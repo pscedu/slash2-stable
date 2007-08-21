@@ -992,7 +992,7 @@ int main(int argc, char * argv[])
 }
 
 int getOptions(int argc,  char *argv[]) { 
-#define ARGS "dDh:i:o:"
+#define ARGS "dDhi:o:"
   int c, err = 0; 
   int fd;
   optarg = NULL; 
