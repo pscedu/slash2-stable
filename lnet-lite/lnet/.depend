@@ -1,0 +1,256 @@
+# DO NOT DELETE
+
+acceptor.o: ../../lnet-lite/include/lnet/lib-lnet.h
+acceptor.o: ../../lnet-lite/include/lnet/types.h
+acceptor.o: ../../lnet-lite/include/libcfs/libcfs.h
+acceptor.o: ../../lnet-lite/include/libcfs/curproc.h /usr/include/stdio.h
+acceptor.o: /usr/include/features.h /usr/include/sys/cdefs.h
+acceptor.o: /usr/include/gnu/stubs.h /usr/include/bits/wordsize.h
+acceptor.o: /usr/include/gnu/stubs-32.h
+acceptor.o: /usr/lib/gcc/x86_64-redhat-linux/4.0.2/include/stddef.h
+acceptor.o: /usr/include/bits/types.h /usr/include/bits/typesizes.h
+acceptor.o: /usr/include/libio.h /usr/include/_G_config.h
+acceptor.o: /usr/include/wchar.h /usr/include/bits/wchar.h
+acceptor.o: /usr/include/gconv.h
+acceptor.o: /usr/lib/gcc/x86_64-redhat-linux/4.0.2/include/stdarg.h
+acceptor.o: /usr/include/bits/stdio_lim.h /usr/include/bits/sys_errlist.h
+acceptor.o: ../../lnet-lite/include/config.h
+acceptor.o: ../../lnet-lite/include/libcfs/kp30.h /usr/include/assert.h
+acceptor.o: ../../include/zestLog.h ../../zestion/subsys.h
+acceptor.o: ../../include/cdefs.h ../../lnet-lite/include/lnet/lnet.h
+acceptor.o: ../../lnet-lite/include/lnet/api.h
+acceptor.o: ../../lnet-lite/include/lnet/lib-types.h
+acceptor.o: ../../lnet-lite/include/libcfs/list.h
+acceptor.o: ../../lnet-lite/include/lustre/ioctl.h
+api-ni.o: ../../lnet-lite/include/lnet/lib-lnet.h
+api-ni.o: ../../lnet-lite/include/lnet/types.h
+api-ni.o: ../../lnet-lite/include/libcfs/libcfs.h
+api-ni.o: ../../lnet-lite/include/libcfs/curproc.h /usr/include/stdio.h
+api-ni.o: /usr/include/features.h /usr/include/sys/cdefs.h
+api-ni.o: /usr/include/gnu/stubs.h /usr/include/bits/wordsize.h
+api-ni.o: /usr/include/gnu/stubs-32.h
+api-ni.o: /usr/lib/gcc/x86_64-redhat-linux/4.0.2/include/stddef.h
+api-ni.o: /usr/include/bits/types.h /usr/include/bits/typesizes.h
+api-ni.o: /usr/include/libio.h /usr/include/_G_config.h /usr/include/wchar.h
+api-ni.o: /usr/include/bits/wchar.h /usr/include/gconv.h
+api-ni.o: /usr/lib/gcc/x86_64-redhat-linux/4.0.2/include/stdarg.h
+api-ni.o: /usr/include/bits/stdio_lim.h /usr/include/bits/sys_errlist.h
+api-ni.o: ../../lnet-lite/include/config.h
+api-ni.o: ../../lnet-lite/include/libcfs/kp30.h /usr/include/assert.h
+api-ni.o: ../../include/zestLog.h ../../zestion/subsys.h
+api-ni.o: ../../include/cdefs.h ../../lnet-lite/include/lnet/lnet.h
+api-ni.o: ../../lnet-lite/include/lnet/api.h
+api-ni.o: ../../lnet-lite/include/lnet/lib-types.h
+api-ni.o: ../../lnet-lite/include/libcfs/list.h
+api-ni.o: ../../lnet-lite/include/lustre/ioctl.h
+config.o: ../../lnet-lite/include/lnet/lib-lnet.h
+config.o: ../../lnet-lite/include/lnet/types.h
+config.o: ../../lnet-lite/include/libcfs/libcfs.h
+config.o: ../../lnet-lite/include/libcfs/curproc.h /usr/include/stdio.h
+config.o: /usr/include/features.h /usr/include/sys/cdefs.h
+config.o: /usr/include/gnu/stubs.h /usr/include/bits/wordsize.h
+config.o: /usr/include/gnu/stubs-32.h
+config.o: /usr/lib/gcc/x86_64-redhat-linux/4.0.2/include/stddef.h
+config.o: /usr/include/bits/types.h /usr/include/bits/typesizes.h
+config.o: /usr/include/libio.h /usr/include/_G_config.h /usr/include/wchar.h
+config.o: /usr/include/bits/wchar.h /usr/include/gconv.h
+config.o: /usr/lib/gcc/x86_64-redhat-linux/4.0.2/include/stdarg.h
+config.o: /usr/include/bits/stdio_lim.h /usr/include/bits/sys_errlist.h
+config.o: ../../lnet-lite/include/config.h
+config.o: ../../lnet-lite/include/libcfs/kp30.h /usr/include/assert.h
+config.o: ../../include/zestLog.h ../../zestion/subsys.h
+config.o: ../../include/cdefs.h ../../lnet-lite/include/lnet/lnet.h
+config.o: ../../lnet-lite/include/lnet/api.h
+config.o: ../../lnet-lite/include/lnet/lib-types.h
+config.o: ../../lnet-lite/include/libcfs/list.h
+config.o: ../../lnet-lite/include/lustre/ioctl.h
+lib-eq.o: ../../lnet-lite/include/lnet/lib-lnet.h
+lib-eq.o: ../../lnet-lite/include/lnet/types.h
+lib-eq.o: ../../lnet-lite/include/libcfs/libcfs.h
+lib-eq.o: ../../lnet-lite/include/libcfs/curproc.h /usr/include/stdio.h
+lib-eq.o: /usr/include/features.h /usr/include/sys/cdefs.h
+lib-eq.o: /usr/include/gnu/stubs.h /usr/include/bits/wordsize.h
+lib-eq.o: /usr/include/gnu/stubs-32.h
+lib-eq.o: /usr/lib/gcc/x86_64-redhat-linux/4.0.2/include/stddef.h
+lib-eq.o: /usr/include/bits/types.h /usr/include/bits/typesizes.h
+lib-eq.o: /usr/include/libio.h /usr/include/_G_config.h /usr/include/wchar.h
+lib-eq.o: /usr/include/bits/wchar.h /usr/include/gconv.h
+lib-eq.o: /usr/lib/gcc/x86_64-redhat-linux/4.0.2/include/stdarg.h
+lib-eq.o: /usr/include/bits/stdio_lim.h /usr/include/bits/sys_errlist.h
+lib-eq.o: ../../lnet-lite/include/config.h
+lib-eq.o: ../../lnet-lite/include/libcfs/kp30.h /usr/include/assert.h
+lib-eq.o: ../../include/zestLog.h ../../zestion/subsys.h
+lib-eq.o: ../../include/cdefs.h ../../lnet-lite/include/lnet/lnet.h
+lib-eq.o: ../../lnet-lite/include/lnet/api.h
+lib-eq.o: ../../lnet-lite/include/lnet/lib-types.h
+lib-eq.o: ../../lnet-lite/include/libcfs/list.h
+lib-eq.o: ../../lnet-lite/include/lustre/ioctl.h
+lib-md.o: ../../lnet-lite/include/lnet/lib-lnet.h
+lib-md.o: ../../lnet-lite/include/lnet/types.h
+lib-md.o: ../../lnet-lite/include/libcfs/libcfs.h
+lib-md.o: ../../lnet-lite/include/libcfs/curproc.h /usr/include/stdio.h
+lib-md.o: /usr/include/features.h /usr/include/sys/cdefs.h
+lib-md.o: /usr/include/gnu/stubs.h /usr/include/bits/wordsize.h
+lib-md.o: /usr/include/gnu/stubs-32.h
+lib-md.o: /usr/lib/gcc/x86_64-redhat-linux/4.0.2/include/stddef.h
+lib-md.o: /usr/include/bits/types.h /usr/include/bits/typesizes.h
+lib-md.o: /usr/include/libio.h /usr/include/_G_config.h /usr/include/wchar.h
+lib-md.o: /usr/include/bits/wchar.h /usr/include/gconv.h
+lib-md.o: /usr/lib/gcc/x86_64-redhat-linux/4.0.2/include/stdarg.h
+lib-md.o: /usr/include/bits/stdio_lim.h /usr/include/bits/sys_errlist.h
+lib-md.o: ../../lnet-lite/include/config.h
+lib-md.o: ../../lnet-lite/include/libcfs/kp30.h /usr/include/assert.h
+lib-md.o: ../../include/zestLog.h ../../zestion/subsys.h
+lib-md.o: ../../include/cdefs.h ../../lnet-lite/include/lnet/lnet.h
+lib-md.o: ../../lnet-lite/include/lnet/api.h
+lib-md.o: ../../lnet-lite/include/lnet/lib-types.h
+lib-md.o: ../../lnet-lite/include/libcfs/list.h
+lib-md.o: ../../lnet-lite/include/lustre/ioctl.h
+lib-me.o: ../../lnet-lite/include/lnet/lib-lnet.h
+lib-me.o: ../../lnet-lite/include/lnet/types.h
+lib-me.o: ../../lnet-lite/include/libcfs/libcfs.h
+lib-me.o: ../../lnet-lite/include/libcfs/curproc.h /usr/include/stdio.h
+lib-me.o: /usr/include/features.h /usr/include/sys/cdefs.h
+lib-me.o: /usr/include/gnu/stubs.h /usr/include/bits/wordsize.h
+lib-me.o: /usr/include/gnu/stubs-32.h
+lib-me.o: /usr/lib/gcc/x86_64-redhat-linux/4.0.2/include/stddef.h
+lib-me.o: /usr/include/bits/types.h /usr/include/bits/typesizes.h
+lib-me.o: /usr/include/libio.h /usr/include/_G_config.h /usr/include/wchar.h
+lib-me.o: /usr/include/bits/wchar.h /usr/include/gconv.h
+lib-me.o: /usr/lib/gcc/x86_64-redhat-linux/4.0.2/include/stdarg.h
+lib-me.o: /usr/include/bits/stdio_lim.h /usr/include/bits/sys_errlist.h
+lib-me.o: ../../lnet-lite/include/config.h
+lib-me.o: ../../lnet-lite/include/libcfs/kp30.h /usr/include/assert.h
+lib-me.o: ../../include/zestLog.h ../../zestion/subsys.h
+lib-me.o: ../../include/cdefs.h ../../lnet-lite/include/lnet/lnet.h
+lib-me.o: ../../lnet-lite/include/lnet/api.h
+lib-me.o: ../../lnet-lite/include/lnet/lib-types.h
+lib-me.o: ../../lnet-lite/include/libcfs/list.h
+lib-me.o: ../../lnet-lite/include/lustre/ioctl.h
+lib-move.o: ../../lnet-lite/include/lnet/lib-lnet.h
+lib-move.o: ../../lnet-lite/include/lnet/types.h
+lib-move.o: ../../lnet-lite/include/libcfs/libcfs.h
+lib-move.o: ../../lnet-lite/include/libcfs/curproc.h /usr/include/stdio.h
+lib-move.o: /usr/include/features.h /usr/include/sys/cdefs.h
+lib-move.o: /usr/include/gnu/stubs.h /usr/include/bits/wordsize.h
+lib-move.o: /usr/include/gnu/stubs-32.h
+lib-move.o: /usr/lib/gcc/x86_64-redhat-linux/4.0.2/include/stddef.h
+lib-move.o: /usr/include/bits/types.h /usr/include/bits/typesizes.h
+lib-move.o: /usr/include/libio.h /usr/include/_G_config.h
+lib-move.o: /usr/include/wchar.h /usr/include/bits/wchar.h
+lib-move.o: /usr/include/gconv.h
+lib-move.o: /usr/lib/gcc/x86_64-redhat-linux/4.0.2/include/stdarg.h
+lib-move.o: /usr/include/bits/stdio_lim.h /usr/include/bits/sys_errlist.h
+lib-move.o: ../../lnet-lite/include/config.h
+lib-move.o: ../../lnet-lite/include/libcfs/kp30.h /usr/include/assert.h
+lib-move.o: ../../include/zestLog.h ../../zestion/subsys.h
+lib-move.o: ../../include/cdefs.h ../../lnet-lite/include/lnet/lnet.h
+lib-move.o: ../../lnet-lite/include/lnet/api.h
+lib-move.o: ../../lnet-lite/include/lnet/lib-types.h
+lib-move.o: ../../lnet-lite/include/libcfs/list.h
+lib-move.o: ../../lnet-lite/include/lustre/ioctl.h
+lib-msg.o: ../../lnet-lite/include/lnet/lib-lnet.h
+lib-msg.o: ../../lnet-lite/include/lnet/types.h
+lib-msg.o: ../../lnet-lite/include/libcfs/libcfs.h
+lib-msg.o: ../../lnet-lite/include/libcfs/curproc.h /usr/include/stdio.h
+lib-msg.o: /usr/include/features.h /usr/include/sys/cdefs.h
+lib-msg.o: /usr/include/gnu/stubs.h /usr/include/bits/wordsize.h
+lib-msg.o: /usr/include/gnu/stubs-32.h
+lib-msg.o: /usr/lib/gcc/x86_64-redhat-linux/4.0.2/include/stddef.h
+lib-msg.o: /usr/include/bits/types.h /usr/include/bits/typesizes.h
+lib-msg.o: /usr/include/libio.h /usr/include/_G_config.h /usr/include/wchar.h
+lib-msg.o: /usr/include/bits/wchar.h /usr/include/gconv.h
+lib-msg.o: /usr/lib/gcc/x86_64-redhat-linux/4.0.2/include/stdarg.h
+lib-msg.o: /usr/include/bits/stdio_lim.h /usr/include/bits/sys_errlist.h
+lib-msg.o: ../../lnet-lite/include/config.h
+lib-msg.o: ../../lnet-lite/include/libcfs/kp30.h /usr/include/assert.h
+lib-msg.o: ../../include/zestLog.h ../../zestion/subsys.h
+lib-msg.o: ../../include/cdefs.h ../../lnet-lite/include/lnet/lnet.h
+lib-msg.o: ../../lnet-lite/include/lnet/api.h
+lib-msg.o: ../../lnet-lite/include/lnet/lib-types.h
+lib-msg.o: ../../lnet-lite/include/libcfs/list.h
+lib-msg.o: ../../lnet-lite/include/lustre/ioctl.h
+lo.o: ../../lnet-lite/include/lnet/lib-lnet.h
+lo.o: ../../lnet-lite/include/lnet/types.h
+lo.o: ../../lnet-lite/include/libcfs/libcfs.h
+lo.o: ../../lnet-lite/include/libcfs/curproc.h /usr/include/stdio.h
+lo.o: /usr/include/features.h /usr/include/sys/cdefs.h
+lo.o: /usr/include/gnu/stubs.h /usr/include/bits/wordsize.h
+lo.o: /usr/include/gnu/stubs-32.h
+lo.o: /usr/lib/gcc/x86_64-redhat-linux/4.0.2/include/stddef.h
+lo.o: /usr/include/bits/types.h /usr/include/bits/typesizes.h
+lo.o: /usr/include/libio.h /usr/include/_G_config.h /usr/include/wchar.h
+lo.o: /usr/include/bits/wchar.h /usr/include/gconv.h
+lo.o: /usr/lib/gcc/x86_64-redhat-linux/4.0.2/include/stdarg.h
+lo.o: /usr/include/bits/stdio_lim.h /usr/include/bits/sys_errlist.h
+lo.o: ../../lnet-lite/include/config.h ../../lnet-lite/include/libcfs/kp30.h
+lo.o: /usr/include/assert.h ../../include/zestLog.h ../../zestion/subsys.h
+lo.o: ../../include/cdefs.h ../../lnet-lite/include/lnet/lnet.h
+lo.o: ../../lnet-lite/include/lnet/api.h
+lo.o: ../../lnet-lite/include/lnet/lib-types.h
+lo.o: ../../lnet-lite/include/libcfs/list.h
+lo.o: ../../lnet-lite/include/lustre/ioctl.h
+peer.o: ../../lnet-lite/include/lnet/lib-lnet.h
+peer.o: ../../lnet-lite/include/lnet/types.h
+peer.o: ../../lnet-lite/include/libcfs/libcfs.h
+peer.o: ../../lnet-lite/include/libcfs/curproc.h /usr/include/stdio.h
+peer.o: /usr/include/features.h /usr/include/sys/cdefs.h
+peer.o: /usr/include/gnu/stubs.h /usr/include/bits/wordsize.h
+peer.o: /usr/include/gnu/stubs-32.h
+peer.o: /usr/lib/gcc/x86_64-redhat-linux/4.0.2/include/stddef.h
+peer.o: /usr/include/bits/types.h /usr/include/bits/typesizes.h
+peer.o: /usr/include/libio.h /usr/include/_G_config.h /usr/include/wchar.h
+peer.o: /usr/include/bits/wchar.h /usr/include/gconv.h
+peer.o: /usr/lib/gcc/x86_64-redhat-linux/4.0.2/include/stdarg.h
+peer.o: /usr/include/bits/stdio_lim.h /usr/include/bits/sys_errlist.h
+peer.o: ../../lnet-lite/include/config.h
+peer.o: ../../lnet-lite/include/libcfs/kp30.h /usr/include/assert.h
+peer.o: ../../include/zestLog.h ../../zestion/subsys.h ../../include/cdefs.h
+peer.o: ../../lnet-lite/include/lnet/lnet.h
+peer.o: ../../lnet-lite/include/lnet/api.h
+peer.o: ../../lnet-lite/include/lnet/lib-types.h
+peer.o: ../../lnet-lite/include/libcfs/list.h
+peer.o: ../../lnet-lite/include/lustre/ioctl.h
+router.o: ../../lnet-lite/include/lnet/lib-lnet.h
+router.o: ../../lnet-lite/include/lnet/types.h
+router.o: ../../lnet-lite/include/libcfs/libcfs.h
+router.o: ../../lnet-lite/include/libcfs/curproc.h /usr/include/stdio.h
+router.o: /usr/include/features.h /usr/include/sys/cdefs.h
+router.o: /usr/include/gnu/stubs.h /usr/include/bits/wordsize.h
+router.o: /usr/include/gnu/stubs-32.h
+router.o: /usr/lib/gcc/x86_64-redhat-linux/4.0.2/include/stddef.h
+router.o: /usr/include/bits/types.h /usr/include/bits/typesizes.h
+router.o: /usr/include/libio.h /usr/include/_G_config.h /usr/include/wchar.h
+router.o: /usr/include/bits/wchar.h /usr/include/gconv.h
+router.o: /usr/lib/gcc/x86_64-redhat-linux/4.0.2/include/stdarg.h
+router.o: /usr/include/bits/stdio_lim.h /usr/include/bits/sys_errlist.h
+router.o: ../../lnet-lite/include/config.h
+router.o: ../../lnet-lite/include/libcfs/kp30.h /usr/include/assert.h
+router.o: ../../include/zestLog.h ../../zestion/subsys.h
+router.o: ../../include/cdefs.h ../../lnet-lite/include/lnet/lnet.h
+router.o: ../../lnet-lite/include/lnet/api.h
+router.o: ../../lnet-lite/include/lnet/lib-types.h
+router.o: ../../lnet-lite/include/libcfs/list.h
+router.o: ../../lnet-lite/include/lustre/ioctl.h
+router_proc.o: ../../lnet-lite/include/libcfs/libcfs.h
+router_proc.o: ../../lnet-lite/include/libcfs/curproc.h /usr/include/stdio.h
+router_proc.o: /usr/include/features.h /usr/include/sys/cdefs.h
+router_proc.o: /usr/include/gnu/stubs.h /usr/include/bits/wordsize.h
+router_proc.o: /usr/include/gnu/stubs-32.h
+router_proc.o: /usr/lib/gcc/x86_64-redhat-linux/4.0.2/include/stddef.h
+router_proc.o: /usr/include/bits/types.h /usr/include/bits/typesizes.h
+router_proc.o: /usr/include/libio.h /usr/include/_G_config.h
+router_proc.o: /usr/include/wchar.h /usr/include/bits/wchar.h
+router_proc.o: /usr/include/gconv.h
+router_proc.o: /usr/lib/gcc/x86_64-redhat-linux/4.0.2/include/stdarg.h
+router_proc.o: /usr/include/bits/stdio_lim.h /usr/include/bits/sys_errlist.h
+router_proc.o: ../../lnet-lite/include/lnet/lib-lnet.h
+router_proc.o: ../../lnet-lite/include/lnet/types.h
+router_proc.o: ../../lnet-lite/include/config.h
+router_proc.o: ../../lnet-lite/include/libcfs/kp30.h /usr/include/assert.h
+router_proc.o: ../../include/zestLog.h ../../zestion/subsys.h
+router_proc.o: ../../include/cdefs.h ../../lnet-lite/include/lnet/lnet.h
+router_proc.o: ../../lnet-lite/include/lnet/api.h
+router_proc.o: ../../lnet-lite/include/lnet/lib-types.h
+router_proc.o: ../../lnet-lite/include/libcfs/list.h
+router_proc.o: ../../lnet-lite/include/lustre/ioctl.h
