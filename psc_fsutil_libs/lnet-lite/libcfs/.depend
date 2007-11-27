@@ -1,0 +1,91 @@
+# DO NOT DELETE
+
+debug.o: ../../lnet-lite/include/libcfs/kp30.h
+debug.o: ../../lnet-lite/include/libcfs/libcfs.h
+debug.o: ../../lnet-lite/include/libcfs/curproc.h /usr/include/stdio.h
+debug.o: /usr/include/features.h /usr/include/sys/cdefs.h
+debug.o: /usr/include/gnu/stubs.h /usr/include/bits/wordsize.h
+debug.o: /usr/include/gnu/stubs-32.h
+debug.o: /usr/lib/gcc/x86_64-redhat-linux/4.0.2/include/stddef.h
+debug.o: /usr/include/bits/types.h /usr/include/bits/typesizes.h
+debug.o: /usr/include/libio.h /usr/include/_G_config.h /usr/include/wchar.h
+debug.o: /usr/include/bits/wchar.h /usr/include/gconv.h
+debug.o: /usr/lib/gcc/x86_64-redhat-linux/4.0.2/include/stdarg.h
+debug.o: /usr/include/bits/stdio_lim.h /usr/include/bits/sys_errlist.h
+debug.o: ../../lnet-lite/include/lnet/types.h
+debug.o: ../../lnet-lite/include/config.h /usr/include/assert.h
+debug.o: ../../include/zestLog.h ../../zestion/subsys.h ../../include/cdefs.h
+debug.o: tracefile.h /usr/include/sys/user.h /usr/include/sys/utsname.h
+debug.o: /usr/include/bits/utsname.h
+nidstrings.o: ../../lnet-lite/include/lnet/lnet.h
+nidstrings.o: ../../lnet-lite/include/lnet/types.h
+nidstrings.o: ../../lnet-lite/include/libcfs/libcfs.h
+nidstrings.o: ../../lnet-lite/include/libcfs/curproc.h /usr/include/stdio.h
+nidstrings.o: /usr/include/features.h /usr/include/sys/cdefs.h
+nidstrings.o: /usr/include/gnu/stubs.h /usr/include/bits/wordsize.h
+nidstrings.o: /usr/include/gnu/stubs-32.h
+nidstrings.o: /usr/lib/gcc/x86_64-redhat-linux/4.0.2/include/stddef.h
+nidstrings.o: /usr/include/bits/types.h /usr/include/bits/typesizes.h
+nidstrings.o: /usr/include/libio.h /usr/include/_G_config.h
+nidstrings.o: /usr/include/wchar.h /usr/include/bits/wchar.h
+nidstrings.o: /usr/include/gconv.h
+nidstrings.o: /usr/lib/gcc/x86_64-redhat-linux/4.0.2/include/stdarg.h
+nidstrings.o: /usr/include/bits/stdio_lim.h /usr/include/bits/sys_errlist.h
+nidstrings.o: ../../lnet-lite/include/config.h
+nidstrings.o: ../../lnet-lite/include/lnet/api.h
+nidstrings.o: ../../lnet-lite/include/libcfs/kp30.h /usr/include/assert.h
+nidstrings.o: ../../include/zestLog.h ../../zestion/subsys.h
+nidstrings.o: ../../include/cdefs.h /usr/include/netdb.h
+nidstrings.o: /usr/include/netinet/in.h /usr/include/stdint.h
+nidstrings.o: /usr/include/sys/socket.h /usr/include/sys/uio.h
+nidstrings.o: /usr/include/sys/types.h /usr/include/time.h
+nidstrings.o: /usr/include/bits/uio.h /usr/include/bits/socket.h
+nidstrings.o: /usr/lib/gcc/x86_64-redhat-linux/4.0.2/include/limits.h
+nidstrings.o: /usr/lib/gcc/x86_64-redhat-linux/4.0.2/include/syslimits.h
+nidstrings.o: /usr/include/limits.h /usr/include/bits/sockaddr.h
+nidstrings.o: /usr/include/asm/socket.h /usr/include/asm-i386/socket.h
+nidstrings.o: /usr/include/asm/sockios.h /usr/include/asm-i386/sockios.h
+nidstrings.o: /usr/include/bits/in.h /usr/include/endian.h
+nidstrings.o: /usr/include/bits/endian.h /usr/include/bits/byteswap.h
+nidstrings.o: /usr/include/bits/netdb.h ../../include/zestLock.h
+nidstrings.o: /usr/include/pthread.h /usr/include/sched.h
+nidstrings.o: /usr/include/bits/sched.h /usr/include/signal.h
+nidstrings.o: /usr/include/bits/sigset.h /usr/include/bits/pthreadtypes.h
+nidstrings.o: /usr/include/bits/setjmp.h
+user-lock.o: /usr/include/stdlib.h /usr/include/features.h
+user-lock.o: /usr/include/sys/cdefs.h /usr/include/gnu/stubs.h
+user-lock.o: /usr/include/bits/wordsize.h /usr/include/gnu/stubs-32.h
+user-lock.o: /usr/lib/gcc/x86_64-redhat-linux/4.0.2/include/stddef.h
+user-lock.o: ../../lnet-lite/include/libcfs/libcfs.h
+user-lock.o: ../../lnet-lite/include/libcfs/curproc.h /usr/include/stdio.h
+user-lock.o: /usr/include/bits/types.h /usr/include/bits/typesizes.h
+user-lock.o: /usr/include/libio.h /usr/include/_G_config.h
+user-lock.o: /usr/include/wchar.h /usr/include/bits/wchar.h
+user-lock.o: /usr/include/gconv.h
+user-lock.o: /usr/lib/gcc/x86_64-redhat-linux/4.0.2/include/stdarg.h
+user-lock.o: /usr/include/bits/stdio_lim.h /usr/include/bits/sys_errlist.h
+user-prim.o: /usr/include/sys/mman.h /usr/include/features.h
+user-prim.o: /usr/include/sys/cdefs.h /usr/include/gnu/stubs.h
+user-prim.o: /usr/include/bits/wordsize.h /usr/include/gnu/stubs-32.h
+user-prim.o: /usr/include/bits/types.h
+user-prim.o: /usr/lib/gcc/x86_64-redhat-linux/4.0.2/include/stddef.h
+user-prim.o: /usr/include/bits/typesizes.h /usr/include/bits/mman.h
+user-prim.o: /usr/include/stdint.h /usr/include/bits/wchar.h
+user-prim.o: /usr/include/stdlib.h /usr/include/string.h
+user-prim.o: /usr/include/signal.h /usr/include/bits/sigset.h
+user-prim.o: /usr/include/errno.h /usr/include/bits/errno.h
+user-prim.o: /usr/include/linux/errno.h /usr/include/asm/errno.h
+user-prim.o: /usr/include/asm-i386/errno.h /usr/include/sys/stat.h
+user-prim.o: /usr/include/bits/stat.h /usr/include/sys/vfs.h
+user-prim.o: /usr/include/sys/statfs.h /usr/include/bits/statfs.h
+user-prim.o: ../../lnet-lite/include/libcfs/libcfs.h
+user-prim.o: ../../lnet-lite/include/libcfs/curproc.h /usr/include/stdio.h
+user-prim.o: /usr/include/libio.h /usr/include/_G_config.h
+user-prim.o: /usr/include/wchar.h /usr/include/gconv.h
+user-prim.o: /usr/lib/gcc/x86_64-redhat-linux/4.0.2/include/stdarg.h
+user-prim.o: /usr/include/bits/stdio_lim.h /usr/include/bits/sys_errlist.h
+user-prim.o: ../../lnet-lite/include/libcfs/kp30.h
+user-prim.o: ../../lnet-lite/include/lnet/types.h
+user-prim.o: ../../lnet-lite/include/config.h /usr/include/assert.h
+user-prim.o: ../../include/zestLog.h ../../zestion/subsys.h
+user-prim.o: ../../include/cdefs.h /usr/include/sys/user.h
