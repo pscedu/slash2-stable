@@ -28,13 +28,13 @@
 #include "subsys.h"
 #define SUBSYS S_RPC
 
-#include "pscAlloc.h"
-#include "pscAtomic.h"
-#include "pscExport.h"
-#include "pscLog.h"
-#include "pscRpc.h"
-#include "pscRpcLog.h"
-#include "pscWaitq.h"
+#include "psc_util/alloc.h"
+#include "psc_util/atomic.h"
+#include "psc_util/log.h"
+#include "psc_util/waitq.h"
+#include "psc_rpc/export.h"
+#include "psc_rpc/rpc.h"
+#include "psc_rpc/rpclog.h"
 
 /**
  * psc_send_buf - rudimentary send function which uses LNetPut.  This is called by pscrpc_send_reply & psc_send_rpc which use psc_send_buf to PUT rpc replies and requests.

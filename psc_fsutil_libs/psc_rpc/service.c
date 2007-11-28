@@ -8,26 +8,27 @@
 #include "psc_util/lock.h"
 #include "psc_ds/list.h"
 
-#include "zestExport.h"
-#include "zestRpc.h"
-#include "zestRpcIO.h"
-#include "zestRpcLog.h"
-#include "zestRpcMDS.h"
-#include "zestThread.h"
-#include "zestThreadTable.h"
+#include "psc_rpc/export.h"
+#include "psc_rpc/rpc.h"
+#include "psc_rpc/rpclog.h"
+#include "psc_util/threadtable.h"
 
-struct zestion_thread *zestionRPCMDSThreads;
-struct zestion_thread *zestionRPCIOThreads;
+// This stuff needs to be extracted
+//#include "zestThread.h"
+//#include "zestRpcIO.h"
+//#include "zestRpcMDS.h"
+//struct psc_thread *zestionRPCMDSThreads;
+//struct psc_thread *zestionRPCIOThreads;
 
 static int test_req_buffer_pressure = 0;
 
-static int zestrpc_server_post_idle_rqbds (struct zestrpc_service *svc);
+static int pscrpc_server_post_idle_rqbds (struct pscrpc_service *svc);
 
-static ZLIST_HEAD (zestrpc_all_services);
-static spinlock_t zestrpc_all_services_lock = SPIN_LOCK_UNLOCKED;
+static PSCLIST_HEAD (pscrpc_all_services);
+static spinlock_t pscrpc_all_services_lock = SPIN_LOCK_UNLOCKED;
 
 static char *
-zestrpc_alloc_request_buffer (int size)
+pscrpc_alloc_request_buffer (int size)
 {
         char *ptr;
 
@@ -36,19 +37,19 @@ zestrpc_alloc_request_buffer (int size)
 }
 
 static void
-zestrpc_free_request_buffer (char *ptr, int size)
+pscrpc_free_request_buffer (char *ptr, int size)
 {
 	ZOBD_FREE(ptr, size);
 }
 
 /**
- * zestrpc_alloc_rqbd - create a new request buffer desc and malloc request buffer memory.  This call sets request_in_callback as the callback handler.
+ * pscrpc_alloc_rqbd - create a new request buffer desc and malloc request buffer memory.  This call sets request_in_callback as the callback handler.
  * @svc: pointer to the service which owns this request buffer ptr.
  */
-struct zestrpc_request_buffer_desc *
-zestrpc_alloc_rqbd (struct zestrpc_service *svc)
+struct pscrpc_request_buffer_desc *
+pscrpc_alloc_rqbd (struct pscrpc_service *svc)
 {
-        struct zestrpc_request_buffer_desc *rqbd;
+        struct pscrpc_request_buffer_desc *rqbd;
 
         ZOBD_ALLOC(rqbd, sizeof (*rqbd));
         if (rqbd == NULL)
@@ -58,8 +59,8 @@ zestrpc_alloc_rqbd (struct zestrpc_service *svc)
         rqbd->rqbd_refcount = 0;
         rqbd->rqbd_cbid.cbid_fn  = zrequest_in_callback;
         rqbd->rqbd_cbid.cbid_arg = rqbd;
-        INIT_ZLIST_HEAD(&rqbd->rqbd_reqs);
-        rqbd->rqbd_buffer = zestrpc_alloc_request_buffer(svc->srv_buf_size);
+        INIT_PSCLIST_HEAD(&rqbd->rqbd_reqs);
+        rqbd->rqbd_buffer = pscrpc_alloc_request_buffer(svc->srv_buf_size);
 
         if (rqbd->rqbd_buffer == NULL) {
                 ZOBD_FREE(rqbd, sizeof (*rqbd));
@@ -67,7 +68,7 @@ zestrpc_alloc_rqbd (struct zestrpc_service *svc)
         }
 
         spin_lock(&svc->srv_lock);
-        zlist_add(&rqbd->rqbd_list, &svc->srv_idle_rqbds);
+        psclist_add(&rqbd->rqbd_list, &svc->srv_idle_rqbds);
         svc->srv_nbufs++;
         spin_unlock(&svc->srv_lock);
 
@@ -75,53 +76,53 @@ zestrpc_alloc_rqbd (struct zestrpc_service *svc)
 }
 
 void
-zestrpc_free_rqbd (struct zestrpc_request_buffer_desc *rqbd)
+pscrpc_free_rqbd (struct pscrpc_request_buffer_desc *rqbd)
 {
-        struct zestrpc_service *svc = rqbd->rqbd_service;
+        struct pscrpc_service *svc = rqbd->rqbd_service;
 
         LASSERT (rqbd->rqbd_refcount == 0);
-        LASSERT (zlist_empty(&rqbd->rqbd_reqs));
+        LASSERT (psclist_empty(&rqbd->rqbd_reqs));
 
         spin_lock(&svc->srv_lock);
-        zlist_del(&rqbd->rqbd_list);
+        psclist_del(&rqbd->rqbd_list);
         svc->srv_nbufs--;
         spin_unlock(&svc->srv_lock);
 
-        zestrpc_free_request_buffer (rqbd->rqbd_buffer, svc->srv_buf_size);
+        pscrpc_free_request_buffer (rqbd->rqbd_buffer, svc->srv_buf_size);
         ZOBD_FREE (rqbd, sizeof (*rqbd));
 }
 
 /**
- * zestrpc_server_post_idle_rqbds - iterate over the srv_idle_rqbds list and repost buffer desc's found there.  Calls zestrpc_register_rqbd() which does LNetMEAttach and LNetMDAttach.
+ * pscrpc_server_post_idle_rqbds - iterate over the srv_idle_rqbds list and repost buffer desc's found there.  Calls pscrpc_register_rqbd() which does LNetMEAttach and LNetMDAttach.
  * @svc: pointer to the service
  */
 int
-zestrpc_server_post_idle_rqbds (struct zestrpc_service *svc)
+pscrpc_server_post_idle_rqbds (struct pscrpc_service *svc)
 {
-        struct zestrpc_request_buffer_desc *rqbd;
+        struct pscrpc_request_buffer_desc *rqbd;
         int                                rc;
         int                                posted = 0;
 
         for (;;) {
                 spin_lock(&svc->srv_lock);
 
-                if (zlist_empty (&svc->srv_idle_rqbds)) {
+                if (psclist_empty (&svc->srv_idle_rqbds)) {
                         spin_unlock(&svc->srv_lock);
                         return (posted);
                 }
 
-                rqbd = zlist_entry(zlist_next(&svc->srv_idle_rqbds),
-                                  struct zestrpc_request_buffer_desc,
+                rqbd = psclist_entry(psclist_next(&svc->srv_idle_rqbds),
+                                  struct pscrpc_request_buffer_desc,
                                   rqbd_list);
-                zlist_del (&rqbd->rqbd_list);
+                psclist_del (&rqbd->rqbd_list);
 
                 /* assume we will post successfully */
                 svc->srv_nrqbd_receiving++;
-                zlist_add (&rqbd->rqbd_list, &svc->srv_active_rqbds);
+                psclist_add (&rqbd->rqbd_list, &svc->srv_active_rqbds);
 
                 spin_unlock(&svc->srv_lock);
 
-                rc = zestrpc_register_rqbd(rqbd);
+                rc = pscrpc_register_rqbd(rqbd);
                 if (rc != 0)
                         break;
 
@@ -131,8 +132,8 @@ zestrpc_server_post_idle_rqbds (struct zestrpc_service *svc)
         spin_lock(&svc->srv_lock);
 
         svc->srv_nrqbd_receiving--;
-        zlist_del(&rqbd->rqbd_list);
-        zlist_add_tail(&rqbd->rqbd_list, &svc->srv_idle_rqbds);
+        psclist_del(&rqbd->rqbd_list);
+        psclist_add_tail(&rqbd->rqbd_list, &svc->srv_idle_rqbds);
 
         /* Don't complain if no request buffers are posted right now; LNET
          * won't drop requests because we set the portal lazy! */
@@ -143,14 +144,14 @@ zestrpc_server_post_idle_rqbds (struct zestrpc_service *svc)
 }
 
 
-static void __zestrpc_server_free_request(struct zestrpc_request *req)
+static void __pscrpc_server_free_request(struct pscrpc_request *req)
 {
-        struct zestrpc_request_buffer_desc *rqbd = req->rq_rqbd;
+        struct pscrpc_request_buffer_desc *rqbd = req->rq_rqbd;
 
-        zlist_del(&req->rq_list_entry);
+        psclist_del(&req->rq_list_entry);
 
         if (req->rq_reply_state != NULL) {
-                zestrpc_rs_decref(req->rq_reply_state);
+                pscrpc_rs_decref(req->rq_reply_state);
                 req->rq_reply_state = NULL;
         }
 
@@ -164,57 +165,57 @@ static void __zestrpc_server_free_request(struct zestrpc_request *req)
 
 
 static void
-zestrpc_server_free_request(struct zestrpc_request *req)
+pscrpc_server_free_request(struct pscrpc_request *req)
 {
-        struct zestrpc_request_buffer_desc *rqbd = req->rq_rqbd;
-        struct zestrpc_service             *svc = rqbd->rqbd_service;
+        struct pscrpc_request_buffer_desc *rqbd = req->rq_rqbd;
+        struct pscrpc_service             *svc = rqbd->rqbd_service;
         int                                refcount;
-        struct zlist_head                  *tmp;
-        struct zlist_head                  *nxt;
+        struct psclist_head                  *tmp;
+        struct psclist_head                  *nxt;
 
         spin_lock(&svc->srv_lock);
 
         svc->srv_n_active_reqs--;
-        zlist_add(&req->rq_list_entry, &rqbd->rqbd_reqs);
+        psclist_add(&req->rq_list_entry, &rqbd->rqbd_reqs);
 
         refcount = --(rqbd->rqbd_refcount);
         if (refcount == 0) {
                 /* request buffer is now idle: add to history */
-                zlist_del(&rqbd->rqbd_list);
-                zlist_add_tail(&rqbd->rqbd_list, &svc->srv_history_rqbds);
+                psclist_del(&rqbd->rqbd_list);
+                psclist_add_tail(&rqbd->rqbd_list, &svc->srv_history_rqbds);
                 svc->srv_n_history_rqbds++;
 
                 /* cull some history?
 		 * I expect only about 1 or 2 rqbds need to be recycled here */
                 while (svc->srv_n_history_rqbds > svc->srv_max_history_rqbds) {
-                        rqbd = zlist_entry(zlist_next(&svc->srv_history_rqbds),
-                                          struct zestrpc_request_buffer_desc,
+                        rqbd = psclist_entry(psclist_next(&svc->srv_history_rqbds),
+                                          struct pscrpc_request_buffer_desc,
                                           rqbd_list);
 
-                        zlist_del(&rqbd->rqbd_list);
+                        psclist_del(&rqbd->rqbd_list);
                         svc->srv_n_history_rqbds--;
 
                         /* remove rqbd's reqs from svc's req history while
 			 * I've got the service lock */
-                        zlist_for_each(tmp, &rqbd->rqbd_reqs) {
-                                req = zlist_entry(tmp, struct zestrpc_request,
+                        psclist_for_each(tmp, &rqbd->rqbd_reqs) {
+                                req = psclist_entry(tmp, struct pscrpc_request,
                                                  rq_list_entry);
                                 /* Track the highest culled req seq */
                                 if (req->rq_history_seq >
                                     svc->srv_request_max_cull_seq)
                                         svc->srv_request_max_cull_seq =
                                                 req->rq_history_seq;
-                                zlist_del(&req->rq_history_list);
+                                psclist_del(&req->rq_history_list);
                         }
 
                         spin_unlock(&svc->srv_lock);
 
 
-                        zlist_for_each_safe(tmp, nxt, &rqbd->rqbd_reqs) {
-                                req = zlist_entry(zlist_next(&rqbd->rqbd_reqs),
-                                                 struct zestrpc_request,
+                        psclist_for_each_safe(tmp, nxt, &rqbd->rqbd_reqs) {
+                                req = psclist_entry(psclist_next(&rqbd->rqbd_reqs),
+                                                 struct pscrpc_request,
                                                  rq_list_entry);
-                                __zestrpc_server_free_request(req);
+                                __pscrpc_server_free_request(req);
                         }
 
                         spin_lock(&svc->srv_lock);
@@ -222,13 +223,13 @@ zestrpc_server_free_request(struct zestrpc_request *req)
                         /* schedule request buffer for re-use.
 			 * NB I can only do this after I've disposed of their
 			 * reqs; particularly the embedded req */
-                        zlist_add_tail(&rqbd->rqbd_list, &svc->srv_idle_rqbds);
+                        psclist_add_tail(&rqbd->rqbd_list, &svc->srv_idle_rqbds);
                 }
         } else if (req->rq_reply_state && req->rq_reply_state->rs_prealloc) {
 		/* If we are low on memory, we are not interested in
 		   history */
-                zlist_del(&req->rq_history_list);
-                __zestrpc_server_free_request(req);
+                psclist_del(&req->rq_history_list);
+                __pscrpc_server_free_request(req);
         }
 
         spin_unlock(&svc->srv_lock);
@@ -236,10 +237,10 @@ zestrpc_server_free_request(struct zestrpc_request *req)
 }
 
 static int
-zestrpc_server_handle_request(struct zestrpc_service *svc,
-                             struct zestion_thread *thread)
+pscrpc_server_handle_request(struct pscrpc_service *svc,
+                             struct psc_thread *thread)
 {
-        struct zestrpc_request *request;
+        struct pscrpc_request *request;
         struct timeval         work_start;
         struct timeval         work_end;
         long                   timediff;
@@ -249,7 +250,7 @@ zestrpc_server_handle_request(struct zestrpc_service *svc,
         LASSERT(svc);
 
         spin_lock(&svc->srv_lock);
-        if (zlist_empty (&svc->srv_request_queue) ||
+        if (psclist_empty (&svc->srv_request_queue) ||
             (svc->srv_n_difficult_replies != 0 &&
              svc->srv_n_active_reqs >= (svc->srv_nthreads - 1))) {
                 /* If all the other threads are handling requests, I must
@@ -259,9 +260,9 @@ zestrpc_server_handle_request(struct zestrpc_service *svc,
                 RETURN(0);
         }
 
-        request = zlist_entry (zlist_next(&svc->srv_request_queue),
-                              struct zestrpc_request, rq_list_entry);
-        zlist_del(&request->rq_list_entry);
+        request = psclist_entry (psclist_next(&svc->srv_request_queue),
+                              struct pscrpc_request, rq_list_entry);
+        psclist_del(&request->rq_list_entry);
         svc->srv_n_queued_reqs--;
         svc->srv_n_active_reqs++;
 
@@ -285,7 +286,7 @@ zestrpc_server_handle_request(struct zestrpc_service *svc,
         /* Clear request swab mask; this is a new request */
         request->rq_req_swab_mask = 0;
 #endif
-        rc = zest_unpack_msg (request->rq_reqmsg, request->rq_reqlen);
+        rc = psc_unpack_msg (request->rq_reqmsg, request->rq_reqlen);
         if (rc != 0) {
                 CERROR ("error unpacking request: ptl %d from %s"
                         " xid "LPU64"\n", svc->srv_req_portal,
@@ -294,18 +295,18 @@ zestrpc_server_handle_request(struct zestrpc_service *svc,
         }
 
         rc = -EINVAL;
-        if (request->rq_reqmsg->type != ZEST_RPC_MSG_REQUEST) {
+        if (request->rq_reqmsg->type != PSC_RPC_MSG_REQUEST) {
                 CERROR("wrong packet type received (type=%u) from %s\n",
                        request->rq_reqmsg->type,
                        libcfs_id2str(request->rq_peer));
                 goto out;
         }
 
-        zinfo("got req "LPD64, request->rq_xid);
+        psc_info("got req "LPD64, request->rq_xid);
 
         request->rq_svc_thread = thread;
 
-	request->rq_conn = zestrpc_get_connection(request->rq_peer,
+	request->rq_conn = pscrpc_get_connection(request->rq_peer,
 						  request->rq_self, NULL);
 	if (request->rq_conn == NULL) {
                 CERROR("null connection struct :(\n");
@@ -315,13 +316,13 @@ zestrpc_server_handle_request(struct zestrpc_service *svc,
 	 * Here's a hack to trick lustre rpc into thinking there's a real export
 	 */
 	if (request->rq_conn->c_exp == NULL) {
-		struct zestrpc_export *exp;
+		struct pscrpc_export *exp;
 
-		DEBUG_REQ(ZLL_WARN, request, "null export");
+		DEBUG_REQ(LL_WARN, request, "null export");
 
 		ZOBD_ALLOC(exp, sizeof(*exp));
 		if (exp == NULL)
-			zfatal("Couldn't allocate export");
+			psc_fatal("Couldn't allocate export");
 		/*
 		 * init and associate the connection and export structs
 		 *  see zclass_new_export() for more detail
@@ -348,7 +349,7 @@ zestrpc_server_handle_request(struct zestrpc_service *svc,
 
         request->rq_phase = ZRQ_PHASE_INTERPRET;
 
-        zinfo("Handling RPC peer+ref:pid:xid:nid:opc "
+        psc_info("Handling RPC peer+ref:pid:xid:nid:opc "
 	      "%s+%d:%d:"LPU64":%d",
 	      libcfs_id2str(request->rq_conn->c_peer),
 	      atomic_read(&request->rq_export->exp_refcount),
@@ -360,7 +361,7 @@ zestrpc_server_handle_request(struct zestrpc_service *svc,
 
         request->rq_phase = ZRQ_PHASE_COMPLETE;
 
-        zinfo("Handled RPC peer+ref:pid:xid:nid:opc "
+        psc_info("Handled RPC peer+ref:pid:xid:nid:opc "
 	      "%s+%d:%d:"LPU64":%d",
 	      libcfs_id2str(request->rq_conn->c_peer),
 	      atomic_read(&request->rq_export->exp_refcount),
@@ -414,17 +415,17 @@ zestrpc_server_handle_request(struct zestrpc_service *svc,
         }
 #endif
 
-        zestrpc_server_free_request(request);
+        pscrpc_server_free_request(request);
 
         RETURN(1);
 }
 
 static int
-zestrpc_server_handle_reply (struct zestrpc_service *svc)
+pscrpc_server_handle_reply (struct pscrpc_service *svc)
 {
 	LASSERT(svc != NULL);
 #if 0
-        struct zestrpc_reply_state *rs;
+        struct pscrpc_reply_state *rs;
         struct obd_export         *exp;
         struct obd_device         *obd;
         int                        nlocks;
@@ -432,13 +433,13 @@ zestrpc_server_handle_reply (struct zestrpc_service *svc)
         ENTRY;
 
         spin_lock(&svc->srv_lock);
-        if (zlist_empty (&svc->srv_reply_queue)) {
+        if (psclist_empty (&svc->srv_reply_queue)) {
                 spin_unlock(&svc->srv_lock);
                 RETURN(0);
         }
 
-        rs = zlist_entry (svc->srv_reply_queue.next,
-                         struct zestrpc_reply_state, rs_list_entry);
+        rs = psclist_entry (svc->srv_reply_queue.next,
+                         struct pscrpc_reply_state, rs_list_entry);
 
         exp = rs->rs_export;
         obd = exp->exp_obd;
@@ -446,19 +447,19 @@ zestrpc_server_handle_reply (struct zestrpc_service *svc)
         LASSERT (rs->rs_difficult);
         LASSERT (rs->rs_scheduled);
 
-        zlist_del(&rs->rs_list_entry);
+        psclist_del(&rs->rs_list_entry);
 
         /* Disengage from notifiers carefully (lock order - irqrestore below!)*/
         spin_unlock(&svc->srv_lock);
 
         spin_lock (&obd->obd_uncommitted_replies_lock);
         /* Noop if removed already */
-        zlist_del_init (&rs->rs_obd_list);
+        psclist_del_init (&rs->rs_obd_list);
         spin_unlock (&obd->obd_uncommitted_replies_lock);
 
         spin_lock (&exp->exp_lock);
         /* Noop if removed already */
-        zlist_del_init (&rs->rs_exp_list);
+        psclist_del_init (&rs->rs_exp_list);
         spin_unlock (&exp->exp_lock);
 
         spin_lock(&svc->srv_lock);
@@ -506,7 +507,7 @@ zestrpc_server_handle_reply (struct zestrpc_service *svc)
 
                 zclass_export_put (exp);
                 rs->rs_export = NULL;
-                zestrpc_rs_decref (rs);
+                pscrpc_rs_decref (rs);
                 atomic_dec (&svc->srv_outstanding_replies);
                 RETURN(1);
         }
@@ -518,42 +519,42 @@ zestrpc_server_handle_reply (struct zestrpc_service *svc)
 }
 
 int
-target_send_reply_msg (struct zestrpc_request *req, int rc, int fail_id)
+target_send_reply_msg (struct pscrpc_request *req, int rc, int fail_id)
 {
 #if PAULS_TODO
         if (ZOBD_FAIL_CHECK(fail_id | ZOBD_FAIL_ONCE)) {
                 obd_fail_loc |= ZOBD_FAIL_ONCE | ZOBD_FAILED;
-                DEBUG_REQ(ZLL_ERROR, req, "dropping reply");
+                DEBUG_REQ(LL_ERROR, req, "dropping reply");
                 return (-ECOMM);
         }
 #endif
 	if (fail_id) {
-                DEBUG_REQ(ZLL_ERROR, req, "dropping reply");
+                DEBUG_REQ(LL_ERROR, req, "dropping reply");
                 return (-ECOMM);
 	}
 
         if (rc) {
-                DEBUG_REQ(ZLL_ERROR, req, "processing error (%d)", rc);
+                DEBUG_REQ(LL_ERROR, req, "processing error (%d)", rc);
                 req->rq_status = rc;
-                return (zestrpc_error(req));
+                return (pscrpc_error(req));
         } else {
-                DEBUG_REQ(ZLL_INFO, req, "sending reply");
+                DEBUG_REQ(LL_INFO, req, "sending reply");
         }
 
-        return (zestrpc_send_reply(req, 1));
+        return (pscrpc_send_reply(req, 1));
 }
 
 int
-zestrpc_grow_req_bufs(struct zestrpc_service *svc)
+pscrpc_grow_req_bufs(struct pscrpc_service *svc)
 {
-        struct zestrpc_request_buffer_desc *rqbd;
+        struct pscrpc_request_buffer_desc *rqbd;
         int                                i;
 
         CDEBUG(D_RPCTRACE, "%s: allocate %d new %d-byte reqbufs (%d/%d left)\n",
                svc->srv_name, svc->srv_nbuf_per_group, svc->srv_buf_size,
                svc->srv_nrqbd_receiving, svc->srv_nbufs);
         for (i = 0; i < svc->srv_nbuf_per_group; i++) {
-                rqbd = zestrpc_alloc_rqbd(svc);
+                rqbd = pscrpc_alloc_rqbd(svc);
 
                 if (rqbd == NULL) {
                         CERROR ("%s: Can't allocate request buffer\n",
@@ -561,7 +562,7 @@ zestrpc_grow_req_bufs(struct zestrpc_service *svc)
                         return (-ENOMEM);
                 }
 
-                if (zestrpc_server_post_idle_rqbds(svc) < 0)
+                if (pscrpc_server_post_idle_rqbds(svc) < 0)
                         return (-EAGAIN);
         }
 
@@ -569,7 +570,7 @@ zestrpc_grow_req_bufs(struct zestrpc_service *svc)
 }
 
 static void
-zestrpc_check_rqbd_pool(struct zestrpc_service *svc)
+pscrpc_check_rqbd_pool(struct pscrpc_service *svc)
 {
         int avail = svc->srv_nrqbd_receiving;
         int low_water = test_req_buffer_pressure ? 0 :
@@ -584,48 +585,48 @@ zestrpc_check_rqbd_pool(struct zestrpc_service *svc)
 	 * space. */
 
         if (avail <= low_water)
-                zestrpc_grow_req_bufs(svc);
+                pscrpc_grow_req_bufs(svc);
 
         //lprocfs_counter_add(svc->srv_stats, ZESTRPC_REQBUF_AVAIL_CNTR, avail);
 	//EXIT;
 }
 
 static int
-zestrpc_retry_rqbds(void *arg)
+pscrpc_retry_rqbds(void *arg)
 {
-        struct zestrpc_service *svc = (struct zestrpc_service *)arg;
+        struct pscrpc_service *svc = (struct pscrpc_service *)arg;
 
         svc->srv_rqbd_timeout = 0;
         return (-ETIMEDOUT);
 }
 
 
-#define zestrpc_main zestrpc_main
-static void * zestrpc_main(void *arg)
+#define pscrpc_main pscrpc_main
+static void * pscrpc_main(void *arg)
 {
-        struct zestion_thread     *thread = arg;
-        struct zestrpc_service    *svc;
-        struct zestrpc_reply_state *rs;
+        struct psc_thread     *thread = arg;
+        struct pscrpc_service    *svc;
+        struct pscrpc_reply_state *rs;
 	int *run;
         //struct lc_watchdog        *watchdog;
 
         int rc = 0;
         ENTRY;
 
-	zdbg("thread %p zthr_type is %d", thread,
-	     thread->zthr_type);
-	switch (thread->zthr_type) {
+	psc_dbg("thread %p pscthr_type is %d", thread,
+	     thread->pscthr_type);
+	switch (thread->pscthr_type) {
 	case ZTHRT_RPCMDS:
-		svc = thread->zthr_rpcmdsthr.zrm_svc;
+		svc = thread->pscthr_rpcmdsthr.zrm_svc;
 		break;
 	case ZTHRT_RPCIO:
-		svc = thread->zthr_rpciothr.zri_svc;
+		svc = thread->pscthr_rpciothr.zri_svc;
 		break;
 	default:
-		zfatal("unknown thread type; type=%d", thread->zthr_type);
+		psc_fatal("unknown thread type; type=%d", thread->pscthr_type);
 	}
 
-	zest_assert(svc != NULL);
+	psc_assert(svc != NULL);
 
         if (svc->srv_init != NULL) {
                 rc = svc->srv_init(thread);
@@ -634,18 +635,18 @@ static void * zestrpc_main(void *arg)
         }
 	/* Alloc reply state structure for this one */
 	ZOBD_ALLOC(rs, svc->srv_max_reply_size);
-	INIT_ZLIST_ENTRY(&rs->rs_list_entry);
+	INIT_PSCLIST_ENTRY(&rs->rs_list_entry);
 
 	spin_lock(&svc->srv_lock);
 	svc->srv_nthreads++;
-	zlist_add(&rs->rs_list_entry, &svc->srv_free_rs_list);
+	psclist_add(&rs->rs_list_entry, &svc->srv_free_rs_list);
 	spin_unlock(&svc->srv_lock);
 	wake_up(&svc->srv_free_rs_waitq);
 
-	CDEBUG(D_NET, "service thread %zu started\n", thread->zthr_id);
+	CDEBUG(D_NET, "service thread %zu started\n", thread->pscthr_id);
 
-	run = (svc == zestRpcMdsSvc ? &thread->zthr_rpcmdsthr.zrm_run :
-	    &thread->zthr_rpciothr.zri_run);
+	run = (svc == zestRpcMdsSvc ? &thread->pscthr_rpcmdsthr.zrm_run :
+	    &thread->pscthr_rpciothr.zri_run);
 
 	/* XXX maintain a list of all managed devices: insert here */
 	while (*run  ||
@@ -653,24 +654,24 @@ static void * zestrpc_main(void *arg)
 
 		/* Don't exit while there are replies to be handled */
 		struct l_wait_info lwi = LWI_TIMEOUT(svc->srv_rqbd_timeout,
-						     zestrpc_retry_rqbds, svc);
+						     pscrpc_retry_rqbds, svc);
 
 		//lc_watchdog_disable(watchdog);
 		//l_wait_event_exclusive (svc->srv_waitq,
 		/*
-		zdbg("*run %d, svc->srv_n_difficult_replies %d, "
-		       "zlist_empty(&svc->srv_idle_rqbds) %d,  svc->srv_rqbd_timeout %d "
-		       "zlist_empty (&svc->srv_reply_queue) %d, zlist_empty(&svc->srv_request_queue) %d "
+		psc_dbg("*run %d, svc->srv_n_difficult_replies %d, "
+		       "psclist_empty(&svc->srv_idle_rqbds) %d,  svc->srv_rqbd_timeout %d "
+		       "psclist_empty (&svc->srv_reply_queue) %d, psclist_empty(&svc->srv_request_queue) %d "
 		       "svc->srv_n_active_reqs %d svc->srv_nthreads %d"
 		       "COND 1=%d, COND 2=%d, COND 3=%d",
 
 		       *run, svc->srv_n_difficult_replies,
-		       zlist_empty(&svc->srv_idle_rqbds), svc->srv_rqbd_timeout,
-		       zlist_empty (&svc->srv_reply_queue), zlist_empty(&svc->srv_request_queue),
+		       psclist_empty(&svc->srv_idle_rqbds), svc->srv_rqbd_timeout,
+		       psclist_empty (&svc->srv_reply_queue), psclist_empty(&svc->srv_request_queue),
 		       svc->srv_n_active_reqs, svc->srv_nthreads,
 		       (*run != 0 && svc->srv_n_difficult_replies == 0),
-		       (!zlist_empty(&svc->srv_idle_rqbds) && svc->srv_rqbd_timeout == 0),
-		       (!zlist_empty (&svc->srv_request_queue) &&
+		       (!psclist_empty(&svc->srv_idle_rqbds) && svc->srv_rqbd_timeout == 0),
+		       (!psclist_empty (&svc->srv_request_queue) &&
 			(svc->srv_n_difficult_replies == 0 ||
 			 svc->srv_n_active_reqs < (svc->srv_nthreads - 1)))
 		       );
@@ -678,10 +679,10 @@ static void * zestrpc_main(void *arg)
 		zsvr_wait_event(&svc->srv_waitq,
 				(!*run &&
 				 svc->srv_n_difficult_replies == 0) ||
-				(!zlist_empty(&svc->srv_idle_rqbds) &&
+				(!psclist_empty(&svc->srv_idle_rqbds) &&
 				 svc->srv_rqbd_timeout == 0) ||
-				!zlist_empty (&svc->srv_reply_queue) ||
-				(!zlist_empty (&svc->srv_request_queue) &&
+				!psclist_empty (&svc->srv_reply_queue) ||
+				(!psclist_empty (&svc->srv_request_queue) &&
 				 (svc->srv_n_difficult_replies == 0 ||
 				  svc->srv_n_active_reqs <
 				  (svc->srv_nthreads - 1))),
@@ -690,26 +691,26 @@ static void * zestrpc_main(void *arg)
 
 		//lc_watchdog_touch(watchdog);
 
-		zestrpc_check_rqbd_pool(svc);
+		pscrpc_check_rqbd_pool(svc);
 
 		/*
 		 * this has to be mod'ed to support the io threads
 		 *  put'ing replies onto this list after they've sync'ed
 		 *  the blocks to disk.. paul
 		 */
-		//if (!zlist_empty (&svc->srv_reply_queue))
-		//	zestrpc_server_handle_reply (svc);
+		//if (!psclist_empty (&svc->srv_reply_queue))
+		//	pscrpc_server_handle_reply (svc);
 
 		/* only handle requests if there are no difficult replies
 		 * outstanding, or I'm not the last thread handling
 		 * requests */
-		if (!zlist_empty (&svc->srv_request_queue) &&
+		if (!psclist_empty (&svc->srv_request_queue) &&
 		    (svc->srv_n_difficult_replies == 0 ||
 		     svc->srv_n_active_reqs < (svc->srv_nthreads - 1)))
-			zestrpc_server_handle_request(svc, thread);
+			pscrpc_server_handle_request(svc, thread);
 
-		if (!zlist_empty(&svc->srv_idle_rqbds) &&
-		    zestrpc_server_post_idle_rqbds(svc) < 0) {
+		if (!psclist_empty(&svc->srv_idle_rqbds) &&
+		    pscrpc_server_post_idle_rqbds(svc) < 0) {
 			/* I just failed to repost request buffers.  Wait
 			 * for a timeout (unless something else happens)
 			 * before I try again */
@@ -723,13 +724,13 @@ static void * zestrpc_main(void *arg)
 
 	// out_srv_init:
 	/*
-	 * deconstruct service specific state created by zestrpc_start_thread()
+	 * deconstruct service specific state created by pscrpc_start_thread()
 	 */
 	if (svc->srv_done != NULL)
 		svc->srv_done(thread);
 
  out:
-	CDEBUG(D_NET, "service thread %zu exiting: rc %d\n", thread->zthr_id, rc);
+	CDEBUG(D_NET, "service thread %zu exiting: rc %d\n", thread->pscthr_id, rc);
 
 	spin_lock(&svc->srv_lock);
 	svc->srv_nthreads--;                    /* must know immediately */
@@ -741,13 +742,13 @@ static void * zestrpc_main(void *arg)
 #endif
         spin_unlock(&svc->srv_lock);
 
-	thread->zthr_rc = rc;
+	thread->pscthr_rc = rc;
 	return NULL;
 }
 
 #if 0
-static void zestrpc_stop_thread(struct zestrpc_service *svc,
-                               struct zestrpc_thread *thread)
+static void pscrpc_stop_thread(struct pscrpc_service *svc,
+                               struct pscrpc_thread *thread)
 {
         struct l_wait_info lwi = { 0 };
 
@@ -760,23 +761,23 @@ static void zestrpc_stop_thread(struct zestrpc_service *svc,
                      &lwi);
 
         spin_lock(&svc->srv_lock);
-        zlist_del(&thread->t_link);
+        psclist_del(&thread->t_link);
         spin_unlock(&svc->srv_lock);
 
         ZOBD_FREE(thread, sizeof(*thread));
 }
 
-void zestrpc_stop_all_threads(struct zestrpc_service *svc)
+void pscrpc_stop_all_threads(struct pscrpc_service *svc)
 {
-        struct zestrpc_thread *thread;
+        struct pscrpc_thread *thread;
 
         spin_lock(&svc->srv_lock);
-        while (!zlist_empty(&svc->srv_threads)) {
-                thread = zlist_entry(svc->srv_threads.next,
-                                    struct zestrpc_thread, t_link);
+        while (!psclist_empty(&svc->srv_threads)) {
+                thread = psclist_entry(svc->srv_threads.next,
+                                    struct pscrpc_thread, t_link);
 
                 spin_unlock(&svc->srv_lock);
-                zestrpc_stop_thread(svc, thread);
+                pscrpc_stop_thread(svc, thread);
                 spin_lock(&svc->srv_lock);
         }
 
@@ -784,19 +785,19 @@ void zestrpc_stop_all_threads(struct zestrpc_service *svc)
 }
 #endif
 
-int zestrpc_unregister_service(struct zestrpc_service *service)
+int pscrpc_unregister_service(struct pscrpc_service *service)
 {
         int                   rc;
         struct l_wait_info    lwi;
-        struct zlist_head     *tmp;
-        struct zestrpc_reply_state *rs, *t;
+        struct psclist_head     *tmp;
+        struct pscrpc_reply_state *rs, *t;
 
-        //zestrpc_stop_all_threads(service);
-        LASSERT(zlist_empty(&service->srv_threads));
+        //pscrpc_stop_all_threads(service);
+        LASSERT(psclist_empty(&service->srv_threads));
 
-        spin_lock (&zestrpc_all_services_lock);
-        zlist_del(&service->srv_list_entry);
-        spin_unlock (&zestrpc_all_services_lock);
+        spin_lock (&pscrpc_all_services_lock);
+        psclist_del(&service->srv_list_entry);
+        spin_unlock (&pscrpc_all_services_lock);
 
         /* All history will be culled when the next request buffer is
 	 * freed */
@@ -809,9 +810,9 @@ int zestrpc_unregister_service(struct zestrpc_service *service)
 
         /* Unlink all the request buffers.  This forces a 'final' event with
 	 * its 'unlink' flag set for each posted rqbd */
-        zlist_for_each(tmp, &service->srv_active_rqbds) {
-                struct zestrpc_request_buffer_desc *rqbd =
-                        zlist_entry(tmp, struct zestrpc_request_buffer_desc,
+        psclist_for_each(tmp, &service->srv_active_rqbds) {
+                struct pscrpc_request_buffer_desc *rqbd =
+                        psclist_entry(tmp, struct pscrpc_request_buffer_desc,
                                    rqbd_list);
 
                 rc = LNetMDUnlink(rqbd->rqbd_md_h);
@@ -841,43 +842,43 @@ int zestrpc_unregister_service(struct zestrpc_service *service)
 
         /* schedule all outstanding replies to terminate them */
         spin_lock(&service->srv_lock);
-        while (!zlist_empty(&service->srv_active_replies)) {
-                rs = zlist_entry(zlist_next(&service->srv_active_replies),
-                                   struct zestrpc_reply_state, rs_list_entry);
+        while (!psclist_empty(&service->srv_active_replies)) {
+                rs = psclist_entry(psclist_next(&service->srv_active_replies),
+                                   struct pscrpc_reply_state, rs_list_entry);
 		CWARN("Active reply found?? %p", rs);
-                //zestrpc_schedule_difficult_reply(rs);
+                //pscrpc_schedule_difficult_reply(rs);
         }
         spin_unlock(&service->srv_lock);
 
         /* purge the request queue.  NB No new replies (rqbds all unlinked)
 	 * and no service threads, so I'm the only thread noodling the
 	 * request queue now */
-        while (!zlist_empty(&service->srv_request_queue)) {
-                struct zestrpc_request *req =
-                        zlist_entry(zlist_next(&service->srv_request_queue),
-                                   struct zestrpc_request,
+        while (!psclist_empty(&service->srv_request_queue)) {
+                struct pscrpc_request *req =
+                        psclist_entry(psclist_next(&service->srv_request_queue),
+                                   struct pscrpc_request,
                                    rq_list_entry);
 
-                zlist_del(&req->rq_list_entry);
+                psclist_del(&req->rq_list_entry);
                 service->srv_n_queued_reqs--;
                 service->srv_n_active_reqs++;
 
-                zestrpc_server_free_request(req);
+                pscrpc_server_free_request(req);
         }
         LASSERT(service->srv_n_queued_reqs == 0);
         LASSERT(service->srv_n_active_reqs == 0);
         LASSERT(service->srv_n_history_rqbds == 0);
-        LASSERT(zlist_empty(&service->srv_active_rqbds));
+        LASSERT(psclist_empty(&service->srv_active_rqbds));
 
         /* Now free all the request buffers since nothing references them
 	 * any more... */
-        while (!zlist_empty(&service->srv_idle_rqbds)) {
-                struct zestrpc_request_buffer_desc *rqbd =
-                        zlist_entry(zlist_next(&service->srv_idle_rqbds),
-                                   struct zestrpc_request_buffer_desc,
+        while (!psclist_empty(&service->srv_idle_rqbds)) {
+                struct pscrpc_request_buffer_desc *rqbd =
+                        psclist_entry(psclist_next(&service->srv_idle_rqbds),
+                                   struct pscrpc_request_buffer_desc,
                                    rqbd_list);
 
-                zestrpc_free_rqbd(rqbd);
+                pscrpc_free_rqbd(rqbd);
         }
 
         /* wait for all outstanding replies to complete (they were
@@ -886,23 +887,23 @@ int zestrpc_unregister_service(struct zestrpc_service *service)
                 lwi = LWI_TIMEOUT(10 * HZ, NULL, NULL);
 
                 rc = zsvr_wait_event(&service->srv_waitq,
-                                  !zlist_empty(&service->srv_reply_queue),
+                                  !psclist_empty(&service->srv_reply_queue),
 				  &lwi,
 				  &service->srv_lock);
 
                 LASSERT(rc == 0 || rc == -ETIMEDOUT);
 
                 if (rc == 0) {
-                        zestrpc_server_handle_reply(service);
+                        pscrpc_server_handle_reply(service);
                         continue;
                 }
                 CWARN("Unexpectedly long timeout %p\n", service);
         }
 
         //list_for_each_entry_safe(rs, t, &service->srv_free_rs_list,
-        zlist_for_each_entry_safe(rs, t, &service->srv_free_rs_list,
+        psclist_for_each_entry_safe(rs, t, &service->srv_free_rs_list,
 				 rs_list_entry) {
-                zlist_del(&rs->rs_list_entry);
+                psclist_del(&rs->rs_list_entry);
                 ZOBD_FREE(rs, service->srv_max_reply_size);
         }
 
@@ -911,16 +912,16 @@ int zestrpc_unregister_service(struct zestrpc_service *service)
 }
 
 
-struct zestrpc_service *
-zestrpc_init_svc(int nbufs, int bufsize, int max_req_size, int max_reply_size,
+struct pscrpc_service *
+pscrpc_init_svc(int nbufs, int bufsize, int max_req_size, int max_reply_size,
 		 int req_portal, int rep_portal, char *name, int num_threads,
 		 svc_handler_t handler)
 {
         int                    rc;
-        struct zestrpc_service *service;
+        struct pscrpc_service *service;
         ENTRY;
 
-	zinfo("bufsize %d  max_req_size %d", bufsize, max_req_size);
+	psc_info("bufsize %d  max_req_size %d", bufsize, max_req_size);
 
         LASSERT (nbufs > 0);
         LASSERT (bufsize >= max_req_size);
@@ -933,7 +934,7 @@ zestrpc_init_svc(int nbufs, int bufsize, int max_req_size, int max_reply_size,
 
         service->srv_name = name;
         spin_lock_init(&service->srv_lock);
-        INIT_ZLIST_HEAD(&service->srv_threads);
+        INIT_PSCLIST_HEAD(&service->srv_threads);
         init_waitqueue_head(&service->srv_waitq);
 
         service->srv_nbuf_per_group = test_req_buffer_pressure ? 1 : nbufs;
@@ -951,35 +952,35 @@ zestrpc_init_svc(int nbufs, int bufsize, int max_req_size, int max_reply_size,
         rc = LNetSetLazyPortal(service->srv_req_portal);
         LASSERT (rc == 0);
 
-	INIT_ZLIST_ENTRY(&service->srv_list_entry);
-	INIT_ZLIST_HEAD(&service->srv_request_queue);
-	INIT_ZLIST_HEAD(&service->srv_request_history);
+	INIT_PSCLIST_ENTRY(&service->srv_list_entry);
+	INIT_PSCLIST_HEAD(&service->srv_request_queue);
+	INIT_PSCLIST_HEAD(&service->srv_request_history);
 
-	INIT_ZLIST_HEAD(&service->srv_idle_rqbds);
-	INIT_ZLIST_HEAD(&service->srv_active_rqbds);
-	INIT_ZLIST_HEAD(&service->srv_history_rqbds);
+	INIT_PSCLIST_HEAD(&service->srv_idle_rqbds);
+	INIT_PSCLIST_HEAD(&service->srv_active_rqbds);
+	INIT_PSCLIST_HEAD(&service->srv_history_rqbds);
 
 	//ATOMIC_INIT(&service->srv_outstanding_replies);
-	INIT_ZLIST_HEAD(&service->srv_active_replies);
-	INIT_ZLIST_HEAD(&service->srv_reply_queue);
+	INIT_PSCLIST_HEAD(&service->srv_active_replies);
+	INIT_PSCLIST_HEAD(&service->srv_reply_queue);
 
-	INIT_ZLIST_HEAD(&service->srv_free_rs_list);
+	INIT_PSCLIST_HEAD(&service->srv_free_rs_list);
 
-	zwaitq_init(&service->srv_free_rs_waitq);
-	zwaitq_init(&service->srv_waitq);
+	psc_waitq_init(&service->srv_free_rs_waitq);
+	psc_waitq_init(&service->srv_waitq);
 
-	INIT_ZLIST_HEAD(&service->srv_threads);
+	INIT_PSCLIST_HEAD(&service->srv_threads);
 
 	spin_lock_init(&service->srv_lock);
 
 	service->srv_name = name;
 
-        spin_lock (&zestrpc_all_services_lock);
-        zlist_add (&service->srv_list_entry, &zestrpc_all_services);
-        spin_unlock (&zestrpc_all_services_lock);
+        spin_lock (&pscrpc_all_services_lock);
+        psclist_add (&service->srv_list_entry, &pscrpc_all_services);
+        spin_unlock (&pscrpc_all_services_lock);
 
         /* Now allocate the request buffers */
-        rc = zestrpc_grow_req_bufs(service);
+        rc = pscrpc_grow_req_bufs(service);
         /* We shouldn't be under memory pressure at startup, so
          * fail if we can't post all our buffers at this time. */
         if (rc != 0)
@@ -992,12 +993,12 @@ zestrpc_init_svc(int nbufs, int bufsize, int max_req_size, int max_reply_size,
                 service->srv_max_reply_size <<= 1;
 
 
-        CDEBUG(D_NET, "%s: Started, zlistening on portal %d\n",
+        CDEBUG(D_NET, "%s: Started, psclistening on portal %d\n",
                service->srv_name, service->srv_req_portal);
 
         RETURN(service);
  failed:
-        zestrpc_unregister_service(service);
+        pscrpc_unregister_service(service);
         return NULL;
 }
 
@@ -1005,23 +1006,24 @@ zestrpc_init_svc(int nbufs, int bufsize, int max_req_size, int max_reply_size,
 #define ZRPCMDSSVCNAME "zrpc_mds"
 #define ZRPCIOSVCNAME  "zrpc_io"
 
+
 void
-zrpcthr_spawn(int type)
+zrpcthr_spawn((int)rpc_func(struct pscrpc_request *), )
 {
-	struct zestion_thread **zthreads, *zthr;
+	struct psc_thread **threads, *thr;
 	struct zestion_rpciothr *zri;
-	struct zestrpc_service *zsvc;
+	struct pscrpc_service *zsvc;
 	int    i, nthreads;
 
-	zdbg("type=%d", type);
+	psc_dbg("type=%d", type);
 
-	zest_assert(type == ZTHRT_RPCIO ||
+	psc_assert(type == ZTHRT_RPCIO ||
 		    type == ZTHRT_RPCMDS);
 
 	if (type == ZTHRT_RPCIO) {
-		zthreads = &zestionRPCIOThreads;
+		threads = &zestionRPCIOThreads;
 		nthreads = NUM_RPCIO_THREADS;
-		zestRpcIoSvc = zestrpc_init_svc(RPCIO_NBUFS,
+		zestRpcIoSvc = pscrpc_init_svc(RPCIO_NBUFS,
 						RPCIO_BUFSIZE,
 						RPCIO_MAXREQSIZE,
 						RPCIO_MAXREPSIZE,
@@ -1030,12 +1032,12 @@ zrpcthr_spawn(int type)
 						RPCIO_SVCNAME,
 						nthreads,
 						zrpc_io_handler);
-		zest_assert(zestRpcIoSvc);
+		psc_assert(zestRpcIoSvc);
 		zsvc = zestRpcIoSvc;
 	} else {
-		zthreads = &zestionRPCMDSThreads;
+		threads = &zestionRPCMDSThreads;
 		nthreads = NUM_RPCMDS_THREADS;
-		zestRpcMdsSvc = zestrpc_init_svc(RPCMDS_NBUFS,
+		zestRpcMdsSvc = pscrpc_init_svc(RPCMDS_NBUFS,
 						 RPCMDS_BUFSIZE,
 						 RPCMDS_MAXREQSIZE,
 						 RPCMDS_MAXREPSIZE,
@@ -1044,20 +1046,20 @@ zrpcthr_spawn(int type)
 						 RPCMDS_SVCNAME,
 						 nthreads,
 						 zrpc_mds_handler);
-		zest_assert(zestRpcMdsSvc);
+		psc_assert(zestRpcMdsSvc);
 		zsvc = zestRpcMdsSvc;
 	}
 
-	*zthreads = ZALLOC(sizeof(**zthreads) * nthreads);
+	*threads = PSCALLOC(sizeof(**threads) * nthreads);
 
-	for (i=0, zthr = *zthreads; i < nthreads; i++, zthr++) {
+	for (i=0, thr = *threads; i < nthreads; i++, thr++) {
 		switch (type) {
 		case ZTHRT_RPCMDS:
-			zthr->zthr_rpcmdsthr.zrm_svc = zsvc;
-			zthr->zthr_rpcmdsthr.zrm_run = 1;
+			thr->pscthr_rpcmdsthr.zrm_svc = zsvc;
+			thr->pscthr_rpcmdsthr.zrm_run = 1;
 			break;
 		case ZTHRT_RPCIO:
-			zri = &zthr->zthr_rpciothr;
+			zri = &thr->pscthr_rpciothr;
 			zri->zri_svc = zsvc;
 			zri->zri_run = 1;
 
@@ -1066,6 +1068,6 @@ zrpcthr_spawn(int type)
 			break;
 		}
 
-		zthr_init(zthr, type, zestrpc_main, i);
+		pscthr_init(thr, type, pscrpc_main, i);
 	}
 }

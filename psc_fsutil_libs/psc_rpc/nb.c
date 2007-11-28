@@ -4,7 +4,6 @@
 #include "psc_rpc/rpc.h"
 #include "psc_rpc/rpclog.h"
 
-
 /**
  * nbreqset_push - send out new requests
  *
