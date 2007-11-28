@@ -8,13 +8,13 @@
 #include <stdarg.h>
 #include <string.h>
 
-#include "pscAlloc.h"
-#include "pscAssert.h"
-#include "pscAtomic.h"
-#include "pscList.h"
-#include "pscLock.h"
-#include "pscWaitq.h"
-#include "pscAlloc.h"
+#include "psc_util/alloc.h"
+#include "psc_util/assert.h"
+#include "psc_util/atomic.h"
+#include "psc_ds/list.h"
+#include "psc_util/lock.h"
+#include "psc_util/waitq.h"
+#include "psc_util/alloc.h"
 
 #define LC_NAME_MAX 32
 
