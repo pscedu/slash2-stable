@@ -1,11 +1,11 @@
 # $Id$
 
-OBJS = $(patsubst %.c,%.o,$(filter %.c,${SRCS}))
-OBJS+= $(patsubst %.y,%.o,$(filter %.y,${SRCS}))
-OBJS+= $(patsubst %.l,%.o,$(filter %.l,${SRCS}))
+OBJS=		$(patsubst %.c,%.o,$(filter %.c,${SRCS}))
+OBJS+=		$(patsubst %.y,%.o,$(filter %.y,${SRCS}))
+OBJS+=		$(patsubst %.l,%.o,$(filter %.l,${SRCS}))
 
-_YACCINTM = $(patsubst %.y,%.c,$(filter %.y,${SRCS}))
-_LEXINTM  = $(patsubst %.l,%.c,$(filter %.l,${SRCS}))
+_YACCINTM=	$(patsubst %.y,%.c,$(filter %.y,${SRCS}))
+_LEXINTM=	$(patsubst %.l,%.c,$(filter %.l,${SRCS}))
 
 all: recurse-all ${TARGET}
 
