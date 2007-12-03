@@ -22,7 +22,7 @@
 #define DEBUG_SUBSYSTEM S_LNET
 #include <lnet/lib-lnet.h>
 
-#include "zestLog.h"
+#include "psc_util/lock.h"
 
 #ifdef __KERNEL__
 #define D_LNI D_CONSOLE

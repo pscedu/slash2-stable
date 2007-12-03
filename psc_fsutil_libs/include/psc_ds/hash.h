@@ -1,24 +1,23 @@
-/* $Id: zestHash.h 2189 2007-11-07 22:18:18Z yanovich $ */
+/* $Id: hash.h 2189 2007-11-07 22:18:18Z yanovich $ */
 
-#ifndef HAVE_ZEST_HASH_INC
-#define HAVE_ZEST_HASH_INC
+#ifndef HAVE_PSC_HASH_INC
+#define HAVE_PSC_HASH_INC
 
 #include <string.h>
 
-#include "ds/list.h"
-#include "ds/lock.h"
+#include "psc_ds/list.h"
+#include "psc_util/lock.h"
 #include "psc_types.h"
 
 #define LOCK_BUCKET(b)  spinlock(&((b)->hbucket_lock))
 #define ULOCK_BUCKET(b) freelock(&(b)->hbucket_lock)
-// Not sure if GET_BUCKET is correct?
 #define GET_BUCKET(t,i) &(t)->htable_buckets[(i) % (t)->htable_size]
 
 #define HTNAME_MAX 30
 
 struct hash_bucket {
 	struct psclist_head	  hbucket_list;	/* Entry list head */
-	zest_spinlock_t		  hbucket_lock;	/* Spinlock for this bucket */
+	psc_spinlock_t		  hbucket_lock;	/* Spinlock for this bucket */
 };
 
 struct hash_table {
@@ -55,9 +54,9 @@ struct hash_entry {
 #define SGET_BUCKET(t,i) &(t)->htable_buckets[str_hash((i)) % (t)->htable_size]
 
 struct hash_entry_str {
-	struct psclist_head	  hentry_str_list; /* Entry list pointers */
-	const char		 *hentry_str_id; /* Pointer to the hash element str */
-	void			 *private;	/* pointer to private data */
+	struct psclist_head	  hentry_str_list; /* Entry list pointers   */
+	const char		 *hentry_str_id; /* Pointer to the hash ele */
+	void			 *private;	/* pointer to private data  */
 };
 
 /*

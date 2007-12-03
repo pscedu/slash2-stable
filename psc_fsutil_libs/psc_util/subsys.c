@@ -1,14 +1,13 @@
 /* $Id: subsys.c 2137 2007-11-05 18:41:27Z yanovich $ */
 
 /*
- * zestiond subsystem definitions.
+ * subsystem definitions.
  */
-
 #include "subsys.h"
 
 #include <strings.h>
 
-/* Must stay sync'd with ZS_* constants. */
+/* Must stay sync'd with S_* constants. */
 const char *subsys_names[] = {
 /* 0 */	"addrcache",
 /* 1 */	"chunkmap",
@@ -29,7 +28,7 @@ psc_subsys_id(const char *name)
 {
 	int n;
 
-	for (n = 0; n < ZNSUBSYS; n++)
+	for (n = 0; n < NSUBSYS; n++)
 		if (strcasecmp(name, subsys_names[n]) == 0)
 			return (n);
 	return (-1);
@@ -40,7 +39,7 @@ psc_subsys_name(int id)
 {
 	if (id < 0)
 		return ("<unknown>");
-	else if (id >= ZNSUBSYS)
+	else if (id >= NSUBSYS)
 		return ("<unknown>");
 	return (subsys_names[id]);
 }

@@ -1,7 +1,7 @@
 /* $Id: psc_util/thread.h 2211 2007-11-13 08:13:47Z yanovich $ */
 
-#ifndef _ZESTTHREAD_H_
-#define _ZESTTHREAD_H_
+#ifndef _PSCTHREAD_H_
+#define _PSCTHREAD_H_
 
 #include "psc_util/atomic.h"
 #include "psc_ds/listcache.c"
@@ -17,9 +17,9 @@ struct psc_thread {
 	int                      pscthr_run;
 	pid_t			 pscthr_pid;
 	int			 pscthr_psig;
-	void			*(*pscthr_start)(void *);	/* thread's main routine */
+	void			*(*pscthr_start)(void *); /* thread main */
 	pthread_t		 pscthr_pthread;
-	u64			 pscthr_hashid;		/* pthread_self() lookup */
+	u64			 pscthr_hashid;		  /* lookup id */
 	size_t			 pscthr_id;
 	int			 pscthr_type;
 	int			 pscthr_rc;
@@ -40,4 +40,4 @@ void	pscthr_init(struct psc_thread *, int, void *(*)(void *), int);
 		ZINIT_ULOCK(l);			\
 	} while (0)
 
-#endif /* _ZESTTHREAD_H_ */
+#endif /* _PSCTHREAD_H_ */

@@ -28,13 +28,10 @@ pscthr_begin(void *arg)
 }
 
 /*
- * pscthr_init - initialize a zestion thread.
- * @thr: zestion thread structure to be initialized, must already be
- *	allocated.
+ * pscthr_init - initialize a thread.
+ * @thr: thread structure to be initialized, must already be allocated.
  * @type: zestion thread type.
- * @start: thread execution routine.  By specifying a NULL routine,
- *	no pthread will be spawned (assuming that an actual pthread
- *	already exists or will be taken care of).
+ * @start: thread execution routine.  By specifying a NULL routine, no pthread will be spawned (assuming that an actual pthread already exists or will be taken care of).
  * @namearg: number of `type' threads thus far.
  */
 void

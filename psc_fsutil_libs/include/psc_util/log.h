@@ -1,10 +1,10 @@
-/* $Id: zestLog.h 1924 2007-10-19 16:04:41Z yanovich $ */
+/* $Id: log.h 1924 2007-10-19 16:04:41Z yanovich $ */
 
 #include <stdarg.h>
 
-#ifndef ZSUBSYS
+#ifndef SUBSYS
 # include "subsys.h"
-# define ZSUBSYS ZS_OTHER
+# define SUBSYS ZS_OTHER
 #endif
 
 #include "cdefs.h"
@@ -19,7 +19,7 @@
 #define LL_TRACE	6 /* flow */
 #define NLOGLEVELS	7
 
-/* Zestion logging options. */
+/* logging options. */
 #define LO_ERRNO	(1<<0)	/* strerror(errno) */
 
 #define _FFL		__FILE__, __func__, __LINE__

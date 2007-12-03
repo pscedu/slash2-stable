@@ -1,4 +1,4 @@
-/* $Id: zestThreadTable.c 1907 2007-10-18 18:15:57Z yanovich $ */
+/* $Id: threadtable.c 1907 2007-10-18 18:15:57Z yanovich $ */
 
 /*
  * This file could be replaced by thread-local storage at some point.
@@ -12,7 +12,6 @@
 #include "psc_ds/hash.h"
 #include "psc_util/threadtable.h"
 #include "psc_types.h"
-#include "zestion/zestion.h"
 
 #define PSC_THREAD_HTABLE_SZ 53
 

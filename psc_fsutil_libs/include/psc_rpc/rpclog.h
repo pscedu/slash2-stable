@@ -1,7 +1,7 @@
-/* $Id: zestRpcLog.h 1988 2007-10-26 01:54:27Z pauln $ */
+/* $Id: rpclog.h 1988 2007-10-26 01:54:27Z pauln $ */
 
-#ifndef HAVE_ZRPCLOG_H
-#define HAVE_ZRPCLOG_H 1
+#ifndef HAVE_RPCLOG_H
+#define HAVE_RPCLOG_H 1
 
 #include "psc_util/log.h"
 #include "psc_rpc/rpc.h"

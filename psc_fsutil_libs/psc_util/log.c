@@ -1,7 +1,7 @@
 /* $Id: log.c 1924 2007-10-19 16:04:41Z yanovich $ */
 
 /*
- * Zestion logging routines.
+ * Logging routines.
  */
 
 #include "subsys.h"
@@ -36,8 +36,8 @@
 static const char *logFormat = DEF_LOGFMT;
 
 /*
- * Global Zest logging level.
- * May be overridden in individual utilities (such as zestiond).
+ * Global logging level.
+ * May be overridden in individual utilities.
  */
 static int defaultLogVal = LL_TRACE;
 

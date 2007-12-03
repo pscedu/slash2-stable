@@ -1,4 +1,4 @@
-/* $Id: zestHash.c 2189 2007-11-07 22:18:18Z yanovich $ */
+/* $Id: hash.c 2189 2007-11-07 22:18:18Z yanovich $ */
 
 #include <sys/param.h>
 

@@ -1,4 +1,4 @@
-/* $Id: zestService.c 2114 2007-11-03 19:39:08Z pauln $ */
+/* $Id: service.c 2114 2007-11-03 19:39:08Z pauln $ */
 
 #include <stdio.h>
 
@@ -401,7 +401,7 @@ pscrpc_server_handle_request(struct pscrpc_service *svc,
                        request->rq_repmsg ?
 		          (int)request->rq_repmsg->status : -999);
 
-#if 0 // Zest has no proc counter
+#if 0 // We have no proc counter in user mode
         if (svc->srv_stats != NULL) {
                 int opc = opcode_offset(request->rq_reqmsg->opc);
                 if (opc > 0) {

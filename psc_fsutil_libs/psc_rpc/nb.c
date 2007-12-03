@@ -23,17 +23,15 @@ nbreqset_push(struct pscrpc_request *req) {
 struct pscrpc_nbreqset *
 nbreqset_init(set_interpreter_func nb_interpret, 
 	      nbreq_callback       nb_callback) {
+
 	struct pscrpc_nbreqset *nbs;
 
-	nbs = PSCALLOC(sizeof(struct pscrpc_nbreqset));
-	
+	nbs = PSCALLOC(sizeof(struct pscrpc_nbreqset));	
 	//LOCK_INIT(&nbs->nb_lock);
-
 	nbs->nb_reqset                = pscrpc_prep_set();
 	nbs->nb_reqset->set_interpret = nb_interpret;
 	nbs->nb_callback              = nb_callback;
 	atomic_set(&nbs->nb_outstanding, 0);
-
 	return nbs;
 }
 
@@ -87,7 +85,8 @@ nbrequest_reap(struct pscrpc_nbreqset *nbs) {
 	ENTRY;
 
         lwi = LWI_TIMEOUT(timeout, NULL, NULL);
-        zcli_wait_event(set->set_waitq, (nreaped=pscrpc_check_set(set, 0)), &lwi);
+        zcli_wait_event(set->set_waitq, 
+			(nreaped=pscrpc_check_set(set, 0)), &lwi);
 	
 	if (!nreaped)
 		RETURN(0);
@@ -97,27 +96,33 @@ nbrequest_reap(struct pscrpc_nbreqset *nbs) {
 	psclist_for_each_safe(i, j, &set->set_requests) { 
 		nchecked++;
 		req = psclist_entry(i, struct pscrpc_request, rq_set_chain);
-		DEBUG_REQ(LL_INFO, req, "reap if Completed");			
+		DEBUG_REQ(LL_INFO, req, "reap if Completed");
 		/*
 		 * Move sent rpcs to the set_requests list
 		 */
 		if (req->rq_phase == ZRQ_PHASE_COMPLETE) {	
 			psclist_del_init(&req->rq_set_chain);	
-			//atomic_dec(&nbs->nb_outstanding);
+			atomic_dec(&nbs->nb_outstanding);
 			nreaped++;
 			/*
 			 * paranoia
 			 */
-			//psc_assert(atomic_read(&nbs->nb_outstanding) >= 0);
+			psc_assert(atomic_read(&nbs->nb_outstanding) >= 0);
+			/* Revisit this, I don't think we need to issue a 
+			   callback here but there may be some failure 
+			   scenarios which require it - paul
+			*/			   
+#if 0
 			/*
 			 * This is the caller's last shot at accessing 
 			 *  this msg..
 			 * Let the callback deal with it's own
 			 *  error handling, we can't do much from here
 			 */			
-			//if (nbs->nb_callback != NULL)
-			//	(int)nbs->nb_callback(req, 
-			//			      &req->rq_async_args);
+			if (nbs->nb_callback != NULL)
+				(int)nbs->nb_callback(req, 
+						      &req->rq_async_args);
+#endif
 			/*
 			 * Be done with it..
 			 */

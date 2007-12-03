@@ -34,7 +34,7 @@
 #endif
 #endif
 
-#include "zestLock.h"
+#include "psc_util/lock.h"
 
 /* CAVEAT VENDITOR! Keep the canonical string representation of nets/nids
  * consistent in all conversion functions.  Some code fragments are copied
@@ -54,7 +54,7 @@
 static char      libcfs_nidstrings[LNET_NIDSTR_COUNT][LNET_NIDSTR_SIZE];
 static int       libcfs_nidstring_idx = 0;
 
-static zest_spinlock_t libcfs_nidstring_lock = LOCK_INITIALIZER;
+static psc_spinlock_t libcfs_nidstring_lock = LOCK_INITIALIZER;
 
 #ifdef __KERNEL__
 static spinlock_t libcfs_nidstring_lock;

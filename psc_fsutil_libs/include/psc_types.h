@@ -1,4 +1,4 @@
-/* $Id: zestTypes.h 1894 2007-10-16 23:42:25Z pauln $ */
+/* $Id: types.h 1894 2007-10-16 23:42:25Z pauln $ */
 
 #if (!defined HAVE_PSC_TYPES_INC)
 #define HAVE_PSC_TYPES_INC 1
