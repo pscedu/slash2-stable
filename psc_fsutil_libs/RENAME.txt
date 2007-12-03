@@ -41,3 +41,14 @@ zestCrc.h:psc_util\/crc.h
 ZCRC:CRC
 zlist:psclist
 ZLIST:PSCLIST
+zestrpc:pscrpc
+ZESTRPC:PTLRPC
+zestAtomic.h:psc_util\/atomic.h
+zestList.h:psc_ds\/list.h
+zestListCache.h:psc_ds\/listcache.c
+zclass:pscrpc
+zestRpc.h:psc_rpc\/rpc.h
+dynarray.h:psc_ds\/dynarray.h
+ZEST_LNET:PSC_LNET
+zestThread.h:psc_util\/thread.h
+ztcplnd:psc_tcplnd

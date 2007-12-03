@@ -195,7 +195,7 @@ void libcfs_debug_set_level(unsigned int debug_level);
 # ifdef LIBCFS_DEBUG
 #  undef NDEBUG
 #  include <assert.h>
-#include "zestLog.h"
+#include "psc_util/log.h"
 #  define LASSERT(e)     assert(e)
 #  define LASSERTF(cond, args...)                                              \
 do {                                                                           \

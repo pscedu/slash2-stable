@@ -2,23 +2,16 @@
 
 #include <stdio.h>
 
+#include "psc_ds/list.h"
 #include "psc_util/alloc.h"
 #include "psc_util/atomic.h"
 #include "psc_util/waitq.h"
 #include "psc_util/lock.h"
-#include "psc_ds/list.h"
-
+#include "psc_util/threadtable.h"
 #include "psc_rpc/export.h"
 #include "psc_rpc/rpc.h"
-#include "psc_rpc/rpclog.h"
-#include "psc_util/threadtable.h"
-
-// This stuff needs to be extracted
-//#include "zestThread.h"
-//#include "zestRpcIO.h"
-//#include "zestRpcMDS.h"
-//struct psc_thread *zestionRPCMDSThreads;
-//struct psc_thread *zestionRPCIOThreads;
+#include "psc_rpc/service.h"
+#include "psc_rpc/rpcpsc_util/log.h"
 
 static int test_req_buffer_pressure = 0;
 
@@ -26,6 +19,8 @@ static int pscrpc_server_post_idle_rqbds (struct pscrpc_service *svc);
 
 static PSCLIST_HEAD (pscrpc_all_services);
 static spinlock_t pscrpc_all_services_lock = SPIN_LOCK_UNLOCKED;
+
+PSCLIST_HEAD (pscrpc_svh_list);
 
 static char *
 pscrpc_alloc_request_buffer (int size)
@@ -55,10 +50,11 @@ pscrpc_alloc_rqbd (struct pscrpc_service *svc)
         if (rqbd == NULL)
                 return (NULL);
 
-        rqbd->rqbd_service = svc;
-        rqbd->rqbd_refcount = 0;
+        rqbd->rqbd_service       = svc;
+        rqbd->rqbd_refcount      = 0;
         rqbd->rqbd_cbid.cbid_fn  = zrequest_in_callback;
         rqbd->rqbd_cbid.cbid_arg = rqbd;
+
         INIT_PSCLIST_HEAD(&rqbd->rqbd_reqs);
         rqbd->rqbd_buffer = pscrpc_alloc_request_buffer(svc->srv_buf_size);
 
@@ -168,10 +164,10 @@ static void
 pscrpc_server_free_request(struct pscrpc_request *req)
 {
         struct pscrpc_request_buffer_desc *rqbd = req->rq_rqbd;
-        struct pscrpc_service             *svc = rqbd->rqbd_service;
+        struct pscrpc_service             *svc  = rqbd->rqbd_service;
+        struct psclist_head               *tmp, *nxt;
         int                                refcount;
-        struct psclist_head                  *tmp;
-        struct psclist_head                  *nxt;
+
 
         spin_lock(&svc->srv_lock);
 
@@ -199,7 +195,7 @@ pscrpc_server_free_request(struct pscrpc_request *req)
 			 * I've got the service lock */
                         psclist_for_each(tmp, &rqbd->rqbd_reqs) {
                                 req = psclist_entry(tmp, struct pscrpc_request,
-                                                 rq_list_entry);
+						    rq_list_entry);
                                 /* Track the highest culled req seq */
                                 if (req->rq_history_seq >
                                     svc->srv_request_max_cull_seq)
@@ -238,7 +234,7 @@ pscrpc_server_free_request(struct pscrpc_request *req)
 
 static int
 pscrpc_server_handle_request(struct pscrpc_service *svc,
-                             struct psc_thread *thread)
+                             struct psc_thread     *thread)
 {
         struct pscrpc_request *request;
         struct timeval         work_start;
@@ -250,18 +246,21 @@ pscrpc_server_handle_request(struct pscrpc_service *svc,
         LASSERT(svc);
 
         spin_lock(&svc->srv_lock);
+
         if (psclist_empty (&svc->srv_request_queue) ||
             (svc->srv_n_difficult_replies != 0 &&
              svc->srv_n_active_reqs >= (svc->srv_nthreads - 1))) {
                 /* If all the other threads are handling requests, I must
 		 * remain free to handle any 'difficult' reply that might
-		 * block them */
+		 * block them 
+		 */
                 spin_unlock(&svc->srv_lock);
                 RETURN(0);
         }
 
         request = psclist_entry (psclist_next(&svc->srv_request_queue),
                               struct pscrpc_request, rq_list_entry);
+
         psclist_del(&request->rq_list_entry);
         svc->srv_n_queued_reqs--;
         svc->srv_n_active_reqs++;
@@ -274,11 +273,11 @@ pscrpc_server_handle_request(struct pscrpc_service *svc,
 
 #if WETRACKSTATSSOMEDAY
         if (svc->srv_stats != NULL) {
-                lprocfs_counter_add(svc->srv_stats, ZESTRPC_REQWAIT_CNTR,
+                lprocfs_counter_add(svc->srv_stats, PTLRPC_REQWAIT_CNTR,
                                     timediff);
-                lprocfs_counter_add(svc->srv_stats, ZESTRPC_REQQDEPTH_CNTR,
+                lprocfs_counter_add(svc->srv_stats, PTLRPC_REQQDEPTH_CNTR,
                                     svc->srv_n_queued_reqs);
-                lprocfs_counter_add(svc->srv_stats, ZESTRPC_REQACTIVE_CNTR,
+                lprocfs_counter_add(svc->srv_stats, PTLRPC_REQACTIVE_CNTR,
                                     svc->srv_n_active_reqs);
         }
 #endif
@@ -305,9 +304,8 @@ pscrpc_server_handle_request(struct pscrpc_service *svc,
         psc_info("got req "LPD64, request->rq_xid);
 
         request->rq_svc_thread = thread;
-
 	request->rq_conn = pscrpc_get_connection(request->rq_peer,
-						  request->rq_self, NULL);
+						 request->rq_self, NULL);
 	if (request->rq_conn == NULL) {
                 CERROR("null connection struct :(\n");
                 return -ENOTCONN;
@@ -325,7 +323,7 @@ pscrpc_server_handle_request(struct pscrpc_service *svc,
 			psc_fatal("Couldn't allocate export");
 		/*
 		 * init and associate the connection and export structs
-		 *  see zclass_new_export() for more detail
+		 *  see pscrpc_new_export() for more detail
 		 */
 		LOCK_INIT(&exp->exp_lock);
 		atomic_set(&exp->exp_refcount, 2);
@@ -333,7 +331,7 @@ pscrpc_server_handle_request(struct pscrpc_service *svc,
 		exp->exp_connection = request->rq_conn;
 		request->rq_conn->c_exp = exp;
 	}
-	zclass_export_rpc_get(request->rq_conn->c_exp);
+	pscrpc_export_rpc_get(request->rq_conn->c_exp);
 	request->rq_export = request->rq_conn->c_exp;
 
         /* Discard requests queued for longer than my timeout.  If the
@@ -350,32 +348,32 @@ pscrpc_server_handle_request(struct pscrpc_service *svc,
         request->rq_phase = ZRQ_PHASE_INTERPRET;
 
         psc_info("Handling RPC peer+ref:pid:xid:nid:opc "
-	      "%s+%d:%d:"LPU64":%d",
-	      libcfs_id2str(request->rq_conn->c_peer),
-	      atomic_read(&request->rq_export->exp_refcount),
-	      request->rq_reqmsg->status,
-	      request->rq_xid,
-	      request->rq_reqmsg->opc);
+		 "%s+%d:%d:"LPU64":%d",
+		 libcfs_id2str(request->rq_conn->c_peer),
+		 atomic_read(&request->rq_export->exp_refcount),
+		 request->rq_reqmsg->status,
+		 request->rq_xid,
+		 request->rq_reqmsg->opc);
 
         rc = svc->srv_handler(request);
 
         request->rq_phase = ZRQ_PHASE_COMPLETE;
 
         psc_info("Handled RPC peer+ref:pid:xid:nid:opc "
-	      "%s+%d:%d:"LPU64":%d",
-	      libcfs_id2str(request->rq_conn->c_peer),
-	      atomic_read(&request->rq_export->exp_refcount),
-	      request->rq_reqmsg->status,
-	      request->rq_xid,
-	      request->rq_reqmsg->opc);
-
+		 "%s+%d:%d:"LPU64":%d",
+		 libcfs_id2str(request->rq_conn->c_peer),
+		 atomic_read(&request->rq_export->exp_refcount),
+		 request->rq_reqmsg->status,
+		 request->rq_xid,
+		 request->rq_reqmsg->opc);
+	
  put_rpc_export:
-	zclass_export_rpc_put(request->rq_export);
+	pscrpc_export_rpc_put(request->rq_export);
 	request->rq_export = NULL;
 
  out:
 	if (request->rq_export != NULL)
-                zclass_export_put(request->rq_export);
+                pscrpc_export_put(request->rq_export);
 
         do_gettimeofday(&work_end);
 
@@ -409,7 +407,7 @@ pscrpc_server_handle_request(struct pscrpc_service *svc,
                 if (opc > 0) {
                         LASSERT(opc < LUSTRE_MAX_OPCODES);
                         lprocfs_counter_add(svc->srv_stats,
-                                            opc + ZESTRPC_LAST_CNTR,
+                                            opc + PTLRPC_LAST_CNTR,
                                             timediff);
                 }
         }
@@ -505,7 +503,7 @@ pscrpc_server_handle_reply (struct pscrpc_service *svc)
                 svc->srv_n_difficult_replies--;
                 spin_unlock(&svc->srv_lock);
 
-                zclass_export_put (exp);
+                pscrpc_export_put (exp);
                 rs->rs_export = NULL;
                 pscrpc_rs_decref (rs);
                 atomic_dec (&svc->srv_outstanding_replies);
@@ -587,7 +585,7 @@ pscrpc_check_rqbd_pool(struct pscrpc_service *svc)
         if (avail <= low_water)
                 pscrpc_grow_req_bufs(svc);
 
-        //lprocfs_counter_add(svc->srv_stats, ZESTRPC_REQBUF_AVAIL_CNTR, avail);
+        //lprocfs_counter_add(svc->srv_stats, PTLRPC_REQBUF_AVAIL_CNTR, avail);
 	//EXIT;
 }
 
@@ -601,32 +599,20 @@ pscrpc_retry_rqbds(void *arg)
 }
 
 
-#define pscrpc_main pscrpc_main
 static void * pscrpc_main(void *arg)
 {
-        struct psc_thread     *thread = arg;
-        struct pscrpc_service    *svc;
+        struct psc_thread         *thread = arg;
+        struct pscrpc_service     *svc    = thread->pscthr_private;
         struct pscrpc_reply_state *rs;
-	int *run;
-        //struct lc_watchdog        *watchdog;
+	int   *run;
 
         int rc = 0;
         ENTRY;
 
-	psc_dbg("thread %p pscthr_type is %d", thread,
-	     thread->pscthr_type);
-	switch (thread->pscthr_type) {
-	case ZTHRT_RPCMDS:
-		svc = thread->pscthr_rpcmdsthr.zrm_svc;
-		break;
-	case ZTHRT_RPCIO:
-		svc = thread->pscthr_rpciothr.zri_svc;
-		break;
-	default:
-		psc_fatal("unknown thread type; type=%d", thread->pscthr_type);
-	}
-
 	psc_assert(svc != NULL);
+
+	psc_dbg("thread %p pscthr_type is %d", thread,
+		thread->pscthr_type);
 
         if (svc->srv_init != NULL) {
                 rc = svc->srv_init(thread);
@@ -644,9 +630,8 @@ static void * pscrpc_main(void *arg)
 	wake_up(&svc->srv_free_rs_waitq);
 
 	CDEBUG(D_NET, "service thread %zu started\n", thread->pscthr_id);
-
-	run = (svc == zestRpcMdsSvc ? &thread->pscthr_rpcmdsthr.zrm_run :
-	    &thread->pscthr_rpciothr.zri_run);
+	
+	run = &thread->pscthr_run;
 
 	/* XXX maintain a list of all managed devices: insert here */
 	while (*run  ||
@@ -687,12 +672,9 @@ static void * pscrpc_main(void *arg)
 				  svc->srv_n_active_reqs <
 				  (svc->srv_nthreads - 1))),
 				&lwi, NULL);
-		//				&lwi, &svc->srv_lock);
-
-		//lc_watchdog_touch(watchdog);
+		//		&lwi, &svc->srv_lock);
 
 		pscrpc_check_rqbd_pool(svc);
-
 		/*
 		 * this has to be mod'ed to support the io threads
 		 *  put'ing replies onto this list after they've sync'ed
@@ -966,8 +948,8 @@ pscrpc_init_svc(int nbufs, int bufsize, int max_req_size, int max_reply_size,
 
 	INIT_PSCLIST_HEAD(&service->srv_free_rs_list);
 
-	psc_waitq_init(&service->srv_free_rs_waitq);
-	psc_waitq_init(&service->srv_waitq);
+	psc_waitq__init(&service->srv_free_rs_waitq);
+	psc_waitq__init(&service->srv_waitq);
 
 	INIT_PSCLIST_HEAD(&service->srv_threads);
 
@@ -1002,72 +984,33 @@ pscrpc_init_svc(int nbufs, int bufsize, int max_req_size, int max_reply_size,
         return NULL;
 }
 
-
-#define ZRPCMDSSVCNAME "zrpc_mds"
-#define ZRPCIOSVCNAME  "zrpc_io"
-
-
+/** 
+ * rpcthr_spawn - create a portal rpc service.  
+ * @svh:  an initialized service handle structure which holds the service's relevant information.
+ */
 void
-zrpcthr_spawn((int)rpc_func(struct pscrpc_request *), )
+pscrpc_thread_spawn(pscrpc_svc_handle_t *svh) {
 {
-	struct psc_thread **threads, *thr;
-	struct zestion_rpciothr *zri;
-	struct pscrpc_service *zsvc;
-	int    i, nthreads;
+	int i;
+	
+	svh->svh_service = pscrpc_init_svc(svh->svh_nbufs,
+					   svh->svh_bufsz,
+					   svh->svh_reqsz,
+					   svh->svh_repsz,
+					   svh->svh_req_portal, 
+					   svh->svh_rep_portal,
+					   svh->svh_svc_name,
+					   svh->svh_nthreads,
+					   svh->svh_handler);
+	
+	psc_assert(svh->svh_service);
 
-	psc_dbg("type=%d", type);
+	/* Track the service handle */
+	psclist_add(&svh->svh_chain, &pscrpc_svh_list);
+       
+	svh->svh_threads = PSCALLOC((sizeof(struct psc_thread)) 
+				    * svh->svh_nthreads);
 
-	psc_assert(type == ZTHRT_RPCIO ||
-		    type == ZTHRT_RPCMDS);
-
-	if (type == ZTHRT_RPCIO) {
-		threads = &zestionRPCIOThreads;
-		nthreads = NUM_RPCIO_THREADS;
-		zestRpcIoSvc = pscrpc_init_svc(RPCIO_NBUFS,
-						RPCIO_BUFSIZE,
-						RPCIO_MAXREQSIZE,
-						RPCIO_MAXREPSIZE,
-						RPCIO_REQUEST_PORTAL,
-						RPCIO_REPLY_PORTAL,
-						RPCIO_SVCNAME,
-						nthreads,
-						zrpc_io_handler);
-		psc_assert(zestRpcIoSvc);
-		zsvc = zestRpcIoSvc;
-	} else {
-		threads = &zestionRPCMDSThreads;
-		nthreads = NUM_RPCMDS_THREADS;
-		zestRpcMdsSvc = pscrpc_init_svc(RPCMDS_NBUFS,
-						 RPCMDS_BUFSIZE,
-						 RPCMDS_MAXREQSIZE,
-						 RPCMDS_MAXREPSIZE,
-						 RPCMDS_REQUEST_PORTAL,
-						 RPCMDS_REPLY_PORTAL,
-						 RPCMDS_SVCNAME,
-						 nthreads,
-						 zrpc_mds_handler);
-		psc_assert(zestRpcMdsSvc);
-		zsvc = zestRpcMdsSvc;
-	}
-
-	*threads = PSCALLOC(sizeof(**threads) * nthreads);
-
-	for (i=0, thr = *threads; i < nthreads; i++, thr++) {
-		switch (type) {
-		case ZTHRT_RPCMDS:
-			thr->pscthr_rpcmdsthr.zrm_svc = zsvc;
-			thr->pscthr_rpcmdsthr.zrm_run = 1;
-			break;
-		case ZTHRT_RPCIO:
-			zri = &thr->pscthr_rpciothr;
-			zri->zri_svc = zsvc;
-			zri->zri_run = 1;
-
-			iostats_init(&zri->zri_st_netperf,
-			    "rpcio-%02d", i);
-			break;
-		}
-
-		pscthr_init(thr, type, pscrpc_main, i);
-	}
+	for (i=0, thr = svh->svh_threads; i < svh->svh_nthreads; i++, thr++)
+		pscthr_init(thr, svh->svh_type, pscrpc_main, i);
 }

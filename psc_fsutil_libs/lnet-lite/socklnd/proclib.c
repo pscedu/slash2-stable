@@ -40,8 +40,8 @@
 #include <pqtimer.h>
 #include <dispatch.h>
 
-#ifdef ZEST_LNET
-#include "zestThread.h"
+#ifdef PSC_LNET
+#include "psc_util/thread.h"
 #endif
 
 /* the following functions are stubs to satisfy the nal definition
@@ -82,11 +82,11 @@ static void check_stopping(void *z)
  */
 void *nal_thread(void *z)
 {
-#ifndef ZEST_LNET        
+#ifndef PSC_LNET        
     bridge b = (bridge) z;
 #else
-    struct zestion_thread *zthr = (struct zestion_thread *)z;
-    bridge b = (bridge) zthr->zthr_lnetthr.bridge;
+    struct psc_thread *thr = (struct psc_thread *)z;
+    bridge b = (bridge) thr->pscthr_lnetthr.bridge;
 #endif
     procbridge p=b->local;
     int rc;

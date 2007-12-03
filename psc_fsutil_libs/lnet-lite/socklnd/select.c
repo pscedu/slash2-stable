@@ -51,12 +51,12 @@
 #define __FDS_BITS(set) (set)->fds_bits
 #endif
 
-#include "zestLock.h"
+#include "psc_util/lock.h"
 
 static struct timeval beginning_of_epoch;
 //static io_handler io_handlers;
 
-zest_spinlock_t ztcplnd_lock = LOCK_INITIALIZER;
+psc_spinlock_t psc_tcplnd_lock = LOCK_INITIALIZER;
 /* Function: now
  *
  * Return: the current time in canonical units: a 64 bit number
@@ -330,7 +330,7 @@ void select_timer_block(when until, void **arg)
     int max, nready, nexec;
     int fd_handling;
 
-    ztrace("This select");
+    psc_trace("This select");
 again:
     if (until) {
         when interval;
@@ -427,7 +427,7 @@ void select_timer_block(when until, io_handler *ioh)
     struct timeval *timeout_pointer;
     int max, nready;
 
-    ztrace("This select");
+    psc_trace("This select");
 again:
     if (until) {
         when interval;

@@ -4,12 +4,12 @@
  * vim:expandtab:shiftwidth=8:tabstop=8:      
  */                                                                   
 int
-zest_sock_write (int sock, void *buffer, int nob, int timeout);
+psc_sock_write (int sock, void *buffer, int nob, int timeout);
 
 /*
  * no comments found for this procedure
  */
 int
-zest_sock_read (int sock, void *buffer, int nob, int timeout);
+psc_sock_read (int sock, void *buffer, int nob, int timeout);
 
 /*<<<<<<<<<<   This is end of the auto-generated output from fillproto. */

@@ -7,31 +7,21 @@
 #include <unistd.h>
 
 #include "psc_util/threadtable.h"
-#include "zestion.h"
 
-struct dynarray pscThreads;
-
-/* Must stay sync'd with ZTHRT_*. */
-const char *zestionThreadTypeNames[] = {
-	"zctlthr",
-	"ziothr%d",
-	"zsyncqthr",
-	"zsyncwthr",
-	"zprtythr%d",
-	"zpgenthr%d",
-	"zrpciothr%d",
-	"zrpcmdsthr%d",
-	"ztcplndthr%d",
-	"ztintvthr",
-	"ztiosthr"
-};
+/* The app must supply threadTypeNames and threadTypes. 
+ *  via the app_thread.d 
+ */ 
+#include "app_thread.h"
+extern const char *threadTypeNames[];
+/*
+ * Keep track of the threads here
+ */
+struct dynarray    pscThreads;
 
 void *
 pscthr_begin(void *arg)
 {
 	struct psc_thread *thr = arg;
-	//usleep(1000000);
-	/* Wait until pscthr_init() has finished initializing us. */
 	spinlock(&thr->pscthr_lock);
 	freelock(&thr->pscthr_lock);
 	return (thr->pscthr_start(thr));
@@ -48,8 +38,8 @@ pscthr_begin(void *arg)
  * @namearg: number of `type' threads thus far.
  */
 void
-pscthr_init(struct psc_thread *thr, int type, void *(*start)(void *),
-    int namearg)
+pscthr_init(struct psc_thread *thr, int type, 
+	    void *(*start)(void *), int namearg)
 {
 	int error, n;
 
@@ -63,14 +53,14 @@ pscthr_init(struct psc_thread *thr, int type, void *(*start)(void *),
 	spinlock(&thr->pscthr_lock);
 
 	snprintf(thr->pscthr_name, sizeof(thr->pscthr_name),
-		 zestionThreadTypeNames[type], namearg);
+		 threadTypeNames[type], namearg);
 
 	for (n = 0; n < ZNSUBSYS; n++)
 		thr->pscthr_log_levels[n] = psc_getloglevel();
 
-	thr->pscthr_type = type;
-	thr->pscthr_id = dynarray_len(&pscThreads); /* XXX lockme? */
-	thr->pscthr_start  = start;
+	thr->pscthr_type  = type;
+	thr->pscthr_id    = dynarray_len(&pscThreads); /* XXX lockme? */
+	thr->pscthr_start = start;
 
 	if (start)
 		if ((error = pthread_create(&thr->pscthr_pthread, NULL,
@@ -80,16 +70,17 @@ pscthr_init(struct psc_thread *thr, int type, void *(*start)(void *),
 	thr->pscthr_hashid = (u64)thr->pscthr_pthread;
 
 	psc_threadtbl_put(thr);
+
 	if (dynarray_add(&pscThreads, thr) == -1)
 		psc_fatal("dynarray_add");
 
 	freelock(&thr->pscthr_lock);
 
 	psc_info("spawned %s [thread %zu] [id %"ZLPX64"] [pthrid %lx] thr=%p"
-	      " thr->type %d, passed type %d",
-	      thr->pscthr_name, thr->pscthr_id,
-	      thr->pscthr_hashid, thr->pscthr_pthread,
-	      thr, thr->pscthr_type, type);
+		 " thr->type %d, passed type %d",
+		 thr->pscthr_name, thr->pscthr_id,
+		 thr->pscthr_hashid, thr->pscthr_pthread,
+		 thr, thr->pscthr_type, type);
 }
 
 /*

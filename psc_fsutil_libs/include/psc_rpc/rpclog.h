@@ -3,11 +3,11 @@
 #ifndef HAVE_ZRPCLOG_H
 #define HAVE_ZRPCLOG_H 1
 
-#include "zestLog.h"
-#include "zestRpc.h"
+#include "psc_util/log.h"
+#include "psc_rpc/rpc.h"
 
 static inline const char *
-zestrpc_rqphase2str(struct zestrpc_request *req)
+pscrpc_rqphase2str(struct pscrpc_request *req)
 {
         switch (req->rq_phase) {
         case ZRQ_PHASE_NEW:
@@ -29,7 +29,7 @@ zestrpc_rqphase2str(struct zestrpc_request *req)
 #define FLAG(field, str) (field ? str : "")
 
 #define DEBUG_REQ_FLAGS(req)                                                \
-        zestrpc_rqphase2str(req),                                            \
+        pscrpc_rqphase2str(req),                                            \
 		FLAG(req->rq_intr, "I"), FLAG(req->rq_replied, "R"),        \
 		FLAG(req->rq_err, "E"),                                     \
 		FLAG(req->rq_timedout, "X") /* eXpired */,                  \
@@ -42,7 +42,7 @@ zestrpc_rqphase2str(struct zestrpc_request *req)
 
 #define DEBUG_REQ(level, req, fmt, ...)					\
 	do {								\
-		_zlog(__FILE__, __func__, __LINE__,			\
+		_psclog(__FILE__, __func__, __LINE__,			\
 		      ZS_RPC, level, 0,					\
 		      " req@%p x"LPD64"/t"LPD64" c"LPX64" o%d->@%s:%d "	\
 		      "lens %d/%d ref %d res %d ret %d fl "REQ_FLAGS_FMT \
@@ -59,8 +59,8 @@ zestrpc_rqphase2str(struct zestrpc_request *req)
 		      req->rq_reqlen, req->rq_replen, atomic_read(&req->rq_refcount), \
 		      req->rq_resend,					\
 		      atomic_read(&req->rq_retries), DEBUG_REQ_FLAGS(req), \
-		      req->rq_reqmsg ? zest_msg_get_flags(req->rq_reqmsg) : 0, \
-		      req->rq_repmsg ? zest_msg_get_flags(req->rq_repmsg) : 0, \
+		      req->rq_reqmsg ? psc_msg_get_flags(req->rq_reqmsg) : 0, \
+		      req->rq_repmsg ? psc_msg_get_flags(req->rq_repmsg) : 0, \
 		      req->rq_repmsg ? (u64)req->rq_repmsg->handle.cookie : 0xfefefefe,	\
 		      req->rq_status,					\
 		      req->rq_repmsg ? req->rq_repmsg->status : 0, req->rq_timeout, \
@@ -70,7 +70,7 @@ zestrpc_rqphase2str(struct zestrpc_request *req)
 
 #define DEBUG_EXP(level, exp, fmt, ...)                                      \
 do {                                                                         \
-        _zlog(__FILE__, __func__, __LINE__,                                  \
+        _psclog(__FILE__, __func__, __LINE__,                                  \
 	      ZS_RPC, level, 0,					     \
 	      " exp@%p h"LPX64" conn@%p p:%s ref %d cnt %d f%d :: "fmt,      \
 	      exp, exp->exp_handle.cookie, exp->exp_connection,              \

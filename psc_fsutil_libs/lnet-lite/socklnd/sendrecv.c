@@ -14,7 +14,7 @@
 #include <errno.h>
 
 int
-zest_sock_write (int sock, void *buffer, int nob, int timeout)
+psc_sock_write (int sock, void *buffer, int nob, int timeout)
 {
         int            rc;
         struct timeval tv, then;
@@ -82,7 +82,7 @@ zest_sock_write (int sock, void *buffer, int nob, int timeout)
 }
 
 int
-zest_sock_read (int sock, void *buffer, int nob, int timeout)
+psc_sock_read (int sock, void *buffer, int nob, int timeout)
 {
         int            rc;
         struct timeval tv, then;

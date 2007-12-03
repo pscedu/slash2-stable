@@ -57,11 +57,11 @@
 # error "This LND requires a multi-threaded runtime"
 #endif
 
-#ifdef ZEST_LNET
-#include "zestThread.h"
+#ifdef PSC_LNET
+#include "psc_util/thread.h"
 #endif
 
-#include "zestAlloc.h"
+#include "psc_util/alloc.h"
 
 /* XXX CFS workaround, to give a chance to let nal thread wake up
  * from waiting in select
@@ -173,10 +173,10 @@ procbridge_startup (lnet_ni_t *ni)
     lnet_ni_t *tni=ni, *oni=ni;
     lnet_nid_t onid=ni->ni_nid;
 
-#ifdef ZEST_LNET
-    struct zestion_thread *zthr = ZALLOC(sizeof(*zthr)*oni->ni_ninterfaces);   
+#ifdef PSC_LNET
+    struct psc_thread *thr = PSCALLOC(sizeof(*thr)*oni->ni_ninterfaces);   
 
-    oni->ni_bonded_interfaces = ZALLOC(sizeof(oni)*oni->ni_ninterfaces);
+    oni->ni_bonded_interfaces = PSCALLOC(sizeof(oni)*oni->ni_ninterfaces);
 #endif
     
     LASSERT (tcpnal_instances < MAXTCPNALS);
@@ -185,7 +185,7 @@ procbridge_startup (lnet_ni_t *ni)
     init_unix_timer();
 
     for (i=0; oni->ni_interfaces[i]; i++) {  
-#ifdef ZEST_LNET            
+#ifdef PSC_LNET            
             LASSERT(!oni->ni_bonded_interfaces[i]);
 
             if (i) {
@@ -193,7 +193,7 @@ procbridge_startup (lnet_ni_t *ni)
                      *  pointer to the list of our sibling if's
                      */
                     LASSERT(&oni->ni_bonded_interfaces[i]);
-                    ni = oni->ni_bonded_interfaces[i] = ZALLOC(sizeof(*oni));
+                    ni = oni->ni_bonded_interfaces[i] = PSCALLOC(sizeof(*oni));
                     ni->ni_bonded_interfaces = oni->ni_bonded_interfaces;
                     ni->ni_interfaces[0] = oni->ni_interfaces[i];
                     ni->ni_ninterfaces = oni->ni_ninterfaces;
@@ -210,13 +210,13 @@ procbridge_startup (lnet_ni_t *ni)
 
 #endif                   
             procbridge_getnid(ni);
-#ifdef ZEST_LNET
+#ifdef PSC_LNET
             /* The credit settings here are pretty irrelevent.  Userspace tcplnd has no
              * tx descriptor pool to exhaust and does a blocking send; that's the real
              * limit on send concurrency. */
             if (i) { 
                     LNET_LOCK();
-                    zlist_add_tail(&ni->ni_list, &the_lnet.ln_nis);
+                    psclist_add_tail(&ni->ni_list, &the_lnet.ln_nis);
                     LNET_UNLOCK();
             }
 #endif
@@ -259,7 +259,7 @@ procbridge_startup (lnet_ni_t *ni)
             __global_procbridge = p;
 #endif
             
-#ifndef ZEST_LNET
+#ifndef PSC_LNET
             /* create nal thread */
             rc = pthread_create(&p->t, NULL, nal_thread, b);
             if (rc != 0) {
@@ -267,9 +267,9 @@ procbridge_startup (lnet_ni_t *ni)
                     return -ESRCH;
             }
 #else
-            zthr->zthr_lnetthr.bridge = (void *)b;
-            zthr_init(zthr, ZTHRT_LNET, nal_thread, (tcpnal_instances-1));
-            zthr++;
+            thr->pscthr_lnetthr.bridge = (void *)b;
+            pscthr_init(thr, ZTHRT_LNET, nal_thread, (tcpnal_instances-1));
+            thr++;
 #endif
     }
 

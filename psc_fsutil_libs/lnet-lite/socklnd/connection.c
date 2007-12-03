@@ -443,8 +443,8 @@ tcpnal_hello_handle_v1(int sock, lnet_process_id_t *nidpid,
         id.nid = nidpid->nid;
         //LNetGetId(1, &id);        
         
-        if (zest_sock_read (sock, buf, len, HELLO_TIMEOUT)) {
-                CERROR("zest_sock_read() from %d failed: %s\n",
+        if (psc_sock_read (sock, buf, len, HELLO_TIMEOUT)) {
+                CERROR("psc_sock_read() from %d failed: %s\n",
                        sock, strerror(errno));
                 return -1;
         }
@@ -483,8 +483,8 @@ tcpnal_hello_handle_v1(int sock, lnet_process_id_t *nidpid,
         hmv->version_major = LNET_PROTO_TCP_VERSION_MAJOR;
         hmv->version_minor = LNET_PROTO_TCP_VERSION_MINOR;
         
-        if (zest_sock_write (sock, buf, len, HELLO_TIMEOUT)) {
-                CERROR("zest_sock_write() to %d of hello reply failed: %s\n",
+        if (psc_sock_write (sock, buf, len, HELLO_TIMEOUT)) {
+                CERROR("psc_sock_write() to %d of hello reply failed: %s\n",
                        sock, strerror(errno));
                 return -1;
         }
@@ -533,8 +533,8 @@ tcpnal_hello_handle_v2(int sock, lnet_process_id_t *nidpid,
         id.nid = nidpid->nid;
         //LNetGetId(1, &id);
 
-        if (zest_sock_read (sock, buf, len, HELLO_TIMEOUT)) {
-                CERROR("zest_sock_read() from %d failed: %s\n",
+        if (psc_sock_read (sock, buf, len, HELLO_TIMEOUT)) {
+                CERROR("psc_sock_read() from %d failed: %s\n",
                        sock, strerror(errno));
                 return -1;
         }        
@@ -571,7 +571,7 @@ tcpnal_hello_handle_v2(int sock, lnet_process_id_t *nidpid,
         if (hello.kshm_nips != 0) {
                 int kshm_ips[hello.kshm_nips], i;
 
-                if (zest_sock_read(sock, &kshm_ips,
+                if (psc_sock_read(sock, &kshm_ips,
                                    hello.kshm_nips * sizeof(__u32), 
                                    HELLO_TIMEOUT)) { 
                         CERROR ("Error reading IPs from nid %s\n",
@@ -608,9 +608,9 @@ tcpnal_hello_handle_v2(int sock, lnet_process_id_t *nidpid,
         reply.msg.hello.incarnation = incarnation;
         reply.msg.hello.type        = tcpnal_invert_type(hello.kshm_ctype);
 
-        if (zest_sock_write (sock, (void *)&reply, 
+        if (psc_sock_write (sock, (void *)&reply, 
                              (int)sizeof(lnet_hdr_t), HELLO_TIMEOUT)) {
-                CERROR("zest_sock_write() to %d of hello reply failed: %s\n",
+                CERROR("psc_sock_write() to %d of hello reply failed: %s\n",
                        sock, strerror(errno));
                 return -1;
         }
@@ -1023,8 +1023,8 @@ manager init_connections(int (*input)(void *, void *), void *a)
     pthread_mutex_init(&m->conn_lock, 0);
 
     if (tcpnal_server) {
-#ifndef ZEST_LNET
-            zfatalx("tcpnal_server only allowed on server");
+#ifndef PSC_LNET
+            psc_fatalx("tcpnal_server only allowed on server");
 #else
             if (bind_socket(m, tcpnal_acceptor_port + 
                             (portInc ? b->tid : 0)))

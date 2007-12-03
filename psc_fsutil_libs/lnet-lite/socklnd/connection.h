@@ -8,11 +8,11 @@
 
 #include <table.h>
 #include <procbridge.h>
-#include "zestListCache.h"
+#include "psc_ds/listcache.c"
 
 typedef struct manager {
     table           connections;
-        zlist_cache_t  *conn_socks;      
+        psclist_cache_t  *conn_socks;      
     pthread_mutex_t conn_lock; /* protect connections table */
     int             bound;
     io_handler      bound_handler;
