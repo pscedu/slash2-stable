@@ -66,7 +66,7 @@ init_hash_entry(struct hash_entry *hentry, u64 *id, void *private)
  * get_hash_entry	-   locate an address in the hash table
  * @t:		hash table pointer
  * @id:		identifier used to get hash bucket
- * @comp:	value to which to compare to differentiate entries with the same ID.
+ * @comp:	value to compare to differentiate entries with same ID.
  */
 struct hash_entry *
 get_hash_entry(const struct hash_table *h, u64 id, const void *comp)
