@@ -10,4 +10,4 @@ YFLAGS+=	-d -o $@
 # this file has been included, e.g. for a ${LIBRARY}.
 TARGET?=	${PROG}
 
-include ${PROOTDIR}/../mk/main.mk
+include ${MAINMK}

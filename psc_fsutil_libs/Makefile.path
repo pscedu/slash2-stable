@@ -1,3 +1,5 @@
 # $Id$
 
+ROOTDIR=${PROOTDIR}/../
 PFLMK=${PROOTDIR}/mk/main.mk
+include ${ROOTDIR}/Makefile.path
