@@ -1,20 +1,13 @@
-OBJS = $(patsubst %.c,%.o,$(filter %.c,${SRCS}))
-OBJS+= $(patsubst %.y,%.o,$(filter %.y,${SRCS}))
-OBJS+= $(patsubst %.l,%.o,$(filter %.l,${SRCS}))
+# $Id$
 
-_YACCINTM = $(patsubst %.y,%.c,$(filter %.y,${SRCS}))
-_LEXINTM  = $(patsubst %.l,%.c,$(filter %.l,${SRCS}))
+include ${PROOTDIR}/mk/local.mk
 
-.y.c:
-	${YACC} ${YFLAGS} $<
+INCLUDES+=	-I${PROOTDIR}/include -I.
+CFLAGS+=	-Wall -W -g ${INCLUDES} ${DEFINES}
+YFLAGS+=	-d -o $@
 
-.c.o:
-	${CC} ${CFLAGS} -c $< -o $@
+# Default to build a binary, but may be overridden after
+# this file has been included, e.g. for a ${LIBRARY}.
+TARGET?=	${PROG}
 
-${PROG}: ${OBJS}
-	${CC} -o $@ ${OBJS} ${LDFLAGS}
-
-lib:	${LIBRARY}
-
-${LIBRARY}:	${OBJS}
-	${AR} ${ARFLAGS} $@ $^
+include ${PROOTDIR}/../mk/main.mk
