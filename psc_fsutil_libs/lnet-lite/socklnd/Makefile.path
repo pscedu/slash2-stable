@@ -1,0 +1,4 @@
+# $Id$
+
+LLROOTDIR:=${LLROOTDIR}../
+include ${LLROOTDIR}/Makefile.path

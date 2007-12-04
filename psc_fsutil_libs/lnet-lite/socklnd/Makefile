@@ -1,6 +1,6 @@
 # $Id$
 
-include ../Makefile.path
+include Makefile.path
 
 LIBRARY=	${LNET_BASE}/lib/libsocknal.a
 SRCS=		connection.c

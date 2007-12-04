@@ -1,5 +1,6 @@
 # $Id$
 
+LLROOTDIR=.
 include Makefile.path
 
 # We can't specify SUBDIRS here; it instead must be specified on
