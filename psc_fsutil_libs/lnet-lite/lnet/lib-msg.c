@@ -25,6 +25,7 @@
 #define DEBUG_SUBSYSTEM S_LNET
 
 #include <lnet/lib-lnet.h>
+#include "psc_util/cdefs.h"
 
 void
 lnet_enq_event_locked (lnet_eq_t *eq, lnet_event_t *ev)
@@ -123,7 +124,7 @@ lnet_complete_msg_locked(lnet_msg_t *msg)
 
 
 void
-lnet_finalize (lnet_ni_t *ni, lnet_msg_t *msg, int status)
+lnet_finalize (__unusedx lnet_ni_t *ni, lnet_msg_t *msg, int status)
 {
 #ifdef __KERNEL__
         int                i;

@@ -17,4 +17,5 @@ INCLUDES+=	-I${LNET_BASE}/include
 
 TARGET=		${LIBRARY}
 
+#CFLAGS+=	-O2
 include ${MAINMK}

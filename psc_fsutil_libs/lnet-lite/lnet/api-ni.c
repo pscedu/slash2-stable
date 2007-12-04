@@ -23,6 +23,7 @@
 #include <lnet/lib-lnet.h>
 
 #include "psc_util/lock.h"
+#include "psc_util/cdefs.h"
 
 #ifdef __KERNEL__
 #define D_LNI D_CONSOLE
@@ -327,8 +328,8 @@ lnet_find_lnd_by_type (int type)
         /* holding lnd mutex */
         list_for_each (tmp, &the_lnet.ln_lnds) {
                 lnd = list_entry(tmp, lnd_t, lnd_list);
-
-                if (lnd->lnd_type == type)
+                
+                if (lnd->lnd_type == (unsigned int)type)
                         return lnd;
         }
         
@@ -535,7 +536,7 @@ lnet_lookup_cookie (__u64 cookie, int type)
         struct list_head    *el;
         unsigned int         hash;
 
-        if ((cookie & (LNET_COOKIE_TYPES - 1)) != type)
+        if ((int)((cookie & (LNET_COOKIE_TYPES - 1))) != type)
                 return (NULL);
         
         hash = ((unsigned int)cookie) % the_lnet.ln_lh_hash_size;
@@ -849,7 +850,7 @@ lnet_islocalnid (lnet_nid_t nid)
 }
 
 int
-lnet_count_acceptor_nis (lnet_ni_t **first_ni)
+lnet_count_acceptor_nis (__unusedx lnet_ni_t **first_ni)
 {
         /* Return the # of NIs that need the acceptor.  Return the first one in
          * *first_ni so the acceptor can pass it connections "blind" to retain
@@ -1101,9 +1102,9 @@ lnet_startup_lndnis (void)
                        ni, libcfs_nid2str(ni->ni_nid),
                        ni->ni_peertxcredits, ni->ni_txcredits);
 
-                ztrace("Added LNI(%p) %s [%d/%d] \n",
-                       ni, libcfs_nid2str(ni->ni_nid),
-                       ni->ni_peertxcredits, ni->ni_txcredits);
+                psc_dbg("Added LNI(%p) %s [%d/%d] \n",
+                        ni, libcfs_nid2str(ni->ni_nid),
+                        ni->ni_peertxcredits, ni->ni_txcredits);
 
                 /* Handle nidstrings for network 0 just like this one */
                 if (the_lnet.ln_ptlcompat > 0) {
@@ -1142,7 +1143,7 @@ lnet_startup_lndnis (void)
 int
 LNetInit(void)
 {
-        extern lnd_t the_tcplnd;
+        __unusedx extern lnd_t the_tcplnd;
         int    rc;
 
         lnet_assert_wire_constants ();
@@ -1641,8 +1642,8 @@ lnet_ping (lnet_process_id_t id, int timeout_ms, lnet_process_id_t *ids, int n_i
                         cfs_restore_sigs(blocked);
 
                 CDEBUG(D_NET, "poll %d(%d %d)%s\n", rc2,
-                       (rc2 <= 0) ? -1 : event.type,
-                       (rc2 <= 0) ? -1 : event.status,
+                       (rc2 <= 0) ? -1 : (int)event.type,
+                       (rc2 <= 0) ? -1 : (int)event.status,
                        (rc2 > 0 && event.unlinked) ? " unlinked" : "");
 
                 LASSERT (rc2 != -EOVERFLOW);     /* can't miss anything */
@@ -1699,7 +1700,7 @@ lnet_ping (lnet_process_id_t id, int timeout_ms, lnet_process_id_t *ids, int n_i
                 __swab32s(&info->pi_version);
                 __swab32s(&info->pi_pid);
                 __swab32s(&info->pi_nnids);
-                for (i = 0; i < info->pi_nnids && i < n_ids; i++)
+                for (i = 0; i < (int)info->pi_nnids && i < (int)n_ids; i++)
                         __swab64s(&info->pi_nid[i]);
 
         } else if (info->pi_magic != LNET_PROTO_PING_MAGIC) {
@@ -1714,16 +1715,16 @@ lnet_ping (lnet_process_id_t id, int timeout_ms, lnet_process_id_t *ids, int n_i
                 goto out_1;
         }
 
-        if (nob < offsetof(lnet_ping_info_t, pi_nid[0])) {
+        if ((unsigned int)nob < offsetof(lnet_ping_info_t, pi_nid[0])) {
                 CERROR("%s: Short reply %d(%d min)\n", libcfs_id2str(id), 
                        nob, (int)offsetof(lnet_ping_info_t, pi_nid[0]));
                 goto out_1;
         }
 
-        if (info->pi_nnids < n_ids)
+        if ((int)info->pi_nnids < n_ids)
                 n_ids = info->pi_nnids;
 
-        if (nob < offsetof(lnet_ping_info_t, pi_nid[n_ids])) {
+        if ((unsigned int)nob < offsetof(lnet_ping_info_t, pi_nid[n_ids])) {
                 CERROR("%s: Short reply %d(%d expected)\n", libcfs_id2str(id), 
                        nob, (int)offsetof(lnet_ping_info_t, pi_nid[n_ids]));
                 goto out_1;

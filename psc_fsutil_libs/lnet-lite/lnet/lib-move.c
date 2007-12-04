@@ -25,6 +25,7 @@
 #define DEBUG_SUBSYSTEM S_LNET
 
 #include <lnet/lib-lnet.h>
+#include "psc_util/cdefs.h"
 
 static int local_nid_dist_zero = 1;
 CFS_MODULE_PARM(local_nid_dist_zero, "i", int, 0444,
@@ -283,7 +284,7 @@ fail_peer (lnet_nid_t nid, int outgoing)
                     nid == tp->tp_nid) {        /* fail this peer */
                         fail = 1;
 
-                        if (tp->tp_threshold != LNET_MD_THRESH_INF) {
+                        if ((int)tp->tp_threshold != LNET_MD_THRESH_INF) {
                                 tp->tp_threshold--;
                                 if (outgoing &&
                                     tp->tp_threshold == 0) {
@@ -402,7 +403,7 @@ lnet_extract_iov (int dst_niov, struct iovec *dst,
         niov = 1;
         for (;;) {
                 LASSERT (src_niov > 0);
-                LASSERT (niov <= dst_niov);
+                LASSERT (niov <= (unsigned int)dst_niov);
 
                 frag_len = src->iov_len - offset;
                 dst->iov_base = ((char *)src->iov_base) + offset;
@@ -424,16 +425,21 @@ lnet_extract_iov (int dst_niov, struct iovec *dst,
 }
 
 #ifndef __KERNEL__
+#if 0
 unsigned int
-lnet_kiov_nob (unsigned int niov, lnet_kiov_t *kiov)
+lnet_kiov_nob (__unusedx unsigned int niov, __unusedx lnet_kiov_t *kiov)
 {
         LASSERT (0);
         return (0);
 }
 
 void
-lnet_copy_kiov2kiov (unsigned int ndkiov, lnet_kiov_t *dkiov, unsigned int doffset,
-                     unsigned int nskiov, lnet_kiov_t *skiov, unsigned int soffset,
+lnet_copy_kiov2kiov (unsigned int ndkiov, 
+                     lnet_kiov_t *dkiov, 
+                     unsigned int doffset,
+                     unsigned int nskiov, 
+                     lnet_kiov_t *skiov, 
+                     unsigned int soffset,
                      unsigned int nob)
 {
         LASSERT (0);
@@ -462,7 +468,7 @@ lnet_extract_kiov (int dst_niov, lnet_kiov_t *dst,
 {
         LASSERT (0);
 }
-
+#endif
 #else /* __KERNEL__ */
 
 unsigned int
@@ -1217,10 +1223,9 @@ lnet_send(lnet_nid_t src_nid, lnet_msg_t *msg)
                  * Found the correct net but the wrong ni
                  */
                 int i; 
-                lnet_ni_t *tni;
                 for (i=0; i < local_ni->ni_ninterfaces; i++) {
-                        ztrace("Comp lni %p with sni %p", 
-                               local_ni->ni_bonded_interfaces[i], src_ni);
+                        psc_trace("Comp lni %p with sni %p", 
+                                  local_ni->ni_bonded_interfaces[i], src_ni);
                         if (local_ni->ni_bonded_interfaces[i] == src_ni) {
                                 lnet_ni_decref_locked(local_ni);
                                 lnet_ni_addref_locked(local_ni->ni_bonded_interfaces[i]);
@@ -1276,9 +1281,8 @@ lnet_send(lnet_nid_t src_nid, lnet_msg_t *msg)
                          * Found the correct net but the wrong ni
                          */
                         int i; 
-                        lnet_ni_t *tni;
                         for (i=0; i < lp->lp_ni->ni_ninterfaces; i++) {
-                                ztrace("Comp lni %p with sni %p", 
+                                psc_trace("Comp lni %p with sni %p", 
                                        lp->lp_ni->ni_bonded_interfaces[i], src_ni);
                                 if (lp->lp_ni->ni_bonded_interfaces[i] == src_ni) {
                                         lp->lp_ni = lp->lp_ni->ni_bonded_interfaces[i];
@@ -1546,9 +1550,9 @@ lnet_match_blocked_msg(lnet_libmd_t *md)
         lnet_me_t        *me  = md->md_me;
         lnet_portal_t    *ptl = &the_lnet.ln_portals[me->me_portal];
 
-        LASSERT (me->me_portal < the_lnet.ln_nportals);
+        LASSERT (me->me_portal < (unsigned int)the_lnet.ln_nportals);
 
-        if ((ptl->ptl_options & LNET_PTL_LAZY) == 0) {
+        if (((unsigned int)ptl->ptl_options & LNET_PTL_LAZY) == 0) {
                 LASSERT (list_empty(&ptl->ptl_msgq));
                 return;
         }
@@ -1632,7 +1636,7 @@ lnet_match_blocked_msg(lnet_libmd_t *md)
 }
 
 static int
-lnet_parse_put(lnet_ni_t *ni, lnet_msg_t *msg)
+lnet_parse_put(__unusedx lnet_ni_t *ni, lnet_msg_t *msg)
 {
         int               rc;
         int               index;
@@ -1805,7 +1809,7 @@ lnet_parse_reply(lnet_ni_t *ni, lnet_msg_t *msg)
         LASSERT (md->md_offset == 0);
 
         rlength = hdr->payload_length;
-        mlength = MIN(rlength, md->md_length);
+        mlength = MIN(rlength, (int)md->md_length);
 
         if (mlength < rlength &&
             (md->md_options & LNET_MD_TRUNCATE) == 0) {
@@ -2373,7 +2377,8 @@ lnet_create_reply_msg (lnet_ni_t *ni, lnet_msg_t *getmsg)
 }
 
 void
-lnet_set_reply_msg_len(lnet_ni_t *ni, lnet_msg_t *reply, unsigned int len)
+lnet_set_reply_msg_len(__unusedx lnet_ni_t *ni, 
+                       lnet_msg_t *reply, unsigned int len)
 {
         /* Set the REPLY length, now the RDMA that elides the REPLY message has
          * completed and I know it. */

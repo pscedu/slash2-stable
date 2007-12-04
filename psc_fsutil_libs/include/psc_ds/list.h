@@ -150,7 +150,8 @@ static __inline__ int psclist_empty(const struct psclist_head *head)
  * @psclist: the new psclist to add.
  * @head: the place to add it in the first psclist.
  */
-static __inline__ void psclist_splice(struct psclist_head *psclist, struct psclist_head *head)
+static __inline__ void psclist_splice(struct psclist_head *psclist, 
+				      struct psclist_head *head)
 {
 	struct psclist_head *first = psclist->znext;
 
@@ -223,10 +224,10 @@ static __inline__ void psclist_splice(struct psclist_head *psclist, struct pscli
  * @head:       the head for your list.
  * @member:     the name of the list_struct within the struct.
  */
-#define psclist_for_each_entry_safe(pos, n, head, member)					\
-	for ((pos) = psclist_entry((head)->znext, typeof(*(pos)), member),		\
-	    (n) = psclist_entry((pos)->member.znext, typeof(*(pos)), member);		\
-	    &(pos)->member != (head);							\
+#define psclist_for_each_entry_safe(pos, n, head, member)		     \
+	for ((pos) = psclist_entry((head)->znext, typeof(*(pos)), member),   \
+	    (n) = psclist_entry((pos)->member.znext, typeof(*(pos)), member);\
+	    &(pos)->member != (head);					     \
 	    (pos) = (n), (n) = psclist_entry((n)->member.znext, typeof(*(n)), member))
 
 /**
@@ -235,9 +236,9 @@ static __inline__ void psclist_splice(struct psclist_head *psclist, struct pscli
  * @hd:		the head for your list.
  * @member:	list entry member of structure.
  */
-#define psclist_for_each_entry(pos, hd, member)						\
-	for ((pos) = psclist_entry((hd)->znext, typeof(*(pos)), member);			\
-	    &(pos)->member != (hd);							\
+#define psclist_for_each_entry(pos, hd, member)				    \
+	for ((pos) = psclist_entry((hd)->znext, typeof(*(pos)), member);    \
+	    &(pos)->member != (hd);					    \
 	    (pos) = psclist_entry((pos)->member.znext, typeof(*(pos)), member))
 
 /**
@@ -246,11 +247,12 @@ static __inline__ void psclist_splice(struct psclist_head *psclist, struct pscli
  * @head:	the head for your list.
  * @offset:	offset into type * of list entry.
  */
-#define psclist_for_each_entry2(pos, head, offset)				\
-	for ((pos) = (void *)(((char *)(head)->znext) - (offset));	\
-	    ((char *)pos) + (offset) != (void *)(head);			\
+#define psclist_for_each_entry2(pos, head, offset)		            \
+	for ((pos) = (void *)(((char *)(head)->znext) - (offset));          \
+	    ((char *)pos) + (offset) != (void *)(head);			    \
 	    (pos) = (void *)(((char *)(((struct psclist_head *)(((char *)pos) + (offset)))->znext)) - (offset)))
 
+#if 0
 #undef list_head
 #undef LIST_HEAD_INIT
 #undef LIST_ENTRY_INIT
@@ -284,5 +286,6 @@ static __inline__ void psclist_splice(struct psclist_head *psclist, struct pscli
 #define list_entry		ERROR
 #define list_for_each		ERROR
 #define list_for_each_safe	ERROR
+#endif
 
 #endif /* HAVE_PSC_LIST_INC */

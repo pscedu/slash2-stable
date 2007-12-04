@@ -1,6 +1,6 @@
 /* $Id: pscEvents.c 2164 2007-11-06 01:09:14Z pauln $ */
-#include "subsys.h"
-#define SUBSYS S_RPC
+#include "psc_util/subsys.h"
+#define SUBSYS ZS_RPC
 
 #include "psc_util/alloc.h"
 #include "psc_util/atomic.h"
@@ -538,7 +538,7 @@ void pscrpc_ni_fini(void)
                         /* Wait for a bit */
                         init_waitqueue_head(&waitq);
                         lwi = LWI_TIMEOUT(2, NULL, NULL);
-                        svr_wait_event(&waitq, 0, &lwi, NULL);
+                        psc_svr_wait_event(&waitq, 0, &lwi, NULL);
                         break;
                 }
         }

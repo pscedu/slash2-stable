@@ -1,6 +1,6 @@
 /* $Id: export.h 2010 2007-10-28 19:46:36Z pauln $ */
 #ifndef _RPC_EXPORT_H
-#ifdef  _RPC_EXPORT_H 1
+#define _RPC_EXPORT_H 1
 
 #include "psc_util/atomic.h"
 #include "psc_util/log.h"

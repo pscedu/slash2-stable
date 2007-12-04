@@ -113,7 +113,7 @@ lib_md_build(lnet_libmd_t *lmd, lnet_md_t *umd, int unlink)
                 memcpy(lmd->md_iov.iov, umd->start,
                        niov * sizeof (lmd->md_iov.iov[0]));
 
-                for (i = 0; i < niov; i++) {
+                for (i = 0; i < (int)niov; i++) {
                         /* We take the base address on trust */
                         if (lmd->md_iov.iov[i].iov_len <= 0) /* invalid length */
                                 return -EINVAL;
@@ -160,7 +160,7 @@ lib_md_build(lnet_libmd_t *lmd, lnet_md_t *umd, int unlink)
 
                 if ((umd->options & LNET_MD_MAX_SIZE) != 0 && /* max size used */
                     (umd->max_size < 0 ||
-                     umd->max_size > umd->length)) // illegal max_size
+                     umd->max_size > (int)umd->length)) // illegal max_size
                         return -EINVAL;
         }
 

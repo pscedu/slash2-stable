@@ -35,6 +35,7 @@
 #endif
 
 #include "psc_util/lock.h"
+#include "psc_util/cdefs.h"
 
 /* CAVEAT VENDITOR! Keep the canonical string representation of nets/nids
  * consistent in all conversion functions.  Some code fragments are copied
@@ -77,7 +78,11 @@ static char *
 libcfs_next_nidstring (void)
 {
         char          *str;
+#ifndef KERNEL 
+        __unusedx unsigned long  flags;
+#else
         unsigned long  flags;
+#endif
 
         NIDSTR_LOCK(flags);
 
@@ -167,13 +172,13 @@ static struct netstrfns  libcfs_netstrfns[] = {
          /* .nf_addr2str  */  libcfs_decnum_addr2str,
          /* .nf_str2addr  */  libcfs_num_str2addr},
         /* placeholder for net0 alias.  It MUST BE THE LAST ENTRY */
-        {/* .nf_type      */  -1},
+        {/* .nf_type      */  -1, NULL, NULL, NULL, NULL},
 };
 
 const int libcfs_nnetstrfns = sizeof(libcfs_netstrfns)/sizeof(libcfs_netstrfns[0]);
 
 int
-libcfs_lo_str2addr(char *str, int nob, __u32 *addr)
+libcfs_lo_str2addr(__unusedx char *str, __unusedx int nob, __u32 *addr)
 {
         *addr = 0;
         return 1;
@@ -537,7 +542,7 @@ EXPORT_SYMBOL(libcfs_str2anynid);
 EXPORT_SYMBOL(libcfs_setnet0alias);
 #else  /* __KERNEL__ */
 void
-libcfs_setnet0alias(int lnd)
+libcfs_setnet0alias(__unusedx int lnd)
 {
         LCONSOLE_ERROR("Liblustre cannot interoperate with old Portals.\n"
                        "portals_compatibility must be set to 'none'.\n");

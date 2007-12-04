@@ -34,6 +34,8 @@
 #include <libcfs/libcfs.h>
 #include "tracefile.h"
 
+#include "psc_util/cdefs.h"
+
 static char debug_file_name[1024];
 
 #ifdef __KERNEL__
@@ -482,7 +484,7 @@ int smp_processor_id = 1;
 char debug_file_path[1024];
 FILE *debug_file_fd;
 
-int portals_do_debug_dumplog(void *arg)
+int portals_do_debug_dumplog(__unusedx void *arg)
 {
         printf("Look in %s\n", debug_file_name);
         return 0;
@@ -501,7 +503,7 @@ void libcfs_debug_dumplog(void)
         return;
 }
 
-int libcfs_debug_init(unsigned long bufsize)
+int libcfs_debug_init(__unusedx unsigned long bufsize)
 {
         char *debug_mask = NULL;
         char *debug_subsys = NULL;
@@ -611,11 +613,11 @@ void catamount_printline(char *buf, size_t size)
 #endif
 
 int
-libcfs_debug_vmsg2(cfs_debug_limit_state_t *cdls,
-                              int subsys, int mask,
-                              const char *file, const char *fn, const int line,
-                              const char *format1, va_list args,
-                              const char *format2, ...)
+libcfs_debug_vmsg2(__unusedx cfs_debug_limit_state_t *cdls,
+                   __unusedx int subsys, int mask,
+                   const char *file, const char *fn, const int line,
+                   const char *format1, va_list args,
+                   const char *format2, ...)
 {
         struct timeval tv;
         int            nob;

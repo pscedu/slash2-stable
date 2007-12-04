@@ -29,6 +29,7 @@
 #include <pqtimer.h>
 #include <stdlib.h>
 #include <string.h>
+#include "psc_util/cdefs.h"
 
 struct timer {
   void (*function)(void *);
@@ -48,12 +49,11 @@ struct thunk {
 extern when now(void);
 
 static thunk thunks;
-static int internal;
+__unusedx static int internal;
 static void (*block_function)(when, void **arg);
 static int number_of_timers;
 static int size_of_pqueue;
 static timer *timers;
-
 
 static void heal(int where)
 {
@@ -86,7 +86,9 @@ static void add_pqueue(int i)
     }
 }
 
-static void add_timer(timer t)
+
+__unusedx static void 
+add_timer(timer t)
 {
     if (size_of_pqueue<(number_of_timers+2)){
 	int oldsize=size_of_pqueue;
@@ -203,7 +205,8 @@ void timer_loop(void **arg)
  * should not assume when, or take a particularily long
  * amount of time. Thunks are for background cleanup tasks.
  */
-void register_thunk(void (*f)(void *),void *a)
+void 
+register_thunk(void (*f)(void *),void *a)
 {
     thunk t=(void *)malloc(sizeof(struct thunk));
     t->f=f;
@@ -218,7 +221,8 @@ void register_thunk(void (*f)(void *),void *a)
  * initialize_timer() must be called before any other timer function,
  * including timer_loop.
  */
-void initialize_timer(void (*block)(when))
+void 
+initialize_timer(void (*block)(when, void **arg))
 {
     block_function=block;
     number_of_timers=0;

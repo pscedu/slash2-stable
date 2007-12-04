@@ -86,7 +86,7 @@ void *nal_thread(void *z)
     bridge b = (bridge) z;
 #else
     struct psc_thread *thr = (struct psc_thread *)z;
-    bridge b = (bridge) thr->pscthr_lnetthr.bridge;
+    bridge b = (bridge) thr->pscthr_private;
 #endif
     procbridge p=b->local;
     int rc;

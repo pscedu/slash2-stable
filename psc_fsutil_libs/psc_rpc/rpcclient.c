@@ -1,6 +1,6 @@
 /* $Id: pscRpcClient.c 2143 2007-11-05 20:40:02Z yanovich $ */
 
-#include "subsys.h"
+#include "psc_util/subsys.h"
 #define SUBSYS S_RPC
 
 #include "psc_rpc/rpc.h"
@@ -210,10 +210,10 @@ pscrpc_prep_req_pool(struct pscrpc_import *imp,
         request->rq_import = import_get(imp);
         request->rq_export = NULL;
 
-        request->rq_req_cbid.cbid_fn  = zrequest_out_callback;
+        request->rq_req_cbid.cbid_fn  = request_out_callback;
         request->rq_req_cbid.cbid_arg = request;
 
-        request->rq_reply_cbid.cbid_fn  = zreply_in_callback;
+        request->rq_reply_cbid.cbid_fn  = reply_in_callback;
         request->rq_reply_cbid.cbid_arg = request;
 
         request->rq_phase = ZRQ_PHASE_NEW;
@@ -282,7 +282,7 @@ pscrpc_prep_bulk_imp (struct pscrpc_request *req, int npages,
         desc->bd_import = import_get(imp);
         desc->bd_req    = req;
 
-        desc->bd_cbid.cbid_fn  = zclient_bulk_callback;
+        desc->bd_cbid.cbid_fn  = client_bulk_callback;
         desc->bd_cbid.cbid_arg = desc;
 
         /* This makes req own desc, and free it when she frees herself */
@@ -305,10 +305,10 @@ pscrpc_prep_bulk_exp (struct pscrpc_request *req,
                 RETURN(NULL);
 
 	desc->bd_connection = req->rq_conn;
-        desc->bd_export = zclass_export_get(exp);
+        desc->bd_export = pscrpc_export_get(exp);
         desc->bd_req = req;
 
-        desc->bd_cbid.cbid_fn  = zserver_bulk_callback;
+        desc->bd_cbid.cbid_fn  = server_bulk_callback;
         desc->bd_cbid.cbid_arg = desc;
 
         /* NB we don't assign rq_bulk here; server-side requests are 
@@ -520,9 +520,9 @@ void pscrpc_unregister_reply (struct pscrpc_request *request)
                 /* Network access will complete in finite time but the HUGE   
 		 * timeout lets us CWARN for visibility of sluggish NALs */
                 lwi = LWI_TIMEOUT(300, NULL, NULL);
-                rc = zcli_wait_event (*wq, 
-				      !pscrpc_client_receiving_reply(request),
-				      &lwi);
+                rc = psc_cli_wait_event(*wq, 
+					!pscrpc_client_receiving_reply(request),
+					&lwi);
                 if (rc == 0)
                         return;
 
@@ -590,7 +590,7 @@ static int after_reply(struct pscrpc_request *req)
 	 * some reason. Try to reconnect, and if that fails, punt to the 
 	 * upcall. */
         if ((rc == -ENOTCONN) || (rc == -ENODEV)) {
-		zerrorx("ENOTCONN or ENODEV");
+		psc_errorx("ENOTCONN or ENODEV");
 #if 0
                 if (req->rq_send_state != PSC_IMP_FULL ||
                     imp->imp_obd->obd_no_recov || imp->imp_dlm_fake) {
@@ -742,7 +742,7 @@ int pscrpc_queue_wait(struct pscrpc_request *req)
         lwi = LWI_TIMEOUT_INTR(timeout, expired_request, 
 			       interrupted_request, req);
 
-        zcli_wait_event(req->rq_reply_waitq, pscrpc_check_reply(req), &lwi);
+        psc_cli_wait_event(req->rq_reply_waitq, pscrpc_check_reply(req), &lwi);
 	DEBUG_REQ(LL_INFO, req, "-- done sleeping");
 	
 	psc_info("Completed RPC status:err:xid:nid:opc %d:%d:"LPX64":%s:%d",
@@ -807,9 +807,9 @@ int pscrpc_queue_wait(struct pscrpc_request *req)
 			 * tranferred OK before she replied with success to 
 			 * me. */
                         lwi = LWI_TIMEOUT(timeout, NULL, NULL);
-                        brc = zcli_wait_event(req->rq_reply_waitq,
-					      !pscrpc_bulk_active(req->rq_bulk),
-					      &lwi);
+                        brc = psc_cli_wait_event(req->rq_reply_waitq,
+						 !pscrpc_bulk_active(req->rq_bulk),
+						 &lwi);
                         LASSERT(brc == 0 || brc == -ETIMEDOUT);
                         if (brc != 0) {
                                 LASSERT(brc == -ETIMEDOUT);
@@ -920,7 +920,7 @@ int pscrpc_check_set(struct pscrpc_request_set *set, int check_allsent)
 
                 if (req->rq_phase == ZRQ_PHASE_RPC) {
                         if (req->rq_timedout||req->rq_waiting||req->rq_resend) {
-                                int status;
+                                int status=0;
                                 pscrpc_unregister_reply(req);
 
                                 spin_lock(&imp->imp_lock);
@@ -1336,8 +1336,8 @@ int pscrpc_set_wait(struct pscrpc_request_set *set)
                                        pscrpc_expired_set,
                                        pscrpc_interrupted_set, set);
 
-                rc = zcli_wait_event(set->set_waitq,
-				     pscrpc_check_set(set, 1), &lwi);
+                rc = psc_cli_wait_event(set->set_waitq,
+					pscrpc_check_set(set, 1), &lwi);
 
                 LASSERT(rc == 0 || rc == -EINTR || rc == -ETIMEDOUT);
 

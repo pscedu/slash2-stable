@@ -1,7 +1,7 @@
 /* $Id: pscConnection.c 2114 2007-11-03 19:39:08Z pauln $ */
 
-#include "subsys.h"
-#define SUBSYS S_RPC
+#include "psc_util/subsys.h"
+#define SUBSYS ZS_RPC
 
 #include "psc_util/alloc.h"
 #include "psc_util/atomic.h"
@@ -40,8 +40,8 @@ pscrpc_lookup_conn_locked (lnet_process_id_t peer)
 
         psclist_for_each(tmp, &conn_unused_list) {
                 c = psclist_entry(tmp, struct pscrpc_connection, c_link);
-		zdbg("unused conn %p@%s looking for %s",
-		     c, libcfs_id2str(c->c_peer), libcfs_id2str(peer));
+		psc_dbg("unused conn %p@%s looking for %s",
+			c, libcfs_id2str(c->c_peer), libcfs_id2str(peer));
 
                 if (peer.nid == c->c_peer.nid &&
                     peer.pid == c->c_peer.pid) {
@@ -64,8 +64,8 @@ pscrpc_get_connection(lnet_process_id_t peer,
 	
 	//psc_assert(uuid != NULL);
 
-	pscinfo("self %s peer %s",
-	      libcfs_nid2str(self), libcfs_id2str(peer));
+	psc_info("self %s peer %s",
+		 libcfs_nid2str(self), libcfs_id2str(peer));
 
         spin_lock(&conn_lock);
 
@@ -76,10 +76,10 @@ pscrpc_get_connection(lnet_process_id_t peer,
         if (c != NULL)
                 RETURN (c);
 
-	pscinfo("Malloc'ing a new rpc_conn for %s",
+	psc_info("Malloc'ing a new rpc_conn for %s",
 	      libcfs_id2str(peer));
 
-        c = TRY_ZALLOC(sizeof(*c));
+        c = TRY_PSCALLOC(sizeof(*c));
         if (c == NULL)
                 RETURN (NULL);
 
@@ -93,8 +93,8 @@ pscrpc_get_connection(lnet_process_id_t peer,
 
         c2 = pscrpc_lookup_conn_locked(peer);
         if (c2 == NULL) { 
-		znotify("adding connection %p for %s", 
-			c, libcfs_id2str(peer));
+		psc_notify("adding connection %p for %s", 
+			   c, libcfs_id2str(peer));
                 psclist_add(&c->c_link, &conn_list);
 	}
 
@@ -117,12 +117,12 @@ int pscrpc_put_connection(struct pscrpc_connection *c)
                 RETURN(0);
         }
 
-        pscinfo("connection=%p refcount %d to %s",
-	      c, atomic_read(&c->c_refcount) - 1,
-	      libcfs_nid2str(c->c_peer.nid));
+        psc_info("connection=%p refcount %d to %s",
+		 c, atomic_read(&c->c_refcount) - 1,
+		 libcfs_nid2str(c->c_peer.nid));
 
         if (atomic_dec_and_test(&c->c_refcount)) {
-		pscinfo("connection=%p to unused_list", c);
+		psc_info("connection=%p to unused_list", c);
 
                 spinlock(&conn_lock);
                 psclist_del(&c->c_link);

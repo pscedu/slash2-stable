@@ -201,21 +201,21 @@ execute_callbacks(io_handler ioh, fd_set *r, fd_set *w, fd_set *e)
 #ifdef ENABLE_SELECT_DISPATCH
 
 static struct {
-    pthread_mutex_t mutex;
-    pthread_cond_t  cond;
-    int             submitted;
-    int             nready;
-    int             maxfd;
-    fd_set         *rset;
-    fd_set         *wset;
-    fd_set         *eset;
-    struct timeval *timeout;
-    struct timeval  submit_time;
+        pthread_mutex_t mutex;
+        pthread_cond_t  cond;
+        int             submitted;
+        int             nready;
+        int             maxfd;
+        fd_set         *rset;
+        fd_set         *wset;
+        fd_set         *eset;
+        struct timeval *timeout;
+        struct timeval  submit_time;
 } fd_extra = {
-    PTHREAD_MUTEX_INITIALIZER,
-    PTHREAD_COND_INITIALIZER,
-    0, 0, 0,
-    NULL, NULL, NULL, NULL,
+        PTHREAD_MUTEX_INITIALIZER,
+        PTHREAD_COND_INITIALIZER,
+        0, 0, 0,
+        NULL, NULL, NULL, NULL, {0,0}
 };
 
 
@@ -265,7 +265,7 @@ again:
 
 static int merge_fds(int max, fd_set *rset, fd_set *wset, fd_set *eset)
 {
-    int i;
+    unsigned int i;
 
     LASSERT(rset);
     LASSERT(wset);
@@ -323,93 +323,93 @@ static struct timeval *choose_timeout(struct timeval *tv1,
  */
 void select_timer_block(when until, void **arg)
 {
-    io_handler *ioh = arg;
-    fd_set fds[3];
-    struct timeval timeout;
-    struct timeval *timeout_pointer, *select_timeout;
-    int max, nready, nexec;
-    int fd_handling;
-
-    psc_trace("This select");
-again:
-    if (until) {
-        when interval;
-
-        interval = until - now();
-        timeout.tv_sec = (interval >> 32);
-        timeout.tv_usec = ((interval << 32) / 1000000) >> 32;
-        timeout_pointer = &timeout;
-    } else
-        timeout_pointer = NULL;
-
-    fd_handling = 0;
-    max = prepare_fd_sets(ioh, &fds[0], &fds[1], &fds[2]);
-    select_timeout = timeout_pointer;
-
-    pthread_mutex_lock(&fd_extra.mutex);
-    fd_handling = fd_extra.submitted;
-    pthread_mutex_unlock(&fd_extra.mutex);
-    if (fd_handling) {
-        max = merge_fds(max, &fds[0], &fds[1], &fds[2]);
-        select_timeout = choose_timeout(timeout_pointer, fd_extra.timeout);
-    }
-
-    /* XXX only compile for linux */
-#if ((__WORDSIZE == 64) && !defined(__mips64__)) || defined(NO_NEWSELECT)
-    nready = syscall(SYS_select, max, &fds[0], &fds[1], &fds[2],
-                     select_timeout);
-#else
-    nready = syscall(SYS__newselect, max, &fds[0], &fds[1], &fds[2],
-                     select_timeout);
-#endif
-    if (nready < 0) {
-        CERROR("select return err %d, errno %d\n", nready, errno);
-        return;
-    }
-
-    if (nready) {
-            nexec = execute_callbacks(*ioh, &fds[0], &fds[1], &fds[2]);
-            nready -= nexec;
-    } else
-            nexec = 0;
-
-    /* even both nready & nexec are 0, we still need try to wakeup
-     * upper thread since it may have timed out
-     */
-    if (fd_handling) {
-        LASSERT(nready >= 0);
-
+        io_handler *ioh = (io_handler *)arg;
+        fd_set fds[3];
+        struct timeval timeout;
+        struct timeval *timeout_pointer, *select_timeout;
+        int max, nready, nexec;
+        int fd_handling;
+        
+        //psc_trace("This select");
+ again:
+        if (until) {
+                when interval;
+                
+                interval = until - now();
+                timeout.tv_sec = (interval >> 32);
+                timeout.tv_usec = ((interval << 32) / 1000000) >> 32;
+                timeout_pointer = &timeout;
+        } else
+                timeout_pointer = NULL;
+        
+        fd_handling = 0;
+        max = prepare_fd_sets(ioh, &fds[0], &fds[1], &fds[2]);
+        select_timeout = timeout_pointer;
+        
         pthread_mutex_lock(&fd_extra.mutex);
-        if (nready) {
-            if (fd_extra.rset)
-                *fd_extra.rset = fds[0];
-            if (fd_extra.wset)
-                *fd_extra.wset = fds[1];
-            if (fd_extra.eset)
-                *fd_extra.eset = fds[2];
-            fd_extra.nready = nready;
-            fd_extra.submitted = 0;
-        } else {
-            struct timeval t;
-
-            fd_extra.nready = 0;
-            if (fd_extra.timeout) {
-                gettimeofday(&t, NULL);
-                if (timeval_ge(&t, &fd_extra.submit_time))
-                    fd_extra.submitted = 0;
-            }
-        }
-
-        pthread_cond_signal(&fd_extra.cond);
+        fd_handling = fd_extra.submitted;
         pthread_mutex_unlock(&fd_extra.mutex);
-    }
-
-    /* haven't found portals event, go back to loop if time
-     * is not expired */
-    if (!nexec) {
-        if (timeout_pointer == NULL || now() >= until)
-            goto again;
-    }
+        if (fd_handling) {
+                max = merge_fds(max, &fds[0], &fds[1], &fds[2]);
+                select_timeout = choose_timeout(timeout_pointer, fd_extra.timeout);
+        }
+        
+        /* XXX only compile for linux */
+#if ((__WORDSIZE == 64) && !defined(__mips64__)) || defined(NO_NEWSELECT)
+        nready = syscall(SYS_select, max, &fds[0], &fds[1], &fds[2],
+                         select_timeout);
+#else
+        nready = syscall(SYS__newselect, max, &fds[0], &fds[1], &fds[2],
+                         select_timeout);
+#endif
+        if (nready < 0) {
+                CERROR("select return err %d, errno %d\n", nready, errno);
+                return;
+        }
+        
+        if (nready) {
+                nexec = execute_callbacks(*ioh, &fds[0], &fds[1], &fds[2]);
+                nready -= nexec;
+        } else
+                nexec = 0;
+        
+        /* even both nready & nexec are 0, we still need try to wakeup
+         * upper thread since it may have timed out
+         */
+        if (fd_handling) {
+                LASSERT(nready >= 0);
+                
+                pthread_mutex_lock(&fd_extra.mutex);
+                if (nready) {
+                        if (fd_extra.rset)
+                                *fd_extra.rset = fds[0];
+                        if (fd_extra.wset)
+                                *fd_extra.wset = fds[1];
+                        if (fd_extra.eset)
+                                *fd_extra.eset = fds[2];
+                        fd_extra.nready = nready;
+                        fd_extra.submitted = 0;
+                } else {
+                        struct timeval t;
+                        
+                        fd_extra.nready = 0;
+                        if (fd_extra.timeout) {
+                                gettimeofday(&t, NULL);
+                                if (timeval_ge(&t, &fd_extra.submit_time))
+                                        fd_extra.submitted = 0;
+                        }
+                }
+                
+                pthread_cond_signal(&fd_extra.cond);
+                pthread_mutex_unlock(&fd_extra.mutex);
+        }
+        
+        /* haven't found portals event, go back to loop if time
+         * is not expired */
+        if (!nexec) {
+                if (timeout_pointer == NULL || now() >= until)
+                        goto again;
+        }
 }
 
 #else /* !ENABLE_SELECT_DISPATCH */

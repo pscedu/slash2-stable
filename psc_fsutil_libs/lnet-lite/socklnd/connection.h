@@ -8,17 +8,17 @@
 
 #include <table.h>
 #include <procbridge.h>
-#include "psc_ds/listcache.c"
+#include "psc_ds/listcache.h"
 
 typedef struct manager {
-    table           connections;
-        psclist_cache_t  *conn_socks;      
-    pthread_mutex_t conn_lock; /* protect connections table */
-    int             bound;
-    io_handler      bound_handler;
-    int           (*handler)(void *, void *);
-    void           *handler_arg;
-    int             port;
+        table            connections;
+        list_cache_t    *conn_socks;      
+        pthread_mutex_t  conn_lock; /* protect connections table */
+        int              bound;
+        io_handler       bound_handler;
+        int            (*handler)(void *, void *);
+        void            *handler_arg;
+        int              port;
 } *manager;
 
 

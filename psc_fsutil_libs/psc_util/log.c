@@ -4,7 +4,7 @@
  * Logging routines.
  */
 
-#include "subsys.h"
+#include "psc_util/subsys.h"
 #define SUBSYS S_LOG
 
 #include <sys/param.h>

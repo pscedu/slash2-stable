@@ -11,7 +11,8 @@
 #include "psc_rpc/export.h"
 #include "psc_rpc/rpc.h"
 #include "psc_rpc/service.h"
-#include "psc_rpc/rpcpsc_util/log.h"
+#include "psc_util/log.h"
+#include "psc_rpc/rpclog.h"
 
 static int test_req_buffer_pressure = 0;
 
@@ -52,7 +53,7 @@ pscrpc_alloc_rqbd (struct pscrpc_service *svc)
 
         rqbd->rqbd_service       = svc;
         rqbd->rqbd_refcount      = 0;
-        rqbd->rqbd_cbid.cbid_fn  = zrequest_in_callback;
+        rqbd->rqbd_cbid.cbid_fn  = request_in_callback;
         rqbd->rqbd_cbid.cbid_arg = rqbd;
 
         INIT_PSCLIST_HEAD(&rqbd->rqbd_reqs);
@@ -661,17 +662,17 @@ static void * pscrpc_main(void *arg)
 			 svc->srv_n_active_reqs < (svc->srv_nthreads - 1)))
 		       );
 		*/
-		zsvr_wait_event(&svc->srv_waitq,
-				(!*run &&
-				 svc->srv_n_difficult_replies == 0) ||
-				(!psclist_empty(&svc->srv_idle_rqbds) &&
-				 svc->srv_rqbd_timeout == 0) ||
-				!psclist_empty (&svc->srv_reply_queue) ||
-				(!psclist_empty (&svc->srv_request_queue) &&
-				 (svc->srv_n_difficult_replies == 0 ||
-				  svc->srv_n_active_reqs <
-				  (svc->srv_nthreads - 1))),
-				&lwi, NULL);
+		psc_svr_wait_event(&svc->srv_waitq,
+				   (!*run &&
+				    svc->srv_n_difficult_replies == 0) ||
+				   (!psclist_empty(&svc->srv_idle_rqbds) &&
+				    svc->srv_rqbd_timeout == 0) ||
+				   !psclist_empty (&svc->srv_reply_queue) ||
+				   (!psclist_empty (&svc->srv_request_queue) &&
+				    (svc->srv_n_difficult_replies == 0 ||
+				     svc->srv_n_active_reqs <
+				     (svc->srv_nthreads - 1))),
+				   &lwi, NULL);
 		//		&lwi, &svc->srv_lock);
 
 		pscrpc_check_rqbd_pool(svc);
@@ -814,9 +815,9 @@ int pscrpc_unregister_service(struct pscrpc_service *service)
                 /* Network access will complete in finite time but the HUGE
 		 * timeout lets us CWARN for visibility of sluggish NALs */
                 lwi = LWI_TIMEOUT(300 * HZ, NULL, NULL);
-                rc = zsvr_wait_event(&service->srv_waitq,
-				     service->srv_nrqbd_receiving == 0,
-				     &lwi, &service->srv_lock);
+                rc = psc_svr_wait_event(&service->srv_waitq,
+					service->srv_nrqbd_receiving == 0,
+					&lwi, &service->srv_lock);
                 if (rc == -ETIMEDOUT)
                         CWARN("Service %s waiting for request buffers\n",
                               service->srv_name);
@@ -868,10 +869,9 @@ int pscrpc_unregister_service(struct pscrpc_service *service)
         while (atomic_read(&service->srv_outstanding_replies) != 0) {
                 lwi = LWI_TIMEOUT(10 * HZ, NULL, NULL);
 
-                rc = zsvr_wait_event(&service->srv_waitq,
-                                  !psclist_empty(&service->srv_reply_queue),
-				  &lwi,
-				  &service->srv_lock);
+                rc = psc_svr_wait_event(&service->srv_waitq,
+					!psclist_empty(&service->srv_reply_queue),
+					&lwi, &service->srv_lock);
 
                 LASSERT(rc == 0 || rc == -ETIMEDOUT);
 
@@ -948,8 +948,8 @@ pscrpc_init_svc(int nbufs, int bufsize, int max_req_size, int max_reply_size,
 
 	INIT_PSCLIST_HEAD(&service->srv_free_rs_list);
 
-	psc_waitq__init(&service->srv_free_rs_waitq);
-	psc_waitq__init(&service->srv_waitq);
+	psc_waitq_init(&service->srv_free_rs_waitq);
+	psc_waitq_init(&service->srv_waitq);
 
 	INIT_PSCLIST_HEAD(&service->srv_threads);
 
@@ -989,9 +989,10 @@ pscrpc_init_svc(int nbufs, int bufsize, int max_req_size, int max_reply_size,
  * @svh:  an initialized service handle structure which holds the service's relevant information.
  */
 void
-pscrpc_thread_spawn(pscrpc_svc_handle_t *svh) {
+pscrpc_thread_spawn(pscrpc_svc_handle_t *svh) 
 {
 	int i;
+	struct psc_thread *thr;
 	
 	svh->svh_service = pscrpc_init_svc(svh->svh_nbufs,
 					   svh->svh_bufsz,
@@ -1004,13 +1005,14 @@ pscrpc_thread_spawn(pscrpc_svc_handle_t *svh) {
 					   svh->svh_handler);
 	
 	psc_assert(svh->svh_service);
-
+	
 	/* Track the service handle */
 	psclist_add(&svh->svh_chain, &pscrpc_svh_list);
-       
+	
 	svh->svh_threads = PSCALLOC((sizeof(struct psc_thread)) 
 				    * svh->svh_nthreads);
-
-	for (i=0, thr = svh->svh_threads; i < svh->svh_nthreads; i++, thr++)
+	
+	for (i=0, thr=svh->svh_threads; i < svh->svh_nthreads; i++, thr++)
 		pscthr_init(thr, svh->svh_type, pscrpc_main, i);
 }
+

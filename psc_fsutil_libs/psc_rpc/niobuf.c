@@ -25,8 +25,8 @@
  *
  */
 
-#include "subsys.h"
-#define SUBSYS S_RPC
+#include "psc_util/subsys.h"
+#define SUBSYS ZS_RPC
 
 #include "psc_util/alloc.h"
 #include "psc_util/atomic.h"
@@ -75,8 +75,8 @@ static int psc_send_buf (lnet_handle_md_t *mdh, void *base, int len,
                 RETURN (-ENOMEM);
         }
 
-        pscinfo("Sending %d bytes to portal %d, xid %"ZLPX64,
-	      len, portal, xid);
+        psc_info("Sending %d bytes to portal %d, xid %"ZLPX64,
+		 len, portal, xid);
 
         rc = LNetPut (conn->c_self, *mdh, ack,
                       conn->c_peer, portal, xid, 0, 0);
@@ -126,7 +126,7 @@ int pscrpc_start_bulk_transfer (struct pscrpc_bulk_desc *desc)
         md.options = PSCRPC_MD_OPTIONS;
         pscrpc_fill_bulk_md(&md, desc);
 
-        LASSERT (desc->bd_cbid.cbid_fn == zserver_bulk_callback);
+        LASSERT (desc->bd_cbid.cbid_fn == server_bulk_callback);
         LASSERT (desc->bd_cbid.cbid_arg == desc);
 
         /* NB total length may be 0 for a read past EOF, so we send a 0
@@ -198,9 +198,9 @@ void pscrpc_abort_bulk (struct pscrpc_bulk_desc *desc)
                 /* Network access will complete in finite time but the HUGE
                  * timeout lets us CWARN for visibility of sluggish NALs */
                 lwi = LWI_TIMEOUT (300, NULL, NULL);
-                rc = zsvr_wait_event(&desc->bd_waitq,
-                                     !pscrpc_bulk_active(desc),
-                                     &lwi, NULL);
+                rc = psc_svr_wait_event(&desc->bd_waitq,
+					!pscrpc_bulk_active(desc),
+					&lwi, NULL);
 
                 if (rc == 0)
                         return;
@@ -247,7 +247,7 @@ int pscrpc_register_bulk (struct pscrpc_request *req)
                       LNET_MD_OP_GET : LNET_MD_OP_PUT);
         pscrpc_fill_bulk_md(&md, desc);
 
-        LASSERT (desc->bd_cbid.cbid_fn == zclient_bulk_callback);
+        LASSERT (desc->bd_cbid.cbid_fn == client_bulk_callback);
         LASSERT (desc->bd_cbid.cbid_arg == desc);
 
         /* XXX Registering the same xid on retried bulk makes my head
@@ -279,11 +279,11 @@ int pscrpc_register_bulk (struct pscrpc_request *req)
                 RETURN (-ENOMEM);
         }
 
-        pscinfo("Setup bulk %s buffers: %u pages %u bytes, xid "LPX64", "
-	      "portal %u",
-	      desc->bd_type == BULK_GET_SOURCE ? "get-source" : "put-sink",
-	      desc->bd_iov_count, desc->bd_nob,
-	      req->rq_xid, desc->bd_portal);
+        psc_info("Setup bulk %s buffers: %u pages %u bytes, xid "LPX64", "
+		 "portal %u",
+		 desc->bd_type == BULK_GET_SOURCE ? "get-source" : "put-sink",
+		 desc->bd_iov_count, desc->bd_nob,
+		 req->rq_xid, desc->bd_portal);
         RETURN(0);
 }
 
@@ -296,7 +296,7 @@ void pscrpc_unregister_bulk (struct pscrpc_request *req)
         /* Disconnect a bulk desc from the network. Idempotent. Not
          * thread-safe (i.e. only interlocks with completion callback). */
         struct pscrpc_bulk_desc *desc = req->rq_bulk;
-        zwaitq_t                 *wq;
+        psc_waitq_t             *wq;
         struct l_wait_info       lwi;
         int                      rc;
 
@@ -323,13 +323,13 @@ void pscrpc_unregister_bulk (struct pscrpc_request *req)
                 /* Network access will complete in finite time but the HUGE
                  * timeout lets us CWARN for visibility of sluggish NALs */
                 lwi = LWI_TIMEOUT (300, NULL, NULL);
-                rc = zcli_wait_event(*wq, !pscrpc_bulk_active(desc),
-                                     &lwi);
+                rc = psc_cli_wait_event(*wq, !pscrpc_bulk_active(desc),
+					&lwi);
                 if (rc == 0)
                         return;
 
                 LASSERT (rc == -ETIMEDOUT);
-                DEBUG_REQ(ZLL_WARN, req,
+                DEBUG_REQ(LL_WARN, req,
 			  "Unexpectedly long timeout: desc %p", desc);
         }
 }
@@ -354,7 +354,7 @@ int pscrpc_send_reply (struct pscrpc_request *req, int may_be_difficult)
         LASSERT (req->rq_repmsg != NULL);
         LASSERT (may_be_difficult || !rs->rs_difficult);
         LASSERT (req->rq_repmsg == &rs->rs_msg);
-        LASSERT (rs->rs_cb_id.cbid_fn == zreply_out_callback);
+        LASSERT (rs->rs_cb_id.cbid_fn == reply_out_callback);
         LASSERT (rs->rs_cb_id.cbid_arg == rs);
         LASSERT (req->rq_repmsg != NULL);
 
@@ -488,8 +488,7 @@ int psc_send_rpc(struct pscrpc_request *request, int noreply)
                         LASSERT (rc == -ENOMEM);
                         GOTO(cleanup_repmsg, rc = -ENOMEM);
                 }
-
-		pscinfo("LNetMEAttach() gave handle %"ZLPX64, reply_me_h.cookie);
+		psc_info("LNetMEAttach() gave handle %"ZLPX64, reply_me_h.cookie);
         }
 
         spinlock(&request->rq_lock);
@@ -512,7 +511,7 @@ int psc_send_rpc(struct pscrpc_request *request, int noreply)
                 reply_md.user_ptr  = &request->rq_reply_cbid;
                 reply_md.eq_handle = pscrpc_eq_h;
 
-		pscinfo("LNetMDAttach() try w/ handle %"ZLPX64,
+		psc_info("LNetMDAttach() try w/ handle %"ZLPX64,
 		      reply_me_h.cookie);
 
                 rc = LNetMDAttach(reply_me_h, reply_md, LNET_UNLINK,
@@ -527,10 +526,10 @@ int psc_send_rpc(struct pscrpc_request *request, int noreply)
                         GOTO(cleanup_me, rc -ENOMEM);
                 }
 
-                pscinfo("Setup reply buffer: %u bytes, xid "LPX64
-		      ", portal %u",
-		      request->rq_replen, request->rq_xid,
-		      request->rq_reply_portal);
+                psc_info("Setup reply buffer: %u bytes, xid "LPX64
+			 ", portal %u",
+			 request->rq_replen, request->rq_xid,
+			 request->rq_reply_portal);
         }
 
         /* add references on request and import for request_out_callback */
@@ -675,8 +674,8 @@ static void __pscrpc_free_req(struct pscrpc_request *request, int  locked)
 
         LASSERTF(!request->rq_receiving_reply, "req %p\n", request);
         LASSERTF(request->rq_rqbd == NULL, "req %p\n",request);/* client-side */
-        LASSERTF(zlist_empty(&request->rq_list_entry), "req %p\n", request);
-        LASSERTF(zlist_empty(&request->rq_set_chain), "req %p\n", request);
+        LASSERTF(psclist_empty(&request->rq_list_entry), "req %p\n", request);
+        LASSERTF(psclist_empty(&request->rq_set_chain), "req %p\n", request);
 
         /* We must take it off the imp_replay_list first.  Otherwise, we'll set
 	 * request->rq_reqmsg to NULL while osc_close is dereferencing it. */
@@ -690,7 +689,7 @@ static void __pscrpc_free_req(struct pscrpc_request *request, int  locked)
         //LASSERTF(zlist_empty(&request->rq_replay_list), "req %p\n", request);
 
 	if (atomic_read(&request->rq_refcount) != 0) {
-                DEBUG_REQ(ZLL_ERROR, request,
+                DEBUG_REQ(LL_ERROR, request,
 			  "freeing request with nonzero refcount");
                 LBUG();
         }
@@ -768,7 +767,7 @@ void pscrpc_free_bulk(struct pscrpc_bulk_desc *desc)
 
         LASSERT((desc->bd_export != NULL) ^ (desc->bd_import != NULL));
         if (desc->bd_export)
-                zclass_export_put(desc->bd_export);
+                pscrpc_export_put(desc->bd_export);
         else
                 import_put(desc->bd_import);
 

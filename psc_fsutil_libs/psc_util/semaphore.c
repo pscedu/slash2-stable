@@ -3,9 +3,12 @@
 #include <errno.h>
 
 #include "psc_util/assert.h"
-#include "psc_util/psc_util/log.h"
+#include "psc_util/log.h"
 #include "psc_util/semaphore.h"
 
+
+#define LOCK  1
+#define ULOCK 2
 /*
  * new locking interface, lckType needs to be
  *  something like (LOCK) or (ULOCK)

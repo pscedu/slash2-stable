@@ -43,6 +43,9 @@
 #include <syscall.h>
 #endif
 
+/* for __unusedx */
+#include "psc_util/cdefs.h"
+
 void
 tcpnal_notify(lnet_ni_t *ni, lnet_nid_t nid, int alive)
 {
@@ -63,7 +66,7 @@ tcpnal_notify(lnet_ni_t *ni, lnet_nid_t nid, int alive)
 /*
  * sends a packet to the peer, after insuring that a connection exists
  */
-int tcpnal_send(lnet_ni_t *ni, void *private, lnet_msg_t *lntmsg)
+int tcpnal_send(lnet_ni_t *ni, __unusedx void *private, lnet_msg_t *lntmsg)
 {
         lnet_hdr_t        *hdr = &lntmsg->msg_hdr;
         lnet_process_id_t  target = {lntmsg->msg_target.nid, 
@@ -155,10 +158,10 @@ int tcpnal_send(lnet_ni_t *ni, void *private, lnet_msg_t *lntmsg)
 int tcpnal_recv(lnet_ni_t     *ni,
                 void         *private,
                 lnet_msg_t   *cookie,
-                int           delayed,
+                __unusedx int delayed,
                 unsigned int  niov,
                 struct iovec *iov,
-                lnet_kiov_t  *kiov,
+                __unusedx lnet_kiov_t  *kiov,
                 unsigned int  offset,
                 unsigned int  mlen,
                 unsigned int  rlen)

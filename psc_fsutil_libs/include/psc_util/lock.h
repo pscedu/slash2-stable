@@ -3,7 +3,7 @@
 #ifndef HAVE_PSC_LOCK_INC
 #define HAVE_PSC_LOCK_INC
 
-#include "pscLog.h"
+#include "psc_util/log.h"
 
 /* Compatibility for LNET. */
 #define spinlock_t		psc_spinlock_t
@@ -45,12 +45,12 @@ validlock(const psc_spinlock_t *sl)
 #define freelock(l)							\
 	do {								\
 		if (!validlock(l))					\
-			zfatalx("lock %p has invalid value", (l));	\
+			psc_fatalx("lock %p has invalid value", (l));	\
 		if ((l)->sl_lock == SL_UNLOCKED)			\
-			zfatalx("tried to unlock already "		\
+			psc_fatalx("tried to unlock already "		\
 			    "unlocked lock (%p)!", (l));		\
 		if ((l)->sl_who != pthread_self())			\
-			zfatalx("tried to unlock someone "		\
+			psc_fatalx("tried to unlock someone "		\
 			    "else's lock (%p, %lu vs. %lu)!",		\
 			    (l), (l)->sl_who, pthread_self());		\
 		(l)->sl_who = 0;					\
@@ -61,11 +61,11 @@ validlock(const psc_spinlock_t *sl)
 #define LOCK_ENSURE(l)							\
 	do {								\
 		if (!validlock(l))					\
-			zfatalx("lock %p has invalid value", (l));	\
+			psc_fatalx("lock %p has invalid value", (l));	\
 		if ((l)->sl_lock == SL_LOCKED)				\
-			zfatalx("lock is not locked (%p)!", (l));	\
+			psc_fatalx("lock is not locked (%p)!", (l));	\
 		if ((l)->sl_who != pthread_self())			\
-			zfatalx("lock is not owned by us "		\
+			psc_fatalx("lock is not owned by us "		\
 			    "(%p, %lu vs. %lu)!",			\
 			    (l), (l)->sl_who, pthread_self());		\
 	} while (0)
@@ -87,7 +87,7 @@ _tands(volatile psc_spinlock_t *s)
 		s->sl_who = pthread_self();	/* we got it */
 		return (0);
 	} else
-		zfatalx("lock %p has invalid value (%d)", s, r);
+		psc_fatalx("lock %p has invalid value (%d)", s, r);
 }
 
 static __inline void
@@ -160,7 +160,7 @@ ureqlock(psc_spinlock_t *sl, int waslocked)
 
 #else /* !HAVE_LIBPTHREAD */
 
-#include "cdefs.h"
+#include "psc_util/cdefs.h"
 
 typedef int psc_spinlock_t;
 
@@ -173,9 +173,9 @@ typedef int psc_spinlock_t;
 #define freelock(l)							\
 	do {								\
 		if (!_LOCK_VALID(l))					\
-			zfatalx("lock %p has invalid value", (l));	\
+			psc_fatalx("lock %p has invalid value", (l));	\
 		if (*(l) == SL_UNLOCKED)				\
-			zfatalx("tried to unlock already "		\
+			psc_fatalx("tried to unlock already "		\
 			    "unlocked lock (%p)!", (l));		\
 		*(l) = SL_UNLOCKED;					\
 	} while (0)
@@ -184,9 +184,9 @@ static __inline void
 spinlock(psc_spinlock_t *l)
 {
 	if (!_LOCK_VALID(l))
-		zfatalx("lock %p has invalid value", l);
+		psc_fatalx("lock %p has invalid value", l);
 	if (*l == SL_LOCKED)
-		zfatalx("lock %p already locked", l);
+		psc_fatalx("lock %p already locked", l);
 	*l = SL_LOCKED;
 }
 
@@ -194,7 +194,7 @@ static __inline int
 trylock(__unusedx psc_spinlock_t *l)
 {
 	if (!_LOCK_VALID(l))
-		zfatalx("lock %p has invalid value", l);
+		psc_fatalx("lock %p has invalid value", l);
 	*l = SL_LOCKED;
 	return (1);
 }

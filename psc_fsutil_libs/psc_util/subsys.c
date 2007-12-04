@@ -3,7 +3,7 @@
 /*
  * subsystem definitions.
  */
-#include "subsys.h"
+#include "psc_util/subsys.h"
 
 #include <strings.h>
 

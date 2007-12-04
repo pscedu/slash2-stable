@@ -58,6 +58,8 @@
 #include <libcfs/libcfs.h>
 #include <libcfs/kp30.h>
 #include <sys/user.h>
+
+#include "psc_util/cdefs.h"
 /*
  * Sleep channel. No-op implementation.
  */
@@ -119,13 +121,13 @@ void cfs_waitq_signal(struct cfs_waitq *waitq)
         (void)waitq;
 }
 
-void cfs_waitq_signal_nr(struct cfs_waitq *waitq, int nr)
+void cfs_waitq_signal_nr(struct cfs_waitq *waitq, __unusedx int nr)
 {
         LASSERT(waitq != NULL);
         (void)waitq;
 }
 
-void cfs_waitq_broadcast(struct cfs_waitq *waitq, int state)
+void cfs_waitq_broadcast(struct cfs_waitq *waitq, __unusedx int state)
 {
         LASSERT(waitq != NULL);
         (void)waitq;
@@ -137,7 +139,9 @@ void cfs_waitq_wait(struct cfs_waitlink *link)
         (void)link;
 }
 
-int64_t cfs_waitq_timedwait(struct cfs_waitlink *link, int state, int64_t timeout)
+int64_t cfs_waitq_timedwait(struct cfs_waitlink *link, 
+                            __unusedx int state, 
+                            __unusedx int64_t timeout)
 {
         LASSERT(link != NULL);
         (void)link;
@@ -148,7 +152,7 @@ int64_t cfs_waitq_timedwait(struct cfs_waitlink *link, int state, int64_t timeou
  * Allocator
  */
 
-cfs_page_t *cfs_alloc_page(unsigned int flags)
+cfs_page_t *cfs_alloc_page(__unusedx unsigned int flags)
 {
         cfs_page_t *pg = malloc(sizeof(*pg));
 
@@ -179,7 +183,7 @@ void *cfs_kmap(cfs_page_t *pg)
         return pg->addr;
 }
 
-void cfs_kunmap(cfs_page_t *pg)
+void cfs_kunmap(__unusedx cfs_page_t *pg)
 {
 }
 
@@ -188,7 +192,8 @@ void cfs_kunmap(cfs_page_t *pg)
  */
 
 cfs_mem_cache_t *
-cfs_mem_cache_create(const char *name, size_t objsize, size_t off, unsigned long flags)
+cfs_mem_cache_create(const char *name, size_t objsize, 
+                     __unusedx size_t off, __unusedx unsigned long flags)
 {
         cfs_mem_cache_t *c;
 
@@ -213,7 +218,7 @@ void *cfs_mem_cache_alloc(cfs_mem_cache_t *c, int gfp)
         return cfs_alloc(c->size, gfp);
 }
 
-void cfs_mem_cache_free(cfs_mem_cache_t *c, void *addr)
+void cfs_mem_cache_free(__unusedx cfs_mem_cache_t *c, void *addr)
 {
         cfs_free(addr);
 }
@@ -255,7 +260,7 @@ void cfs_enter_debugger(void)
          */
 }
 
-void cfs_daemonize(char *str)
+void cfs_daemonize(__unusedx char *str)
 {
         return;
 }
@@ -333,9 +338,10 @@ void *cfs_stack_trace_frame(struct cfs_stack_trace *trace, int frame_no)
 
 #else
 
-void cfs_stack_trace_fill(struct cfs_stack_trace *trace)
+void cfs_stack_trace_fill(__unusedx struct cfs_stack_trace *trace)
 {}
-void *cfs_stack_trace_frame(struct cfs_stack_trace *trace, int frame_no)
+void *cfs_stack_trace_frame(__unusedx struct cfs_stack_trace *trace, 
+                            __unusedx int frame_no)
 {
         return NULL;
 }

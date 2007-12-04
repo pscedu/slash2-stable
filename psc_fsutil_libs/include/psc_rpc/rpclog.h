@@ -43,7 +43,7 @@ pscrpc_rqphase2str(struct pscrpc_request *req)
 #define DEBUG_REQ(level, req, fmt, ...)					\
 	do {								\
 		_psclog(__FILE__, __func__, __LINE__,			\
-		      ZS_RPC, level, 0,					\
+		      S_RPC, level, 0,					\
 		      " req@%p x"LPD64"/t"LPD64" c"LPX64" o%d->@%s:%d "	\
 		      "lens %d/%d ref %d res %d ret %d fl "REQ_FLAGS_FMT \
 		      "/%x/%x replyc "LPX64" rc %d/%d to=%d :: "fmt,	\
@@ -71,7 +71,7 @@ pscrpc_rqphase2str(struct pscrpc_request *req)
 #define DEBUG_EXP(level, exp, fmt, ...)                                      \
 do {                                                                         \
         _psclog(__FILE__, __func__, __LINE__,                                  \
-	      ZS_RPC, level, 0,					     \
+	      S_RPC, level, 0,					     \
 	      " exp@%p h"LPX64" conn@%p p:%s ref %d cnt %d f%d :: "fmt,      \
 	      exp, exp->exp_handle.cookie, exp->exp_connection,              \
 	      exp->exp_connection ?                                          \

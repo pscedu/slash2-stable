@@ -23,6 +23,7 @@
 
 #define DEBUG_SUBSYSTEM S_LNET
 #include <lnet/lib-lnet.h>
+#include "psc_util/cdefs.h"
 
 #if defined(__KERNEL__) && defined(LNET_ROUTER)
 
@@ -265,7 +266,10 @@ EXPORT_SYMBOL(lnet_notify);
 #else
 
 int
-lnet_notify (lnet_ni_t *ni, lnet_nid_t nid, int alive, time_t when)
+lnet_notify (__unusedx lnet_ni_t *ni, 
+             __unusedx lnet_nid_t nid, 
+             __unusedx int alive, 
+             __unusedx time_t when)
 {
         return -EOPNOTSUPP;
 }
@@ -1139,7 +1143,7 @@ lnet_init_rtrpools (void)
 }
 
 int
-lnet_alloc_rtrpools (int im_a_arouter)
+lnet_alloc_rtrpools (__unusedx int im_a_arouter)
 {
         return 0;
 }

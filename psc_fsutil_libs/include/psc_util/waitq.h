@@ -5,7 +5,7 @@
 
 #include <time.h>
 
-#include "psc_ds/lock.h"
+#include "psc_util/lock.h"
 #include "psc_ds/list.h"
 
 #if HAVE_LIBPTHREAD
@@ -13,16 +13,16 @@
 # include <pthread.h>
 
 struct psc_wait_queue {
-	pthread_mutex_t		zwaitq_mut;
-	pthread_cond_t		zwaitq_cond;
-	pthread_condattr_t	zwaitq_cond_attr;
+	pthread_mutex_t		wq_mut;
+	pthread_cond_t		wq_cond;
+	pthread_condattr_t	wq_cond_attr;
 };
 
 #else /* HAVE_LIBPTHREAD */
 
 struct psc_wait_queue {
-	psc_spinlock_t		zwaitq_mut;
-	struct psclist_head	zwaitq_sleepers;
+	psc_spinlock_t		wq_mut;
+	struct psclist_head	wq_sleepers;
 };
 
 #endif /* HAVE_LIBPTHREAD */

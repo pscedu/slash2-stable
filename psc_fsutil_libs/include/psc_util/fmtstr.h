@@ -28,12 +28,12 @@
 #define FMTSTR(buf, siz, fmt, cases)					\
 	({								\
 		const char *_p, *_t;					\
-		char *_s, *_tfmt, *_tfmt_new;				\
+		char *_s, *_tfmt, *_tfmt_new;			        \
 		int _want, _twant, _sawch;				\
 		size_t _tfmt_len;					\
 									\
 		_s = buf;						\
-		_tfmt = NULL;						\
+		_tfmt = _tfmt_new = NULL;				\
 		_tfmt_len = 0;						\
 		for (_p = fmt; *_p != '\0'; _p++) {			\
 		    	_sawch = 0;					\

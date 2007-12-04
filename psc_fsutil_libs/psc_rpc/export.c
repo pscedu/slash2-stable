@@ -1,7 +1,7 @@
 /* $Id: pscExport.c 2212 2007-11-19 16:49:37Z pauln $ */
 
-#include "subsys.h"
-#define ZSUBSYS ZS_RPC
+#include "psc_util/subsys.h"
+#define SUBSYS ZS_RPC
 
 #include "psc_ds/tree.h"
 #include "psc_rpc/rpc.h"
@@ -11,21 +11,20 @@
 
 void __zclass_export_put(struct pscrpc_export *exp)
 {
+#ifdef ZESTION
 	struct zeil *zeil, *next;
-
-	//printf("decrementing export (possibly %d)\n", atomic_read(&exp->exp_refcount));
+#endif
         if (atomic_dec_and_test(&exp->exp_refcount)) {
-		//printf("EXPORT SHOULD BE FREED\n");
-                zinfo("destroying export %p/%s",
-		      exp, (exp->exp_connection) ?
-		      libcfs_id2str(exp->exp_connection->c_peer) : "<?>");
+                psc_info("destroying export %p/%s",
+			 exp, (exp->exp_connection) ?
+			 libcfs_id2str(exp->exp_connection->c_peer) : "<?>");
 
                 /* "Local" exports (lctl, LOV->{mdc,osc}) have no connection. */
                 if (exp->exp_connection)
 			//ptlrpc_put_connection_superhack(exp->exp_connection);
                         pscrpc_put_connection(exp->exp_connection);
 		// XXX Shield from the client for now,
-#ifdef PSCION
+#ifdef ZESTION
 		//printf("cleaning up ZEILS");
 		for (zeil = SPLAY_MIN(zeiltree, &exp->exp_zeiltree);
 		    zeil; zeil = next) {

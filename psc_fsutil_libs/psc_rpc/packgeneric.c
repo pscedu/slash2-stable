@@ -1,7 +1,7 @@
 /* $Id: pscPackGeneric.c 1868 2007-10-12 18:52:11Z yanovich $ */
 
-#include "subsys.h"
-#define ZSUBSYS ZS_RPC
+#include "psc_util/subsys.h"
+#define SUBSYS ZS_RPC
 
 #define _GNU_SOURCE //strnlen
 
@@ -104,14 +104,14 @@ int psc_pack_reply (struct pscrpc_request *req,
                         RETURN (-ENOMEM);
         }
         atomic_set(&rs->rs_refcount, 1);        /* 1 ref for rq_reply_state */
-        rs->rs_cb_id.cbid_fn  = zreply_out_callback;
+        rs->rs_cb_id.cbid_fn  = reply_out_callback;
         rs->rs_cb_id.cbid_arg = rs;
         rs->rs_service = req->rq_rqbd->rqbd_service;
         rs->rs_size = size;
-        INIT_ZLIST_ENTRY(&rs->rs_list_entry);
+        INIT_PSCLIST_ENTRY(&rs->rs_list_entry);
 #if 0
-        INIT_LIST_HEAD(&rs->rs_exp_list);
-        INIT_ZLIST_HEAD(&rs->rs_obd_list);
+        INIT_PSCLIST_HEAD(&rs->rs_exp_list);
+        INIT_PSCLIST_HEAD(&rs->rs_obd_list);
 #endif
 
         req->rq_replen = msg_len;

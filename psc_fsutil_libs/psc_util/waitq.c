@@ -4,9 +4,9 @@
 
 #include "psc_util/assert.h"
 #include "psc_util/lock.h"
-#include "psc_util/psc_util/log.h"
+#include "psc_util/log.h"
 #include "psc_util/waitq.h"
-#include "psc_util/psc_util/cdefs.h"
+#include "psc_util/cdefs.h"
 
 #if HAVE_LIBPTHREAD
 
@@ -21,15 +21,15 @@ void psc_waitq_init(psc_waitq_t *q)
 {
 	int rc;
 
-	rc = pthread_mutex_init(&q->psc_waitq_mut, NULL);
+	rc = pthread_mutex_init(&q->wq_mut, NULL);
 	/* XXX cond_attr is uninitialized */
-	rc |= pthread_cond_init(&q->psc_waitq_cond, &q->psc_waitq_cond_attr);
+	rc |= pthread_cond_init(&q->wq_cond, &q->wq_cond_attr);
 
 	psc_assert(rc == 0);
 }
 
 /**
- * psc_waitq_wait - wait until resource managed by psc_waitq_cond is available.
+ * psc_waitq_wait - wait until resource managed by wq_cond is available.
  * @q: pointer to the queue struct which holds the necessary pthreads elements.
  * @k: pointer to spinlock needed to protect the list
  * Notes: hopefully the freelock() call is not a source of deadlock.  It's here
@@ -42,20 +42,20 @@ void psc_waitq_wait(psc_waitq_t *q, psc_spinlock_t *k)
 {
 	int rc;
 
-	rc = pthread_mutex_lock(&q->psc_waitq_mut);
+	rc = pthread_mutex_lock(&q->wq_mut);
 
 	if (k != NULL)
 		freelock(k);
 
-	rc |= pthread_cond_wait(&q->psc_waitq_cond, &q->psc_waitq_mut);
-	rc |= pthread_mutex_unlock(&q->psc_waitq_mut);
+	rc |= pthread_cond_wait(&q->wq_cond, &q->wq_mut);
+	rc |= pthread_mutex_unlock(&q->wq_mut);
 
 	psc_assert(rc == 0);
 }
 
 /*
  * psc_waitq_timedwait - wait a maximum amount of time for the resource managed by
- *	psc_waitq_cond to become available.
+ *	wq_cond to become available.
  * @q: the wait queue.
  * @k: lock needed to protect the list.
  * @abstime: maximum amount of time to wait before giving up.
@@ -69,13 +69,13 @@ int psc_waitq_timedwait(psc_waitq_t *q, psc_spinlock_t *k,
 	//psc_trace("abstime.sec %lu abstime.usec %ld", 
 	//       abstime->tv_sec, abstime->tv_nsec);
 
-	rc = pthread_mutex_lock(&q->psc_waitq_mut);
+	rc = pthread_mutex_lock(&q->wq_mut);
 
 	if (k != NULL)
 		freelock(k);
 
-	rc |= pthread_cond_timedwait(&q->psc_waitq_cond, &q->psc_waitq_mut, abstime);
-	rc |= pthread_mutex_unlock(&q->psc_waitq_mut);
+	rc |= pthread_cond_timedwait(&q->wq_cond, &q->wq_mut, abstime);
+	rc |= pthread_mutex_unlock(&q->wq_mut);
 
 	psc_assert(rc == 0 || rc == ETIMEDOUT);
 	return rc;
@@ -89,9 +89,9 @@ void psc_waitq_wakeup(psc_waitq_t *q)
 {
 	int rc;
 
-	rc =  pthread_mutex_lock(&q->psc_waitq_mut);
-	rc |= pthread_cond_signal(&q->psc_waitq_cond);
-	rc |= pthread_mutex_unlock(&q->psc_waitq_mut);
+	rc =  pthread_mutex_lock(&q->wq_mut);
+	rc |= pthread_cond_signal(&q->wq_cond);
+	rc |= pthread_mutex_unlock(&q->wq_mut);
 
 	psc_assert(rc == 0);
 }
@@ -103,9 +103,9 @@ void psc_waitq_wakeup(psc_waitq_t *q)
 void psc_waitq_wakeall(psc_waitq_t *q)
 {
 	int rc = 0;
-	rc =  pthread_mutex_lock(&q->psc_waitq_mut);
-	rc |= pthread_cond_broadcast(&q->psc_waitq_cond);
-	rc |= pthread_mutex_unlock(&q->psc_waitq_mut);
+	rc =  pthread_mutex_lock(&q->wq_mut);
+	rc |= pthread_cond_broadcast(&q->wq_cond);
+	rc |= pthread_mutex_unlock(&q->wq_mut);
 
 	psc_assert(rc == 0);
 }

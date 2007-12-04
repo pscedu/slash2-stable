@@ -51,14 +51,14 @@
 #undef list_for_each_safe
 
 #include "psc_ds/list.h"
-#include "psc_ds/listcache.c"
+#include "psc_ds/listcache.h"
 #include "psc_util/atomic.h"
 #include "psc_util/lock.h"
 #include "psc_util/thread.h"
 #include "psc_util/waitq.h"
 #include "psc_types.h"
 
-#define PTLRPC_MD_OPTIONS 0
+#define PSCRPC_MD_OPTIONS 0
 #define BULK_GET_SOURCE    0
 #define BULK_PUT_SINK      1
 #define BULK_GET_SINK      2
@@ -68,19 +68,19 @@
 #define PSC_RPC_MSG_ERR     4712
 #define PSC_RPC_MSG_REPLY   4713
 
-#define PTLRPC_MSG_MAGIC    0x0BD00BD0
+#define PSCRPC_MSG_MAGIC    0x0BD00BD0
 #if !CATAMOUNT_CLIENT
-#define PTLRPC_MSG_VERSION  0x00000003
+#define PSCRPC_MSG_VERSION  0x00000003
 #else
-#define PTLRPC_MSG_VERSION  0x00000004
+#define PSCRPC_MSG_VERSION  0x00000004
 #endif
 
 #define ZOBD_FREE(ptr, size) ((void)(size), free((ptr)))
 #define ZOBD_ALLOC(ptr, size) (ptr = PSCALLOC(size))
 
 #define PAGE_SIZE               4096
-#define PTLRPC_MAX_BRW_SIZE     LNET_MTU
-#define PTLRPC_MAX_BRW_PAGES    (PTLRPC_MAX_BRW_SIZE/PAGE_SIZE)
+#define PSCRPC_MAX_BRW_SIZE     LNET_MTU
+#define PSCRPC_MAX_BRW_PAGES    (PSCRPC_MAX_BRW_SIZE/PAGE_SIZE)
 #define CURRENT_SECONDS         time(NULL)
 #define PSC_SERVER   0xff /* differentiate client and server for ni init */
 #define PSC_CLIENT   0x0f
@@ -236,7 +236,7 @@ struct pscrpc_request_set {
 	psc_waitq_t         *set_wakeup_ptr;   /* Others wait here..    */
 	set_interpreter_func set_interpret;    /* callback function     */
 	void                *set_arg;          /* callback pointer      */
-#ifdef 0
+#if 0
 	//psc_spinlock_t     rqset_lock;
 	//psclist_cache_t    rqset_reqs;       /* the request list      */
 #endif       
@@ -254,7 +254,7 @@ struct pscrpc_bulk_desc {
 	struct pscrpc_connection *bd_connection;   /* server only            */
 	struct pscrpc_export     *bd_export;       /* server only            */
         struct pscrpc_request    *bd_req;          /* associated request     */
-        psc_waitq___t             bd_waitq;        /* server side only WQ    */
+        psc_waitq_t               bd_waitq;        /* server side only WQ    */
         int                       bd_iov_count;    /* # entries in bd_iov    */
         int                       bd_max_iov;      /* alloc'd size of bd_iov */
         int                       bd_nob;          /* # bytes covered        */
@@ -340,15 +340,16 @@ struct pscrpc_request {
         struct pscrpc_cb_id         rq_req_cbid;
 	struct pscrpc_cb_id         rq_reply_cbid;
 	struct pscrpc_bulk_desc    *rq_bulk;    /* attach bulk */
-        void  *rq_interpret_reply;              /* Async completion handler */
-        struct pscrpc_async_args rq_async_args; /* Async completion context */
+        void                       *rq_interpret_reply; /* Async completion handler */
+        struct pscrpc_async_args    rq_async_args;      /* Async completion context */
+	lnet_handle_md_t            rq_req_md_h;
 	/* client-only incoming reply */
         lnet_handle_md_t            rq_reply_md_h;
         psc_waitq_t                 rq_reply_waitq;
 	/* server-side... */
-        struct timeval       rq_arrival_time;       /* request arrival time */
-        struct pscrpc_reply_state *rq_reply_state;  /* separated reply state */
-        struct pscrpc_request_buffer_desc *rq_rqbd; /* incoming req  buffer*/
+        struct timeval              rq_arrival_time; /* request arrival time */
+        struct pscrpc_reply_state  *rq_reply_state;  /* separated reply state */
+        struct pscrpc_request_buffer_desc *rq_rqbd;  /* incoming req  buffer*/
 };
 
 /*
@@ -878,7 +879,7 @@ do {                                                                         \
                 if (__timeout)                                               \
                        abstime.tv_sec = __timeout + __now;                   \
                 abstime.tv_nsec = 0;                                         \
-		ret = psc_waitq___timedwait(wq, lck, &abstime);              \
+		ret = psc_waitq_timedwait(wq, lck, &abstime);              \
 		if (ret) {                                                   \
 			ret = -ret;                                          \
 			break;                                               \

@@ -166,16 +166,15 @@ void procbridge_getnid(lnet_ni_t *ni)
 int
 procbridge_startup (lnet_ni_t *ni)
 {
-    procbridge p;
+    procbridge p=NULL;
     bridge     b;
     int        rc, i;
-    extern int tcpnal_acceptor_port;
-    lnet_ni_t *tni=ni, *oni=ni;
-    lnet_nid_t onid=ni->ni_nid;
+    lnet_ni_t *oni=ni;
+    __unusedx lnet_nid_t onid=ni->ni_nid;
+    __unusedx extern int tcpnal_acceptor_port;
 
 #ifdef PSC_LNET
-    struct psc_thread *thr = PSCALLOC(sizeof(*thr)*oni->ni_ninterfaces);   
-
+    struct psc_thread *thr    = PSCALLOC(sizeof(*thr)*oni->ni_ninterfaces);   
     oni->ni_bonded_interfaces = PSCALLOC(sizeof(oni)*oni->ni_ninterfaces);
 #endif
     
@@ -211,16 +210,18 @@ procbridge_startup (lnet_ni_t *ni)
 #endif                   
             procbridge_getnid(ni);
 #ifdef PSC_LNET
-            /* The credit settings here are pretty irrelevent.  Userspace tcplnd has no
-             * tx descriptor pool to exhaust and does a blocking send; that's the real
-             * limit on send concurrency. */
+            /* The credit settings here are pretty irrelevent.  
+             *   Userspace tcplnd has no tx descriptor pool to 
+             *   exhaust and does a blocking send; that's the real
+             *   limit on send concurrency. 
+             */
             if (i) { 
                     LNET_LOCK();
-                    psclist_add_tail(&ni->ni_list, &the_lnet.ln_nis);
+                    /* let cfs manage their own lists */
+                    list_add_tail(&ni->ni_list, &the_lnet.ln_nis);
                     LNET_UNLOCK();
             }
 #endif
-
             ni->ni_maxtxcredits = 1000;
             ni->ni_peertxcredits = 1000;
             ni->ni_txcredits = ni->ni_mintxcredits = ni->ni_maxtxcredits;
@@ -267,8 +268,8 @@ procbridge_startup (lnet_ni_t *ni)
                     return -ESRCH;
             }
 #else
-            thr->pscthr_lnetthr.bridge = (void *)b;
-            pscthr_init(thr, ZTHRT_LNET, nal_thread, (tcpnal_instances-1));
+            thr->pscthr_private = (void *)b;
+            pscthr_init(thr, SLASH_LNDTHR, nal_thread, (tcpnal_instances-1));
             thr++;
 #endif
     }

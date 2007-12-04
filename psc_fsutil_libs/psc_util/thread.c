@@ -1,12 +1,15 @@
 /* $Id: thread.c 2073 2007-11-01 17:31:07Z pauln $ */
 
-#include "subsys.h"
+#include "psc_util/subsys.h"
 
 #include <err.h>
 #include <stdio.h>
 #include <unistd.h>
 
 #include "psc_util/threadtable.h"
+#include "psc_util/lock.h"
+#include "psc_util/thread.h"
+#include "psc_types.h"
 
 /* The app must supply threadTypeNames and threadTypes. 
  *  via the app_thread.d 

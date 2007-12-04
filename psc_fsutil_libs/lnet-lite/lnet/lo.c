@@ -21,9 +21,10 @@
 
 #define DEBUG_SUBSYSTEM S_LNET
 #include <lnet/lib-lnet.h>
+#include "psc_util/cdefs.h"
 
 int
-lolnd_send (lnet_ni_t *ni, void *private, lnet_msg_t *lntmsg)
+lolnd_send (lnet_ni_t *ni, __unusedx void *private, lnet_msg_t *lntmsg)
 {
         LASSERT (!lntmsg->msg_routing);
         LASSERT (!lntmsg->msg_target_is_router);
@@ -33,9 +34,10 @@ lolnd_send (lnet_ni_t *ni, void *private, lnet_msg_t *lntmsg)
 
 int
 lolnd_recv (lnet_ni_t *ni, void *private, lnet_msg_t *lntmsg,
-            int delayed, unsigned int niov, 
+            __unusedx int delayed, unsigned int niov, 
             struct iovec *iov, lnet_kiov_t *kiov,
-            unsigned int offset, unsigned int mlen, unsigned int rlen)
+            unsigned int offset, unsigned int mlen, 
+            __unusedx unsigned int rlen)
 {
         lnet_msg_t *sendmsg = private;
 
@@ -74,7 +76,7 @@ lolnd_recv (lnet_ni_t *ni, void *private, lnet_msg_t *lntmsg,
 static int lolnd_instanced;
 
 void
-lolnd_shutdown(lnet_ni_t *ni)
+lolnd_shutdown(__unusedx lnet_ni_t *ni)
 {
 	CDEBUG (D_NET, "shutdown\n");
         LASSERT (lolnd_instanced);

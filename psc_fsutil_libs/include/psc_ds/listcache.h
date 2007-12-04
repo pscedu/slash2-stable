@@ -8,48 +8,37 @@
 #include <stdarg.h>
 #include <string.h>
 
+#include "psc_ds/list.h"
+#include "psc_util/lock.h"
 #include "psc_util/alloc.h"
 #include "psc_util/assert.h"
 #include "psc_util/atomic.h"
-#include "psc_ds/list.h"
-#include "psc_util/lock.h"
 #include "psc_util/waitq.h"
 #include "psc_util/alloc.h"
 
 #define LC_NAME_MAX 32
 
-#if 0
-#ifdef PSCION
-extern struct psclist_head pscListCaches;
-extern psc_spinlock_t pscListCachesLock;
-#endif
-#endif
-
 struct psclist_head pscListCaches;
-psc_spinlock_t	  pscListCachesLock;
+psc_spinlock_t	    pscListCachesLock;
 
 /*
  * List cache which can be edited by multiple
  *  threads.
  */
 struct list_cache {
-	struct psclist_head	lc_index_lentry;	/* link between caches  */
-	char			lc_name[LC_NAME_MAX];	/* for lc mgmt */
-
-	ssize_t			lc_max;		/* max allowable entries */
-	ssize_t			lc_min;		/* keep at least this many */
-	ssize_t			lc_size;		/* current #items in list */
-	size_t			lc_nseen;		/* total #items placed on us */
-	size_t			lc_offset;		/* index into item of entry member */
-
-	atomic_t		lc_total;		/* relative max */
-
-	struct psclist_head	lc_list;		/* head/tail of list */
-	psc_spinlock_t		lc_lock;		/* exclusitivity ctl*/
-	psc_waitq_t		lc_waitq_empty;	/* when we're empty */
-	psc_waitq_t		lc_waitq_full;		/* when we're full */
+	struct psclist_head lc_list;		/* head/tail of list         */
+	struct psclist_head lc_index_lentry;	/* link between caches       */
+	char		    lc_name[LC_NAME_MAX]; /* for lc mgmt             */
+	ssize_t		    lc_max;		/* max allowable entries     */
+	ssize_t		    lc_min;		/* keep at least this many   */
+	ssize_t		    lc_size;		/* current #items in list    */
+	size_t		    lc_nseen;		/* total #items placed on us */
+	size_t		    lc_offset;		/* offset to entry member    */
+	atomic_t	    lc_total;		/* relative max              */
+	psc_spinlock_t	    lc_lock;		/* exclusitivity ctl         */
+	psc_waitq_t	    lc_waitq_empty;	/* when we're empty          */
+	psc_waitq_t	    lc_waitq_full;	/* when we're full           */
 };
-
 typedef struct list_cache list_cache_t;
 
 #define LIST_CACHE_LOCK(l)  spinlock(&(l)->lc_lock)
@@ -92,7 +81,6 @@ lc_del(struct psclist_head *e, list_cache_t *l)
 	psc_assert(l->lc_size >= 0);
 
 	ureqlock(&l->lc_lock, locked);
-
 	/*
 	 * An item was popped from our list, so wakeup other
 	 * threads waiting to use the spot on this list.
@@ -117,11 +105,11 @@ __list_cache_get(list_cache_t *l, int block, int peek)
 		if (block) {
 			/* Wait until the list is no longer empty. */
 			if (block > 1)
-				zwarnx("Watiing on listcache %p : '%s'",
-				       l, l->lc_name);
+				psc_warnx("Watiing on listcache %p : '%s'",
+					  l, l->lc_name);
 			else
-				zinfo("Waiting on listcache %p : '%s'",
-				      l, l->lc_name);
+				psc_notify("Waiting on listcache %p : '%s'",
+					   l, l->lc_name);
 			psc_waitq_wait(&l->lc_waitq_empty, &l->lc_lock);
 			goto start;
 
@@ -133,7 +121,7 @@ __list_cache_get(list_cache_t *l, int block, int peek)
 	e = psclist_first(&l->lc_list);
 
 	if (!peek)
-		list_cache_del(e, l);
+		lc_del(e, l);
 
 	LIST_CACHE_ULOCK(l);
 
@@ -447,7 +435,7 @@ lc_sort(list_cache_t *lc,
 	int j;
 
 	j = 0;
-	p = ZALLOC(lc->lc_size * sizeof(*p));
+	p = PSCALLOC(lc->lc_size * sizeof(*p));
 	locked = reqlock(&lc->lc_lock);
 	if (lc->lc_size == 0 || lc->lc_size == 1) {
 		ureqlock(&lc->lc_lock, locked);

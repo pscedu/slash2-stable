@@ -1177,7 +1177,7 @@ lnet_match_networks (char **networksp, char *ip2nets, __u32 *ipaddrs, int nip)
                                         "%s%s", (len == 0) ? "" : ",", 
                                         tb->ltb_text);
                 
-                        if (len >= sizeof(networks)) {
+                        if (len >= (int)sizeof(networks)) {
                                 CERROR("Too many matched networks\n");
                                 rc = -E2BIG;
                                 goto out;

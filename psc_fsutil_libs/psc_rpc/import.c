@@ -1,7 +1,7 @@
 /* $Id: import.c 2137 2007-11-05 18:41:27Z yanovich $ */
 
-#include "subsys.h"
-#define SUBSYS S_RPC
+#include "psc_util/subsys.h"
+#define SUBSYS ZS_RPC
 
 #include "psc_rpc/rpc.h"
 
@@ -60,19 +60,19 @@ int pscrpc_set_import_discon(struct pscrpc_import *imp, u32 conn_cnt)
         spin_lock(&imp->imp_lock);
 
 	psc_warnx("inhere conn_cnt %u imp_conn_cnt %u, imp->imp_state = %d",
-	       conn_cnt, imp->imp_conn_cnt, imp->imp_state);
+		  conn_cnt, imp->imp_conn_cnt, imp->imp_state);
 
         if (imp->imp_state == PSC_IMP_FULL &&
             (conn_cnt == 0 || conn_cnt == (u32)imp->imp_conn_cnt)) {
 
-		zerrorx("Connection to service via nid %s was "
-			"lost; in progress operations using this "
-			"service will %s.",
-			libcfs_nid2str(imp->imp_connection->c_peer.nid),
-			imp->imp_replayable ?
-			"wait for recovery to complete" : "fail");
+		psc_errorx("Connection to service via nid %s was "
+			   "lost; in progress operations using this "
+			   "service will %s.",
+			   libcfs_nid2str(imp->imp_connection->c_peer.nid),
+			   imp->imp_replayable ?
+			   "wait for recovery to complete" : "fail");
 
-                ZIMPORT_SET_STATE_NOLOCK(imp, PSC_IMP_DISCON);
+                PSCIMPORT_SET_STATE_NOLOCK(imp, PSC_IMP_DISCON);
                 spin_unlock(&imp->imp_lock);
 
                 //if (obd_dump_on_timeout)
@@ -110,7 +110,7 @@ void pscrpc_deactivate_import(struct pscrpc_import *imp)
         imp->imp_generation++;
         spin_unlock(&imp->imp_lock);
 
-	zerrorx("Here's where failover is supposed to happen!!!");
+	psc_errorx("Here's where failover is supposed to happen!!!");
         pscrpc_abort_inflight(imp);
         //pscobd_import_event(imp->imp_obd, imp, IMP_EVENT_INACTIVE);
 }
@@ -133,9 +133,9 @@ void pscrpc_invalidate_import(struct pscrpc_import *imp)
 
         /* wait for all requests to error out and call completion callbacks */
         lwi = LWI_TIMEOUT_INTERVAL(MAX(ZOBD_TIMEOUT, 1), HZ, NULL, NULL);
-        rc = zcli_wait_event(imp->imp_recovery_waitq,
-			     (atomic_read(&imp->imp_inflight) == 0),
-			     &lwi);
+        rc = psc_cli_wait_event(imp->imp_recovery_waitq,
+				(atomic_read(&imp->imp_inflight) == 0),
+				&lwi);
 
         if (rc)
                 CERROR("rc = %d waiting for callback (%d != 0)\n",
