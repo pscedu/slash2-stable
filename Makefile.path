@@ -1,0 +1,3 @@
+# $Id$
+
+MAINMK=${ROOTDIR}/mk/main.mk
