@@ -1,10 +1,8 @@
 # $Id$
 
-ROOTDIR = ../..
-IS_3RDPARTY =
-include ${ROOTDIR}/mk/defs.mk
+include ../Makefile.path
 
-LIBRARY=	${LNET_BASE}/lib/libzlnet.a
+LIBRARY=	${LNET_BASE}/lib/liblnet.a
 SRCS=		acceptor.c
 SRCS+=		api-errno.c
 SRCS+=		api-ni.c
@@ -22,4 +20,4 @@ INCLUDES+=	-I${LNET_BASE}/include
 
 TARGET=		${LIBRARY}
 
-include ${MAINMK}
+include ${LLMK}

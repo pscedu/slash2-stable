@@ -1,8 +1,6 @@
 # $Id$
 
-ROOTDIR = ../..
-IS_3RDPARTY =
-include ${ROOTDIR}/mk/defs.mk
+include ../Makefile.path
 
 LIBRARY=	${LNET_BASE}/lib/libsocknal.a
 SRCS=		connection.c
@@ -17,5 +15,4 @@ INCLUDES+=	-I${LNET_BASE}/include
 
 TARGET=		${LIBRARY}
 
-#CFLAGS+=	-O2
-include ${MAINMK}
+include ${LLMK}
