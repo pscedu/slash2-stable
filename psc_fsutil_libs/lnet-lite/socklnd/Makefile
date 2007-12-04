@@ -12,7 +12,7 @@ SRCS+=		table.c
 SRCS+=		tcplnd.c
 SRCS+=		sendrecv.c
 INCLUDES+=	-I${LNET_BASE}/include
-
+INCLUDES+=	-I${ROOTDIR}/psc_fsutil_libs/include
 TARGET=		${LIBRARY}
 
 include ${LLMK}
