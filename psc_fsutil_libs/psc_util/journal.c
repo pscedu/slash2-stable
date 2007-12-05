@@ -1,17 +1,20 @@
 /* $Id$ */
 
 #include "psc_ds/types.h"
+#include "psc_util/palloc.h"
 
 struct psc_journal {
 	int		pj_entsz;	/* sizeof log entry */
-	int		pj_nent;	/* #ent slots in journal */
+	int		pj_nents;	/* #ent slots in journal */
 	daddr_t		pj_daddr;	/* disk offset of starting ent */
 	int		pj_nextwrite;	/* slot to write next ent */
 	int		pj_gen;		/* current wrap generation */
 };
 
 struct psc_journal_walker {
-	int		pjw_pos;
+	int		pjw_pos;	/* current position */
+	int		pjw_stop;	/* targetted end position */
+	int		pjw_seen;	/* whether to terminate at stop_pos */
 };
 
 struct psc_journal_enthdr {
@@ -22,60 +25,84 @@ struct psc_journal_enthdr {
 
 #define PJE_MAGIC	0x45678912aabbccdd
 
+/*
+ * pjournal_alloclog - allocate a log for I/O to a journal.
+ * @pj: the journal.
+ * Returns: data buffer pointer valid for journal I/O.
+ */
 void *
 pjournal_alloclog(struct psc_journal *pj)
 {
 	return (palloc(pj->pj_entsz));
 }
 
+/*
+ * pjournal_logwrite - store a new entry in a journal.
+ * @pj: the journal.
+ * @type: the application-specific log entry type.
+ * @data: the journal entry contents to store.
+ * Returns: 0 on success, -1 on error.
+ */
 int
 pjournal_logwrite(struct psc_journal *pj, int type, const void *data)
 {
 	struct psc_journal_enthdr *pje;
+	daddr_t addr;
+
+	if (data & (pscPageSize - 1))
+		pfatal("data is not page-aligned");
 
 	pje = data;
 	pje->pje_magic = PJE_MAGIC;
 	pje->pje_type = type;
-	ppio_write(pj->nextlog, pje, pj->entsz);
+	addr = pj->pj_daddr + pj->pj_nextwrite * pj->pj_entsz;
+	ppio_write(addr, pje, pj->entsz);
 	return (0);
 }
 
+/*
+ * pjournal_logread - get a specified entry from a journal.
+ * @pj: the journal.
+ * @slot: the position in the journal of the entry to obtain.
+ * @pje: an entry to be filled in for the journal entry.
+ * Returns: 0 on success, -1 on error.
+ */
 int
-pjournal_walk_start(struct psc_journal *pj, struct psc_journal_walker *pjw,
-    struct psc_journal_entry *pje)
+pjournal_logread(struct psc_journal *pj, int slot, void *data)
 {
-	memset(pjw, 0, sizeof(*pjw));
-	return (pjournal_walk(pj, pjw, pje));
+	daddr_t addr;
+
+	if (data & (pscPageSize - 1))
+		pfatal("data is not page-aligned");
+
+	if (slot >= pj->pj_nents)
+		return (-1);
+
+	addr = pj->pj_daddr + slot * pj->pj_entsz;
+	ppio_read(addr, data, pj->entsz);
+	return (0);
 }
 
+/*
+ * pjournal_walk - traverse each entry in a journal.
+ * @pj: the journal.
+ * @pjw: a walker for the journal.
+ * @pje: an entry to be filled in for the next journal entry.
+ * Returns: 0 on success, -1 on error, -2 on end of journal.
+ */
 int
 pjournal_walk(struct psc_journal *pj, struct psc_journal_walker *pjw,
     struct psc_journal_entry *pje)
 {
-}
+	daddr_t addr;
 
-
-
-#define SLASH_INUM_ALLOC_SZ	1024	/* allocate 1024 inums at a time */
-
-#define SLASH_PJET_VOID		0
-#define SLASH_PJET_INUM		1
-
-struct slash_jent_inum {
-	struct psc_journal_enthdr	sji_hdr;
-	slash_inum_t			sji_inum;
-};
-
-slash_inum_t
-slash_get_inum(struct slash_sb_mem *sbm)
-{
-	struct slash_jent_inum *sji;
-
-	if (++sbm->sbm_inum % INUM_ALLOC_SZ == 0) {
-		sji = pjournal_alloclog(sbm->sbm_pj);
-		sji->sgi_inum = sbm->sbm_inum;
-		pjournal_writelog(sbm->sbm_pj, SLASH_PJET_INUM, sji);
-		free(sji);
+	if (pjw->pjw_pos == pjw->pjw_stop) {
+		if (pjw->pjw_seen)
+			return (-2);
+		pjw->pjw_seen = 1;
 	}
-	return (sbm->sbm_inum);
+	pjournal_logread(pj, pjw->pjw_pos, pje);
+	if (++pjw->pjw_pos >= pj->pj_nents)
+		pjw->pjw_pos = 0;
+	return (0);
 }

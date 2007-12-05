@@ -17,6 +17,7 @@ SRCS+=		psc_rpc/packgeneric.c
 SRCS+=		psc_rpc/rpcclient.c
 SRCS+=		psc_rpc/service.c
 SRCS+=		psc_util/crc.c
+SRCS+=		psc_util/journal.c
 SRCS+=		psc_util/log.c
 SRCS+=		psc_util/myrandom.c
 SRCS+=		psc_util/palloc.c
