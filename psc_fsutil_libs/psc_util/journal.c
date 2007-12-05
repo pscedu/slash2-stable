@@ -3,40 +3,11 @@
 #include "psc_ds/types.h"
 #include "psc_util/palloc.h"
 
-struct psc_journal {
-	psc_spinlock_t	pj_lock;	/* contention lock */
-	int		pj_entsz;	/* sizeof log entry */
-	int		pj_nents;	/* #ent slots in journal */
-	daddr_t		pj_daddr;	/* disk offset of starting ent */
-	int		pj_nextwrite;	/* next entry slot to write to */
-	int		pj_genid;	/* current wrap generation */
-	atomic_t	pj_nextxid;	/* next transaction ID */
-};
-
-struct psc_journal_walker {
-	int		pjw_pos;	/* current position */
-	int		pjw_stop;	/* targetted end position */
-	int		pjw_seen;	/* whether to terminate at stop_pos */
-};
-
-struct psc_journal_enthdr {
-	u64		pje_magic;	/* validity check */
-	u32		pje_genid;	/* log generation for wrapping */
-	u32		pje_type;	/* app-specific log entry type */
-	u32		pje_xid;	/* transaction ID */
-	/* record contents follow */
-};
-
 #define PJ_LOCK(pj)	spinlock(&(pj)->pj_lock)
 #define PJ_ULOCK(pj)	freelock(&(pj)->pj_lock)
 
 #define PJE_MAGIC	0x45678912aabbccdd
 #define PJE_XID_NONE	0		/* invalid transaction ID */
-
-/* Journal entry types. */
-#define PJET_VOID	0		/* null journal record */
-#define PJET_XSTART	(-1)		/* transaction began */
-#define PJET_XEND	(-2)		/* transaction ended */
 
 /*
  * pjournal_init - initialize the in-memory representation of a journal.
