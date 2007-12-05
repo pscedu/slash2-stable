@@ -1,5 +1,10 @@
 /* $Id$ */
 
+#include "psc_types.h"
+#include "psc_util/atomic.h"
+#include "psc_util/atomic.h"
+#include "psc_util/lock.h"
+
 struct psc_journal {
 	psc_spinlock_t	pj_lock;	/* contention lock */
 	int		pj_entsz;	/* sizeof log entry */
@@ -29,14 +34,14 @@ struct psc_journal_enthdr {
 #define PJET_XSTART	(-1)		/* transaction began */
 #define PJET_XEND	(-2)		/* transaction ended */
 
-void	 pjournal_init(struct pjournal *, daddr_t, int, int);
-int	 pjournal_nextxid(struct pjournal *);
-int	 pjournal_xstart(struct pjournal *, int);
-int	 pjournal_xend(struct pjournal *, int);
+void	 pjournal_init(struct psc_journal *, daddr_t, int, int);
+int	 pjournal_nextxid(struct psc_journal *);
+int	 pjournal_xstart(struct psc_journal *, int);
+int	 pjournal_xend(struct psc_journal *, int);
 int	 pjournal_clearlog(struct psc_journal *, int);
 void	*pjournal_alloclog(struct psc_journal *);
-int	 pjournal_logwritex(struct psc_journal *, int, int, const void *);
-int	 pjournal_logwrite(struct psc_journal *, int, const void *);
+int	 pjournal_logwritex(struct psc_journal *, int, int, void *);
+int	 pjournal_logwrite(struct psc_journal *, int, void *);
 int	 pjournal_logread(struct psc_journal *, int, void *);
 int	 pjournal_walk(struct psc_journal *, struct psc_journal_walker *,
-	    struct psc_journal_entry *);
+	    struct psc_journal_enthdr *);
