@@ -1,7 +1,10 @@
 /* $Id$ */
 
-#include "psc_ds/types.h"
-#include "psc_util/palloc.h"
+#include "psc_types.h"
+#include "psc_util/alloc.h"
+#include "psc_util/atomic.h"
+#include "psc_util/journal.h"
+#include "psc_util/lock.h"
 
 #define PJ_LOCK(pj)	spinlock(&(pj)->pj_lock)
 #define PJ_ULOCK(pj)	freelock(&(pj)->pj_lock)
@@ -17,14 +20,13 @@
  * @entsz: size of a journal entry.
  */
 void
-pjournal_init(struct pjournal *pj, daddr_t start, int nents, int entsz)
+pjournal_init(struct psc_journal *pj, daddr_t start, int nents, int entsz)
 {
 	memset(pj, 0, sizeof(*pj));
 	pj->pj_daddr = start;
 	pj->pj_nents = nents;
 	pj->pj_entsz = entsz;
 	LOCK_INIT(&pj->pj_lock);
-	atomic_init(&pj->pj_nextxid, 0);
 }
 
 /*
@@ -33,7 +35,7 @@ pjournal_init(struct pjournal *pj, daddr_t start, int nents, int entsz)
  * Returns: new, unused transaction ID.
  */
 int
-pjournal_nextxid(struct pjournal *pj)
+pjournal_nextxid(struct psc_journal *pj)
 {
 	int xid;
 
@@ -44,20 +46,132 @@ pjournal_nextxid(struct pjournal *pj)
 }
 
 /*
+ * _pjournal_logwrite - store a new entry in a journal.
+ * @pj: the journal.
+ * @slot: position location in journal to write.
+ * @type: the application-specific log entry type.
+ * @xid: transaction ID of entry.
+ * @data: the journal entry contents to store.
+ * Returns: 0 on success, -1 on error.
+ */
+__static int
+_pjournal_logwrite(struct psc_journal *pj, int slot, int type, int xid,
+    void *data)
+{
+	struct psc_journal_enthdr *pje;
+	daddr_t addr;
+
+	if (slot >= pj->pj_nents)
+		return (-1);
+
+	if ((unsigned long)data & (pscPageSize - 1))
+		pfatal("data is not page-aligned");
+
+	pje = data;
+	pje->pje_magic = PJE_MAGIC;
+	pje->pje_type = type;
+	pje->pje_xid = xid;
+	addr = pj->pj_daddr + slot * pj->pj_entsz;
+	ppio_write(addr, pje, pj->pj_entsz);
+	return (0);
+}
+
+/*
+ * _pjournal_logwritex - store a new entry in a journal transaction.
+ * @pj: the journal.
+ * @type: the application-specific log entry type.
+ * @xid: transaction ID.
+ * @data: the journal entry contents to store.
+ * Returns: 0 on success, -1 on error.
+ */
+__static int
+_pjournal_logwritex(struct psc_journal *pj, int type, int xid,
+    void *data)
+{
+	int rc;
+
+	rc = _pjournal_logwrite(pj, pj->pj_nextwrite, type, xid, data);
+	if (rc)
+		return (rc);
+
+	PJ_LOCK(pj);
+	if (++pj->pj_nextwrite >= pj->pj_nents) {
+		pj->pj_nextwrite = 0;
+		atomic_set(&pj->pj_nextxid, 0);
+		pj->pj_genid++;
+	}
+	PJ_ULOCK(pj);
+	return (rc);
+}
+
+/*
+ * pjournal_logwritex - store a new entry in a journal transaction.
+ * @pj: the journal.
+ * @type: the application-specific log entry type.
+ * @xid: transaction ID.
+ * @data: the journal entry contents to store.
+ * Returns: 0 on success, -1 on error.
+ */
+int
+pjournal_logwritex(struct psc_journal *pj, int type, int xid,
+    void *data)
+{
+	if (type == PJET_VOID ||
+	    type == PJET_XSTART ||
+	    type == PJET_XEND)
+		pfatal("invalid journal entry type");
+	return (_pjournal_logwritex(pj, type, xid, data));
+}
+
+/*
+ * pjournal_logwrite - store a new entry in a journal.
+ * @pj: the journal.
+ * @type: the application-specific log entry type.
+ * @data: the journal entry contents to store.
+ * Returns: 0 on success, -1 on error.
+ */
+int
+pjournal_logwrite(struct psc_journal *pj, int type, void *data)
+{
+	return (_pjournal_logwritex(pj, type, PJE_XID_NONE, data));
+}
+
+/*
+ * pjournal_logread - get a specified entry from a journal.
+ * @pj: the journal.
+ * @slot: the position in the journal of the entry to obtain.
+ * @pje: an entry to be filled in for the journal entry.
+ * Returns: 0 on success, -1 on error.
+ */
+int
+pjournal_logread(struct psc_journal *pj, int slot, void *data)
+{
+	daddr_t addr;
+
+	if ((unsigned long)data & (pscPageSize - 1))
+		pfatal("data is not page-aligned");
+
+	if (slot >= pj->pj_nents)
+		return (-1);
+
+	addr = pj->pj_daddr + slot * pj->pj_entsz;
+	ppio_read(addr, data, pj->pj_entsz);
+	return (0);
+}
+
+/*
  * pjournal_xend - write a "transaction began" record in a journal.
  * @pj: the journal.
  * @xid: ID of initiated transaction.
  * Returns: 0 on success, -1 on error.
  */
 int
-pjournal_xstart(struct pjournal *pj, int xid)
+pjournal_xstart(struct psc_journal *pj, int xid)
 {
 	struct psc_journal_enthdr *pje;
-	daddr_t addr;
 
 	pje = palloc(pj->pj_entsz);
-	pje->pje_xid = xid;
-	_pjournal_logwrite(pj, slot, PJET_XSTART, pje);
+	_pjournal_logwritex(pj, PJET_XSTART, xid, pje);
 	free(pje);
 	return (0);
 }
@@ -69,14 +183,12 @@ pjournal_xstart(struct pjournal *pj, int xid)
  * Returns: 0 on success, -1 on error.
  */
 int
-pjournal_xend(struct pjournal *pj, int xid)
+pjournal_xend(struct psc_journal *pj, int xid)
 {
 	struct psc_journal_enthdr *pje;
-	daddr_t addr;
 
 	pje = palloc(pj->pj_entsz);
-	pje->pje_xid = xid;
-	_pjournal_logwrite(pj, slot, PJET_XEND, pje);
+	pjournal_logwritex(pj, PJET_XEND, xid, pje);
 	free(pje);
 	return (0);
 }
@@ -91,10 +203,9 @@ int
 pjournal_clearlog(struct psc_journal *pj, int slot)
 {
 	struct psc_journal_enthdr *pje;
-	daddr_t addr;
 
 	pje = palloc(pj->pj_entsz);
-	_pjournal_logwrite(pj, slot, PJET_VOID, pje);
+	_pjournal_logwrite(pj, slot, PJET_VOID, PJE_XID_NONE, pje);
 	free(pje);
 	return (0);
 }
@@ -111,105 +222,6 @@ pjournal_alloclog(struct psc_journal *pj)
 }
 
 /*
- * _pjournal_logwrite - store a new entry in a journal.
- * @pj: the journal.
- * @slot: position location in journal to write.
- * @type: the application-specific log entry type.
- * @xid: transaction ID of entry.
- * @data: the journal entry contents to store.
- * Returns: 0 on success, -1 on error.
- */
-__static int
-_pjournal_logwrite(struct psc_journal *pj, int slot, int type, int xid,
-    const void *data)
-{
-	struct psc_journal_enthdr *pje;
-	daddr_t addr;
-
-	if (slot >= pj->pj_nents)
-		return (-1);
-
-	if (data & (pscPageSize - 1))
-		pfatal("data is not page-aligned");
-
-	pje = data;
-	pje->pje_magic = PJE_MAGIC;
-	pje->pje_type = type;
-	pje->pje_xid = xid;
-	addr = pj->pj_daddr + slot * pj->pj_entsz;
-	ppio_write(addr, pje, pj->entsz);
-	return (0);
-}
-
-/*
- * pjournal_logwritex - store a new entry in a journal transaction.
- * @pj: the journal.
- * @type: the application-specific log entry type.
- * @xid: transaction ID.
- * @data: the journal entry contents to store.
- * Returns: 0 on success, -1 on error.
- */
-int
-pjournal_logwritex(struct psc_journal *pj, int type, int xid,
-    const void *data)
-{
-	if (type == PJET_VOID ||
-	    type == PJET_XSTART ||
-	    type == PJET_XEND)
-		pfatal("invalid journal entry type");
-
-	rc = _pjournal_logwrite(pj, pj->pj_nextwrite, type, xid, data);
-	if (rc)
-		return (rc);
-
-	PJ_LOCK(pj);
-	if (++pj->pj_nextwrite >= pj->pj_nents) {
-		pj->pj_nextwrite = 0;
-		pj->pj_xid = 0;
-		pj->pj_genid++;
-	}
-	PJ_ULOCK(pj);
-	return (rc);
-}
-
-/*
- * pjournal_logwrite - store a new entry in a journal.
- * @pj: the journal.
- * @type: the application-specific log entry type.
- * @data: the journal entry contents to store.
- * Returns: 0 on success, -1 on error.
- */
-int
-pjournal_logwrite(struct psc_journal *pj, int type, const void *data)
-{
-	return (_pjournal_logwrite(pj, pj->pj_nextwrite, type, data,
-	    PJE_XID_NONE));
-}
-
-/*
- * pjournal_logread - get a specified entry from a journal.
- * @pj: the journal.
- * @slot: the position in the journal of the entry to obtain.
- * @pje: an entry to be filled in for the journal entry.
- * Returns: 0 on success, -1 on error.
- */
-int
-pjournal_logread(struct psc_journal *pj, int slot, void *data)
-{
-	daddr_t addr;
-
-	if (data & (pscPageSize - 1))
-		pfatal("data is not page-aligned");
-
-	if (slot >= pj->pj_nents)
-		return (-1);
-
-	addr = pj->pj_daddr + slot * pj->pj_entsz;
-	ppio_read(addr, data, pj->entsz);
-	return (0);
-}
-
-/*
  * pjournal_walk - traverse each entry in a journal.
  * @pj: the journal.
  * @pjw: a walker for the journal.
@@ -218,10 +230,8 @@ pjournal_logread(struct psc_journal *pj, int slot, void *data)
  */
 int
 pjournal_walk(struct psc_journal *pj, struct psc_journal_walker *pjw,
-    struct psc_journal_entry *pje)
+    struct psc_journal_enthdr *pje)
 {
-	daddr_t addr;
-
 	if (pjw->pjw_pos == pjw->pjw_stop) {
 		if (pjw->pjw_seen)
 			return (-2);
