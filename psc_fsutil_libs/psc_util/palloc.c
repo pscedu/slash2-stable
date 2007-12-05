@@ -13,7 +13,7 @@
 #include "psc_util/alloc.h"
 #include "psc_util/log.h"
 
-long pageSize;
+long pscPageSize;
 
 /*
  * palloc - page-aligned memory allocation.
@@ -26,7 +26,13 @@ palloc(size_t len)
 	void *p;
 	int rc;
 
-	rc = posix_memalign(&p, pageSize, len);
+	if (pscPageSize == 0) {
+		pageSize = sysconf(_SC_PAGESIZE);
+		if (pageSize == -1)
+			psc_fatal("sysconf");
+	}
+
+	rc = posix_memalign(&p, pscPageSize, len);
 	if (rc)
 		psc_fatalx("posix_memalign: %s", strerror(rc));
 	if (mlock(p, len) == -1)
