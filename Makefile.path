@@ -1,3 +1,5 @@
 # $Id$
 
-MAINMK=${ROOTDIR}/mk/main.mk
+LNET_BASE=	${ROOTDIR}/lnet-lite
+PFL_BASE=	${ROOTDIR}/psc_fsutil_libs
+MAINMK=		${ROOTDIR}/mk/main.mk
