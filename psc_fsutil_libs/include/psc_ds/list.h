@@ -10,6 +10,8 @@
 
 #include <stdio.h>
 
+#include "zestAssert.h"
+
 /* -*- Mode: C; tab-width: 8 -*- */
 
 /* I stole this out of the kernel :P -pauln */
@@ -78,6 +80,22 @@ static __inline__ void __psclist_add(struct psclist_head * new,
 static __inline__ void psclist_add(struct psclist_head *new, struct psclist_head *head)
 {
 	__psclist_add(new, head, head->znext);
+}
+
+/**
+ * zlist_xadd - add an element to a list and check for exclusive membership.
+ * @new: entry to be added
+ * @head: zlist_head to add it after
+ *
+ * Insert a new entry after the specified head.
+ * Ensure entry doesn't already belong to another list.
+ * This is good for implementing stacks.
+ */
+static __inline__ void
+psclist_xadd(struct psclist_head *new, struct psclist_head *head)
+{
+        zest_assert(new->zprev == NULL && new->znext == NULL);
+        __psclist_add(new, head, head->znext);
 }
 
 /**
@@ -150,7 +168,7 @@ static __inline__ int psclist_empty(const struct psclist_head *head)
  * @psclist: the new psclist to add.
  * @head: the place to add it in the first psclist.
  */
-static __inline__ void psclist_splice(struct psclist_head *psclist, 
+static __inline__ void psclist_splice(struct psclist_head *psclist,
 				      struct psclist_head *head)
 {
 	struct psclist_head *first = psclist->znext;
@@ -171,10 +189,18 @@ static __inline__ void psclist_splice(struct psclist_head *psclist,
  * psclist_entry - get the struct for this entry
  * @ptr:	the &struct psclist_head pointer.
  * @type:	the type of the struct this is embedded in.
- * @member:	the name of the psclist_struct within the struct.
+ * @member:	the name of the struct psclist_head within the struct.
  */
 #define psclist_entry(ptr, type, member) \
 	((type *)((char *)(ptr)-(unsigned long)(&((type *)0)->member)))
+
+/**
+ * psclist_next_entry - get the element following the specified element.
+ * @e: an element with a list member.
+ * @member: the name of the struct psclist_head within the struct.
+ */
+#define psclist_next_entry(e, memb) \
+	psclist_entry(psclist_next(&e->memb), typeof(*e), memb)
 
 /**
  * psclist_for_each	-	iterate over a psclist

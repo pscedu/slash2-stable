@@ -13,7 +13,7 @@ struct dynarray {
 	const void	**da_items;
 };
 
-#define DYNARRAY_INIT { 0, 0, NULL}
+#define DYNARRAY_INIT { 0, 0, NULL }
 
 void	 dynarray_init(struct dynarray *);
 int	 dynarray_add(struct dynarray *, const void *);
@@ -22,7 +22,7 @@ void	 dynarray_free(struct dynarray *);
 void	 dynarray_reset(struct dynarray *);
 int	 dynarray_len(const struct dynarray *);
 void	 dynarray_remove(struct dynarray *, const void *);
-int	 dynarray_ensure(struct dynarray *, int);
+int	 dynarray_hintlen(struct dynarray *, int);
 int	 dynarray_freeslack(struct dynarray *);
 
 #endif /* _DYNARRAY_H_ */
