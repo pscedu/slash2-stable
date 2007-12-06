@@ -1,5 +1,5 @@
 # $Id$
 
-ROOTDIR=${LLROOTDIR}/../../
+ROOTDIR=${LLROOTDIR}/../
 LLMK=${LLROOTDIR}/mk/main.mk
 include ${ROOTDIR}/Makefile.path
