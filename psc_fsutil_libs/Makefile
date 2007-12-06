@@ -3,7 +3,7 @@
 PROOTDIR=.
 include Makefile.path
 
-LIBRARY=	libpfl.a
+LIBRARY=	lib/libpfl.a
 SRCS+=		psc_ds/dynarray.c
 SRCS+=		psc_ds/hash.c
 SRCS+=		psc_ds/vbitmap.c
