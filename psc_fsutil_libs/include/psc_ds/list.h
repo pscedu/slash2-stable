@@ -10,7 +10,7 @@
 
 #include <stdio.h>
 
-#include "zestAssert.h"
+#include "psc_util/assert.h"
 
 /* -*- Mode: C; tab-width: 8 -*- */
 
@@ -94,7 +94,7 @@ static __inline__ void psclist_add(struct psclist_head *new, struct psclist_head
 static __inline__ void
 psclist_xadd(struct psclist_head *new, struct psclist_head *head)
 {
-        zest_assert(new->zprev == NULL && new->znext == NULL);
+        psc_assert(new->zprev == NULL && new->znext == NULL);
         __psclist_add(new, head, head->znext);
 }
 
