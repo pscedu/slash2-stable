@@ -27,8 +27,8 @@ palloc(size_t len)
 	int rc;
 
 	if (pscPageSize == 0) {
-		pageSize = sysconf(_SC_PAGESIZE);
-		if (pageSize == -1)
+		pscPageSize = sysconf(_SC_PAGESIZE);
+		if (pscPageSize == -1)
 			psc_fatal("sysconf");
 	}
 
