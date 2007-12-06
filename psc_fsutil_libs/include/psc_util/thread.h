@@ -7,7 +7,6 @@
 #include "psc_ds/listcache.h"
 #include "psc_types.h"
 #include "psc_ds/dynarray.h"
-#include "app_thread.h"
 
 #define ZTHR_NAME_MAX	24 /* must be 8-byte aligned */
 
@@ -30,7 +29,7 @@ struct psc_thread {
 	void                *pscthr_private;
 };
 
-void	pscthr_init(struct psc_thread *, int, void *(*)(void *), int);
+void	pscthr_init(struct psc_thread *, int, void *(*)(void *), const char *);
 
 #define ZINIT_LOCK(l)	spinlock(l)
 #define ZINIT_ULOCK(l)	freelock(l)

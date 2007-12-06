@@ -13,7 +13,6 @@
 #include "psc_util/assert.h"
 #include "psc_util/threadtable.h"
 #include "psc_util/thread.h"
-#include "app_thread.h"
 
 #define PSC_THREAD_HTABLE_SZ 53
 

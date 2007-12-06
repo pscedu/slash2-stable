@@ -11,11 +11,6 @@
 #include "psc_util/thread.h"
 #include "psc_types.h"
 
-/* The app must supply threadTypeNames and threadTypes. 
- *  via the app_thread.d 
- */ 
-#include "app_thread.h"
-extern const char *threadTypeNames[];
 /*
  * Keep track of the threads here
  */
@@ -34,17 +29,17 @@ pscthr_begin(void *arg)
  * pscthr_init - initialize a thread.
  * @thr: thread structure to be initialized, must already be allocated.
  * @type: zestion thread type.
- * @start: thread execution routine.  By specifying a NULL routine, no pthread will be spawned (assuming that an actual pthread already exists or will be taken care of).
+ * @start: thread execution routine.  By specifying a NULL routine,
+ *	no pthread will be spawned (assuming that an actual pthread
+ *	already exists or will be taken care of).
  * @namearg: number of `type' threads thus far.
  */
 void
-pscthr_init(struct psc_thread *thr, int type, 
-	    void *(*start)(void *), int namearg)
+pscthr_init(struct psc_thread *thr, int type,
+	    void *(*start)(void *), const char *name)
 {
 	int error, n;
 
-	if (type < 0 || type >= NZTHRT)
-		psc_fatalx("invalid thread type %d", type);
 	/*
 	 * Ensure that the thr is initialized before the new thread
 	 *  attempts to access its data structures.
@@ -52,8 +47,8 @@ pscthr_init(struct psc_thread *thr, int type,
 	LOCK_INIT(&thr->pscthr_lock);
 	spinlock(&thr->pscthr_lock);
 
-	snprintf(thr->pscthr_name, sizeof(thr->pscthr_name),
-		 threadTypeNames[type], namearg);
+	snprintf(thr->pscthr_name, sizeof(thr->pscthr_name), "%s",
+		 name);
 
 	for (n = 0; n < ZNSUBSYS; n++)
 		thr->pscthr_log_levels[n] = psc_getloglevel();
