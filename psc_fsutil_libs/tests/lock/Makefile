@@ -2,8 +2,8 @@
 
 include ../Makefile.path
 
-PROG=	zestLockTest
-SRCS=	zestLockTest.c
-SRCS+=	../../zestion/log.c
+PROG=		lock
+SRCS=		lock.c
+SRCS+=		${PFL_BASE}/psc_util/log.c
 
-include ${ZESTMK}
+include ${PFLMK}

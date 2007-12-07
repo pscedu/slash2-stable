@@ -2,9 +2,9 @@
 
 include ../Makefile.path
 
-PROG=	myrandom
-SRCS=	myrandom.c
-SRCS+=	../../util/myrandom.c
-SRCS+=	../../zestion/log.c
+PROG=		myrandom
+SRCS=		myrandom.c
+SRCS+=		${PFL_BASE}/psc_util/myrandom.c
+SRCS+=		${PFL_BASE}/psc_util/log.c
 
-include ${ZESTMK}
+include ${PFLMK}

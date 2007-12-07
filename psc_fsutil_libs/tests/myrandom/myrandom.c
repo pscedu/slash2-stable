@@ -4,8 +4,8 @@
 #include <stdlib.h>
 #include <unistd.h>
 
-#include "myrandom.h"
-#include "cdefs.h"
+#include "psc_util/myrandom.h"
+#include "psc_util/cdefs.h"
 
 const char *progname;
 
@@ -19,9 +19,7 @@ usage(void)
 int
 main(int argc, char *argv[])
 {
-	struct vbitmap *vb;
-	size_t elem;
-	int i, c;
+	int c;
 
 	progname = argv[0];
 	while ((c = getopt(argc, argv, "")) != -1)

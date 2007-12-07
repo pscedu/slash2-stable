@@ -1,0 +1,4 @@
+# $Id$
+
+PROOTDIR:=${PROOTDIR}../
+include ${PROOTDIR}/Makefile.path

@@ -5,8 +5,8 @@
 #include <stdlib.h>
 #include <unistd.h>
 
-#include "vbitmap.h"
-#include "cdefs.h"
+#include "psc_ds/vbitmap.h"
+#include "psc_util/cdefs.h"
 
 const char *progname;
 

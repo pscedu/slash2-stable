@@ -1,5 +1,13 @@
 /* $Id$ */
 
+/*
+ *  Below is the output tester for this program:
+ *
+ *	$ ./lock | perl -e '$c = 1; while (<>) { chomp;
+ *		if ($l =~ /[0-9]+:([0-9]+)/ ) { if ($c != $1) {
+ *		print "$l is bad $1\n"; $c = $1; } else { $c++; } } }'
+*/
+
 #include <sys/types.h>
 #include <sys/time.h>
 #include <sys/wait.h>
@@ -14,15 +22,25 @@
 #include <time.h>
 #include <unistd.h>
 
-#include "zestLock.h"
+#include "psc_util/lock.h"
 
 #define OBUFSZ 33554432
 
 #define STARTWATCH(t) gettimeofday((&t[0]), NULL)
 #define STOPWATCH(t)  gettimeofday((&t[1]), NULL)
 
-double calc_run_time(struct timeval *tv1,
-		     struct timeval *tv2)
+int obytes_used;
+int **obuf;
+void *ptr;
+psc_spinlock_t *lock;
+int  *val;
+int  *lockcnt;
+
+int num_procs;
+int num_locks;
+
+double
+calc_run_time(struct timeval *tv1, struct timeval *tv2)
 {
 	float t;
 
@@ -32,26 +50,9 @@ double calc_run_time(struct timeval *tv1,
 	return t;
 }
 
-
-int obytes_used;
-int **obuf;
-void *ptr;
-zest_spinlock_t *lock;
-int  *val;
-int  *lockcnt;
-
-int num_procs;
-int num_locks;
-
-/*
- *  Below is the output tester for this program.
-
-cat /tmp/zestLocktest.out  | perl -e '$c = 1; while (<>) { $l = $_; chomp $l; if ($l  =~ /[0-9]+:([0-9]+)/ ) { if ( $c != $1) { print "$l is bad $1\n";$c = $1; } else { $c++; } } }'
-*/
-
 void printHelp(void)
 {
-	fprintf(stderr, "usage: zestLockTest [-t num_threads] [-n num_locks]\n");
+	fprintf(stderr, "usage: lock [-t num_threads] [-n num_locks]\n");
 	exit(1);
 }
 
@@ -63,22 +64,18 @@ int getOptions(int argc,  char *argv[])
 
 	while ( !err && ((c = getopt(argc, argv, ARGS)) != -1))
 		switch (c) {
-
 		case 't':
 			num_procs = atoi(optarg);
 			break;
-
 		case 'n':
 			num_locks = atoi(optarg);
 			break;
-
-		default :
+		default:
 			printHelp();
 		}
 
 	return err;
 }
-
 
 int child_main(int id)
 {
@@ -148,8 +145,8 @@ int main(int argc, char *argv[])
 
 	bzero(ptr, OBUFSZ);
 
-	lock = (zest_spinlock_t *)ptr;
-	val  = (int *)lock + (sizeof(zest_spinlock_t));
+	lock = (psc_spinlock_t *)ptr;
+	val  = (int *)lock + (sizeof(psc_spinlock_t));
 
 	lockcnt = (int *)val + sizeof(int);
 

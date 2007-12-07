@@ -4,8 +4,8 @@
 #include <stdio.h>
 #include <unistd.h>
 
-#include "fmtstr.h"
-#include "cdefs.h"
+#include "psc_util/fmtstr.h"
+#include "psc_util/cdefs.h"
 
 const char *progname;
 

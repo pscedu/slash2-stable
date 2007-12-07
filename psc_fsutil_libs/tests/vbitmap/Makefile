@@ -4,6 +4,6 @@ include ../Makefile.path
 
 PROG=		vbitmap
 SRCS=		vbitmap.c
-SRCS+=		../../util/vbitmap.c
+SRCS+=		${PFL_BASE}/psc_ds/vbitmap.c
 
-include ${ZESTMK}
+include ${PFLMK}
