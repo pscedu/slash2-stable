@@ -17,7 +17,7 @@ SRCS+=		peer.c
 SRCS+=		router.c
 SRCS+=		router_proc.c
 INCLUDES+=	-I${LNET_BASE}/include
-
+INCLUDES+=	-I${PFL_BASE}/include
 TARGET=		${LIBRARY}
 
 include ${LLMK}
