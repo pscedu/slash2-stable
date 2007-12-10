@@ -18,8 +18,8 @@
 
 #define LC_NAME_MAX 32
 
-struct psclist_head pscListCaches;
-psc_spinlock_t	    pscListCachesLock;
+extern struct psclist_head pscListCaches;
+extern psc_spinlock_t	    pscListCachesLock;
 
 /*
  * List cache which can be edited by multiple
@@ -45,7 +45,7 @@ typedef struct list_cache list_cache_t;
 #define LIST_CACHE_ULOCK(l) freelock(&(l)->lc_lock)
 
 /**
- * list_cache_sz - how many items are in here.
+ * lc_sz - how many items are in here.
  * This should use atomics at some point
  */
 static inline ssize_t
@@ -61,8 +61,9 @@ lc_sz(list_cache_t *l)
 
 	return sz;
 }
+
 /**
- * list_cache_del - remove an entry from the list
+ * lc_del - remove an entry from the list
  * @e: the entry
  * @l: the entry's respective list
  */
@@ -89,12 +90,12 @@ lc_del(struct psclist_head *e, list_cache_t *l)
 }
 
 /**
- * list_cache_get
+ * lc_get
  * @l: the list cache to access
  * @block: should the get wait
  */
 static inline struct psclist_head *
-__list_cache_get(list_cache_t *l, int block, int peek)
+_lc_get(list_cache_t *l, int block, int peek)
 {
 	struct psclist_head *e;
 
@@ -129,21 +130,21 @@ __list_cache_get(list_cache_t *l, int block, int peek)
 }
 
 /*
- *  Wrapper calls for the old list_cache_get()
+ *  Wrapper calls for the old lc_get()
  */
 static inline struct psclist_head *
 lc_get(list_cache_t *l, int block)
 {
-	return (__list_cache_get(l, block, 0));
+	return (_lc_get(l, block, 0));
 }
 
 /**
- * list_cache_put - Bounded list put
+ * lc_put - Bounded list put
  * @l: the list cache to access
  * @n: new list item
  */
 static inline void
-__list_cache_put(list_cache_t *l, struct psclist_head *n, int qors)
+_lc_put(list_cache_t *l, struct psclist_head *n, int qors)
 {
 	psc_assert(n->znext == NULL);
 	psc_assert(n->zprev == NULL);
@@ -175,19 +176,19 @@ __list_cache_put(list_cache_t *l, struct psclist_head *n, int qors)
 static inline void
 lc_queue(list_cache_t *l, struct psclist_head *n)
 {
-	return (__list_cache_put(l, n, 1));
+	return (_lc_put(l, n, 1));
 }
 
 static inline void
 lc_stack(list_cache_t *l, struct psclist_head *n)
 {
-	return (__list_cache_put(l, n, 0));
+	return (_lc_put(l, n, 0));
 }
 
-#define list_cache_put list_cache_queue
+#define lc_put lc_queue
 
 /**
- * list_cache_requeue - move an existing entry to the end of the queue
+ * lc_requeue - move an existing entry to the end of the queue
  *
  */
 static inline void
@@ -202,7 +203,7 @@ lc_requeue(list_cache_t *l, struct psclist_head *n)
 }
 
 /**
- * list_cache_init - initialize a list cache.
+ * lc_init - initialize a list cache.
  * @l: the list cache to initialize.
  */
 static inline void
@@ -278,7 +279,7 @@ lc_reginit(list_cache_t *lc, const char *name, ...)
 {
 	va_list ap;
 
-	list_cache_init(lc);
+	lc_init(lc);
 
 	va_start(ap, name);
 	lc_vregister(lc, name, ap);
@@ -332,7 +333,7 @@ lc_lookup(const char *name)
 #endif /* PSCION */
 
 /**
- * list_cache_empty - determine if the list cache has elements currently.
+ * lc_empty - determine if the list cache has elements currently.
  * @lc: list cache to check.
  */
 static inline int
@@ -341,16 +342,16 @@ lc_empty(const list_cache_t *lc)
 	return (psclist_empty(&lc->lc_list));
 }
 
-#define __list_cache_grow(l, n, type, init_fn, __ret)			 \
+#define _lc_grow(l, n, type, init_fn, __ret)				\
 	do {								\
 		int     i;						\
 		type   *ptr;						\
 		list_cache_t *lc = l;					\
-		ssize_t z = list_cache_sz(lc);			\
+		ssize_t z = lc_sz(lc);					\
 									\
 		__ret = 0;						\
-		if (z >= lc->lc_max) {				\
-			zwarnx("Cache %s has overgrown", lc->lc_name); \
+		if (z >= lc->lc_max) {					\
+			zwarnx("Cache %s has overgrown", lc->lc_name);	\
 			break;						\
 		}							\
 		if (z == lc->lc_max)					\
@@ -359,11 +360,11 @@ lc_empty(const list_cache_t *lc)
 			n = lc->lc_max - z;				\
 									\
 		for (i=0; i < n; i++, __ret++) {			\
-			if (atomic_read(&lc->lc_total) >= lc->lc_max) { \
+			if (atomic_read(&lc->lc_total) >= lc->lc_max) {	\
 				__ret = i;				\
 				break;					\
 			}						\
-			ptr = TRY_ZALLOC(sizeof(type));	                \
+			ptr = TRY_ZALLOC(sizeof(type));			\
 			if (ptr == NULL) {				\
 				if (!i)					\
 					__ret = -ENOMEM;		\
@@ -374,25 +375,25 @@ lc_empty(const list_cache_t *lc)
 		}							\
 	} while(0)
 
-#define lc_grow(lc, n, type, init_fn)           \
-({                                                        \
-        int                 __ret;                        \
-                                                          \
-        __list_cache_grow(lc, n, type, init_fn, __ret); \
-        __ret;                                            \
+#define lc_grow(lc, n, type, init_fn)					\
+({									\
+	int __ret;							\
+									\
+	_lc_grow(lc, n, type, init_fn, __ret);				\
+	__ret;								\
 })
 
-#define __list_cache_shrink(l, n, type, free_fn, __ret)	     \
-	do {							     \
-		int     i;					     \
-		type   *ptr;					     \
-		list_cache_t *lc = l;				     \
-		ssize_t z = list_cache_sz(lc);		     \
-		struct psclist_head *e;				     \
-								     \
-		__ret = 0;					     \
-		if (z < lc->lc_min) {				     \
-			zwarn("Cache %s it underfilled", lc->lc_name); \
+#define _lc_shrink(l, n, type, free_fn, __ret)				\
+	do {								\
+		int     i;						\
+		type   *ptr;						\
+		list_cache_t *lc = l;					\
+		ssize_t z = lc_sz(lc);					\
+		struct psclist_head *e;					\
+									\
+		__ret = 0;						\
+		if (z < lc->lc_min) {					\
+			zwarn("Cache %s it underfilled", lc->lc_name);	\
 			break;						\
 		}							\
 		if (z == lc->lc_min)					\
@@ -400,9 +401,9 @@ lc_empty(const list_cache_t *lc)
 		if ((z - n) > lc->lc_min)				\
 			n = z - lc->lc_min;				\
 		for (i=0; i < n; i++, __ret++) {			\
-			if (atomic_read(&lc->lc_total) <= lc->lc_min) \
+			if (atomic_read(&lc->lc_total) <= lc->lc_min)	\
 				break;					\
-			e = list_cache_get((lc), 0);			\
+			e = lc_get((lc), 0);				\
 			ptr = psclist_entry(e, type, lc_list);		\
 			psc_assert((ptr));				\
 			free_fn((ptr));					\
@@ -410,11 +411,11 @@ lc_empty(const list_cache_t *lc)
 		}							\
 	} while(0)
 
-#define lc_shrink(lc, n, type, free_fn)           \
-	({						    \
-		int                 __ret;		    \
-							    \
-		__list_cache_shrink(lc, n, type, free_fn, __ret);	\
+#define lc_shrink(lc, n, type, free_fn)					\
+	({								\
+		int                 __ret;				\
+									\
+		_lc_shrink(lc, n, type, free_fn, __ret);		\
 		__ret;							\
 	})
 
