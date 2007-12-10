@@ -199,6 +199,22 @@ trylock(__unusedx psc_spinlock_t *l)
 	return (1);
 }
 
+static __inline int
+reqlock(psc_spinlock_t *l)
+{
+	if (*l != SL_LOCKED)
+		/* not locked, grab it */
+		spinlock(l);
+	return (0);
+}
+
+static __inline void
+ureqlock(psc_spinlock_t *l, int waslocked)
+{
+	if (!waslocked)
+		freelock(l);
+}
+
 #endif /* HAVE_LIBPTHREAD */
 
 #endif /* HAVE_PSC_LOCK_INC */
