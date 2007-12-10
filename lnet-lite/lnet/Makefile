@@ -2,7 +2,7 @@
 
 include Makefile.path
 
-LIBRARY=	${LNET_BASE}/lib/liblnet.a
+LIBRARY=	${LNET_BASE}/lib/libzlnet.a
 SRCS=		acceptor.c
 SRCS+=		api-errno.c
 SRCS+=		api-ni.c

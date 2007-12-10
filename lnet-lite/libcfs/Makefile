@@ -2,7 +2,7 @@
 
 include Makefile.path
 
-LIBRARY=	${LNET_BASE}/lib/libcfs.a
+LIBRARY=	${LNET_BASE}/lib/libzcfs.a
 SRCS=		debug.c
 SRCS+=		nidstrings.c
 SRCS+=		user-lock.c
