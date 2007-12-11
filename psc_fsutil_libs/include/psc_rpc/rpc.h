@@ -147,11 +147,8 @@ struct pscrpc_export {
         atomic_t                  exp_rpc_count;
 	struct pscrpc_connection *exp_connection;
 	int                       exp_failed;
-#ifdef ZESTION	
-	/* Only zest needs zeils, other users of exports may require their own data structures here.
-	 */
-	struct zeiltree		  exp_zeiltree;
-#endif
+	void			(*exp_destroycb)(struct pscrpc_export *);
+	void			 *exp_private; /* app-specific data */
 	//struct psclist_head       exp_outstanding_replies;
 };
 /* TODO - c_exp needs to become a pointer */

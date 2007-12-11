@@ -6,14 +6,9 @@
 #include "psc_ds/tree.h"
 #include "psc_rpc/rpc.h"
 #include "psc_rpc/export.h"
-//#include "pscInode.h"
-//#include "zeil.h"
 
-void __zclass_export_put(struct pscrpc_export *exp)
+void __pscrpc_export_put(struct pscrpc_export *exp)
 {
-#ifdef ZESTION
-	struct zeil *zeil, *next;
-#endif
         if (atomic_dec_and_test(&exp->exp_refcount)) {
                 psc_info("destroying export %p/%s",
 			 exp, (exp->exp_connection) ?
@@ -24,23 +19,9 @@ void __zclass_export_put(struct pscrpc_export *exp)
 			//ptlrpc_put_connection_superhack(exp->exp_connection);
                         pscrpc_put_connection(exp->exp_connection);
 		// XXX Shield from the client for now,
-#ifdef ZESTION
-		//printf("cleaning up ZEILS");
-		for (zeil = SPLAY_MIN(zeiltree, &exp->exp_zeiltree);
-		    zeil; zeil = next) {
-			//printf("  removing ino link %p\n", zeil);
-			/* Remove from zeil tree. */
-			next = SPLAY_NEXT(zeiltree, &exp->exp_zeiltree, zeil);
-			SPLAY_REMOVE(zeiltree, &exp->exp_zeiltree, zeil);
 
-			/* Remove from inode list. */
-			ZINODE_LOCK(zeil->zeil_ino);
-			zlist_del(&zeil->zeil_ino_entry);
-			ZINODE_ULOCK(zeil->zeil_ino);
+		exp->exp_destroycb(exp);
 
-			free(zeil);
-		}
-#endif
 		/* Outstanding replies refers to 'difficult' replies
 		   Not sure what h_link is for - pauln */
                 //LASSERT(list_empty(&exp->exp_outstanding_replies));
