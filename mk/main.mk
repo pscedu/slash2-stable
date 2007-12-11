@@ -92,7 +92,7 @@ depend: ${_YACCINTM}
 
 clean:
 	rm -rf ${OBJS} ${PROG} ${LIBRARY} ${CLEANFILES} ${_YACCINTM} ${_LEXINTM}	\
-	    .depend tags
+	    .depend* tags cscope.out
 	@for i in ${SUBDIRS}; do							\
 		echo -n "===> ";							\
 		if [ -n "${DIRPREFIX}" ]; then						\
@@ -137,5 +137,41 @@ listsrcs:
 	@if [ -n "${SRCS}" ]; then							\
 		echo "${SRCS}";								\
 	fi
+
+ifdef SROOTDIR
+CS_ARGS+=-s${SROOTDIR}
+endif
+
+ifdef ZROOTDIR
+CS_ARGS+=-s${ZROOTDIR}
+endif
+
+cscope cs:
+	@for i in ${SUBDIRS}; do							\
+		echo -n "===> " >&2;							\
+		if [ -n "${DIRPREFIX}" ]; then						\
+			echo -n ${DIRPREFIX} >&2;					\
+		fi;									\
+		echo $$i >&2;								\
+		(cd $$i && ${MAKE} SUBDIRS= DIRPREFIX=${DIRPREFIX}$$i/ $@) || exit 1;	\
+		if [ -n "${DIRPREFIX}" ]; then						\
+			echo "<=== ${DIRPREFIX}" | sed 's!/$$!!' >&2;			\
+		fi;									\
+	done
+	cscope -Rb -s${ROOTDIR}/{lnet-lite,psc_fsutil_libs} ${CS_ARGS}
+
+etags:
+	@for i in ${SUBDIRS}; do							\
+		echo -n "===> " >&2;							\
+		if [ -n "${DIRPREFIX}" ]; then						\
+			echo -n ${DIRPREFIX} >&2;					\
+		fi;									\
+		echo $$i >&2;								\
+		(cd $$i && ${MAKE} SUBDIRS= DIRPREFIX=${DIRPREFIX}$$i/ $@) || exit 1;	\
+		if [ -n "${DIRPREFIX}" ]; then						\
+			echo "<=== ${DIRPREFIX}" | sed 's!/$$!!' >&2;			\
+		fi;									\
+	done
+	find ${ROOTDIR} -name \*.[chly] -exec etags -a {} \; ${SRCS}
 
 -include .depend
