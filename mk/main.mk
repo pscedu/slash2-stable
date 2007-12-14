@@ -140,10 +140,12 @@ listsrcs:
 
 ifdef SROOTDIR
 CS_ARGS+=-s${SROOTDIR}
+ET_ARGS+="${SROOTDIR}"
 endif
 
 ifdef ZROOTDIR
 CS_ARGS+=-s${ZROOTDIR}
+ET_ARGS+="${ZROOTDIR}"
 endif
 
 cscope cs:
@@ -172,6 +174,6 @@ etags:
 			echo "<=== ${DIRPREFIX}" | sed 's!/$$!!' >&2;			\
 		fi;									\
 	done
-	find ${ROOTDIR} -name \*.[chly] -exec etags -a {} \; ${SRCS}
+	find ${ROOTDIR} ${ET_ARGS} -name \*.[chly] -exec etags -a {} ;
 
 -include .depend
