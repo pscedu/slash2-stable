@@ -65,7 +65,7 @@ _pjournal_logwrite(struct psc_journal *pj, int slot, int type, int xid,
 		return (-1);
 
 	if ((unsigned long)data & (pscPageSize - 1))
-		pfatal("data is not page-aligned");
+		psc_fatal("data is not page-aligned");
 
 	pje = data;
 	pje->pje_magic = PJE_MAGIC;
@@ -119,7 +119,7 @@ pjournal_logwritex(struct psc_journal *pj, int type, int xid,
 	if (type == PJET_VOID ||
 	    type == PJET_XSTART ||
 	    type == PJET_XEND)
-		pfatal("invalid journal entry type");
+		psc_fatal("invalid journal entry type");
 	return (_pjournal_logwritex(pj, type, xid, data));
 }
 
@@ -149,7 +149,7 @@ pjournal_logread(struct psc_journal *pj, int slot, void *data)
 	daddr_t addr;
 
 	if ((unsigned long)data & (pscPageSize - 1))
-		pfatal("data is not page-aligned");
+		psc_fatal("data is not page-aligned");
 
 	if (slot >= pj->pj_nents)
 		return (-1);
