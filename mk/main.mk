@@ -138,9 +138,9 @@ listsrcs:
 		echo "${SRCS}";								\
 	fi
 
-ifdef SROOTDIR
-CS_ARGS+=-s${SROOTDIR}
-ET_ARGS+="${SROOTDIR}"
+ifdef SLASH_BASE
+CS_ARGS+=-s${SLASH_BASE}
+ET_ARGS+="${SLASH_BASE}"
 endif
 
 ifdef ZROOTDIR
