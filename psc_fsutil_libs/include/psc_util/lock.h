@@ -1,7 +1,7 @@
-/* $Id: pscLock.h 1969 2007-10-25 15:49:21Z yanovich $ */
+/* $Id$ */
 
-#ifndef HAVE_PSC_LOCK_INC
-#define HAVE_PSC_LOCK_INC
+#ifndef _PFL_LOCK_H_
+#define _PFL_LOCK_H_
 
 #include "psc_util/log.h"
 
@@ -217,4 +217,4 @@ ureqlock(psc_spinlock_t *l, int waslocked)
 
 #endif /* HAVE_LIBPTHREAD */
 
-#endif /* HAVE_PSC_LOCK_INC */
+#endif /* _PFL_LOCK_H_ */

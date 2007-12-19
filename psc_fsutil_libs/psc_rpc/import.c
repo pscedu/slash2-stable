@@ -1,7 +1,6 @@
-/* $Id: import.c 2137 2007-11-05 18:41:27Z yanovich $ */
+/* $Id$ */
 
-#include "psc_util/subsys.h"
-#define SUBSYS ZS_RPC
+#define PSC_SUBSYS PSS_RPC
 
 #include "psc_rpc/rpc.h"
 

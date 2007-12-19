@@ -1,7 +1,7 @@
-/* $Id: assert.h 426 2006-12-07 17:08:43Z yanovich $ */
+/* $Id$ */
 
-#if (!defined HAVE_PSC_ASSERT_INC)
-#define HAVE_PSC_ASSERT_INC 1
+#ifndef _PFL_ASSERT_H_
+#define _PFL_ASSERT_H_
 
 #include "psc_util/log.h"
 
@@ -18,10 +18,10 @@
 			    ## __VA_ARGS__);		\
 	} while (0)
 
-#define psc_assert_perror(cond)			\
+#define psc_assert_perror(cond)				\
 	do {						\
 		if (!(cond))				\
 			psc_fatal("[assert] " # cond);	\
 	} while (0)
 
-#endif
+#endif /*_PFL_ASSERT_H_ */

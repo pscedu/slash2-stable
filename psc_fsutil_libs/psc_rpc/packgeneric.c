@@ -1,7 +1,6 @@
-/* $Id: pscPackGeneric.c 1868 2007-10-12 18:52:11Z yanovich $ */
+/* $Id$ */
 
-#include "psc_util/subsys.h"
-#define SUBSYS ZS_RPC
+#define PSC_SUBSYS PSS_RPC
 
 #define _GNU_SOURCE //strnlen
 

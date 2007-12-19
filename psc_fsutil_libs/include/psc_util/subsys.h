@@ -1,29 +1,23 @@
-/* $Id: subsys.h 1868 2007-10-12 18:52:11Z yanovich $ */
+/* $Id$ */
 
 /*
- * zestiond subsystem definitions.
+ * Subsystem definitions.
+ * Subsystems are used to modularize components of an
+ * application for pinpointing error messages, etc.
  */
 
-#ifndef _SUBSYS_H_
-#define _SUBSYS_H_
+#ifndef _PFL_SUBSYS_H_
+#define _PFL_SUBSYS_H_
 
-/* Must stay sync'd with subsys_names[] in subsys.c. */
-#define ZS_ADDRCACHE	0
-#define ZS_CHUNKMAP	1
-#define ZS_FILEOPS	2
-#define ZS_INODE	3
-#define ZS_LOG		4
-#define ZS_READ		5
-#define ZS_SYNC		6
-#define ZS_CIOD		7
-#define ZS_RPC		8
-#define ZS_LNET		9
-#define ZS_PARITY	10
-#define ZS_OTHER	11
-#define ZNSUBSYS	12
-#define NSUBSYS ZNSUBSYS
+#define PSS_LOG		0
+#define PSS_JOURNAL	1
+#define PSS_RPC		2
+#define PSS_LNET	3
+#define PSS_OTHER	4
+#define _PSS_LAST	5
 
-int		 zsubsys_id(const char *);
-const char	*zsubsys_name(int);
+int		 psc_subsys_id(const char *);
+const char	*psc_subsys_name(int);
+void		 psc_subsys_register(int, const char *);
 
-#endif /* _SUBSYS_H_ */
+#endif /* _PFL_SUBSYS_H_ */

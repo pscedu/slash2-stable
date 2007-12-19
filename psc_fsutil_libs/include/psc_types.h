@@ -1,7 +1,7 @@
-/* $Id: types.h 1894 2007-10-16 23:42:25Z pauln $ */
+/* $Id$ */
 
-#if (!defined HAVE_PSC_TYPES_INC)
-#define HAVE_PSC_TYPES_INC 1
+#ifndef _PFL_TYPES_H_
+#define _PFL_TYPES_H_
 
 typedef unsigned int		u32;
 typedef unsigned short int	u16;
@@ -20,7 +20,6 @@ typedef int			s32;
  */
 #if __x86_64
 typedef unsigned long int u64;
-typedef u64 zaddr_t;
 
 # define UINT64CONST(x) ((u64) x##L)
 
@@ -39,7 +38,6 @@ typedef u64 zaddr_t;
 
 #else /* i386 */
 typedef unsigned long long int u64;
-typedef u32 zaddr_t;
 
 # define UINT64CONST(x) ((u64) x##LL)
 
@@ -77,4 +75,4 @@ typedef struct psc_iov psc_iov_t;
 
 #define MASK_UPPER32 0x00000000ffffffffULL
 
-#endif
+#endif /* _PFL_TYPES_H_ */

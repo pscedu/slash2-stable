@@ -1,7 +1,7 @@
-/* $Id: rpc.h 2114 2007-11-03 19:39:08Z pauln $ */
+/* $Id$ */
 
-#ifndef PTLRPC_H
-#define PTLRPC_H
+#ifndef _PFL_RPC_H_
+#define _PFL_RPC_H_
 
 #undef list_head
 #undef LIST_HEAD_INIT
@@ -236,7 +236,7 @@ struct pscrpc_request_set {
 #if 0
 	//psc_spinlock_t     rqset_lock;
 	//psclist_cache_t    rqset_reqs;       /* the request list      */
-#endif       
+#endif
 };
 
 
@@ -298,20 +298,20 @@ struct pscrpc_request {
 	int rq_status;
 	int rq_retry;
 	int rq_timeout;         /* time to wait for reply (seconds) */
-	int rq_request_portal;  
-        int rq_reply_portal;    
+	int rq_request_portal;
+        int rq_reply_portal;
 	int rq_nob_received;    /* client-side # reply bytes received */
 	int rq_reqlen;
 	int rq_replen;
         int rq_import_generation;
 	time_t rq_sent;
-	psc_spinlock_t rq_lock;	
+	psc_spinlock_t rq_lock;
 	u64 rq_transno;
         u64 rq_xid;
 	u64 rq_history_seq;
-	unsigned int rq_intr:1, rq_replied:1, rq_err:1, rq_timedout:1, 
+	unsigned int rq_intr:1, rq_replied:1, rq_err:1, rq_timedout:1,
 		     rq_resend:1, rq_restart:1, rq_replay:1, rq_no_resend:1,
-		     rq_waiting:1, rq_receiving_reply:1, rq_no_delay:1, 
+		     rq_waiting:1, rq_receiving_reply:1, rq_no_delay:1,
                      rq_net_err:1;
 	atomic_t rq_refcount; /* client-side refcnt for SENT race */
 	atomic_t rq_retries;  /* count retries */
@@ -320,7 +320,7 @@ struct pscrpc_request {
 	enum   psc_rq_phase         rq_phase; /* one of RQ_PHASE_* */
         enum   psc_imp_state        rq_send_state;
 	struct psclist_head         rq_list_entry;
-	struct psclist_head         rq_set_chain; 
+	struct psclist_head         rq_set_chain;
 	struct psclist_head         rq_list_set;   /* for request set */
 	struct psclist_head         rq_history_list;
 	struct pscrpc_import       *rq_import;     /* client side */
@@ -435,17 +435,17 @@ struct pscrpc_reply_state {
 	struct pscrpc_service *rs_service;     /* backpointer to my service */
 	struct psc_msg         rs_msg;         /* msg struct */
 	struct pscrpc_cb_id    rs_cb_id;       /* reply callback */
-        struct psclist_head    rs_list_entry;  
+        struct psclist_head    rs_list_entry;
 };
 
 /*
- * Non-blocking request sets 
+ * Non-blocking request sets
  */
 typedef int (*nbreq_callback)(struct pscrpc_request *,
                               struct pscrpc_async_args *);
 
 struct pscrpc_nbreqset {
-        //psc_spinlock_t            *nb_lock;                                  
+        //psc_spinlock_t            *nb_lock;
         struct pscrpc_request_set *nb_reqset;
         nbreq_callback             nb_callback;
         atomic_t                   nb_outstanding;
@@ -463,51 +463,51 @@ extern int
 nbrequest_reap(struct pscrpc_nbreqset *nbs);
 
 /*
- * End Non-blocking request sets 
+ * End Non-blocking request sets
  */
 
-extern void 
+extern void
 psc_free_reply_state(struct pscrpc_reply_state *rs);
 
-extern void 
+extern void
 pscrpc_req_finished(struct pscrpc_request *request);
 
 extern struct pscrpc_bulk_desc *
 pscrpc_prep_bulk_exp (struct pscrpc_request *req, int npages,
 		      int type, int portal);
 
-extern void 
+extern void
 pscrpc_free_bulk(struct pscrpc_bulk_desc *desc);
 
-extern int 
+extern int
 psc_pack_reply (struct pscrpc_request *req,
 		int count, int *lens, char **bufs);
 
-extern int 
+extern int
 pscrpc_put_connection(struct pscrpc_connection *c);
 
-extern void 
+extern void
 pscrpc_fill_bulk_md (lnet_md_t *md, struct pscrpc_bulk_desc *desc);
 
 /*
  *  events.c
  */
-extern void 
+extern void
 request_in_callback(lnet_event_t *ev);
 
-extern void 
+extern void
 request_out_callback(lnet_event_t *ev);
 
-extern void 
+extern void
 client_bulk_callback (lnet_event_t *ev);
 
-extern void 
+extern void
 server_bulk_callback (lnet_event_t *ev);
 
-extern void  
+extern void
 reply_in_callback(lnet_event_t *ev);
 
-extern void 
+extern void
 reply_out_callback(lnet_event_t *ev);
 
 extern void
@@ -522,10 +522,10 @@ pscrpc_wait_event (int timeout);
 extern lnet_pid_t
 psc_get_pid(void);
 
-extern int 
+extern int
 pscrpc_ni_init(int type);
 
-extern int 
+extern int
 pscrpc_init_portals(int);
 /*
  * events.c done
@@ -534,21 +534,21 @@ pscrpc_init_portals(int);
 /*
  * packgeneric.c
  */
-extern int 
+extern int
 psc_msg_size(int count, int *lengths);
 
-extern int 
+extern int
 psc_msg_swabbed(struct psc_msg *msg);
 
-extern int 
+extern int
 psc_pack_request (struct pscrpc_request *req,
 		  int count, int *lens, char **bufs);
 
-extern int 
+extern int
 psc_pack_reply (struct pscrpc_request *req,
 		int count, int *lens, char **bufs);
 
-extern int 
+extern int
 psc_unpack_msg(struct psc_msg *m, int len);
 
 extern void *
@@ -561,7 +561,7 @@ psc_msg_buf(struct psc_msg *m, int n, int min_size);
  *
  * returns zero for non-existent message indices
  */
-extern int 
+extern int
 psc_msg_buflen(struct psc_msg *m, int n);
 
 extern char *
@@ -573,46 +573,46 @@ psc_msg_string (struct psc_msg *m, int idx, int max_len);
 /*
  * niobuf.c
  */
-extern int 
+extern int
 pscrpc_start_bulk_transfer (struct pscrpc_bulk_desc *desc);
 
-extern void 
+extern void
 pscrpc_abort_bulk (struct pscrpc_bulk_desc *desc);
 
-extern int 
+extern int
 pscrpc_register_bulk (struct pscrpc_request *req);
 
-extern void 
+extern void
 pscrpc_unregister_bulk (struct pscrpc_request *req);
 
-extern int 
+extern int
 pscrpc_send_reply (struct pscrpc_request *req, int may_be_difficult);
 
-extern int 
+extern int
 pscrpc_reply (struct pscrpc_request *req);
 
-extern int 
+extern int
 pscrpc_error(struct pscrpc_request *req);
 
-extern int 
+extern int
 psc_send_rpc(struct pscrpc_request *request, int noreply);
 
-extern int 
+extern int
 pscrpc_register_rqbd (struct pscrpc_request_buffer_desc *rqbd);
 
-extern void 
+extern void
 psc_free_reply_state (struct pscrpc_reply_state *rs);
 
-extern void 
+extern void
 pscrpc_free_req(struct pscrpc_request *request);
 
-extern void 
+extern void
 pscrpc_req_finished(struct pscrpc_request *request);
 
-extern void 
+extern void
 pscrpc_free_bulk(struct pscrpc_bulk_desc *desc);
 
-extern void 
+extern void
 pscrpc_fill_bulk_md (lnet_md_t *md, struct pscrpc_bulk_desc *desc);
 /*
  * niobuf.c done
@@ -635,7 +635,7 @@ pscrpc_abort_inflight(struct pscrpc_import *imp);
 /*
  *  rpcclient.c
  */
-extern int 
+extern int
 pscrpc_expire_one_request(struct pscrpc_request *req);
 
 struct pscrpc_request *
@@ -655,33 +655,33 @@ import_put(struct pscrpc_import *import);
 extern struct pscrpc_import *
 new_import(void);
 
-extern int 
+extern int
 pscrpc_queue_wait(struct pscrpc_request *req);
 
-extern struct pscrpc_request_set * 
+extern struct pscrpc_request_set *
 pscrpc_prep_set(void);
 
-extern int 
+extern int
 pscrpc_push_req(struct pscrpc_request *req);
 
 extern void
 pscrpc_set_add_new_req(struct pscrpc_request_set *set,
                         struct pscrpc_request     *req);
 
-extern int 
-pscrpc_check_set(struct pscrpc_request_set *set, 
+extern int
+pscrpc_check_set(struct pscrpc_request_set *set,
 		  int check_allsent);
 
-extern int 
+extern int
 pscrpc_set_wait(struct pscrpc_request_set *set);
 
 /*
  *  rpcclient.c done
  */
-static inline int 
+static inline int
 pscrpc_bulk_active (struct pscrpc_bulk_desc *desc)
 {
-        int rc;	
+        int rc;
         spinlock(&desc->bd_lock);
         rc = desc->bd_network_rw;
         freelock(&desc->bd_lock);
@@ -742,44 +742,44 @@ psc_str2uuid(struct psc_uuid *uuid, char *tmp)
 #define MSG_RESENT             2
 #define MSG_REPLAY             4
 
-static inline int 
+static inline int
 psc_msg_get_flags(struct psc_msg *msg)
 {
         return (msg->flags & MSG_GEN_FLAG_MASK);
 }
 
-static inline void 
+static inline void
 psc_msg_add_flags(struct psc_msg *msg, int flags)
 {
         msg->flags |= MSG_GEN_FLAG_MASK & flags;
 }
 
-static inline void 
+static inline void
 psc_msg_set_flags(struct psc_msg *msg, int flags)
 {
         msg->flags &= ~MSG_GEN_FLAG_MASK;
         psc_msg_add_flags(msg, flags);
 }
 
-static inline void 
+static inline void
 psc_msg_clear_flags(struct psc_msg *msg, int flags)
 {
         msg->flags &= ~(MSG_GEN_FLAG_MASK & flags);
 }
 
-static inline int 
+static inline int
 psc_msg_get_op_flags(struct psc_msg *msg)
 {
         return (msg->flags >> MSG_OP_FLAG_SHIFT);
 }
 
-static inline void 
+static inline void
 psc_msg_add_op_flags(struct psc_msg *msg, int flags)
 {
         msg->flags |= ((flags & MSG_GEN_FLAG_MASK) << MSG_OP_FLAG_SHIFT);
 }
 
-static inline void 
+static inline void
 psc_msg_set_op_flags(struct psc_msg *msg, int flags)
 {
         msg->flags &= ~MSG_OP_FLAG_MASK;
@@ -1002,4 +1002,4 @@ do {                                                                    \
 #define list_for_each		ERROR
 #define list_for_each_safe	ERROR
 
-#endif
+#endif /* _PFL_RPC_H_ */

@@ -1,4 +1,4 @@
-/* $Id: fmtstr.h 1283 2007-07-17 16:43:48Z yanovich $ */
+/* $Id$ */
 
 #include <ctype.h>
 #include <stdio.h>
@@ -28,7 +28,7 @@
 #define FMTSTR(buf, siz, fmt, cases)					\
 	({								\
 		const char *_p, *_t;					\
-		char *_s, *_tfmt, *_tfmt_new;			        \
+		char *_s, *_tfmt, *_tfmt_new;				\
 		int _want, _twant, _sawch;				\
 		size_t _tfmt_len;					\
 									\

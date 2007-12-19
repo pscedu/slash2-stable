@@ -1,4 +1,4 @@
-/* $Id: threadtable.c 1907 2007-10-18 18:15:57Z yanovich $ */
+/* $Id$ */
 
 /*
  * This file could be replaced by thread-local storage at some point.
@@ -13,8 +13,6 @@
 #include "psc_util/assert.h"
 #include "psc_util/threadtable.h"
 #include "psc_util/thread.h"
-
-#define PSC_THREAD_HTABLE_SZ 53
 
 struct hash_table thrHtable;
 
@@ -51,15 +49,6 @@ _psc_threadtbl_get(pthread_t thrid, int canfail)
 	if (!canfail)
 		psc_assert(e != NULL);
 	return (e ? e->private : NULL);
-}
-
-/**
- * psc_threadtbl_init - intialize thread hash table.
- */
-void
-psc_threadtbl_init(void)
-{
-	init_hash_table(&thrHtable, PSC_THREAD_HTABLE_SZ, "threads");
 }
 
 void

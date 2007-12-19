@@ -1,4 +1,4 @@
-/* $Id: vbitmap.c 1873 2007-10-12 19:38:10Z yanovich $ */
+/* $Id$ */
 
 #include <sys/param.h>
 

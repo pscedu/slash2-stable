@@ -1,6 +1,7 @@
-/* $Id: export.h 2010 2007-10-28 19:46:36Z pauln $ */
-#ifndef _RPC_EXPORT_H
-#define _RPC_EXPORT_H 1
+/* $Id$ */
+
+#ifndef _PFL_EXPORT_H_
+#define _PFL_EXPORT_H_
 
 #include "psc_util/atomic.h"
 #include "psc_util/log.h"
@@ -44,4 +45,4 @@ struct pscrpc_export;
 extern void 
 __pscrpc_export_put(struct pscrpc_export *exp);
 
-#endif
+#endif /* _PFL_EXPORT_H_ */

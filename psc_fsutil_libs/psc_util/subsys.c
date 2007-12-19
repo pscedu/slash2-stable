@@ -1,35 +1,27 @@
-/* $Id: subsys.c 2137 2007-11-05 18:41:27Z yanovich $ */
+/* $Id$ */
 
 /*
- * subsystem definitions.
+ * Subsystem definitions.
  */
 #include "psc_util/subsys.h"
+#include "psc_ds/dynarray.h"
+#include "psc_util/log.h"
 
+#include <stdio.h>
 #include <strings.h>
 
-/* Must stay sync'd with S_* constants. */
-const char *subsys_names[] = {
-/* 0 */	"addrcache",
-/* 1 */	"chunkmap",
-/* 2 */	"fileops",
-/* 3 */	"inode",
-/* 4 */	"log",
-/* 5 */	"read",
-/* 6 */	"sync",
-/* 7 */	"ciod",
-/* 8 */	"rpc",
-/* 9 */	"lnet",
-/*10 */	"pty",
-/*11 */	"other"
-};
+struct dynarray psc_subsystems;
 
 int
 psc_subsys_id(const char *name)
 {
-	int n;
+	const char **ss;
+	int n, len;
 
-	for (n = 0; n < NSUBSYS; n++)
-		if (strcasecmp(name, subsys_names[n]) == 0)
+	ss = dynarray_get(&psc_subsystems);
+	len = dynarray_len(&psc_subsystems);
+	for (n = 0; n < len; n++)
+		if (strcasecmp(name, ss[n]) == 0)
 			return (n);
 	return (-1);
 }
@@ -37,9 +29,31 @@ psc_subsys_id(const char *name)
 const char *
 psc_subsys_name(int id)
 {
+	const char **ss;
+	int len;
+
 	if (id < 0)
 		return ("<unknown>");
-	else if (id >= NSUBSYS)
+
+	ss = dynarray_get(&psc_subsystems);
+	len = dynarray_len(&psc_subsystems);
+
+	if (id >= len)
 		return ("<unknown>");
-	return (subsys_names[id]);
+	if (ss[id] == NULL)
+		return ("<unreg>");
+	return (ss[id]);
+}
+
+void
+psc_subsys_register(int id, const char *name)
+{
+	const char **ss;
+
+	dynarray_hintlen(&psc_subsystems, id);
+	ss = dynarray_get(&psc_subsystems);
+
+	if (ss[id])
+		psc_fatalx("subsys slot %d already registered", id);
+	ss[id] = name;
 }

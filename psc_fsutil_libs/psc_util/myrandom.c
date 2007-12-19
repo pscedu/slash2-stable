@@ -1,4 +1,4 @@
-/* $Id: myrandom.c 2136 2007-11-05 18:34:14Z yanovich $ */
+/* $Id$ */
 
 #include <sys/types.h>
 

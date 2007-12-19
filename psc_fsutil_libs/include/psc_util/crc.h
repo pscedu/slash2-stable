@@ -1,7 +1,7 @@
-/* $Id: pscCrc.h 1729 2007-09-21 21:29:10Z pauln $ */
+/* $Id$ */
 
-#ifndef HAVE_PSC_CRC_INC
-#define HAVE_PSC_CRC_INC
+#ifndef _PFL_CRC_H_
+#define _PFL_CRC_H_
 
 #include <sys/types.h>
 
@@ -34,4 +34,4 @@ extern const u64 crc_table[];
 
 int crc_valid(psc_crc_t crc, const void *p, size_t len);
 
-#endif /* HAVE_PSC_CRC_INC */
+#endif /* _PFL_CRC_H_ */

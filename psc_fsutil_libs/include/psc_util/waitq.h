@@ -1,7 +1,7 @@
-/* $Id: pscWaitq.h 1741 2007-09-26 16:21:31Z yanovich $ */
+/* $Id$ */
 
-#ifndef HAVE_PSC_WAITQ_INC
-#define HAVE_PSC_WAITQ_INC
+#ifndef _PFL_WAITQ_H_
+#define _PFL_WAITQ_H_
 
 #include <time.h>
 
@@ -41,4 +41,4 @@ typedef psc_waitq_t		wait_queue_head_t;
 #define init_waitqueue_head(q)	psc_waitq_init(q)
 #define wake_up(q)		psc_waitq_wakeup(q)
 
-#endif
+#endif /* _PFL_WAITQ_H_ */

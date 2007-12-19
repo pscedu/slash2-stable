@@ -1,4 +1,4 @@
-/* $Id: dynarray.c 2236 2007-11-27 20:55:03Z yanovich $ */
+/* $Id$ */
 
 /*
  * Dynamically-sized array API.

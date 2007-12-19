@@ -1,4 +1,4 @@
-/* $Id: pscNiobuf.c 2009 2007-10-28 19:46:13Z pauln $ */
+/* $Id$ */
 
 /* -*- mode: c; c-basic-offset: 8; indent-tabs-mode: nil; -*-
  * vim:expandtab:shiftwidth=8:tabstop=8:
@@ -25,8 +25,7 @@
  *
  */
 
-#include "psc_util/subsys.h"
-#define SUBSYS ZS_RPC
+#define PSC_SUBSYS PSS_RPC
 
 #include "psc_util/alloc.h"
 #include "psc_util/atomic.h"
@@ -329,7 +328,7 @@ void pscrpc_unregister_bulk (struct pscrpc_request *req)
                         return;
 
                 LASSERT (rc == -ETIMEDOUT);
-                DEBUG_REQ(LL_WARN, req,
+                DEBUG_REQ(PLL_WARN, req,
 			  "Unexpectedly long timeout: desc %p", desc);
         }
 }
@@ -689,7 +688,7 @@ static void __pscrpc_free_req(struct pscrpc_request *request, int  locked)
         //LASSERTF(zlist_empty(&request->rq_replay_list), "req %p\n", request);
 
 	if (atomic_read(&request->rq_refcount) != 0) {
-                DEBUG_REQ(LL_ERROR, request,
+                DEBUG_REQ(PLL_ERROR, request,
 			  "freeing request with nonzero refcount");
                 LBUG();
         }

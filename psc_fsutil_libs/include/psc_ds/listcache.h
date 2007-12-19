@@ -1,7 +1,7 @@
-/* $Id: pscListCache.h 1974 2007-10-25 16:56:27Z yanovich $ */
+/* $Id$ */
 
-#ifndef HAVE_PSC_LISTCACHE_INC
-#define HAVE_PSC_LISTCACHE_INC
+#ifndef _PFL_LISTCACHE_H_
+#define _PFL_LISTCACHE_H_
 
 #include <sys/types.h>
 
@@ -460,4 +460,4 @@ lc_sort(list_cache_t *lc,
 	ureqlock(&lc->lc_lock, locked);
 }
 
-#endif /* HAVE_PSC_LISTCACHE_INC */
+#endif /* _PFL_LISTCACHE_H_ */

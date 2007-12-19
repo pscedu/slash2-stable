@@ -1,5 +1,7 @@
 /* $Id$ */
 
+#define PSC_SUBSYS PSS_JOURNAL
+
 #include "psc_types.h"
 #include "psc_util/alloc.h"
 #include "psc_util/atomic.h"

@@ -1,4 +1,4 @@
-/* $Id: thread.c 2073 2007-11-01 17:31:07Z pauln $ */
+/* $Id$ */
 
 #include "psc_util/subsys.h"
 
@@ -28,17 +28,18 @@ pscthr_begin(void *arg)
 /*
  * pscthr_init - initialize a thread.
  * @thr: thread structure to be initialized, must already be allocated.
- * @type: zestion thread type.
+ * @type: application-specific thread type.
  * @start: thread execution routine.  By specifying a NULL routine,
  *	no pthread will be spawned (assuming that an actual pthread
  *	already exists or will be taken care of).
- * @namearg: number of `type' threads thus far.
+ * @namearg: application-specific name for thread.
  */
 void
 pscthr_init(struct psc_thread *thr, int type,
 	    void *(*start)(void *), const char *name)
 {
-	int error, n;
+	int error, n, nsubsys;
+	int *loglevels;
 
 	/*
 	 * Ensure that the thr is initialized before the new thread
@@ -50,8 +51,10 @@ pscthr_init(struct psc_thread *thr, int type,
 	snprintf(thr->pscthr_name, sizeof(thr->pscthr_name), "%s",
 		 name);
 
-	for (n = 0; n < ZNSUBSYS; n++)
-		thr->pscthr_log_levels[n] = psc_getloglevel();
+	loglevels = dynarray_get(&thr->pscthr_loglevels);
+	nsubsys = dynarray_len(&thr->pscthr_loglevels);
+	for (n = 0; n < nsubsys; n++)
+		loglevels[n] = psc_getloglevel();
 
 	thr->pscthr_type  = type;
 	thr->pscthr_id    = dynarray_len(&pscThreads); /* XXX lockme? */
@@ -87,11 +90,17 @@ int
 pscthr_getloglevel(int subsys)
 {
 	struct psc_thread *thr;
+	int nsubsys, *loglevels;
 
 	thr = psc_threadtbl_get_canfail();
 	if (thr == NULL)
-		return (LL_TRACE);
-	return (thr->pscthr_log_levels[subsys]);
+		return (PLL_TRACE);
+	loglevels = dynarray_get(&thr->pscthr_loglevels);
+	nsubsys = dynarray_len(&thr->pscthr_loglevels);
+	if (subsys >= nsubsys)
+		psc_fatalx("request subsystem out of bounds (%d)",
+		    subsys);
+	return (loglevels[subsys]);
 }
 
 /*

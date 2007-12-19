@@ -1,9 +1,9 @@
-/* $Id: */
+/* $Id$ */
 
 /* XXX add GPL copyright */
 
-#ifndef HAVE_PSC_LIST_INC
-#define HAVE_PSC_LIST_INC
+#ifndef _PFL_LIST_H_
+#define _PFL_LIST_H_
 
 #ifndef HAVE_PSC_LIST_CORE
 #define HAVE_PSC_LIST_CORE
@@ -278,7 +278,6 @@ static __inline__ void psclist_splice(struct psclist_head *psclist,
 	    ((char *)pos) + (offset) != (void *)(head);			    \
 	    (pos) = (void *)(((char *)(((struct psclist_head *)(((char *)pos) + (offset)))->znext)) - (offset)))
 
-#if 0
 #undef list_head
 #undef LIST_HEAD_INIT
 #undef LIST_ENTRY_INIT
@@ -312,6 +311,5 @@ static __inline__ void psclist_splice(struct psclist_head *psclist,
 #define list_entry		ERROR
 #define list_for_each		ERROR
 #define list_for_each_safe	ERROR
-#endif
 
-#endif /* HAVE_PSC_LIST_INC */
+#endif /* _PFL_LIST_H_ */

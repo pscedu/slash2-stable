@@ -1,6 +1,6 @@
-/* $Id: pscEvents.c 2164 2007-11-06 01:09:14Z pauln $ */
-#include "psc_util/subsys.h"
-#define SUBSYS ZS_RPC
+/* $Id$ */
+
+#define PSC_SUBSYS PSS_RPC
 
 #include "psc_util/alloc.h"
 #include "psc_util/atomic.h"
@@ -22,7 +22,7 @@ void request_out_callback(lnet_event_t *ev)
                  ev->type == LNET_EVENT_UNLINK);
         LASSERT (ev->unlinked);
 
-        DEBUG_REQ((ev->status == 0) ? LL_INFO : LL_ERROR, req,
+        DEBUG_REQ((ev->status == 0) ? PLL_INFO : PLL_ERROR, req,
                   "type %d, status %d", ev->type, ev->status);
 
         if (ev->type == LNET_EVENT_UNLINK || ev->status != 0) {
@@ -124,7 +124,7 @@ void request_in_callback(lnet_event_t *ev)
                        service->srv_nrqbd_receiving, service->srv_name);
 
 		if (!service->srv_nrqbd_receiving)
-			CERROR("Service %s, all request buffer are busy", 
+			CERROR("Service %s, all request buffer are busy",
 			      service->srv_name);
 #if 0
                 /* Normally, don't complain about 0 buffers posted; LNET won't
@@ -205,7 +205,7 @@ void reply_in_callback(lnet_event_t *ev)
         LASSERT (ev->offset == 0);
         LASSERT (ev->mlength <= (u32)req->rq_replen);
 
-        DEBUG_REQ((ev->status == 0) ? LL_INFO : LL_ERROR, req,
+        DEBUG_REQ((ev->status == 0) ? PLL_INFO : PLL_ERROR, req,
                   "type %d, status %d initiator ;%s;",
 		  ev->type, ev->status, libcfs_id2str(ev->initiator));
 

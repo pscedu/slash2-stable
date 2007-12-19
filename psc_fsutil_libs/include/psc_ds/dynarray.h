@@ -1,11 +1,11 @@
-/* $Id: dynarray.h 2197 2007-11-08 21:41:22Z yanovich $ */
+/* $Id$ */
 
 /*
  * Routines for managing dynamically-sized arrays.
  */
 
-#ifndef _DYNARRAY_H_
-#define _DYNARRAY_H_
+#ifndef _PFL_DYNARRAY_H_
+#define _PFL_DYNARRAY_H_
 
 struct dynarray {
 	int		  da_pos;
@@ -25,4 +25,4 @@ void	 dynarray_remove(struct dynarray *, const void *);
 int	 dynarray_hintlen(struct dynarray *, int);
 int	 dynarray_freeslack(struct dynarray *);
 
-#endif /* _DYNARRAY_H_ */
+#endif /* _PFL_DYNARRAY_H_ */

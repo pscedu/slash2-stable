@@ -1,4 +1,6 @@
-/* $Id: pscRpcNbReq.c 2195 2007-11-08 16:35:41Z yanovich $ */
+/* $Id$ */
+
+#define PSC_SUBSYS PSS_RPC
 
 #include "psc_util/alloc.h"
 #include "psc_rpc/rpc.h"
@@ -21,12 +23,12 @@ nbreqset_push(struct pscrpc_request *req) {
  * @nb_callback:   application callback
  */
 struct pscrpc_nbreqset *
-nbreqset_init(set_interpreter_func nb_interpret, 
+nbreqset_init(set_interpreter_func nb_interpret,
 	      nbreq_callback       nb_callback) {
 
 	struct pscrpc_nbreqset *nbs;
 
-	nbs = PSCALLOC(sizeof(struct pscrpc_nbreqset));	
+	nbs = PSCALLOC(sizeof(struct pscrpc_nbreqset));
 	//LOCK_INIT(&nbs->nb_lock);
 	nbs->nb_reqset                = pscrpc_prep_set();
 	nbs->nb_reqset->set_interpret = nb_interpret;
@@ -40,13 +42,13 @@ nbreqset_init(set_interpreter_func nb_interpret,
  *
  */
 void
-nbreqset_add(struct pscrpc_nbreqset *nbs, 
+nbreqset_add(struct pscrpc_nbreqset *nbs,
 	     struct pscrpc_request  *req) {
-	
+
 	atomic_inc(&nbs->nb_outstanding);
 	pscrpc_set_add_new_req(nbs->nb_reqset, req);
-	if (nbreqset_push(req)) { 
-		DEBUG_REQ(LL_ERROR, req, "Send Failure");
+	if (nbreqset_push(req)) {
+		DEBUG_REQ(PLL_ERROR, req, "Send Failure");
 		psc_fatalx("Send Failure");
 	}
 }
@@ -63,13 +65,13 @@ nbrequest_flush(struct pscrpc_nbreqset *nbs) {
 }
 
 /**
- * nbrequest_reap - remove completed requests from the 
+ * nbrequest_reap - remove completed requests from the
  *                  request set and place them into the
- *                  'completed' list.  
- * @nbs: the non-blocking set 
- * Notes:  Call before pscrpc_check_set(), pscrpc_check_set() manages 
- *        'set_remaining'..  If there are problems look at pscrpc_set_wait(), 
- *        there you'll find a more sophisticated and proper use of sets.  
+ *                  'completed' list.
+ * @nbs: the non-blocking set
+ * Notes:  Call before pscrpc_check_set(), pscrpc_check_set() manages
+ *        'set_remaining'..  If there are problems look at pscrpc_set_wait(),
+ *        there you'll find a more sophisticated and proper use of sets.
  *        pscrpc_set_wait() deals with blocking set nevertheless much applies
  *        here as well.
  */
@@ -85,42 +87,42 @@ nbrequest_reap(struct pscrpc_nbreqset *nbs) {
 	ENTRY;
 
         lwi = LWI_TIMEOUT(timeout, NULL, NULL);
-        psc_cli_wait_event(set->set_waitq, 
+        psc_cli_wait_event(set->set_waitq,
 			   (nreaped=pscrpc_check_set(set, 0)), &lwi);
-	
+
 	if (!nreaped)
 		RETURN(0);
-	
-	spinlock(&set->set_new_req_lock);	
 
-	psclist_for_each_safe(i, j, &set->set_requests) { 
+	spinlock(&set->set_new_req_lock);
+
+	psclist_for_each_safe(i, j, &set->set_requests) {
 		nchecked++;
 		req = psclist_entry(i, struct pscrpc_request, rq_set_chain);
-		DEBUG_REQ(LL_INFO, req, "reap if Completed");
+		DEBUG_REQ(PLL_INFO, req, "reap if Completed");
 		/*
 		 * Move sent rpcs to the set_requests list
 		 */
-		if (req->rq_phase == ZRQ_PHASE_COMPLETE) {	
-			psclist_del_init(&req->rq_set_chain);	
+		if (req->rq_phase == ZRQ_PHASE_COMPLETE) {
+			psclist_del_init(&req->rq_set_chain);
 			atomic_dec(&nbs->nb_outstanding);
 			nreaped++;
 			/*
 			 * paranoia
 			 */
 			psc_assert(atomic_read(&nbs->nb_outstanding) >= 0);
-			/* Revisit this, I don't think we need to issue a 
-			   callback here but there may be some failure 
+			/* Revisit this, I don't think we need to issue a
+			   callback here but there may be some failure
 			   scenarios which require it - paul
-			*/			   
+			*/
 #if 0
 			/*
-			 * This is the caller's last shot at accessing 
+			 * This is the caller's last shot at accessing
 			 *  this msg..
 			 * Let the callback deal with it's own
 			 *  error handling, we can't do much from here
-			 */			
+			 */
 			if (nbs->nb_callback != NULL)
-				(int)nbs->nb_callback(req, 
+				(int)nbs->nb_callback(req,
 						      &req->rq_async_args);
 #endif
 			/*
@@ -133,4 +135,3 @@ nbrequest_reap(struct pscrpc_nbreqset *nbs) {
 	psc_dbg("checked %d requests", nchecked);
 	RETURN(nreaped);
 }
-

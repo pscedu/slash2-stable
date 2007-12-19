@@ -1,7 +1,7 @@
-/* $Id: vbitmap.h 1664 2007-09-13 20:35:24Z yanovich $ */
+/* $Id$ */
 
-#ifndef HAVE_VBITMAP_INC
-#define HAVE_VBITMAP_INC
+#ifndef _PFL_VBITMAP_H_
+#define _PFL_VBITMAP_H_
 
 #include <sys/types.h>
 
@@ -26,4 +26,4 @@ void		vbitmap_printhex(const struct vbitmap *);
 void		vbitmap_printstats(const struct vbitmap *);
 void		vbitmap_getstats(const struct vbitmap *, int *, int *);
 
-#endif
+#endif /* _PFL_VBITMAP_H_ */

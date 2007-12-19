@@ -1,4 +1,6 @@
-/* $Id: service.c 2114 2007-11-03 19:39:08Z pauln $ */
+/* $Id$ */
+
+#define PSC_SUBSYS PSS_RPC
 
 #include <stdio.h>
 
@@ -253,7 +255,7 @@ pscrpc_server_handle_request(struct pscrpc_service *svc,
              svc->srv_n_active_reqs >= (svc->srv_nthreads - 1))) {
                 /* If all the other threads are handling requests, I must
 		 * remain free to handle any 'difficult' reply that might
-		 * block them 
+		 * block them
 		 */
                 spin_unlock(&svc->srv_lock);
                 RETURN(0);
@@ -317,7 +319,7 @@ pscrpc_server_handle_request(struct pscrpc_service *svc,
 	if (request->rq_conn->c_exp == NULL) {
 		struct pscrpc_export *exp;
 
-		DEBUG_REQ(LL_WARN, request, "null export");
+		DEBUG_REQ(PLL_WARN, request, "null export");
 
 		ZOBD_ALLOC(exp, sizeof(*exp));
 		if (exp == NULL)
@@ -367,7 +369,7 @@ pscrpc_server_handle_request(struct pscrpc_service *svc,
 		 request->rq_reqmsg->status,
 		 request->rq_xid,
 		 request->rq_reqmsg->opc);
-	
+
  put_rpc_export:
 	pscrpc_export_rpc_put(request->rq_export);
 	request->rq_export = NULL;
@@ -523,21 +525,21 @@ target_send_reply_msg (struct pscrpc_request *req, int rc, int fail_id)
 #if PAULS_TODO
         if (ZOBD_FAIL_CHECK(fail_id | ZOBD_FAIL_ONCE)) {
                 obd_fail_loc |= ZOBD_FAIL_ONCE | ZOBD_FAILED;
-                DEBUG_REQ(LL_ERROR, req, "dropping reply");
+                DEBUG_REQ(PLL_ERROR, req, "dropping reply");
                 return (-ECOMM);
         }
 #endif
 	if (fail_id) {
-                DEBUG_REQ(LL_ERROR, req, "dropping reply");
+                DEBUG_REQ(PLL_ERROR, req, "dropping reply");
                 return (-ECOMM);
 	}
 
         if (rc) {
-                DEBUG_REQ(LL_ERROR, req, "processing error (%d)", rc);
+                DEBUG_REQ(PLL_ERROR, req, "processing error (%d)", rc);
                 req->rq_status = rc;
                 return (pscrpc_error(req));
         } else {
-                DEBUG_REQ(LL_INFO, req, "sending reply");
+                DEBUG_REQ(PLL_INFO, req, "sending reply");
         }
 
         return (pscrpc_send_reply(req, 1));
@@ -631,7 +633,7 @@ static void * pscrpc_main(void *arg)
 	wake_up(&svc->srv_free_rs_waitq);
 
 	CDEBUG(D_NET, "service thread %zu started\n", thread->pscthr_id);
-	
+
 	run = &thread->pscthr_run;
 
 	/* XXX maintain a list of all managed devices: insert here */
@@ -725,7 +727,6 @@ static void * pscrpc_main(void *arg)
 #endif
         spin_unlock(&svc->srv_lock);
 
-	thread->pscthr_rc = rc;
 	return NULL;
 }
 
@@ -984,35 +985,39 @@ pscrpc_init_svc(int nbufs, int bufsize, int max_req_size, int max_reply_size,
         return NULL;
 }
 
-/** 
- * rpcthr_spawn - create a portal rpc service.  
- * @svh:  an initialized service handle structure which holds the service's relevant information.
+/**
+ * rpcthr_spawn - create a portal rpc service.
+ * @svh:  an initialized service handle structure which holds the
+ *	service's relevant information.
  */
 void
-pscrpc_thread_spawn(pscrpc_svc_handle_t *svh) 
+pscrpc_thread_spawn(pscrpc_svc_handle_t *svh)
 {
 	int i;
+	char thrname[PSC_THRNAME_MAX];
 	struct psc_thread *thr;
-	
+
 	svh->svh_service = pscrpc_init_svc(svh->svh_nbufs,
 					   svh->svh_bufsz,
 					   svh->svh_reqsz,
 					   svh->svh_repsz,
-					   svh->svh_req_portal, 
+					   svh->svh_req_portal,
 					   svh->svh_rep_portal,
 					   svh->svh_svc_name,
 					   svh->svh_nthreads,
 					   svh->svh_handler);
-	
+
 	psc_assert(svh->svh_service);
-	
+
 	/* Track the service handle */
 	psclist_add(&svh->svh_chain, &pscrpc_svh_list);
-	
-	svh->svh_threads = PSCALLOC((sizeof(struct psc_thread)) 
-				    * svh->svh_nthreads);
-	
-	for (i=0, thr=svh->svh_threads; i < svh->svh_nthreads; i++, thr++)
-		pscthr_init(thr, svh->svh_type, pscrpc_main, i);
-}
 
+	svh->svh_threads = PSCALLOC((sizeof(struct psc_thread))
+				    * svh->svh_nthreads);
+
+	for (i=0, thr=svh->svh_threads; i < svh->svh_nthreads; i++, thr++) {
+		snprintf(thrname, sizeof(thrname), "%s%d",
+		    svh->svh_svc_name, i);
+		pscthr_init(thr, svh->svh_type, pscrpc_main, thrname);
+	}
+}

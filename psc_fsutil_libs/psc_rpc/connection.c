@@ -1,7 +1,6 @@
-/* $Id: pscConnection.c 2114 2007-11-03 19:39:08Z pauln $ */
+/* $Id$ */
 
-#include "psc_util/subsys.h"
-#define SUBSYS ZS_RPC
+#define PSC_SUBSYS PSS_RPC
 
 #include "psc_util/alloc.h"
 #include "psc_util/atomic.h"
@@ -61,7 +60,7 @@ pscrpc_get_connection(lnet_process_id_t peer,
         struct pscrpc_connection *c;
         struct pscrpc_connection *c2;
         ENTRY;
-	
+
 	//psc_assert(uuid != NULL);
 
 	psc_info("self %s peer %s",
@@ -92,8 +91,8 @@ pscrpc_get_connection(lnet_process_id_t peer,
         spin_lock(&conn_lock);
 
         c2 = pscrpc_lookup_conn_locked(peer);
-        if (c2 == NULL) { 
-		psc_notify("adding connection %p for %s", 
+        if (c2 == NULL) {
+		psc_notify("adding connection %p for %s",
 			   c, libcfs_id2str(peer));
                 psclist_add(&c->c_link, &conn_list);
 	}

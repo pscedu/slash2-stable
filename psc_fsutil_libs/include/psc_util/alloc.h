@@ -1,7 +1,7 @@
 /* $Id$ */
 
-#ifndef HAVE_PSC_ALLOC_INC
-#define HAVE_PSC_ALLOC_INC
+#ifndef _PFL_ALLOC_H_
+#define _PFL_ALLOC_H_
 
 #include <stdlib.h>
 #include <string.h>
@@ -32,4 +32,4 @@ void *palloc(size_t);
 
 extern long pscPageSize;
 
-#endif /* HAVE_PSC_ALLOC_INC */
+#endif /* _PFL_ALLOC_H_ */

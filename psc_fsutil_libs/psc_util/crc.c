@@ -1,4 +1,4 @@
-/* $Id: crc.c 1782 2007-09-28 16:12:03Z pauln $ */
+/* $Id$ */
 
 #include "psc_types.h"
 #include "psc_util/crc.h"

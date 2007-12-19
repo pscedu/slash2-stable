@@ -1,5 +1,7 @@
-#ifndef SERVICE_INC
-#define SERVICE_INC 1
+/* $Id$ */
+
+#ifndef _PFL_SERVICE_H_
+#define _PFL_SERVICE_H_
 
 #include "psc_rpc/rpc.h"
 #include "psc_util/thread.h"
@@ -26,4 +28,4 @@ struct pscrpc_svc_handle {
 typedef struct pscrpc_svc_handle pscrpc_svc_handle_t;
 
 
-#endif
+#endif /* _PFL_SERVICE_H_ */

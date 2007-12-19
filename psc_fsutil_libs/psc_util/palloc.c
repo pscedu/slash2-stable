@@ -1,4 +1,4 @@
-/* $Id: palloc.c 2189 2007-11-07 22:18:18Z yanovich $ */
+/* $Id$ */
 
 #define _XOPEN_SOURCE 600 /* posix_memalign */
 
@@ -25,12 +25,6 @@ palloc(size_t len)
 {
 	void *p;
 	int rc;
-
-	if (pscPageSize == 0) {
-		pscPageSize = sysconf(_SC_PAGESIZE);
-		if (pscPageSize == -1)
-			psc_fatal("sysconf");
-	}
 
 	rc = posix_memalign(&p, pscPageSize, len);
 	if (rc)

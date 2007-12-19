@@ -1,7 +1,6 @@
-/* $Id: pscExport.c 2212 2007-11-19 16:49:37Z pauln $ */
+/* $Id$ */
 
-#include "psc_util/subsys.h"
-#define SUBSYS ZS_RPC
+#define PSC_SUBSYS PSS_RPC
 
 #include "psc_ds/tree.h"
 #include "psc_rpc/rpc.h"

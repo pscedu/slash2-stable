@@ -1,4 +1,4 @@
-/* $Id: myrandom.h 2137 2007-11-05 18:41:27Z yanovich $ */
+/* $Id$ */
 
 #include "psc_types.h"
 

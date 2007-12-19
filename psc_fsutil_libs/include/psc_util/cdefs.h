@@ -1,4 +1,4 @@
-/* $Id: cdefs.h 2178 2007-11-06 19:37:30Z yanovich $ */
+/* $Id$ */
 
 #define NENTRIES(t) (int)(sizeof(t) / sizeof(t[0]))
 
