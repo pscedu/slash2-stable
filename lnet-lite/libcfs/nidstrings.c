@@ -1,4 +1,4 @@
-/* -*- mode: c; c-basic-offset: 8; indent-tabs-mode: nil; -*-
+ /* -*- mode: c; c-basic-offset: 8; indent-tabs-mode: nil; -*-
  * vim:expandtab:shiftwidth=8:tabstop=8:
  *
  * Copyright (C) 2002 Cluster File Systems, Inc.
@@ -55,8 +55,6 @@
 static char      libcfs_nidstrings[LNET_NIDSTR_COUNT][LNET_NIDSTR_SIZE];
 static int       libcfs_nidstring_idx = 0;
 
-static psc_spinlock_t libcfs_nidstring_lock = LOCK_INITIALIZER;
-
 #ifdef __KERNEL__
 static spinlock_t libcfs_nidstring_lock;
 
@@ -67,9 +65,9 @@ void libcfs_init_nidstrings (void)
 
 # define NIDSTR_LOCK(f)   spin_lock_irqsave(&libcfs_nidstring_lock, f)
 # define NIDSTR_UNLOCK(f) spin_unlock_irqrestore(&libcfs_nidstring_lock, f)
+
 #else
-//# define NIDSTR_LOCK(f)   (f=0)                 /* avoid unused var warnings */
-//# define NIDSTR_UNLOCK(f) (f=0)
+static psc_spinlock_t libcfs_nidstring_lock = LOCK_INITIALIZER;
 #define NIDSTR_LOCK(f) spinlock(&libcfs_nidstring_lock);
 #define NIDSTR_UNLOCK(f) freelock(&libcfs_nidstring_lock);
 #endif
@@ -391,7 +389,7 @@ libcfs_nid2str(lnet_nid_t nid)
                 return "LNET_NID_ANY";
 
         nf = libcfs_lnd2netstrfns(lnd);
-        //str = libcfs_next_nidstring();
+        str = libcfs_next_nidstring();
 
         if (nf == NULL)
                 snprintf(str, LNET_NIDSTR_SIZE, "%x@<%u:%u>", addr, lnd, nnum);

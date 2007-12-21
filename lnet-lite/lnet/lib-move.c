@@ -425,7 +425,7 @@ lnet_extract_iov (int dst_niov, struct iovec *dst,
 }
 
 #ifndef __KERNEL__
-#if 0
+//#if 0
 unsigned int
 lnet_kiov_nob (__unusedx unsigned int niov, __unusedx lnet_kiov_t *kiov)
 {
@@ -468,7 +468,7 @@ lnet_extract_kiov (int dst_niov, lnet_kiov_t *dst,
 {
         LASSERT (0);
 }
-#endif
+//#endif
 #else /* __KERNEL__ */
 
 unsigned int
