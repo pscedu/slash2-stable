@@ -28,7 +28,7 @@ init_hash_table(struct hash_table *t, int size, const char *fmt, ...)
 
 	t->htable_size       = size;
 	t->htable_buckets    = PSCALLOC(size * HASH_BUCKET_SZ);
-	t->htable_strlen_max = ZPATH_MAX;
+	t->htable_strlen_max = PATH_MAX;
 	t->htcompare         = NULL;
 
 	LOCK_INIT(&t->htable_lock);

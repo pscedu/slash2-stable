@@ -5,6 +5,7 @@
 #include "psc_ds/dynarray.h"
 #include "psc_util/threadtable.h"
 #include "psc_util/subsys.h"
+#include "psc_util/thread.h"
 
 extern struct dynarray psc_subsystems;
 extern long pscPageSize;
