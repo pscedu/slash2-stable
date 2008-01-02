@@ -7,7 +7,6 @@
 #include "psc_util/subsys.h"
 
 extern struct dynarray psc_subsystems;
-extern struct dynarray pscThreads;
 extern long pscPageSize;
 
 void

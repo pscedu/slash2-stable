@@ -26,4 +26,6 @@ struct psc_thread {
 
 void	pscthr_init(struct psc_thread *, int, void *(*)(void *), const char *);
 
+extern struct dynarray pscThreads;
+
 #endif /* _PFL_THREAD_H_ */
