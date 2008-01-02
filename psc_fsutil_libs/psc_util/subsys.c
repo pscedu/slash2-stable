@@ -50,7 +50,7 @@ void
 psc_subsys_register(int id, const char *name)
 {
 	dynarray_add(&psc_subsystems, name);
-	if (++psc_nsubsys != id)
+	if (psc_nsubsys++ != id)
 		psc_fatalx("bad ID %d for subsys %s, check order",
 		    id, name);
 }
