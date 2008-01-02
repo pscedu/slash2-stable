@@ -50,7 +50,7 @@ psc_subsys_register(int id, const char *name)
 {
 	const char **ss;
 
-	dynarray_hintlen(&psc_subsystems, id);
+	dynarray_hintlen(&psc_subsystems, id + 1);
 	ss = dynarray_get(&psc_subsystems);
 
 	if (ss[id])
