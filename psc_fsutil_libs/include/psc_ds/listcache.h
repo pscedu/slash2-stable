@@ -351,7 +351,7 @@ lc_empty(const list_cache_t *lc)
 									\
 		__ret = 0;						\
 		if (z >= lc->lc_max) {					\
-			zwarnx("Cache %s has overgrown", lc->lc_name);	\
+			psc_warnx("Cache %s has overgrown", lc->lc_name);	\
 			break;						\
 		}							\
 		if (z == lc->lc_max)					\
