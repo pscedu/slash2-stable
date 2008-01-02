@@ -51,6 +51,9 @@ pscthr_init(struct psc_thread *thr, int type,
 	snprintf(thr->pscthr_name, sizeof(thr->pscthr_name), "%s",
 		 name);
 
+	if (dynarray_hintlen(&thr->pscthr_loglevels,
+	    dynarray_len(&psc_subsystems)) == -1)
+		psc_fatal("dynarray_hintlen");
 	loglevels = dynarray_get(&thr->pscthr_loglevels);
 	nsubsys = dynarray_len(&thr->pscthr_loglevels);
 	for (n = 0; n < nsubsys; n++)
