@@ -1,0 +1,1 @@
+- remove PSC_LNET and add a global runtime var for server vs. client
