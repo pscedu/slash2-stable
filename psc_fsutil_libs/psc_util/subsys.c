@@ -11,6 +11,7 @@
 #include <strings.h>
 
 struct dynarray psc_subsystems;
+int psc_nsubsys;
 
 int
 psc_subsys_id(const char *name)
@@ -48,12 +49,8 @@ psc_subsys_name(int id)
 void
 psc_subsys_register(int id, const char *name)
 {
-	const char **ss;
-
-	dynarray_hintlen(&psc_subsystems, id + 1);
-	ss = dynarray_get(&psc_subsystems);
-
-	if (ss[id])
-		psc_fatalx("subsys slot %d already registered", id);
-	ss[id] = name;
+	dynarray_add(&psc_subsystems, name);
+	if (++psc_nsubsys != id)
+		psc_fatalx("bad ID %d for subsys %s, check order",
+		    id, name);
 }

@@ -1,4 +1,3 @@
-
 /* $Id$ */
 
 #ifndef _PFL_THREAD_H_
@@ -21,7 +20,7 @@ struct psc_thread {
 	size_t		   pscthr_id;
 	int		   pscthr_type;			/* app-specific type */
 	char		   pscthr_name[PSC_THRNAME_MAX];
-	struct dynarray	   pscthr_loglevels;
+	int		  *pscthr_loglevels;
 	psc_spinlock_t	   pscthr_lock;
 	void		  *pscthr_private;		/* app-specific data */
 };

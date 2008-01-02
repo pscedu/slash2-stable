@@ -6,6 +6,7 @@
 #include <stdio.h>
 #include <unistd.h>
 
+#include "psc_util/alloc.h"
 #include "psc_util/threadtable.h"
 #include "psc_util/lock.h"
 #include "psc_util/thread.h"
@@ -38,8 +39,7 @@ void
 pscthr_init(struct psc_thread *thr, int type,
 	    void *(*start)(void *), const char *name)
 {
-	int error, n, nsubsys;
-	int *loglevels;
+	int *loglevels, error, n;
 
 	/*
 	 * Ensure that the thr is initialized before the new thread
@@ -51,12 +51,9 @@ pscthr_init(struct psc_thread *thr, int type,
 	snprintf(thr->pscthr_name, sizeof(thr->pscthr_name), "%s",
 		 name);
 
-	if (dynarray_hintlen(&thr->pscthr_loglevels,
-	    dynarray_len(&psc_subsystems)) == -1)
-		psc_fatal("dynarray_hintlen");
-	loglevels = dynarray_get(&thr->pscthr_loglevels);
-	nsubsys = dynarray_len(&thr->pscthr_loglevels);
-	for (n = 0; n < nsubsys; n++)
+	thr->pscthr_loglevels = PSCALLOC(psc_nsubsys *
+	    sizeof(*thr->pscthr_loglevels));
+	for (n = 0; n < psc_nsubsys; n++)
 		loglevels[n] = psc_getloglevel();
 
 	thr->pscthr_type  = type;
@@ -93,17 +90,14 @@ int
 pscthr_getloglevel(int subsys)
 {
 	struct psc_thread *thr;
-	int nsubsys, *loglevels;
 
 	thr = psc_threadtbl_get_canfail();
 	if (thr == NULL)
 		return (PLL_TRACE);
-	loglevels = dynarray_get(&thr->pscthr_loglevels);
-	nsubsys = dynarray_len(&thr->pscthr_loglevels);
-	if (subsys >= nsubsys)
+	if (subsys >= psc_nsubsys)
 		psc_fatalx("request subsystem out of bounds (%d)",
 		    subsys);
-	return (loglevels[subsys]);
+	return (thr->pscthr_loglevels[subsys]);
 }
 
 /*
