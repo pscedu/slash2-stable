@@ -1,4 +1,4 @@
 # $Id$
 
-PROOTDIR:=${PROOTDIR}../
-include ${PROOTDIR}/Makefile.path
+PFL_BASE:=${PFL_BASE}../
+include ${PFL_BASE}/Makefile.path

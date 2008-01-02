@@ -1,8 +1,8 @@
 # $Id$
 
-include ${PROOTDIR}/mk/local.mk
+include ${PFL_BASE}/mk/local.mk
 
-INCLUDES+=	-I${PROOTDIR}/include -I.
+INCLUDES+=	-I${PFL_BASE}/include -I.
 CFLAGS+=	-Wall -W -g ${INCLUDES} ${DEFINES}
 YFLAGS+=	-d -o $@
 

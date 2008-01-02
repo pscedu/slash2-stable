@@ -1,5 +1,5 @@
 # $Id$
 
-ROOTDIR=${PROOTDIR}/../
-PFLMK=${PROOTDIR}/mk/main.mk
+ROOTDIR=${PFL_BASE}/../
+PFLMK=${PFL_BASE}/mk/main.mk
 include ${ROOTDIR}/Makefile.path

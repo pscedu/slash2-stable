@@ -1,6 +1,7 @@
 # $Id$
 
-PROOTDIR=.
+PFL_BASE=.
+PROJECT_BASE=${PFL_BASE}
 include Makefile.path
 
 LIBRARY=	lib/libpfl.a
