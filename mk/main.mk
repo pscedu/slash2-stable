@@ -138,14 +138,34 @@ listsrcs:
 		echo "${SRCS}";								\
 	fi
 
+hdr-sync:
+	@for i in ${SUBDIRS}; do							\
+		echo -n "===> " >&2;							\
+		if [ -n "${DIRPREFIX}" ]; then						\
+			echo -n ${DIRPREFIX} >&2;					\
+		fi;									\
+		echo $$i >&2;								\
+		(cd $$i && ${MAKE} SUBDIRS= DIRPREFIX=${DIRPREFIX}$$i/ $@) || exit 1;	\
+		if [ -n "${DIRPREFIX}" ]; then						\
+			echo "<=== ${DIRPREFIX}" | sed 's!/$$!!' >&2;			\
+		fi;									\
+	done
+	if [ -z "${PROJECT_BASE}" ]; then						\
+		echo "PROJECT_BASE not defined, aborting" >&2;				\
+		exit 1;									\
+	fi
+	@for i in "${SRCS}"; do								\
+		sh ${ROOTDIR}/tools/hdr-sync.sh "${PROJECT_BASE}" $$i;			\
+	done
+
 ifdef SLASH_BASE
 CS_ARGS+=-s${SLASH_BASE}
 ET_ARGS+="${SLASH_BASE}"
 endif
 
-ifdef ZROOTDIR
-CS_ARGS+=-s${ZROOTDIR}
-ET_ARGS+="${ZROOTDIR}"
+ifdef ZEST_BASE
+CS_ARGS+=-s${ZEST_BASE}
+ET_ARGS+="${ZEST_BASE}"
 endif
 
 cscope cs:
