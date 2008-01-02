@@ -49,29 +49,9 @@ typedef unsigned long long int u64;
 
 #endif
 
-#define ZPATH_MAX 1024
-
-/*
- * Note that incrementing this pointer must
- *  result in an increase of 1.
- */
-typedef void psc_buffer_t;
 typedef	u64 psc_crc_t;
-typedef	u64 psc_magic_t;
-typedef u32 psc_block_id_t; /* really only 24 bits, this + diskid == 32bits */
-typedef u16 psc_node_id_t;
-typedef u16 psc_disk_id_t;  /* can we get away with 1 byte here? - try to.. */
-
-#define RBLD_DISK_ID ((1 << sizeof(psc_disk_id_t)) - 1)
-#define RBLD_BLOCK_ID ((1 << sizeof(psc_block_id_t)) - 1)
 
 #define CRCSZ (sizeof(psc_crc_t))
-
-struct psc_iov {
-	u64 ziov_flogical_offset;
-	u32 ziov_len;
-} __attribute__ ((packed));
-typedef struct psc_iov psc_iov_t;
 
 #define MASK_UPPER32 0x00000000ffffffffULL
 
