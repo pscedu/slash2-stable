@@ -88,7 +88,9 @@ io_handler register_io_handler(int fd,
                                void *arg)
 {
     io_handler i=(io_handler)malloc(sizeof(struct io_handler));
- 
+
+    memset(i, 0, (sizeof(struct io_handler)));
+    
     CERROR("register_io_handler fd %d ioh=%p", fd, *handler_head);
 
     if ((i->fd=fd)>=0){
@@ -323,14 +325,13 @@ static struct timeval *choose_timeout(struct timeval *tv1,
  */
 void select_timer_block(when until, void **arg)
 {
-        io_handler *ioh = (io_handler *)arg;
+        io_handler *ioh = arg;
         fd_set fds[3];
         struct timeval timeout;
         struct timeval *timeout_pointer, *select_timeout;
         int max, nready, nexec;
         int fd_handling;
         
-        //psc_trace("This select");
  again:
         if (until) {
                 when interval;

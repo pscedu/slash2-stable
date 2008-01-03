@@ -39,7 +39,7 @@ void
 pscthr_init(struct psc_thread *thr, int type,
 	    void *(*start)(void *), const char *name)
 {
-	int *loglevels, error, n;
+	int error, n;
 
 	/*
 	 * Ensure that the thr is initialized before the new thread
@@ -52,9 +52,10 @@ pscthr_init(struct psc_thread *thr, int type,
 		 name);
 
 	thr->pscthr_loglevels = PSCALLOC(psc_nsubsys *
-	    sizeof(*thr->pscthr_loglevels));
+					 sizeof(*thr->pscthr_loglevels));
+
 	for (n = 0; n < psc_nsubsys; n++)
-		loglevels[n] = psc_getloglevel();
+		thr->pscthr_loglevels[n] = psc_getloglevel();
 
 	thr->pscthr_type  = type;
 	thr->pscthr_id    = dynarray_len(&pscThreads); /* XXX lockme? */

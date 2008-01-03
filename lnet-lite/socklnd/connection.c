@@ -1012,7 +1012,7 @@ init_connections(int (*input)(void *, void *), void *a)
 {
     manager m = (manager)malloc(sizeof(struct manager));
     bridge  b;
-    __unusedx extern int portInc;
+    //__unusedx extern int portInc;
 
     if (m == NULL) 
             goto fail;

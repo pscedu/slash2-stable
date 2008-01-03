@@ -174,7 +174,7 @@ procbridge_startup (lnet_ni_t *ni)
     __unusedx extern int tcpnal_acceptor_port;
 
 #ifdef PSC_LNET
-    struct psc_thread *thr    = PSCALLOC(sizeof(*thr)*oni->ni_ninterfaces);   
+    struct psc_thread *thr    = PSCALLOC(sizeof(*thr)*oni->ni_ninterfaces);
     oni->ni_bonded_interfaces = PSCALLOC(sizeof(oni)*oni->ni_ninterfaces);
 #endif
     
@@ -230,8 +230,9 @@ procbridge_startup (lnet_ni_t *ni)
             p=(procbridge)malloc(sizeof(struct procbridge));
             b->local = p;
             b->b_ni = ni;
-            b->b_io_handler = (io_handler)malloc(sizeof(struct io_handler));
-            memset(b->b_io_handler, 0, (sizeof(struct io_handler)));
+            //b->b_io_handler = (io_handler)malloc(sizeof(struct io_handler));
+            //memset(b->b_io_handler, 0, (sizeof(struct io_handler)));
+            b->b_io_handler = NULL;
             
             ni->ni_data = b;
 
