@@ -41,8 +41,8 @@ psc_setloglevel(int new)
 	old = pscLogLevel;
 	if (new < 0)
 		new = 0;
-	else if (new >= NPLOGLEVELS)
-		new = NPLOGLEVELS - 1;
+	else if (new >= PNLOGLEVELS)
+		new = PNLOGLEVELS - 1;
 	pscLogLevel = new;
 	return (old);
 }
@@ -63,7 +63,7 @@ psc_getloglevel(void)
 			l = strtol(p, &ep, 10);
 			if (p[0] == '\0' || ep == NULL || *ep != '\0')
 				errx(1, "invalid log level env: %s", p);
-			if (errno == ERANGE || l <= 0 || l >= NPLOGLEVELS)
+			if (errno == ERANGE || l <= 0 || l >= PNLOGLEVELS)
 				errx(1, "invalid log level env: %s", p);
 			pscLogLevel = (int)l;
 		}
@@ -193,7 +193,7 @@ psclog_name(int id)
 {
 	if (id < 0)
 		return ("<unknown>");
-	else if (id >= NPLOGLEVELS)
+	else if (id >= PNLOGLEVELS)
 		return ("<unknown>");
 	return (psc_loglevel_names[id]);
 }
@@ -215,7 +215,7 @@ psclog_id(const char *name)
 	};
 	int n;
 
-	for (n = 0; n < NPLOGLEVELS; n++)
+	for (n = 0; n < PNLOGLEVELS; n++)
 		if (strcasecmp(name, psc_loglevel_names[n]) == 0)
 			return (n);
 	for (n = 0; n < NENTRIES(altloglevels); n++)

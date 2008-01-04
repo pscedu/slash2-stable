@@ -17,7 +17,7 @@
 #define PLL_INFO	4 /* general information */
 #define PLL_DEBUG	5 /* debug messages */
 #define PLL_TRACE	6 /* flow */
-#define NPLOGLEVELS	7
+#define PNLOGLEVELS	7
 
 /* Logging options. */
 #define PLO_ERRNO	(1<<0)	/* strerror(errno) */
