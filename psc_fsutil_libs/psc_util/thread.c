@@ -3,6 +3,7 @@
 #include "psc_util/subsys.h"
 
 #include <err.h>
+#include <stdarg.h>
 #include <stdio.h>
 #include <unistd.h>
 
@@ -11,13 +12,14 @@
 #include "psc_util/lock.h"
 #include "psc_util/thread.h"
 #include "psc_types.h"
+#include "psc_util/cdefs.h"
 
 /*
  * Keep track of the threads here
  */
 struct dynarray    pscThreads;
 
-void *
+__static void *
 pscthr_begin(void *arg)
 {
 	struct psc_thread *thr = arg;
@@ -37,9 +39,10 @@ pscthr_begin(void *arg)
  */
 void
 pscthr_init(struct psc_thread *thr, int type,
-	    void *(*start)(void *), const char *name)
+	    void *(*start)(void *), const char *namefmt, ...)
 {
-	int error, n;
+	va_list ap;
+	int rc, n;
 
 	/*
 	 * Ensure that the thr is initialized before the new thread
@@ -48,11 +51,16 @@ pscthr_init(struct psc_thread *thr, int type,
 	LOCK_INIT(&thr->pscthr_lock);
 	spinlock(&thr->pscthr_lock);
 
-	snprintf(thr->pscthr_name, sizeof(thr->pscthr_name), "%s",
-		 name);
+	va_start(ap, namefmt);
+	rc = vsnprintf(thr->pscthr_name, sizeof(thr->pscthr_name),
+	    namefmt, ap);
+	va_end(ap);
+
+	if (rc == -1)
+		psc_fatal("vsnprintf");
 
 	thr->pscthr_loglevels = PSCALLOC(psc_nsubsys *
-					 sizeof(*thr->pscthr_loglevels));
+	    sizeof(*thr->pscthr_loglevels));
 
 	for (n = 0; n < psc_nsubsys; n++)
 		thr->pscthr_loglevels[n] = psc_getloglevel();
@@ -62,9 +70,9 @@ pscthr_init(struct psc_thread *thr, int type,
 	thr->pscthr_start = start;
 
 	if (start)
-		if ((error = pthread_create(&thr->pscthr_pthread, NULL,
-					    pscthr_begin, thr)) != 0)
-			psc_errorx("pthread_create: %s", strerror(error));
+		if ((rc = pthread_create(&thr->pscthr_pthread, NULL,
+		    pscthr_begin, thr)) != 0)
+			psc_fatalx("pthread_create: %s", strerror(rc));
 
 	thr->pscthr_hashid = (u64)thr->pscthr_pthread;
 
@@ -73,6 +81,7 @@ pscthr_init(struct psc_thread *thr, int type,
 	if (dynarray_add(&pscThreads, thr) == -1)
 		psc_fatal("dynarray_add");
 
+	thr->pscthr_run = 1;
 	freelock(&thr->pscthr_lock);
 
 	psc_info("spawned %s [thread %zu] [id %"ZLPX64"] [pthrid %lx] thr=%p"
