@@ -18,8 +18,8 @@
 
 #define LC_NAME_MAX 32
 
-extern struct psclist_head pscListCaches;
-extern psc_spinlock_t	    pscListCachesLock;
+extern struct psclist_head	pscListCaches;
+extern psc_spinlock_t		pscListCachesLock;
 
 /*
  * List cache which can be edited by multiple
@@ -219,7 +219,6 @@ lc_init(list_cache_t *lc)
 	psc_waitq_init(&lc->lc_waitq_full);
 }
 
-#ifdef PSCION
 /**
  * lc_vregister - register a list cache for external access.
  * @lc: the list cache to register.
@@ -233,16 +232,16 @@ lc_vregister(list_cache_t *lc, const char *name, va_list ap)
 
 	if (lc->lc_index_lentry.znext ||
 	    lc->lc_index_lentry.zprev)
-		zfatalx("lc is already registered");
+		psc_fatalx("lc is already registered");
 
 	spinlock(&pscListCachesLock);
 	locked = reqlock(&lc->lc_lock);
 
 	rc = vsnprintf(lc->lc_name, sizeof(lc->lc_name), name, ap);
 	if (rc == -1)
-		zfatal("vsnprintf");
+		psc_fatal("vsnprintf");
 	else if (rc > (int)sizeof(lc->lc_name))
-		zfatalx("lc_name is too large (%s)", name);
+		psc_fatalx("lc_name is too large (%s)", name);
 
 	psc_assert(
 	    lc->lc_index_lentry.znext == NULL &&
@@ -330,7 +329,6 @@ lc_lookup(const char *name)
 		return (lc);
 	return (NULL);
 }
-#endif /* PSCION */
 
 /**
  * lc_empty - determine if the list cache has elements currently.
@@ -364,7 +362,7 @@ lc_empty(const list_cache_t *lc)
 				__ret = i;				\
 				break;					\
 			}						\
-			ptr = TRY_ZALLOC(sizeof(type));			\
+			ptr = TRY_PSCALLOC(sizeof(type));		\
 			if (ptr == NULL) {				\
 				if (!i)					\
 					__ret = -ENOMEM;		\
