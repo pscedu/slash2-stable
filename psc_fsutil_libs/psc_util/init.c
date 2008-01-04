@@ -6,9 +6,12 @@
 #include "psc_util/threadtable.h"
 #include "psc_util/subsys.h"
 #include "psc_util/thread.h"
+#include "psc_util/alloc.h"
 
 extern struct dynarray psc_subsystems;
-extern long pscPageSize;
+
+struct psclist_head pscListCaches;
+psc_spinlock_t pscListCachesLock;
 
 void
 pfl_init(int thrtabsz)
