@@ -993,9 +993,8 @@ pscrpc_init_svc(int nbufs, int bufsize, int max_req_size, int max_reply_size,
 void
 pscrpc_thread_spawn(pscrpc_svc_handle_t *svh)
 {
-	int i;
-	char thrname[PSC_THRNAME_MAX];
 	struct psc_thread *thr;
+	int i;
 
 	svh->svh_service = pscrpc_init_svc(svh->svh_nbufs,
 					   svh->svh_bufsz,
@@ -1015,9 +1014,7 @@ pscrpc_thread_spawn(pscrpc_svc_handle_t *svh)
 	svh->svh_threads = PSCALLOC((sizeof(struct psc_thread))
 				    * svh->svh_nthreads);
 
-	for (i=0, thr=svh->svh_threads; i < svh->svh_nthreads; i++, thr++) {
-		snprintf(thrname, sizeof(thrname), "%s%d",
+	for (i=0, thr=svh->svh_threads; i < svh->svh_nthreads; i++, thr++)
+		pscthr_init(thr, svh->svh_type, pscrpc_main, "%s%d",
 		    svh->svh_svc_name, i);
-		pscthr_init(thr, svh->svh_type, pscrpc_main, thrname);
-	}
 }
