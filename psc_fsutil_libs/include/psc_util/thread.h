@@ -9,6 +9,7 @@
 #include "psc_types.h"
 #include "psc_ds/dynarray.h"
 #include "psc_util/lock.h"
+#include "psc_util/slash_appthread.h"
 
 #define PSC_THRNAME_MAX	24 /* must be 8-byte aligned */
 
