@@ -521,7 +521,7 @@ lnet_set_msg_uid(lnet_ni_t *ni, lnet_msg_t *msg, lnet_uid_t uid)
 
 extern lnet_ni_t *lnet_nid2ni_locked (lnet_nid_t nid);
 extern lnet_ni_t *lnet_net2ni_locked (__u32 net);
-extern int        lnet_localnids_get (lnet_nid_t **nids);
+extern int        lnet_localnids_get (lnet_nid_t *nids, size_t max);
 
 static inline lnet_ni_t *
 lnet_net2ni (__u32 net) 
