@@ -19,7 +19,7 @@ void __pscrpc_export_put(struct pscrpc_export *exp)
                         pscrpc_put_connection(exp->exp_connection);
 		// XXX Shield from the client for now,
 
-		exp->exp_destroycb(exp);
+		exp->exp_destroycb(exp->exp_private);
 
 		/* Outstanding replies refers to 'difficult' replies
 		   Not sure what h_link is for - pauln */
