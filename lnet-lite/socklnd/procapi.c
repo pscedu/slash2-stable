@@ -174,7 +174,6 @@ procbridge_startup (lnet_ni_t *ni)
     __unusedx extern int tcpnal_acceptor_port;
 
 #ifdef PSC_LNET
-    struct psc_thread *thr    = PSCALLOC(sizeof(*thr)*oni->ni_ninterfaces);
     oni->ni_bonded_interfaces = PSCALLOC(sizeof(oni)*oni->ni_ninterfaces);
 #endif
     
@@ -261,18 +260,7 @@ procbridge_startup (lnet_ni_t *ni)
             __global_procbridge = p;
 #endif
             
-#ifndef PSC_LNET
-            /* create nal thread */
-            rc = pthread_create(&p->t, NULL, nal_thread, b);
-            if (rc != 0) {
-                    perror("nal_init: pthread_create");
-                    return -ESRCH;
-            }
-#else
-            thr->pscthr_private = (void *)b;
-            pscthr_init(thr, SLASH_LNDTHR, nal_thread, (tcpnal_instances-1));
-            thr++;
-#endif
+	    lnet_thrspawnf(&p->t, nal_thread, b);
     }
 
     do {
