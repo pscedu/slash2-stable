@@ -1,6 +1,7 @@
 #ifndef __ARCH_I386_ATOMIC__
 #define __ARCH_I386_ATOMIC__
 
+#include "psc_types.h"
 #include <asm/bitops.h>
 #include <asm/system.h>
 
