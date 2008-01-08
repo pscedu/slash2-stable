@@ -3,6 +3,8 @@
 #ifndef _PFL_TYPES_H_
 #define _PFL_TYPES_H_
 
+#include "psc_util/subsys.h"
+
 typedef unsigned int		u32;
 typedef unsigned short int	u16;
 typedef unsigned char		u8;
