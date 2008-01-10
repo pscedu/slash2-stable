@@ -13,8 +13,6 @@
 #include "psc_util/alloc.h"
 #include "psc_util/log.h"
 
-long pscPageSize;
-
 /*
  * palloc - page-aligned memory allocation.
  * @len: amount of memory to be page-aligned.

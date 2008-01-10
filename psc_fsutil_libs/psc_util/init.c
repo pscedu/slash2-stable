@@ -12,6 +12,7 @@ extern struct dynarray psc_subsystems;
 
 struct psclist_head pscListCaches;
 psc_spinlock_t pscListCachesLock;
+long pscPageSize;
 
 void
 pfl_init(int thrtabsz)
