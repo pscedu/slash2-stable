@@ -1,5 +1,7 @@
 # $Id$
 
+-include ${PROJ_BASE}/mk/local.mk
+
 OBJS=		$(patsubst %.c,%.o,$(filter %.c,${SRCS}))
 OBJS+=		$(patsubst %.y,%.o,$(filter %.y,${SRCS}))
 OBJS+=		$(patsubst %.l,%.o,$(filter %.l,${SRCS}))
