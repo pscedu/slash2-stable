@@ -10,6 +10,8 @@ struct psc_thread;
 
 typedef int (*pscrpc_service_func_t)(struct pscrpc_request *);
 
+#define PSCRPC_SVCNAME_MAX 32
+
 struct pscrpc_svc_handle {
 	struct psclist_head    svh_chain;
 	struct psc_thread     *svh_threads;
@@ -23,7 +25,7 @@ struct pscrpc_svc_handle {
 	int svh_req_portal;
 	int svh_rep_portal;
 	int svh_type;
-	char svh_svc_name[32];
+	char svh_svc_name[PSCRPC_SVCNAME_MAX];
 };
 
 typedef struct pscrpc_svc_handle pscrpc_svc_handle_t;
