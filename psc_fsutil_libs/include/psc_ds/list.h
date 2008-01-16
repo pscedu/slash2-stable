@@ -262,6 +262,13 @@ static __inline__ void psclist_splice(struct psclist_head *psclist,
 #define psclist_prev(e) (e)->zprev
 
 /**
+ * psclist_prev_entry - grab item before specified entry.
+ * @e: entry
+ */
+#define psclist_prev_entry(e, type, memb) \
+	psclist_entry((e)->zprev, type, memb)
+
+/**
  * psclist_for_each_entry_safe - iterate over list of given type safe
  *	against removal of list entry
  * @pos:        the type * to use as a loop counter.
