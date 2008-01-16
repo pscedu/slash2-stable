@@ -121,7 +121,8 @@ init_hash_entry(struct hash_entry *hentry, u64 *id, void *private);
  * @id:		identifier used to get hash bucket
  */
 struct hash_entry *
-get_hash_entry(const struct hash_table *h, u64 id, const void *comp);
+get_hash_entry(const struct hash_table *h, u64 id, const void *comp,
+    void (*cbf)(void *));
 
 /**
  * del_hash_entry	-   remove an entry in the hash table
@@ -165,7 +166,7 @@ get_hash_entry_str(struct hash_table *h, const char *id);
  * @size:	the match string
  */
 int
-del_hash_entry_str(struct hash_table *h, char *id);
+del_hash_entry_str(struct hash_table *h, const char *id);
 
 /**
  * add_hash_entry_str	-  add an entry in the hash table

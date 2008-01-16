@@ -67,38 +67,37 @@ init_hash_entry(struct hash_entry *hentry, u64 *id, void *private)
  * @t:		hash table pointer
  * @id:		identifier used to get hash bucket
  * @comp:	value to compare to differentiate entries with same ID.
+ * @cbf: callback routine when the entry is found, to prevent race conditions.
  */
 struct hash_entry *
-get_hash_entry(const struct hash_table *h, u64 id, const void *comp)
+get_hash_entry(const struct hash_table *h, u64 id, const void *comp,
+    void (*cbf)(void *))
 {
 	int found             = 0;
 	struct hash_bucket *b;
 	struct hash_entry  *e = NULL;
-	struct psclist_head   *t;
 
 	psc_assert(h->htable_size);
+	if (h->htcompare)
+		psc_assert(comp);
+	else
+		psc_assert(comp == NULL);
 
 	b = GET_BUCKET(h, id);
 	LOCK_BUCKET(b);
 
-	if (psclist_empty(&b->hbucket_list))
-		goto end;
-
-	psclist_for_each(t, &b->hbucket_list) {
-		e = psclist_entry(t, struct hash_entry, hentry_list);
-
+	psclist_for_each_entry(e, &b->hbucket_list, hentry_list) {
 		if (id == *e->hentry_id) {
-			if ((h->htcompare) != NULL) {
-				if ((h->htcompare)(comp, e->private))
-					found = 1;
-				psc_assert(comp);
-			} else
+			if (h->htcompare == NULL ||
+			    h->htcompare(comp, e->private)) {
 				found = 1;
-			break;
+				if (cbf)
+					cbf(e->private);
+				break;
+			}
 		}
 	}
 
- end:
 	ULOCK_BUCKET(b);
 	if (!found)
 		return(NULL);
@@ -216,35 +215,25 @@ get_hash_entry_str(struct hash_table *h, const char *id)
  * @size:	the match string
  */
 int
-del_hash_entry_str(struct hash_table *h, char *id)
+del_hash_entry_str(struct hash_table *h, const char *id)
 {
 	int found = 0;
 	struct hash_bucket     *b;
 	struct hash_entry_str  *e = NULL;
-	struct psclist_head       *t;
 
 	psc_assert(h->htable_size);
 
 	b = SGET_BUCKET(h, id);
 	LOCK_BUCKET(b);
 
-	psclist_for_each(t, &b->hbucket_list) {
-		e = psclist_entry(t, struct hash_entry_str, hentry_str_list);
+	psclist_for_each_entry(e, &b->hbucket_list, hentry_str_list)
 		if ( !strncmp(id, e->hentry_str_id, h->htable_strlen_max) ) {
-			found = 1;
+			found = -1;
+			psclist_del(&e->hentry_str_list);
 			break;
 		}
-	}
-
-	if (!found) {
-		ULOCK_BUCKET(b);
-		return -1;
-	}
-
-	psclist_del(&e->hentry_str_list);
 	ULOCK_BUCKET(b);
-
-	return 0;
+	return (found);
 }
 
 /**

@@ -44,7 +44,7 @@ _psc_threadtbl_get(pthread_t thrid, int canfail)
 	if (canfail && thrHtable.htable_buckets == NULL)
 		return (NULL);
 
-	e = get_hash_entry(&thrHtable, thrid, NULL);
+	e = get_hash_entry(&thrHtable, thrid, NULL, NULL);
 
 	if (!canfail)
 		psc_assert(e != NULL);
