@@ -83,9 +83,9 @@ static __inline__ void psclist_add(struct psclist_head *new, struct psclist_head
 }
 
 /**
- * zlist_xadd - add an element to a list and check for exclusive membership.
+ * psclist_xadd - add an element to a list and check for exclusive membership.
  * @new: entry to be added
- * @head: zlist_head to add it after
+ * @head: psclist_head to add it after
  *
  * Insert a new entry after the specified head.
  * Ensure entry doesn't already belong to another list.
@@ -227,8 +227,27 @@ static __inline__ void psclist_splice(struct psclist_head *psclist,
  * psclist_first -	grab first entry from a psclist
  * @head:	the head for your psclist.
  */
-#define psclist_first(head) \
-	(head)->znext
+#define psclist_first(head) (head)->znext
+
+/**
+ * psclist_first_entry - grab first item from a psclist
+ * @head: list head.
+ */
+#define psclist_first_entry(hd, type, memb) \
+	psclist_entry((hd)->znext, type, memb)
+
+/**
+ * psclist_last - grab last list entry.
+ * @hd: list head.
+ */
+#define psclist_last(hd) (hd)->zprev
+
+/**
+ * psclist_last_entry - grab last list item.
+ * @hd: list head.
+ */
+#define psclist_last_entry(hd, type, memb) \
+	psclist_entry((hd)->zprev, type, memb)
 
 /**
  * psclist_next -	grab the entry following the specified entry.
