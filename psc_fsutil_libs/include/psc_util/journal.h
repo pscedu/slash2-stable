@@ -13,6 +13,7 @@ struct psc_journal {
 	int		pj_nextwrite;	/* next entry slot to write to */
 	int		pj_genid;	/* current wrap generation */
 	atomic_t	pj_nextxid;	/* next transaction ID */
+	int		pj_fd;		/* open file descriptor to disk */
 };
 
 struct psc_journal_walker {
@@ -34,7 +35,7 @@ struct psc_journal_enthdr {
 #define PJET_XSTART	(-1)		/* transaction began */
 #define PJET_XEND	(-2)		/* transaction ended */
 
-void	 pjournal_init(struct psc_journal *, daddr_t, int, int);
+void	 pjournal_init(struct psc_journal *, const char *, daddr_t, int, int);
 int	 pjournal_nextxid(struct psc_journal *);
 int	 pjournal_xstart(struct psc_journal *, int);
 int	 pjournal_xend(struct psc_journal *, int);

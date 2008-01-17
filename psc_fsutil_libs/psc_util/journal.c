@@ -2,11 +2,19 @@
 
 #define PSC_SUBSYS PSS_JOURNAL
 
+#include <sys/types.h>
+
+#include <fcntl.h>
+#include <string.h>
+
 #include "psc_types.h"
 #include "psc_util/alloc.h"
 #include "psc_util/atomic.h"
 #include "psc_util/journal.h"
 #include "psc_util/lock.h"
+
+int pread(int fd, void *, size_t, off_t);
+int pwrite(int fd, const void *, size_t, off_t);
 
 #define PJ_LOCK(pj)	spinlock(&(pj)->pj_lock)
 #define PJ_ULOCK(pj)	freelock(&(pj)->pj_lock)
@@ -22,13 +30,21 @@
  * @entsz: size of a journal entry.
  */
 void
-pjournal_init(struct psc_journal *pj, daddr_t start, int nents, int entsz)
+pjournal_init(struct psc_journal *pj, const char *fn, daddr_t start,
+    int nents, int entsz)
 {
+	int fd;
+
+	fd = open(fn, O_RDWR | O_CREAT);
+	if (fd == -1)
+		psc_fatal("open %s", fn);
+
 	memset(pj, 0, sizeof(*pj));
+	LOCK_INIT(&pj->pj_lock);
 	pj->pj_daddr = start;
 	pj->pj_nents = nents;
 	pj->pj_entsz = entsz;
-	LOCK_INIT(&pj->pj_lock);
+	pj->pj_fd = fd;
 }
 
 /*
@@ -74,7 +90,7 @@ _pjournal_logwrite(struct psc_journal *pj, int slot, int type, int xid,
 	pje->pje_type = type;
 	pje->pje_xid = xid;
 	addr = pj->pj_daddr + slot * pj->pj_entsz;
-	ppio_write(addr, pje, pj->pj_entsz);
+	pwrite(pj->pj_fd, pje, pj->pj_entsz, addr);
 	return (0);
 }
 
@@ -157,7 +173,7 @@ pjournal_logread(struct psc_journal *pj, int slot, void *data)
 		return (-1);
 
 	addr = pj->pj_daddr + slot * pj->pj_entsz;
-	ppio_read(addr, data, pj->pj_entsz);
+	pread(pj->pj_fd, data, pj->pj_entsz, addr);
 	return (0);
 }
 
