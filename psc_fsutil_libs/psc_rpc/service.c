@@ -976,7 +976,7 @@ pscrpc_init_svc(int nbufs, int bufsize, int max_req_size, int max_reply_size,
                 service->srv_max_reply_size <<= 1;
 
 
-        CDEBUG(D_NET, "%s: Started, psclistening on portal %d\n",
+        CDEBUG(D_NET, "%s: Started, listening on portal %d\n",
                service->srv_name, service->srv_req_portal);
 
         RETURN(service);
@@ -1014,7 +1014,9 @@ pscrpc_thread_spawn(pscrpc_svc_handle_t *svh)
 	svh->svh_threads = PSCALLOC((sizeof(struct psc_thread))
 				    * svh->svh_nthreads);
 
-	for (i=0, thr=svh->svh_threads; i < svh->svh_nthreads; i++, thr++)
+	for (i=0, thr=svh->svh_threads; i < svh->svh_nthreads; i++, thr++) {
 		pscthr_init(thr, svh->svh_type, pscrpc_main, "%s%d",
 		    svh->svh_svc_name, i);
+		thr->pscthr_private = svh->svh_service;
+	}
 }
