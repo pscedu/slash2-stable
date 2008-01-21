@@ -1014,9 +1014,7 @@ pscrpc_thread_spawn(pscrpc_svc_handle_t *svh)
 	svh->svh_threads = PSCALLOC((sizeof(struct psc_thread))
 				    * svh->svh_nthreads);
 
-	for (i=0, thr=svh->svh_threads; i < svh->svh_nthreads; i++, thr++) {
-		pscthr_init(thr, svh->svh_type, pscrpc_main, "%s%d",
-		    svh->svh_svc_name, i);
-		thr->pscthr_private = svh->svh_service;
-	}
+	for (i=0, thr=svh->svh_threads; i < svh->svh_nthreads; i++, thr++)
+		pscthr_init(thr, svh->svh_type, pscrpc_main,
+		    svh->svh_service, "%s%d", svh->svh_svc_name, i);
 }
