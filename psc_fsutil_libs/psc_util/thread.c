@@ -39,7 +39,7 @@ pscthr_begin(void *arg)
  */
 void
 pscthr_init(struct psc_thread *thr, int type,
-	    void *(*start)(void *), const char *namefmt, ...)
+    void *(*start)(void *), void *private, const char *namefmt, ...)
 {
 	va_list ap;
 	int rc, n;
@@ -84,6 +84,7 @@ pscthr_init(struct psc_thread *thr, int type,
 		psc_fatal("dynarray_add");
 
 	thr->pscthr_run = 1;
+	thr->pscthr_private = private;
 	freelock(&thr->pscthr_lock);
 
 	psc_info("spawned %s [thread %zu] [id %"ZLPX64"] [pthrid %lx] thr=%p"

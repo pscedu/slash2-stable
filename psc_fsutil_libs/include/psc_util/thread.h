@@ -25,7 +25,8 @@ struct psc_thread {
 	void		  *pscthr_private;		/* app-specific data */
 };
 
-void	pscthr_init(struct psc_thread *, int, void *(*)(void *), const char *, ...);
+void	pscthr_init(struct psc_thread *, int, void *(*)(void *),
+		void *, const char *, ...);
 
 extern struct dynarray pscThreads;
 
