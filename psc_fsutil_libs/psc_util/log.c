@@ -27,10 +27,7 @@
 
 static const char *pscLogFormat = DEF_LOGFMT;
 
-/*
- * Global logging level.
- * May be overridden in individual utilities.
- */
+/* Global logging level. */
 static int pscLogLevel = PLL_TRACE;
 
 int

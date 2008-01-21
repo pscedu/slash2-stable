@@ -69,10 +69,12 @@ pscthr_init(struct psc_thread *thr, int type,
 	thr->pscthr_id    = dynarray_len(&pscThreads); /* XXX lockme? */
 	thr->pscthr_start = start;
 
-	if (start)
+	if (start) {
 		if ((rc = pthread_create(&thr->pscthr_pthread, NULL,
 		    pscthr_begin, thr)) != 0)
 			psc_fatalx("pthread_create: %s", strerror(rc));
+	} else
+		thr->pscthr_pthread = pthread_self();
 
 	thr->pscthr_hashid = (u64)thr->pscthr_pthread;
 
@@ -103,7 +105,7 @@ pscthr_getloglevel(int subsys)
 
 	thr = psc_threadtbl_get_canfail();
 	if (thr == NULL)
-		return (PLL_TRACE);
+		return (psc_getloglevel());
 	if (subsys >= psc_nsubsys)
 		psc_fatalx("request subsystem out of bounds (%d)",
 		    subsys);
