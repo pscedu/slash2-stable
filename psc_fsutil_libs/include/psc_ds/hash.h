@@ -9,8 +9,12 @@
 #include "psc_util/lock.h"
 #include "psc_types.h"
 
-#define LOCK_BUCKET(b)  spinlock(&((b)->hbucket_lock))
-#define ULOCK_BUCKET(b) freelock(&(b)->hbucket_lock)
+#define LOCK_BUCKET(hb)		spinlock(&(hb)->hbucket_lock)
+#define ULOCK_BUCKET(hb)	freelock(&(hb)->hbucket_lock)
+
+#define LOCK_HASHTBL(ht)	spinlock(&(ht)->htable_lock)
+#define ULOCK_HASHTBL(ht)	freelock(&(ht)->htable_lock)
+
 #define GET_BUCKET(t,i) &(t)->htable_buckets[(i) % (t)->htable_size]
 
 #define HTNAME_MAX 30
