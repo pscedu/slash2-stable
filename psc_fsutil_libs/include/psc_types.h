@@ -26,28 +26,16 @@ typedef unsigned long int u64;
 # define UINT64CONST(x) ((u64) x##L)
 
 /* printf(3) specifier modifiers for 64-bit types. */
-# define ZLPX64 "lx"
-# define ZLPU64 "lu"
-/*
- * Lustre user mode stuff insists on using long long everywhere
- */
-# define ZLLPX64 "Lx"
-# define ZLLPU64 "Lu"
-
-
-# define _P_OFFX "lx"
-# define _P_OFFD "ld"
+# define _P_LP64 "l"
+# define _P_OFFT "l"
 
 #else /* i386 */
 typedef unsigned long long int u64;
 
 # define UINT64CONST(x) ((u64) x##LL)
 
-# define ZLPX64 "llx"
-# define ZLPU64 "llu"
-
-# define _P_OFFX "llx"
-# define _P_OFFD "lld"
+# define _P_LP64 "ll"
+# define _P_OFFT "ll"
 
 #endif
 
