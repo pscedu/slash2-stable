@@ -645,14 +645,14 @@ void psc_free_reply_state (struct pscrpc_reply_state *rs)
         LASSERT (!rs->rs_difficult || rs->rs_handled);
         LASSERT (rs->rs_export == NULL);
         LASSERT (rs->rs_nlocks == 0);
-        LASSERT (zlist_empty(&rs->rs_exp_list));
-        LASSERT (zlist_empty(&rs->rs_obd_list));
+        LASSERT (psclist_empty(&rs->rs_exp_list));
+        LASSERT (psclist_empty(&rs->rs_obd_list));
 
         if (unlikely(rs->rs_prealloc)) {
                 struct ptlrpc_service *svc = rs->rs_service;
 
                 spin_lock(&svc->srv_lock);
-                zlist_add(&rs->rs_list_entry,
+                psclist_add(&rs->rs_list_entry,
                          &svc->srv_free_rs_list);
                 spin_unlock(&svc->srv_lock);
                 wake_up(&svc->srv_free_rs_waitq);
@@ -679,11 +679,11 @@ static void __pscrpc_free_req(struct pscrpc_request *request, int  locked)
         if (request->rq_import != NULL) {
                 if (!locked)
                         spin_lock(&request->rq_import->imp_lock);
-                //zlist_del_init(&request->rq_replay_list);
+                //psclist_del_init(&request->rq_replay_list);
                 if (!locked)
                         spin_unlock(&request->rq_import->imp_lock);
         }
-        //LASSERTF(zlist_empty(&request->rq_replay_list), "req %p\n", request);
+        //LASSERTF(psclist_empty(&request->rq_replay_list), "req %p\n", request);
 
 	if (atomic_read(&request->rq_refcount) != 0) {
                 DEBUG_REQ(PLL_ERROR, request,
