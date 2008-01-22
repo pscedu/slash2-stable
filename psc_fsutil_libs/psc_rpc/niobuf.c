@@ -656,8 +656,6 @@ void psc_free_reply_state (struct pscrpc_reply_state *rs)
                          &svc->srv_free_rs_list);
                 spin_unlock(&svc->srv_lock);
                 wake_up(&svc->srv_free_rs_waitq);
-        } else {
-                ZOBD_FREE(rs, rs->rs_size);
         }
 #endif
         ZOBD_FREE(rs, rs->rs_size);
