@@ -75,7 +75,7 @@
 #define PSCRPC_MSG_VERSION  0x00000004
 #endif
 
-#define ZOBD_FREE(ptr, size) ((void)(size), free((ptr)))
+#define ZOBD_FREE(ptr, size) free((ptr))
 #define ZOBD_ALLOC(ptr, size) (ptr = PSCALLOC(size))
 
 #define PAGE_SIZE               4096
@@ -422,6 +422,8 @@ struct pscrpc_request_buffer_desc {
 
 
 struct pscrpc_reply_state {
+	struct pscrpc_cb_id    rs_cb_id;       /* reply callback */
+	struct psclist_head    rs_list_entry;
 	int                    rs_size;
 	u64                    rs_xid;
 	unsigned int           rs_difficult:1; /* ACK/commit stuff */
@@ -433,9 +435,7 @@ struct pscrpc_reply_state {
 	atomic_t               rs_refcount;
 	lnet_handle_md_t       rs_md_h;
 	struct pscrpc_service *rs_service;     /* backpointer to my service */
-	struct psc_msg         rs_msg;         /* msg struct */
-	struct pscrpc_cb_id    rs_cb_id;       /* reply callback */
-        struct psclist_head    rs_list_entry;
+	struct psc_msg         rs_msg;         /* msg struct -- MUST BE LAST MEMBER */
 };
 
 /*
