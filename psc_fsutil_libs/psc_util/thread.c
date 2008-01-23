@@ -87,7 +87,7 @@ pscthr_init(struct psc_thread *thr, int type,
 	thr->pscthr_private = private;
 	freelock(&thr->pscthr_lock);
 
-	psc_info("spawned %s [thread %zu] [id %"ZLPX64"] [pthrid %lx] thr=%p"
+	psc_info("spawned %s [thread %zu] [id %"_P_LP64"x] [pthrid %lx] thr=%p"
 		 " thr->type %d, passed type %d",
 		 thr->pscthr_name, thr->pscthr_id,
 		 thr->pscthr_hashid, thr->pscthr_pthread,

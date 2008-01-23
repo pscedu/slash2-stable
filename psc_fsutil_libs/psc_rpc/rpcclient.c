@@ -960,8 +960,8 @@ int pscrpc_check_set(struct pscrpc_request_set *set, int check_allsent)
                                                 /* ensure previous bulk fails */
                                                 req->rq_xid = pscrpc_next_xid();
 						CDEBUG(D_HA, "resend bulk "
-                                                       "old x%"ZLPU64
-                                                       " new x%"ZLPU64"\n",
+                                                       "old x%"_P_LP64"u"
+                                                       " new x%"_P_LP64"u\n",
                                                        old_xid, req->rq_xid);
                                         }
                                 }
@@ -1501,7 +1501,7 @@ void pscrpc_resend_req(struct pscrpc_request *req)
 
                 /* ensure previous bulk fails */
                 req->rq_xid = pscrpc_next_xid();
-                psc_warnx("resend bulk old x%"ZLPU64" new x%"ZLPU64,
+                psc_warnx("resend bulk old x%"_P_LP64"u new x%"_P_LP64"u",
                        old_xid, req->rq_xid);
         }
         pscrpc_wake_client_req(req);
