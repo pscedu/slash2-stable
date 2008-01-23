@@ -75,8 +75,8 @@
 #define PSCRPC_MSG_VERSION  0x00000004
 #endif
 
-#define ZOBD_FREE(ptr, size) free((ptr))
-#define ZOBD_ALLOC(ptr, size) (ptr = PSCALLOC(size))
+#define ZOBD_FREE(ptr, size) free(ptr)
+#define ZOBD_ALLOC(ptr, size) ((ptr) = PSCALLOC(size))
 
 #define PAGE_SIZE               4096
 #define PSCRPC_MAX_BRW_SIZE     LNET_MTU
