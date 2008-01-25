@@ -10,8 +10,8 @@
 
 extern struct dynarray psc_subsystems;
 
-struct psclist_head pscListCaches;
-psc_spinlock_t pscListCachesLock;
+struct psclist_head pscListCaches = PSCLIST_HEAD_INIT(pscListCaches);
+psc_spinlock_t pscListCachesLock = LOCK_INITIALIZER;
 long pscPageSize;
 
 void
