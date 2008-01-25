@@ -187,20 +187,17 @@ get_hash_entry_str(struct hash_table *h, const char *id)
 	int found = 0;
 	struct hash_bucket     *b;
 	struct hash_entry_str  *e = NULL;
-	struct psclist_head   *t;
 
 	psc_assert(h->htable_size);
 
 	b = SGET_BUCKET(h, id);
 	LOCK_BUCKET(b);
 
-	psclist_for_each(t, &b->hbucket_list) {
-		e = psclist_entry(t, struct hash_entry_str, hentry_str_list);
+	psclist_for_each_entry(e, &b->hbucket_list, hentry_str_list)
 		if ( !strncmp(id, e->hentry_str_id, h->htable_strlen_max) ) {
 			found = 1;
 			break;
 		}
-	}
 	ULOCK_BUCKET(b);
 
 	if (!found)
