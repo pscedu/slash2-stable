@@ -30,6 +30,8 @@ struct psclist_head {
 	struct psclist_head *znext, *zprev;
 };
 
+#define psclist_entry psclist_head
+
 #define PSCLIST_INIT_CHECK(l) (((l)->zprev == NULL) && ((l)->znext == NULL))
 
 #define PSCLIST_HEAD_INIT(name)	{ &(name), &(name) }
