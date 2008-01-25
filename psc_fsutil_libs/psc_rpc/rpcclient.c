@@ -222,9 +222,9 @@ pscrpc_prep_req_pool(struct pscrpc_import *imp,
         request->rq_reply_portal = imp->imp_client->cli_reply_portal;
 
         spin_lock_init(&request->rq_lock);
-        INIT_PSCLIST_HEAD(&request->rq_list_entry);
+        INIT_PSCLIST_ENTRY(&request->rq_list_entry);
         //INIT_PSCLIST_HEAD(&request->rq_replay_list);
-        INIT_PSCLIST_HEAD(&request->rq_set_chain);
+        INIT_PSCLIST_ENTRY(&request->rq_set_chain);
         init_waitqueue_head(&request->rq_reply_waitq);
         request->rq_xid = pscrpc_next_xid();
         atomic_set(&request->rq_refcount, 1);
@@ -750,7 +750,7 @@ int pscrpc_queue_wait(struct pscrpc_request *req)
 	      req->rq_reqmsg->opc);
 
         spin_lock(&imp->imp_lock);
-        psclist_del_init(&req->rq_list_entry);
+        psclist_del(&req->rq_list_entry);
         spin_unlock(&imp->imp_lock);
 
         /* If the reply was received normally, this just grabs the spinlock
@@ -986,7 +986,7 @@ int pscrpc_check_set(struct pscrpc_request_set *set, int check_allsent)
                                 continue;
 
                         spin_lock(&imp->imp_lock);
-                        psclist_del_init(&req->rq_list_entry);
+                        psclist_del(&req->rq_list_entry);
                         spin_unlock(&imp->imp_lock);
 
                         req->rq_status = after_reply(req);
@@ -1093,7 +1093,7 @@ void pscrpc_set_destroy(struct pscrpc_request_set *set)
         psclist_for_each_safe(tmp, next, &set->set_requests) {
                 struct pscrpc_request *req =
                         psclist_entry(tmp, struct pscrpc_request, rq_set_chain);
-                psclist_del_init(&req->rq_set_chain);
+                psclist_del(&req->rq_set_chain);
 
                 LASSERT(req->rq_phase == expected_phase);
 
