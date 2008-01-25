@@ -111,6 +111,21 @@ static __inline__ void psclist_add_tail(struct psclist_head *new, struct psclist
 	__psclist_add(new, head->zprev, head);
 }
 
+/**
+ * psclist_xadd_tail - add a new entry and check for exclusive membership.
+ * @new: new entry to be added
+ * @head: psclist head to add it before
+ *
+ * Insert a new entry before the specified head.
+ * Ensure entry doesn't already belong to another list.
+ * This is useful for implementing queues.
+ */
+static __inline__ void psclist_xadd_tail(struct psclist_head *new, struct psclist_head *head)
+{
+        psc_assert(new->zprev == NULL && new->znext == NULL);
+	__psclist_add(new, head->zprev, head);
+}
+
 /*
  * Delete a psclist entry by making the prev/next entries
  * point to each other.
