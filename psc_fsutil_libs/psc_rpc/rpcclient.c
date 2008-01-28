@@ -224,7 +224,7 @@ pscrpc_prep_req_pool(struct pscrpc_import *imp,
         spin_lock_init(&request->rq_lock);
         INIT_PSCLIST_ENTRY(&request->rq_list_entry);
         //INIT_PSCLIST_HEAD(&request->rq_replay_list);
-        INIT_PSCLIST_ENTRY(&request->rq_set_chain);
+        INIT_PSCLIST_ENTRY(&request->rq_set_chain_lentry);
         init_waitqueue_head(&request->rq_reply_waitq);
         request->rq_xid = pscrpc_next_xid();
         atomic_set(&request->rq_refcount, 1);
@@ -340,8 +340,8 @@ pscrpc_set_add_new_req(struct pscrpc_request_set *set,
 {
         spin_lock(&set->set_new_req_lock);
         /* The set takes over the caller's request reference */
-        //psclist_add_tail(&req->rq_set_chain, &set->set_new_requests);
-        psclist_add_tail(&req->rq_set_chain, &set->set_requests);
+        //psclist_add_tail(&req->rq_set_chain_lentry, &set->set_new_requests);
+        psclist_add_tail(&req->rq_set_chain_lentry, &set->set_requests);
         req->rq_set = set;
 	set->set_remaining++;
         atomic_inc(&req->rq_import->imp_inflight);
@@ -854,7 +854,7 @@ int pscrpc_check_set(struct pscrpc_request_set *set, int check_allsent)
 
         psclist_for_each(tmp, &set->set_requests) {
                 struct pscrpc_request *req =
-                        psclist_entry(tmp, struct pscrpc_request, rq_set_chain);
+                        psclist_entry(tmp, struct pscrpc_request, rq_set_chain_lentry);
                 struct pscrpc_import *imp = req->rq_import;
                 int rc = 0;
 
@@ -1082,7 +1082,7 @@ void pscrpc_set_destroy(struct pscrpc_request_set *set)
 		ZRQ_PHASE_COMPLETE : ZRQ_PHASE_NEW;
         psclist_for_each (tmp, &set->set_requests) {
                 struct pscrpc_request *req =
-                        psclist_entry(tmp, struct pscrpc_request, rq_set_chain);
+                        psclist_entry(tmp, struct pscrpc_request, rq_set_chain_lentry);
 
                 LASSERT(req->rq_phase == expected_phase);
                 n++;
@@ -1092,8 +1092,8 @@ void pscrpc_set_destroy(struct pscrpc_request_set *set)
 
         psclist_for_each_safe(tmp, next, &set->set_requests) {
                 struct pscrpc_request *req =
-                        psclist_entry(tmp, struct pscrpc_request, rq_set_chain);
-                psclist_del(&req->rq_set_chain);
+                        psclist_entry(tmp, struct pscrpc_request, rq_set_chain_lentry);
+                psclist_del(&req->rq_set_chain_lentry);
 
                 LASSERT(req->rq_phase == expected_phase);
 
@@ -1185,7 +1185,7 @@ int pscrpc_expired_set(void *data)
         /* A timeout expired; see which reqs it applies to... */
         psclist_for_each (tmp, &set->set_requests) {
                 struct pscrpc_request *req =
-                        psclist_entry(tmp, struct pscrpc_request, rq_set_chain);
+                        psclist_entry(tmp, struct pscrpc_request, rq_set_chain_lentry);
 
                 /* request in-flight? */
                 if (!((req->rq_phase == ZRQ_PHASE_RPC && !req->rq_waiting &&
@@ -1221,7 +1221,7 @@ int pscrpc_set_next_timeout(struct pscrpc_request_set *set)
         //SIGNAL_MASK_ASSERT(); /* XXX BUG 1511 */
 
         psclist_for_each(tmp, &set->set_requests) {
-                req = psclist_entry(tmp, struct pscrpc_request, rq_set_chain);
+                req = psclist_entry(tmp, struct pscrpc_request, rq_set_chain_lentry);
 
                 /* request in-flight? */
                 if (!((req->rq_phase == ZRQ_PHASE_RPC && !req->rq_waiting) ||
@@ -1257,7 +1257,7 @@ void pscrpc_interrupted_set(void *data)
 
         psclist_for_each(tmp, &set->set_requests) {
                 struct pscrpc_request *req =
-                        psclist_entry(tmp, struct pscrpc_request, rq_set_chain);
+                        psclist_entry(tmp, struct pscrpc_request, rq_set_chain_lentry);
 
                 if (req->rq_phase != ZRQ_PHASE_RPC)
                         continue;
@@ -1319,7 +1319,7 @@ int pscrpc_set_wait(struct pscrpc_request_set *set)
                 RETURN(0);
 
         psclist_for_each(tmp, &set->set_requests) {
-                req = psclist_entry(tmp, struct pscrpc_request, rq_set_chain);
+                req = psclist_entry(tmp, struct pscrpc_request, rq_set_chain_lentry);
                 if (req->rq_phase == ZRQ_PHASE_NEW)
                         (void)pscrpc_send_new_req(req);
         }
@@ -1353,7 +1353,7 @@ int pscrpc_set_wait(struct pscrpc_request_set *set)
 
         rc = 0;
         psclist_for_each(tmp, &set->set_requests) {
-                req = psclist_entry(tmp, struct pscrpc_request, rq_set_chain);
+                req = psclist_entry(tmp, struct pscrpc_request, rq_set_chain_lentry);
 
                 LASSERT(req->rq_phase == ZRQ_PHASE_COMPLETE);
                 if (req->rq_status != 0)

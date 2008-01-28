@@ -787,7 +787,7 @@ pscrpc_unregister_service(struct pscrpc_service *service)
 	LASSERT(psclist_empty(&service->srv_threads));
 
 	spin_lock (&pscrpc_all_services_lock);
-	psclist_del(&service->srv_list_entry);
+	psclist_del(&service->srv_lentry);
 	spin_unlock (&pscrpc_all_services_lock);
 
 	/* All history will be culled when the next request buffer is
@@ -939,7 +939,7 @@ pscrpc_init_svc(int nbufs, int bufsize, int max_req_size, int max_reply_size,
 	rc = LNetSetLazyPortal(service->srv_req_portal);
 	LASSERT (rc == 0);
 
-	INIT_PSCLIST_ENTRY(&service->srv_list_entry);
+	INIT_PSCLIST_ENTRY(&service->srv_lentry);
 	INIT_PSCLIST_HEAD(&service->srv_request_queue);
 	INIT_PSCLIST_HEAD(&service->srv_request_history);
 
@@ -963,7 +963,7 @@ pscrpc_init_svc(int nbufs, int bufsize, int max_req_size, int max_reply_size,
 	service->srv_name = name;
 
 	spin_lock (&pscrpc_all_services_lock);
-	psclist_xadd (&service->srv_list_entry, &pscrpc_all_services);
+	psclist_xadd (&service->srv_lentry, &pscrpc_all_services);
 	spin_unlock (&pscrpc_all_services_lock);
 
 	/* Now allocate the request buffers */
@@ -1013,7 +1013,7 @@ pscrpc_thread_spawn(pscrpc_svc_handle_t *svh)
 	psc_assert(svh->svh_service);
 
 	/* Track the service handle */
-	psclist_xadd(&svh->svh_chain, &pscrpc_svh_list);
+	psclist_xadd(&svh->svh_lentry, &pscrpc_svh_list);
 
 	svh->svh_threads = PSCALLOC((sizeof(struct psc_thread))
 				    * svh->svh_nthreads);

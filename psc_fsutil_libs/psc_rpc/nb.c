@@ -97,13 +97,13 @@ nbrequest_reap(struct pscrpc_nbreqset *nbs) {
 
 	psclist_for_each_safe(i, j, &set->set_requests) {
 		nchecked++;
-		req = psclist_entry(i, struct pscrpc_request, rq_set_chain);
+		req = psclist_entry(i, struct pscrpc_request, rq_set_chain_lentry);
 		DEBUG_REQ(PLL_INFO, req, "reap if Completed");
 		/*
 		 * Move sent rpcs to the set_requests list
 		 */
 		if (req->rq_phase == ZRQ_PHASE_COMPLETE) {
-			psclist_del(&req->rq_set_chain);
+			psclist_del(&req->rq_set_chain_lentry);
 			atomic_dec(&nbs->nb_outstanding);
 			nreaped++;
 			/*
