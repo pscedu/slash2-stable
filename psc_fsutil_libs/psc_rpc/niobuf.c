@@ -671,8 +671,8 @@ static void __pscrpc_free_req(struct pscrpc_request *request, int  locked)
 
         LASSERTF(!request->rq_receiving_reply, "req %p\n", request);
         LASSERTF(request->rq_rqbd == NULL, "req %p\n",request);/* client-side */
-        LASSERTF(psclist_empty(&request->rq_list_entry), "req %p\n", request);
-        LASSERTF(psclist_empty(&request->rq_set_chain_lentry), "req %p\n", request);
+        LASSERTF(psclist_disjoint(&request->rq_list_entry), "req %p\n", request);
+        LASSERTF(psclist_disjoint(&request->rq_set_chain_lentry), "req %p\n", request);
 
         /* We must take it off the imp_replay_list first.  Otherwise, we'll set
 	 * request->rq_reqmsg to NULL while osc_close is dereferencing it. */
