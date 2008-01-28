@@ -90,12 +90,12 @@ lc_del(struct psclist_head *e, list_cache_t *l)
 }
 
 /**
- * lc_get
+ * lc_get - grab the item from the head of a listcache.
  * @l: the list cache to access
  * @block: should the get wait
  */
 static inline struct psclist_head *
-_lc_get(list_cache_t *l, int block, int peek)
+lc_get(list_cache_t *l, int block)
 {
 	struct psclist_head *e;
 
@@ -113,30 +113,21 @@ _lc_get(list_cache_t *l, int block, int peek)
 					   l, l->lc_name);
 			psc_waitq_wait(&l->lc_waitq_empty, &l->lc_lock);
 			goto start;
-
 		} else {
 			LIST_CACHE_ULOCK(l);
 			return NULL;
 		}
 	}
 	e = psclist_first(&l->lc_list);
-
-	if (!peek)
-		lc_del(e, l);
+	lc_del(e, l);
 
 	LIST_CACHE_ULOCK(l);
 
 	return e;
 }
 
-/*
- *  Wrapper calls for the old lc_get()
- */
-static inline struct psclist_head *
-lc_get(list_cache_t *l, int block)
-{
-	return (_lc_get(l, block, 0));
-}
+#define lc_getnb(l)		lc_get((l), 0)
+#define lc_getwait(l)		lc_get((l), 1)
 
 /**
  * lc_put - Bounded list put
