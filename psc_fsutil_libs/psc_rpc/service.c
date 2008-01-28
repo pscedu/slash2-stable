@@ -59,6 +59,7 @@ pscrpc_alloc_rqbd (struct pscrpc_service *svc)
         rqbd->rqbd_cbid.cbid_arg = rqbd;
 
         INIT_PSCLIST_HEAD(&rqbd->rqbd_reqs);
+	INIT_PSCLIST_ENTRY(&rqbd->rqbd_lentry);
         rqbd->rqbd_buffer = pscrpc_alloc_request_buffer(svc->srv_buf_size);
 
         if (rqbd->rqbd_buffer == NULL) {
@@ -67,7 +68,7 @@ pscrpc_alloc_rqbd (struct pscrpc_service *svc)
         }
 
         spin_lock(&svc->srv_lock);
-        psclist_add(&rqbd->rqbd_list, &svc->srv_idle_rqbds);
+        psclist_add(&rqbd->rqbd_lentry, &svc->srv_idle_rqbds);
         svc->srv_nbufs++;
         spin_unlock(&svc->srv_lock);
 
@@ -83,7 +84,7 @@ pscrpc_free_rqbd (struct pscrpc_request_buffer_desc *rqbd)
         LASSERT (psclist_empty(&rqbd->rqbd_reqs));
 
         spin_lock(&svc->srv_lock);
-        psclist_del(&rqbd->rqbd_list);
+        psclist_del(&rqbd->rqbd_lentry);
         svc->srv_nbufs--;
         spin_unlock(&svc->srv_lock);
 
@@ -112,12 +113,12 @@ pscrpc_server_post_idle_rqbds (struct pscrpc_service *svc)
 
                 rqbd = psclist_entry(psclist_next(&svc->srv_idle_rqbds),
                                   struct pscrpc_request_buffer_desc,
-                                  rqbd_list);
-                psclist_del (&rqbd->rqbd_list);
+                                  rqbd_lentry);
+                psclist_del (&rqbd->rqbd_lentry);
 
                 /* assume we will post successfully */
                 svc->srv_nrqbd_receiving++;
-                psclist_add (&rqbd->rqbd_list, &svc->srv_active_rqbds);
+                psclist_add (&rqbd->rqbd_lentry, &svc->srv_active_rqbds);
 
                 spin_unlock(&svc->srv_lock);
 
@@ -131,8 +132,8 @@ pscrpc_server_post_idle_rqbds (struct pscrpc_service *svc)
         spin_lock(&svc->srv_lock);
 
         svc->srv_nrqbd_receiving--;
-        psclist_del(&rqbd->rqbd_list);
-        psclist_add_tail(&rqbd->rqbd_list, &svc->srv_idle_rqbds);
+        psclist_del(&rqbd->rqbd_lentry);
+        psclist_add_tail(&rqbd->rqbd_lentry, &svc->srv_idle_rqbds);
 
         /* Don't complain if no request buffers are posted right now; LNET
          * won't drop requests because we set the portal lazy! */
@@ -180,8 +181,8 @@ pscrpc_server_free_request(struct pscrpc_request *req)
         refcount = --(rqbd->rqbd_refcount);
         if (refcount == 0) {
                 /* request buffer is now idle: add to history */
-                psclist_del(&rqbd->rqbd_list);
-                psclist_add_tail(&rqbd->rqbd_list, &svc->srv_history_rqbds);
+                psclist_del(&rqbd->rqbd_lentry);
+                psclist_add_tail(&rqbd->rqbd_lentry, &svc->srv_history_rqbds);
                 svc->srv_n_history_rqbds++;
 
                 /* cull some history?
@@ -189,9 +190,9 @@ pscrpc_server_free_request(struct pscrpc_request *req)
                 while (svc->srv_n_history_rqbds > svc->srv_max_history_rqbds) {
                         rqbd = psclist_entry(psclist_next(&svc->srv_history_rqbds),
                                           struct pscrpc_request_buffer_desc,
-                                          rqbd_list);
+                                          rqbd_lentry);
 
-                        psclist_del(&rqbd->rqbd_list);
+                        psclist_del(&rqbd->rqbd_lentry);
                         svc->srv_n_history_rqbds--;
 
                         /* remove rqbd's reqs from svc's req history while
@@ -222,7 +223,7 @@ pscrpc_server_free_request(struct pscrpc_request *req)
                         /* schedule request buffer for re-use.
 			 * NB I can only do this after I've disposed of their
 			 * reqs; particularly the embedded req */
-                        psclist_add_tail(&rqbd->rqbd_list, &svc->srv_idle_rqbds);
+                        psclist_add_tail(&rqbd->rqbd_lentry, &svc->srv_idle_rqbds);
                 }
         } else if (req->rq_reply_state && req->rq_reply_state->rs_prealloc) {
 		/* If we are low on memory, we are not interested in
@@ -797,7 +798,7 @@ int pscrpc_unregister_service(struct pscrpc_service *service)
         psclist_for_each(tmp, &service->srv_active_rqbds) {
                 struct pscrpc_request_buffer_desc *rqbd =
                         psclist_entry(tmp, struct pscrpc_request_buffer_desc,
-                                   rqbd_list);
+                                   rqbd_lentry);
 
                 rc = LNetMDUnlink(rqbd->rqbd_md_h);
                 LASSERT (rc == 0 || rc == -ENOENT);
@@ -860,7 +861,7 @@ int pscrpc_unregister_service(struct pscrpc_service *service)
                 struct pscrpc_request_buffer_desc *rqbd =
                         psclist_entry(psclist_next(&service->srv_idle_rqbds),
                                    struct pscrpc_request_buffer_desc,
-                                   rqbd_list);
+                                   rqbd_lentry);
 
                 pscrpc_free_rqbd(rqbd);
         }

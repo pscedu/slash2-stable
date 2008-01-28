@@ -413,7 +413,7 @@ struct pscrpc_request_buffer_desc {
         int                    rqbd_refcount;
         char                  *rqbd_buffer;
         lnet_handle_md_t       rqbd_md_h;
-        struct psclist_head    rqbd_list;
+        struct psclist_head    rqbd_lentry;
         struct psclist_head    rqbd_reqs;
         struct pscrpc_service *rqbd_service;
         struct pscrpc_cb_id    rqbd_cbid;
