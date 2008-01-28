@@ -56,9 +56,9 @@ struct psclist_head {
  * This is only for internal psclist manipulation where we know
  * the prev/next entries already!
  */
-static __inline__ void __psclist_add(struct psclist_head * new,
-	struct psclist_head * prev,
-	struct psclist_head * next)
+static __inline__ void
+__psclist_add(struct psclist_head *new, struct psclist_head *prev,
+	struct psclist_head *next)
 {
 #if 0
 	psc_assert(new->zprev == NULL && new->znext == NULL);
@@ -77,7 +77,8 @@ static __inline__ void __psclist_add(struct psclist_head * new,
  * Insert a new entry after the specified head.
  * This is good for implementing stacks.
  */
-static __inline__ void psclist_add(struct psclist_head *new, struct psclist_head *head)
+static __inline__ void
+psclist_add(struct psclist_head *new, struct psclist_head *head)
 {
 	__psclist_add(new, head, head->znext);
 }
@@ -106,7 +107,8 @@ psclist_xadd(struct psclist_head *new, struct psclist_head *head)
  * Insert a new entry before the specified head.
  * This is useful for implementing queues.
  */
-static __inline__ void psclist_add_tail(struct psclist_head *new, struct psclist_head *head)
+static __inline__ void
+psclist_add_tail(struct psclist_head *new, struct psclist_head *head)
 {
 	__psclist_add(new, head->zprev, head);
 }
@@ -120,7 +122,8 @@ static __inline__ void psclist_add_tail(struct psclist_head *new, struct psclist
  * Ensure entry doesn't already belong to another list.
  * This is useful for implementing queues.
  */
-static __inline__ void psclist_xadd_tail(struct psclist_head *new, struct psclist_head *head)
+static __inline__ void
+psclist_xadd_tail(struct psclist_head *new, struct psclist_head *head)
 {
         psc_assert(new->zprev == NULL && new->znext == NULL);
 	__psclist_add(new, head->zprev, head);
@@ -133,8 +136,8 @@ static __inline__ void psclist_xadd_tail(struct psclist_head *new, struct psclis
  * This is only for internal psclist manipulation where we know
  * the prev/next entries already!
  */
-static __inline__ void __psclist_del(struct psclist_head * prev,
-				  struct psclist_head * next)
+static __inline__ void
+__psclist_del(struct psclist_head *prev, struct psclist_head *next)
 {
 	next->zprev = prev;
 	prev->znext = next;
@@ -145,7 +148,8 @@ static __inline__ void __psclist_del(struct psclist_head * prev,
  * @entry: the element to delete from the psclist.
  * Note: psclist_empty on entry does not return true after this, the entry is in an undefined state.
  */
-static __inline__ void psclist_del(struct psclist_head *entry)
+static __inline__ void
+psclist_del(struct psclist_head *entry)
 {
 	__psclist_del(entry->zprev, entry->znext);
 	entry->znext = entry->zprev = NULL;
@@ -155,7 +159,8 @@ static __inline__ void psclist_del(struct psclist_head *entry)
  * psclist_del_init - deletes entry from psclist and reinitialize it.
  * @entry: the element to delete from the psclist.
  */
-static __inline__ void psclist_del_init(struct psclist_head *entry)
+static __inline__ void
+psclist_del_init(struct psclist_head *entry)
 {
 	__psclist_del(entry->zprev, entry->znext);
 	INIT_PSCLIST_HEAD(entry);
@@ -165,7 +170,8 @@ static __inline__ void psclist_del_init(struct psclist_head *entry)
  * psclist_empty - tests whether a psclist is empty
  * @head: the psclist to test.
  */
-static __inline__ int psclist_empty(const struct psclist_head *head)
+static __inline__ int
+psclist_empty(const struct psclist_head *head)
 {
 #if 0
 	if (head->znext == head) {
@@ -179,17 +185,23 @@ static __inline__ int psclist_empty(const struct psclist_head *head)
 }
 
 /**
+ * psclist_disjoint - tests whether a psclist entry is not a member of a list.
+ * @entry: the psclist entry to test.
+ */
+#define psclist_disjoint(ent)	((ent)->znext == NULL && (ent)->zprev == NULL)
+
+/**
  * psclist_splice - join two psclists
  * @psclist: the new psclist to add.
  * @head: the place to add it in the first psclist.
  */
-static __inline__ void psclist_splice(struct psclist_head *psclist,
-				      struct psclist_head *head)
+static __inline__ void
+psclist_splice(struct psclist_head *list, struct psclist_head *head)
 {
-	struct psclist_head *first = psclist->znext;
+	struct psclist_head *first = list->znext;
 
-	if (first != psclist) {
-		struct psclist_head *last = psclist->zprev;
+	if (first != list) {
+		struct psclist_head *last = list->zprev;
 		struct psclist_head *at = head->znext;
 
 		first->zprev = head;
