@@ -68,7 +68,7 @@ pscrpc_alloc_rqbd (struct pscrpc_service *svc)
         }
 
         spin_lock(&svc->srv_lock);
-        psclist_add(&rqbd->rqbd_lentry, &svc->srv_idle_rqbds);
+        psclist_xadd(&rqbd->rqbd_lentry, &svc->srv_idle_rqbds);
         svc->srv_nbufs++;
         spin_unlock(&svc->srv_lock);
 
@@ -118,7 +118,7 @@ pscrpc_server_post_idle_rqbds (struct pscrpc_service *svc)
 
                 /* assume we will post successfully */
                 svc->srv_nrqbd_receiving++;
-                psclist_add (&rqbd->rqbd_lentry, &svc->srv_active_rqbds);
+                psclist_xadd (&rqbd->rqbd_lentry, &svc->srv_active_rqbds);
 
                 spin_unlock(&svc->srv_lock);
 
@@ -133,7 +133,7 @@ pscrpc_server_post_idle_rqbds (struct pscrpc_service *svc)
 
         svc->srv_nrqbd_receiving--;
         psclist_del(&rqbd->rqbd_lentry);
-        psclist_add_tail(&rqbd->rqbd_lentry, &svc->srv_idle_rqbds);
+        psclist_xadd_tail(&rqbd->rqbd_lentry, &svc->srv_idle_rqbds);
 
         /* Don't complain if no request buffers are posted right now; LNET
          * won't drop requests because we set the portal lazy! */
@@ -176,13 +176,13 @@ pscrpc_server_free_request(struct pscrpc_request *req)
         spin_lock(&svc->srv_lock);
 
         svc->srv_n_active_reqs--;
-        psclist_add(&req->rq_list_entry, &rqbd->rqbd_reqs);
+        psclist_xadd(&req->rq_list_entry, &rqbd->rqbd_reqs);
 
         refcount = --(rqbd->rqbd_refcount);
         if (refcount == 0) {
                 /* request buffer is now idle: add to history */
                 psclist_del(&rqbd->rqbd_lentry);
-                psclist_add_tail(&rqbd->rqbd_lentry, &svc->srv_history_rqbds);
+                psclist_xadd_tail(&rqbd->rqbd_lentry, &svc->srv_history_rqbds);
                 svc->srv_n_history_rqbds++;
 
                 /* cull some history?
@@ -223,7 +223,7 @@ pscrpc_server_free_request(struct pscrpc_request *req)
                         /* schedule request buffer for re-use.
 			 * NB I can only do this after I've disposed of their
 			 * reqs; particularly the embedded req */
-                        psclist_add_tail(&rqbd->rqbd_lentry, &svc->srv_idle_rqbds);
+                        psclist_xadd_tail(&rqbd->rqbd_lentry, &svc->srv_idle_rqbds);
                 }
         } else if (req->rq_reply_state && req->rq_reply_state->rs_prealloc) {
 		/* If we are low on memory, we are not interested in
@@ -629,7 +629,7 @@ static void * pscrpc_main(void *arg)
 
 	spin_lock(&svc->srv_lock);
 	svc->srv_nthreads++;
-	psclist_add(&rs->rs_list_entry, &svc->srv_free_rs_list);
+	psclist_xadd(&rs->rs_list_entry, &svc->srv_free_rs_list);
 	spin_unlock(&svc->srv_lock);
 	wake_up(&svc->srv_free_rs_waitq);
 
@@ -960,7 +960,7 @@ pscrpc_init_svc(int nbufs, int bufsize, int max_req_size, int max_reply_size,
 	service->srv_name = name;
 
         spin_lock (&pscrpc_all_services_lock);
-        psclist_add (&service->srv_list_entry, &pscrpc_all_services);
+        psclist_xadd (&service->srv_list_entry, &pscrpc_all_services);
         spin_unlock (&pscrpc_all_services_lock);
 
         /* Now allocate the request buffers */
@@ -1010,7 +1010,7 @@ pscrpc_thread_spawn(pscrpc_svc_handle_t *svh)
 	psc_assert(svh->svh_service);
 
 	/* Track the service handle */
-	psclist_add(&svh->svh_chain, &pscrpc_svh_list);
+	psclist_xadd(&svh->svh_chain, &pscrpc_svh_list);
 
 	svh->svh_threads = PSCALLOC((sizeof(struct psc_thread))
 				    * svh->svh_nthreads);

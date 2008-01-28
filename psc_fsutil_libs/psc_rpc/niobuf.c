@@ -652,7 +652,7 @@ void psc_free_reply_state (struct pscrpc_reply_state *rs)
                 struct ptlrpc_service *svc = rs->rs_service;
 
                 spin_lock(&svc->srv_lock);
-                psclist_add(&rs->rs_list_entry,
+                psclist_xadd(&rs->rs_list_entry,
                          &svc->srv_free_rs_list);
                 spin_unlock(&svc->srv_lock);
                 wake_up(&svc->srv_free_rs_waitq);

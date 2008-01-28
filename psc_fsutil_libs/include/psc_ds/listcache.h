@@ -149,9 +149,9 @@ _lc_put(list_cache_t *l, struct psclist_head *n, int qors)
 	}
 
 	if (qors)
-		psclist_add_tail(n, &l->lc_list);
+		psclist_xadd_tail(n, &l->lc_list);
 	else
-		psclist_add(n, &l->lc_list);
+		psclist_xadd(n, &l->lc_list);
 
 	l->lc_size++;
 	l->lc_nseen++;
@@ -189,7 +189,7 @@ lc_requeue(list_cache_t *l, struct psclist_head *n)
 
 	locked = reqlock(&l->lc_lock);
 	psclist_del(n);
-	psclist_add_tail(n, &l->lc_list);
+	psclist_xadd_tail(n, &l->lc_list);
 	ureqlock(&l->lc_lock, locked);
 }
 
@@ -221,10 +221,6 @@ lc_vregister(list_cache_t *lc, const char *name, va_list ap)
 {
 	int rc, locked;
 
-	if (lc->lc_index_lentry.znext ||
-	    lc->lc_index_lentry.zprev)
-		psc_fatalx("lc is already registered");
-
 	spinlock(&pscListCachesLock);
 	locked = reqlock(&lc->lc_lock);
 
@@ -234,11 +230,7 @@ lc_vregister(list_cache_t *lc, const char *name, va_list ap)
 	else if (rc > (int)sizeof(lc->lc_name))
 		psc_fatalx("lc_name is too large (%s)", name);
 
-	psc_assert(
-	    lc->lc_index_lentry.znext == NULL &&
-	    lc->lc_index_lentry.zprev == NULL);
-
-	psclist_add(&lc->lc_index_lentry, &pscListCaches);
+	psclist_xadd(&lc->lc_index_lentry, &pscListCaches);
 
 	ureqlock(&lc->lc_lock, locked);
 	freelock(&pscListCachesLock);

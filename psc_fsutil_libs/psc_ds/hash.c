@@ -45,7 +45,7 @@ init_hash_table(struct hash_table *t, int size, const char *fmt, ...)
 	INIT_PSCLIST_ENTRY(&t->htable_entry);
 
 	spinlock(&hashTablesListLock);
-	psclist_add(&t->htable_entry, &hashTablesList);
+	psclist_xadd(&t->htable_entry, &hashTablesList);
 	freelock(&hashTablesListLock);
 }
 
@@ -158,7 +158,7 @@ add_hash_entry(struct hash_table *t, struct hash_entry *e)
 
 	b = GET_BUCKET(t, *e->hentry_id);
 	LOCK_BUCKET(b);
-	psclist_add(&e->hentry_list, &b->hbucket_list);
+	psclist_xadd(&e->hentry_list, &b->hbucket_list);
 	ULOCK_BUCKET(b);
 }
 
@@ -247,7 +247,7 @@ add_hash_entry_str(struct hash_table *t, struct hash_entry_str *e)
 
 	b = SGET_BUCKET(t, e->hentry_str_id);
 	LOCK_BUCKET(b);
-	psclist_add(&e->hentry_str_list, &b->hbucket_list);
+	psclist_xadd(&e->hentry_str_list, &b->hbucket_list);
 	ULOCK_BUCKET(b);
 }
 
