@@ -1,3 +1,4 @@
 - remove PSC_LNET and add a global runtime var for server vs. client
 - psclist_for_each* should be changed to NULL out the iterative variable
   at loop end
+- deploy psclist_xadd
