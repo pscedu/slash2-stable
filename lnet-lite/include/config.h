@@ -94,9 +94,8 @@
 /* struct file_operations has flock field */
 #define HAVE_F_OP_FLOCK 1
 
-#ifndef HAVE_GETHOSTBYNAME_DEFINED
-#error "please set -DHAVE_GETHOSTBYNAME_DEFINED and perhaps -DHAVE_GETHOSTBYNAME"
-#endif
+/* Define to 1 if you have the `gethostbyname'. */
+#define HAVE_GETHOSTBYNAME 1
 
 /* Define to 1 if you have the `get_preemption_level' function. */
 /* #undef HAVE_GET_PREEMPTION_LEVEL */
@@ -131,9 +130,8 @@
 /* libefence support is requested */
 /* #undef HAVE_LIBEFENCE */
 
-#ifndef HAVE_LIBPTHREAD_DEFINED
-#error "please set -DHAVE_LIBPTHREAD_DEFINED and perhaps -DHAVE_LIBPTHREAD"
-#endif
+/* pthreads */
+#ifndef HAVE_LIBPTHREAD 1
 
 /* readline library is available */
 #define HAVE_LIBREADLINE 1

@@ -57,10 +57,6 @@
 # error "This LND requires a multi-threaded runtime"
 #endif
 
-#ifdef PSC_LNET
-#include "psc_util/thread.h"
-#endif
-
 #include "psc_util/alloc.h"
 
 /* XXX CFS workaround, to give a chance to let nal thread wake up
@@ -173,9 +169,7 @@ procbridge_startup (lnet_ni_t *ni)
     __unusedx lnet_nid_t onid=ni->ni_nid;
     __unusedx extern int tcpnal_acceptor_port;
 
-#ifdef PSC_LNET
     oni->ni_bonded_interfaces = PSCALLOC(sizeof(oni)*oni->ni_ninterfaces);
-#endif
     
     LASSERT (tcpnal_instances < MAXTCPNALS);
     LASSERT (oni->ni_lnd == &the_tcplnd);
@@ -183,7 +177,6 @@ procbridge_startup (lnet_ni_t *ni)
     init_unix_timer();
 
     for (i=0; oni->ni_interfaces[i]; i++) {  
-#ifdef PSC_LNET            
             LASSERT(!oni->ni_bonded_interfaces[i]);
 
             if (i) {
@@ -206,9 +199,7 @@ procbridge_startup (lnet_ni_t *ni)
                     ni = oni->ni_bonded_interfaces[0] = oni;
             }
 
-#endif                   
             procbridge_getnid(ni);
-#ifdef PSC_LNET
             /* The credit settings here are pretty irrelevent.  
              *   Userspace tcplnd has no tx descriptor pool to 
              *   exhaust and does a blocking send; that's the real
@@ -220,7 +211,6 @@ procbridge_startup (lnet_ni_t *ni)
                     list_add_tail(&ni->ni_list, &the_lnet.ln_nis);
                     LNET_UNLOCK();
             }
-#endif
             ni->ni_maxtxcredits = 1000;
             ni->ni_peertxcredits = 1000;
             ni->ni_txcredits = ni->ni_mintxcredits = ni->ni_maxtxcredits;

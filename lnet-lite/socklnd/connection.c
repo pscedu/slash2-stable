@@ -1027,15 +1027,11 @@ init_connections(int (*input)(void *, void *), void *a)
     pthread_mutex_init(&m->conn_lock, 0);
 
     if (tcpnal_server) {
-#ifndef PSC_LNET
-            psc_fatalx("tcpnal_server only allowed on server");
-#else
             if (bind_socket(m, tcpnal_acceptor_port
 //                          +  (portInc ? b->tid : 0)
                             ))
 
                     return (m);
-#endif
     } else
             return (m);
  fail:

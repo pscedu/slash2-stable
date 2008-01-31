@@ -27,7 +27,7 @@
  *  implementation. 'library' might be better termed 'communication'
  *  or 'kernel'.
  */
- 
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdarg.h>
@@ -39,10 +39,6 @@
 #include <errno.h>
 #include <pqtimer.h>
 #include <dispatch.h>
-
-#ifdef PSC_LNET
-#include "psc_util/thread.h"
-#endif
 
 /* the following functions are stubs to satisfy the nal definition
    without doing anything particularily useful*/
@@ -56,7 +52,7 @@ static void check_stopping(void *z)
 
     if ((p->nal_flags & NAL_FLAG_STOPPING) == 0)
             return;
-    
+
     tcpnal_shutdown(b);
 
     pthread_mutex_lock(&p->mutex);
@@ -73,24 +69,19 @@ static void check_stopping(void *z)
  *               allocated and partially populated by the api level code
  * Returns: nothing, and only on error or explicit shutdown
  *
- *  This function is the entry point of the pthread initiated on 
+ *  This function is the entry point of the pthread initiated on
  *  the api side of the interface. This thread is used to handle
  *  asynchronous delivery to the application.
- * 
+ *
  *  We define a limit macro to place a ceiling on limits
  *   for syntactic convenience
  */
 void *nal_thread(void *z)
 {
-#ifndef PSC_LNET        
     bridge b = (bridge) z;
-#else
-    struct psc_thread *thr = (struct psc_thread *)z;
-    bridge b = (bridge) thr->pscthr_private;
-#endif
     procbridge p=b->local;
     int rc;
-    
+
     rc = tcpnal_init(b);
     /*
      * Whatever the initialization returned is passed back to the
