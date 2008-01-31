@@ -131,7 +131,7 @@
 /* #undef HAVE_LIBEFENCE */
 
 /* pthreads */
-#ifndef HAVE_LIBPTHREAD 1
+#define HAVE_LIBPTHREAD 1
 
 /* readline library is available */
 #define HAVE_LIBREADLINE 1
