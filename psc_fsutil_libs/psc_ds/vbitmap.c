@@ -112,8 +112,13 @@ vbitmap_nfree(const struct vbitmap *vb)
 
 	pos = vb->vb_start;
 	do {
+		if (*pos == 0x00) {
+			n += 8;
+			continue;
+		}
                 if (*pos != 0xff) {
 			int i;
+			
 			for (i=0; i < 8; i++)
 				if (!(*pos || (unsigned char)(1 << i)))
 					n++;
@@ -136,6 +141,10 @@ vbitmap_lcr(const struct vbitmap *vb)
 
 	pos = vb->vb_start;
 	do {
+		if (*pos == 0x00) {
+			n += 8;
+			continue;
+		}
                 if (*pos != 0xff) {
 			int i;
 			for (i=0; i < 8; i++) {
