@@ -6,6 +6,7 @@
 #include <sys/types.h>
 
 #include <stdarg.h>
+#include <stddef.h>
 #include <string.h>
 
 #include "psc_ds/list.h"
@@ -21,23 +22,23 @@
 extern struct psclist_head	pscListCaches;
 extern psc_spinlock_t		pscListCachesLock;
 
-/*
- * List cache which can be edited by multiple
- *  threads.
- */
+/* List cache which can be edited by multiple threads.  */
 struct list_cache {
-	struct psclist_head lc_list;		/* head/tail of list         */
-	struct psclist_head lc_index_lentry;	/* link between caches       */
-	char		    lc_name[LC_NAME_MAX]; /* for lc mgmt             */
-	ssize_t		    lc_max;		/* max allowable entries     */
-	ssize_t		    lc_min;		/* keep at least this many   */
-	ssize_t		    lc_size;		/* current #items in list    */
-	size_t		    lc_nseen;		/* total #items placed on us */
-	size_t		    lc_offset;		/* offset to entry member    */
-	atomic_t	    lc_total;		/* relative max              */
-	psc_spinlock_t	    lc_lock;		/* exclusitivity ctl         */
-	psc_waitq_t	    lc_waitq_empty;	/* when we're empty          */
-	psc_waitq_t	    lc_waitq_full;	/* when we're full           */
+	struct psclist_head	lc_index_lentry;	/* link between caches       */
+	char			lc_name[LC_NAME_MAX];	/* for lc mgmt               */
+
+	ssize_t			lc_max;			/* max allowable entries     */
+	ssize_t			lc_min;			/* keep at least this many   */
+	ssize_t			lc_size;		/* current #items in list    */
+	size_t			lc_nseen;		/* total #items placed on us */
+	size_t			lc_entsize;		/* size of entry on us       */
+	size_t			lc_offset;		/* offset to entry member    */
+	atomic_t		lc_total;		/* relative max              */
+
+	struct psclist_head	lc_list;		/* head/tail of list         */
+	psc_spinlock_t		lc_lock;		/* exclusitivity ctl         */
+	psc_waitq_t		lc_waitq_empty;		/* when we're empty          */
+	psc_waitq_t		lc_waitq_full;		/* when we're full           */
 };
 typedef struct list_cache list_cache_t;
 
@@ -82,6 +83,7 @@ lc_del(struct psclist_head *e, list_cache_t *l)
 	psc_assert(l->lc_size >= 0);
 
 	ureqlock(&l->lc_lock, locked);
+
 	/*
 	 * An item was popped from our list, so wakeup other
 	 * threads waiting to use the spot on this list.
@@ -98,9 +100,12 @@ static inline struct psclist_head *
 lc_get(list_cache_t *l, int block)
 {
 	struct psclist_head *e;
+	int locked;
 
+	locked = reqlock(&l->lc_lock);
+	if (0)
  start:
-	LIST_CACHE_LOCK(l);
+		reqlock(&l->lc_lock);
 
 	if (psclist_empty(&l->lc_list)) {
 		if (block) {
@@ -114,20 +119,20 @@ lc_get(list_cache_t *l, int block)
 			psc_waitq_wait(&l->lc_waitq_empty, &l->lc_lock);
 			goto start;
 		} else {
-			LIST_CACHE_ULOCK(l);
+			ureqlock(&l->lc_lock, locked);
 			return NULL;
 		}
 	}
 	e = psclist_first(&l->lc_list);
 	lc_del(e, l);
 
-	LIST_CACHE_ULOCK(l);
+	ureqlock(&l->lc_lock, locked);
 
 	return e;
 }
 
-#define lc_getnb(l)		lc_get((l), 0)
-#define lc_getwait(l)		lc_get((l), 1)
+#define lc_getnb(l)		(void *)(((char *)lc_get((l), 0)) - l->lc_offset)
+#define lc_getwait(l)		(void *)(((char *)lc_get((l), 1)) - l->lc_offset)
 
 /**
  * lc_put - Bounded list put
@@ -137,11 +142,15 @@ lc_get(list_cache_t *l, int block)
 static inline void
 _lc_put(list_cache_t *l, struct psclist_head *n, int qors)
 {
+	int locked;
+
 	psc_assert(n->znext == NULL);
 	psc_assert(n->zprev == NULL);
 
+	locked = reqlock(&l->lc_lock);
+	if (0)
  start:
-	LIST_CACHE_LOCK(l);
+		reqlock(&l->lc_lock);
 
 	if ((l->lc_max > 0) && (l->lc_size >= l->lc_max)) {
 		psc_waitq_wait(&l->lc_waitq_full, &l->lc_lock);
@@ -156,7 +165,8 @@ _lc_put(list_cache_t *l, struct psclist_head *n, int qors)
 	l->lc_size++;
 	l->lc_nseen++;
 
-	LIST_CACHE_ULOCK(l);
+	ureqlock(&l->lc_lock, locked);
+
 	/*
 	 * There is now an item available; wake up waiters
 	 * who think the list is empty.
@@ -164,19 +174,11 @@ _lc_put(list_cache_t *l, struct psclist_head *n, int qors)
 	psc_waitq_wakeup(&l->lc_waitq_empty);
 }
 
-static inline void
-lc_queue(list_cache_t *l, struct psclist_head *n)
-{
-	return (_lc_put(l, n, 1));
-}
-
-static inline void
-lc_stack(list_cache_t *l, struct psclist_head *n)
-{
-	return (_lc_put(l, n, 0));
-}
-
-#define lc_put lc_queue
+#define lc_queue(l, n)		_lc_put(l, n, 1)
+#define lc_stack(l, n)		_lc_put(l, n, 0)
+#define lc_puttail(l, n)	_lc_put(l, n, 1)
+#define lc_puthead(l, n)	_lc_put(l, n, 0)
+#define lc_put(l, n)		_lc_put(l, n, 1)
 
 /**
  * lc_requeue - move an existing entry to the end of the queue
@@ -194,14 +196,16 @@ lc_requeue(list_cache_t *l, struct psclist_head *n)
 }
 
 /**
- * lc_init - initialize a list cache.
+ * _lc_init - initialize a list cache.
  * @l: the list cache to initialize.
  */
 static inline void
-lc_init(list_cache_t *lc)
+_lc_init(list_cache_t *lc, ptrdiff_t offset, size_t entsize)
 {
 	lc->lc_size  = 0;
 	lc->lc_max   = -1;
+	lc->lc_entsize = entsize;
+	lc->lc_offset = offset;
 	atomic_set(&lc->lc_total, 0);
 	INIT_PSCLIST_HEAD(&lc->lc_list);
 	INIT_PSCLIST_ENTRY(&lc->lc_index_lentry);
@@ -209,6 +213,9 @@ lc_init(list_cache_t *lc)
 	psc_waitq_init(&lc->lc_waitq_empty);
 	psc_waitq_init(&lc->lc_waitq_full);
 }
+
+#define lc_init(lc, type, member) \
+	_lc_init((lc), offsetof(type, member), sizeof(type))
 
 /**
  * lc_vregister - register a list cache for external access.
@@ -257,16 +264,19 @@ lc_register(list_cache_t *lc, const char *name, ...)
  * @name: printf(3) format of name for list.
  */
 static inline void
-lc_reginit(list_cache_t *lc, const char *name, ...)
+_lc_reginit(list_cache_t *lc, ptrdiff_t offset, size_t entsize, const char *name, ...)
 {
 	va_list ap;
 
-	lc_init(lc);
+	_lc_init(lc, offset, entsize);
 
 	va_start(ap, name);
 	lc_vregister(lc, name, ap);
 	va_end(ap);
 }
+
+#define lc_reginit(lc, type, member, fmt, ...) \
+	_lc_regint(lc, offsetof(type, member), sizeof(type), fmt, ## __VA_ARGS__)
 
 /**
  * lc_unregister - remove list cache external access registration.
@@ -292,15 +302,13 @@ lc_unregister(list_cache_t *lc)
 static inline list_cache_t *
 lc_lookup(const char *name)
 {
-	struct psclist_head *e;
 	list_cache_t *lc;
 	int found;
 
 	lc = NULL; /* gcc */
 	found = 0;
 	spinlock(&pscListCachesLock);
-	psclist_for_each(e, &pscListCaches) {
-		lc = psclist_entry(e, list_cache_t, lc_index_lentry);
+	psclist_for_each_entry(lc, &pscListCaches, lc_index_lentry) {
 		if (strcmp(name, lc->lc_name) == 0) {
 			LIST_CACHE_LOCK(lc);
 			found = 1;
@@ -317,11 +325,7 @@ lc_lookup(const char *name)
  * lc_empty - determine if the list cache has elements currently.
  * @lc: list cache to check.
  */
-static inline int
-lc_empty(const list_cache_t *lc)
-{
-	return (psclist_empty(&lc->lc_list));
-}
+#define lc_empty(lc) psclist_empty(&(lc)->lc_list)
 
 #define _lc_grow(l, n, type, init_fn, __ret)				\
 	do {								\
