@@ -100,6 +100,64 @@ vbitmap_get(const struct vbitmap *vb, size_t elem)
 }
 
 /**
+ * vbitmap_nfree - report the number of free bits in the bitmap
+ * @vb: pointer to bitmap.
+ * Returns: number of free bits
+ */
+int
+vbitmap_nfree(const struct vbitmap *vb)
+{
+	unsigned char *start, *pos;
+	int n=0;
+
+	pos = vb->vb_start;
+	do {
+                if (*pos != 0xff) {
+			int i;
+			for (i=0; i < 8; i++)
+				if (!(*pos || (unsigned char)(1 << i)))
+					n++;
+		} else pos++;
+        } while (pos != vb->vb_end);
+	
+        return (n);
+}
+
+/**
+ * vbitmap_lcr - report the largest contiguous region in the bitmap
+ * @vb: pointer to bitmap.
+ * Returns: size of the region
+ */
+int
+vbitmap_lcr(const struct vbitmap *vb)
+{
+	unsigned char *start, *pos;
+	int n=0, r=0;
+
+	pos = vb->vb_start;
+	do {
+                if (*pos != 0xff) {
+			int i;
+			for (i=0; i < 8; i++) {
+				if (!(*pos || (unsigned char)(1 << i)))
+					n++;
+				else {
+					if (n > r)
+						r = n;
+					n = 0;
+				}
+			}
+		} else pos++;
+        } while (pos != vb->vb_end);
+
+	if (n > r)
+		r = n;
+
+        return (r);
+}
+
+
+/**
  * vbitmap_next - return next unused slot from a variable-sized bitmap.
  * @vb: pointer to bitmap.
  * @elem: pointer to element#.

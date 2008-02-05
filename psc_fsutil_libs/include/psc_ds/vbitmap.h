@@ -26,4 +26,7 @@ void		vbitmap_printhex(const struct vbitmap *);
 void		vbitmap_printstats(const struct vbitmap *);
 void		vbitmap_getstats(const struct vbitmap *, int *, int *);
 
+int             vbitmap_nfree(const struct vbitmap *);
+int             vbitmap_lcr(const struct vbitmap *);
+
 #endif /* _PFL_VBITMAP_H_ */
