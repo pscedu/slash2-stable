@@ -130,30 +130,30 @@ vbitmap_nfree(const struct vbitmap *vb)
 	for (n = 0, p = vb->vb_start; p < vb->vb_end; p++)
 		n += bs_nfree(*p, NBBY);
 	n += bs_nfree(*p, vb->vb_lastsize);
-        return (n);
+	return (n);
 }
 
 /**
- * vbitmap_lcr - report the largest contiguous region in the bitmap
+ * vbitmap_lcr - report the largest contiguous region in the bitmap.
  * @vb: pointer to bitmap.
- * Returns: size of the region
+ * Returns: size of the region.
  */
 int
 vbitmap_lcr(const struct vbitmap *vb)
 {
-	unsigned char *pos;
-	int n=0, r=0;
+	unsigned char *p;
+	int i, n=0, r=0;
 
-	pos = vb->vb_start;
-	do {
-		if (*pos == 0x00) {
+	for (p = vb->vb_start; p <= vb->vb_end; p++)
+		if (*p == 0x00)
 			n += NBBY;
-			continue;
-		}
-                if (*pos != 0xff) {
-			int i;
-			for (i=0; i < NBBY; i++) {
-				if (!(*pos && (unsigned char)(1 << i)))
+		else if (*p == 0xff) {
+			if (n > r)
+				r = n;
+			n = 0;
+		} else {
+			for (i = 0; i < NBBY; i++) {
+				if ((*p & (1 << i)) == 0)
 					n++;
 				else {
 					if (n > r)
@@ -161,70 +161,51 @@ vbitmap_lcr(const struct vbitmap *vb)
 					n = 0;
 				}
 			}
-		} else {
-			if (n > r)
-				r = n;
-			n = 0;
-			pos++;
 		}
-        } while (pos != vb->vb_end);
-
 	if (n > r)
 		r = n;
-
-        return (r);
+	return (r);
 }
-
 
 /**
  * vbitmap_getncontig - try to get 'N' contiguous slots (or bits)
  * @vb: pointer to bitmap.
- * @n:  as an input parameter, requests 'N' number of slots.  On output, informs the caller of the starting slot.
+ * @nslots:  as an input parameter, requests 'N' number of slots.  On output, informs the caller of the starting slot.
  * Returns: number of slots assigned, 0 for none.
  */
 int
-vbitmap_getncontig(const struct vbitmap *vb, int *nslots)
+vbitmap_getncontig(struct vbitmap *vb, int *nslots)
 {
-	unsigned char *pos;
+	unsigned char *p;
 	int i=0, sbit=0, ebit=0, t1=0, t2=0;
 
-#define TEST_AND_SET if ((t2-t1) > (ebit-sbit)) {sbit=t1; ebit=t2; t1=t2=0;}
+#define TEST_AND_SET					\
+	do {						\
+		if ((t2 - t1) > (ebit - sbit)) {	\
+			sbit = t1;			\
+			ebit = t2;			\
+		}					\
+		t1 = t2 + 1;				\
+	} while (0)
 
-	for (pos = vb->vb_start; pos <= vb->vb_end; pos++) {
-                if (*pos == 0xff)
-			TEST_AND_SET;
-		/* Otherwise.. */
-		for (i=0; i < NBBY; i++) {
-			if (!(*pos && (unsigned char)(1 << i))) {
-				if (!t2-t1)
-					/* Set start bit */
-					t1 = ((pos - vb->vb_start) * NBBY) + i;
-
-				if ((t2-t1) == *nslots)
-					/* Have as many as we need */
-					goto mark_bits;
-			} else {
-				/* Set end bit */
-				t2 = ((pos - vb->vb_start) * NBBY) + (i-1);
+	for (p = vb->vb_start; p <= vb->vb_end; p++)
+		for (i = 0; i < NBBY; i++, t2++) {
+			if (*p & (1 << i))
 				TEST_AND_SET;
-			}
+			else if (t2 - t1 == *nslots)
+				goto mark_bits;
 		}
-	}
  mark_bits:
 	TEST_AND_SET;
 
-	if (ebit-sbit) {
-		for (i=sbit; i <= ebit; i++) {
-			pos = (vb->vb_start + i/NBBY);
-			psc_assert(!(*pos && (unsigned char)(1 << i%NBBY)));
-			*pos |= (unsigned char)(1 << i%NBBY);
-		}
+	if (ebit - sbit) {
+		for (i = sbit; i < ebit; i++)
+			vb->vb_start[i / NBBY] |= 1 << (i % NBBY);
 		/* Inform the caller of the start bit */
 		*nslots = sbit;
 	}
-	return (ebit-sbit);
+	return (ebit - sbit);
 }
-
 
 /**
  * vbitmap_next - return next unused slot from a variable-sized bitmap.
