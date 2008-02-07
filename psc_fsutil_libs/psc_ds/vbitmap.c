@@ -10,6 +10,7 @@
 
 #include "psc_ds/vbitmap.h"
 #include "psc_util/assert.h"
+#include "psc_util/cdefs.h"
 
 /**
  * vbitmap_new - create a new variable-sized bitmap.
@@ -100,32 +101,35 @@ vbitmap_get(const struct vbitmap *vb, size_t elem)
 	return (vb->vb_start[bytes] & (1 << pos));
 }
 
+__static __inline int
+bs_nfree(int b, int m)
+{
+	int i, n;
+
+	if (b == 0)
+		return (NBBY);
+	if (b == 0xff)
+		return (0);
+	for (i = n = 0; i < m; i++)
+		if ((b & (1 << i)) == 0)
+			n++;
+	return (n);
+}
+
 /**
- * vbitmap_nfree - report the number of free bits in the bitmap
+ * vbitmap_nfree - report the number of free bits in the bitmap.
  * @vb: pointer to bitmap.
- * Returns: number of free bits
+ * Returns: number of free bits.
  */
 int
 vbitmap_nfree(const struct vbitmap *vb)
 {
-	unsigned char *pos;
-	int n=0;
+	unsigned char *p;
+	int n;
 
-	pos = vb->vb_start;
-	do {
-		if (*pos == 0x00) {
-			n += 8;
-			continue;
-		}
-                if (*pos != 0xff) {
-			int i;
-			
-			for (i=0; i < 8; i++)
-				if (!(*pos || (unsigned char)(1 << i)))
-					n++;
-		} else pos++;
-        } while (pos != vb->vb_end);
-	
+	for (n = 0, p = vb->vb_start; p < vb->vb_end; p++)
+		n += bs_nfree(*p, NBBY);
+	n += bs_nfree(*p, vb->vb_lastsize);
         return (n);
 }
 
@@ -161,7 +165,7 @@ vbitmap_lcr(const struct vbitmap *vb)
 			if (n > r)
 				r = n;
 			n = 0;
-			pos++;			
+			pos++;
 		}
         } while (pos != vb->vb_end);
 
@@ -187,7 +191,7 @@ vbitmap_getncontig(const struct vbitmap *vb, int *nslots)
 #define TEST_AND_SET if ((t2-t1) > (ebit-sbit)) {sbit=t1; ebit=t2; t1=t2=0;}
 
 	for (pos = vb->vb_start; pos <= vb->vb_end; pos++) {
-                if (*pos == 0xff) 
+                if (*pos == 0xff)
 			TEST_AND_SET;
 		/* Otherwise.. */
 		for (i=0; i < NBBY; i++) {
@@ -195,7 +199,7 @@ vbitmap_getncontig(const struct vbitmap *vb, int *nslots)
 				if (!t2-t1)
 					/* Set start bit */
 					t1 = ((pos - vb->vb_start) * NBBY) + i;
-				
+
 				if ((t2-t1) == *nslots)
 					/* Have as many as we need */
 					goto mark_bits;
@@ -205,13 +209,13 @@ vbitmap_getncontig(const struct vbitmap *vb, int *nslots)
 				TEST_AND_SET;
 			}
 		}
-	}	
+	}
  mark_bits:
 	TEST_AND_SET;
 
 	if (ebit-sbit) {
 		for (i=sbit; i <= ebit; i++) {
- 			pos = (vb->vb_start + i/NBBY);
+			pos = (vb->vb_start + i/NBBY);
 			psc_assert(!(*pos && (unsigned char)(1 << i%NBBY)));
 			*pos |= (unsigned char)(1 << i%NBBY);
 		}
