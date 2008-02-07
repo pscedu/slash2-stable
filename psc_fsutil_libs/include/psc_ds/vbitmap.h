@@ -20,6 +20,8 @@ int		vbitmap_next(struct vbitmap *, size_t *);
 int		vbitmap_resize(struct vbitmap *, size_t);
 size_t		vbitmap_getsize(const struct vbitmap *);
 int		vbitmap_get(const struct vbitmap *, size_t);
+int             vbitmap_getncontig(const struct vbitmap *, int *);
+
 
 void		vbitmap_printbin(const struct vbitmap *);
 void		vbitmap_printhex(const struct vbitmap *);
