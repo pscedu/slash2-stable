@@ -51,8 +51,6 @@ main(int argc, char *argv[])
 	else
 		printf("rightfully out of elements\n");
 
-	printf("nfree %d=0\n", vbitmap_nfree(vb));
-
 	/* free some slots */
 	printf("\nfreeing some slots\n");
 	for (elem = 0; elem < NELEM; elem += NELEM / 10) {
@@ -61,7 +59,7 @@ main(int argc, char *argv[])
 	}
 
 	printf("\n");
-	vbitmap_printhex(vb);
+	//vbitmap_printhex(vb);
 
 	/* try to re-grab the freed slots */
 	printf("\nregrabbing %d freed slots\n", vbitmap_nfree(vb));
