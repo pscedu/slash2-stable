@@ -60,10 +60,8 @@ main(int argc, char *argv[])
 		vbitmap_unset(vb, elem);
 	}
 
-	printf("nfree %d=11\n", vbitmap_nfree(vb));
-
-//	printf("\n");
-//	vbitmap_printhex(vb);
+	printf("\n");
+	vbitmap_printhex(vb);
 
 	/* try to re-grab the freed slots */
 	printf("\nregrabbing %d freed slots\n", vbitmap_nfree(vb));
