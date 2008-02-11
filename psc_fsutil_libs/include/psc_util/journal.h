@@ -1,5 +1,8 @@
 /* $Id$ */
 
+#ifndef _PFL_JOURNAL_H_
+#define _PFL_JOURNAL_H_
+
 #include "psc_types.h"
 #include "psc_util/atomic.h"
 #include "psc_util/atomic.h"
@@ -46,3 +49,5 @@ int	 pjournal_logwrite(struct psc_journal *, int, void *);
 int	 pjournal_logread(struct psc_journal *, int, void *);
 int	 pjournal_walk(struct psc_journal *, struct psc_journal_walker *,
 	    struct psc_journal_enthdr *);
+
+#endif /* _PFL_JOURNAL_H_ */
