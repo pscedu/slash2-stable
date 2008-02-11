@@ -276,7 +276,7 @@ _lc_reginit(list_cache_t *lc, ptrdiff_t offset, size_t entsize, const char *name
 }
 
 #define lc_reginit(lc, type, member, fmt, ...) \
-	_lc_regint(lc, offsetof(type, member), sizeof(type), fmt, ## __VA_ARGS__)
+	_lc_reginit(lc, offsetof(type, member), sizeof(type), fmt, ## __VA_ARGS__)
 
 /**
  * lc_unregister - remove list cache external access registration.
