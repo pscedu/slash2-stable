@@ -19,7 +19,7 @@ int pwrite(int fd, const void *, size_t, off_t);
 #define PJ_LOCK(pj)	spinlock(&(pj)->pj_lock)
 #define PJ_ULOCK(pj)	freelock(&(pj)->pj_lock)
 
-#define PJE_MAGIC	0x45678912aabbccdd
+#define PJE_MAGIC	0x45678912aabbccddULL
 #define PJE_XID_NONE	0		/* invalid transaction ID */
 
 /*
