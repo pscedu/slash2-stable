@@ -47,7 +47,7 @@ main(int argc, char *argv[])
 	/* try one past end of filled bitmap */
 	printf("expected to have filled up bitmap\n\n");
 	if (vbitmap_next(vb, &elem))
-		printf("got another expected unused elem! %d\n", elem);
+		printf("got another expected unused elem! %zu\n", elem);
 	else
 		printf("rightfully out of elements\n");
 
@@ -72,7 +72,7 @@ main(int argc, char *argv[])
 	/* try one past end of filled bitmap */
 	printf("expected to have filled up bitmap\n\n");
 	if (vbitmap_next(vb, &elem))
-		printf("got another expected unused elem! %d\n", elem);
+		printf("got another expected unused elem! %zu\n", elem);
 	else
 		printf("rightfully out of elements\n");
 

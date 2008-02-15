@@ -32,6 +32,6 @@ main(int argc, char *argv[])
 		usage();
 
 	printf("%u\n", myrandom32());
-	printf("%016"ZLPX64"\n", myrandom64());
+	printf("%016"_P_LP64"x\n", myrandom64());
 	exit(0);
 }
