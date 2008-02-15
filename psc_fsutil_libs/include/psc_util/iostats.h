@@ -1,16 +1,16 @@
 /* $Id$ */
 
-#ifndef _IOSTATS_H_
-#define _IOSTATS_H_
+#ifndef _PFL_IOSTATS_H_
+#define _PFL_IOSTATS_H_
 
 #include <sys/time.h>
 
 #include <stdarg.h>
 
-#include "zestAtomic.h"
-#include "zestList.h"
-#include "zestLock.h"
-#include "zestTypes.h"
+#include "psc_util/atomic.h"
+#include "psc_ds/list.h"
+#include "psc_util/lock.h"
+#include "psc_types.h"
 
 #define IST_NAME_MAX 30
 
@@ -30,9 +30,9 @@ struct iostats {
 	double			ist_erate;
 };
 
-extern psc_spinlock_t		iostatsListLock;
-extern struct psclist_head	iostatsList;
+extern psc_spinlock_t		pscIostatsListLock;
+extern struct psclist_head	pscIostatsList;
 
 void iostats_init(struct iostats *ist, const char *fmt, ...);
 
-#endif /* _IOSTATS_H_ */
+#endif /* _PFL_IOSTATS_H_ */

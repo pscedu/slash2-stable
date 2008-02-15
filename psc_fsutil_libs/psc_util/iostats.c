@@ -4,12 +4,13 @@
 
 #include <stdarg.h>
 
-#include "zestList.h"
-#include "zestLock.h"
-#include "iostats.h"
+#include "psc_ds/list.h"
+#include "psc_util/lock.h"
+#include "psc_util/log.h"
+#include "psc_util/iostats.h"
 
-struct psclist_head	iostatsList = PSCLIST_HEAD_INIT(iostatsList);
-psc_spinlock_t		iostatsListLock = LOCK_INITIALIZER;
+struct psclist_head	pscIostatsList = PSCLIST_HEAD_INIT(pscIostatsList);
+psc_spinlock_t		pscIostatsListLock = LOCK_INITIALIZER;
 
 void
 iostats_init(struct iostats *ist, const char *fmt, ...)
@@ -25,7 +26,7 @@ iostats_init(struct iostats *ist, const char *fmt, ...)
 	if (rc == -1)
 		psc_fatal("vsnprintf");
 
-	spinlock(&iostatsListLock);
-	psclist_add(&ist->ist_lentry, &iostatsList);
-	freelock(&iostatsListLock);
+	spinlock(&pscIostatsListLock);
+	psclist_add(&ist->ist_lentry, &pscIostatsList);
+	freelock(&pscIostatsListLock);
 }
