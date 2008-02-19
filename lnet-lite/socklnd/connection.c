@@ -95,7 +95,7 @@ tcpnal_set_global_params (void)
                 tcpnal_env_param("TCPLND_PORT",
                                 &tcpnal_acceptor_port) &&
 		/* Default to same port as acceptor. */
-		tcpnal_connector_port = tcpnal_acceptor_port;
+		(tcpnal_connector_port = tcpnal_acceptor_port, 1) &&
                 tcpnal_env_param("TCPLND_CPORT",
                                 &tcpnal_connector_port) &&
                 tcpnal_env_param("TCPNAL_BUFFER_SIZE",
