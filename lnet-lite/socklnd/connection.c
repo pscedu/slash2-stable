@@ -57,6 +57,7 @@ int tcpnal_usesdp = 0;
 
 /* tunables (via environment) */
 int tcpnal_acceptor_port = 988;
+int tcpnal_connector_port = 988;
 int tcpnal_buffer_size   = 0;
 int tcpnal_nagle         = 0;
 int tcpnal_server        = 0;
@@ -93,6 +94,10 @@ tcpnal_set_global_params (void)
                                  &tcpnal_usesdp)       &&
                 tcpnal_env_param("TCPLND_PORT",
                                 &tcpnal_acceptor_port) &&
+		/* Default to same port as acceptor. */
+		tcpnal_connector_port = tcpnal_acceptor_port;
+                tcpnal_env_param("TCPLND_CPORT",
+                                &tcpnal_connector_port) &&
                 tcpnal_env_param("TCPNAL_BUFFER_SIZE",
                                  &tcpnal_buffer_size) &&
                 tcpnal_env_param("TCPLND_BUFFER_SIZE",
@@ -693,7 +698,7 @@ force_tcp_connection(manager    m,
     //addr.sin_family       = (tcpnal_usesdp ? AF_SDP : AF_INET);
     addr.sin_family      = AF_INET;
     addr.sin_addr.s_addr = htonl(ip);
-    addr.sin_port        = htons(tcpnal_acceptor_port);
+    addr.sin_port        = htons(tcpnal_connector_port);
 
     memset(&locaddr, 0, sizeof(locaddr)); 
     locaddr.sin_family = AF_INET; 
