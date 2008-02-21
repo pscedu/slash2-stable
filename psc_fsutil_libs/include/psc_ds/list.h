@@ -30,8 +30,6 @@ struct psclist_head {
 	struct psclist_head *znext, *zprev;
 };
 
-#define PSCLIST_INIT_CHECK(l) (((l)->zprev == NULL) && ((l)->znext == NULL))
-
 #define PSCLIST_HEAD_INIT(name)	{ &(name), &(name) }
 #define PSCLIST_ENTRY_INIT(name)	{ NULL, NULL }
 
@@ -60,9 +58,6 @@ static __inline__ void
 __psclist_add(struct psclist_head *new, struct psclist_head *prev,
 	struct psclist_head *next)
 {
-#if 0
-	psc_assert(new->zprev == NULL && new->znext == NULL);
-#endif
 	next->zprev = new;
 	new->znext = next;
 	new->zprev = prev;
