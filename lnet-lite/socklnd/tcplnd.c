@@ -115,7 +115,7 @@ int tcpnal_send(lnet_ni_t *ni, __unusedx void *private, lnet_msg_t *lntmsg)
         sysrc = syscall(SYS_writev, c->fd, tiov, ntiov);
         if (sysrc != total) {
                 fprintf (stderr, "BAD SEND rc %d != %d, errno %d\n",
-                         rc, total, errno);
+                         sysrc, total, errno);
                 rc = -errno;
         }
 #else
