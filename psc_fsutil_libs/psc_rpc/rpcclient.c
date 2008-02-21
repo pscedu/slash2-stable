@@ -408,7 +408,6 @@ static int pscrpc_send_new_req(struct pscrpc_request *req)
 			  req->rq_reqmsg->status,
 			pscrpc_import_state_name(req->rq_send_state),
 			  pscrpc_import_state_name(imp->imp_state));
-		LASSERT(psclist_empty (&req->rq_list_entry));
 
 		psclist_xadd_tail(&req->rq_list_entry, &imp->imp_delayed_list);
 		spin_unlock(&imp->imp_lock);
@@ -424,7 +423,6 @@ static int pscrpc_send_new_req(struct pscrpc_request *req)
 #endif
 
 	/* XXX this is the same as pscrpc_queue_wait */
-	LASSERT(psclist_empty(&req->rq_list_entry));
 	psclist_xadd_tail(&req->rq_list_entry, &imp->imp_sending_list);
 	spin_unlock(&imp->imp_lock);
 
