@@ -29,7 +29,7 @@ recurse-all:
 	${YACC} ${YFLAGS} $<
 
 .c.o:
-	${CC} ${CFLAGS} ${$(subst .,_,$(subst /,_,$(subst ../,,$<)))_CFLAGS} -c $< -o $@
+	${CC} ${CFLAGS} ${$(subst .,_,$(subst /,_,$(subst ../,,$(subst //,/,$<))))_CFLAGS} -c $< -o $@
 
 ${PROG}: ${OBJS}
 	${CC} -o $@ ${OBJS} ${LDFLAGS}
