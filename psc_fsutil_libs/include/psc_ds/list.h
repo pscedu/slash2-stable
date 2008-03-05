@@ -186,6 +186,12 @@ psclist_empty(const struct psclist_head *head)
 #define psclist_disjoint(ent)	((ent)->znext == NULL && (ent)->zprev == NULL)
 
 /**
+ * psclist_conjoint - tests whether a psclist entry is a member of a list.
+ * @entry: the psclist entry to test.
+ */
+#define psclist_conjoint(ent)	((ent)->znext != NULL && (ent)->zprev != NULL)
+
+/**
  * psclist_splice - join two psclists
  * @psclist: the new psclist to add.
  * @head: the place to add it in the first psclist.
