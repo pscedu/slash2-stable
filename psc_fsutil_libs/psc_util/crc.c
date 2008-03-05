@@ -138,13 +138,14 @@ const u64 crc_table[256] = {
 	UINT64CONST(0xD80C07CD676F8394), UINT64CONST(0x9AFCE626CE85B507)
 };
 
-int
-crc_valid(psc_crc_t crc, const void *p, size_t len)
+void /* __inline */
+psc_crc_calc(psc_crc_t *crcp, const void *data, int len)
 {
-	psc_crc_t c;
+	PSC_CRC_CALC(*crcp, data, len);
+}
 
-	CRC_INIT(c);
-	CRC_DO(c, p, len);
-	CRC_FIN(c);
-	return (c == crc);
+void /* __inline */
+psc_crc_add(psc_crc_t *crcp, const void *data, int len)
+{
+	PSC_CRC_ADD(*crcp, data, len);
 }
