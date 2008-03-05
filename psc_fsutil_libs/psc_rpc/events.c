@@ -497,7 +497,7 @@ int pscrpc_ni_init(int type)
 	if (LNetGetId(1, &my_id))
 		psc_fatalx("LNetGetId() failed");
 
-        psc_notify("nidpid is (0x%"_P_LP64"x,0x%x)", my_id.nid, my_id.pid);
+        psc_notify("nidpid is (0x%"_P_U64"x,0x%x)", my_id.nid, my_id.pid);
 
         if (rc == 0)
                 return 0;

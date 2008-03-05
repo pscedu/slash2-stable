@@ -26,7 +26,7 @@ typedef unsigned long int u64;
 # define UINT64CONST(x) ((u64) x##L)
 
 /* printf(3) specifier modifiers for 64-bit types. */
-# define _P_LP64 "l"
+# define _P_U64 "l"
 # define _P_OFFT "l"
 
 #else /* i386 */
@@ -34,7 +34,7 @@ typedef unsigned long long int u64;
 
 # define UINT64CONST(x) ((u64) x##LL)
 
-# define _P_LP64 "ll"
+# define _P_U64 "ll"
 # define _P_OFFT "ll"
 
 #endif

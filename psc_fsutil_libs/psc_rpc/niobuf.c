@@ -74,7 +74,7 @@ static int psc_send_buf (lnet_handle_md_t *mdh, void *base, int len,
                 RETURN (-ENOMEM);
         }
 
-        psc_info("Sending %d bytes to portal %d, xid %"_P_LP64"x",
+        psc_info("Sending %d bytes to portal %d, xid %"_P_U64"x",
 		 len, portal, xid);
 
         rc = LNetPut (conn->c_self, *mdh, ack,
@@ -84,7 +84,7 @@ static int psc_send_buf (lnet_handle_md_t *mdh, void *base, int len,
                 /* We're going to get an UNLINK event when I unlink below,
                  * which will complete just like any other failed send, so
                  * I fall through and return success here! */
-                psc_errorx("LNetPut(%s, %d, %"_P_LP64"u) failed: %d",
+                psc_errorx("LNetPut(%s, %d, %"_P_U64"u) failed: %d",
 			libcfs_id2str(conn->c_peer), portal, xid, rc);
                 rc2 = LNetMDUnlink(*mdh);
                 LASSERTF(rc2 == 0, "rc2 = %d\n", rc2);
@@ -487,7 +487,7 @@ int psc_send_rpc(struct pscrpc_request *request, int noreply)
                         LASSERT (rc == -ENOMEM);
                         GOTO(cleanup_repmsg, rc = -ENOMEM);
                 }
-		psc_info("LNetMEAttach() gave handle %"_P_LP64"x", reply_me_h.cookie);
+		psc_info("LNetMEAttach() gave handle %"_P_U64"x", reply_me_h.cookie);
         }
 
         spinlock(&request->rq_lock);
@@ -510,7 +510,7 @@ int psc_send_rpc(struct pscrpc_request *request, int noreply)
                 reply_md.user_ptr  = &request->rq_reply_cbid;
                 reply_md.eq_handle = pscrpc_eq_h;
 
-		psc_info("LNetMDAttach() try w/ handle %"_P_LP64"x",
+		psc_info("LNetMDAttach() try w/ handle %"_P_U64"x",
 		      reply_me_h.cookie);
 
                 rc = LNetMDAttach(reply_me_h, reply_md, LNET_UNLINK,

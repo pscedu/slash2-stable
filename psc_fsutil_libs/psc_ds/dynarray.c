@@ -25,17 +25,15 @@ int
 dynarray_hintlen(struct dynarray *da, int n)
 {
 	void *p;
+	int i;
 
 	if (n > da->da_nalloc) {
-		int i;
-
 		p = realloc(da->da_items, n * sizeof(*da->da_items));
 		if (p == NULL && n)
 			return (-1);
-		da->da_items = p;		
-		for (i=da->da_nalloc; i < n; i++) { 
+		da->da_items = p;
+		for (i = da->da_nalloc; i < n; i++)
 			da->da_items[i] = NULL;
-		}
 		da->da_nalloc = n;
 	}
 	return (0);
