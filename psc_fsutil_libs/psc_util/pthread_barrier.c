@@ -1,3 +1,5 @@
+/* $Id$ */
+
 /*
  * barrier.c
  *
@@ -20,10 +22,11 @@
  * to do something in a serial region before entering another
  * parallel section of code.
  */
+
 #include <pthread.h>
 #include <errno.h>
 #include <stdio.h>
-#include "pthread_barrier.h"
+#include "psc_util/pthread_barrier.h"
 
 /*
  * Initialize a barrier for use.
