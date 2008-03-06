@@ -9,7 +9,6 @@
 #include <strings.h>
 
 #include "psc_ds/vbitmap.h"
-#include "psc_util/assert.h"
 #include "psc_util/cdefs.h"
 
 /**
@@ -170,7 +169,8 @@ vbitmap_lcr(const struct vbitmap *vb)
 /**
  * vbitmap_getncontig - try to get 'N' contiguous slots (or bits)
  * @vb: pointer to bitmap.
- * @nslots:  as an input parameter, requests 'N' number of slots.  On output, informs the caller of the starting slot.
+ * @nslots:  as an input parameter, requests 'N' number of slots.
+ *	On output, informs the caller of the starting slot.
  * Returns: number of slots assigned, 0 for none.
  */
 int
