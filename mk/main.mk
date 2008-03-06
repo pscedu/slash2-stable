@@ -94,7 +94,7 @@ depend: ${_YACCINTM}
 
 clean:
 	rm -rf ${OBJS} ${PROG} ${LIBRARY} ${CLEANFILES} ${_YACCINTM} ${_LEXINTM}	\
-	    .depend* tags cscope.out
+	    .depend* tags cscope.out core.[0-9]*
 	@for i in ${SUBDIRS}; do							\
 		echo -n "===> ";							\
 		if [ -n "${DIRPREFIX}" ]; then						\
