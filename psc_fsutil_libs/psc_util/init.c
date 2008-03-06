@@ -2,11 +2,20 @@
 
 #include <unistd.h>
 
-#include "psc_ds/dynarray.h"
-#include "psc_util/threadtable.h"
 #include "psc_util/subsys.h"
-#include "psc_util/thread.h"
+#include "zestList.h"
+#include "zestLock.h"
+#include "zestThreadTable.h"
+#include "zestion/zestion.h"
+
+/*
+#include "psc_ds/dynarray.h"
+#include "psc_ds/list.h"
 #include "psc_util/alloc.h"
+#include "psc_util/lock.h"
+#include "psc_util/thread.h"
+#include "psc_util/threadtable.h"
+*/
 
 extern struct dynarray psc_subsystems;
 

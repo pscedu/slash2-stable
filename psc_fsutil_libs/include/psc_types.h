@@ -1,9 +1,7 @@
 /* $Id$ */
 
-#ifndef _PFL_TYPES_H_
-#define _PFL_TYPES_H_
-
-#include "psc_util/subsys.h"
+#ifndef __PFL_TYPES_H__
+#define __PFL_TYPES_H__
 
 typedef unsigned int		u32;
 typedef unsigned short int	u16;
@@ -45,4 +43,6 @@ typedef	u64 psc_crc_t;
 
 #define MASK_UPPER32 0x00000000ffffffffULL
 
-#endif /* _PFL_TYPES_H_ */
+#include "psc_util/subsys.h"
+
+#endif /* __PFL_TYPES_H__ */
