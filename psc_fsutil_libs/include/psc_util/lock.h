@@ -202,10 +202,12 @@ trylock(__unusedx psc_spinlock_t *l)
 static __inline int
 reqlock(psc_spinlock_t *l)
 {
-	if (*l != SL_LOCKED)
-		/* not locked, grab it */
-		spinlock(l);
-	return (0);
+	if (!_LOCK_VALID(l))
+		psc_fatalx("lock %p has invalid value", l);
+	if (*l == SL_LOCKED)
+	        return 1;
+	else
+	        return 0;
 }
 
 static __inline void
