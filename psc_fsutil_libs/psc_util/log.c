@@ -25,6 +25,13 @@
 
 #define DEF_LOGFMT "[%s:%06u %n:%F:%l]"
 
+#ifndef HOST_NAME_MAX
+#ifndef MAXHOSTNAMELEN
+#error "No HOST_NAME_MAX or MAXHOSTNAMELEN"
+#endif
+#define HOST_NAME_MAX MAXHOSTNAMELEN
+#endif
+
 static const char *pscLogFormat = DEF_LOGFMT;
 
 /* Global logging level. */
