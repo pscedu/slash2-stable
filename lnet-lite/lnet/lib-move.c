@@ -1285,10 +1285,12 @@ lnet_send(lnet_nid_t src_nid, lnet_msg_t *msg)
                         return rc;
                 }
 
-                if (lp->lp_ni != src_ni && 
-                    lp->lp_ni->ni_ninterfaces) {
-                }                        
-                LASSERT (lp->lp_ni == src_ni);
+		/*
+		 * Ensure our peer is reachable via this ni or one of
+		 * its slaves.
+		 */
+                //LASSERT (lp->lp_ni == src_ni);
+                LASSERT(lp->lp_ni == lnet_ni_findslave(src_ni, lp->lp_ni, 1));
         } else {
                 /* sending to a remote network */
                 rnet = lnet_find_net_locked(LNET_NIDNET(dst_nid));
@@ -1310,7 +1312,8 @@ lnet_send(lnet_nid_t src_nid, lnet_msg_t *msg)
                         CERROR("lp2 %p", lp2);
 
                         if (lp2->lp_alive &&
-                            (src_ni == NULL || lp2->lp_ni == src_ni) &&
+                            (src_ni == NULL ||
+			     lp2->lp_ni == lnet_ni_findslave(src_ni, lp2->lp_ni, 1)) &&
                             (lp == NULL || lnet_compare_routers(lp2, lp) > 0)) {
                                 best_route = route;
                                 lp = lp2;
@@ -1336,7 +1339,7 @@ lnet_send(lnet_nid_t src_nid, lnet_msg_t *msg)
                         src_ni = lp->lp_ni;
                         src_nid = src_ni->ni_nid;
                 } else {
-                        LASSERT (src_ni == lp->lp_ni);
+                        LASSERT(src_ni == lnet_ni_findslave(lp->lp_ni, src_ni, 1));
                         lnet_ni_decref_locked(src_ni);
                 }
 
