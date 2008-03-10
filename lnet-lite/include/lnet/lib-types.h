@@ -350,8 +350,8 @@ typedef struct lnet_ni {
         char             *ni_interfaces[LNET_MAX_INTERFACES]; /* equivalent interfaces to use */
         struct lnet_ni  **ni_bonded_interfaces; /* list of if's on this net */
         int               ni_slave;
-	struct iostats	  ni_recvstats;
-	struct iostats	  ni_sendstats;
+	void             *ni_recvstats;
+	void             *ni_sendstats;
 } lnet_ni_t;
 
 typedef struct lnet_peer {

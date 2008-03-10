@@ -58,6 +58,7 @@
 #endif
 
 #include "psc_util/alloc.h"
+#include "psc_util/iostats.h"
 
 /* XXX CFS workaround, to give a chance to let nal thread wake up
  * from waiting in select
@@ -197,6 +198,11 @@ procbridge_startup (lnet_ni_t *ni)
             } else {
                     ni = oni->ni_bonded_interfaces[0] = oni;
             }
+	    /* Allocate memory for iostats, ni_netstats is (void *) to 
+	     *  avoid the mess of linking in zest headers into lib-types.h
+	     */
+	    ni->ni_sendstats = PSCALLOC(sizeof(struct iostats));
+	    ni->ni_recvstats = PSCALLOC(sizeof(struct iostats));
 
             procbridge_getnid(ni);
             /* The credit settings here are pretty irrelevent.  
