@@ -88,7 +88,7 @@ int tcpnal_send(lnet_ni_t *ni, __unusedx void *private, lnet_msg_t *lntmsg)
         int   ntiov;
         int i;
 
-	ist = ni->ni_sendstats;
+	ist = &ni->ni_sendstats;
 
         if (!(c = force_tcp_connection((manager)b->lower, &target,
                                        b->local)))
@@ -176,7 +176,7 @@ int tcpnal_recv(lnet_ni_t     *ni,
         int ntiov;
         int i;
 
-	ist = ni->ni_recvstats;
+	ist = &ni->ni_recvstats;
         if (mlen == 0)
                 goto finalize;
 

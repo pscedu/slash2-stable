@@ -21,7 +21,7 @@ psc_sock_write (int sock, void *buffer, int nob, int timeout)
         int            rc;
         struct timeval tv, then;
         
-        LASSERT((nob > 0) || tcpnal_maxsend_kb);
+        LASSERT((nob > 0) || tcpnal_maxsendkb);
         /* Caller may pass a zero timeout if she thinks the socket buffer is        
          * empty enough to take the whole message immediately */
 

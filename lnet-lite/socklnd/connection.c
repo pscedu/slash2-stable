@@ -709,8 +709,7 @@ force_tcp_connection(manager    m,
     addr.sin_port        = htons(tcpnal_connector_port);
 
     memset(&locaddr, 0, sizeof(locaddr)); 
-    locaddr.sin_family = AF_INET; 
-    //locaddr.sin_family = (tcpnal_usesdp ? AF_SDP : AF_INET);
+    locaddr.sin_family = (tcpnal_usesdp ? AF_SDP : AF_INET);
     locaddr.sin_addr.s_addr = INADDR_ANY;
     locaddr.sin_port = m->port;
 

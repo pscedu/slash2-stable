@@ -69,7 +69,6 @@ void libcfs_init_nidstrings (void)
 # define NIDSTR_UNLOCK(f) spin_unlock_irqrestore(&libcfs_nidstring_lock, f)
 
 #else
-static psc_spinlock_t libcfs_nidstring_lock = LOCK_INITIALIZER;
 #define NIDSTR_LOCK(f) spinlock(&libcfs_nidstring_lock);
 #define NIDSTR_UNLOCK(f) freelock(&libcfs_nidstring_lock);
 #endif
