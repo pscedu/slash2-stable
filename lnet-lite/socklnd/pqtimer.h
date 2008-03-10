@@ -19,24 +19,13 @@ register_timer(when interval,
 	       void (*function)(void *),
 	       void *argument);
 
-timer 
-register_timer_wait(void);
-
-void 
-remove_timer(timer);
-
-void 
-timer_loop(void **arg);
-
-void 
-initialize_timer(void (*block)(when, void **arg));
-
+timer register_timer_wait(void);
+void remove_timer(timer);
+void timer_loop(void **arg);
+void initialize_timer(void (*block)(when, void **arg));
 //void initialize_timer(void (*block)(when));
-void 
-timer_fire(void);
-
-void 
-register_thunk(void (*f)(void *),void *a);
+void timer_fire(void);
+void register_thunk(void (*f)(void *),void *a);
 
 #define HZ 0x100000000ull
 #endif

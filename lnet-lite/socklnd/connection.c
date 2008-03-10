@@ -61,6 +61,8 @@ int tcpnal_connector_port = 988;
 int tcpnal_buffer_size   = 0;
 int tcpnal_nagle         = 0;
 int tcpnal_server        = 0;
+int tcpnal_maxsendkb	 = 1024;
+int tcpnal_portinc	 = 0;
 
 #define HELLO_TIMEOUT 5
 
@@ -108,6 +110,12 @@ tcpnal_set_global_params (void)
                                  &tcpnal_nagle) &&
                 tcpnal_env_param("TCPLND_SERVER",
                                  &tcpnal_server);
+                tcpnal_env_param("TCPLND_MAXSENDKB",
+                                 &tcpnal_maxsendkb);
+                tcpnal_env_param("TCPNAL_MAXSENDKB",
+                                 &tcpnal_maxsendkb);
+                tcpnal_env_param("TCPNAL_PORTINC",
+                                 &tcpnal_portinc);
 }
 
 /* Function:  compare_connection
@@ -674,6 +682,7 @@ force_tcp_connection(manager    m,
 {
     unsigned int       ip = LNET_NIDADDR(nidpid->nid);
     connection         conn = NULL;
+    bridge	       b = m->handler_arg;
     struct sockaddr_in addr;
     struct sockaddr_in locaddr; 
     int                fd;
@@ -695,8 +704,7 @@ force_tcp_connection(manager    m,
            nidpid->pid, libcfs_nid2str(nidpid->nid)); 
 
     memset(&addr, 0, sizeof(addr));
-    //addr.sin_family       = (tcpnal_usesdp ? AF_SDP : AF_INET);
-    addr.sin_family      = AF_INET;
+    addr.sin_family      = (tcpnal_usesdp ? AF_SDP : AF_INET);
     addr.sin_addr.s_addr = htonl(ip);
     addr.sin_port        = htons(tcpnal_connector_port);
 
@@ -963,7 +971,7 @@ bind_socket(manager m, unsigned short port)
         }
         
         bzero((char *) &addr, sizeof(addr));
-        addr.sin_family      = AF_INET;
+        addr.sin_family      = (tcpnal_usesdp ? AF_SDP : AF_INET);
         addr.sin_addr.s_addr = htonl(LNET_NIDADDR(b->b_ni->ni_nid));
         addr.sin_port        = htons(port);
         
@@ -1017,7 +1025,6 @@ init_connections(int (*input)(void *, void *), void *a)
 {
     manager m = (manager)malloc(sizeof(struct manager));
     bridge  b;
-    //__unusedx extern int portInc;
 
     if (m == NULL) 
             goto fail;
@@ -1032,10 +1039,8 @@ init_connections(int (*input)(void *, void *), void *a)
     pthread_mutex_init(&m->conn_lock, 0);
 
     if (tcpnal_server) {
-            if (bind_socket(m, tcpnal_acceptor_port
-//                          +  (portInc ? b->tid : 0)
-                            ))
-
+            if (bind_socket(m, tcpnal_acceptor_port +
+	        (tcpnal_portinc ? b->tid : 0)))
                     return (m);
     } else
             return (m);

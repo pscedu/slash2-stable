@@ -55,6 +55,8 @@
 static char      libcfs_nidstrings[LNET_NIDSTR_COUNT][LNET_NIDSTR_SIZE];
 static int       libcfs_nidstring_idx = 0;
 
+static psc_spinlock_t libcfs_nidstring_lock = LOCK_INITIALIZER;
+
 #ifdef __KERNEL__
 static spinlock_t libcfs_nidstring_lock;
 
@@ -389,7 +391,7 @@ libcfs_nid2str(lnet_nid_t nid)
                 return "LNET_NID_ANY";
 
         nf = libcfs_lnd2netstrfns(lnd);
-        str = libcfs_next_nidstring();
+        //str = libcfs_next_nidstring();
 
         if (nf == NULL)
                 snprintf(str, LNET_NIDSTR_SIZE, "%x@<%u:%u>", addr, lnd, nnum);

@@ -45,6 +45,7 @@
 
 /* for __unusedx */
 #include "psc_util/cdefs.h"
+#include "psc_util/iostats.h"
 
 void
 tcpnal_notify(lnet_ni_t *ni, lnet_nid_t nid, int alive)
@@ -80,11 +81,14 @@ int tcpnal_send(lnet_ni_t *ni, __unusedx void *private, lnet_msg_t *lntmsg)
         bridge b = (bridge)ni->ni_data;
         struct iovec tiov[257];
         static pthread_mutex_t send_lock = PTHREAD_MUTEX_INITIALIZER;
+	struct iostats *ist;
         int rc = 0;
         int   sysrc;
         int   total;
         int   ntiov;
         int i;
+
+	ist = ni->ni_sendstats;
 
         if (!(c = force_tcp_connection((manager)b->lower, &target,
                                        b->local)))
@@ -150,6 +154,7 @@ int tcpnal_send(lnet_ni_t *ni, __unusedx void *private, lnet_msg_t *lntmsg)
                  * from cb_send() */
                 lnet_finalize(ni, lntmsg, 0);
         }
+	atomic_add(total, &ist->ist_bytes_intv);
 
         return(rc);
 }
@@ -167,9 +172,11 @@ int tcpnal_recv(lnet_ni_t     *ni,
                 unsigned int  rlen)
 {
         struct iovec tiov[256];
+	struct iostats *ist;
         int ntiov;
         int i;
 
+	ist = ni->ni_recvstats;
         if (mlen == 0)
                 goto finalize;
 
@@ -190,6 +197,8 @@ finalize:
         lnet_finalize(ni, cookie, 0);
 
         LASSERT(rlen >= mlen);
+
+	atomic_add(rlen, &ist->ist_bytes_intv);
 
         if (mlen != rlen){
                 char *trash=malloc(rlen - mlen);
@@ -266,6 +275,10 @@ int tcpnal_init(bridge b)
                 /* TODO: this needs to shut down the newly created junk */
                 return(-ENXIO);
         }
+	iostats_init(&b->b_ni->ni_recvstats, "lndrcv%s",
+	    libcfs_nid2str(b->b_ni->ni_nid));
+	iostats_init(&b->b_ni->ni_sendstats, "lndsnd%s",
+	    libcfs_nid2str(b->b_ni->ni_nid));
         b->lower = m;
         return(0);
 }

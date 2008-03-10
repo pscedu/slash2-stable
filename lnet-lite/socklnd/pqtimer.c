@@ -87,7 +87,7 @@ static void add_pqueue(int i)
 }
 
 
-__unusedx static void 
+static void 
 add_timer(timer t)
 {
     if (size_of_pqueue<(number_of_timers+2)){

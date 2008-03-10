@@ -13,13 +13,15 @@
 #include <libcfs/kp30.h>
 #include <errno.h>
 
+extern int tcpnal_maxsendkb;
+
 int
 psc_sock_write (int sock, void *buffer, int nob, int timeout)
 {
         int            rc;
         struct timeval tv, then;
         
-        LASSERT (nob > 0);
+        LASSERT((nob > 0) || tcpnal_maxsend_kb);
         /* Caller may pass a zero timeout if she thinks the socket buffer is        
          * empty enough to take the whole message immediately */
 
@@ -28,7 +30,7 @@ psc_sock_write (int sock, void *buffer, int nob, int timeout)
         for (;;) {
                 struct iovec  iov = {
                         .iov_base = buffer,
-                        .iov_len  = nob
+                        .iov_len  = MIN(nob, tcpnal_maxsendkb)
                 };
                 struct msghdr msg = {
                         .msg_name       = NULL,

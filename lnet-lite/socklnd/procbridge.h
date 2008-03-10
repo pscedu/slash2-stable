@@ -28,6 +28,7 @@ typedef struct procbridge {
     int notifier[2];
 
     int nal_flags;
+    bridge pb_bridge;
 
 } *procbridge;
 

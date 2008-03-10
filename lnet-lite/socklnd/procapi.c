@@ -166,8 +166,7 @@ procbridge_startup (lnet_ni_t *ni)
     bridge     b;
     int        rc, i;
     lnet_ni_t *oni=ni;
-    __unusedx lnet_nid_t onid=ni->ni_nid;
-    __unusedx extern int tcpnal_acceptor_port;
+    lnet_nid_t onid=ni->ni_nid;
 
     oni->ni_bonded_interfaces = PSCALLOC(sizeof(oni)*oni->ni_ninterfaces);
     
@@ -229,6 +228,7 @@ procbridge_startup (lnet_ni_t *ni)
             pthread_mutex_init(&p->mutex,0);
             pthread_cond_init(&p->cond, 0);
             p->nal_flags = 0;
+	    p->pb_bridge = b; /* backpointer to access ni from procbridge */
 
             /* initialize notifier */
             if (socketpair(AF_UNIX, SOCK_STREAM, 0, p->notifier)) {

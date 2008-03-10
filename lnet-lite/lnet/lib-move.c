@@ -1169,6 +1169,30 @@ lnet_return_credits_locked (lnet_msg_t *msg)
         }
 }
 
+static lnet_ni_t *
+lnet_ni_findslave(lnet_ni_t *master_ni, lnet_ni_t *ni, int test_only) 
+{
+	int i=1; 
+	lnet_ni_t *tni=ni;
+
+	if (!master_ni->ni_bonded_interfaces)
+		return tni;
+
+	for (i=0; i < master_ni->ni_ninterfaces; i++) {
+		psc_trace("Comp lni %p with sni %p", 
+			master_ni->ni_bonded_interfaces[i], ni);
+		if (master_ni->ni_bonded_interfaces[i] == ni) {
+			if (!test_only) {
+				lnet_ni_decref_locked(master_ni);
+				lnet_ni_addref_locked(master_ni->ni_bonded_interfaces[i]);
+			}
+			tni = ni;
+			break;
+		}
+	}
+	return tni;
+}
+
 int
 lnet_send(lnet_nid_t src_nid, lnet_msg_t *msg)
 {
@@ -1218,22 +1242,8 @@ lnet_send(lnet_nid_t src_nid, lnet_msg_t *msg)
 
         if (local_ni && 
             local_ni != src_ni && 
-            local_ni->ni_ninterfaces) {
-                /*
-                 * Found the correct net but the wrong ni
-                 */
-                int i; 
-                for (i=0; i < local_ni->ni_ninterfaces; i++) {
-                        psc_trace("Comp lni %p with sni %p", 
-                                  local_ni->ni_bonded_interfaces[i], src_ni);
-                        if (local_ni->ni_bonded_interfaces[i] == src_ni) {
-                                lnet_ni_decref_locked(local_ni);
-                                lnet_ni_addref_locked(local_ni->ni_bonded_interfaces[i]);
-                                local_ni = local_ni->ni_bonded_interfaces[i];
-                                break;
-                        }
-                }        
-        }
+            local_ni->ni_ninterfaces)
+		local_ni = lnet_ni_findslave(local_ni, src_ni, 0);
 
         if (local_ni != NULL) {
                 if (src_ni == NULL) {
@@ -1277,18 +1287,6 @@ lnet_send(lnet_nid_t src_nid, lnet_msg_t *msg)
 
                 if (lp->lp_ni != src_ni && 
                     lp->lp_ni->ni_ninterfaces) {
-                        /*
-                         * Found the correct net but the wrong ni
-                         */
-                        int i; 
-                        for (i=0; i < lp->lp_ni->ni_ninterfaces; i++) {
-                                psc_trace("Comp lni %p with sni %p", 
-                                       lp->lp_ni->ni_bonded_interfaces[i], src_ni);
-                                if (lp->lp_ni->ni_bonded_interfaces[i] == src_ni) {
-                                        lp->lp_ni = lp->lp_ni->ni_bonded_interfaces[i];
-                                        break;
-                                }
-                        }
                 }                        
                 LASSERT (lp->lp_ni == src_ni);
         } else {
