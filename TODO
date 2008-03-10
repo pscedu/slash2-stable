@@ -3,3 +3,4 @@
   at loop end
 - deploy psclist_xadd
 - remove generation numbers from slash_fid_t and add a new slash_fidgen_t
+- watch out for sizeof(type var[0])
