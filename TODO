@@ -1,4 +1,10 @@
-- remove PSC_LNET and add a global runtime var for server vs. client
+- get rid of -DHAVE_*_DEFINED and just assume so
+- rename ZROOTDIR -> ZEST_BASE
+- rename ROOTDIR -> PROJ_BASE
+- introduce PROJECT_BASE
+
+slash
+- piggyback small readdirs directly into READDIR replies
 - psclist_for_each* should be changed to NULL out the iterative variable
   at loop end
 - deploy psclist_xadd
