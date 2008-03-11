@@ -7,7 +7,7 @@
 
 #include "psc_util/alloc.h"
 #include "psc_util/assert.h"
-#include "psc_util/list.h"
+#include "psc_ds/list.h"
 #include "psc_util/lock.h"
 #include "psc_util/log.h"
 #include "psc_ds/hash.h"

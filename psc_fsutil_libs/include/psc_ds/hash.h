@@ -24,6 +24,8 @@ struct hash_bucket {
 	psc_spinlock_t		  hbucket_lock;	/* Spinlock for this bucket */
 };
 
+#define HASH_BUCKET_SZ sizeof(struct hash_bucket)
+
 struct hash_table {
 	char			  htable_name[HTNAME_MAX];
 	struct psclist_head	  htable_entry;
@@ -35,8 +37,6 @@ struct hash_table {
 	int			(*htcompare)(const void *, const void *);
 };
 
-#define HASH_BUCKET_SZ sizeof(struct hash_bucket)
-
 struct hash_entry {
 	struct psclist_head	  hentry_list;	/* Entry list pointers */
 	u64			 *hentry_id;	/* Pointer to the hash element id */
@@ -45,7 +45,7 @@ struct hash_entry {
 
 /**
  * hash_entry - get the struct for this entry
- * @ptr:	the &struct hash_entry pointer.
+ * @ptr:	the struct hash_entry pointer.
  * @type:	the type of the struct this is embedded in.
  * @member:	the name of the hash_entry struct within the struct.
  */
@@ -55,12 +55,12 @@ struct hash_entry {
 /*
  * String Hash Defines
  */
-#define SGET_BUCKET(t,i) &(t)->htable_buckets[str_hash((i)) % (t)->htable_size]
+#define SGET_BUCKET(t, i) &(t)->htable_buckets[str_hash((i)) % (t)->htable_size]
 
 struct hash_entry_str {
-	struct psclist_head	  hentry_str_list; /* Entry list pointers   */
-	const char		 *hentry_str_id; /* Pointer to the hash ele */
-	void			 *private;	/* pointer to private data  */
+	struct psclist_head	  hentry_str_list; /* Entry list pointers */
+	const char		 *hentry_str_id;   /* Pointer to the hash element str */
+	void			 *private;	   /* pointer to private data  */
 };
 
 /*
