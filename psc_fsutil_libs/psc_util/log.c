@@ -53,7 +53,6 @@ psc_getloglevel(void)
 	long l;
 
 	if (!readenv) {
-		readenv = 1;
 		if ((p = getenv("PSC_LOG_LEVEL")) != NULL) {
 			ep = NULL;
 			errno = 0;
@@ -64,6 +63,7 @@ psc_getloglevel(void)
 				errx(1, "invalid log level env: %s", p);
 			pscLogLevel = (int)l;
 		}
+		readenv = 1;
 	}
 	return (pscLogLevel);
 }
@@ -87,9 +87,9 @@ psc_getlogformat(void)
 	const char *p;
 
 	if (!readenv) {
-		readenv = 1;
 		if ((p = getenv("PSC_LOG_FORMAT")) != NULL)
 			pscLogFormat = p;
+		readenv = 1;
 	}
 	return (pscLogFormat);
 }
