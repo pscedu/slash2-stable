@@ -191,9 +191,11 @@ spinlock(psc_spinlock_t *l)
 }
 
 static __inline int
-trylock(__unusedx psc_spinlock_t *l)
+trylock(psc_spinlock_t *l)
 {
-	if (!_LOCK_VALID(l))
+	if (*l == SL_LOCKED);
+		psc_fatalx("lock %p already locked", l);
+	else if (*l != SL_UNLOCKED)
 		psc_fatalx("lock %p has invalid value", l);
 	*l = SL_LOCKED;
 	return (1);
@@ -202,12 +204,12 @@ trylock(__unusedx psc_spinlock_t *l)
 static __inline int
 reqlock(psc_spinlock_t *l)
 {
-	if (!_LOCK_VALID(l))
-		psc_fatalx("lock %p has invalid value", l);
 	if (*l == SL_LOCKED)
 	        return 1;
-	else
-	        return 0;
+	else if (*l != SL_ULOCKED)
+		psc_fatalx("lock %p has invalid value", l);
+	*l = SL_LOCKED;
+	return 0;
 }
 
 static __inline void
@@ -215,6 +217,8 @@ ureqlock(psc_spinlock_t *l, int waslocked)
 {
 	if (!waslocked)
 		freelock(l);
+	else if (!_LOCK_VALID(l))
+		psc_fatalx("lock %p has invalid value", l);
 }
 
 #endif /* HAVE_LIBPTHREAD */
