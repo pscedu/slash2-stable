@@ -4,7 +4,7 @@
 
 #include "psc_util/subsys.h"
 #include "zestList.h"
-#include "zestLock.h"
+#include "psc_util/lock.h"
 #include "zestThreadTable.h"
 #include "zestion/zestion.h"
 
