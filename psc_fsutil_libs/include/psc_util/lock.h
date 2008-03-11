@@ -1,7 +1,7 @@
 /* $Id$ */
 
-#ifndef _PFL_LOCK_H_
-#define _PFL_LOCK_H_
+#ifndef __PFL_LOCK_H__
+#define __PFL_LOCK_H__
 
 #include "psc_util/log.h"
 
@@ -56,7 +56,6 @@ validlock(const psc_spinlock_t *sl)
 		(l)->sl_who = 0;					\
 		(l)->sl_lock = SL_UNLOCKED;				\
 	} while (0)
-
 
 #define LOCK_ENSURE(l)							\
 	do {								\
@@ -127,7 +126,7 @@ reqlock(psc_spinlock_t *sl)
 {
 	if (sl->sl_lock == SL_LOCKED) {
 		/*
-		 * this code is thread safe, because
+		 * This code is thread safe because
 		 * even if sl_who changes, it won't
 		 * be set to us and we will still wait
 		 * for the lock when we need to.
@@ -206,7 +205,7 @@ reqlock(psc_spinlock_t *l)
 {
 	if (*l == SL_LOCKED)
 	        return 1;
-	else if (*l != SL_ULOCKED)
+	else if (*l != SL_UNLOCKED)
 		psc_fatalx("lock %p has invalid value", l);
 	*l = SL_LOCKED;
 	return 0;
@@ -223,4 +222,4 @@ ureqlock(psc_spinlock_t *l, int waslocked)
 
 #endif /* HAVE_LIBPTHREAD */
 
-#endif /* _PFL_LOCK_H_ */
+#endif /* __PFL_LOCK_H__ */
