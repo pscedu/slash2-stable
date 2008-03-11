@@ -7,17 +7,18 @@
 
 #include "psc_util/alloc.h"
 #include "psc_util/assert.h"
-#include "psc_util/log.h"
+#include "psc_util/list.h"
 #include "psc_util/lock.h"
+#include "psc_util/log.h"
 #include "psc_ds/hash.h"
 
 struct psclist_head hashTablesList = PSCLIST_HEAD_INIT(hashTablesList);
 psc_spinlock_t hashTablesListLock = LOCK_INITIALIZER;
 
 /**
- * init_hash_table	-   initialize a hash table
- * @hash_table:	pointer to the hash table array
- * @size:       size of the hash table
+ * init_hash_table -   initialize a hash table
+ * @hash_table: pointer to the hash table array
+ * @size: size of the hash table
  */
 void
 init_hash_table(struct hash_table *t, int size, const char *fmt, ...)
@@ -50,10 +51,10 @@ init_hash_table(struct hash_table *t, int size, const char *fmt, ...)
 }
 
 /**
- * init_hash_entry	-   initialize a hash entry
+ * init_hash_entry - initialize a hash entry
  * @hash_entry: pointer to the hash_entry which will be initialized
  * @id: pointer to the array of hash_entry pointers
- * @private:    application data to be stored in the hash
+ * @private: application data to be stored in the hash
  */
 void
 init_hash_entry(struct hash_entry *hentry, u64 *id, void *private)
@@ -63,10 +64,10 @@ init_hash_entry(struct hash_entry *hentry, u64 *id, void *private)
 }
 
 /**
- * get_hash_entry	-   locate an address in the hash table
- * @t:		hash table pointer
- * @id:		identifier used to get hash bucket
- * @comp:	value to compare to differentiate entries with same ID.
+ * get_hash_entry -   locate an address in the hash table
+ * @t: hash table pointer
+ * @id: identifier used to get hash bucket
+ * @comp: value to compare to differentiate entries with same ID.
  * @cbf: callback routine when the entry is found, to prevent race conditions.
  */
 struct hash_entry *
@@ -106,9 +107,9 @@ get_hash_entry(const struct hash_table *h, u64 id, const void *comp,
 }
 
 /**
- * del_hash_entry	-   remove an entry in the hash table
- * @t:		pointer to hash table
- * @id:		identifier used to get hash bucket
+ * del_hash_entry -   remove an entry in the hash table
+ * @t: pointer to hash table
+ * @id: identifier used to get hash bucket
  *
  * Returns 0 on success, -1 if entry was not found.
  */
@@ -145,9 +146,9 @@ del_hash_entry(struct hash_table *h, u64 id)
 }
 
 /**
- * add_hash_entry	-   add an entry in the hash table
- * @t:				pointer to the hash table
- * @entry:		pointer to entry to be added
+ * add_hash_entry -   add an entry in the hash table
+ * @t: pointer to the hash table
+ * @entry: pointer to entry to be added
  */
 void
 add_hash_entry(struct hash_table *t, struct hash_entry *e)
@@ -163,10 +164,10 @@ add_hash_entry(struct hash_table *t, struct hash_entry *e)
 }
 
 /**
- * init_hash_entry_str	-   initialize a string hash entry
- * @hentry: 	pointer to the hash_entry which will be initialized
- * @id: 			pointer to the array of hash_entry pointers
- * @private:  application data to be stored in the hash
+ * init_hash_entry_str -   initialize a string hash entry
+ * @hentry: pointer to the hash_entry which will be initialized
+ * @id: pointer to the array of hash_entry pointers
+ * @private: application data to be stored in the hash
  */
 void
 init_hash_entry_str(struct hash_entry_str *hentry, const char *id,
@@ -177,9 +178,9 @@ init_hash_entry_str(struct hash_entry_str *hentry, const char *id,
 }
 
 /**
- * get_hash_entry_str	-   locate an address in the hash table
- * @h:		pointer to the hash table
- * @id:		identifier used to get hash bucket
+ * get_hash_entry_str -   locate an address in the hash table
+ * @h: pointer to the hash table
+ * @id: identifier used to get hash bucket
  */
 struct hash_entry_str *
 get_hash_entry_str(struct hash_table *h, const char *id)
@@ -207,9 +208,9 @@ get_hash_entry_str(struct hash_table *h, const char *id)
 }
 
 /**
- * del_hash_entry_str	-   remove an entry in the hash table
- * @t:		pointer to the hash table
- * @size:	the match string
+ * del_hash_entry_str -   remove an entry in the hash table
+ * @t: pointer to the hash table
+ * @size: the match string
  */
 int
 del_hash_entry_str(struct hash_table *h, const char *id)
@@ -234,9 +235,9 @@ del_hash_entry_str(struct hash_table *h, const char *id)
 }
 
 /**
- * add_hash_entry_str	-  add an entry in the hash table
- * @t:				pointer to the hash table
- * @entry:		pointer to entry to be added
+ * add_hash_entry_str -  add an entry in the hash table
+ * @t: pointer to the hash table
+ * @entry: pointer to entry to be added
  */
 void
 add_hash_entry_str(struct hash_table *t, struct hash_entry_str *e)
