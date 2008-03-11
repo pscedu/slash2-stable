@@ -3,7 +3,7 @@
 #include <unistd.h>
 
 #include "psc_util/subsys.h"
-#include "zestList.h"
+#include "psc_ds/list.h"
 #include "psc_util/lock.h"
 #include "zestThreadTable.h"
 #include "zestion/zestion.h"
