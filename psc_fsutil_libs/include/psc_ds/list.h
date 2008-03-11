@@ -1,36 +1,32 @@
 /* $Id$ */
 
-/* XXX add GPL copyright */
-
-#ifndef _PFL_LIST_H_
-#define _PFL_LIST_H_
-
-#ifndef HAVE_PSC_LIST_CORE
-#define HAVE_PSC_LIST_CORE
-
-#include <stdio.h>
-
-#include "psc_util/assert.h"
-
-/* -*- Mode: C; tab-width: 8 -*- */
-
-/* I stole this out of the kernel :P -pauln */
-
 /*
- * Simple doubly linked psclist implementation.
+ * Simple doubly linked list implementation based off <linux/list.h>.
  *
  * Some of the internal functions ("__xxx") are useful when
  * manipulating whole psclists rather than single entries, as
  * sometimes we already know the next/prev entries and we can
  * generate better code by using them directly rather than
  * using the generic single-entry routines.
+ *
+ * I stole this out of the kernel :P -pauln
+ *
+ * XXX add GPL copyright
  */
 
+#ifndef __PFL_LIST_H__
+#define __PFL_LIST_H__
+
+#include <stdio.h>
+
+#include "psc_util/assert.h"
+
 struct psclist_head {
-	struct psclist_head *znext, *zprev;
+	struct psclist_head *znext;
+	struct psclist_head *zprev;
 };
 
-#define PSCLIST_HEAD_INIT(name)	{ &(name), &(name) }
+#define PSCLIST_HEAD_INIT(name)		{ &(name), &(name) }
 #define PSCLIST_ENTRY_INIT(name)	{ NULL, NULL }
 
 #define PSCLIST_HEAD(name) \
@@ -90,8 +86,8 @@ psclist_add(struct psclist_head *new, struct psclist_head *head)
 static __inline__ void
 psclist_xadd(struct psclist_head *new, struct psclist_head *head)
 {
-        psc_assert(new->zprev == NULL && new->znext == NULL);
-        __psclist_add(new, head, head->znext);
+	psc_assert(new->zprev == NULL && new->znext == NULL);
+	__psclist_add(new, head, head->znext);
 }
 
 /**
@@ -120,7 +116,7 @@ psclist_add_tail(struct psclist_head *new, struct psclist_head *head)
 static __inline__ void
 psclist_xadd_tail(struct psclist_head *new, struct psclist_head *head)
 {
-        psc_assert(new->zprev == NULL && new->znext == NULL);
+	psc_assert(new->zprev == NULL && new->znext == NULL);
 	__psclist_add(new, head->zprev, head);
 }
 
@@ -141,7 +137,8 @@ __psclist_del(struct psclist_head *prev, struct psclist_head *next)
 /**
  * psclist_del - deletes entry from psclist.
  * @entry: the element to delete from the psclist.
- * Note: psclist_empty on entry does not return true after this, the entry is in an undefined state.
+ * Note: psclist_empty on entry does not return true after this,
+ * the entry is in an undefined state.
  */
 static __inline__ void
 psclist_del(struct psclist_head *entry)
@@ -162,8 +159,8 @@ psclist_del_init(struct psclist_head *entry)
 }
 
 /**
- * psclist_empty - tests whether a psclist is empty
- * @head: the psclist to test.
+ * psclist_empty - tests whether a psclist is empty.
+ * @head: the psclist head to test.
  */
 static __inline__ int
 psclist_empty(const struct psclist_head *head)
@@ -215,9 +212,9 @@ psclist_splice(struct psclist_head *list, struct psclist_head *head)
 
 /**
  * psclist_entry - get the struct for this entry
- * @ptr:	the &struct psclist_head pointer.
- * @type:	the type of the struct this is embedded in.
- * @member:	the name of the struct psclist_head within the struct.
+ * @ptr: the &struct psclist_head pointer.
+ * @type: the type of the struct this is embedded in.
+ * @member: the name of the struct psclist_head within the struct.
  */
 #define psclist_entry(ptr, type, member) \
 	((type *)((char *)(ptr)-(unsigned long)(&((type *)0)->member)))
@@ -231,29 +228,27 @@ psclist_splice(struct psclist_head *list, struct psclist_head *head)
 	psclist_entry(psclist_next(&e->memb), typeof(*e), memb)
 
 /**
- * psclist_for_each	-	iterate over a psclist
- * @pos:	the &struct psclist_head to use as a loop counter.
- * @head:	the head for your psclist.
+ * psclist_for_each - iterate over a psclist
+ * @pos: the &struct psclist_head to use as a loop counter.
+ * @head: the head for your psclist.
  */
-#define psclist_for_each(pos, head) \
-	for ((pos) = (head)->znext; (pos) != (head); \
+#define psclist_for_each(pos, head)			\
+	for ((pos) = (head)->znext; (pos) != (head);	\
 		(pos) = (pos)->znext)
 
 /**
- * psclist_for_each_safe	-	iterate over a psclist safe against removal of psclist entry
- * @pos:	the &struct psclist_head to use as a loop counter.
- * @n:		another &struct psclist_head to use as temporary storage
- * @head:	the head for your psclist.
+ * psclist_for_each_safe - iterate over a psclist safe against removal of psclist entry
+ * @pos: the &struct psclist_head to use as a loop counter.
+ * @n: another &struct psclist_head to use as temporary storage
+ * @head: the head for your psclist.
  */
-#define psclist_for_each_safe(pos, n, head) \
-	for (pos = (head)->znext, n = pos->znext; pos != (head); \
+#define psclist_for_each_safe(pos, n, head)				\
+	for (pos = (head)->znext, n = pos->znext; pos != (head);	\
 		pos = n, n = pos->znext)
 
-#endif /* HAVE_PSC_LIST_CORE */
-
 /**
- * psclist_first -	grab first entry from a psclist
- * @head:	the head for your psclist.
+ * psclist_first - grab first entry from a psclist
+ * @head: the head for your psclist.
  */
 #define psclist_first(head) (head)->znext
 
@@ -278,14 +273,14 @@ psclist_splice(struct psclist_head *list, struct psclist_head *head)
 	psclist_entry((hd)->zprev, type, memb)
 
 /**
- * psclist_next -	grab the entry following the specified entry.
- * @e:	entry
+ * psclist_next - grab the entry following the specified entry.
+ * @e: entry
  */
 #define psclist_next(e) (e)->znext
 
 /**
- * psclist_prev -	grab the entry before the specified entry.
- * @e:	entry
+ * psclist_prev - grab the entry before the specified entry.
+ * @e: entry
  */
 #define psclist_prev(e) (e)->zprev
 
@@ -299,38 +294,39 @@ psclist_splice(struct psclist_head *list, struct psclist_head *head)
 /**
  * psclist_for_each_entry_safe - iterate over list of given type safe
  *	against removal of list entry
- * @pos:        the type * to use as a loop counter.
- * @n:          another type * to use as temporary storage
- * @head:       the head for your list.
- * @member:     the name of the list_struct within the struct.
+ * @pos: the type * to use as a loop counter.
+ * @n: another type * to use as temporary storage
+ * @head: the head for your list.
+ * @member: the name of the list_struct within the struct.
  */
-#define psclist_for_each_entry_safe(pos, n, head, member)		     \
-	for ((pos) = psclist_entry((head)->znext, typeof(*(pos)), member),   \
-	    (n) = psclist_entry((pos)->member.znext, typeof(*(pos)), member);\
-	    &(pos)->member != (head);					     \
+#define psclist_for_each_entry_safe(pos, n, head, member)			\
+	for ((pos) = psclist_entry((head)->znext, typeof(*(pos)), member),	\
+	    (n) = psclist_entry((pos)->member.znext, typeof(*(pos)), member);	\
+	    &(pos)->member != (head);						\
 	    (pos) = (n), (n) = psclist_entry((n)->member.znext, typeof(*(n)), member))
 
 /**
  * psclist_for_each_entry - iterate over list of given type
- * @pos:	the type * to use as a loop counter.
- * @hd:		the head for your list.
- * @member:	list entry member of structure.
+ * @pos: the type * to use as a loop counter.
+ * @hd: the head for your list.
+ * @member: list entry member of structure.
  */
-#define psclist_for_each_entry(pos, hd, member)				    \
-	for ((pos) = psclist_entry((hd)->znext, typeof(*(pos)), member);    \
-	    &(pos)->member != (hd);					    \
+#define psclist_for_each_entry(pos, hd, member)					\
+	for ((pos) = psclist_entry((hd)->znext, typeof(*(pos)), member);	\
+	    &(pos)->member != (hd);						\
 	    (pos) = psclist_entry((pos)->member.znext, typeof(*(pos)), member))
 
 /**
  * psclist_for_each_entry2 - iterate over list of given type
- * @pos:	the type * to use as a loop counter.
- * @head:	the head for your list.
- * @offset:	offset into type * of list entry.
+ * @pos: the type * to use as a loop counter.
+ * @head: the head for your list.
+ * @offset: offset into type * of list entry.
  */
-#define psclist_for_each_entry2(pos, head, offset)		            \
-	for ((pos) = (void *)(((char *)(head)->znext) - (offset));          \
-	    ((char *)pos) + (offset) != (void *)(head);			    \
-	    (pos) = (void *)(((char *)(((struct psclist_head *)(((char *)pos) + (offset)))->znext)) - (offset)))
+#define psclist_for_each_entry2(pos, head, offset)				\
+	for ((pos) = (void *)(((char *)(head)->znext) - (offset));		\
+	    ((char *)pos) + (offset) != (void *)(head);				\
+	    (pos) = (void *)(((char *)(((struct psclist_head *)(((char *)pos) +	\
+	      (offset)))->znext)) - (offset)))
 
 #undef list_head
 #undef LIST_HEAD_INIT
