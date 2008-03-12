@@ -164,7 +164,7 @@ ureqlock(psc_spinlock_t *sl, int waslocked)
 typedef int psc_spinlock_t;
 
 /* XXX provide some way to detect reinitializing already-initialized locks. */
-#define LOCK_INIT(l)		*(l) = SL_UNLOCKED
+#define LOCK_INIT(l)		(*(l) = SL_UNLOCKED)
 #define LOCK_INITIALIZER	SL_UNLOCKED
 
 #define _LOCK_VALID(l)		(*(l) == SL_LOCKED || *(l) == SL_UNLOCKED)
