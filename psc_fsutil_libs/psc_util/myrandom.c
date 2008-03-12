@@ -6,81 +6,105 @@
 #include <stdio.h>
 #include <unistd.h>
 
+#include "psc_types.h"
 #include "psc_util/lock.h"
 #include "psc_util/log.h"
-#include "psc_types.h"
-#include "psc_util/myrandom.h"
+#include "psc_util/random.h"
 
 #define _PATH_URANDOM "/dev/urandom"
 #define SMALL_BUF 128
 
-psc_spinlock_t	 mrlock = LOCK_INITIALIZER;
-unsigned char	 mrbuf[SMALL_BUF];
-ssize_t		 mrsiz;
-unsigned char	*mrp;
+psc_spinlock_t	 psc_random_lock = LOCK_INITIALIZER;
+unsigned char	 psc_random_buf[SMALL_BUF];
+ssize_t		 psc_random_siz;
+unsigned char	*psc_random_pos;
 
 /**
- * myrandom_getbyte: get a byte from our random data buffer and refill
+ * psc_random_getbyte: get a byte from our random data buffer and refill
  *	our buffer if needed.
- * Notes: not reentrant!
+ * Notes: not thread-safe!
  */
 __static u64
-myrandom_getbyte(void)
+psc_random_getbyte(void)
 {
 	int fd;
 
-	if (mrp && mrp >= mrbuf + mrsiz)
-		mrp = NULL;
+	if (psc_random_pos &&
+	    psc_random_pos >= psc_random_buf + psc_random_siz)
+		psc_random_pos = NULL;
 
-	if (mrp == NULL) {
+	if (psc_random_pos == NULL) {
 		fd = open(_PATH_URANDOM, O_RDONLY, 0);
 		if (fd == -1)
 			psc_fatal("open %s", _PATH_URANDOM);
-		mrsiz = read(fd, mrbuf, sizeof(mrbuf));
-		if (mrsiz == -1)
+		psc_random_siz = read(fd, mrbuf, sizeof(mrbuf));
+		if (psc_random_siz == -1)
 			psc_fatal("read %s", _PATH_URANDOM);
-		if (mrsiz == 0)
+		if (psc_random_siz == 0)
 			psc_fatalx("EOF on %s", _PATH_URANDOM);
-		mrp = mrbuf;
+		psc_random_pos = psc_random_buf;
 		close(fd);
 	}
-	return (*mrp++);
+	return (*psc_random_pos++);
 }
 
 /**
- * myrandom32: get a random 32-bit number from /dev/urandom.
+ * psc_random32: get a random 32-bit number from /dev/urandom.
  */
 u32
-myrandom32(void)
+psc_random32(void)
 {
 	u32 r;
 
-	spinlock(&mrlock);
-	r = myrandom_getbyte();
-	r |= myrandom_getbyte() << 8;
-	r |= myrandom_getbyte() << 16;
-	r |= myrandom_getbyte() << 24;
+	spinlock(&psc_random_lock);
+	r = psc_random_getbyte();
+	r |= psc_random_getbyte() << 8;
+	r |= psc_random_getbyte() << 16;
+	r |= psc_random_getbyte() << 24;
+	freelock(&psc_random_lock);
+	return (r);
+}
+
+/**
+ * psc_random64: get a random 64-bit number from /dev/urandom.
+ */
+u64
+psc_random64(void)
+{
+	u64 r;
+
+	spinlock(&psc_random_lock);
+	r = psc_random_getbyte();
+	r |= psc_random_getbyte() << 8;
+	r |= psc_random_getbyte() << (8*2);
+	r |= psc_random_getbyte() << (8*3);
+	r |= psc_random_getbyte() << (8*4);
+	r |= psc_random_getbyte() << (8*5);
+	r |= psc_random_getbyte() << (8*6);
+	r |= psc_random_getbyte() << (8*7);
 	freelock(&mrlock);
 	return (r);
 }
 
 /**
- * myrandom64: get a random 64-bit number from /dev/urandom.
+ * psc_random32u: get a uniformly distributed random 32-bit number
+ *	from /dev/urandom.
+ * @max: bound.
  */
-u64
-myrandom64(void)
+u32
+psc_random32u(u32 max)
 {
-	u64 r;
+	u32 r, min;
 
-	spinlock(&mrlock);
-	r = myrandom_getbyte();
-	r |= myrandom_getbyte() << 8;
-	r |= myrandom_getbyte() << (8*2);
-	r |= myrandom_getbyte() << (8*3);
-	r |= myrandom_getbyte() << (8*4);
-	r |= myrandom_getbyte() << (8*5);
-	r |= myrandom_getbyte() << (8*6);
-	r |= myrandom_getbyte() << (8*7);
-	freelock(&mrlock);
-	return (r);
+	if (max < 2)
+		return (0);
+
+	min = 0x100000000UL % max;
+
+	for (;;) {
+		r = psc_random32();
+		if (r >= min)
+			break;
+	}
+	return (r % max);
 }
