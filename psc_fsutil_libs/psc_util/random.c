@@ -37,8 +37,8 @@ psc_random_getbyte(void)
 		fd = open(_PATH_URANDOM, O_RDONLY, 0);
 		if (fd == -1)
 			psc_fatal("open %s", _PATH_URANDOM);
-		psc_random_siz = read(fd, mrbuf, sizeof(mrbuf));
-		if (psc_random_siz == -1)
+		if ((psc_random_siz = read(fd, psc_random_buf,
+		    sizeof(psc_random_buf))) == -1)
 			psc_fatal("read %s", _PATH_URANDOM);
 		if (psc_random_siz == 0)
 			psc_fatalx("EOF on %s", _PATH_URANDOM);
@@ -82,7 +82,7 @@ psc_random64(void)
 	r |= psc_random_getbyte() << (8*5);
 	r |= psc_random_getbyte() << (8*6);
 	r |= psc_random_getbyte() << (8*7);
-	freelock(&mrlock);
+	freelock(&psc_random_lock);
 	return (r);
 }
 
