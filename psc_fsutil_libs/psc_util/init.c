@@ -19,11 +19,6 @@ long pscPageSize;
 void
 pfl_init(int thrtabsz)
 {
-	char *p;
-
-	if ((p = getenv("PSC_LOG_FORMAT")) != NULL)
-		psc_setlogformat(p);
-
 	dynarray_init(&psc_subsystems);
 
 	psc_subsys_register(PSS_LOG, "log");
