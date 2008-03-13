@@ -192,7 +192,7 @@ spinlock(psc_spinlock_t *l)
 static __inline int
 trylock(psc_spinlock_t *l)
 {
-	if (*l == SL_LOCKED);
+	if (*l == SL_LOCKED)
 		psc_fatalx("lock %p already locked", l);
 	else if (*l != SL_UNLOCKED)
 		psc_fatalx("lock %p has invalid value", l);
