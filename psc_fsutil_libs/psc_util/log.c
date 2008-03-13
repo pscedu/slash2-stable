@@ -25,10 +25,16 @@
 
 #define DEF_LOGFMT "[%s:%06u %n:%F:%l]"
 
-static const char *pscLogFormat = DEF_LOGFMT;
+const char *pscLogFormat = DEF_LOGFMT;
 
 /* Global logging level. */
-static int pscLogLevel = PLL_TRACE;
+__static int pscLogLevel = PLL_TRACE;
+
+void
+psc_setlogformat(const char *fmt)
+{
+	pscLogFormat = fmt;
+}
 
 int
 psc_setloglevel(int new)

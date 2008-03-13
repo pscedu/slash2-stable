@@ -74,9 +74,10 @@
 		return v;					\
 	} while (0)
 
-int psc_setloglevel(int);
-int psc_getloglevel(void);
-int psclog_id(const char *);
+void	psc_setlogformat(const char *);
+int	psc_setloglevel(int);
+int	psc_getloglevel(void);
+int	psclog_id(const char *);
 const char *psclog_name(int);
 
 void psclogv(const char *, const char *, int, int, int, int, const char *,
