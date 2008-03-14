@@ -3,6 +3,7 @@
 include ${LLROOTDIR}/mk/local.mk
 
 INCLUDES+=	-I.
+INCLUDES+=	-I${KERNEL_BASE}/include
 CFLAGS+=	-Wall -W -g ${INCLUDES} ${DEFINES}
 
 # Default to build a binary, but may be overridden after
