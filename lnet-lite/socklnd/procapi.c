@@ -57,6 +57,15 @@
 # error "This LND requires a multi-threaded runtime"
 #endif
 
+void
+add_ni(lnet_ni_t *ni)
+{
+	LNET_LOCK();
+	/* let cfs manage their own lists */
+	list_add_tail(&ni->ni_list, &the_lnet.ln_nis);
+	LNET_UNLOCK();
+}
+
 #include "psc_util/alloc.h"
 #include "psc_util/iostats.h"
 
@@ -210,12 +219,8 @@ procbridge_startup (lnet_ni_t *ni)
              *   exhaust and does a blocking send; that's the real
              *   limit on send concurrency. 
              */
-            if (i) { 
-                    LNET_LOCK();
-                    /* let cfs manage their own lists */
-                    list_add_tail(&ni->ni_list, &the_lnet.ln_nis);
-                    LNET_UNLOCK();
-            }
+            if (i)
+	    	add_ni(ni);
             ni->ni_maxtxcredits = 1000;
             ni->ni_peertxcredits = 1000;
             ni->ni_txcredits = ni->ni_mintxcredits = ni->ni_maxtxcredits;
