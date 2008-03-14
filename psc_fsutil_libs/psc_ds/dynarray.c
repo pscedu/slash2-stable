@@ -54,6 +54,14 @@ dynarray_get(const struct dynarray *da)
 	return (da->da_items);
 }
 
+void *
+dynarray_getpos(const struct dynarray *da, const int pos)
+{	
+	if (pos >= da->da_pos)
+		abort();
+	return (da->da_items[pos]);
+}
+
 void
 dynarray_free(struct dynarray *da)
 {
