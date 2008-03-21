@@ -91,6 +91,42 @@ lc_del(struct psclist_head *e, list_cache_t *l)
 	psc_waitq_wakeup(&l->lc_waitq_full);
 }
 
+
+/**
+ * lc_get - grab the item from the head of a listcache.
+ * @l: the list cache to access
+ * @abstime: timer which tells how long to wait
+ */
+static inline struct psclist_head *
+lc_timed_get(list_cache_t *l, struct timespec *abstime)
+{
+	struct psclist_head *e=NULL;
+	int locked, rc;
+
+	locked = reqlock(&l->lc_lock);
+	if (0)
+ start:
+		reqlock(&l->lc_lock);
+
+	if (psclist_empty(&l->lc_list)) {	       
+		psc_notify("Timed wait on listcache %p : '%s'",
+			   l, l->lc_name);
+		rc = psc_waitq_timedwait(&l->lc_waitq_empty, &l->lc_lock, 
+					 abstime);
+		if (rc == ETIMEDOUT)
+			goto end;
+		else
+			goto start;
+	}
+	e = psclist_first(&l->lc_list);
+	lc_del(e, l);
+
+ end:
+	ureqlock(&l->lc_lock, locked);
+
+	return e;
+}
+
 /**
  * lc_get - grab the item from the head of a listcache.
  * @l: the list cache to access
@@ -131,8 +167,9 @@ lc_get(list_cache_t *l, int block)
 	return e;
 }
 
-#define lc_getnb(l)		(void *)(((char *)lc_get((l), 0)) - l->lc_offset)
-#define lc_getwait(l)		(void *)(((char *)lc_get((l), 1)) - l->lc_offset)
+#define lc_getnb(l)	 (void *)(((char *)lc_get((l), 0)) - l->lc_offset)
+#define lc_getwait(l)	 (void *)(((char *)lc_get((l), 1)) - l->lc_offset)
+#define lc_gettimed(l,t) (void *)(((char *)lc_timedget((l), (t))) - l->lc_offset)
 
 /**
  * lc_put - Bounded list put
@@ -327,7 +364,7 @@ lc_lookup(const char *name)
  */
 #define lc_empty(lc) psclist_empty(&(lc)->lc_list)
 
-#define _lc_grow(l, n, type, init_fn, __ret)				\
+#define _lc_grow(l, n, type, liste, init_fn, __ret)			\
 	do {								\
 		int     i;						\
 		type   *ptr;						\
@@ -336,7 +373,7 @@ lc_lookup(const char *name)
 									\
 		__ret = 0;						\
 		if (z >= lc->lc_max) {					\
-			psc_warnx("Cache %s has overgrown", lc->lc_name);	\
+			psc_warnx("Cache %s has overgrown", lc->lc_name); \
 			break;						\
 		}							\
 		if (z == lc->lc_max)					\
@@ -356,11 +393,12 @@ lc_lookup(const char *name)
 				break;					\
 			}						\
 			init_fn(ptr);					\
+			lc_put(&lc, &ptr->liste);			\
 			atomic_inc(&lc->lc_total);			\
 		}							\
 	} while(0)
 
-#define lc_grow(lc, n, type, init_fn)					\
+#define lc_grow(lc, n, type, liste, init_fn)				\
 ({									\
 	int __ret;							\
 									\
