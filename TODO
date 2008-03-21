@@ -13,3 +13,9 @@ pfl
 - remove psclist_add
 - psclist_for_each* should be changed to NULL out the iterative variable
   at loop end
+- no ifdefs
+- disallow lock reinitializatoin (e.g. allow LOCK_INIT once)
+- remove psclist_del_init
+
+lnet-lite
+- remove ZEST_LNET
