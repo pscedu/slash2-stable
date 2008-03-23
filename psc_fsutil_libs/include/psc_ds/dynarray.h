@@ -18,6 +18,7 @@ struct dynarray {
 void	 dynarray_init(struct dynarray *);
 int	 dynarray_add(struct dynarray *, const void *);
 void	*dynarray_get(const struct dynarray *);
+void	*dynarray_getpos(const struct dynarray *, int);
 void	 dynarray_free(struct dynarray *);
 void	 dynarray_reset(struct dynarray *);
 int	 dynarray_len(const struct dynarray *);

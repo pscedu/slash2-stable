@@ -12,6 +12,7 @@
 #include <string.h>
 
 #include "psc_ds/dynarray.h"
+#include "psc_util/log.h"
 
 void
 dynarray_init(struct dynarray *da)
@@ -55,10 +56,10 @@ dynarray_get(const struct dynarray *da)
 }
 
 void *
-dynarray_getpos(const struct dynarray *da, const int pos)
-{	
+dynarray_getpos(const struct dynarray *da, int pos)
+{
 	if (pos >= da->da_pos)
-		abort();
+		psc_fatalx("out of bounds array access");
 	return (da->da_items[pos]);
 }
 
