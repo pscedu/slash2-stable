@@ -52,7 +52,7 @@
 
 #include "sendrecv.h"
 
-#define AF_SDP 27
+#include <sdp_inet.h>
 int tcpnal_usesdp = 0;
 
 /* tunables (via environment) */
@@ -100,8 +100,6 @@ tcpnal_set_global_params (void)
 		(tcpnal_connector_port = tcpnal_acceptor_port, 1) &&
                 tcpnal_env_param("TCPLND_CPORT",
                                 &tcpnal_connector_port) &&
-                tcpnal_env_param("TCPNAL_BUFFER_SIZE",
-                                 &tcpnal_buffer_size) &&
                 tcpnal_env_param("TCPLND_BUFFER_SIZE",
                                  &tcpnal_buffer_size) &&
                 tcpnal_env_param("TCPNAL_NAGLE",
@@ -112,9 +110,7 @@ tcpnal_set_global_params (void)
                                  &tcpnal_server);
                 tcpnal_env_param("TCPLND_MAXSENDKB",
                                  &tcpnal_maxsendkb);
-                tcpnal_env_param("TCPNAL_MAXSENDKB",
-                                 &tcpnal_maxsendkb);
-                tcpnal_env_param("TCPNAL_PORTINC",
+                tcpnal_env_param("TCPLND_PORTINC",
                                  &tcpnal_portinc);
 }
 
