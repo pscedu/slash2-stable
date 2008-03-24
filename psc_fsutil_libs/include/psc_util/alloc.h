@@ -28,6 +28,12 @@ PSCALLOC_(size_t size, int can_fail)
 	return ptr;
 }
 
+static inline void
+PSCFREE(void *p) 
+{
+	return (free(p));
+}
+
 void *palloc(size_t);
 
 extern long pscPageSize;
