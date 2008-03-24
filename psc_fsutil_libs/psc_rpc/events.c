@@ -315,7 +315,14 @@ void server_bulk_callback (lnet_event_t *ev)
 }
 
 /**
- * pscrpc_master_callback - client and server master callback.  In server context, pscrpc_master_callback is called within lnet via the callback handler in LNetEQPoll.  The client is single threaded so there is only one blocking routing for all lnet activities (pscrpc_check_events).  In client context, pscrpc_check_events is responsible for calling pscrpc_master_callback.
+ * pscrpc_master_callback - client and server master callback.
+ * In server context, pscrpc_master_callback is called within lnet via
+ * the callback handler in LNetEQPoll.  The client is single threaded
+ * so there is only one blocking routing for all lnet activities
+ * (pscrpc_check_events).
+ *
+ * In client context, pscrpc_check_events is responsible for calling
+ * pscrpc_master_callback().
  * @ev: the event passed up from lnet
  */
 static void pscrpc_master_callback(lnet_event_t *ev)
@@ -346,7 +353,7 @@ pscrpc_register_wait_callback (int (*fn)(void *arg), void *arg)
 {
         struct pscrpc_wait_callback *llwc = NULL;
 
-        llwc = ZALLOC(sizeof(*llwc));
+        llwc = PSCALLOC(sizeof(*llwc));
 
         llwc->llwc_fn = fn;
         llwc->llwc_arg = arg;
@@ -402,7 +409,8 @@ pscrpc_check_events (int timeout)
 }
 
 /**
- * pscrpc_wait_event - called from the macro zcli_wait_event() (pscRpc.h), calls pscrpc_check_events().  See zcli_wait_event for more detail.
+ * pscrpc_wait_event - called from the macro psc_cli_wait_event() (pscRpc.h), calls pscrpc_check_events().
+ * See psc_cli_wait_event for more detail.
  * @timeout: number of seconds to block (0 is forever i think)
  * NOTES: Client context only
  */

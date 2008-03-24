@@ -72,12 +72,12 @@ int psc_pack_request (struct pscrpc_request *req,
         }
         req->rq_reqlen = reqlen;
 
-	//zinfo("request %p request->rq_reqmsg %p",
+	//pscinfo("request %p request->rq_reqmsg %p",
 	//      req, req->rq_reqmsg);
 
 	psc_init_msg (req->rq_reqmsg, count, lens, bufs);
 
-	//	zinfo("request %p request->rq_reqmsg %p",
+	//	pscinfo("request %p request->rq_reqmsg %p",
 	//      req, req->rq_reqmsg);
 
         RETURN (0);
