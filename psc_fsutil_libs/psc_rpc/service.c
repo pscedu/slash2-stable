@@ -613,7 +613,6 @@ pscrpc_main(void *arg)
 	struct psc_thread         *thread = arg;
 	struct pscrpc_service     *svc    = thread->pscthr_private;
 	struct pscrpc_reply_state *rs;
-	int   *run;
 
 	int rc = 0;
 	ENTRY;
@@ -640,10 +639,8 @@ pscrpc_main(void *arg)
 
 	CDEBUG(D_NET, "service thread %zu started\n", thread->pscthr_id);
 
-	run = &thread->pscthr_run;
-
 	/* XXX maintain a list of all managed devices: insert here */
-	while (*run  ||
+	while (thread->pscthr_run  ||
 	       svc->srv_n_difficult_replies != 0) {
 
 		/* Don't exit while there are replies to be handled */
@@ -653,17 +650,17 @@ pscrpc_main(void *arg)
 		//lc_watchdog_disable(watchdog);
 		//l_wait_event_exclusive (svc->srv_waitq,
 		/*
-		psc_dbg("*run %d, svc->srv_n_difficult_replies %d, "
+		psc_dbg("run %d, svc->srv_n_difficult_replies %d, "
 		       "psclist_empty(&svc->srv_idle_rqbds) %d,  svc->srv_rqbd_timeout %d "
 		       "psclist_empty (&svc->srv_reply_queue) %d, psclist_empty(&svc->srv_request_queue) %d "
 		       "svc->srv_n_active_reqs %d svc->srv_nthreads %d"
 		       "COND 1=%d, COND 2=%d, COND 3=%d",
 
-		       *run, svc->srv_n_difficult_replies,
+		       thread->pscthr_run, svc->srv_n_difficult_replies,
 		       psclist_empty(&svc->srv_idle_rqbds), svc->srv_rqbd_timeout,
 		       psclist_empty (&svc->srv_reply_queue), psclist_empty(&svc->srv_request_queue),
 		       svc->srv_n_active_reqs, svc->srv_nthreads,
-		       (*run != 0 && svc->srv_n_difficult_replies == 0),
+		       (thread->pscthr_run != 0 && svc->srv_n_difficult_replies == 0),
 		       (!psclist_empty(&svc->srv_idle_rqbds) && svc->srv_rqbd_timeout == 0),
 		       (!psclist_empty (&svc->srv_request_queue) &&
 			(svc->srv_n_difficult_replies == 0 ||
@@ -671,7 +668,7 @@ pscrpc_main(void *arg)
 		       );
 		*/
 		psc_svr_wait_event(&svc->srv_waitq,
-				   (!*run &&
+				   (!thread->pscthr_run &&
 				    svc->srv_n_difficult_replies == 0) ||
 				   (!psclist_empty(&svc->srv_idle_rqbds) &&
 				    svc->srv_rqbd_timeout == 0) ||
