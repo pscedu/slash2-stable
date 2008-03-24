@@ -696,12 +696,6 @@ pscrpc_bulk_active (struct pscrpc_bulk_desc *desc)
 extern int
 target_send_reply_msg (struct pscrpc_request *req, int rc, int fail_id);
 
-extern void
-zrpcthr_spawn(int type);
-/*
- *  service.c done
- */
-
 /*
  *  service.c
  */

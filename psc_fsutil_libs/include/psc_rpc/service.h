@@ -30,6 +30,8 @@ struct pscrpc_svc_handle {
 
 typedef struct pscrpc_svc_handle pscrpc_svc_handle_t;
 
-void pscrpc_thread_spawn(pscrpc_svc_handle_t *);
+#define pscrpc_thread_spawn(svh, type, memb) \
+	__pscrpc_thread_spawn((svh), sizeof(type), offsetof(type, memb))
+void __pscrpc_thread_spawn(pscrpc_svc_handle_t *, size_t, ptrdiff_t);
 
 #endif /* _PSCRPC_SERVICE_H_ */

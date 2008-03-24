@@ -5,16 +5,17 @@
 #include <stdio.h>
 
 #include "psc_ds/list.h"
-#include "psc_util/alloc.h"
-#include "psc_util/atomic.h"
-#include "psc_util/waitq.h"
-#include "psc_util/lock.h"
-#include "psc_util/threadtable.h"
 #include "psc_rpc/export.h"
 #include "psc_rpc/rpc.h"
-#include "psc_rpc/service.h"
-#include "psc_util/log.h"
 #include "psc_rpc/rpclog.h"
+#include "psc_rpc/service.h"
+#include "psc_util/alloc.h"
+#include "psc_util/atomic.h"
+#include "psc_util/cdefs.h"
+#include "psc_util/lock.h"
+#include "psc_util/log.h"
+#include "psc_util/threadtable.h"
+#include "psc_util/waitq.h"
 
 static int test_req_buffer_pressure = 0;
 
@@ -35,7 +36,7 @@ pscrpc_alloc_request_buffer (int size)
 }
 
 static void
-pscrpc_free_request_buffer (char *ptr, int size)
+pscrpc_free_request_buffer (char *ptr, __unusedx int size)
 {
 	ZOBD_FREE(ptr, size);
 }
@@ -987,14 +988,18 @@ pscrpc_init_svc(int nbufs, int bufsize, int max_req_size, int max_reply_size,
 }
 
 /**
- * rpcthr_spawn - create a portal rpc service.
+ * pscrpc_spawn - create an RPC service.
  * @svh:  an initialized service handle structure which holds the
  *	service's relevant information.
+ * @siz: size of thread-local data storage.
+ * @offset: offset into thread-local storage of service data.
  */
 void
-pscrpc_thread_spawn(pscrpc_svc_handle_t *svh)
+__pscrpc_thread_spawn(pscrpc_svc_handle_t *svh, size_t siz,
+    ptrdiff_t offset)
 {
 	struct psc_thread *thr;
+	void *p;
 	int i;
 
 	svh->svh_service = pscrpc_init_svc(svh->svh_nbufs,
@@ -1012,10 +1017,11 @@ pscrpc_thread_spawn(pscrpc_svc_handle_t *svh)
 	/* Track the service handle */
 	psclist_xadd(&svh->svh_lentry, &pscrpc_svh_list);
 
-	svh->svh_threads = PSCALLOC((sizeof(struct psc_thread))
-				    * svh->svh_nthreads);
+	svh->svh_threads = PSCALLOC((sizeof(*thr)) * svh->svh_nthreads);
+	p = PSCALLOC(siz);
+	*(struct pscrpc_service **)((char *)p + offset) = svh->svh_service;
 
 	for (i=0, thr=svh->svh_threads; i < svh->svh_nthreads; i++, thr++)
 		pscthr_init(thr, svh->svh_type, pscrpc_main,
-		    svh->svh_service, "%s%d", svh->svh_svc_name, i);
+		    p, "%s%d", svh->svh_svc_name, i);
 }
