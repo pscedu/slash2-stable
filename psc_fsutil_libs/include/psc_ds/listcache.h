@@ -5,9 +5,11 @@
 
 #include <sys/types.h>
 
+#include <errno.h>
 #include <stdarg.h>
 #include <stddef.h>
 #include <string.h>
+#include <time.h>
 
 #include "psc_ds/list.h"
 #include "psc_util/lock.h"
@@ -91,11 +93,10 @@ lc_del(struct psclist_head *e, list_cache_t *l)
 	psc_waitq_wakeup(&l->lc_waitq_full);
 }
 
-
 /**
- * lc_get - grab the item from the head of a listcache.
- * @l: the list cache to access
- * @abstime: timer which tells how long to wait
+ * lc_timed_get - try to grab an item from the head of a listcache.
+ * @l: the list cache to access.
+ * @abstime: timer which tells how long to wait.
  */
 static inline struct psclist_head *
 lc_timed_get(list_cache_t *l, struct timespec *abstime)
@@ -108,10 +109,10 @@ lc_timed_get(list_cache_t *l, struct timespec *abstime)
  start:
 		reqlock(&l->lc_lock);
 
-	if (psclist_empty(&l->lc_list)) {	       
+	if (psclist_empty(&l->lc_list)) {
 		psc_notify("Timed wait on listcache %p : '%s'",
 			   l, l->lc_name);
-		rc = psc_waitq_timedwait(&l->lc_waitq_empty, &l->lc_lock, 
+		rc = psc_waitq_timedwait(&l->lc_waitq_empty, &l->lc_lock,
 					 abstime);
 		if (rc == ETIMEDOUT)
 			goto end;
@@ -167,9 +168,9 @@ lc_get(list_cache_t *l, int block)
 	return e;
 }
 
-#define lc_getnb(l)	 (void *)(((char *)lc_get((l), 0)) - l->lc_offset)
-#define lc_getwait(l)	 (void *)(((char *)lc_get((l), 1)) - l->lc_offset)
-#define lc_gettimed(l,t) (void *)(((char *)lc_timedget((l), (t))) - l->lc_offset)
+#define lc_getnb(l)		(void *)(((char *)lc_get((l), 0)) - l->lc_offset)
+#define lc_getwait(l)		(void *)(((char *)lc_get((l), 1)) - l->lc_offset)
+#define lc_gettimed(l, t)	(void *)(((char *)lc_timedget((l), (t))) - l->lc_offset)
 
 /**
  * lc_put - Bounded list put
@@ -364,47 +365,35 @@ lc_lookup(const char *name)
  */
 #define lc_empty(lc) psclist_empty(&(lc)->lc_list)
 
-#define _lc_grow(l, n, type, liste, init_fn, __ret)			\
-	do {								\
-		int     i;						\
-		type   *ptr;						\
-		list_cache_t *lc = l;					\
-		ssize_t z = lc_sz(lc);					\
-									\
-		__ret = 0;						\
-		if (z >= lc->lc_max) {					\
-			psc_warnx("Cache %s has overgrown", lc->lc_name); \
-			break;						\
-		}							\
-		if (z == lc->lc_max)					\
-			break;						\
-		if ((z + n) > lc->lc_max)				\
-			n = lc->lc_max - z;				\
-									\
-		for (i=0; i < n; i++, __ret++) {			\
-			if (atomic_read(&lc->lc_total) >= lc->lc_max) {	\
-				__ret = i;				\
-				break;					\
-			}						\
-			ptr = TRY_PSCALLOC(sizeof(type));		\
-			if (ptr == NULL) {				\
-				if (!i)					\
-					__ret = -ENOMEM;		\
-				break;					\
-			}						\
-			init_fn(ptr);					\
-			lc_put(&lc, &ptr->liste);			\
-			atomic_inc(&lc->lc_total);			\
-		}							\
-	} while(0)
+static int
+lc_grow(list_cache_t *lc, size_t n, void (*initf)(void *))
+{
+	ssize_t z = lc_sz(lc);
+	int i, rc;
+	void *p;
 
-#define lc_grow(lc, n, type, liste, init_fn)				\
-({									\
-	int __ret;							\
-									\
-	_lc_grow(lc, n, type, init_fn, __ret);				\
-	__ret;								\
-})
+	if (z > lc->lc_max) {
+		psc_warnx("Cache %s has overgrown", lc->lc_name);
+		return (0);
+	}
+	if (z == lc->lc_max)
+		return (0);
+	if (z + n > lc->lc_max)
+		n = lc->lc_max - z;
+
+	for (i = 0; i < n; i++) {
+		if (atomic_read(&lc->lc_total) >= lc->lc_max)
+			return (i);
+		p = TRY_PSCALLOC((lc)->lc_entsize);
+		if (p == NULL)
+			return (-ENOMEM);
+		initf(p);
+		INIT_PSCLIST_ENTRY(lc->lc_offset + (char *)p);
+		lc_put(lc, lc->lc_offset + (char *)p);
+		atomic_inc(&lc->lc_total);
+	}
+	return (i);
+}
 
 #define _lc_shrink(l, n, type, free_fn, __ret)				\
 	do {								\
