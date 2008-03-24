@@ -10,7 +10,7 @@
 struct dynarray {
 	int		  da_pos;
 	int		  da_nalloc;
-	const void	**da_items;
+	void		**da_items;
 };
 
 #define DYNARRAY_INIT { 0, 0, NULL }
