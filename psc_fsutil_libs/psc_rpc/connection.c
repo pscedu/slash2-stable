@@ -24,7 +24,7 @@ pscrpc_connection_addref(struct pscrpc_connection *c)
 }
 
 struct pscrpc_connection *
-pscrpc_lookup_conn_locked (lnet_process_id_t peer)
+pscrpc_lookup_conn_locked (lnet_process_id_t peer, lnet_nid_t self)
 {
         struct pscrpc_connection *c;
         struct psclist_head          *tmp;
@@ -33,7 +33,8 @@ pscrpc_lookup_conn_locked (lnet_process_id_t peer)
                 c = psclist_entry(tmp, struct pscrpc_connection, c_link);
 
                 if (peer.nid == c->c_peer.nid &&
-                    peer.pid == c->c_peer.pid)
+                    peer.pid == c->c_peer.pid &&
+		    self == c->c_self)
                         return pscrpc_connection_addref(c);
         }
 
@@ -68,7 +69,7 @@ pscrpc_get_connection(lnet_process_id_t peer,
 
         spin_lock(&conn_lock);
 
-        c = pscrpc_lookup_conn_locked(peer);
+        c = pscrpc_lookup_conn_locked(peer, self);
 
         spin_unlock(&conn_lock);
 
@@ -90,7 +91,7 @@ pscrpc_get_connection(lnet_process_id_t peer,
 
         spin_lock(&conn_lock);
 
-        c2 = pscrpc_lookup_conn_locked(peer);
+        c2 = pscrpc_lookup_conn_locked(peer, self);
         if (c2 == NULL) {
 		psc_notify("adding connection %p for %s",
 			   c, libcfs_id2str(peer));
