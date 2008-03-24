@@ -17,9 +17,9 @@ pscrpc_connection_addref(struct pscrpc_connection *c)
 {
         ENTRY;
         atomic_inc(&c->c_refcount);
-        CDEBUG (D_INFO, "connection=%p refcount %d to %s\n",
+        CDEBUG (D_INFO, "connection=%p refcount %d to %s self=%s\n",
                 c, atomic_read(&c->c_refcount),
-                libcfs_nid2str(c->c_peer.nid));
+                libcfs_nid2str(c->c_peer.nid), libcfs_nid2str(c->c_self));
         RETURN(c);
 }
 
@@ -44,7 +44,8 @@ pscrpc_lookup_conn_locked (lnet_process_id_t peer, lnet_nid_t self)
 			c, libcfs_id2str(c->c_peer), libcfs_id2str(peer));
 
                 if (peer.nid == c->c_peer.nid &&
-                    peer.pid == c->c_peer.pid) {
+                    peer.pid == c->c_peer.pid &&
+		    self     == c->c_self) {
                         psclist_del(&c->c_link);
                         psclist_add(&c->c_link, &conn_list);
                         return pscrpc_connection_addref(c);
@@ -73,8 +74,11 @@ pscrpc_get_connection(lnet_process_id_t peer,
 
         spin_unlock(&conn_lock);
 
-        if (c != NULL)
+        if (c != NULL) {
+		psc_info("got self %s peer %s",
+			 libcfs_nid2str(c->c_self), libcfs_id2str(c->c_peer.nid));
                 RETURN (c);
+	}
 
 	psc_info("Malloc'ing a new rpc_conn for %s",
 	      libcfs_id2str(peer));

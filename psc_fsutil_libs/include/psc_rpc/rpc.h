@@ -624,7 +624,7 @@ pscrpc_get_connection(lnet_process_id_t peer,
 		      lnet_nid_t self, struct psc_uuid *uuid);
 
 extern struct pscrpc_connection*
-pscrpc_lookup_conn_locked (lnet_process_id_t peer, lnet_nid_t);
+pscrpc_lookup_conn_locked (lnet_process_id_t peer, lnet_nid_t self);
 
 extern struct pscrpc_connection *
 pscrpc_connection_addref(struct pscrpc_connection *c);
