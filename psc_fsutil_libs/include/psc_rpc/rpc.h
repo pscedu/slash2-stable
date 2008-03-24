@@ -26,8 +26,10 @@
 
 #include <sys/uio.h>
 #include <asm/param.h>
+
 #include <time.h>
 #include <unistd.h>
+
 #include "libcfs/kp30.h"
 #include "libcfs/libcfs.h"
 #include "lnet/api.h"
@@ -50,13 +52,13 @@
 #undef list_for_each
 #undef list_for_each_safe
 
+#include "psc_types.h"
 #include "psc_ds/list.h"
 #include "psc_ds/listcache.h"
 #include "psc_util/atomic.h"
 #include "psc_util/lock.h"
 #include "psc_util/thread.h"
 #include "psc_util/waitq.h"
-#include "psc_types.h"
 
 #define PSCRPC_MD_OPTIONS 0
 #define BULK_GET_SOURCE    0
@@ -622,7 +624,7 @@ pscrpc_get_connection(lnet_process_id_t peer,
 		      lnet_nid_t self, struct psc_uuid *uuid);
 
 extern struct pscrpc_connection*
-pscrpc_lookup_conn_locked (lnet_process_id_t peer);
+pscrpc_lookup_conn_locked (lnet_process_id_t peer, lnet_nid_t);
 
 extern struct pscrpc_connection *
 pscrpc_connection_addref(struct pscrpc_connection *c);
