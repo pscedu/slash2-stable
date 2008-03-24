@@ -365,12 +365,12 @@ lc_lookup(const char *name)
  */
 #define lc_empty(lc) psclist_empty(&(lc)->lc_list)
 
-static int
-lc_grow(list_cache_t *lc, size_t n, void (*initf)(void *))
+static inline int
+lc_grow(list_cache_t *lc, ssize_t n, void (*initf)(void *))
 {
 	ssize_t z = lc_sz(lc);
-	int i, rc;
 	void *p;
+	int i;
 
 	if (z > lc->lc_max) {
 		psc_warnx("Cache %s has overgrown", lc->lc_name);
@@ -384,12 +384,17 @@ lc_grow(list_cache_t *lc, size_t n, void (*initf)(void *))
 	for (i = 0; i < n; i++) {
 		if (atomic_read(&lc->lc_total) >= lc->lc_max)
 			return (i);
-		p = TRY_PSCALLOC((lc)->lc_entsize);
-		if (p == NULL)
-			return (-ENOMEM);
-		initf(p);
-		INIT_PSCLIST_ENTRY(lc->lc_offset + (char *)p);
-		lc_put(lc, lc->lc_offset + (char *)p);
+		p = TRY_PSCALLOC(lc->lc_entsize);
+		if (p == NULL) {
+			errno = ENOMEM;
+			return (-1);
+		}
+		if (initf)
+			initf(p);
+		INIT_PSCLIST_ENTRY((struct psclist_head *)
+		    (lc->lc_offset + (char *)p));
+		lc_put(lc, (struct psclist_head *)
+		    (lc->lc_offset + (char *)p));
 		atomic_inc(&lc->lc_total);
 	}
 	return (i);
