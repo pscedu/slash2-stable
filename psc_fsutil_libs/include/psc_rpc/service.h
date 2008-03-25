@@ -1,7 +1,7 @@
 /* $Id$ */
 
-#ifndef _PSCRPC_SERVICE_H_
-#define _PSCRPC_SERVICE_H_
+#ifndef __PSCRPC_SERVICE_H__
+#define __PSCRPC_SERVICE_H__
 
 #include "psc_rpc/rpc.h"
 #include "psc_ds/list.h"
@@ -30,8 +30,12 @@ struct pscrpc_svc_handle {
 
 typedef struct pscrpc_svc_handle pscrpc_svc_handle_t;
 
-#define pscrpc_thread_spawn(svh, type, memb) \
-	__pscrpc_thread_spawn((svh), sizeof(type), offsetof(type, memb))
-void __pscrpc_thread_spawn(pscrpc_svc_handle_t *, size_t, ptrdiff_t);
+struct pscrpc_thread {
+	struct pscrpc_service	*prt_svc;
+};
 
-#endif /* _PSCRPC_SERVICE_H_ */
+#define pscrpc_thread_spawn(svh, type) \
+	__pscrpc_thread_spawn((svh), sizeof(type))
+void __pscrpc_thread_spawn(pscrpc_svc_handle_t *, size_t);
+
+#endif /* __PSCRPC_SERVICE_H__ */

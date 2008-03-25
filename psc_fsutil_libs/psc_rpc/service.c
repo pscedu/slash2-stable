@@ -609,10 +609,8 @@ pscrpc_retry_rqbds(void *arg)
 }
 
 static void *
-pscrpc_main(void *arg)
+pscrpc_main(struct psc_thread *thread, struct pscrpc_service *svc)
 {
-	struct psc_thread         *thread = arg;
-	struct pscrpc_service     *svc    = thread->pscthr_private;
 	struct pscrpc_reply_state *rs;
 
 	int rc = 0;
@@ -987,6 +985,16 @@ pscrpc_init_svc(int nbufs, int bufsize, int max_req_size, int max_reply_size,
 	return NULL;
 }
 
+void *
+pscrpcthr_begin(void *arg)
+{
+	struct psc_thread *thr = arg;
+	struct pscrpc_thread *prt;
+
+	prt = thr->pscthr_private;
+	return (pscrpc_main(thr, prt->prt_svc));
+}
+
 /**
  * pscrpc_spawn - create an RPC service.
  * @svh:  an initialized service handle structure which holds the
@@ -995,11 +1003,10 @@ pscrpc_init_svc(int nbufs, int bufsize, int max_req_size, int max_reply_size,
  * @offset: offset into thread-local storage of service data.
  */
 void
-__pscrpc_thread_spawn(pscrpc_svc_handle_t *svh, size_t siz,
-    ptrdiff_t offset)
+__pscrpc_thread_spawn(pscrpc_svc_handle_t *svh, size_t siz)
 {
+	struct pscrpc_thread *prt;
 	struct psc_thread *thr;
-	void *p;
 	int i;
 
 	svh->svh_service = pscrpc_init_svc(svh->svh_nbufs,
@@ -1018,10 +1025,10 @@ __pscrpc_thread_spawn(pscrpc_svc_handle_t *svh, size_t siz,
 	psclist_xadd(&svh->svh_lentry, &pscrpc_svh_list);
 
 	svh->svh_threads = PSCALLOC((sizeof(*thr)) * svh->svh_nthreads);
-	p = PSCALLOC(siz);
-	*(struct pscrpc_service **)((char *)p + offset) = svh->svh_service;
+	prt = PSCALLOC(siz);
+	prt->prt_svc = svh->svh_service;
 
 	for (i=0, thr=svh->svh_threads; i < svh->svh_nthreads; i++, thr++)
-		pscthr_init(thr, svh->svh_type, pscrpc_main,
-		    p, "%s%d", svh->svh_svc_name, i);
+		pscthr_init(thr, svh->svh_type, pscrpcthr_begin,
+		    prt, "%s%d", svh->svh_svc_name, i);
 }

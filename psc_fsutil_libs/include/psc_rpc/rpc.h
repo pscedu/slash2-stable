@@ -265,6 +265,7 @@ struct pscrpc_bulk_desc {
 	lnet_md_iovec_t           bd_iov[0];       /* must be last           */
 };
 
+#if 0
 struct pscrpc_thread {
 	struct psclist_head t_link; /* active threads, from svc->srv_threads */
 	void               *t_data; /* thread-private data (prealloc memory) */
@@ -272,6 +273,7 @@ struct pscrpc_thread {
 	unsigned int        t_id;  /* service thread index */
 	wait_queue_head_t   t_ctl_waitq;
 };
+#endif
 
 struct psc_msg {
 	struct psc_handle handle;
