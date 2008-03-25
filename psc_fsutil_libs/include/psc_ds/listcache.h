@@ -1,7 +1,7 @@
 /* $Id$ */
 
-#ifndef _PFL_LISTCACHE_H_
-#define _PFL_LISTCACHE_H_
+#ifndef __PFL_LISTCACHE_H__
+#define __PFL_LISTCACHE_H__
 
 #include <sys/types.h>
 
@@ -400,41 +400,32 @@ lc_grow(list_cache_t *lc, ssize_t n, void (*initf)(void *))
 	return (i);
 }
 
-#define _lc_shrink(l, n, type, free_fn, __ret)				\
-	do {								\
-		int     i;						\
-		type   *ptr;						\
-		list_cache_t *lc = l;					\
-		ssize_t z = lc_sz(lc);					\
-		struct psclist_head *e;					\
-									\
-		__ret = 0;						\
-		if (z < lc->lc_min) {					\
-			zwarn("Cache %s it underfilled", lc->lc_name);	\
-			break;						\
-		}							\
-		if (z == lc->lc_min)					\
-			break;						\
-		if ((z - n) > lc->lc_min)				\
-			n = z - lc->lc_min;				\
-		for (i=0; i < n; i++, __ret++) {			\
-			if (atomic_read(&lc->lc_total) <= lc->lc_min)	\
-				break;					\
-			e = lc_get((lc), 0);				\
-			ptr = psclist_entry(e, type, lc_list);		\
-			psc_assert((ptr));				\
-			free_fn((ptr));					\
-			atomic_dec(&lc->lc_total);			\
-		}							\
-	} while(0)
+static inline int
+lc_shrink(list_cache_t *lc, ssize_t n, void (*freef)(void *))
+{
+	ssize_t z = lc_sz(lc);
+	void *p;
+	int i;
 
-#define lc_shrink(lc, n, type, free_fn)					\
-	({								\
-		int                 __ret;				\
-									\
-		_lc_shrink(lc, n, type, free_fn, __ret);		\
-		__ret;							\
-	})
+	if (z < lc->lc_min) {
+		psc_warnx("Cache %s is underfilled", lc->lc_name);
+		return (0);
+	}
+	if (z == lc->lc_min)
+		return (0);
+	if (z - n > lc->lc_min)
+		n = z - lc->lc_min;
+
+	for (i = 0; i < n; i++) {
+		if (atomic_read(&lc->lc_total) <= lc->lc_min)
+			break;
+		p = lc_getnb(lc);
+		psc_assert(p);
+		freef(p);
+		atomic_dec(&lc->lc_total);
+	}
+	return (i);
+}
 
 /**
  * lc_sort - sort items in a list cache.
@@ -449,8 +440,7 @@ lc_sort(list_cache_t *lc,
 {
 	void **p, *next, *prev;
 	struct psclist_head *e;
-	int locked;
-	int j;
+	int j, locked;
 
 	j = 0;
 	p = PSCALLOC(lc->lc_size * sizeof(*p));
@@ -477,4 +467,4 @@ lc_sort(list_cache_t *lc,
 	ureqlock(&lc->lc_lock, locked);
 }
 
-#endif /* _PFL_LISTCACHE_H_ */
+#endif /* __PFL_LISTCACHE_H__ */
