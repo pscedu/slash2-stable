@@ -232,8 +232,9 @@ psclist_splice(struct psclist_head *list, struct psclist_head *head)
  * @pos: the &struct psclist_head to use as a loop counter.
  * @head: the head for your psclist.
  */
-#define psclist_for_each(pos, head)			\
-	for ((pos) = (head)->znext; (pos) != (head);	\
+#define psclist_for_each(pos, head)				\
+	for ((pos) = (head)->znext;				\
+	    ((pos) != (head)) || ((pos) = NULL);		\
 		(pos) = (pos)->znext)
 
 /**
@@ -242,9 +243,10 @@ psclist_splice(struct psclist_head *list, struct psclist_head *head)
  * @n: another &struct psclist_head to use as temporary storage
  * @head: the head for your psclist.
  */
-#define psclist_for_each_safe(pos, n, head)				\
-	for (pos = (head)->znext, n = pos->znext; pos != (head);	\
-		pos = n, n = pos->znext)
+#define psclist_for_each_safe(pos, n, head)			\
+	for ((pos) = (head)->znext, (n) = (pos)->znext;		\
+	    ((pos) != (head)) || ((pos) = NULL);		\
+	    (pos) = (n), (n) = (pos)->znext)
 
 /**
  * psclist_first - grab first entry from a psclist
@@ -302,29 +304,29 @@ psclist_splice(struct psclist_head *list, struct psclist_head *head)
 #define psclist_for_each_entry_safe(pos, n, head, member)			\
 	for ((pos) = psclist_entry((head)->znext, typeof(*(pos)), member),	\
 	    (n) = psclist_entry((pos)->member.znext, typeof(*(pos)), member);	\
-	    &(pos)->member != (head);						\
+	    (&(pos)->member != (head)) || ((pos) = (n) = NULL);			\
 	    (pos) = (n), (n) = psclist_entry((n)->member.znext, typeof(*(n)), member))
 
 /**
- * psclist_for_each_entry - iterate over list of given type
+ * psclist_for_each_entry - iterate over list of given type.
  * @pos: the type * to use as a loop counter.
  * @hd: the head for your list.
  * @member: list entry member of structure.
  */
 #define psclist_for_each_entry(pos, hd, member)					\
 	for ((pos) = psclist_entry((hd)->znext, typeof(*(pos)), member);	\
-	    &(pos)->member != (hd);						\
+	    (&(pos)->member != (hd)) || ((pos) = NULL);				\
 	    (pos) = psclist_entry((pos)->member.znext, typeof(*(pos)), member))
 
 /**
- * psclist_for_each_entry2 - iterate over list of given type
+ * psclist_for_each_entry2 - iterate over list of given type.
  * @pos: the type * to use as a loop counter.
  * @head: the head for your list.
  * @offset: offset into type * of list entry.
  */
 #define psclist_for_each_entry2(pos, head, offset)				\
 	for ((pos) = (void *)(((char *)(head)->znext) - (offset));		\
-	    ((char *)pos) + (offset) != (void *)(head);				\
+	    (((char *)pos) + (offset) != (void *)(head)) || ((pos) = NULL);	\
 	    (pos) = (void *)(((char *)(((struct psclist_head *)(((char *)pos) +	\
 	      (offset)))->znext)) - (offset)))
 
