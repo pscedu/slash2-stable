@@ -15,128 +15,128 @@ static struct psclist_head conn_unused_list = PSCLIST_HEAD_INIT(conn_unused_list
 struct pscrpc_connection *
 pscrpc_connection_addref(struct pscrpc_connection *c)
 {
-        ENTRY;
-        atomic_inc(&c->c_refcount);
-        CDEBUG (D_INFO, "connection=%p refcount %d to %s self=%s\n",
-                c, atomic_read(&c->c_refcount),
-                libcfs_nid2str(c->c_peer.nid), libcfs_nid2str(c->c_self));
-        RETURN(c);
+	ENTRY;
+	atomic_inc(&c->c_refcount);
+	CDEBUG (D_INFO, "connection=%p refcount %d to %s self=%s\n",
+		c, atomic_read(&c->c_refcount),
+		libcfs_nid2str(c->c_peer.nid), libcfs_nid2str(c->c_self));
+	RETURN(c);
 }
 
 struct pscrpc_connection *
 pscrpc_lookup_conn_locked (lnet_process_id_t peer, lnet_nid_t self)
 {
-        struct pscrpc_connection *c;
-        struct psclist_head          *tmp;
+	struct pscrpc_connection *c;
+	struct psclist_head          *tmp;
 
-        psclist_for_each(tmp, &conn_list) {
-                c = psclist_entry(tmp, struct pscrpc_connection, c_link);
+	psclist_for_each(tmp, &conn_list) {
+		c = psclist_entry(tmp, struct pscrpc_connection, c_link);
 
-                if (peer.nid == c->c_peer.nid &&
-                    peer.pid == c->c_peer.pid &&
+		if (peer.nid == c->c_peer.nid &&
+		    peer.pid == c->c_peer.pid &&
 		    self == c->c_self)
-                        return pscrpc_connection_addref(c);
-        }
+			return pscrpc_connection_addref(c);
+	}
 
-        psclist_for_each(tmp, &conn_unused_list) {
-                c = psclist_entry(tmp, struct pscrpc_connection, c_link);
+	psclist_for_each(tmp, &conn_unused_list) {
+		c = psclist_entry(tmp, struct pscrpc_connection, c_link);
 		psc_dbg("unused conn %p@%s looking for %s",
 			c, libcfs_id2str(c->c_peer), libcfs_id2str(peer));
 
-                if (peer.nid == c->c_peer.nid &&
-                    peer.pid == c->c_peer.pid &&
+		if (peer.nid == c->c_peer.nid &&
+		    peer.pid == c->c_peer.pid &&
 		    self     == c->c_self) {
-                        psclist_del(&c->c_link);
-                        psclist_add(&c->c_link, &conn_list);
-                        return pscrpc_connection_addref(c);
-                }
-        }
+			psclist_del(&c->c_link);
+			psclist_add(&c->c_link, &conn_list);
+			return pscrpc_connection_addref(c);
+		}
+	}
 
-        return NULL;
+	return NULL;
 }
 
 struct pscrpc_connection *
 pscrpc_get_connection(lnet_process_id_t peer,
 		       lnet_nid_t self, struct psc_uuid *uuid)
 {
-        struct pscrpc_connection *c;
-        struct pscrpc_connection *c2;
-        ENTRY;
+	struct pscrpc_connection *c;
+	struct pscrpc_connection *c2;
+	ENTRY;
 
 	//psc_assert(uuid != NULL);
 
 	psc_info("self %s peer %s",
 		 libcfs_nid2str(self), libcfs_id2str(peer));
 
-        spin_lock(&conn_lock);
+	spin_lock(&conn_lock);
 
-        c = pscrpc_lookup_conn_locked(peer, self);
+	c = pscrpc_lookup_conn_locked(peer, self);
 
-        spin_unlock(&conn_lock);
+	spin_unlock(&conn_lock);
 
-        if (c != NULL) {
+	if (c != NULL) {
 		psc_info("got self %s peer %s",
-			 libcfs_nid2str(c->c_self), libcfs_id2str(c->c_peer.nid));
-                RETURN (c);
+			 libcfs_nid2str(c->c_self), libcfs_nid2str(c->c_peer.nid));
+		RETURN (c);
 	}
 
 	psc_info("Malloc'ing a new rpc_conn for %s",
 	      libcfs_id2str(peer));
 
-        c = TRY_PSCALLOC(sizeof(*c));
-        if (c == NULL)
-                RETURN (NULL);
+	c = TRY_PSCALLOC(sizeof(*c));
+	if (c == NULL)
+		RETURN (NULL);
 
-        atomic_set(&c->c_refcount, 1);
-        c->c_peer = peer;
-        c->c_self = self;
-        if (uuid != NULL)
-                psc_str2uuid(&c->c_remote_uuid, (char *)uuid->uuid);
+	atomic_set(&c->c_refcount, 1);
+	c->c_peer = peer;
+	c->c_self = self;
+	if (uuid != NULL)
+		psc_str2uuid(&c->c_remote_uuid, (char *)uuid->uuid);
 
-        spin_lock(&conn_lock);
+	spin_lock(&conn_lock);
 
-        c2 = pscrpc_lookup_conn_locked(peer, self);
-        if (c2 == NULL) {
+	c2 = pscrpc_lookup_conn_locked(peer, self);
+	if (c2 == NULL) {
 		psc_notify("adding connection %p for %s",
 			   c, libcfs_id2str(peer));
-                psclist_add(&c->c_link, &conn_list);
+		psclist_add(&c->c_link, &conn_list);
 	}
 
-        spin_unlock(&conn_lock);
+	spin_unlock(&conn_lock);
 
-        if (c2 == NULL)
-                RETURN (c);
+	if (c2 == NULL)
+		RETURN (c);
 
-        ZOBD_FREE(c, sizeof(*c));
-        RETURN (c2);
+	ZOBD_FREE(c, sizeof(*c));
+	RETURN (c2);
 }
 
 int pscrpc_put_connection(struct pscrpc_connection *c)
 {
-        int rc = 0;
-        ENTRY;
+	int rc = 0;
+	ENTRY;
 
-        if (c == NULL) {
-                CERROR("NULL connection\n");
-                RETURN(0);
-        }
+	if (c == NULL) {
+		CERROR("NULL connection\n");
+		RETURN(0);
+	}
 
-        psc_info("connection=%p refcount %d to %s",
+	psc_info("connection=%p refcount %d to %s",
 		 c, atomic_read(&c->c_refcount) - 1,
 		 libcfs_nid2str(c->c_peer.nid));
 
-        if (atomic_dec_and_test(&c->c_refcount)) {
+	if (atomic_dec_and_test(&c->c_refcount)) {
 		psc_info("connection=%p to unused_list", c);
 
-                spinlock(&conn_lock);
-                psclist_del(&c->c_link);
-                psclist_add(&c->c_link, &conn_unused_list);
-                freelock(&conn_lock);
-                rc = 1;
-        }
-        if (atomic_read(&c->c_refcount) < 0)
-                psc_errorx("connection %p refcount %d!",
+		spinlock(&conn_lock);
+		psclist_del(&c->c_link);
+		psclist_add(&c->c_link, &conn_unused_list);
+		freelock(&conn_lock);
+		rc = 1;
+	}
+	if (atomic_read(&c->c_refcount) < 0)
+		psc_errorx("connection %p refcount %d!",
 			c, atomic_read(&c->c_refcount));
 
-        RETURN(rc);
+	RETURN(rc);
 }
