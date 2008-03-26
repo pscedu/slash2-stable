@@ -700,17 +700,17 @@ force_tcp_connection(manager    m,
            nidpid->pid, libcfs_nid2str(nidpid->nid)); 
 
     memset(&addr, 0, sizeof(addr));
-    addr.sin_family      = (tcpnal_usesdp ? AF_SDP : AF_INET);
+    addr.sin_family      = (tcpnal_usesdp ? AF_INET_SDP : AF_INET);
     addr.sin_addr.s_addr = htonl(ip);
     addr.sin_port        = htons(tcpnal_connector_port);
 
     memset(&locaddr, 0, sizeof(locaddr)); 
-    locaddr.sin_family = (tcpnal_usesdp ? AF_SDP : AF_INET);
+    locaddr.sin_family = (tcpnal_usesdp ? AF_INET_SDP : AF_INET);
     locaddr.sin_addr.s_addr = INADDR_ANY;
     locaddr.sin_port = m->port;
 
     if (!tcpnal_server) { 
-            fd = socket((tcpnal_usesdp ? AF_SDP : AF_INET), SOCK_STREAM, 0);
+            fd = socket((tcpnal_usesdp ? AF_INET_SDP : AF_INET), SOCK_STREAM, 0);
             if (fd < 0) {
                     CERROR("tcpnal socket failed: %s\n", strerror(errno));
                     goto out;
@@ -761,7 +761,7 @@ force_tcp_connection(manager    m,
     } else { 
             for (rport = IPPORT_RESERVED - 1; rport > IPPORT_RESERVED / 2; 
                  --rport) {
-                    fd = socket((tcpnal_usesdp ? AF_SDP : AF_INET), 
+                    fd = socket((tcpnal_usesdp ? AF_INET_SDP : AF_INET), 
                                 SOCK_STREAM, 0);
                     if (fd < 0) {
                             CERROR("tcpnal socket failed: %s\n", 
@@ -947,7 +947,7 @@ bind_socket(manager m, unsigned short port)
         socklen_t alen=sizeof(struct sockaddr_in);
         bridge b=m->handler_arg;
         __unusedx unsigned int local_addr=LNET_NIDADDR(b->b_ni->ni_nid);
-        int sock_type = (tcpnal_usesdp ? AF_SDP : AF_INET);
+        int sock_type = (tcpnal_usesdp ? AF_INET_SDP : AF_INET);
 	socklen_t option;
 
         if ((m->bound = socket(sock_type, SOCK_STREAM, 0)) < 0)  
@@ -966,7 +966,7 @@ bind_socket(manager m, unsigned short port)
         }
         
         bzero((char *) &addr, sizeof(addr));
-        addr.sin_family      = (tcpnal_usesdp ? AF_SDP : AF_INET);
+        addr.sin_family      = (tcpnal_usesdp ? AF_INET_SDP : AF_INET);
         addr.sin_addr.s_addr = htonl(LNET_NIDADDR(b->b_ni->ni_nid));
         addr.sin_port        = htons(port);
         
