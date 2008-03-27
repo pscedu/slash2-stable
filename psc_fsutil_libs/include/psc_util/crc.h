@@ -26,7 +26,7 @@
 										\
 		while (__len-- > 0) {						\
 			__idx = ((int)(__crc0 >> 56) ^ *__data++) & 0xff;	\
-			__crc0 = crc_table[__idx] ^ (__crc0 << 8);		\
+			__crc0 = psc_crc_table[__idx] ^ (__crc0 << 8);		\
 		}								\
 		crc = __crc0;							\
 	} while (0)
@@ -41,6 +41,6 @@
 void psc_crc_add(psc_crc_t *, const void *, int);
 void psc_crc_calc(psc_crc_t *, const void *, int);
 
-extern const u64 crc_table[];
+extern const u64 psc_crc_table[];
 
 #endif /* __PFL_CRC_H__ */
