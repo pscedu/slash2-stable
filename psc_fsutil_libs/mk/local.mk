@@ -11,4 +11,3 @@ CTAGS=		ctags
 DEFINES+=	-D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64
 
 THREAD_LIBS?=	-lpthread
-LNET_LIBS?=	-L${LNET_BASE}/lib -lzlnet -lzcfs -lsocknal
