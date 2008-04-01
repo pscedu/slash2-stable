@@ -148,17 +148,6 @@ psclist_del(struct psclist_head *entry)
 }
 
 /**
- * psclist_del_init - deletes entry from psclist and reinitialize it.
- * @entry: the element to delete from the psclist.
- */
-static __inline__ void
-psclist_del_init(struct psclist_head *entry)
-{
-	__psclist_del(entry->zprev, entry->znext);
-	INIT_PSCLIST_HEAD(entry);
-}
-
-/**
  * psclist_empty - tests whether a psclist is empty.
  * @head: the psclist head to test.
  */
@@ -340,7 +329,6 @@ psclist_splice(struct psclist_head *list, struct psclist_head *head)
 #undef list_add
 #undef list_add_tail
 #undef list_del
-#undef list_del_init
 #undef list_empty
 #undef list_splice
 #undef list_entry
@@ -357,7 +345,6 @@ psclist_splice(struct psclist_head *list, struct psclist_head *head)
 #define list_add		ERROR
 #define list_add_tail		ERROR
 #define list_del		ERROR
-#define list_del_init		ERROR
 #define list_empty		ERROR
 #define list_splice		ERROR
 #define list_entry		ERROR
