@@ -1025,10 +1025,11 @@ __pscrpc_thread_spawn(pscrpc_svc_handle_t *svh, size_t siz)
 	psclist_xadd(&svh->svh_lentry, &pscrpc_svh_list);
 
 	svh->svh_threads = PSCALLOC((sizeof(*thr)) * svh->svh_nthreads);
-	prt = PSCALLOC(siz);
-	prt->prt_svc = svh->svh_service;
 
-	for (i=0, thr=svh->svh_threads; i < svh->svh_nthreads; i++, thr++)
+	for (i=0, thr=svh->svh_threads; i < svh->svh_nthreads; i++, thr++) {
+		prt = PSCALLOC(siz);
+		prt->prt_svc = svh->svh_service;
 		pscthr_init(thr, svh->svh_type, pscrpcthr_begin,
 		    prt, "%s%d", svh->svh_svc_name, i);
+	}
 }
