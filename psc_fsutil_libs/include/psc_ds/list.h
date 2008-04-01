@@ -245,7 +245,7 @@ psclist_splice(struct psclist_head *list, struct psclist_head *head)
  */
 #define psclist_for_each_safe(pos, n, head)			\
 	for ((pos) = (head)->znext, (n) = (pos)->znext;		\
-	    ((pos) != (head)) || ((pos) = NULL);		\
+	    ((pos) != (head)) || ((pos) = (n) = NULL);		\
 	    (pos) = (n), (n) = (pos)->znext)
 
 /**
