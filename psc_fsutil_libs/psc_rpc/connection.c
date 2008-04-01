@@ -47,7 +47,7 @@ pscrpc_lookup_conn_locked (lnet_process_id_t peer, lnet_nid_t self)
 		    peer.pid == c->c_peer.pid &&
 		    self     == c->c_self) {
 			psclist_del(&c->c_link);
-			psclist_add(&c->c_link, &conn_list);
+			psclist_xadd(&c->c_link, &conn_list);
 			return pscrpc_connection_addref(c);
 		}
 	}
@@ -99,7 +99,7 @@ pscrpc_get_connection(lnet_process_id_t peer,
 	if (c2 == NULL) {
 		psc_notify("adding connection %p for %s",
 			   c, libcfs_id2str(peer));
-		psclist_add(&c->c_link, &conn_list);
+		psclist_xadd(&c->c_link, &conn_list);
 	}
 
 	spin_unlock(&conn_lock);
@@ -130,7 +130,7 @@ int pscrpc_put_connection(struct pscrpc_connection *c)
 
 		spinlock(&conn_lock);
 		psclist_del(&c->c_link);
-		psclist_add(&c->c_link, &conn_unused_list);
+		psclist_xadd(&c->c_link, &conn_unused_list);
 		freelock(&conn_lock);
 		rc = 1;
 	}

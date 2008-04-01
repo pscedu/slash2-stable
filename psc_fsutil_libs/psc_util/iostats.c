@@ -27,6 +27,6 @@ iostats_init(struct iostats *ist, const char *fmt, ...)
 		psc_fatal("vsnprintf");
 
 	spinlock(&pscIostatsListLock);
-	psclist_add(&ist->ist_lentry, &pscIostatsList);
+	psclist_xadd(&ist->ist_lentry, &pscIostatsList);
 	freelock(&pscIostatsListLock);
 }

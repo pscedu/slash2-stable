@@ -115,7 +115,7 @@ void request_in_callback(lnet_event_t *ev)
         spinlock(&service->srv_lock);
 
         req->rq_history_seq = service->srv_request_seq++;
-        psclist_add_tail(&req->rq_history_list, &service->srv_request_history);
+        psclist_xadd_tail(&req->rq_history_list, &service->srv_request_history);
 
         if (ev->unlinked) {
                 service->srv_nrqbd_receiving--;
@@ -141,7 +141,7 @@ void request_in_callback(lnet_event_t *ev)
                 rqbd->rqbd_refcount++;
         }
 
-        psclist_add_tail(&req->rq_list_entry, &service->srv_request_queue);
+        psclist_xadd_tail(&req->rq_list_entry, &service->srv_request_queue);
         service->srv_n_queued_reqs++;
 
         /* NB everything can disappear under us once the request
@@ -357,7 +357,7 @@ pscrpc_register_wait_callback (int (*fn)(void *arg), void *arg)
 
         llwc->llwc_fn = fn;
         llwc->llwc_arg = arg;
-        psclist_add_tail(&llwc->llwc_list, &pscrpc_wait_callbacks);
+        psclist_xadd_tail(&llwc->llwc_list, &pscrpc_wait_callbacks);
 
         return (llwc);
 }
