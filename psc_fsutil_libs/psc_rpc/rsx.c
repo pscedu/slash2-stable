@@ -176,6 +176,10 @@ rsx_bulkgetsink(struct pscrpc_request *rq, struct pscrpc_bulk_desc **descp,
 		    "id %s - client will retry",
 		    libcfs_id2str(rq->rq_peer));
 	}
+	if (rc) {
+		pscrpc_free_bulk(desc);
+		*descp = NULL;
+	}
 	return (rc);
 }
 
