@@ -49,12 +49,12 @@ struct iovec;
 
 #define GET_CUSTOM_REPLY(rq, mp) GET_CUSTOM_REPLY_SZ(rq, mp, sizeof(*(mp)))
 
-#define GET_GEN_REQ(rq, mq)								\
+#define GET_GEN_REQ(rq, mq, mp)								\
 	do {										\
 		(mq) = psc_msg_buf((rq)->rq_reqmsg, 0, sizeof(*(mq)));			\
 		if ((mq) == NULL) {							\
 			psc_warnx("reqbody is null");					\
-			GENERIC_REPLY((rq), -ENOMSG);					\
+			GENERIC_REPLY((rq), -ENOMSG, (mp));				\
 		}									\
 	} while (0)
 
