@@ -8,7 +8,7 @@
 #include <stdio.h>
 
 #include "psc_rpc/rpc.h"
-#include "rsx.h"
+#include "psc_rpc/rsx.h"
 
 /*
  * rsx_newreq - Create a new request and associate it with the import.
