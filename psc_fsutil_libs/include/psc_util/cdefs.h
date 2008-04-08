@@ -10,6 +10,10 @@
 #define __dead		__attribute__((__noreturn__))
 #endif
 
+#ifndef __packed
+#define __packed	__attribute__((__packed__))
+#endif
+
 #define __unusedx	__attribute__((__unused__))
 
 #ifdef __weak
