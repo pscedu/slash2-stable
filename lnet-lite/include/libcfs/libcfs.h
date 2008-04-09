@@ -208,12 +208,14 @@ do {                                                                    \
 
 #else
 
+#ifndef CDEBUG
 #define CDEBUG(mask, format, a...)                                      \
 do {                                                                    \
         if (((mask) & D_CANTMASK) != 0)                                 \
                 fprintf(stderr, "(%s:%d:%s()) " format,                 \
                         __FILE__, __LINE__, __FUNCTION__, ## a);        \
 } while (0)
+#endif
 
 #define CDEBUG_LIMIT CDEBUG
 
