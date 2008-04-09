@@ -465,6 +465,9 @@ nbreqset_add(struct pscrpc_nbreqset *nbs,
 extern int
 nbrequest_reap(struct pscrpc_nbreqset *nbs);
 
+int
+nbrequest_flush(struct pscrpc_nbreqset *);
+
 /*
  * End Non-blocking request sets
  */
