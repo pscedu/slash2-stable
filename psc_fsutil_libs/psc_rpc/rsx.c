@@ -199,7 +199,7 @@ rsx_bulkgetsource(struct pscrpc_request *rq, struct pscrpc_bulk_desc **descp,
 	struct pscrpc_bulk_desc *desc;
 	int i;
 
-	*descp = desc = pscrpc_prep_bulk_imp(rq, 1, BULK_GET_SOURCE, ptl);
+	*descp = desc = pscrpc_prep_bulk_imp(rq, n, BULK_GET_SOURCE, ptl);
 	if (desc == NULL)
 		psc_fatal("NULL bulk descriptor");
 	desc->bd_nob = 0;
