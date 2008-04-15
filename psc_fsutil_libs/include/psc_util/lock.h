@@ -80,9 +80,11 @@ _tands(volatile psc_spinlock_t *s)
 	     : "=r" (r), "=m" (s->sl_lock)
 	     : "0"  (r), "m"  (s->sl_lock)
 	);
-	if (r == SL_LOCKED)
+	if (r == SL_LOCKED) {
+		if (s->sl_who == pthread_self())
+			psc_fatalx("already holding the lock");
 		return (1);			/* already locked */
-	else if (r == SL_UNLOCKED) {
+	} else if (r == SL_UNLOCKED) {
 		s->sl_who = pthread_self();	/* we got it */
 		return (0);
 	} else
