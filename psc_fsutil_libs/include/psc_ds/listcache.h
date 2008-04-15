@@ -168,7 +168,7 @@ lc_get(list_cache_t *l, int block)
 
 //#define lc_getnb(l)		(void *)(((char *)lc_get((l), 0)) - (l)->lc_offset)
 #define lc_getwait(l)		(void *)(((char *)lc_get((l), 1)) - (l)->lc_offset)
-#define lc_gettimed(l, t)	(void *)(((char *)lc_timed_get((l), (t))) - (l)->lc_offset)
+//#define lc_gettimed(l, t)	(void *)(((char *)lc_timed_get((l), (t))) - (l)->lc_offset)
 
 static inline void *
 lc_getnb(list_cache_t *l)
@@ -177,6 +177,15 @@ lc_getnb(list_cache_t *l)
 	
 	return (p ? (p - l->lc_offset) : NULL);
 }
+
+static inline void *
+lc_gettimed(list_cache_t *l, struct timespec *abstime)
+{
+        void *p = (char *)lc_timed_get(l, abstime);
+
+        return (p ? (p - l->lc_offset) : NULL);
+}
+
 
 /**
  * lc_put - Bounded list put
