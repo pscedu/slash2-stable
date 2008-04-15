@@ -121,10 +121,8 @@ lc_timed_get(list_cache_t *l, struct timespec *abstime)
 	}
 	e = psclist_first(&l->lc_list);
 	lc_del(e, l);
-
- end:
 	ureqlock(&l->lc_lock, locked);
-
+ end:
 	return e;
 }
 
@@ -168,9 +166,17 @@ lc_get(list_cache_t *l, int block)
 	return e;
 }
 
-#define lc_getnb(l)		(void *)(((char *)lc_get((l), 0)) - (l)->lc_offset)
+//#define lc_getnb(l)		(void *)(((char *)lc_get((l), 0)) - (l)->lc_offset)
 #define lc_getwait(l)		(void *)(((char *)lc_get((l), 1)) - (l)->lc_offset)
 #define lc_gettimed(l, t)	(void *)(((char *)lc_timed_get((l), (t))) - (l)->lc_offset)
+
+static inline void *
+lc_getnb(list_cache_t *l)
+{
+	void *p = (char *)lc_get(l, 0);
+	
+	return (p ? (p - l->lc_offset) : NULL);
+}
 
 /**
  * lc_put - Bounded list put
