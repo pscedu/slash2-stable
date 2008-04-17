@@ -24,9 +24,6 @@ int
 rsx_newreq(struct pscrpc_import *imp, int version, int op, int reqlen, int replen,
     struct pscrpc_request **rqp, void *mqp)
 {
-	int rc;
-
-	rc = 0;
 	*rqp = pscrpc_prep_req(imp, version, op, 1, &reqlen, NULL);
 	if (*rqp == NULL)
 		return (-ENOMEM);
@@ -42,13 +39,13 @@ rsx_newreq(struct pscrpc_import *imp, int version, int op, int reqlen, int reple
 }
 
 /*
- * rsx_getrep - Wait for a reply of a "simple" command, i.e. an error code.
+ * rsx_waitrep - Wait for a reply of a "simple" command, i.e. an error code.
  * @rq: the RPC request we sent.
  * @replen: anticipated size of response.
  * @mpp: value-result pointer where reply buffer start will be set.
  */
 int
-rsx_getrep(struct pscrpc_request *rq, int replen, void *mpp)
+rsx_waitrep(struct pscrpc_request *rq, int replen, void *mpp)
 {
 	int rc;
 
