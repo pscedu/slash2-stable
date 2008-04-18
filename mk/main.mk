@@ -9,6 +9,47 @@ OBJS+=		$(patsubst %.l,%.o,$(filter %.l,${SRCS}))
 _YACCINTM=	$(patsubst %.y,%.c,$(filter %.y,${SRCS}))
 _LEXINTM=	$(patsubst %.l,%.c,$(filter %.l,${SRCS}))
 
+LNET_SOCKLND_SRCS+=	${LNET_BASE}/socklnd/connection.c
+LNET_SOCKLND_SRCS+=	${LNET_BASE}/socklnd/pqtimer.c
+LNET_SOCKLND_SRCS+=	${LNET_BASE}/socklnd/procapi.c
+LNET_SOCKLND_SRCS+=	${LNET_BASE}/socklnd/proclib.c
+LNET_SOCKLND_SRCS+=	${LNET_BASE}/socklnd/select.c
+LNET_SOCKLND_SRCS+=	${LNET_BASE}/socklnd/table.c
+LNET_SOCKLND_SRCS+=	${LNET_BASE}/socklnd/tcplnd.c
+LNET_SOCKLND_SRCS+=	${LNET_BASE}/socklnd/sendrecv.c
+
+LNET_CFS_SRCS+=		${LNET_BASE}/libcfs/debug.c
+LNET_CFS_SRCS+=		${LNET_BASE}/libcfs/nidstrings.c
+LNET_CFS_SRCS+=		${LNET_BASE}/libcfs/user-lock.c
+LNET_CFS_SRCS+=		${LNET_BASE}/libcfs/user-prim.c
+
+LNET_LIB_SRCS+=		${LNET_BASE}/lnet/acceptor.c
+LNET_LIB_SRCS+=		${LNET_BASE}/lnet/api-errno.c
+LNET_LIB_SRCS+=		${LNET_BASE}/lnet/api-ni.c
+LNET_LIB_SRCS+=		${LNET_BASE}/lnet/config.c
+LNET_LIB_SRCS+=		${LNET_BASE}/lnet/lib-eq.c
+LNET_LIB_SRCS+=		${LNET_BASE}/lnet/lib-md.c
+LNET_LIB_SRCS+=		${LNET_BASE}/lnet/lib-me.c
+LNET_LIB_SRCS+=		${LNET_BASE}/lnet/lib-move.c
+LNET_LIB_SRCS+=		${LNET_BASE}/lnet/lib-msg.c
+LNET_LIB_SRCS+=		${LNET_BASE}/lnet/lo.c
+LNET_LIB_SRCS+=		${LNET_BASE}/lnet/peer.c
+LNET_LIB_SRCS+=		${LNET_BASE}/lnet/router.c
+LNET_LIB_SRCS+=		${LNET_BASE}/lnet/router_proc.c
+
+LNET_PTLLND_SRCS+=	${LNET_BASE}/ptllnd/ptllnd.c
+LNET_PTLLND_SRCS+=	${LNET_BASE}/ptllnd/ptllnd_cb.c
+
+PSCRPC_SRCS+=		${PFL_BASE}/psc_rpc/connection.c
+PSCRPC_SRCS+=		${PFL_BASE}/psc_rpc/events.c
+PSCRPC_SRCS+=		${PFL_BASE}/psc_rpc/export.c
+PSCRPC_SRCS+=		${PFL_BASE}/psc_rpc/import.c
+PSCRPC_SRCS+=		${PFL_BASE}/psc_rpc/nb.c
+PSCRPC_SRCS+=		${PFL_BASE}/psc_rpc/niobuf.c
+PSCRPC_SRCS+=		${PFL_BASE}/psc_rpc/packgeneric.c
+PSCRPC_SRCS+=		${PFL_BASE}/psc_rpc/rpcclient.c
+PSCRPC_SRCS+=		${PFL_BASE}/psc_rpc/service.c
+
 all: recurse-all ${TARGET}
 
 recurse-all:
@@ -159,6 +200,9 @@ hdr-sync:
 	@for i in "${SRCS}"; do								\
 		sh ${ROOTDIR}/tools/hdr-sync.sh "${PROJECT_BASE}" $$i;			\
 	done
+
+#CS_ARGS+=-s${APP_BASE}
+#ET_ARGS+="${APP_BASE}"
 
 ifdef SLASH_BASE
 CS_ARGS+=-s${SLASH_BASE}
