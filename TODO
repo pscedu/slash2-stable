@@ -4,10 +4,12 @@ make
 
 general
 - watch out for sizeof(type var[0])
+- constify RPC replies in clients and requests in servers
 
 slash
 - piggyback small readdirs directly into READDIR replies
 - remove generation numbers from slash_fid_t and add a new slash_fidgen_t
+- remove rpc_sendmsg
 
 pfl
 - remove psclist_add
