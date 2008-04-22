@@ -291,7 +291,6 @@ struct psc_msg {
 	u32 buflens[0];
 };
 
-
 struct pscrpc_reply_state;
 struct pscrpc_request_buffer_desc;
 struct pscrpc_nbrequests;
@@ -352,13 +351,10 @@ struct pscrpc_request {
 	struct pscrpc_request_buffer_desc *rq_rqbd;  /* incoming req  buffer*/
 };
 
-/*
- * Each service installs its own request handler
- */
+/* Each service installs its own request handler */
 typedef int (*svc_handler_t)(struct pscrpc_request *req);
-/*
- * Server side request management
- */
+
+/* Server side request management */
 struct pscrpc_service {
 	int srv_max_req_size;      /* max request sz to recv  */
 	int srv_max_reply_size;    /* biggest reply to send   */
@@ -423,7 +419,6 @@ struct pscrpc_request_buffer_desc {
 	struct pscrpc_request  rqbd_req;
 };
 
-
 struct pscrpc_reply_state {
 	struct pscrpc_cb_id    rs_cb_id;       /* reply callback */
 	struct psclist_head    rs_list_entry;
@@ -454,110 +449,73 @@ struct pscrpc_nbreqset {
 	atomic_t                   nb_outstanding;
 };
 
-extern struct pscrpc_nbreqset *
+struct pscrpc_nbreqset *
 nbreqset_init(set_interpreter_func nb_interpret,
 	      nbreq_callback       nb_callback);
 
-extern void
+void
 nbreqset_add(struct pscrpc_nbreqset *nbs,
 	     struct pscrpc_request  *req);
 
-extern int
+int
 nbrequest_reap(struct pscrpc_nbreqset *nbs);
 
 int
 nbrequest_flush(struct pscrpc_nbreqset *);
 
-/*
- * End Non-blocking request sets
- */
+/* End non-blocking request sets */
 
-extern void
+void
 psc_free_reply_state(struct pscrpc_reply_state *rs);
 
-extern void
+void
 pscrpc_req_finished(struct pscrpc_request *request);
 
-extern struct pscrpc_bulk_desc *
+struct pscrpc_bulk_desc *
 pscrpc_prep_bulk_exp (struct pscrpc_request *req, int npages,
 		      int type, int portal);
 
-extern void
+void
 pscrpc_free_bulk(struct pscrpc_bulk_desc *desc);
 
-extern int
+int
 psc_pack_reply (struct pscrpc_request *req,
 		int count, int *lens, char **bufs);
 
-extern int
+int
 pscrpc_put_connection(struct pscrpc_connection *c);
 
-extern void
+void
 pscrpc_fill_bulk_md (lnet_md_t *md, struct pscrpc_bulk_desc *desc);
 
-/*
- *  events.c
- */
-extern void
-request_in_callback(lnet_event_t *ev);
+/*  events.c */
+void request_in_callback(lnet_event_t *ev);
+void request_out_callback(lnet_event_t *ev);
+void client_bulk_callback (lnet_event_t *ev);
+void server_bulk_callback (lnet_event_t *ev);
+void reply_in_callback(lnet_event_t *ev);
+void reply_out_callback(lnet_event_t *ev);
+void pscrpc_deregister_wait_callback (void *opaque);
+int pscrpc_check_events (int timeout);
+int pscrpc_wait_event (int timeout);
+lnet_pid_t psc_get_pid(void);
+int pscrpc_ni_init(int type);
+int pscrpc_init_portals(int);
+/* events.c done */
 
-extern void
-request_out_callback(lnet_event_t *ev);
+/* packgeneric.c */
+int psc_msg_size(int count, int *lengths);
+int psc_msg_swabbed(struct psc_msg *msg);
 
-extern void
-client_bulk_callback (lnet_event_t *ev);
-
-extern void
-server_bulk_callback (lnet_event_t *ev);
-
-extern void
-reply_in_callback(lnet_event_t *ev);
-
-extern void
-reply_out_callback(lnet_event_t *ev);
-
-extern void
-pscrpc_deregister_wait_callback (void *opaque);
-
-extern int
-pscrpc_check_events (int timeout);
-
-extern int
-pscrpc_wait_event (int timeout);
-
-extern lnet_pid_t
-psc_get_pid(void);
-
-extern int
-pscrpc_ni_init(int type);
-
-extern int
-pscrpc_init_portals(int);
-/*
- * events.c done
- */
-
-/*
- * packgeneric.c
- */
-extern int
-psc_msg_size(int count, int *lengths);
-
-extern int
-psc_msg_swabbed(struct psc_msg *msg);
-
-extern int
-psc_pack_request (struct pscrpc_request *req,
+int psc_pack_request (struct pscrpc_request *req,
 		  int count, int *lens, char **bufs);
 
-extern int
-psc_pack_reply (struct pscrpc_request *req,
+int psc_pack_reply (struct pscrpc_request *req,
 		int count, int *lens, char **bufs);
 
-extern int
-psc_unpack_msg(struct psc_msg *m, int len);
+int psc_unpack_msg(struct psc_msg *m, int len);
 
-extern void *
+void *
 psc_msg_buf(struct psc_msg *m, int n, int min_size);
 
 /**
@@ -567,81 +525,45 @@ psc_msg_buf(struct psc_msg *m, int n, int min_size);
  *
  * returns zero for non-existent message indices
  */
-extern int
+int
 psc_msg_buflen(struct psc_msg *m, int n);
 
-extern char *
-psc_msg_string (struct psc_msg *m, int idx, int max_len);
-/*
- * packgeneric.c done
- */
+char *
+psc_msg_string(struct psc_msg *m, int idx, int max_len);
+/* packgeneric.c done */
 
-/*
- * niobuf.c
- */
-extern int
-pscrpc_start_bulk_transfer (struct pscrpc_bulk_desc *desc);
+/* niobuf.c */
+int  pscrpc_start_bulk_transfer(struct pscrpc_bulk_desc *desc);
+void pscrpc_abort_bulk(struct pscrpc_bulk_desc *desc);
+int  pscrpc_register_bulk(struct pscrpc_request *req);
+void pscrpc_unregister_bulk(struct pscrpc_request *req);
+int  pscrpc_send_reply(struct pscrpc_request *req, int may_be_difficult);
+int  pscrpc_reply(struct pscrpc_request *req);
+int  pscrpc_error(struct pscrpc_request *req);
+int  psc_send_rpc(struct pscrpc_request *request, int noreply);
+int  pscrpc_register_rqbd(struct pscrpc_request_buffer_desc *rqbd);
+void psc_free_reply_state(struct pscrpc_reply_state *rs);
+void pscrpc_free_req(struct pscrpc_request *request);
+void pscrpc_req_finished(struct pscrpc_request *request);
+void pscrpc_free_bulk(struct pscrpc_bulk_desc *desc);
+void pscrpc_fill_bulk_md(lnet_md_t *md, struct pscrpc_bulk_desc *desc);
+/* niobuf.c done */
 
-extern void
-pscrpc_abort_bulk (struct pscrpc_bulk_desc *desc);
-
-extern int
-pscrpc_register_bulk (struct pscrpc_request *req);
-
-extern void
-pscrpc_unregister_bulk (struct pscrpc_request *req);
-
-extern int
-pscrpc_send_reply (struct pscrpc_request *req, int may_be_difficult);
-
-extern int
-pscrpc_reply (struct pscrpc_request *req);
-
-extern int
-pscrpc_error(struct pscrpc_request *req);
-
-extern int
-psc_send_rpc(struct pscrpc_request *request, int noreply);
-
-extern int
-pscrpc_register_rqbd (struct pscrpc_request_buffer_desc *rqbd);
-
-extern void
-psc_free_reply_state (struct pscrpc_reply_state *rs);
-
-extern void
-pscrpc_free_req(struct pscrpc_request *request);
-
-extern void
-pscrpc_req_finished(struct pscrpc_request *request);
-
-extern void
-pscrpc_free_bulk(struct pscrpc_bulk_desc *desc);
-
-extern void
-pscrpc_fill_bulk_md (lnet_md_t *md, struct pscrpc_bulk_desc *desc);
-/*
- * niobuf.c done
- */
-
-extern struct pscrpc_connection *
+struct pscrpc_connection *
 pscrpc_get_connection(lnet_process_id_t peer,
 		      lnet_nid_t self, struct psc_uuid *uuid);
 
-extern struct pscrpc_connection*
+struct pscrpc_connection*
 pscrpc_lookup_conn_locked (lnet_process_id_t peer, lnet_nid_t self);
 
-extern struct pscrpc_connection *
+struct pscrpc_connection *
 pscrpc_connection_addref(struct pscrpc_connection *c);
 
-extern void
+void
 pscrpc_abort_inflight(struct pscrpc_import *imp);
 
-
-/*
- *  rpcclient.c
- */
-extern int
+/*  rpcclient.c */
+int
 pscrpc_expire_one_request(struct pscrpc_request *req);
 
 struct pscrpc_request *
@@ -652,38 +574,37 @@ struct pscrpc_bulk_desc *
 pscrpc_prep_bulk_imp (struct pscrpc_request *req, int npages,
 		      int type, int portal);
 
-extern struct pscrpc_request *
+struct pscrpc_request *
 pscrpc_request_addref(struct pscrpc_request *req);
 
-extern void
+void
 import_put(struct pscrpc_import *import);
 
-extern struct pscrpc_import *
+struct pscrpc_import *
 new_import(void);
 
-extern int
+int
 pscrpc_queue_wait(struct pscrpc_request *req);
 
-extern struct pscrpc_request_set *
+struct pscrpc_request_set *
 pscrpc_prep_set(void);
 
-extern int
+int
 pscrpc_push_req(struct pscrpc_request *req);
 
-extern void
+void
 pscrpc_set_add_new_req(struct pscrpc_request_set *set,
 		       struct pscrpc_request     *req);
 
-extern int
+int
 pscrpc_check_set(struct pscrpc_request_set *set,
 		  int check_allsent);
 
-extern int
-pscrpc_set_wait(struct pscrpc_request_set *set);
+int  pscrpc_set_wait(struct pscrpc_request_set *);
+void pscrpc_set_destroy(struct pscrpc_request_set *);
 
-/*
- *  rpcclient.c done
- */
+/*  rpcclient.c done */
+
 static inline int
 pscrpc_bulk_active (struct pscrpc_bulk_desc *desc)
 {
@@ -695,21 +616,14 @@ pscrpc_bulk_active (struct pscrpc_bulk_desc *desc)
 	return (rc);
 }
 
-/*
- *  service.c
- */
-extern int
+/* service.c */
+int
 target_send_reply_msg (struct pscrpc_request *req, int rc, int fail_id);
 
-/*
- *  service.c
- */
-extern void
+void
 pscrpc_fail_import(struct pscrpc_import *imp, __u32 conn_cnt);
-/*
- *  service.c done
- */
 
+/* service.c done */
 
 static inline void
 pscrpc_rs_addref(struct pscrpc_reply_state *rs)
@@ -729,8 +643,8 @@ pscrpc_rs_decref(struct pscrpc_reply_state *rs)
 static inline void
 psc_str2uuid(struct psc_uuid *uuid, char *tmp)
 {
-	strncpy((char *)uuid->uuid, tmp, sizeof(*uuid));
-	uuid->uuid[sizeof(*uuid) - 1] = '\0';
+	strncpy((char *)uuid->uuid, tmp, sizeof(uuid->uuid));
+	uuid->uuid[sizeof(uuid->uuid) - 1] = '\0';
 }
 
 /* Flags that are operation-specific go in the top 16 bits. */
