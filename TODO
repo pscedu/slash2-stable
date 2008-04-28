@@ -15,8 +15,3 @@ pfl
 - remove psclist_add
 - no ifdefs
 - disallow lock reinitialization (e.g. allow LOCK_INIT once)
-- remove psclist_del_init
-
-lnet-lite
-- remove ZEST_LNET
-- add ${LNET_SOCKLND_SRCS} vars as a replacment for LNET_LIBS
