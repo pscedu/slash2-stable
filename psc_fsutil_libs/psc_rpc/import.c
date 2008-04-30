@@ -154,7 +154,7 @@ void pscrpc_activate_import(struct pscrpc_import *imp)
         //pscobd_import_event(obd, imp, IMP_EVENT_ACTIVE);
 }
 
-void pscrpc_fail_import(struct pscrpc_import *imp, __u32 conn_cnt)
+int pscrpc_fail_import(struct pscrpc_import *imp, __u32 conn_cnt)
 {
         ENTRY;
 
@@ -180,7 +180,9 @@ void pscrpc_fail_import(struct pscrpc_import *imp, __u32 conn_cnt)
                 spin_unlock(&imp->imp_lock);
 
                 //ptlrpc_pinger_wake_up();
-		psc_fatalx("Shouldn't be here just yet.. failover not ready");
+		if (imp->imp_failcb == NULL ||
+		    imp->imp_failcb(imp->imp_failcbarg) == 0)
+			psc_fatalx("communication failure");
         }
-        EXIT;
+	EXIT;
 }

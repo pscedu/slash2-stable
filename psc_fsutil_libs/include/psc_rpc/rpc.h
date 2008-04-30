@@ -198,6 +198,8 @@ struct pscrpc_import {
 	u64                       imp_peer_committed_transno;
 	wait_queue_head_t         imp_recovery_waitq;
 	struct psclist_head       imp_delayed_list;
+	int			(*imp_failcb)(void *);	/* callback on failure */
+	void *			  imp_failcbarg;
 	unsigned int              imp_invalid:1,
 		                  imp_server_timeout:1,
 		                  imp_deactive:1,
