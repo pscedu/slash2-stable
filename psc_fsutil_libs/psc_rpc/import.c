@@ -4,6 +4,8 @@
 
 #include "psc_rpc/rpc.h"
 
+int zest_reconnect(void);
+
 static inline char *
 pscrpc_import_state_name(enum psc_imp_state state)
 {
@@ -154,7 +156,7 @@ void pscrpc_activate_import(struct pscrpc_import *imp)
         //pscobd_import_event(obd, imp, IMP_EVENT_ACTIVE);
 }
 
-int pscrpc_fail_import(struct pscrpc_import *imp, __u32 conn_cnt)
+void pscrpc_fail_import(struct pscrpc_import *imp, __u32 conn_cnt)
 {
         ENTRY;
 
@@ -181,8 +183,18 @@ int pscrpc_fail_import(struct pscrpc_import *imp, __u32 conn_cnt)
 
                 //ptlrpc_pinger_wake_up();
 		if (imp->imp_failcb == NULL ||
-		    imp->imp_failcb(imp->imp_failcbarg) == 0)
+		    imp->imp_failcb(imp->imp_failcbarg) == 0){
+#if 0
 			psc_fatalx("communication failure");
+#else
+			psc_dbg("attempting reconnect...");
+			if (0!=zest_reconnect()){
+				psc_fatalx("zest_reconnect() failed");
+			} else {
+				psc_notify("zest_reconnect() succeeded!");
+			}
+#endif
+		}
         }
 	EXIT;
 }
