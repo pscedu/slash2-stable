@@ -98,7 +98,7 @@ key_from_string(char *s)
         unsigned char *n;
         int i;
         if (!s) return(1);
-        for (n=s,i=0;*n;n++,i++) result^=(*n*57)^*n*i;
+        for (n=(void *)s,i=0;*n;n++,i++) result^=(*n*57)^*n*i;
         return(result);
 }
 
