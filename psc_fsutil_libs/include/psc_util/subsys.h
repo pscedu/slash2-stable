@@ -20,7 +20,7 @@
 
 int		 psc_subsys_id(const char *);
 const char	*psc_subsys_name(int);
-void		 psc_subsys_register(int, const char *);
+void		 psc_subsys_register(int, char *);
 
 extern struct dynarray psc_subsystems;
 extern int psc_nsubsys;

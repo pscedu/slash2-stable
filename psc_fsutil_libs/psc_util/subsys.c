@@ -47,7 +47,7 @@ psc_subsys_name(int id)
 }
 
 void
-psc_subsys_register(int id, const char *name)
+psc_subsys_register(int id, char *name)
 {
 	dynarray_add(&psc_subsystems, name);
 	if (psc_nsubsys++ != id)
