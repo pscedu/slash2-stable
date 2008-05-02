@@ -201,7 +201,7 @@ finalize:
 	atomic_add(rlen, &ist->ist_bytes_intv);
 
         if (mlen != rlen){
-                char *trash=malloc(rlen - mlen);
+                unsigned char *trash=malloc(rlen - mlen);
 
                 /*TODO: check error status*/
                 read_connection(private, trash, rlen - mlen);
