@@ -41,7 +41,7 @@ dynarray_hintlen(struct dynarray *da, int n)
 }
 
 int
-dynarray_add(struct dynarray *da, const void *item)
+dynarray_add(struct dynarray *da, void *item)
 {
 	if (dynarray_hintlen(da, da->da_pos + 1) == -1)
 		return (-1);
