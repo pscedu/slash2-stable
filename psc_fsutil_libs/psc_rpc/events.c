@@ -9,6 +9,9 @@
 #include "psc_rpc/rpclog.h"
 #include "psc_types.h"
 
+lnet_handle_eq_t pscrpc_eq_h;
+struct psclist_head pscrpc_wait_callbacks;
+
 /*
  *  Client's outgoing request callback
  */
@@ -489,7 +492,7 @@ int pscrpc_ni_init(int type)
 			psc_fatalx("failed LNetNIInit() (%d)", rc);
 
 		rc = LNetEQAlloc(1024, pscrpc_master_callback, &pscrpc_eq_h);
-		CERROR(LPX64" pscrpc_eq_h cookie value", pscrpc_eq_h.cookie);
+		CERROR("%#"_P_LU64"x pscrpc_eq_h cookie value", pscrpc_eq_h.cookie);
 	} else {
 		/* liblustre calls the master callback when it removes events from the
 		 * event queue.  The event queue has to be big enough not to drop
@@ -505,7 +508,7 @@ int pscrpc_ni_init(int type)
 	if (LNetGetId(1, &my_id))
 		psc_fatalx("LNetGetId() failed");
 
-        psc_notify("nidpid is (0x%"_P_U64"x,0x%x)", my_id.nid, my_id.pid);
+        psc_notify("nidpid is (0x%#"_P_LU64"x,0x%x)", my_id.nid, my_id.pid);
 
         if (rc == 0)
                 return 0;

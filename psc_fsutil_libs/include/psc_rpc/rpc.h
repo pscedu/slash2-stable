@@ -89,8 +89,8 @@
 #define PSC_SVR_PID  54321
 #define ZOBD_TIMEOUT 60
 
-lnet_handle_eq_t pscrpc_eq_h;
-struct psclist_head pscrpc_wait_callbacks;
+extern lnet_handle_eq_t pscrpc_eq_h;
+extern struct psclist_head pscrpc_wait_callbacks;
 
 struct psc_handle {
 	u64 cookie;

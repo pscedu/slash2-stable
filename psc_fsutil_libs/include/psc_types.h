@@ -39,6 +39,8 @@ typedef unsigned long long int u64;
 
 #endif
 
+#define _P_LU64 "L"
+
 typedef	u64 psc_crc_t;
 
 #define CRCSZ (sizeof(psc_crc_t))
