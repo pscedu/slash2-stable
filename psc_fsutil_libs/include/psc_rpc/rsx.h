@@ -31,6 +31,10 @@ struct iovec;
 		}									\
 	} while (0)
 
+#define RSX_NEWREQ(imp, version, op, rq, mq, mp)					\
+	rsx_newreq((imp), (version), (op), sizeof(*(mq)), sizeof(*(mp)),		\
+	    &(rq), &(mq))
+
 int rsx_newreq(struct pscrpc_import *, int, int, int, int, struct pscrpc_request **, void *);
 int rsx_waitrep(struct pscrpc_request *, int, void *);
 int rsx_bulkgetsink(struct pscrpc_request *, struct pscrpc_bulk_desc **, int, struct iovec *, int);
