@@ -328,19 +328,25 @@ psc_ctlrep_getlc(int fd, struct psc_ctlmsghdr *mh, void *m)
 #define MAX_LEVELS 8
 
 __static void
-psc_ctlthr_rep_param(int fd, struct psc_ctlmsghdr *mh,
-    struct psc_ctlmsg_param *sp, const char *thrname,
+psc_ctlmsg_param_send(int fd, struct psc_ctlmsghdr *mh,
+    struct psc_ctlmsg_param *pcp, const char *thrname,
     char **levels, int nlevels, const char *value)
 {
 	char *s, othrname[PSC_THRNAME_MAX];
 	const char *p, *end;
 	int lvl;
 
-	snprintf(othrname, sizeof(othrname), "%s", sp->sp_thrname);
-	snprintf(sp->sp_thrname, sizeof(sp->sp_thrname), "%s", thrname);
+	/*
+	 * Save original request threadname and copy actual in
+	 * for this message.  These will differ in cases such as
+	 * "all" or "ziothr" against "ziothr9".
+	 */
+	snprintf(othrname, sizeof(othrname), "%s", pcp->pcp_thrname);
+	snprintf(pcp->pcp_thrname, sizeof(pcp->pcp_thrname), "%s", thrname);
 
-	s = sp->sp_field;
-	end = s + sizeof(sp->sp_field) - 1;
+	/* Concatenate each levels[] element together with dots (`.'). */
+	s = pcp->pcp_field;
+	end = s + sizeof(pcp->pcp_field) - 1;
 	for (lvl = 0; s < end && lvl < nlevels; lvl++) {
 		for (p = levels[lvl]; s < end && *p; s++, p++)
 			*s = *p;
@@ -349,15 +355,16 @@ psc_ctlthr_rep_param(int fd, struct psc_ctlmsghdr *mh,
 	}
 	*s = '\0';
 
-	snprintf(sp->sp_value, sizeof(sp->sp_value), "%s", value);
-	psc_ctlmsg_sendv(fd, mh, sp);
+	snprintf(pcp->pcp_value, sizeof(pcp->pcp_value), "%s", value);
+	psc_ctlmsg_sendv(fd, mh, pcp);
 
-	snprintf(sp->sp_thrname, sizeof(sp->sp_thrname), "%s", othrname);
+	/* Restore original threadname value for additional processing. */
+	snprintf(pcp->pcp_thrname, sizeof(pcp->pcp_thrname), "%s", othrname);
 }
 
 __static void
-psc_ctlthr_param_log_level(int fd, struct psc_ctlmsghdr *mh,
-    struct psc_ctlmsg_param *sp, char **levels, int nlevels)
+psc_ctl_param_log_level(int fd, struct psc_ctlmsghdr *mh,
+    struct psc_ctlmsg_param *pcp, char **levels, int nlevels)
 {
 	int n, nthr, set, loglevel, subsys, start_ss, end_ss;
 	struct psc_thread **threads, *thr;
@@ -369,13 +376,13 @@ psc_ctlthr_param_log_level(int fd, struct psc_ctlmsghdr *mh,
 	threads = dynarray_get(&pscThreads);
 	nthr = dynarray_len(&pscThreads);
 
-	set = (mh->mh_type == SCMT_SETPARAM);
+	set = (mh->mh_type == PCMT_SETPARAM);
 
 	if (set) {
-		loglevel = psclog_id(sp->sp_value);
+		loglevel = psclog_id(pcp->pcp_value);
 		if (loglevel == -1) {
-			psc_ctlthr_senderrmsg(fd, mh,
-			    "invalid log.level value: %s", sp->sp_value);
+			psc_ctlsenderr(fd, mh,
+			    "invalid log.level value: %s", pcp->pcp_value);
 			return;
 		}
 	}
@@ -396,13 +403,13 @@ psc_ctlthr_param_log_level(int fd, struct psc_ctlmsghdr *mh,
 		end_ss = psc_nsubsys;
 	}
 
-	FOR_EACH_THREAD(n, thr, sp->sp_thrname, threads, nthr)
+	PSC_CTL_FOREACH_THREAD(n, thr, pcp->pcp_thrname, threads, nthr)
 		for (subsys = start_ss; subsys < end_ss; subsys++) {
 			levels[2] = psc_subsys_name(subsys);
 			if (set)
 				thr->pscthr_loglevels[subsys] = loglevel;
 			else {
-				psc_ctlthr_rep_param(fd, mh, sp,
+				psc_ctlmsg_param_send(fd, mh, pcp,
 				    thr->pscthr_name, levels, 3,
 				    psclog_name(thr->pscthr_loglevels[subsys]));
 			}
@@ -410,17 +417,17 @@ psc_ctlthr_param_log_level(int fd, struct psc_ctlmsghdr *mh,
 }
 
 __static void
-psc_ctlrep_param(int fd, struct psc_ctlmsghdr *mh,
-    struct psc_ctlmsg_param *pcp)
+psc_ctlrep_param(int fd, struct psc_ctlmsghdr *mh, void *m)
 {
+	struct psc_ctlmsg_param *pcp = m;
 	char *t, *levels[MAX_LEVELS];
 	int nlevels, set;
 
-	set = (mh->mh_type == SCMT_SETPARAM);
+	set = (mh->mh_type == PCMT_SETPARAM);
 
-	for (nlevels = 0, t = sp->sp_field;
-	    nlevels < MAX_LEVELS && (levels[nlevels] = t) != NULL;
-	    nlevels++) {
+	for (nlevels = 0, t = pcp->pcp_field;
+	    nlevels < MAX_LEVELS &&
+	    (levels[nlevels] = t) != NULL; nlevels++) {
 		if ((t = strchr(levels[nlevels], '.')) != NULL)
 			*t++ = '\0';
 		if (*levels[nlevels] == '\0')
@@ -434,9 +441,11 @@ psc_ctlrep_param(int fd, struct psc_ctlmsghdr *mh,
 		if (nlevels == 1) {
 			if (set)
 				goto invalid;
-			psc_ctlthr_param_log_level(fd, mh, sp, levels, nlevels);
+			psc_ctlthr_param_log_level(fd,
+			    mh, pcp, levels, nlevels);
 		} else if (strcmp(levels[1], "level") == 0)
-			psc_ctlthr_param_log_level(fd, mh, sp, levels, nlevels);
+			psc_ctlthr_param_log_level(fd,
+			    mh, pcp, levels, nlevels);
 		else
 			goto invalid;
 	} else
