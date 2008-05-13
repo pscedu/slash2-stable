@@ -19,11 +19,13 @@
 #include <stdlib.h>
 #include <unistd.h>
 
-#include "psc_ds/atomic.h"
 #include "psc_ds/hash.h"
 #include "psc_ds/list.h"
 #include "psc_ds/listcache.h"
+#include "psc_util/atomic.h"
 #include "psc_util/cdefs.h"
+#include "psc_util/ctl.h"
+#include "psc_util/iostats.h"
 #include "psc_util/thread.h"
 #include "psc_util/threadtable.h"
 
@@ -134,19 +136,21 @@ psc_ctlthr_stat(struct psc_thread *thr, struct psc_ctlmsg_stats *pcst)
  * psc_ctlmsg_stats_send - send a response to a "getstats" inquiry.
  * @fd: client socket descriptor.
  * @mh: already filled-in control message header.
- * @pcst: thread stats control message to be filled in and sent out.
+ * @m: control message to be filled in and sent out.
  * @thr: thread begin queried.
  */
 __static void
-psc_ctlmsg_stats_send(int fd, struct psc_ctlmsghdr *mh,
-    struct psc_ctlmsg_stats *pcst, struct psc_thread *thr)
+psc_ctlmsg_stats_send(int fd, struct psc_ctlmsghdr *mh, void *m,
+    struct psc_thread *thr)
 {
-	if (thr->pscthr_stat == NULL)
+	struct psc_ctlmsg_stats *pcst = m;
+
+	if (thr->pscthr_statf == NULL)
 		return;
 	snprintf(pcst->pcst_thrname, sizeof(pcst->pcst_thrname),
 	    "%s", thr->pscthr_name);
 	pcst->pcst_thrtype = thr->pscthr_type;
-	thr->pscthr_stat(thr, pcst);
+	thr->pscthr_statf(thr, pcst);
 	psc_ctlmsg_sendv(fd, mh, pcst);
 }
 
@@ -171,7 +175,7 @@ psc_ctlrep_getstats(int fd, struct psc_ctlmsghdr *mh, void *m)
  * @mh: already filled-in control message header.
  */
 __static void
-psc_ctlrep_getsubsys(int fd, struct psc_ctlmsghdr *mh, __unused void *m)
+psc_ctlrep_getsubsys(int fd, struct psc_ctlmsghdr *mh, __unusedx void *m)
 {
 	struct psc_ctlmsg_subsys *pcss;
 	const char **ss;
@@ -182,10 +186,10 @@ psc_ctlrep_getsubsys(int fd, struct psc_ctlmsghdr *mh, __unused void *m)
 	pcss = PSCALLOC(siz);
 	ss = dynarray_get(&psc_subsystems);
 	for (n = 0; n < psc_nsubsys; n++)
-		if (snprintf(&pcss->sss_names[n * PCSS_NAME_MAX],
+		if (snprintf(&pcss->pcss_names[n * PCSS_NAME_MAX],
 		    PCSS_NAME_MAX, "%s", ss[n]) == -1) {
 			psc_warn("snprintf");
-			psc_ctlthr_senderrmsg(fd, mh,
+			psc_ctlsenderr(fd, mh,
 			    "unable to retrieve subsystems");
 			goto done;
 		}
@@ -203,19 +207,20 @@ psc_ctlrep_getsubsys(int fd, struct psc_ctlmsghdr *mh, __unused void *m)
  * @thr: thread begin queried.
  */
 __static void
-psc_ctlmsg_loglevel_send(int fd, struct psc_ctlmsghdr *mh, struct psc_thread *thr)
+psc_ctlmsg_loglevel_send(int fd, struct psc_ctlmsghdr *mh, void *m,
+    struct psc_thread *thr)
 {
-	struct psc_ctlmsg_loglevel *pcl;
+	struct psc_ctlmsg_loglevel *pcl = m;
 	size_t siz;
 
-	siz = sizeof(*pll) + sizeof(*pll->pll_levels) * psc_nsubsys;
-	pll = PSCALLOC(siz);
-	snprintf(pll->pll_thrname, sizeof(pll->pll_thrname),
+	siz = sizeof(*pcl) + sizeof(*pcl->pcl_levels) * psc_nsubsys;
+	pcl = PSCALLOC(siz);
+	snprintf(pcl->pcl_thrname, sizeof(pcl->pcl_thrname),
 	    "%s", thr->pscthr_name);
-	memcpy(pll->pll_levels, thr->pscthr_loglevels, psc_nsubsys *
-	    sizeof(*pll->pll_levels));
+	memcpy(pcl->pcl_levels, thr->pscthr_loglevels, psc_nsubsys *
+	    sizeof(*pcl->pcl_levels));
 	mh->mh_size = siz;
-	psc_ctlmsg_sendv(fd, mh, pll);
+	psc_ctlmsg_sendv(fd, mh, pcl);
 	mh->mh_size = 0;	/* reset because we used our own buffer */
 	free(pcl);
 }
@@ -306,7 +311,7 @@ psc_ctlrep_getlc(int fd, struct psc_ctlmsghdr *mh, void *m)
 	struct psc_ctlmsg_lc *pclc = m;
 	list_cache_t *lc;
 
-	if (strcmp(pclc->slc_name, PCLC_NAME_ALL) == 0) {
+	if (strcmp(pclc->pclc_name, PCLC_NAME_ALL) == 0) {
 		spinlock(&pscListCachesLock);
 		psclist_for_each_entry(lc, &pscListCaches,
 		    lc_index_lentry) {
@@ -321,7 +326,7 @@ psc_ctlrep_getlc(int fd, struct psc_ctlmsghdr *mh, void *m)
 		else
 			psc_ctlsenderr(fd, mh,
 			    "unknown listcache: %s",
-			    pclc->slc_name);
+			    pclc->pclc_name);
 	}
 }
 
@@ -391,7 +396,7 @@ psc_ctl_param_log_level(int fd, struct psc_ctlmsghdr *mh,
 		/* Subsys specified, use it. */
 		subsys = psc_subsys_id(levels[2]);
 		if (subsys == -1) {
-			psc_ctlthr_senderrmsg(fd, mh,
+			psc_ctlsenderr(fd, mh,
 			    "invalid log.level subsystem: %s", levels[2]);
 			return;
 		}
@@ -441,10 +446,10 @@ psc_ctlrep_param(int fd, struct psc_ctlmsghdr *mh, void *m)
 		if (nlevels == 1) {
 			if (set)
 				goto invalid;
-			psc_ctlthr_param_log_level(fd,
+			psc_ctl_param_log_level(fd,
 			    mh, pcp, levels, nlevels);
 		} else if (strcmp(levels[1], "level") == 0)
-			psc_ctlthr_param_log_level(fd,
+			psc_ctl_param_log_level(fd,
 			    mh, pcp, levels, nlevels);
 		else
 			goto invalid;
@@ -477,8 +482,8 @@ psc_ctlrep_iostats(int fd, struct psc_ctlmsghdr *mh, void *m)
 	all = (strcmp(name, PCI_NAME_ALL) == 0);
 
 	found = 0;
-	spinlock(&iostatsListLock);
-	psclist_for_each_entry(ist, &iostatsList, ist_lentry)
+	spinlock(&pscIostatsListLock);
+	psclist_for_each_entry(ist, &pscIostatsList, ist_lentry)
 		if (all ||
 		    strncmp(ist->ist_name, name, strlen(name)) == 0) {
 			found = 1;
@@ -487,7 +492,7 @@ psc_ctlrep_iostats(int fd, struct psc_ctlmsghdr *mh, void *m)
 			if (strlen(ist->ist_name) == strlen(name))
 				break;
 		}
-	freelock(&iostatsListLock);
+	freelock(&pscIostatsListLock);
 
 	if (!found && !all)
 		psc_ctlsenderr(fd, mh,
@@ -496,8 +501,9 @@ psc_ctlrep_iostats(int fd, struct psc_ctlmsghdr *mh, void *m)
 
 void
 psc_ctl_applythrop(int fd, struct psc_ctlmsghdr *mh, void *m, const char *thrname,
-    void (*cb)(int, struct psc_ctlmsghdr *, void *, struct psc_thread *))
+    void (*cbf)(int, struct psc_ctlmsghdr *, void *, struct psc_thread *))
 {
+	struct psc_thread **threads;
 	int n, nthr;
 
 	/* XXX lock or snapshot threads so they don't change underneath us */
@@ -505,12 +511,12 @@ psc_ctl_applythrop(int fd, struct psc_ctlmsghdr *mh, void *m, const char *thrnam
 	threads = dynarray_get(&pscThreads);
 	if (strcasecmp(thrname, PCTHRNAME_EVERYONE) == 0) {
 		for (n = 0; n < nthr; n++)
-			cb(fd, mh, m, threads[n]);
+			cbf(fd, mh, m, threads[n]);
 	} else {
 		for (n = 0; n < nthr; n++)
 			if (strcasecmp(thrname,
 			    threads[n]->pscthr_name) == 0) {
-				cb(fd, mh, m, threads[n]);
+				cbf(fd, mh, m, threads[n]);
 				break;
 			}
 		if (n == nthr)
@@ -538,7 +544,7 @@ psc_ctl_applythrop(int fd, struct psc_ctlmsghdr *mh, void *m, const char *thrnam
  * connection, anyone can denial the service quite easily.
  */
 __static void
-psc_ctlthr_service(int fd, struct psc_ctlops *ct, int nops)
+psc_ctlthr_service(int fd, const struct psc_ctlops *ct, int nops)
 {
 	struct psc_ctlmsghdr mh;
 	size_t siz;
@@ -552,7 +558,7 @@ psc_ctlthr_service(int fd, struct psc_ctlops *ct, int nops)
 			psc_notice("short read on psc_ctlmsghdr; read=%zd", n);
 			continue;
 		}
-		if (mh.mh_size > msiz) {
+		if (mh.mh_size > siz) {
 			siz = mh.mh_size;
 			if ((m = realloc(m, siz)) == NULL)
 				psc_fatal("realloc");
@@ -571,19 +577,19 @@ psc_ctlthr_service(int fd, struct psc_ctlops *ct, int nops)
 		    ct[mh.mh_type].pc_op == NULL) {
 			psc_warnx("unrecognized psc_ctlmsghdr type; "
 			    "type=%d size=%zu", mh.mh_type, mh.mh_size);
-			psc_ctlthr_senderrmsg(fd, mh,
+			psc_ctlsenderr(fd, &mh,
 			    "unrecognized psc_ctlmsghdr type; "
 			    "type=%d size=%zu", mh.mh_type, mh.mh_size);
 			continue;
 		}
 		if (ct[mh.mh_type].pc_siz &&
-		    ct[mh.mh_type].pc_siz != mh->mh_size) {
-			psc_ctlthr_senderrmsg(fd, mh,
+		    ct[mh.mh_type].pc_siz != mh.mh_size) {
+			psc_ctlsenderr(fd, &mh,
 			    "invalid ctlmsg size; type=%d, size=%zu",
-			    mh->mh_type, mh->mh_size);
+			    mh.mh_type, mh.mh_size);
 			continue;
 		}
-		ct[mh.mh_type].pc_op(fd, mh, m);
+		ct[mh.mh_type].pc_op(fd, &mh, m);
 	}
 	if (n == -1)
 		psc_fatal("read");
@@ -597,7 +603,7 @@ psc_ctlthr_service(int fd, struct psc_ctlops *ct, int nops)
  * @nops: number of operations in @ct table.
  */
 __dead void
-psc_ctlthr_main(const char *fn, struct psc_ctlops *ct, int nops)
+psc_ctlthr_main(const char *fn, const struct psc_ctlops *ct, int nops)
 {
 	struct sockaddr_un sun;
 	mode_t old_umask;
@@ -646,7 +652,7 @@ psc_ctlthr_main(const char *fn, struct psc_ctlops *ct, int nops)
 		if ((fd = accept(s, (struct sockaddr *)&sun,
 		    &siz)) == -1)
 			psc_fatal("accept");
-		psc_ctlthr(&pscControlThread)->sc_st_nclients++;
+		psc_ctlthr(&pscControlThread)->pc_st_nclients++;
 		psc_ctlthr_service(fd, ct, nops);
 		close(fd);
 	}
