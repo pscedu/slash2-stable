@@ -9,6 +9,7 @@
 
 #include "psc_ds/hash.h"
 #include "psc_ds/listcache.h"
+#include "psc_util/iostats.h"
 #include "psc_util/thread.h"
 
 #define PCTHRNAME_EVERYONE	"everyone"
@@ -42,20 +43,24 @@ struct psc_ctlmsg_lc {
 struct psc_ctlmsg_stats {
 	char			pcst_thrname[PSC_THRNAME_MAX];
 	int			pcst_thrtype;
-	int			pcst_u32_1;
-	int			pcst_u32_2;
-	int			pcst_u32_3;
+	u32			pcst_u32_1;
+	u32			pcst_u32_2;
+	u32			pcst_u32_3;
 };
+
+#define pcst_nclients	pcst_u32_1
+#define pcst_nsent	pcst_u32_2
+#define pcst_nrecv	pcst_u32_3
 
 struct psc_ctlmsg_hashtable {
-	char			pch_name[HTNAME_MAX];
-	int			pch_totalbucks;
-	int			pch_usedbucks;
-	int			pch_nents;
-	int			pch_maxbucklen;
+	char			pcht_name[HTNAME_MAX];
+	int			pcht_totalbucks;
+	int			pcht_usedbucks;
+	int			pcht_nents;
+	int			pcht_maxbucklen;
 };
 
-#define PCH_NAME_ALL		"all"
+#define PCHT_NAME_ALL		"all"
 
 #define PCP_FIELD_MAX		30
 #define PCP_VALUE_MAX		50
@@ -106,7 +111,7 @@ struct psc_ctlmsghdr {
 	unsigned char		mh_data[0];
 };
 
-struct psc_ctlthread {
+struct psc_ctlthr {
 	int pc_st_nclients;
 	int pc_st_nsent;
 	int pc_st_nrecv;
@@ -121,8 +126,10 @@ struct psc_ctlops {
 	for ((i) = 0; ((thr) = (threads)[i]) && (i) < (nthreads); i++)	\
 		if (strncmp((thr)->pscthr_name, (thrname),		\
 		    strlen(thrname)) == 0 ||				\
-		    strcmp((thrname), STHRNAME_EVERYONE) == 0)
+		    strcmp((thrname), PCTHRNAME_EVERYONE) == 0)
 
-void psc_ctlthr_main(const char *);
+#define psc_ctlthr(thr)	((struct psc_ctlthr *)(thr)->pscthr_private)
+
+void psc_ctlthr_main(const char *, const struct psc_ctlops *, int);
 void psc_ctl_applythrop(int, struct psc_ctlmsghdr *, void *, const char *,
-	void (*)(int, struct psc_ctlmsghdr *, void *, struct psc_thread *))
+	void (*)(int, struct psc_ctlmsghdr *, void *, struct psc_thread *));
