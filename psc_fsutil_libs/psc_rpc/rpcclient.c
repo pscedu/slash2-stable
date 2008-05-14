@@ -1344,6 +1344,9 @@ int pscrpc_set_wait(struct pscrpc_request_set *set)
 		 * EINTR.
 		 * I don't really care if we go once more round the loop in
 		 * the error cases -eeb. */
+
+		/* let the real timeouts bubble back up to the caller */
+		if (-ETIMEDOUT==rc) return rc;
 	} while (rc != 0 || set->set_remaining != 0);
 
 	LASSERT(set->set_remaining == 0);

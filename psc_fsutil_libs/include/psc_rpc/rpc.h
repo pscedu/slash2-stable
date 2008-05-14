@@ -824,7 +824,7 @@ do {										\
  *	model can be used for server threads so long as liblustre_wait_event()
  *	is replaced with something that uses timed waitq's.
  */
-#define pscrpc_timeout 100
+#define pscrpc_timeout 37
 #define __psc_client_wait_event(wq, condition, info, ret, excl)			\
 do {										\
 	time_t __timeout = info->lwi_timeout;					\
@@ -845,10 +845,11 @@ do {										\
 		__interval = info->lwi_interval;				\
 										\
 	while (!(condition)) {							\
-		pscrpc_wait_event(__interval);					\
+		ret = pscrpc_wait_event(__interval);			        \
+		if (0<ret) ret=0; /* preserve the previous semantics */         \
 		if (condition)							\
 			break;							\
-										\
+		if (-ETIMEDOUT==ret) break;     				\
 		if (!__timed_out && info->lwi_timeout != 0) {			\
 			__now = time(NULL);					\
 			__timeout -= __now - __then;				\
