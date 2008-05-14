@@ -10,11 +10,11 @@
 #include <unistd.h>
 
 #include "psc_ds/list.h"
-#include "psc_util/log.h"
-#include "../slashd/control.h"
-#include "psc_util/subsys.h"
 #include "psc_ds/vbitmap.h"
 #include "psc_util/cdefs.h"
+#include "psc_util/ctl.h"
+#include "psc_util/log.h"
+#include "psc_util/subsys.h"
 
 __static PSCLIST_HEAD(psc_ctlmsgs);
 
@@ -27,11 +27,6 @@ int psc_ctl_noheader;
 int psc_ctl_inhuman;
 int psc_ctl_nsubsys;
 char *psc_ctl_subsys_names;
-
-struct psc_ctlshow_ent {
-	const char	*pse_name;
-	int		 pse_value;
-};
 
 __static int
 psc_ctlshow_lookup(const char *name)
@@ -274,21 +269,6 @@ psc_ctlthr_prdat(const struct psc_ctlmsg_stat *pcst)
 	    pcst->pcst_nsent, pcst->pcst_nrecv);
 }
 
-struct psc_thrstatfmt {
-	int  (*ptf_prhdr)(void);
-	void (*ptf_prdat)(const struct psc_ctlmsg_stat *);
-} psc_thrstatfmt[] = {
-	{ psc_ctlthr_prhdr, psc_ctlthr_prdat }
-};
-
-
-struct psc_ctlmsg_prfmt {
-	int	(*prf_prhdr)(void);
-	void	(*prf_prdat)(const void *)
-	size_t	  prf_msgsiz;
-	int	(*prf_check)(const struct psc_ctlmsghdr *);
-};
-
 int
 psc_ctlmsg_hashtable_prhdr(void)
 {
@@ -399,44 +379,44 @@ psc_ctlmsg_param_prdat(const void *m)
 		    pcp->pcp_field, pcp->pcp_value);
 }
 
-
-
+void
+psc_ctlmsg_stats_prdat(const void *m)
+{
+	struct psc_ctlmsg_stats *pcst = m;
+	struct psc_ctl_thrstatfmt *ptf;
 	static int last_thrtype = -1;
 
-		pcst = m;
-		if (pcst->pcst_thrtype >= 0 &&
-		    pcst->pcst_thrtype < nthrstatf &&
-		    psc_thrstatfmt[pcst->pcst_thrtype] == NULL)
-			break;
+	/* Check thread type. */
+	if (pcst->pcst_thrtype < 0 ||
+	    pcst->pcst_thrtype >= NENTRIES(psc_ctl_thrstatfmts))
+		psc_fatalx("invalid thread type: %d",
+		    pcst->pcst_thrtype);
 
-		if (lastmsgtype != PCMT_GETSTATS) {
-			printf("thread stats\n");
-			last_thrtype = -1;
-		}
+	/* Skip thread types for which there are no print routine. */
+	ptf = &psc_ctl_thrstatfmts[pcst->pcst_thrtype];
+	if (ptf->ptf_prhdr == NULL)
+		return;
 
-		if (pcst->pcst_thrtype < 0 ||
-		    pcst->pcst_thrtype >= nthrstatf) {
-			psc_warnx("invalid thread type: %d",
-			    pcst->pcst_thrtype);
-			break;
-		}
+	if (!psc_ctl_noheaders && lastmsgtype != PCMT_GETSTATS) {
+		printf("thread stats\n");
+		last_thrtype = -1;
+	}
 
-		/* print subheader for each thread type */
-		if (last_thrtype != pcst->pcst_thrtype) {
-			if (lastmsgtype == PCMT_GETSTATS)
-				printf("\n");
-			len = psc_thrstatfmt[pcst->pcst_thrtype].ptf_prhdr();
-			putchar('\n');
-			for (n = 0; n < len; n++)
-				putchar('=');
-			putchar('\n');
-		}
-		last_thrtype = pcst->pcst_thrtype;
+	/* Print thread-type-specific sub-header. */
+	if (!psc_ctl_noheaders && last_thrtype != pcst->pcst_thrtype) {
+		if (lastmsgtype == PCMT_GETSTATS)
+			printf("\n");
+		len = ptf->ptf_prhdr();
+		putchar('\n');
+		for (n = 0; n < len; n++)
+			putchar('=');
+		putchar('\n');
+	}
+	last_thrtype = pcst->pcst_thrtype;
 
-		/* print thread stats */
-		psc_thrstatfmt[pcst->pcst_thrtype].ptf_prdat(pcst);
-
-
+	/* Print thread stats. */
+	ptf->ptf_prdat(pcst);
+}
 
 int
 psc_ctlmsg_loglevel_check(const struct psc_ctlmsghdr *mh)
