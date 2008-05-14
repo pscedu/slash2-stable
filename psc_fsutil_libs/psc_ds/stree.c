@@ -10,7 +10,8 @@ psc_stree_init(struct psc_streenode *ptn)
 	INIT_PSCLIST_ENTRY(&ptn->ptn_sibling);
 }
 
-void
+
+struct psc_streenode *
 psc_stree_addchild(struct psc_streenode *ptn, void *data)
 {
 	struct psc_streenode *child;
@@ -19,5 +20,6 @@ psc_stree_addchild(struct psc_streenode *ptn, void *data)
 	INIT_PSCLIST_HEAD(&child->ptn_children);
 	child->ptn->ptn_data = data;
 	psclist_xadd(&child->ptn_sibling, &ptn->ptn_children);
+	return (child);
 
 }

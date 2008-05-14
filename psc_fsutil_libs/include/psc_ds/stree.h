@@ -8,3 +8,7 @@ struct psc_streenode {
 
 #define psc_stree_foreach_child(child, ptn)		\
 	psclist_for_each_entry((child), &(ptn)->ptn_children, ptn_sibling)
+
+struct psc_streenode *
+     psc_stree_addchild(struct psc_streenode *, void *);
+void psc_stree_init(struct psc_streenode *);
