@@ -5,7 +5,7 @@
  * parameters of a running daemon instance.
  */
 
-#include <sys/param.h>
+#include <sys/types.h>
 
 #include "psc_ds/hash.h"
 #include "psc_ds/listcache.h"

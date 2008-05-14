@@ -22,6 +22,7 @@
 #include "psc_ds/hash.h"
 #include "psc_ds/list.h"
 #include "psc_ds/listcache.h"
+#include "psc_ds/stree.h"
 #include "psc_util/atomic.h"
 #include "psc_util/cdefs.h"
 #include "psc_util/ctl.h"
@@ -333,7 +334,7 @@ psc_ctlrep_getlc(int fd, struct psc_ctlmsghdr *mh, void *m)
 #define MAX_LEVELS 8
 
 __static void
-psc_ctlmsg_param_send(int fd, struct psc_ctlmsghdr *mh,
+psc_ctlmsg_param_send(int fd, const struct psc_ctlmsghdr *mh,
     struct psc_ctlmsg_param *pcp, const char *thrname,
     char **levels, int nlevels, const char *value)
 {
@@ -368,7 +369,7 @@ psc_ctlmsg_param_send(int fd, struct psc_ctlmsghdr *mh,
 }
 
 __static void
-psc_ctl_param_log_level(int fd, struct psc_ctlmsghdr *mh,
+psc_ctlparam_log_level(int fd, struct psc_ctlmsghdr *mh,
     struct psc_ctlmsg_param *pcp, char **levels, int nlevels)
 {
 	int n, nthr, set, loglevel, subsys, start_ss, end_ss;
@@ -421,12 +422,35 @@ psc_ctl_param_log_level(int fd, struct psc_ctlmsghdr *mh,
 		}
 }
 
+/* Node in the control parameter tree. */
+struct psc_ctlparam_node {
+	char  *pcn_name;
+	void (*pcn_cbf)(int, struct psc_ctlmsghdr *, struct psc_ctlmsg_param *, char **, int);
+};
+
+/* Stack processing frame. */
+struct psc_ctlparam_procframe {
+	struct psclist_head	pcf_lentry;
+	int			pcf_level;
+	int			pcf_flags;
+	int			pcf_pos;
+
+};
+
+#define PCFF_USEPOS	(1<<0)
+
+struct psc_streenode psc_ctlparamtree;
+
 __static void
 psc_ctlrep_param(int fd, struct psc_ctlmsghdr *mh, void *m)
 {
+	struct psc_ctlparam_procframe *pcf;
+	struct psc_streenode *ptn, *c, *d;
 	struct psc_ctlmsg_param *pcp = m;
+	struct psc_ctlparam_node *pcn;
+	struct psclist_head stack;
 	char *t, *levels[MAX_LEVELS];
-	int nlevels, set;
+	int n, k, nlevels, set;
 
 	set = (mh->mh_type == PCMT_SETPARAM);
 
@@ -442,26 +466,82 @@ psc_ctlrep_param(int fd, struct psc_ctlmsghdr *mh, void *m)
 	if (nlevels == 0 || nlevels >= MAX_LEVELS)
 		goto invalid;
 
-	if (strcmp(levels[0], "log") == 0) {
-		if (nlevels == 1) {
-			if (set)
+	INIT_PSCLIST_HEAD(&stack);
+
+	while (!psclist_empty(&stack)) {
+		pcf = psclist_first_entry(&stack,
+		    struct psc_ctlparam_procframe, pcf_lentry);
+		psclist_del(&pcf->pcf_lentry);
+
+		n = 1;
+		ptn = &psc_ctlparamtree;
+		do {
+			k = 0;
+			psc_stree_foreach_child(c, ptn) {
+				pcn = ptn->ptn_data;
+				if (pcf->pcf_flags & PCFF_USEPOS) {
+					if (pcf->pcf_pos == k)
+						break;
+				} else
+				if (strcmp(pcn->pcn_name, levels[n]) == 0)
+					break;
+				k++;
+			}
+			if (c == NULL)
 				goto invalid;
-			psc_ctl_param_log_level(fd,
-			    mh, pcp, levels, nlevels);
-		} else if (strcmp(levels[1], "level") == 0)
-			psc_ctl_param_log_level(fd,
-			    mh, pcp, levels, nlevels);
-		else
-			goto invalid;
-	} else
-		goto invalid;
+			if (pcf->pcf_level == n) {
+				if (psclist_empty(&c->ptn_children))
+					pcn->pcn_cbf(fd, mh, pcp, levels, nlevels);
+				else {
+					if (set)
+						goto invalid;
+					k = 0;
+					psc_stree_foreach_child(d, c) {
+						pcf = PSCALLOC(sizeof(*pcf));
+						pcf->pcf_level = n + 1;
+						pcf->pcf_pos = k++;
+						pcf->pcf_flags = PCFF_USEPOS;
+						psclist_xadd(&pcf->pcf_lentry, &stack);
+					}
+				}
+			}
+		} while (++n < pcf->pcf_level);
+		free(pcf);
+	}
 	return;
 
  invalid:
 	while (nlevels > 1)
 		levels[--nlevels][-1] = '.';
-	psc_ctlsenderr(fd, mh,
-	    "invalid field/value: %s", pcp->pcp_field);
+	psc_ctlsenderr(fd, mh, "invalid field/value: %s", pcp->pcp_field);
+}
+
+void
+psc_ctlparam_register(char *name, void (*cbf)(int, struct psc_ctlmsghdr *,
+    struct psc_ctlmsg_param *, char **, int))
+{
+	struct psc_streenode *ptn, *c;
+	struct psc_ctlparam_node *pcn;
+	char *subname, *next;
+
+	ptn = &psc_ctlparamtree;
+	for (subname = name; subname != NULL; subname = next) {
+		if ((next = strchr(subname, ',')) != NULL)
+			*next++ = '\0';
+		psc_stree_foreach_child(c, ptn) {
+			pcn = c->ptn_data;
+			if (strcmp(pcn->pcn_name, subname) == 0)
+				break;
+		}
+		if (c == NULL) {
+			pcn = PSCALLOC(sizeof(*pcn));
+			pcn->pcn_name = strdup(subname);
+			if (next == NULL)
+				pcn->pcn_cbf = cbf;
+			c = psc_stree_addchild(ptn, pcn);
+		}
+		ptn = c;
+	}
 }
 
 /*
