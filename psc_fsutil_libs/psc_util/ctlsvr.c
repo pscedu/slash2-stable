@@ -115,7 +115,7 @@ psc_ctlsenderr(int fd, struct psc_ctlmsghdr *mh, const char *fmt, ...)
 	vsnprintf(pce.pce_errmsg, sizeof(pce.pce_errmsg), fmt, ap); /* XXX */
 	va_end(ap);
 
-	mh->mh_type = PCMT_ERRMSG;
+	mh->mh_type = PCMT_ERROR;
 	mh->mh_size = sizeof(pce);
 	psc_ctlmsg_sendv(fd, mh, &pce);
 }
@@ -482,8 +482,8 @@ psc_ctlrep_param(int fd, struct psc_ctlmsghdr *mh, void *m)
 				if (pcf->pcf_flags & PCFF_USEPOS) {
 					if (pcf->pcf_pos == k)
 						break;
-				} else
-				if (strcmp(pcn->pcn_name, levels[n]) == 0)
+				} else if (strcmp(pcn->pcn_name,
+				    levels[n]) == 0)
 					break;
 				k++;
 			}
