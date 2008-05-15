@@ -1,5 +1,7 @@
 /* $Id$ */
 
+#define PSCTHR_NAME_MAX 12
+
 #define PSC_CTLMSG_PRFMT_DEFS															\
 /* 0 */	{ NULL,				psc_ctlmsg_error_prdat,		sizeof(struct psc_ctlmsg_error),	NULL },				\
 /* 1 */	{ psc_ctlmsg_loglevel_prhdr,	psc_ctlmsg_loglevel_prdat,	0,					psc_ctlmsg_loglevel_check },	\
@@ -32,7 +34,7 @@ void psc_ctlparse_hashtable(const char *);
 void psc_ctlparse_show(char *);
 void psc_ctlparse_lc(char *);
 void psc_ctlparse_param(char *);
-void psc_ctlparse_iostat(char *);
+void psc_ctlparse_iostats(char *);
 
 void psc_ctlcli_main(const char *);
 

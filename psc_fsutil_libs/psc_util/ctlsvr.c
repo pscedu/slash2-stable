@@ -26,6 +26,7 @@
 #include "psc_util/atomic.h"
 #include "psc_util/cdefs.h"
 #include "psc_util/ctl.h"
+#include "psc_util/ctlsvr.h"
 #include "psc_util/iostats.h"
 #include "psc_util/thread.h"
 #include "psc_util/threadtable.h"
@@ -175,7 +176,7 @@ psc_ctlrep_getstats(int fd, struct psc_ctlmsghdr *mh, void *m)
  * @fd: client socket descriptor.
  * @mh: already filled-in control message header.
  */
-__static void
+void
 psc_ctlrep_getsubsys(int fd, struct psc_ctlmsghdr *mh, __unusedx void *m)
 {
 	struct psc_ctlmsg_subsys *pcss;
@@ -232,7 +233,7 @@ psc_ctlmsg_loglevel_send(int fd, struct psc_ctlmsghdr *mh, void *m,
  * @mh: already filled-in control message header.
  * @m: control message to examine.
  */
-__static void
+void
 psc_ctlrep_getloglevel(int fd, struct psc_ctlmsghdr *mh, void *m)
 {
 	struct psc_ctlmsg_loglevel *pcl = m;
@@ -249,7 +250,7 @@ psc_ctlrep_getloglevel(int fd, struct psc_ctlmsghdr *mh, void *m)
  * @mh: already filled-in control message header.
  * @m: control message to be filled in and sent out.
  */
-__static void
+void
 psc_ctlrep_gethashtable(int fd, struct psc_ctlmsghdr *mh, void *m)
 {
 	struct psc_ctlmsg_hashtable *pcht = m;
@@ -306,7 +307,7 @@ psc_ctlmsg_lc_send(int fd, struct psc_ctlmsghdr *mh,
  * @mh: already filled-in control message header.
  * @pclc: control message to examine and reuse.
  */
-__static void
+void
 psc_ctlrep_getlc(int fd, struct psc_ctlmsghdr *mh, void *m)
 {
 	struct psc_ctlmsg_lc *pclc = m;
@@ -368,7 +369,7 @@ psc_ctlmsg_param_send(int fd, const struct psc_ctlmsghdr *mh,
 	snprintf(pcp->pcp_thrname, sizeof(pcp->pcp_thrname), "%s", othrname);
 }
 
-__static void
+void
 psc_ctlparam_log_level(int fd, struct psc_ctlmsghdr *mh,
     struct psc_ctlmsg_param *pcp, char **levels, int nlevels)
 {
@@ -441,7 +442,7 @@ struct psc_ctlparam_procframe {
 
 struct psc_streenode psc_ctlparamtree;
 
-__static void
+void
 psc_ctlrep_param(int fd, struct psc_ctlmsghdr *mh, void *m)
 {
 	struct psc_ctlparam_procframe *pcf;
@@ -545,13 +546,13 @@ psc_ctlparam_register(char *name, void (*cbf)(int, struct psc_ctlmsghdr *,
 }
 
 /*
- * psc_ctlrep_iostats - send a response to a "getiostats" inquiry.
+ * psc_ctlrep_getiostats - send a response to a "getiostats" inquiry.
  * @fd: client socket descriptor.
  * @mh: already filled-in control message header.
  * @m: iostats control message to be filled in and sent out.
  */
-__static void
-psc_ctlrep_iostats(int fd, struct psc_ctlmsghdr *mh, void *m)
+void
+psc_ctlrep_getiostats(int fd, struct psc_ctlmsghdr *mh, void *m)
 {
 	struct psc_ctlmsg_iostats *pci = m;
 	char name[IST_NAME_MAX];
@@ -624,7 +625,7 @@ psc_ctl_applythrop(int fd, struct psc_ctlmsghdr *mh, void *m, const char *thrnam
  * connection, anyone can denial the service quite easily.
  */
 __static void
-psc_ctlthr_service(int fd, const struct psc_ctlops *ct, int nops)
+psc_ctlthr_service(int fd, const struct psc_ctlop *ct, int nops)
 {
 	struct psc_ctlmsghdr mh;
 	size_t siz;
@@ -683,7 +684,7 @@ psc_ctlthr_service(int fd, const struct psc_ctlops *ct, int nops)
  * @nops: number of operations in @ct table.
  */
 __dead void
-psc_ctlthr_main(const char *fn, const struct psc_ctlops *ct, int nops)
+psc_ctlthr_main(const char *fn, const struct psc_ctlop *ct, int nops)
 {
 	struct sockaddr_un sun;
 	mode_t old_umask;

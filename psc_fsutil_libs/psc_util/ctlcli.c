@@ -12,10 +12,9 @@
 #include "psc_ds/vbitmap.h"
 #include "psc_util/cdefs.h"
 #include "psc_util/ctl.h"
+#include "psc_util/ctlcli.h"
 #include "psc_util/log.h"
 #include "psc_util/subsys.h"
-
-#define PSCTHR_NAME_MAX 12
 
 __static PSCLIST_HEAD(psc_ctlmsgs);
 
@@ -203,7 +202,7 @@ psc_ctlparse_param(char *spec)
 }
 
 void
-psc_ctlparse_iostat(char *iostats)
+psc_ctlparse_iostats(char *iostats)
 {
 	struct psc_ctlmsg_iostats *pci;
 	char *iostat, *next;
