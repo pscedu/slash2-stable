@@ -1,3 +1,5 @@
 /* $Id$ */
 
-int mkdirs(const char *);
+#include <sys/types.h>
+
+int mkdirs(const char *, mode_t);
