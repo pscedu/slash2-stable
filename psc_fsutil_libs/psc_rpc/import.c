@@ -181,7 +181,7 @@ void pscrpc_fail_import(struct pscrpc_import *imp, __u32 conn_cnt)
 
                 //ptlrpc_pinger_wake_up();
 		if (imp->imp_failcb){
-			if (0 == imp->imp_failcb()){
+			if (0 != imp->imp_failcb()){
 				psc_fatalx("imp->failcb() failed");
 			} else {
 				psc_notify("imp->failcb() succeeded!");
