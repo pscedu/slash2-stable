@@ -671,7 +671,7 @@ psc_ctlthr_service(int fd, const struct psc_ctlop *ct, int nops)
 			    mh.mh_type, mh.mh_size);
 			continue;
 		}
-		psc_ctlthr(&pscControlThread)->pc_st_nread++;
+		psc_ctlthr(&pscControlThread)->pc_st_nrecv++;
 		ct[mh.mh_type].pc_op(fd, &mh, m);
 	}
 	if (n == -1)
