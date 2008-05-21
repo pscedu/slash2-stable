@@ -301,7 +301,7 @@ psc_ctlmsg_error_prdat(const void *m)
 }
 
 int
-psc_ctlmsg_subsys_check(const struct psc_ctlmsghdr *mh, const void *m)
+psc_ctlmsg_subsys_check(struct psc_ctlmsghdr *mh, const void *m)
 {
 	const struct psc_ctlmsg_subsys *pcss = m;
 	int n;
@@ -318,6 +318,7 @@ psc_ctlmsg_subsys_check(const struct psc_ctlmsghdr *mh, const void *m)
 		    &pcss->pcss_names[n * PCSS_NAME_MAX], PCSS_NAME_MAX);
 		psc_ctl_subsys_names[n][PCSS_NAME_MAX - 1] = '\0';
 	}
+	mh->mh_type = -1;	/* hack to fix newline */
 	return (0);
 }
 
@@ -450,7 +451,7 @@ psc_ctlmsg_stats_prdat(const void *m)
 }
 
 int
-psc_ctlmsg_loglevel_check(const struct psc_ctlmsghdr *mh,
+psc_ctlmsg_loglevel_check(struct psc_ctlmsghdr *mh,
     __unusedx const void *m)
 {
 	__unusedx struct psc_ctlmsg_loglevel *pcl;
