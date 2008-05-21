@@ -26,7 +26,7 @@ struct psc_ctlmsg {
 int psc_ctl_noheader;
 int psc_ctl_inhuman;
 int psc_ctl_nsubsys;
-char *psc_ctl_subsys_names;
+char **psc_ctl_subsys_names;
 __static int psc_ctl_lastmsgtype = -1;
 
 __static int
@@ -230,7 +230,7 @@ psc_ctl_loglevel_namelen(int n)
 	size_t maxlen;
 	int j;
 
-	maxlen = strlen(&psc_ctl_subsys_names[n * PCSS_NAME_MAX]);
+	maxlen = strlen(psc_ctl_subsys_names[n]);
 	for (j = 0; j < PNLOGLEVELS + 1; j++)
 		maxlen = MAX(maxlen, strlen(psclog_name(j)));
 	return (maxlen);
@@ -269,7 +269,8 @@ psc_ctlthr_prdat(const struct psc_ctlmsg_stats *pcst)
 }
 
 int
-psc_ctlmsg_hashtable_prhdr(__unusedx struct psc_ctlmsghdr *mh)
+psc_ctlmsg_hashtable_prhdr(__unusedx struct psc_ctlmsghdr *mh,
+    __unusedx const void *m)
 {
 	printf("hash table statistics\n");
 	return (printf("%12s %6s %6s %7s %6s %6s %6s\n",
@@ -300,21 +301,29 @@ psc_ctlmsg_error_prdat(const void *m)
 }
 
 int
-psc_ctlmsg_subsys_check(const struct psc_ctlmsghdr *mh)
+psc_ctlmsg_subsys_check(const struct psc_ctlmsghdr *mh, const void *m)
 {
-	const struct psc_ctlmsg_subsys *pcss = (void *)mh->mh_data;
+	const struct psc_ctlmsg_subsys *pcss = m;
+	int n;
 
 	if (mh->mh_size == 0 ||
 	    mh->mh_size % PCSS_NAME_MAX)
 		return (sizeof(*pcss));
 	psc_ctl_nsubsys = mh->mh_size / PCSS_NAME_MAX;
-	psc_ctl_subsys_names = PSCALLOC(mh->mh_size);
-	memcpy(psc_ctl_subsys_names, pcss->pcss_names, mh->mh_size);
+	psc_ctl_subsys_names = PSCALLOC(psc_ctl_nsubsys *
+	    sizeof(*psc_ctl_subsys_names));
+	for (n = 0; n < psc_ctl_nsubsys; n++) {
+		psc_ctl_subsys_names[n] = PSCALLOC(PCSS_NAME_MAX);
+		memcpy(psc_ctl_subsys_names[n],
+		    &pcss->pcss_names[n * PCSS_NAME_MAX], PCSS_NAME_MAX);
+		psc_ctl_subsys_names[n][PCSS_NAME_MAX - 1] = '\0';
+	}
 	return (0);
 }
 
 int
-psc_ctlmsg_iostats_prhdr(__unusedx struct psc_ctlmsghdr *mh)
+psc_ctlmsg_iostats_prhdr(__unusedx struct psc_ctlmsghdr *mh,
+    __unusedx const void *m)
 {
 	printf("iostats\n");
 	return (printf(" %-12s %9s %8s %8s %8s\n",
@@ -344,7 +353,8 @@ psc_ctlmsg_iostats_prdat(const void *m)
 }
 
 int
-psc_ctlmsg_lc_prhdr(__unusedx struct psc_ctlmsghdr *mh)
+psc_ctlmsg_lc_prhdr(__unusedx struct psc_ctlmsghdr *mh,
+    __unusedx const void *m)
 {
 	printf("list caches\n");
 	return (printf(" %20s %8s %9s %8s\n",
@@ -365,7 +375,8 @@ psc_ctlmsg_lc_prdat(const void *m)
 }
 
 int
-psc_ctlmsg_param_prhdr(__unusedx struct psc_ctlmsghdr *mh)
+psc_ctlmsg_param_prhdr(__unusedx struct psc_ctlmsghdr *mh,
+    __unusedx const void *m)
 {
 	printf("parameters\n");
 	return (printf(" %-30s %s\n", "name", "value"));
@@ -386,11 +397,11 @@ psc_ctlmsg_param_prdat(const void *m)
 #define MT_RESET_STATS (-2)
 
 int
-psc_ctlmsg_stats_prhdr(struct psc_ctlmsghdr *mh)
+psc_ctlmsg_stats_prhdr(struct psc_ctlmsghdr *mh, const void *m)
 {
 	static int last_thrtype = -1;
 
-	const struct psc_ctlmsg_stats *pcst = (void *)mh->mh_data;
+	const struct psc_ctlmsg_stats *pcst = m;
 	struct psc_ctl_thrstatfmt *ptf;
 	int len, n;
 
@@ -439,7 +450,8 @@ psc_ctlmsg_stats_prdat(const void *m)
 }
 
 int
-psc_ctlmsg_loglevel_check(const struct psc_ctlmsghdr *mh)
+psc_ctlmsg_loglevel_check(const struct psc_ctlmsghdr *mh,
+    __unusedx const void *m)
 {
 	__unusedx struct psc_ctlmsg_loglevel *pcl;
 
@@ -450,7 +462,8 @@ psc_ctlmsg_loglevel_check(const struct psc_ctlmsghdr *mh)
 }
 
 int
-psc_ctlmsg_loglevel_prhdr(__unusedx struct psc_ctlmsghdr *mh)
+psc_ctlmsg_loglevel_prhdr(__unusedx struct psc_ctlmsghdr *mh,
+    __unusedx const void *m)
 {
 	int len, n;
 
@@ -458,7 +471,7 @@ psc_ctlmsg_loglevel_prhdr(__unusedx struct psc_ctlmsghdr *mh)
 	len = printf(" %-*s ", PSCTHR_NAME_MAX, "thread");
 	for (n = 0; n < psc_ctl_nsubsys; n++)
 		len += printf(" %*s", psc_ctl_loglevel_namelen(n),
-		    &psc_ctl_subsys_names[n * PCSS_NAME_MAX]);
+		    psc_ctl_subsys_names[n]);
 	len += printf("\n");
 	return (len);
 }
@@ -497,7 +510,7 @@ psc_ctlmsg_print(struct psc_ctlmsghdr *mh, const void *m)
 	} else if (prf->prf_check == NULL)
 		/* Disallowed message type. */
 		psc_fatalx("invalid ctlmsg type %d", mh->mh_type);
-	else if ((n = prf->prf_check(mh)) != 0)
+	else if ((n = prf->prf_check(mh, m)) != 0)
 		psc_fatalx("invalid ctlmsg size; type=%d; sizeof=%zu "
 		    "expected=%d", mh->mh_type, mh->mh_size, n);
 
@@ -506,7 +519,7 @@ psc_ctlmsg_print(struct psc_ctlmsghdr *mh, const void *m)
 	    prf->prf_prhdr != NULL) {
 		if (psc_ctl_lastmsgtype != -1)
 			printf("\n");
-		len = prf->prf_prhdr(mh) - 1;
+		len = prf->prf_prhdr(mh, m) - 1;
 		for (n = 0; n < len; n++)
 			putchar('=');
 		putchar('\n');
