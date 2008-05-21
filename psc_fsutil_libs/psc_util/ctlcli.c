@@ -256,14 +256,14 @@ psc_humanscale(char buf[8], double num)
 int
 psc_ctlthr_prhdr(void)
 {
-	return (printf(" %-*s %8s %8s %8s\n", PSCTHR_NAME_MAX,
+	return (printf(" %-*s %9s %8s %8s\n", PSCTHR_NAME_MAX,
 	    "thread", "#nclients", "#sent", "#recv"));
 }
 
 void
 psc_ctlthr_prdat(const struct psc_ctlmsg_stats *pcst)
 {
-	printf(" %-*s %8u %8u %8u\n", PSCTHR_NAME_MAX,
+	printf(" %-*s %9u %8u %8u\n", PSCTHR_NAME_MAX,
 	    pcst->pcst_thrname, pcst->pcst_nclients,
 	    pcst->pcst_nsent, pcst->pcst_nrecv);
 }
@@ -318,7 +318,7 @@ psc_ctlmsg_subsys_check(struct psc_ctlmsghdr *mh, const void *m)
 		    &pcss->pcss_names[n * PCSS_NAME_MAX], PCSS_NAME_MAX);
 		psc_ctl_subsys_names[n][PCSS_NAME_MAX - 1] = '\0';
 	}
-	mh->mh_type = -1;	/* hack to fix newline */
+	mh->mh_type = psc_ctl_lastmsgtype;	/* hack to fix newline */
 	return (0);
 }
 
@@ -395,16 +395,29 @@ psc_ctlmsg_param_prdat(const void *m)
 		    pcp->pcp_field, pcp->pcp_value);
 }
 
-#define MT_RESET_STATS (-2)
+#define MT_IN_STATS (-2)
 
 int
-psc_ctlmsg_stats_prhdr(struct psc_ctlmsghdr *mh, const void *m)
+psc_ctlmsg_stats_check(__unusedx struct psc_ctlmsghdr *mh, const void *m)
 {
 	static int last_thrtype = -1;
 
 	const struct psc_ctlmsg_stats *pcst = m;
+
+	if (psc_ctl_lastmsgtype == PCMT_GETSTATS) {
+		if (last_thrtype != pcst->pcst_thrtype)
+			psc_ctl_lastmsgtype = MT_IN_STATS;
+	} else
+		psc_ctl_lastmsgtype = MT_IN_STATS;
+	last_thrtype = pcst->pcst_thrtype;
+	return (0);
+}
+
+int
+psc_ctlmsg_stats_prhdr(__unusedx struct psc_ctlmsghdr *mh, const void *m)
+{
+	const struct psc_ctlmsg_stats *pcst = m;
 	struct psc_ctl_thrstatfmt *ptf;
-	int len, n;
 
 	/* Check thread type. */
 	if (pcst->pcst_thrtype < 0 ||
@@ -418,24 +431,11 @@ psc_ctlmsg_stats_prhdr(struct psc_ctlmsghdr *mh, const void *m)
 		psc_fatalx("invalid thread type: %d",
 		    pcst->pcst_thrtype);
 
-	if (psc_ctl_lastmsgtype != MT_RESET_STATS) {
+	if (psc_ctl_lastmsgtype == MT_IN_STATS)
+		printf("\n");
+	else
 		printf("thread stats\n");
-		last_thrtype = -1;
-	}
-
-	/* Print thread-type-specific sub-header. */
-	if (!psc_ctl_noheader && last_thrtype != pcst->pcst_thrtype) {
-		if (psc_ctl_lastmsgtype == PCMT_GETSTATS)
-			printf("\n");
-		len = ptf->ptf_prhdr() - 1;
-		for (n = 0; n < len; n++)
-			putchar('=');
-		putchar('\n');
-	}
-	last_thrtype = pcst->pcst_thrtype;
-
-	mh->mh_type = MT_RESET_STATS;
-	return (len);
+	return (ptf->ptf_prhdr());
 }
 
 void
@@ -520,8 +520,8 @@ psc_ctlmsg_print(struct psc_ctlmsghdr *mh, const void *m)
 	    prf->prf_prhdr != NULL) {
 		if (psc_ctl_lastmsgtype != -1)
 			printf("\n");
-		len = prf->prf_prhdr(mh, m) - 1;
-		for (n = 0; n < len; n++)
+		len = prf->prf_prhdr(mh, m);
+		for (n = 0; n < len - 1; n++)
 			putchar('=');
 		putchar('\n');
 	}
