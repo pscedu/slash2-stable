@@ -87,7 +87,7 @@ get_hash_entry(const struct hash_table *h, u64 id, const void *comp,
 	b = GET_BUCKET(h, id);
 	LOCK_BUCKET(b);
 
-	psclist_for_each_entry(e, &b->hbucket_list, hentry_list) {
+	psclist_for_each_entry(e, &b->hbucket_list, hentry_lentry) {
 		if (id == *e->hentry_id) {
 			if (h->htcompare == NULL ||
 			    h->htcompare(comp, e->private)) {
@@ -127,7 +127,7 @@ del_hash_entry(struct hash_table *h, u64 id)
 	LOCK_BUCKET(b);
 
 	psclist_for_each(t, &b->hbucket_list) {
-		e = psclist_entry(t, struct hash_entry, hentry_list);
+		e = psclist_entry(t, struct hash_entry, hentry_lentry);
 		if (id == *e->hentry_id) {
 			found = 1;
 			break;
@@ -139,7 +139,7 @@ del_hash_entry(struct hash_table *h, u64 id)
 		return -1;
 	}
 
-	psclist_del(&e->hentry_list);
+	psclist_del(&e->hentry_lentry);
 	ULOCK_BUCKET(b);
 
 	return 0;
@@ -159,7 +159,7 @@ add_hash_entry(struct hash_table *t, struct hash_entry *e)
 
 	b = GET_BUCKET(t, *e->hentry_id);
 	LOCK_BUCKET(b);
-	psclist_xadd(&e->hentry_list, &b->hbucket_list);
+	psclist_xadd(&e->hentry_lentry, &b->hbucket_list);
 	ULOCK_BUCKET(b);
 }
 
@@ -194,7 +194,7 @@ get_hash_entry_str(struct hash_table *h, const char *id)
 	b = SGET_BUCKET(h, id);
 	LOCK_BUCKET(b);
 
-	psclist_for_each_entry(e, &b->hbucket_list, hentry_str_list)
+	psclist_for_each_entry(e, &b->hbucket_list, hentry_str_lentry)
 		if ( !strncmp(id, e->hentry_str_id, h->htable_strlen_max) ) {
 			found = 1;
 			break;
@@ -224,10 +224,10 @@ del_hash_entry_str(struct hash_table *h, const char *id)
 	b = SGET_BUCKET(h, id);
 	LOCK_BUCKET(b);
 
-	psclist_for_each_entry(e, &b->hbucket_list, hentry_str_list)
+	psclist_for_each_entry(e, &b->hbucket_list, hentry_str_lentry)
 		if ( !strncmp(id, e->hentry_str_id, h->htable_strlen_max) ) {
 			found = -1;
-			psclist_del(&e->hentry_str_list);
+			psclist_del(&e->hentry_str_lentry);
 			break;
 		}
 	ULOCK_BUCKET(b);
@@ -248,7 +248,7 @@ add_hash_entry_str(struct hash_table *t, struct hash_entry_str *e)
 
 	b = SGET_BUCKET(t, e->hentry_str_id);
 	LOCK_BUCKET(b);
-	psclist_xadd(&e->hentry_str_list, &b->hbucket_list);
+	psclist_xadd(&e->hentry_str_lentry, &b->hbucket_list);
 	ULOCK_BUCKET(b);
 }
 
