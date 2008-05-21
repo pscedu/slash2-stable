@@ -147,12 +147,13 @@ psc_ctlmsg_stats_send(int fd, struct psc_ctlmsghdr *mh, void *m,
 {
 	struct psc_ctlmsg_stats *pcst = m;
 
-	if (thr->pscthr_statf == NULL)
+	if (thr->pscthr_type >= psc_ctl_ngetstats ||
+	    psc_ctl_getstats[thr->pscthr_type] == NULL)
 		return;
 	snprintf(pcst->pcst_thrname, sizeof(pcst->pcst_thrname),
 	    "%s", thr->pscthr_name);
 	pcst->pcst_thrtype = thr->pscthr_type;
-	thr->pscthr_statf(thr, pcst);
+	psc_ctl_getstats[thr->pscthr_type](thr, pcst);
 	psc_ctlmsg_sendv(fd, mh, pcst);
 }
 
@@ -670,6 +671,7 @@ psc_ctlthr_service(int fd, const struct psc_ctlop *ct, int nops)
 			    mh.mh_type, mh.mh_size);
 			continue;
 		}
+		psc_ctlthr(&pscControlThread)->pc_st_nread++;
 		ct[mh.mh_type].pc_op(fd, &mh, m);
 	}
 	if (n == -1)

@@ -45,6 +45,8 @@ void psc_ctlrep_getstats(int, struct psc_ctlmsghdr *, void *);
 void psc_ctlrep_getsubsys(int, struct psc_ctlmsghdr *, void *);
 void psc_ctlrep_param(int, struct psc_ctlmsghdr *, void *);
 
+void psc_ctlthr_stat(struct psc_thread *, struct psc_ctlmsg_stats *);
+
 void psc_ctlparam_log_level(int, struct psc_ctlmsghdr *,
 	struct psc_ctlmsg_param *, char **, int);
 
@@ -56,3 +58,5 @@ void psc_ctl_applythrop(int, struct psc_ctlmsghdr *, void *, const char *,
 	void (*)(int, struct psc_ctlmsghdr *, void *, struct psc_thread *));
 
 extern struct psc_thread pscControlThread;
+extern void (*psc_ctl_getstats[])(struct psc_thread *, struct psc_ctlmsg_stats *);
+extern int psc_ctl_ngetstats;
