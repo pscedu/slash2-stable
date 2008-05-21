@@ -17,7 +17,6 @@ struct psc_ctlmsg_stats;
 struct psc_thread {
 	int		   pscthr_run;
 	void		*(*pscthr_start)(void *);	/* thread main */
-	void		 (*pscthr_statf)(struct psc_thread *, struct psc_ctlmsg_stats *);
 	pthread_t	   pscthr_pthread;
 	u64		   pscthr_hashid;		/* lookup ID */
 	size_t		   pscthr_id;
