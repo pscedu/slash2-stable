@@ -387,15 +387,13 @@ void
 psc_ctlmsg_param_prdat(const void *m)
 {
 	const struct psc_ctlmsg_param *pcp = m;
-	int n;
 
 	if (strcmp(pcp->pcp_thrname, PCTHRNAME_EVERYONE) == 0)
 		printf(" %-30s %s\n", pcp->pcp_field, pcp->pcp_value);
-	else {
-		printf(" %s.%n", pcp->pcp_thrname, &n);
-		printf("%-*s %s\n", 30 - n + 2,
+	else
+		printf(" %s.%-*s %s\n", pcp->pcp_thrname,
+		    30 - (int)strlen(pcp->pcp_thrname),
 		    pcp->pcp_field, pcp->pcp_value);
-	}
 }
 
 #define MT_IN_STATS (-2)
