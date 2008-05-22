@@ -180,9 +180,17 @@ rsx_bulkgetsink(struct pscrpc_request *rq, struct pscrpc_bulk_desc **descp,
 	return (rc);
 }
 
+
+
+#define rsx_bulkgetsource(rq, descp, ptl, iov, n) \
+	rsx_bulkclient(rq, descp, ptl, iov, n, BULK_GET_SOURCE);
+
+#define rsx_bulkputsink(rq, descp, ptl, iov, n) \
+	rsx_bulkclient(rq, descp, ptl, iov, n, BULK_PUT_SINK);
+
 /*
- * rsx_bulkgetsource - setup a source to send data from to satisfy a GET from peer.
- * @rq: RPC request associated with GET.
+ * rsx_bulkclient - setup a source or sink.  Source (BULK_GET_SOURCE) allows the server to pull our buffer, sink (BULK_PUT_SINK) sets up a buffer which is to be filled by the server.
+ * @rq: RPC request.
  * @descp: pointer to bulk xfer descriptor.
  * @ptl: portal to issue bulk xfer across.
  * @iov: iovec array of receive buffer.
@@ -190,13 +198,15 @@ rsx_bulkgetsink(struct pscrpc_request *rq, struct pscrpc_bulk_desc **descp,
  * Returns: 0 or negative errno on error.
  */
 int
-rsx_bulkgetsource(struct pscrpc_request *rq, struct pscrpc_bulk_desc **descp,
-    int ptl, struct iovec *iov, int n)
+rsx_bulkclient(struct pscrpc_request *rq, struct pscrpc_bulk_desc **descp,
+	       int ptl, struct iovec *iov, int n, int type)
 {
 	struct pscrpc_bulk_desc *desc;
 	int i;
 
-	*descp = desc = pscrpc_prep_bulk_imp(rq, n, BULK_GET_SOURCE, ptl);
+	psc_assert(type == BULK_GET_SOURCE || type = BULK_PUT_SINK);
+
+	*descp = desc = pscrpc_prep_bulk_imp(rq, n, type, ptl);
 	if (desc == NULL)
 		psc_fatal("NULL bulk descriptor");
 	desc->bd_nob = 0;

@@ -37,5 +37,8 @@ struct iovec;
 
 int rsx_newreq(struct pscrpc_import *, int, int, int, int, struct pscrpc_request **, void *);
 int rsx_waitrep(struct pscrpc_request *, int, void *);
-int rsx_bulkgetsink(struct pscrpc_request *, struct pscrpc_bulk_desc **, int, struct iovec *, int);
-int rsx_bulkgetsource(struct pscrpc_request *, struct pscrpc_bulk_desc **, int, struct iovec *, int);
+//int rsx_bulkgetsink(struct pscrpc_request *, struct pscrpc_bulk_desc **, int, struct iovec *, int);
+//int rsx_bulkgetsource(struct pscrpc_request *, struct pscrpc_bulk_desc **, int, struct iovec *, int);
+int rsx_bulkclient(struct pscrpc_request *, struct pscrpc_bulk_desc **, int, struct iovec *, int, int);
+
+
