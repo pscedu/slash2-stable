@@ -27,7 +27,7 @@ struct psclist_head {
 };
 
 #define PSCLIST_HEAD_INIT(name)		{ &(name), &(name) }
-#define PSCLIST_ENTRY_INIT(name)	{ NULL, NULL }
+#define PSCLIST_ENTRY_INIT		{ NULL, NULL }
 
 #define PSCLIST_HEAD(name) \
 	struct psclist_head name = PSCLIST_HEAD_INIT(name)
@@ -213,8 +213,8 @@ psclist_splice(struct psclist_head *list, struct psclist_head *head)
  * @e: an element with a list member.
  * @member: the name of the struct psclist_head within the struct.
  */
-#define psclist_next_entry(e, memb) \
-	psclist_entry(psclist_next(&e->memb), typeof(*e), memb)
+#define psclist_next_entry(e, member) \
+	psclist_entry(psclist_next(&e->member), typeof(*e), member)
 
 /**
  * psclist_for_each - iterate over a psclist
@@ -247,8 +247,8 @@ psclist_splice(struct psclist_head *list, struct psclist_head *head)
  * psclist_first_entry - grab first item from a psclist
  * @head: list head.
  */
-#define psclist_first_entry(hd, type, memb) \
-	psclist_entry((hd)->znext, type, memb)
+#define psclist_first_entry(hd, type, member) \
+	psclist_entry((hd)->znext, type, member)
 
 /**
  * psclist_last - grab last list entry.
@@ -260,8 +260,8 @@ psclist_splice(struct psclist_head *list, struct psclist_head *head)
  * psclist_last_entry - grab last list item.
  * @hd: list head.
  */
-#define psclist_last_entry(hd, type, memb) \
-	psclist_entry((hd)->zprev, type, memb)
+#define psclist_last_entry(hd, type, member) \
+	psclist_entry((hd)->zprev, type, member)
 
 /**
  * psclist_next - grab the entry following the specified entry.
@@ -279,8 +279,8 @@ psclist_splice(struct psclist_head *list, struct psclist_head *head)
  * psclist_prev_entry - grab item before specified entry.
  * @e: entry
  */
-#define psclist_prev_entry(e, type, memb) \
-	psclist_entry((e)->zprev, type, memb)
+#define psclist_prev_entry(e, type, member) \
+	psclist_entry((e)->zprev, type, member)
 
 /**
  * psclist_for_each_entry_safe - iterate over list of given type safe
@@ -288,9 +288,9 @@ psclist_splice(struct psclist_head *list, struct psclist_head *head)
  * @pos: the type * to use as a loop counter.
  * @n: another type * to use as temporary storage
  * @head: the head for your list.
- * @member: the name of the list_struct within the struct.
+ * @member: list entry member of structure.
  */
-#define psclist_for_each_entry_safe(pos, n, head, member)			\
+#define psclist_for_each_entry_safe(pos, n, head, member)				\
 	for ((pos) = psclist_entry((head)->znext, typeof(*(pos)), member),	\
 	    (n) = psclist_entry((pos)->member.znext, typeof(*(pos)), member);	\
 	    (&(pos)->member != (head)) || ((pos) = (n) = NULL);			\
@@ -303,7 +303,7 @@ psclist_splice(struct psclist_head *list, struct psclist_head *head)
  * @member: list entry member of structure.
  */
 #define psclist_for_each_entry(pos, hd, member)					\
-	for ((pos) = psclist_entry((hd)->znext, typeof(*(pos)), member);	\
+	for ((pos) = psclist_entry((hd)->znext, typeof(*(pos)), member);		\
 	    (&(pos)->member != (hd)) || ((pos) = NULL);				\
 	    (pos) = psclist_entry((pos)->member.znext, typeof(*(pos)), member))
 
