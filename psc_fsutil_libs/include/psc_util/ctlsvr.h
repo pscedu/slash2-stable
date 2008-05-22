@@ -50,7 +50,7 @@ void psc_ctlthr_stat(struct psc_thread *, struct psc_ctlmsg_stats *);
 void psc_ctlparam_log_level(int, struct psc_ctlmsghdr *,
 	struct psc_ctlmsg_param *, char **, int);
 
-void psc_ctlparam_register(char *, void (*)(int, struct psc_ctlmsghdr *,
+void psc_ctlparam_register(const char *, void (*)(int, struct psc_ctlmsghdr *,
 	struct psc_ctlmsg_param *, char **, int));
 
 void psc_ctlthr_main(const char *, const struct psc_ctlop *, int);
