@@ -204,7 +204,7 @@ rsx_bulkclient(struct pscrpc_request *rq, struct pscrpc_bulk_desc **descp,
 	struct pscrpc_bulk_desc *desc;
 	int i;
 
-	psc_assert(type == BULK_GET_SOURCE || type = BULK_PUT_SINK);
+	psc_assert(type == BULK_GET_SOURCE || type == BULK_PUT_SINK);
 
 	*descp = desc = pscrpc_prep_bulk_imp(rq, n, type, ptl);
 	if (desc == NULL)
