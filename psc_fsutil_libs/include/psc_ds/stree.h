@@ -6,6 +6,9 @@ struct psc_streenode {
 	void			*ptn_data;
 };
 
+#define PSC_STREE_INIT(t) \
+	{ PSCLIST_ENTRY_INIT, PSCLIST_HEAD_INIT((t).ptn_children), NULL }
+
 #define psc_stree_foreach_child(child, ptn)		\
 	psclist_for_each_entry((child), &(ptn)->ptn_children, ptn_sibling)
 

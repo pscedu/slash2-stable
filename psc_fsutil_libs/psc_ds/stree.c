@@ -25,5 +25,4 @@ psc_stree_addchild(struct psc_streenode *ptn, void *data)
 	child->ptn_data = data;
 	psclist_xadd(&child->ptn_sibling, &ptn->ptn_children);
 	return (child);
-
 }
