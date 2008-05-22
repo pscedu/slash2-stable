@@ -34,7 +34,6 @@ int             fh_remove(u64 fh);
 u64             fh_register(u64 fh, 
 			    void (*fhreg_cb)(struct fhent *, int, void **),
 			    void *cb_args[]);
-u64             fh_register(const struct cfh *);
 int             fh_reap(void);
 
 #define         dh_lookup(fh) _dh_lookup((fh), 0)

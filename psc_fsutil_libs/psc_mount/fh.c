@@ -89,6 +89,7 @@ fh_register(u64 fh, void (*fh_regcb)(struct fhent *, int, void **),
 			psc_fatalx("Attempted to reinsert fd "LPX64, t->fh);
 	}
 	freelock(&fhtreelock);
+
 	if (fh_regcb)
 		/* Callback into the fd handler
 		 */
