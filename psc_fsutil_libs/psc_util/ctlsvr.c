@@ -432,27 +432,31 @@ struct psc_ctlparam_node {
 
 /* Stack processing frame. */
 struct psc_ctlparam_procframe {
-	struct psclist_head	pcf_lentry;
-	int			pcf_level;
-	int			pcf_flags;
-	int			pcf_pos;
+	struct psclist_head	 pcf_lentry;
+	struct psc_streenode	*pcf_ptn;
+	int			 pcf_level;
+	int			 pcf_flags;
+	int			 pcf_pos;
 
 };
 
 #define PCFF_USEPOS	(1<<0)
 
-struct psc_streenode psc_ctlparamtree;
+struct psc_streenode psc_ctlparamtree = PSC_STREE_INIT(psc_ctlparamtree);
 
 void
 psc_ctlrep_param(int fd, struct psc_ctlmsghdr *mh, void *m)
 {
-	struct psc_ctlparam_procframe *pcf;
+	struct psc_ctlparam_procframe *pcf, *npcf;
 	struct psc_streenode *ptn, *c, *d;
 	struct psc_ctlmsg_param *pcp = m;
 	struct psc_ctlparam_node *pcn;
 	struct psclist_head stack;
 	char *t, *levels[MAX_LEVELS];
 	int n, k, nlevels, set;
+
+	pcf = NULL;
+	INIT_PSCLIST_HEAD(&stack);
 
 	set = (mh->mh_type == PCMT_SETPARAM);
 
@@ -468,19 +472,21 @@ psc_ctlrep_param(int fd, struct psc_ctlmsghdr *mh, void *m)
 	if (nlevels == 0 || nlevels >= MAX_LEVELS)
 		goto invalid;
 
-	INIT_PSCLIST_HEAD(&stack);
+	pcf = PSCALLOC(sizeof(*pcf));
+	pcf->pcf_ptn = &psc_ctlparamtree;
+	psclist_xadd(&pcf->pcf_lentry, &stack);
 
 	while (!psclist_empty(&stack)) {
 		pcf = psclist_first_entry(&stack,
 		    struct psc_ctlparam_procframe, pcf_lentry);
 		psclist_del(&pcf->pcf_lentry);
 
-		n = 1;
-		ptn = &psc_ctlparamtree;
+		n = pcf->pcf_level;
+		ptn = pcf->pcf_ptn;
 		do {
 			k = 0;
 			psc_stree_foreach_child(c, ptn) {
-				pcn = ptn->ptn_data;
+				pcn = c->ptn_data;
 				if (pcf->pcf_flags & PCFF_USEPOS) {
 					if (pcf->pcf_pos == k)
 						break;
@@ -491,44 +497,61 @@ psc_ctlrep_param(int fd, struct psc_ctlmsghdr *mh, void *m)
 			}
 			if (c == NULL)
 				goto invalid;
-			if (pcf->pcf_level == n) {
-				if (psclist_empty(&c->ptn_children))
-					pcn->pcn_cbf(fd, mh, pcp, levels, nlevels);
-				else {
-					if (set)
-						goto invalid;
-					k = 0;
-					psc_stree_foreach_child(d, c) {
-						pcf = PSCALLOC(sizeof(*pcf));
-						pcf->pcf_level = n + 1;
-						pcf->pcf_pos = k++;
-						pcf->pcf_flags = PCFF_USEPOS;
-						psclist_xadd(&pcf->pcf_lentry, &stack);
+			if (psclist_empty(&c->ptn_children))
+				pcn->pcn_cbf(fd, mh, pcp, levels, nlevels);
+			else if (pcf->pcf_level + 1 >= nlevels) {
+				if (set)
+					goto invalid;
+				k = 0;
+				psc_stree_foreach_child(d, c) {
+					pcn = d->ptn_data;
+					if (psclist_empty(&d->ptn_children))
+						pcn->pcn_cbf(fd, mh, pcp, levels, nlevels);
+					else {
+						npcf = PSCALLOC(sizeof(*npcf));
+						npcf->pcf_ptn = d;
+						npcf->pcf_level = n + 1;
+						npcf->pcf_pos = k++;
+						npcf->pcf_flags = PCFF_USEPOS;
+						psclist_xadd(&npcf->pcf_lentry, &stack);
 					}
 				}
 			}
-		} while (++n < pcf->pcf_level);
+			ptn = c;
+		} while (++n < nlevels);
 		free(pcf);
 	}
 	return;
 
  invalid:
+	free(pcf);
+	/*
+	 * Strictly speaking, this shouldn't be necessary, cause
+	 * any frames we added were done out of the integrity of
+	 * the paramtree.
+	 */
+	psclist_for_each_entry_safe(pcf, npcf, &stack, pcf_lentry)
+		free(pcf);
 	while (nlevels > 1)
 		levels[--nlevels][-1] = '.';
 	psc_ctlsenderr(fd, mh, "invalid field/value: %s", pcp->pcp_field);
 }
 
 void
-psc_ctlparam_register(char *name, void (*cbf)(int, struct psc_ctlmsghdr *,
+psc_ctlparam_register(const char *oname, void (*cbf)(int, struct psc_ctlmsghdr *,
     struct psc_ctlmsg_param *, char **, int))
 {
 	struct psc_streenode *ptn, *c;
 	struct psc_ctlparam_node *pcn;
-	char *subname, *next;
+	char *subname, *next, *name;
+
+	name = strdup(oname);
+	if (name == NULL)
+		psc_fatal("strdup");
 
 	ptn = &psc_ctlparamtree;
 	for (subname = name; subname != NULL; subname = next) {
-		if ((next = strchr(subname, ',')) != NULL)
+		if ((next = strchr(subname, '.')) != NULL)
 			*next++ = '\0';
 		psc_stree_foreach_child(c, ptn) {
 			pcn = c->ptn_data;
@@ -538,12 +561,15 @@ psc_ctlparam_register(char *name, void (*cbf)(int, struct psc_ctlmsghdr *,
 		if (c == NULL) {
 			pcn = PSCALLOC(sizeof(*pcn));
 			pcn->pcn_name = strdup(subname);
+			if (pcn->pcn_name == NULL)
+				psc_fatal("strdup");
 			if (next == NULL)
 				pcn->pcn_cbf = cbf;
 			c = psc_stree_addchild(ptn, pcn);
 		}
 		ptn = c;
 	}
+	free(name);
 }
 
 /*
