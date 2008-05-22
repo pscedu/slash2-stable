@@ -462,10 +462,10 @@ psc_ctlrep_param(int fd, struct psc_ctlmsghdr *mh, void *m)
 
 	for (nlevels = 0, t = pcp->pcp_field;
 	    nlevels < MAX_LEVELS &&
-	    (levels[nlevels] = t) != NULL; nlevels++) {
+	    (levels[nlevels] = t) != NULL; ) {
 		if ((t = strchr(levels[nlevels], '.')) != NULL)
 			*t++ = '\0';
-		if (*levels[nlevels] == '\0')
+		if (*levels[nlevels++] == '\0')
 			goto invalid;
 	}
 
@@ -497,9 +497,10 @@ psc_ctlrep_param(int fd, struct psc_ctlmsghdr *mh, void *m)
 			}
 			if (c == NULL)
 				goto invalid;
-			if (psclist_empty(&c->ptn_children))
+			if (psclist_empty(&c->ptn_children)) {
 				pcn->pcn_cbf(fd, mh, pcp, levels, nlevels);
-			else if (pcf->pcf_level + 1 >= nlevels) {
+				break;
+			} else if (pcf->pcf_level + 1 >= nlevels) {
 				if (set)
 					goto invalid;
 				k = 0;
@@ -532,9 +533,10 @@ psc_ctlrep_param(int fd, struct psc_ctlmsghdr *mh, void *m)
 	 */
 	psclist_for_each_entry_safe(pcf, npcf, &stack, pcf_lentry)
 		free(pcf);
-	while (nlevels > 1)
-		levels[--nlevels][-1] = '.';
-	psc_ctlsenderr(fd, mh, "invalid field/value: %s", pcp->pcp_field);
+	while (nlevels-- > 1)
+		pcp->pcp_field[strlen(pcp->pcp_field)] = '.';
+	psc_ctlsenderr(fd, mh, "invalid field%s: %s",
+	    set ? "/value" : "", pcp->pcp_field);
 }
 
 void
