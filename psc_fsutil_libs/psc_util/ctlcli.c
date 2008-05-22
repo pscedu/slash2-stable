@@ -327,7 +327,7 @@ psc_ctlmsg_iostats_prhdr(__unusedx struct psc_ctlmsghdr *mh,
     __unusedx const void *m)
 {
 	printf("iostats\n");
-	return (printf(" %-12s %9s %8s %8s %8s\n",
+	return (printf(" %-30s %9s %8s %8s %8s\n",
 	    "name", "ratecur", "total", "erate", "toterr"));
 }
 
@@ -338,7 +338,7 @@ psc_ctlmsg_iostats_prdat(const void *m)
 	const struct iostats *ist = &pci->pci_ist;
 	char buf[8];
 
-	printf(" %-12s ", ist->ist_name);
+	printf(" %-30s ", ist->ist_name);
 	if (psc_ctl_inhuman) {
 		printf("%8.2f ", ist->ist_rate);
 		printf("%8"_P_U64"u ", ist->ist_bytes_total);
