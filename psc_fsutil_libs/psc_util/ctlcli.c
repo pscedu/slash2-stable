@@ -380,7 +380,7 @@ psc_ctlmsg_param_prhdr(__unusedx struct psc_ctlmsghdr *mh,
     __unusedx const void *m)
 {
 	printf("parameters\n");
-	return (printf(" %-30s %s\n", "name", "value"));
+	return (printf(" %-35s %s\n", "name", "value"));
 }
 
 void
@@ -389,10 +389,10 @@ psc_ctlmsg_param_prdat(const void *m)
 	const struct psc_ctlmsg_param *pcp = m;
 
 	if (strcmp(pcp->pcp_thrname, PCTHRNAME_EVERYONE) == 0)
-		printf(" %-30s %s\n", pcp->pcp_field, pcp->pcp_value);
+		printf(" %-35s %s\n", pcp->pcp_field, pcp->pcp_value);
 	else
 		printf(" %s.%-*s %s\n", pcp->pcp_thrname,
-		    30 - (int)strlen(pcp->pcp_thrname),
+		    35 - (int)strlen(pcp->pcp_thrname) - 1,
 		    pcp->pcp_field, pcp->pcp_value);
 }
 
