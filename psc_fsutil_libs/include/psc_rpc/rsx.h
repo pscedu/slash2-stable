@@ -41,4 +41,8 @@ int rsx_waitrep(struct pscrpc_request *, int, void *);
 //int rsx_bulkgetsource(struct pscrpc_request *, struct pscrpc_bulk_desc **, int, struct iovec *, int);
 int rsx_bulkclient(struct pscrpc_request *, struct pscrpc_bulk_desc **, int, struct iovec *, int, int);
 
+#define rsx_bulkgetsource(rq, descp, ptl, iov, n) \
+	rsx_bulkclient(rq, descp, ptl, iov, n, BULK_GET_SOURCE);
 
+#define rsx_bulkputsink(rq, descp, ptl, iov, n) \
+	rsx_bulkclient(rq, descp, ptl, iov, n, BULK_PUT_SINK);

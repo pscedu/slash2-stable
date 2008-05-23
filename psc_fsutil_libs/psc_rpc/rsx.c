@@ -181,13 +181,6 @@ rsx_bulkgetsink(struct pscrpc_request *rq, struct pscrpc_bulk_desc **descp,
 }
 
 
-
-#define rsx_bulkgetsource(rq, descp, ptl, iov, n) \
-	rsx_bulkclient(rq, descp, ptl, iov, n, BULK_GET_SOURCE);
-
-#define rsx_bulkputsink(rq, descp, ptl, iov, n) \
-	rsx_bulkclient(rq, descp, ptl, iov, n, BULK_PUT_SINK);
-
 /*
  * rsx_bulkclient - setup a source or sink.  Source (BULK_GET_SOURCE) allows the server to pull our buffer, sink (BULK_PUT_SINK) sets up a buffer which is to be filled by the server.
  * @rq: RPC request.
