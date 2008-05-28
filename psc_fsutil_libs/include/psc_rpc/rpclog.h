@@ -32,13 +32,14 @@ pscrpc_rqphase2str(struct pscrpc_request *req)
         pscrpc_rqphase2str(req),                                            \
 		FLAG(req->rq_intr, "I"), FLAG(req->rq_replied, "R"),        \
 		FLAG(req->rq_err, "E"),                                     \
+		FLAG(req->rq_net_err, "e"),				    \
 		FLAG(req->rq_timedout, "X") /* eXpired */,                  \
                 FLAG(req->rq_resend, "S"),				    \
 		FLAG(req->rq_restart, "T"), FLAG(req->rq_replay, "P"),      \
 		FLAG(req->rq_no_resend, "N"),                               \
 		FLAG(req->rq_waiting, "W")
 
-#define REQ_FLAGS_FMT "%s:%s%s%s%s%s%s%s%s%s"
+#define REQ_FLAGS_FMT "%s:%s%s%s%s%s%s%s%s%s%s"
 
 #define DEBUG_REQ(level, req, fmt, ...)					\
 	do {								\
