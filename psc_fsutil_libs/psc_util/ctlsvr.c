@@ -318,7 +318,7 @@ psc_ctlrep_getlc(int fd, struct psc_ctlmsghdr *mh, void *m)
 		spinlock(&pscListCachesLock);
 		psclist_for_each_entry(lc, &pscListCaches,
 		    lc_index_lentry) {
-			LIST_CACHE_LOCK(lc); /* XXX deadlock */
+			LIST_CACHE_LOCK(lc); /* XXX deadlock, use trylock */
 			psc_ctlmsg_lc_send(fd, mh, pclc, lc);
 		}
 		freelock(&pscListCachesLock);
@@ -335,7 +335,7 @@ psc_ctlrep_getlc(int fd, struct psc_ctlmsghdr *mh, void *m)
 
 #define MAX_LEVELS 8
 
-__static void
+void
 psc_ctlmsg_param_send(int fd, const struct psc_ctlmsghdr *mh,
     struct psc_ctlmsg_param *pcp, const char *thrname,
     char **levels, int nlevels, const char *value)

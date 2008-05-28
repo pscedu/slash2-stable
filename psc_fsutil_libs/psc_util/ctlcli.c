@@ -413,7 +413,8 @@ psc_ctlmsg_param_prdat(__unusedx const struct psc_ctlmsghdr *mh,
 		    pcp->pcp_field, pcp->pcp_value);
 }
 
-#define MT_IN_STATS (-2)
+#define MT_SKIPHDR (-2)
+__static int psc_ctl_stat_prthrtype;
 
 int
 psc_ctlmsg_stats_check(__unusedx struct psc_ctlmsghdr *mh, const void *m)
@@ -422,12 +423,17 @@ psc_ctlmsg_stats_check(__unusedx struct psc_ctlmsghdr *mh, const void *m)
 
 	const struct psc_ctlmsg_stats *pcst = m;
 
+	if (mh->mh_size != sizeof(*pcst))
+		return (sizeof(*pcst));
+
 	if (psc_ctl_lastmsgtype == PCMT_GETSTATS) {
-		if (last_thrtype != pcst->pcst_thrtype)
-			psc_ctl_lastmsgtype = MT_IN_STATS;
+		if (last_thrtype != pcst->pcst_thrtype) {
+			psc_ctl_stat_prthrtype = 1;
+			last_thrtype = pcst->pcst_thrtype;
+			psc_ctl_lastmsgtype = MT_SKIPHDR;
+		}
 	} else
-		psc_ctl_lastmsgtype = MT_IN_STATS;
-	last_thrtype = pcst->pcst_thrtype;
+		last_thrtype = -1;
 	return (0);
 }
 
@@ -449,9 +455,7 @@ psc_ctlmsg_stats_prhdr(__unusedx struct psc_ctlmsghdr *mh, const void *m)
 		psc_fatalx("invalid thread type: %d",
 		    pcst->pcst_thrtype);
 
-	if (psc_ctl_lastmsgtype == MT_IN_STATS)
-		printf("\n");
-	else
+	if (psc_ctl_lastmsgtype != MT_SKIPHDR)
 		printf("thread stats\n");
 	return (ptf->ptf_prhdr());
 }

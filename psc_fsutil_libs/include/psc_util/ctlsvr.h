@@ -37,6 +37,9 @@ struct psc_ctlop {
 
 void psc_ctlsenderr(int, struct psc_ctlmsghdr *, const char *, ...);
 
+void psc_ctlmsg_sendv(int, const struct psc_ctlmsghdr *, const void *);
+void psc_ctlmsg_send(int, int, size_t, const void *);
+
 void psc_ctlrep_gethashtable(int, struct psc_ctlmsghdr *, void *);
 void psc_ctlrep_getiostats(int, struct psc_ctlmsghdr *, void *);
 void psc_ctlrep_getlc(int, struct psc_ctlmsghdr *, void *);
@@ -53,7 +56,10 @@ void psc_ctlparam_log_level(int, struct psc_ctlmsghdr *,
 void psc_ctlparam_register(const char *, void (*)(int, struct psc_ctlmsghdr *,
 	struct psc_ctlmsg_param *, char **, int));
 
-void psc_ctlthr_main(const char *, const struct psc_ctlop *, int);
+void psc_ctlmsg_param_send(int, const struct psc_ctlmsghdr *,
+	struct psc_ctlmsg_param *, const char *, char **, int, const char *);
+
+__dead void psc_ctlthr_main(const char *, const struct psc_ctlop *, int);
 void psc_ctl_applythrop(int, struct psc_ctlmsghdr *, void *, const char *,
 	void (*)(int, struct psc_ctlmsghdr *, void *, struct psc_thread *));
 

@@ -6,7 +6,7 @@
 /* 0 */	{ NULL,				psc_ctlmsg_error_prdat,		sizeof(struct psc_ctlmsg_error),	NULL },				\
 /* 1 */	{ psc_ctlmsg_loglevel_prhdr,	psc_ctlmsg_loglevel_prdat,	0,					psc_ctlmsg_loglevel_check },	\
 /* 2 */	{ psc_ctlmsg_lc_prhdr,		psc_ctlmsg_lc_prdat,		sizeof(struct psc_ctlmsg_lc),		NULL },				\
-/* 3 */	{ psc_ctlmsg_stats_prhdr,	psc_ctlmsg_stats_prdat,		sizeof(struct psc_ctlmsg_stats),	NULL },				\
+/* 3 */	{ psc_ctlmsg_stats_prhdr,	psc_ctlmsg_stats_prdat,		0,					psc_ctlmsg_stats_check },	\
 /* 4 */	{ NULL,				NULL,				0,					psc_ctlmsg_subsys_check },	\
 /* 5 */	{ psc_ctlmsg_hashtable_prhdr,	psc_ctlmsg_hashtable_prdat,	sizeof(struct psc_ctlmsg_hashtable),	NULL },				\
 /* 6 */	{ psc_ctlmsg_param_prhdr,	psc_ctlmsg_param_prdat,		sizeof(struct psc_ctlmsg_param),	NULL },				\
@@ -55,6 +55,7 @@ int   psc_ctlmsg_lc_prhdr(struct psc_ctlmsghdr *, const void *);
 void  psc_ctlmsg_lc_prdat(const struct psc_ctlmsghdr *, const void *);
 int   psc_ctlmsg_param_prhdr(struct psc_ctlmsghdr *, const void *);
 void  psc_ctlmsg_param_prdat(const struct psc_ctlmsghdr *, const void *);
+int   psc_ctlmsg_stats_check(struct psc_ctlmsghdr *, const void *);
 int   psc_ctlmsg_stats_prhdr(struct psc_ctlmsghdr *, const void *);
 void  psc_ctlmsg_stats_prdat(const struct psc_ctlmsghdr *, const void *);
 int   psc_ctlmsg_loglevel_check(struct psc_ctlmsghdr *, const void *);
