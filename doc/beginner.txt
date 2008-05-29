@@ -1,6 +1,15 @@
 $Id$
 
 Starting Guide for PFL, Zest, and Slash
+
+Terminology
+===========
+
+lnd - Lustre networking device.  LNDs are abstraction layers that let
+	underlying protocols, such as TCP or portals, handle lower-level
+	communication details.
+
+PFL API Notes
 =======================================
 
   Some global data structure instances get automatically registered for
@@ -9,6 +18,19 @@ Starting Guide for PFL, Zest, and Slash
 
     $ zestiondctl -Lreadfree
 
+  And the code just looks like this:
+
+    #include "psc_ds/listcache.h"
+
+    struct readbuf {
+	...
+	struct psclist_head rb_entry;
+    };
+
+    list_cache_t zReadBufferList;
+
+    lc_reginit(&zreadBufferList, struct readbuf, rb_entry, "readfree");
+
 Documentation
 =============
 
@@ -16,17 +38,20 @@ Documentation
 
     $ nroff -mandoc foo.1
 
-  and usually pipe it to a pager or somewhere...
+  and usually pipe it to a pager or somewhere.
 
 Make Infrastructure
 ==================================
 
-  To build most components, try "make build" first.
-  If make(1) complains that there is no "build" target, then try:
+  To build most components, try "make build" first.  If make(1)
+  complains that there is no "build" target, then try:
 
     $ make clean
     $ make depend
     $ make
+
+ Maintaining File Dependencies
+ -----------------------------
 
   You should re-run "make depend" any time any file changes/adds/removes
   a #include directive so file dependences are properly maintained.
@@ -39,11 +64,11 @@ Make Infrastructure
 
     $ make cs
 
-  Emacs:
+  For emacs:
 
     $ make etags
 
-  It is advised to check code against lint(1) from time to time:
+  It is also advised to check code against lint(1) from time to time:
 
     $ make lint
 
@@ -56,8 +81,8 @@ Local Files
   Program deployments will necessarily require some changes to
   configuration and/or other local repository files.  Please avoid
   committing to example configuration files or files called "local*"
-  unless you know what you're doing, otherwise it may cause may SVN
-  merge conflicts on everyone's checkouts (including yourself)
+  unless you know what you're doing, otherwise it may cause SVN merge
+  conflicts on everyone's checkouts (including your other checkouts).
 
 Project Hierarchy
 =================
@@ -79,8 +104,9 @@ psc_fsutil_libs (PFL) - utility library defining common data structures
      +-	psc_types - basic data types
      |
      +-	psc_ds - code implementing various data structures
+     |
      |	 	dynarray - dynamically resizable arrays using realloc()
-     |	 	hash - hash table
+     |	 	hash - hash tables
      |			(o) automatically registered for export/control
      |		stree - simple tree where each node may have a variable
      |			number of branches/children
@@ -93,15 +119,18 @@ psc_fsutil_libs (PFL) - utility library defining common data structures
      |		tree - BSD sys/tree.h, contains two types of trees:
      |			(o) splay - auto-rebalancing two-child-node tree
      |			(o) red-black - glorified binary search tree
-     |			documentation for this file is here:
+     |			documentation for this file is available here:
      |			http://www.openbsd.org/cgi-bin/man.cgi?query=tree
+     |
      +-	psc_rpc - remote procedure call (RPC) library which leverages
      |	    the LNET networking library
      |		rsx - interface for simple RPC message communication
      |		the other files are split/shared between client/server activity
      |
      |		the zest client has an asynchronous I/O example
+     |
      +-	psc_util - miscellaneous utility routines
+     |
      |		alloc - validity-checked allocation routines
      |		assert - assertions tied to logging system
      |		atomic - a data type which provies a variety of mathematical operations
@@ -127,6 +156,7 @@ psc_fsutil_libs (PFL) - utility library defining common data structures
      |
      |			reqlock() - require a spinlock for a section,
      |				ideal for recursive or highly nested program structure
+     |			tryreqlock() - attempt to require a spinlock
      |			ureqlock() - (possibly) release a required lock,
      |				if not already held before corresponding reqlock()
      |		log - fine-grained logging API
@@ -153,7 +183,7 @@ psc_fsutil_libs (PFL) - utility library defining common data structures
      |			psc_fatal()	fatal error, end program execution, with errno
      |			psc_fatalx()	fatal error, end program execution, not sys-related
      |
-     |		mkdirs - mkdir -p in a function
+     |		mkdirs - "mkdir -p" in a function
      |		palloc - page-aligned alloc, necessary for some kinds of I/O and performance
      |		printhex - simple data printer in hexadecimal for debugging
      |		pthread_barrier - thread barriers, for sync'ing everyone up before
@@ -168,85 +198,101 @@ psc_fsutil_libs (PFL) - utility library defining common data structures
      |		threadtable - hash table of threads, for looking yourself up to access
      |			thread-local data
      |		waitq - wait on an event, from the context of a thread
+
 slash_nara - root of slash-specific code
-	include - shared include files
-		buffer - slab buffers for memory-resident file portions
-		fid - global file ID definitions
-		fidcache - managing a collection of in-core files
-		inode - one in-core file
-		offtree - "offset tree" for connecting file-logical positions
-			to slab buffers efficiently
-		slashrpc - slash RPC definitions
-		slconfig - lex-based configuration parser definitions
-	mk - slash-specific build rules/definitions/customizations/etc.
-	mount_slash - fuse mounter for slash, connects to slashd and sliod
-		control - control interface definitions
-		mount_slash.c - core program definitions
-		rpc - RPC routines specific to mount_slash
-	msctl - command-line mount_slash controller
-	newfs_slio - sets up a new file system for use with sliod
-	newfs_slmd - sets up a new file system for use with slashd
-	share - code amongst several slash-related programs
-	slashd - MDS server
-		backend - inter- MDS and I/O daemon communication
-		cfd - "client file descriptor" routines, which tracks client-scoped
-			identifiers with active files
-		control - control interface definitions
-		dircache - cache for open(2) directory handles for efficiency
-		fidcache - active file collection
-		journal - slash-specific journalling routines
-		lconf - lex definitions for slash.conf configuration parser
-		mds - RPC messages for metadata exchange
-		sb - slash file system superblock routines
-		timer - timer subsystem routines, for periodic maintenance
-		yconf - yacc rules/codes for slash.conf configuration parser
-	slctl - command-line slashd controller
-	sliod - I/O server
-		control - control interface definitions
-		rpc - RPC routines specific to sliod
-		timer - timer subsystem routines, for periodic maintenance
-	slioctl - command-line sliod controller
+ |
+ +- include - shared include files
+ |
+ |   	buffer - slab buffers for memory-resident file portions
+ |	fid - global file ID definitions
+ |	fidcache - managing a collection of in-core files
+ |	inode - one in-core file
+ |	offtree - "offset tree" for connecting file-logical positions
+ |		to slab buffers efficiently
+ |	slashrpc - slash RPC definitions
+ |	slconfig - lex-based configuration parser definitions
+ |
+ +- mk - slash-specific build rules/definitions/customizations/etc.
+ |
+ +- mount_slash - fuse mounter for slash, connects to slashd and sliod
+ |
+ |	control - control interface definitions
+ |	mount_slash.c - core program definitions
+ |	rpc - RPC routines specific to mount_slash
+ |
+ +- msctl - command-line mount_slash controller
+ |
+ +- newfs_slio - sets up a new file system for use with sliod
+ |
+ +- newfs_slmd - sets up a new file system for use with slashd
+ |
+ +- share - code amongst several slash-related programs
+ |
+ +- slashd - MDS server
+ |
+ |	backend - inter- MDS and I/O daemon communication
+ |	cfd - "client file descriptor" routines, which tracks client-scoped
+ |		identifiers with active files
+ |	control - control interface definitions
+ |	dircache - cache for open(2) directory handles for efficiency
+ |	fidcache - active file collection
+ |	journal - slash-specific journalling routines
+ |	lconf - lex definitions for slash.conf configuration parser
+ |	mds - RPC messages for metadata exchange
+ |	sb - slash file system superblock routines
+ |	timer - timer subsystem routines, for periodic maintenance
+ |	yconf - yacc rules/codes for slash.conf configuration parser
+ |
+ +- slctl - command-line slashd controller
+ |
+ +- sliod - I/O server
+ |
+ |	control - control interface definitions
+ |	rpc - RPC routines specific to sliod
+ |	timer - timer subsystem routines, for periodic maintenance
+ |
+ +- slioctl - command-line sliod controller
+
 zest - root of zest-specific code
 
-how to leverage the make infrastructure for building your programs in a PFL-friendly manner:
+Writing Makefiles
+=================
 
-the structure of our make system is a bit weird but is so to allow programs/sources/paths
-to move around without requiring many pathname references to be updated.
+  This section explains how to leverage the make infrastructure for
+  building your programs.
 
-next, adding sources: simple add all the source file your program consists of to SRCS:
+  The structure of our make system is a bit weird but is so to allow
+  programs/sources/paths to move around without requiring many pathname
+  references to be updated.  This is what all the Makefile.path files
+  are for.
 
-  SRCS+=	foo.c
-  SRCS+=	bar.c
+  Now for writing your own.  First, list all source files your program
+  consists of in SRCS:
 
-libraries are frowned upon for a number of reasons.  instead, add to your program SRCS
-variable:
+	PROG=		foo
+	SRCS+=		foo.c
+	SRCS+=		bar.c
 
-  SRCS+=	${PFL_BASE}/psc_util/crc.c
+  Libraries (libmylib.a) are frowned upon for a number of reasons.
+  Instead, add library files to your program SRCS variable:
 
-there are a number of convenience variables for large SRCS additions:
+	SRCS+=		${PFL_BASE}/psc_util/crc.c
 
-  userland LNET socket networking device:
-	SRCS+=	${LNET_SOCKLND_SRCS}
+  There are a number of convenience variables for large libraries:
 
-  userland LNET cfs (miscellaenous) library (used by all LNET code):
-	SRCS+=	${LNET_CFS_SRCS}
+	SRCS+=		${LNET_SOCKLND_SRCS}	# socket networking device
+	SRCS+=		${LNET_CFS_SRCS}	# miscellaneous routines
+	SRCS+=		${LNET_LIB_SRCS}	# message/mem routines
+	SRCS+=		${LNET_PTLLND_SRCS}	# portals networking device
+	SRCS+=		${PSCRPC_SRCS}		# pscrpc library
 
-  userland LNET library (used by all LNET networking devices):
-	SRCS+=	${LNET_LIB_SRCS}
-
-  userland LNET portals networking device:
-	SRCS+=	${LNET_PTLLND_SRCS}
-
-  PSC RPC library:
-	SRCS+=	${PSCRPC_SRCS}
-
-next, specify additional optional environmental factors:
+  Next, specify additional optional environmental factors:
 
 	INCLUDES - a list of -I<path> passed to gcc and a few other places
 	DEFINES - a list of -D<name>[=<value>] directives
 	LDFLAGS - linker flags such as -lfoo or -L<path>
 
-notes:
+  Notes:
 	- don't use CFLAGS directly unless you only want to pass a flag to gcc.
 	  e.g. if you add CFLAGS+=-DFOO, then this define won't propagated to
 	  other targets, such as "make define" or "make lint"
@@ -266,11 +312,12 @@ notes:
 
 		$ INCLUDES+=	-I/usr/src/kernels/2.6.9/include/stuff
 
-finally, include rules for the project the program is a part of
+  Finally, include rules for the project the program is a part of:
 
-  include ${SLASHMK}
+	include ${SLASHMK}
 
-writing a pfl program
+Writing a PFL Program
+=====================
 
 - PFL initialization
   (o) creates the subsystem facility to allow fine-grained logging capabilities
