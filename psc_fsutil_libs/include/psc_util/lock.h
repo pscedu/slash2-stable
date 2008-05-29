@@ -87,8 +87,8 @@ _tands(volatile psc_spinlock_t *s)
 	} else if (r == SL_UNLOCKED) {
 		s->sl_who = pthread_self();	/* we got it */
 		return (0);
-	} else
-		psc_fatalx("lock %p has invalid value (%d)", s, r);
+	}
+	psc_fatalx("lock %p has invalid value (%d)", s, r);
 }
 
 static __inline void
@@ -142,6 +142,18 @@ reqlock(psc_spinlock_t *sl)
 		/* not locked, grab it */
 		spinlock(sl);
 	return (0);
+}
+
+static __inline int
+tryreqlock(psc_spinlock_t *sl, int *locked)
+{
+	*locked = 0;
+	if (sl->sl_lock == SL_LOCKED &&
+	    sl->sl_who == pthread_self()) {
+		*locked = 1;
+		return (0);
+	}
+	return (trylock(sl));
 }
 
 /*
