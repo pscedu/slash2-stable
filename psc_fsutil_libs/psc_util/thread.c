@@ -3,20 +3,18 @@
 #include "psc_util/subsys.h"
 
 #include <err.h>
+#include <signal.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <unistd.h>
 
+#include "psc_types.h"
 #include "psc_util/alloc.h"
-#include "psc_util/threadtable.h"
+#include "psc_util/cdefs.h"
 #include "psc_util/lock.h"
 #include "psc_util/thread.h"
-#include "psc_types.h"
-#include "psc_util/cdefs.h"
+#include "psc_util/threadtable.h"
 
-/*
- * Keep track of the threads here
- */
 struct dynarray    pscThreads;
 
 __static void *
@@ -126,4 +124,44 @@ pscthr_getname(void)
 	if (thr == NULL)
 		return (NULL);
 	return (thr->pscthr_name);
+}
+
+void
+pscthr_setpause(struct psc_thread *thr, int pause)
+{
+	spinlock(&thr->pscthr_lock);
+	if (pause ^ (thr->pscthr_flags & PTF_PAUSED))
+		pthread_kill(thr->pscthr_pthread,
+		    pause ? SIGUSR1 : SIGUSR2);
+	freelock(&thr->pscthr_lock);
+}
+
+void
+pscthr_sigusr1(__unusedx int sig)
+{
+	struct psc_thread *thr;
+	int locked;
+
+	thr = psc_threadtbl_get();
+	while (tryreqlock(&thr->pscthr_lock, &locked))
+		sched_yield();
+	thr->pscthr_flags |= PTF_PAUSED;
+	ureqlock(&thr->pscthr_lock, locked);
+	while (thr->pscthr_flags & PTF_PAUSED) {
+		usleep(500);
+		sched_yield();
+	}
+}
+
+void
+pscthr_sigusr2(__unusedx int sig)
+{
+	struct psc_thread *thr;
+	int locked;
+
+	thr = psc_threadtbl_get();
+	while (tryreqlock(&thr->pscthr_lock, &locked))
+		sched_yield();
+	thr->pscthr_flags &= ~PTF_PAUSED;
+	ureqlock(&thr->pscthr_lock, locked);
 }
