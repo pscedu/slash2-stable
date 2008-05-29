@@ -1,141 +1,173 @@
-some data structures get registered for statistics exportation and
-manipulation through daemon control sockets, for example, the
-free read buffer list in zest is accessible like this:
+$Id$
 
-  $ zestiondctl -Lreadfree
+Starting Guide for PFL, Zest, and Slash
+=======================================
 
-how to view manpages:
+  Some global data structure instances get automatically registered for
+  statistics exportation and manipulation through daemon control sockets.
+  For example, the free read buffer list in zest is accessible like this:
 
-  $ nroff -mandoc foo.1
+    $ zestiondctl -Lreadfree
 
-and usually pipe it to a pager or somewhere...
+Documentation
+=============
 
-building how-to for most programs: try "make build" first.
-if make(1) complains there is no "build" target, then execute:
+  How to view manpages:
 
-  $ make clean
-  $ make depend
-  $ make
+    $ nroff -mandoc foo.1
 
-you should re-run "make depend" anytime any file changes/adds/removes a #include
-directive so file dependences are properly maintained.
+  and usually pipe it to a pager or somewhere...
 
-other make targets.  to create a recursive code database for use with vim, use
-the cscope target:
+Make Infrastructure
+==================================
 
-  $ make cs
+  To build most components, try "make build" first.
+  If make(1) complains that there is no "build" target, then try:
 
-emacs:
+    $ make clean
+    $ make depend
+    $ make
 
-  $ make etags
+  You should re-run "make depend" any time any file changes/adds/removes
+  a #include directive so file dependences are properly maintained.
 
-it is advised to check code against lint from time to time:
+ Other Make Targets
+ ------------------
 
-  $ make lint
+  To create a recursive code database for use with tagname lookups in
+  vim (e.g. to go to functions/symbols by name), use the cscope target:
 
-most targets are recursive.  there are other tricks in $PROJ_BASE/mk/main.mk.
+    $ make cs
 
-you should not commit to example configuration files or files called "local*"
-unless you know what you're doing, otherwise it may cause may SVN merge conflicts
-for everyone else (including yourself)
+  Emacs:
 
-lnet-lite - lower level networking library
-mk - global build infrastructure
-	each project contains additional build rules and settings
-	(such as include file directories pertinent to its various sources)
-psc_fsutil_libs (PFL) - common data structures and routines
-    include - header files
-	psc_types - basic data types
-	psc_ds - code implementing various data structures
-		dynarray - dynamically resizable arrays using realloc()
-		hash - hash table
-			(o) automatically registered for export/control
-		stree - simple tree where each node may have a variable
-			number of branches/children
-		vbitmap - arbitrarily-sized bitmaps (byte strings)
-		list - linux/list.h rewrite, lightweight linked list implementation,
-			NOT thread-safe (these routines must be invoked mutually
-			exclusive sections of code e.g. protected by spinlocks)
-		listcache - heavier duty linked list, thread-safe
-			(o) automatically registered for export/control
-		tree - BSD sys/tree.h, contains two types of trees:
-			(o) splay - auto-rebalancing two-child-node tree
-			(o) red-black - glorified binary search tree
-			documentation for this file is here:
-			http://www.openbsd.org/cgi-bin/man.cgi?query=tree
-	psc_rpc - remote procedure call (RPC) library which leverages
-	    the LNET networking library
-		rsx - interface for simple RPC message communication
-		the other files are split/shared between client/server activity
+    $ make etags
 
-		the zest client has an asynchronous I/O example
-	psc_util - miscellaneous utility routines
-		alloc - validity-checked allocation routines
-		assert - assertions tied to logging system
-		atomic - a data type which provies a variety of mathematical operations
-			which by nature of atomic i.e mutually exclusive, ideal e.g. for
-			thread-shared data structures containing members which need
-			to be updated but shouldn't require the overhead of locking the
-			structure
-		cdefs - miscellaneous C definitions
-		crc - cyclic redundancy checks for attempting to verify data integrity
-		ctlcli - client interface for daemon control
-		ctlsvr - server guts for daemon control
-		fmtstr - custom format strings, e.g. %M for minutes, %H for hours, etc.
-		init - PFL initialization, key data structures and threads, etc.
-		iostats - routines for gathering statistics about any form of I/O
-			(o) automatically registered for export/control
-		journal - cheesy (atm) journaling routines
-		lock - simple spinlock implementation for mutually exclusive code sections
-			spinlock() - necessarily acquire a spinlock,
-				blocking until release if already held by another thread
-			freelock() - release a held spinlock
-			trylock() - attempt to grab a spinlock, returning false if another
-				thread already holds it
+  It is advised to check code against lint(1) from time to time:
 
-			reqlock() - require a spinlock for a section,
-				ideal for recursive or highly nested program structure
-			ureqlock() - (possibly) release a required lock,
-				if not already held before corresponding reqlock()
-		log - fine-grained logging API
-			in PFL programs, there are a number of subsystems a program
-			may register, e.g. in zest there is an inode subsystem which
-			tracks open/active files, syncer subsystem in charge of moving
-			data chunks to third-party file systems, parity rebuild subsystem
-			in charge of reconstructing lost blocks, etc.
+    $ make lint
 
-			each subsystem has a loglevel associated with it which describes
-			which kinds of messages (by severity) may be reported, and each
-			thread has its own set of values for these.  these levels are
-			all controllable via the control interface
-			(o) automatically registered for export/control
+  Most targets are recursive.  There are other targets in
+  $PROJ_BASE/mk/main.mk.
 
-			psc_trace()	flow report
-			psc_info()	informational/diagnostic message
-			psc_dbg()	debugging messages
-			psc_notice()	condition alert
-			psc_warn()	non-critical error, append errno
-			psc_warnx()	non-critical error, not system-related
-			psc_error()	serious error, append errno to message
-			psc_errorx()	serious error, not system-related
-			psc_fatal()	fatal error, end program execution, with errno
-			psc_fatalx()	fatal error, end program execution, not sys-related
+Local Files
+===========
 
-		mkdirs - mkdir -p in a function
-		palloc - page-aligned alloc, necessary for some kinds of I/O and performance
-		printhex - simple data printer in hexadecimal for debugging
-		pthread_barrier - thread barriers, for sync'ing everyone up before
-			proceeding to further workloads
-		random - pseudo-random number generator based on /dev/urandom
-		strlcpy - OpenBSD's NUL-guaranteed truncation-detecting strncpy
-		subsys - routines relating to the "subsystem" facility which may be used
-			to logically divide large program structure into modules
-		thread - layer above pthread which gives you many things (basically,
-			all thread-safe code in PFL deals with pscthreads and not
-			pthreads directly)
-		threadtable - hash table of threads, for looking yourself up to access
-			thread-local data
-		waitq - wait on an event, from the context of a thread
+  Program deployments will necessarily require some changes to
+  configuration and/or other local repository files.  Please avoid
+  committing to example configuration files or files called "local*"
+  unless you know what you're doing, otherwise it may cause may SVN
+  merge conflicts on everyone's checkouts (including yourself)
+
+Project Hierarchy
+=================
+
+lnet-lite - lower level networking library, used by pscrpc.
+	If you require network communication abilities, see the pscrpc
+	APIs instead.
+
+mk - global make(1)/build infrastructure
+	Note: individual projects may contain additional build rules and
+	settings (such as include file directories pertinent to its
+	various sources) in its $APP_ROOT/mk directory.
+
+psc_fsutil_libs (PFL) - utility library defining common data structures
+ |	and routines shared by zest & slash.
+ |
+ +- include - header files
+     |
+     +-	psc_types - basic data types
+     |
+     +-	psc_ds - code implementing various data structures
+     |	 	dynarray - dynamically resizable arrays using realloc()
+     |	 	hash - hash table
+     |			(o) automatically registered for export/control
+     |		stree - simple tree where each node may have a variable
+     |			number of branches/children
+     |		vbitmap - arbitrarily-sized bitmaps (byte strings)
+     |		list - linux/list.h rewrite, lightweight linked list implementation,
+     |			NOT thread-safe (these routines must be invoked mutually
+     |			exclusive sections of code e.g. protected by spinlocks)
+     |		listcache - heavier duty linked list, thread-safe
+     |			(o) automatically registered for export/control
+     |		tree - BSD sys/tree.h, contains two types of trees:
+     |			(o) splay - auto-rebalancing two-child-node tree
+     |			(o) red-black - glorified binary search tree
+     |			documentation for this file is here:
+     |			http://www.openbsd.org/cgi-bin/man.cgi?query=tree
+     +-	psc_rpc - remote procedure call (RPC) library which leverages
+     |	    the LNET networking library
+     |		rsx - interface for simple RPC message communication
+     |		the other files are split/shared between client/server activity
+     |
+     |		the zest client has an asynchronous I/O example
+     +-	psc_util - miscellaneous utility routines
+     |		alloc - validity-checked allocation routines
+     |		assert - assertions tied to logging system
+     |		atomic - a data type which provies a variety of mathematical operations
+     |			which by nature of atomic i.e mutually exclusive, ideal e.g. for
+     |			thread-shared data structures containing members which need
+     |			to be updated but shouldn't require the overhead of locking the
+     |			structure
+     |		cdefs - miscellaneous C definitions
+     |		crc - cyclic redundancy checks for attempting to verify data integrity
+     |		ctlcli - client interface for daemon control
+     |		ctlsvr - server guts for daemon control
+     |		fmtstr - custom format strings, e.g. %M for minutes, %H for hours, etc.
+     |		init - PFL initialization, key data structures and threads, etc.
+     |		iostats - routines for gathering statistics about any form of I/O
+     |			(o) automatically registered for export/control
+     |		journal - cheesy (atm) journaling routines
+     |		lock - simple spinlock implementation for mutually exclusive code sections
+     |			spinlock() - necessarily acquire a spinlock,
+     |				blocking until release if already held by another thread
+     |			freelock() - release a held spinlock
+     |			trylock() - attempt to grab a spinlock, returning false if another
+     |				thread already holds it
+     |
+     |			reqlock() - require a spinlock for a section,
+     |				ideal for recursive or highly nested program structure
+     |			ureqlock() - (possibly) release a required lock,
+     |				if not already held before corresponding reqlock()
+     |		log - fine-grained logging API
+     |			in PFL programs, there are a number of subsystems a program
+     |			may register, e.g. in zest there is an inode subsystem which
+     |			tracks open/active files, syncer subsystem in charge of moving
+     |			data chunks to third-party file systems, parity rebuild subsystem
+     |			in charge of reconstructing lost blocks, etc.
+     |
+     |			each subsystem has a loglevel associated with it which describes
+     |			which kinds of messages (by severity) may be reported, and each
+     |			thread has its own set of values for these.  these levels are
+     |			all controllable via the control interface
+     |			(o) automatically registered for export/control
+     |
+     |			psc_trace()	flow report
+     |			psc_info()	informational/diagnostic message
+     |			psc_dbg()	debugging messages
+     |			psc_notice()	condition alert
+     |			psc_warn()	non-critical error, append errno
+     |			psc_warnx()	non-critical error, not system-related
+     |			psc_error()	serious error, append errno to message
+     |			psc_errorx()	serious error, not system-related
+     |			psc_fatal()	fatal error, end program execution, with errno
+     |			psc_fatalx()	fatal error, end program execution, not sys-related
+     |
+     |		mkdirs - mkdir -p in a function
+     |		palloc - page-aligned alloc, necessary for some kinds of I/O and performance
+     |		printhex - simple data printer in hexadecimal for debugging
+     |		pthread_barrier - thread barriers, for sync'ing everyone up before
+     |			proceeding to further workloads
+     |		random - pseudo-random number generator based on /dev/urandom
+     |		strlcpy - OpenBSD's NUL-guaranteed truncation-detecting strncpy
+     |		subsys - routines relating to the "subsystem" facility which may be used
+     |			to logically divide large program structure into modules
+     |		thread - layer above pthread which gives you many things (basically,
+     |			all thread-safe code in PFL deals with pscthreads and not
+     |			pthreads directly)
+     |		threadtable - hash table of threads, for looking yourself up to access
+     |			thread-local data
+     |		waitq - wait on an event, from the context of a thread
 slash_nara - root of slash-specific code
 	include - shared include files
 		buffer - slab buffers for memory-resident file portions
@@ -266,7 +298,3 @@ threadtable registration
   contains a member void *rq->rq_export->exp_privdata which can be used
   to store an application-specific (or task-specific) structure to
   associate data with the peer.
-
--
-
-
