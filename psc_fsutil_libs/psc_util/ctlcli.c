@@ -279,7 +279,7 @@ psc_ctlmsg_hashtable_prhdr(__unusedx struct psc_ctlmsghdr *mh,
     __unusedx const void *m)
 {
 	printf("hash table statistics\n");
-	return (printf("%12s %6s %6s %7s %6s %6s %6s\n",
+	return (printf(" %-20s %6s %6s %7s %6s %6s %6s\n",
 	    "table", "total", "used", "%use", "ents",
 	    "avglen", "maxlen"));
 }
@@ -290,7 +290,7 @@ psc_ctlmsg_hashtable_prdat(__unusedx const struct psc_ctlmsghdr *mh,
 {
 	const struct psc_ctlmsg_hashtable *pcht = m;
 
-	printf("%12s %6d %6d %6.2f%% %6d %6.1f %6d\n",
+	printf(" %-20s %6d %6d %6.2f%% %6d %6.1f %6d\n",
 	    pcht->pcht_name,
 	    pcht->pcht_totalbucks, pcht->pcht_usedbucks,
 	    pcht->pcht_usedbucks * 100.0 / pcht->pcht_totalbucks,
