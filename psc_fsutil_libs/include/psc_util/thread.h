@@ -16,10 +16,11 @@ struct psc_ctlmsg_stats;
 
 struct psc_thread {
 	int		   pscthr_run;
+	int		   pscthr_flags;
 	void		*(*pscthr_start)(void *);	/* thread main */
 	pthread_t	   pscthr_pthread;
 	u64		   pscthr_hashid;		/* lookup ID */
-	size_t		   pscthr_id;
+	size_t		   pscthr_id;			/* XXX go away */
 	int		   pscthr_type;			/* app-specific type */
 	char		   pscthr_name[PSC_THRNAME_MAX];
 	int		  *pscthr_loglevels;
@@ -27,6 +28,11 @@ struct psc_thread {
 	void		  *pscthr_private;		/* app-specific data */
 };
 
+#define PTF_PAUSED	(1 << 0)
+
+void	pscthr_setpause(struct psc_thread *, int);
+void	pscthr_sigusr1(int);
+void	pscthr_sigusr2(int);
 void	pscthr_init(struct psc_thread *, int, void *(*)(void *),
 		void *, const char *, ...);
 
