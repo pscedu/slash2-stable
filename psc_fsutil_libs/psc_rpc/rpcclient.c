@@ -880,8 +880,12 @@ int pscrpc_check_set(struct pscrpc_request_set *set, int check_allsent)
 		if (req->rq_phase == ZRQ_PHASE_INTERPRET)
 			GOTO(interpret, req->rq_status);
 
-		if (req->rq_net_err && !req->rq_timedout)
+		if (req->rq_net_err && !req->rq_timedout){
 			pscrpc_expire_one_request(req);
+
+			/* make sure net errors get flagged as error cases */
+			if(!req->rq_err) req->rq_err = 1;
+		}
 
 		if (req->rq_err) {
 			pscrpc_unregister_reply(req);
