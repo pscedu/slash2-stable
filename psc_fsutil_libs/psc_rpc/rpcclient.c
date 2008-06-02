@@ -881,9 +881,11 @@ int pscrpc_check_set(struct pscrpc_request_set *set, int check_allsent)
 			GOTO(interpret, req->rq_status);
 
 		if (req->rq_net_err && !req->rq_timedout){
+			/* expire this request, 
+			 * which will eventually pscrpc_fail_import() too... */
 			pscrpc_expire_one_request(req);
 
-			/* make sure net errors get flagged as error cases */
+			/* NTBS: make sure net errors get flagged as error cases */
 			if(!req->rq_err) req->rq_err = 1;
 		}
 
