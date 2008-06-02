@@ -75,8 +75,6 @@ recurse-all:
 ${PROG}: ${OBJS}
 	${CC} -o $@ ${OBJS} ${LDFLAGS}
 
-lib: ${LIBRARY}
-
 ${LIBRARY}: ${OBJS}
 	${AR} ${ARFLAGS} $@ $^
 
