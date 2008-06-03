@@ -68,7 +68,8 @@ rsx_timeout(__unusedx void *arg)
 }
 
 /*
- * rsx_bulkgetsink - setup a sink to receive a GET from peer.
+ * rsx_bulkgetsink - setup a source or sink for a server.
+ * @type: GET_SINK receive from client or PUT_SOURCE to push to a client.
  * @rq: RPC request associated with GET.
  * @descp: pointer to bulk xfer descriptor.
  * @ptl: portal to issue bulk xfer across.
@@ -77,15 +78,17 @@ rsx_timeout(__unusedx void *arg)
  * Returns: 0 or negative errno on error.
  */
 int
-rsx_bulkgetsink(struct pscrpc_request *rq, struct pscrpc_bulk_desc **descp,
-    int ptl, struct iovec *iov, int n)
+rsx_bulkserver(struct pscrpc_request *rq, struct pscrpc_bulk_desc **descp,
+    int type, int ptl, struct iovec *iov, int n)
 {
 	int sum, i, rc, comms_error;
 	struct pscrpc_bulk_desc *desc;
 	struct l_wait_info lwi;
 	u8 *v1;
 
-	*descp = desc = pscrpc_prep_bulk_exp(rq, 1, BULK_GET_SINK, ptl);
+	psc_assert(type == BULK_GET_SINK || type == BULK_PUT_SOURCE);
+
+	*descp = desc = pscrpc_prep_bulk_exp(rq, 1, type, ptl);
 	if (desc == NULL) {
 		psc_warnx("pscrpc_prep_bulk_exp returned a null desc");
 		return (-ENOMEM); // XXX errno
@@ -180,9 +183,10 @@ rsx_bulkgetsink(struct pscrpc_request *rq, struct pscrpc_bulk_desc **descp,
 	return (rc);
 }
 
-
 /*
- * rsx_bulkclient - setup a source or sink.  Source (BULK_GET_SOURCE) allows the server to pull our buffer, sink (BULK_PUT_SINK) sets up a buffer which is to be filled by the server.
+ * rsx_bulkclient - setup a source or sink for a client.
+ * @type: GET_SOURCE lets server to pull our buffer,
+ *	PUT_SINK sets up a buffer filled in by the server
  * @rq: RPC request.
  * @descp: pointer to bulk xfer descriptor.
  * @ptl: portal to issue bulk xfer across.
@@ -192,7 +196,7 @@ rsx_bulkgetsink(struct pscrpc_request *rq, struct pscrpc_bulk_desc **descp,
  */
 int
 rsx_bulkclient(struct pscrpc_request *rq, struct pscrpc_bulk_desc **descp,
-	       int ptl, struct iovec *iov, int n, int type)
+    int type, int ptl, struct iovec *iov, int n)
 {
 	struct pscrpc_bulk_desc *desc;
 	int i;
