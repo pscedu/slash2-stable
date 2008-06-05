@@ -59,10 +59,10 @@ pwndmap_set(struct psc_wndmap *p, size_t pos)
 	pos -= p->pwm_min;
 	psclist_for_each_entry(pb, &p->pwm_wmbs, pwmb_lentry) {
 		if (pos < WMBSZ) {
-			if (pb->pwmb_buf[pos / NBBY] & (1 << (pos % NBBY)))
+			if (pb->pwmb_buf[pos / NBBY] & (1 << (pos % NBBY - 1)))
 				rc = 1;
 			else {
-				pb->pwmb_buf[pos / NBBY] |= 1 << (pos % NBBY);
+				pb->pwmb_buf[pos / NBBY] |= 1 << (pos % NBBY - 1);
 				if (pwndmap_block_full(pb)) {
 					p->pwm_min += WMBSZ;
 
@@ -76,7 +76,7 @@ pwndmap_set(struct psc_wndmap *p, size_t pos)
 	}
 	for (; pos >= WMBSZ; pos -= WMBSZ)
 		pb = pwndmap_addblock(p);
-	pb->pwmb_buf[pos / NBBY] |= 1 << (pos % NBBY);
+	pb->pwmb_buf[pos / NBBY] |= 1 << (pos % NBBY - 1);
  done:
 	freelock(&p->pmw_lock);
 	return (rc);
