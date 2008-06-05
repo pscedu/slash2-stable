@@ -48,15 +48,22 @@ int
 pwndmap_set(struct psc_wndmap *p, size_t pos)
 {
 	struct psc_wndmap_block *pb;
-	int rc;
+	int rc, nwrapend;
 
 	rc = 0;
 	spinlock(&p->pmw_lock);
 	if (pos < p->pwm_min) {
-		rc = -1;
-		goto done;
-	}
-	pos -= p->pwm_min;
+		nwrapend = 0;
+		psclist_for_each_entry(pb, &p->pwm_wmbs, pwmb_lentry)
+			if (++nwrapend * WMBSZ + p->pwm_min < p->pwm_min)
+				break;
+		if (pb == NULL) {
+			rc = -1;
+			goto done;
+		}
+		pos += WMBSZ * nwrapend;
+	} else
+		pos -= p->pwm_min;
 	psclist_for_each_entry(pb, &p->pwm_wmbs, pwmb_lentry) {
 		if (pos < WMBSZ) {
 			if (pb->pwmb_buf[pos / NBBY] & (1 << (pos % NBBY - 1)))
