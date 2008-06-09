@@ -14,6 +14,7 @@
 #include "psc_util/ctl.h"
 #include "psc_util/ctlcli.h"
 #include "psc_util/log.h"
+#include "psc_util/strlcpy.h"
 #include "psc_util/subsys.h"
 
 __static PSCLIST_HEAD(psc_ctlmsgs);
@@ -65,7 +66,7 @@ psc_ctlparse_hashtable(const char *tblname)
 	struct psc_ctlmsg_hashtable *pcht;
 
 	pcht = psc_ctlmsg_push(PCMT_GETHASHTABLE, sizeof(*pcht));
-	snprintf(pcht->pcht_name, sizeof(pcht->pcht_name), "%s", tblname);
+	strlcpy(pcht->pcht_name, tblname, sizeof(pcht->pcht_name));
 }
 
 void
@@ -78,11 +79,8 @@ psc_ctl_packshow_loglevel(const char *thr)
 	    sizeof(struct psc_ctlmsg_subsys));
 
 	pcl = psc_ctlmsg_push(PCMT_GETLOGLEVEL, sizeof(*pcl));
-	n = snprintf(pcl->pcl_thrname,
-	   sizeof(pcl->pcl_thrname), "%s", thr);
-	if (n == -1)
-		psc_fatal("snprintf");
-	else if (n == 0 || n >= (int)sizeof(pcl->pcl_thrname))
+	n = strlcpy(pcl->pcl_thrname, thr, sizeof(pcl->pcl_thrname));
+	if (n == 0 || n >= (int)sizeof(pcl->pcl_thrname))
 		psc_fatalx("invalid thread name: %s", thr);
 }
 
@@ -93,11 +91,8 @@ psc_ctl_packshow_stats(const char *thr)
 	int n;
 
 	pcst = psc_ctlmsg_push(PCMT_GETSTATS, sizeof(*pcst));
-	n = snprintf(pcst->pcst_thrname,
-	   sizeof(pcst->pcst_thrname), "%s", thr);
-	if (n == -1)
-		psc_fatal("snprintf");
-	else if (n == 0 || n >= (int)sizeof(pcst->pcst_thrname))
+	n = strlcpy(pcst->pcst_thrname, thr, sizeof(pcst->pcst_thrname));
+	if (n == 0 || n >= (int)sizeof(pcst->pcst_thrname))
 		psc_fatalx("invalid thread name: %s", thr);
 }
 
@@ -149,10 +144,19 @@ psc_ctlparse_param(char *spec)
 {
 	struct psc_ctlmsg_param *pcp;
 	char *thr, *field, *value;
-	int n;
+	int flags, n;
 
-	if ((value = strchr(spec, '=')) != NULL)
+	flags = 0;
+	if ((value = strchr(spec, '=')) != NULL) {
+		if (value > spec && value[-1] == '+') {
+			flags = PCPF_ADD;
+			value[-1] = '\0';
+		} else if (value > spec && value[-1] == '-') {
+			flags = PCPF_SUB;
+			value[-1] = '\0';
+		}
 		*value++ = '\0';
+	}
 
 	if ((field = strchr(spec, '.')) == NULL) {
 		thr = PCTHRNAME_EVERYONE;
@@ -198,6 +202,7 @@ psc_ctlparse_param(char *spec)
 
 	/* Set parameter value (if applicable). */
 	if (value) {
+		pcp->pcp_flags = flags;
 		n = snprintf(pcp->pcp_value,
 		    sizeof(pcp->pcp_value), "%s", value);
 		if (n == -1)
