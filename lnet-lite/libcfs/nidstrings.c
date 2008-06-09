@@ -94,19 +94,19 @@ libcfs_next_nidstring (void)
         return str;
 }
 
-static int  libcfs_lo_str2addr(char *str, int nob, __u32 *addr);
+static int  libcfs_lo_str2addr(const char *str, int nob, __u32 *addr);
 static void libcfs_ip_addr2str(__u32 addr, char *str);
-static int  libcfs_ip_str2addr(char *str, int nob, __u32 *addr);
+static int  libcfs_ip_str2addr(const char *str, int nob, __u32 *addr);
 static void libcfs_decnum_addr2str(__u32 addr, char *str);
 static void libcfs_hexnum_addr2str(__u32 addr, char *str);
-static int  libcfs_num_str2addr(char *str, int nob, __u32 *addr);
+static int  libcfs_num_str2addr(const char *str, int nob, __u32 *addr);
 
 struct netstrfns {
         int          nf_type;
         char        *nf_name;
         char        *nf_modname;
         void       (*nf_addr2str)(__u32 addr, char *str);
-        int        (*nf_str2addr)(char *str, int nob, __u32 *addr);
+        int        (*nf_str2addr)(const char *str, int nob, __u32 *addr);
 };
 
 static struct netstrfns  libcfs_netstrfns[] = {
@@ -177,7 +177,7 @@ static struct netstrfns  libcfs_netstrfns[] = {
 const int libcfs_nnetstrfns = sizeof(libcfs_netstrfns)/sizeof(libcfs_netstrfns[0]);
 
 int
-libcfs_lo_str2addr(__unusedx char *str, __unusedx int nob, __u32 *addr)
+libcfs_lo_str2addr(__unusedx const char *str, __unusedx int nob, __u32 *addr)
 {
         *addr = 0;
         return 1;
@@ -210,7 +210,7 @@ libcfs_ip_addr2str(__u32 addr, char *str)
  * fine too :) */
 
 int
-libcfs_ip_str2addr(char *str, int nob, __u32 *addr)
+libcfs_ip_str2addr(const char *str, int nob, __u32 *addr)
 {
         int   a;
         int   b;
@@ -269,7 +269,7 @@ libcfs_hexnum_addr2str(__u32 addr, char *str)
 }
 
 int
-libcfs_num_str2addr(char *str, int nob, __u32 *addr)
+libcfs_num_str2addr(const char *str, int nob, __u32 *addr)
 {
         int     n;
 
@@ -457,7 +457,7 @@ libcfs_str2net(char *str)
 }
 
 lnet_nid_t
-libcfs_str2nid(char *str)
+libcfs_str2nid(const char *str)
 {
         char             *sep = strchr(str, '@');
         struct netstrfns *nf;
