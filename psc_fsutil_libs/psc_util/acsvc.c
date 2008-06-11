@@ -13,14 +13,13 @@
 #include <unistd.h>
 
 #include "psc_ds/list.h"
+#include "psc_util/acsvc.h"
 #include "psc_util/alloc.h"
 #include "psc_util/atomic.h"
 #include "psc_util/cdefs.h"
 #include "psc_util/strlcpy.h"
 #include "psc_util/thread.h"
 #include "psc_util/waitq.h"
-
-#include "acsvc.h"
 
 struct access_request {
 	int			 arq_id;
