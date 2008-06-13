@@ -275,9 +275,9 @@ int tcpnal_init(bridge b)
                 /* TODO: this needs to shut down the newly created junk */
                 return(-ENXIO);
         }
-	iostats_init(b->b_ni->ni_recvstats, "lndrcv%s",
+	iostats_init(b->b_ni->ni_recvstats, "lndrcv-%s",
 	    libcfs_nid2str(b->b_ni->ni_nid));
-	iostats_init(b->b_ni->ni_sendstats, "lndsnd%s",
+	iostats_init(b->b_ni->ni_sendstats, "lndsnd-%s",
 	    libcfs_nid2str(b->b_ni->ni_nid));
         b->lower = m;
         return(0);
