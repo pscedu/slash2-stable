@@ -98,8 +98,10 @@ void
 psclogv(__unusedx const char *fn, const char *func, int line, int subsys,
     int level, int options, const char *fmt, va_list ap)
 {
-	char hostname[HOST_NAME_MAX], emsg[LINE_MAX], umsg[LINE_MAX];
-	char *p, prefix[LINE_MAX], nothrname[20];
+	static char hostname[HOST_NAME_MAX];
+	static int rank;
+
+	char prefix[LINE_MAX], emsg[LINE_MAX], umsg[LINE_MAX], nothrname[20], *p;
 	const char *thrname, *logfmt;
 	struct timeval tv;
 	int save_errno;
@@ -116,21 +118,29 @@ psclogv(__unusedx const char *fn, const char *func, int line, int subsys,
 		thrname = nothrname;
 	}
 
-	if (gethostname(hostname, sizeof(hostname)) == -1)
-		err(1, "gethostname");
-	if ((p = strchr(hostname, '.')) != NULL)
-		*p = '\0';
+	if (*hostname == '\0') {
+		if (gethostname(hostname, sizeof(hostname)) == -1)
+			err(1, "gethostname");
+		if ((p = strchr(hostname, '.')) != NULL)
+			*p = '\0';
+	}
+
+#ifndef __TARGET_LINUX__
+	if (rank == 0)
+		rank = cnos_get_rank();
+#endif
 
 	gettimeofday(&tv, NULL);
 	FMTSTR(prefix, sizeof(prefix), logfmt,
-		FMTSTRCASE('n', prefix, sizeof(prefix), "s", thrname)
+		FMTSTRCASE('F', prefix, sizeof(prefix), "s", func)
+		FMTSTRCASE('f', prefix, sizeof(prefix), "s", fn)
+		FMTSTRCASE('h', prefix, sizeof(prefix), "s", hostname)
 		FMTSTRCASE('L', prefix, sizeof(prefix), "d", level)
 		FMTSTRCASE('l', prefix, sizeof(prefix), "d", line)
+		FMTSTRCASE('n', prefix, sizeof(prefix), "s", thrname)
+		FMTSTRCASE('r', prefix, sizeof(prefix), "d", rank)
 		FMTSTRCASE('s', prefix, sizeof(prefix), "lu", tv.tv_sec)
 		FMTSTRCASE('u', prefix, sizeof(prefix), "lu", tv.tv_usec)
-		FMTSTRCASE('f', prefix, sizeof(prefix), "s", fn)
-		FMTSTRCASE('F', prefix, sizeof(prefix), "s", func)
-		FMTSTRCASE('h', prefix, sizeof(prefix), "s", hostname)
 	);
 
 	/*
