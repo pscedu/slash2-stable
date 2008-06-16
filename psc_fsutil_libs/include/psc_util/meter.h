@@ -1,5 +1,8 @@
 /* $Id$ */
 
+#ifndef __PFL_METER_H__
+#define __PFL_METER_H__
+
 #include <sys/types.h>
 
 #include <stdarg.h>
@@ -21,3 +24,5 @@ extern psc_spinlock_t		pscMetersLock;
 
 void psc_meter_init(struct psc_meter *, size_t, const char *, ...);
 void psc_meter_free(struct psc_meter *);
+
+#endif /* __PFL_METER_H__ */

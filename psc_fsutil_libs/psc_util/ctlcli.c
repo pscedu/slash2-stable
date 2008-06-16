@@ -14,6 +14,7 @@
 #include "psc_util/ctl.h"
 #include "psc_util/ctlcli.h"
 #include "psc_util/log.h"
+#include "psc_util/meter.h"
 #include "psc_util/strlcpy.h"
 #include "psc_util/subsys.h"
 
@@ -235,6 +236,25 @@ psc_ctlparse_iostats(char *iostats)
 	}
 }
 
+void
+psc_ctlparse_meter(char *meters)
+{
+	struct psc_ctlmsg_meter *pcm;
+	char *meter, *next;
+	int n;
+
+	for (meter = meters; meter != NULL; meter = next) {
+		if ((next = strchr(meter, ',')) != NULL)
+			*next++ = '\0';
+
+		pcm = psc_ctlmsg_push(PCMT_GETMETER, sizeof(*pcm));
+		n = strlcpy(pcm->pcm_mtr.pm_name, meter,
+		    sizeof(pcm->pcm_mtr.pm_name));
+		if (n == 0 || n >= sizeof(pcm->pcm_mtr.pm_name))
+			psc_fatalx("invalid meter: %s", meter);
+	}
+}
+
 int
 psc_ctl_loglevel_namelen(int n)
 {
@@ -371,6 +391,41 @@ psc_ctlmsg_iostats_prdat(__unusedx const struct psc_ctlmsghdr *mh,
 	}
 	printf("%6.1f/s %8"_P_U64"u\n", ist->ist_erate,
 	    ist->ist_errors_total);
+}
+
+int
+psc_ctlmsg_meter_prhdr(__unusedx struct psc_ctlmsghdr *mh,
+    __unusedx const void *m)
+{
+	printf("meters\n");
+	return (printf(" %12s %13s %8s\n",
+	    "name", "position", "progress"));
+}
+
+void
+psc_ctlmsg_meter_prdat(__unusedx const struct psc_ctlmsghdr *mh,
+    const void *m)
+{
+	const struct psc_ctlmsg_meter *pcm = m;
+	int n, len;
+
+	printf(" %12s %5zu/%8zu %n",
+	    pcm->pcm_mtr.pm_name,
+	    pcm->pcm_mtr.pm_cur,
+	    pcm->pcm_mtr.pm_max, &len);
+#define WIDTH 80
+	len = WIDTH - len - 3;
+	if (len < 0)
+		len = 0;
+	putchar('|');
+	for (n = 0; n < (int)(len * pcm->pcm_mtr.pm_cur /
+	    pcm->pcm_mtr.pm_max); n++)
+		putchar('=');
+	putchar(pcm->pcm_mtr.pm_cur ==
+	    pcm->pcm_mtr.pm_max ? '=' : '>');
+	for (; n < len; n++)
+		putchar(' ');
+	printf("|\n");
 }
 
 int
