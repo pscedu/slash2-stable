@@ -94,29 +94,29 @@ __dead void _psc_fatal(const char *, const char *, int, int, int, int,
 
 #ifdef CDEBUG
 # undef CDEBUG
-# define CDEBUG(mask, format, ...)				\
-	do {							\
-		switch (mask) {					\
-		case D_ERROR:					\
-		case D_NETERROR:				\
-			psc_errorx(format, ## __VA_ARGS__);	\
-			break;					\
-		case D_WARNING:					\
-			psc_warnx(format, ## __VA_ARGS__);	\
-			break;					\
-		case D_NET:					\
-		case D_INFO:					\
-		case D_CONFIG:					\
-			psc_info(format, ## __VA_ARGS__);	\
-			break;					\
-		case D_RPCTRACE:				\
-		case D_TRACE:					\
-			psc_trace(format, ## __VA_ARGS__);	\
-			break;					\
-		default:					\
-			psc_warnx("Unknown lustre mask %d", mask); \
-			psc_warnx(format, ## __VA_ARGS__);	\
-			break;					\
-		}						\
-	} while (0)
 #endif
+#define CDEBUG(mask, format, ...)					\
+	do {								\
+		switch (mask) {						\
+		case D_ERROR:						\
+		case D_NETERROR:					\
+			psc_errorx(format, ## __VA_ARGS__);		\
+			break;						\
+		case D_WARNING:						\
+			psc_warnx(format, ## __VA_ARGS__);		\
+			break;						\
+		case D_NET:						\
+		case D_INFO:						\
+		case D_CONFIG:						\
+			psc_info(format, ## __VA_ARGS__);		\
+			break;						\
+		case D_RPCTRACE:					\
+		case D_TRACE:						\
+			psc_trace(format, ## __VA_ARGS__);		\
+			break;						\
+		default:						\
+			psc_warnx("Unknown lustre mask %d", mask);	\
+			psc_warnx(format, ## __VA_ARGS__);		\
+			break;						\
+		}							\
+	} while (0)
