@@ -13,6 +13,7 @@
 #include "psc_ds/hash.h"
 #include "psc_ds/listcache.h"
 #include "psc_util/iostats.h"
+#include "psc_util/meter.h"
 #include "psc_util/thread.h"
 
 #define PCTHRNAME_EVERYONE	"everyone"
@@ -84,6 +85,12 @@ struct psc_ctlmsg_iostats {
 
 #define PCI_NAME_ALL		"all"
 
+struct psc_ctlmsg_meter {
+	struct psc_meter	pcm_mtr;
+};
+
+#define PCM_NAME_ALL		"all"
+
 /* Control message types. */
 #define PCMT_ERROR		0
 #define PCMT_GETLOGLEVEL	1
@@ -94,7 +101,8 @@ struct psc_ctlmsg_iostats {
 #define PCMT_GETPARAM		6
 #define PCMT_SETPARAM		7
 #define PCMT_GETIOSTATS		8
-#define NPCMT			9
+#define PCMT_GETMETER		9
+#define NPCMT			10
 
 /*
  * Control message header.

@@ -22,7 +22,8 @@ struct psc_ctlmsg_param;
 /* 5 */	{ psc_ctlrep_gethashtable,	sizeof(struct psc_ctlmsg_hashtable) },	\
 /* 6 */	{ psc_ctlrep_param,		sizeof(struct psc_ctlmsg_param) },	\
 /* 7 */	{ psc_ctlrep_param,		sizeof(struct psc_ctlmsg_param) },	\
-/* 8 */	{ psc_ctlrep_getiostats,	sizeof(struct psc_ctlmsg_iostats) }
+/* 8 */	{ psc_ctlrep_getiostats,	sizeof(struct psc_ctlmsg_iostats) },	\
+/* 9 */	{ psc_ctlrep_getmeter,		sizeof(struct psc_ctlmsg_meter) }
 
 struct psc_ctlthr {
 	int	  pc_st_nclients;
@@ -44,6 +45,7 @@ void psc_ctlrep_gethashtable(int, struct psc_ctlmsghdr *, void *);
 void psc_ctlrep_getiostats(int, struct psc_ctlmsghdr *, void *);
 void psc_ctlrep_getlc(int, struct psc_ctlmsghdr *, void *);
 void psc_ctlrep_getloglevel(int, struct psc_ctlmsghdr *, void *);
+void psc_ctlrep_getmeter(int, struct psc_ctlmsghdr *, void *);
 void psc_ctlrep_getstats(int, struct psc_ctlmsghdr *, void *);
 void psc_ctlrep_getsubsys(int, struct psc_ctlmsghdr *, void *);
 void psc_ctlrep_param(int, struct psc_ctlmsghdr *, void *);

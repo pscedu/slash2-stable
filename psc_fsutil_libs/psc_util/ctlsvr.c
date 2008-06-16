@@ -758,6 +758,42 @@ psc_ctlrep_getiostats(int fd, struct psc_ctlmsghdr *mh, void *m)
 		    "unknown iostats: %s", name);
 }
 
+/*
+ * zctlrep_getmeter - respond to a "getmeter" inquiry.
+ * @fd: client socket descriptor.
+ * @mh: already filled-in control message header.
+ * @m: control message to examine and reuse.
+ */
+void
+psc_ctlrep_getmeter(int fd, struct psc_ctlmsghdr *mh, void *m)
+{
+	struct psc_ctlmsg_meter *pcm = m;
+	char name[PSC_METER_NAME_MAX];
+	struct psc_meter *pm;
+	int found, all;
+
+	found = 0;
+	snprintf(name, sizeof(name), "%s", pcm->pcm_mtr.pm_name);
+	all = (strcmp(name, PCM_NAME_ALL) == 0);
+
+	spinlock(&pscMetersLock);
+	psclist_for_each_entry(pm, &pscMetersList, pm_lentry)
+		if (all || strncmp(pm->pm_name, name,
+		    strlen(name)) == 0) {
+			found = 1;
+
+			pcm->pcm_mtr = *pm;
+			psc_ctlmsg_sendv(fd, mh, pcm);
+
+			/* Terminate on exact match. */
+			if (strlen(name) == strlen(pm->pm_name))
+				break;
+		}
+	freelock(&pscMetersLock);
+	if (!found && !all)
+		psc_ctlsenderr(fd, mh, "unknown meter: %s", name);
+}
+
 void
 psc_ctl_applythrop(int fd, struct psc_ctlmsghdr *mh, void *m, const char *thrname,
     void (*cbf)(int, struct psc_ctlmsghdr *, void *, struct psc_thread *))
