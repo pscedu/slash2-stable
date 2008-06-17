@@ -14,26 +14,26 @@ fhcmp(const void *a, const void *b)
 {
 	const struct fhent *ta = a, *tb = b;
 
-	if (ta->fh < tb->fh)
+	if (ta->fh_id < tb->fh_id)
 		return (-1);
-	else if (ta->fh > tb->fh)
+	else if (ta->fh_id > tb->fh_id)
 		return (1);
 	return (0);
 }
 
 SPLAY_HEAD(fhtree, fhent);
-SPLAY_PROTOTYPE(fhtree, fhent, entry, fhcmp);
-SPLAY_GENERATE(fhtree, fhent, entry, fhcmp);
+SPLAY_PROTOTYPE(fhtree, fhent, fh_entry, fhcmp);
+SPLAY_GENERATE(fhtree, fhent, fh_entry, fhcmp);
 
 struct fhtree  fhtree;
 psc_spinlock_t fhtreelock = LOCK_INITIALIZER;
 
 struct fhent *
-_fh_lookup(u64 fh, int rm)
+_fh_lookup(u64 fhid, int rm)
 {
 	struct fhent *t, tq;
 
-	tq.fh = fh;
+	tq.fh_id = fhid;
 	spinlock(&fhtreelock);
 	t = SPLAY_FIND(fhtree, &fhtree, &tq);
 	if (t && rm)
@@ -49,37 +49,36 @@ _fh_lookup(u64 fh, int rm)
  * @fh_regcb: callback
  */
 void
-fh_register(u64 fh, void (*fh_regcb)(struct fhent *, int, void **),
+fh_register(u64 fhid, void (*fh_regcb)(struct fhent *, int, void **),
 	    void *cb_args[])
 {
 	struct fhent *t, fh;
 	int    op = FD_REG_EXIST;
 
-	fh.fh = fh;
-
+	fh.fh_id = fhid;
 	spinlock(&fhtreelock);
 	t = SPLAY_FIND(fhtree, &fhtree, &fh);
 	if (t == NULL) {
 		op = FD_REG_NEW;
 		t = PSCALLOC(sizeof(*t));
-		LOCK_INIT(t->lock);
+		LOCK_INIT(&t->fh_lock);
+		spinlock(&t->fh_lock);
 		t->fh_pri = NULL;
-		t->fh = fh
+		t->fh_id = fhid;
 		/* Inform the cache of our status, this allows us to
 		 *   init without holding the fhtreelock.
 		 */
-		t->fd = FD_REG_INIT;
+		t->fh_state = FD_REG_INIT;
 		if (SPLAY_INSERT(fhtree, &fhtree, t))
-			psc_fatalx("Attempted to reinsert fd "LPX64, t->fh);
+			psc_fatalx("Attempted to reinsert fd %"_P_U64"x", t->fh_id);
 	}
 	freelock(&fhtreelock);
 
-	if (fh_regcb)
-		/* Callback into the fd handler
-		 */
+	if (fh_regcb) {
+		/* Callback into the fd handler */
 		(*fh_regcb)(t, op, cb_args);
-
-	return (t->fh);
+		freelock(&t->fh_lock);
+	}
 }
 
 int
