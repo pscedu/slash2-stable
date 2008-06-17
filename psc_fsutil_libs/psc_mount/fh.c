@@ -4,11 +4,10 @@
 
 #include "psc_types.h"
 #include "psc_ds/tree.h"
+#include "psc_mount/dhfh.h"
 #include "psc_util/alloc.h"
 #include "psc_util/lock.h"
 #include "psc_util/random.h"
-
-#include "psc_mount/dhfh.h"
 
 int
 fhcmp(const void *a, const void *b)
@@ -30,33 +29,18 @@ struct fhtree  fhtree;
 psc_spinlock_t fhtreelock = LOCK_INITIALIZER;
 
 struct fhent *
-fh_lookup(u64 fh)
+_fh_lookup(u64 fh, int rm)
 {
 	struct fhent *t, tq;
 
 	tq.fh = fh;
-
 	spinlock(&fhtreelock);
 	t = SPLAY_FIND(fhtree, &fhtree, &tq);
+	if (t && rm)
+		if (SPLAY_REMOVE(fhtree, &fhtree, t) == NULL)
+			psc_fatalx("unable to remove element");
 	freelock(&fhtreelock);
-
-	return(t);
-}
-
-int
-fh_remove(u64 fh)
-{
-	struct fhent *t, tq;
-	int    rc=-1;
-
-        tq.fh = fh;
-
-        spinlock(&fhtreelock);
-	if (SPLAY_REMOVE(fhtree, &fhtree, t))
-		rc = 0;
-	freelock(&fhtreelock);
-	
-	return (rc);		
+	return (t);
 }
 
 /**
@@ -65,7 +49,7 @@ fh_remove(u64 fh)
  * @fh_regcb: callback
  */
 void
-fh_register(u64 fh, void (*fh_regcb)(struct fhent *, int, void **), 
+fh_register(u64 fh, void (*fh_regcb)(struct fhent *, int, void **),
 	    void *cb_args[])
 {
 	struct fhent *t, fh;
@@ -73,17 +57,17 @@ fh_register(u64 fh, void (*fh_regcb)(struct fhent *, int, void **),
 
 	fh.fh = fh;
 
-	spinlock(&fhtreelock);	
+	spinlock(&fhtreelock);
 	t = SPLAY_FIND(fhtree, &fhtree, &fh);
-        if (t == NULL) {				
+	if (t == NULL) {
 		op = FD_REG_NEW;
 		t = PSCALLOC(sizeof(*t));
 		LOCK_INIT(t->lock);
 		t->fh_pri = NULL;
 		t->fh = fh
-		/* Inform the cache of our status, this allows us to 
+		/* Inform the cache of our status, this allows us to
 		 *   init without holding the fhtreelock.
-		 */ 
+		 */
 		t->fd = FD_REG_INIT;
 		if (SPLAY_INSERT(fhtree, &fhtree, t))
 			psc_fatalx("Attempted to reinsert fd "LPX64, t->fh);
