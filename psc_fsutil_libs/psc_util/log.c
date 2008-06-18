@@ -23,9 +23,11 @@
 #include "psc_util/fmtstr.h"
 #include "psc_util/cdefs.h"
 
-#define DEF_LOGFMT "[%s:%06u %n:%F:%l]"
+#ifndef PSC_LOG_FMT
+#define PSC_LOG_FMT "[%s:%06u %n:%F:%l]"
+#endif
 
-__static const char *pscLogFormat = DEF_LOGFMT;
+__static const char *pscLogFormat = PSC_LOG_FMT;
 
 /* Global logging level. */
 __static int pscLogLevel = PLL_TRACE;
