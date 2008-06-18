@@ -39,6 +39,9 @@ struct iovec;
 	rsx_newreq((imp), (version), (op), sizeof(*(mq)),		\
 	    sizeof(*(mp)), &(rq), &(mq))
 
+#define RSX_WAITREP(rq, mp)						\
+	rsx_waitrep((rq), sizeof(*(mp)), &(mp))
+
 int rsx_newreq(struct pscrpc_import *, int, int, int, int,
 	struct pscrpc_request **, void *);
 int rsx_waitrep(struct pscrpc_request *, int, void *);
