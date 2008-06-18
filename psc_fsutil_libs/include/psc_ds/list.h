@@ -209,14 +209,6 @@ psclist_splice(struct psclist_head *list, struct psclist_head *head)
 	((type *)((char *)(ptr)-(unsigned long)(&((type *)0)->member)))
 
 /**
- * psclist_next_entry - get the element following the specified element.
- * @e: an element with a list member.
- * @member: the name of the struct psclist_head within the struct.
- */
-#define psclist_next_entry(e, member) \
-	psclist_entry(psclist_next(&e->member), typeof(*e), member)
-
-/**
  * psclist_for_each - iterate over a psclist
  * @pos: the &struct psclist_head to use as a loop counter.
  * @head: the head for your psclist.
@@ -245,10 +237,13 @@ psclist_splice(struct psclist_head *list, struct psclist_head *head)
 
 /**
  * psclist_first_entry - grab first item from a psclist
- * @head: list head.
+ * @hd: list head.
+ * @type: entry type.
+ * @member: list_head member name in entry structure.
  */
-#define psclist_first_entry(hd, type, member) \
-	psclist_entry((hd)->znext, type, member)
+#define psclist_first_entry(hd, type, member)			\
+	((hd)->znext == (hd)->zprev ? 				\
+	 NULL : psclist_entry((hd)->znext, type, member))
 
 /**
  * psclist_last - grab last list entry.
@@ -259,9 +254,12 @@ psclist_splice(struct psclist_head *list, struct psclist_head *head)
 /**
  * psclist_last_entry - grab last list item.
  * @hd: list head.
+ * @type: entry type.
+ * @member: list_head member name in entry structure.
  */
-#define psclist_last_entry(hd, type, member) \
-	psclist_entry((hd)->zprev, type, member)
+#define psclist_last_entry(hd, type, member)			\
+	((hd)->znext == (hd)->zprev ?				\
+	 NULL : psclist_entry((hd)->zprev, type, member))
 
 /**
  * psclist_next - grab the entry following the specified entry.
@@ -274,13 +272,6 @@ psclist_splice(struct psclist_head *list, struct psclist_head *head)
  * @e: entry
  */
 #define psclist_prev(e) (e)->zprev
-
-/**
- * psclist_prev_entry - grab item before specified entry.
- * @e: entry
- */
-#define psclist_prev_entry(e, type, member) \
-	psclist_entry((e)->zprev, type, member)
 
 /**
  * psclist_for_each_entry_safe - iterate over list of given type safe
