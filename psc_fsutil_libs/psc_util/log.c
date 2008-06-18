@@ -126,12 +126,12 @@ psclogv(__unusedx const char *fn, const char *func, int line, int subsys,
 	}
 
 	if (rank == 0)
-#ifdef __TARGET_LINUX__
+#ifdef LINUX
 		rank = getpid();
 #else
-	        rank = cnos_get_rank();	
+	        rank = cnos_get_rank();
 #endif
-		
+
 	gettimeofday(&tv, NULL);
 	FMTSTR(prefix, sizeof(prefix), logfmt,
 		FMTSTRCASE('F', prefix, sizeof(prefix), "s", func)
