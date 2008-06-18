@@ -145,6 +145,7 @@ psclogv(__unusedx const char *fn, const char *func, int line, int subsys,
 		FMTSTRCASE('r', prefix, sizeof(prefix), "d", rank)
 		FMTSTRCASE('s', prefix, sizeof(prefix), "lu", tv.tv_sec)
 		FMTSTRCASE('u', prefix, sizeof(prefix), "lu", tv.tv_usec)
+// XXX fuse_get_context()->pid
 	);
 
 	/*
