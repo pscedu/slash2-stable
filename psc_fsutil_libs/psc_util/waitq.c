@@ -23,9 +23,6 @@ psc_waitq_init(psc_waitq_t *q)
 	int rc;
 
 	rc = pthread_mutex_init(&q->wq_mut, NULL);
-	/* XXX cond_attr is uninitialized */
-	rc |= pthread_cond_init(&q->wq_cond, &q->wq_cond_attr);
-
 	psc_assert(rc == 0);
 }
 

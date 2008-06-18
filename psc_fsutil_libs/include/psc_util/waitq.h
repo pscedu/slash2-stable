@@ -15,7 +15,6 @@
 struct psc_wait_queue {
 	pthread_mutex_t		wq_mut;
 	pthread_cond_t		wq_cond;
-	pthread_condattr_t	wq_cond_attr;
 };
 
 #else /* HAVE_LIBPTHREAD */
