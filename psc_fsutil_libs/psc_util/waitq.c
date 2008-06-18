@@ -23,6 +23,7 @@ psc_waitq_init(psc_waitq_t *q)
 	int rc;
 
 	rc = pthread_mutex_init(&q->wq_mut, NULL);
+	rc |= pthread_cond_init(&q->wq_cond, NULL);
 	psc_assert(rc == 0);
 }
 
