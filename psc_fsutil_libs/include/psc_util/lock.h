@@ -183,14 +183,13 @@ typedef int psc_spinlock_t;
 
 #define _LOCK_VALID(l)		(*(l) == SL_LOCKED || *(l) == SL_UNLOCKED)
 
-#define freelock(l)							\
-	do {								\
-		if (!_LOCK_VALID(l))					\
-			psc_fatalx("lock %p has invalid value", (l));	\
-		if (*(l) == SL_UNLOCKED)				\
-			psc_fatalx("tried to unlock already "		\
-			    "unlocked lock (%p)!", (l));		\
-		*(l) = SL_UNLOCKED;					\
+#define freelock(l)								\
+	do {									\
+		if (!_LOCK_VALID(l))						\
+			psc_fatalx("freelock: invalid lock value (%p)", (l));	\
+		if (*(l) == SL_UNLOCKED)					\
+			psc_fatalx("freelock: not locked (%p)", (l));		\
+		*(l) = SL_UNLOCKED;						\
 	} while (0)
 
 static __inline void
