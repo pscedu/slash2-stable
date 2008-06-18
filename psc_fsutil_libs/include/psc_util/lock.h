@@ -38,6 +38,7 @@ validlock(const psc_spinlock_t *sl)
 {
 	int v;
 
+	if (!sl) psc_fatalx("NULL lock pointer");
 	v = sl->sl_lock;
 	return (v == SL_LOCKED || v == SL_UNLOCKED);
 }
