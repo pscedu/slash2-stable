@@ -116,7 +116,7 @@ get_hash_entry(const struct hash_table *h, u64 id, const void *comp,
 int
 del_hash_entry(struct hash_table *h, u64 id)
 {
-	int found             = 0;
+	int rc = -1;
 	struct hash_bucket *b;
 	struct hash_entry  *e = NULL;
 	struct psclist_head   *t;
@@ -129,20 +129,14 @@ del_hash_entry(struct hash_table *h, u64 id)
 	psclist_for_each(t, &b->hbucket_list) {
 		e = psclist_entry(t, struct hash_entry, hentry_lentry);
 		if (id == *e->hentry_id) {
-			found = 1;
+			psclist_del(&e->hentry_lentry);
+			rc = 0;
 			break;
 		}
 	}
 
-	if (!found) {
-		ULOCK_BUCKET(b);
-		return -1;
-	}
-
-	psclist_del(&e->hentry_lentry);
 	ULOCK_BUCKET(b);
-
-	return 0;
+	return (rc);
 }
 
 /**
@@ -185,7 +179,6 @@ init_hash_entry_str(struct hash_entry_str *hentry, const char *id,
 struct hash_entry_str *
 get_hash_entry_str(struct hash_table *h, const char *id)
 {
-	int found = 0;
 	struct hash_bucket     *b;
 	struct hash_entry_str  *e = NULL;
 
@@ -195,16 +188,10 @@ get_hash_entry_str(struct hash_table *h, const char *id)
 	LOCK_BUCKET(b);
 
 	psclist_for_each_entry(e, &b->hbucket_list, hentry_str_lentry)
-		if ( !strncmp(id, e->hentry_str_id, h->htable_strlen_max) ) {
-			found = 1;
+		if (!strncmp(id, e->hentry_str_id, h->htable_strlen_max))
 			break;
-		}
 	ULOCK_BUCKET(b);
-
-	if (!found)
-		return(NULL);
-
-	return(e);
+	return (e);
 }
 
 /**
@@ -215,7 +202,7 @@ get_hash_entry_str(struct hash_table *h, const char *id)
 int
 del_hash_entry_str(struct hash_table *h, const char *id)
 {
-	int found = 0;
+	int found = -1;
 	struct hash_bucket     *b;
 	struct hash_entry_str  *e = NULL;
 
@@ -226,7 +213,7 @@ del_hash_entry_str(struct hash_table *h, const char *id)
 
 	psclist_for_each_entry(e, &b->hbucket_list, hentry_str_lentry)
 		if ( !strncmp(id, e->hentry_str_id, h->htable_strlen_max) ) {
-			found = -1;
+			found = 0;
 			psclist_del(&e->hentry_str_lentry);
 			break;
 		}
