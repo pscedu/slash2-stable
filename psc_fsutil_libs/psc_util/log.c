@@ -101,7 +101,7 @@ psclogv(__unusedx const char *fn, const char *func, int line, int subsys,
     int level, int options, const char *fmt, va_list ap)
 {
 	static char hostname[HOST_NAME_MAX];
-	static int rank;
+	static int rank=-1;
 
 	char prefix[LINE_MAX], emsg[LINE_MAX], umsg[LINE_MAX], nothrname[20], *p;
 	const char *thrname, *logfmt;
@@ -127,7 +127,7 @@ psclogv(__unusedx const char *fn, const char *func, int line, int subsys,
 			*p = '\0';
 	}
 
-	if (rank == 0)
+	if (rank == -1)
 #ifdef LINUX
 		rank = getpid();
 #else
