@@ -32,10 +32,12 @@ struct list_cache {
 	ssize_t			lc_max;			/* max allowable entries     */
 	ssize_t			lc_min;			/* keep at least this many   */
 	ssize_t			lc_size;		/* current #items in list    */
+	atomic_t		lc_total;		/* relative max              */
+
 	size_t			lc_nseen;		/* total #items placed on us */
+
 	size_t			lc_entsize;		/* size of entry on us       */
 	size_t			lc_offset;		/* offset to entry member    */
-	atomic_t		lc_total;		/* relative max              */
 
 	struct psclist_head	lc_list;		/* head/tail of list         */
 	psc_spinlock_t		lc_lock;		/* exclusitivity ctl         */
@@ -101,7 +103,7 @@ lc_del(struct psclist_head *e, list_cache_t *l)
 static inline struct psclist_head *
 lc_timed_get(list_cache_t *l, struct timespec *abstime)
 {
-	struct psclist_head *e=NULL;
+	struct psclist_head *e;
 	int locked, rc;
 
 	locked = reqlock(&l->lc_lock);
@@ -112,18 +114,19 @@ lc_timed_get(list_cache_t *l, struct timespec *abstime)
 	if (psclist_empty(&l->lc_list)) {
 		psc_notify("Timed wait on listcache %p : '%s'",
 			   l, l->lc_name);
-		rc = psc_waitq_timedwait(&l->lc_waitq_empty, &l->lc_lock,
-					 abstime);
-		if (rc == ETIMEDOUT)
-			goto end;
-		else
-			goto start;
+		rc = psc_waitq_timedwait(&l->lc_waitq_empty,
+		    &l->lc_lock, abstime);
+		if (rc) {
+			psc_assert(rc == ETIMEDOUT);
+			errno = rc;
+			return (NULL);
+		}
+		goto start;
 	}
 	e = psclist_first(&l->lc_list);
 	lc_del(e, l);
 	ureqlock(&l->lc_lock, locked);
- end:
-	return e;
+	return (e);
 }
 
 /**
@@ -163,57 +166,54 @@ lc_get(list_cache_t *l, int block)
 
 	ureqlock(&l->lc_lock, locked);
 
-	return e;
+	return (e);
 }
 
-//#define lc_getnb(l)		(void *)(((char *)lc_get((l), 0)) - (l)->lc_offset)
 #define lc_getwait(l)		(void *)(((char *)lc_get((l), 1)) - (l)->lc_offset)
-//#define lc_gettimed(l, t)	(void *)(((char *)lc_timed_get((l), (t))) - (l)->lc_offset)
 
 static inline void *
 lc_getnb(list_cache_t *l)
 {
-	void *p = (char *)lc_get(l, 0);
-	
-	return (p ? (p - l->lc_offset) : NULL);
+	void *p = lc_get(l, 0);
+
+	return (p ? (char *)p - l->lc_offset : NULL);
 }
 
 static inline void *
 lc_gettimed(list_cache_t *l, struct timespec *abstime)
 {
-        void *p = (char *)lc_timed_get(l, abstime);
+        void *p = lc_timed_get(l, abstime);
 
-        return (p ? (p - l->lc_offset) : NULL);
+        return (p ? (char *)p - l->lc_offset : NULL);
 }
-
 
 /**
  * lc_put - Bounded list put
  * @l: the list cache to access
- * @n: new list item
+ * @e: new list item
  */
 static inline void
-_lc_put(list_cache_t *l, struct psclist_head *n, int qors)
+_lc_put(list_cache_t *l, struct psclist_head *e, int tails)
 {
 	int locked;
 
-	psc_assert(n->znext == NULL);
-	psc_assert(n->zprev == NULL);
+	psc_assert(e->znext == NULL);
+	psc_assert(e->zprev == NULL);
 
 	locked = reqlock(&l->lc_lock);
 	if (0)
  start:
 		reqlock(&l->lc_lock);
 
-	if ((l->lc_max > 0) && (l->lc_size >= l->lc_max)) {
+	if (l->lc_max > 0 && l->lc_size >= l->lc_max) {
 		psc_waitq_wait(&l->lc_waitq_full, &l->lc_lock);
 		goto start;
 	}
 
-	if (qors)
-		psclist_xadd_tail(n, &l->lc_list);
+	if (tails)
+		psclist_xadd_tail(e, &l->lc_list);
 	else
-		psclist_xadd(n, &l->lc_list);
+		psclist_xadd(e, &l->lc_list);
 
 	l->lc_size++;
 	l->lc_nseen++;
@@ -227,11 +227,23 @@ _lc_put(list_cache_t *l, struct psclist_head *n, int qors)
 	psc_waitq_wakeup(&l->lc_waitq_empty);
 }
 
-#define lc_queue(l, n)		_lc_put(l, n, 1)
-#define lc_stack(l, n)		_lc_put(l, n, 0)
-#define lc_puttail(l, n)	_lc_put(l, n, 1)
-#define lc_puthead(l, n)	_lc_put(l, n, 0)
-#define lc_put(l, n)		_lc_put(l, n, 1)
+static inline void
+_lc_add(list_cache_t *lc, void *p, int tails)
+{
+	void *e;
+
+	psc_assert(p);
+	e = (char *)p + lc->lc_offset;
+	lc_puthead(lc, e, tails);
+}
+
+#define lc_queue(l, e)		_lc_put(l, e, 1)
+#define lc_stack(l, e)		_lc_put(l, e, 0)
+#define lc_puthead(l, e)	_lc_put(l, e, 0)
+#define lc_puttail(l, e)	_lc_put(l, e, 1)
+#define lc_put(l, e)		_lc_put(l, e, 1)
+#define lc_addhead(l, p)	_lc_add(l, p, 0)
+#define lc_addtail(l, p)	_lc_add(l, p, 1)
 
 /**
  * lc_requeue - move an existing entry to the end of the queue
@@ -248,10 +260,6 @@ lc_requeue(list_cache_t *l, struct psclist_head *n)
 	ureqlock(&l->lc_lock, locked);
 }
 
-/**
- * _lc_init - initialize a list cache.
- * @l: the list cache to initialize.
- */
 static inline void
 _lc_init(list_cache_t *lc, ptrdiff_t offset, size_t entsize)
 {
@@ -267,6 +275,12 @@ _lc_init(list_cache_t *lc, ptrdiff_t offset, size_t entsize)
 	psc_waitq_init(&lc->lc_waitq_full);
 }
 
+/**
+ * lc_init - initialize a list cache.
+ * @lc: the list cache to initialize.
+ * @type: type of variable the list will contain.
+ * @member: member name in type linking entries together.
+ */
 #define lc_init(lc, type, member) \
 	_lc_init((lc), offsetof(type, member), sizeof(type))
 
@@ -311,13 +325,9 @@ lc_register(list_cache_t *lc, const char *name, ...)
 	va_end(ap);
 }
 
-/**
- * lc_reginit - initialize and register a list cache.
- * @lc: the list cache.
- * @name: printf(3) format of name for list.
- */
 static inline void
-_lc_reginit(list_cache_t *lc, ptrdiff_t offset, size_t entsize, const char *name, ...)
+_lc_reginit(list_cache_t *lc, ptrdiff_t offset, size_t entsize,
+    const char *name, ...)
 {
 	va_list ap;
 
@@ -328,6 +338,13 @@ _lc_reginit(list_cache_t *lc, ptrdiff_t offset, size_t entsize, const char *name
 	va_end(ap);
 }
 
+/**
+ * lc_reginit - initialize and register a list cache.
+ * @lc: the list cache.
+ * @type: type of variable the list will contain.
+ * @member: member name in type linking entries together.
+ * @fmt: printf(3) format of name for list.
+ */
 #define lc_reginit(lc, type, member, fmt, ...) \
 	_lc_reginit(lc, offsetof(type, member), sizeof(type), fmt, ## __VA_ARGS__)
 
@@ -450,8 +467,8 @@ lc_shrink(list_cache_t *lc, ssize_t n, void (*freef)(void *))
  */
 static inline void
 lc_sort(list_cache_t *lc,
-	 void (*sortf)(void *, size_t, size_t, int (*)(const void *, const void *)),
-	 int (*cmpf)(const void *, const void *))
+    void (*sortf)(void *, size_t, size_t, int (*)(const void *, const void *)),
+    int (*cmpf)(const void *, const void *))
 {
 	void **p, *next, *prev;
 	struct psclist_head *e;
