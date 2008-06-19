@@ -234,7 +234,7 @@ _lc_add(list_cache_t *lc, void *p, int tails)
 
 	psc_assert(p);
 	e = (char *)p + lc->lc_offset;
-	lc_puthead(lc, e, tails);
+	_lc_put(lc, e, tails);
 }
 
 #define lc_queue(l, e)		_lc_put(l, e, 1)
