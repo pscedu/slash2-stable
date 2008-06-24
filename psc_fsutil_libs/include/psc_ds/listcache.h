@@ -41,8 +41,9 @@ struct list_cache {
 
 	struct psclist_head	lc_list;		/* head/tail of list         */
 	psc_spinlock_t		lc_lock;		/* exclusitivity ctl         */
-	psc_waitq_t		lc_waitq_empty;		/* when we're empty          */
-	psc_waitq_t		lc_waitq_full;		/* when we're full           */
+	psc_waitq_t		lc_wq_want;		/* when someone wants an ent */
+	psc_waitq_t		lc_wq_empty;		/* when we're empty          */
+	psc_waitq_t		lc_wq_full;		/* when we're full           */
 };
 typedef struct list_cache list_cache_t;
 
@@ -92,7 +93,7 @@ lc_del(struct psclist_head *e, list_cache_t *l)
 	 * An item was popped from our list, so wakeup other
 	 * threads waiting to use the spot on this list.
 	 */
-	psc_waitq_wakeup(&l->lc_waitq_full);
+	psc_waitq_wakeup(&l->lc_wq_full);
 }
 
 /**
@@ -114,7 +115,7 @@ lc_timed_get(list_cache_t *l, struct timespec *abstime)
 	if (psclist_empty(&l->lc_list)) {
 		psc_notify("Timed wait on listcache %p : '%s'",
 			   l, l->lc_name);
-		rc = psc_waitq_timedwait(&l->lc_waitq_empty,
+		rc = psc_waitq_timedwait(&l->lc_wq_empty,
 		    &l->lc_lock, abstime);
 		if (rc) {
 			psc_assert(rc == ETIMEDOUT);
@@ -154,7 +155,8 @@ lc_get(list_cache_t *l, int block)
 			else
 				psc_notify("Waiting on listcache %p : '%s'",
 					   l, l->lc_name);
-			psc_waitq_wait(&l->lc_waitq_empty, &l->lc_lock);
+			psc_waitq_wakeup(&l->lc_wq_want);
+			psc_waitq_wait(&l->lc_wq_empty, &l->lc_lock);
 			goto start;
 		} else {
 			ureqlock(&l->lc_lock, locked);
@@ -163,9 +165,7 @@ lc_get(list_cache_t *l, int block)
 	}
 	e = psclist_first(&l->lc_list);
 	lc_del(e, l);
-
 	ureqlock(&l->lc_lock, locked);
-
 	return (e);
 }
 
@@ -206,7 +206,7 @@ _lc_put(list_cache_t *l, struct psclist_head *e, int tails)
 		reqlock(&l->lc_lock);
 
 	if (l->lc_max > 0 && l->lc_size >= l->lc_max) {
-		psc_waitq_wait(&l->lc_waitq_full, &l->lc_lock);
+		psc_waitq_wait(&l->lc_wq_full, &l->lc_lock);
 		goto start;
 	}
 
@@ -224,7 +224,7 @@ _lc_put(list_cache_t *l, struct psclist_head *e, int tails)
 	 * There is now an item available; wake up waiters
 	 * who think the list is empty.
 	 */
-	psc_waitq_wakeup(&l->lc_waitq_empty);
+	psc_waitq_wakeup(&l->lc_wq_empty);
 }
 
 static inline void
@@ -244,6 +244,7 @@ _lc_add(list_cache_t *lc, void *p, int tails)
 #define lc_put(l, e)		_lc_put(l, e, 1)
 #define lc_addhead(l, p)	_lc_add(l, p, 0)
 #define lc_addtail(l, p)	_lc_add(l, p, 1)
+#define lc_add(l, p)		_lc_add(l, p, 1)
 
 /**
  * lc_requeue - move an existing entry to the end of the queue
@@ -271,8 +272,9 @@ _lc_init(list_cache_t *lc, ptrdiff_t offset, size_t entsize)
 	INIT_PSCLIST_HEAD(&lc->lc_list);
 	INIT_PSCLIST_ENTRY(&lc->lc_index_lentry);
 	LOCK_INIT(&lc->lc_lock);
-	psc_waitq_init(&lc->lc_waitq_empty);
-	psc_waitq_init(&lc->lc_waitq_full);
+	psc_waitq_init(&lc->lc_wq_empty);
+	psc_waitq_init(&lc->lc_wq_full);
+	psc_waitq_init(&lc->lc_wq_want);
 }
 
 /**
@@ -373,22 +375,16 @@ static inline list_cache_t *
 lc_lookup(const char *name)
 {
 	list_cache_t *lc;
-	int found;
 
-	lc = NULL; /* gcc */
-	found = 0;
+	lc = NULL;
 	spinlock(&pscListCachesLock);
-	psclist_for_each_entry(lc, &pscListCaches, lc_index_lentry) {
+	psclist_for_each_entry(lc, &pscListCaches, lc_index_lentry)
 		if (strcmp(name, lc->lc_name) == 0) {
 			LIST_CACHE_LOCK(lc);
-			found = 1;
 			break;
 		}
-	}
 	freelock(&pscListCachesLock);
-	if (found)
-		return (lc);
-	return (NULL);
+	return (lc);
 }
 
 /**
@@ -475,12 +471,12 @@ lc_sort(list_cache_t *lc,
 	int j, locked;
 
 	j = 0;
-	p = PSCALLOC(lc->lc_size * sizeof(*p));
 	locked = reqlock(&lc->lc_lock);
 	if (lc->lc_size == 0 || lc->lc_size == 1) {
 		ureqlock(&lc->lc_lock, locked);
 		return;
 	}
+	p = PSCALLOC(lc->lc_size * sizeof(*p));
 	psclist_for_each(e, &lc->lc_list)
 		p[j++] = ((char *)e) - lc->lc_offset;
 	sortf(p, lc->lc_size, sizeof(*p), cmpf);
