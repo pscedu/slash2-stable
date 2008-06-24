@@ -7,15 +7,17 @@ general
 - constify RPC replies in clients and requests in servers
 - check all bulkserver()'s for free_desc()
 - sweep tree for \b0[0-9] and fix bad permissions (711 -> 700)
+- add cache pools, whose members are shared among list caches
 
 slash
 - piggyback small readdirs directly into READDIR replies
-- remove generation numbers from slash_fid_t and add a new slash_fidgen_t
 
 pfl
 - remove psclist_add
 - no ifdefs
 - disallow lock reinitialization (e.g. allow LOCK_INIT once)
+- for psclog(), add extensibility mechanism for fmtstr,
+  allowing app-specific callbacks (e.g. %r for zest clients)
 
 lnet
 - move iostats outside of socklnd
