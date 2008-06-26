@@ -164,7 +164,7 @@ add_hash_entry(const struct hash_table *t, struct hash_entry *e)
  * @private: application data to be stored in the hash
  */
 void
-init_hash_entry_str(const struct hash_entry_str *hentry, const char *id,
+init_hash_entry_str(struct hash_entry_str *hentry, const char *id,
     void *private)
 {
 	hentry->hentry_str_id = id;
