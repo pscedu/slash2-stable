@@ -103,7 +103,7 @@ psc_waitq_wakeup(psc_waitq_t *q)
 }
 
 /*
- * psc_waitq_wakeall - a method for implementing a psuedo-barrier.
+ * psc_waitq_wakeall - a method for implementing a pseudo-barrier.
  * @q: pointer to the wait queue struct.
  */
 void
