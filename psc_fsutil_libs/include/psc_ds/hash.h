@@ -43,15 +43,6 @@ struct hash_entry {
 	void			 *private;	/* pointer to private data */
 };
 
-/**
- * hash_entry - get the struct for this entry
- * @ptr:	the struct hash_entry pointer.
- * @type:	the type of the struct this is embedded in.
- * @member:	the name of the hash_entry struct within the struct.
- */
-#define hash_entry(ptr, type, member) \
-	((type *)((char *)(ptr)-(unsigned long)(&((type *)0)->member)))
-
 /*
  * String Hash Defines
  */
@@ -89,8 +80,17 @@ str_hash(const char *s)
 	return (h);
 }
 
+#define HASHTBL_FOREACH_BUCKET(b, ht)				\
+	for ((b) = (ht)->htable_buckets;			\
+	    (b) - (ht)->htable_buckets < (ht)->htable_size;	\
+	    (b)++)
+
+#define HASHBUCKET_FOREACH_ENTRY(p, b)				\
+	psclist_for_each_entry(p, &(b)->hbucket_list)
+
+
 struct hash_entry * get_hash_entry(const struct hash_table *, u64, const void *, void (*)(void *));
-struct hash_entry_str * get_hash_entry_str(struct hash_table *, const char *);
+struct hash_entry_str * get_hash_entry_str(const struct hash_table *, const char *);
 
 int  del_hash_entry(struct hash_table *, u64);
 int  del_hash_entry_str(struct hash_table *, const char *);
