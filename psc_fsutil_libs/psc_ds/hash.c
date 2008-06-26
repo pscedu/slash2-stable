@@ -5,12 +5,12 @@
 #include <stdarg.h>
 #include <stdio.h>
 
+#include "psc_ds/hash.h"
+#include "psc_ds/list.h"
 #include "psc_util/alloc.h"
 #include "psc_util/assert.h"
-#include "psc_ds/list.h"
 #include "psc_util/lock.h"
 #include "psc_util/log.h"
-#include "psc_ds/hash.h"
 
 struct psclist_head hashTablesList = PSCLIST_HEAD_INIT(hashTablesList);
 psc_spinlock_t hashTablesListLock = LOCK_INITIALIZER;
@@ -114,7 +114,7 @@ get_hash_entry(const struct hash_table *h, u64 id, const void *comp,
  * Returns 0 on success, -1 if entry was not found.
  */
 int
-del_hash_entry(struct hash_table *h, u64 id)
+del_hash_entry(const struct hash_table *h, u64 id)
 {
 	int rc = -1;
 	struct hash_bucket *b;
@@ -145,7 +145,7 @@ del_hash_entry(struct hash_table *h, u64 id)
  * @entry: pointer to entry to be added
  */
 void
-add_hash_entry(struct hash_table *t, struct hash_entry *e)
+add_hash_entry(const struct hash_table *t, struct hash_entry *e)
 {
 	struct hash_bucket *b;
 
@@ -164,7 +164,7 @@ add_hash_entry(struct hash_table *t, struct hash_entry *e)
  * @private: application data to be stored in the hash
  */
 void
-init_hash_entry_str(struct hash_entry_str *hentry, const char *id,
+init_hash_entry_str(const struct hash_entry_str *hentry, const char *id,
     void *private)
 {
 	hentry->hentry_str_id = id;
@@ -177,7 +177,7 @@ init_hash_entry_str(struct hash_entry_str *hentry, const char *id,
  * @id: identifier used to get hash bucket
  */
 struct hash_entry_str *
-get_hash_entry_str(struct hash_table *h, const char *id)
+get_hash_entry_str(const struct hash_table *h, const char *id)
 {
 	struct hash_bucket     *b;
 	struct hash_entry_str  *e = NULL;
@@ -200,7 +200,7 @@ get_hash_entry_str(struct hash_table *h, const char *id)
  * @size: the match string
  */
 int
-del_hash_entry_str(struct hash_table *h, const char *id)
+del_hash_entry_str(const struct hash_table *h, const char *id)
 {
 	int found = -1;
 	struct hash_bucket     *b;
@@ -227,7 +227,7 @@ del_hash_entry_str(struct hash_table *h, const char *id)
  * @entry: pointer to entry to be added
  */
 void
-add_hash_entry_str(struct hash_table *t, struct hash_entry_str *e)
+add_hash_entry_str(const struct hash_table *t, struct hash_entry_str *e)
 {
 	struct hash_bucket *b;
 
@@ -248,8 +248,8 @@ add_hash_entry_str(struct hash_table *t, struct hash_entry_str *e)
  * @maxbucklen: value-result pointer to maximum bucket length.
  */
 void
-hash_table_stats(struct hash_table *t, int *totalbucks, int *usedbucks,
-    int *nents, int *maxbucklen)
+hash_table_stats(const struct hash_table *t, int *totalbucks,
+    int *usedbucks, int *nents, int *maxbucklen)
 {
 	struct hash_bucket *b;
 	struct psclist_head *ent;
@@ -280,7 +280,7 @@ hash_table_stats(struct hash_table *t, int *totalbucks, int *usedbucks,
  * @t: pointer to the hash table.
  */
 void
-hash_table_printstats(struct hash_table *t)
+hash_table_printstats(const struct hash_table *t)
 {
 	int totalbucks, usedbucks, nents, maxbucklen;
 

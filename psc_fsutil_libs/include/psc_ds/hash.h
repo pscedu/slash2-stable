@@ -88,16 +88,15 @@ str_hash(const char *s)
 #define HASHBUCKET_FOREACH_ENTRY(p, b)				\
 	psclist_for_each_entry(p, &(b)->hbucket_list)
 
-
 struct hash_entry * get_hash_entry(const struct hash_table *, u64, const void *, void (*)(void *));
 struct hash_entry_str * get_hash_entry_str(const struct hash_table *, const char *);
 
-int  del_hash_entry(struct hash_table *, u64);
-int  del_hash_entry_str(struct hash_table *, const char *);
-void add_hash_entry(struct hash_table *, struct hash_entry *);
-void add_hash_entry_str(struct hash_table *, struct hash_entry_str *);
-void hash_table_printstats(struct hash_table *);
-void hash_table_stats(struct hash_table *, int *, int *, int *, int *);
+int  del_hash_entry(const struct hash_table *, u64);
+int  del_hash_entry_str(const struct hash_table *, const char *);
+void add_hash_entry(const struct hash_table *, struct hash_entry *);
+void add_hash_entry_str(const struct hash_table *, struct hash_entry_str *);
+void hash_table_printstats(const struct hash_table *);
+void hash_table_stats(const struct hash_table *, int *, int *, int *, int *);
 void init_hash_entry(struct hash_entry *, u64 *, void *);
 void init_hash_entry_str(struct hash_entry_str *, const char *, void *);
 void init_hash_table(struct hash_table *, int, const char *, ...);
