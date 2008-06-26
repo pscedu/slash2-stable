@@ -90,6 +90,10 @@ psclist_xadd(struct psclist_head *new, struct psclist_head *head)
 	__psclist_add(new, head, head->znext);
 }
 
+#define psclist_xadd_head(e, hd)	psclist_xadd((e), (hd))
+#define psclist_xadd_after(e, t)	psclist_xadd((e), (t))
+#define psclist_xadd_before(e, t)	psclist_xadd_tail((e), (t))
+
 /**
  * psclist_add_tail - add a new entry
  * @new: new entry to be added
