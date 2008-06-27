@@ -8,6 +8,7 @@ general
 - check all bulkserver()'s for free_desc()
 - sweep tree for \b0[0-9] and fix bad permissions (711 -> 700)
 - add cache pools, whose members are shared among list caches
+- change _P_U64 to _P_64 since the conversion specifier decides unsigned or not
 
 slash
 - piggyback small readdirs directly into READDIR replies
