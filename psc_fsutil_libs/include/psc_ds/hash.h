@@ -91,8 +91,8 @@ str_hash(const char *s)
 struct hash_entry * get_hash_entry(const struct hash_table *, u64, const void *, void (*)(void *));
 struct hash_entry_str * get_hash_entry_str(const struct hash_table *, const char *);
 
-int  del_hash_entry(const struct hash_table *, u64);
-int  del_hash_entry_str(const struct hash_table *, const char *);
+void *del_hash_entry(const struct hash_table *, u64);
+void *del_hash_entry_str(const struct hash_table *, const char *);
 void add_hash_entry(const struct hash_table *, struct hash_entry *);
 void add_hash_entry_str(const struct hash_table *, struct hash_entry_str *);
 void hash_table_printstats(const struct hash_table *);

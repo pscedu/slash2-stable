@@ -110,33 +110,24 @@ get_hash_entry(const struct hash_table *h, u64 id, const void *comp,
  * del_hash_entry -   remove an entry in the hash table
  * @t: pointer to hash table
  * @id: identifier used to get hash bucket
- *
- * Returns 0 on success, -1 if entry was not found.
  */
-int
+void *
 del_hash_entry(const struct hash_table *h, u64 id)
 {
-	int rc = -1;
 	struct hash_bucket *b;
-	struct hash_entry  *e = NULL;
-	struct psclist_head   *t;
+	struct hash_entry *e;
 
 	psc_assert(h->htable_size);
 
 	b = GET_BUCKET(h, id);
 	LOCK_BUCKET(b);
-
-	psclist_for_each(t, &b->hbucket_list) {
-		e = psclist_entry(t, struct hash_entry, hentry_lentry);
+	psclist_for_each_entry(e, &b->hbucket_list, hentry_lentry)
 		if (id == *e->hentry_id) {
 			psclist_del(&e->hentry_lentry);
-			rc = 0;
 			break;
 		}
-	}
-
 	ULOCK_BUCKET(b);
-	return (rc);
+	return (e ? e->private : NULL);
 }
 
 /**
@@ -199,26 +190,23 @@ get_hash_entry_str(const struct hash_table *h, const char *id)
  * @t: pointer to the hash table
  * @size: the match string
  */
-int
+void *
 del_hash_entry_str(const struct hash_table *h, const char *id)
 {
-	int found = -1;
-	struct hash_bucket     *b;
-	struct hash_entry_str  *e = NULL;
+	struct hash_entry_str *e;
+	struct hash_bucket *b;
 
 	psc_assert(h->htable_size);
 
 	b = SGET_BUCKET(h, id);
 	LOCK_BUCKET(b);
-
 	psclist_for_each_entry(e, &b->hbucket_list, hentry_str_lentry)
-		if ( !strncmp(id, e->hentry_str_id, h->htable_strlen_max) ) {
-			found = 0;
+		if (!strncmp(id, e->hentry_str_id, h->htable_strlen_max)) {
 			psclist_del(&e->hentry_str_lentry);
 			break;
 		}
 	ULOCK_BUCKET(b);
-	return (found);
+	return (e ? e->private : NULL);
 }
 
 /**
