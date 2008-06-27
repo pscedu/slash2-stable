@@ -96,13 +96,8 @@ lc_del(struct psclist_head *e, list_cache_t *l)
 	psc_waitq_wakeup(&l->lc_wq_full);
 }
 
-/**
- * lc_timed_get - try to grab an item from the head of a listcache.
- * @l: the list cache to access.
- * @abstime: timer which tells how long to wait.
- */
 static inline struct psclist_head *
-lc_timed_get(list_cache_t *l, struct timespec *abstime)
+_lc_gettimed(list_cache_t *l, struct timespec *abstime)
 {
 	struct psclist_head *e;
 	int locked, rc;
@@ -130,13 +125,8 @@ lc_timed_get(list_cache_t *l, struct timespec *abstime)
 	return (e);
 }
 
-/**
- * lc_get - grab the item from the head of a listcache.
- * @l: the list cache to access
- * @block: should the get wait
- */
 static inline struct psclist_head *
-lc_get(list_cache_t *l, int block)
+_lc_get(list_cache_t *l, int block)
 {
 	struct psclist_head *e;
 	int locked;
@@ -169,20 +159,30 @@ lc_get(list_cache_t *l, int block)
 	return (e);
 }
 
-#define lc_getwait(l)		(void *)(((char *)lc_get((l), 1)) - (l)->lc_offset)
+/**
+ * lc_get - grab the item from the head of a listcache.
+ * @l: the list cache to access
+ * @block: should the get wait
+ */
+#define lc_getwait(l)		(void *)(((char *)_lc_get((l), 1)) - (l)->lc_offset)
 
 static inline void *
 lc_getnb(list_cache_t *l)
 {
-	void *p = lc_get(l, 0);
+	void *p = _lc_get(l, 0);
 
 	return (p ? (char *)p - l->lc_offset : NULL);
 }
 
+/**
+ * lc_gettimed - try to grab an item from the head of a listcache.
+ * @l: the list cache to access.
+ * @abstime: timer which tells how long to wait.
+ */
 static inline void *
 lc_gettimed(list_cache_t *l, struct timespec *abstime)
 {
-        void *p = lc_timed_get(l, abstime);
+        void *p = _lc_gettimed(l, abstime);
 
         return (p ? (char *)p - l->lc_offset : NULL);
 }
