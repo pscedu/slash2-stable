@@ -429,7 +429,7 @@ static int pscrpc_send_new_req(struct pscrpc_request *req)
 	// we don't have a 'current' struct - paul
 	//req->rq_reqmsg->status = current->pid;
 	psc_info("Sending RPC pname:cluuid:pid:xid:nid:opc"
-	      " %d:"LPU64":%s:%d\n",
+	      " %d:%"_P_U64"u:%s:%d\n",
 	      req->rq_reqmsg->status,
 	      req->rq_xid,
 	      libcfs_nid2str(imp->imp_connection->c_peer.nid),
@@ -639,7 +639,7 @@ int pscrpc_queue_wait(struct pscrpc_request *req)
 
 	LASSERT(imp != NULL);
 	psc_info("Sending RPC cookie:pid:xid:nid:opc "
-	      LPX64":%d:"LPU64":%s:%d",
+	      "%"_P_U64"x:%d:%"_P_U64"u:%s:%d",
 	      req->rq_reqmsg->handle.cookie,
 	      imp->imp_connection->c_peer.pid, req->rq_xid,
 	      libcfs_nid2str(imp->imp_connection->c_peer.nid),
@@ -741,7 +741,7 @@ int pscrpc_queue_wait(struct pscrpc_request *req)
 	psc_cli_wait_event(req->rq_reply_waitq, pscrpc_check_reply(req), &lwi);
 	DEBUG_REQ(PLL_INFO, req, "-- done sleeping");
 
-	psc_info("Completed RPC status:err:xid:nid:opc %d:%d:"LPX64":%s:%d",
+	psc_info("Completed RPC status:err:xid:nid:opc %d:%d:%"_P_U64"x:%s:%d",
 	      req->rq_reqmsg->status, req->rq_err, req->rq_xid,
 	      libcfs_nid2str(imp->imp_connection->c_peer.nid),
 	      req->rq_reqmsg->opc);
@@ -1051,7 +1051,7 @@ int pscrpc_check_set(struct pscrpc_request_set *set, int check_allsent)
 		}
 
 		psc_dbg("Completed RPC pname:cluuid:pid:xid:nid:"
-		       "opc %d:"LPU64":%s:%d",
+		       "opc %d:%"_P_U64"u:%s:%d",
 		       req->rq_reqmsg->status,
 		       req->rq_xid,
 		       libcfs_nid2str(imp->imp_connection->c_peer.nid),
