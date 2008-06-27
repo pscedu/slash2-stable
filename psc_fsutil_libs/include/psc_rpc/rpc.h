@@ -219,7 +219,7 @@ struct pscrpc_async_args {
 	 * big enough.  For _tons_ of context, ZOBD_ALLOC a struct and store
 	 * a pointer to it here.  The pointer_arg ensures this struct is at
 	 * least big enough for that. */
-	__u64      space[2];
+	u64      space[2];
 	void      *pointer_arg[5];
 };
 

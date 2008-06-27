@@ -42,7 +42,7 @@
 static int psc_send_buf (lnet_handle_md_t *mdh, void *base, int len,
                           lnet_ack_req_t ack, struct pscrpc_cb_id *cbid,
                           struct pscrpc_connection *conn,
-                          int portal, __u64 xid)
+                          int portal, u64 xid)
 {
         int              rc;
         lnet_md_t         md;
