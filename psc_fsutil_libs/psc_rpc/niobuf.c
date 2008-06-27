@@ -74,7 +74,7 @@ static int psc_send_buf (lnet_handle_md_t *mdh, void *base, int len,
                 RETURN (-ENOMEM);
         }
 
-        psc_info("Sending %d bytes to portal %d, xid %"_P_LU64"x",
+        psc_info("Sending %d bytes to portal %d, xid %"_P_U64"x",
 		 len, portal, xid);
 
         rc = LNetPut (conn->c_self, *mdh, ack,
@@ -84,7 +84,7 @@ static int psc_send_buf (lnet_handle_md_t *mdh, void *base, int len,
                 /* We're going to get an UNLINK event when I unlink below,
                  * which will complete just like any other failed send, so
                  * I fall through and return success here! */
-                psc_errorx("LNetPut(%s, %d, %"_P_LU64"u) failed: %d",
+                psc_errorx("LNetPut(%s, %d, %"_P_U64"u) failed: %d",
 			libcfs_id2str(conn->c_peer), portal, xid, rc);
                 rc2 = LNetMDUnlink(*mdh);
                 LASSERTF(rc2 == 0, "rc2 = %d\n", rc2);
@@ -141,7 +141,7 @@ int pscrpc_start_bulk_transfer (struct pscrpc_bulk_desc *desc)
         /* Client's bulk and reply matchbits are the same */
         xid = desc->bd_req->rq_xid;
         CDEBUG(D_NET, "Transferring %u pages %u bytes via portal %d "
-               "id %s xid "LPX64"\n",
+               "id %s xid %"_P_U64"x\n",
                desc->bd_iov_count, desc->bd_nob, desc->bd_portal,
                libcfs_id2str(conn->c_peer), xid);
 
@@ -159,7 +159,7 @@ int pscrpc_start_bulk_transfer (struct pscrpc_bulk_desc *desc)
                 /* Can't send, so we unlink the MD bound above.  The UNLINK
                  * event this creates will signal completion with failure,
                  * so we return SUCCESS here! */
-                CERROR("Transfer(%s, %d, "LPX64") failed: %d\n",
+                CERROR("Transfer(%s, %d, %"_P_U64"x) failed: %d\n",
                        libcfs_id2str(conn->c_peer), desc->bd_portal, xid, rc);
                 rc2 = LNetMDUnlink(desc->bd_md_h);
                 LASSERT (rc2 == 0);
@@ -253,7 +253,7 @@ int pscrpc_register_bulk (struct pscrpc_request *req)
          * explode trying to understand how the original request's bulk
          * might interfere with the retried request -eeb */
         LASSERTF (!desc->bd_registered || req->rq_xid != desc->bd_last_xid,
-                  "registered: %d  rq_xid: "LPX64" bd_last_xid: "LPX64"\n",
+                  "registered: %d  rq_xid: %"_P_U64"x bd_last_xid: %"_P_U64"x\n",
                   desc->bd_registered, req->rq_xid, desc->bd_last_xid);
         desc->bd_registered = 1;
         desc->bd_last_xid = req->rq_xid;
@@ -278,7 +278,7 @@ int pscrpc_register_bulk (struct pscrpc_request *req)
                 RETURN (-ENOMEM);
         }
 
-        psc_info("Setup bulk %s buffers: %u pages %u bytes, xid "LPX64", "
+        psc_info("Setup bulk %s buffers: %u pages %u bytes, xid %"_P_U64"x, "
 		 "portal %u",
 		 desc->bd_type == BULK_GET_SOURCE ? "get-source" : "put-sink",
 		 desc->bd_iov_count, desc->bd_nob,
@@ -525,7 +525,7 @@ int psc_send_rpc(struct pscrpc_request *request, int noreply)
                         GOTO(cleanup_me, rc -ENOMEM);
                 }
 
-                psc_info("Setup reply buffer: %u bytes, xid "LPX64
+                psc_info("Setup reply buffer: %u bytes, xid %"_P_U64"x"
 			 ", portal %u",
 			 request->rq_replen, request->rq_xid,
 			 request->rq_reply_portal);
