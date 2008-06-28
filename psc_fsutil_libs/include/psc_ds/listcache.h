@@ -126,7 +126,7 @@ _lc_gettimed(list_cache_t *l, struct timespec *abstime)
 }
 
 static inline struct psclist_head *
-_lc_get(list_cache_t *l, int block)
+lc_get(list_cache_t *l, int block)
 {
 	struct psclist_head *e;
 	int locked;
@@ -164,12 +164,12 @@ _lc_get(list_cache_t *l, int block)
  * @l: the list cache to access
  * @block: should the get wait
  */
-#define lc_getwait(l)		(void *)(((char *)_lc_get((l), 1)) - (l)->lc_offset)
+#define lc_getwait(l)		(void *)(((char *)lc_get((l), 1)) - (l)->lc_offset)
 
 static inline void *
 lc_getnb(list_cache_t *l)
 {
-	void *p = _lc_get(l, 0);
+	void *p = lc_get(l, 0);
 
 	return (p ? (char *)p - l->lc_offset : NULL);
 }
