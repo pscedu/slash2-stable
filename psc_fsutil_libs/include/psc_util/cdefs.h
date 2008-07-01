@@ -22,6 +22,14 @@
 
 #define __weak		__attribute__((__weak__))
 
+#ifdef __cplusplus
+# define __BEGIN_DECLS	extern "C" {
+# define __END_DECLS	}
+#else
+# define __BEGIN_DECLS
+# define __END_DECLS
+#endif
+
 /*
  * Keyword to mark something as file-scoped
  * without the side effects of using `static'.
