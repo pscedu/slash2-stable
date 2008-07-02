@@ -68,15 +68,15 @@ init_hash_entry(struct hash_entry *hentry, u64 *id, void *private)
  * @t: hash table pointer
  * @id: identifier used to get hash bucket
  * @comp: value to compare to differentiate entries with same ID.
- * @cbf: callback routine when the entry is found, to prevent race conditions.
+ * @cbf: callback routine when the entry is found, to prevent race
+ * 	conditions while the bucket is locked.
  */
 struct hash_entry *
 get_hash_entry(const struct hash_table *h, u64 id, const void *comp,
     void (*cbf)(void *))
 {
-	int found             = 0;
 	struct hash_bucket *b;
-	struct hash_entry  *e = NULL;
+	struct hash_entry *e;
 
 	psc_assert(h->htable_size);
 	if (h->htcompare)
@@ -86,24 +86,16 @@ get_hash_entry(const struct hash_table *h, u64 id, const void *comp,
 
 	b = GET_BUCKET(h, id);
 	LOCK_BUCKET(b);
-
-	psclist_for_each_entry(e, &b->hbucket_list, hentry_lentry) {
-		if (id == *e->hentry_id) {
+	psclist_for_each_entry(e, &b->hbucket_list, hentry_lentry)
+		if (id == *e->hentry_id)
 			if (h->htcompare == NULL ||
 			    h->htcompare(comp, e->private)) {
-				found = 1;
 				if (cbf)
 					cbf(e->private);
 				break;
 			}
-		}
-	}
-
 	ULOCK_BUCKET(b);
-	if (!found)
-		return(NULL);
-
-	return(e);
+	return (e);
 }
 
 /**
