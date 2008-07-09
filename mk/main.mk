@@ -130,6 +130,10 @@ depend: ${_YACCINTM}
 		echo "${MKDEP} ${INCLUDES} ${DEFINES} ${SRCS}";				\
 		${MKDEP} ${INCLUDES} ${DEFINES} ${SRCS};				\
 	fi
+	@if [ -n "${PROG}" ]; then							\
+		echo -n "${PROG}:" >> .depend;						\
+		perl ${ROOTDIR}/tools/libdep.pl ${LDFLAGS} >> .depend;			\
+	fi
 
 clean:
 	rm -rf ${OBJS} ${PROG} ${LIBRARY} ${CLEANFILES} ${_YACCINTM} ${_LEXINTM}	\
