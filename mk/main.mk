@@ -133,6 +133,7 @@ depend: ${_YACCINTM}
 	@if [ -n "${PROG}" ]; then							\
 		echo -n "${PROG}:" >> .depend;						\
 		perl ${ROOTDIR}/tools/libdep.pl ${LDFLAGS} >> .depend;			\
+		echo >> .depend;							\
 	fi
 
 clean:
