@@ -80,13 +80,13 @@ str_hash(const char *s)
 	return (h);
 }
 
-#define HASHTBL_FOREACH_BUCKET(b, ht)				\
-	for ((b) = (ht)->htable_buckets;			\
-	    (b) - (ht)->htable_buckets < (ht)->htable_size;	\
+#define HASHTBL_FOREACH_BUCKET(b, ht)					\
+	for ((b) = (ht)->htable_buckets;				\
+	    (b) - (ht)->htable_buckets < (ht)->htable_size;		\
 	    (b)++)
 
-#define HASHBUCKET_FOREACH_ENTRY(p, b)				\
-	psclist_for_each_entry(p, &(b)->hbucket_list)
+#define HASHBUCKET_FOREACH_ENTRY(p, b)					\
+	psclist_for_each_entry(p, &(b)->hbucket_list, hentry_lentry)
 
 struct hash_entry * get_hash_entry(const struct hash_table *, u64, const void *, void (*)(void *));
 struct hash_entry_str * get_hash_entry_str(const struct hash_table *, const char *);
