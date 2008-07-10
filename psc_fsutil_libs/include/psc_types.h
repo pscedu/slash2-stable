@@ -23,7 +23,7 @@ typedef signed char		s8;
 #if __x86_64
 typedef unsigned long int u64;
 
-# define UINT64CONST(x) ((u64) x##L)
+# define U64CONST(x) ((u64)(x##L))
 
 /* printf(3) specifier modifiers for 64-bit types. */
 # define _P_U64 "l"
@@ -32,7 +32,7 @@ typedef unsigned long int u64;
 #else /* i386 */
 typedef unsigned long long int u64;
 
-# define UINT64CONST(x) ((u64) x##LL)
+# define U64CONST(x) ((u64)(x##LL))
 
 # define _P_U64 "ll"
 # define _P_OFFT "ll"

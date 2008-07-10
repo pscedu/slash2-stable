@@ -11,10 +11,10 @@
  */
 
 /* Initialize a CRC accumulator */
-#define PSC_CRC_INIT(crc)	((crc) = UINT64CONST(0xffffffffffffffff))
+#define PSC_CRC_INIT(crc)	((crc) = U64CONST(0xffffffffffffffff))
 
 /* Finish a CRC calculation */
-#define PSC_CRC_FIN(crc)	((crc) ^= UINT64CONST(0xffffffffffffffff))
+#define PSC_CRC_FIN(crc)	((crc) ^= U64CONST(0xffffffffffffffff))
 
 /* Accumulate some (more) bytes into a CRC */
 #define PSC_CRC_ADD(crc, data, len)						\
