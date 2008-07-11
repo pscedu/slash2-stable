@@ -434,37 +434,48 @@ lnet_kiov_nob (__unusedx unsigned int niov, __unusedx lnet_kiov_t *kiov)
 }
 
 void
-lnet_copy_kiov2kiov (unsigned int ndkiov, 
-                     lnet_kiov_t *dkiov, 
-                     unsigned int doffset,
-                     unsigned int nskiov, 
-                     lnet_kiov_t *skiov, 
-                     unsigned int soffset,
-                     unsigned int nob)
+lnet_copy_kiov2kiov (__unusedx unsigned int ndkiov, 
+                     __unusedx lnet_kiov_t *dkiov, 
+                     __unusedx unsigned int doffset,
+                     __unusedx unsigned int nskiov, 
+                     __unusedx lnet_kiov_t *skiov, 
+                     __unusedx unsigned int soffset,
+                     __unusedx unsigned int nob)
 {
         LASSERT (0);
 }
 
 void
-lnet_copy_kiov2iov (unsigned int niov, struct iovec *iov, unsigned int iovoffset,
-                    unsigned int nkiov, lnet_kiov_t *kiov, unsigned int kiovoffset,
-                    unsigned int nob)
+lnet_copy_kiov2iov (__unusedx unsigned int niov,
+		    __unusedx struct iovec *iov,
+		    __unusedx unsigned int iovoffset,
+                    __unusedx unsigned int nkiov,
+		    __unusedx lnet_kiov_t *kiov,
+		    __unusedx unsigned int kiovoffset,
+                    __unusedx unsigned int nob)
 {
         LASSERT (0);
 }
 
 void
-lnet_copy_iov2kiov (unsigned int nkiov, lnet_kiov_t *kiov, unsigned int kiovoffset,
-                    unsigned int niov, struct iovec *iov, unsigned int iovoffset,
-                    unsigned int nob)
+lnet_copy_iov2kiov (__unusedx unsigned int nkiov,
+		    __unusedx lnet_kiov_t *kiov,
+		    __unusedx unsigned int kiovoffset,
+                    __unusedx unsigned int niov,
+		    __unusedx struct iovec *iov,
+		    __unusedx unsigned int iovoffset,
+                    __unusedx unsigned int nob)
 {
         LASSERT (0);
 }
 
 int
-lnet_extract_kiov (int dst_niov, lnet_kiov_t *dst,
-                   int src_niov, lnet_kiov_t *src,
-                   unsigned int offset, unsigned int len)
+lnet_extract_kiov (__unusedx int dst_niov,
+		   __unusedx lnet_kiov_t *dst,
+                   __unusedx int src_niov,
+		   __unusedx lnet_kiov_t *src,
+                   __unusedx unsigned int offset,
+		   __unusedx unsigned int len)
 {
         LASSERT (0);
 }
