@@ -241,7 +241,7 @@ psc_ctlparse_meter(char *meters)
 {
 	struct psc_ctlmsg_meter *pcm;
 	char *meter, *next;
-	int n;
+	size_t n;
 
 	for (meter = meters; meter != NULL; meter = next) {
 		if ((next = strchr(meter, ',')) != NULL)
