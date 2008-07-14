@@ -61,20 +61,6 @@ __psclist_add(struct psclist_head *new, struct psclist_head *prev,
 }
 
 /**
- * psclist_add - add a new entry
- * @new: new entry to be added
- * @head: psclist head to add it after
- *
- * Insert a new entry after the specified head.
- * This is good for implementing stacks.
- */
-static __inline__ void
-psclist_add(struct psclist_head *new, struct psclist_head *head)
-{
-	__psclist_add(new, head, head->znext);
-}
-
-/**
  * psclist_xadd - add an element to a list and check for exclusive membership.
  * @new: entry to be added
  * @head: psclist_head to add it after
@@ -93,20 +79,6 @@ psclist_xadd(struct psclist_head *new, struct psclist_head *head)
 #define psclist_xadd_head(e, hd)	psclist_xadd((e), (hd))
 #define psclist_xadd_after(e, t)	psclist_xadd((e), (t))
 #define psclist_xadd_before(e, t)	psclist_xadd_tail((e), (t))
-
-/**
- * psclist_add_tail - add a new entry
- * @new: new entry to be added
- * @head: psclist head to add it before
- *
- * Insert a new entry before the specified head.
- * This is useful for implementing queues.
- */
-static __inline__ void
-psclist_add_tail(struct psclist_head *new, struct psclist_head *head)
-{
-	__psclist_add(new, head->zprev, head);
-}
 
 /**
  * psclist_xadd_tail - add a new entry and check for exclusive membership.
