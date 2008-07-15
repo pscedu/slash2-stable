@@ -1,9 +1,12 @@
 /* $Id$ */
+#ifndef __DHFH_H
+#define __DHFH_H 1
 
 #include "psc_types.h"
 #include "psc_ds/tree.h"
 #include "psc_util/atomic.h"
 #include "psc_util/lock.h"
+
 
 /* Register operation parameters.
  */ 
@@ -58,3 +61,5 @@ u64		dh_register(int);
 void		dh_release(struct dhent *);
 void		dh_destroy(struct dhent *);
 int		dh_reap(void);
+
+#endif
