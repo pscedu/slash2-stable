@@ -49,11 +49,14 @@ _fh_lookup(u64 fhid, int rm)
  * @fh_regcb: callback
  */
 void
-fh_register(u64 fhid, void (*fh_regcb)(struct fhent *, int, void **),
-	    void *cb_args[])
+fh_register(u64 fhid, int oflag,
+	    void (*fh_regcb)(struct fhent *, int, void **), void *cb_args[])
 {
 	struct fhent *t, fh;
 	int    op = FD_REG_EXIST;
+
+	psc_assert((oflag & FHENT_WRITE) || 
+		   (oflag & FHENT_READ));
 
 	fh.fh_id = fhid;
 	spinlock(&fhtreelock);
@@ -68,9 +71,20 @@ fh_register(u64 fhid, void (*fh_regcb)(struct fhent *, int, void **),
 		/* Inform the cache of our status, this allows us to
 		 *   init without holding the fhtreelock.
 		 */
-		t->fh_state = FD_REG_INIT;
+		t->fh_state = FHENT_INIT | oflag;
 		if (SPLAY_INSERT(fhtree, &fhtree, t))
-			psc_fatalx("Attempted to reinsert fd %"_P_U64"x", t->fh_id);
+			psc_fatalx("Attempted to reinsert fd %"_P_U64"x", 
+				   t->fh_id);
+	} else {
+		if (!(oflag & t->fh_state)) {
+			/* The fd needs to change state.
+			 */
+			psc_debug("Fhent (%p) fd %"_P_U64"x: adding state : "
+				  "from (%d) to (%d)",
+				  t, t->fh_id, t->fh_state, 
+				  (t->fh_state | oflag));		
+			t->fh_state |= oflag;
+		}
 	}
 	freelock(&fhtreelock);
 

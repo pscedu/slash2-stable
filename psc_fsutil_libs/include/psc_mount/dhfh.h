@@ -5,10 +5,10 @@
 #include "psc_util/atomic.h"
 #include "psc_util/lock.h"
 
+/* Register operation parameters.
+ */ 
 #define FD_REG_NEW   0
 #define FD_REG_EXIST 1
-#define FD_REG_INIT  0xffffffff
-#define FD_REG_READY 0x00000000
 
 struct fhent {
 	u64			 fh_id;
@@ -24,6 +24,16 @@ struct fhent {
 #define fh_magic fh_data.fhu_magic
 };
 
+/* Valid fhent states, the first two help with initialization race
+ *  conditions.
+ */
+enum fhent_states {
+	FHENT_INIT  = (1<<0),
+	FHENT_READY = (1<<1),
+	FHENT_READ  = (1<<2),
+	FHENT_WRITE = (1<<3)
+};
+
 struct dhent {
 	u64			 dh_id;
 	int			 dh_dfd;
@@ -36,7 +46,7 @@ struct dhent {
 #define	fh_remove(fh) _fh_lookup((fh), 1)
 
 struct fhent *	_fh_lookup(u64, int);
-void		fh_register(u64,
+void		fh_register(u64, int,
 			void (*)(struct fhent *, int, void **), void *[]);
 int		fh_reap(void);
 
