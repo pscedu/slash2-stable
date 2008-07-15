@@ -8,6 +8,8 @@
 #include "psc_util/alloc.h"
 #include "psc_util/lock.h"
 #include "psc_util/random.h"
+#include "psc_util/log.h"
+#include "psc_util/assert.h"
 
 int
 fhcmp(const void *a, const void *b)
@@ -79,10 +81,10 @@ fh_register(u64 fhid, int oflag,
 		if (!(oflag & t->fh_state)) {
 			/* The fd needs to change state.
 			 */
-			psc_debug("Fhent (%p) fd %"_P_U64"x: adding state : "
-				  "from (%d) to (%d)",
-				  t, t->fh_id, t->fh_state, 
-				  (t->fh_state | oflag));		
+			psc_dbg("Fhent (%p) fd %"_P_U64"x: adding state : "
+				"from (%d) to (%d)",
+				t, t->fh_id, t->fh_state, 
+				(t->fh_state | oflag));		
 			t->fh_state |= oflag;
 		}
 	}
