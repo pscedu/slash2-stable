@@ -30,8 +30,9 @@ typedef struct psc_wait_queue psc_waitq_t;
 
 void psc_waitq_init(psc_waitq_t *);
 void psc_waitq_wait(psc_waitq_t *, psc_spinlock_t *);
-int  psc_waitq_timedwait(psc_waitq_t *, psc_spinlock_t *, const struct timespec *);
-void psc_waitq_wakeup(psc_waitq_t *);
+int  psc_waitq_timedwait(psc_waitq_t *, psc_spinlock_t *,
+	const struct timespec *);
+void psc_waitq_wakeone(psc_waitq_t *);
 void psc_waitq_wakeall(psc_waitq_t *);
 
 #define psc_waitq_wakeup(q)	psc_waitq_wakeone(q)

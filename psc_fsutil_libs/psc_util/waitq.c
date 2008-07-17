@@ -87,11 +87,11 @@ psc_waitq_timedwait(psc_waitq_t *q, psc_spinlock_t *k,
 }
 
 /*
- * psc_waitq_wakeup - unblock one waiting thread
+ * psc_waitq_wakeone - unblock one waiting thread.
  * @q: pointer to the wait queue struct.
  */
 void
-psc_waitq_wakeup(psc_waitq_t *q)
+psc_waitq_wakeone(psc_waitq_t *q)
 {
 	int rc;
 
@@ -140,7 +140,7 @@ psc_waitq_timedwait(__unusedx psc_waitq_t *q, __unusedx psc_spinlock_t *k,
 }
 
 void
-psc_waitq_wakeup(__unusedx psc_waitq_t *q)
+psc_waitq_wakeone(__unusedx psc_waitq_t *q)
 {
 	psc_fatalx("waitqs not supported");
 }
