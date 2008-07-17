@@ -9,7 +9,7 @@
 #include "psc_util/atomic.h"
 #include "psc_util/lock.h"
 
-struct psc_locked_list {
+struct psc_lockedlist {
 	struct psclist_head	pll_listhd;
 	psc_spinlock_t		pll_lock;
 	atomic_t		pll_nitems;
@@ -20,9 +20,9 @@ struct psc_locked_list {
 	_pll_init((pll), offsetof(type, member))
 
 static inline void
-_pll_init(struct psc_locked_list *pll, int offset)
+_pll_init(struct psc_lockedlist *pll, int offset)
 {
-	PSCLIST_INIT_HEAD(&pll->pll_listhd);
+	INIT_PSCLIST_HEAD(&pll->pll_listhd);
 	LOCK_INIT(&pll->pll_lock);
 	pll->pll_offset = offset;
 	atomic_set(&pll->pll_nitems, 0);
@@ -35,14 +35,13 @@ _pll_init(struct psc_locked_list *pll, int offset)
 #define pll_addtail(pll, p)	_pll_add((pll), (p), 1)
 
 static inline void
-_pll_add(struct psc_locked_list *pll, void *p, int tail)
+_pll_add(struct psc_lockedlist *pll, void *p, int tail)
 {
-	struct psclist_head *e;
 	int locked;
+	void *e;
 
 	psc_assert(p);
 	e = (char *)p + pll->pll_offset;
-
 	locked = reqlock(&pll->pll_lock);
 	if (tail)
 		psclist_xadd_tail(e, &pll->pll_listhd);
@@ -53,19 +52,20 @@ _pll_add(struct psc_locked_list *pll, void *p, int tail)
 }
 
 static inline void *
-pll_get(struct psc_locked_list *pll, int tail)
+pll_get(struct psc_lockedlist *pll, int tail)
 {
 	struct psclist_head *e;
+	int locked;
 
 	locked = reqlock(&pll->pll_lock);
-	if (psclist_empty(&pll->pll)) {
+	if (psclist_empty(&pll->pll_listhd)) {
 		ureqlock(&pll->pll_lock, locked);
 		return (NULL);
 	}
 	if (tail)
-		e = psclist_last(&pll);
+		e = psclist_last(&pll->pll_listhd);
 	else
-		e = psclist_first(&pll);
+		e = psclist_first(&pll->pll_listhd);
 	psclist_del(e);
 	atomic_dec(&pll->pll_nitems);
 	ureqlock(&pll->pll_lock, locked);
@@ -73,15 +73,15 @@ pll_get(struct psc_locked_list *pll, int tail)
 }
 
 static inline int
-pll_empty(struct psc_locked_list *pll)
+pll_empty(struct psc_lockedlist *pll)
 {
-	int empty;
+	int locked, empty;
 
 	locked = reqlock(&pll->pll_lock);
-	empty = psclist_empty(&pll->pll_lock);
+	empty = psclist_empty(&pll->pll_listhd);
 	ureqlock(&pll->pll_lock, locked);
 	return (empty);
 }
 
-#define PLL_LOCK(pll)	spinlock((pll)->pll_lock)
-#define PLL_ULOCK(pll)	freelock((pll)->pll_lock)
+#define PLL_LOCK(pll)	spinlock(&(pll)->pll_lock)
+#define PLL_ULOCK(pll)	freelock(&(pll)->pll_lock)
