@@ -76,11 +76,31 @@ pool_get(struct psc_poolmgr *m)
 {
 	void *p;
 
-	POOL_LOCK(m);
 	p = lc_getnb(&m->ppm_lc);
-	/* XXX if below low watermark, allocate or steal some entries */
-	POOL_ULOCK(m);
-	return (p);
+	if (p)
+		return (p);
+
+	/* If not autoresizable, wait for someone to release. */
+	if ((m->ppm_flags & PPMF_AUTO) == 0) {
+		return (lc_getwait(&m->ppm_lc));
+
+	/* If autoresizable, try to grow the pool. */
+	if (pool_grow(m, 5)) {
+		p = lc_getnb(&m->ppm_lc);
+		if (p)
+			return (p);
+	}
+
+	if ((m->ppm_flags & PPMF_REAP) == 0) {
+		psc_warnx("%s reached max, consider bumping",
+		    m->ppm_lc.lc_name);
+		return (lc_getwait(&m->ppm_lc));
+	}
+
+	/* Try reaping another pool. */
+	pool_reap();
+	pool_grow(m, 5);
+	return (lc_getwait(&m->ppm_lc));
 }
 
 /*
@@ -94,8 +114,11 @@ pool_return(struct psc_poolmgr *m, void *p)
 	POOL_LOCK(m);
 	lc_add(&m->ppm_lc, p);
 	psc_assert(m->ppm_lc.lc_size <= m->ppm_max);
-	/* XXX if above high watermark, free some entries */
 	POOL_ULOCK(m);
+
+	/* XXX if above high watermark, free some entries */
+	if (m->ppm_flags & PPMF_AUTO && lc_sz(m->ppm_lc) > 5)
+		pool_shrink(m, 5);
 }
 
 /*
