@@ -10,11 +10,15 @@
  * one greedy pool gets too large, others trim his size down.
  */
 
+#include <sys/param.h>
+
 #include <stdarg.h>
 
 #include "psc_ds/listcache.h"
+#include "psc_ds/lockedlist.h"
 #include "psc_util/alloc.h"
 #include "psc_util/assert.h"
+#include "psc_util/cdefs.h"
 #include "psc_util/lock.h"
 
 struct psc_poolmgr {
@@ -46,118 +50,6 @@ struct psc_poolmgr {
 extern struct psc_lockedlist	psc_pools;
 
 /*
- * psc_pool_init - initialize a pool.
- * @m: the pool manager to initialize.
- * @type: type of entry member.
- * @member: name of psclist_head entry member.
- * @flags: pool manager flags.
- * @total: initial number of entries to join pool.
- * @initf: callback routine for initializing a pool entry.
- * @namefmt: printf(3)-style name of pool.
- */
-#define psc_pool_init(m, type, member, flags, total, initf, namefmt, ...)	\
-	_psc_pool_init((m), offsetof(type, member), sizeof(type), (flags),	\
-	    (total), (initf), namefmt, ## __VA_ARGS__)
-
-void
-_psc_pool_init(struct psc_poolmgr *m, ptrdiff_t offset, size_t entsize,
-    int flags, int total, void (*initf)(void *), const char *namefmt, ...)
-{
-	va_list ap;
-
-	memset(m, 0, sizeof(&m));
-	pll_add(&psc_pools, m);
-	m->ppm_flags = flags;
-	m->ppm_initf = initf;
-
-	va_start(ap, namefmt);
-	_lc_reginit(&m->ppm_lc, offset, entsize, namefmt, ap);
-	va_end(ap);
-
-	if (total)
-		psc_pool_grow(m, total);
-}
-
-void
-_psc_pool_reap(void)
-{
-	struct psc_poolmgr *m, *culprit;
-	int mx, culpritmx;
-
-	culpritmx = mx = 0;
-	PLL_LOCK(&psc_pools);
-	psclist_for_each_entry(m, psc_pools, pool_lentry) {
-		POOL_LOCK(m);
-		if (m->ppm_flags & PPMF_REAP)
-			mx = m->ppm_lc.lc_entsize * m->ppm_lc.lc_size;
-		POOL_ULOCK(m);
-
-		if (mx > culpritmx) {
-			culprit = m;
-			culpritmx = mx;
-		}
-	}
-	PLL_ULOCK(&psc_pools);
-
-	if (culprit)
-		psc_pool_shrink(culprit, 5);
-}
-
-/*
- * psc_pool_get - grab an item from a pool.
- * @m: the pool manager.
- */
-void *
-psc_pool_get(struct psc_poolmgr *m)
-{
-	void *p;
-
-	p = lc_getnb(&m->ppm_lc);
-	if (p)
-		return (p);
-
-	/* If not autoresizable, wait for someone to release. */
-	if ((m->ppm_flags & PPMF_AUTO) == 0) {
-		return (lc_getwait(&m->ppm_lc));
-
-	/* If autoresizable, try to grow the pool. */
-	if (psc_pool_grow(m, 5)) {
-		p = lc_getnb(&m->ppm_lc);
-		if (p)
-			return (p);
-	}
-
-	if ((m->ppm_flags & PPMF_REAP) == 0) {
-		psc_warnx("%s reached max, consider bumping",
-		    m->ppm_lc.lc_name);
-		return (lc_getwait(&m->ppm_lc));
-	}
-
-	/* Try reaping another pool. */
-	_psc_pool_reap();
-	psc_pool_grow(m, 5);
-	return (lc_getwait(&m->ppm_lc));
-}
-
-/*
- * psc_pool_return - return an item to a pool.
- * @m: the pool manager.
- * @p: item to return.
- */
-void
-psc_pool_return(struct psc_poolmgr *m, void *p)
-{
-	POOL_LOCK(m);
-	lc_add(&m->ppm_lc, p);
-	psc_assert(m->ppm_lc.lc_size <= m->ppm_max);
-	POOL_ULOCK(m);
-
-	/* XXX if above high watermark, free some entries */
-	if (m->ppm_flags & PPMF_AUTO && lc_sz(m->ppm_lc) > 5)
-		psc_pool_shrink(m, 5);
-}
-
-/*
  * psc_pool_grow - increase #items in a pool.
  * @m: the pool manager.
  * @n: #items to add to pool.
@@ -177,7 +69,7 @@ psc_pool_grow(struct psc_poolmgr *m, int n)
 		return (0);
 	}
 	/* Bound number to add to ppm_max. */
-	n = MIN(n, m->ppm_max - m->ppm_size);
+	n = MIN(n, m->ppm_max - m->ppm_total);
 	POOL_ULOCK(m);
 
 	for (i = 0; i < n; i++) {
@@ -212,7 +104,7 @@ psc_pool_grow(struct psc_poolmgr *m, int n)
  * @n: #items to remove from pool.
  */
 static inline int
-psc_pool_shrink(struct psc_poolmgr *m, int n);
+psc_pool_shrink(struct psc_poolmgr *m, int n)
 {
 	void *p;
 	int i;
@@ -226,13 +118,13 @@ psc_pool_shrink(struct psc_poolmgr *m, int n);
 		return (0);
 	}
 	/* Bound number to add to ppm_min. */
-	n = MAX(n, m->ppm_size - m->ppm_min);
+	n = MAX(n, m->ppm_total - m->ppm_min);
 	POOL_ULOCK(m);
 
 	for (i = 0; i < n; i++) {
 		POOL_LOCK(m);
-		if (&m->ppm_total > m->ppm_min) {
-			p = lc_getnb(lc);
+		if (m->ppm_total > m->ppm_min) {
+			p = lc_getnb(&m->ppm_lc);
 			psc_assert(p);
 			m->ppm_total--;
 		} else {
@@ -243,4 +135,116 @@ psc_pool_shrink(struct psc_poolmgr *m, int n);
 		free(p);
 	}
 	return (i);
+}
+
+static inline void
+_psc_pool_reap(void)
+{
+	struct psc_poolmgr *m, *culprit;
+	int mx, culpritmx;
+
+	culpritmx = mx = 0;
+	PLL_LOCK(&psc_pools);
+	psclist_for_each_entry(m, &psc_pools.pll_listhd, ppm_lentry) {
+		POOL_LOCK(m);
+		if (m->ppm_flags & PPMF_REAP)
+			mx = m->ppm_lc.lc_entsize * m->ppm_lc.lc_size;
+		POOL_ULOCK(m);
+
+		if (mx > culpritmx) {
+			culprit = m;
+			culpritmx = mx;
+		}
+	}
+	PLL_ULOCK(&psc_pools);
+
+	if (culprit)
+		psc_pool_shrink(culprit, 5);
+}
+
+/*
+ * psc_pool_get - grab an item from a pool.
+ * @m: the pool manager.
+ */
+static inline void *
+psc_pool_get(struct psc_poolmgr *m)
+{
+	void *p;
+
+	p = lc_getnb(&m->ppm_lc);
+	if (p)
+		return (p);
+
+	/* If not autoresizable, wait for someone to release. */
+	if ((m->ppm_flags & PPMF_AUTO) == 0)
+		return (lc_getwait(&m->ppm_lc));
+
+	/* If autoresizable, try to grow the pool. */
+	if (psc_pool_grow(m, 5)) {
+		p = lc_getnb(&m->ppm_lc);
+		if (p)
+			return (p);
+	}
+
+	if ((m->ppm_flags & PPMF_REAP) == 0) {
+		psc_warnx("%s reached max, consider bumping",
+		    m->ppm_lc.lc_name);
+		return (lc_getwait(&m->ppm_lc));
+	}
+
+	/* Try reaping another pool. */
+	_psc_pool_reap();
+	psc_pool_grow(m, 5);
+	return (lc_getwait(&m->ppm_lc));
+}
+
+/*
+ * psc_pool_return - return an item to a pool.
+ * @m: the pool manager.
+ * @p: item to return.
+ */
+static inline void
+psc_pool_return(struct psc_poolmgr *m, void *p)
+{
+	POOL_LOCK(m);
+	lc_add(&m->ppm_lc, p);
+	psc_assert(m->ppm_lc.lc_size <= m->ppm_max);
+	POOL_ULOCK(m);
+
+	/* XXX if above high watermark, free some entries */
+	if (m->ppm_flags & PPMF_AUTO && lc_sz(&m->ppm_lc) > 5)
+		psc_pool_shrink(m, 5);
+}
+
+/*
+ * psc_pool_init - initialize a pool.
+ * @m: the pool manager to initialize.
+ * @type: type of entry member.
+ * @member: name of psclist_head entry member.
+ * @flags: pool manager flags.
+ * @total: initial number of entries to join pool.
+ * @initf: callback routine for initializing a pool entry.
+ * @namefmt: printf(3)-style name of pool.
+ */
+#define psc_pool_init(m, type, member, flags, total, initf, namefmt, ...)	\
+	_psc_pool_init((m), offsetof(type, member), sizeof(type), (flags),	\
+	    (total), (initf), namefmt, ## __VA_ARGS__)
+
+static inline void
+_psc_pool_init(struct psc_poolmgr *m, ptrdiff_t offset, size_t entsize,
+    int flags, int total, void (*initf)(void *), const char *namefmt, ...)
+{
+	va_list ap;
+
+	memset(m, 0, sizeof(&m));
+	pll_add(&psc_pools, m);
+	m->ppm_flags = flags;
+	m->ppm_initf = initf;
+
+	va_start(ap, namefmt);
+	_lc_reginit(&m->ppm_lc, offset, entsize, namefmt, ap);
+	va_end(ap);
+
+	if (total)
+		psc_pool_grow(m, total);
 }
