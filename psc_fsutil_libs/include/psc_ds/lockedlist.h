@@ -1,9 +1,14 @@
 /* $Id$ */
 
+#include "psc_ds/list.h"
+#include "psc_util/assert.h"
+#include "psc_util/atomic.h"
+#include "psc_util/lock.h"
+
 struct psc_locked_list {
 	struct psclist_head	pll_listhd;
 	psc_spinlock_t		pll_lock;
-	int			pll_nitems;
+	atomic_t		pll_nitems;
 	int			pll_offset;
 };
 
@@ -16,7 +21,7 @@ _pll_init(struct psc_locked_list *pll, int offset)
 	PSCLIST_INIT_HEAD(&pll->pll_listhd);
 	LOCK_INIT(&pll->pll_lock);
 	pll->pll_offset = offset;
-	pll->pll_nitems = 0;
+	atomic_set(&pll->pll_nitems, 0);
 }
 
 #define pll_add(pll, e)		_pll_add((pll), (e), 0)
@@ -39,7 +44,7 @@ _pll_add(struct psc_locked_list *pll, void *p, int tail)
 		psclist_xadd_tail(e, &pll->pll_listhd);
 	else
 		psclist_xadd_head(e, &pll->pll_listhd);
-	pll->pll_nitems++;
+	atomic_inc(&pll->pll_nitems);
 	ureqlock(&pll->pll_lock, locked);
 }
 
@@ -58,6 +63,7 @@ pll_get(struct psc_locked_list *pll, int tail)
 	else
 		e = psclist_first(&pll);
 	psclist_del(e);
+	atomic_dec(&pll->pll_nitems);
 	ureqlock(&pll->pll_lock, locked);
 	return ((char *)e - pll->pll_offset);
 }
@@ -71,15 +77,4 @@ pll_empty(struct psc_locked_list *pll)
 	empty = psclist_empty(&pll->pll_lock);
 	ureqlock(&pll->pll_lock, locked);
 	return (empty);
-}
-
-static inline int
-pll_sz(struct psc_locked_list *pll)
-{
-	int nitems;
-
-	locked = reqlock(&pll->pll_lock);
-	nitems = &pll->pll_nitems;
-	ureqlock(&pll->pll_lock, locked);
-	return (nitems);
 }
