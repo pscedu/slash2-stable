@@ -1,5 +1,9 @@
 /* $Id$ */
 
+/*
+ * Locked lists are lists for use in a multithreaded environment.
+ */
+
 #include "psc_ds/list.h"
 #include "psc_util/assert.h"
 #include "psc_util/atomic.h"
@@ -24,11 +28,11 @@ _pll_init(struct psc_locked_list *pll, int offset)
 	atomic_set(&pll->pll_nitems, 0);
 }
 
-#define pll_add(pll, e)		_pll_add((pll), (e), 0)
-#define pll_addstack(pll, e)	_pll_add((pll), (e), 0)
-#define pll_addqueue(pll, e)	_pll_add((pll), (e), 1)
-#define pll_addhead(pll, e)	_pll_add((pll), (e), 0)
-#define pll_addtail(pll, e)	_pll_add((pll), (e), 1)
+#define pll_add(pll, p)		_pll_add((pll), (p), 0)
+#define pll_addstack(pll, p)	_pll_add((pll), (p), 0)
+#define pll_addqueue(pll, p)	_pll_add((pll), (p), 1)
+#define pll_addhead(pll, p)	_pll_add((pll), (p), 0)
+#define pll_addtail(pll, p)	_pll_add((pll), (p), 1)
 
 static inline void
 _pll_add(struct psc_locked_list *pll, void *p, int tail)
@@ -78,3 +82,6 @@ pll_empty(struct psc_locked_list *pll)
 	ureqlock(&pll->pll_lock, locked);
 	return (empty);
 }
+
+#define PLL_LOCK(pll)	spinlock((pll)->pll_lock)
+#define PLL_ULOCK(pll)	freelock((pll)->pll_lock)
