@@ -28,12 +28,13 @@ struct psc_wait_queue {
 
 typedef struct psc_wait_queue psc_waitq_t;
 
-void psc_waitq_init(psc_waitq_t *q);
-void psc_waitq_wait(psc_waitq_t *q, psc_spinlock_t *k);
-int  psc_waitq_timedwait(psc_waitq_t *q, psc_spinlock_t *k,
-			 const struct timespec *abstime);
-void psc_waitq_wakeup(psc_waitq_t *q);
-void psc_waitq_wakeall(psc_waitq_t *q);
+void psc_waitq_init(psc_waitq_t *);
+void psc_waitq_wait(psc_waitq_t *, psc_spinlock_t *);
+int  psc_waitq_timedwait(psc_waitq_t *, psc_spinlock_t *, const struct timespec *);
+void psc_waitq_wakeup(psc_waitq_t *);
+void psc_waitq_wakeall(psc_waitq_t *);
+
+#define psc_waitq_wakeup(q)	psc_waitq_wakeone(q)
 
 /* Compatibility for LNET code. */
 typedef psc_waitq_t		wait_queue_head_t;
