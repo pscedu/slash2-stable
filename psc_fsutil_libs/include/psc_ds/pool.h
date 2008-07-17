@@ -10,13 +10,21 @@
  * one greedy pool gets too large, others trim his size down.
  */
 
+#include <stdarg.h>
+
+#include "psc_ds/listcache.h"
+#include "psc_util/alloc.h"
+#include "psc_util/assert.h"
+#include "psc_util/lock.h"
+
 struct psc_poolmgr {
-	list_cache_t	  ppm_lc;		/* free pool entries */
-	int		  ppm_flags;		/* flags */
-	int		  ppm_min;		/* min bound of #items */
-	int		  ppm_max;		/* max bound of #items */
-	int		  ppm_total;		/* #items in circulation */
-	void		(*ppm_initf)(void *);	/* entry initialization routine */
+	struct psclist_head	  ppm_lentry;		/* pool linker */
+	struct psc_listcache	  ppm_lc;		/* free pool entries */
+	int			  ppm_flags;		/* flags */
+	int			  ppm_min;		/* min bound of #items */
+	int			  ppm_max;		/* max bound of #items */
+	int			  ppm_total;		/* #items in circulation */
+	void			(*ppm_initf)(void *);	/* entry initializer */
 };
 
 /* Pool manager flags. */
@@ -26,17 +34,17 @@ struct psc_poolmgr {
 #define POOL_LOCK(m)	spinlock(&(m)->ppm_lc.lc_lock)
 #define POOL_ULOCK(m)	freelock(&(m)->ppm_lc.lc_lock)
 
-#define POOL_CHECK(m)							\
-	do {								\
-		psc_assert((m)->ppm_min >= 0);				\
-		psc_assert((m)->ppm_max >= 0);				\
-		psc_assert((m)->ppm_total >= 0);			\
-		psc_assert((m)->ppm_min <= (m)->ppm_total);		\
-		psc_assert((m)->ppm_total <= (m)->ppm_max);		\
+#define POOL_CHECK(m)								\
+	do {									\
+		psc_assert((m)->ppm_min >= 0);					\
+		psc_assert((m)->ppm_max >= 0);					\
+		psc_assert((m)->ppm_total >= 0);				\
+		psc_assert((m)->ppm_min <= (m)->ppm_total);			\
+		psc_assert((m)->ppm_total <= (m)->ppm_max);			\
 	} while (0)
 
 /*
- * pool_init - initialize a pool.
+ * psc_pool_init - initialize a pool.
  * @m: the pool manager to initialize.
  * @type: type of entry member.
  * @member: name of psclist_head entry member.
@@ -45,12 +53,12 @@ struct psc_poolmgr {
  * @initf: callback routine for initializing a pool entry.
  * @namefmt: printf(3)-style name of pool.
  */
-#define pool_init(m, type, member, flags, total, initf, namefmt, ...)	\
-	_pool_init((m), offsetof(type, member), sizeof(type), (flags),	\
+#define psc_pool_init(m, type, member, flags, total, initf, namefmt, ...)	\
+	_psc_pool_init((m), offsetof(type, member), sizeof(type), (flags),	\
 	    (total), (initf), namefmt, ## __VA_ARGS__)
 
 void
-_pool_init(struct psc_poolmgr *m, ptrdiff_t offset, size_t entsize,
+_psc_pool_init(struct psc_poolmgr *m, ptrdiff_t offset, size_t entsize,
     int flags, int total, void (*initf)(void *), const char *namefmt, ...)
 {
 	va_list ap;
@@ -64,15 +72,40 @@ _pool_init(struct psc_poolmgr *m, ptrdiff_t offset, size_t entsize,
 	va_end(ap);
 
 	if (total)
-		pool_grow(m, total);
+		psc_pool_grow(m, total);
+}
+
+struct psc_lockedlist	psc_pools;
+
+void
+_psc_pool_reap(void)
+{
+	struct psc_poolmgr *m, *culprit;
+	int mx, culpritmx;
+
+	culpritmx = 0;
+	spinlock(&psc_poolslock);
+	psclist_for_each_entry(m, psc_pools, pool_lentry) {
+		POOL_LOCK(m);
+		mx = m->ppm_lc.lc_entsize * m->ppm_lc.lc_size;
+		POOL_ULOCK(m);
+
+		if (mx > culpritmx) {
+			culprit = m;
+			culpritmx = mx;
+		}
+	}
+	freelock(&psc_poolslock);
+
+	psc_pool_shrink(culprit, 5);
 }
 
 /*
- * pool_get - grab an item from a pool.
+ * psc_pool_get - grab an item from a pool.
  * @m: the pool manager.
  */
 void *
-pool_get(struct psc_poolmgr *m)
+psc_pool_get(struct psc_poolmgr *m)
 {
 	void *p;
 
@@ -85,7 +118,7 @@ pool_get(struct psc_poolmgr *m)
 		return (lc_getwait(&m->ppm_lc));
 
 	/* If autoresizable, try to grow the pool. */
-	if (pool_grow(m, 5)) {
+	if (psc_pool_grow(m, 5)) {
 		p = lc_getnb(&m->ppm_lc);
 		if (p)
 			return (p);
@@ -98,18 +131,18 @@ pool_get(struct psc_poolmgr *m)
 	}
 
 	/* Try reaping another pool. */
-	pool_reap();
-	pool_grow(m, 5);
+	_psc_pool_reap();
+	psc_pool_grow(m, 5);
 	return (lc_getwait(&m->ppm_lc));
 }
 
 /*
- * pool_return - return an item to a pool.
+ * psc_pool_return - return an item to a pool.
  * @m: the pool manager.
  * @p: item to return.
  */
 void
-pool_return(struct psc_poolmgr *m, void *p)
+psc_pool_return(struct psc_poolmgr *m, void *p)
 {
 	POOL_LOCK(m);
 	lc_add(&m->ppm_lc, p);
@@ -118,16 +151,16 @@ pool_return(struct psc_poolmgr *m, void *p)
 
 	/* XXX if above high watermark, free some entries */
 	if (m->ppm_flags & PPMF_AUTO && lc_sz(m->ppm_lc) > 5)
-		pool_shrink(m, 5);
+		psc_pool_shrink(m, 5);
 }
 
 /*
- * pool_grow - increase #items in a pool.
+ * psc_pool_grow - increase #items in a pool.
  * @m: the pool manager.
  * @n: #items to add to pool.
  */
 static inline int
-pool_grow(struct psc_poolmgr *m, int n)
+psc_pool_grow(struct psc_poolmgr *m, int n)
 {
 	void *p;
 	int i;
@@ -171,12 +204,12 @@ pool_grow(struct psc_poolmgr *m, int n)
 }
 
 /*
- * pool_shrink - decrease #items in a pool.
+ * psc_pool_shrink - decrease #items in a pool.
  * @m: the pool manager.
  * @n: #items to remove from pool.
  */
 static inline int
-pool_shrink(struct psc_poolmgr *m, int n);
+psc_pool_shrink(struct psc_poolmgr *m, int n);
 {
 	void *p;
 	int i;
