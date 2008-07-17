@@ -43,6 +43,8 @@ struct psc_poolmgr {
 		psc_assert((m)->ppm_total <= (m)->ppm_max);			\
 	} while (0)
 
+extern struct psc_lockedlist	psc_pools;
+
 /*
  * psc_pool_init - initialize a pool.
  * @m: the pool manager to initialize.
@@ -64,6 +66,7 @@ _psc_pool_init(struct psc_poolmgr *m, ptrdiff_t offset, size_t entsize,
 	va_list ap;
 
 	memset(m, 0, sizeof(&m));
+	pll_add(&psc_pools, m);
 	m->ppm_flags = flags;
 	m->ppm_initf = initf;
 
@@ -75,8 +78,6 @@ _psc_pool_init(struct psc_poolmgr *m, ptrdiff_t offset, size_t entsize,
 		psc_pool_grow(m, total);
 }
 
-struct psc_lockedlist	psc_pools;
-
 void
 _psc_pool_reap(void)
 {
@@ -84,7 +85,7 @@ _psc_pool_reap(void)
 	int mx, culpritmx;
 
 	culpritmx = mx = 0;
-	spinlock(&psc_poolslock);
+	PLL_LOCK(&psc_pools);
 	psclist_for_each_entry(m, psc_pools, pool_lentry) {
 		POOL_LOCK(m);
 		if (m->ppm_flags & PPMF_REAP)
@@ -96,7 +97,7 @@ _psc_pool_reap(void)
 			culpritmx = mx;
 		}
 	}
-	freelock(&psc_poolslock);
+	PLL_ULOCK(&psc_pools);
 
 	if (culprit)
 		psc_pool_shrink(culprit, 5);
