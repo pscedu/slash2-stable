@@ -83,11 +83,12 @@ _psc_pool_reap(void)
 	struct psc_poolmgr *m, *culprit;
 	int mx, culpritmx;
 
-	culpritmx = 0;
+	culpritmx = mx = 0;
 	spinlock(&psc_poolslock);
 	psclist_for_each_entry(m, psc_pools, pool_lentry) {
 		POOL_LOCK(m);
-		mx = m->ppm_lc.lc_entsize * m->ppm_lc.lc_size;
+		if (m->ppm_flags & PPMF_REAP)
+			mx = m->ppm_lc.lc_entsize * m->ppm_lc.lc_size;
 		POOL_ULOCK(m);
 
 		if (mx > culpritmx) {
@@ -97,7 +98,8 @@ _psc_pool_reap(void)
 	}
 	freelock(&psc_poolslock);
 
-	psc_pool_shrink(culprit, 5);
+	if (culprit)
+		psc_pool_shrink(culprit, 5);
 }
 
 /*
