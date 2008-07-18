@@ -5,8 +5,9 @@
 
 #include <time.h>
 
-#include "psc_util/lock.h"
 #include "psc_ds/list.h"
+#include "psc_util/atomic.h"
+#include "psc_util/lock.h"
 
 #if HAVE_LIBPTHREAD
 
@@ -15,6 +16,7 @@
 struct psc_wait_queue {
 	pthread_mutex_t		wq_mut;
 	pthread_cond_t		wq_cond;
+	atomic_t		wq_nwaitors;
 };
 
 #else /* HAVE_LIBPTHREAD */

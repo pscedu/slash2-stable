@@ -3,10 +3,11 @@
 #include <errno.h>
 
 #include "psc_util/assert.h"
+#include "psc_util/atomic.h"
+#include "psc_util/cdefs.h"
 #include "psc_util/lock.h"
 #include "psc_util/log.h"
 #include "psc_util/waitq.h"
-#include "psc_util/cdefs.h"
 
 #if HAVE_LIBPTHREAD
 
@@ -15,13 +16,13 @@
 /**
  * psc_waitq_init - prepare the queue struct for use.
  * @q: the struct to be initialized.
- * Notes:  the initializer macros must be cast this way or the file will not compile.
  */
 void
 psc_waitq_init(psc_waitq_t *q)
 {
 	int rc;
 
+	atomic_set(&q->wq_nwaitors, 0);
 	rc = pthread_mutex_init(&q->wq_mut, NULL);
 	rc |= pthread_cond_init(&q->wq_cond, NULL);
 	psc_assert(rc == 0);
@@ -43,6 +44,7 @@ psc_waitq_wait(psc_waitq_t *q, psc_spinlock_t *k)
 	int rc;
 
 	rc = pthread_mutex_lock(&q->wq_mut);
+	atomic_inc(&q->wq_nwaitors);
 
 	if (k != NULL)
 		freelock(k);
@@ -50,6 +52,7 @@ psc_waitq_wait(psc_waitq_t *q, psc_spinlock_t *k)
 	rc |= pthread_cond_wait(&q->wq_cond, &q->wq_mut);
 //	if (k)
 //		spinlock(k);
+	atomic_dec(&q->wq_nwaitors);
 	rc |= pthread_mutex_unlock(&q->wq_mut);
 
 	psc_assert(rc == 0);
@@ -69,10 +72,8 @@ psc_waitq_timedwait(psc_waitq_t *q, psc_spinlock_t *k,
 {
 	int rc;
 
-	//psc_trace("abstime.sec %lu abstime.usec %ld",
-	//       abstime->tv_sec, abstime->tv_nsec);
-
 	rc = pthread_mutex_lock(&q->wq_mut);
+	atomic_inc(&q->wq_nwaitors);
 
 	if (k != NULL)
 		freelock(k);
@@ -80,6 +81,7 @@ psc_waitq_timedwait(psc_waitq_t *q, psc_spinlock_t *k,
 	rc |= pthread_cond_timedwait(&q->wq_cond, &q->wq_mut, abstime);
 //	if (k)
 //		spinlock(k);
+	atomic_dec(&q->wq_nwaitors);
 	rc |= pthread_mutex_unlock(&q->wq_mut);
 
 	psc_assert(rc == 0 || rc == ETIMEDOUT);
