@@ -32,6 +32,8 @@ struct psc_poolmgr {
 	int			  ppm_max;		/* max bound of #items */
 	int			  ppm_total;		/* #items in circulation */
 	void			(*ppm_initf)(void *);	/* entry initializer */
+	void			(*ppm_destroyf)(void *);/* entry deinitializer */
+	int			(*ppm_reapcb)(struct psc_listcache *, int);
 };
 
 /* Pool manager flags. */
@@ -41,11 +43,11 @@ struct psc_poolmgr {
 #define POOL_LOCK(m)	spinlock(&(m)->ppm_lc.lc_lock)
 #define POOL_ULOCK(m)	freelock(&(m)->ppm_lc.lc_lock)
 
-#define POOL_CHECK(m)								\
-	do {									\
-		psc_assert((m)->ppm_min >= 0);					\
-		psc_assert((m)->ppm_max >= 0);					\
-		psc_assert((m)->ppm_total >= 0);				\
+#define POOL_CHECK(m)						\
+	do {							\
+		psc_assert((m)->ppm_min >= 0);			\
+		psc_assert((m)->ppm_max >= 0);			\
+		psc_assert((m)->ppm_total >= 0);		\
 	} while (0)
 
 extern struct psc_lockedlist	psc_pools;
@@ -84,7 +86,8 @@ psc_pool_grow(struct psc_poolmgr *m, int n)
 		if (m->ppm_initf)
 			m->ppm_initf(p);
 		POOL_LOCK(m);
-		if (m->ppm_total < m->ppm_max) {
+		if (m->ppm_total < m->ppm_max ||
+		    m->ppm_max == 0) {
 			m->ppm_total++;
 			lc_add(&m->ppm_lc, p);
 		} else
@@ -95,8 +98,11 @@ psc_pool_grow(struct psc_poolmgr *m, int n)
 		 * If we prematurely exiting,
 		 * we didn't use this item.
 		 */
-		if (n == 0)
+		if (n == 0) {
+			if (m->ppm_destroyf)
+				m->ppm_destroyf(p);
 			free(p);
+		}
 	}
 	return (i);
 }
@@ -137,6 +143,8 @@ psc_pool_shrink(struct psc_poolmgr *m, int n)
 			n = 0; /* break prematurely */
 		}
 		POOL_ULOCK(m);
+		if (m->ppm_destroyf)
+			m->ppm_destroyf(p);
 		free(p);
 	}
 	return (i);
@@ -226,6 +234,7 @@ static inline void *
 psc_pool_get(struct psc_poolmgr *m)
 {
 	void *p;
+	int n;
 
 	p = lc_getnb(&m->ppm_lc);
 	if (p)
@@ -242,6 +251,21 @@ psc_pool_get(struct psc_poolmgr *m)
 			return (p);
 	}
 
+	/*
+	 * If this pool user provided a reaper routine e.g.
+	 * for reclaiming buffers on a clean list, try that.
+	 */
+	if (m->ppm_reapcb) {
+		do {
+			n = m->ppm_reapcb(&m->ppm_lc, atomic_read(
+			    &m->ppm_lc.lc_wq_empty.wq_nwaitors));
+			p = lc_getnb(&m->ppm_lc);
+			if (p)
+				return (p);
+		} while (n);
+	}
+
+	/* If not communal, wait for a buffer. */
 	if ((m->ppm_flags & PPMF_REAP) == 0) {
 		psc_warnx("%s reached max, consider bumping",
 		    m->ppm_lc.lc_name);
