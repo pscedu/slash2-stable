@@ -24,28 +24,22 @@
 extern struct psclist_head	pscListCaches;
 extern psc_spinlock_t		pscListCachesLock;
 
-/* List cache which can be edited by multiple threads.  */
-struct list_cache {
+/* List cache which can be edited by multiple threads. */
+struct psc_listcache {
 	struct psclist_head	lc_index_lentry;	/* link between caches       */
 	char			lc_name[LC_NAME_MAX];	/* for lc mgmt               */
 
-	ssize_t			lc_max;			/* max allowable entries     */
-	ssize_t			lc_min;			/* keep at least this many   */
 	ssize_t			lc_size;		/* current #items in list    */
-	atomic_t		lc_total;		/* relative max              */
-
-	size_t			lc_nseen;		/* total #items placed on us */
-
+	size_t			lc_nseen;		/* stat: total #times put()  */
 	size_t			lc_entsize;		/* size of entry on us       */
-	size_t			lc_offset;		/* offset to entry member    */
+	ptrdiff_t		lc_offset;		/* offset to entry member    */
 
-	struct psclist_head	lc_list;		/* head/tail of list         */
+	struct psclist_head	lc_listhd;		/* head/tail of list         */
 	psc_spinlock_t		lc_lock;		/* exclusitivity ctl         */
 	psc_waitq_t		lc_wq_want;		/* when someone wants an ent */
 	psc_waitq_t		lc_wq_empty;		/* when we're empty          */
-	psc_waitq_t		lc_wq_full;		/* when we're full           */
 };
-typedef struct list_cache list_cache_t;
+typedef struct psc_listcache list_cache_t;
 
 #define LIST_CACHE_LOCK(l)  spinlock(&(l)->lc_lock)
 #define LIST_CACHE_ULOCK(l) freelock(&(l)->lc_lock)
@@ -64,15 +58,9 @@ lc_sz(list_cache_t *l)
 	locked = reqlock(&l->lc_lock);
 	sz = l->lc_size;
 	ureqlock(&l->lc_lock, locked);
-
-	return sz;
+	return (sz);
 }
 
-/**
- * lc_del - remove an entry from the list
- * @e: the entry
- * @l: the entry's respective list
- */
 static inline void
 lc_del(struct psclist_head *e, list_cache_t *l)
 {
@@ -81,19 +69,29 @@ lc_del(struct psclist_head *e, list_cache_t *l)
 	psc_assert(e && l);
 
 	locked = reqlock(&l->lc_lock);
-
 	psclist_del(e);
 	l->lc_size--;
-
 	psc_assert(l->lc_size >= 0);
-
 	ureqlock(&l->lc_lock, locked);
+}
 
-	/*
-	 * An item was popped from our list, so wakeup other
-	 * threads waiting to use the spot on this list.
-	 */
-	psc_waitq_wakeup(&l->lc_wq_full);
+/**
+ * lc_remove - remove an item from a listcache.
+ * @l: the listcache.
+ * @p: the item containing a psclist_head member.
+ */
+static inline void
+lc_remove(list_cache_t *lc, void *p)
+{
+	int locked;
+	void *e;
+
+	e = (char *)p + lc->lc_offset;
+	locked = reqlock(&lc->lc_lock);
+	psclist_del(e);
+	lc->lc_size--;
+	psc_assert(lc->lc_size >= 0);
+	ureqlock(&lc->lc_lock, locked);
 }
 
 static inline struct psclist_head *
@@ -107,7 +105,7 @@ _lc_gettimed(list_cache_t *l, struct timespec *abstime)
  start:
 		reqlock(&l->lc_lock);
 
-	if (psclist_empty(&l->lc_list)) {
+	if (psclist_empty(&l->lc_listhd)) {
 		psc_notify("Timed wait on listcache %p : '%s'",
 			   l, l->lc_name);
 		rc = psc_waitq_timedwait(&l->lc_wq_empty,
@@ -119,10 +117,23 @@ _lc_gettimed(list_cache_t *l, struct timespec *abstime)
 		}
 		goto start;
 	}
-	e = psclist_first(&l->lc_list);
+	e = psclist_first(&l->lc_listhd);
 	lc_del(e, l);
 	ureqlock(&l->lc_lock, locked);
 	return (e);
+}
+
+/**
+ * lc_gettimed - try to grab an item from the head of a listcache.
+ * @l: the list cache to access.
+ * @abstime: timer which tells how long to wait.
+ */
+static inline void *
+lc_gettimed(list_cache_t *l, struct timespec *abstime)
+{
+	void *p = _lc_gettimed(l, abstime);
+
+	return (p ? (char *)p - l->lc_offset : NULL);
 }
 
 static inline struct psclist_head *
@@ -136,7 +147,7 @@ lc_get(list_cache_t *l, int block)
  start:
 		reqlock(&l->lc_lock);
 
-	if (psclist_empty(&l->lc_list)) {
+	if (psclist_empty(&l->lc_listhd)) {
 		if (block) {
 			/* Wait until the list is no longer empty. */
 			if (block > 1)
@@ -153,38 +164,29 @@ lc_get(list_cache_t *l, int block)
 			return NULL;
 		}
 	}
-	e = psclist_first(&l->lc_list);
+	e = psclist_first(&l->lc_listhd);
 	lc_del(e, l);
 	ureqlock(&l->lc_lock, locked);
 	return (e);
 }
 
 /**
- * lc_get - grab the item from the head of a listcache.
- * @l: the list cache to access
- * @block: should the get wait
+ * lc_getwait - grab an item from a listcache,
+ *	blocking if necessary until an item becomes available.
+ * @lc: the list cache to access.
  */
-#define lc_getwait(l)		(void *)(((char *)lc_get((l), 1)) - (l)->lc_offset)
-
-static inline void *
-lc_getnb(list_cache_t *l)
-{
-	void *p = lc_get(l, 0);
-
-	return (p ? (char *)p - l->lc_offset : NULL);
-}
+#define lc_getwait(lc)		(void *)(((char *)lc_get((lc), 1)) - (lc)->lc_offset)
 
 /**
- * lc_gettimed - try to grab an item from the head of a listcache.
- * @l: the list cache to access.
- * @abstime: timer which tells how long to wait.
+ * lc_getnb - grab an item from a listcache or NULL if none are available.
+ * @lc: the list cache to access.
  */
 static inline void *
-lc_gettimed(list_cache_t *l, struct timespec *abstime)
+lc_getnb(list_cache_t *lc)
 {
-        void *p = _lc_gettimed(l, abstime);
+	void *p = lc_get(lc, 0);
 
-        return (p ? (char *)p - l->lc_offset : NULL);
+	return (p ? (char *)p - lc->lc_offset : NULL);
 }
 
 /**
@@ -201,19 +203,11 @@ _lc_put(list_cache_t *l, struct psclist_head *e, int tails)
 	psc_assert(e->zprev == NULL);
 
 	locked = reqlock(&l->lc_lock);
-	if (0)
- start:
-		reqlock(&l->lc_lock);
-
-	if (l->lc_max > 0 && l->lc_size >= l->lc_max) {
-		psc_waitq_wait(&l->lc_wq_full, &l->lc_lock);
-		goto start;
-	}
 
 	if (tails)
-		psclist_xadd_tail(e, &l->lc_list);
+		psclist_xadd_tail(e, &l->lc_listhd);
 	else
-		psclist_xadd(e, &l->lc_list);
+		psclist_xadd(e, &l->lc_listhd);
 
 	l->lc_size++;
 	l->lc_nseen++;
@@ -237,17 +231,17 @@ _lc_add(list_cache_t *lc, void *p, int tails)
 	_lc_put(lc, e, tails);
 }
 
-#define lc_queue(l, e)		_lc_put(l, e, 1)
-#define lc_stack(l, e)		_lc_put(l, e, 0)
-#define lc_puthead(l, e)	_lc_put(l, e, 0)
-#define lc_puttail(l, e)	_lc_put(l, e, 1)
-#define lc_put(l, e)		_lc_put(l, e, 1)
+#define lc_queue(lc, e)		_lc_put((lc), (e), 1)
+#define lc_stack(lc, e)		_lc_put((lc), (e), 0)
+#define lc_puthead(lc, e)	_lc_put((lc), (e), 0)
+#define lc_puttail(lc, e)	_lc_put((lc), (e), 1)
+#define lc_put(lc, e)		_lc_put((lc), (e), 1)
 
-#define lc_addstack(l, p)	_lc_add(l, p, 0)
-#define lc_addqueue(l, p)	_lc_add(l, p, 1)
-#define lc_addhead(l, p)	_lc_add(l, p, 0)
-#define lc_addtail(l, p)	_lc_add(l, p, 1)
-#define lc_add(l, p)		_lc_add(l, p, 1)
+#define lc_addstack(lc, p)	_lc_add((lc), (p), 0)
+#define lc_addqueue(lc, p)	_lc_add((lc), (p), 1)
+#define lc_addhead(lc, p)	_lc_add((lc), (p), 0)
+#define lc_addtail(lc, p)	_lc_add((lc), (p), 1)
+#define lc_add(lc, p)		_lc_add((lc), (p), 1)
 
 /**
  * lc_requeue - move an existing entry to the end of the queue
@@ -260,23 +254,21 @@ lc_requeue(list_cache_t *l, struct psclist_head *n)
 
 	locked = reqlock(&l->lc_lock);
 	psclist_del(n);
-	psclist_xadd_tail(n, &l->lc_list);
+	psclist_xadd_tail(n, &l->lc_listhd);
 	ureqlock(&l->lc_lock, locked);
 }
 
 static inline void
 _lc_init(list_cache_t *lc, ptrdiff_t offset, size_t entsize)
 {
-	lc->lc_size  = 0;
-	lc->lc_max   = -1;
+	lc->lc_size = 0;
+	lc->lc_nseen = 0;
 	lc->lc_entsize = entsize;
 	lc->lc_offset = offset;
-	atomic_set(&lc->lc_total, 0);
-	INIT_PSCLIST_HEAD(&lc->lc_list);
+	INIT_PSCLIST_HEAD(&lc->lc_listhd);
 	INIT_PSCLIST_ENTRY(&lc->lc_index_lentry);
 	LOCK_INIT(&lc->lc_lock);
 	psc_waitq_init(&lc->lc_wq_empty);
-	psc_waitq_init(&lc->lc_wq_full);
 	psc_waitq_init(&lc->lc_wq_want);
 }
 
@@ -351,7 +343,7 @@ _lc_reginit(list_cache_t *lc, ptrdiff_t offset, size_t entsize,
  * @fmt: printf(3) format of name for list.
  */
 #define lc_reginit(lc, type, member, fmt, ...) \
-	_lc_reginit(lc, offsetof(type, member), sizeof(type), fmt, ## __VA_ARGS__)
+	_lc_reginit((lc), offsetof(type, member), sizeof(type), (fmt), ## __VA_ARGS__)
 
 /**
  * lc_unregister - remove list cache external access registration.
@@ -394,69 +386,7 @@ lc_lookup(const char *name)
  * lc_empty - determine if the list cache has elements currently.
  * @lc: list cache to check.
  */
-#define lc_empty(lc) psclist_empty(&(lc)->lc_list)
-
-static inline int
-lc_grow(list_cache_t *lc, ssize_t n, void (*initf)(void *))
-{
-	ssize_t z = lc_sz(lc);
-	void *p;
-	int i;
-
-	if (z > lc->lc_max) {
-		psc_warnx("Cache %s has overgrown", lc->lc_name);
-		return (0);
-	}
-	if (z == lc->lc_max)
-		return (0);
-	if (z + n > lc->lc_max)
-		n = lc->lc_max - z;
-
-	for (i = 0; i < n; i++) {
-		if (atomic_read(&lc->lc_total) >= lc->lc_max)
-			return (i);
-		p = TRY_PSCALLOC(lc->lc_entsize);
-		if (p == NULL) {
-			errno = ENOMEM;
-			return (-1);
-		}
-		if (initf)
-			initf(p);
-		INIT_PSCLIST_ENTRY((struct psclist_head *)
-		    (lc->lc_offset + (char *)p));
-		lc_put(lc, (struct psclist_head *)
-		    (lc->lc_offset + (char *)p));
-		atomic_inc(&lc->lc_total);
-	}
-	return (i);
-}
-
-static inline int
-lc_shrink(list_cache_t *lc, ssize_t n, void (*freef)(void *))
-{
-	ssize_t z = lc_sz(lc);
-	void *p;
-	int i;
-
-	if (z < lc->lc_min) {
-		psc_warnx("Cache %s is underfilled", lc->lc_name);
-		return (0);
-	}
-	if (z == lc->lc_min)
-		return (0);
-	if (z - n > lc->lc_min)
-		n = z - lc->lc_min;
-
-	for (i = 0; i < n; i++) {
-		if (atomic_read(&lc->lc_total) <= lc->lc_min)
-			break;
-		p = lc_getnb(lc);
-		psc_assert(p);
-		freef(p);
-		atomic_dec(&lc->lc_total);
-	}
-	return (i);
-}
+#define lc_empty(lc) psclist_empty(&(lc)->lc_listhd)
 
 /**
  * lc_sort - sort items in a list cache.
@@ -480,7 +410,7 @@ lc_sort(list_cache_t *lc,
 		return;
 	}
 	p = PSCALLOC(lc->lc_size * sizeof(*p));
-	psclist_for_each(e, &lc->lc_list)
+	psclist_for_each(e, &lc->lc_listhd)
 		p[j++] = ((char *)e) - lc->lc_offset;
 	sortf(p, lc->lc_size, sizeof(*p), cmpf);
 	prev = lc->lc_offset + (char *)p[lc->lc_size - 1];
@@ -493,8 +423,8 @@ lc_sort(list_cache_t *lc,
 		e->zprev = prev;
 		e->znext = next;
 	}
-	lc->lc_list.znext = (void *)(lc->lc_offset + (char *)p[0]);
-	lc->lc_list.zprev = (void *)(lc->lc_offset + (char *)p[lc->lc_size - 1]);
+	lc->lc_listhd.znext = (void *)(lc->lc_offset + (char *)p[0]);
+	lc->lc_listhd.zprev = (void *)(lc->lc_offset + (char *)p[lc->lc_size - 1]);
 	ureqlock(&lc->lc_lock, locked);
 }
 
