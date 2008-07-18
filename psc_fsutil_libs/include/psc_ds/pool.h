@@ -10,6 +10,9 @@
  * one greedy pool gets too large, others trim his size down.
  */
 
+#ifndef __PFL_POOL_H__
+#define __PFL_POOL_H__
+
 #include <sys/param.h>
 
 #include <stdarg.h>
@@ -43,8 +46,6 @@ struct psc_poolmgr {
 		psc_assert((m)->ppm_min >= 0);					\
 		psc_assert((m)->ppm_max >= 0);					\
 		psc_assert((m)->ppm_total >= 0);				\
-		psc_assert((m)->ppm_min <= (m)->ppm_total);			\
-		psc_assert((m)->ppm_total <= (m)->ppm_max);			\
 	} while (0)
 
 extern struct psc_lockedlist	psc_pools;
@@ -62,15 +63,17 @@ psc_pool_grow(struct psc_poolmgr *m, int n)
 
 	psc_assert(n > 0);
 
-	POOL_LOCK(m);
-	POOL_CHECK(m);
-	if (m->ppm_total == m->ppm_max) {
+	if (m->ppm_max) {
+		POOL_LOCK(m);
+		POOL_CHECK(m);
+		if (m->ppm_total == m->ppm_max) {
+			POOL_ULOCK(m);
+			return (0);
+		}
+		/* Bound number to add to ppm_max. */
+		n = MIN(n, m->ppm_max - m->ppm_total);
 		POOL_ULOCK(m);
-		return (0);
 	}
-	/* Bound number to add to ppm_max. */
-	n = MIN(n, m->ppm_max - m->ppm_total);
-	POOL_ULOCK(m);
 
 	for (i = 0; i < n; i++) {
 		p = TRY_PSCALLOC(m->ppm_lc.lc_entsize);
@@ -111,15 +114,17 @@ psc_pool_shrink(struct psc_poolmgr *m, int n)
 
 	psc_assert(n > 0);
 
-	POOL_LOCK(m);
-	POOL_CHECK(m);
-	if (m->ppm_total == m->ppm_min) {
+	if (m->ppm_min) {
+		POOL_LOCK(m);
+		POOL_CHECK(m);
+		if (m->ppm_total == m->ppm_min) {
+			POOL_ULOCK(m);
+			return (0);
+		}
+		/* Bound number to add to ppm_min. */
+		n = MAX(n, m->ppm_total - m->ppm_min);
 		POOL_ULOCK(m);
-		return (0);
 	}
-	/* Bound number to add to ppm_min. */
-	n = MAX(n, m->ppm_total - m->ppm_min);
-	POOL_ULOCK(m);
 
 	for (i = 0; i < n; i++) {
 		POOL_LOCK(m);
@@ -135,6 +140,57 @@ psc_pool_shrink(struct psc_poolmgr *m, int n)
 		free(p);
 	}
 	return (i);
+}
+
+/*
+ * psc_pool_settotal - set #items in a pool.
+ * @m: the pool manager.
+ * @total: #items the pool should contain.
+ */
+static inline int
+psc_pool_settotal(struct psc_poolmgr *m, int total)
+{
+	int adj;
+
+	adj = 0;
+	POOL_LOCK(m);
+	if (total > m->ppm_max)
+		total = m->ppm_max;
+	else if (total < m->ppm_min)
+		total = m->ppm_min;
+	adj = m->ppm_total - total;
+	POOL_ULOCK(m);
+
+	if (adj < 0)
+		adj = psc_pool_shrink(m, -adj);
+	else if (adj)
+		adj = psc_pool_grow(m, adj);
+	return (adj);
+}
+
+/*
+ * psc_pool_resize - resize a pool so the current total is between
+ *	ppm_min and ppm_max.  Note the pool size may not go into
+ *	effect immediately if enough entries are not on the free list.
+ * @m: the pool manager.
+ */
+static inline void
+psc_pool_resize(struct psc_poolmgr *m)
+{
+	int adj;
+
+	adj = 0;
+	POOL_LOCK(m);
+	if (m->ppm_total > m->ppm_max)
+		adj = m->ppm_max - m->ppm_total;
+	else if (m->ppm_total < m->ppm_min)
+		adj = m->ppm_min - m->ppm_total;
+	POOL_ULOCK(m);
+
+	if (adj < 0)
+		psc_pool_shrink(m, -adj);
+	else if (adj)
+		psc_pool_grow(m, adj);
 }
 
 static inline void
@@ -230,7 +286,7 @@ psc_pool_return(struct psc_poolmgr *m, void *p)
 	_psc_pool_init((m), offsetof(type, member), sizeof(type), (flags),	\
 	    (total), (initf), namefmt, ## __VA_ARGS__)
 
-static inline void
+static inline int
 _psc_pool_init(struct psc_poolmgr *m, ptrdiff_t offset, size_t entsize,
     int flags, int total, void (*initf)(void *), const char *namefmt, ...)
 {
@@ -246,5 +302,21 @@ _psc_pool_init(struct psc_poolmgr *m, ptrdiff_t offset, size_t entsize,
 	va_end(ap);
 
 	if (total)
-		psc_pool_grow(m, total);
+		return (psc_pool_grow(m, total));
+	return (0);
 }
+
+static inline struct psc_poolmgr *
+psc_pool_lookup(const char *name)
+{
+	struct psc_poolmgr *m;
+
+	PLL_LOCK(&psc_pools);
+	psclist_for_each_entry(m, &psc_pools.pll_listhd, ppm_lentry)
+		if (strcmp(name, m->ppm_lc.lc_name) == 0)
+			break;
+	PLL_ULOCK(&psc_pools);
+	return (m);
+}
+
+#endif /* __PFL_POOL_H__ */
