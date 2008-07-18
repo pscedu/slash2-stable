@@ -7,7 +7,7 @@ general
 - constify RPC replies in clients and requests in servers
 - check all bulkserver()'s for free_desc()
 - sweep tree for \b0[0-9] and fix bad permissions (711 -> 700)
-- add cache pools, whose members are shared among list caches
+- tie PSCALLOC to pool reaping
 - type fixes:
 	(o) s/U64CONST/UINT64_C/
 	(o) inttypes.h PRI[dioux]64 in place of _P_U64 and LPX
@@ -17,7 +17,6 @@ slash
 - piggyback small readdirs directly into READDIR replies
 
 pfl
-- remove psclist_add
 - no ifdefs
 - disallow lock reinitialization (e.g. allow LOCK_INIT once)
 - for psclog(), add extensibility mechanism for fmtstr,
