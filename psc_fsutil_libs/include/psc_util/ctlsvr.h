@@ -23,7 +23,8 @@ struct psc_ctlmsg_param;
 /* 6 */	{ psc_ctlrep_param,		sizeof(struct psc_ctlmsg_param) },	\
 /* 7 */	{ psc_ctlrep_param,		sizeof(struct psc_ctlmsg_param) },	\
 /* 8 */	{ psc_ctlrep_getiostats,	sizeof(struct psc_ctlmsg_iostats) },	\
-/* 9 */	{ psc_ctlrep_getmeter,		sizeof(struct psc_ctlmsg_meter) }
+/* 9 */	{ psc_ctlrep_getmeter,		sizeof(struct psc_ctlmsg_meter) },	\
+/*10 */	{ psc_ctlrep_getpool,		sizeof(struct psc_ctlmsg_pool) }
 
 struct psc_ctlthr {
 	int	  pc_st_nclients;
@@ -49,10 +50,13 @@ void psc_ctlrep_getmeter(int, struct psc_ctlmsghdr *, void *);
 void psc_ctlrep_getstats(int, struct psc_ctlmsghdr *, void *);
 void psc_ctlrep_getsubsys(int, struct psc_ctlmsghdr *, void *);
 void psc_ctlrep_param(int, struct psc_ctlmsghdr *, void *);
+void psc_ctlrep_getpool(int, struct psc_ctlmsghdr *, void *);
 
 void psc_ctlthr_stat(struct psc_thread *, struct psc_ctlmsg_stats *);
 
 void psc_ctlparam_log_level(int, struct psc_ctlmsghdr *,
+	struct psc_ctlmsg_param *, char **, int);
+void psc_ctlparam_pool(int, struct psc_ctlmsghdr *,
 	struct psc_ctlmsg_param *, char **, int);
 
 void psc_ctlparam_register(const char *, void (*)(int, struct psc_ctlmsghdr *,

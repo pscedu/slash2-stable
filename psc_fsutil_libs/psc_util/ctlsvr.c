@@ -22,6 +22,7 @@
 #include "psc_ds/hash.h"
 #include "psc_ds/list.h"
 #include "psc_ds/listcache.h"
+#include "psc_ds/pool.h"
 #include "psc_ds/stree.h"
 #include "psc_util/atomic.h"
 #include "psc_util/cdefs.h"
@@ -296,7 +297,6 @@ psc_ctlmsg_lc_send(int fd, struct psc_ctlmsghdr *mh,
 	snprintf(pclc->pclc_name, sizeof(pclc->pclc_name),
 	    "%s", lc->lc_name);
 	pclc->pclc_size = lc->lc_size;
-	pclc->pclc_max = lc->lc_max;
 	pclc->pclc_nseen = lc->lc_nseen;
 	LIST_CACHE_ULOCK(lc);
 	psc_ctlmsg_sendv(fd, mh, pclc);
@@ -330,6 +330,57 @@ psc_ctlrep_getlc(int fd, struct psc_ctlmsghdr *mh, void *m)
 			psc_ctlsenderr(fd, mh,
 			    "unknown listcache: %s",
 			    pclc->pclc_name);
+	}
+}
+
+/*
+ * psc_ctlmsg_pool_send - send a psc_ctlmsg_pool for a poolmgr.
+ * @fd: client socket descriptor.
+ * @mh: already filled-in control message header.
+ * @pcpm: control message to be filled in and sent out.
+ * @m: the locked pool about which to reply with information.
+ */
+__static void
+psc_ctlmsg_pool_send(int fd, struct psc_ctlmsghdr *mh,
+    struct psc_ctlmsg_pool *pcpm, struct psc_poolmgr *m)
+{
+	snprintf(pcpm->pcpm_name, sizeof(pcpm->pcpm_name),
+	    "%s", m->ppm_lc.lc_name);
+	pcpm->pcpm_min = m->ppm_min;
+	pcpm->pcpm_max = m->ppm_max;
+	pcpm->pcpm_total = m->ppm_total;
+	POOL_ULOCK(m);
+	psc_ctlmsg_sendv(fd, mh, pcpm);
+}
+
+/*
+ * psc_ctlrep_getpool - send a response to a "getpool" inquiry.
+ * @fd: client socket descriptor.
+ * @mh: already filled-in control message header.
+ * @pcpm: control message to examine and reuse.
+ */
+void
+psc_ctlrep_getpool(int fd, struct psc_ctlmsghdr *mh, void *msg)
+{
+	struct psc_ctlmsg_pool *pcpm = msg;
+	struct psc_poolmgr *m;
+
+	if (strcmp(pcpm->pcpm_name, PCPM_NAME_ALL) == 0) {
+		PLL_LOCK(&psc_pools);
+		psclist_for_each_entry(m, &psc_pools.pll_listhd,
+		    ppm_lentry) {
+			POOL_LOCK(m); /* XXX deadlock, use trylock */
+			psc_ctlmsg_pool_send(fd, mh, pcpm, m);
+		}
+		PLL_ULOCK(&psc_pools);
+	} else {
+		m = psc_pool_lookup(pcpm->pcpm_name);
+		if (m)
+			psc_ctlmsg_pool_send(fd, mh, pcpm, m);
+		else
+			psc_ctlsenderr(fd, mh,
+			    "unknown pool: %s",
+			    pcpm->pcpm_name);
 	}
 }
 
@@ -433,73 +484,71 @@ psc_ctlparam_log_level(int fd, struct psc_ctlmsghdr *mh,
 }
 
 void
-psc_ctlparam_lc_handle(int fd, struct psc_ctlmsghdr *mh,
+psc_ctlparam_pool_handle(int fd, struct psc_ctlmsghdr *mh,
     struct psc_ctlmsg_param *pcp, char **levels, int nlevels,
-    list_cache_t *lc, long val)
+    struct psc_poolmgr *m, int val)
 {
 	int set;
 	char nbuf[20];
 
-	levels[1] = lc->lc_name;
+	levels[1] = m->ppm_lc.lc_name;
 
 	set = (mh->mh_type == PCMT_SETPARAM);
 
 	if (nlevels == 2 || strcmp(levels[2], "min") == 0) {
 		if (set) {
 			if (pcp->pcp_flags & PCPF_ADD)
-				lc->lc_min += val;
+				m->ppm_min += val;
 			else if (pcp->pcp_flags & PCPF_SUB)
-				lc->lc_min -= val;
+				m->ppm_min -= val;
 			else
-				lc->lc_min = val;
+				m->ppm_min = val;
+			psc_pool_resize(m);
 		} else {
 			levels[2] = "min";
-			snprintf(nbuf, sizeof(nbuf), "%zd", lc->lc_min);
+			snprintf(nbuf, sizeof(nbuf), "%d", m->ppm_min);
 			psc_ctlmsg_param_send(fd, mh, pcp,
 			    pcp->pcp_thrname, levels, 3, nbuf);
 		}
-	}
-
-	if (nlevels == 2 || strcmp(levels[2], "max") == 0) {
+	} else if (nlevels == 2 || strcmp(levels[2], "max") == 0) {
 		if (set) {
 			if (pcp->pcp_flags & PCPF_ADD)
-				lc->lc_max += val;
+				m->ppm_max += val;
 			else if (pcp->pcp_flags & PCPF_SUB)
-				lc->lc_max -= val;
+				m->ppm_max -= val;
 			else
-				lc->lc_max = val;
+				m->ppm_max = val;
+			psc_pool_resize(m);
 		} else {
 			levels[2] = "max";
-			snprintf(nbuf, sizeof(nbuf), "%zd", lc->lc_max);
+			snprintf(nbuf, sizeof(nbuf), "%d", m->ppm_max);
 			psc_ctlmsg_param_send(fd, mh, pcp,
 			    pcp->pcp_thrname, levels, 3, nbuf);
 		}
-	}
-
-	if (nlevels == 2 || strcmp(levels[2], "size") == 0) {
+	} else if (nlevels == 2 || strcmp(levels[2], "total") == 0) {
 		if (set) {
 			if (pcp->pcp_flags & PCPF_ADD)
-				lc->lc_size += val; // XXX lc_grow
+				psc_pool_grow(m, val);
 			else if (pcp->pcp_flags & PCPF_SUB)
-				lc->lc_size -= val; // XXX lc_shrink
+				psc_pool_shrink(m, val);
 			else
-				lc->lc_size = val;  // XXX
+				psc_pool_settotal(m, val);
 		} else {
-			levels[2] = "size";
-			snprintf(nbuf, sizeof(nbuf), "%zd", lc->lc_size);
+			levels[2] = "total";
+			snprintf(nbuf, sizeof(nbuf), "%d", m->ppm_total);
 			psc_ctlmsg_param_send(fd, mh, pcp,
 			    pcp->pcp_thrname, levels, 3, nbuf);
 		}
 	}
-	LIST_CACHE_ULOCK(lc);
+	POOL_ULOCK(m);
 }
 
 void
-psc_ctlparam_lc(int fd, struct psc_ctlmsghdr *mh,
+psc_ctlparam_pool(int fd, struct psc_ctlmsghdr *mh,
     struct psc_ctlmsg_param *pcp, char **levels, int nlevels)
 {
-	int set, lcfield;
-	list_cache_t *lc;
+	struct psc_poolmgr *m;
+	int set, poolfield;
 	char *endp;
 	long val;
 
@@ -513,14 +562,14 @@ psc_ctlparam_lc(int fd, struct psc_ctlmsghdr *mh,
 		return;
 	}
 
-#define LCFIELD_MIN 0
-#define LCFIELD_MAX 1
-#define LCFIELD_SIZ 2
+#define POOLFIELD_MIN 0
+#define POOLFIELD_MAX 1
+#define POOLFIELD_TOT 2
 
-	levels[0] = "lc";
+	levels[0] = "pool";
 
 	val = 0; /* gcc */
-	lcfield = 0; /* gcc */
+	poolfield = 0; /* gcc */
 
 	set = (mh->mh_type == PCMT_SETPARAM);
 
@@ -531,13 +580,13 @@ psc_ctlparam_lc(int fd, struct psc_ctlmsghdr *mh,
 		}
 
 		if (strcmp(levels[2], "min") == 0)
-			lcfield = LCFIELD_MIN;
+			poolfield = POOLFIELD_MIN;
 		else if (strcmp(levels[2], "max") == 0)
-			lcfield = LCFIELD_MAX;
-		else if (strcmp(levels[2], "size") == 0)
-			lcfield = LCFIELD_SIZ;
+			poolfield = POOLFIELD_MAX;
+		else if (strcmp(levels[2], "total") == 0)
+			poolfield = POOLFIELD_TOT;
 		else {
-			psc_ctlsenderr(fd, mh, "invalid lc field: %s",
+			psc_ctlsenderr(fd, mh, "invalid pool field: %s",
 			    levels[2]);
 			return;
 		}
@@ -545,30 +594,33 @@ psc_ctlparam_lc(int fd, struct psc_ctlmsghdr *mh,
 		endp = NULL;
 		val = strtol(pcp->pcp_value, &endp, 10);
 		if (val == LONG_MIN || val == LONG_MAX ||
+		    val > INT_MAX || val < 0 ||
 		    endp == pcp->pcp_value || *endp != '\0') {
-			psc_ctlsenderr(fd, mh, "invalid lc %s value: %s",
+			psc_ctlsenderr(fd, mh,
+			    "invalid pool %s value: %s",
 			    levels[2], pcp->pcp_value);
 			return;
 		}
 	}
 
 	if (nlevels == 1) {
-		spinlock(&pscListCachesLock);
-		psclist_for_each_entry(lc, &pscListCaches,
-		    lc_index_lentry) {
-			LIST_CACHE_LOCK(lc); /* XXX deadlock, use trylock */
-			psc_ctlparam_lc_handle(fd, mh,
-			    pcp, levels, nlevels, lc, val);
+		PLL_LOCK(&psc_pools);
+		psclist_for_each_entry(m,
+		    &psc_pools.pll_listhd, ppm_lentry) {
+			POOL_LOCK(m);
+			psc_ctlparam_pool_handle(fd, mh,
+			    pcp, levels, nlevels, m, val);
 		}
-		freelock(&pscListCachesLock);
+		PLL_ULOCK(&psc_pools);
 	} else {
-		lc = lc_lookup(levels[1]);
-		if (lc == NULL) {
-			psc_ctlsenderr(fd, mh, "invalid lc: %s", levels[1]);
+		m = psc_pool_lookup(levels[1]);
+		if (m == NULL) {
+			psc_ctlsenderr(fd, mh, "invalid pool: %s",
+			    levels[1]);
 			return;
 		}
-		psc_ctlparam_lc_handle(fd, mh,
-		    pcp, levels, nlevels, lc, val);
+		psc_ctlparam_pool_handle(fd, mh,
+		    pcp, levels, nlevels, m, val);
 	}
 }
 

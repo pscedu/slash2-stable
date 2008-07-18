@@ -91,6 +91,15 @@ struct psc_ctlmsg_meter {
 
 #define PCM_NAME_ALL		"all"
 
+struct psc_ctlmsg_pool {
+	char			pcpm_name[LC_NAME_MAX];
+	int			pcpm_min;
+	int			pcpm_max;
+	int			pcpm_total;
+};
+
+#define PCPM_NAME_ALL		"all"
+
 /* Control message types. */
 #define PCMT_ERROR		0
 #define PCMT_GETLOGLEVEL	1
@@ -102,7 +111,8 @@ struct psc_ctlmsg_meter {
 #define PCMT_SETPARAM		7
 #define PCMT_GETIOSTATS		8
 #define PCMT_GETMETER		9
-#define NPCMT			10
+#define PCMT_GETPOOL		10
+#define NPCMT			11
 
 /*
  * Control message header.
