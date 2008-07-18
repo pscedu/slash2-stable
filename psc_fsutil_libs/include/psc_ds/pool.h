@@ -264,7 +264,8 @@ psc_pool_return(struct psc_poolmgr *m, void *p)
 {
 	POOL_LOCK(m);
 	lc_add(&m->ppm_lc, p);
-	psc_assert(m->ppm_lc.lc_size <= m->ppm_max);
+	if (m->ppm_max)
+		psc_assert(m->ppm_lc.lc_size <= m->ppm_max);
 	POOL_ULOCK(m);
 
 	/* XXX if above high watermark, free some entries */
