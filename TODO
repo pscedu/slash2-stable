@@ -24,3 +24,11 @@ pfl
 
 lnet
 - move iostats outside of socklnd
+
+zest client
+
+  $ pwd
+  zest/trunk/tests/clientx/linux
+  $ m
+  make: *** No rule to make target `../../..//client/linux/libzestclient.a', needed by `clientx'.  Stop.
+
