@@ -81,7 +81,7 @@ psc_pool_grow(struct psc_poolmgr *m, int n)
 		p = TRY_PSCALLOC(m->ppm_lc.lc_entsize);
 		if (p == NULL) {
 			errno = ENOMEM;
-			return (-1);
+			return (i);
 		}
 		if (m->ppm_initf)
 			m->ppm_initf(p);
@@ -90,18 +90,19 @@ psc_pool_grow(struct psc_poolmgr *m, int n)
 		    m->ppm_max == 0) {
 			m->ppm_total++;
 			lc_add(&m->ppm_lc, p);
-		} else
-			n = 0; /* break prematurely */
+			p = NULL;
+		}
 		POOL_ULOCK(m);
 
 		/*
-		 * If we prematurely exiting,
+		 * If we are prematurely exiting,
 		 * we didn't use this item.
 		 */
-		if (n == 0) {
+		if (p) {
 			if (m->ppm_destroyf)
 				m->ppm_destroyf(p);
 			free(p);
+			break;
 		}
 	}
 	return (i);
@@ -138,12 +139,12 @@ psc_pool_shrink(struct psc_poolmgr *m, int n)
 			p = lc_getnb(&m->ppm_lc);
 			psc_assert(p);
 			m->ppm_total--;
-		} else {
+		} else
 			p = NULL;
-			n = 0; /* break prematurely */
-		}
 		POOL_ULOCK(m);
-		if (m->ppm_destroyf)
+		if (p == NULL)
+			break;
+		if (p && m->ppm_destroyf)
 			m->ppm_destroyf(p);
 		free(p);
 	}
