@@ -177,23 +177,8 @@ void pscrpc_fail_import(struct pscrpc_import *imp, __u32 conn_cnt)
 
                 spin_lock(&imp->imp_lock);
                 imp->imp_force_verify = 1;
+		imp->imp_failed = 1;
                 spin_unlock(&imp->imp_lock);
-
-                //ptlrpc_pinger_wake_up();
-		if (imp->imp_failcb){
-			if (-ENOSYS != (int)imp->imp_failcb){
-				psc_trace("invoking client failover callback");
-				if (0 != imp->imp_failcb(imp->imp_failcbarg)){
-					psc_fatalx("imp->failcb() failed");
-				} else {
-					psc_notify("imp->failcb() succeeded!");
-				}
-			} else {
-				psc_trace("NO failover callback registered");
-			}
-		} else {
-			psc_fatalx("communication failure");
-		}
         }
 	EXIT;
 }
