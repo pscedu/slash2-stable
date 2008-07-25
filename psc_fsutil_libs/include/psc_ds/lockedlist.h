@@ -7,6 +7,8 @@
 #ifndef __PFL_LOCKEDLIST_H__
 #define __PFL_LOCKEDLIST_H__
 
+#include <stddef.h>
+
 #include "psc_ds/list.h"
 #include "psc_util/assert.h"
 #include "psc_util/atomic.h"
@@ -18,6 +20,10 @@ struct psc_lockedlist {
 	atomic_t		pll_nitems;
 	int			pll_offset;
 };
+
+#define PLL_INITIALIZER(pll, type, member) \
+	{ PSCLIST_HEAD_INIT((pll)->pll_listhd), LOCK_INITIALIZER, \
+	  ATOMIC_INIT(0), offsetof(type, member) }
 
 #define pll_init(pll, type, member) \
 	_pll_init((pll), offsetof(type, member))
@@ -55,7 +61,7 @@ _pll_add(struct psc_lockedlist *pll, void *p, int tail)
 }
 
 static inline void *
-pll_get(struct psc_lockedlist *pll, int tail)
+pll_get(struct psc_lockedlist *pll, ptrdiff_t tail)
 {
 	struct psclist_head *e;
 	int locked;
