@@ -15,8 +15,6 @@ extern struct dynarray psc_subsystems;
 
 long pscPageSize;
 
-struct psc_lockedlist psc_pools;
-
 void
 pfl_init(int thrtabsz)
 {
@@ -27,8 +25,6 @@ pfl_init(int thrtabsz)
 	psc_subsys_register(PSS_RPC, "rpc");
 	psc_subsys_register(PSS_LNET, "lnet");
 	psc_subsys_register(PSS_OTHER, "other");
-
-	pll_init(&psc_pools, struct psc_poolmgr, ppm_lentry);
 
 	psc_threadtbl_init(thrtabsz);
 
