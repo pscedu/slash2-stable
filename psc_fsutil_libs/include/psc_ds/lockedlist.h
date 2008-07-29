@@ -37,6 +37,8 @@ _pll_init(struct psc_lockedlist *pll, int offset)
 	atomic_set(&pll->pll_nitems, 0);
 }
 
+#define pll_nitems(pll)		atomic_read(&(pll)->pll_nitems)
+
 #define pll_add(pll, p)		_pll_add((pll), (p), 0)
 #define pll_addstack(pll, p)	_pll_add((pll), (p), 0)
 #define pll_addqueue(pll, p)	_pll_add((pll), (p), 1)
@@ -79,6 +81,19 @@ pll_get(struct psc_lockedlist *pll, ptrdiff_t tail)
 	atomic_dec(&pll->pll_nitems);
 	ureqlock(&pll->pll_lock, locked);
 	return ((char *)e - pll->pll_offset);
+}
+
+static inline void
+pll_remove(struct psc_lockedlist *pll, void *p)
+{
+	int locked;
+	void *e;
+
+	psc_assert(p);
+	e = (char *)p + pll->pll_offset;
+	locked = reqlock(&pll->pll_lock);
+	psclist_del(e);
+	ureqlock(&pll->pll_lock, locked);
 }
 
 static inline int
