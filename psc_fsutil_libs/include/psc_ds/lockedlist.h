@@ -93,6 +93,7 @@ pll_remove(struct psc_lockedlist *pll, void *p)
 	e = (char *)p + pll->pll_offset;
 	locked = reqlock(&pll->pll_lock);
 	psclist_del(e);
+	atomic_dec(&pll->pll_nitems);
 	ureqlock(&pll->pll_lock, locked);
 }
 
