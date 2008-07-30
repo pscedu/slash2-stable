@@ -12,7 +12,8 @@
 /* 6 */	{ psc_ctlmsg_param_prhdr,	psc_ctlmsg_param_prdat,		sizeof(struct psc_ctlmsg_param),	NULL },				\
 /* 7 */	{ NULL,				NULL,				0,					NULL },				\
 /* 8 */	{ psc_ctlmsg_iostats_prhdr,	psc_ctlmsg_iostats_prdat,	sizeof(struct psc_ctlmsg_iostats),	NULL },				\
-/* 9 */	{ psc_ctlmsg_meter_prhdr,	psc_ctlmsg_meter_prdat,		sizeof(struct psc_ctlmsg_meter),	NULL }
+/* 9 */	{ psc_ctlmsg_meter_prhdr,	psc_ctlmsg_meter_prdat,		sizeof(struct psc_ctlmsg_meter),	NULL },                         \
+/*10 */	{ psc_ctlmsg_pool_prhdr,	psc_ctlmsg_pool_prdat,		sizeof(struct psc_ctlmsg_pool),	        NULL }
 
 struct psc_ctlshow_ent {
 	const char	 *pse_name;
@@ -55,6 +56,8 @@ int   psc_ctlmsg_iostats_prhdr(struct psc_ctlmsghdr *, const void *);
 void  psc_ctlmsg_iostats_prdat(const struct psc_ctlmsghdr *, const void *);
 int   psc_ctlmsg_meter_prhdr(struct psc_ctlmsghdr *, const void *);
 void  psc_ctlmsg_meter_prdat(const struct psc_ctlmsghdr *, const void *);
+int   psc_ctlmsg_pool_prhdr(struct psc_ctlmsghdr *, const void *);
+void  psc_ctlmsg_pool_prdat(const struct psc_ctlmsghdr *, const void *);
 int   psc_ctlmsg_lc_prhdr(struct psc_ctlmsghdr *, const void *);
 void  psc_ctlmsg_lc_prdat(const struct psc_ctlmsghdr *, const void *);
 int   psc_ctlmsg_param_prhdr(struct psc_ctlmsghdr *, const void *);

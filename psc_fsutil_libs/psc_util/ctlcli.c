@@ -429,6 +429,20 @@ psc_ctlmsg_meter_prdat(__unusedx const struct psc_ctlmsghdr *mh,
 }
 
 int
+psc_ctlmsg_pool_prhdr(__unusedx struct psc_ctlmsghdr *mh,
+    __unusedx const void *m)
+{
+	return printf("this space intentionally left blank\n");
+}
+
+void
+psc_ctlmsg_pool_prdat(__unusedx const struct psc_ctlmsghdr *mh,
+		      __unusedx const void *m)
+{
+	printf("this space intentionally left blank\n");
+}
+
+int
 psc_ctlmsg_lc_prhdr(__unusedx struct psc_ctlmsghdr *mh,
     __unusedx const void *m)
 {
