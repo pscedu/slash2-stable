@@ -77,7 +77,7 @@ nbrequest_flush(struct pscrpc_nbreqset *nbs) {
  */
 int
 nbrequest_reap(struct pscrpc_nbreqset *nbs) {
-	int    nreaped = 0, nchecked=0;
+	int    nreaped=0, nchecked=0;
 	struct psclist_head          *i, *j;
 	struct pscrpc_request     *req;
 	struct pscrpc_request_set *set = nbs->nb_reqset;
@@ -97,7 +97,8 @@ nbrequest_reap(struct pscrpc_nbreqset *nbs) {
 
 	psclist_for_each_safe(i, j, &set->set_requests) {
 		nchecked++;
-		req = psclist_entry(i, struct pscrpc_request, rq_set_chain_lentry);
+		req = psclist_entry(i, struct pscrpc_request, 
+				    rq_set_chain_lentry);
 		DEBUG_REQ(PLL_INFO, req, "reap if Completed");
 		/*
 		 * Move sent rpcs to the set_requests list
@@ -110,11 +111,6 @@ nbrequest_reap(struct pscrpc_nbreqset *nbs) {
 			 * paranoia
 			 */
 			psc_assert(atomic_read(&nbs->nb_outstanding) >= 0);
-			/* Revisit this, I don't think we need to issue a
-			   callback here but there may be some failure
-			   scenarios which require it - paul
-			*/
-#if 0
 			/*
 			 * This is the caller's last shot at accessing
 			 *  this msg..
@@ -124,7 +120,6 @@ nbrequest_reap(struct pscrpc_nbreqset *nbs) {
 			if (nbs->nb_callback != NULL)
 				(int)nbs->nb_callback(req,
 						      &req->rq_async_args);
-#endif
 			/*
 			 * Be done with it..
 			 */
