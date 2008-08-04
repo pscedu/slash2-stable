@@ -1360,8 +1360,22 @@ int pscrpc_set_wait(struct pscrpc_request_set *set)
 	rc = 0;
 	psclist_for_each(tmp, &set->set_requests) {
 		req = psclist_entry(tmp, struct pscrpc_request, rq_set_chain_lentry);
-
+		if (req->rq_import->imp_failed){
+			rc = -ECONNABORTED;
+			continue;
+		}
+#if 0
+		/* this assumes 100% reliable delivery
+		 * which breaks the fail-over we're allowing for Zest */
 		LASSERT(req->rq_phase == ZRQ_PHASE_COMPLETE);
+#else
+		/* so if all messages didn't complete
+		 * then just make a note of it */
+		if (!(req->rq_phase == ZRQ_PHASE_COMPLETE)){
+			psc_errorx("error in rq_phase: rq_phase = 0x%x",
+				   req->rq_phase);
+		}
+#endif
 		if (req->rq_status != 0)
 			rc = req->rq_status;
 	}
