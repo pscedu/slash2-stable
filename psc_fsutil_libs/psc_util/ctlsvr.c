@@ -495,7 +495,7 @@ psc_ctlparam_pool_handle(int fd, struct psc_ctlmsghdr *mh,
 
 	set = (mh->mh_type == PCMT_SETPARAM);
 
-	if (nlevels == 2 || strcmp(levels[2], "min") == 0) {
+	if (nlevels < 3 || strcmp(levels[2], "min") == 0) {
 		if (set) {
 			if (pcp->pcp_flags & PCPF_ADD)
 				m->ppm_min += val;
@@ -510,7 +510,8 @@ psc_ctlparam_pool_handle(int fd, struct psc_ctlmsghdr *mh,
 			psc_ctlmsg_param_send(fd, mh, pcp,
 			    pcp->pcp_thrname, levels, 3, nbuf);
 		}
-	} else if (nlevels == 2 || strcmp(levels[2], "max") == 0) {
+	}
+	if (nlevels < 3 || strcmp(levels[2], "max") == 0) {
 		if (set) {
 			if (pcp->pcp_flags & PCPF_ADD)
 				m->ppm_max += val;
@@ -525,7 +526,8 @@ psc_ctlparam_pool_handle(int fd, struct psc_ctlmsghdr *mh,
 			psc_ctlmsg_param_send(fd, mh, pcp,
 			    pcp->pcp_thrname, levels, 3, nbuf);
 		}
-	} else if (nlevels == 2 || strcmp(levels[2], "total") == 0) {
+	}
+	if (nlevels < 3 || strcmp(levels[2], "total") == 0) {
 		if (set) {
 			if (pcp->pcp_flags & PCPF_ADD)
 				psc_pool_grow(m, val);
