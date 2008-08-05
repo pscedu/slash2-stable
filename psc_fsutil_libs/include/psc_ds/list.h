@@ -218,8 +218,8 @@ psclist_splice(struct psclist_head *list, struct psclist_head *head)
  * @member: list_head member name in entry structure.
  */
 #define psclist_first_entry(hd, type, member)			\
-	((hd)->znext == (hd)->zprev ? 				\
-	 NULL : psclist_entry((hd)->znext, type, member))
+	(psclist_empty(hd) ? NULL :				\
+	 psclist_entry((hd)->znext, type, member))
 
 /**
  * psclist_last - grab last list entry.
@@ -234,8 +234,8 @@ psclist_splice(struct psclist_head *list, struct psclist_head *head)
  * @member: list_head member name in entry structure.
  */
 #define psclist_last_entry(hd, type, member)			\
-	((hd)->znext == (hd)->zprev ?				\
-	 NULL : psclist_entry((hd)->zprev, type, member))
+	(psclist_empty(hd) ? NULL :				\
+	 psclist_entry((hd)->zprev, type, member))
 
 /**
  * psclist_next - grab the entry following the specified entry.
