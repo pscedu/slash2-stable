@@ -214,6 +214,23 @@ psc_ctlparse_param(char *spec)
 }
 
 void
+psc_ctlparse_pool(char *pools)
+{
+	struct psc_ctlmsg_pool *pcpm;
+	char *pool, *poolnext;
+
+	for (pool = pools; pool; pool = poolnext) {
+		if ((poolnext = strchr(pool, ',')) != NULL)
+			*poolnext++ = '\0';
+
+		pcpm = psc_ctlmsg_push(PCMT_GETPOOL, sizeof(*pcpm));
+		if (strlcpy(pcpm->pcpm_name, pool,
+		    sizeof(pcpm->pcpm_name)) >= sizeof(pcpm->pcpm_name))
+			psc_fatalx("invalid pool: %s", pool);
+	}
+}
+
+void
 psc_ctlparse_iostats(char *iostats)
 {
 	struct psc_ctlmsg_iostats *pci;
@@ -432,14 +449,19 @@ int
 psc_ctlmsg_pool_prhdr(__unusedx struct psc_ctlmsghdr *mh,
     __unusedx const void *m)
 {
-	return printf("this space intentionally left blank\n");
+	printf("pools\n");
+	return (printf(" %-20s %8s %8s %8s\n",
+	    "pool", "min", "max", "total"));
 }
 
 void
 psc_ctlmsg_pool_prdat(__unusedx const struct psc_ctlmsghdr *mh,
-		      __unusedx const void *m)
+    const void *m)
 {
-	printf("this space intentionally left blank\n");
+	const struct psc_ctlmsg_pool *pcpm = m;
+
+	printf(" %-20s %8d %8d %8d\n", pcpm->pcpm_name,
+	    pcpm->pcpm_min, pcpm->pcpm_max, pcpm->pcpm_total);
 }
 
 int

@@ -37,6 +37,7 @@ void  psc_ctlparse_iostats(char *);
 void  psc_ctlparse_lc(char *);
 void  psc_ctlparse_meter(char *);
 void  psc_ctlparse_param(char *);
+void  psc_ctlparse_pool(char *);
 void  psc_ctlparse_show(char *);
 
 void  psc_ctl_packshow_loglevel(const char *);
