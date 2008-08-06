@@ -488,15 +488,21 @@ psc_ctlparam_pool_handle(int fd, struct psc_ctlmsghdr *mh,
     struct psc_ctlmsg_param *pcp, char **levels, int nlevels,
     struct psc_poolmgr *m, int val)
 {
-	int set;
 	char nbuf[20];
+	int set;
 
+	if (nlevels > 4) {
+		psc_ctlsenderr(fd, mh, "invalid field");
+		return;
+	}
+
+	levels[0] = "pool";
 	levels[1] = m->ppm_lc.lc_name;
 
 	set = (mh->mh_type == PCMT_SETPARAM);
 
 	if (nlevels < 3 || strcmp(levels[2], "min") == 0) {
-		if (set) {
+		if (nlevels == 3 && set) {
 			if (pcp->pcp_flags & PCPF_ADD)
 				m->ppm_min += val;
 			else if (pcp->pcp_flags & PCPF_SUB)
@@ -508,11 +514,11 @@ psc_ctlparam_pool_handle(int fd, struct psc_ctlmsghdr *mh,
 			levels[2] = "min";
 			snprintf(nbuf, sizeof(nbuf), "%d", m->ppm_min);
 			psc_ctlmsg_param_send(fd, mh, pcp,
-			    pcp->pcp_thrname, levels, 3, nbuf);
+			    PCTHRNAME_EVERYONE, levels, 3, nbuf);
 		}
 	}
 	if (nlevels < 3 || strcmp(levels[2], "max") == 0) {
-		if (set) {
+		if (nlevels == 3 && set) {
 			if (pcp->pcp_flags & PCPF_ADD)
 				m->ppm_max += val;
 			else if (pcp->pcp_flags & PCPF_SUB)
@@ -524,11 +530,11 @@ psc_ctlparam_pool_handle(int fd, struct psc_ctlmsghdr *mh,
 			levels[2] = "max";
 			snprintf(nbuf, sizeof(nbuf), "%d", m->ppm_max);
 			psc_ctlmsg_param_send(fd, mh, pcp,
-			    pcp->pcp_thrname, levels, 3, nbuf);
+			    PCTHRNAME_EVERYONE, levels, 3, nbuf);
 		}
 	}
 	if (nlevels < 3 || strcmp(levels[2], "total") == 0) {
-		if (set) {
+		if (nlevels == 3 && set) {
 			if (pcp->pcp_flags & PCPF_ADD)
 				psc_pool_grow(m, val);
 			else if (pcp->pcp_flags & PCPF_SUB)
@@ -539,7 +545,7 @@ psc_ctlparam_pool_handle(int fd, struct psc_ctlmsghdr *mh,
 			levels[2] = "total";
 			snprintf(nbuf, sizeof(nbuf), "%d", m->ppm_total);
 			psc_ctlmsg_param_send(fd, mh, pcp,
-			    pcp->pcp_thrname, levels, 3, nbuf);
+			    PCTHRNAME_EVERYONE, levels, 3, nbuf);
 		}
 	}
 	POOL_ULOCK(m);
