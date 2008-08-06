@@ -349,6 +349,7 @@ psc_ctlmsg_pool_send(int fd, struct psc_ctlmsghdr *mh,
 	pcpm->pcpm_min = m->ppm_min;
 	pcpm->pcpm_max = m->ppm_max;
 	pcpm->pcpm_total = m->ppm_total;
+	pcpm->pcpm_flags = m->ppm_flags;
 	POOL_ULOCK(m);
 	psc_ctlmsg_sendv(fd, mh, pcpm);
 }

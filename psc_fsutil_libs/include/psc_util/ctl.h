@@ -96,6 +96,7 @@ struct psc_ctlmsg_pool {
 	int			pcpm_min;
 	int			pcpm_max;
 	int			pcpm_total;
+	int			pcpm_flags;
 };
 
 #define PCPM_NAME_ALL		"all"

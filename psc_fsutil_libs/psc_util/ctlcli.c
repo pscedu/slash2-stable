@@ -9,6 +9,7 @@
 #include <unistd.h>
 
 #include "psc_ds/list.h"
+#include "psc_ds/pool.h"
 #include "psc_ds/vbitmap.h"
 #include "psc_util/cdefs.h"
 #include "psc_util/ctl.h"
@@ -450,8 +451,8 @@ psc_ctlmsg_pool_prhdr(__unusedx struct psc_ctlmsghdr *mh,
     __unusedx const void *m)
 {
 	printf("pools\n");
-	return (printf(" %-20s %8s %8s %8s\n",
-	    "pool", "min", "max", "total"));
+	return (printf(" %-20s %5s %8s %8s %8s\n",
+	    "pool", "flags", "min", "max", "total"));
 }
 
 void
@@ -460,7 +461,10 @@ psc_ctlmsg_pool_prdat(__unusedx const struct psc_ctlmsghdr *mh,
 {
 	const struct psc_ctlmsg_pool *pcpm = m;
 
-	printf(" %-20s %8d %8d %8d\n", pcpm->pcpm_name,
+	printf(" %-20s %c%c%c%c%c %8d %8d %8d\n", pcpm->pcpm_name,
+	    '-', '-', '-',
+	    pcpm->pcpm_flags & PPMF_REAP ? 'R' : '-',
+	    pcpm->pcpm_flags & PPMF_AUTO ? 'A' : '-',
 	    pcpm->pcpm_min, pcpm->pcpm_max, pcpm->pcpm_total);
 }
 
