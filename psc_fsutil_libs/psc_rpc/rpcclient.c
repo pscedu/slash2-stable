@@ -783,8 +783,12 @@ int pscrpc_queue_wait(struct pscrpc_request *req)
 	if (!req->rq_replied) {
 		/* How can this be? -eeb */
 		DEBUG_REQ(PLL_ERROR, req, "!rq_replied: ");
+#if 0 /* We have hit this point many times upon server failure */
 		LBUG();
 		GOTO(out, rc = req->rq_status);
+#else /* so... just make it an error condition */
+		GOTO(out, rc = -EIO);
+#endif
 	}
 
 	rc = after_reply (req);
