@@ -31,6 +31,12 @@
 #define PSC_LOG_FMT "[%s:%06u %n:%F:%l]"
 #endif
 
+#define PSC_LOG_INIT()				\
+	do {					\
+		if (!psc_loginit)		\
+			psc_log_init();		\
+	} while (0)
+
 __static int		 psc_loginit;
 __static const char	*psc_logfmt = PSC_LOG_FMT;
 __static int		 psc_loglevel = PLL_TRACE;
@@ -64,6 +70,7 @@ psc_log_init(void)
 int
 psc_log_getlevel_global(void)
 {
+	PSC_LOG_INIT();
 	return (psc_loglevel);
 }
 
@@ -123,8 +130,7 @@ psclogv(__unusedx const char *fn, const char *func, int line, int subsys,
 	struct timeval tv;
 	int save_errno;
 
-	if (!psc_loginit)
-		psc_log_init();
+	PSC_LOG_INIT();
 
 	save_errno = errno;
 
