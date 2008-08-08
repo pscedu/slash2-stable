@@ -1030,6 +1030,6 @@ __pscrpc_thread_spawn(pscrpc_svc_handle_t *svh, size_t siz)
 		prt = PSCALLOC(siz);
 		prt->prt_svc = svh->svh_service;
 		pscthr_init(thr, svh->svh_type, pscrpcthr_begin,
-		    prt, "%s%d", svh->svh_svc_name, i);
+		    prt, "%sthr%d", svh->svh_svc_name, i);
 	}
 }
