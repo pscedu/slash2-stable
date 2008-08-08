@@ -23,7 +23,7 @@ int		vbitmap_get(const struct vbitmap *, size_t);
 int		vbitmap_nfree(const struct vbitmap *);
 int		vbitmap_lcr(const struct vbitmap *);
 int		vbitmap_getncontig(struct vbitmap *, int *);
-struct vbitmap *vbitmap_attach(char *, size_t);
+struct vbitmap *vbitmap_attach(unsigned char *, size_t);
 
 void		vbitmap_printbin(const struct vbitmap *);
 void		vbitmap_printhex(const struct vbitmap *);

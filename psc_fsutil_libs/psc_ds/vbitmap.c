@@ -42,15 +42,15 @@ vbitmap_new(size_t nelems)
 	return (vb);
 }
 
-struct vbitmap * 
-vbitmap_attach(char *buf, size_t size) {
+struct vbitmap *
+vbitmap_attach(unsigned char *buf, size_t size)
+{
 	struct vbitmap *vb;
-	
+
 	if ((vb = malloc(sizeof(*vb))) == NULL)
                 return (NULL);
         memset(vb, 0, sizeof(*vb));
-
-	vb->vb_pos = vb->vb_start = buf;	
+	vb->vb_pos = vb->vb_start = buf;
 	vb->vb_end = buf + (size-1);
 	vb->vb_lastsize = 0;
 	return (vb);
