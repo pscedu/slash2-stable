@@ -281,7 +281,7 @@ psc_ctl_loglevel_namelen(int n)
 
 	maxlen = strlen(psc_ctl_subsys_names[n]);
 	for (j = 0; j < PNLOGLEVELS; j++)
-		maxlen = MAX(maxlen, strlen(psclog_name(j)));
+		maxlen = MAX(maxlen, strlen(psc_loglevel_getname(j)));
 	return (maxlen);
 }
 
@@ -610,7 +610,7 @@ psc_ctlmsg_loglevel_prdat(__unusedx const struct psc_ctlmsghdr *mh,
 	printf(" %-*s ", PSCTHR_NAME_MAX, pcl->pcl_thrname);
 	for (n = 0; n < psc_ctl_nsubsys; n++)
 		printf(" %*s", psc_ctl_loglevel_namelen(n),
-		    psclog_name(pcl->pcl_levels[n]));
+		    psc_loglevel_getname(pcl->pcl_levels[n]));
 	printf("\n");
 }
 

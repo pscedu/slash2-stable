@@ -61,7 +61,7 @@ pscthr_init(struct psc_thread *thr, int type,
 	    sizeof(*thr->pscthr_loglevels));
 
 	for (n = 0; n < psc_nsubsys; n++)
-		thr->pscthr_loglevels[n] = psc_getloglevel();
+		thr->pscthr_loglevels[n] = psc_log_getlevel(n);
 
 	thr->pscthr_type  = type;
 	thr->pscthr_id    = dynarray_len(&pscThreads); /* XXX lockme? */
@@ -93,21 +93,20 @@ pscthr_init(struct psc_thread *thr, int type,
 }
 
 /*
- * pscthr_getloglevel - get thread logging level for the specified subsystem.
+ * psc_log_getlevel - get thread logging level for the specified subsystem.
  * This routine is not intended for general-purpose usage.
  * @subsys: subsystem ID.
  */
 int
-pscthr_getloglevel(int subsys)
+psc_log_getlevel(int subsys)
 {
 	struct psc_thread *thr;
 
 	thr = psc_threadtbl_get_canfail();
 	if (thr == NULL)
-		return (psc_getloglevel());
+		return (psc_log_getlevel_ss(subsys));
 	if (subsys >= psc_nsubsys)
-		psc_fatalx("request subsystem out of bounds (%d)",
-		    subsys);
+		psc_fatalx("subsystem out of bounds (%d)", subsys);
 	return (thr->pscthr_loglevels[subsys]);
 }
 

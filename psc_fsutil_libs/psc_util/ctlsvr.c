@@ -182,16 +182,14 @@ void
 psc_ctlrep_getsubsys(int fd, struct psc_ctlmsghdr *mh, __unusedx void *m)
 {
 	struct psc_ctlmsg_subsys *pcss;
-	const char **ss;
 	size_t siz;
 	int n;
 
 	siz = PCSS_NAME_MAX * psc_nsubsys;
 	pcss = PSCALLOC(siz);
-	ss = dynarray_get(&psc_subsystems);
 	for (n = 0; n < psc_nsubsys; n++)
 		if (snprintf(&pcss->pcss_names[n * PCSS_NAME_MAX],
-		    PCSS_NAME_MAX, "%s", ss[n]) == -1) {
+		    PCSS_NAME_MAX, "%s", psc_subsys_name(n)) == -1) {
 			psc_warn("snprintf");
 			psc_ctlsenderr(fd, mh,
 			    "unable to retrieve subsystems");
@@ -444,7 +442,7 @@ psc_ctlparam_log_level(int fd, struct psc_ctlmsghdr *mh,
 	set = (mh->mh_type == PCMT_SETPARAM);
 
 	if (set) {
-		loglevel = psclog_id(pcp->pcp_value);
+		loglevel = psc_loglevel_getid(pcp->pcp_value);
 		if (loglevel == -1) {
 			psc_ctlsenderr(fd, mh,
 			    "invalid log.level value: %s", pcp->pcp_value);
@@ -480,7 +478,8 @@ psc_ctlparam_log_level(int fd, struct psc_ctlmsghdr *mh,
 				levels[2] = psc_subsys_name(subsys);
 				psc_ctlmsg_param_send(fd, mh, pcp,
 				    thr->pscthr_name, levels, 3,
-				    psclog_name(thr->pscthr_loglevels[subsys]));
+				    psc_loglevel_getname(thr->
+				    pscthr_loglevels[subsys]));
 			}
 }
 

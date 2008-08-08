@@ -9,8 +9,7 @@
 #ifndef _PFL_SUBSYS_H_
 #define _PFL_SUBSYS_H_
 
-#include "psc_ds/dynarray.h"
-
+#define PSS_ALL		(-1)
 #define PSS_LOG		0
 #define PSS_JOURNAL	1
 #define PSS_RPC		2
@@ -20,9 +19,8 @@
 
 int		 psc_subsys_id(const char *);
 const char	*psc_subsys_name(int);
-void		 psc_subsys_register(int, char *);
+void		 psc_subsys_register(int, const char *);
 
-extern struct dynarray psc_subsystems;
 extern int psc_nsubsys;
 
 #endif /* _PFL_SUBSYS_H_ */

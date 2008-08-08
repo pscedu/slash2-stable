@@ -74,10 +74,14 @@
 		return v;					\
 	} while (0)
 
-int	psc_setloglevel(int);
-int	psc_getloglevel(void);
-int	psclog_id(const char *);
-const char *psclog_name(int);
+void	psc_log_setlevel(int, int);
+int	psc_log_getlevel(int);
+int	psc_log_getlevel_global(void);
+int	psc_log_getlevel_ss(int);
+
+const char *
+	psc_loglevel_getname(int);
+int	psc_loglevel_getid(const char *);
 
 void psclogv(const char *, const char *, int, int, int, int, const char *,
     va_list);
@@ -95,28 +99,28 @@ __dead void _psc_fatal(const char *, const char *, int, int, int, int,
 #ifdef CDEBUG
 # undef CDEBUG
 #endif
-#define CDEBUG(mask, format, ...)					\
+#define CDEBUG(mask, fmt, ...)						\
 	do {								\
 		switch (mask) {						\
 		case D_ERROR:						\
 		case D_NETERROR:					\
-			psc_errorx(format, ## __VA_ARGS__);		\
+			psc_errorx((fmt), ## __VA_ARGS__);		\
 			break;						\
 		case D_WARNING:						\
-			psc_warnx(format, ## __VA_ARGS__);		\
+			psc_warnx((fmt), ## __VA_ARGS__);		\
 			break;						\
 		case D_NET:						\
 		case D_INFO:						\
 		case D_CONFIG:						\
-			psc_info(format, ## __VA_ARGS__);		\
+			psc_info((fmt), ## __VA_ARGS__);		\
 			break;						\
 		case D_RPCTRACE:					\
 		case D_TRACE:						\
-			psc_trace(format, ## __VA_ARGS__);		\
+			psc_trace((fmt), ## __VA_ARGS__);		\
 			break;						\
 		default:						\
-			psc_warnx("Unknown lustre mask %d", mask);	\
-			psc_warnx(format, ## __VA_ARGS__);		\
+			psc_warnx("Unknown lustre mask %d", (mask));	\
+			psc_warnx((fmt), ## __VA_ARGS__);		\
 			break;						\
 		}							\
 	} while (0)

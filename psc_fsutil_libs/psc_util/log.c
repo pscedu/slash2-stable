@@ -2,6 +2,8 @@
 
 /*
  * Logging routines.
+ * Notes:
+ *	(o) We cannot use psc_fatal() for fatal errors here.  Instead use err(3).
  */
 
 #define PSC_SUBSYS PSS_LOG
@@ -19,61 +21,82 @@
 #include <string.h>
 #include <unistd.h>
 
-#include "psc_util/log.h"
-#include "psc_util/fmtstr.h"
+#include "psc_util/alloc.h"
 #include "psc_util/cdefs.h"
+#include "psc_util/fmtstr.h"
+#include "psc_util/lock.h"
+#include "psc_util/log.h"
 
 #ifndef PSC_LOG_FMT
 #define PSC_LOG_FMT "[%s:%06u %n:%F:%l]"
 #endif
 
-__static const char *pscLogFormat = PSC_LOG_FMT;
+__static int		 psc_loginit;
+__static const char	*psc_logfmt = PSC_LOG_FMT;
+__static int		 psc_loglevel = PLL_TRACE;
 
-/* Global logging level. */
-__static int pscLogLevel = PLL_TRACE;
-
-int
-psc_setloglevel(int new)
+__static void
+psc_log_init(void)
 {
-	int old;
-
-	old = pscLogLevel;
-	if (new < 0)
-		new = 0;
-	else if (new >= PNLOGLEVELS)
-		new = PNLOGLEVELS - 1;
-	pscLogLevel = new;
-	return (old);
-}
-
-int
-psc_getloglevel(void)
-{
-	static int readenv;
-	const char *p;
-	char *ep;
+	static psc_spinlock_t lock = LOCK_INITIALIZER;
+	char *ep, *p;
 	long l;
 
-	if (!readenv) {
+	spinlock(&lock);
+	if (psc_loginit == 0) {
+		if ((p = getenv("PSC_LOG_FORMAT")) != NULL)
+			psc_logfmt = p;
 		if ((p = getenv("PSC_LOG_LEVEL")) != NULL) {
 			ep = NULL;
 			errno = 0;
 			l = strtol(p, &ep, 10);
 			if (p[0] == '\0' || ep == NULL || *ep != '\0')
 				errx(1, "invalid log level env: %s", p);
-			if (errno == ERANGE || l <= 0 || l >= PNLOGLEVELS)
+			if (errno == ERANGE || l < 0 || l >= PNLOGLEVELS)
 				errx(1, "invalid log level env: %s", p);
-			pscLogLevel = (int)l;
+			psc_loglevel = (int)l;
 		}
-		readenv = 1;
+		psc_loginit = 1;
 	}
-	return (pscLogLevel);
+	freelock(&lock);
+}
+
+int
+psc_log_getlevel_global(void)
+{
+	return (psc_loglevel);
 }
 
 __weak int
-pscthr_getloglevel(__unusedx int subsys)
+psc_log_getlevel_ss(__unusedx int subsys)
 {
-	return (psc_getloglevel());
+	return (psc_log_getlevel_global());
+}
+
+__weak int
+psc_log_getlevel(int subsys)
+{
+	return (psc_log_getlevel_ss(subsys));
+}
+
+void
+psc_log_setlevel_global(int newlevel)
+{
+	if (newlevel >= PNLOGLEVELS || newlevel < 0)
+		errx(1, "log level out of bounds (%d)", newlevel);
+	psc_loglevel = newlevel;
+}
+
+__weak void
+psc_log_setlevel_ss(__unusedx int subsys, int newlevel)
+{
+	psc_log_setlevel_global(newlevel);
+}
+
+__weak void
+psc_log_setlevel(int subsys, int newlevel)
+{
+	psc_log_setlevel_ss(subsys, newlevel);
 }
 
 __weak const char *
@@ -83,17 +106,9 @@ pscthr_getname(void)
 }
 
 const char *
-psc_getlogformat(void)
+psc_log_getformat(void)
 {
-	static int readenv;
-	const char *p;
-
-	if (!readenv) {
-		if ((p = getenv("PSC_LOG_FORMAT")) != NULL)
-			pscLogFormat = p;
-		readenv = 1;
-	}
-	return (pscLogFormat);
+	return (psc_logfmt);
 }
 
 void
@@ -108,12 +123,15 @@ psclogv(__unusedx const char *fn, const char *func, int line, int subsys,
 	struct timeval tv;
 	int save_errno;
 
+	if (!psc_loginit)
+		psc_log_init();
+
 	save_errno = errno;
 
-	if (pscthr_getloglevel(subsys) < level)
+	if (psc_log_getlevel(subsys) < level)
 		return;
 
-	logfmt = psc_getlogformat();
+	logfmt = psc_log_getformat();
 	thrname = pscthr_getname();
 	if (thrname == NULL) {
 		snprintf(nothrname, sizeof(nothrname), "<%d>", getpid());
@@ -201,7 +219,7 @@ const char *psc_loglevel_names[] = {
 };
 
 const char *
-psclog_name(int id)
+psc_loglevel_getname(int id)
 {
 	if (id < 0)
 		return ("<unknown>");
@@ -211,7 +229,7 @@ psclog_name(int id)
 }
 
 int
-psclog_id(const char *name)
+psc_loglevel_getid(const char *name)
 {
 	struct {
 		const char	*lvl_name;
