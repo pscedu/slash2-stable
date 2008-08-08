@@ -247,7 +247,7 @@ psc_loglevel_getid(const char *name)
 		{ "warning",	PLL_WARN },
 		{ "warnings",	PLL_WARN },
 		{ "notify",	PLL_NOTICE },
-		{ "all",	PLL_DEBUG }
+		{ "all",	PLL_TRACE }
 	};
 	int n;
 
