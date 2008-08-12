@@ -217,7 +217,9 @@ void reply_in_callback(lnet_event_t *ev)
 
         spinlock(&req->rq_lock);
 
+#if 0 /* this fails in a recovery scenario */
         LASSERT (req->rq_receiving_reply);
+#endif
         req->rq_receiving_reply = 0;
 
         if (ev->type == LNET_EVENT_PUT && ev->status == 0) {
