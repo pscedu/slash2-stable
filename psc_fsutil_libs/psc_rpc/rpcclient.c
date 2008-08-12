@@ -1384,7 +1384,8 @@ int pscrpc_set_wait(struct pscrpc_request_set *set)
 			rc = req->rq_status;
 	}
 
-	if (set->set_interpret != NULL) {
+	if (!rc && /* don't bother unless it completed successfully */
+	    set->set_interpret != NULL) {
 		set_interpreter_func interpreter = set->set_interpret;
 		rc = interpreter (set, set->set_arg, rc);
 	}
