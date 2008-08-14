@@ -381,7 +381,7 @@ libcfs_nid2str(lnet_nid_t nid)
         int               nnum = LNET_NETNUM(net);
         struct netstrfns *nf;
         char             *str;
-        char              sstr[32];
+        static char       sstr[32];
         int               nob;
 
         str = sstr;
@@ -469,7 +469,7 @@ libcfs_str2nid(const char *str)
                 if (nf == NULL)
                         return LNET_NID_ANY;
         } else {
-                sep = str + strlen(str);
+                sep = (char*)str + strlen(str);
                 net = LNET_MKNET(SOCKLND, 0);
                 nf = libcfs_lnd2netstrfns(SOCKLND);
                 LASSERT (nf != NULL);
