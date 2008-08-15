@@ -10,7 +10,7 @@
 /* aliases for common usage */
 #define PSCALLOC(s)	psc_alloc((s), 0)
 #define TRY_PSCALLOC(s)	psc_alloc((s), PAF_CANFAIL)
-#define PSCFREE(p)	free(p, 0, 0)
+#define PSCFREE(p)	free(p)
 
 /* allocation flags */
 #define PAF_CANFAIL	(1 << 0)	/* return NULL instead of fatal */
