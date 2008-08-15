@@ -1,3 +1,5 @@
+/* $Id$ */
+
 /*
  * barrier.h
  *
@@ -16,13 +18,13 @@
 /*
  * Structure describing a barrier.
  */
-typedef struct barrier_tag {
-    pthread_mutex_t     mutex;          /* Control access to barrier */
-    pthread_cond_t      cv;             /* wait for barrier */
-    int                 valid;          /* set when valid */
-    int                 threshold;      /* number of threads required */
-    int                 counter;        /* current number of threads */
-    unsigned long       cycle;          /* count cycles */
+typedef struct {
+	pthread_mutex_t     mutex;          /* Control access to barrier */
+	pthread_cond_t      cv;             /* wait for barrier */
+	int                 valid;          /* set when valid */
+	int                 threshold;      /* number of threads required */
+	int                 counter;        /* current number of threads */
+	unsigned long       cycle;          /* count cycles */
 } barrier_t;
 
 #define BARRIER_VALID   0xdbcafe
@@ -37,6 +39,7 @@ typedef struct barrier_tag {
 /*
  * Define barrier functions
  */
-extern int barrier_init (barrier_t *barrier, int count);
-extern int barrier_destroy (barrier_t *barrier);
-extern int barrier_wait (barrier_t *barrier);
+int barrier_init(barrier_t *, int);
+int barrier_nremaining(barrier_t *);
+int barrier_destroy(barrier_t *);
+int barrier_wait(barrier_t *);
