@@ -31,7 +31,7 @@ struct psc_poolmgr {
 	int			  ppm_min;		/* min bound of #items */
 	int			  ppm_max;		/* max bound of #items */
 	int			  ppm_total;		/* #items in circulation */
-	void			(*ppm_initf)(void *);	/* entry initializer */
+	int			(*ppm_initf)(void *);	/* entry initializer */
 	void			(*ppm_destroyf)(void *);/* entry deinitializer */
 	int			(*ppm_reapcb)(struct psc_listcache *, int);
 };
@@ -63,7 +63,7 @@ void	 psc_pool_resize(struct psc_poolmgr *);
 void	*psc_pool_get(struct psc_poolmgr *);
 void	 psc_pool_return(struct psc_poolmgr *, void *);
 int	 _psc_pool_init(struct psc_poolmgr *, ptrdiff_t, size_t,
-		int, int, void (*)(void *), const char *, ...);
+		int, int, int (*)(void *), const char *, ...);
 
 extern struct psc_lockedlist psc_pools;
 

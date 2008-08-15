@@ -32,13 +32,16 @@ psc_pool_grow(struct psc_poolmgr *m, int n)
 	}
 
 	for (i = 0; i < n; i++) {
-		p = TRY_PSCALLOC(m->ppm_lc.lc_entsize);
+		p = psc_alloc(m->ppm_lc.lc_entsize,
+		    PAF_LOCK | PAF_CANFAIL);
 		if (p == NULL) {
 			errno = ENOMEM;
 			return (i);
 		}
-		if (m->ppm_initf)
-			m->ppm_initf(p);
+		if (m->ppm_initf && !m->ppm_initf(p)) {
+			free(p);
+			return (i);
+		}
 		POOL_LOCK(m);
 		if (m->ppm_total < m->ppm_max ||
 		    m->ppm_max == 0) {
@@ -254,7 +257,7 @@ psc_pool_return(struct psc_poolmgr *m, void *p)
 
 int
 _psc_pool_init(struct psc_poolmgr *m, ptrdiff_t offset, size_t entsize,
-    int flags, int total, void (*initf)(void *), const char *namefmt, ...)
+    int flags, int total, int (*initf)(void *), const char *namefmt, ...)
 {
 	va_list ap;
 
