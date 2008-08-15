@@ -12,8 +12,7 @@
 #include "psc_util/threadtable.h"
 
 extern struct dynarray psc_subsystems;
-
-long pscPageSize;
+extern long pscPageSize;
 
 void
 pfl_init(int thrtabsz)

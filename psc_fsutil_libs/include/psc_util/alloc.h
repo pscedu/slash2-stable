@@ -3,46 +3,24 @@
 #ifndef __PFL_ALLOC_H__
 #define __PFL_ALLOC_H__
 
-#include <errno.h>
-#include <stdint.h>
+#include <sys/types.h>
+
 #include <stdlib.h>
-#include <string.h>
 
-#include "psc_util/log.h"
+/* aliases for common usage */
+#define PSCALLOC(s)	psc_alloc((s), 0)
+#define TRY_PSCALLOC(s)	psc_alloc((s), PAF_CANFAIL)
+#define PSCFREE(p)	free(p, 0, 0)
 
-#define PSCALLOC(s)	_PSCALLOC((s), 0)
-#define TRY_PSCALLOC(s)	_PSCALLOC((s), 1)
+/* allocation flags */
+#define PAF_CANFAIL	(1 << 0)	/* return NULL instead of fatal */
+#define PAF_PAGEALIGN	(1 << 1)	/* align to physmem page size */
+#define PAF_NOREAP	(1 << 2)	/* don't reap mem pools if mem unavail */
+#define PAF_LOCK	(1 << 3)	/* lock mem regions as unswappable */
 
-static inline void *
-_PSCALLOC(size_t size, int can_fail)
-{
-	void *ptr = malloc(size);
-
-	if (ptr == NULL) {
-		if (!can_fail)
-			psc_fatal("malloc");
-		else {
-			psc_error("malloc");
-			return (NULL);
-		}
-	}
-	memset(ptr, 0, size);
-	return (ptr);
-}
-
-static inline void *
-PSC_CALLOC(size_t num, size_t size)
-{
-	if (num && SIZE_MAX / num < size) {
-		errno = ENOMEM;
-		return (NULL);
-	}
-	return (PSCALLOC(size * num));
-}
-
-#define PSCFREE(p) free(p)
-
-void *palloc(size_t);
+void	*psc_alloc(size_t, int);
+void	*psc_calloc(size_t, size_t);
+void	 psc_freel(void *, size_t);
 
 extern long pscPageSize;
 
