@@ -38,7 +38,7 @@ psc_pool_grow(struct psc_poolmgr *m, int n)
 			errno = ENOMEM;
 			return (i);
 		}
-		if (m->ppm_initf && !m->ppm_initf(p)) {
+		if (m->ppm_initf && m->ppm_initf(p)) {
 			free(p);
 			return (i);
 		}
