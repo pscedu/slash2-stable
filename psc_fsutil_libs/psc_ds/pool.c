@@ -14,8 +14,8 @@ struct psc_lockedlist psc_pools =
 int
 psc_pool_grow(struct psc_poolmgr *m, int n)
 {
+	int i, flags;
 	void *p;
-	int i;
 
 	psc_assert(n > 0);
 
@@ -31,15 +31,20 @@ psc_pool_grow(struct psc_poolmgr *m, int n)
 		POOL_ULOCK(m);
 	}
 
+	flags = PAF_CANFAIL;
+	if ((m->ppm_flags & PPMF_NOLOCK) == 0)
+		flags |= PAF_LOCK;
 	for (i = 0; i < n; i++) {
-		p = psc_alloc(m->ppm_lc.lc_entsize,
-		    PAF_LOCK | PAF_CANFAIL);
+		p = psc_alloc(m->ppm_lc.lc_entsize, flags);
 		if (p == NULL) {
 			errno = ENOMEM;
 			return (i);
 		}
 		if (m->ppm_initf && m->ppm_initf(p)) {
-			free(p);
+			if (flags & PAF_LOCK)
+				psc_freel(p, m->ppm_lc.lc_entsize);
+			else
+				free(p);
 			return (i);
 		}
 		POOL_LOCK(m);
@@ -103,7 +108,10 @@ psc_pool_shrink(struct psc_poolmgr *m, int n)
 			break;
 		if (p && m->ppm_destroyf)
 			m->ppm_destroyf(p);
-		free(p);
+		if (m->ppm_flags & PPMF_NOLOCK)
+			free(p);
+		else
+			psc_freel(p, m->ppm_lc.lc_entsize);
 	}
 	return (i);
 }

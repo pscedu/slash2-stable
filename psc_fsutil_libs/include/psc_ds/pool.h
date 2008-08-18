@@ -37,8 +37,9 @@ struct psc_poolmgr {
 };
 
 /* Pool manager flags. */
-#define PPMF_AUTO	(1 << 0)	/* this pool automatically resizes */
-#define PPMF_REAP	(1 << 1)	/* this pool may reap pigs and be reaped */
+#define PPMF_AUTO	(1 << 0)	/* pool automatically resizes */
+#define PPMF_REAP	(1 << 1)	/* may reap other ppm pigs and be reaped by other ppms */
+#define PPMF_NOLOCK	(1 << 2)	/* pool ents shouldn't be alloc'd unswappably */
 
 #define POOL_LOCK(m)	spinlock(&(m)->ppm_lc.lc_lock)
 #define POOL_ULOCK(m)	freelock(&(m)->ppm_lc.lc_lock)
