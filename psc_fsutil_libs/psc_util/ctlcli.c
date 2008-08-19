@@ -473,7 +473,7 @@ psc_ctlmsg_lc_prhdr(__unusedx struct psc_ctlmsghdr *mh,
     __unusedx const void *m)
 {
 	printf("list caches\n");
-	return (printf(" %-20s %8s %9s %8s\n",
+	return (printf(" %-25s %8s %9s %8s\n",
 	    "list", "size", "max", "#seen"));
 }
 
@@ -483,7 +483,7 @@ psc_ctlmsg_lc_prdat(__unusedx const struct psc_ctlmsghdr *mh,
 {
 	const struct psc_ctlmsg_lc *pclc = m;
 
-	printf(" %-20s %8zu ", pclc->pclc_name, pclc->pclc_size);
+	printf(" %-25s %8zu ", pclc->pclc_name, pclc->pclc_size);
 	if (pclc->pclc_max == (size_t)-1)
 		printf("%9s", "unlimited");
 	else
