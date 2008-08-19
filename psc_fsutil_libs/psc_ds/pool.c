@@ -206,12 +206,9 @@ psc_pool_get(struct psc_poolmgr *m)
 	if (p)
 		return (p);
 
-	/* If not autoresizable, wait for someone to release. */
-	if ((m->ppm_flags & PPMF_AUTO) == 0)
-		return (lc_getwait(&m->ppm_lc));
-
 	/* If autoresizable, try to grow the pool. */
-	if (psc_pool_grow(m, 5)) {
+	if ((m->ppm_flags & PPMF_AUTO) &&
+	    psc_pool_grow(m, 5)) {
 		p = lc_getnb(&m->ppm_lc);
 		if (p)
 			return (p);
@@ -231,16 +228,15 @@ psc_pool_get(struct psc_poolmgr *m)
 		} while (n);
 	}
 
-	/* If not communal, wait for a buffer. */
-	if ((m->ppm_flags & PPMF_REAP) == 0) {
-		psc_warnx("%s reached max, consider bumping",
-		    m->ppm_lc.lc_name);
-		return (lc_getwait(&m->ppm_lc));
+	/* If communal, try reaping another pool. */
+	if ((m->ppm_flags & PPMF_REAP)) {
+		_psc_pool_reap();
+		psc_pool_grow(m, 5);
 	}
 
-	/* Try reaping another pool. */
-	_psc_pool_reap();
-	psc_pool_grow(m, 5);
+	/* when all else fails, wait for it */
+	psc_dbg("waiting on %s pool",
+		  m->ppm_lc.lc_name);
 	return (lc_getwait(&m->ppm_lc));
 }
 
