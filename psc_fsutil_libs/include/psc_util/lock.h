@@ -46,14 +46,14 @@ validlock(const psc_spinlock_t *sl)
 #define freelock(l)							\
 	do {								\
 		if (!validlock(l))					\
-			psc_fatalx("lock %p has invalid value", (l));	\
+			psc_fatalx("freelock: invalid lock value "	\
+				   "(%p)", (l));			\
 		if ((l)->sl_lock == SL_UNLOCKED)			\
-			psc_fatalx("tried to unlock already "		\
-			    "unlocked lock (%p)!", (l));		\
+			psc_fatalx("freelock: not locked (%p)", (l));	\
 		if ((l)->sl_who != pthread_self())			\
-			psc_fatalx("tried to unlock someone "		\
-			    "else's lock (%p, %lu vs. %lu)!",		\
-			    (l), (l)->sl_who, pthread_self());		\
+			psc_fatalx("freelock: not owner "		\
+				   "(%p, owner=%lu, self=%lu)!",	\
+				   (l), (l)->sl_who, pthread_self());	\
 		(l)->sl_who = 0;					\
 		(l)->sl_lock = SL_UNLOCKED;				\
 	} while (0)
