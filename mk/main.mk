@@ -243,6 +243,6 @@ etags:
 			echo "<=== ${DIRPREFIX}" | sed 's!/$$!!' >&2;			\
 		fi;									\
 	done
-	rm -f TAGS ; find ${ROOTDIR}/{lnet-lite,psc_fsutil_libs} ${ET_ARGS} -name \*.[chly] -exec etags -a {} \;
+	find ${ROOTDIR}/{lnet-lite,psc_fsutil_libs} ${ET_ARGS} -name \*.[chly] | xargs etags
 
 -include .depend
