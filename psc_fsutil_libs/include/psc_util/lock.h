@@ -12,6 +12,123 @@
 #define spin_unlock(l)		freelock(l)
 #define spin_lock_init(l)	LOCK_INIT(l)
 
+#ifdef __ia64
+
+#ifndef __USE_UNIX98
+#define __USE_UNIX98
+#endif
+
+#ifndef __USE_GNU
+#define __USE_GNU
+#endif
+
+#include <errno.h>
+#include <string.h>
+#include <pthread.h>
+
+typedef pthread_mutex_t psc_spinlock_t;
+
+#define LOCK_INIT(l)							\
+	do {								\
+		pthread_mutexattr_t attr;				\
+									\
+		pthread_mutexattr_init(&attr);				\
+		pthread_mutexattr_settype(&attr,			\
+		    PTHREAD_MUTEX_ERRORCHECK_NP);			\
+		pthread_mutex_init((l), &attr);				\
+		pthread_mutexattr_destroy(&attr);			\
+	} while (0)
+
+#define LOCK_INITIALIZER	PTHREAD_ERRORCHECK_MUTEX_INITIALIZER_NP
+
+#define freelock(l)							\
+	do {								\
+		int rc;							\
+									\
+		rc = pthread_mutex_unlock(l);				\
+		if (rc)							\
+			psc_fatalx("spinlock: %s", strerror(rc));	\
+	} while (0)
+
+#define spinlock(l)							\
+	do {								\
+		int rc;							\
+									\
+		rc = pthread_mutex_lock(l);				\
+		if (rc)							\
+			psc_fatalx("spinlock: %s", strerror(rc));	\
+	} while (0)
+
+static __inline int
+trylock(psc_spinlock_t *s)
+{
+	int rc;
+
+	rc = pthread_mutex_trylock(s);
+	if (rc == 0)
+		return (1);
+	else if (rc == EBUSY)
+		return (0);
+	psc_fatalx("trylock: %s", strerror(rc));
+}
+
+/*
+ * reqlock - require a lock for a critical section.
+ *	locks if unlocked, doesn't if already locked
+ *	(to avoid deadlock).
+ * @sl: the lock.
+ * Returns true if the lock is already locked.
+ */
+static __inline int
+reqlock(psc_spinlock_t *sl)
+{
+	int rc;
+
+	rc = pthread_mutex_lock(sl);
+	if (rc == 0)
+		return (0);
+	else if (rc == EDEADLK)
+		return (1);
+	psc_fatalx("reqlock: %s", strerror(rc));
+}
+
+static __inline int
+tryreqlock(psc_spinlock_t *sl, int *locked)
+{
+	int rc;
+
+	rc = pthread_mutex_trylock(sl);
+	if (rc == 0) {
+		*locked = 0;
+		return (1);
+	} else if (rc == EBUSY) {
+		*locked = 0;
+		return (0);
+	} else if (rc == EDEADLK) {
+		*locked = 1;
+		return (0);
+	}
+	psc_fatalx("reqlock: %s", strerror(rc));
+
+}
+
+/*
+ * ureqlock - "unrequire" a lock -- unlocks the lock if
+ *	it was locked for the nearest "reqlock ... ureqlock"
+ *	section and doesn't if the lock was already locked
+ *	before the critical section began.
+ * @sl: the lock.
+ * @waslocked: return value from reqlock().
+ */
+static __inline void
+ureqlock(psc_spinlock_t *sl, int waslocked)
+{
+	if (!waslocked)
+		freelock(sl);
+}
+
+#else
+
 #define SL_UNLOCKED		2
 #define SL_LOCKED		3
 
@@ -237,3 +354,4 @@ ureqlock(psc_spinlock_t *l, int waslocked)
 #endif /* HAVE_LIBPTHREAD */
 
 #endif /* __PFL_LOCK_H__ */
+#endif
