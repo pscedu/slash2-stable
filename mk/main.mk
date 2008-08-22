@@ -245,4 +245,7 @@ etags:
 	done
 	find ${ROOTDIR}/{lnet-lite,psc_fsutil_libs} ${ET_ARGS} -name \*.[chly] | xargs etags
 
+env:
+	@env
+
 -include .depend
