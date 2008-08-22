@@ -1,9 +1,84 @@
+/* $Id$ */
+
 #ifndef __ARCH_I386_ATOMIC__
 #define __ARCH_I386_ATOMIC__
 
-#include "psc_types.h"
+#ifdef __ia64
+
+#include <sys/types.h>
 #include <asm/bitops.h>
 #include <asm/system.h>
+
+#include "psc_types.h"
+
+typedef struct { volatile __s32 counter; } atomic_t;
+#define ATOMIC_INIT(i)			{ (i) }
+#define atomic_set(v,i)			(((v)->counter) = (i))
+#define atomic_read(v)			((v)->counter)
+#define atomic_add(i,v)			atomic_add_return((i), (v))
+#define atomic_inc(v)			atomic_add(1, (v))
+#define atomic_inc_return(v)		atomic_add_return(1, (v))
+#define atomic_add_return(i,v)						\
+({									\
+	int __ia64_aar_i = (i);						\
+	(__builtin_constant_p(i)					\
+	 && (   (__ia64_aar_i ==  1) || (__ia64_aar_i ==   4)		\
+	     || (__ia64_aar_i ==  8) || (__ia64_aar_i ==  16)		\
+	     || (__ia64_aar_i == -1) || (__ia64_aar_i ==  -4)		\
+	     || (__ia64_aar_i == -8) || (__ia64_aar_i == -16)))		\
+		? ia64_fetch_and_add(__ia64_aar_i, &(v)->counter)	\
+		: ia64_atomic_add(__ia64_aar_i, v);			\
+})
+#define atomic_sub_return(i,v)						\
+({									\
+	int __ia64_asr_i = (i);						\
+	(__builtin_constant_p(i)					\
+	 && (   (__ia64_asr_i ==   1) || (__ia64_asr_i ==   4)		\
+	     || (__ia64_asr_i ==   8) || (__ia64_asr_i ==  16)		\
+	     || (__ia64_asr_i ==  -1) || (__ia64_asr_i ==  -4)		\
+	     || (__ia64_asr_i ==  -8) || (__ia64_asr_i == -16)))	\
+		? ia64_fetch_and_add(-__ia64_asr_i, &(v)->counter)	\
+		: ia64_atomic_sub(__ia64_asr_i, v);			\
+})
+#define atomic_dec(v)			atomic_sub(1, (v))
+#define atomic_dec_and_test(v)		(atomic_sub_return(1, (v)) == 0)
+#define atomic_dec_return(v)		atomic_sub_return(1, (v))
+#define atomic_sub(i,v)			atomic_sub_return((i), (v))
+
+static __inline__ int
+ia64_atomic_add (int i, atomic_t *v)
+{
+	__s32 old, new;
+	CMPXCHG_BUGCHECK_DECL
+
+	do {
+		CMPXCHG_BUGCHECK(v);
+		old = atomic_read(v);
+		new = old + i;
+	} while (ia64_cmpxchg(acq, v, old, new, sizeof(atomic_t)) != old);
+	return new;
+}
+
+static __inline__ int
+ia64_atomic_sub (int i, atomic_t *v)
+{
+	__s32 old, new;
+	CMPXCHG_BUGCHECK_DECL
+
+	do {
+		CMPXCHG_BUGCHECK(v);
+		old = atomic_read(v);
+		new = old - i;
+	} while (ia64_cmpxchg(acq, v, old, new, sizeof(atomic_t)) != old);
+	return new;
+}
+
+#else
+
+#include <asm/bitops.h>
+#include <asm/system.h>
+
+#include "psc_types.h"
 
 //#include <asm/processor.h>
 // need to include the path the kernel headers
@@ -264,4 +339,5 @@ __asm__ __volatile__(LOCK_PREFIX "orl %0,%1" \
 #define smp_mb__after_atomic_inc()	barrier()
 
 //#include <asm-generic/atomic.h>
+#endif
 #endif
