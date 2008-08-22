@@ -80,7 +80,10 @@
 #define ZOBD_FREE(ptr, size) free(ptr)
 #define ZOBD_ALLOC(ptr, size) ((ptr) = PSCALLOC(size))
 
+#ifndef PAGE_SIZE
 #define PAGE_SIZE               4096
+#endif
+
 #define PSCRPC_MAX_BRW_SIZE     LNET_MTU
 #define PSCRPC_MAX_BRW_PAGES    (PSCRPC_MAX_BRW_SIZE/PAGE_SIZE)
 #define CURRENT_SECONDS         time(NULL)
