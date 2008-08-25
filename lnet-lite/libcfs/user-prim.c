@@ -58,6 +58,7 @@
 #include <libcfs/libcfs.h>
 #include <libcfs/kp30.h>
 #include <sys/user.h>
+#include <asm/page.h>
 
 #include "psc_util/cdefs.h"
 /*

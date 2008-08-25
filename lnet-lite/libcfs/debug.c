@@ -30,6 +30,8 @@
 #include <mach/vm_param.h>
 #endif
 
+#include <asm/page.h>
+
 #include <libcfs/kp30.h>
 #include <libcfs/libcfs.h>
 #include "tracefile.h"
@@ -623,7 +625,7 @@ libcfs_debug_vmsg2(__unusedx cfs_debug_limit_state_t *cdls,
         int            nob;
         int            remain;
         va_list        ap;
-        char           buf[PAGE_SIZE]; /* size 4096 used for compatimble with linux,
+        char           buf[PAGE_SIZE]; /* size 4096 used for compatible with linux,
                                    * where message can`t be exceed PAGE_SIZE */
         int            console = 0;
         char *prefix = "Lustre";
