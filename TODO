@@ -27,6 +27,10 @@ pfl
 lnet
 - move iostats outside of socklnd
 
+zest
+- mount_zest test mode, how fast processes connect to fuse
+
+
 zest client
 
   $ pwd
