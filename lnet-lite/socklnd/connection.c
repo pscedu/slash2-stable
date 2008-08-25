@@ -700,12 +700,12 @@ force_tcp_connection(manager    m,
            nidpid->pid, libcfs_nid2str(nidpid->nid)); 
 
     memset(&addr, 0, sizeof(addr));
-    addr.sin_family      = (tcpnal_usesdp ? AF_INET_SDP : AF_INET);
+    addr.sin_family      = AF_INET;
     addr.sin_addr.s_addr = htonl(ip);
     addr.sin_port        = htons(tcpnal_connector_port);
 
     memset(&locaddr, 0, sizeof(locaddr)); 
-    locaddr.sin_family = (tcpnal_usesdp ? AF_INET_SDP : AF_INET);
+    locaddr.sin_family = AF_INET;
     locaddr.sin_addr.s_addr = INADDR_ANY;
     locaddr.sin_port = m->port;
 
@@ -966,7 +966,8 @@ bind_socket(manager m, unsigned short port)
         }
         
         bzero((char *) &addr, sizeof(addr));
-        addr.sin_family      = (tcpnal_usesdp ? AF_INET_SDP : AF_INET);
+        //addr.sin_family      = (tcpnal_usesdp ? AF_INET_SDP : AF_INET);
+        addr.sin_family      = AF_INET;
         addr.sin_addr.s_addr = htonl(LNET_NIDADDR(b->b_ni->ni_nid));
         addr.sin_port        = htons(port);
         
