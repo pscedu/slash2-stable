@@ -859,7 +859,7 @@ int pscrpc_check_set(struct pscrpc_request_set *set, int check_allsent)
 		struct pscrpc_import *imp = req->rq_import;
 		int rc = 0;
 
-		DEBUG_REQ(PLL_WARN, req, "reqset=%p", set);
+		//		DEBUG_REQ(PLL_WARN, req, "reqset=%p", set);
 
 		if (req->rq_phase == ZRQ_PHASE_NEW &&
 		    pscrpc_send_new_req(req)) {
