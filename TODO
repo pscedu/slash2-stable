@@ -7,9 +7,8 @@ general
 - constify RPC replies in clients and requests in servers
 - check all bulkserver()'s for free_desc()
 - sweep tree for \b0[0-9] and fix bad permissions (711 -> 700)
-- tie PSCALLOC to pool reaping
 - ctlapi GETTREE
-- add psc_ prefix and psc_mt_ (multithread-safe) prefix to all pfl things
+- pfl: use "psc_" prefix and "_mt" (multithread-safe) postfix where sensical
 - type fixes:
 	(o) s/U64CONST/UINT64_C/
 	(o) inttypes.h PRI[dioux]64 in place of _P_U64 and LPX
@@ -38,3 +37,34 @@ zest client
   $ m
   make: *** No rule to make target `../../..//client/linux/libzestclient.a', needed by `clientx'.  Stop.
 
+- test parity reconstruction service by rebuilding
+  a block from each parity group
+- investigate SIGPIPE mishandling in client zest library
+  causing infinite loop
+- investigate size of block addressing types causing
+  unreasonable limits on maximum file system size, perhaps
+  during file system creation time (hopefully only)
+- implement FLUSH on mount_zest
+- fsck service is currently badly broken
+- faster CRC operations
+- remove ifdef buttons, either entirely or turn into
+  zestiondctl params, currently:
+    (o) SERVER_CRC_CHECK
+- make a proper solution when running out of parity groups
+  when servicing clients.  possible solution:
+    (o) block new file opens until parity groups from older
+        descriptors are finished
+- do not allow clients to sit on parity groups, need some
+  kind of reclamation mechanism
+
+- move parity block into random positions in the raid scheme
+  to avoid placing all parity data on the same disk
+  however skip these on disk fail rebuild
+- pass sizeof(iovs) to client on CONNECT
+- write back support on server
+
+- mount_zest control interface for stats and such,
+  needs further multithreaded operation for this
+	inflightSBlist
+	zest_itime_vals
+	zcconn
