@@ -548,7 +548,6 @@ psc_ctlparam_pool_handle(int fd, struct psc_ctlmsghdr *mh,
 			    PCTHRNAME_EVERYONE, levels, 3, nbuf);
 		}
 	}
-	POOL_ULOCK(m);
 }
 
 void
@@ -614,11 +613,9 @@ psc_ctlparam_pool(int fd, struct psc_ctlmsghdr *mh,
 	if (nlevels == 1) {
 		PLL_LOCK(&psc_pools);
 		psclist_for_each_entry(m,
-		    &psc_pools.pll_listhd, ppm_lentry) {
-			POOL_LOCK(m);
+		    &psc_pools.pll_listhd, ppm_lentry)
 			psc_ctlparam_pool_handle(fd, mh,
 			    pcp, levels, nlevels, m, val);
-		}
 		PLL_ULOCK(&psc_pools);
 	} else {
 		m = psc_pool_lookup(levels[1]);
