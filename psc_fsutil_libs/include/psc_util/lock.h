@@ -66,9 +66,9 @@ trylock(psc_spinlock_t *s)
 
 	rc = pthread_mutex_trylock(s);
 	if (rc == 0)
-		return (1);
-	else if (rc == EBUSY)
 		return (0);
+	else if (rc == EBUSY)
+		return (1);
 	psc_fatalx("trylock: %s", strerror(rc));
 }
 
