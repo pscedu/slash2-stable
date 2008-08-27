@@ -128,11 +128,11 @@ psc_pool_settotal(struct psc_poolmgr *m, int total)
 
 	adj = 0;
 	POOL_LOCK(m);
-	if (total > m->ppm_max)
+	if (m->ppm_max && total > m->ppm_max)
 		total = m->ppm_max;
 	else if (total < m->ppm_min)
 		total = m->ppm_min;
-	adj = m->ppm_total - total;
+	adj = total - m->ppm_total;
 	POOL_ULOCK(m);
 
 	if (adj < 0)
@@ -155,7 +155,7 @@ psc_pool_resize(struct psc_poolmgr *m)
 
 	adj = 0;
 	POOL_LOCK(m);
-	if (m->ppm_total > m->ppm_max)
+	if (m->ppm_max && m->ppm_total > m->ppm_max)
 		adj = m->ppm_max - m->ppm_total;
 	else if (m->ppm_total < m->ppm_min)
 		adj = m->ppm_min - m->ppm_total;
