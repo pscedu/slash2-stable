@@ -8,6 +8,7 @@ OBJS+=		$(patsubst %.l,%.o,$(filter %.l,${SRCS}))
 
 _YACCINTM=	$(patsubst %.y,%.c,$(filter %.y,${SRCS}))
 _LEXINTM=	$(patsubst %.l,%.c,$(filter %.l,${SRCS}))
+_C_SRCS=	$(filter %.c,${SRCS}) ${_YACCINTM} ${_LEXINTM}
 
 LNET_SOCKLND_SRCS+=	${LNET_BASE}/socklnd/connection.c
 LNET_SOCKLND_SRCS+=	${LNET_BASE}/socklnd/pqtimer.c
@@ -113,7 +114,7 @@ recurse-install:
 		done;									\
 	fi
 
-depend: ${_YACCINTM}
+depend: ${_C_SRCS}
 	@for i in ${SUBDIRS}; do							\
 		echo -n "===> ";							\
 		if [ -n "${DIRPREFIX}" ]; then						\
@@ -125,10 +126,9 @@ depend: ${_YACCINTM}
 			echo "<=== ${DIRPREFIX}" | sed 's!/$$!!';			\
 		fi;									\
 	done
-	@if [ -n "${SRCS}" ]; then							\
-		touch .depend;								\
-		echo "${MKDEP} ${INCLUDES} ${DEFINES} ${SRCS}";				\
-		${MKDEP} ${INCLUDES} ${DEFINES} ${SRCS};				\
+	@if [ -n "${_C_SRCS}" ]; then							\
+		echo "${MKDEP} ${INCLUDES} ${DEFINES} ${_C_SRCS}";			\
+		${MKDEP} ${INCLUDES} ${DEFINES} ${_C_SRCS};				\
 	fi
 	@if [ -n "${PROG}" ]; then							\
 		echo -n "${PROG}:" >> .depend;						\
@@ -183,26 +183,6 @@ listsrcs:
 	@if [ -n "${SRCS}" ]; then							\
 		echo "${SRCS}";								\
 	fi
-
-hdr-sync:
-	@for i in ${SUBDIRS}; do							\
-		echo -n "===> " >&2;							\
-		if [ -n "${DIRPREFIX}" ]; then						\
-			echo -n ${DIRPREFIX} >&2;					\
-		fi;									\
-		echo $$i >&2;								\
-		(cd $$i && ${MAKE} SUBDIRS= DIRPREFIX=${DIRPREFIX}$$i/ $@) || exit 1;	\
-		if [ -n "${DIRPREFIX}" ]; then						\
-			echo "<=== ${DIRPREFIX}" | sed 's!/$$!!' >&2;			\
-		fi;									\
-	done
-	if [ -z "${PROJECT_BASE}" ]; then						\
-		echo "PROJECT_BASE not defined, aborting" >&2;				\
-		exit 1;									\
-	fi
-	@for i in "${SRCS}"; do								\
-		sh ${ROOTDIR}/tools/hdr-sync.sh "${PROJECT_BASE}" $$i;			\
-	done
 
 #CS_ARGS+=-s${APP_BASE}
 #ET_ARGS+="${APP_BASE}"

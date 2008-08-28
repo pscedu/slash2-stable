@@ -1,5 +1,13 @@
 # $Id$
 
+# Disappointingly, recent versions of gcc hide
+# standard headers in places other than /usr/include.
+MKDEP_PROG=	${ROOTDIR}/tools/mkdep
+MKDEP=		${MKDEP_PROG} $$(if ${CC} -v 2>&1 | grep -q gcc; then \
+		    ${CC} -print-search-dirs | grep install | \
+		    awk '{print "-I" $$2 "include"}' | sed 's/:/ -I/'; fi)
+LINT=		splint +posixlib
+
 # for ZESTIONs
 KERNEL_BASE=	/usr/src/kernels/2.6.22.14-72.fc6-x86_64
 
