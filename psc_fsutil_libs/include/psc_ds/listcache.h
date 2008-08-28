@@ -86,6 +86,7 @@ lc_remove(list_cache_t *lc, void *p)
 	int locked;
 	void *e;
 
+	psc_assert(p);
 	e = (char *)p + lc->lc_offset;
 	locked = reqlock(&lc->lc_lock);
 	psclist_del(e);
