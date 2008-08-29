@@ -29,6 +29,7 @@
 #include "psc_util/ctl.h"
 #include "psc_util/ctlsvr.h"
 #include "psc_util/iostats.h"
+#include "psc_util/strlcpy.h"
 #include "psc_util/thread.h"
 #include "psc_util/threadtable.h"
 
@@ -258,46 +259,30 @@ psc_ctlrep_gethashtable(int fd, struct psc_ctlmsghdr *mh, void *m)
 	char name[HTNAME_MAX];
 	int found, all;
 
+	found = 0;
 	snprintf(name, sizeof(name), "%s", pcht->pcht_name); /* XXX */
 	all = (strcmp(name, PCHT_NAME_ALL) == 0);
-
-	found = 0;
 	spinlock(&hashTablesListLock);
 	psclist_for_each_entry(ht, &hashTablesList, htable_entry) {
-		if (all || strcmp(name, ht->htable_name) == 0) {
+		if (all ||
+		    strncmp(name, ht->htable_name, strlen(name)) == 0) {
 			found = 1;
+
 			snprintf(pcht->pcht_name, sizeof(pcht->pcht_name),
 			    "%s", ht->htable_name);
 			hash_table_stats(ht, &pcht->pcht_totalbucks,
 			    &pcht->pcht_usedbucks, &pcht->pcht_nents,
 			    &pcht->pcht_maxbucklen);
 			psc_ctlmsg_sendv(fd, mh, pcht);
-			if (!all)
+
+			/* Terminate on exact match. */
+			if (strlen(ht->htable_name) == strlen(name))
 				break;
 		}
 	}
 	freelock(&hashTablesListLock);
 	if (!found && !all)
 		psc_ctlsenderr(fd, mh, "unknown hash table: %s", name);
-}
-
-/*
- * psc_ctlmsg_lc_send - send a psc_ctlmsg_lc for a listcache.
- * @fd: client socket descriptor.
- * @mh: already filled-in control message header.
- * @pclc: control message to be filled in and sent out.
- * @lc: the locked list_cache about which to reply with information.
- */
-__static void
-psc_ctlmsg_lc_send(int fd, struct psc_ctlmsghdr *mh,
-    struct psc_ctlmsg_lc *pclc, list_cache_t *lc)
-{
-	snprintf(pclc->pclc_name, sizeof(pclc->pclc_name),
-	    "%s", lc->lc_name);
-	pclc->pclc_size = lc->lc_size;
-	pclc->pclc_nseen = lc->lc_nseen;
-	LIST_CACHE_ULOCK(lc);
-	psc_ctlmsg_sendv(fd, mh, pclc);
 }
 
 /*
@@ -310,46 +295,36 @@ void
 psc_ctlrep_getlc(int fd, struct psc_ctlmsghdr *mh, void *m)
 {
 	struct psc_ctlmsg_lc *pclc = m;
-	list_cache_t *lc;
+	struct psc_listcache *lc;
+	char name[LC_NAME_MAX];
+	int found, all;
 
-	if (strcmp(pclc->pclc_name, PCLC_NAME_ALL) == 0) {
-		spinlock(&pscListCachesLock);
-		psclist_for_each_entry(lc, &pscListCaches,
-		    lc_index_lentry) {
-			LIST_CACHE_LOCK(lc); /* XXX deadlock, use trylock */
-			psc_ctlmsg_lc_send(fd, mh, pclc, lc);
+	found = 0;
+	strlcpy(name, pclc->pclc_name, sizeof(name));
+	all = (strcmp(name, PCLC_NAME_ALL) == 0);
+	spinlock(&pscListCachesLock);
+	psclist_for_each_entry(lc, &pscListCaches, lc_index_lentry) {
+		if (all ||
+		    strncmp(lc->lc_name, name, strlen(name)) == 0) {
+			found = 1;
+
+			LIST_CACHE_LOCK(lc);
+			strlcpy(pclc->pclc_name, lc->lc_name,
+			    sizeof(pclc->pclc_name));
+			pclc->pclc_size = lc->lc_size;
+			pclc->pclc_nseen = lc->lc_nseen;
+			LIST_CACHE_ULOCK(lc);
+			psc_ctlmsg_sendv(fd, mh, pclc);
+
+			/* Terminate on exact match. */
+			if (strlen(lc->lc_name) == strlen(name))
+				break;
 		}
-		freelock(&pscListCachesLock);
-	} else {
-		lc = lc_lookup(pclc->pclc_name);
-		if (lc)
-			psc_ctlmsg_lc_send(fd, mh, pclc, lc);
-		else
-			psc_ctlsenderr(fd, mh,
-			    "unknown listcache: %s",
-			    pclc->pclc_name);
 	}
-}
-
-/*
- * psc_ctlmsg_pool_send - send a psc_ctlmsg_pool for a poolmgr.
- * @fd: client socket descriptor.
- * @mh: already filled-in control message header.
- * @pcpm: control message to be filled in and sent out.
- * @m: the locked pool about which to reply with information.
- */
-__static void
-psc_ctlmsg_pool_send(int fd, struct psc_ctlmsghdr *mh,
-    struct psc_ctlmsg_pool *pcpm, struct psc_poolmgr *m)
-{
-	snprintf(pcpm->pcpm_name, sizeof(pcpm->pcpm_name),
-	    "%s", m->ppm_lc.lc_name);
-	pcpm->pcpm_min = m->ppm_min;
-	pcpm->pcpm_max = m->ppm_max;
-	pcpm->pcpm_total = m->ppm_total;
-	pcpm->pcpm_flags = m->ppm_flags;
-	POOL_ULOCK(m);
-	psc_ctlmsg_sendv(fd, mh, pcpm);
+	freelock(&pscListCachesLock);
+	if (!found && !all)
+		psc_ctlsenderr(fd, mh, "unknown listcache: %s",
+		    pclc->pclc_name);
 }
 
 /*
@@ -363,24 +338,38 @@ psc_ctlrep_getpool(int fd, struct psc_ctlmsghdr *mh, void *msg)
 {
 	struct psc_ctlmsg_pool *pcpm = msg;
 	struct psc_poolmgr *m;
+	char name[LC_NAME_MAX];
+	int found, all;
 
-	if (strcmp(pcpm->pcpm_name, PCPM_NAME_ALL) == 0) {
-		PLL_LOCK(&psc_pools);
-		psclist_for_each_entry(m, &psc_pools.pll_listhd,
-		    ppm_lentry) {
-			POOL_LOCK(m); /* XXX deadlock, use trylock */
-			psc_ctlmsg_pool_send(fd, mh, pcpm, m);
+
+	found = 0;
+	strlcpy(name, pcpm->pcpm_name, sizeof(name));
+	all = (strcmp(name, PCPM_NAME_ALL) == 0);
+	PLL_LOCK(&psc_pools);
+	psclist_for_each_entry(m, &psc_pools.pll_listhd, ppm_lentry) {
+		if (all || strncmp(m->ppm_lc.lc_name, name,
+		    strlen(name)) == 0) {
+			found = 1;
+
+			POOL_LOCK(m);
+			strlcpy(pcpm->pcpm_name, m->ppm_lc.lc_name,
+			    sizeof(pcpm->pcpm_name));
+			pcpm->pcpm_min = m->ppm_min;
+			pcpm->pcpm_max = m->ppm_max;
+			pcpm->pcpm_total = m->ppm_total;
+			pcpm->pcpm_flags = m->ppm_flags;
+			POOL_ULOCK(m);
+			psc_ctlmsg_sendv(fd, mh, pcpm);
+
+			/* Terminate on exact match. */
+			if (strlen(m->ppm_lc.lc_name) == strlen(name))
+				break;
 		}
-		PLL_ULOCK(&psc_pools);
-	} else {
-		m = psc_pool_lookup(pcpm->pcpm_name);
-		if (m)
-			psc_ctlmsg_pool_send(fd, mh, pcpm, m);
-		else
-			psc_ctlsenderr(fd, mh,
-			    "unknown pool: %s",
-			    pcpm->pcpm_name);
 	}
+	PLL_ULOCK(&psc_pools);
+	if (!found && !all)
+		psc_ctlsenderr(fd, mh, "unknown pool: %s",
+		    pcpm->pcpm_name);
 }
 
 #define MAX_LEVELS 8
@@ -794,25 +783,25 @@ psc_ctlrep_getiostats(int fd, struct psc_ctlmsghdr *mh, void *m)
 	struct iostats *ist;
 	int found, all;
 
+	found = 0;
 	snprintf(name, sizeof(name), "%s", pci->pci_ist.ist_name);
 	all = (strcmp(name, PCI_NAME_ALL) == 0);
-
-	found = 0;
 	spinlock(&pscIostatsListLock);
 	psclist_for_each_entry(ist, &pscIostatsList, ist_lentry)
 		if (all ||
 		    strncmp(ist->ist_name, name, strlen(name)) == 0) {
 			found = 1;
+
 			pci->pci_ist = *ist;
 			psc_ctlmsg_sendv(fd, mh, pci);
+
+			/* Terminate on exact match. */
 			if (strlen(ist->ist_name) == strlen(name))
 				break;
 		}
 	freelock(&pscIostatsListLock);
-
 	if (!found && !all)
-		psc_ctlsenderr(fd, mh,
-		    "unknown iostats: %s", name);
+		psc_ctlsenderr(fd, mh, "unknown iostats: %s", name);
 }
 
 /*
