@@ -348,17 +348,15 @@ _lc_reginit(list_cache_t *lc, ptrdiff_t offset, size_t entsize,
 
 /**
  * lc_unregister - remove list cache external access registration.
- * @lc: the list cache to unregister.
+ * @lc: the list cache to unregister, must be UNLOCKED.
  */
 static inline void
 lc_unregister(list_cache_t *lc)
 {
-	int locked;
-
 	spinlock(&pscListCachesLock);
-	locked = reqlock(&lc->lc_lock);
+	spinlock(&lc->lc_lock);
 	psclist_del(&lc->lc_index_lentry);
-	ureqlock(&lc->lc_lock, locked);
+	freelock(&lc->lc_lock);
 	freelock(&pscListCachesLock);
 }
 
