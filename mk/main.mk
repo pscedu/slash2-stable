@@ -101,7 +101,7 @@ recurse-install:
 		echo cp -pf ${PROG} ${INSTALLDIR}/bin;				\
 		cp -pf ${PROG} ${INSTALLDIR}/bin;					\
 	fi
-	@if [ -n "${HEADERS}" ]; then							\
+	@if [ -n "${HEADERS:Q}" ]; then							\
 		for i in "${HEADERS}"; do						\
 			if [ x"$${i%/*}" = x"$$i" ]; then				\
 				_dir=${INSTALLDIR}/include/$${i%/*};			\
@@ -126,7 +126,7 @@ depend: ${_C_SRCS}
 			echo "<=== ${DIRPREFIX}" | sed 's!/$$!!';			\
 		fi;									\
 	done
-	@if [ -n "${_C_SRCS}" ]; then							\
+	@if [ -n "${_C_SRCS:Q}" ]; then							\
 		echo "${MKDEP} ${INCLUDES} ${DEFINES} ${_C_SRCS}";			\
 		${MKDEP} ${INCLUDES} ${DEFINES} ${_C_SRCS};				\
 	fi
@@ -138,7 +138,7 @@ depend: ${_C_SRCS}
 
 clean:
 	rm -rf ${OBJS} ${PROG} ${LIBRARY} ${CLEANFILES} ${_YACCINTM} ${_LEXINTM}	\
-	    .depend* tags cscope.out core.[0-9]*
+	    .depend* TAGS cscope.out core.[0-9]*
 	@for i in ${SUBDIRS}; do							\
 		echo -n "===> ";							\
 		if [ -n "${DIRPREFIX}" ]; then						\
@@ -163,7 +163,7 @@ lint:
 			echo "<=== ${DIRPREFIX}" | sed 's!/$$!!';			\
 		fi;									\
 	done
-	@if [ -n "${SRCS}" ]; then							\
+	@if [ -n "${SRCS:Q}" ]; then							\
 		echo "${LINT} ${INCLUDES} ${DEFINES} ${SRCS}";				\
 		${LINT} ${INCLUDES} ${DEFINES} ${SRCS} || true;				\
 	fi
@@ -180,7 +180,7 @@ listsrcs:
 			echo "<=== ${DIRPREFIX}" | sed 's!/$$!!' >&2;			\
 		fi;									\
 	done
-	@if [ -n "${SRCS}" ]; then							\
+	@if [ -n "${SRCS:Q}" ]; then							\
 		echo "${SRCS}";								\
 	fi
 
