@@ -22,8 +22,6 @@ struct psc_wait_queue {
 #else /* HAVE_LIBPTHREAD */
 
 struct psc_wait_queue {
-	psc_spinlock_t		wq_mut;
-	struct psclist_head	wq_sleepers;
 };
 
 #endif /* HAVE_LIBPTHREAD */
