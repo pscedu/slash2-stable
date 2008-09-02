@@ -16,15 +16,19 @@
 extern int tcpnal_maxsendkb;
 
 int
-psc_sock_write (int sock, void *buffer, int nob, int timeout)
+psc_sock_io (int sock, void *buffer, int nob, int timeout, int rw)
 {
         int            rc;
         struct timeval tv, then;
-        
-        LASSERT((nob > 0) || tcpnal_maxsendkb);
-        /* Caller may pass a zero timeout if she thinks the socket buffer is        
-         * empty enough to take the whole message immediately */
 
+        LASSERT(nob > 0);
+        /* Caller may pass a zero timeout if she thinks the socket buffer is
+         * empty enough to take the whole message immediately */
+        if (rw)
+                LASSERT(tcpnal_maxsendkb);
+        else
+                LASSERT(timeout > 0);
+        
         gettimeofday(&then, NULL);
 
         for (;;) {
@@ -39,7 +43,7 @@ psc_sock_write (int sock, void *buffer, int nob, int timeout)
                         .msg_iovlen     = 1,
                         .msg_control    = NULL,
                         .msg_controllen = 0,
-                        .msg_flags      = (timeout == 0) ? MSG_DONTWAIT : 0
+                        .msg_flags      = (rw && !timeout) ? MSG_DONTWAIT : 0
                 };
                 
                 if (timeout != 0) {
@@ -48,103 +52,38 @@ psc_sock_write (int sock, void *buffer, int nob, int timeout)
                                 .tv_sec = timeout,
                                 .tv_usec = 0
                         };
-                        rc = setsockopt(sock, SOL_SOCKET, SO_SNDTIMEO,
+                        rc = setsockopt(sock, SOL_SOCKET,
+                                        (rw ? SO_SNDTIMEO : SO_RCVTIMEO),
                                         (char *)&tv, sizeof(tv));
                         if (rc != 0) {
-                                CERROR("Can't set socket send timeout "
+                                CERROR("Can't set socket %s timeout "
                                        "%ld.%06d: %d\n",
+                                       (rw ? "send" : "recv"),
                                        (long)tv.tv_sec, (int)tv.tv_usec, rc);
                                 return -errno;
                         }
                 }
-                
-                rc = sendmsg (sock, &msg, iov.iov_len);
+                if (rw)
+                        rc = sendmsg(sock, &msg, iov.iov_len);
+                else
+                        rc = recvmsg(sock, &msg, iov.iov_len);
 
-                gettimeofday(&tv, NULL);
-
-                if (rc == nob)
-                        return 0;
-                
                 if (rc < 0)
-                        return rc;
-                
+                        return (-errno);
+
                 if (rc == 0) {
                         CERROR ("Unexpected zero rc\n");
-                        return (-ECONNABORTED);
+                        return (rw ? -ECONNABORTED : -ECONNRESET);
                 }
-                
-                if (tv.tv_sec - then.tv_sec > timeout)
-                        return -EAGAIN;
-                
-                buffer = ((char *)buffer) + rc;
                 nob -= rc;
-
-                if (nob == 0)
-                        break;
-        }        
-        return (0);
-}
-
-int
-psc_sock_read (int sock, void *buffer, int nob, int timeout)
-{
-        int            rc;
-        struct timeval tv, then;
-        
-        LASSERT (nob > 0);
-        LASSERT (timeout > 0);
-
-        gettimeofday(&then, NULL);
-
-        for (;;) {
-                struct iovec  iov = {
-                        .iov_base = buffer,
-                        .iov_len  = nob
-                };
-                struct msghdr msg = {
-                        .msg_name       = NULL,
-                        .msg_namelen    = 0,
-                        .msg_iov        = &iov,
-                        .msg_iovlen     = 1,
-                        .msg_control    = NULL,
-                        .msg_controllen = 0,
-                        .msg_flags      = 0
-                };
-                
-                if (timeout != 0) {
-                        /* Set send timeout to remaining time */
-                        tv = (struct timeval) {
-                                .tv_sec = timeout,
-                                .tv_usec = 0
-                        };
-                        rc = setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO,
-                                        (char *)&tv, sizeof(tv));
-                        if (rc != 0) {
-                                CERROR("Can't set socket send timeout "
-                                       "%ld.%06d: %d\n",
-                                       (long)tv.tv_sec, (int)tv.tv_usec, rc);
-                                return rc;
-                        }
-                }
-                
-                rc = recvmsg (sock, &msg, 0);
-
+                if (!nob)
+                        return (0);
+                               
                 gettimeofday(&tv, NULL);
-
-                if (rc < 0)
-                        return rc;
-
-                if (rc == 0)
-                        return -ECONNRESET;
+                if (tv.tv_sec - then.tv_sec > timeout)
+                        return (rw ? -EAGAIN : -ETIMEDOUT);
 
                 buffer = ((char *)buffer) + rc;
-                nob -= rc;
-
-                if (nob == 0)
-                        return 0;
-
-                if (tv.tv_sec - then.tv_sec > timeout)
-                        return -ETIMEDOUT;
         }        
         return (0);
 }

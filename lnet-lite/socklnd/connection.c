@@ -42,6 +42,7 @@
 #include <lnet/socklnd.h>
 #include <libcfs/kp30.h>
 #include <connection.h>
+#include <sendrecv.h>
 #include <pthread.h>
 #include <errno.h>
 #if defined (__APPLE__)
@@ -274,9 +275,9 @@ tcpnal_write(lnet_nid_t nid, int sockfd, void *buffer, int nob)
 #else
         int rc = psc_sock_write(sockfd, buffer, nob, 20);
 
-        if (!rc) {
-                CERROR("Failed to send to %s: %s\n",
-                       libcfs_nid2str(nid), strerror(errno));
+        if (rc) {
+                CERROR("Failed to send to %s: %s rc(%d)\n",
+                       libcfs_nid2str(nid), strerror(errno), rc);
                 return (-1);
         } else
                 return (0);

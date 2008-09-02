@@ -214,6 +214,7 @@ void request_in_callback(lnet_event_t *ev)
 
         if (ev->unlinked) {
                 service->srv_nrqbd_receiving--;
+
                 CDEBUG(D_NET,"Buffer complete: %d buffers still posted\n",
                        service->srv_nrqbd_receiving);
 
