@@ -179,7 +179,7 @@ validlock(const psc_spinlock_t *sl)
 	do {								\
 		if (!validlock(l))					\
 			psc_fatalx("lock %p has invalid value", (l));	\
-		if ((l)->sl_lock == SL_LOCKED)				\
+		if ((l)->sl_lock != SL_LOCKED)				\
 			psc_fatalx("lock is not locked (%p)!", (l));	\
 		if ((l)->sl_who != pthread_self())			\
 			psc_fatalx("lock is not owned by us "		\
