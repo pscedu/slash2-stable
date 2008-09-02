@@ -256,8 +256,8 @@ allocate_connection(manager m, lnet_process_id_t *nidpid, int fd)
 int
 tcpnal_write(lnet_nid_t nid, int sockfd, void *buffer, int nob)
 {
+#if 0        
         int rc = syscall(SYS_write, sockfd, buffer, nob);
-        
         /* NB called on an 'empty' socket with huge buffering! */
         if (rc == nob)
                 return 0;
@@ -271,6 +271,16 @@ tcpnal_write(lnet_nid_t nid, int sockfd, void *buffer, int nob)
         CERROR("Short send to %s: %d/%d\n",
                libcfs_nid2str(nid), rc, nob);
         return -1;
+#else
+        int rc = psc_sock_write(sockfd, buffer, nob, 20);
+
+        if (!rc) {
+                CERROR("Failed to send to %s: %s\n",
+                       libcfs_nid2str(nid), strerror(errno));
+                return (-1);
+        } else
+                return (0);
+#endif
 }
 
 int
@@ -1031,7 +1041,8 @@ init_connections(int (*input)(void *, void *), void *a)
     m->handler_arg = b = a;
     m->port = 0;                         /* set on first connection */
        
-    psc_warnx("nid %s tid %d b %p", libcfs_nid2str(b->b_ni->ni_nid), b->tid, b);
+    psc_warnx("nid %s tid %d b %p", 
+              libcfs_nid2str(b->b_ni->ni_nid), b->tid, b);
 
     pthread_mutex_init(&m->conn_lock, 0);
 

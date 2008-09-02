@@ -54,7 +54,7 @@ psc_sock_write (int sock, void *buffer, int nob, int timeout)
                                 CERROR("Can't set socket send timeout "
                                        "%ld.%06d: %d\n",
                                        (long)tv.tv_sec, (int)tv.tv_usec, rc);
-                                return rc;
+                                return -errno;
                         }
                 }
                 
@@ -78,8 +78,10 @@ psc_sock_write (int sock, void *buffer, int nob, int timeout)
                 
                 buffer = ((char *)buffer) + rc;
                 nob -= rc;
-        }
-        
+
+                if (nob == 0)
+                        break;
+        }        
         return (0);
 }
 
