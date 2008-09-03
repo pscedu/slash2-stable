@@ -10,6 +10,7 @@
 #include <unistd.h>
 
 #include "psc_types.h"
+#include "psc_ds/hash.h"
 #include "psc_util/alloc.h"
 #include "psc_util/cdefs.h"
 #include "psc_util/lock.h"
@@ -198,7 +199,7 @@ pscthr_destroy(struct psc_thread *thr)
 	struct hash_entry *e;
 
 	free(thr->pscthr_loglevels);
-	e = del_hash_entry(thrHTable, thr->pscthr_hashid);
+	e = del_hash_entry(&thrHtable, thr->pscthr_hashid);
 	if (e)
 		free(e);
 
