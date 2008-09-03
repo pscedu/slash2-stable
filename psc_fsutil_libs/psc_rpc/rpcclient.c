@@ -65,8 +65,8 @@ struct pscrpc_import *new_import(void)
 
 struct pscrpc_import *import_get(struct pscrpc_import *import)
 {
-	LASSERT(atomic_read(&import->imp_refcount) >= 0);
-	LASSERT(atomic_read(&import->imp_refcount) < 0x5a5a5a);
+	psc_assert(atomic_read(&import->imp_refcount) >= 0);
+	psc_assert(atomic_read(&import->imp_refcount) < 0x5a5a5a);
 	atomic_inc(&import->imp_refcount);
 	psc_info("import %p refcount=%d", import,
 	      atomic_read(&import->imp_refcount));
@@ -80,8 +80,8 @@ void import_put(struct pscrpc_import *import)
 	psc_info("import %p refcount=%d", import,
 	      atomic_read(&import->imp_refcount) - 1);
 
-	LASSERT(atomic_read(&import->imp_refcount) > 0);
-	LASSERT(atomic_read(&import->imp_refcount) < 0x5a5a5a);
+	psc_assert(atomic_read(&import->imp_refcount) > 0);
+	psc_assert(atomic_read(&import->imp_refcount) < 0x5a5a5a);
 	if (!atomic_dec_and_test(&import->imp_refcount)) {
 		EXIT;
 		return;
@@ -148,8 +148,8 @@ pscrpc_prep_req_from_pool(struct pscrpc_request_pool *pool)
 	psclist_del(&request->rq_list);
 	spin_unlock(&pool->prp_lock);
 
-	LASSERT(request->rq_reqmsg);
-	LASSERT(request->rq_pool);
+	psc_assert(request->rq_reqmsg);
+	psc_assert(request->rq_pool);
 
 	reqmsg = request->rq_reqmsg;
 	memset(request, 0, sizeof(*request));
@@ -170,10 +170,10 @@ pscrpc_prep_req_pool(struct pscrpc_import *imp,
 	int rc;
 	ENTRY;
 
-	LASSERT((unsigned long)imp > 0x1000);
-	LASSERT(imp != LP_POISON);
-	LASSERT((unsigned long)imp->imp_client > 0x1000);
-	LASSERT(imp->imp_client != LP_POISON);
+	psc_assert((unsigned long)imp > 0x1000);
+	psc_assert(imp != LP_POISON);
+	psc_assert((unsigned long)imp->imp_client > 0x1000);
+	psc_assert(imp->imp_client != LP_POISON);
 
 	if (pool)
 		//request = pscrpc_prep_req_from_pool(pool);
@@ -189,7 +189,7 @@ pscrpc_prep_req_pool(struct pscrpc_import *imp,
 
 	rc = psc_pack_request(request, count, lengths, bufs);
 	if (rc) {
-		LASSERT(!request->rq_pool);
+		psc_assert(!request->rq_pool);
 		ZOBD_FREE(request, sizeof(*request));
 		RETURN(NULL);
 	}
@@ -271,7 +271,7 @@ pscrpc_prep_bulk_imp (struct pscrpc_request *req, int npages,
 	struct pscrpc_import    *imp = req->rq_import;
 	struct pscrpc_bulk_desc *desc;
 
-	LASSERT(type == BULK_PUT_SINK || type == BULK_GET_SOURCE);
+	psc_assert(type == BULK_PUT_SINK || type == BULK_GET_SOURCE);
 	desc = new_bulk(npages, type, portal);
 	if (desc == NULL)
 		RETURN(NULL);
@@ -297,7 +297,7 @@ pscrpc_prep_bulk_exp (struct pscrpc_request *req,
 	struct pscrpc_export   *exp = req->rq_export;
 	struct pscrpc_bulk_desc *desc;
 
-	LASSERT(type == BULK_PUT_SOURCE || type == BULK_GET_SINK);
+	psc_assert(type == BULK_PUT_SOURCE || type == BULK_GET_SINK);
 
 	desc = new_bulk(npages, type, portal);
 	if (desc == NULL)
@@ -336,7 +336,7 @@ pscrpc_prep_set(void)
  * is supposed to notice these and move them into the set proper. */
 void
 pscrpc_set_add_new_req(struct pscrpc_request_set *set,
-			struct pscrpc_request     *req)
+		       struct pscrpc_request    *req)
 {
 	spin_lock(&set->set_new_req_lock);
 	/* The set takes over the caller's request reference */
@@ -383,20 +383,23 @@ static void interrupted_request(void *data)
 	spin_unlock(&req->rq_lock);
 }
 
-static int pscrpc_send_new_req(struct pscrpc_request *req)
+static int pscrpc_send_new_req_locked(struct pscrpc_request *req)
 {
 	struct pscrpc_import     *imp;
 	int rc;
 	ENTRY;
 
-	LASSERT(req->rq_phase == ZRQ_PHASE_NEW);
+	LOCK_ENSURE(&req->rq_lock);
+	DEBUG_REQ(PLL_INFO, req, "about to send rpc");
+
+	psc_assert(req->rq_phase == ZRQ_PHASE_NEW);
 	req->rq_phase = ZRQ_PHASE_RPC;
+	freelock(&req->rq_lock);
 
 	imp = req->rq_import;
 	spin_lock(&imp->imp_lock);
 
 	req->rq_import_generation = imp->imp_generation;
-
 #if 0
 	if (pscrpc_import_delay_req(imp, req, &rc)) {
 		spin_lock (&req->rq_lock);
@@ -427,14 +430,7 @@ static int pscrpc_send_new_req(struct pscrpc_request *req)
 	spin_unlock(&imp->imp_lock);
 
 	// we don't have a 'current' struct - paul
-	//req->rq_reqmsg->status = current->pid;
-	psc_info("Sending RPC pname:cluuid:pid:xid:nid:opc"
-	      " %d:%"_P_U64"u:%s:%d\n",
-	      req->rq_reqmsg->status,
-	      req->rq_xid,
-	      libcfs_nid2str(imp->imp_connection->c_peer.nid),
-	      req->rq_reqmsg->opc);
-
+	//req->rq_reqmsg->status = current->pid;	
 	rc = psc_send_rpc(req, 0);
 	if (rc) {
 		DEBUG_REQ(PLL_WARN, req,
@@ -446,7 +442,16 @@ static int pscrpc_send_new_req(struct pscrpc_request *req)
 }
 
 int pscrpc_push_req(struct pscrpc_request *req) {
-	return (pscrpc_send_new_req(req));
+	spinlock(&req->rq_lock);
+	if (req->rq_phase == ZRQ_PHASE_NEW)
+		/* pscrpc_send_new_req_locked() free's the lock.
+		 */
+		return (pscrpc_send_new_req_locked(req));
+	else {
+		freelock(&req->rq_lock);
+		DEBUG_REQ(PLL_INFO, req, "req already inflight");
+		return (0);
+	}
 }
 
 
@@ -498,7 +503,7 @@ void pscrpc_unregister_reply (struct pscrpc_request *request)
 	wait_queue_head_t *wq;
 	struct l_wait_info lwi;
 
-	LASSERT(!in_interrupt ());             /* might sleep */
+	psc_assert(!in_interrupt ());             /* might sleep */
 
 	if (!pscrpc_client_receiving_reply(request))
 		return;
@@ -523,7 +528,7 @@ void pscrpc_unregister_reply (struct pscrpc_request *request)
 		if (rc == 0)
 			return;
 
-		LASSERT (rc == -ETIMEDOUT);
+		psc_assert (rc == -ETIMEDOUT);
 		DEBUG_REQ(PLL_WARN, request, "Unexpectedly long timeout");
 	}
 }
@@ -558,7 +563,7 @@ static int after_reply(struct pscrpc_request *req)
 	int rc;
 	ENTRY;
 
-	LASSERT(!req->rq_receiving_reply);
+	psc_assert(!req->rq_receiving_reply);
 
 	/* NB Until this point, the whole of the incoming message,
 	 * including buflens, status etc is in the sender's byte order. */
@@ -567,7 +572,7 @@ static int after_reply(struct pscrpc_request *req)
 	/* Clear reply swab mask; this is a new reply in sender's byte order */
 	req->rq_rep_swab_mask = 0;
 #endif
-	LASSERT (req->rq_nob_received <= req->rq_replen);
+	psc_assert (req->rq_nob_received <= req->rq_replen);
 	rc = psc_unpack_msg(req->rq_repmsg, req->rq_nob_received);
 	if (rc) {
 		DEBUG_REQ(PLL_ERROR, req, "unpack_rep failed: %d", rc);
@@ -633,11 +638,11 @@ int pscrpc_queue_wait(struct pscrpc_request *req)
 	int timeout = 0;
 	ENTRY;
 
-	LASSERT(req->rq_set == NULL);
-	LASSERT(!req->rq_receiving_reply);
+	psc_assert(req->rq_set == NULL);
+	psc_assert(!req->rq_receiving_reply);
 	atomic_inc(&imp->imp_inflight);
 
-	LASSERT(imp != NULL);
+	psc_assert(imp != NULL);
 	psc_info("Sending RPC cookie:pid:xid:nid:opc "
 	      "%"_P_U64"x:%d:%"_P_U64"u:%s:%d",
 	      req->rq_reqmsg->handle.cookie,
@@ -810,9 +815,9 @@ int pscrpc_queue_wait(struct pscrpc_request *req)
 			brc = psc_cli_wait_event(req->rq_reply_waitq,
 						 !pscrpc_bulk_active(req->rq_bulk),
 						 &lwi);
-			LASSERT(brc == 0 || brc == -ETIMEDOUT);
+			psc_assert(brc == 0 || brc == -ETIMEDOUT);
 			if (brc != 0) {
-				LASSERT(brc == -ETIMEDOUT);
+				psc_assert(brc == -ETIMEDOUT);
 				DEBUG_REQ(PLL_ERROR, req, "bulk timed out");
 				rc = brc;
 			} else if (!req->rq_bulk->bd_success) {
@@ -825,7 +830,7 @@ int pscrpc_queue_wait(struct pscrpc_request *req)
 			pscrpc_unregister_bulk (req);
 	}
 
-	LASSERT(!req->rq_receiving_reply);
+	psc_assert(!req->rq_receiving_reply);
 	req->rq_phase = ZRQ_PHASE_INTERPRET;
 
 	atomic_dec(&imp->imp_inflight);
@@ -859,10 +864,10 @@ int pscrpc_check_set(struct pscrpc_request_set *set, int check_allsent)
 		struct pscrpc_import *imp = req->rq_import;
 		int rc = 0;
 
-		//		DEBUG_REQ(PLL_WARN, req, "reqset=%p", set);
+		DEBUG_REQ(PLL_TRACE, req, "reqset=%p", set);
 
-		if (req->rq_phase == ZRQ_PHASE_NEW &&
-		    pscrpc_send_new_req(req)) {
+		if (req->rq_phase == ZRQ_PHASE_NEW && 
+		    pscrpc_push_req(req)) {
 			DEBUG_REQ(PLL_WARN, req, "ZRQ_PHASE_NEW");
 			force_timer_recalc = 1;
 		}
@@ -1021,7 +1026,7 @@ int pscrpc_check_set(struct pscrpc_request_set *set, int check_allsent)
 			req->rq_phase = ZRQ_PHASE_BULK;
 		}
 
-		LASSERT(req->rq_phase == ZRQ_PHASE_BULK);
+		psc_assert(req->rq_phase == ZRQ_PHASE_BULK);
 		if (pscrpc_bulk_active(req->rq_bulk))
 			continue;
 
@@ -1037,8 +1042,8 @@ int pscrpc_check_set(struct pscrpc_request_set *set, int check_allsent)
 		req->rq_phase = ZRQ_PHASE_INTERPRET;
 
 	interpret:
-		LASSERT(req->rq_phase == ZRQ_PHASE_INTERPRET);
-		LASSERT(!req->rq_receiving_reply);
+		psc_assert(req->rq_phase == ZRQ_PHASE_INTERPRET);
+		psc_assert(!req->rq_receiving_reply);
 
 		pscrpc_unregister_reply(req);
 		if (req->rq_bulk != NULL)
@@ -1091,18 +1096,18 @@ void pscrpc_set_destroy(struct pscrpc_request_set *set)
 		struct pscrpc_request *req =
 			psclist_entry(tmp, struct pscrpc_request, rq_set_chain_lentry);
 
-		LASSERT(req->rq_phase == expected_phase);
+		psc_assert(req->rq_phase == expected_phase);
 		n++;
 	}
 
-	LASSERT(set->set_remaining == 0 || set->set_remaining == n);
+	psc_assert(set->set_remaining == 0 || set->set_remaining == n);
 
 	psclist_for_each_safe(tmp, next, &set->set_requests) {
 		struct pscrpc_request *req =
 			psclist_entry(tmp, struct pscrpc_request, rq_set_chain_lentry);
 		psclist_del(&req->rq_set_chain_lentry);
 
-		LASSERT(req->rq_phase == expected_phase);
+		psc_assert(req->rq_phase == expected_phase);
 
 		if (req->rq_phase == ZRQ_PHASE_NEW) {
 
@@ -1124,7 +1129,7 @@ void pscrpc_set_destroy(struct pscrpc_request_set *set)
 		pscrpc_req_finished (req);
 	}
 
-	LASSERT(set->set_remaining == 0);
+	psc_assert(set->set_remaining == 0);
 
 	ZOBD_FREE(set, sizeof(*set));
 	EXIT;
@@ -1187,7 +1192,7 @@ int pscrpc_expired_set(void *data)
 	time_t                     now = CURRENT_SECONDS;
 	ENTRY;
 
-	LASSERT(set != NULL);
+	psc_assert(set != NULL);
 
 	/* A timeout expired; see which reqs it applies to... */
 	psclist_for_each (tmp, &set->set_requests) {
@@ -1259,7 +1264,7 @@ void pscrpc_interrupted_set(void *data)
 	struct pscrpc_request_set *set = data;
 	struct psclist_head *tmp;
 
-	LASSERT(set != NULL);
+	psc_assert(set != NULL);
 	CERROR("INTERRUPTED SET %p\n", set);
 
 	psclist_for_each(tmp, &set->set_requests) {
@@ -1280,7 +1285,7 @@ static int pscrpc_import_delay_req(struct pscrpc_import *imp,
 	int delay = 0;
 	ENTRY;
 
-	LASSERT (status != NULL);
+	psc_assert (status != NULL);
 	*status = 0;
 
 	if (imp->imp_state == PSC_IMP_NEW) {
@@ -1327,8 +1332,9 @@ int pscrpc_set_wait(struct pscrpc_request_set *set)
 
 	psclist_for_each(tmp, &set->set_requests) {
 		req = psclist_entry(tmp, struct pscrpc_request, rq_set_chain_lentry);
+
 		if (req->rq_phase == ZRQ_PHASE_NEW)
-			(void)pscrpc_send_new_req(req);
+			(void)pscrpc_push_req(req);
 	}
 
 	do {
@@ -1345,7 +1351,7 @@ int pscrpc_set_wait(struct pscrpc_request_set *set)
 		rc = psc_cli_wait_event(set->set_waitq,
 					pscrpc_check_set(set, 1), &lwi);
 
-		LASSERT(rc == 0 || rc == -EINTR || rc == -ETIMEDOUT);
+		psc_assert(rc == 0 || rc == -EINTR || rc == -ETIMEDOUT);
 
 		/* -EINTR => all requests have been flagged rq_intr so next
 		 * check completes.
@@ -1359,7 +1365,7 @@ int pscrpc_set_wait(struct pscrpc_request_set *set)
 		if (-ETIMEDOUT==rc) RETURN(rc);
 	} while (rc != 0 || set->set_remaining != 0);
 
-	LASSERT(set->set_remaining == 0);
+	psc_assert(set->set_remaining == 0);
 
 	rc = 0;
 	psclist_for_each(tmp, &set->set_requests) {
@@ -1371,7 +1377,7 @@ int pscrpc_set_wait(struct pscrpc_request_set *set)
 #if 0
 		/* this assumes 100% reliable delivery
 		 * which breaks the fail-over we're allowing for Zest */
-		LASSERT(req->rq_phase == ZRQ_PHASE_COMPLETE);
+		psc_assert(req->rq_phase == ZRQ_PHASE_COMPLETE);
 #else
 		/* so if all messages didn't complete
 		 * then just make a note of it */
@@ -1401,9 +1407,9 @@ void pscrpc_free_committed(struct pscrpc_import *imp)
 	struct pscrpc_request *last_req = NULL; /* temporary fire escape */
 	ENTRY;
 
-	LASSERT(imp != NULL);
+	psc_assert(imp != NULL);
 
-	LASSERT_SPIN_LOCKED(&imp->imp_lock);
+	psc_assert_SPIN_LOCKED(&imp->imp_lock);
 
 	if (imp->imp_peer_committed_transno == imp->imp_last_transno_checked &&
 	    imp->imp_generation == imp->imp_last_generation_checked) {
@@ -1422,7 +1428,7 @@ void pscrpc_free_committed(struct pscrpc_import *imp)
 		req = psclist_entry(tmp, struct pscrpc_request, rq_replay_list);
 
 		/* XXX ok to remove when 1357 resolved - rread 05/29/03  */
-		LASSERT(req != last_req);
+		psc_assert(req != last_req);
 		last_req = req;
 
 		if (req->rq_import_generation < imp->imp_generation) {
@@ -1482,6 +1488,7 @@ void pscrpc_abort_inflight(struct pscrpc_import *imp)
 			req->rq_err = 1;
 			pscrpc_wake_client_req(req);
 		}
+		//__pscrpc_req_finished(req, 1);
 		spin_unlock (&req->rq_lock);
 	 }
 
