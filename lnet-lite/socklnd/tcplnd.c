@@ -177,8 +177,8 @@ int tcpnal_recv(lnet_ni_t     *ni,
         static pthread_mutex_t recv_lock = PTHREAD_MUTEX_INITIALIZER;
         struct iovec tiov[256];
 	struct iostats *ist;
-        int ntiov;
-        int i;
+	connection c = private;
+        int ntiov, rc;
 
 	ist = ni->ni_recvstats;
         if (mlen == 0)
@@ -189,32 +189,27 @@ int tcpnal_recv(lnet_ni_t     *ni,
         ntiov = lnet_extract_iov(256, tiov, niov, iov, offset, mlen);
 
         pthread_mutex_lock(&recv_lock);
-        /* FIXME
-         * 1. Is this effecient enough? change to use readv() directly?
-         * 2. need check return from read_connection()
-         * - MeiJia
-         */
-        for (i = 0; i < ntiov; i++)
-                read_connection(private, tiov[i].iov_base, tiov[i].iov_len);
+	rc = psc_sock_readv(c->fd, tiov, ntiov, 0);
+
+        if (mlen != rlen){
+                unsigned char *trash=malloc(rlen - mlen);
+
+		CERROR("trashing %d bytes\n", rlen - mlen);
+                /*TODO: check error status*/
+	        psc_sock_read(c->fd, trash, rlen - mlen, 0);
+                free(trash);
+        }
 
         pthread_mutex_unlock(&recv_lock);
 finalize:
-        /* FIXME; we always assume success here... */
-        lnet_finalize(ni, cookie, 0);
+	if (rc == 0)
+	        lnet_finalize(ni, cookie, 0);
 
         LASSERT(rlen >= mlen);
 
 	atomic_add(rlen, &ist->ist_bytes_intv);
 
-        if (mlen != rlen){
-                unsigned char *trash=malloc(rlen - mlen);
-
-                /*TODO: check error status*/
-                read_connection(private, trash, rlen - mlen);
-                free(trash);
-        }
-
-        return(0);
+        return(rc);
 }
 
 
@@ -236,7 +231,7 @@ static int from_connection(void *a, void *d)
 
         memset(&hdr, 0, sizeof(lnet_hdr_t));
 
-        if (read_connection(c, (unsigned char *)&hdr, sizeof(hdr))) {
+        if (psc_sock_read(c->fd, &hdr, sizeof(hdr), 0) == 0) {
                 CDEBUG(D_NET, "SRC %s:%u DEST %s CONNNID %s %u\n",
                        libcfs_nid2str(hdr.src_nid),
                        hdr.src_pid,
