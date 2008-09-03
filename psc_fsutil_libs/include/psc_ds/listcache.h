@@ -152,12 +152,12 @@ lc_get(list_cache_t *l, int block)
 		if (block) {
 			/* Wait until the list is no longer empty. */
 			if (block > 1)
-				psc_warnx("Watiing on listcache %p : '%s'",
+				psc_warnx("Waiting on listcache %p : '%s'",
 					  l, l->lc_name);
 			else
 				psc_notify("Waiting on listcache %p : '%s'",
 					   l, l->lc_name);
-			psc_waitq_wakeup(&l->lc_wq_want);
+			psc_waitq_wakeall(&l->lc_wq_want);
 			psc_waitq_wait(&l->lc_wq_empty, &l->lc_lock);
 			goto start;
 		} else {
