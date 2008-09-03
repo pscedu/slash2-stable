@@ -18,6 +18,13 @@
 
 struct dynarray    pscThreads;
 
+/*
+ * pscthr_begin: each new thread begins its life here.
+ *	This routine invokes the thread's real start routine once
+ *	it's safe after the thread who created us has finished our
+ *	(external) initialization.
+ * @arg: thread structure.
+ */
 __static void *
 pscthr_begin(void *arg)
 {
@@ -126,6 +133,11 @@ pscthr_getname(void)
 	return (thr->pscthr_name);
 }
 
+/*
+ * pscthr_setpause - set thread pause state.
+ * @thr: the thread.
+ * @pause: whether to pause or unpause the thread.
+ */
 void
 pscthr_setpause(struct psc_thread *thr, int pause)
 {
@@ -136,6 +148,10 @@ pscthr_setpause(struct psc_thread *thr, int pause)
 	freelock(&thr->pscthr_lock);
 }
 
+/*
+ * pscthr_sigusr2 - catch SIGUSR1: pause the thread.
+ * @sig: signal number.
+ */
 void
 pscthr_sigusr1(__unusedx int sig)
 {
@@ -153,6 +169,10 @@ pscthr_sigusr1(__unusedx int sig)
 	}
 }
 
+/*
+ * pscthr_sigusr2 - catch SIGUSR2: unpause the thread.
+ * @sig: signal number.
+ */
 void
 pscthr_sigusr2(__unusedx int sig)
 {
@@ -164,4 +184,29 @@ pscthr_sigusr2(__unusedx int sig)
 		sched_yield();
 	thr->pscthr_flags &= ~PTF_PAUSED;
 	ureqlock(&thr->pscthr_lock, locked);
+}
+
+/*
+ * pscthr_destroy - remove thread resources from the process.
+ * @thr: thread that is going away.
+ * Notes: make sure psc_thread memory itself and any
+ * threadtype-specific memory (pscthr_private) is released.
+ */
+void
+pscthr_destroy(struct psc_thread *thr)
+{
+	struct hash_entry *e;
+
+	free(thr->pscthr_loglevels);
+	e = del_hash_entry(thrHTable, thr->pscthr_hashid);
+	if (e)
+		free(e);
+
+	/*
+	 * I don't think we can do this unless must disallow any
+	 * external indexing into this array.  Things that need to
+	 * reference a thread should maintain a pointer to the pscthr
+	 * and not a pscThreads index.
+	 */
+	dynarray_remove(&pscThreads, thr);
 }

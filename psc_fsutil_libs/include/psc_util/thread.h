@@ -33,6 +33,7 @@ struct psc_thread {
 void	pscthr_setpause(struct psc_thread *, int);
 void	pscthr_sigusr1(int);
 void	pscthr_sigusr2(int);
+void	pscthr_destroy(struct psc_thread *);
 void	pscthr_init(struct psc_thread *, int, void *(*)(void *),
 		void *, const char *, ...);
 
