@@ -612,6 +612,7 @@ static void *
 pscrpc_main(struct psc_thread *thread, struct pscrpc_service *svc)
 {
 	struct pscrpc_reply_state *rs;
+	struct sigaction sa;
 
 	int rc = 0;
 	ENTRY;
@@ -620,6 +621,11 @@ pscrpc_main(struct psc_thread *thread, struct pscrpc_service *svc)
 
 	psc_dbg("thread %p pscthr_type is %d", thread,
 		thread->pscthr_type);
+	
+	memset(&sa, 0, sizeof(sa));
+	sa.sa_handler = SIG_IGN;
+	if (sigaction(SIGPIPE, &sa, NULL) == -1)
+		psc_fatal("sigaction");
 
 	if (svc->srv_init != NULL) {
 		rc = svc->srv_init(thread);
