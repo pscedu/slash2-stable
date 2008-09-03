@@ -36,6 +36,7 @@
 #include <procbridge.h>
 #include <connection.h>
 #include <errno.h>
+#include <sendrecv.h>
 
 #if defined(__APPLE__)
 #include <sys/syscall.h>
@@ -109,7 +110,9 @@ int tcpnal_send(lnet_ni_t *ni, __unusedx void *private, lnet_msg_t *lntmsg)
         ntiov = 1 + lnet_extract_iov(256, &tiov[1], niov, iov, offset, len);
 
         pthread_mutex_lock(&send_lock);
-#if 1 // Use syscall(SYS_writev..) instead of send()
+#if 1
+	rc = psc_sock_writev(c->fd, tiov, ntiov, 0);
+#elif 0 // Use syscall(SYS_writev..) instead of send()
         for (i = total = 0; i < ntiov; i++)
                 total += tiov[i].iov_len;
 
@@ -171,6 +174,7 @@ int tcpnal_recv(lnet_ni_t     *ni,
                 unsigned int  mlen,
                 unsigned int  rlen)
 {
+        static pthread_mutex_t recv_lock = PTHREAD_MUTEX_INITIALIZER;
         struct iovec tiov[256];
 	struct iostats *ist;
         int ntiov;
@@ -184,6 +188,7 @@ int tcpnal_recv(lnet_ni_t     *ni,
 
         ntiov = lnet_extract_iov(256, tiov, niov, iov, offset, mlen);
 
+        pthread_mutex_lock(&recv_lock);
         /* FIXME
          * 1. Is this effecient enough? change to use readv() directly?
          * 2. need check return from read_connection()
@@ -192,6 +197,7 @@ int tcpnal_recv(lnet_ni_t     *ni,
         for (i = 0; i < ntiov; i++)
                 read_connection(private, tiov[i].iov_base, tiov[i].iov_len);
 
+        pthread_mutex_unlock(&recv_lock);
 finalize:
         /* FIXME; we always assume success here... */
         lnet_finalize(ni, cookie, 0);

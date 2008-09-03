@@ -1,7 +1,16 @@
-#ifndef __SEND_RECV_H
-#define __SEND_RECV_H 1
+/* $Id$ */
 
-#define psc_sock_read(s, b, n, t) psc_sock_io(s, b, n, t, 0)
-#define psc_sock_write(s, b, n, t) psc_sock_io(s, b, n, t, 1)
+#ifndef __SEND_RECV_H__
+#define __SEND_RECV_H__
 
-#endif
+struct iovec;
+
+#define psc_sock_read(s, buf, nb, timo)		psc_sock_io((s), (buf), (nb), (timo), 0)
+#define psc_sock_write(s, buf, nb, timo)	psc_sock_io((s), (buf), (nb), (timo), 1)
+#define psc_sock_readv(s, iov, niov, timo)	psc_sock_iov((s), (iov), (niov), (timo), 0)
+#define psc_sock_writev(s, iov, niov, timo)	psc_sock_iov((s), (iov), (niov), (timo), 1)
+
+int psc_sock_io(int, void *, int, int, int);
+int psc_sock_iov(int, struct iovec *, int, int, int);
+
+#endif /* __SEND_RECV_H__ */
