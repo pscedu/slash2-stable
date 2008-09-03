@@ -110,38 +110,7 @@ int tcpnal_send(lnet_ni_t *ni, __unusedx void *private, lnet_msg_t *lntmsg)
         ntiov = 1 + lnet_extract_iov(256, &tiov[1], niov, iov, offset, len);
 
         pthread_mutex_lock(&send_lock);
-#if 1
 	rc = psc_sock_writev(c->fd, tiov, ntiov, 0);
-#elif 0 // Use syscall(SYS_writev..) instead of send()
-        for (i = total = 0; i < ntiov; i++)
-                total += tiov[i].iov_len;
-
-        CDEBUG(D_NET, "Frags %d LEN %d\n", 
-               i, total);
-
-        sysrc = syscall(SYS_writev, c->fd, tiov, ntiov);
-        if (sysrc != total) {
-                fprintf (stderr, "BAD SEND rc %d != %d, errno %d\n",
-                         sysrc, total, errno);
-                rc = -errno;
-        }
-#else
-        //        for (i = total = 0; i <= ntiov; i++) {
-        for (i = total = 0; i < ntiov; i++) {
-                rc = send(c->fd, tiov[i].iov_base, tiov[i].iov_len, 0);
-
-                CERROR("Frag %d LEN %zu BASE %p ntiov %d\n", 
-                       i, tiov[i].iov_len, tiov[i].iov_base, ntiov);
-
-                if (rc != tiov[i].iov_len) {
-                        CERROR("BAD SEND rc %d != %d, errno %d\n",
-                                 rc, tiov[i].iov_len, errno);
-                        rc = -errno;
-                        break;
-                }
-                total += rc;
-        }
-#endif
         CDEBUG(D_NET, "sent %s total %d in %d frags\n",
                hdr->type == LNET_MSG_ACK ? "ACK" :
                hdr->type == LNET_MSG_PUT ? "PUT" :
@@ -177,9 +146,11 @@ int tcpnal_recv(lnet_ni_t     *ni,
         static pthread_mutex_t recv_lock = PTHREAD_MUTEX_INITIALIZER;
         struct iovec tiov[256];
 	struct iostats *ist;
-	connection c = private;
+        unsigned char *trash;
         int ntiov, rc;
+	connection c;
 
+	c = private;
 	ist = ni->ni_recvstats;
         if (mlen == 0)
                 goto finalize;
@@ -188,19 +159,18 @@ int tcpnal_recv(lnet_ni_t     *ni,
 
         ntiov = lnet_extract_iov(256, tiov, niov, iov, offset, mlen);
 
+        trash=malloc(rlen - mlen);
         pthread_mutex_lock(&recv_lock);
 	rc = psc_sock_readv(c->fd, tiov, ntiov, 0);
 
-        if (mlen != rlen){
-                unsigned char *trash=malloc(rlen - mlen);
-
+        if (mlen != rlen){ 
 		CERROR("trashing %d bytes\n", rlen - mlen);
                 /*TODO: check error status*/
 	        psc_sock_read(c->fd, trash, rlen - mlen, 0);
-                free(trash);
         }
 
         pthread_mutex_unlock(&recv_lock);
+	free(trash);
 finalize:
 	if (rc == 0)
 	        lnet_finalize(ni, cookie, 0);
