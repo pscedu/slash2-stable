@@ -257,7 +257,7 @@ psclist_splice(struct psclist_head *list, struct psclist_head *head)
  * @head: the head for your list.
  * @member: list entry member of structure.
  */
-#define psclist_for_each_entry_safe(pos, n, head, member)				\
+#define psclist_for_each_entry_safe(pos, n, head, member)			\
 	for ((pos) = psclist_entry((head)->znext, typeof(*(pos)), member),	\
 	    (n) = psclist_entry((pos)->member.znext, typeof(*(pos)), member);	\
 	    (&(pos)->member != (head)) || ((pos) = (n) = NULL);			\
@@ -270,7 +270,7 @@ psclist_splice(struct psclist_head *list, struct psclist_head *head)
  * @member: list entry member of structure.
  */
 #define psclist_for_each_entry(pos, hd, member)					\
-	for ((pos) = psclist_entry((hd)->znext, typeof(*(pos)), member);		\
+	for ((pos) = psclist_entry((hd)->znext, typeof(*(pos)), member);	\
 	    (&(pos)->member != (hd)) || ((pos) = NULL);				\
 	    (pos) = psclist_entry((pos)->member.znext, typeof(*(pos)), member))
 
@@ -284,6 +284,22 @@ psclist_splice(struct psclist_head *list, struct psclist_head *head)
 	for ((pos) = (void *)(((char *)(head)->znext) - (offset));		\
 	    (((char *)pos) + (offset) != (void *)(head)) || ((pos) = NULL);	\
 	    (pos) = (void *)(((char *)(((struct psclist_head *)(((char *)pos) +	\
+	      (offset)))->znext)) - (offset)))
+
+/**
+ * psclist_for_each_entry2_safe - iterate over list of given type.
+ * @pos: the type * to use as a loop counter.
+ * @n: another type * to use as temporary storage
+ * @head: the head for your list.
+ * @offset: offset into type * of list entry.
+ */
+#define psclist_for_each_entry2_safe(pos, n, head, offset)			\
+	for ((pos) = (void *)(((char *)(head)->znext) - (offset)),		\
+	    (n) = (void *)(((char *)(((struct psclist_head *)(((char *)pos) +	\
+	      (offset)))->znext)) - (offset));					\
+	    (((char *)pos) + (offset) != (void *)(head)) ||			\
+	      ((pos) = (n) = NULL); (pos) = (n), 				\
+	    (n) = (void *)(((char *)(((struct psclist_head *)(((char *)n) +	\
 	      (offset)))->znext)) - (offset)))
 
 #undef list_head
