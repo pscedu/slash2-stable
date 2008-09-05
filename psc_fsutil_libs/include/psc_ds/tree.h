@@ -83,7 +83,7 @@ struct {								\
 	SPLAY_RIGHT(tmp, field) = (head)->sph_root;			\
 	(head)->sph_root = tmp;						\
 } while (0)
-	
+
 #define SPLAY_ROTATE_LEFT(head, tmp, field) do {			\
 	SPLAY_RIGHT((head)->sph_root, field) = SPLAY_LEFT(tmp, field);	\
 	SPLAY_LEFT(tmp, field) = (head)->sph_root;			\
@@ -270,7 +270,7 @@ void name##_SPLAY_MINMAX(struct name *head, int __comp) \
 	SPLAY_ASSEMBLE(head, &__node, __left, __right, field);		\
 }
 
-#define SPLAY_NEGINF	-1
+#define SPLAY_NEGINF	(-1)
 #define SPLAY_INF	1
 
 #define SPLAY_INSERT(name, x, y)	name##_SPLAY_INSERT(x, y)
@@ -329,7 +329,7 @@ struct {								\
 } while (0)
 
 #ifndef RB_AUGMENT
-#define RB_AUGMENT(x)
+#define RB_AUGMENT(x) (void)0
 #endif
 
 #define RB_ROTATE_LEFT(head, elm, tmp, field) do {			\
