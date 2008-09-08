@@ -55,7 +55,7 @@ zest client
     (o) block new file opens until parity groups from older
         descriptors are finished
 - do not allow clients to sit on parity groups, need some
-  kind of reclamation mechanism
+  kind of reap/reclamation mechanism
 
 - move parity block into random positions in the raid scheme
   to avoid placing all parity data on the same disk
@@ -65,6 +65,4 @@ zest client
 
 - mount_zest control interface for stats and such,
   needs further multithreaded operation for this
-	inflightSBlist
-	zest_itime_vals
 	zcconn
