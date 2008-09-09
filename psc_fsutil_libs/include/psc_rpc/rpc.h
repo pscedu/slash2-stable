@@ -805,7 +805,6 @@ pscrpc_wake_client_req (struct pscrpc_request *req)
 									\
 			if (condition)					\
 				break;					\
-			}						\
 									\
 			if (!__timed_out && info->lwi_timeout != 0) {	\
 				__now = time(NULL);			\
