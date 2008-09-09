@@ -30,10 +30,6 @@ psc_sock_io(int s, void *p, int nob, int timeout, int wr)
 	LASSERT(nob > 0);
 	/* Caller may pass a zero timeout if she thinks the socket buffer is
 	 * empty enough to take the whole message immediately */
-	if (wr)
-		LASSERT(tcpnal_maxsendkb);
-	else
-		LASSERT(timeout > 0);
 
 	if (gettimeofday(&then, NULL) == -1)
 		LASSERT(0);

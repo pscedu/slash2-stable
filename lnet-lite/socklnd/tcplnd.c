@@ -80,7 +80,7 @@ int tcpnal_send(lnet_ni_t *ni, __unusedx void *private, lnet_msg_t *lntmsg)
 
         connection c;
         bridge b = (bridge)ni->ni_data;
-        struct iovec tiov[257];
+        struct iovec *tiov;
         static pthread_mutex_t send_lock = PTHREAD_MUTEX_INITIALIZER;
 	struct iostats *ist;
         int rc = 0;
@@ -105,19 +105,22 @@ int tcpnal_send(lnet_ni_t *ni, __unusedx void *private, lnet_msg_t *lntmsg)
         LASSERT (niov <= 256);
         LASSERT (len == 0 || iov != NULL);      /* I don't understand kiovs */
 
+        tiov = PSCALLOC(sizeof(*tiov) * (niov+1));
+
         tiov[0].iov_base = hdr;
         tiov[0].iov_len = sizeof(lnet_hdr_t);
-        ntiov = 1 + lnet_extract_iov(256, &tiov[1], niov, iov, offset, len);
+        ntiov = 1 + lnet_extract_iov(niov, &tiov[1], niov, iov, offset, len);
 
         pthread_mutex_lock(&send_lock);
 	rc = psc_sock_writev(c->fd, tiov, ntiov, 0);
-        CDEBUG(D_NET, "sent %s total %d in %d frags\n",
+
+        CDEBUG(D_NET, "sent %s total %d in %d frags (sysrc=%d)\n",
                hdr->type == LNET_MSG_ACK ? "ACK" :
                hdr->type == LNET_MSG_PUT ? "PUT" :
                hdr->type == LNET_MSG_GET ? "GET" :
                hdr->type == LNET_MSG_REPLY ? "REPLY" :
                hdr->type == LNET_MSG_HELLO ? "HELLO" : "UNKNOWN",
-               total, niov + 1);
+               total, niov + 1, sysrc);
 
         pthread_mutex_unlock(&send_lock);
 
@@ -128,6 +131,7 @@ int tcpnal_send(lnet_ni_t *ni, __unusedx void *private, lnet_msg_t *lntmsg)
         }
 	atomic_add(total, &ist->ist_bytes_intv);
 
+        PSCFREE(tiov);
         return(rc);
 }
 
@@ -143,8 +147,8 @@ int tcpnal_recv(lnet_ni_t     *ni,
                 unsigned int  mlen,
                 unsigned int  rlen)
 {
+        struct iovec *tiov = PSCALLOC(sizeof(*tiov) * (niov));
         static pthread_mutex_t recv_lock = PTHREAD_MUTEX_INITIALIZER;
-        struct iovec tiov[256];
 	struct iostats *ist;
         unsigned char *trash;
         int ntiov, rc;
@@ -157,7 +161,7 @@ int tcpnal_recv(lnet_ni_t     *ni,
 
         LASSERT(iov != NULL);           /* I don't understand kiovs */
 
-        ntiov = lnet_extract_iov(256, tiov, niov, iov, offset, mlen);
+        ntiov = lnet_extract_iov(niov, tiov, niov, iov, offset, mlen);
 
         trash=malloc(rlen - mlen);
         pthread_mutex_lock(&recv_lock);
@@ -168,6 +172,9 @@ int tcpnal_recv(lnet_ni_t     *ni,
                 /*TODO: check error status*/
 	        psc_sock_read(c->fd, trash, rlen - mlen, 0);
         }
+
+
+        PSCFREE(tiov);
 
         pthread_mutex_unlock(&recv_lock);
 	free(trash);
