@@ -239,6 +239,7 @@ struct pscrpc_request_set {
 	psc_waitq_t         *set_wakeup_ptr;   /* Others wait here..    */
 	set_interpreter_func set_interpret;    /* callback function     */
 	void                *set_arg;          /* callback pointer      */
+	psc_spinlock_t       set_lock;
 #if 0
 	//psc_spinlock_t     rqset_lock;
 	//psclist_cache_t    rqset_reqs;       /* the request list      */
@@ -780,44 +781,48 @@ pscrpc_wake_client_req (struct pscrpc_request *req)
  */
 
 #define SVR_TIMEOUT 60
-#define  __psc_server_wait_event(wq, condition, info, ret, excl, lck)		\
-do {										\
-	time_t __now       = time(NULL);					\
-	time_t __timeout   = SVR_TIMEOUT;					\
-	time_t __then      = 0;							\
-	int    __timed_out = 0;							\
-	struct timespec abstime = {0, 0};					\
-										\
-	ret = 0;								\
-	if (condition) break;							\
-										\
-	while (!(condition)) {							\
-		if (__timeout)							\
-			abstime.tv_sec = __timeout + __now;			\
-		abstime.tv_nsec = 0;						\
-		ret = psc_waitq_timedwait(wq, lck, &abstime);			\
-		if (ret) {							\
-			ret = -ret;						\
-			break;							\
-		}								\
-		if (condition) break;						\
-										\
-		if (!__timed_out && info->lwi_timeout != 0) {			\
-			__now = time(NULL);					\
-			__timeout -= __now - __then;				\
-			__then = __now;						\
-										\
-			if (__timeout > 0) continue;				\
-			__timeout = 0;						\
-			__timed_out = 1;					\
-			if (info->lwi_on_timeout == NULL ||			\
-			    info->lwi_on_timeout(info->lwi_cb_data)) {		\
-				ret = -ETIMEDOUT;				\
-				break;						\
-			}							\
-		}								\
-	}									\
-} while (0)
+#define SVR_SHORT_TIMEO 1
+#define  __psc_server_wait_event(wq, condition, info, ret, excl, lck)	\
+	do {								\
+		time_t __now       = time(NULL);			\
+		time_t __timeout   = SVR_TIMEOUT;			\
+		time_t __then      = __now;				\
+		int    __timed_out = 0;					\
+		struct timespec abstime = {0, 0};			\
+									\
+		ret = 0;						\
+									\
+		while (!(condition)) {					\
+			if (__timeout)					\
+				abstime.tv_sec = SVR_SHORT_TIMEO + __now; \
+			abstime.tv_nsec = 0;				\
+			ret = psc_waitq_timedwait(wq, lck, &abstime);	\
+			if (ret && (ret != ETIMEDOUT)) {		\
+				ret = -ret;				\
+				break;					\
+			} else						\
+				ret = 0;				\
+									\
+			if (condition)					\
+				break;					\
+			}						\
+									\
+			if (!__timed_out && info->lwi_timeout != 0) {	\
+				__now = time(NULL);			\
+				__timeout -= __now - __then;		\
+				__then = __now;				\
+									\
+				if (__timeout > 0) continue;		\
+				__timeout = 0;				\
+				__timed_out = 1;			\
+				if (info->lwi_on_timeout == NULL ||	\
+				    info->lwi_on_timeout(info->lwi_cb_data)) { \
+					ret = -ETIMEDOUT;		\
+					break;				\
+				}					\
+			}						\
+		}							\
+	} while (0)
 
 
 /**
@@ -828,68 +833,70 @@ do {										\
  *	is replaced with something that uses timed waitq's.
  */
 #define pscrpc_timeout 13
-#define __psc_client_wait_event(wq, condition, info, ret, excl)			\
-do {										\
-	time_t __timeout = info->lwi_timeout;					\
-	long __now;								\
-	long __then = 0;							\
-	int  __timed_out = 0;							\
-	int  __interval = pscrpc_timeout;					\
-										\
-	ret = 0;								\
-	if (condition)								\
-		break;								\
-										\
-	if (__timeout != 0)							\
-		__then = time(NULL);						\
-	if (__timeout && __timeout < __interval)				\
-		__interval = __timeout;						\
-	if (info->lwi_interval && info->lwi_interval < __interval)		\
-		__interval = info->lwi_interval;				\
-										\
-	while (!(condition)) {							\
-		ret = pscrpc_wait_event(__interval);			        \
-		if (0<ret) ret=0; /* preserve the previous semantics */         \
-		if (condition)							\
-			break;							\
-		if (-ETIMEDOUT==ret) break;     				\
-		if (!__timed_out && info->lwi_timeout != 0) {			\
-			__now = time(NULL);					\
-			__timeout -= __now - __then;				\
-			__then = __now;						\
-										\
-			if (__timeout > 0)					\
-				continue;					\
-										\
-			__timeout = 0;						\
-			__timed_out = 1;					\
-			if (info->lwi_on_timeout == NULL ||			\
-			    info->lwi_on_timeout(info->lwi_cb_data)) {		\
-				ret = -ETIMEDOUT;				\
-				break;						\
-			}							\
-		}								\
-	}									\
-} while (0)
+#define __psc_client_wait_event(wq, condition, info, ret, excl)		\
+	do {								\
+		time_t __timeout = info->lwi_timeout;			\
+		long __now;						\
+		long __then = 0;					\
+		int  __timed_out = 0;					\
+		int  __interval = pscrpc_timeout;			\
+									\
+		ret = 0;						\
+		if (condition)						\
+			break;						\
+									\
+		if (__timeout != 0)					\
+			__then = time(NULL);				\
+		if (__timeout && __timeout < __interval)		\
+			__interval = __timeout;				\
+		if (info->lwi_interval && info->lwi_interval < __interval) \
+			__interval = info->lwi_interval;		\
+									\
+		while (!(condition)) {					\
+			ret = pscrpc_wait_event(__interval);		\
+			if (0<ret) ret=0; /* preserve the previous semantics */	\
+			if (condition)					\
+				break;					\
+			if (-ETIMEDOUT==ret) break;			\
+			if (!__timed_out && info->lwi_timeout != 0) {	\
+				__now = time(NULL);			\
+				__timeout -= __now - __then;		\
+				__then = __now;				\
+									\
+				if (__timeout > 0)			\
+					continue;			\
+									\
+				__timeout = 0;				\
+				__timed_out = 1;			\
+				if (info->lwi_on_timeout == NULL ||	\
+				    info->lwi_on_timeout(info->lwi_cb_data)) { \
+					ret = -ETIMEDOUT;		\
+					break;				\
+				}					\
+			}						\
+		}							\
+	} while (0)
 
 
-#define psc_cli_wait_event(wq, condition, info)					\
-({										\
-	int                 __ret;						\
-	struct l_wait_info *__info = (info);					\
-										\
-	__psc_client_wait_event(wq, condition, __info, __ret, 0);		\
-	__ret;									\
-})
+#define psc_cli_wait_event(wq, condition, info, lck)			\
+	({								\
+		int                 __ret;				\
+		struct l_wait_info *__info = (info);			\
+									\
+		__psc_client_wait_event(wq, condition, __info, __ret, 0); \
+		__ret;							\
+	})
 
-#define psc_svr_wait_event(wq, condition, info, lck)				\
-({										\
-	int                 __ret;						\
-	struct l_wait_info *__info = (info);					\
-										\
-	__psc_server_wait_event(wq, condition, __info, __ret, 0, lck);		\
-	__ret;									\
-})
+#define psc_svr_wait_event(wq, condition, info, lck)			\
+	({								\
+		int                 __ret;				\
+		struct l_wait_info *__info = (info);			\
+									\
+		__psc_server_wait_event(wq, condition, __info, __ret, 0, lck); \
+		__ret;							\
+	})
+
+#define psc_wait_event psc_svr_wait_event
 
 #undef list_head
 #undef LIST_HEAD_INIT
