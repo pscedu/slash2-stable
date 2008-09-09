@@ -84,7 +84,6 @@ int tcpnal_send(lnet_ni_t *ni, __unusedx void *private, lnet_msg_t *lntmsg)
         static pthread_mutex_t send_lock = PTHREAD_MUTEX_INITIALIZER;
 	struct iostats *ist;
         int rc = 0;
-        int   sysrc;
         int   total;
         int   ntiov;
         int i;
@@ -113,25 +112,24 @@ int tcpnal_send(lnet_ni_t *ni, __unusedx void *private, lnet_msg_t *lntmsg)
 
         pthread_mutex_lock(&send_lock);
 	rc = psc_sock_writev(c->fd, tiov, ntiov, 0);
+        pthread_mutex_unlock(&send_lock);
 
-        CDEBUG(D_NET, "sent %s total %d in %d frags (sysrc=%d)\n",
+        CDEBUG(D_NET, "sent %s total %d in %d frags (rc=%d)\n",
                hdr->type == LNET_MSG_ACK ? "ACK" :
                hdr->type == LNET_MSG_PUT ? "PUT" :
                hdr->type == LNET_MSG_GET ? "GET" :
                hdr->type == LNET_MSG_REPLY ? "REPLY" :
                hdr->type == LNET_MSG_HELLO ? "HELLO" : "UNKNOWN",
-               total, niov + 1, sysrc);
+               total, niov + 1, rc);
 
-        pthread_mutex_unlock(&send_lock);
+        PSCFREE(tiov);
+	atomic_add(total, &ist->ist_bytes_intv);
 
         if (rc == 0) {
                 /* NB the NAL only calls lnet_finalize() if it returns 0
                  * from cb_send() */
                 lnet_finalize(ni, lntmsg, 0);
-        }
-	atomic_add(total, &ist->ist_bytes_intv);
-
-        PSCFREE(tiov);
+        } 
         return(rc);
 }
 
@@ -173,18 +171,17 @@ int tcpnal_recv(lnet_ni_t     *ni,
 	        psc_sock_read(c->fd, trash, rlen - mlen, 0);
         }
 
-
-        PSCFREE(tiov);
-
         pthread_mutex_unlock(&recv_lock);
+
+        PSCFREE(tiov); 
 	free(trash);
 finalize:
+	atomic_add(rlen, &ist->ist_bytes_intv);
+
 	if (rc == 0)
 	        lnet_finalize(ni, cookie, 0);
 
         LASSERT(rlen >= mlen);
-
-	atomic_add(rlen, &ist->ist_bytes_intv);
 
         return(rc);
 }
