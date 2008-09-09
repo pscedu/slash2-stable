@@ -322,8 +322,8 @@ void pscrpc_unregister_bulk (struct pscrpc_request *req)
                 /* Network access will complete in finite time but the HUGE
                  * timeout lets us CWARN for visibility of sluggish NALs */
                 lwi = LWI_TIMEOUT (300, NULL, NULL);
-                rc = psc_cli_wait_event(*wq, !pscrpc_bulk_active(desc),
-					&lwi);
+                rc = psc_wait_event(wq, !pscrpc_bulk_active(desc),
+				    &lwi, NULL);
                 if (rc == 0)
                         return;
 

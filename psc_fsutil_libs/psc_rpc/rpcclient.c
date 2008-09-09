@@ -2,6 +2,8 @@
 
 #define PSC_SUBSYS PSS_RPC
 
+#include <stdlib.h>
+
 #include "psc_rpc/rpc.h"
 #include "psc_rpc/rpclog.h"
 #include "psc_rpc/export.h"
@@ -327,6 +329,7 @@ pscrpc_prep_set(void)
 	init_waitqueue_head(&set->set_waitq);
 	set->set_remaining = 0;
 	spin_lock_init(&set->set_new_req_lock);
+	spin_lock_init(&set->set_lock);
 	INIT_PSCLIST_HEAD(&set->set_new_requests);
 
 	RETURN(set);
@@ -448,6 +451,10 @@ int pscrpc_push_req(struct pscrpc_request *req) {
 		 */
 		return (pscrpc_send_new_req_locked(req));
 	else {
+		/* This is ok, it means that another thread has done
+		 *   a pscrpc_check_set() which also pushes req's 
+		 *   which are ZRQ_PHASE_NEW.
+		 */
 		freelock(&req->rq_lock);
 		DEBUG_REQ(PLL_INFO, req, "req already inflight");
 		return (0);
@@ -522,9 +529,9 @@ void pscrpc_unregister_reply (struct pscrpc_request *request)
 		/* Network access will complete in finite time but the HUGE
 		 * timeout lets us CWARN for visibility of sluggish NALs */
 		lwi = LWI_TIMEOUT(300, NULL, NULL);
-		rc = psc_cli_wait_event(*wq,
-					!pscrpc_client_receiving_reply(request),
-					&lwi);
+		rc = psc_wait_event(wq,
+				    !pscrpc_client_receiving_reply(request),
+				    &lwi, NULL);
 		if (rc == 0)
 			return;
 
@@ -743,7 +750,8 @@ int pscrpc_queue_wait(struct pscrpc_request *req)
 	lwi = LWI_TIMEOUT_INTR(timeout, expired_request,
 			       interrupted_request, req);
 
-	psc_cli_wait_event(req->rq_reply_waitq, pscrpc_check_reply(req), &lwi);
+	psc_wait_event(&req->rq_reply_waitq, pscrpc_check_reply(req),
+		       &lwi, NULL);
 	DEBUG_REQ(PLL_INFO, req, "-- done sleeping");
 
 	psc_info("Completed RPC status:err:xid:nid:opc %d:%d:%"_P_U64"x:%s:%d",
@@ -812,9 +820,9 @@ int pscrpc_queue_wait(struct pscrpc_request *req)
 			 * tranferred OK before she replied with success to
 			 * me. */
 			lwi = LWI_TIMEOUT(timeout, NULL, NULL);
-			brc = psc_cli_wait_event(req->rq_reply_waitq,
-						 !pscrpc_bulk_active(req->rq_bulk),
-						 &lwi);
+			brc = psc_wait_event(&req->rq_reply_waitq,
+					     !pscrpc_bulk_active(req->rq_bulk),
+					     &lwi, NULL);
 			psc_assert(brc == 0 || brc == -ETIMEDOUT);
 			if (brc != 0) {
 				psc_assert(brc == -ETIMEDOUT);
@@ -860,11 +868,12 @@ int pscrpc_check_set(struct pscrpc_request_set *set, int check_allsent)
 
 	psclist_for_each(tmp, &set->set_requests) {
 		struct pscrpc_request *req =
-			psclist_entry(tmp, struct pscrpc_request, rq_set_chain_lentry);
+			psclist_entry(tmp, struct pscrpc_request, 
+				      rq_set_chain_lentry);
 		struct pscrpc_import *imp = req->rq_import;
 		int rc = 0;
 
-		DEBUG_REQ(PLL_TRACE, req, "reqset=%p", set);
+		DEBUG_REQ(PLL_INFO, req, "reqset=%p", set);
 
 		if (req->rq_phase == ZRQ_PHASE_NEW && 
 		    pscrpc_push_req(req)) {
@@ -930,7 +939,9 @@ int pscrpc_check_set(struct pscrpc_request_set *set, int check_allsent)
 		}
 
 		if (req->rq_phase == ZRQ_PHASE_RPC) {
-			if (req->rq_timedout||req->rq_waiting||req->rq_resend) {
+			if (req->rq_timedout || 
+			    req->rq_waiting  ||
+			    req->rq_resend) {
 				int status=0;
 				pscrpc_unregister_reply(req);
 
@@ -1059,14 +1070,14 @@ int pscrpc_check_set(struct pscrpc_request_set *set, int check_allsent)
 						     req->rq_status);
 		}
 
+		set->set_remaining--;
+
 		psc_dbg("Completed RPC pname:cluuid:pid:xid:nid:"
-		       "opc %d:%"_P_U64"u:%s:%d",
+		       "opc %d:%"_P_U64"u:%s:%d rem=(%d)",
 		       req->rq_reqmsg->status,
 		       req->rq_xid,
 		       libcfs_nid2str(imp->imp_connection->c_peer.nid),
-		       req->rq_reqmsg->opc);
-
-		set->set_remaining--;
+			req->rq_reqmsg->opc, set->set_remaining);
 
 		atomic_dec(&imp->imp_inflight);
 		wake_up(&imp->imp_recovery_waitq);
@@ -1331,7 +1342,8 @@ int pscrpc_set_wait(struct pscrpc_request_set *set)
 		RETURN(0);
 
 	psclist_for_each(tmp, &set->set_requests) {
-		req = psclist_entry(tmp, struct pscrpc_request, rq_set_chain_lentry);
+		req = psclist_entry(tmp, struct pscrpc_request, 
+				    rq_set_chain_lentry);
 
 		if (req->rq_phase == ZRQ_PHASE_NEW)
 			(void)pscrpc_push_req(req);
@@ -1339,17 +1351,17 @@ int pscrpc_set_wait(struct pscrpc_request_set *set)
 
 	do {
 		timeout = pscrpc_set_next_timeout(set);
-
 		/* wait until all complete, interrupted, or an in-flight
-		 * req times out */
+		 * req times out 
+		 */
 		CDEBUG(D_NET, "set %p going to sleep for %d seconds\n",
 		       set, timeout);
 		lwi = LWI_TIMEOUT_INTR((timeout ? timeout : 1) * HZ,
 				       pscrpc_expired_set,
 				       pscrpc_interrupted_set, set);
 
-		rc = psc_cli_wait_event(set->set_waitq,
-					pscrpc_check_set(set, 1), &lwi);
+		rc = psc_wait_event(&set->set_waitq,
+				    pscrpc_check_set(set, 1), &lwi, NULL);
 
 		psc_assert(rc == 0 || rc == -EINTR || rc == -ETIMEDOUT);
 
@@ -1359,9 +1371,10 @@ int pscrpc_set_wait(struct pscrpc_request_set *set)
 		 * timed out, signals are enabled allowing completion with
 		 * EINTR.
 		 * I don't really care if we go once more round the loop in
-		 * the error cases -eeb. */
-
-		/* let the real timeouts bubble back up to the caller */
+		 * the error cases -eeb. 
+		 */
+		/* let the real timeouts bubble back up to the caller 
+		 */
 		if (-ETIMEDOUT==rc) RETURN(rc);
 	} while (rc != 0 || set->set_remaining != 0);
 
@@ -1384,10 +1397,11 @@ int pscrpc_set_wait(struct pscrpc_request_set *set)
 		if (!(req->rq_phase == ZRQ_PHASE_COMPLETE)){
 			psc_errorx("error in rq_phase: rq_phase = 0x%x",
 				   req->rq_phase);
+			rc = -EIO;
 		}
 #endif
 		if (req->rq_status != 0)
-			rc = req->rq_status;
+			rc = -(abs(req->rq_status));
 	}
 
 	if (!rc && /* don't bother unless it completed successfully */
@@ -1397,6 +1411,38 @@ int pscrpc_set_wait(struct pscrpc_request_set *set)
 	}
 
 	RETURN(rc);
+}
+
+
+/**
+ * pscrpc_set_finalize - call set_wait or check_set depending on blocking mode.  If the set has completed then free it.
+ * @set: the set.
+ * @block: call set_wait right away or otherwise only if check_set reports the set as being done.
+ * @destroy: call destroy if the set has completed.
+ */
+int 
+pscrpc_set_finalize(struct pscrpc_request_set *set, int block, int destroy)
+{
+	int rc;
+		
+	if (block) {
+	set_wait:
+		rc = pscrpc_set_wait(set);
+		if (rc) {
+			psc_error("pscrpc_set_wait() failed for set %p", set);
+			return (rc);
+		} else {
+			if (destroy)
+				pscrpc_set_destroy(set);
+			return (0);
+		}
+	} else {
+		rc = pscrpc_check_set(set, 1);
+		psc_warnx("pscrpc_check_set() returned %d set=%p", rc, set);
+		if (rc == 1)
+			goto set_wait;
+	}
+	return (rc);
 }
 
 #if 0

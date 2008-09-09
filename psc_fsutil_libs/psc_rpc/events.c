@@ -441,8 +441,8 @@ pscrpc_wait_event (int timeout)
                 /* Give all registered callbacks a bite at the cherry */
                 psclist_for_each(tmp, &pscrpc_wait_callbacks) {
                         llwc = psclist_entry(tmp, struct pscrpc_wait_callback,
-                                          llwc_list);
-
+					     llwc_list);
+			
                         if (llwc->llwc_fn(llwc->llwc_arg))
                                 found_something = 1;
                 }

@@ -87,8 +87,8 @@ nbrequest_reap(struct pscrpc_nbreqset *nbs) {
 	ENTRY;
 
         lwi = LWI_TIMEOUT(timeout, NULL, NULL);
-        psc_cli_wait_event(set->set_waitq,
-			   (nreaped=pscrpc_check_set(set, 0)), &lwi);
+        psc_wait_event(&set->set_waitq,
+		       (nreaped=pscrpc_check_set(set, 0)), &lwi, NULL);
 
 	if (!nreaped)
 		RETURN(0);
