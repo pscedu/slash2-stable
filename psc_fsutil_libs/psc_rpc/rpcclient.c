@@ -529,9 +529,9 @@ void pscrpc_unregister_reply (struct pscrpc_request *request)
 		/* Network access will complete in finite time but the HUGE
 		 * timeout lets us CWARN for visibility of sluggish NALs */
 		lwi = LWI_TIMEOUT(300, NULL, NULL);
-		rc = psc_wait_event(wq,
+		rc = psc_cli_wait_event(wq,
 				    !pscrpc_client_receiving_reply(request),
-				    &lwi, NULL);
+				    &lwi);
 		if (rc == 0)
 			return;
 
@@ -750,8 +750,8 @@ int pscrpc_queue_wait(struct pscrpc_request *req)
 	lwi = LWI_TIMEOUT_INTR(timeout, expired_request,
 			       interrupted_request, req);
 
-	psc_wait_event(&req->rq_reply_waitq, pscrpc_check_reply(req),
-		       &lwi, NULL);
+	psc_cli_wait_event(&req->rq_reply_waitq, pscrpc_check_reply(req),
+		       &lwi);
 	DEBUG_REQ(PLL_INFO, req, "-- done sleeping");
 
 	psc_info("Completed RPC status:err:xid:nid:opc %d:%d:%"_P_U64"x:%s:%d",
@@ -820,9 +820,9 @@ int pscrpc_queue_wait(struct pscrpc_request *req)
 			 * tranferred OK before she replied with success to
 			 * me. */
 			lwi = LWI_TIMEOUT(timeout, NULL, NULL);
-			brc = psc_wait_event(&req->rq_reply_waitq,
+			brc = psc_cli_wait_event(&req->rq_reply_waitq,
 					     !pscrpc_bulk_active(req->rq_bulk),
-					     &lwi, NULL);
+					     &lwi);
 			psc_assert(brc == 0 || brc == -ETIMEDOUT);
 			if (brc != 0) {
 				psc_assert(brc == -ETIMEDOUT);
@@ -1360,8 +1360,8 @@ int pscrpc_set_wait(struct pscrpc_request_set *set)
 				       pscrpc_expired_set,
 				       pscrpc_interrupted_set, set);
 
-		rc = psc_wait_event(&set->set_waitq,
-				    pscrpc_check_set(set, 1), &lwi, NULL);
+		rc = psc_cli_wait_event(&set->set_waitq,
+				    pscrpc_check_set(set, 1), &lwi);
 
 		psc_assert(rc == 0 || rc == -EINTR || rc == -ETIMEDOUT);
 

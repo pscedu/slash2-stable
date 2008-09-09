@@ -132,9 +132,9 @@ void pscrpc_invalidate_import(struct pscrpc_import *imp)
 
         /* wait for all requests to error out and call completion callbacks */
         lwi = LWI_TIMEOUT_INTERVAL(MAX(ZOBD_TIMEOUT, 1), HZ, NULL, NULL);
-        rc = psc_wait_event(&imp->imp_recovery_waitq,
+        rc = psc_cli_wait_event(&imp->imp_recovery_waitq,
 			    (atomic_read(&imp->imp_inflight) == 0),
-			    &lwi, NULL);
+			    &lwi);
 	
         if (rc)
                 CERROR("rc = %d waiting for callback (%d != 0)\n",

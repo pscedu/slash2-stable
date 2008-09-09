@@ -764,7 +764,7 @@ pscrpc_wake_client_req (struct pscrpc_request *req)
 	.lwi_interval   = 0                                                  \
 })
 
-#define LWI_INTR(cb, data)  LWI_TIMEOUT_INTR(0, NULL, cb, data)
+#define LWI_INTR(cb, data)  LWI_TIMEOUT_INTR(0, NULL, (cb), (data))
 
 #define PSC_FATAL_SIGS (sigmask(SIGKILL) | sigmask(SIGINT)  |              \
 			sigmask(SIGTERM) | sigmask(SIGQUIT) |              \
@@ -876,26 +876,30 @@ pscrpc_wake_client_req (struct pscrpc_request *req)
 		}							\
 	} while (0)
 
-
-#define psc_cli_wait_event(wq, condition, info, lck)			\
+#ifdef PSCRPC_POLL_BLOCK
+# define psc_cli_wait_event(wq, condition, info)			\
 	({								\
 		int                 __ret;				\
 		struct l_wait_info *__info = (info);			\
 									\
-		__psc_client_wait_event(wq, condition, __info, __ret, 0); \
+		__psc_client_wait_event((wq), (condition), __info,	\
+		    __ret, 0);						\
 		__ret;							\
 	})
+#else
+# define psc_cli_wait_event(wq, condition, info)			\
+	psc_svr_wait_event((wq), (condition), (info), NULL)
+#endif
 
 #define psc_svr_wait_event(wq, condition, info, lck)			\
 	({								\
 		int                 __ret;				\
 		struct l_wait_info *__info = (info);			\
 									\
-		__psc_server_wait_event(wq, condition, __info, __ret, 0, lck); \
+		__psc_server_wait_event((wq), (condition), __info,	\
+		    __ret, 0, (lck));					\
 		__ret;							\
 	})
-
-#define psc_wait_event psc_svr_wait_event
 
 #undef list_head
 #undef LIST_HEAD_INIT
