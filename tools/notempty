@@ -1,0 +1,5 @@
+#!/usr/bin/perl
+
+my $arg = shift || "";
+$arg =~ s/^\s+|\s$//g;
+exit($arg ? 0 : 1);

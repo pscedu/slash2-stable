@@ -98,10 +98,10 @@ recurse-install:
 	fi
 	@if [ -n "${PROG}" ]; then							\
 		mkdir -p ${INSTALLDIR}/bin;						\
-		echo cp -pf ${PROG} ${INSTALLDIR}/bin;				\
+		echo cp -pf ${PROG} ${INSTALLDIR}/bin;					\
 		cp -pf ${PROG} ${INSTALLDIR}/bin;					\
 	fi
-	@if [ -n "${HEADERS:Q}" ]; then							\
+	@if ${NOTEMPTY} "${HEADERS}"; then						\
 		for i in "${HEADERS}"; do						\
 			if [ x"$${i%/*}" = x"$$i" ]; then				\
 				_dir=${INSTALLDIR}/include/$${i%/*};			\
@@ -126,7 +126,7 @@ depend: ${_C_SRCS}
 			echo "<=== ${DIRPREFIX}" | sed 's!/$$!!';			\
 		fi;									\
 	done
-	@if [ -n "${_C_SRCS:Q}" ]; then							\
+	@if ${NOTEMPTY} "${_C_SRCS}"; then						\
 		echo "${MKDEP} ${INCLUDES} ${DEFINES} ${_C_SRCS}";			\
 		${MKDEP} ${INCLUDES} ${DEFINES} ${_C_SRCS};				\
 	fi
@@ -163,7 +163,7 @@ lint:
 			echo "<=== ${DIRPREFIX}" | sed 's!/$$!!';			\
 		fi;									\
 	done
-	@if [ -n "${SRCS:Q}" ]; then							\
+	@if ${NOTEMPTY} "${SRCS}"; then							\
 		echo "${LINT} ${INCLUDES} ${DEFINES} ${SRCS}";				\
 		${LINT} ${INCLUDES} ${DEFINES} ${SRCS} || true;				\
 	fi
@@ -180,7 +180,7 @@ listsrcs:
 			echo "<=== ${DIRPREFIX}" | sed 's!/$$!!' >&2;			\
 		fi;									\
 	done
-	@if [ -n "${SRCS:Q}" ]; then							\
+	@if ${NOTEMPTY} "${SRCS}"; then							\
 		echo "${SRCS}";								\
 	fi
 
