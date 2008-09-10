@@ -819,10 +819,11 @@ pscrpc_wake_client_req (struct pscrpc_request *req)
 					ret = -ETIMEDOUT;		\
 					break;				\
 				}					\
-			}						\
+			} else						\
+				__now = time(NULL);			\
 		}							\
 	} while (0)
-
+	  
 
 /**
  * __psc_client_wait_event - the below call is for clients.  Clients are
