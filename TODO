@@ -44,7 +44,6 @@ zest client
 - investigate size of block addressing types causing
   unreasonable limits on maximum file system size, perhaps
   during file system creation time (hopefully only)
-- implement FLUSH on mount_zest
 - fsck service is currently badly broken
 - faster CRC operations
 - remove ifdef buttons, either entirely or turn into
