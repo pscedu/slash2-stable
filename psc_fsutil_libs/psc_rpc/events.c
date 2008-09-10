@@ -492,12 +492,12 @@ int pscrpc_ni_init(int type)
 		/* kernel portals calls our master callback when events are added to
 		 * the event queue.  In fact lustre never pulls events off this queue,
 		 * so it's only sized for some debug history. */
-		CERROR("Requesting PID %u\n", PSC_SVR_PID);
+		psc_info("Requesting PID %u\n", PSC_SVR_PID);
 		if ((rc = LNetNIInit(PSC_SVR_PID)))
 			psc_fatalx("failed LNetNIInit() (%d)", rc);
 
 		rc = LNetEQAlloc(1024, pscrpc_master_callback, &pscrpc_eq_h);
-		CERROR("%#"_P_LU64"x pscrpc_eq_h cookie value", pscrpc_eq_h.cookie);
+		psc_info("%#"_P_LU64"x pscrpc_eq_h cookie value", pscrpc_eq_h.cookie);
 	} else {
 		/* liblustre calls the master callback when it removes events from the
 		 * event queue.  The event queue has to be big enough not to drop

@@ -269,7 +269,7 @@ lnet_parse_networks(struct list_head *nilist, char *networks)
                         ni->ni_ninterfaces++;
                         ni->ni_interfaces[niface++] = iface;
 			iface = comma;
-                        CERROR("got interface ;%s;", ni->ni_interfaces[niface-1]);
+                        psc_info("got interface ;%s;", ni->ni_interfaces[niface-1]);
 		} while (iface != NULL);
 
 		str = bracket + 1;

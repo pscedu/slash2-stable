@@ -1068,7 +1068,7 @@ lnet_startup_lndnis (void)
 
                 tni = ni;
                 rc = (lnd->lnd_startup)(ni);
-                CERROR("tni=%p ni=%p rc=%d", tni, ni, rc);
+                psc_info("tni=%p ni=%p rc=%d", tni, ni, rc);
                 ni=tni;
 
                 LNET_MUTEX_UP(&the_lnet.ln_lnd_mutex);

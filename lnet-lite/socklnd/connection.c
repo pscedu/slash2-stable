@@ -965,7 +965,7 @@ bind_socket(manager m, unsigned short port)
         if ((m->bound = socket(sock_type, SOCK_STREAM, 0)) < 0)  
                 return(0);
         
-        psc_warn("local bind address %x %x (mgr=%p) socknum=%d &b->b_io_handler %p", 
+        psc_info("local bind address %x %x (mgr=%p) socknum=%d &b->b_io_handler %p", 
                  LNET_NIDADDR(b->b_ni->ni_nid), 
                  htonl(LNET_NIDADDR(b->b_ni->ni_nid)), m, m->bound, 
                  &b->b_io_handler);
@@ -987,7 +987,7 @@ bind_socket(manager m, unsigned short port)
                 CERROR ("tcpnal bind: %s", strerror(errno)); 
                 return(0);
         }
-        psc_warn("local bind address %x %x (mgr=%p) "
+        psc_info("local bind address %x %x (mgr=%p) "
                  "socknum=%d &b->b_io_handler %p", 
                  LNET_NIDADDR(b->b_ni->ni_nid), 
                  htonl(LNET_NIDADDR(b->b_ni->ni_nid)), m, m->bound, 
@@ -1042,7 +1042,7 @@ init_connections(int (*input)(void *, void *), void *a)
     m->handler_arg = b = a;
     m->port = 0;                         /* set on first connection */
        
-    psc_warnx("nid %s tid %d b %p", 
+    psc_info("nid %s tid %d b %p", 
               libcfs_nid2str(b->b_ni->ni_nid), b->tid, b);
 
     pthread_mutex_init(&m->conn_lock, 0);

@@ -91,7 +91,7 @@ io_handler register_io_handler(int fd,
 
     memset(i, 0, (sizeof(struct io_handler)));
     
-    CERROR("register_io_handler fd %d ioh=%p", fd, *handler_head);
+    psc_info("register_io_handler fd %d ioh=%p", fd, *handler_head);
 
     if ((i->fd=fd)>=0){
         i->type=type;
