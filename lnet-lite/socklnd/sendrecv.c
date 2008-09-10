@@ -35,8 +35,8 @@ psc_sock_io(int s, void *p, int nob, int timeout, int wr)
 		LASSERT(0);
 
 	flags = MSG_NOSIGNAL | MSG_WAITALL;
-	if (wr && !timeout)
-		flags |= MSG_DONTWAIT;
+//	if (wr && !timeout)
+//		flags |= MSG_DONTWAIT;
 
 	now = then;
 	for (; nob; nob -= rc, buf += rc) {
@@ -58,9 +58,9 @@ psc_sock_io(int s, void *p, int nob, int timeout, int wr)
 		}
 
 		if (wr)
-			rc = write(s, buf, nob);
+			rc = send(s, buf, nob, flags);
 		else
-			rc = read(s, buf, nob);
+			rc = recv(s, buf, nob, flags);
 		if (rc == -1)
 			return (-errno);
 		if (rc == 0) {
