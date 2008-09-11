@@ -40,7 +40,7 @@ _pll_init(struct psc_lockedlist *pll, int offset, psc_spinlock_t *lkp)
 	if (lkp)
 		pll->pll_lockp = lkp;
 	else {
-		pll->pll_lockp = PSCALLOC(sizeof(pll->pll_lockp));
+		pll->pll_lockp = PSCALLOC(sizeof(*pll->pll_lockp));
 		LOCK_INIT(pll->pll_lockp);
 		pll->pll_flags |= PLLF_ALLOCLOCK;
 	}
