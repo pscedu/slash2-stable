@@ -10,6 +10,7 @@
 #include <stddef.h>
 
 #include "psc_ds/list.h"
+#include "psc_util/alloc.h"
 #include "psc_util/assert.h"
 #include "psc_util/atomic.h"
 #include "psc_util/lock.h"
@@ -24,17 +25,18 @@ struct psc_lockedlist {
 
 #define PLLF_ALLOCLOCK	(1 << 0)	/* list alloc'd its own lock */
 
-#define PLL_INITIALIZER(pll, type, member, lock) \
-	{ PSCLIST_HEAD_INIT((pll)->pll_listhd), LOCK_INITIALIZER, \
-	  ATOMIC_INIT(0), offsetof(type, member), (lock) }
+#define PLL_INITIALIZER(pll, type, member, lock)		\
+	{ PSCLIST_HEAD_INIT((pll)->pll_listhd), (lock),		\
+	  ATOMIC_INIT(0), offsetof(type, member), 0 }
 
-#define pll_init(pll, type, member, lock) \
+#define pll_init(pll, type, member, lock)			\
 	_pll_init((pll), offsetof(type, member), (lock))
 
 static __inline void
 _pll_init(struct psc_lockedlist *pll, int offset, psc_spinlock_t *lkp)
 {
 	INIT_PSCLIST_HEAD(&pll->pll_listhd);
+	pll->pll_flags = 0;
 	if (lkp)
 		pll->pll_lockp = lkp;
 	else {

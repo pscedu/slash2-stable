@@ -3,8 +3,9 @@
 #include "psc_ds/lockedlist.h"
 #include "psc_ds/pool.h"
 
-struct psc_lockedlist psc_pools =
-    PLL_INITIALIZER(&psc_pools, struct psc_poolmgr, ppm_lentry);
+psc_spinlock_t psc_pools_lock = LOCK_INITIALIZER;
+struct psc_lockedlist psc_pools = PLL_INITIALIZER(&psc_pools,
+    struct psc_poolmgr, ppm_lentry, &psc_pools_lock);
 
 /*
  * psc_pool_grow - increase #items in a pool.
