@@ -505,10 +505,10 @@ atomic_add_return(int i, atomic_t *v)
  *
  * Atomically adds @i to @v and returns @i + @v
  */
-static __inline int
+static __inline int64_t
 psc_atomic64_add_return(int64_t i, psc_atomic64_t *v)
 {
-	int __i = i;
+	int64_t __i = i;
 
 	__asm__ __volatile__(
 		LOCK_PREFIX "xaddq %0, %1;"
