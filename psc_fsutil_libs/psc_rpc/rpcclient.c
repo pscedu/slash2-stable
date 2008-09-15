@@ -1434,7 +1434,7 @@ pscrpc_set_finalize(struct pscrpc_request_set *set, int block, int destroy)
 		}
 	} else {
 		rc = pscrpc_check_set(set, 1);
-		psc_warnx("pscrpc_check_set() returned %d set=%p", rc, set);
+		psc_trace("pscrpc_check_set() returned %d set=%p", rc, set);
 		if (rc == 1)
 			goto set_wait;
 		else 
