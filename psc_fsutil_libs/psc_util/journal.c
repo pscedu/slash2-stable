@@ -344,14 +344,12 @@ pjournal_headtail_get(struct psc_journal *pj, struct psc_journal_walker *pjw)
 
 		for (i=0; i < rc; i++) {			
 			struct psc_journal_enthdr *h = jbuf[pj->pj_entsz * i];
-
 			/* Punt for now.
 			 */
 			if (h->pje_type & PJET_CORRUPT) {
 				rc = -1;
 				goto out;
-			}			
-
+			}
 			if (!ents && !i)
 				lastgen = h->pje_genmarker;
 			
@@ -362,8 +360,7 @@ pjournal_headtail_get(struct psc_journal *pj, struct psc_journal_walker *pjw)
 				pjw->pjw_stop = (ents + i) - 1;
 				rc = 0;
 				goto out;
-			}
-				
+			}				
 			if ((lastgen & PJET_LOG_GMASK) != 
 			    (h->pje_genmarker & PJET_LOG_GMASK)) {
 				psc_trace("found tm @slot(%d)", (ents + i)-1);
@@ -387,7 +384,6 @@ pjournal_headtail_get(struct psc_journal *pj, struct psc_journal_walker *pjw)
 				 *  would mean that tm+1 would be the sm.
 				 */
 			}
-
 			if (h->pje_genmarker & PJET_LOG_STMRK)
 				sm = ents + i;
 		}
