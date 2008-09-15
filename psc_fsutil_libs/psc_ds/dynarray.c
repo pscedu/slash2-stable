@@ -49,6 +49,19 @@ dynarray_add(struct dynarray *da, void *item)
 	return (0);
 }
 
+int
+dynarray_add_ifdne(struct dynarray *da, void *item)
+{
+	int j;
+
+	for (j=0; j < dynarray_len(da); j++) {
+		if (item == dynarray_getpos(da, j))
+			return (1);
+	}
+
+	return (dynarray_add(da, item));
+}
+
 void *
 dynarray_get(const struct dynarray *da)
 {
@@ -62,6 +75,7 @@ dynarray_getpos(const struct dynarray *da, int pos)
 		psc_fatalx("out of bounds array access");
 	return (da->da_items[pos]);
 }
+
 
 void
 dynarray_free(struct dynarray *da)
