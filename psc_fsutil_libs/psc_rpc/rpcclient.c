@@ -1069,15 +1069,10 @@ int pscrpc_check_set(struct pscrpc_request_set *set, int check_allsent)
 			req->rq_status = interpreter(req, &req->rq_async_args,
 						     req->rq_status);
 		}
-
 		set->set_remaining--;
 
-		psc_dbg("Completed RPC pname:cluuid:pid:xid:nid:"
-		       "opc %d:%"_P_U64"u:%s:%d rem=(%d)",
-		       req->rq_reqmsg->status,
-		       req->rq_xid,
-		       libcfs_nid2str(imp->imp_connection->c_peer.nid),
-			req->rq_reqmsg->opc, set->set_remaining);
+		DEBUG_REQ(PLL_DEBUG, req, "set(%p) rem=(%d) ", 
+			  set, set->set_remaining);
 
 		atomic_dec(&imp->imp_inflight);
 		wake_up(&imp->imp_recovery_waitq);
@@ -1419,6 +1414,7 @@ int pscrpc_set_wait(struct pscrpc_request_set *set)
  * @set: the set.
  * @block: call set_wait right away or otherwise only if check_set reports the set as being done.
  * @destroy: call destroy if the set has completed.
+ * Notes: return 0 when the set has been completed, otherwise return 1
  */
 int 
 pscrpc_set_finalize(struct pscrpc_request_set *set, int block, int destroy)
@@ -1441,6 +1437,8 @@ pscrpc_set_finalize(struct pscrpc_request_set *set, int block, int destroy)
 		psc_warnx("pscrpc_check_set() returned %d set=%p", rc, set);
 		if (rc == 1)
 			goto set_wait;
+		else 
+			rc = 1;
 	}
 	return (rc);
 }
