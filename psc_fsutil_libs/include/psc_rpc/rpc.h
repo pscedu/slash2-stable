@@ -605,6 +605,9 @@ int
 pscrpc_check_set(struct pscrpc_request_set *set,
 		  int check_allsent);
 
+int 
+pscrpc_set_finalize(struct pscrpc_request_set *set, int block, int destroy);
+
 int  pscrpc_set_wait(struct pscrpc_request_set *);
 void pscrpc_set_destroy(struct pscrpc_request_set *);
 
@@ -832,7 +835,7 @@ pscrpc_wake_client_req (struct pscrpc_request *req)
  *	model can be used for server threads so long as liblustre_wait_event()
  *	is replaced with something that uses timed waitq's.
  */
-#define pscrpc_timeout 13
+#define pscrpc_timeout 1
 #define __psc_client_wait_event(wq, condition, info, ret, excl)		\
 	do {								\
 		time_t __timeout = info->lwi_timeout;			\
