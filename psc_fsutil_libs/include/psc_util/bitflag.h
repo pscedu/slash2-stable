@@ -14,7 +14,7 @@
 static inline int
 bitflag_sorc(int *f, psc_spinlock_t *lck, int on, int off, int sorc)
 {
-        int rc, l;
+        int rc=0, l;
 	if (lck)
 		l = reqlock(lck);
 
@@ -33,32 +33,35 @@ bitflag_sorc(int *f, psc_spinlock_t *lck, int on, int off, int sorc)
 		}
         } 	
 	if (sorc & BIT_SET) {
-                if (sorc == BIT_SET_STRICT) {
+                if (sorc & BIT_SET_STRICT) {
 			if ((sorc & BIT_CHKSET) != BIT_CHKSET) {
 				/* 'Normal' mode, where 'ons' are enabled
 				 *   and 'offs' are disabled.
 				 */
 				if (ATTR_HASANY(*f, on) || 
-				    !ATTR_HASALL(*f, off))
+				    !ATTR_HASALL(*f, off)) {
 					rc = -1;
+					goto done;
+				}
 			} else 
 				/* Alternate mode where if 'ons' then
 				 *  enable the 'offs'.
 				 */
-				if (ATTR_HASANY(*f, off))
+				if (ATTR_HASANY(*f, off)) {
 					rc = -1;
-                } else {
-			if ((sorc & BIT_CHKSET) != BIT_CHKSET) {
-				ATTR_SET(*f, on);
-				ATTR_UNSET(*f, off);
-			} else
-				/* In chkset mode no flags are disabled, 
-				 *  the off's are turned on.
-				 */
-				ATTR_SET(*f, off);
-			rc = 0;
-                }
-        } 	
+					goto done;
+				}
+		}
+		if ((sorc & BIT_CHKSET) != BIT_CHKSET) {
+			ATTR_SET(*f, on);
+			ATTR_UNSET(*f, off);
+		} else
+			/* In chkset mode no flags are disabled, 
+			 *  the off's are turned on.
+			 */
+			ATTR_SET(*f, off);
+		rc = 0;
+	}
  done:
 	if (lck)
 		ureqlock(lck, l);
