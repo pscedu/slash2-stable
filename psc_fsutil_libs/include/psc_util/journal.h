@@ -66,7 +66,7 @@ struct psc_journal_xidhndl {
 	int                 pjx_flags;   /* app-specific log entry type */
 	struct psclist_head pjx_lentry;  /* chain on journal */	
 	psc_spinlock_t      pjx_lock;    /* serialize */
-	psc_journal        *pjx_pj;
+	struct psc_journal *pjx_pj;
 	atomic_t            pjx_ref;
 };
 
