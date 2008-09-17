@@ -256,13 +256,13 @@ psclist_splice(struct psclist_head *list, struct psclist_head *head)
 	_psclist_next_entry((hd), (p), offset(type, memb), 0)
 
 static __inline void *
-psclist_next_entry(struct psclist_head *hd, void *p, ptrdiff_t offset,
-    int wantprev)
+_psclist_next_entry(struct psclist_head *hd, void *p,
+    unsigned long offset, int wantprev)
 {
 	struct psclist_head *e, *n;
 
 	psc_assert(p);
-	e = (char *)p + offset;
+	e = (void *)((char *)p + offset);
 
 	/*
 	 * Ensure integrity of entry: must be contained in
@@ -289,8 +289,8 @@ psclist_next_entry(struct psclist_head *hd, void *p, ptrdiff_t offset,
  * @type: entry type.
  * @memb: list_head member name in entry structure.
  */
-#define psclist_next_entry(hd, p, type, memb)			\
-	_psclist_next_entry((hd), (p), offset(type, memb), 1)
+#define psclist_prev_entry(hd, p, type, memb)			\
+	_psclist_prev_entry((hd), (p), offset(type, memb), 1)
 
 /**
  * psclist_for_each_entry_safe - iterate over list of given type safe
