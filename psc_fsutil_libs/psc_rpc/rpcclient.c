@@ -863,6 +863,11 @@ int pscrpc_check_set(struct pscrpc_request_set *set, int check_allsent)
 	int ncompleted         = 0;
 	ENTRY;
 
+	spinlock(&set->set_lock);
+	psc_assert(!set->set_flags);
+	set->set_flags = 1;
+	freelock(&set->set_lock);
+
 	if (set->set_remaining == 0)
 		RETURN(1);
 
@@ -873,7 +878,7 @@ int pscrpc_check_set(struct pscrpc_request_set *set, int check_allsent)
 		struct pscrpc_import *imp = req->rq_import;
 		int rc = 0;
 
-		DEBUG_REQ(PLL_INFO, req, "reqset=%p", set);
+		DEBUG_REQ(PLL_TRACE, req, "reqset=%p", set);
 
 		if (req->rq_phase == ZRQ_PHASE_NEW && 
 		    pscrpc_push_req(req)) {
@@ -1071,12 +1076,16 @@ int pscrpc_check_set(struct pscrpc_request_set *set, int check_allsent)
 		}
 		set->set_remaining--;
 
-		DEBUG_REQ(PLL_DEBUG, req, "set(%p) rem=(%d) ", 
+		DEBUG_REQ(PLL_NOTICE, req, "set(%p) rem=(%d) ", 
 			  set, set->set_remaining);
 
 		atomic_dec(&imp->imp_inflight);
 		wake_up(&imp->imp_recovery_waitq);
 	}
+
+	spinlock(&set->set_lock);
+	set->set_flags = 0;
+	freelock(&set->set_lock);
 
 	/* If we hit an error, we want to recover promptly. */
 	if (check_allsent)
