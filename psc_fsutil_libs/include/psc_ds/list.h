@@ -128,17 +128,18 @@ psclist_del(struct psclist_head *entry)
  * @head: the psclist head to test.
  */
 static __inline__ int
-psclist_empty(const struct psclist_head *head)
+psclist_empty(const struct psclist_head *hd)
 {
+	psc_assert(hd->znext && hd->zprev);
 #if 0
-	if (head->znext == head) {
-		if (head->zprev != head)
+	if (hd->znext == head) {
+		if (hd->zprev != hd)
 			abort();
 		return (1);
 	} else
 		return (0);
 #endif
-	return head->znext == head;
+	return (hd->znext == hd);
 }
 
 /**
@@ -180,6 +181,7 @@ psclist_splice(struct psclist_head *list, struct psclist_head *head)
  * @ptr: the &struct psclist_head pointer.
  * @type: the type of the struct this is embedded in.
  * @member: the name of the struct psclist_head within the struct.
+ * XXX rewrite using offsetof().
  */
 #define psclist_entry(ptr, type, member) \
 	((type *)((char *)(ptr)-(unsigned long)(&((type *)0)->member)))
@@ -215,11 +217,11 @@ psclist_splice(struct psclist_head *list, struct psclist_head *head)
  * psclist_first_entry - grab first item from a psclist
  * @hd: list head.
  * @type: entry type.
- * @member: list_head member name in entry structure.
+ * @memb: list_head member name in entry structure.
  */
-#define psclist_first_entry(hd, type, member)			\
+#define psclist_first_entry(hd, type, memb)			\
 	(psclist_empty(hd) ? NULL :				\
-	 psclist_entry((hd)->znext, type, member))
+	 psclist_entry((hd)->znext, type, memb))
 
 /**
  * psclist_last - grab last list entry.
@@ -231,11 +233,11 @@ psclist_splice(struct psclist_head *list, struct psclist_head *head)
  * psclist_last_entry - grab last list item.
  * @hd: list head.
  * @type: entry type.
- * @member: list_head member name in entry structure.
+ * @memb: list_head member name in entry structure.
  */
-#define psclist_last_entry(hd, type, member)			\
+#define psclist_last_entry(hd, type, memb)			\
 	(psclist_empty(hd) ? NULL :				\
-	 psclist_entry((hd)->zprev, type, member))
+	 psclist_entry((hd)->zprev, type, memb))
 
 /**
  * psclist_next - grab the entry following the specified entry.
@@ -244,10 +246,51 @@ psclist_splice(struct psclist_head *list, struct psclist_head *head)
 #define psclist_next(e) (e)->znext
 
 /**
+ * psclist_next_entry - grab the item following the specified entry.
+ * @hd: list head
+ * @p: item on list.
+ * @type: entry type.
+ * @memb: list_head member name in entry structure.
+ */
+#define psclist_next_entry(hd, p, type, memb)			\
+	_psclist_next_entry((hd), (p), offset(type, memb), 0)
+
+static __inline void *
+psclist_next_entry(struct psclist_head *hd, void *p, ptrdiff_t offset,
+    int wantprev)
+{
+	struct psclist_head *e, *n;
+
+	psc_assert(p);
+	e = (char *)p + offset;
+
+	/*
+	 * Ensure integrity of entry: must be contained in
+	 * a list and must not inadvertenly be a head!
+	 */
+	psc_assert(e->znext && e->zprev);
+	n = wantprev ? e->zprev : e->znext;
+	psc_assert(n != e);
+	if (n == hd)
+		return (NULL);
+	return ((char *)n - offset);
+}
+
+/**
  * psclist_prev - grab the entry before the specified entry.
  * @e: entry
  */
 #define psclist_prev(e) (e)->zprev
+
+/**
+ * psclist_prev_entry - grab the item before the specified entry.
+ * @hd: list head
+ * @e: entry
+ * @type: entry type.
+ * @memb: list_head member name in entry structure.
+ */
+#define psclist_next_entry(hd, p, type, memb)			\
+	_psclist_next_entry((hd), (p), offset(type, memb), 1)
 
 /**
  * psclist_for_each_entry_safe - iterate over list of given type safe
