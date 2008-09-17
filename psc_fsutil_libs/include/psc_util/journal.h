@@ -4,10 +4,10 @@
 #define _PFL_JOURNAL_H_
 
 #include "psc_types.h"
-#include "psc_util/thread.h"
-#include "psc_util/atomic.h"
 #include "psc_util/atomic.h"
 #include "psc_util/lock.h"
+#include "psc_util/thread.h"
+#include "psc_util/waitq.h"
 
 int pread(int fd, void *, size_t, off_t);
 int pwrite(int fd, const void *, size_t, off_t);
@@ -36,10 +36,10 @@ struct psc_journal {
 typedef void (*psc_jhandler)(void *, int);
 
 struct psc_journal_walker {
-	int		pjw_pos;	/* current position */	
+	int		pjw_pos;	/* current position */
 	int		pjw_stop;	/* targetted end position */
 	int		pjw_seen;	/* whether to terminate at stop_pos */
-	psc_jhandler    pjw_cb;    
+	psc_jhandler    pjw_cb;
 };
 
 #define PJET_LOG_GEN0  0x00001010
@@ -64,7 +64,7 @@ struct psc_journal_xidhndl {
 	u64                 pjx_xid;
 	int                 pjx_tailslot;
 	int                 pjx_flags;   /* app-specific log entry type */
-	struct psclist_head pjx_lentry;  /* chain on journal */	
+	struct psclist_head pjx_lentry;  /* chain on journal */
 	psc_spinlock_t      pjx_lock;    /* serialize */
 	struct psc_journal *pjx_pj;
 	atomic_t            pjx_ref;
@@ -77,7 +77,7 @@ struct psc_journal_xidhndl {
 #define PJET_XSTARTED	(2<<30)		/* transaction began */
 #define PJET_XEND	(2<<31)		/* transaction ended */
 
-void	 pjournal_init(struct psc_journal *, const char *, daddr_t, int, int);
+void	 pjournal_init(struct psc_journal *, const char *, daddr_t, int, int, int);
 int	 pjournal_nextxid(struct psc_journal *);
 int	 pjournal_xstart(struct psc_journal *, int);
 int	 pjournal_xend(struct psc_journal *, int);
