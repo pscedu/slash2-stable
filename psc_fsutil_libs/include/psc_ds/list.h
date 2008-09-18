@@ -290,7 +290,7 @@ _psclist_next_entry(struct psclist_head *hd, void *p,
  * @memb: list_head member name in entry structure.
  */
 #define psclist_prev_entry(hd, p, type, memb)			\
-	_psclist_prev_entry((hd), (p), offset(type, memb), 1)
+	_psclist_next_entry((hd), (p), offsetof(type, memb), 1)
 
 /**
  * psclist_for_each_entry_safe - iterate over list of given type safe
