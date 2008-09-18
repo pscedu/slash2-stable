@@ -10,6 +10,7 @@
 #define BIT_SET_STRICT    (1<<3 | BIT_SET)
 #define BIT_CHKSET        (BIT_CHK | BIT_SET)
 #define BIT_CHKSET_STRICT (BIT_CHK_STRICT | BIT_SET_STRICT)
+#define BITFLAG_ABORT     (1<<31)
 
 static inline int
 bitflag_sorc(int *f, psc_spinlock_t *lck, int on, int off, int sorc)
@@ -63,6 +64,9 @@ bitflag_sorc(int *f, psc_spinlock_t *lck, int on, int off, int sorc)
 		rc = 0;
 	}
  done:
+	if (rc && (sorc & BITFLAG_ABORT))
+		abort();
+
 	if (lck)
 		ureqlock(lck, l);
         return (rc);
