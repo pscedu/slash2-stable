@@ -93,9 +93,9 @@ do {                                            \
 
 #ifdef LNET_USE_LIB_FREELIST
 
-#define MAX_MES         4096
-#define MAX_MDS         4096
-#define MAX_MSGS        4096    /* Outstanding messages */
+#define MAX_MES         16384
+#define MAX_MDS         16384
+#define MAX_MSGS        16384    /* Outstanding messages */
 #define MAX_EQS         512
 
 static inline void *
