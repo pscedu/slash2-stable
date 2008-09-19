@@ -86,7 +86,6 @@ int tcpnal_send(lnet_ni_t *ni, __unusedx void *private, lnet_msg_t *lntmsg)
         int rc = 0;
         int   total;
         int   ntiov;
-        int i;
 
 	ist = ni->ni_sendstats;
 
