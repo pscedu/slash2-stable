@@ -22,20 +22,13 @@ pfl
 - disallow lock reinitialization (e.g. allow LOCK_INIT once)
 - for psclog(), add extensibility mechanism for fmtstr,
   allowing app-specific callbacks (e.g. %r for zest clients)
+- move iostat thr and interval thr here
 
 lnet
 - move iostats outside of socklnd
 
 zest
 - mount_zest test mode, how fast processes connect to fuse
-
-
-zest client
-
-  $ pwd
-  zest/trunk/tests/clientx/linux
-  $ m
-  make: *** No rule to make target `../../..//client/linux/libzestclient.a', needed by `clientx'.  Stop.
 
 - test parity reconstruction service by rebuilding
   a block from each parity group
