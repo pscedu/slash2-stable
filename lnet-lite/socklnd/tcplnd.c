@@ -113,6 +113,9 @@ int tcpnal_send(lnet_ni_t *ni, __unusedx void *private, lnet_msg_t *lntmsg)
 	rc = psc_sock_writev(c->fd, tiov, ntiov, 0);
         pthread_mutex_unlock(&send_lock);
 
+	atomic_add(total, &ist->ist_bytes_intv);
+        PSCFREE(tiov);
+
         CDEBUG(D_NET, "sent %s total %d in %d frags (rc=%d)\n",
                hdr->type == LNET_MSG_ACK ? "ACK" :
                hdr->type == LNET_MSG_PUT ? "PUT" :
@@ -120,9 +123,6 @@ int tcpnal_send(lnet_ni_t *ni, __unusedx void *private, lnet_msg_t *lntmsg)
                hdr->type == LNET_MSG_REPLY ? "REPLY" :
                hdr->type == LNET_MSG_HELLO ? "HELLO" : "UNKNOWN",
                total, niov + 1, rc);
-
-        PSCFREE(tiov);
-	atomic_add(total, &ist->ist_bytes_intv);
 
         if (rc == 0) {
                 /* NB the NAL only calls lnet_finalize() if it returns 0
@@ -151,6 +151,8 @@ int tcpnal_recv(lnet_ni_t     *ni,
         int ntiov, rc;
 	connection c;
 
+        LASSERT(rlen >= mlen);
+
 	c = private;
 	ist = ni->ni_recvstats;
         if (mlen == 0)
@@ -174,15 +176,12 @@ int tcpnal_recv(lnet_ni_t     *ni,
 
         PSCFREE(tiov); 
 	free(trash);
-finalize:
 	atomic_add(rlen, &ist->ist_bytes_intv);
+finalize:
 
 	if (rc == 0)
-	        lnet_finalize(ni, cookie, 0);
-
-        LASSERT(rlen >= mlen);
-
-        return(rc);
+	        lnet_finalize(ni, cookie, 0); 
+        return (rc);
 }
 
 
