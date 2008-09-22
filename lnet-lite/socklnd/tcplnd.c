@@ -83,8 +83,7 @@ int tcpnal_send(lnet_ni_t *ni, __unusedx void *private, lnet_msg_t *lntmsg)
         struct iovec *tiov;
         static pthread_mutex_t send_lock = PTHREAD_MUTEX_INITIALIZER;
 	struct iostats *ist;
-        int rc = 0;
-        int   ntiov;
+        int total, ntiov, rc, j;
 
 	ist = ni->ni_sendstats;
 
@@ -113,7 +112,7 @@ int tcpnal_send(lnet_ni_t *ni, __unusedx void *private, lnet_msg_t *lntmsg)
         pthread_mutex_unlock(&send_lock);
 
 	for (total = 0, j = 0; j < ntiov; j++)
-		total += tiov[i].iov_len;
+		total += tiov[j].iov_len;
 
 	atomic_add(total, &ist->ist_bytes_intv);
         PSCFREE(tiov);
