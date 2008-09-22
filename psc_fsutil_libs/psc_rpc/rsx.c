@@ -21,8 +21,8 @@
  * @mqp: value-result of pointer to start of request buffer.
  */
 int
-rsx_newreq(struct pscrpc_import *imp, int version, int op, int reqlen, int replen,
-    struct pscrpc_request **rqp, void *mqp)
+rsx_newreq(struct pscrpc_import *imp, int version, int op, int reqlen,
+    int replen, struct pscrpc_request **rqp, void *mqp)
 {
 	*rqp = pscrpc_prep_req(imp, version, op, 1, &reqlen, NULL);
 	if (*rqp == NULL)
