@@ -259,7 +259,6 @@ pjournal_logread(struct psc_journal *pj, int slot, void *data)
 	return (ra);
 }
 
-
 int
 pjournal_xadd(struct psc_journal_xidhndl *xh, int type, void *data)
 {
