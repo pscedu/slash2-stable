@@ -7,10 +7,10 @@
 
 #include <stdarg.h>
 
-#include "psc_util/atomic.h"
-#include "psc_ds/list.h"
-#include "psc_util/lock.h"
 #include "psc_types.h"
+#include "psc_ds/list.h"
+#include "psc_util/atomic.h"
+#include "psc_util/lock.h"
 
 #define IST_NAME_MAX 30
 
