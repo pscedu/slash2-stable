@@ -102,7 +102,7 @@ _pjournal_logwrite(struct psc_journal *pj, int xid, int slot, int type,
 	rc = pwrite(pj->pj_fd, pje, pj->pj_entsz,
 	       (daddr_t)(pj->pj_daddr + (slot * pj->pj_entsz)));
 
-	free(pje);
+	psc_freel(pje, PJ_PJESZ(pj));
 	return (rc);
 }
 
@@ -291,7 +291,7 @@ pjournal_start_mark(struct psc_journal *pj, int slot)
 	pje = psc_alloc(PJ_PJESZ(pj), PAF_PAGEALIGN | PAF_LOCK);
 	pje->pje_genmarker = PJET_LOG_STMRK;
 	_pjournal_logwrite(pj, PJE_XID_NONE, slot, PJET_VOID, pje);
-	free(pje);
+	psc_freel(pje, PJ_PJESZ(pj));
 	return (0);
 }
 

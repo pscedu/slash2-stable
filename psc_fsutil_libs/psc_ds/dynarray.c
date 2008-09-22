@@ -76,7 +76,6 @@ dynarray_getpos(const struct dynarray *da, int pos)
 	return (da->da_items[pos]);
 }
 
-
 void
 dynarray_free(struct dynarray *da)
 {

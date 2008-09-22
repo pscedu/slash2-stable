@@ -17,7 +17,7 @@ struct dynarray {
 
 void	 dynarray_init(struct dynarray *);
 int	 dynarray_add(struct dynarray *, void *);
-int      dynarray_add_ifdne(struct dynarray *, void *);
+int	 dynarray_add_ifdne(struct dynarray *, void *);
 void	*dynarray_get(const struct dynarray *);
 void	*dynarray_getpos(const struct dynarray *, int);
 void	 dynarray_free(struct dynarray *);
