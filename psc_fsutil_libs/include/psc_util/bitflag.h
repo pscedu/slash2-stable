@@ -1,105 +1,74 @@
-#ifndef __BITFLAG_H_
-#define __BITFLAG_H_ 1
+/* $Id$ */
 
+#ifndef __PFL_BITFLAG_H__
+#define __PFL_BITFLAG_H__
+
+#include "psc_util/assert.h"
 #include "psc_util/cdefs.h"
 #include "psc_util/lock.h"
 
-#define BIT_CHK           (1<<0)
-#define BIT_SET           (1<<1)
-#define BIT_STRICT        (1<<2)
-#define BIT_CHK_STRICT    (BIT_CHK | BIT_STRICT)
-#define BIT_SET_STRICT    (BIT_SET | BIT_STRICT)
-#define BIT_CHKSET        (BIT_CHK | BIT_SET)
-#define BIT_CHKSET_STRICT (BIT_CHKSET | BIT_STRICT)
-#define BIT_ABORT         (1<<31)
+#define BIT_CHK			(1 << 0)
+#define BIT_SET			(1 << 1)
+#define BIT_STRICT		(1 << 2)
+#define BIT_ABORT		(1 << 3)
 
-/* 
- * Notes on usage, based on the value of 'sorc':
- * BIT_CHKSET means:
- *   if any "on" bits were on, set all "off" bits on
- * BIT_CHECKSET | BIT_STRICT means:
- *   if all "on" bits were on, then make sure "off" bits were off
- *   and set the "off" bits on
- * BIT_CHK means:
- *   check that at least some "on" bits were on,
- *   and that at least some "off" bits were off
- * BIT_CHK | BIT_STRICT means:
- *   check that all "on" bits were on,
- *   and that all "off" bits were off
- * BIT_SET means:
- *   set all "on" bits on
- *   set all "off" bits off
- * BIT_SET | BIT_STRICT means:
- *   make sure allo "on" bits were off, and that all "off" bits were off
- *   then set all "on" bits on and all "off" bits off
+#define BIT_CHK_STRICT		(BIT_CHK | BIT_STRICT)
+#define BIT_SET_STRICT		(BIT_SET | BIT_STRICT)
+#define BIT_CHKSET		(BIT_CHK | BIT_SET)
+#define BIT_CHKSET_STRICT	(BIT_CHK | BIT_SET | BIT_STRICT)
+
+/*
+ * bitflag_sorc - check and/or set flags on a variable.
+ * @f: flags variable to perform operations on.
+ * @lck: optional spinlock.
+ * @checkon: values to ensure are enabled.
+ * @checkoff: values to ensure are disabled.
+ * @turnon: values to enable.
+ * @turnoff: values to disable.
+ * @flags: settings which dictate operation of this routine.
+ * Notes: returns -1 on failure, 0 on success.
  */
-
-static inline int
-bitflag_sorc(int *f, psc_spinlock_t *lck, int on, int off, int sorc)
+static __inline int
+bitflag_sorc(int *f, psc_spinlock_t *lck, int checkon, int checkoff,
+    int turnon, int turnoff, int flags)
 {
-        int rc=0, l;
-	if (lck)
-		l = reqlock(lck);
+        int locked;
 
-	if (!(sorc & BIT_CHKSET)) /* gotta be one, the other, or both */
-		abort();
-
-	if (ATTR_HASALL(sorc, BIT_CHKSET)){
-		/* Alternate mode where if 'ons' then
-		 *  enable the 'offs'.
-		 */
-		if ((sorc & BIT_STRICT) &&
-		    on && off && ATTR_HASANY(*f, off)) {
-			rc = -1; /* error, because the offs
-				  * were already set */
-			goto done;
-		}
-
-		/* In chkset mode no flags are disabled, 
-		 *  the off's are turned on (conditionally)
-		 */
-		if (ATTR_HASALL(*f, on) ||
-		    (!(sorc & BIT_STRICT) && ATTR_HASANY(*f, on)))
-			ATTR_SET(*f, off);
-		rc = 0;
-		goto done;
-	}
-
-        if (sorc & BIT_CHK) {
-                if ((!off || !ATTR_HASANY(*f, off)) &&  /* None of the 'offs' AND  */
-		    ((!on || ATTR_HASALL(*f, on)) ||   /* Have all of the 'ons' OR */
-		     (!(sorc & BIT_STRICT) && /* not strict.. AND  */
-		      ((!on || ATTR_HASANY(*f, on)) &&   /* Have any of the 'ons' AND */
-		       (!off || ATTR_HASANY(~(*f), off)))))) /* any of the 'offs' were off */
-                        rc = 0;
-		else {
-			rc = -1;
-		}
-        }
-
-	if (sorc & BIT_SET) {
-                if (sorc & BIT_STRICT) {
-			/* 'Normal' mode, where 'ons' are enabled
-			 *   and 'offs' are disabled.
-			 */
-			if ((on && ATTR_HASANY(*f, on)) || 
-			    (off && !ATTR_HASALL(*f, off))) {
-				rc = -1; /* error, because they were
-					  * already in the end state */
-				goto done;
-			}
-		}
-		ATTR_SET(*f, on);
-		ATTR_UNSET(*f, off);
-		rc = 0;
-	}
- done:
-	if (rc && (sorc & BIT_ABORT))
-		abort();
+	psc_assert(ATTR_HASANY(flags, BIT_CHK | BIT_SET));
 
 	if (lck)
-		ureqlock(lck, l);
-        return (rc);
+		locked = reqlock(lck);
+
+	if (flags & BIT_CHK) {
+		psc_assert(checkon | checkoff);
+		if (flags & BIT_STRICT) {
+			if (!ATTR_HASALL(*f, checkon) ||
+			    ATTR_HASANY(*f, checkoff))
+				goto error;
+		} else {
+			if (!ATTR_HASANY(*f, checkon))
+				goto error;
+		}
+	}
+	if (flags & BIT_SET) {
+		psc_assert(turnon | turnoff);
+		if (flags & BIT_STRICT) {
+			if (ATTR_HASANY(*f, turnon))
+				goto error;
+			if (!ATTR_HASALL(*f, turnoff))
+				goto error;
+		}
+		*f |= turnon;
+		*f &= ~turnoff;
+	}
+	if (lck)
+		ureqlock(lck, locked);
+	return (0);
+ error:
+	if (lck)
+		ureqlock(lck, locked);
+	psc_assert((flags & BIT_ABORT) == 0);
+	return (-1);
 }
 
-#endif
+#endif /* __PFL_BITFLAG_H__ */
