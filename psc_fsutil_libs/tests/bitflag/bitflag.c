@@ -27,6 +27,7 @@ usage(void)
 		psc_fatal("fork");			\
 	case 0: /* child */				\
 		code;					\
+		fprintf(stdout, "code completed\n");	\
 		exit(0);				\
 	default: /* parent */				\
 		if (wait(&st) == -1)			\
@@ -66,7 +67,20 @@ main(int argc, char *argv[])
 
 	f = 0;
 	CNT_ASSERT0(f = B1; psc_assert(bitflag_sorc(&f, NULL, B1, 0, 0, 0, 0) == 0));
+	CNT_ASSERT0(f = B1; psc_assert(bitflag_sorc(&f, NULL, 0, B1, 0, 0, 0) != 0));
 	CNT_ASSERT0(f = B2; psc_assert(bitflag_sorc(&f, NULL, B2, B3, 0, 0, 0) == 0));
+
+	CNT_ASSERT0(psc_assert(bitflag_sorc(&f, NULL, 0, 0, B1, 0, BIT_STRICT) == 0);
+		    psc_assert(bitflag_sorc(&f, NULL, 0, 0, B1, 0, BIT_STRICT) != 0);
+		    psc_assert(bitflag_sorc(&f, NULL, B1|B2, 0, 0, 0, BIT_STRICT) != 0);
+		    psc_assert(bitflag_sorc(&f, NULL, 0, 0, B2, 0, BIT_STRICT) == 0);
+		    psc_assert(bitflag_sorc(&f, NULL, B1|B2, 0, 0, 0, BIT_STRICT) == 0);
+		    psc_assert(bitflag_sorc(&f, NULL, B1, 0, B3, 0, BIT_STRICT) == 0);
+		    psc_assert(f==(B1|B2|B3));
+		    psc_assert(bitflag_sorc(&f, NULL, B3, 0, 0, B2, BIT_STRICT) == 0);
+		    psc_assert(f==(B1|B3));
+		    );
+
 	CNT_ASSERT0(psc_assert(bitflag_sorc(&f, NULL, 0, 0, B6, 0, 0) == 0); psc_assert(f == B6));
 
 	exit(0);
