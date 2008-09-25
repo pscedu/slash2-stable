@@ -7,15 +7,8 @@
 #include "psc_util/cdefs.h"
 #include "psc_util/lock.h"
 
-#define BIT_CHK			(1 << 0)
-#define BIT_SET			(1 << 1)
-#define BIT_STRICT		(1 << 2)
-#define BIT_ABORT		(1 << 3)
-
-#define BIT_CHK_STRICT		(BIT_CHK | BIT_STRICT)
-#define BIT_SET_STRICT		(BIT_SET | BIT_STRICT)
-#define BIT_CHKSET		(BIT_CHK | BIT_SET)
-#define BIT_CHKSET_STRICT	(BIT_CHK | BIT_SET | BIT_STRICT)
+#define BIT_STRICT		(1 << 0)
+#define BIT_ABORT		(1 << 1)
 
 /*
  * bitflag_sorc - check and/or set flags on a variable.
@@ -34,33 +27,39 @@ bitflag_sorc(int *f, psc_spinlock_t *lck, int checkon, int checkoff,
 {
         int locked;
 
-	psc_assert(ATTR_HASANY(flags, BIT_CHK | BIT_SET));
-
 	if (lck)
 		locked = reqlock(lck);
 
-	if (flags & BIT_CHK) {
-		psc_assert(checkon | checkoff);
-		if (flags & BIT_STRICT) {
-			if (!ATTR_HASALL(*f, checkon) ||
-			    ATTR_HASANY(*f, checkoff))
-				goto error;
-		} else {
-			if (!ATTR_HASANY(*f, checkon))
-				goto error;
-		}
-	}
-	if (flags & BIT_SET) {
-		psc_assert(turnon | turnoff);
-		if (flags & BIT_STRICT) {
-			if (ATTR_HASANY(*f, turnon))
-				goto error;
-			if (!ATTR_HASALL(*f, turnoff))
-				goto error;
-		}
+	/* check on bits */
+	if (checkon &&
+	    (!ATTR_HASANY(*f, checkon) ||
+	     (ATTR_ISSET(flags, BIT_STRICT) &&
+	      !ATTR_HASALL(*f, checkon))))
+		goto error;
+	
+	/* check off bits */
+	if (checkoff &&
+	    (ATTR_HASALL(*f, checkoff) ||
+	     (ATTR_ISSET(flags, BIT_STRICT) &&
+	      ATTR_HASANY(*f, checkoff))))
+		goto error;
+
+	/* set on bits */
+	if (turnon &&
+	    (ATTR_ISSET(flags, BIT_STRICT) &&
+	     ATTR_HASANY(*f, turnon)))
+		goto error;
+	else
 		*f |= turnon;
+
+	/* unset off bits */
+	if (turnoff &&
+	    (ATTR_ISSET(flags, BIT_STRICT) &&
+	     ATTR_HASANY(~(*f), turnoff)))
+		goto error;
+	else
 		*f &= ~turnoff;
-	}
+
 	if (lck)
 		ureqlock(lck, locked);
 	return (0);
