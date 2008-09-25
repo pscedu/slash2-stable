@@ -44,21 +44,17 @@ bitflag_sorc(int *f, psc_spinlock_t *lck, int checkon, int checkoff,
 	      ATTR_HASANY(*f, checkoff))))
 		goto error;
 
-	/* set on bits */
-	if (turnon &&
-	    (ATTR_ISSET(flags, BIT_STRICT) &&
-	     ATTR_HASANY(*f, turnon)))
+	/* check for strict setting */
+	if (ATTR_ISSET(flags, BIT_STRICT) &&
+	    ((turnon && ATTR_HASANY(*f, turnon)) ||
+	     (turnoff && ATTR_HASANY(~(*f), turnoff))))
 		goto error;
-	else
-		*f |= turnon;
+	
+	/* set on bits */
+	if (turnon)  *f |= turnon;
 
 	/* unset off bits */
-	if (turnoff &&
-	    (ATTR_ISSET(flags, BIT_STRICT) &&
-	     ATTR_HASANY(~(*f), turnoff)))
-		goto error;
-	else
-		*f &= ~turnoff;
+	if (turnoff) *f &= ~turnoff;
 
 	if (lck)
 		ureqlock(lck, locked);
