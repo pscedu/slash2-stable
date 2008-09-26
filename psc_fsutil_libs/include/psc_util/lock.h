@@ -28,43 +28,56 @@
 
 typedef pthread_mutex_t psc_spinlock_t;
 
-#define LOCK_INIT(l)							\
+#define LOCK_INIT(lk)							\
 	do {								\
 		pthread_mutexattr_t attr;				\
 									\
 		pthread_mutexattr_init(&attr);				\
 		pthread_mutexattr_settype(&attr,			\
 		    PTHREAD_MUTEX_ERRORCHECK_NP);			\
-		pthread_mutex_init((l), &attr);				\
+		pthread_mutex_init((lk), &attr);			\
 		pthread_mutexattr_destroy(&attr);			\
 	} while (0)
 
 #define LOCK_INITIALIZER	PTHREAD_ERRORCHECK_MUTEX_INITIALIZER_NP
 
-#define freelock(l)							\
-	do {								\
-		int rc;							\
-									\
-		rc = pthread_mutex_unlock(l);				\
-		if (rc)							\
-			psc_fatalx("spinlock: %s", strerror(rc));	\
-	} while (0)
-
-#define spinlock(l)							\
-	do {								\
-		int rc;							\
-									\
-		rc = pthread_mutex_lock(l);				\
-		if (rc)							\
-			psc_fatalx("spinlock: %s", strerror(rc));	\
-	} while (0)
-
-static __inline int
-trylock(psc_spinlock_t *s)
+static __inline void
+LOCK_ENSURE(psc_spinlock_t *lk)
 {
 	int rc;
 
-	rc = pthread_mutex_trylock(s);
+	rc = pthread_mutex_trylock(lk);
+	if (rc == EDEADLK)
+		return;
+	psc_fatalx("spinlock not locked: %s", strerror(rc));
+}
+
+static __inline void
+freelock(psc_spinlock_t *lk)
+{
+	int rc;
+
+	rc = pthread_mutex_unlock(lk);
+	if (rc)
+		psc_fatalx("spinlock: %s", strerror(rc));
+}
+
+static __inline void
+spinlock(psc_spinlock_t *lk)
+{
+	int rc;
+
+	rc = pthread_mutex_lock(lk);
+	if (rc)
+		psc_fatalx("spinlock: %s", strerror(rc));
+}
+
+static __inline int
+trylock(psc_spinlock_t *lk)
+{
+	int rc;
+
+	rc = pthread_mutex_trylock(lk);
 	if (rc == 0)
 		return (0);
 	else if (rc == EBUSY)
@@ -76,15 +89,15 @@ trylock(psc_spinlock_t *s)
  * reqlock - require a lock for a critical section.
  *	locks if unlocked, doesn't if already locked
  *	(to avoid deadlock).
- * @sl: the lock.
+ * @lk: the lock.
  * Returns true if the lock is already locked.
  */
 static __inline int
-reqlock(psc_spinlock_t *sl)
+reqlock(psc_spinlock_t *lk)
 {
 	int rc;
 
-	rc = pthread_mutex_lock(sl);
+	rc = pthread_mutex_lock(lk);
 	if (rc == 0)
 		return (0);
 	else if (rc == EDEADLK)
@@ -93,11 +106,11 @@ reqlock(psc_spinlock_t *sl)
 }
 
 static __inline int
-tryreqlock(psc_spinlock_t *sl, int *locked)
+tryreqlock(psc_spinlock_t *lk, int *locked)
 {
 	int rc;
 
-	rc = pthread_mutex_trylock(sl);
+	rc = pthread_mutex_trylock(lk);
 	if (rc == 0) {
 		*locked = 0;
 		return (1);
@@ -117,14 +130,14 @@ tryreqlock(psc_spinlock_t *sl, int *locked)
  *	it was locked for the nearest "reqlock ... ureqlock"
  *	section and doesn't if the lock was already locked
  *	before the critical section began.
- * @sl: the lock.
+ * @lk: the lock.
  * @waslocked: return value from reqlock().
  */
 static __inline void
-ureqlock(psc_spinlock_t *sl, int waslocked)
+ureqlock(psc_spinlock_t *lk, int waslocked)
 {
 	if (!waslocked)
-		freelock(sl);
+		freelock(lk);
 }
 
 #else
