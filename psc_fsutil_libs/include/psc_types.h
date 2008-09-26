@@ -17,14 +17,14 @@ typedef int8_t		s8;
 
 /* printf(3) specifier modifiers for 64-bit types. */
 #if defined(__x86_64) || defined(__ia64)
-# define PRIlnidx	"lx"
-# define PRIoffx	"lx"
-# define PRIoffd	"ld"
+# define PRIxLNID	"lx"
+# define PRIxOFF	"lx"
+# define PRIdOFF	"ld"
 # define _P_U64		"l"
 #else
-# define PRIlnidx	"Lx"
-# define PRIoffx	"Lx"
-# define PRIoffd	"Ld"
+# define PRIxLNID	"Lx"
+# define PRIxOFF	"Lx"
+# define PRIdOFF	"Ld"
 # define _P_U64		"ll"
 #endif
 
