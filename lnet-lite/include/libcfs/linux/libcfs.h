@@ -16,12 +16,7 @@
 #include <libcfs/linux/linux-fs.h>
 #include <libcfs/linux/linux-tcpip.h>
 
-#ifdef HAVE_ASM_TYPES_H
-#include <asm/types.h>
-#else
 #include <libcfs/types.h>
-#endif
-
 
 #ifdef __KERNEL__
 # include <linux/types.h>

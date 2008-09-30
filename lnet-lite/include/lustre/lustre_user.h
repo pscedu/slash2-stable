@@ -9,11 +9,7 @@
 #ifndef _LUSTRE_USER_H
 #define _LUSTRE_USER_H
 
-#ifdef HAVE_ASM_TYPES_H
-#include <asm/types.h>
-#else
 #include <lustre/types.h>
-#endif
 
 #ifdef HAVE_QUOTA_SUPPORT
 #ifdef __KERNEL__
@@ -303,29 +299,20 @@ struct if_quotactl {
 };
 
 #ifndef LPU64
-#if !defined(BITS_PER_LONG) && defined(__WORDSIZE)
-#define BITS_PER_LONG __WORDSIZE
-#endif
-/* x86_64 defines __u64 as "long" in userspace, but "long long" in the kernel */
-#if defined(__x86_64__) && defined(__KERNEL__)
-# define LPU64 "%Lu"
-# define LPD64 "%Ld"
-# define LPX64 "%#Lx"
-# define LPSZ  "%lu"
-# define LPSSZ "%ld"
-#elif (BITS_PER_LONG == 32 || __WORDSIZE == 32)
-# define LPU64 "%Lu"
-# define LPD64 "%Ld"
-# define LPX64 "%#Lx"
-# define LPSZ  "%u"
-# define LPSSZ "%d"
-#elif (BITS_PER_LONG == 64 || __WORDSIZE == 64)
-# define LPU64 "%lu"
-# define LPD64 "%ld"
-# define LPX64 "%#lx"
-# define LPSZ  "%lu"
-# define LPSSZ "%ld"
-#endif
+
+# if !defined(BITS_PER_LONG) && defined(__WORDSIZE)
+# define BITS_PER_LONG __WORDSIZE
+# endif
+
+#define __STDC_FORMAT_MACROS
+#include <inttypes.h>
+
+# define LPU64 "%"PRIu64
+# define LPD64 "%"PRId64
+# define LPX64 "%#"PRIx64
+# define LPSZ  "%"PRIu64
+# define LPSSZ "%"PRId64
+
 #endif /* !LPU64 */
 
 #ifndef offsetof
