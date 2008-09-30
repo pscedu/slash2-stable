@@ -135,10 +135,13 @@ acsvc_svrmain(int s)
 		iov.iov_len = sizeof(arq);
 		m.msg_iov = &iov;
 		m.msg_iovlen = 1;
+ restart:
 		nbytes = recvmsg(s, &m, 0); /* check TRUNC */
-		if (nbytes == -1)
+		if (nbytes == -1) {
+			if (errno == EINTR)
+				goto restart;
 			psc_fatal("recvmsg");
-		else if (nbytes == 0)
+		} else if (nbytes == 0)
 			exit(0);
 		else if (nbytes != sizeof(arq))
 			psc_fatalx("recvmsg: short I/O");
