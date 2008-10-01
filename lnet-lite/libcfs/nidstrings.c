@@ -484,7 +484,7 @@ libcfs_str2nid(const char *str)
 char *
 libcfs_id2str(lnet_process_id_t id)
 {
-        char  sstr[32];
+        static char  sstr[32];
         //char *str = libcfs_next_nidstring();
         char *str = sstr;
 
