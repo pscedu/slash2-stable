@@ -54,21 +54,24 @@ barrier_t  barrier;
 #ifdef OS64
 #define TIMET  "%u" 
 #define UTIMET "%06u"
-#define SIZET  "%lu"
 #define OFFT   "%lu" 
 #define INOT   "%u" 
 
 #elif QK
 #define TIMET  "%lu"
 #define UTIMET "%06lu"
-#define SIZET  "%lu"
 #define OFFT   "%llu"
 #define INOT   "%lu"
+
+#elif __WORDSIZE == 64
+#define TIMET  "%lu"
+#define UTIMET "%06lu"
+#define OFFT   "%lu"
+#define INOT   "%lu" 
 
 #else
 #define TIMET  "%lu"
 #define UTIMET "%06lu"
-#define SIZET  "%u"
 #define OFFT   "%llu"
 #define INOT   "%llu" 
 #endif
@@ -623,7 +626,7 @@ static inline void _BARRIER(GROUP_t *mygroup, struct io_toolbox *iot) {
   }                                                              \
   STOPWATCH(FSTAT_clk);                                          \
   DEBUG(D_DTREE,                                                 \
-	"%s\t%#09x Filesize = "SIZET", Inode = "INOT"\n",        \
+	"%s\t%#09x Filesize = %zu, Inode = "INOT"\n",        \
 	clock_2_str(BLOCK_clk), iot->filenum,		         \
 	(size_t)iot->stb.st_size, iot->stb.st_ino);		 \
 } while ( 0 )
@@ -634,7 +637,7 @@ static inline void _BARRIER(GROUP_t *mygroup, struct io_toolbox *iot) {
   ASSERT(!stat(iot->mypath, &iot->stb));                         \
   STOPWATCH(STAT_clk);                                           \
   DEBUG(D_DTREE,                                                 \
-	"%s\t%#09x Filesize = "SIZET", Inode = "INOT"\n",        \
+	"%s\t%#09x Filesize = %zu, Inode = "INOT"\n",        \
         clock_2_str(STAT_clk), iot->filenum,	               	 \
 	(size_t)iot->stb.st_size, iot->stb.st_ino);		 \
 } while ( 0 )
@@ -690,7 +693,7 @@ static inline void log_op(int    op_type,
 
 static inline void * iolog_alloc(IOTESTLOG_t *iolog, size_t size) 
 { 
-  BDEBUG("size "SIZET"\n", size);
+  BDEBUG("size %zu\n", size);
   ASSERT( (size > 0) && !(size % OPLOGSZ) );
   void *p = malloc(size);  
   ASSERT(p != NULL);

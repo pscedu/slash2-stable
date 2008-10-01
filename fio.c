@@ -98,7 +98,7 @@ void init_log_buffers(IOT_t *iot)
   iolog->iolog_oplog_cnt = num_log_ops;  
   iolog->iolog_oplog     = iolog_alloc(iolog, oplog_size);
 
-  DEBUG(D_OUTPUT, "iolog %p sz = "SIZET" num_log_ops = %d size "SIZET"\n", 
+  DEBUG(D_OUTPUT, "iolog %p sz = %zu num_log_ops = %d size %zu\n", 
 	iolog->iolog_oplog, iolog->iolog_size, num_log_ops, oplog_size);
   
   bzero(iolog->iolog_oplog, oplog_size);
@@ -563,8 +563,8 @@ int do_io(IOT_t *iot, int op) {
     
     bzero(sublog, logsz);
 
-    DEBUG(D_MEMORY, "malloc ok to %p iologsz "SIZET"\n", 
-	  sublog, (size_t)iolog->iolog_size);
+    DEBUG(D_MEMORY, "malloc ok to %p iologsz %zu\n", 
+	  sublog, iolog->iolog_size);
 
     /* save this sublog pointer to the 
      *  correct spot in the current oplog
@@ -576,8 +576,8 @@ int do_io(IOT_t *iot, int op) {
      */
     iot->op_log = sublog;
 
-    DEBUG(D_MEMORY, "malloc'ed "SIZET", to sub iot->op_log %p old_log %p\n", 
-	  (size_t)logsz, iot->op_log, op_log_save);
+    DEBUG(D_MEMORY, "malloc'ed %zu, to sub iot->op_log %p old_log %p\n", 
+	  logsz, iot->op_log, op_log_save);
   }      
 
   STARTWATCH(clk_type);

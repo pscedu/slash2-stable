@@ -1,7 +1,13 @@
+/* $Id$ */
+
 %{
-#define YYSTYPE char *
+#include <err.h>
+
 #include "fio.h"
-#include "fio_sym.h"
+#include "fio_sym.h" 
+
+int yylex(void);
+int yyerror(const char *, ...);
 %}
 
 %start group_blocks
@@ -23,12 +29,17 @@
 %token RECIPE_END
 %token RECIPE_START
 
-%token NUM
-%token NAME
-%token PATHNAME
-%token BOOL
-%token SIZEVAL
-%token FLOATVAL
+%token <string> NUM
+%token <string> NAME
+%token <string> PATHNAME
+%token <string> BOOL
+%token <string> SIZEVAL
+%token <string> FLOATVAL
+
+%union {
+	char *string;
+	void *voidp;
+};
 
 %%
 group_blocks : /* NULL */               |
@@ -63,7 +74,7 @@ group_start : GROUP NAME GROUP_START
   }
   numGroups++;
 
-  BDEBUG("malloc'ing %d bytes for testGroup inc_ptr %p\n",
+  BDEBUG("malloc'ing %zu bytes for testGroup inc_ptr %p\n",
 	sizeof(GROUP_t), (void *)ptr);  
 
   BDEBUG("\nGroup Name = '%s'\n",
@@ -195,7 +206,7 @@ int run_yacc()
   return 0;
 }
 
-int yyerror(char *msg)
+int yyerror(const char *msg, ...)
 {
   printf("Error encountered: %s \n", msg);
   return 0;

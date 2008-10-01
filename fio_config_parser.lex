@@ -1,12 +1,11 @@
+/* $Id$ */
+
 %{
-#ifdef NEED_YYLVAL
-#define YYSTYPE char *
-extern char * yylval;
-#endif
-#include "fio.h"
-#include "fio_config_parser.tab.h"
 #include <stdio.h>
 #include <string.h>
+
+#include "fio.h"
+#include "fio_config_parser.tab.h"
 %}
 
 eq   [=]
@@ -25,12 +24,12 @@ pathname [a-zA-Z0-9\/\-\.\_]+
 
 [ \n\t]+ ;
 
-group { 
+group {
   CDEBUG("GROUP %s\n", yytext);
-  return GROUP; 
+  return GROUP;
 }
 
-iotests { 
+iotests {
   CDEBUG("IOTESTS %s\n", yytext);
   return IOTESTS;
 }
@@ -40,44 +39,44 @@ sub {
   return SUB;
 }
 
-yes { 
+yes {
   CDEBUG("BOOL %s\n", yytext);
-  yylval=strdup(yytext);
-  return BOOL; 
+  yylval.string=strdup(yytext);
+  return BOOL;
 }
 
-no { 
+no {
   CDEBUG("BOOL %s\n", yytext);
-  yylval=strdup(yytext);
-  return BOOL; 
+  yylval.string=strdup(yytext);
+  return BOOL;
 }
 
-{num} { 
+{num} {
   CDEBUG("NUM %s\n", yytext);
-  yylval=strdup(yytext);
-  return NAME; 
+  yylval.string=strdup(yytext);
+  return NUM;
 }
 
-{eq} { 
+{eq} {
   CDEBUG("EQ %s\n", yytext);
-  return EQ; 
+  return EQ;
 }
 
-{endl} { 
+{endl} {
   CDEBUG("END %s\n", yytext);
   return END;
 }
 
-{sizeval} { 
+{sizeval} {
   CDEBUG("SIZEVAL %s\n", yytext);
-  yylval=strdup(yytext);
-  return SIZEVAL; 
+  yylval.string=strdup(yytext);
+  return SIZEVAL;
 }
 
-{float} { 
+{float} {
   CDEBUG("FLOATVAL %s\n", yytext);
-  yylval=strdup(yytext);
-  return FLOATVAL; 
+  yylval.string=strdup(yytext);
+  return FLOATVAL;
 }
 
 "{" {
@@ -100,38 +99,37 @@ no {
   return SUBSECT_END;
 }
 
-{sep} { 
+{sep} {
   CDEBUG("RECIPE_SEP %s\n", yytext);
-  return RECIPE_SEP; 
+  return RECIPE_SEP;
 }
 
-"[" { 
-  CDEBUG("RECIPE_START %s\n", yytext); 
+"[" {
+  CDEBUG("RECIPE_START %s\n", yytext);
   return RECIPE_START;
 }
 
-"]" { 
+"]" {
   CDEBUG("RECIPE_END %s\n", yytext);
   return RECIPE_END;
 }
 
-{name} { 
+{name} {
   CDEBUG("NAME %s\n", yytext);
-  yylval=strdup(yytext);
-  CDEBUG("NAME1 %s %s %p\n", yytext, yylval, (void *)yylval);
-  return NAME; 
+  yylval.string=strdup(yytext);
+  CDEBUG("NAME1 %s %s %p\n", yytext, yylval.string, yylval.voidp);
+  return NAME;
 }
 
-{pathname} { 
+{pathname} {
   CDEBUG("PATHNAME %s\n", yytext);
-  yylval=strdup(yytext);
-  return PATHNAME; 
+  yylval.string=strdup(yytext);
+  return PATHNAME;
 }
 
 . WARN("Unrecognized character: %s\n", yytext);
 
 %%
-
 
 int yywrap()
 {

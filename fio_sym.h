@@ -1,3 +1,7 @@
+/* $Id$ */
+
+struct io_toolbox;
+
 enum sym_types { 
   FIO_FUNCTION = 1,
   FIO_VARIABLE = 2,
@@ -41,3 +45,4 @@ struct symtable_t {
 
 struct symtable_t * get_symbol(const char *);
 void store_tok_val(const char *, char *);
+void store_func(const char *);

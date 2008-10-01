@@ -18,20 +18,20 @@ struct symtable_t * get_symbol(const char *name) {
   return e;
 }
 
-struct symtable_t * func_lookup(int addr) { 
+struct symtable_t * func_lookup(unsigned long addr) { 
   struct symtable_t *e = NULL;
 
   for (e = sym_table; e != NULL && e->name != NULL ; e++) 
     if (e->sym_type && FIO_FUNCTION) 
-      if ((int)e->io_func == (int)addr) break;
+      if ((unsigned long)e->io_func == addr) break;
   
   if (e == NULL || e->name == NULL) { 
-    WARN("Symbol '%x' was not found\n", addr);
+    WARN("Symbol '%lx' was not found\n", addr);
   }
   return e;
 }
 
-char * func_addr_2_name(int addr) { 
+char * func_addr_2_name(unsigned long addr) { 
   struct symtable_t *e = func_lookup(addr);
   
   ASSERT(e != NULL);
