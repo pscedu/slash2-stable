@@ -25,7 +25,9 @@ static __inline int
 bitflag_sorc(int *f, psc_spinlock_t *lck, int checkon, int checkoff,
     int turnon, int turnoff, int flags)
 {
-        int locked;
+	int strict, locked;
+
+	strict = ATTR_ISSET(flags, BIT_STRICT);
 
 	if (lck)
 		locked = reqlock(lck);
@@ -33,28 +35,28 @@ bitflag_sorc(int *f, psc_spinlock_t *lck, int checkon, int checkoff,
 	/* check on bits */
 	if (checkon &&
 	    (!ATTR_HASANY(*f, checkon) ||
-	     (ATTR_ISSET(flags, BIT_STRICT) &&
-	      !ATTR_HASALL(*f, checkon))))
+	     (strict && !ATTR_HASALL(*f, checkon))))
 		goto error;
-	
+
 	/* check off bits */
 	if (checkoff &&
 	    (ATTR_HASALL(*f, checkoff) ||
-	     (ATTR_ISSET(flags, BIT_STRICT) &&
-	      ATTR_HASANY(*f, checkoff))))
+	     (strict && ATTR_HASANY(*f, checkoff))))
 		goto error;
 
-	/* check for strict setting */
-	if (ATTR_ISSET(flags, BIT_STRICT) &&
+	/* strict setting mandates turn bits be in negated state */
+	if (strict &&
 	    ((turnon && ATTR_HASANY(*f, turnon)) ||
 	     (turnoff && ATTR_HASANY(~(*f), turnoff))))
 		goto error;
-	
+
 	/* set on bits */
-	if (turnon)  *f |= turnon;
+	if (turnon)
+		*f |= turnon;
 
 	/* unset off bits */
-	if (turnoff) *f &= ~turnoff;
+	if (turnoff)
+		*f &= ~turnoff;
 
 	if (lck)
 		ureqlock(lck, locked);
