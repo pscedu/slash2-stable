@@ -162,6 +162,9 @@ test_recipe_decl  : NAME RECIPE_START
   int num_iotests          =  currentGroup->num_iotests; 
   struct io_routine_t *ior = &currentGroup->iotests[num_iotests];
 
+  if (num_iotests >= MAXTESTS)
+    errx(1, "num_iotests (%d) >= MAXTESTS (%d)", num_iotests, MAXTESTS);
+
   strncpy(ior->io_testname, (char *)$1, 
 	  TEST_GROUP_NAME_MAX);
   BDEBUG("Got test name '%s'\n", ior->io_testname);
