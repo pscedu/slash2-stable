@@ -144,7 +144,7 @@ acsvc_svrmain(int s)
 		} else if (nbytes == 0)
 			exit(0);
 		else if (nbytes != sizeof(arq))
-			psc_fatalx("recvmsg: short I/O");
+			psc_fatalx("recvmsg: short I/O (%zd)", nbytes);
 
 		/* Setup reply. */
 		memset(&m, 0, sizeof(m));
