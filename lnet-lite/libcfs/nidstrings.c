@@ -484,9 +484,7 @@ libcfs_str2nid(const char *str)
 char *
 libcfs_id2str(lnet_process_id_t id)
 {
-        static char  sstr[32];
-        //char *str = libcfs_next_nidstring();
-        char *str = sstr;
+        char *str = libcfs_next_nidstring();
 
         snprintf(str, LNET_NIDSTR_SIZE, "%s%u-%s",
                  ((id.pid & LNET_PID_USERFLAG) != 0) ? "U" : "",
