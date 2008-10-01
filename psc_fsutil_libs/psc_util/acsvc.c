@@ -155,10 +155,10 @@ acsvc_svrmain(int s)
 		m.msg_iovlen = 1;
 
 		/* Invoke access operation. */
-		if (setuid(arq.arq_uid) == -1)
-			psc_fatal("setuid %d", arq.arq_uid);
-		if (setgid(arq.arq_gid) == -1)
-			psc_fatal("setgid %d", arq.arq_gid);
+		if (seteuid(arq.arq_uid) == -1)
+			psc_fatal("seteuid %d", arq.arq_uid);
+//		if (setegid(arq.arq_gid) == -1)
+//			psc_fatal("setegid %d", arq.arq_gid);
 		switch (arq.arq_op) {
 		case ACSOP_CHMOD:
 			rc = chmod(arq.arq_fn, arq.arq_data_chmod.mode);
@@ -178,17 +178,19 @@ acsvc_svrmain(int s)
 			    arq.arq_data_mknod.dev);
 			break;
 		case ACSOP_OPEN:
-			m.msg_control = ac.ac_buf;
-			m.msg_controllen = sizeof(ac.ac_buf);
-
-			c = CMSG_FIRSTHDR(&m);
-			c->cmsg_len = CMSG_LEN(sizeof(int));
-			c->cmsg_level = SOL_SOCKET;
-			c->cmsg_type = SCM_RIGHTS;
-			rc = fd = open(arq.arq_fn,
+			arp.arp_data_open.fd = rc = fd = open(arq.arq_fn,
 			    arq.arq_data_open.flags,
 			    arq.arq_data_open.mode);
-			*(int *)CMSG_DATA(c) = fd;
+			if (fd != -1) {
+				m.msg_control = ac.ac_buf;
+				m.msg_controllen = sizeof(ac.ac_buf);
+
+				c = CMSG_FIRSTHDR(&m);
+				c->cmsg_len = CMSG_LEN(sizeof(int));
+				c->cmsg_level = SOL_SOCKET;
+				c->cmsg_type = SCM_RIGHTS;
+				*(int *)CMSG_DATA(c) = fd;
+			}
 			break;
 		case ACSOP_READLINK:
 			rc = readlink(arq.arq_fn,
@@ -230,7 +232,8 @@ acsvc_svrmain(int s)
 		if (nbytes == -1)
 			psc_fatal("sendmsg");
 		else if (nbytes != sizeof(arp))
-			psc_fatalx("sendmsg: short I/O");
+			psc_fatalx("sendmsg: short I/O, want %zu got %zd",
+			    sizeof(arp), nbytes);
 
 		/* Cleanup any work open(2) did. */
 		if (fd != -1) {
@@ -264,7 +267,8 @@ acsvc_climain(__unusedx void *arg)
 		if (nbytes == -1)
 			psc_fatal("recvmsg");
 		else if (nbytes != sizeof(arp))
-			psc_fatalx("recvmsg: short I/O");
+			psc_fatalx("recvmsg: short I/O, want %zu, got %zd",
+			    sizeof(arp), nbytes);
 
 		if (m.msg_flags & MSG_TRUNC || m.msg_flags & MSG_CTRUNC)
 			psc_fatalx("recvmsg: received truncated message");
@@ -279,8 +283,7 @@ acsvc_climain(__unusedx void *arg)
 		if (apr == NULL)
 			psc_fatalx("received a bogus reply");
 
-		for (c = CMSG_FIRSTHDR(&m); c;
-		    c = CMSG_NXTHDR(&m, c))
+		for (c = CMSG_FIRSTHDR(&m); c; c = CMSG_NXTHDR(&m, c))
 			if (c->cmsg_len == CMSG_LEN(sizeof(int)) &&
 			    c->cmsg_level == SOL_SOCKET &&
 			    c->cmsg_type == SCM_RIGHTS) {
@@ -293,7 +296,6 @@ acsvc_climain(__unusedx void *arg)
 		psc_waitq_wakeup(&apr->apr_wq);
 	}
 }
-
 
 void
 acsvc_init(struct psc_thread *thr, int thrtype, const char *name)
@@ -438,11 +440,11 @@ access_fsop(int op, uid_t uid, gid_t gid, const char *fn, ...)
 		apr = acsreq_issue(arq);
 		switch (op) {
 		case ACSOP_OPEN:
-			rc = apr->apr_rep.arp_data_open.fd;
-			if (rc == -1) {
-				errno = apr->apr_rep.arp_rc;
+			if (apr->apr_rep.arp_data_open.fd == -1) {
 				rc = -1;
-			}
+				errno = apr->apr_rep.arp_rc;
+			} else
+				rc = apr->apr_rep.arp_data_open.fd;
 			/* XXX: test validity of `fd', perhaps via select(2). */
 			break;
 //		case ACSOP_OPENDIR:
@@ -489,8 +491,8 @@ access_fsop(int op, uid_t uid, gid_t gid, const char *fn, ...)
 			}
 			break;
 		}
+		free(apr); /* XXX might modify errno */
 	}
 	va_end(ap);
-	free(apr); /* XXX might modify errno */
 	return (rc);
 }
