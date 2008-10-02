@@ -221,8 +221,11 @@ psc_pool_get(struct psc_poolmgr *m)
 	 */
 	if (m->ppm_reapcb) {
 		do {
+			/* ask for wq_nwaitors+1 because the asking thread
+			 * wants one... and everybody else who is already
+			 * waiting will want one too */
 			n = m->ppm_reapcb(&m->ppm_lc, atomic_read(
-			    &m->ppm_lc.lc_wq_empty.wq_nwaitors));
+			    &m->ppm_lc.lc_wq_empty.wq_nwaitors)+1);
 			p = lc_getnb(&m->ppm_lc);
 			if (p)
 				return (p);
