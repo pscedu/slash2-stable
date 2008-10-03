@@ -54,7 +54,7 @@ struct access_request {
 			mode_t mode;
 		} arqdu_open;
 		struct {
-			size_t len;
+			off_t len;
 		} arqdu_truncate;
 		struct {
 			struct timeval tv[2];
@@ -99,6 +99,7 @@ struct access_reply {
 
 struct access_pendreq {
 	struct psclist_head	 apr_lentry;
+	psc_spinlock_t		 apr_lock;
 	struct psc_wait_queue	 apr_wq;
 	int			 apr_id;
 	int			 apr_fd;
@@ -138,7 +139,7 @@ acsvc_svrmain(int s)
 		m.msg_iov = &iov;
 		m.msg_iovlen = 1;
  restart:
-		nbytes = recvmsg(s, &m, 0); /* check TRUNC */
+		nbytes = recvmsg(s, &m, MSG_WAITALL); /* check TRUNC */
 		if (nbytes == -1) {
 			if (errno == EINTR)
 				goto restart;
@@ -229,6 +230,8 @@ acsvc_svrmain(int s)
 		case ACSOP_UTIMES:
 			rc = utimes(arq.arq_fn, arq.arq_data_utimes.tv);
 			break;
+		default:
+			psc_fatal("unknown op %d", arq.arq_op);
 		}
 		arp.arp_id = arq.arq_id;
 		arp.arp_op = arq.arq_op;
@@ -236,7 +239,7 @@ acsvc_svrmain(int s)
 			arp.arp_rc = errno;
 
 		/* Send reply. */
-		nbytes = sendmsg(s, &m, 0);
+		nbytes = sendmsg(s, &m, MSG_WAITALL);
 		if (nbytes == -1)
 			psc_fatal("sendmsg");
 		else if (nbytes != sizeof(arp))
@@ -271,7 +274,7 @@ acsvc_climain(__unusedx void *arg)
 		m.msg_iovlen = 1;
 		m.msg_control = ac.ac_buf;
 		m.msg_controllen = sizeof(ac.ac_buf);
-		nbytes = recvmsg(acsvc_fd, &m, 0);
+		nbytes = recvmsg(acsvc_fd, &m, MSG_WAITALL);
 		if (nbytes == -1)
 			psc_fatal("recvmsg");
 		else if (nbytes != sizeof(arp))
@@ -301,6 +304,7 @@ acsvc_climain(__unusedx void *arg)
 				break;
 			}
 		apr->apr_rep = arp;
+		spinlock(&apr->apr_lock);
 		psc_waitq_wakeup(&apr->apr_wq);
 	}
 }
@@ -353,6 +357,8 @@ acsreq_issue(struct access_request *arq)
 	m.msg_iovlen = 1;
 
 	apr = PSCALLOC(sizeof(*apr));
+	LOCK_INIT(&apr->apr_lock);
+	spinlock(&apr->apr_lock);
 	apr->apr_id = arq->arq_id;
 	apr->apr_op = arq->arq_op;
 	psc_waitq_init(&apr->apr_wq);
@@ -362,7 +368,7 @@ acsreq_issue(struct access_request *arq)
 	freelock(&acsvc_pendlistlock);
 
 	/* Issue request. */
-	nbytes = sendmsg(acsvc_fd, &m, 0);
+	nbytes = sendmsg(acsvc_fd, &m, MSG_WAITALL);
 	if (nbytes == -1)
 		psc_fatal("sendmsg");
 	else if (nbytes != sizeof(*arq))
@@ -370,7 +376,7 @@ acsreq_issue(struct access_request *arq)
 	free(arq);
 
 	/* Wait for request return. */
-	psc_waitq_wait(&apr->apr_wq, NULL);	/* XXX check return */
+	psc_waitq_wait(&apr->apr_wq, &apr->apr_lock);	/* XXX check return */
 
 	spinlock(&acsvc_pendlistlock);
 	psclist_del(&apr->apr_lentry);
@@ -386,6 +392,7 @@ access_fsop(int op, uid_t uid, gid_t gid, const char *fn, ...)
 	va_list ap;
 	int rc;
 
+	rc = 0;
 	/* Construct request. */
 	arq = acsreq_new(op, uid, gid);
 	if (strlcpy(arq->arq_fn, fn, PATH_MAX) >= PATH_MAX) {
@@ -437,6 +444,8 @@ access_fsop(int op, uid_t uid, gid_t gid, const char *fn, ...)
 		break;
 	case ACSOP_TRUNCATE:
 		arq->arq_data_truncate.len = va_arg(ap, off_t);
+		if (arq->arq_data_truncate.len < 0)
+			rc = EINVAL;
 		break;
 	case ACSOP_UTIMES:
 		memcpy(&arq->arq_data_utimes.tv,
