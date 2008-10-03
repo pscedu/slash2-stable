@@ -30,6 +30,9 @@ struct access_request {
 	char			 arq_fn[PATH_MAX];
 	union {
 		struct {
+			int mode;
+		} arqdu_access;
+		struct {
 			mode_t mode;
 		} arqdu_chmod;
 		struct {
@@ -57,6 +60,7 @@ struct access_request {
 			struct timeval tv[2];
 		} arqdu_utimes;
 	} arq_datau;
+#define arq_data_access		arq_datau.arqdu_access
 #define arq_data_chmod		arq_datau.arqdu_chmod
 #define arq_data_chown		arq_datau.arqdu_chown
 #define arq_data_link		arq_datau.arqdu_link
@@ -160,6 +164,9 @@ acsvc_svrmain(int s)
 //		if (setegid(arq.arq_gid) == -1)
 //			psc_fatal("setegid %d", arq.arq_gid);
 		switch (arq.arq_op) {
+		case ACSOP_ACCESS:
+			rc = access(arq.arq_fn, arq.arq_data_access.mode);
+			break;
 		case ACSOP_CHMOD:
 			rc = chmod(arq.arq_fn, arq.arq_data_chmod.mode);
 			break;
@@ -387,6 +394,9 @@ access_fsop(int op, uid_t uid, gid_t gid, const char *fn, ...)
 	}
 	va_start(ap, fn);
 	switch (op) {
+	case ACSOP_ACCESS:
+		arq->arq_data_access.mode = va_arg(ap, int); 
+		break;
 	case ACSOP_CHMOD:
 		arq->arq_data_chmod.mode = va_arg(ap, mode_t);
 		break;
