@@ -73,8 +73,6 @@ struct access_request {
 #define arq_data_utimes		arq_datau.arqdu_utimes
 };
 
-/* XXX opendir() needs access checks! */
-
 struct access_reply {
 	int			arp_op;
 	int			arp_rc;
@@ -87,7 +85,7 @@ struct access_reply {
 			char fn[PATH_MAX];
 		} arpdu_readlink;
 		struct {
-			struct stat sb;
+			struct stat stb;
 		} arpdu_stat;
 		struct {
 			struct statvfs sv;
@@ -209,6 +207,9 @@ acsvc_svrmain(int s)
 			break;
 		case ACSOP_RMDIR:
 			rc = rmdir(arq.arq_fn);
+			break;
+		case ACSOP_STAT:
+			rc = stat(arq.arq_fn, &arp.arp_data_stat.stb);
 			break;
 		case ACSOP_STATFS:
 			rc = statvfs(arq.arq_fn,
@@ -395,7 +396,7 @@ access_fsop(int op, uid_t uid, gid_t gid, const char *fn, ...)
 	va_start(ap, fn);
 	switch (op) {
 	case ACSOP_ACCESS:
-		arq->arq_data_access.mode = va_arg(ap, int); 
+		arq->arq_data_access.mode = va_arg(ap, int);
 		break;
 	case ACSOP_CHMOD:
 		arq->arq_data_chmod.mode = va_arg(ap, mode_t);
@@ -425,6 +426,9 @@ access_fsop(int op, uid_t uid, gid_t gid, const char *fn, ...)
 		if (strlcpy(arq->arq_data_rename.to, va_arg(ap, char *),
 		    PATH_MAX) >= PATH_MAX)
 			rc = ENAMETOOLONG;
+		break;
+	case ACSOP_STAT:
+	case ACSOP_STATFS:
 		break;
 	case ACSOP_SYMLINK:
 		if (strlcpy(arq->arq_data_symlink.to, va_arg(ap, char *),
@@ -457,8 +461,6 @@ access_fsop(int op, uid_t uid, gid_t gid, const char *fn, ...)
 				rc = apr->apr_rep.arp_data_open.fd;
 			/* XXX: test validity of `fd', perhaps via select(2). */
 			break;
-//		case ACSOP_OPENDIR:
-//			break;
 		case ACSOP_READLINK:
 			rc = apr->apr_rep.arp_rc;
 			if (rc) {
@@ -481,8 +483,16 @@ access_fsop(int op, uid_t uid, gid_t gid, const char *fn, ...)
 				}
 			}
 			break;
-//		case ACSOP_STAT:
-//			break;
+		case ACSOP_STAT:
+			rc = apr->apr_rep.arp_rc;
+			if (rc) {
+				errno = rc;
+				rc = -1;
+			} else
+				memcpy(va_arg(ap, struct stat *),
+				    &apr->apr_rep.arp_data_stat.stb,
+				    sizeof(struct stat));
+			break;
 		case ACSOP_STATFS:
 			rc = apr->apr_rep.arp_rc;
 			if (rc) {
