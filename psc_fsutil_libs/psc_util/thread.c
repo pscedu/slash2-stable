@@ -160,7 +160,7 @@ pscthr_sigusr1(__unusedx int sig)
 	int locked;
 
 	thr = psc_threadtbl_get();
-	while (tryreqlock(&thr->pscthr_lock, &locked))
+	while (!tryreqlock(&thr->pscthr_lock, &locked))
 		sched_yield();
 	thr->pscthr_flags |= PTF_PAUSED;
 	ureqlock(&thr->pscthr_lock, locked);
@@ -181,7 +181,7 @@ pscthr_sigusr2(__unusedx int sig)
 	int locked;
 
 	thr = psc_threadtbl_get();
-	while (tryreqlock(&thr->pscthr_lock, &locked))
+	while (!tryreqlock(&thr->pscthr_lock, &locked))
 		sched_yield();
 	thr->pscthr_flags &= ~PTF_PAUSED;
 	ureqlock(&thr->pscthr_lock, locked);

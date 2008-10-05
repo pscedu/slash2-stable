@@ -79,9 +79,9 @@ trylock(psc_spinlock_t *lk)
 
 	rc = pthread_mutex_trylock(lk);
 	if (rc == 0)
-		return (0);
-	else if (rc == EBUSY)
 		return (1);
+	else if (rc == EBUSY)
+		return (0);
 	psc_fatalx("trylock: %s", strerror(rc));
 }
 
@@ -119,10 +119,9 @@ tryreqlock(psc_spinlock_t *lk, int *locked)
 		return (0);
 	} else if (rc == EDEADLK) {
 		*locked = 1;
-		return (0);
+		return (1);
 	}
-	psc_fatalx("reqlock: %s", strerror(rc));
-
+	psc_fatalx("pthread_mutex_trylock: %s", strerror(rc));
 }
 
 /*
@@ -214,10 +213,10 @@ _tands(volatile psc_spinlock_t *s)
 	if (r == SL_LOCKED) {
 		if (s->sl_who == pthread_self())
 			psc_fatalx("already holding the lock");
-		return (1);			/* already locked */
+		return (0);			/* already locked */
 	} else if (r == SL_UNLOCKED) {
 		s->sl_who = pthread_self();	/* we got it */
-		return (0);
+		return (1);
 	}
 	psc_fatalx("lock %p has invalid value (%d)", s, r);
 }
@@ -228,7 +227,7 @@ spinlock(psc_spinlock_t *s)
 	struct timespec tm;
 	int i = 0;
 
-	while (_tands(s)) {
+	while (!_tands(s)) {
 		if (i < MAX_SPIN_CNT) {
 			sched_yield();
 			i++;
@@ -278,12 +277,12 @@ reqlock(psc_spinlock_t *sl)
 static __inline int
 tryreqlock(psc_spinlock_t *sl, int *locked)
 {
-	*locked = 0;
 	if (sl->sl_lock == SL_LOCKED &&
 	    sl->sl_who == pthread_self()) {
 		*locked = 1;
-		return (0);
+		return (1);
 	}
+	*locked = 0;
 	return (trylock(sl));
 }
 

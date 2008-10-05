@@ -11,7 +11,6 @@
 #include "psc_util/lock.h"
 #include "psc_util/random.h"
 
-
 int
 dhcmp(const void *a, const void *b)
 {
@@ -61,7 +60,7 @@ dh_release(struct dhent *d)
 		 * really is zero as dh_lookup() may be in the middle of
 		 * handing out another reference.
 		 */
-		while (trylock(&dhtreelock)) {
+		while (!trylock(&dhtreelock)) {
 			freelock(&d->lock);
 			spinlock(&d->lock);
 		}
