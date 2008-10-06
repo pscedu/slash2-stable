@@ -13,6 +13,7 @@ general
 	(o) s/U64CONST/UINT64_C/
 	(o) inttypes.h PRI[dioux]64 in place of _P_U64 and LPX
 	(o) s/u64/uint64_t/
+- investigate pthread_rwlocks for things like trees and large lists
 
 slash
 - piggyback small readdirs directly into READDIR replies
