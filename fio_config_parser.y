@@ -2,12 +2,17 @@
 
 %{
 #include <err.h>
+#include <stdarg.h>
 
 #include "fio.h"
-#include "fio_sym.h" 
+#include "fio_sym.h"
 
 int yylex(void);
 int yyerror(const char *, ...);
+
+int lineno;
+int errors;
+
 %}
 
 %start group_blocks
@@ -42,17 +47,18 @@ int yyerror(const char *, ...);
 };
 
 %%
+
 group_blocks : /* NULL */               |
                group_blocks group_block
 {};
 
-group_block : group_start statements GROUP_END 
+group_block : group_start statements GROUP_END
 {
   ASSERT(currentGroup->num_pes);
 
 #ifdef PTHREADS
   BDEBUG("Allocating %d Thread Structs\n",
-	 currentGroup->num_pes);  
+	 currentGroup->num_pes);
 
   currentGroup->threads = malloc(sizeof(THREAD_t) *
 				 currentGroup->num_pes);
@@ -63,19 +69,19 @@ group_block : group_start statements GROUP_END
 };
 
 group_start : GROUP NAME GROUP_START
-{   
+{
   extern GROUP_t *currentGroup;
   GROUP_t        *group;
   char *ptr = (char *)$2;
 
   if (!numGroups) {
     BDEBUG("initialize groupList\n");
-    INIT_LIST_HEAD(&groupList);    
+    INIT_LIST_HEAD(&groupList);
   }
   numGroups++;
 
   BDEBUG("malloc'ing %zu bytes for testGroup inc_ptr %p\n",
-	sizeof(GROUP_t), (void *)ptr);  
+	sizeof(GROUP_t), (void *)ptr);
 
   BDEBUG("\nGroup Name = '%s'\n",
 	 (char *)$2);
@@ -88,7 +94,7 @@ group_start : GROUP NAME GROUP_START
   strncpy(group->test_name, (char *)$2, TEST_GROUP_NAME_MAX);
   currentGroup = group;
 
-  BDEBUG("New Group Declared: Name '%s' Addr %p\n", 
+  BDEBUG("New Group Declared: Name '%s' Addr %p\n",
 	group->test_name, group);
 };
 
@@ -99,39 +105,47 @@ statements        : /* NULL */               |
 statement         : val_stmt   |
                     path_stmt  |
                     bool_stmt  |
+                    num_stmt  |
                     size_stmt  |
                     float_stmt ;
 
 val_stmt  : NAME EQ NAME END
-{ 
+{
   BDEBUG("Found Name/Val Statement: Tok '%s' Val '%s'\n",
 	$1, $3);
   store_tok_val($1, $3);
 };
 
-path_stmt : NAME EQ PATHNAME END 
-{ 
+num_stmt  : NAME EQ NUM END
+{
+  BDEBUG("Found Name/Val Statement: Tok '%s' Val '%s'\n",
+	$1, $3);
+  store_tok_val($1, $3);
+};
+
+path_stmt : NAME EQ PATHNAME END
+{
   BDEBUG("Found Path Statement: Tok '%s' Val '%s'\n",
 	$1, $3);
   store_tok_val($1, $3);
 };
 
 bool_stmt : NAME EQ BOOL END
-{ 
+{
   BDEBUG("Found Bool Statement: Tok '%s' Val '%s'\n",
 	$1, $3);
   store_tok_val($1, $3);
 };
 
 size_stmt  : NAME EQ SIZEVAL END
-{ 
+{
   BDEBUG("Found Sizeval Statement: Tok '%s' Val '%s'\n",
 	$1, $3);
   store_tok_val($1, $3);
 };
 
 float_stmt : NAME EQ FLOATVAL END
-{ 
+{
   BDEBUG("Found Float Statement: Tok '%s' Val '%s'\n",
 	$1, $3);
   store_tok_val($1, $3);
@@ -139,14 +153,14 @@ float_stmt : NAME EQ FLOATVAL END
 
 
 subsect_block     : subsect_begin statements   SUBSECT_END |
-                    iotests SUBSECT_END 
+                    iotests SUBSECT_END
 {};
 
-subsect_begin     : SUB NAME SUBSECT_START 
-{ 
+subsect_begin     : SUB NAME SUBSECT_START
+{
   struct symtable_t *sym = get_symbol((char *) $2);
-  
-  if (sym == NULL) { 
+
+  if (sym == NULL) {
     WARN("Invalid config entry '%s'\n", $2);
     exit(1);
   }
@@ -156,58 +170,68 @@ iotests           : IOTESTS SUBSECT_START test_recipes
 {};
 
 
-test_recipes      : /* NULL */               | 
-                    test_recipe test_recipes 
+test_recipes      : /* NULL */               |
+                    test_recipe test_recipes
 {};
 
 
-test_recipe       : test_recipe_decl test_recipe_comps RECIPE_END 
-{ 
+test_recipe       : test_recipe_decl test_recipe_comps RECIPE_END
+{
   currentGroup->num_iotests++;
 };
 
 
-test_recipe_decl  : NAME RECIPE_START 
+test_recipe_decl  : NAME RECIPE_START
 {
   extern GROUP_t *currentGroup;
-  int num_iotests          =  currentGroup->num_iotests; 
+  int num_iotests          =  currentGroup->num_iotests;
   struct io_routine_t *ior = &currentGroup->iotests[num_iotests];
 
   if (num_iotests >= MAXTESTS)
     errx(1, "num_iotests (%d) >= MAXTESTS (%d)", num_iotests, MAXTESTS);
 
-  strncpy(ior->io_testname, (char *)$1, 
+  strncpy(ior->io_testname, (char *)$1,
 	  TEST_GROUP_NAME_MAX);
   BDEBUG("Got test name '%s'\n", ior->io_testname);
 };
-
 
 test_recipe_comps : /* NULL */                          |
                     test_recipe_comp  test_recipe_comps |
 		    test_recipe_scomp test_recipe_comps
 {};
 
-test_recipe_scomp  : NAME 
-{ 
-  store_func($1);
-};
-
-
-test_recipe_comp  : NAME RECIPE_SEP 
+test_recipe_scomp  : NAME
 {
   store_func($1);
 };
 
+test_recipe_comp  : NAME RECIPE_SEP
+{
+  store_func($1);
+};
 
 %%
-int run_yacc()
+
+int run_yacc(void)
 {
   yyparse();
+  if (errors)
+    errx(1, "errors encountered");
   return 0;
 }
 
 int yyerror(const char *msg, ...)
 {
-  printf("Error encountered: %s \n", msg);
+  va_list ap;
+
+  printf("line %d: Error encountered: ", lineno);
+
+  va_start(ap, msg);
+  vprintf(msg, ap);
+  va_end(ap);
+
+  printf("\n");
+
+  errors = 1;
   return 0;
 }

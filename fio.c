@@ -1,3 +1,7 @@
+/* $Id$ */
+
+#include <err.h>
+
 #include "fio_sym.h"
 #include "fio.h"
 
@@ -270,11 +274,8 @@ IOT_t * init_pe(int mype)
   (void)print_pe_map();
 #endif
     
-  if ( stat(mygroup->test_path, &stb) ) { 
-    fprintf(stderr, "stat() ;%s; %s", 
-	    mygroup->test_path, strerror(errno));
-    exit(1);
-  }
+  if ( stat(mygroup->test_path, &stb) == -1)
+    err(1, "stat %s", mygroup->test_path);
   
   if ( S_ISDIR(stb.st_mode) ) { 
     if ( chdir(mygroup->test_path) ) {     

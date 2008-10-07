@@ -424,7 +424,7 @@ static inline char * get_dbg_prefix(int dbg_channel)
 
 #define DUMP_GROUP(g) do {	                		    \
     int i,j;							    \
-    BDEBUG("Group '%s' %p\n\tnum_pes %d\n\tnum_tests %d\n\tpath '%s'\n\tfile_size %llu\n\tblock_size %llu\n\titeratons %d\n\ttest_opts %d\n\tfile_per_pe %d\n\tfile_per_dir %d\n\ttree_depth %d\ttree_width %d\n\ttest_freq "TIMET TIMET"\n", \
+    BDEBUG("Group '%s' %p\n\tnum_pes %d\n\tnum_tests %d\n\tpath '%s'\n\tfile_size %llu\n\tblock_size %llu\n\titeratons %d\n\ttest_opts %d\n\tfile_per_pe %d\n\tfile_per_dir %d\n\ttree_depth %d\n\ttree_width %d\n\ttest_freq "TIMET TIMET"\n", \
 	    g->test_name,                                           \
 	    g,                                                      \
             g->num_pes,                                             \
@@ -969,4 +969,4 @@ int run_yacc();
 int getOptions(int,  char **); 
 void printHelp(void);
 
-
+extern int lineno;

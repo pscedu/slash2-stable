@@ -1,8 +1,9 @@
 # $Id$
 
 #CFLAGS = -O2 -Wall -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64  -D_XOPEN_SOURCE -D_REENTRANT -D_THREAD_SAFE -DOS64 -DNEED_YYLVAL
-#CFLAGS = -O2 -Wall -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64  
-CFLAGS = -O2 -Wall 
+#CFLAGS = -O2 -Wall -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64
+CFLAGS = -O2 -Wall
+# CFLAGS += -W
 LINUXFLAGS = -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64 -DYY_NO_UNPUT
 LIBS = -lm
 
@@ -17,7 +18,7 @@ lex_yacc:
 base:   lex_yacc $(OBJS)
 
 qk:	INC = /opt/xt-mpt/default/mpich2-64/P2/include/
-qk:     LIB = /opt/xt-mpt/default/mpich2-64/P2/lib/ 
+qk:     LIB = /opt/xt-mpt/default/mpich2-64/P2/lib/
 qk:     CC = qk-gcc
 qk:     CFLAGS += -DQK -DMPI $(LINUXFLAGS) -I $(INC)
 qk:     LIBS   += -lmpich
