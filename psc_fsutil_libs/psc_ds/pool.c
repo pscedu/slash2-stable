@@ -219,13 +219,13 @@ psc_pool_get(struct psc_poolmgr *m)
 	 * If this pool user provided a reaper routine e.g.
 	 * for reclaiming buffers on a clean list, try that.
 	 */
-	if (m->ppm_reapcb) {
+	if (m->ppm_reclaimcb) {
 		do {
 			/* ask for wq_nwaitors+1 because the asking thread
 			 * wants one... and everybody else who is already
 			 * waiting will want one too */
-			n = m->ppm_reapcb(&m->ppm_lc, atomic_read(
-			    &m->ppm_lc.lc_wq_empty.wq_nwaitors)+1);
+			n = m->ppm_reclaimcb(&m->ppm_lc, atomic_read(
+			    &m->ppm_lc.lc_wq_empty.wq_nwaitors) + 1);
 			p = lc_getnb(&m->ppm_lc);
 			if (p)
 				return (p);

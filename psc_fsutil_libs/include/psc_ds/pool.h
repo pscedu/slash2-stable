@@ -33,7 +33,7 @@ struct psc_poolmgr {
 	int			  ppm_total;		/* #items in circulation */
 	int			(*ppm_initf)(void *);	/* entry initializer */
 	void			(*ppm_destroyf)(void *);/* entry deinitializer */
-	int			(*ppm_reapcb)(struct psc_listcache *, int);
+	int			(*ppm_reclaimcb)(struct psc_listcache *, int);
 };
 
 /* Pool manager flags. */
