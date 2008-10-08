@@ -523,7 +523,7 @@ int psc_send_rpc(struct pscrpc_request *request, int noreply)
                         /* ...but the MD attach didn't succeed... */
                         request->rq_receiving_reply = 0;
                         freelock(&request->rq_lock);
-                        GOTO(cleanup_me, rc -ENOMEM);
+                        GOTO(cleanup_me, rc = -ENOMEM);
                 }
 
                 psc_info("Setup reply buffer: %u bytes, xid %"_P_U64"x"
@@ -704,6 +704,8 @@ static void __pscrpc_free_req(struct pscrpc_request *request, int  locked)
 
         if (request->rq_bulk != NULL)
                 pscrpc_free_bulk(request->rq_bulk);
+	
+	psc_assert(request->rq_reply_state == NULL);
 
         if (request->rq_pool) {
                 //__ptlrpc_free_req_to_pool(request);
