@@ -310,9 +310,10 @@ acsvc_climain(__unusedx void *arg)
 }
 
 void
-acsvc_init(struct psc_thread *thr, int thrtype, const char *name)
+acsvc_init(struct psc_thread *thr, int thrtype, const char *name, char **av)
 {
 	int fds[2];
+	char *p;
 
 	if (socketpair(AF_LOCAL, SOCK_STREAM, PF_UNSPEC, fds) == -1)
 		psc_fatal("socketpair");
@@ -320,6 +321,14 @@ acsvc_init(struct psc_thread *thr, int thrtype, const char *name)
 	case -1:
 		psc_fatal("fork");
 	case 0:  /* child */
+		if (av) {
+			p = strrchr(av[0], '/');
+			if (p)
+				p++;
+			else
+				p = av[0];
+			setprocesstitle(av, "%s [acsvc]", p);
+		}
 		close(fds[1]);
 		acsvc_svrmain(fds[0]);
 	}
