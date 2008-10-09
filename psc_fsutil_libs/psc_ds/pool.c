@@ -216,7 +216,7 @@ psc_pool_get(struct psc_poolmgr *m)
 	}
 
 	/*
-	 * If this pool user provided a reaper routine e.g.
+	 * If this pool user provided a reclaimer routine e.g.
 	 * for reclaiming buffers on a clean list, try that.
 	 */
 	if (m->ppm_reclaimcb) {
