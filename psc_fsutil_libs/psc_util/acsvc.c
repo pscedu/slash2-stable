@@ -382,7 +382,7 @@ acsreq_issue(struct access_request *arq)
 		psc_fatal("sendmsg");
 	else if (nbytes != sizeof(*arq))
 		psc_fatalx("sendmsg: short I/O");
-	free(arq);
+	PSCFREE(arq);
 
 	/* Wait for request return. */
 	psc_waitq_wait(&apr->apr_wq, &apr->apr_lock);	/* XXX check return */
@@ -405,7 +405,7 @@ access_fsop(int op, uid_t uid, gid_t gid, const char *fn, ...)
 	/* Construct request. */
 	arq = acsreq_new(op, uid, gid);
 	if (strlcpy(arq->arq_fn, fn, PATH_MAX) >= PATH_MAX) {
-		free(arq);
+		PSCFREE(arq);
 		errno = ENAMETOOLONG;
 		return (-1);
 	}
@@ -529,7 +529,7 @@ access_fsop(int op, uid_t uid, gid_t gid, const char *fn, ...)
 			}
 			break;
 		}
-		free(apr); /* XXX might modify errno */
+		PSCFREE(apr); /* XXX might modify errno */
 	}
 	va_end(ap);
 	return (rc);

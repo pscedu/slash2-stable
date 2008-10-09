@@ -83,6 +83,6 @@
 		 */							\
 		if (siz > 0)						\
 			*_s = '\0';					\
-		free(_tfmt);						\
+		PSCFREE(_tfmt);						\
 		_want;							\
 	})

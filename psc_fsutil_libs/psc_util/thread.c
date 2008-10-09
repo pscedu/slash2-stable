@@ -198,10 +198,10 @@ pscthr_destroy(struct psc_thread *thr)
 {
 	struct hash_entry *e;
 
-	free(thr->pscthr_loglevels);
+	PSCFREE(thr->pscthr_loglevels);
 	e = del_hash_entry(&thrHtable, thr->pscthr_hashid);
 	if (e)
-		free(e);
+		PSCFREE(e);
 
 	/*
 	 * I don't think we can do this unless must disallow any

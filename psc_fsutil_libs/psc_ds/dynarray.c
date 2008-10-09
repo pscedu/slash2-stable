@@ -79,7 +79,7 @@ dynarray_getpos(const struct dynarray *da, int pos)
 void
 dynarray_free(struct dynarray *da)
 {
-	free(da->da_items);
+	PSCFREE(da->da_items);
 }
 
 int

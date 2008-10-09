@@ -52,7 +52,7 @@ static __inline void
 pll_destroy(struct psc_lockedlist *pll)
 {
 	if (pll->pll_flags & PLLF_ALLOCLOCK)
-		free(pll->pll_lockp);
+		PSCFREE(pll->pll_lockp);
 }
 
 #define pll_nitems(pll)		atomic_read(&(pll)->pll_nitems)

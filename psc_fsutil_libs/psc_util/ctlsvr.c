@@ -200,7 +200,7 @@ psc_ctlrep_getsubsys(int fd, struct psc_ctlmsghdr *mh, __unusedx void *m)
 	psc_ctlmsg_sendv(fd, mh, pcss);
  done:
 	mh->mh_size = 0;	/* reset because we used our own buffer */
-	free(pcss);
+	PSCFREE(pcss);
 }
 
 /*
@@ -225,7 +225,7 @@ psc_ctlmsg_loglevel_send(int fd, struct psc_ctlmsghdr *mh, void *m,
 	mh->mh_size = siz;
 	psc_ctlmsg_sendv(fd, mh, pcl);
 	mh->mh_size = 0;	/* reset because we used our own buffer */
-	free(pcl);
+	PSCFREE(pcl);
 }
 
 /*
@@ -715,19 +715,19 @@ psc_ctlrep_param(int fd, struct psc_ctlmsghdr *mh, void *m)
 			}
 			ptn = c;
 		} while (++n < nlevels);
-		free(pcf);
+		PSCFREE(pcf);
 	}
 	return;
 
  invalid:
-	free(pcf);
+	PSCFREE(pcf);
 	/*
 	 * Strictly speaking, this shouldn't be necessary, cause
 	 * any frames we added were done out of the integrity of
 	 * the paramtree.
 	 */
 	psclist_for_each_entry_safe(pcf, npcf, &stack, pcf_lentry)
-		free(pcf);
+		PSCFREE(pcf);
 	while (nlevels-- > 1)
 		pcp->pcp_field[strlen(pcp->pcp_field)] = '.';
 	psc_ctlsenderr(fd, mh, "invalid field%s: %s",
@@ -766,7 +766,7 @@ psc_ctlparam_register(const char *oname, void (*cbf)(int, struct psc_ctlmsghdr *
 		}
 		ptn = c;
 	}
-	free(name);
+	PSCFREE(name);
 }
 
 /*
@@ -935,7 +935,7 @@ psc_ctlthr_service(int fd, const struct psc_ctlop *ct, int nops)
 	}
 	if (n == -1)
 		psc_fatal("read");
-	free(m);
+	PSCFREE(m);
 }
 
 /*

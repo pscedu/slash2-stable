@@ -77,7 +77,7 @@
 #define PSCRPC_MSG_VERSION  0x00000004
 #endif
 
-#define ZOBD_FREE(ptr, size) free(ptr)
+#define ZOBD_FREE(ptr, size) PSCFREE(ptr)
 #define ZOBD_ALLOC(ptr, size) ((ptr) = PSCALLOC(size))
 
 #ifndef PAGE_SIZE

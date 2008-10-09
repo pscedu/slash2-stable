@@ -66,7 +66,7 @@ dh_release(struct dhent *d)
 		}
 		if (d->refcnt == 0) {
 			close(d->dfd);
-			free(d);
+			PSCFREE(d);
 		} else
 			freelock(&d->lock);
 		freelock(&dhtreelock);

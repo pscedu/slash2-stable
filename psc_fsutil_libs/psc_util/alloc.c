@@ -49,7 +49,7 @@ psc_alloc(size_t size, int flags)
 	if ((flags & PAF_LOCK) && mlock(p, size) == -1) {
 		if (flags & PAF_CANFAIL) {
 			save_errno = errno;
-			free(p);
+			PSCFREE(p);
 			psc_error("mlock");
 			errno = save_errno;
 			return (NULL);
@@ -75,5 +75,5 @@ psc_freel(void *p, size_t size)
 {
 	if (p && munlock(p, size) == -1)
 		psc_fatal("munlock %p", p);
-	free(p);
+	PSCFREE(p);
 }

@@ -411,7 +411,7 @@ pjournal_headtail_get(struct psc_journal *pj, struct psc_journal_walker *pjw)
  out:
 	psc_info("journal pos (S=%d) (E=%d) (rc=%d)",
 		 pjw->pjw_pos, pjw->pjw_stop, rc);
-	free(jbuf);
+	PSCFREE(jbuf);
 	return (rc);
 }
 
@@ -454,6 +454,6 @@ pjournal_replay(struct psc_journal *pj, psc_jhandler pj_handler)
 			pjw.pjw_pos = 0;
 	}
 
-	free(jbuf);
+	PSCFREE(jbuf);
 	return (0);
 }

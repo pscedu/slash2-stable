@@ -45,7 +45,7 @@ psc_pool_grow(struct psc_poolmgr *m, int n)
 			if (flags & PAF_LOCK)
 				psc_freel(p, m->ppm_lc.lc_entsize);
 			else
-				free(p);
+				PSCFREE(p);
 			return (i);
 		}
 		POOL_LOCK(m);
@@ -64,7 +64,7 @@ psc_pool_grow(struct psc_poolmgr *m, int n)
 		if (p) {
 			if (m->ppm_destroyf)
 				m->ppm_destroyf(p);
-			free(p);
+			PSCFREE(p);
 			break;
 		}
 	}
@@ -110,7 +110,7 @@ psc_pool_shrink(struct psc_poolmgr *m, int n)
 		if (p && m->ppm_destroyf)
 			m->ppm_destroyf(p);
 		if (m->ppm_flags & PPMF_NOLOCK)
-			free(p);
+			PSCFREE(p);
 		else
 			psc_freel(p, m->ppm_lc.lc_entsize);
 	}

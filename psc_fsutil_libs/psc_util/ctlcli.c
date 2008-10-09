@@ -363,8 +363,8 @@ psc_ctlmsg_subsys_check(struct psc_ctlmsghdr *mh, const void *m)
 
 	/* Release old subsystems. */
 	for (n = 0; n < psc_ctl_nsubsys; n++)
-		free(psc_ctl_subsys_names[n]);
-	free(psc_ctl_subsys_names);
+		PSCFREE(psc_ctl_subsys_names[n]);
+	PSCFREE(psc_ctl_subsys_names);
 
 	psc_ctl_nsubsys = mh->mh_size / PCSS_NAME_MAX;
 	psc_ctl_subsys_names = PSCALLOC(psc_ctl_nsubsys *
@@ -687,7 +687,7 @@ psc_ctlcli_main(const char *sockfn)
 		siz = pcm->pcm_mh.mh_size + sizeof(pcm->pcm_mh);
 		if (write(s, &pcm->pcm_mh, siz) != siz)
 			psc_fatal("write");
-		free(pcm);
+		PSCFREE(pcm);
 	}
 	if (shutdown(s, SHUT_WR) == -1)
 		psc_fatal("shutdown");
@@ -716,6 +716,6 @@ psc_ctlcli_main(const char *sockfn)
 	}
 	if (n == -1)
 		psc_fatal("read");
-	free(m);
+	PSCFREE(m);
 	close(s);
 }

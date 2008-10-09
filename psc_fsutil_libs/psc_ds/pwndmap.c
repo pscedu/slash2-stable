@@ -97,6 +97,6 @@ pwndmap_free(struct psc_windowmap *p)
 	spinlock(&p->pwm_lock);
 	psclist_for_each_entry_safe(pb,
 	    nextpb, &p->pwm_wmbs, pwmb_lentry)
-		free(pb);
+		PSCFREE(pb);
 	freelock(&p->pwm_lock);
 }

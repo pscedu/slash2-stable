@@ -28,7 +28,7 @@ vbitmap_new(size_t nelems)
 	bytes = howmany(nelems, NBBY);
 	vb->vb_start = calloc(bytes, 1);
 	if (vb->vb_start == NULL && bytes) {
-		free(vb);
+		PSCFREE(vb);
 		return (NULL);
 	}
 	vb->vb_pos = vb->vb_start;
@@ -63,7 +63,7 @@ vbitmap_attach(unsigned char *buf, size_t size)
 void
 vbitmap_free(struct vbitmap *vb)
 {
-	free(vb->vb_start);
+	PSCFREE(vb->vb_start);
 	vb->vb_start = NULL;
 	vb->vb_end = NULL;
 	vb->vb_pos = NULL;
