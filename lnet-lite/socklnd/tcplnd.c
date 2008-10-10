@@ -145,9 +145,9 @@ int tcpnal_recv(lnet_ni_t     *ni,
                 unsigned int  mlen,
                 unsigned int  rlen)
 {
-        struct iovec *tiov = PSCALLOC(sizeof(*tiov) * (niov));
         static pthread_mutex_t recv_lock = PTHREAD_MUTEX_INITIALIZER;
 	struct iostats *ist;
+        struct iovec *tiov;
         unsigned char *trash;
         int ntiov, rc;
 	connection c;
@@ -161,9 +161,10 @@ int tcpnal_recv(lnet_ni_t     *ni,
 
         LASSERT(iov != NULL);           /* I don't understand kiovs */
 
+	tiov = PSCALLOC(sizeof(*tiov) * (niov));
         ntiov = lnet_extract_iov(niov, tiov, niov, iov, offset, mlen);
 
-        trash=malloc(rlen - mlen);
+        trash=PSCALLOC(rlen - mlen);
         pthread_mutex_lock(&recv_lock);
 	rc = psc_sock_readv(c->fd, tiov, ntiov, 0);
 
@@ -175,8 +176,8 @@ int tcpnal_recv(lnet_ni_t     *ni,
 
         pthread_mutex_unlock(&recv_lock);
 
-        PSCFREE(tiov); 
 	free(trash);
+        PSCFREE(tiov); 
 	atomic_add(rlen, &ist->ist_bytes_intv);
 finalize:
 
