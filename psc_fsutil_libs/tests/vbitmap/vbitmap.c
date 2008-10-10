@@ -7,6 +7,7 @@
 
 #include "psc_ds/vbitmap.h"
 #include "psc_util/cdefs.h"
+#include "psc_util/alloc.h"
 
 const char *progname;
 

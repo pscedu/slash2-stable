@@ -13,6 +13,7 @@
 
 #include "psc_ds/dynarray.h"
 #include "psc_util/log.h"
+#include "psc_util/alloc.h"
 
 void
 dynarray_init(struct dynarray *da)

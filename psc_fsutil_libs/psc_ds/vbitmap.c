@@ -10,6 +10,7 @@
 
 #include "psc_ds/vbitmap.h"
 #include "psc_util/cdefs.h"
+#include "psc_util/alloc.h"
 
 /**
  * vbitmap_new - create a new variable-sized bitmap.
