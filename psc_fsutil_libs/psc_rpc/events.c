@@ -454,7 +454,6 @@ pscrpc_wait_event (int timeout)
                 /* Nothing so far, but I'm allowed to block... */
                 found_something = pscrpc_check_events(timeout);
                 if (!found_something){           /* still nothing */
-			psc_warnx("pscrpc_check_events returned NOTHING.  recommend breaking here!!!");
 			return -ETIMEDOUT;
                         break;                  /* I timed out */
 		}
