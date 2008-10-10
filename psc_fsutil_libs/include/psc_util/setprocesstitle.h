@@ -1,3 +1,3 @@
 /* $Id$ */
 
-int setprocesstitle(char *, const char *, ...);
+int setprocesstitle(char **, const char *, ...);

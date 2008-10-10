@@ -6,15 +6,16 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "psc_util/setprocesstitle.h"
 #include "psc_util/strlcpy.h"
 
 int
 setprocesstitle(char **av, const char *fmt, ...)
 {
 	char buf[2048];
-	int j, newlen;
-	size_t len;
+	size_t len, newlen;
 	va_list ap;
+	int j;
 
 	va_start(ap, fmt);
 	vsnprintf(buf, sizeof(buf), fmt, ap);
