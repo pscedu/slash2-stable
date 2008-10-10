@@ -149,7 +149,7 @@ int tcpnal_recv(lnet_ni_t     *ni,
 	struct iostats *ist;
         struct iovec *tiov;
         unsigned char *trash;
-        int ntiov, rc;
+        int ntiov, rc=0;
 	connection c;
 
         LASSERT(rlen >= mlen);
