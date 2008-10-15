@@ -122,8 +122,7 @@ void request_in_callback(lnet_event_t *ev)
 
         if (ev->unlinked) {
                 service->srv_nrqbd_receiving--;
-		//               CDEBUG(D_RPCTRACE,"Buffer complete: %d buffers still posted\n",
-                CERROR("Buffer complete: %d buffers still posted (%s)\n",
+                CDEBUG(D_RPCTRACE, "Buffer complete: %d buffers still posted (%s)\n",
                        service->srv_nrqbd_receiving, service->srv_name);
 
 		if (!service->srv_nrqbd_receiving)

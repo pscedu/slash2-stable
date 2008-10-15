@@ -215,10 +215,8 @@ void request_in_callback(lnet_event_t *ev)
         if (ev->unlinked) {
                 service->srv_nrqbd_receiving--;
 
-#if 0
                 CDEBUG(D_NET,"Buffer complete: %d buffers still posted\n",
                        service->srv_nrqbd_receiving);
-#endif
 
                 /* Normally, don't complain about 0 buffers posted; LNET won't
                  * drop incoming reqs since we set the portal lazy */
