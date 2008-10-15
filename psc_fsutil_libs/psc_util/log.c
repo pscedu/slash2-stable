@@ -130,9 +130,9 @@ psclogv(__unusedx const char *fn, const char *func, int line, int subsys,
 	struct timeval tv;
 	int save_errno;
 
-	PSC_LOG_INIT();
-
 	save_errno = errno;
+
+	PSC_LOG_INIT();
 
 	if (psc_log_getlevel(subsys) < level)
 		return;
