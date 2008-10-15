@@ -12,8 +12,8 @@
 #include <string.h>
 
 #include "psc_ds/dynarray.h"
-#include "psc_util/log.h"
 #include "psc_util/alloc.h"
+#include "psc_util/log.h"
 
 void
 dynarray_init(struct dynarray *da)

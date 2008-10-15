@@ -9,8 +9,8 @@
 #include <strings.h>
 
 #include "psc_ds/vbitmap.h"
-#include "psc_util/cdefs.h"
 #include "psc_util/alloc.h"
+#include "psc_util/cdefs.h"
 
 /**
  * vbitmap_new - create a new variable-sized bitmap.
