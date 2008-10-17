@@ -1437,8 +1437,8 @@ pscrpc_set_finalize(struct pscrpc_request_set *set, int block, int destroy)
 	set_wait:
 		rc = pscrpc_set_wait(set);
 		if (rc) {
-			psc_errorx("pscrpc_set_wait() failed for set %p: %s",
-			    set, strerror(-rc));
+			errno = -rc;
+			psc_error("pscrpc_set_wait() failed for set %p", set);
 			return (rc);
 		} else {
 			if (destroy)
