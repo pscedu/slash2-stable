@@ -859,8 +859,13 @@ pscrpc_wake_client_req (struct pscrpc_request *req)
 		while (!(condition)) {					\
 			ret = pscrpc_wait_event(__interval);		\
 			if (0<ret) ret=0; /* preserve the previous semantics */	\
-			if (condition)					\
+			if (condition){					\
+				if (ret){				\
+					ret = 0; /* if it's true now */ \
+					/* don't claim timeout */	\
+				}					\
 				break;					\
+			}						\
 			if (-ETIMEDOUT==ret) break;			\
 			if (!__timed_out && info->lwi_timeout != 0) {	\
 				__now = time(NULL);			\
