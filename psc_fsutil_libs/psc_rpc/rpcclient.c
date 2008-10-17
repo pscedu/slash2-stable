@@ -500,7 +500,7 @@ static int pscrpc_check_reply(struct pscrpc_request *req)
 	EXIT;
  out:
 	spin_unlock(&req->rq_lock);
-	DEBUG_REQ(PLL_INFO, req, "rc = %d for", rc);
+	DEBUG_REQ(PLL_INFO, req, "rc = %d", rc);
 	return rc;
 }
 
@@ -759,6 +759,9 @@ int pscrpc_queue_wait(struct pscrpc_request *req)
 	      libcfs_nid2str(imp->imp_connection->c_peer.nid),
 	      req->rq_reqmsg->opc);
 
+	if (req->rq_replied)
+		DEBUG_REQ(PLL_INFO, req, "REPLIED:");
+
 	spin_lock(&imp->imp_lock);
 	psclist_del(&req->rq_list_entry);
 	spin_unlock(&imp->imp_lock);
@@ -796,7 +799,7 @@ int pscrpc_queue_wait(struct pscrpc_request *req)
 	if (!req->rq_replied) {
 		/* How can this be? -eeb */
 		DEBUG_REQ(PLL_ERROR, req, "!rq_replied: ");
-#if 0 /* We have hit this point many times upon server failure */
+#if 1 /* We have hit this point many times upon server failure */
 		LBUG();
 		GOTO(out, rc = req->rq_status);
 #else /* so... just make it an error condition */

@@ -211,6 +211,9 @@ void reply_in_callback(lnet_event_t *ev)
                   "type %d, status %d initiator ;%s;",
 		  ev->type, ev->status, libcfs_id2str(ev->initiator));
 
+        psc_dbg("event: type=%d, status=%d, offset=%d, mlength=%d",
+                ev->type, ev->status, ev->offset, ev->mlength);
+
 	if (!req->rq_peer.nid)
 		req->rq_peer = ev->initiator;
 
