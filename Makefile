@@ -1,62 +1,55 @@
 # $Id$
 
-#CFLAGS = -O2 -Wall -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64  -D_XOPEN_SOURCE -D_REENTRANT -D_THREAD_SAFE -DOS64 -DNEED_YYLVAL
-#CFLAGS = -O2 -Wall -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64
-CFLAGS = -O2 -Wall
-# CFLAGS += -W
-LINUXFLAGS = -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64 -DYY_NO_UNPUT
-LIBS = -lm
+SRCS+=		fio.c
+SRCS+=		fio_config_lex.l
+SRCS+=		fio_config_parser.y
+SRCS+=		fio_pthread_barrier.c
+SRCS+=		fio_sym.c
 
-OBJS = fio.o fio_sym.o lex.yy.o fio_config_parser.tab.o
-CC   = gcc
+CFLAGS=		-O2 -Wall -W
+LINUXFLAGS=	-D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64 -DYY_NO_UNPUT
+LDFLAGS=	-lm
+YFLAGS=		-d -o $@
 
+OBJS+=		$(patsubst %.c,%.o,$(filter %.c,${SRCS}))
+OBJS+=		$(patsubst %.y,%.o,$(filter %.y,${SRCS}))
+OBJS+=		$(patsubst %.l,%.o,$(filter %.l,${SRCS}))
 
-lex_yacc:
-	lex fio_config_parser.lex
-	bison -d fio_config_parser.y
+_YACCINTM=	$(patsubst %.y,%.c,$(filter %.y,${SRCS}))
+_LEXINTM=	$(patsubst %.l,%.c,$(filter %.l,${SRCS}))
 
-base:   lex_yacc $(OBJS)
+all:
+	@echo "no target specified, pick one of:"
+	@echo "  mpi zest debian_mpi pthreads qk"
+	@exit 1
 
-qk:	INC = /opt/xt-mpt/default/mpich2-64/P2/include/
-qk:     LIB = /opt/xt-mpt/default/mpich2-64/P2/lib/
-qk:     CC = qk-gcc
-qk:     CFLAGS += -DQK -DMPI $(LINUXFLAGS) -I $(INC)
-qk:     LIBS   += -lmpich
-#qk:     LIBS   += -lmpich -liobuf
-qk:	base
-	$(CC) $(CFLAGS) -o fio.qk $(OBJS) -L $(LIB) -L .  $(LIBS)
+qk:		CC=		qk-gcc
+qk:		CFLAGS+=	-DQK -DMPI ${LINUXFLAGS}
+qk:		CFLAGS+=	-I/opt/xt-mpt/default/mpich2-64/P2/include/
+qk:		LDFLAGS+=	-lmpich -L/opt/xt-mpt/default/mpich2-64/P2/lib
 
+zest:		CC=		ZINCPATH=../zest/trunk/intercept/include ZLIBPATH=../zest/trunk/client/linux ../zest/trunk/scripts/zcc
+zest:		CFLAGS+=	-DPTHREADS ${LINUXFLAGS}
+zest:		LDFLAGS+=	-lpthread
 
-pthreads: OBJS   += fio_pthread_barrier.o
-pthreads: CFLAGS += -DPTHREADS $(LINUXFLAGS)
-pthreads: LIBS   += -lpthread
-pthreads: base fio_pthread_barrier.o
-	$(CC) $(CFLAGS) -o fio.pthreads $(OBJS) $(LIBS)
+pthreads:	CFLAGS+=	-DPTHREADS ${LINUXFLAGS}
+pthreads:	LDFLAGS+=	-lpthread
 
-mpi:
-	flex fio_config_parser.lex
-	bison -d fio_config_parser.y
-	mpicc $(CFLAGS) -DMPI -c -o fio_config_parser.lex.o lex.yy.c
-	mpicc $(CFLAGS) -DMPI -c -o fio_config_parser.y.o fio_config_parser.tab.c
-	mpicc $(CFLAGS) -DMPI -c -o ./fio_sym.o ./fio_sym.c
-	mpicc $(CFLAGS) -DMPI -c -o ./fio.o fio.c
-	mpicc $(CFLAGS) -DMPI -o fio.mpi fio.o fio_sym.o fio_config_parser.lex.o fio_config_parser.y.o  -ll -lm
+mpi:		CC=		mpicc
+mpi:		CFLAGS+=	-DMPI
 
-debian_mpi:
-	flex fio_config_parser.lex
-	bison -d fio_config_parser.y
-	mpicc.mpich $(CFLAGS) -DMPI -c -o fio_config_parser.lex.o lex.yy.c
-	mpicc.mpich $(CFLAGS) -DMPI -c -o fio_config_parser.y.o fio_config_parser.tab.c
-	mpicc.mpich $(CFLAGS) -DMPI -c -o ./fio_sym.o ./fio_sym.c
-	mpicc.mpich $(CFLAGS) -DMPI -c -o ./fio.o fio.c
-	mpicc.mpich $(CFLAGS) -DMPI -o fio.mpi fio.o fio_sym.o fio_config_parser.lex.o fio_config_parser.y.o  -ll -lm
+debian_mpi:	CC=		mpicc.mpich
+debian_mpi:	CFLAGS+=	-DMPI
 
-clean_all:
-	rm -f *.o fio.pthreads fio.qk fio.mpi
-
-clean:
-	rm -f *.o
-
+debian_mpi mpi pthreads zest qk: ${OBJS}
+	${CC} -o fio.$@ ${OBJS} ${LDFLAGS}
 
 .c.o:
-	$(CC) $(CFLAGS) $(LINUXFLAGS) -c -o $@ $<
+	${CC} ${CFLAGS} ${LINUXFLAGS} -c -o $@ $<
+
+.y.c:
+	${YACC} ${YFLAGS} $<
+
+clean_all clean:
+	rm -f ${OBJS} ${_YACCINTM} ${_LEXINTM} \
+	    fio.debian_mpi fio.pthreads fio.zest fio.qk fio.mpi

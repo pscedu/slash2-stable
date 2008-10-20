@@ -5,7 +5,7 @@
 #include <string.h>
 
 #include "fio.h"
-#include "fio_config_parser.tab.h"
+#include "fio_config_parser.h"
 %}
 
 eq		[=]
@@ -17,7 +17,7 @@ name		[0-9A-Za-z_]+
 float		[0-9]*\.?[0-9]+
 
 sizeval		[0-9]+[BKMGTbkmgt]
-pathname	[a-zA-Z0-9/._-]+
+pathname	[a-zA-Z0-9/._:-]+
 
 %%
 
