@@ -1,3 +1,5 @@
+/* $Id$ */
+
 /*
  * barrier.c
  *
@@ -20,9 +22,13 @@
  * to do something in a serial region before entering another
  * parallel section of code.
  */
-#include <pthread.h>
+
+#ifdef PTHREADS
+
 #include <errno.h>
+#include <pthread.h>
 #include <stdio.h>
+
 #include "fio_pthread_barrier.h"
 
 /*
@@ -143,3 +149,5 @@ int barrier_wait (barrier_t *barrier)
     pthread_mutex_unlock (&barrier->mutex);
     return status;          /* error, -1 for waker, or 0 */
 }
+
+#endif
