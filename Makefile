@@ -6,10 +6,10 @@ SRCS+=		fio_config_parser.y
 SRCS+=		fio_pthread_barrier.c
 SRCS+=		fio_sym.c
 
-CFLAGS=		-g -Wall -W
+CFLAGS=		-O2 -Wall -W
 LINUXFLAGS=	-D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64 -DYY_NO_UNPUT
 LDFLAGS=	-lm
-YFLAGS=		-d -o $@ -t
+YFLAGS=		-d -o $@
 
 OBJS+=		$(patsubst %.c,%.o,$(filter %.c,${SRCS}))
 OBJS+=		$(patsubst %.y,%.o,$(filter %.y,${SRCS}))
