@@ -6,23 +6,11 @@
 
 #include "fio.h"
 #include "fio_config_parser.h"
+
+int yyerror(const char *, ...);
 %}
 
-eq		[=]
-sep		[:]
-endl		[;]
-
-num		[0-9]+
-name		[0-9A-Za-z_]+
-float		[0-9]*\.?[0-9]+
-
-sizeval		[0-9]+[BKMGTbkmgt]
-pathname	[a-zA-Z0-9/._:-]+
-
 %%
-
-\n		{ lineno++; }
-[ \t]+		;
 
 group {
 	CDEBUG("GROUP %s\n", yytext);
@@ -71,17 +59,17 @@ no {
 	return SUBSECT_END;
 }
 
-{sep} {
-	CDEBUG("RECIPE_SEP %s\n", yytext);
-	return RECIPE_SEP;
-}
-
-{eq} {
+= {
 	CDEBUG("EQ %s\n", yytext);
 	return EQ;
 }
 
-{endl} {
+: {
+	CDEBUG("RECIPE_SEP %s\n", yytext);
+	return RECIPE_SEP;
+}
+
+; {
 	CDEBUG("END %s\n", yytext);
 	return END;
 }
@@ -96,38 +84,44 @@ no {
 	return RECIPE_END;
 }
 
-{sizeval} {
+[0-9]+[BKMGTbkmgt] {
 	CDEBUG("SIZEVAL %s\n", yytext);
 	yylval.string=strdup(yytext);
 	return SIZEVAL;
 }
 
-{num} {
+[0-9]+ {
 	CDEBUG("NUM %s\n", yytext);
 	yylval.string=strdup(yytext);
 	return NUM;
 }
 
-{float} {
+[0-9]*\.?[0-9]+ {
 	CDEBUG("FLOATVAL %s\n", yytext);
 	yylval.string=strdup(yytext);
 	return FLOATVAL;
 }
 
-{name} {
-	CDEBUG("NAME %s\n", yytext);
+[0-9A-Za-z_/.-]+ {
+	CDEBUG("STR %s\n", yytext);
 	yylval.string=strdup(yytext);
-	CDEBUG("NAME1 %s %s %p\n", yytext, yylval.string, yylval.voidp);
-	return NAME;
+	return STR;
 }
 
-{pathname} {
-	CDEBUG("PATHNAME %s\n", yytext);
-	yylval.string=strdup(yytext);
-	return PATHNAME;
+\"[^"]*\" {
+	char *p;
+
+	CDEBUG("STR %s\n", yytext);
+	p = strrchr(yytext, '"');
+	*p = '\0';
+	yylval.string=strdup(yytext + 1);
+	return STR;
 }
 
-.	WARN("Unrecognized character: %s\n", yytext);
+\n	{ lineno++; }
+[ \t]+	;
+
+.	yyerror("Unrecognized character: %s\n", yytext);
 
 %%
 

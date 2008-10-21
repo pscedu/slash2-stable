@@ -6,10 +6,10 @@ SRCS+=		fio_config_parser.y
 SRCS+=		fio_pthread_barrier.c
 SRCS+=		fio_sym.c
 
-CFLAGS=		-O2 -Wall -W
+CFLAGS=		-g -Wall -W
 LINUXFLAGS=	-D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64 -DYY_NO_UNPUT
 LDFLAGS=	-lm
-YFLAGS=		-d -o $@
+YFLAGS=		-d -o $@ -t
 
 OBJS+=		$(patsubst %.c,%.o,$(filter %.c,${SRCS}))
 OBJS+=		$(patsubst %.y,%.o,$(filter %.y,${SRCS}))
@@ -49,6 +49,8 @@ debian_mpi mpi pthreads zest qk: ${OBJS}
 
 .y.c:
 	${YACC} ${YFLAGS} $<
+
+.PRECIOUS: %.c
 
 clean_all clean:
 	rm -f ${OBJS} ${_YACCINTM} ${_LEXINTM} \
