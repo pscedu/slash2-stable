@@ -750,8 +750,12 @@ int pscrpc_queue_wait(struct pscrpc_request *req)
 	lwi = LWI_TIMEOUT_INTR(timeout, expired_request,
 			       interrupted_request, req);
 
-	psc_cli_wait_event(&req->rq_reply_waitq, pscrpc_check_reply(req),
-		       &lwi);
+	rc = psc_cli_wait_event(&req->rq_reply_waitq, pscrpc_check_reply(req),
+				&lwi);
+	/* !!! might have timed out !!! */
+	if (rc)
+		DEBUG_REQ(PLL_INFO, req, "psc_cli_wait_event(pscrpc_check_reply) returned %d", rc);
+
 	DEBUG_REQ(PLL_INFO, req, "-- done sleeping");
 
 	psc_info("Completed RPC status:err:xid:nid:opc %d:%d:%"_P_U64"x:%s:%d",
