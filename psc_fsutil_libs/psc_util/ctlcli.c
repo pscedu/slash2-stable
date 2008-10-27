@@ -4,6 +4,7 @@
 #include <sys/socket.h>
 #include <sys/un.h>
 
+#include <err.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -679,7 +680,7 @@ psc_ctlcli_main(const char *sockfn)
 	sun.sun_family = AF_UNIX;
 	snprintf(sun.sun_path, sizeof(sun.sun_path), "%s", sockfn);
 	if (connect(s, (struct sockaddr *)&sun, sizeof(sun)) == -1)
-		psc_fatal("connect: %s", sockfn);
+		err(1, "connect: %s", sockfn);
 
 	/* Send queued control messages. */
 	psclist_for_each_entry_safe(pcm, nextpcm,
