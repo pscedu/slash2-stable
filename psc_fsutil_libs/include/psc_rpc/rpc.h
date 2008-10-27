@@ -886,7 +886,10 @@ pscrpc_wake_client_req (struct pscrpc_request *req)
 		}							\
 	} while (0)
 
-#ifdef PSCRPC_POLL_BLOCK
+#ifdef HAVE_LIBPTHREAD 
+# define psc_cli_wait_event(wq, condition, info)			\
+	psc_svr_wait_event((wq), (condition), (info), NULL)
+#else 
 # define psc_cli_wait_event(wq, condition, info)			\
 	({								\
 		int                 __ret;				\
@@ -896,9 +899,6 @@ pscrpc_wake_client_req (struct pscrpc_request *req)
 		    __ret, 0);						\
 		__ret;							\
 	})
-#else
-# define psc_cli_wait_event(wq, condition, info)			\
-	psc_svr_wait_event((wq), (condition), (info), NULL)
 #endif
 
 #define psc_svr_wait_event(wq, condition, info, lck)			\
