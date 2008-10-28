@@ -689,7 +689,7 @@ force_tcp_connection(manager    m,
 {
     unsigned int       ip = LNET_NIDADDR(nidpid->nid);
     connection         conn = NULL;
-    bridge	       b = m->handler_arg;
+//    bridge	       b = m->handler_arg;
     struct sockaddr_in addr;
     struct sockaddr_in locaddr; 
     int                fd;

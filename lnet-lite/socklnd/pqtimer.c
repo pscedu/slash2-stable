@@ -87,6 +87,7 @@ static void add_pqueue(int i)
 }
 
 
+#if 0
 static void 
 add_timer(timer t)
 {
@@ -100,7 +101,6 @@ add_timer(timer t)
     add_pqueue(number_of_timers);
 }
 
-#if 0
 /* Function: register_timer
  * Arguments: interval: the time interval from the current time when
  *                      the timer function should be called

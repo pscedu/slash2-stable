@@ -325,7 +325,7 @@ static struct timeval *choose_timeout(struct timeval *tv1,
  */
 void select_timer_block(when until, void **arg)
 {
-        io_handler *ioh = arg;
+        io_handler *ioh = (void *)arg;
         fd_set fds[3];
         struct timeval timeout;
         struct timeval *timeout_pointer, *select_timeout;
