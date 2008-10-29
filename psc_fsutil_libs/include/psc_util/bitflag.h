@@ -60,12 +60,12 @@ bitflag_sorc(int *f, psc_spinlock_t *lck, int checkon, int checkoff,
 
 	if (lck)
 		ureqlock(lck, locked);
-	return (0);
+	return (1);
  error:
 	if (lck)
 		ureqlock(lck, locked);
 	psc_assert((flags & BIT_ABORT) == 0);
-	return (-1);
+	return (0);
 }
 
 #endif /* __PFL_BITFLAG_H__ */
