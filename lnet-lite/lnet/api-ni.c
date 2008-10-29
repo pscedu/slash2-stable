@@ -820,7 +820,7 @@ lnet_islocalnet (__u32 net)
 int
 lnet_localnids_get (lnet_nid_t *nids, size_t max)
 {
-        int               n=0;
+        size_t            n=0;
         lnet_ni_t        *ni;        
         struct list_head *tmp;
 
