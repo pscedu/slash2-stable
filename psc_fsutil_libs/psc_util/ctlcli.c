@@ -464,8 +464,8 @@ psc_ctlmsg_pool_prdat(__unusedx const struct psc_ctlmsghdr *mh,
 
 	printf(" %-20s %c%c%c%c%c %8d %8d %8d\n", pcpm->pcpm_name,
 	    '-', '-', '-',
-	    pcpm->pcpm_flags & PPMF_REAP ? 'R' : '-',
 	    pcpm->pcpm_flags & PPMF_AUTO ? 'A' : '-',
+	    pcpm->pcpm_flags & PPMF_NOLOCK ? 'N' : '-',
 	    pcpm->pcpm_min, pcpm->pcpm_max, pcpm->pcpm_total);
 }
 
