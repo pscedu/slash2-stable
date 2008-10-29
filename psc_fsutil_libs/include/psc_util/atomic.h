@@ -150,6 +150,7 @@ ia64_atomic64_sub(__s64 i, psc_atomic64_t *v)
 #define psc_atomic64_inc(v)			psc_atomic64_add(1 ,(v))
 #define psc_atomic64_dec(v)			psc_atomic64_sub(1 ,(v))
 
+#define atomic_cmpxchg(v, old, new)		((int)cmpxchg(&((v)->counter), (old), (new)))
 #define atomic_xchg(v, new)			(xchg(&((v)->counter), (new)))
 
 #else
