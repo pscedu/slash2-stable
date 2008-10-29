@@ -326,8 +326,6 @@ pscrpc_server_handle_request(struct pscrpc_service *svc,
 	if (request->rq_conn->c_exp == NULL) {
 		struct pscrpc_export *exp;
 
-		DEBUG_REQ(PLL_WARN, request, "null export");
-
 		ZOBD_ALLOC(exp, sizeof(*exp));
 		if (exp == NULL)
 			psc_fatal("Couldn't allocate export");

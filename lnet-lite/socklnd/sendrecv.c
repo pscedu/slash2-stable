@@ -61,20 +61,18 @@ psc_sock_io(int s, void *p, int nob, int timeout, int wr)
 			rc = send(s, buf, nob, flags);
 		else
 			rc = recv(s, buf, nob, flags);
-		
+
 		if (rc == -1) {
-			CERROR("failed %s rc(%d) errno(%d)", 
+			CERROR("failed %s rc(%d) errno(%d)",
 			       wr ? "send" : "recv", rc, errno);
 			if (errno != EAGAIN && errno != EINTR)
 				return (-errno);
 			else
 				rc = 0;
 
-		} else if (rc == 0) {
-			CERROR ("Unexpected zero rc\n");
+		} else if (rc == 0)
 			return (wr ? -ECONNABORTED : -ECONNRESET);
-		}
-		
+
 		if (timeout) {
 			if (gettimeofday(&now, NULL) == -1)
 				LASSERT(0);
