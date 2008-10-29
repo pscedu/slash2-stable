@@ -125,7 +125,7 @@ psc_waitq_wakeall(psc_waitq_t *q)
 void
 psc_waitq_init(__unusedx psc_waitq_t *q)
 {
-	psc_fatalx("waitqs not supported");
+	atomic_set(&q->wq_nwaitors, 0);
 }
 
 void

@@ -22,6 +22,7 @@ struct psc_wait_queue {
 #else /* HAVE_LIBPTHREAD */
 
 struct psc_wait_queue {
+	atomic_t		wq_nwaitors;
 };
 
 #endif /* HAVE_LIBPTHREAD */
