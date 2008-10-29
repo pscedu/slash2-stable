@@ -3,9 +3,10 @@
 #include "psc_ds/lockedlist.h"
 #include "psc_ds/pool.h"
 
+struct psc_poolset psc_pooldefset = PSC_POOLSET_INIT;
 psc_spinlock_t psc_pools_lock = LOCK_INITIALIZER;
 struct psc_lockedlist psc_pools = PLL_INITIALIZER(&psc_pools,
-    struct psc_poolmgr, ppm_lentry, &psc_pools_lock);
+    struct psc_poolmgr, ppm_all_lentry, &psc_pools_lock);
 
 /*
  * psc_pool_grow - increase #items in a pool.
@@ -168,18 +169,30 @@ psc_pool_resize(struct psc_poolmgr *m)
 		psc_pool_grow(m, adj);
 }
 
+/*
+ * _psc_pool_reap - reap other pools in attempt to reclaim memory in the
+ *	dire situation of pool exhaustion.
+ * @pps: set to reap from.
+ * @initiator: the requestor pool, which should be a member of @pps, but
+ *	should not itself be considered a candidate for reaping.
+ */
 void
-_psc_pool_reap(void)
+_psc_pool_reap(struct psc_poolset *pps, struct psc_poolmgr *initiator)
 {
 	struct psc_poolmgr *m, *culprit;
-	int mx, culpritmx;
+	int i, len, mx, culpritmx;
+	void **pools;
 
 	culpritmx = mx = 0;
-	PLL_LOCK(&psc_pools);
-	psclist_for_each_entry(m, &psc_pools.pll_listhd, ppm_lentry) {
+	len = dynarray_len(&pps->pps_pools);
+	pools = dynarray_get(&pps->pps_pools);
+	for (i = 0; i < len; i++) {
+		m = pools[i];
+		if (m == initiator)
+			continue;
+
 		POOL_LOCK(m);
-		if (m->ppm_flags & PPMF_REAP)
-			mx = m->ppm_lc.lc_entsize * m->ppm_lc.lc_size;
+		mx = m->ppm_lc.lc_entsize * m->ppm_lc.lc_size;
 		POOL_ULOCK(m);
 
 		if (mx > culpritmx) {
@@ -187,7 +200,6 @@ _psc_pool_reap(void)
 			culpritmx = mx;
 		}
 	}
-	PLL_ULOCK(&psc_pools);
 
 	if (culprit)
 		psc_pool_shrink(culprit, 5);
@@ -232,15 +244,13 @@ psc_pool_get(struct psc_poolmgr *m)
 		} while (n);
 	}
 
-	/* If communal, try reaping another pool. */
-	if ((m->ppm_flags & PPMF_REAP)) {
-		_psc_pool_reap();
+	/* If communal, try reaping other pools in sets. */
+	POOL_LOCK(m);
+	for (n = 0; n < dynarray_len(&m->ppm_sets); n++)
+		_psc_pool_reap(dynarray_getpos(&m->ppm_sets, n), m);
+	POOL_ULOCK(m);
+	if (n)
 		psc_pool_grow(m, 5);
-	}
-
-	/* when all else fails, wait for it */
-	psc_dbg("waiting on %s pool",
-		  m->ppm_lc.lc_name);
 	return (lc_getwait(&m->ppm_lc));
 }
 
@@ -265,14 +275,19 @@ psc_pool_return(struct psc_poolmgr *m, void *p)
 
 int
 _psc_pool_init(struct psc_poolmgr *m, ptrdiff_t offset, size_t entsize,
-    int flags, int total, int (*initf)(void *), const char *namefmt, ...)
+    int flags, int total, int max, int (*initf)(void *),
+    void (*destroyf)(void *), int (*reclaimcb)(struct psc_listcache *, int),
+    const char *namefmt, ...)
 {
 	va_list ap;
 
 	memset(m, 0, sizeof(&m));
 	pll_add(&psc_pools, m);
+	m->ppm_reclaimcb = reclaimcb;
+	m->ppm_destroyf = destroyf;
 	m->ppm_flags = flags;
 	m->ppm_initf = initf;
+	m->ppm_max = max;
 
 	va_start(ap, namefmt);
 	_lc_reginit(&m->ppm_lc, offset, entsize, namefmt, ap);
@@ -289,9 +304,32 @@ psc_pool_lookup(const char *name)
 	struct psc_poolmgr *m;
 
 	PLL_LOCK(&psc_pools);
-	psclist_for_each_entry(m, &psc_pools.pll_listhd, ppm_lentry)
+	psclist_for_each_entry(m, &psc_pools.pll_listhd, ppm_all_lentry)
 		if (strcmp(name, m->ppm_lc.lc_name) == 0)
 			break;
 	PLL_ULOCK(&psc_pools);
 	return (m);
+}
+
+void
+psc_pool_joinset(struct psc_poolmgr *ppm, struct psc_poolset *pps)
+{
+	if (dynarray_exists(&pps->pps_pools, ppm))
+		psc_fatalx("pool already exists in set");
+	if (dynarray_exists(&ppm->ppm_sets, pps))
+		psc_fatalx("pool already member of set");
+	if (dynarray_add(&pps->pps_pools, ppm) == -1)
+		psc_fatalx("dynarray_add");
+	if (dynarray_add(&ppm->ppm_sets, pps) == -1)
+		psc_fatalx("dynarray_add");
+}
+
+void
+psc_pool_leaveset(struct psc_poolmgr *ppm)
+{
+	struct psc_poolset *pps;
+
+	pps = ppm->ppm_set;
+	dynarray_remove(&pps->pps_pools, ppm);
+	dynarray_remove(&ppm->ppm_sets, pps);
 }

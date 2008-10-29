@@ -346,7 +346,7 @@ psc_ctlrep_getpool(int fd, struct psc_ctlmsghdr *mh, void *msg)
 	strlcpy(name, pcpm->pcpm_name, sizeof(name));
 	all = (strcmp(name, PCPM_NAME_ALL) == 0);
 	PLL_LOCK(&psc_pools);
-	psclist_for_each_entry(m, &psc_pools.pll_listhd, ppm_lentry) {
+	psclist_for_each_entry(m, &psc_pools.pll_listhd, ppm_all_lentry) {
 		if (all || strncmp(m->ppm_lc.lc_name, name,
 		    strlen(name)) == 0) {
 			found = 1;
@@ -602,7 +602,7 @@ psc_ctlparam_pool(int fd, struct psc_ctlmsghdr *mh,
 	if (nlevels == 1) {
 		PLL_LOCK(&psc_pools);
 		psclist_for_each_entry(m,
-		    &psc_pools.pll_listhd, ppm_lentry)
+		    &psc_pools.pll_listhd, ppm_all_lentry)
 			psc_ctlparam_pool_handle(fd, mh,
 			    pcp, levels, nlevels, m, val);
 		PLL_ULOCK(&psc_pools);
