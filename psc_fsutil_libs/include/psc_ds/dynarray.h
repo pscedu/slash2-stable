@@ -26,5 +26,6 @@ int	 dynarray_len(const struct dynarray *);
 void	 dynarray_remove(struct dynarray *, const void *);
 int	 dynarray_hintlen(struct dynarray *, int);
 int	 dynarray_freeslack(struct dynarray *);
+int	 dynarray_exists(const struct dynarray *, const void *);
 
 #endif /* _PFL_DYNARRAY_H_ */

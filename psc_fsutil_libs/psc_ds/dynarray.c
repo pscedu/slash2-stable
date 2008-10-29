@@ -42,6 +42,20 @@ dynarray_hintlen(struct dynarray *da, int n)
 }
 
 int
+dynarray_exists(const struct dynarray *da, const void *item)
+{
+	int j, len;
+	void **p;
+
+	p = dynarray_get(da);
+	len = dynarray_len(da);
+	for (j = 0; j < len; j++)
+		if (p[j] == item)
+			return (1);
+	return (0);
+}
+
+int
 dynarray_add(struct dynarray *da, void *item)
 {
 	if (dynarray_hintlen(da, da->da_pos + 1) == -1)
@@ -55,11 +69,9 @@ dynarray_add_ifdne(struct dynarray *da, void *item)
 {
 	int j;
 
-	for (j=0; j < dynarray_len(da); j++) {
+	for (j = 0; j < dynarray_len(da); j++)
 		if (item == dynarray_getpos(da, j))
 			return (1);
-	}
-
 	return (dynarray_add(da, item));
 }
 
@@ -109,7 +121,7 @@ dynarray_remove(struct dynarray *da, const void *item)
 			da->da_pos--;
 			return;
 		}
-	abort();
+	psc_fatalx("dynarray_remove: element not found");
 }
 
 int
