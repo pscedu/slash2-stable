@@ -10,6 +10,7 @@
 #include <unistd.h>
 
 #include "psc_types.h"
+#include "psc_ds/dynarray.h"
 #include "psc_ds/hash.h"
 #include "psc_util/alloc.h"
 #include "psc_util/cdefs.h"
@@ -17,7 +18,8 @@
 #include "psc_util/thread.h"
 #include "psc_util/threadtable.h"
 
-struct dynarray    pscThreads;
+struct dynarray	pscThreads;
+psc_spinlock_t	pscThreadsLock = LOCK_INITIALIZER;
 
 /*
  * pscthr_begin: each new thread begins its life here.
@@ -72,9 +74,13 @@ pscthr_init(struct psc_thread *thr, int type,
 	for (n = 0; n < psc_nsubsys; n++)
 		thr->pscthr_loglevels[n] = psc_log_getlevel(n);
 
-	thr->pscthr_type  = type;
-	thr->pscthr_id    = dynarray_len(&pscThreads); /* XXX lockme? */
+	spinlock(&pscThreadsLock);
+
+	thr->pscthr_run = 1;
+	thr->pscthr_type = type;
+	thr->pscthr_id = dynarray_len(&pscThreads);
 	thr->pscthr_start = start;
+	thr->pscthr_private = private;
 
 	if (start) {
 		if ((rc = pthread_create(&thr->pscthr_pthread, NULL,
@@ -89,9 +95,7 @@ pscthr_init(struct psc_thread *thr, int type,
 
 	if (dynarray_add(&pscThreads, thr) == -1)
 		psc_fatal("dynarray_add");
-
-	thr->pscthr_run = 1;
-	thr->pscthr_private = private;
+	freelock(&pscThreadsLock);
 	freelock(&thr->pscthr_lock);
 
 	psc_info("spawned %s [thread %zu] [id %"_P_U64"x] [pthrid %lx] thr=%p"
@@ -190,24 +194,25 @@ pscthr_sigusr2(__unusedx int sig)
 /*
  * pscthr_destroy - remove thread resources from the process.
  * @thr: thread that is going away.
- * Notes: make sure psc_thread memory itself and any
- * threadtype-specific memory (pscthr_private) is released.
+ * Notes: make sure any threadtype-specific memory (pscthr_private)
+ *	has been released and any memory for this psc_thread itself.
  */
 void
 pscthr_destroy(struct psc_thread *thr)
 {
-	struct hash_entry *e;
-
+	reqlock(&thr->pscthr_lock);
 	PSCFREE(thr->pscthr_loglevels);
-	e = del_hash_entry(&thrHtable, thr->pscthr_hashid);
-	if (e)
-		PSCFREE(e);
+	del_hash_entry(&thrHtable, thr->pscthr_hashid);
 
 	/*
-	 * I don't think we can do this unless must disallow any
+	 * I don't think we can do this unless we disallow any
 	 * external indexing into this array.  Things that need to
 	 * reference a thread should maintain a pointer to the pscthr
 	 * and not a pscThreads index.
+	 *
+	 * At this point, pscThreads is only used by things like ctlapi.
 	 */
+	spinlock(&pscThreadsLock);
 	dynarray_remove(&pscThreads, thr);
+	freelock(&pscThreadsLock);
 }

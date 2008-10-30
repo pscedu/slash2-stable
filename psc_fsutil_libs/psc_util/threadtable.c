@@ -9,7 +9,6 @@
 
 #include "psc_types.h"
 #include "psc_ds/hash.h"
-#include "psc_util/alloc.h"
 #include "psc_util/assert.h"
 #include "psc_util/threadtable.h"
 #include "psc_util/thread.h"
@@ -23,13 +22,8 @@ struct hash_table thrHtable;
 void
 psc_threadtbl_put(struct psc_thread *thr)
 {
-	struct hash_entry *e;
-
-	e = PSCALLOC(sizeof(*e));
-	psc_assert(thr);
-
-	init_hash_entry(e, &thr->pscthr_hashid, thr);
-	add_hash_entry(&thrHtable, e);
+	init_hash_entry(&thr->pscthr_hentry, &thr->pscthr_hashid, thr);
+	add_hash_entry(&thrHtable, &thr->pscthr_hentry);
 }
 
 /**

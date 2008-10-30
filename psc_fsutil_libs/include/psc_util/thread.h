@@ -8,6 +8,7 @@
 
 #include "psc_types.h"
 #include "psc_ds/dynarray.h"
+#include "psc_ds/hash.h"
 #include "psc_util/lock.h"
 
 struct psc_ctlmsg_stats;
@@ -24,6 +25,7 @@ struct psc_thread {
 	int		   pscthr_type;			/* app-specific type */
 	char		   pscthr_name[PSC_THRNAME_MAX];
 	int		  *pscthr_loglevels;
+	struct hash_entry  pscthr_hentry;		/* entry in threadtable */
 	psc_spinlock_t	   pscthr_lock;
 	void		  *pscthr_private;		/* app-specific data */
 };
@@ -37,6 +39,7 @@ void	pscthr_destroy(struct psc_thread *);
 void	pscthr_init(struct psc_thread *, int, void *(*)(void *),
 		void *, const char *, ...);
 
-extern struct dynarray pscThreads;
+extern struct dynarray	pscThreads;
+extern psc_spinlock_t	pscThreadsLock;
 
 #endif /* __PFL_THREAD_H__ */

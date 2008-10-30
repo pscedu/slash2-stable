@@ -101,8 +101,8 @@ get_hash_entry(const struct hash_table *h, u64 id, const void *comp,
 
 /**
  * del_hash_entry -   remove an entry in the hash table
- * @t: pointer to hash table
- * @id: identifier used to get hash bucket
+ * @h: pointer to hash table
+ * @id: element ID to look up in hash bucket.
  */
 void *
 del_hash_entry(const struct hash_table *h, u64 id)
