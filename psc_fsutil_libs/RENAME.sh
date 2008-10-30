@@ -1,1 +1,0 @@
-export FILE=hash.c ; for i in `cat /home/pauln/zest/trunk/scripts/psctil_subs.txt`; do FROM=`echo $i | awk -F : '{print $1}'`; TO=`echo $i | awk -F : '{print $2}'`; cat $FILE | sed s/${FROM}/${TO}/g > a.tmp; mv a.tmp $FILE; done
