@@ -43,7 +43,7 @@ struct psc_thread pscControlThread;
  * @mh: already filled-out control message header.
  * @m: control message contents.
  */
-void
+int
 psc_ctlmsg_sendv(int fd, const struct psc_ctlmsghdr *mh, const void *m)
 {
 	struct iovec iov[2];
@@ -57,13 +57,20 @@ psc_ctlmsg_sendv(int fd, const struct psc_ctlmsghdr *mh, const void *m)
 	iov[1].iov_len = mh->mh_size;
 
 	n = writev(fd, iov, NENTRIES(iov));
-	if (n == -1)
+	if (n == -1) {
+		if (errno == EPIPE) {
+			psc_ctlthr(&pscControlThread)->pc_st_ndrop++;
+			sched_yield();
+			return (0);
+		}
 		psc_fatal("write");
+	}
 	tsiz = sizeof(*mh) + mh->mh_size;
 	if ((size_t)n != tsiz)
 		warn("short write");
 	psc_ctlthr(&pscControlThread)->pc_st_nsent++;
 	sched_yield();
+	return (1);
 }
 
 /*
@@ -73,9 +80,9 @@ psc_ctlmsg_sendv(int fd, const struct psc_ctlmsghdr *mh, const void *m)
  * @siz: size of message.
  * @m: control message contents.
  * Notes: a control message header will be constructed and
- * written to the client preceding the message contents.
+ *	written to the client preceding the message contents.
  */
-void
+int
 psc_ctlmsg_send(int fd, int type, size_t siz, const void *m)
 {
 	struct psc_ctlmsghdr mh;
@@ -94,13 +101,20 @@ psc_ctlmsg_send(int fd, int type, size_t siz, const void *m)
 	iov[1].iov_len = siz;
 
 	n = writev(fd, iov, NENTRIES(iov));
-	if (n == -1)
+	if (n == -1) {
+		if (errno == EPIPE) {
+			psc_ctlthr(&pscControlThread)->pc_st_ndrop++;
+			sched_yield();
+			return (0);
+		}
 		psc_fatal("write");
+	}
 	tsiz = sizeof(mh) + siz;
 	if ((size_t)n != tsiz)
 		warn("short write");
 	psc_ctlthr(&pscControlThread)->pc_st_nsent++;
 	sched_yield();
+	return (1);
 }
 
 /*
@@ -108,7 +122,7 @@ psc_ctlmsg_send(int fd, int type, size_t siz, const void *m)
  * @fd: client socket descriptor.
  * @fmt: printf(3) format of error message.
  */
-void
+int
 psc_ctlsenderr(int fd, struct psc_ctlmsghdr *mh, const char *fmt, ...)
 {
 	struct psc_ctlmsg_error pce;
@@ -120,7 +134,7 @@ psc_ctlsenderr(int fd, struct psc_ctlmsghdr *mh, const char *fmt, ...)
 
 	mh->mh_type = PCMT_ERROR;
 	mh->mh_size = sizeof(pce);
-	psc_ctlmsg_sendv(fd, mh, &pce);
+	return (psc_ctlmsg_sendv(fd, mh, &pce));
 }
 
 /*
@@ -143,7 +157,7 @@ psc_ctlthr_stat(struct psc_thread *thr, struct psc_ctlmsg_stats *pcst)
  * @m: control message to be filled in and sent out.
  * @thr: thread begin queried.
  */
-__static void
+__static int
 psc_ctlmsg_stats_send(int fd, struct psc_ctlmsghdr *mh, void *m,
     struct psc_thread *thr)
 {
@@ -151,12 +165,12 @@ psc_ctlmsg_stats_send(int fd, struct psc_ctlmsghdr *mh, void *m,
 
 	if (thr->pscthr_type >= psc_ctl_ngetstats ||
 	    psc_ctl_getstats[thr->pscthr_type] == NULL)
-		return;
+		return (1);
 	snprintf(pcst->pcst_thrname, sizeof(pcst->pcst_thrname),
 	    "%s", thr->pscthr_name);
 	pcst->pcst_thrtype = thr->pscthr_type;
 	psc_ctl_getstats[thr->pscthr_type](thr, pcst);
-	psc_ctlmsg_sendv(fd, mh, pcst);
+	return (psc_ctlmsg_sendv(fd, mh, pcst));
 }
 
 /*
@@ -165,13 +179,13 @@ psc_ctlmsg_stats_send(int fd, struct psc_ctlmsghdr *mh, void *m,
  * @mh: already filled-in control message header.
  * @m: control message to examine and reuse.
  */
-void
+int
 psc_ctlrep_getstats(int fd, struct psc_ctlmsghdr *mh, void *m)
 {
 	struct psc_ctlmsg_stats *pcst = m;
 
-	psc_ctl_applythrop(fd, mh, m, pcst->pcst_thrname,
-	    psc_ctlmsg_stats_send);
+	return (psc_ctl_applythrop(fd, mh, m, pcst->pcst_thrname,
+	    psc_ctlmsg_stats_send));
 }
 
 /*
@@ -179,13 +193,14 @@ psc_ctlrep_getstats(int fd, struct psc_ctlmsghdr *mh, void *m)
  * @fd: client socket descriptor.
  * @mh: already filled-in control message header.
  */
-void
+int
 psc_ctlrep_getsubsys(int fd, struct psc_ctlmsghdr *mh, __unusedx void *m)
 {
 	struct psc_ctlmsg_subsys *pcss;
 	size_t siz;
-	int n;
+	int n, rc;
 
+	rc = 1;
 	siz = PCSS_NAME_MAX * psc_nsubsys;
 	pcss = PSCALLOC(siz);
 	for (n = 0; n < psc_nsubsys; n++)
@@ -197,10 +212,11 @@ psc_ctlrep_getsubsys(int fd, struct psc_ctlmsghdr *mh, __unusedx void *m)
 			goto done;
 		}
 	mh->mh_size = siz;
-	psc_ctlmsg_sendv(fd, mh, pcss);
+	rc = psc_ctlmsg_sendv(fd, mh, pcss);
  done:
 	mh->mh_size = 0;	/* reset because we used our own buffer */
 	PSCFREE(pcss);
+	return (rc);
 }
 
 /*
@@ -209,12 +225,13 @@ psc_ctlrep_getsubsys(int fd, struct psc_ctlmsghdr *mh, __unusedx void *m)
  * @mh: already filled-in control message header.
  * @thr: thread begin queried.
  */
-__static void
+__static int
 psc_ctlmsg_loglevel_send(int fd, struct psc_ctlmsghdr *mh, void *m,
     struct psc_thread *thr)
 {
 	struct psc_ctlmsg_loglevel *pcl = m;
 	size_t siz;
+	int rc;
 
 	siz = sizeof(*pcl) + sizeof(*pcl->pcl_levels) * psc_nsubsys;
 	pcl = PSCALLOC(siz);
@@ -223,9 +240,10 @@ psc_ctlmsg_loglevel_send(int fd, struct psc_ctlmsghdr *mh, void *m,
 	memcpy(pcl->pcl_levels, thr->pscthr_loglevels, psc_nsubsys *
 	    sizeof(*pcl->pcl_levels));
 	mh->mh_size = siz;
-	psc_ctlmsg_sendv(fd, mh, pcl);
+	rc = psc_ctlmsg_sendv(fd, mh, pcl);
 	mh->mh_size = 0;	/* reset because we used our own buffer */
 	PSCFREE(pcl);
+	return (rc);
 }
 
 /*
@@ -234,13 +252,13 @@ psc_ctlmsg_loglevel_send(int fd, struct psc_ctlmsghdr *mh, void *m,
  * @mh: already filled-in control message header.
  * @m: control message to examine.
  */
-void
+int
 psc_ctlrep_getloglevel(int fd, struct psc_ctlmsghdr *mh, void *m)
 {
 	struct psc_ctlmsg_loglevel *pcl = m;
 
-	psc_ctl_applythrop(fd, mh, m, pcl->pcl_thrname,
-	    psc_ctlmsg_loglevel_send);
+	return (psc_ctl_applythrop(fd, mh, m, pcl->pcl_thrname,
+	    psc_ctlmsg_loglevel_send));
 }
 
 /*
@@ -251,14 +269,15 @@ psc_ctlrep_getloglevel(int fd, struct psc_ctlmsghdr *mh, void *m)
  * @mh: already filled-in control message header.
  * @m: control message to be filled in and sent out.
  */
-void
+int
 psc_ctlrep_gethashtable(int fd, struct psc_ctlmsghdr *mh, void *m)
 {
 	struct psc_ctlmsg_hashtable *pcht = m;
 	struct hash_table *ht;
 	char name[HTNAME_MAX];
-	int found, all;
+	int rc, found, all;
 
+	rc = 1;
 	found = 0;
 	snprintf(name, sizeof(name), "%s", pcht->pcht_name); /* XXX */
 	all = (strcmp(name, PCHT_NAME_ALL) == 0);
@@ -273,7 +292,9 @@ psc_ctlrep_gethashtable(int fd, struct psc_ctlmsghdr *mh, void *m)
 			hash_table_stats(ht, &pcht->pcht_totalbucks,
 			    &pcht->pcht_usedbucks, &pcht->pcht_nents,
 			    &pcht->pcht_maxbucklen);
-			psc_ctlmsg_sendv(fd, mh, pcht);
+			rc = psc_ctlmsg_sendv(fd, mh, pcht);
+			if (!rc)
+				break;
 
 			/* Terminate on exact match. */
 			if (strlen(ht->htable_name) == strlen(name))
@@ -281,8 +302,9 @@ psc_ctlrep_gethashtable(int fd, struct psc_ctlmsghdr *mh, void *m)
 		}
 	}
 	freelock(&hashTablesListLock);
-	if (!found && !all)
-		psc_ctlsenderr(fd, mh, "unknown hash table: %s", name);
+	if (rc && !found && !all)
+		rc = psc_ctlsenderr(fd, mh, "unknown hash table: %s", name);
+	return (rc);
 }
 
 /*
@@ -291,14 +313,15 @@ psc_ctlrep_gethashtable(int fd, struct psc_ctlmsghdr *mh, void *m)
  * @mh: already filled-in control message header.
  * @pclc: control message to examine and reuse.
  */
-void
+int
 psc_ctlrep_getlc(int fd, struct psc_ctlmsghdr *mh, void *m)
 {
 	struct psc_ctlmsg_lc *pclc = m;
 	struct psc_listcache *lc;
 	char name[LC_NAME_MAX];
-	int found, all;
+	int rc, found, all;
 
+	rc = 1;
 	found = 0;
 	strlcpy(name, pclc->pclc_name, sizeof(name));
 	all = (strcmp(name, PCLC_NAME_ALL) == 0);
@@ -314,7 +337,9 @@ psc_ctlrep_getlc(int fd, struct psc_ctlmsghdr *mh, void *m)
 			pclc->pclc_size = lc->lc_size;
 			pclc->pclc_nseen = lc->lc_nseen;
 			LIST_CACHE_ULOCK(lc);
-			psc_ctlmsg_sendv(fd, mh, pclc);
+			rc = psc_ctlmsg_sendv(fd, mh, pclc);
+			if (!rc)
+				break;
 
 			/* Terminate on exact match. */
 			if (strlen(lc->lc_name) == strlen(name))
@@ -322,9 +347,10 @@ psc_ctlrep_getlc(int fd, struct psc_ctlmsghdr *mh, void *m)
 		}
 	}
 	freelock(&pscListCachesLock);
-	if (!found && !all)
-		psc_ctlsenderr(fd, mh, "unknown listcache: %s",
+	if (rc && !found && !all)
+		rc = psc_ctlsenderr(fd, mh, "unknown listcache: %s",
 		    pclc->pclc_name);
+	return (rc);
 }
 
 /*
@@ -333,14 +359,15 @@ psc_ctlrep_getlc(int fd, struct psc_ctlmsghdr *mh, void *m)
  * @mh: already filled-in control message header.
  * @pcpm: control message to examine and reuse.
  */
-void
+int
 psc_ctlrep_getpool(int fd, struct psc_ctlmsghdr *mh, void *msg)
 {
 	struct psc_ctlmsg_pool *pcpm = msg;
 	struct psc_poolmgr *m;
 	char name[LC_NAME_MAX];
-	int locked, found, all;
+	int rc, locked, found, all;
 
+	rc = 1;
 	found = 0;
 	strlcpy(name, pcpm->pcpm_name, sizeof(name));
 	all = (strcmp(name, PCPM_NAME_ALL) == 0);
@@ -358,7 +385,9 @@ psc_ctlrep_getpool(int fd, struct psc_ctlmsghdr *mh, void *msg)
 			pcpm->pcpm_total = m->ppm_total;
 			pcpm->pcpm_flags = m->ppm_flags;
 			POOL_ULOCK(m, locked);
-			psc_ctlmsg_sendv(fd, mh, pcpm);
+			rc = psc_ctlmsg_sendv(fd, mh, pcpm);
+			if (!rc)
+				break;
 
 			/* Terminate on exact match. */
 			if (strlen(m->ppm_lc.lc_name) == strlen(name))
@@ -366,21 +395,22 @@ psc_ctlrep_getpool(int fd, struct psc_ctlmsghdr *mh, void *msg)
 		}
 	}
 	PLL_ULOCK(&psc_pools);
-	if (!found && !all)
-		psc_ctlsenderr(fd, mh, "unknown pool: %s",
+	if (rc && !found && !all)
+		rc = psc_ctlsenderr(fd, mh, "unknown pool: %s",
 		    pcpm->pcpm_name);
+	return (rc);
 }
 
 #define MAX_LEVELS 8
 
-void
+int
 psc_ctlmsg_param_send(int fd, const struct psc_ctlmsghdr *mh,
     struct psc_ctlmsg_param *pcp, const char *thrname,
     char **levels, int nlevels, const char *value)
 {
 	char *s, othrname[PSC_THRNAME_MAX];
 	const char *p, *end;
-	int lvl;
+	int rc, lvl;
 
 	/*
 	 * Save original request threadname and copy actual in
@@ -402,54 +432,48 @@ psc_ctlmsg_param_send(int fd, const struct psc_ctlmsghdr *mh,
 	*s = '\0';
 
 	snprintf(pcp->pcp_value, sizeof(pcp->pcp_value), "%s", value);
-	psc_ctlmsg_sendv(fd, mh, pcp);
+	rc = psc_ctlmsg_sendv(fd, mh, pcp);
 
 	/* Restore original threadname value for additional processing. */
 	snprintf(pcp->pcp_thrname, sizeof(pcp->pcp_thrname), "%s", othrname);
+	return (rc);
 }
 
-void
+int
 psc_ctlparam_log_level(int fd, struct psc_ctlmsghdr *mh,
     struct psc_ctlmsg_param *pcp, char **levels, int nlevels)
 {
-	int n, nthr, set, loglevel, subsys, start_ss, end_ss;
+	int rc, n, nthr, set, loglevel, subsys, start_ss, end_ss;
 	struct psc_thread **threads, *thr;
 
-	if (nlevels > 3) {
-		psc_ctlsenderr(fd, mh, "invalid field");
-		return;
-	}
+	if (nlevels > 3)
+		return (psc_ctlsenderr(fd, mh, "invalid field"));
 
 	levels[0] = "log";
 	levels[1] = "level";
 
 	loglevel = 0; /* gcc */
-	threads = dynarray_get(&pscThreads);
-	nthr = dynarray_len(&pscThreads);
 
 	set = (mh->mh_type == PCMT_SETPARAM);
 
 	if (set) {
 		loglevel = psc_loglevel_getid(pcp->pcp_value);
-		if (loglevel == -1) {
-			psc_ctlsenderr(fd, mh,
-			    "invalid log.level value: %s", pcp->pcp_value);
-			return;
-		}
-		if (pcp->pcp_flags & (PCPF_ADD | PCPF_SUB)) {
-			psc_ctlsenderr(fd, mh, "invalid operation");
-			return;
-		}
+		if (loglevel == -1)
+			return (psc_ctlsenderr(fd, mh,
+			    "invalid log.level value: %s",
+			    pcp->pcp_value));
+		if (pcp->pcp_flags & (PCPF_ADD | PCPF_SUB))
+			return (psc_ctlsenderr(fd, mh,
+			    "invalid operation"));
 	}
 
 	if (nlevels == 3) {
 		/* Subsys specified, use it. */
 		subsys = psc_subsys_id(levels[2]);
-		if (subsys == -1) {
-			psc_ctlsenderr(fd, mh,
-			    "invalid log.level subsystem: %s", levels[2]);
-			return;
-		}
+		if (subsys == -1)
+			return (psc_ctlsenderr(fd, mh,
+			    "invalid log.level subsystem: %s",
+			    levels[2]));
 		start_ss = subsys;
 		end_ss = subsys + 1;
 	} else {
@@ -458,20 +482,29 @@ psc_ctlparam_log_level(int fd, struct psc_ctlmsghdr *mh,
 		end_ss = psc_nsubsys;
 	}
 
+	rc = 1;
+	spinlock(&pscThreadsLock);
+	threads = dynarray_get(&pscThreads);
+	nthr = dynarray_len(&pscThreads);
 	PSC_CTL_FOREACH_THREAD(n, thr, pcp->pcp_thrname, threads, nthr)
 		for (subsys = start_ss; subsys < end_ss; subsys++)
 			if (set)
 				thr->pscthr_loglevels[subsys] = loglevel;
 			else {
 				levels[2] = psc_subsys_name(subsys);
-				psc_ctlmsg_param_send(fd, mh, pcp,
+				rc = psc_ctlmsg_param_send(fd, mh, pcp,
 				    thr->pscthr_name, levels, 3,
 				    psc_loglevel_getname(thr->
 				    pscthr_loglevels[subsys]));
+				if (!rc)
+					goto done;
 			}
+ done:
+	freelock(&pscThreadsLock);
+	return (rc);
 }
 
-void
+int
 psc_ctlparam_pool_handle(int fd, struct psc_ctlmsghdr *mh,
     struct psc_ctlmsg_param *pcp, char **levels, int nlevels,
     struct psc_poolmgr *m, int val)
@@ -479,10 +512,11 @@ psc_ctlparam_pool_handle(int fd, struct psc_ctlmsghdr *mh,
 	char nbuf[20];
 	int set;
 
-	if (nlevels > 4) {
-		psc_ctlsenderr(fd, mh, "invalid field");
-		return;
-	}
+	if (nlevels > 4 || (nlevels == 3 &&
+	    (strcmp(levels[2], "min") != 0 &&
+	     strcmp(levels[2], "max") != 0 &&
+	     strcmp(levels[2], "total") != 0)))
+		return (psc_ctlsenderr(fd, mh, "invalid field"));
 
 	levels[0] = "pool";
 	levels[1] = m->ppm_lc.lc_name;
@@ -501,8 +535,9 @@ psc_ctlparam_pool_handle(int fd, struct psc_ctlmsghdr *mh,
 		} else {
 			levels[2] = "min";
 			snprintf(nbuf, sizeof(nbuf), "%d", m->ppm_min);
-			psc_ctlmsg_param_send(fd, mh, pcp,
-			    PCTHRNAME_EVERYONE, levels, 3, nbuf);
+			if (!psc_ctlmsg_param_send(fd, mh, pcp,
+			    PCTHRNAME_EVERYONE, levels, 3, nbuf))
+				return (0);
 		}
 	}
 	if (nlevels < 3 || strcmp(levels[2], "max") == 0) {
@@ -517,8 +552,9 @@ psc_ctlparam_pool_handle(int fd, struct psc_ctlmsghdr *mh,
 		} else {
 			levels[2] = "max";
 			snprintf(nbuf, sizeof(nbuf), "%d", m->ppm_max);
-			psc_ctlmsg_param_send(fd, mh, pcp,
-			    PCTHRNAME_EVERYONE, levels, 3, nbuf);
+			if (!psc_ctlmsg_param_send(fd, mh, pcp,
+			    PCTHRNAME_EVERYONE, levels, 3, nbuf))
+				return (0);
 		}
 	}
 	if (nlevels < 3 || strcmp(levels[2], "total") == 0) {
@@ -532,30 +568,28 @@ psc_ctlparam_pool_handle(int fd, struct psc_ctlmsghdr *mh,
 		} else {
 			levels[2] = "total";
 			snprintf(nbuf, sizeof(nbuf), "%d", m->ppm_total);
-			psc_ctlmsg_param_send(fd, mh, pcp,
-			    PCTHRNAME_EVERYONE, levels, 3, nbuf);
+			if (!psc_ctlmsg_param_send(fd, mh, pcp,
+			    PCTHRNAME_EVERYONE, levels, 3, nbuf))
+				return (0);
 		}
 	}
+	return (1);
 }
 
-void
+int
 psc_ctlparam_pool(int fd, struct psc_ctlmsghdr *mh,
     struct psc_ctlmsg_param *pcp, char **levels, int nlevels)
 {
 	struct psc_poolmgr *m;
-	int set, poolfield;
+	int rc, set, poolfield;
 	char *endp;
 	long val;
 
-	if (nlevels > 3) {
-		psc_ctlsenderr(fd, mh, "invalid field");
-		return;
-	}
+	if (nlevels > 3)
+		return (psc_ctlsenderr(fd, mh, "invalid field"));
 
-	if (strcmp(pcp->pcp_thrname, PCTHRNAME_EVERYONE) != 0) {
-		psc_ctlsenderr(fd, mh, "invalid thread field");
-		return;
-	}
+	if (strcmp(pcp->pcp_thrname, PCTHRNAME_EVERYONE) != 0)
+		return (psc_ctlsenderr(fd, mh, "invalid thread field"));
 
 #define POOLFIELD_MIN 0
 #define POOLFIELD_MAX 1
@@ -569,10 +603,9 @@ psc_ctlparam_pool(int fd, struct psc_ctlmsghdr *mh,
 	set = (mh->mh_type == PCMT_SETPARAM);
 
 	if (set) {
-		if (nlevels != 3) {
-			psc_ctlsenderr(fd, mh, "invalid operation");
-			return;
-		}
+		if (nlevels != 3)
+			return (psc_ctlsenderr(fd, mh,
+			    "invalid operation"));
 
 		if (strcmp(levels[2], "min") == 0)
 			poolfield = POOLFIELD_MIN;
@@ -580,48 +613,44 @@ psc_ctlparam_pool(int fd, struct psc_ctlmsghdr *mh,
 			poolfield = POOLFIELD_MAX;
 		else if (strcmp(levels[2], "total") == 0)
 			poolfield = POOLFIELD_TOT;
-		else {
-			psc_ctlsenderr(fd, mh, "invalid pool field: %s",
-			    levels[2]);
-			return;
-		}
+		else
+			return (psc_ctlsenderr(fd, mh,
+			    "invalid pool field: %s", levels[2]));
 
 		endp = NULL;
 		val = strtol(pcp->pcp_value, &endp, 10);
 		if (val == LONG_MIN || val == LONG_MAX ||
 		    val > INT_MAX || val < 0 ||
-		    endp == pcp->pcp_value || *endp != '\0') {
-			psc_ctlsenderr(fd, mh,
+		    endp == pcp->pcp_value || *endp != '\0')
+			return (psc_ctlsenderr(fd, mh,
 			    "invalid pool %s value: %s",
-			    levels[2], pcp->pcp_value);
-			return;
-		}
+			    levels[2], pcp->pcp_value));
 	}
 
 	if (nlevels == 1) {
 		PLL_LOCK(&psc_pools);
 		psclist_for_each_entry(m,
 		    &psc_pools.pll_listhd, ppm_all_lentry)
-			psc_ctlparam_pool_handle(fd, mh,
-			    pcp, levels, nlevels, m, val);
+			if (!(rc = psc_ctlparam_pool_handle(fd,
+			    mh, pcp, levels, nlevels, m, val)))
+				break;
 		PLL_ULOCK(&psc_pools);
 	} else {
 		m = psc_pool_lookup(levels[1]);
-		if (m == NULL) {
-			psc_ctlsenderr(fd, mh, "invalid pool: %s",
-			    levels[1]);
-			return;
-		}
-		psc_ctlparam_pool_handle(fd, mh,
+		if (m == NULL)
+			return (psc_ctlsenderr(fd, mh,
+			    "invalid pool: %s", levels[1]));
+		rc = psc_ctlparam_pool_handle(fd, mh,
 		    pcp, levels, nlevels, m, val);
 	}
+	return (rc);
 }
 
 /* Node in the control parameter tree. */
 struct psc_ctlparam_node {
-	char  *pcn_name;
-	void (*pcn_cbf)(int, struct psc_ctlmsghdr *,
-		struct psc_ctlmsg_param *, char **, int);
+	char	 *pcn_name;
+	int	(*pcn_cbf)(int, struct psc_ctlmsghdr *,
+			struct psc_ctlmsg_param *, char **, int);
 };
 
 /* Stack processing frame. */
@@ -631,14 +660,13 @@ struct psc_ctlparam_procframe {
 	int			 pcf_level;
 	int			 pcf_flags;
 	int			 pcf_pos;
-
 };
 
 #define PCFF_USEPOS	(1<<0)
 
 struct psc_streenode psc_ctlparamtree = PSC_STREE_INIT(psc_ctlparamtree);
 
-void
+int
 psc_ctlrep_param(int fd, struct psc_ctlmsghdr *mh, void *m)
 {
 	struct psc_ctlparam_procframe *pcf, *npcf;
@@ -692,7 +720,9 @@ psc_ctlrep_param(int fd, struct psc_ctlmsghdr *mh, void *m)
 			if (c == NULL)
 				goto invalid;
 			if (psclist_empty(&c->ptn_children)) {
-				pcn->pcn_cbf(fd, mh, pcp, levels, nlevels);
+				if (!pcn->pcn_cbf(fd, mh,
+				    pcp, levels, nlevels))
+					goto shortcircuit;
 				break;
 			} else if (pcf->pcf_level + 1 >= nlevels) {
 				if (set)
@@ -700,9 +730,11 @@ psc_ctlrep_param(int fd, struct psc_ctlmsghdr *mh, void *m)
 				k = 0;
 				psc_stree_foreach_child(d, c) {
 					pcn = d->ptn_data;
-					if (psclist_empty(&d->ptn_children))
-						pcn->pcn_cbf(fd, mh, pcp, levels, nlevels);
-					else {
+					if (psclist_empty(&d->ptn_children)) {
+						if (!pcn->pcn_cbf(fd, mh,
+						    pcp, levels, nlevels))
+							goto shortcircuit;
+					} else {
 						npcf = PSCALLOC(sizeof(*npcf));
 						npcf->pcf_ptn = d;
 						npcf->pcf_level = n + 1;
@@ -716,7 +748,13 @@ psc_ctlrep_param(int fd, struct psc_ctlmsghdr *mh, void *m)
 		} while (++n < nlevels);
 		PSCFREE(pcf);
 	}
-	return;
+	return (1);
+
+ shortcircuit:
+	PSCFREE(pcf);
+	psclist_for_each_entry_safe(pcf, npcf, &stack, pcf_lentry)
+		PSCFREE(pcf);
+	return (0);
 
  invalid:
 	PSCFREE(pcf);
@@ -729,12 +767,12 @@ psc_ctlrep_param(int fd, struct psc_ctlmsghdr *mh, void *m)
 		PSCFREE(pcf);
 	while (nlevels-- > 1)
 		pcp->pcp_field[strlen(pcp->pcp_field)] = '.';
-	psc_ctlsenderr(fd, mh, "invalid field%s: %s",
-	    set ? "/value" : "", pcp->pcp_field);
+	return (psc_ctlsenderr(fd, mh, "invalid field%s: %s",
+	    set ? "/value" : "", pcp->pcp_field));
 }
 
 void
-psc_ctlparam_register(const char *oname, void (*cbf)(int, struct psc_ctlmsghdr *,
+psc_ctlparam_register(const char *oname, int (*cbf)(int, struct psc_ctlmsghdr *,
     struct psc_ctlmsg_param *, char **, int))
 {
 	struct psc_streenode *ptn, *c;
@@ -774,14 +812,15 @@ psc_ctlparam_register(const char *oname, void (*cbf)(int, struct psc_ctlmsghdr *
  * @mh: already filled-in control message header.
  * @m: iostats control message to be filled in and sent out.
  */
-void
+int
 psc_ctlrep_getiostats(int fd, struct psc_ctlmsghdr *mh, void *m)
 {
 	struct psc_ctlmsg_iostats *pci = m;
 	char name[IST_NAME_MAX];
 	struct iostats *ist;
-	int found, all;
+	int rc, found, all;
 
+	rc = 1;
 	found = 0;
 	snprintf(name, sizeof(name), "%s", pci->pci_ist.ist_name);
 	all = (strcmp(name, PCI_NAME_ALL) == 0);
@@ -792,15 +831,18 @@ psc_ctlrep_getiostats(int fd, struct psc_ctlmsghdr *mh, void *m)
 			found = 1;
 
 			pci->pci_ist = *ist;
-			psc_ctlmsg_sendv(fd, mh, pci);
+			rc = psc_ctlmsg_sendv(fd, mh, pci);
+			if (!rc)
+				break;
 
 			/* Terminate on exact match. */
 			if (strlen(ist->ist_name) == strlen(name))
 				break;
 		}
 	freelock(&pscIostatsListLock);
-	if (!found && !all)
-		psc_ctlsenderr(fd, mh, "unknown iostats: %s", name);
+	if (rc && !found && !all)
+		rc = psc_ctlsenderr(fd, mh, "unknown iostats: %s", name);
+	return (rc);
 }
 
 /*
@@ -809,18 +851,18 @@ psc_ctlrep_getiostats(int fd, struct psc_ctlmsghdr *mh, void *m)
  * @mh: already filled-in control message header.
  * @m: control message to examine and reuse.
  */
-void
+int
 psc_ctlrep_getmeter(int fd, struct psc_ctlmsghdr *mh, void *m)
 {
 	struct psc_ctlmsg_meter *pcm = m;
 	char name[PSC_METER_NAME_MAX];
 	struct psc_meter *pm;
-	int found, all;
+	int rc, found, all;
 
+	rc = 1;
 	found = 0;
 	snprintf(name, sizeof(name), "%s", pcm->pcm_mtr.pm_name);
 	all = (strcmp(name, PCM_NAME_ALL) == 0);
-
 	spinlock(&pscMetersLock);
 	psclist_for_each_entry(pm, &pscMetersList, pm_lentry)
 		if (all || strncmp(pm->pm_name, name,
@@ -828,41 +870,55 @@ psc_ctlrep_getmeter(int fd, struct psc_ctlmsghdr *mh, void *m)
 			found = 1;
 
 			pcm->pcm_mtr = *pm;
-			psc_ctlmsg_sendv(fd, mh, pcm);
+			rc = psc_ctlmsg_sendv(fd, mh, pcm);
+			if (!rc)
+				break;
 
 			/* Terminate on exact match. */
 			if (strlen(name) == strlen(pm->pm_name))
 				break;
 		}
 	freelock(&pscMetersLock);
-	if (!found && !all)
-		psc_ctlsenderr(fd, mh, "unknown meter: %s", name);
+	if (rc && !found && !all)
+		rc = psc_ctlsenderr(fd, mh, "unknown meter: %s", name);
+	return (rc);
 }
 
-void
+int
 psc_ctl_applythrop(int fd, struct psc_ctlmsghdr *mh, void *m, const char *thrname,
-    void (*cbf)(int, struct psc_ctlmsghdr *, void *, struct psc_thread *))
+    int (*cbf)(int, struct psc_ctlmsghdr *, void *, struct psc_thread *))
 {
 	struct psc_thread **threads;
-	int n, nthr;
+	int rc, n, nthr;
 
-	/* XXX lock or snapshot threads so they don't change underneath us */
+	rc = 1;
+	spinlock(&pscThreadsLock);
 	nthr = dynarray_len(&pscThreads);
 	threads = dynarray_get(&pscThreads);
 	if (strcasecmp(thrname, PCTHRNAME_EVERYONE) == 0) {
-		for (n = 0; n < nthr; n++)
-			cbf(fd, mh, m, threads[n]);
+		for (n = 0; n < nthr; n++) {
+			rc = cbf(fd, mh, m, threads[n]);
+			if (!rc)
+				break;
+		}
 	} else {
 		for (n = 0; n < nthr; n++)
+			/*
+			 * XXX: strncasecmp?
+			 * thr1 can't match thr10,
+			 * don't partial match numbers.
+			 */
 			if (strcasecmp(thrname,
 			    threads[n]->pscthr_name) == 0) {
-				cbf(fd, mh, m, threads[n]);
+				rc = cbf(fd, mh, m, threads[n]);
 				break;
 			}
 		if (n == nthr)
-			psc_ctlsenderr(fd, mh,
+			rc = psc_ctlsenderr(fd, mh,
 			    "unknown thread: %s", thrname);
 	}
+	freelock(&pscThreadsLock);
+	return (rc);
 }
 
 /*
@@ -930,9 +986,10 @@ psc_ctlthr_service(int fd, const struct psc_ctlop *ct, int nops)
 			continue;
 		}
 		psc_ctlthr(&pscControlThread)->pc_st_nrecv++;
-		ct[mh.mh_type].pc_op(fd, &mh, m);
+		if (!ct[mh.mh_type].pc_op(fd, &mh, m))
+			break;
 	}
-	if (n == -1)
+	if (n == -1 && errno != EPIPE)
 		psc_fatal("read");
 	PSCFREE(m);
 }

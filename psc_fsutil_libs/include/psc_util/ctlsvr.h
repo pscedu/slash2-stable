@@ -30,44 +30,45 @@ struct psc_ctlthr {
 	int	  pc_st_nclients;
 	int	  pc_st_nsent;
 	int	  pc_st_nrecv;
+	int	  pc_st_ndrop;
 };
 
 struct psc_ctlop {
-	void	(*pc_op)(int, struct psc_ctlmsghdr *, void *);
+	int	(*pc_op)(int, struct psc_ctlmsghdr *, void *);
 	size_t	  pc_siz;
 };
 
-void psc_ctlsenderr(int, struct psc_ctlmsghdr *, const char *, ...);
+int	psc_ctlsenderr(int, struct psc_ctlmsghdr *, const char *, ...);
 
-void psc_ctlmsg_sendv(int, const struct psc_ctlmsghdr *, const void *);
-void psc_ctlmsg_send(int, int, size_t, const void *);
+int	psc_ctlmsg_sendv(int, const struct psc_ctlmsghdr *, const void *);
+int	psc_ctlmsg_send(int, int, size_t, const void *);
 
-void psc_ctlrep_gethashtable(int, struct psc_ctlmsghdr *, void *);
-void psc_ctlrep_getiostats(int, struct psc_ctlmsghdr *, void *);
-void psc_ctlrep_getlc(int, struct psc_ctlmsghdr *, void *);
-void psc_ctlrep_getloglevel(int, struct psc_ctlmsghdr *, void *);
-void psc_ctlrep_getmeter(int, struct psc_ctlmsghdr *, void *);
-void psc_ctlrep_getstats(int, struct psc_ctlmsghdr *, void *);
-void psc_ctlrep_getsubsys(int, struct psc_ctlmsghdr *, void *);
-void psc_ctlrep_param(int, struct psc_ctlmsghdr *, void *);
-void psc_ctlrep_getpool(int, struct psc_ctlmsghdr *, void *);
+int	psc_ctlrep_gethashtable(int, struct psc_ctlmsghdr *, void *);
+int	psc_ctlrep_getiostats(int, struct psc_ctlmsghdr *, void *);
+int	psc_ctlrep_getlc(int, struct psc_ctlmsghdr *, void *);
+int	psc_ctlrep_getloglevel(int, struct psc_ctlmsghdr *, void *);
+int	psc_ctlrep_getmeter(int, struct psc_ctlmsghdr *, void *);
+int	psc_ctlrep_getstats(int, struct psc_ctlmsghdr *, void *);
+int	psc_ctlrep_getsubsys(int, struct psc_ctlmsghdr *, void *);
+int	psc_ctlrep_param(int, struct psc_ctlmsghdr *, void *);
+int	psc_ctlrep_getpool(int, struct psc_ctlmsghdr *, void *);
 
-void psc_ctlthr_stat(struct psc_thread *, struct psc_ctlmsg_stats *);
+void	psc_ctlthr_stat(struct psc_thread *, struct psc_ctlmsg_stats *);
 
-void psc_ctlparam_log_level(int, struct psc_ctlmsghdr *,
-	struct psc_ctlmsg_param *, char **, int);
-void psc_ctlparam_pool(int, struct psc_ctlmsghdr *,
-	struct psc_ctlmsg_param *, char **, int);
+int	psc_ctlparam_log_level(int, struct psc_ctlmsghdr *,
+		struct psc_ctlmsg_param *, char **, int);
+int	psc_ctlparam_pool(int, struct psc_ctlmsghdr *,
+		struct psc_ctlmsg_param *, char **, int);
 
-void psc_ctlparam_register(const char *, void (*)(int, struct psc_ctlmsghdr *,
-	struct psc_ctlmsg_param *, char **, int));
+void	psc_ctlparam_register(const char *, int (*)(int, struct psc_ctlmsghdr *,
+		struct psc_ctlmsg_param *, char **, int));
 
-void psc_ctlmsg_param_send(int, const struct psc_ctlmsghdr *,
-	struct psc_ctlmsg_param *, const char *, char **, int, const char *);
+int	psc_ctlmsg_param_send(int, const struct psc_ctlmsghdr *,
+		struct psc_ctlmsg_param *, const char *, char **, int, const char *);
 
 __dead void psc_ctlthr_main(const char *, const struct psc_ctlop *, int);
-void psc_ctl_applythrop(int, struct psc_ctlmsghdr *, void *, const char *,
-	void (*)(int, struct psc_ctlmsghdr *, void *, struct psc_thread *));
+int	psc_ctl_applythrop(int, struct psc_ctlmsghdr *, void *, const char *,
+		int (*)(int, struct psc_ctlmsghdr *, void *, struct psc_thread *));
 
 extern struct psc_thread pscControlThread;
 extern void (*psc_ctl_getstats[])(struct psc_thread *, struct psc_ctlmsg_stats *);
