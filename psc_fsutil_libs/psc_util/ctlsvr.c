@@ -339,8 +339,7 @@ psc_ctlrep_getpool(int fd, struct psc_ctlmsghdr *mh, void *msg)
 	struct psc_ctlmsg_pool *pcpm = msg;
 	struct psc_poolmgr *m;
 	char name[LC_NAME_MAX];
-	int found, all;
-
+	int locked, found, all;
 
 	found = 0;
 	strlcpy(name, pcpm->pcpm_name, sizeof(name));
@@ -351,14 +350,14 @@ psc_ctlrep_getpool(int fd, struct psc_ctlmsghdr *mh, void *msg)
 		    strlen(name)) == 0) {
 			found = 1;
 
-			POOL_LOCK(m);
+			locked = POOL_RLOCK(m);
 			strlcpy(pcpm->pcpm_name, m->ppm_lc.lc_name,
 			    sizeof(pcpm->pcpm_name));
 			pcpm->pcpm_min = m->ppm_min;
 			pcpm->pcpm_max = m->ppm_max;
 			pcpm->pcpm_total = m->ppm_total;
 			pcpm->pcpm_flags = m->ppm_flags;
-			POOL_ULOCK(m);
+			POOL_ULOCK(m, locked);
 			psc_ctlmsg_sendv(fd, mh, pcpm);
 
 			/* Terminate on exact match. */
@@ -948,19 +947,16 @@ __dead void
 psc_ctlthr_main(const char *fn, const struct psc_ctlop *ct, int nops)
 {
 	struct sockaddr_un sun;
+	struct sigaction sa;
 	mode_t old_umask;
-	sigset_t sigset;
 	socklen_t siz;
-	int rc, s, fd;
+	int s, fd;
 
 	/* Ignore SIGPIPEs in this thread. */
-	if (sigemptyset(&sigset) == -1)
-		psc_fatal("sigemptyset");
-	if (sigaddset(&sigset, SIGPIPE) == -1)
-		psc_fatal("sigemptyset");
-	rc = pthread_sigmask(SIG_BLOCK, &sigset, NULL);
-	if (rc)
-		psc_fatalx("pthread_sigmask: %s", strerror(rc));
+	memset(&sa, 0, sizeof(sa));
+	sa.sa_handler = SIG_IGN;
+	if (sigaction(SIGPIPE, &sa, NULL) == -1)
+		psc_fatal("sigaction");
 
 	/* Create control socket. */
 	if ((s = socket(AF_LOCAL, SOCK_STREAM, 0)) == -1)

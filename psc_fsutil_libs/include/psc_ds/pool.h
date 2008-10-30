@@ -39,7 +39,6 @@ struct psc_poolmgr {
 	int			  ppm_min;		/* min bound of #items */
 	int			  ppm_max;		/* max bound of #items */
 	int			  ppm_total;		/* #items in circulation */
-	struct psc_poolset	 *ppm_set;		/* membership in relation set */
 	int			(*ppm_initf)(void *);	/* entry initializer */
 	void			(*ppm_destroyf)(void *);/* entry deinitializer */
 	int			(*ppm_reclaimcb)(struct psc_listcache *, int);
@@ -49,8 +48,8 @@ struct psc_poolmgr {
 #define PPMF_AUTO	(1 << 0)	/* pool automatically resizes */
 #define PPMF_NOLOCK	(1 << 1)	/* pool ents shouldn't be alloc'd unswappably */
 
-#define POOL_LOCK(m)	spinlock(&(m)->ppm_lc.lc_lock)
-#define POOL_ULOCK(m)	freelock(&(m)->ppm_lc.lc_lock)
+#define POOL_RLOCK(m)		reqlock(&(m)->ppm_lc.lc_lock)
+#define POOL_ULOCK(m, l)	ureqlock(&(m)->ppm_lc.lc_lock, (l))
 
 #define POOL_CHECK(m)								\
 	do {									\
@@ -74,12 +73,16 @@ int	 psc_pool_shrink(struct psc_poolmgr *, int);
 int	 psc_pool_settotal(struct psc_poolmgr *, int);
 void	 psc_pool_resize(struct psc_poolmgr *);
 void	 psc_pool_joinset(struct psc_poolmgr *, struct psc_poolset *);
-void	 psc_pool_leaveset(struct psc_poolmgr *);
+void	 psc_pool_leaveset(struct psc_poolmgr *, struct psc_poolset *);
 void	*psc_pool_get(struct psc_poolmgr *);
 void	 psc_pool_return(struct psc_poolmgr *, void *);
+void	 psc_pool_destroy(struct psc_poolmgr *);
 int	 _psc_pool_init(struct psc_poolmgr *, ptrdiff_t, size_t,
 		int, int, int, int (*)(void *), void (*)(void *),
 		int (*)(struct psc_listcache *, int), const char *, ...);
+
+void	 psc_poolset_init(struct psc_poolset *);
+void	 psc_poolset_destroy(struct psc_poolset *);
 
 extern struct psc_lockedlist	psc_pools;
 extern struct psc_poolset	psc_pooldefset;
