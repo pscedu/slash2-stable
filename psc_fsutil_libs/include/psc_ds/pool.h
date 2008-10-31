@@ -26,10 +26,11 @@
 #include "psc_util/lock.h"
 
 struct psc_poolset {
+	psc_spinlock_t		  pps_lock;
 	struct dynarray		  pps_pools;		/* pointers to pools */
 };
 
-#define PSC_POOLSET_INIT	{ DYNARRAY_INIT }
+#define PSC_POOLSET_INIT	{ LOCK_INITIALIZER, DYNARRAY_INIT }
 
 struct psc_poolmgr {
 	struct psclist_head	  ppm_all_lentry;	/* global linker */

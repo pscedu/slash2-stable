@@ -101,7 +101,7 @@ psc_pool_shrink(struct psc_poolmgr *m, int n)
 			POOL_ULOCK(m, locked);
 			return (0);
 		}
-		/* Bound number to add to ppm_min. */
+		/* Bound number to shrink to ppm_min. */
 		n = MAX(n, m->ppm_total - m->ppm_min);
 		POOL_ULOCK(m, locked);
 	}
@@ -293,7 +293,7 @@ _psc_pool_init(struct psc_poolmgr *m, ptrdiff_t offset, size_t entsize,
 {
 	va_list ap;
 
-	memset(m, 0, sizeof(&m));
+	memset(m, 0, sizeof(*m));
 	dynarray_init(&m->ppm_sets);
 	m->ppm_reclaimcb = reclaimcb;
 	m->ppm_destroyf = destroyf;
@@ -364,6 +364,10 @@ psc_pool_lookup(const char *name)
 void
 psc_pool_joinset(struct psc_poolmgr *m, struct psc_poolset *pps)
 {
+	int locked;
+
+	spinlock(&pps->pps_lock);
+	locked = POOL_RLOCK(m);
 	if (dynarray_exists(&pps->pps_pools, m))
 		psc_fatalx("pool already exists in set");
 	if (dynarray_exists(&m->ppm_sets, pps))
@@ -372,6 +376,8 @@ psc_pool_joinset(struct psc_poolmgr *m, struct psc_poolset *pps)
 		psc_fatalx("dynarray_add");
 	if (dynarray_add(&m->ppm_sets, pps) == -1)
 		psc_fatalx("dynarray_add");
+	POOL_ULOCK(m, locked);
+	freelock(&pps->pps_lock);
 }
 
 /*
@@ -382,8 +388,14 @@ psc_pool_joinset(struct psc_poolmgr *m, struct psc_poolset *pps)
 void
 psc_pool_leaveset(struct psc_poolmgr *m, struct psc_poolset *pps)
 {
+	int locked;
+
+	spinlock(&pps->pps_lock);
+	locked = POOL_RLOCK(m);
 	dynarray_remove(&pps->pps_pools, m);
 	dynarray_remove(&m->ppm_sets, pps);
+	POOL_ULOCK(m, locked);
+	freelock(&pps->pps_lock);
 }
 
 /*
@@ -393,6 +405,7 @@ psc_pool_leaveset(struct psc_poolmgr *m, struct psc_poolset *pps)
 void
 psc_poolset_init(struct psc_poolset *pps)
 {
+	LOCK_INIT(&pps->pps_lock);
 	dynarray_init(&pps->pps_pools);
 }
 
