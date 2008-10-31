@@ -110,7 +110,7 @@ del_hash_entry(const struct hash_table *h, u64 id)
 	struct hash_bucket *b;
 	struct hash_entry *e;
 
-	psc_assert(h->htable_size);
+	if (!h || ! h->htable_size) return NULL;
 
 	b = GET_BUCKET(h, id);
 	LOCK_BUCKET(b);
