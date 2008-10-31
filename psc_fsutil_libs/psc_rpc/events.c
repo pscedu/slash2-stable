@@ -416,9 +416,10 @@ pscrpc_check_events (int timeout)
 }
 
 /**
- * pscrpc_wait_event - called from the macro psc_cli_wait_event() (pscRpc.h), calls pscrpc_check_events().
+ * pscrpc_wait_event - called from the macro psc_cli_wait_event() (rpc.h), calls pscrpc_check_events().
  * See psc_cli_wait_event for more detail.
  * @timeout: number of seconds to block (0 is forever i think)
+ * Returns: 0 if nothing found, 1 if something found, -ETIMEDOUT on timeout.
  * NOTES: Client context only
  */
 int
