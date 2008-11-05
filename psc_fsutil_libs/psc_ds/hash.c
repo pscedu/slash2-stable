@@ -64,8 +64,35 @@ init_hash_entry(struct hash_entry *hentry, u64 *id, void *private)
 	hentry->private   = private;
 }
 
+struct hash_entry *
+_psc_hashbkt_search(const struct hash_table *t, struct hash_bucket *b,
+    u64 id, const void *cmp, void (*cbf)(void *), int del)
+{
+	struct hash_entry *e;
+	int locked;
+
+	if (t->htcompare)
+		psc_assert(cmp);
+	else
+		psc_assert(cmp == NULL);
+
+	locked = reqlock(&b->hbucket_lock);
+	psclist_for_each_entry(e, &b->hbucket_list, hentry_lentry)
+		if (id == *e->hentry_id)
+			if (t->htcompare == NULL ||
+			    t->htcompare(cmp, e->private)) {
+				if (cbf)
+					cbf(e->private);
+				break;
+			}
+	if (e && del)
+		psclist_del(&e->hentry_lentry);
+	ureqlock(&b->hbucket_lock, locked);
+	return (e);
+}
+
 /**
- * get_hash_entry -   locate an address in the hash table
+ * get_hash_entry - locate an address in the hash table
  * @t: hash table pointer
  * @id: identifier used to get hash bucket
  * @comp: value to compare to differentiate entries with same ID.
@@ -73,30 +100,13 @@ init_hash_entry(struct hash_entry *hentry, u64 *id, void *private)
  * 	conditions while the bucket is locked.
  */
 struct hash_entry *
-get_hash_entry(const struct hash_table *h, u64 id, const void *comp,
+get_hash_entry(const struct hash_table *t, u64 id, const void *cmp,
     void (*cbf)(void *))
 {
 	struct hash_bucket *b;
-	struct hash_entry *e;
 
-	psc_assert(h->htable_size);
-	if (h->htcompare)
-		psc_assert(comp);
-	else
-		psc_assert(comp == NULL);
-
-	b = GET_BUCKET(h, id);
-	LOCK_BUCKET(b);
-	psclist_for_each_entry(e, &b->hbucket_list, hentry_lentry)
-		if (id == *e->hentry_id)
-			if (h->htcompare == NULL ||
-			    h->htcompare(comp, e->private)) {
-				if (cbf)
-					cbf(e->private);
-				break;
-			}
-	ULOCK_BUCKET(b);
-	return (e);
+	b = GET_BUCKET(t, id);
+	return (_psc_hashbkt_search(t, b, id, cmp, cbf, 0));
 }
 
 /**
@@ -105,21 +115,13 @@ get_hash_entry(const struct hash_table *h, u64 id, const void *comp,
  * @id: element ID to look up in hash bucket.
  */
 void *
-del_hash_entry(const struct hash_table *h, u64 id)
+del_hash_entry(const struct hash_table *t, u64 id)
 {
 	struct hash_bucket *b;
 	struct hash_entry *e;
 
-	psc_assert(h->htable_size);
-
-	b = GET_BUCKET(h, id);
-	LOCK_BUCKET(b);
-	psclist_for_each_entry(e, &b->hbucket_list, hentry_lentry)
-		if (id == *e->hentry_id) {
-			psclist_del(&e->hentry_lentry);
-			break;
-		}
-	ULOCK_BUCKET(b);
+	b = GET_BUCKET(t, id);
+	e = _psc_hashbkt_search(t, b, id, NULL, NULL, 1);
 	return (e ? e->private : NULL);
 }
 
@@ -163,7 +165,7 @@ init_hash_entry_str(struct hash_entry_str *hentry, const char *id,
 struct hash_entry_str *
 get_hash_entry_str(const struct hash_table *h, const char *id)
 {
-	struct hash_bucket     *b;
+	struct hash_bucket *b;
 	struct hash_entry_str  *e = NULL;
 
 	psc_assert(h->htable_size);
