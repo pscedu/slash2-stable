@@ -408,6 +408,37 @@ libcfs_nid2str(lnet_nid_t nid)
         return str;
 }
 
+void
+libcfs_nid2str2(lnet_nid_t nid, char str[LNET_NIDSTR_SIZE])
+{
+        __u32             addr = LNET_NIDADDR(nid);
+        __u32             net = LNET_NIDNET(nid);
+        int               lnd = LNET_NETTYP(net);
+        int               nnum = LNET_NETNUM(net);
+        struct netstrfns *nf;
+        int               nob;
+
+        if (nid == LNET_NID_ANY) {
+		snprintf(str, sizeof(str), "LNET_NID_ANY");
+		return;
+	}
+
+        nf = libcfs_lnd2netstrfns(lnd);
+
+        if (nf == NULL)
+                snprintf(str, LNET_NIDSTR_SIZE, "%x@<%u:%u>", addr, lnd, nnum);
+        else {
+                nf->nf_addr2str(addr, str);
+                nob = strlen(str);
+                if (nnum == 0)
+                        snprintf(str + nob, LNET_NIDSTR_SIZE - nob, "@%s",
+                                 nf->nf_name);
+                else
+                        snprintf(str + nob, LNET_NIDSTR_SIZE - nob, "@%s%u",
+                                 nf->nf_name, nnum);
+        }
+}
+
 static struct netstrfns *
 libcfs_str2net_internal(char *str, __u32 *net)
 {
