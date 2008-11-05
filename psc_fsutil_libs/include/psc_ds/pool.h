@@ -65,12 +65,15 @@ struct psc_poolmgr {
 	    (total), (max), (initf), (destroyf), (reclaimcb), (namefmt),	\
 	    ## __VA_ARGS__)
 
-#define psc_pool_joindefset(m)	psc_pool_joinset((m), &psc_pooldefset)
+#define psc_pool_joindefset(m)		psc_pool_joinset((m), &psc_pooldefset)
+
+#define psc_pool_shrink(m, i)		_psc_pool_shrink((m), (i), 0)
+#define psc_pool_tryshrink(m, i)	_psc_pool_shrink((m), (i), 1)
 
 struct psc_poolmgr *
 	 psc_pool_lookup(const char *);
 int	 psc_pool_grow(struct psc_poolmgr *, int);
-int	 psc_pool_shrink(struct psc_poolmgr *, int);
+int	_psc_pool_shrink(struct psc_poolmgr *, int, int);
 int	 psc_pool_settotal(struct psc_poolmgr *, int);
 void	 psc_pool_resize(struct psc_poolmgr *);
 void	 psc_pool_joinset(struct psc_poolmgr *, struct psc_poolset *);
@@ -78,7 +81,7 @@ void	 psc_pool_leaveset(struct psc_poolmgr *, struct psc_poolset *);
 void	*psc_pool_get(struct psc_poolmgr *);
 void	 psc_pool_return(struct psc_poolmgr *, void *);
 void	 psc_pool_destroy(struct psc_poolmgr *);
-int	 _psc_pool_init(struct psc_poolmgr *, ptrdiff_t, size_t,
+int	_psc_pool_init(struct psc_poolmgr *, ptrdiff_t, size_t,
 		int, int, int, int (*)(void *), void (*)(void *),
 		int (*)(struct psc_listcache *, int), const char *, ...);
 

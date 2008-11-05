@@ -87,7 +87,7 @@ psc_pool_grow(struct psc_poolmgr *m, int n)
  * @n: #items to remove from pool.
  */
 int
-psc_pool_shrink(struct psc_poolmgr *m, int n)
+_psc_pool_shrink(struct psc_poolmgr *m, int n, int try)
 {
 	int i, locked;
 	void *p;
@@ -110,8 +110,12 @@ psc_pool_shrink(struct psc_poolmgr *m, int n)
 		locked = POOL_RLOCK(m);
 		if (m->ppm_total > m->ppm_min) {
 			p = lc_getnb(&m->ppm_lc);
-			psc_assert(p);
-			m->ppm_total--;
+			if (p == NULL) {
+				if (!try)
+					psc_fatalx("psc_pool_shrink: no free "
+					    "items available to remove");
+			} else
+				m->ppm_total--;
 		} else
 			p = NULL;
 		POOL_ULOCK(m, locked);
