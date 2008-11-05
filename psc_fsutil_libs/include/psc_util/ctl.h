@@ -50,11 +50,13 @@ struct psc_ctlmsg_stats {
 	u32			pcst_u32_1;
 	u32			pcst_u32_2;
 	u32			pcst_u32_3;
+	u32			pcst_u32_4;
 };
 
 #define pcst_nclients	pcst_u32_1
 #define pcst_nsent	pcst_u32_2
 #define pcst_nrecv	pcst_u32_3
+#define pcst_ndrop	pcst_u32_4
 
 struct psc_ctlmsg_hashtable {
 	char			pcht_name[HTNAME_MAX];
