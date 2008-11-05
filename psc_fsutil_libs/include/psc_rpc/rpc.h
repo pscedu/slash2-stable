@@ -90,6 +90,7 @@
 #define PSC_SERVER   0xff /* differentiate client and server for ni init */
 #define PSC_CLIENT   0x0f
 #define PSC_SVR_PID  54321
+#define PSC_NIDSTR_SIZE 32
 #define ZOBD_TIMEOUT 60
 
 extern lnet_handle_eq_t pscrpc_eq_h;
@@ -567,6 +568,8 @@ pscrpc_connection_addref(struct pscrpc_connection *c);
 
 void
 pscrpc_abort_inflight(struct pscrpc_import *imp);
+
+void	 psc_nid2str(lnet_nid_t, char []); 
 
 /*  rpcclient.c */
 int

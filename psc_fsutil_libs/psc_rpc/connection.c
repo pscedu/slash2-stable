@@ -140,3 +140,9 @@ int pscrpc_put_connection(struct pscrpc_connection *c)
 
 	RETURN(rc);
 }
+
+void
+psc_nid2str(lnet_nid_t addr, char str[PSC_NIDSTR_SIZE])
+{
+	libcfs_nid2str2(addr, str);
+}
