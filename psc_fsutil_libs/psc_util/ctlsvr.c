@@ -581,7 +581,7 @@ psc_ctlparam_pool(int fd, struct psc_ctlmsghdr *mh,
     struct psc_ctlmsg_param *pcp, char **levels, int nlevels)
 {
 	struct psc_poolmgr *m;
-	int rc, set, poolfield;
+	int rc, set;
 	char *endp;
 	long val;
 
@@ -591,14 +591,9 @@ psc_ctlparam_pool(int fd, struct psc_ctlmsghdr *mh,
 	if (strcmp(pcp->pcp_thrname, PCTHRNAME_EVERYONE) != 0)
 		return (psc_ctlsenderr(fd, mh, "invalid thread field"));
 
-#define POOLFIELD_MIN 0
-#define POOLFIELD_MAX 1
-#define POOLFIELD_TOT 2
-
 	levels[0] = "pool";
 
 	val = 0; /* gcc */
-	poolfield = 0; /* gcc */
 
 	set = (mh->mh_type == PCMT_SETPARAM);
 
@@ -607,13 +602,9 @@ psc_ctlparam_pool(int fd, struct psc_ctlmsghdr *mh,
 			return (psc_ctlsenderr(fd, mh,
 			    "invalid operation"));
 
-		if (strcmp(levels[2], "min") == 0)
-			poolfield = POOLFIELD_MIN;
-		else if (strcmp(levels[2], "max") == 0)
-			poolfield = POOLFIELD_MAX;
-		else if (strcmp(levels[2], "total") == 0)
-			poolfield = POOLFIELD_TOT;
-		else
+		if (strcmp(levels[2], "min") &&
+		    strcmp(levels[2], "max") &&
+		    strcmp(levels[2], "total"))
 			return (psc_ctlsenderr(fd, mh,
 			    "invalid pool field: %s", levels[2]));
 
