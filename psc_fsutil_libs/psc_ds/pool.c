@@ -305,8 +305,10 @@ _psc_pool_init(struct psc_poolmgr *m, ptrdiff_t offset, size_t entsize,
 	m->ppm_initf = initf;
 	m->ppm_max = max;
 
+	_lc_init(&m->ppm_lc, offset, entsize);
+
 	va_start(ap, namefmt);
-	_lc_reginit(&m->ppm_lc, offset, entsize, namefmt, ap);
+	lc_vregister(&m->ppm_lc, namefmt, ap);
 	va_end(ap);
 
 	pll_add(&psc_pools, m);
