@@ -287,7 +287,7 @@ psc_ctl_loglevel_namelen(int n)
 }
 
 void
-psc_humanscale(char buf[8], double num)
+psc_humanscale(char buf[PSC_CTL_HUMANBUF_SZ], double num)
 {
 	int mag;
 
@@ -395,7 +395,7 @@ psc_ctlmsg_iostats_prdat(__unusedx const struct psc_ctlmsghdr *mh,
 {
 	const struct psc_ctlmsg_iostats *pci = m;
 	const struct iostats *ist = &pci->pci_ist;
-	char buf[8];
+	char buf[PSC_CTL_HUMANBUF_SZ];
 
 	printf(" %-30s ", ist->ist_name);
 	if (psc_ctl_inhuman) {
