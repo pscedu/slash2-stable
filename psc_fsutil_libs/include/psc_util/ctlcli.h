@@ -1,7 +1,9 @@
 /* $Id$ */
 
+struct psc_ctlmsg_stats;
+struct psc_ctlmsghdr;
+
 #define PSCTHR_NAME_MAX		12
-#define PSC_CTL_HUMANBUF_SZ	8
 
 #define PSC_CTLMSG_PRFMT_DEFS															\
 /* 0 */	{ NULL,				psc_ctlmsg_error_prdat,		sizeof(struct psc_ctlmsg_error),	NULL },				\
@@ -70,8 +72,6 @@ void  psc_ctlmsg_stats_prdat(const struct psc_ctlmsghdr *, const void *);
 int   psc_ctlmsg_loglevel_check(struct psc_ctlmsghdr *, const void *);
 int   psc_ctlmsg_loglevel_prhdr(struct psc_ctlmsghdr *, const void *);
 void  psc_ctlmsg_loglevel_prdat(const struct psc_ctlmsghdr *, const void *);
-
-void	psc_humanscale(char buf[], double);
 
 extern int psc_ctl_noheader;
 extern int psc_ctl_inhuman;
