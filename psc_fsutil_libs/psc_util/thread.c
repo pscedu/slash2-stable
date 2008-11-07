@@ -180,7 +180,7 @@ psc_log_getlevel(int subsys)
 {
 	struct psc_thread *thr;
 
-	thr = pscthr_get();
+	thr = pscthr_get_canfail();
 	if (thr == NULL)
 		return (psc_log_getlevel_ss(subsys));
 	if (subsys >= psc_nsubsys)
@@ -197,7 +197,7 @@ pscthr_getname(void)
 {
 	struct psc_thread *thr;
 
-	thr = pscthr_get();
+	thr = pscthr_get_canfail();
 	if (thr == NULL)
 		return (NULL);
 	return (thr->pscthr_name);
