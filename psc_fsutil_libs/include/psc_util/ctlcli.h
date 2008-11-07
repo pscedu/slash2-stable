@@ -3,8 +3,6 @@
 struct psc_ctlmsg_stats;
 struct psc_ctlmsghdr;
 
-#define PSCTHR_NAME_MAX		12
-
 #define PSC_CTLMSG_PRFMT_DEFS															\
 /* 0 */	{ NULL,				psc_ctlmsg_error_prdat,		sizeof(struct psc_ctlmsg_error),	NULL },				\
 /* 1 */	{ psc_ctlmsg_loglevel_prhdr,	psc_ctlmsg_loglevel_prdat,	0,					psc_ctlmsg_loglevel_check },	\

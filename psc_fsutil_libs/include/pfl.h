@@ -1,3 +1,3 @@
 /* $Id$ */
 
-void pfl_init(int);
+void pfl_init();

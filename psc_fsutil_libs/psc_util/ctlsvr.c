@@ -31,7 +31,6 @@
 #include "psc_util/iostats.h"
 #include "psc_util/strlcpy.h"
 #include "psc_util/thread.h"
-#include "psc_util/threadtable.h"
 
 struct psc_thread pscControlThread;
 

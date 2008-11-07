@@ -14,7 +14,6 @@
 #include "psc_util/cdefs.h"
 #include "psc_util/lock.h"
 #include "psc_util/log.h"
-#include "psc_util/threadtable.h"
 #include "psc_util/waitq.h"
 
 static int test_req_buffer_pressure = 0;
@@ -619,7 +618,7 @@ pscrpc_main(struct psc_thread *thread, struct pscrpc_service *svc)
 
 	psc_dbg("thread %p pscthr_type is %d", thread,
 		thread->pscthr_type);
-	
+
 	memset(&sa, 0, sizeof(sa));
 	sa.sa_handler = SIG_IGN;
 	if (sigaction(SIGPIPE, &sa, NULL) == -1)
@@ -640,7 +639,7 @@ pscrpc_main(struct psc_thread *thread, struct pscrpc_service *svc)
 	spin_unlock(&svc->srv_lock);
 	wake_up(&svc->srv_free_rs_waitq);
 
-	CDEBUG(D_NET, "service thread %zu started\n", thread->pscthr_id);
+	CDEBUG(D_NET, "service thread started");
 
 	/* XXX maintain a list of all managed devices: insert here */
 	while (thread->pscthr_run  ||
@@ -721,7 +720,7 @@ pscrpc_main(struct psc_thread *thread, struct pscrpc_service *svc)
 		svc->srv_done(thread);
 
  out:
-	CDEBUG(D_NET, "service thread %zu exiting: rc %d\n", thread->pscthr_id, rc);
+	CDEBUG(D_NET, "service thread exiting: rc %d", rc);
 
 	spin_lock(&svc->srv_lock);
 	svc->srv_nthreads--;			/* must know immediately */

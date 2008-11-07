@@ -2,6 +2,8 @@
 
 #include "psc_util/subsys.h"
 
+#include <sys/syscall.h>
+
 #include <err.h>
 #include <signal.h>
 #include <stdarg.h>
@@ -16,10 +18,49 @@
 #include "psc_util/cdefs.h"
 #include "psc_util/lock.h"
 #include "psc_util/thread.h"
-#include "psc_util/threadtable.h"
 
 struct dynarray	pscThreads;
 psc_spinlock_t	pscThreadsLock = LOCK_INITIALIZER;
+pthread_key_t	psc_thrkey;
+int		psc_thrinit;
+pthread_once_t	psc_thr_once = PTHREAD_ONCE_INIT;
+
+void
+pscthr_destroy(void *arg)
+{
+	struct psc_thread *thr = arg;
+
+	reqlock(&thr->pscthr_lock);
+	PSCFREE(thr->pscthr_loglevels);
+
+	/*
+	 * I don't think we can do this unless we disallow any
+	 * external indexing into this array.  Things that need to
+	 * reference a thread should maintain a pointer to the pscthr
+	 * and not a pscThreads index.
+	 *
+	 * At this point, pscThreads is only used by things like ctlapi.
+	 */
+	spinlock(&pscThreadsLock);
+	dynarray_remove(&pscThreads, thr);
+	freelock(&pscThreadsLock);
+
+	if (thr->pscthr_dtor)
+		thr->pscthr_dtor(thr->pscthr_private);
+	if (thr->pscthr_flags & PTF_FREE)
+		free(thr);
+}
+
+void
+pscthrs_init(void)
+{
+	int rc;
+
+	rc = pthread_key_create(&psc_thrkey, pscthr_destroy);
+	if (rc)
+		psc_fatalx("pthread_key_create: %s", strerror(rc));
+	psc_thrinit = 1;
+}
 
 /*
  * pscthr_begin: each new thread begins its life here.
@@ -32,9 +73,34 @@ __static void *
 pscthr_begin(void *arg)
 {
 	struct psc_thread *thr = arg;
+	int rc;
+
 	spinlock(&thr->pscthr_lock);
+	thr->pscthr_pthread = pthread_self();
+	thr->pscthr_thrid = syscall(SYS_gettid);
+	rc = pthread_setspecific(psc_thrkey, thr);
+	if (rc)
+		psc_fatalx("pthread_setspecific: %s", strerror(rc));
 	freelock(&thr->pscthr_lock);
 	return (thr->pscthr_start(thr));
+}
+
+struct psc_thread *
+pscthr_get_canfail(void)
+{
+	if (!psc_thrinit)
+		pthread_once(&psc_thr_once, pscthrs_init);
+	return (pthread_getspecific(psc_thrkey));
+}
+
+struct psc_thread *
+pscthr_get(void)
+{
+	struct psc_thread *thr;
+
+	thr = pscthr_get_canfail();
+	psc_assert(thr);
+	return (thr);
 }
 
 /*
@@ -44,21 +110,31 @@ pscthr_begin(void *arg)
  * @start: thread execution routine.  By specifying a NULL routine,
  *	no pthread will be spawned (assuming that an actual pthread
  *	already exists or will be taken care of).
+ * @private: thread-specific data.
+ * @flags: operational flags.
+ * @dtor: optional destructor for thread.
  * @namearg: application-specific name for thread.
  */
 void
-pscthr_init(struct psc_thread *thr, int type,
-    void *(*start)(void *), void *private, const char *namefmt, ...)
+_pscthr_init(struct psc_thread *thr, int type, void *(*start)(void *),
+    void *private, int flags, void (*dtor)(void *), const char *namefmt, ...)
 {
 	va_list ap;
 	int rc, n;
 
-	/*
-	 * Ensure that the thr is initialized before the new thread
-	 *  attempts to access its data structures.
-	 */
+	if (!psc_thrinit)
+		pthread_once(&psc_thr_once, pscthrs_init);
+
+	if (flags & PTF_PAUSED)
+		psc_fatalx("pscthr_init: PTF_PAUSED specified");
+
 	LOCK_INIT(&thr->pscthr_lock);
-	spinlock(&thr->pscthr_lock);
+	thr->pscthr_run = 1;
+	thr->pscthr_type = type;
+	thr->pscthr_start = start;
+	thr->pscthr_private = private;
+	thr->pscthr_flags = flags;
+	thr->pscthr_dtor = dtor;
 
 	va_start(ap, namefmt);
 	rc = vsnprintf(thr->pscthr_name, sizeof(thr->pscthr_name),
@@ -67,6 +143,8 @@ pscthr_init(struct psc_thread *thr, int type,
 
 	if (rc == -1)
 		psc_fatal("vsnprintf");
+	if (rc >= (int)sizeof(thr->pscthr_name))
+		psc_fatalx("pscthr_init: thread name too long: %s", namefmt);
 
 	thr->pscthr_loglevels = PSCALLOC(psc_nsubsys *
 	    sizeof(*thr->pscthr_loglevels));
@@ -74,35 +152,22 @@ pscthr_init(struct psc_thread *thr, int type,
 	for (n = 0; n < psc_nsubsys; n++)
 		thr->pscthr_loglevels[n] = psc_log_getlevel(n);
 
-	spinlock(&pscThreadsLock);
-
-	thr->pscthr_run = 1;
-	thr->pscthr_type = type;
-	thr->pscthr_id = dynarray_len(&pscThreads);
-	thr->pscthr_start = start;
-	thr->pscthr_private = private;
-
 	if (start) {
 		if ((rc = pthread_create(&thr->pscthr_pthread, NULL,
 		    pscthr_begin, thr)) != 0)
 			psc_fatalx("pthread_create: %s", strerror(rc));
-	} else
+	} else {
 		thr->pscthr_pthread = pthread_self();
+		thr->pscthr_thrid = syscall(SYS_gettid);
+		rc = pthread_setspecific(psc_thrkey, thr);
+		if (rc)
+			psc_fatalx("pthread_setspecific: %s", strerror(rc));
+	}
 
-	thr->pscthr_hashid = (u64)thr->pscthr_pthread;
-
-	psc_threadtbl_put(thr);
-
+	spinlock(&pscThreadsLock);
 	if (dynarray_add(&pscThreads, thr) == -1)
 		psc_fatal("dynarray_add");
 	freelock(&pscThreadsLock);
-	freelock(&thr->pscthr_lock);
-
-	psc_info("spawned %s [thread %zu] [id %"_P_U64"x] [pthrid %lx] thr=%p"
-		 " thr->type %d, passed type %d",
-		 thr->pscthr_name, thr->pscthr_id,
-		 thr->pscthr_hashid, thr->pscthr_pthread,
-		 thr, thr->pscthr_type, type);
 }
 
 /*
@@ -115,7 +180,7 @@ psc_log_getlevel(int subsys)
 {
 	struct psc_thread *thr;
 
-	thr = psc_threadtbl_get_canfail();
+	thr = pscthr_get();
 	if (thr == NULL)
 		return (psc_log_getlevel_ss(subsys));
 	if (subsys >= psc_nsubsys)
@@ -132,7 +197,7 @@ pscthr_getname(void)
 {
 	struct psc_thread *thr;
 
-	thr = psc_threadtbl_get_canfail();
+	thr = pscthr_get();
 	if (thr == NULL)
 		return (NULL);
 	return (thr->pscthr_name);
@@ -163,7 +228,7 @@ pscthr_sigusr1(__unusedx int sig)
 	struct psc_thread *thr;
 	int locked;
 
-	thr = psc_threadtbl_get();
+	thr = pscthr_get();
 	while (!tryreqlock(&thr->pscthr_lock, &locked))
 		sched_yield();
 	thr->pscthr_flags |= PTF_PAUSED;
@@ -184,35 +249,9 @@ pscthr_sigusr2(__unusedx int sig)
 	struct psc_thread *thr;
 	int locked;
 
-	thr = psc_threadtbl_get();
+	thr = pscthr_get();
 	while (!tryreqlock(&thr->pscthr_lock, &locked))
 		sched_yield();
 	thr->pscthr_flags &= ~PTF_PAUSED;
 	ureqlock(&thr->pscthr_lock, locked);
-}
-
-/*
- * pscthr_destroy - remove thread resources from the process.
- * @thr: thread that is going away.
- * Notes: make sure any threadtype-specific memory (pscthr_private)
- *	has been released and any memory for this psc_thread itself.
- */
-void
-pscthr_destroy(struct psc_thread *thr)
-{
-	reqlock(&thr->pscthr_lock);
-	PSCFREE(thr->pscthr_loglevels);
-	del_hash_entry(&thrHtable, thr->pscthr_hashid);
-
-	/*
-	 * I don't think we can do this unless we disallow any
-	 * external indexing into this array.  Things that need to
-	 * reference a thread should maintain a pointer to the pscthr
-	 * and not a pscThreads index.
-	 *
-	 * At this point, pscThreads is only used by things like ctlapi.
-	 */
-	spinlock(&pscThreadsLock);
-	dynarray_remove(&pscThreads, thr);
-	freelock(&pscThreadsLock);
 }

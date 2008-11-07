@@ -290,14 +290,14 @@ psc_ctl_loglevel_namelen(int n)
 int
 psc_ctlthr_prhdr(void)
 {
-	return (printf(" %-*s %9s %8s %8s\n", PSCTHR_NAME_MAX,
+	return (printf(" %-*s %9s %8s %8s\n", PSC_THRNAME_MAX,
 	    "thread", "#nclients", "#sent", "#recv"));
 }
 
 void
 psc_ctlthr_prdat(const struct psc_ctlmsg_stats *pcst)
 {
-	printf(" %-*s %9u %8u %8u\n", PSCTHR_NAME_MAX,
+	printf(" %-*s %9u %8u %8u\n", PSC_THRNAME_MAX,
 	    pcst->pcst_thrname, pcst->pcst_nclients,
 	    pcst->pcst_nsent, pcst->pcst_nrecv);
 }
@@ -577,7 +577,7 @@ psc_ctlmsg_loglevel_prhdr(__unusedx struct psc_ctlmsghdr *mh,
 	int len, n;
 
 	printf("logging levels\n");
-	len = printf(" %-*s ", PSCTHR_NAME_MAX, "thread");
+	len = printf(" %-*s ", PSC_THRNAME_MAX, "thread");
 	for (n = 0; n < psc_ctl_nsubsys; n++)
 		len += printf(" %*s", psc_ctl_loglevel_namelen(n),
 		    psc_ctl_subsys_names[n]);
@@ -592,7 +592,7 @@ psc_ctlmsg_loglevel_prdat(__unusedx const struct psc_ctlmsghdr *mh,
 	const struct psc_ctlmsg_loglevel *pcl = m;
 	int n;
 
-	printf(" %-*s ", PSCTHR_NAME_MAX, pcl->pcl_thrname);
+	printf(" %-*s ", PSC_THRNAME_MAX, pcl->pcl_thrname);
 	for (n = 0; n < psc_ctl_nsubsys; n++)
 		printf(" %*s", psc_ctl_loglevel_namelen(n),
 		    psc_loglevel_getname(pcl->pcl_levels[n]));
