@@ -57,11 +57,11 @@ pscrpc_rqphase2str(struct pscrpc_request *req)
 	    "/%x/%x replyc %"_P_U64"x rc %d/%d to=%d :: "fmt,		\
 	    (rq), (rq)->rq_xid, (rq)->rq_transno,			\
 	    (rq)->rq_reqmsg ? (rq)->rq_reqmsg->handle.cookie : 0xdeadbeef, \
-	    (rq)->rq_reqmsg ? (rq)->rq_reqmsg->opc : -1,		\
+	    (rq)->rq_reqmsg ? (int)(rq)->rq_reqmsg->opc : -1,		\
 	    __imp ? libcfs_id2str(__imp->imp_connection->c_peer) :	\
 	      (rq)->rq_conn ? __nidstr : "<?>",				\
 	    __imp && __imp->imp_client ?				\
-	      __imp->imp_client->cli_request_portal : -1,		\
+	      (int)__imp->imp_client->cli_request_portal : -1,		\
 	    (rq)->rq_reqlen, (rq)->rq_replen,				\
 	    atomic_read(&(rq)->rq_refcount), (rq)->rq_resend,		\
 	    atomic_read(&(rq)->rq_retries), DEBUG_REQ_FLAGS(rq),	\
