@@ -570,6 +570,7 @@ void
 pscrpc_abort_inflight(struct pscrpc_import *imp);
 
 void	 psc_nid2str(lnet_nid_t, char []); 
+void	 psc_id2str(lnet_process_id_t, char []); 
 
 /*  rpcclient.c */
 int

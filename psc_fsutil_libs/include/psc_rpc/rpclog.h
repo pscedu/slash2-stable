@@ -44,10 +44,12 @@ pscrpc_rqphase2str(struct pscrpc_request *req)
 #define DEBUG_REQ(level, rq, fmt, ...)					\
     do {								\
 	struct pscrpc_import *__imp = (rq)->rq_import;			\
-	char __nidstr[PSC_NIDSTR_SIZE];					\
+	char __nidstr[PSC_NIDSTR_SIZE], __idstr[PSC_NIDSTR_SIZE];	\
 									\
 	if ((rq)->rq_conn)						\
 		psc_nid2str((rq)->rq_conn->c_peer.nid, __nidstr);	\
+	if (__imp)							\
+		psc_id2str(__imp->imp_connection->c_peer, __idstr);	\
 	_psclog(__FILE__, __func__, __LINE__,				\
 	    PSS_RPC, (level), 0,					\
 	    " req@%p x%"_P_U64"d/t%"_P_U64"d "				\
@@ -58,8 +60,7 @@ pscrpc_rqphase2str(struct pscrpc_request *req)
 	    (rq), (rq)->rq_xid, (rq)->rq_transno,			\
 	    (rq)->rq_reqmsg ? (rq)->rq_reqmsg->handle.cookie : 0xdeadbeef, \
 	    (rq)->rq_reqmsg ? (int)(rq)->rq_reqmsg->opc : -1,		\
-	    __imp ? libcfs_id2str(__imp->imp_connection->c_peer) :	\
-	      (rq)->rq_conn ? __nidstr : "<?>",				\
+	    __imp ? __idstr : (rq)->rq_conn ? __nidstr : "<?>",		\
 	    __imp && __imp->imp_client ?				\
 	      (int)__imp->imp_client->cli_request_portal : -1,		\
 	    (rq)->rq_reqlen, (rq)->rq_replen,				\

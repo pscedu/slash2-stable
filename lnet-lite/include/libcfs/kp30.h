@@ -261,6 +261,7 @@ int         libcfs_str2lnd(char *str);
 char       *libcfs_net2str(__u32 net);
 char       *libcfs_nid2str(lnet_nid_t nid);
 void	    libcfs_nid2str2(lnet_nid_t nid, char []);
+void	    libcfs_id2str2(lnet_process_id_t nid, char []);
 __u32       libcfs_str2net(char *str);
 lnet_nid_t  libcfs_str2nid(const char *str);
 int         libcfs_str2anynid(lnet_nid_t *nid, char *str);
