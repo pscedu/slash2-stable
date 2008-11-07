@@ -146,3 +146,9 @@ psc_nid2str(lnet_nid_t addr, char str[PSC_NIDSTR_SIZE])
 {
 	libcfs_nid2str2(addr, str);
 }
+
+void
+psc_id2str(lnet_process_id_t addr, char str[PSC_NIDSTR_SIZE])
+{
+	libcfs_id2str2(addr, str);
+}
