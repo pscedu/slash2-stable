@@ -12,6 +12,8 @@
 #include <numaif.h>
 #endif
 
+#include <procbridge.h>
+
 #include "pfl.h"
 #include "psc_rpc/rpc.h"
 #include "psc_rpc/rsx.h"
@@ -77,13 +79,15 @@ int			 nthr = 8;
 int			 nbuf = 4096;
 int			 setsz = 8;
 int			 bufsz = 1024 * 1024;
+atomic_t		 nsets = ATOMIC_INIT(0);
 
 lnet_process_id_t	 mynid;
 pscrpc_svc_handle_t	 svc;
 struct pscrpc_import	*imp;
 struct psc_thread	 eqpollthr;
 const char		*progname;
-struct iostats		 ist;
+struct iostats		 ist, *lst;
+int			 doserver;
 
 __dead void
 usage(void)
@@ -151,6 +155,7 @@ set_cb(__unusedx struct pscrpc_request_set *set, void *arg,
 {
 	struct mythr *mt = arg;
 
+	atomic_dec(&nsets);
 	spinlock(&mt->setlock);
 	mt->nsets--;
 	psc_waitq_wakeall(&mt->set_wq);
@@ -201,7 +206,6 @@ client_main(void *arg)
 			    0, 1) == 0)
 				dynarray_remove(&da, sets[i]);
 		spinlock(&mt->setlock);
-printf("had %d:%d sets\n", n, mt->nsets);
 		if (mt->nsets >= mt->maxset) {
 			ts.tv_sec = 0;
 			ts.tv_nsec = 5000 * 1000;
@@ -209,6 +213,7 @@ printf("had %d:%d sets\n", n, mt->nsets);
 			    &mt->setlock, &ts);
 			continue;
 		}
+		atomic_inc(&nsets);
 		mt->nsets++;
 		freelock(&mt->setlock);
 		set = pscrpc_prep_set();
@@ -246,7 +251,7 @@ server_write_handler(struct pscrpc_request *rq)
 	thr = pscthr_get();
 	mt = mythr(thr);
 	if (mt->buf == NULL)
-		mt->buf = psc_alloc(bufsz, PAF_LOCK | PAF_PAGEALIGN);
+		mt->buf = psc_alloc(bufsz, PAF_PAGEALIGN);
 
 	RSX_ALLOCREP(rq, mq, mp);
 	iov.iov_base = mt->buf;
@@ -313,6 +318,11 @@ lnet_spawnthr(pthread_t *t, void *(*startf)(void *), void *arg)
 	extern int tcpnal_instances;
 	struct psc_thread *pt;
 
+	if (doserver)
+		lst = ((bridge)arg)->b_ni->ni_recvstats;
+	else
+		lst = ((bridge)arg)->b_ni->ni_sendstats;
+
 	if (startf != nal_thread)
 		psc_fatalx("unknown LNET start routine");
 
@@ -327,16 +337,15 @@ int
 main(int argc, char *argv[])
 {
 	char *endp, ratebuf[PSC_CTL_HUMANBUF_SZ];
+	int maxset = 32, nb, i, rc, c;
 	lnet_process_id_t server_id;
-	int nb, i, rc, c, doserver;
 	struct pscrpc_request *rq;
 	struct timeval tv, lastv;
 	struct msg_req *mq;
 	struct msg_rep *mp;
 	struct mythr *mt;
-	double rate;
+	double rate, tm;
 	long l;
-	int maxset = 32;
 
 #ifdef HAVE_CPUSET
 	unsigned int nnodes;
@@ -509,20 +518,32 @@ main(int argc, char *argv[])
 		}
 #endif
 	}
+	printf("time (s)        app-rate =======      lnet-rate =======   nsets\n");
+	if (gettimeofday(&lastv, NULL) == -1)
+		psc_fatal("gettimeofday");
 	for (;;) {
 		if (gettimeofday(&tv, NULL) == -1)
 			psc_fatal("gettimeofday");
 		if (tv.tv_sec != lastv.tv_sec) {
 			timersub(&tv, &lastv, &ist.ist_intv);
 			lastv = tv;
+			tm = ist.ist_intv.tv_sec * (uint64_t)1000000 +
+			    ist.ist_intv.tv_usec;
+			printf("\r%2.5fs ", tm / 1000000);
 
 			nb = 0;
 			nb = atomic_xchg(&ist.ist_bytes_intv, nb);
-			rate = nb /
-			    ((ist.ist_intv.tv_sec * (uint64_t)1000000 +
-			    ist.ist_intv.tv_usec) / 1000000);
+			rate = nb / (tm / 1000000);
 			psc_humanscale(ratebuf, rate);
-			printf("\rrate: %10.3f\t%7s", rate, ratebuf);
+			printf(" %14.3f %7s", rate, ratebuf);
+
+			nb = 0;
+			nb = atomic_xchg(&lst->ist_bytes_intv, nb);
+			rate = nb / (tm / 1000000);
+			psc_humanscale(ratebuf, rate);
+			printf(" %14.3f %7s", rate, ratebuf);
+
+			printf(" %7d", atomic_read(&nsets));
 			fflush(stdout);
 		}
 		sleep(1);
