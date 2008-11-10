@@ -60,33 +60,34 @@ struct msg_rep {
 	int rc;
 };
 
-struct mythr {
-	struct pscrpc_thread prt;
-#ifdef HAVE_CPUSET
-	int bindnode;
-#endif
-	char *buf;
-	int maxset;
-	int nsets;
-	struct psc_wait_queue set_wq;
-	psc_spinlock_t setlock;
+struct thr_init {
+	int n;
 };
 
-#define mythr(thr)	((struct mythr *)thr->pscthr_private)
+struct cli_thr {
+	struct psc_wait_queue set_wq;
+	int nsets;
+};
+
+struct svr_thr {
+	struct pscrpc_thread prt;
+	char *buf;
+};
+
+#define cli_thr(thr)	((struct cli_thr *)thr->pscthr_private)
+#define svr_thr(thr)	((struct svr_thr *)thr->pscthr_private)
 
 int			 nthr = 8;
-//int			 maxset = 512;
 int			 nbuf = 4096;
-int			 setsz = 8;
-int			 bufsz = 1024 * 1024;
-atomic_t		 nsets = ATOMIC_INIT(0);
+int			 g_bufsz = 1024 * 1024;
+int			 g_setsz = 8;
+int			 g_maxset = 32;
 
-lnet_process_id_t	 mynid;
 pscrpc_svc_handle_t	 svc;
 struct pscrpc_import	*imp;
 struct psc_thread	 eqpollthr;
 const char		*progname;
-struct iostats		 ist, *lst;
+struct iostats		*lst;
 int			 doserver;
 
 __dead void
@@ -94,7 +95,11 @@ usage(void)
 {
 	fprintf(stderr,
 	    "usage: %s [-b nbuf] [-t nthr] -d\n"
-	    "       %s [-m maxset] [-S setsz] [-s bufsz] [-t nthr] server-nid\n",
+	    "       %s [-m maxset] [-S setsz] [-s bufsz] "
+#ifndef HAVE_CPUSET
+	    "[-t nthr] "
+#endif
+	    "server-nid\n",
 	    progname, progname);
 	exit(1);
 }
@@ -141,7 +146,6 @@ bindnode(int nid)
 int
 write_cb(struct pscrpc_request *rq, __unusedx void *arg, int status)
 {
-	atomic_add(bufsz, &ist.ist_bytes_intv);
 	if (status)
 		psc_fatalx("non-zero status in reply: %d", status);
 	if (rq->rq_status)
@@ -150,22 +154,28 @@ write_cb(struct pscrpc_request *rq, __unusedx void *arg, int status)
 }
 
 int
-set_cb(__unusedx struct pscrpc_request_set *set, void *arg,
+set_cb(__unusedx struct pscrpc_request_set *set, __unusedx void *arg,
     __unusedx int status)
 {
-	struct mythr *mt = arg;
+	struct psc_thread *thr;
+	struct cli_thr *ct;
 
-	atomic_dec(&nsets);
-	spinlock(&mt->setlock);
-	mt->nsets--;
-	psc_waitq_wakeall(&mt->set_wq);
-	freelock(&mt->setlock);
+	thr = pscthr_get();
+	ct = cli_thr(thr);
+	spinlock(&thr->pscthr_lock);
+	ct->nsets--;
+	psc_waitq_wakeall(&ct->set_wq);
+	freelock(&thr->pscthr_lock);
 	return (0);
 }
 
 __dead void *
 eqpollthr_main(__unusedx void *arg)
 {
+#ifdef HAVE_CPUSET
+	if (bindnode(0) == -1)
+		psc_fatal("bindnode %d", 0);
+#endif
 	for (;;) {
 		pscrpc_check_events(100);
 		sched_yield();
@@ -175,27 +185,33 @@ eqpollthr_main(__unusedx void *arg)
 __dead void *
 client_main(void *arg)
 {
-	struct psc_thread *thr = arg;
 	const struct msg_rep *mp;
-	struct pscrpc_bulk_desc *desc;
+	int i, rc, n, maxset = g_maxset, bufsz = g_bufsz, setsz = g_setsz;
 	struct pscrpc_request_set *set, **sets;
+	struct pscrpc_bulk_desc *desc;
 	struct pscrpc_request *rq;
-	struct msg_req *mq;
+	struct psc_thread *thr;
+	struct thr_init *ti;
 	struct dynarray da;
 	struct timespec ts;
+	struct cli_thr *ct;
+	struct msg_req *mq;
 	struct iovec iov;
-	struct mythr *mt;
-	int i, rc, n;
 	char *buf;
 
-	mt = mythr(thr);
-	dynarray_init(&da);
-
+	ti = arg;
 #ifdef HAVE_CPUSET
-	/* bind to node zero which has IB */
-	if (bindnode(mt->bindnode) == -1)
-		psc_fatal("bindnode %d", mt->bindnode);
+	if (bindnode(ti->n) == -1)
+		psc_fatal("bindnode %d", mt->n);
 #endif
+
+	ct = PSCALLOC(sizeof(*ct));
+	psc_waitq_init(&ct->set_wq);
+
+	thr = PSCALLOC(sizeof(*thr));
+	pscthr_init(thr, THRT_RPC, NULL, ct, "rpcthr%d", n);
+
+	dynarray_init(&da);
 
 	buf = psc_alloc(bufsz, PAF_PAGEALIGN);
 	for (;;) {
@@ -205,21 +221,19 @@ client_main(void *arg)
 			if (pscrpc_set_finalize(sets[i],
 			    0, 1) == 0)
 				dynarray_remove(&da, sets[i]);
-		spinlock(&mt->setlock);
-		if (mt->nsets >= mt->maxset) {
+		spinlock(&thr->pscthr_lock);
+		if (ct->nsets >= maxset) {
 			ts.tv_sec = 0;
 			ts.tv_nsec = 5000 * 1000;
-			psc_waitq_timedwait(&mt->set_wq,
-			    &mt->setlock, &ts);
+			psc_waitq_timedwait(&ct->set_wq,
+			    &thr->pscthr_lock, &ts);
 			continue;
 		}
-		atomic_inc(&nsets);
-		mt->nsets++;
-		freelock(&mt->setlock);
+		ct->nsets++;
+		freelock(&thr->pscthr_lock);
 		set = pscrpc_prep_set();
 		dynarray_add(&da, set);
 		set->set_interpret = set_cb;
-		set->set_arg = mt;
 		for (i = 0; i < setsz; i++) {
 			if ((rc = RSX_NEWREQ(imp, RT_VERSION,
 			    MT_WRITE, rq, mq, mp)) != 0)
@@ -244,25 +258,23 @@ server_write_handler(struct pscrpc_request *rq)
 	struct pscrpc_bulk_desc *desc;
 	struct psc_thread *thr;
 	struct msg_rep *mp;
-	struct mythr *mt;
+	struct svr_thr *st;
 	struct iovec iov;
 	int rc;
 
 	thr = pscthr_get();
-	mt = mythr(thr);
-	if (mt->buf == NULL)
-		mt->buf = psc_alloc(bufsz, PAF_PAGEALIGN);
+	st = svr_thr(thr);
+	if (st->buf == NULL)
+		st->buf = psc_alloc(g_bufsz, PAF_PAGEALIGN);
 
 	RSX_ALLOCREP(rq, mq, mp);
-	iov.iov_base = mt->buf;
-	iov.iov_len = bufsz;
+	iov.iov_base = st->buf;
+	iov.iov_len = g_bufsz;
 	rc = rsx_bulkserver(rq, &desc, BULK_GET_SINK, RT_BULK_PORTAL,
 	    &iov, 1);
 	if (rc)
 		psc_fatalx("bulk_recv: %s", strerror(-rc));
 	pscrpc_free_bulk(desc);
-
-	atomic_add(bufsz, &ist.ist_bytes_intv);
 	return (0);
 }
 
@@ -337,14 +349,15 @@ int
 main(int argc, char *argv[])
 {
 	char *endp, ratebuf[PSC_CTL_HUMANBUF_SZ];
-	int maxset = 32, nb, i, rc, c;
-	lnet_process_id_t server_id;
+	lnet_process_id_t server_id, my_id;
+	struct timeval tv, lastv, intv;
 	struct pscrpc_request *rq;
-	struct timeval tv, lastv;
+	struct thr_init *ti;
 	struct msg_req *mq;
 	struct msg_rep *mp;
-	struct mythr *mt;
+	int nb, i, rc, c;
 	double rate, tm;
+	pthread_t pthr;
 	long l;
 
 #ifdef HAVE_CPUSET
@@ -352,11 +365,14 @@ main(int argc, char *argv[])
 	struct bitmask *bm;
 	struct cpuset *cs;
 	int j;
+# define THRFLAG
+#else
+# define THRFLAG "t:"
 #endif
 
 	doserver = 0;
 	progname = argv[0];
-	while ((c = getopt(argc, argv, "b:dm:S:s:t:w:")) != -1)
+	while ((c = getopt(argc, argv, "b:dm:S:s:"THRFLAG"w:")) != -1)
 		switch (c) {
 		case 'b':
 			endp = NULL;
@@ -375,7 +391,7 @@ main(int argc, char *argv[])
 			if (l < 0 || l > INT_MAX ||
 			    endp == optarg || *endp != '\0')
 				errx(1, "invalid maxset: %s", optarg);
-			maxset = (int)l;
+			g_maxset = (int)l;
 			break;
 		case 'S':
 			endp = NULL;
@@ -383,7 +399,7 @@ main(int argc, char *argv[])
 			if (l < 0 || l > MAX_SETSZ ||
 			    endp == optarg || *endp != '\0')
 				errx(1, "invalid setsz: %s", optarg);
-			setsz = (int)l;
+			g_setsz = (int)l;
 			break;
 		case 's':
 			endp = NULL;
@@ -391,7 +407,7 @@ main(int argc, char *argv[])
 			if (l < 0 || l > INT_MAX ||
 			    endp == optarg || *endp != '\0')
 				errx(1, "invalid bufsz: %s", optarg);
-			bufsz = (int)l;
+			g_bufsz = (int)l;
 			break;
 		case 't':
 			endp = NULL;
@@ -416,7 +432,6 @@ main(int argc, char *argv[])
 
 	lnet_thrspawnf = lnet_spawnthr;
 	pfl_init(256);
-	iostats_init(&ist, "ist");
 
 	if (doserver) {
 		if (argc)
@@ -439,7 +454,7 @@ main(int argc, char *argv[])
 		svc.svh_type = THRT_RPC;
 		strlcpy(svc.svh_svc_name, "svc",
 		    sizeof(svc.svh_svc_name));
-		pscrpc_thread_spawn(&svc, struct mythr);
+		pscrpc_thread_spawn(&svc, struct svr_thr);
 	} else {
 		if (argc != 1)
 			usage();
@@ -447,7 +462,7 @@ main(int argc, char *argv[])
 		if (pscrpc_init_portals(PSC_CLIENT))
 			psc_fatal("pscrpc_init_portals");
 
-		if (LNetGetId(1, &mynid))
+		if (LNetGetId(1, &my_id))
 			psc_fatalx("LNetGetId() failed");
 
 		server_id.pid = 0;
@@ -455,6 +470,10 @@ main(int argc, char *argv[])
 		if (server_id.nid == LNET_NID_ANY)
 			psc_fatalx("invalid server name %s", argv[0]);
 
+		/*
+		 * XXX bound the process doing lnet_send() to this same
+		 * node where the memory resides.
+		 */
 		imp = new_import();
 		imp->imp_client = PSCALLOC(sizeof(*imp->imp_client));
 		imp->imp_client->cli_request_portal = RT_REQ_PORTAL;
@@ -462,7 +481,7 @@ main(int argc, char *argv[])
 		imp->imp_max_retries = 2;
 
 		imp->imp_connection = pscrpc_get_connection(server_id,
-		    mynid.nid, NULL);
+		    my_id.nid, NULL);
 		imp->imp_connection->c_peer.pid = PSC_SVR_PID;
 
 		pscthr_init(&eqpollthr, THRT_EQPOLL,
@@ -495,13 +514,13 @@ main(int argc, char *argv[])
 				bitmask_clearbit(bm, i);
 #define THR_PER_NODE 1
 				for (j = 0; j < THR_PER_NODE; j++) {
-					mt = PSCALLOC(sizeof(*mt));
-					mt->bindnode = i;
-					mt->maxset = maxset;
-					psc_waitq_init(&mt->set_wq);
-					LOCK_INIT(&mt->setlock);
-					pscthr_init(PSCALLOC(sizeof(struct psc_thread)),
-					    THRT_RPC, client_main, mt, "rpcthr%d", i);
+					ti = PSCALLOC(sizeof(*ti));
+					ti->n = i;
+					rc = pthread_create(&pthr, NULL,
+					    client_main, ti);
+					if (rc)
+						psc_fatalx("pthread_create: %s",
+						    strerror(rc));
 				}
 			}
 		}
@@ -509,41 +528,34 @@ main(int argc, char *argv[])
 		cpuset_free(cs);
 #else
 		for (i = 0; i < nthr; i++) {
-			mt = PSCALLOC(sizeof(*mt));
-			mt->maxset = maxset;
-			psc_waitq_init(&mt->set_wq);
-			LOCK_INIT(&mt->setlock);
-			pscthr_init(PSCALLOC(sizeof(struct psc_thread)),
-			    THRT_RPC, client_main, mt, "rpcthr%d", i);
+			ti = PSCALLOC(sizeof(*ti));
+			ti->n = i;
+			rc = pthread_create(&pthr, NULL, client_main,
+			    ti);
+			if (rc)
+				psc_fatalx("pthread_create: %s",
+				    strerror(rc));
 		}
 #endif
 	}
-	printf("time (s)        app-rate =======      lnet-rate =======   nsets\n");
+	printf("time (s)       lnet-rate =======\n");
 	if (gettimeofday(&lastv, NULL) == -1)
 		psc_fatal("gettimeofday");
 	for (;;) {
 		if (gettimeofday(&tv, NULL) == -1)
 			psc_fatal("gettimeofday");
 		if (tv.tv_sec != lastv.tv_sec) {
-			timersub(&tv, &lastv, &ist.ist_intv);
+			timersub(&tv, &lastv, &intv);
 			lastv = tv;
-			tm = ist.ist_intv.tv_sec * (uint64_t)1000000 +
-			    ist.ist_intv.tv_usec;
+			tm = intv.tv_sec * (uint64_t)1000000 +
+			    intv.tv_usec;
 			printf("\r%2.5fs ", tm / 1000000);
-
-			nb = 0;
-			nb = atomic_xchg(&ist.ist_bytes_intv, nb);
-			rate = nb / (tm / 1000000);
-			psc_humanscale(ratebuf, rate);
-			printf(" %14.3f %7s", rate, ratebuf);
 
 			nb = 0;
 			nb = atomic_xchg(&lst->ist_bytes_intv, nb);
 			rate = nb / (tm / 1000000);
 			psc_humanscale(ratebuf, rate);
 			printf(" %14.3f %7s", rate, ratebuf);
-
-			printf(" %7d", atomic_read(&nsets));
 			fflush(stdout);
 		}
 		sleep(1);
