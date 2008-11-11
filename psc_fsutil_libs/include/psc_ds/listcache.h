@@ -28,6 +28,7 @@ extern psc_spinlock_t		pscListCachesLock;
 struct psc_listcache {
 	struct psclist_head	lc_index_lentry;	/* link between caches       */
 	char			lc_name[LC_NAME_MAX];	/* for lc mgmt               */
+	int			lc_flags;
 
 	ssize_t			lc_size;		/* current #items in list    */
 	size_t			lc_nseen;		/* stat: total #times put()  */
@@ -40,6 +41,8 @@ struct psc_listcache {
 	psc_waitq_t		lc_wq_empty;		/* when we're empty          */
 };
 typedef struct psc_listcache list_cache_t;
+
+#define PLCF_DYING	(1 << 0)	/* listcache is about to go away */
 
 #define LIST_CACHE_LOCK(l)  spinlock(&(l)->lc_lock)
 #define LIST_CACHE_ULOCK(l) freelock(&(l)->lc_lock)
@@ -144,26 +147,21 @@ lc_get(list_cache_t *l, int block)
 	int locked;
 
 	locked = reqlock(&l->lc_lock);
-	if (0)
- start:
-		reqlock(&l->lc_lock);
-
-	if (psclist_empty(&l->lc_listhd)) {
-		if (block) {
-			/* Wait until the list is no longer empty. */
-			if (block > 1)
-				psc_warnx("Waiting on listcache %p : '%s'",
-					  l, l->lc_name);
-			else
-				psc_notify("Waiting on listcache %p : '%s'",
-					   l, l->lc_name);
-			psc_waitq_wakeall(&l->lc_wq_want);
-			psc_waitq_wait(&l->lc_wq_empty, &l->lc_lock);
-			goto start;
-		} else {
+	while (psclist_empty(&l->lc_listhd)) {
+		if ((l->lc_flags & PLCF_DYING) || !block) {
 			ureqlock(&l->lc_lock, locked);
-			return NULL;
+			return (NULL);
 		}
+		/* Wait until the list is no longer empty. */
+		if (block > 1)
+			psc_warnx("Waiting on listcache %p : '%s'",
+				  l, l->lc_name);
+		else
+			psc_notify("Waiting on listcache %p : '%s'",
+				   l, l->lc_name);
+		psc_waitq_wakeall(&l->lc_wq_want);
+		psc_waitq_wait(&l->lc_wq_empty, &l->lc_lock);
+		spinlock(&l->lc_lock);
 	}
 	e = psclist_first(&l->lc_listhd);
 	lc_del(e, l);
@@ -176,7 +174,13 @@ lc_get(list_cache_t *l, int block)
  *	blocking if necessary until an item becomes available.
  * @lc: the list cache to access.
  */
-#define lc_getwait(lc)		(void *)(((char *)lc_get((lc), 1)) - (lc)->lc_offset)
+static inline void *
+lc_getwait(list_cache_t *lc)
+{
+	void *p = lc_get(lc, 1);
+
+	return (p ? (char *)p - lc->lc_offset : NULL);
+}
 
 /**
  * lc_getnb - grab an item from a listcache or NULL if none are available.
@@ -188,6 +192,19 @@ lc_getnb(list_cache_t *lc)
 	void *p = lc_get(lc, 0);
 
 	return (p ? (char *)p - lc->lc_offset : NULL);
+}
+
+/*
+ * lc_kill - list wants to go away, notify waitors.
+ * @lc: list cache to kill.
+ */
+void
+lc_kill(struct psc_listcache *lc)
+{
+	spinlock(&lc->lc_lock);
+	lc->lc_flags |= PLCF_DYING;
+	psc_waitq_wakeall(&lc->lc_wq_empty);
+	freelock(&lc->lc_lock);
 }
 
 /**
