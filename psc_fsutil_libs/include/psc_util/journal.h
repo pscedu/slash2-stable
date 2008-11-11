@@ -86,5 +86,8 @@ int	 pjournal_logwrite(struct psc_journal_xidhndl *, int, void *);
 int	 pjournal_logread(struct psc_journal *, int, void *);
 int	 pjournal_walk(struct psc_journal *, struct psc_journal_walker *,
 	    struct psc_journal_enthdr *);
+int
+pjournal_xadd(struct psc_journal_xidhndl *xh, int type, void *data);
+
 
 #endif /* _PFL_JOURNAL_H_ */

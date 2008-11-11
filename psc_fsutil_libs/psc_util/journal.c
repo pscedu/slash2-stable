@@ -344,7 +344,7 @@ pjournal_headtail_get(struct psc_journal *pj, struct psc_journal_walker *pjw)
 {
 	unsigned char *jbuf=pjournal_alloclog_ra(pj);
 	int rc=0, i, ents=0;
-	u32 tm=PJET_SLOT_ANY, sm=PJET_SLOT_ANY, lastgen;
+        u32 tm=PJET_SLOT_ANY, sm=PJET_SLOT_ANY, lastgen;
 
 	pjw->pjw_pos = pjw->pjw_stop = 0;
 
@@ -444,9 +444,8 @@ pjournal_replay(struct psc_journal *pj, psc_jhandler pj_handler)
 		rc = pjournal_logread(pj, pjw.pjw_pos, jbuf);
 		if (rc < 0)
 			return (-1);
-
-		if (pjw.pjw_cb)
-			(pj_handler)(jbuf, rc);
+		
+		(pj_handler)(jbuf, rc);
 
 		nents -= rc;
 
