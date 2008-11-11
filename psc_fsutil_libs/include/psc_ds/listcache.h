@@ -198,7 +198,7 @@ lc_getnb(list_cache_t *lc)
  * lc_kill - list wants to go away, notify waitors.
  * @lc: list cache to kill.
  */
-void
+static inline void
 lc_kill(struct psc_listcache *lc)
 {
 	spinlock(&lc->lc_lock);
