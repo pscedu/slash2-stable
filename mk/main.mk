@@ -45,7 +45,6 @@ PSCRPC_SRCS+=		${PFL_BASE}/psc_rpc/connection.c
 PSCRPC_SRCS+=		${PFL_BASE}/psc_rpc/events.c
 PSCRPC_SRCS+=		${PFL_BASE}/psc_rpc/export.c
 PSCRPC_SRCS+=		${PFL_BASE}/psc_rpc/import.c
-PSCRPC_SRCS+=		${PFL_BASE}/psc_rpc/nb.c
 PSCRPC_SRCS+=		${PFL_BASE}/psc_rpc/niobuf.c
 PSCRPC_SRCS+=		${PFL_BASE}/psc_rpc/packgeneric.c
 PSCRPC_SRCS+=		${PFL_BASE}/psc_rpc/rpcclient.c
