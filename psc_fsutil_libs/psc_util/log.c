@@ -10,6 +10,7 @@
 
 #include <sys/param.h>
 #include <sys/time.h>
+#include <sys/syscall.h>
 
 #include <ctype.h>
 #include <err.h>
@@ -31,6 +32,12 @@
 #define PSC_LOG_FMT "[%s:%06u %n:%F:%l]"
 #endif
 
+struct psclog_data {
+	char hostname[HOST_NAME_MAX];
+	char nothrname[20];
+	int rank;
+};
+
 #define PSC_LOG_INIT()				\
 	do {					\
 		if (!psc_loginit)		\
@@ -40,6 +47,7 @@
 __static int		 psc_loginit;
 __static const char	*psc_logfmt = PSC_LOG_FMT;
 __static int		 psc_loglevel = PLL_TRACE;
+__static pthread_key_t	 psc_logkey;
 
 __static void
 psc_log_init(void)
@@ -47,6 +55,7 @@ psc_log_init(void)
 	static psc_spinlock_t lock = LOCK_INITIALIZER;
 	char *ep, *p;
 	long l;
+	int rc;
 
 	spinlock(&lock);
 	if (psc_loginit == 0) {
@@ -62,6 +71,10 @@ psc_log_init(void)
 				errx(1, "invalid log level env: %s", p);
 			psc_loglevel = (int)l;
 		}
+		rc = pthread_key_create(&psc_logkey, free);
+		if (rc)
+			psc_fatalx("pthread_key_create: %s", strerror(rc));
+
 		psc_loginit = 1;
 	}
 	freelock(&lock);
@@ -118,17 +131,22 @@ psc_log_getformat(void)
 	return (psc_logfmt);
 }
 
+__weak int
+MPI_Comm_rank(__unusedx int comm, int *rank)
+{
+	*rank = -1;
+	return (0);
+}
+
 void
 psclogv(__unusedx const char *fn, const char *func, int line, int subsys,
     int level, int options, const char *fmt, va_list ap)
 {
-	static char hostname[HOST_NAME_MAX];
-	static int rank=-1;
-
-	char prefix[LINE_MAX], emsg[LINE_MAX], umsg[LINE_MAX], nothrname[20], *p;
+	char prefix[LINE_MAX], emsg[LINE_MAX], umsg[LINE_MAX], *p;
 	const char *thrname, *logfmt;
+	struct psclog_data *d;
 	struct timeval tv;
-	int save_errno;
+	int rc, save_errno;
 
 	save_errno = errno;
 
@@ -138,35 +156,43 @@ psclogv(__unusedx const char *fn, const char *func, int line, int subsys,
 		return;
 
 	logfmt = psc_log_getformat();
+
+	d = pthread_getspecific(psc_logkey);
+	if (d == NULL) {
+		d = PSCALLOC(sizeof(*d));
+		if (gethostname(d->hostname, sizeof(d->hostname)) == -1)
+			err(1, "gethostname");
+		if ((p = strchr(d->hostname, '.')) != NULL)
+			*p = '\0';
+#ifdef LINUX
+		MPI_Comm_rank(1, &d->rank); /* 1=MPI_COMM_WORLD */
+#else
+	        d->rank = cnos_get_rank();
+#endif
+		rc = pthread_setspecific(psc_logkey, d);
+		if (rc)
+			psc_fatalx("pthread_setspecific: %s",
+			    strerror(rc));
+	}
+
 	thrname = pscthr_getname();
 	if (thrname == NULL) {
-		snprintf(nothrname, sizeof(nothrname), "<%d>", getpid());
-		thrname = nothrname;
+		if (d->nothrname[0] == '\0')
+			snprintf(d->nothrname, sizeof(d->nothrname),
+			    "<%ld>", syscall(SYS_gettid));
+		thrname = d->nothrname;
 	}
-
-	if (*hostname == '\0') {
-		if (gethostname(hostname, sizeof(hostname)) == -1)
-			err(1, "gethostname");
-		if ((p = strchr(hostname, '.')) != NULL)
-			*p = '\0';
-	}
-
-	if (rank == -1)
-#ifdef LINUX
-		rank = getpid();
-#else
-	        rank = cnos_get_rank();
-#endif
 
 	gettimeofday(&tv, NULL);
 	FMTSTR(prefix, sizeof(prefix), logfmt,
 		FMTSTRCASE('F', prefix, sizeof(prefix), "s", func)
 		FMTSTRCASE('f', prefix, sizeof(prefix), "s", fn)
-		FMTSTRCASE('h', prefix, sizeof(prefix), "s", hostname)
+		FMTSTRCASE('h', prefix, sizeof(prefix), "s", d->hostname)
+		FMTSTRCASE('i', prefix, sizeof(prefix), "ld", syscall(SYS_gettid))
 		FMTSTRCASE('L', prefix, sizeof(prefix), "d", level)
 		FMTSTRCASE('l', prefix, sizeof(prefix), "d", line)
 		FMTSTRCASE('n', prefix, sizeof(prefix), "s", thrname)
-		FMTSTRCASE('r', prefix, sizeof(prefix), "d", rank)
+		FMTSTRCASE('r', prefix, sizeof(prefix), "d", d->rank)
 		FMTSTRCASE('s', prefix, sizeof(prefix), "lu", tv.tv_sec)
 		FMTSTRCASE('u', prefix, sizeof(prefix), "lu", tv.tv_usec)
 // XXX fuse_get_context()->pid
