@@ -20,7 +20,7 @@ _LEXINTM=	$(patsubst %.l,%.c,$(filter %.l,${SRCS}))
 
 all:
 	@echo "no target specified, pick one of:"
-	@echo "  mpi zest debian_mpi pthreads qk"
+	@echo "  mpi zest zmpi debian_mpi pthreads qk"
 	@exit 1
 
 qk:		CC=		qk-gcc
@@ -38,10 +38,14 @@ pthreads:	LDFLAGS+=	-lpthread
 mpi:		CC=		mpicc
 mpi:		CFLAGS+=	-DMPI
 
+zmpi:		CC=		ZINCPATH=../zest/trunk/intercept/include ZLIBPATH=../zest/trunk/client/linux-mt ../zest/trunk/scripts/zcc
+zmpi:		CFLAGS+=	-DMPI ${LINUXFLAGS}
+zmpi:		LDFLAGS+=	-lmpi
+
 debian_mpi:	CC=		mpicc.mpich
 debian_mpi:	CFLAGS+=	-DMPI
 
-debian_mpi mpi pthreads zest qk: ${OBJS}
+debian_mpi mpi zmpi pthreads zest qk: ${OBJS}
 	${CC} -o fio.$@ ${OBJS} ${LDFLAGS}
 
 .c.o:
@@ -54,4 +58,4 @@ debian_mpi mpi pthreads zest qk: ${OBJS}
 
 clean_all clean:
 	rm -f ${OBJS} ${_YACCINTM} ${_LEXINTM} \
-	    fio.debian_mpi fio.pthreads fio.zest fio.qk fio.mpi
+	    fio.debian_mpi fio.pthreads fio.zest fio.qk fio.mpi fio.zmpi

@@ -974,12 +974,12 @@ main(int argc, char *argv[])
 #ifdef PTHREADS
 	struct list_head *tmp;
 	GROUP_t          *group = NULL;
-	int               rc, i, c, fd;
-
-#elif  MPI
-	int  mype = 0;
-	(int)MPI_Init(&argc, &argv);
+	int rc, i;
+#elif MPI
+	int mype = 0;
+	MPI_Init(&argc, &argv);
 #endif
+	int c, fd;
 
 	TOTAL_PES = 0;
 
