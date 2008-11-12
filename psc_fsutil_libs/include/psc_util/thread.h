@@ -34,6 +34,7 @@ struct psc_thread {
 	_pscthr_init((thr), (type), (startf), (priv), 0, NULL,	\
 	    (namefmt), ## __VA_ARGS__)
 
+void    pscthr_destroy(void *arg);
 void	pscthr_setpause(struct psc_thread *, int);
 void	pscthr_sigusr1(int);
 void	pscthr_sigusr2(int);

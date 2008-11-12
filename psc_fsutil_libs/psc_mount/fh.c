@@ -50,7 +50,7 @@ _fh_lookup(u64 fhid, int rm)
  * @fh: file handle
  * @fh_regcb: callback
  */
-void
+struct fhent *
 fh_register(u64 fhid, int oflag,
 	    void (*fh_regcb)(struct fhent *, int, void **), void *cb_args[])
 {
@@ -58,7 +58,8 @@ fh_register(u64 fhid, int oflag,
 	int    op = FD_REG_EXIST;
 
 	psc_assert((oflag & FHENT_WRITE) || 
-		   (oflag & FHENT_READ));
+		   (oflag & FHENT_READ)  ||
+		   (oflag & FHENT_LOOKUP));
 
 	fh.fh_id = fhid;
 	spinlock(&fhtreelock);
@@ -68,7 +69,7 @@ fh_register(u64 fhid, int oflag,
 		t = PSCALLOC(sizeof(*t));
 		LOCK_INIT(&t->fh_lock);
 		spinlock(&t->fh_lock);
-		t->fh_pri = NULL;
+		t->fh_private = NULL;
 		t->fh_id = fhid;
 		/* Inform the cache of our status, this allows us to
 		 *   init without holding the fhtreelock.
@@ -95,6 +96,8 @@ fh_register(u64 fhid, int oflag,
 		(*fh_regcb)(t, op, cb_args);
 		freelock(&t->fh_lock);
 	}
+
+	return (t);
 }
 
 int
