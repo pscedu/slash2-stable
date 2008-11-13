@@ -44,10 +44,10 @@ struct psclog_data {
 			psc_log_init();		\
 	} while (0)
 
-__static int		 psc_loginit;
-__static const char	*psc_logfmt = PSC_LOG_FMT;
-__static int		 psc_loglevel = PLL_TRACE;
-__static pthread_key_t	 psc_logkey;
+__static int			 psc_loginit;
+__static const char		*psc_logfmt = PSC_LOG_FMT;
+__static int			 psc_loglevel = PLL_TRACE;
+__static struct psclog_data	*psc_logdata;
 
 __static void
 psc_log_init(void)
@@ -55,7 +55,6 @@ psc_log_init(void)
 	static psc_spinlock_t lock = LOCK_INITIALIZER;
 	char *ep, *p;
 	long l;
-	int rc;
 
 	spinlock(&lock);
 	if (psc_loginit == 0) {
@@ -71,13 +70,21 @@ psc_log_init(void)
 				errx(1, "invalid log level env: %s", p);
 			psc_loglevel = (int)l;
 		}
-		rc = pthread_key_create(&psc_logkey, free);
-		if (rc)
-			psc_fatalx("pthread_key_create: %s", strerror(rc));
-
 		psc_loginit = 1;
 	}
 	freelock(&lock);
+}
+
+__weak struct psclog_data *
+psclog_getdata(void)
+{
+	return (psc_logdata);
+}
+
+__weak void
+psclog_setdata(struct psclog_data *d)
+{
+	psc_logdata = d;
 }
 
 int
@@ -146,7 +153,7 @@ psclogv(__unusedx const char *fn, const char *func, int line, int subsys,
 	const char *thrname, *logfmt;
 	struct psclog_data *d;
 	struct timeval tv;
-	int rc, save_errno;
+	int save_errno;
 
 	save_errno = errno;
 
@@ -157,7 +164,7 @@ psclogv(__unusedx const char *fn, const char *func, int line, int subsys,
 
 	logfmt = psc_log_getformat();
 
-	d = pthread_getspecific(psc_logkey);
+	d = psclog_getdata();
 	if (d == NULL) {
 		d = PSCALLOC(sizeof(*d));
 		if (gethostname(d->hostname, sizeof(d->hostname)) == -1)
@@ -169,10 +176,7 @@ psclogv(__unusedx const char *fn, const char *func, int line, int subsys,
 #else
 	        d->rank = cnos_get_rank();
 #endif
-		rc = pthread_setspecific(psc_logkey, d);
-		if (rc)
-			psc_fatalx("pthread_setspecific: %s",
-			    strerror(rc));
+		psclog_setdata(d);
 	}
 
 	thrname = pscthr_getname();

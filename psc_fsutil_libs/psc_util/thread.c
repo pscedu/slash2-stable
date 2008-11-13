@@ -22,6 +22,7 @@
 struct dynarray	pscThreads;
 psc_spinlock_t	pscThreadsLock = LOCK_INITIALIZER;
 pthread_key_t	psc_thrkey;
+pthread_key_t	psc_logkey;
 int		psc_thrinit;
 pthread_once_t	psc_thr_once = PTHREAD_ONCE_INIT;
 
@@ -57,6 +58,9 @@ pscthrs_init(void)
 	int rc;
 
 	rc = pthread_key_create(&psc_thrkey, pscthr_destroy);
+	if (rc)
+		psc_fatalx("pthread_key_create: %s", strerror(rc));
+	rc = pthread_key_create(&psc_logkey, free);
 	if (rc)
 		psc_fatalx("pthread_key_create: %s", strerror(rc));
 	psc_thrinit = 1;
@@ -254,4 +258,21 @@ pscthr_sigusr2(__unusedx int sig)
 		sched_yield();
 	thr->pscthr_flags &= ~PTF_PAUSED;
 	ureqlock(&thr->pscthr_lock, locked);
+}
+
+struct psclog_data *
+psclog_getdata(void)
+{
+	return (pthread_getspecific(psc_logkey));
+}
+
+void
+psclog_setdata(struct psclog_data *d)
+{
+	int rc;
+
+	rc = pthread_setspecific(psc_logkey, d);
+	if (rc)
+		psc_fatalx("pthread_setspecific: %s",
+		    strerror(rc));
 }
