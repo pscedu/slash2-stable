@@ -352,15 +352,11 @@ main(int argc, char *argv[])
 	pthread_t pthr;
 	long l;
 
-	signal(SIGSEGV, sigsegv);
-
 #ifdef HAVE_CPUSET
-	unsigned int nnodes;
 	nodemask_t nonibnodes;
-	struct bitmask *bm;
-	struct cpuset *cs;
-	int j;
 #endif
+
+	signal(SIGSEGV, sigsegv);
 
 	doserver = 0;
 	progname = argv[0];
