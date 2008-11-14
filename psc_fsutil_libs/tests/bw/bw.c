@@ -9,13 +9,14 @@
 #ifdef HAVE_CPUSET
 #include <cpuset.h>
 #include <bitmask.h>
-#include <numaif.h>
+#include <numa.h>
 #endif
 
 #include <procbridge.h>
 
 #include "pfl.h"
 #include "psc_rpc/rpc.h"
+#include "psc_rpc/rpclog.h"
 #include "psc_rpc/rsx.h"
 #include "psc_rpc/service.h"
 #include "psc_util/alloc.h"
@@ -34,6 +35,7 @@
 #define THRT_LND		0	/* networking dev thr */
 #define THRT_EQPOLL		1	/* LNetEQPoll */
 #define THRT_RPC		2	/* RPC handlers */
+#define THRT_RQ			3
 
 /* RPC test service settings */
 #define RT_BUFSIZE		384
@@ -86,9 +88,12 @@ int			 g_maxset = 32;
 pscrpc_svc_handle_t	 svc;
 struct pscrpc_import	*imp;
 struct psc_thread	 eqpollthr;
+struct psc_thread	 rqthr;
 const char		*progname;
 struct iostats		*lst;
 int			 doserver;
+nodemask_t		 ibnodes;
+struct psc_listcache	 requests;
 
 __dead void
 usage(void)
@@ -103,45 +108,6 @@ usage(void)
 	    progname, progname);
 	exit(1);
 }
-
-#ifdef HAVE_CPUSET
-int
-bindnode(int nid)
-{
-	struct bitmask *mems, *cpus;
-	unsigned int i;
-	cpu_set_t m;
-	int rc;
-
-	rc = 0;
-	cpus = bitmask_alloc(cpuset_cpus_nbits());
-	mems = bitmask_alloc(cpuset_mems_nbits());
-	bitmask_clearall(cpus);
-	bitmask_clearall(mems);
-
-	bitmask_setbit(mems, nid);
-	if (cpuset_localcpus(mems, cpus) == -1) {
-		rc = -1;
-		goto out;
-	}
-	CPU_ZERO(&m);
-	for (i = 0; i < bitmask_nbits(cpus); i++)
-		if (bitmask_isbitset(cpus, i))
-			CPU_SET(i, &m);
-
-	if (sched_setaffinity(syscall(SYS_gettid),
-	    sizeof(m), &m) == -1) {
-		rc = -1;
-		goto out;
-	}
-	if (set_mempolicy(MPOL_DEFAULT, NULL, 0) == -1)
-		rc = -1;
- out:
-	bitmask_free(mems);
-	bitmask_free(cpus);
-	return (rc);
-}
-#endif
 
 int
 write_cb(struct pscrpc_request *rq, __unusedx void *arg, int status)
@@ -172,12 +138,28 @@ set_cb(__unusedx struct pscrpc_request_set *set, __unusedx void *arg,
 __dead void *
 eqpollthr_main(__unusedx void *arg)
 {
-#ifdef HAVE_CPUSET
-	if (bindnode(0) == -1)
-		psc_fatal("bindnode %d", 0);
-#endif
 	for (;;) {
 		pscrpc_check_events(100);
+		sched_yield();
+	}
+}
+
+__dead void *
+rqthr_main(__unusedx void *arg)
+{
+	struct pscrpc_request *rq;
+	int rc;
+
+	for (;;) {
+		rq = lc_getwait(&requests);
+		rc = pscrpc_push_req(rq);
+		if (rc) {
+			DEBUG_REQ(PLL_ERROR, rq,
+			    "pscrpc_push_req() failed; rc=%d", rc);
+			spinlock(&rq->rq_lock);
+			rq->rq_status = rc;
+			freelock(&rq->rq_lock);
+		}
 		sched_yield();
 	}
 }
@@ -197,13 +179,21 @@ client_main(void *arg)
 	struct cli_thr *ct;
 	struct msg_req *mq;
 	struct iovec iov;
+	nodemask_t nm;
 	char *buf;
 
 	ti = arg;
 #ifdef HAVE_CPUSET
-	if (bindnode(ti->n) == -1)
-		psc_fatal("bindnode %d", mt->n);
+	nodemask_zero(&nm);
+	nodemask_set(&nm, cpuset_p_rel_to_sys_mem(getpid(), ti->n));
+printf("node %d\n", ti->n);
+printf("node %d maps to %d\n", ti->n, cpuset_p_rel_to_sys_mem(getpid(), ti->n));
+	if (numa_run_on_node_mask(&nm) == -1)
+		psc_fatal("numa");
+	numa_set_membind(&nm);
+
 #endif
+	free(ti);
 
 	ct = PSCALLOC(sizeof(*ct));
 	psc_waitq_init(&ct->set_wq);
@@ -244,9 +234,7 @@ client_main(void *arg)
 			rsx_bulkclient(rq, &desc, BULK_GET_SOURCE,
 			    RT_BULK_PORTAL, &iov, 1);
 			pscrpc_set_add_new_req(set, rq);
-			rc = pscrpc_push_req(rq);
-			if (rc)
-				psc_fatalx("pscrpc_push_req: %d", rc);
+			lc_addtail(&requests, rq);
 		}
 	}
 }
@@ -314,12 +302,6 @@ lndthr_begin(void *arg)
 {
 	struct psc_thread *thr;
 
-#ifdef HAVE_CPUSET
-	/* bind to node zero which has IB */
-	if (bindnode(0) == -1)
-		psc_fatal("bindnode %d", 0);
-#endif
-
 	thr = arg;
 	return (nal_thread(thr->pscthr_private));
 }
@@ -345,6 +327,16 @@ lnet_spawnthr(pthread_t *t, void *(*startf)(void *), void *arg)
 	pt->pscthr_private = arg;
 }
 
+void
+sigsegv(__unusedx int sig)
+{
+	char buf[50];
+
+	snprintf(buf, sizeof(buf), "gstack %d", getpid());
+	system(buf);
+	exit(1);
+}
+
 int
 main(int argc, char *argv[])
 {
@@ -360,19 +352,19 @@ main(int argc, char *argv[])
 	pthread_t pthr;
 	long l;
 
+	signal(SIGSEGV, sigsegv);
+
 #ifdef HAVE_CPUSET
 	unsigned int nnodes;
+	nodemask_t nonibnodes;
 	struct bitmask *bm;
 	struct cpuset *cs;
 	int j;
-# define THRFLAG
-#else
-# define THRFLAG "t:"
 #endif
 
 	doserver = 0;
 	progname = argv[0];
-	while ((c = getopt(argc, argv, "b:dm:S:s:"THRFLAG"w:")) != -1)
+	while ((c = getopt(argc, argv, "b:dm:S:s:t:w:")) != -1)
 		switch (c) {
 		case 'b':
 			endp = NULL;
@@ -459,6 +451,18 @@ main(int argc, char *argv[])
 		if (argc != 1)
 			usage();
 
+		numa_exit_on_error = 1;
+		nonibnodes = numa_all_nodes;
+		for (i = 0; i < NUMA_NUM_NODES; i++)
+			if (nodemask_isset(&ibnodes, i))
+				nodemask_clr(&nonibnodes, i);
+		extern void get_ib_node_neighbors(nodemask_t *);
+		get_ib_node_neighbors(&ibnodes);
+
+		if (numa_migrate_pages(getpid(), &nonibnodes, &ibnodes) == -1)
+			psc_fatal("cpuset_migrate_pages");
+		numa_set_membind(&ibnodes);
+
 		if (pscrpc_init_portals(PSC_CLIENT))
 			psc_fatal("pscrpc_init_portals");
 
@@ -486,6 +490,8 @@ main(int argc, char *argv[])
 
 		pscthr_init(&eqpollthr, THRT_EQPOLL,
 		    eqpollthr_main, NULL, "eqpollthr");
+		lc_init(&requests, struct pscrpc_request, rq_history_list);
+		pscthr_init(&rqthr, THRT_RQ, rqthr_main, NULL, "rqthr");
 
 		rc = RSX_NEWREQ(imp, RT_VERSION,
 		    MT_CONNECT, rq, mq, mp);
@@ -500,33 +506,6 @@ main(int argc, char *argv[])
 		imp->imp_failed = 0;
 		pscrpc_req_finished(rq);
 
-#ifdef HAVE_CPUSET
-		nnodes = cpuset_mems_nbits();
-		cs = cpuset_alloc();
-		bm = bitmask_alloc(nnodes);
-#define PATH_CS_ROOT "/"
-		if (cpuset_query(cs, PATH_CS_ROOT) == -1)
-			psc_fatalx("cpuset_query");
-		if (cpuset_getmems(cs, bm) == -1)
-			psc_fatalx("cpuset_getmems");
-		for (i = 0; i < (int)nnodes; i++) {
-			if (bitmask_isbitset(bm, i)) {
-				bitmask_clearbit(bm, i);
-#define THR_PER_NODE 1
-				for (j = 0; j < THR_PER_NODE; j++) {
-					ti = PSCALLOC(sizeof(*ti));
-					ti->n = i;
-					rc = pthread_create(&pthr, NULL,
-					    client_main, ti);
-					if (rc)
-						psc_fatalx("pthread_create: %s",
-						    strerror(rc));
-				}
-			}
-		}
-		bitmask_free(bm);
-		cpuset_free(cs);
-#else
 		for (i = 0; i < nthr; i++) {
 			ti = PSCALLOC(sizeof(*ti));
 			ti->n = i;
@@ -536,7 +515,6 @@ main(int argc, char *argv[])
 				psc_fatalx("pthread_create: %s",
 				    strerror(rc));
 		}
-#endif
 	}
 	printf("time (s)       lnet-rate =======\n");
 	if (gettimeofday(&lastv, NULL) == -1)

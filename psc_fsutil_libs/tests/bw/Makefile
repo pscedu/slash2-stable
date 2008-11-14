@@ -4,6 +4,7 @@ include ../Makefile.path
 
 PROG=		bw
 SRCS+=		bw.c
+SRCS+=		${ROOTDIR}/zest/trunk/mount_zest/ibnode.c
 SRCS+=		${PFL_BASE}/psc_ds/dynarray.c
 SRCS+=		${PFL_BASE}/psc_ds/hash.c
 SRCS+=		${PFL_BASE}/psc_rpc/rsx.c
