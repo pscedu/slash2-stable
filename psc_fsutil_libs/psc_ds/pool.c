@@ -324,10 +324,11 @@ _psc_pool_init(struct psc_poolmgr *m, ptrdiff_t offset, size_t entsize,
 void
 psc_pool_destroy(struct psc_poolmgr *m)
 {
-	int i, len, tot;
+	int i, len, tot, locked;
 	void **sets;
 
-	POOL_RLOCK(m);
+	pll_remove(&psc_pools, m);
+	locked = POOL_RLOCK(m);
 	if (m->ppm_lc.lc_size != m->ppm_total)
 		psc_fatalx("psc_pool_destroy: items in use");
 	m->ppm_min = 0;
@@ -336,13 +337,13 @@ psc_pool_destroy(struct psc_poolmgr *m)
 	tot = m->ppm_total;
 	if (tot && psc_pool_shrink(m, tot) != tot)
 		psc_fatalx("psc_pool_destroy: unable to drain");
-	lc_unregister(&m->ppm_lc);
-	pll_remove(&psc_pools, m);
 	sets = dynarray_get(&m->ppm_sets);
 	len = dynarray_len(&m->ppm_sets);
 	for (i = 0; i < len; i++)
 		psc_pool_leaveset(m, sets[i]);
 	dynarray_free(&m->ppm_sets);
+	POOL_ULOCK(m, locked);
+	lc_unregister(&m->ppm_lc);
 }
 
 /*
