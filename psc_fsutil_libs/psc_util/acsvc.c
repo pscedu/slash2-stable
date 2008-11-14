@@ -252,6 +252,12 @@ acsvc_svrmain(int s)
 			close(fd);
 			fd = -1;
 		}
+
+		/* Reset back to full privileges. */
+		if (seteuid(0) == -1)
+			psc_fatal("seteuid 0");
+//		if (setegid(0) == -1)
+//			psc_fatal("setegid 0");
 	}
 }
 
