@@ -335,6 +335,9 @@ psc_ctlrep_getlc(int fd, struct psc_ctlmsghdr *mh, void *m)
 			    sizeof(pclc->pclc_name));
 			pclc->pclc_size = lc->lc_size;
 			pclc->pclc_nseen = lc->lc_nseen;
+			pclc->pclc_flags = lc->lc_flags;
+			pclc->pclc_nw_want = atomic_read(&lc->lc_wq_want.wq_nwaitors);
+			pclc->pclc_nw_empty = atomic_read(&lc->lc_wq_empty.wq_nwaitors);
 			LIST_CACHE_ULOCK(lc);
 			rc = psc_ctlmsg_sendv(fd, mh, pclc);
 			if (!rc)
@@ -383,6 +386,7 @@ psc_ctlrep_getpool(int fd, struct psc_ctlmsghdr *mh, void *msg)
 			pcpm->pcpm_max = m->ppm_max;
 			pcpm->pcpm_total = m->ppm_total;
 			pcpm->pcpm_flags = m->ppm_flags;
+			pcpm->pcpm_free = lc_sz(&m->ppm_lc);
 			POOL_ULOCK(m, locked);
 			rc = psc_ctlmsg_sendv(fd, mh, pcpm);
 			if (!rc)

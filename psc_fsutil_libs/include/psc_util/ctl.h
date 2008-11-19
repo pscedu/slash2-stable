@@ -37,9 +37,11 @@ struct psc_ctlmsg_loglevel {
 
 struct psc_ctlmsg_lc {
 	char			pclc_name[LC_NAME_MAX];
-	size_t			pclc_max;	/* max #items list can attain */
 	size_t			pclc_size;	/* #items on list */
 	size_t			pclc_nseen;	/* max #items list can attain */
+	int			pclc_flags;
+	int			pclc_nw_want;	/* #waitors waking for a want */
+	int			pclc_nw_empty;	/* #waitors waking on empty */
 };
 
 #define PCLC_NAME_ALL		"all"
@@ -98,6 +100,7 @@ struct psc_ctlmsg_pool {
 	int			pcpm_min;
 	int			pcpm_max;
 	int			pcpm_total;
+	int			pcpm_free;
 	int			pcpm_flags;
 };
 

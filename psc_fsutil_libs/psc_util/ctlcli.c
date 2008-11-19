@@ -436,8 +436,8 @@ psc_ctlmsg_pool_prhdr(__unusedx struct psc_ctlmsghdr *mh,
     __unusedx const void *m)
 {
 	printf("pools\n");
-	return (printf(" %-20s %5s %8s %8s %8s\n",
-	    "pool", "flags", "min", "max", "total"));
+	return (printf(" %-20s %5s %8s %8s %8s %8s\n",
+	    "pool", "flags", "total", "free", "min", "max"));
 }
 
 void
@@ -446,11 +446,17 @@ psc_ctlmsg_pool_prdat(__unusedx const struct psc_ctlmsghdr *mh,
 {
 	const struct psc_ctlmsg_pool *pcpm = m;
 
-	printf(" %-20s %c%c%c%c%c %8d %8d %8d\n", pcpm->pcpm_name,
+	printf(" %-20s %c%c%c%c%c %8d %8d %8d ", pcpm->pcpm_name,
 	    '-', '-', '-',
 	    pcpm->pcpm_flags & PPMF_AUTO ? 'A' : '-',
 	    pcpm->pcpm_flags & PPMF_NOLOCK ? 'N' : '-',
-	    pcpm->pcpm_min, pcpm->pcpm_max, pcpm->pcpm_total);
+	    pcpm->pcpm_total, pcpm->pcpm_free,
+	    pcpm->pcpm_min);
+	if (pcpm->pcpm_max)
+		printf("%8d", pcpm->pcpm_max);
+	else
+		printf("%8s", "<inf>");
+	printf("\n");
 }
 
 int
@@ -458,8 +464,8 @@ psc_ctlmsg_lc_prhdr(__unusedx struct psc_ctlmsghdr *mh,
     __unusedx const void *m)
 {
 	printf("list caches\n");
-	return (printf(" %-25s %8s %9s %8s\n",
-	    "list", "size", "max", "#seen"));
+	return (printf(" %-25s %8s %5s %5s %6s %8s\n",
+	    "list", "size", "flags", "#want", "#empty", "#seen"));
 }
 
 void
@@ -468,12 +474,11 @@ psc_ctlmsg_lc_prdat(__unusedx const struct psc_ctlmsghdr *mh,
 {
 	const struct psc_ctlmsg_lc *pclc = m;
 
-	printf(" %-25s %8zu ", pclc->pclc_name, pclc->pclc_size);
-	if (pclc->pclc_max == (size_t)-1)
-		printf("%9s", "unlimited");
-	else
-		printf("%9zu", pclc->pclc_max);
-	printf(" %8zu\n", pclc->pclc_nseen);
+	printf(" %-25s %8zu     %c %5d %6d %8zu\n",
+	    pclc->pclc_name, pclc->pclc_size,
+	    pclc->pclc_flags & PLCF_DYING ? 'D' : '-',
+	    pclc->pclc_nw_want, pclc->pclc_nw_empty,
+	    pclc->pclc_nseen);
 }
 
 int
