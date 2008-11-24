@@ -42,23 +42,62 @@
 #define RT_MAXREQSIZE		RT_BUFSIZE
 #define RT_MAXREPSIZE		256
 
-#define RT_REQ_PORTAL		17
-#define RT_REP_PORTAL		18
-#define RT_BULK_PORTAL		19
+#define RT_REQ_PORTAL		27
+#define RT_REP_PORTAL		28
+#define RT_BULK_PORTAL		29
 
 #define RT_VERSION		0x1
+#define RT_MAGIC		0x1100ffeeddccbbaaULL
+
+struct zest_iov {
+	uint64_t ziov_flogical_offset;
+	uint32_t ziov_len;
+} __attribute__ ((packed));
+typedef struct zest_iov zest_iov_t;
+
+#define ZCHUNK_MAP_MAX_IOVECS 16
+
+struct zest_chunk_iovs {
+	uint16_t        zchunk_niovs;
+	zest_iov_t zchunk_iovs[ZCHUNK_MAP_MAX_IOVECS];
+	char       zchunk_pad[6];       /* align to 8 bytes */
+} __attribute__ ((packed));
+typedef struct zest_chunk_iovs zest_iovs;
+
+struct ciod_wire {
+	zest_iovs	ciodw_iovs;		/* file logical iovecs for block */
+	uint32_t	ciodw_len:24;		/* buffer length */
+	uint8_t		ciodw_flags;		/* ciod flags */
+	uint8_t		ciodw_pg_size;		/* parity group size */
+	uint8_t		ciodw_pg_pos;		/* parity group position */
+	unsigned char	ciodw__xpad[6];		/* align/spacing */
+	uint32_t	ciodw_pg_cid;		/* client-issued ptygrp ID */
+	psc_crc_t	ciodw_crc_buf;		/* client-computed CRC of block */
+	psc_crc_t	ciodw_crc_meta;		/* client-computed CRC of this metadata */
+} __packed;
+
+struct write_req {
+	u64	pad[6];
+	struct ciod_wire ciodw;
+};
+
+struct write_rep {
+	int32_t rc;
+	uint32_t len;
+};
 
 /* Message types */
 enum {
-	MT_WRITE,
-	MT_CONNECT
+	MT_CONNECT,
+	MT_WRITE = 10
 };
 
-struct msg_req {
-	int dummy;
+struct connect_req {
+	u64 magic;
+	u32 version;
 };
 
-struct msg_rep {
+struct connect_rep {
 	int rc;
 };
 
@@ -92,8 +131,10 @@ struct psc_thread	 rqthr;
 const char		*progname;
 struct iostats		*lst;
 int			 doserver;
-nodemask_t		 ibnodes;
 struct psc_listcache	 requests;
+#ifdef HAVE_CPUSET
+nodemask_t		 ibnodes;
+#endif
 
 __dead void
 usage(void)
@@ -167,20 +208,23 @@ rqthr_main(__unusedx void *arg)
 __dead void *
 client_main(void *arg)
 {
-	const struct msg_rep *mp;
+	const struct write_rep *mp;
 	int i, rc, n, maxset = g_maxset, bufsz = g_bufsz, setsz = g_setsz;
 	struct pscrpc_request_set *set, **sets;
 	struct pscrpc_bulk_desc *desc;
 	struct pscrpc_request *rq;
 	struct psc_thread *thr;
+	struct ciod_wire *cw;
+	struct write_req *mq;
 	struct thr_init *ti;
 	struct dynarray da;
 	struct timespec ts;
 	struct cli_thr *ct;
-	struct msg_req *mq;
 	struct iovec iov;
-	nodemask_t nm;
 	char *buf;
+#ifdef HAVE_CPUSET
+	nodemask_t nm;
+#endif
 
 	ti = arg;
 #ifdef HAVE_CPUSET
@@ -231,6 +275,8 @@ printf("node %d maps to %d\n", ti->n, cpuset_p_rel_to_sys_mem(getpid(), ti->n));
 			rq->rq_interpret_reply = write_cb;
 			iov.iov_base = buf;
 			iov.iov_len = bufsz;
+			cw = &mq->ciodw;
+			cw->ciodw_len = bufsz;
 			rsx_bulkclient(rq, &desc, BULK_GET_SOURCE,
 			    RT_BULK_PORTAL, &iov, 1);
 			pscrpc_set_add_new_req(set, rq);
@@ -242,10 +288,10 @@ printf("node %d maps to %d\n", ti->n, cpuset_p_rel_to_sys_mem(getpid(), ti->n));
 int
 server_write_handler(struct pscrpc_request *rq)
 {
-	const struct msg_req *mq;
+	const struct write_req *mq;
 	struct pscrpc_bulk_desc *desc;
 	struct psc_thread *thr;
-	struct msg_rep *mp;
+	struct write_rep *mp;
 	struct svr_thr *st;
 	struct iovec iov;
 	int rc;
@@ -269,8 +315,8 @@ server_write_handler(struct pscrpc_request *rq)
 int
 server_connect_handler(struct pscrpc_request *rq)
 {
-	const struct msg_req *mq;
-	struct msg_rep *mp;
+	const struct connect_req *mq;
+	struct connect_rep *mp;
 
 	RSX_ALLOCREP(rq, mq, mp);
 	return (0);
@@ -344,9 +390,9 @@ main(int argc, char *argv[])
 	lnet_process_id_t server_id, my_id;
 	struct timeval tv, lastv, intv;
 	struct pscrpc_request *rq;
+	struct connect_req *mq;
+	struct connect_rep *mp;
 	struct thr_init *ti;
-	struct msg_req *mq;
-	struct msg_rep *mp;
 	int nb, i, rc, c;
 	double rate, tm;
 	pthread_t pthr;
@@ -447,6 +493,7 @@ main(int argc, char *argv[])
 		if (argc != 1)
 			usage();
 
+#ifdef HAVE_CPUSET
 		numa_exit_on_error = 1;
 		nonibnodes = numa_all_nodes;
 		for (i = 0; i < NUMA_NUM_NODES; i++)
@@ -458,6 +505,7 @@ main(int argc, char *argv[])
 		if (numa_migrate_pages(getpid(), &nonibnodes, &ibnodes) == -1)
 			psc_fatal("cpuset_migrate_pages");
 		numa_set_membind(&ibnodes);
+#endif
 
 		if (pscrpc_init_portals(PSC_CLIENT))
 			psc_fatal("pscrpc_init_portals");
@@ -493,6 +541,8 @@ main(int argc, char *argv[])
 		    MT_CONNECT, rq, mq, mp);
 		if (rc)
 			psc_fatalx("rsx_newreq: %d", rc);
+		mq->magic = RT_MAGIC;
+		mq->version = RT_VERSION;
 		rc = RSX_WAITREP(rq, mp);
 		if (rc)
 			psc_fatalx("rsx_waitrep: %d", rc);
