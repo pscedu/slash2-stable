@@ -463,6 +463,8 @@ access_fsop(int op, uid_t uid, gid_t gid, const char *fn, ...)
 		if (arq->arq_data_truncate.len < 0)
 			rc = EINVAL;
 		break;
+	case ACSOP_UNLINK:
+		break;
 	case ACSOP_UTIMES:
 		memcpy(&arq->arq_data_utimes.tv,
 		    va_arg(ap, struct timeval *),
