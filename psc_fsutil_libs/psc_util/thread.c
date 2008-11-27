@@ -19,12 +19,12 @@
 #include "psc_util/lock.h"
 #include "psc_util/thread.h"
 
-struct dynarray	pscThreads;
+struct dynarray	pscThreads = DYNARRAY_INIT;
 psc_spinlock_t	pscThreadsLock = LOCK_INITIALIZER;
 pthread_key_t	psc_thrkey;
 pthread_key_t	psc_logkey;
+pthread_once_t	psc_thronce = PTHREAD_ONCE_INIT;
 int		psc_thrinit;
-pthread_once_t	psc_thr_once = PTHREAD_ONCE_INIT;
 
 void
 pscthr_destroy(void *arg)
@@ -93,7 +93,7 @@ struct psc_thread *
 pscthr_get_canfail(void)
 {
 	if (!psc_thrinit)
-		pthread_once(&psc_thr_once, pscthrs_init);
+		pthread_once(&psc_thronce, pscthrs_init);
 	return (pthread_getspecific(psc_thrkey));
 }
 
@@ -127,7 +127,7 @@ _pscthr_init(struct psc_thread *thr, int type, void *(*start)(void *),
 	int rc, n;
 
 	if (!psc_thrinit)
-		pthread_once(&psc_thr_once, pscthrs_init);
+		pthread_once(&psc_thronce, pscthrs_init);
 
 	if (flags & PTF_PAUSED)
 		psc_fatalx("pscthr_init: PTF_PAUSED specified");
@@ -273,6 +273,6 @@ psclog_setdata(struct psclog_data *d)
 
 	rc = pthread_setspecific(psc_logkey, d);
 	if (rc)
-		psc_fatalx("pthread_setspecific: %s",
+		err(1, "pthread_setspecific: %s",
 		    strerror(rc));
 }

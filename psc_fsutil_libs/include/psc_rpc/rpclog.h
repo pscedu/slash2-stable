@@ -50,8 +50,7 @@ pscrpc_rqphase2str(struct pscrpc_request *req)
 		psc_nid2str((rq)->rq_conn->c_peer.nid, __nidstr);	\
 	if (__imp)							\
 		psc_id2str(__imp->imp_connection->c_peer, __idstr);	\
-	_psclog(__FILE__, __func__, __LINE__,				\
-	    PSS_RPC, (level), 0,					\
+	psc_logs((level), PSS_RPC,					\
 	    " req@%p x%"_P_U64"d/t%"_P_U64"d "				\
 	    "c%"_P_U64"x "						\
 	    "o%d->@%s:%d "						\
@@ -75,14 +74,13 @@ pscrpc_rqphase2str(struct pscrpc_request *req)
     } while (0)
 
 #define DEBUG_EXP(level, exp, fmt, ...)					\
-	_psclog(__FILE__, __func__, __LINE__,				\
-	    PSS_RPC, level, 0, " exp@%p h%"_P_U64"x "			\
-	    "conn@%p p:%s ref %d cnt %d f%d :: "fmt,			\
-	    exp, exp->exp_handle.cookie, exp->exp_connection,		\
-	    exp->exp_connection ?					\
-	       libcfs_id2str(exp->exp_connection->c_peer) : "<?>",	\
-	    atomic_read(&exp->exp_refcount),				\
-	    atomic_read(&exp->exp_rpc_count), exp->exp_failed,		\
+	psc_logs((level), PSS_RPC,					\
+	    " exp@%p h%"_P_U64"x conn@%p p:%s ref %d cnt %d f%d :: "fmt,\
+	    (exp), (exp)->exp_handle.cookie, (exp)->exp_connection,	\
+	    (exp)->exp_connection ?					\
+	       libcfs_id2str((exp)->exp_connection->c_peer) : "<?>",	\
+	    atomic_read(&(exp)->exp_refcount),				\
+	    atomic_read(&(exp)->exp_rpc_count), (exp)->exp_failed,	\
 	    ## __VA_ARGS__)
 
 #endif /* _PFL_RPCLOG_H_ */

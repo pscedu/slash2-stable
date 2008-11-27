@@ -32,47 +32,40 @@
 #define PSC_LOG_FMT "[%s:%06u %n:%F:%l]"
 #endif
 
+struct fuse_context {
+	uid_t uid;
+	gid_t gid;
+	pid_t pid;
+};
+
 struct psclog_data {
 	char hostname[HOST_NAME_MAX];
 	char nothrname[20];
 	int rank;
 };
 
-#define PSC_LOG_INIT()				\
-	do {					\
-		if (!psc_loginit)		\
-			psc_log_init();		\
-	} while (0)
-
-__static int			 psc_loginit;
 __static const char		*psc_logfmt = PSC_LOG_FMT;
 __static int			 psc_loglevel = PLL_TRACE;
 __static struct psclog_data	*psc_logdata;
 
-__static void
+void
 psc_log_init(void)
 {
-	static psc_spinlock_t lock = LOCK_INITIALIZER;
 	char *ep, *p;
 	long l;
 
-	spinlock(&lock);
-	if (psc_loginit == 0) {
-		if ((p = getenv("PSC_LOG_FORMAT")) != NULL)
-			psc_logfmt = p;
-		if ((p = getenv("PSC_LOG_LEVEL")) != NULL) {
-			ep = NULL;
-			errno = 0;
-			l = strtol(p, &ep, 10);
-			if (p[0] == '\0' || ep == NULL || *ep != '\0')
-				errx(1, "invalid log level env: %s", p);
-			if (errno == ERANGE || l < 0 || l >= PNLOGLEVELS)
-				errx(1, "invalid log level env: %s", p);
-			psc_loglevel = (int)l;
-		}
-		psc_loginit = 1;
+	if ((p = getenv("PSC_LOG_FORMAT")) != NULL)
+		psc_logfmt = p;
+	if ((p = getenv("PSC_LOG_LEVEL")) != NULL) {
+		ep = NULL;
+		errno = 0;
+		l = strtol(p, &ep, 10);
+		if (p[0] == '\0' || ep == NULL || *ep != '\0')
+			errx(1, "invalid log level env: %s", p);
+		if (errno == ERANGE || l < 0 || l >= PNLOGLEVELS)
+			errx(1, "invalid log level env: %s", p);
+		psc_loglevel = (int)l;
 	}
-	freelock(&lock);
 }
 
 __weak struct psclog_data *
@@ -90,7 +83,6 @@ psclog_setdata(struct psclog_data *d)
 int
 psc_log_getlevel_global(void)
 {
-	PSC_LOG_INIT();
 	return (psc_loglevel);
 }
 
@@ -132,12 +124,6 @@ pscthr_getname(void)
 	return (NULL);
 }
 
-const char *
-psc_log_getformat(void)
-{
-	return (psc_logfmt);
-}
-
 __weak int
 MPI_Comm_rank(__unusedx int comm, int *rank)
 {
@@ -145,24 +131,24 @@ MPI_Comm_rank(__unusedx int comm, int *rank)
 	return (0);
 }
 
+__weak struct fuse_context *
+psclog_get_fuse_context(void)
+{
+	return (NULL);
+}
+
 void
-psclogv(__unusedx const char *fn, const char *func, int line, int subsys,
+psclogv(const char *fn, const char *func, int line, int subsys,
     int level, int options, const char *fmt, va_list ap)
 {
 	char prefix[LINE_MAX], emsg[LINE_MAX], umsg[LINE_MAX], *p;
-	const char *thrname, *logfmt;
+	struct fuse_context *ctx;
 	struct psclog_data *d;
 	struct timeval tv;
+	const char *thrname;
 	int save_errno;
 
 	save_errno = errno;
-
-	PSC_LOG_INIT();
-
-	if (psc_log_getlevel(subsys) < level)
-		return;
-
-	logfmt = psc_log_getformat();
 
 	d = psclog_getdata();
 	if (d == NULL) {
@@ -187,8 +173,10 @@ psclogv(__unusedx const char *fn, const char *func, int line, int subsys,
 		thrname = d->nothrname;
 	}
 
+	ctx = psclog_get_fuse_context();
+
 	gettimeofday(&tv, NULL);
-	FMTSTR(prefix, sizeof(prefix), logfmt,
+	FMTSTR(prefix, sizeof(prefix), psc_logfmt,
 		FMTSTRCASE('F', prefix, sizeof(prefix), "s", func)
 		FMTSTRCASE('f', prefix, sizeof(prefix), "s", fn)
 		FMTSTRCASE('h', prefix, sizeof(prefix), "s", d->hostname)
@@ -196,10 +184,12 @@ psclogv(__unusedx const char *fn, const char *func, int line, int subsys,
 		FMTSTRCASE('L', prefix, sizeof(prefix), "d", level)
 		FMTSTRCASE('l', prefix, sizeof(prefix), "d", line)
 		FMTSTRCASE('n', prefix, sizeof(prefix), "s", thrname)
+		FMTSTRCASE('P', prefix, sizeof(prefix), "d", ctx ? (int)ctx->pid : -1)
 		FMTSTRCASE('r', prefix, sizeof(prefix), "d", d->rank)
 		FMTSTRCASE('s', prefix, sizeof(prefix), "lu", tv.tv_sec)
+		FMTSTRCASE('t', prefix, sizeof(prefix), "d", subsys)
+		FMTSTRCASE('U', prefix, sizeof(prefix), "d", ctx ? (int)ctx->uid : -1)
 		FMTSTRCASE('u', prefix, sizeof(prefix), "lu", tv.tv_usec)
-// XXX fuse_get_context()->pid
 	);
 
 	/*
@@ -217,6 +207,9 @@ psclogv(__unusedx const char *fn, const char *func, int line, int subsys,
 		emsg[0] = '\0';
 	fprintf(stderr, "%s %s%s\n", prefix, umsg, emsg);
 	errno = save_errno; /* Restore in case it is needed further. */
+
+	if (level == PLL_FATAL)
+		abort();
 }
 
 void
@@ -239,7 +232,14 @@ _psc_fatal(const char *fn, const char *func, int line, int subsys,
 	va_start(ap, fmt);
 	psclogv(fn, func, line, subsys, level, options, fmt, ap);
 	va_end(ap);
+	abort();
+}
 
+__dead void
+_psc_fatalv(const char *fn, const char *func, int line, int subsys,
+    int level, int options, const char *fmt, va_list ap)
+{
+	psclogv(fn, func, line, subsys, level, options, fmt, ap);
 	abort();
 }
 

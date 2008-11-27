@@ -18,8 +18,8 @@ struct psc_subsys {
 	int		 pss_loglevel;
 };
 
-__static struct dynarray psc_subsystems;
-int			 psc_nsubsys;
+struct dynarray	psc_subsystems = DYNARRAY_INIT;
+int		psc_nsubsys;
 
 int
 psc_subsys_id(const char *name)
@@ -56,8 +56,8 @@ psc_subsys_register(int ssid, const char *name)
 	ss->pss_loglevel = psc_log_getlevel_global();
 	dynarray_add(&psc_subsystems, ss);
 	if (psc_nsubsys++ != ssid)
-		psc_fatalx("bad ID %d for subsys %s, check order",
-		    ssid, name);
+		psc_fatalx("bad ID %d for subsys %s [want %d], "
+		    "check order", ssid, name, psc_nsubsys);
 }
 
 int
