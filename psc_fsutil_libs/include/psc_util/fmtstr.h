@@ -36,7 +36,7 @@
 		_tfmt = _tfmt_new = NULL;				\
 		_tfmt_len = 0;						\
 		for (_p = fmt; *_p != '\0'; _p++) {			\
-		    	_sawch = 0;					\
+			_sawch = 0;					\
 			if (*_p == '%') {				\
 				/* Look for a conversion specifier. */	\
 				for (_t = _p + 1; *_t != '\0'; _t++) {	\

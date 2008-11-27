@@ -61,7 +61,7 @@ struct psc_poolmgr {
 
 #define psc_pool_init(m, type, member, flags, total, max, initf, destroyf,	\
 	    reclaimcb, namefmt, ...)						\
-	_psc_pool_init((m), offsetof(type, member), sizeof(type), (flags), 	\
+	_psc_pool_init((m), offsetof(type, member), sizeof(type), (flags),	\
 	    (total), (max), (initf), (destroyf), (reclaimcb), (namefmt),	\
 	    ## __VA_ARGS__)
 

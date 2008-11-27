@@ -23,7 +23,7 @@ struct iostats {
 
 	atomic_t		ist_bytes_intv;
 	u64			ist_bytes_total;
-	double 			ist_rate;
+	double			ist_rate;
 
 	atomic_t		ist_errors_intv;
 	u64			ist_errors_total;

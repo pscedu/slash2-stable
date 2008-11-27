@@ -341,7 +341,7 @@ _psclist_next_entry(struct psclist_head *hd, void *p,
 	    (n) = (void *)(((char *)(((struct psclist_head *)(((char *)pos) +	\
 	      (offset)))->znext)) - (offset));					\
 	    (((char *)pos) + (offset) != (void *)(head)) ||			\
-	      ((pos) = (n) = NULL); (pos) = (n), 				\
+	      ((pos) = (n) = NULL); (pos) = (n),				\
 	    (n) = (void *)(((char *)(((struct psclist_head *)(((char *)n) +	\
 	      (offset)))->znext)) - (offset)))
 
