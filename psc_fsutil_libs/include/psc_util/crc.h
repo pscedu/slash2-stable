@@ -43,6 +43,6 @@ void psc_crc_calc(psc_crc_t *, const void *, int);
 
 extern const u64 psc_crc_table[];
 
-#define _P_CRC "%16"_P_U64"x"
+#define PRI_PSC_CRC "%16"PRIx64
 
 #endif /* __PFL_CRC_H__ */

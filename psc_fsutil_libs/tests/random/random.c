@@ -35,7 +35,7 @@ main(int argc, char *argv[])
 		usage();
 
 	printf("%u\n", psc_random32());
-	printf("%016"_P_U64"x\n", psc_random64());
+	printf("%016"PRIx64"\n", psc_random64());
 
 	for (i = 0; i < 500000; i++)
 		buf[psc_random32u(NENTS)]++;

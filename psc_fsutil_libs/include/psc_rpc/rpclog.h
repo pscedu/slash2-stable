@@ -51,11 +51,11 @@ pscrpc_rqphase2str(struct pscrpc_request *req)
 	if (__imp)							\
 		psc_id2str(__imp->imp_connection->c_peer, __idstr);	\
 	psc_logs((level), PSS_RPC,					\
-	    " req@%p x%"_P_U64"d/t%"_P_U64"d "				\
-	    "c%"_P_U64"x "						\
+	    " req@%p x%"PRId64"/t%"PRId64" "				\
+	    "c%"PRIx64" "						\
 	    "o%d->@%s:%d "						\
 	    "lens %d/%d ref %d res %d ret %d fl "REQ_FLAGS_FMT		\
-	    "/%x/%x replyc %"_P_U64"x rc %d/%d to=%d :: "fmt,		\
+	    "/%x/%x replyc %"PRIx64" rc %d/%d to=%d :: "fmt,		\
 	    (rq), (rq)->rq_xid, (rq)->rq_transno,			\
 	    (rq)->rq_reqmsg ? (rq)->rq_reqmsg->handle.cookie : 0xdeadbeef, \
 	    (rq)->rq_reqmsg ? (int)(rq)->rq_reqmsg->opc : -1,		\
@@ -75,7 +75,7 @@ pscrpc_rqphase2str(struct pscrpc_request *req)
 
 #define DEBUG_EXP(level, exp, fmt, ...)					\
 	psc_logs((level), PSS_RPC,					\
-	    " exp@%p h%"_P_U64"x conn@%p p:%s ref %d cnt %d f%d :: "fmt,\
+	    " exp@%p h%"PRIx64" conn@%p p:%s ref %d cnt %d f%d :: "fmt,	\
 	    (exp), (exp)->exp_handle.cookie, (exp)->exp_connection,	\
 	    (exp)->exp_connection ?					\
 	       libcfs_id2str((exp)->exp_connection->c_peer) : "<?>",	\

@@ -384,7 +384,7 @@ psc_ctlmsg_iostats_prdat(__unusedx const struct psc_ctlmsghdr *mh,
 	printf(" %-30s ", ist->ist_name);
 	if (psc_ctl_inhuman) {
 		printf("%8.2f ", ist->ist_rate);
-		printf("%8"_P_U64"u ", ist->ist_bytes_total);
+		printf("%8"PRIu64" ", ist->ist_bytes_total);
 	} else {
 		psc_humanscale(buf, ist->ist_rate);
 		printf("%7s/s ", buf);
@@ -392,7 +392,7 @@ psc_ctlmsg_iostats_prdat(__unusedx const struct psc_ctlmsghdr *mh,
 		psc_humanscale(buf, ist->ist_bytes_total);
 		printf("%8s ", buf);
 	}
-	printf("%6.1f/s %8"_P_U64"u\n", ist->ist_erate,
+	printf("%6.1f/s %8"PRIu64"\n", ist->ist_erate,
 	    ist->ist_errors_total);
 }
 

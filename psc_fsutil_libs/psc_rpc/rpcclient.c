@@ -433,7 +433,7 @@ static int pscrpc_send_new_req_locked(struct pscrpc_request *req)
 	spin_unlock(&imp->imp_lock);
 
 	// we don't have a 'current' struct - paul
-	//req->rq_reqmsg->status = current->pid;	
+	//req->rq_reqmsg->status = current->pid;
 	rc = psc_send_rpc(req, 0);
 	if (rc) {
 		DEBUG_REQ(PLL_WARN, req,
@@ -452,7 +452,7 @@ int pscrpc_push_req(struct pscrpc_request *req) {
 		return (pscrpc_send_new_req_locked(req));
 	else {
 		/* This is ok, it means that another thread has done
-		 *   a pscrpc_check_set() which also pushes req's 
+		 *   a pscrpc_check_set() which also pushes req's
 		 *   which are ZRQ_PHASE_NEW.
 		 */
 		freelock(&req->rq_lock);
@@ -651,7 +651,7 @@ int pscrpc_queue_wait(struct pscrpc_request *req)
 
 	psc_assert(imp != NULL);
 	psc_info("Sending RPC cookie:pid:xid:nid:opc "
-	      "%"_P_U64"x:%d:%"_P_U64"u:%s:%d",
+	      "%"PRIx64":%d:%"PRIu64":%s:%d",
 	      req->rq_reqmsg->handle.cookie,
 	      imp->imp_connection->c_peer.pid, req->rq_xid,
 	      libcfs_nid2str(imp->imp_connection->c_peer.nid),
@@ -758,7 +758,7 @@ int pscrpc_queue_wait(struct pscrpc_request *req)
 
 	DEBUG_REQ(PLL_INFO, req, "-- done sleeping");
 
-	psc_info("Completed RPC status:err:xid:nid:opc %d:%d:%"_P_U64"x:%s:%d",
+	psc_info("Completed RPC status:err:xid:nid:opc %d:%d:%"PRIx64":%s:%d",
 	      req->rq_reqmsg->status, req->rq_err, req->rq_xid,
 	      libcfs_nid2str(imp->imp_connection->c_peer.nid),
 	      req->rq_reqmsg->opc);
@@ -880,14 +880,14 @@ int pscrpc_check_set(struct pscrpc_request_set *set, int check_allsent)
 
 	psclist_for_each(tmp, &set->set_requests) {
 		struct pscrpc_request *req =
-			psclist_entry(tmp, struct pscrpc_request, 
+			psclist_entry(tmp, struct pscrpc_request,
 				      rq_set_chain_lentry);
 		struct pscrpc_import *imp = req->rq_import;
 		int rc = 0;
 
 		DEBUG_REQ(PLL_TRACE, req, "reqset=%p", set);
 
-		if (req->rq_phase == ZRQ_PHASE_NEW && 
+		if (req->rq_phase == ZRQ_PHASE_NEW &&
 		    pscrpc_push_req(req)) {
 			DEBUG_REQ(PLL_WARN, req, "ZRQ_PHASE_NEW");
 			force_timer_recalc = 1;
@@ -911,7 +911,7 @@ int pscrpc_check_set(struct pscrpc_request_set *set, int check_allsent)
 			GOTO(interpret, req->rq_status);
 
 		if (req->rq_net_err && !req->rq_timedout){
-			/* expire this request, 
+			/* expire this request,
 			 * which will eventually pscrpc_fail_import() too... */
 			pscrpc_expire_one_request(req);
 
@@ -951,7 +951,7 @@ int pscrpc_check_set(struct pscrpc_request_set *set, int check_allsent)
 		}
 
 		if (req->rq_phase == ZRQ_PHASE_RPC) {
-			if (req->rq_timedout || 
+			if (req->rq_timedout ||
 			    req->rq_waiting  ||
 			    req->rq_resend) {
 				int status=0;
@@ -995,8 +995,8 @@ int pscrpc_check_set(struct pscrpc_request_set *set, int check_allsent)
 						/* ensure previous bulk fails */
 						req->rq_xid = pscrpc_next_xid();
 						CDEBUG(D_HA, "resend bulk "
-						       "old x%"_P_U64"u "
-						       "new x%"_P_U64"u\n",
+						       "old x%"PRIu64" "
+						       "new x%"PRIu64"\n",
 						       old_xid, req->rq_xid);
 					}
 				}
@@ -1083,7 +1083,7 @@ int pscrpc_check_set(struct pscrpc_request_set *set, int check_allsent)
 		}
 		set->set_remaining--;
 
-		DEBUG_REQ(PLL_NOTICE, req, "set(%p) rem=(%d) ", 
+		DEBUG_REQ(PLL_NOTICE, req, "set(%p) rem=(%d) ",
 			  set, set->set_remaining);
 
 		atomic_dec(&imp->imp_inflight);
@@ -1353,7 +1353,7 @@ int pscrpc_set_wait(struct pscrpc_request_set *set)
 		RETURN(0);
 
 	psclist_for_each(tmp, &set->set_requests) {
-		req = psclist_entry(tmp, struct pscrpc_request, 
+		req = psclist_entry(tmp, struct pscrpc_request,
 				    rq_set_chain_lentry);
 
 		if (req->rq_phase == ZRQ_PHASE_NEW)
@@ -1363,7 +1363,7 @@ int pscrpc_set_wait(struct pscrpc_request_set *set)
 	do {
 		timeout = pscrpc_set_next_timeout(set);
 		/* wait until all complete, interrupted, or an in-flight
-		 * req times out 
+		 * req times out
 		 */
 		CDEBUG(D_NET, "set %p going to sleep for %d seconds\n",
 		       set, timeout);
@@ -1382,9 +1382,9 @@ int pscrpc_set_wait(struct pscrpc_request_set *set)
 		 * timed out, signals are enabled allowing completion with
 		 * EINTR.
 		 * I don't really care if we go once more round the loop in
-		 * the error cases -eeb. 
+		 * the error cases -eeb.
 		 */
-		/* let the real timeouts bubble back up to the caller 
+		/* let the real timeouts bubble back up to the caller
 		 */
 		if (-ETIMEDOUT==rc) RETURN(rc);
 	} while (rc != 0 || set->set_remaining != 0);
@@ -1432,11 +1432,11 @@ int pscrpc_set_wait(struct pscrpc_request_set *set)
  * @destroy: call destroy if the set has completed.
  * Notes: return 0 when the set has been completed, otherwise return 1
  */
-int 
+int
 pscrpc_set_finalize(struct pscrpc_request_set *set, int block, int destroy)
 {
 	int rc;
-		
+
 	if (block) {
 	set_wait:
 		rc = pscrpc_set_wait(set);
@@ -1454,7 +1454,7 @@ pscrpc_set_finalize(struct pscrpc_request_set *set, int block, int destroy)
 		psc_trace("pscrpc_check_set() returned %d set=%p", rc, set);
 		if (rc == 1)
 			goto set_wait;
-		else 
+		else
 			rc = 1;
 	}
 	return (rc);
@@ -1594,7 +1594,7 @@ void pscrpc_resend_req(struct pscrpc_request *req)
 
 		/* ensure previous bulk fails */
 		req->rq_xid = pscrpc_next_xid();
-		psc_warnx("resend bulk old x%"_P_U64"u new x%"_P_U64"u",
+		psc_warnx("resend bulk old x%"PRIu64" new x%"PRIu64,
 		       old_xid, req->rq_xid);
 	}
 	pscrpc_wake_client_req(req);

@@ -6,10 +6,10 @@
 #include "psc_ds/tree.h"
 #include "psc_mount/dhfh.h"
 #include "psc_util/alloc.h"
-#include "psc_util/lock.h"
-#include "psc_util/random.h"
-#include "psc_util/log.h"
 #include "psc_util/assert.h"
+#include "psc_util/lock.h"
+#include "psc_util/log.h"
+#include "psc_util/random.h"
 
 int
 fhcmp(const void *a, const void *b)
@@ -57,7 +57,7 @@ fh_register(u64 fhid, int oflag,
 	struct fhent *t, fh;
 	int    op = FD_REG_EXIST;
 
-	psc_assert((oflag & FHENT_WRITE) || 
+	psc_assert((oflag & FHENT_WRITE) ||
 		   (oflag & FHENT_READ)  ||
 		   (oflag & FHENT_LOOKUP));
 
@@ -76,16 +76,16 @@ fh_register(u64 fhid, int oflag,
 		 */
 		t->fh_state = FHENT_INIT | oflag;
 		if (SPLAY_INSERT(fhtree, &fhtree, t))
-			psc_fatalx("Attempted to reinsert fd %"_P_U64"x", 
+			psc_fatalx("Attempted to reinsert fd %"PRIx64,
 				   t->fh_id);
 	} else {
 		if (!(oflag & t->fh_state)) {
 			/* The fd needs to change state.
 			 */
-			psc_dbg("Fhent (%p) fd %"_P_U64"x: adding state : "
+			psc_dbg("Fhent (%p) fd %"PRIx64": adding state : "
 				"from (%d) to (%d)",
-				t, t->fh_id, t->fh_state, 
-				(t->fh_state | oflag));		
+				t, t->fh_id, t->fh_state,
+				(t->fh_state | oflag));
 			t->fh_state |= oflag;
 		}
 	}

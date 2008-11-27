@@ -297,7 +297,7 @@ pscrpc_server_handle_request(struct pscrpc_service *svc,
 	rc = psc_unpack_msg (request->rq_reqmsg, request->rq_reqlen);
 	if (rc != 0) {
 		CERROR ("error unpacking request: ptl %d from %s"
-			" xid %"_P_U64"x\n", svc->srv_req_portal,
+			" xid %"PRIx64"\n", svc->srv_req_portal,
 			libcfs_id2str(request->rq_peer), request->rq_xid);
 		goto out;
 	}
@@ -310,7 +310,7 @@ pscrpc_server_handle_request(struct pscrpc_service *svc,
 		goto out;
 	}
 
-	psc_info("got req %"_P_U64"d", request->rq_xid);
+	psc_info("got req %"PRId64, request->rq_xid);
 
 	request->rq_svc_thread = thread;
 	request->rq_conn = pscrpc_get_connection(request->rq_peer,
@@ -355,7 +355,7 @@ pscrpc_server_handle_request(struct pscrpc_service *svc,
 	request->rq_phase = ZRQ_PHASE_INTERPRET;
 
 	psc_info("Handling RPC peer+ref:pid:xid:nid:opc "
-		 "%s+%d:%d:%"_P_U64"u:%d",
+		 "%s+%d:%d:%"PRIu64":%d",
 		 libcfs_id2str(request->rq_conn->c_peer),
 		 atomic_read(&request->rq_export->exp_refcount),
 		 request->rq_reqmsg->status,
@@ -367,7 +367,7 @@ pscrpc_server_handle_request(struct pscrpc_service *svc,
 	request->rq_phase = ZRQ_PHASE_COMPLETE;
 
 	psc_info("Handled RPC peer+ref:pid:xid:nid:opc "
-		 "%s+%d:%d:%"_P_U64"u:%d",
+		 "%s+%d:%d:%"PRIu64":%d",
 		 libcfs_id2str(request->rq_conn->c_peer),
 		 atomic_read(&request->rq_export->exp_refcount),
 		 request->rq_reqmsg->status,
@@ -387,8 +387,8 @@ pscrpc_server_handle_request(struct pscrpc_service *svc,
 	timediff = cfs_timeval_sub(&work_end, &work_start, NULL);
 
 	if (timediff / 1000000 > ZOBD_TIMEOUT)
-		CERROR("request %"_P_U64"u opc %u from %s processed in %lds "
-		       "trans %"_P_U64"u rc %d/%d\n",
+		CERROR("request %"PRIu64" opc %u from %s processed in %lds "
+		       "trans %"PRIu64" rc %d/%d\n",
 		       request->rq_xid, request->rq_reqmsg->opc,
 		       libcfs_id2str(request->rq_peer),
 		       cfs_timeval_sub(&work_end, &request->rq_arrival_time,
@@ -398,8 +398,8 @@ pscrpc_server_handle_request(struct pscrpc_service *svc,
 		       request->rq_repmsg ?
 			  (int)request->rq_repmsg->status : -999);
 	else
-		CDEBUG(D_NET, "request %"_P_U64"u opc %u from %s processed in "
-		       "%ldus (%ldus total) trans %"_P_U64"u rc %d/%d\n",
+		CDEBUG(D_NET, "request %"PRIu64" opc %u from %s processed in "
+		       "%ldus (%ldus total) trans %"PRIu64" rc %d/%d\n",
 		       request->rq_xid, request->rq_reqmsg->opc,
 		       libcfs_id2str(request->rq_peer), timediff,
 		       cfs_timeval_sub(&work_end, &request->rq_arrival_time,
