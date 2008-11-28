@@ -112,7 +112,7 @@ psc_ctlparse_show(char *showspec)
 		*thrlist++ = '\0';
 
 	if ((pse = psc_ctlshow_lookup(showspec)) == NULL)
-		psc_fatalx("invalid show parameter: %s", showspec);
+		errx(1, "invalid show parameter: %s", showspec);
 
 	for (thr = thrlist; thr != NULL; thr = thrnext) {
 		if ((thrnext = strchr(thr, ',')) != NULL)
