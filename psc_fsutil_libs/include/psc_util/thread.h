@@ -14,7 +14,7 @@ struct psc_ctlmsg_stats;
 #define PSC_THRNAME_MAX	16	/* must be 8-byte aligned */
 
 struct psc_thread {
-	int		   pscthr_run;			/* XXX merge with PTF_PAUSED */
+	int		   pscthr_run;
 	int		   pscthr_flags;
 	void		*(*pscthr_start)(void *);	/* thread main */
 	pthread_t	   pscthr_pthread;
@@ -27,8 +27,16 @@ struct psc_thread {
 	void		 (*pscthr_dtor)(void *);
 };
 
-#define PTF_PAUSED	(1 << 0)
-#define PTF_FREE	(1 << 1)
+#define PTF_PAUSED	(1 << 0)	/* thread is frozen */
+#define PTF_FREE	(1 << 1)	/* thr mem should be free(3)'d on exit */
+
+#define PSCTHR_MKCAST(label, name, type)		\
+static inline struct name *				\
+label(struct psc_thread *pt)				\
+{							\
+	psc_assert(pt->pscthr_type == (type));		\
+	return ((struct name *)pt->pscthr_private);	\
+}
 
 #define pscthr_init(thr, type, startf, priv, namefmt, ...)	\
 	_pscthr_init((thr), (type), (startf), (priv), 0, NULL,	\
