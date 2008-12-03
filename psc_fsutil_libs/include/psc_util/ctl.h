@@ -70,8 +70,8 @@ struct psc_ctlmsg_hashtable {
 
 #define PCHT_NAME_ALL		"all"
 
-#define PCP_FIELD_MAX		32
-#define PCP_VALUE_MAX		32
+#define PCP_FIELD_MAX		48
+#define PCP_VALUE_MAX		48
 
 struct psc_ctlmsg_param {
 	char			pcp_thrname[PSC_THRNAME_MAX];
