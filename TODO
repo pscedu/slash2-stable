@@ -40,9 +40,7 @@ zest
   during file system creation time (hopefully only)
 - fsck service is currently badly broken
 - faster CRC operations
-- remove ifdef buttons, either entirely or turn into
-  zestiondctl params, currently:
-    (o) SERVER_CRC_CHECK
+- remove ifdef buttons
 - make a proper solution when running out of parity groups
   when servicing clients.  possible solution:
     (o) block new file opens until parity groups from older

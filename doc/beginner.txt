@@ -16,7 +16,7 @@ PFL API Notes
   statistics exportation and manipulation through daemon control sockets.
   For example, the free read buffer list in zest is accessible like this:
 
-    $ zestiondctl -Lreadfree
+    $ zctl -Lreadfree
 
   And the code just looks like this:
 
