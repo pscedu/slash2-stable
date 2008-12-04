@@ -312,7 +312,7 @@ acsvc_climain(__unusedx void *arg)
 			}
 		apr->apr_rep = arp;
 		spinlock(&apr->apr_lock);
-		psc_waitq_wakeup(&apr->apr_wq);
+		psc_waitq_wakeall(&apr->apr_wq);
 	}
 }
 

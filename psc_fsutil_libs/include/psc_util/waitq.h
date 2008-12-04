@@ -36,11 +36,9 @@ int  psc_waitq_timedwait(psc_waitq_t *, psc_spinlock_t *,
 void psc_waitq_wakeone(psc_waitq_t *);
 void psc_waitq_wakeall(psc_waitq_t *);
 
-#define psc_waitq_wakeup(q)	psc_waitq_wakeone(q)
-
 /* Compatibility for LNET code. */
 typedef psc_waitq_t		wait_queue_head_t;
 #define init_waitqueue_head(q)	psc_waitq_init(q)
-#define wake_up(q)		psc_waitq_wakeup(q)
+#define wake_up(q)		psc_waitq_wakeone(q)
 
 #endif /* _PFL_WAITQ_H_ */

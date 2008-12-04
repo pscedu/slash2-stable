@@ -236,7 +236,7 @@ _lc_put(list_cache_t *l, struct psclist_head *e, int tails)
 	 * There is now an item available; wake up waiters
 	 * who think the list is empty.
 	 */
-	psc_waitq_wakeup(&l->lc_wq_empty);
+	psc_waitq_wakeall(&l->lc_wq_empty);
 }
 
 static inline void

@@ -1,11 +1,11 @@
 /* $Id$ */
 
 /*
- * Locked lists are lists for use in a multithreaded environment.
+ * Locked lists are thread-safe linked lists.
  */
 
-#ifndef __PFL_LOCKEDLIST_H__
-#define __PFL_LOCKEDLIST_H__
+#ifndef _PFL_LOCKEDLIST_H_
+#define _PFL_LOCKEDLIST_H_
 
 #include <stddef.h>
 
@@ -129,4 +129,4 @@ pll_empty(struct psc_lockedlist *pll)
 #define PLL_LOCK(pll)	spinlock((pll)->pll_lockp)
 #define PLL_ULOCK(pll)	freelock((pll)->pll_lockp)
 
-#endif /* __PFL_LOCKEDLIST_H__ */
+#endif /* _PFL_LOCKEDLIST_H_ */

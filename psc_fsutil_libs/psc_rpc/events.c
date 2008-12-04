@@ -148,7 +148,7 @@ void request_in_callback(lnet_event_t *ev)
 
         /* NB everything can disappear under us once the request
 	 * has been queued and we unlock, so do the wake now... */
-	psc_waitq_wakeup(&service->srv_waitq);
+	psc_waitq_wakeall(&service->srv_waitq);
         //wake_up(&service->srv_waitq);
 
         freelock(&service->srv_lock);
@@ -314,7 +314,7 @@ void server_bulk_callback (lnet_event_t *ev)
         if (ev->unlinked) {
                 /* This is the last callback no matter what... */
                 desc->bd_network_rw = 0;
-                psc_waitq_wakeup(&desc->bd_waitq);
+                psc_waitq_wakeall(&desc->bd_waitq);
         }
 
         freelock(&desc->bd_lock);
