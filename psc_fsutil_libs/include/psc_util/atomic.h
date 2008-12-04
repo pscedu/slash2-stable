@@ -147,11 +147,39 @@ ia64_atomic64_sub(__s64 i, psc_atomic64_t *v)
 
 #define psc_atomic64_add(i, v)			psc_atomic64_add_return((i), (v))
 #define psc_atomic64_sub(i, v)			psc_atomic64_sub_return((i), (v))
-#define psc_atomic64_inc(v)			psc_atomic64_add(1 ,(v))
-#define psc_atomic64_dec(v)			psc_atomic64_sub(1 ,(v))
+#define psc_atomic64_inc(v)			psc_atomic64_add(1, (v))
+#define psc_atomic64_dec(v)			psc_atomic64_sub(1, (v))
 
 #define atomic_cmpxchg(v, old, new)		((int)cmpxchg(&((v)->counter), (old), (new)))
 #define atomic_xchg(v, new)			(xchg(&((v)->counter), (new)))
+
+static __inline int
+atomic_set_mask(unsigned int mask, atomic_t *v)
+{
+	uint32_t old, new;
+	CMPXCHG_BUGCHECK_DECL
+
+	do {
+		CMPXCHG_BUGCHECK(v);
+		old = atomic_read(v);
+		new = old | mask;
+	} while (ia64_cmpxchg(acq, v, old, new, sizeof(atomic_t)) != old);
+	return new;
+}
+
+static __inline int
+atomic_clear_mask(unsigned int mask, atomic_t *v)
+{
+	uint32_t old, new;
+	CMPXCHG_BUGCHECK_DECL
+
+	do {
+		CMPXCHG_BUGCHECK(v);
+		old = atomic_read(v);
+		new = old & ~mask;
+	} while (ia64_cmpxchg(acq, v, old, new, sizeof(atomic_t)) != old);
+	return new;
+}
 
 #else
 
@@ -567,6 +595,12 @@ psc_atomic64_add_return(int64_t i, psc_atomic64_t *v)
 		LOCK_PREFIX "orl %0,%1"				\
 		: : "r" (mask),					\
 		    "m" (*(addr)) : "memory")
+
+#define psc_atomic64_set_mask(mask, v)				\
+	__asm__ __volatile__(					\
+		LOCK_PREFIX "orq %0,%1"				\
+		: : "r" (mask),					\
+		    "m" (*(v)) : "memory")
 
 #endif /* __ia64 */
 #endif /* __PFL_ATOMIC_H__ */
