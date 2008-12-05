@@ -2,9 +2,13 @@
 
 include Makefile.path
 
-SUBDIRS=	fmtstr
+SUBDIRS+=	atomic
+SUBDIRS+=	bitflag
+SUBDIRS+=	bw
+SUBDIRS+=	fmtstr
 SUBDIRS+=	lock
-SUBDIRS+=	myrandom
+SUBDIRS+=	random
 SUBDIRS+=	vbitmap
+SUBDIRS+=	waitq
 
 include ${PFLMK}
