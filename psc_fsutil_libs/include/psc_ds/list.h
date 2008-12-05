@@ -114,7 +114,7 @@ __psclist_del(struct psclist_head *prev, struct psclist_head *next)
  * psclist_del - deletes entry from psclist.
  * @entry: the element to delete from the psclist.
  * Note: psclist_empty on entry does not return true after this,
- * the entry is in an undefined state.
+ *	the entry is in an undefined state.
  */
 static __inline__ void
 psclist_del(struct psclist_head *entry)

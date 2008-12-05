@@ -1,4 +1,4 @@
-/* $Id: hash.c 4483 2008-10-31 20:49:24Z nstone $ */
+/* $Id$ */
 
 #include <sys/param.h>
 

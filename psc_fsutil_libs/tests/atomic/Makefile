@@ -1,4 +1,4 @@
-# $Id: Makefile 2344 2007-12-07 17:48:02Z yanovich $
+# $Id$
 
 include ../Makefile.path
 

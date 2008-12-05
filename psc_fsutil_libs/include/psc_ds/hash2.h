@@ -1,4 +1,4 @@
-/* $Id: hash.h 4118 2008-09-09 17:59:03Z yanovich $ */
+/* $Id$ */
 
 #ifndef _PFL_HASH_H_
 #define _PFL_HASH_H_
