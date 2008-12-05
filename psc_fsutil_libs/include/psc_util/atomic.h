@@ -1,7 +1,7 @@
 /* $Id$ */
 
-#ifndef __ARCH_I386_ATOMIC__
-#define __ARCH_I386_ATOMIC__
+#ifndef _PFL_ATOMIC_H_
+#define _PFL_ATOMIC_H_
 
 #include <sys/types.h>
 #include <asm/bitops.h>
@@ -596,11 +596,17 @@ psc_atomic64_add_return(int64_t i, psc_atomic64_t *v)
 		: : "r" (mask),					\
 		    "m" (*(addr)) : "memory")
 
-#define psc_atomic64_set_mask(mask, v)				\
-	__asm__ __volatile__(					\
-		LOCK_PREFIX "orq %0,%1"				\
-		: : "r" (mask),					\
-		    "m" (*(v)) : "memory")
+static __inline int64_t
+psc_atomic64_set_mask(int64_t mask, psc_atomic64_t *v)
+{
+	int64_t newmask = mask;
+
+	__asm__ __volatile__(
+		LOCK_PREFIX "orq %0, %1;"
+		:"=r"(mask)
+		:"m"(v->counter), "0"(newmask));
+	return newmask | mask;
+}
 
 #endif /* __ia64 */
-#endif /* __PFL_ATOMIC_H__ */
+#endif /* _PFL_ATOMIC_H_ */
