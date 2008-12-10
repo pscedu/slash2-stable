@@ -24,11 +24,8 @@ void
 pfl_init(void)
 {
 	static atomic_t init = ATOMIC_INIT(0);
-	int v;
 
-	v = 1;
-	(void)atomic_xchg(&init, v);
-	if (v)
+	if (atomic_xchg(&init, 1))
 		errx(1, "pfl_init: already initialized");
 
 	pscthrs_init();
