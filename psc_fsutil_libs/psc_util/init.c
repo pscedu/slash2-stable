@@ -3,6 +3,7 @@
 #include <unistd.h>
 
 #include "psc_util/alloc.h"
+#include "psc_util/atomic.h"
 #include "psc_util/cdefs.h"
 #include "psc_util/log.h"
 
@@ -21,6 +22,14 @@ psc_subsys_register(__unusedx int level, __unusedx const char *name)
 void
 pfl_init(void)
 {
+	static atomic_t init = ATOMIC_INIT(0);
+	int v;
+
+	v = 1;
+	(void)atomic_xchg(&init, v);
+	if (v)
+		psc_fatalx("pfl_init: already initialized");
+
 	pscthrs_init();
 	psc_log_init();
 
