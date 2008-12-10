@@ -1,5 +1,6 @@
 /* $Id$ */
 
+#include <err.h>
 #include <unistd.h>
 
 #include "psc_util/alloc.h"
@@ -28,7 +29,7 @@ pfl_init(void)
 	v = 1;
 	(void)atomic_xchg(&init, v);
 	if (v)
-		psc_fatalx("pfl_init: already initialized");
+		errx(1, "pfl_init: already initialized");
 
 	pscthrs_init();
 	psc_log_init();
