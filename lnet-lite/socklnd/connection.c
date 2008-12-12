@@ -822,7 +822,7 @@ force_tcp_connection(manager    m,
             }
     }
     
-    option = tcpnal_nagle ? 0 : 1;
+    option = tcpnal_nagle ? 1 : 0;
     setsockopt(fd, IPPROTO_TCP, TCP_NODELAY, &option, sizeof(option));
     option = tcpnal_buffer_size;
     if (option != 0) {
