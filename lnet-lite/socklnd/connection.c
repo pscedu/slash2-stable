@@ -822,7 +822,7 @@ force_tcp_connection(manager    m,
             }
     }
     
-    option = tcpnal_nagle ? 1 : 0;
+    option = tcpnal_nagle ? 0 : 1;
     setsockopt(fd, IPPROTO_TCP, TCP_NODELAY, &option, sizeof(option));
     option = tcpnal_buffer_size;
     if (option != 0) {
@@ -871,7 +871,7 @@ static int new_connection(void *z)
     struct sockaddr_in s;
     lnet_process_id_t  nidpid = {b->b_ni->ni_nid, 0};
     int                fd;
-    socklen_t          len = sizeof(struct sockaddr_in);
+    socklen_t          len = sizeof(struct sockaddr_in), option;
     unsigned int       ipaddr;
     ssize_t            rc;
     lnet_acceptor_connreq_t cr;
@@ -884,6 +884,9 @@ static int new_connection(void *z)
             CERROR("accept failed %s\n", strerror(errno));
             return 0;
     }
+    option = tcpnal_nagle ? 0 : 1;
+    setsockopt(fd, IPPROTO_TCP, TCP_NODELAY, &option, sizeof(option));
+
     ipaddr = *((unsigned int *)&s.sin_addr);
 
     rc = recv(fd, &cr, cr_sz, 0);
