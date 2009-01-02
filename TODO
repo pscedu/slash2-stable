@@ -6,7 +6,7 @@ general
 - watch out for sizeof(type var[0])
 - constify RPC replies in clients and requests in servers
 - check all bulkserver()'s for free_desc()
-- sweep tree for \b0[0-9] and fix bad permissions (711 -> 700)
+- sweep tree for \b0[0-9] and fix bad permissions (711 -> 700 - slash?)
 - ctlapi GETTREE
 - pfl: use "psc_" prefix and "_mt" (multithread-safe) postfix where sensical
 - type fixes:
@@ -20,7 +20,7 @@ slash
 
 pfl
 - no ifdefs
-- disallow lock reinitialization (e.g. allow LOCK_INIT once)
+- watch out for lock reinitialization (i.e. LOCK_INIT twice)
 - for psclog(), add extensibility mechanism for fmtstr,
   allowing app-specific callbacks (e.g. %r for zest clients)
 - move iostat thr and interval thr here
@@ -29,8 +29,6 @@ lnet
 - move iostats outside of socklnd
 
 zest
-- mount_zest test mode, how fast processes connect to fuse
-
 - test parity reconstruction service by rebuilding
   a block from each parity group
 - investigate SIGPIPE mishandling in client zest library
@@ -39,7 +37,7 @@ zest
   unreasonable limits on maximum file system size, perhaps
   during file system creation time (hopefully only)
 - fsck service is currently badly broken
-- faster CRC operations
+- research faster CRC operations
 - remove ifdef buttons
 - make a proper solution when running out of parity groups
   when servicing clients.  possible solution:
@@ -49,11 +47,10 @@ zest
   kind of reap/reclamation mechanism
 
 - move parity block into random positions in the raid scheme
-  to avoid placing all parity data on the same disk
+  to avoid placing all parity data on the same disk.
   however skip these on disk fail rebuild
+
+  note: have the fastest disks grab each successive block in a pg,
+  deprecates need for zigs, or at least current complexity of zigs.
 - pass sizeof(iovs) to client on CONNECT
 - write back support on server
-
-- mount_zest control interface for stats and such,
-  needs further multithreaded operation for this
-	zcconn
