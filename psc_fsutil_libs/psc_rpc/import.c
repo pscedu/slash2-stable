@@ -175,6 +175,7 @@ void pscrpc_fail_import(struct pscrpc_import *imp, __u32 conn_cnt)
 		//CDEBUG(D_HA, "%s: waking up pinger\n",
                 //       obd2cli_tgt(imp->imp_obd));
 
+		psc_notify("failing import %p", imp);
                 spin_lock(&imp->imp_lock);
                 imp->imp_force_verify = 1;
 		imp->imp_failed = 1;
