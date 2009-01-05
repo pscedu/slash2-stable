@@ -494,7 +494,7 @@ psc_ctlparam_log_level(int fd, struct psc_ctlmsghdr *mh,
 			if (set)
 				thr->pscthr_loglevels[subsys] = loglevel;
 			else {
-				levels[2] = psc_subsys_name(subsys);
+				levels[2] = (char*)psc_subsys_name(subsys);
 				rc = psc_ctlmsg_param_send(fd, mh, pcp,
 				    thr->pscthr_name, levels, 3,
 				    psc_loglevel_getname(thr->
