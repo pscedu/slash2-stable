@@ -183,6 +183,22 @@ listsrcs:
 		echo "${SRCS}";								\
 	fi
 
+test: all
+	@for i in ${SUBDIRS}; do							\
+		echo -n "===> " >&2;							\
+		if [ -n "${DIRPREFIX}" ]; then						\
+			echo -n ${DIRPREFIX} >&2;					\
+		fi;									\
+		echo $$i >&2;								\
+		(cd $$i && ${MAKE} SUBDIRS= DIRPREFIX=${DIRPREFIX}$$i/ $@) || exit 1;	\
+		if [ -n "${DIRPREFIX}" ]; then						\
+			echo "<=== ${DIRPREFIX}" | sed 's!/$$!!' >&2;			\
+		fi;									\
+	done
+	@if [ -n "${PROG}" ]; then							\
+		./${PROG} || exit 1;							\
+	fi
+
 #CS_ARGS+=-s${APP_BASE}
 #ET_ARGS+="${APP_BASE}"
 
