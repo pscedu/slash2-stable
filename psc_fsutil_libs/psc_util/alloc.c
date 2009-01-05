@@ -14,30 +14,47 @@
 
 long pscPageSize;
 
+/*
+ * _psc_pool_reapsome - Provide an overrideable reclaimer for when
+ *	pools are not in use.
+ */
 __weak void
-_psc_pool_reap(void)
+_psc_pool_reapsome(__unusedx size_t size)
 {
 }
 
+/*
+ * psc_realloc - Allocate or resize a chunk of memory.
+ * @p: current chunk of memory to resize or NULL for new chunk.
+ * @size: desired size of memory chunk.
+ * @flags: operational flags.
+ */
 void *
-psc_alloc(size_t size, int flags)
+psc_realloc(void *p, size_t size, int flags)
 {
 	int rc, save_errno;
-	void *p;
+	void *newp;
 
  retry:
-	if (flags & PAF_PAGEALIGN) {
-		rc = posix_memalign(&p, pscPageSize, size);
+	if (flags & PAF_PAGEALIGN && p == NULL) {
+		rc = posix_memalign(&newp, pscPageSize, size);
 		if (rc) {
 			errno = rc;
-			p = NULL;
+			newp = NULL;
 		}
-	} else
-		p = malloc(size);
-	if (p == NULL) {
-		if ((flags & PAF_NOREAP) == 0) {
-			_psc_pool_reap();
-			flags &= ~PAF_NOREAP;
+	} else {
+		newp = realloc(p, size);
+		if (newp == NULL && size == 0)
+			return (newp);
+	}
+	if (newp == NULL) {
+		/*
+		 * We didn't get our memory.  Try reaping some pools
+		 * if enabled and retry, otherwise, handle failure.
+		 */
+		if (flags & PAF_POOLREAP) {
+			_psc_pool_reapsome(size);
+			flags &= ~PAF_POOLREAP;
 			goto retry;
 		}
 		if (flags & PAF_CANFAIL) {
@@ -46,30 +63,46 @@ psc_alloc(size_t size, int flags)
 		}
 		psc_fatal("malloc");
 	}
-	if ((flags & PAF_LOCK) && mlock(p, size) == -1) {
-		if (flags & PAF_CANFAIL) {
-			save_errno = errno;
-			PSCFREE(p);
-			psc_error("mlock");
-			errno = save_errno;
-			return (NULL);
+	if (flags & PAF_LOCK) {
+		/* Disallow realloc(p, sz, PAF_LOCK) for now. */
+		if (p)
+			psc_fatalx("psc_realloc: unable to lock realloc'd mem");
+		if (mlock(newp, size) == -1) {
+			if (flags & PAF_CANFAIL) {
+				save_errno = errno;
+				PSCFREE(p);
+				psc_error("mlock");
+				errno = save_errno;
+				return (NULL);
+			}
 		}
 		psc_fatal("mlock");
 	}
-	memset(p, 0, size);
+	if ((flags & PAF_NOZERO) == 0)
+		memset(p, 0, size);
 	return (p);
 }
 
+/*
+ * psc_calloc - Allocate zeroed memory.
+ * @size: size of chunk to allocate.
+ * @flags: operational flags.
+ */
 void *
-psc_calloc(size_t num, size_t size)
+psc_calloc(size_t num, size_t size, int flags)
 {
 	if (num && SIZE_MAX / num < size) {
 		errno = ENOMEM;
 		return (NULL);
 	}
-	return (psc_alloc(size * num, PAF_CANFAIL));
+	return (psc_realloc(NULL, size * num, flags));
 }
 
+/*
+ * psc_freel - Free locked memory.
+ * @p: memory chunk to free.
+ * @size: size of chunk.
+ */
 void
 psc_freel(void *p, size_t size)
 {

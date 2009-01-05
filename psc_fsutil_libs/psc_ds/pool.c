@@ -220,6 +220,16 @@ _psc_pool_reap(struct psc_poolset *pps, struct psc_poolmgr *initiator)
 }
 
 /*
+ * _psc_pool_reap - reap some memory from a global (or local on NUMAs)
+ *	memory pool.
+ * @size: desired amount of memory to reclaim.
+ */
+__weak void
+_psc_pool_reapsome(__unusedx size_t size)
+{
+}
+
+/*
  * psc_pool_get - grab an item from a pool.
  * @m: the pool manager.
  */

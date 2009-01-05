@@ -5,13 +5,15 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "psc_util/alloc.h"
+
 #define FMTSTRCASE(ch, buf, siz, convfmt, ...)				\
 	case ch: {							\
 		size_t _len;						\
 									\
 		_len = _t - _p + strlen(convfmt) + 1;			\
 		if (_len > _tfmt_len && (_tfmt_new =			\
-		    realloc(_tfmt, _len)) == NULL)			\
+		    PSC_TRY_REALLOC(_tfmt, _len)) == NULL)		\
 			_twant = -1;					\
 		else {							\
 			_tfmt = _tfmt_new;				\
