@@ -9,6 +9,7 @@ SUBDIRS+=	bw
 SUBDIRS+=	fmtstr
 SUBDIRS+=	lock
 SUBDIRS+=	random
+SUBDIRS+=	sig
 SUBDIRS+=	vbitmap
 SUBDIRS+=	waitq
 
