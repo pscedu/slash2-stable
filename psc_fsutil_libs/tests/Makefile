@@ -2,6 +2,7 @@
 
 include Makefile.path
 
+SUBDIRS+=	acsvc
 SUBDIRS+=	atomic
 SUBDIRS+=	bitflag
 SUBDIRS+=	bw
