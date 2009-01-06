@@ -79,8 +79,8 @@ psc_realloc(void *p, size_t size, int flags)
 		psc_fatal("mlock");
 	}
 	if ((flags & PAF_NOZERO) == 0)
-		memset(p, 0, size);
-	return (p);
+		memset(newp, 0, size);
+	return (newp);
 }
 
 /*
