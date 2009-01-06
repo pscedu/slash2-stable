@@ -164,7 +164,7 @@ atomic_set_mask(unsigned int mask, atomic_t *v)
 		old = atomic_read(v);
 		new = old | mask;
 	} while (ia64_cmpxchg(acq, v, old, new, sizeof(atomic_t)) != old);
-	return new;
+	return (new);
 }
 
 static __inline int
@@ -178,7 +178,21 @@ atomic_clear_mask(unsigned int mask, atomic_t *v)
 		old = atomic_read(v);
 		new = old & ~mask;
 	} while (ia64_cmpxchg(acq, v, old, new, sizeof(atomic_t)) != old);
-	return new;
+	return (new);
+}
+
+static __inline int64_t
+psc_atomic64_set_mask(uint64_t mask, psc_atomic64_t *v)
+{
+	uint64_t new, old;
+	CMPXCHG_BUGCHECK_DECL
+
+	do {
+		CMPXCHG_BUGCHECK(v);
+		old = psc_atomic64_read(v);
+		new = old | mask;
+	} while (ia64_cmpxchg(acq, v, old, new, sizeof(psc_atomic64_t)) != old);
+	return (new);
 }
 
 #else
