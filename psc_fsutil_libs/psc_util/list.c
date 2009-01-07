@@ -4,5 +4,7 @@
 #include "psc_ds/listcache.h"
 #include "psc_util/lock.h"
 
-struct psclist_head pscListCaches = PSCLIST_HEAD_INIT(pscListCaches);
-psc_spinlock_t pscListCachesLock = LOCK_INITIALIZER;
+__static psc_spinlock_t pscListCachesLock = LOCK_INITIALIZER;
+struct psc_lockedlist pscListCaches =
+    PLL_INITIALIZER(&pscListCaches, struct psc_listcache,
+    lc_index_lentry, &pscListCachesLock);

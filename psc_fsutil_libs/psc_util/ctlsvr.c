@@ -324,10 +324,11 @@ psc_ctlrep_getlc(int fd, struct psc_ctlmsghdr *mh, void *m)
 	found = 0;
 	strlcpy(name, pclc->pclc_name, sizeof(name));
 	all = (strcmp(name, PCLC_NAME_ALL) == 0);
-	spinlock(&pscListCachesLock);
-	psclist_for_each_entry(lc, &pscListCaches, lc_index_lentry) {
-		if (all ||
-		    strncmp(lc->lc_name, name, strlen(name)) == 0) {
+	PLL_LOCK(&pscListCaches);
+	psclist_for_each_entry(lc,
+	    &pscListCaches.pll_listhd, lc_index_lentry) {
+		if (all || strncmp(lc->lc_name,
+		    name, strlen(name)) == 0) {
 			found = 1;
 
 			LIST_CACHE_LOCK(lc);
@@ -336,8 +337,10 @@ psc_ctlrep_getlc(int fd, struct psc_ctlmsghdr *mh, void *m)
 			pclc->pclc_size = lc->lc_size;
 			pclc->pclc_nseen = lc->lc_nseen;
 			pclc->pclc_flags = lc->lc_flags;
-			pclc->pclc_nw_want = atomic_read(&lc->lc_wq_want.wq_nwaitors);
-			pclc->pclc_nw_empty = atomic_read(&lc->lc_wq_empty.wq_nwaitors);
+			pclc->pclc_nw_want = atomic_read(
+			    &lc->lc_wq_want.wq_nwaitors);
+			pclc->pclc_nw_empty = atomic_read(
+			    &lc->lc_wq_empty.wq_nwaitors);
 			LIST_CACHE_ULOCK(lc);
 			rc = psc_ctlmsg_sendv(fd, mh, pclc);
 			if (!rc)
@@ -348,7 +351,7 @@ psc_ctlrep_getlc(int fd, struct psc_ctlmsghdr *mh, void *m)
 				break;
 		}
 	}
-	freelock(&pscListCachesLock);
+	PLL_ULOCK(&pscListCaches);
 	if (rc && !found && !all)
 		rc = psc_ctlsenderr(fd, mh, "unknown listcache: %s",
 		    pclc->pclc_name);
@@ -494,7 +497,7 @@ psc_ctlparam_log_level(int fd, struct psc_ctlmsghdr *mh,
 			if (set)
 				thr->pscthr_loglevels[subsys] = loglevel;
 			else {
-				levels[2] = (char*)psc_subsys_name(subsys);
+				levels[2] = (char *)psc_subsys_name(subsys);
 				rc = psc_ctlmsg_param_send(fd, mh, pcp,
 				    thr->pscthr_name, levels, 3,
 				    psc_loglevel_getname(thr->
