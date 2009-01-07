@@ -8,17 +8,17 @@
 #define _PFL_LOCKEDLIST_H_
 
 #include <stddef.h>
+#include <string.h>
 
 #include "psc_ds/list.h"
 #include "psc_util/alloc.h"
 #include "psc_util/assert.h"
-#include "psc_util/atomic.h"
 #include "psc_util/lock.h"
 
 struct psc_lockedlist {
 	struct psclist_head	 pll_listhd;
 	psc_spinlock_t		*pll_lockp;
-	atomic_t		 pll_nitems;
+	int			 pll_nitems;
 	int			 pll_offset;
 	int			 pll_flags;
 };
@@ -27,7 +27,7 @@ struct psc_lockedlist {
 
 #define PLL_INITIALIZER(pll, type, member, lock)		\
 	{ PSCLIST_HEAD_INIT((pll)->pll_listhd), (lock),		\
-	  ATOMIC_INIT(0), offsetof(type, member), 0 }
+	  0, offsetof(type, member), 0 }
 
 #define pll_init(pll, type, member, lock)			\
 	_pll_init((pll), offsetof(type, member), (lock))
@@ -35,8 +35,8 @@ struct psc_lockedlist {
 static __inline void
 _pll_init(struct psc_lockedlist *pll, int offset, psc_spinlock_t *lkp)
 {
+	memset(pll, 0, sizeof(*pll));
 	INIT_PSCLIST_HEAD(&pll->pll_listhd);
-	pll->pll_flags = 0;
 	if (lkp)
 		pll->pll_lockp = lkp;
 	else {
@@ -45,7 +45,6 @@ _pll_init(struct psc_lockedlist *pll, int offset, psc_spinlock_t *lkp)
 		pll->pll_flags |= PLLF_ALLOCLOCK;
 	}
 	pll->pll_offset = offset;
-	atomic_set(&pll->pll_nitems, 0);
 }
 
 static __inline void
@@ -55,7 +54,16 @@ pll_destroy(struct psc_lockedlist *pll)
 		PSCFREE(pll->pll_lockp);
 }
 
-#define pll_nitems(pll)		atomic_read(&(pll)->pll_nitems)
+static __inline int
+pll_nitems(struct psc_lockedlist *pll)
+{
+	int n, locked;
+
+	locked = reqlock(pll->pll_lockp);
+	n = pll->pll_nitems;
+	ureqlock(pll->pll_lockp, locked);
+	return (n);
+}
 
 #define pll_add(pll, p)		_pll_add((pll), (p), 0)
 #define pll_addstack(pll, p)	_pll_add((pll), (p), 0)
@@ -76,30 +84,45 @@ _pll_add(struct psc_lockedlist *pll, void *p, int tail)
 		psclist_xadd_tail(e, &pll->pll_listhd);
 	else
 		psclist_xadd_head(e, &pll->pll_listhd);
-	atomic_inc(&pll->pll_nitems);
+	pll->pll_nitems++;
 	ureqlock(pll->pll_lockp, locked);
 }
 
+#define PLLF_HEAD	(1 << 0)
+#define PLLF_STACK	(1 << 0)
+#define PLLF_TAIL	(1 << 1)
+#define PLLF_QUEUE	(1 << 1)
+#define PLLF_PEEK	(1 << 2)
+
 static __inline void *
-pll_get(struct psc_lockedlist *pll, ptrdiff_t tail)
+_pll_get(struct psc_lockedlist *pll, int flags)
 {
 	struct psclist_head *e;
 	int locked;
+
+	psc_assert((flags & PLLF_HEAD) ^ (flags & PLLF_TAIL));
 
 	locked = reqlock(pll->pll_lockp);
 	if (psclist_empty(&pll->pll_listhd)) {
 		ureqlock(pll->pll_lockp, locked);
 		return (NULL);
 	}
-	if (tail)
+	if (flags & PLLF_TAIL)
 		e = psclist_last(&pll->pll_listhd);
 	else
 		e = psclist_first(&pll->pll_listhd);
-	psclist_del(e);
-	atomic_dec(&pll->pll_nitems);
+	if ((flags & PLLF_PEEK) == 0) {
+		psclist_del(e);
+		pll->pll_nitems--;
+	}
 	ureqlock(pll->pll_lockp, locked);
 	return ((char *)e - pll->pll_offset);
 }
+
+#define pll_get(pll)		_pll_get((pll), PLLF_HEAD)
+#define pll_gethd(pll)		_pll_get((pll), PLLF_HEAD)
+#define pll_gettail(pll)	_pll_get((pll), PLLF_TAIL)
+#define pll_gethdpeek(pll)	_pll_get((pll), PLLF_HEAD | PLLF_PEEK)
 
 static __inline void
 pll_remove(struct psc_lockedlist *pll, void *p)
@@ -111,7 +134,7 @@ pll_remove(struct psc_lockedlist *pll, void *p)
 	e = (char *)p + pll->pll_offset;
 	locked = reqlock(pll->pll_lockp);
 	psclist_del(e);
-	atomic_dec(&pll->pll_nitems);
+	pll->pll_nitems--;
 	ureqlock(pll->pll_lockp, locked);
 }
 
