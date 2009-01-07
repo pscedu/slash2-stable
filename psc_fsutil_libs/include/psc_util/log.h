@@ -14,6 +14,7 @@
 #define PLL_ERROR	1 /* recoverable failure */
 #define PLL_WARN	2 /* something wrong, require attention */
 #define PLL_NOTICE	3 /* something unusual, recommend attention */
+#define PLL_NOTIFY	3
 #define PLL_INFO	4 /* general information */
 #define PLL_DEBUG	5 /* debug messages */
 #define PLL_TRACE	6 /* flow */
@@ -57,6 +58,7 @@
 #define psc_info(fmt, ...)		_psclogck(PSC_SUBSYS, PLL_INFO, 0, (fmt), ## __VA_ARGS__)
 #define psc_trace(fmt, ...)		_psclogck(PSC_SUBSYS, PLL_TRACE, 0, (fmt), ## __VA_ARGS__)
 #define psc_log(lvl, fmt, ...)		_psclogck(PSC_SUBSYS, (lvl), 0, (fmt), ## __VA_ARGS__)
+#define psc_logx(lvl, fmt, ...)		_psclogck(PSC_SUBSYS, (lvl), PLO_ERRNO, (fmt), ## __VA_ARGS__)
 
 /* Override/specify subsystem. */
 #define psc_fatals(ss, fmt, ...)	_psclogft((ss), PLL_FATAL, PLO_ERRNO, (fmt), ## __VA_ARGS__)
@@ -71,6 +73,7 @@
 #define psc_infos(ss, fmt, ...)		_psclogck((ss), PLL_INFO, 0, (fmt), ## __VA_ARGS__)
 #define psc_traces(ss, fmt, ...)	_psclogck((ss), PLL_TRACE, 0, (fmt), ## __VA_ARGS__)
 #define psc_logs(lvl, ss, fmt, ...)	_psclogck((ss), (lvl), 0, (fmt), ## __VA_ARGS__)
+#define psc_logxs(lvl, ss, fmt, ...)	_psclogck((ss), (lvl), PLO_ERRNO, (fmt), ## __VA_ARGS__)
 
 /* Variable-argument list versions. */
 #define psc_fatalv(fmt, ap)		psclogvft(PSC_SUBSYS, PLL_FATAL, PLO_ERRNO, (fmt), ap)
@@ -85,6 +88,7 @@
 #define psc_infov(fmt, ap)		psclogvck(PSC_SUBSYS, PLL_INFO, 0, (fmt), ap)
 #define psc_tracev(fmt, ap)		psclogvck(PSC_SUBSYS, PLL_TRACE, 0, (fmt), ap)
 #define psc_logv(lvl, fmt, ap)		psclogvck(PSC_SUBSYS, (lvl), 0, (fmt), ap)
+#define psc_logxv(lvl, fmt, ap)		psclogvck(PSC_SUBSYS, (lvl), PLO_ERRNO, (fmt), ap)
 
 /* Variable-argument list versions with subsystem overriding. */
 #define psc_fatalsv(fmt, ap)		psclogvft((ss), PLL_FATAL, PLO_ERRNO, (fmt), (ap))
@@ -99,6 +103,7 @@
 #define psc_infosv(fmt, ap)		psclogvck((ss), PLL_INFO, 0, (fmt), (ap))
 #define psc_tracesv(fmt, ap)		psclogvck((ss), PLL_TRACE, 0, (fmt), (ap))
 #define psc_logsv(lvl, ss, fmt, ap)	psclogvck((ss), (lvl), 0, (fmt), (ap))
+#define psc_logxsv(lvl, ss, fmt, ap)	psclogvck((ss), (lvl), PLO_ERRNO, (fmt), (ap))
 
 #define ENTRY_MARKER			psc_trace("entry_marker")
 #define EXIT_MARKER			psc_trace("exit_marker")
