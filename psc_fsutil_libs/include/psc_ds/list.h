@@ -1,21 +1,11 @@
 /* $Id$ */
 
 /*
- * Simple doubly linked list implementation based off <linux/list.h>.
- *
- * Some of the internal functions ("__xxx") are useful when
- * manipulating whole psclists rather than single entries, as
- * sometimes we already know the next/prev entries and we can
- * generate better code by using them directly rather than
- * using the generic single-entry routines.
- *
- * I stole this out of the kernel :P -pauln
- *
- * XXX add GPL copyright
+ * Simple doubly linked list implementation loosely based off <linux/list.h>.
  */
 
-#ifndef __PFL_LIST_H__
-#define __PFL_LIST_H__
+#ifndef _PFL_LIST_H_
+#define _PFL_LIST_H_
 
 #include <stdio.h>
 
@@ -50,8 +40,8 @@ struct psclist_head {
  * This is only for internal psclist manipulation where we know
  * the prev/next entries already!
  */
-static __inline__ void
-__psclist_add(struct psclist_head *new, struct psclist_head *prev,
+static __inline void
+_psclist_add(struct psclist_head *new, struct psclist_head *prev,
 	struct psclist_head *next)
 {
 	next->zprev = new;
@@ -69,11 +59,11 @@ __psclist_add(struct psclist_head *new, struct psclist_head *prev,
  * Ensure entry doesn't already belong to another list.
  * This is good for implementing stacks.
  */
-static __inline__ void
+static __inline void
 psclist_xadd(struct psclist_head *new, struct psclist_head *head)
 {
 	psc_assert(new->zprev == NULL && new->znext == NULL);
-	__psclist_add(new, head, head->znext);
+	_psclist_add(new, head, head->znext);
 }
 
 #define psclist_xadd_head(e, hd)	psclist_xadd((e), (hd))
@@ -89,11 +79,11 @@ psclist_xadd(struct psclist_head *new, struct psclist_head *head)
  * Ensure entry doesn't already belong to another list.
  * This is useful for implementing queues.
  */
-static __inline__ void
+static __inline void
 psclist_xadd_tail(struct psclist_head *new, struct psclist_head *head)
 {
 	psc_assert(new->zprev == NULL && new->znext == NULL);
-	__psclist_add(new, head->zprev, head);
+	_psclist_add(new, head->zprev, head);
 }
 
 /*
@@ -103,8 +93,8 @@ psclist_xadd_tail(struct psclist_head *new, struct psclist_head *head)
  * This is only for internal psclist manipulation where we know
  * the prev/next entries already!
  */
-static __inline__ void
-__psclist_del(struct psclist_head *prev, struct psclist_head *next)
+static __inline void
+_psclist_del(struct psclist_head *prev, struct psclist_head *next)
 {
 	next->zprev = prev;
 	prev->znext = next;
@@ -116,10 +106,10 @@ __psclist_del(struct psclist_head *prev, struct psclist_head *next)
  * Note: psclist_empty on entry does not return true after this,
  *	the entry is in an undefined state.
  */
-static __inline__ void
+static __inline void
 psclist_del(struct psclist_head *entry)
 {
-	__psclist_del(entry->zprev, entry->znext);
+	_psclist_del(entry->zprev, entry->znext);
 	entry->znext = entry->zprev = NULL;
 }
 
@@ -127,7 +117,7 @@ psclist_del(struct psclist_head *entry)
  * psclist_empty - tests whether a psclist is empty.
  * @head: the psclist head to test.
  */
-static __inline__ int
+static __inline int
 psclist_empty(const struct psclist_head *hd)
 {
 	psc_assert(hd->znext && hd->zprev);
@@ -159,7 +149,7 @@ psclist_empty(const struct psclist_head *hd)
  * @psclist: the new psclist to add.
  * @head: the place to add it in the first psclist.
  */
-static __inline__ void
+static __inline void
 psclist_splice(struct psclist_head *list, struct psclist_head *head)
 {
 	struct psclist_head *first = list->znext;
@@ -318,6 +308,17 @@ _psclist_next_entry(struct psclist_head *hd, void *p,
 	    (pos) = psclist_entry((pos)->member.znext, typeof(*(pos)), member))
 
 /**
+ * psclist_for_each_entry_backwards - iterate backwards over a list.
+ * @pos: the type * to use as a loop counter.
+ * @hd: the head for your list.
+ * @member: list entry member of structure.
+ */
+#define psclist_for_each_entry_backwards(pos, hd, member)			\
+	for ((pos) = psclist_entry((hd)->zprev, typeof(*(pos)), member);	\
+	    (&(pos)->member != (hd)) || ((pos) = NULL);				\
+	    (pos) = psclist_entry((pos)->member.zprev, typeof(*(pos)), member))
+
+/**
  * psclist_for_each_entry2 - iterate over list of given type.
  * @pos: the type * to use as a loop counter.
  * @head: the head for your list.
@@ -328,6 +329,18 @@ _psclist_next_entry(struct psclist_head *hd, void *p,
 	    (((char *)pos) + (offset) != (void *)(head)) || ((pos) = NULL);	\
 	    (pos) = (void *)(((char *)(((struct psclist_head *)(((char *)pos) +	\
 	      (offset)))->znext)) - (offset)))
+
+/**
+ * psclist_for_each_entry2_backwards - iterate backwards over a list.
+ * @pos: the type * to use as a loop counter.
+ * @head: the head for your list.
+ * @offset: offset into type * of list entry.
+ */
+#define psclist_for_each_entry2_backwards(pos, head, offset)			\
+	for ((pos) = (void *)(((char *)(head)->zprev) - (offset));		\
+	    (((char *)pos) + (offset) != (void *)(head)) || ((pos) = NULL);	\
+	    (pos) = (void *)(((char *)(((struct psclist_head *)(((char *)pos) +	\
+	      (offset)))->zprev)) - (offset)))
 
 /**
  * psclist_for_each_entry2_safe - iterate over list of given type.
@@ -344,37 +357,5 @@ _psclist_next_entry(struct psclist_head *hd, void *p,
 	      ((pos) = (n) = NULL); (pos) = (n),				\
 	    (n) = (void *)(((char *)(((struct psclist_head *)(((char *)n) +	\
 	      (offset)))->znext)) - (offset)))
-
-#undef list_head
-#undef LIST_HEAD_INIT
-#undef LIST_ENTRY_INIT
-#undef LIST_HEAD
-#undef INIT_LIST_HEAD
-#undef INIT_LIST_ENTRY
-
-#undef list_add
-#undef list_add_tail
-#undef list_del
-#undef list_empty
-#undef list_splice
-#undef list_entry
-#undef list_for_each
-#undef list_for_each_safe
-
-#define list_head		ERROR
-#define LIST_HEAD_INIT		ERROR
-#define LIST_ENTRY_INIT		ERROR
-#define LIST_HEAD		ERROR
-#define INIT_LIST_HEAD		ERROR
-#define INIT_LIST_ENTRY		ERROR
-
-#define list_add		ERROR
-#define list_add_tail		ERROR
-#define list_del		ERROR
-#define list_empty		ERROR
-#define list_splice		ERROR
-#define list_entry		ERROR
-#define list_for_each		ERROR
-#define list_for_each_safe	ERROR
 
 #endif /* _PFL_LIST_H_ */
