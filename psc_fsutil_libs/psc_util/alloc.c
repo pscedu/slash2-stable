@@ -36,7 +36,7 @@ psc_realloc(void *p, size_t size, int flags)
 	void *newp;
 
  retry:
-	if (flags & PAF_PAGEALIGN && p == NULL) {
+	if ((flags & PAF_PAGEALIGN) && p == NULL) {
 		rc = posix_memalign(&newp, pscPageSize, size);
 		if (rc) {
 			errno = rc;
@@ -75,8 +75,8 @@ psc_realloc(void *p, size_t size, int flags)
 				errno = save_errno;
 				return (NULL);
 			}
+			psc_fatal("mlock");
 		}
-		psc_fatal("mlock");
 	}
 	if ((flags & PAF_NOZERO) == 0)
 		memset(newp, 0, size);
