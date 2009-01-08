@@ -1343,10 +1343,10 @@ static int pscrpc_import_delay_req(struct pscrpc_import *imp,
 
 int pscrpc_set_wait(struct pscrpc_request_set *set)
 {
-	struct psclist_head      *tmp;
+	struct psclist_head   *tmp;
 	struct pscrpc_request *req;
 	struct l_wait_info     lwi;
-	int                    rc, timeout;
+	int                    rc=0, timeout;
 	ENTRY;
 
 	if (psclist_empty(&set->set_requests))
@@ -1441,6 +1441,10 @@ pscrpc_set_finalize(struct pscrpc_request_set *set, int block, int destroy)
 	set_wait:
 		rc = pscrpc_set_wait(set);
 		if (rc) {
+			/* ??? set imp_failed here ???
+			 * IFF it's not being set by the lower layers
+			 * AND... even if it is, this mighth be a good place
+			 *        for a fall-back (timeout-based?) */
 			errno = -rc;
 			psc_error("pscrpc_set_wait() failed for set %p", set);
 			return (rc);
