@@ -83,7 +83,7 @@ _psc_poolmaster_getmgr(struct psc_poolmaster *p, int memnid)
 	struct psc_poolmgr *m, **mv;
 
 	spinlock(&p->pms_lock);
-	if (dynarray_hintlen(&p->pms_poolmgrs, memnid) == -1)
+	if (dynarray_hintlen(&p->pms_poolmgrs, memnid + 1) == -1)
 		psc_fatal("unable to resize poolmgrs");
 	mv = dynarray_get(&p->pms_poolmgrs);
 	m = mv[memnid];
