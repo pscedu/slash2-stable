@@ -88,17 +88,17 @@ str_hash(const char *s)
 #define HASHBUCKET_FOREACH_ENTRY(p, b)					\
 	psclist_for_each_entry(p, &(b)->hbucket_list, hentry_lentry)
 
-#define psc_hashbkt_lock(b)		LOCK_BUCKET(b)
-#define psc_hashbkt_unlock(b)		ULOCK_BUCKET(b)
-#define psc_hashbkt_get(t, id)		GET_BUCKET(t, id)
+#define hashbkt_lock(b)			LOCK_BUCKET(b)
+#define hashbkt_unlock(b)		ULOCK_BUCKET(b)
+#define hashbkt_get(t, id)		GET_BUCKET(t, id)
 
-#define psc_hashbkt_del_item(t, b, id, cmp)				\
-	_psc_hashbkt_search((t), (b), (id), (cmp), NULL, 1)
+#define hashbkt_del_item(t, b, id, cmp)					\
+	_hashbkt_search((t), (b), (id), (cmp), NULL, 1)
 
-#define psc_hashbkt_search(t, b, id, cmp, cbf)				\
-	_psc_hashbkt_search((t), (b), (id), (cmp), (cbf), 0)
+#define hashbkt_search(t, b, id, cmp, cbf)				\
+	_hashbkt_search((t), (b), (id), (cmp), (cbf), 0)
 
-struct hash_entry *_psc_hashbkt_search(const struct hash_table *,
+struct hash_entry *_hashbkt_search(const struct hash_table *,
 	struct hash_bucket *, u64, const void *, void (*)(void *), int);
 
 struct hash_entry * get_hash_entry(const struct hash_table *, u64, const void *, void (*)(void *));

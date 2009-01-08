@@ -65,7 +65,7 @@ init_hash_entry(struct hash_entry *hentry, u64 *id, void *private)
 }
 
 struct hash_entry *
-_psc_hashbkt_search(const struct hash_table *t, struct hash_bucket *b,
+_hashbkt_search(const struct hash_table *t, struct hash_bucket *b,
     u64 id, const void *cmp, void (*cbf)(void *), int del)
 {
 	struct hash_entry *e;
@@ -106,7 +106,7 @@ get_hash_entry(const struct hash_table *t, u64 id, const void *cmp,
 	struct hash_bucket *b;
 
 	b = GET_BUCKET(t, id);
-	return (_psc_hashbkt_search(t, b, id, cmp, cbf, 0));
+	return (_hashbkt_search(t, b, id, cmp, cbf, 0));
 }
 
 /**
@@ -121,7 +121,7 @@ del_hash_entry(const struct hash_table *t, u64 id)
 	struct hash_entry *e;
 
 	b = GET_BUCKET(t, id);
-	e = _psc_hashbkt_search(t, b, id, NULL, NULL, 1);
+	e = _hashbkt_search(t, b, id, NULL, NULL, 1);
 	return (e ? e->private : NULL);
 }
 
