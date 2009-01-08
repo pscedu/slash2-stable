@@ -1,12 +1,12 @@
 /* $Id$ */
 
-#ifndef _PFL_HASH_H_
-#define _PFL_HASH_H_
+#ifndef _PFL_HASH2_H_
+#define _PFL_HASH2_H_
 
 #include "psc_types.h"
-#include "psc_ds/hash.h"
 #include "psc_ds/list.h"
 #include "psc_ds/lockedlist.h"
+#include "psc_util/atomic.h"
 #include "psc_util/lock.h"
 
 #define PSC_HASHTBL_LOCK(t)	spinlock(&(t)->pht_lock)
@@ -34,7 +34,7 @@ struct psc_hashtbl {
 
 struct psc_hashent {
 	struct psclist_head	  phe_lentry;
-}
+};
 
 /* Table flags. */
 #define PHTF_STR	(1 << 0)	/* IDs are strings */
@@ -94,9 +94,10 @@ void	 psc_hashtbl_add_item(const struct psc_hashtbl *, void *);
 void	 psc_hashtbl_prstats(const struct psc_hashtbl *);
 void	 psc_hashtbl_getstats(const struct psc_hashtbl *, int *, int *, int *, int *);
 void	 psc_hashtbl_destroy(struct psc_hashtbl *);
+void	 psc_hashtbl_remove(const struct psc_hashtbl *, void *);
 void	*_psc_hashtbl_search(const struct psc_hashtbl *, int, const void *,
 	    void (*)(void *), ...);
-void	 psc_hashtbl_init(struct psc_hashtbl *, int, int, int, int,
+void	_psc_hashtbl_init(struct psc_hashtbl *, int, int, int, int,
 	    int (*)(const void *, const void *), const char *, ...);
 
 /**
@@ -129,16 +130,17 @@ void	 psc_hashtbl_init(struct psc_hashtbl *, int, int, int, int,
 
 struct psc_hashbkt *
 	 psc_hashbkt_get(const struct psc_hashtbl *, ...);
+void	 psc_hashbkt_add_item(const struct psc_hashtbl *,
+		struct psc_hashbkt *, void *);
 void	*_psc_hashbkt_search(const struct psc_hashtbl *,
-		const struct psc_hashbkt *, int, const void *,
+		struct psc_hashbkt *, int, const void *,
 		void (*)(void *), ...);
 
 #define psc_hashbkt_lock(b)	spinlock(&(b)->phb_lock)
 #define psc_hashbkt_unlock(b)	freelock(&(b)->phb_lock)
 
-void	 psc_hashent_init(const void *p);
-void	 psc_hashtbl_remove(const struct psc_hashtbl *, void *);
+void	 psc_hashent_init(const struct psc_hashtbl *, void *p);
 
-extern struct psc_lockedlist pscHashTables;
+extern struct psc_lockedlist psc_hashtbls;
 
-#endif /* _PFL_HASH_H_ */
+#endif /* _PFL_HASH2_H_ */

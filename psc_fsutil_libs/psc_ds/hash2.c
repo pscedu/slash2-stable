@@ -6,21 +6,22 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "psc_ds/hash.h"
+#include "psc_ds/hash2.h"
 #include "psc_ds/list.h"
+#include "psc_ds/lockedlist.h"
 #include "psc_util/alloc.h"
 #include "psc_util/assert.h"
 #include "psc_util/lock.h"
 #include "psc_util/log.h"
 
-union {
+union entry_id_u {
 	uint64_t	*id;
 	const char	*str;
 	void		*p;
-} entry_id_u;
+};
 
-struct psc_lockedlist pscHashTables =
-    PLL_INITIALIZERL(pscHashTables, struct psc_hashtbl, pht_lentry);
+struct psc_lockedlist psc_hashtbls =
+    PLL_INITIALIZER(&psc_hashtbls, struct psc_hashtbl, pht_lentry);
 
 /*
  * "This well-known hash function
@@ -30,7 +31,7 @@ struct psc_lockedlist pscHashTables =
  *    Addison-Wesley, 1988, p. 436)."
  */
 __static inline int
-str_hash(const char *s)
+psc_hash_stringify(const char *s)
 {
 	const char *p;
 	unsigned h = 0, g;
@@ -48,7 +49,7 @@ str_hash(const char *s)
 }
 
 void
-psc_hashtbl_init(struct psc_hashtbl *t, int flags, int idoff,
+_psc_hashtbl_init(struct psc_hashtbl *t, int flags, int idoff,
     int hentoff, int nbuckets, int (*cmp)(const void *, const void *),
     const char *fmt, ...)
 {
@@ -56,14 +57,17 @@ psc_hashtbl_init(struct psc_hashtbl *t, int flags, int idoff,
 	va_list ap;
 	int i;
 
-	if (size == 0)
+	if (nbuckets == 0)
 		psc_fatalx("hash table size must be non-zero for modulus to work");
 
+	memset(t, 0, sizeof(*t));
 	INIT_PSCLIST_ENTRY(&t->pht_lentry);
 	LOCK_INIT(&t->pht_lock);
 	t->pht_nbuckets = nbuckets;
 	t->pht_buckets = PSCALLOC(nbuckets * sizeof(*t->pht_buckets));
 	t->pht_flags = flags;
+	t->pht_idoff = idoff;
+	t->pht_hentoff = hentoff;
 	t->pht_cmp = cmp;
 
 	va_start(ap, fmt);
@@ -73,9 +77,9 @@ psc_hashtbl_init(struct psc_hashtbl *t, int flags, int idoff,
 	for (i = 0, b = t->pht_buckets; i < nbuckets; i++, b++) {
 		INIT_PSCLIST_HEAD(&b->phb_listhd);
 		LOCK_INIT(&b->phb_lock);
-		atomic_init(&b->phb_nitems);
+		atomic_set(&b->phb_nitems, 0);
 	}
-	pll_add(&pscHashTables, t);
+	pll_add(&psc_hashtbls, t);
 }
 
 /**
@@ -87,12 +91,12 @@ psc_hashtbl_lookup(const char *name)
 {
 	struct psc_hashtbl *t;
 
-	PLL_LOCK(&pscHashTables);
-	psclist_for_each(t, &pscHashTables.pll_listhd, pht_lentry)
+	PLL_LOCK(&psc_hashtbls);
+	psclist_for_each_entry(t, &psc_hashtbls.pll_listhd, pht_lentry)
 		if (strcmp(t->pht_name, name) == 0)
 			break;
-	PLL_ULOCK(&pscHashTables);
-	return (p);
+	PLL_ULOCK(&psc_hashtbls);
+	return (t);
 }
 
 /**
@@ -103,7 +107,7 @@ psc_hashtbl_lookup(const char *name)
 void
 psc_hashtbl_destroy(struct psc_hashtbl *t)
 {
-	pll_remove(&pscHashTables, t);
+	pll_remove(&psc_hashtbls, t);
 	free(t->pht_buckets);
 }
 
@@ -113,11 +117,11 @@ psc_hashbkt_getv(const struct psc_hashtbl *t, va_list ap)
 	struct psc_hashbkt *b;
 
 	if (t->pht_flags & PHTF_STR)
-		b = &t->htable_buckets[str_hash(va_arg(ap,
-		    const char *)) % t->htable_size];
+		b = &t->pht_buckets[psc_hash_stringify(va_arg(ap,
+		    const char *)) % t->pht_nbuckets];
 	else
-		b = &t->htable_buckets[va_arg(ap,
-		    uint64_t) % t->htable_size];
+		b = &t->pht_buckets[va_arg(ap,
+		    uint64_t) % t->pht_nbuckets];
 	return (b);
 }
 
@@ -127,10 +131,10 @@ psc_hashbkt_getu(const struct psc_hashtbl *t, const union entry_id_u *idp)
 	struct psc_hashbkt *b;
 
 	if (t->pht_flags & PHTF_STR)
-		b = &t->htable_buckets[str_hash(idp->str) %
-		    t->htable_size];
+		b = &t->pht_buckets[psc_hash_stringify(idp->str) %
+		    t->pht_nbuckets];
 	else
-		b = &t->htable_buckets[*idp->id % t->htable_size];
+		b = &t->pht_buckets[*idp->id % t->pht_nbuckets];
 	return (b);
 }
 
@@ -146,6 +150,7 @@ struct psc_hashbkt *
 psc_hashbkt_get(const struct psc_hashtbl *t, ...)
 {
 	struct psc_hashbkt *b;
+	va_list ap;
 
 	va_start(ap, t);
 	b = psc_hashbkt_getv(t, ap);
@@ -153,15 +158,15 @@ psc_hashbkt_get(const struct psc_hashtbl *t, ...)
 	return (b);
 }
 
-void *
+__static void *
 _psc_hashbkt_searchv(const struct psc_hashtbl *t,
-    const struct psc_hashbkt *b, int flags, const void *cmp,
+    struct psc_hashbkt *b, int flags, const void *cmp,
     void (*cbf)(void *), va_list ap)
 {
-	struct psc_hashbkt *b;
-	union entry_idp_u idp;
+	union entry_id_u idu;
 	const char *strid;
 	uint64_t id;
+	int locked;
 	void *p;
 
 	if (t->pht_cmp)
@@ -172,15 +177,15 @@ _psc_hashbkt_searchv(const struct psc_hashtbl *t,
 	if (t->pht_flags & PHTF_STR)
 		id = va_arg(ap, uint64_t);
 	else
-		str = va_arg(ap, const char *);
+		strid = va_arg(ap, const char *);
 
-	locked = reqlock(&b->pht_lock);
+	locked = reqlock(&b->phb_lock);
 	PSC_HASHBKT_FOREACH_ENTRY(t, p, b) {
-		idp.p = (char *)p + t->pht_idoff;
+		idu.p = (char *)p + t->pht_idoff;
 		if (t->pht_flags & PHTF_STR) {
-			if (strcmp(str, idp.str) == 0)
+			if (strcmp(strid, idu.str) == 0)
 				goto checkit;
-		} else if (id == *idp.id)
+		} else if (id == *idu.id)
 			goto checkit;
 		continue;
  checkit:
@@ -190,17 +195,18 @@ _psc_hashbkt_searchv(const struct psc_hashtbl *t,
 			break;
 		}
 	}
-	if (p && (flags & PHTGL_DEL)) {
-		psclist_del((char *)p + t->pht_hentoff);
+	if (p && (flags & PHLF_DEL)) {
+		psclist_del((struct psclist_head *)((char *)p +
+		    t->pht_hentoff));
 		atomic_dec(&b->phb_nitems);
 	}
-	ureqlock(&b->pht_lock);
+	ureqlock(&b->phb_lock, locked);
 	return (p);
 }
 
 void *
 _psc_hashbkt_search(const struct psc_hashtbl *t,
-    const struct psc_hashbkt *b, int flags, const void *cmp,
+    struct psc_hashbkt *b, int flags, const void *cmp,
     void (*cbf)(void *), ...)
 {
 	va_list ap;
@@ -219,8 +225,8 @@ _psc_hashtbl_search(const struct psc_hashtbl *t, int flags,
 	va_list ap;
 	void *p;
 
-	va_start(ap, flags);
-	p = psc_hashbkt_searchv(t, psc_hashbkt_searchv(t, ap),
+	va_start(ap, cbf);
+	p = _psc_hashbkt_searchv(t, psc_hashbkt_getv(t, ap),
 	    flags, cmp, cbf, ap);
 	va_end(ap);
 	return (p);
@@ -234,8 +240,10 @@ _psc_hashtbl_search(const struct psc_hashtbl *t, int flags,
 void
 psc_hashent_init(const struct psc_hashtbl *t, void *p)
 {
+	struct psclist_head *e;
+
 	psc_assert(p);
-	e = (char *)p + t->pht_hentoff;
+	e = (struct psclist_head *)((char *)p + t->pht_hentoff);
 	INIT_PSCLIST_ENTRY(e);
 }
 
@@ -249,13 +257,34 @@ psc_hashent_remove(const struct psc_hashtbl *t, void *p)
 {
 	struct psc_hashbkt *b;
 	union entry_id_u idu;
+	int locked;
 
 	psc_assert(p);
-	idu.p = (char *)t + t->pht_idoff;
+	idu.p = (char *)p + t->pht_idoff;
 	b = psc_hashbkt_getu(t, &idu);
 	locked = reqlock(&b->phb_lock);
-	psclist_del((char *)p + t->pht_hentoff);
+	psclist_del((struct psclist_head *)((char *)p + t->pht_hentoff));
 	atomic_dec(&b->phb_nitems);
+	ureqlock(&b->phb_lock, locked);
+}
+
+
+/**
+ * psc_hashbkt_add_item - add an item to a hash bucket.
+ * @t: the hash table.
+ * @p: item to add.
+ */
+void
+psc_hashbkt_add_item(const struct psc_hashtbl *t, struct psc_hashbkt *b,
+    void *p)
+{
+	int locked;
+
+	psc_assert(p);
+	locked = reqlock(&b->phb_lock);
+	psclist_xadd((struct psclist_head *)((char *)p + t->pht_hentoff),
+	    &b->phb_listhd);
+	atomic_inc(&b->phb_nitems);
 	ureqlock(&b->phb_lock, locked);
 }
 
@@ -269,12 +298,14 @@ psc_hashtbl_add_item(const struct psc_hashtbl *t, void *p)
 {
 	struct psc_hashbkt *b;
 	union entry_id_u idu;
+	int locked;
 
 	psc_assert(p);
 	idu.p = (char *)p + t->pht_idoff;
 	b = psc_hashbkt_getu(t, &idu);
-	locked = reqlock(&b->ptb_lock);
-	psclist_xadd((char *)p + t->pht_hentoff, &b->phb_listhd);
+	locked = reqlock(&b->phb_lock);
+	psclist_xadd((struct psclist_head *)((char *)p + t->pht_hentoff),
+	    &b->phb_listhd);
 	atomic_inc(&b->phb_nitems);
 	ureqlock(&b->phb_lock, locked);
 }
