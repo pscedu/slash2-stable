@@ -1,8 +1,8 @@
 /* $Id$ */
 
 /*
- * Dynamically-sized array API.
- * This code is *not* thread-safe!
+ * Dynamically resizeable arrays.
+ * This API is not thread-safe!
  */
 
 #include <err.h>
@@ -34,6 +34,7 @@ dynarray_hintlen(struct dynarray *da, int n)
 		if (p == NULL && n)
 			return (-1);
 		da->da_items = p;
+		/* Initialize new slots to zero. */
 		for (i = da->da_nalloc; i < n; i++)
 			da->da_items[i] = NULL;
 		da->da_nalloc = n;

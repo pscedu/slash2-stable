@@ -62,7 +62,7 @@ _psc_poolmaster_initmgr(struct psc_poolmaster *p, struct psc_poolmgr *m)
 	m->ppm_max = p->pms_max;
 
 	_lc_reginit(&m->ppm_lc, p->pms_offset, p->pms_entsize,
-	    "%s:%d", p->pms_name, psc_get_memnid());
+	    "%s:%d", p->pms_name, psc_memnode_getid());
 	pll_add(&psc_pools, m);
 
 	n = 0;

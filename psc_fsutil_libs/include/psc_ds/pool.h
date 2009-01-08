@@ -94,7 +94,7 @@ struct psc_poolmgr {
 	    (flags), (total), (min), (max), (initf), (destroyf),	\
 	    (reclaimcb), (namefmt), ## __VA_ARGS__)
 
-#define psc_poolmaster_getmgr(p)	_psc_poolmaster_getmgr((p), psc_get_memnid())
+#define psc_poolmaster_getmgr(p)	_psc_poolmaster_getmgr((p), psc_memnode_getid())
 
 #define psc_pool_shrink(m, i)		_psc_pool_shrink((m), (i), 0)
 #define psc_pool_tryshrink(m, i)	_psc_pool_shrink((m), (i), 1)
