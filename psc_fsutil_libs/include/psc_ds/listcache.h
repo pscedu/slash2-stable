@@ -327,7 +327,7 @@ lc_vregister(struct psc_listcache *lc, const char *name, va_list ap)
 	else if (rc > (int)sizeof(lc->lc_name))
 		psc_fatalx("lc_name is too large (%s)", name);
 
-	pll_remove(&pscListCaches, lc);
+	pll_add(&pscListCaches, lc);
 
 	freelock(&lc->lc_lock);
 	PLL_ULOCK(&pscListCaches);
