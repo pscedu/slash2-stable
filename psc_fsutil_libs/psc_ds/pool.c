@@ -52,7 +52,7 @@ _psc_poolmaster_initmgr(struct psc_poolmaster *p, struct psc_poolmgr *m)
 {
 	int n, locked;
 
-	reqlock(&p->pms_lock);
+	locked = reqlock(&p->pms_lock);
 	memset(m, 0, sizeof(*m));
 	m->ppm_reclaimcb = p->pms_reclaimcb;
 	m->ppm_destroyf = p->pms_destroyf;
@@ -61,14 +61,21 @@ _psc_poolmaster_initmgr(struct psc_poolmaster *p, struct psc_poolmgr *m)
 	m->ppm_min = p->pms_min;
 	m->ppm_max = p->pms_max;
 
+#ifdef HAVE_CPUSET
 	_lc_reginit(&m->ppm_lc, p->pms_offset, p->pms_entsize,
 	    "%s:%d", p->pms_name, psc_memnode_getid());
+#else
+	_lc_reginit(&m->ppm_lc, p->pms_offset, p->pms_entsize,
+	    "%s", p->pms_name);
+#endif
+
+	n = p->pms_total;
+	ureqlock(&p->pms_lock, locked);
+
 	pll_add(&psc_pools, m);
 
-	n = 0;
-	if (p->pms_total)
-		n = psc_pool_grow(m, p->pms_total);
-	ureqlock(&p->pms_lock, locked);
+	if (n)
+		n = psc_pool_grow(m, n);
 	return (n);
 }
 

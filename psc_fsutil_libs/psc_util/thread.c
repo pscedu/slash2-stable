@@ -124,11 +124,10 @@ _pscthr_init(struct psc_thread *thr, int type, void *(*start)(void *),
 		psc_fatalx("pscthr_init: PTF_PAUSED specified");
 
 	LOCK_INIT(&thr->pscthr_lock);
-	thr->pscthr_flags |= PTF_RUN;
 	thr->pscthr_type = type;
 	thr->pscthr_start = start;
 	thr->pscthr_private = private;
-	thr->pscthr_flags = flags;
+	thr->pscthr_flags = flags | PTF_RUN;
 	thr->pscthr_dtor = dtor;
 
 	va_start(ap, namefmt);
