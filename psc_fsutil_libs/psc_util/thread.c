@@ -14,17 +14,18 @@
 #include "psc_types.h"
 #include "psc_ds/dynarray.h"
 #include "psc_ds/hash.h"
+#include "psc_ds/lockedlist.h"
 #include "psc_util/alloc.h"
 #include "psc_util/cdefs.h"
 #include "psc_util/lock.h"
 #include "psc_util/thread.h"
 
-struct dynarray	pscThreads = DYNARRAY_INIT;
-psc_spinlock_t	pscThreadsLock = LOCK_INITIALIZER;
-pthread_key_t	psc_thrkey;
-pthread_key_t	psc_logkey;
-pthread_once_t	psc_thronce = PTHREAD_ONCE_INIT;
-int		psc_thrinit;
+__static pthread_once_t	psc_thronce = PTHREAD_ONCE_INIT;
+__static pthread_key_t	psc_thrkey;
+__static pthread_key_t	psc_logkey;
+__static int		psc_thrinit;
+struct psc_lockedlist	psc_threads =
+    PLL_INITIALIZER(&psc_threads, struct psc_thread, pscthr_lentry);
 
 void
 pscthr_destroy(void *arg)
@@ -34,17 +35,7 @@ pscthr_destroy(void *arg)
 	reqlock(&thr->pscthr_lock);
 	PSCFREE(thr->pscthr_loglevels);
 
-	/*
-	 * I don't think we can do this unless we disallow any
-	 * external indexing into this array.  Things that need to
-	 * reference a thread should maintain a pointer to the pscthr
-	 * and not a pscThreads index.
-	 *
-	 * At this point, pscThreads is only used by things like ctlapi.
-	 */
-	spinlock(&pscThreadsLock);
-	dynarray_remove(&pscThreads, thr);
-	freelock(&pscThreadsLock);
+	pll_remove(&psc_threads, thr);
 
 	if (thr->pscthr_dtor)
 		thr->pscthr_dtor(thr->pscthr_private);
@@ -133,7 +124,7 @@ _pscthr_init(struct psc_thread *thr, int type, void *(*start)(void *),
 		psc_fatalx("pscthr_init: PTF_PAUSED specified");
 
 	LOCK_INIT(&thr->pscthr_lock);
-	thr->pscthr_run = 1;
+	thr->pscthr_flags |= PTF_RUN;
 	thr->pscthr_type = type;
 	thr->pscthr_start = start;
 	thr->pscthr_private = private;
@@ -168,10 +159,7 @@ _pscthr_init(struct psc_thread *thr, int type, void *(*start)(void *),
 			psc_fatalx("pthread_setspecific: %s", strerror(rc));
 	}
 
-	spinlock(&pscThreadsLock);
-	if (dynarray_add(&pscThreads, thr) == -1)
-		psc_fatal("dynarray_add");
-	freelock(&pscThreadsLock);
+	pll_add(&psc_threads, thr);
 }
 
 /*

@@ -1,7 +1,7 @@
 /* $Id$ */
 
-#ifndef __PFL_PARITY_H__
-#define __PFL_PARITY_H__
+#ifndef _PFL_PARITY_H_
+#define _PFL_PARITY_H_
 
 #include <sys/types.h>
 
@@ -9,4 +9,4 @@
 
 void parity_calc(const void *, void *, u32);
 
-#endif
+#endif /* _PFL_PARITY_H_ */

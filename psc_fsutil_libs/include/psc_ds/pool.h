@@ -1,94 +1,126 @@
 /* $Id$ */
 
 /*
- * Pool manager routines and definitions.
- *
- * Pools are like free lists but also track allocations for items
- * in circulation among multiple lists.
- *
- * Pools share allocations for items among themselves, so when
- * one greedy pool gets too large, others trim his size down.
+ * Memory pool routines and definitions.
  */
 
-#ifndef __PFL_POOL_H__
-#define __PFL_POOL_H__
+#ifndef _PFL_POOL_H_
+#define _PFL_POOL_H_
 
-#include <sys/param.h>
-
-#include <stdarg.h>
+#include <sys/types.h>
 
 #include "psc_ds/dynarray.h"
 #include "psc_ds/listcache.h"
 #include "psc_ds/lockedlist.h"
-#include "psc_util/alloc.h"
 #include "psc_util/assert.h"
-#include "psc_util/cdefs.h"
 #include "psc_util/lock.h"
+#include "psc_util/memnode.h"
 
+/*
+ * Poolsets contain a group of poolmgrs which can reap memory from each
+ * other.
+ *
+ * Dynamic arrays are used here so pools can be members of multiple sets
+ * without having to worry about allocating/managing multiple
+ * psclist_head members.
+ */
 struct psc_poolset {
 	psc_spinlock_t		  pps_lock;
-	struct dynarray		  pps_pools;		/* pointers to pools */
+	struct dynarray		  pps_pools;		/* poolmasters in set */
 };
 
-#define PSC_POOLSET_INIT	{ LOCK_INITIALIZER, DYNARRAY_INIT }
+/*
+ * Pool masters are containers for pool managers.  Pool managers
+ * manage buffers local to a memory node.  On non-NUMA architectures,
+ * they manage buffers globally.
+ */
+struct psc_poolmaster {
+	psc_spinlock_t		  pms_lock;
+	struct dynarray		  pms_poolmgrs;		/* NUMA pools */
+	struct dynarray		  pms_sets;		/* poolset memberships */
 
+	/* entries for initializing memnode poolmgrs */
+	char			  pms_name[LC_NAME_MAX];
+	ptrdiff_t		  pms_offset;		/* entry offset to listhead */
+	int			  pms_entsize;		/* size of entry in pool */
+	int			  pms_total;		/* #items to populate */
+	int			  pms_min;		/* min bound of #items */
+	int			  pms_max;		/* max bound of #items */
+	int			  pms_flags;		/* flags */
+	int			(*pms_initf)(void *);	/* entry initializer */
+	void			(*pms_destroyf)(void *);/* entry destructor */
+	int			(*pms_reclaimcb)(struct psc_listcache *, int);
+};
+
+/*
+ * Pools managers are like free lists containing items which can be
+ * retrieved from the pool and put into circulation across other list
+ * caches or in any way seen fit.
+ */
 struct psc_poolmgr {
-	struct psclist_head	  ppm_all_lentry;	/* global linker */
-	struct dynarray		  ppm_sets;		/* pointers to sets */
 	struct psc_listcache	  ppm_lc;		/* free pool entries */
-	int			  ppm_flags;		/* flags */
+	struct psclist_head	  ppm_all_lentry;
+	struct psc_poolmaster	 *ppm_master;
+
+	int			  ppm_total;		/* #items in circulation */
 	int			  ppm_min;		/* min bound of #items */
 	int			  ppm_max;		/* max bound of #items */
-	int			  ppm_total;		/* #items in circulation */
+	int			  ppm_flags;		/* flags */
 	int			(*ppm_initf)(void *);	/* entry initializer */
-	void			(*ppm_destroyf)(void *);/* entry deinitializer */
+	void			(*ppm_destroyf)(void *);/* entry destructor */
 	int			(*ppm_reclaimcb)(struct psc_listcache *, int);
 };
 
 /* Pool manager flags. */
 #define PPMF_AUTO	(1 << 0)	/* pool automatically resizes */
-#define PPMF_NOLOCK	(1 << 1)	/* pool ents shouldn't be alloc'd unswappably */
+#define PPMF_NOLOCK	(1 << 1)	/* pool ents shouldn't be mlock'd */
 
 #define POOL_RLOCK(m)		reqlock(&(m)->ppm_lc.lc_lock)
 #define POOL_ULOCK(m, l)	ureqlock(&(m)->ppm_lc.lc_lock, (l))
 
-#define POOL_CHECK(m)								\
-	do {									\
-		psc_assert((m)->ppm_min >= 0);					\
-		psc_assert((m)->ppm_max >= 0);					\
-		psc_assert((m)->ppm_total >= 0);				\
+/* Sanity check */
+#define POOL_CHECK(m)							\
+	do {								\
+		psc_assert((m)->ppm_min >= 0);				\
+		psc_assert((m)->ppm_max >= 0);				\
+		psc_assert((m)->ppm_total >= 0);			\
 	} while (0)
 
-#define psc_pool_init(m, type, member, flags, total, max, initf, destroyf,	\
-	    reclaimcb, namefmt, ...)						\
-	_psc_pool_init((m), offsetof(type, member), sizeof(type), (flags),	\
-	    (total), (max), (initf), (destroyf), (reclaimcb), (namefmt),	\
-	    ## __VA_ARGS__)
+#define PSC_POOLSET_INIT	{ LOCK_INITIALIZER, DYNARRAY_INIT }
 
-#define psc_pool_joindefset(m)		psc_pool_joinset((m), &psc_pooldefset)
+#define psc_poolmaster_init(p, type, member, flags, total, min,	max,	\
+	    initf, destroyf, reclaimcb, namefmt, ...)			\
+	_psc_poolmaster_init((p), offsetof(type, member), sizeof(type),	\
+	    (flags), (total), (min), (max), (initf), (destroyf),	\
+	    (reclaimcb), (namefmt), ## __VA_ARGS__)
+
+#define psc_poolmaster_getmgr(p)	_psc_poolmaster_getmgr((p), psc_get_memnid())
 
 #define psc_pool_shrink(m, i)		_psc_pool_shrink((m), (i), 0)
 #define psc_pool_tryshrink(m, i)	_psc_pool_shrink((m), (i), 1)
 
 struct psc_poolmgr *
-	 psc_pool_lookup(const char *);
+	_psc_poolmaster_getmgr(struct psc_poolmaster *, int);
+void	_psc_poolmaster_init(struct psc_poolmaster *, ptrdiff_t, size_t,
+		int, int, int, int, int (*)(void *), void (*)(void *),
+		int (*)(struct psc_listcache *, int), const char *, ...);
+
 int	 psc_pool_grow(struct psc_poolmgr *, int);
 int	_psc_pool_shrink(struct psc_poolmgr *, int, int);
 int	 psc_pool_settotal(struct psc_poolmgr *, int);
 void	 psc_pool_resize(struct psc_poolmgr *);
-void	 psc_pool_joinset(struct psc_poolmgr *, struct psc_poolset *);
-void	 psc_pool_leaveset(struct psc_poolmgr *, struct psc_poolset *);
+void	 psc_pool_reapmem(size_t);
 void	*psc_pool_get(struct psc_poolmgr *);
 void	 psc_pool_return(struct psc_poolmgr *, void *);
-void	 psc_pool_destroy(struct psc_poolmgr *);
-int	_psc_pool_init(struct psc_poolmgr *, ptrdiff_t, size_t,
-		int, int, int, int (*)(void *), void (*)(void *),
-		int (*)(struct psc_listcache *, int), const char *, ...);
+struct psc_poolmgr *
+	 psc_pool_lookup(const char *);
+void	 psc_pool_share(struct psc_poolmaster *);
+void	 psc_pool_unshare(struct psc_poolmaster *);
 
 void	 psc_poolset_init(struct psc_poolset *);
-void	 psc_poolset_destroy(struct psc_poolset *);
+void	 psc_poolset_enlist(struct psc_poolset *, struct psc_poolmaster *);
+void	 psc_poolset_disbar(struct psc_poolset *, struct psc_poolmaster *);
 
 extern struct psc_lockedlist	psc_pools;
-extern struct psc_poolset	psc_pooldefset;
 
-#endif /* __PFL_POOL_H__ */
+#endif /* _PFL_POOL_H_ */

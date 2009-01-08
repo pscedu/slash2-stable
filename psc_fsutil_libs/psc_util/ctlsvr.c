@@ -449,8 +449,8 @@ int
 psc_ctlparam_log_level(int fd, struct psc_ctlmsghdr *mh,
     struct psc_ctlmsg_param *pcp, char **levels, int nlevels)
 {
-	int rc, n, nthr, set, loglevel, subsys, start_ss, end_ss;
-	struct psc_thread **threads, *thr;
+	int rc, set, loglevel, subsys, start_ss, end_ss;
+	struct psc_thread *thr;
 
 	if (nlevels > 3)
 		return (psc_ctlsenderr(fd, mh, "invalid field"));
@@ -489,10 +489,8 @@ psc_ctlparam_log_level(int fd, struct psc_ctlmsghdr *mh,
 	}
 
 	rc = 1;
-	spinlock(&pscThreadsLock);
-	threads = dynarray_get(&pscThreads);
-	nthr = dynarray_len(&pscThreads);
-	PSC_CTL_FOREACH_THREAD(n, thr, pcp->pcp_thrname, threads, nthr)
+	PLL_LOCK(&psc_threads);
+	PSC_CTL_FOREACH_THREAD(thr, pcp->pcp_thrname, &psc_threads.pll_listhd)
 		for (subsys = start_ss; subsys < end_ss; subsys++)
 			if (set)
 				thr->pscthr_loglevels[subsys] = loglevel;
@@ -506,7 +504,7 @@ psc_ctlparam_log_level(int fd, struct psc_ctlmsghdr *mh,
 					goto done;
 			}
  done:
-	freelock(&pscThreadsLock);
+	PLL_ULOCK(&psc_threads);
 	return (rc);
 }
 
@@ -885,36 +883,36 @@ int
 psc_ctl_applythrop(int fd, struct psc_ctlmsghdr *mh, void *m, const char *thrname,
     int (*cbf)(int, struct psc_ctlmsghdr *, void *, struct psc_thread *))
 {
-	struct psc_thread **threads;
-	int rc, n, nthr;
+	struct psc_thread *thr;
+	int rc;
 
 	rc = 1;
-	spinlock(&pscThreadsLock);
-	nthr = dynarray_len(&pscThreads);
-	threads = dynarray_get(&pscThreads);
+	PLL_LOCK(&psc_threads);
 	if (strcasecmp(thrname, PCTHRNAME_EVERYONE) == 0) {
-		for (n = 0; n < nthr; n++) {
-			rc = cbf(fd, mh, m, threads[n]);
+		psclist_for_each_entry(thr,
+		    &psc_threads.pll_listhd, pscthr_lentry) {
+			rc = cbf(fd, mh, m, thr);
 			if (!rc)
 				break;
 		}
 	} else {
-		for (n = 0; n < nthr; n++)
+		psclist_for_each_entry(thr,
+		    &psc_threads.pll_listhd, pscthr_lentry)
 			/*
 			 * XXX: strncasecmp?
 			 * thr1 can't match thr10,
 			 * don't partial match numbers.
 			 */
 			if (strcasecmp(thrname,
-			    threads[n]->pscthr_name) == 0) {
-				rc = cbf(fd, mh, m, threads[n]);
+			    thr->pscthr_name) == 0) {
+				rc = cbf(fd, mh, m, thr);
 				break;
 			}
-		if (n == nthr)
+		if (thr == NULL)
 			rc = psc_ctlsenderr(fd, mh,
 			    "unknown thread: %s", thrname);
 	}
-	freelock(&pscThreadsLock);
+	PLL_ULOCK(&psc_threads);
 	return (rc);
 }
 

@@ -642,7 +642,7 @@ pscrpc_main(struct psc_thread *thread, struct pscrpc_service *svc)
 	CDEBUG(D_NET, "service thread started");
 
 	/* XXX maintain a list of all managed devices: insert here */
-	while (thread->pscthr_run  ||
+	while ((thread->pscthr_flags & PTF_RUN) ||
 	       svc->srv_n_difficult_replies != 0) {
 
 		/* Don't exit while there are replies to be handled */
@@ -670,7 +670,7 @@ pscrpc_main(struct psc_thread *thread, struct pscrpc_service *svc)
 		       );
 		*/
 		psc_svr_wait_event(&svc->srv_waitq,
-				   (!thread->pscthr_run &&
+				   (!(thread->pscthr_flags & PTF_RUN) &&
 				    svc->srv_n_difficult_replies == 0) ||
 				   (!psclist_empty(&svc->srv_idle_rqbds) &&
 				    svc->srv_rqbd_timeout == 0) ||

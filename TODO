@@ -24,6 +24,8 @@ pfl
 - for psclog(), add extensibility mechanism for fmtstr,
   allowing app-specific callbacks (e.g. %r for zest clients)
 - move iostat thr and interval thr here
+- rename dynarray_hintlen -> dynarray_ensurelen
+- create a refcnt manager for thread-safe activity
 
 lnet
 - move iostats outside of socklnd

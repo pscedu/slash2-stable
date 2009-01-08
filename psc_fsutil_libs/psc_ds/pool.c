@@ -1,5 +1,7 @@
 /* $Id$ */
 
+#include <sys/param.h>
+
 #include <errno.h>
 
 #include "psc_ds/dynarray.h"
@@ -12,10 +14,86 @@
 #include "psc_util/log.h"
 #include "psc_util/waitq.h"
 
-struct psc_poolset psc_poolset_main = PSC_POOLSET_INIT;
-__static psc_spinlock_t psc_pools_lock = LOCK_INITIALIZER;
-struct psc_lockedlist psc_pools = PLL_INITIALIZER(&psc_pools,
-    struct psc_poolmgr, ppm_all_lentry, &psc_pools_lock);
+#define ppm_lock ppm_lc.lc_lock
+
+__static struct psc_poolset psc_poolset_main = PSC_POOLSET_INIT;
+struct psc_lockedlist psc_pools =
+    PLL_INITIALIZER(&psc_pools, struct psc_poolmgr, ppm_all_lentry);
+
+void
+_psc_poolmaster_init(struct psc_poolmaster *p, ptrdiff_t offset,
+    size_t entsize, int flags, int total, int min, int max, int (*initf)(void *),
+    void (*destroyf)(void *), int (*reclaimcb)(struct psc_listcache *, int),
+    const char *namefmt, ...)
+{
+	va_list ap;
+
+	memset(p, 0, sizeof(*p));
+	LOCK_INIT(&p->pms_lock);
+	dynarray_init(&p->pms_poolmgrs);
+	dynarray_init(&p->pms_sets);
+	p->pms_reclaimcb = reclaimcb;
+	p->pms_destroyf = destroyf;
+	p->pms_entsize = entsize;
+	p->pms_offset = offset;
+	p->pms_flags = flags;
+	p->pms_initf = initf;
+	p->pms_total = total;
+	p->pms_min = min;
+	p->pms_max = max;
+
+	va_start(ap, namefmt);
+	vsnprintf(p->pms_name, sizeof(p->pms_name), namefmt, ap);
+	va_end(ap);
+}
+
+int
+_psc_poolmaster_initmgr(struct psc_poolmaster *p, struct psc_poolmgr *m)
+{
+	int n, locked;
+
+	reqlock(&p->pms_lock);
+	memset(m, 0, sizeof(*m));
+	m->ppm_reclaimcb = p->pms_reclaimcb;
+	m->ppm_destroyf = p->pms_destroyf;
+	m->ppm_flags = p->pms_flags;
+	m->ppm_initf = p->pms_initf;
+	m->ppm_min = p->pms_min;
+	m->ppm_max = p->pms_max;
+
+	_lc_reginit(&m->ppm_lc, p->pms_offset, p->pms_entsize,
+	    "%s:%d", p->pms_name, psc_get_memnid());
+	pll_add(&psc_pools, m);
+
+	n = 0;
+	if (p->pms_total)
+		n = psc_pool_grow(m, p->pms_total);
+	ureqlock(&p->pms_lock, locked);
+	return (n);
+}
+
+/*
+ * psc_poolmaster_getmgr - obtain a pool manager for this NUMA from the
+ *	master.
+ * @p: pool master.
+ */
+struct psc_poolmgr *
+_psc_poolmaster_getmgr(struct psc_poolmaster *p, int memnid)
+{
+	struct psc_poolmgr *m, **mv;
+
+	spinlock(&p->pms_lock);
+	if (dynarray_hintlen(&p->pms_poolmgrs, memnid) == -1)
+		psc_fatal("unable to resize poolmgrs");
+	mv = dynarray_get(&p->pms_poolmgrs);
+	m = mv[memnid];
+	if (m == NULL) {
+		mv[memnid] = m = PSCALLOC(sizeof(*m));
+		_psc_poolmaster_initmgr(p, m);
+	}
+	freelock(&p->pms_lock);
+	return (m);
+}
 
 /*
  * psc_pool_grow - increase #items in a pool.
@@ -186,35 +264,42 @@ psc_pool_resize(struct psc_poolmgr *m)
  * @s: set to reap from.
  * @initiator: the requestor pool, which should be a member of @s, but
  *	should not itself be considered a candidate for reaping.
+ * @size: amount of memory needed to be released, should probably be
+ *	@initiator->pms_entsize.
  */
 void
-_psc_pool_reap(struct psc_poolset *s, struct psc_poolmgr *initiator)
+_psc_pool_reap(struct psc_poolset *s, struct psc_poolmaster *initiator, size_t mem)
 {
 	struct psc_poolmgr *m, *culprit;
-	int i, len, mx, culpritmx;
-	void **pools;
+	struct psc_poolmaster *p;
+	size_t mx, culpritmx;
+	void **pv;
+	int i, np;
 
+	spinlock(&s->pps_lock);
 	culpritmx = mx = 0;
-	len = dynarray_len(&s->pps_pools);
-	pools = dynarray_get(&s->pps_pools);
-	for (i = 0; i < len; i++) {
-		m = pools[i];
-		if (m == initiator)
+	np = dynarray_len(&s->pps_pools);
+	pv = dynarray_get(&s->pps_pools);
+	for (i = 0; i < np; i++) {
+		p = pv[i];
+		if (p == initiator)
 			continue;
+		m = psc_poolmaster_getmgr(p);
 
-		if (!trylock(&m->ppm_lc.lc_lock))
+		if (!trylock(&m->ppm_lock))
 			continue;
 		mx = m->ppm_lc.lc_entsize * m->ppm_lc.lc_size;
-		freelock(&m->ppm_lc.lc_lock);
+		freelock(&m->ppm_lock);
 
 		if (mx > culpritmx) {
 			culprit = m;
 			culpritmx = mx;
 		}
 	}
+	freelock(&s->pps_lock);
 
 	if (culprit)
-		psc_pool_shrink(culprit, 5);
+		psc_pool_tryshrink(culprit, 5);
 }
 
 /*
@@ -222,9 +307,10 @@ _psc_pool_reap(struct psc_poolset *s, struct psc_poolmgr *initiator)
  *	memory pool.
  * @size: desired amount of memory to reclaim.
  */
-__weak void
-_psc_pool_reapsome(__unusedx size_t size)
+void
+psc_pool_reapmem(size_t size)
 {
+	_psc_pool_reap(&psc_poolset_main, NULL, size);
 }
 
 /*
@@ -264,10 +350,11 @@ psc_pool_get(struct psc_poolmgr *m)
 		} while (n);
 
 	/* If communal, try reaping other pools in sets. */
-	locked = POOL_RLOCK(m);
-	for (n = 0; n < dynarray_len(&m->ppm_sets); n++)
-		_psc_pool_reap(dynarray_getpos(&m->ppm_sets, n), m);
-	POOL_ULOCK(m, locked);
+	locked = reqlock(&m->ppm_master->pms_lock);
+	for (n = 0; n < dynarray_len(&m->ppm_master->pms_sets); n++)
+		_psc_pool_reap(dynarray_getpos(&m->ppm_master->pms_sets, n),
+		    m->ppm_master, m->ppm_lc.lc_entsize);
+	ureqlock(&m->ppm_master->pms_lock, locked);
 	if (n)
 		psc_pool_grow(m, 5);
 	return (lc_getwait(&m->ppm_lc));
@@ -294,141 +381,6 @@ psc_pool_return(struct psc_poolmgr *m, void *p)
 		psc_pool_shrink(m, 5);
 }
 
-int
-_psc_pool_init(struct psc_poolmaster *pms, struct psc_poolmgr *m)
-{
-	memset(m, 0, sizeof(*m));
-	dynarray_init(&m->ppm_sets);
-	m->ppm_reclaimcb = pms->pms_reclaimcb;
-	m->ppm_destroyf = pms->pms_destroyf;
-	m->ppm_flags = pms->pms_flags;
-	m->ppm_initf = pms->pms_initf;
-	m->ppm_max = pms->pms_max;
-	m->ppm_min = pms->pms_min;
-
-	_lc_reginit(&m->ppm_lc, pms->pms_offset, pms->pms_entsize,
-#ifdef HAVE_CPUSET
-	    "%s:%d", pms->pms_name, numa_preferred()
-#else
-	    "%s", pms->pms_name
-#endif
-	);
-
-	pll_add(&psc_pools, m);
-	if (pms->pms_total)
-		return (psc_pool_grow(m, pms->pms_total));
-	return (0);
-}
-
-void
-_psc_poolmaster_init(struct psc_poolmaster *pms, ptrdiff_t offset,
-    size_t entsize, int flags, int total, int max, int (*initf)(void *),
-    void (*destroyf)(void *), int (*reclaimcb)(struct psc_listcache *, int),
-    const char *namefmt, ...)
-{
-	va_list ap;
-
-	memset(pms, 0, sizeof(*pms));
-	LOCK_INIT(&pms->pms_lock);
-	dynarray_init(&pms->pms_poolmgrs);
-	pms->pms_reclaimcb = reclaimcb;
-	pms->pms_destroyf = destroyf;
-	pms->pms_entsize = entsize;
-	pms->pms_offset = offset;
-	pms->pms_flags = flags;
-	pms->pms_initf = initf;
-	pms->pms_total = total;
-	pms->pms_max = max;
-	pms->pms_min = min;
-
-	va_start(ap, namefmt);
-	lc_vregister(&pms->ppm_lc, namefmt, ap);
-	va_end(ap);
-}
-
-void
-_psc_pool_destroy(struct psc_poolmgr *m)
-{
-	int i, len, tot, locked;
-	void **sets;
-
-	pll_remove(&psc_pools, m);
-	locked = POOL_RLOCK(m);
-	if (m->ppm_lc.lc_size != m->ppm_total)
-		psc_fatalx("psc_pool_destroy: items in use");
-	m->ppm_min = 0;
-	m->ppm_max = 1;
-	m->ppm_flags &= ~PPMF_AUTO;
-	tot = m->ppm_total;
-	if (tot && psc_pool_shrink(m, tot) != tot)
-		psc_fatalx("psc_pool_destroy: unable to drain");
-	sets = dynarray_get(&m->ppm_sets);
-	len = dynarray_len(&m->ppm_sets);
-	for (i = 0; i < len; i++)
-		psc_pool_leaveset(m, sets[i]);
-	dynarray_free(&m->ppm_sets);
-	POOL_ULOCK(m, locked);
-	lc_unregister(&m->ppm_lc);
-}
-
-#define ppm_lock ppm_lc.lc_lock
-
-/*
- * psc_poolmaster_destroy - destroy a poolmaster.
- * @pms: poolmaster to destroy.
- */
-void
-psc_poolmaster_destroy(struct psc_poolmaster *pms)
-{
-	struct psc_poolmgr *mv, *setv;
-	int i, nm, nset;
-
-	/* Remove membership from all sets first due to deadlock ordering. */
-	spinlock(&pms->pms_lock);
-	nset = dynarray_len(&pms->pms_sets);
-	setv = dynarray_get(&pms->pms_sets);
-	for (i = 0; i < nset; i++) {
-		if (!trylock(&setv[i].pps_lock)) {
-			freelock(&pms->pms_lock);
-			return;
-		}
-		psc_poolset_disbar(setv[i], pms);
-		freelock(&setv[i].pps_lock);
-	}
-
-	/* Now acquire locks on every pool before destroying anything. */
-	PLL_LOCK(&psc_pools);
-	mv = dynarray_len(&pms->pms_poolmgrs);
-	nm = dynarray_get(&pms->pms_poolmgrs);
-	for (i = 0; i < nm; i++) {
-		m = mv[i];
-		if (!trylock(&m->ppm_lock)) {
-			i--;
-			goto bail;
-		}
-		if (m->ppm_refcnt)
-			goto bail;
-	}
-
-	/* We acquired locks on every pool, time to let go. */
-	for (i = 0; i < nm; i++)
-		_psc_pool_destroy(mv[i]);
-	dynarray_free(&pms->pms_poolmgrs);
-	dynarray_free(&pms->pms_sets);
-	return;
-
- bail:
-	/*
-	 * Unable to destroy, there are still active references.
-	 * Someone else will try again once the refcnt on everyone
-	 * reaches zero again.
-	 */
-	for (; i > 0; i--)
-		freelock(&pv[i]->ppm_lock);
-	PLL_ULOCK(&psc_pools);
-	freelock(&pms->pms_lock);
-}
-
 /*
  * psc_pool_lookup - find a pool by name.
  * @name: name of pool to find.
@@ -440,148 +392,30 @@ psc_pool_lookup(const char *name)
 
 	PLL_LOCK(&psc_pools);
 	psclist_for_each_entry(m, &psc_pools.pll_listhd, ppm_all_lentry)
-		if (strcmp(name, m->ppm_lc.lc_name) == 0) {
-			_psc_pool_incref(m);
+		if (strcmp(name, m->ppm_lc.lc_name) == 0)
 			break;
-		}
 	PLL_ULOCK(&psc_pools);
 	return (m);
 }
 
+/*
+ * psc_pool_share - allow a pool to share its resources with everyone.
+ * @p: pool master to share.
+ */
 void
-_psc_pool_incref(struct psc_poolmgr *m)
+psc_pool_share(struct psc_poolmaster *p)
 {
-	reqlock(&m->ppm_lock);
-	m->ppm_refcnt++;
-	ureqlock(&m->ppm_lock);
-}
-
-void
-_psc_poolset_incref(struct psc_poolset *s)
-{
-	reqlock(&s->pps_lock);
-	s->pps_refcnt++;
-	ureqlock(&s->pps_lock);
+	psc_poolset_enlist(&psc_poolset_main, p);
 }
 
 /*
- * psc_pool_decref - drop a reference to a pool manager.  If this was
- *	the last reference, free the pool master.
- * @m: pool to release.
+ * psc_pool_unshare - disallow a pool from sharing its resources with everyone.
+ * @p: pool master to unshare.
  */
 void
-psc_pool_decref(struct psc_poolmgr *m)
+psc_pool_unshare(struct psc_poolmaster *p)
 {
-	int n;
-
-	reqlock(&m->ppm_lock);
-	POOL_ENSUREREF(m);
-	n = --m->ppm_refcnt;
-	freelock(&m->ppm_lock);
-	if (n == 0)
-		psc_poolmaster_destroy(m->ppm_master);
-}
-
-/*
- * psc_poolset_decref - drop a reference to a pool set.  If this was
- *	the last reference, free it.
- * @s: poolset to release.
- */
-void
-psc_poolset_decref(struct psc_poolset *s)
-{
-	int n;
-
-	reqlock(&s->pps_lock);
-	POOLSET_ENSUREREF(s);
-	n = --s->pps_refcnt;
-	freelock(&s->ppm_lock);
-	if (n == 0)
-		psc_poolset_destroy(s);
-}
-
-/*
- * POOL_ENSUREREF - ensure there is at least one reference to a pool.
- * @m: pool manager to check.
- */
-#define POOL_ENSUREREF(m)				\
-	do {						\
-		LOCK_ENSURE(&(m)->ppm_lock);		\
-		psc_assert((m)->ppm_refcnt > 0);	\
-	} while (0)
-
-/*
- * POOLSET_ENSUREREF - ensure there is at least one reference to a poolset.
- * @m: poolset to check.
- */
-#define POOLSET_ENSUREREF(m)				\
-	do {						\
-		LOCK_ENSURE(&(s)->pps_lock);		\
-		psc_assert((s)->pps_refcnt > 0);	\
-	} while (0)
-
-/*
- * psc_poolset_enlist - add a pool to a pool set.
- * @s: set to which @pms should be added.
- * @pms: pool master to add.
- */
-void
-psc_poolset_enlist(struct psc_poolset *s, struct psc_poolmaster *pms)
-{
-	int locked;
-
-	spinlock(&s->pps_lock);
-	spinlock(&pms->pms_lock);
-	if (dynarray_exists(&s->pps_pools, pms))
-		psc_fatalx("pool already exists in set");
-	if (dynarray_exists(&pms->pms_sets, s))
-		psc_fatalx("pool already member of set");
-	if (dynarray_add(&s->pps_pools, pms) == -1)
-		psc_fatalx("dynarray_add");
-	if (dynarray_add(&pms->pms_sets, s) == -1)
-		psc_fatalx("dynarray_add");
-	freelock(&pms->pms_lock);
-	freelock(&s->pps_lock);
-}
-
-/*
- * psc_pool_share - allow pool to share its resources with everyone.
- * @pms: pool master to share.
- */
-void
-psc_pool_share(struct psc_poolmaster *pms)
-{
-	psc_poolset_enlist(&psc_poolset_main, pms);
-}
-
-/*
- * psc_pool_leaveset - remove a pool's membership from a pool set.
- * @s: set from which pool should be removed.
- * @m: pool to remove from set.
- */
-void
-psc_poolset_disbar(struct psc_poolset *s, struct psc_poolmaster *m)
-{
-	int locked, locked2;
-
-	locked = reqlock(&s->pps_lock);
-	locked2 = reqlock(&pms->pms_lock);
-	if (locked == 0 && locked2)
-		psc_fatalx("deadlock ordering");
-	dynarray_remove(&s->pps_pools, pms);
-	dynarray_remove(&pms->pms_sets, s);
-	ureqlock(&pms->pms_lock, locked2);
-	ureqlock(&s->pps_lock, locked);
-}
-
-/*
- * psc_pool_unshare - disallow pool from sharing its resources with everyone.
- * @pms: pool master to share.
- */
-void
-psc_pool_unshare(struct psc_poolmaster *pms)
-{
-	psc_poolset_disbar(&psc_poolset_main, pms);
+	psc_poolset_disbar(&psc_poolset_main, p);
 }
 
 /*
@@ -596,44 +430,47 @@ psc_poolset_init(struct psc_poolset *s)
 }
 
 /*
- * psc_poolset_destroy - destroy a pool set.
- * @s: set to destroy.
+ * psc_poolset_enlist - add a pool master to a pool set.
+ * @s: set to which pool master should be added.
+ * @p: pool master to add.
  */
 void
-psc_poolset_destroy(struct psc_poolset *s)
+psc_poolset_enlist(struct psc_poolset *s, struct psc_poolmaster *p)
 {
-	reqlock(&s->pps_lock);
-	if (s->pps_refcnt) {
-		freelock(&s->pps_lock);
-		return;
-	}
-	psc_assert(dynarray_len(&s->pps_pools) == 0);
-	dynarray_free(&s->pps_pools);
-	memset(s, 0, sizeof(*s));
+	int locked, locked2;
+
+	locked = reqlock(&s->pps_lock);
+	locked2 = reqlock(&p->pms_lock);
+	if (locked == 0 && locked2)
+		psc_fatalx("deadlock ordering");
+	if (dynarray_exists(&s->pps_pools, p))
+		psc_fatalx("pool already exists in set");
+	if (dynarray_exists(&p->pms_sets, s))
+		psc_fatalx("pool already member of set");
+	if (dynarray_add(&s->pps_pools, p) == -1)
+		psc_fatalx("dynarray_add");
+	if (dynarray_add(&p->pms_sets, s) == -1)
+		psc_fatalx("dynarray_add");
+	ureqlock(&p->pms_lock, locked2);
+	ureqlock(&s->pps_lock, locked);
 }
 
 /*
- * psc_poolmaster_getmgr - obtain a pool manager for this NUMA from the
- *	master.
- * @pms: pool master.
+ * psc_poolset_disbar - remove a pool master from from a pool set.
+ * @s: set from which pool master should be removed.
+ * @p: pool master to remove from set.
  */
-struct psc_poolmgr *
-psc_poolmaster_getmgr(struct psc_poolmaster *pms)
+void
+psc_poolset_disbar(struct psc_poolset *s, struct psc_poolmaster *p)
 {
-	struct psc_poolmgr *m;
-	struct psc_thread *thr;
-	int memnid;
+	int locked, locked2;
 
-	memnid = psc_get_memnid();
-	spinlock(&pms->pms_lock);
-	if (dynarray_hintlen(&pms->pms_poolmgrs, memnid) == -1)
-		psc_fatal("unable to resize poolmgrs");
-	m = pms->pms_poolmgrs[memnid];
-	if (m == NULL) {
-		pms->pms_poolmgrs[memnid] = m = PSCALLOC(sizeof(*m));
-		_psc_pool_init(pms, m);
-	}
-	_psc_pool_incref(m);
-	freelock(&pms->pms_lock);
-	return (m);
+	locked = reqlock(&s->pps_lock);
+	locked2 = reqlock(&p->pms_lock);
+	if (locked == 0 && locked2)
+		psc_fatalx("deadlock ordering");
+	dynarray_remove(&s->pps_pools, p);
+	dynarray_remove(&p->pms_sets, s);
+	ureqlock(&p->pms_lock, locked2);
+	ureqlock(&s->pps_lock, locked);
 }

@@ -4,11 +4,12 @@
 
 struct psc_ctlmsghdr;
 struct psc_ctlmsg_param;
+struct psc_ctlmsg_stats;
 
-#define PSC_CTL_FOREACH_THREAD(i, thr, thrname, threads, nthreads)	\
-	for ((i) = 0; ((thr) = (threads)[i]) && (i) < (nthreads); i++)	\
-		if (strncmp((thr)->pscthr_name, (thrname),		\
-		    strlen(thrname)) == 0 ||				\
+#define PSC_CTL_FOREACH_THREAD(thr, thrname, threads)				\
+	psclist_for_each_entry((thr), (threads), pscthr_lentry)			\
+		if (strncmp((thr)->pscthr_name, (thrname),			\
+		    strlen(thrname)) == 0 ||					\
 		    strcmp((thrname), PCTHRNAME_EVERYONE) == 0)
 
 #define psc_ctlthr(thr)	((struct psc_ctlthr *)(thr)->pscthr_private)

@@ -7,27 +7,41 @@
 #ifndef _PFL_LOCKEDLIST_H_
 #define _PFL_LOCKEDLIST_H_
 
+#include <sys/types.h>
+
 #include <stddef.h>
 #include <string.h>
 
 #include "psc_ds/list.h"
-#include "psc_util/alloc.h"
 #include "psc_util/assert.h"
 #include "psc_util/lock.h"
 
 struct psc_lockedlist {
 	struct psclist_head	 pll_listhd;
-	psc_spinlock_t		*pll_lockp;
 	int			 pll_nitems;
-	int			 pll_offset;
+	ptrdiff_t		 pll_offset;
 	int			 pll_flags;
+	union {
+		psc_spinlock_t	 pllu_lock;
+		psc_spinlock_t	*pllu_lockp;
+	} pll_u;
+#define pll_lockp	pll_u.pllu_lockp
+#define pll_lock	pll_u.pllu_lock
 };
 
-#define PLLF_ALLOCLOCK	(1 << 0)	/* list alloc'd its own lock */
+#define PLLF_EXTLOCK	(1 << 0)	/* lock is external */
 
-#define PLL_INITIALIZER(pll, type, member, lock)		\
-	{ PSCLIST_HEAD_INIT((pll)->pll_listhd), (lock),		\
-	  0, offsetof(type, member), 0 }
+#define PLL_GETLOCK(pll) ((pll)->pll_flags & PLLF_EXTLOCK ?	\
+	(pll)->pll_lockp : &(pll)->pll_lock)
+
+#define PLL_LOCK(pll)		spinlock(PLL_GETLOCK(pll))
+#define PLL_RLOCK(pll)		reqlock(PLL_GETLOCK(pll))
+#define PLL_ULOCK(pll)		freelock(PLL_GETLOCK(pll))
+#define PLL_URLOCK(pll, l)	ureqlock(PLL_GETLOCK(pll), (l))
+
+#define PLL_INITIALIZER(pll, type, member)			\
+	{ PSCLIST_HEAD_INIT((pll)->pll_listhd), 0, 		\
+	  offsetof(type, member), 0, { LOCK_INITIALIZER } }
 
 #define pll_init(pll, type, member, lock)			\
 	_pll_init((pll), offsetof(type, member), (lock))
@@ -37,21 +51,12 @@ _pll_init(struct psc_lockedlist *pll, int offset, psc_spinlock_t *lkp)
 {
 	memset(pll, 0, sizeof(*pll));
 	INIT_PSCLIST_HEAD(&pll->pll_listhd);
-	if (lkp)
+	if (lkp) {
+		pll->pll_flags |= PLLF_EXTLOCK;
 		pll->pll_lockp = lkp;
-	else {
-		pll->pll_lockp = PSCALLOC(sizeof(*pll->pll_lockp));
-		LOCK_INIT(pll->pll_lockp);
-		pll->pll_flags |= PLLF_ALLOCLOCK;
-	}
+	} else
+		LOCK_INIT(&pll->pll_lock);
 	pll->pll_offset = offset;
-}
-
-static __inline void
-pll_destroy(struct psc_lockedlist *pll)
-{
-	if (pll->pll_flags & PLLF_ALLOCLOCK)
-		PSCFREE(pll->pll_lockp);
 }
 
 static __inline int
@@ -59,9 +64,9 @@ pll_nitems(struct psc_lockedlist *pll)
 {
 	int n, locked;
 
-	locked = reqlock(pll->pll_lockp);
+	locked = PLL_RLOCK(pll);
 	n = pll->pll_nitems;
-	ureqlock(pll->pll_lockp, locked);
+	PLL_URLOCK(pll, locked);
 	return (n);
 }
 
@@ -79,13 +84,13 @@ _pll_add(struct psc_lockedlist *pll, void *p, int tail)
 
 	psc_assert(p);
 	e = (char *)p + pll->pll_offset;
-	locked = reqlock(pll->pll_lockp);
+	locked = PLL_RLOCK(pll);
 	if (tail)
 		psclist_xadd_tail(e, &pll->pll_listhd);
 	else
 		psclist_xadd_head(e, &pll->pll_listhd);
 	pll->pll_nitems++;
-	ureqlock(pll->pll_lockp, locked);
+	PLL_URLOCK(pll, locked);
 }
 
 #define PLLF_HEAD	(1 << 0)
@@ -102,9 +107,9 @@ _pll_get(struct psc_lockedlist *pll, int flags)
 
 	psc_assert((flags & PLLF_HEAD) ^ (flags & PLLF_TAIL));
 
-	locked = reqlock(pll->pll_lockp);
+	locked = PLL_RLOCK(pll);
 	if (psclist_empty(&pll->pll_listhd)) {
-		ureqlock(pll->pll_lockp, locked);
+		PLL_URLOCK(pll, locked);
 		return (NULL);
 	}
 	if (flags & PLLF_TAIL)
@@ -115,7 +120,7 @@ _pll_get(struct psc_lockedlist *pll, int flags)
 		psclist_del(e);
 		pll->pll_nitems--;
 	}
-	ureqlock(pll->pll_lockp, locked);
+	PLL_URLOCK(pll, locked);
 	return ((char *)e - pll->pll_offset);
 }
 
@@ -132,10 +137,10 @@ pll_remove(struct psc_lockedlist *pll, void *p)
 
 	psc_assert(p);
 	e = (char *)p + pll->pll_offset;
-	locked = reqlock(pll->pll_lockp);
+	locked = PLL_RLOCK(pll);
 	psclist_del(e);
 	pll->pll_nitems--;
-	ureqlock(pll->pll_lockp, locked);
+	PLL_URLOCK(pll, locked);
 }
 
 static __inline int
@@ -143,13 +148,10 @@ pll_empty(struct psc_lockedlist *pll)
 {
 	int locked, empty;
 
-	locked = reqlock(pll->pll_lockp);
+	locked = PLL_RLOCK(pll);
 	empty = psclist_empty(&pll->pll_listhd);
-	ureqlock(pll->pll_lockp, locked);
+	PLL_URLOCK(pll, locked);
 	return (empty);
 }
-
-#define PLL_LOCK(pll)	spinlock((pll)->pll_lockp)
-#define PLL_ULOCK(pll)	freelock((pll)->pll_lockp)
 
 #endif /* _PFL_LOCKEDLIST_H_ */
