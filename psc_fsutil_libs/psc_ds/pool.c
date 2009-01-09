@@ -22,9 +22,9 @@ struct psc_lockedlist psc_pools =
 
 void
 _psc_poolmaster_init(struct psc_poolmaster *p, ptrdiff_t offset,
-    size_t entsize, int flags, int total, int min, int max, int (*initf)(void *),
-    void (*destroyf)(void *), int (*reclaimcb)(struct psc_listcache *, int),
-    const char *namefmt, ...)
+    size_t entsize, int flags, int total, int min, int max,
+    int (*initf)(struct psc_poolmgr *, void *), void (*destroyf)(void *),
+    int (*reclaimcb)(struct psc_listcache *, int), const char *namefmt, ...)
 {
 	va_list ap;
 
@@ -136,7 +136,7 @@ psc_pool_grow(struct psc_poolmgr *m, int n)
 			errno = ENOMEM;
 			return (i);
 		}
-		if (m->ppm_initf && m->ppm_initf(p)) {
+		if (m->ppm_initf && m->ppm_initf(m, p)) {
 			if (flags & PAF_LOCK)
 				psc_freel(p, m->ppm_lc.lc_entsize);
 			else

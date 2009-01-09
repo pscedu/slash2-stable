@@ -16,6 +16,8 @@
 #include "psc_util/lock.h"
 #include "psc_util/memnode.h"
 
+struct psc_poolmgr;
+
 /*
  * Poolsets contain a group of poolmgrs which can reap memory from each
  * other.
@@ -39,7 +41,7 @@ struct psc_poolmaster {
 	struct dynarray		  pms_poolmgrs;		/* NUMA pools */
 	struct dynarray		  pms_sets;		/* poolset memberships */
 
-	/* entries for initializing memnode poolmgrs */
+	/* for initializing memnode poolmgrs */
 	char			  pms_name[LC_NAME_MAX];
 	ptrdiff_t		  pms_offset;		/* entry offset to listhead */
 	int			  pms_entsize;		/* size of entry in pool */
@@ -47,8 +49,8 @@ struct psc_poolmaster {
 	int			  pms_min;		/* min bound of #items */
 	int			  pms_max;		/* max bound of #items */
 	int			  pms_flags;		/* flags */
-	int			(*pms_initf)(void *);	/* entry initializer */
-	void			(*pms_destroyf)(void *);/* entry destructor */
+	int			(*pms_initf)(struct psc_poolmgr *, void *);
+	void			(*pms_destroyf)(void *);
 	int			(*pms_reclaimcb)(struct psc_listcache *, int);
 };
 
@@ -66,8 +68,10 @@ struct psc_poolmgr {
 	int			  ppm_min;		/* min bound of #items */
 	int			  ppm_max;		/* max bound of #items */
 	int			  ppm_flags;		/* flags */
-	int			(*ppm_initf)(void *);	/* entry initializer */
-	void			(*ppm_destroyf)(void *);/* entry destructor */
+
+	/* routines to initialize, teardown, & reclaim pool entries */
+	int			(*ppm_initf)(struct psc_poolmgr *, void *);
+	void			(*ppm_destroyf)(void *);
 	int			(*ppm_reclaimcb)(struct psc_listcache *, int);
 };
 
@@ -102,8 +106,9 @@ struct psc_poolmgr {
 struct psc_poolmgr *
 	_psc_poolmaster_getmgr(struct psc_poolmaster *, int);
 void	_psc_poolmaster_init(struct psc_poolmaster *, ptrdiff_t, size_t,
-		int, int, int, int, int (*)(void *), void (*)(void *),
-		int (*)(struct psc_listcache *, int), const char *, ...);
+		int, int, int, int, int (*)(struct psc_poolmgr *, void *),
+		void (*)(void *), int (*)(struct psc_listcache *, int),
+		const char *, ...);
 
 int	 psc_pool_grow(struct psc_poolmgr *, int);
 int	_psc_pool_shrink(struct psc_poolmgr *, int, int);
