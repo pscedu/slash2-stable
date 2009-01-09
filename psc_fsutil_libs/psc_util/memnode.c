@@ -50,24 +50,26 @@ psc_memnode_get(void)
 void *
 psc_memnode_getkey(struct psc_memnode *pmn, int key)
 {
+	int locked;
 	void *val;
 
 	val = NULL;
-	spinlock(&pmn->pmn_lock);
+	locked = reqlock(&pmn->pmn_lock);
 	if (dynarray_len(&pmn->pmn_keys) > key)
 		val = dynarray_getpos(&pmn->pmn_keys, key);
-	freelock(&pmn->pmn_lock);
+	ureqlock(&pmn->pmn_lock, locked);
 	return (val);
 }
 
 void
 psc_memnode_setkey(struct psc_memnode *pmn, int pos, void *val)
 {
+	int locked;
 	void **v;
 
-	spinlock(&pmn->pmn_lock);
+	locked = reqlock(&pmn->pmn_lock);
 	dynarray_hintlen(&pmn->pmn_keys, pos + 1);
 	v = dynarray_get(&pmn->pmn_keys);
 	v[pos] = val;
-	freelock(&pmn->pmn_lock);
+	ureqlock(&pmn->pmn_lock, locked);
 }
