@@ -1478,12 +1478,12 @@ void pscrpc_free_committed(struct pscrpc_import *imp)
 
 	if (imp->imp_peer_committed_transno == imp->imp_last_transno_checked &&
 	    imp->imp_generation == imp->imp_last_generation_checked) {
-		CDEBUG(D_HA, "%s: skip recheck for last_committed "LPU64"\n",
+		CDEBUG(D_HA, "%s: skip recheck for last_committed %"PRIu64"\n",
 		       imp->imp_obd->obd_name, imp->imp_peer_committed_transno);
 		return;
 	}
 
-	CDEBUG(D_HA, "%s: committing for last_committed "LPU64" gen %d\n",
+	CDEBUG(D_HA, "%s: committing for last_committed %"PRIu64" gen %d\n",
 	       imp->imp_obd->obd_name, imp->imp_peer_committed_transno,
 	       imp->imp_generation);
 	imp->imp_last_transno_checked = imp->imp_peer_committed_transno;
@@ -1512,7 +1512,7 @@ void pscrpc_free_committed(struct pscrpc_import *imp)
 			break;
 		}
 
-		DEBUG_REQ(D_HA, req, "committing (last_committed "LPU64")",
+		DEBUG_REQ(D_HA, req, "committing (last_committed %"PRIu64")",
 			  imp->imp_peer_committed_transno);
 	free_req:
 		if (req->rq_commit_cb != NULL)
