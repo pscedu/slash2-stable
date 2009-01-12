@@ -60,6 +60,7 @@ _psc_poolmaster_initmgr(struct psc_poolmaster *p, struct psc_poolmgr *m)
 	m->ppm_initf = p->pms_initf;
 	m->ppm_min = p->pms_min;
 	m->ppm_max = p->pms_max;
+	m->ppm_master = p;
 
 #ifdef HAVE_CPUSET
 	_lc_reginit(&m->ppm_lc, p->pms_offset, p->pms_entsize,
