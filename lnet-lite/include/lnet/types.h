@@ -116,7 +116,8 @@ typedef enum {
         LNET_EVENT_REPLY  = 2,
         LNET_EVENT_ACK    = 3,
 	LNET_EVENT_SEND   = 4,
-	LNET_EVENT_UNLINK = 5
+	LNET_EVENT_UNLINK = 5,
+	LNET_EVENT_DROP   = 6
 } lnet_event_kind_t;
 
 #define LNET_SEQ_BASETYPE	long

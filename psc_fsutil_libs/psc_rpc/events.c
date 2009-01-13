@@ -321,6 +321,11 @@ void server_bulk_callback (lnet_event_t *ev)
         EXIT;
 }
 
+static void
+drop_callback(lnet_event_t *ev)
+{
+}
+
 /**
  * pscrpc_master_callback - client and server master callback.
  * In server context, pscrpc_master_callback is called within lnet via
@@ -334,9 +339,16 @@ void server_bulk_callback (lnet_event_t *ev)
  */
 static void pscrpc_master_callback(lnet_event_t *ev)
 {
-        struct pscrpc_cb_id *cbid = ev->md.user_ptr;
-        void (*callback)(lnet_event_t *ev) = cbid->cbid_fn;
+	struct pscrpc_cb_id *cbid;
+	void (*callback)(lnet_event_t *);
+	
+	if (ev->type == LNET_EVENT_DROP) {
+		drop_callback(ev);
+		return;
+	}
 
+	cbid = ev->md.user_ptr;
+	callback = cbid->cbid_fn;
         /* Honestly, it's best to find out early. */
         LASSERT (cbid->cbid_arg != LP_POISON);
         LASSERT (callback == request_out_callback ||

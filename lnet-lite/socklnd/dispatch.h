@@ -22,6 +22,7 @@ struct io_handler{
         int fd;
         int type;
         int (*function)(void *);
+        void (*errf)(void *);
         void *argument;
         int disabled;
 };
@@ -36,6 +37,7 @@ io_handler register_io_handler(int fd,
                                int type,
                                io_handler *handler_head,
                                int (*function)(void *),
+			       void (*errf)(void *),
                                void *arg);
 
 void remove_io_handler (io_handler i);

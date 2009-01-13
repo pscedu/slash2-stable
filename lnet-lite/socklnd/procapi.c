@@ -250,7 +250,7 @@ procbridge_startup (lnet_ni_t *ni)
             
             if (!register_io_handler(p->notifier[1], READ_HANDLER,
                                      &b->b_io_handler,
-                                     procbridge_notifier_handler, p)) {
+                                     procbridge_notifier_handler, NULL, p)) {
                     perror("fail to register notifier handler");
                     return -ENOMEM;
             }

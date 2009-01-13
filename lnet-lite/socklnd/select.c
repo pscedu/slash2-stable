@@ -85,6 +85,7 @@ io_handler register_io_handler(int fd,
                                int type,
                                io_handler *handler_head,
                                int (*function)(void *),
+                               void (*errf)(void *),
                                void *arg)
 {
     io_handler i=(io_handler)malloc(sizeof(struct io_handler));
@@ -96,6 +97,7 @@ io_handler register_io_handler(int fd,
     if ((i->fd=fd)>=0){
         i->type=type;
         i->function=function;
+        i->errf=errf;
         i->argument=arg;
         i->disabled=0;
         //i->last=&io_handlers;
@@ -147,6 +149,7 @@ prepare_fd_sets(io_handler *ioh, fd_set *r, fd_set *w, fd_set *e)
         if ((*k)->disabled){
             j=*k;
             *k=(*k)->next;
+	    j->errf(j->argument);
             free(j);
         }
         if (*k) {

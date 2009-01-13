@@ -22,7 +22,7 @@
 /* connection.c:
    This file provides a simple stateful connection manager which
    builds tcp connections on demand and leaves them open for
-   future use. 
+   future use.
 */
 
 #include <stdlib.h>
@@ -122,7 +122,7 @@ tcpnal_set_global_params (void)
  *
  *    compare_connection() tests for collisions in the hash table
  */
-static int 
+static int
 compare_connection(void *arg1, void *arg2)
 {
     connection  c = arg1;
@@ -137,11 +137,11 @@ compare_connection(void *arg1, void *arg2)
  * Returns: a not-particularily-well-distributed hash
  *          of the id
  */
-static unsigned int 
+static unsigned int
 connection_key(void *arg)
 {
         lnet_nid_t *nid = arg;
-        
+
         return (unsigned int)(*nid);
 }
 
@@ -150,9 +150,9 @@ close_connection(void *arg)
 {
         connection c = arg;
         int rc;
-                       
+
         rc = shutdown(c->fd, SHUT_RDWR);
-        if (rc) 
+        if (rc)
                 CERROR("shutdown of sock %d (nid %s, pid %u) failed: %s\n",
                        c->fd, libcfs_nid2str(c->peer_nid), c->peer_pid,
                        strerror(errno));
@@ -165,31 +165,31 @@ close_connection(void *arg)
 /* Function:  remove_connection
  * Arguments: c: the connection to remove
  */
-void 
+void
 remove_connection(void *arg)
 {
         connection c = arg;
 
         CDEBUG(D_NET, "Removing conn (nid %s, pid %u)\n",
                libcfs_nid2str(c->peer_nid), c->peer_pid);
-        
+
         hash_table_remove(c->m->connections,&c->peer_nid);
         remove_io_handler(c->conn_iohandler);
         close_connection(c);
 }
 
 
-/* Function:  read_connection: 
- * Arguments: c:    the connection to read from 
+/* Function:  read_connection:
+ * Arguments: c:    the connection to read from
  *            dest: the buffer to read into
- *            len:  the number of bytes to read   
+ *            len:  the number of bytes to read
  * Returns: success as 1, or failure as 0
  *
  *   read_connection() reads data from the connection, continuing
  *   to read partial results until the request is satisfied or
  *   it errors. TODO: this read should be covered by signal protection.
  */
-int 
+int
 read_connection(connection c, unsigned char *dest, int len)
 {
     int offset = 0,rc;
@@ -207,10 +207,10 @@ read_connection(connection c, unsigned char *dest, int len)
                             if (errno == EINTR) {
                                     rc = 0;
                             } else {
-                                    CDEBUG(D_WARNING, 
-                                           "recverr rc=%d sock=%d(nid %s," 
+                                    CDEBUG(D_WARNING,
+                                           "recverr rc=%d sock=%d(nid %s,"
                                            " pid %u):%s\n",
-                                           rc, c->fd, 
+                                           rc, c->fd,
                                            libcfs_nid2str(c->peer_nid),
                                            c->peer_pid, strerror(errno));
                                     remove_connection(c);
@@ -229,8 +229,43 @@ static int connection_input(void *d)
         return((*c->m->handler)(c->m->handler_arg,c));
 }
 
+static void
+connection_fail(void *d)
+{
+	lnet_event_t eva, evb;
+	struct list_head *e;
+	connection c = d;
+	lnet_eq_t *eq;
+	bridge b;
 
-static connection 
+	remove_connection(d);
+	b = c->m->handler_arg;
+
+	/* An event for dropping the import... */
+	memset(&eva, 0, sizeof(eva));
+	eva.type = LNET_EVENT_DROP;
+	eva.target.nid = c->peer_nid;
+	eva.target.pid = c->peer_pid;
+	eva.initiator.nid = b->b_ni->ni_nid;
+	eva.initiator.pid = the_lnet.ln_pid;
+
+	/* ... and one for dropping the export. */
+	memset(&evb, 0, sizeof(evb));
+	evb.type = LNET_EVENT_DROP;
+	evb.target = eva.initiator;
+	evb.initiator = eva.target;
+
+	/* Inform all eq's to drop associations to this conn. */
+	LNET_LOCK();
+	list_for_each(e, &the_lnet.ln_active_eqs) {
+		eq = list_entry(e, lnet_eq_t, eq_list); 
+		lnet_enq_event_locked(eq, &eva);
+		lnet_enq_event_locked(eq, &evb);
+	}
+	LNET_UNLOCK();
+}
+
+static connection
 allocate_connection(manager m, lnet_process_id_t *nidpid, int fd)
 {
     bridge     b = m->handler_arg;
@@ -243,9 +278,10 @@ allocate_connection(manager m, lnet_process_id_t *nidpid, int fd)
     c->peer_nid = nidpid->nid;
     c->peer_pid = nidpid->pid;
 
-    c->conn_iohandler = register_io_handler(fd, READ_HANDLER, 
+    c->conn_iohandler = register_io_handler(fd, READ_HANDLER,
                                             &b->b_io_handler,
-                                            connection_input, c);
+                                            connection_input,
+					    connection_fail, c);
 
     CDEBUG(D_NET, "Adding connection (%p) to nid %u-%s\n",
            c, nidpid->pid, libcfs_nid2str(nidpid->nid));
@@ -257,7 +293,7 @@ allocate_connection(manager m, lnet_process_id_t *nidpid, int fd)
 int
 tcpnal_write(lnet_nid_t nid, int sockfd, void *buffer, int nob)
 {
-#if 0        
+#if 0
         int rc = syscall(SYS_write, sockfd, buffer, nob);
         /* NB called on an 'empty' socket with huge buffering! */
         if (rc == nob)
@@ -268,7 +304,7 @@ tcpnal_write(lnet_nid_t nid, int sockfd, void *buffer, int nob)
                        libcfs_nid2str(nid), strerror(errno));
                 return -1;
         }
-        
+
         CERROR("Short send to %s: %d/%d\n",
                libcfs_nid2str(nid), rc, nob);
         return -1;
@@ -285,13 +321,13 @@ tcpnal_write(lnet_nid_t nid, int sockfd, void *buffer, int nob)
 }
 
 int
-tcpnal_read(lnet_nid_t nid, int sockfd, void *buffer, int nob) 
+tcpnal_read(lnet_nid_t nid, int sockfd, void *buffer, int nob)
 {
         int       rc;
 
         while (nob > 0) {
                 rc = syscall(SYS_read, sockfd, buffer, nob);
-                
+
                 if (rc == 0) {
                         CERROR("Unexpected EOF from %s\n",
                                libcfs_nid2str(nid));
@@ -357,7 +393,7 @@ tcpnal_hello (int sockfd, lnet_nid_t nid)
 
         hdr.src_nid = id.nid;
         hdr.src_pid = id.pid;
-        
+
         /* I don't send any interface info */
 
         /* Assume sufficient socket buffering for these messages... */
@@ -372,10 +408,10 @@ tcpnal_hello (int sockfd, lnet_nid_t nid)
         rc = tcpnal_read(nid, sockfd, &hmv, sizeof(hmv));
         if (rc != 0)
                 return -1;
-        
+
         if (hmv.magic != le32_to_cpu(LNET_PROTO_TCP_MAGIC)) {
                 CERROR ("Bad magic %#08x (%#08x expected) from %s\n",
-                        cpu_to_le32(hmv.magic), LNET_PROTO_TCP_MAGIC, 
+                        cpu_to_le32(hmv.magic), LNET_PROTO_TCP_MAGIC,
                         libcfs_nid2str(nid));
                 return -1;
         }
@@ -419,7 +455,7 @@ tcpnal_hello (int sockfd, lnet_nid_t nid)
 
         if (nid != le64_to_cpu (hdr.src_nid)) {
                 CERROR ("Connected to %s, but expecting %s\n",
-                        libcfs_nid2str(le64_to_cpu (hdr.src_nid)), 
+                        libcfs_nid2str(le64_to_cpu (hdr.src_nid)),
                         libcfs_nid2str(nid));
                 return -1;
         }
@@ -452,9 +488,9 @@ tcpnal_invert_type(int type)
                 }
 }
 
-int 
-tcpnal_hello_handle_v1(int sock, lnet_process_id_t *nidpid, 
-                       __unusedx int flipped) 
+int
+tcpnal_hello_handle_v1(int sock, lnet_process_id_t *nidpid,
+                       __unusedx int flipped)
 {
         lnet_magicversion_t *hmv;
         lnet_hdr_t           hdr;
@@ -463,31 +499,31 @@ tcpnal_hello_handle_v1(int sock, lnet_process_id_t *nidpid,
         lnet_process_id_t    id;
 
         id.nid = nidpid->nid;
-        //LNetGetId(1, &id);        
-        
+        //LNetGetId(1, &id);
+
         if (psc_sock_read (sock, buf, len, HELLO_TIMEOUT)) {
                 CERROR("psc_sock_read() from %d failed: %s\n",
                        sock, strerror(errno));
                 return -1;
         }
-       
-        CDEBUG(D_TRACE, 
-               "New Conn:\n\tHdr.dest_nid = %s\n" 
+
+        CDEBUG(D_TRACE,
+               "New Conn:\n\tHdr.dest_nid = %s\n"
                "\tHdr.src_nid  = %s\n"
                "\tHdr.dest_pid = %u\n"
-               "\tHdr.src_pid  = %u\n"           
-               "\tHdr.type     = %u\n"                      
-               "\tHdr.payllen  = %u\n"           
+               "\tHdr.src_pid  = %u\n"
+               "\tHdr.type     = %u\n"
+               "\tHdr.payllen  = %u\n"
                "\tHdr.hello.incarnation  = "LPX64"\n"
-               "\tHdr.hello.type  = %u\n",           
+               "\tHdr.hello.type  = %u\n",
                libcfs_nid2str(hdr.dest_nid),
                libcfs_nid2str(hdr.src_nid),
-               hdr.dest_pid, 
+               hdr.dest_pid,
                hdr.src_pid,
                hdr.type,
                hdr.payload_length,
                hdr.msg.hello.incarnation,
-               hdr.msg.hello.type);        
+               hdr.msg.hello.type);
         /*
          *  hand the nidpid back to the caller
          */
@@ -499,44 +535,44 @@ tcpnal_hello_handle_v1(int sock, lnet_process_id_t *nidpid,
         hdr.src_nid = id.nid;
         hdr.src_pid = the_lnet.ln_pid;
         hdr.msg.hello.type = tcpnal_invert_type(hdr.msg.hello.type);
-                
-        hmv = (lnet_magicversion_t *)&hdr.dest_nid;        
+
+        hmv = (lnet_magicversion_t *)&hdr.dest_nid;
         hmv->magic = LNET_PROTO_TCP_MAGIC;
         hmv->version_major = LNET_PROTO_TCP_VERSION_MAJOR;
         hmv->version_minor = LNET_PROTO_TCP_VERSION_MINOR;
-        
+
         if (psc_sock_write (sock, buf, len, HELLO_TIMEOUT)) {
                 CERROR("psc_sock_write() to %d of hello reply failed: %s\n",
                        sock, strerror(errno));
                 return -1;
         }
-        CDEBUG(D_NET, 
-               "v1 Hello Reply:\n\tHdr.dest_nid = %s\n" 
+        CDEBUG(D_NET,
+               "v1 Hello Reply:\n\tHdr.dest_nid = %s\n"
                "\tHdr.src_nid  = %s\n"
                "\tHdr.dest_pid = %u\n"
-               "\tHdr.src_pid  = %u\n"           
-               "\tHdr.type     = %u\n"                      
-               "\tHdr.payllen  = %u\n"           
+               "\tHdr.src_pid  = %u\n"
+               "\tHdr.type     = %u\n"
+               "\tHdr.payllen  = %u\n"
                "\tHdr.hello.incarnation  = "LPX64"\n"
-               "\tHdr.hello.type  = %u\n",           
+               "\tHdr.hello.type  = %u\n",
                libcfs_nid2str(hdr.dest_nid),
                libcfs_nid2str(hdr.src_nid),
-               hdr.dest_pid, 
+               hdr.dest_pid,
                hdr.src_pid,
                hdr.type,
                hdr.payload_length,
                hdr.msg.hello.incarnation,
-               hdr.msg.hello.type);        
+               hdr.msg.hello.type);
         return 0;
 }
 
 
 /**
- * tcpnal_hello_handle_v2 - expect a v2 style packet but send a v1 reply 
+ * tcpnal_hello_handle_v2 - expect a v2 style packet but send a v1 reply
  */
-int 
-tcpnal_hello_handle_v2(int sock, lnet_process_id_t *nidpid, 
-                       __unusedx int flipped) 
+int
+tcpnal_hello_handle_v2(int sock, lnet_process_id_t *nidpid,
+                       __unusedx int flipped)
 {
         ksock_hello_msg_t    hello;
         lnet_hdr_t           reply;
@@ -559,18 +595,18 @@ tcpnal_hello_handle_v2(int sock, lnet_process_id_t *nidpid,
                 CERROR("psc_sock_read() from %d failed: %s\n",
                        sock, strerror(errno));
                 return -1;
-        }        
+        }
 
-        CDEBUG(D_TRACE, 
-               "New Conn v2 from (%d bytes)\n\thello.kshm_magic   = %u\n" 
+        CDEBUG(D_TRACE,
+               "New Conn v2 from (%d bytes)\n\thello.kshm_magic   = %u\n"
                "\thello.kshm_version = %u\n"
-               "\thello.kshm_src_nid = %s\n"           
-               "\thello.kshm_dst_nid = %s\n"           
-               "\thello.kshm_src_pid = %u\n"           
-               "\thello.kshm_dst_pid = %u\n"           
-               "\thello.kshm_src_incarnation = "LPX64"\n" 
-               "\thello.kshm_dst_incarnation = "LPX64"\n" 
-               "\thello.kshm_ctype = %u\n" 
+               "\thello.kshm_src_nid = %s\n"
+               "\thello.kshm_dst_nid = %s\n"
+               "\thello.kshm_src_pid = %u\n"
+               "\thello.kshm_dst_pid = %u\n"
+               "\thello.kshm_src_incarnation = "LPX64"\n"
+               "\thello.kshm_dst_incarnation = "LPX64"\n"
+               "\thello.kshm_ctype = %u\n"
                "\thello.kshm_nips = %u\n",
                len,
                hello.kshm_magic,
@@ -584,8 +620,8 @@ tcpnal_hello_handle_v2(int sock, lnet_process_id_t *nidpid,
                hello.kshm_ctype,
                hello.kshm_nips);
 
-        if (hello.kshm_magic != LNET_PROTO_MAGIC) { 
-                CERROR("bad magic from peer %x should be %x\n", 
+        if (hello.kshm_magic != LNET_PROTO_MAGIC) {
+                CERROR("bad magic from peer %x should be %x\n",
                        hello.kshm_magic, LNET_PROTO_MAGIC);
                 return -EPROTO;
         }
@@ -595,8 +631,8 @@ tcpnal_hello_handle_v2(int sock, lnet_process_id_t *nidpid,
                 unsigned int i;
 
                 if (psc_sock_read(sock, &kshm_ips,
-                                   hello.kshm_nips * sizeof(__u32), 
-                                   HELLO_TIMEOUT)) { 
+                                   hello.kshm_nips * sizeof(__u32),
+                                   HELLO_TIMEOUT)) {
                         CERROR ("Error reading IPs from nid %s\n",
                                 libcfs_nid2str(hello.kshm_src_nid));
                         return -1;
@@ -606,7 +642,7 @@ tcpnal_hello_handle_v2(int sock, lnet_process_id_t *nidpid,
                         if (hello.kshm_ips[i] == 0) {
                                 CERROR("Zero IP[%d]\n", i);
                                 return -EPROTO;
-                        } else 
+                        } else
                                 CERROR("Got IP[%d] from ip %u\n",
                                        i, hello.kshm_ips[i]);
                 }
@@ -618,7 +654,7 @@ tcpnal_hello_handle_v2(int sock, lnet_process_id_t *nidpid,
         nidpid->pid = hello.kshm_src_pid;
 
         hmv = (lnet_magicversion_t *)&reply.dest_nid;
-        
+
         hmv->magic = LNET_PROTO_TCP_MAGIC;
         hmv->version_major = LNET_PROTO_TCP_VERSION_MAJOR;
         hmv->version_minor = LNET_PROTO_TCP_VERSION_MINOR;
@@ -631,14 +667,14 @@ tcpnal_hello_handle_v2(int sock, lnet_process_id_t *nidpid,
         reply.msg.hello.incarnation = incarnation;
         reply.msg.hello.type        = tcpnal_invert_type(hello.kshm_ctype);
 
-        if (psc_sock_write (sock, (void *)&reply, 
+        if (psc_sock_write (sock, (void *)&reply,
                              (int)sizeof(lnet_hdr_t), HELLO_TIMEOUT)) {
                 CERROR("psc_sock_write() to %d of hello reply failed: %s\n",
                        sock, strerror(errno));
                 return -1;
         }
 
-        CDEBUG(D_TRACE, 
+        CDEBUG(D_TRACE,
                "v2 Hello Reply:\n\tHdr.dest_nid = %s\n"
                "\tHdr.src_nid  = %s\n"
                "\tHdr.dest_pid = %u\n"
@@ -660,16 +696,16 @@ tcpnal_hello_handle_v2(int sock, lnet_process_id_t *nidpid,
         ssize_t rc;
         unsigned long long b[128];
         memset(b, 0, 1024);
-        
+
         rc = recv(sock, (unsigned char *)b, 24, 0);
         CERROR("got %zd extra bytes\n", rc);
 
         int i;
-        for (i=0; i < 128; i+=4) { 
-                CERROR("%016llx %016llx %016llx %016llx\n", 
-                       (b[i]), 
-                       (b[i+1]), 
-                       (b[i+2]), 
+        for (i=0; i < 128; i+=4) {
+                CERROR("%016llx %016llx %016llx %016llx\n",
+                       (b[i]),
+                       (b[i+1]),
+                       (b[i+2]),
                        (b[i+3]));
         }
 
@@ -682,7 +718,7 @@ tcpnal_hello_handle_v2(int sock, lnet_process_id_t *nidpid,
  * Returns: an allocated connection structure, either
  *          a pre-existing one, or a new connection
  */
-connection 
+connection
 force_tcp_connection(manager    m,
                      lnet_process_id_t *nidpid,
                      procbridge pb)
@@ -691,7 +727,7 @@ force_tcp_connection(manager    m,
     connection         conn = NULL;
 //    bridge	       b = m->handler_arg;
     struct sockaddr_in addr;
-    struct sockaddr_in locaddr; 
+    struct sockaddr_in locaddr;
     int                fd;
     int                option;
     int                rc;
@@ -700,50 +736,50 @@ force_tcp_connection(manager    m,
 
     pthread_mutex_lock(&m->conn_lock);
 
-    CDEBUG(D_NET, "Looking up connection for %u-%s\n", 
+    CDEBUG(D_NET, "Looking up connection for %u-%s\n",
            nidpid->pid, libcfs_nid2str(nidpid->nid));
 
     conn = hash_table_find(m->connections, &nidpid->nid);
     if (conn)
             goto out;
 
-    CDEBUG(D_NET, "No conn found, establishing conn to %u-%s\n", 
-           nidpid->pid, libcfs_nid2str(nidpid->nid)); 
+    CDEBUG(D_NET, "No conn found, establishing conn to %u-%s\n",
+           nidpid->pid, libcfs_nid2str(nidpid->nid));
 
     memset(&addr, 0, sizeof(addr));
     addr.sin_family      = AF_INET;
     addr.sin_addr.s_addr = htonl(ip);
     addr.sin_port        = htons(tcpnal_connector_port);
 
-    memset(&locaddr, 0, sizeof(locaddr)); 
+    memset(&locaddr, 0, sizeof(locaddr));
     //locaddr.sin_family = AF_INET;
     locaddr.sin_family = (tcpnal_usesdp ? AF_INET_SDP : AF_INET);
     locaddr.sin_addr.s_addr = INADDR_ANY;
     locaddr.sin_port = m->port;
 
-    if (!tcpnal_server) { 
+    if (!tcpnal_server) {
             fd = socket((tcpnal_usesdp ? AF_INET_SDP : AF_INET), SOCK_STREAM, 0);
             if (fd < 0) {
                     CERROR("tcpnal socket failed: %s\n", strerror(errno));
                     goto out;
-            } 
-            
+            }
+
             option = 1;
-            rc = setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, 
+            rc = setsockopt(fd, SOL_SOCKET, SO_REUSEADDR,
                             &option, sizeof(option));
             if (rc != 0) {
-                    CERROR ("Can't set SO_REUSEADDR for socket: %s\n", 
-                            strerror(errno)); 
+                    CERROR ("Can't set SO_REUSEADDR for socket: %s\n",
+                            strerror(errno));
                     close(fd);
                     goto out;
-            } 
+            }
 
             if (m->port != 0) {
                     /* Bind all subsequent connections to the same port */
-                    rc = bind(fd, (struct sockaddr *)&locaddr, 
+                    rc = bind(fd, (struct sockaddr *)&locaddr,
                               sizeof(locaddr));
                     if (rc != 0) {
-                            CERROR("Error binding port: %s\n", 
+                            CERROR("Error binding port: %s\n",
                                    strerror(errno));
                             close(fd);
                             goto out;
@@ -753,46 +789,46 @@ force_tcp_connection(manager    m,
             rc = connect(fd, (struct sockaddr *)&addr,
                          sizeof(struct sockaddr_in));
             if (rc != 0) {
-                    CERROR("Error connecting to remote host: %s\n", 
+                    CERROR("Error connecting to remote host: %s\n",
                            strerror(errno));
                     close(fd);
                     goto out;
             }
-            
+
             sz = sizeof(locaddr);
             rc = getsockname(fd, (struct sockaddr *)&locaddr, &sz);
             if (rc != 0) {
                     CERROR("Error on getsockname: %s\n", strerror(errno));
                     close(fd);
                     goto out;
-            }            
+            }
 
             if (m->port == 0)
                     m->port = ntohs(locaddr.sin_port);
 
-    } else { 
-            for (rport = IPPORT_RESERVED - 1; rport > IPPORT_RESERVED / 2; 
+    } else {
+            for (rport = IPPORT_RESERVED - 1; rport > IPPORT_RESERVED / 2;
                  --rport) {
-                    fd = socket((tcpnal_usesdp ? AF_INET_SDP : AF_INET), 
+                    fd = socket((tcpnal_usesdp ? AF_INET_SDP : AF_INET),
                                 SOCK_STREAM, 0);
                     if (fd < 0) {
-                            CERROR("tcpnal socket failed: %s\n", 
+                            CERROR("tcpnal socket failed: %s\n",
                                    strerror(errno));
                             goto out;
-                    } 
-                    
+                    }
+
                     option = 1;
-                    rc = setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, 
+                    rc = setsockopt(fd, SOL_SOCKET, SO_REUSEADDR,
                                     &option, sizeof(option));
                     if (rc != 0) {
-                            CERROR("Can't set SO_REUSEADDR for socket: %s\n", 
-                                   strerror(errno)); 
+                            CERROR("Can't set SO_REUSEADDR for socket: %s\n",
+                                   strerror(errno));
                             close(fd);
                             goto out;
-                    } 
-                    
+                    }
+
                     locaddr.sin_port = htons(rport);
-                    rc = bind(fd, (struct sockaddr *)&locaddr, 
+                    rc = bind(fd, (struct sockaddr *)&locaddr,
                               sizeof(locaddr));
 
                     if (rc == 0 || errno == EACCES) {
@@ -800,28 +836,28 @@ force_tcp_connection(manager    m,
                                          sizeof(struct sockaddr_in));
                             if (rc == 0) {
                                     break;
-                            } else if (errno != EADDRINUSE && 
+                            } else if (errno != EADDRINUSE &&
                                        errno != EADDRNOTAVAIL) {
-                                    CERROR("Error connecting to remote host: %s\n", 
+                                    CERROR("Error connecting to remote host: %s\n",
                                            strerror(errno));
                                     close(fd);
                                     goto out;
                             }
                     } else if (errno != EADDRINUSE) {
-                            CERROR("Error binding to privileged port: %s\n", 
+                            CERROR("Error binding to privileged port: %s\n",
                                    strerror(errno));
                             close(fd);
                             goto out;
                     }
                     close(fd);
             }
-            
+
             if (rport == IPPORT_RESERVED / 2) {
                     CERROR("Out of ports trying to bind to a reserved port\n");
                     goto out;
             }
     }
-    
+
     option = tcpnal_nagle ? 0 : 1;
     setsockopt(fd, IPPROTO_TCP, TCP_NODELAY, &option, sizeof(option));
     option = tcpnal_buffer_size;
@@ -830,15 +866,15 @@ force_tcp_connection(manager    m,
             option = tcpnal_buffer_size;
             setsockopt(fd, SOL_SOCKET, SO_RCVBUF, &option, sizeof(option));
     }
-    
+
     /* say hello */
-    if (tcpnal_hello(fd, nidpid->nid)) { 
+    if (tcpnal_hello(fd, nidpid->nid)) {
             conn = NULL;
-            goto out;            
+            goto out;
     }
-    
+
     conn = allocate_connection(m, nidpid, fd);
-    
+
     /* let nal thread know this event right away */
     if (conn)
             procbridge_wakeup_nal(pb);
@@ -848,14 +884,14 @@ out:
     return (conn);
 }
 
-connection 
+connection
 force_tcp_connection_old(manager m, lnet_nid_t nid, procbridge pb)
 {
         /* just spoof the lustre pid for now (12345) */
         lnet_process_id_t nidpid = {nid, 12345};
-        return force_tcp_connection(m, &nidpid, pb);        
+        return force_tcp_connection(m, &nidpid, pb);
 }
-        
+
 /* Function:  new_connection
  * Arguments: t: opaque argument holding the tcpname
  * Returns: 1 in order to reregister for new connection requests
@@ -877,7 +913,7 @@ static int new_connection(void *z)
     lnet_acceptor_connreq_t cr;
     ssize_t            cr_sz = sizeof(lnet_acceptor_connreq_t);
     int                lnet_magic;
-    
+
     fd  = accept(m->bound,(struct sockaddr *)&s,&len);
 
     if (fd < 0) {
@@ -890,49 +926,49 @@ static int new_connection(void *z)
     ipaddr = *((unsigned int *)&s.sin_addr);
 
     rc = recv(fd, &cr, cr_sz, 0);
-    
-    if (rc != cr_sz) 
+
+    if (rc != cr_sz)
             goto failed_conn;
 
     CDEBUG(D_TRACE, "acr_magic %u, acr_version %u, acr_nid %s\n",
            cr.acr_magic, cr.acr_version, libcfs_nid2str(cr.acr_nid));
 
-    if (cr.acr_magic != LNET_PROTO_ACCEPTOR_MAGIC) {            
+    if (cr.acr_magic != LNET_PROTO_ACCEPTOR_MAGIC) {
             CERROR("recv'd invalid MAGIC from %d\n",
                    ipaddr);
             return 0;
     }
-    
+
     if (cr.acr_version != LNET_PROTO_ACCEPTOR_VERSION) {
             CERROR("recv'd invalid VERSION %d from %d\n",
                    cr.acr_version, ipaddr);
             return 0;
     }
     /*
-     * Grab the next 4 bytes, that will tell us if lustre is 
+     * Grab the next 4 bytes, that will tell us if lustre is
      *  working with v1 or v2 lnet
      */
     rc = recv(fd, &lnet_magic, sizeof(lnet_magic), MSG_PEEK);
     if (rc < 0 || rc != sizeof(lnet_magic))
             goto failed_conn;
 
-    CDEBUG(D_TRACE, "Got 4 bytes for LNET_PROTO_MAGIC (%x) %x\n", 
+    CDEBUG(D_TRACE, "Got 4 bytes for LNET_PROTO_MAGIC (%x) %x\n",
            LNET_PROTO_MAGIC, lnet_magic);
 
     if (lnet_magic == LNET_PROTO_MAGIC)
             rc = tcpnal_hello_handle_v2(fd, &nidpid, 0);
 
-    else 
-            /* 
+    else
+            /*
              * Assuming that this is the old hello
-             */ 
+             */
             rc = tcpnal_hello_handle_v1(fd, &nidpid, 0);
 
     if (rc)
             goto failed_conn;
 
     CDEBUG(D_NET, "Conn from nid %s:0x%x\n",
-           libcfs_nid2str(nidpid.nid), nidpid.pid);        
+           libcfs_nid2str(nidpid.nid), nidpid.pid);
 
     pthread_mutex_lock(&m->conn_lock);
     allocate_connection(m, &nidpid, fd);
@@ -955,7 +991,7 @@ static int new_connection(void *z)
  *
  *  TODO: The port should be an explicitly sized type.
  */
-__unusedx static int 
+__unusedx static int
 bind_socket(manager m, unsigned short port)
 {
         struct sockaddr_in addr;
@@ -965,44 +1001,45 @@ bind_socket(manager m, unsigned short port)
         int sock_type = (tcpnal_usesdp ? AF_INET_SDP : AF_INET);
 	socklen_t option;
 
-        if ((m->bound = socket(sock_type, SOCK_STREAM, 0)) < 0)  
+        if ((m->bound = socket(sock_type, SOCK_STREAM, 0)) < 0)
                 return(0);
-        
-        psc_info("local bind address %x %x (mgr=%p) socknum=%d &b->b_io_handler %p", 
-                 LNET_NIDADDR(b->b_ni->ni_nid), 
-                 htonl(LNET_NIDADDR(b->b_ni->ni_nid)), m, m->bound, 
+
+        psc_info("local bind address %x %x (mgr=%p) socknum=%d &b->b_io_handler %p",
+                 LNET_NIDADDR(b->b_ni->ni_nid),
+                 htonl(LNET_NIDADDR(b->b_ni->ni_nid)), m, m->bound,
                  &b->b_io_handler);
-        
+
         option = tcpnal_buffer_size;
         if (option != 0) {
                 setsockopt(m->bound, SOL_SOCKET, SO_SNDBUF, &option, sizeof(option));
                 option = tcpnal_buffer_size;
                 setsockopt(m->bound, SOL_SOCKET, SO_RCVBUF, &option, sizeof(option));
         }
-        
+
         bzero((char *) &addr, sizeof(addr));
         addr.sin_family      = (tcpnal_usesdp ? AF_INET_SDP : AF_INET);
         //addr.sin_family      = AF_INET;
         addr.sin_addr.s_addr = htonl(LNET_NIDADDR(b->b_ni->ni_nid));
         addr.sin_port        = htons(port);
-        
+
         if (bind(m->bound,(struct sockaddr *)&addr,alen)<0){
-                CERROR ("tcpnal bind: %s", strerror(errno)); 
+                CERROR ("tcpnal bind: %s", strerror(errno));
                 return(0);
         }
         psc_info("local bind address %x %x (mgr=%p) "
-                 "socknum=%d &b->b_io_handler %p", 
-                 LNET_NIDADDR(b->b_ni->ni_nid), 
-                 htonl(LNET_NIDADDR(b->b_ni->ni_nid)), m, m->bound, 
+                 "socknum=%d &b->b_io_handler %p",
+                 LNET_NIDADDR(b->b_ni->ni_nid),
+                 htonl(LNET_NIDADDR(b->b_ni->ni_nid)), m, m->bound,
                  &b->b_io_handler);
-        
+
         getsockname(m->bound,(struct sockaddr *)&addr, &alen);
-        
+
         m->bound_handler=register_io_handler(m->bound,
                                              READ_HANDLER,
                                              &b->b_io_handler,
-                                             new_connection, m);        
-        listen(m->bound, 5); 
+                                             new_connection,
+					     NULL, m);
+        listen(m->bound, 5);
         m->port=addr.sin_port;
         return(1);
 }
@@ -1013,7 +1050,7 @@ bind_socket(manager m, unsigned short port)
  *
  * close all connections and reclaim resources
  */
-void 
+void
 shutdown_connections(manager m)
 {
         //#if 0
@@ -1031,21 +1068,21 @@ shutdown_connections(manager m)
  * Returns: a newly allocated manager structure, or
  *          zero if the fixed port could not be bound
  */
-manager 
+manager
 init_connections(int (*input)(void *, void *), void *a)
 {
     manager m = (manager)malloc(sizeof(struct manager));
     bridge  b;
 
-    if (m == NULL) 
+    if (m == NULL)
             goto fail;
-    
+
     m->connections = hash_create_table(compare_connection,connection_key);
     m->handler = input;
     m->handler_arg = b = a;
     m->port = 0;                         /* set on first connection */
-       
-    psc_info("nid %s tid %d b %p", 
+
+    psc_info("nid %s tid %d b %p",
               libcfs_nid2str(b->b_ni->ni_nid), b->tid, b);
 
     pthread_mutex_init(&m->conn_lock, 0);
