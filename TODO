@@ -10,10 +10,10 @@ general
 - ctlapi GETTREE
 - pfl: use "psc_" prefix and "_mt" (multithread-safe) postfix where sensical
 - type fixes:
-	(o) s/U64CONST/UINT64_C/
 	(o) inttypes.h PRI[dioux]64 in place of _P_U64 and LPX
 	(o) s/u64/uint64_t/
 - investigate pthread_rwlocks for things like trees and large lists
+- remove ifdef buttons
 
 slash
 - piggyback small readdirs directly into READDIR replies
@@ -40,7 +40,6 @@ zest
   during file system creation time (hopefully only)
 - fsck service is currently badly broken
 - research faster CRC operations
-- remove ifdef buttons
 - make a proper solution when running out of parity groups
   when servicing clients.  possible solution:
     (o) block new file opens until parity groups from older
