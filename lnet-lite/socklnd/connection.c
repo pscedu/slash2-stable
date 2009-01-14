@@ -138,9 +138,9 @@ compare_connection(void *arg1, const void *arg2)
  *          of the id
  */
 static unsigned int
-connection_key(void *arg)
+connection_key(const void *arg)
 {
-        lnet_nid_t *nid = arg;
+        const lnet_nid_t *nid = arg;
 
         return (unsigned int)(*nid);
 }
