@@ -123,10 +123,10 @@ tcpnal_set_global_params (void)
  *    compare_connection() tests for collisions in the hash table
  */
 static int
-compare_connection(void *arg1, void *arg2)
+compare_connection(void *arg1, const void *arg2)
 {
     connection  c = arg1;
-    lnet_process_id_t *nidpid = arg2;
+    const lnet_process_id_t *nidpid = arg2;
 
     return ((c->peer_nid == nidpid->nid) &&
             (c->peer_pid == nidpid->pid));
@@ -232,43 +232,36 @@ static int connection_input(void *d)
 static void
 connection_fail(void *d)
 {
-	lnet_event_t eva, evb;
 	struct list_head *e;
-	connection c = d;
+        connection c = d;
+	lnet_event_t ev;
 	lnet_eq_t *eq;
 	bridge b;
 
-	remove_connection(d);
 	b = c->m->handler_arg;
 
-	/* An event for dropping the import... */
-	memset(&eva, 0, sizeof(eva));
-	eva.type = LNET_EVENT_DROP;
-	eva.target.nid = c->peer_nid;
-	eva.target.pid = c->peer_pid;
-	eva.initiator.nid = b->b_ni->ni_nid;
-	eva.initiator.pid = the_lnet.ln_pid;
+	memset(&ev, 0, sizeof(ev));
+	ev.type = LNET_EVENT_DROP;
+	ev.initiator.nid = c->peer_nid;
+	ev.initiator.pid = c->peer_pid;
+	ev.target.nid = b->b_ni->ni_nid;
+	ev.target.pid = the_lnet.ln_pid;
 
-	/* ... and one for dropping the export. */
-	memset(&evb, 0, sizeof(evb));
-	evb.type = LNET_EVENT_DROP;
-	evb.target = eva.initiator;
-	evb.initiator = eva.target;
+	remove_connection(d);
 
 	/* Inform all eq's to drop associations to this conn. */
 	LNET_LOCK();
 	list_for_each(e, &the_lnet.ln_active_eqs) {
-		eq = list_entry(e, lnet_eq_t, eq_list); 
-		lnet_enq_event_locked(eq, &eva);
-		lnet_enq_event_locked(eq, &evb);
+		eq = list_entry(e, lnet_eq_t, eq_list);
+		lnet_enq_event_locked(eq, &ev);
 	}
 	LNET_UNLOCK();
 }
 
 static connection
-allocate_connection(manager m, lnet_process_id_t *nidpid, int fd)
+allocate_connection(manager m, const lnet_process_id_t *nidpid, int fd)
 {
-    bridge     b = m->handler_arg;
+    bridge b = m->handler_arg;
     connection c = malloc(sizeof(struct connection));
 
     LASSERT(c != NULL);
@@ -345,10 +338,8 @@ tcpnal_read(lnet_nid_t nid, int sockfd, void *buffer, int nob)
         return 0;
 }
 
-
-
 int
-tcpnal_hello (int sockfd, lnet_nid_t nid)
+tcpnal_hello(manager m, int sockfd, lnet_nid_t peernid)
 {
         struct timeval          tv;
         __u64                   incarnation;
@@ -357,13 +348,16 @@ tcpnal_hello (int sockfd, lnet_nid_t nid)
         lnet_acceptor_connreq_t cr;
         lnet_hdr_t              hdr;
         lnet_magicversion_t     hmv;
-        lnet_process_id_t       id;
+        lnet_process_id_t       myid;
+	bridge			b;
 
-        LNetGetId(1, &id);
+	b = m->handler_arg;
+	myid.nid = b->b_ni->ni_nid;
+	myid.pid = the_lnet.ln_pid;
 
         CDEBUG(D_NET, "saying hello to %s, (i am %s %u)\n",
-               libcfs_nid2str(nid), libcfs_nid2str(id.nid),
-               id.pid);
+               libcfs_nid2str(peernid), libcfs_nid2str(myid.nid),
+               myid.pid);
 
         gettimeofday(&tv, NULL);
         incarnation = (((__u64)tv.tv_sec) * 1000000) + tv.tv_usec;
@@ -371,7 +365,7 @@ tcpnal_hello (int sockfd, lnet_nid_t nid)
         memset(&cr, 0, sizeof(cr));
         cr.acr_magic   = LNET_PROTO_ACCEPTOR_MAGIC;
         cr.acr_version = LNET_PROTO_ACCEPTOR_VERSION;
-        cr.acr_nid     = nid;
+        cr.acr_nid     = peernid;
 
         /* hmv initialised and copied separately into hdr; compiler "optimize"
          * likely due to confusion about pointer alias of hmv and hdr when this
@@ -391,28 +385,28 @@ tcpnal_hello (int sockfd, lnet_nid_t nid)
         hdr.msg.hello.type = cpu_to_le32(SOCKLND_CONN_ANY);
         hdr.msg.hello.incarnation = cpu_to_le64(incarnation);
 
-        hdr.src_nid = id.nid;
-        hdr.src_pid = id.pid;
+        hdr.src_nid = cpu_to_le64(myid.nid);
+        hdr.src_pid = cpu_to_le32(myid.pid);
 
         /* I don't send any interface info */
 
         /* Assume sufficient socket buffering for these messages... */
-        rc = tcpnal_write(nid, sockfd, &cr, sizeof(cr));
+        rc = tcpnal_write(peernid, sockfd, &cr, sizeof(cr));
         if (rc != 0)
                 return -1;
 
-        rc = tcpnal_write(nid, sockfd, &hdr, sizeof(hdr));
+        rc = tcpnal_write(peernid, sockfd, &hdr, sizeof(hdr));
         if (rc != 0)
                 return -1;
 
-        rc = tcpnal_read(nid, sockfd, &hmv, sizeof(hmv));
+        rc = tcpnal_read(peernid, sockfd, &hmv, sizeof(hmv));
         if (rc != 0)
                 return -1;
 
         if (hmv.magic != le32_to_cpu(LNET_PROTO_TCP_MAGIC)) {
                 CERROR ("Bad magic %#08x (%#08x expected) from %s\n",
                         cpu_to_le32(hmv.magic), LNET_PROTO_TCP_MAGIC,
-                        libcfs_nid2str(nid));
+                        libcfs_nid2str(peernid));
                 return -1;
         }
 
@@ -424,7 +418,7 @@ tcpnal_hello (int sockfd, lnet_nid_t nid)
                         le16_to_cpu (hmv.version_minor),
                         LNET_PROTO_TCP_VERSION_MAJOR,
                         LNET_PROTO_TCP_VERSION_MINOR,
-                        libcfs_nid2str(nid));
+                        libcfs_nid2str(peernid));
                 return -1;
         }
 
@@ -434,7 +428,7 @@ tcpnal_hello (int sockfd, lnet_nid_t nid)
         /* version 1 sends magic/version as the dest_nid of a 'hello' header,
          * so read the rest of it in now... */
 
-        rc = tcpnal_read(nid, sockfd, ((char *)&hdr) + sizeof (hmv),
+        rc = tcpnal_read(peernid, sockfd, ((char *)&hdr) + sizeof (hmv),
                          sizeof(hdr) - sizeof(hmv));
         if (rc != 0)
                 return -1;
@@ -444,7 +438,7 @@ tcpnal_hello (int sockfd, lnet_nid_t nid)
                 CERROR ("Expecting a HELLO hdr "
                         " but got type %d with %d payload from %s\n",
                         le32_to_cpu (hdr.type),
-                        le32_to_cpu (hdr.payload_length), libcfs_nid2str(nid));
+                        le32_to_cpu (hdr.payload_length), libcfs_nid2str(peernid));
                 return -1;
         }
 
@@ -453,10 +447,10 @@ tcpnal_hello (int sockfd, lnet_nid_t nid)
                 return -1;
         }
 
-        if (nid != le64_to_cpu (hdr.src_nid)) {
+        if (peernid != le64_to_cpu (hdr.src_nid)) {
                 CERROR ("Connected to %s, but expecting %s\n",
                         libcfs_nid2str(le64_to_cpu (hdr.src_nid)),
-                        libcfs_nid2str(nid));
+                        libcfs_nid2str(peernid));
                 return -1;
         }
 
@@ -464,7 +458,7 @@ tcpnal_hello (int sockfd, lnet_nid_t nid)
         nob = le32_to_cpu(hdr.payload_length);
         if (nob != 0) {
                 CERROR("Unexpected HELLO payload %d from %s\n",
-                       nob, libcfs_nid2str(nid));
+                       nob, libcfs_nid2str(peernid));
                 return -1;
         }
 
@@ -489,17 +483,14 @@ tcpnal_invert_type(int type)
 }
 
 int
-tcpnal_hello_handle_v1(int sock, lnet_process_id_t *nidpid,
-                       __unusedx int flipped)
+tcpnal_hello_handle_v1(manager m, int sock, lnet_process_id_t *peerid,
+    __unusedx int flipped)
 {
         lnet_magicversion_t *hmv;
         lnet_hdr_t           hdr;
         int                  len = sizeof(hdr);
         void                *buf = (void *)&hdr;
-        lnet_process_id_t    id;
-
-        id.nid = nidpid->nid;
-        //LNetGetId(1, &id);
+	bridge		     b = m->handler_arg;
 
         if (psc_sock_read (sock, buf, len, HELLO_TIMEOUT)) {
                 CERROR("psc_sock_read() from %d failed: %s\n",
@@ -524,15 +515,18 @@ tcpnal_hello_handle_v1(int sock, lnet_process_id_t *nidpid,
                hdr.payload_length,
                hdr.msg.hello.incarnation,
                hdr.msg.hello.type);
-        /*
-         *  hand the nidpid back to the caller
-         */
-        nidpid->nid = hdr.src_nid;
-        nidpid->pid = hdr.src_pid;
+
+	/*
+	 *  check nid and hand the pid back to the caller
+	 */ 
+	if (peerid->nid != hdr.src_nid)
+		return (-1);
+	peerid->pid = hdr.src_pid;
+
         /*
          * Encode the hello reply
          */
-        hdr.src_nid = id.nid;
+        hdr.src_nid = b->b_ni->ni_nid;
         hdr.src_pid = the_lnet.ln_pid;
         hdr.msg.hello.type = tcpnal_invert_type(hdr.msg.hello.type);
 
@@ -571,25 +565,22 @@ tcpnal_hello_handle_v1(int sock, lnet_process_id_t *nidpid,
  * tcpnal_hello_handle_v2 - expect a v2 style packet but send a v1 reply
  */
 int
-tcpnal_hello_handle_v2(int sock, lnet_process_id_t *nidpid,
-                       __unusedx int flipped)
+tcpnal_hello_handle_v2(manager m, int sock, lnet_process_id_t *peerid,
+    __unusedx int flipped)
 {
         ksock_hello_msg_t    hello;
         lnet_hdr_t           reply;
         int                  len = (int)(sizeof(hello) - sizeof(hello.kshm_ips));
         void                *buf = (void *)&hello;
-        lnet_process_id_t    id;
         __u64                incarnation;
         struct timeval       tv;
         lnet_magicversion_t *hmv;
+	bridge		     br = m->handler_arg;
 
         memset(&hello, 0, sizeof(hello));
 
         gettimeofday(&tv, NULL);
         incarnation = (((__u64)tv.tv_sec) * 1000000) + tv.tv_usec;
-
-        id.nid = nidpid->nid;
-        //LNetGetId(1, &id);
 
         if (psc_sock_read (sock, buf, len, HELLO_TIMEOUT)) {
                 CERROR("psc_sock_read() from %d failed: %s\n",
@@ -647,11 +638,13 @@ tcpnal_hello_handle_v2(int sock, lnet_process_id_t *nidpid,
                                        i, hello.kshm_ips[i]);
                 }
         }
-        /*
-         *  hand the nidpid back to the caller
-         */
-        nidpid->nid = hello.kshm_src_nid;
-        nidpid->pid = hello.kshm_src_pid;
+
+	/*
+	 *  check nid and hand the pid back to the caller
+	 */ 
+	if (peerid->nid != hello.kshm_src_nid)
+		return (-1);
+	peerid->pid = hello.kshm_src_pid;
 
         hmv = (lnet_magicversion_t *)&reply.dest_nid;
 
@@ -659,8 +652,7 @@ tcpnal_hello_handle_v2(int sock, lnet_process_id_t *nidpid,
         hmv->version_major = LNET_PROTO_TCP_VERSION_MAJOR;
         hmv->version_minor = LNET_PROTO_TCP_VERSION_MINOR;
 
-        reply.dest_pid       = hello.kshm_src_pid;
-        reply.src_nid        = id.nid;
+        reply.src_nid        = br->b_ni->ni_nid;
         reply.src_pid        = the_lnet.ln_pid;
         reply.type           = LNET_MSG_HELLO;
         reply.payload_length = 0;
@@ -720,12 +712,11 @@ tcpnal_hello_handle_v2(int sock, lnet_process_id_t *nidpid,
  */
 connection
 force_tcp_connection(manager    m,
-                     lnet_process_id_t *nidpid,
+                     const lnet_process_id_t *nidpid,
                      procbridge pb)
 {
     unsigned int       ip = LNET_NIDADDR(nidpid->nid);
     connection         conn = NULL;
-//    bridge	       b = m->handler_arg;
     struct sockaddr_in addr;
     struct sockaddr_in locaddr;
     int                fd;
@@ -868,7 +859,7 @@ force_tcp_connection(manager    m,
     }
 
     /* say hello */
-    if (tcpnal_hello(fd, nidpid->nid)) {
+    if (tcpnal_hello(m, fd, nidpid->nid)) {
             conn = NULL;
             goto out;
     }
@@ -904,17 +895,19 @@ static int new_connection(void *z)
 {
     manager            m = (manager)z;
     bridge             b = m->handler_arg;
-    struct sockaddr_in s;
-    lnet_process_id_t  nidpid = {b->b_ni->ni_nid, 0};
+    struct sockaddr_storage ss;
+    struct sockaddr_in *sin = (void *)&ss;
     int                fd;
-    socklen_t          len = sizeof(struct sockaddr_in), option;
+    socklen_t          sslen, option;
     unsigned int       ipaddr;
     ssize_t            rc;
     lnet_acceptor_connreq_t cr;
     ssize_t            cr_sz = sizeof(lnet_acceptor_connreq_t);
     int                lnet_magic;
+    lnet_process_id_t  peerid;
 
-    fd  = accept(m->bound,(struct sockaddr *)&s,&len);
+    sslen = sizeof(ss);
+    fd  = accept(m->bound, (struct sockaddr *)&ss, &sslen);
 
     if (fd < 0) {
             CERROR("accept failed %s\n", strerror(errno));
@@ -923,7 +916,7 @@ static int new_connection(void *z)
     option = tcpnal_nagle ? 0 : 1;
     setsockopt(fd, IPPROTO_TCP, TCP_NODELAY, &option, sizeof(option));
 
-    ipaddr = *((unsigned int *)&s.sin_addr);
+    ipaddr = *((unsigned int *)&sin->sin_addr);
 
     rc = recv(fd, &cr, cr_sz, 0);
 
@@ -936,13 +929,13 @@ static int new_connection(void *z)
     if (cr.acr_magic != LNET_PROTO_ACCEPTOR_MAGIC) {
             CERROR("recv'd invalid MAGIC from %d\n",
                    ipaddr);
-            return 0;
+            goto failed_conn;
     }
 
     if (cr.acr_version != LNET_PROTO_ACCEPTOR_VERSION) {
             CERROR("recv'd invalid VERSION %d from %d\n",
                    cr.acr_version, ipaddr);
-            return 0;
+            goto failed_conn;
     }
     /*
      * Grab the next 4 bytes, that will tell us if lustre is
@@ -955,29 +948,33 @@ static int new_connection(void *z)
     CDEBUG(D_TRACE, "Got 4 bytes for LNET_PROTO_MAGIC (%x) %x\n",
            LNET_PROTO_MAGIC, lnet_magic);
 
+    peerid.nid = LNET_MKNID(LNET_NIDNET(b->b_ni->ni_nid),
+      ntohl(sin->sin_addr.s_addr));
+
     if (lnet_magic == LNET_PROTO_MAGIC)
-            rc = tcpnal_hello_handle_v2(fd, &nidpid, 0);
+            rc = tcpnal_hello_handle_v2(m, fd, &peerid, 0);
 
     else
             /*
              * Assuming that this is the old hello
              */
-            rc = tcpnal_hello_handle_v1(fd, &nidpid, 0);
+            rc = tcpnal_hello_handle_v1(m, fd, &peerid, 0);
 
     if (rc)
             goto failed_conn;
 
     CDEBUG(D_NET, "Conn from nid %s:0x%x\n",
-           libcfs_nid2str(nidpid.nid), nidpid.pid);
+	libcfs_nid2str(peerid.nid), peerid.pid);
 
     pthread_mutex_lock(&m->conn_lock);
-    allocate_connection(m, &nidpid, fd);
+    allocate_connection(m, &peerid, fd);
     pthread_mutex_unlock(&m->conn_lock);
     return(1);
 
  failed_conn:
     CERROR("Conn error %s\n", strerror(errno));
-    return rc;
+    close(fd);
+    return (1);
 }
 
 /* Function:  bind_socket
