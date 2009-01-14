@@ -2,12 +2,14 @@
 
 #define PSC_SUBSYS PSS_RPC
 
-#include "psc_util/alloc.h"
-#include "psc_util/atomic.h"
-#include "psc_util/waitq.h"
+#include "psc_types.h"
+#include "psc_rpc/export.h"
 #include "psc_rpc/rpc.h"
 #include "psc_rpc/rpclog.h"
-#include "psc_types.h"
+#include "psc_util/alloc.h"
+#include "psc_util/atomic.h"
+#include "psc_util/log.h"
+#include "psc_util/waitq.h"
 
 lnet_handle_eq_t pscrpc_eq_h;
 struct psclist_head pscrpc_wait_callbacks;
@@ -324,6 +326,19 @@ void server_bulk_callback (lnet_event_t *ev)
 static void
 drop_callback(lnet_event_t *ev)
 {
+	struct pscrpc_connection *conn;
+
+	conn = pscrpc_get_connection(ev->initiator,
+	    ev->target.nid, NULL);
+	if (conn) {
+		if (conn->c_exp)
+			pscrpc_export_put(conn->c_exp);
+#if 0
+		if (conn->c_imp)
+			pscrpc_import_release(conn->c_imp);
+#endif
+		pscrpc_put_connection(conn);
+	}
 }
 
 /**
@@ -341,7 +356,7 @@ static void pscrpc_master_callback(lnet_event_t *ev)
 {
 	struct pscrpc_cb_id *cbid;
 	void (*callback)(lnet_event_t *);
-	
+
 	if (ev->type == LNET_EVENT_DROP) {
 		drop_callback(ev);
 		return;
@@ -457,7 +472,7 @@ pscrpc_wait_event (int timeout)
                 psclist_for_each(tmp, &pscrpc_wait_callbacks) {
                         llwc = psclist_entry(tmp, struct pscrpc_wait_callback,
 					     llwc_list);
-			
+
                         if (llwc->llwc_fn(llwc->llwc_arg))
                                 found_something = 1;
                 }
