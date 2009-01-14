@@ -101,7 +101,7 @@ struct access_reply {
 struct access_pendreq {
 	struct psclist_head	 apr_lentry;
 	psc_spinlock_t		 apr_lock;
-	struct psc_wait_queue	 apr_wq;
+	struct psc_waitq	 apr_wq;
 	int			 apr_id;
 	int			 apr_fd;
 	int			 apr_op;

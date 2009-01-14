@@ -13,7 +13,7 @@
 
 # include <pthread.h>
 
-struct psc_wait_queue {
+struct psc_waitq {
 	pthread_mutex_t		wq_mut;
 	pthread_cond_t		wq_cond;
 	atomic_t		wq_nwaitors;
@@ -21,13 +21,13 @@ struct psc_wait_queue {
 
 #else /* HAVE_LIBPTHREAD */
 
-struct psc_wait_queue {
+struct psc_waitq {
 	atomic_t		wq_nwaitors;
 };
 
 #endif /* HAVE_LIBPTHREAD */
 
-typedef struct psc_wait_queue psc_waitq_t;
+typedef struct psc_waitq psc_waitq_t;
 
 void psc_waitq_init(psc_waitq_t *);
 void psc_waitq_wait(psc_waitq_t *, psc_spinlock_t *);
