@@ -31,9 +31,9 @@
  * the table 
  */
 static table_entry *
-table_lookup (table t,void *comparator,
+table_lookup (table t, const void *comparator,
               unsigned int k,
-              int (*compare_function)(void *, void *),
+              int (*compare_function)(void *, const void *),
               int *success)
 {
         unsigned int key=k%t->size;
@@ -111,8 +111,8 @@ key_from_string(char *s)
  * Returns: a pointer to the new table
  */
 table 
-hash_create_table (int (*compare_function)(void *, void *),
-                   unsigned int (*key_function)(void *))
+hash_create_table (int (*compare_function)(void *, const void *),
+                   unsigned int (*key_function)(const void *))
 {
         table new=(table)malloc(sizeof(struct table));
         memset(new, 0, sizeof(struct table));
@@ -133,7 +133,7 @@ hash_create_table (int (*compare_function)(void *, void *),
  * Returns: the element references to by comparator, or null
  */
 void *
-hash_table_find (table t, void *comparator)
+hash_table_find (table t, const void *comparator)
 {
         int success;
         table_entry* entry=table_lookup(t,comparator,
@@ -153,7 +153,7 @@ hash_table_find (table t, void *comparator)
  * Returns: nothing
  */
 void 
-hash_table_insert (table t, void *value, void *comparator)
+hash_table_insert (table t, void *value, const void *comparator)
 {
         int success;
         unsigned int k=(*t->key_function)(comparator);
@@ -182,7 +182,7 @@ hash_table_insert (table t, void *value, void *comparator)
  * Returns: 
  */
 void 
-hash_table_remove (table t, void *comparator)
+hash_table_remove (table t, const void *comparator)
 {
         int success;
         table_entry temp;

@@ -21,15 +21,15 @@ typedef struct table {
   unsigned int size;
   int number_of_entries;
   table_entry *entries;
-  int (*compare_function)(const void *, const void *);
-  unsigned int (*key_function)(void *);
+  int (*compare_function)(void *, const void *);
+  unsigned int (*key_function)(const void *);
 } *table;
 
 /* table.c */
 unsigned int key_from_int(int i);
 unsigned int key_from_string(char *s);
 table hash_create_table(int (*compare_function)(void *, const void *), 
-                        unsigned int (*key_function)(void *));
+                        unsigned int (*key_function)(const void *));
 void *hash_table_find(table t, const void *comparator);
 void hash_table_insert(table t, void *value, const void *comparator);
 void hash_table_remove(table t, const void *comparator);
