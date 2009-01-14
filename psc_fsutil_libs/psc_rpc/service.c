@@ -333,7 +333,7 @@ pscrpc_server_handle_request(struct pscrpc_service *svc,
 		 *  see pscrpc_new_export() for more detail
 		 */
 		LOCK_INIT(&exp->exp_lock);
-		atomic_set(&exp->exp_refcount, 2);
+		atomic_set(&exp->exp_refcount, 1);
 		atomic_set(&exp->exp_rpc_count, 0);
 		exp->exp_connection = request->rq_conn;
 		request->rq_conn->c_exp = exp;

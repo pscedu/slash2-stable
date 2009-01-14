@@ -335,7 +335,7 @@ drop_callback(lnet_event_t *ev)
 			pscrpc_export_put(conn->c_exp);
 #if 0
 		if (conn->c_imp)
-			pscrpc_import_release(conn->c_imp);
+			import_put(conn->c_imp);
 #endif
 		pscrpc_put_connection(conn);
 	}
