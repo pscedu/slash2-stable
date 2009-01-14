@@ -106,7 +106,7 @@ struct thr_init {
 };
 
 struct cli_thr {
-	struct psc_wait_queue set_wq;
+	struct psc_waitq set_wq;
 	int nsets;
 };
 
