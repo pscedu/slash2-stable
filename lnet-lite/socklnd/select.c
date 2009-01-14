@@ -149,7 +149,8 @@ prepare_fd_sets(io_handler *ioh, fd_set *r, fd_set *w, fd_set *e)
         if ((*k)->disabled){
             j=*k;
             *k=(*k)->next;
-	    j->errf(j->argument);
+	    if (j->errf)
+	    	j->errf(j->argument);
             free(j);
         }
         if (*k) {

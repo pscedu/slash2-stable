@@ -217,7 +217,6 @@ static int from_connection(void *a, void *d)
                 hdr.dest_pid = cpu_to_le32(the_lnet.ln_pid);
 
                 rc = lnet_parse(b->b_ni, &hdr, c->peer_nid, c, 0);
-                //rc = lnet_parse(b->b_ni, &hdr, hdr.src_nid, c, 0);
                 if (rc < 0) {
                         CERROR("Error %d from lnet_parse\n", rc);
                         return 0;
