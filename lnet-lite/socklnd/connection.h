@@ -30,7 +30,7 @@ typedef struct connection {
         io_handler  conn_iohandler;
 } *connection;
 
-connection force_tcp_connection(manager m, lnet_process_id_t *nidpid, 
+connection force_tcp_connection(manager m, const lnet_process_id_t *nidpid, 
                                 procbridge pb);
 
 connection force_tcp_connection_old(manager m, lnet_nid_t nid,
