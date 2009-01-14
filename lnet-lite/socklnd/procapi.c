@@ -28,6 +28,8 @@
  *  Along with initialization, shutdown, and transport to the library
  *  side, this file contains some stubs to satisfy the nal definition.
  */
+
+#include <err.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -138,25 +140,27 @@ void procbridge_getnid(lnet_ni_t *ni)
         struct ifreq r;
         int s, rc;
         unsigned int ipaddr=0;
-        
+
         s = socket(PF_INET, SOCK_DGRAM, IPPROTO_IP);
         LASSERT(s >= 0);
-        
+
         memset(&r, 0, sizeof(struct ifreq));
 
         strncpy(r.ifr_name, ni->ni_interfaces[0], IFNAMSIZ);
-        
+
         rc = ioctl(s, SIOCGIFADDR, &r);
+	if (rc == -1)
+		err(1, "ioctl gifaddr %s", r.ifr_name);
 
         ipaddr  = (unsigned char)r.ifr_addr.sa_data[2] << 24;
         ipaddr |= (unsigned char)r.ifr_addr.sa_data[3] << 16;
         ipaddr |= (unsigned char)r.ifr_addr.sa_data[4] << 8;
         ipaddr |= (unsigned char)r.ifr_addr.sa_data[5];
-        
+
         ni->ni_nid |= LNET_MKNID(LNET_MKNET(SOCKLND, 0), ipaddr);
-        CERROR("Dev ;%s; Addr ;0x%x; %s\n", 
+        CERROR("Dev ;%s; Addr ;0x%x; %s\n",
                r.ifr_name, ipaddr, libcfs_nid2str(ni->ni_nid));
-        
+
 }
 
 /* Function: procbridge_startup
@@ -179,17 +183,17 @@ procbridge_startup (lnet_ni_t *ni)
     lnet_nid_t onid=ni->ni_nid;
 
     oni->ni_bonded_interfaces = PSCALLOC(sizeof(oni)*oni->ni_ninterfaces);
-    
+
     LASSERT (tcpnal_instances < MAXTCPNALS);
     LASSERT (oni->ni_lnd == &the_tcplnd);
 
     init_unix_timer();
 
-    for (i=0; oni->ni_interfaces[i]; i++) {  
+    for (i=0; oni->ni_interfaces[i]; i++) {
             LASSERT(!oni->ni_bonded_interfaces[i]);
 
             if (i) {
-                    /* bond the slave interface, carry the 
+                    /* bond the slave interface, carry the
                      *  pointer to the list of our sibling if's
                      */
                     LASSERT(&oni->ni_bonded_interfaces[i]);
@@ -207,17 +211,17 @@ procbridge_startup (lnet_ni_t *ni)
             } else {
                     ni = oni->ni_bonded_interfaces[0] = oni;
             }
-	    /* Allocate memory for iostats, ni_netstats is (void *) to 
+	    /* Allocate memory for iostats, ni_netstats is (void *) to
 	     *  avoid the mess of linking in zest headers into lib-types.h
 	     */
 	    ni->ni_sendstats = PSCALLOC(sizeof(struct iostats));
 	    ni->ni_recvstats = PSCALLOC(sizeof(struct iostats));
 
             procbridge_getnid(ni);
-            /* The credit settings here are pretty irrelevent.  
-             *   Userspace tcplnd has no tx descriptor pool to 
+            /* The credit settings here are pretty irrelevent.
+             *   Userspace tcplnd has no tx descriptor pool to
              *   exhaust and does a blocking send; that's the real
-             *   limit on send concurrency. 
+             *   limit on send concurrency.
              */
             if (i)
 	    	add_ni(ni);
@@ -232,7 +236,7 @@ procbridge_startup (lnet_ni_t *ni)
             //b->b_io_handler = (io_handler)malloc(sizeof(struct io_handler));
             //memset(b->b_io_handler, 0, (sizeof(struct io_handler)));
             b->b_io_handler = NULL;
-            
+
             ni->ni_data = b;
 
             /* init procbridge */
@@ -247,7 +251,7 @@ procbridge_startup (lnet_ni_t *ni)
                     rc = -errno;
                     return rc;
             }
-            
+
             if (!register_io_handler(p->notifier[1], READ_HANDLER,
                                      &b->b_io_handler,
                                      procbridge_notifier_handler, NULL, p)) {
@@ -256,11 +260,11 @@ procbridge_startup (lnet_ni_t *ni)
             }
 
             b->tid = tcpnal_instances++;
-            
+
 #ifdef ENABLE_SELECT_DISPATCH
             __global_procbridge = p;
 #endif
-            
+
 	    lnet_thrspawnf(&p->t, nal_thread, b);
     }
 
