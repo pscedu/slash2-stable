@@ -77,7 +77,7 @@ static char *
 libcfs_next_nidstring (void)
 {
         char          *str;
-#ifndef KERNEL 
+#ifndef KERNEL
         __unusedx unsigned long  flags;
 #else
         unsigned long  flags;
@@ -284,7 +284,7 @@ libcfs_num_str2addr(const char *str, int nob, __u32 *addr)
         n = nob;
         if (sscanf(str, "%u%n", addr, &n) >= 1 && n == nob)
                 return 1;
-        
+
         return 0;
 }
 
@@ -331,14 +331,13 @@ libcfs_lnd2modname(int lnd)
 char *
 libcfs_lnd2str(int lnd)
 {
-        char            sstr[32];
-        char           *str = sstr;
+        char           *str;
         struct netstrfns *nf = libcfs_lnd2netstrfns(lnd);
 
         if (nf != NULL)
                 return nf->nf_name;
 
-        //str = libcfs_next_nidstring();
+        str = libcfs_next_nidstring();
         snprintf(str, LNET_NIDSTR_SIZE, "?%u?", lnd);
         return str;
 }
@@ -381,16 +380,13 @@ libcfs_nid2str(lnet_nid_t nid)
         int               nnum = LNET_NETNUM(net);
         struct netstrfns *nf;
         char             *str;
-        static char       sstr[32];
         int               nob;
-
-        str = sstr;
 
         if (nid == LNET_NID_ANY)
                 return "LNET_NID_ANY";
 
         nf = libcfs_lnd2netstrfns(lnd);
-        //str = libcfs_next_nidstring();
+        str = libcfs_next_nidstring();
 
         if (nf == NULL)
                 snprintf(str, LNET_NIDSTR_SIZE, "%x@<%u:%u>", addr, lnd, nnum);
