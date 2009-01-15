@@ -136,6 +136,10 @@ depend: ${_C_SRCS}
 	fi
 
 clean:
+	@# Check existence of files to catch errors such as SRCS+=file.y instead of file.c
+	@for i in ${SRCS}; do								\
+		test -f $$i || { echo "file does not exist: $$i" >&2; exit 1; };	\
+	done
 	rm -rf ${OBJS} ${PROG} ${LIBRARY} ${CLEANFILES} ${_YACCINTM} ${_LEXINTM}	\
 	    .depend* TAGS cscope.out core.[0-9]*
 	@for i in ${SUBDIRS}; do							\
