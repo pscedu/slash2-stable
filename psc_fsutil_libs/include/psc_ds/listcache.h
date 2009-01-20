@@ -57,7 +57,6 @@ lc_sz(struct psc_listcache *lc)
 	int locked;
 	ssize_t sz;
 
-	psc_assert(lc);
 	locked = reqlock(&lc->lc_lock);
 	sz = lc->lc_size;
 	ureqlock(&lc->lc_lock, locked);
@@ -68,8 +67,6 @@ static inline void
 lc_del(struct psclist_head *e, struct psc_listcache *lc)
 {
 	int locked;
-
-	psc_assert(e && lc);
 
 	locked = reqlock(&lc->lc_lock);
 	psclist_del(e);
