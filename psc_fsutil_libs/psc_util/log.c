@@ -38,12 +38,6 @@ struct fuse_context {
 	pid_t pid;
 };
 
-struct psclog_data {
-	char hostname[HOST_NAME_MAX];
-	char nothrname[20];
-	int rank;
-};
-
 __static const char		*psc_logfmt = PSC_LOG_FMT;
 __static int			 psc_loglevel = PLL_TRACE;
 __static struct psclog_data	*psc_logdata;
@@ -69,13 +63,13 @@ psc_log_init(void)
 }
 
 __weak struct psclog_data *
-psclog_getdata(void)
+psclog_getdatamem(void)
 {
 	return (psc_logdata);
 }
 
 __weak void
-psclog_setdata(struct psclog_data *d)
+psclog_setdatamem(struct psclog_data *d)
 {
 	psc_logdata = d;
 }
@@ -137,11 +131,35 @@ psclog_get_fuse_context(void)
 	return (NULL);
 }
 
+struct psclog_data *
+psclog_getdata(void)
+{
+	struct psclog_data *d;
+	char *p;
+
+	d = psclog_getdatamem();
+	if (d == NULL) {
+		d = PSCALLOC(sizeof(*d));
+		if (gethostname(d->pld_hostname,
+		    sizeof(d->pld_hostname)) == -1)
+			err(1, "gethostname");
+		if ((p = strchr(d->pld_hostname, '.')) != NULL)
+			*p = '\0';
+#ifdef LINUX
+		MPI_Comm_rank(1, &d->pld_rank); /* 1=MPI_COMM_WORLD */
+#else
+	        d->pld_rank = cnos_get_rank();
+#endif
+		psclog_setdatamem(d);
+	}
+	return (d);
+}
+
 void
 psclogv(const char *fn, const char *func, int line, int subsys,
     int level, int options, const char *fmt, va_list ap)
 {
-	char prefix[LINE_MAX], emsg[LINE_MAX], umsg[LINE_MAX], *p;
+	char prefix[LINE_MAX], emsg[LINE_MAX], umsg[LINE_MAX];
 	struct fuse_context *ctx;
 	struct psclog_data *d;
 	struct timeval tv;
@@ -151,26 +169,13 @@ psclogv(const char *fn, const char *func, int line, int subsys,
 	save_errno = errno;
 
 	d = psclog_getdata();
-	if (d == NULL) {
-		d = PSCALLOC(sizeof(*d));
-		if (gethostname(d->hostname, sizeof(d->hostname)) == -1)
-			err(1, "gethostname");
-		if ((p = strchr(d->hostname, '.')) != NULL)
-			*p = '\0';
-#ifdef LINUX
-		MPI_Comm_rank(1, &d->rank); /* 1=MPI_COMM_WORLD */
-#else
-	        d->rank = cnos_get_rank();
-#endif
-		psclog_setdata(d);
-	}
-
 	thrname = pscthr_getname();
 	if (thrname == NULL) {
-		if (d->nothrname[0] == '\0')
-			snprintf(d->nothrname, sizeof(d->nothrname),
+		if (d->pld_nothrname[0] == '\0')
+			snprintf(d->pld_nothrname,
+			    sizeof(d->pld_nothrname),
 			    "<%ld>", syscall(SYS_gettid));
-		thrname = d->nothrname;
+		thrname = d->pld_nothrname;
 	}
 
 	ctx = psclog_get_fuse_context();
@@ -179,13 +184,13 @@ psclogv(const char *fn, const char *func, int line, int subsys,
 	FMTSTR(prefix, sizeof(prefix), psc_logfmt,
 		FMTSTRCASE('F', prefix, sizeof(prefix), "s", func)
 		FMTSTRCASE('f', prefix, sizeof(prefix), "s", fn)
-		FMTSTRCASE('h', prefix, sizeof(prefix), "s", d->hostname)
+		FMTSTRCASE('h', prefix, sizeof(prefix), "s", d->pld_hostname)
 		FMTSTRCASE('i', prefix, sizeof(prefix), "ld", syscall(SYS_gettid))
 		FMTSTRCASE('L', prefix, sizeof(prefix), "d", level)
 		FMTSTRCASE('l', prefix, sizeof(prefix), "d", line)
 		FMTSTRCASE('n', prefix, sizeof(prefix), "s", thrname)
 		FMTSTRCASE('P', prefix, sizeof(prefix), "d", ctx ? (int)ctx->pid : -1)
-		FMTSTRCASE('r', prefix, sizeof(prefix), "d", d->rank)
+		FMTSTRCASE('r', prefix, sizeof(prefix), "d", d->pld_rank)
 		FMTSTRCASE('s', prefix, sizeof(prefix), "lu", tv.tv_sec)
 		FMTSTRCASE('t', prefix, sizeof(prefix), "d", subsys)
 		FMTSTRCASE('U', prefix, sizeof(prefix), "d", ctx ? (int)ctx->uid : -1)

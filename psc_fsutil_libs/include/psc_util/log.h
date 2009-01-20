@@ -1,5 +1,10 @@
 /* $Id$ */
 
+#ifndef _PFL_LOG_H_
+#define _PFL_LOG_H_
+
+#include <sys/param.h>
+
 #include <stdarg.h>
 
 #ifndef PSC_SUBSYS
@@ -8,6 +13,12 @@
 
 #include "psc_util/subsys.h"
 #include "psc_util/cdefs.h"
+
+struct psclog_data {
+	char	pld_hostname[HOST_NAME_MAX];
+	char	pld_nothrname[20];
+	int	pld_rank;
+};
 
 /* Log levels. */
 #define PLL_FATAL	0 /* process/thread termination */
@@ -120,6 +131,9 @@ int	psc_log_getlevel(int);
 int	psc_log_getlevel_global(void);
 int	psc_log_getlevel_ss(int);
 
+struct psclog_data *
+	psclog_getdata(void);
+
 const char *
 	psc_loglevel_getname(int);
 int	psc_loglevel_getid(const char *);
@@ -168,3 +182,5 @@ __dead void _psc_fatal(const char *, const char *, int, int, int, int,
 			break;						\
 		}							\
 	} while (0)
+
+#endif /* _PFL_LOG_H_ */

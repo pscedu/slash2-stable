@@ -20,10 +20,8 @@
 #include "psc_util/lock.h"
 #include "psc_util/thread.h"
 
-__static pthread_once_t	psc_thronce = PTHREAD_ONCE_INIT;
 __static pthread_key_t	psc_thrkey;
 __static pthread_key_t	psc_logkey;
-__static int		psc_thrinit;
 struct psc_lockedlist	psc_threads =
     PLL_INITIALIZER(&psc_threads, struct psc_thread, pscthr_lentry);
 
@@ -54,7 +52,6 @@ pscthrs_init(void)
 	rc = pthread_key_create(&psc_logkey, free);
 	if (rc)
 		psc_fatalx("pthread_key_create: %s", strerror(rc));
-	psc_thrinit = 1;
 }
 
 /*
@@ -83,8 +80,6 @@ pscthr_begin(void *arg)
 struct psc_thread *
 pscthr_get_canfail(void)
 {
-	if (!psc_thrinit)
-		pthread_once(&psc_thronce, pscthrs_init);
 	return (pthread_getspecific(psc_thrkey));
 }
 
@@ -116,9 +111,6 @@ _pscthr_init(struct psc_thread *thr, int type, void *(*start)(void *),
 {
 	va_list ap;
 	int rc, n;
-
-	if (!psc_thrinit)
-		pthread_once(&psc_thronce, pscthrs_init);
 
 	if (flags & PTF_PAUSED)
 		psc_fatalx("pscthr_init: PTF_PAUSED specified");
@@ -248,13 +240,13 @@ pscthr_sigusr2(__unusedx int sig)
 }
 
 struct psclog_data *
-psclog_getdata(void)
+psclog_getdatamem(void)
 {
 	return (pthread_getspecific(psc_logkey));
 }
 
 void
-psclog_setdata(struct psclog_data *d)
+psclog_setdatamem(struct psclog_data *d)
 {
 	int rc;
 
