@@ -262,7 +262,7 @@ static connection
 allocate_connection(manager m, const lnet_process_id_t *nidpid, int fd)
 {
     bridge b = m->handler_arg;
-    connection c = malloc(sizeof(struct connection));
+    connection c = PSCALLOC(sizeof(struct connection));
 
     LASSERT(c != NULL);
 
@@ -756,8 +756,10 @@ force_tcp_connection(manager    m,
             }
 
             option = 1;
-            rc = setsockopt(fd, SOL_SOCKET, SO_REUSEADDR,
+            setsockopt(fd, IPPROTO_TCP, TCP_NODELAY, &option, sizeof(option));
+            rc = setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, 
                             &option, sizeof(option));
+
             if (rc != 0) {
                     CERROR ("Can't set SO_REUSEADDR for socket: %s\n",
                             strerror(errno));
@@ -898,12 +900,14 @@ static int new_connection(void *z)
     struct sockaddr_storage ss;
     struct sockaddr_in *sin = (void *)&ss;
     int                fd;
+
+    //socklen_t          len = sizeof(struct sockaddr_in);
     socklen_t          sslen, option;
     unsigned int       ipaddr;
     ssize_t            rc;
     lnet_acceptor_connreq_t cr;
     ssize_t            cr_sz = sizeof(lnet_acceptor_connreq_t);
-    int                lnet_magic;
+    int                lnet_magic, option;
     lnet_process_id_t  peerid;
 
     sslen = sizeof(ss);
@@ -913,7 +917,8 @@ static int new_connection(void *z)
             CERROR("accept failed %s\n", strerror(errno));
             return 0;
     }
-    option = tcpnal_nagle ? 0 : 1;
+
+    option = 1;
     setsockopt(fd, IPPROTO_TCP, TCP_NODELAY, &option, sizeof(option));
 
     ipaddr = *((unsigned int *)&sin->sin_addr);
