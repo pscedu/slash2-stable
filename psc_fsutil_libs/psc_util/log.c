@@ -118,6 +118,9 @@ pscthr_getname(void)
 	return (NULL);
 }
 
+/**
+ * MPI_Comm_rank - dummy overrideable MPI rank retriever.
+ */
 __weak int
 MPI_Comm_rank(__unusedx int comm, int *rank)
 {
@@ -125,8 +128,11 @@ MPI_Comm_rank(__unusedx int comm, int *rank)
 	return (0);
 }
 
+/**
+ * fuse_get_context - dummy overrideable fuse context retriever.
+ */
 __weak struct fuse_context *
-psclog_get_fuse_context(void)
+fuse_get_context(void)
 {
 	return (NULL);
 }
@@ -178,7 +184,7 @@ psclogv(const char *fn, const char *func, int line, int subsys,
 		thrname = d->pld_nothrname;
 	}
 
-	ctx = psclog_get_fuse_context();
+	ctx = fuse_get_context();
 
 	gettimeofday(&tv, NULL);
 	FMTSTR(prefix, sizeof(prefix), psc_logfmt,
