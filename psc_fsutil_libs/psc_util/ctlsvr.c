@@ -879,6 +879,12 @@ psc_ctlrep_getmeter(int fd, struct psc_ctlmsghdr *mh, void *m)
 	return (rc);
 }
 
+__weak size_t
+multilock_cond_nwaitors(__unusedx struct multilock_cond *m)
+{
+	return (0);
+}
+
 /*
  * psc_ctlrep_getmlist - respond to a "getmlist" inquiry.
  * @fd: client socket descriptor.
