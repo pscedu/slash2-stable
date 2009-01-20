@@ -151,10 +151,10 @@ psclog_getdata(void)
 			err(1, "gethostname");
 		if ((p = strchr(d->pld_hostname, '.')) != NULL)
 			*p = '\0';
-#ifdef LINUX
-		MPI_Comm_rank(1, &d->pld_rank); /* 1=MPI_COMM_WORLD */
-#else
+#ifdef HAVE_CNOS
 	        d->pld_rank = cnos_get_rank();
+#else
+		MPI_Comm_rank(1, &d->pld_rank); /* 1=MPI_COMM_WORLD */
 #endif
 		psclog_setdatamem(d);
 	}

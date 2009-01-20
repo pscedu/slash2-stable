@@ -11,9 +11,8 @@ THREAD_LIBS?=	-lpthread
 ifneq ($(wildcard /opt/sgi),)
 # On altix
 SRCS+=		${ROOTDIR}/zest/trunk/compat/ia64.c
-DEFINES+=	-DCONFIG_NR_CPUS=2 -DLINUX -D_GNU_SOURCE -DHAVE_CPUSET
+DEFINES+=	-DCONFIG_NR_CPUS=2 -D_GNU_SOURCE -DHAVE_CPUSET
 CPUSET_LIBS=	-lcpuset -lbitmask -lnuma
 else
 # regular linux
-DEFINES+=	-DLINUX
 endif
