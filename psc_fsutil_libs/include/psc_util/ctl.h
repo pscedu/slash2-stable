@@ -132,8 +132,8 @@ struct psc_ctlmsg_cmd {
 #define PCMT_GETIOSTATS		8
 #define PCMT_GETMETER		9
 #define PCMT_GETPOOL		10
-#define ZCMT_GETMLIST		11
-#define ZCMT_CMD		12
+#define PCMT_GETMLIST		11
+#define PCMT_CMD		12
 #define NPCMT			13
 
 /*

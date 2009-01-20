@@ -640,6 +640,26 @@ psc_ctlmsg_loglevel_prdat(__unusedx const struct psc_ctlmsghdr *mh,
 	printf("\n");
 }
 
+int
+psc_ctlmsg_mlist_prhdr(__unusedx struct psc_ctlmsghdr *mh,
+    __unusedx const void *m)
+{
+	printf("mlists\n");
+	return (printf(" %-20s %5s %9s %8s\n",
+	    "name", "size", "#seen", "#waitors"));
+}
+
+void
+psc_ctlmsg_mlist_prdat(__unusedx const struct psc_ctlmsghdr *mh,
+    const void *m)
+{
+	const struct psc_ctlmsg_mlist *pcml = m;
+
+	printf(" %-20s %5d %9"PRIu64" %8d\n",
+	    pcml->pcml_name, pcml->pcml_size,
+	    pcml->pcml_nseen, pcml->pcml_waitors);
+}
+
 __static void
 psc_ctlmsg_print(struct psc_ctlmsghdr *mh, const void *m)
 {
