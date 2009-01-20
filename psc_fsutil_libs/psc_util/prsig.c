@@ -1,8 +1,14 @@
 /* $Id$ */
 
+#include <sys/param.h>
+
+#include <inttypes.h>
 #include <signal.h>
-#include <stdint.h>
 #include <stdio.h>
+
+#include "psc_util/log.h"
+#include "psc_util/prsig.h"
+#include "psc_util/strlcat.h"
 
 const char *signames[] = {
 	"<zero>",
@@ -44,16 +50,17 @@ void
 psc_sigappend(char buf[LINE_MAX], const char *str)
 {
 	if (buf[0] != '\0')
-		strlcat(buf, ",", sizeof(buf));
-	strlcat(buf, str, sizeof(buf));
+		psc_strlcat(buf, ",", sizeof(buf));
+	psc_strlcat(buf, str, sizeof(buf));
 }
 
-int
+void
 psc_prsig(void)
 {
 	struct sigaction sa;
 	char buf[LINE_MAX];
-	int i;
+	uint64_t mask;
+	int i, j;
 
 	for (i = 1; i < NSIG; i++) {
 		if (sigaction(i, &sa, NULL) == -1)
@@ -69,7 +76,10 @@ psc_prsig(void)
 		else
 			psc_sigappend(buf, "caught");
 
-		printf("%s\t\t%016"PRIx64"\t%s\n", signames[i],
-		    (uint64_t)sa.sa_mask, buf);
+		mask = 0;
+		for (j = 1; j < NSIG; j++)
+			if (sigismember(&sa.sa_mask, j))
+				mask |= 1 << (j - 1);
+		printf("%s\t\t%016"PRIx64"\t%s\n", signames[i], mask, buf);
 	}
 }
