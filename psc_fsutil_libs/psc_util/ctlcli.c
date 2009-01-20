@@ -219,16 +219,16 @@ psc_ctlparse_param(char *spec)
 void
 psc_ctlparse_pool(char *pools)
 {
-	struct psc_ctlmsg_pool *pcpm;
+	struct psc_ctlmsg_pool *pcpl;
 	char *pool, *poolnext;
 
 	for (pool = pools; pool; pool = poolnext) {
 		if ((poolnext = strchr(pool, ',')) != NULL)
 			*poolnext++ = '\0';
 
-		pcpm = psc_ctlmsg_push(PCMT_GETPOOL, sizeof(*pcpm));
-		if (strlcpy(pcpm->pcpm_name, pool,
-		    sizeof(pcpm->pcpm_name)) >= sizeof(pcpm->pcpm_name))
+		pcpl = psc_ctlmsg_push(PCMT_GETPOOL, sizeof(*pcpl));
+		if (strlcpy(pcpl->pcpl_name, pool,
+		    sizeof(pcpl->pcpl_name)) >= sizeof(pcpl->pcpl_name))
 			psc_fatalx("invalid pool: %s", pool);
 	}
 }
@@ -273,6 +273,43 @@ psc_ctlparse_meter(char *meters)
 		if (n == 0 || n >= sizeof(pcm->pcm_mtr.pm_name))
 			psc_fatalx("invalid meter: %s", meter);
 	}
+}
+
+void
+psc_ctlparse_mlist(char *mlists)
+{
+	struct psc_ctlmsg_mlist *pcml;
+	char *mlist, *mlistnext;
+	int n;
+
+	for (mlist = mlists; mlist != NULL; mlist = mlistnext) {
+		if ((mlistnext = strchr(mlist, ',')) != NULL)
+			*mlistnext++ = '\0';
+
+		pcml = psc_ctlmsg_push(PCMT_GETMLIST, sizeof(*pcml));
+
+		n = snprintf(pcml->pcml_name, sizeof(pcml->pcml_name),
+		    "%s", mlist);
+		if (n == -1)
+			psc_fatal("snprintf");
+		else if (n == 0 || n > (int)sizeof(pcml->pcml_name))
+			psc_fatalx("invalid mlist: %s", mlist);
+	}
+}
+
+void
+psc_ctlparse_cmd(char *cmd)
+{
+	struct psc_ctlmsg_cmd *pcc;
+	int i;
+
+	for (i = 0; i < psc_ctlcmd_nreqs; i++)
+		if (strcasecmp(cmd, psc_ctlcmd_reqs[i].pccr_name) == 0) {
+			pcc = psc_ctlmsg_push(PCMT_CMD, sizeof(*pcc));
+			pcc->pcc_opcode = psc_ctlcmd_reqs[i].pccr_opcode;
+			return;
+		}
+	psc_fatalx("command not found: %s", cmd);
 }
 
 int
@@ -444,15 +481,15 @@ void
 psc_ctlmsg_pool_prdat(__unusedx const struct psc_ctlmsghdr *mh,
     const void *m)
 {
-	const struct psc_ctlmsg_pool *pcpm = m;
+	const struct psc_ctlmsg_pool *pcpl = m;
 
-	printf(" %-20s    %c%c %8d %8d %8d ", pcpm->pcpm_name,
-	    pcpm->pcpm_flags & PPMF_AUTO ? 'A' : '-',
-	    pcpm->pcpm_flags & PPMF_NOLOCK ? 'N' : '-',
-	    pcpm->pcpm_total, pcpm->pcpm_free,
-	    pcpm->pcpm_min);
-	if (pcpm->pcpm_max)
-		printf("%8d", pcpm->pcpm_max);
+	printf(" %-20s    %c%c %8d %8d %8d ", pcpl->pcpl_name,
+	    pcpl->pcpl_flags & PPMF_AUTO ? 'A' : '-',
+	    pcpl->pcpl_flags & PPMF_NOLOCK ? 'N' : '-',
+	    pcpl->pcpl_total, pcpl->pcpl_free,
+	    pcpl->pcpl_min);
+	if (pcpl->pcpl_max)
+		printf("%8d", pcpl->pcpl_max);
 	else
 		printf("%8s", "<inf>");
 	printf("\n");

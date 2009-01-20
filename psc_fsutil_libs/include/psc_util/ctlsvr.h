@@ -12,6 +12,7 @@ struct psc_ctlmsg_stats;
 		    strlen(thrname)) == 0 ||					\
 		    strcmp((thrname), PCTHRNAME_EVERYONE) == 0)
 
+/* XXX use PSCTHR_MKCAST */
 #define psc_ctlthr(thr)	((struct psc_ctlthr *)(thr)->pscthr_private)
 
 #define PSC_CTLDEFOPS								\
@@ -25,7 +26,9 @@ struct psc_ctlmsg_stats;
 /* 7 */	{ psc_ctlrep_param,		sizeof(struct psc_ctlmsg_param) },	\
 /* 8 */	{ psc_ctlrep_getiostats,	sizeof(struct psc_ctlmsg_iostats) },	\
 /* 9 */	{ psc_ctlrep_getmeter,		sizeof(struct psc_ctlmsg_meter) },	\
-/*10 */	{ psc_ctlrep_getpool,		sizeof(struct psc_ctlmsg_pool) }
+/*10 */	{ psc_ctlrep_getpool,		sizeof(struct psc_ctlmsg_pool) },	\
+/*11 */	{ psc_ctlrep_getmlist,		sizeof(struct psc_ctlmsg_mlist) },	\
+/*12 */	{ psc_ctlhnd_cmd,		sizeof(struct psc_ctlmsg_cmd) }
 
 struct psc_ctlthr {
 	int	  pc_st_nclients;
@@ -53,6 +56,8 @@ int	psc_ctlrep_getstats(int, struct psc_ctlmsghdr *, void *);
 int	psc_ctlrep_getsubsys(int, struct psc_ctlmsghdr *, void *);
 int	psc_ctlrep_param(int, struct psc_ctlmsghdr *, void *);
 int	psc_ctlrep_getpool(int, struct psc_ctlmsghdr *, void *);
+int	psc_ctlrep_getmlist(int, struct psc_ctlmsghdr *, void *);
+int	psc_ctlhnd_cmd(int, struct psc_ctlmsghdr *, void *);
 
 void	psc_ctlthr_stat(struct psc_thread *, struct psc_ctlmsg_stats *);
 
@@ -67,10 +72,15 @@ void	psc_ctlparam_register(const char *, int (*)(int, struct psc_ctlmsghdr *,
 int	psc_ctlmsg_param_send(int, const struct psc_ctlmsghdr *,
 		struct psc_ctlmsg_param *, const char *, char **, int, const char *);
 
-__dead void psc_ctlthr_main(const char *, const struct psc_ctlop *, int);
+__dead void
+	psc_ctlthr_main(const char *, const struct psc_ctlop *, int);
 int	psc_ctl_applythrop(int, struct psc_ctlmsghdr *, void *, const char *,
 		int (*)(int, struct psc_ctlmsghdr *, void *, struct psc_thread *));
 
 extern struct psc_thread pscControlThread;
+
 extern void (*psc_ctl_getstats[])(struct psc_thread *, struct psc_ctlmsg_stats *);
 extern int psc_ctl_ngetstats;
+
+extern int (*psc_ctl_cmds[])(int, struct psc_ctlmsghdr *, void *);
+extern int psc_ctl_ncmds;

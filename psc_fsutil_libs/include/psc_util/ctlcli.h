@@ -14,11 +14,18 @@ struct psc_ctlmsghdr;
 /* 7 */	{ NULL,				NULL,				0,					NULL },				\
 /* 8 */	{ psc_ctlmsg_iostats_prhdr,	psc_ctlmsg_iostats_prdat,	sizeof(struct psc_ctlmsg_iostats),	NULL },				\
 /* 9 */	{ psc_ctlmsg_meter_prhdr,	psc_ctlmsg_meter_prdat,		sizeof(struct psc_ctlmsg_meter),	NULL },                         \
-/*10 */	{ psc_ctlmsg_pool_prhdr,	psc_ctlmsg_pool_prdat,		sizeof(struct psc_ctlmsg_pool),	        NULL }
+/*10 */	{ psc_ctlmsg_pool_prhdr,	psc_ctlmsg_pool_prdat,		sizeof(struct psc_ctlmsg_pool),	        NULL },				\
+/*11 */	{ psc_ctlmsg_mlist_prhdr,	psc_ctlmsg_mlist_prdat,		sizeof(struct psc_ctlmsg_mlist),        NULL },				\
+/*12 */	{ NULL,				NULL,				0,					NULL }
 
 struct psc_ctlshow_ent {
 	const char	 *pse_name;
 	void		(*pse_cb)(const char *);
+};
+
+struct psc_ctlcmd_req {
+	const char *	  pccr_name;
+	int		  pccr_opcode;
 };
 
 struct psc_ctl_thrstatfmt {
@@ -33,10 +40,12 @@ struct psc_ctlmsg_prfmt {
 	int		(*prf_check)(struct psc_ctlmsghdr *, const void *);
 };
 
+void  psc_ctlparse_cmd(char *);
 void  psc_ctlparse_hashtable(const char *);
 void  psc_ctlparse_iostats(char *);
 void  psc_ctlparse_lc(char *);
 void  psc_ctlparse_meter(char *);
+void  psc_ctlparse_mlist(char *);
 void  psc_ctlparse_param(char *);
 void  psc_ctlparse_pool(char *);
 void  psc_ctlparse_show(char *);
@@ -70,6 +79,8 @@ void  psc_ctlmsg_stats_prdat(const struct psc_ctlmsghdr *, const void *);
 int   psc_ctlmsg_loglevel_check(struct psc_ctlmsghdr *, const void *);
 int   psc_ctlmsg_loglevel_prhdr(struct psc_ctlmsghdr *, const void *);
 void  psc_ctlmsg_loglevel_prdat(const struct psc_ctlmsghdr *, const void *);
+int   psc_ctlmsg_mlist_prhdr(struct psc_ctlmsghdr *, const void *);
+void  psc_ctlmsg_mlist_prdat(const struct psc_ctlmsghdr *, const void *);
 
 extern int psc_ctl_noheader;
 extern int psc_ctl_inhuman;
@@ -80,3 +91,5 @@ extern struct psc_ctlshow_ent	 psc_ctlshow_tab[];
 extern int			 psc_ctlshow_ntabents;
 extern struct psc_ctlmsg_prfmt	 psc_ctlmsg_prfmts[];
 extern int			 psc_ctlmsg_nprfmts;
+extern struct psc_ctlcmd_req	 psc_ctlcmd_reqs[];
+extern int			 psc_ctlcmd_nreqs;

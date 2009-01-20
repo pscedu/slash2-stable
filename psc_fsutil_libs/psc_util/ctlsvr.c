@@ -30,6 +30,7 @@
 #include "psc_util/fmtstr.h"
 #include "psc_util/iostats.h"
 #include "psc_util/log.h"
+#include "psc_util/mlist.h"
 #include "psc_util/strlcpy.h"
 #include "psc_util/thread.h"
 
@@ -354,8 +355,7 @@ psc_ctlrep_getlc(int fd, struct psc_ctlmsghdr *mh, void *m)
 	}
 	PLL_ULOCK(&pscListCaches);
 	if (rc && !found && !all)
-		rc = psc_ctlsenderr(fd, mh, "unknown listcache: %s",
-		    pclc->pclc_name);
+		rc = psc_ctlsenderr(fd, mh, "unknown listcache: %s", name);
 	return (rc);
 }
 
@@ -363,20 +363,20 @@ psc_ctlrep_getlc(int fd, struct psc_ctlmsghdr *mh, void *m)
  * psc_ctlrep_getpool - send a response to a "getpool" inquiry.
  * @fd: client socket descriptor.
  * @mh: already filled-in control message header.
- * @pcpm: control message to examine and reuse.
+ * @pcpl: control message to examine and reuse.
  */
 int
 psc_ctlrep_getpool(int fd, struct psc_ctlmsghdr *mh, void *msg)
 {
-	struct psc_ctlmsg_pool *pcpm = msg;
+	struct psc_ctlmsg_pool *pcpl = msg;
 	struct psc_poolmgr *m;
 	char name[LC_NAME_MAX];
 	int rc, locked, found, all;
 
 	rc = 1;
 	found = 0;
-	strlcpy(name, pcpm->pcpm_name, sizeof(name));
-	all = (strcmp(name, PCPM_NAME_ALL) == 0);
+	strlcpy(name, pcpl->pcpl_name, sizeof(name));
+	all = (strcmp(name, PCPL_NAME_ALL) == 0);
 	PLL_LOCK(&psc_pools);
 	psclist_for_each_entry(m, &psc_pools.pll_listhd, ppm_all_lentry) {
 		if (all || strncmp(m->ppm_lc.lc_name, name,
@@ -384,15 +384,15 @@ psc_ctlrep_getpool(int fd, struct psc_ctlmsghdr *mh, void *msg)
 			found = 1;
 
 			locked = POOL_RLOCK(m);
-			strlcpy(pcpm->pcpm_name, m->ppm_lc.lc_name,
-			    sizeof(pcpm->pcpm_name));
-			pcpm->pcpm_min = m->ppm_min;
-			pcpm->pcpm_max = m->ppm_max;
-			pcpm->pcpm_total = m->ppm_total;
-			pcpm->pcpm_flags = m->ppm_flags;
-			pcpm->pcpm_free = lc_sz(&m->ppm_lc);
+			strlcpy(pcpl->pcpl_name, m->ppm_lc.lc_name,
+			    sizeof(pcpl->pcpl_name));
+			pcpl->pcpl_min = m->ppm_min;
+			pcpl->pcpl_max = m->ppm_max;
+			pcpl->pcpl_total = m->ppm_total;
+			pcpl->pcpl_flags = m->ppm_flags;
+			pcpl->pcpl_free = lc_sz(&m->ppm_lc);
 			POOL_ULOCK(m, locked);
-			rc = psc_ctlmsg_sendv(fd, mh, pcpm);
+			rc = psc_ctlmsg_sendv(fd, mh, pcpl);
 			if (!rc)
 				break;
 
@@ -403,8 +403,7 @@ psc_ctlrep_getpool(int fd, struct psc_ctlmsghdr *mh, void *msg)
 	}
 	PLL_ULOCK(&psc_pools);
 	if (rc && !found && !all)
-		rc = psc_ctlsenderr(fd, mh, "unknown pool: %s",
-		    pcpm->pcpm_name);
+		rc = psc_ctlsenderr(fd, mh, "unknown pool: %s", name);
 	return (rc);
 }
 
@@ -865,7 +864,7 @@ psc_ctlrep_getmeter(int fd, struct psc_ctlmsghdr *mh, void *m)
 		    strlen(name)) == 0) {
 			found = 1;
 
-			pcm->pcm_mtr = *pm;
+			pcm->pcm_mtr = *pm; /* XXX atomic */
 			rc = psc_ctlmsg_sendv(fd, mh, pcm);
 			if (!rc)
 				break;
@@ -880,6 +879,84 @@ psc_ctlrep_getmeter(int fd, struct psc_ctlmsghdr *mh, void *m)
 	return (rc);
 }
 
+/*
+ * psc_ctlrep_getmlist - respond to a "getmlist" inquiry.
+ * @fd: client socket descriptor.
+ * @mh: already filled-in control message header.
+ * @m: control message to examine and reuse.
+ */
+int
+psc_ctlrep_getmlist(int fd, struct psc_ctlmsghdr *mh, void *m)
+{
+	struct psc_ctlmsg_mlist *pcml = m;
+	char name[PML_NAME_MAX];
+	struct psc_mlist *pml;
+	int rc, found, all;
+
+	rc = 1;
+	found = 0;
+	snprintf(name, sizeof(name), "%s", pcml->pcml_name);
+	all = (strcmp(name, PCML_NAME_ALL) == 0);
+	PLL_LOCK(&psc_mlists);
+	psclist_for_each_entry(pml, &psc_mlists.pll_listhd,
+	    pml_index_lentry)
+		if (all || strncmp(pml->pml_name, name,
+		    strlen(name)) == 0) {
+			found = 1;
+
+			MLIST_LOCK(pml);
+			snprintf(pcml->pcml_name,
+			    sizeof(pcml->pcml_name),
+			    "%s", pml->pml_name);
+			pcml->pcml_size = pml->pml_size;
+			pcml->pcml_nseen = pml->pml_nseen;
+			pcml->pcml_waitors =
+			    multilock_cond_nwaitors(&pml->pml_mlcond_empty);
+			MLIST_ULOCK(pml);
+
+			rc = psc_ctlmsg_sendv(fd, mh, pcml);
+			if (!rc)
+				break;
+
+			/* Terminate on exact match. */
+			if (strlen(name) == strlen(pml->pml_name))
+				break;
+		}
+	PLL_ULOCK(&psc_mlists);
+	if (rc && !found && !all)
+		rc = psc_ctlsenderr(fd, mh, "unknown mlist: %s", name);
+	return (rc);
+}
+
+/*
+ * psc_ctlhnd_cmd - invoke an action from a "command" inquiry.
+ * @fd: client socket descriptor.
+ * @mh: already filled-in control message header.
+ * @m: control message to examine.
+ */
+int
+psc_ctlhnd_cmd(int fd, struct psc_ctlmsghdr *mh, void *m)
+{
+	struct psc_ctlmsg_cmd *pcc = m;
+	int rc;
+
+	rc = 1;
+	if (pcc->pcc_opcode > 0 && pcc->pcc_opcode < psc_ctl_ncmds)
+		rc = (*psc_ctl_cmds[pcc->pcc_opcode])(fd, mh, m);
+	else
+		rc = psc_ctlsenderr(fd, mh,
+		    "unknown command: %d", pcc->pcc_opcode);
+	return (rc);
+}
+
+/*
+ * psc_ctl_applythrop - invoke an operation on all applicable threads.
+ * @fd: client socket descriptor.
+ * @mh: already filled-in control message header.
+ * @m: control message to examine.
+ * @thrname: name of thread to match on.
+ * @cbf: callback to run for matching threads.
+ */
 int
 psc_ctl_applythrop(int fd, struct psc_ctlmsghdr *mh, void *m, const char *thrname,
     int (*cbf)(int, struct psc_ctlmsghdr *, void *, struct psc_thread *))

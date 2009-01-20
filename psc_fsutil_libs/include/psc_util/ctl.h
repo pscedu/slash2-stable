@@ -5,8 +5,8 @@
  * parameters of a running daemon instance.
  */
 
-#ifndef __PFL_CTL_H__
-#define __PFL_CTL_H__
+#ifndef _PFL_CTL_H_
+#define _PFL_CTL_H_
 
 #include <sys/types.h>
 
@@ -14,6 +14,7 @@
 #include "psc_ds/listcache.h"
 #include "psc_util/iostats.h"
 #include "psc_util/meter.h"
+#include "psc_util/mlist.h"
 #include "psc_util/thread.h"
 
 #define PCTHRNAME_EVERYONE	"everyone"
@@ -32,27 +33,27 @@ struct psc_ctlmsg_subsys {
 
 struct psc_ctlmsg_loglevel {
 	char			pcl_thrname[PSC_THRNAME_MAX];
-	int			pcl_levels[0];
+	int32_t			pcl_levels[0];
 };
 
 struct psc_ctlmsg_lc {
 	char			pclc_name[LC_NAME_MAX];
-	size_t			pclc_size;	/* #items on list */
-	size_t			pclc_nseen;	/* max #items list can attain */
-	int			pclc_flags;
-	int			pclc_nw_want;	/* #waitors waking for a want */
-	int			pclc_nw_empty;	/* #waitors waking on empty */
+	uint64_t		pclc_size;	/* #items on list */
+	uint64_t		pclc_nseen;	/* max #items list can attain */
+	int32_t			pclc_flags;
+	int32_t			pclc_nw_want;	/* #waitors waking for a want */
+	int32_t			pclc_nw_empty;	/* #waitors waking on empty */
 };
 
 #define PCLC_NAME_ALL		"all"
 
 struct psc_ctlmsg_stats {
 	char			pcst_thrname[PSC_THRNAME_MAX];
-	int			pcst_thrtype;
-	u32			pcst_u32_1;
-	u32			pcst_u32_2;
-	u32			pcst_u32_3;
-	u32			pcst_u32_4;
+	int32_t			pcst_thrtype;
+	uint32_t		pcst_u32_1;
+	uint32_t		pcst_u32_2;
+	uint32_t		pcst_u32_3;
+	uint32_t		pcst_u32_4;
 };
 
 #define pcst_nclients	pcst_u32_1
@@ -62,10 +63,10 @@ struct psc_ctlmsg_stats {
 
 struct psc_ctlmsg_hashtable {
 	char			pcht_name[HTNAME_MAX];
-	int			pcht_totalbucks;
-	int			pcht_usedbucks;
-	int			pcht_nents;
-	int			pcht_maxbucklen;
+	int32_t			pcht_totalbucks;
+	int32_t			pcht_usedbucks;
+	int32_t			pcht_nents;
+	int32_t			pcht_maxbucklen;
 };
 
 #define PCHT_NAME_ALL		"all"
@@ -77,7 +78,7 @@ struct psc_ctlmsg_param {
 	char			pcp_thrname[PSC_THRNAME_MAX];
 	char			pcp_field[PCP_FIELD_MAX];
 	char			pcp_value[PCP_VALUE_MAX];
-	int			pcp_flags;
+	int32_t			pcp_flags;
 };
 
 #define PCPF_ADD	(1 << 0)
@@ -96,15 +97,28 @@ struct psc_ctlmsg_meter {
 #define PCM_NAME_ALL		"all"
 
 struct psc_ctlmsg_pool {
-	char			pcpm_name[LC_NAME_MAX];
-	int			pcpm_min;
-	int			pcpm_max;
-	int			pcpm_total;
-	int			pcpm_free;
-	int			pcpm_flags;
+	char			pcpl_name[LC_NAME_MAX];
+	int32_t			pcpl_min;
+	int32_t			pcpl_max;
+	int32_t			pcpl_total;
+	int32_t			pcpl_free;
+	int32_t			pcpl_flags;
 };
 
-#define PCPM_NAME_ALL		"all"
+#define PCPL_NAME_ALL		"all"
+
+struct psc_ctlmsg_mlist {
+	char			 pcml_name[PML_NAME_MAX];
+	uint64_t		 pcml_nseen;
+	uint32_t		 pcml_size;
+	uint32_t		 pcml_waitors;
+};
+
+#define PCML_NAME_ALL		"all"
+
+struct psc_ctlmsg_cmd {
+	int32_t			 pcc_opcode;
+};
 
 /* Control message types. */
 #define PCMT_ERROR		0
@@ -118,7 +132,9 @@ struct psc_ctlmsg_pool {
 #define PCMT_GETIOSTATS		8
 #define PCMT_GETMETER		9
 #define PCMT_GETPOOL		10
-#define NPCMT			11
+#define ZCMT_GETMLIST		11
+#define ZCMT_CMD		12
+#define NPCMT			13
 
 /*
  * Control message header.
@@ -131,4 +147,4 @@ struct psc_ctlmsghdr {
 	unsigned char		mh_data[0];
 };
 
-#endif /* __PFL_CTL_H__ */
+#endif /* _PFL_CTL_H_ */
