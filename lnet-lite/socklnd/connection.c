@@ -907,7 +907,7 @@ static int new_connection(void *z)
     ssize_t            rc;
     lnet_acceptor_connreq_t cr;
     ssize_t            cr_sz = sizeof(lnet_acceptor_connreq_t);
-    int                lnet_magic, option;
+    int                lnet_magic;
     lnet_process_id_t  peerid;
 
     sslen = sizeof(ss);
