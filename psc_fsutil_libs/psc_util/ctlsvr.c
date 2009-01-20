@@ -11,7 +11,6 @@
 #include <sys/un.h>
 #include <sys/uio.h>
 
-#include <err.h>
 #include <errno.h>
 #include <signal.h>
 #include <stdarg.h>
@@ -28,7 +27,9 @@
 #include "psc_util/cdefs.h"
 #include "psc_util/ctl.h"
 #include "psc_util/ctlsvr.h"
+#include "psc_util/fmtstr.h"
 #include "psc_util/iostats.h"
+#include "psc_util/log.h"
 #include "psc_util/strlcpy.h"
 #include "psc_util/thread.h"
 
@@ -66,7 +67,7 @@ psc_ctlmsg_sendv(int fd, const struct psc_ctlmsghdr *mh, const void *m)
 	}
 	tsiz = sizeof(*mh) + mh->mh_size;
 	if ((size_t)n != tsiz)
-		warn("short write");
+		psc_warn("short write");
 	psc_ctlthr(&pscControlThread)->pc_st_nsent++;
 	sched_yield();
 	return (1);
@@ -110,7 +111,7 @@ psc_ctlmsg_send(int fd, int type, size_t siz, const void *m)
 	}
 	tsiz = sizeof(mh) + siz;
 	if ((size_t)n != tsiz)
-		warn("short write");
+		psc_warn("short write");
 	psc_ctlthr(&pscControlThread)->pc_st_nsent++;
 	sched_yield();
 	return (1);
@@ -991,15 +992,16 @@ psc_ctlthr_service(int fd, const struct psc_ctlop *ct, int nops)
 
 /*
  * psc_ctlthr_main - main control thread client-servicing loop.
- * @fn: path to control socket.
+ * @ofn: path to control socket.
  * @ct: control operations.
  * @nops: number of operations in @ct table.
  */
 __dead void
-psc_ctlthr_main(const char *fn, const struct psc_ctlop *ct, int nops)
+psc_ctlthr_main(const char *ofn, const struct psc_ctlop *ct, int nops)
 {
 	struct sockaddr_un sun;
 	struct sigaction sa;
+	char fn[PATH_MAX];
 	mode_t old_umask;
 	socklen_t siz;
 	int s, fd;
@@ -1014,6 +1016,11 @@ psc_ctlthr_main(const char *fn, const struct psc_ctlop *ct, int nops)
 	if ((s = socket(AF_LOCAL, SOCK_STREAM, 0)) == -1)
 		psc_fatal("socket");
 
+	FMTSTR(fn, sizeof(fn), ofn,
+		FMTSTRCASE('h', fn, sizeof(fn), "s",
+		    psclog_getdata()->pld_hostname)
+	);
+
 	bzero(&sun, sizeof(sun));
 	sun.sun_family = AF_LOCAL;
 	snprintf(sun.sun_path, sizeof(sun.sun_path), "%s", fn);
@@ -1021,6 +1028,7 @@ psc_ctlthr_main(const char *fn, const struct psc_ctlop *ct, int nops)
 		if (errno != ENOENT)
 			psc_error("unlink %s", fn);
 
+	/* XXX lock this umask call */
 	old_umask = umask(S_IXUSR | S_IXGRP | S_IWOTH | S_IROTH | S_IXOTH);
 	if (bind(s, (struct sockaddr *)&sun, sizeof(sun)) == -1)
 		psc_fatal("bind %s", fn);
