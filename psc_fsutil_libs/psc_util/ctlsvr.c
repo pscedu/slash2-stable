@@ -819,8 +819,9 @@ psc_ctlrep_getiostats(int fd, struct psc_ctlmsghdr *mh, void *m)
 	found = 0;
 	snprintf(name, sizeof(name), "%s", pci->pci_ist.ist_name);
 	all = (strcmp(name, PCI_NAME_ALL) == 0);
-	spinlock(&pscIostatsListLock);
-	psclist_for_each_entry(ist, &pscIostatsList, ist_lentry)
+	PLL_LOCK(&psc_iostats);
+	psclist_for_each_entry(ist,
+	    &psc_iostats.pll_listhd, ist_lentry)
 		if (all ||
 		    strncmp(ist->ist_name, name, strlen(name)) == 0) {
 			found = 1;
@@ -834,7 +835,7 @@ psc_ctlrep_getiostats(int fd, struct psc_ctlmsghdr *mh, void *m)
 			if (strlen(ist->ist_name) == strlen(name))
 				break;
 		}
-	freelock(&pscIostatsListLock);
+	PLL_ULOCK(&psc_iostats);
 	if (rc && !found && !all)
 		rc = psc_ctlsenderr(fd, mh, "unknown iostats: %s", name);
 	return (rc);

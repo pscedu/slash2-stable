@@ -1,16 +1,16 @@
 /* $Id$ */
 
+#include <stdarg.h>
 #include <stdio.h>
 
-#include <stdarg.h>
-
 #include "psc_ds/list.h"
+#include "psc_ds/lockedlist.h"
+#include "psc_util/iostats.h"
 #include "psc_util/lock.h"
 #include "psc_util/log.h"
-#include "psc_util/iostats.h"
 
-struct psclist_head	pscIostatsList = PSCLIST_HEAD_INIT(pscIostatsList);
-psc_spinlock_t		pscIostatsListLock = LOCK_INITIALIZER;
+struct psc_lockedlist psc_iostats =
+    PLL_INITIALIZER(&psc_iostats, struct iostats, ist_lentry);
 
 void
 iostats_init(struct iostats *ist, const char *fmt, ...)
@@ -18,7 +18,7 @@ iostats_init(struct iostats *ist, const char *fmt, ...)
 	va_list ap;
 	int rc;
 
-	INIT_PSCLIST_ENTRY(&ist->ist_lentry);
+	memset(ist, 0, sizeof(*ist));
 
 	va_start(ap, fmt);
 	rc = vsnprintf(ist->ist_name, sizeof(ist->ist_name), fmt, ap);
@@ -26,7 +26,5 @@ iostats_init(struct iostats *ist, const char *fmt, ...)
 	if (rc == -1)
 		psc_fatal("vsnprintf");
 
-	spinlock(&pscIostatsListLock);
-	psclist_xadd(&ist->ist_lentry, &pscIostatsList);
-	freelock(&pscIostatsListLock);
+	pll_add(&psc_iostats, ist);
 }
