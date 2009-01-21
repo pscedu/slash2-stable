@@ -1,0 +1,75 @@
+/* $Id$ */
+
+#include <sys/types.h>
+#include <sys/time.h>
+
+#include <unistd.h>
+
+#include "psc_ds/lockedlist.h"
+#include "psc_util/atomic.h"
+#include "psc_util/cdefs.h"
+#include "psc_util/iostats.h"
+#include "psc_util/thread.h"
+#include "psc_util/waitq.h"
+
+__static struct psc_waitq	psc_timerwtq;
+__static struct psc_thread	psc_timerthr;
+
+__static void *
+psc_timerthr_main(__unusedx void *arg)
+{
+	for (;;) {
+		sleep(1);
+		psc_waitq_wakeall(&psc_timerwtq);
+		sched_yield();
+	}
+}
+
+void *
+psc_timer_iosthr_main(__unusedx void *arg)
+{
+	struct iostats *ist;
+	struct timeval tv;
+	unsigned long intv;
+
+	for (;;) {
+		psc_waitq_wait(&psc_timerwtq, NULL);
+
+		PLL_LOCK(&psc_iostats);
+		if (gettimeofday(&tv, NULL) == -1)
+			psc_fatal("gettimeofday");
+		psclist_for_each_entry(ist,
+		    &psc_iostats.pll_listhd, ist_lentry) {
+			if (tv.tv_sec != ist->ist_lasttv.tv_sec) {
+				timersub(&tv, &ist->ist_lasttv,
+				    &ist->ist_intv);
+				ist->ist_lasttv = tv;
+
+				intv = 0;
+				intv = atomic_xchg(&ist->ist_bytes_intv, intv);
+				ist->ist_rate = intv /
+				    ((ist->ist_intv.tv_sec * 1e6 +
+				    ist->ist_intv.tv_usec) * 1e-6);
+				ist->ist_bytes_total += intv;
+
+				intv = 0;
+				intv = atomic_xchg(&ist->ist_errors_intv, intv);
+				ist->ist_erate = intv /
+				    ((ist->ist_intv.tv_sec * 1e6 +
+				    ist->ist_intv.tv_usec) * 1e-6);
+				ist->ist_errors_total += intv;
+			}
+		}
+		PLL_ULOCK(&psc_iostats);
+		sched_yield();
+	}
+}
+
+void
+psc_timerthr_spawn(int thrtype, const char *name)
+{
+	psc_waitq_init(&psc_timerwtq);
+
+	pscthr_init(&psc_timerthr, thrtype,
+	    psc_timerthr_main, NULL, name);
+}
