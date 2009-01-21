@@ -55,3 +55,5 @@ zest
   deprecates need for zigs, or at least current complexity of zigs.
 - pass sizeof(iovs) to client on CONNECT
 - write back support on server
+
+- the *at family of routines allow any fd, not just a dirfd
