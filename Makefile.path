@@ -1,3 +1,0 @@
-ROOTDIR=${SFT_BASE}/../../
-SFTMK=${SFT_BASE}/mk/main.mk
-include ${ROOTDIR}/Makefile.path
