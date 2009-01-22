@@ -1,5 +1,7 @@
 /* $Id$ */
 
+#define _XOPEN_SOURCE 600
+
 #include <sys/types.h>
 #include <sys/mman.h>
 
@@ -21,6 +23,48 @@ long pscPageSize;
 __weak void
 _psc_pool_reapsome(__unusedx size_t size)
 {
+}
+
+/**
+ * psc_alloc_countbits - count number of bits set in a value.
+ * @val: value to inspect.
+ */
+int
+psc_alloc_countbits(size_t val)
+{
+	unsigned int i, n;
+
+	n = 0;
+	for (i = 0; i < NBBY * sizeof(val); i++)
+		if (val & (1 << i))
+			n++;
+	return (0);
+}
+
+/**
+ * posix_memalign - An overrideable aligned memory allocator for systems
+ *	which do not support posix_memalign(3).
+ * @p: value-result pointer to memory.
+ * @alignment: alignment size, must be power-of-two.
+ * @size: amount of memory to allocate.
+ */
+__weak int
+posix_memalign(void **p, size_t alignment, size_t size)
+{
+	void *startp;
+
+	if (psc_alloc_countbits(alignment) != 1)
+		psc_fatalx("%zu: bad alignment size, must be power of two", size);
+
+	size += alignment;
+	startp = malloc(size);
+	if (startp == NULL)
+		return (errno);
+	/* Align to boundary. */
+	*p = (void *)(((unsigned long)startp) & ~(alignment - 1));
+	if (*p != startp)
+		*p += alignment;
+	return (0);
 }
 
 /*
