@@ -1,7 +1,7 @@
 /* $Id$ */
 
-#ifndef __PFL_LOCK_H__
-#define __PFL_LOCK_H__
+#ifndef _PFL_LOCK_H_
+#define _PFL_LOCK_H_
 
 #include "psc_util/log.h"
 
@@ -14,13 +14,7 @@
 
 #ifdef __ia64
 
-#ifndef __USE_UNIX98
-#define __USE_UNIX98
-#endif
-
-#ifndef __USE_GNU
-#define __USE_GNU
-#endif
+#define _XOPEN_SOURCE
 
 #include <errno.h>
 #include <string.h>
@@ -313,6 +307,14 @@ typedef int psc_spinlock_t;
 
 #define _LOCK_VALID(l)		(*(l) == SL_LOCKED || *(l) == SL_UNLOCKED)
 
+#define LOCK_ENSURE(l)								\
+	do {									\
+		if (!_LOCK_VALID(l))						\
+			psc_fatalx("lock %p has invalid value", (l));		\
+		if (*(l) != SL_LOCKED)						\
+			psc_fatalx("lock is not locked (%p)!", (l));		\
+	} while (0)
+
 #define freelock(l)								\
 	do {									\
 		if (!_LOCK_VALID(l))						\
@@ -363,7 +365,20 @@ ureqlock(psc_spinlock_t *l, int waslocked)
 		psc_fatalx("lock %p has invalid value", l);
 }
 
+static __inline int
+tryreqlock(psc_spinlock_t *l, int *locked)
+{
+	if (*l == SL_LOCKED) {
+		*locked = 1;
+	        return (1);
+	} else if (*l != SL_UNLOCKED)
+		psc_fatalx("lock %p has invalid value", l);
+	*l = SL_LOCKED;
+	*locked = 0;
+	return 1;
+}
+
 #endif /* HAVE_LIBPTHREAD */
 
-#endif /* __PFL_LOCK_H__ */
+#endif /* _PFL_LOCK_H_ */
 #endif
