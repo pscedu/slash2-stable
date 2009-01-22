@@ -20,6 +20,7 @@
 
 #ifndef __KERNEL__
 #include <stdio.h>
+#include <stddef.h>
 #endif
 
 #define LIBCFS_DEBUG
