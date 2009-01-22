@@ -2,6 +2,8 @@
 
 #include <sys/cdefs.h>
 
+#include <stddef.h>
+
 #define NENTRIES(t) (int)(sizeof(t) / sizeof(t[0]))
 
 #ifndef offsetof
