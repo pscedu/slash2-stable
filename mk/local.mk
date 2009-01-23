@@ -2,7 +2,7 @@
 
 # Disappointingly, recent versions of gcc hide
 # standard headers in places other than /usr/include.
-MKDEP_PROG=	env CC="${CC}" ${ROOTDIR}/tools/mkdep
+MKDEP_PROG=	$(filter CC=*,${CC}) ${ROOTDIR}/tools/mkdep
 MKDEP=		${MKDEP_PROG} $$(if ${CC} -v 2>&1 | grep -q gcc; then \
 		    ${CC} -print-search-dirs | grep install | \
 		    awk '{print "-I" $$2 "include"}' | sed 's/:/ -I/'; fi)
