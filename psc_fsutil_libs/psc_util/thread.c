@@ -68,6 +68,13 @@ pscthr_begin(void *arg)
 	int rc;
 
 	spinlock(&thr->pscthr_lock);
+
+	thr->pscthr_loglevels = PSCALLOC(psc_nsubsys *
+	    sizeof(*thr->pscthr_loglevels));
+
+	for (n = 0; n < psc_nsubsys; n++)
+		thr->pscthr_loglevels[n] = psc_log_getlevel_ss(n);
+
 	thr->pscthr_pthread = pthread_self();
 	thr->pscthr_thrid = syscall(SYS_gettid);
 	rc = pthread_setspecific(psc_thrkey, thr);
@@ -115,6 +122,7 @@ _pscthr_init(struct psc_thread *thr, int type, void *(*start)(void *),
 	if (flags & PTF_PAUSED)
 		psc_fatalx("pscthr_init: PTF_PAUSED specified");
 
+	memset(thr, 0, sizeof(*thr));
 	LOCK_INIT(&thr->pscthr_lock);
 	thr->pscthr_type = type;
 	thr->pscthr_start = start;
@@ -131,12 +139,6 @@ _pscthr_init(struct psc_thread *thr, int type, void *(*start)(void *),
 		psc_fatal("vsnprintf");
 	if (rc >= (int)sizeof(thr->pscthr_name))
 		psc_fatalx("pscthr_init: thread name too long: %s", namefmt);
-
-	thr->pscthr_loglevels = PSCALLOC(psc_nsubsys *
-	    sizeof(*thr->pscthr_loglevels));
-
-	for (n = 0; n < psc_nsubsys; n++)
-		thr->pscthr_loglevels[n] = psc_log_getlevel(n);
 
 	if (start) {
 		if ((rc = pthread_create(&thr->pscthr_pthread, NULL,
