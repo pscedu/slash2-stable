@@ -195,6 +195,30 @@ psc_atomic64_set_mask(uint64_t mask, psc_atomic64_t *v)
 	return (new);
 }
 
+__dead static __inline unsigned long
+__bad_increment_for_ia64_fetch_and_add(void)
+{
+	psc_fatalx("__bad_increment_for_ia64_fetch_and_add");
+}
+
+__dead static __inline void
+__bad_size_for_ia64_fetch_and_add(void)
+{
+	psc_fatalx("__bad_size_for_ia64_fetch_and_add");
+}
+
+__dead static __inline void
+ia64_cmpxchg_called_with_bad_pointer(void)
+{
+	psc_fatalx("ia64_cmpxchg_called_with_bad_pointer");
+}
+
+__dead static __inline void
+ia64_xchg_called_with_bad_pointer(void)
+{
+	psc_fatalx("ia64_xchg_called_with_bad_pointer");
+}
+
 #else
 
 #ifdef LOCK_PREFIX
