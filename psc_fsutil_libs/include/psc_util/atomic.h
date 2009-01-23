@@ -13,6 +13,13 @@
 
 #ifdef __ia64
 
+#include "psc_util/log.h"
+
+#define __bad_increment_for_ia64_fetch_and_add() ({ psc_fatalx("__bad_increment_for_ia64_fetch_and_add"); 0; })
+#define __bad_size_for_ia64_fetch_and_add()	 psc_fatalx("__bad_size_for_ia64_fetch_and_add")
+#define ia64_cmpxchg_called_with_bad_pointer()	 ({ psc_fatalx("ia64_cmpxchg_called_with_bad_pointer"); 0; })
+#define ia64_xchg_called_with_bad_pointer()	 psc_fatalx("ia64_xchg_called_with_bad_pointer")
+
 typedef struct { volatile __s32 counter; } atomic_t;
 typedef struct { volatile __s64 counter; } psc_atomic64_t;
 
@@ -193,30 +200,6 @@ psc_atomic64_set_mask(uint64_t mask, psc_atomic64_t *v)
 		new = old | mask;
 	} while (ia64_cmpxchg(acq, v, old, new, sizeof(psc_atomic64_t)) != old);
 	return (new);
-}
-
-__dead static __inline unsigned long
-__bad_increment_for_ia64_fetch_and_add(void)
-{
-	psc_fatalx("__bad_increment_for_ia64_fetch_and_add");
-}
-
-__dead static __inline void
-__bad_size_for_ia64_fetch_and_add(void)
-{
-	psc_fatalx("__bad_size_for_ia64_fetch_and_add");
-}
-
-__dead static __inline void
-ia64_cmpxchg_called_with_bad_pointer(void)
-{
-	psc_fatalx("ia64_cmpxchg_called_with_bad_pointer");
-}
-
-__dead static __inline void
-ia64_xchg_called_with_bad_pointer(void)
-{
-	psc_fatalx("ia64_xchg_called_with_bad_pointer");
 }
 
 #else
