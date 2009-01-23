@@ -65,7 +65,7 @@ __static void *
 pscthr_begin(void *arg)
 {
 	struct psc_thread *thr = arg;
-	int rc;
+	int n, rc;
 
 	spinlock(&thr->pscthr_lock);
 
@@ -117,7 +117,7 @@ _pscthr_init(struct psc_thread *thr, int type, void *(*start)(void *),
     void *private, int flags, void (*dtor)(void *), const char *namefmt, ...)
 {
 	va_list ap;
-	int rc, n;
+	int rc;
 
 	if (flags & PTF_PAUSED)
 		psc_fatalx("pscthr_init: PTF_PAUSED specified");
