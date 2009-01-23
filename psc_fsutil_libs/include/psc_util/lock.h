@@ -14,7 +14,9 @@
 
 #ifdef __ia64
 
+#ifndef _XOPEN_SOURCE
 #define _XOPEN_SOURCE
+#endif
 
 #include <errno.h>
 #include <string.h>
