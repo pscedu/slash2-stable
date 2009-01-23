@@ -16,6 +16,7 @@ general
 - remove ifdef buttons
 
 slash
+- see if newer zfs fuse supports openat
 - piggyback small readdirs directly into READDIR replies
 
 pfl
