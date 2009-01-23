@@ -68,13 +68,10 @@ pscthr_begin(void *arg)
 	int n, rc;
 
 	spinlock(&thr->pscthr_lock);
-
 	thr->pscthr_loglevels = PSCALLOC(psc_nsubsys *
 	    sizeof(*thr->pscthr_loglevels));
-
 	for (n = 0; n < psc_nsubsys; n++)
-		thr->pscthr_loglevels[n] = psc_log_getlevel_ss(n);
-
+		thr->pscthr_loglevels[n] = psc_log_getlevel(n);
 	thr->pscthr_pthread = pthread_self();
 	thr->pscthr_thrid = syscall(SYS_gettid);
 	rc = pthread_setspecific(psc_thrkey, thr);
@@ -145,6 +142,10 @@ _pscthr_init(struct psc_thread *thr, int type, void *(*start)(void *),
 		    pscthr_begin, thr)) != 0)
 			psc_fatalx("pthread_create: %s", strerror(rc));
 	} else {
+		thr->pscthr_loglevels = PSCALLOC(psc_nsubsys *
+		    sizeof(*thr->pscthr_loglevels));
+		for (n = 0; n < psc_nsubsys; n++)
+			thr->pscthr_loglevels[n] = psc_log_getlevel(n);
 		thr->pscthr_pthread = pthread_self();
 		thr->pscthr_thrid = syscall(SYS_gettid);
 		rc = pthread_setspecific(psc_thrkey, thr);
