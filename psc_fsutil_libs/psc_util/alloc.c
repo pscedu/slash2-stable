@@ -25,48 +25,6 @@ _psc_pool_reapsome(__unusedx size_t size)
 {
 }
 
-/**
- * psc_alloc_countbits - count number of bits set in a value.
- * @val: value to inspect.
- */
-int
-psc_alloc_countbits(size_t val)
-{
-	unsigned int i, n;
-
-	n = 0;
-	for (i = 0; i < NBBY * sizeof(val); i++)
-		if (val & (1 << i))
-			n++;
-	return (0);
-}
-
-/**
- * posix_memalign - An overrideable aligned memory allocator for systems
- *	which do not support posix_memalign(3).
- * @p: value-result pointer to memory.
- * @alignment: alignment size, must be power-of-two.
- * @size: amount of memory to allocate.
- */
-__weak int
-posix_memalign(void **p, size_t alignment, size_t size)
-{
-	void *startp;
-
-	if (psc_alloc_countbits(alignment) != 1)
-		psc_fatalx("%zu: bad alignment size, must be power of two", size);
-
-	size += alignment;
-	startp = malloc(size);
-	if (startp == NULL)
-		return (errno);
-	/* Align to boundary. */
-	*p = (void *)(((unsigned long)startp) & ~(alignment - 1));
-	if (*p != startp)
-		*p += alignment;
-	return (0);
-}
-
 /*
  * psc_realloc - Allocate or resize a chunk of memory.
  * @p: current chunk of memory to resize or NULL for new chunk.
@@ -152,5 +110,15 @@ psc_freel(void *p, size_t size)
 {
 	if (p && munlock(p, size) == -1)
 		psc_fatal("munlock %p", p);
+	PSCFREE(p);
+}
+
+/*
+ * psc_freen - Free aligned memory.
+ * @p: memory chunk to free.
+ */
+__weak void
+psc_freen(void *p)
+{
 	PSCFREE(p);
 }

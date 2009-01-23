@@ -48,3 +48,8 @@ lnet_lite_lnet_router_proc_c_CFLAGS=	-DPSC_SUBSYS=PSS_LNET
 
 lnet_lite_ptllnd_ptllnd_c_CFLAGS=	-DPSC_SUBSYS=PSS_LNET
 lnet_lite_ptllnd_ptllnd_cb_c_CFLAGS=	-DPSC_SUBSYS=PSS_LNET
+
+ifneq ($(wildcard /opt/xt-os),)
+# on xt3
+SRCS+=		${PFL_BASE}/compat/posix_memalign.c
+endif
