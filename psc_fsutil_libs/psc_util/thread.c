@@ -114,7 +114,7 @@ _pscthr_init(struct psc_thread *thr, int type, void *(*start)(void *),
     void *private, int flags, void (*dtor)(void *), const char *namefmt, ...)
 {
 	va_list ap;
-	int rc;
+	int rc, n;
 
 	if (flags & PTF_PAUSED)
 		psc_fatalx("pscthr_init: PTF_PAUSED specified");
