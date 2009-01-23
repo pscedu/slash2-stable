@@ -50,7 +50,7 @@ PSCRPC_SRCS+=		${PFL_BASE}/psc_rpc/packgeneric.c
 PSCRPC_SRCS+=		${PFL_BASE}/psc_rpc/rpcclient.c
 PSCRPC_SRCS+=		${PFL_BASE}/psc_rpc/service.c
 
-TARGET?=	        ${PROG}
+TARGET?=	        ${PROG} ${LIBRARY}
 
 all: recurse-all ${TARGET}
 
