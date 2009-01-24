@@ -896,8 +896,8 @@ static int new_connection(void *z)
     bridge             b = m->handler_arg;
     struct sockaddr_storage ss;
     struct sockaddr_in *sin = (void *)&ss;
-    int                fd;
-    socklen_t          sslen, option;
+    int                fd, option;
+    socklen_t          sslen;
     unsigned int       ipaddr;
     ssize_t            rc;
     lnet_acceptor_connreq_t cr;
@@ -996,7 +996,7 @@ bind_socket(manager m, unsigned short port)
         bridge b=m->handler_arg;
         __unusedx unsigned int local_addr=LNET_NIDADDR(b->b_ni->ni_nid);
         int sock_type = (tcpnal_usesdp ? AF_INET_SDP : AF_INET);
-	socklen_t option;
+	int option;
 
         if ((m->bound = socket(sock_type, SOCK_STREAM, 0)) < 0)
                 return(0);
