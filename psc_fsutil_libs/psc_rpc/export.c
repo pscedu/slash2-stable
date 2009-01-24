@@ -3,10 +3,12 @@
 #define PSC_SUBSYS PSS_RPC
 
 #include "psc_ds/tree.h"
-#include "psc_rpc/rpc.h"
 #include "psc_rpc/export.h"
+#include "psc_rpc/rpc.h"
+#include "psc_util/log.h"
 
-void __pscrpc_export_put(struct pscrpc_export *exp)
+void
+__pscrpc_export_put(struct pscrpc_export *exp)
 {
         if (atomic_dec_and_test(&exp->exp_refcount)) {
                 psc_info("destroying export %p/%s",
@@ -15,11 +17,10 @@ void __pscrpc_export_put(struct pscrpc_export *exp)
 
                 /* "Local" exports (lctl, LOV->{mdc,osc}) have no connection. */
                 if (exp->exp_connection)
-			//ptlrpc_put_connection_superhack(exp->exp_connection);
                         pscrpc_put_connection(exp->exp_connection);
-		// XXX Shield from the client for now,
 
-		exp->exp_destroycb(exp->exp_private);
+		if (exp->exp_destroycb)
+			exp->exp_destroycb(exp->exp_private);
 
 		/* Outstanding replies refers to 'difficult' replies
 		   Not sure what h_link is for - pauln */
