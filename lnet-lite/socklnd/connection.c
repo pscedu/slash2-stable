@@ -719,9 +719,9 @@ force_tcp_connection(manager    m,
     connection         conn = NULL;
     struct sockaddr_in addr;
     struct sockaddr_in locaddr;
-    int                fd;
+    int                fd, option;
     int                rc;
-    socklen_t          sz, option;
+    socklen_t          sz;
     int                rport;
 
     pthread_mutex_lock(&m->conn_lock);
