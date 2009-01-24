@@ -16,6 +16,11 @@ pscthrs_init(void)
 }
 
 __weak void
+psc_memnode_init(void)
+{
+}
+
+__weak void
 psc_subsys_register(__unusedx int level, __unusedx const char *name)
 {
 }
@@ -29,6 +34,7 @@ pfl_init(void)
 		errx(1, "pfl_init: already initialized");
 
 	pscthrs_init();
+	psc_memnode_init();
 	psc_log_init();
 
 	psc_subsys_register(PSS_LOG, "log");
