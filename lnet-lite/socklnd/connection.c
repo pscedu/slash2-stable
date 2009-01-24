@@ -720,9 +720,8 @@ force_tcp_connection(manager    m,
     struct sockaddr_in addr;
     struct sockaddr_in locaddr;
     int                fd;
-    int                option;
     int                rc;
-    socklen_t          sz;
+    socklen_t          sz, option;
     int                rport;
 
     pthread_mutex_lock(&m->conn_lock);
@@ -756,10 +755,8 @@ force_tcp_connection(manager    m,
             }
 
             option = 1;
-            setsockopt(fd, IPPROTO_TCP, TCP_NODELAY, &option, sizeof(option));
             rc = setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, 
-                            &option, sizeof(option));
-
+                            &option, sizeof(option)); 
             if (rc != 0) {
                     CERROR ("Can't set SO_REUSEADDR for socket: %s\n",
                             strerror(errno));
@@ -900,8 +897,6 @@ static int new_connection(void *z)
     struct sockaddr_storage ss;
     struct sockaddr_in *sin = (void *)&ss;
     int                fd;
-
-    //socklen_t          len = sizeof(struct sockaddr_in);
     socklen_t          sslen, option;
     unsigned int       ipaddr;
     ssize_t            rc;
@@ -918,7 +913,7 @@ static int new_connection(void *z)
             return 0;
     }
 
-    option = 1;
+    option = tcpnal_nagle ? 0 : 1;
     setsockopt(fd, IPPROTO_TCP, TCP_NODELAY, &option, sizeof(option));
 
     ipaddr = *((unsigned int *)&sin->sin_addr);
