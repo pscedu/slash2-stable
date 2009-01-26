@@ -3,7 +3,6 @@
 #ifndef _PFL_HASH2_H_
 #define _PFL_HASH2_H_
 
-#include "psc_types.h"
 #include "psc_ds/list.h"
 #include "psc_ds/lockedlist.h"
 #include "psc_util/atomic.h"

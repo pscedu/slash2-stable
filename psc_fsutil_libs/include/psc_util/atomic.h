@@ -9,8 +9,6 @@
 
 #include <stdint.h>
 
-#include "psc_types.h"
-
 #ifdef __ia64
 
 #include "psc_util/log.h"

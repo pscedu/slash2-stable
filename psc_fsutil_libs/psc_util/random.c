@@ -3,10 +3,10 @@
 #include <sys/types.h>
 
 #include <fcntl.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <unistd.h>
 
-#include "psc_types.h"
 #include "psc_util/lock.h"
 #include "psc_util/log.h"
 #include "psc_util/random.h"
@@ -24,7 +24,7 @@ unsigned char	*psc_random_pos;
  *	our buffer if needed.
  * Notes: not thread-safe!
  */
-__static u64
+__static uint64_t
 psc_random_getbyte(void)
 {
 	int fd;
@@ -51,10 +51,10 @@ psc_random_getbyte(void)
 /**
  * psc_random32: get a random 32-bit number from /dev/urandom.
  */
-u32
+uint32_t
 psc_random32(void)
 {
-	u32 r;
+	uint32_t r;
 
 	spinlock(&psc_random_lock);
 	r = psc_random_getbyte();
@@ -68,10 +68,10 @@ psc_random32(void)
 /**
  * psc_random64: get a random 64-bit number from /dev/urandom.
  */
-u64
+uint64_t
 psc_random64(void)
 {
-	u64 r;
+	uint64_t r;
 
 	spinlock(&psc_random_lock);
 	r = psc_random_getbyte();
@@ -91,10 +91,10 @@ psc_random64(void)
  *	from /dev/urandom.
  * @max: bound.
  */
-u32
-psc_random32u(u32 max)
+uint32_t
+psc_random32u(uint32_t max)
 {
-	u32 r, min;
+	uint32_t r, min;
 
 	if (max < 2)
 		return (0);

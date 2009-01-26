@@ -1,7 +1,7 @@
 /* $Id$ */
 
-#include "psc_types.h"
+#include <stdint.h>
 
-u32 psc_random32(void);
-u32 psc_random32u(u32);
-u64 psc_random64(void);
+uint32_t psc_random32(void);
+uint32_t psc_random32u(uint32_t);
+uint64_t psc_random64(void);

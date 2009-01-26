@@ -3,6 +3,8 @@
 #ifndef __PFL_CRC_H__
 #define __PFL_CRC_H__
 
+#include <stdint.h>
+
 #include "psc_types.h"
 
 /*
@@ -20,8 +22,8 @@
 #define PSC_CRC_ADD(crc, data, len)						\
 	do {									\
 		unsigned char *__data = (unsigned char *)(data);		\
-		u64 __crc0 = (crc);						\
-		u32 __len = (len);						\
+		uint64_t __crc0 = (crc);					\
+		uint32_t __len = (len);						\
 		int __idx;							\
 										\
 		while (__len-- > 0) {						\
@@ -41,7 +43,7 @@
 void psc_crc_add(psc_crc_t *, const void *, int);
 void psc_crc_calc(psc_crc_t *, const void *, int);
 
-extern const u64 psc_crc_table[];
+extern const uint64_t psc_crc_table[];
 
 #define PRI_PSC_CRC "%16"PRIx64
 

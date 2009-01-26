@@ -1,9 +1,9 @@
 /* $Id$ */
 
-#ifndef __PFL_TYPES_H__
-#define __PFL_TYPES_H__
+#ifndef _PFL_TYPES_H_
+#define _PFL_TYPES_H_
 
-#include <inttypes.h>
+#include <stdint.h>
 
 typedef uint64_t	u64;
 typedef uint32_t	u32;
@@ -28,10 +28,10 @@ typedef int8_t		s8;
 # define _P_U64		"ll"
 #endif
 
-typedef	u64 psc_crc_t;
+typedef	uint64_t psc_crc_t;
 
 #define CRCSZ (sizeof(psc_crc_t))
 
 #include "psc_util/subsys.h"
 
-#endif /* __PFL_TYPES_H__ */
+#endif /* _PFL_TYPES_H_ */

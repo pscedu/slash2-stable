@@ -84,7 +84,7 @@ rsx_bulkserver(struct pscrpc_request *rq, struct pscrpc_bulk_desc **descp,
 	int sum, i, rc, comms_error;
 	struct pscrpc_bulk_desc *desc;
 	struct l_wait_info lwi;
-	u8 *v1;
+	uint8_t *v1;
 
 	psc_assert(type == BULK_GET_SINK || type == BULK_PUT_SOURCE);
 

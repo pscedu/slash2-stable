@@ -1,13 +1,14 @@
 /* $Id$ */
 
-#include "psc_types.h"
+#include <stdint.h>
+
 #include "psc_util/crc.h"
 
 /*
  * Shamelessly heisted from TelegraphCQ-0.2
  *   pauln 11/08/06
  */
-const u64 psc_crc_table[256] = {
+const uint64_t psc_crc_table[256] = {
 	UINT64_C(0x0000000000000000), UINT64_C(0x42F0E1EBA9EA3693),
 	UINT64_C(0x85E1C3D753D46D26), UINT64_C(0xC711223CFA3E5BB5),
 	UINT64_C(0x493366450E42ECDF), UINT64_C(0x0BC387AEA7A8DA4C),
