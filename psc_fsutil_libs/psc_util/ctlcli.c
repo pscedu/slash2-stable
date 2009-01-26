@@ -5,6 +5,7 @@
 #include <sys/un.h>
 
 #include <err.h>
+#include <inttypes.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
