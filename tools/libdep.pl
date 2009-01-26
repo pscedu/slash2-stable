@@ -6,14 +6,12 @@ use warnings;
 
 my @l_opts;
 my @L_opts;
+my @libs;
 
-my $i;
-for ($i = 0; $i < @ARGV; $i++) {
-	if ($ARGV[$i] =~ /^-l/) {
-		push @l_opts, $';
-	} elsif ($ARGV[$i] =~ /^-L/) {
-		push @L_opts, $';
-	}
+foreach my $arg (@ARGV) {
+	push(@l_opts, $'), next if $arg =~ /^-l/;
+	push(@L_opts, $'), next if $arg =~ /^-L/;
+	push(@libs, $arg), next if $arg =~ /\.a$/;
 }
 
 my @dirs = grep { -d $_ } @L_opts;
@@ -31,6 +29,10 @@ foreach my $line (@lines) {
 foreach my $lib (@l_opts) {
 	foreach my $path (@dirs) {
 		my $name = "$path/lib$lib.a";
-		print " ", $name if -f $name;
+		print " ", $name if -f $name; # XXX call `last'
 	}
+}
+
+foreach my $lib (@libs) {
+	print " ", $lib;
 }
