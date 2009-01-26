@@ -24,6 +24,15 @@ printhex(void *ptr, size_t len)
 		}
 		printf("%02x", *p);
 	}
-printf("\n------------------------------------------\n");
+	printf("\n------------------------------------------\n");
 	freelock(&l);
+}
+
+void
+printbin(uint64_t val)
+{
+	int i;
+
+	for (i = 0; i < (int)sizeof(val) * NBBY; i++)
+		putchar(val & (1 << i) ? '1': '0');
 }
