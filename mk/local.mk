@@ -8,6 +8,7 @@ MKDEP=		${MKDEP_PROG} $$(if ${CC} -v 2>&1 | grep -q gcc; then \
 		    awk '{print "-I" $$2 "include"}' | sed 's/:/ -I/'; fi)
 LINT=		splint +posixlib
 NOTEMPTY=	${ROOTDIR}/tools/notempty
+PKG_CONFIG=	PKG_CONFIG_PATH=/usr/local/lib/pkgconfig pkg-config
 
 # for ZESTIONs
 KERNEL_BASE=	/usr/src/kernels/2.6.22.14-72.fc6-x86_64
