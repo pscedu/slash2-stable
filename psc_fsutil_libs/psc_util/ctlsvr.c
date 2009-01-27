@@ -491,7 +491,7 @@ psc_ctlparam_log_level(int fd, struct psc_ctlmsghdr *mh,
 	rc = 1;
 	PLL_LOCK(&psc_threads);
 	PSC_CTL_FOREACH_THREAD(thr, pcp->pcp_thrname, &psc_threads.pll_listhd)
-		for (subsys = start_ss; subsys < end_ss; subsys++)
+		for (subsys = start_ss; subsys < end_ss; subsys++) {
 			if (set)
 				thr->pscthr_loglevels[subsys] = loglevel;
 			else {
@@ -503,6 +503,7 @@ psc_ctlparam_log_level(int fd, struct psc_ctlmsghdr *mh,
 				if (!rc)
 					goto done;
 			}
+		}
  done:
 	PLL_ULOCK(&psc_threads);
 	return (rc);
