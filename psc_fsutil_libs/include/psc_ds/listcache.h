@@ -13,12 +13,11 @@
 
 #include "psc_ds/list.h"
 #include "psc_ds/lockedlist.h"
-#include "psc_util/lock.h"
 #include "psc_util/alloc.h"
 #include "psc_util/assert.h"
 #include "psc_util/atomic.h"
+#include "psc_util/lock.h"
 #include "psc_util/waitq.h"
-#include "psc_util/alloc.h"
 
 #define LC_NAME_MAX 32
 
@@ -69,9 +68,9 @@ lc_del(struct psclist_head *e, struct psc_listcache *lc)
 	int locked;
 
 	locked = reqlock(&lc->lc_lock);
+	psc_assert(lc->lc_size > 0);
 	psclist_del(e);
 	lc->lc_size--;
-	psc_assert(lc->lc_size >= 0);
 	ureqlock(&lc->lc_lock, locked);
 }
 
@@ -89,9 +88,9 @@ lc_remove(struct psc_listcache *lc, void *p)
 	psc_assert(p);
 	e = (char *)p + lc->lc_offset;
 	locked = reqlock(&lc->lc_lock);
+	psc_assert(lc->lc_size > 0);
 	psclist_del(e);
 	lc->lc_size--;
-	psc_assert(lc->lc_size >= 0);
 	ureqlock(&lc->lc_lock, locked);
 }
 
@@ -142,6 +141,7 @@ _lc_get(struct psc_listcache *lc, struct timespec *abstime, int flags)
 	    psclist_first(&lc->lc_listhd) :
 	    psclist_last(&lc->lc_listhd);
 	if ((flags & PLCGF_PEEK) == 0) {
+		psc_assert(lc->lc_size > 0);
 		psclist_del(e);
 		lc->lc_size--;
 	}
