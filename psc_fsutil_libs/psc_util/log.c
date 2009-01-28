@@ -132,7 +132,7 @@ MPI_Comm_rank(__unusedx int comm, int *rank)
  * fuse_get_context - dummy overrideable fuse context retriever.
  */
 __weak struct fuse_context *
-fuse_get_context(void)
+psclog_get_fuse_context(void)
 {
 	return (NULL);
 }
@@ -186,7 +186,7 @@ psclogv(const char *fn, const char *func, int line, int subsys,
 		thrname = d->pld_nothrname;
 	}
 
-	ctx = fuse_get_context();
+	ctx = psclog_get_fuse_context();
 
 	gettimeofday(&tv, NULL);
 	FMTSTR(prefix, sizeof(prefix), psc_logfmt,
