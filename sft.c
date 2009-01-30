@@ -1,24 +1,30 @@
-#include <sys/types.h>
+/* $Id$ */
+
+#include <sys/param.h>
 #include <sys/stat.h>
-#include <unistd.h>
+
+#include <fcntl.h>
+#include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <limits.h>
-#include <fcntl.h>
+#include <unistd.h>
 
 #ifdef MPI
 #include <mpi.h>
 MPI_Group world;
 #endif
 
+#include "psc_util/cdefs.h"
 #include "psc_util/crc.h"
 
+#if 0
 #ifndef MIN
 # define MIN(a,b) (((a)<(b)) ? (a): (b))
 #endif
 #ifndef MAX
 # define MAX(a,b) (((a)>(b)) ? (a): (b))
+#endif
 #endif
 
 int pes, mype;
@@ -30,8 +36,9 @@ psc_crc_t filecrc;
 char file[PATH_MAX];
 char *buf;
 
-static void 
-sft_help(void) { 
+void
+sft_help(void)
+{
 	fprintf(stderr, "sft [-n] [-d] [-f filename] [-c]\n"
 		"\t -d (enable debugging output)\n"
 		"\t -c (enable MD5 checksummming)\n"
@@ -39,16 +46,16 @@ sft_help(void) {
 	exit(1);
 }
 
-static void 
-sft_getopt(int argc,  char *argv[]) { 
+void
+sft_getopt(int argc,  char *argv[]) {
 #define ARGS "dhcn:f:"
 	int have_file=0;
 	char c;
-	optarg = NULL; 
-	
+	optarg = NULL;
+
 	while ((c = getopt(argc, argv, ARGS)) != -1) {
-		switch (c) {  
-			
+		switch (c) {
+
 		case 'h':
 			sft_help();
 			break;
@@ -58,8 +65,8 @@ sft_getopt(int argc,  char *argv[]) {
 			break;
 		case 'd':
 			debug = strtol(optarg, NULL, 10);
-			break;			
-		case 'f':			
+			break;
+		case 'f':
 			strncpy(file, optarg, PATH_MAX);
 			have_file = 1;
 			break;
@@ -67,7 +74,7 @@ sft_getopt(int argc,  char *argv[]) {
 			bufsz = strtol(optarg, NULL, 10);
 			break;
 
-		default : 			
+		default :
 			fprintf(stderr, "Invalid option '%s'\n", optarg);
 			sft_help();
 		}
@@ -77,9 +84,9 @@ sft_getopt(int argc,  char *argv[]) {
 		fprintf(stderr, "No input file specified");
 		sft_help();
 	}
-} 
+}
 
-static void 
+void
 sft_barrier(void)
 {
 #ifdef MPI
@@ -87,22 +94,28 @@ sft_barrier(void)
 #endif
 }
 
-static void 
-sft_parallel_init(void)
+#ifdef MPI
+void
+sft_parallel_init(int argc, char *argv[])
 {
-#ifdef MPI	
+	int rc;
+
 	if (MPI_Init(&argc, &argv) != MPI_SUCCESS)
 		abort();
-	
+
 	MPI_Comm_size(MPI_COMM_WORLD, &pes);
 	MPI_Comm_rank(MPI_COMM_WORLD, &mype);
-	
+
 	rc = MPI_Comm_group(MPI_COMM_WORLD, &world);
 	if (rc != MPI_SUCCESS)
 		abort();
-#endif
-	return;
 }
+#else
+void
+sft_parallel_init(__unusedx int argc, __unusedx char *argv[])
+{
+}
+#endif
 
 static void
 sft_parallel_finalize(void)
@@ -110,23 +123,23 @@ sft_parallel_finalize(void)
 #ifdef MPI
 	MPI_Finalize();
 #endif
-	return;
 }
 
-int 
-main(int argc, char *argv[]) {
-	int rc, fd;
+int
+main(int argc, char *argv[])
+{
+	int fd;
 	struct stat stb;
 	ssize_t rem, szrc;
 	size_t tmp;
-	
+
 	sft_getopt(argc, argv);
 
 	buf = malloc(bufsz);
 	if (!buf)
 		abort();
-	
-	sft_parallel_init();
+
+	sft_parallel_init(argc, argv);
 	sft_barrier();
 
 	fd = open(file, O_RDONLY);
@@ -138,10 +151,10 @@ main(int argc, char *argv[]) {
 
 	if (debug)
 		fprintf(stdout, "filesize=%lu", stb.st_size);
-	
+
 	rem = stb.st_size;
 
-	while (rem) {		
+	while (rem) {
 		tmp = MIN(rem, bufsz);
 		szrc = read(fd, buf, tmp);
 		if (szrc != (ssize_t)tmp) {
@@ -157,7 +170,7 @@ main(int argc, char *argv[]) {
 	if (crc) {
 		PSC_CRC_FIN(filecrc);
 		fprintf(stdout, "F '%s' CRC=0x%lx\n", file, filecrc);
-	}	
+	}
 	close(fd);
 
 	sft_parallel_finalize();
