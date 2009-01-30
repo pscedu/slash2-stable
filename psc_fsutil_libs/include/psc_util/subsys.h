@@ -14,8 +14,9 @@
 #define PSS_JOURNAL	1
 #define PSS_RPC		2
 #define PSS_LNET	3
-#define PSS_OTHER	4
-#define _PSS_LAST	5
+#define PSS_MEMALLOC    4
+#define PSS_OTHER	5
+#define _PSS_LAST	6
 
 int		 psc_subsys_id(const char *);
 const char	*psc_subsys_name(int);

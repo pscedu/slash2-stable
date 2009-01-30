@@ -14,9 +14,21 @@
 #define PSC_REALLOC(p, sz)	psc_realloc((p), (sz), 0)
 #define PSC_TRY_REALLOC(p, sz)	psc_realloc((p), (sz), PAF_CANFAIL)
 
-#define PSCFREE(p)		free(p)
 
-#define psc_alloc(sz, fl)	psc_realloc(NULL, (sz), (fl))
+#define PSCFREE(p)							\
+	({								\
+		psc_traces(PSS_MEMALLOC, "freeing %p", (p));		\
+		free(p);						\
+	})
+
+#define psc_alloc(sz, fl)						\
+	({								\
+		void *__p;						\
+		__p = psc_realloc(NULL, (sz), (fl));			\
+		psc_traces(PSS_MEMALLOC, "alloc %p sz=%d fl=%d",	\
+			   __p, (sz), (fl));				\
+		__p;							\
+	})
 
 /* allocation flags */
 #define PAF_CANFAIL	(1 << 0)	/* return NULL instead of fatal */

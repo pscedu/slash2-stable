@@ -41,6 +41,7 @@ pfl_init(void)
 	psc_subsys_register(PSS_JOURNAL, "journal");
 	psc_subsys_register(PSS_RPC, "rpc");
 	psc_subsys_register(PSS_LNET, "lnet");
+	psc_subsys_register(PSS_MEMALLOC, "memalloc");
 	psc_subsys_register(PSS_OTHER, "other");
 
 	pscPageSize = sysconf(_SC_PAGESIZE);
