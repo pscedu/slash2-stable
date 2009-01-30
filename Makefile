@@ -4,7 +4,7 @@ ROOTDIR=../..
 PROJECT_BASE=.
 include ${ROOTDIR}/Makefile.path
 
-PROG?=		sft.qk
+PROG?=		sft
 SRCS+=		sft.c
 SRCS+=		${PFL_BASE}/psc_util/crc.c
 
@@ -22,9 +22,6 @@ sft.qk:		CFLAGS+=	-DMPI
 sft.qk:		LDFLAGS+=	-L/opt/xt-mpt/default/mpich2-64/P2/lib -lmpich
 
 include ${MAINMK}
-
-sft:
-	@PROG=sft ${MAKE}
 
 mpi qk:
 	@PROG=sft.$@ ${MAKE}
