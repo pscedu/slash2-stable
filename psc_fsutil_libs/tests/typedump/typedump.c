@@ -117,5 +117,7 @@ main(int argc, char *argv[])
 	PRTYPE(struct psc_thread);
 	PRTYPE(struct psc_waitq);
 
+	PRVAL(offsetof(struct psc_listcache, lc_listhd));
+
 	exit(0);
 }
