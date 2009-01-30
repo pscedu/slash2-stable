@@ -7,7 +7,10 @@
 #include <limits.h>
 #include <fcntl.h>
 
+#ifdef MPI
 #include <mpi.h>
+MPI_Group world;
+#endif
 
 #include "psc_util/crc.h"
 
@@ -18,7 +21,6 @@
 # define MAX(a,b) (((a)>(b)) ? (a): (b))
 #endif
 
-MPI_Group world;
 int pes, mype;
 unsigned long crc=0, debug=0;
 ssize_t bufsz=131072;
@@ -77,10 +79,38 @@ sft_getopt(int argc,  char *argv[]) {
 	}
 } 
 
-static 
-void sft_barrier(void)
+static void 
+sft_barrier(void)
 {
+#ifdef MPI
 	MPI_Barrier(MPI_COMM_WORLD);
+#endif
+}
+
+static void 
+sft_parallel_init(void)
+{
+#ifdef MPI	
+	if (MPI_Init(&argc, &argv) != MPI_SUCCESS)
+		abort();
+	
+	MPI_Comm_size(MPI_COMM_WORLD, &pes);
+	MPI_Comm_rank(MPI_COMM_WORLD, &mype);
+	
+	rc = MPI_Comm_group(MPI_COMM_WORLD, &world);
+	if (rc != MPI_SUCCESS)
+		abort();
+#endif
+	return;
+}
+
+static void
+sft_parallel_finalize(void)
+{
+#ifdef MPI
+	MPI_Finalize();
+#endif
+	return;
 }
 
 int 
@@ -96,17 +126,9 @@ main(int argc, char *argv[]) {
 	if (!buf)
 		abort();
 	
-	if (MPI_Init(&argc, &argv) != MPI_SUCCESS)
-		abort();
-	
-	MPI_Comm_size(MPI_COMM_WORLD, &pes);
-	MPI_Comm_rank(MPI_COMM_WORLD, &mype);
-	
-	rc = MPI_Comm_group(MPI_COMM_WORLD, &world);
-	if (rc != MPI_SUCCESS)
-		abort();
-	
+	sft_parallel_init();
 	sft_barrier();
+
 	fd = open(file, O_RDONLY);
 	if (fd < 0)
 		abort();
@@ -135,10 +157,9 @@ main(int argc, char *argv[]) {
 	if (crc) {
 		PSC_CRC_FIN(filecrc);
 		fprintf(stdout, "F '%s' CRC=0x%lx\n", file, filecrc);
-	}
-	
+	}	
 	close(fd);
-	MPI_Finalize();
 
+	sft_parallel_finalize();
 	return (0);
 }
