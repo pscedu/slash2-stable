@@ -824,7 +824,7 @@ lnet_localnids_get (lnet_nid_t *nids, size_t max)
         lnet_ni_t        *ni;        
         struct list_head *tmp;
 
-        LASSERT(*nids);
+        LASSERT(nids);
         
         LNET_LOCK();
         LASSERT (the_lnet.ln_init);
