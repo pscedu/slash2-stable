@@ -60,6 +60,7 @@ init_hash_table(struct hash_table *t, int size, const char *fmt, ...)
 void
 init_hash_entry(struct hash_entry *hentry, u64 *id, void *private)
 {
+	memset(hentry, 0, sizeof(*hentry));
 	hentry->hentry_id = id;
 	hentry->private   = private;
 }
@@ -153,6 +154,7 @@ void
 init_hash_entry_str(struct hash_entry_str *hentry, const char *id,
     void *private)
 {
+	memset(hentry, 0, sizeof(*hentry));
 	hentry->hentry_str_id = id;
 	hentry->private       = private;
 }
