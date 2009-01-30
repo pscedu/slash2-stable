@@ -13,7 +13,8 @@
 									\
 		_len = _t - _p + strlen(convfmt) + 1;			\
 		if (_len > _tfmt_len && (_tfmt_new =			\
-		    PSC_TRY_REALLOC(_tfmt, _len)) == NULL)		\
+		    psc_realloc(_tfmt, _len,				\
+		    PAF_CANFAIL | PAF_NOLOG)) == NULL)			\
 			_twant = -1;					\
 		else {							\
 			_tfmt = _tfmt_new;				\
@@ -85,6 +86,6 @@
 		 */							\
 		if (siz > 0)						\
 			*_s = '\0';					\
-		PSCFREE(_tfmt);						\
+		free(_tfmt);						\
 		_want;							\
 	})

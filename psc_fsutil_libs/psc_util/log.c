@@ -145,7 +145,7 @@ psclog_getdata(void)
 
 	d = psclog_getdatamem();
 	if (d == NULL) {
-		d = PSCALLOC(sizeof(*d));
+		d = psc_alloc(sizeof(*d), PAF_NOLOG);
 		if (gethostname(d->pld_hostname,
 		    sizeof(d->pld_hostname)) == -1)
 			err(1, "gethostname");
