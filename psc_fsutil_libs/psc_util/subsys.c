@@ -51,7 +51,7 @@ psc_subsys_register(int ssid, const char *name)
 {
 	struct psc_subsys *ss;
 
-	ss = PSCALLOC(sizeof(*ss));
+	ss = psc_alloc(sizeof(*ss), PAF_NOLOG);
 	ss->pss_name = name;
 	ss->pss_loglevel = psc_log_getlevel_global();
 	dynarray_add(&psc_subsystems, ss);
@@ -65,11 +65,9 @@ psc_log_getlevel_ss(int ssid)
 {
 	const struct psc_subsys *ss;
 
-	if (ssid >= psc_nsubsys || ssid < 0) {
-		/* must use warnx(3) here to avoid loops with psclog */
-		warnx("subsystem out of bounds (%d)", ssid);
-		return (psc_log_getlevel_global());
-	}
+	if (ssid >= psc_nsubsys || ssid < 0)
+		/* must use errx(3) here to avoid loops with psclog */
+		errx(1, "subsystem out of bounds (%d)", ssid);
 	ss = dynarray_getpos(&psc_subsystems, ssid);
 	return (ss->pss_loglevel);
 }
