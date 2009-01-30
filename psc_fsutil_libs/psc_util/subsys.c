@@ -65,9 +65,11 @@ psc_log_getlevel_ss(int ssid)
 {
 	const struct psc_subsys *ss;
 
-	if (ssid >= psc_nsubsys || ssid < 0)
-		/* must use err(3) here to avoid loops with psclog */
-		errx(1, "subsystem out of bounds (%d)", ssid);
+	if (ssid >= psc_nsubsys || ssid < 0) {
+		/* must use warnx(3) here to avoid loops with psclog */
+		warnx("subsystem out of bounds (%d)", ssid);
+		return (psc_log_getlevel_global());
+	}
 	ss = dynarray_getpos(&psc_subsystems, ssid);
 	return (ss->pss_loglevel);
 }
