@@ -27,7 +27,8 @@
 		__p = psc_realloc(NULL, (sz), (fl));			\
 		if (((fl) & PAF_NOLOG) == 0)				\
 			psc_traces(PSS_MEMALLOC,			\
-			    "alloc %p sz=%d fl=%d", __p, (sz), (fl));	\
+			    "alloc %p sz=%zu fl=%d", __p,		\
+			    (size_t)(sz), (fl));			\
 		__p;							\
 	})
 
