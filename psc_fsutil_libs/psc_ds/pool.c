@@ -379,7 +379,7 @@ psc_pool_return(struct psc_poolmgr *m, void *p)
 	int locked;
 
 	locked = POOL_RLOCK(m);
-	lc_add(&m->ppm_lc, p);
+	lc_addhead(&m->ppm_lc, p);
 	if (m->ppm_max)
 		psc_assert(m->ppm_lc.lc_size <= m->ppm_max);
 	POOL_ULOCK(m, locked);
