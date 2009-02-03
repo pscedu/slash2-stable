@@ -1,5 +1,10 @@
 /* $Id$ */
 
+/*
+ * Threading library, integrated with logging subsystem along with some
+ * other useful utilities.
+ */
+
 #include "psc_util/subsys.h"
 
 #include <sys/syscall.h>
@@ -25,7 +30,10 @@ __static pthread_key_t	psc_logkey;
 struct psc_lockedlist	psc_threads =
     PLL_INITIALIZER(&psc_threads, struct psc_thread, pscthr_lentry);
 
-void
+/**
+ * pscthr_destroy - Thread destructor.
+ */
+__static void
 pscthr_destroy(void *arg)
 {
 	struct psc_thread *thr = arg;
@@ -41,6 +49,9 @@ pscthr_destroy(void *arg)
 		free(thr);
 }
 
+/**
+ * pscthrs_init - Initialize threading subsystem.
+ */
 void
 pscthrs_init(void)
 {
@@ -65,6 +76,7 @@ __static void *
 pscthr_begin(void *arg)
 {
 	struct psc_thread *thr = arg;
+	struct sigaction sa;
 	int n, rc;
 
 	spinlock(&thr->pscthr_lock);
@@ -77,16 +89,34 @@ pscthr_begin(void *arg)
 	rc = pthread_setspecific(psc_thrkey, thr);
 	if (rc)
 		psc_fatalx("pthread_setspecific: %s", strerror(rc));
+
+	memset(&sa, 0, sizeof(sa));
+	sa.sa_handler = pscthr_sigusr1;
+	if (sigaction(SIGUSR1, &sa, NULL) == -1)
+		psc_fatal("sigaction");
+
+	memset(&sa, 0, sizeof(sa));
+	sa.sa_handler = pscthr_sigusr2;
+	if (sigaction(SIGUSR2, &sa, NULL) == -1)
+		psc_fatal("sigaction");
+
 	freelock(&thr->pscthr_lock);
 	return (thr->pscthr_start(thr));
 }
 
+/**
+ * pscthr_get - Retrieve thread info from thread-local storage unless
+ *	uninitialized.
+ */
 struct psc_thread *
 pscthr_get_canfail(void)
 {
 	return (pthread_getspecific(psc_thrkey));
 }
 
+/**
+ * pscthr_get - Retrieve thread info from thread-local storage.
+ */
 struct psc_thread *
 pscthr_get(void)
 {
@@ -97,8 +127,8 @@ pscthr_get(void)
 	return (thr);
 }
 
-/*
- * pscthr_init - initialize a thread.
+/**
+ * pscthr_init - Initialize a thread.
  * @thr: thread structure to be initialized, must already be allocated.
  * @type: application-specific thread type.
  * @start: thread execution routine.  By specifying a NULL routine,
@@ -151,6 +181,16 @@ _pscthr_init(struct psc_thread *thr, int type, void *(*start)(void *),
 		rc = pthread_setspecific(psc_thrkey, thr);
 		if (rc)
 			psc_fatalx("pthread_setspecific: %s", strerror(rc));
+
+		memset(&sa, 0, sizeof(sa));
+		sa.sa_handler = pscthr_sigusr1;
+		if (sigaction(SIGUSR1, &sa, NULL) == -1)
+			psc_fatal("sigaction");
+
+		memset(&sa, 0, sizeof(sa));
+		sa.sa_handler = pscthr_sigusr2;
+		if (sigaction(SIGUSR2, &sa, NULL) == -1)
+			psc_fatal("sigaction");
 	}
 
 	pll_add(&psc_threads, thr);
@@ -205,7 +245,7 @@ pscthr_setpause(struct psc_thread *thr, int pause)
 }
 
 /*
- * pscthr_sigusr2 - catch SIGUSR1: pause the thread.
+ * pscthr_sigusr1 - catch SIGUSR1: pause the thread.
  * @sig: signal number.
  */
 void
@@ -242,12 +282,20 @@ pscthr_sigusr2(__unusedx int sig)
 	ureqlock(&thr->pscthr_lock, locked);
 }
 
+/**
+ * psclog_getdatamem - Obtain logging info from thread-local storage.
+ * @d: data pointer.
+ */
 struct psclog_data *
 psclog_getdatamem(void)
 {
 	return (pthread_getspecific(psc_logkey));
 }
 
+/**
+ * psclog_setdatamem - Store logging info into thread-local storage.
+ * @d: data pointer.
+ */
 void
 psclog_setdatamem(struct psclog_data *d)
 {
@@ -257,4 +305,14 @@ psclog_setdatamem(struct psclog_data *d)
 	if (rc)
 		err(1, "pthread_setspecific: %s",
 		    strerror(rc));
+}
+
+/**
+ * psc_get_hostname - Override hostname retrieval to access thread-local
+ *	storage for hostname.
+ */
+char *
+psc_get_hostname(void)
+{
+	return (psclog_getdata()->pld_hostname);
 }
