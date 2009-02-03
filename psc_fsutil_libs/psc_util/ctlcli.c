@@ -704,19 +704,25 @@ psc_ctlmsg_print(struct psc_ctlmsghdr *mh, const void *m)
 }
 
 void
-psc_ctlcli_main(const char *sockfn)
+psc_ctlcli_main(const char *osockfn)
 {
 	extern void usage(void);
 
 	struct psc_ctlmsg *pcm, *nextpcm;
 	struct psc_ctlmsghdr mh;
 	struct sockaddr_un sun;
+	char sockfn[PATH_MAX];
 	ssize_t siz, n;
 	void *m;
 	int s;
 
 	if (psclist_empty(&psc_ctlmsgs))
 		usage();
+
+	FMTSTR(sockfn, sizeof(sockfn), osockfn,
+		FMTSTRCASE('h', sockfn, sizeof(sockfn), "s",
+		    psclog_getdata()->pld_hostname)
+	);
 
 	/* Connect to control socket. */
 	if ((s = socket(AF_UNIX, SOCK_STREAM, 0)) == -1)
