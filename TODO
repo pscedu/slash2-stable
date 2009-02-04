@@ -14,9 +14,9 @@ general
 	(o) s/u64/uint64_t/
 - investigate pthread_rwlocks for things like trees and large lists
 - remove ifdef buttons
+- watch out for "a - b" in cmp functions overflowing
 
 slash
-- see if newer zfs fuse supports openat
 - piggyback small readdirs directly into READDIR replies
 
 pfl
@@ -58,3 +58,5 @@ zest
 - write back support on server
 
 - the *at family of routines allow any fd, not just a dirfd
+
+consider adding a new keyword __local or something for thread-localized memory.
