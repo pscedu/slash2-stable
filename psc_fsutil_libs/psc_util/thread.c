@@ -143,6 +143,7 @@ void
 _pscthr_init(struct psc_thread *thr, int type, void *(*start)(void *),
     void *private, int flags, void (*dtor)(void *), const char *namefmt, ...)
 {
+	struct sigaction sa;
 	va_list ap;
 	int rc, n;
 

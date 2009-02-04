@@ -16,6 +16,7 @@
 #include "psc_util/cdefs.h"
 #include "psc_util/ctl.h"
 #include "psc_util/ctlcli.h"
+#include "psc_util/fmtstr.h"
 #include "psc_util/humanscale.h"
 #include "psc_util/log.h"
 #include "psc_util/meter.h"
