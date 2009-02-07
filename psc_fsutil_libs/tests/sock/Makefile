@@ -2,9 +2,11 @@
 
 include ../Makefile.path
 
-PROG=	sock
-SRCS=	sock.c
-SRCS+=	${PFL_BASE}/psc_util/alloc.c
-SRCS+=	${PFL_BASE}/psc_util/log.c
+PROG=		sock
+SRCS=		sock.c
+SRCS+=		${PFL_BASE}/psc_util/alloc.c
+SRCS+=		${PFL_BASE}/psc_util/log.c
+SRCS+=		${PFL_BASE}/psc_util/strlcpy.c
+LDFLAGS+=	${THREAD_LIBS}
 
 include ${PFLMK}
