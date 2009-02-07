@@ -60,3 +60,14 @@ zest
 - the *at family of routines allow any fd, not just a dirfd
 
 consider adding a new keyword __local or something for thread-localized memory.
+
+
+
+- see if pool initf allows us to set the arg type instead of void
+
+- investigate proper control socket permissions checks.  regular
+  users should be able to read some stats but only root users
+  should be able to issue exit commands, etc.
+
+
+move tests/bw and tests/sock out of tests
