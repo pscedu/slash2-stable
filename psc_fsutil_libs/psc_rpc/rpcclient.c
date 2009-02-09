@@ -750,8 +750,8 @@ int pscrpc_queue_wait(struct pscrpc_request *req)
 	lwi = LWI_TIMEOUT_INTR(timeout, expired_request,
 			       interrupted_request, req);
 
-	rc = psc_cli_wait_event(&req->rq_reply_waitq, pscrpc_check_reply(req),
-				&lwi);
+	rc = psc_cli_wait_event(&req->rq_reply_waitq,
+	    pscrpc_check_reply(req), &lwi);
 	/* !!! might have timed out !!! */
 	if (rc)
 		DEBUG_REQ(PLL_INFO, req, "psc_cli_wait_event(pscrpc_check_reply) returned %d", rc);
@@ -1446,7 +1446,8 @@ pscrpc_set_finalize(struct pscrpc_request_set *set, int block, int destroy)
 			 * AND... even if it is, this mighth be a good place
 			 *        for a fall-back (timeout-based?) */
 			errno = -rc;
-			psc_error("pscrpc_set_wait() failed for set %p", set);
+			psc_errorx("pscrpc_set_wait() failed for set %p: %s",
+			    set, strerror(-rc));
 			return (rc);
 		} else {
 			if (destroy)
