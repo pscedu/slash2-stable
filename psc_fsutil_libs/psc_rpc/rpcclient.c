@@ -1378,7 +1378,7 @@ int pscrpc_set_wait(struct pscrpc_request_set *set)
 
 		/* -EINTR => all requests have been flagged rq_intr so next
 		 * check completes.
-		 * -ETIMEOUTD => someone timed out.  When all reqs have
+		 * -ETIMEDOUT => someone timed out.  When all reqs have
 		 * timed out, signals are enabled allowing completion with
 		 * EINTR.
 		 * I don't really care if we go once more round the loop in
