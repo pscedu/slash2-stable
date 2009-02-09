@@ -31,7 +31,7 @@ __pscrpc_export_put(struct pscrpc_export *exp)
 #endif
                 ZOBD_FREE(exp, sizeof(*exp));
 		/**
-		 * Psc is not using obd's and our exports are attached to
+		 * pscrpc is not using obd's and our exports are attached to
                 class_decref(obd);
 		*/
         }
