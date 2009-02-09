@@ -273,6 +273,10 @@ typedef unsigned int cfs_rdev_t;
 // static inline void local_irq_save(unsigned long flag) {return;}
 // static inline void local_irq_restore(unsigned long flag) {return;}
 
+int cfs_parse_int_tunable(int *value, char *name);
+
+#define LIBCFS_REALLOC(ptr, size) realloc(ptr, size)
+
 enum {
         CFS_STACK_TRACE_DEPTH = 16
 };
