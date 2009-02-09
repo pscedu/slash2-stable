@@ -19,6 +19,12 @@ LNET_SOCKLND_SRCS+=	${LNET_BASE}/socklnd/table.c
 LNET_SOCKLND_SRCS+=	${LNET_BASE}/socklnd/tcplnd.c
 LNET_SOCKLND_SRCS+=	${LNET_BASE}/socklnd/sendrecv.c
 
+LNET_SOCKLND2_SRCS+=	${LNET_BASE}/socklnd2/conn.c
+LNET_SOCKLND2_SRCS+=	${LNET_BASE}/socklnd2/handlers.c
+LNET_SOCKLND2_SRCS+=	${LNET_BASE}/socklnd2/poll.c
+LNET_SOCKLND2_SRCS+=	${LNET_BASE}/socklnd2/usocklnd.c
+LNET_SOCKLND2_SRCS+=	${LNET_BASE}/socklnd2/usocklnd_cb.c
+
 LNET_CFS_SRCS+=		${LNET_BASE}/libcfs/debug.c
 LNET_CFS_SRCS+=		${LNET_BASE}/libcfs/nidstrings.c
 LNET_CFS_SRCS+=		${LNET_BASE}/libcfs/user-lock.c
