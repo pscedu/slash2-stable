@@ -48,7 +48,7 @@ typedef struct {
         __u32                 uc_peer_ip;    /* IP address of the peer */
         __u16                 uc_peer_port;  /* port of the peer */
         struct list_head      uc_stale_list; /* orphaned connections */
-        
+
         /* Receive state */
         int                uc_rx_state;      /* message or hello state */
         ksock_hello_msg_t *uc_rx_hello;      /* hello buffer */
@@ -69,10 +69,10 @@ typedef struct {
         int                uc_tx_flag;       /* deadline valid? */
         int                uc_sending;       /* send op is in progress */
         usock_tx_t        *uc_tx_hello;      /* fake tx with hello */
-        
+
         atomic_t       uc_refcount;      /* # of users */
         pthread_mutex_t    uc_lock;          /* serialize */
-        int                uc_errored;       /* a flag for lnet_notify() */ 
+        int                uc_errored;       /* a flag for lnet_notify() */
 } usock_conn_t;
 
 /* Allowable conn states are: */
@@ -107,9 +107,18 @@ typedef struct usock_peer_s {
                                             * hasn't been set so far */
         atomic_t      up_refcount;     /* # of users */
         pthread_mutex_t   up_lock;         /* serialize */
-        int               up_errored;      /* a flag for lnet_notify() */ 
+        int               up_errored;      /* a flag for lnet_notify() */
         cfs_time_t        up_last_alive;   /* when the peer was last alive */
 } usock_peer_t;
+
+struct completion {
+	struct psc_waitq wq;
+};
+
+#define complete(c)		psc_waitq_wakeall(&(c)->wq)
+#define init_completion(c)	psc_waitq_init(&(c)->wq)
+#define fini_completion(c)	(void)0
+#define wait_for_completion(c)	waitq_wait(&(c)->wq)
 
 typedef struct {
         int               upt_notifier_fd;       /* notifier fd for writing */
@@ -170,7 +179,7 @@ typedef struct {
         pthread_cond_t  un_cond;        /* condvar to wait for notifications */
         pthread_mutex_t un_lock;        /* a lock to protect un_cond */
 } usock_net_t;
-        
+
 typedef struct {
         int ut_poll_timeout;  /* the third arg for poll(2) (seconds) */
         int ut_timeout;       /* "stuck" socket timeout (seconds) */
@@ -330,7 +339,7 @@ int usocklnd_find_or_create_peer(lnet_ni_t *ni, lnet_process_id_t id,
 int usocklnd_find_or_create_conn(usock_peer_t *peer, int type,
                                  usock_conn_t **connp,
                                  usock_tx_t *tx, usock_zc_ack_t *zc_ack,
-                                 int *send_immediately_flag);                                 
+                                 int *send_immediately_flag);
 void usocklnd_link_conn_to_peer(usock_conn_t *conn, usock_peer_t *peer, int idx);
 int usocklnd_invert_type(int type);
 void usocklnd_conn_new_state(usock_conn_t *conn, int new_state);
