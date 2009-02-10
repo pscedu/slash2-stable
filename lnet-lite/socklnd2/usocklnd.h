@@ -18,6 +18,7 @@
 
 #include "psc_util/atomic.h"
 #include "psc_util/log.h"
+#include "psc_util/waitq.h"
 
 typedef struct {
         struct list_head tx_list;    /* neccessary to form tx list */
@@ -112,13 +113,36 @@ typedef struct usock_peer_s {
 } usock_peer_t;
 
 struct completion {
+	int done;
+	psc_spinlock_t lock;
 	struct psc_waitq wq;
 };
 
-#define complete(c)		psc_waitq_wakeall(&(c)->wq)
-#define init_completion(c)	psc_waitq_init(&(c)->wq)
+#define complete(c)							\
+	do {								\
+		spinlock(&(c)->lock);					\
+		(c)->done = 1;						\
+		psc_waitq_wakeall(&(c)->wq);				\
+		freelock(&(c)->lock);					\
+	} while (0)
+
+#define init_completion(c)						\
+	do {								\
+		LOCK_INIT(&(c)->lock);					\
+		(c)->done = 0;						\
+		psc_waitq_init(&(c)->wq);				\
+	} while (0)
+
 #define fini_completion(c)	(void)0
-#define wait_for_completion(c)	waitq_wait(&(c)->wq)
+
+#define wait_for_completion(c)						\
+	do {								\
+		spinlock(&(c)->lock);					\
+		if ((c)->done)						\
+			freelock(&(c)->lock);				\
+		else							\
+			psc_waitq_wait(&(c)->wq, &(c)->lock);		\
+	} while (0)
 
 typedef struct {
         int               upt_notifier_fd;       /* notifier fd for writing */

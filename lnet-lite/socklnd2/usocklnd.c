@@ -196,7 +196,7 @@ usocklnd_update_tunables()
                 return -EINVAL;
         
         if (usock_tuns.ut_npollthreads == 0) {
-                usock_tuns.ut_npollthreads = cfs_lnet_online_cpus();
+                usock_tuns.ut_npollthreads = cfs_online_cpus();
 
                 if (usock_tuns.ut_npollthreads <= 0) {
                         CERROR("Cannot find out the number of online CPUs\n");
@@ -323,9 +323,8 @@ usocklnd_base_startup()
 
         /* Spawn poll threads */
         for (i = 0; i < usock_data.ud_npollthreads; i++) {
-                rc = cfs_kernel_thread(usocklnd_poll_thread,
-                                       &usock_data.ud_pollthreads[i],
-                                       0); /* 0 - unused flag */
+                rc = cfs_create_thread(usocklnd_poll_thread,
+                                       &usock_data.ud_pollthreads[i]);
                 if (rc) {
                         usocklnd_base_shutdown(i);
                         return rc;
@@ -606,4 +605,10 @@ usocklnd_del_conns_locked(usock_peer_t *peer)
                 if (conn != NULL)
                         usocklnd_conn_kill(conn);                 
         }       
+}
+
+int
+usocklnd_ninstances(void)
+{
+	return (usock_data.ud_nets_count);
 }
