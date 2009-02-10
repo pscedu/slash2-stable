@@ -37,6 +37,7 @@
 
 #include <stdlib.h>
 #include <libcfs/libcfs.h>
+#include <libcfs/kp30.h>
 /*
  * Optional debugging (magic stamping and checking ownership) can be added.
  */
@@ -222,6 +223,50 @@ void up_write(struct rw_semaphore *s)
         (void)s;
 }
 #endif
+
+#ifdef HAVE_LIBPTHREAD
+
+#include <pthread.h>
+
+/*
+ * Completion
+ */
+
+void cfs_init_completion(struct cfs_completion *c)
+{
+        LASSERT(c != NULL);
+        c->c_done = 0;
+        pthread_mutex_init(&c->c_mut, NULL);
+        pthread_cond_init(&c->c_cond, NULL);
+}
+
+void cfs_fini_completion(struct cfs_completion *c)
+{
+        LASSERT(c != NULL);
+        pthread_mutex_destroy(&c->c_mut);
+        pthread_cond_destroy(&c->c_cond);
+}
+
+void cfs_complete(struct cfs_completion *c)
+{
+        LASSERT(c != NULL);
+        pthread_mutex_lock(&c->c_mut);
+        c->c_done++;
+        pthread_cond_signal(&c->c_cond);
+        pthread_mutex_unlock(&c->c_mut);
+}
+
+void cfs_wait_for_completion(struct cfs_completion *c)
+{
+        LASSERT(c != NULL);
+        pthread_mutex_lock(&c->c_mut);
+        while (c->c_done == 0)
+                pthread_cond_wait(&c->c_cond, &c->c_mut);
+        c->c_done--;
+        pthread_mutex_unlock(&c->c_mut);
+}
+
+#endif 
 
 /* !__KERNEL__ */
 #endif

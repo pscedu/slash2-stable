@@ -140,13 +140,29 @@ void cfs_waitq_wait(struct cfs_waitlink *link)
         (void)link;
 }
 
-int64_t cfs_waitq_timedwait(struct cfs_waitlink *link, 
-                            __unusedx int state, 
+int64_t cfs_waitq_timedwait(struct cfs_waitlink *link,
+                            __unusedx int state,
                             __unusedx int64_t timeout)
 {
         LASSERT(link != NULL);
         (void)link;
         return 0;
+}
+
+int cfs_parse_int_tunable(int *value, char *name)
+{
+        char    *env = getenv(name);
+        char    *end;
+
+        if (env == NULL)
+                return 0;
+
+        *value = strtoull(env, &end, 0);
+        if (*end == 0)
+                return 0;
+
+        CERROR("Can't parse tunable %s=%s\n", name, env);
+        return -EINVAL;
 }
 
 /*
@@ -193,7 +209,7 @@ void cfs_kunmap(__unusedx cfs_page_t *pg)
  */
 
 cfs_mem_cache_t *
-cfs_mem_cache_create(const char *name, size_t objsize, 
+cfs_mem_cache_create(const char *name, size_t objsize,
                      __unusedx size_t off, __unusedx unsigned long flags)
 {
         cfs_mem_cache_t *c;
@@ -283,7 +299,7 @@ cfs_sigset_t cfs_block_sigs(cfs_sigset_t blocks)
 {
         cfs_sigset_t   old;
         int   rc;
-        
+
         rc = sigprocmask(SIG_SETMASK, &blocks, &old);
         LASSERT (rc == 0);
 
@@ -341,7 +357,7 @@ void *cfs_stack_trace_frame(struct cfs_stack_trace *trace, int frame_no)
 
 void cfs_stack_trace_fill(__unusedx struct cfs_stack_trace *trace)
 {}
-void *cfs_stack_trace_frame(__unusedx struct cfs_stack_trace *trace, 
+void *cfs_stack_trace_frame(__unusedx struct cfs_stack_trace *trace,
                             __unusedx int frame_no)
 {
         return NULL;

@@ -191,6 +191,25 @@ typedef struct { volatile int counter; } atomic_t;
 
 #endif
 
+#ifdef HAVE_LIBPTHREAD
+
+/*
+ * Completion
+ */
+
+struct cfs_completion {
+        int c_done;
+        pthread_cond_t c_cond;
+        pthread_mutex_t c_mut;
+};
+
+void cfs_init_completion(struct cfs_completion *c);
+void cfs_fini_completion(struct cfs_completion *c);
+void cfs_complete(struct cfs_completion *c);
+void cfs_wait_for_completion(struct cfs_completion *c);
+
+#endif
+
 /* !__KERNEL__ */
 #endif
 

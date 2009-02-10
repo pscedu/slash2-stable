@@ -257,6 +257,13 @@ usocklnd_poll_thread(void *arg)
         return 0;
 }
 
+void *
+usocklnd_poll_thread_hack(void *arg)
+{
+	usocklnd_poll_thread(arg);
+	return (NULL); 
+}
+
 /* Returns 0 on success, <0 else */
 int
 usocklnd_add_pollrequest(usock_conn_t *conn, int type, short value)

@@ -94,7 +94,7 @@
 #define LASSERTF(cond, fmt...) ((void)(0))
 #endif /* LIBCFS_DEBUG */
 
-void lbug_with_loc(char *file, const char *func, const int line)
+int lbug_with_loc(char *file, const char *func, const int line)
         __attribute__((noreturn));
 
 #define LBUG() lbug_with_loc(__FILE__, __FUNCTION__, __LINE__)
@@ -203,7 +203,7 @@ do {                                                                           \
                 CERROR(args);                                                  \
           assert(cond);                                                        \
 } while (0)
-#  define LBUG()   assert(0)
+#  define LBUG()   (assert(0), 0)
 # else
 #  define LASSERT(e) ((void)(0))
 #  define LASSERTF(cond, args...) do { } while (0)

@@ -22,6 +22,7 @@
 
 #define DEBUG_SUBSYSTEM S_LNET
 #include <lnet/lib-lnet.h>
+#include <libcfs/user-tcpip.h>
 
 #ifdef __KERNEL__
 static char *accept = "secure";
@@ -61,7 +62,7 @@ lnet_acceptor_port(void)
 EXPORT_SYMBOL(lnet_acceptor_port);
 
 void
-lnet_connect_console_error (int rc, lnet_nid_t peer_nid, 
+lnet_connect_console_error (int rc, lnet_nid_t peer_nid,
                            __u32 peer_ip, int peer_port)
 {
         switch (rc) {
@@ -131,13 +132,13 @@ lnet_connect(cfs_socket_t **sockp, lnet_nid_t peer_nid,
 
         CLASSERT (sizeof(cr) <= 16);            /* not too big to be on the stack */
 
-        for (port = LNET_ACCEPTOR_MAX_RESERVED_PORT; 
-             port >= LNET_ACCEPTOR_MIN_RESERVED_PORT; 
+        for (port = LNET_ACCEPTOR_MAX_RESERVED_PORT;
+             port >= LNET_ACCEPTOR_MIN_RESERVED_PORT;
              --port) {
                 /* Iterate through reserved ports. */
 
-                rc = libcfs_sock_connect(&sock, &fatal, 
-                                         local_ip, port, 
+                rc = libcfs_sock_connect(&sock, &fatal,
+                                         local_ip, port,
                                          peer_ip, peer_port);
                 if (rc != 0) {
                         if (fatal)
@@ -176,14 +177,14 @@ lnet_connect(cfs_socket_t **sockp, lnet_nid_t peer_nid,
                         if (rc != 0)
                                 goto failed_sock;
                 }
-                
+
                 *sockp = sock;
                 return 0;
         }
 
         rc = -EADDRINUSE;
         goto failed;
-        
+
  failed_sock:
         libcfs_sock_release(sock);
  failed:
@@ -215,7 +216,7 @@ lnet_accept(lnet_ni_t *blind_ni, cfs_socket_t *sock, __u32 magic)
          * acceptor.  If so, blind_ni != NULL... */
 
         LASSERT (sizeof(cr) <= 16);             /* not too big for the stack */
-        
+
         rc = libcfs_sock_getaddr(sock, 1, &peer_ip, &peer_port);
         LASSERT (rc == 0);                      /* we succeeded before */
 
@@ -248,7 +249,7 @@ lnet_accept(lnet_ni_t *blind_ni, cfs_socket_t *sock, __u32 magic)
                         str = "'old' openibnal";
                 else
                         str = "unrecognised";
-            
+
                 LCONSOLE_ERROR("Refusing connection from %u.%u.%u.%u magic %08x: "
                                " %s acceptor protocol\n",
                                HIPQUAD(peer_ip), magic, str);
@@ -257,7 +258,7 @@ lnet_accept(lnet_ni_t *blind_ni, cfs_socket_t *sock, __u32 magic)
 
         flip = (magic != LNET_PROTO_ACCEPTOR_MAGIC);
 
-        rc = libcfs_sock_read(sock, &cr.acr_version, 
+        rc = libcfs_sock_read(sock, &cr.acr_version,
                               sizeof(cr.acr_version),
                               accept_timeout);
         if (rc != 0) {
@@ -268,7 +269,7 @@ lnet_accept(lnet_ni_t *blind_ni, cfs_socket_t *sock, __u32 magic)
 
         if (flip)
                 __swab32s(&cr.acr_version);
-        
+
         if (cr.acr_version != LNET_PROTO_ACCEPTOR_VERSION) {
                 /* future version compatibility!
                  * An acceptor-specific protocol rev will first send a version
@@ -342,7 +343,7 @@ lnet_accept(lnet_ni_t *blind_ni, cfs_socket_t *sock, __u32 magic)
         return rc;
 }
 EXPORT_SYMBOL(lnet_accept);
-        
+
 int
 lnet_acceptor(void *arg)
 {
@@ -387,20 +388,20 @@ lnet_acceptor(void *arg)
 
 		lnet_acceptor_state.pta_sock = NULL;
         } else {
-                LCONSOLE(0, "Accept %s, port %d%s\n", 
+                LCONSOLE(0, "Accept %s, port %d%s\n",
                          accept, accept_port,
                          blind_ni == NULL ? "" : " (proto compatible)");
         }
-        
+
 	/* set init status and unblock parent */
 	lnet_acceptor_state.pta_shutdown = rc;
 	mutex_up(&lnet_acceptor_state.pta_signal);
-	
+
 	if (rc != 0)
 		return rc;
 
 	while (lnet_acceptor_state.pta_shutdown == 0) {
-		
+
 		rc = libcfs_sock_accept(&newsock, lnet_acceptor_state.pta_sock);
 		if (rc != 0) {
 			if (rc != -EAGAIN) {
@@ -427,14 +428,14 @@ lnet_acceptor(void *arg)
                         rc = blind_ni->ni_lnd->lnd_accept(blind_ni, newsock);
                         if (rc != 0) {
                                 CERROR("NI %s refused 'blind' connection from "
-                                       "%u.%u.%u.%u\n", 
-                                       libcfs_nid2str(blind_ni->ni_nid), 
+                                       "%u.%u.%u.%u\n",
+                                       libcfs_nid2str(blind_ni->ni_nid),
                                        HIPQUAD(peer_ip));
                                 goto failed;
                         }
                         continue;
                 }
-                
+
 		rc = libcfs_sock_read(newsock, &magic, sizeof(magic),
 				      accept_timeout);
 		if (rc != 0) {
@@ -446,13 +447,13 @@ lnet_acceptor(void *arg)
                 rc = lnet_accept(NULL, newsock, magic);
                 if (rc != 0)
                         goto failed;
-                
+
                 continue;
-                
+
 	failed:
 		libcfs_sock_release(newsock);
 	}
-	
+
 	libcfs_sock_release(lnet_acceptor_state.pta_sock);
         lnet_acceptor_state.pta_sock = NULL;
 
@@ -460,7 +461,7 @@ lnet_acceptor(void *arg)
                 lnet_ni_decref(blind_ni);
 
         LCONSOLE(0,"Acceptor stopping\n");
-	
+
 	/* unblock lnet_acceptor_stop() */
 	mutex_up(&lnet_acceptor_state.pta_signal);
 	return 0;
@@ -486,10 +487,10 @@ lnet_acceptor_start(void)
                                 accept);
                 return -EINVAL;
         }
-	
+
 	if (lnet_count_acceptor_nis(NULL) == 0)  /* not required */
 		return 0;
-	
+
 	pid = cfs_kernel_thread(lnet_acceptor, (void *)secure, 0);
 	if (pid < 0) {
 		CERROR("Can't start acceptor thread: %ld\n", pid);
@@ -513,7 +514,7 @@ lnet_acceptor_stop(void)
 {
 	if (lnet_acceptor_state.pta_sock == NULL) /* not running */
 		return;
-	
+
 	lnet_acceptor_state.pta_shutdown = 1;
 	libcfs_sock_abort_accept(lnet_acceptor_state.pta_sock);
 
@@ -522,6 +523,335 @@ lnet_acceptor_stop(void)
 }
 
 #else /* __KERNEL__ */
+#ifdef HAVE_LIBPTHREAD
+
+static char *accept_type;
+static int accept_port = 988;
+static int accept_backlog;
+static int accept_timeout;
+
+struct {
+        int                   pta_shutdown;
+        int                   pta_sock;
+        struct cfs_completion pta_completion;
+} lnet_acceptor_state;
+
+int
+lnet_acceptor_port(void)
+{
+        return accept_port;
+}
+
+int
+lnet_parse_int_tunable(int *value, char *name, int dflt)
+{
+        char    *env = getenv(name);
+        char    *end;
+
+        if (env == NULL) {
+                *value = dflt;
+                return 0;
+        }
+
+        *value = strtoull(env, &end, 0);
+        if (*end == 0)
+                return 0;
+
+        CERROR("Can't parse tunable %s=%s\n", name, env);
+        return -EINVAL;
+}
+
+int
+lnet_parse_string_tunable(char **value, char *name, char *dflt)
+{
+        char    *env = getenv(name);
+
+        if (env == NULL)
+                *value = dflt;
+        else
+                *value = env;
+
+        return 0;
+}
+
+int
+lnet_acceptor_get_tunables()
+{
+        int rc;
+        rc = lnet_parse_string_tunable(&accept_type, "LNET_ACCEPT", "secure");
+
+        if (rc != 0)
+                return rc;
+
+        rc = lnet_parse_int_tunable(&accept_port, "LNET_ACCEPT_PORT", 988);
+
+        if (rc != 0)
+                return rc;
+
+        rc = lnet_parse_int_tunable(&accept_backlog, "LNET_ACCEPT_BACKLOG", 127);
+
+        if (rc != 0)
+                return rc;
+
+        rc = lnet_parse_int_tunable(&accept_timeout, "LNET_ACCEPT_TIMEOUT", 5);
+
+        if (rc != 0)
+                return rc;
+
+        CDEBUG(D_NET, "accept_type     = %s\n", accept_type);
+        CDEBUG(D_NET, "accept_port     = %d\n", accept_port);
+        CDEBUG(D_NET, "accept_backlog  = %d\n", accept_backlog);
+        CDEBUG(D_NET, "accept_timeout  = %d\n", accept_timeout);
+        return 0;
+}
+
+static inline int
+lnet_accept_magic(__u32 magic, __u32 constant)
+{
+        return (magic == constant ||
+                magic == __swab32(constant));
+}
+
+/* user-land lnet_accept() isn't used by any LND's directly. So, we don't
+ * do it visible outside acceptor.c and we can change its prototype
+ * freely */
+static int
+lnet_accept(int sock, __u32 magic, __u32 peer_ip, __unusedx int peer_port)
+{
+        int rc, flip;
+        lnet_acceptor_connreq_t cr;
+        lnet_ni_t *ni;
+
+        if (!lnet_accept_magic(magic, LNET_PROTO_ACCEPTOR_MAGIC)) {
+                LCONSOLE_ERROR("Refusing connection from %u.%u.%u.%u magic %08x: "
+                               "unsupported acceptor protocol\n",
+                               HIPQUAD(peer_ip), magic);
+                return -EPROTO;
+        }
+
+        flip = (magic != LNET_PROTO_ACCEPTOR_MAGIC);
+
+        rc = libcfs_sock_read(sock, &cr.acr_version,
+                              sizeof(cr.acr_version),
+                              accept_timeout);
+        if (rc != 0) {
+                CERROR("Error %d reading connection request version from "
+                       "%u.%u.%u.%u\n", rc, HIPQUAD(peer_ip));
+                return -EIO;
+        }
+
+        if (flip)
+                __swab32s(&cr.acr_version);
+
+        if (cr.acr_version != LNET_PROTO_ACCEPTOR_VERSION)
+                return -EPROTO;
+
+        rc = libcfs_sock_read(sock, &cr.acr_nid,
+                              sizeof(cr) -
+                              offsetof(lnet_acceptor_connreq_t, acr_nid),
+                              accept_timeout);
+        if (rc != 0) {
+                CERROR("Error %d reading connection request from "
+                       "%u.%u.%u.%u\n", rc, HIPQUAD(peer_ip));
+                return -EIO;
+        }
+
+        if (flip)
+                __swab64s(&cr.acr_nid);
+
+        ni = lnet_net2ni(LNET_NIDNET(cr.acr_nid));
+
+        if (ni == NULL ||                    /* no matching net */
+             ni->ni_nid != cr.acr_nid) {     /* right NET, wrong NID! */
+                if (ni != NULL)
+                        lnet_ni_decref(ni);
+                LCONSOLE_ERROR("Refusing connection from %u.%u.%u.%u for %s: "
+                               " No matching NI\n",
+                               HIPQUAD(peer_ip), libcfs_nid2str(cr.acr_nid));
+                return -EPERM;
+        }
+
+        if (ni->ni_lnd->lnd_accept == NULL) {
+                lnet_ni_decref(ni);
+                LCONSOLE_ERROR("Refusing connection from %u.%u.%u.%u for %s: "
+                               " NI doesn not accept IP connections\n",
+                               HIPQUAD(peer_ip), libcfs_nid2str(cr.acr_nid));
+                return -EPERM;
+        }
+
+        CDEBUG(D_NET, "Accept %s from %u.%u.%u.%u\n",
+               libcfs_nid2str(cr.acr_nid), HIPQUAD(peer_ip));
+
+        rc = ni->ni_lnd->lnd_accept(ni, sock);
+
+        lnet_ni_decref(ni);
+        return rc;
+}
+
+int
+lnet_acceptor(void *arg)
+{
+        char           name[16];
+        int            secure = (int)((unsigned long)arg);
+        int            rc;
+        int            newsock;
+        __u32          peer_ip;
+        int            peer_port;
+        __u32          magic;
+
+        snprintf(name, sizeof(name), "acceptor_%03d", accept_port);
+        cfs_daemonize(name);
+        cfs_block_allsigs();
+
+        rc = libcfs_sock_listen(&lnet_acceptor_state.pta_sock,
+                                0, accept_port, accept_backlog);
+        if (rc != 0) {
+                if (rc == -EADDRINUSE)
+                        LCONSOLE_ERROR("Can't start acceptor on port %d: "
+                                       "port already in use\n",
+                                       accept_port);
+                else
+                        LCONSOLE_ERROR("Can't start acceptor on port %d: "
+                                       "unexpected error %d\n",
+                                       accept_port, rc);
+
+        } else {
+                LCONSOLE(0, "Accept %s, port %d\n", accept_type, accept_port);
+        }
+
+        /* set init status and unblock parent */
+        lnet_acceptor_state.pta_shutdown = rc;
+        cfs_complete(&lnet_acceptor_state.pta_completion);
+
+        if (rc != 0)
+                return rc;
+
+        while (!lnet_acceptor_state.pta_shutdown) {
+
+                rc = libcfs_sock_accept(&newsock, lnet_acceptor_state.pta_sock,
+                                        &peer_ip, &peer_port);
+                if (rc != 0)
+                        continue;
+
+                /* maybe we're waken up with libcfs_sock_abort_accept() */
+                if (lnet_acceptor_state.pta_shutdown) {
+                        close(newsock);
+                        break;
+                }
+
+                if (secure && peer_port > LNET_ACCEPTOR_MAX_RESERVED_PORT) {
+                        CERROR("Refusing connection from %u.%u.%u.%u: "
+                               "insecure port %d\n",
+                               HIPQUAD(peer_ip), peer_port);
+                        goto failed;
+                }
+
+                rc = libcfs_sock_read(newsock, &magic, sizeof(magic),
+                                      accept_timeout);
+                if (rc != 0) {
+                        CERROR("Error %d reading connection request from "
+                               "%u.%u.%u.%u\n", rc, HIPQUAD(peer_ip));
+                        goto failed;
+                }
+
+                rc = lnet_accept(newsock, magic, peer_ip, peer_port);
+                if (rc != 0)
+                        goto failed;
+
+                continue;
+
+          failed:
+                close(newsock);
+        }
+
+        close(lnet_acceptor_state.pta_sock);
+        LCONSOLE(0,"Acceptor stopping\n");
+
+        /* unblock lnet_acceptor_stop() */
+        cfs_complete(&lnet_acceptor_state.pta_completion);
+
+        return 0;
+}
+
+void *
+lnet_acceptor_hack(void *arg)
+{
+	lnet_acceptor(arg);
+	return (NULL);
+}
+
+static int skip_waiting_for_completion;
+
+int
+lnet_acceptor_start(void)
+{
+        long   secure;
+        int rc;
+
+        rc = lnet_acceptor_get_tunables();
+        if (rc != 0)
+                return rc;
+
+        /* Do nothing if we're liblustre clients */
+        if ((the_lnet.ln_pid & LNET_PID_USERFLAG) != 0)
+                return 0;
+
+        cfs_init_completion(&lnet_acceptor_state.pta_completion);
+
+        if (!strcmp(accept_type, "secure")) {
+                secure = 1;
+        } else if (!strcmp(accept_type, "all")) {
+                secure = 0;
+        } else if (!strcmp(accept_type, "none")) {
+                skip_waiting_for_completion = 1;
+                return 0;
+        } else {
+                LCONSOLE_ERROR ("Can't parse 'accept_type=\"%s\"'\n", accept_type);
+                cfs_fini_completion(&lnet_acceptor_state.pta_completion);
+                return -EINVAL;
+        }
+
+        if (lnet_count_acceptor_nis(NULL) == 0) { /* not required */
+                skip_waiting_for_completion = 1;
+                return 0;
+        }
+
+        rc = cfs_create_thread(lnet_acceptor_hack, (void *)secure);
+        if (rc != 0) {
+                CERROR("Can't start acceptor thread: %d\n", rc);
+                cfs_fini_completion(&lnet_acceptor_state.pta_completion);
+                return rc;
+        }
+
+        /* wait for acceptor to startup */
+        cfs_wait_for_completion(&lnet_acceptor_state.pta_completion);
+
+        if (!lnet_acceptor_state.pta_shutdown)
+                return 0;
+
+        cfs_fini_completion(&lnet_acceptor_state.pta_completion);
+        return -ENETDOWN;
+}
+
+void
+lnet_acceptor_stop(void)
+{
+        /* Do nothing if we're liblustre clients */
+        if ((the_lnet.ln_pid & LNET_PID_USERFLAG) != 0)
+                return;
+
+        if (!skip_waiting_for_completion) {
+                lnet_acceptor_state.pta_shutdown = 1;
+                libcfs_sock_abort_accept(accept_port);
+
+                /* block until acceptor signals exit */
+                cfs_wait_for_completion(&lnet_acceptor_state.pta_completion);
+        }
+
+        cfs_fini_completion(&lnet_acceptor_state.pta_completion);
+}
+
+#else
 
 int
 lnet_acceptor_start(void)
@@ -534,4 +864,5 @@ lnet_acceptor_stop(void)
 {
 }
 
+#endif
 #endif /* !__KERNEL__ */

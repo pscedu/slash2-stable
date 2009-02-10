@@ -96,6 +96,4 @@ int LNetGet(lnet_nid_t        self,
 	    __u64             match_bits_in, 
 	    unsigned int      offset_in);
 
-void (*lnet_thrspawnf)(pthread_t *, void *(*)(void *), void *);
-
 #endif

@@ -20,6 +20,8 @@
  */
 #define DEBUG_SUBSYSTEM S_LNET
 
+#error "no way"
+
 #include <libcfs/kp30.h>
 #include <libcfs/libcfs.h>
 

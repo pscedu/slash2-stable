@@ -879,7 +879,7 @@ lnet_count_acceptor_nis (__unusedx lnet_ni_t **first_ni)
          * *first_ni so the acceptor can pass it connections "blind" to retain
          * binary compatibility. */
         int                count = 0;
-#ifdef __KERNEL__
+#if defined(__KERNEL__) || defined(HAVE_LIBPTHREAD)
         struct list_head  *tmp;
         lnet_ni_t         *ni;
 
@@ -1362,13 +1362,17 @@ LNetCtl(unsigned int cmd, void *arg)
         case IOC_LIBCFS_PORTALS_COMPATIBILITY:
                 return the_lnet.ln_ptlcompat;
 
-        case IOC_LIBCFS_LNET_DIST:
-                rc = LNetDist(data->ioc_nid, &data->ioc_nid, &data->ioc_u32[1]);
+        case IOC_LIBCFS_LNET_DIST: {
+		int tmp;
+
+                rc = LNetDist(data->ioc_nid, &data->ioc_nid, &tmp);
+		data->ioc_u32[1] = tmp;
                 if (rc < 0 && rc != -EHOSTUNREACH)
                         return rc;
                 
                 data->ioc_u32[0] = rc;
                 return 0;
+	}
 
         case IOC_LIBCFS_TESTPROTOCOMPAT:
                 LNET_LOCK();

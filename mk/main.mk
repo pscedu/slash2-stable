@@ -29,6 +29,7 @@ LNET_CFS_SRCS+=		${LNET_BASE}/libcfs/debug.c
 LNET_CFS_SRCS+=		${LNET_BASE}/libcfs/nidstrings.c
 LNET_CFS_SRCS+=		${LNET_BASE}/libcfs/user-lock.c
 LNET_CFS_SRCS+=		${LNET_BASE}/libcfs/user-prim.c
+LNET_CFS_SRCS+=		${LNET_BASE}/libcfs/user-tcpip.c
 
 LNET_LIB_SRCS+=		${LNET_BASE}/lnet/acceptor.c
 LNET_LIB_SRCS+=		${LNET_BASE}/lnet/api-errno.c

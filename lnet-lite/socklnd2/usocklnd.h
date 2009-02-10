@@ -295,6 +295,7 @@ int usocklnd_recv(lnet_ni_t *ni, void *private, lnet_msg_t *msg, int delayed,
 int usocklnd_accept(lnet_ni_t *ni, int sock_fd);
 
 int usocklnd_poll_thread(void *arg);
+void *usocklnd_poll_thread_hack(void *arg);
 int usocklnd_add_pollrequest(usock_conn_t *conn, int type, short value);
 void usocklnd_add_killrequest(usock_conn_t *conn);
 int usocklnd_process_pollrequest(usock_pollrequest_t *pr,

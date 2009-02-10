@@ -265,7 +265,8 @@ procbridge_startup (lnet_ni_t *ni)
             __global_procbridge = p;
 #endif
 
-	    lnet_thrspawnf(&p->t, nal_thread, b);
+	    pthread_t cfs_create_thread2(void *(*)(void *), void *);
+	    p->t = cfs_create_thread2(nal_thread, b);
     }
 
     do {
@@ -284,4 +285,10 @@ procbridge_startup (lnet_ni_t *ni)
     tcpnal_running = 1;
 
     return 0;
+}
+
+int
+usocklnd_ninstances(void)
+{
+	return (tcpnal_instances);
 }

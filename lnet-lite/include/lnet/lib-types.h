@@ -330,6 +330,10 @@ typedef struct lnet_lnd
 #else
         /* wait for something to happen */
         void (*lnd_wait)(struct lnet_ni *ni, int milliseconds);
+
+#ifdef HAVE_LIBPTHREAD
+        int (*lnd_accept)(struct lnet_ni *ni, int sock);
+#endif
 #endif
 } lnd_t;
 

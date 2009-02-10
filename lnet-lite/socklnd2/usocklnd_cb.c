@@ -70,7 +70,7 @@ usocklnd_send_tx_immediately(usock_conn_t *conn, usock_tx_t *tx)
 }
 
 int
-usocklnd_send(lnet_ni_t *ni, void *private, lnet_msg_t *lntmsg)
+usocklnd_send(lnet_ni_t *ni, __unusedx void *private, lnet_msg_t *lntmsg)
 {
         usock_tx_t       *tx;
         lnet_process_id_t target = lntmsg->msg_target;
@@ -111,9 +111,10 @@ usocklnd_send(lnet_ni_t *ni, void *private, lnet_msg_t *lntmsg)
 }
 
 int
-usocklnd_recv(lnet_ni_t *ni, void *private, lnet_msg_t *msg, int delayed,
-              unsigned int niov, struct iovec *iov, lnet_kiov_t *kiov,
-              unsigned int offset, unsigned int mlen, unsigned int rlen)
+usocklnd_recv(__unusedx lnet_ni_t *ni, void *private, lnet_msg_t *msg,
+    __unusedx int delayed, unsigned int niov, struct iovec *iov,
+    __unusedx lnet_kiov_t *kiov, unsigned int offset, unsigned int mlen,
+    unsigned int rlen)
 {
         int           rc   = 0;
         usock_conn_t *conn = (usock_conn_t *)private;

@@ -104,11 +104,14 @@ lnd_t the_lolnd = {
         /* .lnd_send       = */ lolnd_send,
         /* .lnd_recv       = */ lolnd_recv,
         /* .lnd_eager_recv = */ NULL,
-        /* .lnd_notify     = */ NULL,
+        /* .lnd_notify     = */ NULL
 #ifdef __KERNEL__
-        /* .lnd_accept     = */ NULL
+        /* .lnd_accept     = */ ,NULL
 #else
-        /* .lnd_wait       = */ NULL
+        /* .lnd_wait       = */ ,NULL
+#ifdef HAVE_LIBPTHREAD
+        /* .lnd_accept     = */ ,NULL
+#endif
 #endif
 };
 
