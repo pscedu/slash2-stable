@@ -182,14 +182,14 @@ lint:
 
 listsrcs:
 	@for i in ${SUBDIRS}; do							\
-		echo -n "===> " >&2;							\
+		echo -n "===> ";							\
 		if [ -n "${DIRPREFIX}" ]; then						\
-			echo -n ${DIRPREFIX} >&2;					\
+			echo -n ${DIRPREFIX};						\
 		fi;									\
-		echo $$i >&2;								\
+		echo $$i;								\
 		(cd $$i && ${MAKE} SUBDIRS= DIRPREFIX=${DIRPREFIX}$$i/ $@) || exit 1;	\
 		if [ -n "${DIRPREFIX}" ]; then						\
-			echo "<=== ${DIRPREFIX}" | sed 's!/$$!!' >&2;			\
+			echo "<=== ${DIRPREFIX}" | sed 's!/$$!!';			\
 		fi;									\
 	done
 	@if ${NOTEMPTY} "${SRCS}"; then							\
@@ -198,14 +198,14 @@ listsrcs:
 
 test: all
 	@for i in ${SUBDIRS}; do							\
-		echo -n "===> " >&2;							\
+		echo -n "===> ";							\
 		if [ -n "${DIRPREFIX}" ]; then						\
-			echo -n ${DIRPREFIX} >&2;					\
+			echo -n ${DIRPREFIX};						\
 		fi;									\
-		echo $$i >&2;								\
+		echo $$i;								\
 		(cd $$i && ${MAKE} SUBDIRS= DIRPREFIX=${DIRPREFIX}$$i/ $@) || exit 1;	\
 		if [ -n "${DIRPREFIX}" ]; then						\
-			echo "<=== ${DIRPREFIX}" | sed 's!/$$!!' >&2;			\
+			echo "<=== ${DIRPREFIX}" | sed 's!/$$!!';			\
 		fi;									\
 	done
 	@if [ -n "${PROG}" ]; then							\
@@ -227,28 +227,28 @@ endif
 
 cscope cs:
 	@for i in ${SUBDIRS}; do							\
-		echo -n "===> " >&2;							\
+		echo -n "===> ";							\
 		if [ -n "${DIRPREFIX}" ]; then						\
-			echo -n ${DIRPREFIX} >&2;					\
+			echo -n ${DIRPREFIX};						\
 		fi;									\
-		echo $$i >&2;								\
+		echo $$i;								\
 		(cd $$i && ${MAKE} SUBDIRS= DIRPREFIX=${DIRPREFIX}$$i/ $@) || exit 1;	\
 		if [ -n "${DIRPREFIX}" ]; then						\
-			echo "<=== ${DIRPREFIX}" | sed 's!/$$!!' >&2;			\
+			echo "<=== ${DIRPREFIX}" | sed 's!/$$!!';			\
 		fi;									\
 	done
 	cscope -Rb -s${ROOTDIR}/{lnet-lite,psc_fsutil_libs} ${CS_ARGS}
 
 etags:
 	@for i in ${SUBDIRS}; do							\
-		echo -n "===> " >&2;							\
+		echo -n "===> ";							\
 		if [ -n "${DIRPREFIX}" ]; then						\
-			echo -n ${DIRPREFIX} >&2;					\
+			echo -n ${DIRPREFIX};						\
 		fi;									\
-		echo $$i >&2;								\
+		echo $$i;								\
 		(cd $$i && ${MAKE} SUBDIRS= DIRPREFIX=${DIRPREFIX}$$i/ $@) || exit 1;	\
 		if [ -n "${DIRPREFIX}" ]; then						\
-			echo "<=== ${DIRPREFIX}" | sed 's!/$$!!' >&2;			\
+			echo "<=== ${DIRPREFIX}" | sed 's!/$$!!';			\
 		fi;									\
 	done
 	find ${ROOTDIR}/{lnet-lite,psc_fsutil_libs} ${ET_ARGS} -name \*.[chly] | xargs etags
