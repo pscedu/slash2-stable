@@ -19,11 +19,11 @@ LNET_SOCKLND_SRCS+=	${LNET_BASE}/socklnd/table.c
 LNET_SOCKLND_SRCS+=	${LNET_BASE}/socklnd/tcplnd.c
 LNET_SOCKLND_SRCS+=	${LNET_BASE}/socklnd/sendrecv.c
 
-LNET_SOCKLND2_SRCS+=	${LNET_BASE}/socklnd2/conn.c
-LNET_SOCKLND2_SRCS+=	${LNET_BASE}/socklnd2/handlers.c
-LNET_SOCKLND2_SRCS+=	${LNET_BASE}/socklnd2/poll.c
-LNET_SOCKLND2_SRCS+=	${LNET_BASE}/socklnd2/usocklnd.c
-LNET_SOCKLND2_SRCS+=	${LNET_BASE}/socklnd2/usocklnd_cb.c
+LNET_SOCKLND2_SRCS+=	${LNET_BASE}/ulnds/usocklnd/conn.c
+LNET_SOCKLND2_SRCS+=	${LNET_BASE}/ulnds/usocklnd/handlers.c
+LNET_SOCKLND2_SRCS+=	${LNET_BASE}/ulnds/usocklnd/poll.c
+LNET_SOCKLND2_SRCS+=	${LNET_BASE}/ulnds/usocklnd/usocklnd.c
+LNET_SOCKLND2_SRCS+=	${LNET_BASE}/ulnds/usocklnd/usocklnd_cb.c
 
 LNET_CFS_SRCS+=		${LNET_BASE}/libcfs/debug.c
 LNET_CFS_SRCS+=		${LNET_BASE}/libcfs/nidstrings.c
@@ -45,8 +45,8 @@ LNET_LIB_SRCS+=		${LNET_BASE}/lnet/peer.c
 LNET_LIB_SRCS+=		${LNET_BASE}/lnet/router.c
 LNET_LIB_SRCS+=		${LNET_BASE}/lnet/router_proc.c
 
-LNET_PTLLND_SRCS+=	${LNET_BASE}/ptllnd/ptllnd.c
-LNET_PTLLND_SRCS+=	${LNET_BASE}/ptllnd/ptllnd_cb.c
+LNET_PTLLND_SRCS+=	${LNET_BASE}/ulnds/ptllnd/ptllnd.c
+LNET_PTLLND_SRCS+=	${LNET_BASE}/ulnds/ptllnd/ptllnd_cb.c
 
 PSCRPC_SRCS+=		${PFL_BASE}/psc_rpc/connection.c
 PSCRPC_SRCS+=		${PFL_BASE}/psc_rpc/events.c
