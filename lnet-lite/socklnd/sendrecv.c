@@ -25,7 +25,7 @@ psc_sock_io(int s, void *p, int nob, int timeout, int wr)
 {
 	struct timeval now, then, tv, totv;
 	unsigned char *buf = p;
-	int flags, rc;
+	int ntries, flags, rc;
 
 	LASSERT(nob > 0);
 	/* Caller may pass a zero timeout if she thinks the socket buffer is
@@ -34,6 +34,7 @@ psc_sock_io(int s, void *p, int nob, int timeout, int wr)
 	if (gettimeofday(&then, NULL) == -1)
 		LASSERT(0);
 
+	ntries = 0;
 	flags = MSG_NOSIGNAL | MSG_WAITALL;
 //	if (wr && !timeout)
 //		flags |= MSG_DONTWAIT;
@@ -67,9 +68,11 @@ psc_sock_io(int s, void *p, int nob, int timeout, int wr)
 			       wr ? "send" : "recv", rc, errno);
 			if (errno != EAGAIN && errno != EINTR)
 				return (-errno);
-			else
+			else {
+				if (ntries++ >= 3)
+					return (-errno);
 				rc = 0;
-
+			}
 		} else if (rc == 0)
 			return (wr ? -ECONNABORTED : -ECONNRESET);
 
