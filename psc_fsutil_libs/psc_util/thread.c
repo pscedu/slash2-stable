@@ -168,6 +168,8 @@ _pscthr_init(struct psc_thread *thr, int type, void *(*start)(void *),
 	if (rc >= (int)sizeof(thr->pscthr_name))
 		psc_fatalx("pscthr_init: thread name too long: %s", namefmt);
 
+	/* Pin thread until initialization is complete. */
+	spinlock(&thr->pscthr_lock);
 	if (start) {
 		if ((rc = pthread_create(&thr->pscthr_pthread, NULL,
 		    pscthr_begin, thr)) != 0)
@@ -195,6 +197,7 @@ _pscthr_init(struct psc_thread *thr, int type, void *(*start)(void *),
 	}
 
 	pll_add(&psc_threads, thr);
+	freelock(&thr->pscthr_lock);
 }
 
 /*
