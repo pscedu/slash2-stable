@@ -42,8 +42,6 @@
 
 #include <lnet/lib-lnet.h>
 
-#include "psc_util/cdefs.h"
-
 static int local_nid_dist_zero = 1;
 CFS_MODULE_PARM(local_nid_dist_zero, "i", int, 0444,
                 "Reserved");

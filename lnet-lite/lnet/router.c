@@ -24,8 +24,6 @@
 #define DEBUG_SUBSYSTEM S_LNET
 #include <lnet/lib-lnet.h>
 
-#include "psc_util/cdefs.h"
-
 #if defined(__KERNEL__) && defined(LNET_ROUTER)
 
 static char *forwarding = "";

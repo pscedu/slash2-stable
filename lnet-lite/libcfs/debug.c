@@ -49,8 +49,6 @@
 #include <libcfs/libcfs.h>
 #include "tracefile.h"
 
-#include "psc_util/cdefs.h"
-
 static char debug_file_name[1024];
 
 #ifdef __KERNEL__
@@ -748,13 +746,10 @@ void catamount_printline(char *buf, size_t size)
 }
 #endif
 
+#if 0
 int
-libcfs_debug_vmsg2b(
-#ifndef HAVE_CATAMOUNT_DATA_H
-    __unusedx
-#endif
-    cfs_debug_limit_state_t *cdls,
-                   __unusedx int subsys, int mask,
+libcfs_debug_vmsg2(cfs_debug_limit_state_t *cdls,
+                   int subsys, int mask,
                    const char *file, const char *fn, const int line,
                    const char *format1, va_list args,
                    const char *format2, ...)
@@ -864,6 +859,7 @@ out_file:
 
         return 0;
 }
+#endif
 
 void
 libcfs_assertion_failed(const char *expr, const char *file, const char *func,

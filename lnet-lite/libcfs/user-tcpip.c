@@ -59,14 +59,9 @@
 #include <sys/syscall.h>
 #endif
 
-#include "psc_util/cdefs.h"
 #include "sdp_inet.h"
 
-__weak int
-lnet_get_usesdp(void)
-{
-	return (0);
-}
+int lnet_get_usesdp(void);
 
 /*
  * Functions to get network interfaces info

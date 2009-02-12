@@ -536,7 +536,7 @@ int pscrpc_ni_init(int type)
 		if ((rc = LNetNIInit(psc_get_pid())))
 			psc_fatalx("failed LNetNIInit() (%d)", rc);
 
-		rc = LNetEQAlloc(10240, LNET_EQ_HANDLER_NONE, &pscrpc_eq_h);
+		rc = LNetEQAlloc(10240, 0, &pscrpc_eq_h);
 	}
 
 	psc_assert(rc == 0);

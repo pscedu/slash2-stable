@@ -37,6 +37,8 @@
 #define DEBUG_SUBSYSTEM S_LNET
 #include <lnet/lib-lnet.h>
 
+#include "psc_util/lock.h"
+
 #ifdef __KERNEL__
 #define D_LNI D_CONSOLE
 #else
@@ -129,6 +131,28 @@ lnet_fini_locks(void)
 }
 
 #else
+
+int
+lnet_get_usesdp(void)
+{
+	static psc_spinlock_t lock = LOCK_INITIALIZER;
+	static int usesdp;
+	static int init;
+
+	if (init)
+		return (usesdp);
+	spinlock(&lock);
+	if (init == 0) {
+		char *val;
+
+		val = getenv("LNET_USESDP");
+		if (val && *val)
+			usesdp = 1;
+		init = 1;
+	}
+	freelock(&lock);
+	return (usesdp);
+}
 
 char *
 lnet_get_routes(void)
@@ -664,6 +688,7 @@ lnet_prepare(lnet_pid_t requested_pid)
                 the_lnet.ln_pid = requested_pid;
 
         } else {/* client case (liblustre) */
+
                 /* My PID must be unique on this node and flag I'm userspace */
                 the_lnet.ln_pid = getpid() | LNET_PID_USERFLAG;
         }
@@ -1379,7 +1404,7 @@ LNetCtl(unsigned int cmd, void *arg)
         case IOC_LIBCFS_PORTALS_COMPATIBILITY:
                 return the_lnet.ln_ptlcompat;
 
-        case IOC_LIBCFS_LNET_DIST: 
+        case IOC_LIBCFS_LNET_DIST:
                 rc = LNetDist(data->ioc_nid, &data->ioc_nid, &data->ioc_u32[1]);
                 if (rc < 0 && rc != -EHOSTUNREACH)
                         return rc;

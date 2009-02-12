@@ -71,8 +71,6 @@
 #include <sys/vfs.h>
 #endif
 
-#include "psc_util/cdefs.h"
-
 /*
  * Sleep channel. No-op implementation.
  */
@@ -159,7 +157,53 @@ int64_t cfs_waitq_timedwait(struct cfs_waitlink *link, __unusedx int state, __un
         return 0;
 }
 
+#if 1
 int cfs_create_thread(cfs_thread_t, void *, const char *, ...);
+#else
+
+#ifdef HAVE_LIBPTHREAD
+
+/*
+ * Threads
+ */
+
+struct lustre_thread_arg {
+        cfs_thread_t f; 
+        void *arg;
+};
+static void *cfs_thread_helper(void *data)
+{
+        struct lustre_thread_arg *targ = data;
+        cfs_thread_t f  = targ->f;
+        void *arg = targ->arg;
+
+        free(targ);
+        
+        (void)f(arg);
+        return NULL;
+}
+int cfs_create_thread(cfs_thread_t func, void *arg)
+{
+        pthread_t tid;
+        pthread_attr_t tattr;
+        int rc;
+        struct lustre_thread_arg *targ_p = malloc(sizeof(struct lustre_thread_arg));
+
+        if ( targ_p == NULL )
+                return -ENOMEM;
+        
+        targ_p->f = func;
+        targ_p->arg = arg;
+
+        pthread_attr_init(&tattr); 
+        pthread_attr_setdetachstate(&tattr, PTHREAD_CREATE_DETACHED);
+        rc = pthread_create(&tid, &tattr, cfs_thread_helper, targ_p);
+        pthread_attr_destroy(&tattr);
+        return -rc;
+}
+#endif
+
+#endif
 
 uid_t cfs_curproc_uid(void)
 {

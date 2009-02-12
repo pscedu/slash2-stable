@@ -60,9 +60,10 @@
 #include <stddef.h>
 #include <stdio.h>
 
-#include "psc_util/cdefs.h"
 #include "psc_util/log.h"
 #endif
+
+#include "psc_util/cdefs.h"
 
 /* Controlled via configure key */
 #define LIBCFS_DEBUG
@@ -220,7 +221,6 @@ typedef struct {
 #define CDEBUG_ENABLED
 
 #if defined(__KERNEL__) || (defined(__arch_lib__) && !defined(LUSTRE_UTILS))
-#error "kernel"
 
 #ifdef CDEBUG_ENABLED
 #define __CDEBUG(cdls, mask, format, a...)                              \
@@ -252,16 +252,9 @@ do {                                            \
 
 #else
 
-#if 0
-#ifndef CDEBUG
-#define CDEBUG(mask, format, a...)                                      \
-do {                                                                    \
-        if (((mask) & D_CANTMASK) != 0)                                 \
-                fprintf(stderr, "(%s:%d:%s()) " format,                 \
-                        __FILE__, __LINE__, __FUNCTION__, ## a);        \
-} while (0)
-#endif
-#endif
+#define CDEBUG(mask, fmt, ...)						\
+	libcfs_debug_vmsg2(NULL, 0, (mask), __FILE__, __func__,		\
+	    __LINE__, NULL, NULL, fmt, ## __VA_ARGS__)		\
 
 #define CDEBUG_LIMIT CDEBUG
 
@@ -559,25 +552,18 @@ struct libcfs_debug_msg_data {
 			___lvl = PLL_TRACE;			\
 			break;					\
 		default:					\
-			abort();				\
+			___lvl = PLL_ERROR;			\
+			psc_errorx("unknown mask: %d", (mask));	\
+			break;					\
 		}						\
 								\
 		if (fmt1)					\
-			psclogv(file, fn, line, PSS_LNET,	\
-			    ___lvl, 0, fmt1, args);		\
+			psclogv((file), (fn), (line), PSS_LNET,	\
+			    ___lvl, 0, (fmt1), (args));		\
 		if (fmt2)					\
-			_psclog(file, fn, line, PSS_LNET,	\
-			    ___lvl, 0, fmt2, ## __VA_ARGS__);	\
+			_psclog((file), (fn), (line), PSS_LNET,	\
+			    ___lvl, 0, (fmt2), ## __VA_ARGS__);	\
 	} while (0)									
-
-#if 0
-extern int libcfs_debug_vmsg2(cfs_debug_limit_state_t *cdls,
-                              int subsys, int mask,
-                              const char *file, const char *fn, const int line,
-                              const char *format1, va_list args,
-                              const char *format2, ...)
-        __attribute__ ((format (printf, 9, 10)));
-#endif
 
 #define libcfs_debug_vmsg(cdls, subsys, mask, file, fn, line, format, args)   \
     libcfs_debug_vmsg2(cdls, subsys, mask, file, fn,line,format,args,NULL,NULL)

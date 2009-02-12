@@ -56,8 +56,6 @@
 #include <lnet/lnet.h>
 #include <lnet/lib-types.h>
 
-#include "psc_util/cdefs.h"
-
 extern lnet_t  the_lnet;                        /* THE network */
 
 static inline int lnet_is_wire_handle_none (lnet_handle_wire_t *wh)
@@ -695,8 +693,6 @@ int lnet_acceptor_port(void);
 #ifdef HAVE_LIBPTHREAD
 int lnet_count_acceptor_nis(lnet_ni_t **first_ni);
 int lnet_acceptor_port(void);
-int lnet_connector_port(void);
-int lnet_get_usesdp(void);
 #endif
 
 int lnet_acceptor_start(void);

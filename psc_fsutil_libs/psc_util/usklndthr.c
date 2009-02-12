@@ -6,8 +6,6 @@
 #include "psc_util/thread.h"
 #include "psc_util/usklndthr.h"
 
-int usocklnd_ninstances(void);
-
 void *
 psc_usklndthr_begin(void *arg)
 {
@@ -46,7 +44,7 @@ cfs_create_thread(cfs_thread_t startf, void *arg, const char *namefmt, ...)
 
 	_pscthr_init(pt, psc_usklndthr_get_type(namefmt),
 	    psc_usklndthr_begin, put, PTF_FREE,
-	    psc_usklndthr_destroy, name, usocklnd_ninstances());
+	    psc_usklndthr_destroy, name);
 	return (0);
 }
 

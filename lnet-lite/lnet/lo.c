@@ -37,8 +37,6 @@
 #define DEBUG_SUBSYSTEM S_LNET
 #include <lnet/lib-lnet.h>
 
-#include "psc_util/cdefs.h"
-
 int
 lolnd_send (lnet_ni_t *ni, __unusedx void *private, lnet_msg_t *lntmsg)
 {
