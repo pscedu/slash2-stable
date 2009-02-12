@@ -139,6 +139,7 @@ lnet_ni_t *
 lnet_new_ni(__u32 net, struct list_head *nilist)
 {
         lnet_ni_t *ni;
+	char buf[32];
 
         if (!lnet_net_unique(net, nilist)) {
                 LCONSOLE_ERROR_MSG(0x111, "Duplicate network specified: %s\n",
@@ -155,6 +156,10 @@ lnet_new_ni(__u32 net, struct list_head *nilist)
         
         /* zero counters/flags, NULL pointers... */
         memset(ni, 0, sizeof(*ni));
+
+	libcfs_net2str2(net, buf);
+	iostats_init(&ni->ni_sendstats, "lnircv-%s", buf);
+	iostats_init(&ni->ni_sendstats, "lnisnd-%s", buf);
 
         /* LND will fill in the address part of the NID */
         ni->ni_nid = LNET_MKNID(net, 0);
