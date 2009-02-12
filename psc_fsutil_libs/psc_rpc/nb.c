@@ -2,6 +2,8 @@
 
 #define PSC_SUBSYS PSS_RPC
 
+#include <inttypes.h>
+
 #include "psc_util/alloc.h"
 #include "psc_rpc/rpc.h"
 #include "psc_rpc/rpclog.h"
