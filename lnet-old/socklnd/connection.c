@@ -69,13 +69,13 @@ int tcpnal_usesdp = 0;
 #define HELLO_TIMEOUT 5
 
 int
-usocklnd_get_usesdp(void)
+lnet_get_usesdp(void)
 {
 	return (tcpnal_usesdp);
 }
 
 int
-lnet_connector_port(void)
+usocklnd_get_cport(void)
 {
 	return (tcpnal_connector_port);
 }
