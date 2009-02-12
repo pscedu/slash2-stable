@@ -384,6 +384,21 @@ libcfs_net2str(__u32 net)
         return str;
 }
 
+void
+libcfs_net2str2(__u32 net, char str[LNET_NIDSTR_SIZE])
+{
+        int               lnd = LNET_NETTYP(net);
+        int               num = LNET_NETNUM(net);
+        struct netstrfns *nf  = libcfs_lnd2netstrfns(lnd);
+
+        if (nf == NULL)
+                snprintf(str, LNET_NIDSTR_SIZE, "<%u:%u>", lnd, num);
+        else if (num == 0)
+                snprintf(str, LNET_NIDSTR_SIZE, "%s", nf->nf_name);
+        else
+                snprintf(str, LNET_NIDSTR_SIZE, "%s%u", nf->nf_name, num);
+}
+
 char *
 libcfs_nid2str(lnet_nid_t nid)
 {

@@ -298,6 +298,7 @@ char       *libcfs_lnd2modname(int type);
 char       *libcfs_lnd2str(int type);
 int         libcfs_str2lnd(const char *str);
 char       *libcfs_net2str(__u32 net);
+void        libcfs_net2str2(__u32 net, char []);
 char       *libcfs_nid2str(lnet_nid_t nid);
 void        libcfs_nid2str2(lnet_nid_t nid, char []);
 __u32       libcfs_str2net(const char *str);
