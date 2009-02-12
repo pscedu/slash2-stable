@@ -10,20 +10,11 @@ _YACCINTM=	$(patsubst %.y,%.c,$(filter %.y,${SRCS}))
 _LEXINTM=	$(patsubst %.l,%.c,$(filter %.l,${SRCS}))
 _C_SRCS=	$(filter %.c,${SRCS}) ${_YACCINTM} ${_LEXINTM}
 
-LNET_SOCKLND_SRCS+=	${LNET_BASE}/socklnd/connection.c
-LNET_SOCKLND_SRCS+=	${LNET_BASE}/socklnd/pqtimer.c
-LNET_SOCKLND_SRCS+=	${LNET_BASE}/socklnd/procapi.c
-LNET_SOCKLND_SRCS+=	${LNET_BASE}/socklnd/proclib.c
-LNET_SOCKLND_SRCS+=	${LNET_BASE}/socklnd/select.c
-LNET_SOCKLND_SRCS+=	${LNET_BASE}/socklnd/table.c
-LNET_SOCKLND_SRCS+=	${LNET_BASE}/socklnd/tcplnd.c
-LNET_SOCKLND_SRCS+=	${LNET_BASE}/socklnd/sendrecv.c
-
-LNET_SOCKLND2_SRCS+=	${LNET_BASE}/ulnds/usocklnd/conn.c
-LNET_SOCKLND2_SRCS+=	${LNET_BASE}/ulnds/usocklnd/handlers.c
-LNET_SOCKLND2_SRCS+=	${LNET_BASE}/ulnds/usocklnd/poll.c
-LNET_SOCKLND2_SRCS+=	${LNET_BASE}/ulnds/usocklnd/usocklnd.c
-LNET_SOCKLND2_SRCS+=	${LNET_BASE}/ulnds/usocklnd/usocklnd_cb.c
+LNET_SOCKLND_SRCS+=	${LNET_BASE}/ulnds/socklnd/conn.c
+LNET_SOCKLND_SRCS+=	${LNET_BASE}/ulnds/socklnd/handlers.c
+LNET_SOCKLND_SRCS+=	${LNET_BASE}/ulnds/socklnd/poll.c
+LNET_SOCKLND_SRCS+=	${LNET_BASE}/ulnds/socklnd/usocklnd.c
+LNET_SOCKLND_SRCS+=	${LNET_BASE}/ulnds/socklnd/usocklnd_cb.c
 
 LNET_CFS_SRCS+=		${LNET_BASE}/libcfs/debug.c
 LNET_CFS_SRCS+=		${LNET_BASE}/libcfs/nidstrings.c

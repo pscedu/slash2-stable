@@ -2,6 +2,7 @@
 
 #define PSC_SUBSYS PSS_RPC
 
+#include <inttypes.h>
 #include <stdlib.h>
 
 #include "psc_rpc/rpc.h"

@@ -1,7 +1,7 @@
 /* -*- mode: c; c-basic-offset: 8; indent-tabs-mode: nil; -*-
  * vim:expandtab:shiftwidth=8:tabstop=8:
  *
- * Copyright (C) 2002 Cluster File Systems, Inc.
+ * Copyright  2008 Sun Microsystems, Inc. All rights reserved
  *
  *   This file is part of Portals
  *   http://sourceforge.net/projects/sandiaportals/
@@ -28,16 +28,16 @@
 #if defined(__KERNEL__) && defined(LNET_ROUTER)
 
 #include <linux/seq_file.h>
-#include <linux/lustre_compat25.h>
 
 /* this is really lnet_proc.c */
 
-#define LNET_PROC_STATS   "sys/lnet/stats"
-#define LNET_PROC_ROUTES  "sys/lnet/routes"
-#define LNET_PROC_ROUTERS "sys/lnet/routers"
-#define LNET_PROC_PEERS   "sys/lnet/peers"
-#define LNET_PROC_BUFFERS "sys/lnet/buffers"
-#define LNET_PROC_NIS     "sys/lnet/nis"
+#define LNET_PROC_ROOT    "sys/lnet"
+#define LNET_PROC_STATS   LNET_PROC_ROOT"/stats"
+#define LNET_PROC_ROUTES  LNET_PROC_ROOT"/routes"
+#define LNET_PROC_ROUTERS LNET_PROC_ROOT"/routers"
+#define LNET_PROC_PEERS   LNET_PROC_ROOT"/peers"
+#define LNET_PROC_BUFFERS LNET_PROC_ROOT"/buffers"
+#define LNET_PROC_NIS     LNET_PROC_ROOT"/nis"
 
 static int
 lnet_router_proc_stats_read (char *page, char **start, off_t off,
@@ -281,7 +281,7 @@ static struct file_operations lnet_routes_fops = {
 
 typedef struct {
         __u64                lrtrsi_version;
-        lnet_peer_t          *lrtrsi_router;
+        lnet_peer_t         *lrtrsi_router;
         loff_t               lrtrsi_off;
 } lnet_router_seq_iterator_t;
 
@@ -321,7 +321,7 @@ lnet_router_seq_seek (lnet_router_seq_iterator_t *lrtrsi, loff_t off)
         }
 
         lrtrsi->lrtrsi_version = the_lnet.ln_routers_version;
-        lrtrsi->lrtrsi_off        = off;
+        lrtrsi->lrtrsi_off     = off;
 
         while (r != &the_lnet.ln_routers) {
                 lnet_peer_t *rtr = list_entry(r, 
@@ -339,7 +339,7 @@ lnet_router_seq_seek (lnet_router_seq_iterator_t *lrtrsi, loff_t off)
         }
 
         lrtrsi->lrtrsi_router = NULL;
-        rc             = -ENOENT;
+        rc = -ENOENT;
  out:
         LNET_UNLOCK();
         return rc;
@@ -395,10 +395,12 @@ lnet_router_seq_show (struct seq_file *s, void *iter)
 {
         lnet_router_seq_iterator_t *lrtrsi = iter;
         lnet_peer_t *lp;
-        lnet_nid_t  nid;
-        int         alive;
-        int         nrefs;
-        int         nrtrrefs;
+        lnet_nid_t   nid;
+        int          alive;
+        int          alive_cnt;
+        int          nrefs;
+        int          nrtrrefs;
+        time_t       last_ping;
 
         if (lrtrsi->lrtrsi_off == 0) {
                 seq_printf(s, "%-4s %7s %9s %6s %12s %s\n",
@@ -416,20 +418,19 @@ lnet_router_seq_show (struct seq_file *s, void *iter)
                 return -ESTALE;
         }
 
-        nrefs = lp->lp_refcount;
-        nrtrrefs = lp->lp_rtr_refcount;
-        nid   = lp->lp_nid;
-        alive = lp->lp_alive;
+        nid       = lp->lp_nid;
+        alive     = lp->lp_alive;
+        alive_cnt = lp->lp_alive_count;
+        nrefs     = lp->lp_refcount;
+        nrtrrefs  = lp->lp_rtr_refcount;
+        last_ping = lp->lp_ping_timestamp;
 
         LNET_UNLOCK();
 
         seq_printf(s, 
-                   "%-4d %7d %9d %6s %12lu %s\n", 
-                   nrefs, nrtrrefs,
-                   lp->lp_alive_count,
-                   alive ? "up" : "down", 
-                   lp->lp_ping_timestamp,
-                   libcfs_nid2str(nid));
+                   "%-4d %7d %9d %6s %12lu %s\n", nrefs, nrtrrefs,
+                   alive_cnt, alive ? "up" : "down",
+                   last_ping, libcfs_nid2str(nid));
         return 0;
 }
 
@@ -600,6 +601,7 @@ lnet_peer_seq_show (struct seq_file *s, void *iter)
         int                       minrtrcr;
         int                       rtrcr;
         int                       alive;
+        int                       rtr;
         int                       txqnob;
         int                       nrefs;
 
@@ -627,6 +629,7 @@ lnet_peer_seq_show (struct seq_file *s, void *iter)
         mintxcr  = lp->lp_mintxcredits;
         rtrcr    = lp->lp_rtrcredits;
         minrtrcr = lp->lp_minrtrcredits;
+        rtr      = lnet_isrouter(lp);
         alive    = lp->lp_alive;
         txqnob   = lp->lp_txqnob;
         nrefs    = lp->lp_refcount;
@@ -634,7 +637,8 @@ lnet_peer_seq_show (struct seq_file *s, void *iter)
         LNET_UNLOCK();
 
         seq_printf(s, "%-24s %4d %5s %5d %5d %5d %5d %5d %d\n",
-                   libcfs_nid2str(nid), nrefs, alive ? "up" : "down",
+                   libcfs_nid2str(nid), nrefs, 
+                   !rtr ? "~rtr" : (alive ? "up" : "down"),
                    maxcr, rtrcr, minrtrcr, txcr, mintxcr, txqnob);
         return 0;
 }
@@ -1001,71 +1005,75 @@ static struct file_operations lnet_ni_fops = {
 void
 lnet_proc_init(void)
 {
-        struct proc_dir_entry *stats;
-        struct proc_dir_entry *routes;
-        struct proc_dir_entry *routers;
-        struct proc_dir_entry *peers;
+        struct proc_dir_entry *pde;
 
+#if 0
+        pde = proc_mkdir(LNET_PROC_ROOT, NULL);
+        if (pde == NULL) {
+                CERROR("couldn't create "LNET_PROC_ROOT"\n");
+                return; 
+        }
+#endif
         /* Initialize LNET_PROC_STATS */
-        stats = create_proc_entry (LNET_PROC_STATS, 0644, NULL);
-        if (stats == NULL) {
+        pde = create_proc_entry (LNET_PROC_STATS, 0644, NULL);
+        if (pde == NULL) {
                 CERROR("couldn't create proc entry %s\n", LNET_PROC_STATS);
                 return;
         }
 
-        stats->data = NULL;
-        stats->read_proc = lnet_router_proc_stats_read;
-        stats->write_proc = lnet_router_proc_stats_write;
+        pde->data = NULL;
+        pde->read_proc = lnet_router_proc_stats_read;
+        pde->write_proc = lnet_router_proc_stats_write;
 
         /* Initialize LNET_PROC_ROUTES */
-        routes = create_proc_entry (LNET_PROC_ROUTES, 0444, NULL);
-        if (routes == NULL) {
+        pde = create_proc_entry (LNET_PROC_ROUTES, 0444, NULL);
+        if (pde == NULL) {
                 CERROR("couldn't create proc entry %s\n", LNET_PROC_ROUTES);
                 return;
         }
 
-        routes->proc_fops = &lnet_routes_fops;
-        routes->data = NULL;
+        pde->proc_fops = &lnet_routes_fops;
+        pde->data = NULL;
 
         /* Initialize LNET_PROC_ROUTERS */
-        routers = create_proc_entry (LNET_PROC_ROUTERS, 0444, NULL);
-        if (routers == NULL) {
+        pde = create_proc_entry (LNET_PROC_ROUTERS, 0444, NULL);
+        if (pde == NULL) {
                 CERROR("couldn't create proc entry %s\n", LNET_PROC_ROUTERS);
                 return;
         }
 
-        routers->proc_fops = &lnet_routers_fops;
-        routers->data = NULL;
+        pde->proc_fops = &lnet_routers_fops;
+        pde->data = NULL;
 
         /* Initialize LNET_PROC_PEERS */
-        peers = create_proc_entry (LNET_PROC_PEERS, 0444, NULL);
-        if (peers == NULL) {
+        pde = create_proc_entry (LNET_PROC_PEERS, 0444, NULL);
+        if (pde == NULL) {
                 CERROR("couldn't create proc entry %s\n", LNET_PROC_PEERS);
                 return;
         }
 
-        peers->proc_fops = &lnet_peer_fops;
-        peers->data = NULL;
+        pde->proc_fops = &lnet_peer_fops;
+        pde->data = NULL;
 
         /* Initialize LNET_PROC_BUFFERS */
-        peers = create_proc_entry (LNET_PROC_BUFFERS, 0444, NULL);
-        if (peers == NULL) {
+        pde = create_proc_entry (LNET_PROC_BUFFERS, 0444, NULL);
+        if (pde == NULL) {
                 CERROR("couldn't create proc entry %s\n", LNET_PROC_BUFFERS);
                 return;
         }
 
-        peers->proc_fops = &lnet_buffers_fops;
-        peers->data = NULL;
+        pde->proc_fops = &lnet_buffers_fops;
+        pde->data = NULL;
 
         /* Initialize LNET_PROC_NIS */
-        peers = create_proc_entry (LNET_PROC_NIS, 0444, NULL);
-        if (peers == NULL) {
+        pde = create_proc_entry (LNET_PROC_NIS, 0444, NULL);
+        if (pde == NULL) {
                 CERROR("couldn't create proc entry %s\n", LNET_PROC_NIS);
                 return;
         }
 
-        peers->proc_fops = &lnet_ni_fops;
-        peers->data = NULL;
+        pde->proc_fops = &lnet_ni_fops;
+        pde->data = NULL;
 }
 
 void
@@ -1077,6 +1085,9 @@ lnet_proc_fini(void)
         remove_proc_entry(LNET_PROC_PEERS, 0);
         remove_proc_entry(LNET_PROC_BUFFERS, 0);
         remove_proc_entry(LNET_PROC_NIS, 0);
+#if 0   
+        remove_proc_entry(LNET_PROC_ROOT, 0);
+#endif
 }
 
 #else

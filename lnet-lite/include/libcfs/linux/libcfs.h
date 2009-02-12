@@ -1,6 +1,39 @@
 /* -*- mode: c; c-basic-offset: 8; indent-tabs-mode: nil; -*-
  * vim:expandtab:shiftwidth=8:tabstop=8:
+ *
+ * GPL HEADER START
+ *
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 only,
+ * as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful, but
+ * WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * General Public License version 2 for more details (a copy is included
+ * in the LICENSE file that accompanied this code).
+ *
+ * You should have received a copy of the GNU General Public License
+ * version 2 along with this program; If not, see
+ * http://www.sun.com/software/products/lustre/docs/GPLv2.pdf
+ *
+ * Please contact Sun Microsystems, Inc., 4150 Network Circle, Santa Clara,
+ * CA 95054 USA or visit www.sun.com if you need additional information or
+ * have any questions.
+ *
+ * GPL HEADER END
  */
+/*
+ * Copyright  2008 Sun Microsystems, Inc. All rights reserved
+ * Use is subject to license terms.
+ */
+/*
+ * This file is part of Lustre, http://www.lustre.org/
+ * Lustre is a trademark of Sun Microsystems, Inc.
+ */
+
 #ifndef __LIBCFS_LINUX_LIBCFS_H__
 #define __LIBCFS_LINUX_LIBCFS_H__
 
@@ -8,15 +41,20 @@
 #error Do not #include this file directly. #include <libcfs/libcfs.h> instead
 #endif
 
+#ifdef HAVE_ASM_TYPES_H
+#include <asm/types.h>
+#else
+#include <libcfs/types.h>
+#endif
+
 #include <stdarg.h>
-#include <libcfs/linux/linux-mem.h>
 #include <libcfs/linux/linux-time.h>
+#include <libcfs/linux/linux-mem.h>
 #include <libcfs/linux/linux-prim.h>
 #include <libcfs/linux/linux-lock.h>
 #include <libcfs/linux/linux-fs.h>
 #include <libcfs/linux/linux-tcpip.h>
 
-#include <libcfs/types.h>
 
 #ifdef __KERNEL__
 # include <linux/types.h>
@@ -31,29 +69,8 @@ typedef unsigned long long cycles_t;
 
 #ifndef __KERNEL__
 /* Userpace byte flipping */
-#ifdef __APPLE__
-# include <machine/endian.h>
-# include <strings.h>
-# define  bswap_16(x) ((((x) & 0x0f) << 8) | \
-		       (((x) & 0xf0) >> 8))
-
-# define  bswap_32(x) ((((x) & 0x000f) << 24) | \
-		       (((x) & 0x00f0) <<  8) | \
-		       (((x) & 0x0f00) >>  8) | \
-		       (((x) & 0xf000) >> 24))
-
-# define  bswap_64(x) ((((x) & 0x0000000f) << 56) | \
-		       (((x) & 0x000000f0) << 40) | \
-		       (((x) & 0x00000f00) << 24) | \
-		       (((x) & 0x0000f000) <<  8) | \
-		       (((x) & 0x000f0000) >>  8) | \
-		       (((x) & 0x00f00000) >> 24) | \
-		       (((x) & 0x0f000000) >> 40) | \
-		       (((x) & 0xf0000000) >> 56))
-#else
 # include <endian.h>
 # include <byteswap.h>
-#endif
 # define __swab16(x) bswap_16(x)
 # define __swab32(x) bswap_32(x)
 # define __swab64(x) bswap_64(x)
@@ -67,6 +84,14 @@ typedef unsigned long long cycles_t;
 #  define cpu_to_le32(x) (x)
 #  define le64_to_cpu(x) (x)
 #  define cpu_to_le64(x) (x)
+
+#  define be16_to_cpu(x) bswap_16(x)
+#  define cpu_to_be16(x) bswap_16(x)
+#  define be32_to_cpu(x) bswap_32(x)
+#  define cpu_to_be32(x) bswap_32(x)
+#  define be64_to_cpu(x) bswap_64(x)
+#  define cpu_to_be64(x) bswap_64(x)
+
 # else
 #  if __BYTE_ORDER == __BIG_ENDIAN
 #   define le16_to_cpu(x) bswap_16(x)
@@ -75,6 +100,14 @@ typedef unsigned long long cycles_t;
 #   define cpu_to_le32(x) bswap_32(x)
 #   define le64_to_cpu(x) bswap_64(x)
 #   define cpu_to_le64(x) bswap_64(x)
+
+#   define be16_to_cpu(x) (x)
+#   define cpu_to_be16(x) (x)
+#   define be32_to_cpu(x) (x)
+#   define cpu_to_be32(x) (x)
+#   define be64_to_cpu(x) (x)
+#   define cpu_to_be64(x) (x)
+
 #  else
 #   error "Unknown byte order"
 #  endif /* __BIG_ENDIAN */
@@ -98,6 +131,7 @@ struct ptldebug_header {
 #ifdef __KERNEL__
 # include <linux/sched.h> /* THREAD_SIZE */
 #else
+#include <asm/page.h>
 # ifndef THREAD_SIZE /* x86_64 has THREAD_SIZE in userspace */
 #  define THREAD_SIZE 8192
 # endif

@@ -158,7 +158,7 @@ usocklnd_check_peer_stale(lnet_ni_t *ni, lnet_process_id_t id)
                 return;
         }
 
-        if (atomic_read(&peer->up_refcount) == 2) {
+        if (cfs_atomic_read(&peer->up_refcount) == 2) {
                 int i;
                 for (i = 0; i < N_CONN_TYPES; i++)
                         LASSERT (peer->up_conns[i] == NULL);
@@ -209,7 +209,7 @@ usocklnd_create_passive_conn(lnet_ni_t *ni, int fd, usock_conn_t **connp)
         CFS_INIT_LIST_HEAD (&conn->uc_tx_list);
         CFS_INIT_LIST_HEAD (&conn->uc_zcack_list);
         pthread_mutex_init(&conn->uc_lock, NULL);
-        atomic_set(&conn->uc_refcount, 1); /* 1 ref for me */
+        cfs_atomic_set(&conn->uc_refcount, 1); /* 1 ref for me */
 
         *connp = conn;
         return 0;
@@ -224,7 +224,7 @@ usocklnd_create_active_conn(usock_peer_t *peer, int type,
         int           fd;
         usock_conn_t *conn;
         __u32         dst_ip   = LNET_NIDADDR(peer->up_peerid.nid);
-        __u16         dst_port = lnet_acceptor_port();
+        __u16         dst_port = lnet_connector_port();
         
         conn = usocklnd_conn_allocate();
         if (conn == NULL)
@@ -265,7 +265,7 @@ usocklnd_create_active_conn(usock_peer_t *peer, int type,
         CFS_INIT_LIST_HEAD (&conn->uc_tx_list);
         CFS_INIT_LIST_HEAD (&conn->uc_zcack_list);
         pthread_mutex_init(&conn->uc_lock, NULL);
-        atomic_set(&conn->uc_refcount, 1); /* 1 ref for me */
+        cfs_atomic_set(&conn->uc_refcount, 1); /* 1 ref for me */
 
         *connp = conn;
         return 0;
@@ -682,7 +682,7 @@ usocklnd_create_peer(lnet_ni_t *ni, lnet_process_id_t id,
         peer->up_incrn_is_set = 0;
         peer->up_errored      = 0;
         peer->up_last_alive   = 0;
-        atomic_set (&peer->up_refcount, 1); /* 1 ref for caller */
+        cfs_atomic_set (&peer->up_refcount, 1); /* 1 ref for caller */
         pthread_mutex_init(&peer->up_lock, NULL);        
 
         pthread_mutex_lock(&net->un_lock);
@@ -1064,7 +1064,7 @@ usocklnd_rx_skipping_state_transition(usock_conn_t *conn)
          * (ran out of iov entries) we'll get called again */
 
         do {
-                nob = MIN (nob_to_skip, sizeof(skip_buffer));
+                nob = MIN (nob_to_skip, (int)sizeof(skip_buffer));
 
                 conn->uc_rx_iov[niov].iov_base = skip_buffer;
                 conn->uc_rx_iov[niov].iov_len  = nob;

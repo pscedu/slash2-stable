@@ -1,26 +1,42 @@
 /* -*- mode: c; c-basic-offset: 8; indent-tabs-mode: nil; -*-
  * vim:expandtab:shiftwidth=8:tabstop=8:
  *
- *  Copyright (C) 2004 Cluster File Systems, Inc.
+ * GPL HEADER START
  *
- *   This file is part of Lustre, http://www.lustre.org.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
- *   Lustre is free software; you can redistribute it and/or
- *   modify it under the terms of version 2 of the GNU General Public
- *   License as published by the Free Software Foundation.
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 only,
+ * as published by the Free Software Foundation.
  *
- *   Lustre is distributed in the hope that it will be useful,
- *   but WITHOUT ANY WARRANTY; without even the implied warranty of
- *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *   GNU General Public License for more details.
+ * This program is distributed in the hope that it will be useful, but
+ * WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * General Public License version 2 for more details (a copy is included
+ * in the LICENSE file that accompanied this code).
  *
- *   You should have received a copy of the GNU General Public License
- *   along with Lustre; if not, write to the Free Software
- *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ * You should have received a copy of the GNU General Public License
+ * version 2 along with this program; If not, see
+ * http://www.sun.com/software/products/lustre/docs/GPLv2.pdf
+ *
+ * Please contact Sun Microsystems, Inc., 4150 Network Circle, Santa Clara,
+ * CA 95054 USA or visit www.sun.com if you need additional information or
+ * have any questions.
+ *
+ * GPL HEADER END
+ */
+/*
+ * Copyright  2008 Sun Microsystems, Inc. All rights reserved
+ * Use is subject to license terms.
+ */
+/*
+ * This file is part of Lustre, http://www.lustre.org/
+ * Lustre is a trademark of Sun Microsystems, Inc.
  */
 
 #define DEBUG_SUBSYSTEM S_LNET
 #include <lnet/lib-lnet.h>
+
 #include "psc_util/cdefs.h"
 
 int
@@ -36,8 +52,7 @@ int
 lolnd_recv (lnet_ni_t *ni, void *private, lnet_msg_t *lntmsg,
             __unusedx int delayed, unsigned int niov, 
             struct iovec *iov, lnet_kiov_t *kiov,
-            unsigned int offset, unsigned int mlen, 
-            __unusedx unsigned int rlen)
+            unsigned int offset, unsigned int mlen, __unusedx unsigned int rlen)
 {
         lnet_msg_t *sendmsg = private;
 
@@ -104,14 +119,14 @@ lnd_t the_lolnd = {
         /* .lnd_send       = */ lolnd_send,
         /* .lnd_recv       = */ lolnd_recv,
         /* .lnd_eager_recv = */ NULL,
-        /* .lnd_notify     = */ NULL
+        /* .lnd_notify     = */ NULL,
 #ifdef __KERNEL__
-        /* .lnd_accept     = */ ,NULL
+        /* .lnd_accept     = */ NULL,
 #else
-        /* .lnd_wait       = */ ,NULL
+        /* .lnd_wait       = */ NULL,
+        /* .lnd_setasync   = */ NULL,
 #ifdef HAVE_LIBPTHREAD
-        /* .lnd_accept     = */ ,NULL
+        /* .lnd_accept     = */ NULL,
 #endif
 #endif
 };
-

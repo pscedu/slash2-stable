@@ -164,7 +164,9 @@ usocklnd_poll_thread(void *arg)
 
 #endif
                 if (rc < 0) {
-                        CERROR("Cannot poll: errno=%d\n", errno);
+			if (errno == EINTR)
+				continue;
+                        CERROR("Cannot poll(2): errno=%d\n", errno);
                         break;
                 }
 
@@ -252,16 +254,9 @@ usocklnd_poll_thread(void *arg)
         }
         
         /* unblock usocklnd_shutdown() */
-        complete(&pt_data->upt_completion);
+        cfs_complete(&pt_data->upt_completion);
 
         return 0;
-}
-
-void *
-usocklnd_poll_thread_hack(void *arg)
-{
-	usocklnd_poll_thread(arg);
-	return (NULL); 
 }
 
 /* Returns 0 on success, <0 else */

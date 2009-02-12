@@ -9,16 +9,15 @@
  *
  */
 
+#ifndef _GNU_SOURCE
 #define _GNU_SOURCE
+#endif
 #include <pthread.h>
 #include <poll.h>
 #include <lnet/lib-lnet.h>
 #include <lnet/socklnd.h>
-#include <libcfs/user-tcpip.h>
 
-#include "psc_util/atomic.h"
 #include "psc_util/log.h"
-#include "psc_util/waitq.h"
 
 typedef struct {
         struct list_head tx_list;    /* neccessary to form tx list */
@@ -71,7 +70,7 @@ typedef struct {
         int                uc_sending;       /* send op is in progress */
         usock_tx_t        *uc_tx_hello;      /* fake tx with hello */
 
-        atomic_t       uc_refcount;      /* # of users */
+        cfs_atomic_t       uc_refcount;      /* # of users */
         pthread_mutex_t    uc_lock;          /* serialize */
         int                uc_errored;       /* a flag for lnet_notify() */
 } usock_conn_t;
@@ -106,43 +105,11 @@ typedef struct usock_peer_s {
         __u64             up_incarnation;  /* peer's incarnation */
         int               up_incrn_is_set; /* 0 if peer's incarnation
                                             * hasn't been set so far */
-        atomic_t      up_refcount;     /* # of users */
+        cfs_atomic_t      up_refcount;     /* # of users */
         pthread_mutex_t   up_lock;         /* serialize */
         int               up_errored;      /* a flag for lnet_notify() */
         cfs_time_t        up_last_alive;   /* when the peer was last alive */
 } usock_peer_t;
-
-struct completion {
-	int done;
-	psc_spinlock_t lock;
-	struct psc_waitq wq;
-};
-
-#define complete(c)							\
-	do {								\
-		spinlock(&(c)->lock);					\
-		(c)->done = 1;						\
-		psc_waitq_wakeall(&(c)->wq);				\
-		freelock(&(c)->lock);					\
-	} while (0)
-
-#define init_completion(c)						\
-	do {								\
-		LOCK_INIT(&(c)->lock);					\
-		(c)->done = 0;						\
-		psc_waitq_init(&(c)->wq);				\
-	} while (0)
-
-#define fini_completion(c)	(void)0
-
-#define wait_for_completion(c)						\
-	do {								\
-		spinlock(&(c)->lock);					\
-		if ((c)->done)						\
-			freelock(&(c)->lock);				\
-		else							\
-			psc_waitq_wait(&(c)->wq, &(c)->lock);		\
-	} while (0)
 
 typedef struct {
         int               upt_notifier_fd;       /* notifier fd for writing */
@@ -160,7 +127,7 @@ typedef struct {
         struct list_head  upt_pollrequests;      /* list of poll requests */
         pthread_mutex_t   upt_pollrequests_lock; /* serialize */
         int               upt_errno;             /* non-zero if errored */
-        struct completion upt_completion;        /* wait/signal facility for
+        struct cfs_completion upt_completion;    /* wait/signal facility for
                                                   * syncronizing shutdown */
 #if defined(__sun__) || defined(__sun)
         int               upt_dp_fd;             /* /dev/poll fd */
@@ -215,6 +182,8 @@ typedef struct {
         int ut_peertxcredits; /* # concurrent sends to 1 peer */
         int ut_socknagle;     /* Is Nagle alg on ? */
         int ut_sockbufsiz;    /* size of socket buffers */
+	int ut_usesdp;        /* use sockets direct */
+	int ut_portinc;       /* increment port for multiple if's */
 } usock_tunables_t;
 
 extern usock_tunables_t usock_tuns;
@@ -242,8 +211,8 @@ typedef struct {
 static inline void
 usocklnd_conn_addref(usock_conn_t *conn)
 {
-        LASSERT (atomic_read(&conn->uc_refcount) > 0);
-        atomic_inc(&conn->uc_refcount);
+        LASSERT (cfs_atomic_read(&conn->uc_refcount) > 0);
+        cfs_atomic_inc(&conn->uc_refcount);
 }
 
 void usocklnd_destroy_conn(usock_conn_t *conn);
@@ -251,16 +220,16 @@ void usocklnd_destroy_conn(usock_conn_t *conn);
 static inline void
 usocklnd_conn_decref(usock_conn_t *conn)
 {
-        LASSERT (atomic_read(&conn->uc_refcount) > 0);
-        if (atomic_dec_and_test(&conn->uc_refcount))
+        LASSERT (cfs_atomic_read(&conn->uc_refcount) > 0);
+        if (cfs_atomic_dec_and_test(&conn->uc_refcount))
                 usocklnd_destroy_conn(conn);
 }
 
 static inline void
 usocklnd_peer_addref(usock_peer_t *peer)
 {
-        LASSERT (atomic_read(&peer->up_refcount) > 0);
-        atomic_inc(&peer->up_refcount);
+        LASSERT (cfs_atomic_read(&peer->up_refcount) > 0);
+        cfs_atomic_inc(&peer->up_refcount);
 }
 
 void usocklnd_destroy_peer(usock_peer_t *peer);
@@ -268,8 +237,8 @@ void usocklnd_destroy_peer(usock_peer_t *peer);
 static inline void
 usocklnd_peer_decref(usock_peer_t *peer)
 {
-        LASSERT (atomic_read(&peer->up_refcount) > 0);
-        if (atomic_dec_and_test(&peer->up_refcount))
+        LASSERT (cfs_atomic_read(&peer->up_refcount) > 0);
+        if (cfs_atomic_dec_and_test(&peer->up_refcount))
                 usocklnd_destroy_peer(peer);
 }
 
@@ -295,7 +264,6 @@ int usocklnd_recv(lnet_ni_t *ni, void *private, lnet_msg_t *msg, int delayed,
 int usocklnd_accept(lnet_ni_t *ni, int sock_fd);
 
 int usocklnd_poll_thread(void *arg);
-void *usocklnd_poll_thread_hack(void *arg);
 int usocklnd_add_pollrequest(usock_conn_t *conn, int type, short value);
 void usocklnd_add_killrequest(usock_conn_t *conn);
 int usocklnd_process_pollrequest(usock_pollrequest_t *pr,

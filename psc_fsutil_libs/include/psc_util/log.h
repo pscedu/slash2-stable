@@ -170,15 +170,48 @@ __dead void _psc_fatal(const char *, const char *, int, int, int, int,
 		case D_NET:						\
 		case D_INFO:						\
 		case D_CONFIG:						\
+		case D_OTHER:						\
 			psc_info((fmt), ## __VA_ARGS__);		\
 			break;						\
 		case D_RPCTRACE:					\
 		case D_TRACE:						\
+		case D_CONSOLE:						\
 			psc_trace((fmt), ## __VA_ARGS__);		\
 			break;						\
 		default:						\
 			psc_warnx("Unknown lustre mask %d", (mask));	\
 			psc_warnx((fmt), ## __VA_ARGS__);		\
+			break;						\
+		}							\
+	} while (0)
+
+#ifdef CDEBUGV
+# undef CDEBUGV
+#endif
+#define CDEBUGV(mask, fmt, args)					\
+	do {								\
+		switch (mask) {						\
+		case D_ERROR:						\
+		case D_NETERROR:					\
+			psc_errorxv((fmt), args);			\
+			break;						\
+		case D_WARNING:						\
+			psc_warnxv((fmt), args);			\
+			break;						\
+		case D_NET:						\
+		case D_INFO:						\
+		case D_CONFIG:						\
+		case D_OTHER:						\
+			psc_infov((fmt), args);				\
+			break;						\
+		case D_RPCTRACE:					\
+		case D_TRACE:						\
+		case D_CONSOLE:						\
+			psc_tracev((fmt), args);			\
+			break;						\
+		default:						\
+			psc_warnx("Unknown lustre mask %d", (mask));	\
+			psc_warnxv((fmt), args);			\
 			break;						\
 		}							\
 	} while (0)

@@ -1,23 +1,41 @@
 /* -*- mode: c; c-basic-offset: 8; indent-tabs-mode: nil; -*-
  * vim:expandtab:shiftwidth=8:tabstop=8:
  *
- * Copyright (C) 2004 Cluster File Systems, Inc.
- *   Author: Jacob Berkman <jacob@clusterfs.com>
+ * GPL HEADER START
  *
- *   This file is part of Lustre, http://www.lustre.org.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
- *   Lustre is free software; you can redistribute it and/or
- *   modify it under the terms of version 2 of the GNU General Public
- *   License as published by the Free Software Foundation.
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 only,
+ * as published by the Free Software Foundation.
  *
- *   Lustre is distributed in the hope that it will be useful,
- *   but WITHOUT ANY WARRANTY; without even the implied warranty of
- *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *   GNU General Public License for more details.
+ * This program is distributed in the hope that it will be useful, but
+ * WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * General Public License version 2 for more details (a copy is included
+ * in the LICENSE file that accompanied this code).
  *
- *   You should have received a copy of the GNU General Public License
- *   along with Lustre; if not, write to the Free Software
- *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ * You should have received a copy of the GNU General Public License
+ * version 2 along with this program; If not, see
+ * http://www.sun.com/software/products/lustre/docs/GPLv2.pdf
+ *
+ * Please contact Sun Microsystems, Inc., 4150 Network Circle, Santa Clara,
+ * CA 95054 USA or visit www.sun.com if you need additional information or
+ * have any questions.
+ *
+ * GPL HEADER END
+ */
+/*
+ * Copyright  2008 Sun Microsystems, Inc. All rights reserved
+ * Use is subject to license terms.
+ */
+/*
+ * This file is part of Lustre, http://www.lustre.org/
+ * Lustre is a trademark of Sun Microsystems, Inc.
+ *
+ * lnet/libcfs/watchdog.c
+ *
+ * Author: Jacob Berkman <jacob@clusterfs.com>
  */
 
 #define DEBUG_SUBSYSTEM S_LNET
@@ -36,7 +54,7 @@ struct lc_watchdog {
         void             *lcw_data;
 
         pid_t             lcw_pid;
-        int               lcw_time; /* time until watchdog fires, in ms */
+        cfs_duration_t    lcw_time; /* time until watchdog fires, jiffies */
 
         enum {
                 LC_WATCHDOG_DISABLED,
@@ -126,8 +144,8 @@ static void lcw_cb(unsigned long data)
         /* NB this warning should appear on the console, but may not get into
          * the logs since we're running in a softirq handler */
 
-        CWARN("Watchdog triggered for pid %d: it was inactive for %ldms\n",
-              (int)lcw->lcw_pid, cfs_duration_sec(lcw->lcw_time) * 1000);
+        CWARN("Watchdog triggered for pid %d: it was inactive for %lds\n",
+              (int)lcw->lcw_pid, cfs_duration_sec(lcw->lcw_time));
         lcw_dump(lcw);
 
         spin_lock_bh(&lcw_pending_timers_lock);
@@ -197,8 +215,9 @@ static int lcw_dispatch_main(void *data)
                         list_del_init(&lcw->lcw_list);
                         spin_unlock_bh(&lcw_pending_timers_lock);
 
-                        CDEBUG(D_INFO, "found lcw for pid %d: inactive for %ldms\n", 
-                               (int)lcw->lcw_pid, cfs_duration_sec(lcw->lcw_time) * 1000);
+                        CDEBUG(D_INFO, "found lcw for pid %d: inactive for "
+                               "%lds\n", (int)lcw->lcw_pid,
+                               cfs_duration_sec(lcw->lcw_time));
 
                         if (lcw->lcw_state != LC_WATCHDOG_DISABLED)
                                 lcw->lcw_callback(lcw->lcw_pid, lcw->lcw_data);
@@ -313,7 +332,7 @@ static void lcw_update_time(struct lc_watchdog *lcw, const char *message)
         lcw->lcw_last_touched = newtime;
 }
 
-void lc_watchdog_touch(struct lc_watchdog *lcw)
+void lc_watchdog_touch_ms(struct lc_watchdog *lcw, int timeout_ms)
 {
         ENTRY;
         LASSERT(lcw != NULL);
@@ -325,9 +344,17 @@ void lc_watchdog_touch(struct lc_watchdog *lcw)
         lcw_update_time(lcw, "touched");
         lcw->lcw_state = LC_WATCHDOG_ENABLED;
 
-        mod_timer(&lcw->lcw_timer, jiffies + lcw->lcw_time);
+        mod_timer(&lcw->lcw_timer, jiffies +
+                  cfs_time_seconds(timeout_ms) / 1000);
 
         EXIT;
+}
+EXPORT_SYMBOL(lc_watchdog_touch_ms);
+
+/* deprecated - use above instead */
+void lc_watchdog_touch(struct lc_watchdog *lcw)
+{
+        lc_watchdog_touch_ms(lcw, cfs_duration_sec(lcw->lcw_time) * 1000);
 }
 EXPORT_SYMBOL(lc_watchdog_touch);
 
@@ -394,6 +421,11 @@ struct lc_watchdog *lc_watchdog_add(int timeout_ms,
 }
 EXPORT_SYMBOL(lc_watchdog_add);
 
+void lc_watchdog_touch_ms(struct lc_watchdog *lcw, int timeout_ms)
+{
+}
+EXPORT_SYMBOL(lc_watchdog_touch_ms);
+
 void lc_watchdog_touch(struct lc_watchdog *lcw)
 {
 }
@@ -410,4 +442,3 @@ void lc_watchdog_delete(struct lc_watchdog *lcw)
 EXPORT_SYMBOL(lc_watchdog_delete);
 
 #endif
-

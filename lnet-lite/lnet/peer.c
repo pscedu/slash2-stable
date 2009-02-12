@@ -1,25 +1,39 @@
 /* -*- mode: c; c-basic-offset: 8; indent-tabs-mode: nil; -*-
  * vim:expandtab:shiftwidth=8:tabstop=8:
  *
- * lib/lib-move.c
- * Data movement routines
+ * GPL HEADER START
  *
- *  Copyright (c) 2001-2003 Cluster File Systems, Inc.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
- *   This file is part of Lustre, http://www.lustre.org
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 only,
+ * as published by the Free Software Foundation.
  *
- *   Lustre is free software; you can redistribute it and/or
- *   modify it under the terms of version 2 of the GNU General Public
- *   License as published by the Free Software Foundation.
+ * This program is distributed in the hope that it will be useful, but
+ * WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * General Public License version 2 for more details (a copy is included
+ * in the LICENSE file that accompanied this code).
  *
- *   Lustre is distributed in the hope that it will be useful,
- *   but WITHOUT ANY WARRANTY; without even the implied warranty of
- *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *   GNU General Public License for more details.
+ * You should have received a copy of the GNU General Public License
+ * version 2 along with this program; If not, see
+ * http://www.sun.com/software/products/lustre/docs/GPLv2.pdf
  *
- *   You should have received a copy of the GNU General Public License
- *   along with Lustre; if not, write to the Free Software
- *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ * Please contact Sun Microsystems, Inc., 4150 Network Circle, Santa Clara,
+ * CA 95054 USA or visit www.sun.com if you need additional information or
+ * have any questions.
+ *
+ * GPL HEADER END
+ */
+/*
+ * Copyright  2008 Sun Microsystems, Inc. All rights reserved
+ * Use is subject to license terms.
+ */
+/*
+ * This file is part of Lustre, http://www.lustre.org/
+ * Lustre is a trademark of Sun Microsystems, Inc.
+ *
+ * lnet/lnet/peer.c
  */
 
 #define DEBUG_SUBSYSTEM S_LNET
@@ -185,6 +199,12 @@ lnet_nid2peer_locked(lnet_peer_t **lpp, lnet_nid_t nid)
                 LIBCFS_FREE(lp, sizeof(*lp));
                 LNET_LOCK();
 
+                if (the_lnet.ln_shutdown) {
+                        lnet_peer_decref_locked(lp2);
+                        *lpp = NULL;
+                        return -ESHUTDOWN;
+                }
+
                 *lpp = lp2;
                 return 0;
         }
@@ -233,7 +253,7 @@ lnet_debug_peer(lnet_nid_t nid)
 
         CDEBUG(D_WARNING, "%-24s %4d %5s %5d %5d %5d %5d %5d %ld\n",
                libcfs_nid2str(lp->lp_nid), lp->lp_refcount, 
-               lp->lp_alive ? "up" : "down",
+               !lnet_isrouter(lp) ? "~rtr" : (lp->lp_alive ? "up" : "down"),
                lp->lp_ni->ni_peertxcredits, 
                lp->lp_rtrcredits, lp->lp_minrtrcredits, 
                lp->lp_txcredits, lp->lp_mintxcredits, lp->lp_txqnob);

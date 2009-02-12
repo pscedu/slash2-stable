@@ -1,5 +1,41 @@
 /* -*- mode: c; c-basic-offset: 8; indent-tabs-mode: nil; -*-
  * vim:expandtab:shiftwidth=8:tabstop=8:
+ *
+ * GPL HEADER START
+ *
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 only,
+ * as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful, but
+ * WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * General Public License version 2 for more details (a copy is included
+ * in the LICENSE file that accompanied this code).
+ *
+ * You should have received a copy of the GNU General Public License
+ * version 2 along with this program; If not, see
+ * http://www.sun.com/software/products/lustre/docs/GPLv2.pdf
+ *
+ * Please contact Sun Microsystems, Inc., 4150 Network Circle, Santa Clara,
+ * CA 95054 USA or visit www.sun.com if you need additional information or
+ * have any questions.
+ *
+ * GPL HEADER END
+ */
+/*
+ * Copyright  2008 Sun Microsystems, Inc. All rights reserved
+ * Use is subject to license terms.
+ */
+/*
+ * This file is part of Lustre, http://www.lustre.org/
+ * Lustre is a trademark of Sun Microsystems, Inc.
+ */
+
+/* -*- mode: c; c-basic-offset: 8; indent-tabs-mode: nil; -*-
+ * vim:expandtab:shiftwidth=8:tabstop=8:
  */
 #ifndef __LIBCFS_LINUX_KP30_H__
 #define __LIBCFS_LINUX_KP30_H__
@@ -9,7 +45,7 @@
 #endif
 
 #ifdef __KERNEL__
-#ifdef HAVE_KERNEL_CONFIG_H
+#ifndef AUTOCONF_INCLUDED
 # include <linux/config.h>
 #endif
 # include <linux/kernel.h>
@@ -23,7 +59,6 @@
 # include <linux/kmod.h>
 # include <linux/notifier.h>
 # include <linux/fs.h>
-# include <asm/segment.h>
 # include <linux/miscdevice.h>
 # include <linux/vmalloc.h>
 # include <linux/time.h>
@@ -68,14 +103,30 @@ static inline void our_cond_resched(void)
         if (current->need_resched)
                schedule ();
 }
-#define work_struct_t       struct tq_struct
-
+#define work_struct_t                   struct tq_struct
+#define cfs_get_work_data(type,field,data)   (data)
 #else
+
+#ifdef HAVE_3ARGS_INIT_WORK
 
 #define prepare_work(wq,cb,cbdata)                                            \
 do {                                                                          \
         INIT_WORK((wq), (void *)(cb), (void *)(cbdata));                      \
 } while (0)
+
+#define cfs_get_work_data(type,field,data)   (data)
+
+#else
+
+#define prepare_work(wq,cb,cbdata)                                            \
+do {                                                                          \
+        INIT_WORK((wq), (void *)(cb));                                        \
+} while (0)
+
+#define cfs_get_work_data(type,field,data) container_of(data,type,field)
+
+#endif
+
 #define wait_on_page wait_on_page_locked
 #define our_recalc_sigpending(current) recalc_sigpending()
 #define strtok(a,b) strpbrk(a, b)
@@ -93,6 +144,12 @@ static inline void our_cond_resched(void)
 #define LASSERT_SPIN_LOCKED(lock) do {} while(0)
 #endif
 #define LASSERT_SEM_LOCKED(sem) LASSERT(down_trylock(sem) != 0)
+
+#ifdef HAVE_SEM_COUNT_ATOMIC
+#define SEM_COUNT(sem)          (atomic_read(&(sem)->count))
+#else
+#define SEM_COUNT(sem)          ((sem)->count)
+#endif
 
 #define LIBCFS_PANIC(msg)            panic(msg)
 
@@ -157,13 +214,17 @@ static inline void our_cond_resched(void)
 # define printf(format, b...) CDEBUG(D_OTHER, format , ## b)
 # define time(a) CURRENT_TIME
 
+#ifndef num_possible_cpus
+#define num_possible_cpus() NR_CPUS
+#endif
+#if LINUX_VERSION_CODE < KERNEL_VERSION(2,5,0)
+#define i_size_read(a) ((a)->i_size)
+#endif
+
 #else  /* !__KERNEL__ */
 # include <stdio.h>
 # include <stdlib.h>
-#ifdef CRAY_XT3
-//# include <ioctl.h>
-# include "lustre/ioctl.h"
-#elif defined(__CYGWIN__)
+#if defined(__CYGWIN__)
 # include <cygwin-ioctl.h>
 #else
 # include <stdint.h>
@@ -173,6 +234,9 @@ static inline void our_cond_resched(void)
 # include <limits.h>
 # include <errno.h>
 # include <sys/ioctl.h>                         /* for _IOWR */
+#ifndef _IOWR
+#include "ioctl.h"
+#endif
 
 # define CFS_MODULE_PARM(name, t, type, perm, desc)
 #define PORTAL_SYMBOL_GET(x) inter_module_get(#x)
@@ -237,7 +301,7 @@ extern lwt_cpu_t lwt_cpus[];
 
 #define LWTSTR(n)       #n
 #define LWTWHERE(f,l)   f ":" LWTSTR(l)
-#define LWT_EVENTS_PER_PAGE (PAGE_SIZE / sizeof (lwt_event_t))
+#define LWT_EVENTS_PER_PAGE (CFS_PAGE_SIZE / sizeof (lwt_event_t))
 
 #define LWT_EVENT(p1, p2, p3, p4)                                       \
 do {                                                                    \
@@ -310,14 +374,42 @@ extern int  lwt_snapshot (cycles_t *now, int *ncpu, int *total_size,
 # define LP_POISON ((void *)(long)0x5a5a5a5a)
 #endif
 
-#define __STDC_FORMAT_MACROS
-#include <inttypes.h> 
+/* this is a bit chunky */
 
-# define LPU64 "%"PRIu64
-# define LPD64 "%"PRId64
-# define LPX64 "%#"PRIx64
+#if defined(__KERNEL__)
+ #define _LWORDSIZE BITS_PER_LONG
+#else
+ #define _LWORDSIZE __WORDSIZE
+#endif
+
+#if defined(HAVE_U64_LONG_LONG)
+# define LPU64 "%Lu"
+# define LPD64 "%Ld"
+# define LPX64 "%#Lx"
+# define LPF64 "L"
+#else
+# define LPU64 "%lu"
+# define LPD64 "%ld"
+# define LPX64 "%#lx"
 # define LPF64 "l"
-# define LPSZ  "%"PRIu64
-# define LPSSZ "%"PRId64
+#endif
+
+#ifdef HAVE_SIZE_T_LONG
+# define LPSZ  "%lu"
+#else
+# define LPSZ  "%u"
+#endif
+
+#ifdef HAVE_SSIZE_T_LONG
+# define LPSSZ "%ld"
+#else
+# define LPSSZ "%d"
+#endif
+
+#ifndef LPU64
+# error "No word size defined"
+#endif
+
+#undef _LWORDSIZE
 
 #endif

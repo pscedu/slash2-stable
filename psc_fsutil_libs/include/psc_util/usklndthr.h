@@ -1,10 +1,13 @@
 /* $Id$ */
 
+#include <stdarg.h>
+
+#include "libcfs/libcfs.h"
+
 struct psc_usklndthr {
-	void *(*put_startf)(void *);
-	void   *put_arg;
+	cfs_thread_t	 put_startf;
+	void		*put_arg;
 };
 
-const char *
-	psc_usklndthr_get_name(struct psc_usklndthr *);
-int	psc_usklndthr_get_type(struct psc_usklndthr *);
+void	psc_usklndthr_get_namev(char [], const char *, va_list);
+int	psc_usklndthr_get_type(const char*);

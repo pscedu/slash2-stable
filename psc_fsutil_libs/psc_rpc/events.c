@@ -2,6 +2,8 @@
 
 #define PSC_SUBSYS PSS_RPC
 
+#include <inttypes.h>
+
 #include "psc_types.h"
 #include "psc_rpc/export.h"
 #include "psc_rpc/rpc.h"
@@ -31,7 +33,6 @@ void request_out_callback(lnet_event_t *ev)
                   "type %d, status %d", ev->type, ev->status);
 
         if (ev->type == LNET_EVENT_UNLINK || ev->status != 0) {
-
                 /* Failed send: make it seem like the reply timed out, just
 		 * like failing sends in client.c does currently...  */
                 spinlock(&req->rq_lock);
@@ -522,6 +523,7 @@ int pscrpc_ni_init(int type)
 		 * the event queue.  In fact lustre never pulls events off this queue,
 		 * so it's only sized for some debug history. */
 		psc_info("Requesting PID %u\n", PSC_SVR_PID);
+		lnet_server_mode();
 		if ((rc = LNetNIInit(PSC_SVR_PID)))
 			psc_fatalx("failed LNetNIInit() (%d)", rc);
 

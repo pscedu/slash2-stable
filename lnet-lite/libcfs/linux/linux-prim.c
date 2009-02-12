@@ -1,13 +1,41 @@
 /* -*- mode: c; c-basic-offset: 8; indent-tabs-mode: nil; -*-
  * vim:expandtab:shiftwidth=8:tabstop=8:
  *
- *  Copyright (c) 2002, 2003 Cluster File Systems, Inc.
+ * GPL HEADER START
  *
- *   This file is part of Lustre, http://www.lustre.org.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 only,
+ * as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful, but
+ * WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * General Public License version 2 for more details (a copy is included
+ * in the LICENSE file that accompanied this code).
+ *
+ * You should have received a copy of the GNU General Public License
+ * version 2 along with this program; If not, see
+ * http://www.sun.com/software/products/lustre/docs/GPLv2.pdf
+ *
+ * Please contact Sun Microsystems, Inc., 4150 Network Circle, Santa Clara,
+ * CA 95054 USA or visit www.sun.com if you need additional information or
+ * have any questions.
+ *
+ * GPL HEADER END
+ */
+/*
+ * Copyright  2008 Sun Microsystems, Inc. All rights reserved
+ * Use is subject to license terms.
+ */
+/*
+ * This file is part of Lustre, http://www.lustre.org/
+ * Lustre is a trademark of Sun Microsystems, Inc.
  */
 
 #define DEBUG_SUBSYSTEM S_LNET
-#ifdef HAVE_KERNEL_CONFIG_H
+#ifndef AUTOCONF_INCLUDED
 #include <linux/config.h>
 #endif
 #include <linux/module.h>
@@ -47,6 +75,20 @@ void cfs_daemonize(char *str) {
         SIGNAL_MASK_UNLOCK(current, flags);
         unlock_kernel();
 }
+
+int cfs_daemonize_ctxt(char *str) {
+        struct task_struct *tsk = current;
+        struct fs_struct *fs = NULL;
+
+        cfs_daemonize(str);
+        fs = copy_fs_struct(tsk->fs);
+        if (fs == NULL)
+                return -ENOMEM;
+        exit_fs(tsk);
+        tsk->fs = fs;
+        return 0;
+}
+
 
 sigset_t
 cfs_get_blockedsigs(void)
@@ -131,6 +173,7 @@ libcfs_arch_cleanup(void)
 EXPORT_SYMBOL(libcfs_arch_init);
 EXPORT_SYMBOL(libcfs_arch_cleanup);
 EXPORT_SYMBOL(cfs_daemonize);
+EXPORT_SYMBOL(cfs_daemonize_ctxt);
 EXPORT_SYMBOL(cfs_block_allsigs);
 EXPORT_SYMBOL(cfs_block_sigs);
 EXPORT_SYMBOL(cfs_get_blockedsigs);

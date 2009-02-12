@@ -1,39 +1,55 @@
 /* -*- mode: c; c-basic-offset: 8; indent-tabs-mode: nil; -*-
  * vim:expandtab:shiftwidth=8:tabstop=8:
  *
- * lib/lib-eq.c
+ * GPL HEADER START
+ *
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 only,
+ * as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful, but
+ * WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * General Public License version 2 for more details (a copy is included
+ * in the LICENSE file that accompanied this code).
+ *
+ * You should have received a copy of the GNU General Public License
+ * version 2 along with this program; If not, see
+ * http://www.sun.com/software/products/lustre/docs/GPLv2.pdf
+ *
+ * Please contact Sun Microsystems, Inc., 4150 Network Circle, Santa Clara,
+ * CA 95054 USA or visit www.sun.com if you need additional information or
+ * have any questions.
+ *
+ * GPL HEADER END
+ */
+/*
+ * Copyright  2008 Sun Microsystems, Inc. All rights reserved
+ * Use is subject to license terms.
+ */
+/*
+ * This file is part of Lustre, http://www.lustre.org/
+ * Lustre is a trademark of Sun Microsystems, Inc.
+ *
+ * lnet/lnet/lib-eq.c
+ *
  * Library level Event queue management routines
- *
- *  Copyright (c) 2001-2003 Cluster File Systems, Inc.
- *
- *   This file is part of Lustre, http://www.lustre.org
- *
- *   Lustre is free software; you can redistribute it and/or
- *   modify it under the terms of version 2 of the GNU General Public
- *   License as published by the Free Software Foundation.
- *
- *   Lustre is distributed in the hope that it will be useful,
- *   but WITHOUT ANY WARRANTY; without even the implied warranty of
- *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *   GNU General Public License for more details.
- *
- *   You should have received a copy of the GNU General Public License
- *   along with Lustre; if not, write to the Free Software
- *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
 #define DEBUG_SUBSYSTEM S_LNET
 #include <lnet/lib-lnet.h>
 
 int
-LNetEQAlloc(unsigned int count, lnet_eq_handler_t callback, 
+LNetEQAlloc(unsigned int count, lnet_eq_handler_t callback,
             lnet_handle_eq_t *handle)
 {
         lnet_eq_t     *eq;
 
         LASSERT (the_lnet.ln_init);
         LASSERT (the_lnet.ln_refcount > 0);
-        
+
         /* We need count to be a power of 2 so that when eq_{enq,deq}_seq
          * overflow, they don't skip entries, so the queue has the same
          * apparant capacity at all times */
@@ -48,7 +64,7 @@ LNetEQAlloc(unsigned int count, lnet_eq_handler_t callback,
 
         if (count == 0)        /* catch bad parameter / overflow on roundup */
                 return (-EINVAL);
-        
+
         eq = lnet_eq_alloc();
         if (eq == NULL)
                 return (-ENOMEM);
@@ -92,7 +108,7 @@ LNetEQFree(lnet_handle_eq_t eqh)
 
         LASSERT (the_lnet.ln_init);
         LASSERT (the_lnet.ln_refcount > 0);
-        
+
         LNET_LOCK();
 
         eq = lnet_handle2eq(&eqh);
@@ -102,6 +118,8 @@ LNetEQFree(lnet_handle_eq_t eqh)
         }
 
         if (eq->eq_refcount != 0) {
+                CDEBUG(D_NET, "Event queue (%d) busy on destroy.\n",
+                       eq->eq_refcount);
                 LNET_UNLOCK();
                 return (-EBUSY);
         }
@@ -121,12 +139,6 @@ LNetEQFree(lnet_handle_eq_t eqh)
         return 0;
 }
 
-/** 
- * lib_get_event - get an event from the queue.
- * @eq: the event queue in question
- * @ev: pointer to the new event
- * Returns '1' if a new event is detected
- */
 int
 lib_get_event (lnet_eq_t *eq, lnet_event_t *ev)
 {
@@ -135,8 +147,8 @@ lib_get_event (lnet_eq_t *eq, lnet_event_t *ev)
         int           rc;
         ENTRY;
 
-        //CERROR("event: %p, sequence: %lu, eq->size: %u\n",
-        //       new_event, eq->eq_deq_seq, eq->eq_size);
+        CDEBUG(D_INFO, "event: %p, sequence: %lu, eq->size: %u\n",
+               new_event, eq->eq_deq_seq, eq->eq_size);
 
         if (LNET_SEQ_GT (eq->eq_deq_seq, new_event->sequence)) {
                 RETURN(0);
@@ -166,7 +178,7 @@ LNetEQGet (lnet_handle_eq_t eventq, lnet_event_t *event)
 {
         int which;
 
-        return LNetEQPoll(&eventq, 1, 0, 
+        return LNetEQPoll(&eventq, 1, 0,
                          event, &which);
 }
 
@@ -179,13 +191,6 @@ LNetEQWait (lnet_handle_eq_t eventq, lnet_event_t *event)
                          event, &which);
 }
 
-/**
- * LNetEQPoll
- *
- * Return '1' if a new event is detected
- *        -ENOENT if the queue is bogus
- *        0 on timeout or empty queue
- */  
 int
 LNetEQPoll (lnet_handle_eq_t *eventqs, int neq, int timeout_ms,
             lnet_event_t *event, int *which)
@@ -198,15 +203,12 @@ LNetEQPoll (lnet_handle_eq_t *eventqs, int neq, int timeout_ms,
 #else
         struct timeval   then;
         struct timeval   now;
-# if HAVE_LIBPTHREAD
+# ifdef HAVE_LIBPTHREAD
         struct timespec  ts;
 # endif
         lnet_ni_t       *eqwaitni = the_lnet.ln_eqwaitni;
 #endif
         ENTRY;
-
-//        CERROR("timeo_ms %d",
-//               timeout_ms);
 
         LASSERT (the_lnet.ln_init);
         LASSERT (the_lnet.ln_refcount > 0);
@@ -214,17 +216,16 @@ LNetEQPoll (lnet_handle_eq_t *eventqs, int neq, int timeout_ms,
         if (neq < 1)
                 RETURN(-ENOENT);
 
-        //        CDEBUG(D_NET, "timeo_ms %d, then %ld.%ld",
-        //      timeout_ms, ts.tv_sec, ts.tv_nsec);
-
         LNET_LOCK();
 
         for (;;) {
                 for (i = 0; i < neq; i++) {
                         lnet_eq_t *eq = lnet_handle2eq(&eventqs[i]);
 
-                        if (eq == NULL)
+                        if (eq == NULL) {
+                                LNET_UNLOCK();
                                 RETURN(-ENOENT);
+                        }
 
                         rc = lib_get_event (eq, event);
                         if (rc != 0) {
@@ -233,10 +234,10 @@ LNetEQPoll (lnet_handle_eq_t *eventqs, int neq, int timeout_ms,
                                 RETURN(rc);
                         }
                 }
-                
+
 #ifdef __KERNEL__
                 if (timeout_ms == 0) {
-                        LNET_UNLOCK ();
+                        LNET_UNLOCK();
                         RETURN (0);
                 }
 
@@ -248,22 +249,22 @@ LNetEQPoll (lnet_handle_eq_t *eventqs, int neq, int timeout_ms,
 
                 if (timeout_ms < 0) {
                         cfs_waitq_wait (&wl, CFS_TASK_INTERRUPTIBLE);
-                } else { 
+                } else {
                         struct timeval tv;
 
                         now = cfs_time_current();
                         cfs_waitq_timedwait(&wl, CFS_TASK_INTERRUPTIBLE,
                                             cfs_time_seconds(timeout_ms)/1000);
-                        cfs_duration_usec(cfs_time_sub(cfs_time_current(), now), 
-                                          &tv); 
+                        cfs_duration_usec(cfs_time_sub(cfs_time_current(), now),
+                                          &tv);
                         timeout_ms -= tv.tv_sec * 1000 + tv.tv_usec / 1000;
                         if (timeout_ms < 0)
                                 timeout_ms = 0;
                 }
-                
+
                 LNET_LOCK();
                 cfs_waitq_del(&the_lnet.ln_waitq, &wl);
-#else                        
+#else
                 if (eqwaitni != NULL) {
                         /* I have a single NI that I have to call into, to get
                          * events queued, or to block. */
@@ -274,11 +275,9 @@ LNetEQPoll (lnet_handle_eq_t *eventqs, int neq, int timeout_ms,
                                 (eqwaitni->ni_lnd->lnd_wait)(eqwaitni, timeout_ms);
                         } else {
                                 gettimeofday(&then, NULL);
-//                                CERROR("timeo_ms %d, then %ld.%ld",
-//                                       timeout_ms, ts.tv_sec, ts.tv_nsec);
 
                                 (eqwaitni->ni_lnd->lnd_wait)(eqwaitni, timeout_ms);
-                                
+
                                 gettimeofday(&now, NULL);
                                 timeout_ms -= (now.tv_sec - then.tv_sec) * 1000 +
                                               (now.tv_usec - then.tv_usec) / 1000;
@@ -294,8 +293,7 @@ LNetEQPoll (lnet_handle_eq_t *eventqs, int neq, int timeout_ms,
                         if (timeout_ms == 0)
                                 eqwaitni = NULL;
 
-                        /* go back and check for events */
-                        continue;               
+                        continue;               /* go back and check for events */
                 }
 
                 if (timeout_ms == 0) {
@@ -303,36 +301,32 @@ LNetEQPoll (lnet_handle_eq_t *eventqs, int neq, int timeout_ms,
                         RETURN (0);
                 }
 
-# if !HAVE_LIBPTHREAD
+# ifndef HAVE_LIBPTHREAD
                 /* If I'm single-threaded, LNET fails at startup if it can't
                  * set the_lnet.ln_eqwaitni correctly.  */
                 LBUG();
 # else
                 if (timeout_ms < 0) {
-                        pthread_cond_wait(&the_lnet.ln_cond, 
+                        pthread_cond_wait(&the_lnet.ln_cond,
                                           &the_lnet.ln_lock);
-
-                        //CERROR("I've woken up!\n");
                 } else {
                         gettimeofday(&then, NULL);
-//                        CERROR("timeo_ms %d, then %ld.%ld",
-//                               timeout_ms, ts.tv_sec, ts.tv_nsec);
-                        ts.tv_sec = then.tv_sec + timeout_ms/1000;
-                        ts.tv_nsec = then.tv_usec * 1000 + 
-                                     (timeout_ms%1000) * 1000000;
 
+                        ts.tv_sec = then.tv_sec + timeout_ms/1000;
+                        ts.tv_nsec = then.tv_usec * 1000 +
+                                     (timeout_ms%1000) * 1000000;
                         if (ts.tv_nsec >= 1000000000) {
                                 ts.tv_sec++;
                                 ts.tv_nsec -= 1000000000;
                         }
-                        
+
                         pthread_cond_timedwait(&the_lnet.ln_cond,
                                                &the_lnet.ln_lock, &ts);
-                        
+
                         gettimeofday(&now, NULL);
                         timeout_ms -= (now.tv_sec - then.tv_sec) * 1000 +
                                       (now.tv_usec - then.tv_usec) / 1000;
-                        
+
                         if (timeout_ms < 0)
                                 timeout_ms = 0;
                 }

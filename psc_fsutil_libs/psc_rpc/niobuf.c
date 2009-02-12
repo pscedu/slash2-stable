@@ -27,6 +27,8 @@
 
 #define PSC_SUBSYS PSS_RPC
 
+#include <inttypes.h>
+
 #include "psc_util/alloc.h"
 #include "psc_util/atomic.h"
 #include "psc_util/log.h"
@@ -229,7 +231,7 @@ int pscrpc_register_bulk (struct pscrpc_request *req)
         /* NB no locking required until desc is on the network */
         psc_assert (desc->bd_nob > 0);
         psc_assert (!desc->bd_network_rw);
-        psc_assert (desc->bd_iov_count <= PSCRPC_MAX_BRW_PAGES);
+        psc_assert (desc->bd_iov_count <= (int)PSCRPC_MAX_BRW_PAGES);
         psc_assert (desc->bd_req != NULL);
         psc_assert (desc->bd_type == BULK_PUT_SINK ||
                  desc->bd_type == BULK_GET_SOURCE);

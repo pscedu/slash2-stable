@@ -2,6 +2,7 @@
 
 #define PSC_SUBSYS PSS_RPC
 
+#include <inttypes.h>
 #include <stdio.h>
 
 #include "psc_ds/list.h"
@@ -553,7 +554,7 @@ int
 pscrpc_grow_req_bufs(struct pscrpc_service *svc)
 {
 	struct pscrpc_request_buffer_desc *rqbd;
-	int                                i;
+	int i;
 
 	CDEBUG(D_RPCTRACE, "%s: allocate %d new %d-byte reqbufs (%d/%d left)\n",
 	       svc->srv_name, svc->srv_nbuf_per_group, svc->srv_buf_size,

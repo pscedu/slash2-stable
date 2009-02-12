@@ -1,6 +1,7 @@
 /* $Id$ */
 
 #include <err.h>
+#include <string.h>
 #include <unistd.h>
 
 #include "psc_util/alloc.h"
@@ -9,6 +10,7 @@
 #include "psc_util/log.h"
 
 extern long pscPageSize;
+extern char **environ;
 
 __weak void
 pscthrs_init(void)
@@ -29,6 +31,7 @@ void
 pfl_init(void)
 {
 	static atomic_t init = ATOMIC_INIT(0);
+	char **p;
 
 	if (atomic_xchg(&init, 1))
 		errx(1, "pfl_init: already initialized");
@@ -47,4 +50,9 @@ pfl_init(void)
 	pscPageSize = sysconf(_SC_PAGESIZE);
 	if (pscPageSize == -1)
 		psc_fatal("sysconf");
+
+	for (p = environ; *p; p++)
+		if (strncmp(*p, "TCPLND", strlen("TCPLND")) == 0 ||
+		    strncmp(*p, "TCPNAL", strlen("TCPNAL")) == 0)
+			psc_fatalx("old-style %s not used anymore", *p);
 }

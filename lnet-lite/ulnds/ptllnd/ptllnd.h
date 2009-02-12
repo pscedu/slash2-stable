@@ -1,19 +1,41 @@
 /* -*- mode: c; c-basic-offset: 8; indent-tabs-mode: nil; -*-
  * vim:expandtab:shiftwidth=8:tabstop=8:
  *
- * Copyright (C) 2005 Cluster File Systems, Inc. All rights reserved.
- *   Author: Eric Barton <eeb@bartonsoftware.com>
+ * GPL HEADER START
  *
- *   This file is part of the Lustre file system, http://www.lustre.org
- *   Lustre is a trademark of Cluster File Systems, Inc.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
- *   This file is confidential source code owned by Cluster File Systems.
- *   No viewing, modification, compilation, redistribution, or any other
- *   form of use is permitted except through a signed license agreement.
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 only,
+ * as published by the Free Software Foundation.
  *
- *   If you have not signed such an agreement, then you have no rights to
- *   this file.  Please destroy it immediately and contact CFS.
+ * This program is distributed in the hope that it will be useful, but
+ * WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * General Public License version 2 for more details (a copy is included
+ * in the LICENSE file that accompanied this code).
  *
+ * You should have received a copy of the GNU General Public License
+ * version 2 along with this program; If not, see
+ * http://www.sun.com/software/products/lustre/docs/GPLv2.pdf
+ *
+ * Please contact Sun Microsystems, Inc., 4150 Network Circle, Santa Clara,
+ * CA 95054 USA or visit www.sun.com if you need additional information or
+ * have any questions.
+ *
+ * GPL HEADER END
+ */
+/*
+ * Copyright  2008 Sun Microsystems, Inc. All rights reserved
+ * Use is subject to license terms.
+ */
+/*
+ * This file is part of Lustre, http://www.lustre.org/
+ * Lustre is a trademark of Sun Microsystems, Inc.
+ *
+ * lnet/ulnds/ptllnd/ptllnd.h
+ *
+ * Author: Eric Barton <eeb@bartonsoftware.com>
  */
 
 
@@ -24,22 +46,28 @@
 
 #include <portals/p30.h>
 #include <lnet/ptllnd.h>           /* Depends on portals/p30.h */
-#include "lustre/ioctl.h"
+#include <stdarg.h>
 
-#define PTLLND_DEBUG_TIMING 0
+/* Hack to record history 
+ * This should really be done by CDEBUG(D_NETTRACE...  */
 
-#define PTLLND_MSGS_PER_BUFFER     64
-#define PTLLND_MSGS_SPARE          256
-#define PTLLND_PEER_HASH_SIZE      101
-#define PTLLND_EQ_SIZE             1024
-#if PTLLND_DEBUG_TIMING
-# define PTLLND_TX_HISTORY         1024
-#else
-# define PTLLND_TX_HISTORY         0
-#endif
-#define PTLLND_WARN_LONG_WAIT      5 /* seconds */
-#define PTLLND_ABORT_ON_NAK        1 /* abort app on protocol version mismatch */
+typedef struct {
+        struct list_head          he_list;
+        struct timeval            he_time;
+        const char               *he_fn;
+        const char               *he_file;
+        int                       he_seq;
+        int                       he_line;
+        char                      he_msg[80];
+} ptllnd_he_t;
 
+void ptllnd_dump_history();
+void ptllnd_history(const char *fn, const char *file, const int line,
+                    const char *fmt, ...);
+#define PTLLND_HISTORY(fmt, a...) \
+        ptllnd_history(__FUNCTION__, __FILE__, __LINE__, fmt, ## a)
+
+        
 #define PTLLND_MD_OPTIONS        (PTL_MD_LUSTRE_COMPLETION_SEMANTICS |\
                                   PTL_MD_EVENT_START_DISABLE)
 typedef struct
@@ -54,7 +82,13 @@ typedef struct
         int                        plni_eq_size;
         int                        plni_checksum;
         int                        plni_max_tx_history;
+        int                        plni_abort_on_protocol_mismatch;
         int                        plni_abort_on_nak;
+        int                        plni_dump_on_nak;
+        int                        plni_debug;
+        int                        plni_long_wait;
+        int                        plni_watchdog_interval;
+        int                        plni_timeout;
 
         __u64                      plni_stamp;
         struct list_head           plni_active_txs;
@@ -69,12 +103,16 @@ typedef struct
         struct list_head          *plni_peer_hash;
         int                        plni_npeers;
 
+        int                        plni_watchdog_nextt;
+        int                        plni_watchdog_peeridx;
+
         struct list_head           plni_tx_history;
         int                        plni_ntx_history;
 
         struct list_head           plni_buffers;
         int                        plni_nbuffers;
         int                        plni_nposted_buffers;
+        int                        plni_nmsgs;
 } ptllnd_ni_t;
 
 #define PTLLND_CREDIT_HIGHWATER(plni) ((plni)->plni_peer_credits - 1)
@@ -85,16 +123,30 @@ typedef struct
         lnet_ni_t                 *plp_ni;
         lnet_process_id_t          plp_id;
         ptl_process_id_t           plp_ptlid;
-        int                        plp_credits;
-        int                        plp_max_credits;
+        int                        plp_credits; /* # msg buffers reserved for me at peer */
+
+        /* credits for msg buffers I've posted for this peer...
+         * outstanding - free buffers I've still to inform my peer about
+         * sent        - free buffers I've told my peer about
+         * lazy        - additional buffers (over and above plni_peer_credits)
+         *               posted to prevent peer blocking on sending a non-RDMA
+         *               messages to me when LNET isn't eagerly responsive to
+         *               the network (i.e. liblustre doesn't have control). 
+         * extra_lazy  - lazy credits not required any more. */
         int                        plp_outstanding_credits;
+        int                        plp_sent_credits;
+        int                        plp_lazy_credits;
+        int                        plp_extra_lazy_credits;
+
         int                        plp_max_msg_size;
         int                        plp_refcount;
+        int                        plp_sent_hello:1;
         int                        plp_recvd_hello:1;
         int                        plp_closing:1;
         __u64                      plp_match;
         __u64                      plp_stamp;
         struct list_head           plp_txq;
+        struct list_head           plp_noopq;
         struct list_head           plp_activeq;
 } ptllnd_peer_t;
 
@@ -126,14 +178,13 @@ typedef struct
         ptl_md_iovec_t            *tx_iov;
         ptl_handle_md_t            tx_bulkmdh;
         ptl_handle_md_t            tx_reqmdh;
-#if PTLLND_DEBUG_TIMING
         struct timeval             tx_bulk_posted;
         struct timeval             tx_bulk_done;
         struct timeval             tx_req_posted;
         struct timeval             tx_req_done;
-#endif
         int                        tx_completing; /* someone already completing */
         int                        tx_msgsize;  /* # bytes in tx_msg */
+        time_t                     tx_deadline; /* time to complete by */
         kptl_msg_t                 tx_msg;      /* message to send */
 } ptllnd_tx_t;
 
@@ -173,18 +224,7 @@ ptllnd_eventarg2obj (void *arg)
         return (void *)(ptr & ~PTLLND_EVENTARG_TYPE_MASK);
 }
 
-#if PTLLND_DEBUG_TIMING
-# define PTLLND_DBGT_INIT(tv)  memset(&(tv), 0, sizeof(tv))
-# define PTLLND_DBGT_STAMP(tv) gettimeofday(&(tv), NULL)
-# define DBGT_FMT              "%ld.%06ld"
-# define DBGT_ARGS(tv)         , (long)((tv).tv_sec), (long)((tv).tv_usec)
-#else
-# define PTLLND_DBGT_INIT(tv)
-# define PTLLND_DBGT_STAMP(tv)
-# define DBGT_FMT              "-"
-# define DBGT_ARGS(tv)
-#endif
-
+int ptllnd_parse_int_tunable(int *value, char *name, int dflt);
 void ptllnd_cull_tx_history(ptllnd_ni_t *plni);
 int ptllnd_startup(lnet_ni_t *ni);
 void ptllnd_shutdown(lnet_ni_t *ni);
@@ -199,16 +239,20 @@ int ptllnd_eager_recv(lnet_ni_t *ni, void *private, lnet_msg_t *msg,
 
 ptllnd_tx_t *ptllnd_new_tx(ptllnd_peer_t *peer, int type, int payload_nob);
 void ptllnd_notify(lnet_ni_t *ni, lnet_nid_t nid, int alive);
+int  ptllnd_setasync(lnet_ni_t *ni, lnet_process_id_t id, int n);
 void ptllnd_wait(lnet_ni_t *ni, int milliseconds);
 void ptllnd_check_sends(ptllnd_peer_t *peer);
 void ptllnd_debug_peer(lnet_ni_t *ni, lnet_process_id_t id);
 void ptllnd_destroy_peer(ptllnd_peer_t *peer);
 void ptllnd_close_peer(ptllnd_peer_t *peer, int error);
 int ptllnd_post_buffer(ptllnd_buffer_t *buf);
-int ptllnd_grow_buffers (lnet_ni_t *ni);
+int ptllnd_size_buffers (lnet_ni_t *ni, int delta);
 const char *ptllnd_evtype2str(int type);
 const char *ptllnd_msgtype2str(int type);
+const char *ptllnd_errtype2str(int type);
 char *ptllnd_ptlid2str(ptl_process_id_t id);
+void ptllnd_dump_debug(lnet_ni_t *ni, lnet_process_id_t id);
+
 
 static inline void
 ptllnd_peer_addref (ptllnd_peer_t *peer)
@@ -226,25 +270,16 @@ ptllnd_peer_decref (ptllnd_peer_t *peer)
                 ptllnd_destroy_peer(peer);
 }
 
-static inline void
-ptllnd_post_tx(ptllnd_tx_t *tx)
-{
-        ptllnd_peer_t *peer = tx->tx_peer;
-        LASSERT(tx->tx_peer != NULL);
-        list_add_tail(&tx->tx_list, &peer->plp_txq);
-        ptllnd_check_sends(peer);
-}
-
 static inline lnet_nid_t
 ptllnd_ptl2lnetnid(lnet_ni_t *ni, ptl_nid_t portals_nid)
 {
-	return LNET_MKNID(LNET_NIDNET(ni->ni_nid), portals_nid);
+        return LNET_MKNID(LNET_NIDNET(ni->ni_nid), portals_nid);
 }
 
 static inline ptl_nid_t
 ptllnd_lnet2ptlnid(lnet_nid_t lnet_nid)
 {
-	return LNET_NIDADDR(lnet_nid);
+        return LNET_NIDADDR(lnet_nid);
 }
 
 /*
@@ -259,5 +294,3 @@ ptllnd_lnet2ptlnid(lnet_nid_t lnet_nid)
  *  boot the catamount node.  This works for debugging some simple
  *  cases.
  */
-
-

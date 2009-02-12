@@ -1,5 +1,41 @@
 /* -*- mode: c; c-basic-offset: 8; indent-tabs-mode: nil; -*-
  * vim:expandtab:shiftwidth=8:tabstop=8:
+ *
+ * GPL HEADER START
+ *
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 only,
+ * as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful, but
+ * WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * General Public License version 2 for more details (a copy is included
+ * in the LICENSE file that accompanied this code).
+ *
+ * You should have received a copy of the GNU General Public License
+ * version 2 along with this program; If not, see
+ * http://www.sun.com/software/products/lustre/docs/GPLv2.pdf
+ *
+ * Please contact Sun Microsystems, Inc., 4150 Network Circle, Santa Clara,
+ * CA 95054 USA or visit www.sun.com if you need additional information or
+ * have any questions.
+ *
+ * GPL HEADER END
+ */
+/*
+ * Copyright  2008 Sun Microsystems, Inc. All rights reserved
+ * Use is subject to license terms.
+ */
+/*
+ * This file is part of Lustre, http://www.lustre.org/
+ * Lustre is a trademark of Sun Microsystems, Inc.
+ */
+
+/* -*- mode: c; c-basic-offset: 8; indent-tabs-mode: nil; -*-
+ * vim:expandtab:shiftwidth=8:tabstop=8:
  */
 #ifndef __LIBCFS_LIBCFS_H__
 #define __LIBCFS_LIBCFS_H__
@@ -8,8 +44,10 @@
 #define __attribute__(x)
 #endif
 
-#if defined(__linux__) || defined(__APPLE__)
+#if defined(__linux__)
 #include <libcfs/linux/libcfs.h>
+#elif defined(__APPLE__)
+#include <libcfs/darwin/libcfs.h>
 #elif defined(__WINNT__)
 #include <libcfs/winnt/libcfs.h>
 #else
@@ -19,10 +57,14 @@
 #include "curproc.h"
 
 #ifndef __KERNEL__
-#include <stdio.h>
 #include <stddef.h>
+#include <stdio.h>
+
+#include "psc_util/cdefs.h"
+#include "psc_util/log.h"
 #endif
 
+/* Controlled via configure key */
 #define LIBCFS_DEBUG
 
 #ifndef offsetof
@@ -42,7 +84,13 @@
 #define container_of0(ptr, type, member)                        \
 ({                                                              \
         typeof(ptr) __ptr = (ptr);                              \
-        __ptr ? container_of(__ptr, type, member) : NULL;       \
+        type       *__res;                                      \
+                                                                \
+        if (unlikely(IS_ERR(__ptr) || __ptr == NULL))           \
+                __res = (type *)__ptr;                          \
+        else                                                    \
+                __res = container_of(__ptr, type, member);      \
+        __res;                                                  \
 })
 
 /*
@@ -66,14 +114,18 @@ extern unsigned int libcfs_stack;
 extern unsigned int libcfs_debug;
 extern unsigned int libcfs_printk;
 extern unsigned int libcfs_console_ratelimit;
+extern cfs_duration_t libcfs_console_max_delay;
+extern cfs_duration_t libcfs_console_min_delay;
+extern unsigned int libcfs_console_backoff;
 extern unsigned int libcfs_debug_binary;
-extern char debug_file_path[1024];
+extern char debug_file_path_arr[1024];
 
 int libcfs_debug_mask2str(char *str, int size, int mask, int is_subsys);
 int libcfs_debug_str2mask(int *mask, const char *str, int is_subsys);
 
 /* Has there been an LBUG? */
 extern unsigned int libcfs_catastrophe;
+extern unsigned int libcfs_panic_on_lbug;
 
 /*
  * struct ptldebug_header is defined in libcfs/<os>/libcfs.h
@@ -92,7 +144,7 @@ extern unsigned int libcfs_catastrophe;
 #define S_LOG         0x00000040
 #define S_LLITE       0x00000080
 #define S_RPC         0x00000100
-/* unused */
+#define S_MGMT        0x00000200
 #define S_LNET        0x00000400
 #define S_LND         0x00000800 /* ALL LNDs */
 #define S_PINGER      0x00001000
@@ -101,7 +153,7 @@ extern unsigned int libcfs_catastrophe;
 #define S_ECHO        0x00008000
 #define S_LDLM        0x00010000
 #define S_LOV         0x00020000
-/* unused */
+#define S_LQUOTA      0x00040000
 /* unused */
 /* unused */
 /* unused */
@@ -118,7 +170,7 @@ extern unsigned int libcfs_catastrophe;
 /* keep these in sync with lnet/utils/debug.c and lnet/libcfs/debug.c */
 
 /* Debugging masks (32 bits, non-overlapping) */
-/* keep these in sync with lnet/utils/debug.c */
+/* keep these in sync with lnet/utils/debug.c and lnet/libcfs/debug.c */
 #define D_TRACE       0x00000001 /* ENTRY/EXIT markers */
 #define D_INODE       0x00000002
 #define D_SUPER       0x00000004
@@ -133,7 +185,7 @@ extern unsigned int libcfs_catastrophe;
 #define D_BUFFS       0x00000800
 #define D_OTHER       0x00001000
 #define D_DENTRY      0x00002000
-/* unused: keep in sync with lnet/utils/debug.c */
+#define D_NETTRACE    0x00004000
 #define D_PAGE        0x00008000 /* bulk page handling */
 #define D_DLMTRACE    0x00010000
 #define D_ERROR       0x00020000 /* CERROR(...) == CDEBUG (D_ERROR, ...) */
@@ -147,7 +199,7 @@ extern unsigned int libcfs_catastrophe;
 #define D_CONSOLE     0x02000000
 #define D_QUOTA       0x04000000
 #define D_SEC         0x08000000
-/* keep these in sync with lnet/utils/debug.c */
+/* keep these in sync with lnet/{utils,libcfs}/debug.c */
 
 #define D_CANTMASK   (D_ERROR | D_EMERG | D_WARNING | D_CONSOLE)
 
@@ -155,18 +207,22 @@ extern unsigned int libcfs_catastrophe;
 # define DEBUG_SUBSYSTEM S_UNDEFINED
 #endif
 
-#define CDEBUG_MAX_LIMIT 600
+#define CDEBUG_DEFAULT_MAX_DELAY (cfs_time_seconds(600))         /* jiffies */
+#define CDEBUG_DEFAULT_MIN_DELAY ((cfs_time_seconds(1) + 1) / 2) /* jiffies */
+#define CDEBUG_DEFAULT_BACKOFF   2
 typedef struct {
         cfs_time_t      cdls_next;
         int             cdls_count;
         cfs_duration_t  cdls_delay;
 } cfs_debug_limit_state_t;
 
-#define CDEBUG_ENABLED (1)
+/* Controlled via configure key */
+#define CDEBUG_ENABLED
 
-#ifdef __KERNEL__
+#if defined(__KERNEL__) || (defined(__arch_lib__) && !defined(LUSTRE_UTILS))
+#error "kernel"
 
-#if CDEBUG_ENABLED
+#ifdef CDEBUG_ENABLED
 #define __CDEBUG(cdls, mask, format, a...)                              \
 do {                                                                    \
         CHECK_STACK();                                                  \
@@ -191,24 +247,12 @@ do {                                            \
 #else /* CDEBUG_ENABLED */
 #define CDEBUG(mask, format, a...) (void)(0)
 #define CDEBUG_LIMIT(mask, format, a...) (void)(0)
+#warning "CDEBUG IS DISABLED. THIS SHOULD NEVER BE DONE FOR PRODUCTION!"
 #endif
-
-#elif defined(__arch_lib__) && !defined(LUSTRE_UTILS)
-
-#define CDEBUG(mask, format, a...)                                      \
-do {                                                                    \
-        if (((mask) & D_CANTMASK) != 0 ||                               \
-            ((libcfs_debug & (mask)) != 0 &&                            \
-             (libcfs_subsystem_debug & DEBUG_SUBSYSTEM) != 0))          \
-                libcfs_debug_msg(NULL, DEBUG_SUBSYSTEM, mask,           \
-                                 __FILE__, __FUNCTION__, __LINE__,      \
-                                 format, ## a);                         \
-} while (0)
-
-#define CDEBUG_LIMIT CDEBUG
 
 #else
 
+#if 0
 #ifndef CDEBUG
 #define CDEBUG(mask, format, a...)                                      \
 do {                                                                    \
@@ -217,10 +261,18 @@ do {                                                                    \
                         __FILE__, __LINE__, __FUNCTION__, ## a);        \
 } while (0)
 #endif
+#endif
 
 #define CDEBUG_LIMIT CDEBUG
 
 #endif /* !__KERNEL__ */
+
+/*
+ * Lustre Error Checksum: calculates checksum
+ * of Hex number by XORing each bit.
+ */
+#define LERRCHKSUM(hexnum) (((hexnum) & 0xf) ^ ((hexnum) >> 4 & 0xf) ^ \
+                           ((hexnum) >> 8 & 0xf))
 
 #define CWARN(format, a...)          CDEBUG_LIMIT(D_WARNING, format, ## a)
 #define CERROR(format, a...)         CDEBUG_LIMIT(D_ERROR, format, ## a)
@@ -229,10 +281,13 @@ do {                                                                    \
 #define LCONSOLE(mask, format, a...) CDEBUG(D_CONSOLE | (mask), format, ## a)
 #define LCONSOLE_INFO(format, a...)  CDEBUG_LIMIT(D_CONSOLE, format, ## a)
 #define LCONSOLE_WARN(format, a...)  CDEBUG_LIMIT(D_CONSOLE | D_WARNING, format, ## a)
-#define LCONSOLE_ERROR(format, a...) CDEBUG_LIMIT(D_CONSOLE | D_ERROR, format, ## a)
+#define LCONSOLE_ERROR_MSG(errnum, format, a...) CDEBUG_LIMIT(D_CONSOLE | D_ERROR, \
+                           "%x-%x: " format, errnum, LERRCHKSUM(errnum),  ## a)
+#define LCONSOLE_ERROR(format, a...) LCONSOLE_ERROR_MSG(0x00, format, ## a)
+
 #define LCONSOLE_EMERG(format, a...) CDEBUG(D_CONSOLE | D_EMERG, format, ## a)
 
-#if CDEBUG_ENABLED
+#ifdef CDEBUG_ENABLED
 
 #define GOTO(label, rc)                                                 \
 do {                                                                    \
@@ -246,8 +301,10 @@ do {                                                                    \
 #define GOTO(label, rc) do { ((void)(rc)); goto label; } while (0)
 #endif
 
-#define CDEBUG_ENTRY_EXIT (1)
-#if CDEBUG_ENTRY_EXIT
+/* Controlled via configure key */
+#define CDEBUG_ENTRY_EXIT
+
+#ifdef CDEBUG_ENTRY_EXIT
 
 /*
  * if rc == NULL, we need to code as RETURN((void *)NULL), otherwise
@@ -260,6 +317,12 @@ do {                                                                    \
                (long)RETURN__ret, (long)RETURN__ret, (long)RETURN__ret);\
         EXIT_NESTING;                                                   \
         return RETURN__ret;                                             \
+} while (0)
+
+#define RETURN_EXIT                                                     \
+do {                                                                    \
+        EXIT_NESTING;                                                   \
+        return;                                                         \
 } while (0)
 
 #define ENTRY                                                           \
@@ -297,6 +360,16 @@ do {                                                                    \
 
 #include <libcfs/list.h>
 
+/* for_each_possible_cpu is defined newly, the former is
+ * for_each_cpu(eg. sles9 and sles10) b=15878 */
+#ifndef for_each_possible_cpu
+# ifdef for_each_cpu
+#  define for_each_possible_cpu(cpu) for_each_cpu(cpu)
+# else
+#  error for_each_possible_cpu is not supported by kernel!
+# endif
+#endif
+
 struct libcfs_ioctl_data;                       /* forward ref */
 
 struct libcfs_ioctl_handler {
@@ -313,6 +386,7 @@ struct libcfs_ioctl_handler {
 int libcfs_register_ioctl(struct libcfs_ioctl_handler *hand);
 int libcfs_deregister_ioctl(struct libcfs_ioctl_handler *hand);
 
+/* libcfs tcpip */
 int libcfs_ipif_query(char *name, int *up, __u32 *ip, __u32 *mask);
 int libcfs_ipif_enumerate(char ***names);
 void libcfs_ipif_free_enumeration(char **names, int n);
@@ -339,6 +413,7 @@ struct lc_watchdog *lc_watchdog_add(int time,
                                     void *data);
 
 /* Enables a watchdog and resets its timer. */
+void lc_watchdog_touch_ms(struct lc_watchdog *lcw, int timeout_ms);
 void lc_watchdog_touch(struct lc_watchdog *lcw);
 
 /* Disable a watchdog; touch it to restart it. */
@@ -353,7 +428,7 @@ void lc_watchdog_dumplog(pid_t pid, void *data);
 /* __KERNEL__ */
 #endif
 
-/* libcfs tcpip */
+/* need both kernel and user-land acceptor */
 #define LNET_ACCEPTOR_MIN_RESERVED_PORT    512
 #define LNET_ACCEPTOR_MAX_RESERVED_PORT    1023
 
@@ -420,8 +495,8 @@ static inline long cfs_timeval_sub(struct timeval *large, struct timeval *small,
                 (large->tv_sec - small->tv_sec) * ONE_MILLION +
                 (large->tv_usec - small->tv_usec));
         if (result != NULL) {
-                result->tv_usec = r / ONE_MILLION;
-                result->tv_sec = r;
+                result->tv_usec = r % ONE_MILLION;
+                result->tv_sec = r / ONE_MILLION;
         }
         return r;
 }
@@ -459,49 +534,86 @@ struct libcfs_debug_msg_data {
         .msg_line           = (ln)          \
     }
 
+#define libcfs_debug_vmsg2(cdls, ss, mask, file,		\
+	    fn, line, fmt1, args, fmt2, ...)			\
+	do {							\
+		int ___lvl;					\
+								\
+		switch (mask) {					\
+		case D_ERROR:					\
+		case D_NETERROR:				\
+			___lvl = PLL_ERROR;			\
+			break;					\
+		case D_WARNING:					\
+			___lvl = PLL_WARN;			\
+			break;					\
+		case D_NET:					\
+		case D_INFO:					\
+		case D_CONFIG:					\
+		case D_OTHER:					\
+			___lvl = PLL_INFO;			\
+			break;					\
+		case D_RPCTRACE:				\
+		case D_TRACE:					\
+		case D_CONSOLE:					\
+			___lvl = PLL_TRACE;			\
+			break;					\
+		default:					\
+			abort();				\
+		}						\
+								\
+		if (fmt1)					\
+			psclogv(file, fn, line, PSS_LNET,	\
+			    ___lvl, 0, fmt1, args);		\
+		if (fmt2)					\
+			_psclog(file, fn, line, PSS_LNET,	\
+			    ___lvl, 0, fmt2, ## __VA_ARGS__);	\
+	} while (0)									
 
+#if 0
 extern int libcfs_debug_vmsg2(cfs_debug_limit_state_t *cdls,
                               int subsys, int mask,
-                              const char *file, const char *fn, const int line, 
-                              const char *format1, va_list args, 
-                              const char *format2, ...);
+                              const char *file, const char *fn, const int line,
+                              const char *format1, va_list args,
+                              const char *format2, ...)
+        __attribute__ ((format (printf, 9, 10)));
+#endif
 
-#define libcfs_debug_vmsg(cdls, subsys, mask, file, fn, line, format, args) \
-    libcfs_debug_vmsg2(cdls, subsys, mask, file, fn, line, format, args, NULL, NULL)
+#define libcfs_debug_vmsg(cdls, subsys, mask, file, fn, line, format, args)   \
+    libcfs_debug_vmsg2(cdls, subsys, mask, file, fn,line,format,args,NULL,NULL)
 
-#define libcfs_debug_msg(cdls, subsys, mask, file, fn, line, format, a...) \
-    libcfs_debug_vmsg2(cdls, subsys, mask, file, fn, line, NULL, NULL, format, ##a) 
+#define libcfs_debug_msg(cdls, subsys, mask, file, fn, line, format, a...)    \
+    libcfs_debug_vmsg2(cdls, subsys, mask, file, fn,line,NULL,NULL,format, ##a)
 
-#define cdebug_va(cdls, subsystem, mask, file, func, line, fmt, args)   do {    \
-        CHECK_STACK();                                                          \
-                                                                                \
-        if (((mask) & D_CANTMASK) != 0 ||                                       \
-            ((libcfs_debug & (mask)) != 0 &&                                    \
-             (libcfs_subsystem_debug & (subsystem)) != 0))                      \
-                libcfs_debug_vmsg(cdls, (subsystem), (mask),                    \
-                                  (file), (func), (line), fmt, args);           \
+#define cdebug_va(cdls, mask, file, func, line, fmt, args)      do {          \
+        CHECK_STACK();                                                        \
+                                                                              \
+        if (((mask) & D_CANTMASK) != 0 ||                                     \
+            ((libcfs_debug & (mask)) != 0 &&                                  \
+             (libcfs_subsystem_debug & DEBUG_SUBSYSTEM) != 0))                \
+                libcfs_debug_vmsg(cdls, DEBUG_SUBSYSTEM, (mask),              \
+                                  (file), (func), (line), fmt, args);         \
 } while(0);
 
-#define cdebug(cdls, subsystem, mask, file, func, line, fmt, a...) do {         \
-        CHECK_STACK();                                                          \
-                                                                                \
-        if (((mask) & D_CANTMASK) != 0 ||                                       \
-            ((libcfs_debug & (mask)) != 0 &&                                    \
-             (libcfs_subsystem_debug & (subsystem)) != 0))                      \
-                libcfs_debug_msg(cdls, (subsystem), (mask),                     \
-                                 (file), (func), (line), fmt, ## a);            \
+#define cdebug(cdls, mask, file, func, line, fmt, a...) do {                  \
+        CHECK_STACK();                                                        \
+                                                                              \
+        if (((mask) & D_CANTMASK) != 0 ||                                     \
+            ((libcfs_debug & (mask)) != 0 &&                                  \
+             (libcfs_subsystem_debug & DEBUG_SUBSYSTEM) != 0))                \
+                libcfs_debug_msg(cdls, DEBUG_SUBSYSTEM, (mask),               \
+                                 (file), (func), (line), fmt, ## a);          \
 } while(0);
 
 extern void libcfs_assertion_failed(const char *expr, const char *file,
                                     const char *fn, const int line);
 
-static inline void cfs_slow_warning(cfs_time_t now, int seconds, char *msg)
+static inline void cfs_slow_warning(cfs_time_t now, __unusedx int seconds, char *msg)
 {
-        seconds = 0;
         if (cfs_time_after(cfs_time_current(),
                            cfs_time_add(now, cfs_time_seconds(15))))
-                CERROR("slow %s %lu sec\n", msg,
-                       cfs_duration_sec(cfs_time_sub(cfs_time_current(), now)));
+                CERROR("slow %s "CFS_TIME_T" sec\n", msg,
+                       cfs_duration_sec(cfs_time_sub(cfs_time_current(),now)));
 }
 
 /*
@@ -509,10 +621,10 @@ static inline void cfs_slow_warning(cfs_time_t now, int seconds, char *msg)
  */
 static inline void cfs_fs_timeval(struct timeval *tv)
 {
-        cfs_fs_time_t t;
+        cfs_fs_time_t time;
 
-        cfs_fs_time_current(&t);
-        cfs_fs_time_usec(&t, tv);
+        cfs_fs_time_current(&time);
+        cfs_fs_time_usec(&time, tv);
 }
 
 /*
@@ -531,18 +643,18 @@ static inline cfs_duration_t cfs_timeout_cap(cfs_duration_t timeout)
  */
 enum cfs_alloc_flags {
         /* allocation is not allowed to block */
-        CFS_ALLOC_ATOMIC = (1 << 0),
+        CFS_ALLOC_ATOMIC = 0x1,
         /* allocation is allowed to block */
-        CFS_ALLOC_WAIT = (1 << 1),
+        CFS_ALLOC_WAIT   = 0x2,
         /* allocation should return zeroed memory */
-        CFS_ALLOC_ZERO   = (1 << 2),
+        CFS_ALLOC_ZERO   = 0x4,
         /* allocation is allowed to call file-system code to free/clean
          * memory */
-        CFS_ALLOC_FS     = (1 << 3),
+        CFS_ALLOC_FS     = 0x8,
         /* allocation is allowed to do io to free/clean memory */
-        CFS_ALLOC_IO     = (1 << 4),
+        CFS_ALLOC_IO     = 0x10,
         /* don't report allocation failure to the console */
-        CFS_ALLOC_NOWARN = (1 << 5),
+        CFS_ALLOC_NOWARN = 0x20,
         /* standard allocator flag combination */
         CFS_ALLOC_STD    = CFS_ALLOC_FS | CFS_ALLOC_IO,
         CFS_ALLOC_USER   = CFS_ALLOC_WAIT | CFS_ALLOC_FS | CFS_ALLOC_IO,
@@ -552,39 +664,9 @@ enum cfs_alloc_flags {
 enum cfs_alloc_page_flags {
         /* allow to return page beyond KVM. It has to be mapped into KVM by
          * cfs_page_map(); */
-        CFS_ALLOC_HIGH   = (1 << 5),
+        CFS_ALLOC_HIGH   = 0x40,
         CFS_ALLOC_HIGHUSER = CFS_ALLOC_WAIT | CFS_ALLOC_FS | CFS_ALLOC_IO | CFS_ALLOC_HIGH,
 };
-
-/*
- * portable UNIX device file identification. (This is not _very_
- * portable. Probably makes no sense for Windows.)
- */
-/*
- * Platform defines
- *
- * cfs_rdev_t
- */
-
-typedef unsigned int cfs_major_nr_t;
-typedef unsigned int cfs_minor_nr_t;
-
-/*
- * Defined by platform.
- */
-cfs_rdev_t     cfs_rdev_build(cfs_major_nr_t major, cfs_minor_nr_t minor);
-cfs_major_nr_t cfs_rdev_major(cfs_rdev_t rdev);
-cfs_minor_nr_t cfs_rdev_minor(cfs_rdev_t rdev);
-
-/*
- * Generic on-wire rdev format.
- */
-
-typedef __u32 cfs_wire_rdev_t;
-
-cfs_wire_rdev_t cfs_wire_rdev_build(cfs_major_nr_t major, cfs_minor_nr_t minor);
-cfs_major_nr_t  cfs_wire_rdev_major(cfs_wire_rdev_t rdev);
-cfs_minor_nr_t  cfs_wire_rdev_minor(cfs_wire_rdev_t rdev);
 
 /*
  * Drop into debugger, if possible. Implementation is provided by platform.
@@ -596,6 +678,7 @@ void cfs_enter_debugger(void);
  * Defined by platform
  */
 void cfs_daemonize(char *str);
+int cfs_daemonize_ctxt(char *str);
 cfs_sigset_t cfs_get_blocked_sigs(void);
 cfs_sigset_t cfs_block_allsigs(void);
 cfs_sigset_t cfs_block_sigs(cfs_sigset_t bits);

@@ -122,8 +122,12 @@ _lc_get(struct psc_listcache *lc, struct timespec *abstime, int flags)
 
 		/* Alert listeners who want to know about exhaustion. */
 		psc_waitq_wakeall(&lc->lc_wq_want);
-		psc_logx(flags & PLCGF_WARN ? PLL_WARN : PLL_NOTICE,
-		    "lc_get(%s:%p): waiting %p", lc->lc_name, lc, abstime);
+		if (abstime)
+			psc_logx(flags & PLCGF_WARN ? PLL_WARN : PLL_NOTICE,
+			    "lc_get(%s:%p): waiting %p", lc->lc_name, lc, abstime);
+		else
+			psc_logx(flags & PLCGF_WARN ? PLL_WARN : PLL_NOTICE,
+			    "lc_get(%s:%p): blocking wait", lc->lc_name, lc);
 		if (abstime) {
 			rc = psc_waitq_timedwait(&lc->lc_wq_empty,
 			    &lc->lc_lock, abstime);

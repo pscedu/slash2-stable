@@ -38,7 +38,6 @@
 
 #include <libcfs/libcfs.h>
 #include <libcfs/kp30.h>
-#include <libcfs/user-tcpip.h>
 
 #include <sys/socket.h>
 #ifdef	HAVE_NETINET_IN_H
@@ -59,6 +58,15 @@
 #ifndef __CYGWIN__
 #include <sys/syscall.h>
 #endif
+
+#include "psc_util/cdefs.h"
+#include "sdp_inet.h"
+
+__weak int
+lnet_get_usesdp(void)
+{
+	return (0);
+}
 
 /*
  * Functions to get network interfaces info
@@ -245,7 +253,7 @@ libcfs_sock_listen (int *sockp, __u32 local_ip, int local_port, int backlog)
         int                option;
         struct sockaddr_in locaddr;
         
-        *sockp = socket(AF_INET, SOCK_STREAM, 0);
+        *sockp = socket(lnet_get_usesdp() ? AF_INET_SDP : AF_INET, SOCK_STREAM, 0);
         if (*sockp < 0) {
                 rc = -errno;
                 CERROR("socket() failed: errno==%d\n", errno);
@@ -262,7 +270,7 @@ libcfs_sock_listen (int *sockp, __u32 local_ip, int local_port, int backlog)
 
         if (local_ip != 0 || local_port != 0) {
                 memset(&locaddr, 0, sizeof(locaddr));
-                locaddr.sin_family = AF_INET;
+                locaddr.sin_family = lnet_get_usesdp() ? AF_INET_SDP : AF_INET;
                 locaddr.sin_port = htons(local_port);
                 locaddr.sin_addr.s_addr = (local_ip == 0) ?
                                           INADDR_ANY : htonl(local_ip);
@@ -366,11 +374,11 @@ libcfs_sock_abort_accept(__u16 port)
         struct sockaddr_in locaddr;
 
         memset(&locaddr, 0, sizeof(locaddr));
-        locaddr.sin_family = AF_INET;
+        locaddr.sin_family = lnet_get_usesdp() ? AF_INET_SDP : AF_INET;
         locaddr.sin_port = htons(port);
         locaddr.sin_addr.s_addr = inet_addr("127.0.0.1");
 
-        fd = socket(AF_INET, SOCK_STREAM, 0);
+        fd = socket(lnet_get_usesdp() ? AF_INET_SDP : AF_INET, SOCK_STREAM, 0);
         if ( fd < 0 ) {
                 CERROR("socket() failed: errno==%d\n", errno);
                 return;
@@ -508,7 +516,7 @@ libcfs_sock_create(int *fdp)
 {
         int rc, fd, option;
 
-        fd = socket(AF_INET, SOCK_STREAM, 0);
+        fd = socket(lnet_get_usesdp() ? AF_INET_SDP : AF_INET, SOCK_STREAM, 0);
         if (fd < 0) {
                 rc = -errno;
                 CERROR ("Cannot create socket\n");
@@ -536,7 +544,7 @@ libcfs_sock_bind_to_port(int fd, __u16 port)
         struct sockaddr_in locaddr;
 
         memset(&locaddr, 0, sizeof(locaddr)); 
-        locaddr.sin_family = AF_INET; 
+        locaddr.sin_family = lnet_get_usesdp() ? AF_INET_SDP : AF_INET; 
         locaddr.sin_addr.s_addr = INADDR_ANY;
         locaddr.sin_port = htons(port);
 
@@ -605,7 +613,7 @@ int libcfs_sock_readv(int fd, const struct iovec *vector, int count)
         int rc;
         
         rc = syscall(SYS_readv, fd, vector, count);
-        
+       
         if (rc == 0) /* EOF */ 
                 return -EIO;
         

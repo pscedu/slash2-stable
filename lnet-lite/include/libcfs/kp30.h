@@ -1,15 +1,52 @@
 /* -*- mode: c; c-basic-offset: 8; indent-tabs-mode: nil; -*-
  * vim:expandtab:shiftwidth=8:tabstop=8:
+ *
+ * GPL HEADER START
+ *
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 only,
+ * as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful, but
+ * WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * General Public License version 2 for more details (a copy is included
+ * in the LICENSE file that accompanied this code).
+ *
+ * You should have received a copy of the GNU General Public License
+ * version 2 along with this program; If not, see
+ * http://www.sun.com/software/products/lustre/docs/GPLv2.pdf
+ *
+ * Please contact Sun Microsystems, Inc., 4150 Network Circle, Santa Clara,
+ * CA 95054 USA or visit www.sun.com if you need additional information or
+ * have any questions.
+ *
+ * GPL HEADER END
  */
+/*
+ * Copyright  2008 Sun Microsystems, Inc. All rights reserved
+ * Use is subject to license terms.
+ */
+/*
+ * This file is part of Lustre, http://www.lustre.org/
+ * Lustre is a trademark of Sun Microsystems, Inc.
+ */
+
 #ifndef __LIBCFS_KP30_H__
 #define __LIBCFS_KP30_H__
 
+/* Controlled via configure key */
 #define LIBCFS_DEBUG
+
 #include <libcfs/libcfs.h>
 #include <lnet/types.h>
 
-#if defined(__linux__) || defined(__APPLE__)
+#if defined(__linux__)
 #include <libcfs/linux/kp30.h>
+#elif defined(__APPLE__)
+#include <libcfs/darwin/kp30.h>
 #elif defined(__WINNT__)
 #include <libcfs/winnt/kp30.h>
 #else
@@ -94,7 +131,9 @@
 #define LASSERTF(cond, fmt...) ((void)(0))
 #endif /* LIBCFS_DEBUG */
 
-int lbug_with_loc(char *file, const char *func, const int line)
+#define KLASSERT(e) LASSERT(e)
+
+void lbug_with_loc(const char *file, const char *func, const int line)
         __attribute__((noreturn));
 
 #define LBUG() lbug_with_loc(__FILE__, __FUNCTION__, __LINE__)
@@ -157,13 +196,13 @@ do {                                                                    \
                        "%s:%d\n", s, __FILE__, __LINE__);               \
                 break;                                                  \
         }                                                               \
+        libcfs_kmem_dec((ptr), s);                                      \
+        CDEBUG(D_MALLOC, "kfreed '" #ptr "': %d at %p (tot %d).\n",     \
+               s, (ptr), atomic_read(&libcfs_kmemory));                 \
         if (unlikely(s > LIBCFS_VMALLOC_SIZE))                          \
                 cfs_free_large(ptr);                                    \
         else                                                            \
                 cfs_free(ptr);                                          \
-        libcfs_kmem_dec((ptr), s);                                      \
-        CDEBUG(D_MALLOC, "kfreed '" #ptr "': %d at %p (tot %d).\n",     \
-               s, (ptr), atomic_read(&libcfs_kmemory));                 \
 } while (0)
 
 /******************************************************************************/
@@ -182,12 +221,12 @@ do {                                                                    \
 
 void libcfs_debug_dumpstack(cfs_task_t *tsk);
 void libcfs_run_upcall(char **argv);
-void libcfs_run_lbug_upcall(char * file, const char *fn, const int line);
+void libcfs_run_lbug_upcall(const char * file, const char *fn, const int line);
 void libcfs_debug_dumplog(void);
 int libcfs_debug_init(unsigned long bufsize);
 int libcfs_debug_cleanup(void);
 int libcfs_debug_clear_buffer(void);
-int libcfs_debug_mark_buffer(char *text);
+int libcfs_debug_mark_buffer(const char *text);
 
 void libcfs_debug_set_level(unsigned int debug_level);
 
@@ -195,7 +234,7 @@ void libcfs_debug_set_level(unsigned int debug_level);
 # ifdef LIBCFS_DEBUG
 #  undef NDEBUG
 #  include <assert.h>
-#include "psc_util/log.h"
+#  include "psc_util/log.h"
 #  define LASSERT(e)     assert(e)
 #  define LASSERTF(cond, args...)                                              \
 do {                                                                           \
@@ -209,17 +248,18 @@ do {                                                                           \
 #  define LASSERTF(cond, args...) do { } while (0)
 #  define LBUG()   ((void)(0))
 # endif /* LIBCFS_DEBUG */
+# define KLASSERT(e) do { } while (0)
 # define printk(format, args...) printf (format, ## args)
 # ifdef CRAY_XT3                                /* buggy calloc! */
 #  define LIBCFS_ALLOC(ptr, size)               \
    do {                                         \
         (ptr) = malloc(size);                   \
         memset(ptr, 0, size);                   \
-   } while (0);
+   } while (0)
 # else
-#  define LIBCFS_ALLOC(ptr, size) do { (ptr) = calloc(1,size); } while (0);
+#  define LIBCFS_ALLOC(ptr, size) do { (ptr) = calloc(1,size); } while (0)
 # endif
-# define LIBCFS_FREE(a, b) do { free(a); } while (0);
+# define LIBCFS_FREE(a, b) do { free(a); } while (0)
 
 void libcfs_debug_dumplog(void);
 int libcfs_debug_init(unsigned long bufsize);
@@ -257,15 +297,15 @@ int libcfs_debug_cleanup(void);
 int         libcfs_isknown_lnd(int type);
 char       *libcfs_lnd2modname(int type);
 char       *libcfs_lnd2str(int type);
-int         libcfs_str2lnd(char *str);
+int         libcfs_str2lnd(const char *str);
 char       *libcfs_net2str(__u32 net);
 char       *libcfs_nid2str(lnet_nid_t nid);
-void	    libcfs_nid2str2(lnet_nid_t nid, char []);
-void	    libcfs_id2str2(lnet_process_id_t nid, char []);
-__u32       libcfs_str2net(char *str);
+void        libcfs_nid2str2(lnet_nid_t nid, char []);
+__u32       libcfs_str2net(const char *str);
 lnet_nid_t  libcfs_str2nid(const char *str);
-int         libcfs_str2anynid(lnet_nid_t *nid, char *str);
+int         libcfs_str2anynid(lnet_nid_t *nid, const char *str);
 char       *libcfs_id2str(lnet_process_id_t id);
+void        libcfs_id2str2(lnet_process_id_t id, char []);
 void        libcfs_setnet0alias(int type);
 
 /* how an LNET NID encodes net:address */
@@ -544,6 +584,7 @@ extern int libcfs_ioctl_popdata(void *arg, void *buf, int size);
 #define IOC_LIBCFS_TESTPROTOCOMPAT         _IOWR('e', 60, IOCTL_LIBCFS_TYPE)
 #define IOC_LIBCFS_PING                    _IOWR('e', 61, IOCTL_LIBCFS_TYPE)
 #define IOC_LIBCFS_DEBUG_PEER              _IOWR('e', 62, IOCTL_LIBCFS_TYPE)
+#define IOC_LIBCFS_LNETST                  _IOWR('e', 63, IOCTL_LIBCFS_TYPE)
 /* lnd ioctls */
 #define IOC_LIBCFS_REGISTER_MYNID          _IOWR('e', 70, IOCTL_LIBCFS_TYPE)
 #define IOC_LIBCFS_CLOSE_CONNECTION        _IOWR('e', 71, IOCTL_LIBCFS_TYPE)

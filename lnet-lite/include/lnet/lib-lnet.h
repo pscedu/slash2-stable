@@ -1,7 +1,39 @@
 /* -*- mode: c; c-basic-offset: 8; indent-tabs-mode: nil; -*-
  * vim:expandtab:shiftwidth=8:tabstop=8:
  *
- * lib-lnet.h
+ * GPL HEADER START
+ *
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 only,
+ * as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful, but
+ * WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * General Public License version 2 for more details (a copy is included
+ * in the LICENSE file that accompanied this code).
+ *
+ * You should have received a copy of the GNU General Public License
+ * version 2 along with this program; If not, see
+ * http://www.sun.com/software/products/lustre/docs/GPLv2.pdf
+ *
+ * Please contact Sun Microsystems, Inc., 4150 Network Circle, Santa Clara,
+ * CA 95054 USA or visit www.sun.com if you need additional information or
+ * have any questions.
+ *
+ * GPL HEADER END
+ */
+/*
+ * Copyright  2008 Sun Microsystems, Inc. All rights reserved
+ * Use is subject to license terms.
+ */
+/*
+ * This file is part of Lustre, http://www.lustre.org/
+ * Lustre is a trademark of Sun Microsystems, Inc.
+ *
+ * lnet/include/lnet/lib-lnet.h
  *
  * Top level include for library side routines
  */
@@ -9,8 +41,10 @@
 #ifndef __LNET_LIB_LNET_H__
 #define __LNET_LIB_LNET_H__
 
-#if defined(__linux__) || defined(__APPLE__)
+#if defined(__linux__)
 #include <lnet/linux/lib-lnet.h>
+#elif defined(__APPLE__)
+#include <lnet/darwin/lib-lnet.h>
 #elif defined(__WINNT__)
 #include <lnet/winnt/lib-lnet.h>
 #else
@@ -22,9 +56,7 @@
 #include <lnet/lnet.h>
 #include <lnet/lib-types.h>
 
-#if !defined(_IOWR)
-#include <lustre/ioctl.h>
-#endif
+#include "psc_util/cdefs.h"
 
 extern lnet_t  the_lnet;                        /* THE network */
 
@@ -64,7 +96,7 @@ static inline int lnet_md_unlinkable (lnet_libmd_t *md)
 #define LNET_MUTEX_DOWN(m) mutex_down(m)
 #define LNET_MUTEX_UP(m)   mutex_up(m)
 #else
-# if !HAVE_LIBPTHREAD
+# ifndef HAVE_LIBPTHREAD
 #define LNET_SINGLE_THREADED_LOCK(l)            \
 do {                                            \
         LASSERT ((l) == 0);                     \
@@ -151,6 +183,9 @@ lnet_md_alloc (__unusedx lnet_md_t *umd)
         LNET_LOCK();
         md = (lnet_libmd_t *)lnet_freelist_alloc(&the_lnet.ln_free_mds);
         LNET_UNLOCK();
+
+        if (md != NULL)
+                CFS_INIT_LIST_HEAD(&md->md_list);
 
         return (md);
 }
@@ -252,6 +287,7 @@ lnet_md_alloc (lnet_md_t *umd)
                 /* Set here in case of early free */
                 md->md_options = umd->options;
                 md->md_niov = niov;
+                CFS_INIT_LIST_HEAD(&md->md_list);
         }
         
         return (md);
@@ -521,8 +557,6 @@ lnet_set_msg_uid(lnet_ni_t *ni, lnet_msg_t *msg, lnet_uid_t uid)
 
 extern lnet_ni_t *lnet_nid2ni_locked (lnet_nid_t nid);
 extern lnet_ni_t *lnet_net2ni_locked (__u32 net);
-extern int        lnet_localnids_get (lnet_nid_t *nids, size_t max);
-
 static inline lnet_ni_t *
 lnet_net2ni (__u32 net) 
 {
@@ -552,6 +586,7 @@ lnet_remotenet_t *lnet_find_net_locked (__u32 net);
 int lnet_islocalnid(lnet_nid_t nid);
 int lnet_islocalnet(__u32 net);
 
+void lnet_build_unlink_event(lnet_libmd_t *md, lnet_event_t *ev);
 void lnet_enq_event_locked(lnet_eq_t *eq, lnet_event_t *ev);
 void lnet_prep_send(lnet_msg_t *msg, int type, lnet_process_id_t target,
                     unsigned int offset, unsigned int len);
@@ -660,6 +695,8 @@ int lnet_acceptor_port(void);
 #ifdef HAVE_LIBPTHREAD
 int lnet_count_acceptor_nis(lnet_ni_t **first_ni);
 int lnet_acceptor_port(void);
+int lnet_connector_port(void);
+int lnet_get_usesdp(void);
 #endif
 
 int lnet_acceptor_start(void);

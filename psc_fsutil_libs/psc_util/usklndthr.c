@@ -6,15 +6,17 @@
 #include "psc_util/thread.h"
 #include "psc_util/usklndthr.h"
 
+int usocklnd_ninstances(void);
+
 void *
 psc_usklndthr_begin(void *arg)
 {
-	struct psc_thread *thr;
+	struct psc_thread *thr = arg;
 	struct psc_usklndthr *put;
 
-	thr = arg;
 	put = thr->pscthr_private;
-	return (put->put_startf(put->put_arg));
+	put->put_startf(put->put_arg);
+	return (NULL);
 }
 
 void
@@ -25,28 +27,26 @@ psc_usklndthr_destroy(void *arg)
 	free(put);
 }
 
-pthread_t
-cfs_create_thread2(void *(*startf)(void *), void *arg)
+int
+cfs_create_thread(cfs_thread_t startf, void *arg, const char *namefmt, ...)
 {
-	int usocklnd_ninstances(void);
+	char name[PSC_THRNAME_MAX];
 	struct psc_usklndthr *put;
 	struct psc_thread *pt;
+	va_list ap;
 
 	pt = PSCALLOC(sizeof(*pt));
 	put = PSCALLOC(sizeof(*put));
 	put->put_startf = startf;
 	put->put_arg = arg;
-	_pscthr_init(pt, psc_usklndthr_get_type(put), psc_usklndthr_begin, put,
-	    PTF_FREE, psc_usklndthr_destroy, psc_usklndthr_get_name(put),
-	    usocklnd_ninstances() - 1);
-	pt->pscthr_private = arg;
-	return (pt->pscthr_pthread);
-}
 
-int
-cfs_create_thread(void *(*startf)(void *), void *arg)
-{
-	cfs_create_thread2(startf, arg);
+	va_start(ap, namefmt);
+	psc_usklndthr_get_namev(name, namefmt, ap);
+	va_end(ap);
+
+	_pscthr_init(pt, psc_usklndthr_get_type(namefmt),
+	    psc_usklndthr_begin, put, PTF_FREE,
+	    psc_usklndthr_destroy, name, usocklnd_ninstances());
 	return (0);
 }
 

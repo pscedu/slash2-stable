@@ -1,26 +1,41 @@
 /* -*- mode: c; c-basic-offset: 8; indent-tabs-mode: nil; -*-
  * vim:expandtab:shiftwidth=8:tabstop=8:
  *
- * Copyright (C) 2004 Cluster File Systems, Inc.
+ * GPL HEADER START
+ *
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 only,
+ * as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful, but
+ * WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * General Public License version 2 for more details (a copy is included
+ * in the LICENSE file that accompanied this code).
+ *
+ * You should have received a copy of the GNU General Public License
+ * version 2 along with this program; If not, see
+ * http://www.sun.com/software/products/lustre/docs/GPLv2.pdf
+ *
+ * Please contact Sun Microsystems, Inc., 4150 Network Circle, Santa Clara,
+ * CA 95054 USA or visit www.sun.com if you need additional information or
+ * have any questions.
+ *
+ * GPL HEADER END
+ */
+/*
+ * Copyright  2008 Sun Microsystems, Inc. All rights reserved
+ * Use is subject to license terms.
+ */
+/*
+ * This file is part of Lustre, http://www.lustre.org/
+ * Lustre is a trademark of Sun Microsystems, Inc.
+ *
+ * lnet/include/libcfs/user-prim.h
+ *
  * Author: Nikita Danilov <nikita@clusterfs.com>
- *
- * This file is part of Lustre, http://www.lustre.org.
- *
- * Lustre is free software; you can redistribute it and/or modify it under the
- * terms of version 2 of the GNU General Public License as published by the
- * Free Software Foundation.
- *
- * Lustre is distributed in the hope that it will be useful, but WITHOUT ANY
- * WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
- * FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more
- * details.
- *
- * You should have received a copy of the GNU General Public License along
- * with Lustre; if not, write to the Free Software Foundation, Inc., 675 Mass
- * Ave, Cambridge, MA 02139, USA.
- *
- * Implementation of portable time API for user-level.
- *
  */
 
 #ifndef __LIBCFS_USER_PRIM_H__
@@ -46,6 +61,13 @@
 #include <libcfs/user-time.h>
 #include <signal.h>
 #include <stdlib.h>
+#include <unistd.h>
+
+#ifdef HAVE_LIBPTHREAD
+#include <pthread.h>
+#endif
+
+#include "psc_util/cdefs.h"
 
 /*
  * Wait Queue. No-op implementation.
@@ -61,18 +83,18 @@ typedef struct cfs_waitq {
 } cfs_waitq_t;
 
 void cfs_waitq_init(struct cfs_waitq *waitq);
-void cfs_waitlink_init(struct cfs_waitlink *l);
-void cfs_waitq_add(struct cfs_waitq *waitq, struct cfs_waitlink *l);
-void cfs_waitq_add_exclusive(struct cfs_waitq *waitq,
-                             struct cfs_waitlink *l);
-void cfs_waitq_forward(struct cfs_waitlink *l, struct cfs_waitq *waitq);
-void cfs_waitq_del(struct cfs_waitq *waitq, struct cfs_waitlink *l);
+void cfs_waitlink_init(struct cfs_waitlink *link);
+void cfs_waitq_add(struct cfs_waitq *waitq, struct cfs_waitlink *link);
+void cfs_waitq_add_exclusive(struct cfs_waitq *waitq, 
+                             struct cfs_waitlink *link);
+void cfs_waitq_forward(struct cfs_waitlink *link, struct cfs_waitq *waitq);
+void cfs_waitq_del(struct cfs_waitq *waitq, struct cfs_waitlink *link);
 int  cfs_waitq_active(struct cfs_waitq *waitq);
 void cfs_waitq_signal(struct cfs_waitq *waitq);
 void cfs_waitq_signal_nr(struct cfs_waitq *waitq, int nr);
-void cfs_waitq_broadcast(struct cfs_waitq *waitq, int state);
-void cfs_waitq_wait(struct cfs_waitlink *l);
-int64_t cfs_waitq_timedwait(struct cfs_waitlink *l, int state, int64_t timeout);
+void cfs_waitq_broadcast(struct cfs_waitq *waitq);
+void cfs_waitq_wait(struct cfs_waitlink *link, int state);
+int64_t cfs_waitq_timedwait(struct cfs_waitlink *link, int state, int64_t timeout);
 #define cfs_schedule_timeout(s, t)              \
         do {                                    \
                 cfs_waitlink_t    l;            \
@@ -101,13 +123,27 @@ struct page {
 #ifdef LIBLUSTRE_HANDLE_UNALIGNED_PAGE
         int     _managed;
 #endif
+        struct list_head _node;
 };
 
 typedef struct page cfs_page_t;
 
-#define CFS_PAGE_SIZE                   PAGE_CACHE_SIZE
-#define CFS_PAGE_SHIFT                  PAGE_CACHE_SHIFT
-#define CFS_PAGE_MASK                   PAGE_CACHE_MASK
+/* ppc64 defined PAGE_SIZE but without PAGE_SHIFT
+ */
+#if !defined(PAGE_SHIFT) || !defined(PAGE_SIZE)
+
+/* 4K */
+#define CFS_PAGE_SHIFT 12
+#define CFS_PAGE_SIZE (1UL << CFS_PAGE_SHIFT)
+#define CFS_PAGE_MASK (~((__u64)CFS_PAGE_SIZE-1))
+
+#else
+
+#define CFS_PAGE_SIZE                   PAGE_SIZE
+#define CFS_PAGE_SHIFT                  PAGE_SHIFT
+#define CFS_PAGE_MASK                   (~((__u64)CFS_PAGE_SIZE-1))
+
+#endif
 
 cfs_page_t *cfs_alloc_page(unsigned int flags);
 void cfs_free_page(cfs_page_t *pg);
@@ -118,6 +154,8 @@ void cfs_kunmap(cfs_page_t *pg);
 #define cfs_get_page(p)			__I_should_not_be_called__(at_all)
 #define cfs_page_count(p)		__I_should_not_be_called__(at_all)
 #define cfs_page_index(p)               ((p)->index)
+#define cfs_page_pin(page) do {} while (0)
+#define cfs_page_unpin(page) do {} while (0)
 
 /*
  * Memory allocator
@@ -211,11 +249,9 @@ static inline void cfs_timer_arm(cfs_timer_t *l, int thetime)
         l->expires = thetime;
 }
 
-#if 0
-static inline void cfs_timer_disarm(cfs_timer_t *l)
+static inline void cfs_timer_disarm(__unusedx cfs_timer_t *l)
 {
 }
-#endif
 
 static inline long cfs_timer_deadline(cfs_timer_t *l)
 {
@@ -238,52 +274,44 @@ cfs_time_t cfs_timer_deadline(struct cfs_timer *t);
 static inline void cfs_pause(cfs_duration_t d)
 {
         struct timespec s;
-
+        
         cfs_duration_nsec(d, &s);
         nanosleep(&s, NULL);
 }
 
 typedef void cfs_psdev_t;
 
-#if 0
 static inline int cfs_psdev_register(__unusedx cfs_psdev_t *foo)
 {
         return 0;
 }
 
-static inline int cfs_psdev_deregister(cfs_psdev_t  *foo)
+static inline int cfs_psdev_deregister(__unusedx cfs_psdev_t *foo)
 {
         return 0;
 }
-#endif
 
-/*
- * portable UNIX device file identification.
- */
-
-typedef unsigned int cfs_rdev_t;
-// typedef unsigned long long kdev_t;
-/*
- */
 #define cfs_lock_kernel()               do {} while (0)
 #define cfs_sigfillset(l) do {}         while (0)
 #define cfs_recalc_sigpending(l)        do {} while (0)
 #define cfs_kernel_thread(l,m,n)        LBUG()
 
-// static inline void local_irq_save(unsigned long flag) {return;}
-// static inline void local_irq_restore(unsigned long flag) {return;}
-
 #ifdef HAVE_LIBPTHREAD
-int cfs_create_thread(void *(*)(void *), void *);
+typedef int (*cfs_thread_t)(void *);
+int cfs_create_thread(cfs_thread_t func, void *arg, const char *, ...);
 #else
-#define cfs_create_thread(l,m) LBUG()
+#define cfs_create_thread(l,m,n,...) LBUG()
 #endif
 
 int cfs_parse_int_tunable(int *value, char *name);
+uid_t cfs_curproc_uid(void);
 
 #define LIBCFS_REALLOC(ptr, size) realloc(ptr, size)
 
 #define cfs_online_cpus() sysconf(_SC_NPROCESSORS_ONLN)
+
+// static inline void local_irq_save(unsigned long flag) {return;}
+// static inline void local_irq_restore(unsigned long flag) {return;}
 
 enum {
         CFS_STACK_TRACE_DEPTH = 16
@@ -303,7 +331,6 @@ struct cfs_stack_trace {
                 (a) = (a) / (b);        \
                 (remainder);            \
         })
-
 
 /* !__KERNEL__ */
 #endif

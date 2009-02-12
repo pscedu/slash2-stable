@@ -377,7 +377,7 @@ usocklnd_activeconn_hellorecv(usock_conn_t *conn)
         peer->up_last_alive = cfs_time_current();
         
         /* peer says that we lost the race */
-        if (hello->kshm_ctype == SOCKLND_CONN_NONE) {
+        if (hello->kshm_ctype == (__u32)SOCKLND_CONN_NONE) {
                 /* Start new active conn, relink txs and zc_acks from
                  * the conn to new conn, schedule removing the conn.
                  * Actually, we're expecting that a passive conn will
@@ -941,7 +941,7 @@ usocklnd_send_tx(usock_conn_t *conn, usock_tx_t *tx)
                 do { 
                         LASSERT (tx->tx_niov > 0); 
                         
-                        if (nob < iov->iov_len) { 
+                        if ((size_t)nob < iov->iov_len) { 
                                 iov->iov_base = (void *)(((unsigned long)(iov->iov_base)) + nob);
                                 iov->iov_len -= nob; 
                                 break; 
@@ -994,7 +994,7 @@ usocklnd_read_data(usock_conn_t *conn)
                 do { 
                         LASSERT (conn->uc_rx_niov > 0); 
                         
-                        if (nob < iov->iov_len) { 
+                        if ((size_t)nob < iov->iov_len) { 
                                 iov->iov_base = (void *)(((unsigned long)(iov->iov_base)) + nob); 
                                 iov->iov_len -= nob; 
                                 break; 
