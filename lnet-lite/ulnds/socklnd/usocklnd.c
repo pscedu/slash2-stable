@@ -234,6 +234,7 @@ usocklnd_update_tunables()
         if (rc)
                 return rc;
 
+	usock_tuns.ut_cport = lnet_acceptor_port();
         rc = cfs_parse_int_tunable(&usock_tuns.ut_cport,
                                       "USOCK_CPORT");
         if (rc)
