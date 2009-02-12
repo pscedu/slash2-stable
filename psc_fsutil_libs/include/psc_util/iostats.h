@@ -29,7 +29,10 @@ struct iostats {
 	double			ist_erate;
 };
 
+#define iostats_intv_add(ist, amt)	atomic_add((amt), &(ist)->ist_bytes_intv)
+
 void iostats_init(struct iostats *, const char *, ...);
+void iostats_rename(struct iostats *, const char *, ...);
 
 extern struct psc_lockedlist	psc_iostats;
 
