@@ -56,6 +56,8 @@
 #include <libcfs/list.h>
 #include <lnet/types.h>
 
+#include "psc_util/iostats.h"
+
 #define WIRE_ATTR	__attribute__((packed))
 
 /* The wire handle's interface cookie only matches one network interface in
@@ -391,8 +393,8 @@ typedef struct lnet_ni {
 	int		  ni_ninterfaces;
 	struct lnet_ni	**ni_bonded_interfaces;	/* list of if's on this net */
 	int		  ni_slave;
-	void		 *ni_recvstats;		/* iostats */
-	void		 *ni_sendstats;		/* iostats */
+	struct iostats	  ni_recvstats;		
+	struct iostats	  ni_sendstats;	
 } lnet_ni_t;
 
 typedef struct lnet_peer {

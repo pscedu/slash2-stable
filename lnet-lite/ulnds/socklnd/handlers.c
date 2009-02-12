@@ -48,6 +48,8 @@
 #endif
 #endif
 
+#include "psc_util/iostats.h"
+
 int
 usocklnd_notifier_handler(int fd)
 {
@@ -957,6 +959,7 @@ usocklnd_send_tx(usock_conn_t *conn, usock_tx_t *tx)
                 if (nob <= 0) /* write queue is flow-controlled or error */
                         return nob;
                 
+		iostats_intv_add(&conn->uc_ni->ni_sendstats, nob);
                 LASSERT (nob <= tx->tx_resid); 
                 tx->tx_resid -= nob;
                 t = cfs_time_current();
@@ -1009,6 +1012,7 @@ usocklnd_read_data(usock_conn_t *conn)
                         return nob;
                 }
                 
+		iostats_intv_add(&conn->uc_ni->ni_recvstats, nob);
                 LASSERT (nob <= conn->uc_rx_nob_wanted); 
                 conn->uc_rx_nob_wanted -= nob;
                 conn->uc_rx_nob_left -= nob;
