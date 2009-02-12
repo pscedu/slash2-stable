@@ -11,8 +11,8 @@
 #define _PROCBRIDGE_H_
 
 #include <pthread.h>
-#include <bridge.h>
 
+#include <socklnd/bridge.h>
 
 #define NAL_FLAG_RUNNING        1
 #define NAL_FLAG_STOPPING       2
@@ -20,7 +20,6 @@
 
 typedef struct procbridge {
     /* sync between user threads and nal thread */
-    pthread_t t;
     pthread_cond_t cond;
     pthread_mutex_t mutex;
 
@@ -37,7 +36,7 @@ typedef struct nal_init_args {
     bridge           nia_bridge;
 } nal_init_args_t;
 
-extern void *nal_thread(void *);
+int nal_thread(void *);
 
 extern void procbridge_wakeup_nal(procbridge p);
 

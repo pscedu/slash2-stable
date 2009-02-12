@@ -28,17 +28,19 @@
  *  or 'kernel'.
  */
 
-#include <stdlib.h>
-#include <stdio.h>
-#include <stdarg.h>
-#include <unistd.h>
-#include <procbridge.h>
 #include <sys/types.h>
 #include <sys/socket.h>
-#include <netdb.h>
+
 #include <errno.h>
-#include <pqtimer.h>
-#include <dispatch.h>
+#include <netdb.h>
+#include <stdarg.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+
+#include <socklnd/procbridge.h>
+#include <socklnd/pqtimer.h>
+#include <socklnd/dispatch.h>
 
 /* the following functions are stubs to satisfy the nal definition
    without doing anything particularily useful*/
@@ -76,7 +78,7 @@ static void check_stopping(void *z)
  *  We define a limit macro to place a ceiling on limits
  *   for syntactic convenience
  */
-void *nal_thread(void *z)
+int nal_thread(void *z)
 {
     bridge b = (bridge) z;
     procbridge p=b->local;

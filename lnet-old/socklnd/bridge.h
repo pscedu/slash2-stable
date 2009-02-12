@@ -8,7 +8,7 @@
 #ifndef TCPNAL_PROCBRIDGE_H
 #define TCPNAL_PROCBRIDGE_H
 
-#include <dispatch.h>
+#include <socklnd/dispatch.h>
 #include <lnet/lib-lnet.h>
 
 typedef struct bridge {

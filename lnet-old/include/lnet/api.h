@@ -3,6 +3,10 @@
 
 #include <lnet/types.h>
 
+#include <stdlib.h>
+
+#include "psc_util/log.h"
+
 int LNetInit(void);
 void LNetFini(void);
 
@@ -95,5 +99,11 @@ int LNetGet(lnet_nid_t        self,
 	    unsigned int      portal_in, 
 	    __u64             match_bits_in, 
 	    unsigned int      offset_in);
+
+#define lnet_server_mode()					\
+	do {							\
+		if (setenv("TCPLND_SERVER", "1", 1) == -1)	\
+			psc_fatal("setenv");			\
+	} while (0)
 
 #endif

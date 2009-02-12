@@ -6,8 +6,9 @@
  *   This file is part of Portals, http://www.sf.net/projects/sandiaportals/
  */
 
-#include <table.h>
-#include <procbridge.h>
+#include <socklnd/table.h>
+#include <socklnd/procbridge.h>
+
 #include "psc_ds/listcache.h"
 
 typedef struct manager {

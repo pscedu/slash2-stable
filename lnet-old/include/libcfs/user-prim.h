@@ -274,9 +274,10 @@ typedef unsigned int cfs_rdev_t;
 // static inline void local_irq_restore(unsigned long flag) {return;}
 
 #ifdef HAVE_LIBPTHREAD
-int cfs_create_thread(void *(*)(void *), void *);
+typedef int (*cfs_thread_t)(void *);
+int cfs_create_thread(cfs_thread_t func, void *arg, const char *, ...);
 #else
-#define cfs_create_thread(l,m) LBUG()
+#define cfs_create_thread(l,m,n,...) LBUG()
 #endif
 
 int cfs_parse_int_tunable(int *value, char *name);

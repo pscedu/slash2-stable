@@ -1,6 +1,14 @@
 # $Id$
 
+# Uncomment this to enable use of the old LNET.
+#OLD_LNET=1
+
+ifdef OLD_LNET
+LNET_BASE=	${ROOTDIR}/lnet-old
+else
 LNET_BASE=	${ROOTDIR}/lnet-lite
+endif
+
 PFL_BASE?=	${ROOTDIR}/psc_fsutil_libs
 ZFS_BASE=	${ROOTDIR}/zfs/zfs-fuse-0.5.0_slash/src
 MAINMK=		${ROOTDIR}/mk/main.mk

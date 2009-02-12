@@ -1,7 +1,8 @@
 #ifndef DISPATCH_H
 #define DISPATCH_H
 
-#include <pqtimer.h>
+#include <socklnd/pqtimer.h>
+
 /* -*- mode: c; c-basic-offset: 8; indent-tabs-mode: nil; -*-
  * vim:expandtab:shiftwidth=8:tabstop=8:
  *

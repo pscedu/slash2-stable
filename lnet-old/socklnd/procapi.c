@@ -29,31 +29,31 @@
  *  side, this file contains some stubs to satisfy the nal definition.
  */
 
-#include <err.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <unistd.h>
-#include <string.h>
-
 #include <sys/socket.h>               /* for "struct sockaddr" et al  */
 #include <net/if.h>
 #include <sys/ioctl.h>
-
+#include <sys/socket.h>
+#include <netinet/in.h>
+#ifdef HAVE_GETHOSTBYNAME
+# include <sys/utsname.h>
+#endif 
 #if defined(__APPLE__)
 # include <sys/syscall.h>
 #elif !defined(__CYGWIN__)
 # include <syscall.h>
 #endif
-#include <netdb.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <procbridge.h>
-#include <pqtimer.h>
-#include <dispatch.h>
+
+#include <err.h>
 #include <errno.h>
-#ifdef HAVE_GETHOSTBYNAME
-# include <sys/utsname.h>
-#endif
+#include <netdb.h> 
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+
+#include <socklnd/procbridge.h>
+#include <socklnd/pqtimer.h>
+#include <socklnd/dispatch.h>
 
 #if !HAVE_LIBPTHREAD
 # error "This LND requires a multi-threaded runtime"
@@ -265,8 +265,7 @@ procbridge_startup (lnet_ni_t *ni)
             __global_procbridge = p;
 #endif
 
-	    pthread_t cfs_create_thread2(void *(*)(void *), void *);
-	    p->t = cfs_create_thread2(nal_thread, b);
+	    cfs_create_thread(nal_thread, b, "lndthr%d", tcpnal_instances);
     }
 
     do {

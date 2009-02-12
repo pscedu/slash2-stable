@@ -25,36 +25,36 @@
    future use.
 */
 
-#include <stdlib.h>
-#include <pqtimer.h>
-#include <dispatch.h>
-#include <table.h>
-#include <stdio.h>
-#include <stdarg.h>
-#include <string.h>
-#include <unistd.h>
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <netinet/tcp.h>
-#include <lnet/types.h>
-#include <lnet/lib-types.h>
-#include <lnet/socklnd.h>
-#include <libcfs/kp30.h>
-#include <connection.h>
-#include <sendrecv.h>
-#include <pthread.h>
-#include <errno.h>
 #if defined (__APPLE__)
 #include <sys/syscall.h>
 #elif !defined(__CYGWIN__)
 #include <syscall.h>
 #endif
 
-#include "sendrecv.h"
+#include <errno.h>
+#include <pthread.h>
+#include <stdarg.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+
+#include <lnet/types.h>
+#include <lnet/lib-types.h>
+#include <lnet/socklnd.h>
+#include <libcfs/kp30.h>
+
+#include <socklnd/pqtimer.h>
+#include <socklnd/dispatch.h>
+#include <socklnd/table.h>
+#include <socklnd/connection.h>
+#include <socklnd/sendrecv.h>
 
 #include <sdp_inet.h>
-int tcpnal_usesdp = 0;
 
 /* tunables (via environment) */
 int tcpnal_acceptor_port = 988;
@@ -64,8 +64,21 @@ int tcpnal_nagle         = 0;
 int tcpnal_server        = 0;
 int tcpnal_maxsendkb	 = 1024;
 int tcpnal_portinc	 = 0;
+int tcpnal_usesdp = 0; 
 
 #define HELLO_TIMEOUT 5
+
+int
+usocklnd_get_usesdp(void)
+{
+	return (tcpnal_usesdp);
+}
+
+int
+lnet_connector_port(void)
+{
+	return (tcpnal_connector_port);
+}
 
 int
 tcpnal_env_param (char *name, int *val)

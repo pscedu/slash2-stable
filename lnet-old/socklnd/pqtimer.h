@@ -27,6 +27,8 @@ void initialize_timer(void (*block)(when, void **arg));
 void timer_fire(void);
 void register_thunk(void (*f)(void *),void *a);
 
+#ifndef HZ
 #define HZ 0x100000000ull
+#endif
 #endif
 

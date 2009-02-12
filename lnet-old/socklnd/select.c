@@ -35,17 +35,19 @@
 
 #include <sys/time.h>
 #include <sys/types.h>
-#include <stdlib.h>
 #if defined(__APPLE__)
 #include <sys/syscall.h>
 #else
 #include <syscall.h>
 #endif
-#include <pthread.h>
+
 #include <errno.h>
-#include <pqtimer.h>
-#include <dispatch.h>
-#include <procbridge.h>
+#include <pthread.h>
+#include <stdlib.h>
+
+#include <socklnd/pqtimer.h>
+#include <socklnd/dispatch.h>
+#include <socklnd/procbridge.h>
 
 #ifndef __FDS_BITS
 #define __FDS_BITS(set) (set)->fds_bits

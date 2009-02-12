@@ -31,12 +31,13 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
-#include <pqtimer.h>
-#include <dispatch.h>
-#include <procbridge.h>
-#include <connection.h>
 #include <errno.h>
-#include <sendrecv.h>
+
+#include <socklnd/pqtimer.h>
+#include <socklnd/dispatch.h>
+#include <socklnd/procbridge.h>
+#include <socklnd/connection.h>
+#include <socklnd/sendrecv.h>
 
 #if defined(__APPLE__)
 #include <sys/syscall.h>
@@ -44,7 +45,6 @@
 #include <syscall.h>
 #endif
 
-/* for __unusedx */
 #include "psc_util/cdefs.h"
 #include "psc_util/iostats.h"
 

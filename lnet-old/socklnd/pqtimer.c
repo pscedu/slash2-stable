@@ -26,9 +26,11 @@
  * be used to provide course-grained time-based callbacks.
  */
 
-#include <pqtimer.h>
 #include <stdlib.h>
 #include <string.h>
+
+#include <socklnd/pqtimer.h>
+
 #include "psc_util/cdefs.h"
 
 struct timer {

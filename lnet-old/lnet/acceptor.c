@@ -773,13 +773,6 @@ lnet_acceptor(void *arg)
         return 0;
 }
 
-void *
-lnet_acceptor_hack(void *arg)
-{
-	lnet_acceptor(arg);
-	return (NULL);
-}
-
 static int skip_waiting_for_completion;
 
 int
@@ -816,7 +809,7 @@ lnet_acceptor_start(void)
                 return 0;
         }
 
-        rc = cfs_create_thread(lnet_acceptor_hack, (void *)secure);
+        rc = cfs_create_thread(lnet_acceptor, (void *)secure, "lnetacthr%d", accept_port);
         if (rc != 0) {
                 CERROR("Can't start acceptor thread: %d\n", rc);
                 cfs_fini_completion(&lnet_acceptor_state.pta_completion);
