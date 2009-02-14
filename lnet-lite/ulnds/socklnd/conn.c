@@ -603,6 +603,10 @@ usocklnd_destroy_peer(usock_peer_t *peer)
 	LNET_LOCK();
 	list_for_each_entry(eq, &the_lnet.ln_active_eqs, eq_list)
 		for (i = 0; i < N_CONN_TYPES; i++) {
+			if (peer->up_conns[i] == NULL ||
+			    peer->up_conns[i]->uc_ni == NULL)
+				continue;
+
 			memset(&ev, 0, sizeof(ev));
 			ev.type = LNET_EVENT_DROP;
 			ev.initiator.nid = peer->up_peerid.nid;
