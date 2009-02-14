@@ -8,8 +8,8 @@
 #include <stdint.h>
 
 #include "psc_ds/list.h"
+#include "psc_ds/lockedlist.h"
 #include "psc_util/atomic.h"
-#include "psc_util/lock.h"
 
 #define IST_NAME_MAX 24
 
@@ -30,6 +30,7 @@ struct iostats {
 };
 
 #define iostats_intv_add(ist, amt)	atomic_add((amt), &(ist)->ist_bytes_intv)
+#define iostats_remove(ist)		pll_remove(&psc_iostats, (ist))
 
 void iostats_init(struct iostats *, const char *, ...);
 void iostats_rename(struct iostats *, const char *, ...);
