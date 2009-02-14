@@ -38,6 +38,8 @@
  * Author: Eric Barton <eeb@clusterfs.com>
  */
 
+#error "no"
+
 #ifndef EXPORT_SYMTAB
 # define EXPORT_SYMTAB
 #endif

@@ -39,6 +39,7 @@
  * Author: Phil Schwan <phil@clusterfs.com>
  */
 
+#error "no"
 
 #define DEBUG_SUBSYSTEM S_LNET
 #define LUSTRE_TRACEFILE_PRIVATE

@@ -33,6 +33,9 @@
  * This file is part of Lustre, http://www.lustre.org/
  * Lustre is a trademark of Sun Microsystems, Inc.
  */
+
+#error "no"
+
 #ifndef __KERNEL__
 
 #include <libcfs/libcfs.h>

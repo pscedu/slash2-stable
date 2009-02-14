@@ -34,6 +34,8 @@
  * Lustre is a trademark of Sun Microsystems, Inc.
  */
 
+#error "no"
+
 #ifndef EXPORT_SYMTAB
 # define EXPORT_SYMTAB
 #endif
