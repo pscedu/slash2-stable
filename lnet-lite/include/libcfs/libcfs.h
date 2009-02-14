@@ -254,7 +254,7 @@ do {                                            \
 
 #define CDEBUG(mask, fmt, ...)						\
 	libcfs_debug_vmsg2(NULL, 0, (mask), __FILE__, __func__,		\
-	    __LINE__, NULL, NULL, fmt, ## __VA_ARGS__)		\
+	    __LINE__, NULL, NULL, fmt, ## __VA_ARGS__)
 
 #define CDEBUG_LIMIT CDEBUG
 
@@ -561,7 +561,7 @@ struct libcfs_debug_msg_data {
 			psclogv((file), (fn), (line), PSS_LNET,	\
 			    ___lvl, 0, (fmt1), (args));		\
 		if (fmt2)					\
-			_psclog((file), (fn), (line), PSS_LNET,	\
+			psclog((file), (fn), (line), PSS_LNET,	\
 			    ___lvl, 0, (fmt2), ## __VA_ARGS__);	\
 	} while (0)									
 

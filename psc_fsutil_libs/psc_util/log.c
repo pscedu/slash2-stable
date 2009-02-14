@@ -164,7 +164,7 @@ psclog_getdata(void)
 }
 
 void
-psclogv(const char *fn, const char *func, int line, int subsys,
+_psclogv(const char *fn, const char *func, int line, int subsys,
     int level, int options, const char *fmt, va_list ap)
 {
 	char prefix[LINE_MAX], emsg[LINE_MAX], umsg[LINE_MAX];
@@ -232,7 +232,7 @@ _psclog(const char *fn, const char *func, int line, int subsys,
 	va_list ap;
 
 	va_start(ap, fmt);
-	psclogv(fn, func, line, subsys, level, options, fmt, ap);
+	_psclogv(fn, func, line, subsys, level, options, fmt, ap);
 	va_end(ap);
 }
 
@@ -243,7 +243,7 @@ _psc_fatal(const char *fn, const char *func, int line, int subsys,
 	va_list ap;
 
 	va_start(ap, fmt);
-	psclogv(fn, func, line, subsys, level, options, fmt, ap);
+	_psclogv(fn, func, line, subsys, level, options, fmt, ap);
 	va_end(ap);
 	abort();
 }

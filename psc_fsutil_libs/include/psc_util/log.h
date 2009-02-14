@@ -41,20 +41,40 @@ struct psclog_data {
 			    (lvl), (flg), (fmt), ## __VA_ARGS__);	\
 	} while (0)
 
-#define psclogvck(ss, lvl, flg, fmt, ap)				\
+#define _psclogvck(ss, lvl, flg, fmt, ap)				\
 	do {								\
 		if (psc_log_getlevel(ss) >= (lvl))			\
-			psclogv(__FILE__, __func__, __LINE__, (ss),	\
+			_psclogv(__FILE__, __func__, __LINE__, (ss),	\
 			    (lvl), (flg), (fmt), (ap));			\
 	} while (0)
 
 #define _psclogft(ss, lvl, flg, fmt, ...)				\
 	_psc_fatal(__FILE__, __func__, __LINE__, (ss),			\
-	    (lvl), (flg), (fmt), ## __VA_ARGS__ )			\
+	    (lvl), (flg), (fmt), ## __VA_ARGS__ )
 
-#define psclogvft(ss, lvl, flg, fmt, ...)				\
+#define _psclogvft(ss, lvl, flg, fmt, ...)				\
 	_psc_fatalv(__FILE__, __func__, __LINE__, (ss),			\
-	    (lvl), (flg), (fmt), (ap))					\
+	    (lvl), (flg), (fmt), (ap))
+
+#define psclog(file, fn, ln, ss, lvl, flg, fmt, ...)			\
+	do {								\
+		if ((lvl) == PLL_FATAL)					\
+			_psc_fatal((file), (fn), (ln), (ss), (lvl),	\
+	    		    (flg), (fmt), ## __VA_ARGS__ );		\
+		else if (psc_log_getlevel(ss) >= (lvl))			\
+			_psclog((file), (fn), (ln), (ss), (lvl),	\
+			    (flg), (fmt), ## __VA_ARGS__);		\
+	} while (0)
+
+#define psclogv(file, fn, ln, ss, lvl, flg, fmt, ap)			\
+	do {								\
+		if ((lvl) == PLL_FATAL)					\
+			_psc_fatalv((file), (fn), (ln), (ss),		\
+			    (lvl), (flg), (fmt), (ap));			\
+		else if (psc_log_getlevel(ss) >= (lvl))			\
+			_psclogv((file), (fn), (ln), (ss),		\
+			    (lvl), (flg), (fmt), (ap));			\
+	} while (0)
 
 /* Current/default/active subsystem. */
 #define psc_fatal(fmt, ...)		_psclogft(PSC_SUBSYS, PLL_FATAL, PLO_ERRNO, (fmt), ## __VA_ARGS__)
@@ -87,34 +107,35 @@ struct psclog_data {
 #define psc_logxs(lvl, ss, fmt, ...)	_psclogck((ss), (lvl), PLO_ERRNO, (fmt), ## __VA_ARGS__)
 
 /* Variable-argument list versions. */
-#define psc_fatalv(fmt, ap)		psclogvft(PSC_SUBSYS, PLL_FATAL, PLO_ERRNO, (fmt), ap)
-#define psc_fatalxv(fmt, ap)		psclogvft(PSC_SUBSYS, PLL_FATAL, 0, (fmt), ap)
-#define psc_errorv(fmt, ap)		psclogvck(PSC_SUBSYS, PLL_ERROR, PLO_ERRNO, (fmt), ap)
-#define psc_errorxv(fmt, ap)		psclogvck(PSC_SUBSYS, PLL_ERROR, 0, (fmt), ap)
-#define psc_warnv(fmt, ap)		psclogvck(PSC_SUBSYS, PLL_WARN, PLO_ERRNO, (fmt), ap)
-#define psc_warnxv(fmt, ap)		psclogvck(PSC_SUBSYS, PLL_WARN, 0, (fmt), ap)
-#define psc_noticev(fmt, ap)		psclogvck(PSC_SUBSYS, PLL_NOTICE, 0, (fmt), ap)
-#define psc_notifyv(fmt, ap)		psclogvck(PSC_SUBSYS, PLL_NOTICE, 0, (fmt), ap)
-#define psc_dbgv(fmt, ap)		psclogvck(PSC_SUBSYS, PLL_DEBUG, 0, (fmt), ap)
-#define psc_infov(fmt, ap)		psclogvck(PSC_SUBSYS, PLL_INFO, 0, (fmt), ap)
-#define psc_tracev(fmt, ap)		psclogvck(PSC_SUBSYS, PLL_TRACE, 0, (fmt), ap)
-#define psc_logv(lvl, fmt, ap)		psclogvck(PSC_SUBSYS, (lvl), 0, (fmt), ap)
-#define psc_logxv(lvl, fmt, ap)		psclogvck(PSC_SUBSYS, (lvl), PLO_ERRNO, (fmt), ap)
+#define psc_fatalv(fmt, ap)		_psclogvft(PSC_SUBSYS, PLL_FATAL, PLO_ERRNO, (fmt), ap)
+#define psc_fatalxv(fmt, ap)		_psclogvft(PSC_SUBSYS, PLL_FATAL, 0, (fmt), ap)
+#define psc_errorv(fmt, ap)		_psclogvck(PSC_SUBSYS, PLL_ERROR, PLO_ERRNO, (fmt), ap)
+#define psc_errorxv(fmt, ap)		_psclogvck(PSC_SUBSYS, PLL_ERROR, 0, (fmt), ap)
+#define psc_warnv(fmt, ap)		_psclogvck(PSC_SUBSYS, PLL_WARN, PLO_ERRNO, (fmt), ap)
+#define psc_warnxv(fmt, ap)		_psclogvck(PSC_SUBSYS, PLL_WARN, 0, (fmt), ap)
+#define psc_noticev(fmt, ap)		_psclogvck(PSC_SUBSYS, PLL_NOTICE, 0, (fmt), ap)
+#define psc_notifyv(fmt, ap)		_psclogvck(PSC_SUBSYS, PLL_NOTICE, 0, (fmt), ap)
+#define psc_dbgv(fmt, ap)		_psclogvck(PSC_SUBSYS, PLL_DEBUG, 0, (fmt), ap)
+#define psc_infov(fmt, ap)		_psclogvck(PSC_SUBSYS, PLL_INFO, 0, (fmt), ap)
+#define psc_tracev(fmt, ap)		_psclogvck(PSC_SUBSYS, PLL_TRACE, 0, (fmt), ap)
+#define psc_logv(lvl, fmt, ap)		_psclogvck(PSC_SUBSYS, (lvl), 0, (fmt), ap)
+#define psc_logxv(lvl, fmt, ap)		_psclogvck(PSC_SUBSYS, (lvl), PLO_ERRNO, (fmt), ap)
 
 /* Variable-argument list versions with subsystem overriding. */
-#define psc_fatalsv(fmt, ap)		psclogvft((ss), PLL_FATAL, PLO_ERRNO, (fmt), (ap))
-#define psc_fatalxsv(fmt, ap)		psclogvft((ss), PLL_FATAL, 0, (fmt), (ap))
-#define psc_errorsv(fmt, ap)		psclogvck((ss), PLL_ERROR, PLO_ERRNO, (fmt), (ap))
-#define psc_errorxsv(fmt, ap)		psclogvck((ss), PLL_ERROR, 0, (fmt), (ap))
-#define psc_warnsv(fmt, ap)		psclogvck((ss), PLL_WARN, PLO_ERRNO, (fmt), (ap))
-#define psc_warnxsv(fmt, ap)		psclogvck((ss), PLL_WARN, 0, (fmt), (ap))
-#define psc_noticesv(fmt, ap)		psclogvck((ss), PLL_NOTICE, 0, (fmt), (ap))
-#define psc_notifysv(fmt, ap)		psclogvck((ss), PLL_NOTICE, 0, (fmt), (ap))
-#define psc_dbgsv(fmt, ap)		psclogvck((ss), PLL_DEBUG, 0, (fmt), (ap))
-#define psc_infosv(fmt, ap)		psclogvck((ss), PLL_INFO, 0, (fmt), (ap))
-#define psc_tracesv(fmt, ap)		psclogvck((ss), PLL_TRACE, 0, (fmt), (ap))
-#define psc_logsv(lvl, ss, fmt, ap)	psclogvck((ss), (lvl), 0, (fmt), (ap))
-#define psc_logxsv(lvl, ss, fmt, ap)	psclogvck((ss), (lvl), PLO_ERRNO, (fmt), (ap))
+#define psc_fatalsv(fmt, ap)		_psclogvft((ss), PLL_FATAL, PLO_ERRNO, (fmt), (ap))
+#define psc_fatalxsv(fmt, ap)		_psclogvft((ss), PLL_FATAL, 0, (fmt), (ap))
+#define psc_errorsv(fmt, ap)		_psclogvck((ss), PLL_ERROR, PLO_ERRNO, (fmt), (ap))
+#define psc_errorxsv(fmt, ap)		_psclogvck((ss), PLL_ERROR, 0, (fmt), (ap))
+#define psc_warnsv(fmt, ap)		_psclogvck((ss), PLL_WARN, PLO_ERRNO, (fmt), (ap))
+#define psc_warnxsv(fmt, ap)		_psclogvck((ss), PLL_WARN, 0, (fmt), (ap))
+#define psc_noticesv(fmt, ap)		_psclogvck((ss), PLL_NOTICE, 0, (fmt), (ap))
+#define psc_notifysv(fmt, ap)		_psclogvck((ss), PLL_NOTICE, 0, (fmt), (ap))
+#define psc_dbgsv(fmt, ap)		_psclogvck((ss), PLL_DEBUG, 0, (fmt), (ap))
+#define psc_infosv(fmt, ap)		_psclogvck((ss), PLL_INFO, 0, (fmt), (ap))
+#define psc_tracesv(fmt, ap)		_psclogvck((ss), PLL_TRACE, 0, (fmt), (ap))
+#define psc_logsv(lvl, ss, fmt, ap)	_psclogvck((ss), (lvl), 0, (fmt), (ap))
+#define psc_logxsv(lvl, ss, fmt, ap)	_psclogvck((ss), (lvl), PLO_ERRNO, (fmt), (ap))
+
 
 #define ENTRY_MARKER			psc_trace("entry_marker")
 #define EXIT_MARKER			psc_trace("exit_marker")
@@ -138,7 +159,7 @@ const char *
 	psc_loglevel_getname(int);
 int	psc_loglevel_getid(const char *);
 
-void psclogv(const char *, const char *, int, int, int, int, const char *,
+void _psclogv(const char *, const char *, int, int, int, int, const char *,
     va_list);
 
 void _psclog(const char *, const char *, int, int, int, int, const char *,
