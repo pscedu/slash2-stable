@@ -3,10 +3,8 @@
 #include <stdarg.h>
 #include <stdio.h>
 
-#include "psc_ds/list.h"
 #include "psc_ds/lockedlist.h"
 #include "psc_util/iostats.h"
-#include "psc_util/lock.h"
 #include "psc_util/log.h"
 
 struct psc_lockedlist psc_iostats =

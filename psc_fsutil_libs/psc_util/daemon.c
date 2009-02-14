@@ -1,23 +1,25 @@
+/* $Id$ */
+
+#include <sys/param.h>
+#include <sys/ioctl.h>
+#include <sys/stat.h>
+
+#include <err.h>
+#include <errno.h>
+#include <fcntl.h>
+#include <signal.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+
+#include "psc_util/daemon.h"
+
 /* a daemon startup routine, by Richard Stevens
  * sever all ties to the launching process
  */
 
-#include <stdlib.h>
-#include <unistd.h>
-#include <signal.h>
-#include <stdio.h>
-#include <fcntl.h>
-#include <sys/ioctl.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <err.h>
-#include <errno.h>
-#include <sys/param.h>
-#include <string.h>
-
-#include "psc_util/daemon.h"
-
-void daemon_start(){
+void daemon_start(void){
 	/* Ignore the terminal stop signals */
 #ifdef SIGTTOU
 	signal(SIGTTOU, SIG_IGN);
@@ -28,7 +30,7 @@ void daemon_start(){
 #ifdef SIGTSTP
 	signal(SIGTSTP, SIG_IGN);
 #endif
-	
+
 	/* If we were not started in the background, fork and
 	 * let the parent exit.  This also guarantees the first child
 	 * is not a process group leader. */
@@ -39,54 +41,52 @@ void daemon_start(){
 		err(errno, "Can't fork first child");
 	} else if (childpid > 0)
 		exit(0); /* parent exits */
-	
-	
+
+
 	/* Disassociate from controlling terminal and process group. */
 	/* Ensure the process can't reacquire a new controlling terminal. */
 	int fd = 0;
-	
+
 #ifdef	SIGTSTP	/* BSD */
-	
+
 	if ( (fd = open("/dev/tty", O_RDWR)) >= 0) {
 		ioctl(fd, TIOCNOTTY, (char *)NULL); /* lose controlling tty */
 		close(fd);
 	}
-	
+
 	if (0!=setpgid(getpid(), getpid())){
 		err(errno, "Can't change process group");
 	}
-	
+
 #else /* System V */
-	
+
 	if (setpgrp() == -1){
 		err(errno, "Can't change process group");
 	}
-	
+
 	signal(SIGHUP, SIG_IGN); /* immune from pgrp leader death */
-	
+
 	if ( (childpid = fork()) < 0){
 		err(errno, "Can't fork second child");
 	} else if (childpid > 0)
 		exit(0); /* first child dies */
-	
+
 	/* begin second child... */
 #endif
-	
-	
+
+
 	/* Move to a "safe" directory   */
 	if (0!=chdir("/tmp")){
 		err(errno, "Failed to CD to /tmp");
 	}
-	
+
 	/* Clear any inherited file mode creation mask. */
 	umask(0);
-	
+
 	/* Close any open files descriptors. */
 	for (fd = 0; fd < NOFILE; fd++)
 		close(fd);
 	errno = 0; /* probably got set to EBADF from a close */
-	
-	return;
 }
 
 void write_pidfile(const char *dname, int id){
@@ -99,7 +99,7 @@ void write_pidfile(const char *dname, int id){
 		snprintf(pidfile_name, MAXPATHLEN, "%s/%s-%d.pid",
 			 PIDFILE_DIR, dname, id);
 	else
-		snprintf(pidfile_name, MAXPATHLEN, "%s/%s.pid", 
+		snprintf(pidfile_name, MAXPATHLEN, "%s/%s.pid",
 			 PIDFILE_DIR, dname);
 
 	if (NULL==(fp=fopen(pidfile_name, "w+")))
@@ -124,7 +124,7 @@ void write_pidfile(const char *dname, int id){
 		/* logically... no need to close this */
 #endif /* LINUX */
 	}
-	
+
 	/* get this PID, and write it to the file */
 	snprintf(pidStr, 10, "%d", getpid());
 	if (0!=fseek(fp, 0, SEEK_SET))
@@ -137,6 +137,4 @@ void write_pidfile(const char *dname, int id){
 		err(errno, "failed to release lock on PID file (%s)",
 		    pidfile_name);
 	fclose(fp);
-	
-	return;
 }
