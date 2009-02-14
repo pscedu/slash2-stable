@@ -1031,6 +1031,8 @@ lnet_shutdown_lndnis (void)
                         CDEBUG(D_LNI, "Removed LNI %s\n",
                                libcfs_nid2str(ni->ni_nid));
 
+		iostats_remove(&ni->ni_sendstats);
+		iostats_remove(&ni->ni_recvstats);
                 LIBCFS_FREE(ni, sizeof(*ni));
 
                 LNET_LOCK();
@@ -1200,6 +1202,8 @@ lnet_startup_lndnis (void)
         while (!list_empty(&nilist)) {
                 ni = list_entry(nilist.next, lnet_ni_t, ni_list);
                 list_del(&ni->ni_list);
+		iostats_remove(&ni->ni_sendstats);
+		iostats_remove(&ni->ni_recvstats);
                 LIBCFS_FREE(ni, sizeof(*ni));
         }
 

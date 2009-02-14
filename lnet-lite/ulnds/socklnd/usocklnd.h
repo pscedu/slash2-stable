@@ -45,6 +45,8 @@
 #include <lnet/lib-lnet.h>
 #include <lnet/socklnd.h>
 
+#include "psc_util/iostats.h"
+
 typedef struct {
         struct list_head tx_list;    /* neccessary to form tx list */
         lnet_msg_t      *tx_lnetmsg; /* lnet message for lnet_finalize() */
@@ -374,3 +376,6 @@ void usocklnd_rx_helloIPs_state_transition(usock_conn_t *conn);
 void usocklnd_rx_lnethdr_state_transition(usock_conn_t *conn);
 void usocklnd_rx_ksmhdr_state_transition(usock_conn_t *conn);
 void usocklnd_rx_skipping_state_transition(usock_conn_t *conn);
+
+extern struct iostats pasv_sendstats;
+extern struct iostats pasv_recvstats;

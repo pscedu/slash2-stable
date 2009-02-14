@@ -47,6 +47,11 @@
 #include <fcntl.h>
 #endif
 
+#include "psc_util/iostats.h"
+
+struct iostats pasv_sendstats;
+struct iostats pasv_recvstats;
+
 lnd_t the_tcplnd = {
         .lnd_type      = SOCKLND,
         .lnd_startup   = usocklnd_startup,
@@ -560,6 +565,9 @@ usocklnd_startup(lnet_ni_t *ni)
 
         ni->ni_maxtxcredits = usock_tuns.ut_txcredits;
         ni->ni_peertxcredits = usock_tuns.ut_peertxcredits;
+
+	iostats_init(&pasv_sendstats, "lnpasvsnd");
+	iostats_init(&pasv_recvstats, "lnpasvrcv");
 
         usock_data.ud_nets_count++;
         return 0;
