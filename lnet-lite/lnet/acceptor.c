@@ -591,7 +591,7 @@ int
 lnet_acceptor_get_tunables()
 {
         int rc;
-        rc = lnet_parse_string_tunable(&accept_type, "LNET_ACCEPT", "secure");
+        rc = lnet_parse_string_tunable(&accept_type, "LNET_ACCEPT", "all");
 
         if (rc != 0)
                 return rc;
