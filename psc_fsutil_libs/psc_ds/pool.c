@@ -276,7 +276,7 @@ psc_pool_resize(struct psc_poolmgr *m)
  *	@initiator->pms_entsize.
  */
 void
-_psc_pool_reap(struct psc_poolset *s, struct psc_poolmaster *initiator, size_t mem)
+_psc_pool_reap(struct psc_poolset *s, struct psc_poolmaster *initiator, __unusedx size_t mem)
 {
 	struct psc_poolmgr *m, *culprit;
 	struct psc_poolmaster *p;
