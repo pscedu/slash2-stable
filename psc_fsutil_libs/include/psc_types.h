@@ -19,6 +19,7 @@ typedef int8_t		s8;
 #define PRIxLNID	PRIx64
 #define PRIxOFF		PRIx64
 #define PRIdOFF		PRId64
+#define _P_U64		__PRI64_PREFIX
 
 typedef	uint64_t psc_crc_t;
 
