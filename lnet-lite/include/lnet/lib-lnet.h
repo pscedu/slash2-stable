@@ -546,7 +546,7 @@ do {                                                                    \
 
 #ifdef CRAY_XT3
 inline static void
-lnet_set_msg_uid(lnet_ni_t *ni, lnet_msg_t *msg, lnet_uid_t uid)
+lnet_set_msg_uid(__unusedx lnet_ni_t *ni, lnet_msg_t *msg, lnet_uid_t uid)
 {
         LASSERT (msg->msg_ev.uid == LNET_UID_ANY);
         msg->msg_ev.uid = uid;

@@ -70,7 +70,7 @@ ptllnd_ptlid2str(ptl_process_id_t id)
 
         char   *str = strs[idx++];
 
-        if (idx >= sizeof(strs)/sizeof(strs[0]))
+        if (idx >= (int)(sizeof(strs)/sizeof(strs[0])))
                 idx = 0;
 
         snprintf(str, sizeof(strs[0]), FMT_PTLID, id.pid, id.nid);
@@ -652,14 +652,14 @@ ptllnd_set_txiov(ptllnd_tx_t *tx,
         }
 
         for (;;) {
-                int temp_offset = offset;
-                int resid = len;
+                unsigned int temp_offset = offset;
+                size_t resid = len;
                 LIBCFS_ALLOC(piov, niov * sizeof(*piov));
                 if (piov == NULL)
                         return -ENOMEM;
 
                 for (npiov = 0;; npiov++) {
-                        LASSERT (npiov < niov);
+                        LASSERT (npiov < (int)niov);
                         LASSERT (iov->iov_len >= temp_offset);
 
                         piov[npiov].iov_base = iov[npiov].iov_base + temp_offset;
@@ -674,7 +674,7 @@ ptllnd_set_txiov(ptllnd_tx_t *tx,
                         temp_offset = 0;
                 }
 
-                if (npiov == niov) {
+                if (npiov == (int)niov) {
                         tx->tx_niov = niov;
                         tx->tx_iov = piov;
                         return 0;
@@ -1056,9 +1056,9 @@ ptllnd_passive_rdma(ptllnd_peer_t *peer, int type, lnet_msg_t *msg,
                        plni->plni_peer_credits + peer->plp_lazy_credits,
                        lnet_msgtyp2str(msg->msg_type),
                        (le32_to_cpu(msg->msg_type) == LNET_MSG_PUT) ? 
-                       le32_to_cpu(msg->msg_hdr.msg.put.ptl_index) :
+                       (int)le32_to_cpu(msg->msg_hdr.msg.put.ptl_index) :
                        (le32_to_cpu(msg->msg_type) == LNET_MSG_GET) ? 
-                       le32_to_cpu(msg->msg_hdr.msg.get.ptl_index) : -1,
+                       (int)le32_to_cpu(msg->msg_hdr.msg.get.ptl_index) : -1,
                        tx);
         ptllnd_post_tx(tx);
         return 0;
@@ -1147,7 +1147,7 @@ ptllnd_active_rdma(ptllnd_peer_t *peer, int type,
 }
 
 int
-ptllnd_send(lnet_ni_t *ni, void *private, lnet_msg_t *msg)
+ptllnd_send(lnet_ni_t *ni, __unusedx void *private, lnet_msg_t *msg)
 {
         ptllnd_ni_t    *plni = ni->ni_data;
         ptllnd_peer_t  *plp;
@@ -1240,9 +1240,9 @@ ptllnd_send(lnet_ni_t *ni, void *private, lnet_msg_t *msg)
                        plni->plni_peer_credits + plp->plp_lazy_credits,
                        lnet_msgtyp2str(msg->msg_type),
                        (le32_to_cpu(msg->msg_type) == LNET_MSG_PUT) ? 
-                       le32_to_cpu(msg->msg_hdr.msg.put.ptl_index) :
+                       (int)le32_to_cpu(msg->msg_hdr.msg.put.ptl_index) :
                        (le32_to_cpu(msg->msg_type) == LNET_MSG_GET) ? 
-                       le32_to_cpu(msg->msg_hdr.msg.get.ptl_index) : -1,
+                       (int)le32_to_cpu(msg->msg_hdr.msg.get.ptl_index) : -1,
                        tx);
         ptllnd_post_tx(tx);
         ptllnd_peer_decref(plp);
@@ -1270,8 +1270,8 @@ ptllnd_rx_done(ptllnd_rx_t *rx)
 }
 
 int
-ptllnd_eager_recv(lnet_ni_t *ni, void *private, lnet_msg_t *msg,
-                  void **new_privatep)
+ptllnd_eager_recv(__unusedx lnet_ni_t *ni, __unusedx void *private,
+    __unusedx lnet_msg_t *msg, __unusedx void **new_privatep)
 {
         /* Shouldn't get here; recvs only block for router buffers */
         LBUG();
@@ -1280,9 +1280,10 @@ ptllnd_eager_recv(lnet_ni_t *ni, void *private, lnet_msg_t *msg,
 
 int
 ptllnd_recv(lnet_ni_t *ni, void *private, lnet_msg_t *msg,
-            int delayed, unsigned int niov,
+            __unusedx int delayed, unsigned int niov,
             struct iovec *iov, lnet_kiov_t *kiov,
-            unsigned int offset, unsigned int mlen, unsigned int rlen)
+            unsigned int offset, unsigned int mlen,
+	    __unusedx unsigned int rlen)
 {
         ptllnd_rx_t    *rx = private;
         int             rc = 0;
@@ -1339,7 +1340,7 @@ ptllnd_parse_request(lnet_ni_t *ni, ptl_process_id_t initiator,
                      kptl_msg_t *msg, unsigned int nob)
 {
         ptllnd_ni_t      *plni = ni->ni_data;
-        const int         basenob = offsetof(kptl_msg_t, ptlm_u);
+        const unsigned    basenob = offsetof(kptl_msg_t, ptlm_u);
         lnet_process_id_t srcid;
         ptllnd_rx_t       rx;
         int               flip;
@@ -1609,7 +1610,7 @@ ptllnd_buf_event (lnet_ni_t *ni, ptl_event_t *event)
                 /* Portals can't force message alignment - someone sending an
                  * odd-length message could misalign subsequent messages */
                 if ((event->mlength & 7) != 0) {
-                        CERROR("Message from %s has odd length %u: "
+                        CERROR("Message from %s has odd length "LPU64": "
                                "probable version incompatibility\n",
                                ptllnd_ptlid2str(event->initiator),
                                event->mlength);

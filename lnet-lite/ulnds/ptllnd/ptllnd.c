@@ -724,7 +724,7 @@ ptllnd_startup (lnet_ni_t *ni)
         }
 
         rc = PtlEQAlloc(plni->plni_nih, plni->plni_eq_size,
-                        PTL_EQ_HANDLER_NONE, &plni->plni_eqh);
+                        0, &plni->plni_eqh);
         if (rc != PTL_OK) {
                 CERROR("PtlEQAlloc failed: %s(%d)\n",
                        ptllnd_errtype2str(rc), rc);

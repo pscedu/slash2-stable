@@ -914,7 +914,11 @@ lnet_islocalnid (lnet_nid_t nid)
 }
 
 int
-lnet_count_acceptor_nis (lnet_ni_t **first_ni)
+lnet_count_acceptor_nis (
+#if !defined(__KERNEL__) && !defined(HAVE_LIBPTHREAD)
+__unusedx
+#endif
+    lnet_ni_t **first_ni)
 {
         /* Return the # of NIs that need the acceptor.  Return the first one in
          * *first_ni so the acceptor can pass it connections "blind" to retain

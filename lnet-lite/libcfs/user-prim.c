@@ -49,6 +49,7 @@
 
 #include <libcfs/libcfs.h>
 #include <libcfs/kp30.h>
+#include <libcfs/user-prim.h>
 
 #include <sys/mman.h>
 #ifndef  __CYGWIN__
@@ -157,11 +158,11 @@ int64_t cfs_waitq_timedwait(struct cfs_waitlink *link, __unusedx int state, __un
         return 0;
 }
 
+#ifdef HAVE_LIBPTHREAD
+
 #if 1
 int cfs_create_thread(cfs_thread_t, void *, const char *, ...);
 #else
-
-#ifdef HAVE_LIBPTHREAD
 
 /*
  * Threads
