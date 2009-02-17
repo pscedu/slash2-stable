@@ -1,4 +1,4 @@
-/* $Id: fmtstr.c 2344 2007-12-07 17:48:02Z yanovich $ */
+/* $Id$ */
 
 #include <sys/types.h>
 #include <sys/socket.h>
