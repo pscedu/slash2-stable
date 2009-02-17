@@ -3,7 +3,7 @@
 #ifndef _PFL_TYPES_H_
 #define _PFL_TYPES_H_
 
-#include <stdint.h>
+#include <inttypes.h>
 
 typedef uint64_t	u64;
 typedef uint32_t	u32;
@@ -15,19 +15,10 @@ typedef int32_t		s32;
 typedef int16_t		s16;
 typedef int8_t		s8;
 
-/* printf(3) specifier modifiers for 64-bit types. */
-#if (defined(__x86_64) || defined(__ia64)) && !defined(CRAY_XT3)
-#error "no"
-# define PRIxLNID	"lx"
-# define PRIxOFF	"lx"
-# define PRIdOFF	"ld"
-# define _P_U64		"l"
-#else
-# define PRIxLNID	"Lx"
-# define PRIxOFF	"Lx"
-# define PRIdOFF	"Ld"
-# define _P_U64		"ll"
-#endif
+/* printf(3) specifier modifiers for custom types. */
+#define PRIxLNID	PRIx64
+#define PRIxOFF		PRIx64
+#define PRIdOFF		PRId64
 
 typedef	uint64_t psc_crc_t;
 
