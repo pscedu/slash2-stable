@@ -490,7 +490,7 @@ int psc_send_rpc(struct pscrpc_request *request, int noreply)
                         psc_assert (rc == -ENOMEM);
                         GOTO(cleanup_repmsg, rc = -ENOMEM);
                 }
-		psc_info("LNetMEAttach() gave handle %"PRIx64, reply_me_h.cookie);
+		psc_info("LNetMEAttach() gave handle %"PRIx64, (uint64_t)reply_me_h.cookie);
         }
 
         spinlock(&request->rq_lock);
@@ -514,7 +514,7 @@ int psc_send_rpc(struct pscrpc_request *request, int noreply)
                 reply_md.eq_handle = pscrpc_eq_h;
 
 		psc_info("LNetMDAttach() try w/ handle %"PRIx64,
-		      reply_me_h.cookie);
+		      (uint64_t)reply_me_h.cookie);
 
                 rc = LNetMDAttach(reply_me_h, reply_md, LNET_UNLINK,
                                  &request->rq_reply_md_h);

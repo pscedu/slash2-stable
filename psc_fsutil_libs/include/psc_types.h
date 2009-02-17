@@ -16,7 +16,8 @@ typedef int16_t		s16;
 typedef int8_t		s8;
 
 /* printf(3) specifier modifiers for 64-bit types. */
-#if defined(__x86_64) || defined(__ia64)
+#if (defined(__x86_64) || defined(__ia64)) && !defined(CRAY_XT3)
+#error "no"
 # define PRIxLNID	"lx"
 # define PRIxOFF	"lx"
 # define PRIdOFF	"ld"

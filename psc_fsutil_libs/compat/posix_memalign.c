@@ -9,9 +9,11 @@
 
 #include <sys/param.h>
 
+#include <errno.h>
 #include <stdint.h>
 #include <stdlib.h>
 
+#include "psc_util/alloc.h"
 #include "psc_util/log.h"
 
 /**

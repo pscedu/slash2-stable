@@ -97,7 +97,7 @@ extern lnet_handle_eq_t pscrpc_eq_h;
 extern struct psclist_head pscrpc_wait_callbacks;
 
 struct psc_handle {
-	u64 cookie;
+	uint64_t cookie;
 };
 #define DEAD_HANDLE_MAGIC 0xdeadbeefcafebabeULL
 
@@ -569,8 +569,8 @@ pscrpc_connection_addref(struct pscrpc_connection *c);
 void
 pscrpc_abort_inflight(struct pscrpc_import *imp);
 
-void	 psc_nid2str(lnet_nid_t, char []); 
-void	 psc_id2str(lnet_process_id_t, char []); 
+void	 psc_nid2str(lnet_nid_t, char []);
+void	 psc_id2str(lnet_process_id_t, char []);
 
 /*  rpcclient.c */
 int
@@ -610,7 +610,7 @@ int
 pscrpc_check_set(struct pscrpc_request_set *set,
 		  int check_allsent);
 
-int 
+int
 pscrpc_set_finalize(struct pscrpc_request_set *set, int block, int destroy);
 
 int  pscrpc_set_wait(struct pscrpc_request_set *);
@@ -831,7 +831,7 @@ pscrpc_wake_client_req (struct pscrpc_request *req)
 				__now = time(NULL);			\
 		}							\
 	} while (0)
-	  
+
 
 /**
  * __psc_client_wait_event - the below call is for clients.  Clients are
@@ -890,10 +890,10 @@ pscrpc_wake_client_req (struct pscrpc_request *req)
 		}							\
 	} while (0)
 
-#ifdef HAVE_LIBPTHREAD 
+#ifdef HAVE_LIBPTHREAD
 # define psc_cli_wait_event(wq, condition, info)			\
 	psc_svr_wait_event((wq), (condition), (info), NULL)
-#else 
+#else
 # define psc_cli_wait_event(wq, condition, info)			\
 	({								\
 		int                 __ret;				\
