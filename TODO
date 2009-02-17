@@ -71,3 +71,6 @@ consider adding a new keyword __local or something for thread-localized memory.
 
 
 move tests/bw and tests/sock out of tests
+
+
+rename HAVE_CPUSET to HAVE_NUMA

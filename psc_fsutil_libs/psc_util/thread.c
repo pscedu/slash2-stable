@@ -23,6 +23,7 @@
 #include "psc_util/alloc.h"
 #include "psc_util/cdefs.h"
 #include "psc_util/lock.h"
+#include "psc_util/mem.h"
 #include "psc_util/thread.h"
 
 __static pthread_key_t	psc_thrkey;
@@ -76,10 +77,19 @@ __static void *
 pscthr_begin(void *arg)
 {
 	struct psc_thread *thr = arg;
+	struct psc_nodemask nm;
 	struct sigaction sa;
 	int n, rc;
+	void *p;
 
 	spinlock(&thr->pscthr_lock);
+
+	psc_numa_get_run_node_mask(&nm);
+	psc_numa_tonodemask_memory(thr, sizeof(*thr), &nm);
+	p = thr->pscthr_private;
+	if (p)
+		psc_numa_tonodemask_memory(p, thr->pscthr_privsiz, &nm);
+
 	thr->pscthr_loglevels = PSCALLOC(psc_nsubsys *
 	    sizeof(*thr->pscthr_loglevels));
 	for (n = 0; n < psc_nsubsys; n++)
@@ -131,18 +141,21 @@ pscthr_get(void)
  * pscthr_init - Initialize a thread.
  * @thr: thread structure to be initialized, must already be allocated.
  * @type: application-specific thread type.
- * @start: thread execution routine.  By specifying a NULL routine,
+ * @startf: thread execution routine.  By specifying a NULL routine,
  *	no pthread will be spawned (assuming that an actual pthread
  *	already exists or will be taken care of).
- * @private: thread-specific data.
+ * @private: thread-type-specific data.
+ * @privsiz: size of type-specific data, for memory bookkeeping.
  * @flags: operational flags.
- * @dtor: optional destructor for thread.
+ * @dtor: optional destructor to run when/if thread exits.
  * @namearg: application-specific name for thread.
  */
 void
-_pscthr_init(struct psc_thread *thr, int type, void *(*start)(void *),
-    void *private, int flags, void (*dtor)(void *), const char *namefmt, ...)
+_pscthr_init(struct psc_thread *thr, int type, void *(*startf)(void *),
+    void *private, size_t privsiz, int flags, void (*dtor)(void *),
+    const char *namefmt, ...)
 {
+	struct psc_nodemask nm;
 	struct sigaction sa;
 	va_list ap;
 	int rc, n;
@@ -153,8 +166,9 @@ _pscthr_init(struct psc_thread *thr, int type, void *(*start)(void *),
 	memset(thr, 0, sizeof(*thr));
 	LOCK_INIT(&thr->pscthr_lock);
 	thr->pscthr_type = type;
-	thr->pscthr_start = start;
+	thr->pscthr_start = startf;
 	thr->pscthr_private = private;
+	thr->pscthr_privsiz = privsiz;
 	thr->pscthr_flags = flags | PTF_RUN;
 	thr->pscthr_dtor = dtor;
 
@@ -170,11 +184,16 @@ _pscthr_init(struct psc_thread *thr, int type, void *(*start)(void *),
 
 	/* Pin thread until initialization is complete. */
 	spinlock(&thr->pscthr_lock);
-	if (start) {
+	if (startf) {
+		/* Thread will finish initializing in its own context. */
 		if ((rc = pthread_create(&thr->pscthr_pthread, NULL,
 		    pscthr_begin, thr)) != 0)
 			psc_fatalx("pthread_create: %s", strerror(rc));
 	} else {
+		/* Initializing our own thread context. */
+		psc_numa_get_run_node_mask(&nm);
+		psc_numa_tonodemask_memory(thr, sizeof(*thr), &nm);
+
 		thr->pscthr_loglevels = PSCALLOC(psc_nsubsys *
 		    sizeof(*thr->pscthr_loglevels));
 		for (n = 0; n < psc_nsubsys; n++)

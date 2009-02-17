@@ -71,5 +71,5 @@ psc_timerthr_spawn(int thrtype, const char *name)
 	psc_waitq_init(&psc_timerwtq);
 
 	pscthr_init(&psc_timerthr, thrtype,
-	    psc_timerthr_main, NULL, name);
+	    psc_timerthr_main, NULL, 0, name);
 }

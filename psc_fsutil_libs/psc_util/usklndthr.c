@@ -43,7 +43,7 @@ cfs_create_thread(cfs_thread_t startf, void *arg, const char *namefmt, ...)
 	va_end(ap);
 
 	_pscthr_init(pt, psc_usklndthr_get_type(namefmt),
-	    psc_usklndthr_begin, put, PTF_FREE,
+	    psc_usklndthr_begin, put, sizeof(*put), PTF_FREE,
 	    psc_usklndthr_destroy, name);
 	return (0);
 }
