@@ -451,10 +451,11 @@ psc_ctlmsg_meter_prdat(__unusedx const struct psc_ctlmsghdr *mh,
 	const struct psc_ctlmsg_meter *pcm = m;
 	int n, len;
 
-	printf(" %12s %5zu/%8zu %n",
+	len = printf(" %12s %5zu/%8zu ",
 	    pcm->pcm_mtr.pm_name,
 	    pcm->pcm_mtr.pm_cur,
-	    pcm->pcm_mtr.pm_max, &len);
+	    pcm->pcm_mtr.pm_max);
+	psc_assert(len != -1);
 #define WIDTH 80
 	len = WIDTH - len - 3;
 	if (len < 0)
