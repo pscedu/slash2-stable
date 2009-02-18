@@ -1,7 +1,7 @@
 #!/bin/sh
 # $Id$
 
-# setcc: set env `CC' appropriately to avoid recusion with wrappers.
+# setcc: set env `CC' appropriately to avoid recursion with wrappers.
 
 : ${CC:?not set}
 
@@ -12,7 +12,7 @@ for i in ${CC}; do
 	fi
 done
 
-if [ x"$(basename $newcc)" = x"zcc" ]; then
+if [ x"$(basename $($newcc -? 2>&1 | awk '{print $2}'))" = x"zcc" ]; then
 	newcc=cc
 fi
 
