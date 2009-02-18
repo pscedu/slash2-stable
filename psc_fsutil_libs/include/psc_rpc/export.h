@@ -3,11 +3,10 @@
 #ifndef _PFL_EXPORT_H_
 #define _PFL_EXPORT_H_
 
+#include "psc_rpc/export.h"
 #include "psc_util/assert.h"
 #include "psc_util/atomic.h"
 #include "psc_util/log.h"
-
-struct pscrpc_export;
 
 void __pscrpc_export_put(struct pscrpc_export *);
 
@@ -26,7 +25,7 @@ pscrpc_export_rpc_get(struct pscrpc_export *exp)
 {
 	int rc;
 
-	refcnt = atomic_inc_return(&exp->exp_rpc_count);
+	rc = atomic_inc_return(&exp->exp_rpc_count);
 	psc_trace("RPC GETting export %p : new rpc_count %d", exp, rc);
 	return (pscrpc_export_get(exp));
 }
