@@ -245,15 +245,16 @@ _psc_fatal(const char *fn, const char *func, int line, int subsys,
 	va_start(ap, fmt);
 	_psclogv(fn, func, line, subsys, level, options, fmt, ap);
 	va_end(ap);
-	abort();
+
+	psc_fatalx("should not reach here");
 }
 
 __dead void
 _psc_fatalv(const char *fn, const char *func, int line, int subsys,
     int level, int options, const char *fmt, va_list ap)
 {
-	psclogv(fn, func, line, subsys, level, options, fmt, ap);
-	abort();
+	_psclogv(fn, func, line, subsys, level, options, fmt, ap);
+	psc_fatalx("should not reach here");
 }
 
 /* Keep synced with LL_* constants. */
