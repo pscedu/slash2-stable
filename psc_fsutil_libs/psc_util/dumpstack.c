@@ -14,6 +14,8 @@ psc_dumpstack(__unusedx int sig)
 	char buf[BUFSIZ];
 
 	spinlock(&lock);
+	fflush(stderr);
+	printf("\n\nAttempting to generating stack trace...\n");
 	snprintf(buf, sizeof(buf), "pstack %d || gstack %d",
 	    getpid(), getpid());
 	system(buf);
