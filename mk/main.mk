@@ -9,6 +9,7 @@ OBJS+=		$(patsubst %.l,%.o,$(filter %.l,${SRCS}))
 _YACCINTM=	$(patsubst %.y,%.c,$(filter %.y,${SRCS}))
 _LEXINTM=	$(patsubst %.l,%.c,$(filter %.l,${SRCS}))
 _C_SRCS=	$(filter %.c,${SRCS}) ${_YACCINTM} ${_LEXINTM}
+ECHORUN=	echorun() { echo "$$@"; "$$@" }; echorun
 
 ifdef OLD_LNET
 LNET_SOCKLND_SRCS+=	${LNET_BASE}/socklnd/connection.c
