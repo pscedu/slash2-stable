@@ -1,6 +1,7 @@
 /* $Id$ */
 
 #include <err.h>
+#include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
 
@@ -39,6 +40,13 @@ pfl_init(void)
 	pscthrs_init();
 	psc_memnode_init();
 	psc_log_init();
+
+	if (getenv("PSC_DUMPSTACK")) {
+		if (signal(SIGSEGV, psc_dumpstack) == SIG_ERR)
+			psc_fatal("signal");
+		if (signal(SIGABRT, psc_dumpstack) == SIG_ERR)
+			psc_fatal("signal");
+	}
 
 	psc_subsys_register(PSS_LOG, "log");
 	psc_subsys_register(PSS_JOURNAL, "journl");
