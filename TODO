@@ -74,3 +74,4 @@ move tests/bw and tests/sock out of tests
 
 
 rename HAVE_CPUSET to HAVE_NUMA
+add a struct psc_completion
