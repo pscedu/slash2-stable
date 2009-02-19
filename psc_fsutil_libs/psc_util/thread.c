@@ -240,7 +240,7 @@ pscthr_init(int type, int flags, void *(*startf)(void *),
 	thr->pscthr_type = type;
 	thr->pscthr_startf = startf;
 	thr->pscthr_privsiz = privsiz;
-	thr->pscthr_flags = (flags & ~PTF_NOTREADY) | PTF_RUN;
+	thr->pscthr_flags = flags | PTF_RUN;
 	thr->pscthr_dtor = dtor;
 
 	va_start(ap, namefmt);
