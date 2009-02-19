@@ -241,7 +241,7 @@ do {                                                                           \
                 CERROR(args);                                                  \
           assert(cond);                                                        \
 } while (0)
-#  define LBUG()   (assert(0), 0)
+#  define LBUG()   assert(0)
 # else
 #  define LASSERT(e) ((void)(0))
 #  define LASSERTF(cond, args...) do { } while (0)
