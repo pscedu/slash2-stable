@@ -1007,7 +1007,7 @@ pscrpcthr_begin(void *arg)
  * @offset: offset into thread-local storage of service data.
  */
 void
-__pscrpc_thread_spawn(pscrpc_svc_handle_t *svh, size_t siz)
+_pscrpc_thread_spawn(pscrpc_svc_handle_t *svh, size_t siz)
 {
 	struct pscrpc_thread *prt;
 	struct psc_thread *thr;
@@ -1028,12 +1028,16 @@ __pscrpc_thread_spawn(pscrpc_svc_handle_t *svh, size_t siz)
 	/* Track the service handle */
 	psclist_xadd(&svh->svh_lentry, &pscrpc_svh_list);
 
-	svh->svh_threads = PSCALLOC((sizeof(*thr)) * svh->svh_nthreads);
+	svh->svh_threads = PSCALLOC((sizeof(*svh->svh_threads)) *
+	    svh->svh_nthreads);
 
-	for (i=0, thr=svh->svh_threads; i < svh->svh_nthreads; i++, thr++) {
-		prt = PSCALLOC(siz);
+	for (i = 0; i < svh->svh_nthreads; i++) {
+		thr = pscthr_init(svh->svh_type, 0,
+		    pscrpcthr_begin, NULL, siz,
+		    "%sthr%d", svh->svh_svc_name, i);
+		svh->svh_threads[i] = thr;
+		prt = thr->pscthr_private;
 		prt->prt_svc = svh->svh_service;
-		pscthr_init(thr, svh->svh_type, pscrpcthr_begin,
-		    prt, siz, "%sthr%d", svh->svh_svc_name, i);
+		pscthr_setready(thr);
 	}
 }

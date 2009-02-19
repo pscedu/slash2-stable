@@ -12,8 +12,7 @@
 #include "psc_util/thread.h"
 #include "psc_util/waitq.h"
 
-__static struct psc_waitq	psc_timerwtq;
-__static struct psc_thread	psc_timerthr;
+__static struct psc_waitq	 psc_timerwtq;
 
 __static void *
 psc_timerthr_main(__unusedx void *arg)
@@ -69,7 +68,5 @@ void
 psc_timerthr_spawn(int thrtype, const char *name)
 {
 	psc_waitq_init(&psc_timerwtq);
-
-	pscthr_init(&psc_timerthr, thrtype,
-	    psc_timerthr_main, NULL, 0, name);
+	pscthr_init(thrtype, 0, psc_timerthr_main, NULL, 0, name);
 }

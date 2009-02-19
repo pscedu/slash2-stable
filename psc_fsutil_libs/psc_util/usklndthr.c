@@ -26,25 +26,24 @@ psc_usklndthr_destroy(void *arg)
 }
 
 int
-cfs_create_thread(cfs_thread_t startf, void *arg, const char *namefmt, ...)
+cfs_create_thread(cfs_thread_t startf, void *arg,
+    const char *namefmt, ...)
 {
 	char name[PSC_THRNAME_MAX];
 	struct psc_usklndthr *put;
-	struct psc_thread *pt;
+	struct psc_thread *thr;
 	va_list ap;
-
-	pt = PSCALLOC(sizeof(*pt));
-	put = PSCALLOC(sizeof(*put));
-	put->put_startf = startf;
-	put->put_arg = arg;
 
 	va_start(ap, namefmt);
 	psc_usklndthr_get_namev(name, namefmt, ap);
 	va_end(ap);
 
-	_pscthr_init(pt, psc_usklndthr_get_type(namefmt),
-	    psc_usklndthr_begin, put, sizeof(*put), PTF_FREE,
-	    psc_usklndthr_destroy, name);
+	thr = pscthr_init(psc_usklndthr_get_type(namefmt), PTF_FREE,
+	    psc_usklndthr_begin, psc_usklndthr_destroy, sizeof(*put),
+	    name);
+	put->put_startf = startf;
+	put->put_arg = arg;
+	pscthr_setready(thr);
 	return (0);
 }
 

@@ -13,12 +13,12 @@ struct psc_nodemask {
 	nodemask_t	pnm_mask;
 };
 
-#define	psc_numa_get_run_node_mask(m)			\
-	do {						\
-		(m)->pnm_mask = numa_get_run_node_mask();\
+#define	psc_numa_get_run_node_mask(m)				\
+	do {							\
+		(m)->pnm_mask = numa_get_run_node_mask();	\
 	} while (0)
 
-#define	psc_numa_tonodemask_memory(p, siz, m)		\
+#define	psc_numa_tonodemask_memory(p, siz, m)			\
 	numa_tonodemask_memory((p), (siz), &(m)->pnm_mask)
 
 #else

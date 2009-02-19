@@ -24,6 +24,7 @@
 #include "psc_util/cdefs.h"
 #include "psc_util/lock.h"
 #include "psc_util/mem.h"
+#include "psc_util/strlcpy.h"
 #include "psc_util/thread.h"
 
 __static pthread_key_t	psc_thrkey;
@@ -33,9 +34,10 @@ struct psc_lockedlist	psc_threads =
 
 /**
  * pscthr_destroy - Thread destructor.
+ * @arg: thread data.
  */
 __static void
-pscthr_destroy(void *arg)
+_pscthr_destroy(void *arg)
 {
 	struct psc_thread *thr = arg;
 
@@ -50,6 +52,44 @@ pscthr_destroy(void *arg)
 		free(thr);
 }
 
+/*
+ * pscthr_sigusr1 - catch SIGUSR1: pause the thread.
+ * @sig: signal number.
+ */
+void
+_pscthr_sigusr1(__unusedx int sig)
+{
+	struct psc_thread *thr;
+	int locked;
+
+	thr = pscthr_get();
+	while (!tryreqlock(&thr->pscthr_lock, &locked))
+		sched_yield();
+	thr->pscthr_flags |= PTF_PAUSED;
+	ureqlock(&thr->pscthr_lock, locked);
+	while (thr->pscthr_flags & PTF_PAUSED) {
+		usleep(500);
+		sched_yield();
+	}
+}
+
+/*
+ * pscthr_sigusr2 - catch SIGUSR2: unpause the thread.
+ * @sig: signal number.
+ */
+void
+_pscthr_sigusr2(__unusedx int sig)
+{
+	struct psc_thread *thr;
+	int locked;
+
+	thr = pscthr_get();
+	while (!tryreqlock(&thr->pscthr_lock, &locked))
+		sched_yield();
+	thr->pscthr_flags &= ~PTF_PAUSED;
+	ureqlock(&thr->pscthr_lock, locked);
+}
+
 /**
  * pscthrs_init - Initialize threading subsystem.
  */
@@ -58,7 +98,7 @@ pscthrs_init(void)
 {
 	int rc;
 
-	rc = pthread_key_create(&psc_thrkey, pscthr_destroy);
+	rc = pthread_key_create(&psc_thrkey, _pscthr_destroy);
 	if (rc)
 		psc_fatalx("pthread_key_create: %s", strerror(rc));
 	rc = pthread_key_create(&psc_logkey, free);
@@ -66,56 +106,8 @@ pscthrs_init(void)
 		psc_fatalx("pthread_key_create: %s", strerror(rc));
 }
 
-/*
- * pscthr_begin: each new thread begins its life here.
- *	This routine invokes the thread's real start routine once
- *	it's safe after the thread who created us has finished our
- *	(external) initialization.
- * @arg: thread structure.
- */
-__static void *
-pscthr_begin(void *arg)
-{
-	struct psc_thread *thr = arg;
-	struct psc_nodemask nm;
-	struct sigaction sa;
-	int n, rc;
-	void *p;
-
-	spinlock(&thr->pscthr_lock);
-
-	psc_numa_get_run_node_mask(&nm);
-	psc_numa_tonodemask_memory(thr, sizeof(*thr), &nm);
-	p = thr->pscthr_private;
-	if (p)
-		psc_numa_tonodemask_memory(p, thr->pscthr_privsiz, &nm);
-
-	thr->pscthr_loglevels = PSCALLOC(psc_nsubsys *
-	    sizeof(*thr->pscthr_loglevels));
-	for (n = 0; n < psc_nsubsys; n++)
-		thr->pscthr_loglevels[n] = psc_log_getlevel(n);
-	thr->pscthr_pthread = pthread_self();
-	thr->pscthr_thrid = syscall(SYS_gettid);
-	rc = pthread_setspecific(psc_thrkey, thr);
-	if (rc)
-		psc_fatalx("pthread_setspecific: %s", strerror(rc));
-
-	memset(&sa, 0, sizeof(sa));
-	sa.sa_handler = pscthr_sigusr1;
-	if (sigaction(SIGUSR1, &sa, NULL) == -1)
-		psc_fatal("sigaction");
-
-	memset(&sa, 0, sizeof(sa));
-	sa.sa_handler = pscthr_sigusr2;
-	if (sigaction(SIGUSR2, &sa, NULL) == -1)
-		psc_fatal("sigaction");
-
-	freelock(&thr->pscthr_lock);
-	return (thr->pscthr_start(thr));
-}
-
 /**
- * pscthr_get - Retrieve thread info from thread-local storage unless
+ * pscthr_get_canfail - Retrieve thread info from thread-local storage unless
  *	uninitialized.
  */
 struct psc_thread *
@@ -138,38 +130,117 @@ pscthr_get(void)
 }
 
 /**
+ * _pscthr_finish_init: final initilization code common among all
+ *	instantiation methods.
+ * @thr: thread to finish initializing.
+ */
+void
+_pscthr_finish_init(struct psc_thread *thr)
+{
+	struct sigaction sa;
+	int n, rc;
+
+	if (thr->pscthr_privsiz)
+		thr->pscthr_private = psc_alloc(thr->pscthr_privsiz,
+		    PAF_NOLOG);
+
+	thr->pscthr_loglevels = psc_alloc(psc_nsubsys *
+	    sizeof(*thr->pscthr_loglevels), PAF_NOLOG);
+	for (n = 0; n < psc_nsubsys; n++)
+		thr->pscthr_loglevels[n] = psc_log_getlevel_ss(n);
+	thr->pscthr_pthread = pthread_self();
+	thr->pscthr_thrid = syscall(SYS_gettid);
+	rc = pthread_setspecific(psc_thrkey, thr);
+	if (rc)
+		psc_fatalx("pthread_setspecific: %s", strerror(rc));
+
+	memset(&sa, 0, sizeof(sa));
+	sa.sa_handler = _pscthr_sigusr1;
+	if (sigaction(SIGUSR1, &sa, NULL) == -1)
+		psc_fatal("sigaction");
+
+	memset(&sa, 0, sizeof(sa));
+	sa.sa_handler = _pscthr_sigusr2;
+	if (sigaction(SIGUSR2, &sa, NULL) == -1)
+		psc_fatal("sigaction");
+
+	pll_add(&psc_threads, thr);
+}
+
+/**
+ * pscthr_begin: each new thread begins its life here.
+ *	This routine invokes the thread's real start routine once
+ *	it's safe after the thread who created us has finished our
+ *	(external) initialization.
+ * @arg: thread structure.
+ */
+__static void *
+_pscthr_begin(void *arg)
+{
+	struct psc_thread *thr, *oldthr = arg;
+
+	/* Setup a localised copy of the thread. */
+	thr = psc_alloc(sizeof(*thr), PAF_NOLOG);
+	psc_waitq_init(&thr->pscthr_waitq);
+	LOCK_INIT(&thr->pscthr_lock);
+	spinlock(&thr->pscthr_lock);
+
+	/* Copy values from original. */
+	spinlock(&oldthr->pscthr_lock);
+	thr->pscthr_type = oldthr->pscthr_type;
+	thr->pscthr_startf = oldthr->pscthr_startf;
+	thr->pscthr_private = oldthr->pscthr_private;
+	thr->pscthr_privsiz = oldthr->pscthr_privsiz;
+	thr->pscthr_flags = oldthr->pscthr_flags;
+	thr->pscthr_dtor = oldthr->pscthr_dtor;
+	strlcpy(thr->pscthr_name, oldthr->pscthr_name,
+	    sizeof(thr->pscthr_name));
+
+	_pscthr_finish_init(thr);
+
+	/* Inform the spawner where our memory is. */
+	oldthr->pscthr_private = thr;
+	psc_waitq_wakeall(&oldthr->pscthr_waitq);
+
+	/* Wait for the spawner to finish us. */
+	do {
+		psc_waitq_wait(&thr->pscthr_waitq, &thr->pscthr_lock);
+		spinlock(&thr->pscthr_lock);
+	} while ((thr->pscthr_flags & PTF_READY) == 0);
+	freelock(&thr->pscthr_lock);
+	return (thr->pscthr_startf(thr));
+}
+
+/**
  * pscthr_init - Initialize a thread.
- * @thr: thread structure to be initialized, must already be allocated.
  * @type: application-specific thread type.
  * @startf: thread execution routine.  By specifying a NULL routine,
  *	no pthread will be spawned (assuming that an actual pthread
  *	already exists or will be taken care of).
- * @private: thread-type-specific data.
- * @privsiz: size of type-specific data, for memory bookkeeping.
+ * @privsiz: size of thread-type-specific data.
  * @flags: operational flags.
  * @dtor: optional destructor to run when/if thread exits.
- * @namearg: application-specific name for thread.
+ * @namefmt: application-specific printf(3) name for thread.
  */
-void
-_pscthr_init(struct psc_thread *thr, int type, void *(*startf)(void *),
-    void *private, size_t privsiz, int flags, void (*dtor)(void *),
-    const char *namefmt, ...)
+struct psc_thread *
+pscthr_init(int type, int flags, void *(*startf)(void *),
+    void (*dtor)(void *), size_t privsiz, const char *namefmt, ...)
 {
-	struct psc_nodemask nm;
-	struct sigaction sa;
+	struct psc_thread mythr, *thr;
 	va_list ap;
-	int rc, n;
+	int rc;
 
 	if (flags & PTF_PAUSED)
 		psc_fatalx("pscthr_init: PTF_PAUSED specified");
 
+	thr = startf ? &mythr : psc_alloc(sizeof(*thr), PAF_NOLOG);
 	memset(thr, 0, sizeof(*thr));
+	psc_waitq_init(&thr->pscthr_waitq);
 	LOCK_INIT(&thr->pscthr_lock);
 	thr->pscthr_type = type;
-	thr->pscthr_start = startf;
-	thr->pscthr_private = private;
+	thr->pscthr_startf = startf;
 	thr->pscthr_privsiz = privsiz;
-	thr->pscthr_flags = flags | PTF_RUN;
+	thr->pscthr_flags = (flags & ~PTF_NOTREADY) | PTF_RUN;
 	thr->pscthr_dtor = dtor;
 
 	va_start(ap, namefmt);
@@ -178,48 +249,46 @@ _pscthr_init(struct psc_thread *thr, int type, void *(*startf)(void *),
 	va_end(ap);
 
 	if (rc == -1)
-		psc_fatal("vsnprintf");
+		psc_fatal("vsnprintf: %s", namefmt);
 	if (rc >= (int)sizeof(thr->pscthr_name))
 		psc_fatalx("pscthr_init: thread name too long: %s", namefmt);
 
 	/* Pin thread until initialization is complete. */
 	spinlock(&thr->pscthr_lock);
 	if (startf) {
-		/* Thread will finish initializing in its own context. */
-		if ((rc = pthread_create(&thr->pscthr_pthread, NULL,
-		    pscthr_begin, thr)) != 0)
+		/*
+		 * Thread will finish initializing in its own context
+		 * and set pscthr_private to the location of the new
+		 * localized memory.
+		 */
+		if ((rc = pthread_create(&thr->pscthr_pthread,
+		    NULL, _pscthr_begin, thr)) != 0)
 			psc_fatalx("pthread_create: %s", strerror(rc));
+		psc_waitq_wait(&thr->pscthr_waitq, &thr->pscthr_lock);
+		thr = thr->pscthr_private;
+		if (thr->pscthr_privsiz == 0)
+			pscthr_setready(thr);
 	} else {
 		/* Initializing our own thread context. */
-		psc_numa_get_run_node_mask(&nm);
-		psc_numa_tonodemask_memory(thr, sizeof(*thr), &nm);
-
-		thr->pscthr_loglevels = PSCALLOC(psc_nsubsys *
-		    sizeof(*thr->pscthr_loglevels));
-		for (n = 0; n < psc_nsubsys; n++)
-			thr->pscthr_loglevels[n] = psc_log_getlevel(n);
-		thr->pscthr_pthread = pthread_self();
-		thr->pscthr_thrid = syscall(SYS_gettid);
-		rc = pthread_setspecific(psc_thrkey, thr);
-		if (rc)
-			psc_fatalx("pthread_setspecific: %s", strerror(rc));
-
-		memset(&sa, 0, sizeof(sa));
-		sa.sa_handler = pscthr_sigusr1;
-		if (sigaction(SIGUSR1, &sa, NULL) == -1)
-			psc_fatal("sigaction");
-
-		memset(&sa, 0, sizeof(sa));
-		sa.sa_handler = pscthr_sigusr2;
-		if (sigaction(SIGUSR2, &sa, NULL) == -1)
-			psc_fatal("sigaction");
+		_pscthr_finish_init(thr);
 	}
+	return (thr);
+}
 
-	pll_add(&psc_threads, thr);
+/**
+ * pscthr_setready - set thread state to READY.
+ * @thr: thread ready to start.
+ */
+void
+pscthr_setready(struct psc_thread *thr)
+{
+	reqlock(&thr->pscthr_lock);
+	thr->pscthr_flags |= PTF_READY;
+	psc_waitq_wakeall(&thr->pscthr_waitq);
 	freelock(&thr->pscthr_lock);
 }
 
-/*
+/**
  * psc_log_getlevel - get thread logging level for the specified subsystem.
  * This routine is not intended for general-purpose usage.
  * @subsys: subsystem ID.
@@ -265,44 +334,6 @@ pscthr_setpause(struct psc_thread *thr, int pause)
 		pthread_kill(thr->pscthr_pthread,
 		    pause ? SIGUSR1 : SIGUSR2);
 	freelock(&thr->pscthr_lock);
-}
-
-/*
- * pscthr_sigusr1 - catch SIGUSR1: pause the thread.
- * @sig: signal number.
- */
-void
-pscthr_sigusr1(__unusedx int sig)
-{
-	struct psc_thread *thr;
-	int locked;
-
-	thr = pscthr_get();
-	while (!tryreqlock(&thr->pscthr_lock, &locked))
-		sched_yield();
-	thr->pscthr_flags |= PTF_PAUSED;
-	ureqlock(&thr->pscthr_lock, locked);
-	while (thr->pscthr_flags & PTF_PAUSED) {
-		usleep(500);
-		sched_yield();
-	}
-}
-
-/*
- * pscthr_sigusr2 - catch SIGUSR2: unpause the thread.
- * @sig: signal number.
- */
-void
-pscthr_sigusr2(__unusedx int sig)
-{
-	struct psc_thread *thr;
-	int locked;
-
-	thr = pscthr_get();
-	while (!tryreqlock(&thr->pscthr_lock, &locked))
-		sched_yield();
-	thr->pscthr_flags &= ~PTF_PAUSED;
-	ureqlock(&thr->pscthr_lock, locked);
 }
 
 /**

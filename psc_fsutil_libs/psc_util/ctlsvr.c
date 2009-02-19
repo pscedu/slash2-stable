@@ -34,8 +34,6 @@
 #include "psc_util/strlcpy.h"
 #include "psc_util/thread.h"
 
-struct psc_thread pscControlThread;
-
 #define Q 15	/* listen() queue */
 
 /*
@@ -60,7 +58,7 @@ psc_ctlmsg_sendv(int fd, const struct psc_ctlmsghdr *mh, const void *m)
 	n = writev(fd, iov, NENTRIES(iov));
 	if (n == -1) {
 		if (errno == EPIPE) {
-			psc_ctlthr(&pscControlThread)->pc_st_ndrop++;
+			psc_ctlthr(pscthr_get())->pc_st_ndrop++;
 			sched_yield();
 			return (0);
 		}
@@ -69,7 +67,7 @@ psc_ctlmsg_sendv(int fd, const struct psc_ctlmsghdr *mh, const void *m)
 	tsiz = sizeof(*mh) + mh->mh_size;
 	if ((size_t)n != tsiz)
 		psc_warn("short write");
-	psc_ctlthr(&pscControlThread)->pc_st_nsent++;
+	psc_ctlthr(pscthr_get())->pc_st_nsent++;
 	sched_yield();
 	return (1);
 }
@@ -104,7 +102,7 @@ psc_ctlmsg_send(int fd, int type, size_t siz, const void *m)
 	n = writev(fd, iov, NENTRIES(iov));
 	if (n == -1) {
 		if (errno == EPIPE) {
-			psc_ctlthr(&pscControlThread)->pc_st_ndrop++;
+			psc_ctlthr(pscthr_get())->pc_st_ndrop++;
 			sched_yield();
 			return (0);
 		}
@@ -113,7 +111,7 @@ psc_ctlmsg_send(int fd, int type, size_t siz, const void *m)
 	tsiz = sizeof(mh) + siz;
 	if ((size_t)n != tsiz)
 		psc_warn("short write");
-	psc_ctlthr(&pscControlThread)->pc_st_nsent++;
+	psc_ctlthr(pscthr_get())->pc_st_nsent++;
 	sched_yield();
 	return (1);
 }
@@ -1066,7 +1064,7 @@ psc_ctlthr_service(int fd, const struct psc_ctlop *ct, int nops)
 			    mh.mh_type, mh.mh_size);
 			continue;
 		}
-		psc_ctlthr(&pscControlThread)->pc_st_nrecv++;
+		psc_ctlthr(pscthr_get())->pc_st_nrecv++;
 		if (!ct[mh.mh_type].pc_op(fd, &mh, m))
 			break;
 	}
@@ -1135,7 +1133,7 @@ psc_ctlthr_main(const char *ofn, const struct psc_ctlop *ct, int nops)
 		if ((fd = accept(s, (struct sockaddr *)&sun,
 		    &siz)) == -1)
 			psc_fatal("accept");
-		psc_ctlthr(&pscControlThread)->pc_st_nclients++;
+		psc_ctlthr(pscthr_get())->pc_st_nclients++;
 		psc_ctlthr_service(fd, ct, nops);
 		close(fd);
 	}

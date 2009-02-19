@@ -77,8 +77,6 @@ __dead void
 int	psc_ctl_applythrop(int, struct psc_ctlmsghdr *, void *, const char *,
 		int (*)(int, struct psc_ctlmsghdr *, void *, struct psc_thread *));
 
-extern struct psc_thread pscControlThread;
-
 extern void (*psc_ctl_getstats[])(struct psc_thread *, struct psc_ctlmsg_stats *);
 extern int psc_ctl_ngetstats;
 

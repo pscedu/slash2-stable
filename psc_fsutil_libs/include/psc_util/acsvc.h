@@ -23,5 +23,6 @@ enum {
 	ACSOP_UTIMES
 };
 
-void acsvc_init(struct psc_thread *, int, const char *, char **);
-int  access_fsop(int, uid_t, gid_t, const char *, ...);
+struct psc_thread *
+	acsvc_init(int, const char *, char **);
+int	access_fsop(int, uid_t, gid_t, const char *, ...);

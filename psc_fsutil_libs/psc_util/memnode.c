@@ -38,7 +38,7 @@ psc_memnode_get(void)
 	pmnv = dynarray_get(&psc_memnodes);
 	pmn = pmnv[memnid];
 	if (pmn == NULL) {
-		pmn = pmnv[memnid] = PSCALLOC(sizeof(*pmn));
+		pmn = pmnv[memnid] = psc_alloc(sizeof(*pmn), PAF_NOLOG);
 		LOCK_INIT(&pmn->pmn_lock);
 		dynarray_init(&pmn->pmn_keys);
 	}

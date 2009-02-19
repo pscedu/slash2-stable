@@ -316,8 +316,8 @@ acsvc_climain(__unusedx void *arg)
 	}
 }
 
-void
-acsvc_init(struct psc_thread *thr, int thrtype, const char *name, char **av)
+struct psc_thread *
+acsvc_init(int thrtype, const char *name, char **av)
 {
 	int fds[2];
 	char *p;
@@ -342,7 +342,7 @@ acsvc_init(struct psc_thread *thr, int thrtype, const char *name, char **av)
 	close(fds[0]);
 	acsvc_fd = fds[1];
 
-	pscthr_init(thr, thrtype, acsvc_climain, NULL, 0, name);
+	return (pscthr_init(thrtype, 0, acsvc_climain, NULL, 0, name));
 }
 
 __static struct access_request *
