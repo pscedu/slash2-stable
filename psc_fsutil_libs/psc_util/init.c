@@ -1,6 +1,8 @@
 /* $Id$ */
 
 #include <err.h>
+#include <signal.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
@@ -8,6 +10,7 @@
 #include "psc_util/alloc.h"
 #include "psc_util/atomic.h"
 #include "psc_util/cdefs.h"
+#include "psc_util/lock.h"
 #include "psc_util/log.h"
 
 extern long pscPageSize;
@@ -26,6 +29,21 @@ psc_memnode_init(void)
 __weak void
 psc_subsys_register(__unusedx int level, __unusedx const char *name)
 {
+}
+
+void
+psc_dumpstack(__unusedx int sig)
+{
+	static psc_spinlock_t lock = LOCK_INITIALIZER;
+	char buf[BUFSIZ];
+
+	spinlock(&lock);
+	fflush(stderr);
+	printf("\n\nAttempting to generating stack trace...\n");
+	snprintf(buf, sizeof(buf), "pstack %d || gstack %d",
+	    getpid(), getpid());
+	system(buf);
+	_exit(1);
 }
 
 void
