@@ -59,9 +59,7 @@ zest
 
 - the *at family of routines allow any fd, not just a dirfd
 
-consider adding a new keyword __local or something for thread-localized memory.
-
-
+- consider adding a new keyword __local or something for thread-localized memory.
 
 - see if pool initf allows us to set the arg type instead of void
 
@@ -69,9 +67,7 @@ consider adding a new keyword __local or something for thread-localized memory.
   users should be able to read some stats but only root users
   should be able to issue exit commands, etc.
 
-
-move tests/bw and tests/sock out of tests
-
-
-rename HAVE_CPUSET to HAVE_NUMA
-add a struct psc_completion
+- move tests/bw and tests/sock out of tests
+- rename HAVE_CPUSET to HAVE_NUMA
+- add a pscthr_get() check in pscalloc and test
+- add a struct psc_completion
