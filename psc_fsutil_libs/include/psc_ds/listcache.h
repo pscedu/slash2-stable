@@ -409,7 +409,7 @@ lc_lookup(const char *name)
 
 /**
  * lc_empty - determine if the list cache has elements currently.
- * @lc: list cache to check, must be locked.
+ * @lc: list cache to check.
  */
 static inline int
 lc_empty(struct psc_listcache *lc)
@@ -417,8 +417,8 @@ lc_empty(struct psc_listcache *lc)
 	int rc, locked;
 
 	locked = reqlock(&lc->lc_lock);
-	rc = psclist_empty(lc->lc_listhd);
-	ureqlock(&lc->lc_lock);
+	rc = psclist_empty(&lc->lc_listhd);
+	ureqlock(&lc->lc_lock, locked);
 	return (rc);
 }
 
