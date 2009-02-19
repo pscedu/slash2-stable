@@ -71,3 +71,13 @@ zest
 - rename HAVE_CPUSET to HAVE_NUMA
 - add a pscthr_get() check in pscalloc and test
 - add a struct psc_completion
+- add extattrs to zfs fuse
+- get xattr working on fruits /bessemer
+- pure unused files in lnet #error "no"
+
+- psclog format specifier: timestamp difference
+- zest user command to tag a file sync disregard
+- new pull model for zest server to client:
+  server RPCIO threads issue GETs to connected mount_zests
+- when mount_zest is idle, have it merge dirty zcf zsb channels
+- let wiki changes automatically email zest-devel@ like svn commits
