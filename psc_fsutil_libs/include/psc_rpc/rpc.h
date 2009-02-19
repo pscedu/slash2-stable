@@ -3,23 +3,6 @@
 #ifndef _PFL_RPC_H_
 #define _PFL_RPC_H_
 
-#undef list_head
-#undef LIST_HEAD_INIT
-#undef LIST_ENTRY_INIT
-#undef LIST_HEAD
-#undef INIT_LIST_HEAD
-#undef INIT_LIST_ENTRY
-
-#undef list_add
-#undef list_add_tail
-#undef list_del
-#undef list_del_init
-#undef list_empty
-#undef list_splice
-#undef list_entry
-#undef list_for_each
-#undef list_for_each_safe
-
 #ifndef _XOPEN_SOURCE
 #define _XOPEN_SOURCE 500
 #endif
@@ -34,23 +17,6 @@
 #include "libcfs/libcfs.h"
 #include "lnet/api.h"
 #include "lnet/types.h"
-
-/* Mask cfs internal list definitions */
-#undef list_head
-#undef LIST_HEAD_INIT
-#undef LIST_ENTRY_INIT
-#undef LIST_HEAD
-#undef INIT_LIST_HEAD
-#undef INIT_LIST_ENTRY
-#undef list_add
-#undef list_add_tail
-#undef list_del
-#undef list_del_init
-#undef list_empty
-#undef list_splice
-#undef list_entry
-#undef list_for_each
-#undef list_for_each_safe
 
 #include "psc_types.h"
 #include "psc_ds/list.h"
@@ -157,14 +123,21 @@ struct pscrpc_export {
 	void			 *exp_private; /* app-specific data */
 	//struct psclist_head       exp_outstanding_replies;
 };
-/* TODO - c_exp needs to become a pointer */
+
+struct pscrpc_import;
+
 struct pscrpc_connection {
 	struct psclist_head   c_link;
 	lnet_nid_t            c_self;
 	lnet_process_id_t     c_peer;
 	struct psc_uuid       c_remote_uuid;
 	atomic_t              c_refcount;
-	struct pscrpc_export *c_exp;  /* meaningful only on server */
+	union {
+		struct pscrpc_export *cu_exp;  /* meaningful only on server */
+		struct pscrpc_import *cu_imp;
+	} c_u;
+#define c_exp c_u.cu_exp
+#define c_imp c_u.cu_imp
 };
 
 struct pscrpc_client {
@@ -914,39 +887,5 @@ pscrpc_wake_client_req (struct pscrpc_request *req)
 		    __ret, 0, (lck));					\
 		__ret;							\
 	})
-
-#undef list_head
-#undef LIST_HEAD_INIT
-#undef LIST_ENTRY_INIT
-#undef LIST_HEAD
-#undef INIT_LIST_HEAD
-#undef INIT_LIST_ENTRY
-
-#undef list_add
-#undef list_add_tail
-#undef list_del
-#undef list_del_init
-#undef list_empty
-#undef list_splice
-#undef list_entry
-#undef list_for_each
-#undef list_for_each_safe
-
-#define list_head		ERROR
-#define LIST_HEAD_INIT		ERROR
-#define LIST_ENTRY_INIT		ERROR
-#define LIST_HEAD		ERROR
-#define INIT_LIST_HEAD		ERROR
-#define INIT_LIST_ENTRY		ERROR
-
-#define list_add		ERROR
-#define list_add_tail		ERROR
-#define list_del		ERROR
-#define list_del_init		ERROR
-#define list_empty		ERROR
-#define list_splice		ERROR
-#define list_entry		ERROR
-#define list_for_each		ERROR
-#define list_for_each_safe	ERROR
 
 #endif /* _PFL_RPC_H_ */
