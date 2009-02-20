@@ -189,7 +189,6 @@ _pscthr_begin(void *arg)
 	spinlock(&oldthr->pscthr_lock);
 	thr->pscthr_type = oldthr->pscthr_type;
 	thr->pscthr_startf = oldthr->pscthr_startf;
-	thr->pscthr_private = oldthr->pscthr_private;
 	thr->pscthr_privsiz = oldthr->pscthr_privsiz;
 	thr->pscthr_flags = oldthr->pscthr_flags;
 	thr->pscthr_dtor = oldthr->pscthr_dtor;
