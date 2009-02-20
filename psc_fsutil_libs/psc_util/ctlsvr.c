@@ -508,6 +508,65 @@ psc_ctlparam_log_level(int fd, struct psc_ctlmsghdr *mh,
 }
 
 int
+psc_ctlparam_log_file(int fd, struct psc_ctlmsghdr *mh,
+    struct psc_ctlmsg_param *pcp, char **levels, int nlevels)
+{
+	int rc, set;
+
+	if (nlevels > 2)
+		return (psc_ctlsenderr(fd, mh, "invalid field"));
+
+	if (strcmp(pcp->pcp_thrname, PCTHRNAME_EVERYONE) != 0)
+		return (psc_ctlsenderr(fd, mh, "invalid thread field"));
+
+	rc = 1;
+	levels[0] = "log";
+	levels[1] = "file";
+
+	set = (mh->mh_type == PCMT_SETPARAM);
+
+	if (set) {
+		if (pcp->pcp_flags & PCPF_SUB)
+			return (psc_ctlsenderr(fd,
+			    mh, "invalid operation"));
+		freopen(pcp->pcp_value,
+		    pcp->pcp_flags & PCPF_ADD ?
+		    "a" : "w", stderr);
+	} else
+		rc = psc_ctlsenderr(fd, mh, "log.file: write-only");
+	return (rc);
+}
+
+int
+psc_ctlparam_log_format(int fd, struct psc_ctlmsghdr *mh,
+    struct psc_ctlmsg_param *pcp, char **levels, int nlevels)
+{
+	int rc, set;
+
+	if (nlevels > 2)
+		return (psc_ctlsenderr(fd, mh, "invalid field"));
+
+	if (strcmp(pcp->pcp_thrname, PCTHRNAME_EVERYONE) != 0)
+		return (psc_ctlsenderr(fd, mh, "invalid thread field"));
+
+	rc = 1;
+	levels[0] = "log";
+	levels[1] = "format";
+
+	set = (mh->mh_type == PCMT_SETPARAM);
+
+	if (set) {
+		static char logbuf[LINE_MAX];
+
+		strlcpy(logbuf, pcp->pcp_value, sizeof(logbuf));
+		psc_logfmt = logbuf;
+	} else
+		rc = psc_ctlmsg_param_send(fd, mh, pcp,
+		    PCTHRNAME_EVERYONE, levels, 2, psc_logfmt);
+	return (rc);
+}
+
+int
 psc_ctlparam_pool_handle(int fd, struct psc_ctlmsghdr *mh,
     struct psc_ctlmsg_param *pcp, char **levels, int nlevels,
     struct psc_poolmgr *m, int val)

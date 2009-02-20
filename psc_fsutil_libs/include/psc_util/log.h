@@ -175,4 +175,6 @@ __dead void _psc_fatal(const char *, const char *, int, int, int, int,
     __attribute__((__format__(__printf__, 7, 8)))
     __attribute__((nonnull(7, 7)));
 
+extern const char *psc_logfmt;
+
 #endif /* _PFL_LOG_H_ */

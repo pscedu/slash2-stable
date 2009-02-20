@@ -61,6 +61,10 @@ int	psc_ctlhnd_cmd(int, struct psc_ctlmsghdr *, void *);
 
 void	psc_ctlthr_stat(struct psc_thread *, struct psc_ctlmsg_stats *);
 
+int	psc_ctlparam_log_file(int, struct psc_ctlmsghdr *,
+		struct psc_ctlmsg_param *, char **, int);
+int	psc_ctlparam_log_format(int, struct psc_ctlmsghdr *,
+		struct psc_ctlmsg_param *, char **, int);
 int	psc_ctlparam_log_level(int, struct psc_ctlmsghdr *,
 		struct psc_ctlmsg_param *, char **, int);
 int	psc_ctlparam_pool(int, struct psc_ctlmsghdr *,

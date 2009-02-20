@@ -38,7 +38,7 @@ struct fuse_context {
 	pid_t pid;
 };
 
-__static const char		*psc_logfmt = PSC_LOG_FMT;
+const char			*psc_logfmt = PSC_LOG_FMT;
 __static int			 psc_loglevel = PLL_TRACE;
 __static struct psclog_data	*psc_logdata;
 

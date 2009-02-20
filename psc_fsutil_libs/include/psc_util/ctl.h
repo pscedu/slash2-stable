@@ -72,7 +72,7 @@ struct psc_ctlmsg_hashtable {
 #define PCHT_NAME_ALL		"all"
 
 #define PCP_FIELD_MAX		48
-#define PCP_VALUE_MAX		48
+#define PCP_VALUE_MAX		4096
 
 struct psc_ctlmsg_param {
 	char			pcp_thrname[PSC_THRNAME_MAX];
@@ -81,8 +81,8 @@ struct psc_ctlmsg_param {
 	int32_t			pcp_flags;
 };
 
-#define PCPF_ADD	(1 << 0)
-#define PCPF_SUB	(1 << 1)
+#define PCPF_ADD	(1 << 0)	/* relative: addition */
+#define PCPF_SUB	(1 << 1)	/* relative: subtraction */
 
 struct psc_ctlmsg_iostats {
 	struct iostats		pci_ist;
