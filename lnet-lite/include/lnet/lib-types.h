@@ -390,9 +390,6 @@ typedef struct lnet_ni {
         lnd_t            *ni_lnd;               /* procedural interface */
         int               ni_refcount;          /* reference count */
         char             *ni_interfaces[LNET_MAX_INTERFACES]; /* equivalent interfaces to use */
-	int		  ni_ninterfaces;
-	struct lnet_ni	**ni_bonded_interfaces;	/* list of if's on this net */
-	int		  ni_slave;
 	struct iostats	  ni_recvstats;		
 	struct iostats	  ni_sendstats;	
 } lnet_ni_t;

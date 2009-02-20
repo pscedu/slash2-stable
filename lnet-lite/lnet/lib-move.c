@@ -1171,30 +1171,6 @@ lnet_return_credits_locked (lnet_msg_t *msg)
         }
 }
 
-static lnet_ni_t *
-lnet_ni_findslave(lnet_ni_t *master_ni, lnet_ni_t *ni, int test_only)
-{
-	int i=1;
-	lnet_ni_t *tni=ni;
-
-	if (!master_ni->ni_bonded_interfaces)
-		return tni;
-
-	for (i=0; i < master_ni->ni_ninterfaces; i++) {
-		psc_trace("Comp lni %p with sni %p",
-			master_ni->ni_bonded_interfaces[i], ni);
-		if (master_ni->ni_bonded_interfaces[i] == ni) {
-			if (!test_only) {
-				lnet_ni_decref_locked(master_ni);
-				lnet_ni_addref_locked(master_ni->ni_bonded_interfaces[i]);
-			}
-			tni = ni;
-			break;
-		}
-	}
-	return tni;
-}
-
 int
 lnet_send(lnet_nid_t src_nid, lnet_msg_t *msg)
 {
@@ -1241,10 +1217,6 @@ lnet_send(lnet_nid_t src_nid, lnet_msg_t *msg)
         /* Is this for someone on a local network? */
         local_ni = lnet_net2ni_locked(LNET_NIDNET(dst_nid));
 
-	if (local_ni && local_ni != src_ni &&
-	    local_ni->ni_ninterfaces)
-		local_ni = lnet_ni_findslave(local_ni, src_ni, 0);
-
         if (local_ni != NULL) {
                 if (src_ni == NULL) {
                         src_ni = local_ni;
@@ -1284,12 +1256,7 @@ lnet_send(lnet_nid_t src_nid, lnet_msg_t *msg)
                         /* ENOMEM or shutting down */
                         return rc;
                 }
-		/*
-		 * Ensure our peer is reachable via this ni or one of
-		 * its slaves.
-		 */
-//                LASSERT (lp->lp_ni == src_ni);
-                LASSERT(lp->lp_ni == lnet_ni_findslave(src_ni, lp->lp_ni, 1));
+                LASSERT (lp->lp_ni == src_ni);
         } else {
                 /* sending to a remote network */
                 rnet = lnet_find_net_locked(LNET_NIDNET(dst_nid));
@@ -1309,8 +1276,7 @@ lnet_send(lnet_nid_t src_nid, lnet_msg_t *msg)
                         lp2 = route->lr_gateway;
 
                         if (lp2->lp_alive &&
-                            (src_ni == NULL || lp2->lp_ni ==
-			     lnet_ni_findslave(src_ni, lp2->lp_ni, 1)) &&
+                            (src_ni == NULL || lp2->lp_ni == src_ni) &&
                             (lp == NULL || lnet_compare_routers(lp2, lp) > 0)) {
                                 best_route = route;
                                 lp = lp2;
@@ -1335,7 +1301,7 @@ lnet_send(lnet_nid_t src_nid, lnet_msg_t *msg)
                         src_ni = lp->lp_ni;
                         src_nid = src_ni->ni_nid;
                 } else {
-                        LASSERT (src_ni == lnet_ni_findslave(lp->lp_ni, src_ni, 1));
+                        LASSERT (src_ni == lp->lp_ni);
                         lnet_ni_decref_locked(src_ni);
                 }
 

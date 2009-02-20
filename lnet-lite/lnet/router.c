@@ -279,7 +279,7 @@ lnet_add_route (__u32 net, unsigned int hops, lnet_nid_t gateway)
         lnet_route_t        *route2;
         lnet_ni_t           *ni;
         int                  add_route;
-        int                  rc, i;
+        int                  rc;
 
         CDEBUG(D_NET, "Add route: net %s hops %u gw %s\n",
                libcfs_net2str(net), hops, libcfs_nid2str(gateway));
@@ -380,13 +380,6 @@ lnet_add_route (__u32 net, unsigned int hops, lnet_nid_t gateway)
                 /* XXX Assume alive */
                 if (ni->ni_lnd->lnd_notify != NULL)
                         (ni->ni_lnd->lnd_notify)(ni, gateway, 1);
-
-                for (i=1; i<ni->ni_ninterfaces; i++) {
-                        lnet_ni_t *tni = ni->ni_bonded_interfaces[i];
-                        CERROR("Add route: net %s hops %u gw %s - notify tni %p\n",
-                               libcfs_net2str(net), hops, libcfs_nid2str(gateway), tni);
-                        (tni->ni_lnd->lnd_notify)(tni, gateway, 1);
-                }
 
                 lnet_ni_decref(ni);
         } else {

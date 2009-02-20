@@ -286,7 +286,6 @@ lnet_parse_networks(struct list_head *nilist, char *networks)
                                 goto failed;
                         }
 
-			ni->ni_ninterfaces++;
                         ni->ni_interfaces[niface++] = iface;
 			iface = comma;
 		} while (iface != NULL);
