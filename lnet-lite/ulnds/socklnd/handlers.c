@@ -40,13 +40,7 @@
 
 #include "usocklnd.h"
 #include <unistd.h>
-#ifndef __CYGWIN__
-#if defined(__sun__) || defined(__sun)
-# include <sys/syscall.h>
-#else
-# include <syscall.h>
-#endif
-#endif
+#include <sys/syscall.h>
 
 #include "psc_util/iostats.h"
 

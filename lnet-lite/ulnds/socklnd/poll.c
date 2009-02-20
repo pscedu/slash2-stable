@@ -40,13 +40,9 @@
 
 #include "usocklnd.h"
 #include <unistd.h>
-#ifndef __CYGWIN__
+#include <sys/syscall.h>
 #if defined(__sun__) || defined(__sun)
-# include <sys/syscall.h>
 # include <sys/devpoll.h>
-#else
-# include <syscall.h>
-#endif
 #endif
 
 #if defined(__sun__) || defined(__sun)

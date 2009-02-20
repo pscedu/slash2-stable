@@ -210,8 +210,6 @@ typedef struct {
         int ut_peertxcredits; /* # concurrent sends to 1 peer */
         int ut_socknagle;     /* Is Nagle alg on ? */
         int ut_sockbufsiz;    /* size of socket buffers */
-	int ut_usesdp;        /* use sockets direct */
-	int ut_portinc;       /* increment port for multiple if's */
 	int ut_cport;         /* remote peer TCP port for connect(2) */
 } usock_tunables_t;
 

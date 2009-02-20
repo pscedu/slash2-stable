@@ -72,8 +72,6 @@ usock_tunables_t usock_tuns = {
         .ut_peertxcredits   = 8,
         .ut_socknagle       = 0,
         .ut_sockbufsiz      = 0,
-        .ut_usesdp          = 0,
-        .ut_portinc         = 0,
         .ut_cport           = 988,
 };
 
@@ -226,16 +224,6 @@ usocklnd_update_tunables()
 
         rc = cfs_parse_int_tunable(&usock_tuns.ut_sockbufsiz,
                                       "USOCK_SOCKBUFSIZ");
-        if (rc)
-                return rc;
-
-        rc = cfs_parse_int_tunable(&usock_tuns.ut_usesdp,
-                                      "USOCK_USESDP");
-        if (rc)
-                return rc;
-
-        rc = cfs_parse_int_tunable(&usock_tuns.ut_portinc,
-                                      "USOCK_PORTINC");
         if (rc)
                 return rc;
 
