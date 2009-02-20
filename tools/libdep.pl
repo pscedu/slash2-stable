@@ -36,3 +36,5 @@ foreach my $lib (@l_opts) {
 foreach my $lib (@libs) {
 	print " ", $lib;
 }
+
+print "\n";
