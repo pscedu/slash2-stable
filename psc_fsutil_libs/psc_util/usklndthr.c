@@ -41,6 +41,7 @@ cfs_create_thread(cfs_thread_t startf, void *arg,
 	thr = pscthr_init(psc_usklndthr_get_type(namefmt), PTF_FREE,
 	    psc_usklndthr_begin, psc_usklndthr_destroy, sizeof(*put),
 	    name);
+	put = thr->pscthr_private;
 	put->put_startf = startf;
 	put->put_arg = arg;
 	pscthr_setready(thr);
