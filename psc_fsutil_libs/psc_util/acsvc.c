@@ -450,6 +450,7 @@ access_fsop(int op, uid_t uid, gid_t gid, const char *fn, ...)
 		    PATH_MAX) >= PATH_MAX)
 			rc = ENAMETOOLONG;
 		break;
+	case ACSOP_RMDIR:
 	case ACSOP_STAT:
 	case ACSOP_STATFS:
 		break;
