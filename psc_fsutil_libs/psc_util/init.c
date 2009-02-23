@@ -43,6 +43,7 @@ psc_dumpstack(__unusedx int sig)
 	snprintf(buf, sizeof(buf), "pstack %d || gstack %d",
 	    getpid(), getpid());
 	system(buf);
+	kill(getpid(), SIGQUIT);
 	_exit(1);
 }
 
