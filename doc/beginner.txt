@@ -345,5 +345,3 @@ threadtable registration
   contains a member void *rq->rq_export->exp_privdata which can be used
   to store an application-specific (or task-specific) structure to
   associate data with the peer.
-
-test
