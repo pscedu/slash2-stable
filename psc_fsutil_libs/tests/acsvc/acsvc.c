@@ -7,7 +7,7 @@
 
 #include "psc_util/acsvc.h"
 #include "psc_util/cdefs.h"
-#include "psc_util/thread.h"
+#include "psc_util/log.h"
 
 const char *progname;
 
@@ -21,7 +21,6 @@ usage(void)
 int
 main(int argc, char *argv[])
 {
-	struct psc_thread thr;
 	int fd;
 
 	progname = argv[0];
@@ -31,7 +30,7 @@ main(int argc, char *argv[])
 	if (argc)
 		usage();
 
-	acsvc_init(&thr, 0, "test", argv);
+	acsvc_init(0, "test", argv);
 
 	fd = access_fsop(ACSOP_OPEN, geteuid(), getegid(),
 	    __FILE__, O_RDONLY);
