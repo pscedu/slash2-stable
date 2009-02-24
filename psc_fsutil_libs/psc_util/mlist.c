@@ -24,7 +24,7 @@ psc_mlist_size(struct psc_mlist *pml)
 	int locked, size;
 
 	locked = reqlock(&pml->pml_lock);
-	size = psclist_empty(&pml->pml_listhd);
+	size = pml->pml_size;
 	ureqlock(&pml->pml_lock, locked);
 	return (size);
 }
