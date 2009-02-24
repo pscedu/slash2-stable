@@ -81,3 +81,5 @@ zest
   server RPCIO threads issue GETs to connected mount_zests
 - when mount_zest is idle, have it merge dirty zcf zsb channels
 - let wiki changes automatically email zest-devel@ like svn commits
+
+- add 'age' to svnweb log
