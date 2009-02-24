@@ -34,7 +34,7 @@ struct psc_mlist {
 	struct psclist_head	pml_index_lentry;	/* link adjoining mlists */
 	psc_spinlock_t		pml_lock;
 
-	size_t			pml_size;
+	int			pml_size;
 	struct psclist_head	pml_listhd;
 	struct multilock_cond	pml_mlcond_empty;	/* wait here while list is empty */
 	char			pml_name[PML_NAME_MAX];	/* for ml mgmt */
