@@ -10,6 +10,7 @@
 #include <sys/socket.h>
 #include <sys/un.h>
 #include <sys/uio.h>
+#include <sys/resource.h>
 
 #include <errno.h>
 #include <signal.h>
@@ -611,7 +612,7 @@ psc_ctlparam_rlim_nofile(int fd, struct psc_ctlmsghdr *mh,
 			return (psc_ctlsenderr(fd, mh,
 			    "getrlimit", strerror(errno)));
 		}
-		snprintf(buf, sizeof(buf), "%d", rlim.rlim_cur);
+		snprintf(buf, sizeof(buf), "%ld", rlim.rlim_cur);
 		rc = psc_ctlmsg_param_send(fd, mh, pcp,
 		    PCTHRNAME_EVERYONE, levels, 2, buf);
 	}
