@@ -558,11 +558,63 @@ psc_ctlparam_log_format(int fd, struct psc_ctlmsghdr *mh,
 	if (set) {
 		static char logbuf[LINE_MAX];
 
+		if (nlevels != 2)
+			return (psc_ctlsenderr(fd, mh, "invalid thread field"));
+
 		strlcpy(logbuf, pcp->pcp_value, sizeof(logbuf));
 		psc_logfmt = logbuf;
 	} else
 		rc = psc_ctlmsg_param_send(fd, mh, pcp,
 		    PCTHRNAME_EVERYONE, levels, 2, psc_logfmt);
+	return (rc);
+}
+
+int
+psc_ctlparam_rlim_nofile(int fd, struct psc_ctlmsghdr *mh,
+    struct psc_ctlmsg_param *pcp, char **levels, int nlevels)
+{
+	struct rlimit rlim;
+	int rc, set;
+	char *endp;
+	long val;
+
+	if (nlevels > 2)
+		return (psc_ctlsenderr(fd, mh, "invalid field"));
+
+	if (strcmp(pcp->pcp_thrname, PCTHRNAME_EVERYONE) != 0)
+		return (psc_ctlsenderr(fd, mh, "invalid thread field"));
+
+	rc = 1;
+	levels[0] = "rlim";
+	levels[1] = "nofile";
+
+	set = (mh->mh_type == PCMT_SETPARAM);
+
+	if (set) {
+		endp = NULL;
+		val = strtol(pcp->pcp_value, &endp, 10);
+		if (val <= 0 || val > 10 * 1024 ||
+		    endp == pcp->pcp_value || *endp != '\0')
+			return (psc_ctlsenderr(fd, mh,
+			    "invalid rlim.nofile value: %s",
+			    pcp->pcp_value));
+
+		rlim.rlim_cur = rlim.rlim_max = (rlim_t)val;
+		if (setrlimit(RLIMIT_NOFILE, &rlim) == -1)
+			return (psc_ctlsenderr(fd, mh,
+			    "invalid thread field", strerror(errno)));
+	} else {
+		char buf[20];
+
+		if (getrlimit(RLIMIT_NOFILE, &rlim) == -1) {
+			psc_error("getrlimit");
+			return (psc_ctlsenderr(fd, mh,
+			    "getrlimit", strerror(errno)));
+		}
+		snprintf(buf, sizeof(buf), "%d", rlim.rlim_cur);
+		rc = psc_ctlmsg_param_send(fd, mh, pcp,
+		    PCTHRNAME_EVERYONE, levels, 2, buf);
+	}
 	return (rc);
 }
 
@@ -778,8 +830,10 @@ psc_ctlrep_param(int fd, struct psc_ctlmsghdr *mh, void *m)
 					goto shortcircuit;
 				break;
 			} else if (pcf->pcf_level + 1 >= nlevels) {
+				/* disallow setting values of non-leaf nodes */
 				if (set)
 					goto invalid;
+
 				k = 0;
 				psc_stree_foreach_child(d, c) {
 					pcn = d->ptn_data;
