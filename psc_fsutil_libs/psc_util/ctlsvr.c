@@ -32,6 +32,7 @@
 #include "psc_util/iostats.h"
 #include "psc_util/log.h"
 #include "psc_util/mlist.h"
+#include "psc_util/rlimit.h"
 #include "psc_util/strlcpy.h"
 #include "psc_util/thread.h"
 
@@ -582,9 +583,9 @@ int
 psc_ctlparam_rlim_nofile(int fd, struct psc_ctlmsghdr *mh,
     struct psc_ctlmsg_param *pcp, char **levels, int nlevels)
 {
-	struct rlimit rlim;
 	int rc, set;
 	char *endp;
+	rlim_t nfd;
 	long val;
 
 	if (nlevels > 2)
@@ -607,20 +608,18 @@ psc_ctlparam_rlim_nofile(int fd, struct psc_ctlmsghdr *mh,
 			return (psc_ctlsenderr(fd, mh,
 			    "invalid rlim.nofile value: %s",
 			    pcp->pcp_value));
-
-		rlim.rlim_cur = rlim.rlim_max = (rlim_t)val;
-		if (setrlimit(RLIMIT_NOFILE, &rlim) == -1)
+		if (psc_setrlimit(RLIMIT_NOFILE, val, val) == -1)
 			return (psc_ctlsenderr(fd, mh,
-			    "invalid thread field", strerror(errno)));
+			    "setrlimit", strerror(errno)));
 	} else {
 		char buf[20];
 
-		if (getrlimit(RLIMIT_NOFILE, &rlim) == -1) {
+		if (psc_getrlimit(RLIMIT_NOFILE, &nfd, NULL) == -1) {
 			psc_error("getrlimit");
 			return (psc_ctlsenderr(fd, mh,
 			    "getrlimit", strerror(errno)));
 		}
-		snprintf(buf, sizeof(buf), "%ld", rlim.rlim_cur);
+		snprintf(buf, sizeof(buf), "%ld", nfd);
 		rc = psc_ctlmsg_param_send(fd, mh, pcp,
 		    PCTHRNAME_EVERYONE, levels, 2, buf);
 	}
