@@ -47,6 +47,7 @@ int
 psc_ctlmsg_sendv(int fd, const struct psc_ctlmsghdr *mh, const void *m)
 {
 	struct iovec iov[2];
+	struct msghdr msg;
 	size_t tsiz;
 	ssize_t n;
 
@@ -56,18 +57,21 @@ psc_ctlmsg_sendv(int fd, const struct psc_ctlmsghdr *mh, const void *m)
 	iov[1].iov_base = (void *)m;
 	iov[1].iov_len = mh->mh_size;
 
-	n = writev(fd, iov, NENTRIES(iov));
+	memset(&msg, 0, sizeof(msg));
+	msg.msg_iov = iov;
+	msg.msg_iovlen = NENTRIES(iov);
+	n = sendmsg(fd, &msg, MSG_NOSIGNAL);
 	if (n == -1) {
 		if (errno == EPIPE) {
 			psc_ctlthr(pscthr_get())->pc_st_ndrop++;
 			sched_yield();
 			return (0);
 		}
-		psc_fatal("write");
+		psc_fatal("sendmsg");
 	}
 	tsiz = sizeof(*mh) + mh->mh_size;
 	if ((size_t)n != tsiz)
-		psc_warn("short write");
+		psc_warn("short sendmsg");
 	psc_ctlthr(pscthr_get())->pc_st_nsent++;
 	sched_yield();
 	return (1);
@@ -87,6 +91,7 @@ psc_ctlmsg_send(int fd, int type, size_t siz, const void *m)
 {
 	struct psc_ctlmsghdr mh;
 	struct iovec iov[2];
+	struct msghdr msg;
 	size_t tsiz;
 	ssize_t n;
 
@@ -100,18 +105,21 @@ psc_ctlmsg_send(int fd, int type, size_t siz, const void *m)
 	iov[1].iov_base = (void *)m;
 	iov[1].iov_len = siz;
 
-	n = writev(fd, iov, NENTRIES(iov));
+	memset(&msg, 0, sizeof(msg));
+	msg.msg_iov = iov;
+	msg.msg_iovlen = NENTRIES(iov);
+	n = sendmsg(fd, &msg, MSG_NOSIGNAL);
 	if (n == -1) {
 		if (errno == EPIPE) {
 			psc_ctlthr(pscthr_get())->pc_st_ndrop++;
 			sched_yield();
 			return (0);
 		}
-		psc_fatal("write");
+		psc_fatal("sendmsg");
 	}
 	tsiz = sizeof(mh) + siz;
 	if ((size_t)n != tsiz)
-		psc_warn("short write");
+		psc_warn("short sendmsg");
 	psc_ctlthr(pscthr_get())->pc_st_nsent++;
 	sched_yield();
 	return (1);
@@ -692,6 +700,93 @@ psc_ctlparam_pool_handle(int fd, struct psc_ctlmsghdr *mh,
 }
 
 int
+psc_ctlparam_run(int fd, struct psc_ctlmsghdr *mh,
+    struct psc_ctlmsg_param *pcp, char **levels, int nlevels)
+{
+	struct psc_thread *thr;
+	int rc, set, run;
+
+	nlevels = 1;
+	levels[0] = "run";
+	run = 0; /* gcc */
+
+	set = (mh->mh_type == PCMT_SETPARAM);
+
+	if (set) {
+		if (strcmp(pcp->pcp_value, "0") == 0)
+			run = 0;
+		else if (strcmp(pcp->pcp_value, "1") == 0)
+			run = 1;
+		else
+			return (psc_ctlsenderr(fd, mh,
+			    "invalid run value: %s",
+			    pcp->pcp_field));
+	}
+
+	rc = 1;
+	PLL_LOCK(&psc_threads);
+	PSC_CTL_FOREACH_THREAD(thr, pcp->pcp_thrname, &psc_threads.pll_listhd) {
+		if (set)
+			pscthr_setrun(thr, run);
+		else if (!(rc = psc_ctlmsg_param_send(fd, mh, pcp,
+		    thr->pscthr_name, levels, nlevels,
+		    thr->pscthr_flags & PTF_RUN ? "1" : "0")))
+			break;
+	}
+	PLL_ULOCK(&psc_threads);
+	return (rc);
+}
+
+/*
+ * psc_ctlparam_pause - handle thread pause state parameter.
+ * @fd: control connection file descriptor.
+ * @mh: already filled-in control message header.
+ * @pcp: parameter control message.
+ * @levels: parameter fields.
+ * @nlevels: number of fields.
+ */
+int
+psc_ctlparam_pause(int fd, struct psc_ctlmsghdr *mh,
+    struct psc_ctlmsg_param *pcp, char **levels, int nlevels)
+{
+	struct psc_thread *thr;
+	int rc, set, pause;
+	char *s;
+	long l;
+
+	nlevels = 1;
+	levels[0] = "pause";
+
+	pause = 0; /* gcc */
+
+	set = (mh->mh_type == PCMT_SETPARAM);
+
+	if (set) {
+		s = NULL;
+		l = strtol(pcp->pcp_value, &s, 10);
+		if (l == LONG_MAX || l == LONG_MIN || *s != '\0' ||
+		    s == pcp->pcp_value || l < 0 || l > 1)
+			return (psc_ctlsenderr(fd, mh,
+			    "invalid pause value: %s",
+			    pcp->pcp_field));
+		pause = (int)l;
+	}
+
+	rc = 1;
+	PLL_LOCK(&psc_threads);
+	PSC_CTL_FOREACH_THREAD(thr, pcp->pcp_thrname, &psc_threads.pll_listhd) {
+		if (set)
+			pscthr_setpause(thr, pause);
+		else if (!(rc = psc_ctlmsg_param_send(fd, mh, pcp,
+		    thr->pscthr_name, levels, nlevels,
+		    (thr->pscthr_flags & PTF_PAUSED) ? "1" : "0")))
+			break;
+	}
+	PLL_ULOCK(&psc_threads);
+	return (rc);
+}
+
+int
 psc_ctlparam_pool(int fd, struct psc_ctlmsghdr *mh,
     struct psc_ctlmsg_param *pcp, char **levels, int nlevels)
 {
@@ -1142,9 +1237,20 @@ psc_ctlthr_service(int fd, const struct psc_ctlop *ct, int nops)
 
 	m = NULL;
 	siz = 0;
-	while ((n = read(fd, &mh, sizeof(mh))) != -1 && n != 0) {
+	for (;;) {
+		n = recv(fd, &mh, sizeof(mh), MSG_WAITALL | MSG_NOSIGNAL);
+		if (n == 0)
+			break;
+		if (n == -1) {
+			if (errno == EPIPE)
+				break;
+			if (errno == EINTR)
+				continue;
+			psc_fatal("recvmsg");
+		}
+
 		if (n != sizeof(mh)) {
-			psc_notice("short read on psc_ctlmsghdr; read=%zd", n);
+			psc_notice("short recvmsg on psc_ctlmsghdr; nbytes=%zd", n);
 			continue;
 		}
 		if (mh.mh_size > siz) {
@@ -1152,12 +1258,19 @@ psc_ctlthr_service(int fd, const struct psc_ctlop *ct, int nops)
 			if ((m = realloc(m, siz)) == NULL)
 				psc_fatal("realloc");
 		}
-		n = read(fd, m, mh.mh_size);
-		if (n == -1)
-			psc_fatal("read");
+
+ again:
+		n = recv(fd, m, mh.mh_size, MSG_WAITALL | MSG_NOSIGNAL);
+		if (n == -1) {
+			if (errno == EPIPE)
+				break;
+			if (errno == EINTR)
+				goto again;
+			psc_fatal("recv");
+		}
 		if ((size_t)n != mh.mh_size) {
-			psc_warn("short read on psc_ctlmsg contents; "
-			    "read=%zu; expected=%zu",
+			psc_warn("short recv on psc_ctlmsg contents; "
+			    "got=%zu; expected=%zu",
 			    n, mh.mh_size);
 			break;
 		}
@@ -1182,8 +1295,6 @@ psc_ctlthr_service(int fd, const struct psc_ctlop *ct, int nops)
 		if (!ct[mh.mh_type].pc_op(fd, &mh, m))
 			break;
 	}
-	if (n == -1 && errno != EPIPE)
-		psc_fatal("read");
 	PSCFREE(m);
 }
 

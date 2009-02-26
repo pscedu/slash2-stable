@@ -71,6 +71,10 @@ int	psc_ctlparam_pool(int, struct psc_ctlmsghdr *,
 		struct psc_ctlmsg_param *, char **, int);
 int	psc_ctlparam_rlim_nofile(int, struct psc_ctlmsghdr *,
 		struct psc_ctlmsg_param *, char **, int);
+int	psc_ctlparam_run(int, struct psc_ctlmsghdr *,
+		struct psc_ctlmsg_param *, char **, int);
+int	psc_ctlparam_pause(int, struct psc_ctlmsghdr *,
+		struct psc_ctlmsg_param *, char **, int);
 
 void	psc_ctlparam_register(const char *, int (*)(int, struct psc_ctlmsghdr *,
 		struct psc_ctlmsg_param *, char **, int));
