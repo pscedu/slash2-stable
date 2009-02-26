@@ -83,3 +83,4 @@ zest
 - let wiki changes automatically email zest-devel@ like svn commits
 
 - add 'age' to svnweb log
+- investigate if our sched_yield() calls are correct
