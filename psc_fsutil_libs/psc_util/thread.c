@@ -66,11 +66,12 @@ _pscthr_sigusr1(__unusedx int sig)
 	while (!tryreqlock(&thr->pscthr_lock, &locked))
 		sched_yield();
 	thr->pscthr_flags |= PTF_PAUSED;
-	ureqlock(&thr->pscthr_lock, locked);
 	while (thr->pscthr_flags & PTF_PAUSED) {
-		usleep(500);
-		sched_yield();
+		psc_waitq_wait(&thr->pscthr_waitq,
+		    &thr->pscthr_lock);
+		spinlock(&thr->pscthr_lock);
 	}
+	ureqlock(&thr->pscthr_lock, locked);
 }
 
 /*
@@ -87,6 +88,7 @@ _pscthr_sigusr2(__unusedx int sig)
 	while (!tryreqlock(&thr->pscthr_lock, &locked))
 		sched_yield();
 	thr->pscthr_flags &= ~PTF_PAUSED;
+	psc_waitq_wakeall(&thr->pscthr_waitq);
 	ureqlock(&thr->pscthr_lock, locked);
 }
 
@@ -368,4 +370,43 @@ char *
 psc_get_hostname(void)
 {
 	return (psclog_getdata()->pld_hostname);
+}
+
+/*
+ * pscthr_setrun - Set the PTF_RUN flag of a thread.
+ * @thr: thread to modify.
+ * @run: boolean whether or not the thread should run.
+ */
+void
+pscthr_setrun(struct psc_thread *thr, int run)
+{
+	int locked;
+
+	locked = reqlock(&thr->pscthr_lock);
+	if (run) {
+		thr->pscthr_flags |= PTF_RUN;
+		psc_waitq_wakeall(&thr->pscthr_waitq);
+	} else
+		thr->pscthr_flags &= ~PTF_RUN;
+	ureqlock(&thr->pscthr_lock, locked);
+}
+
+/**
+ * pscthr_run - Ensure a thread should a main loop iteration.
+ */
+int
+pscthr_run(void)
+{
+	struct psc_thread *thr;
+
+	thr = pscthr_get();
+	spinlock(&thr->pscthr_lock);
+	if ((thr->pscthr_flags & PTF_RUN) == 0)
+		do {
+			psc_waitq_wait(&thr->pscthr_waitq,
+			    &thr->pscthr_lock);
+			spinlock(&thr->pscthr_lock);
+		} while ((thr->pscthr_flags) == 0);
+	freelock(&thr->pscthr_lock);
+	return (1);
 }
