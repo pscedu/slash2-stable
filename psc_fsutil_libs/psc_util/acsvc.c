@@ -139,11 +139,10 @@ acsvc_svrmain(int s)
 		iov.iov_len = sizeof(arq);
 		m.msg_iov = &iov;
 		m.msg_iovlen = 1;
- restart:
 		nbytes = recvmsg(s, &m, MSG_WAITALL); /* check TRUNC */
 		if (nbytes == -1) {
 			if (errno == EINTR)
-				goto restart;
+				continue;
 			psc_fatal("recvmsg");
 		} else if (nbytes == 0)
 			exit(0);
