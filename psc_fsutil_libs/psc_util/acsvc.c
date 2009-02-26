@@ -159,10 +159,10 @@ acsvc_svrmain(int s)
 		m.msg_iovlen = 1;
 
 		/* Invoke access operation. */
-		if (seteuid(arq.arq_uid) == -1)
-			psc_fatal("seteuid %d", arq.arq_uid);
 //		if (setegid(arq.arq_gid) == -1)
 //			psc_fatal("setegid %d", arq.arq_gid);
+		if (seteuid(arq.arq_uid) == -1)
+			psc_fatal("seteuid %d", arq.arq_uid);
 		switch (arq.arq_op) {
 		case ACSOP_ACCESS:
 			rc = access(arq.arq_fn, arq.arq_data_access.mode);
@@ -282,9 +282,11 @@ acsvc_climain(__unusedx void *arg)
 		m.msg_control = ac.ac_buf;
 		m.msg_controllen = sizeof(ac.ac_buf);
 		nbytes = recvmsg(acsvc_fd, &m, MSG_WAITALL);
-		if (nbytes == -1)
+		if (nbytes == -1) {
+			if (errno == EINTR)
+				continue;
 			psc_fatal("recvmsg");
-		else if (nbytes != sizeof(arp))
+		} else if (nbytes != sizeof(arp))
 			psc_fatalx("recvmsg: short I/O, want %zu, got %zd",
 			    sizeof(arp), nbytes);
 
