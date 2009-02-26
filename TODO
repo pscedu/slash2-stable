@@ -2,7 +2,7 @@ make
 - rename ROOTDIR -> PROJ_BASE
 - introduce APP_BASE
 
-general
+general reminders
 - watch out for sizeof(type var[0])
 - constify RPC replies in clients and requests in servers
 - check all bulkserver()'s for free_desc()
@@ -15,6 +15,7 @@ general
 - investigate pthread_rwlocks for things like trees and large lists
 - remove ifdef buttons
 - watch out for "a - b" in cmp functions overflowing
+- investigate if our sched_yield() calls are correct
 
 slash
 - piggyback small readdirs directly into READDIR replies
@@ -27,9 +28,15 @@ pfl
 - move iostat thr and interval thr here
 - rename dynarray_hintlen -> dynarray_ensurelen
 - create a refcnt manager for thread-safe activity
-
-lnet
-- move iostats outside of socklnd
+- consider adding a new keyword __local or something for thread-localized memory.
+- add a pscthr_get() check in pscalloc and test
+- add a struct psc_completion
+- psclog format specifier: timestamp difference
+- investigate proper control socket permissions checks.  regular
+  users should be able to read some stats but only root users
+  should be able to issue exit commands, etc.  TCP sockets should
+  inspect remote port to determine "authorization"
+- rename HAVE_CPUSET to HAVE_NUMA
 
 zest
 - test parity reconstruction service by rebuilding
@@ -47,7 +54,6 @@ zest
         descriptors are finished
 - do not allow clients to sit on parity groups, need some
   kind of reap/reclamation mechanism
-
 - move parity block into random positions in the raid scheme
   to avoid placing all parity data on the same disk.
   however skip these on disk fail rebuild
@@ -56,31 +62,14 @@ zest
   deprecates need for zigs, or at least current complexity of zigs.
 - pass sizeof(iovs) to client on CONNECT
 - write back support on server
-
-- the *at family of routines allow any fd, not just a dirfd
-
-- consider adding a new keyword __local or something for thread-localized memory.
-
-- see if pool initf allows us to set the arg type instead of void
-
-- investigate proper control socket permissions checks.  regular
-  users should be able to read some stats but only root users
-  should be able to issue exit commands, etc.
-
-- move tests/bw and tests/sock out of tests
-- rename HAVE_CPUSET to HAVE_NUMA
-- add a pscthr_get() check in pscalloc and test
-- add a struct psc_completion
 - add extattrs to zfs fuse
 - get xattr working on fruits /bessemer
-- pure unused files in lnet #error "no"
-
-- psclog format specifier: timestamp difference
+- the *at family of routines allow any fd, not just a dirfd
 - zest user command to tag a file sync disregard
 - new pull model for zest server to client:
   server RPCIO threads issue GETs to connected mount_zests
 - when mount_zest is idle, have it merge dirty zcf zsb channels
-- let wiki changes automatically email zest-devel@ like svn commits
 
-- add 'age' to svnweb log
-- investigate if our sched_yield() calls are correct
+svnweb
+- add 'age' (how long) to log display
+- let wiki changes automatically email zest-devel@ like svn commits
