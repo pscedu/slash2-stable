@@ -476,8 +476,8 @@ psc_ctlmsg_pool_prhdr(__unusedx struct psc_ctlmsghdr *mh,
     __unusedx const void *m)
 {
 	printf("pools\n");
-	return (printf(" %-20s %5s %8s %8s %8s %8s\n",
-	    "pool", "flags", "free", "total", "min", "max"));
+	return (printf(" %-20s %5s %8s %8s %5s %8s %8s\n",
+	    "pool", "flags", "free", "total", "%use", "min", "max"));
 }
 
 void
@@ -486,11 +486,21 @@ psc_ctlmsg_pool_prdat(__unusedx const struct psc_ctlmsghdr *mh,
 {
 	const struct psc_ctlmsg_pool *pcpl = m;
 
-	printf(" %-20s    %c%c %8d %8d %8d ", pcpl->pcpl_name,
+	printf(" %-20s    %c%c %8d %8d ", pcpl->pcpl_name,
 	    pcpl->pcpl_flags & PPMF_AUTO ? 'A' : '-',
 	    pcpl->pcpl_flags & PPMF_NOLOCK ? 'N' : '-',
-	    pcpl->pcpl_free, pcpl->pcpl_total,
-	    pcpl->pcpl_min);
+	    pcpl->pcpl_free, pcpl->pcpl_total);
+	if (pcpl->pcpl_free == 0)
+		printf(" 100%%");
+	else if (pcpl->pcpl_free == pcpl->pcpl_total)
+		printf("   0%%");
+	else if (pcpl->pcpl_total)
+		printf("%2.1f",
+		    (pcpl->pcpl_total - pcpl->pcpl_free) *
+		    100.0 / pcpl->pcpl_total);
+	else
+		printf("<und>");
+	printf(" %8d ", pcpl->pcpl_min);
 	if (pcpl->pcpl_max)
 		printf("%8d", pcpl->pcpl_max);
 	else
