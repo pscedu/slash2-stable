@@ -36,9 +36,11 @@ struct psc_hashent {
 };
 
 /* Table flags. */
+#define PHTF_NONE	(0 << 0)	/* no table flags specified */
 #define PHTF_STR	(1 << 0)	/* IDs are strings */
 
 /* Lookup flags. */
+#define PHLF_NONE	(0 << 0)	/* no lookup flags specified */
 #define PHLF_DEL	(1 << 0)	/* find and remove item from table */
 
 #define PSC_HASHTBL_FOREACH_BUCKET(b, t)				\
@@ -51,7 +53,6 @@ struct psc_hashent {
 
 /**
  * psc_hashtbl_init - initialize a hash table.
- * @flags: modifier flags.
  * @flags: modifier flags.
  * @t: hash table to initialize.
  * @nbuckets: number of buckets to create.
