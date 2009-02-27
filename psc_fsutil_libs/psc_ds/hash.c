@@ -110,6 +110,25 @@ get_hash_entry(const struct hash_table *t, u64 id, const void *cmp,
 	return (_hashbkt_search(t, b, id, cmp, cbf, 0));
 }
 
+
+void
+spinlock_hash_bucket(const struct hash_table *t, u64 id)
+{
+	struct hash_bucket *b=GET_BUCKET(t, id);
+
+	spinlock(&b->hbucket_lock);
+}
+
+void
+freelock_hash_bucket(const struct hash_table *t, u64 id)
+{
+	struct hash_bucket *b=GET_BUCKET(t, id);
+
+	freelock(&b->hbucket_lock);
+}
+
+
+
 /**
  * del_hash_entry -   remove an entry in the hash table
  * @h: pointer to hash table
@@ -135,13 +154,14 @@ void
 add_hash_entry(const struct hash_table *t, struct hash_entry *e)
 {
 	struct hash_bucket *b;
+	int locked;
 
 	psc_assert(t->htable_size);
 
 	b = GET_BUCKET(t, *e->hentry_id);
-	LOCK_BUCKET(b);
+	locked = reqlock(&b->hbucket_lock);
 	psclist_xadd(&e->hentry_lentry, &b->hbucket_list);
-	ULOCK_BUCKET(b);
+	ureqlock(&b->hbucket_lock, locked);
 }
 
 /**
