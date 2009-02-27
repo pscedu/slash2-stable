@@ -262,7 +262,7 @@ cscope cs:
 			echo "<=== ${DIRPREFIX}" | sed 's!/$$!!';			\
 		fi;									\
 	done
-	cscope -Rb -s${ROOTDIR}/{lnet-lite,psc_fsutil_libs} ${CS_ARGS}
+	cscope -Rb ${CS_ARGS} -s${PFL_BASE} -s${LNET_BASE}
 
 etags:
 	@for i in ${SUBDIRS}; do							\
@@ -276,7 +276,7 @@ etags:
 			echo "<=== ${DIRPREFIX}" | sed 's!/$$!!';			\
 		fi;									\
 	done
-	find ${ROOTDIR}/{lnet-lite,psc_fsutil_libs} ${ET_ARGS} -name \*.[chly] | xargs etags
+	find ${ET_ARGS} ${PFL_BASE} ${PFL_BASE} -name \*.[chly] | xargs etags
 
 env:
 	@env
