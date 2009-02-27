@@ -322,6 +322,8 @@ init_pe(int mype)
 	 *  needed to do read checksumming..
 	 */
 	if (mygroup->block_size) {
+		int id = (ACTIVETYPE(FIO_SAMEFILE) &&
+			  !ACTIVEFILE(FIO_SEEKOFF)) ? 0 : iot->mype;
 		iot->bdesc.buffer_size = iot->rd_bdesc.buffer_size = mygroup->block_size;
 		iot->bdesc.buffer      = malloc(iot->bdesc.buffer_size);
 		iot->rd_bdesc.buffer   = malloc(iot->bdesc.buffer_size);
@@ -329,8 +331,8 @@ init_pe(int mype)
 		ASSERT( (iot->bdesc.buffer    != NULL) &&
 			(iot->rd_bdesc.buffer != NULL) );
 
-		init_buffer(&iot->bdesc,    iot->mype);
-		init_buffer(&iot->rd_bdesc, iot->mype);
+		init_buffer(&iot->bdesc,    id);
+		init_buffer(&iot->rd_bdesc, id);
 		compare_buffer(&iot->bdesc, &iot->rd_bdesc);
 	}
 

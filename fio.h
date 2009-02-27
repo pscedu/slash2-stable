@@ -577,7 +577,7 @@ static inline void _BARRIER(GROUP_t *mygroup, struct io_toolbox *iot) {
   APP_BARRIER;                                                       \
   STARTWATCH(WROPEN_clk);                                        \
   ASSERT((iot->myfd =                                            \
-	  open(iot->mypath, O_CREAT| O_WRONLY|O_TRUNC, 0644)) >= 0 );	         \
+	  open(iot->mypath, O_CREAT| O_WRONLY, 0644)) >= 0 );	         \
   DEBUG(D_DTREE, "opened %s fd = %d\n", iot->mypath, iot->myfd);	 \
   STOPWATCH(WROPEN_clk);                                         \
 } while ( 0 )
@@ -731,8 +731,12 @@ static inline void make_fnam(struct io_toolbox *iot)
   GROUP_t *mygroup = iot->mygroup;
   int      tmp_pe  = iot->mytest_pe;
 
-  if (ACTIVETYPE(FIO_SAMEFILE))
-    tmp_pe = 999999;
+  if (ACTIVETYPE(FIO_SAMEFILE)) {
+	if (!ACTIVETYPE(FIO_SEEKOFF))
+		tmp_pe = 0;
+	else
+		tmp_pe = 999999;
+  }
 
   iot->myfnam = str_end(iot->mypath);
 
