@@ -842,7 +842,7 @@ int pscrpc_queue_wait(struct pscrpc_request *req)
 				rc = -EIO;
 			}
 		}
-		if (rc < 0)
+		//if (rc < 0)
 			pscrpc_unregister_bulk (req);
 	}
 

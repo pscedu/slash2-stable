@@ -299,27 +299,43 @@ void pscrpc_unregister_bulk (struct pscrpc_request *req)
         struct pscrpc_bulk_desc *desc = req->rq_bulk;
         psc_waitq_t             *wq;
         struct l_wait_info       lwi;
-        int                      rc;
+        int                      rc, l, registered=0;
 
-        //psc_assert (!in_interrupt ());    /* might sleep */
+	l = reqlock(&desc->bd_lock);
 
-        if (!pscrpc_bulk_active(desc))  /* completed or */
-                return;                  /* never registered */
+	psc_info("desc->bd_registered=(%d) pscrpc_bulk_active(desc)=(%d)", 
+		 desc->bd_registered, pscrpc_bulk_active(desc));
 
-        psc_assert (desc->bd_req == req);   /* bd_req NULL until registered */
+        if (!desc->bd_registered && !pscrpc_bulk_active(desc)) {  /* completed or */
+		ureqlock(&desc->bd_lock, l);                      /* never registered */
+                return;                  
+	}
+	/* bd_req NULL until registered
+	 */ 
+        psc_assert(desc->bd_req == req);
+	/* Signify that this is being unlinked.
+	 */
+	if (desc->bd_registered) {
+		desc->bd_registered = 0;
+		registered = 1;
+	}
+	
+	ureqlock(&desc->bd_lock, l);
 
         /* the unlink ensures the callback happens ASAP and is the last
          * one.  If it fails, it must be because completion just happened,
          * but we must still l_wait_event() in this case to give liblustre
          * a chance to run client_bulk_callback() */
-
-        LNetMDUnlink (desc->bd_md_h);
+	if (registered)
+		LNetMDUnlink (desc->bd_md_h);
 
         if (req->rq_set != NULL)
                 wq = &req->rq_set->set_waitq;
         else
                 wq = &req->rq_reply_waitq;
 
+	/* This segment should only be needed for single threaded nals.
+	 */
         for (;;) {
                 /* Network access will complete in finite time but the HUGE
                  * timeout lets us CWARN for visibility of sluggish NALs */
@@ -766,6 +782,7 @@ void pscrpc_free_bulk(struct pscrpc_bulk_desc *desc)
         psc_assert(desc != NULL);
         psc_assert(desc->bd_iov_count != LI_POISON); /* not freed already */
         psc_assert(!desc->bd_network_rw);            /* network hands off or */
+	psc_assert(!desc->bd_registered);
 
         psc_assert((desc->bd_export != NULL) ^ (desc->bd_import != NULL));
         if (desc->bd_export)
