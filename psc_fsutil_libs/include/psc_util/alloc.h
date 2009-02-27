@@ -20,6 +20,8 @@
 		free(p);						\
 	} while (0)
 
+#define psc_free_nl(p) free(p)
+
 #define psc_alloc(sz, fl)						\
 	({								\
 		void *__p;						\
