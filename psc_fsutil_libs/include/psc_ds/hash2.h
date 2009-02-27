@@ -23,7 +23,7 @@ struct psc_hashtbl {
 	char			  pht_name[PSC_HTNAME_MAX];
 	struct psclist_head	  pht_lentry;
 	psc_spinlock_t		  pht_lock;
-	int			  pht_flags;	/* see below */
+	int			  pht_flags;	/* hash table flags, see below */
 	int			  pht_idoff;	/* offset into item to item ID */
 	int			  pht_hentoff;	/* offset into item to item ID */
 	int			  pht_nbuckets;
@@ -53,9 +53,14 @@ struct psc_hashent {
 
 /**
  * psc_hashtbl_init - initialize a hash table.
- * @flags: modifier flags.
+ *
  * @t: hash table to initialize.
- * @nbuckets: number of buckets to create.
+ * @flags: optional modifier flags.
+ * @type: type of the structure to be put into the hash table.
+ * @idmemb: the field that stores the ID information (aka key).
+ * @hentmemb: the field used to link the structure into the hash table.
+ * @nb: number of buckets to create.
+ * @cmp: optional function to differentiate items of the same ID.
  * @fmt: name of hash for lookups and external control.
  */
 #define psc_hashtbl_init(t, flags, type, idmemb, hentmemb, nb, cmp,	\
