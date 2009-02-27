@@ -286,15 +286,29 @@ _psclist_next_entry(struct psclist_head *hd, void *p,
  * psclist_for_each_entry_safe - iterate over list of given type safe
  *	against removal of list entry
  * @pos: the type * to use as a loop counter.
- * @n: another type * to use as temporary storage
- * @head: the head for your list.
+ * @n: another type * to use as temporary storage.
+ * @hd: the head for your list.
  * @member: list entry member of structure.
  */
-#define psclist_for_each_entry_safe(pos, n, head, member)			\
-	for ((pos) = psclist_entry((head)->znext, typeof(*(pos)), member),	\
-	    (n) = psclist_entry((pos)->member.znext, typeof(*(pos)), member);	\
-	    (&(pos)->member != (head)) || ((pos) = (n) = NULL);			\
+#define psclist_for_each_entry_safe(pos, n, hd, member)				\
+	for ((pos) = psclist_entry((hd)->znext, typeof(*(pos)), member),	\
+	    (n) = psclist_entry((pos)->member.znext, typeof(*(n)), member);	\
+	    (&(pos)->member != (hd)) || ((pos) = (n) = NULL);			\
 	    (pos) = (n), (n) = psclist_entry((n)->member.znext, typeof(*(n)), member))
+
+/**
+ * psclist_for_each_entry_safe_backwards - iterate backwards over a list safe
+ *	against removal of entries.
+ * @pos: the type * to use as a loop counter.
+ * @n: another type * to use as temporary storage.
+ * @hd: the head for your list.
+ * @member: list entry member of structure.
+ */
+#define psclist_for_each_entry_safe_backwards(pos, n, hd, member)		\
+	for ((pos) = psclist_entry((hd)->zprev, typeof(*(pos)), member),	\
+	    (n) = psclist_entry((pos)->member.zprev, typeof(*(n)), member);	\
+	    (&(pos)->member != (hd)) || ((pos) = (n) = NULL);			\
+	    (pos) = (n), (n) = psclist_entry((pos)->member.zprev, typeof(*(n)), member))
 
 /**
  * psclist_for_each_entry - iterate over list of given type.
