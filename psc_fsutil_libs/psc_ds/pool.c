@@ -403,9 +403,9 @@ psc_pool_get(struct psc_poolmgr *m)
 		    m->ppm_master, m->ppm_lc.lc_entsize);
 	ureqlock(&m->ppm_master->pms_lock, locked);
 	if (n)
-		psc_pool_grow(m, 5);
+		psc_pool_grow(m, 2);
 
-	/* Nothing else we can do, wait for pool return. */
+	/* Nothing else we can do, wait for an item to return. */
 	return (lc_getwait(&m->ppm_lc));
 }
 
@@ -428,6 +428,7 @@ psc_pool_return(struct psc_poolmgr *m, void *p)
 	    (m->ppm_flags & PPMF_AUTO &&
 	     lc_sz(&m->ppm_lc) * 100 <
 	     m->ppm_total * m->ppm_thres)) {
+		m->ppm_total--;
 		POOL_ULOCK(m, locked);
 
 		if (p && m->ppm_destroyf)
