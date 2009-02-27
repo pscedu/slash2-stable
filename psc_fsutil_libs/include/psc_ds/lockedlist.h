@@ -19,7 +19,7 @@
 struct psc_lockedlist {
 	struct psclist_head	 pll_listhd;
 	int			 pll_nitems;
-	ptrdiff_t		 pll_offset;
+	ptrdiff_t		 pll_offset;	/* offset of the linkage sub-structure */
 	int			 pll_flags;
 	union {
 		psc_spinlock_t	 pllu_lock;

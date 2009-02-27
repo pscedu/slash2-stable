@@ -66,7 +66,8 @@ psclist_xadd(struct psclist_head *new, struct psclist_head *head)
 	 * _psclist_add() does not really rely on the back/forward
 	 * points of new, so we might want to remove this assert.
 	 * If so, there will be no need to add INIT_PSCLIST_ENTRY()
-	 * before calling us.  - Zhihui 02/27/2009
+	 * before calling us. It was added to catch adding the same
+	 * entry twice historically.  - Zhihui 02/27/2009
 	 */
 	psc_assert(new->zprev == NULL && new->znext == NULL);
 	_psclist_add(new, head, head->znext);
