@@ -420,12 +420,12 @@ psc_pool_return(struct psc_poolmgr *m, void *p)
 	int locked;
 
 	/*
-	 * if pool max > total or we reached the auto
+	 * if pool max < total or we reached the auto
 	 * resize threshold, directly free this item.
 	 */
 	locked = POOL_RLOCK(m);
-	if (m->ppm_max < m->ppm_total ||
-	    (m->ppm_flags & PPMF_AUTO &&
+	if ((m->ppm_flags & PPMF_AUTO) &&
+	    (m->ppm_max < m->ppm_total ||
 	     lc_sz(&m->ppm_lc) * 100 <
 	     m->ppm_total * m->ppm_thres)) {
 		m->ppm_total--;
