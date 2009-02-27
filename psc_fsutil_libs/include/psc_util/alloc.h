@@ -20,6 +20,7 @@
 		free(p);						\
 	} while (0)
 
+/* Free without logging */
 #define psc_free_nl(p) free(p)
 
 #define psc_alloc(sz, fl)						\
