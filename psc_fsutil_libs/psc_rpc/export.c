@@ -15,10 +15,9 @@ __pscrpc_export_put(struct pscrpc_export *exp)
 			 exp, (exp->exp_connection) ?
 			 libcfs_id2str(exp->exp_connection->c_peer) : "<?>");
 
-                /* "Local" exports (lctl, LOV->{mdc,osc}) have no connection. */
                 if (exp->exp_connection)
                         pscrpc_put_connection(exp->exp_connection);
-
+		
 		if (exp->exp_destroycb)
 			exp->exp_destroycb(exp->exp_private);
 
