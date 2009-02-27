@@ -1,5 +1,8 @@
 # $Id$
 
+ROOTDIR=..
+include ${ROOTDIR}/Makefile.path
+
 SRCS+=		fio.c
 SRCS+=		fio_config_lex.l
 SRCS+=		fio_config_parser.y
@@ -7,6 +10,7 @@ SRCS+=		fio_pthread_barrier.c
 SRCS+=		fio_sym.c
 
 CFLAGS=		-O2 -Wall -W
+CFLAGS+=	-I${PFL_BASE}/include
 LINUXFLAGS=	-D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64 -DYY_NO_UNPUT
 LDFLAGS=	-lm
 YFLAGS=		-d -o $@

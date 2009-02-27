@@ -912,7 +912,7 @@ static inline void pop_dirstack(IOT_t *iot)
  * Buffer Related functions and macros
  */
 static inline void xor_buffer(struct buffer_t *bdesc){
-  int t = 0;
+  size_t t = 0;
   long int *buf_long_ints = (long int *)bdesc->buffer;
 
   for(t = 0; t < bdesc->buffer_size / sizeof(long int); t++){
@@ -923,7 +923,7 @@ static inline void xor_buffer(struct buffer_t *bdesc){
 
 static inline int compare_buffer(const struct buffer_t *bdesc_a,
 				 const struct buffer_t *bdesc_b) {
-  int    t = 0;
+  size_t t = 0;
   size_t i = bdesc_a->buffer_size / LONGSZ;
 
   unsigned long *a, *b;
@@ -936,7 +936,7 @@ static inline int compare_buffer(const struct buffer_t *bdesc_a,
   for(t=0; t < i; t++) {
 
     if( a[t] != b[t] ){
-      WARN("checksum failed at t=%d a 0x%lx addr %p b 0x%lx addr %p\n",
+      WARN("checksum failed at t=%zd a 0x%lx addr %p b 0x%lx addr %p\n",
 	   t, a[t], (void *)&a[t], b[t], (void *)&b[t]);
       return -1;
     }

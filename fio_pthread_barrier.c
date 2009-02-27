@@ -96,7 +96,8 @@ int barrier_destroy (barrier_t *barrier)
  */
 int barrier_wait (barrier_t *barrier)
 {
-    int status, cancel, tmp, cycle;
+    int status, cancel, tmp;
+    unsigned long cycle;
 
     if (barrier->valid != BARRIER_VALID)
         return EINVAL;

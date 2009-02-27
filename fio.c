@@ -2,6 +2,8 @@
 
 #include <err.h>
 
+#include "psc_util/cdefs.h"
+
 #include "fio_sym.h"
 #include "fio.h"
 
@@ -197,7 +199,7 @@ write_output(IOT_t *iot)
 
 			ASSERT( write(fd, oplog->sub.oplog_sublog,
 				(OPLOGSZ*oplog->oplog_subcnt))
-				== (OPLOGSZ*oplog->oplog_subcnt) );
+				== (ssize_t)(OPLOGSZ*oplog->oplog_subcnt) );
 
 			free(oplog->sub.oplog_sublog);
 			/* after using the oplog pointer,
@@ -223,7 +225,11 @@ write_output(IOT_t *iot)
 }
 
 void
-print_pe_map(struct io_toolbox *iot)
+print_pe_map(
+#ifndef CATAMOUNT
+    __unusedx
+#endif
+    struct io_toolbox *iot)
 {
 	// if i'm the first process then print the map
 #ifdef CATAMOUNT
@@ -360,7 +366,11 @@ init_pe(int mype)
  *  work.
  */
 void
-init_barriers(int mype)
+init_barriers(
+#ifndef MPI
+    __unusedx
+#endif
+    int mype)
 {
 #ifdef MPI
 	GROUP_t *mygroup;
@@ -432,7 +442,7 @@ init_buffer(struct buffer_t *bdesc, int id)
 {
 	long int *buf_long_ints = (long int *)bdesc->buffer;
 	size_t    i             = bdesc->buffer_size / LONGSZ;
-	int t;
+	size_t t;
 
 	bzero(bdesc->buffer, bdesc->buffer_size);
 
@@ -502,7 +512,7 @@ do_open(struct io_toolbox *iot)
 		RDOPEN;
 		clk = RDOPEN_clk;
 
-	} else ASSERT(1);
+	} else ASSERT(0);
 
 	DEBUG(D_DTREE, "opened ;%s;\n",
 	iot->mypath);
@@ -764,14 +774,14 @@ do_close(IOT_t *iot)
 }
 
 int
-do_rename(IOT_t *iot)
+do_rename(__unusedx IOT_t *iot)
 {
 	//struct test_group_t *mygroup = iot->mygroup;
 	return 0;
 }
 
 int
-do_link(IOT_t *iot)
+do_link(__unusedx IOT_t *iot)
 {
 	//struct test_group_t *mygroup = iot->mygroup;
 	return 0;
