@@ -83,7 +83,7 @@ _psc_hashtbl_init(struct psc_hashtbl *t, int flags, int idoff,
 }
 
 /**
- * psc_hashtbl_lookup - find a hash table by its name.
+ * psc_hashtbl_lookup - find a hash table by its name, return NULL if none exists.
  * @name: name of hash table.
  */
 struct psc_hashtbl *
@@ -108,7 +108,7 @@ void
 psc_hashtbl_destroy(struct psc_hashtbl *t)
 {
 	pll_remove(&psc_hashtbls, t);
-	free(t->pht_buckets);
+	PSCFREE(t->pht_buckets);
 }
 
 __static struct psc_hashbkt *
@@ -183,12 +183,13 @@ _psc_hashbkt_searchv(const struct psc_hashtbl *t,
 	PSC_HASHBKT_FOREACH_ENTRY(t, p, b) {
 		idu.p = (char *)p + t->pht_idoff;
 		if (t->pht_flags & PHTF_STR) {
-			if (strcmp(strid, idu.str) == 0)
-				goto checkit;
-		} else if (id == *idu.id)
-			goto checkit;
-		continue;
- checkit:
+			if (strcmp(strid, idu.str))
+				continue;
+		} else if (id != *idu.id)
+			continue;
+		/*
+		 * Do additional check and invoke callback as need be.
+		 */
 		if (t->pht_cmp == NULL || t->pht_cmp(cmp, p)) {
 			if (cbf)
 				cbf(p);
