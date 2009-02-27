@@ -108,6 +108,12 @@ void
 psc_hashtbl_destroy(struct psc_hashtbl *t)
 {
 	pll_remove(&psc_hashtbls, t);
+#if 0
+	for (i = 0; i < t->pht_nbuckets; i++)
+		if (atomic_read(&t->pht_buckets[i].phb_nitems))
+			psc_fatalx("psc_hashtbl_destroy: "
+			    "hash table not empty");
+#endif
 	PSCFREE(t->pht_buckets);
 }
 
