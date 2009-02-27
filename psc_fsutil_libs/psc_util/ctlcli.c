@@ -496,7 +496,7 @@ psc_ctlmsg_pool_prdat(__unusedx const struct psc_ctlmsghdr *mh,
 	else if (pcpl->pcpl_free == pcpl->pcpl_total)
 		printf("   0%%");
 	else if (pcpl->pcpl_total)
-		printf("% 2.1f%%",
+		printf("%4.1f%%",
 		    (pcpl->pcpl_total - pcpl->pcpl_free) *
 		    100.0 / pcpl->pcpl_total);
 	else
