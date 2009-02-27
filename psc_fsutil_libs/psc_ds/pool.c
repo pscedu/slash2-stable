@@ -1,5 +1,12 @@
 /* $Id$ */
 
+/*
+ * Memory pool routines.
+ *
+ * XXX: watch out, during communal reaping, for two pools
+ * to continually reap other back and forth.
+ */
+
 #include <sys/param.h>
 
 #include <errno.h>
@@ -41,6 +48,7 @@ _psc_poolmaster_init(struct psc_poolmaster *p, ptrdiff_t offset,
 	p->pms_total = total;
 	p->pms_min = min;
 	p->pms_max = max;
+	p->pms_thres = 80;
 
 	va_start(ap, namefmt);
 	vsnprintf(p->pms_name, sizeof(p->pms_name), namefmt, ap);
@@ -56,6 +64,7 @@ _psc_poolmaster_initmgr(struct psc_poolmaster *p, struct psc_poolmgr *m)
 	memset(m, 0, sizeof(*m));
 	m->ppm_reclaimcb = p->pms_reclaimcb;
 	m->ppm_destroyf = p->pms_destroyf;
+	m->ppm_thres = p->pms_thres;
 	m->ppm_flags = p->pms_flags;
 	m->ppm_initf = p->pms_initf;
 	m->ppm_min = p->pms_min;
@@ -276,7 +285,7 @@ psc_pool_resize(struct psc_poolmgr *m)
  *	@initiator->pms_entsize.
  */
 void
-_psc_pool_reap(struct psc_poolset *s, struct psc_poolmaster *initiator, __unusedx size_t mem)
+_psc_pool_reap(struct psc_poolset *s, struct psc_poolmaster *initiator, size_t mem)
 {
 	struct psc_poolmgr *m, *culprit;
 	struct psc_poolmaster *p;
@@ -322,6 +331,22 @@ psc_pool_reapmem(size_t size)
 }
 
 /*
+ * _psc_pool_flagtest - test pool state.
+ * @m: pool to inspect.
+ * @flags: flags to check.
+ */
+__static int
+_psc_pool_flagtest(struct psc_poolmgr *m, int flags)
+{
+	int rc, locked;
+
+	locked = POOL_RLOCK(m);
+	rc = m->ppm_flags & flags;
+	POOL_ULOCK(m, locked);
+	return (rc);
+}
+
+/*
  * psc_pool_get - grab an item from a pool.
  * @m: the pool manager.
  */
@@ -335,12 +360,26 @@ psc_pool_get(struct psc_poolmgr *m)
 	if (p)
 		return (p);
 
-	/* If autoresizable, try to grow the pool. */
-	if ((m->ppm_flags & PPMF_AUTO) &&
-	    psc_pool_grow(m, 5)) {
+	/* If total < min, try to grow the pool. */
+	locked = POOL_RLOCK(m);
+	n = m->ppm_min - m->ppm_total;
+	POOL_ULOCK(m, locked);
+	if (n > 0) {
+		psc_pool_grow(m, n);
 		p = lc_getnb(&m->ppm_lc);
 		if (p)
 			return (p);
+	}
+
+	/* If autoresizable, try to grow the pool. */
+	if (_psc_pool_flagtest(m, PPMF_AUTO)) {
+		do {
+			n = psc_pool_grow(m, 2);
+			p = lc_getnb(&m->ppm_lc);
+			if (p)
+				return (p);
+			/* If we've grown to pool max, quit. */
+		} while (n && _psc_pool_flagtest(m, PPMF_AUTO));
 	}
 
 	/*
@@ -365,6 +404,8 @@ psc_pool_get(struct psc_poolmgr *m)
 	ureqlock(&m->ppm_master->pms_lock, locked);
 	if (n)
 		psc_pool_grow(m, 5);
+
+	/* Nothing else we can do, wait for pool return. */
 	return (lc_getwait(&m->ppm_lc));
 }
 
@@ -378,15 +419,28 @@ psc_pool_return(struct psc_poolmgr *m, void *p)
 {
 	int locked;
 
+	/*
+	 * if pool max > total or we reached the auto
+	 * resize threshold, directly free this item.
+	 */
 	locked = POOL_RLOCK(m);
-	lc_addhead(&m->ppm_lc, p);
-	if (m->ppm_max)
-		psc_assert(m->ppm_lc.lc_size <= m->ppm_max);
-	POOL_ULOCK(m, locked);
+	if (m->ppm_max < m->ppm_total ||
+	    (m->ppm_flags & PPMF_AUTO &&
+	     lc_sz(&m->ppm_lc) * 100 <
+	     m->ppm_total * m->ppm_thres)) {
+		POOL_ULOCK(m, locked);
 
-	/* XXX if above high watermark, free some entries */
-	if (m->ppm_flags & PPMF_AUTO && lc_sz(&m->ppm_lc) > 5)
-		psc_pool_shrink(m, 5);
+		if (p && m->ppm_destroyf)
+			m->ppm_destroyf(p);
+		if (m->ppm_flags & PPMF_NOLOCK)
+			PSCFREE(p);
+		else
+			psc_freel(p, m->ppm_lc.lc_entsize);
+	} else {
+		/* Pool should keep this item. */
+		lc_addhead(&m->ppm_lc, p);
+		POOL_ULOCK(m, locked);
+	}
 }
 
 /*

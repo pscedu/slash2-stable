@@ -103,6 +103,7 @@ struct psc_ctlmsg_pool {
 	int32_t			pcpl_total;
 	int32_t			pcpl_free;
 	int32_t			pcpl_flags;
+	int32_t			pcpl_thres;
 };
 
 #define PCPL_NAME_ALL		"all"

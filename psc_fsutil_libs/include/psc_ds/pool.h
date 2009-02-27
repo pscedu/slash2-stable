@@ -49,6 +49,8 @@ struct psc_poolmaster {
 	int			  pms_min;		/* min bound of #items */
 	int			  pms_max;		/* max bound of #items */
 	int			  pms_flags;		/* flags */
+	int			  pms_thres;		/* autoresize threshold */
+
 	int			(*pms_initf)(struct psc_poolmgr *, void *);
 	void			(*pms_destroyf)(void *);
 	int			(*pms_reclaimcb)(struct psc_listcache *, int);
@@ -67,6 +69,7 @@ struct psc_poolmgr {
 	int			  ppm_total;		/* #items in circulation */
 	int			  ppm_min;		/* min bound of #items */
 	int			  ppm_max;		/* max bound of #items */
+	int			  ppm_thres;		/* autoresize threshold */
 	int			  ppm_flags;		/* flags */
 
 	/* routines to initialize, teardown, & reclaim pool entries */

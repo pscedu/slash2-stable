@@ -476,8 +476,8 @@ psc_ctlmsg_pool_prhdr(__unusedx struct psc_ctlmsghdr *mh,
     __unusedx const void *m)
 {
 	printf("pools\n");
-	return (printf(" %-20s %5s %8s %8s %5s %8s %8s\n",
-	    "pool", "flags", "free", "total", "%use", "min", "max"));
+	return (printf(" %-20s %5s %8s %8s %5s %8s %8s %8s\n",
+	    "pool", "flags", "free", "total", "%use", "min", "max", "thres"));
 }
 
 void
@@ -505,7 +505,7 @@ psc_ctlmsg_pool_prdat(__unusedx const struct psc_ctlmsghdr *mh,
 		printf("%8d", pcpl->pcpl_max);
 	else
 		printf("%8s", "<inf>");
-	printf("\n");
+	printf(" %8d\n", pcpl->pcpl_thres);
 }
 
 int

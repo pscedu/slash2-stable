@@ -398,6 +398,7 @@ psc_ctlrep_getpool(int fd, struct psc_ctlmsghdr *mh, void *msg)
 			pcpl->pcpl_max = m->ppm_max;
 			pcpl->pcpl_total = m->ppm_total;
 			pcpl->pcpl_flags = m->ppm_flags;
+			pcpl->pcpl_thres = m->ppm_thres;
 			pcpl->pcpl_free = lc_sz(&m->ppm_lc);
 			POOL_ULOCK(m, locked);
 			rc = psc_ctlmsg_sendv(fd, mh, pcpl);
@@ -632,11 +633,12 @@ psc_ctlparam_pool_handle(int fd, struct psc_ctlmsghdr *mh,
     struct psc_poolmgr *m, int val)
 {
 	char nbuf[20];
-	int set;
+	int locked, set;
 
 	if (nlevels > 4 || (nlevels == 3 &&
 	    (strcmp(levels[2], "min") != 0 &&
 	     strcmp(levels[2], "max") != 0 &&
+	     strcmp(levels[2], "thres") != 0 &&
 	     strcmp(levels[2], "total") != 0)))
 		return (psc_ctlsenderr(fd, mh, "invalid field"));
 
@@ -690,6 +692,28 @@ psc_ctlparam_pool_handle(int fd, struct psc_ctlmsghdr *mh,
 		} else {
 			levels[2] = "total";
 			snprintf(nbuf, sizeof(nbuf), "%d", m->ppm_total);
+			if (!psc_ctlmsg_param_send(fd, mh, pcp,
+			    PCTHRNAME_EVERYONE, levels, 3, nbuf))
+				return (0);
+		}
+	}
+	if (nlevels < 3 || strcmp(levels[2], "thres") == 0) {
+		if (nlevels == 3 && set) {
+			locked = POOL_RLOCK(m);
+			if (pcp->pcp_flags & PCPF_ADD)
+				m->ppm_thres += val;
+			else if (pcp->pcp_flags & PCPF_SUB)
+				m->ppm_thres -= val;
+			else
+				m->ppm_thres = val;
+			if (m->ppm_thres < 1)
+				m->ppm_thres = 1;
+			else if (m->ppm_thres > 99)
+				m->ppm_thres = 99;
+			POOL_ULOCK(m, locked);
+		} else {
+			levels[2] = "thres";
+			snprintf(nbuf, sizeof(nbuf), "%d", m->ppm_thres);
 			if (!psc_ctlmsg_param_send(fd, mh, pcp,
 			    PCTHRNAME_EVERYONE, levels, 3, nbuf))
 				return (0);
