@@ -24,8 +24,8 @@ struct psc_hashtbl {
 	struct psclist_head	  pht_lentry;
 	psc_spinlock_t		  pht_lock;
 	int			  pht_flags;	/* hash table flags, see below */
-	int			  pht_idoff;	/* offset into item to item ID */
-	int			  pht_hentoff;	/* offset into item to item ID */
+	int			  pht_idoff;	/* offset into item to its ID field */
+	int			  pht_hentoff;	/* offset to the hash table linkage */
 	int			  pht_nbuckets;
 	struct psc_hashbkt	 *pht_buckets;
 	int			(*pht_cmp)(const void *, const void *);
