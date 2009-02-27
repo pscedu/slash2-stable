@@ -594,11 +594,11 @@ void pscrpc_set_destroy(struct pscrpc_request_set *);
 static inline int
 pscrpc_bulk_active (struct pscrpc_bulk_desc *desc)
 {
-	int rc;
+	int rc, l;
 
-	spinlock(&desc->bd_lock);
+	l = reqlock(&desc->bd_lock);
 	rc = desc->bd_network_rw;
-	freelock(&desc->bd_lock);
+	ureqlock(&desc->bd_lock, l);
 	return (rc);
 }
 
