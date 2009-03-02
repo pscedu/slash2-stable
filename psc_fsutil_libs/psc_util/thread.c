@@ -170,6 +170,27 @@ _pscthr_finish_init(struct psc_thread *thr)
 }
 
 /**
+ * pscthr_bind_memnode: bind a thread to a specific NUMA memnode.
+ * @thr: thread structure.
+ */
+void
+_pscthr_bind_memnode(struct psc_thread *thr)
+{
+#ifdef HAVE_NUMA
+	nodemask_t nm;
+
+	nodemask_zero(&nm);
+	nodemask_set(&nm, cpuset_p_rel_to_sys_mem(syscall(SYS_gettid),
+	    thr->pscthr_memnid));
+	if (numa_run_on_node_mask(&nm) == -1)
+		psc_fatal("numa");
+	numa_set_membind(&nm);
+#else
+	(void)thr; /* avoid unused warnings */
+#endif
+}
+
+/**
  * pscthr_begin: each new thread begins its life here.
  *	This routine invokes the thread's real start routine once
  *	it's safe after the thread who created us has finished our
@@ -180,6 +201,8 @@ __static void *
 _pscthr_begin(void *arg)
 {
 	struct psc_thread *thr, *oldthr = arg;
+
+	_pscthr_bind_memnode(oldthr);
 
 	/* Setup a localised copy of the thread. */
 	thr = psc_alloc(sizeof(*thr), PAF_NOLOG);
@@ -224,8 +247,9 @@ _pscthr_begin(void *arg)
  * @namefmt: application-specific printf(3) name for thread.
  */
 struct psc_thread *
-pscthr_init(int type, int flags, void *(*startf)(void *),
-    void (*dtor)(void *), size_t privsiz, const char *namefmt, ...)
+_pscthr_init(int type, int flags, void *(*startf)(void *),
+    void (*dtor)(void *), size_t privsiz, int memnid,
+    const char *namefmt, ...)
 {
 	struct psc_thread mythr, *thr;
 	va_list ap;
@@ -243,6 +267,7 @@ pscthr_init(int type, int flags, void *(*startf)(void *),
 	thr->pscthr_privsiz = privsiz;
 	thr->pscthr_flags = flags | PTF_RUN;
 	thr->pscthr_dtor = dtor;
+	thr->pscthr_memnid = memnid;
 
 	va_start(ap, namefmt);
 	rc = vsnprintf(thr->pscthr_name, sizeof(thr->pscthr_name),
@@ -271,6 +296,7 @@ pscthr_init(int type, int flags, void *(*startf)(void *),
 			pscthr_setready(thr);
 	} else {
 		/* Initializing our own thread context. */
+		_pscthr_bind_memnode(thr);
 		_pscthr_finish_init(thr);
 	}
 	return (thr);

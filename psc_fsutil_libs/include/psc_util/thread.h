@@ -29,9 +29,11 @@ struct psc_thread {
 	char			   pscthr_name[PSC_THRNAME_MAX];/* human readable name */
 	int			  *pscthr_loglevels;		/* logging granularity */
 	void			  *pscthr_private;		/* app-specific data */
-	size_t			   pscthr_privsiz;		/* size of app data */
-	void			  *pscthr_memnode;		/* which memnode we're on */
 	struct psc_waitq	   pscthr_waitq;		/* for init, at least */
+
+	/* only used for thread initialization */
+	int			   pscthr_memnid;		/* ID of memnode */
+	size_t			   pscthr_privsiz;		/* size of app data */
 };
 
 #define PTF_PAUSED	(1 << 0)	/* thread is frozen */
@@ -39,13 +41,22 @@ struct psc_thread {
 #define PTF_RUN		(1 << 2)	/* thread should operate normally */
 #define PTF_READY	(1 << 3)	/* thread can start (used during initialization) */
 
-#define PSCTHR_MKCAST(label, name, type)			\
-static inline struct name *					\
-label(struct psc_thread *pt)					\
-{								\
-	psc_assert(pt->pscthr_type == (type));			\
-	return ((struct name *)pt->pscthr_private);		\
+#define PSCTHR_MKCAST(label, name, type)				\
+static inline struct name *						\
+label(struct psc_thread *pt)						\
+{									\
+	psc_assert(pt->pscthr_type == (type));				\
+	return ((struct name *)pt->pscthr_private);			\
 }
+
+/*
+ * pscthr_init - initialization a process thread.
+ * @
+ */
+#define pscthr_init(thrtype, flags, startf, dtor, privsiz, namefmt,	\
+	    ...)							\
+	_pscthr_init((thrtype), (flags), (startf), (dtor), (privsiz),	\
+	    -1, (namefmt), ## __VA_ARGS__)
 
 void	pscthr_setpause(struct psc_thread *, int);
 void	pscthr_setready(struct psc_thread *);
@@ -55,8 +66,8 @@ int	pscthr_run(void);
 struct psc_thread *pscthr_get(void);
 struct psc_thread *pscthr_get_canfail(void);
 struct psc_thread *
-	pscthr_init(int, int, void *(*)(void *), void (*)(void *),
-	    size_t, const char *, ...);
+	_pscthr_init(int, int, void *(*)(void *), void (*)(void *),
+	    size_t, int, const char *, ...);
 
 extern struct psc_lockedlist psc_threads;
 
