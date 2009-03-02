@@ -480,7 +480,8 @@ psc_ctlmsg_pool_prhdr(__unusedx struct psc_ctlmsghdr *mh,
     __unusedx const void *m)
 {
 	printf("pools\n");
-	return (printf(" %-18s %5s %7s %7s %5s %7s %7s %5s\n",
+	return (printf(" %-18s %5s %7s %7s "
+	    "%6s %7s %7s %5s\n",
 	    "pool", "flags", "free", "total",
 	    "%use", "min", "max", "thres"));
 }
