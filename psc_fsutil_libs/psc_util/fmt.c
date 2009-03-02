@@ -29,8 +29,8 @@ psc_fmt_ratio(char buf[PSCFMT_RATIO_BUFSIZ], int n, int d)
 	else if (n == d)
 		snprintf(buf, PSCFMT_RATIO_BUFSIZ, " 100%%");
 	else if (d)
-		snprintf(buf, PSCFMT_RATIO_BUFSIZ, "%4.1f%%",
-		    (d - n) * 100.0 / d);
+		snprintf(buf, PSCFMT_RATIO_BUFSIZ, "%5.2f%%",
+		    n * 100.0 / d);
 	else
 		snprintf(buf, PSCFMT_RATIO_BUFSIZ, "<und>");
 }
