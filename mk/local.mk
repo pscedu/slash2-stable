@@ -10,6 +10,7 @@ MKDEP=		${MKDEP_PROG} $$(if ${CC} -v 2>&1 | grep -q gcc; then \
 LINT=		splint +posixlib
 NOTEMPTY=	${ROOTDIR}/tools/notempty
 PKG_CONFIG=	PKG_CONFIG_PATH=/usr/local/lib/pkgconfig pkg-config
+LKERNEL_BASE=	${ROOTDIR}/kernel/2.6.9-42.0.8.EL_lustre.1.4.9.1
 
 ifeq ($(wildcard /opt/xt-os),)
  # for ZESTIONs
