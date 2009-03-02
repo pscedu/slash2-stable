@@ -486,21 +486,14 @@ psc_ctlmsg_pool_prdat(__unusedx const struct psc_ctlmsghdr *mh,
     const void *m)
 {
 	const struct psc_ctlmsg_pool *pcpl = m;
+	char rbuf[PSCFMT_RATIO_BUFSIZ];
 
-	printf(" %-18s    %c%c %7d %7d ", pcpl->pcpl_name,
+	psc_fmt_ratio(rbuf, pcpl->pcpl_total - pcpl->pcpl_free,
+	    pcpl->pcpl_total);
+	printf(" %-18s    %c%c %7d %7d %6s", pcpl->pcpl_name,
 	    pcpl->pcpl_flags & PPMF_AUTO ? 'A' : '-',
 	    pcpl->pcpl_flags & PPMF_NOLOCK ? 'N' : '-',
 	    pcpl->pcpl_free, pcpl->pcpl_total);
-	if (pcpl->pcpl_free == 0)
-		printf(" 100%%");
-	else if (pcpl->pcpl_free == pcpl->pcpl_total)
-		printf("   0%%");
-	else if (pcpl->pcpl_total)
-		printf("%4.1f%%",
-		    (pcpl->pcpl_total - pcpl->pcpl_free) *
-		    100.0 / pcpl->pcpl_total);
-	else
-		printf("<und>");
 	if (pcpl->pcpl_flags & PPMF_AUTO) {
 		printf(" %7d ", pcpl->pcpl_min);
 		if (pcpl->pcpl_max)
