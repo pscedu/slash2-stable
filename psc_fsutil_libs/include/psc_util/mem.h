@@ -3,7 +3,7 @@
 #ifndef _PFL_MEM_H_
 #define _PFL_MEM_H_
 
-#ifdef HAVE_CPUSET
+#ifdef HAVE_NUMA
 
 #include <sys/types.h>
 

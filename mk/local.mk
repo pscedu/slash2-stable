@@ -12,11 +12,20 @@ NOTEMPTY=	${ROOTDIR}/tools/notempty
 PKG_CONFIG=	PKG_CONFIG_PATH=/usr/local/lib/pkgconfig pkg-config
 
 ifeq ($(wildcard /opt/xt-os),)
-# for ZESTIONs
-KERNEL_BASE=	/usr/src/kernels/2.6.22.14-72.fc6-x86_64
+ # for ZESTIONs
+ KERNEL_BASE=	/usr/src/kernels/2.6.22.14-72.fc6-x86_64
 else
-# on xt3
-KERNEL_BASE=	/usr/src/kernel.2.6-ss-lustre26
+ ifeq ($(wildcard /opt/sgi),)
+  # on xt3
+  SRCS+=	${PFL_BASE}/compat/posix_memalign.c
+  DEFINES+=	-DHOST_NAME_MAX=MAXHOSTNAMELEN
+  KERNEL_BASE=	/usr/src/kernel.2.6-ss-lustre26
+ else
+  # on altix
+  KERNEL_BASE=	/usr/src/linux
+  DEFINES+=	-DCONFIG_NR_CPUS=2 -D_GNU_SOURCE -DHAVE_NUMA
+  NUMA_LIBS=	-lcpuset -lbitmask -lnuma
+ endif
 endif
 
 psc_fsutil_libs_psc_util_crc_c_CFLAGS=		-O2
@@ -52,9 +61,3 @@ lnet_lite_lnet_router_proc_c_CFLAGS=	-DPSC_SUBSYS=PSS_LNET
 
 lnet_lite_ptllnd_ptllnd_c_CFLAGS=	-DPSC_SUBSYS=PSS_LNET
 lnet_lite_ptllnd_ptllnd_cb_c_CFLAGS=	-DPSC_SUBSYS=PSS_LNET
-
-ifneq ($(wildcard /opt/xt-os),)
-# on xt3
-SRCS+=		${PFL_BASE}/compat/posix_memalign.c
-DEFINES+=	-DHOST_NAME_MAX=MAXHOSTNAMELEN
-endif

@@ -7,11 +7,3 @@ INCLUDES+=	-I${ROOTDIR}/zest/trunk/include/kernel/2.6.9-42.0.8.EL_lustre.1.4.9.1
 INCLUDES+=	-I${KERNEL_BASE}/include
 
 THREAD_LIBS?=	-lpthread
-
-ifneq ($(wildcard /opt/sgi),)
-# On altix
-DEFINES+=	-DCONFIG_NR_CPUS=2 -D_GNU_SOURCE -DHAVE_CPUSET
-CPUSET_LIBS=	-lcpuset -lbitmask -lnuma
-else
-# regular linux
-endif

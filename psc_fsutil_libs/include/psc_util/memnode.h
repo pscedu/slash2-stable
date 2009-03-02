@@ -5,11 +5,11 @@
 
 #include <pthread.h>
 
-#ifdef HAVE_CPUSET
+#ifdef HAVE_NUMA
 #include <numa.h>
 #endif
 
-#ifdef HAVE_CPUSET
+#ifdef HAVE_NUMA
 # define psc_memnode_getid()	numa_preferred()
 #else
 # define psc_memnode_getid()	0
