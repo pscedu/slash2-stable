@@ -16,8 +16,8 @@
 #include "psc_util/cdefs.h"
 #include "psc_util/ctl.h"
 #include "psc_util/ctlcli.h"
+#include "psc_util/fmt.h"
 #include "psc_util/fmtstr.h"
-#include "psc_util/humanscale.h"
 #include "psc_util/log.h"
 #include "psc_util/meter.h"
 #include "psc_util/strlcpy.h"
@@ -356,12 +356,15 @@ psc_ctlmsg_hashtable_prdat(__unusedx const struct psc_ctlmsghdr *mh,
     const void *m)
 {
 	const struct psc_ctlmsg_hashtable *pcht = m;
+	char rbuf[PSCFMT_RATIO_BUFSIZ];
 
-	printf(" %-20s %6d %6d %6.2f%% %6d %6.1f %6d\n",
-	    pcht->pcht_name,
-	    pcht->pcht_totalbucks, pcht->pcht_usedbucks,
-	    pcht->pcht_usedbucks * 100.0 / pcht->pcht_totalbucks,
-	    pcht->pcht_nents,
+	psc_fmt_ratio(rbuf, pcht->pcht_usedbucks, pcht->pcht_totalbucks);
+	printf(" %-20s %6d "
+	    "%6d %6s %6d "
+	    "%6.1f "
+	    "%6d\n",
+	    pcht->pcht_name, pcht->pcht_totalbucks,
+	    pcht->pcht_usedbucks, rbuf, pcht->pcht_nents,
 	    pcht->pcht_nents * 1.0 / pcht->pcht_totalbucks,
 	    pcht->pcht_maxbucklen);
 }
@@ -418,17 +421,17 @@ psc_ctlmsg_iostats_prdat(__unusedx const struct psc_ctlmsghdr *mh,
 {
 	const struct psc_ctlmsg_iostats *pci = m;
 	const struct iostats *ist = &pci->pci_ist;
-	char buf[PSC_CTL_HUMANBUF_SZ];
+	char buf[PSCFMT_HUMAN_BUFSIZ];
 
 	printf(" %-30s ", ist->ist_name);
 	if (psc_ctl_inhuman) {
 		printf("%8.2f ", ist->ist_rate);
 		printf("%8"PRIu64" ", ist->ist_bytes_total);
 	} else {
-		psc_humanscale(buf, ist->ist_rate);
+		psc_fmt_human(buf, ist->ist_rate);
 		printf("%7s/s ", buf);
 
-		psc_humanscale(buf, ist->ist_bytes_total);
+		psc_fmt_human(buf, ist->ist_bytes_total);
 		printf("%8s ", buf);
 	}
 	printf("%6.1f/s %8"PRIu64"\n", ist->ist_erate,
@@ -493,7 +496,7 @@ psc_ctlmsg_pool_prdat(__unusedx const struct psc_ctlmsghdr *mh,
 	printf(" %-18s    %c%c %7d %7d %6s", pcpl->pcpl_name,
 	    pcpl->pcpl_flags & PPMF_AUTO ? 'A' : '-',
 	    pcpl->pcpl_flags & PPMF_NOLOCK ? 'N' : '-',
-	    pcpl->pcpl_free, pcpl->pcpl_total);
+	    pcpl->pcpl_free, pcpl->pcpl_total, rbuf);
 	if (pcpl->pcpl_flags & PPMF_AUTO) {
 		printf(" %7d ", pcpl->pcpl_min);
 		if (pcpl->pcpl_max)
