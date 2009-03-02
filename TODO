@@ -36,6 +36,7 @@ pfl
   users should be able to read some stats but only root users
   should be able to issue exit commands, etc.  TCP sockets should
   inspect remote port to determine "authorization"
+- add a check to ensure hash table size is not a direct power of two
 
 zest
 - test parity reconstruction service by rebuilding
