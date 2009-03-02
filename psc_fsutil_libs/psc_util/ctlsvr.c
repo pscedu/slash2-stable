@@ -1057,7 +1057,7 @@ psc_ctlrep_getiostats(int fd, struct psc_ctlmsghdr *mh, void *m)
 		    strncmp(ist->ist_name, name, strlen(name)) == 0) {
 			found = 1;
 
-			pci->pci_ist = *ist;
+			pci->pci_ist = *ist; /* XXX lock? */
 			rc = psc_ctlmsg_sendv(fd, mh, pci);
 			if (!rc)
 				break;
