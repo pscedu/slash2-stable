@@ -79,6 +79,7 @@ struct psc_poolmgr {
 };
 
 /* Pool manager flags. */
+#define PPMF_NONE	(0 << 0)	/* no pool manager flag specified */
 #define PPMF_AUTO	(1 << 0)	/* pool automatically resizes */
 #define PPMF_NOLOCK	(1 << 1)	/* pool ents shouldn't be mlock'd */
 
