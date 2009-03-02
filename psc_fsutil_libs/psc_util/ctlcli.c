@@ -358,7 +358,8 @@ psc_ctlmsg_hashtable_prdat(__unusedx const struct psc_ctlmsghdr *mh,
 	const struct psc_ctlmsg_hashtable *pcht = m;
 	char rbuf[PSCFMT_RATIO_BUFSIZ];
 
-	psc_fmt_ratio(rbuf, pcht->pcht_usedbucks, pcht->pcht_totalbucks);
+	psc_fmt_ratio(rbuf, pcht->pcht_totalbucks - pcht->pcht_usedbucks,
+	    pcht->pcht_totalbucks);
 	printf(" %-20s %6d "
 	    "%6d %6s %6d "
 	    "%6.1f "
@@ -491,8 +492,7 @@ psc_ctlmsg_pool_prdat(__unusedx const struct psc_ctlmsghdr *mh,
 	const struct psc_ctlmsg_pool *pcpl = m;
 	char rbuf[PSCFMT_RATIO_BUFSIZ];
 
-	psc_fmt_ratio(rbuf, pcpl->pcpl_total - pcpl->pcpl_free,
-	    pcpl->pcpl_total);
+	psc_fmt_ratio(rbuf, pcpl->pcpl_free, pcpl->pcpl_total);
 	printf(" %-18s    %c%c %7d %7d %6s", pcpl->pcpl_name,
 	    pcpl->pcpl_flags & PPMF_AUTO ? 'A' : '-',
 	    pcpl->pcpl_flags & PPMF_NOLOCK ? 'N' : '-',
