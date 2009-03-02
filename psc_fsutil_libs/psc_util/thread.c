@@ -179,12 +179,14 @@ _pscthr_bind_memnode(struct psc_thread *thr)
 #ifdef HAVE_NUMA
 	nodemask_t nm;
 
-	nodemask_zero(&nm);
-	nodemask_set(&nm, cpuset_p_rel_to_sys_mem(syscall(SYS_gettid),
-	    thr->pscthr_memnid));
-	if (numa_run_on_node_mask(&nm) == -1)
-		psc_fatal("numa");
-	numa_set_membind(&nm);
+	if (thr->pscthr_memnid != -1) {
+		nodemask_zero(&nm);
+		nodemask_set(&nm, cpuset_p_rel_to_sys_mem(syscall(SYS_gettid),
+		    thr->pscthr_memnid));
+		if (numa_run_on_node_mask(&nm) == -1)
+			psc_fatal("numa");
+		numa_set_membind(&nm);
+	}
 #else
 	(void)thr; /* avoid unused warnings */
 #endif
