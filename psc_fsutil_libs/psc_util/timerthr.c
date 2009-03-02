@@ -47,14 +47,14 @@ psc_timer_iosthr_main(__unusedx void *arg)
 				intv = 0;
 				intv = atomic_xchg(&ist->ist_bytes_intv, intv);
 				ist->ist_rate = intv /
-				    ((ist->ist_intv.tv_sec * 1e6 +
+				    ((ist->ist_intv.tv_sec * UINT64_C(1000000) +
 				    ist->ist_intv.tv_usec) * 1e-6);
 				ist->ist_bytes_total += intv;
 
 				intv = 0;
 				intv = atomic_xchg(&ist->ist_errors_intv, intv);
 				ist->ist_erate = intv /
-				    ((ist->ist_intv.tv_sec * 1e6 +
+				    ((ist->ist_intv.tv_sec * UINT64_C(1000000) +
 				    ist->ist_intv.tv_usec) * 1e-6);
 				ist->ist_errors_total += intv;
 			}
