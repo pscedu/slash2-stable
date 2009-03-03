@@ -13,7 +13,6 @@
 #include <sys/resource.h>
 
 #include <errno.h>
-#include <signal.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -1331,17 +1330,10 @@ __dead void
 psc_ctlthr_main(const char *ofn, const struct psc_ctlop *ct, int nops)
 {
 	struct sockaddr_un sun;
-	struct sigaction sa;
 	char fn[PATH_MAX];
 	mode_t old_umask;
 	socklen_t siz;
 	int s, fd;
-
-	/* Ignore SIGPIPEs in this thread. */
-	memset(&sa, 0, sizeof(sa));
-	sa.sa_handler = SIG_IGN;
-	if (sigaction(SIGPIPE, &sa, NULL) == -1)
-		psc_fatal("sigaction");
 
 	/* Create control socket. */
 	if ((s = socket(AF_LOCAL, SOCK_STREAM, 0)) == -1)
