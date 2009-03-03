@@ -17,6 +17,8 @@ iostats_init(struct iostats *ist, const char *fmt, ...)
 	int rc;
 
 	memset(ist, 0, sizeof(*ist));
+	if (gettimeofday(&ist->ist_lasttv, NULL) == -1)
+		psc_fatal("gettimeofday");
 
 	va_start(ap, fmt);
 	rc = vsnprintf(ist->ist_name, sizeof(ist->ist_name), fmt, ap);
