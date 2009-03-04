@@ -670,11 +670,11 @@ void psc_free_reply_state (struct pscrpc_reply_state *rs)
         if (unlikely(rs->rs_prealloc)) {
                 struct ptlrpc_service *svc = rs->rs_service;
 
-                spin_lock(&svc->srv_lock);
+                spinlock(&svc->srv_lock);
                 psclist_xadd(&rs->rs_list_entry,
                          &svc->srv_free_rs_list);
-                spin_unlock(&svc->srv_lock);
-                wake_up(&svc->srv_free_rs_waitq);
+                freelock(&svc->srv_lock);
+                psc_waitq_wakeall(&svc->srv_free_rs_waitq);
         }
 #endif
         ZOBD_FREE(rs, rs->rs_size);
@@ -697,10 +697,10 @@ static void __pscrpc_free_req(struct pscrpc_request *request, int  locked)
 	 * request->rq_reqmsg to NULL while osc_close is dereferencing it. */
         if (request->rq_import != NULL) {
                 if (!locked)
-                        spin_lock(&request->rq_import->imp_lock);
+                        spinlock(&request->rq_import->imp_lock);
                 //psclist_del_init(&request->rq_replay_list);
                 if (!locked)
-                        spin_unlock(&request->rq_import->imp_lock);
+                        freelock(&request->rq_import->imp_lock);
         }
         //psc_assertF(psclist_empty(&request->rq_replay_list), "req %p\n", request);
 

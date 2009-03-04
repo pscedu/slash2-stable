@@ -32,12 +32,12 @@ pscrpc_import_state_name(enum psc_imp_state state)
 
 int pscrpc_init_import(struct pscrpc_import *imp)
 {
-        spin_lock(&imp->imp_lock);
+        spinlock(&imp->imp_lock);
 
         imp->imp_generation++;
         imp->imp_state =  PSC_IMP_NEW;
 
-        spin_unlock(&imp->imp_lock);
+        freelock(&imp->imp_lock);
 
         return 0;
 }
@@ -56,7 +56,7 @@ int pscrpc_set_import_discon(struct pscrpc_import *imp, u32 conn_cnt)
 {
         int rc = 0;
 
-        spin_lock(&imp->imp_lock);
+        spinlock(&imp->imp_lock);
 
 	psc_warnx("inhere conn_cnt %u imp_conn_cnt %u, imp->imp_state = %d",
 		  conn_cnt, imp->imp_conn_cnt, imp->imp_state);
@@ -72,7 +72,7 @@ int pscrpc_set_import_discon(struct pscrpc_import *imp, u32 conn_cnt)
 			   "wait for recovery to complete" : "fail");
 
                 PSCIMPORT_SET_STATE_NOLOCK(imp, PSC_IMP_DISCON);
-                spin_unlock(&imp->imp_lock);
+                freelock(&imp->imp_lock);
 
                 //if (obd_dump_on_timeout)
                 //        libcfs_debug_dumplog();
@@ -83,7 +83,7 @@ int pscrpc_set_import_discon(struct pscrpc_import *imp, u32 conn_cnt)
 #endif
                 rc = 1;
         } else {
-                spin_unlock(&imp->imp_lock);
+                freelock(&imp->imp_lock);
                 psc_warnx("%s: import %p already %s (conn %u, was %u): %s",
 			imp->imp_client->cli_name, imp,
 			(imp->imp_state == PSC_IMP_FULL &&
@@ -103,11 +103,11 @@ void pscrpc_deactivate_import(struct pscrpc_import *imp)
 {
         ENTRY;
 
-        spin_lock(&imp->imp_lock);
+        spinlock(&imp->imp_lock);
         psc_warnx("setting import %p INVALID", imp);
         imp->imp_invalid = 1;
         imp->imp_generation++;
-        spin_unlock(&imp->imp_lock);
+        freelock(&imp->imp_lock);
 
 	psc_errorx("Here's where failover is supposed to happen!!!");
         pscrpc_abort_inflight(imp);
@@ -147,9 +147,9 @@ void pscrpc_activate_import(struct pscrpc_import *imp)
 {
         //struct obd_device *obd = imp->imp_obd;
 
-        spin_lock(&imp->imp_lock);
+        spinlock(&imp->imp_lock);
         imp->imp_invalid = 0;
-        spin_unlock(&imp->imp_lock);
+        freelock(&imp->imp_lock);
 
         //pscobd_import_event(obd, imp, IMP_EVENT_ACTIVE);
 }
@@ -176,10 +176,10 @@ void pscrpc_fail_import(struct pscrpc_import *imp, __u32 conn_cnt)
                 //       obd2cli_tgt(imp->imp_obd));
 
 		psc_notify("failing import %p", imp);
-                spin_lock(&imp->imp_lock);
+                spinlock(&imp->imp_lock);
                 imp->imp_force_verify = 1;
 		imp->imp_failed = 1;
-                spin_unlock(&imp->imp_lock);
+                freelock(&imp->imp_lock);
         }
 	EXIT;
 }

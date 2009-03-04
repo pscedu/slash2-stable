@@ -121,7 +121,7 @@ void request_in_callback(lnet_event_t *ev)
         spinlock(&service->srv_lock);
 
         req->rq_history_seq = service->srv_request_seq++;
-        psclist_xadd_tail(&req->rq_history_list, &service->srv_request_history);
+        psclist_xadd_tail(&req->rq_history_lentry, &service->srv_request_history);
 
         if (ev->unlinked) {
                 service->srv_nrqbd_receiving--;
@@ -152,7 +152,7 @@ void request_in_callback(lnet_event_t *ev)
         /* NB everything can disappear under us once the request
 	 * has been queued and we unlock, so do the wake now... */
 	psc_waitq_wakeall(&service->srv_waitq);
-        //wake_up(&service->srv_waitq);
+        //psc_waitq_wakeall(&service->srv_waitq);
 
         freelock(&service->srv_lock);
         EXIT;
@@ -559,7 +559,7 @@ int pscrpc_ni_init(int type)
 
 void pscrpc_ni_fini(void)
 {
-        wait_queue_head_t   waitq;
+        struct psc_waitq   waitq;
         struct l_wait_info  lwi;
         int                 rc;
         int                 retries;
@@ -584,7 +584,7 @@ void pscrpc_ni_fini(void)
                                 CWARN("Event queue still busy\n");
 
                         /* Wait for a bit */
-                        init_waitqueue_head(&waitq);
+                        psc_waitq_init(&waitq);
                         lwi = LWI_TIMEOUT(2, NULL, NULL);
                         psc_svr_wait_event(&waitq, 0, &lwi, NULL);
                         break;

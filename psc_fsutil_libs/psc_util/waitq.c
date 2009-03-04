@@ -1,6 +1,11 @@
 /* $Id$ */
 
+#ifndef _GNU_SOURCE
+#define _GNU_SOURCE
+#endif
+
 #include <errno.h>
+#include <string.h>
 
 #include "psc_util/assert.h"
 #include "psc_util/atomic.h"
@@ -13,142 +18,197 @@
 
 #include <pthread.h>
 
+#ifndef timespecadd
+#define timespecadd(tsp, usp, vsp)					\
+	do {								\
+		(vsp)->tv_sec = (tsp)->tv_sec + (usp)->tv_sec;		\
+		(vsp)->tv_nsec = (tsp)->tv_nsec + (usp)->tv_nsec;	\
+		if ((vsp)->tv_nsec >= 1000000000L) {			\
+			(vsp)->tv_sec++;				\
+			(vsp)->tv_nsec -= 1000000000L;			\
+		}							\
+	} while (0)
+#endif
+
 /**
  * psc_waitq_init - prepare the queue struct for use.
  * @q: the struct to be initialized.
  */
 void
-psc_waitq_init(psc_waitq_t *q)
+psc_waitq_init(struct psc_waitq *q)
 {
+	pthread_mutexattr_t attr;
 	int rc;
 
+	memset(q, 0, sizeof(*q));
 	atomic_set(&q->wq_nwaitors, 0);
-	rc = pthread_mutex_init(&q->wq_mut, NULL);
-	rc |= pthread_cond_init(&q->wq_cond, NULL);
-	psc_assert(rc == 0);
-}
 
-/**
- * psc_waitq_wait - wait until resource managed by wq_cond is available.
- * @q: wait queue.
- * @k: optional lock needed to protect the list.
- * Notes: hopefully the freelock() call is not a source of deadlock.  It's here
- * to prevent a race between a process trying to wait and a process that free's
- * the resource also guarded by 'k'.  If this were to occur then the waiting
- * process would never wake up.  Using this method guarantees a free won't
- * happen before this process is put to sleep.
- */
-void
-psc_waitq_wait(psc_waitq_t *q, psc_spinlock_t *k)
-{
-	int rc;
-
-	rc = pthread_mutex_lock(&q->wq_mut);
-	atomic_inc(&q->wq_nwaitors);
-
-	if (k != NULL)
-		freelock(k);
-
-	rc |= pthread_cond_wait(&q->wq_cond, &q->wq_mut);
-//	if (k)
-//		spinlock(k);
-	atomic_dec(&q->wq_nwaitors);
-	rc |= pthread_mutex_unlock(&q->wq_mut);
-
-	psc_assert(rc == 0);
+	rc = pthread_mutexattr_init(&attr);
+	if (rc)
+		psc_fatalx("pthread_mutexattr_init: %s", strerror(rc));
+	rc = pthread_mutexattr_settype(&attr,
+	    PTHREAD_MUTEX_ERRORCHECK_NP);
+	if (rc)
+		psc_fatalx("pthread_mutexattr_settype: %s",
+		    strerror(rc));
+	rc = pthread_mutex_init(&q->wq_mut, &attr);
+	if (rc)
+		psc_fatalx("pthread_mutex_init: %s", strerror(rc));
+	rc = pthread_mutexattr_destroy(&attr);
+	if (rc)
+		psc_fatalx("pthread_mutexattr_destroy: %s",
+		    strerror(rc));
+	rc = pthread_cond_init(&q->wq_cond, NULL);
+	if (rc)
+		psc_fatalx("pthread_cond_init: %s", strerror(rc));
 }
 
 /*
- * psc_waitq_timedwait - wait a maximum amount of time for the resource managed by
- *	wq_cond to become available.
- * @q: the wait queue.
+ * psc_waitq_waitabs - wait until the time specified for the
+ *	resource managed by wq_cond to become available.
+ * @q: the wait queue to wait on.
  * @k: optional lock needed to protect the list.
- * @abstime: maximum amount of time to wait before giving up.
+ * @reltime: amount of time to wait for.
  * Notes: returns ETIMEDOUT if the resource has not become available.
  */
 int
-psc_waitq_timedwait(psc_waitq_t *q, psc_spinlock_t *k,
-		     const struct timespec *abstime)
+psc_waitq_waitabs(struct psc_waitq *q, psc_spinlock_t *k,
+    const struct timespec *abstime)
 {
-	int rc;
+	int rc, rv;
 
 	rc = pthread_mutex_lock(&q->wq_mut);
-	atomic_inc(&q->wq_nwaitors);
+	if (rc)
+		psc_fatalx("pthread_mutex_lock: %s", strerror(rc));
 
 	if (k != NULL)
 		freelock(k);
 
-	rc |= pthread_cond_timedwait(&q->wq_cond, &q->wq_mut, abstime);
-//	if (k)
-//		spinlock(k);
+	atomic_inc(&q->wq_nwaitors);
+	rv = pthread_cond_timedwait(&q->wq_cond, &q->wq_mut, abstime);
+	if (rv && rv != ETIMEDOUT)
+		psc_fatalx("pthread_cond_timedwait: %s", strerror(rv));
 	atomic_dec(&q->wq_nwaitors);
-	rc |= pthread_mutex_unlock(&q->wq_mut);
+	rc = pthread_mutex_unlock(&q->wq_mut);
+	if (rc)
+		psc_fatalx("pthread_mutex_unlock: %s", strerror(rc));
+	return (rv);
+}
 
-	psc_assert(rc == 0 || rc == ETIMEDOUT);
-	return rc;
+/*
+ * psc_waitq_waitrel - wait at most the amount of time specified for the
+ *	resource managed by wq_cond to become available.
+ * @q: the wait queue to wait on.
+ * @k: optional lock needed to protect the list.
+ * @reltime: amount of time to wait for.
+ * Notes: returns ETIMEDOUT if the resource has not become available.
+ */
+int
+psc_waitq_waitrel(struct psc_waitq *q, psc_spinlock_t *k,
+    const struct timespec *reltime)
+{
+	struct timespec abstime;
+	int rc, rv;
+
+	rc = pthread_mutex_lock(&q->wq_mut);
+	if (rc)
+		psc_fatalx("pthread_mutex_lock: %s", strerror(rc));
+
+	if (k != NULL)
+		freelock(k);
+
+	atomic_inc(&q->wq_nwaitors);
+	if (reltime) {
+		if (clock_gettime(CLOCK_REALTIME, &abstime) == -1)
+			psc_fatal("clock_gettime");
+		timespecadd(&abstime, reltime, &abstime);
+		rv = pthread_cond_timedwait(&q->wq_cond, &q->wq_mut, &abstime);
+		if (rv && rv != ETIMEDOUT)
+			psc_fatalx("pthread_cond_timedwait: %s", strerror(rv));
+	} else {
+		rv = pthread_cond_wait(&q->wq_cond, &q->wq_mut);
+		if (rv)
+			psc_fatalx("pthread_cond_wait: %s", strerror(rv));
+	}
+	atomic_dec(&q->wq_nwaitors);
+	rc = pthread_mutex_unlock(&q->wq_mut);
+	if (rc)
+		psc_fatalx("pthread_mutex_unlock: %s", strerror(rc));
+	return (rv);
 }
 
 /*
  * psc_waitq_wakeone - unblock one waiting thread.
- * @q: pointer to the wait queue struct.
+ * @q: wait queue to operate on.
  */
 void
-psc_waitq_wakeone(psc_waitq_t *q)
+psc_waitq_wakeone(struct psc_waitq *q)
 {
 	int rc;
 
-	rc =  pthread_mutex_lock(&q->wq_mut);
-	rc |= pthread_cond_signal(&q->wq_cond);
-	rc |= pthread_mutex_unlock(&q->wq_mut);
-
-	psc_assert(rc == 0);
+	rc = pthread_mutex_lock(&q->wq_mut);
+	if (rc)
+		psc_fatalx("pthread_mutex_lock: %s", strerror(rc));
+	rc = pthread_cond_signal(&q->wq_cond);
+	if (rc)
+		psc_fatalx("pthread_cond_signal: %s", strerror(rc));
+	rc = pthread_mutex_unlock(&q->wq_mut);
+	if (rc)
+		psc_fatalx("pthread_mutex_unlock: %s", strerror(rc));
 }
 
 /*
- * psc_waitq_wakeall - a method for implementing a pseudo-barrier.
- * @q: pointer to the wait queue struct.
+ * psc_waitq_wakeall - wake everyone waiting on a wait queue.
+ * @q: wait queue to operate on.
  */
 void
-psc_waitq_wakeall(psc_waitq_t *q)
+psc_waitq_wakeall(struct psc_waitq *q)
 {
 	int rc;
 
-	rc =  pthread_mutex_lock(&q->wq_mut);
-	rc |= pthread_cond_broadcast(&q->wq_cond);
-	rc |= pthread_mutex_unlock(&q->wq_mut);
-
-	psc_assert(rc == 0);
+	rc = pthread_mutex_lock(&q->wq_mut);
+	if (rc)
+		psc_fatalx("pthread_mutex_lock: %s", strerror(rc));
+	rc = pthread_cond_broadcast(&q->wq_cond);
+	if (rc)
+		psc_fatalx("pthread_cond_broadcast: %s", strerror(rc));
+	rc = pthread_mutex_unlock(&q->wq_mut);
+	if (rc)
+		psc_fatalx("pthread_mutex_unlock: %s", strerror(rc));
 }
 
 #else /* HAVE_LIBPTHREAD */
 
 void
-psc_waitq_init(__unusedx psc_waitq_t *q)
+psc_waitq_init(struct psc_waitq *q)
 {
 	atomic_set(&q->wq_nwaitors, 0);
 }
 
-void
-psc_waitq_wait(__unusedx psc_waitq_t *q, __unusedx psc_spinlock_t *k)
+int
+psc_waitq_waitrel(__unusedx struct psc_waitq *q,
+    __unusedx psc_spinlock_t *k,
+    __unusedx const struct timespec *reltime)
 {
 	psc_fatalx("waitqs not supported");
 }
 
 int
-psc_waitq_timedwait(__unusedx psc_waitq_t *q, __unusedx psc_spinlock_t *k,
+psc_waitq_waitabs(__unusedx struct psc_waitq *q,
+    __unusedx psc_spinlock_t *k,
     __unusedx const struct timespec *abstime)
 {
 	psc_fatalx("waitqs not supported");
 }
 
 void
-psc_waitq_wakeone(__unusedx psc_waitq_t *q)
+psc_waitq_wakeone(__unusedx struct psc_waitq *q)
 {
 	psc_fatalx("waitqs not supported");
 }
 
 void
-psc_waitq_wakeall(__unusedx psc_waitq_t *q)
+psc_waitq_wakeall(__unusedx struct psc_waitq *q)
 {
 	psc_fatalx("waitqs not supported");
 }

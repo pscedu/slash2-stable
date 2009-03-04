@@ -5,29 +5,31 @@
 #include <inttypes.h>
 #include <stdlib.h>
 
+#include "psc_rpc/export.h"
 #include "psc_rpc/rpc.h"
 #include "psc_rpc/rpclog.h"
-#include "psc_rpc/export.h"
 #include "psc_util/alloc.h"
 
 static u64 pscrpc_last_xid = 0;
-static spinlock_t pscrpc_last_xid_lock = SPIN_LOCK_UNLOCKED;
+static psc_spinlock_t pscrpc_last_xid_lock = LOCK_INITIALIZER;
 
 u64 pscrpc_next_xid(void)
 {
 	u64 tmp;
-	spin_lock(&pscrpc_last_xid_lock);
+
+	spinlock(&pscrpc_last_xid_lock);
 	tmp = ++pscrpc_last_xid;
-	spin_unlock(&pscrpc_last_xid_lock);
+	freelock(&pscrpc_last_xid_lock);
 	return tmp;
 }
 
 u64 pscrpc_sample_next_xid(void)
 {
 	u64 tmp;
-	spin_lock(&pscrpc_last_xid_lock);
+
+	spinlock(&pscrpc_last_xid_lock);
 	tmp = pscrpc_last_xid + 1;
-	spin_unlock(&pscrpc_last_xid_lock);
+	freelock(&pscrpc_last_xid_lock);
 	return tmp;
 }
 
@@ -50,11 +52,11 @@ struct pscrpc_import *new_import(void)
 	//INIT_PSCLIST_HEAD(&imp->imp_replay_list);
 	INIT_PSCLIST_HEAD(&imp->imp_sending_list);
 	//INIT_PSCLIST_HEAD(&imp->imp_delayed_list);
-	spin_lock_init(&imp->imp_lock);
+	LOCK_INIT(&imp->imp_lock);
 	//imp->imp_last_success_conn = 0;
 	imp->imp_state = PSC_IMP_NEW;
 	//imp->imp_obd = class_incref(obd);
-	init_waitqueue_head(&imp->imp_recovery_waitq);
+	psc_waitq_init(&imp->imp_recovery_waitq);
 
 	atomic_set(&imp->imp_refcount, 2);
 	atomic_set(&imp->imp_inflight, 0);
@@ -135,21 +137,21 @@ pscrpc_prep_req_from_pool(struct pscrpc_request_pool *pool)
 	if (!pool)
 		return NULL;
 
-	spin_lock(&pool->prp_lock);
+	spinlock(&pool->prp_lock);
 
 	/* See if we have anything in a pool, and bail out if nothing,
 	 * in writeout path, where this matters, this is safe to do, because
 	 * nothing is lost in this case, and when some in-flight requests
 	 * complete, this code will be called again. */
 	if (unlikely(psclist_empty(&pool->prp_req_list))) {
-		spin_unlock(&pool->prp_lock);
+		freelock(&pool->prp_lock);
 		return NULL;
 	}
 
 	request = psclist_entry(pool->prp_req_list.next, struct pscrpc_request,
 			     rq_list);
 	psclist_del(&request->rq_list);
-	spin_unlock(&pool->prp_lock);
+	freelock(&pool->prp_lock);
 
 	psc_assert(request->rq_reqmsg);
 	psc_assert(request->rq_pool);
@@ -224,11 +226,11 @@ pscrpc_prep_req_pool(struct pscrpc_import *imp,
 	request->rq_request_portal = imp->imp_client->cli_request_portal;
 	request->rq_reply_portal = imp->imp_client->cli_reply_portal;
 
-	spin_lock_init(&request->rq_lock);
+	LOCK_INIT(&request->rq_lock);
 	INIT_PSCLIST_ENTRY(&request->rq_list_entry);
 	//INIT_PSCLIST_HEAD(&request->rq_replay_list);
 	INIT_PSCLIST_ENTRY(&request->rq_set_chain_lentry);
-	init_waitqueue_head(&request->rq_reply_waitq);
+	psc_waitq_init(&request->rq_reply_waitq);
 	request->rq_xid = pscrpc_next_xid();
 	atomic_set(&request->rq_refcount, 1);
 
@@ -256,8 +258,8 @@ new_bulk(int npages, int type, int portal)
 	if (!desc)
 		return NULL;
 
-	spin_lock_init(&desc->bd_lock);
-	init_waitqueue_head(&desc->bd_waitq);
+	LOCK_INIT(&desc->bd_lock);
+	psc_waitq_init(&desc->bd_waitq);
 	desc->bd_max_iov = npages;
 	desc->bd_iov_count = 0;
 	desc->bd_md_h = LNET_INVALID_HANDLE;
@@ -327,10 +329,10 @@ pscrpc_prep_set(void)
 	if (!set)
 		RETURN(NULL);
 	INIT_PSCLIST_HEAD(&set->set_requests);
-	init_waitqueue_head(&set->set_waitq);
+	psc_waitq_init(&set->set_waitq);
 	set->set_remaining = 0;
-	spin_lock_init(&set->set_new_req_lock);
-	spin_lock_init(&set->set_lock);
+	LOCK_INIT(&set->set_new_req_lock);
+	LOCK_INIT(&set->set_lock);
 	INIT_PSCLIST_HEAD(&set->set_new_requests);
 
 	RETURN(set);
@@ -342,14 +344,14 @@ void
 pscrpc_set_add_new_req(struct pscrpc_request_set *set,
 		       struct pscrpc_request    *req)
 {
-	spin_lock(&set->set_new_req_lock);
+	spinlock(&set->set_new_req_lock);
 	/* The set takes over the caller's request reference */
 	//psclist_xadd_tail(&req->rq_set_chain_lentry, &set->set_new_requests);
 	psclist_xadd_tail(&req->rq_set_chain_lentry, &set->set_requests);
 	req->rq_set = set;
 	set->set_remaining++;
 	atomic_inc(&req->rq_import->imp_inflight);
-	spin_unlock(&set->set_new_req_lock);
+	freelock(&set->set_new_req_lock);
 }
 
 /**
@@ -371,9 +373,9 @@ static int expired_request(void *data)
 		RETURN(pscrpc_expire_one_request(req));
 	}
 
-	spin_lock(&req->rq_lock);
+	spinlock(&req->rq_lock);
 	req->rq_resend = 1;
-	spin_unlock(&req->rq_lock);
+	freelock(&req->rq_lock);
 
 	return 0;
 }
@@ -382,9 +384,9 @@ static void interrupted_request(void *data)
 {
 	struct pscrpc_request *req = data;
 	DEBUG_REQ(PLL_INFO, req, "request interrupted");
-	spin_lock(&req->rq_lock);
+	spinlock(&req->rq_lock);
 	req->rq_intr = 1;
-	spin_unlock(&req->rq_lock);
+	freelock(&req->rq_lock);
 }
 
 static int pscrpc_send_new_req_locked(struct pscrpc_request *req)
@@ -401,14 +403,14 @@ static int pscrpc_send_new_req_locked(struct pscrpc_request *req)
 	freelock(&req->rq_lock);
 
 	imp = req->rq_import;
-	spin_lock(&imp->imp_lock);
+	spinlock(&imp->imp_lock);
 
 	req->rq_import_generation = imp->imp_generation;
 #if 0
 	if (pscrpc_import_delay_req(imp, req, &rc)) {
-		spin_lock (&req->rq_lock);
+		spinlock (&req->rq_lock);
 		req->rq_waiting = 1;
-		spin_unlock (&req->rq_lock);
+		freelock (&req->rq_lock);
 
 		DEBUG_REQ(D_HA, req, "req from PID %d waiting for recovery: "
 			  "(%s != %s)",
@@ -417,12 +419,12 @@ static int pscrpc_send_new_req_locked(struct pscrpc_request *req)
 			  pscrpc_import_state_name(imp->imp_state));
 
 		psclist_xadd_tail(&req->rq_list_entry, &imp->imp_delayed_list);
-		spin_unlock(&imp->imp_lock);
+		freelock(&imp->imp_lock);
 		RETURN(0);
 	}
 
 	if (rc != 0) {
-		spin_unlock(&imp->imp_lock);
+		freelock(&imp->imp_lock);
 		req->rq_status = rc;
 		req->rq_phase = ZRQ_PHASE_INTERPRET;
 		RETURN(rc);
@@ -431,7 +433,7 @@ static int pscrpc_send_new_req_locked(struct pscrpc_request *req)
 
 	/* XXX this is the same as pscrpc_queue_wait */
 	psclist_xadd_tail(&req->rq_list_entry, &imp->imp_sending_list);
-	spin_unlock(&imp->imp_lock);
+	freelock(&imp->imp_lock);
 
 	// we don't have a 'current' struct - paul
 	//req->rq_reqmsg->status = current->pid;
@@ -469,7 +471,7 @@ static int pscrpc_check_reply(struct pscrpc_request *req)
 	ENTRY;
 
 	/* serialise with network callback */
-	spin_lock(&req->rq_lock);
+	spinlock(&req->rq_lock);
 
 	if (req->rq_replied) {
 		DEBUG_REQ(PLL_INFO, req, "REPLIED:");
@@ -478,9 +480,9 @@ static int pscrpc_check_reply(struct pscrpc_request *req)
 
 	if (req->rq_net_err && !req->rq_timedout) {
 		DEBUG_REQ(PLL_ERROR, req, "NET_ERR: %d", req->rq_net_err);
-		spin_unlock(&req->rq_lock);
+		freelock(&req->rq_lock);
 		rc = pscrpc_expire_one_request(req);
-		spin_lock(&req->rq_lock);
+		spinlock(&req->rq_lock);
 		GOTO(out, rc);
 	}
 
@@ -500,7 +502,7 @@ static int pscrpc_check_reply(struct pscrpc_request *req)
 	}
 	EXIT;
  out:
-	spin_unlock(&req->rq_lock);
+	freelock(&req->rq_lock);
 	DEBUG_REQ(PLL_INFO, req, "rc = %d", rc);
 	return rc;
 }
@@ -508,7 +510,7 @@ static int pscrpc_check_reply(struct pscrpc_request *req)
 void pscrpc_unregister_reply (struct pscrpc_request *request)
 {
 	int                rc;
-	wait_queue_head_t *wq;
+	struct psc_waitq *wq;
 	struct l_wait_info lwi;
 
 	psc_assert(!in_interrupt ());             /* might sleep */
@@ -617,13 +619,13 @@ static int after_reply(struct pscrpc_request *req)
 
 #if 0
 	if (req->rq_import->imp_replayable) {
-		spin_lock(&imp->imp_lock);
+		spinlock(&imp->imp_lock);
 		if (req->rq_transno != 0)
 			pscrpc_retain_replayable_request(req, imp);
 		else if (req->rq_commit_cb != NULL) {
-			spin_unlock(&imp->imp_lock);
+			freelock(&imp->imp_lock);
 			req->rq_commit_cb(req);
-			spin_lock(&imp->imp_lock);
+			spinlock(&imp->imp_lock);
 		}
 
 		/* Replay-enabled imports return commit-status information. */
@@ -631,7 +633,7 @@ static int after_reply(struct pscrpc_request *req)
 			imp->imp_peer_committed_transno =
 				req->rq_repmsg->last_committed;
 		pscrpc_free_committed(imp);
-		spin_unlock(&imp->imp_lock);
+		freelock(&imp->imp_lock);
 	}
 #endif
 	RETURN(rc);
@@ -661,7 +663,7 @@ int pscrpc_queue_wait(struct pscrpc_request *req)
 	/* Mark phase here for a little debug help */
 	req->rq_phase = ZRQ_PHASE_RPC;
 
-	spin_lock(&imp->imp_lock);
+	spinlock(&imp->imp_lock);
 	req->rq_import_generation = imp->imp_generation;
  restart:
 	/*
@@ -670,7 +672,7 @@ int pscrpc_queue_wait(struct pscrpc_request *req)
 		psclist_del(&req->rq_list_entry);
 
 		psclist_xadd_tail(&req->rq_list_entry, &imp->imp_delayed_list);
-		spin_unlock(&imp->imp_lock);
+		freelock(&imp->imp_lock);
 
 		DEBUG_REQ(PLL_WARN, req, "\"%s\" waiting for recovery: (%s != %s)",
 			  current->comm,
@@ -687,7 +689,7 @@ int pscrpc_queue_wait(struct pscrpc_request *req)
 			  pscrpc_import_state_name(req->rq_send_state),
 			  req->rq_err, req->rq_intr);
 
-		spin_lock(&imp->imp_lock);
+		spinlock(&imp->imp_lock);
 		psclist_del(&req->rq_list_entry);
 
 		if (req->rq_err) {
@@ -697,7 +699,7 @@ int pscrpc_queue_wait(struct pscrpc_request *req)
 			rc = -EINTR;
 		}
 		else if (req->rq_no_resend) {
-			spin_unlock(&imp->imp_lock);
+			freelock(&imp->imp_lock);
 			GOTO(out, rc = -ETIMEDOUT);
 		}
 		else {
@@ -708,7 +710,7 @@ int pscrpc_queue_wait(struct pscrpc_request *req)
 	*/
 	if (rc != 0) {
 		psclist_del(&req->rq_list_entry);
-		spin_unlock(&imp->imp_lock);
+		freelock(&imp->imp_lock);
 		req->rq_status = rc; // XXX this ok?
 		GOTO(out, rc);
 	}
@@ -733,7 +735,7 @@ int pscrpc_queue_wait(struct pscrpc_request *req)
 	}
 	/* XXX this is the same as pscrpc_set_wait */
 	psclist_xadd_tail(&req->rq_list_entry, &imp->imp_sending_list);
-	spin_unlock(&imp->imp_lock);
+	freelock(&imp->imp_lock);
 
 	psc_info("request %p request->rq_reqmsg %p",
 	      req, req->rq_reqmsg);
@@ -767,9 +769,9 @@ int pscrpc_queue_wait(struct pscrpc_request *req)
 	if (req->rq_replied)
 		DEBUG_REQ(PLL_INFO, req, "REPLIED:");
 
-	spin_lock(&imp->imp_lock);
+	spinlock(&imp->imp_lock);
 	psclist_del(&req->rq_list_entry);
-	spin_unlock(&imp->imp_lock);
+	freelock(&imp->imp_lock);
 
 	/* If the reply was received normally, this just grabs the spinlock
 	 * (ensuring the reply callback has returned), sees that
@@ -784,7 +786,7 @@ int pscrpc_queue_wait(struct pscrpc_request *req)
 		/* ...unless we were specifically told otherwise. */
 		if (req->rq_no_resend)
 			GOTO(out, rc = -ETIMEDOUT);
-		spin_lock(&imp->imp_lock);
+		spinlock(&imp->imp_lock);
 		goto restart;
 	}
 
@@ -815,7 +817,7 @@ int pscrpc_queue_wait(struct pscrpc_request *req)
 	rc = after_reply (req);
 	/* NB may return +ve success rc */
 	if (req->rq_resend) {
-		spin_lock(&imp->imp_lock);
+		spinlock(&imp->imp_lock);
 		goto restart;
 	}
 
@@ -850,7 +852,7 @@ int pscrpc_queue_wait(struct pscrpc_request *req)
 	req->rq_phase = ZRQ_PHASE_INTERPRET;
 
 	atomic_dec(&imp->imp_inflight);
-	wake_up(&imp->imp_recovery_waitq);
+	psc_waitq_wakeall(&imp->imp_recovery_waitq);
 	RETURN(rc);
 }
 
@@ -926,9 +928,9 @@ int pscrpc_check_set(struct pscrpc_request_set *set, int check_allsent)
 				req->rq_status = -EIO;
 			req->rq_phase = ZRQ_PHASE_INTERPRET;
 
-			spin_lock(&imp->imp_lock);
+			spinlock(&imp->imp_lock);
 			psclist_del(&req->rq_list_entry);
-			spin_unlock(&imp->imp_lock);
+			freelock(&imp->imp_lock);
 
 			GOTO(interpret, req->rq_status);
 		}
@@ -944,9 +946,9 @@ int pscrpc_check_set(struct pscrpc_request_set *set, int check_allsent)
 			req->rq_status = -EINTR;
 			req->rq_phase = ZRQ_PHASE_INTERPRET;
 
-			spin_lock(&imp->imp_lock);
+			spinlock(&imp->imp_lock);
 			psclist_del(&req->rq_list_entry);
-			spin_unlock(&imp->imp_lock);
+			freelock(&imp->imp_lock);
 
 			GOTO(interpret, req->rq_status);
 		}
@@ -958,11 +960,11 @@ int pscrpc_check_set(struct pscrpc_request_set *set, int check_allsent)
 				int status=0;
 				pscrpc_unregister_reply(req);
 
-				spin_lock(&imp->imp_lock);
+				spinlock(&imp->imp_lock);
 
 #if 0
 				if (pscrpc_import_delay_req(imp, req, &status)){
-					spin_unlock(&imp->imp_lock);
+					freelock(&imp->imp_lock);
 					continue;
 				}
 #endif
@@ -970,19 +972,19 @@ int pscrpc_check_set(struct pscrpc_request_set *set, int check_allsent)
 				if (status != 0) {
 					req->rq_status = status;
 					req->rq_phase = ZRQ_PHASE_INTERPRET;
-					spin_unlock(&imp->imp_lock);
+					freelock(&imp->imp_lock);
 					GOTO(interpret, req->rq_status);
 				}
 				if (req->rq_no_resend) {
 					req->rq_status = -ENOTCONN;
 					req->rq_phase = ZRQ_PHASE_INTERPRET;
-					spin_unlock(&imp->imp_lock);
+					freelock(&imp->imp_lock);
 					GOTO(interpret, req->rq_status);
 				}
 				psclist_xadd_tail(&req->rq_list_entry,
 					      &imp->imp_sending_list);
 
-				spin_unlock(&imp->imp_lock);
+				freelock(&imp->imp_lock);
 
 				req->rq_waiting = 0;
 				if (req->rq_resend) {
@@ -1021,19 +1023,19 @@ int pscrpc_check_set(struct pscrpc_request_set *set, int check_allsent)
 			if (!pscrpc_client_replied(req))
 				continue;
 
-			spin_lock(&imp->imp_lock);
+			spinlock(&imp->imp_lock);
 			psclist_del(&req->rq_list_entry);
-			spin_unlock(&imp->imp_lock);
+			freelock(&imp->imp_lock);
 
 			req->rq_status = after_reply(req);
 			if (req->rq_resend) {
 				/* Add this req to the delayed list so
 				   it can be errored if the import is
 				   evicted after recovery. */
-				spin_lock(&req->rq_lock);
+				spinlock(&req->rq_lock);
 				psclist_xadd_tail(&req->rq_list_entry,
 					      &imp->imp_delayed_list);
-				spin_unlock(&req->rq_lock);
+				freelock(&req->rq_lock);
 				continue;
 			}
 
@@ -1088,7 +1090,7 @@ int pscrpc_check_set(struct pscrpc_request_set *set, int check_allsent)
 			  set, set->set_remaining);
 
 		atomic_dec(&imp->imp_inflight);
-		wake_up(&imp->imp_recovery_waitq);
+		psc_waitq_wakeall(&imp->imp_recovery_waitq);
 	}
 
 	spinlock(&set->set_lock);
@@ -1173,9 +1175,9 @@ int pscrpc_expire_one_request(struct pscrpc_request *req)
 	if (imp != NULL)
 		LNetCtl(IOC_LIBCFS_DEBUG_PEER, &imp->imp_connection->c_peer);
 #endif
-	spin_lock(&req->rq_lock);
+	spinlock(&req->rq_lock);
 	req->rq_timedout = 1;
-	spin_unlock(&req->rq_lock);
+	freelock(&req->rq_lock);
 
 	pscrpc_unregister_reply (req);
 
@@ -1196,10 +1198,10 @@ int pscrpc_expire_one_request(struct pscrpc_request *req)
 	//    imp->imp_obd->obd_no_recov) {
 
 	if (req->rq_send_state != PSC_IMP_FULL) {
-		spin_lock(&req->rq_lock);
+		spinlock(&req->rq_lock);
 		req->rq_status = -ETIMEDOUT;
 		req->rq_err = 1;
-		spin_unlock(&req->rq_lock);
+		freelock(&req->rq_lock);
 		RETURN(1);
 	}
 
@@ -1277,9 +1279,9 @@ int pscrpc_set_next_timeout(struct pscrpc_request_set *set)
 
  void pscrpc_mark_interrupted(struct pscrpc_request *req)
 {
-	spin_lock(&req->rq_lock);
+	spinlock(&req->rq_lock);
 	req->rq_intr = 1;
-	spin_unlock(&req->rq_lock);
+	freelock(&req->rq_lock);
 }
 
 void pscrpc_interrupted_set(void *data)
@@ -1538,7 +1540,7 @@ void pscrpc_abort_inflight(struct pscrpc_import *imp)
 	  * pscrpc_{queue,set}_wait must (and does) hold imp_lock while testing
 	  * this flag and then putting requests on sending_list or delayed_list.
 	  */
-	 spin_lock(&imp->imp_lock);
+	 spinlock(&imp->imp_lock);
 
 	 /* XXX locking?  Maybe we should remove each request with the list
 	  * locked?  Also, how do we know if the requests on the list are
@@ -1550,13 +1552,13 @@ void pscrpc_abort_inflight(struct pscrpc_import *imp)
 
 		DEBUG_REQ(PLL_WARN, req, "inflight");
 
-		spin_lock (&req->rq_lock);
+		spinlock (&req->rq_lock);
 		if (req->rq_import_generation < imp->imp_generation) {
 			req->rq_err = 1;
 			pscrpc_wake_client_req(req);
 		}
 		//__pscrpc_req_finished(req, 1);
-		spin_unlock (&req->rq_lock);
+		freelock (&req->rq_lock);
 	 }
 
 #if 0
@@ -1566,12 +1568,12 @@ void pscrpc_abort_inflight(struct pscrpc_import *imp)
 
 		DEBUG_REQ(PLL_WARN, req, "aborting waiting req");
 
-		spin_lock (&req->rq_lock);
+		spinlock (&req->rq_lock);
 		if (req->rq_import_generation < imp->imp_generation) {
 			req->rq_err = 1;
 			pscrpc_wake_client_req(req);
 		}
-		spin_unlock (&req->rq_lock);
+		freelock (&req->rq_lock);
 	 }
 
 	 /* Last chance to free reqs left on the replay list, but we
@@ -1580,7 +1582,7 @@ void pscrpc_abort_inflight(struct pscrpc_import *imp)
 		 pscrpc_free_committed(imp);
 #endif
 
-	 spin_unlock(&imp->imp_lock);
+	 freelock(&imp->imp_lock);
 
 	 EXIT;
 }
@@ -1591,7 +1593,7 @@ void pscrpc_resend_req(struct pscrpc_request *req)
 	req->rq_reqmsg->handle.cookie = 0;
 	req->rq_status = -EAGAIN;
 
-	spin_lock(&req->rq_lock);
+	spinlock(&req->rq_lock);
 	req->rq_resend = 1;
 	req->rq_net_err = 0;
 	req->rq_timedout = 0;
@@ -1604,5 +1606,5 @@ void pscrpc_resend_req(struct pscrpc_request *req)
 		       old_xid, req->rq_xid);
 	}
 	pscrpc_wake_client_req(req);
-	spin_unlock(&req->rq_lock);
+	freelock(&req->rq_lock);
 }

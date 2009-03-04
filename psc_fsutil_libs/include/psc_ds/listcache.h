@@ -36,8 +36,8 @@ struct psc_listcache {
 
 	struct psclist_head	lc_listhd;		/* head/tail of list         */
 	psc_spinlock_t		lc_lock;		/* exclusitivity ctl         */
-	psc_waitq_t		lc_wq_want;		/* when someone wants an ent */
-	psc_waitq_t		lc_wq_empty;		/* when we're empty          */
+	struct psc_waitq	lc_wq_want;		/* when someone wants an ent */
+	struct psc_waitq	lc_wq_empty;		/* when we're empty          */
 };
 typedef struct psc_listcache list_cache_t;
 
@@ -129,7 +129,7 @@ _lc_get(struct psc_listcache *lc, struct timespec *abstime, int flags)
 			psc_logx(flags & PLCGF_WARN ? PLL_WARN : PLL_NOTICE,
 			    "lc_get(%s:%p): blocking wait", lc->lc_name, lc);
 		if (abstime) {
-			rc = psc_waitq_timedwait(&lc->lc_wq_empty,
+			rc = psc_waitq_waitabs(&lc->lc_wq_empty,
 			    &lc->lc_lock, abstime);
 			/* XXX subtract from abstime */
 			if (rc) {

@@ -68,11 +68,11 @@ pscrpc_get_connection(lnet_process_id_t peer,
 	psc_info("self %s peer %s",
 		 libcfs_nid2str(self), libcfs_id2str(peer));
 
-	spin_lock(&conn_lock);
+	spinlock(&conn_lock);
 
 	c = pscrpc_lookup_conn_locked(peer, self);
 
-	spin_unlock(&conn_lock);
+	freelock(&conn_lock);
 
 	if (c != NULL) {
 		psc_info("got self %s peer %s",
@@ -93,7 +93,7 @@ pscrpc_get_connection(lnet_process_id_t peer,
 	if (uuid != NULL)
 		psc_str2uuid(&c->c_remote_uuid, (char *)uuid->uuid);
 
-	spin_lock(&conn_lock);
+	spinlock(&conn_lock);
 
 	c2 = pscrpc_lookup_conn_locked(peer, self);
 	if (c2 == NULL) {
@@ -102,7 +102,7 @@ pscrpc_get_connection(lnet_process_id_t peer,
 		psclist_xadd(&c->c_link, &conn_list);
 	}
 
-	spin_unlock(&conn_lock);
+	freelock(&conn_lock);
 
 	if (c2 == NULL)
 		RETURN (c);

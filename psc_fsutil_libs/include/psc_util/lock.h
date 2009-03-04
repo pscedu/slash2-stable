@@ -5,13 +5,6 @@
 
 #include "psc_util/log.h"
 
-/* Compatibility for LNET. */
-#define spinlock_t		psc_spinlock_t
-#define SPIN_LOCK_UNLOCKED	LOCK_INITIALIZER
-#define spin_lock(l)		spinlock(l)
-#define spin_unlock(l)		freelock(l)
-#define spin_lock_init(l)	LOCK_INIT(l)
-
 #ifdef __ia64
 
 #ifndef _XOPEN_SOURCE
@@ -382,5 +375,5 @@ tryreqlock(psc_spinlock_t *l, int *locked)
 
 #endif /* HAVE_LIBPTHREAD */
 
+#endif /* __ia64 */
 #endif /* _PFL_LOCK_H_ */
-#endif
