@@ -67,6 +67,8 @@ zest
 - new pull model for zest server to client:
   server RPCIO threads issue GETs to connected mount_zests
 - when mount_zest is idle, have it merge dirty zcf zsb channels
+- ensure libzestclient is not paritying over partial buffers
+- investigate libgru for NUMA memory staging
 
 development tool
 - let wiki changes automatically email zest-devel@ like svn commits
