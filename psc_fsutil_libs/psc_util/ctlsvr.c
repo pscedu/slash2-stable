@@ -1178,7 +1178,7 @@ psc_ctlhnd_cmd(int fd, struct psc_ctlmsghdr *mh, void *m)
 	int rc;
 
 	rc = 1;
-	if (pcc->pcc_opcode > 0 && pcc->pcc_opcode < psc_ctl_ncmds)
+	if (pcc->pcc_opcode >= 0 && pcc->pcc_opcode < psc_ctl_ncmds)
 		rc = (*psc_ctl_cmds[pcc->pcc_opcode])(fd, mh, m);
 	else
 		rc = psc_ctlsenderr(fd, mh,
