@@ -7,13 +7,10 @@ general reminders
 - constify RPC replies in clients and requests in servers
 - check all bulkserver()'s for free_desc()
 - sweep tree for \b0[0-9] and fix bad permissions (711 -> 700 - slash?)
-- ctlapi GETTREE
-- pfl: use "psc_" prefix and "_mt" (multithread-safe) postfix where sensical
-- type fixes:
-	(o) inttypes.h PRI[dioux]64 in place of _P_U64 and LPX
-	(o) s/u64/uint64_t/
+- ctlapi GETTREE?
+- zap _P_U64
+- use the standard C library uint64_t type
 - investigate pthread_rwlocks for things like trees and large lists
-- remove ifdef buttons
 - watch out for "a - b" in cmp functions overflowing
 - investigate if our sched_yield() calls are correct
 
@@ -22,6 +19,7 @@ slash
 
 pfl
 - no ifdefs
+- pfl: use "psc_" prefix and "_mt" (multithread-safe) postfix
 - watch out for lock reinitialization (i.e. LOCK_INIT twice)
 - for psclog(), add extensibility mechanism for fmtstr,
   allowing app-specific callbacks (e.g. %r for zest clients)
@@ -30,7 +28,6 @@ pfl
 - create a refcnt manager for thread-safe activity
 - consider adding a new keyword __local or something for thread-localized memory.
 - add a pscthr_get() check in pscalloc and test
-- add a struct psc_completion
 - psclog format specifier: timestamp difference
 - investigate proper control socket permissions checks.  regular
   users should be able to read some stats but only root users
@@ -60,6 +57,7 @@ zest
 
   note: have the fastest disks grab each successive block in a pg,
   deprecates need for zigs, or at least current complexity of zigs.
+- fix zigoff among inodes
 - pass sizeof(iovs) to client on CONNECT
 - write back support on server
 - add extattrs to zfs fuse
@@ -70,6 +68,5 @@ zest
   server RPCIO threads issue GETs to connected mount_zests
 - when mount_zest is idle, have it merge dirty zcf zsb channels
 
-svnweb
-- add 'age' (how long) to log display
+development tool
 - let wiki changes automatically email zest-devel@ like svn commits
