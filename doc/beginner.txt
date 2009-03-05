@@ -6,10 +6,10 @@ Terminology
 ===========
 
 lnd - Lustre networking device.  LNDs are abstraction layers that let
-	underlying protocols, such as TCP or portals, handle lower-level
+	underlying protocols, such as TCP or Cray portals, handle lower-level
 	communication details.
 
-PFL API Notes
+Control API Notes
 =======================================
 
   Some global data structure instances get automatically registered for
@@ -27,7 +27,7 @@ PFL API Notes
 	struct psclist_head rb_entry;
     };
 
-    list_cache_t zReadBufferList;
+    struct psc_listcache zReadBufferList;
 
     lc_reginit(&zreadBufferList, struct readbuf, rb_entry, "readfree");
 
@@ -82,7 +82,8 @@ Local Files
   configuration and/or other local repository files.  Please avoid
   committing to example configuration files or files called "local*"
   unless you know what you're doing, otherwise it may cause SVN merge
-  conflicts on everyone's checkouts (including your other checkouts).
+  conflicts on everyone's checkouts (including any other checkouts you
+  may have).
 
 Project Hierarchy
 =================
@@ -101,26 +102,30 @@ psc_fsutil_libs (PFL) - utility library defining common data structures
  |
  +- include - header files
      |
-     +-	psc_types - basic data types
-     |
+     +-	psc_types.h - primitive data types
      +-	psc_ds - code implementing various data structures
      |
      |	 	dynarray - dynamically resizable arrays using realloc()
-     |	 	hash - hash tables
+     |	 	hash2 - hash table API
      |			(o) automatically registered for export/control
-     |		stree - simple tree where each node may have a variable
-     |			number of branches/children
-     |		vbitmap - arbitrarily-sized bitmaps (byte strings)
      |		list - linux/list.h rewrite, lightweight linked list implementation,
      |			NOT thread-safe (these routines must be invoked mutually
      |			exclusive sections of code e.g. protected by spinlocks)
      |		listcache - heavier duty linked list, thread-safe
      |			(o) automatically registered for export/control
+     |		lockedlist - lightweight thread-safe linked list API
+     |		pool - object memory management
+     |			(o) automatically registered for export/control
+     |		queue - BSD sys/queue.h, additional list/queue structures
+     |			such as singly linked lists
+     |		stree - simple tree where each node may have a variable
+     |			number of branches/children
      |		tree - BSD sys/tree.h, contains two types of trees:
      |			(o) splay - auto-rebalancing two-child-node tree
      |			(o) red-black - glorified binary search tree
      |			documentation for this file is available here:
      |			http://www.openbsd.org/cgi-bin/man.cgi?query=tree
+     |		vbitmap - arbitrarily-sized bitmaps (byte strings)
      |
      +-	psc_rpc - remote procedure call (RPC) library which leverages
      |	    the LNET networking library
@@ -131,7 +136,10 @@ psc_fsutil_libs (PFL) - utility library defining common data structures
      |
      +-	psc_util - miscellaneous utility routines
      |
-     |		alloc - validity-checked allocation routines
+     |		acsvc - file system access control mechanism, for performing
+     |			file system operations with other user privileges.
+     |		alloc - validity-checked allocation routines supporting
+     |			page-alignment and mlock(2)
      |		assert - assertions tied to logging system
      |		atomic - a data type which provies a variety of mathematical operations
      |			which by nature of atomic i.e mutually exclusive, ideal e.g. for
@@ -142,11 +150,12 @@ psc_fsutil_libs (PFL) - utility library defining common data structures
      |		crc - cyclic redundancy checks for attempting to verify data integrity
      |		ctlcli - client interface for daemon control
      |		ctlsvr - server guts for daemon control
+     |		fmt - string formatting APIs, such as human-readable sizes (2.5M)
      |		fmtstr - custom format strings, e.g. %M for minutes, %H for hours, etc.
      |		init - PFL initialization, key data structures and threads, etc.
      |		iostats - routines for gathering statistics about any form of I/O
      |			(o) automatically registered for export/control
-     |		journal - cheesy (atm) journaling routines
+     |		journal - journaling routines
      |		lock - simple spinlock implementation for mutually exclusive code sections
      |			spinlock() - necessarily acquire a spinlock,
      |				blocking until release if already held by another thread
@@ -169,38 +178,42 @@ psc_fsutil_libs (PFL) - utility library defining common data structures
      |			each subsystem has a loglevel associated with it which describes
      |			which kinds of messages (by severity) may be reported, and each
      |			thread has its own set of values for these.  these levels are
-     |			all controllable via the control interface
-     |			(o) automatically registered for export/control
+     |			all controllable via the control interface.
      |
-     |			psc_trace()	flow report
-     |			psc_info()	informational/diagnostic message
-     |			psc_dbg()	debugging messages
-     |			psc_notice()	condition alert
-     |			psc_warn()	non-critical error, append errno
-     |			psc_warnx()	non-critical error, not system-related
-     |			psc_error()	serious error, append errno to message
-     |			psc_errorx()	serious error, not system-related
-     |			psc_fatal()	fatal error, end program execution, with errno
-     |			psc_fatalx()	fatal error, end program execution, not sys-related
+     |			  psc_trace()	flow report
+     |			  psc_info()	informational/diagnostic message
+     |			  psc_dbg()	debugging messages
+     |			  psc_notice()	condition alert
+     |			  psc_warn()	non-critical error, append errno
+     |			  psc_warnx()	non-critical error, not system-related
+     |			  psc_error()	serious error, append errno to message
+     |			  psc_errorx()	serious error, not system-related
+     |			  psc_fatal()	fatal error, end program execution, with errno
+     |			  psc_fatalx()	fatal error, end program execution, not sys-related
      |
+     |		meter - API for progress meters
      |		mkdirs - "mkdir -p" in a function
-     |		palloc - page-aligned alloc, necessary for some kinds of I/O and performance
+     |		multilock - pthread_cond-like API for waiting of any of
+     |			number of conditions to occur
      |		printhex - simple data printer in hexadecimal for debugging
+     |		prsig - signal(2) behavior dumper
      |		pthread_barrier - thread barriers, for sync'ing everyone up before
-     |			proceeding to further workloads
+     |			proceeding to further workloads.
      |		random - pseudo-random number generator based on /dev/urandom
+     |		rlimit - resource limit (getrlimit(2)) API
+     |		setprocesstitle - API for setting the ps(1) process name string
+     |		strlcat - OpenBSD's NUL-guaranteed truncation-detecting strncat
      |		strlcpy - OpenBSD's NUL-guaranteed truncation-detecting strncpy
      |		subsys - routines relating to the "subsystem" facility which may be used
      |			to logically divide large program structure into modules
      |		thread - layer above pthread which gives you many things (basically,
      |			all thread-safe code in PFL deals with pscthreads and not
      |			pthreads directly)
-     |		threadtable - hash table of threads, for looking yourself up to access
-     |			thread-local data
+     |		timerthr - API for dedicating threads to perform events periodically
+     |		usklndthr - LNET userland socket LND module thread spawner
      |		waitq - wait on an event, from the context of a thread
 
 slash_nara - root of slash-specific code
- |
  +- include - shared include files
  |
  |   	buffer - slab buffers for memory-resident file portions
@@ -213,7 +226,6 @@ slash_nara - root of slash-specific code
  |	slconfig - lex-based configuration parser definitions
  |
  +- mk - slash-specific build rules/definitions/customizations/etc.
- |
  +- mount_slash - fuse mounter for slash, connects to slashd and sliod
  |
  |	control - control interface definitions
@@ -221,13 +233,7 @@ slash_nara - root of slash-specific code
  |	rpc - RPC routines specific to mount_slash
  |
  +- msctl - command-line mount_slash controller
- |
- +- newfs_slio - sets up a new file system for use with sliod
- |
- +- newfs_slmd - sets up a new file system for use with slashd
- |
  +- share - code amongst several slash-related programs
- |
  +- slashd - MDS server
  |
  |	backend - inter- MDS and I/O daemon communication
@@ -253,7 +259,16 @@ slash_nara - root of slash-specific code
  |
  +- slioctl - command-line sliod controller
 
-zest - root of zest-specific code
+tools - miscellaneous development tools
+ |
+ +- Id.sh - a tool for fixing $Id$ tags in files
+ +- libdep.pl - invoked by "make depend" for tracking libfoo.a and
+ |		-lfoo on executables
+ +- mkdep - a portable file dependency generator used by "make depend"
+ +- notempty - simple utility for a workaround in the make
+ |		infrastructure
+ +- unwrapcc - a tool for finding the actual intended final $CC target
+		when deep cc(1) wrappers are in use
 
 Writing Makefiles
 =================
@@ -315,33 +330,41 @@ Writing Makefiles
   Finally, include rules for the project the program is a part of:
 
 	include ${SLASHMK}
+	include ${PLFMK}
 
 Writing a PFL Program
 =====================
 
-- PFL initialization
-  (o) creates the subsystem facility to allow fine-grained logging capabilities
-  (o) initializes the thread table
-  (o) other minor environmental initialization
+ PFL initialization
+  Every PFL application must invoke pfl_init() before it can access most
+  PFL APIs.  This routine:
+    (o) creates the subsystem facility to allow fine-grained logging
+        capabilities
+    (o) initializes the thread subsystem
+    (o) initializes the NUMA local memory access subsystem
+    (o) parses the environment as described in pflenv(7)
 
-threadtable registration
-  - any code that runs in a thread that does a threadtable lookup for himself
-    will crash unless that thread has been registered with pscthr_init().
-    this routine can register a thread which has already been spawned (e.g.
-    the main/first thread) or can be used to spawn off new threads with the
-    specified start/main routine
-  - most PFL code uses the threadtable, so make sure your threads pscthr_init()
-    before invoking PFL routines, otherwise the table lookup will fail and
-    you'll crash!
+ psc_thread registration
+  Every thread in a PFL application which invokes PFL APIs should invoke
+  pscthr_init() to initialize some metathread structures.  This
+  information can be access later with pscthr_get(), including thread-local
+  storage via the pscthr_private field.
 
-- LNET initialization
-  (o) a global lnet_thrspawnf is used to callback to your code from LNET to
-      "properly" spawn off new threads (by whatever that means for your
-      application) for its dirty work.  in many cases, this means we just
-      call pscthr_init() and spawn the thread off.
+ LNET initialization
+  Our modified LNET stack requests to the application to spawn a thread.
+  PFL provides an implementation of these routines but requires that your
+  application provides two routines to aid it in spawning:
 
-- storing connection-local data: PSCRPC maintains a structure psc_export
-  associated with each request which contains the peer information and
-  contains a member void *rq->rq_export->exp_privdata which can be used
-  to store an application-specific (or task-specific) structure to
-  associate data with the peer.
+    psc_usklndthr_getname()
+    psc_usklndthr_gettype()
+
+  See example implementations of these in zestiond.
+
+ PSCRPC Layer: Storing per-connection data
+  PSCRPC maintains a structure psc_export associated with each request
+  which contains the peer information and contains a member:
+
+    void *rq->rq_export->exp_privdata
+
+  This can be used to store an application-specific (or task-specific)
+  structure to associate data with the peer.
