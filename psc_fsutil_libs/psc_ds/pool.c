@@ -398,7 +398,7 @@ _psc_pool_flagtest(struct psc_poolmgr *m, int flags)
 }
 
 #define POOL_GETOBJ(m) \
-	(POOL_IS_MLIST(m) ? lc_getnb(&(m)->ppm_lc) : psc_mlist_tryget(&(m)->ppm_ml))
+	(POOL_IS_MLIST(m) ? psc_mlist_tryget(&(m)->ppm_ml) : lc_getnb(&(m)->ppm_lc))
 
 /*
  * psc_pool_get - grab an item from a pool.
