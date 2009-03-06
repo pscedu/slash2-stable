@@ -69,6 +69,7 @@ zest
 - when mount_zest is idle, have it merge dirty zcf zsb channels
 - ensure libzestclient is not paritying over partial buffers
 - investigate libgru for NUMA memory staging
+- zconnlock is a global lock on NUMA
 
 development tool
 - let wiki changes automatically email zest-devel@ like svn commits
