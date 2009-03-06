@@ -15,31 +15,31 @@
 #ifndef _PFL_MLIST_H_
 #define _PFL_MLIST_H_
 
-#include <stdarg.h>
-#include <string.h>
+#include <stddef.h>
 
 #include "psc_ds/list.h"
+#include "psc_ds/listguts.h"
 #include "psc_ds/lockedlist.h"
-#include "psc_util/assert.h"
 #include "psc_util/lock.h"
-#include "psc_util/log.h"
 #include "psc_util/multilock.h"
 
-#define MLIST_LOCK(pml)  spinlock(&(pml)->pml_lock)
-#define MLIST_ULOCK(pml) freelock(&(pml)->pml_lock)
-
-#define PML_NAME_MAX 32
-
 struct psc_mlist {
-	struct psclist_head	pml_index_lentry;	/* link adjoining mlists */
-	psc_spinlock_t		pml_lock;
+	struct psc_listguts	pml_guts;
 
-	int			pml_size;
-	struct psclist_head	pml_listhd;
-	struct multilock_cond	pml_mlcond_empty;	/* wait here while list is empty */
-	char			pml_name[PML_NAME_MAX];	/* for ml mgmt */
-	size_t			pml_nseen;		/* total #items placed on us */
+//	struct multilock_cond	pml_mlcond_want;	/* when someone wants an obj */
+	struct multilock_cond	pml_mlcond_empty;	/* when we're empty */
+#define pml_index_lentry	pml_guts.plg_index_lentry
+#define pml_lock		pml_guts.plg_lock
+#define pml_name		pml_guts.plg_name
+#define pml_listhd		pml_guts.plg_listhd
+#define pml_size		pml_guts.plg_size
+#define pml_nseen		pml_guts.plg_nseen
+#define pml_entsize		pml_guts.plg_entsize
+#define pml_offset		pml_guts.plg_offset
 };
+
+#define MLIST_LOCK(pml)		spinlock(&(pml)->pml_lock)
+#define MLIST_ULOCK(pml)	freelock(&(pml)->pml_lock)
 
 /**
  * psc_mlist_empty - check if an mlist is empty.
@@ -47,12 +47,18 @@ struct psc_mlist {
  */
 #define psc_mlist_empty(pml)	(psc_mlist_size(pml) == 0)
 
-struct psclist_head *
-	psc_mlist_tryget(struct psc_mlist *);
-void	psc_mlist_put(struct psc_mlist *, struct psclist_head *);
-void	psc_mlist_del(struct psc_mlist *, struct psclist_head *);
-void	psc_mlist_init(struct psc_mlist *, void *arg, const char *, ...);
-int	psc_mlist_size(struct psc_mlist *);
+#define psc_mlist_reginit(pml, mlcarg, type, member, namefmt, ...)	\
+	_psc_mlist_reginit((pml), (mlcarg), sizeof(type),		\
+	    offsetof(type, member), (namefmt), ## __VA_ARGS__)
+
+void	*psc_mlist_tryget(struct psc_mlist *);
+void	 psc_mlist_add(struct psc_mlist *, void *);
+void	 psc_mlist_remove(struct psc_mlist *, void  *);
+void	_psc_mlist_init(struct psc_mlist *, void *, size_t, ptrdiff_t,
+		const char *, ...);
+void	_psc_mlist_reginit(struct psc_mlist *, void *, size_t, ptrdiff_t,
+		const char *, ...);
+int	 psc_mlist_size(struct psc_mlist *);
 
 extern struct psc_lockedlist psc_mlists;
 

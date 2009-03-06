@@ -21,17 +21,36 @@
 #include "psc_util/log.h"
 #include "psc_util/waitq.h"
 
-#define ppm_lock ppm_lc.lc_lock
-
 __static struct psc_poolset psc_poolset_main = PSC_POOLSET_INIT;
 struct psc_lockedlist psc_pools =
     PLL_INITIALIZER(&psc_pools, struct psc_poolmgr, ppm_all_lentry);
 
+__weak void
+_psc_mlist_init(__unusedx struct psc_mlist *m, __unusedx void *arg,
+    __unusedx size_t entsize, __unusedx ptrdiff_t offset,
+    __unusedx const char *fmt, ...)
+{
+	psc_fatalx("mlist support not compiled in");
+}
+
+__weak void
+psc_mlist_add(__unusedx struct psc_mlist *pml, __unusedx void *p)
+{
+	psc_fatalx("mlist support not compiled in");
+}
+
+__weak void *
+psc_mlist_tryget(__unusedx struct psc_mlist *pml)
+{
+	psc_fatalx("mlist support not compiled in");
+}
+
 void
-_psc_poolmaster_init(struct psc_poolmaster *p, ptrdiff_t offset,
-    size_t entsize, int flags, int total, int min, int max,
+_psc_poolmaster_init(struct psc_poolmaster *p, size_t entsize,
+    ptrdiff_t offset, int flags, int total, int min, int max,
     int (*initf)(struct psc_poolmgr *, void *), void (*destroyf)(void *),
-    int (*reclaimcb)(struct psc_listcache *, int), const char *namefmt, ...)
+    int (*reclaimcb)(struct psc_listcache *, int),
+    void *mlcarg, const char *namefmt, ...)
 {
 	va_list ap;
 
@@ -48,7 +67,8 @@ _psc_poolmaster_init(struct psc_poolmaster *p, ptrdiff_t offset,
 	p->pms_total = total;
 	p->pms_min = min;
 	p->pms_max = max;
-	p->pms_thres = 80;
+	p->pms_thres = POOL_AUTOSIZE_THRESH;
+	p->pms_mlcarg = mlcarg;
 
 	va_start(ap, namefmt);
 	vsnprintf(p->pms_name, sizeof(p->pms_name), namefmt, ap);
@@ -60,8 +80,8 @@ _psc_poolmaster_initmgr(struct psc_poolmaster *p, struct psc_poolmgr *m)
 {
 	int n, locked;
 
-	locked = reqlock(&p->pms_lock);
 	memset(m, 0, sizeof(*m));
+	locked = reqlock(&p->pms_lock);
 	m->ppm_reclaimcb = p->pms_reclaimcb;
 	m->ppm_destroyf = p->pms_destroyf;
 	m->ppm_thres = p->pms_thres;
@@ -71,13 +91,29 @@ _psc_poolmaster_initmgr(struct psc_poolmaster *p, struct psc_poolmgr *m)
 	m->ppm_max = p->pms_max;
 	m->ppm_master = p;
 
+	if (POOL_IS_MLIST(m)) {
 #ifdef HAVE_NUMA
-	_lc_reginit(&m->ppm_lc, p->pms_offset, p->pms_entsize,
-	    "%s:%d", p->pms_name, psc_memnode_getid());
+		_psc_mlist_init(&m->ppm_ml, p->pms_mlcarg, p->pms_entsize,
+		    p->pms_offset, "%s:%d", p->pms_name, psc_memnode_getid());
 #else
-	_lc_reginit(&m->ppm_lc, p->pms_offset, p->pms_entsize,
-	    "%s", p->pms_name);
+		_psc_mlist_init(&m->ppm_ml, p->pms_mlcarg, p->pms_entsize,
+		    p->pms_offset, "%s", p->pms_name);
 #endif
+	} else {
+		_lc_init(&m->ppm_lc, p->pms_offset, p->pms_entsize);
+
+#ifdef HAVE_NUMA
+		n = snprintf(m->ppm_lg.plg_name, sizeof(m->ppm_lg.plg_name),
+		    "%s:%d", p->pms_name, psc_memnode_getid());
+#else
+		n = snprintf(m->ppm_lg.plg_name, sizeof(m->ppm_lg.plg_name),
+		    "%s", p->pms_name);
+#endif
+		if (n == -1)
+			psc_fatal("snprintf %s", p->pms_name);
+		if (n >= (int)sizeof(m->ppm_lg.plg_name))
+			psc_fatalx("%s: name too long", p->pms_name);
+	}
 
 	n = p->pms_total;
 	ureqlock(&p->pms_lock, locked);
@@ -113,6 +149,22 @@ _psc_poolmaster_getmgr(struct psc_poolmaster *p, int memnid)
 }
 
 /*
+ * _psc_pool_destroy_obj - Release an object allocated by pool.
+ * @m: pool manager.
+ * @p: item to free.
+ */
+void
+_psc_pool_destroy_obj(struct psc_poolmgr *m, void *p)
+{
+	if (p && m->ppm_destroyf)
+		m->ppm_destroyf(p);
+	if (m->ppm_flags & PPMF_NOLOCK)
+		PSCFREE(p);
+	else
+		psc_freel(p, m->ppm_lg.plg_entsize);
+}
+
+/*
  * psc_pool_grow - increase #items in a pool.
  * @m: the pool manager.
  * @n: #items to add to pool.
@@ -129,26 +181,26 @@ psc_pool_grow(struct psc_poolmgr *m, int n)
 		locked = POOL_RLOCK(m);
 		POOL_CHECK(m);
 		if (m->ppm_total == m->ppm_max) {
-			POOL_ULOCK(m, locked);
+			POOL_URLOCK(m, locked);
 			return (0);
 		}
 		/* Bound number to add to ppm_max. */
 		n = MIN(n, m->ppm_max - m->ppm_total);
-		POOL_ULOCK(m, locked);
+		POOL_URLOCK(m, locked);
 	}
 
 	flags = PAF_CANFAIL;
 	if ((m->ppm_flags & PPMF_NOLOCK) == 0)
 		flags |= PAF_LOCK;
 	for (i = 0; i < n; i++) {
-		p = psc_alloc(m->ppm_lc.lc_entsize, flags);
+		p = psc_alloc(m->ppm_lg.plg_entsize, flags);
 		if (p == NULL) {
 			errno = ENOMEM;
 			return (i);
 		}
 		if (m->ppm_initf && m->ppm_initf(m, p)) {
 			if (flags & PAF_LOCK)
-				psc_freel(p, m->ppm_lc.lc_entsize);
+				psc_freel(p, m->ppm_lg.plg_entsize);
 			else
 				PSCFREE(p);
 			return (i);
@@ -157,19 +209,20 @@ psc_pool_grow(struct psc_poolmgr *m, int n)
 		if (m->ppm_total < m->ppm_max ||
 		    m->ppm_max == 0) {
 			m->ppm_total++;
-			lc_add(&m->ppm_lc, p);
+			if (POOL_IS_MLIST(m))
+				psc_mlist_add(&m->ppm_ml, p);
+			else
+				lc_add(&m->ppm_lc, p);
 			p = NULL;
 		}
-		POOL_ULOCK(m, locked);
+		POOL_URLOCK(m, locked);
 
 		/*
 		 * If we are prematurely exiting,
 		 * we didn't use this item.
 		 */
 		if (p) {
-			if (m->ppm_destroyf)
-				m->ppm_destroyf(p);
-			PSCFREE(p);
+			_psc_pool_destroy_obj(m, p);
 			break;
 		}
 	}
@@ -193,33 +246,31 @@ _psc_pool_shrink(struct psc_poolmgr *m, int n, int failok)
 		locked = POOL_RLOCK(m);
 		POOL_CHECK(m);
 		if (m->ppm_total == m->ppm_min) {
-			POOL_ULOCK(m, locked);
+			POOL_URLOCK(m, locked);
 			return (0);
 		}
 		/* Bound number to shrink to ppm_min. */
 		n = MAX(n, m->ppm_total - m->ppm_min);
-		POOL_ULOCK(m, locked);
+		POOL_URLOCK(m, locked);
 	}
 
 	for (i = 0; i < n; i++) {
 		locked = POOL_RLOCK(m);
 		if (m->ppm_total > m->ppm_min) {
-			p = lc_getnb(&m->ppm_lc);
+			if (POOL_IS_MLIST(m))
+				p = psc_mlist_tryget(&m->ppm_ml);
+			else
+				p = lc_getnb(&m->ppm_lc);
 			if (p == NULL && !failok)
 				psc_fatalx("psc_pool_shrink: no free "
 				    "items available to remove");
 			m->ppm_total--;
 		} else
 			p = NULL;
-		POOL_ULOCK(m, locked);
+		POOL_URLOCK(m, locked);
 		if (p == NULL)
 			break;
-		if (p && m->ppm_destroyf)
-			m->ppm_destroyf(p);
-		if (m->ppm_flags & PPMF_NOLOCK)
-			PSCFREE(p);
-		else
-			psc_freel(p, m->ppm_lc.lc_entsize);
+		_psc_pool_destroy_obj(m, p);
 	}
 	return (i);
 }
@@ -241,7 +292,7 @@ psc_pool_settotal(struct psc_poolmgr *m, int total)
 	else if (total < m->ppm_min)
 		total = m->ppm_min;
 	adj = total - m->ppm_total;
-	POOL_ULOCK(m, locked);
+	POOL_URLOCK(m, locked);
 
 	if (adj < 0)
 		adj = psc_pool_shrink(m, -adj);
@@ -267,7 +318,7 @@ psc_pool_resize(struct psc_poolmgr *m)
 		adj = m->ppm_max - m->ppm_total;
 	else if (m->ppm_total < m->ppm_min)
 		adj = m->ppm_min - m->ppm_total;
-	POOL_ULOCK(m, locked);
+	POOL_URLOCK(m, locked);
 
 	if (adj < 0)
 		psc_pool_shrink(m, -adj);
@@ -303,10 +354,10 @@ _psc_pool_reap(struct psc_poolset *s, struct psc_poolmaster *initiator, size_t m
 			continue;
 		m = psc_poolmaster_getmgr(p);
 
-		if (!trylock(&m->ppm_lock))
+		if (!POOL_TRYLOCK(m))
 			continue;
-		mx = m->ppm_lc.lc_entsize * m->ppm_lc.lc_size;
-		freelock(&m->ppm_lock);
+		mx = m->ppm_lg.plg_entsize * m->ppm_lg.plg_size;
+		POOL_UNLOCK(m);
 
 		if (mx > culpritmx) {
 			culprit = m;
@@ -342,9 +393,12 @@ _psc_pool_flagtest(struct psc_poolmgr *m, int flags)
 
 	locked = POOL_RLOCK(m);
 	rc = m->ppm_flags & flags;
-	POOL_ULOCK(m, locked);
+	POOL_URLOCK(m, locked);
 	return (rc);
 }
+
+#define POOL_GETOBJ(m) \
+	(POOL_IS_MLIST(m) ? lc_getnb(&(m)->ppm_lc) : psc_mlist_tryget(&(m)->ppm_ml))
 
 /*
  * psc_pool_get - grab an item from a pool.
@@ -363,10 +417,10 @@ psc_pool_get(struct psc_poolmgr *m)
 	/* If total < min, try to grow the pool. */
 	locked = POOL_RLOCK(m);
 	n = m->ppm_min - m->ppm_total;
-	POOL_ULOCK(m, locked);
+	POOL_URLOCK(m, locked);
 	if (n > 0) {
 		psc_pool_grow(m, n);
-		p = lc_getnb(&m->ppm_lc);
+		p = POOL_GETOBJ(m);
 		if (p)
 			return (p);
 	}
@@ -375,7 +429,7 @@ psc_pool_get(struct psc_poolmgr *m)
 	if (_psc_pool_flagtest(m, PPMF_AUTO)) {
 		do {
 			n = psc_pool_grow(m, 2);
-			p = lc_getnb(&m->ppm_lc);
+			p = POOL_GETOBJ(m);
 			if (p)
 				return (p);
 			/* If we've grown to pool max, quit. */
@@ -391,7 +445,7 @@ psc_pool_get(struct psc_poolmgr *m)
 			/* Add +1 here to count the invoker as a waitor. */
 			n = m->ppm_reclaimcb(&m->ppm_lc, atomic_read(
 			    &m->ppm_lc.lc_wq_empty.wq_nwaitors) + 1);
-			p = lc_getnb(&m->ppm_lc);
+			p = POOL_GETOBJ(m);
 			if (p)
 				return (p);
 		} while (n);
@@ -400,10 +454,18 @@ psc_pool_get(struct psc_poolmgr *m)
 	locked = reqlock(&m->ppm_master->pms_lock);
 	for (n = 0; n < dynarray_len(&m->ppm_master->pms_sets); n++)
 		_psc_pool_reap(dynarray_getpos(&m->ppm_master->pms_sets, n),
-		    m->ppm_master, m->ppm_lc.lc_entsize);
+		    m->ppm_master, m->ppm_lg.plg_entsize);
 	ureqlock(&m->ppm_master->pms_lock, locked);
 	if (n)
 		psc_pool_grow(m, 2);
+
+	/*
+	 * Try once more, if nothing, a condition should be added to the
+	 * multilock.  This invocation should have been done in a
+	 * multilock critical section to prevent dropping notifications.
+	 */
+	if (POOL_IS_MLIST(m))
+		return (POOL_GETOBJ(m));
 
 	/* Nothing else we can do, wait for an item to return. */
 	return (lc_getwait(&m->ppm_lc));
@@ -426,21 +488,17 @@ psc_pool_return(struct psc_poolmgr *m, void *p)
 	locked = POOL_RLOCK(m);
 	if ((m->ppm_flags & PPMF_AUTO) &&
 	    ((m->ppm_max && m->ppm_max < m->ppm_total) ||
-	     lc_sz(&m->ppm_lc) * 100 <
-	     m->ppm_total * m->ppm_thres)) {
+	     m->ppm_lg.plg_size * 100 < m->ppm_total * m->ppm_thres)) {
 		m->ppm_total--;
-		POOL_ULOCK(m, locked);
-
-		if (p && m->ppm_destroyf)
-			m->ppm_destroyf(p);
-		if (m->ppm_flags & PPMF_NOLOCK)
-			PSCFREE(p);
-		else
-			psc_freel(p, m->ppm_lc.lc_entsize);
+		POOL_URLOCK(m, locked);
+		_psc_pool_destroy_obj(m, p);
 	} else {
 		/* Pool should keep this item. */
-		lc_addhead(&m->ppm_lc, p);
-		POOL_ULOCK(m, locked);
+		if (POOL_IS_MLIST(m))
+			psc_mlist_add(&m->ppm_ml, p);
+		else
+			lc_addhead(&m->ppm_lc, p);
+		POOL_URLOCK(m, locked);
 	}
 }
 
@@ -455,7 +513,7 @@ psc_pool_lookup(const char *name)
 
 	PLL_LOCK(&psc_pools);
 	psclist_for_each_entry(m, &psc_pools.pll_listhd, ppm_all_lentry)
-		if (strcmp(name, m->ppm_lc.lc_name) == 0)
+		if (strcmp(name, m->ppm_lg.plg_name) == 0)
 			break;
 	PLL_ULOCK(&psc_pools);
 	return (m);

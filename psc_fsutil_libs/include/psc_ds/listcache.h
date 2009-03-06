@@ -1,5 +1,10 @@
 /* $Id$ */
 
+/*
+ * List caches are thread-safe lists which allow threads to wait
+ * for entries to become available.
+ */
+
 #ifndef _PFL_LISTCACHE_H_
 #define _PFL_LISTCACHE_H_
 
@@ -12,43 +17,39 @@
 #include <time.h>
 
 #include "psc_ds/list.h"
+#include "psc_ds/listguts.h"
 #include "psc_ds/lockedlist.h"
 #include "psc_util/alloc.h"
 #include "psc_util/assert.h"
-#include "psc_util/atomic.h"
 #include "psc_util/lock.h"
 #include "psc_util/waitq.h"
 
-#define LC_NAME_MAX 32
-
 extern struct psc_lockedlist	pscListCaches;
 
-/* List cache which can be edited by multiple threads. */
 struct psc_listcache {
-	struct psclist_head	lc_index_lentry;	/* link between caches       */
-	char			lc_name[LC_NAME_MAX];	/* for lc mgmt               */
+	struct psc_listguts	lc_guts;
 	int			lc_flags;
 
-	ssize_t			lc_size;		/* current #items in list    */
-	size_t			lc_nseen;		/* stat: total #times put()  */
-	size_t			lc_entsize;		/* size of entry on us       */
-	ptrdiff_t		lc_offset;		/* offset to entry member    */
-
-	struct psclist_head	lc_listhd;		/* head/tail of list         */
-	psc_spinlock_t		lc_lock;		/* exclusitivity ctl         */
-	struct psc_waitq	lc_wq_want;		/* when someone wants an ent */
-	struct psc_waitq	lc_wq_empty;		/* when we're empty          */
+	struct psc_waitq	lc_wq_want;	/* when someone wants an ent */
+	struct psc_waitq	lc_wq_empty;	/* when we're empty */
+#define lc_index_lentry		lc_guts.plg_index_lentry
+#define lc_lock			lc_guts.plg_lock
+#define lc_name			lc_guts.plg_name
+#define lc_listhd		lc_guts.plg_listhd
+#define lc_size			lc_guts.plg_size
+#define lc_nseen		lc_guts.plg_nseen
+#define lc_entsize		lc_guts.plg_entsize
+#define lc_offset		lc_guts.plg_offset
 };
 typedef struct psc_listcache list_cache_t;
 
 #define PLCF_DYING	(1 << 0)	/* listcache is about to go away */
 
-#define LIST_CACHE_LOCK(l)  spinlock(&(l)->lc_lock)
-#define LIST_CACHE_ULOCK(l) freelock(&(l)->lc_lock)
+#define LIST_CACHE_LOCK(lc)	spinlock(&(lc)->lc_lock)
+#define LIST_CACHE_ULOCK(lc)	freelock(&(lc)->lc_lock)
 
 /**
  * lc_sz - how many items are in here.
- * This should use atomics at some point
  */
 static inline ssize_t
 lc_sz(struct psc_listcache *lc)

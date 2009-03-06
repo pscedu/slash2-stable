@@ -11,10 +11,12 @@
 
 #include "psc_ds/dynarray.h"
 #include "psc_ds/listcache.h"
+#include "psc_ds/listguts.h"
 #include "psc_ds/lockedlist.h"
 #include "psc_util/assert.h"
 #include "psc_util/lock.h"
 #include "psc_util/memnode.h"
+#include "psc_util/mlist.h"
 
 struct psc_poolmgr;
 
@@ -42,13 +44,14 @@ struct psc_poolmaster {
 	struct dynarray		  pms_sets;		/* poolset memberships */
 
 	/* for initializing memnode poolmgrs */
-	char			  pms_name[LC_NAME_MAX];
+	char			  pms_name[PLG_NAME_MAX];
 	ptrdiff_t		  pms_offset;		/* entry offset to listhead */
 	int			  pms_entsize;		/* size of entry in pool */
 	int			  pms_total;		/* #items to populate */
 	int			  pms_min;		/* min bound of #items */
 	int			  pms_max;		/* max bound of #items */
 	int			  pms_flags;		/* flags */
+	void			 *pms_mlcarg;		/* mlist cond arg */
 	int			  pms_thres;		/* autoresize threshold */
 
 	int			(*pms_initf)(struct psc_poolmgr *, void *);
@@ -62,7 +65,11 @@ struct psc_poolmaster {
  * caches or in any way seen fit.
  */
 struct psc_poolmgr {
-	struct psc_listcache	  ppm_lc;		/* free pool entries */
+	union {
+		struct psc_listcache	ppmu_lc;	/* free pool entries */
+		struct psc_mlist	ppmu_ml;
+		struct psc_listguts	ppmu_lg;
+	} ppm_u;
 	struct psclist_head	  ppm_all_lentry;
 	struct psc_poolmaster	 *ppm_master;
 
@@ -76,15 +83,22 @@ struct psc_poolmgr {
 	int			(*ppm_initf)(struct psc_poolmgr *, void *);
 	void			(*ppm_destroyf)(void *);
 	int			(*ppm_reclaimcb)(struct psc_listcache *, int);
+#define ppm_lc ppm_u.ppmu_lc
+#define ppm_ml ppm_u.ppmu_ml
+#define ppm_lg ppm_u.ppmu_lg
 };
 
 /* Pool manager flags. */
-#define PPMF_NONE	(0 << 0)	/* no pool manager flag specified */
+#define PPMF_NONE	0		/* no pool manager flag specified */
 #define PPMF_AUTO	(1 << 0)	/* pool automatically resizes */
 #define PPMF_NOLOCK	(1 << 1)	/* pool ents shouldn't be mlock'd */
+#define PPMF_MLIST	(1 << 2)	/* backend storage is mgt'd via mlist */
 
-#define POOL_RLOCK(m)		reqlock(&(m)->ppm_lc.lc_lock)
-#define POOL_ULOCK(m, l)	ureqlock(&(m)->ppm_lc.lc_lock, (l))
+#define POOL_LOCK(m)		spinlock(&(m)->ppm_lg.plg_lock)
+#define POOL_TRYLOCK(m)		trylock(&(m)->ppm_lg.plg_lock)
+#define POOL_UNLOCK(m)		freelock(&(m)->ppm_lg.plg_lock)
+#define POOL_RLOCK(m)		reqlock(&(m)->ppm_lg.plg_lock)
+#define POOL_URLOCK(m, l)	ureqlock(&(m)->ppm_lg.plg_lock, (l))
 
 /* Sanity check */
 #define POOL_CHECK(m)							\
@@ -94,13 +108,24 @@ struct psc_poolmgr {
 		psc_assert((m)->ppm_total >= 0);			\
 	} while (0)
 
+#define POOL_IS_MLIST(m)	((m)->ppm_flags & PPMF_MLIST)
+
 #define PSC_POOLSET_INIT	{ LOCK_INITIALIZER, DYNARRAY_INIT }
+
+/* default value of pool fill before freeing items directly on pool_return */
+#define POOL_AUTOSIZE_THRESH 80
 
 #define psc_poolmaster_init(p, type, member, flags, total, min,	max,	\
 	    initf, destroyf, reclaimcb, namefmt, ...)			\
-	_psc_poolmaster_init((p), offsetof(type, member), sizeof(type),	\
+	_psc_poolmaster_init((p), sizeof(type), offsetof(type, member),	\
 	    (flags), (total), (min), (max), (initf), (destroyf),	\
-	    (reclaimcb), (namefmt), ## __VA_ARGS__)
+	    (reclaimcb), NULL, (namefmt), ## __VA_ARGS__)
+
+#define psc_poolmaster_initml(p, type, member, flags, total, min, max,	\
+	    initf, destroyf, reclaimcb, mlcarg, namefmt, ...)		\
+	_psc_poolmaster_init((p), sizeof(type), offsetof(type, member),	\
+	    (flags) | PPMF_MLIST, (total), (min), (max), (initf),	\
+	    (destroyf),	(reclaimcb), (mlcarg), (namefmt), ## __VA_ARGS__)
 
 #define psc_poolmaster_getmgr(p)	_psc_poolmaster_getmgr((p), psc_memnode_getid())
 
@@ -109,10 +134,10 @@ struct psc_poolmgr {
 
 struct psc_poolmgr *
 	_psc_poolmaster_getmgr(struct psc_poolmaster *, int);
-void	_psc_poolmaster_init(struct psc_poolmaster *, ptrdiff_t, size_t,
+void	_psc_poolmaster_init(struct psc_poolmaster *, size_t, ptrdiff_t,
 		int, int, int, int, int (*)(struct psc_poolmgr *, void *),
 		void (*)(void *), int (*)(struct psc_listcache *, int),
-		const char *, ...);
+		void *, const char *, ...);
 
 int	 psc_pool_grow(struct psc_poolmgr *, int);
 int	_psc_pool_shrink(struct psc_poolmgr *, int, int);

@@ -37,9 +37,15 @@ typedef struct psc_waitq psc_waitq_t;
 /**
  * psc_waitq_wait - wait until resource managed by wq_cond is available.
  * @wq: wait queue.
- * @lk: optional lock needed to protect the list.
+ * @lk: optional lock to prevent race condition in waiting.
  */
 #define psc_waitq_wait(wq, lk) psc_waitq_waitrel((wq), (lk), NULL)
+
+/**
+ * psc_waitq_nwaitors - determine number of threads waiting on a waitq.
+ * @wq: wait queue.
+ */
+#define psc_waitq_nwaitors(wq)	atomic_read(&(wq)->wq_nwaitors)
 
 #define psc_waitq_timedwait(wq, lk, abs) psc_waitq_waitabs((wq), (lk), (abs))
 

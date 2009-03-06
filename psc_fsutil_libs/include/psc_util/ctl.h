@@ -37,23 +37,23 @@ struct psc_ctlmsg_loglevel {
 };
 
 struct psc_ctlmsg_lc {
-	char			pclc_name[LC_NAME_MAX];
 	uint64_t		pclc_size;	/* #items on list */
 	uint64_t		pclc_nseen;	/* max #items list can attain */
 	int32_t			pclc_flags;
 	int32_t			pclc_nw_want;	/* #waitors waking for a want */
 	int32_t			pclc_nw_empty;	/* #waitors waking on empty */
+	char			pclc_name[PLG_NAME_MAX];
 };
 
 #define PCLC_NAME_ALL		"all"
 
 struct psc_ctlmsg_stats {
-	char			pcst_thrname[PSC_THRNAME_MAX];
 	int32_t			pcst_thrtype;
 	uint32_t		pcst_u32_1;
 	uint32_t		pcst_u32_2;
 	uint32_t		pcst_u32_3;
 	uint32_t		pcst_u32_4;
+	char			pcst_thrname[PSC_THRNAME_MAX];
 };
 
 #define pcst_nclients	pcst_u32_1
@@ -62,11 +62,11 @@ struct psc_ctlmsg_stats {
 #define pcst_ndrop	pcst_u32_4
 
 struct psc_ctlmsg_hashtable {
-	char			pcht_name[HTNAME_MAX];
 	int32_t			pcht_totalbucks;
 	int32_t			pcht_usedbucks;
 	int32_t			pcht_nents;
 	int32_t			pcht_maxbucklen;
+	char			pcht_name[HTNAME_MAX];
 };
 
 #define PCHT_NAME_ALL		"all"
@@ -97,22 +97,25 @@ struct psc_ctlmsg_meter {
 #define PCM_NAME_ALL		"all"
 
 struct psc_ctlmsg_pool {
-	char			pcpl_name[LC_NAME_MAX];
 	int32_t			pcpl_min;
 	int32_t			pcpl_max;
 	int32_t			pcpl_total;
 	int32_t			pcpl_free;
 	int32_t			pcpl_flags;
 	int32_t			pcpl_thres;
+	int32_t			pcpl_nw_want;
+	int32_t			pcpl_nw_empty;
+	uint64_t		pcpl_nseen;
+	char			pcpl_name[PLG_NAME_MAX];
 };
 
 #define PCPL_NAME_ALL		"all"
 
 struct psc_ctlmsg_mlist {
-	char			 pcml_name[PML_NAME_MAX];
 	uint64_t		 pcml_nseen;
 	uint32_t		 pcml_size;
 	uint32_t		 pcml_waitors;
+	char			 pcml_name[PLG_NAME_MAX];
 };
 
 #define PCML_NAME_ALL		"all"

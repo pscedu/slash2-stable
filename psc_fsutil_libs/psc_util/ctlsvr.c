@@ -35,7 +35,19 @@
 #include "psc_util/strlcpy.h"
 #include "psc_util/thread.h"
 
-#define Q 15	/* listen() queue */
+#define Q 15	/* listen(2) queue */
+
+__weak size_t
+multilock_cond_nwaitors(__unusedx struct multilock_cond *m)
+{
+	psc_fatalx("multilock support not compiled in");
+}
+
+__weak int
+psc_mlist_size(__unusedx struct psc_mlist *pml)
+{
+	psc_fatalx("mlist support not compiled in");
+}
 
 /*
  * psc_ctlmsg_sendv - send a control message back to client.
@@ -326,7 +338,7 @@ psc_ctlrep_getlc(int fd, struct psc_ctlmsghdr *mh, void *m)
 {
 	struct psc_ctlmsg_lc *pclc = m;
 	struct psc_listcache *lc;
-	char name[LC_NAME_MAX];
+	char name[PLG_NAME_MAX];
 	int rc, found, all;
 
 	rc = 1;
@@ -346,10 +358,10 @@ psc_ctlrep_getlc(int fd, struct psc_ctlmsghdr *mh, void *m)
 			pclc->pclc_size = lc->lc_size;
 			pclc->pclc_nseen = lc->lc_nseen;
 			pclc->pclc_flags = lc->lc_flags;
-			pclc->pclc_nw_want = atomic_read(
-			    &lc->lc_wq_want.wq_nwaitors);
-			pclc->pclc_nw_empty = atomic_read(
-			    &lc->lc_wq_empty.wq_nwaitors);
+			pclc->pclc_nw_want = psc_waitq_nwaitors(
+			    &lc->lc_wq_want);
+			pclc->pclc_nw_empty = psc_waitq_nwaitors(
+			    &lc->lc_wq_empty);
 			LIST_CACHE_ULOCK(lc);
 			rc = psc_ctlmsg_sendv(fd, mh, pclc);
 			if (!rc)
@@ -377,8 +389,8 @@ psc_ctlrep_getpool(int fd, struct psc_ctlmsghdr *mh, void *msg)
 {
 	struct psc_ctlmsg_pool *pcpl = msg;
 	struct psc_poolmgr *m;
-	char name[LC_NAME_MAX];
-	int rc, locked, found, all;
+	char name[PLG_NAME_MAX];
+	int rc, found, all;
 
 	rc = 1;
 	found = 0;
@@ -386,26 +398,37 @@ psc_ctlrep_getpool(int fd, struct psc_ctlmsghdr *mh, void *msg)
 	all = (strcmp(name, PCPL_NAME_ALL) == 0);
 	PLL_LOCK(&psc_pools);
 	psclist_for_each_entry(m, &psc_pools.pll_listhd, ppm_all_lentry) {
-		if (all || strncmp(m->ppm_lc.lc_name, name,
+		if (all || strncmp(m->ppm_lg.plg_name, name,
 		    strlen(name)) == 0) {
 			found = 1;
 
-			locked = POOL_RLOCK(m);
-			strlcpy(pcpl->pcpl_name, m->ppm_lc.lc_name,
+			POOL_LOCK(m);
+			strlcpy(pcpl->pcpl_name, m->ppm_lg.plg_name,
 			    sizeof(pcpl->pcpl_name));
 			pcpl->pcpl_min = m->ppm_min;
 			pcpl->pcpl_max = m->ppm_max;
 			pcpl->pcpl_total = m->ppm_total;
 			pcpl->pcpl_flags = m->ppm_flags;
 			pcpl->pcpl_thres = m->ppm_thres;
-			pcpl->pcpl_free = lc_sz(&m->ppm_lc);
-			POOL_ULOCK(m, locked);
+			pcpl->pcpl_nseen = m->ppm_lg.plg_nseen;
+			if (POOL_IS_MLIST(m)) {
+				pcpl->pcpl_free = psc_mlist_size(&m->ppm_ml);
+				pcpl->pcpl_nw_empty = multilock_cond_nwaitors(
+				    &m->ppm_ml.pml_mlcond_empty);
+			} else {
+				pcpl->pcpl_free = lc_sz(&m->ppm_lc);
+				pcpl->pcpl_nw_want = psc_waitq_nwaitors(
+				    &m->ppm_lc.lc_wq_want);
+				pcpl->pcpl_nw_empty = psc_waitq_nwaitors(
+				    &m->ppm_lc.lc_wq_empty);
+			}
+			POOL_UNLOCK(m);
 			rc = psc_ctlmsg_sendv(fd, mh, pcpl);
 			if (!rc)
 				break;
 
 			/* Terminate on exact match. */
-			if (strlen(m->ppm_lc.lc_name) == strlen(name))
+			if (strlen(m->ppm_lg.plg_name) == strlen(name))
 				break;
 		}
 	}
@@ -632,7 +655,7 @@ psc_ctlparam_pool_handle(int fd, struct psc_ctlmsghdr *mh,
     struct psc_poolmgr *m, int val)
 {
 	char nbuf[20];
-	int locked, set;
+	int set;
 
 	if (nlevels > 4 || (nlevels == 3 &&
 	    (strcmp(levels[2], "min") != 0 &&
@@ -642,7 +665,7 @@ psc_ctlparam_pool_handle(int fd, struct psc_ctlmsghdr *mh,
 		return (psc_ctlsenderr(fd, mh, "invalid field"));
 
 	levels[0] = "pool";
-	levels[1] = m->ppm_lc.lc_name;
+	levels[1] = m->ppm_lg.plg_name;
 
 	set = (mh->mh_type == PCMT_SETPARAM);
 
@@ -698,7 +721,7 @@ psc_ctlparam_pool_handle(int fd, struct psc_ctlmsghdr *mh,
 	}
 	if (nlevels < 3 || strcmp(levels[2], "thres") == 0) {
 		if (nlevels == 3 && set) {
-			locked = POOL_RLOCK(m);
+			POOL_LOCK(m);
 			if (pcp->pcp_flags & PCPF_ADD)
 				m->ppm_thres += val;
 			else if (pcp->pcp_flags & PCPF_SUB)
@@ -709,7 +732,7 @@ psc_ctlparam_pool_handle(int fd, struct psc_ctlmsghdr *mh,
 				m->ppm_thres = 1;
 			else if (m->ppm_thres > 99)
 				m->ppm_thres = 99;
-			POOL_ULOCK(m, locked);
+			POOL_UNLOCK(m);
 		} else {
 			levels[2] = "thres";
 			snprintf(nbuf, sizeof(nbuf), "%d", m->ppm_thres);
@@ -1110,12 +1133,6 @@ psc_ctlrep_getmeter(int fd, struct psc_ctlmsghdr *mh, void *m)
 	return (rc);
 }
 
-__weak size_t
-multilock_cond_nwaitors(__unusedx struct multilock_cond *m)
-{
-	return (0);
-}
-
 /*
  * psc_ctlrep_getmlist - respond to a "getmlist" inquiry.
  * @fd: client socket descriptor.
@@ -1126,7 +1143,7 @@ int
 psc_ctlrep_getmlist(int fd, struct psc_ctlmsghdr *mh, void *m)
 {
 	struct psc_ctlmsg_mlist *pcml = m;
-	char name[PML_NAME_MAX];
+	char name[PLG_NAME_MAX];
 	struct psc_mlist *pml;
 	int rc, found, all;
 
