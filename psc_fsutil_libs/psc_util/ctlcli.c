@@ -511,10 +511,10 @@ psc_ctlmsg_pool_prdat(__unusedx const struct psc_ctlmsghdr *mh,
 	} else
 		printf(" %7s %7s %5s", "<n/a>", "<n/a>", "<n/a>");
 	printf(" %2d", pcpl->pcpl_nw_empty);
-	if ((pcpl->pcpl_flags & PPMF_MLIST) == 0)
-		printf(" %2d", pcpl->pcpl_nw_want);
-	else
+	if (pcpl->pcpl_flags & PPMF_MLIST)
 		printf("  -");
+	else
+		printf(" %2d", pcpl->pcpl_nw_want);
 	printf("\n");
 }
 
