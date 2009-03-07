@@ -438,3 +438,20 @@ pscthr_run(void)
 	freelock(&thr->pscthr_lock);
 	return (1);
 }
+
+void
+pscthr_prnamebyid(pthread_t id)
+{
+	struct psc_thread *thr;
+
+	PLL_LOCK(&psc_threads);
+	psclist_for_each_entry(thr, &psc_threads.pll_listhd,
+	    pscthr_lentry)
+		if (thr->pscthr_pthread == id ||
+		    (unsigned long)thr->pscthr_thrid == id) {
+			printf("thr %ld: %s\n", id, thr->pscthr_name);
+			return;
+		}
+	PLL_ULOCK(&psc_threads);
+	printf("thr %ld: not found\n", id);
+}
