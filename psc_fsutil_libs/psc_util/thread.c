@@ -439,8 +439,22 @@ pscthr_run(void)
 	return (1);
 }
 
-void
-pscthr_prnamebyid(pthread_t id)
+struct psc_thread *
+pscthr_getbyname(const char *name)
+{
+	struct psc_thread *thr;
+
+	PLL_LOCK(&psc_threads);
+	psclist_for_each_entry(thr, &psc_threads.pll_listhd,
+	    pscthr_lentry)
+		if (strcmp(thr->pscthr_name, name) == 0)
+			break;
+	PLL_ULOCK(&psc_threads);
+	return (thr);
+}
+
+struct psc_thread *
+pscthr_getbyid(pthread_t id)
 {
 	struct psc_thread *thr;
 
@@ -448,10 +462,8 @@ pscthr_prnamebyid(pthread_t id)
 	psclist_for_each_entry(thr, &psc_threads.pll_listhd,
 	    pscthr_lentry)
 		if (thr->pscthr_pthread == id ||
-		    (unsigned long)thr->pscthr_thrid == id) {
-			printf("thr %ld: %s\n", id, thr->pscthr_name);
-			return;
-		}
+		    (unsigned long)thr->pscthr_thrid == id)
+			break;
 	PLL_ULOCK(&psc_threads);
-	printf("thr %ld: not found\n", id);
+	return (thr);
 }
