@@ -488,7 +488,8 @@ psc_pool_return(struct psc_poolmgr *m, void *p)
 	locked = POOL_RLOCK(m);
 	if ((m->ppm_flags & PPMF_AUTO) &&
 	    ((m->ppm_max && m->ppm_max < m->ppm_total) ||
-	     m->ppm_lg.plg_size * 100 < m->ppm_total * m->ppm_thres)) {
+	     m->ppm_lg.plg_size * 100 < m->ppm_thres * (m->ppm_max ?
+	      MIN(m->ppm_max, m->ppm_total) : m->ppm_total))) {
 		m->ppm_total--;
 		POOL_URLOCK(m, locked);
 		_psc_pool_destroy_obj(m, p);
