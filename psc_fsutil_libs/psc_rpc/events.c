@@ -327,19 +327,7 @@ void server_bulk_callback (lnet_event_t *ev)
 static void
 drop_callback(lnet_event_t *ev)
 {
-	struct pscrpc_connection *conn;
-
-	conn = pscrpc_get_connection(ev->initiator,
-	    ev->target.nid, NULL);
-	if (conn) {
-		if (conn->c_exp)
-			pscrpc_export_put(conn->c_exp);
-#if 0
-		if (conn->c_imp)
-			import_put(conn->c_imp);
-#endif
-		pscrpc_put_connection(conn);
-	}
+	pscrpc_drop_conns(&ev->initiator);
 }
 
 /**

@@ -2,11 +2,12 @@
 
 #define PSC_SUBSYS PSS_RPC
 
+#include "psc_ds/list.h"
+#include "psc_rpc/export.h"
+#include "psc_rpc/rpc.h"
 #include "psc_util/alloc.h"
 #include "psc_util/atomic.h"
-#include "psc_ds/list.h"
 #include "psc_util/lock.h"
-#include "psc_rpc/rpc.h"
 
 static psc_spinlock_t  conn_lock        = LOCK_INITIALIZER;
 static struct psclist_head conn_list        = PSCLIST_HEAD_INIT(conn_list);
@@ -151,4 +152,24 @@ void
 psc_id2str(lnet_process_id_t addr, char str[PSC_NIDSTR_SIZE])
 {
 	libcfs_id2str2(addr, str);
+}
+
+void
+pscrpc_drop_conns(lnet_process_id_t *peer)
+{
+	struct pscrpc_connection *c;
+
+	spinlock(&conn_lock);
+	psclist_for_each_entry(c, &conn_list, c_link)
+		if (c->c_peer.nid == peer->nid &&
+		    c->c_peer.pid == peer->pid) {
+			if (c->c_exp)
+				pscrpc_export_put(c->c_exp);
+#if 0
+			if (c->c_imp)
+				import_put(c->c_imp);
+#endif
+			pscrpc_put_connection(c);
+		}
+	freelock(&conn_lock);
 }

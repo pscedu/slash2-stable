@@ -476,6 +476,7 @@ void	 pscrpc_unregister_bulk(struct pscrpc_request *req);
 void	 pscrpc_abort_inflight(struct pscrpc_import *imp);
 void	 psc_nid2str(lnet_nid_t, char []);
 void	 psc_id2str(lnet_process_id_t, char []);
+void	 pscrpc_drop_conns(lnet_process_id_t *);
 
 struct pscrpc_connection *
 	 pscrpc_get_connection(lnet_process_id_t, lnet_nid_t, struct psc_uuid *);
