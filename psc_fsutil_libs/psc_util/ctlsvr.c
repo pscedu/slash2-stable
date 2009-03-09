@@ -317,7 +317,7 @@ psc_ctlrep_gethashtable(int fd, struct psc_ctlmsghdr *mh, void *m)
 				break;
 
 			/* Terminate on exact match. */
-			if (strlen(ht->htable_name) == strlen(name))
+			if (strcmp(ht->htable_name, name) == 0)
 				break;
 		}
 	}
@@ -368,7 +368,7 @@ psc_ctlrep_getlc(int fd, struct psc_ctlmsghdr *mh, void *m)
 				break;
 
 			/* Terminate on exact match. */
-			if (strlen(lc->lc_name) == strlen(name))
+			if (strcmp(lc->lc_name, name) == 0)
 				break;
 		}
 	}
@@ -428,7 +428,7 @@ psc_ctlrep_getpool(int fd, struct psc_ctlmsghdr *mh, void *msg)
 				break;
 
 			/* Terminate on exact match. */
-			if (strlen(m->ppm_lg.plg_name) == strlen(name))
+			if (strcmp(m->ppm_lg.plg_name, name) == 0)
 				break;
 		}
 	}
@@ -1085,7 +1085,7 @@ psc_ctlrep_getiostats(int fd, struct psc_ctlmsghdr *mh, void *m)
 				break;
 
 			/* Terminate on exact match. */
-			if (strlen(ist->ist_name) == strlen(name))
+			if (strcmp(ist->ist_name, name) == 0)
 				break;
 		}
 	PLL_ULOCK(&psc_iostats);
@@ -1124,7 +1124,7 @@ psc_ctlrep_getmeter(int fd, struct psc_ctlmsghdr *mh, void *m)
 				break;
 
 			/* Terminate on exact match. */
-			if (strlen(name) == strlen(pm->pm_name))
+			if (strcmp(pm->pm_name, name) == 0)
 				break;
 		}
 	freelock(&pscMetersLock);
@@ -1173,7 +1173,7 @@ psc_ctlrep_getmlist(int fd, struct psc_ctlmsghdr *mh, void *m)
 				break;
 
 			/* Terminate on exact match. */
-			if (strlen(name) == strlen(pml->pml_name))
+			if (strcmp(pml->pml_name, name) == 0)
 				break;
 		}
 	PLL_ULOCK(&psc_mlists);
