@@ -601,20 +601,13 @@ usocklnd_destroy_peer(usock_peer_t *peer)
 
 	/* Inform all eq's to drop associations to this peer. */
 	LNET_LOCK();
-	list_for_each_entry(eq, &the_lnet.ln_active_eqs, eq_list)
-		for (i = 0; i < N_CONN_TYPES; i++) {
-			if (peer->up_conns[i] == NULL ||
-			    peer->up_conns[i]->uc_ni == NULL)
-				continue;
-
-			memset(&ev, 0, sizeof(ev));
-			ev.type = LNET_EVENT_DROP;
-			ev.initiator.nid = peer->up_peerid.nid;
-			ev.initiator.pid = peer->up_peerid.pid;
-			ev.target.nid = peer->up_conns[i]->uc_ni->ni_nid;
-			ev.target.pid = the_lnet.ln_pid;
-			lnet_enq_event_locked(eq, &ev);
-		}
+	list_for_each_entry(eq, &the_lnet.ln_active_eqs, eq_list) {
+		memset(&ev, 0, sizeof(ev));
+		ev.type = LNET_EVENT_DROP;
+		ev.initiator.nid = peer->up_peerid.nid;
+		ev.initiator.pid = peer->up_peerid.pid;
+		lnet_enq_event_locked(eq, &ev);
+	}
 	LNET_UNLOCK(); 
 
         LIBCFS_FREE (peer, sizeof (*peer));
