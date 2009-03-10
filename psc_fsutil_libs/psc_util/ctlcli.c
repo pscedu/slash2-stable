@@ -58,7 +58,7 @@ psc_ctlmsg_push(int type, size_t msiz)
 	size_t tsiz;
 
 	tsiz = msiz + sizeof(*pcm);
-	pcm = PSCALLOC(tsiz);
+	pcm = psc_alloc(tsiz, PAF_NOLOG);
 	psclist_xadd_tail(&pcm->pcm_lentry, &psc_ctlmsgs);
 	pcm->pcm_mh.mh_type = type;
 	pcm->pcm_mh.mh_size = msiz;
@@ -762,7 +762,7 @@ psc_ctlcli_main(const char *osockfn)
 		siz = pcm->pcm_mh.mh_size + sizeof(pcm->pcm_mh);
 		if (write(s, &pcm->pcm_mh, siz) != siz)
 			psc_fatal("write");
-		PSCFREE(pcm);
+		free(pcm);
 	}
 	if (shutdown(s, SHUT_WR) == -1)
 		psc_fatal("shutdown");
@@ -791,6 +791,6 @@ psc_ctlcli_main(const char *osockfn)
 	}
 	if (n == -1)
 		psc_fatal("read");
-	PSCFREE(m);
+	free(m);
 	close(s);
 }
