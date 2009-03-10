@@ -127,17 +127,17 @@ int pscrpc_put_connection(struct pscrpc_connection *c)
 		 libcfs_nid2str(c->c_peer.nid));
 
 	if (atomic_dec_and_test(&c->c_refcount)) {
-		int l;
+		int locked;
 		psc_info("connection=%p to unused_list", c);
 
-		l = reqlock(&conn_lock);
+		locked = reqlock(&conn_lock);
 		psclist_del(&c->c_link);
 		psclist_xadd(&c->c_link, &conn_unused_list);
-		ureqlock(&conn_lock, l);
+		ureqlock(&conn_lock, locked);
 		rc = 1;
 	}
 	if (atomic_read(&c->c_refcount) < 0)
-		psc_errorx("connection %p refcount %d!",
+		psc_fatalx("connection %p refcount %d!",
 			c, atomic_read(&c->c_refcount));
 
 	RETURN(rc);
