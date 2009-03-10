@@ -482,14 +482,14 @@ psc_pool_return(struct psc_poolmgr *m, void *p)
 	int locked;
 
 	/*
-	 * if pool max < total or we reached the auto
-	 * resize threshold, directly free this item.
+	 * If pool max < total (e.g. when an administrator lowers max
+	 * beyond current total) or we reached the auto resize
+	 * threshold, directly free this item.
 	 */
 	locked = POOL_RLOCK(m);
 	if ((m->ppm_flags & PPMF_AUTO) &&
 	    ((m->ppm_max && m->ppm_max < m->ppm_total) ||
-	     m->ppm_lg.plg_size * 100 < m->ppm_thres * (m->ppm_max ?
-	      MAX(m->ppm_max, m->ppm_total) : m->ppm_total))) {
+	     m->ppm_lg.plg_size * 100 > m->ppm_thres * m->ppm_total)) {
 		m->ppm_total--;
 		POOL_URLOCK(m, locked);
 		_psc_pool_destroy_obj(m, p);
