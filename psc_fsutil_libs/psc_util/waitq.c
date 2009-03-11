@@ -43,6 +43,7 @@ psc_waitq_init(struct psc_waitq *q)
 	memset(q, 0, sizeof(*q));
 	atomic_set(&q->wq_nwaitors, 0);
 
+#if 0
 	rc = pthread_mutexattr_init(&attr);
 	if (rc)
 		psc_fatalx("pthread_mutexattr_init: %s", strerror(rc));
@@ -61,6 +62,14 @@ psc_waitq_init(struct psc_waitq *q)
 	rc = pthread_cond_init(&q->wq_cond, NULL);
 	if (rc)
 		psc_fatalx("pthread_cond_init: %s", strerror(rc));
+#else
+	rc = pthread_mutex_init(&q->wq_mut, &attr);
+	if (rc)
+		psc_fatalx("pthread_mutex_init: %s", strerror(rc));
+	rc = pthread_cond_init(&q->wq_cond, NULL);
+	if (rc)
+		psc_fatalx("pthread_cond_init: %s", strerror(rc));
+#endif
 }
 
 /*
