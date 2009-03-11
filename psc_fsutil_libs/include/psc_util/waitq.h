@@ -19,7 +19,7 @@ struct psc_waitq {
 	atomic_t		wq_nwaitors;
 };
 
-#define PSC_WAITQ_INIT	{ PTHREAD_ERRORCHECK_MUTEX_INITIALIZER_NP, \
+#define PSC_WAITQ_INIT	{ PTHREAD_MUTEX_INITIALIZER, \
 			  PTHREAD_COND_INITIALIZER, ATOMIC_INIT(0) }
 
 #else /* HAVE_LIBPTHREAD */
