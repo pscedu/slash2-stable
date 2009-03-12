@@ -57,19 +57,20 @@ zest
 
   note: have the fastest disks grab each successive block in a pg,
   deprecates need for zigs, or at least current complexity of zigs.
-- fix zigoff among inodes
 - pass sizeof(iovs) to client on CONNECT
 - write back support on server
 - add extattrs to zfs fuse
 - get xattr working on fruits /bessemer
-- the *at family of routines allow any fd, not just a dirfd
+- the *at family of routines allow any fd, not just a dirfd.
+  (1) fatalx where we cant use a non-dir fd
+  (2) extended attribute use obviously cannot be implemented
+  (3) try to support ../ paths that access other dirs/files
 - zest user command to tag a file sync disregard
 - new pull model for zest server to client:
   server RPCIO threads issue GETs to connected mount_zests
 - when mount_zest is idle, have it merge dirty zcf zsb channels
 - ensure libzestclient is not paritying over partial buffers
 - investigate libgru for NUMA memory staging
-- zconnlock is a global lock on NUMA
 
 development tool
 - let wiki changes automatically email zest-devel@ like svn commits
