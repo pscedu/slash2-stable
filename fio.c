@@ -159,8 +159,6 @@ write_output(IOT_t *iot)
 		 iot->macro_iterations);
 
 	if ( (fd = open(outpath, O_CREAT|O_TRUNC|O_WRONLY, 0644)) < 0 ) {
-		char wd[PATH_MAX];
-		fprintf(stderr, "pwd: %s\n", getcwd(wd, sizeof(wd)));
 		fprintf(stderr, "open() %s %s\n", outpath, strerror(errno));
 		exit(1);
 	}
