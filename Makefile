@@ -9,7 +9,13 @@ SRCS+=		fio_config_parser.y
 SRCS+=		fio_pthread_barrier.c
 SRCS+=		fio_sym.c
 
-CFLAGS=		-O2 -Wall -W
+ifdef DEBUG
+CFLAGS+=	-g
+else
+CFLAGS+=	-O2
+endif
+
+CFLAGS=		-Wall -W
 CFLAGS+=	-I${PFL_BASE}/include
 LINUXFLAGS=	-D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64 -DYY_NO_UNPUT
 LDFLAGS=	-lm
