@@ -167,10 +167,11 @@ pscrpc_drop_conns(lnet_process_id_t *peer)
 			if (c->c_exp)
 				pscrpc_export_put(c->c_exp);
 #if 0
-			if (c->c_imp)
+			else if (c->c_imp)
 				import_put(c->c_imp);
 #endif
-			pscrpc_put_connection(c);
+			else
+				pscrpc_put_connection(c);
 		}
 	freelock(&conn_lock);
 }
