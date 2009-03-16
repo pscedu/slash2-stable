@@ -290,7 +290,7 @@ init_pe(int mype)
 	(void)print_pe_map();
 #endif
 
-	if ( mkdir(mygroup->test_path, &stb) == -1 && errno != EEXIST)
+	if ( mkdir(mygroup->test_path, 0755) == -1 && errno != EEXIST)
 		err(1, "stat %s", mygroup->test_path);
 
 	if ( stat(mygroup->test_path, &stb) == -1)
