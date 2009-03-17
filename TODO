@@ -71,6 +71,9 @@ zest
 - when mount_zest is idle, have it merge dirty zcf zsb channels
 - ensure libzestclient is not paritying over partial buffers
 - investigate libgru for NUMA memory staging
+- when ppm_total is set less than lc_size for !PPMF_AUTO, set
+  ppm_max and check this value in other places to eventually
+  decrease pool size
 
 development tool
 - let wiki changes automatically email zest-devel@ like svn commits
