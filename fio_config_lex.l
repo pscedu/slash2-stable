@@ -118,10 +118,11 @@ no {
 	return STR;
 }
 
-\n	{ lineno++; }
-[ \t]+	;
+[ \t]*#.*	;
+[ \t]+		;
+\n		{ lineno++; }
 
-.	yyerror("Unrecognized character: %s\n", yytext);
+.		yyerror("Unrecognized character: %s\n", yytext);
 
 %%
 
