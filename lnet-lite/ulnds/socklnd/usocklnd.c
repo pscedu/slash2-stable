@@ -252,6 +252,7 @@ usocklnd_update_tunables()
 int
 usocklnd_base_startup()
 {
+	pthread_mutexattr_t attr;
         usock_pollthread_t *pt;
         int                 i;
         int                 rc;
@@ -352,7 +353,10 @@ usocklnd_base_startup()
                 pt->upt_errno = 0;
                 CFS_INIT_LIST_HEAD (&pt->upt_pollrequests);
                 CFS_INIT_LIST_HEAD (&pt->upt_stale_list);
-                pthread_mutex_init(&pt->upt_pollrequests_lock, NULL);
+		pthread_mutexattr_init(&attr);
+		pthread_mutexattr_settype(&attr,
+		    PTHREAD_MUTEX_ERRORCHECK_NP);
+                pthread_mutex_init(&pt->upt_pollrequests_lock, &attr);
                 cfs_init_completion(&pt->upt_completion);
         }
 
@@ -523,6 +527,7 @@ usocklnd_assign_ni_nid(lnet_ni_t *ni)
 int
 usocklnd_startup(lnet_ni_t *ni)
 {
+	pthread_mutexattr_t attr;
         int          rc;
         usock_net_t *net;
 
@@ -538,6 +543,9 @@ usocklnd_startup(lnet_ni_t *ni)
 
         memset(net, 0, sizeof(*net));
         net->un_incarnation = usocklnd_new_incarnation();
+	pthread_mutexattr_init(&attr);
+	pthread_mutexattr_settype(&attr,
+	    PTHREAD_MUTEX_ERRORCHECK_NP);
         pthread_mutex_init(&net->un_lock, NULL);
         pthread_cond_init(&net->un_cond, NULL);
 

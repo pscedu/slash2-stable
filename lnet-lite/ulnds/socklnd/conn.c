@@ -210,6 +210,7 @@ usocklnd_check_peer_stale(lnet_ni_t *ni, lnet_process_id_t id)
 int
 usocklnd_create_passive_conn(lnet_ni_t *ni, int fd, usock_conn_t **connp)
 {
+	pthread_mutexattr_t attr;
         int           rc;
         __u32         peer_ip;
         __u16         peer_port;
@@ -237,6 +238,9 @@ usocklnd_create_passive_conn(lnet_ni_t *ni, int fd, usock_conn_t **connp)
         conn->uc_ni = ni;
         CFS_INIT_LIST_HEAD (&conn->uc_tx_list);
         CFS_INIT_LIST_HEAD (&conn->uc_zcack_list);
+	pthread_mutexattr_init(&attr);
+	pthread_mutexattr_settype(&attr,
+	    PTHREAD_MUTEX_ERRORCHECK_NP);
         pthread_mutex_init(&conn->uc_lock, NULL);
         cfs_atomic_set(&conn->uc_refcount, 1); /* 1 ref for me */
 
@@ -249,6 +253,7 @@ int
 usocklnd_create_active_conn(usock_peer_t *peer, int type,
                             usock_conn_t **connp)
 {
+	pthread_mutexattr_t attr;
         int           rc;
         int           fd;
         usock_conn_t *conn;
@@ -293,6 +298,9 @@ usocklnd_create_active_conn(usock_peer_t *peer, int type,
         usocklnd_peer_addref(peer);
         CFS_INIT_LIST_HEAD (&conn->uc_tx_list);
         CFS_INIT_LIST_HEAD (&conn->uc_zcack_list);
+	pthread_mutexattr_init(&attr);
+	pthread_mutexattr_settype(&attr,
+	    PTHREAD_MUTEX_ERRORCHECK_NP);
         pthread_mutex_init(&conn->uc_lock, NULL);
         cfs_atomic_set(&conn->uc_refcount, 1); /* 1 ref for me */
 
@@ -708,6 +716,7 @@ int
 usocklnd_create_peer(lnet_ni_t *ni, lnet_process_id_t id,
                      usock_peer_t **peerp)
 {
+	pthread_mutexattr_t attr;
         usock_net_t  *net = ni->ni_data;
         usock_peer_t *peer;
         int           i;
@@ -725,6 +734,9 @@ usocklnd_create_peer(lnet_ni_t *ni, lnet_process_id_t id,
         peer->up_errored      = 0;
         peer->up_last_alive   = 0;
         cfs_atomic_set (&peer->up_refcount, 1); /* 1 ref for caller */
+	pthread_mutexattr_init(&attr);
+	pthread_mutexattr_settype(&attr,
+	    PTHREAD_MUTEX_ERRORCHECK_NP);
         pthread_mutex_init(&peer->up_lock, NULL);        
 
         pthread_mutex_lock(&net->un_lock);

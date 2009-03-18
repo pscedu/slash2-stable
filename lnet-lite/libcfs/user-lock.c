@@ -48,6 +48,14 @@
  * in other branches.
  */
 
+#ifndef _XOPEN_SOURCE
+#define _XOPEN_SOURCE 500
+#endif
+
+#ifndef _GNU_SOURCE
+#define _GNU_SOURCE
+#endif
+
 #ifndef __KERNEL__
 
 #include <stdlib.h>
@@ -248,9 +256,14 @@ void up_write(struct rw_semaphore *s)
 
 void cfs_init_completion(struct cfs_completion *c)
 {
+	pthread_mutexattr_t attr;
+
         LASSERT(c != NULL);
         c->c_done = 0;
-        pthread_mutex_init(&c->c_mut, NULL);
+	pthread_mutexattr_init(&attr);
+	pthread_mutexattr_settype(&attr,
+	    PTHREAD_MUTEX_ERRORCHECK_NP);
+        pthread_mutex_init(&c->c_mut, &attr);
         pthread_cond_init(&c->c_cond, NULL);
 }
 
@@ -284,7 +297,7 @@ void cfs_wait_for_completion(struct cfs_completion *c)
  * atomic primitives
  */
 
-static pthread_mutex_t atomic_guard_lock = PTHREAD_MUTEX_INITIALIZER;
+static pthread_mutex_t atomic_guard_lock = PTHREAD_ERRORCHECK_MUTEX_INITIALIZER_NP;
 
 int cfs_atomic_read(cfs_atomic_t *a)
 {

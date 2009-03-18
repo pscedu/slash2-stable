@@ -34,6 +34,10 @@
  * Lustre is a trademark of Sun Microsystems, Inc.
  */
 
+#ifndef _XOPEN_SOURCE
+#define _XOPEN_SOURCE 500
+#endif
+
 #define DEBUG_SUBSYSTEM S_LNET
 #include <lnet/lib-lnet.h>
 
@@ -245,10 +249,15 @@ void lnet_fini_locks(void)
 
 void lnet_init_locks(void)
 {
+	pthread_mutexattr_t attr;
+
         pthread_cond_init(&the_lnet.ln_cond, NULL);
-        pthread_mutex_init(&the_lnet.ln_lock, NULL);
-        pthread_mutex_init(&the_lnet.ln_lnd_mutex, NULL);
-        pthread_mutex_init(&the_lnet.ln_api_mutex, NULL);
+	pthread_mutexattr_init(&attr);
+	pthread_mutexattr_settype(&attr,
+	    PTHREAD_MUTEX_ERRORCHECK_NP);
+        pthread_mutex_init(&the_lnet.ln_lock, &attr);
+        pthread_mutex_init(&the_lnet.ln_lnd_mutex, &attr);
+        pthread_mutex_init(&the_lnet.ln_api_mutex, &attr);
 }
 
 void lnet_fini_locks(void)
