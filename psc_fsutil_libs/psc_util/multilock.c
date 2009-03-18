@@ -19,6 +19,7 @@
 #include "psc_util/cdefs.h"
 #include "psc_util/log.h"
 #include "psc_util/multilock.h"
+#include "psc_util/pthrutil.h"
 
 __static int
 multilock_cmp(const void *a, const void *b)
@@ -45,7 +46,7 @@ multilock_cond_init(struct multilock_cond *mlc, const void *data,
 
 	memset(mlc, 0, sizeof(*mlc));
 	dynarray_init(&mlc->mlc_multilocks);
-	pthread_mutex_init(&mlc->mlc_mutex, NULL);
+	psc_pthread_mutex_init(&mlc->mlc_mutex);
 	mlc->mlc_data = data;
 	mlc->mlc_flags = flags;
 
@@ -232,7 +233,7 @@ multilock_init(struct multilock *ml, const char *name, ...)
 
 	memset(ml, 0, sizeof(*ml));
 	dynarray_init(&ml->ml_conds);
-	pthread_mutex_init(&ml->ml_mutex, NULL);
+	psc_pthread_mutex_init(&ml->ml_mutex);
 	pthread_cond_init(&ml->ml_cond, NULL);
 	ml->ml_mask = vbitmap_new(0);
 	if (ml->ml_mask == NULL)

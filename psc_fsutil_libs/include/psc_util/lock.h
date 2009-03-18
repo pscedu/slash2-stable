@@ -15,18 +15,11 @@
 #include <string.h>
 #include <pthread.h>
 
+#include "psc_util/pthrutil.h"
+
 typedef pthread_mutex_t psc_spinlock_t;
 
-#define LOCK_INIT(lk)							\
-	do {								\
-		pthread_mutexattr_t attr;				\
-									\
-		pthread_mutexattr_init(&attr);				\
-		pthread_mutexattr_settype(&attr,			\
-		    PTHREAD_MUTEX_ERRORCHECK_NP);			\
-		pthread_mutex_init((lk), &attr);			\
-		pthread_mutexattr_destroy(&attr);			\
-	} while (0)
+#define LOCK_INIT(lk)		psc_pthread_mutex_init(lk);
 
 #define LOCK_INITIALIZER	PTHREAD_ERRORCHECK_MUTEX_INITIALIZER_NP
 

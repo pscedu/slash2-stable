@@ -27,22 +27,20 @@
 #include <errno.h>
 #include <stdio.h>
 
+#include "psc_util/pthrutil.h"
 #include "psc_util/pthread_barrier.h"
 
 /*
  * Initialize a barrier for use.
  */
 int
-barrier_init
-(barrier_t *barrier, int count)
+barrier_init(barrier_t *barrier, int count)
 {
 	int status;
 
 	barrier->threshold = barrier->counter = count;
 	barrier->cycle = 0;
-	status = pthread_mutex_init(&barrier->mutex, NULL);
-	if (status != 0)
-		return status;
+	psc_pthread_mutex_init(&barrier->mutex);
 	status = pthread_cond_init(&barrier->cv, NULL);
 	if (status != 0) {
 		pthread_mutex_destroy(&barrier->mutex);
