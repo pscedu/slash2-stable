@@ -165,13 +165,11 @@ pscrpc_drop_conns(lnet_process_id_t *peer)
 		if (c->c_peer.nid == peer->nid &&
 		    c->c_peer.pid == peer->pid) {
 			if (c->c_exp)
-				pscrpc_export_put(c->c_exp);
+				pscrpc_export_hldrop(c->c_exp);
 #if 0
 			else if (c->c_imp)
-				import_put(c->c_imp);
+				pscrpc_import_hldrop(c->c_imp);
 #endif
-			else
-				pscrpc_put_connection(c);
 		}
 	freelock(&conn_lock);
 }

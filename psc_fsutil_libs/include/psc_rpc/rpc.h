@@ -119,7 +119,7 @@ struct pscrpc_export {
 	atomic_t                  exp_rpc_count;
 	struct pscrpc_connection *exp_connection;
 	int                       exp_failed;
-	void			(*exp_destroycb)(void *);
+	void			(*exp_hldropf)(void *);
 	void			 *exp_private; /* app-specific data */
 	//struct psclist_head       exp_outstanding_replies;
 };

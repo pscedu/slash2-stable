@@ -8,6 +8,12 @@
 #include "psc_util/atomic.h"
 #include "psc_util/log.h"
 
+#define pscrpc_export_hldrop(e)					\
+	do {							\
+		if ((e)->exp_hldropf)				\
+			(e)->exp_hldropf((e)->exp_private);	\
+	} while (0)
+
 void __pscrpc_export_put(struct pscrpc_export *);
 
 static inline struct pscrpc_export *

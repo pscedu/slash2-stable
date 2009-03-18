@@ -18,8 +18,7 @@ __pscrpc_export_put(struct pscrpc_export *exp)
                 if (exp->exp_connection)
                         pscrpc_put_connection(exp->exp_connection);
 		
-		if (exp->exp_destroycb)
-			exp->exp_destroycb(exp->exp_private);
+		pscrpc_export_hldrop(exp);
 
 		/* Outstanding replies refers to 'difficult' replies
 		   Not sure what h_link is for - pauln */
