@@ -548,6 +548,7 @@ struct libcfs_debug_msg_data {
 			break;					\
 		case D_RPCTRACE:				\
 		case D_TRACE:					\
+		case D_CONSOLE | D_ERROR:			\
 		case D_CONSOLE:					\
 			___lvl = PLL_TRACE;			\
 			break;					\
