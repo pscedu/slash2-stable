@@ -59,12 +59,12 @@ rsx_waitrep(struct pscrpc_request *rq, int replen, void *mpp)
 	return (0);
 }
 
-#define OBD_TIMEOUT 15
+#define OBD_TIMEOUT 60
 
 int
 rsx_timeout(__unusedx void *arg)
 {
-	return (0);
+	return (1);
 }
 
 /*
