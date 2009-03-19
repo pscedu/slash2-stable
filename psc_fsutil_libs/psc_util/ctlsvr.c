@@ -438,6 +438,7 @@ psc_ctlrep_getpool(int fd, struct psc_ctlmsghdr *mh, void *msg)
 	return (rc);
 }
 
+/* Maximum depth of parameter node, e.g. [thr.]foo.bar.glarch=3 */
 #define MAX_LEVELS 8
 
 int
@@ -657,7 +658,7 @@ psc_ctlparam_pool_handle(int fd, struct psc_ctlmsghdr *mh,
 	char nbuf[20];
 	int set;
 
-	if (nlevels > 4 || (nlevels == 3 &&
+	if (nlevels > 3 || (nlevels == 3 &&
 	    (strcmp(levels[2], "min") != 0 &&
 	     strcmp(levels[2], "max") != 0 &&
 	     strcmp(levels[2], "thres") != 0 &&
@@ -751,7 +752,9 @@ psc_ctlparam_run(int fd, struct psc_ctlmsghdr *mh,
 	struct psc_thread *thr;
 	int rc, set, run;
 
-	nlevels = 1;
+	if (nlevels > 1)
+		return (psc_ctlsenderr(fd, mh, "invalid field"));
+
 	levels[0] = "run";
 	run = 0; /* gcc */
 
@@ -770,11 +773,12 @@ psc_ctlparam_run(int fd, struct psc_ctlmsghdr *mh,
 
 	rc = 1;
 	PLL_LOCK(&psc_threads);
-	PSC_CTL_FOREACH_THREAD(thr, pcp->pcp_thrname, &psc_threads.pll_listhd) {
+	PSC_CTL_FOREACH_THREAD(thr, pcp->pcp_thrname,
+	    &psc_threads.pll_listhd) {
 		if (set)
 			pscthr_setrun(thr, run);
 		else if (!(rc = psc_ctlmsg_param_send(fd, mh, pcp,
-		    thr->pscthr_name, levels, nlevels,
+		    thr->pscthr_name, levels, 1,
 		    thr->pscthr_flags & PTF_RUN ? "1" : "0")))
 			break;
 	}
@@ -799,7 +803,9 @@ psc_ctlparam_pause(int fd, struct psc_ctlmsghdr *mh,
 	char *s;
 	long l;
 
-	nlevels = 1;
+	if (nlevels > 1)
+		return (psc_ctlsenderr(fd, mh, "invalid field"));
+
 	levels[0] = "pause";
 
 	pause = 0; /* gcc */
@@ -823,7 +829,7 @@ psc_ctlparam_pause(int fd, struct psc_ctlmsghdr *mh,
 		if (set)
 			pscthr_setpause(thr, pause);
 		else if (!(rc = psc_ctlmsg_param_send(fd, mh, pcp,
-		    thr->pscthr_name, levels, nlevels,
+		    thr->pscthr_name, levels, 1,
 		    (thr->pscthr_flags & PTF_PAUSED) ? "1" : "0")))
 			break;
 	}
@@ -847,7 +853,6 @@ psc_ctlparam_pool(int fd, struct psc_ctlmsghdr *mh,
 		return (psc_ctlsenderr(fd, mh, "invalid thread field"));
 
 	levels[0] = "pool";
-
 	val = 0; /* gcc */
 
 	set = (mh->mh_type == PCMT_SETPARAM);
