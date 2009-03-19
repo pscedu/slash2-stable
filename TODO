@@ -34,6 +34,7 @@ pfl
   should be able to issue exit commands, etc.  TCP sockets should
   inspect remote port to determine "authorization"
 - add a check to ensure hash table size is not a direct power of two
+- rename stree to vtree (variable number of children per branch)
 
 zest
 - test parity reconstruction service by rebuilding
