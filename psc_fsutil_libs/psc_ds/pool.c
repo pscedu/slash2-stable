@@ -49,7 +49,7 @@ void
 _psc_poolmaster_init(struct psc_poolmaster *p, size_t entsize,
     ptrdiff_t offset, int flags, int total, int min, int max,
     int (*initf)(struct psc_poolmgr *, void *), void (*destroyf)(void *),
-    int (*reclaimcb)(struct psc_listcache *, int),
+    int (*reclaimcb)(struct psc_poolmgr *, int),
     void *mlcarg, const char *namefmt, ...)
 {
 	va_list ap;
@@ -443,7 +443,7 @@ psc_pool_get(struct psc_poolmgr *m)
 	if (m->ppm_reclaimcb)
 		do {
 			/* Add +1 here to count the invoker as a waitor. */
-			n = m->ppm_reclaimcb(&m->ppm_lc, atomic_read(
+			n = m->ppm_reclaimcb(m, atomic_read(
 			    &m->ppm_lc.lc_wq_empty.wq_nwaitors) + 1);
 			p = POOL_GETOBJ(m);
 			if (p)
