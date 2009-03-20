@@ -221,8 +221,10 @@ _psclogv(const char *fn, const char *func, int line, int subsys,
 	fprintf(stderr, "%s %s%s\n", prefix, umsg, emsg);
 	errno = save_errno; /* Restore in case it is needed further. */
 
-	if (level == PLL_FATAL)
+	if (level == PLL_FATAL) {
 		abort();
+		_exit(1);
+	}
 }
 
 void
