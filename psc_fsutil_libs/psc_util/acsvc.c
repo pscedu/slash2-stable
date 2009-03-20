@@ -129,7 +129,12 @@ acsvc_svrmain(int s)
 	struct iovec iov;
 	struct msghdr m;
 	ssize_t nbytes;
+	uid_t euid;
+	gid_t egid;
 	int fd, rc;
+
+	euid = geteuid();
+	egid = getegid();
 
 	fd = -1;
 	for (;;) {
@@ -157,11 +162,16 @@ acsvc_svrmain(int s)
 		m.msg_iov = &iov;
 		m.msg_iovlen = 1;
 
+		if (arq.arq_uid != euid || arq.arq_gid != egid) {
+			if (seteuid(0) == -1)
+				psc_fatal("seteuid 0");
+			if (setegid(arq.arq_gid) == -1)
+				psc_fatal("setegid %d", arq.arq_gid);
+			if (seteuid(arq.arq_uid) == -1)
+				psc_fatal("seteuid %d", arq.arq_uid);
+		}
+
 		/* Invoke access operation. */
-//		if (setegid(arq.arq_gid) == -1)
-//			psc_fatal("setegid %d", arq.arq_gid);
-		if (seteuid(arq.arq_uid) == -1)
-			psc_fatal("seteuid %d", arq.arq_uid);
 		switch (arq.arq_op) {
 		case ACSOP_ACCESS:
 			rc = access(arq.arq_fn, arq.arq_data_access.mode);
@@ -251,12 +261,6 @@ acsvc_svrmain(int s)
 			close(fd);
 			fd = -1;
 		}
-
-		/* Reset back to full privileges. */
-		if (seteuid(0) == -1)
-			psc_fatal("seteuid 0");
-//		if (setegid(0) == -1)
-//			psc_fatal("setegid 0");
 	}
 }
 
