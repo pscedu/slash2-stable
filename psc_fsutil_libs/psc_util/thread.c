@@ -386,7 +386,7 @@ psclog_setdatamem(struct psclog_data *d)
 
 	rc = pthread_setspecific(psc_logkey, d);
 	if (rc)
-		err(1, "pthread_setspecific: %s",
+		errx(1, "pthread_setspecific: %s",
 		    strerror(rc));
 }
 
