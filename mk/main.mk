@@ -234,6 +234,7 @@ test: all
 		fi;									\
 	done
 	@if [ -n "${PROG}" ]; then							\
+		echo "./${PROG}";							\
 		./${PROG} || exit 1;							\
 	fi
 
