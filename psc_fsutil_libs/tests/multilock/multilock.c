@@ -19,9 +19,9 @@ struct thr {
 };
 
 struct multilock_cond mastermlc;
-
-int nthreads;
-int iterations;
+int nthreads = 32;
+int iterations = 1000;
+const char *progname;
 
 void *
 thr_main(void *arg)
@@ -30,17 +30,12 @@ thr_main(void *arg)
 	void *p;
 	int i;
 
-	printf("spawned thread 0x%lx\n", t->t_pthread);
 	for (i = 0; i < iterations; i++) {
-		multilock_wait(&t->t_ml, &p);
-		printf("thr 0x%lx: obtained master lock\n",
-		    t->t_pthread);
-		sleep(2);
+		multilock_wait(&t->t_ml, &p, 0);
+		usleep(200);
 	}
 	return (NULL);
 }
-
-const char *progname;
 
 __dead void
 usage(void)
@@ -56,8 +51,6 @@ main(int argc, char *argv[])
 	int error, c, j;
 	long l;
 
-	nthreads = 2;
-	iterations = 10;
 	while ((c = getopt(argc, argv, "i:n:")) != -1)
 		switch (c) {
 		case 'i':
@@ -79,31 +72,23 @@ main(int argc, char *argv[])
 	if ((threads = calloc(nthreads, sizeof(*threads))) == NULL)
 		err(1, "calloc");
 
-	multilock_cond_init(&mastermlc, NULL);
+	multilock_cond_init(&mastermlc, NULL, 0, "master");
 
-	for (j = 0; j < nthreads; j++) {
-		t = &threads[j];
-		multilock_cond_init(&t->t_mlc, NULL);
-		multilock_addcond(&t->t_ml, &mastermlc);
-		multilock_addcond(&t->t_ml, &t->t_mlc);
-
-		multilock_free(&t->t_ml);
-		multilock_init(&t->t_ml);
-		multilock_addcond(&t->t_ml, &mastermlc);
-		multilock_addcond(&t->t_ml, &t->t_mlc);
+	for (j = 0, t = threads; j < nthreads; j++, t++) {
+		multilock_cond_init(&t->t_mlc, NULL, 0, "cond%d", j);
+		multilock_init(&t->t_ml, "ml%d", j);
+		multilock_addcond(&t->t_ml, &mastermlc, 1);
+		multilock_addcond(&t->t_ml, &t->t_mlc, 1);
 
 		if ((error = pthread_create(&t->t_pthread, NULL,
 		    thr_main, t)) != 0)
 			errx(1, "pthread_create: %s", strerror(error));
 		sched_yield();
 	}
-	printf("spawned %d threads, doing %d iterations\n", nthreads,
-	    iterations);
 
 	for (j = 0; j < iterations; j++) {
-		printf("waking up master condition\n");
 		multilock_cond_wakeup(&mastermlc);
-		sleep(1);
+		usleep(100);
 	}
 	exit(0);
 }

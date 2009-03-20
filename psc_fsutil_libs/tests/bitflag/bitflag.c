@@ -27,7 +27,6 @@ usage(void)
 		psc_fatal("fork");			\
 	case 0: /* child */				\
 		code;					\
-		fprintf(stdout, "code completed\n");	\
 		exit(0);				\
 	default: /* parent */				\
 		if (wait(&st) == -1)			\

@@ -1,10 +1,15 @@
 /* $Id$ */
 
+#include <sys/param.h>
+
 #include <fcntl.h>
+#include <libgen.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <unistd.h>
 
+#include "pfl.h"
 #include "psc_util/acsvc.h"
 #include "psc_util/cdefs.h"
 #include "psc_util/log.h"
@@ -21,6 +26,7 @@ usage(void)
 int
 main(int argc, char *argv[])
 {
+	char *dir, fn[PATH_MAX];
 	int fd;
 
 	progname = argv[0];
@@ -30,10 +36,18 @@ main(int argc, char *argv[])
 	if (argc)
 		usage();
 
+	pfl_init();
 	acsvc_init(0, "test", argv);
 
-	fd = access_fsop(ACSOP_OPEN, geteuid(), getegid(),
-	    __FILE__, O_RDONLY);
+	dir = strdup(progname);
+	if (dir == NULL)
+		psc_fatal("strdup");
+	if (dirname(dir) == NULL)
+		psc_fatal("dirname");
+	snprintf(fn, sizeof(fn), "%s/%s", dir, __FILE__);
+
+	fd = access_fsop(ACSOP_OPEN, geteuid(), getegid(), fn,
+	    O_RDONLY);
 	if (fd == -1)
 		psc_fatal("access_fsop");
 	close(fd);
