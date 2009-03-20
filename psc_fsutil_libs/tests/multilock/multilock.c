@@ -8,8 +8,9 @@
 #include <string.h>
 #include <unistd.h>
 
-#include "multilock.h"
 #include "psc_util/cdefs.h"
+#include "psc_util/log.h"
+#include "psc_util/multilock.h"
 
 struct thr {
 	pthread_t		t_pthread;

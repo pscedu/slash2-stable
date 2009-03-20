@@ -15,7 +15,7 @@
 #include "psc_rpc/service.h"
 #include "psc_util/cdefs.h"
 #include "psc_util/ctl.h"
-#include "psc_util/humanscale.h"
+#include "psc_util/fmt.h"
 #include "psc_util/journal.h"
 #include "psc_util/mlist.h"
 #include "psc_util/multilock.h"
@@ -106,7 +106,8 @@ main(int argc, char *argv[])
 	PRTYPE(struct psc_ctlmsg_iostats);
 	PRTYPE(struct psc_ctlmsg_meter);
 	PRTYPE(struct psc_ctlmsg_pool);
-	PRVAL(PSC_CTL_HUMANBUF_SZ);
+	PRVAL(PSCFMT_HUMAN_BUFSIZ);
+	PRVAL(PSCFMT_RATIO_BUFSIZ);
 	PRTYPE(struct iostats);
 	PRTYPE(struct psc_journal);
 	PRTYPE(struct psc_journal_enthdr);

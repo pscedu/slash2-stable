@@ -59,7 +59,6 @@ child_main(__unusedx void *arg)
 int
 main(int argc, char *argv[])
 {
-	struct psc_thread *thr, *p;
 	int c, i, rc = 0;
 
 	progname = argv[0];
@@ -82,11 +81,9 @@ main(int argc, char *argv[])
 
 	psc_waitq_init(&waitq);
 
-	p = thr = PSCALLOC(nthreads * sizeof(*thr));
-	psc_assert(thr != NULL);
+	for (i = 0; i < nthreads; i++)
+		pscthr_init(0, 0, child_main, NULL, 0, "thr%d", i);
 
-	for (i=0; i < nthreads; i++, thr++)
-		pscthr_init(thr, 0, child_main, NULL, "thr%d", i);
 	sleep(1);
 	psc_waitq_wakeall(&waitq);
 	sleep(2);
@@ -96,11 +93,5 @@ main(int argc, char *argv[])
 		psc_waitq_wakeone(&waitq);
 		usleep(30);
 	}
-
-	for (i=0, thr=p; i < nthreads; i++, thr++) {
-		rc = pthread_join(thr->pscthr_pthread, NULL);
-		psc_assert(rc == 0);
-	}
-
 	return rc;
 }
