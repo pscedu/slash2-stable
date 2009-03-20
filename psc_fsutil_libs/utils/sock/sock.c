@@ -47,7 +47,6 @@ struct iostats	 	 rdst;			/* read stats */
 struct iostats	 	 wrst;			/* write stats */
 pthread_t		 rdthr;
 in_port_t		 port = PORT;
-struct psc_thread	 tiosthr;
 
 __dead void
 usage(void)
@@ -265,8 +264,8 @@ main(int argc, char *argv[])
 	buf = PSCALLOC(bufsiz);
 
 	psc_timerthr_spawn(THRT_TINTV, "tintvthr");
-	pscthr_init(&tiosthr, THRT_TIOS,
-	    psc_timer_iosthr_main, NULL, "tiosthr");
+	pscthr_init(THRT_TIOS, 0, psc_timer_iosthr_main,
+	    NULL, 0, "tiosthr");
 
 	if (listenif)
 		dolisten(listenif);
