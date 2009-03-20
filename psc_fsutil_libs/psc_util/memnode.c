@@ -27,6 +27,7 @@ psc_memnode_get(void)
 {
 	struct psc_memnode *pmn, **pmnv;
 	int memnid;
+	int rc;
 
 	pmn = pthread_getspecific(psc_memnodes_key);
 	if (pmn)
@@ -38,12 +39,15 @@ psc_memnode_get(void)
 	pmnv = dynarray_get(&psc_memnodes);
 	pmn = pmnv[memnid];
 	if (pmn == NULL) {
-		pmn = pmnv[memnid] = psc_alloc(sizeof(*pmn), PAF_NOLOG);
+		pmn = pmnv[memnid] = psc_alloc(sizeof(*pmn),
+		    PAF_NOLOG);
 		LOCK_INIT(&pmn->pmn_lock);
 		dynarray_init(&pmn->pmn_keys);
 	}
 	freelock(&psc_memnodes_lock);
-	pthread_setspecific(psc_memnodes_key, pmn);
+	rc = pthread_setspecific(psc_memnodes_key, pmn);
+	if (rc)
+		psc_fatalx("pthread_setspecific: %s", strerror(rc));
 	return (pmn);
 }
 
