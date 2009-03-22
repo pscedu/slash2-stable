@@ -1,10 +1,7 @@
 /* $Id$ */
 
-#include <sys/select.h>
 #include <sys/types.h>
 #include <sys/time.h>
-#include <sys/resource.h>
-#include <sys/wait.h>
 
 #include <getopt.h>
 #include <pthread.h>
@@ -13,6 +10,7 @@
 #include <time.h>
 #include <unistd.h>
 
+#include "pfl.h"
 #include "psc_util/alloc.h"
 #include "psc_util/assert.h"
 #include "psc_util/cdefs.h"
@@ -62,6 +60,7 @@ main(int argc, char *argv[])
 	int c, i, rc = 0;
 
 	progname = argv[0];
+	pfl_init();
 	while ((c = getopt(argc, argv, "n:i:")) != -1)
 		switch (c) {
 		case 'n':
