@@ -21,6 +21,12 @@
 #include "psc_util/multilock.h"
 #include "psc_util/pthrutil.h"
 
+/*
+ * multilock_cmp - Compare two multilocks, used for sorting.  Sorting is
+ *	necessary to avoid deadlocking.
+ * @a: a multilock
+ * @b: another multilock
+ */
 __static int
 multilock_cmp(const void *a, const void *b)
 {
@@ -33,7 +39,7 @@ multilock_cmp(const void *a, const void *b)
 	return (0);
 }
 
-/*
+/**
  * multilock_cond_init - initialize a multilock condition.
  * @mlc: the condition to initialize.
  * @data: pointer to user data.
@@ -95,6 +101,40 @@ multilock_cond_unlockall(struct multilock_cond *mlc)
 		pthread_mutex_unlock(&mlv[j]->ml_mutex);
 }
 
+/**
+ * multilock_cond_destroy - release a multilock condition.
+ * @mlc: the condition to release.
+ */
+void
+multilock_cond_destroy(struct multilock_cond *mlc)
+{
+	struct multilock *ml, **mlv;
+	int nml, i, count;
+
+	count = 0;
+ restart:
+	psc_pthread_mutex_lock(&mlc->mlc_mutex);
+	nml = dynarray_len(&mlc->mlc_multilocks);
+	mlv = dynarray_get(&mlc->mlc_multilocks);
+	for (i = 0; i < nml; i++) {
+		ml = mlv[i];
+		if (pthread_mutex_trylock(&ml->ml_mutex)) {
+			if (count++ == 300000)
+				psc_errorx("mlcond %s failed to lock his "
+				    "multilocks - possible deadlock",
+				    mlc->mlc_name);
+			pthread_mutex_unlock(&mlc->mlc_mutex);
+			sched_yield();
+			goto restart;
+		}
+		dynarray_remove(&ml->ml_conds, mlc);
+		dynarray_remove(&mlc->mlc_multilocks, ml);
+		pthread_mutex_unlock(&ml->ml_mutex);
+
+	}
+	dynarray_free(&mlc->mlc_multilocks);
+}
+
 /*
  * multilock_masked_cond - determine if a condition is masked
  *	off in a multilock.
@@ -129,7 +169,7 @@ multilock_cond_wakeup(struct multilock_cond *mlc)
 
 	count = 0;
  restart:
-	pthread_mutex_lock(&mlc->mlc_mutex);
+	psc_pthread_mutex_lock(&mlc->mlc_mutex);
 	if (multilock_cond_trylockall(mlc)) {
 		if (count++ == 300000)
 			psc_errorx("mlcond %s failed to lock his "
@@ -167,7 +207,7 @@ multilock_addcond(struct multilock *ml, struct multilock_cond *mlc,
 	rc = 0;
 
  restart:
-	pthread_mutex_lock(&mlc->mlc_mutex);
+	psc_pthread_mutex_lock(&mlc->mlc_mutex);
 
 	if (pthread_mutex_trylock(&ml->ml_mutex)) {
 		pthread_mutex_unlock(&mlc->mlc_mutex);
@@ -245,6 +285,18 @@ multilock_init(struct multilock *ml, const char *name, ...)
 }
 
 /*
+ * multilock_free - destroy a multilock.
+ * @ml: the multilock to release.
+ */
+void
+multilock_free(struct multilock *ml)
+{
+	multilock_reset(ml);
+	dynarray_free(&ml->ml_conds);
+	vbitmap_free(ml->ml_mask);
+}
+
+/*
  * multilock_mask_cond - update multilock active condition mask.
  * @ml: the multilock.
  * @mlc: the condition to mask.
@@ -257,7 +309,7 @@ multilock_mask_cond(struct multilock *ml,
 	struct multilock_cond **mlcv;
 	int nmlc, j;
 
-	pthread_mutex_lock(&ml->ml_mutex);
+	psc_pthread_mutex_lock(&ml->ml_mutex);
 	ml->ml_owner = pthread_self();
 	nmlc = dynarray_len(&ml->ml_conds);
 	mlcv = dynarray_get(&ml->ml_conds);
@@ -289,7 +341,7 @@ multilock_wait(struct multilock *ml, void *datap, int usec)
 
 	won = 0;
  restart:
-	pthread_mutex_lock(&ml->ml_mutex);
+	psc_pthread_mutex_lock(&ml->ml_mutex);
 	ml->ml_owner = pthread_self();
 
 	/* Check for missed wakeups during a critical section. */
@@ -306,7 +358,7 @@ multilock_wait(struct multilock *ml, void *datap, int usec)
 		psc_fatalx("multilock has no conditions and will never wake up");
 
 	for (j = 0; j < nmlc; j++) {
-		pthread_mutex_lock(&mlcv[j]->mlc_mutex);
+		psc_pthread_mutex_lock(&mlcv[j]->mlc_mutex);
 		mlcv[j]->mlc_winner = NULL;
 		pthread_mutex_unlock(&mlcv[j]->mlc_mutex);
 	}
@@ -343,9 +395,9 @@ multilock_wait(struct multilock *ml, void *datap, int usec)
 	ml->ml_owner = 0;
 	pthread_mutex_unlock(&ml->ml_mutex);
 
-	pthread_mutex_lock(&mlc->mlc_mutex);
+	psc_pthread_mutex_lock(&mlc->mlc_mutex);
 	if (mlc->mlc_flags & PMLCF_WAKEALL) {
-		*(void **)datap = NULL;
+		*(void **)datap = (void *)mlc->mlc_data;
 		won = 1;
 	} else if (mlc->mlc_winner == NULL) {
 		*(void **)datap = (void *)mlc->mlc_data;
@@ -374,7 +426,7 @@ multilock_reset(struct multilock *ml)
 	int nmlc, j;
 
  restart:
-	pthread_mutex_lock(&ml->ml_mutex);
+	psc_pthread_mutex_lock(&ml->ml_mutex);
 	ml->ml_owner = pthread_self();
 	nmlc = dynarray_len(&ml->ml_conds);
 	mlcv = dynarray_get(&ml->ml_conds);
@@ -420,7 +472,7 @@ multilock_cond_nwaitors(struct multilock_cond *mlc)
 {
 	int n;
 
-	pthread_mutex_lock(&mlc->mlc_mutex);
+	psc_pthread_mutex_lock(&mlc->mlc_mutex);
 	n = dynarray_len(&mlc->mlc_multilocks);
 	pthread_mutex_unlock(&mlc->mlc_mutex);
 	return (n);
@@ -433,7 +485,7 @@ multilock_cond_nwaitors(struct multilock_cond *mlc)
 void
 multilock_enter_critsect(struct multilock *ml)
 {
-	pthread_mutex_lock(&ml->ml_mutex);
+	psc_pthread_mutex_lock(&ml->ml_mutex);
 	ml->ml_flags |= PMLF_CRITSECT;
 	ml->ml_waker = NULL;
 	pthread_mutex_unlock(&ml->ml_mutex);
@@ -446,7 +498,7 @@ multilock_enter_critsect(struct multilock *ml)
 void
 multilock_leave_critsect(struct multilock *ml)
 {
-	pthread_mutex_lock(&ml->ml_mutex);
+	psc_pthread_mutex_lock(&ml->ml_mutex);
 	ml->ml_flags &= ~PMLF_CRITSECT;
 	pthread_mutex_unlock(&ml->ml_mutex);
 }

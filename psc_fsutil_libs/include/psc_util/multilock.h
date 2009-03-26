@@ -29,7 +29,7 @@ struct multilock_cond {
 #define PMLCF_WAKEALL		(1 << 0)		/* wake all multilocks, not just one */
 
 #define MLCOND_INIT(data, name, flags) \
-	{ PTHREAD_MUTEX_INITIALIZER, DYNARRAY_INIT, NULL, data, flags, name }
+	{ PTHREAD_MUTEX_INITIALIZER, DYNARRAY_INIT, NULL, (data), (flags), (name) }
 
 struct multilock {
 	/*
@@ -57,9 +57,11 @@ void	multilock_leave_critsect(struct multilock *);
 void	multilock_mask_cond(struct multilock *, const struct multilock_cond *, int);
 void	multilock_reset(struct multilock *);
 int	multilock_wait(struct multilock *, void *, int);
+void	multilock_free(struct multilock *);
 
 void	multilock_cond_init(struct multilock_cond *, const void *, int, const char *, ...);
 size_t	multilock_cond_nwaitors(struct multilock_cond *);
 void	multilock_cond_wakeup(struct multilock_cond *);
+void	multilock_cond_destroy(struct multilock_cond *);
 
 #endif /* _PFL_MULTILOCK_H_ */
