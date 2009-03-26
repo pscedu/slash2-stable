@@ -42,8 +42,9 @@ int pscrpc_init_import(struct pscrpc_import *imp)
         return 0;
 }
 
-/* Returns true if import was FULL, false if import was already not
- * connected.
+/**
+ * pscrpc_set_import_discon - Returns true if import was FULL,
+ *	false if import was already not connected.
  * @imp - import to be disconnected
  * @conn_cnt - connection count (epoch) of the request that timed out
  *             and caused the disconnection.  In some cases, multiple
@@ -135,7 +136,7 @@ void pscrpc_invalidate_import(struct pscrpc_import *imp)
         rc = psc_cli_wait_event(&imp->imp_recovery_waitq,
 			    (atomic_read(&imp->imp_inflight) == 0),
 			    &lwi);
-	
+
         if (rc)
                 CERROR("rc = %d waiting for callback (%d != 0)\n",
                        rc, atomic_read(&imp->imp_inflight));

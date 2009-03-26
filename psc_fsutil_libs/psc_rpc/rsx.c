@@ -68,10 +68,10 @@ rsx_timeout(__unusedx void *arg)
 }
 
 /*
- * rsx_bulkgetsink - setup a source or sink for a server.
- * @type: GET_SINK receive from client or PUT_SOURCE to push to a client.
+ * rsx_bulkserver - setup a source or sink for a server.
  * @rq: RPC request associated with GET.
  * @descp: pointer to bulk xfer descriptor.
+ * @type: GET_SINK receive from client or PUT_SOURCE to push to a client.
  * @ptl: portal to issue bulk xfer across.
  * @iov: iovec array of receive buffer.
  * @n: #iovecs.
