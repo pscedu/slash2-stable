@@ -12,6 +12,7 @@
 	do {							\
 		if ((e)->exp_hldropf)				\
 			(e)->exp_hldropf((e)->exp_private);	\
+		(e)->exp_private = NULL;			\
 	} while (0)
 
 void __pscrpc_export_put(struct pscrpc_export *);
