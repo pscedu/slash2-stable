@@ -385,6 +385,26 @@ pscrpc_server_handle_request(struct pscrpc_service *svc,
 
 	do_gettimeofday(&work_end);
 
+	/*
+	 * peer queue length accounting
+	 * XXX optimization: perform destruction only if export was destroyed.
+	 */
+	if (svc->srv_count_peer_qlens &&
+	    atomic_dec_return(&request->rq_peer_qlen->qlen) == 0) {
+		struct hash_bucket *hb;
+
+		hb = hashbkt_get(&svc->srv_peer_qlentab,
+		    request->rq_peer.nid);
+		hashbkt_lock(hb);
+		if (atomic_read(&request->rq_peer_qlen->qlen) == 0)
+			hashbkt_del_entry(hb,
+			    &request->rq_peer_qlen->hentry);
+		else
+			request->rq_peer_qlen = NULL;
+		hashbkt_unlock(hb);
+		free(request->rq_peer_qlen);
+	}
+
 	timediff = cfs_timeval_sub(&work_end, &work_start, NULL);
 
 	if (timediff / 1000000 > ZOBD_TIMEOUT)
@@ -898,11 +918,18 @@ pscrpc_unregister_service(struct pscrpc_service *service)
 	return 0;
 }
 
+int
+rpc_peer_qlen_cmp(const void *a, const void *b)
+{
+	const struct rpc_peer_qlen *qa = a, *qb = b;
+
+	return (memcmp(&qa->id, &qb->id, sizeof(qa->id)));
+}
 
 struct pscrpc_service *
 pscrpc_init_svc(int nbufs, int bufsize, int max_req_size, int max_reply_size,
 		 int req_portal, int rep_portal, char *name, int num_threads,
-		 svc_handler_t handler)
+		 svc_handler_t handler, int flags)
 {
 	int                    rc;
 	struct pscrpc_service *service;
@@ -979,6 +1006,13 @@ pscrpc_init_svc(int nbufs, int bufsize, int max_req_size, int max_reply_size,
 	while (service->srv_max_reply_size < max_reply_size)
 		service->srv_max_reply_size <<= 1;
 
+	if (flags & PSCRPC_SVCF_COUNT_PEER_QLENS) {
+		service->srv_count_peer_qlens = 1;
+#define QLENTABSZ 511
+		init_hash_table(&service->srv_peer_qlentab,
+		    QLENTABSZ, "qlen-%s", service->srv_name);
+		service->srv_peer_qlentab.htcompare = rpc_peer_qlen_cmp;
+	}
 
 	CDEBUG(D_NET, "%s: Started, listening on portal %d\n",
 	       service->srv_name, service->srv_req_portal);
@@ -1021,7 +1055,8 @@ _pscrpc_thread_spawn(pscrpc_svc_handle_t *svh, size_t siz)
 					   svh->svh_rep_portal,
 					   svh->svh_svc_name,
 					   svh->svh_nthreads,
-					   svh->svh_handler);
+					   svh->svh_handler,
+					   svh->svh_flags);
 
 	psc_assert(svh->svh_service);
 

@@ -357,7 +357,10 @@ pscrpc_set_add_new_req(struct pscrpc_request_set *set,
 /**
  * expired_request - timeout handler used when sending a msg
  * @data: the request
- * Notes: Modified to allow requests to be retried without causing a failure of the entire import.  When the request fails 'imp_max_retries' times, pscrpc_expire_one_request() is called and the import is failed.
+ * Notes: Modified to allow requests to be retried without causing a
+ * failure of the entire import.  When the request fails
+ * 'imp_max_retries' times, pscrpc_expire_one_request() is called and
+ * the import is failed.
  */
 static int expired_request(void *data)
 {
@@ -1205,7 +1208,8 @@ int pscrpc_expire_one_request(struct pscrpc_request *req)
 		RETURN(1);
 	}
 
-	pscrpc_fail_import(imp, req->rq_reqmsg->conn_cnt);
+	if (!imp->imp_igntimeout)
+		pscrpc_fail_import(imp, req->rq_reqmsg->conn_cnt);
 
 	RETURN(0);
 }

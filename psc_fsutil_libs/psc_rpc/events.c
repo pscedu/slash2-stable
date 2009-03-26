@@ -149,6 +149,39 @@ void request_in_callback(lnet_event_t *ev)
         psclist_xadd_tail(&req->rq_list_entry, &service->srv_request_queue);
         service->srv_n_queued_reqs++;
 
+	/* count the RPC request queue length for this peer if enabled */
+	if (service->srv_count_peer_qlens) {
+		struct rpc_peer_qlen *pq;
+		struct hash_entry *hent;
+
+		hent = get_hash_entry(&service->srv_peer_qlentab,
+		    req->rq_peer.nid, &req->rq_peer, NULL);
+		if (hent == NULL) {
+			struct hash_bucket *hb;
+
+			pq = PSCALLOC(sizeof(*pq));
+			pq->id = req->rq_peer;
+			init_hash_entry(&pq->hentry, &pq->id.nid, pq);
+
+			hb = hashbkt_get(&service->srv_peer_qlentab,
+			    req->rq_peer.nid);
+			hashbkt_lock(hb);
+			hent = hashbkt_search(&service->srv_peer_qlentab,
+			    hb, req->rq_peer.nid, &req->rq_peer, NULL);
+			if (hent == NULL) {
+				hashbkt_add_entry(hb, &pq->hentry);
+				hent = &pq->hentry;
+				pq = NULL;
+			}
+			hashbkt_unlock(hb);
+
+			free(pq);
+		}
+		pq = hent->private;
+		atomic_inc(&pq->qlen);
+		req->rq_peer_qlen = pq;
+	}
+
         /* NB everything can disappear under us once the request
 	 * has been queued and we unlock, so do the wake now... */
 	psc_waitq_wakeall(&service->srv_waitq);

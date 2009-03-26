@@ -19,6 +19,7 @@
 #include "lnet/types.h"
 
 #include "psc_types.h"
+#include "psc_ds/hash.h"
 #include "psc_ds/list.h"
 #include "psc_ds/listcache.h"
 #include "psc_util/atomic.h"
@@ -180,6 +181,7 @@ struct pscrpc_import {
 		                  imp_deactive:1,
 		                  imp_replayable:1,
 		                  imp_force_verify:1,
+		                  imp_igntimeout:1,
 		                  imp_failed:1;
 #if 0
 	unsigned int              imp_invalid:1, imp_replayable:1,
@@ -265,6 +267,12 @@ struct pscrpc_reply_state;
 struct pscrpc_request_buffer_desc;
 struct pscrpc_nbrequests;
 
+struct rpc_peer_qlen {
+	atomic_t		 qlen;
+	lnet_process_id_t	 id;
+	struct hash_entry	 hentry;
+};
+
 struct pscrpc_request {
 	int rq_type;
 	int rq_status;
@@ -319,6 +327,7 @@ struct pscrpc_request {
 	struct timeval              rq_arrival_time; /* request arrival time */
 	struct pscrpc_reply_state  *rq_reply_state;  /* separated reply state */
 	struct pscrpc_request_buffer_desc *rq_rqbd;  /* incoming req  buffer*/
+	struct rpc_peer_qlen	   *rq_peer_qlen;
 };
 
 /* Each service installs its own request handler */
@@ -342,6 +351,7 @@ struct pscrpc_service {
 	int srv_n_history_rqbds;   /* # request buffers in history */
 	int srv_max_history_rqbds; /* max # request buffers in history */
 	int srv_nbufs;             /* total # req buffer descs allocated */
+	int srv_count_peer_qlens:1;
 	u32 srv_req_portal;
 	u32 srv_rep_portal;
 	u64 srv_request_seq;       /* next request sequence # */
@@ -362,6 +372,8 @@ struct pscrpc_service {
 					* wait-queue is signalled when new
 					* incoming request arrives and when
 					* difficult reply has to be handled. */
+	struct hash_table srv_peer_qlentab;
+
 	psc_spinlock_t srv_lock;
 	svc_handler_t  srv_handler;
 	char          *srv_name;  /* only statically allocated strings here,

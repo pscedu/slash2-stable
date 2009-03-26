@@ -25,10 +25,13 @@ struct pscrpc_svc_handle {
 	int			  svh_req_portal;
 	int			  svh_rep_portal;
 	int			  svh_type;
+	int			  svh_flags;
 	char			  svh_svc_name[PSCRPC_SVCNAME_MAX];
 };
 
 typedef struct pscrpc_svc_handle pscrpc_svc_handle_t;
+
+#define PSCRPC_SVCF_COUNT_PEER_QLENS	(1 << 0)
 
 struct pscrpc_thread {
 	struct pscrpc_service	*prt_svc;
