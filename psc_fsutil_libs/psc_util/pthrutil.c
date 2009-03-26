@@ -28,3 +28,13 @@ psc_pthread_mutex_init(pthread_mutex_t *mut)
 	if (rc)
 		psc_fatalx("pthread_mutex_init: %s", strerror(rc));
 }
+
+void
+psc_pthread_mutex_lock(pthread_mutex_t *mut)
+{
+	int rc;
+
+	rc = pthread_mutex_lock(mut);
+	if (rc)
+		psc_fatalx("pthread_mutex_lock: %s", strerror(rc));
+}
