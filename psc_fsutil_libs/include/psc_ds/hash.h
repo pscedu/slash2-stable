@@ -104,6 +104,9 @@ struct hash_entry *_hashbkt_search(const struct hash_table *,
 struct hash_entry * get_hash_entry(const struct hash_table *, u64, const void *, void (*)(void *));
 struct hash_entry_str * get_hash_entry_str(const struct hash_table *, const char *);
 
+void hashbkt_del_entry(struct hash_bucket *, struct hash_entry *);
+void hashbkt_add_entry(struct hash_bucket *, struct hash_entry *);
+
 void *del_hash_entry(const struct hash_table *, u64);
 void *del_hash_entry_str(const struct hash_table *, const char *);
 void add_hash_entry(const struct hash_table *, struct hash_entry *);
@@ -116,6 +119,7 @@ void init_hash_table(struct hash_table *, int, const char *, ...);
 void spinlock_hash_bucket(const struct hash_table *, u64);
 void freelock_hash_bucket(const struct hash_table *, u64);
 
+/* XXX use a lockedlist */
 extern struct psclist_head hashTablesList;
 extern psc_spinlock_t hashTablesListLock;
 
