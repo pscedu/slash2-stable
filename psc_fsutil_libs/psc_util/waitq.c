@@ -55,7 +55,9 @@ psc_waitq_init(struct psc_waitq *q)
  * @q: the wait queue to wait on.
  * @k: optional lock needed to protect the list.
  * @reltime: amount of time to wait for.
- * Notes: returns ETIMEDOUT if the resource has not become available.
+ * Note: returns ETIMEDOUT if the resource has not become available.
+ * Note: this code could be merged with waitrel() but we try to make
+ *	the timing calculations accurate.
  */
 int
 psc_waitq_waitabs(struct psc_waitq *q, psc_spinlock_t *k,
@@ -123,6 +125,16 @@ psc_waitq_waitrel(struct psc_waitq *q, psc_spinlock_t *k,
 	return (rv);
 }
 
+__inline int
+_psc_waitq_waitrelv(struct psc_waitq *wq, psc_spinlock_t *lk, long s, long ns)
+{
+	struct timespec ts;
+
+	ts.tv_sec = s;
+	ts.tv_nsec = ns;
+	return (psc_waitq_waitrel(wq, lk, &ts));
+}
+
 /*
  * psc_waitq_wakeone - unblock one waiting thread.
  * @q: wait queue to operate on.
@@ -176,7 +188,7 @@ psc_waitq_waitrel(__unusedx struct psc_waitq *q,
     __unusedx psc_spinlock_t *k,
     __unusedx const struct timespec *reltime)
 {
-	psc_fatalx("waitqs not supported");
+	psc_fatalx("wait will sleep forever, single threaded");
 }
 
 int
@@ -184,19 +196,17 @@ psc_waitq_waitabs(__unusedx struct psc_waitq *q,
     __unusedx psc_spinlock_t *k,
     __unusedx const struct timespec *abstime)
 {
-	psc_fatalx("waitqs not supported");
+	psc_fatalx("wait will sleep forever, single threaded");
 }
 
 void
 psc_waitq_wakeone(__unusedx struct psc_waitq *q)
 {
-	psc_fatalx("waitqs not supported");
 }
 
 void
 psc_waitq_wakeall(__unusedx struct psc_waitq *q)
 {
-	psc_fatalx("waitqs not supported");
 }
 
 #endif /* HAVE_LIBPTHREAD */
