@@ -13,13 +13,22 @@
 #include "psc_util/log.h"
 #include "psc_util/waitq.h"
 
-#define PSC_THRNAME_MAX	16	/* must be 8-byte aligned */
+#define PSC_THRNAME_MAX	32	/* must be 8-byte aligned */
 
 struct psc_thread {
 	struct psclist_head	   pscthr_lentry;		/* list management */
 	psc_spinlock_t		   pscthr_lock;			/* for mutex */
 	pthread_t		   pscthr_pthread;		/* pthread_self() */
 	pid_t			   pscthr_thrid;		/* gettid(2) */
+
+#if 0
+	/*
+	 * XXX: If we modify fuse to invoke an application callback to
+	 * create a new thread, we can utilize this new field to track
+	 * threads by spawn index for use in gdb.
+	 */
+	int			   pscthr_index;		/* spawn timeline */
+#endif
 
 	void			*(*pscthr_startf)(void *);	/* thread main */
 	void			 (*pscthr_dtor)(void *);	/* custom destructor */
