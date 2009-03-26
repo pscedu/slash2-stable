@@ -29,4 +29,7 @@ struct psc_listguts {
 	ptrdiff_t		plg_offset;		/* psclist_head entry obj offset */
 };
 
+#define listguts_for_each(p, lg)					\
+	psclist_for_each_entry2((p), &(lg)->plg_listhd, (lg)->plg_offset)
+
 #endif /* _PFL_LISTGUTS_H_ */
