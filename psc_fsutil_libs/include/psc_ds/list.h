@@ -249,8 +249,8 @@ psclist_splice(struct psclist_head *list, struct psclist_head *head)
  * @type: entry type.
  * @memb: list_head member name in entry structure.
  */
-#define psclist_next_entry(hd, p, type, memb)			\
-	_psclist_next_entry((hd), (p), offset(type, memb), 0)
+#define psclist_next_entry(hd, p, memb)				\
+	_psclist_next_entry((hd), (p), offsetof(typeof(*(p)), memb), 0)
 
 static __inline void *
 _psclist_next_entry(struct psclist_head *hd, void *p,
@@ -286,8 +286,8 @@ _psclist_next_entry(struct psclist_head *hd, void *p,
  * @type: entry type.
  * @memb: list_head member name in entry structure.
  */
-#define psclist_prev_entry(hd, p, type, memb)			\
-	_psclist_next_entry((hd), (p), offsetof(type, memb), 1)
+#define psclist_prev_entry(hd, p, memb)				\
+	_psclist_next_entry((hd), (p), offsetof(typeof(*(p)), memb), 1)
 
 /**
  * psclist_for_each_entry_safe - iterate over list of given type safe
