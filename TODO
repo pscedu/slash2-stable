@@ -25,7 +25,7 @@ pfl
   allowing app-specific callbacks (e.g. %r for zest clients)
 - move iostat thr and interval thr here
 - rename dynarray_hintlen -> dynarray_ensurelen
-- create a refcnt manager for thread-safe activity
+- create a generic refcnt manager for thread-safe activity
 - consider adding a new keyword __local or something for thread-localized memory.
 - add a pscthr_get() check in pscalloc and test
 - psclog format specifier: timestamp difference
@@ -69,12 +69,15 @@ zest
 - zest user command to tag a file sync disregard
 - new pull model for zest server to client:
   server RPCIO threads issue GETs to connected mount_zests
+    (o) need some way to "multilock" on multiple requests sent
+        to different clients
 - when mount_zest is idle, have it merge dirty zcf zsb channels
 - ensure libzestclient is not paritying over partial buffers
 - investigate libgru for NUMA memory staging
 - when ppm_total is set less than lc_size for !PPMF_AUTO, set
   ppm_max and check this value in other places to eventually
   decrease pool size
+- move typedump to utils
 
 development tool
 - let wiki changes automatically email zest-devel@ like svn commits
