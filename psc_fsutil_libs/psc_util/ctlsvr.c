@@ -1304,19 +1304,21 @@ psc_ctlthr_service(int fd, const struct psc_ctlop *ct, int nops)
 		}
 
  again:
-		n = recv(fd, m, mh.mh_size, MSG_WAITALL | MSG_NOSIGNAL);
-		if (n == -1) {
-			if (errno == EPIPE)
+		if (mh.mh_size) {
+			n = recv(fd, m, mh.mh_size, MSG_WAITALL | MSG_NOSIGNAL);
+			if (n == -1) {
+				if (errno == EPIPE)
+					break;
+				if (errno == EINTR)
+					goto again;
+				psc_fatal("recv");
+			}
+			if ((size_t)n != mh.mh_size) {
+				psc_warn("short recv on psc_ctlmsg contents; "
+				    "got=%zu; expected=%zu",
+				    n, mh.mh_size);
 				break;
-			if (errno == EINTR)
-				goto again;
-			psc_fatal("recv");
-		}
-		if ((size_t)n != mh.mh_size) {
-			psc_warn("short recv on psc_ctlmsg contents; "
-			    "got=%zu; expected=%zu",
-			    n, mh.mh_size);
-			break;
+			}
 		}
 		if (mh.mh_type < 0 ||
 		    mh.mh_type >= nops ||
