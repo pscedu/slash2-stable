@@ -129,6 +129,8 @@ struct psc_poolmgr {
 
 #define psc_poolmaster_getmgr(p)	_psc_poolmaster_getmgr((p), psc_memnode_getid())
 
+#define psc_pool_tryget(p)		lc_getnb(&(p)->ppm_lc)
+
 #define psc_pool_shrink(m, i)		_psc_pool_shrink((m), (i), 0)
 #define psc_pool_tryshrink(m, i)	_psc_pool_shrink((m), (i), 1)
 
