@@ -67,6 +67,8 @@ zest
   (2) extended attribute use obviously cannot be implemented
   (3) try to support ../ paths that access other dirs/files
 - zest user command to tag a file sync disregard
+  rm(1) (link count reaches zero of file in fid namespace) won't do
+  because there could still be open fd's to it
 - new pull model for zest server to client:
   server RPCIO threads issue GETs to connected mount_zests
     (o) need some way to "multilock" on multiple requests sent
