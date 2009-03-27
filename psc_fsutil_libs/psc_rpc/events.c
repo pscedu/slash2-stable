@@ -49,6 +49,14 @@ void request_out_callback(lnet_event_t *ev)
         EXIT;
 }
 
+void
+pscrpc_bump_peer_qlen(void *arg)
+{
+	struct rpc_peer_qlen *pq = arg;
+
+	atomic_inc(&pq->qlen);
+}
+
 /*
  * Server's incoming request callback
  */
@@ -155,11 +163,12 @@ void request_in_callback(lnet_event_t *ev)
 		struct hash_entry *hent;
 
 		hent = get_hash_entry(&service->srv_peer_qlentab,
-		    req->rq_peer.nid, &req->rq_peer, NULL);
+		    req->rq_peer.nid, &req->rq_peer, pscrpc_bump_peer_qlen);
 		if (hent == NULL) {
 			struct hash_bucket *hb;
 
 			pq = PSCALLOC(sizeof(*pq));
+			atomic_set(&pq->qlen, 1);
 			pq->id = req->rq_peer;
 			init_hash_entry(&pq->hentry, &pq->id.nid, pq);
 
@@ -178,7 +187,6 @@ void request_in_callback(lnet_event_t *ev)
 			free(pq);
 		}
 		pq = hent->private;
-		atomic_inc(&pq->qlen);
 		req->rq_peer_qlen = pq;
 	}
 
