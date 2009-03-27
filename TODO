@@ -80,6 +80,7 @@ zest
   ppm_max and check this value in other places to eventually
   decrease pool size
 - move typedump to utils
+- zestThread.h has no business being shared by all things in zestland
 
 development tool
 - let wiki changes automatically email zest-devel@ like svn commits
