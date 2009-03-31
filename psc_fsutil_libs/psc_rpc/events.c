@@ -181,6 +181,11 @@ void request_in_callback(lnet_event_t *ev)
 				hashbkt_add_entry(hb, &pq->hentry);
 				hent = &pq->hentry;
 				pq = NULL;
+			} else {
+				struct rpc_peer_qlen *pqt;
+
+				pqt = hent->private;
+				atomic_inc(&pqt->qlen);
 			}
 			hashbkt_unlock(hb);
 
