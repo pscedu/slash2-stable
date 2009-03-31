@@ -105,6 +105,8 @@ struct psc_ctlmsg_pool {
 	int32_t			pcpl_thres;
 	int32_t			pcpl_nw_want;
 	int32_t			pcpl_nw_empty;
+	uint64_t		pcpl_ngrow;
+	uint64_t		pcpl_nshrink;
 	uint64_t		pcpl_nseen;
 	char			pcpl_name[PLG_NAME_MAX];
 };

@@ -412,7 +412,7 @@ psc_ctlmsg_iostats_prhdr(__unusedx struct psc_ctlmsghdr *mh,
     __unusedx const void *m)
 {
 	printf("iostats\n");
-	return (printf(" %-30s %9s %8s %8s %8s\n",
+	return (printf(" %-37s %10s %12s %8s %8s\n",
 	    "name", "ratecur", "total", "erate", "#err"));
 }
 
@@ -424,16 +424,16 @@ psc_ctlmsg_iostats_prdat(__unusedx const struct psc_ctlmsghdr *mh,
 	const struct iostats *ist = &pci->pci_ist;
 	char buf[PSCFMT_HUMAN_BUFSIZ];
 
-	printf(" %-30s ", ist->ist_name);
+	printf(" %-37s ", ist->ist_name);
 	if (psc_ctl_inhuman) {
-		printf("%8.2f ", ist->ist_rate);
-		printf("%8"PRIu64" ", ist->ist_bytes_total);
+		printf("%10.2f ", ist->ist_rate);
+		printf("%12"PRIu64" ", ist->ist_bytes_total);
 	} else {
 		psc_fmt_human(buf, ist->ist_rate);
-		printf("%7s/s ", buf);
+		printf("%8s/s ", buf);
 
 		psc_fmt_human(buf, ist->ist_bytes_total);
-		printf("%8s ", buf);
+		printf("%12s ", buf);
 	}
 	printf("%6.1f/s %8"PRIu64"\n", ist->ist_erate,
 	    ist->ist_errors_total);
@@ -480,11 +480,14 @@ psc_ctlmsg_pool_prhdr(__unusedx struct psc_ctlmsghdr *mh,
     __unusedx const void *m)
 {
 	printf("pools\n");
-	return (printf(" %-18s %5s %7s %7s "
-	    "%6s %7s %7s %5s %2s %2s\n",
-	    "name", "flags", "free", "total",
-	    "%use", "min", "max", "thres", "#e", "#w"));
-	/* XXX add nseen */
+	return (printf(
+	    " %-8s %3s %6s %6s %6s "
+	    "%6s %6s %6s %2s "
+	    "%6s %6s %3s %3s\n",
+	    "name", "flg", "#free", "#use", "total",
+	    "%use", "min", "max", "th",
+	    "#grow", "#shrnk", "#em", "#wa"));
+	/* XXX add ngets and waiting/sleep time */
 }
 
 void
@@ -496,25 +499,37 @@ psc_ctlmsg_pool_prdat(__unusedx const struct psc_ctlmsghdr *mh,
 
 	psc_fmt_ratio(rbuf, pcpl->pcpl_total - pcpl->pcpl_free,
 	    pcpl->pcpl_total);
-	printf(" %-18s   %c%c%c %7d %7d %6s", pcpl->pcpl_name,
+	printf(
+	    " %-8s %c%c%c "
+	    "%6d %6d "
+	    "%6d %6s",
+	    pcpl->pcpl_name,
 	    pcpl->pcpl_flags & PPMF_AUTO ? 'A' : '-',
 	    pcpl->pcpl_flags & PPMF_NOLOCK ? 'N' : '-',
 	    pcpl->pcpl_flags & PPMF_MLIST ? 'M' : '-',
-	    pcpl->pcpl_free, pcpl->pcpl_total, rbuf);
+	    pcpl->pcpl_free, pcpl->pcpl_total - pcpl->pcpl_free,
+	    pcpl->pcpl_total, rbuf);
 	if (pcpl->pcpl_flags & PPMF_AUTO) {
-		printf(" %7d ", pcpl->pcpl_min);
+		printf(" %6d ", pcpl->pcpl_min);
 		if (pcpl->pcpl_max)
-			printf("%7d", pcpl->pcpl_max);
+			printf("%6d", pcpl->pcpl_max);
 		else
-			printf("%7s", "<inf>");
-		printf(" %5d", pcpl->pcpl_thres);
+			printf("%6s", "<inf>");
+		printf(" %2d", pcpl->pcpl_thres);
 	} else
-		printf(" %7s %7s %5s", "<n/a>", "<n/a>", "<n/a>");
-	printf(" %2d", pcpl->pcpl_nw_empty);
-	if (pcpl->pcpl_flags & PPMF_MLIST)
-		printf("  -");
+		printf(" %6s %6s %2s", "-", "-", "-");
+
+	if (pcpl->pcpl_flags & PPMF_AUTO)
+		printf(" %6zu %6zu", pcpl->pcpl_ngrow,
+		    pcpl->pcpl_nshrink);
 	else
-		printf(" %2d", pcpl->pcpl_nw_want);
+		printf(" %6s %6s", "-", "-");
+
+	printf(" %3d", pcpl->pcpl_nw_empty);
+	if (pcpl->pcpl_flags & PPMF_MLIST)
+		printf("   -");
+	else
+		printf(" %3d", pcpl->pcpl_nw_want);
 	printf("\n");
 }
 
@@ -523,8 +538,8 @@ psc_ctlmsg_lc_prhdr(__unusedx struct psc_ctlmsghdr *mh,
     __unusedx const void *m)
 {
 	printf("list caches\n");
-	return (printf(" %-25s %6s %5s %5s %6s %8s\n",
-	    "name", "size", "flags", "#want", "#empty", "#seen"));
+	return (printf(" %-42s %3s %8s %3s %3s %15s\n",
+	    "name", "flg", "#items", "#wa", "#em", "#seen"));
 }
 
 void
@@ -533,9 +548,12 @@ psc_ctlmsg_lc_prdat(__unusedx const struct psc_ctlmsghdr *mh,
 {
 	const struct psc_ctlmsg_lc *pclc = m;
 
-	printf(" %-25s %6zu     %c %5d %6d %8zu\n",
-	    pclc->pclc_name, pclc->pclc_size,
+	printf(
+	    " %-42s   %c "
+	    "%8zu %3d %3d %15zu\n",
+	    pclc->pclc_name,
 	    pclc->pclc_flags & PLCF_DYING ? 'D' : '-',
+	    pclc->pclc_size,
 	    pclc->pclc_nw_want, pclc->pclc_nw_empty,
 	    pclc->pclc_nseen);
 }
@@ -668,8 +686,8 @@ psc_ctlmsg_mlist_prhdr(__unusedx struct psc_ctlmsghdr *mh,
     __unusedx const void *m)
 {
 	printf("mlists\n");
-	return (printf(" %-25s %6s %6s %12s\n",
-	    "name", "size", "#empty", "#seen"));
+	return (printf(" %-50s %8s %3s %15s\n",
+	    "name", "#items", "#em", "#seen"));
 }
 
 void
@@ -678,7 +696,7 @@ psc_ctlmsg_mlist_prdat(__unusedx const struct psc_ctlmsghdr *mh,
 {
 	const struct psc_ctlmsg_mlist *pcml = m;
 
-	printf(" %-25s %6d %6d %12"PRIu64"\n",
+	printf(" %-50s %8d %3d %15"PRIu64"\n",
 	    pcml->pcml_name, pcml->pcml_size,
 	    pcml->pcml_waitors, pcml->pcml_nseen);
 }

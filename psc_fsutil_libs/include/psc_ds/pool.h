@@ -78,6 +78,8 @@ struct psc_poolmgr {
 	int			  ppm_max;		/* max bound of #items */
 	int			  ppm_thres;		/* autoresize threshold */
 	int			  ppm_flags;		/* flags */
+	uint64_t		  ppm_ngrow;		/* #allocs */
+	uint64_t		  ppm_nshrink;		/* #deallocs */
 
 	/* routines to initialize, teardown, & reclaim pool entries */
 	int			(*ppm_initf)(struct psc_poolmgr *, void *);

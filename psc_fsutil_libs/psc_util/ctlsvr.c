@@ -411,6 +411,8 @@ psc_ctlrep_getpool(int fd, struct psc_ctlmsghdr *mh, void *msg)
 			pcpl->pcpl_flags = m->ppm_flags;
 			pcpl->pcpl_thres = m->ppm_thres;
 			pcpl->pcpl_nseen = m->ppm_lg.plg_nseen;
+			pcpl->pcpl_ngrown = m->ppm_ngrow;
+			pcpl->pcpl_nshrink = m->ppm_nshrink;
 			if (POOL_IS_MLIST(m)) {
 				pcpl->pcpl_free = psc_mlist_size(&m->ppm_ml);
 				pcpl->pcpl_nw_empty = multilock_cond_nwaitors(

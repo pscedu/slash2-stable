@@ -209,6 +209,7 @@ psc_pool_grow(struct psc_poolmgr *m, int n)
 		if (m->ppm_total < m->ppm_max ||
 		    m->ppm_max == 0) {
 			m->ppm_total++;
+			m->ppm_ngrow++;
 			if (POOL_IS_MLIST(m))
 				psc_mlist_add(&m->ppm_ml, p);
 			else
@@ -265,6 +266,7 @@ _psc_pool_shrink(struct psc_poolmgr *m, int n, int failok)
 				psc_fatalx("psc_pool_shrink: no free "
 				    "items available to remove");
 			m->ppm_total--;
+			m->ppm_nshrink++;
 		} else
 			p = NULL;
 		POOL_URLOCK(m, locked);
