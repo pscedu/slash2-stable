@@ -32,4 +32,15 @@ struct psc_listguts {
 #define listguts_for_each(p, lg)					\
 	psclist_for_each_entry2((p), &(lg)->plg_listhd, (lg)->plg_offset)
 
+static inline int
+psclg_size(struct psc_listguts *plg)
+{
+	int locked, n;
+
+	locked = reqlock(&plg->plg_lock);
+	n = plg->plg_size;
+	ureqlock(&plg->plg_lock, locked);
+	return (n);
+}
+
 #endif /* _PFL_LISTGUTS_H_ */
