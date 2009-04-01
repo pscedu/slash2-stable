@@ -1069,7 +1069,7 @@ _pscrpc_thread_spawn(pscrpc_svc_handle_t *svh, size_t siz)
 	for (i = 0; i < svh->svh_nthreads; i++) {
 		thr = pscthr_init(svh->svh_type, 0,
 		    pscrpcthr_begin, NULL, siz,
-		    "%sthr%d", svh->svh_svc_name, i);
+		    "%sthr%02d", svh->svh_svc_name, i);
 		svh->svh_threads[i] = thr;
 		prt = thr->pscthr_private;
 		prt->prt_svc = svh->svh_service;
