@@ -633,6 +633,19 @@ psc_atomic16_setmask_ret(psc_atomic16_t *v, int16_t mask)
 	return (oldval);
 }
 
+static inline int16_t
+psc_atomic16_testmaskset(psc_atomic16_t *v, int16_t mask, int16_t newval)
+{
+	int16_t oldval;
+
+	oldval = psc_atomic16_read(v);
+	if (oldval & mask)
+		return (0);
+	if (psc_atomic16_cmpxchg(v, oldval, newval) != oldval)
+		return (0);
+	return (1);
+}
+
 static __inline int64_t
 psc_atomic64_set_mask(int64_t mask, psc_atomic64_t *v)
 {
