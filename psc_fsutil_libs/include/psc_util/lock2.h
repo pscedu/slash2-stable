@@ -6,13 +6,17 @@
  * them.
  */
 
-#ifndef _PFL_LOCK_H_
-#define _PFL_LOCK_H_
+#ifndef _PFL_LOCK2_H_
+#define _PFL_LOCK2_H_
 
 #define PSL_MAGIC
 
 #include <sched.h>
 #include <time.h>
+
+#include "psc_util/atomic.h"
+#include "psc_util/log.h"
+#include "psc_util/thread.h"
 
 struct psc_spinlock {
 	psc_atomic16_t	psl_value;
@@ -74,7 +78,7 @@ psc_spin_trylock(struct psc_spinlock *psl)
 {
 	int16_t oldval;
 
-	PSL_MAGIC_CHECK();
+	PSL_MAGIC_CHECK(psl);
 	oldval = psc_atomic16_setmask_ret(&psl->psl_value, PSL_LOCKMASK);
 	if (oldval & PSL_LOCKMASK) {
 		if ((oldval & PSL_OWNERMASK) == pscthr_gettid())
@@ -142,4 +146,4 @@ psc_spin_tryreqlock(struct psc_spinlock *psl, int *locked)
 			psc_spin_unlock(psl);				\
 	} while (0)
 
-#endif /* _PFL_LOCK_H_ */
+#endif /* _PFL_LOCK2_H_ */
