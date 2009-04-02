@@ -628,17 +628,18 @@ do_io(IOT_t *iot, int op)
 		if (clk_type == WRITE_clk)
 			SWABBUFFER(&iot->bdesc);
 
-		/*
-		 * need to handle all the return code
-		 *  cases here (ie partial reads)
-		 */
-		if (clk_type == WRITE_clk)
-			rc = write(iot->myfd, iot->bdesc.buffer,
-			    iot->bdesc.buffer_size);
-
-		else
-			rc = read(iot->myfd, iot->bdesc.buffer,
-			    iot->bdesc.buffer_size);
+		do {
+			/*
+			 * need to handle all the return code
+			 *  cases here (ie partial reads)
+			 */
+			if (clk_type == WRITE_clk)
+				rc = write(iot->myfd, iot->bdesc.buffer,
+				    iot->bdesc.buffer_size); 
+			else
+				rc = read(iot->myfd, iot->bdesc.buffer,
+				    iot->bdesc.buffer_size);
+		} while (rc == -1 && errno == EINTR); 
 
 		DEBUG(D_BLOCK, "IO to fd %d rc == %d\n",
 		iot->myfd, rc);
