@@ -219,9 +219,11 @@ psc_atomic64_set_mask(uint64_t mask, psc_atomic64_t *v)
  */
 typedef struct { volatile int counter; } atomic_t;
 typedef struct { volatile int64_t counter; } psc_atomic64_t;
+typedef struct { volatile int32_t value; } psc_atomic16_t;
 
 #define ATOMIC_INIT(i)			{ (i) }
 #define PSC_ATOMIC64_INIT(i)		{ (i) }
+#define PSC_ATOMIC16_INIT(i)		{ (i) }
 
 /**
  * atomic_read - read atomic variable
@@ -231,6 +233,7 @@ typedef struct { volatile int64_t counter; } psc_atomic64_t;
  */
 #define atomic_read(v)			((v)->counter)
 #define psc_atomic64_read(v)		((v)->counter)
+#define psc_atomic16_read(v)		((v)->value)
 
 /**
  * atomic_set - set atomic variable
@@ -241,6 +244,7 @@ typedef struct { volatile int64_t counter; } psc_atomic64_t;
  */
 #define atomic_set(v, i)		(((v)->counter) = (i))
 #define psc_atomic64_set(v, i)		(((v)->counter) = (i))
+#define psc_atomic16_set(v, i)		(((v)->value) = (i))
 
 /**
  * atomic_add - add integer to atomic variable
@@ -574,6 +578,8 @@ psc_atomic64_add_return(int64_t i, psc_atomic64_t *v)
 #define atomic_cmpxchg(v, old, new)	((int)cmpxchg(&((v)->counter), (old), (new)))
 #define atomic_xchg(v, new)		(xchg(&((v)->counter), (new)))
 
+#define psc_atomic16_cmpxchg(v, old, new)	((int16_t)cmpxchg(&((v)->value), (old), (new)))
+
 /**
  * atomic_add_unless - add unless the number is a given value
  * @v: pointer of type atomic_t
@@ -614,6 +620,18 @@ psc_atomic64_add_return(int64_t i, psc_atomic64_t *v)
 		LOCK_PREFIX "orl %0,%1"				\
 		: : "r" (mask),					\
 		    "m" (*(addr)) : "memory")
+
+static inline int16_t
+psc_atomic16_setmask_ret(psc_atomic16_t *v, int16_t mask)
+{
+	int16_t oldval, newval;
+
+	do {
+		oldval = psc_atomic16_read(v);
+		newval = oldval | mask;
+	} while (psc_atomic16_cmpxchg(v, oldval, newval) != oldval);
+	return (oldval);
+}
 
 static __inline int64_t
 psc_atomic64_set_mask(int64_t mask, psc_atomic64_t *v)
