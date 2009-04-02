@@ -67,6 +67,8 @@ label(struct psc_thread *pt)						\
 	_pscthr_init((thrtype), (flags), (startf), (dtor), (privsiz),	\
 	    -1, (namefmt), ## __VA_ARGS__)
 
+#define pscthr_gettid()	pscthr_get()->pscthr_thrid
+
 void	pscthr_setpause(struct psc_thread *, int);
 void	pscthr_setready(struct psc_thread *);
 void	pscthr_setrun(struct psc_thread *, int);
