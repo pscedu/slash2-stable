@@ -2,8 +2,8 @@
 
 include ../Makefile.path
 
-PROG=		lock
-SRCS=		lock.c
+PROG=		lock2
+SRCS=		lock2.c
 SRCS+=		${PFL_BASE}/psc_ds/dynarray.c
 SRCS+=		${PFL_BASE}/psc_util/alloc.c
 SRCS+=		${PFL_BASE}/psc_util/init.c

@@ -15,13 +15,13 @@
 #include "psc_util/alloc.h"
 #include "psc_util/atomic.h"
 #include "psc_util/cdefs.h"
-#include "psc_util/lock.h"
+#include "psc_util/lock2.h"
 #include "psc_util/thread.h"
 
 #define STARTWATCH(t) gettimeofday(&(t)[0], NULL)
 #define STOPWATCH(t)  gettimeofday(&(t)[1], NULL)
 
-psc_spinlock_t lock = LOCK_INITIALIZER;
+struct psc_spinlock lock = PSL_LOCK_INIT;
 atomic_t idx = ATOMIC_INIT(0);
 atomic_t nworkers = ATOMIC_INIT(0);
 int nthrs = 32;
@@ -44,10 +44,10 @@ thr_main(__unusedx void *arg)
 	int *p, i;
 
 	for (i = 0, p = buf; i < nruns; i++, p++) {
-		spinlock(&lock);
+		psc_spin_lock(&lock);
 		atomic_inc(&idx);
 		*p = i;
-		freelock(&lock);
+		psc_spin_unlock(&lock);
 		usleep(1);
 	}
 	atomic_dec(&nworkers);
