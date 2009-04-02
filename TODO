@@ -8,22 +8,20 @@ general reminders
 - check all bulkserver()'s for free_desc()
 - sweep tree for \b0[0-9] and fix bad permissions (711 -> 700 - slash?)
 - ctlapi GETTREE?
-- zap _P_U64
-- use the standard C library uint64_t type
+- zap _P_U64, u64, u32, u16, u8
 - investigate pthread_rwlocks for things like trees and large lists
 - watch out for "a - b" in cmp functions overflowing
 - investigate if our sched_yield() calls are correct
+- watch out for lock reinitialization (i.e. LOCK_INIT twice)
+- minimize ifdef's in pfl
 
 slash
 - piggyback small readdirs directly into READDIR replies
 
 pfl
-- no ifdefs
 - pfl: use "psc_" prefix and "_mt" (multithread-safe) postfix
-- watch out for lock reinitialization (i.e. LOCK_INIT twice)
 - for psclog(), add extensibility mechanism for fmtstr,
   allowing app-specific callbacks (e.g. %r for zest clients)
-- move iostat thr and interval thr here
 - rename dynarray_hintlen -> dynarray_ensurelen
 - create a generic refcnt manager for thread-safe activity
 - consider adding a new keyword __local or something for thread-localized memory.
