@@ -237,18 +237,23 @@ vbitmap_next(struct vbitmap *vb, size_t *elem)
 	pos = start = vb->vb_pos;
 	do {
 		/* Check if byte is completely full. */
-		if (*pos != 0xff)
-			goto found;
-
-		/* Byte is full, advance. */
-		if (pos == vb->vb_end)
-			pos = vb->vb_start;
-		else
-			pos++;
+		if (pos == vb->vb_end) {
+			if (vb->vb_lastsize == NBBY) {
+				if (*pos != 0xff)
+					goto found;
+			} else if (*pos != ~(char)(0x100 -
+			    (1 << vb->vb_lastsize)))
+				goto found;
+			pos = vb->vb_start;	/* byte is full, advance */
+		} else {
+			if (*pos != 0xff)
+				goto found;
+			pos++;			/* byte is full, advance */
+		}
 	} while (pos != start);
 	return (0);
 
-found:
+ found:
 	/* We now have a byte from the bitmap that has a zero. */
 	vb->vb_pos = pos;
 	bytepos = ffs(~*pos) - 1;
