@@ -486,7 +486,7 @@ psc_ctlmsg_pool_prhdr(__unusedx struct psc_ctlmsghdr *mh,
 	    "%6s %6s %3s %3s\n",
 	    "name", "flg", "#free", "#use", "total",
 	    "%use", "min", "max", "th",
-	    "#grow", "#shrnk", "#em", "#wa"));
+	    "#grows", "#shrnk", "#em", "#wa"));
 	/* XXX add ngets and waiting/sleep time */
 }
 

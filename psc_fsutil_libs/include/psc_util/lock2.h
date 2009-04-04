@@ -64,7 +64,7 @@ struct psc_spinlock {
 		if ((_v & PSL_OWNERMASK) != pscthr_gettid())		\
 			psc_fatalx("freelock: not owner "		\
 			    "(%p, owner=%d, self=%d)!",	(psl),		\
-			    (_v & PSL_OWNERMASK), pscthr_gettid());	\
+			    _v & PSL_OWNERMASK, pscthr_gettid());	\
 	} while (0)
 
 #define psc_spin_unlock(psl)						\
