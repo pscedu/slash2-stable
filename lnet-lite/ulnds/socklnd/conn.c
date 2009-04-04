@@ -867,6 +867,7 @@ usocklnd_find_or_create_conn(usock_peer_t *peer, int type,
                 conn = peer->up_conns[idx];
                 LASSERT(conn->uc_type == type);
         } else {
+#if 0
                 if (userflag) {
                         CERROR("Refusing to create a connection to "
                                "userspace process %s\n",
@@ -874,6 +875,7 @@ usocklnd_find_or_create_conn(usock_peer_t *peer, int type,
                         rc = -EHOSTUNREACH;
                         goto find_or_create_conn_failed;
                 }
+#endif
                 
                 rc = usocklnd_create_active_conn(peer, type, &conn);
                 if (rc) {
