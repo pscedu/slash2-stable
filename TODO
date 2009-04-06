@@ -1,7 +1,3 @@
-make
-- rename ROOTDIR -> PROJ_BASE
-- introduce APP_BASE
-
 general reminders
 - watch out for sizeof(type var[0])
 - constify RPC replies in clients and requests in servers
@@ -14,9 +10,18 @@ general reminders
 - investigate if our sched_yield() calls are correct
 - watch out for lock reinitialization (i.e. LOCK_INIT twice)
 - minimize ifdef's in pfl
+- remove XXX comments
+- keep "make build > /dev/null" clean
+- check memset() for bad sizes sizeof(pg) vs. sizeof(*pg)
+- watch for realloc(p, 0) returning NULL being okay
+
+make
+- rename ROOTDIR -> PROJ_BASE
+- introduce APP_BASE
 
 slash
 - piggyback small readdirs directly into READDIR replies
+- implement READDIRPLUS with basic stat(2) info for each dirent
 
 pfl
 - pfl: use "psc_" prefix and "_mt" (multithread-safe) postfix
@@ -33,6 +38,7 @@ pfl
   inspect remote port to determine "authorization"
 - add a check to ensure hash table size is not a direct power of two
 - rename stree to vtree (variable number of children per branch)
+- phase out hash1
 
 zest
 - test parity reconstruction service by rebuilding
@@ -42,7 +48,6 @@ zest
 - investigate size of block addressing types causing
   unreasonable limits on maximum file system size, perhaps
   during file system creation time (hopefully only)
-- fsck service is currently badly broken
 - research faster CRC operations
 - make a proper solution when running out of parity groups
   when servicing clients.  possible solution:
@@ -66,7 +71,7 @@ zest
   (3) try to support ../ paths that access other dirs/files
 - zest user command to tag a file sync disregard
   rm(1) (link count reaches zero of file in fid namespace) won't do
-  because there could still be open fd's to it
+  because there could still be open fd's to it, built into zsyncmgt
 - new pull model for zest server to client:
   server RPCIO threads issue GETs to connected mount_zests
     (o) need some way to "multilock" on multiple requests sent
