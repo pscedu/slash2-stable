@@ -25,18 +25,26 @@ ifeq ($(wildcard /usr/src/kernels/linux),)
  else
   ifeq ($(wildcard /opt/sgi),)
    # on xt3
-   SRCS+=		${PFL_BASE}/compat/posix_memalign.c
-   DEFINES+=		-DHOST_NAME_MAX=MAXHOSTNAMELEN
    KERNEL_BASE=		/usr/src/kernel.2.6-ss-lustre26
   else
    # on altix
    KERNEL_BASE=		/usr/src/linux
-   DEFINES+=		-DCONFIG_NR_CPUS=2 -D_GNU_SOURCE -DHAVE_NUMA
-   NUMA_LIBS=		-lcpuset -lbitmask -lnuma
   endif
  endif
 else
  KERNEL_BASE=		/usr/src/kernels/linux
+endif
+
+ifneq ($(wildcard /opt/sgi),)
+ # on altix
+ DEFINES+=		-DCONFIG_NR_CPUS=2 -D_GNU_SOURCE -DHAVE_NUMA
+ NUMA_LIBS=		-lcpuset -lbitmask -lnuma
+else
+
+ifneq ($(wildcard /opt/xt-pe),)
+ # on xt3
+ SRCS+=			${PFL_BASE}/compat/posix_memalign.c
+ DEFINES+=		-DHOST_NAME_MAX=MAXHOSTNAMELEN
 endif
 
 psc_fsutil_libs_psc_util_crc_c_CFLAGS=		-O2
