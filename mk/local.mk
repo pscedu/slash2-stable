@@ -39,7 +39,7 @@ ifneq ($(wildcard /opt/sgi),)
  # on altix
  DEFINES+=		-DCONFIG_NR_CPUS=2 -D_GNU_SOURCE -DHAVE_NUMA
  NUMA_LIBS=		-lcpuset -lbitmask -lnuma
-else
+endif
 
 ifneq ($(wildcard /opt/xt-pe),)
  # on xt3
