@@ -8,6 +8,7 @@
 #include <sys/types.h>
 
 #include <numa.h>
+#include <cpuset.h>
 
 struct psc_nodemask {
 	nodemask_t	pnm_mask;
