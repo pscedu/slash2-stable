@@ -103,7 +103,7 @@ ia64_atomic64_sub(__s64 i, psc_atomic64_t *v)
 	     || (__ia64_aar_i ==  8) || (__ia64_aar_i ==  16)		\
 	     || (__ia64_aar_i == -1) || (__ia64_aar_i ==  -4)		\
 	     || (__ia64_aar_i == -8) || (__ia64_aar_i == -16)))		\
-		? ia64_fetch_and_add(__ia64_aar_i, &(v)->value)	\
+		? ia64_fetch_and_add(__ia64_aar_i, &(v)->value)		\
 		: ia64_atomic_add(__ia64_aar_i, (v));			\
 })
 
@@ -120,7 +120,7 @@ ia64_atomic64_sub(__s64 i, psc_atomic64_t *v)
 		: ia64_atomic_add(__ia64_aar_i, (v));			\
 })
 
-#define psc_atomic64_add_return(i, v)					\
+#define psc_atomic64_add_return(v, i)					\
 ({									\
 	long __ia64_aar_i = (i);					\
 									\
@@ -129,7 +129,7 @@ ia64_atomic64_sub(__s64 i, psc_atomic64_t *v)
 	     || (__ia64_aar_i ==  8) || (__ia64_aar_i ==  16)		\
 	     || (__ia64_aar_i == -1) || (__ia64_aar_i ==  -4)		\
 	     || (__ia64_aar_i == -8) || (__ia64_aar_i == -16)))		\
-		? ia64_fetch_and_add(__ia64_aar_i, &(v)->value)	\
+		? ia64_fetch_and_add(__ia64_aar_i, &(v)->value)		\
 		: ia64_atomic64_add(__ia64_aar_i, (v));			\
 })
 
@@ -159,7 +159,7 @@ ia64_atomic64_sub(__s64 i, psc_atomic64_t *v)
 		: ia64_atomic_sub(__ia64_asr_i, (v));			\
 })
 
-#define psc_atomic64_sub_return(i, v)					\
+#define psc_atomic64_sub_return(v, i)					\
 ({									\
 	long __ia64_asr_i = (i);					\
 									\
