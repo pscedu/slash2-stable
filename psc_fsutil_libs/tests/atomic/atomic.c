@@ -71,8 +71,8 @@ main(int argc, char *argv[])
 
 	psc_assert(psc_atomic64_read(&v64) == 100000000000ULL);
 	TEST(psc_atomic64, set, &v64, &v64, 2000000000000ULL, 2000000000000ULL);
-	TEST(psc_atomic64, add, &v64, 15, &v64, 2000000000015ULL);
-	TEST(psc_atomic64, sub, &v64, 9, &v64, 2000000000006ULL);
+	TEST(psc_atomic64, add, &v64, &v64, 15, 2000000000015ULL);
+	TEST(psc_atomic64, sub, &v64, &v64, 9, 2000000000006ULL);
 	TEST1(psc_atomic64, inc, &v64, 2000000000007ULL);
 	TEST1(psc_atomic64, dec, &v64, 2000000000006ULL);
 

@@ -194,28 +194,89 @@ ia64_atomic64_sub(__s64 i, psc_atomic64_t *v)
 #define psc_atomic64_inc(v)			psc_atomic64_add((v), 1)
 #define psc_atomic64_dec(v)			psc_atomic64_sub((v), 1)
 
-#define psc_atomic_genaf(name, readf, atype, vtype, op, ...)		\
-static __inline vtype							\
-name(atype *v, ## __VA_ARGS__)						\
-{									\
-	vtype oldval, newval;						\
-	CMPXCHG_BUGCHECK_DECL						\
-									\
-	do {								\
-		CMPXCHG_BUGCHECK(v);					\
-		oldval = readf(v);					\
-		newval = op;						\
-	} while (ia64_cmpxchg(acq, v, oldval,				\
-	    newval, sizeof(vtype)) != oldval);				\
-	return (newval);						\
+static __inline void
+psc_atomic32_set_mask(psc_atomic32_t *v, int32_t mask)
+{
+	int32_t oldval, newval;
+	CMPXCHG_BUGCHECK_DECL
+
+	do {
+		CMPXCHG_BUGCHECK(v);
+		oldval = psc_atomic32_read(v);
+		newval = oldval | mask;
+	} while (ia64_cmpxchg(acq, v, oldval,
+	    newval, sizeof(newval)) != oldval);
 }
 
-psc_atomic_genaf(atomic_clear_mask, atomic_read, atomic_t, uint32_t, oldval & ~mask, uint32_t mask)
-psc_atomic_genaf(atomic_set_mask, atomic_read, atomic_t, uint32_t, oldval | mask, uint32_t mask)
-psc_atomic_genaf(psc_atomic32_clear_mask, psc_atomic32_read, psc_atomic32_t, uint32_t, oldval & ~mask, uint32_t mask)
-psc_atomic_genaf(psc_atomic32_set_mask, psc_atomic32_read, psc_atomic32_t, uint32_t, oldval | mask, uint32_t mask)
-psc_atomic_genaf(psc_atomic64_clear_mask, psc_atomic64_read, psc_atomic64_t, uint64_t, oldval & ~mask, uint64_t mask)
-psc_atomic_genaf(psc_atomic64_set_mask, psc_atomic64_read, psc_atomic64_t, uint64_t, oldval | mask, uint64_t mask)
+static __inline void
+psc_atomic32_clear_mask(psc_atomic32_t *v, int32_t mask)
+{
+	int32_t oldval, newval;
+	CMPXCHG_BUGCHECK_DECL
+
+	do {
+		CMPXCHG_BUGCHECK(v);
+		oldval = psc_atomic32_read(v);
+		newval = oldval & ~mask;
+	} while (ia64_cmpxchg(acq, v, oldval,
+	    newval, sizeof(newval)) != oldval);
+}
+
+static __inline void
+psc_atomic64_set_mask(psc_atomic64_t *v, int64_t mask)
+{
+	int64_t oldval, newval;
+	CMPXCHG_BUGCHECK_DECL
+
+	do {
+		CMPXCHG_BUGCHECK(v);
+		oldval = psc_atomic64_read(v);
+		newval = oldval | mask;
+	} while (ia64_cmpxchg(acq, v, oldval,
+	    newval, sizeof(newval)) != oldval);
+}
+
+static __inline void
+psc_atomic64_clear_mask(psc_atomic64_t *v, int64_t mask)
+{
+	int64_t oldval, newval;
+	CMPXCHG_BUGCHECK_DECL
+
+	do {
+		CMPXCHG_BUGCHECK(v);
+		oldval = psc_atomic64_read(v);
+		newval = oldval & ~mask;
+	} while (ia64_cmpxchg(acq, v, oldval,
+	    newval, sizeof(newval)) != oldval);
+}
+
+static __inline void
+atomic_set_mask(int32_t mask, atomic_t *v)
+{
+	int32_t oldval, newval;
+	CMPXCHG_BUGCHECK_DECL
+
+	do {
+		CMPXCHG_BUGCHECK(v);
+		oldval = atomic_read(v);
+		newval = oldval | mask;
+	} while (ia64_cmpxchg(acq, v, oldval,
+	    newval, sizeof(newval)) != oldval);
+}
+
+static __inline void
+atomic_clear_mask(int32_t mask, atomic_t *v)
+{
+	int32_t oldval, newval;
+	CMPXCHG_BUGCHECK_DECL
+
+	do {
+		CMPXCHG_BUGCHECK(v);
+		oldval = atomic_read(v);
+		newval = oldval & ~mask;
+	} while (ia64_cmpxchg(acq, v, oldval,
+	    newval, sizeof(newval)) != oldval);
+}
 
 #else
 
