@@ -43,10 +43,8 @@ _pscthr_destroy(void *arg)
 {
 	struct psc_thread *thr = arg;
 
-	reqlock(&thr->pscthr_lock);
-	PSCFREE(thr->pscthr_loglevels);
-
 	PLL_LOCK(&psc_threads);
+	reqlock(&thr->pscthr_lock);
 	pll_remove(&psc_threads, thr);
 	if (thr->pscthr_uniqid) {
 		vbitmap_unset(psc_uniqthridmap,
@@ -58,6 +56,7 @@ _pscthr_destroy(void *arg)
 
 	if (thr->pscthr_dtor)
 		thr->pscthr_dtor(thr->pscthr_private);
+	PSCFREE(thr->pscthr_loglevels);
 	if (thr->pscthr_flags & PTF_FREE)
 		free(thr);
 }
