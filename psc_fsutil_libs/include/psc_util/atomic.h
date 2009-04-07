@@ -19,18 +19,22 @@
 #define ia64_xchg_called_with_bad_pointer()	 psc_fatalx("ia64_xchg_called_with_bad_pointer")
 
 typedef struct { volatile __s32 value; } atomic_t;
+typedef struct { volatile __s16 value; } psc_atomic16_t;
 typedef struct { volatile __s32 value; } psc_atomic32_t;
 typedef struct { volatile __s64 value; } psc_atomic64_t;
 
 #define ATOMIC_INIT(i)				{ (i) }
+#define PSC_ATOMIC16_INIT(i)			{ (i) }
 #define PSC_ATOMIC32_INIT(i)			{ (i) }
 #define PSC_ATOMIC64_INIT(i)			{ (i) }
 
 #define atomic_read(v)				((v)->value)
+#define psc_atomic16_read(v)			((v)->value)
 #define psc_atomic32_read(v)			((v)->value)
 #define psc_atomic64_read(v)			((v)->value)
 
 #define atomic_set(v, i)			(((v)->value) = (i))
+#define psc_atomic16_set(v, i)			(((v)->value) = (i))
 #define psc_atomic32_set(v, i)			(((v)->value) = (i))
 #define psc_atomic64_set(v, i)			(((v)->value) = (i))
 
@@ -191,10 +195,10 @@ ia64_atomic64_sub(__s64 i, psc_atomic64_t *v)
 #define psc_atomic64_dec(v)			psc_atomic64_sub((v), 1)
 
 #define psc_atomic_genaf(name, readf, atype, vtype, op, ...)		\
-static __inline int							\
-name(type *v, ## __VA_ARGS__)						\
+static __inline vtype							\
+name(atype *v, ## __VA_ARGS__)						\
 {									\
-	uint32_t oldval, newval;					\
+	vtype oldval, newval;						\
 	CMPXCHG_BUGCHECK_DECL						\
 									\
 	do {								\
@@ -202,7 +206,7 @@ name(type *v, ## __VA_ARGS__)						\
 		oldval = readf(v);					\
 		newval = op;						\
 	} while (ia64_cmpxchg(acq, v, oldval,				\
-	    newval, sizeof(*v)) != oldval);				\
+	    newval, sizeof(vtype)) != oldval);				\
 	return (newval);						\
 }
 
