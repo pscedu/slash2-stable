@@ -61,10 +61,10 @@ struct psc_spinlock {
 		_v = psc_atomic16_read(&(psl)->psl_value);		\
 		if ((_v & PSL_LOCKMASK) == 0)				\
 			psc_fatalx("freelock: not locked (%p)", (psl));	\
-		if ((_v & PSL_OWNERMASK) != pscthr_gettid())		\
+		if ((_v & PSL_OWNERMASK) != pscthr_getuniqid())		\
 			psc_fatalx("freelock: not owner "		\
 			    "(%p, owner=%d, self=%d)!",	(psl),		\
-			    _v & PSL_OWNERMASK, pscthr_gettid());	\
+			    _v & PSL_OWNERMASK, pscthr_getuniqid());	\
 	} while (0)
 
 #define psc_spin_unlock(psl)						\
@@ -81,11 +81,11 @@ psc_spin_trylock(struct psc_spinlock *psl)
 	PSL_MAGIC_CHECK(psl);
 	oldval = psc_atomic16_setmask_ret(&psl->psl_value, PSL_LOCKMASK);
 	if (oldval & PSL_LOCKMASK) {
-		if ((oldval & PSL_OWNERMASK) == pscthr_gettid())
+		if ((oldval & PSL_OWNERMASK) == pscthr_getuniqid())
 			psc_fatalx("already holding the lock");
 		return (0);				/* someone else has it */
 	}
-	oldval = pscthr_gettid() | PSL_LOCKMASK;
+	oldval = pscthr_getuniqid() | PSL_LOCKMASK;
 	psc_atomic16_set(&psl->psl_value, oldval);	/* we got it */
 	return (1);
 }
@@ -119,7 +119,7 @@ psc_spin_reqlock(struct psc_spinlock *psl)
 
 	v = psc_atomic16_read(&psl->psl_value);
 	if ((v & PSL_LOCKMASK) &&
-	    (v & PSL_OWNERMASK) == pscthr_gettid())
+	    (v & PSL_OWNERMASK) == pscthr_getuniqid())
 		return (1);
 	psc_spin_lock(psl);
 	return (0);
@@ -132,7 +132,7 @@ psc_spin_tryreqlock(struct psc_spinlock *psl, int *locked)
 
 	v = psc_atomic16_read(&psl->psl_value);
 	if ((v & PSL_LOCKMASK) &&
-	    (v & PSL_OWNERMASK) == pscthr_gettid()) {
+	    (v & PSL_OWNERMASK) == pscthr_getuniqid()) {
 		*locked = 1;
 		return (1);
 	}

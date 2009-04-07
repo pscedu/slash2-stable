@@ -12,7 +12,6 @@ NOTEMPTY=	${ROOTDIR}/tools/notempty
 PKG_CONFIG=	PKG_CONFIG_PATH=/usr/local/lib/pkgconfig pkg-config
 LKERNEL_BASE=	${ROOTDIR}/kernel/2.6.9-42.0.8.EL_lustre.1.4.9.1
 
-
 ifeq ($(wildcard /usr/src/kernels/linux),)
  ifeq ($(wildcard /opt/xt-os),)
   ifeq ($(wildcard /wolverine_pool),)

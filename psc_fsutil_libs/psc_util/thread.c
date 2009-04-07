@@ -20,6 +20,7 @@
 #include "psc_ds/dynarray.h"
 #include "psc_ds/hash.h"
 #include "psc_ds/lockedlist.h"
+#include "psc_ds/vbitmap.h"
 #include "psc_util/alloc.h"
 #include "psc_util/cdefs.h"
 #include "psc_util/lock.h"
@@ -29,6 +30,7 @@
 
 __static pthread_key_t	psc_thrkey;
 __static pthread_key_t	psc_logkey;
+__static struct vbitmap *psc_uniqthridmap;
 struct psc_lockedlist	psc_threads =
     PLL_INITIALIZER(&psc_threads, struct psc_thread, pscthr_lentry);
 
@@ -44,7 +46,15 @@ _pscthr_destroy(void *arg)
 	reqlock(&thr->pscthr_lock);
 	PSCFREE(thr->pscthr_loglevels);
 
+	PLL_LOCK(&psc_threads);
 	pll_remove(&psc_threads, thr);
+	if (thr->pscthr_uniqid) {
+		vbitmap_unset(psc_uniqthridmap,
+		    thr->pscthr_uniqid - 1);
+		vbitmap_setnextpos(psc_uniqthridmap,
+		    thr->pscthr_uniqid - 1);
+	}
+	PLL_ULOCK(&psc_threads);
 
 	if (thr->pscthr_dtor)
 		thr->pscthr_dtor(thr->pscthr_private);
@@ -437,6 +447,25 @@ pscthr_run(void)
 		} while ((thr->pscthr_flags) == 0);
 	freelock(&thr->pscthr_lock);
 	return (1);
+}
+
+int
+pscthr_getuniqid(void)
+{
+	struct psc_thread *thr;
+	size_t pos;
+
+	thr = pscthr_get();
+	if (thr->pscthr_uniqid == 0) {
+		PLL_LOCK(&psc_threads);
+		if (psc_uniqthridmap == NULL)
+			psc_uniqthridmap = vbitmap_newf(0, PVBF_AUTO);
+		if (vbitmap_next(psc_uniqthridmap, &pos) == -1)
+			psc_fatal("vbitmap_next");
+		PLL_ULOCK(&psc_threads);
+		thr->pscthr_uniqid = pos + 1;
+	}
+	return (thr->pscthr_uniqid);
 }
 
 struct psc_thread *
