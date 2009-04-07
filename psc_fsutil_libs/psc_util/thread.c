@@ -468,6 +468,20 @@ pscthr_getuniqid(void)
 	return (thr->pscthr_uniqid);
 }
 
+int
+pscthr_getnextuniqid(void)
+{
+	size_t pos;
+
+	PLL_LOCK(&psc_threads);
+	if (psc_uniqthridmap == NULL)
+		psc_uniqthridmap = vbitmap_newf(0, PVBF_AUTO);
+	if (vbitmap_next(psc_uniqthridmap, &pos) == -1)
+		psc_fatal("vbitmap_next");
+	PLL_ULOCK(&psc_threads);
+	return (pos + 1);
+}
+
 struct psc_thread *
 pscthr_getbyname(const char *name)
 {

@@ -75,6 +75,7 @@ void	pscthr_setready(struct psc_thread *);
 void	pscthr_setrun(struct psc_thread *, int);
 int	pscthr_run(void);
 int	pscthr_getuniqid(void);
+int	pscthr_getnextuniqid(void);
 
 struct psc_thread *pscthr_get(void);
 struct psc_thread *pscthr_get_canfail(void);
