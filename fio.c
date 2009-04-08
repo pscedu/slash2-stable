@@ -291,7 +291,7 @@ init_pe(int mype)
 #endif
 
 	if ( mkdir(mygroup->test_path, 0755) == -1 && errno != EEXIST)
-		err(1, "stat %s", mygroup->test_path);
+		err(1, "mkdir %s", mygroup->test_path);
 
 	if ( stat(mygroup->test_path, &stb) == -1)
 		err(1, "stat %s", mygroup->test_path);
@@ -635,11 +635,11 @@ do_io(IOT_t *iot, int op)
 			 */
 			if (clk_type == WRITE_clk)
 				rc = write(iot->myfd, iot->bdesc.buffer,
-				    iot->bdesc.buffer_size); 
+				    iot->bdesc.buffer_size);
 			else
 				rc = read(iot->myfd, iot->bdesc.buffer,
 				    iot->bdesc.buffer_size);
-		} while (rc == -1 && errno == EINTR); 
+		} while (rc == -1 && errno == EINTR);
 
 		DEBUG(D_BLOCK, "IO to fd %d rc == %d\n",
 		iot->myfd, rc);
