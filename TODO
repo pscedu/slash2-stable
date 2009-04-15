@@ -1,3 +1,5 @@
+$Id$
+
 general reminders
 - watch out for sizeof(type var[0])
 - constify RPC replies in clients and requests in servers
