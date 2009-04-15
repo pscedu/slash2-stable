@@ -49,14 +49,10 @@ zest
   unreasonable limits on maximum file system size, perhaps
   during file system creation time (hopefully only)
 - research faster CRC operations
-- make a proper solution when running out of parity groups
-  when servicing clients.  possible solution:
-    (o) block new file opens until parity groups from older
-        descriptors are finished
 - do not allow clients to sit on parity groups, need some
   kind of reap/reclamation mechanism
 - move parity block into random positions in the raid scheme
-  to avoid placing all parity data on the same disk.
+  to avoid placing all parity data on the same disk. (for RAID 6?)
   however skip these on disk fail rebuild
 
   note: have the fastest disks grab each successive block in a pg,
