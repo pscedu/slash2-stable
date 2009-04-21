@@ -486,8 +486,8 @@ int	 pscrpc_send_reply(struct pscrpc_request *req, int may_be_difficult);
 int	 pscrpc_start_bulk_transfer(struct pscrpc_bulk_desc *desc);
 void	 pscrpc_unregister_bulk(struct pscrpc_request *req);
 void	 pscrpc_abort_inflight(struct pscrpc_import *imp);
-void	 psc_nid2str(lnet_nid_t, char []);
-void	 psc_id2str(lnet_process_id_t, char []);
+char	*psc_nid2str(lnet_nid_t, char []);
+char	*psc_id2str(lnet_process_id_t, char []);
 void	 pscrpc_drop_conns(lnet_process_id_t *);
 
 struct pscrpc_connection *

@@ -46,10 +46,6 @@ pscrpc_rqphase2str(struct pscrpc_request *req)
 	struct pscrpc_import *__imp = (rq)->rq_import;			\
 	char __nidstr[PSC_NIDSTR_SIZE], __idstr[PSC_NIDSTR_SIZE];	\
 									\
-	if ((rq)->rq_conn)						\
-		psc_nid2str((rq)->rq_conn->c_peer.nid, __nidstr);	\
-	if (__imp)							\
-		psc_id2str(__imp->imp_connection->c_peer, __idstr);	\
 	psc_logs((level), PSS_RPC,					\
 	    " req@%p x%"PRId64"/t%"PRId64" "				\
 	    "c%"PRIx64" "						\
@@ -57,9 +53,13 @@ pscrpc_rqphase2str(struct pscrpc_request *req)
 	    "lens %d/%d ref %d res %d ret %d fl "REQ_FLAGS_FMT		\
 	    "/%x/%x replyc %"PRIx64" rc %d/%d to=%d :: "fmt,		\
 	    (rq), (rq)->rq_xid, (rq)->rq_transno,			\
-	    (rq)->rq_reqmsg ? (rq)->rq_reqmsg->handle.cookie : 0xdeadbeef, \
+	    (rq)->rq_reqmsg ?						\
+	      (rq)->rq_reqmsg->handle.cookie : 0xdeadbeef,		\
 	    (rq)->rq_reqmsg ? (int)(rq)->rq_reqmsg->opc : -1,		\
-	    __imp ? __idstr : (rq)->rq_conn ? __nidstr : "<?>",		\
+	    __imp ?							\
+	      psc_id2str(__imp->imp_connection->c_peer, __idstr) :	\
+	      (rq)->rq_conn ?						\
+	      psc_nid2str((rq)->rq_conn->c_peer.nid, __nidstr) : "<?>",	\
 	    __imp && __imp->imp_client ?				\
 	      (int)__imp->imp_client->cli_request_portal : -1,		\
 	    (rq)->rq_reqlen, (rq)->rq_replen,				\
@@ -67,7 +67,8 @@ pscrpc_rqphase2str(struct pscrpc_request *req)
 	    atomic_read(&(rq)->rq_retries), DEBUG_REQ_FLAGS(rq),	\
 	    (rq)->rq_reqmsg ? psc_msg_get_flags((rq)->rq_reqmsg) : -1,	\
 	    (rq)->rq_repmsg ? psc_msg_get_flags((rq)->rq_repmsg) : 0,	\
-	    (rq)->rq_repmsg ? (rq)->rq_repmsg->handle.cookie : 0xdeadbeef, \
+	    (rq)->rq_repmsg ?						\
+	      (rq)->rq_repmsg->handle.cookie : 0xdeadbeef,		\
 	    (rq)->rq_status,						\
 	    (rq)->rq_repmsg ? (rq)->rq_repmsg->status : 0,		\
 	    (rq)->rq_timeout, ## __VA_ARGS__);				\
