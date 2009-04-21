@@ -97,6 +97,7 @@ psc_mlist_remove(struct psc_mlist *pml, void *p)
 /**
  * _psc_mlist_initv - initialize a multilockable list.
  * @pml: mlist to initialize.
+ * @flags: multilock condition flags.
  * @arg: multilock condition to use for availability notification.
  * @entsize: size of an entry on this mlist.
  * @offset: offset into entry for the psclist_head for list mgt.
@@ -104,8 +105,8 @@ psc_mlist_remove(struct psc_mlist *pml, void *p)
  * @ap: va_list of arguments to mlist name printf(3) format.
  */
 void
-_psc_mlist_initv(struct psc_mlist *pml, void *arg, size_t entsize,
-    ptrdiff_t offset, const char *fmt, va_list ap)
+_psc_mlist_initv(struct psc_mlist *pml, int flags, void *arg,
+    size_t entsize, ptrdiff_t offset, const char *fmt, va_list ap)
 {
 	int rc;
 
@@ -121,7 +122,7 @@ _psc_mlist_initv(struct psc_mlist *pml, void *arg, size_t entsize,
 	else if (rc >= (int)sizeof(pml->pml_name))
 		psc_fatalx("mlist name is too long: %s", fmt);
 
-	multilock_cond_init(&pml->pml_mlcond_empty, arg, 0,
+	multilock_cond_init(&pml->pml_mlcond_empty, arg, flags,
 	    "%s-empty", pml->pml_name);
 }
 
@@ -134,13 +135,13 @@ _psc_mlist_initv(struct psc_mlist *pml, void *arg, size_t entsize,
  * @fmt: printf(3) format for mlist name.
  */
 void
-_psc_mlist_init(struct psc_mlist *pml, void *arg, size_t entsize,
-    ptrdiff_t offset, const char *fmt, ...)
+_psc_mlist_init(struct psc_mlist *pml, int flags, void *arg,
+    size_t entsize, ptrdiff_t offset, const char *fmt, ...)
 {
 	va_list ap;
 
 	va_start(ap, fmt);
-	_psc_mlist_initv(pml, arg, entsize, offset, fmt, ap);
+	_psc_mlist_initv(pml, flags, arg, entsize, offset, fmt, ap);
 	va_end(ap);
 }
 
@@ -171,13 +172,13 @@ psc_mlist_register(struct psc_mlist *pml)
  * @fmt: printf(3) format for mlist name.
  */
 void
-_psc_mlist_reginit(struct psc_mlist *pml, void *arg, size_t entsize,
-    ptrdiff_t offset, const char *fmt, ...)
+_psc_mlist_reginit(struct psc_mlist *pml, int flags, void *arg,
+    size_t entsize, ptrdiff_t offset, const char *fmt, ...)
 {
 	va_list ap;
 
 	va_start(ap, fmt);
-	_psc_mlist_initv(pml, arg, entsize, offset, fmt, ap);
+	_psc_mlist_initv(pml, flags, arg, entsize, offset, fmt, ap);
 	va_end(ap);
 
 	psc_mlist_register(pml);

@@ -48,16 +48,16 @@ struct psc_mlist {
 #define psc_mlist_empty(pml)	(psc_mlist_size(pml) == 0)
 
 #define psc_mlist_reginit(pml, mlcarg, type, member, namefmt, ...)	\
-	_psc_mlist_reginit((pml), (mlcarg), sizeof(type),		\
+	_psc_mlist_reginit((pml), 0, (mlcarg), sizeof(type),		\
 	    offsetof(type, member), (namefmt), ## __VA_ARGS__)
 
 void	*psc_mlist_tryget(struct psc_mlist *);
 void	 psc_mlist_add(struct psc_mlist *, void *);
 void	 psc_mlist_remove(struct psc_mlist *, void  *);
-void	_psc_mlist_init(struct psc_mlist *, void *, size_t, ptrdiff_t,
-		const char *, ...);
-void	_psc_mlist_reginit(struct psc_mlist *, void *, size_t, ptrdiff_t,
-		const char *, ...);
+void	_psc_mlist_init(struct psc_mlist *, int, void *, size_t,
+		ptrdiff_t, const char *, ...);
+void	_psc_mlist_reginit(struct psc_mlist *, int, void *, size_t,
+		ptrdiff_t, const char *, ...);
 int	 psc_mlist_size(struct psc_mlist *);
 
 extern struct psc_lockedlist psc_mlists;

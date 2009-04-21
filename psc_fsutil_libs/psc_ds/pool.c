@@ -26,9 +26,9 @@ struct psc_lockedlist psc_pools =
     PLL_INITIALIZER(&psc_pools, struct psc_poolmgr, ppm_all_lentry);
 
 __weak void
-_psc_mlist_init(__unusedx struct psc_mlist *m, __unusedx void *arg,
-    __unusedx size_t entsize, __unusedx ptrdiff_t offset,
-    __unusedx const char *fmt, ...)
+_psc_mlist_init(__unusedx struct psc_mlist *m, __unusedx int flags,
+    __unusedx void *arg, __unusedx size_t entsize,
+    __unusedx ptrdiff_t offset, __unusedx const char *fmt, ...)
 {
 	psc_fatalx("mlist support not compiled in");
 }
@@ -93,11 +93,12 @@ _psc_poolmaster_initmgr(struct psc_poolmaster *p, struct psc_poolmgr *m)
 
 	if (POOL_IS_MLIST(m)) {
 #ifdef HAVE_NUMA
-		_psc_mlist_init(&m->ppm_ml, p->pms_mlcarg, p->pms_entsize,
-		    p->pms_offset, "%s:%d", p->pms_name, psc_memnode_getid());
+		_psc_mlist_init(&m->ppm_ml, PMLCF_WAKEALL, p->pms_mlcarg,
+		    p->pms_entsize, p->pms_offset, "%s:%d", p->pms_name,
+		    psc_memnode_getid());
 #else
-		_psc_mlist_init(&m->ppm_ml, p->pms_mlcarg, p->pms_entsize,
-		    p->pms_offset, "%s", p->pms_name);
+		_psc_mlist_init(&m->ppm_ml, PMLCF_WAKEALL, p->pms_mlcarg,
+		    p->pms_entsize, p->pms_offset, "%s", p->pms_name);
 #endif
 	} else {
 		_lc_init(&m->ppm_lc, p->pms_offset, p->pms_entsize);
