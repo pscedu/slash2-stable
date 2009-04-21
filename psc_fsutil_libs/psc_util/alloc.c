@@ -54,9 +54,9 @@ psc_realloc(void *p, size_t size, int flags)
 		 * We didn't get our memory.  Try reaping some pools
 		 * if enabled and retry, otherwise, handle failure.
 		 */
-		if (flags & PAF_POOLREAP) {
+		if ((flags & PAF_NOREAP) == 0) {
 			_psc_pool_reapsome(size);
-			flags &= ~PAF_POOLREAP;
+			flags |= PAF_NOREAP;
 			goto retry;
 		}
 		if (flags & PAF_CANFAIL) {
@@ -80,7 +80,8 @@ psc_realloc(void *p, size_t size, int flags)
 			psc_fatal("mlock");
 		}
 	}
-	if ((flags & PAF_NOZERO) == 0)
+	/* XXX provide a way to zero out new regions of realloc'd mem */
+	if (p == NULL && (flags & PAF_NOZERO) == 0)
 		memset(newp, 0, size);
 	return (newp);
 }

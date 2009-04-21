@@ -38,7 +38,7 @@
 /* allocation flags */
 #define PAF_CANFAIL	(1 << 0)	/* return NULL instead of fatal */
 #define PAF_PAGEALIGN	(1 << 1)	/* align to physmem page size */
-#define PAF_POOLREAP	(1 << 2)	/* reap pools if mem unavail */
+#define PAF_NOREAP	(1 << 2)	/* don't reap pools if mem unavail */
 #define PAF_LOCK	(1 << 3)	/* lock mem regions as unswappable */
 #define PAF_NOZERO	(1 << 4)	/* don't force memory zeroing */
 #define PAF_NOLOG	(1 << 5)	/* don't psclog this allocation */
