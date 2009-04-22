@@ -47,7 +47,7 @@ pscrpc_rqphase2str(struct pscrpc_request *req)
 	char __nidstr[PSC_NIDSTR_SIZE], __idstr[PSC_NIDSTR_SIZE];	\
 									\
 	psc_logs((level), PSS_RPC,					\
-	    " req@%p x%"PRId64"/t%"PRId64" "				\
+	    "req@%p x%"PRId64"/t%"PRId64" "				\
 	    "c%"PRIx64" "						\
 	    "o%d->@%s:%d "						\
 	    "lens %d/%d ref %d res %d ret %d fl "REQ_FLAGS_FMT		\
@@ -76,7 +76,7 @@ pscrpc_rqphase2str(struct pscrpc_request *req)
 
 #define DEBUG_EXP(level, exp, fmt, ...)					\
 	psc_logs((level), PSS_RPC,					\
-	    " exp@%p h%"PRIx64" conn@%p p:%s ref %d cnt %d f%d :: "fmt,	\
+	    "exp@%p h%"PRIx64" conn@%p p:%s ref %d cnt %d f%d :: "fmt,	\
 	    (exp), (exp)->exp_handle.cookie, (exp)->exp_connection,	\
 	    (exp)->exp_connection ?					\
 	       libcfs_id2str((exp)->exp_connection->c_peer) : "<?>",	\
