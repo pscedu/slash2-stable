@@ -41,6 +41,8 @@ pfl
 - add a check to ensure hash table size is not a direct power of two
 - rename stree to vtree (variable number of children per branch)
 - phase out hash1
+- create vlocks: vector lock API when you need to lock multiple
+  structures in a reqlock order fashion (hash tables and lists etc.)
 
 zest
 - test parity reconstruction service by rebuilding
