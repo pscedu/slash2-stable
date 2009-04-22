@@ -96,13 +96,13 @@ lc_remove(struct psc_listcache *lc, void *p)
 }
 
 /* lc_get() flags */
-#define PLCGF_TAIL	(1 << 0)
-#define PLCGF_STACK	(1 << 0)
-#define PLCGF_HEAD	(1 << 1)
-#define PLCGF_QUEUE	(1 << 1)
-#define PLCGF_NOBLOCK	(1 << 2)
-#define PLCGF_WARN	(1 << 3)
-#define PLCGF_PEEK	(1 << 4)
+#define PLCGF_TAIL	(1 << 0)	/* grab from tail */
+#define PLCGF_STACK	(1 << 0)	/* grab from tail */
+#define PLCGF_HEAD	(1 << 1)	/* grab from head */
+#define PLCGF_QUEUE	(1 << 1)	/* grab from head */
+#define PLCGF_NOBLOCK	(1 << 2)	/* return NULL if unavail */
+#define PLCGF_WARN	(1 << 3)	/* emit messages */
+#define PLCGF_PEEK	(1 << 4)	/* don't remove item */
 
 static __inline struct psclist_head *
 _lc_get(struct psc_listcache *lc, struct timespec *abstime, int flags)
@@ -132,7 +132,6 @@ _lc_get(struct psc_listcache *lc, struct timespec *abstime, int flags)
 		if (abstime) {
 			rc = psc_waitq_waitabs(&lc->lc_wq_empty,
 			    &lc->lc_lock, abstime);
-			/* XXX subtract from abstime */
 			if (rc) {
 				psc_assert(rc == ETIMEDOUT);
 				errno = rc;
