@@ -757,7 +757,7 @@ pscrpc_wake_client_req(struct pscrpc_request *req)
 		if (info->lwi_interval && info->lwi_interval < __interval) \
 			__interval = info->lwi_interval;		\
 									\
-		while (!(condition)) {					\
+		for (; !(condition); (ret) = 0) {			\
 			ret = pscrpc_wait_event(__interval);		\
 			if (0<ret) ret=0; /* preserve the previous semantics */	\
 			if (condition){					\
