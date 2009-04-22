@@ -56,7 +56,7 @@ struct psc_poolmaster {
 
 	int			(*pms_initf)(struct psc_poolmgr *, void *);
 	void			(*pms_destroyf)(void *);
-	int			(*pms_reclaimcb)(struct psc_poolmgr *, int);
+	int			(*pms_reclaimcb)(struct psc_poolmgr *);
 };
 
 /*
@@ -80,11 +80,13 @@ struct psc_poolmgr {
 	int			  ppm_flags;		/* flags */
 	uint64_t		  ppm_ngrow;		/* #allocs */
 	uint64_t		  ppm_nshrink;		/* #deallocs */
+	atomic_t		  ppm_nwaiters;		/* #thrs waiting for item */
+	pthread_mutex_t		  ppm_reclaim_mutex;	/* exclusive reclamation */
 
 	/* routines to initialize, teardown, & reclaim pool entries */
 	int			(*ppm_initf)(struct psc_poolmgr *, void *);
 	void			(*ppm_destroyf)(void *);
-	int			(*ppm_reclaimcb)(struct psc_poolmgr *, int);
+	int			(*ppm_reclaimcb)(struct psc_poolmgr *);
 #define ppm_lc ppm_u.ppmu_lc
 #define ppm_ml ppm_u.ppmu_ml
 #define ppm_lg ppm_u.ppmu_lg
@@ -140,7 +142,7 @@ struct psc_poolmgr *
 	_psc_poolmaster_getmgr(struct psc_poolmaster *, int);
 void	_psc_poolmaster_init(struct psc_poolmaster *, size_t, ptrdiff_t,
 		int, int, int, int, int (*)(struct psc_poolmgr *, void *),
-		void (*)(void *), int (*)(struct psc_poolmgr *, int),
+		void (*)(void *), int (*)(struct psc_poolmgr *),
 		void *, const char *, ...);
 
 int	 psc_pool_grow(struct psc_poolmgr *, int);

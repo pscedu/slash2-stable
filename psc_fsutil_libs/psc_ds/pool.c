@@ -19,6 +19,7 @@
 #include "psc_util/cdefs.h"
 #include "psc_util/lock.h"
 #include "psc_util/log.h"
+#include "psc_util/pthrutil.h"
 #include "psc_util/waitq.h"
 
 __static struct psc_poolset psc_poolset_main = PSC_POOLSET_INIT;
@@ -49,7 +50,7 @@ void
 _psc_poolmaster_init(struct psc_poolmaster *p, size_t entsize,
     ptrdiff_t offset, int flags, int total, int min, int max,
     int (*initf)(struct psc_poolmgr *, void *), void (*destroyf)(void *),
-    int (*reclaimcb)(struct psc_poolmgr *, int),
+    int (*reclaimcb)(struct psc_poolmgr *),
     void *mlcarg, const char *namefmt, ...)
 {
 	va_list ap;
@@ -81,6 +82,7 @@ _psc_poolmaster_initmgr(struct psc_poolmaster *p, struct psc_poolmgr *m)
 	int n, locked;
 
 	memset(m, 0, sizeof(*m));
+	psc_pthread_mutex_init(&m->ppm_reclaim_mutex);
 	locked = reqlock(&p->pms_lock);
 	m->ppm_reclaimcb = p->pms_reclaimcb;
 	m->ppm_destroyf = p->pms_destroyf;
@@ -339,7 +341,8 @@ psc_pool_resize(struct psc_poolmgr *m)
  *	@initiator->pms_entsize.
  */
 void
-_psc_pool_reap(struct psc_poolset *s, struct psc_poolmaster *initiator, __unusedx size_t mem)
+_psc_pool_reap(struct psc_poolset *s, struct psc_poolmaster *initiator,
+    size_t mem)
 {
 	struct psc_poolmgr *m, *culprit;
 	struct psc_poolmaster *p;
@@ -443,11 +446,14 @@ psc_pool_get(struct psc_poolmgr *m)
 	 * If this pool user provided a reclaimer routine e.g.
 	 * for reclaiming buffers on a clean list, try that.
 	 */
+ tryreclaim:
 	if (m->ppm_reclaimcb)
 		do {
-			/* Add +1 here to count the invoker as a waitor. */
-			n = m->ppm_reclaimcb(m, atomic_read(
-			    &m->ppm_lc.lc_wq_empty.wq_nwaitors) + 1);
+			atomic_inc(&m->ppm_nwaiters);
+			pthread_mutex_lock(&m->ppm_reclaim_mutex);
+			n = m->ppm_reclaimcb(m);
+			pthread_mutex_unlock(&m->ppm_reclaim_mutex);
+			atomic_dec(&m->ppm_nwaiters);
 			p = POOL_GETOBJ(m);
 			if (p)
 				return (p);
@@ -470,7 +476,30 @@ psc_pool_get(struct psc_poolmgr *m)
 	if (POOL_IS_MLIST(m))
 		return (POOL_GETOBJ(m));
 
-	/* Nothing else we can do, wait for an item to return. */
+	/*
+	 * If there is a reclaimer routine specified, invoke it
+	 * periodically instead of blocking forever.
+	 */
+	if (m->ppm_reclaimcb) {
+		POOL_LOCK(m);
+		p = POOL_GETOBJ(m);
+		if (p) {
+			POOL_UNLOCK(m);
+			return (p);
+		}
+		atomic_inc(&m->ppm_nwaiters);
+		psc_waitq_waitrel_us(&m->ppm_lc.lc_wq_empty,
+		    &m->ppm_lc.lc_lock, 100);
+		atomic_dec(&m->ppm_nwaiters);
+
+		p = POOL_GETOBJ(m);
+		if (p)
+			return (p);
+
+		goto tryreclaim;
+	}
+
+	/* Nothing else we can do; wait for an item to return. */
 	return (lc_getwait(&m->ppm_lc));
 }
 
