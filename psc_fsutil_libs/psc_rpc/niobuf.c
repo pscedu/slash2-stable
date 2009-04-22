@@ -303,15 +303,15 @@ void pscrpc_unregister_bulk (struct pscrpc_request *req)
 
 	l = reqlock(&desc->bd_lock);
 
-	psc_info("desc->bd_registered=(%d) pscrpc_bulk_active(desc)=(%d)", 
+	psc_info("desc->bd_registered=(%d) pscrpc_bulk_active(desc)=(%d)",
 		 desc->bd_registered, pscrpc_bulk_active(desc));
 
         if (!desc->bd_registered && !pscrpc_bulk_active(desc)) {  /* completed or */
 		ureqlock(&desc->bd_lock, l);                      /* never registered */
-                return;                  
+                return;
 	}
 	/* bd_req NULL until registered
-	 */ 
+	 */
         psc_assert(desc->bd_req == req);
 	/* Signify that this is being unlinked.
 	 */
@@ -319,7 +319,7 @@ void pscrpc_unregister_bulk (struct pscrpc_request *req)
 		desc->bd_registered = 0;
 		registered = 1;
 	}
-	
+
 	ureqlock(&desc->bd_lock, l);
 
         /* the unlink ensures the callback happens ASAP and is the last
@@ -377,7 +377,7 @@ int pscrpc_send_reply (struct pscrpc_request *req, int may_be_difficult)
 
 #if PAULS_TODO
         /*
-         * Psc will have to place portions of the export
+         * pscrpc will have to place portions of the export
          *   functionality into the service - so here the request
          *   should probably be linked with the pscrpc_service
          * For now we'll just shelf this check - paul
@@ -722,7 +722,7 @@ static void __pscrpc_free_req(struct pscrpc_request *request, int  locked)
 
         if (request->rq_bulk != NULL)
                 pscrpc_free_bulk(request->rq_bulk);
-	
+
 	psc_assert(request->rq_reply_state == NULL);
 
         if (request->rq_pool) {
@@ -737,7 +737,6 @@ static void __pscrpc_free_req(struct pscrpc_request *request, int  locked)
         }
         EXIT;
 }
-
 
 void pscrpc_free_req(struct pscrpc_request *request)
 {
