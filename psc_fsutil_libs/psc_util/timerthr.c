@@ -12,7 +12,7 @@
 #include "psc_util/thread.h"
 #include "psc_util/waitq.h"
 
-__static struct psc_waitq	 psc_timerwtq;
+struct psc_waitq psc_timerwtq;
 
 __static void *
 psc_timerthr_main(__unusedx void *arg)
@@ -20,7 +20,7 @@ psc_timerthr_main(__unusedx void *arg)
 	for (;;) {
 		sleep(1);
 		psc_waitq_wakeall(&psc_timerwtq);
-		sched_yield();
+		/* XXX subtract the time this took from next sleep */
 	}
 }
 
