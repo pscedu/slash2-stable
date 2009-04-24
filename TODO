@@ -43,6 +43,7 @@ pfl
 - phase out hash1
 - create vlocks: vector lock API when you need to lock multiple
   structures in a reqlock order fashion (hash tables and lists etc.)
+- add custom sleep intervals for timerthr API
 
 zest
 - test parity reconstruction service by rebuilding
@@ -86,6 +87,7 @@ zest
 - zestThread.h has no business being shared by all things in zestland
 - have two iothrs access the same disk to shorten the time the disk
   is idle
+- kill the zest/trunk directory
 
 development tool
 - let wiki changes automatically email zest-devel@ like svn commits
