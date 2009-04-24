@@ -5,7 +5,9 @@ include ../Makefile.path
 PROG=		sock
 SRCS=		sock.c
 SRCS+=		${PFL_BASE}/psc_ds/dynarray.c
+SRCS+=		${PFL_BASE}/psc_ds/vbitmap.c
 SRCS+=		${PFL_BASE}/psc_util/alloc.c
+SRCS+=		${PFL_BASE}/psc_util/fmt.c
 SRCS+=		${PFL_BASE}/psc_util/init.c
 SRCS+=		${PFL_BASE}/psc_util/iostats.c
 SRCS+=		${PFL_BASE}/psc_util/log.c
