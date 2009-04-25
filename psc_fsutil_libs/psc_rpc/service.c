@@ -391,18 +391,26 @@ pscrpc_server_handle_request(struct pscrpc_service *svc,
 	 */
 	if (svc->srv_count_peer_qlens &&
 	    atomic_dec_return(&request->rq_peer_qlen->qlen) == 0) {
+		struct rpc_peer_qlen *pq;
 		struct hash_bucket *hb;
+		struct hash_entry *h;
 
+		pq = NULL;
 		hb = hashbkt_get(&svc->srv_peer_qlentab,
 		    request->rq_peer.nid);
 		hashbkt_lock(hb);
-		if (atomic_read(&request->rq_peer_qlen->qlen) == 0)
-			hashbkt_del_entry(hb,
-			    &request->rq_peer_qlen->hentry);
-		else
-			request->rq_peer_qlen = NULL;
+		/* Look up the struct again in case it disappeared. */
+		h = hashbkt_search(&svc->srv_peer_qlentab,
+		    hb, request->rq_peer.nid, &request->rq_peer, NULL);
+		if (h) {
+			pq = h->private;
+			if (atomic_read(&pq->qlen) == 0)
+				hashbkt_del_entry(hb, &pq->hentry);
+			else
+				pq = NULL;
+		}
 		hashbkt_unlock(hb);
-		free(request->rq_peer_qlen);
+		free(pq);
 	}
 
 	timediff = cfs_timeval_sub(&work_end, &work_start, NULL);
