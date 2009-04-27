@@ -88,7 +88,7 @@ rsx_bulkserver(struct pscrpc_request *rq, struct pscrpc_bulk_desc **descp,
 
 	psc_assert(type == BULK_GET_SINK || type == BULK_PUT_SOURCE);
 
-	*descp = desc = pscrpc_prep_bulk_exp(rq, 1, type, ptl);
+	*descp = desc = pscrpc_prep_bulk_exp(rq, n, type, ptl);
 	if (desc == NULL) {
 		psc_warnx("pscrpc_prep_bulk_exp returned a null desc");
 		return (-ENOMEM); // XXX errno
