@@ -117,6 +117,7 @@ void init_hash_entry(struct hash_entry *, u64 *, void *);
 void init_hash_entry_str(struct hash_entry_str *, const char *, void *);
 void init_hash_table(struct hash_table *, int, const char *, ...);
 void spinlock_hash_bucket(const struct hash_table *, u64);
+int  trylock_hash_bucket(const struct hash_table *, u64);
 void freelock_hash_bucket(const struct hash_table *, u64);
 
 /* XXX use a lockedlist */

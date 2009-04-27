@@ -148,6 +148,14 @@ spinlock_hash_bucket(const struct hash_table *t, u64 id)
 	spinlock(&b->hbucket_lock);
 }
 
+int
+trylock_hash_bucket(const struct hash_table *t, u64 id)
+{
+	struct hash_bucket *b=GET_BUCKET(t, id);
+
+	return (trylock(&b->hbucket_lock));
+}
+
 void
 freelock_hash_bucket(const struct hash_table *t, u64 id)
 {
