@@ -13,11 +13,9 @@
  * set when the barrier is initialized, and cannot be changed
  * except by reinitializing.
  */
+
 #include <pthread.h>
 
-/*
- * Structure describing a barrier.
- */
 typedef struct {
 	pthread_mutex_t     mutex;          /* Control access to barrier */
 	pthread_cond_t      cv;             /* wait for barrier */
@@ -25,21 +23,17 @@ typedef struct {
 	int                 threshold;      /* number of threads required */
 	int                 counter;        /* current number of threads */
 	unsigned long       cycle;          /* count cycles */
-} barrier_t;
+} pthread_barrier_t;
+
+typedef struct {
+} pthread_barrierattr_t;
 
 #define BARRIER_VALID   0xdbcafe
 
-/*
- * Support static initialization of barriers
- */
 #define BARRIER_INITIALIZER(cnt) \
-    {PTHREAD_MUTEX_INITIALIZER, PTHREAD_COND_INITIALIZER, \
-    BARRIER_VALID, cnt, cnt, 0}
+    { PTHREAD_MUTEX_INITIALIZER, PTHREAD_COND_INITIALIZER, \
+    BARRIER_VALID, cnt, cnt, 0 }
 
-/*
- * Define barrier functions
- */
-int barrier_init(barrier_t *, int);
-int barrier_nremaining(barrier_t *);
-int barrier_destroy(barrier_t *);
-int barrier_wait(barrier_t *);
+int pthread_barrier_init(pthread_barrier_t *, pthread_barrierattr_t *, int);
+int pthread_barrier_destroy(pthread_barrier_t *);
+int pthread_barrier_wait(pthread_barrier_t *);

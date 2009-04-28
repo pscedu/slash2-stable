@@ -28,13 +28,14 @@
 #include <stdio.h>
 
 #include "psc_util/pthrutil.h"
-#include "psc_util/pthread_barrier.h"
+#include "compat/pthread_barrier.h"
 
 /*
  * Initialize a barrier for use.
  */
 int
-barrier_init(barrier_t *barrier, int count)
+pthread_barrier_init(pthread_barrier_t *barrier, __unusedx
+    pthread_barrierattr_t *attr, int count)
 {
 	int status;
 
@@ -54,7 +55,7 @@ barrier_init(barrier_t *barrier, int count)
  * Destroy a barrier when done using it.
  */
 int
-barrier_destroy(barrier_t *barrier)
+pthread_barrier_destroy(pthread_barrier_t *barrier)
 {
 	int status, status2;
 
@@ -88,26 +89,13 @@ barrier_destroy(barrier_t *barrier)
 	return (status != 0 ? status : status2);
 }
 
-int
-barrier_nremaining(barrier_t *b)
-{
-	int rc;
-
-	rc = pthread_mutex_lock(&b->mutex);
-	if (rc)
-		return (rc);
-	rc = b->counter;
-	pthread_mutex_unlock(&b->mutex);
-	return (rc);
-}
-
 /*
  * Wait for all members of a barrier to reach the barrier. When
  * the count (of remaining members) reaches 0, broadcast to wake
  * all threads waiting.
  */
 int
-barrier_wait(barrier_t *barrier)
+pthread_barrier_wait(pthread_barrier_t *barrier)
 {
 	int status, cancel, tmp;
 	unsigned long cycle;
