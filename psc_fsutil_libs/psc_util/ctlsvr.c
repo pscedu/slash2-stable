@@ -18,6 +18,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 
+#include "pfl.h"
 #include "psc_ds/hash.h"
 #include "psc_ds/list.h"
 #include "psc_ds/listcache.h"
@@ -1358,7 +1359,6 @@ psc_ctlthr_main(const char *ofn, const struct psc_ctlop *ct, int nops)
 	struct sockaddr_un sun;
 	char fn[PATH_MAX];
 	mode_t old_umask;
-	socklen_t siz;
 	int s, fd;
 
 	/* Create control socket. */
@@ -1377,11 +1377,12 @@ psc_ctlthr_main(const char *ofn, const struct psc_ctlop *ct, int nops)
 		if (errno != ENOENT)
 			psc_error("unlink %s", fn);
 
-	/* XXX lock this umask call */
+	spinlock(&psc_umask_lock);
 	old_umask = umask(S_IXUSR | S_IXGRP | S_IWOTH | S_IROTH | S_IXOTH);
 	if (bind(s, (struct sockaddr *)&sun, sizeof(sun)) == -1)
 		psc_fatal("bind %s", fn);
 	umask(old_umask);
+	freelock(&psc_umask_lock);
 
 	/* XXX fchmod */
 	if (chmod(fn, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP |
@@ -1395,9 +1396,7 @@ psc_ctlthr_main(const char *ofn, const struct psc_ctlop *ct, int nops)
 		psc_fatal("listen");
 
 	for (;;) {
-		siz = sizeof(sun);
-		if ((fd = accept(s, (struct sockaddr *)&sun,
-		    &siz)) == -1)
+		if ((fd = accept(s, NULL, NULL)) == -1)
 			psc_fatal("accept");
 		psc_ctlthr(pscthr_get())->pc_st_nclients++;
 		psc_ctlthr_service(fd, ct, nops);
