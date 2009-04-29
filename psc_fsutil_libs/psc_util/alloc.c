@@ -123,3 +123,17 @@ psc_freen(void *p)
 {
 	PSCFREE(p);
 }
+
+
+/*
+ * psc_freenl - Free locked aligned memory.
+ * @p: memory chunk to free.
+ * @size: size of chunk.
+ */
+__weak void
+psc_freenl(void *p, size_t size)
+{
+	if (p && munlock(p, size) == -1)
+		psc_fatal("munlock %p", p);
+	PSCFREE(p);
+}

@@ -47,6 +47,7 @@ void	*psc_realloc(void *, size_t, int);
 void	*psc_calloc(size_t, size_t, int);
 void	 psc_freel(void *, size_t);
 void	 psc_freen(void *);
+void	 psc_freenl(void *, size_t);
 
 extern long pscPageSize;
 
