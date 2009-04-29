@@ -44,6 +44,7 @@ posix_memalign(void **p, size_t alignment, size_t size)
 {
 	void *startp;
 
+psc_fatalx("broken");
 	if (psc_alloc_countbits(alignment) != 1)
 		psc_fatalx("%zu: bad alignment size, must be power of two (%x bits)",
 		    size, psc_alloc_countbits(alignment));
