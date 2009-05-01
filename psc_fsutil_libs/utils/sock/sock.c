@@ -108,9 +108,9 @@ __dead void
 ioloop(int s, int ioflags)
 {
 	struct iostats *ist;
+	int wr, rem;
 	ssize_t rv;
 	fd_set set;
-	int wr;
 
 	wr = ioflags & IOF_WR;
 
@@ -134,20 +134,21 @@ ioloop(int s, int ioflags)
 			psc_fatalx("select: unexpected value (%zd)", rv);
 
 		/* transfer a chunk of data */
-		if (wr)
-			rv = send(s, buf, bufsiz, MSG_NOSIGNAL | MSG_WAITALL);
-		else
-			rv = recv(s, buf, bufsiz, MSG_NOSIGNAL | MSG_WAITALL);
-		if (rv == -1)
-			psc_fatal("%s", wr ? "send" : "recv");
-		else if (rv == 0)
-			psc_fatalx("%s: reached EOF", wr ? "send" : "recv");
-		else if (rv != (int)bufsiz)
-			psc_fatalx("%s: short write, want %zu, got %zd",
-			    wr ? "send" : "recv", bufsiz, rv);
+		rem = bufsiz;
+		do {
+			if (wr)
+				rv = send(s, buf, rem, MSG_NOSIGNAL | MSG_WAITALL);
+			else
+				rv = recv(s, buf, rem, MSG_NOSIGNAL | MSG_WAITALL);
+			if (rv == -1)
+				psc_fatal("%s", wr ? "send" : "recv");
+			else if (rv == 0)
+				psc_fatalx("%s: reached EOF", wr ? "send" : "recv");
 
-		/* tally amount transferred */
-		atomic_add(rv, &ist->ist_bytes_intv);
+			/* tally amount transferred */
+			atomic_add(rv, &ist->ist_bytes_intv);
+			rem -= rv;
+		} while (rem);
 	}
 }
 
