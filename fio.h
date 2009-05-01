@@ -611,8 +611,10 @@ static inline void _BARRIER(GROUP_t *mygroup, struct io_toolbox *iot) {
   APP_BARRIER;                                                   \
   STARTWATCH(MKDIR_clk);                                         \
   rc = mkdir(iot->mypath, 0755);				 \
-  if (rc && (errno != EEXIST))					 \
+  if (rc == -1 && (errno != EEXIST)) {				 \
+    WARN("mkdir %s failed: %s", iot->mypath, strerror(errno));	 \
     ASSERTPE(0);						 \
+  }								 \
   STOPWATCH(MKDIR_clk);                                          \
 } while ( 0 )
 
