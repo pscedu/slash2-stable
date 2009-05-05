@@ -757,10 +757,11 @@ int pscrpc_queue_wait(struct pscrpc_request *req)
 			       interrupted_request, req);
 
 	rc = psc_cli_wait_event(&req->rq_reply_waitq,
-	    pscrpc_check_reply(req), &lwi);
+			pscrpc_check_reply(req), &lwi);
 	/* !!! might have timed out !!! */
 	if (rc)
-		DEBUG_REQ(PLL_INFO, req, "psc_cli_wait_event(pscrpc_check_reply) returned %d", rc);
+		DEBUG_REQ(PLL_INFO, req, 
+		  "psc_cli_wait_event(pscrpc_check_reply) returned %d", rc);
 
 	DEBUG_REQ(PLL_INFO, req, "-- done sleeping");
 
@@ -1208,8 +1209,10 @@ int pscrpc_expire_one_request(struct pscrpc_request *req)
 		RETURN(1);
 	}
 
-	if (!imp->imp_igntimeout)
+	if (!imp->imp_igntimeout) {
 		pscrpc_fail_import(imp, req->rq_reqmsg->conn_cnt);
+		RETURN(1);
+	}
 
 	RETURN(0);
 }
