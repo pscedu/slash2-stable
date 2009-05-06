@@ -15,13 +15,13 @@
 #include "psc_util/alloc.h"
 #include "psc_util/atomic.h"
 #include "psc_util/cdefs.h"
-#include "psc_util/lock2.h"
+#include "psc_util/spinlock.h"
 #include "psc_util/thread.h"
 
 #define STARTWATCH(t) gettimeofday(&(t)[0], NULL)
 #define STOPWATCH(t)  gettimeofday(&(t)[1], NULL)
 
-struct psc_spinlock lock = PSL_LOCK_INIT;
+struct psc_spinlock lock = PSC_SPINLOCK_INIT;
 atomic_t idx = ATOMIC_INIT(0);
 atomic_t nworkers = ATOMIC_INIT(0);
 int nthrs = 32;
