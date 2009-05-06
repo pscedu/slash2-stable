@@ -144,8 +144,8 @@ void	*_psc_hashbkt_search(const struct psc_hashtbl *,
 #define psc_hashbkt_lock(b)	spinlock(&(b)->phb_lock)
 #define psc_hashbkt_unlock(b)	freelock(&(b)->phb_lock)
 
-void	 psc_hashent_init(const struct psc_hashtbl *, void *p);
-void	 psc_hashent_remove(const struct psc_hashtbl *, void *p);
+void	 psc_hashent_init(const struct psc_hashtbl *, void *);
+void	 psc_hashent_remove(const struct psc_hashtbl *, void *);
 
 extern struct psc_lockedlist psc_hashtbls;
 
