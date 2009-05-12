@@ -782,6 +782,9 @@ int pscrpc_queue_wait(struct pscrpc_request *req)
 	 * req->rq_receiving_reply is clear and returns. */
 	pscrpc_unregister_reply (req);
 
+	if (rc)
+		GOTO(out, 0);
+
 	if (req->rq_err)
 		GOTO(out, rc = -EIO);
 
