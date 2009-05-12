@@ -136,7 +136,6 @@ struct psclog_data {
 #define psc_logsv(lvl, ss, fmt, ap)	_psclogvck((ss), (lvl), 0, (fmt), (ap))
 #define psc_logxsv(lvl, ss, fmt, ap)	_psclogvck((ss), (lvl), PLO_ERRNO, (fmt), (ap))
 
-
 #define ENTRY_MARKER			psc_trace("entry_marker")
 #define EXIT_MARKER			psc_trace("exit_marker")
 
