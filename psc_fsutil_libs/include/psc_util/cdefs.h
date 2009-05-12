@@ -1,5 +1,8 @@
 /* $Id$ */
 
+#ifndef _PFL_CDEFS_H_
+#define _PFL_CDEFS_H_
+
 #include <sys/cdefs.h>
 
 #include <stddef.h>
@@ -47,7 +50,24 @@
 #define ATTR_HASALL(c, a)	(((c) & (a)) == (a))
 #define ATTR_HASANY(c, a)	((c) & (a))
 #define ATTR_TEST(c, a)		((c) & (a))
-#define ATTR_SET(c, a)		((c) |= (a))
+#define ATTR_SET(c, a)		((void)((c) |= (a)))
 #define ATTR_ISSET(c, a)	ATTR_TEST((c), (a))
-#define ATTR_UNSET(c, a)	((c) &= ~(a))
+#define ATTR_UNSET(c, a)	((void)((c) &= ~(a)))
+#define ATTR_NONESET(c, a)	(((c) & (a)) == 0)
 #define ATTR_RESET(c)		((c) = 0)
+
+#define ATTR_XSET(c, a)						\
+	do {							\
+		if (ATTR_ISSET(c, a))				\
+			abort();				\
+		ATTR_SET(c, a);					\
+	} while (0)
+
+#define ATTR_XUNSET(c, a)					\
+	do {							\
+		if (!ATTR_HASALL(c, a))				\
+			abort();				\
+		ATTR_UNSET(c, a);				\
+	} while (0)
+
+#endif /* _PFL_CDEFS_H_ */
