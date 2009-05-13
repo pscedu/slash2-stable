@@ -817,4 +817,28 @@ psc_atomic16_testmaskset(psc_atomic16_t *v, int16_t mask, int16_t newval)
 	return (1);
 }
 
+static __inline int32_t
+psc_atomic32_clearmask_retold(psc_atomic32_t *v, int32_t mask)
+{
+	int32_t oldval, newval;
+
+	do {
+		oldval = psc_atomic32_read(v);
+		newval = oldval & ~mask;
+	} while (psc_atomic32_cmpxchg(v, oldval, newval) != oldval);
+	return (oldval);
+}
+
+static __inline int32_t
+psc_atomic32_setmask_retold(psc_atomic32_t *v, int32_t mask)
+{
+	int32_t oldval, newval;
+
+	do {
+		oldval = psc_atomic32_read(v);
+		newval = oldval | mask;
+	} while (psc_atomic32_cmpxchg(v, oldval, newval) != oldval);
+	return (oldval);
+}
+
 #endif /* _PFL_ATOMIC_H_ */
