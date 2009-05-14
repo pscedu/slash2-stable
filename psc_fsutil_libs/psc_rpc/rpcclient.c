@@ -760,7 +760,7 @@ int pscrpc_queue_wait(struct pscrpc_request *req)
 			pscrpc_check_reply(req), &lwi);
 	/* !!! might have timed out !!! */
 	if (rc)
-		DEBUG_REQ(PLL_INFO, req, 
+		DEBUG_REQ(PLL_INFO, req,
 		  "psc_cli_wait_event(pscrpc_check_reply) returned %d", rc);
 
 	DEBUG_REQ(PLL_INFO, req, "-- done sleeping");
@@ -1065,7 +1065,7 @@ int pscrpc_check_set(struct pscrpc_request_set *set, int check_allsent)
 
 		if (!req->rq_bulk->bd_success) {
 			/* The RPC reply arrived OK, but the bulk screwed
-			 * up!  Dead wierd since the server told us the RPC
+			 * up!  Dead weird since the server told us the RPC
 			 * was good after getting the REPLY for her GET or
 			 * the ACK for her PUT. */
 			DEBUG_REQ(PLL_ERROR, req, "bulk transfer failed");
@@ -1085,12 +1085,9 @@ int pscrpc_check_set(struct pscrpc_request_set *set, int check_allsent)
 		req->rq_phase = ZRQ_PHASE_COMPLETE;
 		ncompleted++;
 
-		if (req->rq_interpret_reply != NULL) {
-			int (*interpreter)(struct pscrpc_request *,void *,int) =
-				req->rq_interpret_reply;
-			req->rq_status = interpreter(req, &req->rq_async_args,
-						     req->rq_status);
-		}
+		if (req->rq_interpret_reply)
+			req->rq_status = req->rq_interpret_reply(req,
+			        &req->rq_async_args);
 		set->set_remaining--;
 
 		DEBUG_REQ(PLL_NOTICE, req, "set(%p) rem=(%d) ",
@@ -1142,18 +1139,12 @@ void pscrpc_set_destroy(struct pscrpc_request_set *set)
 		psc_assert(req->rq_phase == expected_phase);
 
 		if (req->rq_phase == ZRQ_PHASE_NEW) {
-
-			if (req->rq_interpret_reply != NULL) {
-				int (*interpreter)(struct pscrpc_request *,
-						   void *, int) =
-					req->rq_interpret_reply;
-
-				/* higher level (i.e. LOV) failed;
-				 * let the sub reqs clean up */
-				req->rq_status = -EBADR;
-				interpreter(req, &req->rq_async_args,
-					    req->rq_status);
-			}
+			req->rq_status = -EBADR;
+			/* higher level (i.e. LOV) failed;
+			 * let the sub reqs clean up */
+			if (req->rq_interpret_reply)
+				req->rq_interpret_reply(req,
+				 &req->rq_async_args);
 			set->set_remaining--;
 		}
 

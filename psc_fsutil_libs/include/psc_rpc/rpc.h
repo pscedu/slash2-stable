@@ -317,7 +317,8 @@ struct pscrpc_request {
 	struct pscrpc_cb_id         rq_req_cbid;
 	struct pscrpc_cb_id         rq_reply_cbid;
 	struct pscrpc_bulk_desc    *rq_bulk;    /* attach bulk */
-	void                       *rq_interpret_reply; /* Async completion handler */
+	int			  (*rq_interpret_reply)(struct pscrpc_request *,
+					struct pscrpc_async_args *);
 	struct pscrpc_async_args    rq_async_args;      /* Async completion context */
 	lnet_handle_md_t            rq_req_md_h;
 	/* client-only incoming reply */
