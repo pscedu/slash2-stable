@@ -39,6 +39,10 @@ struct psc_lockedlist {
 #define PLL_ULOCK(pll)		freelock(PLL_GETLOCK(pll))
 #define PLL_URLOCK(pll, l)	ureqlock(PLL_GETLOCK(pll), (l))
 
+#define pll_foreach_safe(p, t, pll)				\
+	psclist_for_each_entry2_safe((p), (t),			\
+	    &(pll)->pll_listhd, (pll)->pll_offset)
+
 #define PLL_INITIALIZER(pll, type, member)			\
 	{ PSCLIST_HEAD_INIT((pll)->pll_listhd), 0, 		\
 	  offsetof(type, member), 0, { LOCK_INITIALIZER } }
