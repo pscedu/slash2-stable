@@ -3,6 +3,8 @@
 #ifndef _PFL_BITFLAG_H_
 #define _PFL_BITFLAG_H_
 
+#include <stdint.h>
+
 #include "psc_util/assert.h"
 #include "psc_util/cdefs.h"
 #include "psc_util/lock.h"
@@ -80,7 +82,7 @@ psc_countbits(size_t val)
 
 	c = 0;
 	for (n = 0; n < NBBY * sizeof(val); n++)
-		if (val & (1 << n))
+		if (val & (UINT64_C(1) << n))
 			c++;
 	return (c);
 }
