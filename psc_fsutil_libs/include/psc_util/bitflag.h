@@ -1,7 +1,7 @@
 /* $Id$ */
 
-#ifndef __PFL_BITFLAG_H__
-#define __PFL_BITFLAG_H__
+#ifndef _PFL_BITFLAG_H_
+#define _PFL_BITFLAG_H_
 
 #include "psc_util/assert.h"
 #include "psc_util/cdefs.h"
@@ -68,4 +68,21 @@ bitflag_sorc(int *f, psc_spinlock_t *lck, int checkon, int checkoff,
 	return (0);
 }
 
-#endif /* __PFL_BITFLAG_H__ */
+/**
+ * psc_countbits - count number of bits set in a value.
+ * @val: value to inspect.
+ */
+static __inline int
+psc_countbits(size_t val)
+{
+	size_t n;
+	int c;
+
+	c = 0;
+	for (n = 0; n < NBBY * sizeof(val); n++)
+		if (val & (1 << n))
+			c++;
+	return (c);
+}
+
+#endif /* _PFL_BITFLAG_H_ */

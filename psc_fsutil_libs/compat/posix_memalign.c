@@ -14,23 +14,8 @@
 #include <stdlib.h>
 
 #include "psc_util/alloc.h"
+#include "psc_util/bitflag.h"
 #include "psc_util/log.h"
-
-/**
- * psc_alloc_countbits - count number of bits set in a value.
- * @val: value to inspect.
- */
-int
-psc_alloc_countbits(size_t val)
-{
-	size_t i, n;
-
-	n = 0;
-	for (i = 0; i < NBBY * sizeof(val); i++)
-		if (val & (UINT64_C(1) << i))
-			n++;
-	return (n);
-}
 
 /**
  * posix_memalign - An overrideable aligned memory allocator for systems
@@ -45,9 +30,9 @@ posix_memalign(void **p, size_t alignment, size_t size)
 	void *startp;
 
 psc_fatalx("broken");
-	if (psc_alloc_countbits(alignment) != 1)
+	if (psc_countbits(alignment) != 1)
 		psc_fatalx("%zu: bad alignment size, must be power of two (%x bits)",
-		    size, psc_alloc_countbits(alignment));
+		    size, psc_countbits(alignment));
 
 	size += alignment;
 	startp = malloc(size);

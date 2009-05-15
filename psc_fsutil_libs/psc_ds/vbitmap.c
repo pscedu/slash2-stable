@@ -11,6 +11,7 @@
 
 #include "psc_ds/vbitmap.h"
 #include "psc_util/alloc.h"
+#include "psc_util/bitflag.h"
 #include "psc_util/cdefs.h"
 #include "psc_util/log.h"
 
@@ -395,17 +396,6 @@ vbitmap_printhex(const struct vbitmap *vb)
 	}
 }
 
-__inline int
-countbits(int a)
-{
-	int c;
-
-	for (c = 0; a; a >>= 1)
-		if (a & 1)
-			c++;
-	return (c);
-}
-
 /**
  * vbitmap_getstats - gather the statistics of a bitmap.
  * @vb: variable bitmap.
@@ -417,7 +407,7 @@ vbitmap_getstats(const struct vbitmap *vb, int *used, int *total)
 
 	*used = 0;
 	for (p = vb->vb_start; p <= vb->vb_end; p++)
-		*used += countbits(*p);
+		*used += psc_countbits(*p);
 	*total = vbitmap_getsize(vb);
 }
 
