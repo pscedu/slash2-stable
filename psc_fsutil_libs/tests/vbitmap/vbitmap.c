@@ -24,8 +24,8 @@ int
 main(int argc, char *argv[])
 {
 	struct vbitmap *vb;
+	int i, c, u, t;
 	size_t elem;
-	int i, c;
 
 	progname = argv[0];
 	while ((c = getopt(argc, argv, "")) != -1)
@@ -46,6 +46,10 @@ main(int argc, char *argv[])
 
 	if (vbitmap_next(vb, &elem))
 		errx(1, "got another expected unused elem! %zu\n", elem);
+
+	vbitmap_getstats(vb, &u, &t);
+	if (u != 213 || t != 213)
+		errx(1, "wrong size");
 
 	if (vbitmap_resize(vb, NELEM) == -1)
 		err(1, "vbitmap_new");
