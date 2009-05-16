@@ -1376,7 +1376,7 @@ int pscrpc_set_wait(struct pscrpc_request_set *set)
 				       pscrpc_interrupted_set, set);
 
 		rc = psc_cli_wait_event(&set->set_waitq,
-				    pscrpc_check_set(set, 1), &lwi);
+		    pscrpc_check_set(set, 1), &lwi);
 
 		psc_assert(rc == 0 || rc == -EINTR || rc == -ETIMEDOUT);
 
@@ -1390,7 +1390,8 @@ int pscrpc_set_wait(struct pscrpc_request_set *set)
 		 */
 		/* let the real timeouts bubble back up to the caller
 		 */
-		if (-ETIMEDOUT==rc) RETURN(rc);
+		if (rc == -ETIMEDOUT)
+			RETURN(rc);
 	} while (rc != 0 || set->set_remaining != 0);
 
 	psc_assert(set->set_remaining == 0);
@@ -1420,10 +1421,8 @@ int pscrpc_set_wait(struct pscrpc_request_set *set)
 	}
 
 	if (!rc && /* don't bother unless it completed successfully */
-	    set->set_interpret != NULL) {
-		set_interpreter_func interpreter = set->set_interpret;
-		rc = interpreter (set, set->set_arg, rc);
-	}
+	    set->set_interpret)
+		rc = set->set_interpret(set, set->set_arg, rc);
 
 	RETURN(rc);
 }
