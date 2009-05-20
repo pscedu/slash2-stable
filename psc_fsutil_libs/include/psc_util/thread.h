@@ -61,7 +61,6 @@ label(struct psc_thread *pt)						\
 
 /*
  * pscthr_init - initialization a process thread.
- * @
  */
 #define pscthr_init(thrtype, flags, startf, dtor, privsiz, namefmt,	\
 	    ...)							\

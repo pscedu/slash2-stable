@@ -1,12 +1,15 @@
 /* $Id$ */
 
+#ifndef _PFL_COMPLETION_H_
+#define _PFL_COMPLETION_H_
+
 struct psc_completion {
 	struct psc_waitq	pc_wq;
 	psc_spinlock_t		pc_lock;
 	int			pc_done;
 };
 
-static inline void
+static __inline void
 psc_completion_init(struct psc_completion *pc)
 {
 	memset(pc, 0, sizeof(*pc));
@@ -14,7 +17,7 @@ psc_completion_init(struct psc_completion *pc)
 	LOCK_INIT(&pc->pc_lock);
 }
 
-static inline void
+static __inline void
 psc_completion_wait(struct psc_completion *pc)
 {
 	spinlock(&pc->pc_lock);
@@ -24,7 +27,7 @@ psc_completion_wait(struct psc_completion *pc)
 		freelock(&pc->pc_lock);
 }
 
-static inline void
+static __inline void
 psc_completion_done(struct psc_completion *pc)
 {
 	spinlock(&pc->pc_lock);
@@ -32,3 +35,5 @@ psc_completion_done(struct psc_completion *pc)
 	psc_waitq_wakeall(&pc->pc_wq);
 	freelock(&pc->pc_lock);
 }
+
+#endif /* _PFL_COMPLETION_H_ */
