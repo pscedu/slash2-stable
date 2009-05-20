@@ -14,7 +14,6 @@ typedef int (*pscrpc_service_func_t)(struct pscrpc_request *);
 
 struct pscrpc_svc_handle {
 	struct psclist_head	  svh_lentry;
-	struct psc_thread	**svh_threads;
 	struct pscrpc_service	 *svh_service;
 	pscrpc_service_func_t	  svh_handler;
 	int			  svh_nthreads;
@@ -26,7 +25,9 @@ struct pscrpc_svc_handle {
 	int			  svh_rep_portal;
 	int			  svh_type;
 	int			  svh_flags;
+	size_t			  svh_thrsiz;
 	char			  svh_svc_name[PSCRPC_SVCNAME_MAX];
+	void			(*svh_initf)(void);
 };
 
 typedef struct pscrpc_svc_handle pscrpc_svc_handle_t;
@@ -34,12 +35,19 @@ typedef struct pscrpc_svc_handle pscrpc_svc_handle_t;
 #define PSCRPC_SVCF_COUNT_PEER_QLENS	(1 << 0)
 
 struct pscrpc_thread {
-	struct pscrpc_service	*prt_svc;
+	struct pscrpc_svc_handle *prt_svh;
+	struct psclist_head	  prt_lentry;	/* link among thrs in service */
+	int			  prt_alive;
 };
 
-#define pscrpc_thread_spawn(svh, type) \
-	_pscrpc_thread_spawn((svh), sizeof(type))
+#define pscrpcthr(thr)		((struct pscrpc_thread *)(thr)->pscthr_private)
 
-void _pscrpc_thread_spawn(pscrpc_svc_handle_t *, size_t);
+#define pscrpc_thread_spawn(svh, type)				\
+	do {							\
+		(svh)->svh_thrsiz = sizeof(type);		\
+		_pscrpc_svh_spawn((svh));			\
+	} while (0)
+
+void _pscrpc_svh_spawn(struct pscrpc_svc_handle *);
 
 #endif /* _PSCRPC_SERVICE_H_ */

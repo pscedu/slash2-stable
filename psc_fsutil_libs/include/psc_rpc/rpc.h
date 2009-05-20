@@ -341,7 +341,6 @@ struct pscrpc_service {
 	int srv_buf_size;          /* size of buffers         */
 	int srv_nbuf_per_group;
 	int srv_watchdog_timeout;  /* soft watchdog timeout, in ms */
-	int srv_num_threads;       /* # threads to start/started */
 	int srv_n_active_reqs;     /* # reqs being served */
 	int srv_n_difficult_replies; /* # 'difficult' replies */
 	int srv_nthreads;          /* # running threads */

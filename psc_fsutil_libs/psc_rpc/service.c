@@ -638,11 +638,13 @@ static void *
 pscrpc_main(struct psc_thread *thread, struct pscrpc_service *svc)
 {
 	struct pscrpc_reply_state *rs;
+	struct pscrpc_thread *prt;
 	struct sigaction sa;
 
 	int rc = 0;
 	ENTRY;
 
+	prt = pscrpcthr(thread);
 	psc_assert(svc != NULL);
 
 	psc_dbg("thread %p pscthr_type is %d", thread,
@@ -671,7 +673,7 @@ pscrpc_main(struct psc_thread *thread, struct pscrpc_service *svc)
 	CDEBUG(D_NET, "service thread started");
 
 	/* XXX maintain a list of all managed devices: insert here */
-	while ((thread->pscthr_flags & PTF_RUN) ||
+	while ((pscthr_run() && prt->prt_alive) ||
 	       svc->srv_n_difficult_replies != 0) {
 
 		/* Don't exit while there are replies to be handled */
@@ -936,8 +938,7 @@ rpc_peer_qlen_cmp(const void *a, const void *b)
 
 struct pscrpc_service *
 pscrpc_init_svc(int nbufs, int bufsize, int max_req_size, int max_reply_size,
-		 int req_portal, int rep_portal, char *name, int num_threads,
-		 svc_handler_t handler, int flags)
+    int req_portal, int rep_portal, char *name, svc_handler_t handler, int flags)
 {
 	int                    rc;
 	struct pscrpc_service *service;
@@ -969,7 +970,6 @@ pscrpc_init_svc(int nbufs, int bufsize, int max_req_size, int max_reply_size,
 	//service->srv_request_history_print_fn = svcreq_printfn;
 	service->srv_request_seq = 1;		/* valid seq #s start at 1 */
 	service->srv_request_max_cull_seq = 0;
-	service->srv_num_threads = num_threads;
 
 	rc = LNetSetLazyPortal(service->srv_req_portal);
 	LASSERT (rc == 0);
@@ -1038,49 +1038,79 @@ pscrpcthr_begin(void *arg)
 	struct pscrpc_thread *prt;
 
 	prt = thr->pscthr_private;
-	return (pscrpc_main(thr, prt->prt_svc));
+	if (prt->prt_svh->svh_initf)
+		prt->prt_svh->svh_initf();
+	return (pscrpc_main(thr, prt->prt_svh->svh_service));
+}
+
+int
+pscrpcsvc_addthr(struct pscrpc_svc_handle *svh)
+{
+	struct pscrpc_service *svc;
+	struct pscrpc_thread *prt;
+	struct psc_thread *thr;
+
+	svc = svh->svh_service;
+	spinlock(&svc->srv_lock);
+	thr = pscthr_init(svh->svh_type, 0, pscrpcthr_begin, NULL,
+	    svh->svh_thrsiz, "%sthr%02d", svh->svh_svc_name,
+	    svc->srv_nthreads);
+	if (thr)
+		psclist_xadd(&prt->prt_lentry,
+		    &prt->prt_svh->svh_service->srv_threads);
+	freelock(&svc->srv_lock);
+	if (thr == NULL)
+		return (-1);
+	prt = thr->pscthr_private;
+	prt->prt_alive = 1;
+	prt->prt_svh = svh;
+	pscthr_setready(thr);
+	return (0);
+}
+
+int
+pscrpcsvc_delthr(struct pscrpc_svc_handle *svh)
+{
+	struct pscrpc_service *svc;
+	struct pscrpc_thread *prt;
+	int rc;
+
+	rc = 0;
+	svc = svh->svh_service;
+	spinlock(&svc->srv_lock);
+	if (svc->srv_nthreads == 0)
+		rc = -1;
+	else {
+		svc->srv_nthreads--;
+		prt = psclist_first_entry(&svc->srv_threads,
+		    struct pscrpc_thread, prt_lentry);
+		prt->prt_alive = 0;
+	}
+	freelock(&svc->srv_lock);
+	return (rc);
 }
 
 /**
- * pscrpc_spawn - create an RPC service.
+ * pscrpc_svh_spawn - create an RPC service.
  * @svh:  an initialized service handle structure which holds the
  *	service's relevant information.
- * @siz: size of thread-local data storage.
- * @offset: offset into thread-local storage of service data.
  */
 void
-_pscrpc_thread_spawn(pscrpc_svc_handle_t *svh, size_t siz)
+_pscrpc_svh_spawn(pscrpc_svc_handle_t *svh)
 {
-	struct pscrpc_thread *prt;
-	struct psc_thread *thr;
 	int i;
 
 	svh->svh_service = pscrpc_init_svc(svh->svh_nbufs,
-					   svh->svh_bufsz,
-					   svh->svh_reqsz,
-					   svh->svh_repsz,
-					   svh->svh_req_portal,
-					   svh->svh_rep_portal,
-					   svh->svh_svc_name,
-					   svh->svh_nthreads,
-					   svh->svh_handler,
-					   svh->svh_flags);
+	    svh->svh_bufsz, svh->svh_reqsz, svh->svh_repsz,
+	    svh->svh_req_portal, svh->svh_rep_portal,
+	    svh->svh_svc_name, svh->svh_handler,
+	    svh->svh_flags);
 
 	psc_assert(svh->svh_service);
 
 	/* Track the service handle */
 	psclist_xadd(&svh->svh_lentry, &pscrpc_svh_list);
 
-	svh->svh_threads = PSCALLOC((sizeof(*svh->svh_threads)) *
-	    svh->svh_nthreads);
-
-	for (i = 0; i < svh->svh_nthreads; i++) {
-		thr = pscthr_init(svh->svh_type, 0,
-		    pscrpcthr_begin, NULL, siz,
-		    "%sthr%02d", svh->svh_svc_name, i);
-		svh->svh_threads[i] = thr;
-		prt = thr->pscthr_private;
-		prt->prt_svc = svh->svh_service;
-		pscthr_setready(thr);
-	}
+	for (i = 0; i < svh->svh_nthreads; i++)
+		pscrpcsvc_addthr(svh);
 }
