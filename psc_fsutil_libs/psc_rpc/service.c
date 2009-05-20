@@ -989,13 +989,6 @@ pscrpc_init_svc(int nbufs, int bufsize, int max_req_size, int max_reply_size,
 	INIT_PSCLIST_HEAD(&service->srv_free_rs_list);
 
 	psc_waitq_init(&service->srv_free_rs_waitq);
-	psc_waitq_init(&service->srv_waitq);
-
-	INIT_PSCLIST_HEAD(&service->srv_threads);
-
-	LOCK_INIT(&service->srv_lock);
-
-	service->srv_name = name;
 
 	spinlock (&pscrpc_all_services_lock);
 	psclist_xadd (&service->srv_lentry, &pscrpc_all_services);
@@ -1055,15 +1048,16 @@ pscrpcsvc_addthr(struct pscrpc_svc_handle *svh)
 	thr = pscthr_init(svh->svh_type, 0, pscrpcthr_begin, NULL,
 	    svh->svh_thrsiz, "%sthr%02d", svh->svh_svc_name,
 	    svc->srv_nthreads);
-	if (thr)
+	prt = thr->pscthr_private;
+	if (thr) {
+		prt->prt_alive = 1;
+		prt->prt_svh = svh;
 		psclist_xadd(&prt->prt_lentry,
-		    &prt->prt_svh->svh_service->srv_threads);
+		    &svh->svh_service->srv_threads);
+	}
 	freelock(&svc->srv_lock);
 	if (thr == NULL)
 		return (-1);
-	prt = thr->pscthr_private;
-	prt->prt_alive = 1;
-	prt->prt_svh = svh;
 	pscthr_setready(thr);
 	return (0);
 }
