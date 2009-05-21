@@ -26,9 +26,9 @@ system utilities to refine program behavior:
 Specify an alternate local
 .Xr tcp 7
 port for listening network sockets created by the Lustre networking
-stack.
+stack.  
 The default is
-.Li 988 .
+.Li 988 .  This is the server side port number.
 .It Ev LNET_NETWORKS
 The list of networks and interfaces known to the Lustre networking
 stack.
@@ -114,7 +114,7 @@ Specify an alternate remote/peer
 .Xr tcp 7
 port for connecting networking sockets.
 The default is
-.Li 988 .
+.Li 988 .  This is the client side port number.
 .It Ev USOCK_SOCKBUFSIZ
 Specify an alternative value for the amount of data that can either be
 queued awaiting tranmission or accumulate in the kernel awaiting
