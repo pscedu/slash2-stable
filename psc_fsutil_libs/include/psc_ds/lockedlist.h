@@ -39,7 +39,11 @@ struct psc_lockedlist {
 #define PLL_ULOCK(pll)		freelock(PLL_GETLOCK(pll))
 #define PLL_URLOCK(pll, l)	ureqlock(PLL_GETLOCK(pll), (l))
 
-#define pll_foreach_safe(p, t, pll)				\
+#define PLL_FOREACH(p, pll)					\
+	psclist_for_each_entry2((p), &(pll)->pll_listhd,	\
+	    (pll)->pll_offset)
+
+#define PLL_FOREACH_SAFE(p, t, pll)				\
 	psclist_for_each_entry2_safe((p), (t),			\
 	    &(pll)->pll_listhd, (pll)->pll_offset)
 

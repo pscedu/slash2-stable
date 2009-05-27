@@ -20,6 +20,7 @@
 
 #include "pfl.h"
 #include "psc_ds/hash.h"
+#include "psc_ds/hash2.h"
 #include "psc_ds/list.h"
 #include "psc_ds/listcache.h"
 #include "psc_ds/pool.h"
@@ -294,6 +295,7 @@ int
 psc_ctlrep_gethashtable(int fd, struct psc_ctlmsghdr *mh, void *m)
 {
 	struct psc_ctlmsg_hashtable *pcht = m;
+	struct psc_hashtbl *pht;
 	struct hash_table *ht;
 	char name[HTNAME_MAX];
 	int rc, found, all;
@@ -323,6 +325,29 @@ psc_ctlrep_gethashtable(int fd, struct psc_ctlmsghdr *mh, void *m)
 		}
 	}
 	freelock(&hashTablesListLock);
+
+	PLL_LOCK(&psc_hashtbls);
+	PLL_FOREACH(pht, &psc_hashtbls) {
+		if (all ||
+		    strncmp(name, pht->pht_name, strlen(name)) == 0) {
+			found = 1;
+
+			snprintf(pcht->pcht_name, sizeof(pcht->pcht_name),
+			    "%s", pht->pht_name);
+			psc_hashtbl_getstats(pht, &pcht->pcht_totalbucks,
+			    &pcht->pcht_usedbucks, &pcht->pcht_nents,
+			    &pcht->pcht_maxbucklen);
+			rc = psc_ctlmsg_sendv(fd, mh, pcht);
+			if (!rc)
+				break;
+
+			/* Terminate on exact match. */
+			if (strcmp(pht->pht_name, name) == 0)
+				break;
+		}
+	}
+	PLL_ULOCK(&psc_hashtbls);
+
 	if (rc && !found && !all)
 		rc = psc_ctlsenderr(fd, mh, "unknown hash table: %s", name);
 	return (rc);
