@@ -337,21 +337,27 @@ psc_pool_resize(struct psc_poolmgr *m)
  * @s: set to reap from.
  * @initiator: the requestor pool, which should be a member of @s, but
  *	should not itself be considered a candidate for reaping.
- * @size: amount of memory needed to be released, should probably be
- *	@initiator->pms_entsize.
+ * @size: amount of memory needed to be released, normally
+ *	@initiator->ppm_entsize but not necessarily always.
+ *
+ * XXX: if invoking this routine does not reap enough available memory
+ *	as adequate, it may be because there are no free buffers
+ *	available in any pools and the caller should then resort to
+ *	forcefully reclaiming pool buffers from the set.
  */
 void
 _psc_pool_reap(struct psc_poolset *s, struct psc_poolmaster *initiator,
-    size_t mem)
+    size_t size)
 {
 	struct psc_poolmgr *m, *culprit;
 	struct psc_poolmaster *p;
-	size_t mx, culpritmx;
+	size_t tmx, culpritmx;
+	int i, np, nobj;
 	void **pv;
-	int i, np;
 
+	culprit = NULL;
+	culpritmx = tmx = 0;
 	spinlock(&s->pps_lock);
-	culpritmx = mx = 0;
 	np = dynarray_len(&s->pps_pools);
 	pv = dynarray_get(&s->pps_pools);
 	for (i = 0; i < np; i++) {
@@ -362,18 +368,19 @@ _psc_pool_reap(struct psc_poolset *s, struct psc_poolmaster *initiator,
 
 		if (!POOL_TRYLOCK(m))
 			continue;
-		mx = m->ppm_lg.plg_entsize * m->ppm_lg.plg_size;
+		tmx = m->ppm_lg.plg_entsize * m->ppm_lg.plg_size;
+		nobj = MAX(size / m->ppm_lg.plg_entsize, 1);
 		POOL_UNLOCK(m);
 
-		if (mx > culpritmx) {
+		if (tmx > culpritmx) {
 			culprit = m;
-			culpritmx = mx;
+			culpritmx = tmx;
 		}
 	}
 	freelock(&s->pps_lock);
 
 	if (culprit)
-		psc_pool_tryshrink(culprit, 5);
+		psc_pool_tryshrink(culprit, nobj);
 }
 
 /*
