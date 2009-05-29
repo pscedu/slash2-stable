@@ -181,9 +181,9 @@ _psc_hashbkt_searchv(const struct psc_hashtbl *t,
 		psc_assert(cmp == NULL);
 
 	if (t->pht_flags & PHTF_STR)
-		id = va_arg(ap, uint64_t);
-	else
 		strid = va_arg(ap, const char *);
+	else
+		id = va_arg(ap, uint64_t);
 
 	locked = reqlock(&b->phb_lock);
 	PSC_HASHBKT_FOREACH_ENTRY(t, p, b) {
