@@ -249,12 +249,13 @@ _pscthr_begin(void *arg)
 /**
  * pscthr_init - Initialize a thread.
  * @type: application-specific thread type.
+ * @flags: operational flags.
  * @startf: thread execution routine.  By specifying a NULL routine,
  *	no pthread will be spawned (assuming that an actual pthread
  *	already exists or will be taken care of).
- * @privsiz: size of thread-type-specific data.
- * @flags: operational flags.
  * @dtor: optional destructor to run when/if thread exits.
+ * @privsiz: size of thread-type-specific data.
+ * @memnid: memory node ID to allocate memory for this thread.
  * @namefmt: application-specific printf(3) name for thread.
  */
 struct psc_thread *
