@@ -1037,7 +1037,7 @@ pscrpcthr_begin(void *arg)
 }
 
 int
-pscrpcsvc_addthr(struct pscrpc_svc_handle *svh)
+pscrpcsvh_addthr(struct pscrpc_svc_handle *svh)
 {
 	struct pscrpc_service *svc;
 	struct pscrpc_thread *prt;
@@ -1063,7 +1063,7 @@ pscrpcsvc_addthr(struct pscrpc_svc_handle *svh)
 }
 
 int
-pscrpcsvc_delthr(struct pscrpc_svc_handle *svh)
+pscrpcsvh_delthr(struct pscrpc_svc_handle *svh)
 {
 	struct pscrpc_service *svc;
 	struct pscrpc_thread *prt;
@@ -1090,7 +1090,7 @@ pscrpcsvc_delthr(struct pscrpc_svc_handle *svh)
  *	service's relevant information.
  */
 void
-_pscrpc_svh_spawn(pscrpc_svc_handle_t *svh)
+_pscrpc_svh_spawn(struct pscrpc_svc_handle *svh)
 {
 	int i;
 
@@ -1106,5 +1106,5 @@ _pscrpc_svh_spawn(pscrpc_svc_handle_t *svh)
 	psclist_xadd(&svh->svh_lentry, &pscrpc_svh_list);
 
 	for (i = 0; i < svh->svh_nthreads; i++)
-		pscrpcsvc_addthr(svh);
+		pscrpcsvh_addthr(svh);
 }

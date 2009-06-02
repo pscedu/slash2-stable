@@ -49,5 +49,7 @@ struct pscrpc_thread {
 	} while (0)
 
 void _pscrpc_svh_spawn(struct pscrpc_svc_handle *);
+int pscrpcsvh_addthr(struct pscrpc_svc_handle *);
+int pscrpcsvh_delthr(struct pscrpc_svc_handle *);
 
 #endif /* _PSCRPC_SERVICE_H_ */
