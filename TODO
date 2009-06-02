@@ -44,6 +44,7 @@ pfl
 - create vlocks: vector lock API when you need to lock multiple
   structures in a reqlock order fashion (hash tables and lists etc.)
 - add custom sleep intervals for timerthr API
+- move pfl.h and psc_types.h into psc_fsutil_libs/include/pfl
 
 zest
 - test parity reconstruction service by rebuilding
