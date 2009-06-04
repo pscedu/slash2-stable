@@ -370,13 +370,8 @@ multilock_wait(struct multilock *ml, void *datap, int usec)
 
 		if (gettimeofday(&tv, NULL) == -1)
 			psc_fatal("gettimeoday");
-		/* make sure timeradd won't complain later */
-		adj.tv_sec = 0;
-		while (usec > 1000000) {
-			adj.tv_sec++;
-			usec -= 1000000;
-		}
-		adj.tv_usec = usec;
+		adj.tv_sec = usec / 1000000;
+		adj.tv_usec = usec % 1000000;
 		timeradd(&tv, &adj, &res);
 		ntv.tv_sec = res.tv_sec;
 		ntv.tv_nsec = res.tv_usec * 1000;
