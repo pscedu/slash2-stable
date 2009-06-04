@@ -172,9 +172,6 @@ ia64_atomic64_sub(__s64 i, psc_atomic64_t *v)
 		: ia64_atomic64_sub(__ia64_asr_i, (v));			\
 })
 
-#define psc_atomic64_dec_return(v)		psc_atomic64_sub_return((v), 1)
-#define psc_atomic64_inc_return(v)		psc_atomic64_add_return((v), 1)
-
 #define atomic_dec_and_test(v)			(atomic_sub_return(1, (v)) == 0)
 #define psc_atomic32_dec_test_zero(v)		(psc_atomic32_sub_return((v), 1) == 0)
 #define psc_atomic64_dec_test_zero(v)		(psc_atomic64_sub_return((v), 1) == 0)
@@ -782,6 +779,9 @@ psc_atomic64_set_mask(psc_atomic64_t *v, int64_t mask)
 
 #define psc_atomic32_dec_return(v)		psc_atomic32_sub_return((v), 1)
 #define psc_atomic32_inc_return(v)		psc_atomic32_add_return((v), 1)
+
+#define psc_atomic64_dec_return(v)		psc_atomic64_sub_return((v), 1)
+#define psc_atomic64_inc_return(v)		psc_atomic64_add_return((v), 1)
 
 #define atomic_cmpxchg(v, old, new)		((int)cmpxchg(&((v)->value), (old), (new)))
 #define atomic_xchg(v, new)			(xchg(&((v)->value), (new)))
