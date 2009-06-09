@@ -14,13 +14,8 @@ LKERNEL_BASE=	${ROOTDIR}/kernel/2.6.9-42.0.8.EL_lustre.1.4.9.1
 
 ifeq ($(wildcard /usr/src/kernels/linux),)
  ifeq ($(wildcard /opt/xt-os),)
-  ifeq ($(wildcard /wolverine_pool),)
-    # for ZESTIONs
-    KERNEL_BASE=	/usr/src/kernels/2.6.18-92.el5-x86_64
-  else
-    # for wolverine
-    KERNEL_BASE=	/usr/src/kernels/2.6.18-92.el5-xen-x86_64
-  endif
+  # for ZESTIONs
+  KERNEL_BASE=	/usr/src/kernels/2.6.18-92.el5-x86_64
  else
   ifeq ($(wildcard /opt/sgi),)
    # on xt3
