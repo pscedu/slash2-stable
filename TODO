@@ -89,6 +89,7 @@ zest
 - have two iothrs access the same disk to shorten the time the disk
   is idle
 - kill the zest/trunk directory
+- add auth checks into fdbuf from slash
 
 development tool
 - let wiki changes automatically email zest-devel@ like svn commits
