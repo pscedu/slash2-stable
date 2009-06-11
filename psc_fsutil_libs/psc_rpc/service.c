@@ -1109,6 +1109,6 @@ _pscrpc_svh_spawn(struct pscrpc_svc_handle *svh)
 
 	n = svh->svh_nthreads;
 	svh->svh_nthreads = 0;
-	for (i = 0; i < svh->svh_nthreads; i++)
+	for (i = 0; i < n; i++)
 		pscrpcsvh_addthr(svh);
 }
