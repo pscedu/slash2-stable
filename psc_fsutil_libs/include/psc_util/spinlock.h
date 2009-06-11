@@ -33,46 +33,49 @@ struct psc_spinlock {
  * psc_spin_ensure - Ensure that a spinlock is owned by the caller.
  * @psl: spinlock.
  */
-#define psc_spin_ensure(psl)						\
-	do {								\
-		int __val;						\
-									\
-		__val = psc_atomic32_read(&(psl)->psl_value);		\
-		if (__val == PSL_UNLOCKED)				\
-			psc_fatalx("psc_spin_ensure: not locked");	\
-		if (__val != PSL_LOCKED)				\
-			psc_fatalx("psc_spin_ensure: invalid value");	\
-		if ((psl)->psl_who != pthread_self())			\
-			psc_fatalx("psc_spin_ensure: not our lock; "	\
-			    "psl=%p, owner=%lu, self=%lu", (psl),	\
-			    (psl)->psl_who, pthread_self());		\
-	} while (0)
+static inline int
+psc_spin_ensure(struct psc_spinlock *psl)
+{
+	int v;
+
+	v = psc_atomic32_read(&psl->psl_value);
+	if (v == PSL_UNLOCKED)
+		psc_fatalx("psc_spin_ensure: not locked");
+	if (v != PSL_LOCKED)
+		psc_fatalx("psc_spin_ensure: invalid value");
+	if (psl->psl_who != pthread_self())
+		psc_fatalx("psc_spin_ensure: not our lock; "
+		    "psl=%p, owner=%lu, self=%lu", (psl),
+		    psl->psl_who, pthread_self());
+	return (1);
+}
 
 /**
  * psc_spin_unlock - Release a spinlock.
  * @psl: spinlock.
  */
-#define psc_spin_unlock(psl)						\
-	do {								\
-		struct timeval __now, __max, __diff;			\
-									\
-		psc_spin_ensure(psl);					\
-		if ((psl)->psl_who != pthread_self())			\
-			psc_fatalx("psc_spin_unlock: not owner; "	\
-			    "psl=%p, owner=%lu, self=%lu",		\
-			    (psl), (psl)->psl_who, pthread_self());	\
-		if (gettimeofday(&__now, NULL) == -1)			\
-			psc_fatal("gettimeofday");			\
-		__max.tv_sec = 0;					\
-		__max.tv_usec = 500;					\
-		timersub(&__now, &(psl)->psl_time, &__diff);		\
-		if (timercmp(&__diff, &__max, >))			\
-			psc_errorx("psc_spin_unlock: lock held long;"	\
-			    "psl=%p, len=%luus", (psl), __diff.tv_sec *	\
-			        1000 * 1000 + __diff.tv_usec);		\
-		(psl)->psl_who = 0;					\
-		psc_atomic32_set(&(psl)->psl_value, PSL_UNLOCKED);	\
-	} while (0)
+static inline void
+psc_spinlock_unlock(struct psc_spinlock *psl)
+{
+	struct timeval now, max, diff;
+
+	psc_spin_ensure(psl);
+	if (psl->psl_who != pthread_self())
+		psc_fatalx("psc_spin_unlock: not owner; "
+		    "psl=%p, owner=%lu, self=%lu",
+		    psl, psl->psl_who, pthread_self());
+	if (gettimeofday(&now, NULL) == -1)
+		psc_fatal("gettimeofday");
+	max.tv_sec = 0;
+	max.tv_usec = 500;
+	timersub(&now, &psl->psl_time, &diff);
+	if (timercmp(&diff, &max, >))
+		psc_errorx("psc_spin_unlock: lock held long;"
+		    "psl=%p, len=%luus", psl, diff.tv_sec *
+		    1000 * 1000 + diff.tv_usec);
+	psl->psl_who = 0;
+	psc_atomic32_set(&psl->psl_value, PSL_UNLOCKED);
+}
 
 /**
  * psc_spin_trylock - Attempt to acquire a spinlock.
