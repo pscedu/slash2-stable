@@ -23,14 +23,14 @@ typedef pthread_mutex_t psc_spinlock_t;
 
 #define LOCK_INITIALIZER	PTHREAD_ERRORCHECK_MUTEX_INITIALIZER_NP
 
-static __inline void
+static __inline int
 LOCK_ENSURE(psc_spinlock_t *lk)
 {
 	int rc;
 
 	rc = pthread_mutex_trylock(lk);
 	if (rc == EDEADLK)
-		return;
+		return (1);
 	psc_fatalx("spinlock not locked: %s", strerror(rc));
 }
 
@@ -158,28 +158,30 @@ validlock(const psc_spinlock_t *sl)
 	do {								\
 		if (!validlock(l))					\
 			psc_fatalx("freelock: invalid lock value "	\
-				   "(%p)", (l));			\
+			    "(%p)", (l));				\
 		if ((l)->sl_lock == SL_UNLOCKED)			\
 			psc_fatalx("freelock: not locked (%p)", (l));	\
 		if ((l)->sl_who != pthread_self())			\
 			psc_fatalx("freelock: not owner "		\
-				   "(%p, owner=%lu, self=%lu)!",	\
-				   (l), (l)->sl_who, pthread_self());	\
+			    "(%p, owner=%lu, self=%lu)!",		\
+			    (l), (l)->sl_who, pthread_self());		\
 		(l)->sl_who = 0;					\
 		(l)->sl_lock = SL_UNLOCKED;				\
 	} while (0)
 
-#define LOCK_ENSURE(l)							\
-	do {								\
-		if (!validlock(l))					\
-			psc_fatalx("lock %p has invalid value", (l));	\
-		if ((l)->sl_lock != SL_LOCKED)				\
-			psc_fatalx("lock is not locked (%p)!", (l));	\
-		if ((l)->sl_who != pthread_self())			\
-			psc_fatalx("lock is not owned by us "		\
-			    "(%p, %lu vs. %lu)!",			\
-			    (l), (l)->sl_who, pthread_self());		\
-	} while (0)
+static __inline int
+LOCK_ENSURE(psc_spinlock_t *s)
+{
+	if (!validlock(s))
+		psc_fatalx("lock %p has invalid value", s);
+	if (s->sl_lock != SL_LOCKED)
+		psc_fatalx("lock is not locked (%p)!", s);
+	if (s->sl_who != pthread_self())
+		psc_fatalx("lock is not owned by us "
+		    "(%p, %lu vs. %lu)!",
+		    s, s->sl_who, pthread_self());
+	return (1);
+}
 
 static __inline int
 _tands(volatile psc_spinlock_t *s)
@@ -295,13 +297,15 @@ typedef int psc_spinlock_t;
 
 #define _LOCK_VALID(l)		(*(l) == SL_LOCKED || *(l) == SL_UNLOCKED)
 
-#define LOCK_ENSURE(l)								\
-	do {									\
-		if (!_LOCK_VALID(l))						\
-			psc_fatalx("lock %p has invalid value", (l));		\
-		if (*(l) != SL_LOCKED)						\
-			psc_fatalx("lock is not locked (%p)!", (l));		\
-	} while (0)
+static __inline int
+LOCK_ENSURE(psc_spinlock_t *s)
+{
+	if (!_LOCK_VALID(s))
+		psc_fatalx("lock %p has invalid value", s);
+	if (*s != SL_LOCKED)
+		psc_fatalx("lock is not locked (%p)!", s);
+	return (1);
+}
 
 #define freelock(l)								\
 	do {									\
