@@ -1047,7 +1047,7 @@ pscrpcsvh_addthr(struct pscrpc_svc_handle *svh)
 	spinlock(&svc->srv_lock);
 	thr = pscthr_init(svh->svh_type, 0, pscrpcthr_begin, NULL,
 	    svh->svh_thrsiz, "%sthr%02d", svh->svh_svc_name,
-	    svc->srv_nthreads);
+	    svh->svh_nthreads);
 	prt = thr->pscthr_private;
 	if (thr) {
 		prt->prt_alive = 1;
@@ -1055,6 +1055,8 @@ pscrpcsvh_addthr(struct pscrpc_svc_handle *svh)
 		psclist_xadd(&prt->prt_lentry,
 		    &svh->svh_service->srv_threads);
 	}
+	if (thr)
+		svh->svh_nthreads++;
 	freelock(&svc->srv_lock);
 	if (thr == NULL)
 		return (-1);
@@ -1092,7 +1094,7 @@ pscrpcsvh_delthr(struct pscrpc_svc_handle *svh)
 void
 _pscrpc_svh_spawn(struct pscrpc_svc_handle *svh)
 {
-	int i;
+	int i, n;
 
 	svh->svh_service = pscrpc_init_svc(svh->svh_nbufs,
 	    svh->svh_bufsz, svh->svh_reqsz, svh->svh_repsz,
@@ -1105,6 +1107,8 @@ _pscrpc_svh_spawn(struct pscrpc_svc_handle *svh)
 	/* Track the service handle */
 	psclist_xadd(&svh->svh_lentry, &pscrpc_svh_list);
 
+	n = svh->svh_nthreads;
+	svh->svh_nthreads = 0;
 	for (i = 0; i < svh->svh_nthreads; i++)
 		pscrpcsvh_addthr(svh);
 }
