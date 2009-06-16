@@ -17,6 +17,7 @@ struct psc_hashbkt {
 	struct psclist_head	  phb_listhd;
 	psc_spinlock_t		  phb_lock;
 	atomic_t		  phb_nitems;
+	int			  phb_refcnt;
 };
 
 struct psc_hashtbl {
@@ -36,11 +37,11 @@ struct psc_hashent {
 };
 
 /* Table flags. */
-#define PHTF_NONE	(0 << 0)	/* no table flags specified */
+#define PHTF_NONE	0		/* no table flags specified */
 #define PHTF_STR	(1 << 0)	/* IDs are strings */
 
 /* Lookup flags. */
-#define PHLF_NONE	(0 << 0)	/* no lookup flags specified */
+#define PHLF_NONE	0		/* no lookup flags specified */
 #define PHLF_DEL	(1 << 0)	/* find and remove item from table */
 
 #define PSC_HASHTBL_FOREACH_BUCKET(b, t)				\

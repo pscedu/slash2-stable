@@ -158,9 +158,14 @@ psc_hashbkt_get(const struct psc_hashtbl *t, ...)
 	struct psc_hashbkt *b;
 	va_list ap;
 
+//	PSC_HASHTBL_LOCK(t);
 	va_start(ap, t);
 	b = psc_hashbkt_getv(t, ap);
 	va_end(ap);
+//	psc_hashbkt_lock(b);
+//	b->phb_refcnt++;
+//	psc_hashbkt_unlock(b);
+//	PSC_HASHTBL_ULOCK(t);
 	return (b);
 }
 
