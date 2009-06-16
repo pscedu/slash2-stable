@@ -29,6 +29,7 @@
 #include "psc_util/cdefs.h"
 #include "psc_util/ctl.h"
 #include "psc_util/ctlsvr.h"
+#include "psc_util/fault.h"
 #include "psc_util/fmtstr.h"
 #include "psc_util/iostats.h"
 #include "psc_util/log.h"
@@ -623,6 +624,10 @@ psc_ctlparam_log_format(int fd, struct psc_ctlmsghdr *mh,
 		if (nlevels != 2)
 			return (psc_ctlsenderr(fd, mh, "invalid thread field"));
 
+		if (pcp->pcp_flags & (PCPF_ADD | PCPF_SUB))
+			return (psc_ctlsenderr(fd, mh,
+			    "invalid operation"));
+
 		strlcpy(logbuf, pcp->pcp_value, sizeof(logbuf));
 		psc_logfmt = logbuf;
 	} else
@@ -653,6 +658,9 @@ psc_ctlparam_rlim_nofile(int fd, struct psc_ctlmsghdr *mh,
 	set = (mh->mh_type == PCMT_SETPARAM);
 
 	if (set) {
+		if (pcp->pcp_flags & (PCPF_ADD | PCPF_SUB))
+			psc_fatalx("not yet supported");
+
 		endp = NULL;
 		val = strtol(pcp->pcp_value, &endp, 10);
 		if (val <= 0 || val > 10 * 1024 ||
@@ -679,19 +687,112 @@ psc_ctlparam_rlim_nofile(int fd, struct psc_ctlmsghdr *mh,
 }
 
 int
+psc_ctlparam_run(int fd, struct psc_ctlmsghdr *mh,
+    struct psc_ctlmsg_param *pcp, char **levels, int nlevels)
+{
+	struct psc_thread *thr;
+	int rc, set, run;
+
+	if (nlevels > 1)
+		return (psc_ctlsenderr(fd, mh, "invalid field"));
+
+	levels[0] = "run";
+	run = 0; /* gcc */
+
+	set = (mh->mh_type == PCMT_SETPARAM);
+
+	if (set) {
+		if (pcp->pcp_flags & (PCPF_ADD | PCPF_SUB))
+			return (psc_ctlsenderr(fd, mh,
+			    "invalid operation"));
+
+		if (strcmp(pcp->pcp_value, "0") == 0)
+			run = 0;
+		else if (strcmp(pcp->pcp_value, "1") == 0)
+			run = 1;
+		else
+			return (psc_ctlsenderr(fd, mh,
+			    "invalid run value: %s",
+			    pcp->pcp_field));
+	}
+
+	rc = 1;
+	PLL_LOCK(&psc_threads);
+	PSC_CTL_FOREACH_THREAD(thr, pcp->pcp_thrname,
+	    &psc_threads.pll_listhd) {
+		if (set)
+			pscthr_setrun(thr, run);
+		else if (!(rc = psc_ctlmsg_param_send(fd, mh, pcp,
+		    thr->pscthr_name, levels, 1,
+		    thr->pscthr_flags & PTF_RUN ? "1" : "0")))
+			break;
+	}
+	PLL_ULOCK(&psc_threads);
+	return (rc);
+}
+
+/*
+ * psc_ctlparam_pause - handle thread pause state parameter.
+ * @fd: control connection file descriptor.
+ * @mh: already filled-in control message header.
+ * @pcp: parameter control message.
+ * @levels: parameter fields.
+ * @nlevels: number of fields.
+ */
+int
+psc_ctlparam_pause(int fd, struct psc_ctlmsghdr *mh,
+    struct psc_ctlmsg_param *pcp, char **levels, int nlevels)
+{
+	struct psc_thread *thr;
+	int rc, set, pause;
+	char *s;
+	long l;
+
+	if (nlevels > 1)
+		return (psc_ctlsenderr(fd, mh, "invalid field"));
+
+	levels[0] = "pause";
+
+	pause = 0; /* gcc */
+
+	set = (mh->mh_type == PCMT_SETPARAM);
+
+	if (set) {
+		if (pcp->pcp_flags & (PCPF_ADD | PCPF_SUB))
+			return (psc_ctlsenderr(fd, mh,
+			    "invalid operation"));
+
+		s = NULL;
+		l = strtol(pcp->pcp_value, &s, 10);
+		if (l == LONG_MAX || l == LONG_MIN || *s != '\0' ||
+		    s == pcp->pcp_value || l < 0 || l > 1)
+			return (psc_ctlsenderr(fd, mh,
+			    "invalid pause value: %s",
+			    pcp->pcp_field));
+		pause = (int)l;
+	}
+
+	rc = 1;
+	PLL_LOCK(&psc_threads);
+	PSC_CTL_FOREACH_THREAD(thr, pcp->pcp_thrname, &psc_threads.pll_listhd) {
+		if (set)
+			pscthr_setpause(thr, pause);
+		else if (!(rc = psc_ctlmsg_param_send(fd, mh, pcp,
+		    thr->pscthr_name, levels, 1,
+		    (thr->pscthr_flags & PTF_PAUSED) ? "1" : "0")))
+			break;
+	}
+	PLL_ULOCK(&psc_threads);
+	return (rc);
+}
+
+int
 psc_ctlparam_pool_handle(int fd, struct psc_ctlmsghdr *mh,
     struct psc_ctlmsg_param *pcp, char **levels, int nlevels,
     struct psc_poolmgr *m, int val)
 {
 	char nbuf[20];
 	int set;
-
-	if (nlevels > 3 || (nlevels == 3 &&
-	    (strcmp(levels[2], "min") != 0 &&
-	     strcmp(levels[2], "max") != 0 &&
-	     strcmp(levels[2], "thres") != 0 &&
-	     strcmp(levels[2], "total") != 0)))
-		return (psc_ctlsenderr(fd, mh, "invalid field"));
 
 	levels[0] = "pool";
 	levels[1] = m->ppm_lg.plg_name;
@@ -774,98 +875,6 @@ psc_ctlparam_pool_handle(int fd, struct psc_ctlmsghdr *mh,
 }
 
 int
-psc_ctlparam_run(int fd, struct psc_ctlmsghdr *mh,
-    struct psc_ctlmsg_param *pcp, char **levels, int nlevels)
-{
-	struct psc_thread *thr;
-	int rc, set, run;
-
-	if (nlevels > 1)
-		return (psc_ctlsenderr(fd, mh, "invalid field"));
-
-	levels[0] = "run";
-	run = 0; /* gcc */
-
-	set = (mh->mh_type == PCMT_SETPARAM);
-
-	if (set) {
-		if (strcmp(pcp->pcp_value, "0") == 0)
-			run = 0;
-		else if (strcmp(pcp->pcp_value, "1") == 0)
-			run = 1;
-		else
-			return (psc_ctlsenderr(fd, mh,
-			    "invalid run value: %s",
-			    pcp->pcp_field));
-	}
-
-	rc = 1;
-	PLL_LOCK(&psc_threads);
-	PSC_CTL_FOREACH_THREAD(thr, pcp->pcp_thrname,
-	    &psc_threads.pll_listhd) {
-		if (set)
-			pscthr_setrun(thr, run);
-		else if (!(rc = psc_ctlmsg_param_send(fd, mh, pcp,
-		    thr->pscthr_name, levels, 1,
-		    thr->pscthr_flags & PTF_RUN ? "1" : "0")))
-			break;
-	}
-	PLL_ULOCK(&psc_threads);
-	return (rc);
-}
-
-/*
- * psc_ctlparam_pause - handle thread pause state parameter.
- * @fd: control connection file descriptor.
- * @mh: already filled-in control message header.
- * @pcp: parameter control message.
- * @levels: parameter fields.
- * @nlevels: number of fields.
- */
-int
-psc_ctlparam_pause(int fd, struct psc_ctlmsghdr *mh,
-    struct psc_ctlmsg_param *pcp, char **levels, int nlevels)
-{
-	struct psc_thread *thr;
-	int rc, set, pause;
-	char *s;
-	long l;
-
-	if (nlevels > 1)
-		return (psc_ctlsenderr(fd, mh, "invalid field"));
-
-	levels[0] = "pause";
-
-	pause = 0; /* gcc */
-
-	set = (mh->mh_type == PCMT_SETPARAM);
-
-	if (set) {
-		s = NULL;
-		l = strtol(pcp->pcp_value, &s, 10);
-		if (l == LONG_MAX || l == LONG_MIN || *s != '\0' ||
-		    s == pcp->pcp_value || l < 0 || l > 1)
-			return (psc_ctlsenderr(fd, mh,
-			    "invalid pause value: %s",
-			    pcp->pcp_field));
-		pause = (int)l;
-	}
-
-	rc = 1;
-	PLL_LOCK(&psc_threads);
-	PSC_CTL_FOREACH_THREAD(thr, pcp->pcp_thrname, &psc_threads.pll_listhd) {
-		if (set)
-			pscthr_setpause(thr, pause);
-		else if (!(rc = psc_ctlmsg_param_send(fd, mh, pcp,
-		    thr->pscthr_name, levels, 1,
-		    (thr->pscthr_flags & PTF_PAUSED) ? "1" : "0")))
-			break;
-	}
-	PLL_ULOCK(&psc_threads);
-	return (rc);
-}
-
-int
 psc_ctlparam_pool(int fd, struct psc_ctlmsghdr *mh,
     struct psc_ctlmsg_param *pcp, char **levels, int nlevels)
 {
@@ -880,8 +889,17 @@ psc_ctlparam_pool(int fd, struct psc_ctlmsghdr *mh,
 	if (strcmp(pcp->pcp_thrname, PCTHRNAME_EVERYONE) != 0)
 		return (psc_ctlsenderr(fd, mh, "invalid thread field"));
 
+	rc = 1;
 	levels[0] = "pool";
 	val = 0; /* gcc */
+
+	if (nlevels == 3 &&
+	    strcmp(levels[2], "min")   != 0 &&
+	    strcmp(levels[2], "max")   != 0 &&
+	    strcmp(levels[2], "thres") != 0 &&
+	    strcmp(levels[2], "total") != 0)
+		return (psc_ctlsenderr(fd, mh,
+		    "invalid pool field: %s", levels[2]));
 
 	set = (mh->mh_type == PCMT_SETPARAM);
 
@@ -889,12 +907,6 @@ psc_ctlparam_pool(int fd, struct psc_ctlmsghdr *mh,
 		if (nlevels != 3)
 			return (psc_ctlsenderr(fd, mh,
 			    "invalid operation"));
-
-		if (strcmp(levels[2], "min") &&
-		    strcmp(levels[2], "max") &&
-		    strcmp(levels[2], "total"))
-			return (psc_ctlsenderr(fd, mh,
-			    "invalid pool field: %s", levels[2]));
 
 		endp = NULL;
 		val = strtol(pcp->pcp_value, &endp, 10);
@@ -921,6 +933,220 @@ psc_ctlparam_pool(int fd, struct psc_ctlmsghdr *mh,
 			    "invalid pool: %s", levels[1]));
 		rc = psc_ctlparam_pool_handle(fd, mh,
 		    pcp, levels, nlevels, m, val);
+	}
+	return (rc);
+}
+
+int
+psc_ctlparam_faults_handle(int fd, struct psc_ctlmsghdr *mh,
+    struct psc_ctlmsg_param *pcp, char **levels, int nlevels,
+    struct psc_fault *pflt, int val)
+{
+	char nbuf[20];
+	int set;
+
+	levels[0] = "faults";
+	levels[1] = pflt->pflt_name;
+
+	set = (mh->mh_type == PCMT_SETPARAM);
+
+	if (nlevels < 3 || strcmp(levels[2], "active") == 0) {
+		if (nlevels == 3 && set) {
+			if (pcp->pcp_flags & (PCPF_ADD | PCPF_SUB))
+				return (psc_ctlsenderr(fd, mh,
+				    "invalid operation"));
+			if (val)
+				pflt->pflt_flags |= PFLTF_ACTIVE;
+			else
+				pflt->pflt_flags &= ~PFLTF_ACTIVE;
+		} else {
+			levels[2] = "active";
+			snprintf(nbuf, sizeof(nbuf), "%d",
+			    pflt->pflt_flags & PFLTF_ACTIVE ? 1 : 0);
+			if (!psc_ctlmsg_param_send(fd, mh, pcp,
+			    PCTHRNAME_EVERYONE, levels, 3, nbuf))
+				return (0);
+		}
+	}
+	if (nlevels < 3 || strcmp(levels[2], "delay") == 0) {
+		if (nlevels == 3 && set) {
+			if (pcp->pcp_flags & PCPF_ADD)
+				pflt->pflt_delay += val;
+			else if (pcp->pcp_flags & PCPF_SUB)
+				pflt->pflt_delay -= val;
+			else
+				pflt->pflt_delay = val;
+		} else {
+			levels[2] = "delay";
+			snprintf(nbuf, sizeof(nbuf), "%ld", pflt->pflt_delay);
+			if (!psc_ctlmsg_param_send(fd, mh, pcp,
+			    PCTHRNAME_EVERYONE, levels, 3, nbuf))
+				return (0);
+		}
+	}
+	if (nlevels < 3 || strcmp(levels[2], "count") == 0) {
+		if (nlevels == 3 && set) {
+			if (pcp->pcp_flags & PCPF_ADD)
+				pflt->pflt_count += val;
+			else if (pcp->pcp_flags & PCPF_SUB)
+				pflt->pflt_count -= val;
+			else
+				pflt->pflt_count = val;
+		} else {
+			levels[2] = "count";
+			snprintf(nbuf, sizeof(nbuf), "%d", pflt->pflt_count);
+			if (!psc_ctlmsg_param_send(fd, mh, pcp,
+			    PCTHRNAME_EVERYONE, levels, 3, nbuf))
+				return (0);
+		}
+	}
+	if (nlevels < 3 || strcmp(levels[2], "begin") == 0) {
+		if (nlevels == 3 && set) {
+			if (pcp->pcp_flags & PCPF_ADD)
+				pflt->pflt_begin += val;
+			else if (pcp->pcp_flags & PCPF_SUB)
+				pflt->pflt_begin -= val;
+			else
+				pflt->pflt_begin = val;
+		} else {
+			levels[2] = "begin";
+			snprintf(nbuf, sizeof(nbuf), "%d", pflt->pflt_begin);
+			if (!psc_ctlmsg_param_send(fd, mh, pcp,
+			    PCTHRNAME_EVERYONE, levels, 3, nbuf))
+				return (0);
+		}
+	}
+	if (nlevels < 3 || strcmp(levels[2], "chance") == 0) {
+		if (nlevels == 3 && set) {
+			if (pcp->pcp_flags & PCPF_ADD)
+				pflt->pflt_chance += val;
+			else if (pcp->pcp_flags & PCPF_SUB)
+				pflt->pflt_chance -= val;
+			else
+				pflt->pflt_chance = val;
+		} else {
+			levels[2] = "chance";
+			snprintf(nbuf, sizeof(nbuf), "%d", pflt->pflt_chance);
+			if (!psc_ctlmsg_param_send(fd, mh, pcp,
+			    PCTHRNAME_EVERYONE, levels, 3, nbuf))
+				return (0);
+		}
+	}
+	if (nlevels < 3 || strcmp(levels[2], "retval") == 0) {
+		if (nlevels == 3 && set) {
+			if (pcp->pcp_flags & PCPF_ADD)
+				pflt->pflt_retval += val;
+			else if (pcp->pcp_flags & PCPF_SUB)
+				pflt->pflt_retval -= val;
+			else
+				pflt->pflt_retval = val;
+		} else {
+			levels[2] = "retval";
+			snprintf(nbuf, sizeof(nbuf), "%d", pflt->pflt_retval);
+			if (!psc_ctlmsg_param_send(fd, mh, pcp,
+			    PCTHRNAME_EVERYONE, levels, 3, nbuf))
+				return (0);
+		}
+	}
+	return (1);
+}
+
+int
+psc_ctlparam_faults(int fd, struct psc_ctlmsghdr *mh,
+    struct psc_ctlmsg_param *pcp, char **levels, int nlevels)
+{
+	struct psc_fault *pflt;
+	struct psc_hashbkt *b;
+	int rc, set;
+	char *endp;
+	long val;
+
+	if (nlevels > 3)
+		return (psc_ctlsenderr(fd, mh, "invalid field"));
+
+	if (strcmp(pcp->pcp_thrname, PCTHRNAME_EVERYONE) != 0)
+		return (psc_ctlsenderr(fd, mh, "invalid thread field"));
+
+	rc = 1;
+	levels[0] = "faults";
+	val = 0; /* gcc */
+
+	/* sanity check field name */
+	if (nlevels == 3 &&
+	    strcmp(levels[2], "active") != 0 &&
+	    strcmp(levels[2], "delay")  != 0 &&
+	    strcmp(levels[2], "count")  != 0 &&
+	    strcmp(levels[2], "begin")  != 0 &&
+	    strcmp(levels[2], "chance") != 0 &&
+	    strcmp(levels[2], "retval") != 0)
+		return (psc_ctlsenderr(fd, mh,
+		    "invalid faults field: %s", levels[2]));
+
+	set = (mh->mh_type == PCMT_SETPARAM);
+
+	if (set) {
+		if (nlevels == 1) {
+			if (pcp->pcp_flags & PCPF_ADD) {
+				rc = psc_fault_add(levels[1]);
+				if (rc == EEXIST)
+					return (psc_ctlsenderr(fd, mh,
+					    "fault already exists"));
+				else if (rc)
+					return (psc_ctlsenderr(fd, mh,
+					    "error adding fault: %s",
+					    strerror(rc)));
+			} else if (pcp->pcp_flags & PCPF_SUB) {
+				psc_fault_remove(levels[1]);
+				if (rc == ENOENT)
+					return (psc_ctlsenderr(fd, mh,
+					    "fault does not exist"));
+				else if (rc)
+					return (psc_ctlsenderr(fd, mh,
+					    "error removing fault: %s",
+					    strerror(rc)));
+			} else
+				return (psc_ctlsenderr(fd, mh,
+				    "invalid operation"));
+			return (1);
+		} else if (nlevels != 3)
+			return (psc_ctlsenderr(fd, mh,
+			    "invalid operation"));
+
+		endp = NULL;
+		val = strtol(pcp->pcp_value, &endp, 10);
+		if (val == LONG_MIN || val == LONG_MAX ||
+		    val > INT_MAX || val < 0 ||
+		    endp == pcp->pcp_value || *endp != '\0')
+			return (psc_ctlsenderr(fd, mh,
+			    "invalid faults %s value: %s",
+			    levels[2], pcp->pcp_value));
+	}
+
+	if (nlevels == 1) {
+		PSC_HASHTBL_LOCK(&psc_faults);
+		PSC_HASHTBL_FOREACH_BUCKET(b, &psc_faults) {
+			psc_hashbkt_lock(b);
+			PSC_HASHBKT_FOREACH_ENTRY(&psc_faults, pflt, b) {
+				psc_fault_lock(pflt);
+				rc = psc_ctlparam_faults_handle(fd, mh,
+				    pcp, levels, nlevels, pflt, val);
+				psc_fault_unlock(pflt);
+				if (rc)
+					break;
+			}
+			psc_hashbkt_unlock(b);
+			if (rc)
+				break;
+		}
+		PSC_HASHTBL_ULOCK(&psc_faults);
+	} else {
+		pflt = psc_fault_lookup(levels[1]);
+		if (pflt == NULL)
+			return (psc_ctlsenderr(fd, mh,
+			    "invalid pool: %s", levels[1]));
+		rc = psc_ctlparam_faults_handle(fd, mh,
+		    pcp, levels, nlevels, pflt, val);
+		psc_fault_unlock(pflt);
 	}
 	return (rc);
 }
