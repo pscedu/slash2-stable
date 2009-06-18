@@ -49,9 +49,9 @@ psc_hash_stringify(const char *s)
 }
 
 void
-_psc_hashtbl_init(struct psc_hashtbl *t, int flags, int idoff,
-    int hentoff, int nbuckets, int (*cmp)(const void *, const void *),
-    const char *fmt, ...)
+_psc_hashtbl_init(struct psc_hashtbl *t, int flags,
+    ptrdiff_t idoff, ptrdiff_t hentoff, int nbuckets,
+    int (*cmp)(const void *, const void *), const char *fmt, ...)
 {
 	struct psc_hashbkt *b;
 	va_list ap;
@@ -234,12 +234,15 @@ void *
 _psc_hashtbl_search(const struct psc_hashtbl *t, int flags,
     const void *cmp, void (*cbf)(void *), ...)
 {
-	va_list ap;
+	struct psc_hashbkt *b;
+	va_list ap, aq;
 	void *p;
 
 	va_start(ap, cbf);
-	p = _psc_hashbkt_searchv(t, psc_hashbkt_getv(t, ap),
-	    flags, cmp, cbf, ap);
+	va_copy(aq, ap);
+	b = psc_hashbkt_getv(t, aq);
+	va_end(aq);
+	p = _psc_hashbkt_searchv(t, b, flags, cmp, cbf, ap);
 	va_end(ap);
 	return (p);
 }
