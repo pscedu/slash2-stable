@@ -77,7 +77,7 @@ psc_ctlmsg_sendv(int fd, const struct psc_ctlmsghdr *mh, const void *m)
 	msg.msg_iovlen = NENTRIES(iov);
 	n = sendmsg(fd, &msg, MSG_NOSIGNAL);
 	if (n == -1) {
-		if (errno == EPIPE) {
+		if (errno == EPIPE || errno == ECONNRESET) {
 			psc_ctlthr(pscthr_get())->pc_st_ndrop++;
 			sched_yield();
 			return (0);
@@ -125,7 +125,7 @@ psc_ctlmsg_send(int fd, int type, size_t siz, const void *m)
 	msg.msg_iovlen = NENTRIES(iov);
 	n = sendmsg(fd, &msg, MSG_NOSIGNAL);
 	if (n == -1) {
-		if (errno == EPIPE) {
+		if (errno == EPIPE || errno == ECONNRESET) {
 			psc_ctlthr(pscthr_get())->pc_st_ndrop++;
 			sched_yield();
 			return (0);
