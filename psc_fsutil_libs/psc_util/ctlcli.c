@@ -805,6 +805,8 @@ psc_ctlcli_main(const char *osockfn)
 			psc_fatal("read");
 		else if (n == 0)
 			psc_fatalx("received unexpected EOF from daemon");
+		else if (n != mh.mh_size)
+			psc_fatalx("short read");
 		psc_ctlmsg_print(&mh, m);
 	}
 	if (n == -1)
