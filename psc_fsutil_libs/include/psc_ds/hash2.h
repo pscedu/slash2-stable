@@ -7,6 +7,7 @@
 #include "psc_ds/lockedlist.h"
 #include "psc_util/atomic.h"
 #include "psc_util/lock.h"
+#include "psc_util/log.h"
 
 #define PSC_HASHTBL_LOCK(t)	spinlock(&(t)->pht_lock)
 #define PSC_HASHTBL_ULOCK(t)	freelock(&(t)->pht_lock)
@@ -25,8 +26,8 @@ struct psc_hashtbl {
 	struct psclist_head	  pht_lentry;
 	psc_spinlock_t		  pht_lock;
 	int			  pht_flags;	/* hash table flags, see below */
-	int			  pht_idoff;	/* offset into item to its ID field */
-	int			  pht_hentoff;	/* offset to the hash table linkage */
+	ptrdiff_t		  pht_idoff;	/* offset into item to its ID field */
+	ptrdiff_t		  pht_hentoff;	/* offset to the hash table linkage */
 	int			  pht_nbuckets;
 	struct psc_hashbkt	 *pht_buckets;
 	int			(*pht_cmp)(const void *, const void *);
@@ -66,8 +67,14 @@ struct psc_hashent {
  */
 #define psc_hashtbl_init(t, flags, type, idmemb, hentmemb, nb, cmp,	\
 	    fmt, ...)							\
-	_psc_hashtbl_init((t), (flags), offsetof(type, idmemb),		\
-	    offsetof(type, hentmemb), (nb), (cmp), (fmt), ## __VA_ARGS__)
+	do {								\
+		if (sizeof(((type *)NULL)->hentmemb) !=			\
+		    sizeof(struct psc_hashent))				\
+			psc_fatalx("invalid hash ID field");		\
+		_psc_hashtbl_init((t), (flags), offsetof(type, idmemb),	\
+		    offsetof(type, hentmemb), (nb), (cmp), (fmt),	\
+		    ## __VA_ARGS__);					\
+	} while (0)
 
 /**
  * psc_hashtbl_search - search a hash table for an item by its hash ID.
@@ -103,7 +110,7 @@ void	 psc_hashtbl_destroy(struct psc_hashtbl *);
 void	 psc_hashtbl_remove(const struct psc_hashtbl *, void *);
 void	*_psc_hashtbl_search(const struct psc_hashtbl *, int, const void *,
 	    void (*)(void *), ...);
-void	_psc_hashtbl_init(struct psc_hashtbl *, int, int, int, int,
+void	_psc_hashtbl_init(struct psc_hashtbl *, int, ptrdiff_t, ptrdiff_t, int,
 	    int (*)(const void *, const void *), const char *, ...);
 
 /**
