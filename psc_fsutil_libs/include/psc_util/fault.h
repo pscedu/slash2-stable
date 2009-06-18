@@ -20,10 +20,11 @@ struct psc_fault {
 	int			pflt_retval;		/* forced return code */
 };
 
+/* fault flags */
 #define PFLTF_ACTIVE	(1 << 0)		/* fault point is activated */
 
-#define	psc_fault_lock(pflt)	spinlock(&pflt->pflt_lock);
-#define	psc_fault_unlock(pflt)	freelock(&pflt->pflt_lock);
+#define	psc_fault_lock(pflt)	spinlock(&(pflt)->pflt_lock)
+#define	psc_fault_unlock(pflt)	freelock(&(pflt)->pflt_lock)
 
 struct psc_fault *
 	psc_fault_lookup(const char *);
