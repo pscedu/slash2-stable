@@ -300,7 +300,7 @@ psc_loglevel_getid(const char *name)
 	for (n = 0; n < PNLOGLEVELS; n++)
 		if (strcasecmp(name, psc_loglevel_names[n]) == 0)
 			return (n);
-	for (n = 0; n < NENTRIES(altloglevels); n++)
+	for (n = 0; n < nitems(altloglevels); n++)
 		if (strcasecmp(name, altloglevels[n].lvl_name) == 0)
 			return (altloglevels[n].lvl_value);
 	return (-1);

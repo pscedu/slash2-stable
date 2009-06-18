@@ -1,6 +1,5 @@
 /* $Id$ */
 
-
 #include <err.h>
 #include <errno.h>
 #include <pthread.h>
@@ -51,7 +50,6 @@ char *signames[] = {
 	"SIGPWR",
 	"SIGSYS"
 };
-#define NSIGS (sizeof(signames) / sizeof(signames[0]))
 
 __dead void
 usage(void)
@@ -67,7 +65,7 @@ report_sigs(void)
 	const char *act;
 	int i;
 
-	for (i = 1; i < (int)NSIGS; i++) {
+	for (i = 1; i < nitems(signames); i++) {
 		if (sigaction(i, NULL, &sa) == -1)
 			err(1, "sigaction");
 		if (sa.sa_handler == SIG_IGN)

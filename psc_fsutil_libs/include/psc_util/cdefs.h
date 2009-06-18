@@ -7,10 +7,12 @@
 
 #include <stddef.h>
 
-#define NENTRIES(t) (int)(sizeof(t) / sizeof(t[0]))
+#ifndef nitems
+#define nitems(t)	((int)(sizeof(t) / sizeof(t[0])))
+#endif
 
 #ifndef offsetof
-#define offsetof(s, e) ((size_t)&((s *)0)->e)
+#define offsetof(s, e)	((size_t)&((s *)0)->e)
 #endif
 
 /* Define __GNUC_PREREQ__(maj, min). */
