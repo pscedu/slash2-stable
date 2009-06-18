@@ -744,6 +744,22 @@ psc_ctlmsg_print(struct psc_ctlmsghdr *mh, const void *m)
 }
 
 void
+psc_ctl_read(int s, void *buf, size_t siz)
+{
+	ssize_t n;
+
+	while (siz) {
+		n = read(s, buf, siz);
+		if (n == -1)
+			psc_fatal("read");
+		else if (n == 0)
+			psc_fatalx("received unexpected EOF from daemon");
+		siz -= n;
+		buf += n;
+	}
+}
+
+void
 psc_ctlcli_main(const char *osockfn)
 {
 	extern void usage(void);
@@ -800,13 +816,7 @@ psc_ctlcli_main(const char *osockfn)
 			if ((m = realloc(m, siz)) == NULL)
 				psc_fatal("realloc");
 		}
-		n = read(s, m, mh.mh_size);
-		if (n == -1)
-			psc_fatal("read");
-		else if (n == 0)
-			psc_fatalx("received unexpected EOF from daemon");
-		else if (n != mh.mh_size)
-			psc_fatalx("short read");
+		psc_ctl_read(s, m, mh.mh_size);
 		psc_ctlmsg_print(&mh, m);
 	}
 	if (n == -1)
