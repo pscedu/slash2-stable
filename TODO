@@ -90,6 +90,7 @@ zest
   is idle
 - kill the zest/trunk directory
 - add auth checks into fdbuf from slash
+- track bitmap stats in real time instead of copying the whole bitmap in zctl
 
 development tool
 - let wiki changes automatically email zest-devel@ like svn commits
