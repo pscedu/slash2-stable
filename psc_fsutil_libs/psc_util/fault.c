@@ -57,6 +57,7 @@ psc_fault_remove(const char *name)
 	int rc;
 
 	rc = 0;
+	b = psc_hashbkt_get(&psc_faults, name);
 	psc_hashbkt_lock(b);
 	pflt = psc_hashbkt_search(&psc_faults, b, NULL, NULL, name);
 	if (pflt)

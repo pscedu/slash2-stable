@@ -1087,7 +1087,7 @@ psc_ctlparam_faults(int fd, struct psc_ctlmsghdr *mh,
 	if (set) {
 		if (nlevels == 1) {
 			if (pcp->pcp_flags & PCPF_ADD) {
-				rc = psc_fault_add(levels[1]);
+				rc = psc_fault_add(pcp->pcp_value);
 				if (rc == EEXIST)
 					return (psc_ctlsenderr(fd, mh,
 					    "fault already exists"));
@@ -1096,7 +1096,7 @@ psc_ctlparam_faults(int fd, struct psc_ctlmsghdr *mh,
 					    "error adding fault: %s",
 					    strerror(rc)));
 			} else if (pcp->pcp_flags & PCPF_SUB) {
-				psc_fault_remove(levels[1]);
+				rc = psc_fault_remove(pcp->pcp_value);
 				if (rc == ENOENT)
 					return (psc_ctlsenderr(fd, mh,
 					    "fault does not exist"));
@@ -1131,11 +1131,11 @@ psc_ctlparam_faults(int fd, struct psc_ctlmsghdr *mh,
 				rc = psc_ctlparam_faults_handle(fd, mh,
 				    pcp, levels, nlevels, pflt, val);
 				psc_fault_unlock(pflt);
-				if (rc)
+				if (rc == 0)
 					break;
 			}
 			psc_hashbkt_unlock(b);
-			if (rc)
+			if (rc == 0)
 				break;
 		}
 		PSC_HASHTBL_ULOCK(&psc_faults);
@@ -1143,7 +1143,7 @@ psc_ctlparam_faults(int fd, struct psc_ctlmsghdr *mh,
 		pflt = psc_fault_lookup(levels[1]);
 		if (pflt == NULL)
 			return (psc_ctlsenderr(fd, mh,
-			    "invalid pool: %s", levels[1]));
+			    "invalid fault: %s", levels[1]));
 		rc = psc_ctlparam_faults_handle(fd, mh,
 		    pcp, levels, nlevels, pflt, val);
 		psc_fault_unlock(pflt);
