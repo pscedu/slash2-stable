@@ -103,6 +103,18 @@ psc_ctl_packshow_stats(const char *thr)
 }
 
 void
+psc_ctl_packshow_faults(const char *thr)
+{
+	struct psc_ctlmsg_fault *pcflt;
+	int n;
+
+	pcflt = psc_ctlmsg_push(PCMT_GETFAULTS, sizeof(*pcflt));
+	n = strlcpy(pcflt->pcflt_thrname, thr, sizeof(pcflt->pcflt_thrname));
+	if (n == 0 || n >= (int)sizeof(pcflt->pcflt_thrname))
+		psc_fatalx("invalid thread name: %s", thr);
+}
+
+void
 psc_ctlparse_show(char *showspec)
 {
 	char *thrlist, *thr, *thrnext;
@@ -699,6 +711,34 @@ psc_ctlmsg_mlist_prdat(__unusedx const struct psc_ctlmsghdr *mh,
 	printf(" %-50s %8d %3d %15"PRIu64"\n",
 	    pcml->pcml_name, pcml->pcml_size,
 	    pcml->pcml_waitors, pcml->pcml_nseen);
+}
+
+int
+psc_ctlmsg_fault_prhdr(__unusedx struct psc_ctlmsghdr *mh,
+    __unusedx const void *m)
+{
+	printf("fault point(s)\n");
+	return (printf(" %-50s %3s %5s %5s %5s"
+	    "%5s %5s %5s %5s\n",
+	    "name", "flg", "#hit", "#uhit", "delay",
+	    "count", "begin", "code", "prob"));
+}
+
+void
+psc_ctlmsg_fault_prdat(__unusedx const struct psc_ctlmsghdr *mh,
+    const void *m)
+{
+	const struct psc_ctlmsg_fault *pcflt = m;
+
+	printf(" %-20s   %c"
+	    "%5d %5d %5d"
+	    "%5d %5d %5d"
+	    "%5d\n",
+	    pcflt->pcflt_name,
+	    pcflt->pcflt_flags & PFLTF_ACTIVE ? 'A' : '-',
+	    pcflt->pcflt_hits, pcflt->pcflt_unhits, pcflt->pcflt_delay,
+	    pcflt->pcflt_count, pcflt->pcflt_begin, pcflt->pcflt_retval,
+	    pcflt->pcflt_chance);
 }
 
 __static void

@@ -12,6 +12,7 @@
 
 #include "psc_ds/hash.h"
 #include "psc_ds/listcache.h"
+#include "psc_util/fault.h"
 #include "psc_util/iostats.h"
 #include "psc_util/meter.h"
 #include "psc_util/mlist.h"
@@ -127,6 +128,7 @@ struct psc_ctlmsg_cmd {
 };
 
 struct psc_ctlmsg_fault {
+	char			pcflt_thrname[PSC_THRNAME_MAX];
 	char			pcflt_name[PSC_FAULT_NAME_MAX];
 	uint32_t		pcflt_flags;
 	uint32_t		pcflt_hits;
@@ -153,7 +155,7 @@ struct psc_ctlmsg_fault {
 #define PCMT_GETMETER		9
 #define PCMT_GETPOOL		10
 #define PCMT_GETMLIST		11
-#define PCMT_GETFAULT		12
+#define PCMT_GETFAULTS		12
 #define PCMT_CMD		13
 #define NPCMT			14
 

@@ -479,6 +479,7 @@ psc_ctlrep_getfault(int fd, struct psc_ctlmsghdr *mh, void *msg)
 	struct psc_ctlmsg_fault *pcflt = msg;
 	struct psc_fault *pflt;
 	struct psc_hashbkt *b;
+	char name[PSC_FAULT_NAME_MAX];
 	int rc, found, all;
 
 	rc = 1;
@@ -513,6 +514,7 @@ psc_ctlrep_getfault(int fd, struct psc_ctlmsghdr *mh, void *msg)
 				/* Terminate on exact match. */
 				if (strcmp(pflt->pflt_name, name) == 0)
 					break;
+			}
 		}
 		psc_hashbkt_unlock(b);
 		if (!rc)

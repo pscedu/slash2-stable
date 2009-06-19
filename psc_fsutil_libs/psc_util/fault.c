@@ -12,12 +12,12 @@
 
 #define PSC_FAULT_NBUCKETS	255
 
-struct psc_hashtbl psc_faults;
+struct psc_hashtbl psc_fault_table;
 
 void
 psc_faults_init(void)
 {
-	psc_hashtbl_init(&psc_faults, PHTF_STR, struct psc_fault,
+	psc_hashtbl_init(&psc_fault_table, PHTF_STR, struct psc_fault,
 	    pflt_name, pflt_hentry, PSC_FAULT_NBUCKETS, NULL, "faults");
 }
 
@@ -36,12 +36,12 @@ psc_fault_add(const char *name)
 	strlcpy(pflt->pflt_name, name, sizeof(pflt->pflt_name));
 
 	rc = 0;
-	b = psc_hashbkt_get(&psc_faults, name);
+	b = psc_hashbkt_get(&psc_fault_table, name);
 	psc_hashbkt_lock(b);
-	if (psc_hashbkt_search(&psc_faults, b, NULL, NULL, name))
+	if (psc_hashbkt_search(&psc_fault_table, b, NULL, NULL, name))
 		rc = EEXIST;
 	else {
-		psc_hashbkt_add_item(&psc_faults, b, pflt);
+		psc_hashbkt_add_item(&psc_fault_table, b, pflt);
 		pflt = NULL;
 	}
 	psc_hashbkt_unlock(b);
@@ -57,11 +57,11 @@ psc_fault_remove(const char *name)
 	int rc;
 
 	rc = 0;
-	b = psc_hashbkt_get(&psc_faults, name);
+	b = psc_hashbkt_get(&psc_fault_table, name);
 	psc_hashbkt_lock(b);
-	pflt = psc_hashbkt_search(&psc_faults, b, NULL, NULL, name);
+	pflt = psc_hashbkt_search(&psc_fault_table, b, NULL, NULL, name);
 	if (pflt)
-		psc_hashent_remove(&psc_faults, pflt);
+		psc_hashent_remove(&psc_fault_table, pflt);
 	psc_hashbkt_unlock(b);
 	free(pflt);
 	if (pflt == NULL)
@@ -74,7 +74,7 @@ psc_fault_lookup(const char *name)
 {
 	struct psc_fault *pflt;
 
-	pflt = psc_hashtbl_search(&psc_faults, NULL, NULL, name);
+	pflt = psc_hashtbl_search(&psc_fault_table, NULL, NULL, name);
 	if (pflt)
 		psc_fault_lock(pflt);
 	return (pflt);
