@@ -90,7 +90,10 @@ zest
   is idle
 - kill the zest/trunk directory
 - add auth checks into fdbuf from slash
-- track bitmap stats in real time instead of copying the whole bitmap in zctl
+- track bitmap stats in real time instead of copying the whole bitmap
+  in zctl
+- auto tune hash table sizes
+- allow zctl to add disks/fix mode operation
 - separate all ctlapi structures into substructures for easier copying vs.
   in-mem respresentations which need locks etc.
 
