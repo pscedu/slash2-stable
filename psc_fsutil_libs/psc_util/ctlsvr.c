@@ -467,6 +467,63 @@ psc_ctlrep_getpool(int fd, struct psc_ctlmsghdr *mh, void *msg)
 	return (rc);
 }
 
+/*
+ * psc_ctlrep_getfault - send a response to a "getfault" inquiry.
+ * @fd: client socket descriptor.
+ * @mh: already filled-in control message header.
+ * @pcpl: control message to examine and reuse.
+ */
+int
+psc_ctlrep_getfault(int fd, struct psc_ctlmsghdr *mh, void *msg)
+{
+	struct psc_ctlmsg_fault *pcflt = msg;
+	struct psc_fault *pflt;
+	struct psc_hashbkt *b;
+	int rc, found, all;
+
+	rc = 1;
+	found = 0;
+	strlcpy(name, pcflt->pcflt_name, sizeof(name));
+	all = (strcmp(name, PCFLT_NAME_ALL) == 0);
+	PSC_HASHTBL_LOCK(&psc_fault_table);
+	PSC_HASHTBL_FOREACH_BUCKET(b, &psc_fault_table) {
+		psc_hashbkt_lock(b);
+		PSC_HASHBKT_FOREACH_ENTRY(&psc_fault_table, pflt, b) {
+			if (all || strncmp(pflt->pflt_name, name,
+			    strlen(name)) == 0) {
+				found = 1;
+
+				psc_fault_lock(pflt);
+				strlcpy(pcflt->pcflt_name, pflt->pflt_name,
+				    sizeof(pcflt->pcflt_name));
+				pcflt->pcflt_flags = pflt->pflt_flags;
+				pcflt->pcflt_hits = pflt->pflt_hits;
+				pcflt->pcflt_unhits = pflt->pflt_unhits;
+				pcflt->pcflt_delay = pflt->pflt_delay;
+				pcflt->pcflt_count = pflt->pflt_count;
+				pcflt->pcflt_begin = pflt->pflt_begin;
+				pcflt->pcflt_retval = pflt->pflt_retval;
+				pcflt->pcflt_chance = pflt->pflt_chance;
+				psc_fault_unlock(pflt);
+
+				rc = psc_ctlmsg_sendv(fd, mh, pcflt);
+				if (!rc)
+					break;
+
+				/* Terminate on exact match. */
+				if (strcmp(pflt->pflt_name, name) == 0)
+					break;
+		}
+		psc_hashbkt_unlock(b);
+		if (!rc)
+			break;
+	}
+	PSC_HASHTBL_ULOCK(&psc_fault_table);
+	if (rc && !found && !all)
+		rc = psc_ctlsenderr(fd, mh, "unknown fault point: %s", name);
+	return (rc);
+}
+
 /* Maximum depth of parameter node, e.g. [thr.]foo.bar.glarch=3 */
 #define MAX_LEVELS 8
 
@@ -945,7 +1002,6 @@ psc_ctlparam_faults_handle(int fd, struct psc_ctlmsghdr *mh,
 	char nbuf[20];
 	int set;
 
-	levels[0] = "faults";
 	levels[1] = pflt->pflt_name;
 
 	set = (mh->mh_type == PCMT_SETPARAM);
@@ -1048,6 +1104,38 @@ psc_ctlparam_faults_handle(int fd, struct psc_ctlmsghdr *mh,
 				return (0);
 		}
 	}
+	if (nlevels < 3 || strcmp(levels[2], "hits") == 0) {
+		if (nlevels == 3 && set) {
+			if (pcp->pcp_flags & PCPF_ADD)
+				pflt->pflt_hits += val;
+			else if (pcp->pcp_flags & PCPF_SUB)
+				pflt->pflt_hits -= val;
+			else
+				pflt->pflt_hits = val;
+		} else {
+			levels[2] = "hits";
+			snprintf(nbuf, sizeof(nbuf), "%d", pflt->pflt_hits);
+			if (!psc_ctlmsg_param_send(fd, mh, pcp,
+			    PCTHRNAME_EVERYONE, levels, 3, nbuf))
+				return (0);
+		}
+	}
+	if (nlevels < 3 || strcmp(levels[2], "unhits") == 0) {
+		if (nlevels == 3 && set) {
+			if (pcp->pcp_flags & PCPF_ADD)
+				pflt->pflt_unhits += val;
+			else if (pcp->pcp_flags & PCPF_SUB)
+				pflt->pflt_unhits -= val;
+			else
+				pflt->pflt_unhits = val;
+		} else {
+			levels[2] = "unhits";
+			snprintf(nbuf, sizeof(nbuf), "%d", pflt->pflt_unhits);
+			if (!psc_ctlmsg_param_send(fd, mh, pcp,
+			    PCTHRNAME_EVERYONE, levels, 3, nbuf))
+				return (0);
+		}
+	}
 	return (1);
 }
 
@@ -1074,10 +1162,12 @@ psc_ctlparam_faults(int fd, struct psc_ctlmsghdr *mh,
 	/* sanity check field name */
 	if (nlevels == 3 &&
 	    strcmp(levels[2], "active") != 0 &&
-	    strcmp(levels[2], "delay")  != 0 &&
-	    strcmp(levels[2], "count")  != 0 &&
 	    strcmp(levels[2], "begin")  != 0 &&
 	    strcmp(levels[2], "chance") != 0 &&
+	    strcmp(levels[2], "count")  != 0 &&
+	    strcmp(levels[2], "delay")  != 0 &&
+	    strcmp(levels[2], "hits")   != 0 &&
+	    strcmp(levels[2], "unhits") != 0 &&
 	    strcmp(levels[2], "retval") != 0)
 		return (psc_ctlsenderr(fd, mh,
 		    "invalid faults field: %s", levels[2]));
@@ -1093,7 +1183,7 @@ psc_ctlparam_faults(int fd, struct psc_ctlmsghdr *mh,
 					    "fault already exists"));
 				else if (rc)
 					return (psc_ctlsenderr(fd, mh,
-					    "error adding fault: %s",
+					    "error adding fault point: %s",
 					    strerror(rc)));
 			} else if (pcp->pcp_flags & PCPF_SUB) {
 				rc = psc_fault_remove(pcp->pcp_value);
@@ -1102,7 +1192,7 @@ psc_ctlparam_faults(int fd, struct psc_ctlmsghdr *mh,
 					    "fault does not exist"));
 				else if (rc)
 					return (psc_ctlsenderr(fd, mh,
-					    "error removing fault: %s",
+					    "error removing fault point: %s",
 					    strerror(rc)));
 			} else
 				return (psc_ctlsenderr(fd, mh,
@@ -1123,27 +1213,27 @@ psc_ctlparam_faults(int fd, struct psc_ctlmsghdr *mh,
 	}
 
 	if (nlevels == 1) {
-		PSC_HASHTBL_LOCK(&psc_faults);
-		PSC_HASHTBL_FOREACH_BUCKET(b, &psc_faults) {
+		PSC_HASHTBL_LOCK(&psc_fault_table);
+		PSC_HASHTBL_FOREACH_BUCKET(b, &psc_fault_table) {
 			psc_hashbkt_lock(b);
-			PSC_HASHBKT_FOREACH_ENTRY(&psc_faults, pflt, b) {
+			PSC_HASHBKT_FOREACH_ENTRY(&psc_fault_table, pflt, b) {
 				psc_fault_lock(pflt);
 				rc = psc_ctlparam_faults_handle(fd, mh,
 				    pcp, levels, nlevels, pflt, val);
 				psc_fault_unlock(pflt);
-				if (rc == 0)
+				if (!rc)
 					break;
 			}
 			psc_hashbkt_unlock(b);
-			if (rc == 0)
+			if (!rc)
 				break;
 		}
-		PSC_HASHTBL_ULOCK(&psc_faults);
+		PSC_HASHTBL_ULOCK(&psc_fault_table);
 	} else {
 		pflt = psc_fault_lookup(levels[1]);
 		if (pflt == NULL)
 			return (psc_ctlsenderr(fd, mh,
-			    "invalid fault: %s", levels[1]));
+			    "unknown fault point: %s", levels[1]));
 		rc = psc_ctlparam_faults_handle(fd, mh,
 		    pcp, levels, nlevels, pflt, val);
 		psc_fault_unlock(pflt);

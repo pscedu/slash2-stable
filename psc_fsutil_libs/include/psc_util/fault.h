@@ -13,6 +13,8 @@ struct psc_fault {
 	struct psc_hashent	pflt_hentry;
 	char			pflt_name[PSC_FAULT_NAME_MAX];
 	int			pflt_flags;		/* see below */
+	int			pflt_hits;		/* #times triggered so far */
+	int			pflt_unhits;		/* #times un-triggered so far */
 	long			pflt_delay;		/* usec */
 	int			pflt_count;		/* #times to respond with programmed behavior */
 	int			pflt_begin;		/* #times to skip programmed behavior */
@@ -31,6 +33,6 @@ struct psc_fault *
 int	psc_fault_add(const char *);
 int	psc_fault_remove(const char *);
 
-extern struct psc_hashtbl psc_faults;
+extern struct psc_hashtbl psc_fault_table;
 
 #endif /* _PFL_FAULT_H_ */

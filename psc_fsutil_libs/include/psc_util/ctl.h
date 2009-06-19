@@ -126,6 +126,20 @@ struct psc_ctlmsg_cmd {
 	int32_t			 pcc_opcode;
 };
 
+struct psc_ctlmsg_fault {
+	char			pcflt_name[PSC_FAULT_NAME_MAX];
+	uint32_t		pcflt_flags;
+	uint32_t		pcflt_hits;
+	uint32_t		pcflt_unhits;
+	uint32_t		pcflt_delay;
+	uint32_t		pcflt_count;
+	uint32_t		pcflt_begin;
+	int32_t			pcflt_retval;
+	int8_t			pcflt_chance;
+};
+
+#define PCFLT_NAME_ALL		"all"
+
 /* Control message types. */
 #define PCMT_ERROR		0
 #define PCMT_GETLOGLEVEL	1
@@ -139,8 +153,9 @@ struct psc_ctlmsg_cmd {
 #define PCMT_GETMETER		9
 #define PCMT_GETPOOL		10
 #define PCMT_GETMLIST		11
-#define PCMT_CMD		12
-#define NPCMT			13
+#define PCMT_GETFAULT		12
+#define PCMT_CMD		13
+#define NPCMT			14
 
 /*
  * Control message header.
