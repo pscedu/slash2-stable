@@ -1172,7 +1172,7 @@ psc_ctlparam_faults(int fd, struct psc_ctlmsghdr *mh,
 	    strcmp(levels[2], "unhits") != 0 &&
 	    strcmp(levels[2], "retval") != 0)
 		return (psc_ctlsenderr(fd, mh,
-		    "invalid faults field: %s", levels[2]));
+		    "invalid fault point field: %s", levels[2]));
 
 	set = (mh->mh_type == PCMT_SETPARAM);
 
@@ -1182,7 +1182,7 @@ psc_ctlparam_faults(int fd, struct psc_ctlmsghdr *mh,
 				rc = psc_fault_add(pcp->pcp_value);
 				if (rc == EEXIST)
 					return (psc_ctlsenderr(fd, mh,
-					    "fault already exists"));
+					    "fault point already exists"));
 				else if (rc)
 					return (psc_ctlsenderr(fd, mh,
 					    "error adding fault point: %s",
@@ -1191,7 +1191,7 @@ psc_ctlparam_faults(int fd, struct psc_ctlmsghdr *mh,
 				rc = psc_fault_remove(pcp->pcp_value);
 				if (rc == ENOENT)
 					return (psc_ctlsenderr(fd, mh,
-					    "fault does not exist"));
+					    "fault point does not exist"));
 				else if (rc)
 					return (psc_ctlsenderr(fd, mh,
 					    "error removing fault point: %s",
@@ -1210,7 +1210,7 @@ psc_ctlparam_faults(int fd, struct psc_ctlmsghdr *mh,
 		    val > INT_MAX || val < 0 ||
 		    endp == pcp->pcp_value || *endp != '\0')
 			return (psc_ctlsenderr(fd, mh,
-			    "invalid faults %s value: %s",
+			    "invalid fault point %s value: %s",
 			    levels[2], pcp->pcp_value));
 	}
 
