@@ -112,6 +112,9 @@ psc_ctl_packshow_faults(const char *thr)
 	n = strlcpy(pcflt->pcflt_thrname, thr, sizeof(pcflt->pcflt_thrname));
 	if (n == 0 || n >= (int)sizeof(pcflt->pcflt_thrname))
 		psc_fatalx("invalid thread name: %s", thr);
+	n = strlcpy(pcflt->pcflt_name, PCFLT_NAME_ALL, sizeof(pcflt->pcflt_name));
+	if (n == 0 || n >= (int)sizeof(pcflt->pcflt_name))
+		psc_fatalx("invalid fault point name: %s", thr);
 }
 
 void
