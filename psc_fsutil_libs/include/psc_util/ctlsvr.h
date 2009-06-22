@@ -28,7 +28,8 @@ struct psc_ctlmsg_stats;
 /* 9 */	{ psc_ctlrep_getmeter,		sizeof(struct psc_ctlmsg_meter) },	\
 /*10 */	{ psc_ctlrep_getpool,		sizeof(struct psc_ctlmsg_pool) },	\
 /*11 */	{ psc_ctlrep_getmlist,		sizeof(struct psc_ctlmsg_mlist) },	\
-/*12 */	{ psc_ctlhnd_cmd,		sizeof(struct psc_ctlmsg_cmd) }
+/*12 */	{ psc_ctlrep_getfault,		sizeof(struct psc_ctlmsg_fault) },	\
+/*13 */	{ psc_ctlhnd_cmd,		sizeof(struct psc_ctlmsg_cmd) }
 
 struct psc_ctlthr {
 	int	  pc_st_nclients;
@@ -57,6 +58,7 @@ int	psc_ctlrep_getsubsys(int, struct psc_ctlmsghdr *, void *);
 int	psc_ctlrep_param(int, struct psc_ctlmsghdr *, void *);
 int	psc_ctlrep_getpool(int, struct psc_ctlmsghdr *, void *);
 int	psc_ctlrep_getmlist(int, struct psc_ctlmsghdr *, void *);
+int	psc_ctlrep_getfault(int, struct psc_ctlmsghdr *, void *);
 int	psc_ctlhnd_cmd(int, struct psc_ctlmsghdr *, void *);
 
 void	psc_ctlthr_stat(struct psc_thread *, struct psc_ctlmsg_stats *);
