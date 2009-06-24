@@ -180,6 +180,9 @@ _psc_hashbkt_searchv(const struct psc_hashtbl *t,
 	int locked;
 	void *p;
 
+	id = 0; /* gcc */
+	strid = NULL; /* gcc */
+
 	if (t->pht_cmp)
 		psc_assert(cmp);
 	else
