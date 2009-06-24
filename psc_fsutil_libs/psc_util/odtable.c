@@ -52,13 +52,19 @@ odtable_putitem(struct odtable *odt, void *data)
 	if (odt->odt_hdr->odth_options & ODTBL_OPT_CRC) {	
 		psc_crc_t crc;
 		
-		psc_crc_calc(&crc, p, odt->odt_hdr->odth_elemsz);
+		psc_crc_calc(&crc, data, odt->odt_hdr->odth_elemsz);
 		odtf->odtf_crc = crc;
+		odtf->odtf_inuse = ODTBL_INUSE;
 		psc_warnx("slot=%"_P_U64"d crc  odtfcrc=%"_P_U64"x \
 elemcrc=%"_P_U64"x", elem, odtf->odtf_crc, crc);
 
 		memcpy(p, data, odt->odt_hdr->odth_elemsz);
 	}
+
+	psc_warnx("slot=%"_P_U64"d odtf->odtf_inuse=%"_P_U64"x", 
+		  elem, odtf->odtf_inuse);
+	
+	
 	odtable_sync(odt, elem);
 
 	return (elem);
@@ -80,7 +86,7 @@ odtable_getitem(struct odtable *odt, size_t elem)
 		
 		psc_crc_calc(&crc, data, odt->odt_hdr->odth_elemsz);
 		if (crc != odtf->odtf_crc) {
-			//odtf->odtf_inuse = ODTBL_BAD;
+			odtf->odtf_inuse = ODTBL_BAD;
 			psc_warnx("slot=%"_P_U64"d crc fail odtfcrc=%"_P_U64"x elemcrc=%"_P_U64"x", elem, odtf->odtf_crc, crc);
 		}
 		return (NULL);
@@ -210,18 +216,18 @@ odtable_load(const char *f, struct odtable **t)
 			vbitmap_unset(odt->odt_bitmap, z);
 
 		else if (odtf->odtf_inuse == ODTBL_INUSE) {
+			vbitmap_set(odt->odt_bitmap, z);
+
 			if (odth->odth_options & ODTBL_OPT_CRC) {
 				psc_crc_t crc;
 				
 				psc_crc_calc(&crc, p, odt->odt_hdr->odth_elemsz);
 				if (crc != odtf->odtf_crc) {
-					//odtf->odtf_inuse = ODTBL_BAD;
-					vbitmap_set(odt->odt_bitmap, z);
+					odtf->odtf_inuse = ODTBL_BAD;
 					psc_warnx("slot=%"_P_U64"d crc fail odtfcrc=%"_P_U64"x elemcrc=%"_P_U64"x", z, odtf->odtf_crc, crc);
-				}				
-			} else
-				vbitmap_set(odt->odt_bitmap, z);	
-
+				}
+			}
+			
 		} else {
 			vbitmap_set(odt->odt_bitmap, z);
 			psc_warnx("slot=%"_P_U64"d ignoring, bad inuse value"
@@ -255,7 +261,7 @@ odtable_release(struct odtable *odt) {
 }
 
 void
-odtable_scan(struct odtable *odt, void (*odt_handler)(void *))
+odtable_scan(struct odtable *odt, void (*odt_handler)(void *, size_t))
 {
 	size_t z, rc;
 	
@@ -269,8 +275,8 @@ odtable_scan(struct odtable *odt, void (*odt_handler)(void *))
 		if (rc) {
 			psc_warnx("slot=%"_P_U64"d marked bad, skipping", z);
 			continue;
-		}		
-		(odt_handler)(odtable_getitem(odt, z));		
+		}
+		(odt_handler)(odtable_getitem_addr(odt, z), z);
 	}
 }
 

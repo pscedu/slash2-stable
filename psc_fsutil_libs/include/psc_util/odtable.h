@@ -74,7 +74,7 @@ extern int
 odtable_load(const char *, struct odtable **);
 
 extern void
-odtable_scan(struct odtable *, void (*odt_handler)(void *));
+odtable_scan(struct odtable *, void (*odt_handler)(void *, size_t));
 
 extern int
 odtable_release(struct odtable *);
