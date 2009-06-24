@@ -52,9 +52,12 @@ odtable_putitem(struct odtable *odt, void *data)
 	if (odt->odt_hdr->odth_options & ODTBL_OPT_CRC) {	
 		psc_crc_t crc;
 		
-		psc_crc_calc(&crc, p, odt->odt_elemsz);
+		psc_crc_calc(&crc, p, odt->odt_hdr->odth_elemsz);
 		odtf->odtf_crc = crc;
-		memcpy(p, data, odt->odt_elemsz);
+		psc_warnx("slot=%"_P_U64"d crc  odtfcrc=%"_P_U64"x \
+elemcrc=%"_P_U64"x", elem, odtf->odtf_crc, crc);
+
+		memcpy(p, data, odt->odt_hdr->odth_elemsz);
 	}
 	odtable_sync(odt, elem);
 
@@ -75,10 +78,10 @@ odtable_getitem(struct odtable *odt, size_t elem)
 	if (odt->odt_hdr->odth_options & ODTBL_OPT_CRC) {	
 		psc_crc_t crc;
 		
-		psc_crc_calc(&crc, data, odt->odt_elemsz);
+		psc_crc_calc(&crc, data, odt->odt_hdr->odth_elemsz);
 		if (crc != odtf->odtf_crc) {
-			odtf->odtf_inuse = ODTBL_BAD;
-			psc_warnx("slot=%"_P_U64"d crc fail", elem);
+			//odtf->odtf_inuse = ODTBL_BAD;
+			psc_warnx("slot=%"_P_U64"d crc fail odtfcrc=%"_P_U64"x elemcrc=%"_P_U64"x", elem, odtf->odtf_crc, crc);
 		}
 		return (NULL);
 	}	
@@ -115,14 +118,13 @@ odtable_create(const char *f, size_t nelems, size_t elemsz)
 	struct odtable_hdr odth = {nelems, elemsz, ODTBL_MAGIC, ODTBL_VERS, 
 				   ODTBL_OPT_CRC, ODTBL_ALIGN};
 
+	odt.odt_hdr = &odth;
+
 	if (!stat(f, &stb))
 		return (-EEXIST);
 
 	if (errno != ENOENT)
 		return (-errno);
-
-	if (!S_ISREG(stb.st_mode))
-		return (-EISDIR);
 
 	odt.odt_fd = open(f, O_CREAT|O_TRUNC|O_WRONLY, 0700);
 	if (odt.odt_fd < 0) {
@@ -135,8 +137,14 @@ odtable_create(const char *f, size_t nelems, size_t elemsz)
                 goto out;
 	}
 
+	psc_errorx("odt.odt_hdr.odth_start=%"_P_U64"x", 
+		   odt.odt_hdr->odth_start);
+
 	for (z=0; z < nelems; z++) {
 		odtf.odtf_slotno = z;
+
+		psc_errorx("elem=%"_P_U64"d offset=%"_P_U64"u ", z, odtable_getoffset(&odt, z));
+
 		if (pwrite(odt.odt_fd, &odtf, sizeof(odtf),
 			   (elemsz + odtable_getoffset(&odt, z))) != 
 		    sizeof(odtf)) {
@@ -182,17 +190,17 @@ odtable_load(const char *f, struct odtable **t)
 	if ((rc = odtable_createmmap(odt)))
 		goto out;
 
-	odt->odt_bitmap = vbitmap_new(odt->odt_nelems);
+	odt->odt_bitmap = vbitmap_new(odt->odt_hdr->odth_nelems);
 	if (!odt->odt_bitmap) {
 		rc = -ENOMEM;
 		goto out_unmap;
 	}
 
-	for (z=0; z < odt->odt_nelems; z++) {
+	for (z=0; z < odt->odt_hdr->odth_nelems; z++) {
 		p = odtable_getitem_addr(odt, z);
 		odtf = odtable_getfooter(odt, z);
 
-		odtable_footercheck(odtf, z, 0, frc);
+		odtable_footercheck(odtf, z, -1, frc);
 		/* Sanity checks for debugging.
 		 */
 		psc_assert(frc != ODTBL_MAGIC_ERR);	
@@ -205,20 +213,20 @@ odtable_load(const char *f, struct odtable **t)
 			if (odth->odth_options & ODTBL_OPT_CRC) {
 				psc_crc_t crc;
 				
-				psc_crc_calc(&crc, p, odt->odt_elemsz);
+				psc_crc_calc(&crc, p, odt->odt_hdr->odth_elemsz);
 				if (crc != odtf->odtf_crc) {
-					odtf->odtf_inuse = ODTBL_BAD;
+					//odtf->odtf_inuse = ODTBL_BAD;
 					vbitmap_set(odt->odt_bitmap, z);
-					psc_warnx("slot=%"_P_U64"d crc fail", 
-						  z);
+					psc_warnx("slot=%"_P_U64"d crc fail odtfcrc=%"_P_U64"x elemcrc=%"_P_U64"x", z, odtf->odtf_crc, crc);
 				}				
 			} else
 				vbitmap_set(odt->odt_bitmap, z);	
 
 		} else {
 			vbitmap_set(odt->odt_bitmap, z);
-			psc_warnx("slot=%"_P_U64"d ignoring, bad inuse value", 
-				  z);
+			psc_warnx("slot=%"_P_U64"d ignoring, bad inuse value"
+				  "inuse=0x%"_P_U64"x", 
+				  z, odtf->odtf_inuse);
 		}			
 	}
 
@@ -251,7 +259,7 @@ odtable_scan(struct odtable *odt, void (*odt_handler)(void *))
 {
 	size_t z, rc;
 	
-	for (z=0; z < odt->odt_nelems; z++) {
+	for (z=0; z < odt->odt_hdr->odth_nelems; z++) {
 		if (!vbitmap_get(odt->odt_bitmap, z))
 			continue;
 		

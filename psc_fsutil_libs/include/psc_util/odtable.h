@@ -36,10 +36,10 @@ enum od_table_errors {
 #define ODTBL_ALIGN 0x1000
 
 #define ODTABLE_ELEMSZ(odt)					\
-	((odt)->odt_elemsz + sizeof(struct odtable_hdr))
+	((odt)->odt_hdr->odth_elemsz + sizeof(struct odtable_hdr))
 
 #define ODTABLE_MAPSZ(odt)				\
-	(ODTABLE_ELEMSZ(odt) * (odt)->odt_nelems)
+	(ODTABLE_ELEMSZ(odt) * (odt)->odt_hdr->odth_nelems)
 
 struct odtable_hdr {
 	size_t          odth_nelems;
@@ -59,8 +59,6 @@ struct odtable_entftr {
 
 
 struct odtable {
-	size_t              odt_nelems;
-	size_t              odt_elemsz;
 	struct vbitmap     *odt_bitmap;
 	int                 odt_fd;
 	void               *odt_base;
@@ -93,37 +91,39 @@ odtable_freeitem(struct odtable *, size_t);
 static inline off_t 
 odtable_getoffset(const struct odtable *odt, size_t elem)
 {
-	psc_assert(elem < odt->odt_nelems);
+	psc_assert(elem < odt->odt_hdr->odth_nelems);
 
-	return ((off_t)((elem * (odt->odt_elemsz + sizeof(struct odtable_hdr)))
+	return ((off_t)((elem * (odt->odt_hdr->odth_elemsz + sizeof(struct odtable_hdr)))
 			+ odt->odt_hdr->odth_start));
 }
 
 static inline void * 
 odtable_getitem_addr(const struct odtable *odt, size_t elem)
 {
-	psc_assert(elem < odt->odt_nelems);
+	psc_assert(elem < odt->odt_hdr->odth_nelems);
 
-	return ((void *)((elem * (odt->odt_elemsz + 
-				  sizeof(struct odtable_hdr)))
-			 + odt->odt_hdr->odth_start));
+	return ((void *)((elem * (odt->odt_hdr->odth_elemsz + 
+			  sizeof(struct odtable_hdr))) + odt->odt_base));
 }
 
 static inline struct odtable_entftr *
 odtable_getfooter(const struct odtable *odt, size_t elem)
 {
-	psc_assert(elem < odt->odt_nelems);
+	psc_assert(elem < odt->odt_hdr->odth_nelems);
 
 	return ((struct odtable_entftr *)
-		((void *)(elem * (odt->odt_elemsz + sizeof(struct odtable_hdr)))
-		 + odt->odt_hdr->odth_start + odt->odt_elemsz));
+		((void *)(odt->odt_base) + (elem * 
+					    (odt->odt_hdr->odth_elemsz + 
+					     sizeof(struct odtable_hdr)))
+		 + odt->odt_hdr->odth_elemsz));
 }
 
 static inline int
 odtable_createmmap(struct odtable *odt)
 {
 	odt->odt_base = mmap(0, ODTABLE_MAPSZ(odt), (PROT_WRITE | PROT_READ), 
-			     0, odt->odt_fd, odt->odt_hdr->odth_start);
+			     MAP_SHARED, odt->odt_fd, 
+			     odt->odt_hdr->odth_start);
 
 	if (odt->odt_base == (void *)MAP_FAILED)
 		return (-errno);
@@ -137,6 +137,7 @@ odtable_freemap(struct odtable *odt)
 	return (munmap(odt->odt_base, ODTABLE_MAPSZ(odt)));
 }
 
+
 #define odtable_footercheck(odtf, elem, inuse, rc)      \
         do {                                            \
                 rc = 0;                                 \
@@ -148,15 +149,17 @@ odtable_freemap(struct odtable *odt)
                                                                 \
                 else if ((odtf)->odtf_inuse == ODTBL_BAD)       \
                         rc = ODTBL_BAD;                                 \
-                                                                        \
-                else if (inuse && (odtf)->odtf_inuse != ODTBL_INUSE)    \
+									\
+                else if (inuse && (inuse > 0) &&			\
+			 (odtf)->odtf_inuse != ODTBL_INUSE)		\
                         rc = ODTBL_INUSE_ERR;                           \
                                                                         \
-                else if (!inuse && (odtf)->odtf_inuse != ODTBL_FREE)    \
+                else if (!inuse && (inuse > 0) &&			\
+			 (odtf)->odtf_inuse != ODTBL_FREE)		\
                         rc = ODTBL_FREE_ERR;                            \
 									\
                 if (rc)                                                 \
-                        psc_errorx("slot=%"_P_U64"d has error %"_P_U64"d", \
+                        psc_errorx("slot=%"_P_U64"d has error %"_P_U64"x", \
 				   elem, rc);				\
         } while (0)
  
