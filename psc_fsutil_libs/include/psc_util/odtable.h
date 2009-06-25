@@ -28,7 +28,9 @@ enum od_table_errors {
 	ODTBL_SLOT_ERR  = 2,
 	ODTBL_INUSE_ERR = 3,
 	ODTBL_FREE_ERR  = 4,
-	ODTBL_CRC_ERR   = 5
+	ODTBL_CRC_ERR   = 5,
+	ODTBL_BADSL_ERR = 6,
+	ODTBL_KEY_ERR   = 7
 };
 
 /* Start data on a 4k boundary
@@ -55,8 +57,8 @@ struct odtable_entftr {
 	uint64_t        odtf_inuse;
 	uint64_t        odtf_slotno;
 	uint64_t        odtf_magic;
+#define odtf_key odtf_crc
 };
-
 
 struct odtable {
 	struct vbitmap     *odt_bitmap;
@@ -66,6 +68,10 @@ struct odtable {
 	psc_spinlock_t      odt_lock;
 };
 
+struct odtable_receipt {
+	size_t   odtr_elem;
+	uint64_t odtr_key;
+};
 
 extern int
 odtable_create(const char *, size_t, size_t);
@@ -74,26 +80,27 @@ extern int
 odtable_load(const char *, struct odtable **);
 
 extern void
-odtable_scan(struct odtable *, void (*odt_handler)(void *, size_t));
+odtable_scan(struct odtable *, void (*odt_handler)(void *, struct odtable_receipt *));
 
 extern int
 odtable_release(struct odtable *);
 
-extern size_t
+extern struct odtable_receipt *
 odtable_putitem(struct odtable *, void *);
 
 extern void *
-odtable_getitem(struct odtable *, size_t);
+odtable_getitem(struct odtable *, const struct odtable_receipt *);
 
-extern void
-odtable_freeitem(struct odtable *, size_t);
+extern int
+odtable_freeitem(struct odtable *, struct odtable_receipt *);
 
 static inline off_t 
 odtable_getoffset(const struct odtable *odt, size_t elem)
 {
 	psc_assert(elem < odt->odt_hdr->odth_nelems);
 
-	return ((off_t)((elem * (odt->odt_hdr->odth_elemsz + sizeof(struct odtable_hdr)))
+	return ((off_t)((elem * (odt->odt_hdr->odth_elemsz + 
+				 sizeof(struct odtable_hdr)))
 			+ odt->odt_hdr->odth_start));
 }
 
@@ -138,29 +145,41 @@ odtable_freemap(struct odtable *odt)
 }
 
 
-#define odtable_footercheck(odtf, elem, inuse, rc)      \
-        do {                                            \
-                rc = 0;                                 \
-                if ((odtf)->odtf_magic != ODTBL_MAGIC)  \
-                        rc = ODTBL_MAGIC_ERR;           \
-                                                        \
-                else if ((odtf)->odtf_slotno != elem)   \
-                        rc = ODTBL_SLOT_ERR;                    \
-                                                                \
-                else if ((odtf)->odtf_inuse == ODTBL_BAD)       \
-                        rc = ODTBL_BAD;                                 \
+/**
+ * inuse == 1  --> test the slot assuming it's being used.
+ * inuse == 0  --> test the slot assuming it's NOT being used.
+ * inuse == -1 --> test the slot ignoring whether or not it's being used.
+ * inuse == 2  --> test the slot assuming it's being used but ignoring key.
+ */
+#define odtable_footercheck(odtf, odtr, inuse)				\
+        ({								\
+                int __ret = 0;						\
+                if ((odtf)->odtf_magic != ODTBL_MAGIC)			\
+                        __ret = ODTBL_MAGIC_ERR;			\
+									\
+                else if ((odtf)->odtf_slotno != (odtr)->odtr_elem)	\
+                        __ret = ODTBL_SLOT_ERR;				\
+									\
+                else if ((odtf)->odtf_inuse == ODTBL_BAD)		\
+                        __ret = ODTBL_BADSL_ERR;			\
 									\
                 else if (inuse && (inuse > 0) &&			\
 			 (odtf)->odtf_inuse != ODTBL_INUSE)		\
-                        rc = ODTBL_INUSE_ERR;                           \
-                                                                        \
+                        __ret = ODTBL_INUSE_ERR;			\
+									\
                 else if (!inuse && (inuse > 0) &&			\
 			 (odtf)->odtf_inuse != ODTBL_FREE)		\
-                        rc = ODTBL_FREE_ERR;                            \
+                        __ret = ODTBL_FREE_ERR;				\
 									\
-                if (rc)                                                 \
-                        psc_errorx("slot=%"_P_U64"d has error %"_P_U64"x", \
-				   elem, rc);				\
-        } while (0)
+		else if ((inuse == 1) &&				\
+			 ((odtf)->odtf_inuse == ODTBL_INUSE) &&		\
+			 ((odtf)->odtf_key != ((odtr)->odtr_key)))	\
+			__ret = ODTBL_KEY_ERR;				\
+									\
+                if (__ret)						\
+                        psc_errorx("slot=%"_P_U64"d has error %d",	\
+				   (odtr)->odtr_elem, __ret);		\
+		__ret;							\
+        })
  
 #endif
