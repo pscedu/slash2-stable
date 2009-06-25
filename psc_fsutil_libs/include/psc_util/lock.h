@@ -230,6 +230,9 @@ trylock(psc_spinlock_t *s)
 	return (_tands(s));
 }
 
+#define PSC_SPIN_RLV_LOCKED 42
+#define PSC_SPIN_RLV_NOTLOCKED 43
+
 /*
  * reqlock - require a lock for a critical section.
  *	locks if unlocked, doesn't if already locked
@@ -248,14 +251,14 @@ reqlock(psc_spinlock_t *sl)
 		 * for the lock when we need to.
 		 */
 		if (sl->sl_who == pthread_self())
-			return (1);
+			return (PSC_SPIN_RLV_LOCKED);
 		else
 			/* someone else has it, wait */
 			spinlock(sl);
 	} else
 		/* not locked, grab it */
 		spinlock(sl);
-	return (0);
+	return (PSC_SPIN_RLV_NOTLOCKED);
 }
 
 static __inline int
@@ -263,10 +266,10 @@ tryreqlock(psc_spinlock_t *sl, int *locked)
 {
 	if (sl->sl_lock == SL_LOCKED &&
 	    sl->sl_who == pthread_self()) {
-		*locked = 1;
+		*locked = PSC_SPIN_RLV_LOCKED;
 		return (1);
 	}
-	*locked = 0;
+	*locked = PSC_SPIN_RLV_NOTLOCKED;
 	return (trylock(sl));
 }
 
@@ -281,8 +284,10 @@ tryreqlock(psc_spinlock_t *sl, int *locked)
 static __inline void
 ureqlock(psc_spinlock_t *sl, int waslocked)
 {
-	if (!waslocked)
+	if (waslocked == PSC_SPIN_RLV_LOCKED)
 		freelock(sl);
+	else if (waslocked != PSC_SPIN_RLV_NOTLOCKED)
+		psc_fatalx("ureqlock: bad value");
 }
 
 #else /* !HAVE_LIBPTHREAD */
