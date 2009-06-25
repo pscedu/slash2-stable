@@ -15,8 +15,11 @@ struct psc_spinlock {
 	struct timeval	psl_time;
 };
 
-#define PSL_UNLOCKED		2
-#define PSL_LOCKED		3
+#define PSL_UNLOCKED		40
+#define PSL_LOCKED		41
+
+#define PRSL_WASLOCKED		42
+#define PRSL_WASNOTLOCKED	43
 
 #define PSL_SLEEP_NSPINS	100			/* #tries before sleep */
 #define PSL_SLEEP_INTV		(5000 - 1)		/* usec */
@@ -132,9 +135,9 @@ psc_spin_reqlock(struct psc_spinlock *psl)
 {
 	if (psc_atomic32_read(&psl->psl_value) == PSL_LOCKED &&
 	    psl->psl_who == pthread_self())
-		return (1);	/* we've already locked it */
-	psc_spin_lock(psl);	/* someone else has it, wait */
-	return (0);
+		return (PRSL_WASLOCKED);	/* we've already locked it */
+	psc_spin_lock(psl);			/* someone else has it, wait */
+	return (PRSL_WASNOTLOCKED);
 }
 
 /**
@@ -148,10 +151,10 @@ psc_spin_tryreqlock(struct psc_spinlock *psl, int *locked)
 {
 	if (psc_atomic32_read(&psl->psl_value) == PSL_LOCKED &&
 	    psl->psl_who == pthread_self()) {
-		*locked = 1;
+		*locked = PRSL_WASLOCKED;
 		return (1);
 	}
-	*locked = 0;
+	*locked = PRSL_WASNOTLOCKED;
 	return (psc_spin_trylock(psl));
 }
 
@@ -166,8 +169,10 @@ psc_spin_tryreqlock(struct psc_spinlock *psl, int *locked)
 static inline void
 psc_spin_ureqlock(struct psc_spinlock *psl, int waslocked)
 {
-	if (!waslocked)
+	if (waslocked == PRSL_WASLOCKED)
 		psc_spin_unlock(psl);
+	else if (waslocked != PRSL_WASNOTLOCKED)
+		psc_fatalx("psc_spin_ureqlock: bad value");
 }
 
 #endif /* _PFL_SPINLOCK_H_ */
