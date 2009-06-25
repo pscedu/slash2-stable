@@ -169,9 +169,9 @@ psc_spin_tryreqlock(struct psc_spinlock *psl, int *locked)
 static inline void
 psc_spin_ureqlock(struct psc_spinlock *psl, int waslocked)
 {
-	if (waslocked == PRSL_WASLOCKED)
+	if (waslocked == PRSL_WASNOTLOCKED)
 		psc_spin_unlock(psl);
-	else if (waslocked != PRSL_WASNOTLOCKED)
+	else if (waslocked != PRSL_WASLOCKED)
 		psc_fatalx("psc_spin_ureqlock: bad value");
 }
 

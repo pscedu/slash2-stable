@@ -284,9 +284,9 @@ tryreqlock(psc_spinlock_t *sl, int *locked)
 static __inline void
 ureqlock(psc_spinlock_t *sl, int waslocked)
 {
-	if (waslocked == PSC_SPIN_RLV_LOCKED)
+	if (waslocked == PSC_SPIN_RLV_NOTLOCKED)
 		freelock(sl);
-	else if (waslocked != PSC_SPIN_RLV_NOTLOCKED)
+	else if (waslocked != PSC_SPIN_RLV_LOCKED)
 		psc_fatalx("ureqlock: bad value");
 }
 
