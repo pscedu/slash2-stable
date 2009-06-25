@@ -344,6 +344,9 @@ psc_pool_resize(struct psc_poolmgr *m)
  *	as adequate, it may be because there are no free buffers
  *	available in any pools and the caller should then resort to
  *	forcefully reclaiming pool buffers from the set.
+ *
+ * XXX: pass back some kind of return value determining whether or not
+ *	any memory could be reaped.
  */
 void
 _psc_pool_reap(struct psc_poolset *s, struct psc_poolmaster *initiator,
@@ -355,6 +358,7 @@ _psc_pool_reap(struct psc_poolset *s, struct psc_poolmaster *initiator,
 	int i, np, nobj;
 	void **pv;
 
+	nobj = 0;
 	culprit = NULL;
 	culpritmx = tmx = 0;
 	spinlock(&s->pps_lock);
@@ -379,7 +383,7 @@ _psc_pool_reap(struct psc_poolset *s, struct psc_poolmaster *initiator,
 	}
 	freelock(&s->pps_lock);
 
-	if (culprit)
+	if (culprit && nobj)
 		psc_pool_tryshrink(culprit, nobj);
 }
 
