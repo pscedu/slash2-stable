@@ -1,9 +1,11 @@
 /* $Id$ */
 
 #define PSC_SUBSYS PSS_JOURNAL
+#include "psc_util/subsys.h"
 
-#define _XOPEN_SOURCE 600
+#ifndef _GNU_SOURCE
 #define _GNU_SOURCE
+#endif
 
 #include <sys/types.h>
 
@@ -17,7 +19,6 @@
 #include "psc_util/atomic.h"
 #include "psc_util/journal.h"
 #include "psc_util/lock.h"
-#include "psc_util/subsys.h"
 
 /*
  * pjournal_init - initialize the in-memory representation of a journal.
@@ -240,7 +241,7 @@ pjournal_logread(struct psc_journal *pj, int slot, void *data)
 
 	for (i=0; i < ra; i++) {
 		struct psc_journal_enthdr *h;
-		
+
 		h = (void *)&p[pj->pj_entsz * i];
 
 		if ((h->pje_magic != PJE_MAGIC ||
@@ -325,8 +326,8 @@ pjournal_format(struct psc_journal *pj)
 
 		for (i=0; i < ra; i++) {
 			struct psc_journal_enthdr *h;
-			
-			h = (void *)&jbuf[pj->pj_entsz * i]; 
+
+			h = (void *)&jbuf[pj->pj_entsz * i];
 			h->pje_magic = 0x45678912aabbccffULL;
 			h->pje_type = PJET_VOID;
 			h->pje_xid = PJE_XID_NONE;
@@ -346,6 +347,7 @@ pjournal_headtail_get(struct psc_journal *pj, struct psc_journal_walker *pjw)
 	int rc=0, i, ents=0;
         u32 tm=PJET_SLOT_ANY, sm=PJET_SLOT_ANY, lastgen;
 
+	lastgen = 0; /* gcc */
 	pjw->pjw_pos = pjw->pjw_stop = 0;
 
 	while (ents < pj->pj_nents) {
@@ -407,7 +409,7 @@ pjournal_headtail_get(struct psc_journal *pj, struct psc_journal_walker *pjw)
 	/* This catches the case where the tm is at the very last slot
 	 *  which means that the log didn't wrap but was about to.
 	 */
-	pjw->pjw_stop = ((tm != PJET_SLOT_ANY) ? tm : (pj->pj_nents-1));
+	pjw->pjw_stop = ((tm != PJET_SLOT_ANY) ? tm : (uint32_t)(pj->pj_nents-1));
  out:
 	psc_info("journal pos (S=%d) (E=%d) (rc=%d)",
 		 pjw->pjw_pos, pjw->pjw_stop, rc);
@@ -444,7 +446,7 @@ pjournal_replay(struct psc_journal *pj, psc_jhandler pj_handler)
 		rc = pjournal_logread(pj, pjw.pjw_pos, jbuf);
 		if (rc < 0)
 			return (-1);
-		
+
 		(pj_handler)(jbuf, rc);
 
 		nents -= rc;
