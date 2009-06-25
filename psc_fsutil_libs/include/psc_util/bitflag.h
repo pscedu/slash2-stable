@@ -29,6 +29,7 @@ bitflag_sorc(int *f, psc_spinlock_t *lck, int checkon, int checkoff,
 {
 	int strict, locked;
 
+	locked = 0; /* gcc */
 	strict = ATTR_ISSET(flags, BIT_STRICT);
 
 	if (lck)
