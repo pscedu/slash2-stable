@@ -58,7 +58,7 @@ psc_spin_ensure(struct psc_spinlock *psl)
  * @psl: spinlock.
  */
 static inline void
-psc_spinlock_unlock(struct psc_spinlock *psl)
+psc_spin_unlock(struct psc_spinlock *psl)
 {
 	struct timeval now, max, diff;
 
