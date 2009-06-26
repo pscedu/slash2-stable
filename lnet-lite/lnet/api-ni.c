@@ -150,7 +150,7 @@ lnet_get_usesdp(void)
 		char *val;
 
 		val = getenv("LNET_USESDP");
-		if (val && *val)
+		if (val && *val != '0')
 			usesdp = 1;
 		init = 1;
 	}
