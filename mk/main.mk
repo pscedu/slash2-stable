@@ -11,39 +11,6 @@ _LEXINTM=	$(patsubst %.l,%.c,$(filter %.l,${SRCS}))
 _C_SRCS=	$(filter %.c,${SRCS}) ${_YACCINTM} ${_LEXINTM}
 ECHORUN=	echorun() { echo "$$@"; "$$@" }; echorun
 
-ifdef OLD_LNET
-LNET_SOCKLND_SRCS+=	${LNET_BASE}/socklnd/connection.c
-LNET_SOCKLND_SRCS+=	${LNET_BASE}/socklnd/pqtimer.c
-LNET_SOCKLND_SRCS+=	${LNET_BASE}/socklnd/procapi.c
-LNET_SOCKLND_SRCS+=	${LNET_BASE}/socklnd/proclib.c
-LNET_SOCKLND_SRCS+=	${LNET_BASE}/socklnd/select.c
-LNET_SOCKLND_SRCS+=	${LNET_BASE}/socklnd/sendrecv.c
-LNET_SOCKLND_SRCS+=	${LNET_BASE}/socklnd/table.c
-LNET_SOCKLND_SRCS+=	${LNET_BASE}/socklnd/tcplnd.c
-
-LNET_CFS_SRCS+=		${LNET_BASE}/libcfs/debug.c
-LNET_CFS_SRCS+=		${LNET_BASE}/libcfs/nidstrings.c
-LNET_CFS_SRCS+=		${LNET_BASE}/libcfs/user-lock.c
-LNET_CFS_SRCS+=		${LNET_BASE}/libcfs/user-prim.c
-LNET_CFS_SRCS+=		${LNET_BASE}/libcfs/user-tcpip.c
-
-LNET_LIB_SRCS+=		${LNET_BASE}/lnet/acceptor.c
-LNET_LIB_SRCS+=		${LNET_BASE}/lnet/api-errno.c
-LNET_LIB_SRCS+=		${LNET_BASE}/lnet/api-ni.c
-LNET_LIB_SRCS+=		${LNET_BASE}/lnet/config.c
-LNET_LIB_SRCS+=		${LNET_BASE}/lnet/lib-eq.c
-LNET_LIB_SRCS+=		${LNET_BASE}/lnet/lib-md.c
-LNET_LIB_SRCS+=		${LNET_BASE}/lnet/lib-me.c
-LNET_LIB_SRCS+=		${LNET_BASE}/lnet/lib-move.c
-LNET_LIB_SRCS+=		${LNET_BASE}/lnet/lib-msg.c
-LNET_LIB_SRCS+=		${LNET_BASE}/lnet/lo.c
-LNET_LIB_SRCS+=		${LNET_BASE}/lnet/peer.c
-LNET_LIB_SRCS+=		${LNET_BASE}/lnet/router.c
-LNET_LIB_SRCS+=		${LNET_BASE}/lnet/router_proc.c
-
-LNET_PTLLND_SRCS+=	${LNET_BASE}/ulnds/ptllnd/ptllnd.c
-LNET_PTLLND_SRCS+=	${LNET_BASE}/ulnds/ptllnd/ptllnd_cb.c
-else
 LNET_SOCKLND_SRCS+=	${LNET_BASE}/ulnds/socklnd/conn.c
 LNET_SOCKLND_SRCS+=	${LNET_BASE}/ulnds/socklnd/handlers.c
 LNET_SOCKLND_SRCS+=	${LNET_BASE}/ulnds/socklnd/poll.c
@@ -72,7 +39,6 @@ LNET_LIB_SRCS+=		${LNET_BASE}/lnet/router_proc.c
 
 LNET_PTLLND_SRCS+=	${LNET_BASE}/ulnds/ptllnd/ptllnd.c
 LNET_PTLLND_SRCS+=	${LNET_BASE}/ulnds/ptllnd/ptllnd_cb.c
-endif
 
 PSCRPC_SRCS+=		${PFL_BASE}/psc_rpc/connection.c
 PSCRPC_SRCS+=		${PFL_BASE}/psc_rpc/events.c
