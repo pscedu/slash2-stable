@@ -18,13 +18,13 @@
 
 struct psc_journal {
 	psc_spinlock_t	pj_lock;	/* contention lock */
-	int		pj_entsz;	/* sizeof log entry */
-	int		pj_nents;	/* #ent slots in journal */
-	int		pj_readahead;	/* grab lots of entries */
-	daddr_t		pj_daddr;	/* disk offset of starting ent */
-	int		pj_nextwrite;	/* next entry slot to write to */
+	uint32_t	pj_entsz;	/* sizeof log entry */
+	uint32_t	pj_nents;	/* #ent slots in journal */
+	uint32_t	pj_readahead;	/* grab lots of entries */
+	off_t		pj_daddr;	/* disk offset of starting ent */
+	uint32_t	pj_nextwrite;	/* next entry slot to write to */
 	int		pj_genid;	/* current wrap generation */
-	u64		pj_nextxid;	/* next transaction ID */
+	uint64_t	pj_nextxid;	/* next transaction ID */
 	int		pj_fd;		/* open file descriptor to disk */
 	struct psclist_head pj_pndgxids;
 	psc_waitq_t	pj_waitq;
@@ -33,8 +33,8 @@ struct psc_journal {
 typedef void (*psc_jhandler)(void *, int);
 
 struct psc_journal_walker {
-	int		pjw_pos;	/* current position */
-	int		pjw_stop;	/* targetted end position */
+	uint32_t	pjw_pos;	/* current position */
+	uint32_t	pjw_stop;	/* targetted end position */
 	int		pjw_seen;	/* whether to terminate at stop_pos */
 	psc_jhandler	pjw_cb;
 };
@@ -47,10 +47,12 @@ struct psc_journal_walker {
 #define PJET_SLOT_ANY	(~0U)
 
 struct psc_journal_enthdr {
-	u64		pje_magic;	/* validity check */
-	u32		pje_genmarker;  /* field to detect log wrapping */
-	u32		pje_type;	/* app-specific log entry type */
-	u32		pje_xid;	/* transaction ID */
+	uint64_t		pje_magic;	/* validity check */
+	uint32_t		pje_genmarker;  /* field to detect log wrapping */
+	uint32_t		pje_type;	/* app-specific log entry type */
+	uint64_t		pje_xid;	/* journal transaction id */
+	uint32_t		pje_sid;	/* xid sub-id */
+	uint32_t		pje_pad;
 	char		pje_data[0];
 };
 
@@ -58,9 +60,10 @@ struct psc_journal_enthdr {
 			     + (p)->pj_entsz)
 
 struct psc_journal_xidhndl {
-	u64                 pjx_xid;
-	int                 pjx_tailslot;
-	int                 pjx_flags;   /* app-specific log entry type */
+	uint64_t             pjx_xid;
+	atomic_t            pjx_sid;
+	uint32_t             pjx_tailslot;
+	uint32_t             pjx_flags;   /* app-specific log entry type */
 	struct psclist_head pjx_lentry;  /* chain on journal */
 	psc_spinlock_t      pjx_lock;    /* serialize */
 	struct psc_journal *pjx_pj;
@@ -69,12 +72,13 @@ struct psc_journal_xidhndl {
 
 /* Journal entry types. */
 #define PJET_VOID	0		/* null journal record */
-#define PJET_CORRUPT	(2<<28)		/* entry has failed magic */
-#define PJET_CLOSED	(2<<29)		/* xid is closed */
-#define PJET_XSTARTED	(2<<30)		/* transaction began */
+#define PJET_CORRUPT	(2<<27)		/* entry has failed magic */
+#define PJET_CLOSED	(2<<28)		/* xid is closed */
+#define PJET_XSTARTED	(2<<29)		/* transaction began */
+#define PJET_XADD       (2<<30)
 #define PJET_XEND	(2<<31)		/* transaction ended */
 
-void	 pjournal_init(struct psc_journal *, const char *, daddr_t, int, int, int);
+void	 pjournal_init(struct psc_journal *, const char *, off_t, int, int, int);
 struct psc_journal_xidhndl *
 	 pjournal_nextxid(struct psc_journal *);
 int	 pjournal_xstart(struct psc_journal *, int);
@@ -83,7 +87,7 @@ int	 pjournal_clearlog(struct psc_journal *, int);
 void	*pjournal_alloclog(struct psc_journal *);
 int	 pjournal_logwritex(struct psc_journal *, int, int, void *);
 int	 pjournal_logwrite(struct psc_journal_xidhndl *, int, void *);
-int	 pjournal_logread(struct psc_journal *, int, void *);
+int	 pjournal_logread(struct psc_journal *, uint32_t, void *);
 int	 pjournal_walk(struct psc_journal *, struct psc_journal_walker *,
 	    struct psc_journal_enthdr *);
 int

@@ -28,12 +28,12 @@
  * @entsz: size of a journal entry.
  */
 void
-pjournal_init(struct psc_journal *pj, const char *fn, daddr_t start,
+pjournal_init(struct psc_journal *pj, const char *fn, off_t start,
 	      int nents, int entsz, int ra)
 {
 	int fd;
 
-	fd = open(fn, O_RDWR | O_CREAT);
+	fd = open(fn, O_RDWR | O_CREAT | O_DIRECT);
 	if (fd == -1)
 		psc_fatal("open %s", fn);
 
@@ -48,6 +48,19 @@ pjournal_init(struct psc_journal *pj, const char *fn, daddr_t start,
 	psc_waitq_init(&pj->pj_waitq);
 }
 
+static struct psc_journal_xidhndl *
+pjournal_xidhndl_new(struct psc_journal *pj)
+{	
+	struct psc_journal_xidhndl *xh;
+
+	xh = PSCALLOC(sizeof(*xh));
+
+	xh->pjx_pj = pj;
+	INIT_PSCLIST_ENTRY(&xh->pjx_lentry);
+	LOCK_INIT(&xh->pjx_lock);	
+	return (xh);
+}
+
 /*
  * pjournal_nextxid - obtain an unused journal transaction ID.
  * @pj: the journal.
@@ -58,7 +71,7 @@ pjournal_nextxid(struct psc_journal *pj)
 {
 	struct psc_journal_xidhndl *xh;
 
-	xh = PSCALLOC(sizeof(*xh));
+	xh = pjournal_xidhndl_new(pj);
 
 	PJ_LOCK(pj);
 	do {
@@ -80,8 +93,8 @@ pjournal_nextxid(struct psc_journal *pj)
  * Returns: 0 on success, -1 on error.
  */
 __static int
-_pjournal_logwrite(struct psc_journal *pj, int xid, int slot, int type,
-    void *data)
+_pjournal_logwrite(struct psc_journal *pj, struct psc_journal_xidhndl *xh, uint32_t slot, 
+		   int type, void *data)
 {
 	struct psc_journal_enthdr *pje;
 	int rc;
@@ -98,8 +111,13 @@ _pjournal_logwrite(struct psc_journal *pj, int xid, int slot, int type,
 	pje->pje_genmarker |= pj->pj_genid;
 	pje->pje_magic = PJE_MAGIC;
 	pje->pje_type = type;
-	pje->pje_xid = xid;
+	pje->pje_xid = xh->pjx_xid;
 
+	if (!(type & PJET_XEND))
+		pje->pje_sid = atomic_inc_return(&xh->pjx_sid);
+	else
+		pje->pje_sid = atomic_read(&xh->pjx_sid);
+	
 	rc = pwrite(pj->pj_fd, pje, pj->pj_entsz,
 	       (daddr_t)(pj->pj_daddr + (slot * pj->pj_entsz)));
 
@@ -118,7 +136,8 @@ _pjournal_logwrite(struct psc_journal *pj, int xid, int slot, int type,
 int
 pjournal_logwrite(struct psc_journal_xidhndl *xh, int type, void *data)
 {
-	int rc, slot, freexh=0;
+	int rc, freexh=0;
+	uint32_t slot;
 	struct psc_journal *pj = xh->pjx_pj;
 	struct psc_journal_xidhndl *t;
 
@@ -181,7 +200,7 @@ pjournal_logwrite(struct psc_journal_xidhndl *xh, int type, void *data)
 
 	psc_assert(atomic_read(&xh->pjx_ref) >= 0);
 
-	if (++pj->pj_nextwrite == pj->pj_nents) {
+	if ((++pj->pj_nextwrite) == pj->pj_nents) {
 		pj->pj_nextwrite = 0;
 		pj->pj_genid = (pj->pj_genid == PJET_LOG_GEN0) ?
 			PJET_LOG_GEN1 : PJET_LOG_GEN0;
@@ -191,7 +210,7 @@ pjournal_logwrite(struct psc_journal_xidhndl *xh, int type, void *data)
 
 	PJ_ULOCK(pj);
 
-	rc = _pjournal_logwrite(pj, xh->pjx_xid, slot, type, data);
+	rc = _pjournal_logwrite(pj, xh, slot, type, data);
 
 	if (freexh) {
 		psc_dbg("pj(%p) freeing xid(%ld)@xh(%p) rc=%d ts=%d",
@@ -210,7 +229,7 @@ pjournal_logwrite(struct psc_journal_xidhndl *xh, int type, void *data)
  * Returns: 'n' entries read on success, -1 on error.
  */
 int
-pjournal_logread(struct psc_journal *pj, int slot, void *data)
+pjournal_logread(struct psc_journal *pj, uint32_t slot, void *data)
 {
 	daddr_t addr;
 	char *p = data;
@@ -268,7 +287,7 @@ pjournal_xadd(struct psc_journal_xidhndl *xh, int type, void *data)
 	atomic_inc(&xh->pjx_ref);
 	freelock(&xh->pjx_lock);
 
-	return(pjournal_logwrite(xh, type, data));
+	return (pjournal_logwrite(xh, type, data));
 }
 
 int
@@ -318,7 +337,8 @@ pjournal_format(struct psc_journal *pj)
 {
 	unsigned char *jbuf=pjournal_alloclog_ra(pj);
 	daddr_t addr;
-	int ra, rc, i, slot=0;
+	int ra, rc, i;
+	uint32_t slot=0;
 
 	for (ra=pj->pj_readahead, slot=0; slot < pj->pj_nents; slot += ra) {
 		while ((slot + ra) >= pj->pj_nents)
@@ -337,6 +357,7 @@ pjournal_format(struct psc_journal *pj)
 		if (rc < 0)
 			return (-errno);
 	}
+	PSCFREE(jbuf);
 	return (0);
 }
 
@@ -344,8 +365,8 @@ __static int
 pjournal_headtail_get(struct psc_journal *pj, struct psc_journal_walker *pjw)
 {
 	unsigned char *jbuf=pjournal_alloclog_ra(pj);
-	int rc=0, i, ents=0;
-        u32 tm=PJET_SLOT_ANY, sm=PJET_SLOT_ANY, lastgen;
+	int rc=0, i;
+        uint32_t tm=PJET_SLOT_ANY, sm=PJET_SLOT_ANY, lastgen, ents=0;
 
 	lastgen = 0; /* gcc */
 	pjw->pjw_pos = pjw->pjw_stop = 0;
@@ -429,7 +450,8 @@ pjournal_replay(struct psc_journal *pj, psc_jhandler pj_handler)
 {
 	void *jbuf=pjournal_alloclog_ra(pj);
 	struct psc_journal_walker pjw;
-	int rc, nents;
+	int rc;
+	uint32_t nents=0;
 
 	psc_assert(pj && pj_handler);
 
