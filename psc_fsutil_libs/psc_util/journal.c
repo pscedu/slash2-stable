@@ -61,6 +61,13 @@ pjournal_xidhndl_new(struct psc_journal *pj)
 	return (xh);
 }
 
+
+void 
+pjournal_xidhndl_free(struct psc_journal_xidhndl *xh)
+{
+	PSCFREE(xh);
+}
+
 /*
  * pjournal_nextxid - obtain an unused journal transaction ID.
  * @pj: the journal.

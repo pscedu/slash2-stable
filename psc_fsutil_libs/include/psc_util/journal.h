@@ -93,5 +93,7 @@ int	 pjournal_walk(struct psc_journal *, struct psc_journal_walker *,
 int
 pjournal_xadd(struct psc_journal_xidhndl *xh, int type, void *data, size_t);
 
+void 
+pjournal_xidhndl_free(struct psc_journal_xidhndl *xh);
 
 #endif /* _PFL_JOURNAL_H_ */
