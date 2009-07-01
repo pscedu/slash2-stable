@@ -346,6 +346,7 @@ pjournal_alloclog(struct psc_journal *pj)
 void *
 pjournal_alloclog_ra(struct psc_journal *pj)
 {
+	psc_warnx("rasz=%zd", PJ_PJESZ(pj) * pj->pj_readahead);
 	return (psc_alloc(PJ_PJESZ(pj) * pj->pj_readahead,
 	    PAF_PAGEALIGN | PAF_LOCK));
 }
