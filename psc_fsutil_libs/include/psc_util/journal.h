@@ -81,17 +81,17 @@ struct psc_journal_xidhndl {
 void	 pjournal_init(struct psc_journal *, const char *, off_t, int, int, int);
 struct psc_journal_xidhndl *
 	 pjournal_nextxid(struct psc_journal *);
-int	 pjournal_xstart(struct psc_journal *, int);
-int	 pjournal_xend(struct psc_journal_xidhndl *, int, void *);
+int	 pjournal_xstart(struct psc_journal *, int, size_t);
+int	 pjournal_xend(struct psc_journal_xidhndl *, int, void *, size_t);
 int	 pjournal_clearlog(struct psc_journal *, int);
 void	*pjournal_alloclog(struct psc_journal *);
-int	 pjournal_logwritex(struct psc_journal *, int, int, void *);
-int	 pjournal_logwrite(struct psc_journal_xidhndl *, int, void *);
+int	 pjournal_logwritex(struct psc_journal *, int, int, void *, size_t);
+int	 pjournal_logwrite(struct psc_journal_xidhndl *, int, void *, size_t);
 int	 pjournal_logread(struct psc_journal *, uint32_t, void *);
 int	 pjournal_walk(struct psc_journal *, struct psc_journal_walker *,
 	    struct psc_journal_enthdr *);
 int
-pjournal_xadd(struct psc_journal_xidhndl *xh, int type, void *data);
+pjournal_xadd(struct psc_journal_xidhndl *xh, int type, void *data, size_t);
 
 
 #endif /* _PFL_JOURNAL_H_ */

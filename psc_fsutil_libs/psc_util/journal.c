@@ -93,20 +93,20 @@ pjournal_nextxid(struct psc_journal *pj)
  * Returns: 0 on success, -1 on error.
  */
 __static int
-_pjournal_logwrite(struct psc_journal *pj, struct psc_journal_xidhndl *xh, uint32_t slot, 
-		   int type, void *data)
+_pjournal_logwrite(struct psc_journal *pj, struct psc_journal_xidhndl *xh, 
+		   uint32_t slot, int type, void *data, size_t size)
 {
 	struct psc_journal_enthdr *pje;
 	int rc;
 
 	psc_assert(slot < pj->pj_nents);
+	psc_assert(size <= pj->pj_entsz);
 
 	pje = psc_alloc(PJ_PJESZ(pj), PAF_PAGEALIGN | PAF_LOCK);
 	if (data)
-		memcpy(pje->pje_data, data, pj->pj_entsz);
+		memcpy(pje->pje_data, data, size);
 
-	psc_assert(pje->pje_genmarker == 0 ||
-		   pje->pje_genmarker == PJET_LOG_STMRK);
+	psc_assert(!pje->pje_genmarker);
 
 	pje->pje_genmarker |= pj->pj_genid;
 	pje->pje_magic = PJE_MAGIC;
@@ -134,7 +134,8 @@ _pjournal_logwrite(struct psc_journal *pj, struct psc_journal_xidhndl *xh, uint3
  * Returns: 0 on success, -1 on error.
  */
 int
-pjournal_logwrite(struct psc_journal_xidhndl *xh, int type, void *data)
+pjournal_logwrite(struct psc_journal_xidhndl *xh, int type, void *data, 
+		  size_t size)
 {
 	int rc, freexh=0;
 	uint32_t slot;
@@ -210,7 +211,7 @@ pjournal_logwrite(struct psc_journal_xidhndl *xh, int type, void *data)
 
 	PJ_ULOCK(pj);
 
-	rc = _pjournal_logwrite(pj, xh, slot, type, data);
+	rc = _pjournal_logwrite(pj, xh, slot, type, data, size);
 
 	if (freexh) {
 		psc_dbg("pj(%p) freeing xid(%ld)@xh(%p) rc=%d ts=%d",
@@ -280,18 +281,20 @@ pjournal_logread(struct psc_journal *pj, uint32_t slot, void *data)
 }
 
 int
-pjournal_xadd(struct psc_journal_xidhndl *xh, int type, void *data)
+pjournal_xadd(struct psc_journal_xidhndl *xh, int type, void *data, 
+	      size_t size)
 {
 	spinlock(&xh->pjx_lock);
 	psc_assert(!(xh->pjx_flags & PJET_XEND));
 	atomic_inc(&xh->pjx_ref);
 	freelock(&xh->pjx_lock);
 
-	return (pjournal_logwrite(xh, type, data));
+	return (pjournal_logwrite(xh, type, data, size));
 }
 
 int
-pjournal_xend(struct psc_journal_xidhndl *xh, int type, void *data)
+pjournal_xend(struct psc_journal_xidhndl *xh, int type, void *data, 
+	      size_t size)
 {
 	spinlock(&xh->pjx_lock);
 	psc_assert(!(xh->pjx_flags & PJET_XEND));
@@ -299,19 +302,27 @@ pjournal_xend(struct psc_journal_xidhndl *xh, int type, void *data)
 	atomic_inc(&xh->pjx_ref);
 	freelock(&xh->pjx_lock);
 
-	return (pjournal_logwrite(xh, type, data));
+	return (pjournal_logwrite(xh, type, data, size));
 }
 
 int
 pjournal_start_mark(struct psc_journal *pj, int slot)
 {
 	struct psc_journal_enthdr *pje;
+	int rc;
 
 	pje = psc_alloc(PJ_PJESZ(pj), PAF_PAGEALIGN | PAF_LOCK);
+
 	pje->pje_genmarker = PJET_LOG_STMRK;
-	_pjournal_logwrite(pj, PJE_XID_NONE, slot, PJET_VOID, pje);
+	pje->pje_magic = PJE_MAGIC;
+	pje->pje_xid = PJE_XID_NONE;
+	pje->pje_type = PJET_VOID;
+	
+	rc = pwrite(pj->pj_fd, pje, pj->pj_entsz,
+	       (daddr_t)(pj->pj_daddr + (slot * pj->pj_entsz)));
+
 	psc_freel(pje, PJ_PJESZ(pj));
-	return (0);
+	return (rc);
 }
 
 /*
