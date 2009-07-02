@@ -124,7 +124,6 @@ psc_freen(void *p)
 	PSCFREE(p);
 }
 
-
 /*
  * psc_freenl - Free locked aligned memory.
  * @p: memory chunk to free.
