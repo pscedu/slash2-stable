@@ -49,7 +49,7 @@ rsx_waitrep(struct pscrpc_request *rq, int replen, void *mpp)
 {
 	int rc;
 
-	*(void**)mpp = NULL;
+	*(void **)mpp = NULL;
 
 	/* Send the request and block on its completion. */
 	rc = pscrpc_queue_wait(rq);
