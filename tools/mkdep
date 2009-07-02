@@ -41,7 +41,7 @@
 scanfordasho() {
 	while [ $# != 0 ]
 	do case "$1" in
-		-o)	
+		-o)
 			file="$2"; shift; shift ;;
 		-o*)
 			file="${1#-o}"; shift ;;
@@ -54,9 +54,14 @@ scanfordasho() {
 D=.depend			# default dependency file is .depend
 append=0
 pflag=
+outdir=
 
 while :
 	do case "$1" in
+		-D)
+			outdir=$2
+			shift; shift ;;
+
 		# -a appends to the depend file
 		-a)
 			append=1
@@ -78,7 +83,7 @@ while :
 done
 
 if [ $# = 0 ] ; then
-	echo 'usage: mkdep [-ap] [-f file] [flags] file ...'
+	echo 'usage: mkdep [-ap] [-D outdir] [-f file] [flags] file ...'
 	exit 1
 fi
 
@@ -103,6 +108,10 @@ if [ $? != 0 ]; then
 	echo 'mkdep: compile failed.'
 	rm -f $TMP
 	exit 1
+fi
+
+if [ x$outdir != x ]; then
+	perl -i -pe "s!^[a-zA-z0-9_-]!$outdir/\$&!" $TMP
 fi
 
 if [ $append = 1 ]; then
