@@ -2,12 +2,13 @@
 
 -include ${ROOTDIR}/mk/local.mk
 
-OBJS=		$(patsubst %.c,%.o,$(filter %.c,${SRCS}))
-OBJS+=		$(patsubst %.y,%.o,$(filter %.y,${SRCS}))
-OBJS+=		$(patsubst %.l,%.o,$(filter %.l,${SRCS}))
+_TOBJS=		$(patsubst %.c,%.o,$(filter %.c,${SRCS}))
+_TOBJS+=	$(patsubst %.y,%.o,$(filter %.y,${SRCS}))
+_TOBJS+=	$(patsubst %.l,%.o,$(filter %.l,${SRCS}))
+OBJS=		$(addprefix ${OBJDIR}/,$(notdir ${_TOBJS}))
 
-_YACCINTM=	$(patsubst %.y,%.c,$(filter %.y,${SRCS}))
-_LEXINTM=	$(patsubst %.l,%.c,$(filter %.l,${SRCS}))
+_YACCINTM=	$(patsubst %.y,%.c,$(filter %.y,$(addprefix ${OBJDIR}/,$(notdir ${SRCS}))))
+_LEXINTM=	$(patsubst %.l,%.c,$(filter %.l,$(addprefix ${OBJDIR}/,$(notdir ${SRCS}))))
 _C_SRCS=	$(filter %.c,${SRCS}) ${_YACCINTM} ${_LEXINTM}
 ECHORUN=	echorun() { echo "$$@"; "$$@" }; echorun
 
@@ -49,7 +50,13 @@ PSCRPC_SRCS+=		${PFL_BASE}/psc_rpc/packgeneric.c
 PSCRPC_SRCS+=		${PFL_BASE}/psc_rpc/rpcclient.c
 PSCRPC_SRCS+=		${PFL_BASE}/psc_rpc/service.c
 
+CFLAGS+=		${INCLUDES} ${DEFINES}
 TARGET?=	        ${PROG} ${LIBRARY}
+OBJDIR=			${CURDIR}/obj
+
+vpath %.y $(dir ${SRCS})
+vpath %.l $(dir ${SRCS})
+vpath %.c $(dir ${SRCS})
 
 all: recurse-all ${TARGET}
 
@@ -67,17 +74,24 @@ recurse-all:
 		fi;									\
 	done
 
-.y.c:
-	${YACC} ${YFLAGS} $<
+${OBJDIR}:
+	mkdir -p $@
 
-.c.o:
-	${CC} ${CFLAGS} ${$(subst .,_,$(subst -,_,$(subst /,_,$(subst ../,,$(subst //,/,$<)))))_CFLAGS} -c $< -o $@
+${OBJDIR}/$(notdir %.c) : %.l | ${OBJDIR}
+	${LEX} ${LFLAGS} $< > $@
+
+${OBJDIR}/$(notdir %.c) : %.y | ${OBJDIR}
+	${YACC} ${YFLAGS} -o $@ $<
+
+${OBJDIR}/$(notdir %.o) : %.c | ${OBJDIR}
+	${CC} ${CFLAGS} ${$(subst .,_,$(subst -,_,$(subst /,_,$(subst			\
+	    ../,,$(subst //,/,$<)))))_CFLAGS} -c $< -o $@
 
 ${PROG}: ${OBJS}
 	${CC} -o $@ ${OBJS} ${LDFLAGS}
 
 ${LIBRARY}: ${OBJS}
-	${AR} ${ARFLAGS} $@ $^
+	${AR} ${ARFLAGS} $@ ${OBJS}
 
 recurse-install:
 	@for i in ${SUBDIRS}; do							\

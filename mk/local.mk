@@ -9,8 +9,27 @@ MKDEP=		${MKDEP_PROG} $$(if ${CC} -v 2>&1 | grep -q gcc; then \
 		    awk '{print "-I" $$2 "include"}' | sed 's/:/ -I/'; fi)
 LINT=		splint +posixlib
 NOTEMPTY=	${ROOTDIR}/tools/notempty
+SCONS=		scons
 PKG_CONFIG=	PKG_CONFIG_PATH=/usr/local/lib/pkgconfig pkg-config
+
 LKERNEL_BASE=	${ROOTDIR}/kernel/2.6.9-42.0.8.EL_lustre.1.4.9.1
+
+LFLAGS+=	-t
+YFLAGS+=	-d
+
+CFLAGS+=	-Wall -W
+CFLAGS+=	-g
+#CFLAGS+=	-Wunused -Wuninitialized -O
+#CFLAGS+=	-Wshadow
+DEFINES+=	-D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64 -DYY_NO_UNPUT
+
+FUSE_INCLUDES=	`${PKG_CONFIG} --cflags fuse | perl -ne 'print $$& while /-I\S+\s?/gc'`
+FUSE_DEFINES=	`${PKG_CONFIG} --cflags fuse | perl -ne 'print $$& while /-D\S+\s?/gc'`
+FUSE_CFLAGS=	`${PKG_CONFIG} --cflags fuse | perl -ne 'print $$& while /-[^ID]\S+\s?/gc'`
+FUSE_LIBS=	`${PKG_CONFIG} --libs fuse`
+
+THREAD_LIBS?=	-lpthread
+LIBL?=		-ll
 
 ifeq ($(wildcard /usr/src/kernels/linux),)
  ifeq ($(wildcard /opt/xt-os),)
