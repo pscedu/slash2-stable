@@ -45,6 +45,8 @@ pfl
   structures in a reqlock order fashion (hash tables and lists etc.)
 - add custom sleep intervals for timerthr API
 - move pfl.h and psc_types.h into psc_fsutil_libs/include/pfl
+- make .depend target dependent on headers so it can rebuild itself
+  and remove from the `clean' target
 
 zest
 - test parity reconstruction service by rebuilding
