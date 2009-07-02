@@ -14,19 +14,33 @@
 
 #define PJE_MAGIC       0x45678912aabbccddULL
 #define PJE_FMT_MAGIC   0x45678912aabbccffULL
-#define PJE_XID_NONE    0               /* invalid transaction ID */
+#define PJE_XID_NONE    0 /* invalid transaction ID */
+
+/* Start writing jents at offset 4k, header must be smaller than PJE_OFFSET.
+ */
+#define PJE_OFFSET      0x1000
+#define PJE_VERSION     0x01
+
+struct psc_journal_hdr {
+	uint32_t       pjh_entsz;
+	uint32_t       pjh_nents;
+	uint32_t       pjh_version;
+	uint32_t       pjh_options;
+	uint32_t       pjh_readahead;
+	uint32_t       pjh_unused;
+	uint64_t       pjh_start_off;
+	uint64_t       pjh_magic;	
+};
+
 
 struct psc_journal {
 	psc_spinlock_t	pj_lock;	/* contention lock */
-	uint32_t	pj_entsz;	/* sizeof log entry */
-	uint32_t	pj_nents;	/* #ent slots in journal */
-	uint32_t	pj_readahead;	/* grab lots of entries */
-	off_t		pj_daddr;	/* disk offset of starting ent */
 	uint32_t	pj_nextwrite;	/* next entry slot to write to */
 	int		pj_genid;	/* current wrap generation */
 	uint64_t	pj_nextxid;	/* next transaction ID */
 	int		pj_fd;		/* open file descriptor to disk */
 	struct psclist_head pj_pndgxids;
+	struct psc_journal_hdr *pj_hdr;
 	psc_waitq_t	pj_waitq;
 };
 
@@ -46,28 +60,51 @@ struct psc_journal_walker {
 
 #define PJET_SLOT_ANY	(~0U)
 
+/*
+ * psc_journal_enthdr - journal entry header.  
+ * @pje_magic: validity check.
+ * @pje_genmarker: field to detect log wrapping.
+ * @pje_type: app-specific log entry type.
+ * @pje_xid: journal transaction id.
+ * @pje_sid: xid sub-id.
+ * @pje_pad: alignment purposes.
+ * @pje_data: application data.
+ * Notes: at some point we may want to make this into a footer which has 
+ *    a crc field.  
+ */
 struct psc_journal_enthdr {
-	uint64_t		pje_magic;	/* validity check */
-	uint32_t		pje_genmarker;  /* field to detect log wrapping */
-	uint32_t		pje_type;	/* app-specific log entry type */
-	uint64_t		pje_xid;	/* journal transaction id */
-	uint32_t		pje_sid;	/* xid sub-id */
+	uint64_t		pje_magic;
+	uint32_t		pje_genmarker;
+	uint32_t		pje_type;
+	uint64_t		pje_xid;
+	uint32_t		pje_sid;
 	uint32_t		pje_pad;
-	char		pje_data[0];
+	char		        pje_data[0];
 };
 
 #define PJ_PJESZ(p) (size_t)((sizeof(struct psc_journal_enthdr)) \
-			     + (p)->pj_entsz)
+			     + (p)->pj_hdr->pjh_entsz)
 
+/*
+ * psc_journal_xidhndl - journal transaction id handle.
+ * @pjx_xid: the transaction id.
+ * @pjx_sid: the xid sub-operation id. 
+ * @pjx_tailslot: the address of our starting / oldest slot.
+ * @pjx_flags: app-specific log entry bits.
+ * @pjx_lentry: open xid handles are chained in journal structure. 
+ * @pjx_lock: serialize.
+ * @pjx_pj: backpointer to our journal.
+ * @pjx_ref: count accessors.
+ */
 struct psc_journal_xidhndl {
 	uint64_t             pjx_xid;
-	atomic_t            pjx_sid;
+	atomic_t             pjx_sid;
 	uint32_t             pjx_tailslot;
-	uint32_t             pjx_flags;   /* app-specific log entry type */
-	struct psclist_head pjx_lentry;  /* chain on journal */
-	psc_spinlock_t      pjx_lock;    /* serialize */
-	struct psc_journal *pjx_pj;
-	atomic_t            pjx_ref;
+	uint32_t             pjx_flags;
+	struct psclist_head  pjx_lentry;
+	psc_spinlock_t       pjx_lock;
+	struct psc_journal  *pjx_pj;
+	atomic_t             pjx_ref;
 };
 
 /* Journal entry types. */
@@ -78,9 +115,15 @@ struct psc_journal_xidhndl {
 #define PJET_XADD       (2<<30)
 #define PJET_XEND	(2<<31)		/* transaction ended */
 
-void	 pjournal_init(struct psc_journal *, const char *, off_t, int, int, int);
+struct psc_journal * 
+pjournal_load(const char *);
+
+int
+pjournal_dump(const char *);
+
 struct psc_journal_xidhndl *
-	 pjournal_nextxid(struct psc_journal *);
+pjournal_nextxid(struct psc_journal *);
+
 int	 pjournal_xstart(struct psc_journal *, int, size_t);
 int	 pjournal_xend(struct psc_journal_xidhndl *, int, void *, size_t);
 int	 pjournal_clearlog(struct psc_journal *, int);
@@ -96,7 +139,7 @@ pjournal_xadd(struct psc_journal_xidhndl *xh, int type, void *data, size_t);
 void 
 pjournal_xidhndl_free(struct psc_journal_xidhndl *xh);
 
-int
-pjournal_format(struct psc_journal *pj);
+void 
+pjournal_format(const char *, uint32_t, uint32_t, uint32_t, uint32_t);
 
 #endif /* _PFL_JOURNAL_H_ */
