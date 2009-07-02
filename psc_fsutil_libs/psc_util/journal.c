@@ -96,8 +96,8 @@ _pjournal_logwrite(struct psc_journal *pj, struct psc_journal_xidhndl *xh,
 	else
 		pje->pje_sid = atomic_read(&xh->pjx_sid);
 	
-	rc = pwrite(pj->pj_fd, pje, pj->pj_hdr->pjh_entsz,
-	       (off_t)(pj->pj_hdr->pjh_start_off + (slot * pj->pj_hdr->pjh_entsz)));
+	//XXX	rc = pwrite(pj->pj_fd, pje, pj->pj_hdr->pjh_entsz,
+	//XXX       (off_t)(pj->pj_hdr->pjh_start_off + (slot * pj->pj_hdr->pjh_entsz)));
 
 	psc_freel(pje, PJ_PJESZ(pj));
 	return (rc);
@@ -128,6 +128,8 @@ pjournal_logwrite(struct psc_journal_xidhndl *xh, int type, void *data,
 	psc_assert(!(type & PJET_XEND));
 
 	psc_assert(!(xh->pjx_flags & PJET_CLOSED));
+
+
 
  retry:
 	PJ_LOCK(pj);
@@ -297,7 +299,8 @@ pjournal_start_mark(struct psc_journal *pj, int slot)
 	pje->pje_type = PJET_VOID;
 	
 	rc = pwrite(pj->pj_fd, pje, pj->pj_hdr->pjh_entsz,
-	       (off_t)(pj->pj_hdr->pjh_start_off + (slot * pj->pj_hdr->pjh_entsz)));
+		    (off_t)(pj->pj_hdr->pjh_start_off + 
+			    (slot * pj->pj_hdr->pjh_entsz)));
 
 	psc_freel(pje, PJ_PJESZ(pj));
 	return (rc);
@@ -455,14 +458,19 @@ pjournal_load(const char *fn)
 {
 	struct psc_journal_hdr *pjh = PSCALLOC(sizeof(*pjh));
 	struct psc_journal *pj = PSCALLOC(sizeof(*pj));
+	void *hdr = psc_alloc(PJE_OFFSET, PAF_PAGEALIGN);
 
-	pj->pj_hdr = pjh;
-	pj->pj_fd = open(fn, O_RDWR | O_CREAT | O_DIRECT);
+	pj->pj_fd = open(fn, O_RDWR|O_DIRECT);
 	if (pj->pj_fd < 0)
 		psc_fatal("open %s", fn);
 
-	if (pread(pj->pj_fd, pjh, sizeof(*pjh), 0) != sizeof(*pjh))
+	if (pread(pj->pj_fd, hdr, PJE_OFFSET, 0) != PJE_OFFSET)
 		psc_fatal("Failed to read journal header");
+
+	memcpy(pjh, hdr, sizeof(*pjh));
+	pj->pj_hdr = pjh;
+
+	psc_freen(hdr);
 
 	if (pjh->pjh_magic != PJE_MAGIC)
 		psc_fatalx("Journal header has bad magic!");
@@ -478,45 +486,39 @@ pjournal_load(const char *fn)
 int
 pjournal_dump(const char *fn)
 {
-	int fd;
-	uint32_t slot, ra, i;
-	struct psc_journal pj;
-	struct psc_journal_hdr pjh;
+	struct psc_journal *pj;
+	struct psc_journal_hdr *pjh;
 	struct psc_journal_enthdr *h;
+	uint32_t slot, ra, i;
 	unsigned char *jbuf;
 
-	fd = open(fn, O_RDONLY);
-        if (fd == -1)
-		psc_fatal("open %s", fn);
-
-	if (pread(fd, &pjh, sizeof(pjh), 0) != sizeof(pjh))
-		psc_fatal("Failed to read journal header");
+	pj = pjournal_load(fn);
+	pjh = pj->pj_hdr;
 
 	fprintf(stdout, "entsz=%u nents=%u vers=%u opts=%u ra=%u "
 		"off=%"_P_U64"x magic=%"_P_U64"x", 
-		pjh.pjh_entsz, pjh.pjh_nents, pjh.pjh_version, pjh.pjh_options,
-		pjh.pjh_readahead, pjh.pjh_start_off, pjh.pjh_magic);
+		pjh->pjh_entsz, pjh->pjh_nents, pjh->pjh_version, pjh->pjh_options,
+		pjh->pjh_readahead, pjh->pjh_start_off, pjh->pjh_magic);
 
-	if (pjh.pjh_magic != PJE_MAGIC)
+	if (pjh->pjh_magic != PJE_MAGIC)
 		psc_warnx("journal %s has bad magic!", fn);
-	
-	pj.pj_hdr = &pjh;
-	jbuf = pjournal_alloclog_ra(&pj);
 
-	for (slot=0, ra=pjh.pjh_readahead; slot < pjh.pjh_nents; 
-	     slot += pjh.pjh_readahead) {
+	jbuf = pjournal_alloclog_ra(pj);
+
+	for (slot=0, ra=pjh->pjh_readahead; slot < pjh->pjh_nents; 
+	     slot += pjh->pjh_readahead) {
 		/* Make sure we don't read past the end.
 		 */
-		while ((slot + ra) > pjh.pjh_nents)
+		while ((slot + ra) > pjh->pjh_nents)
 			ra--;
 
-		if (pread(fd, jbuf, (pjh.pjh_entsz * ra), 
-			   (off_t)(PJE_OFFSET + (slot * pjh.pjh_entsz)))
-		    != (pjh.pjh_entsz * ra))
+		if (pread(pj->pj_fd, jbuf, (pjh->pjh_entsz * ra), 
+			   (off_t)(PJE_OFFSET + (slot * pjh->pjh_entsz)))
+		    != (pjh->pjh_entsz * ra))
 			psc_fatal("Failed to write entries");
 
 		for (i=0; i < ra; i++) {
-			h = (void *)&jbuf[pjh.pjh_entsz * i];
+			h = (void *)&jbuf[pjh->pjh_entsz * i];
 
 			fprintf(stdout, "slot=%u gmrkr=%x magic=%"_P_U64"x"
 				" type=%x xid=%"_P_U64"x sid=%d\n",
@@ -530,7 +532,7 @@ pjournal_dump(const char *fn)
 		}
 	}
 	
-	if (close(fd) < 0)
+	if (close(pj->pj_fd) < 0)
 		psc_fatal("Failed to close journal fd");
 
 	PSCFREE(jbuf);
@@ -543,7 +545,7 @@ pjournal_format(const char *fn, uint32_t nents, uint32_t entsz, uint32_t ra,
 {
 	struct psc_journal pj;
 	struct psc_journal_hdr pjh = {entsz, nents, PJE_VERSION, opts, ra, 
-				       0, PJE_OFFSET, PJE_MAGIC};
+				      0, PJE_OFFSET, PJE_MAGIC};
 	struct psc_journal_enthdr *h;
 	unsigned char *jbuf;
 	uint32_t slot, i;
