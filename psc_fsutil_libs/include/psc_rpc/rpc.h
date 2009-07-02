@@ -19,7 +19,7 @@
 #include "lnet/types.h"
 
 #include "psc_types.h"
-#include "psc_ds/hash.h"
+#include "psc_ds/hash2.h"
 #include "psc_ds/list.h"
 #include "psc_ds/listcache.h"
 #include "psc_util/atomic.h"
@@ -270,7 +270,7 @@ struct pscrpc_nbrequests;
 struct rpc_peer_qlen {
 	atomic_t		 qlen;
 	lnet_process_id_t	 id;
-	struct hash_entry	 hentry;
+	struct psc_hashent	 hentry;
 };
 
 struct pscrpc_request {
@@ -372,7 +372,7 @@ struct pscrpc_service {
 					* wait-queue is signalled when new
 					* incoming request arrives and when
 					* difficult reply has to be handled. */
-	struct hash_table srv_peer_qlentab;
+	struct psc_hashtbl srv_peer_qlentab;
 
 	psc_spinlock_t srv_lock;
 	svc_handler_t  srv_handler;

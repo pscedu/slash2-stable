@@ -392,24 +392,17 @@ pscrpc_server_handle_request(struct pscrpc_service *svc,
 	if (svc->srv_count_peer_qlens &&
 	    atomic_dec_return(&request->rq_peer_qlen->qlen) == 0) {
 		struct rpc_peer_qlen *pq;
-		struct hash_bucket *hb;
-		struct hash_entry *h;
+		struct psc_hashbkt *b;
 
-		pq = NULL;
-		hb = hashbkt_get(&svc->srv_peer_qlentab,
+		b = psc_hashbkt_get(&svc->srv_peer_qlentab,
 		    request->rq_peer.nid);
-		hashbkt_lock(hb);
+		psc_hashbkt_lock(b);
 		/* Look up the struct again in case it disappeared. */
-		h = hashbkt_search(&svc->srv_peer_qlentab,
-		    hb, request->rq_peer.nid, &request->rq_peer, NULL);
-		if (h) {
-			pq = h->private;
-			if (atomic_read(&pq->qlen) == 0)
-				hashbkt_del_entry(hb, &pq->hentry);
-			else
-				pq = NULL;
-		}
-		hashbkt_unlock(hb);
+		pq = psc_hashbkt_search(&svc->srv_peer_qlentab,
+		    b, &request->rq_peer, NULL, request->rq_peer.nid);
+		if (pq && atomic_read(&pq->qlen) == 0)
+			psc_hashent_remove(&svc->srv_peer_qlentab, &pq);
+		psc_hashbkt_unlock(b);
 		free(pq);
 	}
 
@@ -1010,9 +1003,9 @@ pscrpc_init_svc(int nbufs, int bufsize, int max_req_size, int max_reply_size,
 	if (flags & PSCRPC_SVCF_COUNT_PEER_QLENS) {
 		service->srv_count_peer_qlens = 1;
 #define QLENTABSZ 511
-		init_hash_table(&service->srv_peer_qlentab,
-		    QLENTABSZ, "qlen-%s", service->srv_name);
-		service->srv_peer_qlentab.htcompare = rpc_peer_qlen_cmp;
+		psc_hashtbl_init(&service->srv_peer_qlentab, 0,
+		    struct rpc_peer_qlen, id, hentry, QLENTABSZ,
+		    rpc_peer_qlen_cmp, "qlen-%s", service->srv_name);
 	}
 
 	CDEBUG(D_NET, "%s: Started, listening on portal %d\n",

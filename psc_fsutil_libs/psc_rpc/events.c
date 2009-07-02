@@ -160,38 +160,36 @@ void request_in_callback(lnet_event_t *ev)
 	/* count the RPC request queue length for this peer if enabled */
 	if (service->srv_count_peer_qlens) {
 		struct rpc_peer_qlen *pq;
-		struct hash_entry *hent;
 
-		hent = get_hash_entry(&service->srv_peer_qlentab,
-		    req->rq_peer.nid, &req->rq_peer, pscrpc_bump_peer_qlen);
-		if (hent == NULL) {
-			struct hash_bucket *hb;
+		pq = psc_hashtbl_search(&service->srv_peer_qlentab,
+		    &req->rq_peer, pscrpc_bump_peer_qlen, req->rq_peer.nid);
+		if (pq == NULL) {
+			struct rpc_peer_qlen *tpq;
+			struct psc_hashbkt *b;
 
-			pq = PSCALLOC(sizeof(*pq));
-			atomic_set(&pq->qlen, 1);
-			pq->id = req->rq_peer;
-			init_hash_entry(&pq->hentry, &pq->id.nid, pq);
+			tpq = PSCALLOC(sizeof(*tpq));
+			tpq->id = req->rq_peer;
 
-			hb = hashbkt_get(&service->srv_peer_qlentab,
+			/*
+			 * Search again in case it was created by
+			 * another thread in the interim.
+			 */
+			b = psc_hashbkt_get(&service->srv_peer_qlentab,
 			    req->rq_peer.nid);
-			hashbkt_lock(hb);
-			hent = hashbkt_search(&service->srv_peer_qlentab,
-			    hb, req->rq_peer.nid, &req->rq_peer, NULL);
-			if (hent == NULL) {
-				hashbkt_add_entry(hb, &pq->hentry);
-				hent = &pq->hentry;
-				pq = NULL;
-			} else {
-				struct rpc_peer_qlen *pqt;
-
-				pqt = hent->private;
-				atomic_inc(&pqt->qlen);
+			psc_hashbkt_lock(b);
+			pq = psc_hashbkt_search(&service->srv_peer_qlentab,
+			    b, &req->rq_peer, NULL, req->rq_peer.nid);
+			if (pq == NULL) {
+				psc_hashbkt_add_item(
+				    &service->srv_peer_qlentab, b, &tpq);
+				pq = tpq;
+				tpq = NULL;
 			}
-			hashbkt_unlock(hb);
+			psc_hashbkt_unlock(b);
 
-			free(pq);
+			free(tpq);
 		}
-		pq = hent->private;
+		atomic_inc(&pq->qlen);
 		req->rq_peer_qlen = pq;
 	}
 
