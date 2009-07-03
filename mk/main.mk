@@ -7,8 +7,9 @@ _TOBJS+=	$(patsubst %.y,%.o,$(filter %.y,${SRCS}))
 _TOBJS+=	$(patsubst %.l,%.o,$(filter %.l,${SRCS}))
 OBJS=		$(addprefix ${OBJDIR}/,$(notdir ${_TOBJS}))
 
-_YACCINTM=	$(patsubst %.y,%.c,$(filter %.y,$(addprefix ${OBJDIR}/,$(notdir ${SRCS}))))
-_LEXINTM=	$(patsubst %.l,%.c,$(filter %.l,$(addprefix ${OBJDIR}/,$(notdir ${SRCS}))))
+_LEXINTM=	$(patsubst %.l,%.c,$(addprefix ${OBJDIR}/,$(notdir $(filter %.l,${SRCS}))))
+_YACCINTM=	$(patsubst %.y,%.c,$(addprefix ${OBJDIR}/,$(notdir $(filter %.y,${SRCS}))))
+CLEANFILES+=	$(patsubst %.y,%.h,$(notdir $(filter %.y,${SRCS})))
 _C_SRCS=	$(filter %.c,${SRCS}) ${_YACCINTM} ${_LEXINTM}
 ECHORUN=	echorun() { echo "$$@"; "$$@" }; echorun
 
@@ -154,8 +155,8 @@ clean:
 	@for i in ${SRCS}; do								\
 		test -f $$i || { echo "file does not exist: $$i" >&2; exit 1; };	\
 	done
-	rm -rf ${OBJS} ${PROG} ${LIBRARY} ${CLEANFILES} ${_YACCINTM} ${_LEXINTM}	\
-	    .depend* TAGS cscope.out core.[0-9]*
+	rm -rf ${OBJS} ${PROG} ${LIBRARY} $(addprefix ${OBJDIR}/,${CLEANFILES})		\
+	    ${_YACCINTM} ${_LEXINTM} .depend* TAGS cscope.out core.[0-9]*
 	@for i in ${SUBDIRS}; do							\
 		echo -n "===> ";							\
 		if [ -n "${DIRPREFIX}" ]; then						\
