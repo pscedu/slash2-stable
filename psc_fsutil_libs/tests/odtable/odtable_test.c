@@ -1,14 +1,18 @@
+/* $Id$ */
+
 #include <sys/param.h>
+
+#include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <strings.h>
 #include <unistd.h>
-#include <stdio.h>
-#include <stdlib.h>
 
 #include "pfl.h"
-#include "psc_util/odtable.h"
-#include "psc_util/log.h"
 #include "psc_ds/dynarray.h"
+#include "psc_util/cdefs.h"
+#include "psc_util/log.h"
+#include "psc_util/odtable.h"
 
 struct dynarray myReceipts;
 
@@ -27,14 +31,14 @@ my_odtcb(void *data, struct odtable_receipt *odtr)
 {
 	char *item = data;
 
-	psc_warnx("found ;%s; at slot=%"_P_U64"d odtr=%p", 
+	psc_warnx("found ;%s; at slot=%"_P_U64"d odtr=%p",
 		  item, odtr->odtr_elem, odtr);
 
 	dynarray_add(&myReceipts, odtr);
 }
 
-int 
-main(int argc, char *argv[]) 
+int
+main(int argc, char *argv[])
 {
 	int rc, i;
 	char c;
@@ -87,16 +91,16 @@ main(int argc, char *argv[])
 			break;
 		default:
 			usage();
-		}	
+		}
 
 	dynarray_init(&myReceipts);
 
 	if (!table_name)
 		usage();
 
-	if (create_table && 
+	if (create_table &&
 	    (rc = odtable_create(table_name, table_size, elem_size)))
-		psc_fatal("odtable_create() failed on ;%s; rc=%d", 
+		psc_fatal("odtable_create() failed on ;%s; rc=%d",
 			  table_name, rc);
 
 	if (load_table &&
@@ -116,19 +120,19 @@ main(int argc, char *argv[])
 
 	if (num_free) {
 		struct odtable_receipt *odtr = NULL;
-		
+
 		while (dynarray_len(&myReceipts) && num_free--) {
 			odtr = dynarray_getpos(&myReceipts, 0);
 			psc_warnx("got odtr=%p key=%"_P_U64"x slot=%"_P_U64"d",
 				  odtr, odtr->odtr_key, odtr->odtr_elem);
 
 			if (!odtable_freeitem(odt, odtr))
-				dynarray_remove(&myReceipts, odtr);	
+				dynarray_remove(&myReceipts, odtr);
 		}
 
 		psc_warnx("# of items left is %d", dynarray_len(&myReceipts));
 	}
-	
-	rc = odtable_release(odt);		
+
+	rc = odtable_release(odt);
 	return (rc);
 }
