@@ -119,7 +119,7 @@ odtable_freeitem(struct odtable *odt, struct odtable_receipt *odtr)
 	PSCFREE(odtr);
 
 	return (0);
-} 
+}
 
 int
 odtable_create(const char *f, size_t nelems, size_t elemsz)
@@ -169,6 +169,7 @@ odtable_create(const char *f, size_t nelems, size_t elemsz)
 	}
  out:
 	close(odt.odt_fd);
+	odt.odt_fd = -1;
 	return (rc);
 }
 
@@ -256,6 +257,7 @@ odtable_load(const char *f, struct odtable **t)
 	*t = odt;
  out:
 	close(odt->odt_fd);
+	odt->odt_fd = -1;
 	return (rc);
 
  out_unmap:
@@ -264,13 +266,25 @@ odtable_load(const char *f, struct odtable **t)
 }
 
 int
-odtable_release(struct odtable *odt) {
+odtable_release(struct odtable *odt)
+{
+	int rc;
+
 	vbitmap_free(odt->odt_bitmap);
+	odt->odt_bitmap = NULL;
+
 	if (odtable_freemap(odt))
 		psc_fatal("odtable_freemap() failed on %p", odt);
 
 	PSCFREE(odt->odt_hdr);
-	return (close(odt->odt_fd));
+	odt->odt_hdr = NULL;
+	if (odt->odt_fd == -1)
+		rc = 0;
+	else {
+		rc = close(odt->odt_fd);
+		odt->odt_fd = -1;
+	}
+	return (rc);
 }
 
 void
