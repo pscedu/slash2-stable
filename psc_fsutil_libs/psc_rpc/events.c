@@ -181,7 +181,7 @@ void request_in_callback(lnet_event_t *ev)
 			    b, &req->rq_peer, NULL, req->rq_peer.nid);
 			if (pq == NULL) {
 				psc_hashbkt_add_item(
-				    &service->srv_peer_qlentab, b, &tpq);
+				    &service->srv_peer_qlentab, b, tpq);
 				pq = tpq;
 				tpq = NULL;
 			}
