@@ -10,38 +10,38 @@
 
 #include "pfl.h"
 #include "psc_ds/dynarray.h"
+#include "psc_util/alloc.h"
 #include "psc_util/cdefs.h"
 #include "psc_util/log.h"
 #include "psc_util/odtable.h"
 
-struct dynarray myReceipts;
-
-__dead void
-usage(void)
-{
-	fprintf(stderr, "Usage: odtable -N table [-C create_table] "
-		"[-l load_table] [-c enable_crc] [-s scan_table] "
-		"[-n # to put] [-z table_size] [-e element_size] "
-		"[-f # to free]\n");
-	exit(1);
-}
+struct dynarray myReceipts = DYNARRAY_INIT;
+const char *progname;
 
 void
 my_odtcb(void *data, struct odtable_receipt *odtr)
 {
 	char *item = data;
 
-	psc_warnx("found ;%s; at slot=%"_P_U64"d odtr=%p",
+	psc_warnx("found ;%s; at slot=%"PRId64" odtr=%p",
 		  item, odtr->odtr_elem, odtr);
 
 	dynarray_add(&myReceipts, odtr);
 }
 
+__dead void
+usage(void)
+{
+	fprintf(stderr,
+	    "usage: %s [-Ccls] [-e elem_size] [-f #frees] [-n #puts]\n"
+	    "\t[-z table_size] -N table_file\n", progname);
+	exit(1);
+}
+
 int
 main(int argc, char *argv[])
 {
-	int rc, i;
-	char c;
+	int c, rc, i;
 
 	char *table_name = NULL;
 
@@ -56,44 +56,45 @@ main(int argc, char *argv[])
 	size_t elem_size  = 128;
 
 	struct odtable *odt;
-	char item[elem_size];
+	char *item;
 
 	pfl_init();
 
-	while ((c = getopt(argc, argv, "Ccls:N:n:z:e:f:")) != -1)
+	while ((c = getopt(argc, argv, "Cce:f:lN:n:sz:")) != -1)
 		switch (c) {
                 case 'C':
 			create_table = 1;
                         break;
-                case 'l':
-			load_table = 1;
-                        break;
                 case 'c':
 			crc_enabled = 1;
                         break;
-                case 'N':
-			table_name = optarg;
-                        break;
-		case 's':
-			scan_table = atoi(optarg);
-			break;
-		case 'n':
-			num_puts = atoi(optarg);
-			break;
-		case 'z':
-			table_size = atoi(optarg);
-			break;
 		case 'e':
 			elem_size = atoi(optarg);
 			break;
 		case 'f':
 			num_free = atoi(optarg);
 			break;
+                case 'l':
+			load_table = 1;
+                        break;
+                case 'N':
+			table_name = optarg;
+                        break;
+		case 'n':
+			num_puts = atoi(optarg);
+			break;
+		case 's':
+			scan_table = 1;
+			break;
+		case 'z':
+			table_size = atoi(optarg);
+			break;
 		default:
 			usage();
 		}
-
-	dynarray_init(&myReceipts);
+	argc -= optind;
+	if (argc)
+		usage();
 
 	if (!table_name)
 		usage();
@@ -107,23 +108,25 @@ main(int argc, char *argv[])
 	    (rc = odtable_load(table_name, &odt)))
 		psc_fatal("odtable_load() failed rc=%d", rc);
 
-
 	if (scan_table)
 		odtable_scan(odt, my_odtcb);
 
+	item = psc_alloc(elem_size, 0);
 
 	for (i=0; i < num_puts; i++) {
 		snprintf(item, elem_size, "... put_number=%d ...", i);
-		if (!odtable_putitem(odt, (void *)item))
+		if (!odtable_putitem(odt, item))
 			psc_errorx("odtable_putitem() failed, no slots available");
 	}
+
+	free(item);
 
 	if (num_free) {
 		struct odtable_receipt *odtr = NULL;
 
 		while (dynarray_len(&myReceipts) && num_free--) {
 			odtr = dynarray_getpos(&myReceipts, 0);
-			psc_warnx("got odtr=%p key=%"_P_U64"x slot=%"_P_U64"d",
+			psc_warnx("got odtr=%p key=%"PRIx64" slot=%"PRId64,
 				  odtr, odtr->odtr_key, odtr->odtr_elem);
 
 			if (!odtable_freeitem(odt, odtr))

@@ -1,0 +1,50 @@
+.\" $Id$
+.Dd July 6, 2009
+.Dt ODTABLE 1
+.ds volume PSC \- Slash Administrator's Manual
+.Os http://www.psc.edu/
+.Sh NAME
+.Nm odtable
+.Nd on-disk data storage table management utility
+.Sh SYNOPSIS
+.Bk -words
+.Nm odtable
+.Bk -words
+.Op Fl C
+.Op Fl e Ar elem_size
+.Op Fl f Ar #frees
+.Op Fl n Ar #puts
+.Op Fl z Ar table_size
+.Ek
+.Bk -words
+.Fl N Ar table_file
+.Ek
+.Sh DESCRIPTION
+The
+.Nm
+utility creates and manipulates on-disk data storage tables in the
+format
+.Xr slashd 8
+understands.
+.Pp
+The following options are available:
+.Bl -tag -width Ds
+.It Fl C
+Create a new table.
+.It Fl e Ar elem_size
+Set the entry size of elements to be stored in the odtable.
+.It Fl f Ar #frees
+Clear out the given number of elements
+.Ar #frees
+from the beginning of the odtable.
+.It Fl N Ar table_file
+Specify the file name of the odtable to create or manipulate.
+.It Fl n Ar #puts
+Store the given number of elements
+.Ar #puts
+as fabricated entries in the odtable.
+.It Fl z Ar table_size
+Specify the number of entries with which new tables should be created.
+.El
+.Sh SEE ALSO
+.Xr slashd 8
