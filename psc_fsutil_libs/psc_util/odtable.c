@@ -293,8 +293,9 @@ odtable_scan(struct odtable *odt, void (*odt_handler)(void *, struct odtable_rec
 		psc_warnx("handing back key=%"_P_U64"x slot=%"_P_U64"d odtr=%p", 
 			  odtr->odtr_key, odtr->odtr_elem, odtr);
 
-		(odt_handler)(odtable_getitem_addr(odt, todtr.odtr_elem), 
-			      odtr);
+		if (odt_handler)
+			(odt_handler)(odtable_getitem_addr(odt, 
+					   todtr.odtr_elem), odtr);
 	}
 }
 
