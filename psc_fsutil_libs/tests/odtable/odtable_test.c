@@ -62,24 +62,24 @@ main(int argc, char *argv[])
 
 	while ((c = getopt(argc, argv, "Cce:f:lN:n:sz:")) != -1)
 		switch (c) {
-                case 'C':
+		case 'C':
 			create_table = 1;
-                        break;
-                case 'c':
+			break;
+		case 'c':
 			crc_enabled = 1;
-                        break;
+			break;
 		case 'e':
 			elem_size = atoi(optarg);
 			break;
 		case 'f':
 			num_free = atoi(optarg);
 			break;
-                case 'l':
+		case 'l':
 			load_table = 1;
-                        break;
-                case 'N':
+			break;
+		case 'N':
 			table_name = optarg;
-                        break;
+			break;
 		case 'n':
 			num_puts = atoi(optarg);
 			break;
