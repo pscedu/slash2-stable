@@ -55,9 +55,9 @@ CFLAGS+=		${INCLUDES} ${DEFINES}
 TARGET?=	        ${PROG} ${LIBRARY}
 OBJDIR=			${CURDIR}/obj
 
-vpath %.y $(dir ${SRCS})
-vpath %.l $(dir ${SRCS})
-vpath %.c $(dir ${SRCS})
+vpath %.y $(sort $(dir $(filter %.y,${SRCS})))
+vpath %.l $(sort $(dir $(filter %.l,${SRCS})))
+vpath %.c $(sort $(dir $(filter %.c,${SRCS})) ${OBJDIR})
 
 all: recurse-all ${TARGET}
 
