@@ -286,7 +286,6 @@ psc_hashent_remove(const struct psc_hashtbl *t, void *p)
 	ureqlock(&b->phb_lock, locked);
 }
 
-
 /**
  * psc_hashbkt_add_item - add an item to a hash bucket.
  * @t: the hash table.
