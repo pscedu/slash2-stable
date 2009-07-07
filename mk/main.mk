@@ -75,6 +75,8 @@ recurse-all:
 		fi;									\
 	done
 
+.SUFFIXES:
+
 ${OBJDIR}:
 	mkdir -p $@
 
