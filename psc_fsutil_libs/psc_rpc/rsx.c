@@ -24,6 +24,8 @@ int
 rsx_newreq(struct pscrpc_import *imp, int version, int op, int reqlen,
     int replen, struct pscrpc_request **rqp, void *mqp)
 {
+	*(void **)mq = NULL;
+
 	*rqp = pscrpc_prep_req(imp, version, op, 1, &reqlen, NULL);
 	if (*rqp == NULL)
 		return (-ENOMEM);
