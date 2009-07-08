@@ -9,6 +9,7 @@
 
 #include <errno.h>
 #include <fcntl.h>
+#include <inttypes.h>
 
 #include "psc_types.h"
 #include "psc_ds/vbitmap.h"
@@ -147,7 +148,6 @@ odtable_freemap(struct odtable *odt)
 	return (munmap(odt->odt_base, ODTABLE_MAPSZ(odt)));
 }
 
-
 /**
  * inuse == 1  --> test the slot assuming it's being used.
  * inuse == 0  --> test the slot assuming it's NOT being used.
@@ -157,6 +157,7 @@ odtable_freemap(struct odtable *odt)
 #define odtable_footercheck(odtf, odtr, inuse)				\
         ({								\
                 int __ret = 0;						\
+	 								\
                 if ((odtf)->odtf_magic != ODTBL_MAGIC)			\
                         __ret = ODTBL_MAGIC_ERR;			\
 									\
@@ -180,7 +181,7 @@ odtable_freemap(struct odtable *odt)
 			__ret = ODTBL_KEY_ERR;				\
 									\
                 if (__ret)						\
-                        psc_errorx("slot=%"_P_U64"d has error %d",	\
+                        psc_errorx("slot=%"PRId64" has error %d",	\
 				   (odtr)->odtr_elem, __ret);		\
 		__ret;							\
         })
