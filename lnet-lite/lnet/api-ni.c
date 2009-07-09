@@ -699,8 +699,11 @@ lnet_prepare(lnet_pid_t requested_pid)
         } else {/* client case (liblustre) */
 
                 /* My PID must be unique on this node and flag I'm userspace */
-                the_lnet.ln_pid = getpid() | LNET_PID_USERFLAG;
+                //the_lnet.ln_pid = getpid() | LNET_PID_USERFLAG;
+                the_lnet.ln_pid = getpid();
         }
+
+        CERROR("my pid=%u\n", the_lnet.ln_pid);
 #endif
 
         rc = lnet_descriptor_setup();
