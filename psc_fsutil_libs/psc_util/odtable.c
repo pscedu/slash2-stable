@@ -151,14 +151,13 @@ odtable_create(const char *f, size_t nelems, size_t elemsz)
                 goto out;
 	}
 
-	psc_errorx("odt.odt_hdr.odth_start=%"PRIx64,
-		   odt.odt_hdr->odth_start);
+	psc_trace("odt.odt_hdr.odth_start=%"PRIx64, odt.odt_hdr->odth_start);
 
 	for (z=0; z < nelems; z++) {
 		odtf.odtf_slotno = z;
 
-		psc_errorx("elem=%"PRId64" offset=%"PRIu64, z,
-		    odtable_getoffset(&odt, z));
+		psc_trace("elem=%"PRId64" offset=%"PRIu64, z,
+			   odtable_getoffset(&odt, z));
 
 		if (pwrite(odt.odt_fd, &odtf, sizeof(odtf),
 			   (elemsz + odtable_getoffset(&odt, z))) !=
