@@ -6,7 +6,7 @@ general reminders
 - check all bulkserver()'s for free_desc()
 - sweep tree for \b0[0-9] and fix bad permissions (711 -> 700 - slash?)
 - ctlapi GETTREE?
-- zap _P_U64, u64, u32, u16, u8
+- zap [us]{64,32,16,8} typedefs
 - investigate pthread_rwlocks for things like trees and large lists
 - watch out for "a - b" in cmp functions overflowing
 - investigate if our sched_yield() calls are correct

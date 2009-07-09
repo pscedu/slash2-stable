@@ -22,18 +22,18 @@
 
 static struct psc_journal_xidhndl *
 pjournal_xidhndl_new(struct psc_journal *pj)
-{	
+{
 	struct psc_journal_xidhndl *xh;
 
 	xh = PSCALLOC(sizeof(*xh));
 
 	xh->pjx_pj = pj;
 	INIT_PSCLIST_ENTRY(&xh->pjx_lentry);
-	LOCK_INIT(&xh->pjx_lock);	
+	LOCK_INIT(&xh->pjx_lock);
 	return (xh);
 }
 
-void 
+void
 pjournal_xidhndl_free(struct psc_journal_xidhndl *xh)
 {
 	PSCFREE(xh);
@@ -71,7 +71,7 @@ pjournal_nextxid(struct psc_journal *pj)
  * Returns: 0 on success, -1 on error.
  */
 __static int
-_pjournal_logwrite(struct psc_journal *pj, struct psc_journal_xidhndl *xh, 
+_pjournal_logwrite(struct psc_journal *pj, struct psc_journal_xidhndl *xh,
 		   uint32_t slot, int type, void *data, size_t size)
 {
 	struct psc_journal_enthdr *pje;
@@ -95,7 +95,7 @@ _pjournal_logwrite(struct psc_journal *pj, struct psc_journal_xidhndl *xh,
 		pje->pje_sid = atomic_inc_return(&xh->pjx_sid);
 	else
 		pje->pje_sid = atomic_read(&xh->pjx_sid);
-	
+
 	//XXX	rc = pwrite(pj->pj_fd, pje, pj->pj_hdr->pjh_entsz,
 	//XXX       (off_t)(pj->pj_hdr->pjh_start_off + (slot * pj->pj_hdr->pjh_entsz)));
 
@@ -112,7 +112,7 @@ _pjournal_logwrite(struct psc_journal *pj, struct psc_journal_xidhndl *xh,
  * Returns: 0 on success, -1 on error.
  */
 int
-pjournal_logwrite(struct psc_journal_xidhndl *xh, int type, void *data, 
+pjournal_logwrite(struct psc_journal_xidhndl *xh, int type, void *data,
 		  size_t size)
 {
 	int rc, freexh=0;
@@ -261,7 +261,7 @@ pjournal_logread(struct psc_journal *pj, uint32_t slot, void *data)
 }
 
 int
-pjournal_xadd(struct psc_journal_xidhndl *xh, int type, void *data, 
+pjournal_xadd(struct psc_journal_xidhndl *xh, int type, void *data,
 	      size_t size)
 {
 	spinlock(&xh->pjx_lock);
@@ -273,7 +273,7 @@ pjournal_xadd(struct psc_journal_xidhndl *xh, int type, void *data,
 }
 
 int
-pjournal_xend(struct psc_journal_xidhndl *xh, int type, void *data, 
+pjournal_xend(struct psc_journal_xidhndl *xh, int type, void *data,
 	      size_t size)
 {
 	spinlock(&xh->pjx_lock);
@@ -297,9 +297,9 @@ pjournal_start_mark(struct psc_journal *pj, int slot)
 	pje->pje_magic = PJE_MAGIC;
 	pje->pje_xid = PJE_XID_NONE;
 	pje->pje_type = PJET_VOID;
-	
+
 	rc = pwrite(pj->pj_fd, pje, pj->pj_hdr->pjh_entsz,
-		    (off_t)(pj->pj_hdr->pjh_start_off + 
+		    (off_t)(pj->pj_hdr->pjh_start_off +
 			    (slot * pj->pj_hdr->pjh_entsz)));
 
 	psc_freel(pje, PJ_PJESZ(pj));
@@ -317,7 +317,7 @@ pjournal_alloclog(struct psc_journal *pj)
 	return (psc_alloc(PJ_PJESZ(pj), PAF_PAGEALIGN | PAF_LOCK));
 }
 
-void * 
+void *
 pjournal_alloclog_ra(struct psc_journal *pj)
 {
 	psc_trace("rasz=%zd", PJ_PJESZ(pj) * pj->pj_hdr->pjh_readahead);
@@ -496,7 +496,7 @@ pjournal_dump(const char *fn)
 	pjh = pj->pj_hdr;
 
 	fprintf(stdout, "entsz=%u nents=%u vers=%u opts=%u ra=%u "
-		"off=%"_P_U64"x magic=%"_P_U64"x", 
+		"off=%"PRIx64" magic=%"PRIx64,
 		pjh->pjh_entsz, pjh->pjh_nents, pjh->pjh_version, pjh->pjh_options,
 		pjh->pjh_readahead, pjh->pjh_start_off, pjh->pjh_magic);
 
@@ -505,14 +505,14 @@ pjournal_dump(const char *fn)
 
 	jbuf = pjournal_alloclog_ra(pj);
 
-	for (slot=0, ra=pjh->pjh_readahead; slot < pjh->pjh_nents; 
+	for (slot=0, ra=pjh->pjh_readahead; slot < pjh->pjh_nents;
 	     slot += pjh->pjh_readahead) {
 		/* Make sure we don't read past the end.
 		 */
 		while ((slot + ra) > pjh->pjh_nents)
 			ra--;
 
-		if (pread(pj->pj_fd, jbuf, (pjh->pjh_entsz * ra), 
+		if (pread(pj->pj_fd, jbuf, (pjh->pjh_entsz * ra),
 			   (off_t)(PJE_OFFSET + (slot * pjh->pjh_entsz)))
 		    != (pjh->pjh_entsz * ra))
 			psc_fatal("Failed to write entries");
@@ -520,18 +520,18 @@ pjournal_dump(const char *fn)
 		for (i=0; i < ra; i++) {
 			h = (void *)&jbuf[pjh->pjh_entsz * i];
 
-			fprintf(stdout, "slot=%u gmrkr=%x magic=%"_P_U64"x"
-				" type=%x xid=%"_P_U64"x sid=%d\n",
+			fprintf(stdout, "slot=%u gmrkr=%x magic=%"PRIx64
+				" type=%x xid=%"PRIx64" sid=%d\n",
 				(slot+i), h->pje_genmarker, h->pje_magic,
 				h->pje_type, h->pje_xid, h->pje_sid);
 
 			if (h->pje_magic != PJE_FMT_MAGIC &&
 			    h->pje_magic != PJE_MAGIC)
-				psc_warnx("journal entry %u has bad magic!", 
+				psc_warnx("journal entry %u has bad magic!",
 					  (slot+i));
 		}
 	}
-	
+
 	if (close(pj->pj_fd) < 0)
 		psc_fatal("Failed to close journal fd");
 
@@ -540,11 +540,11 @@ pjournal_dump(const char *fn)
 }
 
 void
-pjournal_format(const char *fn, uint32_t nents, uint32_t entsz, uint32_t ra, 
+pjournal_format(const char *fn, uint32_t nents, uint32_t entsz, uint32_t ra,
 		uint32_t opts)
 {
 	struct psc_journal pj;
-	struct psc_journal_hdr pjh = {entsz, nents, PJE_VERSION, opts, ra, 
+	struct psc_journal_hdr pjh = {entsz, nents, PJE_VERSION, opts, ra,
 				      0, PJE_OFFSET, PJE_MAGIC};
 	struct psc_journal_enthdr *h;
 	unsigned char *jbuf;
@@ -560,7 +560,7 @@ pjournal_format(const char *fn, uint32_t nents, uint32_t entsz, uint32_t ra,
 	if (pwrite(fd, &pjh, sizeof(pjh), 0) < 0)
 		psc_fatal("Failed to write header");
 
-	for (slot=0, ra=pjh.pjh_readahead; slot < pjh.pjh_nents; 
+	for (slot=0, ra=pjh.pjh_readahead; slot < pjh.pjh_nents;
 	     slot += pjh.pjh_readahead) {
 		/* Make sure we don't read past the end.
 		 */
@@ -575,7 +575,7 @@ pjournal_format(const char *fn, uint32_t nents, uint32_t entsz, uint32_t ra,
 			h->pje_sid = PJE_XID_NONE;
 		}
 
-		if (pwrite(fd, jbuf, (pjh.pjh_entsz * ra), 
+		if (pwrite(fd, jbuf, (pjh.pjh_entsz * ra),
 			   (off_t)(PJE_OFFSET + (slot * pjh.pjh_entsz))) < 0)
 			psc_fatal("Failed to write entries");
 	}
