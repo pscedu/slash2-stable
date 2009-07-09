@@ -1400,6 +1400,7 @@ int pscrpc_set_wait(struct pscrpc_request_set *set)
 	psclist_for_each(tmp, &set->set_requests) {
 		req = psclist_entry(tmp, struct pscrpc_request, rq_set_chain_lentry);
 		if (req->rq_import->imp_failed){
+			psc_errorx("failed import detected!");
 			rc = -ECONNABORTED;
 			continue;
 		}
@@ -1416,14 +1417,18 @@ int pscrpc_set_wait(struct pscrpc_request_set *set)
 			rc = -EIO;
 		}
 #endif
-		if (req->rq_status != 0)
+		if (req->rq_status != 0){
+			psc_errorx("error status detected in rq_status (%d)", req->rq_status);
 			rc = -(abs(req->rq_status));
+		}
 	}
 
 	if (!rc && /* don't bother unless it completed successfully */
-	    set->set_interpret)
+	    set->set_interpret){
 		rc = set->set_interpret(set, set->set_arg, rc);
-
+		if (rc)
+			psc_errorx("set interpreter failed (%d)", rc);
+	}
 	RETURN(rc);
 }
 
