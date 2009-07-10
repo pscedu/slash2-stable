@@ -221,6 +221,11 @@ test: all
 		./${PROG} || exit 1;							\
 	fi
 
+prereq:
+
+build: prereq
+	${MAKE} clean && ${MAKE} depend && ${MAKE}
+
 #CS_ARGS+=-s${APP_BASE}
 #ET_ARGS+="${APP_BASE}"
 
