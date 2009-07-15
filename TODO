@@ -47,6 +47,7 @@ pfl
 - move pfl.h and psc_types.h into psc_fsutil_libs/include/pfl
 - make .depend target dependent on headers so it can rebuild itself
   and remove from the `clean' target
+- fix endianess in RPCs
 
 zest
 - test parity reconstruction service by rebuilding
