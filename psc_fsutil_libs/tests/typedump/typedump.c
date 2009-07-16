@@ -6,20 +6,69 @@
 #include <stdio.h>
 #include <unistd.h>
 
-#include "psc_ds/hash2.h"
-#include "psc_ds/pool.h"
-#include "psc_ds/stree.h"
-#include "psc_ds/vbitmap.h"
-#include "psc_mount/dhfh.h"
-#include "psc_rpc/rpc.h"
-#include "psc_rpc/service.h"
-#include "psc_util/cdefs.h"
-#include "psc_util/ctl.h"
-#include "psc_util/fmt.h"
-#include "psc_util/journal.h"
-#include "psc_util/mlist.h"
-#include "psc_util/multilock.h"
-#include "psc_util/waitq.h"
+/* start includes */
+#include <psc_ds/dynarray.h>
+#include <psc_ds/hash.h>
+#include <psc_ds/hash2.h>
+#include <psc_ds/list.h>
+#include <psc_ds/listcache.h>
+#include <psc_ds/listguts.h>
+#include <psc_ds/lockedlist.h>
+#include <psc_ds/pool.h>
+#include <psc_ds/stree.h>
+#include <psc_ds/vbitmap.h>
+#include <psc_mount/dhfh.h>
+#include <psc_rpc/export.h>
+#include <psc_rpc/rpc.h>
+#include <psc_rpc/rpclog.h>
+#include <psc_rpc/rsx.h>
+#include <psc_rpc/service.h>
+#include <psc_util/acsvc.h>
+#include <psc_util/alloc.h>
+#include <psc_util/assert.h>
+#include <psc_util/atomic.h>
+#include <psc_util/base64.h>
+#include <psc_util/bitflag.h>
+#include <psc_util/cdefs.h>
+#include <psc_util/completion.h>
+#include <psc_util/crc.h>
+#include <psc_util/ctl.h>
+#include <psc_util/ctlcli.h>
+#include <psc_util/ctlsvr.h>
+#include <psc_util/daemon.h>
+#include <psc_util/fault.h>
+#include <psc_util/fmt.h>
+#include <psc_util/fmtstr.h>
+#include <psc_util/hostname.h>
+#include <psc_util/iostats.h>
+#include <psc_util/journal.h>
+#include <psc_util/lock.h>
+#include <psc_util/log.h>
+#include <psc_util/mem.h>
+#include <psc_util/memnode.h>
+#include <psc_util/meter.h>
+#include <psc_util/mkdirs.h>
+#include <psc_util/mlist.h>
+#include <psc_util/mspinlock.h>
+#include <psc_util/multilock.h>
+#include <psc_util/net.h>
+#include <psc_util/odtable.h>
+#include <psc_util/parity.h>
+#include <psc_util/prsig.h>
+#include <psc_util/pthrutil.h>
+#include <psc_util/random.h>
+#include <psc_util/rlimit.h>
+#include <psc_util/semaphore.h>
+#include <psc_util/setprocesstitle.h>
+#include <psc_util/spinlock.h>
+#include <psc_util/strlcat.h>
+#include <psc_util/strlcpy.h>
+#include <psc_util/subsys.h>
+#include <psc_util/thread.h>
+#include <psc_util/timerthr.h>
+#include <psc_util/usklndthr.h>
+#include <psc_util/waitq.h>
+/* end includes */
 
 const char *progname;
 
@@ -51,7 +100,6 @@ main(int argc, char *argv[])
 #define PRVAL(val) \
 	printf("%-32s %lu\n", #val, (unsigned long)(val))
 
-	/* C types/values */
 	PRTYPE(int);
 	PRTYPE(unsigned char);
 	PRTYPE(unsigned short);
@@ -67,58 +115,103 @@ main(int argc, char *argv[])
 	PRTYPE(INT_MAX);
 	PRTYPE(UINT64_MAX);
 
-	/* system types/values */
-	PRVAL(PATH_MAX);
-
-	/* PFL types/values */
-	PRTYPE(struct psc_ctlmsghdr);
-	PRTYPE(psc_crc_t);
+/* start structs */
+	PRTYPE(list_cache_t);
+	PRTYPE(psc_spinlock_t);
+	PRTYPE(psc_waitq_t);
+	PRTYPE(pscrpc_svc_handle_t);
 	PRTYPE(struct dynarray);
+	PRTYPE(struct fhent);
+	PRTYPE(struct hash_bucket);
+	PRTYPE(struct hash_entry);
+	PRTYPE(struct hash_entry_str);
+	PRTYPE(struct hash_table);
+	PRTYPE(struct iostats);
+	PRTYPE(struct l_wait_info);
+	PRTYPE(struct multilock);
+	PRTYPE(struct multilock_cond);
+	PRTYPE(struct odtable);
+	PRTYPE(struct odtable_entftr);
+	PRTYPE(struct odtable_hdr);
+	PRTYPE(struct odtable_receipt);
+	PRTYPE(struct psc_completion);
+	PRTYPE(struct psc_ctl_thrstatfmt);
+	PRTYPE(struct psc_ctlcmd_req);
+	PRTYPE(struct psc_ctlmsg_cmd);
+	PRTYPE(struct psc_ctlmsg_error);
+	PRTYPE(struct psc_ctlmsg_fault);
+	PRTYPE(struct psc_ctlmsg_hashtable);
+	PRTYPE(struct psc_ctlmsg_iostats);
+	PRTYPE(struct psc_ctlmsg_lc);
+	PRTYPE(struct psc_ctlmsg_loglevel);
+	PRTYPE(struct psc_ctlmsg_meter);
+	PRTYPE(struct psc_ctlmsg_mlist);
+	PRTYPE(struct psc_ctlmsg_param);
+	PRTYPE(struct psc_ctlmsg_pool);
+	PRTYPE(struct psc_ctlmsg_prfmt);
+	PRTYPE(struct psc_ctlmsg_stats);
+	PRTYPE(struct psc_ctlmsg_subsys);
+	PRTYPE(struct psc_ctlmsghdr);
+	PRTYPE(struct psc_ctlop);
+	PRTYPE(struct psc_ctlshow_ent);
+	PRTYPE(struct psc_ctlthr);
+	PRTYPE(struct psc_fault);
+	PRTYPE(struct psc_handle);
 	PRTYPE(struct psc_hashbkt);
-	PRTYPE(struct psc_hashtbl);
 	PRTYPE(struct psc_hashent);
-	PRTYPE(struct psclist_head);
+	PRTYPE(struct psc_hashtbl);
+	PRTYPE(struct psc_journal);
+	PRTYPE(struct psc_journal_enthdr);
+	PRTYPE(struct psc_journal_hdr);
+	PRTYPE(struct psc_journal_walker);
+	PRTYPE(struct psc_journal_xidhndl);
 	PRTYPE(struct psc_listcache);
+	PRTYPE(struct psc_listguts);
 	PRTYPE(struct psc_lockedlist);
-	PRTYPE(struct psc_poolset);
+	PRTYPE(struct psc_memnode);
+	PRTYPE(struct psc_meter);
+	PRTYPE(struct psc_mlist);
+	PRTYPE(struct psc_msg);
+	PRTYPE(struct psc_mspinlock);
+	PRTYPE(struct psc_nodemask);
 	PRTYPE(struct psc_poolmaster);
 	PRTYPE(struct psc_poolmgr);
+	PRTYPE(struct psc_poolset);
+	PRTYPE(struct psc_spinlock);
 	PRTYPE(struct psc_streenode);
-	PRTYPE(struct vbitmap);
-	PRTYPE(struct fhent);
-
+	PRTYPE(struct psc_thread);
+	PRTYPE(struct psc_usklndthr);
+	PRTYPE(struct psc_uuid);
+	PRTYPE(struct psc_waitq);
+	PRTYPE(struct psclist_head);
+	PRTYPE(struct psclog_data);
+	PRTYPE(struct pscrpc_async_args);
+	PRTYPE(struct pscrpc_bulk_desc);
+	PRTYPE(struct pscrpc_cb_id);
+	PRTYPE(struct pscrpc_client);
 	PRTYPE(struct pscrpc_connection);
 	PRTYPE(struct pscrpc_export);
 	PRTYPE(struct pscrpc_import);
+	PRTYPE(struct pscrpc_nbreqset);
+	PRTYPE(struct pscrpc_reply_state);
 	PRTYPE(struct pscrpc_request);
-	PRTYPE(struct pscrpc_bulk_desc);
+	PRTYPE(struct pscrpc_request_buffer_desc);
+	PRTYPE(struct pscrpc_request_pool);
+	PRTYPE(struct pscrpc_request_set);
 	PRTYPE(struct pscrpc_service);
 	PRTYPE(struct pscrpc_svc_handle);
-	PRVAL(PSC_NIDSTR_SIZE);
-
-	PRTYPE(struct psc_ctlmsg_error);
-	PRTYPE(struct psc_ctlmsg_subsys);
-	PRTYPE(struct psc_ctlmsg_loglevel);
-	PRTYPE(struct psc_ctlmsg_lc);
-	PRTYPE(struct psc_ctlmsg_stats);
-	PRTYPE(struct psc_ctlmsg_hashtable);
-	PRTYPE(struct psc_ctlmsg_param);
-	PRTYPE(struct psc_ctlmsg_iostats);
-	PRTYPE(struct psc_ctlmsg_meter);
-	PRTYPE(struct psc_ctlmsg_pool);
-	PRVAL(PSCFMT_HUMAN_BUFSIZ);
-	PRVAL(PSCFMT_RATIO_BUFSIZ);
-	PRTYPE(struct iostats);
-	PRTYPE(struct psc_journal);
-	PRTYPE(struct psc_journal_enthdr);
-	PRTYPE(struct psc_meter);
-	PRTYPE(struct psc_mlist);
-	PRTYPE(struct multilock);
-	PRTYPE(struct multilock_cond);
-	PRTYPE(struct psc_thread);
-	PRTYPE(struct psc_waitq);
+	PRTYPE(struct pscrpc_thread);
+	PRTYPE(struct pscrpc_wait_callback);
+	PRTYPE(struct rpc_peer_qlen);
+	PRTYPE(struct vbitmap);
+/* end structs */
 
 	PRVAL(offsetof(struct psc_listcache, lc_listhd));
+	PRVAL(PSCFMT_HUMAN_BUFSIZ);
+	PRVAL(PSCFMT_RATIO_BUFSIZ);
+	PRVAL(PSC_NIDSTR_SIZE);
+	/* system types/values */
+	PRVAL(PATH_MAX);
 
 	exit(0);
 }
