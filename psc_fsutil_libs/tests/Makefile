@@ -13,7 +13,6 @@ SUBDIRS+=	prsig
 SUBDIRS+=	random
 SUBDIRS+=	setprocesstitle
 SUBDIRS+=	sig
-SUBDIRS+=	typedump
 SUBDIRS+=	vbitmap
 SUBDIRS+=	waitq
 
