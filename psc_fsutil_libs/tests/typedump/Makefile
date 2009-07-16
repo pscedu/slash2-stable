@@ -11,3 +11,6 @@ DEFINES+=	-DHAVE_LIBPTHREAD -DHAVE_LIBPTHREAD_DEFINED \
 		-DHAVE_GETHOSTBYNAME -DHAVE_GETHOSTBYNAME_DEFINED
 
 include ${PFLMK}
+
+gentypes:
+	@${GENTYPES} -h '../../include/*/*.h' -x '../../include/psc_ds/{queue,tree}.h' typedump.c

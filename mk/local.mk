@@ -11,6 +11,7 @@ LINT=		splint +posixlib
 NOTEMPTY=	${ROOTDIR}/tools/notempty
 SCONS=		scons
 PKG_CONFIG=	PKG_CONFIG_PATH=/usr/local/lib/pkgconfig pkg-config
+GENTYPES=	${ROOTDIR}/tools/gentypes.pl
 
 LKERNEL_BASE=	${ROOTDIR}/kernel/2.6.9-42.0.8.EL_lustre.1.4.9.1
 
