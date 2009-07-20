@@ -133,9 +133,13 @@ pjournal_logwrite(struct psc_journal_xidhndl *xh, int type, void *data,
 
  retry:
 	PJ_LOCK(pj);
-	/* This is the 'highest' available slot at the moment.
+	/* The 'highest' available slot at the moment.
 	 */
 	slot = pj->pj_nextwrite;
+	/* The head of this list represents the oldest pending transaction
+	 *  slot.  By checking it, we're trying to prevent the journal from
+	 *  over writing slots belonging to open transactions.
+	 */
 	t = psclist_first_entry(&pj->pj_pndgxids, struct psc_journal_xidhndl,
 				pjx_lentry);
 
