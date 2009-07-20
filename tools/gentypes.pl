@@ -51,11 +51,18 @@ my @hdrs = uniq sort <$opts{h}>;
 if ($opts{x}) {
 	@hdrs = filter [<$opts{x}>], @hdrs;
 }
+my $lvl = 0;
 foreach my $hdr (@hdrs) {
 	open HDR, "<", $hdr;
 	while (<HDR>) {
-		push @types, "struct $1" if /^struct\s+(\w+)\s*{/;
-		push @types, $1 if /^typedef\s+(?:struct\s+)?(?:\w+)\s+(\w+)\s*;\s*$/;
+		if ($lvl) {
+			$lvl++ if /^\s*#if/;
+			$lvl-- if /^\s*#endif/;
+		} else {
+			$lvl = 1 if /^\s*#if\s+0\s*$/;
+			push @types, "struct $1" if /^struct\s+(\w+)\s*{/;
+			push @types, $1 if /^typedef\s+(?:struct\s+)?(?:\w+)\s+(\w+)\s*;\s*$/;
+		}
 	}
 	close HDR;
 }
