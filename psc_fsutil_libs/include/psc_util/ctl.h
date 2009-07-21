@@ -67,6 +67,7 @@ struct psc_ctlmsg_hashtable {
 	int32_t			pcht_usedbucks;
 	int32_t			pcht_nents;
 	int32_t			pcht_maxbucklen;
+	int32_t			pcht_flags;
 	char			pcht_name[HTNAME_MAX];
 };
 

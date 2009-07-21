@@ -4,7 +4,6 @@
 #define _PFL_HASH_H_
 
 #include "psc_types.h"
-#include "psc_ds/hash.h"
 #include "psc_ds/list.h"
 #include "psc_util/cdefs.h"
 #include "psc_util/lock.h"
@@ -15,7 +14,7 @@
 #define LOCK_HASHTBL(ht)	spinlock(&(ht)->htable_lock)
 #define ULOCK_HASHTBL(ht)	freelock(&(ht)->htable_lock)
 
-#define GET_BUCKET(t,i) &(t)->htable_buckets[(i) % (t)->htable_size]
+#define GET_BUCKET(t,i)		&(t)->htable_buckets[(i) % (t)->htable_size]
 
 #define HTNAME_MAX 30
 
@@ -36,6 +35,11 @@ struct hash_table {
 	struct hash_bucket	 *htable_buckets;
 	int			(*htcompare)(const void *, const void *);
 };
+
+/* hash table flags */
+#define HTF_RESORT	(1 << 0)	/* resort buckets on lookup */
+#define HTF_ALLOWDUPS	(1 << 1)	/* use comparator for items with same ID */
+#define HTF_STR		(1 << 2)	/* use strings for ID */
 
 struct hash_entry {
 	struct psclist_head	  hentry_lentry;/* Entry list pointers */

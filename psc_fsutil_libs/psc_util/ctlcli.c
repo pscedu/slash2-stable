@@ -10,6 +10,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 
+#include "psc_ds/hash.h"
 #include "psc_ds/list.h"
 #include "psc_ds/pool.h"
 #include "psc_ds/vbitmap.h"
@@ -361,10 +362,10 @@ psc_ctlmsg_hashtable_prhdr(__unusedx struct psc_ctlmsghdr *mh,
     __unusedx const void *m)
 {
 	printf("hash table statistics\n");
-	return (printf(" %-20s %6s %6s %6s "
-	    "%6s %6s %6s\n",
-	    "table", "used", "total", "%use",
-	    "ents", "avglen", "maxlen"));
+	return (printf(" %-31s %5s %6s %6s "
+	    "%6s %6s %6s %6s\n",
+	    "table", "flags", "used", "total",
+	    "%use", "#ents", "avglen", "maxlen"));
 }
 
 void
@@ -375,12 +376,17 @@ psc_ctlmsg_hashtable_prdat(__unusedx const struct psc_ctlmsghdr *mh,
 	char rbuf[PSCFMT_RATIO_BUFSIZ];
 
 	psc_fmt_ratio(rbuf, pcht->pcht_usedbucks, pcht->pcht_totalbucks);
-	printf(" %-20s %6d "
-	    "%6d %6s %6d "
+	printf(" %-31s   %c%c%c "
+	    "%6d %6d "
+	    "%6s %6d "
 	    "%6.1f "
 	    "%6d\n",
-	    pcht->pcht_name, pcht->pcht_usedbucks,
-	    pcht->pcht_totalbucks, rbuf, pcht->pcht_nents,
+	    pcht->pcht_name,
+	    pcht->pcht_flags & HTF_ALLOWDUPS ? 'D' : '-',
+	    pcht->pcht_flags & HTF_RESORT ? 'R' : '-',
+	    pcht->pcht_flags & HTF_STR ? 'S' : '-',
+	    pcht->pcht_usedbucks, pcht->pcht_totalbucks,
+	    rbuf, pcht->pcht_nents,
 	    pcht->pcht_nents * 1.0 / pcht->pcht_totalbucks,
 	    pcht->pcht_maxbucklen);
 }
