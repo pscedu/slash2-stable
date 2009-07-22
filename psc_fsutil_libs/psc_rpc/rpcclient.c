@@ -885,8 +885,10 @@ int pscrpc_check_set(struct pscrpc_request_set *set, int check_allsent)
 	set->set_flags = 1;
 	freelock(&set->set_lock);
 
-	if (set->set_remaining == 0)
+	if (set->set_remaining == 0) {
+		set->set_flags = 0;
 		RETURN(1);
+	}
 
 	psclist_for_each(tmp, &set->set_requests) {
 		struct pscrpc_request *req =
