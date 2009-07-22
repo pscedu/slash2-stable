@@ -169,7 +169,7 @@ void request_in_callback(lnet_event_t *ev)
 
 			tpq = PSCALLOC(sizeof(*tpq));
 			tpq->id = req->rq_peer;
-			atomic_set(&pq->qlen, 1);
+			atomic_set(&tpq->qlen, 1);
 
 			/*
 			 * Search again in case it was created by
