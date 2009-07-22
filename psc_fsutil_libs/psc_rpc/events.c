@@ -169,6 +169,7 @@ void request_in_callback(lnet_event_t *ev)
 
 			tpq = PSCALLOC(sizeof(*tpq));
 			tpq->id = req->rq_peer;
+			atomic_set(&pq->qlen, 1);
 
 			/*
 			 * Search again in case it was created by
@@ -178,7 +179,8 @@ void request_in_callback(lnet_event_t *ev)
 			    req->rq_peer.nid);
 			psc_hashbkt_lock(b);
 			pq = psc_hashbkt_search(&service->srv_peer_qlentab,
-			    b, &req->rq_peer, NULL, req->rq_peer.nid);
+			    b, &req->rq_peer, pscrpc_bump_peer_qlen,
+			    req->rq_peer.nid);
 			if (pq == NULL) {
 				psc_hashbkt_add_item(
 				    &service->srv_peer_qlentab, b, tpq);
@@ -189,7 +191,6 @@ void request_in_callback(lnet_event_t *ev)
 
 			free(tpq);
 		}
-		atomic_inc(&pq->qlen);
 		req->rq_peer_qlen = pq;
 	}
 
