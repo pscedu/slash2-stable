@@ -29,8 +29,12 @@ struct psc_listguts {
 	ptrdiff_t		plg_offset;		/* psclist_head entry obj offset */
 };
 
+/* XXX add LOCK_ENSURE */
 #define LISTGUTS_FOREACH(p, lg)					\
 	psclist_for_each_entry2((p), &(lg)->plg_listhd, (lg)->plg_offset)
+
+#define LISTGUTS_FOREACH_BACKWARDS(p, lg)			\
+	psclist_for_each_entry2_backwards((p), &(lg)->plg_listhd, (lg)->plg_offset)
 
 #define LISTGUTS_FOREACH_SAFE(p, t, lg)				\
 	psclist_for_each_entry2_safe((p), (t), &(lg)->plg_listhd, (lg)->plg_offset)
