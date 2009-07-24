@@ -329,7 +329,6 @@ pscthr_setready(struct psc_thread *thr)
 
 /**
  * psc_log_getlevel - get thread logging level for the specified subsystem.
- * This routine is not intended for general-purpose usage.
  * @subsys: subsystem ID.
  */
 int
@@ -345,9 +344,31 @@ psc_log_getlevel(int subsys)
 	return (thr->pscthr_loglevels[subsys]);
 }
 
+/**
+ * pscthr_setloglevel - set thread logging level for the specified subsystem.
+ * @ssid: subsystem ID to change logging level for.
+ * @newlevel: new logging level value to take on.
+ */
+void
+pscthr_setloglevel(int ssid, int newlevel)
+{
+	struct psc_thread *thr;
+	int i;
+
+	if (newlevel >= PNLOGLEVELS || newlevel < 0)
+		psc_fatalx("log level out of bounds (%d)", newlevel);
+
+	if (ssid == PSS_ALL)
+		for (i = 0; i < psc_nsubsys; i++)
+			thr->psc_loglevels[i] = newlevel;
+	else if (ssid >= psc_nsubsys || ssid < 0)
+		psc_fatalx("subsystem out of bounds (%d)", ssid);
+	else
+		thr->psc_loglevels[subsys] = newlevel;
+}
+
 /*
  * pscthr_getname - get thread name.
- * This routine is not intended for general-purpose usage.
  */
 const char *
 pscthr_getname(void)

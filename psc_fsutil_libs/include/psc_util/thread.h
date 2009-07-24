@@ -75,6 +75,7 @@ void	pscthr_setrun(struct psc_thread *, int);
 int	pscthr_run(void);
 int	pscthr_getuniqid(void);
 int	pscthr_getnextuniqid(void);
+void	pscthr_setloglevel(int, int);
 
 struct psc_thread *pscthr_get(void);
 struct psc_thread *pscthr_get_canfail(void);
