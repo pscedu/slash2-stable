@@ -360,11 +360,11 @@ pscthr_setloglevel(int ssid, int newlevel)
 
 	if (ssid == PSS_ALL)
 		for (i = 0; i < psc_nsubsys; i++)
-			thr->psc_loglevels[i] = newlevel;
+			thr->pscthr_loglevels[i] = newlevel;
 	else if (ssid >= psc_nsubsys || ssid < 0)
 		psc_fatalx("subsystem out of bounds (%d)", ssid);
 	else
-		thr->psc_loglevels[subsys] = newlevel;
+		thr->pscthr_loglevels[ssid] = newlevel;
 }
 
 /*
