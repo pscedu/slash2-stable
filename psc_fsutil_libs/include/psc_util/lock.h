@@ -19,7 +19,7 @@
 
 typedef pthread_mutex_t psc_spinlock_t;
 
-#define LOCK_INIT(lk)		psc_pthread_mutex_init(lk);
+#define LOCK_INIT(lk)		psc_pthread_mutex_init(lk)
 
 #define LOCK_INITIALIZER	PTHREAD_ERRORCHECK_MUTEX_INITIALIZER_NP
 
