@@ -1041,15 +1041,14 @@ pscrpcsvh_addthr(struct pscrpc_svc_handle *svh)
 	thr = pscthr_init(svh->svh_type, 0, pscrpcthr_begin, NULL,
 	    svh->svh_thrsiz, "%sthr%02d", svh->svh_svc_name,
 	    svh->svh_nthreads);
-	prt = thr->pscthr_private;
 	if (thr) {
+		prt = thr->pscthr_private;
 		prt->prt_alive = 1;
 		prt->prt_svh = svh;
 		psclist_xadd(&prt->prt_lentry,
 		    &svh->svh_service->srv_threads);
-	}
-	if (thr)
 		svh->svh_nthreads++;
+	}
 	freelock(&svc->srv_lock);
 	if (thr == NULL)
 		return (-1);
