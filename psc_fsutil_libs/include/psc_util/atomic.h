@@ -28,15 +28,19 @@ typedef struct { volatile __s64 value; } psc_atomic64_t;
 #define PSC_ATOMIC32_INIT(i)			{ (i) }
 #define PSC_ATOMIC64_INIT(i)			{ (i) }
 
-#define atomic_read(v)				((v)->value)
-#define psc_atomic16_read(v)			((v)->value)
-#define psc_atomic32_read(v)			((v)->value)
-#define psc_atomic64_read(v)			((v)->value)
+#define psc_atomic16_access(v)			((v)->value)
+#define psc_atomic32_access(v)			((v)->value)
+#define psc_atomic64_access(v)			((v)->value)
+
+#define atomic_read(v)				((const)(v)->value)
+#define psc_atomic16_read(v)			((const)psc_atomic16_access(v))
+#define psc_atomic32_read(v)			((const)psc_atomic32_access(v))
+#define psc_atomic64_read(v)			((const)psc_atomic32_access(v))
 
 #define atomic_set(v, i)			(((v)->value) = (i))
-#define psc_atomic16_set(v, i)			(((v)->value) = (i))
-#define psc_atomic32_set(v, i)			(((v)->value) = (i))
-#define psc_atomic64_set(v, i)			(((v)->value) = (i))
+#define psc_atomic16_set(v, i)			(psc_atomic16_access(v) = (i))
+#define psc_atomic32_set(v, i)			(psc_atomic32_access(v) = (i))
+#define psc_atomic64_set(v, i)			(psc_atomic64_access(v) = (i))
 
 static __inline int
 ia64_atomic_add(int i, atomic_t *v)
@@ -293,14 +297,18 @@ atomic_clear_mask(int32_t mask, atomic_t *v)
  * not some alias that contains the same information.
  */
 typedef struct { volatile int value; } atomic_t;
-typedef struct { volatile int16_t value; } psc_atomic16_t;
-typedef struct { volatile int32_t value; } psc_atomic32_t;
-typedef struct { volatile int64_t value; } psc_atomic64_t;
+typedef struct { volatile int16_t value16; } psc_atomic16_t;
+typedef struct { volatile int32_t value32; } psc_atomic32_t;
+typedef struct { volatile int64_t value64; } psc_atomic64_t;
 
 #define ATOMIC_INIT(i)			{ (i) }
 #define PSC_ATOMIC16_INIT(i)		{ (i) }
 #define PSC_ATOMIC32_INIT(i)		{ (i) }
 #define PSC_ATOMIC64_INIT(i)		{ (i) }
+
+#define psc_atomic16_access(v)		((v)->value16)
+#define psc_atomic32_access(v)		((v)->value32)
+#define psc_atomic64_access(v)		((v)->value64)
 
 /**
  * atomic_read - read atomic variable
@@ -308,10 +316,10 @@ typedef struct { volatile int64_t value; } psc_atomic64_t;
  *
  * Atomically reads the value of @v.
  */
-#define atomic_read(v)			((v)->value)
-#define psc_atomic16_read(v)		((v)->value)
-#define psc_atomic32_read(v)		((v)->value)
-#define psc_atomic64_read(v)		((v)->value)
+#define atomic_read(v)			((const int)(v)->value)
+#define psc_atomic16_read(v)		((const int16_t)psc_atomic16_access(v))
+#define psc_atomic32_read(v)		((const int32_t)psc_atomic32_access(v))
+#define psc_atomic64_read(v)		((const int64_t)psc_atomic64_access(v))
 
 /**
  * atomic_set - set atomic variable
@@ -321,9 +329,9 @@ typedef struct { volatile int64_t value; } psc_atomic64_t;
  * Atomically sets the value of @v to @i.
  */
 #define atomic_set(v, i)		(((v)->value) = (i))
-#define psc_atomic16_set(v, i)		(((v)->value) = (i))
-#define psc_atomic32_set(v, i)		(((v)->value) = (i))
-#define psc_atomic64_set(v, i)		(((v)->value) = (i))
+#define psc_atomic16_set(v, i)		(psc_atomic16_access(v) = (i))
+#define psc_atomic32_set(v, i)		(psc_atomic32_access(v) = (i))
+#define psc_atomic64_set(v, i)		(psc_atomic64_access(v) = (i))
 
 /**
  * atomic_add - add integer to atomic variable
@@ -346,8 +354,8 @@ psc_atomic32_add(psc_atomic32_t *v, int32_t i)
 {
 	__asm__ __volatile__(
 		LOCK_PREFIX "addl %1,%0"
-		:"=m" (v->value)
-		:"ir" (i), "m" (v->value));
+		:"=m" psc_atomic32_access(v)
+		:"ir" (i), "m" psc_atomic32_access(v));
 }
 
 /**
@@ -362,8 +370,8 @@ psc_atomic64_add(psc_atomic64_t *v, int64_t i)
 {
 	__asm__ __volatile__(
 		LOCK_PREFIX "addq %1,%0"
-		:"=m" (v->value)
-		:"ir" (i), "m" (v->value));
+		:"=m" psc_atomic64_access(v)
+		:"ir" (i), "m" psc_atomic64_access(v));
 }
 
 /**
@@ -387,8 +395,8 @@ psc_atomic32_sub(psc_atomic32_t *v, int32_t i)
 {
 	__asm__ __volatile__(
 		LOCK_PREFIX "subl %1,%0"
-		:"=m" (v->value)
-		:"ir" (i), "m" (v->value));
+		:"=m" psc_atomic32_access(v)
+		:"ir" (i), "m" psc_atomic32_access(v));
 }
 
 /**
@@ -403,8 +411,8 @@ psc_atomic64_sub(psc_atomic64_t *v, int64_t i)
 {
 	__asm__ __volatile__(
 		LOCK_PREFIX "subq %1,%0"
-		:"=m" (v->value)
-		:"ir" (i), "m" (v->value));
+		:"=m" psc_atomic64_access(v)
+		:"ir" (i), "m" psc_atomic64_access(v));
 }
 
 /**
@@ -435,8 +443,8 @@ psc_atomic32_sub_test_zero(psc_atomic32_t *v, int32_t i)
 
 	__asm__ __volatile__(
 		LOCK_PREFIX "subl %2,%0; sete %1"
-		:"=m" (v->value), "=qm" (c)
-		:"ir" (i), "m" (v->value) : "memory");
+		:"=m" psc_atomic32_access(v), "=qm" (c)
+		:"ir" (i), "m" psc_atomic32_access(v) : "memory");
 	return c;
 }
 
@@ -456,8 +464,8 @@ psc_atomic64_sub_test_zero(psc_atomic64_t *v, int64_t i)
 
 	__asm__ __volatile__(
 		LOCK_PREFIX "subq %2,%0; sete %1"
-		:"=m" (v->value), "=qm" (c)
-		:"ir" (i), "m" (v->value) : "memory");
+		:"=m" psc_atomic64_access(v), "=qm" (c)
+		:"ir" (i), "m" psc_atomic64_access(v) : "memory");
 	return c;
 }
 
@@ -481,8 +489,8 @@ psc_atomic32_inc(psc_atomic32_t *v)
 {
 	__asm__ __volatile__(
 		LOCK_PREFIX "incl %0"
-		:"=m" (v->value)
-		:"m" (v->value));
+		:"=m" psc_atomic32_access(v)
+		:"m" psc_atomic32_access(v));
 }
 
 /**
@@ -494,8 +502,8 @@ psc_atomic64_inc(psc_atomic64_t *v)
 {
 	__asm__ __volatile__(
 		LOCK_PREFIX "incq %0"
-		: "=m" (v->value)
-		: "m" (v->value));
+		: "=m" psc_atomic64_access(v)
+		: "m" psc_atomic64_access(v));
 }
 
 static __inline void
@@ -516,8 +524,8 @@ psc_atomic32_dec(psc_atomic32_t *v)
 {
 	__asm__ __volatile__(
 		LOCK_PREFIX "decl %0"
-		: "=m" (v->value)
-		: "m" (v->value));
+		: "=m" psc_atomic32_access(v)
+		: "m" psc_atomic32_access(v));
 }
 
 /**
@@ -529,8 +537,8 @@ psc_atomic64_dec(psc_atomic64_t *v)
 {
 	__asm__ __volatile__(
 		LOCK_PREFIX "decq %0"
-		: "=m" (v->value)
-		: "m" (v->value));
+		: "=m" psc_atomic64_access(v)
+		: "m" psc_atomic64_access(v));
 }
 
 static __inline int
@@ -557,8 +565,8 @@ psc_atomic32_dec_test_zero(psc_atomic32_t *v)
 
 	__asm__ __volatile__(
 		LOCK_PREFIX "decl %0; sete %1"
-		: "=m" (v->value), "=qm" (c)
-		: "m" (v->value) : "memory");
+		: "=m" psc_atomic32_access(v), "=qm" (c)
+		: "m" psc_atomic32_access(v) : "memory");
 	return (c != 0);
 }
 
@@ -574,8 +582,8 @@ psc_atomic64_dec_test_zero(psc_atomic64_t *v)
 
 	__asm__ __volatile__(
 		LOCK_PREFIX "decq %0; sete %1"
-		: "=m" (v->value), "=qm" (c)
-		: "m" (v->value) : "memory");
+		: "=m" psc_atomic64_access(v), "=qm" (c)
+		: "m" psc_atomic64_access(v) : "memory");
 	return (c != 0);
 }
 
@@ -603,8 +611,8 @@ psc_atomic32_inc_test_zero(psc_atomic32_t *v)
 
 	__asm__ __volatile__(
 		LOCK_PREFIX "incl %0; sete %1"
-		: "=m" (v->value), "=qm" (c)
-		: "m" (v->value) : "memory");
+		: "=m" psc_atomic32_access(v), "=qm" (c)
+		: "m" psc_atomic32_access(v) : "memory");
 	return (c != 0);
 }
 
@@ -620,8 +628,8 @@ psc_atomic64_inc_test_zero(psc_atomic64_t *v)
 
 	__asm__ __volatile__(
 		LOCK_PREFIX "incq %0; sete %1"
-		: "=m" (v->value), "=qm" (c)
-		: "m" (v->value) : "memory");
+		: "=m" psc_atomic64_access(v), "=qm" (c)
+		: "m" psc_atomic64_access(v) : "memory");
 	return (c != 0);
 }
 
@@ -650,8 +658,8 @@ psc_atomic32_add_test_neg(psc_atomic32_t *v, int i)
 
 	__asm__ __volatile__(
 		LOCK_PREFIX "addl %2,%0; sets %1"
-		: "=m" (v->value), "=qm" (c)
-		: "ir" (i), "m" (v->value) : "memory");
+		: "=m" psc_atomic32_access(v), "=qm" (c)
+		: "ir" (i), "m" psc_atomic32_access(v) : "memory");
 	return (c);
 }
 
@@ -668,8 +676,8 @@ psc_atomic64_add_test_neg(psc_atomic64_t *v, int64_t i)
 
 	__asm__ __volatile__(
 		LOCK_PREFIX "addq %2,%0; sets %1"
-		:"=m" (v->value), "=qm" (c)
-		:"ir" (i), "m" (v->value) : "memory");
+		:"=m" psc_atomic64_access(v), "=qm" (c)
+		:"ir" (i), "m" psc_atomic64_access(v) : "memory");
 	return (c);
 }
 
@@ -697,7 +705,7 @@ psc_atomic32_add_return(psc_atomic32_t *v, int32_t i)
 
 	__asm__ __volatile__(
 		LOCK_PREFIX "xaddl %0, %1"
-		: "+r" (i), "+m" (v->value)
+		: "+r" (i), "+m" psc_atomic32_access(v)
 		: : "memory");
 	return (i + __i);
 }
@@ -715,7 +723,7 @@ psc_atomic64_add_return(psc_atomic64_t *v, int64_t i)
 	__asm__ __volatile__(
 		LOCK_PREFIX "xaddq %0, %1;"
 		: "=r" (i)
-		: "m" (v->value), "0" (i));
+		: "m" psc_atomic64_access(v), "0" (i));
 	return (i + __i);
 }
 
@@ -739,7 +747,7 @@ psc_atomic32_clear_mask(psc_atomic32_t *v, int32_t mask)
 	__asm__ __volatile__(
 		LOCK_PREFIX "andl %0,%1"
 		: : "r" (~(mask)),
-		    "m" (v->value) : "memory");
+		    "m" psc_atomic32_access(v) : "memory");
 }
 
 static __inline void
@@ -757,7 +765,7 @@ psc_atomic32_set_mask(psc_atomic32_t *v, int32_t mask)
 	__asm__ __volatile__(
 		LOCK_PREFIX "orl %0,%1"
 		: : "r" (mask),
-		    "m" (v->value) : "memory");
+		    "m" psc_atomic32_access(v) : "memory");
 }
 
 static __inline int64_t
@@ -767,8 +775,8 @@ psc_atomic64_set_mask(psc_atomic64_t *v, int64_t mask)
 
 	__asm__ __volatile__(
 		LOCK_PREFIX "orq %0, %1;"
-		:"=r"(mask)
-		:"m"(v->value), "0"(newmask));
+		: "=r" (mask)
+		: "m" psc_atomic64_access(v), "0"(newmask));
 	return (newmask | mask);
 }
 
@@ -785,12 +793,12 @@ psc_atomic64_set_mask(psc_atomic64_t *v, int64_t mask)
 
 #define atomic_cmpxchg(v, old, new)		((int)cmpxchg(&((v)->value), (old), (new)))
 #define atomic_xchg(v, new)			(xchg(&((v)->value), (new)))
-#define psc_atomic16_cmpxchg(v, old, new)	((int16_t)cmpxchg(&((v)->value), (old), (new)))
-#define psc_atomic16_xchg(v, new)		(xchg(&((v)->value), (new)))
-#define psc_atomic32_cmpxchg(v, old, new)	((int32_t)cmpxchg(&((v)->value), (old), (new)))
-#define psc_atomic32_xchg(v, new)		(xchg(&((v)->value), (new)))
-#define psc_atomic64_cmpxchg(v, old, new)	((int64_t)cmpxchg(&((v)->value), (old), (new)))
-#define psc_atomic64_xchg(v, new)		(xchg(&((v)->value), (new)))
+#define psc_atomic16_cmpxchg(v, old, new)	((int16_t)cmpxchg(&psc_atomic16_access(v), (old), (new)))
+#define psc_atomic16_xchg(v, new)		(xchg(&psc_atomic16_access(v), (new)))
+#define psc_atomic32_cmpxchg(v, old, new)	((int32_t)cmpxchg(&psc_atomic32_access(v), (old), (new)))
+#define psc_atomic32_xchg(v, new)		(xchg(&psc_atomic32_access(v), (new)))
+#define psc_atomic64_cmpxchg(v, old, new)	((int64_t)cmpxchg(&psc_atomic64_access(v), (old), (new)))
+#define psc_atomic64_xchg(v, new)		(xchg(&psc_atomic64_access(v), (new)))
 
 static inline int16_t
 psc_atomic16_setmask_ret(psc_atomic16_t *v, int16_t mask)
