@@ -25,11 +25,10 @@
 #include "psc_util/alloc.h"
 #include "psc_util/cdefs.h"
 #include "psc_util/fmtstr.h"
-#include "psc_util/lock.h"
 #include "psc_util/log.h"
 
 #ifndef PSC_LOG_FMT
-#define PSC_LOG_FMT "[%s:%06u %n:%F:%l]"
+#define PSC_LOG_FMT "[%s:%06u %n:%F:%l] "
 #endif
 
 struct fuse_context {
@@ -41,6 +40,7 @@ struct fuse_context {
 const char			*psc_logfmt = PSC_LOG_FMT;
 __static int			 psc_loglevel = PLL_TRACE;
 __static struct psclog_data	*psc_logdata;
+char				 psclog_eol[8] = "\n";
 
 void
 psc_log_init(void)
@@ -210,15 +210,15 @@ _psclogv(const char *fn, const char *func, int line, int subsys,
 	 * to prevent threads weaving between printf() calls.
 	 */
 	vsnprintf(umsg, sizeof(umsg), fmt, ap);
-	if (umsg[strlen(umsg)-1] == '\n')
-		umsg[strlen(umsg)-1] = '\0';
+	if (umsg[strlen(umsg) - 1] == '\n')
+		umsg[strlen(umsg) - 1] = '\0';
 
 	if (options & PLO_ERRNO)
 		snprintf(emsg, sizeof(emsg), ": %s",
 		    strerror(save_errno));
 	else
 		emsg[0] = '\0';
-	fprintf(stderr, "%s %s%s\n", prefix, umsg, emsg);
+	fprintf(stderr, "%s%s%s%s", prefix, umsg, emsg, psclog_eol);
 	errno = save_errno; /* Restore in case it is needed further. */
 
 	if (level == PLL_FATAL) {
