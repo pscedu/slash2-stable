@@ -8,6 +8,7 @@
 
 #include <errno.h>
 #include <fcntl.h>
+#include <signal.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <string.h>
@@ -289,7 +290,9 @@ acsvc_climain(__unusedx void *arg)
 			if (errno == EINTR)
 				continue;
 			psc_fatal("recvmsg");
-		} else if (nbytes != sizeof(arp))
+		} else if (nbytes == 0)
+			psc_fatalx("recvmsg: unexpected EOF");
+		else if (nbytes != sizeof(arp))
 			psc_fatalx("recvmsg: short I/O, want %zu, got %zd",
 			    sizeof(arp), nbytes);
 
@@ -333,6 +336,7 @@ acsvc_init(int thrtype, const char *name, char **av)
 	case -1:
 		psc_fatal("fork");
 	case 0:  /* child */
+		signal(SIGINT, SIG_IGN);
 		if (av) {
 			p = strrchr(av[0], '/');
 			if (p)
