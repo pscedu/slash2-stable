@@ -2,8 +2,8 @@
 
 include ../Makefile.path
 
-PROG=		random
-SRCS=		random.c
+PROG=		random_test
+SRCS=		random_test.c
 SRCS+=		${PFL_BASE}/psc_util/alloc.c
 SRCS+=		${PFL_BASE}/psc_util/log.c
 SRCS+=		${PFL_BASE}/psc_util/random.c
