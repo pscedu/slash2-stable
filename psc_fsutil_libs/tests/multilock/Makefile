@@ -2,8 +2,8 @@
 
 include ../Makefile.path
 
-PROG=		multilock
-SRCS=		multilock.c
+PROG=		multilock_test
+SRCS=		multilock_test.c
 SRCS+=		${PFL_BASE}/psc_ds/dynarray.c
 SRCS+=		${PFL_BASE}/psc_ds/vbitmap.c
 SRCS+=		${PFL_BASE}/psc_util/alloc.c
