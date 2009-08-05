@@ -2,8 +2,8 @@
 
 include ../Makefile.path
 
-PROG=		vbitmap
-SRCS=		vbitmap.c
+PROG=		vbitmap_test
+SRCS=		vbitmap_test.c
 SRCS+=		${PFL_BASE}/psc_ds/vbitmap.c
 
 include ${PFLMK}
