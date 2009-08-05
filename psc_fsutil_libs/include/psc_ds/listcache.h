@@ -47,6 +47,7 @@ typedef struct psc_listcache list_cache_t;
 
 #define LIST_CACHE_LOCK(lc)	spinlock(&(lc)->lc_lock)
 #define LIST_CACHE_ULOCK(lc)	freelock(&(lc)->lc_lock)
+#define LIST_CACHE_TRYLOCK(lc)	trylock(&(lc)->lc_lock)
 
 /**
  * lc_sz - how many items are in here.
