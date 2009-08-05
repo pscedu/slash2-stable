@@ -2,8 +2,8 @@
 
 include ../Makefile.path
 
-PROG=		acsvc
-SRCS=		acsvc.c
+PROG=		acsvc_test
+SRCS=		acsvc_test.c
 SRCS+=		${PFL_BASE}/psc_ds/dynarray.c
 SRCS+=		${PFL_BASE}/psc_ds/hash.c
 SRCS+=		${PFL_BASE}/psc_ds/vbitmap.c
