@@ -62,7 +62,7 @@ vbitmap_attach(unsigned char *buf, size_t size)
         memset(vb, 0, sizeof(*vb));
 	vb->vb_pos = vb->vb_start = buf;
 	vb->vb_end = buf + (size - 1);
-	vb->vb_lastsize = 0;
+	vb->vb_lastsize = NBBY;
 	return (vb);
 }
 
@@ -156,33 +156,40 @@ vbitmap_nfree(const struct vbitmap *vb)
 	return (n);
 }
 
-
+/**
+ * vbitmap_invert - invert the state of all bits in a vbitmap.
+ * @vb: variable bitmap.
+ */
 void
 vbitmap_invert(struct vbitmap *vb)
 {
 	unsigned char *p;
-	int n;
 
-	for (n = 0, p = vb->vb_start; p <= vb->vb_end; p++)
+	for (p = vb->vb_start; p <= vb->vb_end; p++)
 		*p = ~(*p);
+	if (vb->vb_lastsize)
+		*p &= vb->vb_lastsize - 1;
 }
 
+/**
+ * vbitmap_setall - toggle on all bits in a vbitmap.
+ * @vb: variable bitmap.
+ */
 void
 vbitmap_setall(struct vbitmap *vb)
 {
 	unsigned char *p;
-	int n;
 
-	for (n = 0, p = vb->vb_start; p <= vb->vb_end; p++)
+	for (p = vb->vb_start; p <= vb->vb_end; p++)
 		*p = 0xff;
+	if (vb->vb_lastsize)
+		*p &= vb->vb_lastsize - 1;
 }
 
 /**
  * vbitmap_lcr - report the largest contiguous region in the bitmap.
  * @vb: variable bitmap.
  * Returns: size of the region.
- *
- * XXX: adjust this to take into account vb_lastsize.
  */
 int
 vbitmap_lcr(const struct vbitmap *vb)
@@ -191,6 +198,10 @@ vbitmap_lcr(const struct vbitmap *vb)
 	int i, n=0, r=0;
 
 	for (p = vb->vb_start; p <= vb->vb_end; p++)
+		/* ensure unused bits are masked off */
+		if (p == vb->vb_end && vb->vb_lastsize)
+			*p &= vb->vb_lastsize - 1;
+
 		if (*p == 0x00)
 			n += NBBY;
 		else if (*p == 0xff) {
