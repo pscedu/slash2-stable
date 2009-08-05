@@ -156,6 +156,27 @@ vbitmap_nfree(const struct vbitmap *vb)
 	return (n);
 }
 
+
+void
+vbitmap_invert(struct vbitmap *vb)
+{
+	unsigned char *p;
+	int n;
+
+	for (n = 0, p = vb->vb_start; p <= vb->vb_end; p++)
+		*p = ~(*p);
+}
+
+void
+vbitmap_setall(struct vbitmap *vb)
+{
+	unsigned char *p;
+	int n;
+
+	for (n = 0, p = vb->vb_start; p <= vb->vb_end; p++)
+		*p = 0xff;
+}
+
 /**
  * vbitmap_lcr - report the largest contiguous region in the bitmap.
  * @vb: variable bitmap.
