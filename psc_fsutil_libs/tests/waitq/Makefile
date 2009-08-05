@@ -2,8 +2,8 @@
 
 include ../Makefile.path
 
-PROG=		waitq
-SRCS=		waitq.c
+PROG=		waitq_test
+SRCS=		waitq_test.c
 SRCS+=		${PFL_BASE}/psc_ds/dynarray.c
 SRCS+=		${PFL_BASE}/psc_ds/vbitmap.c
 SRCS+=		${PFL_BASE}/psc_util/alloc.c
