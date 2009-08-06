@@ -272,6 +272,30 @@ _lc_add(struct psc_listcache *lc, void *p, int tails)
 #define lc_add(lc, p)		_lc_add((lc), (p), 1)
 
 /**
+ * lc_move - move an existing entry to the end of the queue
+ *
+ */
+static inline void
+lc_move(struct psc_listcache *lc, void *p, int tails)
+{
+	int locked;
+	void *e;
+
+	psc_assert(p);
+	e = (char *)p + lc->lc_offset;
+	locked = reqlock(&lc->lc_lock);
+	psclist_del(e);
+	if (tails)
+		psclist_xadd_tail(e, &lc->lc_listhd);
+	else
+		psclist_xadd(e, &lc->lc_listhd);
+	ureqlock(&lc->lc_lock, locked);
+}
+
+#define lc_move2tail(lc, p)	lc_move((lc), (p), 1)
+#define lc_move2head(lc, p)	lc_move((lc), (p), 0)
+
+/**
  * lc_requeue - move an existing entry to the end of the queue
  *
  */
