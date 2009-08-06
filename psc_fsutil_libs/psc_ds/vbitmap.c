@@ -110,6 +110,22 @@ vbitmap_set(struct vbitmap *vb, size_t elem)
 }
 
 /**
+ * vbitmap_xset - set bit for an element of a variable-sized bitmap.
+ * @vb: variable bitmap.
+ * @elem: element# to set.
+ *
+ * Returns -1 if already set.
+ */
+int
+vbitmap_xset(struct vbitmap *vb, size_t elem)
+{
+	if (vbitmap_get(vb, elem))
+		return (-1);
+	vbitmap_set(vb, elem);
+	return (0);
+}
+
+/**
  * vbitmap_get - get bit for an element of a variable-sized bitmap.
  * @vb: variable bitmap.
  * @elem: element # to get.

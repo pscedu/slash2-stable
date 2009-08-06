@@ -21,6 +21,7 @@ struct vbitmap *vbitmap_newf(size_t, int);
 void		vbitmap_free(struct vbitmap *);
 void		vbitmap_unset(struct vbitmap *, size_t);
 void		vbitmap_set(struct vbitmap *, size_t);
+int		vbitmap_xset(struct vbitmap *, size_t);
 int		vbitmap_next(struct vbitmap *, size_t *);
 int		vbitmap_resize(struct vbitmap *, size_t);
 size_t		vbitmap_getsize(const struct vbitmap *);
