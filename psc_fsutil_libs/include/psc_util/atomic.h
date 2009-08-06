@@ -485,6 +485,15 @@ atomic_inc(atomic_t *v)
 }
 
 static __inline void
+psc_atomic16_inc(psc_atomic16_t *v)
+{
+	__asm__ __volatile__(
+		LOCK_PREFIX "incw %0"
+		:"=m" psc_atomic16_access(v)
+		:"m" psc_atomic16_access(v));
+}
+
+static __inline void
 psc_atomic32_inc(psc_atomic32_t *v)
 {
 	__asm__ __volatile__(
@@ -551,6 +560,23 @@ atomic_dec_and_test(atomic_t *v)
 		:"=m" (v->value), "=qm" (c)
 		:"m" (v->value) : "memory");
 	return c != 0;
+}
+
+/**
+ * psc_atomic16_dec_test_zero - Atomically decrement and check
+ *	if new value is zero.
+ * @v: atomic value.
+ */
+static __inline int
+psc_atomic16_dec_test_zero(psc_atomic16_t *v)
+{
+	unsigned char c;
+
+	__asm__ __volatile__(
+		LOCK_PREFIX "decw %0; sete %1"
+		: "=m" psc_atomic16_access(v), "=qm" (c)
+		: "m" psc_atomic16_access(v) : "memory");
+	return (c != 0);
 }
 
 /**
