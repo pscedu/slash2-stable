@@ -47,15 +47,16 @@ usage(void)
 int
 main(int argc, char *argv[])
 {
+	psc_atomic64_t v64 = PSC_ATOMIC64_INIT(100000000000ULL);
+	psc_atomic16_t v16 = PSC_ATOMIC16_INIT(0);
+	atomic_t v = ATOMIC_INIT(10);
+
 	progname = argv[0];
 	if (getopt(argc, argv, "") != -1)
 		usage();
 	argc -= optind;
 	if (argc)
 		usage();
-
-	psc_atomic64_t v64 = PSC_ATOMIC64_INIT(100000000000ULL);
-	atomic_t v = ATOMIC_INIT(10);
 
 	psc_assert(atomic_read(&v) == 10);
 	TEST(atomic, set, &v, &v, 200, 200);
@@ -75,6 +76,9 @@ main(int argc, char *argv[])
 	TEST(psc_atomic64, sub, &v64, &v64, 9, 2000000000006ULL);
 	TEST1(psc_atomic64, inc, &v64, 2000000000007ULL);
 	TEST1(psc_atomic64, dec, &v64, 2000000000006ULL);
+
+	TEST1(psc_atomic16, inc, &v16, 1);
+	TEST1V(psc_atomic16, dec_test_zero, &v16, 0, 1);
 
 	exit(0);
 }
