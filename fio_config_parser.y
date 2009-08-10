@@ -14,7 +14,9 @@ int yyparse(void);
 int lineno;
 int errors;
 
-extern GROUP_t *currentGroup;
+struct list_head groupList = LIST_HEAD_INIT(groupList);
+GROUP_t         *currentGroup;
+int              numGroups;
 %}
 
 %start group_blocks
@@ -70,10 +72,6 @@ group_block:	group_start statements GROUP_END {
 group_start:	GROUP STR GROUP_START {
 	GROUP_t        *group;
 
-	if (!numGroups) {
-		BDEBUG("initialize groupList\n");
-		INIT_LIST_HEAD(&groupList);
-	}
 	numGroups++;
 
 	BDEBUG("malloc'ing %zu bytes for testGroup inc_ptr %p\n",

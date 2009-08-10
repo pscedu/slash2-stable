@@ -326,9 +326,8 @@ struct test_group_t {
 };
 typedef struct test_group_t GROUP_t;
 
-struct list_head groupList;
-GROUP_t         *currentGroup;
-int              numGroups;
+extern struct list_head	 groupList;
+extern GROUP_t		*currentGroup;
 
 #define DEBUG(chan, format, args...) do {				\
 	struct timeval tv;						\
