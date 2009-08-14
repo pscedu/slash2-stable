@@ -402,6 +402,8 @@ pscrpc_server_handle_request(struct pscrpc_service *svc,
 		    b, &request->rq_peer, NULL, request->rq_peer.nid);
 		if (pq && atomic_read(&pq->qlen) == 0)
 			psc_hashent_remove(&svc->srv_peer_qlentab, pq);
+		else
+			pq = NULL;
 		psc_hashbkt_unlock(b);
 		free(pq);
 	}
