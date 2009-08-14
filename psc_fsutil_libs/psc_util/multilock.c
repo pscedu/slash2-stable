@@ -519,7 +519,7 @@ multilock_hascond(struct multilock *ml, struct multilock_cond *mlc)
 	psc_pthread_mutex_lock(&ml->ml_mutex);
 	nmlc = dynarray_len(&ml->ml_conds);
 	mlcv = dynarray_get(&ml->ml_conds);
-	for (j = 0; j < nmlc; j++) {
+	for (j = 0; j < nmlc; j++)
 		if (mlcv[j] == mlc) {
 			rc = 1;
 			break;
