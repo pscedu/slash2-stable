@@ -52,12 +52,13 @@ struct multilock {
 
 int	multilock_addcond(struct multilock *, struct multilock_cond *, int);
 void	multilock_enter_critsect(struct multilock *);
+void	multilock_free(struct multilock *);
+int	multilock_hascond(struct multilock *, struct multilock_cond *);
 void	multilock_init(struct multilock *, const char *, ...);
 void	multilock_leave_critsect(struct multilock *);
 void	multilock_mask_cond(struct multilock *, const struct multilock_cond *, int);
 void	multilock_reset(struct multilock *);
 int	multilock_wait(struct multilock *, void *, int);
-void	multilock_free(struct multilock *);
 
 void	multilock_cond_init(struct multilock_cond *, const void *, int, const char *, ...);
 size_t	multilock_cond_nwaitors(struct multilock_cond *);

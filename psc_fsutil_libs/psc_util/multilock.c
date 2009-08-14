@@ -502,3 +502,28 @@ multilock_leave_critsect(struct multilock *ml)
 	ml->ml_flags &= ~PMLF_CRITSECT;
 	pthread_mutex_unlock(&ml->ml_mutex);
 }
+
+/*
+ * multilock_hascond - determine if a condition has been registered in a
+ *	multilock.
+ * @ml: the multilock.
+ * @mlc: the multilock condition to check the existence of.
+ */
+int
+multilock_hascond(struct multilock *ml, struct multilock_cond *mlc)
+{
+	struct multilock_cond **mlcv;
+	int nmlc, j, rc;
+
+	rc = 0;
+	psc_pthread_mutex_lock(&ml->ml_mutex);
+	nmlc = dynarray_len(&ml->ml_conds);
+	mlcv = dynarray_get(&ml->ml_conds);
+	for (j = 0; j < nmlc; j++) {
+		if (mlcv[j] == mlc) {
+			rc = 1;
+			break;
+		}
+	pthread_mutex_unlock(&ml->ml_mutex);
+	return (rc);
+}
