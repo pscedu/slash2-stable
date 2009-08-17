@@ -380,8 +380,7 @@ multilock_wait(struct multilock *ml, void *datap, int usec)
 		    &ml->ml_mutex, &ntv);
 		if (rc == ETIMEDOUT) {
 			pthread_mutex_unlock(&ml->ml_mutex);
-			errno = ETIMEDOUT;
-			return (-1);
+			return (-ETIMEDOUT);
 		}
 		if (rc)
 			psc_fatalx("pthread_cond_timedwait: %s",
