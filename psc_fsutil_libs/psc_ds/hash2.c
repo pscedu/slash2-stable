@@ -201,9 +201,6 @@ _psc_hashbkt_searchv(const struct psc_hashtbl *t,
 				continue;
 		} else if (id != *idu.id)
 			continue;
-		/*
-		 * Do additional check and invoke callback as need be.
-		 */
 		if (t->pht_cmp == NULL || t->pht_cmp(cmp, p)) {
 			if (cbf)
 				cbf(p);
