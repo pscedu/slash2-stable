@@ -136,7 +136,7 @@ typedef struct {
 /* A HELLO message contains a magic number and protocol version
  * code in the header's dest_nid, the peer's NID in the src_nid, and
  * LNET_MSG_HELLO in the type field.  All other common fields are zero
- * (including payload_size; i.e. no payload).  
+ * (including payload_size; i.e. no payload).
  * This is for use by byte-stream LNDs (e.g. TCP/IP) to check the peer is
  * running the same protocol and to find out its NID. These LNDs should
  * exchange HELLO messages when a connection is first established.  Individual
@@ -315,20 +315,20 @@ typedef struct lnet_lnd
 
         /* fields initialised by the LND */
         unsigned int      lnd_type;
-        
+
         int  (*lnd_startup) (struct lnet_ni *ni);
         void (*lnd_shutdown) (struct lnet_ni *ni);
         int  (*lnd_ctl)(struct lnet_ni *ni, unsigned int cmd, void *arg);
 
         /* In data movement APIs below, payload buffers are described as a set
          * of 'niov' fragments which are...
-         * EITHER 
+         * EITHER
          *    in virtual memory (struct iovec *iov != NULL)
          * OR
          *    in pages (kernel only: plt_kiov_t *kiov != NULL).
          * The LND may NOT overwrite these fragment descriptors.
          * An 'offset' and may specify a byte offset within the set of
-         * fragments to start from 
+         * fragments to start from
          */
 
         /* Start sending a preformatted message.  'private' is NULL for PUT and
@@ -344,7 +344,7 @@ typedef struct lnet_lnd
          * complete later with lnet_finalize().  This also gives back a receive
          * credit if the LND does flow control. */
 	int (*lnd_recv)(struct lnet_ni *ni, void *private, lnet_msg_t *msg,
-                        int delayed, unsigned int niov, 
+                        int delayed, unsigned int niov,
                         struct iovec *iov, lnet_kiov_t *kiov,
                         unsigned int offset, unsigned int mlen, unsigned int rlen);
 
@@ -390,8 +390,8 @@ typedef struct lnet_ni {
         lnd_t            *ni_lnd;               /* procedural interface */
         int               ni_refcount;          /* reference count */
         char             *ni_interfaces[LNET_MAX_INTERFACES]; /* equivalent interfaces to use */
-	struct iostats	  ni_recvstats;		
-	struct iostats	  ni_sendstats;	
+	struct iostats	  ni_recv_ist;
+	struct iostats	  ni_send_ist;
 } lnet_ni_t;
 
 typedef struct lnet_peer {
@@ -499,7 +499,7 @@ typedef struct
         int                ln_niinit_self;      /* Have I called LNetNIInit myself? */
 
         int                ln_ptlcompat;        /* do I support talking to portals? */
-        
+
         struct list_head   ln_lnds;             /* registered LNDs */
 
 #ifdef __KERNEL__
@@ -543,10 +543,10 @@ typedef struct
         struct list_head  *ln_peer_hash;        /* NID->peer hash */
         int                ln_npeers;           /* # peers extant */
         int                ln_peertable_version; /* /proc validity stamp */
-        
+
         int                ln_routing;          /* am I a router? */
         lnet_rtrbufpool_t  ln_rtrpools[LNET_NRBPOOLS]; /* router buffer pools */
-        
+
         int                ln_lh_hash_size;     /* size of lib handle hash table */
         struct list_head  *ln_lh_hash_table;    /* all extant lib handles, this interface */
         __u64              ln_next_object_cookie; /* cookie generator */
@@ -575,7 +575,7 @@ typedef struct
 	struct semaphore   ln_rc_signal;        /* serialise startup/shutdown */
         lnet_handle_eq_t   ln_rc_eqh;           /* router checker's event queue */
 #endif
-        
+
 #ifdef LNET_USE_LIB_FREELIST
         lnet_freelist_t    ln_free_mes;
         lnet_freelist_t    ln_free_msgs;
@@ -595,7 +595,7 @@ typedef struct
          * call lnet_server_mode() */
 
         int                ln_server_mode_flag;
-#endif        
+#endif
 } lnet_t;
 
 #endif

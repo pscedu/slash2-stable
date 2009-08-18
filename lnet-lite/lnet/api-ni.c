@@ -826,7 +826,7 @@ lnet_unprepare (void)
                 lnet_msg_free (msg);
         }
 
-        LIBCFS_FREE(the_lnet.ln_portals,  
+        LIBCFS_FREE(the_lnet.ln_portals,
                     the_lnet.ln_nportals * sizeof(*the_lnet.ln_portals));
 
         lnet_free_rtrpools();
@@ -874,19 +874,19 @@ int
 lnet_localnids_get (lnet_nid_t *nids, size_t max)
 {
         size_t            n=0;
-        lnet_ni_t        *ni;        
+        lnet_ni_t        *ni;
         struct list_head *tmp;
 
         LASSERT(nids);
-        
+
         LNET_LOCK();
         LASSERT (the_lnet.ln_init);
         list_for_each (tmp, &the_lnet.ln_nis) {
                 if (n == max) break;
-                ni = list_entry(tmp, lnet_ni_t, ni_list);                
+                ni = list_entry(tmp, lnet_ni_t, ni_list);
                 if (LNET_NETTYP(LNET_NIDNET(ni->ni_nid)) == LOLND)
                         continue;
-                nids[n++] = ni->ni_nid;                
+                nids[n++] = ni->ni_nid;
         }
         LNET_UNLOCK();
 
@@ -1047,8 +1047,8 @@ lnet_shutdown_lndnis (void)
                         CDEBUG(D_LNI, "Removed LNI %s\n",
                                libcfs_nid2str(ni->ni_nid));
 
-		iostats_remove(&ni->ni_sendstats);
-		iostats_remove(&ni->ni_recvstats);
+		iostats_remove(&ni->ni_send_ist);
+		iostats_remove(&ni->ni_recv_ist);
                 LIBCFS_FREE(ni, sizeof(*ni));
 
                 LNET_LOCK();
@@ -1218,8 +1218,8 @@ lnet_startup_lndnis (void)
         while (!list_empty(&nilist)) {
                 ni = list_entry(nilist.next, lnet_ni_t, ni_list);
                 list_del(&ni->ni_list);
-		iostats_remove(&ni->ni_sendstats);
-		iostats_remove(&ni->ni_recvstats);
+		iostats_remove(&ni->ni_send_ist);
+		iostats_remove(&ni->ni_recv_ist);
                 LIBCFS_FREE(ni, sizeof(*ni));
         }
 
@@ -1789,7 +1789,7 @@ lnet_ping (lnet_process_id_t id, int timeout_ms, lnet_process_id_t *ids, int n_i
                         __swab64s(&info->pi_nid[i]);
 
         } else if (info->pi_magic != LNET_PROTO_PING_MAGIC) {
-                CERROR("%s: Unexpected magic %08x\n", 
+                CERROR("%s: Unexpected magic %08x\n",
                        libcfs_id2str(id), info->pi_magic);
                 goto out_1;
         }

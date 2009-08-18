@@ -49,8 +49,10 @@
 
 #include "psc_util/iostats.h"
 
-struct iostats pasv_sendstats;
-struct iostats pasv_recvstats;
+struct iostats usock_pasv_send_ist;	/* passive interface */
+struct iostats usock_pasv_recv_ist;
+struct iostats usock_aggr_send_ist;	/* aggregate across all interfaces */
+struct iostats usock_aggr_recv_ist;
 
 lnd_t the_tcplnd = {
         .lnd_type      = SOCKLND,
@@ -562,8 +564,10 @@ usocklnd_startup(lnet_ni_t *ni)
         ni->ni_maxtxcredits = usock_tuns.ut_txcredits;
         ni->ni_peertxcredits = usock_tuns.ut_peertxcredits;
 
-	iostats_init(&pasv_sendstats, "lnpasvsnd");
-	iostats_init(&pasv_recvstats, "lnpasvrcv");
+	iostats_init(&usock_pasv_send_ist, "lusklnd-pasv-snd");
+	iostats_init(&usock_pasv_recv_ist, "lusklnd-pasv-rcv");
+	iostats_init(&usock_aggr_send_ist, "lusklnd-aggr-snd");
+	iostats_init(&usock_aggr_recv_ist, "lusklnd-aggr-rcv");
 
         usock_data.ud_nets_count++;
         return 0;
