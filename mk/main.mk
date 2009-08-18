@@ -81,14 +81,14 @@ ${OBJDIR}:
 	mkdir -p $@
 
 ${OBJDIR}/$(notdir %.c) : %.l | ${OBJDIR}
-	${LEX} ${LFLAGS} $< > $@
+	${LEX} ${LFLAGS} $(realpath $<) > $@
 
 ${OBJDIR}/$(notdir %.c) : %.y | ${OBJDIR}
-	${YACC} ${YFLAGS} -o $@ $<
+	${YACC} ${YFLAGS} -o $@ $(realpath $<)
 
 ${OBJDIR}/$(notdir %.o) : %.c | ${OBJDIR}
 	${CC} ${CFLAGS} ${$(subst .,_,$(subst -,_,$(subst /,_,$(subst			\
-	    ../,,$(subst //,/,$<)))))_CFLAGS} -c $< -o $@
+	    ../,,$(subst //,/,$<)))))_CFLAGS} -c $(realpath $<) -o $@
 
 ${PROG}: ${OBJS}
 	${CC} -o $@ ${OBJS} ${LDFLAGS}
