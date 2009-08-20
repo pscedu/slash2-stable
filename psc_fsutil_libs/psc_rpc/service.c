@@ -391,7 +391,7 @@ pscrpc_server_handle_request(struct pscrpc_service *svc,
 	 */
 	if (svc->srv_count_peer_qlens &&
 	    atomic_dec_return(&request->rq_peer_qlen->qlen) == 0) {
-		struct rpc_peer_qlen *pq;
+		struct pscrpc_peer_qlen *pq;
 		struct psc_hashbkt *b;
 
 		b = psc_hashbkt_get(&svc->srv_peer_qlentab,
@@ -924,9 +924,9 @@ pscrpc_unregister_service(struct pscrpc_service *service)
 }
 
 int
-rpc_peer_qlen_cmp(const void *a, const void *b)
+pscrpc_peer_qlen_cmp(const void *a, const void *b)
 {
-	const struct rpc_peer_qlen *qa = a, *qb = b;
+	const struct pscrpc_peer_qlen *qa = a, *qb = b;
 
 	return (memcmp(&qa->id, &qb->id, sizeof(qa->id)));
 }
@@ -1006,8 +1006,8 @@ pscrpc_init_svc(int nbufs, int bufsize, int max_req_size, int max_reply_size,
 		service->srv_count_peer_qlens = 1;
 #define QLENTABSZ 511
 		psc_hashtbl_init(&service->srv_peer_qlentab, 0,
-		    struct rpc_peer_qlen, id, hentry, QLENTABSZ,
-		    rpc_peer_qlen_cmp, "qlen-%s", service->srv_name);
+		    struct pscrpc_peer_qlen, id, hentry, QLENTABSZ,
+		    pscrpc_peer_qlen_cmp, "qlen-%s", service->srv_name);
 	}
 
 	CDEBUG(D_NET, "%s: Started, listening on portal %d\n",

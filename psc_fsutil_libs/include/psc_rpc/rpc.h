@@ -27,80 +27,80 @@
 #include "psc_util/thread.h"
 #include "psc_util/waitq.h"
 
-#define PSCRPC_MD_OPTIONS 0
-#define BULK_GET_SOURCE    0
-#define BULK_PUT_SINK      1
-#define BULK_GET_SINK      2
-#define BULK_PUT_SOURCE    3
+#define PSCRPC_MD_OPTIONS	0
+#define BULK_GET_SOURCE		0
+#define BULK_PUT_SINK		1
+#define BULK_GET_SINK		2
+#define BULK_PUT_SOURCE		3
 
-#define PSC_RPC_MSG_REQUEST 4711
-#define PSC_RPC_MSG_ERR     4712
-#define PSC_RPC_MSG_REPLY   4713
+#define PSC_RPC_MSG_REQUEST	4711
+#define PSC_RPC_MSG_ERR		4712
+#define PSC_RPC_MSG_REPLY	4713
 
-#define PSCRPC_MSG_MAGIC    0x0BD00BD0
+#define PSCRPC_MSG_MAGIC	0x0BD00BD0
 #if !CATAMOUNT_CLIENT
-#define PSCRPC_MSG_VERSION  0x00000003
+#define PSCRPC_MSG_VERSION	0x00000003
 #else
-#define PSCRPC_MSG_VERSION  0x00000004
+#define PSCRPC_MSG_VERSION	0x00000004
 #endif
 
-#define ZOBD_FREE(ptr, size) PSCFREE(ptr)
-#define ZOBD_ALLOC(ptr, size) ((ptr) = PSCALLOC(size))
+#define ZOBD_FREE(ptr, size)	PSCFREE(ptr)
+#define ZOBD_ALLOC(ptr, size)	((ptr) = PSCALLOC(size))
 
 #ifndef PAGE_SIZE
-#define PAGE_SIZE               4096
+#define PAGE_SIZE		4096
 #endif
 
-#define PSCRPC_MAX_BRW_SIZE     LNET_MTU
-#define PSCRPC_MAX_BRW_PAGES    (PSCRPC_MAX_BRW_SIZE/PAGE_SIZE)
-#define CURRENT_SECONDS         time(NULL)
-#define PSC_SERVER   0xff /* differentiate client and server for ni init */
-#define PSC_CLIENT   0x0f
-#define PSC_SVR_PID  54321
-#define PSC_NIDSTR_SIZE 32
-#define ZOBD_TIMEOUT 60
+#define PSCRPC_MAX_BRW_SIZE	LNET_MTU
+#define PSCRPC_MAX_BRW_PAGES	(PSCRPC_MAX_BRW_SIZE/PAGE_SIZE)
+#define CURRENT_SECONDS		time(NULL)
+#define PSC_SERVER		0xff	/* differentiate client and server for ni init */
+#define PSC_CLIENT		0x0f
+#define PSC_SVR_PID		54321
+#define PSC_NIDSTR_SIZE		32
+#define ZOBD_TIMEOUT		60
 
-extern lnet_handle_eq_t pscrpc_eq_h;
-extern struct psclist_head pscrpc_wait_callbacks;
+extern lnet_handle_eq_t		pscrpc_eq_h;
+extern struct psclist_head	pscrpc_wait_callbacks;
 
-struct psc_handle {
-	uint64_t cookie;
+struct pscrpc_handle {
+	uint64_t		cookie;
 };
 #define DEAD_HANDLE_MAGIC 0xdeadbeefcafebabeULL
 
 struct l_wait_info {
-	time_t lwi_timeout;
-	long   lwi_interval;
-	int  (*lwi_on_timeout)(void *);
-	void (*lwi_on_signal)(void *);
-	void  *lwi_cb_data;
+	time_t			  lwi_timeout;
+	long			  lwi_interval;
+	int			(*lwi_on_timeout)(void *);
+	void			(*lwi_on_signal)(void *);
+	void			 *lwi_cb_data;
 };
 
 struct pscrpc_wait_callback {
-	struct psclist_head    llwc_list;
-	int               (*llwc_fn)(void *arg);
-	void               *llwc_arg;
+	struct psclist_head	  llwc_lentry;
+	int			(*llwc_fn)(void *arg);
+	void			 *llwc_arg;
 };
 
 enum psc_rq_phase {
-	ZRQ_PHASE_NEW         = 0xebc0de00,
-	ZRQ_PHASE_RPC         = 0xebc0de01,
-	ZRQ_PHASE_BULK        = 0xebc0de02,
-	ZRQ_PHASE_INTERPRET   = 0xebc0de03,
-	ZRQ_PHASE_COMPLETE    = 0xebc0de04,
+	ZRQ_PHASE_NEW		= 0xebc0de00,
+	ZRQ_PHASE_RPC		= 0xebc0de01,
+	ZRQ_PHASE_BULK		= 0xebc0de02,
+	ZRQ_PHASE_INTERPRET	= 0xebc0de03,
+	ZRQ_PHASE_COMPLETE	= 0xebc0de04,
 };
 
 enum psc_imp_state {
-	PSC_IMP_CLOSED       = 1,
-	PSC_IMP_NEW          = 2,
-	PSC_IMP_DISCON       = 3,
-	PSC_IMP_CONNECTING   = 4,
-	PSC_IMP_REPLAY       = 5,
-	PSC_IMP_REPLAY_LOCKS = 6,
-	PSC_IMP_REPLAY_WAIT  = 7,
-	PSC_IMP_RECOVER      = 8,
-	PSC_IMP_FULL         = 9,
-	PSC_IMP_EVICTED      = 10
+	PSC_IMP_CLOSED		= 1,
+	PSC_IMP_NEW		= 2,
+	PSC_IMP_DISCON		= 3,
+	PSC_IMP_CONNECTING	= 4,
+	PSC_IMP_REPLAY		= 5,
+	PSC_IMP_REPLAY_LOCKS	= 6,
+	PSC_IMP_REPLAY_WAIT	= 7,
+	PSC_IMP_RECOVER		= 8,
+	PSC_IMP_FULL		= 9,
+	PSC_IMP_EVICTED		= 10
 };
 
 struct psc_uuid {
@@ -109,32 +109,32 @@ struct psc_uuid {
 };
 
 struct pscrpc_cb_id {
-	void   (*cbid_fn)(lnet_event_t *ev);    /* specific callback fn */
-	void    *cbid_arg;                      /* additional arg */
+	void	(*cbid_fn)(lnet_event_t *ev);	/* specific callback fn */
+	void	 *cbid_arg;			/* additional arg */
 };
 
 struct pscrpc_export {
 	psc_spinlock_t		  exp_lock;
-	struct psc_handle         exp_handle;
-	atomic_t                  exp_refcount;
-	atomic_t                  exp_rpc_count;
+	struct pscrpc_handle	  exp_handle;
+	atomic_t		  exp_refcount;
+	atomic_t		  exp_rpc_count;
 	struct pscrpc_connection *exp_connection;
-	int                       exp_failed;
+	int			  exp_failed;
 	void			(*exp_hldropf)(void *);
 	void			 *exp_private; /* app-specific data */
-	//struct psclist_head       exp_outstanding_replies;
+//	struct psclist_head       exp_outstanding_replies;
 };
 
 struct pscrpc_import;
 
 struct pscrpc_connection {
-	struct psclist_head   c_link;
-	lnet_nid_t            c_self;
-	lnet_process_id_t     c_peer;
-	struct psc_uuid       c_remote_uuid;
-	atomic_t              c_refcount;
+	struct psclist_head	c_link;
+	lnet_nid_t		c_self;
+	lnet_process_id_t	c_peer;
+	struct psc_uuid		c_remote_uuid;
+	atomic_t		c_refcount;
 	union {
-		struct pscrpc_export *cu_exp;  /* meaningful only on server */
+		struct pscrpc_export *cu_exp;		/* meaningful only on server */
 		struct pscrpc_import *cu_imp;
 	} c_u;
 #define c_exp c_u.cu_exp
@@ -142,23 +142,21 @@ struct pscrpc_connection {
 };
 
 struct pscrpc_client {
-	u32                   cli_request_portal;
-	u32                   cli_reply_portal;
-	char                 *cli_name;
+	u32			 cli_request_portal;
+	u32			 cli_reply_portal;
+	char			*cli_name;
 };
 
 struct pscrpc_request_pool {
-	psc_spinlock_t          prp_lock;
-	struct psclist_head prp_req_list;    /* list of request structs */
-	int                 prp_rq_size;
-	void (*prp_populate)(struct pscrpc_request_pool *, int);
+	psc_spinlock_t		  prp_lock;
+	struct psclist_head	  prp_req_list;		/* list of request structs */
+	int			  prp_rq_size;
+	void			(*prp_populate)(struct pscrpc_request_pool *, int);
 };
 
 struct pscrpc_import {
 	struct pscrpc_connection *imp_connection;
 	struct pscrpc_client     *imp_client;
-	struct psclist_head       imp_list;
-	struct psclist_head       imp_conn_list;
 	struct psclist_head       imp_sending_list;  /* in-flight? */
 	struct psclist_head       imp_uncomitted;    /* post send  */
 	struct psclist_head       imp_rpcsets;       /* list of sets */
@@ -170,7 +168,7 @@ struct pscrpc_import {
 	int                       imp_conn_cnt;
 	int                       imp_max_retries;
 	enum psc_imp_state        imp_state;
-	struct psc_handle         imp_remote_handle;
+	struct pscrpc_handle      imp_remote_handle;
 	u64                       imp_last_replay_transno;
 	u64                       imp_last_transno_checked; /* optimize */
 	u64                       imp_peer_committed_transno;
@@ -184,11 +182,11 @@ struct pscrpc_import {
 		                  imp_igntimeout:1,
 		                  imp_failed:1;
 #if 0
-	unsigned int              imp_invalid:1, imp_replayable:1,
-		imp_dlm_fake:1, imp_server_timeout:1,
+	unsigned int
+		imp_dlm_fake:1,
 		imp_initial_recov:1, imp_initial_recov_bk:1,
-		imp_force_verify:1, imp_pingable:1,
-		imp_resend_replay:1, imp_deactive:1;
+		imp_pingable:1,
+		imp_resend_replay:1
 #endif
 };
 
@@ -199,20 +197,16 @@ struct pscrpc_async_args {
 	 * a pointer to it here.  The pointer_arg ensures this struct is at
 	 * least big enough for that. */
 	u64      space[2];
-	void      *pointer_arg[5];
+	void    *pointer_arg[5];
 };
 
 struct pscrpc_request_set;
 typedef int (*set_interpreter_func)(struct pscrpc_request_set *, void *, int);
 
 struct pscrpc_request_set {
-	struct psclist_head  set_list;         /* associate with import */
 	struct psclist_head  set_requests;
-	psc_spinlock_t       set_new_req_lock;
-	struct psclist_head  set_new_requests;
 	int                  set_remaining;
 	struct psc_waitq     set_waitq;        /* I block here          */
-	struct psc_waitq    *set_wakeup_ptr;   /* Others wait here..    */
 	set_interpreter_func set_interpret;    /* callback function     */
 	void                *set_arg;          /* callback pointer      */
 	psc_spinlock_t       set_lock;
@@ -223,6 +217,8 @@ struct pscrpc_request_set {
 #endif
 };
 
+/* set flags */
+#define PSCRPC_SETF_CHECKING	(1 << 0)
 
 struct pscrpc_bulk_desc {
 	unsigned int              bd_success:1;    /* completed successfully */
@@ -248,7 +244,7 @@ struct pscrpc_bulk_desc {
 };
 
 struct psc_msg {
-	struct psc_handle handle;
+	struct pscrpc_handle handle;
 	u32 magic;
 	u32 type;
 	u32 version;
@@ -267,41 +263,48 @@ struct pscrpc_reply_state;
 struct pscrpc_request_buffer_desc;
 struct pscrpc_nbrequests;
 
-struct rpc_peer_qlen {
+struct pscrpc_peer_qlen {
 	atomic_t		 qlen;
 	lnet_process_id_t	 id;
 	struct psc_hashent	 hentry;
 };
 
 struct pscrpc_request {
-	int rq_type;
-	int rq_status;
-	int rq_retry;
-	int rq_timeout;         /* time to wait for reply (seconds) */
-	int rq_request_portal;
-	int rq_reply_portal;
-	int rq_nob_received;    /* client-side # reply bytes received */
-	int rq_reqlen;
-	int rq_replen;
-	int rq_import_generation;
-	time_t rq_sent;
-	psc_spinlock_t rq_lock;
-	u64 rq_transno;
-	u64 rq_xid;
-	u64 rq_history_seq;
-	unsigned int rq_intr:1, rq_replied:1, rq_err:1, rq_timedout:1,
-		     rq_resend:1, rq_restart:1, rq_replay:1, rq_no_resend:1,
-		     rq_waiting:1, rq_receiving_reply:1, rq_no_delay:1,
-		     rq_net_err:1;
-	atomic_t rq_refcount; /* client-side refcnt for SENT race */
-	atomic_t rq_retries;  /* count retries */
-	lnet_process_id_t rq_peer;
-	lnet_nid_t        rq_self;
+	int			rq_type;
+	int			rq_status;
+	int			rq_retry;
+	int			rq_timeout;         /* time to wait for reply (seconds) */
+	int			rq_request_portal;
+	int			rq_reply_portal;
+	int			rq_nob_received;    /* client-side # reply bytes received */
+	int			rq_reqlen;
+	int			rq_replen;
+	int			rq_import_generation;
+	time_t			rq_sent;
+	psc_spinlock_t		rq_lock;
+	u64			rq_transno;
+	u64			rq_xid;
+	u64			rq_history_seq;
+	unsigned int		rq_intr:1,
+				rq_replied:1,
+				rq_err:1,
+				rq_timedout:1,
+				rq_resend:1,
+				rq_restart:1,
+				rq_replay:1,
+				rq_no_resend:1,
+				rq_waiting:1,
+				rq_receiving_reply:1,
+				rq_no_delay:1,
+				rq_net_err:1;
+	atomic_t		rq_refcount; /* client-side refcnt for SENT race */
+	atomic_t		rq_retries;  /* count retries */
+	lnet_process_id_t	rq_peer;
+	lnet_nid_t		rq_self;
 	enum   psc_rq_phase         rq_phase; /* one of RQ_PHASE_* */
 	enum   psc_imp_state        rq_send_state;
 	struct psclist_head         rq_list_entry;
 	struct psclist_head         rq_set_chain_lentry;
-	struct psclist_head         rq_list_set;   /* for request set */
 	struct psclist_head         rq_history_lentry;
 	struct pscrpc_import       *rq_import;     /* client side */
 	struct pscrpc_request_pool *rq_pool;
@@ -328,7 +331,7 @@ struct pscrpc_request {
 	struct timeval              rq_arrival_time; /* request arrival time */
 	struct pscrpc_reply_state  *rq_reply_state;  /* separated reply state */
 	struct pscrpc_request_buffer_desc *rq_rqbd;  /* incoming req  buffer*/
-	struct rpc_peer_qlen	   *rq_peer_qlen;
+	struct pscrpc_peer_qlen	   *rq_peer_qlen;
 };
 
 /* Each service installs its own request handler */
@@ -517,6 +520,7 @@ int	 pscrpc_check_set(struct pscrpc_request_set *, int);
 int	 pscrpc_set_finalize(struct pscrpc_request_set *, int, int);
 int	 pscrpc_set_wait(struct pscrpc_request_set *);
 void	 pscrpc_set_destroy(struct pscrpc_request_set *);
+void	 pscrpc_set_lock(struct pscrpc_request_set *);
 
 static inline int
 pscrpc_bulk_active(struct pscrpc_bulk_desc *desc)

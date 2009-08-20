@@ -95,7 +95,7 @@ nbrequest_reap(struct pscrpc_nbreqset *nbs) {
 	if (!nreaped)
 		RETURN(0);
 
-	spinlock(&set->set_new_req_lock);
+	pscrpc_set_lock(set);
 
 	psclist_for_each_safe(i, j, &set->set_requests) {
 		nchecked++;
@@ -128,7 +128,7 @@ nbrequest_reap(struct pscrpc_nbreqset *nbs) {
 			pscrpc_req_finished(req);
 		}
 	}
-	freelock(&set->set_new_req_lock);
+	freelock(&set->set_lock);
 	psc_dbg("checked %d requests", nchecked);
 	RETURN(nreaped);
 }

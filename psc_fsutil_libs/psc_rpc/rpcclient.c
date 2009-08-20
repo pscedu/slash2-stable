@@ -5,10 +5,14 @@
 #include <inttypes.h>
 #include <stdlib.h>
 
+#include "psc_ds/list.h"
 #include "psc_rpc/export.h"
 #include "psc_rpc/rpc.h"
 #include "psc_rpc/rpclog.h"
 #include "psc_util/alloc.h"
+#include "psc_util/atomic.h"
+#include "psc_util/spinlock.h"
+#include "psc_util/waitq.h"
 
 static u64 pscrpc_last_xid = 0;
 static psc_spinlock_t pscrpc_last_xid_lock = LOCK_INITIALIZER;
@@ -61,7 +65,6 @@ struct pscrpc_import *new_import(void)
 	atomic_set(&imp->imp_refcount, 2);
 	atomic_set(&imp->imp_inflight, 0);
 	//atomic_set(&imp->imp_replay_inflight, 0);
-	INIT_PSCLIST_HEAD(&imp->imp_conn_list);
 	//INIT_PSCLIST_HEAD(&imp->imp_handle.h_link);
 	//class_handle_hash(&imp->imp_handle, import_handle_addref);
 
@@ -331,11 +334,19 @@ pscrpc_prep_set(void)
 	INIT_PSCLIST_HEAD(&set->set_requests);
 	psc_waitq_init(&set->set_waitq);
 	set->set_remaining = 0;
-	LOCK_INIT(&set->set_new_req_lock);
 	LOCK_INIT(&set->set_lock);
-	INIT_PSCLIST_HEAD(&set->set_new_requests);
 
 	RETURN(set);
+}
+
+void
+pscrpc_set_lock(struct pscrpc_request_set *set)
+{
+	spinlock(&set->set_lock);
+	while (set->set_flags & PSCRPC_SETF_CHECKING) {
+		psc_waitq_wait(&set->set_waitq, &set->set_lock);
+		spinlock(&set->set_lock);
+	}
 }
 
 /* lock so many callers can add things, the context that owns the set
@@ -344,14 +355,13 @@ void
 pscrpc_set_add_new_req(struct pscrpc_request_set *set,
 		       struct pscrpc_request    *req)
 {
-	spinlock(&set->set_new_req_lock);
+	pscrpc_set_lock(set);
 	/* The set takes over the caller's request reference */
-	//psclist_xadd_tail(&req->rq_set_chain_lentry, &set->set_new_requests);
 	psclist_xadd_tail(&req->rq_set_chain_lentry, &set->set_requests);
 	req->rq_set = set;
 	set->set_remaining++;
 	atomic_inc(&req->rq_import->imp_inflight);
-	freelock(&set->set_new_req_lock);
+	freelock(&set->set_lock);
 }
 
 /**
@@ -450,7 +460,9 @@ static int pscrpc_send_new_req_locked(struct pscrpc_request *req)
 	RETURN(0);
 }
 
-int pscrpc_push_req(struct pscrpc_request *req) {
+int
+pscrpc_push_req(struct pscrpc_request *req)
+{
 	spinlock(&req->rq_lock);
 	if (req->rq_phase == ZRQ_PHASE_NEW)
 		/* pscrpc_send_new_req_locked() free's the lock.
@@ -467,8 +479,8 @@ int pscrpc_push_req(struct pscrpc_request *req) {
 	}
 }
 
-
-static int pscrpc_check_reply(struct pscrpc_request *req)
+static int
+pscrpc_check_reply(struct pscrpc_request *req)
 {
 	int rc = 0;
 	ENTRY;
@@ -881,12 +893,15 @@ int pscrpc_check_set(struct pscrpc_request_set *set, int check_allsent)
 	ENTRY;
 
 	spinlock(&set->set_lock);
-	psc_assert(!set->set_flags);
-	set->set_flags = 1;
+	psc_assert((set->set_flags & PSCRPC_SETF_CHECKING) == 0);
+	set->set_flags |= PSCRPC_SETF_CHECKING;
 	freelock(&set->set_lock);
 
 	if (set->set_remaining == 0) {
-		set->set_flags = 0;
+		spinlock(&set->set_lock);
+		set->set_flags &= ~PSCRPC_SETF_CHECKING;
+		psc_waitq_wakeall(&set->set_waitq);
+		freelock(&set->set_lock);
 		RETURN(1);
 	}
 
@@ -928,7 +943,8 @@ int pscrpc_check_set(struct pscrpc_request_set *set, int check_allsent)
 			pscrpc_expire_one_request(req);
 
 			/* NTBS: make sure net errors get flagged as error cases */
-			if(!req->rq_err) req->rq_err = 1;
+			if (!req->rq_err)
+				req->rq_err = 1;
 		}
 
 		if (req->rq_err) {
@@ -1076,7 +1092,7 @@ int pscrpc_check_set(struct pscrpc_request_set *set, int check_allsent)
 
 		req->rq_phase = ZRQ_PHASE_INTERPRET;
 
-	interpret:
+ interpret:
 		psc_assert(req->rq_phase == ZRQ_PHASE_INTERPRET);
 		psc_assert(!req->rq_receiving_reply);
 
@@ -1100,7 +1116,8 @@ int pscrpc_check_set(struct pscrpc_request_set *set, int check_allsent)
 	}
 
 	spinlock(&set->set_lock);
-	set->set_flags = 0;
+	set->set_flags &= ~PSCRPC_SETF_CHECKING;
+	psc_waitq_wakeall(&set->set_waitq);
 	freelock(&set->set_lock);
 
 	/* If we hit an error, we want to recover promptly. */
@@ -1280,7 +1297,7 @@ int pscrpc_set_next_timeout(struct pscrpc_request_set *set)
 	RETURN(timeout);
 }
 
- void pscrpc_mark_interrupted(struct pscrpc_request *req)
+void pscrpc_mark_interrupted(struct pscrpc_request *req)
 {
 	spinlock(&req->rq_lock);
 	req->rq_intr = 1;
@@ -1434,7 +1451,6 @@ int pscrpc_set_wait(struct pscrpc_request_set *set)
 	RETURN(rc);
 }
 
-
 /**
  * pscrpc_set_finalize - call set_wait or check_set depending on blocking mode.  If the set has completed then free it.
  * @set: the set.
@@ -1448,7 +1464,7 @@ pscrpc_set_finalize(struct pscrpc_request_set *set, int block, int destroy)
 	int rc;
 
 	if (block) {
-	set_wait:
+ set_wait:
 		rc = pscrpc_set_wait(set);
 		if (rc) {
 			/* ??? set imp_failed here ???
@@ -1525,7 +1541,7 @@ void pscrpc_free_committed(struct pscrpc_import *imp)
 
 		DEBUG_REQ(D_HA, req, "committing (last_committed %"PRIu64")",
 			  imp->imp_peer_committed_transno);
-	free_req:
+ free_req:
 		if (req->rq_commit_cb != NULL)
 			req->rq_commit_cb(req);
 		psclist_del_init(&req->rq_replay_list);

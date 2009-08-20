@@ -52,7 +52,7 @@ void request_out_callback(lnet_event_t *ev)
 void
 pscrpc_bump_peer_qlen(void *arg)
 {
-	struct rpc_peer_qlen *pq = arg;
+	struct pscrpc_peer_qlen *pq = arg;
 
 	atomic_inc(&pq->qlen);
 }
@@ -159,12 +159,12 @@ void request_in_callback(lnet_event_t *ev)
 
 	/* count the RPC request queue length for this peer if enabled */
 	if (service->srv_count_peer_qlens) {
-		struct rpc_peer_qlen *pq;
+		struct pscrpc_peer_qlen *pq;
 
 		pq = psc_hashtbl_search(&service->srv_peer_qlentab,
 		    &req->rq_peer, pscrpc_bump_peer_qlen, req->rq_peer.nid);
 		if (pq == NULL) {
-			struct rpc_peer_qlen *tpq;
+			struct pscrpc_peer_qlen *tpq;
 			struct psc_hashbkt *b;
 
 			tpq = PSCALLOC(sizeof(*tpq));
@@ -504,7 +504,7 @@ pscrpc_wait_event (int timeout)
 		/* Give all registered callbacks a bite at the cherry */
 		psclist_for_each(tmp, &pscrpc_wait_callbacks) {
 			llwc = psclist_entry(tmp, struct pscrpc_wait_callback,
-					     llwc_list);
+					     llwc_lentry);
 
 			if (llwc->llwc_fn(llwc->llwc_arg))
 				found_something = 1;
