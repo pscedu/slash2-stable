@@ -43,7 +43,7 @@ struct hash_table {
 
 struct hash_entry {
 	struct psclist_head	  hentry_lentry;/* Entry list pointers */
-	u64			 *hentry_id;	/* Pointer to the hash element id */
+	const u64		 *hentry_id;	/* Pointer to the hash element id */
 	void			 *private;	/* pointer to private data */
 };
 
@@ -117,7 +117,7 @@ void add_hash_entry(const struct hash_table *, struct hash_entry *);
 void add_hash_entry_str(const struct hash_table *, struct hash_entry_str *);
 void hash_table_printstats(const struct hash_table *);
 void hash_table_stats(const struct hash_table *, int *, int *, int *, int *);
-void init_hash_entry(struct hash_entry *, u64 *, void *);
+void init_hash_entry(struct hash_entry *, const u64 *, void *);
 void init_hash_entry_str(struct hash_entry_str *, const char *, void *);
 void init_hash_table(struct hash_table *, int, const char *, ...);
 void spinlock_hash_bucket(const struct hash_table *, u64);

@@ -58,7 +58,7 @@ init_hash_table(struct hash_table *t, int size, const char *fmt, ...)
  * @private: application data to be stored in the hash
  */
 void
-init_hash_entry(struct hash_entry *hentry, u64 *id, void *private)
+init_hash_entry(struct hash_entry *hentry, const u64 *id, void *private)
 {
 	memset(hentry, 0, sizeof(*hentry));
 	hentry->hentry_id = id;
