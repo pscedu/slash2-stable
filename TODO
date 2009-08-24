@@ -48,6 +48,9 @@ pfl
 - make .depend target dependent on headers so it can rebuild itself
   and remove from the `clean' target
 - fix endianess in RPCs
+- add API for PSC mem failure, so we can plug into the memhandling
+  paths when asprintf() fails instead of centralizing the logic over
+  malloc().
 
 zest
 - test parity reconstruction service by rebuilding
