@@ -528,7 +528,7 @@ struct libcfs_debug_msg_data {
     }
 
 #define libcfs_debug_vmsg2(cdls, ss, mask, file,		\
-	    fn, line, fmt1, args, fmt2, ...)			\
+	    func, line, fmt1, args, fmt2, ...)			\
 	do {							\
 		int ___lvl;					\
 								\
@@ -559,18 +559,20 @@ struct libcfs_debug_msg_data {
 		}						\
 								\
 		if (fmt1)					\
-			psclogv((file), (fn), (line), PSS_LNET,	\
-			    ___lvl, 0, (fmt1), (args));		\
+			psclogv((file), (func), (line),		\
+			    PSS_LNET, ___lvl, 0, (fmt1),	\
+			    (args));				\
 		if (fmt2)					\
-			psclog((file), (fn), (line), PSS_LNET,	\
-			    ___lvl, 0, (fmt2), ## __VA_ARGS__);	\
-	} while (0)									
+			psclog((file), (func), (line),		\
+			     PSS_LNET, ___lvl, 0, (fmt2),	\
+			     ## __VA_ARGS__);			\
+	} while (0)
 
-#define libcfs_debug_vmsg(cdls, subsys, mask, file, fn, line, format, args)   \
-    libcfs_debug_vmsg2(cdls, subsys, mask, file, fn,line,format,args,NULL,NULL)
+#define libcfs_debug_vmsg(cdls, subsys, mask, file, func, line, format, args)   \
+    libcfs_debug_vmsg2(cdls, subsys, mask, file, func, line, format, args, NULL, NULL)
 
-#define libcfs_debug_msg(cdls, subsys, mask, file, fn, line, format, a...)    \
-    libcfs_debug_vmsg2(cdls, subsys, mask, file, fn,line,NULL,NULL,format, ##a)
+#define libcfs_debug_msg(cdls, subsys, mask, file, func, line, format, a...)    \
+    libcfs_debug_vmsg2(cdls, subsys, mask, file, func, line, NULL, NULL, format, ##a)
 
 #define cdebug_va(cdls, mask, file, func, line, fmt, args)      do {          \
         CHECK_STACK();                                                        \
