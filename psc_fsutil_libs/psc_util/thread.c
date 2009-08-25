@@ -175,7 +175,7 @@ _pscthr_finish_init(struct psc_thread *thr)
 	if (sigaction(SIGUSR2, &sa, NULL) == -1)
 		psc_fatal("sigaction");
 
-	pll_add(&psc_threads, thr);
+	pll_addtail(&psc_threads, thr);
 }
 
 /**
