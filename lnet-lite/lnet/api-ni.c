@@ -703,7 +703,7 @@ lnet_prepare(lnet_pid_t requested_pid)
                 //the_lnet.ln_pid = getpid();
         }
 
-        CERROR("my pid=%u\n", the_lnet.ln_pid);
+        CDEBUG(D_OTHER, "my pid=%u\n", the_lnet.ln_pid);
 #endif
 
         rc = lnet_descriptor_setup();
