@@ -85,6 +85,7 @@ struct access_reply {
 		} arpdu_open;
 		struct {
 			char fn[PATH_MAX];
+			ssize_t len;
 		} arpdu_readlink;
 		struct {
 			struct stat stb;
@@ -96,6 +97,7 @@ struct access_reply {
 #define arp_data_open		arp_datau.arpdu_open
 #define arp_data_readlink	arp_datau.arpdu_readlink
 #define arp_data_stat		arp_datau.arpdu_stat
+#define arp_data_lstat		arp_datau.arpdu_stat
 #define arp_data_statfs		arp_datau.arpdu_statfs
 };
 
@@ -187,6 +189,9 @@ acsvc_svrmain(int s)
 		case ACSOP_LINK:
 			rc = link(arq.arq_fn, arq.arq_data_link.to);
 			break;
+		case ACSOP_LSTAT:
+			rc = lstat(arq.arq_fn, &arp.arp_data_lstat.stb);
+			break;
 		case ACSOP_MKDIR:
 			rc = mkdir(arq.arq_fn, arq.arq_data_mkdir.mode);
 			break;
@@ -213,6 +218,8 @@ acsvc_svrmain(int s)
 			rc = readlink(arq.arq_fn,
 			    arp.arp_data_readlink.fn,
 			    sizeof(arp.arp_data_readlink.fn));
+			if (rc != -1)
+				arp.arp_data_readlink.len = rc;
 			break;
 		case ACSOP_RENAME:
 			rc = rename(arq.arq_fn, arq.arq_data_rename.to);
@@ -442,6 +449,8 @@ access_fsop(int op, uid_t uid, gid_t gid, const char *fn, ...)
 		    PATH_MAX) >= PATH_MAX)
 			rc = ENAMETOOLONG;
 		break;
+	case ACSOP_LSTAT:
+		break;
 	case ACSOP_MKDIR:
 		arq->arq_data_mkdir.mode = va_arg(ap, mode_t);
 		break;
@@ -453,6 +462,8 @@ access_fsop(int op, uid_t uid, gid_t gid, const char *fn, ...)
 		arq->arq_data_open.flags = va_arg(ap, int);
 		if (arq->arq_data_open.flags & O_CREAT)
 			arq->arq_data_open.mode = va_arg(ap, mode_t);
+		break;
+	case ACSOP_READLINK:
 		break;
 	case ACSOP_RENAME:
 		if (strlcpy(arq->arq_data_rename.to, va_arg(ap, char *),
@@ -504,22 +515,32 @@ access_fsop(int op, uid_t uid, gid_t gid, const char *fn, ...)
 				errno = rc;
 				rc = -1;
 			} else {
+				size_t len, rlen, tlen;
 				char *buf;
-				size_t len;
 
 				buf = va_arg(ap, char *);
 				len = va_arg(ap, size_t);
-				if (len > PATH_MAX) {
-					errno = EINVAL;
-					rc = -1;
-				} else {
+				if (len > 1) {
+					rlen = apr->apr_rep.arp_data_readlink.len;
+
+					/* do copy confined to smallest bufsiz */
+					tlen = MIN(rlen, len);
 					memcpy(buf,
-					    apr->apr_rep.arp_data_readlink.fn,
-					    len - 1);
-					buf[len - 1] = '\0';
+					    apr->apr_rep.arp_data_readlink.fn, tlen);
+
+					/* if extra space for NUL, append */
+					if (tlen < len && tlen > 0)
+						buf[tlen] = '\0';
+					/* no extra space, overwrite last char */
+					else if (tlen > 0)
+						buf[tlen - 1] = '\0';
+					else
+						buf[0] = '\0';
+					rc = tlen;
 				}
 			}
 			break;
+		case ACSOP_LSTAT:
 		case ACSOP_STAT:
 			rc = apr->apr_rep.arp_rc;
 			if (rc) {
