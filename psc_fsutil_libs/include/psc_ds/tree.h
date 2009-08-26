@@ -77,6 +77,9 @@ struct {								\
 #define SPLAY_ROOT(head)		(head)->sph_root
 #define SPLAY_EMPTY(head)		(SPLAY_ROOT(head) == NULL)
 
+#define SPLAY_ENTRY_DISJOINT(elm, field)				\
+	(SPLAY_LEFT(elm, field) == NULL && SPLAY_RIGHT(elm, field) == NULL)
+
 /* SPLAY_ROTATE_{LEFT,RIGHT} expect that tmp hold SPLAY_{RIGHT,LEFT} */
 #define SPLAY_ROTATE_RIGHT(head, tmp, field) do {			\
 	SPLAY_LEFT((head)->sph_root, field) = SPLAY_RIGHT(tmp, field);	\
