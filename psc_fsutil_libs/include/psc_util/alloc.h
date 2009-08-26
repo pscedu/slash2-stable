@@ -18,10 +18,15 @@
 	do {								\
 		psc_traces(PSS_MEMALLOC, "freeing %p", (p));		\
 		free(p);						\
+		(p) = NULL;						\
 	} while (0)
 
 /* Free without logging */
-#define psc_free_nl(p) free(p)
+#define psc_free_nl(p)							\
+	do {								\
+		free(p);						\
+		(p) = NULL;						\
+	} while (0)
 
 #define psc_alloc(sz, fl)						\
 	({								\
