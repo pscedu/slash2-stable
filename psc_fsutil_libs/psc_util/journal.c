@@ -140,17 +140,20 @@ pjournal_logwrite(struct psc_journal_xidhndl *xh, int type, void *data,
 	 *  slot.  By checking it, we're trying to prevent the journal from
 	 *  over writing slots belonging to open transactions.
 	 */
-	t = psclist_first_entry(&pj->pj_pndgxids, struct psc_journal_xidhndl,
-				pjx_lentry);
-
-	psc_trace("pj(%p) tail@slot(%d) my@slot(%d)",
-		  pj, t->pjx_tailslot, slot);
-
-	if (t->pjx_tailslot == slot) {
-		psc_warnx("pj(%p) blocking on slot(%d) availability - "
-			  "owned by xid (%p)", pj, slot, t);
-		psc_waitq_wait(&pj->pj_waitq, &pj->pj_lock);
-		goto retry;
+	if (!psclist_empty(&pj->pj_pndgxids)) {
+	
+		t = psclist_first_entry(&pj->pj_pndgxids, struct psc_journal_xidhndl,
+					pjx_lentry);
+		
+		psc_trace("pj(%p) tail@slot(%d) my@slot(%d)",
+			  pj, t->pjx_tailslot, slot);
+		
+		if (t->pjx_tailslot == slot) {
+			psc_warnx("pj(%p) blocking on slot(%d) availability - "
+				  "owned by xid (%p)", pj, slot, t);
+			psc_waitq_wait(&pj->pj_waitq, &pj->pj_lock);
+			goto retry;
+		}
 	}
 
 	if (atomic_dec_and_test(&xh->pjx_ref) &&
