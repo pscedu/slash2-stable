@@ -121,8 +121,8 @@ multilock_cond_destroy(struct multilock_cond *mlc)
 		if (pthread_mutex_trylock(&ml->ml_mutex)) {
 			if (count++ == 300000)
 				psc_errorx("mlcond %s failed to lock his "
-				    "multilocks - possible deadlock",
-				    mlc->mlc_name);
+				    "multilocks - possible deadlock if this "
+				    "message repeats", mlc->mlc_name);
 			pthread_mutex_unlock(&mlc->mlc_mutex);
 			sched_yield();
 			goto restart;
@@ -173,8 +173,8 @@ multilock_cond_wakeup(struct multilock_cond *mlc)
 	if (multilock_cond_trylockall(mlc)) {
 		if (count++ == 300000)
 			psc_errorx("mlcond %s failed to lock his "
-			    "multilocks - possible deadlock",
-			    mlc->mlc_name);
+			    "multilocks - possible deadlock if this "
+			    "message repeats", mlc->mlc_name);
 		pthread_mutex_unlock(&mlc->mlc_mutex);
 		sched_yield();
 		goto restart;
