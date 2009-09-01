@@ -980,10 +980,14 @@ psc_ctlparam_pool(int fd, struct psc_ctlmsghdr *mh,
 	if (nlevels == 1) {
 		PLL_LOCK(&psc_pools);
 		psclist_for_each_entry(m,
-		    &psc_pools.pll_listhd, ppm_all_lentry)
-			if (!(rc = psc_ctlparam_pool_handle(fd,
-			    mh, pcp, levels, nlevels, m, val)))
+		    &psc_pools.pll_listhd, ppm_all_lentry) {
+			POOL_LOCK(m);
+			rc = psc_ctlparam_pool_handle(fd, mh, pcp,
+			    levels, nlevels, m, val);
+			POOL_UNLOCK(m);
+			if (!rc)
 				break;
+		}
 		PLL_ULOCK(&psc_pools);
 	} else {
 		m = psc_pool_lookup(levels[1]);
@@ -992,6 +996,7 @@ psc_ctlparam_pool(int fd, struct psc_ctlmsghdr *mh,
 			    "invalid pool: %s", levels[1]));
 		rc = psc_ctlparam_pool_handle(fd, mh,
 		    pcp, levels, nlevels, m, val);
+		POOL_UNLOCK(m);
 	}
 	return (rc);
 }
