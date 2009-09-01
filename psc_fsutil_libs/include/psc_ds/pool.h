@@ -102,7 +102,7 @@ struct psc_poolmgr {
 #define POOL_TRYLOCK(m)		trylock(&(m)->ppm_lg.plg_lock)
 #define POOL_UNLOCK(m)		freelock(&(m)->ppm_lg.plg_lock)
 #define POOL_RLOCK(m)		reqlock(&(m)->ppm_lg.plg_lock)
-#define POOL_URLOCK(m, l)	ureqlock(&(m)->ppm_lg.plg_lock, (l))
+#define POOL_URLOCK(m, lk)	ureqlock(&(m)->ppm_lg.plg_lock, (lk))
 
 /* Sanity check */
 #define POOL_CHECK(m)							\
@@ -145,6 +145,7 @@ void	_psc_poolmaster_init(struct psc_poolmaster *, size_t, ptrdiff_t,
 		void (*)(void *), int (*)(struct psc_poolmgr *),
 		void *, const char *, ...);
 
+int	 psc_pool_gettotal(struct psc_poolmgr *);
 int	 psc_pool_grow(struct psc_poolmgr *, int);
 int	_psc_pool_shrink(struct psc_poolmgr *, int, int);
 int	 psc_pool_settotal(struct psc_poolmgr *, int);

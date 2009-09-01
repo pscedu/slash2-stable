@@ -548,6 +548,23 @@ psc_pool_return(struct psc_poolmgr *m, void *p)
 }
 
 /*
+ * psc_pool_gettotal - obtain the number of objects in a pool
+ *	circulation (note: this is not the number of free objects
+ *	available for use).
+ * @m: pool to query.
+ */
+int
+psc_pool_gettotal(struct psc_poolmgr *m)
+{
+	int locked, n;
+
+	locked = POOL_RLOCK(m);
+	n = m->ppm_total;
+	POOL_URLOCK(m, locked);
+	return (n);
+}
+
+/*
  * psc_pool_lookup - find a pool by name.
  * @name: name of pool to find.
  */
@@ -558,8 +575,10 @@ psc_pool_lookup(const char *name)
 
 	PLL_LOCK(&psc_pools);
 	psclist_for_each_entry(m, &psc_pools.pll_listhd, ppm_all_lentry)
-		if (strcmp(name, m->ppm_lg.plg_name) == 0)
+		if (strcmp(name, m->ppm_lg.plg_name) == 0) {
+			POOL_LOCK(m);
 			break;
+		}
 	PLL_ULOCK(&psc_pools);
 	return (m);
 }
