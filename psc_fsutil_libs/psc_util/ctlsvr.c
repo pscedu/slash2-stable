@@ -803,7 +803,7 @@ psc_ctlparam_pause(int fd, struct psc_ctlmsghdr *mh,
     struct psc_ctlmsg_param *pcp, char **levels, int nlevels)
 {
 	struct psc_thread *thr;
-	int rc, set, pause;
+	int rc, set, pauseval;
 	char *s;
 	long l;
 
@@ -812,7 +812,7 @@ psc_ctlparam_pause(int fd, struct psc_ctlmsghdr *mh,
 
 	levels[0] = "pause";
 
-	pause = 0; /* gcc */
+	pauseval = 0; /* gcc */
 
 	set = (mh->mh_type == PCMT_SETPARAM);
 
@@ -828,14 +828,14 @@ psc_ctlparam_pause(int fd, struct psc_ctlmsghdr *mh,
 			return (psc_ctlsenderr(fd, mh,
 			    "invalid pause value: %s",
 			    pcp->pcp_field));
-		pause = (int)l;
+		pauseval = (int)l;
 	}
 
 	rc = 1;
 	PLL_LOCK(&psc_threads);
 	PSC_CTL_FOREACH_THREAD(thr, pcp->pcp_thrname, &psc_threads.pll_listhd) {
 		if (set)
-			pscthr_setpause(thr, pause);
+			pscthr_setpause(thr, pauseval);
 		else if (!(rc = psc_ctlmsg_param_send(fd, mh, pcp,
 		    thr->pscthr_name, levels, 1,
 		    (thr->pscthr_flags & PTF_PAUSED) ? "1" : "0")))
