@@ -610,10 +610,10 @@ static inline void cfs_slow_warning(cfs_time_t now, __unusedx int seconds, char 
  */
 static inline void cfs_fs_timeval(struct timeval *tv)
 {
-        cfs_fs_time_t time;
+        cfs_fs_time_t tm;
 
-        cfs_fs_time_current(&time);
-        cfs_fs_time_usec(&time, tv);
+        cfs_fs_time_current(&tm);
+        cfs_fs_time_usec(&tm, tv);
 }
 
 /*
