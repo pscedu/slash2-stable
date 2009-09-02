@@ -355,6 +355,7 @@ pscthr_setloglevel(int ssid, int newlevel)
 	struct psc_thread *thr;
 	int i;
 
+	thr = pscthr_get();
 	if (newlevel >= PNLOGLEVELS || newlevel < 0)
 		psc_fatalx("log level out of bounds (%d)", newlevel);
 
@@ -384,15 +385,15 @@ pscthr_getname(void)
 /*
  * pscthr_setpause - set thread pause state.
  * @thr: the thread.
- * @pause: whether to pause or unpause the thread.
+ * @pauseval: whether to pause or unpause the thread.
  */
 void
-pscthr_setpause(struct psc_thread *thr, int pause)
+pscthr_setpause(struct psc_thread *thr, int pauseval)
 {
 	spinlock(&thr->pscthr_lock);
-	if (pause ^ (thr->pscthr_flags & PTF_PAUSED))
+	if (pauseval ^ (thr->pscthr_flags & PTF_PAUSED))
 		pthread_kill(thr->pscthr_pthread,
-		    pause ? SIGUSR1 : SIGUSR2);
+		    pauseval ? SIGUSR1 : SIGUSR2);
 	freelock(&thr->pscthr_lock);
 }
 
