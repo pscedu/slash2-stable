@@ -29,7 +29,7 @@ struct psc_journal_hdr {
 	uint32_t       pjh_readahead;
 	uint32_t       pjh_unused;
 	uint64_t       pjh_start_off;
-	uint64_t       pjh_magic;	
+	uint64_t       pjh_magic;
 };
 
 
@@ -61,7 +61,7 @@ struct psc_journal_walker {
 #define PJET_SLOT_ANY	(~0U)
 
 /*
- * psc_journal_enthdr - journal entry header.  
+ * psc_journal_enthdr - journal entry header.
  * @pje_magic: validity check.
  * @pje_genmarker: field to detect log wrapping.
  * @pje_type: app-specific log entry type.
@@ -69,8 +69,8 @@ struct psc_journal_walker {
  * @pje_sid: xid sub-id.
  * @pje_pad: alignment purposes.
  * @pje_data: application data.
- * Notes: at some point we may want to make this into a footer which has 
- *    a crc field.  
+ * Notes: at some point we may want to make this into a footer which has
+ *    a crc field.
  */
 struct psc_journal_enthdr {
 	uint64_t		pje_magic;
@@ -88,10 +88,10 @@ struct psc_journal_enthdr {
 /*
  * psc_journal_xidhndl - journal transaction id handle.
  * @pjx_xid: the transaction id.
- * @pjx_sid: the xid sub-operation id. 
+ * @pjx_sid: the xid sub-operation id.
  * @pjx_tailslot: the address of our starting / oldest slot.
  * @pjx_flags: app-specific log entry bits.
- * @pjx_lentry: open xid handles are chained in journal structure. 
+ * @pjx_lentry: open xid handles are chained in journal structure.
  * @pjx_lock: serialize.
  * @pjx_pj: backpointer to our journal.
  * @pjx_ref: count accessors.
@@ -115,31 +115,26 @@ struct psc_journal_xidhndl {
 #define PJET_XADD       (2<<30)
 #define PJET_XEND	(2<<31)		/* transaction ended */
 
-struct psc_journal * 
+struct psc_journal *
 pjournal_load(const char *);
-
-int
-pjournal_dump(const char *);
 
 struct psc_journal_xidhndl *
 pjournal_nextxid(struct psc_journal *);
 
-int	 pjournal_xstart(struct psc_journal *, int, size_t);
-int	 pjournal_xend(struct psc_journal_xidhndl *, int, void *, size_t);
-int	 pjournal_clearlog(struct psc_journal *, int);
 void	*pjournal_alloclog(struct psc_journal *);
-int	 pjournal_logwritex(struct psc_journal *, int, int, void *, size_t);
-int	 pjournal_logwrite(struct psc_journal_xidhndl *, int, void *, size_t);
+int	 pjournal_clearlog(struct psc_journal *, int);
+int	 pjournal_dump(const char *);
+void	 pjournal_format(const char *, uint32_t, uint32_t, uint32_t, uint32_t);
 int	 pjournal_logread(struct psc_journal *, uint32_t, void *);
+int	 pjournal_logwrite(struct psc_journal_xidhndl *, int, void *, size_t);
+int	 pjournal_logwritex(struct psc_journal *, int, int, void *, size_t);
+int	 pjournal_xadd(struct psc_journal_xidhndl *, int, void *, size_t);
+int	 pjournal_xend(struct psc_journal_xidhndl *, int, void *, size_t);
+void	 pjournal_xidhndl_free(struct psc_journal_xidhndl *);
+int	 pjournal_xstart(struct psc_journal *, int, size_t);
 int	 pjournal_walk(struct psc_journal *, struct psc_journal_walker *,
 	    struct psc_journal_enthdr *);
-int
-pjournal_xadd(struct psc_journal_xidhndl *xh, int type, void *data, size_t);
 
-void 
-pjournal_xidhndl_free(struct psc_journal_xidhndl *xh);
-
-void 
-pjournal_format(const char *, uint32_t, uint32_t, uint32_t, uint32_t);
+#define pjournal_xidhndl_free(xh)	PSCFREE(xh)
 
 #endif /* _PFL_JOURNAL_H_ */
