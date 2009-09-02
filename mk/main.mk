@@ -52,7 +52,7 @@ PSCRPC_SRCS+=		${PFL_BASE}/psc_rpc/rpcclient.c
 PSCRPC_SRCS+=		${PFL_BASE}/psc_rpc/service.c
 
 CFLAGS+=		${INCLUDES} ${DEFINES}
-TARGET?=	        ${PROG} ${LIBRARY}
+TARGET?=		${PROG} ${LIBRARY}
 OBJDIR=			${CURDIR}/obj
 
 vpath %.y $(sort $(dir $(filter %.y,${SRCS})))
@@ -88,7 +88,8 @@ ${OBJDIR}/$(notdir %.c) : %.y | ${OBJDIR}
 
 ${OBJDIR}/$(notdir %.o) : %.c | ${OBJDIR}
 	${CC} ${CFLAGS} ${$(subst .,_,$(subst -,_,$(subst /,_,$(subst			\
-	    ../,,$(subst //,/,$<)))))_CFLAGS} -c $(realpath $<) -o $@
+	    ../,,$(subst //,/,$(subst $(realpath					\
+	    ${ROOTDIR})/,,$(realpath $<)))))))_CFLAGS} -c $(realpath $<) -o $@
 
 ${PROG}: ${OBJS}
 	${CC} -o $@ ${OBJS} ${LDFLAGS}
