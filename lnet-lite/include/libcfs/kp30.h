@@ -526,7 +526,7 @@ static inline int libcfs_ioctl_pack(struct libcfs_ioctl_data *data, char **pbuf,
                                     int max)
 {
         char *ptr;
-        struct libcfs_ioctl_data *overlay;
+        struct libcfs_ioctl_data *t_overlay;
         data->ioc_len = libcfs_ioctl_packlen(data);
         data->ioc_version = LIBCFS_IOCTL_VERSION;
 
@@ -537,15 +537,15 @@ static inline int libcfs_ioctl_pack(struct libcfs_ioctl_data *data, char **pbuf,
         }
         if (!*pbuf)
                 return 1;
-        overlay = (struct libcfs_ioctl_data *)*pbuf;
+        t_overlay = (struct libcfs_ioctl_data *)*pbuf;
         memcpy(*pbuf, data, sizeof(*data));
 
-        ptr = overlay->ioc_bulk;
+        ptr = t_overlay->ioc_bulk;
         if (data->ioc_inlbuf1)
                 LOGL(data->ioc_inlbuf1, data->ioc_inllen1, ptr);
         if (data->ioc_inlbuf2)
                 LOGL(data->ioc_inlbuf2, data->ioc_inllen2, ptr);
-        if (libcfs_ioctl_is_invalid(overlay))
+        if (libcfs_ioctl_is_invalid(t_overlay))
                 return 1;
 
         return 0;
