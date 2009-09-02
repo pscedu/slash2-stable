@@ -620,11 +620,11 @@ static inline void cfs_fs_timeval(struct timeval *tv)
  * return valid time-out based on user supplied one. Currently we only check
  * that time-out is not shorted than allowed.
  */
-static inline cfs_duration_t cfs_timeout_cap(cfs_duration_t timeout)
+static inline cfs_duration_t cfs_timeout_cap(cfs_duration_t tmout)
 {
-        if (timeout < CFS_TICK)
-                timeout = CFS_TICK;
-        return timeout;
+        if (tmout < CFS_TICK)
+                tmout = CFS_TICK;
+        return tmout;
 }
 
 /*
