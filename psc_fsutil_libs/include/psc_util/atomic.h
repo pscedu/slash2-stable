@@ -43,6 +43,20 @@ typedef struct { volatile __s64 value; } psc_atomic64_t;
 #define psc_atomic64_set(v, i)			(psc_atomic64_access(v) = (i))
 
 static __inline int
+ia64_atomic_add(int i, atomic_t *v)
+{
+	__s32 old, new;
+	CMPXCHG_BUGCHECK_DECL
+
+	do {
+		CMPXCHG_BUGCHECK(v);
+		old = atomic_read(v);
+		new = old + i;
+	} while (ia64_cmpxchg(acq, v, old, new, sizeof(atomic_t)) != old);
+	return new;
+}
+
+static __inline int
 ia64_atomic16_add(__s16 i, psc_atomic16_t *v)
 {
 	__s16 old, new;
@@ -57,18 +71,18 @@ ia64_atomic16_add(__s16 i, psc_atomic16_t *v)
 }
 
 static __inline int
-ia64_atomic_add(int i, atomic_t *v)
+ia64_atomic32_add(__s32 i, psc_atomic32_t *v)
 {
 	__s32 old, new;
 	CMPXCHG_BUGCHECK_DECL
 
 	do {
 		CMPXCHG_BUGCHECK(v);
-		old = atomic_read(v);
+		old = psc_atomic32_read(v);
 		new = old + i;
-	} while (ia64_cmpxchg(acq, v, old, new, sizeof(atomic_t)) != old);
+	} while (ia64_cmpxchg(acq, v, old, new, sizeof(psc_atomic32_t)) != old);
 	return new;
-}
+} 
 
 static __inline int
 ia64_atomic64_add(__s64 i, psc_atomic64_t *v)
@@ -113,6 +127,20 @@ ia64_atomic16_sub(__s16 i, psc_atomic16_t *v)
 } 
 
 static __inline int
+ia64_atomic32_sub(__s32 i, psc_atomic32_t *v)
+{
+	__s32 old, new;
+	CMPXCHG_BUGCHECK_DECL
+
+	do {
+		CMPXCHG_BUGCHECK(v);
+		old = psc_atomic32_read(v);
+		new = old - i;
+	} while (ia64_cmpxchg(acq, v, old, new, sizeof(psc_atomic32_t)) != old);
+	return new;
+} 
+
+static __inline int
 ia64_atomic64_sub(__s64 i, psc_atomic64_t *v)
 {
 	__s64 old, new;
@@ -151,7 +179,7 @@ ia64_atomic64_sub(__s64 i, psc_atomic64_t *v)
 	     || (__ia64_aar_i == -1) || (__ia64_aar_i ==  -4)		\
 	     || (__ia64_aar_i == -8) || (__ia64_aar_i == -16)))		\
 		? ia64_fetch_and_add(__ia64_aar_i, &(v)->value)		\
-		: ia64_atomic_add(__ia64_aar_i, (v));			\
+		: ia64_atomic32_add(__ia64_aar_i, (v));			\
 })
 
 #define psc_atomic64_add_return(v, i)					\
@@ -192,7 +220,7 @@ ia64_atomic64_sub(__s64 i, psc_atomic64_t *v)
 	     || (__ia64_asr_i ==  -1) || (__ia64_asr_i ==  -4)		\
 	     || (__ia64_asr_i ==  -8) || (__ia64_asr_i == -16)))	\
 		? ia64_fetch_and_add(-__ia64_asr_i, &(v)->value)	\
-		: ia64_atomic_sub(__ia64_asr_i, (v));			\
+		: ia64_atomic32_sub(__ia64_asr_i, (v));			\
 })
 
 #define psc_atomic64_sub_return(v, i)					\
