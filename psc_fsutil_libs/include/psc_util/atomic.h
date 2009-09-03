@@ -32,15 +32,29 @@ typedef struct { volatile __s64 value; } psc_atomic64_t;
 #define psc_atomic32_access(v)			((v)->value)
 #define psc_atomic64_access(v)			((v)->value)
 
-#define atomic_read(v)				((const)(v)->value)
-#define psc_atomic16_read(v)			((const)psc_atomic16_access(v))
-#define psc_atomic32_read(v)			((const)psc_atomic32_access(v))
-#define psc_atomic64_read(v)			((const)psc_atomic32_access(v))
+#define atomic_read(v)				((const int)(v)->value)
+#define psc_atomic16_read(v)			((const uint16_t)psc_atomic16_access(v))
+#define psc_atomic32_read(v)			((const uint32_t)psc_atomic32_access(v))
+#define psc_atomic64_read(v)			((const uint64_t)psc_atomic32_access(v))
 
 #define atomic_set(v, i)			(((v)->value) = (i))
 #define psc_atomic16_set(v, i)			(psc_atomic16_access(v) = (i))
 #define psc_atomic32_set(v, i)			(psc_atomic32_access(v) = (i))
 #define psc_atomic64_set(v, i)			(psc_atomic64_access(v) = (i))
+
+static __inline int
+ia64_atomic16_add(__s16 i, psc_atomic16_t *v)
+{
+	__s16 old, new;
+	CMPXCHG_BUGCHECK_DECL
+
+	do {
+		CMPXCHG_BUGCHECK(v);
+		old = psc_atomic16_read(v);
+		new = old + i;
+	} while (ia64_cmpxchg(acq, v, old, new, sizeof(psc_atomic16_t)) != old);
+	return new;
+}
 
 static __inline int
 ia64_atomic_add(int i, atomic_t *v)
@@ -85,6 +99,20 @@ ia64_atomic_sub(int i, atomic_t *v)
 }
 
 static __inline int
+ia64_atomic16_sub(__s16 i, psc_atomic16_t *v)
+{
+	__s16 old, new;
+	CMPXCHG_BUGCHECK_DECL
+
+	do {
+		CMPXCHG_BUGCHECK(v);
+		old = psc_atomic16_read(v);
+		new = old - i;
+	} while (ia64_cmpxchg(acq, v, old, new, sizeof(psc_atomic16_t)) != old);
+	return new;
+} 
+
+static __inline int
 ia64_atomic64_sub(__s64 i, psc_atomic64_t *v)
 {
 	__s64 old, new;
@@ -110,6 +138,8 @@ ia64_atomic64_sub(__s64 i, psc_atomic64_t *v)
 		? ia64_fetch_and_add(__ia64_aar_i, &(v)->value)		\
 		: ia64_atomic_add(__ia64_aar_i, (v));			\
 })
+
+#define psc_atomic16_add_return(v, i) ia64_atomic16_add((i), (v))
 
 #define psc_atomic32_add_return(v, i)					\
 ({									\
@@ -150,6 +180,8 @@ ia64_atomic64_sub(__s64 i, psc_atomic64_t *v)
 		: ia64_atomic_sub(__ia64_asr_i, (v));			\
 })
 
+#define psc_atomic16_sub_return(v, i)	ia64_atomic16_sub((i), (v))
+
 #define psc_atomic32_sub_return(v, i)					\
 ({									\
 	int __ia64_asr_i = (i);						\
@@ -177,6 +209,7 @@ ia64_atomic64_sub(__s64 i, psc_atomic64_t *v)
 })
 
 #define atomic_dec_and_test(v)			(atomic_sub_return(1, (v)) == 0)
+#define psc_atomic16_dec_test_zero(v)		(psc_atomic16_sub_return((v), 1) == 0)
 #define psc_atomic32_dec_test_zero(v)		(psc_atomic32_sub_return((v), 1) == 0)
 #define psc_atomic64_dec_test_zero(v)		(psc_atomic64_sub_return((v), 1) == 0)
 
@@ -184,6 +217,11 @@ ia64_atomic64_sub(__s64 i, psc_atomic64_t *v)
 #define atomic_sub(i, v)			atomic_sub_return((i), (v))
 #define atomic_inc(v)				atomic_add(1, (v))
 #define atomic_dec(v)				atomic_sub(1, (v))
+
+#define psc_atomic16_add(v, i)			psc_atomic16_add_return((v), (i))
+#define psc_atomic16_sub(v, i)			psc_atomic16_sub_return((v), (i))
+#define psc_atomic16_inc(v)			psc_atomic16_add((v), 1)
+#define psc_atomic16_dec(v)			psc_atomic16_sub((v), 1)
 
 #define psc_atomic32_add(v, i)			psc_atomic32_add_return((v), (i))
 #define psc_atomic32_sub(v, i)			psc_atomic32_sub_return((v), (i))
