@@ -44,12 +44,14 @@ main(int argc, char *argv[])
 		psc_fatal("strdup");
 	if (dirname(dir) == NULL)
 		psc_fatal("dirname");
-	snprintf(fn, sizeof(fn), "%s/%s", dir, __FILE__);
+	snprintf(fn, sizeof(fn), "%s%s%s",
+	    __FILE__[0] == '/' ? "" : dir,
+	    __FILE__[0] == '/' ? "" : "/", __FILE__);
 
 	fd = access_fsop(ACSOP_OPEN, geteuid(), getegid(), fn,
 	    O_RDONLY);
 	if (fd == -1)
-		psc_fatal("access_fsop");
+		psc_fatal("access_fsop: %s", fn);
 	close(fd);
 	exit(0);
 }
