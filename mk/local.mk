@@ -20,6 +20,7 @@ YFLAGS+=	-d
 
 CFLAGS+=	-Wall -W
 CFLAGS+=	-g
+#CFLAGS+=	-ggdb3
 #CFLAGS+=	-Wunused -Wuninitialized -O
 #CFLAGS+=	-Wshadow
 DEFINES+=	-D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64 -DYY_NO_UNPUT
@@ -61,8 +62,8 @@ ifneq ($(wildcard /opt/xt-pe),)
  DEFINES+=		-DHOST_NAME_MAX=MAXHOSTNAMELEN
 endif
 
-psc_fsutil_libs_psc_util_crc_c_CFLAGS=		-O2
-psc_fsutil_libs_psc_util_parity_c_CFLAGS=	-O2
+psc_fsutil_libs_psc_util_crc_c_CFLAGS=		-O2 -g0
+psc_fsutil_libs_psc_util_parity_c_CFLAGS=	-O2 -g0
 
 lnet_lite_ulnds_socklnd_conn_c_CFLAGS=		-DPSC_SUBSYS=PSS_LNET -Wno-shadow
 lnet_lite_ulnds_socklnd_handlers_c_CFLAGS=	-DPSC_SUBSYS=PSS_LNET -Wno-shadow
