@@ -139,14 +139,30 @@ const uint64_t psc_crc_table[256] = {
 	UINT64_C(0xD80C07CD676F8394), UINT64_C(0x9AFCE626CE85B507)
 };
 
-void /* __inline */
-psc_crc_calc(psc_crc_t *crcp, const void *data, int len)
+__inline void
+psc_crc_calc(psc_crc_t *cp, const void *data, int len)
 {
-	PSC_CRC_CALC(*crcp, data, len);
+	PSC_CRC_INIT(*cp);
+	psc_crc_add(cp, data, len);
+	PSC_CRC_FIN(*cp);
 }
 
-void /* __inline */
-psc_crc_add(psc_crc_t *crcp, const void *data, int len)
+/*
+ * psc_crc_add - Accumulate bytes into a CRC.
+ * @cp: pointer to an initialized CRC buffer.
+ * @data: data to perform CRC over.
+ * @len: amount of data.
+ */
+__inline void
+psc_crc_add(psc_crc_t *cp, const void *datap, int len)
 {
-	PSC_CRC_ADD(*crcp, data, len);
+	const uint8_t *data = datap;
+	uint64_t crc0 = *cp;
+	int idx;
+
+	while (len-- > 0) {
+		idx = ((int)(crc0 >> 56) ^ *data++) & 0xff;
+		crc0 = psc_crc_table[idx] ^ (crc0 << 8);
+	}
+	*cp = crc0;
 }

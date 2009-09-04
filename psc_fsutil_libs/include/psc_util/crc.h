@@ -1,7 +1,7 @@
 /* $Id$ */
 
-#ifndef __PFL_CRC_H__
-#define __PFL_CRC_H__
+#ifndef _PFL_CRC_H_
+#define _PFL_CRC_H_
 
 #include <stdint.h>
 
@@ -18,33 +18,11 @@
 /* Finish a CRC calculation */
 #define PSC_CRC_FIN(crc)	((crc) ^= UINT64_C(0xffffffffffffffff))
 
-/* Accumulate some (more) bytes into a CRC */
-#define PSC_CRC_ADD(crc, data, len)						\
-	do {									\
-		unsigned char *__data = (unsigned char *)(data);		\
-		uint64_t __crc0 = (crc);					\
-		uint32_t __len = (len);						\
-		int __idx;							\
-										\
-		while (__len-- > 0) {						\
-			__idx = ((int)(__crc0 >> 56) ^ *__data++) & 0xff;	\
-			__crc0 = psc_crc_table[__idx] ^ (__crc0 << 8);		\
-		}								\
-		crc = __crc0;							\
-	} while (0)
-
-#define PSC_CRC_CALC(crc, buf, len)						\
-	do {									\
-		PSC_CRC_INIT(crc);						\
-		PSC_CRC_ADD((crc), (buf), (len));				\
-		PSC_CRC_FIN(crc);						\
-	} while (0)
-
-void psc_crc_add(psc_crc_t *, const void *, int);
 void psc_crc_calc(psc_crc_t *, const void *, int);
+void psc_crc_add(psc_crc_t *, const void *, int);
 
 extern const uint64_t psc_crc_table[];
 
 #define PRI_PSC_CRC "%16"PRIx64
 
-#endif /* __PFL_CRC_H__ */
+#endif /* _PFL_CRC_H_ */
