@@ -383,10 +383,10 @@ extern int  lwt_snapshot (cycles_t *now, int *ncpu, int *total_size,
 #endif
 
 #if defined(HAVE_U64_LONG_LONG) || defined(CRAY_XT3)
-# define LPU64 "%Lu"
-# define LPD64 "%Ld"
-# define LPX64 "%#Lx"
-# define LPF64 "L"
+# define LPU64 "%llu"
+# define LPD64 "%lld"
+# define LPX64 "%#llx"
+# define LPF64 "ll"
 #else
 # define LPU64 "%lu"
 # define LPD64 "%ld"

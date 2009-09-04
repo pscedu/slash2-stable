@@ -502,7 +502,7 @@ pscrpc_server_handle_reply (struct pscrpc_service *svc)
 	if (nlocks == 0 && !been_handled) {
 		/* If we see this, we should already have seen the warning
 		 * in mds_steal_ack_locks()  */
-		CWARN("All locks stolen from rs %p x"LPD64".t"LPD64
+		CWARN("All locks stolen from rs %p x%"PRId64".t%"PRId64
 		      " o%d NID %s\n",
 		      rs,
 		      rs->rs_xid, rs->rs_transno,
