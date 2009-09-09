@@ -1,14 +1,27 @@
 /* $Id$ */
 
 #include <inttypes.h>
+#include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <unistd.h>
 
+#include "psc_util/alloc.h"
 #include "psc_util/assert.h"
 #include "psc_util/atomic.h"
 
+struct thr {
+	int pos;
+};
+
+pthread_barrier_t barrier;
 const char *progname;
+
+psc_atomic64_t v64 = PSC_ATOMIC64_INIT(100000000000ULL);
+psc_atomic32_t v32 = PSC_ATOMIC32_INIT(0);
+psc_atomic16_t v16 = PSC_ATOMIC16_INIT(0);
+atomic_t v = ATOMIC_INIT(10);
 
 #define CHECKV(prefix, op, v, newval)					\
 	if (prefix ## _read(v) != (newval))				\
@@ -37,6 +50,25 @@ const char *progname;
 		CHECKV(prefix, op, v, newval);				\
 	} while (0)
 
+void *
+startf(void *arg)
+{
+	struct thr *thr = arg;
+	int32_t ov, mask;
+	int i;
+
+	pthread_barrier_wait(&barrier);
+	for (i = 0; i < 1024 * 1024 * 10; i++) {
+		mask = 1 << (i % 4 + thr->pos * 4);
+		ov = psc_atomic32_setmask_retold(&v32, mask);
+		psc_assert((ov & mask) == 0);
+
+		ov = psc_atomic32_clearmask_retold(&v32, mask);
+		psc_assert(ov & mask);
+	}
+	return (NULL);
+}
+
 void
 usage(void)
 {
@@ -47,9 +79,9 @@ usage(void)
 int
 main(int argc, char *argv[])
 {
-	psc_atomic64_t v64 = PSC_ATOMIC64_INIT(100000000000ULL);
-	psc_atomic16_t v16 = PSC_ATOMIC16_INIT(0);
-	atomic_t v = ATOMIC_INIT(10);
+	struct thr *thr;
+	pthread_t pthrs[4];
+	int rc, i;
 
 	progname = argv[0];
 	if (getopt(argc, argv, "") != -1)
@@ -80,5 +112,20 @@ main(int argc, char *argv[])
 	TEST1(psc_atomic16, inc, &v16, 1);
 	TEST1V(psc_atomic16, dec_test_zero, &v16, 0, 1);
 
+	rc = pthread_barrier_init(&barrier, NULL, 4);
+	if (rc)
+		psc_fatalx("pthread_barrier_init: %s", strerror(rc));
+	for (i = 0; i < 4; i++) {
+		thr = PSCALLOC(sizeof(*thr));
+		thr->pos = i;
+		rc = pthread_create(&pthrs[i], NULL, startf, thr);
+		if (rc)
+			psc_fatalx("pthread_create: %s", strerror(rc));
+	}
+	for (i = 0; i < 4; i++) {
+		rc = pthread_join(pthrs[i], NULL);
+		if (rc)
+			psc_fatalx("pthread_join: %s", strerror(rc));
+	}
 	exit(0);
 }
