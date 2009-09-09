@@ -15,6 +15,17 @@ struct dynarray {
 
 #define DYNARRAY_INIT { 0, 0, NULL }
 
+/**
+ * dynarray_sort - Reorder elements of a dynarray.
+ * @da: dynamic array whose elements to sort.
+ * @sortf: which sorting algorithm to use.
+ * @cmpf: criteria for reordering items.
+ * Returns -1 on failure or zero on success.
+ */
+#define dynarray_sort(da, sortf, cmpf)				\
+	(sortf)((da)->da_items, (da)->da_pos,			\
+	    sizeof(*(da)->da_items), (cmpf))
+
 int	 dynarray_add(struct dynarray *, void *);
 int	 dynarray_add_ifdne(struct dynarray *, void *);
 int	 dynarray_ensurelen(struct dynarray *, int);
