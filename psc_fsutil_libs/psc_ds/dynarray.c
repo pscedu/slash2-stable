@@ -53,7 +53,7 @@ _dynarray_resize(struct dynarray *da, int n)
 
 /**
  * dynarray_ensurelen - If necessary, enlarge the allocation for a dynamic
- * 	array to fit the given number of elements.
+ *	array to fit the given number of elements.
  * @da: dynamic array to ensure.
  * @n: size.
  * Returns -1 on failure and zero on success.
@@ -204,10 +204,9 @@ dynarray_remove(struct dynarray *da, const void *item)
 }
 
 /**
- * dynarray_freeslack - Release
- * @da: dynamic array to remove from.
- * @item: item to remove.
- * Returns -1 on failure or zero on success.
+ * dynarray_freeslack - Release free space slots in an dynarray.
+ * @da: dynamic array to trim.
+ * Returns the size (# of item slots) the dynarray has decreased by.
  */
 int
 dynarray_freeslack(struct dynarray *da)
