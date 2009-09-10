@@ -54,6 +54,8 @@ struct psc_ctlmsg_stats {
 	uint32_t		pcst_u32_2;
 	uint32_t		pcst_u32_3;
 	uint32_t		pcst_u32_4;
+	int			pcst_id;
+	int			pcst_lwp;
 	char			pcst_thrname[PSC_THRNAME_MAX];
 };
 
@@ -116,6 +118,7 @@ struct psc_ctlmsg_pool {
 #define PCPL_NAME_ALL		"all"
 
 struct psc_ctlmsg_mlist {
+	long			 pcml_addr;
 	uint64_t		 pcml_nseen;
 	uint32_t		 pcml_size;
 	uint32_t		 pcml_waitors;

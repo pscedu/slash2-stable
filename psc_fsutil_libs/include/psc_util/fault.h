@@ -6,7 +6,14 @@
 #include "psc_ds/hash2.h"
 #include "psc_util/lock.h"
 
-#define PSC_FAULT_NAME_MAX	32
+/* list of fault points */
+
+#define	FOO				"foo"
+#define	BAR				"bar"
+#define	ZFSCK_CSGROUP_FAIL		"csfail"
+#define	ZREAD_CHECK_CRC_FAIL		"chkcrc"
+
+#define	PSC_FAULT_NAME_MAX		 32
 
 struct psc_fault {
 	psc_spinlock_t		pflt_lock;
@@ -28,11 +35,16 @@ struct psc_fault {
 #define	psc_fault_lock(pflt)	spinlock(&(pflt)->pflt_lock)
 #define	psc_fault_unlock(pflt)	freelock(&(pflt)->pflt_lock)
 
-struct psc_fault *
-	psc_fault_lookup(const char *);
-int	psc_fault_add(const char *);
-int	psc_fault_remove(const char *);
+struct	psc_fault	*psc_fault_lookup(const char *);
+int			 psc_fault_add(const char *);
+int			 psc_fault_remove(const char *);
+int			 psc_fault_register(const char *, int, int, int, int, int);
 
 extern struct psc_hashtbl psc_fault_table;
+
+void	psc_fault_init(void);
+void	psc_fault_here(const char *name, int *rc);
+
+void	psc_enter_debugger(char *);
 
 #endif /* _PFL_FAULT_H_ */

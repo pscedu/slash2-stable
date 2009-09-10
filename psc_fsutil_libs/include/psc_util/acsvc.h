@@ -26,4 +26,8 @@ enum {
 
 struct psc_thread *
 	acsvc_init(int, const char *, char **);
+#if USE_GDB_FORK_WORKAROUND
+struct psc_thread *
+	acsvc_init_zestiond(int);
+#endif
 int	access_fsop(int, uid_t, gid_t, const char *, ...);

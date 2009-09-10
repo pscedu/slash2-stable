@@ -18,6 +18,8 @@
 #include "psc_util/memnode.h"
 #include "psc_util/mlist.h"
 
+#define	PSC_POOLNAME_MAX	16
+
 struct psc_poolmgr;
 
 /*

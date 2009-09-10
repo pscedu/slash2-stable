@@ -34,6 +34,8 @@ __static struct vbitmap *psc_uniqthridmap;
 struct psc_lockedlist	psc_threads =
     PLL_INITIALIZER(&psc_threads, struct psc_thread, pscthr_lentry);
 
+atomic_t		psc_thread_ids;
+
 /**
  * pscthr_destroy - Thread destructor.
  * @arg: thread data.
@@ -311,6 +313,7 @@ _pscthr_init(int type, int flags, void *(*startf)(void *),
 		_pscthr_bind_memnode(thr);
 		_pscthr_finish_init(thr);
 	}
+	thr->pscthr_id = atomic_add_return(1, &psc_thread_ids);
 	return (thr);
 }
 
@@ -445,6 +448,8 @@ pscthr_setrun(struct psc_thread *thr, int run)
 	locked = reqlock(&thr->pscthr_lock);
 	if (run) {
 		thr->pscthr_flags |= PTF_RUN;
+		/* debugging only, but should be harmless otherwise */
+		thr->pscthr_flags |= PTF_READY;
 		psc_waitq_wakeall(&thr->pscthr_waitq);
 	} else
 		thr->pscthr_flags &= ~PTF_RUN;

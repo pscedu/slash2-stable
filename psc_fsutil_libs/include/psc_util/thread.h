@@ -13,7 +13,12 @@
 #include "psc_util/log.h"
 #include "psc_util/waitq.h"
 
-#define PSC_THRNAME_MAX	32	/* must be 8-byte aligned */
+#define PSC_THRNAME_MAX			32	/* must be 8-byte aligned */
+
+#define	PSC_THRNAME_ZIOTHR		10
+#define	PSC_THRNAME_ZPGENTHR		10
+#define	PSC_THRNAME_ZSYNCWTHR		10
+#define	PSC_THRNAME_ZSYNCQTHR		10
 
 struct psc_thread {
 	struct psclist_head	   pscthr_lentry;		/* list management */
@@ -44,6 +49,7 @@ struct psc_thread {
 	/* only used for thread initialization */
 	int			   pscthr_memnid;		/* ID of memnode */
 	size_t			   pscthr_privsiz;		/* size of app data */
+	int		   	   pscthr_id;			/* approximate gdb ID */
 };
 
 #define PTF_PAUSED	(1 << 0)	/* thread is frozen */

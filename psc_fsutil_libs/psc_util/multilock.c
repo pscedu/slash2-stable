@@ -354,8 +354,9 @@ multilock_wait(struct multilock *ml, void *datap, int usec)
 	nmlc = dynarray_len(&ml->ml_conds);
 	mlcv = dynarray_get(&ml->ml_conds);
 
-	if (nmlc == 0)
-		psc_fatalx("multilock has no conditions and will never wake up");
+	/* XXX what if all conditions are masked off */
+	if (nmlc == 0 && !usec)
+		psc_fatalx("A multilock with no conditions or timeout will never wake up");
 
 	for (j = 0; j < nmlc; j++) {
 		psc_pthread_mutex_lock(&mlcv[j]->mlc_mutex);
@@ -480,6 +481,10 @@ multilock_cond_nwaitors(struct multilock_cond *mlc)
 /*
  * multilock_enter_critsect - enter a critical section.
  * @ml: the multilock.
+ *
+ * Zhihui: If we check waker field in the multilock_wait
+ *         unconditionally and clear it after being woken
+ *         up, we might now need this enter/leave stuff.
  */
 void
 multilock_enter_critsect(struct multilock *ml)

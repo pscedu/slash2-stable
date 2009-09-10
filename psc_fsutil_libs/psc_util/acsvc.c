@@ -165,6 +165,12 @@ acsvc_svrmain(int s)
 		m.msg_iov = &iov;
 		m.msg_iovlen = 1;
 
+#if !USE_GDB_FORK_WORKAROUND
+		/*
+		 * Looks like that a client does send an open request
+		 * to us instead of doing it locally. So I have to do a
+		 * chown() afterwards to correct the uid/gid setting.
+		 */
 		if (arq.arq_uid != euid || arq.arq_gid != egid) {
 			if (seteuid(0) == -1)
 				psc_fatal("seteuid 0");
@@ -173,6 +179,7 @@ acsvc_svrmain(int s)
 			if (seteuid(arq.arq_uid) == -1)
 				psc_fatal("seteuid %d", arq.arq_uid);
 		}
+#endif
 
 		/* Invoke access operation. */
 		switch (arq.arq_op) {
@@ -213,6 +220,11 @@ acsvc_svrmain(int s)
 				c->cmsg_type = SCM_RIGHTS;
 				*(int *)CMSG_DATA(c) = fd;
 			}
+#if USE_GDB_FORK_WORKAROUND
+			if (fd != 1) {
+				chown(arq.arq_fn, arq.arq_uid, arq.arq_gid);
+			}
+#endif
 			break;
 		case ACSOP_READLINK:
 			rc = readlink(arq.arq_fn,
@@ -330,6 +342,31 @@ acsvc_climain(__unusedx void *arg)
 		psc_waitq_wakeall(&apr->apr_wq);
 	}
 }
+
+#if USE_GDB_FORK_WORKAROUND
+
+static int acsvc_fd_server;
+
+__static __dead void *
+acsvc_svrmain_zestiond(__unusedx void *arg)
+{
+	acsvc_svrmain(acsvc_fd_server);
+}
+
+struct psc_thread *
+acsvc_init_zestiond(int thrtype)
+{
+	int fds[2];
+	if (socketpair(AF_LOCAL, SOCK_STREAM, PF_UNSPEC, fds) == -1)
+		psc_fatal("socketpair");
+
+	acsvc_fd_server = fds[0];
+	acsvc_fd = fds[1];
+	pscthr_init(thrtype, 0, acsvc_svrmain_zestiond, NULL, 0, "acsvc");
+	return (pscthr_init(thrtype, 0, acsvc_climain, NULL, 0, "zacsthr"));
+}
+
+#endif
 
 struct psc_thread *
 acsvc_init(int thrtype, const char *name, char **av)

@@ -1,5 +1,7 @@
 /* $Id$ */
 
+#define	PSC_MLIST_NAME_MAX	16
+
 struct psc_ctlmsg_stats;
 struct psc_ctlmsghdr;
 
@@ -57,6 +59,9 @@ void  psc_ctl_packshow_faults(const char *);
 
 void *psc_ctlmsg_push(int, size_t);
 void  psc_ctlcli_main(const char *);
+
+int   psc_defthr_prhdr(void);
+void  psc_defthr_prdat(const struct psc_ctlmsg_stats *);
 
 int   psc_ctlthr_prhdr(void);
 void  psc_ctlthr_prdat(const struct psc_ctlmsg_stats *);

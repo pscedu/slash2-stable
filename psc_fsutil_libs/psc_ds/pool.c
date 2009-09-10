@@ -350,7 +350,7 @@ psc_pool_resize(struct psc_poolmgr *m)
  */
 void
 _psc_pool_reap(struct psc_poolset *s, struct psc_poolmaster *initiator,
-    size_t size)
+    __unusedx size_t size)
 {
 	struct psc_poolmgr *m, *culprit;
 	struct psc_poolmaster *p;

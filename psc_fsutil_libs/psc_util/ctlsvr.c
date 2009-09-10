@@ -82,7 +82,7 @@ psc_ctlmsg_sendv(int fd, const struct psc_ctlmsghdr *mh, const void *m)
 			sched_yield();
 			return (0);
 		}
-		psc_fatal("sendmsg");
+		psc_error("sendmsg failed with errno = %d", errno);
 	}
 	tsiz = sizeof(*mh) + mh->mh_size;
 	if ((size_t)n != tsiz)
@@ -161,6 +161,18 @@ psc_ctlsenderr(int fd, struct psc_ctlmsghdr *mh, const char *fmt, ...)
 }
 
 /*
+ * psc_defthr_stat - export control thread stats.
+ * @thr: thread begin queried.
+ * @pcst: thread stats control message to be filled in.
+ */
+void
+psc_defthr_stat(struct psc_thread *thr, struct psc_ctlmsg_stats *pcst)
+{
+	pcst->pcst_id       = thr->pscthr_id;
+	pcst->pcst_lwp      = thr->pscthr_thrid; 
+}
+
+/*
  * psc_ctlthr_stat - export control thread stats.
  * @thr: thread begin queried.
  * @pcst: thread stats control message to be filled in.
@@ -168,6 +180,8 @@ psc_ctlsenderr(int fd, struct psc_ctlmsghdr *mh, const char *fmt, ...)
 void
 psc_ctlthr_stat(struct psc_thread *thr, struct psc_ctlmsg_stats *pcst)
 {
+	pcst->pcst_id       = thr->pscthr_id;
+	pcst->pcst_lwp      = thr->pscthr_thrid; 
 	pcst->pcst_nclients = psc_ctlthr(thr)->pc_st_nclients;
 	pcst->pcst_nsent    = psc_ctlthr(thr)->pc_st_nsent;
 	pcst->pcst_nrecv    = psc_ctlthr(thr)->pc_st_nrecv;
@@ -206,9 +220,13 @@ int
 psc_ctlrep_getstats(int fd, struct psc_ctlmsghdr *mh, void *m)
 {
 	struct psc_ctlmsg_stats *pcst = m;
+	char			*thrname;
+	int			 rc;
 
-	return (psc_ctl_applythrop(fd, mh, m, pcst->pcst_thrname,
-	    psc_ctlmsg_stats_send));
+	thrname = strdup(pcst->pcst_thrname);
+	rc = psc_ctl_applythrop(fd, mh, m, thrname, psc_ctlmsg_stats_send);
+	free(thrname);
+	return (rc);
 }
 
 /*
@@ -1009,12 +1027,14 @@ psc_ctlparam_faults_handle(int fd, struct psc_ctlmsghdr *mh,
 	char nbuf[20];
 	int set;
 
+	levels[0] = "faults";
 	levels[1] = pflt->pflt_name;
 
 	set = (mh->mh_type == PCMT_SETPARAM);
 
 	if (nlevels < 3 || strcmp(levels[2], "active") == 0) {
-		if (nlevels == 3 && set) {
+		if (set) {
+			psc_assert(nlevels == 3);
 			if (pcp->pcp_flags & (PCPF_ADD | PCPF_SUB))
 				return (psc_ctlsenderr(fd, mh,
 				    "invalid operation"));
@@ -1032,7 +1052,8 @@ psc_ctlparam_faults_handle(int fd, struct psc_ctlmsghdr *mh,
 		}
 	}
 	if (nlevels < 3 || strcmp(levels[2], "delay") == 0) {
-		if (nlevels == 3 && set) {
+		if (set) {
+			psc_assert(nlevels == 3);
 			if (pcp->pcp_flags & PCPF_ADD)
 				pflt->pflt_delay += val;
 			else if (pcp->pcp_flags & PCPF_SUB)
@@ -1048,7 +1069,8 @@ psc_ctlparam_faults_handle(int fd, struct psc_ctlmsghdr *mh,
 		}
 	}
 	if (nlevels < 3 || strcmp(levels[2], "count") == 0) {
-		if (nlevels == 3 && set) {
+		if (set) {
+			psc_assert(nlevels == 3);
 			if (pcp->pcp_flags & PCPF_ADD)
 				pflt->pflt_count += val;
 			else if (pcp->pcp_flags & PCPF_SUB)
@@ -1064,7 +1086,8 @@ psc_ctlparam_faults_handle(int fd, struct psc_ctlmsghdr *mh,
 		}
 	}
 	if (nlevels < 3 || strcmp(levels[2], "begin") == 0) {
-		if (nlevels == 3 && set) {
+		if (set) {
+			psc_assert(nlevels == 3);
 			if (pcp->pcp_flags & PCPF_ADD)
 				pflt->pflt_begin += val;
 			else if (pcp->pcp_flags & PCPF_SUB)
@@ -1080,7 +1103,8 @@ psc_ctlparam_faults_handle(int fd, struct psc_ctlmsghdr *mh,
 		}
 	}
 	if (nlevels < 3 || strcmp(levels[2], "chance") == 0) {
-		if (nlevels == 3 && set) {
+		if (set) {
+			psc_assert(nlevels == 3);
 			if (pcp->pcp_flags & PCPF_ADD)
 				pflt->pflt_chance += val;
 			else if (pcp->pcp_flags & PCPF_SUB)
@@ -1096,7 +1120,8 @@ psc_ctlparam_faults_handle(int fd, struct psc_ctlmsghdr *mh,
 		}
 	}
 	if (nlevels < 3 || strcmp(levels[2], "retval") == 0) {
-		if (nlevels == 3 && set) {
+		if (set) {
+			psc_assert(nlevels == 3);
 			if (pcp->pcp_flags & PCPF_ADD)
 				pflt->pflt_retval += val;
 			else if (pcp->pcp_flags & PCPF_SUB)
@@ -1112,7 +1137,8 @@ psc_ctlparam_faults_handle(int fd, struct psc_ctlmsghdr *mh,
 		}
 	}
 	if (nlevels < 3 || strcmp(levels[2], "hits") == 0) {
-		if (nlevels == 3 && set) {
+		if (set) {
+			psc_assert(nlevels == 3);
 			if (pcp->pcp_flags & PCPF_ADD)
 				pflt->pflt_hits += val;
 			else if (pcp->pcp_flags & PCPF_SUB)
@@ -1128,7 +1154,8 @@ psc_ctlparam_faults_handle(int fd, struct psc_ctlmsghdr *mh,
 		}
 	}
 	if (nlevels < 3 || strcmp(levels[2], "unhits") == 0) {
-		if (nlevels == 3 && set) {
+		if (set) {
+			psc_assert(nlevels == 3);
 			if (pcp->pcp_flags & PCPF_ADD)
 				pflt->pflt_unhits += val;
 			else if (pcp->pcp_flags & PCPF_SUB)
@@ -1163,8 +1190,8 @@ psc_ctlparam_faults(int fd, struct psc_ctlmsghdr *mh,
 		return (psc_ctlsenderr(fd, mh, "invalid thread field"));
 
 	rc = 1;
-	levels[0] = "faults";
 	val = 0; /* gcc */
+	psc_assert(strcmp(levels[0], "faults") == 0);
 
 	/* sanity check field name */
 	if (nlevels == 3 &&
@@ -1177,7 +1204,7 @@ psc_ctlparam_faults(int fd, struct psc_ctlmsghdr *mh,
 	    strcmp(levels[2], "unhits") != 0 &&
 	    strcmp(levels[2], "retval") != 0)
 		return (psc_ctlsenderr(fd, mh,
-		    "invalid fault point field: %s", levels[2]));
+		    "invalid faults field: %s", levels[2]));
 
 	set = (mh->mh_type == PCMT_SETPARAM);
 
@@ -1190,7 +1217,7 @@ psc_ctlparam_faults(int fd, struct psc_ctlmsghdr *mh,
 					    "fault point already exists"));
 				else if (rc)
 					return (psc_ctlsenderr(fd, mh,
-					    "error adding fault point: %s",
+					    "error adding fault: %s",
 					    strerror(rc)));
 			} else if (pcp->pcp_flags & PCPF_SUB) {
 				rc = psc_fault_remove(pcp->pcp_value);
@@ -1199,7 +1226,7 @@ psc_ctlparam_faults(int fd, struct psc_ctlmsghdr *mh,
 					    "fault point does not exist"));
 				else if (rc)
 					return (psc_ctlsenderr(fd, mh,
-					    "error removing fault point: %s",
+					    "error removing fault: %s",
 					    strerror(rc)));
 			} else
 				return (psc_ctlsenderr(fd, mh,
@@ -1217,7 +1244,7 @@ psc_ctlparam_faults(int fd, struct psc_ctlmsghdr *mh,
 			return (psc_ctlsenderr(fd, mh,
 			    "invalid fault point %s value: %s",
 			    levels[2], pcp->pcp_value));
-	}
+	} 
 
 	if (nlevels == 1) {
 		PSC_HASHTBL_LOCK(&psc_fault_table);
@@ -1232,15 +1259,13 @@ psc_ctlparam_faults(int fd, struct psc_ctlmsghdr *mh,
 					break;
 			}
 			psc_hashbkt_unlock(b);
-			if (!rc)
-				break;
 		}
 		PSC_HASHTBL_ULOCK(&psc_fault_table);
 	} else {
 		pflt = psc_fault_lookup(levels[1]);
 		if (pflt == NULL)
 			return (psc_ctlsenderr(fd, mh,
-			    "unknown fault point: %s", levels[1]));
+			    "invalid fault point: %s", levels[1]));
 		rc = psc_ctlparam_faults_handle(fd, mh,
 		    pcp, levels, nlevels, pflt, val);
 		psc_fault_unlock(pflt);
@@ -1518,6 +1543,7 @@ psc_ctlrep_getmlist(int fd, struct psc_ctlmsghdr *mh, void *m)
 			snprintf(pcml->pcml_name,
 			    sizeof(pcml->pcml_name),
 			    "%s", pml->pml_name);
+			pcml->pcml_addr = (long) pml;
 			pcml->pcml_size = pml->pml_size;
 			pcml->pcml_nseen = pml->pml_nseen;
 			pcml->pcml_waitors =
@@ -1559,6 +1585,26 @@ psc_ctlhnd_cmd(int fd, struct psc_ctlmsghdr *mh, void *m)
 	return (rc);
 }
 
+static 
+int psc_ctl_matchthr(const char *thr1, const char *thr2)
+{
+	int len;
+
+	if (strcasecmp(thr1, thr2) == 0)
+		return (0);
+	
+	len = strlen(thr1);
+	if (strncasecmp(thr1, thr2, len) != 0)
+		return (1);
+	
+	while (thr2[len] != '\0') {
+		if (!isdigit(thr2[len]))
+			return (1);
+		len++;
+	}
+	return (0);
+}
+
 /*
  * psc_ctl_applythrop - invoke an operation on all applicable threads.
  * @fd: client socket descriptor.
@@ -1571,8 +1617,9 @@ int
 psc_ctl_applythrop(int fd, struct psc_ctlmsghdr *mh, void *m, const char *thrname,
     int (*cbf)(int, struct psc_ctlmsghdr *, void *, struct psc_thread *))
 {
-	struct psc_thread *thr;
-	int rc;
+	int			 rc;
+	struct psc_thread	*thr;
+	int			 match = 0;
 
 	rc = 1;
 	PLL_LOCK(&psc_threads);
@@ -1591,12 +1638,19 @@ psc_ctl_applythrop(int fd, struct psc_ctlmsghdr *mh, void *m, const char *thrnam
 			 * thr1 can't match thr10,
 			 * don't partial match numbers.
 			 */
+#if 0
 			if (strcasecmp(thrname,
 			    thr->pscthr_name) == 0) {
 				rc = cbf(fd, mh, m, thr);
 				break;
 			}
-		if (thr == NULL)
+#endif
+			if (psc_ctl_matchthr(thrname,
+			    thr->pscthr_name) == 0) {
+				match = 1;
+				rc = cbf(fd, mh, m, thr);
+			}
+		if (!match)
 			rc = psc_ctlsenderr(fd, mh,
 			    "unknown thread: %s", thrname);
 	}
