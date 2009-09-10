@@ -991,6 +991,7 @@ main(int argc, char *argv[])
 	struct list_head *tmp;
 	GROUP_t          *group = NULL;
 	int rc, i;
+	struct stat sbuf;
 #elif MPI
 	int mype = 0;
 	MPI_Init(&argc, &argv);
@@ -998,6 +999,15 @@ main(int argc, char *argv[])
 	int c, fd;
 
 	TOTAL_PES = 0;
+
+	if (argc == 1) {
+		/* make sure that a configuration file is provided via redirection */
+		fstat(STDIN_FILENO, &sbuf);
+		if (S_ISCHR(sbuf.st_mode)) {
+			fprintf(stderr, "Please use either -i or redirection to specify a config file.\n");
+			usage();
+		}
+	}
 
 	while (((c = getopt(argc, argv, "dDi:o:")) != -1))
 		switch (c) {
@@ -1041,6 +1051,16 @@ main(int argc, char *argv[])
 	init_barriers(0);
 	list_for_each(tmp, &groupList) {
 		group = list_entry(tmp, GROUP_t, group_list);
+		if (group->files_per_dir < group->num_pes) {
+			fprintf(stderr, "# of files per directory (%d) should be no less than # of PEs (%d), a multiple is preferred.\n",
+				group->files_per_dir, group->num_pes);
+			continue;
+		}
+		if (group->block_size > 128*1024) {
+			fprintf(stderr, "block size (%llu) should be no greater than 128K due to current FUSE limitation\n",	
+				group->block_size);
+			continue;
+		}
 		/*
 		 * note that every group has a pe 0... the mpi port
 		 *  is going to have to handle this a bit differently
