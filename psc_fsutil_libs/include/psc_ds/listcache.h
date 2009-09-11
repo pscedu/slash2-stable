@@ -96,23 +96,27 @@ lc_remove(struct psc_listcache *lc, void *p)
 	ureqlock(&lc->lc_lock, locked);
 }
 
+enum psclc_pos {
+	PLCP_TAIL,
+	PLCP_HEAD
+};
+
+#define PLCP_STACK	PLCP_HEAD
+#define PLCP_QUEUE	PLCP_TAIL
+
 /* lc_get() flags */
-#define PLCGF_TAIL	(1 << 0)	/* grab from tail */
-#define PLCGF_STACK	(1 << 0)	/* grab from tail */
-#define PLCGF_HEAD	(1 << 1)	/* grab from head */
-#define PLCGF_QUEUE	(1 << 1)	/* grab from head */
-#define PLCGF_NOBLOCK	(1 << 2)	/* return NULL if unavail */
-#define PLCGF_WARN	(1 << 3)	/* emit messages */
-#define PLCGF_PEEK	(1 << 4)	/* don't remove item */
+#define PLCGF_NOBLOCK	(1 << 0)	/* return NULL if unavail */
+#define PLCGF_WARN	(1 << 1)	/* emit messages */
+#define PLCGF_PEEK	(1 << 2)	/* don't remove item */
 
 static __inline struct psclist_head *
-_lc_get(struct psc_listcache *lc, struct timespec *abstime, int flags)
+_lc_get(struct psc_listcache *lc, struct timespec *abstime,
+    enum psclc_pos pos, int flags)
 {
 	struct psclist_head *e;
 	int locked, rc;
 
-	/* Ensure either head or tail is set. */
-	psc_assert((flags & PLCGF_HEAD) ^ (flags & PLCGF_TAIL));
+	psc_assert(pos == PLCP_HEAD || pos ==  PLCP_TAIL);
 
 	locked = reqlock(&lc->lc_lock);
 	while (psclist_empty(&lc->lc_listhd)) {
@@ -142,7 +146,7 @@ _lc_get(struct psc_listcache *lc, struct timespec *abstime, int flags)
 			psc_waitq_wait(&lc->lc_wq_empty, &lc->lc_lock);
 		spinlock(&lc->lc_lock);
 	}
-	e = flags & PLCGF_HEAD ?
+	e = pos & PLCP_HEAD ?
 	    psclist_first(&lc->lc_listhd) :
 	    psclist_last(&lc->lc_listhd);
 	if ((flags & PLCGF_PEEK) == 0) {
@@ -162,7 +166,7 @@ _lc_get(struct psc_listcache *lc, struct timespec *abstime, int flags)
 static inline void *
 lc_gettimed(struct psc_listcache *lc, struct timespec *abstime)
 {
-	void *p = _lc_get(lc, abstime, PLCGF_HEAD);
+	void *p = _lc_get(lc, abstime, PLCP_HEAD, 0);
 
 	return (p ? (char *)p - lc->lc_offset : NULL);
 }
@@ -175,7 +179,7 @@ lc_gettimed(struct psc_listcache *lc, struct timespec *abstime)
 static inline void *
 lc_getwait(struct psc_listcache *lc)
 {
-	void *p = _lc_get(lc, NULL, PLCGF_HEAD);
+	void *p = _lc_get(lc, NULL, PLCP_HEAD, 0);
 
 	return (p ? (char *)p - lc->lc_offset : NULL);
 }
@@ -187,7 +191,7 @@ lc_getwait(struct psc_listcache *lc)
 static inline void *
 lc_getnb(struct psc_listcache *lc)
 {
-	void *p = _lc_get(lc, NULL, PLCGF_HEAD | PLCGF_NOBLOCK);
+	void *p = _lc_get(lc, NULL, PLCP_HEAD, PLCGF_NOBLOCK);
 
 	return (p ? (char *)p - lc->lc_offset : NULL);
 }
@@ -199,7 +203,7 @@ lc_getnb(struct psc_listcache *lc)
 static inline void *
 lc_peektail(struct psc_listcache *lc)
 {
-	void *p = _lc_get(lc, NULL, PLCGF_TAIL | PLCGF_NOBLOCK | PLCGF_PEEK);
+	void *p = _lc_get(lc, NULL, PLCP_TAIL, PLCGF_NOBLOCK | PLCGF_PEEK);
 
 	return (p ? (char *)p - lc->lc_offset : NULL);
 }
@@ -217,22 +221,34 @@ lc_kill(struct psc_listcache *lc)
 	freelock(&lc->lc_lock);
 }
 
+/* lc_add() flags */
+#define PLCAF_DYINGOK	(1 << 0)	/* list can die */
+
 /**
- * lc_put - Bounded list put
- * @l: the list cache to access
- * @e: new list item
+ * lc_put - add an item entry to a list cache.
+ * @lc: the list cache to add to.
+ * @e: new list item to add.
+ * @pos: where to add the item, head or tail of list.
+ * @flags: operational behavior.
  */
-static inline void
-_lc_put(struct psc_listcache *lc, struct psclist_head *e, int tails)
+static inline int
+_lc_put(struct psc_listcache *lc, struct psclist_head *e,
+    enum psclc_pos pos, int flags)
 {
 	int locked;
 
-	psc_assert(e->znext == NULL);
-	psc_assert(e->zprev == NULL);
+	psc_assert(pos == PLCP_HEAD || pos == PLCP_TAIL);
+	psc_assert(psclist_disjoint(e));
 
 	locked = reqlock(&lc->lc_lock);
 
-	if (tails)
+	if (lc->lc_flags & PLCF_DYING) {
+		psc_assert(flags & PLCAF_DYINGOK);
+		ureqlock(&lc->lc_lock, locked);
+		return (0);
+	}
+
+	if (pos == PLCP_TAIL)
 		psclist_xadd_tail(e, &lc->lc_listhd);
 	else
 		psclist_xadd(e, &lc->lc_listhd);
@@ -247,68 +263,76 @@ _lc_put(struct psc_listcache *lc, struct psclist_head *e, int tails)
 	 * who think the list is empty.
 	 */
 	psc_waitq_wakeall(&lc->lc_wq_empty);
+	return (1);
 }
 
-static inline void
-_lc_add(struct psc_listcache *lc, void *p, int tails)
+static inline int
+_lc_add(struct psc_listcache *lc, void *p, enum psclc_pos pos, int flags)
 {
 	void *e;
 
 	psc_assert(p);
 	e = (char *)p + lc->lc_offset;
-	_lc_put(lc, e, tails);
+	if (_lc_put(lc, e, pos, flags))
+		return (1);
+	psc_assert(flags & PLCAF_DYINGOK);
+	return (0);
 }
 
-#define lc_queue(lc, e)		_lc_put((lc), (e), 1)
-#define lc_stack(lc, e)		_lc_put((lc), (e), 0)
-#define lc_puthead(lc, e)	_lc_put((lc), (e), 0)
-#define lc_puttail(lc, e)	_lc_put((lc), (e), 1)
-#define lc_put(lc, e)		_lc_put((lc), (e), 1)
+#define lc_queue(lc, e)		((void)_lc_put((lc), (e), PLCP_TAIL, 0))
+#define lc_stack(lc, e)		((void)_lc_put((lc), (e), PLCP_HEAD, 0))
+#define lc_puthead(lc, e)	((void)_lc_put((lc), (e), PLCP_HEAD, 0))
+#define lc_puttail(lc, e)	((void)_lc_put((lc), (e), PLCP_TAIL, 0))
+#define lc_put(lc, e)		((void)_lc_put((lc), (e), PLCP_TAIL, 0))
 
-#define lc_addstack(lc, p)	_lc_add((lc), (p), 0)
-#define lc_addqueue(lc, p)	_lc_add((lc), (p), 1)
-#define lc_addhead(lc, p)	_lc_add((lc), (p), 0)
-#define lc_addtail(lc, p)	_lc_add((lc), (p), 1)
-#define lc_add(lc, p)		_lc_add((lc), (p), 1)
+#define lc_addstack(lc, p)	((void)_lc_add((lc), (p), PLCP_HEAD, 0))
+#define lc_addqueue(lc, p)	((void)_lc_add((lc), (p), PLCP_TAIL, 0))
+#define lc_addhead(lc, p)	((void)_lc_add((lc), (p), PLCP_HEAD, 0))
+#define lc_addtail(lc, p)	((void)_lc_add((lc), (p), PLCP_TAIL, 0))
+#define lc_add(lc, p)		((void)_lc_add((lc), (p), PLCP_TAIL, 0))
+
+#define lc_add_ifalive(lc, p)	_lc_add((lc), (p), PLCP_TAIL, PLCAF_DYINGOK)
 
 /**
- * lc_move - move an existing entry to the end of the queue
- *
+ * lc_move_entry - move an item entry on a list cache to the start or end.
+ * @lc: list cache to move on.
+ * @e: item entry to move.
+ * @pos: where to move the item entry; list head or tail.
  */
 static inline void
-lc_move(struct psc_listcache *lc, void *p, int tails)
+lc_move_entry(struct psc_listcache *lc, struct psclist_head *e,
+    enum psclc_pos pos)
 {
 	int locked;
-	void *e;
 
-	psc_assert(p);
-	e = (char *)p + lc->lc_offset;
 	locked = reqlock(&lc->lc_lock);
 	psclist_del(e);
-	if (tails)
+	if (pos == PLCP_TAIL)
 		psclist_xadd_tail(e, &lc->lc_listhd);
 	else
 		psclist_xadd(e, &lc->lc_listhd);
 	ureqlock(&lc->lc_lock, locked);
 }
 
-#define lc_move2tail(lc, p)	lc_move((lc), (p), 1)
-#define lc_move2head(lc, p)	lc_move((lc), (p), 0)
-
 /**
- * lc_requeue - move an existing entry to the end of the queue
- *
+ * lc_move - move an item on a list cache to the start or end.
+ * @lc: list cache to move on.
+ * @p: item to move.
+ * @pos: where to move the item; list head or tail.
  */
 static inline void
-lc_requeue(struct psc_listcache *lc, struct psclist_head *n)
+lc_move(struct psc_listcache *lc, void *p, enum psclc_pos pos)
 {
-	int locked;
+	void *e;
 
-	locked = reqlock(&lc->lc_lock);
-	psclist_del(n);
-	psclist_xadd_tail(n, &lc->lc_listhd);
-	ureqlock(&lc->lc_lock, locked);
+	psc_assert(pos == PLCP_HEAD || pos == PLCP_TAIL);
+	psc_assert(p);
+	e = (char *)p + lc->lc_offset;
+	lc_move_entry(lc, e, pos);
 }
+
+#define lc_move2tail(lc, p)	lc_move((lc), (p), PLCP_TAIL)
+#define lc_move2head(lc, p)	lc_move((lc), (p), PLCP_HEAD)
 
 static inline void
 _lc_init(struct psc_listcache *lc, ptrdiff_t offset, size_t entsize)
