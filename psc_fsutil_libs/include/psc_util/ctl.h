@@ -49,16 +49,17 @@ struct psc_ctlmsg_lc {
 #define PCLC_NAME_ALL		"all"
 
 struct psc_ctlmsg_stats {
+	char			pcst_thrname[PSC_THRNAME_MAX];
 	int32_t			pcst_thrtype;
+	int32_t			pcst_thrid;
+	uint32_t		pcst_flags;
 	uint32_t		pcst_u32_1;
 	uint32_t		pcst_u32_2;
 	uint32_t		pcst_u32_3;
 	uint32_t		pcst_u32_4;
-	int			pcst_id;
-	int			pcst_lwp;
-	char			pcst_thrname[PSC_THRNAME_MAX];
 };
 
+/* psc_ctlthr aliases */
 #define pcst_nclients	pcst_u32_1
 #define pcst_nsent	pcst_u32_2
 #define pcst_nrecv	pcst_u32_3
@@ -118,7 +119,6 @@ struct psc_ctlmsg_pool {
 #define PCPL_NAME_ALL		"all"
 
 struct psc_ctlmsg_mlist {
-	long			 pcml_addr;
 	uint64_t		 pcml_nseen;
 	uint32_t		 pcml_size;
 	uint32_t		 pcml_waitors;

@@ -61,7 +61,6 @@ int	psc_ctlrep_getmlist(int, struct psc_ctlmsghdr *, void *);
 int	psc_ctlrep_getfault(int, struct psc_ctlmsghdr *, void *);
 int	psc_ctlhnd_cmd(int, struct psc_ctlmsghdr *, void *);
 
-void	psc_defthr_stat(struct psc_thread *, struct psc_ctlmsg_stats *);
 void	psc_ctlthr_stat(struct psc_thread *, struct psc_ctlmsg_stats *);
 
 int	psc_ctlparam_log_file(int, struct psc_ctlmsghdr *,

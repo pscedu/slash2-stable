@@ -15,26 +15,12 @@
 
 #define PSC_THRNAME_MAX			32	/* must be 8-byte aligned */
 
-#define	PSC_THRNAME_ZIOTHR		10
-#define	PSC_THRNAME_ZPGENTHR		10
-#define	PSC_THRNAME_ZSYNCWTHR		10
-#define	PSC_THRNAME_ZSYNCQTHR		10
-
 struct psc_thread {
 	struct psclist_head	   pscthr_lentry;		/* list management */
 	psc_spinlock_t		   pscthr_lock;			/* for mutex */
 	pthread_t		   pscthr_pthread;		/* pthread_self() */
 	pid_t			   pscthr_thrid;		/* gettid(2) */
-	int			   pscthr_uniqid;
-
-#if 0
-	/*
-	 * XXX: If we modify fuse to invoke an application callback to
-	 * create a new thread, we can utilize this new field to track
-	 * threads by spawn index for use in gdb.
-	 */
-	int			   pscthr_index;		/* spawn timeline */
-#endif
+	int			   pscthr_uniqid;		/* transiency bookkeeping */
 
 	void			*(*pscthr_startf)(void *);	/* thread main */
 	void			 (*pscthr_dtor)(void *);	/* custom destructor */
@@ -49,7 +35,6 @@ struct psc_thread {
 	/* only used for thread initialization */
 	int			   pscthr_memnid;		/* ID of memnode */
 	size_t			   pscthr_privsiz;		/* size of app data */
-	int		   	   pscthr_id;			/* approximate gdb ID */
 };
 
 #define PTF_PAUSED	(1 << 0)	/* thread is frozen */

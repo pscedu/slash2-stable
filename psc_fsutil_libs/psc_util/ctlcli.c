@@ -343,37 +343,20 @@ psc_ctl_loglevel_namelen(int n)
 }
 
 int
-psc_defthr_prhdr(void)
-{
-	return (printf("%4s %6s  %-*s\n", 
-	    "id", "lwp", PSC_THRNAME_MAX, "name"));
-}
-
-void
-psc_defthr_prdat(const struct psc_ctlmsg_stats *pcst)
-{
-	printf("%4d %6d  %-*s\n", 
-	    pcst->pcst_id, pcst->pcst_lwp,
-	    PSC_THRNAME_MAX,
-	    pcst->pcst_thrname);
-}
-
-int
 psc_ctlthr_prhdr(void)
 {
-	return (printf("%4s %6s  %-*s %9s %8s %8s\n", "id", "lwp",
-	    PSC_THRNAME_MAX, "name", "#nclients", "#sent", "#recv"));
+	return (printf(" %-*s %5s %9s %8s %8s\n",
+	    PSC_THRNAME_MAX, "name", "thrid",
+	    "#nclients", "#sent", "#recv"));
 }
 
 void
 psc_ctlthr_prdat(const struct psc_ctlmsg_stats *pcst)
 {
-	printf("%4d %6d  %-*s %9u %8u %8u\n",
-	    pcst->pcst_id, pcst->pcst_lwp,
-	    PSC_THRNAME_MAX,
-	    pcst->pcst_thrname, 
-	    pcst->pcst_nclients,
-	    pcst->pcst_nsent, pcst->pcst_nrecv);
+	printf(" %-*s %5d "
+	    "%9u %8u %8u\n",
+	    PSC_THRNAME_MAX, pcst->pcst_thrname, pcst->pcst_thrid,
+	    pcst->pcst_nclients, pcst->pcst_nsent, pcst->pcst_nrecv);
 }
 
 int
@@ -521,11 +504,10 @@ psc_ctlmsg_pool_prhdr(__unusedx struct psc_ctlmsghdr *mh,
 {
 	printf("pools\n");
 	return (printf(
-	    "%-*s %4s %6s %6s %6s "
+	    " %-8s %3s %6s %6s %6s "
 	    "%6s %6s %6s %2s "
 	    "%6s %6s %3s %3s\n",
-	    PSC_POOLNAME_MAX,
-	    "name", "flag", "#free", "#use", "total",
+	    "name", "flg", "#free", "#use", "total",
 	    "%use", "min", "max", "th",
 	    "#grows", "#shrnx", "#em", "#wa"));
 	/* XXX add ngets and waiting/sleep time */
@@ -541,10 +523,9 @@ psc_ctlmsg_pool_prdat(__unusedx const struct psc_ctlmsghdr *mh,
 	psc_fmt_ratio(rbuf, pcpl->pcpl_total - pcpl->pcpl_free,
 	    pcpl->pcpl_total);
 	printf(
-	    "%-*s  %c%c%c "
+	    " %-8s %c%c%c "
 	    "%6d %6d "
 	    "%6d %6s",
-	    PSC_POOLNAME_MAX,
 	    pcpl->pcpl_name,
 	    pcpl->pcpl_flags & PPMF_AUTO ? 'A' : '-',
 	    pcpl->pcpl_flags & PPMF_NOLOCK ? 'N' : '-',
@@ -622,51 +603,20 @@ psc_ctlmsg_param_prdat(__unusedx const struct psc_ctlmsghdr *mh,
 		    pcp->pcp_field, pcp->pcp_value);
 }
 
-#define MT_SKIPHDR (-2)
-__static int psc_ctl_stat_prthrtype;
-
 int
-psc_ctlmsg_stats_check(__unusedx struct psc_ctlmsghdr *mh, const void *m)
+psc_ctlmsg_stats_prhdr(__unusedx struct psc_ctlmsghdr *mh, __unusedx const void *m)
 {
-	static int last_thrtype = -1;
-	const struct psc_ctlmsg_stats *pcst = m;
-
-	if (mh->mh_size != sizeof(*pcst))
-		return (sizeof(*pcst));
-
-	if (psc_ctl_lastmsgtype == PCMT_GETSTATS) {
-		if (last_thrtype != pcst->pcst_thrtype) {
-			psc_ctl_stat_prthrtype = 1;
-			last_thrtype = pcst->pcst_thrtype;
-			psc_ctl_lastmsgtype = MT_SKIPHDR;
-		}
-	} else
-		last_thrtype = pcst->pcst_thrtype;
-
-	return (0);
-}
-
-int
-psc_ctlmsg_stats_prhdr(__unusedx struct psc_ctlmsghdr *mh, const void *m)
-{
-	const struct psc_ctlmsg_stats *pcst = m;
-	struct psc_ctl_thrstatfmt *ptf;
-
-	/* Check thread type. */
-	if (pcst->pcst_thrtype < 0 ||
-	    pcst->pcst_thrtype >= psc_ctl_nthrstatfmts)
-		psc_fatalx("invalid thread type: %d",
-		    pcst->pcst_thrtype);
-
-	/* Skip thread types for which there are no print routine. */
-	ptf = &psc_ctl_thrstatfmts[pcst->pcst_thrtype];
-	if (ptf->ptf_prhdr == NULL)
-		psc_fatalx("invalid thread type: %d",
-		    pcst->pcst_thrtype);
-
-        if (psc_ctl_lastmsgtype != MT_SKIPHDR)
-		printf("Listing of thread stats:\n");
-	return (ptf->ptf_prhdr());
+	printf("thread stats\n");
+	return (printf(" %-*s %5s %5s"
+#ifdef HAVE_NUMA
+	    " %7d"
+#endif
+	    "\n",
+	    PSC_THRNAME_MAX, "name", "thrid", "flags"
+#ifdef HAVE_NUMA
+		, "memnode"
+#endif
+	    ));
 }
 
 void
@@ -676,10 +626,23 @@ psc_ctlmsg_stats_prdat(__unusedx const struct psc_ctlmsghdr *mh,
 	const struct psc_ctlmsg_stats *pcst = m;
 	struct psc_ctl_thrstatfmt *ptf;
 
-	/* Skip thread types for which there are no print routine. */
+	printf(" %-*s %5d"
+#ifdef HAVE_NUMA
+	    " %7d"
+#endif
+	    " %c%c%c%c",
+	    PSC_THRNAME_MAX, pcst->pcst_thrname, pcst->pcst_thrid,
+#ifdef HAVE_NUMA
+	    pcst->pcst_memnode,
+#endif
+	    pcst->pcst_flags & PTF_PAUSED	? 'P' : '-',
+	    pcst->pcst_flags & PTF_FREE		? 'F' : '-',
+	    pcst->pcst_flags & PTF_RUN		? 'R' : '-',
+	    pcst->pcst_flags & PTF_READY	? 'I' : '-');
 	ptf = &psc_ctl_thrstatfmts[pcst->pcst_thrtype];
 	if (ptf->ptf_prdat)
 		ptf->ptf_prdat(pcst);
+	printf("\n");
 }
 
 int
@@ -728,9 +691,8 @@ psc_ctlmsg_mlist_prhdr(__unusedx struct psc_ctlmsghdr *mh,
     __unusedx const void *m)
 {
 	printf("mlists\n");
-	return (printf(" %-*s %8s %3s %10s   %14s\n",
-	    PSC_MLIST_NAME_MAX,
-	    "name", "#items", "#em", "#seen", "addr"));
+	return (printf(" %-50s %8s %3s %15s\n",
+	    "name", "#items", "#em", "#seen"));
 }
 
 void
@@ -739,10 +701,9 @@ psc_ctlmsg_mlist_prdat(__unusedx const struct psc_ctlmsghdr *mh,
 {
 	const struct psc_ctlmsg_mlist *pcml = m;
 
-	printf(" %-*s %8d %3d %10"PRIu64"   0x%012lx\n",
-	    PSC_MLIST_NAME_MAX,
+	printf(" %-50s %8d %3d %15"PRIu64"\n",
 	    pcml->pcml_name, pcml->pcml_size,
-	    pcml->pcml_waitors, pcml->pcml_nseen, pcml->pcml_addr);
+	    pcml->pcml_waitors, pcml->pcml_nseen);
 }
 
 int
@@ -750,7 +711,8 @@ psc_ctlmsg_fault_prhdr(__unusedx struct psc_ctlmsghdr *mh,
     __unusedx const void *m)
 {
 	printf("fault point(s)\n");
-	return (printf(" %-20s %3s %7s %7s %5s %10s %5s %5s %5s\n",
+	return (printf(" %-35s %3s %7s %7s %5s "
+	    "%10s %5s %5s %5s\n",
 	    "name", "flg", "#hit", "#uhit", "delay",
 	    "count", "begin", "code", "prob"));
 }
@@ -761,7 +723,10 @@ psc_ctlmsg_fault_prdat(__unusedx const struct psc_ctlmsghdr *mh,
 {
 	const struct psc_ctlmsg_fault *pcflt = m;
 
-	printf(" %-20s   %c %7d %7d %5d %10d %5d %5d %5d\n",
+	printf(" %-20s   %c "
+	    "%7d %7d %5d "
+	    "%10d %5d %5d "
+	    "%5d\n",
 	    pcflt->pcflt_name,
 	    pcflt->pcflt_flags & PFLTF_ACTIVE ? 'A' : '-',
 	    pcflt->pcflt_hits, pcflt->pcflt_unhits, pcflt->pcflt_delay,
@@ -795,8 +760,8 @@ psc_ctlmsg_print(struct psc_ctlmsghdr *mh, const void *m)
 		    "expected=%d", mh->mh_type, mh->mh_size, n);
 
 	/* Print display header. */
-	if (!psc_ctl_noheader && prf->prf_prhdr != NULL && 
-	    psc_ctl_lastmsgtype != mh->mh_type) {
+	if (!psc_ctl_noheader && psc_ctl_lastmsgtype != mh->mh_type &&
+	    prf->prf_prhdr != NULL) {
 
 		if (psc_ctl_lastmsgtype != -1)
 			printf("\n");
@@ -805,11 +770,11 @@ psc_ctlmsg_print(struct psc_ctlmsghdr *mh, const void *m)
 			putchar('=');
 		putchar('\n');
 	}
-	psc_ctl_lastmsgtype = mh->mh_type;
 
 	/* Print display contents. */
 	if (prf->prf_prdat)
 		prf->prf_prdat(mh, m);
+	psc_ctl_lastmsgtype = mh->mh_type;
 }
 
 void
