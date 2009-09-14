@@ -42,6 +42,7 @@ int			 psc_fault_remove(const char *);
 int			 psc_fault_register(const char *, int, int, int, int, int);
 
 extern struct psc_hashtbl psc_fault_table;
+extern const char *psc_fault_names[];
 
 void	psc_fault_init(void);
 void	psc_fault_here(const char *name, int *rc);
