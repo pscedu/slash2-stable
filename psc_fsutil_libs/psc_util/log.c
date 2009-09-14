@@ -28,7 +28,7 @@
 #include "psc_util/log.h"
 
 #ifndef PSC_LOG_FMT
-#define PSC_LOG_FMT "[%s:%06u %n:%F:%l] "
+#define PSC_LOG_FMT "[%s:%06u %n:%i:%F:%l] "
 #endif
 
 struct fuse_context {
