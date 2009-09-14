@@ -1056,11 +1056,6 @@ main(int argc, char *argv[])
 				group->files_per_dir, group->num_pes);
 			continue;
 		}
-		if (group->block_size > 128*1024) {
-			fprintf(stderr, "block size (%llu) should be no greater than 128K due to current FUSE limitation\n",	
-				group->block_size);
-			continue;
-		}
 		/*
 		 * note that every group has a pe 0... the mpi port
 		 *  is going to have to handle this a bit differently
