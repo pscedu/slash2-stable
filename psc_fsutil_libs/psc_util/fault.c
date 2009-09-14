@@ -23,6 +23,7 @@ char *psc_fault_names[] = {
 	FOO,
 	BAR,
 	ZFSCK_CSGROUP_FAIL,
+	ZIOTHR_DIGEST_FAIL,
 	ZREAD_CHECK_CRC_FAIL,
 	NULL            
 };
@@ -79,6 +80,7 @@ psc_fault_add(const char *name)
 		rc = EEXIST;
 		free(pflt);
 	} else {
+		fault_enabled = 1;
 		atomic_inc(&psc_fault_count);
 		psc_hashbkt_add_item(&psc_fault_table, b, pflt);
 	}

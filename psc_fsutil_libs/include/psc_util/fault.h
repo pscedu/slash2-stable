@@ -11,6 +11,7 @@
 #define	FOO				"foo"
 #define	BAR				"bar"
 #define	ZFSCK_CSGROUP_FAIL		"csfail"
+#define	ZIOTHR_DIGEST_FAIL		"digestfail"
 #define	ZREAD_CHECK_CRC_FAIL		"chkcrc"
 
 #define	PSC_FAULT_NAME_MAX		 32
