@@ -8,7 +8,7 @@
 #include <stdarg.h>
 
 #ifndef PSC_SUBSYS
-# define PSC_SUBSYS PSS_OTHER
+# define PSC_SUBSYS PSS_GEN
 #endif
 
 #include "psc_util/subsys.h"

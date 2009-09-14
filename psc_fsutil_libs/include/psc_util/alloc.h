@@ -16,7 +16,7 @@
 
 #define PSCFREE(p)							\
 	do {								\
-		psc_traces(PSS_MEMALLOC, "freeing %p", (p));		\
+		psc_traces(PSS_MEM, "freeing %p", (p));			\
 		free(p);						\
 		(p) = NULL;						\
 	} while (0)
@@ -34,7 +34,7 @@
 									\
 		__p = psc_realloc(NULL, (sz), (fl));			\
 		if (((fl) & PAF_NOLOG) == 0)				\
-			psc_traces(PSS_MEMALLOC,			\
+			psc_traces(PSS_MEM,				\
 			    "alloc %p sz=%zu fl=%d", __p,		\
 			    (size_t)(sz), (fl));			\
 		__p;							\
