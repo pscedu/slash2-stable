@@ -85,9 +85,6 @@ struct psc_hashent {
  * The variable argument list should consist of a single argument of either type of:
  *	- uint64_t hash ID value
  *	- const char * string ID
- *
- * XXX I have to pass the ID twice because one is consumed to get the bucket and
- *     the second is used for comparison.
  */
 #define psc_hashtbl_search(t, cmp, cbf, ...)				\
 	_psc_hashtbl_search((t), 0, (cmp), (cbf), ## __VA_ARGS__)
