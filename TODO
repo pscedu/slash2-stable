@@ -52,6 +52,7 @@ pfl
 - add API for PSC mem failure, so we can plug into the memhandling
   paths when asprintf() fails instead of centralizing the logic over
   malloc().
+- kill PSS_LOG
 
 zest
 - test parity reconstruction service by rebuilding
