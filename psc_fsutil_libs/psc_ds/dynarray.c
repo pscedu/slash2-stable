@@ -124,16 +124,6 @@ dynarray_add_ifdne(struct dynarray *da, void *item)
 }
 
 /**
- * dynarray_get - Access a dynamic array's item list.
- * @da: dynamic array to access.
- */
-void *
-dynarray_get(const struct dynarray *da)
-{
-	return (da->da_items);
-}
-
-/**
  * dynarray_getpos - Access an item in dynamic array.
  * @da: dynamic array to access.
  * @pos: item index.
@@ -156,16 +146,6 @@ dynarray_free(struct dynarray *da)
 {
 	free(da->da_items);
 	dynarray_init(da);
-}
-
-/**
- * dynarray_len - Obtain the number of elements stored in a dynamic array.
- * @da: dynamic array to access.
- */
-int
-dynarray_len(const struct dynarray *da)
-{
-	return (da->da_pos);
 }
 
 /**
