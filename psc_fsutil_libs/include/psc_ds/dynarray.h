@@ -35,7 +35,7 @@ struct psc_dynarray {
  * dynarray_get - Access a dynamic array's item list.
  * @pda: dynamic array to access.
  */
-#define dynarray_get(pda)	(pda)->pda_items
+#define dynarray_get(pda)	((void *)(pda)->pda_items)
 
 /**
  * dynarray_sort - Reorder elements of a dynarray.
