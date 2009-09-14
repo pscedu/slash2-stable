@@ -16,6 +16,7 @@ general reminders
 - keep "make build > /dev/null" clean
 - check memset() for bad sizes sizeof(pg) vs. sizeof(*pg)
 - watch for realloc(p, 0) returning NULL being okay
+- deploy __thread in more places
 
 make
 - rename ROOTDIR -> PROJ_BASE
@@ -83,7 +84,7 @@ zest
 - new pull model for zest server to client:
   server RPCIO threads issue GETs to connected mount_zests
     (o) need some way to "multilock" on multiple requests sent
-        to different clients
+	to different clients
 - when mount_zest is idle, have it merge dirty zcf zsb channels
 - ensure libzestclient is not paritying over partial buffers
 - investigate libgru for NUMA memory staging
