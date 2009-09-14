@@ -15,8 +15,8 @@
 #define PSS_RPC		2
 #define PSS_LNET	3
 #define PSS_MEM		4
-#define PSS_GEN	5
-#define PSS_TMP		6
+#define PSS_GEN		5		/* catchall */
+#define PSS_TMP		6		/* temporary debug use */
 #define _PSS_LAST	7
 
 int		 psc_subsys_id(const char *);
