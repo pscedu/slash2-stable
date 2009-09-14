@@ -50,9 +50,6 @@ else
  KERNEL_BASE=		/usr/src/kernels/linux
 endif
 
-# temp fix for compile on frodo
-# KERNEL_BASE= /usr/src/kernels/zest-devel-kernel
-
 ifneq ($(wildcard /opt/sgi),)
  # on altix
  DEFINES+=		-DCONFIG_NR_CPUS=2 -D_GNU_SOURCE -DHAVE_NUMA
