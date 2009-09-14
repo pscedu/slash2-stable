@@ -1,43 +1,30 @@
 /* $Id$ */
 
+#include <sys/time.h>
+
 #include <errno.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-#include <sys/time.h>
 
 #include "psc_ds/hash2.h"
 #include "psc_util/alloc.h"
 #include "psc_util/fault.h"
 #include "psc_util/lock.h"
+#include "psc_util/random.h"
 #include "psc_util/strlcpy.h"
 
-#define PSC_FAULT_NBUCKETS	16	
+#define PSC_FAULT_NBUCKETS	16
 
 static	int	fault_enabled = 0;
 
 atomic_t		psc_fault_count;
 struct psc_hashtbl	psc_fault_table;
 
-char *psc_fault_names[] = {
-	FOO,
-	BAR,
-	ZFSCK_CSGROUP_FAIL,
-	ZIOTHR_DIGEST_FAIL,
-	ZREAD_CHECK_CRC_FAIL,
-	NULL            
-};
-
-
 void
 psc_fault_init(void)
 {
-	static char randstate[256]; 
-
 	atomic_set(&psc_fault_count, 0);
-
-	if (initstate(time(NULL), randstate, 256) == NULL)
-		psc_fatal("fail to initialize random number generator\n");
 
 	psc_hashtbl_init(&psc_fault_table, PHTF_STR, struct psc_fault,
 		pflt_name, pflt_hentry, PSC_FAULT_NBUCKETS, NULL, "faults");
@@ -112,9 +99,9 @@ psc_fault_remove(const char *name)
 void
 psc_fault_take_lock(void *p)
 {
-        struct psc_fault *pflt; 
+	struct psc_fault *pflt;
 
-        pflt = (struct psc_fault *)p;
+	pflt = p;
 	psc_fault_lock(pflt);
 }
 
@@ -131,7 +118,7 @@ psc_fault_lookup(const char *name)
 /*
  * Alternative to add().  This function allows us to set fault points even before control thread
  * is ready to receive commands.
- */ 
+ */
 int
 psc_fault_register(const char *name, int delay, int begin, int chance, int count, int retval)
 {
@@ -203,7 +190,7 @@ psc_fault_here(const char *name, int *rc)
 		psc_fault_unlock(pflt);
 		return;
 	}
-	dice = random() % 100;
+	dice = psc_random32u(100);
 	if (dice > pflt->pflt_chance) {
 		pflt->pflt_unhits++;
 		psc_fault_unlock(pflt);
@@ -219,7 +206,7 @@ psc_fault_here(const char *name, int *rc)
 	psc_fault_unlock(pflt);
 }
 
-void 
+void
 psc_enter_debugger(char *str)
 {
 	struct timeval	tv;
