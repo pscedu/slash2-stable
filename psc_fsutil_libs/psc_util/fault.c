@@ -208,17 +208,6 @@ psc_fault_here(const char *name, int *rc)
 	psc_fault_unlock(pflt);
 }
 
-void
-psc_enter_debugger(char *str)
-{
-	struct timeval	tv;
-
-	gettimeofday(&tv, NULL);
-	printf("timestamp %lu:%lu, enter debugger (%s) ...\n", tv.tv_sec, tv.tv_usec, str);
-	psc_notify("timestamp %lu:%lu, enter debugger (%s) ...\n", tv.tv_sec, tv.tv_usec, str);
-	__asm__ __volatile__ ("int3");
-}
-
 /*
  * psc_ctlrep_getfault - send a response to a "getfault" inquiry.
  * @fd: client socket descriptor.

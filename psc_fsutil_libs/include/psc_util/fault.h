@@ -36,8 +36,6 @@ void	psc_fault_init(void);
 int	psc_fault_register(const char *, int, int, int, int, int);
 int	psc_fault_remove(const char *);
 
-void	psc_enter_debugger(char *);
-
 extern struct psc_hashtbl psc_fault_table;
 extern const char *psc_fault_names[];
 

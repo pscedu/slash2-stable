@@ -50,8 +50,21 @@ psc_dumpstack(__unusedx int sig)
 	snprintf(buf, sizeof(buf), "pstack %d || gstack %d",
 	    getpid(), getpid());
 	system(buf);
-	kill(getpid(), SIGQUIT);
+	kill(0, SIGQUIT);
 	_exit(1);
+}
+
+#include <sys/time.h>
+void
+psc_enter_debugger(const char *str)
+{
+	struct timeval	tv;
+
+	gettimeofday(&tv, NULL);
+	printf("timestamp %lu:%lu, enter debugger (%s) ...\n", tv.tv_sec, tv.tv_usec, str);
+	psc_notify("timestamp %lu:%lu, enter debugger (%s) ...\n", tv.tv_sec, tv.tv_usec, str);
+	__asm__ __volatile__ ("int3");
+//	kill(0, SIGINT);
 }
 
 void
