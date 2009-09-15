@@ -342,20 +342,10 @@ psc_ctl_loglevel_namelen(int n)
 	return (maxlen);
 }
 
-int
-psc_ctlthr_prhdr(void)
-{
-	return (printf(" %-*s %5s %9s %8s %8s\n",
-	    PSC_THRNAME_MAX, "name", "thrid",
-	    "#nclients", "#sent", "#recv"));
-}
-
 void
 psc_ctlthr_prdat(const struct psc_ctlmsg_stats *pcst)
 {
-	printf(" %-*s %5d "
-	    "%9u %8u %8u\n",
-	    PSC_THRNAME_MAX, pcst->pcst_thrname, pcst->pcst_thrid,
+	printf(" #conn %8u #sent %9u #recv %9u",
 	    pcst->pcst_nclients, pcst->pcst_nsent, pcst->pcst_nrecv);
 }
 
@@ -604,19 +594,27 @@ psc_ctlmsg_param_prdat(__unusedx const struct psc_ctlmsghdr *mh,
 }
 
 int
-psc_ctlmsg_stats_prhdr(__unusedx struct psc_ctlmsghdr *mh, __unusedx const void *m)
+psc_ctlmsg_stats_prhdr(__unusedx struct psc_ctlmsghdr *mh,
+    __unusedx const void *m)
 {
+	const char *msg = "thread-specific-stats";
+	int n;
+
 	printf("thread stats\n");
-	return (printf(" %-*s %5s"
+	n = printf(" %-15s %5s"
 #ifdef HAVE_NUMA
-	    " %7d"
+	    " %6s"
 #endif
-	    " %4s\n",
-	    PSC_THRNAME_MAX, "name", "thrid"
+	    " %4s ",
+	    "name", "thrid",
 #ifdef HAVE_NUMA
-	    , "memnode"
+	    "memnid",
 #endif
-	    , "flag"));
+	    "flag");
+#define DISPLAY_WIDTH 80
+	printf("%*s%s\n", (DISPLAY_WIDTH - n - 1) / 2 -
+	    (int)strlen(msg) / 2, "", msg);
+	return (DISPLAY_WIDTH);
 }
 
 void
@@ -626,12 +624,12 @@ psc_ctlmsg_stats_prdat(__unusedx const struct psc_ctlmsghdr *mh,
 	const struct psc_ctlmsg_stats *pcst = m;
 	struct psc_ctl_thrstatfmt *ptf;
 
-	printf(" %-*s %5d"
+	printf(" %-15s %5d"
 #ifdef HAVE_NUMA
-	    " %7d"
+	    " %6d"
 #endif
 	    " %c%c%c%c",
-	    PSC_THRNAME_MAX, pcst->pcst_thrname, pcst->pcst_thrid,
+	    pcst->pcst_thrname, pcst->pcst_thrid,
 #ifdef HAVE_NUMA
 	    pcst->pcst_memnode,
 #endif
