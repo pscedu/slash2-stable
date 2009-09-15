@@ -18,7 +18,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 
-#include "pfl.h"
+#include "pfl/pfl.h"
 #include "psc_ds/hash.h"
 #include "psc_ds/hash2.h"
 #include "psc_ds/list.h"

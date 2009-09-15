@@ -5,12 +5,9 @@
 
 #include <stdint.h>
 
-#include "psc_types.h"
+typedef	uint64_t psc_crc_t;
 
-/*
- * Shamelessly heisted from TelegraphCQ-0.2
- *   pauln 11/08/06
- */
+#define CRCSZ (sizeof(psc_crc_t))
 
 /* Initialize a CRC accumulator */
 #define PSC_CRC_INIT(crc)	((crc) = UINT64_C(0xffffffffffffffff))
@@ -22,7 +19,5 @@ void psc_crc_calc(psc_crc_t *, const void *, int);
 void psc_crc_add(psc_crc_t *, const void *, int);
 
 extern const uint64_t psc_crc_table[];
-
-#define PRI_PSC_CRC "%16"PRIx64
 
 #endif /* _PFL_CRC_H_ */

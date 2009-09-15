@@ -16,7 +16,6 @@
 #include <string.h>
 #include <unistd.h>
 
-#include "psc_types.h"
 #include "psc_ds/dynarray.h"
 #include "psc_ds/hash.h"
 #include "psc_ds/lockedlist.h"

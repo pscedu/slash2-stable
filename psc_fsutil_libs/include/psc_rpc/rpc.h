@@ -18,7 +18,7 @@
 #include "lnet/api.h"
 #include "lnet/types.h"
 
-#include "psc_types.h"
+#include "pfl/types.h"
 #include "psc_ds/hash2.h"
 #include "psc_ds/list.h"
 #include "psc_ds/listcache.h"

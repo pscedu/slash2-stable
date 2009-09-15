@@ -3,7 +3,7 @@
 #ifndef _PFL_HASH_H_
 #define _PFL_HASH_H_
 
-#include "psc_types.h"
+#include "pfl/types.h"
 #include "psc_ds/list.h"
 #include "psc_util/cdefs.h"
 #include "psc_util/lock.h"

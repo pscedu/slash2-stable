@@ -20,10 +20,7 @@ typedef int8_t		s8;
 #define PRIxOFF		PRIx64
 #define PRIdOFF		PRId64
 #define PRIxCRC		PRIx64
-
-typedef	uint64_t psc_crc_t;
-
-#define CRCSZ (sizeof(psc_crc_t))
+#define PRI_PSC_CRC	"%16"PRIx64
 
 #include "psc_util/subsys.h"
 
