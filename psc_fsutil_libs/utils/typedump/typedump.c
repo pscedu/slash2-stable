@@ -7,6 +7,8 @@
 #include <unistd.h>
 
 /* start includes */
+#include <pfl/pfl.h>
+#include <pfl/types.h>
 #include <psc_ds/dynarray.h>
 #include <psc_ds/hash.h>
 #include <psc_ds/hash2.h>
@@ -17,7 +19,6 @@
 #include <psc_ds/pool.h>
 #include <psc_ds/stree.h>
 #include <psc_ds/vbitmap.h>
-#include <psc_mount/dhfh.h>
 #include <psc_rpc/export.h>
 #include <psc_rpc/rpc.h>
 #include <psc_rpc/rpclog.h>
@@ -117,11 +118,14 @@ main(int argc, char *argv[])
 
 /* start structs */
 	PRTYPE(list_cache_t);
+	PRTYPE(psc_crc_t);
 	PRTYPE(psc_spinlock_t);
 	PRTYPE(psc_waitq_t);
 	PRTYPE(pscrpc_svc_handle_t);
-	PRTYPE(struct dynarray);
-	PRTYPE(struct fhent);
+	PRTYPE(s16);
+	PRTYPE(s32);
+	PRTYPE(s64);
+	PRTYPE(s8);
 	PRTYPE(struct hash_bucket);
 	PRTYPE(struct hash_entry);
 	PRTYPE(struct hash_entry_str);
@@ -155,8 +159,8 @@ main(int argc, char *argv[])
 	PRTYPE(struct psc_ctlop);
 	PRTYPE(struct psc_ctlshow_ent);
 	PRTYPE(struct psc_ctlthr);
+	PRTYPE(struct psc_dynarray);
 	PRTYPE(struct psc_fault);
-	PRTYPE(struct psc_handle);
 	PRTYPE(struct psc_hashbkt);
 	PRTYPE(struct psc_hashent);
 	PRTYPE(struct psc_hashtbl);
@@ -191,8 +195,10 @@ main(int argc, char *argv[])
 	PRTYPE(struct pscrpc_client);
 	PRTYPE(struct pscrpc_connection);
 	PRTYPE(struct pscrpc_export);
+	PRTYPE(struct pscrpc_handle);
 	PRTYPE(struct pscrpc_import);
 	PRTYPE(struct pscrpc_nbreqset);
+	PRTYPE(struct pscrpc_peer_qlen);
 	PRTYPE(struct pscrpc_reply_state);
 	PRTYPE(struct pscrpc_request);
 	PRTYPE(struct pscrpc_request_buffer_desc);
@@ -202,8 +208,11 @@ main(int argc, char *argv[])
 	PRTYPE(struct pscrpc_svc_handle);
 	PRTYPE(struct pscrpc_thread);
 	PRTYPE(struct pscrpc_wait_callback);
-	PRTYPE(struct rpc_peer_qlen);
 	PRTYPE(struct vbitmap);
+	PRTYPE(u16);
+	PRTYPE(u32);
+	PRTYPE(u64);
+	PRTYPE(u8);
 /* end structs */
 
 	PRVAL(offsetof(struct psc_listcache, lc_listhd));
