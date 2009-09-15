@@ -1,6 +1,7 @@
 /* $Id$ */
 
-#include <sys/types.h>
+#ifndef _PFL_ACSVC_H_
+#define _PFL_ACSVC_H_
 
 struct psc_thread;
 
@@ -26,8 +27,6 @@ enum {
 
 struct psc_thread *
 	acsvc_init(int, const char *, char **);
-#if USE_GDB_FORK_WORKAROUND
-struct psc_thread *
-	acsvc_init_zestiond(int);
-#endif
 int	access_fsop(int, uid_t, gid_t, const char *, ...);
+
+#endif /* _PFL_ACSVC_H_ */
