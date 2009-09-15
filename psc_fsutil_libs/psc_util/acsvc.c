@@ -354,7 +354,7 @@ acsvc_svrmain_zestiond(__unusedx void *arg)
 }
 
 struct psc_thread *
-acsvc_init_zestiond(int thrtype)
+acsvc_init(int thrtype, __unusedx const char *name, __unusedx char **av)
 {
 	int fds[2];
 	if (socketpair(AF_LOCAL, SOCK_STREAM, PF_UNSPEC, fds) == -1)
@@ -366,7 +366,7 @@ acsvc_init_zestiond(int thrtype)
 	return (pscthr_init(thrtype, 0, acsvc_climain, NULL, 0, "zacsthr"));
 }
 
-#endif
+#else
 
 struct psc_thread *
 acsvc_init(int thrtype, const char *name, char **av)
@@ -397,6 +397,8 @@ acsvc_init(int thrtype, const char *name, char **av)
 
 	return (pscthr_init(thrtype, 0, acsvc_climain, NULL, 0, name));
 }
+
+#endif
 
 __static struct access_request *
 acsreq_new(int op, uid_t uid, gid_t gid)
