@@ -11,7 +11,6 @@
 #include <fcntl.h>
 #include <inttypes.h>
 
-#include "psc_types.h"
 #include "psc_ds/vbitmap.h"
 #include "psc_util/assert.h"
 #include "psc_util/crc.h"
@@ -155,35 +154,35 @@ odtable_freemap(struct odtable *odt)
  * inuse == 2  --> test the slot assuming it's being used but ignoring key.
  */
 #define odtable_footercheck(odtf, odtr, inuse)				\
-        ({								\
-                int __ret = 0;						\
-	 								\
-                if ((odtf)->odtf_magic != ODTBL_MAGIC)			\
-                        __ret = ODTBL_MAGIC_ERR;			\
+	({								\
+		int __ret = 0;						\
 									\
-                else if ((odtf)->odtf_slotno != (odtr)->odtr_elem)	\
-                        __ret = ODTBL_SLOT_ERR;				\
+		if ((odtf)->odtf_magic != ODTBL_MAGIC)			\
+			__ret = ODTBL_MAGIC_ERR;			\
 									\
-                else if ((odtf)->odtf_inuse == ODTBL_BAD)		\
-                        __ret = ODTBL_BADSL_ERR;			\
+		else if ((odtf)->odtf_slotno != (odtr)->odtr_elem)	\
+			__ret = ODTBL_SLOT_ERR;				\
 									\
-                else if (inuse && (inuse > 0) &&			\
+		else if ((odtf)->odtf_inuse == ODTBL_BAD)		\
+			__ret = ODTBL_BADSL_ERR;			\
+									\
+		else if (inuse && (inuse > 0) &&			\
 			 (odtf)->odtf_inuse != ODTBL_INUSE)		\
-                        __ret = ODTBL_INUSE_ERR;			\
+			__ret = ODTBL_INUSE_ERR;			\
 									\
-                else if (!inuse && (inuse > 0) &&			\
+		else if (!inuse && (inuse > 0) &&			\
 			 (odtf)->odtf_inuse != ODTBL_FREE)		\
-                        __ret = ODTBL_FREE_ERR;				\
+			__ret = ODTBL_FREE_ERR;				\
 									\
 		else if ((inuse == 1) &&				\
 			 ((odtf)->odtf_inuse == ODTBL_INUSE) &&		\
 			 ((odtf)->odtf_key != ((odtr)->odtr_key)))	\
 			__ret = ODTBL_KEY_ERR;				\
 									\
-                if (__ret)						\
-                        psc_errorx("slot=%"PRId64" has error %d",	\
+		if (__ret)						\
+			psc_errorx("slot=%"PRId64" has error %d",	\
 				   (odtr)->odtr_elem, __ret);		\
 		__ret;							\
-        })
+	})
 
 #endif

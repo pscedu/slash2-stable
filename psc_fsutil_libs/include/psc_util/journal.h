@@ -3,7 +3,6 @@
 #ifndef _PFL_JOURNAL_H_
 #define _PFL_JOURNAL_H_
 
-#include "psc_types.h"
 #include "psc_util/atomic.h"
 #include "psc_util/lock.h"
 #include "psc_util/thread.h"

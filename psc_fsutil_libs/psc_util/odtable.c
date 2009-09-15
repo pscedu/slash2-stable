@@ -13,7 +13,6 @@
 #include <string.h>
 #include <unistd.h>
 
-#include "psc_types.h"
 #include "psc_util/alloc.h"
 #include "psc_util/cdefs.h"
 #include "psc_util/lock.h"
