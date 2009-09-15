@@ -63,8 +63,8 @@ psc_enter_debugger(const char *str)
 	gettimeofday(&tv, NULL);
 	printf("timestamp %lu:%lu, enter debugger (%s) ...\n", tv.tv_sec, tv.tv_usec, str);
 	psc_notify("timestamp %lu:%lu, enter debugger (%s) ...\n", tv.tv_sec, tv.tv_usec, str);
-	__asm__ __volatile__ ("int3");
-//	kill(0, SIGINT);
+//	__asm__ __volatile__ ("int3");
+	kill(0, SIGINT);
 }
 
 void
@@ -78,7 +78,6 @@ pfl_init(void)
 	pscthrs_init();
 	psc_memnode_init();
 	psc_log_init();
-	psc_fault_init();
 
 	if (getenv("PSC_DUMPSTACK")) {
 		if (signal(SIGSEGV, psc_dumpstack) == SIG_ERR)
@@ -94,6 +93,8 @@ pfl_init(void)
 	psc_subsys_register(PSS_MEM, "mem");
 	psc_subsys_register(PSS_GEN, "gen");
 	psc_subsys_register(PSS_TMP, "tmp");
+
+	psc_fault_init();
 
 	pscPageSize = sysconf(_SC_PAGESIZE);
 	if (pscPageSize == -1)
