@@ -607,16 +607,16 @@ int
 psc_ctlmsg_stats_prhdr(__unusedx struct psc_ctlmsghdr *mh, __unusedx const void *m)
 {
 	printf("thread stats\n");
-	return (printf(" %-*s %5s %5s"
+	return (printf(" %-*s %5s"
 #ifdef HAVE_NUMA
 	    " %7d"
 #endif
-	    "\n",
-	    PSC_THRNAME_MAX, "name", "thrid", "flags"
+	    " %4s\n",
+	    PSC_THRNAME_MAX, "name", "thrid"
 #ifdef HAVE_NUMA
-		, "memnode"
+	    , "memnode"
 #endif
-	    ));
+	    , "flag"));
 }
 
 void
@@ -639,9 +639,11 @@ psc_ctlmsg_stats_prdat(__unusedx const struct psc_ctlmsghdr *mh,
 	    pcst->pcst_flags & PTF_FREE		? 'F' : '-',
 	    pcst->pcst_flags & PTF_RUN		? 'R' : '-',
 	    pcst->pcst_flags & PTF_READY	? 'I' : '-');
-	ptf = &psc_ctl_thrstatfmts[pcst->pcst_thrtype];
-	if (ptf->ptf_prdat)
-		ptf->ptf_prdat(pcst);
+	if (pcst->pcst_thrtype < psc_ctl_nthrstatfmts) {
+		ptf = &psc_ctl_thrstatfmts[pcst->pcst_thrtype];
+		if (ptf->ptf_prdat)
+			ptf->ptf_prdat(pcst);
+	}
 	printf("\n");
 }
 
