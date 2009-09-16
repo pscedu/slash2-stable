@@ -34,7 +34,7 @@ struct psc_ctl_thrstatfmt {
 };
 
 struct psc_ctlmsg_prfmt {
-	int		(*prf_prhdr)(struct psc_ctlmsghdr *, const void *);
+	void		(*prf_prhdr)(struct psc_ctlmsghdr *, const void *);
 	void		(*prf_prdat)(const struct psc_ctlmsghdr *, const void *);
 	size_t		  prf_msgsiz;
 	int		(*prf_check)(struct psc_ctlmsghdr *, const void *);
@@ -59,29 +59,28 @@ void  psc_ctlcli_main(const char *);
 
 void  psc_ctlthr_prdat(const struct psc_ctlmsg_stats *);
 
-int   psc_ctlmsg_hashtable_prhdr(struct psc_ctlmsghdr *, const void *);
+void  psc_ctlmsg_hashtable_prhdr(struct psc_ctlmsghdr *, const void *);
 void  psc_ctlmsg_hashtable_prdat(const struct psc_ctlmsghdr *, const void *);
 void  psc_ctlmsg_error_prdat(const struct psc_ctlmsghdr *, const void *);
 int   psc_ctlmsg_subsys_check(struct psc_ctlmsghdr *, const void *);
-int   psc_ctlmsg_iostats_prhdr(struct psc_ctlmsghdr *, const void *);
+void  psc_ctlmsg_iostats_prhdr(struct psc_ctlmsghdr *, const void *);
 void  psc_ctlmsg_iostats_prdat(const struct psc_ctlmsghdr *, const void *);
-int   psc_ctlmsg_meter_prhdr(struct psc_ctlmsghdr *, const void *);
+void  psc_ctlmsg_meter_prhdr(struct psc_ctlmsghdr *, const void *);
 void  psc_ctlmsg_meter_prdat(const struct psc_ctlmsghdr *, const void *);
-int   psc_ctlmsg_pool_prhdr(struct psc_ctlmsghdr *, const void *);
+void  psc_ctlmsg_pool_prhdr(struct psc_ctlmsghdr *, const void *);
 void  psc_ctlmsg_pool_prdat(const struct psc_ctlmsghdr *, const void *);
-int   psc_ctlmsg_lc_prhdr(struct psc_ctlmsghdr *, const void *);
+void  psc_ctlmsg_lc_prhdr(struct psc_ctlmsghdr *, const void *);
 void  psc_ctlmsg_lc_prdat(const struct psc_ctlmsghdr *, const void *);
-int   psc_ctlmsg_param_prhdr(struct psc_ctlmsghdr *, const void *);
+void  psc_ctlmsg_param_prhdr(struct psc_ctlmsghdr *, const void *);
 void  psc_ctlmsg_param_prdat(const struct psc_ctlmsghdr *, const void *);
-int   psc_ctlmsg_stats_check(struct psc_ctlmsghdr *, const void *);
-int   psc_ctlmsg_stats_prhdr(struct psc_ctlmsghdr *, const void *);
+void  psc_ctlmsg_stats_prhdr(struct psc_ctlmsghdr *, const void *);
 void  psc_ctlmsg_stats_prdat(const struct psc_ctlmsghdr *, const void *);
 int   psc_ctlmsg_loglevel_check(struct psc_ctlmsghdr *, const void *);
-int   psc_ctlmsg_loglevel_prhdr(struct psc_ctlmsghdr *, const void *);
+void  psc_ctlmsg_loglevel_prhdr(struct psc_ctlmsghdr *, const void *);
 void  psc_ctlmsg_loglevel_prdat(const struct psc_ctlmsghdr *, const void *);
-int   psc_ctlmsg_mlist_prhdr(struct psc_ctlmsghdr *, const void *);
+void  psc_ctlmsg_mlist_prhdr(struct psc_ctlmsghdr *, const void *);
 void  psc_ctlmsg_mlist_prdat(const struct psc_ctlmsghdr *, const void *);
-int   psc_ctlmsg_fault_prhdr(struct psc_ctlmsghdr *, const void *);
+void  psc_ctlmsg_fault_prhdr(struct psc_ctlmsghdr *, const void *);
 void  psc_ctlmsg_fault_prdat(const struct psc_ctlmsghdr *, const void *);
 
 extern int psc_ctl_noheader;

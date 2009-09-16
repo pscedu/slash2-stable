@@ -1275,9 +1275,10 @@ psc_ctl_applythrop(int fd, struct psc_ctlmsghdr *mh, void *m, const char *thrnam
     int (*cbf)(int, struct psc_ctlmsghdr *, void *, struct psc_thread *))
 {
 	struct psc_thread *thr;
-	int rc;
+	int rc, len, nsz, found;
 
 	rc = 1;
+	found = 0;
 	PLL_LOCK(&psc_threads);
 	if (strcasecmp(thrname, PCTHRNAME_EVERYONE) == 0) {
 		psclist_for_each_entry(thr,
@@ -1287,19 +1288,21 @@ psc_ctl_applythrop(int fd, struct psc_ctlmsghdr *mh, void *m, const char *thrnam
 				break;
 		}
 	} else {
+		len = strlen(thrname);
 		psclist_for_each_entry(thr,
-		    &psc_threads.pll_listhd, pscthr_lentry)
-			/*
-			 * XXX: strncasecmp?
-			 * thr1 can't match thr10,
-			 * don't partial match numbers.
-			 */
-			if (strcasecmp(thrname,
-			    thr->pscthr_name) == 0) {
+		    &psc_threads.pll_listhd, pscthr_lentry) {
+			nsz = strcspn(thr->pscthr_name, "0123456789");
+			if (len && strncasecmp(thrname,
+			    thr->pscthr_name, len) == 0 &&
+			    (len <= nsz ||
+			     len == (int)strlen(thr->pscthr_name))) {
+				found = 1;
 				rc = cbf(fd, mh, m, thr);
-				break;
+				if (!rc)
+					break;
 			}
-		if (thr == NULL)
+		}
+		if (!found)
 			rc = psc_ctlsenderr(fd, mh,
 			    "unknown thread: %s", thrname);
 	}

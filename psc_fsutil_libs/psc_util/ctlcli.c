@@ -24,6 +24,8 @@
 #include "psc_util/strlcpy.h"
 #include "psc_util/subsys.h"
 
+#define DISPLAY_WIDTH 80
+
 __static PSCLIST_HEAD(psc_ctlmsgs);
 
 struct psc_ctlmsg {
@@ -349,15 +351,15 @@ psc_ctlthr_prdat(const struct psc_ctlmsg_stats *pcst)
 	    pcst->pcst_nclients, pcst->pcst_nsent, pcst->pcst_nrecv);
 }
 
-int
+void
 psc_ctlmsg_hashtable_prhdr(__unusedx struct psc_ctlmsghdr *mh,
     __unusedx const void *m)
 {
-	printf("hash table statistics\n");
-	return (printf(" %-31s %5s %6s %6s "
+	printf("hash table statistics\n"
+	    " %-31s %5s %6s %6s "
 	    "%6s %6s %6s %6s\n",
 	    "table", "flags", "used", "total",
-	    "%use", "#ents", "avglen", "maxlen"));
+	    "%use", "#ents", "avglen", "maxlen");
 }
 
 void
@@ -420,13 +422,13 @@ psc_ctlmsg_subsys_check(struct psc_ctlmsghdr *mh, const void *m)
 	return (0);
 }
 
-int
+void
 psc_ctlmsg_iostats_prhdr(__unusedx struct psc_ctlmsghdr *mh,
     __unusedx const void *m)
 {
-	printf("iostats\n");
-	return (printf(" %-37s %10s %12s %8s %8s\n",
-	    "name", "ratecur", "total", "erate", "#err"));
+	printf("iostats\n"
+	    " %-37s %10s %12s %8s %8s\n",
+	    "name", "ratecur", "total", "erate", "#err");
 }
 
 void
@@ -452,13 +454,13 @@ psc_ctlmsg_iostats_prdat(__unusedx const struct psc_ctlmsghdr *mh,
 	    ist->ist_errors_total);
 }
 
-int
+void
 psc_ctlmsg_meter_prhdr(__unusedx struct psc_ctlmsghdr *mh,
     __unusedx const void *m)
 {
-	printf("meters\n");
-	return (printf(" %12s %13s %8s\n",
-	    "name", "position", "progress"));
+	printf("meters\n"
+	    " %12s %13s %8s\n",
+	    "name", "position", "progress");
 }
 
 void
@@ -488,18 +490,17 @@ psc_ctlmsg_meter_prdat(__unusedx const struct psc_ctlmsghdr *mh,
 	printf("|\n");
 }
 
-int
+void
 psc_ctlmsg_pool_prhdr(__unusedx struct psc_ctlmsghdr *mh,
     __unusedx const void *m)
 {
-	printf("pools\n");
-	return (printf(
+	printf("pools\n"
 	    " %-8s %3s %6s %6s %6s "
 	    "%6s %6s %6s %2s "
 	    "%6s %6s %3s %3s\n",
 	    "name", "flg", "#free", "#use", "total",
 	    "%use", "min", "max", "th",
-	    "#grows", "#shrnx", "#em", "#wa"));
+	    "#grows", "#shrnx", "#em", "#wa");
 	/* XXX add ngets and waiting/sleep time */
 }
 
@@ -546,13 +547,13 @@ psc_ctlmsg_pool_prdat(__unusedx const struct psc_ctlmsghdr *mh,
 	printf("\n");
 }
 
-int
+void
 psc_ctlmsg_lc_prhdr(__unusedx struct psc_ctlmsghdr *mh,
     __unusedx const void *m)
 {
-	printf("list caches\n");
-	return (printf(" %-42s %3s %8s %3s %3s %15s\n",
-	    "name", "flg", "#items", "#wa", "#em", "#seen"));
+	printf("list caches\n"
+	    " %-42s %3s %8s %3s %3s %15s\n",
+	    "name", "flg", "#items", "#wa", "#em", "#seen");
 }
 
 void
@@ -571,12 +572,12 @@ psc_ctlmsg_lc_prdat(__unusedx const struct psc_ctlmsghdr *mh,
 	    pclc->pclc_nseen);
 }
 
-int
+void
 psc_ctlmsg_param_prhdr(__unusedx struct psc_ctlmsghdr *mh,
     __unusedx const void *m)
 {
-	printf("parameters\n");
-	return (printf(" %-35s %s\n", "name", "value"));
+	printf("parameters\n"
+	    " %-35s %s\n", "name", "value");
 }
 
 void
@@ -593,7 +594,7 @@ psc_ctlmsg_param_prdat(__unusedx const struct psc_ctlmsghdr *mh,
 		    pcp->pcp_field, pcp->pcp_value);
 }
 
-int
+void
 psc_ctlmsg_stats_prhdr(__unusedx struct psc_ctlmsghdr *mh,
     __unusedx const void *m)
 {
@@ -611,10 +612,8 @@ psc_ctlmsg_stats_prhdr(__unusedx struct psc_ctlmsghdr *mh,
 	    "memnid",
 #endif
 	    "flag");
-#define DISPLAY_WIDTH 80
 	printf("%*s%s\n", (DISPLAY_WIDTH - n - 1) / 2 -
 	    (int)strlen(msg) / 2, "", msg);
-	return (DISPLAY_WIDTH);
 }
 
 void
@@ -657,19 +656,18 @@ psc_ctlmsg_loglevel_check(struct psc_ctlmsghdr *mh,
 	return (0);
 }
 
-int
+void
 psc_ctlmsg_loglevel_prhdr(__unusedx struct psc_ctlmsghdr *mh,
     __unusedx const void *m)
 {
-	int len, n;
+	int n;
 
 	printf("logging levels\n");
-	len = printf(" %-*s ", PSC_THRNAME_MAX, "thread");
+	printf(" %-*s ", PSC_THRNAME_MAX, "thread");
 	for (n = 0; n < psc_ctl_nsubsys; n++)
-		len += printf(" %*s", psc_ctl_loglevel_namelen(n),
+		printf(" %*s", psc_ctl_loglevel_namelen(n),
 		    psc_ctl_subsys_names[n]);
-	len += printf("\n");
-	return (len);
+	printf("\n");
 }
 
 void
@@ -686,13 +684,13 @@ psc_ctlmsg_loglevel_prdat(__unusedx const struct psc_ctlmsghdr *mh,
 	printf("\n");
 }
 
-int
+void
 psc_ctlmsg_mlist_prhdr(__unusedx struct psc_ctlmsghdr *mh,
     __unusedx const void *m)
 {
-	printf("mlists\n");
-	return (printf(" %-50s %8s %3s %15s\n",
-	    "name", "#items", "#em", "#seen"));
+	printf("mlists\n"
+	    " %-50s %8s %3s %15s\n",
+	    "name", "#items", "#em", "#seen");
 }
 
 void
@@ -706,15 +704,15 @@ psc_ctlmsg_mlist_prdat(__unusedx const struct psc_ctlmsghdr *mh,
 	    pcml->pcml_waitors, pcml->pcml_nseen);
 }
 
-int
+void
 psc_ctlmsg_fault_prhdr(__unusedx struct psc_ctlmsghdr *mh,
     __unusedx const void *m)
 {
-	printf("fault point(s)\n");
-	return (printf(" %-35s %3s %7s %7s %5s "
+	printf("fault point(s)\n"
+	    " %-35s %3s %7s %7s %5s "
 	    "%10s %5s %5s %5s\n",
 	    "name", "flg", "#hit", "#uhit", "delay",
-	    "count", "begin", "code", "prob"));
+	    "count", "begin", "code", "prob");
 }
 
 void
@@ -738,7 +736,7 @@ __static void
 psc_ctlmsg_print(struct psc_ctlmsghdr *mh, const void *m)
 {
 	const struct psc_ctlmsg_prfmt *prf;
-	int n, len;
+	int n;
 
 	/* Validate message type. */
 	if (mh->mh_type < 0 ||
@@ -765,8 +763,8 @@ psc_ctlmsg_print(struct psc_ctlmsghdr *mh, const void *m)
 
 		if (psc_ctl_lastmsgtype != -1)
 			printf("\n");
-		len = prf->prf_prhdr(mh, m);
-		for (n = 0; n < len - 1; n++)
+		prf->prf_prhdr(mh, m);
+		for (n = 0; n < DISPLAY_WIDTH; n++)
 			putchar('=');
 		putchar('\n');
 	}
