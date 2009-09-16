@@ -276,10 +276,16 @@ void reply_in_callback(lnet_event_t *ev)
 		req->rq_nob_received = ev->mlength;
 	}
 
+	if (req->rq_compl_cntr)
+		/* Notify upper layer that an rpc is ready to be
+		 *   finalized.
+		 */
+		atomic_inc(req->rq_compl_cntr);
+
 	/* NB don't unlock till after wakeup; req can disappear under us
 	 * since we don't have our own ref */
 	pscrpc_wake_client_req(req);
-
+	
 	freelock(&req->rq_lock);
 	EXIT;
 }

@@ -299,6 +299,7 @@ struct pscrpc_request {
 				rq_net_err:1;
 	atomic_t		rq_refcount; /* client-side refcnt for SENT race */
 	atomic_t		rq_retries;  /* count retries */
+	atomic_t               *rq_compl_cntr;
 	lnet_process_id_t	rq_peer;
 	lnet_nid_t		rq_self;
 	enum   psc_rq_phase         rq_phase; /* one of RQ_PHASE_* */
@@ -318,7 +319,7 @@ struct pscrpc_request {
 	struct psc_msg             *rq_repmsg;
 	/* request and reply callbacks */
 	struct pscrpc_cb_id         rq_req_cbid;
-	struct pscrpc_cb_id         rq_reply_cbid;
+	struct pscrpc_cb_id         rq_reply_cbid;       
 	struct pscrpc_bulk_desc    *rq_bulk;    /* attach bulk */
 	int			  (*rq_interpret_reply)(struct pscrpc_request *,
 					struct pscrpc_async_args *);
