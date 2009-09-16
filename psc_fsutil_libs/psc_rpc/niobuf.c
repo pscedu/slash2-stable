@@ -120,7 +120,8 @@ int pscrpc_start_bulk_transfer (struct pscrpc_bulk_desc *desc)
 	psc_assert (conn != NULL);
 
         desc->bd_success = 0;
-
+	
+	md.max_size = 0;
         md.user_ptr = &desc->bd_cbid;
         md.eq_handle = pscrpc_eq_h;
         md.threshold = 2; /* SENT and ACK/REPLY */
@@ -776,7 +777,7 @@ void pscrpc_req_finished(struct pscrpc_request *request)
 
 void pscrpc_free_bulk(struct pscrpc_bulk_desc *desc)
 {
-        ENTRY;
+	psc_trace("free desc=%p", desc);
 
         psc_assert(desc != NULL);
         psc_assert(desc->bd_iov_count != LI_POISON); /* not freed already */
@@ -802,7 +803,10 @@ void pscrpc_fill_bulk_md(lnet_md_t *md, struct pscrpc_bulk_desc *desc)
                 md->length = desc->bd_iov[0].iov_len;
                 return;
         }
-
+	/* Note that md->length is used differently depending on the 
+	 *   number of iov's given.  If > 1 iov, set LNET_MD_IOVEC
+	 *   otherwise assume a single iovec (above).
+	 */
         md->options |= LNET_MD_IOVEC;
         md->start = &desc->bd_iov[0];
         md->length = desc->bd_iov_count;
