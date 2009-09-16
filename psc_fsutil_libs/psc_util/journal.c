@@ -19,6 +19,7 @@
 #include "psc_util/atomic.h"
 #include "psc_util/journal.h"
 #include "psc_util/lock.h"
+#include "psc_ds/dynarray.h"
 
 static struct psc_journal_xidhndl *
 pjournal_xidhndl_new(struct psc_journal *pj)
@@ -28,6 +29,9 @@ pjournal_xidhndl_new(struct psc_journal *pj)
 	xh = PSCALLOC(sizeof(*xh));
 
 	xh->pjx_pj = pj;
+
+	psc_warnx("xh=%p xh->pjx_pj=%p", xh, xh->pjx_pj);
+
 	INIT_PSCLIST_ENTRY(&xh->pjx_lentry);
 	LOCK_INIT(&xh->pjx_lock);
 	return (xh);
@@ -51,7 +55,8 @@ pjournal_nextxid(struct psc_journal *pj)
 	} while (xh->pjx_xid == PJE_XID_NONE);
 	PJ_ULOCK(pj);
 
-	xh->pjx_pj = pj;
+	psc_assert(xh->pjx_pj == pj);
+
 	return (xh);
 }
 
@@ -69,12 +74,26 @@ _pjournal_logwrite(struct psc_journal *pj, struct psc_journal_xidhndl *xh,
 		   uint32_t slot, int type, void *data, size_t size)
 {
 	struct psc_journal_enthdr *pje;
-	int rc;
+	int rc=0, len;
 
 	psc_assert(slot < pj->pj_hdr->pjh_nents);
 	psc_assert(size <= pj->pj_hdr->pjh_entsz);
 
+#ifdef PJE_DYN_BUFFER
 	pje = psc_alloc(PJ_PJESZ(pj), PAF_PAGEALIGN | PAF_LOCK);
+#else
+ retry:
+	PJ_LOCK(pj);
+	if (!(len = dynarray_len(&pj->pj_bufs))) {
+		psc_waitq_wait(&pj->pj_waitq, &pj->pj_lock);
+		goto retry;
+	}
+	pje = dynarray_getpos(&pj->pj_bufs, len-1);
+	psc_assert(pje);
+	dynarray_remove(&pj->pj_bufs, pje);
+	psc_notify("got pje=%p", pje);
+	PJ_ULOCK(pj);
+#endif
 	if (data)
 		memcpy(pje->pje_data, data, size);
 
@@ -93,7 +112,14 @@ _pjournal_logwrite(struct psc_journal *pj, struct psc_journal_xidhndl *xh,
 	//XXX	rc = pwrite(pj->pj_fd, pje, pj->pj_hdr->pjh_entsz,
 	//XXX       (off_t)(pj->pj_hdr->pjh_start_off + (slot * pj->pj_hdr->pjh_entsz)));
 
+#ifdef PJE_DYN_BUFFER
 	psc_freel(pje, PJ_PJESZ(pj));
+#else
+	PJ_LOCK(pj);
+	dynarray_add(&pj->pj_bufs, pje);
+	psc_waitq_wakeall(&pj->pj_waitq);
+	PJ_ULOCK(pj);
+#endif
 	return (rc);
 }
 
@@ -110,9 +136,8 @@ pjournal_logwrite(struct psc_journal_xidhndl *xh, int type, void *data,
 		  size_t size)
 {
 	int rc, freexh=0;
-	uint32_t slot;
+	uint32_t slot, tail_slot=0;
 	struct psc_journal *pj = xh->pjx_pj;
-	struct psc_journal_xidhndl *t;
 
 	if (type == PJET_VOID)
 		psc_assert(!data);
@@ -122,8 +147,6 @@ pjournal_logwrite(struct psc_journal_xidhndl *xh, int type, void *data,
 	psc_assert(!(type & PJET_XEND));
 
 	psc_assert(!(xh->pjx_flags & PJET_CLOSED));
-
-
 
  retry:
 	PJ_LOCK(pj);
@@ -135,20 +158,24 @@ pjournal_logwrite(struct psc_journal_xidhndl *xh, int type, void *data,
 	 *  over writing slots belonging to open transactions.
 	 */
 	if (!psclist_empty(&pj->pj_pndgxids)) {
+		struct psc_journal_xidhndl *t;
 	
-		t = psclist_first_entry(&pj->pj_pndgxids, struct psc_journal_xidhndl,
-					pjx_lentry);
-		
-		psc_trace("pj(%p) tail@slot(%d) my@slot(%d)",
-			  pj, t->pjx_tailslot, slot);
+		t = psclist_first_entry(&pj->pj_pndgxids, 
+				struct psc_journal_xidhndl, pjx_lentry);
 		
 		if (t->pjx_tailslot == slot) {
-			psc_warnx("pj(%p) blocking on slot(%d) availability - "
-				  "owned by xid (%p)", pj, slot, t);
+			psc_warnx("pj(%p) blocking on slot(%d) "
+				  "availability - owned by xid (%p)", 
+				  pj, slot, t);
 			psc_waitq_wait(&pj->pj_waitq, &pj->pj_lock);
 			goto retry;
 		}
+		tail_slot = t->pjx_tailslot;
 	}
+
+	psc_info("pj(%p) tail@slot(%d) my@slot(%d) xh_flags(%o) xh_ref(%d)",
+		 pj, tail_slot, slot, xh->pjx_flags, 
+		 atomic_read(&xh->pjx_ref));
 
 	if (atomic_dec_and_test(&xh->pjx_ref) &&
 	    (xh->pjx_flags & PJET_XEND)) {
@@ -159,7 +186,8 @@ pjournal_logwrite(struct psc_journal_xidhndl *xh, int type, void *data,
 				/* We are the tail so unblock the journal.
 				 */
 				psc_warnx("pj(%p) unblocking slot(%d) - "
-					  "owned by xid (%p)", pj, slot, xh);
+					  "owned by xid (%p)", 
+					  pj, slot, xh);
 				psc_waitq_wakeall(&pj->pj_waitq);
 			}
 		}
@@ -267,6 +295,7 @@ pjournal_xadd(struct psc_journal_xidhndl *xh, int type, void *data,
 {
 	spinlock(&xh->pjx_lock);
 	psc_assert(!(xh->pjx_flags & PJET_XEND));
+	psc_assert(atomic_read(&xh->pjx_ref) >= 0);
 	atomic_inc(&xh->pjx_ref);
 	freelock(&xh->pjx_lock);
 
@@ -460,6 +489,10 @@ pjournal_load(const char *fn)
 	struct psc_journal_hdr *pjh = PSCALLOC(sizeof(*pjh));
 	struct psc_journal *pj = PSCALLOC(sizeof(*pj));
 	void *hdr = psc_alloc(PJE_OFFSET, PAF_PAGEALIGN);
+#ifndef PJE_DYN_BUFFER
+	struct psc_journal_enthdr *pje;
+	int n=8;
+#endif
 
 	pj->pj_fd = open(fn, O_RDWR|O_DIRECT);
 	if (pj->pj_fd < 0)
@@ -480,6 +513,13 @@ pjournal_load(const char *fn)
 	INIT_PSCLIST_HEAD(&pj->pj_pndgxids);
 	psc_waitq_init(&pj->pj_waitq);
 
+#ifndef PJE_DYN_BUFFER
+	dynarray_init(&pj->pj_bufs);
+	while (n--) {
+		pje = psc_alloc(PJ_PJESZ(pj), PAF_PAGEALIGN | PAF_LOCK);
+		dynarray_add(&pj->pj_bufs, pje);
+	}	
+#endif
 	return (pj);
 }
 

@@ -7,6 +7,7 @@
 #include "psc_util/lock.h"
 #include "psc_util/thread.h"
 #include "psc_util/waitq.h"
+#include "psc_ds/dynarray.h"
 
 #define PJ_LOCK(pj)     spinlock(&(pj)->pj_lock)
 #define PJ_ULOCK(pj)    freelock(&(pj)->pj_lock)
@@ -34,11 +35,12 @@ struct psc_journal_hdr {
 
 struct psc_journal {
 	psc_spinlock_t	pj_lock;	/* contention lock */
+	uint64_t	pj_nextxid;	/* next transaction ID */
 	uint32_t	pj_nextwrite;	/* next entry slot to write to */
 	int		pj_genid;	/* current wrap generation */
-	uint64_t	pj_nextxid;	/* next transaction ID */
 	int		pj_fd;		/* open file descriptor to disk */
 	struct psclist_head pj_pndgxids;
+	struct dynarray pj_bufs;
 	struct psc_journal_hdr *pj_hdr;
 	psc_waitq_t	pj_waitq;
 };
@@ -108,11 +110,12 @@ struct psc_journal_xidhndl {
 
 /* Journal entry types. */
 #define PJET_VOID	0		/* null journal record */
-#define PJET_CORRUPT	(2<<27)		/* entry has failed magic */
-#define PJET_CLOSED	(2<<28)		/* xid is closed */
-#define PJET_XSTARTED	(2<<29)		/* transaction began */
-#define PJET_XADD       (2<<30)
-#define PJET_XEND	(2<<31)		/* transaction ended */
+#define PJET_CORRUPT	(1<<0)		/* entry has failed magic */
+#define PJET_CLOSED	(1<<1)		/* xid is closed */
+#define PJET_XSTARTED	(1<<2)		/* transaction began */
+#define PJET_XADD       (1<<3)
+#define PJET_XEND	(1<<4)		/* transaction ended */
+#define PJET_RESERVED   PJET_XEND       /* denote the last used bit */
 
 struct psc_journal *
 pjournal_load(const char *);
