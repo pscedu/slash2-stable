@@ -24,7 +24,7 @@
 #include "psc_util/strlcpy.h"
 #include "psc_util/subsys.h"
 
-#define DISPLAY_WIDTH 80
+#define DISPLAY_WIDTH 100
 
 __static PSCLIST_HEAD(psc_ctlmsgs);
 
