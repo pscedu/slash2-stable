@@ -36,8 +36,6 @@
 
 #if !defined(__KERNEL__) || !defined(REDSTORM)
 
-#include <lnet/lib-lnet.h>
-
 #include <libcfs/libcfs.h>
 #include <libcfs/kp30.h>
 
@@ -244,17 +242,12 @@ libcfs_ipif_enumerate (char ***namesp)
  */
 
 int
-lnet_localnids_get (lnet_nid_t *nids, size_t max);
-
-int
 libcfs_sock_listen (int *sockp, __u32 local_ip, int local_port, int backlog)
 {
         int                rc;
         int                option;
         struct sockaddr_in locaddr;
-        lnet_nid_t         nids[10];
-        int                nnids;
-
+        
         *sockp = socket(lnet_get_usesdp() ? AF_INET_SDP : AF_INET, SOCK_STREAM, 0);
         if (*sockp < 0) {
                 rc = -errno;
@@ -274,16 +267,9 @@ libcfs_sock_listen (int *sockp, __u32 local_ip, int local_port, int backlog)
                 memset(&locaddr, 0, sizeof(locaddr));
                 locaddr.sin_family = lnet_get_usesdp() ? AF_INET_SDP : AF_INET;
                 locaddr.sin_port = htons(local_port);
-                if (0==local_ip){
-                        nnids = lnet_localnids_get(nids,10);
-                        if (0==nnids){
-                                locaddr.sin_addr.s_addr = INADDR_ANY;
-                        } else {
-                                locaddr.sin_addr.s_addr = htonl(LNET_NIDADDR(nids[0]));
-                        }
-                } else
-                        locaddr.sin_addr.s_addr = htonl(local_ip);
-                
+                locaddr.sin_addr.s_addr = (local_ip == 0) ?
+                                          INADDR_ANY : htonl(local_ip);
+
                 if ( bind(*sockp, (struct sockaddr *)&locaddr, sizeof(locaddr)) ) {
                         rc = -errno;
                         if ( errno == -EADDRINUSE )
