@@ -337,7 +337,7 @@ int
 multilock_wait(struct multilock *ml, void *datap, int usec)
 {
 	struct multilock_cond *mlc, **mlcv;
-	int won, nmlc, j;
+	int allmasked, won, nmlc, j;
 
 	won = 0;
  restart:
@@ -354,15 +354,22 @@ multilock_wait(struct multilock *ml, void *datap, int usec)
 	nmlc = dynarray_len(&ml->ml_conds);
 	mlcv = dynarray_get(&ml->ml_conds);
 
-	/* XXX what if all conditions are masked off */
-	if (nmlc == 0 && !usec)
-		psc_fatalx("A multilock with no conditions or timeout will never wake up");
+	if (nmlc == 0)
+		psc_fatalx("multilock has no conditions and will never wake up");
 
+	allmasked = 1;
 	for (j = 0; j < nmlc; j++) {
+		/* check if all conditions have been masked off */
+		if (allmasked && vbitmap_get(ml->ml_mask, j))
+			allmasked = 0;
+
 		psc_pthread_mutex_lock(&mlcv[j]->mlc_mutex);
 		mlcv[j]->mlc_winner = NULL;
 		pthread_mutex_unlock(&mlcv[j]->mlc_mutex);
 	}
+
+	if (allmasked)
+		psc_fatalx("multilock has all conditions masked and will never wake up");
 
 	if (usec) {
 		struct timeval tv, res, adj;
@@ -481,10 +488,6 @@ multilock_cond_nwaitors(struct multilock_cond *mlc)
 /*
  * multilock_enter_critsect - enter a critical section.
  * @ml: the multilock.
- *
- * Zhihui: If we check waker field in the multilock_wait
- *         unconditionally and clear it after being woken
- *         up, we might now need this enter/leave stuff.
  */
 void
 multilock_enter_critsect(struct multilock *ml)
