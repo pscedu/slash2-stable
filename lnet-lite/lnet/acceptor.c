@@ -314,6 +314,7 @@ int
 lnet_acceptor_start(void)
 {
 	struct lnet_acceptor_param *lap;
+	struct in_addr ina;
 	char addrbuf[40];
 	long   secure;
 	lnet_ni_t *ni;
@@ -358,8 +359,10 @@ lnet_acceptor_start(void)
 			lap->lap_addr.s_addr = LNET_NIDADDR(ni->ni_nid);
 			cfs_init_completion(&lap->lap_compl);
 
+			ina.s_addr = htonl(lap->lap_addr.s_addr);
+
 			rc = cfs_create_thread(lnet_acceptor, lap, "lnetacthr-%s:%d",
-			    inet_ntop(AF_INET, &lap->lap_addr, addrbuf, sizeof(addrbuf)),
+			    inet_ntop(AF_INET, &ina, addrbuf, sizeof(addrbuf)),
 			    lap->lap_port);
 			if (rc != 0) {
 				CERROR("Can't start acceptor thread: %d\n", rc);
