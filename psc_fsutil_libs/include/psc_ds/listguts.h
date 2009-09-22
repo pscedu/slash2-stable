@@ -50,4 +50,19 @@ psclg_size(struct psc_listguts *plg)
 	return (n);
 }
 
+static inline int
+psclg_conjoint(struct psc_listguts *plg, void *p)
+{
+	struct psclist_head *e;
+	int locked, conjoint;
+
+	psc_assert(p);
+	e = (struct psclist_head *)((char *)p + plg->plg_offset);
+	locked = reqlock(&plg->plg_lock);
+	/* XXX can scan list to ensure membership */
+	conjoint = psclist_conjoint(e);
+	ureqlock(&plg->plg_lock, locked);
+	return (conjoint);
+}
+
 #endif /* _PFL_LISTGUTS_H_ */

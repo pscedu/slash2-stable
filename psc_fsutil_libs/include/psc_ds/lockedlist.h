@@ -48,7 +48,7 @@ struct psc_lockedlist {
 	    &(pll)->pll_listhd, (pll)->pll_offset)
 
 #define PLL_INITIALIZER(pll, type, member)			\
-	{ PSCLIST_HEAD_INIT((pll)->pll_listhd), 0, 		\
+	{ PSCLIST_HEAD_INIT((pll)->pll_listhd), 0,		\
 	  offsetof(type, member), 0, { LOCK_INITIALIZER } }
 
 #define pll_init(pll, type, member, lock)			\
@@ -160,6 +160,21 @@ pll_empty(struct psc_lockedlist *pll)
 	empty = psclist_empty(&pll->pll_listhd);
 	PLL_URLOCK(pll, locked);
 	return (empty);
+}
+
+static __inline int
+pll_conjoint(struct psc_lockedlist *pll, void *p)
+{
+	struct psclist_head *e;
+	int locked, conjoint;
+
+	psc_assert(p);
+	e = (struct psclist_head *)((char *)p + pll->pll_offset);
+	locked = PLL_RLOCK(pll);
+	/* XXX can scan list to ensure membership */
+	conjoint = psclist_conjoint(e);
+	PLL_URLOCK(pll, locked);
+	return (conjoint);
 }
 
 #endif /* _PFL_LOCKEDLIST_H_ */
