@@ -368,6 +368,11 @@ usocklnd_base_startup()
 
         pthread_rwlock_init(&usock_data.ud_peers_lock, NULL);
 
+	iostats_init(&usock_pasv_send_ist, "lusklnd-pasv-snd");
+	iostats_init(&usock_pasv_recv_ist, "lusklnd-pasv-rcv");
+	iostats_init(&usock_aggr_send_ist, "lusklnd-aggr-snd");
+	iostats_init(&usock_aggr_recv_ist, "lusklnd-aggr-rcv");
+
         /* Spawn poll threads */
         for (i = 0; i < usock_data.ud_npollthreads; i++) {
                 rc = cfs_create_thread(usocklnd_poll_thread,
@@ -563,11 +568,6 @@ usocklnd_startup(lnet_ni_t *ni)
 
         ni->ni_maxtxcredits = usock_tuns.ut_txcredits;
         ni->ni_peertxcredits = usock_tuns.ut_peertxcredits;
-
-	iostats_init(&usock_pasv_send_ist, "lusklnd-pasv-snd");
-	iostats_init(&usock_pasv_recv_ist, "lusklnd-pasv-rcv");
-	iostats_init(&usock_aggr_send_ist, "lusklnd-aggr-snd");
-	iostats_init(&usock_aggr_recv_ist, "lusklnd-aggr-rcv");
 
         usock_data.ud_nets_count++;
         return 0;
