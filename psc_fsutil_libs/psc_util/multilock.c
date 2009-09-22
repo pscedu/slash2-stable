@@ -507,6 +507,7 @@ multilock_leave_critsect(struct multilock *ml)
 {
 	psc_pthread_mutex_lock(&ml->ml_mutex);
 	ml->ml_flags &= ~PMLF_CRITSECT;
+	/* XXX should release any captured events */
 	pthread_mutex_unlock(&ml->ml_mutex);
 }
 
