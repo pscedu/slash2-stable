@@ -3,11 +3,11 @@
 #ifndef _PFL_JOURNAL_H_
 #define _PFL_JOURNAL_H_
 
+#include "psc_ds/dynarray.h"
 #include "psc_util/atomic.h"
 #include "psc_util/lock.h"
 #include "psc_util/thread.h"
 #include "psc_util/waitq.h"
-#include "psc_ds/dynarray.h"
 
 #define PJ_LOCK(pj)     spinlock(&(pj)->pj_lock)
 #define PJ_ULOCK(pj)    freelock(&(pj)->pj_lock)
@@ -80,7 +80,7 @@ struct psc_journal_enthdr {
 	uint64_t		pje_xid;
 	uint32_t		pje_sid;
 	uint32_t		pje_pad;
-	char		        pje_data[0];
+	char			pje_data[0];
 };
 
 #define PJ_PJESZ(p) (size_t)((sizeof(struct psc_journal_enthdr)) \
