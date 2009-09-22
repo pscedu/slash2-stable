@@ -193,14 +193,13 @@ psc_ctlmsg_stats_send(int fd, struct psc_ctlmsghdr *mh, void *m,
 {
 	struct psc_ctlmsg_stats *pcst = m;
 
-	if (thr->pscthr_type >= psc_ctl_ngetstats)
-		return (1);
 	snprintf(pcst->pcst_thrname, sizeof(pcst->pcst_thrname),
 	    "%s", thr->pscthr_name);
 	pcst->pcst_thrid = thr->pscthr_thrid;
 	pcst->pcst_thrtype = thr->pscthr_type;
 	pcst->pcst_flags = thr->pscthr_flags;
-	if (psc_ctl_getstats[thr->pscthr_type])
+	if (thr->pscthr_type < psc_ctl_ngetstats &&
+	    psc_ctl_getstats[thr->pscthr_type])
 		psc_ctl_getstats[thr->pscthr_type](thr, pcst);
 	return (psc_ctlmsg_sendv(fd, mh, pcst));
 }
