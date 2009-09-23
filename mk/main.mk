@@ -222,6 +222,9 @@ test: all
 		./${PROG} || exit 1;							\
 	fi
 
+hdrclean:
+	${HDRCLEAN} */*.[clyh]
+
 prereq:
 
 build: prereq

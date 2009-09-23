@@ -80,7 +80,7 @@ my %msyms = (
 my (@srcs, @hdrs);
 
 foreach my $file (@ARGV) {
-	if ($file =~ /\.c$/) {
+	if ($file =~ /\.[cly]$/) {
 		push @srcs, $file;
 	} elsif ($file =~ /\.h$/) {
 		push @hdrs, $file;
@@ -144,20 +144,28 @@ $syms{defs} = [ excl $syms{defs}, $syms{undefs} ];
 delete $syms{undefs};
 
 foreach my $src (@srcs) {
+	local $/;
 	open SRC, "<", $src or err $src;
-	while (defined (my $line = <SRC>)) {
-		foreach my $key (keys %syms) {
-			foreach my $tag (@{ $syms{$key} }) {
-				push @{ $msyms{$key} }, $tag if
-				    $line =~ /$key/;
-			}
+	my $line = <SRC>;
+	close SRC;
+
+	$line =~ s!/\*.*?\*/!!gs;
+	$line =~ s!//.*!!gm;
+
+	foreach my $key (keys %syms) {
+		foreach my $tag (@{ $syms{$key} }) {
+			push @{ $msyms{$key} }, $tag if
+			    $line =~ /$tag/;
 		}
 	}
-	close SRC;
 }
 
 foreach my $key (keys %msyms) {
 	$msyms{$key} = [ uniq sort @{ $msyms{$key} } ];
+}
+
+foreach my $key (keys %syms) {
+	$syms{$key} = [ excl $syms{$key}, $msyms{$key} ];
 }
 
 my $width = `stty size | awk '{print \$2}'`;
