@@ -21,7 +21,7 @@ my %opts;
 getopts("", \%opts) or usage();
 usage() unless @ARGV;
 
-my (@funcs, @structs, @typedefs, @defs, @unions, @enums);
+my (@funcs, @structs, @typedefs, @defs, @unions, @enums, @vars, @undefs);
 my (@srcs, @hdrs);
 
 foreach my $file (@ARGV) {
@@ -42,14 +42,20 @@ foreach my $hdr (@hdrs) {
 
 	1 while $line =~ s/{[^{}]*?}//gs;
 	$line =~ s/\\\n//gs;
-	$line =~ s/\n\n+/\n/gs;
 	$line =~ s!/\*.*?\*/!!gs;
+	$line =~ s!//.*!!gm;
 	$line =~ s/^\s*#\s*(?:if|ifdef|ifndef|include|endif|else)\b.*//gm;
-	$line =~ s/\n(?=\w+\()/ /gs;
+	$line =~ s/\n(?=\w+\s*\()/ /gs;
+	$line =~ s/\n(?=\s+\*?\w+)/ /gs;
 
 	while ($line =~ s/^\s*#\s*define\s+(\w+).*//m) {
 		my $def = $1;
 		push @defs, $def unless $def =~ /^_/;
+	}
+
+	while ($line =~ s/^\s*#\s*undef\s+(\w+)\s*$//m) {
+		my $undef = $1;
+		push @undefs, $undef unless $undef =~ /^_/;
 	}
 
 	while ($line =~ s/^\s*struct\s+(\w+)\s*;//m) {
@@ -64,6 +70,15 @@ foreach my $hdr (@hdrs) {
 	while ($line =~ s/^.*?(\w+)\s*\(\s*[^*].*//m) {
 		push @funcs, $1;
 	}
+
+	while ($line =~ s/^.*([a-zA-Z0-9_\[\]]+)\s*;\s*$//m) {
+		my $var = $1;
+		$var =~ s/\[.*//;
+		push @vars, $var;
+	}
+
+	$line =~ s/\n\n+/\n/gs;
+	print $line;
 }
 
 sub uniq {
@@ -82,6 +97,7 @@ sub uniq {
 
 @funcs = uniq sort @funcs;
 @structs = uniq sort @structs;
+@vars = uniq sort @vars;
 
 foreach my $src (@srcs) {
 	open SRC, "<", $src or err $src;
