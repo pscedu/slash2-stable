@@ -17,11 +17,66 @@ sub err {
 	die "$0: ", @_, ": $!\n";
 }
 
+sub uniq {
+	local $_;
+	my @uniq;
+	my $last = undef;
+
+	foreach (@_) {
+		unless (defined $last and $last eq $_) {
+			push @uniq, $_;
+			$last = $_;
+		}
+	}
+	return @uniq;
+}
+
+sub excl {
+	my ($master, $mask) = @_;
+	my @excl;
+
+	my $j = 0;
+	for (my $i = 0; $i < @$master; $i++) {
+		for (; $j < @$mask && $master->[$i] gt $mask->[$j]; $j++) {
+		}
+		push @excl, $master->[$i] unless
+		    $j < @$mask && $master->[$i] eq $mask->[$j];
+	}
+	return (@excl);
+}
+
+sub maxlen {
+	my ($ra) = @_;
+	my $maxlen = 0;
+	foreach my $t (@$ra) {
+		my $tlen = length $t;
+		$maxlen = $tlen if $tlen > $maxlen;
+	}
+	return ($maxlen);
+};
+
 my %opts;
 getopts("", \%opts) or usage();
 usage() unless @ARGV;
 
-my (@funcs, @structs, @typedefs, @defs, @unions, @enums, @vars, @undefs);
+my %syms = (
+	defs		=> [],
+	funcs		=> [],
+	structs		=> [],
+	typedefs	=> [],
+	undefs		=> [],
+	unions		=> [],
+	vars		=> [],
+);
+my %msyms = (
+	defs		=> [],
+	funcs		=> [],
+	structs		=> [],
+	typedefs	=> [],
+	undefs		=> [],
+	unions		=> [],
+	vars		=> [],
+);
 my (@srcs, @hdrs);
 
 foreach my $file (@ARGV) {
@@ -50,58 +105,80 @@ foreach my $hdr (@hdrs) {
 
 	while ($line =~ s/^\s*#\s*define\s+(\w+).*//m) {
 		my $def = $1;
-		push @defs, $def unless $def =~ /^_/;
+		push @{ $syms{defs} }, $def unless $def =~ /^_/;
 	}
 
 	while ($line =~ s/^\s*#\s*undef\s+(\w+)\s*$//m) {
 		my $undef = $1;
-		push @undefs, $undef unless $undef =~ /^_/;
+		push @{ $syms{undefs} }, $undef unless $undef =~ /^_/;
 	}
 
 	while ($line =~ s/^\s*struct\s+(\w+)\s*;//m) {
-		push @structs, $1;
+		push @{ $syms{structs} }, $1;
 	}
 
 	while ($line =~ s/^\s*typedef\s+(?:(?:struct|union)\s+)?(\w+)\s+(.*)//m) {
 		my $name = $2;
-		push @typedefs, $name =~ /(\w+)/;;
+		push @{ $syms{typedefs} }, $name =~ /(\w+)/;;
 	}
 
 	while ($line =~ s/^.*?(\w+)\s*\(\s*[^*].*//m) {
-		push @funcs, $1;
+		push @{ $syms{funcs} }, $1;
 	}
 
-	while ($line =~ s/^.*([a-zA-Z0-9_\[\]]+)\s*;\s*$//m) {
+	while ($line =~ s/^.*?([a-zA-Z0-9_\[\]]+)\s*;\s*$//m) {
 		my $var = $1;
 		$var =~ s/\[.*//;
-		push @vars, $var;
+		push @{ $syms{vars} }, $var;
 	}
 
-	$line =~ s/\n\n+/\n/gs;
-	print $line;
+#	$line =~ s/\n\n+/\n/gs;
+#	print $line;
 }
 
-sub uniq {
-	local $_;
-	my @uniq;
-	my $last = undef;
-
-	foreach (@_) {
-		unless (defined $last and $last eq $_) {
-			push @uniq, $_;
-			$last = $_;
-		}
-	}
-	return @uniq;
+foreach my $key (keys %syms) {
+	$syms{$key} = [ uniq sort @{ $syms{$key} } ];
 }
 
-@funcs = uniq sort @funcs;
-@structs = uniq sort @structs;
-@vars = uniq sort @vars;
+$syms{defs} = [ excl $syms{defs}, $syms{undefs} ];
+delete $syms{undefs};
 
 foreach my $src (@srcs) {
 	open SRC, "<", $src or err $src;
 	while (defined (my $line = <SRC>)) {
+		foreach my $key (keys %syms) {
+			foreach my $tag (@{ $syms{$key} }) {
+				push @{ $msyms{$key} }, $tag if
+				    $line =~ /$key/;
+			}
+		}
 	}
 	close SRC;
+}
+
+foreach my $key (keys %msyms) {
+	$msyms{$key} = [ uniq sort @{ $msyms{$key} } ];
+}
+
+my $width = `stty size | awk '{print \$2}'`;
+$width = 80 unless $width && $width =~ /^\d+$/ &&
+    $width > 34 && $width < 300;
+$width -= 4;
+
+my $first = 1;
+foreach my $key (keys %syms) {
+	next unless @{ $syms{$key} };
+	print "\n" unless $first;
+	print "unused $key:\n";
+	my $maxlen = maxlen $syms{$key};
+	my $ncols = $width / ($maxlen + 3);
+	my $colwidth = $width / $ncols;
+	my $n = 0;
+	foreach my $sym (@{ $syms{$key} }) {
+		print "    " if ($n % $ncols) == 0;
+		printf "%-*s", $colwidth, $sym;
+		$n++;
+		print "\n" if ($n % $ncols) == 0 || $n == @{ $syms{$key} };
+	}
+	$first = 0;
 }
