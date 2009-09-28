@@ -10,7 +10,7 @@
 
 #define pscrpc_export_hldrop(e)					\
 	do {							\
-		if ((e)->exp_hldropf)				\
+		if ((e)->exp_hldropf && (e)->exp_private)	\
 			(e)->exp_hldropf((e)->exp_private);	\
 		(e)->exp_private = NULL;			\
 	} while (0)
