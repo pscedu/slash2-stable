@@ -48,8 +48,7 @@ _pscthr_destroy(void *arg)
 	if (thr->pscthr_uniqid) {
 		vbitmap_unset(psc_uniqthridmap,
 		    thr->pscthr_uniqid - 1);
-		vbitmap_setnextpos(psc_uniqthridmap,
-		    thr->pscthr_uniqid - 1);
+		vbitmap_setnextpos(psc_uniqthridmap, 0);
 	}
 	PLL_ULOCK(&psc_threads);
 
@@ -470,7 +469,7 @@ pscthr_run(void)
 	return (1);
 }
 
-int
+void
 pscthr_getuniqid(void)
 {
 	struct psc_thread *thr;
@@ -486,21 +485,6 @@ pscthr_getuniqid(void)
 		PLL_ULOCK(&psc_threads);
 		thr->pscthr_uniqid = pos + 1;
 	}
-	return (thr->pscthr_uniqid);
-}
-
-int
-pscthr_getnextuniqid(void)
-{
-	size_t pos;
-
-	PLL_LOCK(&psc_threads);
-	if (psc_uniqthridmap == NULL)
-		psc_uniqthridmap = vbitmap_newf(0, PVBF_AUTO);
-	if (vbitmap_next(psc_uniqthridmap, &pos) == -1)
-		psc_fatal("vbitmap_next");
-	PLL_ULOCK(&psc_threads);
-	return (pos + 1);
 }
 
 struct psc_thread *
