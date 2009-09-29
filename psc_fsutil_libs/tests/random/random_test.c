@@ -10,6 +10,7 @@
 
 const char *progname;
 
+#define NRUNS 5000000
 #define NENTS 5000
 int buf[NENTS];
 
@@ -38,9 +39,9 @@ main(int argc, char *argv[])
 	printf("%u\n", psc_random32());
 	printf("%016"PRIx64"\n", psc_random64());
 
-	for (i = 0; i < 500000; i++)
+	for (i = 0; i < NRUNS; i++)
 		buf[psc_random32u(NENTS)]++;
 	for (i = 0; i < NENTS; i++)
-		printf("%d\t%d\n", i+1, buf[i]);
+		printf("%d\t%d\n", i, buf[i]);
 	exit(0);
 }
