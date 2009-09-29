@@ -158,7 +158,7 @@ psc_mlist_register(struct psc_mlist *pml)
 {
 	PLL_LOCK(&psc_mlists);
 	spinlock(&pml->pml_lock);
-	pll_add(&psc_mlists, pml);
+	pll_addtail(&psc_mlists, pml);
 	freelock(&pml->pml_lock);
 	PLL_ULOCK(&psc_mlists);
 }
