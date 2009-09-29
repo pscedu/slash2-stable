@@ -154,6 +154,8 @@ foreach my $src (@srcs) {
 
 	foreach my $key (keys %syms) {
 		foreach my $tag (@{ $syms{$key} }) {
+			$tag = "struct\\s+$tag" if $key eq "struct";
+			$tag = "union\\s+$tag" if $key eq "union";
 			push @{ $msyms{$key} }, $tag if
 			    $line =~ /$tag/;
 		}
