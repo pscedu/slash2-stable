@@ -445,14 +445,14 @@ pjournal_replay(struct psc_journal *pj, psc_jhandler pj_handler)
 {
 	void *jbuf=pjournal_alloclog_ra(pj);
 	struct psc_journal_walker pjw;
-	int rc;
+	int rc = 0;
 	uint32_t nents=0;
 
 	psc_assert(pj && pj_handler);
 
 	rc = pjournal_headtail_get(pj, &pjw);
 	if (rc < 0)
-		return (rc);
+		goto out;
 
 	if (pjw.pjw_stop >= pjw.pjw_pos)
 		nents = pjw.pjw_stop - pjw.pjw_pos;
@@ -462,7 +462,7 @@ pjournal_replay(struct psc_journal *pj, psc_jhandler pj_handler)
 	while (nents) {
 		rc = pjournal_logread(pj, pjw.pjw_pos, jbuf);
 		if (rc < 0)
-			return (-1);
+			goto out;
 
 		(pj_handler)(jbuf, rc);
 
@@ -472,8 +472,9 @@ pjournal_replay(struct psc_journal *pj, psc_jhandler pj_handler)
 			pjw.pjw_pos = 0;
 	}
 
+ out:
 	PSCFREE(jbuf);
-	return (0);
+	return (rc);
 }
 
 /*
