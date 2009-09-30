@@ -13,6 +13,8 @@ struct psc_completion {
 	int			pc_rc;
 };
 
+#define PSC_COMPLETION_INIT	{ PSC_WAITQ_INIT, LOCK_INITIALIZER, PCV_NOTDONE, 0 }
+
 static __inline void
 psc_completion_init(struct psc_completion *pc)
 {
@@ -25,13 +27,15 @@ psc_completion_init(struct psc_completion *pc)
 static __inline int
 psc_completion_wait(struct psc_completion *pc)
 {
-	reqlock(&pc->pc_lock);
-	if (pc->pc_done == PCV_NOTDONE) {
-		psc_waitq_wait(&pc->pc_wq, &pc->pc_lock);
-		spinlock(&pc->pc_lock);
-		psc_assert(pc->pc_done == PCV_DONE);
+	if (pc->pc_done != PCV_DONE) {
+		reqlock(&pc->pc_lock);
+		if (pc->pc_done == PCV_NOTDONE) {
+			psc_waitq_wait(&pc->pc_wq, &pc->pc_lock);
+			spinlock(&pc->pc_lock);
+			psc_assert(pc->pc_done == PCV_DONE);
+		}
+		freelock(&pc->pc_lock);
 	}
-	freelock(&pc->pc_lock);
 	return (pc->pc_rc);
 }
 
