@@ -17,6 +17,7 @@ struct psc_waitq {
 	pthread_mutex_t		wq_mut;
 	pthread_cond_t		wq_cond;
 	atomic_t		wq_nwaitors;
+	struct timespec		wq_waitv;
 };
 
 #define PSC_WAITQ_INIT	{ PTHREAD_ERRORCHECK_MUTEX_INITIALIZER_NP, \

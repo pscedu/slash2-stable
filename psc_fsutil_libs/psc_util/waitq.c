@@ -31,6 +31,13 @@
 	} while (0)
 #endif
 
+#ifndef timespeccmp
+#define timespeccmp(tsp, usp, cmp)					\
+	(((tsp)->tv_sec == (usp)->tv_sec) ?				\
+	    ((tsp)->tv_nsec cmp (usp)->tv_nsec) :			\
+	    ((tsp)->tv_sec cmp (usp)->tv_sec))
+#endif
+
 /**
  * psc_waitq_init - prepare the queue struct for use.
  * @q: the struct to be initialized.
@@ -72,11 +79,19 @@ psc_waitq_waitabs(struct psc_waitq *q, psc_spinlock_t *k,
 	if (k != NULL)
 		freelock(k);
 
+	if (clock_gettime(CLOCK_REALTIME, &q->wq_waitv) == 0 &&
+	    timespeccmp(&q->wq_waitv, abstime, >)) {
+		rv = ETIMEDOUT;
+		goto out;
+	}
+
 	atomic_inc(&q->wq_nwaitors);
 	rv = pthread_cond_timedwait(&q->wq_cond, &q->wq_mut, abstime);
 	if (rv && rv != ETIMEDOUT)
 		psc_fatalx("pthread_cond_timedwait: %s", strerror(rv));
 	atomic_dec(&q->wq_nwaitors);
+
+ out:
 	rc = pthread_mutex_unlock(&q->wq_mut);
 	if (rc)
 		psc_fatalx("pthread_mutex_unlock: %s", strerror(rc));
@@ -104,6 +119,8 @@ psc_waitq_waitrel(struct psc_waitq *q, psc_spinlock_t *k,
 
 	if (k != NULL)
 		freelock(k);
+
+	clock_gettime(CLOCK_REALTIME, &q->wq_waitv);
 
 	atomic_inc(&q->wq_nwaitors);
 	if (reltime) {
