@@ -176,8 +176,10 @@ acsvc_svrmain(int s)
 				psc_fatal("seteuid 0");
 			if (setegid(arq.arq_gid) == -1)
 				psc_fatal("setegid %d", arq.arq_gid);
+			egid = arq.arq_gid;
 			if (seteuid(arq.arq_uid) == -1)
 				psc_fatal("seteuid %d", arq.arq_uid);
+			euid = arq.arq_uid;
 		}
 #endif
 
