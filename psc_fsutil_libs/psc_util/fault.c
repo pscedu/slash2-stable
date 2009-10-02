@@ -126,14 +126,12 @@ psc_fault_register(const char *name, int delay, int begin, int chance, int count
 {
 	int			 i;
 	struct psc_hashbkt	*b;
-	int			 rc;
 	struct psc_fault	*pflt;
 
 	if (strlen(name) >= sizeof(pflt->pflt_name))
 		return (ENAMETOOLONG);
 
 	i = 0;
-	rc = 0;
 	while (1) {
 		if (psc_fault_names[i] == NULL)
 			return ENOENT;
@@ -161,7 +159,8 @@ psc_fault_register(const char *name, int delay, int begin, int chance, int count
 	pflt->pflt_count = count;		/* one time only */
 	pflt->pflt_retval = retval;		/* keep the original error code */
 	psc_hashbkt_unlock(b);
-	return (rc);
+	fault_enabled = 1;
+	return (0);
 }
 
 void
