@@ -985,6 +985,14 @@ pscrpc_init_svc(int nbufs, int bufsize, int max_req_size, int max_reply_size,
 
 	psc_waitq_init(&service->srv_free_rs_waitq);
 
+	if (flags & PSCRPC_SVCF_COUNT_PEER_QLENS) {
+		service->srv_count_peer_qlens = 1;
+#define QLENTABSZ 511
+		psc_hashtbl_init(&service->srv_peer_qlentab, 0,
+		    struct pscrpc_peer_qlen, id, hentry, QLENTABSZ,
+		    pscrpc_peer_qlen_cmp, "qlen-%s", service->srv_name);
+	}
+
 	spinlock (&pscrpc_all_services_lock);
 	psclist_xadd (&service->srv_lentry, &pscrpc_all_services);
 	freelock (&pscrpc_all_services_lock);
@@ -1002,20 +1010,14 @@ pscrpc_init_svc(int nbufs, int bufsize, int max_req_size, int max_reply_size,
 	while (service->srv_max_reply_size < max_reply_size)
 		service->srv_max_reply_size <<= 1;
 
-	if (flags & PSCRPC_SVCF_COUNT_PEER_QLENS) {
-		service->srv_count_peer_qlens = 1;
-#define QLENTABSZ 511
-		psc_hashtbl_init(&service->srv_peer_qlentab, 0,
-		    struct pscrpc_peer_qlen, id, hentry, QLENTABSZ,
-		    pscrpc_peer_qlen_cmp, "qlen-%s", service->srv_name);
-	}
-
 	CDEBUG(D_NET, "%s: Started, listening on portal %d\n",
 	       service->srv_name, service->srv_req_portal);
 
 	RETURN(service);
  failed:
 	pscrpc_unregister_service(service);
+//	psc_hashtbl_del();
+	free(service);
 	return NULL;
 }
 
