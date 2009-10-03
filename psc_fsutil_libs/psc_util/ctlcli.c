@@ -90,7 +90,7 @@ psc_ctl_packshow_loglevel(const char *thr)
 	pcl = psc_ctlmsg_push(PCMT_GETLOGLEVEL, sizeof(*pcl));
 	n = strlcpy(pcl->pcl_thrname, thr, sizeof(pcl->pcl_thrname));
 	if (n == 0 || n >= (int)sizeof(pcl->pcl_thrname))
-		psc_fatalx("invalid thread name: %s", thr);
+		errx(1, "invalid thread name: %s", thr);
 }
 
 void
@@ -102,7 +102,7 @@ psc_ctl_packshow_stats(const char *thr)
 	pcst = psc_ctlmsg_push(PCMT_GETSTATS, sizeof(*pcst));
 	n = strlcpy(pcst->pcst_thrname, thr, sizeof(pcst->pcst_thrname));
 	if (n == 0 || n >= (int)sizeof(pcst->pcst_thrname))
-		psc_fatalx("invalid thread name: %s", thr);
+		errx(1, "invalid thread name: %s", thr);
 }
 
 void
@@ -114,10 +114,10 @@ psc_ctl_packshow_faults(const char *thr)
 	pcflt = psc_ctlmsg_push(PCMT_GETFAULTS, sizeof(*pcflt));
 	n = strlcpy(pcflt->pcflt_thrname, thr, sizeof(pcflt->pcflt_thrname));
 	if (n == 0 || n >= (int)sizeof(pcflt->pcflt_thrname))
-		psc_fatalx("invalid thread name: %s", thr);
+		errx(1, "invalid thread name: %s", thr);
 	n = strlcpy(pcflt->pcflt_name, PCFLT_NAME_ALL, sizeof(pcflt->pcflt_name));
 	if (n == 0 || n >= (int)sizeof(pcflt->pcflt_name))
-		psc_fatalx("invalid fault point name: %s", thr);
+		errx(1, "invalid fault point name: %s", thr);
 }
 
 void
@@ -159,7 +159,7 @@ psc_ctlparse_lc(char *lists)
 		if (n == -1)
 			psc_fatal("snprintf");
 		else if (n == 0 || n > (int)sizeof(pclc->pclc_name))
-			psc_fatalx("invalid list: %s", list);
+			errx(1, "invalid list: %s", list);
 	}
 }
 
@@ -214,7 +214,7 @@ psc_ctlparse_param(char *spec)
 	if (n == -1)
 		psc_fatal("snprintf");
 	else if (n == 0 || n > (int)sizeof(pcp->pcp_thrname))
-		psc_fatalx("invalid thread name: %s", thr);
+		errx(1, "invalid thread name: %s", thr);
 
 	/* Set parameter name. */
 	n = snprintf(pcp->pcp_field, sizeof(pcp->pcp_field),
@@ -222,7 +222,7 @@ psc_ctlparse_param(char *spec)
 	if (n == -1)
 		psc_fatal("snprintf");
 	else if (n == 0 || n > (int)sizeof(pcp->pcp_field))
-		psc_fatalx("invalid parameter: %s", thr);
+		errx(1, "invalid parameter: %s", thr);
 
 	/* Set parameter value (if applicable). */
 	if (value) {
@@ -232,7 +232,7 @@ psc_ctlparse_param(char *spec)
 		if (n == -1)
 			psc_fatal("snprintf");
 		else if (n == 0 || n > (int)sizeof(pcp->pcp_value))
-			psc_fatalx("invalid parameter value: %s", thr);
+			errx(1, "invalid parameter value: %s", thr);
 	}
 }
 
@@ -249,7 +249,7 @@ psc_ctlparse_pool(char *pools)
 		pcpl = psc_ctlmsg_push(PCMT_GETPOOL, sizeof(*pcpl));
 		if (strlcpy(pcpl->pcpl_name, pool,
 		    sizeof(pcpl->pcpl_name)) >= sizeof(pcpl->pcpl_name))
-			psc_fatalx("invalid pool: %s", pool);
+			errx(1, "invalid pool: %s", pool);
 	}
 }
 
@@ -272,7 +272,7 @@ psc_ctlparse_iostats(char *iostats)
 		if (n == -1)
 			psc_fatal("snprintf");
 		else if (n == 0 || n > (int)sizeof(pci->pci_ist.ist_name))
-			psc_fatalx("invalid iostat name: %s", iostat);
+			errx(1, "invalid iostat name: %s", iostat);
 	}
 }
 
@@ -291,7 +291,7 @@ psc_ctlparse_meter(char *meters)
 		n = strlcpy(pcm->pcm_mtr.pm_name, meter,
 		    sizeof(pcm->pcm_mtr.pm_name));
 		if (n == 0 || n >= sizeof(pcm->pcm_mtr.pm_name))
-			psc_fatalx("invalid meter: %s", meter);
+			errx(1, "invalid meter: %s", meter);
 	}
 }
 
@@ -313,7 +313,7 @@ psc_ctlparse_mlist(char *mlists)
 		if (n == -1)
 			psc_fatal("snprintf");
 		else if (n == 0 || n > (int)sizeof(pcml->pcml_name))
-			psc_fatalx("invalid mlist: %s", mlist);
+			errx(1, "invalid mlist: %s", mlist);
 	}
 }
 
@@ -329,7 +329,7 @@ psc_ctlparse_cmd(char *cmd)
 			pcc->pcc_opcode = psc_ctlcmd_reqs[i].pccr_opcode;
 			return;
 		}
-	psc_fatalx("command not found: %s", cmd);
+	errx(1, "unrecognized command: %s", cmd);
 }
 
 int
