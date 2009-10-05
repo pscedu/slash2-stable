@@ -82,11 +82,10 @@ _pjournal_logwrite(struct psc_journal *pj, struct psc_journal_xidhndl *xh,
 #ifdef PJE_DYN_BUFFER
 	pje = psc_alloc(PJ_PJESZ(pj), PAF_PAGEALIGN | PAF_LOCK);
 #else
- retry:
 	PJ_LOCK(pj);
-	if (!(len = dynarray_len(&pj->pj_bufs))) {
+	while (!(len = dynarray_len(&pj->pj_bufs))) {
 		psc_waitq_wait(&pj->pj_waitq, &pj->pj_lock);
-		goto retry;
+		PJ_LOCK(pj);
 	}
 	pje = dynarray_getpos(&pj->pj_bufs, len-1);
 	psc_assert(pje);
