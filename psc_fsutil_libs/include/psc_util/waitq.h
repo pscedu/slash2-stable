@@ -33,8 +33,6 @@ struct psc_waitq {
 
 #endif
 
-typedef struct psc_waitq psc_waitq_t;
-
 /**
  * psc_waitq_wait - wait until resource managed by wq_cond is available.
  * @wq: wait queue.

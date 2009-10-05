@@ -42,7 +42,7 @@ struct psc_journal {
 	struct psclist_head 	 pj_pndgxids;
 	struct dynarray 	 pj_bufs;
 	struct psc_journal_hdr	*pj_hdr;
-	psc_waitq_t		 pj_waitq;
+	struct psc_waitq	 pj_waitq;
 };
 
 typedef void (*psc_jhandler)(void *, int);

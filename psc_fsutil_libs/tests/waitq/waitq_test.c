@@ -21,7 +21,7 @@
 int nthreads = 1;
 int iterations = 1;
 const char *progname;
-psc_waitq_t waitq;
+struct psc_waitq waitq;
 
 __dead void
 usage(void)

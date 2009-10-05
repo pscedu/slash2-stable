@@ -18,7 +18,7 @@ int
 main(void)
 {
 	struct l_wait_info lwi;
-	psc_waitq_t wq;
+	struct psc_waitq wq;
 	int rc;
 
 	if ( pscrpc_ni_init() ) {

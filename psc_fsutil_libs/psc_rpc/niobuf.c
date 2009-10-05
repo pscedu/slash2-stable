@@ -38,7 +38,9 @@
 #include "psc_rpc/rpclog.h"
 
 /**
- * psc_send_buf - rudimentary send function which uses LNetPut.  This is called by pscrpc_send_reply & psc_send_rpc which use psc_send_buf to PUT rpc replies and requests.
+ * psc_send_buf - rudimentary send function which uses LNetPut.  This is called
+ *	by pscrpc_send_reply & psc_send_rpc which use psc_send_buf to PUT rpc
+ *	replies and requests.
  * @mdh:  md handle to
  */
 static int psc_send_buf (lnet_handle_md_t *mdh, void *base, int len,
@@ -298,7 +300,7 @@ void pscrpc_unregister_bulk (struct pscrpc_request *req)
         /* Disconnect a bulk desc from the network. Idempotent. Not
          * thread-safe (i.e. only interlocks with completion callback). */
         struct pscrpc_bulk_desc *desc = req->rq_bulk;
-        psc_waitq_t             *wq;
+        struct psc_waitq        *wq;
         struct l_wait_info       lwi;
         int                      rc, l, registered=0;
 
