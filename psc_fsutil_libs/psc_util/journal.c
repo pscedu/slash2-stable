@@ -77,7 +77,7 @@ _pjournal_logwrite(struct psc_journal *pj, struct psc_journal_xidhndl *xh,
 	int rc=0, len;
 
 	psc_assert(slot < pj->pj_hdr->pjh_nents);
-	psc_assert(size <= pj->pj_hdr->pjh_entsz);
+	psc_assert(size <= PJ_PJESZ(pj));
 
 #ifdef PJE_DYN_BUFFER
 	pje = psc_alloc(PJ_PJESZ(pj), PAF_PAGEALIGN | PAF_LOCK);

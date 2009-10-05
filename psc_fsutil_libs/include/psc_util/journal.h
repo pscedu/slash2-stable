@@ -34,15 +34,15 @@ struct psc_journal_hdr {
 
 
 struct psc_journal {
-	psc_spinlock_t	pj_lock;	/* contention lock */
-	uint64_t	pj_nextxid;	/* next transaction ID */
-	uint32_t	pj_nextwrite;	/* next entry slot to write to */
-	int		pj_genid;	/* current wrap generation */
-	int		pj_fd;		/* open file descriptor to disk */
-	struct psclist_head pj_pndgxids;
-	struct dynarray pj_bufs;
-	struct psc_journal_hdr *pj_hdr;
-	psc_waitq_t	pj_waitq;
+	psc_spinlock_t		 pj_lock;	/* contention lock */
+	uint64_t		 pj_nextxid;	/* next transaction ID */
+	uint32_t		 pj_nextwrite;	/* next entry slot to write to */
+	int			 pj_genid;	/* current wrap generation */
+	int			 pj_fd;		/* open file descriptor to disk */
+	struct psclist_head 	 pj_pndgxids;
+	struct dynarray 	 pj_bufs;
+	struct psc_journal_hdr	*pj_hdr;
+	psc_waitq_t		 pj_waitq;
 };
 
 typedef void (*psc_jhandler)(void *, int);
