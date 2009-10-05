@@ -38,7 +38,7 @@
 #include "psc_util/strlcpy.h"
 #include "psc_util/thread.h"
 
-#define Q 15	/* listen(2) queue */
+#define QLEN 15	/* listen(2) queue */
 
 __weak size_t
 multilock_cond_nwaitors(__unusedx struct multilock_cond *m)
@@ -1445,7 +1445,7 @@ psc_ctlthr_main(const char *ofn, const struct psc_ctlop *ct, int nops)
 	}
 
 	/* Serve client connections. */
-	if (listen(s, Q) == -1)
+	if (listen(s, QLEN) == -1)
 		psc_fatal("listen");
 
 	for (;;) {
