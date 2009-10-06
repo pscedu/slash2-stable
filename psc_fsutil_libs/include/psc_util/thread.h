@@ -20,7 +20,6 @@ struct psc_thread {
 	psc_spinlock_t		   pscthr_lock;			/* for mutex */
 	pthread_t		   pscthr_pthread;		/* pthread_self() */
 	pid_t			   pscthr_thrid;		/* gettid(2) */
-	int			   pscthr_uniqid;		/* transiency bookkeeping */
 
 	void			*(*pscthr_startf)(void *);	/* thread main */
 	void			 (*pscthr_dtor)(void *);	/* custom destructor */
@@ -64,7 +63,6 @@ void	pscthr_setpause(struct psc_thread *, int);
 void	pscthr_setready(struct psc_thread *);
 void	pscthr_setrun(struct psc_thread *, int);
 int	pscthr_run(void);
-void	pscthr_getuniqid(void);
 void	pscthr_setloglevel(int, int);
 
 struct psc_thread *pscthr_get(void);
