@@ -50,7 +50,7 @@ vbitmap_newf(size_t nelems, int flags)
 /**
  * vbitmap_attach - Initialize a variable bitmap from a chunk of memory.
  * @buf: memory where to read bitmap from.
- * @buf: length of memory buffer.
+ * @size: length of memory buffer.
  */
 struct vbitmap *
 vbitmap_attach(unsigned char *buf, size_t size)
@@ -58,8 +58,8 @@ vbitmap_attach(unsigned char *buf, size_t size)
 	struct vbitmap *vb;
 
 	if ((vb = malloc(sizeof(*vb))) == NULL)
-                return (NULL);
-        memset(vb, 0, sizeof(*vb));
+		return (NULL);
+	memset(vb, 0, sizeof(*vb));
 	vb->vb_pos = vb->vb_start = buf;
 	vb->vb_end = buf + (size - 1);
 	vb->vb_lastsize = NBBY;
@@ -313,6 +313,7 @@ vbitmap_next(struct vbitmap *vb, size_t *elem)
 			pos++;			/* byte is full, advance */
 		}
 	} while (pos != start);
+
 	if (vb->vb_flags & PVBF_AUTO) {
 		int newsiz;
 
