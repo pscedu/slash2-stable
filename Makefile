@@ -38,7 +38,7 @@ qk:		CFLAGS+=	-DQK -DMPI ${LINUXFLAGS}
 qk:		CFLAGS+=	-I/opt/xt-mpt/default/mpich2-64/P2/include/
 qk:		LDFLAGS+=	-lmpich -L/opt/xt-mpt/default/mpich2-64/P2/lib
 
-zest:		CC=		ZINCPATH=../zest/trunk/intercept/include ZLIBPATH=../zest/trunk/client/linux-mt ../zest/trunk/scripts/zcc
+zest:		CC=		ZINCPATH=../zest/intercept/include ZLIBPATH=../zest/client/linux-mt ../zest/scripts/zcc
 zest:		CFLAGS+=	-DPTHREADS ${LINUXFLAGS}
 zest:		LDFLAGS+=	-lpthread
 
@@ -48,7 +48,7 @@ pthreads:	LDFLAGS+=	-lpthread
 mpi:		CC=		mpicc
 mpi:		CFLAGS+=	-DMPI
 
-zmpi:		CC=		ZINCPATH=../zest/trunk/intercept/include ZLIBPATH=../zest/trunk/client/linux-mt ../zest/trunk/scripts/zcc
+zmpi:		CC=		ZINCPATH=../zest/intercept/include ZLIBPATH=../zest/client/linux-mt ../zest/scripts/zcc
 zmpi:		CFLAGS+=	-DMPI ${LINUXFLAGS}
 zmpi:		LDFLAGS+=	-lmpi
 
