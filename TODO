@@ -96,7 +96,6 @@ zest
 - zestThread.h has no business being shared by all things in zestland
 - have two iothrs access the same disk to shorten the time the disk
   is idle
-- kill the zest/trunk directory
 - add auth checks into fdbuf from slash
 - track bitmap stats in real time instead of copying the whole bitmap
   in zctl
