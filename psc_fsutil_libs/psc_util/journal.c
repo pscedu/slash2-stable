@@ -177,12 +177,10 @@ pjournal_logwrite(struct psc_journal_xidhndl *xh, int type, void *data,
 		tail_slot = t->pjx_tailslot;
 	}
 
-	psc_info("pj(%p) tail@slot(%d) my@slot(%d) xh_flags(%o) xh_ref(%d)",
-		 pj, tail_slot, slot, xh->pjx_flags, 
-		 atomic_read(&xh->pjx_ref));
+	psc_info("pj(%p) tail@slot(%d) my@slot(%d) xh_flags(%o)",
+		 pj, tail_slot, slot, xh->pjx_flags);
 
-	if (atomic_dec_and_test(&xh->pjx_ref) &&
-	    (xh->pjx_flags & PJET_XEND)) {
+	if (xh->pjx_flags & PJET_XEND) {
 		if (xh->pjx_flags & PJET_XSTARTED) {
 			xh->pjx_flags |= PJET_CLOSED;
 			psclist_del(&xh->pjx_lentry);
@@ -202,7 +200,7 @@ pjournal_logwrite(struct psc_journal_xidhndl *xh, int type, void *data,
 		 *  so that the tail of the journal can be found
 		 *  and that overwriting pending xids may be
 		 *  prevented.
-		 * Note:  self-contained ops (PJET_XEND and refcnt of 1)
+		 * Note:  self-contained ops (PJET_XEND)
 		 *        cannot end up here.
 		 */
 		psc_assert(!(xh->pjx_flags & PJET_XEND));
@@ -211,8 +209,6 @@ pjournal_logwrite(struct psc_journal_xidhndl *xh, int type, void *data,
 		psclist_xadd_tail(&xh->pjx_lentry, &pj->pj_pndgxids);
 		xh->pjx_flags |= PJET_XSTARTED;
 	}
-
-	psc_assert(atomic_read(&xh->pjx_ref) >= 0);
 
 	if ((++pj->pj_nextwrite) == pj->pj_hdr->pjh_nents) {
 		pj->pj_nextwrite = 0;
@@ -299,8 +295,6 @@ pjournal_xadd(struct psc_journal_xidhndl *xh, int type, void *data,
 {
 	spinlock(&xh->pjx_lock);
 	psc_assert(!(xh->pjx_flags & PJET_XEND));
-	psc_assert(atomic_read(&xh->pjx_ref) >= 0);
-	atomic_inc(&xh->pjx_ref);
 	freelock(&xh->pjx_lock);
 
 	return (pjournal_logwrite(xh, type, data, size));
@@ -313,7 +307,6 @@ pjournal_xend(struct psc_journal_xidhndl *xh, int type, void *data,
 	spinlock(&xh->pjx_lock);
 	psc_assert(!(xh->pjx_flags & PJET_XEND));
 	xh->pjx_flags |= PJET_XEND;
-	atomic_inc(&xh->pjx_ref);
 	freelock(&xh->pjx_lock);
 
 	return (pjournal_logwrite(xh, type, data, size));

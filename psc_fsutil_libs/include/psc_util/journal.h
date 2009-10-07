@@ -95,7 +95,6 @@ struct psc_journal_enthdr {
  * @pjx_lentry: open xid handles are chained in journal structure.
  * @pjx_lock: serialize.
  * @pjx_pj: backpointer to our journal.
- * @pjx_ref: count accessors.
  */
 struct psc_journal_xidhndl {
 	uint64_t             pjx_xid;
@@ -105,7 +104,6 @@ struct psc_journal_xidhndl {
 	struct psclist_head  pjx_lentry;
 	psc_spinlock_t       pjx_lock;
 	struct psc_journal  *pjx_pj;
-	atomic_t             pjx_ref;
 };
 
 /* Journal entry types. */
