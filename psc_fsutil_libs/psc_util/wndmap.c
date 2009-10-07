@@ -9,89 +9,149 @@
 #include "psc_util/wndmap.h"
 #include "psc_util/spinlock.h"
 
-__static struct psc_wndmap_block *
-psc_wndmap_addblock(struct psc_wndmap *p)
-{
-	struct psc_wndmap_block *pb;
+#define WMBSZ (sizeof(((struct psc_wndmap_block *)NULL)->pwmb_buf) * NBBY)
 
-	pb = PSCALLOC(sizeof(*pb));
-	psclist_xadd_tail(&pb->pwmb_lentry, &p->pwm_wmbs);
-	return (pb);
+__static struct psc_wndmap_block *
+psc_wndmap_addblock(struct psc_wndmap *wm)
+{
+	struct psc_wndmap_block *wb;
+
+	wb = PSCALLOC(sizeof(*wb));
+	pll_addtail(&wm->pwm_wmbs, wb);
+	return (wb);
 }
 
 __static int
-psc_wndmap_block_full(struct psc_wndmap_block *pb)
+psc_wndmap_block_empty(const struct psc_wndmap_block *wb)
 {
 	int n;
 
-	for (n = 0; n < sizeof(*pb); n++)
-		if (pb->pwmb_buf[n] != 0xff)
+	for (n = 0; n < sizeof(*wb); n++)
+		if (wb->pwmb_buf[n])
 			return (0);
 	return (1);
 }
 
 void
-psc_wndmap_init(struct psc_wndmap *p, size_t min)
+psc_wndmap_init(struct psc_wndmap *wm, size_t min)
 {
-	p->pwm_min = min;
-	LOCK_INIT(&p->pwm_lock);
-	PSCLIST_HEAD_INIT(&p->pwm_wmbs);
-	psc_wndmap_addblock(p);
+	wm->pwm_min = min;
+	LOCK_INIT(&wm->pwm_lock);
+	pll_init(&wm->pwm_wmbs, struct psc_wndmap_block,
+	    pwmb_lentry, &wm->pwm_lock);
+	psc_wndmap_addblock(wm);
 }
 
 int
-psc_wndmap_set(struct psc_wndmap *p, size_t pos)
+psc_wndmap_find(const struct psc_wndmap *wm, size_t pos,
+    struct psc_wndmap_block **wbp, size_t *np)
 {
-	struct psc_wndmap_block *pb;
-	int rc, nwrapend;
+	size_t bmin, bmax, ymin, ymax, n;
+	struct psc_wndmap_block *wb;
 
-	rc = 0;
-	WNDMAP_LOCK(p);
-	if (pos < p->pwm_min) {
-		nwrapend = 0;
-		psclist_for_each_entry(pb, &p->pwm_wmbs, pwmb_lentry)
-			if (++nwrapend * WMBSZ + p->pwm_min < p->pwm_min)
-				break;
-		if (pb == NULL) {
-			rc = -1;
-			goto done;
-		}
-		pos += WMBSZ * nwrapend;
-	} else
-		pos -= p->pwm_min;
-	psclist_for_each_entry(pb, &p->pwm_wmbs, pwmb_lentry) {
-		if (pos < WMBSZ) {
-			if (pb->pwmb_buf[pos / NBBY] & (1 << (pos % NBBY - 1)))
-				rc = 1;
-			else {
-				pb->pwmb_buf[pos / NBBY] |= 1 << (pos % NBBY - 1);
-				if (psc_wndmap_block_full(pb)) {
-					p->pwm_min += WMBSZ;
+	bmin = wm->pwm_min;
+	PLL_FOREACH(wb, &wm->pwm_wmbs) {
+		bmax = bmin + (WMBSZ - 1);
 
-					psclist_del(&pb->pwmb_lentry)
-					memset(pb, 0, sizeof(*pb));
-					psclist_xadd_tail(&pb->pwmb_lentry, &p->pwm_wmbs);
+		/* check if pos falls in this block */
+		if ((bmin > bmax && (bmin <= pos || pos <= bmax)) ||
+		    (bmin < bmax && (bmin <= pos && pos <= bmax))) {
+			ymin = bmin;
+			for (n = 0; n < WMBSZ; n++, ymin += NBBY) {
+				ymax = ymin + (NBBY - 1);
+
+				/* check if pos falls in this byte */
+				if ((ymin > ymax && (ymin <= pos || pos <= ymax)) ||
+				    (ymin < ymax && (ymin <= pos && pos <= ymax))) {
+					for (j = 0; j < NBBY; j++, n++) {
+						if (n == pos) {
+							*wbp = wb;
+							*np = n;
+							return (1);
+						}
+					}
+					psc_fatalx("shouldn't reach here");
 				}
 			}
-			goto done;
+			psc_fatalx("shouldn't reach here");
 		}
 	}
-	for (; pos >= WMBSZ; pos -= WMBSZ)
-		pb = psc_wndmap_addblock(p);
-	pb->pwmb_buf[pos / NBBY] |= 1 << (pos % NBBY - 1);
- done:
-	WNDMAP_ULOCK(p);
+	return (0);
+}
+
+int
+psc_wndmap_isset(struct psc_wndmap *wm, size_t pos)
+{
+	struct psc_wndmap_block *wb;
+	size_t n;
+	int rc = 0;
+
+	WMDMAP_LOCK(wm);
+	if (psc_wndmap_find(wm, pos, &wb, &n) &&
+	    wb->pwmb_buf[n / NBBY] & (1 << (n % NBBY - 1)))
+		rc = 1;
+	WMDMAP_ULOCK(wm);
 	return (rc);
 }
 
 void
-psc_wndmap_free(struct psc_wndmap *p)
+psc_wndmap_clearpos(struct psc_wndmap *wm, size_t pos)
 {
-	struct psc_wndmap_block *pb, *nextpb;
+	struct psc_wndmap_block *wb;
 
-	WNDMAP_LOCK(p);
-	psclist_for_each_entry_safe(pb,
-	    nextpb, &p->pwm_wmbs, pwmb_lentry)
-		PSCFREE(pb);
-	WNDMAP_ULOCK(p);
+	WNDMAP_LOCK(wm);
+	psc_assert(psc_wndmap_find(wm, pos, &wb, &n));
+	psc_assert(wb->pwmb_buf[n / NBBY] & (1 << n % NBBY - 1));
+	wb->pwmb_buf[n / NBBY] &= ~(1 << n % NBBY - 1);
+
+	/* if the first block is now empty, advance window */
+	if (psc_wndmap_block_empty(wb)) {
+		wm->pwm_min += WMBSZ;
+
+		pll_remove(&wm->pwm_wmbs, wb);
+		pll_addtail(&wm->pwm_wmbs, wb);
+	}
+	WNDMAP_ULOCK(wm);
+	return (rc);
+}
+
+size_t
+psc_wndmap_getnext(struct psc_wndmap *wm)
+{
+	struct psc_wndmap_block *wb;
+	size_t pos, n, j;
+
+	WNDMAP_LOCK(wm);
+	pos = wm->pwm_min;
+	PLL_FOREACH(wb, &wm->pwm_wmbs)
+		for (n = 0; n < WMBSZ; n++) {
+			if (wb->pwmb_buf[n / NBBY] != 0xff) {
+				j = ffs(~wb->pwmb_buf[n / NBBY]);
+				psc_assert(j != NBBY + 1);
+				pos += j;
+				wb->pwmb_buf[n / NBBY] |=
+				    1 << (n % NBBY - 1);
+				goto out;
+			} else
+				pos += NBBY;
+		}
+	/* no space available, return first bit in a new block */
+	wb = psc_wndmap_addblock(wm);
+	wb->pwmb_buf[0] = 1;
+ out:
+	WNDMAP_ULOCK(wm);
+	return (pos);
+}
+
+void
+psc_wndmap_free(struct psc_wndmap *wm)
+{
+	struct psc_wndmap_block *wb, *next;
+
+	WNDMAP_LOCK(wm);
+	PLL_FOREACH_SAFE(wb, next, &wm->pwm_wmbs) {
+		pll_remove(wm->pwm_wmbs, wb);
+		PSCFREE(wb);
+	}
+	WNDMAP_ULOCK(wm);
 }
