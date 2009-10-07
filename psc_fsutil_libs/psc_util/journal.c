@@ -70,8 +70,8 @@ pjournal_nextxid(struct psc_journal *pj)
  * Returns: 0 on success, -1 on error.
  */
 __static int
-_pjournal_logwrite(struct psc_journal *pj, struct psc_journal_xidhndl *xh,
-		   uint32_t slot, int type, void *data, size_t size)
+pjournal_logwrite_internal(struct psc_journal *pj, struct psc_journal_xidhndl *xh,
+		   	    uint32_t slot, int type, void *data, size_t size)
 {
 	struct psc_journal_enthdr *pje;
 	int rc, len;
@@ -222,7 +222,7 @@ pjournal_logwrite(struct psc_journal_xidhndl *xh, int type, void *data,
 
 	PJ_ULOCK(pj);
 
-	rc = _pjournal_logwrite(pj, xh, slot, type, data, size);
+	rc = pjournal_logwrite_internal(pj, xh, slot, type, data, size);
 
 	if (freexh) {
 		psc_dbg("pj(%p) freeing xid(%ld)@xh(%p) rc=%d ts=%d",
