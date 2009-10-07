@@ -141,13 +141,11 @@ pjournal_logwrite(struct psc_journal_xidhndl *xh, int type, void *data,
 	int				 rc;
 	struct psc_journal		*pj;
 	uint32_t			 slot;
-	int				 freexh;
 	uint32_t			 tail_slot;
 
 	if (type == PJET_VOID)
 		psc_assert(!data);
 
-	freexh = 0;
 	tail_slot = 0;
 	pj = xh->pjx_pj;
 
@@ -193,8 +191,6 @@ pjournal_logwrite(struct psc_journal_xidhndl *xh, int type, void *data,
 				psc_waitq_wakeall(&pj->pj_waitq);
 			}
 		}
-		freexh = 1;
-
 	} else if (!(xh->pjx_flags & PJET_XSTARTED)) {
 		/* Multi-step operation, mark the slot id here
 		 *  so that the tail of the journal can be found
@@ -222,7 +218,7 @@ pjournal_logwrite(struct psc_journal_xidhndl *xh, int type, void *data,
 
 	rc = pjournal_logwrite_internal(pj, xh, slot, type, data, size);
 
-	if (freexh) {
+	if (xh->pjx_flags & PJET_XEND) {
 		psc_dbg("pj(%p) freeing xid(%ld)@xh(%p) rc=%d ts=%d",
 			pj, xh->pjx_xid, xh, rc, xh->pjx_tailslot);
 		psc_assert(psclist_disjoint(&xh->pjx_lentry));
