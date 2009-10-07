@@ -8,8 +8,8 @@
 #include <unistd.h>
 
 #include "psc_util/alloc.h"
-#include "psc_util/assert.h"
 #include "psc_util/atomic.h"
+#include "psc_util/log.h"
 
 struct thr {
 	int pos;

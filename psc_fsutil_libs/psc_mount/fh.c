@@ -7,7 +7,6 @@
 #include "psc_ds/tree.h"
 #include "psc_mount/dhfh.h"
 #include "psc_util/alloc.h"
-#include "psc_util/assert.h"
 #include "psc_util/lock.h"
 #include "psc_util/log.h"
 #include "psc_util/random.h"

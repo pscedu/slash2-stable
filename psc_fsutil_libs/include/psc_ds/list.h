@@ -9,7 +9,7 @@
 
 #include <stdio.h>
 
-#include "psc_util/assert.h"
+#include "psc_util/log.h"
 
 struct psclist_head {
 	struct psclist_head *znext;

@@ -12,9 +12,9 @@
 #include <inttypes.h>
 
 #include "psc_ds/vbitmap.h"
-#include "psc_util/assert.h"
 #include "psc_util/crc.h"
 #include "psc_util/lock.h"
+#include "psc_util/log.h"
 
 #define ODTBL_VERS  0x0000000000000001ULL
 #define ODTBL_MAGIC 0x001122335577bbddULL

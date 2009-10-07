@@ -20,8 +20,8 @@
 #include "psc_ds/listguts.h"
 #include "psc_ds/lockedlist.h"
 #include "psc_util/alloc.h"
-#include "psc_util/assert.h"
 #include "psc_util/lock.h"
+#include "psc_util/log.h"
 #include "psc_util/waitq.h"
 
 extern struct psc_lockedlist	pscListCaches;

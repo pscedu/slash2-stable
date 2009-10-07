@@ -12,9 +12,9 @@
 
 #include "pfl/pfl.h"
 #include "psc_util/alloc.h"
-#include "psc_util/assert.h"
 #include "psc_util/cdefs.h"
 #include "psc_util/lock.h"
+#include "psc_util/log.h"
 #include "psc_util/thread.h"
 #include "psc_util/waitq.h"
 

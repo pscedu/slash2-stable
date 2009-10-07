@@ -13,8 +13,8 @@
 #include <string.h>
 
 #include "psc_ds/list.h"
-#include "psc_util/assert.h"
 #include "psc_util/lock.h"
+#include "psc_util/log.h"
 
 struct psc_lockedlist {
 	struct psclist_head	 pll_listhd;

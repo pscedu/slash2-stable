@@ -4,7 +4,6 @@
 #define _PFL_EXPORT_H_
 
 #include "psc_rpc/rpc.h"
-#include "psc_util/assert.h"
 #include "psc_util/atomic.h"
 #include "psc_util/log.h"
 

@@ -6,7 +6,6 @@
 
 #include <errno.h>
 
-#include "psc_util/assert.h"
 #include "psc_util/log.h"
 #include "psc_util/semaphore.h"
 

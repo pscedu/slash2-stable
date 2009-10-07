@@ -13,8 +13,8 @@
 #include "psc_ds/listcache.h"
 #include "psc_ds/listguts.h"
 #include "psc_ds/lockedlist.h"
-#include "psc_util/assert.h"
 #include "psc_util/lock.h"
+#include "psc_util/log.h"
 #include "psc_util/memnode.h"
 #include "psc_util/mlist.h"
 

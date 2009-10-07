@@ -5,9 +5,9 @@
 
 #include <stdint.h>
 
-#include "psc_util/assert.h"
 #include "psc_util/cdefs.h"
 #include "psc_util/lock.h"
+#include "psc_util/log.h"
 
 #define BIT_STRICT		(1 << 0)
 #define BIT_ABORT		(1 << 1)
