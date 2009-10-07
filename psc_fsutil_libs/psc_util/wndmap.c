@@ -5,9 +5,11 @@
 #include <string.h>
 
 #include "psc_ds/list.h"
+#include "psc_ds/lockedlist.h"
 #include "psc_util/alloc.h"
+#include "psc_util/atomic.h"
+#include "psc_util/lock.h"
 #include "psc_util/wndmap.h"
-#include "psc_util/spinlock.h"
 
 #define WMBSZ (sizeof(((struct psc_wndmap_block *)NULL)->pwmb_buf) * NBBY)
 
@@ -24,7 +26,7 @@ psc_wndmap_addblock(struct psc_wndmap *wm)
 __static int
 psc_wndmap_block_empty(const struct psc_wndmap_block *wb)
 {
-	int n;
+	size_t n;
 
 	for (n = 0; n < sizeof(*wb); n++)
 		if (wb->pwmb_buf[n])
@@ -43,12 +45,14 @@ psc_wndmap_init(struct psc_wndmap *wm, size_t min)
 }
 
 int
-psc_wndmap_find(const struct psc_wndmap *wm, size_t pos,
+psc_wndmap_find(struct psc_wndmap *wm, size_t pos,
     struct psc_wndmap_block **wbp, size_t *np)
 {
 	size_t bmin, bmax, ymin, ymax, n;
 	struct psc_wndmap_block *wb;
+	int j;
 
+	LOCK_ENSURE(&wm->pwm_lock);
 	bmin = wm->pwm_min;
 	PLL_FOREACH(wb, &wm->pwm_wmbs) {
 		bmax = bmin + (WMBSZ - 1);
@@ -86,11 +90,11 @@ psc_wndmap_isset(struct psc_wndmap *wm, size_t pos)
 	size_t n;
 	int rc = 0;
 
-	WMDMAP_LOCK(wm);
+	WNDMAP_LOCK(wm);
 	if (psc_wndmap_find(wm, pos, &wb, &n) &&
 	    wb->pwmb_buf[n / NBBY] & (1 << (n % NBBY - 1)))
 		rc = 1;
-	WMDMAP_ULOCK(wm);
+	WNDMAP_ULOCK(wm);
 	return (rc);
 }
 
@@ -98,11 +102,15 @@ void
 psc_wndmap_clearpos(struct psc_wndmap *wm, size_t pos)
 {
 	struct psc_wndmap_block *wb;
+	size_t n;
 
 	WNDMAP_LOCK(wm);
 	psc_assert(psc_wndmap_find(wm, pos, &wb, &n));
-	psc_assert(wb->pwmb_buf[n / NBBY] & (1 << n % NBBY - 1));
-	wb->pwmb_buf[n / NBBY] &= ~(1 << n % NBBY - 1);
+	psc_assert(wb->pwmb_buf[n / NBBY] & (1 << (n % NBBY - 1)));
+	wb->pwmb_buf[n / NBBY] &= ~(1 << (n % NBBY - 1));
+
+	if (pos == wm->pwm_nextmin)
+		wm->pwm_nextmin++;
 
 	/* if the first block is now empty, advance window */
 	if (psc_wndmap_block_empty(wb)) {
@@ -112,7 +120,6 @@ psc_wndmap_clearpos(struct psc_wndmap *wm, size_t pos)
 		pll_addtail(&wm->pwm_wmbs, wb);
 	}
 	WNDMAP_ULOCK(wm);
-	return (rc);
 }
 
 size_t
@@ -122,7 +129,7 @@ psc_wndmap_getnext(struct psc_wndmap *wm)
 	size_t pos, n, j;
 
 	WNDMAP_LOCK(wm);
-	pos = wm->pwm_min;
+	pos = wm->pwm_nextmin;
 	PLL_FOREACH(wb, &wm->pwm_wmbs)
 		for (n = 0; n < WMBSZ; n++) {
 			if (wb->pwmb_buf[n / NBBY] != 0xff) {
@@ -150,7 +157,7 @@ psc_wndmap_free(struct psc_wndmap *wm)
 
 	WNDMAP_LOCK(wm);
 	PLL_FOREACH_SAFE(wb, next, &wm->pwm_wmbs) {
-		pll_remove(wm->pwm_wmbs, wb);
+		pll_remove(&wm->pwm_wmbs, wb);
 		PSCFREE(wb);
 	}
 	WNDMAP_ULOCK(wm);
