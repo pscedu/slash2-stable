@@ -9,7 +9,7 @@
 #include "psc_util/wndmap.h"
 #include "psc_util/spinlock.h"
 
-struct psc_wndmap_block *
+__static struct psc_wndmap_block *
 psc_wndmap_addblock(struct psc_wndmap *p)
 {
 	struct psc_wndmap_block *pb;
@@ -19,7 +19,7 @@ psc_wndmap_addblock(struct psc_wndmap *p)
 	return (pb);
 }
 
-int
+__static int
 psc_wndmap_block_full(struct psc_wndmap_block *pb)
 {
 	int n;
@@ -46,7 +46,7 @@ psc_wndmap_set(struct psc_wndmap *p, size_t pos)
 	int rc, nwrapend;
 
 	rc = 0;
-	spinlock(&p->pmw_lock);
+	WNDMAP_LOCK(p);
 	if (pos < p->pwm_min) {
 		nwrapend = 0;
 		psclist_for_each_entry(pb, &p->pwm_wmbs, pwmb_lentry)
@@ -80,7 +80,7 @@ psc_wndmap_set(struct psc_wndmap *p, size_t pos)
 		pb = psc_wndmap_addblock(p);
 	pb->pwmb_buf[pos / NBBY] |= 1 << (pos % NBBY - 1);
  done:
-	freelock(&p->pmw_lock);
+	WNDMAP_ULOCK(p);
 	return (rc);
 }
 
@@ -89,9 +89,9 @@ psc_wndmap_free(struct psc_wndmap *p)
 {
 	struct psc_wndmap_block *pb, *nextpb;
 
-	spinlock(&p->pwm_lock);
+	WNDMAP_LOCK(p);
 	psclist_for_each_entry_safe(pb,
 	    nextpb, &p->pwm_wmbs, pwmb_lentry)
 		PSCFREE(pb);
-	freelock(&p->pwm_lock);
+	WNDMAP_ULOCK(p);
 }

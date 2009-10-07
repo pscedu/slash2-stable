@@ -16,8 +16,9 @@ struct psc_wndmap_block {
 
 #define WMBSZ (sizeof(((struct psc_wndmap_block *)NULL)->pwmb_buf) * NBBY)
 
-struct psc_wndmap_block *
-	psc_wndmap_addblock(struct psc_wndmap *);
+#define WNDMAP_LOCK(p)		spinlock(&(p)->pwm_lock)
+#define WNDMAP_ULOCK(p)		freelock(&(p)->pwm_lock)
+
 int	psc_wndmap_block_full(struct psc_wndmap_block *);
 void	psc_wndmap_free(struct psc_wndmap *);
 void	psc_wndmap_init(struct psc_wndmap *, size_t);
