@@ -148,7 +148,7 @@ struct psclog_data {
 #define psc_assert(cond)					\
 	do {							\
 		if (!(cond))					\
-			psc_fatalx("[assert] %s", # cond);	\
+			psc_fatalx("[assert] %s", #cond);	\
 	} while (0)
 
 #define psc_assert_msg(cond, format, ...)			\
@@ -161,7 +161,7 @@ struct psclog_data {
 #define psc_assert_perror(cond)					\
 	do {							\
 		if (!(cond))					\
-			psc_fatal("[assert] " # cond);		\
+			psc_fatal("[assert] %s", #cond);	\
 	} while (0)
 
 void	psc_log_init(void);
