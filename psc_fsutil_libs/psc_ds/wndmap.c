@@ -1,19 +1,16 @@
 /* $Id$ */
 
-struct psc_wndmap {
-	size_t			 pwm_min;	/* bottom edge of window */
-	psc_spinlock_t		 pwm_lock;
-	struct psclist_head	*pwm_wmbs;
-};
+#include <sys/param.h>
 
-/* windowmap block */
-struct psc_wndmap_block {
-	struct psclist_head	 pwmb_lentry;
-	char			 pwmb_buf[32];
-};
+#include <string.h>
+
+#include "psc_ds/list.h"
+#include "psc_util/alloc.h"
+#include "psc_util/wndmap.h"
+#include "psc_util/spinlock.h"
 
 struct psc_wndmap_block *
-pwndmap_addblock(struct psc_windowmap *p)
+psc_wndmap_addblock(struct psc_wndmap *p)
 {
 	struct psc_wndmap_block *pb;
 
@@ -23,7 +20,7 @@ pwndmap_addblock(struct psc_windowmap *p)
 }
 
 int
-pwndmap_block_full(struct psc_wndmap_block *pb)
+psc_wndmap_block_full(struct psc_wndmap_block *pb)
 {
 	int n;
 
@@ -34,18 +31,16 @@ pwndmap_block_full(struct psc_wndmap_block *pb)
 }
 
 void
-pwndmap_init(struct psc_windowmap *p, size_t min)
+psc_wndmap_init(struct psc_wndmap *p, size_t min)
 {
 	p->pwm_min = min;
 	LOCK_INIT(&p->pwm_lock);
 	PSCLIST_HEAD_INIT(&p->pwm_wmbs);
-	pwndmap_addblock(p);
+	psc_wndmap_addblock(p);
 }
 
-#define WMBSZ (sizeof(((struct psc_wndmap_block *)NULL)->pwmb_buf) * NBBY)
-
 int
-pwndmap_set(struct psc_wndmap *p, size_t pos)
+psc_wndmap_set(struct psc_wndmap *p, size_t pos)
 {
 	struct psc_wndmap_block *pb;
 	int rc, nwrapend;
@@ -70,7 +65,7 @@ pwndmap_set(struct psc_wndmap *p, size_t pos)
 				rc = 1;
 			else {
 				pb->pwmb_buf[pos / NBBY] |= 1 << (pos % NBBY - 1);
-				if (pwndmap_block_full(pb)) {
+				if (psc_wndmap_block_full(pb)) {
 					p->pwm_min += WMBSZ;
 
 					psclist_del(&pb->pwmb_lentry)
@@ -82,7 +77,7 @@ pwndmap_set(struct psc_wndmap *p, size_t pos)
 		}
 	}
 	for (; pos >= WMBSZ; pos -= WMBSZ)
-		pb = pwndmap_addblock(p);
+		pb = psc_wndmap_addblock(p);
 	pb->pwmb_buf[pos / NBBY] |= 1 << (pos % NBBY - 1);
  done:
 	freelock(&p->pmw_lock);
@@ -90,7 +85,7 @@ pwndmap_set(struct psc_wndmap *p, size_t pos)
 }
 
 void
-pwndmap_free(struct psc_windowmap *p)
+psc_wndmap_free(struct psc_wndmap *p)
 {
 	struct psc_wndmap_block *pb, *nextpb;
 
