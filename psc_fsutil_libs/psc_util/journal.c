@@ -108,9 +108,11 @@ pjournal_logwrite_internal(struct psc_journal *pj, struct psc_journal_xidhndl *x
 	else
 		pje->pje_sid = atomic_read(&xh->pjx_sid);
 
+#ifdef NOT_READY
 	/* commit the log on disk before we can return */
 	rc = pwrite(pj->pj_fd, pje, pj->pj_hdr->pjh_entsz, 
 		   (off_t)(pj->pj_hdr->pjh_start_off + (slot * pj->pj_hdr->pjh_entsz)));
+#endif
 
 #ifdef PJE_DYN_BUFFER
 	psc_freel(pje, PJ_PJESZ(pj));
