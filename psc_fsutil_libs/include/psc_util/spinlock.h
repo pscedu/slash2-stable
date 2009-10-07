@@ -3,9 +3,11 @@
 #ifndef _PFL_SPINLOCK_H_
 #define _PFL_SPINLOCK_H_
 
+#include <sys/time.h>
+
 #include <pthread.h>
 #include <sched.h>
-#include <time.h>
+#include <unistd.h>
 
 #include "psc_util/log.h"
 
