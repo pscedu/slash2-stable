@@ -60,7 +60,7 @@ struct psclog_data {
 	do {								\
 		if ((lvl) == PLL_FATAL)					\
 			_psc_fatal((file), (fn), (ln), (ss), (lvl),	\
-	    		    (flg), (fmt), ## __VA_ARGS__ );		\
+			    (flg), (fmt), ## __VA_ARGS__ );		\
 		else if (psc_log_getlevel(ss) >= (lvl))			\
 			_psclog((file), (fn), (ln), (ss), (lvl),	\
 			    (flg), (fmt), ## __VA_ARGS__);		\
@@ -143,6 +143,25 @@ struct psclog_data {
 	do {							\
 		psc_trace("exit_marker");			\
 		return v;					\
+	} while (0)
+
+#define psc_assert(cond)					\
+	do {							\
+		if (!(cond))					\
+			psc_fatalx("[assert] %s", # cond);	\
+	} while (0)
+
+#define psc_assert_msg(cond, format, ...)			\
+	do {							\
+		if (!(cond))					\
+			psc_fatalx("[assert] " format,		\
+			    ## __VA_ARGS__);			\
+	} while (0)
+
+#define psc_assert_perror(cond)					\
+	do {							\
+		if (!(cond))					\
+			psc_fatal("[assert] " # cond);		\
 	} while (0)
 
 void	psc_log_init(void);
