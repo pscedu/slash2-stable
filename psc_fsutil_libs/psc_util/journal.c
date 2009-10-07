@@ -135,12 +135,19 @@ int
 pjournal_logwrite(struct psc_journal_xidhndl *xh, int type, void *data,
 		  size_t size)
 {
-	int rc, freexh=0;
-	uint32_t slot, tail_slot=0;
-	struct psc_journal *pj = xh->pjx_pj;
+	struct psc_journal_xidhndl	*t;
+	int				 rc;
+	struct psc_journal		*pj;
+	uint32_t			 slot;
+	int				 freexh;
+	uint32_t			 tail_slot;
 
 	if (type == PJET_VOID)
 		psc_assert(!data);
+
+	freexh = 0;
+	tail_slot = 0;
+	pj = xh->pjx_pj;
 
 	psc_assert(!(type & PJET_CORRUPT));
 	psc_assert(!(type & PJET_XSTARTED));
@@ -149,20 +156,15 @@ pjournal_logwrite(struct psc_journal_xidhndl *xh, int type, void *data,
 	psc_assert(!(xh->pjx_flags & PJET_CLOSED));
 
  retry:
+	/*
+	 * Make sure that the next slot to be written does not have a pending transaction.
+	 * Since we add a new transaction at the tail of the pending transaction list, we
+	 * only need to check the head of the list to find out the oldest pending transaction.
+	 */
 	PJ_LOCK(pj);
-	/* The 'highest' available slot at the moment.
-	 */
 	slot = pj->pj_nextwrite;
-	/* The head of this list represents the oldest pending transaction
-	 *  slot.  By checking it, we're trying to prevent the journal from
-	 *  over writing slots belonging to open transactions.
-	 */
-	if (!psclist_empty(&pj->pj_pndgxids)) {
-		struct psc_journal_xidhndl *t;
-	
-		t = psclist_first_entry(&pj->pj_pndgxids, 
-				struct psc_journal_xidhndl, pjx_lentry);
-		
+	t = psclist_first_entry(&pj->pj_pndgxids, struct psc_journal_xidhndl, pjx_lentry);
+	if (t) {
 		if (t->pjx_tailslot == slot) {
 			psc_warnx("pj(%p) blocking on slot(%d) "
 				  "availability - owned by xid (%p)", 
