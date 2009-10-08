@@ -483,9 +483,10 @@ pjournal_load(const char *fn)
 	struct psc_journal_hdr *pjh = PSCALLOC(sizeof(*pjh));
 	struct psc_journal *pj = PSCALLOC(sizeof(*pj));
 	void *hdr = psc_alloc(PJE_OFFSET, PAF_PAGEALIGN);
+
 #ifndef PJE_DYN_BUFFER
-	struct psc_journal_enthdr *pje;
-	int n=8;
+	int				 i;
+	struct psc_journal_enthdr	*pje;
 #endif
 
 	pj->pj_fd = open(fn, O_RDWR|O_DIRECT);
@@ -509,7 +510,7 @@ pjournal_load(const char *fn)
 
 #ifndef PJE_DYN_BUFFER
 	dynarray_init(&pj->pj_bufs);
-	while (n--) {
+	for (i = 0; i < NUM_PJBUF; i++) {
 		pje = psc_alloc(PJ_PJESZ(pj), PAF_PAGEALIGN | PAF_LOCK);
 		dynarray_add(&pj->pj_bufs, pje);
 	}	

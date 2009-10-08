@@ -21,6 +21,7 @@
 #define PJE_OFFSET      0x1000
 #define PJE_VERSION     0x01
 
+
 struct psc_journal_hdr {
 	uint32_t       pjh_entsz;
 	uint32_t       pjh_nents;
@@ -32,6 +33,9 @@ struct psc_journal_hdr {
 	uint64_t       pjh_magic;
 };
 
+#ifndef PJE_DYN_BUFFER
+#define	NUM_PJBUF		8		/* number of journal buffers */
+#endif
 
 struct psc_journal {
 	psc_spinlock_t		 pj_lock;	/* contention lock */
