@@ -518,7 +518,58 @@ pjournal_load(const char *fn)
 	return (pj);
 }
 
+/*
+ * Initialize a new journal file.
+ */
+void
+pjournal_format(const char *fn, uint32_t nents, uint32_t entsz, uint32_t ra,
+		uint32_t opts)
+{
+	struct psc_journal pj;
+	struct psc_journal_hdr pjh = {entsz, nents, PJE_VERSION, opts, ra,
+				      0, PJE_OFFSET, PJE_MAGIC};
+	struct psc_journal_enthdr *h;
+	unsigned char *jbuf;
+	uint32_t slot, i;
+	int fd;
 
+	pj.pj_hdr = &pjh;
+	jbuf = pjournal_alloclog_ra(&pj);
+
+	if ((fd = open(fn, O_WRONLY|O_CREAT|O_TRUNC, 0700)) < 0)
+		psc_fatal("Could not create or truncate the journal %s", fn);
+
+	if (pwrite(fd, &pjh, sizeof(pjh), 0) < 0)
+		psc_fatal("Failed to write header");
+
+	for (slot=0, ra=pjh.pjh_readahead; slot < pjh.pjh_nents;
+	     slot += pjh.pjh_readahead) {
+		/* Make sure we don't read past the end.
+		 */
+		while ((slot + ra) > pjh.pjh_nents)
+			ra--;
+
+		for (i=0; i < ra; i++) {
+			h = (void *)&jbuf[pjh.pjh_entsz * i];
+			h->pje_magic = PJE_FMT_MAGIC;
+			h->pje_type = PJET_VOID;
+			h->pje_xid = PJE_XID_NONE;
+			h->pje_sid = PJE_XID_NONE;
+		}
+
+		if (pwrite(fd, jbuf, (pjh.pjh_entsz * ra),
+			   (off_t)(PJE_OFFSET + (slot * pjh.pjh_entsz))) < 0)
+			psc_fatal("Failed to write entries");
+	}
+	if (close(fd) < 0)
+		psc_fatal("Failed to close journal fd");
+
+	PSCFREE(jbuf);
+}
+
+/*
+ * Dump the contents of a journal file.
+ */
 int
 pjournal_dump(const char *fn)
 {
@@ -573,50 +624,4 @@ pjournal_dump(const char *fn)
 
 	PSCFREE(jbuf);
 	return (0);
-}
-
-void
-pjournal_format(const char *fn, uint32_t nents, uint32_t entsz, uint32_t ra,
-		uint32_t opts)
-{
-	struct psc_journal pj;
-	struct psc_journal_hdr pjh = {entsz, nents, PJE_VERSION, opts, ra,
-				      0, PJE_OFFSET, PJE_MAGIC};
-	struct psc_journal_enthdr *h;
-	unsigned char *jbuf;
-	uint32_t slot, i;
-	int fd;
-
-	pj.pj_hdr = &pjh;
-	jbuf = pjournal_alloclog_ra(&pj);
-
-	if ((fd = open(fn, O_WRONLY|O_CREAT|O_TRUNC, 0700)) < 0)
-		psc_fatal("Could not create or truncate the journal %s", fn);
-
-	if (pwrite(fd, &pjh, sizeof(pjh), 0) < 0)
-		psc_fatal("Failed to write header");
-
-	for (slot=0, ra=pjh.pjh_readahead; slot < pjh.pjh_nents;
-	     slot += pjh.pjh_readahead) {
-		/* Make sure we don't read past the end.
-		 */
-		while ((slot + ra) > pjh.pjh_nents)
-			ra--;
-
-		for (i=0; i < ra; i++) {
-			h = (void *)&jbuf[pjh.pjh_entsz * i];
-			h->pje_magic = PJE_FMT_MAGIC;
-			h->pje_type = PJET_VOID;
-			h->pje_xid = PJE_XID_NONE;
-			h->pje_sid = PJE_XID_NONE;
-		}
-
-		if (pwrite(fd, jbuf, (pjh.pjh_entsz * ra),
-			   (off_t)(PJE_OFFSET + (slot * pjh.pjh_entsz))) < 0)
-			psc_fatal("Failed to write entries");
-	}
-	if (close(fd) < 0)
-		psc_fatal("Failed to close journal fd");
-
-	PSCFREE(jbuf);
 }
