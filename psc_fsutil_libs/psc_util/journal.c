@@ -231,7 +231,7 @@ pjournal_logwrite(struct psc_journal_xidhndl *xh, int type, void *data,
  * pjournal_logread - get a specified entry from a journal.
  * @pj: the journal.
  * @slot: the position in the journal of the entry to obtain.
- * @pje: an entry to be filled in for the journal entry.
+ * @data: a pointer to buffer when we fill journal entries.
  * Returns: 'n' entries read on success, -1 on error.
  */
 int
