@@ -355,12 +355,23 @@ pjournal_headtail_get(struct psc_journal *pj, struct psc_journal_walker *pjw)
 	int		 i;
 	int		 rc;
 	int		 ra;
-	unsigned char	*jbuf=pjournal_alloclog_ra(pj);
-        uint32_t tm=PJET_SLOT_ANY, sm=PJET_SLOT_ANY, lastgen, ents=0;
+        uint32_t	 sm;
+        uint32_t	 tm;
+	uint32_t	 ents;
+	unsigned char	*jbuf;
+	uint32_t	 lastgen;
+
+	/* initialize start marker (sm) and transition marker (tm) */
+	sm = PJET_SLOT_ANY;
+	tm = PJET_SLOT_ANY;
 
 	rc = 0;
-	lastgen = 0; /* gcc */
-	pjw->pjw_pos = pjw->pjw_stop = 0;
+	ents = 0;
+	lastgen = 0;		/* gcc */
+	pjw->pjw_pos = 0;
+	pjw->pjw_stop = 0;
+
+	jbuf = pjournal_alloclog_ra(pj);
 
 	while (ents < pj->pj_hdr->pjh_nents) {
 		ra = pjournal_logread(pj, pjw->pjw_pos, jbuf);
