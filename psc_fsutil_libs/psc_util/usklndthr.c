@@ -17,14 +17,6 @@ psc_usklndthr_begin(void *arg)
 	return (NULL);
 }
 
-void
-psc_usklndthr_destroy(void *arg)
-{
-	struct psc_usklndthr *put = arg;
-
-	free(put);
-}
-
 int
 cfs_create_thread(cfs_thread_t startf, void *arg,
     const char *namefmt, ...)
@@ -39,7 +31,7 @@ cfs_create_thread(cfs_thread_t startf, void *arg,
 	va_end(ap);
 
 	thr = pscthr_init(psc_usklndthr_get_type(namefmt), PTF_FREE,
-	    psc_usklndthr_begin, psc_usklndthr_destroy, sizeof(*put),
+	    psc_usklndthr_begin, NULL, sizeof(*put),
 	    name);
 	put = thr->pscthr_private;
 	put->put_startf = startf;

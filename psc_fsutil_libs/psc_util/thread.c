@@ -46,8 +46,10 @@ _pscthr_destroy(void *arg)
 	pll_remove(&psc_threads, thr);
 	PLL_ULOCK(&psc_threads);
 
-	if (thr->pscthr_dtor)
+	if (thr->pscthr_dtor) {
 		thr->pscthr_dtor(thr->pscthr_private);
+		free(thr->pscthr_private);
+	}
 	PSCFREE(thr->pscthr_loglevels);
 	if (thr->pscthr_flags & PTF_FREE)
 		free(thr);
