@@ -30,9 +30,7 @@ pfl
 - pfl: use "psc_" prefix and "_mt" (multithread-safe) postfix
 - for psclog(), add extensibility mechanism for fmtstr,
   allowing app-specific callbacks (e.g. %r for zest clients)
-- rename dynarray_hintlen -> dynarray_ensurelen
 - create a generic refcnt manager for thread-safe activity
-- consider adding a new keyword __local or something for thread-localized memory.
 - add a pscthr_get() check in pscalloc and test
 - psclog format specifier: timestamp difference
 - investigate proper control socket permissions checks.  regular
@@ -52,7 +50,6 @@ pfl
 - add API for PSC mem failure, so we can plug into the memhandling
   paths when asprintf() fails instead of centralizing the logic over
   malloc().
-- kill PSS_LOG
 
 zest
 - test parity reconstruction service by rebuilding

@@ -6,8 +6,6 @@
  *	(o) We cannot use psc_fatal() for fatal errors here.  Instead use err(3).
  */
 
-#define PSC_SUBSYS PSS_LOG
-
 #include <sys/param.h>
 #include <sys/time.h>
 #include <sys/syscall.h>
@@ -154,7 +152,7 @@ psclog_getdata(void)
 #ifdef HAVE_CNOS
 		int cnos_get_rank(void);
 
-	        d->pld_rank = cnos_get_rank();
+		d->pld_rank = cnos_get_rank();
 #else
 		MPI_Comm_rank(1, &d->pld_rank); /* 1=MPI_COMM_WORLD */
 #endif

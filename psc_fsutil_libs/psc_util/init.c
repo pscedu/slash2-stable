@@ -92,8 +92,7 @@ pfl_init(void)
 			psc_fatal("signal");
 	}
 
-	psc_subsys_register(PSS_LOG, "log");
-	psc_subsys_register(PSS_JOURNAL, "journl");
+	psc_subsys_register(PSS_JOURNAL, "jrnl");
 	psc_subsys_register(PSS_RPC, "rpc");
 	psc_subsys_register(PSS_LNET, "lnet");
 	psc_subsys_register(PSS_MEM, "mem");
