@@ -18,6 +18,7 @@
 /**
  * vbitmap_new - create a new variable-sized bitmap.
  * @nelems: number of entries in bitmap.
+ * @flags: operational flags.
  */
 struct vbitmap *
 vbitmap_newf(size_t nelems, int flags)
@@ -57,26 +58,24 @@ vbitmap_attach(unsigned char *buf, size_t size)
 {
 	struct vbitmap *vb;
 
-	if ((vb = malloc(sizeof(*vb))) == NULL)
-		return (NULL);
-	memset(vb, 0, sizeof(*vb));
+	vb = PSCALLOC(sizeof(*vb));
+	vb->vb_flags |= PVBF_EXTALLOC;
 	vb->vb_pos = vb->vb_start = buf;
 	vb->vb_end = buf + (size - 1);
 	vb->vb_lastsize = NBBY;
 	return (vb);
 }
 
-/**
- * vbitmap_free - reclaim memory from a variable-sized bitmap.
- * @vb: variable bitmap.
- */
 void
-vbitmap_free(struct vbitmap *vb)
+_vbitmap_free(struct vbitmap *vb)
 {
-	free(vb->vb_start);
+	if ((vb->vb_flags & PVBF_EXTALLOC) == 0)
+		free(vb->vb_start);
 	vb->vb_start = NULL;
 	vb->vb_end = NULL;
 	vb->vb_pos = NULL;
+	if ((vb->vb_flags & PVBF_STATIC) == 0)
+		free(vb);
 }
 
 /**
@@ -303,7 +302,7 @@ vbitmap_next(struct vbitmap *vb, size_t *elem)
 			if (vb->vb_lastsize == NBBY) {
 				if (*pos != 0xff)
 					goto found;
-			} else if (*pos != ~(char)(0x100 -
+			} else if (pos && *pos != ~(char)(0x100 -
 			    (1 << vb->vb_lastsize)))
 				goto found;
 			pos = vb->vb_start;	/* byte is full, advance */
@@ -314,7 +313,7 @@ vbitmap_next(struct vbitmap *vb, size_t *elem)
 		}
 	} while (pos != start);
 
-	if (vb->vb_flags & PVBF_AUTO) {
+	if ((vb->vb_flags & (PVBF_AUTO | PVBF_EXTALLOC)) == PVBF_AUTO) {
 		int newsiz;
 
 		newsiz = vbitmap_getsize(vb) + 1;
