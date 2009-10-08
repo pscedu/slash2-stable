@@ -37,7 +37,7 @@ psc_wndmap_block_empty(const struct psc_wndmap_block *wb)
 void
 psc_wndmap_init(struct psc_wndmap *wm, size_t min)
 {
-	wm->pwm_min = min;
+	wm->pwm_min = wm->pwm_nextmin = min;
 	LOCK_INIT(&wm->pwm_lock);
 	pll_init(&wm->pwm_wmbs, struct psc_wndmap_block,
 	    pwmb_lentry, &wm->pwm_lock);
