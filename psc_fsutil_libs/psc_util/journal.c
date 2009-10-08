@@ -542,9 +542,11 @@ pjournal_format(const char *fn, uint32_t nents, uint32_t entsz, uint32_t ra,
 	if (pwrite(fd, &pjh, sizeof(pjh), 0) < 0)
 		psc_fatal("Failed to write header");
 
+	psc_assert(PJE_OFFSET >= sizeof(pjh)); 
+
 	for (slot=0, ra=pjh.pjh_readahead; slot < pjh.pjh_nents;
 	     slot += pjh.pjh_readahead) {
-		/* Make sure we don't read past the end.
+		/* Make sure we don't write past the end.
 		 */
 		while ((slot + ra) > pjh.pjh_nents)
 			ra--;
