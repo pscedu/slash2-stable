@@ -26,7 +26,6 @@
 #include <psc_rpc/service.h>
 #include <psc_util/acsvc.h>
 #include <psc_util/alloc.h>
-#include <psc_util/assert.h>
 #include <psc_util/atomic.h>
 #include <psc_util/base64.h>
 #include <psc_util/bitflag.h>
@@ -66,9 +65,11 @@
 #include <psc_util/strlcpy.h>
 #include <psc_util/subsys.h>
 #include <psc_util/thread.h>
+#include <psc_util/time.h>
 #include <psc_util/timerthr.h>
 #include <psc_util/usklndthr.h>
 #include <psc_util/waitq.h>
+#include <psc_util/wndmap.h>
 /* end includes */
 
 const char *progname;
@@ -120,7 +121,6 @@ main(int argc, char *argv[])
 	PRTYPE(list_cache_t);
 	PRTYPE(psc_crc_t);
 	PRTYPE(psc_spinlock_t);
-	PRTYPE(psc_waitq_t);
 	PRTYPE(pscrpc_svc_handle_t);
 	PRTYPE(s16);
 	PRTYPE(s32);
@@ -187,6 +187,8 @@ main(int argc, char *argv[])
 	PRTYPE(struct psc_usklndthr);
 	PRTYPE(struct psc_uuid);
 	PRTYPE(struct psc_waitq);
+	PRTYPE(struct psc_wndmap);
+	PRTYPE(struct psc_wndmap_block);
 	PRTYPE(struct psclist_head);
 	PRTYPE(struct psclog_data);
 	PRTYPE(struct pscrpc_async_args);
