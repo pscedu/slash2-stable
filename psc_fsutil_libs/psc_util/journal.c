@@ -393,9 +393,13 @@ pjournal_headtail_get(struct psc_journal *pj, struct psc_journal_walker *pjw)
 			if (!ents && !i)
 				lastgen = h->pje_genmarker;
 
+			/*
+			 * If we find a newly formatted log, it means that we have never
+			 * used up all the slots even once.  In this case, the previous 
+			 * slot should be the end of the log.  The start of the log should
+			 * be either 0 or the start marker (sm).
+			 */
 			if (h->pje_magic == PJE_FMT_MAGIC) {
-				/* Newly formatted log.
-				 */
 				pjw->pjw_pos = (sm == PJET_SLOT_ANY ? 0 : sm);
 				pjw->pjw_stop = (ents + i) - 1;
 				goto out;
