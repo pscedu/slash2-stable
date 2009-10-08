@@ -16,7 +16,7 @@
 #define PJE_FMT_MAGIC   0x45678912aabbccffULL
 #define PJE_XID_NONE    0 /* invalid transaction ID */
 
-/* Start writing jents at offset 4k, header must be smaller than PJE_OFFSET.
+/* Start writing journal entries (pje) at offset 4k, header must be smaller than PJE_OFFSET.
  */
 #define PJE_OFFSET      0x1000
 #define PJE_VERSION     0x01
