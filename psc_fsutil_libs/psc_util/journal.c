@@ -352,19 +352,24 @@ pjournal_alloclog_ra(struct psc_journal *pj)
 __static int
 pjournal_headtail_get(struct psc_journal *pj, struct psc_journal_walker *pjw)
 {
-	unsigned char *jbuf=pjournal_alloclog_ra(pj);
-	int rc=0, i;
+	int		 i;
+	int		 rc;
+	int		 ra;
+	unsigned char	*jbuf=pjournal_alloclog_ra(pj);
         uint32_t tm=PJET_SLOT_ANY, sm=PJET_SLOT_ANY, lastgen, ents=0;
 
+	rc = 0;
 	lastgen = 0; /* gcc */
 	pjw->pjw_pos = pjw->pjw_stop = 0;
 
 	while (ents < pj->pj_hdr->pjh_nents) {
-		rc = pjournal_logread(pj, pjw->pjw_pos, jbuf);
-		if (rc < 0)
-			return (-1);
+		ra = pjournal_logread(pj, pjw->pjw_pos, jbuf);
+		if (ra < 0) {
+			rc = -1;
+			goto out;
+		}
 
-		for (i=0; i < rc; i++) {
+		for (i=0; i < ra; i++) {
 			struct psc_journal_enthdr *h;
 
 			h = (void *)&jbuf[pj->pj_hdr->pjh_entsz * i];
@@ -382,7 +387,6 @@ pjournal_headtail_get(struct psc_journal *pj, struct psc_journal_walker *pjw)
 				 */
 				pjw->pjw_pos = (sm == PJET_SLOT_ANY ? 0 : sm);
 				pjw->pjw_stop = (ents + i) - 1;
-				rc = 0;
 				goto out;
 			}
 			if ((lastgen & PJET_LOG_GMASK) !=
@@ -399,7 +403,6 @@ pjournal_headtail_get(struct psc_journal *pj, struct psc_journal_walker *pjw)
 					 */
 					pjw->pjw_pos = sm;
 					pjw->pjw_stop = tm;
-					rc = 0;
 					goto out;
 				}
 				/* Else..
@@ -411,7 +414,7 @@ pjournal_headtail_get(struct psc_journal *pj, struct psc_journal_walker *pjw)
 			if (h->pje_genmarker & PJET_LOG_STMRK)
 				sm = ents + i;
 		}
-		ents += rc;
+		ents += ra;
 	}
 
 	pjw->pjw_pos  = ((sm != PJET_SLOT_ANY) ? sm : (tm+1));
