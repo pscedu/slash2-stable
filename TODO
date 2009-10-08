@@ -43,7 +43,6 @@ pfl
 - create vlocks: vector lock API when you need to lock multiple
   structures in a reqlock order fashion (hash tables and lists etc.)
 - add custom sleep intervals for timerthr API
-- move pfl.h and psc_types.h into psc_fsutil_libs/include/pfl
 - make .depend target dependent on headers so it can rebuild itself
   and remove from the `clean' target
 - fix endianess in RPCs
@@ -52,24 +51,12 @@ pfl
   malloc().
 
 zest
-- test parity reconstruction service by rebuilding
-  a block from each parity group
-- investigate SIGPIPE mishandling in client zest library
-  causing infinite loop
-- investigate size of block addressing types causing
-  unreasonable limits on maximum file system size, perhaps
-  during file system creation time (hopefully only)
 - research faster CRC operations
 - do not allow clients to sit on parity groups, need some
   kind of reap/reclamation mechanism
-- move parity block into random positions in the raid scheme
-  to avoid placing all parity data on the same disk. (for RAID 6?)
-  however skip these on disk fail rebuild
-
-  note: have the fastest disks grab each successive block in a pg,
-  deprecates need for zigs, or at least current complexity of zigs.
+- new RAID scheme: have the fastest disks grab each successive block
+  in a pg, obviates need for zigs
 - pass sizeof(iovs) to client on CONNECT
-- write back support on server
 - add extattrs to zfs fuse
 - get xattr working on fruits /bessemer
 - the *at family of routines allow any fd, not just a dirfd.
@@ -94,8 +81,6 @@ zest
 - have two iothrs access the same disk to shorten the time the disk
   is idle
 - add auth checks into fdbuf from slash
-- track bitmap stats in real time instead of copying the whole bitmap
-  in zctl
 - auto tune hash table sizes
 - allow zctl to add disks/fix mode operation
 - separate all ctlapi structures into substructures for easier copying vs.
