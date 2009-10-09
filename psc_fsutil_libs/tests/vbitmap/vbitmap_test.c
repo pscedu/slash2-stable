@@ -39,7 +39,7 @@ main(int argc, char *argv[])
 		usage();
 
 	for (i = 0; i < 79; i++)
-		if (!vbitmap_next(&vba, &j))
+		if (vbitmap_next(&vba, &j) != 1)
 			errx(1, "vbitmap_next failed with auto");
 		else if (j != (size_t)i)
 			errx(1, "elem %d is not supposed to be %zu", i, j);
