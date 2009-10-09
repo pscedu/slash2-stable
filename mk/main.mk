@@ -237,8 +237,8 @@ ifdef SLASH_BASE
 CS_ARGS+=-s${SLASH_BASE}
 ET_ARGS+="${SLASH_BASE}"
 
-CS_ARGS+=-s${ZFS_BASE}
-ET_ARGS+="${ZFS_BASE}"
+CS_ARGS+=-s${ZFS_BASE}/zfs-fuse
+ET_ARGS+="${ZFS_BASE}/zfs-fuse"
 endif
 
 ifdef ZEST_BASE
