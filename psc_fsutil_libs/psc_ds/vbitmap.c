@@ -370,6 +370,9 @@ vbitmap_resize(struct vbitmap *vb, size_t newsize)
 	start = realloc(vb->vb_start, siz);
 	if (start == NULL && siz)
 		return (-1);
+	/* special case for resizing NULL vbitmaps */
+	if (vb->vb_start == NULL)
+		memset(start, 0, siz);
 	vb->vb_start = start;
 	if (siz)
 		vb->vb_end = start + siz - 1;
