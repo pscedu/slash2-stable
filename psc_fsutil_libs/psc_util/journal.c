@@ -411,6 +411,10 @@ pjournal_headtail_get(struct psc_journal *pj, struct psc_journal_walker *pjw)
 				 *  here until the end is from the previous
 				 *  log wrap.
 				 */
+
+				lastgen = h->pje_genmarker;
+				psc_assert(tm == PJET_SLOT_ANY);
+
 				tm = (ents + i) - 1;
 				if (sm != PJET_SLOT_ANY) {
 					/* Here's the case where the tm > sm
@@ -432,6 +436,9 @@ pjournal_headtail_get(struct psc_journal *pj, struct psc_journal_walker *pjw)
 		ents += ra;
 	}
 
+	/*
+	 * If the starter marker is overwritten, then we won't find it.
+	 */
 	pjw->pjw_pos  = ((sm != PJET_SLOT_ANY) ? sm : (tm+1));
 	/* This catches the case where the tm is at the very last slot
 	 *  which means that the log didn't wrap but was about to.
