@@ -23,9 +23,9 @@ usage(void)
 int
 main(int argc, char *argv[])
 {
-	struct vbitmap *vb;
+	struct vbitmap *vb, vba = VBITMAP_INIT_AUTO;
 	int i, c, u, t;
-	size_t elem;
+	size_t elem, j;
 
 	progname = argv[0];
 	while ((c = getopt(argc, argv, "")) != -1)
@@ -37,6 +37,12 @@ main(int argc, char *argv[])
 	argc -= optind;
 	if (argc)
 		usage();
+
+	for (i = 0; i < 79; i++)
+		if (!vbitmap_next(&vba, &j))
+			errx(1, "vbitmap_next failed with auto");
+		else if (j != (size_t)i)
+			errx(1, "elem %d is not supposed to be %zu", i, j);
 
 	if ((vb = vbitmap_new(213)) == NULL)
 		err(1, "vbitmap_new");
