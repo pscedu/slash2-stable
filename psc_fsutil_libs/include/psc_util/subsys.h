@@ -14,7 +14,7 @@
 #define PSS_RPC		1
 #define PSS_LNET	2
 #define PSS_MEM		3
-#define PSS_GEN		4		/* catchall */
+#define PSS_GEN		4		/* generic/catch other */
 #define PSS_TMP		5		/* temporary debug use */
 #define _PSS_LAST	6
 

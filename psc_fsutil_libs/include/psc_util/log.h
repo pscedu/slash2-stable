@@ -50,7 +50,7 @@ struct psclog_data {
 
 #define _psclogft(ss, lvl, flg, fmt, ...)				\
 	_psc_fatal(__FILE__, __func__, __LINE__, (ss),			\
-	    (lvl), (flg), (fmt), ## __VA_ARGS__ )
+	    (lvl), (flg), (fmt), ## __VA_ARGS__)
 
 #define _psclogvft(ss, lvl, flg, fmt, ...)				\
 	_psc_fatalv(__FILE__, __func__, __LINE__, (ss),			\
