@@ -11,7 +11,7 @@
 #include "psc_rpc/rpclog.h"
 #include "psc_util/alloc.h"
 #include "psc_util/atomic.h"
-#include "psc_util/spinlock.h"
+#include "psc_util/lock.h"
 #include "psc_util/waitq.h"
 
 static u64 pscrpc_last_xid = 0;
