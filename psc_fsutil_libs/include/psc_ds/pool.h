@@ -119,6 +119,20 @@ struct psc_poolmgr {
 /* default value of pool fill before freeing items directly on pool_return */
 #define POOL_AUTOSIZE_THRESH 80
 
+/*
+ * psc_poolmaster_init - initialize a pool resource.
+ * @p: pool master.
+ * @type: managed structure type.
+ * @member: name of psclist_head structure used to interlink managed structs.
+ * @total: # of initial entries to allocate.
+ * @min: for autosizing pools, smallest number of pool entries to shrink to.
+ * @max: for autosizing pools, highest number of pool entries to grow to.
+ * @initf: managed structure initialization constructor.
+ * @destroyf: managed structure destructor.
+ * @reclaimcb: for accessing stale items outside the pool during low memory
+ *	conditions.
+ * @namefmt: printf(3)-like name of pool for external access.
+ */
 #define psc_poolmaster_init(p, type, member, flags, total, min,	max,	\
 	    initf, destroyf, reclaimcb, namefmt, ...)			\
 	_psc_poolmaster_init((p), sizeof(type), offsetof(type, member),	\
@@ -135,6 +149,11 @@ struct psc_poolmgr {
 
 #define psc_pool_tryget(p)		lc_getnb(&(p)->ppm_lc)
 
+/*
+ * psc_pool_shrink - decrease #items in a pool.
+ * @m: the pool manager.
+ * @i: #items to remove from pool.
+ */
 #define psc_pool_shrink(m, i)		_psc_pool_shrink((m), (i), 0)
 #define psc_pool_tryshrink(m, i)	_psc_pool_shrink((m), (i), 1)
 

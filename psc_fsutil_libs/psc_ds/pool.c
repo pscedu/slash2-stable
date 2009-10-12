@@ -233,11 +233,6 @@ psc_pool_grow(struct psc_poolmgr *m, int n)
 	return (i);
 }
 
-/*
- * psc_pool_shrink - decrease #items in a pool.
- * @m: the pool manager.
- * @n: #items to remove from pool.
- */
 int
 _psc_pool_shrink(struct psc_poolmgr *m, int n, int failok)
 {
