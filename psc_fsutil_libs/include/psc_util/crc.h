@@ -6,8 +6,8 @@
 #include <stdint.h>
 
 typedef	uint64_t psc_crc_t;
-
-#define CRCSZ (sizeof(psc_crc_t))
+typedef	uint64_t psc_crc64_t;
+typedef	uint32_t psc_crc32_t;
 
 /* Initialize a CRC accumulator */
 #define PSC_CRC_INIT(crc)	((crc) = UINT64_C(0xffffffffffffffff))
