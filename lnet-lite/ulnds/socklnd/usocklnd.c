@@ -75,6 +75,7 @@ usock_tunables_t usock_tuns = {
         .ut_socknagle       = 0,
         .ut_sockbufsiz      = 0,
         .ut_cport           = 988,
+        .ut_portpid         = 1,
 };
 
 #define MAX_REASONABLE_TIMEOUT 36000 /* 10 hours */
@@ -138,6 +139,13 @@ usocklnd_validate_tunables()
 
         if (usock_tuns.ut_sockbufsiz < 0) {
                 CERROR("USOCK_SOCKBUFSIZ: %d should be 0 or positive\n",
+                       usock_tuns.ut_sockbufsiz);
+                return -1;
+        }
+
+        if (usock_tuns.ut_portpid != 0 &&
+            usock_tuns.ut_portpid != 1) {
+                CERROR("USOCK_PORTPID: %d should be 0 or 1\n",
                        usock_tuns.ut_sockbufsiz);
                 return -1;
         }
@@ -226,6 +234,11 @@ usocklnd_update_tunables()
 
         rc = cfs_parse_int_tunable(&usock_tuns.ut_sockbufsiz,
                                       "USOCK_SOCKBUFSIZ");
+        if (rc)
+                return rc;
+
+        rc = cfs_parse_int_tunable(&usock_tuns.ut_portpid,
+                                      "USOCK_PORTPID");
         if (rc)
                 return rc;
 

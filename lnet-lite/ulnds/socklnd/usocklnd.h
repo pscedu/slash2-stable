@@ -211,6 +211,7 @@ typedef struct {
         int ut_socknagle;     /* Is Nagle alg on ? */
         int ut_sockbufsiz;    /* size of socket buffers */
 	int ut_cport;         /* remote peer TCP port for connect(2) */
+	int ut_portpid;       /* substitute peer TCP port for peer PID */
 } usock_tunables_t;
 
 extern usock_tunables_t usock_tuns;

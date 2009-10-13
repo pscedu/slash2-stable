@@ -537,8 +537,8 @@ usocklnd_passiveconn_hellorecv(usock_conn_t *conn)
 
         /* don't know peer's nid and incarnation yet */
         if (peer_port > LNET_ACCEPTOR_MAX_RESERVED_PORT) {
-                /* do not trust liblustre clients */
-                conn->uc_peerid.pid = peer_port | LNET_PID_USERFLAG;
+                conn->uc_peerid.pid = (usock_tuns.ut_portpid ?
+		    peer_port : hello->kshm_src_pid) | LNET_PID_USERFLAG;
                 conn->uc_peerid.nid = LNET_MKNID(LNET_NIDNET(ni->ni_nid),
                                                  peer_ip);
                 if (hello->kshm_ctype != SOCKLND_CONN_ANY) {
