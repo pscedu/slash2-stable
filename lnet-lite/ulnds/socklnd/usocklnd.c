@@ -146,7 +146,7 @@ usocklnd_validate_tunables()
         if (usock_tuns.ut_portpid != 0 &&
             usock_tuns.ut_portpid != 1) {
                 CERROR("USOCK_PORTPID: %d should be 0 or 1\n",
-                       usock_tuns.ut_sockbufsiz);
+                       usock_tuns.ut_portpid);
                 return -1;
         }
 
