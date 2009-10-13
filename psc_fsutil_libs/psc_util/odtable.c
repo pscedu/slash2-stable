@@ -139,7 +139,7 @@ odtable_create(const char *f, size_t nelems, size_t elemsz)
 	if (errno != ENOENT)
 		return (-errno);
 
-	odt.odt_fd = open(f, O_CREAT|O_TRUNC|O_WRONLY, 0700);
+	odt.odt_fd = open(f, O_CREAT|O_TRUNC|O_WRONLY, 0600);
 	if (odt.odt_fd < 0) {
 		rc = -errno;
 		goto out;
@@ -147,7 +147,7 @@ odtable_create(const char *f, size_t nelems, size_t elemsz)
 
 	if (pwrite(odt.odt_fd, &odth, sizeof(odth), 0) != sizeof(odth)) {
 		rc = -errno;
-                goto out;
+		goto out;
 	}
 
 	psc_trace("odt.odt_hdr.odth_start=%"PRIx64, odt.odt_hdr->odth_start);
@@ -185,9 +185,11 @@ odtable_load(const char *f, struct odtable **t)
 	psc_assert(t);
 	*t = NULL;
 
-	odt->odt_fd = open(f, O_RDWR, 0700);
-	if (odt->odt_fd < 0)
+	odt->odt_fd = open(f, O_RDWR, 0600);
+	if (odt->odt_fd < 0) {
+		free(odt);
 		return (-errno);
+	}
 
 	odth = odt->odt_hdr = PSCALLOC(sizeof(*odth));
 
@@ -256,6 +258,14 @@ odtable_load(const char *f, struct odtable **t)
  out:
 	close(odt->odt_fd);
 	odt->odt_fd = -1;
+	if (rc) {
+		if (odt->odt_base)
+			munmap(odt->odt_base, ODTABLE_MAPSZ(odt));
+		if (odt->odt_bitmap)
+			vbitmap_free(odt->odt_bitmap);
+		free(odt->odt_hdr);
+		free(odt);
+	}
 	return (rc);
 
  out_unmap:
@@ -282,6 +292,7 @@ odtable_release(struct odtable *odt)
 		rc = close(odt->odt_fd);
 		odt->odt_fd = -1;
 	}
+	PSCFREE(odt);
 	return (rc);
 }
 

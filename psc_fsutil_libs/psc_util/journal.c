@@ -561,7 +561,7 @@ pjournal_format(const char *fn, uint32_t nents, uint32_t entsz, uint32_t ra,
 	pj.pj_hdr = &pjh;
 	jbuf = pjournal_alloclog_ra(&pj);
 
-	if ((fd = open(fn, O_WRONLY|O_CREAT|O_TRUNC, 0700)) < 0)
+	if ((fd = open(fn, O_WRONLY|O_CREAT|O_TRUNC, 0600)) < 0)
 		psc_fatal("Could not create or truncate the journal %s", fn);
 
 	if (pwrite(fd, &pjh, sizeof(pjh), 0) < 0)
