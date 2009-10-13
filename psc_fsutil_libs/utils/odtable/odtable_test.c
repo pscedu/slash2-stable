@@ -2,6 +2,7 @@
 
 #include <sys/param.h>
 
+#include <err.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -23,7 +24,7 @@ my_odtcb(void *data, struct odtable_receipt *odtr)
 {
 	char *item = data;
 
-	psc_warnx("found ;%s; at slot=%"PRId64" odtr=%p",
+	psc_warnx("found %s at slot=%"PRId64" odtr=%p",
 		  item, odtr->odtr_elem, odtr);
 
 	dynarray_add(&myReceipts, odtr);
@@ -101,12 +102,12 @@ main(int argc, char *argv[])
 
 	if (create_table &&
 	    (rc = odtable_create(table_name, table_size, elem_size)))
-		psc_fatal("odtable_create() failed on ;%s; rc=%d",
-			  table_name, rc);
+		errx(1, "odtable_create: %s: %s", table_name,
+		    strerror(-rc));
 
 	if (load_table &&
 	    (rc = odtable_load(table_name, &odt)))
-		psc_fatal("odtable_load() failed rc=%d", rc);
+		errx(1, "odtable_load: %s", strerror(-rc));
 
 	if (scan_table)
 		odtable_scan(odt, my_odtcb);
