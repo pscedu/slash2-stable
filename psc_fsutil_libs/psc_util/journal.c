@@ -611,13 +611,13 @@ pjournal_dump(const char *fn)
 	pj = pjournal_load(fn);
 	pjh = pj->pj_hdr;
 
-	fprintf(stdout, "entsz=%u nents=%u vers=%u opts=%u ra=%u "
+	psc_info("entsz=%u nents=%u vers=%u opts=%u ra=%u "
 		"off=%"PRIx64" magic=%"PRIx64,
 		pjh->pjh_entsz, pjh->pjh_nents, pjh->pjh_version, pjh->pjh_options,
 		pjh->pjh_readahead, pjh->pjh_start_off, pjh->pjh_magic);
 
 	if (pjh->pjh_magic != PJE_MAGIC)
-		psc_warnx("journal %s has bad magic!", fn);
+		psc_fatalx("journal %s has bad magic!", fn);
 
 	jbuf = pjournal_alloclog_ra(pj);
 
@@ -636,7 +636,7 @@ pjournal_dump(const char *fn)
 		for (i=0; i < ra; i++) {
 			h = (void *)&jbuf[pjh->pjh_entsz * i];
 
-			fprintf(stdout, "slot=%u gmrkr=%x magic=%"PRIx64
+			psc_info("slot=%u gmrkr=%x magic=%"PRIx64
 				" type=%x xid=%"PRIx64" sid=%d\n",
 				(slot+i), h->pje_genmarker, h->pje_magic,
 				h->pje_type, h->pje_xid, h->pje_sid);
