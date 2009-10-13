@@ -74,7 +74,7 @@ pjournal_logwrite_internal(struct psc_journal *pj, struct psc_journal_xidhndl *x
 		   	    uint32_t slot, int type, void *data, size_t size)
 {
 	struct psc_journal_enthdr *pje;
-	int rc, len;
+	int rc = 0, len;
 
 	psc_assert(slot < pj->pj_hdr->pjh_nents);
 	psc_assert(size <= PJ_PJESZ(pj));
@@ -112,6 +112,8 @@ pjournal_logwrite_internal(struct psc_journal *pj, struct psc_journal_xidhndl *x
 	/* commit the log on disk before we can return */
 	rc = pwrite(pj->pj_fd, pje, pj->pj_hdr->pjh_entsz, 
 		   (off_t)(pj->pj_hdr->pjh_start_off + (slot * pj->pj_hdr->pjh_entsz)));
+	if (rc != -1 && rc != pj->pj_hdr->pjh_entsz)
+		rc = -EAGAIN;
 #endif
 
 #ifdef PJE_DYN_BUFFER
