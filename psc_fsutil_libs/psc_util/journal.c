@@ -122,6 +122,13 @@ pjournal_logwrite_internal(struct psc_journal *pj, struct psc_journal_xidhndl *x
 	psc_waitq_wakeall(&pj->pj_waitq);
 	PJ_ULOCK(pj);
 #endif
+	if (xh->pjx_flags & PJX_XCLOSED && xh->pjx_tailslot == pj->pj_nextwrite) {
+		/* We are the tail so unblock the journal.  */
+		psc_warnx("pj(%p) unblocking slot(%d) - "
+			  "owned by xid (%p)", 
+			  pj, slot, xh);
+		psc_waitq_wakeall(&pj->pj_waitq);
+	}
 	return (rc);
 }
 
@@ -178,20 +185,7 @@ pjournal_logwrite(struct psc_journal_xidhndl *xh, int type, void *data,
 	psc_info("pj(%p) tail@slot(%d) my@slot(%d) xh_flags(%o)",
 		 pj, tail_slot, slot, xh->pjx_flags);
 
-	if (xh->pjx_flags & PJET_XEND) {
-		if (xh->pjx_flags & PJET_XSTARTED) {
-			xh->pjx_flags |= PJET_XCLOSED;
-			psclist_del(&xh->pjx_lentry);
-			if (xh->pjx_tailslot == pj->pj_nextwrite) {
-				/* We are the tail so unblock the journal.
-				 */
-				psc_warnx("pj(%p) unblocking slot(%d) - "
-					  "owned by xid (%p)", 
-					  pj, slot, xh);
-				psc_waitq_wakeall(&pj->pj_waitq);
-			}
-		}
-	} else if (!(xh->pjx_flags & PJET_XSTARTED)) {
+	if (!(xh->pjx_flags & PJET_XSTARTED)) {
 		/* Multi-step operation, mark the slot id here
 		 *  so that the tail of the journal can be found
 		 *  and that overwriting pending xids may be
