@@ -115,7 +115,7 @@ pjournal_logwrite_internal(struct psc_journal *pj, struct psc_journal_xidhndl *x
 #endif
 
 #ifdef PJE_DYN_BUFFER
-	psc_freel(pje, PJ_PJESZ(pj));
+	psc_freenl(pje, PJ_PJESZ(pj));
 #else
 	PJ_LOCK(pj);
 	dynarray_add(&pj->pj_bufs, pje);
@@ -309,7 +309,7 @@ pjournal_start_mark(struct psc_journal *pj, int slot)
 		    (off_t)(pj->pj_hdr->pjh_start_off +
 			    (slot * pj->pj_hdr->pjh_entsz)));
 
-	psc_freel(pje, PJ_PJESZ(pj));
+	psc_freenl(pje, PJ_PJESZ(pj));
 	return (rc);
 }
 
@@ -442,7 +442,7 @@ pjournal_load(const char *fn)
 	struct psc_journal_enthdr	*pje;
 #endif
 	pj = PSCALLOC(sizeof(*pj));
-	pjh = PSCALLOC(sizeof(*pj));
+	pjh = psc_alloc(sizeof(*pjh), PAF_PAGEALIGN | PAF_LOCK);
 
 	pj->pj_fd = open(fn, O_RDWR);
 	if (pj->pj_fd == -1)
@@ -536,7 +536,7 @@ pjournal_close(struct psc_journal *pj)
 #ifndef PJE_DYN_BUFFER
 	dynarray_free(&pj->pj_bufs);
 #endif
-	PSCFREE(pj->pj_hdr);
+	psc_freenl(pj->pj_hdr, sizeof(*pj->pj_hdr));
 	PSCFREE(pj);
 }
 

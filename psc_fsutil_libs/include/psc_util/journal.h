@@ -3,6 +3,8 @@
 #ifndef _PFL_JOURNAL_H_
 #define _PFL_JOURNAL_H_
 
+#include <sys/user.h>
+
 #include "psc_ds/dynarray.h"
 #include "psc_util/atomic.h"
 #include "psc_util/lock.h"
@@ -14,21 +16,32 @@
 
 #define PJH_MAGIC	0x45678912aabbccffULL	/* magic number of the journal header */
 
-/* 
- * Start writing journal entries (pje) at offset 4k, header must be smaller than PJE_OFFSET.
- */
-#define PJE_OFFSET      0x1000
 #define PJH_VERSION     0x01
 
+struct _psc_journal_hdr {
+	uint32_t       _pjh_entsz;
+	uint32_t       _pjh_nents;
+	uint32_t       _pjh_version;
+	uint32_t       _pjh_options;
+	uint32_t       _pjh_readahead;
+	uint32_t       _pjh_unused;
+	uint64_t       _pjh_start_off;
+	uint64_t       _pjh_magic;
+};
+
+#define PJH_ALIGN_SIZE	PSC_ALIGN(sizeof(struct _psc_journal_hdr), PAGE_SIZE)
+
 struct psc_journal_hdr {
-	uint32_t       pjh_entsz;
-	uint32_t       pjh_nents;
-	uint32_t       pjh_version;
-	uint32_t       pjh_options;
-	uint32_t       pjh_readahead;
-	uint32_t       pjh_unused;
-	uint64_t       pjh_start_off;
-	uint64_t       pjh_magic;
+	struct _psc_journal_hdr pjh;
+	char			pjg__pad[PJH_ALIGN_SIZE - sizeof(struct _psc_journal_hdr)];
+#define pjh_entsz	pjh._pjh_entsz
+#define pjh_nents	pjh._pjh_nents
+#define pjh_version	pjh._pjh_version
+#define pjh_options	pjh._pjh_options
+#define pjh_readahead	pjh._pjh_readahead
+#define pjh_unused	pjh._pjh_unused
+#define pjh_start_off	pjh._pjh_start_off
+#define pjh_magic	pjh._pjh_magic
 };
 
 #ifndef PJE_DYN_BUFFER
@@ -41,8 +54,8 @@ struct psc_journal {
 	uint32_t		 pj_nextwrite;	/* next entry slot to write to */
 	int			 pj_genid;	/* current wrap generation */
 	int			 pj_fd;		/* open file descriptor to disk */
-	struct psclist_head 	 pj_pndgxids;
-	struct dynarray 	 pj_bufs;
+	struct psclist_head	 pj_pndgxids;
+	struct dynarray		 pj_bufs;
 	struct psc_journal_hdr	*pj_hdr;
 	struct psc_waitq	 pj_waitq;
 };
@@ -56,11 +69,18 @@ struct psc_journal_walker {
 	psc_jhandler	pjw_cb;
 };
 
+/*
+ * Start writing journal entries (pje) at offset
+ * All disk I/O to the journal bypasses the buffer cache
+ * and thus must be page-aligned.
+ * Header must be smaller than PJE_OFFSET.
+ */
+#define PJE_OFFSET      PJH_ALIGN_SIZE
 
 #define PJE_XID_NONE		0			/* invalid transaction ID */
 #define PJE_MAGIC		0x45678912aabbccddULL	/* magic number for each journal entry */
 
-/* 
+/*
  * Journal entry types - higher bits after PJET_LASTBIT are used to identify log users.
  */
 #define PJET_NONE		(0 << 0)		/* null journal record */
