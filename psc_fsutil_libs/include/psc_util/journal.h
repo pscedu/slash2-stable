@@ -12,15 +12,13 @@
 #define PJ_LOCK(pj)     spinlock(&(pj)->pj_lock)
 #define PJ_ULOCK(pj)    freelock(&(pj)->pj_lock)
 
-#define PJE_MAGIC       0x45678912aabbccddULL
-#define PJE_FMT_MAGIC   0x45678912aabbccffULL
-#define PJE_XID_NONE    0 /* invalid transaction ID */
+#define PJH_MAGIC	0x45678912aabbccffULL	/* magic number of the journal header */
 
-/* Start writing journal entries (pje) at offset 4k, header must be smaller than PJE_OFFSET.
+/* 
+ * Start writing journal entries (pje) at offset 4k, header must be smaller than PJE_OFFSET.
  */
-#define PJE_OFFSET      0x1000
-#define PJE_VERSION     0x01
-
+#define PJH_OFFSET      0x1000
+#define PJH_VERSION     0x01
 
 struct psc_journal_hdr {
 	uint32_t       pjh_entsz;
@@ -58,12 +56,9 @@ struct psc_journal_walker {
 	psc_jhandler	pjw_cb;
 };
 
-#define PJET_LOG_GEN0  0x00001010
-#define PJET_LOG_GEN1  0x0000fefe
-#define PJET_LOG_GMASK 0x0000ffff
-#define PJET_LOG_STMRK 0xffff0000
 
-#define PJET_SLOT_ANY	(~0U)
+#define PJE_XID_NONE		0			/* invalid transaction ID */
+#define PJE_MAGIC		0x45678912aabbccddULL	/* magic number for each journal entry */
 
 /* Journal entry types. */
 #define PJET_NONE		(0 << 0)		/* null journal record */

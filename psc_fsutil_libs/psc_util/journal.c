@@ -207,8 +207,6 @@ pjournal_logwrite(struct psc_journal_xidhndl *xh, int type, void *data,
 
 	if ((++pj->pj_nextwrite) == pj->pj_hdr->pjh_nents) {
 		pj->pj_nextwrite = 0;
-		pj->pj_genid = (pj->pj_genid == PJET_LOG_GEN0) ?
-			PJET_LOG_GEN1 : PJET_LOG_GEN0;
 
 	} else
 		psc_assert(pj->pj_nextwrite < pj->pj_hdr->pjh_nents);
@@ -268,10 +266,7 @@ pjournal_logread(struct psc_journal *pj, uint32_t slot, void *data)
 
 		h = (void *)&p[pj->pj_hdr->pjh_entsz * i];
 
-		if ((h->pje_magic != PJE_MAGIC ||
-		     h->pje_magic != PJE_FMT_MAGIC) ||
-		    (h->pje_magic == PJE_FMT_MAGIC &&
-		     h->pje_xid != PJE_XID_NONE)) {
+		if (h->pje_magic != PJE_MAGIC) {
 			psc_warnx("pj(%p) slot@%d failed magic", pj, slot + i);
 			h->pje_type |= PJET_CORRUPT;
 		}
@@ -349,15 +344,9 @@ pjournal_headtail_get(struct psc_journal *pj, struct psc_journal_walker *pjw)
 	int		 i;
 	int		 rc;
 	int		 ra;
-        uint32_t	 sm;
-        uint32_t	 tm;
 	uint32_t	 ents;
 	unsigned char	*jbuf;
 	uint32_t	 lastgen;
-
-	/* initialize start marker (sm) and transition marker (tm) */
-	sm = PJET_SLOT_ANY;
-	tm = PJET_SLOT_ANY;
 
 	rc = 0;
 	ents = 0;
@@ -384,30 +373,10 @@ pjournal_headtail_get(struct psc_journal *pj, struct psc_journal_walker *pjw)
 				rc = -1;
 				goto out;
 			}
-
-			/*
-			 * If we find a newly formatted log, it means that we have never
-			 * used up all the slots even once.  In this case, the previous 
-			 * slot should be the end of the log.  The start of the log should
-			 * be either 0 or the start marker (sm).
-			 */
-			if (h->pje_magic == PJE_FMT_MAGIC) {
-				pjw->pjw_pos = (sm == PJET_SLOT_ANY ? 0 : sm);
-				pjw->pjw_stop = (ents + i) - 1;
-				goto out;
-			}
 		}
 		ents += ra;
 	}
 
-	/*
-	 * If the starter marker is overwritten, then we won't find it.
-	 */
-	pjw->pjw_pos  = ((sm != PJET_SLOT_ANY) ? sm : (tm+1));
-	/* This catches the case where the tm is at the very last slot
-	 *  which means that the log didn't wrap but was about to.
-	 */
-	pjw->pjw_stop = ((tm != PJET_SLOT_ANY) ? tm : (uint32_t)(pj->pj_hdr->pjh_nents-1));
  out:
 	psc_info("journal pos (S=%d) (E=%d) (rc=%d)",
 		 pjw->pjw_pos, pjw->pjw_stop, rc);
@@ -483,7 +452,7 @@ pjournal_load(const char *fn)
 	if (pj->pj_fd < 0)
 		psc_fatal("open %s", fn);
 
-	if (pread(pj->pj_fd, pjh, PJE_OFFSET, sizeof(*pjh)) != sizeof(*pjh))
+	if (pread(pj->pj_fd, pjh, PJH_OFFSET, sizeof(*pjh)) != sizeof(*pjh))
 		psc_fatal("Failed to read journal header");
 
 	pj->pj_hdr = pjh;
@@ -522,11 +491,11 @@ pjournal_format(const char *fn, uint32_t nents, uint32_t entsz, uint32_t ra,
 
 	pjh.pjh_entsz = entsz;
 	pjh.pjh_nents = nents;
-	pjh.pjh_version = PJE_VERSION;
+	pjh.pjh_version = PJH_VERSION;
 	pjh.pjh_options = opts;
 	pjh.pjh_readahead = ra;
 	pjh.pjh_unused = 0;
-	pjh.pjh_start_off = PJE_OFFSET;
+	pjh.pjh_start_off = PJH_OFFSET;
 	pjh.pjh_magic = PJE_MAGIC;
 
 	pj.pj_hdr = &pjh;
@@ -538,7 +507,7 @@ pjournal_format(const char *fn, uint32_t nents, uint32_t entsz, uint32_t ra,
 	if (pwrite(fd, &pjh, sizeof(pjh), 0) < 0)
 		psc_fatal("Failed to write header");
 
-	psc_assert(PJE_OFFSET >= sizeof(pjh)); 
+	psc_assert(PJH_OFFSET >= sizeof(pjh)); 
 
 	for (slot=0, ra=pjh.pjh_readahead; slot < pjh.pjh_nents; slot += ra) {
 		/* Make sure we don't write past the end. */
@@ -547,14 +516,14 @@ pjournal_format(const char *fn, uint32_t nents, uint32_t entsz, uint32_t ra,
 
 		for (i = 0; i < ra; i++) {
 			h = (void *)&jbuf[pjh.pjh_entsz * i];
-			h->pje_magic = PJE_FMT_MAGIC;
+			h->pje_magic = PJE_MAGIC;
 			h->pje_type = PJET_FORMAT;
 			h->pje_xid = PJE_XID_NONE;
 			h->pje_sid = PJE_XID_NONE;
 		}
 
 		if (pwrite(fd, jbuf, (pjh.pjh_entsz * ra),
-			   (off_t)(PJE_OFFSET + (slot * pjh.pjh_entsz))) < 0)
+			   (off_t)(PJH_OFFSET + (slot * pjh.pjh_entsz))) < 0)
 			psc_fatal("Failed to write entries");
 	}
 	if (close(fd) < 0)
@@ -594,7 +563,7 @@ pjournal_dump(const char *fn)
 			ra--;
 
 		if (pread(pj->pj_fd, jbuf, (pjh->pjh_entsz * ra),
-			   (off_t)(PJE_OFFSET + (slot * pjh->pjh_entsz)))
+			   (off_t)(PJH_OFFSET + (slot * pjh->pjh_entsz)))
 		    != (pjh->pjh_entsz * ra))
 			psc_fatal("Failed to read entries");
 
@@ -606,8 +575,7 @@ pjournal_dump(const char *fn)
 				(slot+i), h->pje_magic,
 				h->pje_type, h->pje_xid, h->pje_sid);
 
-			if (h->pje_magic != PJE_FMT_MAGIC &&
-			    h->pje_magic != PJE_MAGIC)
+			if (h->pje_magic != PJE_MAGIC)
 				psc_warnx("journal entry %u has bad magic!",
 					  (slot+i));
 		}
