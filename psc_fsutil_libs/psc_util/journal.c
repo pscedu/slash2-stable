@@ -442,10 +442,10 @@ pjournal_load(const char *fn)
 	struct psc_journal_enthdr	*pje;
 #endif
 	pj = PSCALLOC(sizeof(*pj));
-	pjh = PSCALLOC(sizeof(*pjh));
+	pjh = PSCALLOC(sizeof(*pj));
 
-	pj->pj_fd = open(fn, O_RDWR|O_DIRECT);
-	if (pj->pj_fd < 0)
+	pj->pj_fd = open(fn, O_RDWR);
+	if (pj->pj_fd == -1)
 		psc_fatal("open %s", fn);
 
 	rc = pread(pj->pj_fd, pjh, sizeof(*pjh), 0);
@@ -530,6 +530,16 @@ pjournal_format(const char *fn, uint32_t nents, uint32_t entsz, uint32_t ra,
 	PSCFREE(jbuf);
 }
 
+void
+pjournal_close(struct psc_journal *pj)
+{
+#ifndef PJE_DYN_BUFFER
+	dynarray_free(&pj->pj_bufs);
+#endif
+	PSCFREE(pj->pj_hdr);
+	PSCFREE(pj);
+}
+
 /*
  * Dump the contents of a journal file.
  */
@@ -583,5 +593,6 @@ pjournal_dump(const char *fn)
 		psc_fatal("Failed to close journal fd");
 
 	PSCFREE(jbuf);
+	pjournal_close(pj);
 	return (0);
 }
