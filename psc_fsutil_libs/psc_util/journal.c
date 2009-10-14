@@ -32,6 +32,7 @@ pjournal_xidhndl_new(struct psc_journal *pj)
 
 	psc_warnx("xh=%p xh->pjx_pj=%p", xh, xh->pjx_pj);
 
+	xh->pjx_tailslot = PJX_SLOT_ANY;
 	INIT_PSCLIST_ENTRY(&xh->pjx_lentry);
 	LOCK_INIT(&xh->pjx_lock);
 	return (xh);

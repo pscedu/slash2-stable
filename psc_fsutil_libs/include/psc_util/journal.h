@@ -104,14 +104,15 @@ struct psc_journal_enthdr {
  * @pjx_lock: serialize.
  * @pjx_pj: backpointer to our journal.
  */
+#define	PJX_SLOT_ANY		 (~0U)
 struct psc_journal_xidhndl {
-	uint64_t             pjx_xid;
-	atomic_t             pjx_sid;
-	uint32_t             pjx_tailslot;
-	uint32_t             pjx_flags;
-	struct psclist_head  pjx_lentry;
-	psc_spinlock_t       pjx_lock;
-	struct psc_journal  *pjx_pj;
+	uint64_t		 pjx_xid;
+	atomic_t		 pjx_sid;
+	uint32_t		 pjx_tailslot;
+	uint32_t		 pjx_flags;
+	struct psclist_head	 pjx_lentry;
+	psc_spinlock_t		 pjx_lock;
+	struct psc_journal	*pjx_pj;
 };
 
 struct psc_journal *
