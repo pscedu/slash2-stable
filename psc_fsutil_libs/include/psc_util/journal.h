@@ -65,6 +65,15 @@ struct psc_journal_walker {
 
 #define PJET_SLOT_ANY	(~0U)
 
+/* Journal entry types. */
+#define PJET_VOID	0		/* null journal record */
+#define PJET_CORRUPT	(1<<0)		/* entry has failed magic */
+#define PJET_CLOSED	(1<<1)		/* xid is closed */
+#define PJET_XSTARTED	(1<<2)		/* transaction began */
+#define PJET_XADD       (1<<3)
+#define PJET_XEND	(1<<4)		/* transaction ended */
+#define PJET_RESERVED   PJET_XEND       /* denote the last used bit */
+
 /*
  * psc_journal_enthdr - journal entry header.
  * @pje_magic: validity check.
@@ -80,7 +89,7 @@ struct psc_journal_walker {
 struct psc_journal_enthdr {
 	uint64_t		pje_magic;
 	uint32_t		pje_genmarker;
-	uint32_t		pje_type;
+	uint32_t		pje_type;		/* see above */
 	uint64_t		pje_xid;
 	uint32_t		pje_sid;
 	uint32_t		pje_pad;
@@ -109,15 +118,6 @@ struct psc_journal_xidhndl {
 	psc_spinlock_t       pjx_lock;
 	struct psc_journal  *pjx_pj;
 };
-
-/* Journal entry types. */
-#define PJET_VOID	0		/* null journal record */
-#define PJET_CORRUPT	(1<<0)		/* entry has failed magic */
-#define PJET_CLOSED	(1<<1)		/* xid is closed */
-#define PJET_XSTARTED	(1<<2)		/* transaction began */
-#define PJET_XADD       (1<<3)
-#define PJET_XEND	(1<<4)		/* transaction ended */
-#define PJET_RESERVED   PJET_XEND       /* denote the last used bit */
 
 struct psc_journal *
 pjournal_load(const char *);
