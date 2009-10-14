@@ -53,6 +53,11 @@ rd_main(void *arg)
 	int rc;
 
 	for (; thr->st < nlocks; thr->st++) {
+//		do {
+//			rc = pthread_rwlock_tryrdlock(&lk);
+//			if (rc)
+//				usleep(1);
+//		} while (rc);
 		rc = pthread_rwlock_rdlock(&lk);
 		if (rc)
 			errx(1, "rdlock: %s", strerror(rc));
@@ -80,9 +85,14 @@ wr_main(void *arg)
 			rc = pthread_rwlock_rdlock(&lk);
 			if (rc)
 				errx(1, "rdlock: %s", strerror(rc));
+			usleep(SLEEP_US);
 		}
 		rc = pthread_rwlock_wrlock(&lk);
 		if (rc)
+			errx(1, "wrlock: %s", strerror(rc));
+
+		rc = pthread_rwlock_wrlock(&lk);
+		if (rc != EDEADLOCK)
 			errx(1, "wrlock: %s", strerror(rc));
 
 		usleep(SLEEP_US);
@@ -90,6 +100,7 @@ wr_main(void *arg)
 		if (rc)
 			errx(1, "unlock: %s", strerror(rc));
 		sched_yield();
+		usleep(100);
 	}
 	return (NULL);
 }
