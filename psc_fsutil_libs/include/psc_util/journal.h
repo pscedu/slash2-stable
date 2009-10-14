@@ -77,22 +77,20 @@ struct psc_journal_walker {
 /*
  * psc_journal_enthdr - journal entry header.
  * @pje_magic: validity check.
- * @pje_genmarker: field to detect log wrapping.
  * @pje_type: app-specific log entry type.
  * @pje_xid: journal transaction id.
  * @pje_sid: xid sub-id.
- * @pje_pad: alignment purposes.
+ * @pje_chksum: XOR checksum
  * @pje_data: application data.
  * Notes: at some point we may want to make this into a footer which has
  *    a crc field.
  */
 struct psc_journal_enthdr {
 	uint64_t		pje_magic;
-	uint32_t		pje_genmarker;
 	uint32_t		pje_type;		/* see above */
 	uint64_t		pje_xid;
 	uint32_t		pje_sid;
-	uint32_t		pje_pad;
+	uint64_t		pje_chksum;
 	char			pje_data[0];
 };
 

@@ -96,9 +96,6 @@ pjournal_logwrite_internal(struct psc_journal *pj, struct psc_journal_xidhndl *x
 	if (data)
 		memcpy(pje->pje_data, data, size);
 
-	psc_assert(!pje->pje_genmarker);
-
-	pje->pje_genmarker |= pj->pj_genid;
 	pje->pje_magic = PJE_MAGIC;
 	pje->pje_type = type;
 	pje->pje_xid = xh->pjx_xid;
@@ -277,12 +274,8 @@ pjournal_logread(struct psc_journal *pj, uint32_t slot, void *data)
 		     h->pje_xid != PJE_XID_NONE)) {
 			psc_warnx("pj(%p) slot@%d failed magic", pj, slot + i);
 			h->pje_type |= PJET_CORRUPT;
-
-		} else if (h->pje_genmarker != PJET_LOG_GEN0 &&
-			   h->pje_genmarker != PJET_LOG_GEN1) {
-			psc_warnx("pj(%p) slot@%d bad gen marker", pj, slot + i);
-			h->pje_type |= PJET_CORRUPT;
 		}
+
 	}
 	return (ra);
 }
@@ -318,7 +311,6 @@ pjournal_start_mark(struct psc_journal *pj, int slot)
 
 	pje = psc_alloc(PJ_PJESZ(pj), PAF_PAGEALIGN | PAF_LOCK);
 
-	pje->pje_genmarker = PJET_LOG_STMRK;
 	pje->pje_magic = PJE_MAGIC;
 	pje->pje_xid = PJE_XID_NONE;
 	pje->pje_type = PJET_VOID;
@@ -392,8 +384,6 @@ pjournal_headtail_get(struct psc_journal *pj, struct psc_journal_walker *pjw)
 				rc = -1;
 				goto out;
 			}
-			if (!ents && !i)
-				lastgen = h->pje_genmarker;
 
 			/*
 			 * If we find a newly formatted log, it means that we have never
@@ -406,34 +396,6 @@ pjournal_headtail_get(struct psc_journal *pj, struct psc_journal_walker *pjw)
 				pjw->pjw_stop = (ents + i) - 1;
 				goto out;
 			}
-			if ((lastgen & PJET_LOG_GMASK) !=
-			    (h->pje_genmarker & PJET_LOG_GMASK)) {
-				psc_trace("found tm @slot(%d)", (ents + i)-1);
-				/* Found a transition marker, everything from
-				 *  here until the end is from the previous
-				 *  log wrap.
-				 */
-
-				lastgen = h->pje_genmarker;
-				psc_assert(tm == PJET_SLOT_ANY);
-
-				tm = (ents + i) - 1;
-				if (sm != PJET_SLOT_ANY) {
-					/* Here's the case where the tm > sm
-					 *  which means the log didn't wrap.
-					 */
-					pjw->pjw_pos = sm;
-					pjw->pjw_stop = tm;
-					goto out;
-				}
-				/* Else..
-				 * The sm is either after the tm and of a
-				 *  different gen or there is no sm which
-				 *  would mean that tm+1 would be the sm.
-				 */
-			}
-			if (h->pje_genmarker & PJET_LOG_STMRK)
-				sm = ents + i;
 		}
 		ents += ra;
 	}
@@ -636,9 +598,9 @@ pjournal_dump(const char *fn)
 		for (i=0; i < ra; i++) {
 			h = (void *)&jbuf[pjh->pjh_entsz * i];
 
-			psc_info("slot=%u gmrkr=%x magic=%"PRIx64
+			psc_info("slot=%u magic=%"PRIx64
 				" type=%x xid=%"PRIx64" sid=%d\n",
-				(slot+i), h->pje_genmarker, h->pje_magic,
+				(slot+i), h->pje_magic,
 				h->pje_type, h->pje_xid, h->pje_sid);
 
 			if (h->pje_magic != PJE_FMT_MAGIC &&
