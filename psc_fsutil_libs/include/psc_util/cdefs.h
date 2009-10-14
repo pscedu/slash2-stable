@@ -19,7 +19,7 @@
 #ifndef __GNUC_PREREQ__
 # ifdef __GNUC__
 #  define __GNUC_PREREQ__(maj, min) \
-        ((__GNUC__ > (maj)) || (__GNUC__ == (maj) && __GNUC_MINOR__ >= (min)))
+	((__GNUC__ > (maj)) || (__GNUC__ == (maj) && __GNUC_MINOR__ >= (min)))
 # else
 #  define __GNUC_PREREQ__(maj, min) 0
 # endif
@@ -71,5 +71,8 @@
 			abort();				\
 		ATTR_UNSET(c, a);				\
 	} while (0)
+
+/* if multiple of 2, use bitwise ops to simplify math */
+#define PSC_ALIGN(sz, incr)	(incr * ((sz + (incr - 1)) / incr))
 
 #endif /* _PFL_CDEFS_H_ */
