@@ -441,6 +441,7 @@ pjournal_load(const char *fn)
 {
 	struct psc_journal		*pj;
 	struct psc_journal_hdr		*pjh;
+	ssize_t rc;
 
 #ifndef PJE_DYN_BUFFER
 	int				 i;
@@ -453,8 +454,10 @@ pjournal_load(const char *fn)
 	if (pj->pj_fd < 0)
 		psc_fatal("open %s", fn);
 
-	if (pread(pj->pj_fd, pjh, PJH_OFFSET, sizeof(*pjh)) != sizeof(*pjh))
-		psc_fatal("Failed to read journal header");
+	rc = pread(pj->pj_fd, pjh, sizeof(*pjh), PJH_OFFSET);
+	if (rc != sizeof(*pjh))
+		psc_fatal("read journal header: want %zu off %ld got %zd",
+		    sizeof(*pjh), (off_t)PJH_OFFSET, rc);
 
 	pj->pj_hdr = pjh;
 
