@@ -142,7 +142,7 @@ pjournal_logwrite(struct psc_journal_xidhndl *xh, int type, void *data,
 	uint32_t			 slot;
 	uint32_t			 tail_slot;
 
-	if (type == PJET_VOID)
+	if (type & PJET_NODATA)
 		psc_assert(!data);
 
 	tail_slot = 0;
@@ -313,7 +313,7 @@ pjournal_start_mark(struct psc_journal *pj, int slot)
 
 	pje->pje_magic = PJE_MAGIC;
 	pje->pje_xid = PJE_XID_NONE;
-	pje->pje_type = PJET_VOID;
+	pje->pje_type = PJET_NODATA;
 
 	rc = pwrite(pj->pj_fd, pje, pj->pj_hdr->pjh_entsz,
 		    (off_t)(pj->pj_hdr->pjh_start_off +
@@ -543,7 +543,7 @@ pjournal_format(const char *fn, uint32_t nents, uint32_t entsz, uint32_t ra,
 		for (i=0; i < ra; i++) {
 			h = (void *)&jbuf[pjh.pjh_entsz * i];
 			h->pje_magic = PJE_FMT_MAGIC;
-			h->pje_type = PJET_VOID;
+			h->pje_type = PJET_FORMAT;
 			h->pje_xid = PJE_XID_NONE;
 			h->pje_sid = PJE_XID_NONE;
 		}

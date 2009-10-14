@@ -66,13 +66,15 @@ struct psc_journal_walker {
 #define PJET_SLOT_ANY	(~0U)
 
 /* Journal entry types. */
-#define PJET_VOID	0		/* null journal record */
-#define PJET_CORRUPT	(1<<0)		/* entry has failed magic */
-#define PJET_CLOSED	(1<<1)		/* xid is closed */
-#define PJET_XSTARTED	(1<<2)		/* transaction began */
-#define PJET_XADD       (1<<3)
-#define PJET_XEND	(1<<4)		/* transaction ended */
-#define PJET_RESERVED   PJET_XEND       /* denote the last used bit */
+#define PJET_NONE		(0 << 0)		/* null journal record */
+#define PJET_NODATA		(1 << 0)		/* no custom data */
+#define PJET_FORMAT		(1 << 1)		/* newly-formatted journal record */
+#define PJET_CORRUPT		(1 << 2)		/* entry has failed magic or checksum */
+#define PJET_CLOSED		(1 << 3)		/* xid is closed */
+#define PJET_XSTARTED		(1 << 4)		/* transaction began */
+#define PJET_XADD		(1 << 5)		/* add new transaction data */
+#define PJET_XEND		(1 << 6)		/* transaction has ended */
+#define PJET_LASTBIT		 6			/* denote the last used bit */
 
 /*
  * psc_journal_enthdr - journal entry header.
