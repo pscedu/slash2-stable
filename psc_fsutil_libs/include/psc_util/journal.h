@@ -17,7 +17,7 @@
 /* 
  * Start writing journal entries (pje) at offset 4k, header must be smaller than PJE_OFFSET.
  */
-#define PJH_OFFSET      0x1000
+#define PJE_OFFSET      0x1000
 #define PJH_VERSION     0x01
 
 struct psc_journal_hdr {

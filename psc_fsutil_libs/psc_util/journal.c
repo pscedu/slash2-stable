@@ -454,10 +454,10 @@ pjournal_load(const char *fn)
 	if (pj->pj_fd < 0)
 		psc_fatal("open %s", fn);
 
-	rc = pread(pj->pj_fd, pjh, sizeof(*pjh), PJH_OFFSET);
+	rc = pread(pj->pj_fd, pjh, sizeof(*pjh), 0);
 	if (rc != sizeof(*pjh))
-		psc_fatal("read journal header: want %zu off %ld got %zd",
-		    sizeof(*pjh), (off_t)PJH_OFFSET, rc);
+		psc_fatal("read journal header: want %zu got %zd",
+		    sizeof(*pjh), rc);
 
 	pj->pj_hdr = pjh;
 
@@ -499,7 +499,7 @@ pjournal_format(const char *fn, uint32_t nents, uint32_t entsz, uint32_t ra,
 	pjh.pjh_options = opts;
 	pjh.pjh_readahead = ra;
 	pjh.pjh_unused = 0;
-	pjh.pjh_start_off = PJH_OFFSET;
+	pjh.pjh_start_off = PJE_OFFSET;
 	pjh.pjh_magic = PJE_MAGIC;
 
 	pj.pj_hdr = &pjh;
@@ -511,7 +511,7 @@ pjournal_format(const char *fn, uint32_t nents, uint32_t entsz, uint32_t ra,
 	if (pwrite(fd, &pjh, sizeof(pjh), 0) < 0)
 		psc_fatal("Failed to write header");
 
-	psc_assert(PJH_OFFSET >= sizeof(pjh)); 
+	psc_assert(PJE_OFFSET >= sizeof(pjh)); 
 
 	for (slot=0, ra=pjh.pjh_readahead; slot < pjh.pjh_nents; slot += ra) {
 		/* Make sure we don't write past the end. */
@@ -527,7 +527,7 @@ pjournal_format(const char *fn, uint32_t nents, uint32_t entsz, uint32_t ra,
 		}
 
 		if (pwrite(fd, jbuf, (pjh.pjh_entsz * ra),
-			   (off_t)(PJH_OFFSET + (slot * pjh.pjh_entsz))) < 0)
+			   (off_t)(PJE_OFFSET + (slot * pjh.pjh_entsz))) < 0)
 			psc_fatal("Failed to write entries");
 	}
 	if (close(fd) < 0)
@@ -567,7 +567,7 @@ pjournal_dump(const char *fn)
 			ra--;
 
 		if (pread(pj->pj_fd, jbuf, (pjh->pjh_entsz * ra),
-			   (off_t)(PJH_OFFSET + (slot * pjh->pjh_entsz)))
+			   (off_t)(PJE_OFFSET + (slot * pjh->pjh_entsz)))
 		    != (pjh->pjh_entsz * ra))
 			psc_fatal("Failed to read entries");
 
