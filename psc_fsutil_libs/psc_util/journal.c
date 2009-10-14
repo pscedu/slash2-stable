@@ -515,12 +515,20 @@ pjournal_format(const char *fn, uint32_t nents, uint32_t entsz, uint32_t ra,
 		uint32_t opts)
 {
 	struct psc_journal pj;
-	struct psc_journal_hdr pjh = {entsz, nents, PJE_VERSION, opts, ra,
-				      0, PJE_OFFSET, PJE_MAGIC};
+	struct psc_journal_hdr pjh;
 	struct psc_journal_enthdr *h;
 	unsigned char *jbuf;
 	uint32_t slot, i;
 	int fd;
+
+	pjh.pjh_entsz = entsz;
+	pjh.pjh_nents = nents;
+	pjh.pjh_version = PJE_VERSION;
+	pjh.pjh_options = opts;
+	pjh.pjh_readahead = ra;
+	pjh.pjh_unused = 0;
+	pjh.pjh_start_off = PJE_OFFSET;
+	pjh.pjh_magic = PJE_MAGIC;
 
 	pj.pj_hdr = &pjh;
 	jbuf = pjournal_alloclog_ra(&pj);
@@ -533,14 +541,13 @@ pjournal_format(const char *fn, uint32_t nents, uint32_t entsz, uint32_t ra,
 
 	psc_assert(PJE_OFFSET >= sizeof(pjh)); 
 
-	for (slot=0, ra=pjh.pjh_readahead; slot < pjh.pjh_nents;
-	     slot += pjh.pjh_readahead) {
+	for (slot=0, ra=pjh.pjh_readahead; slot < pjh.pjh_nents; slot += ra) {
 		/* Make sure we don't write past the end.
 		 */
 		while ((slot + ra) > pjh.pjh_nents)
 			ra--;
 
-		for (i=0; i < ra; i++) {
+		for (i = 0; i < ra; i++) {
 			h = (void *)&jbuf[pjh.pjh_entsz * i];
 			h->pje_magic = PJE_FMT_MAGIC;
 			h->pje_type = PJET_FORMAT;
