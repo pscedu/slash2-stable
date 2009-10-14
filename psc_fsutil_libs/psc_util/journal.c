@@ -543,8 +543,7 @@ pjournal_format(const char *fn, uint32_t nents, uint32_t entsz, uint32_t ra,
 	psc_assert(PJE_OFFSET >= sizeof(pjh)); 
 
 	for (slot=0, ra=pjh.pjh_readahead; slot < pjh.pjh_nents; slot += ra) {
-		/* Make sure we don't write past the end.
-		 */
+		/* Make sure we don't write past the end. */
 		while ((slot + ra) > pjh.pjh_nents)
 			ra--;
 
