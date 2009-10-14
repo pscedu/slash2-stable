@@ -469,14 +469,17 @@ pjournal_replay(struct psc_journal *pj, psc_jhandler pj_handler)
 struct psc_journal *
 pjournal_load(const char *fn)
 {
-	struct psc_journal_hdr *pjh = PSCALLOC(sizeof(*pjh));
-	struct psc_journal *pj = PSCALLOC(sizeof(*pj));
-	void *hdr = psc_alloc(PJE_OFFSET, PAF_PAGEALIGN);
+	struct psc_journal		*pj;
+	void				*hdr;
+	struct psc_journal_hdr		*pjh;
 
 #ifndef PJE_DYN_BUFFER
 	int				 i;
 	struct psc_journal_enthdr	*pje;
 #endif
+	pj = PSCALLOC(sizeof(*pj));
+	pjh = PSCALLOC(sizeof(*pjh));
+	hdr = psc_alloc(PJE_OFFSET, PAF_PAGEALIGN);
 
 	pj->pj_fd = open(fn, O_RDWR|O_DIRECT);
 	if (pj->pj_fd < 0)
