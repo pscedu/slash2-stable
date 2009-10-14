@@ -470,7 +470,6 @@ struct psc_journal *
 pjournal_load(const char *fn)
 {
 	struct psc_journal		*pj;
-	void				*hdr;
 	struct psc_journal_hdr		*pjh;
 
 #ifndef PJE_DYN_BUFFER
@@ -479,19 +478,15 @@ pjournal_load(const char *fn)
 #endif
 	pj = PSCALLOC(sizeof(*pj));
 	pjh = PSCALLOC(sizeof(*pjh));
-	hdr = psc_alloc(PJE_OFFSET, PAF_PAGEALIGN);
 
 	pj->pj_fd = open(fn, O_RDWR|O_DIRECT);
 	if (pj->pj_fd < 0)
 		psc_fatal("open %s", fn);
 
-	if (pread(pj->pj_fd, hdr, PJE_OFFSET, 0) != PJE_OFFSET)
+	if (pread(pj->pj_fd, pjh, PJE_OFFSET, sizeof(*pjh)) != sizeof(*pjh))
 		psc_fatal("Failed to read journal header");
 
-	memcpy(pjh, hdr, sizeof(*pjh));
 	pj->pj_hdr = pjh;
-
-	psc_freen(hdr);
 
 	if (pjh->pjh_magic != PJE_MAGIC)
 		psc_fatalx("Journal header has bad magic!");
