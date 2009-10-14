@@ -590,19 +590,17 @@ pjournal_dump(const char *fn)
 
 	jbuf = pjournal_alloclog_ra(pj);
 
-	for (slot=0, ra=pjh->pjh_readahead; slot < pjh->pjh_nents;
-	     slot += pjh->pjh_readahead) {
-		/* Make sure we don't read past the end.
-		 */
+	for (slot = 0, ra=pjh->pjh_readahead; slot < pjh->pjh_nents; slot += ra) {
+		/* Make sure we don't read past the end. */
 		while ((slot + ra) > pjh->pjh_nents)
 			ra--;
 
 		if (pread(pj->pj_fd, jbuf, (pjh->pjh_entsz * ra),
 			   (off_t)(PJE_OFFSET + (slot * pjh->pjh_entsz)))
 		    != (pjh->pjh_entsz * ra))
-			psc_fatal("Failed to write entries");
+			psc_fatal("Failed to read entries");
 
-		for (i=0; i < ra; i++) {
+		for (i = 0; i < ra; i++) {
 			h = (void *)&jbuf[pjh->pjh_entsz * i];
 
 			psc_info("slot=%u magic=%"PRIx64
