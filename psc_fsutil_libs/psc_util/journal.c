@@ -514,12 +514,13 @@ void
 pjournal_format(const char *fn, uint32_t nents, uint32_t entsz, uint32_t ra,
 		uint32_t opts)
 {
-	struct psc_journal pj;
-	struct psc_journal_hdr pjh;
-	struct psc_journal_enthdr *h;
-	unsigned char *jbuf;
-	uint32_t slot, i;
-	int fd;
+	uint32_t			 i;
+	struct psc_journal_enthdr	*h;
+	int				 fd;
+	struct psc_journal		 pj;
+	struct psc_journal_hdr		 pjh;
+	unsigned char			*jbuf;
+	uint32_t			 slot;
 
 	pjh.pjh_entsz = entsz;
 	pjh.pjh_nents = nents;
