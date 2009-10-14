@@ -153,7 +153,7 @@ pjournal_logwrite(struct psc_journal_xidhndl *xh, int type, void *data,
 	psc_assert(!(type & PJET_XSTARTED));
 	psc_assert(!(type & PJET_XEND));
 
-	psc_assert(!(xh->pjx_flags & PJET_CLOSED));
+	psc_assert(!(xh->pjx_flags & PJX_XCLOSED));
 
  retry:
 	/*
@@ -180,7 +180,7 @@ pjournal_logwrite(struct psc_journal_xidhndl *xh, int type, void *data,
 
 	if (xh->pjx_flags & PJET_XEND) {
 		if (xh->pjx_flags & PJET_XSTARTED) {
-			xh->pjx_flags |= PJET_CLOSED;
+			xh->pjx_flags |= PJET_XCLOSED;
 			psclist_del(&xh->pjx_lentry);
 			if (xh->pjx_tailslot == pj->pj_nextwrite) {
 				/* We are the tail so unblock the journal.

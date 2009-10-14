@@ -60,12 +60,14 @@ struct psc_journal_walker {
 #define PJE_XID_NONE		0			/* invalid transaction ID */
 #define PJE_MAGIC		0x45678912aabbccddULL	/* magic number for each journal entry */
 
-/* Journal entry types. */
+/* 
+ * Journal entry types - higher bits after PJET_LASTBIT are used to identify log users.
+ */
 #define PJET_NONE		(0 << 0)		/* null journal record */
 #define PJET_NODATA		(1 << 0)		/* no custom data */
 #define PJET_FORMAT		(1 << 1)		/* newly-formatted journal record */
 #define PJET_CORRUPT		(1 << 2)		/* entry has failed magic or checksum */
-#define PJET_CLOSED		(1 << 3)		/* xid is closed */
+#define PJET_XCLOSED		(1 << 3)		/* xid is closed */
 #define PJET_XSTARTED		(1 << 4)		/* transaction began */
 #define PJET_XADD		(1 << 5)		/* add new transaction data */
 #define PJET_XEND		(1 << 6)		/* transaction has ended */
@@ -105,6 +107,11 @@ struct psc_journal_enthdr {
  * @pjx_pj: backpointer to our journal.
  */
 #define	PJX_SLOT_ANY		 (~0U)
+
+#define	PJX_NONE		 (0 << 0)
+#define	PJX_XSTARTED		 (1 << 0)
+#define	PJX_XCLOSED		 (1 << 1)
+
 struct psc_journal_xidhndl {
 	uint64_t		 pjx_xid;
 	atomic_t		 pjx_sid;
