@@ -391,7 +391,7 @@ pjournal_scan_slots(struct psc_journal *pj)
 	nopen = 0;
 	nclose = 0;
 	nformat = 0;
-	last_xid = 0;
+	last_xid = PJE_XID_NONE;
 	last_slot = PJX_SLOT_ANY;
 
 	dynarray_init(&pj->pj_bufs);
