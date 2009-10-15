@@ -349,7 +349,30 @@ pjournal_remove_entries(struct psc_journal *pj, uint64_t xid)
 }
 
 __static int
-pjournal_scan_slots(struct psc_journal *pj, struct psc_journal_walker *pjw)
+pjournal_xid_cmp(const void *x, const void *y)
+{
+	struct psc_journal_enthdr	*a;
+	struct psc_journal_enthdr	*b;
+
+	a = (struct psc_journal_enthdr *) x;
+	b = (struct psc_journal_enthdr *) y;
+
+	if (a->pje_xid < b->pje_xid)
+		return (-1);
+
+	if (a->pje_xid > b->pje_xid)
+                return (1);
+
+	return (0);
+}
+
+
+/*
+ * Accumulate all journal entries that need to be replayed in memory.  To reduce memory 
+ * usage, we remove those entries of closed transactions as soon as we find them.
+ */
+__static int
+pjournal_scan_slots(struct psc_journal *pj)
 {
 	int				 i;
 	int				 rc;
@@ -357,22 +380,18 @@ pjournal_scan_slots(struct psc_journal *pj, struct psc_journal_walker *pjw)
 	struct psc_journal_enthdr	*pje;
 	uint32_t			 ents;
 	unsigned char			*jbuf;
-	uint32_t			 lastgen;
 
 	rc = 0;
 	ents = 0;
-	lastgen = 0;		/* gcc */
-	pjw->pjw_pos = 0;
-	pjw->pjw_stop = 0;
 
 	dynarray_init(&pj->pj_bufs);
 
 	jbuf = pjournal_alloclog_ra(pj);
 	while (ents < pj->pj_hdr->pjh_nents) {
-		ra = pjournal_logread(pj, pjw->pjw_pos, jbuf);
+		ra = pjournal_logread(pj, ents, jbuf);
 		if (ra < 0) {
 			rc = -1;
-			goto out;
+			break;
 		}
 		for (i = 0; i < ra; i++) {
 			pje = (struct psc_journal_enthdr *)&jbuf[pj->pj_hdr->pjh_entsz * i];
@@ -389,10 +408,7 @@ pjournal_scan_slots(struct psc_journal *pj, struct psc_journal_walker *pjw)
 		}
 		ents += ra;
 	}
-
- out:
-	psc_info("journal pos (S=%d) (E=%d) (rc=%d)",
-		 pjw->pjw_pos, pjw->pjw_stop, rc);
+	qsort(pj->pj_bufs.da_items, pj->pj_bufs.da_pos, sizeof(void *), pjournal_xid_cmp);
 	psc_freenl(jbuf, PJ_PJESZ(pj));
 	return (rc);
 }
@@ -414,7 +430,7 @@ pjournal_replay(struct psc_journal *pj, psc_jhandler pj_handler)
 
 	psc_assert(pj && pj_handler);
 
-	rc = pjournal_scan_slots(pj, &pjw);
+	rc = pjournal_scan_slots(pj);
 	if (rc < 0)
 		goto out;
 
