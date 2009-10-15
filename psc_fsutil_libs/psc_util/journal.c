@@ -80,9 +80,6 @@ pjournal_logwrite_internal(struct psc_journal *pj, struct psc_journal_xidhndl *x
 	psc_assert(slot < pj->pj_hdr->pjh_nents);
 	psc_assert(size <= PJ_PJESZ(pj));
 
-#ifdef PJE_DYN_BUFFER
-	pje = psc_alloc(PJ_PJESZ(pj), PAF_PAGEALIGN | PAF_LOCK);
-#else
 	PJ_LOCK(pj);
 	while (!(len = dynarray_len(&pj->pj_bufs))) {
 		psc_waitq_wait(&pj->pj_waitq, &pj->pj_lock);
@@ -93,7 +90,7 @@ pjournal_logwrite_internal(struct psc_journal *pj, struct psc_journal_xidhndl *x
 	dynarray_remove(&pj->pj_bufs, pje);
 	psc_notify("got pje=%p", pje);
 	PJ_ULOCK(pj);
-#endif
+
 	if (data)
 		memcpy(pje->pje_data, data, size);
 
@@ -114,14 +111,11 @@ pjournal_logwrite_internal(struct psc_journal *pj, struct psc_journal_xidhndl *x
 		rc = -EAGAIN;
 #endif
 
-#ifdef PJE_DYN_BUFFER
-	psc_freenl(pje, PJ_PJESZ(pj));
-#else
 	PJ_LOCK(pj);
 	dynarray_add(&pj->pj_bufs, pje);
 	psc_waitq_wakeall(&pj->pj_waitq);
 	PJ_ULOCK(pj);
-#endif
+
 	if (xh->pjx_flags & PJX_XCLOSED && xh->pjx_tailslot == pj->pj_nextwrite) {
 		/* We are the tail so unblock the journal.  */
 		psc_warnx("pj(%p) unblocking slot(%d) - "
@@ -433,14 +427,12 @@ pjournal_replay(struct psc_journal *pj, psc_jhandler pj_handler)
 struct psc_journal *
 pjournal_load(const char *fn)
 {
+	int				 i;
 	ssize_t				 rc;
 	struct psc_journal		*pj;
 	struct psc_journal_hdr		*pjh;
-
-#ifndef PJE_DYN_BUFFER
-	int				 i;
 	struct psc_journal_enthdr	*pje;
-#endif
+
 	pj = PSCALLOC(sizeof(*pj));
 	pjh = psc_alloc(sizeof(*pjh), PAF_PAGEALIGN | PAF_LOCK);
 
@@ -461,13 +453,12 @@ pjournal_load(const char *fn)
 	INIT_PSCLIST_HEAD(&pj->pj_pndgxids);
 	psc_waitq_init(&pj->pj_waitq);
 
-#ifndef PJE_DYN_BUFFER
 	dynarray_init(&pj->pj_bufs);
-	for (i = 0; i < NUM_PJBUF; i++) {
+	for (i = 0; i < MAX_NUM_PJBUF; i++) {
 		pje = psc_alloc(PJ_PJESZ(pj), PAF_PAGEALIGN | PAF_LOCK);
 		dynarray_add(&pj->pj_bufs, pje);
 	}	
-#endif
+
 	return (pj);
 }
 
@@ -532,9 +523,7 @@ pjournal_format(const char *fn, uint32_t nents, uint32_t entsz, uint32_t ra,
 void
 pjournal_close(struct psc_journal *pj)
 {
-#ifndef PJE_DYN_BUFFER
 	dynarray_free(&pj->pj_bufs);
-#endif
 	psc_freenl(pj->pj_hdr, sizeof(*pj->pj_hdr));
 	PSCFREE(pj);
 }

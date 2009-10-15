@@ -44,9 +44,7 @@ struct psc_journal_hdr {
 #define pjh_magic	pjh._pjh_magic
 };
 
-#ifndef PJE_DYN_BUFFER
-#define	NUM_PJBUF		8		/* number of journal buffers */
-#endif
+#define	MAX_NUM_PJBUF		 8		/* number of journal buffers to keep around */
 
 struct psc_journal {
 	psc_spinlock_t		 pj_lock;	/* contention lock */
