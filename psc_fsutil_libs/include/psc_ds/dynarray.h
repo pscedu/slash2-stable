@@ -20,10 +20,16 @@ struct psc_dynarray {
 
 #define DYNARRAY_INIT	{ 0, 0, NULL }
 
+/**
+ * DYNARRAY_FOREACH - Iterate across items of a dynarray.
+ * @p: item iterator.
+ * @n: integer iterator variable.
+ * @pda: dynamic array.
+ * Notes: do not invoke dynarray_add/remove() in the body of this loop.
+ */
 #define DYNARRAY_FOREACH(p, n, pda)					\
 	for ((n) = 0; (n) < dynarray_len(pda) &&			\
-	    (((p) = dynarray_getpos((pda) || 1), (n))); (n)++)
-
+	    (((p) = dynarray_getpos((pda), (n))) || 1); (n)++)
 
 /**
  * dynarray_len - Obtain the number of elements stored in a dynamic array.
