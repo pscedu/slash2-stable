@@ -454,6 +454,7 @@ pjournal_load(const char *fn)
 	psc_waitq_init(&pj->pj_waitq);
 
 	dynarray_init(&pj->pj_bufs);
+	dynarray_ensurelen(&pj->pj_bufs, MAX_NUM_PJBUF);
 	for (i = 0; i < MAX_NUM_PJBUF; i++) {
 		pje = psc_alloc(PJ_PJESZ(pj), PAF_PAGEALIGN | PAF_LOCK);
 		dynarray_add(&pj->pj_bufs, pje);
@@ -523,6 +524,11 @@ pjournal_format(const char *fn, uint32_t nents, uint32_t entsz, uint32_t ra,
 void
 pjournal_close(struct psc_journal *pj)
 {
+	struct psc_journal_enthdr *pje;
+	int n;
+
+	DYNARRAY_FOREACH(pje, n, &pj->pj_bufs)
+		psc_freenl(pje, PJ_PJESZ(pj));
 	dynarray_free(&pj->pj_bufs);
 	psc_freenl(pj->pj_hdr, sizeof(*pj->pj_hdr));
 	PSCFREE(pj);
