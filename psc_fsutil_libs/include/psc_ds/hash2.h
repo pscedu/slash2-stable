@@ -154,6 +154,9 @@ void	*_psc_hashbkt_search(const struct psc_hashtbl *,
 
 void	 psc_hashent_init(const struct psc_hashtbl *, void *);
 void	 psc_hashent_remove(const struct psc_hashtbl *, void *);
+int	 psc_hashent_conjoint(const struct psc_hashtbl *, void *);
+
+#define psc_hashent_disjoint(t, p)	(!psc_hashent_conjoint((t), (p)))
 
 extern struct psc_lockedlist psc_hashtbls;
 

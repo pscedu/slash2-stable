@@ -262,6 +262,21 @@ psc_hashent_init(const struct psc_hashtbl *t, void *p)
 }
 
 /**
+ * psc_hashent_conjoint - test if an item belongs in a hash table.
+ * @t: the hash table.
+ * @p: item to check.
+ */
+int
+psc_hashent_conjoint(const struct psc_hashtbl *t, void *p)
+{
+	struct psclist_head *e;
+
+	psc_assert(p);
+	e = (struct psclist_head *)((char *)p + t->pht_hentoff);
+	return (psclist_conjoint(e));
+}
+
+/**
  * psc_hashent_remove - remove an item from the hash table its in.
  * @t: the hash table.
  * @p: the item to remove from hash table.
