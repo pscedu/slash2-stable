@@ -75,7 +75,7 @@ struct psc_journal_walker {
  * and thus must be page-aligned.
  * Header must be smaller than PJE_OFFSET.
  */
-#define PJE_OFFSET      PJH_ALIGN_SIZE
+#define PJE_OFFSET		PJH_ALIGN_SIZE
 
 #define PJE_XID_NONE		0			/* invalid transaction ID */
 #define PJE_MAGIC		0x45678912aabbccddULL	/* magic number for each journal entry */

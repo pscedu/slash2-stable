@@ -334,7 +334,7 @@ pjournal_alloclog_ra(struct psc_journal *pj)
 
 
 __static int
-pjournal_headtail_get(struct psc_journal *pj, struct psc_journal_walker *pjw)
+pjournal_scan_slots(struct psc_journal *pj, struct psc_journal_walker *pjw)
 {
 	int		 i;
 	int		 rc;
@@ -396,7 +396,7 @@ pjournal_replay(struct psc_journal *pj, psc_jhandler pj_handler)
 
 	psc_assert(pj && pj_handler);
 
-	rc = pjournal_headtail_get(pj, &pjw);
+	rc = pjournal_scan_slots(pj, &pjw);
 	if (rc < 0)
 		goto out;
 
