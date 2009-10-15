@@ -383,15 +383,18 @@ pjournal_scan_slots(struct psc_journal *pj)
 	int				 nopen;
 	int				 nclose;
 	int				 nformat;
+	uint64_t			 last_xid;
+	int				 last_slot;
 
 	rc = 0;
 	ents = 0;
 	nopen = 0;
 	nclose = 0;
 	nformat = 0;
+	last_xid = 0;
+	last_slot = PJX_SLOT_ANY;
 
 	dynarray_init(&pj->pj_bufs);
-
 	jbuf = pjournal_alloclog_ra(pj);
 	while (ents < pj->pj_hdr->pjh_nents) {
 		ra = pjournal_logread(pj, ents, jbuf);
@@ -401,6 +404,10 @@ pjournal_scan_slots(struct psc_journal *pj)
 		}
 		for (i = 0; i < ra; i++) {
 			pje = (struct psc_journal_enthdr *)&jbuf[pj->pj_hdr->pjh_entsz * i];
+			if (pje->pje_xid >= last_xid) {
+				last_xid = pje->pje_xid;
+				last_slot = ents + i;
+			}
 			if (pje->pje_type & PJET_FORMAT) {
 				nformat++;
 				continue;
@@ -417,9 +424,10 @@ pjournal_scan_slots(struct psc_journal *pj)
 		}
 		ents += ra;
 	}
+	pj->pj_nextwrite = last_slot;
 	qsort(pj->pj_bufs.da_items, pj->pj_bufs.da_pos, sizeof(void *), pjournal_xid_cmp);
 	psc_freenl(jbuf, PJ_PJESZ(pj));
-	psc_warnx("Journal statitics: %d format, %d close, %d open, %d scan, %d total", 
+	psc_warnx("Journal statistics: %d format, %d close, %d open, %d scan, %d total", 
 		   nformat, nclose, nopen, ents, pj->pj_hdr->pjh_nents);
 	return (rc);
 }
