@@ -351,11 +351,7 @@ pjournal_remove_entries(struct psc_journal *pj, uint64_t xid)
 __static int
 pjournal_xid_cmp(const void *x, const void *y)
 {
-	struct psc_journal_enthdr	*a;
-	struct psc_journal_enthdr	*b;
-
-	a = (struct psc_journal_enthdr *) x;
-	b = (struct psc_journal_enthdr *) y;
+	const struct psc_journal_enthdr	*a = x, *b = y;
 
 	if (a->pje_xid < b->pje_xid)
 		return (-1);
