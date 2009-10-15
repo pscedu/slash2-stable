@@ -111,8 +111,8 @@ struct psc_journal_enthdr {
 	char			pje_data[0];
 };
 
-#define PJ_PJESZ(p) (size_t)((sizeof(struct psc_journal_enthdr)) \
-			     + (p)->pj_hdr->pjh_entsz)
+#define PJ_PJESZ(p) ((size_t)((sizeof(struct psc_journal_enthdr)) \
+			     + (p)->pj_hdr->pjh_entsz))
 
 /*
  * psc_journal_xidhndl - journal transaction id handle.
