@@ -326,16 +326,38 @@ pjournal_alloclog_ra(struct psc_journal *pj)
 			  PAF_PAGEALIGN | PAF_LOCK));
 }
 
+__static void 
+pjournal_remove_entries(struct psc_journal *pj, uint64_t xid)
+{
+	int				 i;
+	struct psc_journal_enthdr	*pje;
+	int				 scan;
+
+	scan = 1;
+	while (scan) {
+		scan = 0;
+		for (i = 0; i < dynarray_len(&pj->pj_bufs); i++) {
+			pje = (struct psc_journal_enthdr *)dynarray_getpos(&pj->pj_bufs, i);
+			if (pje->pje_xid == xid) {
+				dynarray_remove(&pj->pj_bufs, (void *)pje);
+				psc_freenl(pje, PJ_PJESZ(pj));
+				scan = 1;
+				break;
+			}
+		}
+        }
+}
 
 __static int
 pjournal_scan_slots(struct psc_journal *pj, struct psc_journal_walker *pjw)
 {
-	int		 i;
-	int		 rc;
-	int		 ra;
-	uint32_t	 ents;
-	unsigned char	*jbuf;
-	uint32_t	 lastgen;
+	int				 i;
+	int				 rc;
+	int				 ra;
+	struct psc_journal_enthdr	*pje;
+	uint32_t			 ents;
+	unsigned char			*jbuf;
+	uint32_t			 lastgen;
 
 	rc = 0;
 	ents = 0;
@@ -343,25 +365,27 @@ pjournal_scan_slots(struct psc_journal *pj, struct psc_journal_walker *pjw)
 	pjw->pjw_pos = 0;
 	pjw->pjw_stop = 0;
 
-	jbuf = pjournal_alloclog_ra(pj);
+	dynarray_init(&pj->pj_bufs);
 
+	jbuf = pjournal_alloclog_ra(pj);
 	while (ents < pj->pj_hdr->pjh_nents) {
 		ra = pjournal_logread(pj, pjw->pjw_pos, jbuf);
 		if (ra < 0) {
 			rc = -1;
 			goto out;
 		}
-
-		for (i=0; i < ra; i++) {
-			struct psc_journal_enthdr *h;
-
-			h = (void *)&jbuf[pj->pj_hdr->pjh_entsz * i];
-			/* Punt for now.
-			 */
-			if (h->pje_type & PJET_CORRUPT) {
-				rc = -1;
-				goto out;
+		for (i = 0; i < ra; i++) {
+			pje = (struct psc_journal_enthdr *)&jbuf[pj->pj_hdr->pjh_entsz * i];
+			if (pje->pje_type & PJET_FORMAT) {
+				continue;
 			}
+			if (pje->pje_type & PJET_XCLOSED) {
+				pjournal_remove_entries(pj, pje->pje_xid);
+				continue;
+			}
+			pje = psc_alloc(PJ_PJESZ(pj), PAF_PAGEALIGN | PAF_LOCK);
+			dynarray_add(&pj->pj_bufs, pje);
+			memcpy(pje, (void *)&jbuf[pj->pj_hdr->pjh_entsz * i], sizeof(*pje));
 		}
 		ents += ra;
 	}
