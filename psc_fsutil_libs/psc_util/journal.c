@@ -375,7 +375,7 @@ pjournal_scan_slots(struct psc_journal *pj, struct psc_journal_walker *pjw)
  out:
 	psc_info("journal pos (S=%d) (E=%d) (rc=%d)",
 		 pjw->pjw_pos, pjw->pjw_stop, rc);
-	PSCFREE(jbuf);
+	psc_freenl(jbuf, PJ_PJESZ(pj));
 	return (rc);
 }
 
@@ -419,7 +419,7 @@ pjournal_replay(struct psc_journal *pj, psc_jhandler pj_handler)
 	}
 
  out:
-	PSCFREE(jbuf);
+	psc_freenl(jbuf, PJ_PJESZ(pj));
 	return (rc);
 }
 
@@ -444,7 +444,7 @@ pjournal_load(const char *fn)
 	pj = PSCALLOC(sizeof(*pj));
 	pjh = psc_alloc(sizeof(*pjh), PAF_PAGEALIGN | PAF_LOCK);
 
-	pj->pj_fd = open(fn, O_RDWR | O_SYNC);
+	pj->pj_fd = open(fn, O_RDWR | O_SYNC | O_DIRECT);
 	if (pj->pj_fd == -1)
 		psc_fatal("open %s", fn);
 
@@ -526,7 +526,7 @@ pjournal_format(const char *fn, uint32_t nents, uint32_t entsz, uint32_t ra,
 	if (close(fd) < 0)
 		psc_fatal("Failed to close journal fd");
 
-	PSCFREE(jbuf);
+	psc_freenl(jbuf, PJ_PJESZ(&pj));
 }
 
 void
@@ -590,7 +590,7 @@ pjournal_dump(const char *fn)
 	if (close(pj->pj_fd) < 0)
 		psc_fatal("Failed to close journal fd");
 
-	PSCFREE(jbuf);
+	psc_freenl(jbuf, PJ_PJESZ(pj));
 	pjournal_close(pj);
 	return (0);
 }
