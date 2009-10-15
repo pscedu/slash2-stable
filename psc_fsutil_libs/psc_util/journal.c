@@ -433,9 +433,9 @@ pjournal_replay(struct psc_journal *pj, psc_jhandler pj_handler)
 struct psc_journal *
 pjournal_load(const char *fn)
 {
+	ssize_t				 rc;
 	struct psc_journal		*pj;
 	struct psc_journal_hdr		*pjh;
-	ssize_t rc;
 
 #ifndef PJE_DYN_BUFFER
 	int				 i;
@@ -454,8 +454,7 @@ pjournal_load(const char *fn)
 		    sizeof(*pjh), rc);
 
 	pj->pj_hdr = pjh;
-
-	if (pjh->pjh_magic != PJE_MAGIC)
+	if (pjh->pjh_magic != PJH_MAGIC)
 		psc_fatalx("Journal header has bad magic!");
 
 	LOCK_INIT(&pj->pj_lock);
