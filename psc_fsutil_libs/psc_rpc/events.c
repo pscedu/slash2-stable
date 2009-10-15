@@ -556,7 +556,7 @@ int pscrpc_ni_init(int type)
 
 	/* CAVEAT EMPTOR: how we process portals events is _radically_
 	 * different depending on... */
-	if (type == PSC_SERVER) {
+	if (type == PSCNET_SERVER) {
 		/* kernel portals calls our master callback when events are added to
 		 * the event queue.  In fact lustre never pulls events off this queue,
 		 * so it's only sized for some debug history. */

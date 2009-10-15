@@ -54,8 +54,8 @@
 #define PSCRPC_MAX_BRW_SIZE	LNET_MTU
 #define PSCRPC_MAX_BRW_PAGES	(PSCRPC_MAX_BRW_SIZE/PAGE_SIZE)
 #define CURRENT_SECONDS		time(NULL)
-#define PSC_SERVER		0xff	/* differentiate client and server for ni init */
-#define PSC_CLIENT		0x0f
+#define PSCNET_SERVER		0xff	/* differentiate client and server for ni init */
+#define PSCNET_CLIENT		0x0f
 #define PSC_SVR_PID		54321
 #define PSC_NIDSTR_SIZE		32
 #define ZOBD_TIMEOUT		60
