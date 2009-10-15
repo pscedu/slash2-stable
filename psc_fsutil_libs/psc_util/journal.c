@@ -545,11 +545,13 @@ pjournal_close(struct psc_journal *pj)
 int
 pjournal_dump(const char *fn)
 {
-	struct psc_journal *pj;
-	struct psc_journal_hdr *pjh;
-	struct psc_journal_enthdr *h;
-	uint32_t slot, ra, i;
-	unsigned char *jbuf;
+	uint32_t			 i;
+	struct psc_journal_enthdr	*h;
+	uint32_t			 ra;
+	struct psc_journal		*pj;
+	struct psc_journal_hdr		*pjh;
+	uint32_t			 slot;
+	unsigned char			*jbuf;
 
 	pj = pjournal_load(fn);
 	pjh = pj->pj_hdr;
@@ -558,9 +560,6 @@ pjournal_dump(const char *fn)
 		"off=%"PRIx64" magic=%"PRIx64,
 		pjh->pjh_entsz, pjh->pjh_nents, pjh->pjh_version, pjh->pjh_options,
 		pjh->pjh_readahead, pjh->pjh_start_off, pjh->pjh_magic);
-
-	if (pjh->pjh_magic != PJE_MAGIC)
-		psc_fatalx("journal %s has bad magic!", fn);
 
 	jbuf = pjournal_alloclog_ra(pj);
 
