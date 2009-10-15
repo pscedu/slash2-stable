@@ -444,7 +444,7 @@ pjournal_load(const char *fn)
 	pj = PSCALLOC(sizeof(*pj));
 	pjh = psc_alloc(sizeof(*pjh), PAF_PAGEALIGN | PAF_LOCK);
 
-	pj->pj_fd = open(fn, O_RDWR);
+	pj->pj_fd = open(fn, O_RDWR | O_SYNC);
 	if (pj->pj_fd == -1)
 		psc_fatal("open %s", fn);
 
