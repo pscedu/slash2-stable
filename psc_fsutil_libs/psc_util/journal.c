@@ -337,9 +337,9 @@ pjournal_remove_entries(struct psc_journal *pj, uint64_t xid)
 	while (scan) {
 		scan = 0;
 		for (i = 0; i < dynarray_len(&pj->pj_bufs); i++) {
-			pje = (struct psc_journal_enthdr *)dynarray_getpos(&pj->pj_bufs, i);
+			pje = dynarray_getpos(&pj->pj_bufs, i);
 			if (pje->pje_xid == xid) {
-				dynarray_remove(&pj->pj_bufs, (void *)pje);
+				dynarray_remove(&pj->pj_bufs, pje);
 				psc_freenl(pje, PJ_PJESZ(pj));
 				scan = 1;
 				break;
@@ -385,7 +385,7 @@ pjournal_scan_slots(struct psc_journal *pj, struct psc_journal_walker *pjw)
 			}
 			pje = psc_alloc(PJ_PJESZ(pj), PAF_PAGEALIGN | PAF_LOCK);
 			dynarray_add(&pj->pj_bufs, pje);
-			memcpy(pje, (void *)&jbuf[pj->pj_hdr->pjh_entsz * i], sizeof(*pje));
+			memcpy(pje, &jbuf[pj->pj_hdr->pjh_entsz * i], sizeof(*pje));
 		}
 		ents += ra;
 	}
