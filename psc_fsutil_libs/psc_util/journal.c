@@ -493,7 +493,7 @@ pjournal_format(const char *fn, uint32_t nents, uint32_t entsz, uint32_t ra,
 	pjh.pjh_readahead = ra;
 	pjh.pjh_unused = 0;
 	pjh.pjh_start_off = PJE_OFFSET;
-	pjh.pjh_magic = PJE_MAGIC;
+	pjh.pjh_magic = PJH_MAGIC;
 
 	pj.pj_hdr = &pjh;
 	jbuf = pjournal_alloclog_ra(&pj);
