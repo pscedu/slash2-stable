@@ -72,7 +72,7 @@ pjournal_nextxid(struct psc_journal *pj)
  */
 __static int
 pjournal_logwrite_internal(struct psc_journal *pj, struct psc_journal_xidhndl *xh,
-		   	    uint32_t slot, int type, void *data, size_t size)
+			    uint32_t slot, int type, void *data, size_t size)
 {
 	struct psc_journal_enthdr *pje;
 	int rc = 0, len;
@@ -105,7 +105,7 @@ pjournal_logwrite_internal(struct psc_journal *pj, struct psc_journal_xidhndl *x
 
 #ifdef NOT_READY
 	/* commit the log on disk before we can return */
-	rc = pwrite(pj->pj_fd, pje, pj->pj_hdr->pjh_entsz, 
+	rc = pwrite(pj->pj_fd, pje, pj->pj_hdr->pjh_entsz,
 		   (off_t)(pj->pj_hdr->pjh_start_off + (slot * pj->pj_hdr->pjh_entsz)));
 	if (rc != -1 && rc != pj->pj_hdr->pjh_entsz)
 		rc = -EAGAIN;
@@ -119,7 +119,7 @@ pjournal_logwrite_internal(struct psc_journal *pj, struct psc_journal_xidhndl *x
 	if (xh->pjx_flags & PJX_XCLOSED && xh->pjx_tailslot == pj->pj_nextwrite) {
 		/* We are the tail so unblock the journal.  */
 		psc_warnx("pj(%p) unblocking slot(%d) - "
-			  "owned by xid (%p)", 
+			  "owned by xid (%p)",
 			  pj, slot, xh);
 		psc_waitq_wakeall(&pj->pj_waitq);
 	}
@@ -168,7 +168,7 @@ pjournal_logwrite(struct psc_journal_xidhndl *xh, int type, void *data,
 	if (t) {
 		if (t->pjx_tailslot == slot) {
 			psc_warnx("pj(%p) blocking on slot(%d) "
-				  "availability - owned by xid (%p)", 
+				  "availability - owned by xid (%p)",
 				  pj, slot, t);
 			psc_waitq_wait(&pj->pj_waitq, &pj->pj_lock);
 			goto retry;
@@ -457,7 +457,7 @@ pjournal_load(const char *fn)
 	for (i = 0; i < MAX_NUM_PJBUF; i++) {
 		pje = psc_alloc(PJ_PJESZ(pj), PAF_PAGEALIGN | PAF_LOCK);
 		dynarray_add(&pj->pj_bufs, pje);
-	}	
+	}
 
 	return (pj);
 }
@@ -495,7 +495,7 @@ pjournal_format(const char *fn, uint32_t nents, uint32_t entsz, uint32_t ra,
 	if (pwrite(fd, &pjh, sizeof(pjh), 0) < 0)
 		psc_fatal("Failed to write header");
 
-	psc_assert(PJE_OFFSET >= sizeof(pjh)); 
+	psc_assert(PJE_OFFSET >= sizeof(pjh));
 
 	for (slot=0, ra=pjh.pjh_readahead; slot < pjh.pjh_nents; slot += ra) {
 		/* Make sure we don't write past the end. */
