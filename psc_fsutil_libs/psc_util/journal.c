@@ -122,9 +122,12 @@ pjournal_logwrite_internal(struct psc_journal *pj, struct psc_journal_xidhndl *x
 			continue;
 		}
 	}
+	/* we may want to turn off logging at this point and force write-through instead */
 	if (rc == -1 || rc != pj->pj_hdr->pjh_entsz) {
+		rc = -1;
 		psc_errorx("Problem writing journal log entries");
-	}
+	} else 
+		rc = 0;
 #endif
 
 	PJ_LOCK(pj);
