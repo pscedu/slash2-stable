@@ -264,6 +264,10 @@ pjournal_logread(struct psc_journal *pj, uint32_t slot, void *data)
 	return (ra);
 }
 
+/*
+ * This function is called to log changes to a piece of metadata.  We can't
+ * reply to our clients until after the log entry is written.
+ */
 int
 pjournal_xadd(struct psc_journal_xidhndl *xh, int type, void *data,
 	      size_t size)
@@ -275,6 +279,10 @@ pjournal_xadd(struct psc_journal_xidhndl *xh, int type, void *data,
 	return (pjournal_logwrite(xh, type, data, size));
 }
 
+/*
+ * This function is called after a piece of metadata has been updated in place
+ * so that we can close the transaction that logs its changes.
+ */
 int
 pjournal_xend(struct psc_journal_xidhndl *xh, int type, void *data,
 	      size_t size)
