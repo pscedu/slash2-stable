@@ -21,6 +21,8 @@
 #include "psc_util/lock.h"
 #include "psc_ds/dynarray.h"
 
+#define MAX_LOG_TRY		3			/* # of times of retry in case of a log write problem */
+
 static struct psc_journal_xidhndl *
 pjournal_xidhndl_new(struct psc_journal *pj)
 {
@@ -74,9 +76,13 @@ __static int
 pjournal_logwrite_internal(struct psc_journal *pj, struct psc_journal_xidhndl *xh,
 			    uint32_t slot, int type, void *data, size_t size)
 {
-	struct psc_journal_enthdr *pje;
-	int rc = 0, len;
+	int				 rc;
+	int				 len;
+	struct psc_journal_enthdr	*pje;
+	int				 ntries;
 
+	rc = 0;
+	ntries = MAX_LOG_TRY;
 	psc_assert(slot < pj->pj_hdr->pjh_nents);
 	psc_assert(size <= PJ_PJESZ(pj));
 
@@ -103,12 +109,22 @@ pjournal_logwrite_internal(struct psc_journal *pj, struct psc_journal_xidhndl *x
 	else
 		pje->pje_sid = atomic_read(&xh->pjx_sid);
 
+
 #ifdef NOT_READY
+
 	/* commit the log on disk before we can return */
-	rc = pwrite(pj->pj_fd, pje, pj->pj_hdr->pjh_entsz,
-		   (off_t)(pj->pj_hdr->pjh_start_off + (slot * pj->pj_hdr->pjh_entsz)));
-	if (rc != -1 && rc != pj->pj_hdr->pjh_entsz)
-		rc = -EAGAIN;
+	while (ntries) {
+		rc = pwrite(pj->pj_fd, pje, pj->pj_hdr->pjh_entsz, 
+			   (off_t)(pj->pj_hdr->pjh_start_off + (slot * pj->pj_hdr->pjh_entsz)));
+		if (rc == -1 && errno == EAGAIN) {
+			ntries--;
+			usleep(100);
+			continue;
+		}
+	}
+	if (rc == -1 || rc != pj->pj_hdr->pjh_entsz) {
+		psc_errorx("Problem writing journal log entries");
+	}
 #endif
 
 	PJ_LOCK(pj);
