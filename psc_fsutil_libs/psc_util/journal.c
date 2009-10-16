@@ -204,10 +204,10 @@ pjournal_logwrite(struct psc_journal_xidhndl *xh, int type, void *data,
 
 	rc = pjournal_logwrite_internal(pj, xh, slot, type, data, size);
 
-	if (xh->pjx_flags & PJET_XEND) {
+	if (xh->pjx_flags & PJX_XCLOSED) {
 		psc_dbg("pj(%p) freeing xid(%ld)@xh(%p) rc=%d ts=%d",
 			pj, xh->pjx_xid, xh, rc, xh->pjx_tailslot);
-		psc_assert(psclist_disjoint(&xh->pjx_lentry));
+		psclist_del(&xh->pjx_lentry);
 		PSCFREE(xh);
 	}
 	return (rc);
@@ -280,8 +280,8 @@ pjournal_xend(struct psc_journal_xidhndl *xh, int type, void *data,
 	      size_t size)
 {
 	spinlock(&xh->pjx_lock);
-	psc_assert(!(xh->pjx_flags & PJET_XEND));
-	xh->pjx_flags |= PJET_XEND;
+	psc_assert(!(xh->pjx_flags & PJX_XCLOSED));
+	xh->pjx_flags |= PJX_XCLOSED;
 	freelock(&xh->pjx_lock);
 
 	return (pjournal_logwrite(xh, type, data, size));
