@@ -422,7 +422,7 @@ psc_pool_get(struct psc_poolmgr *m)
 	int locked, n;
 	void *p;
 
-	p = lc_getnb(&m->ppm_lc);
+	p = POOL_GETOBJ(m);
 	if (p)
 		return (p);
 
