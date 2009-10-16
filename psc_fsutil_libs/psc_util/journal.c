@@ -98,7 +98,7 @@ pjournal_logwrite_internal(struct psc_journal *pj, struct psc_journal_xidhndl *x
 	pje->pje_type = type;
 	pje->pje_xid = xh->pjx_xid;
 
-	if (!(type & PJET_XEND))
+	if (!(type & PJET_XCLOSED))
 		pje->pje_sid = atomic_inc_return(&xh->pjx_sid);
 	else
 		pje->pje_sid = atomic_read(&xh->pjx_sid);
@@ -116,11 +116,9 @@ pjournal_logwrite_internal(struct psc_journal *pj, struct psc_journal_xidhndl *x
 	psc_waitq_wakeall(&pj->pj_waitq);
 	PJ_ULOCK(pj);
 
-	if (xh->pjx_flags & PJX_XCLOSED && xh->pjx_tailslot == pj->pj_nextwrite) {
+	if ((xh->pjx_flags & PJX_XCLOSED) && (xh->pjx_tailslot == pj->pj_nextwrite)) {
 		/* We are the tail so unblock the journal.  */
-		psc_warnx("pj(%p) unblocking slot(%d) - "
-			  "owned by xid (%p)",
-			  pj, slot, xh);
+		psc_warnx("pj (%p) unblocking slot %d - owned by xid %lu", pj, slot, xh->pjx_xid);
 		psc_waitq_wakeall(&pj->pj_waitq);
 	}
 	return (rc);
