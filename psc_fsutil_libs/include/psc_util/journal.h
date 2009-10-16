@@ -89,7 +89,8 @@ struct psc_journal_walker {
 #define PJET_XSTARTED		(1 << 4)		/* transaction began */
 #define PJET_XADD		(1 << 5)		/* add new transaction data */
 #define PJET_XEND		(1 << 6)		/* transaction has ended */
-#define PJET_LASTBIT		 6			/* denote the last used bit */
+#define PJET_STARTUP		(1 << 7)		/* system startup */
+#define PJET_LASTBIT		 7			/* denote the last used bit */
 
 /*
  * psc_journal_enthdr - journal entry header.
