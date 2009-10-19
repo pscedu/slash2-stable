@@ -31,12 +31,11 @@ pjournal_xidhndl_new(struct psc_journal *pj)
 	xh = PSCALLOC(sizeof(*xh));
 
 	xh->pjx_pj = pj;
-
-	psc_warnx("xh=%p xh->pjx_pj=%p", xh, xh->pjx_pj);
-
+	LOCK_INIT(&xh->pjx_lock);
 	xh->pjx_tailslot = PJX_SLOT_ANY;
 	INIT_PSCLIST_ENTRY(&xh->pjx_lentry);
-	LOCK_INIT(&xh->pjx_lock);
+
+	psc_warnx("Start a new transaction %p for journal %p.", xh, xh->pjx_pj);
 	return (xh);
 }
 
