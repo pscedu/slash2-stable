@@ -46,7 +46,7 @@ pjournal_newxid(struct psc_journal *pj)
 	} while (xh->pjx_xid == PJE_XID_NONE);
 	PJ_ULOCK(pj);
 
-	psc_warnx("Start a new transaction %p (xid = %ld) for journal %p.", xh, xh->pjx_xid, xh->pjx_pj);
+	psc_warnx("Start a new transaction %p (xid = %ld) for journal %p.", xh, (long int) xh->pjx_xid, xh->pjx_pj);
 	return (xh);
 }
 
@@ -151,12 +151,11 @@ pjournal_logwrite(struct psc_journal_xidhndl *xh, int type, void *data,
 	if (type & PJET_NODATA)
 		psc_assert(!data);
 
-	tail_slot = 0;
 	pj = xh->pjx_pj;
 
+	psc_assert(!(type & PJET_XEND));
 	psc_assert(!(type & PJET_CORRUPT));
 	psc_assert(!(type & PJET_XSTARTED));
-	psc_assert(!(type & PJET_XEND));
 
 	psc_assert(!(xh->pjx_flags & PJX_XCLOSED));
 
@@ -168,21 +167,18 @@ pjournal_logwrite(struct psc_journal_xidhndl *xh, int type, void *data,
 	 */
 	PJ_LOCK(pj);
 	slot = pj->pj_nextwrite;
+	tail_slot = PJX_SLOT_ANY;
 	t = psclist_first_entry(&pj->pj_pndgxids, struct psc_journal_xidhndl, pjx_lentry);
 	if (t) {
-		if (t->pjx_tailslot == slot) {
-			psc_warnx("pj(%p) blocking on slot(%d) "
-				  "availability - owned by xid (%p)",
-				  pj, slot, t);
+		if (t->pjx_tailslot == pj->pj_nextwrite) {
+			psc_warnx("Journal %p write is blocked on slot %d "
+				  "owned by transaction %p (xid = %ld)", 
+				   pj, pj->pj_nextwrite, t, (long int) t->pjx_xid);
 			psc_waitq_wait(&pj->pj_waitq, &pj->pj_lock);
 			goto retry;
 		}
 		tail_slot = t->pjx_tailslot;
 	}
-
-	psc_info("pj(%p) tail@slot(%d) my@slot(%d) xh_flags(%o)",
-		 pj, tail_slot, slot, xh->pjx_flags);
-
 	if (!(xh->pjx_flags & PJET_XSTARTED)) {
 		/* Multi-step operation, mark the slot id here
 		 *  so that the tail of the journal can be found
@@ -200,11 +196,13 @@ pjournal_logwrite(struct psc_journal_xidhndl *xh, int type, void *data,
 
 	if ((++pj->pj_nextwrite) == pj->pj_hdr->pjh_nents) {
 		pj->pj_nextwrite = 0;
-
 	} else
 		psc_assert(pj->pj_nextwrite < pj->pj_hdr->pjh_nents);
 
 	PJ_ULOCK(pj);
+
+	psc_info("Writing transaction %p into journal %p: transaction tail = %d, log tail = %d",
+		  xh, pj, xh->pjx_tailslot, tail_slot);
 
 	rc = pjournal_logwrite_internal(pj, xh, slot, type, data, size);
 
