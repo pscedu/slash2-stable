@@ -11,7 +11,7 @@
 #include "psc_rpc/rsx.h"
 
 /*
- * rsx_newreq - Create a new request and associate it with the import.
+ * pfl_rsx_newreq - Create a new request and associate it with the import.
  * @imp: import portal on which to create the request.
  * @version: version of communication protocol of channel.
  * @op: operation ID of command to send.
@@ -21,7 +21,7 @@
  * @mqp: value-result of pointer to start of request buffer.
  */
 int
-rsx_newreq(struct pscrpc_import *imp, int version, int op, int reqlen,
+pfl_rsx_newreq(struct pscrpc_import *imp, int version, int op, int reqlen,
     int replen, struct pscrpc_request **rqp, void *mqp)
 {
 	*(void **)mqp = NULL;
@@ -35,19 +35,19 @@ rsx_newreq(struct pscrpc_import *imp, int version, int op, int reqlen,
 	if (*(void **)mqp == NULL)
 		psc_fatalx("psc_msg_buf");
 
-	/* Setup reply buffer. */
+	/* Setup reply buffer now so asynchronous RPCs work, too. */
 	(*rqp)->rq_replen = psc_msg_size(1, &replen);
 	return (0);
 }
 
 /*
- * rsx_waitrep - Wait for a reply of a "simple" command, i.e. an error code.
+ * pfl_rsx_waitrep - Wait for a reply of a "simple" command, i.e. an error code.
  * @rq: the RPC request we sent.
  * @replen: anticipated size of response.
  * @mpp: value-result pointer where reply buffer start will be set.
  */
 int
-rsx_waitrep(struct pscrpc_request *rq, int replen, void *mpp)
+pfl_rsx_waitrep(struct pscrpc_request *rq, int replen, void *mpp)
 {
 	int rc;
 
@@ -66,7 +66,7 @@ rsx_waitrep(struct pscrpc_request *rq, int replen, void *mpp)
 #define OBD_TIMEOUT 60
 
 int
-rsx_timeout(__unusedx void *arg)
+pfl_rsx_timeout(__unusedx void *arg)
 {
 	return (1);
 }
@@ -110,7 +110,7 @@ rsx_bulkserver(struct pscrpc_request *rq, struct pscrpc_bulk_desc **descp,
 		rc = pscrpc_start_bulk_transfer(desc);
 	if (rc == 0) {
 		lwi = LWI_TIMEOUT_INTERVAL(OBD_TIMEOUT / 2,
-		    HZ, rsx_timeout, desc);
+		    HZ, pfl_rsx_timeout, desc);
 
 		rc = psc_svr_wait_event(&desc->bd_waitq,
 		    (!pscrpc_bulk_active(desc) || desc->bd_export->exp_failed),

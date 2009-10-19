@@ -1,5 +1,8 @@
 /* $Id$ */
 
+#ifndef _PFL_RSX_H_
+#define _PFL_RSX_H_
+
 struct pscrpc_request;
 struct pscrpc_import;
 struct pscrpc_bulk_desc;
@@ -36,16 +39,18 @@ struct iovec;
 	} while (0)
 
 #define RSX_NEWREQ(imp, version, op, rq, mq, mp)			\
-	rsx_newreq((imp), (version), (op), sizeof(*(mq)),		\
+	pfl_rsx_newreq((imp), (version), (op), sizeof(*(mq)),		\
 	    sizeof(*(mp)), &(rq), &(mq))
 
 #define RSX_WAITREP(rq, mp)						\
-	rsx_waitrep((rq), sizeof(*(mp)), &(mp))
+	pfl_rsx_waitrep((rq), sizeof(*(mp)), &(mp))
 
-int rsx_newreq(struct pscrpc_import *, int, int, int, int,
+int pfl_rsx_newreq(struct pscrpc_import *, int, int, int, int,
 	struct pscrpc_request **, void *);
-int rsx_waitrep(struct pscrpc_request *, int, void *);
+int pfl_rsx_waitrep(struct pscrpc_request *, int, void *);
 int rsx_bulkserver(struct pscrpc_request *, struct pscrpc_bulk_desc **,
 	int, int, struct iovec *, int);
 int rsx_bulkclient(struct pscrpc_request *, struct pscrpc_bulk_desc **,
 	int, int, struct iovec *, int);
+
+#endif /* _PFL_RSX_H_ */
