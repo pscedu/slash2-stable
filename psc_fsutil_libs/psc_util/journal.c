@@ -164,7 +164,7 @@ pjournal_logwrite_internal(struct psc_journal *pj, struct psc_journal_xidhndl *x
 }
 
 /*
- * _pjournal_logwritex - store a new entry in a journal transaction.
+ * _pjournal_logwrite - store a new entry in a journal transaction.
  * @pj: the journal.
  * @type: the application-specific log entry type.
  * @xid: transaction ID.
@@ -182,7 +182,7 @@ pjournal_logwrite(struct psc_journal_xidhndl *xh, int type, void *data,
 	uint32_t			 tail_slot;
 
 	pj = xh->pjx_pj;
-	if (type & PJET_NODATA)
+	if (type == PJET_NONE)
 		psc_assert(!data);
 
  retry:
@@ -204,17 +204,12 @@ pjournal_logwrite(struct psc_journal_xidhndl *xh, int type, void *data,
 			goto retry;
 		}
 		tail_slot = t->pjx_tailslot;
+	} else {
+		type |= PJET_STARTUP;
 	}
-	if (!(xh->pjx_flags & PJX_XSTARTED)) {
-		/* Multi-step operation, mark the slot id here
-		 *  so that the tail of the journal can be found
-		 *  and that overwriting pending xids may be
-		 *  prevented.
-		 * Note:  self-contained ops (PJET_XEND)
-		 *        cannot end up here.
-		 */
-		psc_assert(!(xh->pjx_flags & PJET_XEND));
 
+	if (!(xh->pjx_flags & PJX_XSTARTED)) {
+		type |= PJET_XCLOSED;
 		xh->pjx_tailslot = slot;
 		psclist_xadd_tail(&xh->pjx_lentry, &pj->pj_pndgxids);
 		xh->pjx_flags |= PJX_XSTARTED;
@@ -285,7 +280,6 @@ pjournal_logread(struct psc_journal *pj, uint32_t slot, void *data)
 
 		if (h->pje_magic != PJE_MAGIC) {
 			psc_warnx("pj(%p) slot@%d failed magic", pj, slot + i);
-			h->pje_type |= PJET_CORRUPT;
 		}
 
 	}
@@ -302,7 +296,7 @@ pjournal_start_mark(struct psc_journal *pj, int slot)
 
 	pje->pje_magic = PJE_MAGIC;
 	pje->pje_xid = PJE_XID_NONE;
-	pje->pje_type = PJET_NODATA;
+	pje->pje_type = PJET_STARTUP;
 
 	rc = pwrite(pj->pj_fd, pje, pj->pj_hdr->pjh_entsz,
 		    (off_t)(pj->pj_hdr->pjh_start_off +
