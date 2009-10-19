@@ -144,20 +144,15 @@ struct psc_journal_xidhndl {
 struct psc_journal *
 pjournal_load(const char *);
 
-struct psc_journal_xidhndl *
-pjournal_newxid(struct psc_journal *);
+struct psc_journal_xidhndl *	pjournal_xnew(struct psc_journal *);
+int				pjournal_xadd(struct psc_journal_xidhndl *, int, void *, size_t);
+int				pjournal_xend(struct psc_journal_xidhndl *, int, void *, size_t);
 
 void	*pjournal_alloclog(struct psc_journal *);
 int	 pjournal_clearlog(struct psc_journal *, int);
 int	 pjournal_dump(const char *);
 void	 pjournal_format(const char *, uint32_t, uint32_t, uint32_t, uint32_t);
 int	 pjournal_logread(struct psc_journal *, uint32_t, void *);
-int	 pjournal_logwrite(struct psc_journal_xidhndl *, int, void *, size_t);
-int	 pjournal_logwritex(struct psc_journal *, int, int, void *, size_t);
-int	 pjournal_xadd(struct psc_journal_xidhndl *, int, void *, size_t);
-int	 pjournal_xend(struct psc_journal_xidhndl *, int, void *, size_t);
-void	 pjournal_xidhndl_free(struct psc_journal_xidhndl *);
-int	 pjournal_xstart(struct psc_journal *, int, size_t);
 int	 pjournal_walk(struct psc_journal *, struct psc_journal_walker *,
 	    struct psc_journal_enthdr *);
 
