@@ -124,7 +124,7 @@ pjournal_logwrite_internal(struct psc_journal *pj, struct psc_journal_xidhndl *x
 	pje->pje_type = type;
 	pje->pje_xid = xh->pjx_xid;
 
-	if (!(type & PJET_XCLOSED))
+	if (!(type & PJE_XCLOSED))
 		pje->pje_sid = atomic_inc_return(&xh->pjx_sid);
 	else
 		pje->pje_sid = atomic_read(&xh->pjx_sid);
@@ -182,7 +182,7 @@ pjournal_logwrite(struct psc_journal_xidhndl *xh, int type, void *data,
 	uint32_t			 tail_slot;
 
 	pj = xh->pjx_pj;
-	if (type == PJET_NONE)
+	if (type == PJE_NONE)
 		psc_assert(!data);
 
  retry:
@@ -205,11 +205,11 @@ pjournal_logwrite(struct psc_journal_xidhndl *xh, int type, void *data,
 		}
 		tail_slot = t->pjx_tailslot;
 	} else {
-		type |= PJET_STARTUP;
+		type |= PJE_STARTUP;
 	}
 
 	if (!(xh->pjx_flags & PJX_XSTARTED)) {
-		type |= PJET_XCLOSED;
+		type |= PJE_XCLOSED;
 		xh->pjx_tailslot = slot;
 		psclist_xadd_tail(&xh->pjx_lentry, &pj->pj_pndgxids);
 		xh->pjx_flags |= PJX_XSTARTED;
@@ -296,7 +296,7 @@ pjournal_start_mark(struct psc_journal *pj, int slot)
 
 	pje->pje_magic = PJE_MAGIC;
 	pje->pje_xid = PJE_XID_NONE;
-	pje->pje_type = PJET_STARTUP;
+	pje->pje_type = PJE_STARTUP;
 
 	rc = pwrite(pj->pj_fd, pje, pj->pj_hdr->pjh_entsz,
 		    (off_t)(pj->pj_hdr->pjh_start_off +
@@ -392,11 +392,11 @@ pjournal_scan_slots(struct psc_journal *pj)
 				last_xid = pje->pje_xid;
 				last_slot = ents + i;
 			}
-			if (pje->pje_type & PJET_FORMAT) {
+			if (pje->pje_type & PJE_FORMAT) {
 				nformat++;
 				continue;
 			}
-			if (pje->pje_type & PJET_XCLOSED) {
+			if (pje->pje_type & PJE_XCLOSED) {
 				pjournal_remove_entries(pj, pje->pje_xid);
 				nclose++;
 				continue;
@@ -549,7 +549,7 @@ pjournal_format(const char *fn, uint32_t nents, uint32_t entsz, uint32_t ra,
 		for (i = 0; i < ra; i++) {
 			h = (void *)&jbuf[pjh.pjh_entsz * i];
 			h->pje_magic = PJE_MAGIC;
-			h->pje_type = PJET_FORMAT;
+			h->pje_type = PJE_FORMAT;
 			h->pje_xid = PJE_XID_NONE;
 			h->pje_sid = PJE_XID_NONE;
 		}

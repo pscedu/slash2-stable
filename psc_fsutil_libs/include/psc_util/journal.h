@@ -81,12 +81,12 @@ struct psc_journal_walker {
 /*
  * Journal entry types - higher bits after PJET_LASTBIT are used to identify log users.
  */
-#define PJET_NONE		(0 << 0)		/* null journal record */
-#define PJET_FORMAT		(1 << 1)		/* newly-formatted journal record */
-#define PJET_XCLOSED		(1 << 2)		/* xid is closed */
-#define PJET_XSTARTED		(1 << 3)		/* transaction began */
-#define PJET_STARTUP		(1 << 4)		/* system startup */
-#define PJET_LASTBIT		 4			/* denote the last used bit */
+#define PJE_NONE		(0 << 0)		/* null journal record */
+#define PJE_FORMAT		(1 << 1)		/* newly-formatted journal record */
+#define PJE_XCLOSED		(1 << 2)		/* xid is closed */
+#define PJE_XSTARTED		(1 << 3)		/* transaction began */
+#define PJE_STARTUP		(1 << 4)		/* system startup */
+#define PJE_LASTBIT		 4			/* denote the last used bit */
 
 /*
  * psc_journal_enthdr - journal entry header.
