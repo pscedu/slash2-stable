@@ -24,7 +24,8 @@ CFLAGS+=	-g
 #CFLAGS+=	-ggdb3
 #CFLAGS+=	-Wunused -Wuninitialized -O
 #CFLAGS+=	-Wshadow
-DEFINES+=	-D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64 -DYY_NO_UNPUT
+DEFINES+=	-D_LARGEFILE_SOURCE -D_LARGEFILE64_SOURCE -D_FILE_OFFSET_BITS=64
+DEFINES+=	-D_REENTRANT -D_GNU_SOURCE -DYY_NO_UNPUT
 
 FUSE_INCLUDES=	`${PKG_CONFIG} --cflags fuse | perl -ne 'print $$& while /-I\S+\s?/gc'`
 FUSE_DEFINES=	`${PKG_CONFIG} --cflags fuse | perl -ne 'print $$& while /-D\S+\s?/gc'`
