@@ -233,7 +233,7 @@ pjournal_logwrite(struct psc_journal_xidhndl *xh, int type, void *data,
 	rc = pjournal_logwrite_internal(pj, xh, slot, type, data, size);
 
 	if (xh->pjx_flags & PJX_XCLOSED) {
-		psc_dbg("Transaction %p (xid = %ld) removed journal, tail slot = %d, rc = %d",
+		psc_dbg("Transaction %p (xid = %ld) removed from journal %p: tail slot = %d, rc = %d",
 			 xh, (long int) xh->pjx_xid, pj, xh->pjx_tailslot, rc);
 		psclist_del(&xh->pjx_lentry);
 		PSCFREE(xh);
@@ -310,17 +310,6 @@ pjournal_start_mark(struct psc_journal *pj, int slot)
 
 	psc_freenl(pje, PJ_PJESZ(pj));
 	return (rc);
-}
-
-/*
- * pjournal_alloclog - allocate a log for I/O to a journal.
- * @pj: the journal.
- * Returns: data buffer pointer valid for journal I/O.
- */
-void *
-pjournal_alloclog(struct psc_journal *pj)
-{
-	return (psc_alloc(PJ_PJESZ(pj), PAF_PAGEALIGN | PAF_LOCK));
 }
 
 void *
