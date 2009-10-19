@@ -148,16 +148,9 @@ pjournal_logwrite(struct psc_journal_xidhndl *xh, int type, void *data,
 	uint32_t			 slot;
 	uint32_t			 tail_slot;
 
+	pj = xh->pjx_pj;
 	if (type & PJET_NODATA)
 		psc_assert(!data);
-
-	pj = xh->pjx_pj;
-
-	psc_assert(!(type & PJET_XEND));
-	psc_assert(!(type & PJET_CORRUPT));
-	psc_assert(!(type & PJET_XSTARTED));
-
-	psc_assert(!(xh->pjx_flags & PJX_XCLOSED));
 
  retry:
 	/*
@@ -170,7 +163,7 @@ pjournal_logwrite(struct psc_journal_xidhndl *xh, int type, void *data,
 	tail_slot = PJX_SLOT_ANY;
 	t = psclist_first_entry(&pj->pj_pndgxids, struct psc_journal_xidhndl, pjx_lentry);
 	if (t) {
-		if (t->pjx_tailslot == pj->pj_nextwrite) {
+		if (t->pjx_tailslot == slot) {
 			psc_warnx("Journal %p write is blocked on slot %d "
 				  "owned by transaction %p (xid = %ld)", 
 				   pj, pj->pj_nextwrite, t, (long int) t->pjx_xid);
@@ -179,7 +172,7 @@ pjournal_logwrite(struct psc_journal_xidhndl *xh, int type, void *data,
 		}
 		tail_slot = t->pjx_tailslot;
 	}
-	if (!(xh->pjx_flags & PJET_XSTARTED)) {
+	if (!(xh->pjx_flags & PJX_XSTARTED)) {
 		/* Multi-step operation, mark the slot id here
 		 *  so that the tail of the journal can be found
 		 *  and that overwriting pending xids may be
@@ -191,7 +184,7 @@ pjournal_logwrite(struct psc_journal_xidhndl *xh, int type, void *data,
 
 		xh->pjx_tailslot = slot;
 		psclist_xadd_tail(&xh->pjx_lentry, &pj->pj_pndgxids);
-		xh->pjx_flags |= PJET_XSTARTED;
+		xh->pjx_flags |= PJX_XSTARTED;
 	}
 
 	if ((++pj->pj_nextwrite) == pj->pj_hdr->pjh_nents) {
