@@ -233,8 +233,8 @@ pjournal_logwrite(struct psc_journal_xidhndl *xh, int type, void *data,
 	rc = pjournal_logwrite_internal(pj, xh, slot, type, data, size);
 
 	if (xh->pjx_flags & PJX_XCLOSED) {
-		psc_dbg("pj(%p) freeing xid(%ld)@xh(%p) rc=%d ts=%d",
-			pj, xh->pjx_xid, xh, rc, xh->pjx_tailslot);
+		psc_dbg("Transaction %p (xid = %ld) removed journal, tail slot = %d, rc = %d",
+			 xh, (long int) xh->pjx_xid, pj, xh->pjx_tailslot, rc);
 		psclist_del(&xh->pjx_lentry);
 		PSCFREE(xh);
 	}
