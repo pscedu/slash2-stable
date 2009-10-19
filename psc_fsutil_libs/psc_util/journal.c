@@ -72,15 +72,14 @@ pjournal_xadd(struct psc_journal_xidhndl *xh, int type, void *data,
  * so that we can close the transaction that logs its changes.
  */
 int
-pjournal_xend(struct psc_journal_xidhndl *xh, int type, void *data,
-	      size_t size)
+pjournal_xend(struct psc_journal_xidhndl *xh)
 {
 	spinlock(&xh->pjx_lock);
 	psc_assert(!(xh->pjx_flags & PJX_XCLOSED));
 	xh->pjx_flags |= PJX_XCLOSED;
 	freelock(&xh->pjx_lock);
 
-	return (pjournal_logwrite(xh, type, data, size));
+	return (pjournal_logwrite(xh, PJE_NONE, NULL, 0));
 }
 
 /*

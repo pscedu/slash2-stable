@@ -145,7 +145,7 @@ void				pjournal_format(const char *, uint32_t, uint32_t, uint32_t, uint32_t);
 /* definitions of transaction handling functions */
 struct psc_journal_xidhndl *	pjournal_xnew(struct psc_journal *);
 int				pjournal_xadd(struct psc_journal_xidhndl *, int, void *, size_t);
-int				pjournal_xend(struct psc_journal_xidhndl *, int, void *, size_t);
+int				pjournal_xend(struct psc_journal_xidhndl *);
 
 
 #define pjournal_xidhndl_free(xh)	PSCFREE(xh)
