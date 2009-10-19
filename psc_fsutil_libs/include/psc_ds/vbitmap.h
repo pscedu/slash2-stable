@@ -20,7 +20,6 @@ struct psc_vbitmap {
 #define PVBF_STATIC	(1 << 1)	/* vbitmap is statically allocated */
 #define PVBF_EXTALLOC	(1 << 2)	/* bitmap mem is externally alloc'd */
 
-#define VBITMAP_INIT		{ NULL, NULL, NULL, 0, PVBF_STATIC }
 #define VBITMAP_INIT_AUTO	{ NULL, NULL, NULL, 0, PVBF_AUTO | PVBF_STATIC }
 
 #define vbitmap_new(siz)	vbitmap_newf((siz), 0)
