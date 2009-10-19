@@ -23,8 +23,13 @@
 
 #define MAX_LOG_TRY		3			/* # of times of retry in case of a log write problem */
 
-static struct psc_journal_xidhndl *
-pjournal_xidhndl_new(struct psc_journal *pj)
+/*
+ * pjournal_newxid - obtain an unused journal transaction ID.
+ * @pj: the owning journal.
+ * Returns: new, unused transaction ID.
+ */
+struct psc_journal_xidhndl *
+pjournal_newxid(struct psc_journal *pj)
 {
 	struct psc_journal_xidhndl *xh;
 
@@ -35,30 +40,13 @@ pjournal_xidhndl_new(struct psc_journal *pj)
 	xh->pjx_tailslot = PJX_SLOT_ANY;
 	INIT_PSCLIST_ENTRY(&xh->pjx_lentry);
 
-	psc_warnx("Start a new transaction %p for journal %p.", xh, xh->pjx_pj);
-	return (xh);
-}
-
-/*
- * pjournal_nextxid - obtain an unused journal transaction ID.
- * @pj: the journal.
- * Returns: new, unused transaction ID.
- */
-struct psc_journal_xidhndl *
-pjournal_nextxid(struct psc_journal *pj)
-{
-	struct psc_journal_xidhndl *xh;
-
-	xh = pjournal_xidhndl_new(pj);
-
 	PJ_LOCK(pj);
 	do {
 		xh->pjx_xid = ++pj->pj_nextxid;
 	} while (xh->pjx_xid == PJE_XID_NONE);
 	PJ_ULOCK(pj);
 
-	psc_assert(xh->pjx_pj == pj);
-
+	psc_warnx("Start a new transaction %p (xid = %ld) for journal %p.", xh, xh->pjx_xid, xh->pjx_pj);
 	return (xh);
 }
 

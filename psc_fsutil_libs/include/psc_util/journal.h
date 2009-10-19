@@ -145,7 +145,7 @@ struct psc_journal *
 pjournal_load(const char *);
 
 struct psc_journal_xidhndl *
-pjournal_nextxid(struct psc_journal *);
+pjournal_newxid(struct psc_journal *);
 
 void	*pjournal_alloclog(struct psc_journal *);
 int	 pjournal_clearlog(struct psc_journal *, int);
