@@ -48,7 +48,7 @@ pjournal_xnew(struct psc_journal *pj)
 	} while (xh->pjx_xid == PJE_XID_NONE);
 	PJ_ULOCK(pj);
 
-	psc_warnx("Start a new transaction %p (xid = %ld) for journal %p.", xh, (long int) xh->pjx_xid, xh->pjx_pj);
+	psc_warnx("Start a new transaction %p (xid = %"PRIx64") for journal %p.", xh, xh->pjx_xid, xh->pjx_pj);
 	return (xh);
 }
 
@@ -157,7 +157,7 @@ pjournal_logwrite_internal(struct psc_journal *pj, struct psc_journal_xidhndl *x
 
 	if ((xh->pjx_flags & PJX_XCLOSED) && (xh->pjx_tailslot == pj->pj_nextwrite)) {
 		/* We are the tail so unblock the journal.  */
-		psc_warnx("pj (%p) unblocking slot %d - owned by xid %lu", pj, slot, xh->pjx_xid);
+		psc_warnx("pj (%p) unblocking slot %d - owned by xid %"PRIx64, pj, slot, xh->pjx_xid);
 		psc_waitq_wakeall(&pj->pj_waitq);
 	}
 	return (rc);
@@ -198,8 +198,8 @@ pjournal_logwrite(struct psc_journal_xidhndl *xh, int type, void *data,
 	if (t) {
 		if (t->pjx_tailslot == slot) {
 			psc_warnx("Journal %p write is blocked on slot %d "
-				  "owned by transaction %p (xid = %ld)", 
-				   pj, pj->pj_nextwrite, t, (long int) t->pjx_xid);
+				  "owned by transaction %p (xid = %"PRIx64")", 
+				   pj, pj->pj_nextwrite, t, t->pjx_xid);
 			psc_waitq_wait(&pj->pj_waitq, &pj->pj_lock);
 			goto retry;
 		}
@@ -233,8 +233,8 @@ pjournal_logwrite(struct psc_journal_xidhndl *xh, int type, void *data,
 	rc = pjournal_logwrite_internal(pj, xh, slot, type, data, size);
 
 	if (xh->pjx_flags & PJX_XCLOSED) {
-		psc_dbg("Transaction %p (xid = %ld) removed from journal %p: tail slot = %d, rc = %d",
-			 xh, (long int) xh->pjx_xid, pj, xh->pjx_tailslot, rc);
+		psc_dbg("Transaction %p (xid = %"PRIx64") removed from journal %p: tail slot = %d, rc = %d",
+			 xh, xh->pjx_xid, pj, xh->pjx_tailslot, rc);
 		psclist_del(&xh->pjx_lentry);
 		PSCFREE(xh);
 	}
