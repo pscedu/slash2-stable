@@ -25,6 +25,12 @@
 #include "psc_util/fmtstr.h"
 #include "psc_util/log.h"
 
+#ifndef APP_STRERROR
+#define APP_STRERROR strerror
+#else
+char *APP_STRERROR(int);
+#endif
+
 #ifndef PSC_LOG_FMT
 #define PSC_LOG_FMT "[%s:%06u %n:%i:%F:%l] "
 #endif
@@ -213,7 +219,7 @@ _psclogv(const char *fn, const char *func, int line, int subsys,
 
 	if (options & PLO_ERRNO)
 		snprintf(emsg, sizeof(emsg), ": %s",
-		    strerror(save_errno));
+		    APP_STRERROR(save_errno));
 	else
 		emsg[0] = '\0';
 	fprintf(stderr, "%s%s%s%s", prefix, umsg, emsg, psclog_eol);
