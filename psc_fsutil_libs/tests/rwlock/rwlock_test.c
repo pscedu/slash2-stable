@@ -1,9 +1,5 @@
 /* $Id$ */
 
-#ifndef _GNU_SOURCE
-#define _GNU_SOURCE
-#endif
-
 #include <err.h>
 #include <errno.h>
 #include <pthread.h>

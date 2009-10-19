@@ -3,10 +3,6 @@
 #define PSC_SUBSYS PSS_JOURNAL
 #include "psc_util/subsys.h"
 
-#ifndef _GNU_SOURCE
-#define _GNU_SOURCE
-#endif
-
 #include <sys/types.h>
 
 #include <errno.h>

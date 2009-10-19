@@ -2,10 +2,6 @@
 
 #define PSC_SUBSYS PSS_RPC
 
-#ifndef _GNU_SOURCE
-#define _GNU_SOURCE //strnlen
-#endif
-
 #include <string.h>
 #include <stddef.h>
 
