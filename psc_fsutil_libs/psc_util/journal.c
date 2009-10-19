@@ -57,8 +57,7 @@ pjournal_xnew(struct psc_journal *pj)
  * reply to our clients until after the log entry is written.
  */
 int
-pjournal_xadd(struct psc_journal_xidhndl *xh, int type, void *data,
-	      size_t size)
+pjournal_xadd(struct psc_journal_xidhndl *xh, int type, void *data, size_t size)
 {
 	spinlock(&xh->pjx_lock);
 	psc_assert(!(xh->pjx_flags & PJX_XCLOSED));
@@ -181,8 +180,6 @@ pjournal_logwrite(struct psc_journal_xidhndl *xh, int type, void *data,
 	uint32_t			 tail_slot;
 
 	pj = xh->pjx_pj;
-	if (type == PJE_NONE)
-		psc_assert(!data);
 
  retry:
 	/*
@@ -313,6 +310,9 @@ pjournal_alloclog_ra(struct psc_journal *pj)
 			  PAF_PAGEALIGN | PAF_LOCK));
 }
 
+/*
+ * Remove all journal entries with the given xid from the journal.
+ */
 __static void 
 pjournal_remove_entries(struct psc_journal *pj, uint64_t xid)
 {
@@ -348,7 +348,6 @@ pjournal_xid_cmp(const void *x, const void *y)
 
 	return (0);
 }
-
 
 /*
  * Accumulate all journal entries that need to be replayed in memory.  To reduce memory 
