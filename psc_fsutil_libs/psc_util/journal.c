@@ -235,47 +235,21 @@ pjournal_logwrite(struct psc_journal_xidhndl *xh, int type, void *data,
  * @data: a pointer to buffer when we fill journal entries.
  * Returns: 'n' entries read on success, -1 on error.
  */
-int
-pjournal_logread(struct psc_journal *pj, uint32_t slot, void *data)
+static int
+pjournal_logread(struct psc_journal *pj, int32_t slot, int32_t count, void *data)
 {
-	daddr_t addr;
-	char *p = data;
-	int i, ra=pj->pj_hdr->pjh_readahead;
-	ssize_t rc;
+	int		rc;
+	off_t		addr;
+	ssize_t		size;
 
-	if ((unsigned long)data & (pscPageSize - 1))
-		psc_fatal("data is not page-aligned");
-
-	if (slot >= pj->pj_hdr->pjh_nents)
-		return (-1);
-
-	while ((slot + ra) >= pj->pj_hdr->pjh_nents)
-		ra--;
-
+	rc = 0;
 	addr = pj->pj_hdr->pjh_start_off + slot * pj->pj_hdr->pjh_entsz;
-
-	rc = pread(pj->pj_fd, data, pj->pj_hdr->pjh_entsz * ra, addr);
-	if (rc < 0) {
-		psc_warn("pj(%p) failed read (errno=%d)", pj, errno);
-		return (-errno);
-
-	} else if (rc != pj->pj_hdr->pjh_entsz * ra) {
-		psc_warnx("pj(%p) failed read, sz(%d) != rc(%zd)", pj,
-			  pj->pj_hdr->pjh_entsz * ra, rc);
-		return (-1);
+	size = pread(pj->pj_fd, data, pj->pj_hdr->pjh_entsz * count, addr);
+	if (size < 0 || size != pj->pj_hdr->pjh_entsz * count) {
+		psc_warn("Fail to read %ld bytes from journal %p: rc = %d, errno = %d", size, pj, rc, errno);
+		rc = -1;
 	}
-
-	for (i=0; i < ra; i++) {
-		struct psc_journal_enthdr *h;
-
-		h = (void *)&p[pj->pj_hdr->pjh_entsz * i];
-
-		if (h->pje_magic != PJE_MAGIC) {
-			psc_warnx("pj(%p) slot@%d failed magic", pj, slot + i);
-		}
-
-	}
-	return (ra);
+	return (rc);
 }
 
 int
@@ -338,10 +312,8 @@ pjournal_xid_cmp(const void *x, const void *y)
 
 	if (a->pje_xid < b->pje_xid)
 		return (-1);
-
 	if (a->pje_xid > b->pje_xid)
                 return (1);
-
 	return (0);
 }
 
@@ -358,6 +330,7 @@ pjournal_scan_slots(struct psc_journal *pj)
 	struct psc_journal_enthdr	*pje;
 	uint32_t			 ents;
 	unsigned char			*jbuf;
+	int				 count;
 	int				 nopen;
 	int				 nclose;
 	int				 nformat;
@@ -372,10 +345,11 @@ pjournal_scan_slots(struct psc_journal *pj)
 	last_xid = PJE_XID_NONE;
 	last_slot = PJX_SLOT_ANY;
 
+	count = pj->pj_hdr->pjh_readahead;
 	dynarray_init(&pj->pj_bufs);
 	jbuf = pjournal_alloclog_ra(pj);
 	while (ents < pj->pj_hdr->pjh_nents) {
-		ra = pjournal_logread(pj, ents, jbuf);
+		ra = pjournal_logread(pj, ents, count, jbuf);
 		if (ra < 0) {
 			rc = -1;
 			break;
@@ -423,6 +397,7 @@ pjournal_replay(struct psc_journal *pj, psc_jhandler pj_handler)
 	void *jbuf=pjournal_alloclog_ra(pj);
 	struct psc_journal_walker pjw;
 	int rc = 0;
+	int count = 0;
 	uint32_t nents=0;
 
 	psc_assert(pj && pj_handler);
@@ -437,7 +412,7 @@ pjournal_replay(struct psc_journal *pj, psc_jhandler pj_handler)
 		nents = (pj->pj_hdr->pjh_nents - pjw.pjw_pos) + pjw.pjw_stop + 1;
 
 	while (nents) {
-		rc = pjournal_logread(pj, pjw.pjw_pos, jbuf);
+		rc = pjournal_logread(pj, pjw.pjw_pos, count, jbuf);
 		if (rc < 0)
 			goto out;
 
