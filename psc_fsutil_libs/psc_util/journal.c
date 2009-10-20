@@ -78,7 +78,7 @@ pjournal_xend(struct psc_journal_xidhndl *xh)
 }
 
 /*
- * _pjournal_logwrite - store a new entry in a journal.
+ * pjournal_logwrite_internal - store a new entry in a journal.
  * @pj: the journal.
  * @slot: position location in journal to write.
  * @type: the application-specific log entry type.
@@ -97,8 +97,8 @@ pjournal_logwrite_internal(struct psc_journal *pj, struct psc_journal_xidhndl *x
 
 	rc = 0;
 	ntries = MAX_LOG_TRY;
-	psc_assert(slot < pj->pj_hdr->pjh_nents);
 	psc_assert(size <= PJ_PJESZ(pj));
+	psc_assert(slot < pj->pj_hdr->pjh_nents);
 
 	PJ_LOCK(pj);
 	while (!(len = dynarray_len(&pj->pj_bufs))) {
@@ -139,7 +139,7 @@ pjournal_logwrite_internal(struct psc_journal *pj, struct psc_journal_xidhndl *x
 	/* we may want to turn off logging at this point and force write-through instead */
 	if (rc == -1 || rc != pj->pj_hdr->pjh_entsz) {
 		rc = -1;
-		psc_errorx("Problem writing journal log entries");
+		psc_errorx("Problem writing journal log entries at slot %d", slot);
 	} else 
 		rc = 0;
 #endif
@@ -158,7 +158,7 @@ pjournal_logwrite_internal(struct psc_journal *pj, struct psc_journal_xidhndl *x
 }
 
 /*
- * _pjournal_logwrite - store a new entry in a journal transaction.
+ * pjournal_logwrite - store a new entry in a journal transaction.
  * @pj: the journal.
  * @type: the application-specific log entry type.
  * @xid: transaction ID.
@@ -201,10 +201,14 @@ pjournal_logwrite(struct psc_journal_xidhndl *xh, int type, void *data,
 	}
 
 	if (!(xh->pjx_flags & PJX_XSTARTED)) {
-		type |= PJE_XCLOSED;
+		type |= PJE_XSTARTED;
 		xh->pjx_tailslot = slot;
 		psclist_xadd_tail(&xh->pjx_lentry, &pj->pj_pndgxids);
 		xh->pjx_flags |= PJX_XSTARTED;
+	}
+	if (xh->pjx_flags & PJX_XCLOSED) {
+		psc_assert(xh->pjx_tailslot != slot);
+		type |= PJE_XCLOSED;
 	}
 
 	if ((++pj->pj_nextwrite) == pj->pj_hdr->pjh_nents) {
