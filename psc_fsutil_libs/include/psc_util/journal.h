@@ -48,10 +48,10 @@ struct psc_journal_hdr {
 
 struct psc_journal {
 	psc_spinlock_t		 pj_lock;	/* contention lock */
+	int			 pj_fd;		/* open file descriptor to disk */
+	char			*pj_logname;	/* log file name */
 	uint64_t		 pj_nextxid;	/* next transaction ID */
 	uint32_t		 pj_nextwrite;	/* next entry slot to write to */
-	int			 pj_genid;	/* current wrap generation */
-	int			 pj_fd;		/* open file descriptor to disk */
 	struct psclist_head	 pj_pndgxids;
 	struct dynarray		 pj_bufs;
 	struct psc_journal_hdr	*pj_hdr;
@@ -59,13 +59,6 @@ struct psc_journal {
 };
 
 typedef void (*psc_jhandler)(struct dynarray *, int);
-
-struct psc_journal_walker {
-	uint32_t	pjw_pos;	/* current position */
-	uint32_t	pjw_stop;	/* targetted end position */
-	int		pjw_seen;	/* whether to terminate at stop_pos */
-	psc_jhandler	pjw_cb;
-};
 
 /*
  * Start writing journal entries (pje) at offset
