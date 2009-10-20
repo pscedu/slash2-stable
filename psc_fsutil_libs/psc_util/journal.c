@@ -358,13 +358,13 @@ pjournal_scan_slots(struct psc_journal *pj)
 		}
 		for (i = 0; i < count; i++) {
 			pje = (struct psc_journal_enthdr *)&jbuf[pj->pj_hdr->pjh_entsz * i];
-			if (pje->pje_xid >= last_xid) {
-				last_xid = pje->pje_xid;
-				last_slot = slot + i;
-			}
 			if (pje->pje_type & PJE_FORMAT) {
 				nformat++;
 				continue;
+			}
+			if (pje->pje_xid >= last_xid) {
+				last_xid = pje->pje_xid;
+				last_slot = slot + i;
 			}
 			if (pje->pje_type & PJE_XCLOSED) {
 				pjournal_remove_entries(pj, pje->pje_xid);
@@ -396,11 +396,11 @@ pjournal_scan_slots(struct psc_journal *pj)
 int
 pjournal_replay(struct psc_journal *pj, psc_jhandler pj_handler)
 {
-	void *jbuf=pjournal_alloclog_ra(pj);
-	struct psc_journal_walker pjw;
-	int rc = 0;
-	int count = 0;
-	uint32_t nents=0;
+	int				 i;
+	int				 rc;
+	struct psc_journal_enthdr	*pje;
+	struct psc_journal_enthdr	*tmppje;
+	struct dynarray			 replaybufs;
 
 	psc_assert(pj && pj_handler);
 
@@ -408,26 +408,20 @@ pjournal_replay(struct psc_journal *pj, psc_jhandler pj_handler)
 	if (rc < 0)
 		goto out;
 
-	if (pjw.pjw_stop >= pjw.pjw_pos)
-		nents = pjw.pjw_stop - pjw.pjw_pos;
-	else
-		nents = (pj->pj_hdr->pjh_nents - pjw.pjw_pos) + pjw.pjw_stop + 1;
-
-	while (nents) {
-		rc = pjournal_logread(pj, pjw.pjw_pos, count, jbuf);
-		if (rc < 0)
-			goto out;
-
-		(pj_handler)(jbuf, rc);
-
-		nents -= rc;
-
-		if ((pjw.pjw_pos += rc) >= pj->pj_hdr->pjh_nents)
-			pjw.pjw_pos = 0;
+	while (dynarray_len(&pj->pj_bufs)) {
+		dynarray_init(&replaybufs);
+		pje = dynarray_getpos(&pj->pj_bufs, 0);
+		dynarray_add(&replaybufs, pje);
+		for (i = 0; i < dynarray_len(&pj->pj_bufs); i++) {
+			tmppje = dynarray_getpos(&pj->pj_bufs, i);
+			if (pje->pje_xid == tmppje->pje_xid) {
+				dynarray_add(&replaybufs, tmppje);
+			}
+		}
+		(pj_handler)(replaybufs, rc);
 	}
 
  out:
-	psc_freenl(jbuf, PJ_PJESZ(pj));
 	return (rc);
 }
 
