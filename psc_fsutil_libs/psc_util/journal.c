@@ -400,15 +400,15 @@ pjournal_replay(struct psc_journal *pj, psc_jhandler pj_handler)
 	int				 rc;
 	uint64_t			 xid;
 	struct psc_journal_enthdr	*pje;
+	int				 nents;
+	int				 ntrans;
 	struct psc_journal_enthdr	*tmppje;
 	struct dynarray			 replaybufs;
 
 	psc_assert(pj && pj_handler);
 
+	ntrans = 0;
 	rc = pjournal_scan_slots(pj);
-	if (rc < 0)
-		goto out;
-
 	while (dynarray_len(&pj->pj_bufs)) {
 
 		pje = dynarray_getpos(&pj->pj_bufs, 0);
@@ -420,10 +420,12 @@ pjournal_replay(struct psc_journal *pj, psc_jhandler pj_handler)
 		for (i = 0; i < dynarray_len(&pj->pj_bufs); i++) {
 			tmppje = dynarray_getpos(&pj->pj_bufs, i);
 			if (tmppje->pje_xid == xid) {
+				nents++;
 				dynarray_add(&replaybufs, tmppje);
 			}
 		}
 
+		ntrans++;
 		(pj_handler)(&replaybufs, rc);
 
 		pjournal_remove_entries(pj, xid);
@@ -431,7 +433,7 @@ pjournal_replay(struct psc_journal *pj, psc_jhandler pj_handler)
 	}
 	dynarray_free(&pj->pj_bufs);
 
- out:
+	psc_warnx("Journal replay: % log entries and %d transactions", nents, ntrans);
 	return (rc);
 }
 
