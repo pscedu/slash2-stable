@@ -387,11 +387,10 @@ pjournal_scan_slots(struct psc_journal *pj)
 }
 
 /*
- * pjournal_walk - traverse each entry in a journal.
+ * pjournal_replay - traverse each open transaction in a journal and reply them.
  * @pj: the journal.
- * @pjw: a walker for the journal.
- * @pje: an entry to be filled in for the next journal entry.
- * Returns: 0 on success, -1 on error, -2 on end of journal.
+ * @pj_handler: the master journal replay function.
+ * Returns: 0 on success, -1 on error.
  */
 int
 pjournal_replay(struct psc_journal *pj, psc_jhandler pj_handler)
@@ -433,7 +432,7 @@ pjournal_replay(struct psc_journal *pj, psc_jhandler pj_handler)
 	}
 	dynarray_free(&pj->pj_bufs);
 
-	psc_warnx("Journal replay: % log entries and %d transactions", nents, ntrans);
+	psc_warnx("Journal replay: %d log entries and %d transactions", nents, ntrans);
 	return (rc);
 }
 
@@ -490,13 +489,15 @@ void
 pjournal_format(const char *fn, uint32_t nents, uint32_t entsz, uint32_t ra,
 		uint32_t opts)
 {
-	uint32_t			 i;
+	int32_t			 	 i;
 	struct psc_journal_enthdr	*h;
 	int				 fd;
 	struct psc_journal		 pj;
 	struct psc_journal_hdr		 pjh;
+	ssize_t				 size;
 	unsigned char			*jbuf;
 	uint32_t			 slot;
+	int				 count;
 
 	pjh.pjh_entsz = entsz;
 	pjh.pjh_nents = nents;
@@ -511,33 +512,32 @@ pjournal_format(const char *fn, uint32_t nents, uint32_t entsz, uint32_t ra,
 	jbuf = pjournal_alloclog_ra(&pj);
 
 	if ((fd = open(fn, O_WRONLY|O_CREAT|O_TRUNC, 0600)) < 0)
-		psc_fatal("Could not create or truncate the journal %s", fn);
-
-	if (pwrite(fd, &pjh, sizeof(pjh), 0) < 0)
-		psc_fatal("Failed to write header");
+		psc_fatal("Could not create or truncate the log file %s", fn);
 
 	psc_assert(PJE_OFFSET >= sizeof(pjh));
+	size = pwrite(fd, &pjh, sizeof(pjh), 0);
+	if (size < 0 || size != sizeof(pjh))
+		psc_fatal("Failed to write header");
 
-	for (slot=0, ra=pjh.pjh_readahead; slot < pjh.pjh_nents; slot += ra) {
-		/* Make sure we don't write past the end. */
-		while ((slot + ra) > pjh.pjh_nents)
-			ra--;
+	for (slot = 0;  slot < pjh.pjh_nents; slot += count) {
 
-		for (i = 0; i < ra; i++) {
+		count = (nents - slot <= ra) ? (nents - slot) : ra;
+		for (i = 0; i < count; i++) {
 			h = (void *)&jbuf[pjh.pjh_entsz * i];
 			h->pje_magic = PJE_MAGIC;
 			h->pje_type = PJE_FORMAT;
 			h->pje_xid = PJE_XID_NONE;
 			h->pje_sid = PJE_XID_NONE;
 		}
-
-		if (pwrite(fd, jbuf, (pjh.pjh_entsz * ra),
-			   (off_t)(PJE_OFFSET + (slot * pjh.pjh_entsz))) < 0)
-			psc_fatal("Failed to write entries");
+		size = pwrite(fd, jbuf, pjh.pjh_entsz * count, 
+			(off_t)(PJE_OFFSET + (slot * pjh.pjh_entsz)));
+		if (size < 0 || size != pjh.pjh_entsz * count) {
+			psc_fatal("Failed to write %d entries at slot %d", count, slot);
+		}
 	}
-	if (close(fd) < 0)
+	if (close(fd) < 0) {
 		psc_fatal("Failed to close journal fd");
-
+	}
 	psc_freenl(jbuf, PJ_PJESZ(&pj));
 }
 
