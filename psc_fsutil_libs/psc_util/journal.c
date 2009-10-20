@@ -272,7 +272,7 @@ pjournal_start_mark(struct psc_journal *pj, int slot)
 	return (rc);
 }
 
-void *
+static void *
 pjournal_alloclog_ra(struct psc_journal *pj)
 {
 	psc_trace("rasz=%zd", PJ_PJESZ(pj) * pj->pj_hdr->pjh_readahead);
