@@ -58,7 +58,7 @@ struct psc_journal {
 	struct psc_waitq	 pj_waitq;
 };
 
-typedef void (*psc_jhandler)(struct dynarray, int);
+typedef void (*psc_jhandler)(struct dynarray *, int);
 
 struct psc_journal_walker {
 	uint32_t	pjw_pos;	/* current position */

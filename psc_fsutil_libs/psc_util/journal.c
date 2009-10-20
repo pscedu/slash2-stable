@@ -398,6 +398,7 @@ pjournal_replay(struct psc_journal *pj, psc_jhandler pj_handler)
 {
 	int				 i;
 	int				 rc;
+	uint64_t			 xid;
 	struct psc_journal_enthdr	*pje;
 	struct psc_journal_enthdr	*tmppje;
 	struct dynarray			 replaybufs;
@@ -409,17 +410,26 @@ pjournal_replay(struct psc_journal *pj, psc_jhandler pj_handler)
 		goto out;
 
 	while (dynarray_len(&pj->pj_bufs)) {
-		dynarray_init(&replaybufs);
+
 		pje = dynarray_getpos(&pj->pj_bufs, 0);
-		dynarray_add(&replaybufs, pje);
+		xid = pje->pje_xid;
+
+		dynarray_init(&replaybufs);
+		dynarray_ensurelen(&replaybufs, 1024);
+
 		for (i = 0; i < dynarray_len(&pj->pj_bufs); i++) {
 			tmppje = dynarray_getpos(&pj->pj_bufs, i);
-			if (pje->pje_xid == tmppje->pje_xid) {
+			if (tmppje->pje_xid == xid) {
 				dynarray_add(&replaybufs, tmppje);
 			}
 		}
-		(pj_handler)(replaybufs, rc);
+
+		(pj_handler)(&replaybufs, rc);
+
+		pjournal_remove_entries(pj, xid);
+		dynarray_free(&replaybufs);
 	}
+	dynarray_free(&pj->pj_bufs);
 
  out:
 	return (rc);
