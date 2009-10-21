@@ -100,8 +100,8 @@ pjournal_logwrite_internal(struct psc_journal *pj, struct psc_journal_xidhndl *x
 
 	rc = 0;
 	ntries = MAX_LOG_TRY;
-	psc_assert(size <= PJ_PJESZ(pj));
 	psc_assert(slot < pj->pj_hdr->pjh_nents);
+	psc_assert(size + sizeof(*pje) <= PJ_PJESZ(pj));
 
 	PJ_LOCK(pj);
 	while (!(len = dynarray_len(&pj->pj_bufs))) {
@@ -111,30 +111,28 @@ pjournal_logwrite_internal(struct psc_journal *pj, struct psc_journal_xidhndl *x
 	pje = dynarray_getpos(&pj->pj_bufs, len-1);
 	psc_assert(pje);
 	dynarray_remove(&pj->pj_bufs, pje);
-	psc_notify("got pje=%p", pje);
 	PJ_ULOCK(pj);
 
+	/* fill in contents for the log entry */
 	pje->pje_magic = PJE_MAGIC;
 	pje->pje_type = type;
 	pje->pje_xid = xh->pjx_xid;
-	pje->pje_chksum = 0;
+	if (!(type & PJE_XCLOSED)) {
+		pje->pje_sid = atomic_inc_return(&xh->pjx_sid);
+	} else {
+		pje->pje_sid = atomic_read(&xh->pjx_sid);
+	}
 	if (data) {
 		memcpy(pje->pje_data, data, size);
 	}
-
-	if (!(type & PJE_XCLOSED))
-		pje->pje_sid = atomic_inc_return(&xh->pjx_sid);
-	else
-		pje->pje_sid = atomic_read(&xh->pjx_sid);
-
 	chksum = 0;
+	pje->pje_chksum = 0;
 	chksump = (uint64_t *)pje;
-	for (i = 0; i < PJ_PJESZ(pj); i++) {
+	for (i = 0; i < (int) (PJ_PJESZ(pj) / sizeof(*chksump)); i++) {
 		chksum ^= *chksump++;
 	}
 	pje->pje_chksum = chksum;
 	
-
 #ifdef NOT_READY
 
 	/* commit the log on disk before we can return */
@@ -162,7 +160,7 @@ pjournal_logwrite_internal(struct psc_journal *pj, struct psc_journal_xidhndl *x
 
 	if ((xh->pjx_flags & PJX_XCLOSED) && (xh->pjx_tailslot == pj->pj_nextwrite)) {
 		/* We are the tail so unblock the journal.  */
-		psc_warnx("pj (%p) unblocking slot %d - owned by xid %"PRIx64, pj, slot, xh->pjx_xid);
+		psc_warnx("Journal %p unblocking slot %d - owned by xid %"PRIx64, pj, slot, xh->pjx_xid);
 		psc_waitq_wakeall(&pj->pj_waitq);
 	}
 	return (rc);
@@ -290,7 +288,6 @@ pjournal_start_mark(struct psc_journal *pj, int slot)
 static void *
 pjournal_alloclog_ra(struct psc_journal *pj)
 {
-	psc_trace("rasz=%zd", PJ_PJESZ(pj) * pj->pj_hdr->pjh_readahead);
 	return (psc_alloc(PJ_PJESZ(pj) * pj->pj_hdr->pjh_readahead,
 			  PAF_PAGEALIGN | PAF_LOCK));
 }

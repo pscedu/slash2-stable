@@ -19,14 +19,14 @@
 #define PJH_VERSION     0x01
 
 struct _psc_journal_hdr {
-	uint32_t       _pjh_entsz;
-	uint32_t       _pjh_nents;
-	uint32_t       _pjh_version;
-	uint32_t       _pjh_options;
-	uint32_t       _pjh_readahead;
-	uint32_t       _pjh_unused;
-	uint64_t       _pjh_start_off;
-	uint64_t       _pjh_magic;
+	uint32_t	_pjh_entsz;
+	uint32_t	_pjh_nents;
+	uint32_t	_pjh_version;
+	uint32_t	_pjh_options;
+	uint32_t	_pjh_readahead;
+	uint32_t	_pjh_unused;
+	uint64_t	_pjh_start_off;
+	uint64_t	_pjh_magic;
 };
 
 #define PJH_ALIGN_SIZE	PSC_ALIGN(sizeof(struct _psc_journal_hdr), PAGE_SIZE)
