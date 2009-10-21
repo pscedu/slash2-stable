@@ -514,6 +514,8 @@ pjournal_format(const char *fn, uint32_t nents, uint32_t entsz, uint32_t ra,
 	unsigned char			*jbuf;
 	uint32_t			 slot;
 	int				 count;
+	uint64_t			 chksum;
+	uint64_t			*chksump;
 
 	pjh.pjh_entsz = entsz;
 	pjh.pjh_nents = nents;
@@ -523,6 +525,14 @@ pjournal_format(const char *fn, uint32_t nents, uint32_t entsz, uint32_t ra,
 	pjh.pjh_unused = 0;
 	pjh.pjh_start_off = PJE_OFFSET;
 	pjh.pjh_magic = PJH_MAGIC;
+	
+	chksum = 0;
+	chksump = (uint64_t *) &pjh;
+	psc_assert((offsetof(struct _psc_journal_hdr, _pjh_chksum) % 8) == 0);
+	for (i = 0; i < (int)offsetof(struct _psc_journal_hdr, _pjh_chksum) / 8; i++) {
+		chksum ^= * chksump++;
+	}
+	pjh.pjh_chksum = chksum;
 
 	pj.pj_hdr = &pjh;
 	jbuf = pjournal_alloclog_ra(&pj);
