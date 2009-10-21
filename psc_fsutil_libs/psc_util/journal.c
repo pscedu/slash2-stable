@@ -90,10 +90,13 @@ static int
 pjournal_logwrite_internal(struct psc_journal *pj, struct psc_journal_xidhndl *xh,
 			    uint32_t slot, int type, void *data, size_t size)
 {
+	int				 i;
 	int				 rc;
 	int				 len;
 	struct psc_journal_enthdr	*pje;
 	int				 ntries;
+	uint64_t			 chksum;
+	uint64_t			*chksump;
 
 	rc = 0;
 	ntries = MAX_LOG_TRY;
@@ -111,19 +114,26 @@ pjournal_logwrite_internal(struct psc_journal *pj, struct psc_journal_xidhndl *x
 	psc_notify("got pje=%p", pje);
 	PJ_ULOCK(pj);
 
-	if (data)
-		memcpy(pje->pje_data, data, size);
-
 	pje->pje_magic = PJE_MAGIC;
 	pje->pje_type = type;
 	pje->pje_xid = xh->pjx_xid;
 	pje->pje_chksum = 0;
+	if (data) {
+		memcpy(pje->pje_data, data, size);
+	}
 
 	if (!(type & PJE_XCLOSED))
 		pje->pje_sid = atomic_inc_return(&xh->pjx_sid);
 	else
 		pje->pje_sid = atomic_read(&xh->pjx_sid);
 
+	chksum = 0;
+	chksump = (uint64_t *)pje;
+	for (i = 0; i < PJ_PJESZ(pj); i++) {
+		chksum ^= *chksump++;
+	}
+	pje->pje_chksum = chksum;
+	
 
 #ifdef NOT_READY
 
