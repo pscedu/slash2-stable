@@ -479,9 +479,11 @@ pjournal_load(const char *fn)
 	struct psc_journal		*pj;
 	struct psc_journal_hdr		*pjh;
 	struct psc_journal_enthdr	*pje;
+	uint64_t			 chksum;
+	uint64_t			*chksump;
 
-	pj = PSCALLOC(sizeof(*pj));
-	pjh = psc_alloc(sizeof(*pjh), PAF_PAGEALIGN | PAF_LOCK);
+	pj = PSCALLOC(sizeof(struct psc_journal));
+	pjh = psc_alloc(sizeof(struct psc_journal_hdr), PAF_PAGEALIGN | PAF_LOCK);
 	/*
 	 * To quote open(2), the O_DIRECT flag may impose alignment restrictions on the length 
 	 * and address of userspace buffers and the file offset of I/Os. Note that we are using
@@ -497,8 +499,27 @@ pjournal_load(const char *fn)
 		    sizeof(*pjh), rc);
 
 	pj->pj_hdr = pjh;
-	if (pjh->pjh_magic != PJH_MAGIC)
-		psc_fatalx("Journal header has bad magic!");
+	if (pjh->pjh_magic != PJH_MAGIC) {
+		PSCFREE(pj);
+		psc_freenl(pjh, sizeof(struct psc_journal_hdr));
+		pj = NULL;
+		psc_errorx("Journal header has a bad magic number!");
+		goto done; 
+	}
+
+	chksum = 0;
+	chksump = (uint64_t *) &pjh;
+	psc_assert((offsetof(struct _psc_journal_hdr, _pjh_chksum) % 8) == 0);
+	for (i = 0; i < (int)offsetof(struct _psc_journal_hdr, _pjh_chksum) / 8; i++) {
+		chksum ^= * chksump++;
+	}
+	if (pjh->pjh_chksum != chksum) {
+		PSCFREE(pj);
+		psc_freenl(pjh, sizeof(struct psc_journal_hdr));
+		pj = NULL;
+		psc_errorx("Journal header has an invalid checksum value");
+		goto done; 
+	}
 
 	LOCK_INIT(&pj->pj_lock);
 	INIT_PSCLIST_HEAD(&pj->pj_pndgxids);
@@ -510,7 +531,7 @@ pjournal_load(const char *fn)
 		pje = psc_alloc(PJ_PJESZ(pj), PAF_PAGEALIGN | PAF_LOCK);
 		dynarray_add(&pj->pj_bufs, pje);
 	}
-
+done:
 	return (pj);
 }
 
