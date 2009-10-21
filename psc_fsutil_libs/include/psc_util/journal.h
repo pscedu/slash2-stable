@@ -63,10 +63,7 @@ struct psc_journal {
 typedef void (*psc_jhandler)(struct dynarray *, int);
 
 /*
- * Start writing journal entries (pje) at offset
- * All disk I/O to the journal bypasses the buffer cache
- * and thus must be page-aligned.
- * Header must be smaller than PJE_OFFSET.
+ * Start offset to write journal entries (i.e., pje). This means that the log header must be smaller than PJE_OFFSET.
  */
 #define PJE_OFFSET		PJH_ALIGN_SIZE
 
@@ -100,6 +97,10 @@ struct psc_journal_enthdr {
 	uint64_t		pje_xid;
 	uint32_t		pje_sid;
 	uint64_t		pje_chksum;
+	/*
+	 * The length of the pje_data[0] is embedded and can be figured out
+	 * by log replay functions.
+	 */
 	char			pje_data[0];
 };
 
