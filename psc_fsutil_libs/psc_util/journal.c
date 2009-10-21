@@ -17,14 +17,14 @@
 #include "psc_util/lock.h"
 #include "psc_ds/dynarray.h"
 
-#define MAX_LOG_TRY		3			/* # of times of retry in case of a log write problem */
+#define MAX_LOG_TRY		3	/* # of times of retry in case of a log write problem */
 
 static int pjournal_logwrite(struct psc_journal_xidhndl *, int, void *, size_t);
 
 /*
  * pjournal_xnew - obtain an unused journal transaction ID.
  * @pj: the owning journal.
- * Returns: new, unused transaction ID.
+ * Returns: new transaction handle
  */
 struct psc_journal_xidhndl *
 pjournal_xnew(struct psc_journal *pj)
@@ -35,6 +35,8 @@ pjournal_xnew(struct psc_journal *pj)
 
 	xh->pjx_pj = pj;
 	LOCK_INIT(&xh->pjx_lock);
+	xh->pjx_flags = PJX_NONE;
+	atomic_set(&xh->pjx_sid, 0);
 	xh->pjx_tailslot = PJX_SLOT_ANY;
 	INIT_PSCLIST_ENTRY(&xh->pjx_lentry);
 
