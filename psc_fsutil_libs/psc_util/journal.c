@@ -506,9 +506,10 @@ pjournal_format(const char *fn, uint32_t nents, uint32_t entsz, uint32_t ra,
 		uint32_t opts)
 {
 	int32_t			 	 i;
-	struct psc_journal_enthdr	*h;
+	int32_t			 	 j;
 	int				 fd;
 	struct psc_journal		 pj;
+	struct psc_journal_enthdr	*pje;
 	struct psc_journal_hdr		 pjh;
 	ssize_t				 size;
 	unsigned char			*jbuf;
@@ -549,11 +550,18 @@ pjournal_format(const char *fn, uint32_t nents, uint32_t entsz, uint32_t ra,
 
 		count = (nents - slot <= ra) ? (nents - slot) : ra;
 		for (i = 0; i < count; i++) {
-			h = (void *)&jbuf[pjh.pjh_entsz * i];
-			h->pje_magic = PJE_MAGIC;
-			h->pje_type = PJE_FORMAT;
-			h->pje_xid = PJE_XID_NONE;
-			h->pje_sid = PJE_XID_NONE;
+			pje = (struct psc_journal_enthdr *)&jbuf[pjh.pjh_entsz * i];
+			pje->pje_magic = PJE_MAGIC;
+			pje->pje_type = PJE_FORMAT;
+			pje->pje_xid = PJE_XID_NONE;
+			pje->pje_sid = PJE_XID_NONE;
+			chksum = 0;
+			pje->pje_chksum = 0;
+			chksump = (uint64_t *)pje;
+			for (j = 0; j < (int) (PJ_PJESZ(&pj) / sizeof(*chksump)); j++) {
+				chksum ^= *chksump++;
+			}
+			pje->pje_chksum = chksum;
 		}
 		size = pwrite(fd, jbuf, pjh.pjh_entsz * count, 
 			(off_t)(PJE_OFFSET + (slot * pjh.pjh_entsz)));
