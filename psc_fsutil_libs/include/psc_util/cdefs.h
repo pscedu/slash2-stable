@@ -56,6 +56,7 @@
 #define ATTR_ISSET(c, a)	ATTR_TEST((c), (a))
 #define ATTR_UNSET(c, a)	((void)((c) &= ~(a)))
 #define ATTR_NONESET(c, a)	(((c) & (a)) == 0)
+#define ATTR_NOTSET(c, a)	ATTR_NONESET((c), (a))
 #define ATTR_RESET(c)		((c) = 0)
 
 #define ATTR_XSET(c, a)						\
