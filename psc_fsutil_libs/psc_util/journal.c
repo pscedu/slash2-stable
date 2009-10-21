@@ -465,11 +465,8 @@ pjournal_replay(struct psc_journal *pj, psc_jhandler pj_handler)
 }
 
 /*
- * pjournal_init - initialize the in-memory representation of a journal.
- * @pj: the journal.
- * @start: disk address of beginning of journal.
- * @nents: number of entries journal can store before wrapping.
- * @entsz: size of a journal entry.
+ * pjournal_load - initialize the in-memory representation of a journal.
+ * return: pj on success, NULL on failure
  */
 struct psc_journal *
 pjournal_load(const char *fn)
