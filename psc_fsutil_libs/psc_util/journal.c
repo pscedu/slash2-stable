@@ -469,7 +469,11 @@ pjournal_load(const char *fn)
 
 	pj = PSCALLOC(sizeof(*pj));
 	pjh = psc_alloc(sizeof(*pjh), PAF_PAGEALIGN | PAF_LOCK);
-
+	/*
+	 * To quote open(2), the O_DIRECT flag may impose alignment restrictions on the length 
+	 * and address of userspace buffers and the file offset of I/Os. Note that we are using
+	 * 512 byte log entries.
+	 */
 	pj->pj_fd = open(fn, O_RDWR | O_SYNC | O_DIRECT);
 	if (pj->pj_fd == -1)
 		psc_fatal("open %s", fn);

@@ -72,7 +72,7 @@ typedef void (*psc_jhandler)(struct dynarray *, int);
 #define PJE_MAGIC		0x45678912aabbccddULL	/* magic number for each journal entry */
 
 /*
- * Journal entry types - higher bits after PJET_LASTBIT are used to identify log users.
+ * Journal entry types - higher bits after PJET_LASTBIT are used to identify different log users.
  */
 #define PJE_NONE		(0 << 0)		/* null journal record */
 #define PJE_FORMAT		(1 << 1)		/* newly-formatted journal record */
@@ -87,7 +87,7 @@ typedef void (*psc_jhandler)(struct dynarray *, int);
  * @pje_type: app-specific log entry type.
  * @pje_xid: journal transaction id.
  * @pje_sid: xid sub-id.
- * @pje_chksum: XOR checksum
+ * @pje_chksum: simple XOR checksum
  * @pje_data: application data.
  * Notes: at some point we may want to make this into a footer which has
  *    a crc field.
@@ -101,8 +101,7 @@ struct psc_journal_enthdr {
 	char			pje_data[0];
 };
 
-#define PJ_PJESZ(p) ((size_t)((sizeof(struct psc_journal_enthdr)) \
-			     + (p)->pj_hdr->pjh_entsz))
+#define	PJ_PJESZ(p)		((p)->pj_hdr->pjh_entsz)
 
 /*
  * psc_journal_xidhndl - journal transaction id handle.
@@ -139,8 +138,5 @@ void				pjournal_format(const char *, uint32_t, uint32_t, uint32_t, uint32_t);
 struct psc_journal_xidhndl *	pjournal_xnew(struct psc_journal *);
 int				pjournal_xadd(struct psc_journal_xidhndl *, int, void *, size_t);
 int				pjournal_xend(struct psc_journal_xidhndl *);
-
-
-#define pjournal_xidhndl_free(xh)	PSCFREE(xh)
 
 #endif /* _PFL_JOURNAL_H_ */
