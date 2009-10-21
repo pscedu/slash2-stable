@@ -117,6 +117,7 @@ pjournal_logwrite_internal(struct psc_journal *pj, struct psc_journal_xidhndl *x
 	pje->pje_magic = PJE_MAGIC;
 	pje->pje_type = type;
 	pje->pje_xid = xh->pjx_xid;
+	pje->pje_chksum = 0;
 
 	if (!(type & PJE_XCLOSED))
 		pje->pje_sid = atomic_inc_return(&xh->pjx_sid);
