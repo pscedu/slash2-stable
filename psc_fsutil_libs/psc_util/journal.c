@@ -337,19 +337,24 @@ __static int
 pjournal_scan_slots(struct psc_journal *pj)
 {
 	int				 i;
+	int				 j;
 	int				 rc;
 	struct psc_journal_enthdr	*pje;
 	uint32_t			 slot;
 	unsigned char			*jbuf;
+	int				 nbad;
 	int				 count;
 	int				 nopen;
 	int				 nclose;
+	uint64_t			 chksum;
+	uint64_t			*chksump;
 	int				 nformat;
 	uint64_t			 last_xid;
 	int				 last_slot;
 
 	rc = 0;
 	slot = 0;
+	nbad = 0;
 	nopen = 0;
 	nclose = 0;
 	nformat = 0;
@@ -370,6 +375,17 @@ pjournal_scan_slots(struct psc_journal *pj)
 		}
 		for (i = 0; i < count; i++) {
 			pje = (struct psc_journal_enthdr *)&jbuf[pj->pj_hdr->pjh_entsz * i];
+			chksum = 0;
+			chksump = (uint64_t *)pje;
+			for (j = 0; j < (int) (PJ_PJESZ(pj) / sizeof(*chksump)); j++) {
+				chksum ^= *chksump++;
+			}
+			if (chksum) {
+				psc_warnx("Journal %p: found an invalid log entry at slot %d", pj, slot+i);
+				nbad++;
+				rc = -1;
+			}
+	
 			if (pje->pje_type & PJE_FORMAT) {
 				nformat++;
 				continue;
@@ -393,8 +409,8 @@ pjournal_scan_slots(struct psc_journal *pj)
 	pj->pj_nextwrite = last_slot;
 	qsort(pj->pj_bufs.da_items, pj->pj_bufs.da_pos, sizeof(void *), pjournal_xid_cmp);
 	psc_freenl(jbuf, PJ_PJESZ(pj));
-	psc_warnx("Journal statistics: %d format, %d close, %d open, %d scan, %d total", 
-		   nformat, nclose, nopen, slot, pj->pj_hdr->pjh_nents);
+	psc_warnx("Journal statistics: %d format, %d close, %d open, %d bad, %d scan, %d total", 
+		   nformat, nclose, nopen, nbad, slot, pj->pj_hdr->pjh_nents);
 	return (rc);
 }
 
