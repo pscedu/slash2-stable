@@ -15,6 +15,7 @@
 .It Ev PSC_DUMPSTACK
 .It Ev PSC_LOG_FORMAT
 .It Ev PSC_LOG_LEVEL
+.It Ev PSC_LOG_LEVEL_ Ns Ar subsys
 .It Ev USOCK_CPORT
 .It Ev USOCK_SOCKBUFSIZ
 .El
@@ -109,6 +110,13 @@ Ranges from
 to
 .Li 6
 .Pq full trace information .
+.It Ev PSC_LOG_LEVEL_ Ns Ar subsys
+Like
+.Ev PSC_LOG_LEVEL ,
+but applies only to the given
+.Ar subsys .
+Control inquiries are available to most daemons that can reveal
+registered subsystems.
 .It Ev USOCK_CPORT
 Specify an alternate remote/peer
 .Xr tcp 7
