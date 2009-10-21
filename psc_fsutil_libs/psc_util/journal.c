@@ -5,12 +5,14 @@
 
 #include <sys/types.h>
 
+#include <err.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <inttypes.h>
 #include <string.h>
 #include <unistd.h>
 
+#include "pfl/types.h"
 #include "psc_util/alloc.h"
 #include "psc_util/atomic.h"
 #include "psc_util/journal.h"
@@ -513,10 +515,11 @@ pjournal_load(const char *fn)
 		chksum ^= * chksump++;
 	}
 	if (pjh->pjh_chksum != chksum) {
+		errx(1, "journal header has an invalid checksum value "
+		    PRI_PSC_CRC" vs "PRI_PSC_CRC, pjh->pjh_chksum, chksum);
 		PSCFREE(pj);
 		psc_freenl(pjh, sizeof(struct psc_journal_hdr));
 		pj = NULL;
-		psc_errorx("Journal header has an invalid checksum value");
 		goto done; 
 	}
 
