@@ -96,9 +96,10 @@ struct psc_journal_enthdr {
 	uint32_t		pje_type;		/* see above */
 	uint64_t		pje_xid;
 	uint32_t		pje_sid;
+	uint32_t		pje_len;		/* for calculating checksum of the following data */
 	uint64_t		pje_chksum;
 	/*
-	 * The length of the pje_data[0] is embedded and can be figured out
+	 * The length of the pje_data[0] is also embedded and can be figured out
 	 * by log replay functions.
 	 */
 	char			pje_data[0];

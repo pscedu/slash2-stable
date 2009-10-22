@@ -13,6 +13,7 @@
 #include <unistd.h>
 
 #include "pfl/types.h"
+#include "psc_util/crc.h"
 #include "psc_util/alloc.h"
 #include "psc_util/atomic.h"
 #include "psc_util/journal.h"
@@ -94,13 +95,11 @@ static int
 pjournal_logwrite_internal(struct psc_journal *pj, struct psc_journal_xidhndl *xh,
 			    uint32_t slot, int type, void *data, size_t size)
 {
-	int				 i;
 	int				 rc;
 	int				 len;
 	struct psc_journal_enthdr	*pje;
 	int				 ntries;
 	uint64_t			 chksum;
-	uint64_t			*chksump;
 
 	rc = 0;
 	ntries = MAX_LOG_TRY;
@@ -121,20 +120,21 @@ pjournal_logwrite_internal(struct psc_journal *pj, struct psc_journal_xidhndl *x
 	pje->pje_magic = PJE_MAGIC;
 	pje->pje_type = type;
 	pje->pje_xid = xh->pjx_xid;
+	pje->pje_len = size;
 	if (!(type & PJE_XCLOSED)) {
 		pje->pje_sid = atomic_inc_return(&xh->pjx_sid);
 	} else {
 		pje->pje_sid = atomic_read(&xh->pjx_sid);
 	}
 	if (data) {
+		psc_assert(size);
 		memcpy(pje->pje_data, data, size);
 	}
-	chksum = 0;
-	pje->pje_chksum = 0;
-	chksump = (uint64_t *)pje;
-	for (i = 0; i < (int) (PJ_PJESZ(pj) / sizeof(*chksump)); i++) {
-		chksum ^= *chksump++;
-	}
+
+	PSC_CRC_INIT(chksum);
+	psc_crc_add(&chksum, pje, offsetof(struct psc_journal_enthdr, pje_chksum));
+	psc_crc_add(&chksum, pje->pje_data, pje->pje_len);
+	PSC_CRC_FIN(chksum);
 	pje->pje_chksum = chksum;
 	
 #ifdef NOT_READY
@@ -341,7 +341,6 @@ __static int
 pjournal_scan_slots(struct psc_journal *pj)
 {
 	int				 i;
-	int				 j;
 	int				 rc;
 	struct psc_journal_enthdr	*pje;
 	uint32_t			 slot;
@@ -351,7 +350,6 @@ pjournal_scan_slots(struct psc_journal *pj)
 	int				 nopen;
 	int				 nclose;
 	uint64_t			 chksum;
-	uint64_t			*chksump;
 	int				 nformat;
 	uint64_t			 last_xid;
 	int				 last_slot;
@@ -379,12 +377,13 @@ pjournal_scan_slots(struct psc_journal *pj)
 		}
 		for (i = 0; i < count; i++) {
 			pje = (struct psc_journal_enthdr *)&jbuf[pj->pj_hdr->pjh_entsz * i];
-			chksum = 0;
-			chksump = (uint64_t *)pje;
-			for (j = 0; j < (int) (PJ_PJESZ(pj) / sizeof(*chksump)); j++) {
-				chksum ^= *chksump++;
-			}
-			if (chksum) {
+
+			PSC_CRC_INIT(chksum);
+			psc_crc_add(&chksum, pje, offsetof(struct psc_journal_enthdr, pje_chksum));
+			psc_crc_add(&chksum, pje->pje_data, pje->pje_len);
+			PSC_CRC_FIN(chksum);
+
+			if (pje->pje_chksum != chksum) {
 				psc_warnx("Journal %p: found an invalid log entry at slot %d", pj, slot+i);
 				nbad++;
 				rc = -1;
@@ -481,7 +480,6 @@ pjournal_load(const char *fn)
 	struct psc_journal_hdr		*pjh;
 	struct psc_journal_enthdr	*pje;
 	uint64_t			 chksum;
-	uint64_t			*chksump;
 
 	pj = PSCALLOC(sizeof(struct psc_journal));
 	pjh = psc_alloc(sizeof(struct psc_journal_hdr), PAF_PAGEALIGN | PAF_LOCK);
@@ -508,12 +506,10 @@ pjournal_load(const char *fn)
 		goto done; 
 	}
 
-	chksum = 0;
-	chksump = (uint64_t *) pjh;
-	psc_assert((offsetof(struct _psc_journal_hdr, _pjh_chksum) % 8) == 0);
-	for (i = 0; i < (int)offsetof(struct _psc_journal_hdr, _pjh_chksum) / 8; i++) {
-		chksum ^= * chksump++;
-	}
+	PSC_CRC_INIT(chksum);
+	psc_crc_add(&chksum, &pjh, offsetof(struct _psc_journal_hdr, _pjh_chksum));
+	PSC_CRC_FIN(chksum);
+
 	if (pjh->pjh_chksum != chksum) {
 		errx(1, "journal header has an invalid checksum value "
 		    PRI_PSC_CRC" vs "PRI_PSC_CRC, pjh->pjh_chksum, chksum);
@@ -545,7 +541,6 @@ pjournal_format(const char *fn, uint32_t nents, uint32_t entsz, uint32_t ra,
 		uint32_t opts)
 {
 	int32_t			 	 i;
-	int32_t			 	 j;
 	int				 fd;
 	struct psc_journal		 pj;
 	struct psc_journal_enthdr	*pje;
@@ -555,7 +550,6 @@ pjournal_format(const char *fn, uint32_t nents, uint32_t entsz, uint32_t ra,
 	uint32_t			 slot;
 	int				 count;
 	uint64_t			 chksum;
-	uint64_t			*chksump;
 
 	pjh.pjh_entsz = entsz;
 	pjh.pjh_nents = nents;
@@ -566,12 +560,9 @@ pjournal_format(const char *fn, uint32_t nents, uint32_t entsz, uint32_t ra,
 	pjh.pjh_start_off = PJE_OFFSET;
 	pjh.pjh_magic = PJH_MAGIC;
 	
-	chksum = 0;
-	chksump = (uint64_t *) &pjh;
-	psc_assert((offsetof(struct _psc_journal_hdr, _pjh_chksum) % 8) == 0);
-	for (i = 0; i < (int)offsetof(struct _psc_journal_hdr, _pjh_chksum) / 8; i++) {
-		chksum ^= * chksump++;
-	}
+	PSC_CRC_INIT(chksum);
+	psc_crc_add(&chksum, &pjh, offsetof(struct _psc_journal_hdr, _pjh_chksum));
+	PSC_CRC_FIN(chksum);
 	pjh.pjh_chksum = chksum;
 
 	pj.pj_hdr = &pjh;
@@ -594,12 +585,13 @@ pjournal_format(const char *fn, uint32_t nents, uint32_t entsz, uint32_t ra,
 			pje->pje_type = PJE_FORMAT;
 			pje->pje_xid = PJE_XID_NONE;
 			pje->pje_sid = PJE_XID_NONE;
-			chksum = 0;
-			pje->pje_chksum = 0;
-			chksump = (uint64_t *)pje;
-			for (j = 0; j < (int) (PJ_PJESZ(&pj) / sizeof(*chksump)); j++) {
-				chksum ^= *chksump++;
-			}
+			pje->pje_len = 0;
+
+			PSC_CRC_INIT(chksum);
+			psc_crc_add(&chksum, pje, offsetof(struct psc_journal_enthdr, pje_chksum));
+			psc_crc_add(&chksum, pje->pje_data, pje->pje_len);
+			PSC_CRC_FIN(chksum);
+
 			pje->pje_chksum = chksum;
 		}
 		size = pwrite(fd, jbuf, pjh.pjh_entsz * count, 
