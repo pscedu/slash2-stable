@@ -96,7 +96,6 @@ pjournal_logwrite_internal(struct psc_journal *pj, struct psc_journal_xidhndl *x
 			    uint32_t slot, int type, void *data, size_t size)
 {
 	int				 rc;
-	int				 len;
 	struct psc_journal_enthdr	*pje;
 	int				 ntries;
 	uint64_t			 chksum;
@@ -107,11 +106,11 @@ pjournal_logwrite_internal(struct psc_journal *pj, struct psc_journal_xidhndl *x
 	psc_assert(size + sizeof(*pje) <= PJ_PJESZ(pj));
 
 	PJ_LOCK(pj);
-	while (!(len = dynarray_len(&pj->pj_bufs))) {
+	while (!dynarray_len(&pj->pj_bufs)) {
 		psc_waitq_wait(&pj->pj_waitq, &pj->pj_lock);
 		PJ_LOCK(pj);
 	}
-	pje = dynarray_getpos(&pj->pj_bufs, len-1);
+	pje = dynarray_getpos(&pj->pj_bufs, 0);
 	psc_assert(pje);
 	dynarray_remove(&pj->pj_bufs, pje);
 	PJ_ULOCK(pj);
