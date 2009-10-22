@@ -186,6 +186,7 @@ pjournal_logwrite_internal(struct psc_journal *pj, struct psc_journal_xidhndl *x
  * @type: the application-specific log entry type.
  * @xid: transaction ID.
  * @data: the journal entry contents to store.
+ * @size: size of the data
  * Returns: 0 on success, -1 on error.
  */
 static int
@@ -221,6 +222,10 @@ pjournal_logwrite(struct psc_journal_xidhndl *xh, int type, void *data,
 		}
 		tail_slot = t->pjx_tailslot;
 	} else {
+		/*
+		 * No open transactions.  Insert a fresh startup to cut down replay
+		 * time in case of a crash.
+		 */
 		type |= PJE_STARTUP;
 	}
 
@@ -310,10 +315,11 @@ pjournal_alloclog_ra(struct psc_journal *pj)
 }
 
 /*
- * Remove all journal entries with the given xid from the journal.
+ * Remove a journal entry if it either has the given xid (mode = 1) or has a xid that is
+ * less than the give xid (mode = 2).
  */
 __static void 
-pjournal_remove_entries(struct psc_journal *pj, uint64_t xid)
+pjournal_remove_entries(struct psc_journal *pj, uint64_t xid, int mode)
 {
 	int				 i;
 	struct psc_journal_enthdr	*pje;
@@ -324,7 +330,13 @@ pjournal_remove_entries(struct psc_journal *pj, uint64_t xid)
 		scan = 0;
 		for (i = 0; i < dynarray_len(&pj->pj_bufs); i++) {
 			pje = dynarray_getpos(&pj->pj_bufs, i);
-			if (pje->pje_xid == xid) {
+			if (mode == 1 && pje->pje_xid == xid) {
+				dynarray_remove(&pj->pj_bufs, pje);
+				psc_freenl(pje, PJ_PJESZ(pj));
+				scan = 1;
+				break;
+			}
+			if (mode == 2 && pje->pje_xid < xid) {
 				dynarray_remove(&pj->pj_bufs, pje);
 				psc_freenl(pje, PJ_PJESZ(pj));
 				scan = 1;
@@ -394,7 +406,7 @@ pjournal_scan_slots(struct psc_journal *pj)
 			pje = (struct psc_journal_enthdr *)&jbuf[pj->pj_hdr->pjh_entsz * i];
 			if (pje->pje_magic != PJE_MAGIC) {
 				nmagic++;
-				psc_warnx("journal slot %d has a bad magic number !", slot+i);
+				psc_warnx("journal slot %d has a bad magic number!", slot+i);
 				continue;
 			}
 
@@ -404,7 +416,7 @@ pjournal_scan_slots(struct psc_journal *pj)
 			PSC_CRC_FIN(chksum);
 
 			if (pje->pje_chksum != chksum) {
-				psc_warnx("Journal %p: found an invalid log entry at slot %d", pj, slot+i);
+				psc_warnx("Journal %p: found an invalid log entry at slot %d!", pj, slot+i);
 				nchksum++;
 				rc = -1;
 			}
@@ -417,8 +429,14 @@ pjournal_scan_slots(struct psc_journal *pj)
 				last_slot = slot + i;
 			}
 			if (pje->pje_type & PJE_XCLOSED) {
-				pjournal_remove_entries(pj, pje->pje_xid);
+				pjournal_remove_entries(pj, pje->pje_xid, 1);
 				nclose++;
+				continue;
+			}
+			if (pje->pje_type & PJE_STARTUP) {
+				pjournal_remove_entries(pj, pje->pje_xid, 2);
+			}
+			if (pje->pje_len == 0) {
 				continue;
 			}
 			nopen++;
@@ -477,7 +495,7 @@ pjournal_replay(struct psc_journal *pj, psc_jhandler pj_handler)
 		ntrans++;
 		(pj_handler)(&replaybufs, rc);
 
-		pjournal_remove_entries(pj, xid);
+		pjournal_remove_entries(pj, xid, 1);
 		dynarray_free(&replaybufs);
 	}
 	dynarray_free(&pj->pj_bufs);
