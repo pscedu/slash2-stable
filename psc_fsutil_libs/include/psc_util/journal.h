@@ -62,7 +62,7 @@ struct psc_journal {
 	struct dynarray		 pj_bufs;
 	struct psc_journal_hdr	*pj_hdr;
 	struct psc_waitq	 pj_waitq;
-	char			 pj_flags;
+	int			 pj_flags;
 };
 
 typedef void (*psc_jhandler)(struct dynarray *, int);
@@ -79,11 +79,11 @@ typedef void (*psc_jhandler)(struct dynarray *, int);
  * Journal entry types - higher bits after PJET_LASTBIT are used to identify different log users.
  */
 #define PJE_NONE		(0 << 0)		/* null journal record */
-#define PJE_FORMAT		(1 << 1)		/* newly-formatted journal record */
-#define PJE_XCLOSED		(1 << 2)		/* xid is closed */
-#define PJE_XSTARTED		(1 << 3)		/* transaction began */
-#define PJE_STARTUP		(1 << 4)		/* system startup */
-#define PJE_LASTBIT		 4			/* denote the last used bit */
+#define PJE_FORMAT		(1 << 0)		/* newly-formatted journal record */
+#define PJE_XCLOSED		(1 << 1)		/* xid is closed */
+#define PJE_XSTARTED		(1 << 2)		/* transaction began */
+#define PJE_STARTUP		(1 << 3)		/* system startup */
+#define PJE_LASTBIT		 3			/* denote the last used bit */
 
 /*
  * psc_journal_enthdr - journal entry header.
@@ -103,7 +103,8 @@ struct psc_journal_enthdr {
 	uint32_t		pje_sid;
 	/* 
 	 * This field is used to calculate the CRC checksum of the following data.
-	 * It also indicates if the log entry is a special one (i.e., one without payload).
+	 * It also indicates if the log entry is a special one (i.e., one without
+	 * payload).
 	 */
 	uint32_t		pje_len;		
 	uint64_t		pje_chksum;

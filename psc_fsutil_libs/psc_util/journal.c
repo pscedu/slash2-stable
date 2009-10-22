@@ -419,9 +419,11 @@ pjournal_scan_slots(struct psc_journal *pj)
 				psc_warnx("Journal %p: found an invalid log entry at slot %d!", pj, slot+i);
 				nchksum++;
 				rc = -1;
+				continue;
 			}
 			if (pje->pje_type & PJE_FORMAT) {
 				nformat++;
+				psc_assert(pje->pje_len == 0);
 				continue;
 			}
 			if (pje->pje_xid >= last_xid) {
@@ -429,6 +431,7 @@ pjournal_scan_slots(struct psc_journal *pj)
 				last_slot = slot + i;
 			}
 			if (pje->pje_type & PJE_XCLOSED) {
+				psc_assert(pje->pje_len == 0);
 				pjournal_remove_entries(pj, pje->pje_xid, 1);
 				nclose++;
 				continue;
@@ -486,6 +489,7 @@ pjournal_replay(struct psc_journal *pj, psc_jhandler pj_handler)
 
 		for (i = 0; i < dynarray_len(&pj->pj_bufs); i++) {
 			tmppje = dynarray_getpos(&pj->pj_bufs, i);
+			psc_assert(tmppje->pje_len != 0);
 			if (tmppje->pje_xid == xid) {
 				nents++;
 				dynarray_add(&replaybufs, tmppje);
@@ -531,7 +535,7 @@ pjournal_load(const char *fn)
 
 	rc = pread(pj->pj_fd, pjh, sizeof(*pjh), 0);
 	if (rc != sizeof(*pjh))
-		psc_fatal("read journal header: want %zu got %zd",
+		psc_fatal("Fail to read journal header: want %zu got %zd",
 		    sizeof(*pjh), rc);
 
 	pj->pj_hdr = pjh;
@@ -549,7 +553,7 @@ pjournal_load(const char *fn)
 	PSC_CRC_FIN(chksum);
 
 	if (pjh->pjh_chksum != chksum) {
-		errx(1, "journal header has an invalid checksum value "
+		errx(1, "Journal header has an invalid checksum value "
 		    PRI_PSC_CRC" vs "PRI_PSC_CRC, pjh->pjh_chksum, chksum);
 		PSCFREE(pj);
 		psc_freenl(pjh, sizeof(struct psc_journal_hdr));
@@ -725,10 +729,9 @@ pjournal_dump(const char *fn)
 				psc_warnx("journal slot %d has bad checksum!", (slot+i));
 				continue;
 			}
-			psc_info("slot=%u magic=%"PRIx64
-				" type=%x xid=%"PRIx64" sid=%d\n",
-				(slot+i), pje->pje_magic,
-				pje->pje_type, pje->pje_xid, pje->pje_sid);
+			psc_info("slot=%u magic=%"PRIx64" type=%x xid=%"PRIx64" sid=%d\n",
+				  (slot+i), pje->pje_magic,
+				  pje->pje_type, pje->pje_xid, pje->pje_sid);
 		}
 
 	}
