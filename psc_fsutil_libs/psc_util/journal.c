@@ -627,46 +627,56 @@ pjournal_close(struct psc_journal *pj)
 int
 pjournal_dump(const char *fn)
 {
-	uint32_t			 i;
-	struct psc_journal_enthdr	*h;
+	int				 i;
 	uint32_t			 ra;
 	struct psc_journal		*pj;
 	struct psc_journal_hdr		*pjh;
+	struct psc_journal_enthdr	*pje;
 	uint32_t			 slot;
 	unsigned char			*jbuf;
+	ssize_t				 size;
+	int				 count;
+	uint64_t			 chksum;
 
 	pj = pjournal_load(fn);
 	pjh = pj->pj_hdr;
 
-	psc_info("entsz=%u nents=%u vers=%u opts=%u ra=%u "
-		"off=%"PRIx64" magic=%"PRIx64,
-		pjh->pjh_entsz, pjh->pjh_nents, pjh->pjh_version, pjh->pjh_options,
-		pjh->pjh_readahead, pjh->pjh_start_off, pjh->pjh_magic);
+	psc_info("Journal header info: "
+		 "entsz=%u nents=%u vers=%u opts=%u ra=%u off=%"PRIx64" magic=%"PRIx64,
+		 pjh->pjh_entsz, pjh->pjh_nents, pjh->pjh_version, pjh->pjh_options,
+		 pjh->pjh_readahead, pjh->pjh_start_off, pjh->pjh_magic);
 
 	jbuf = pjournal_alloclog_ra(pj);
 
-	for (slot = 0, ra=pjh->pjh_readahead; slot < pjh->pjh_nents; slot += ra) {
-		/* Make sure we don't read past the end. */
-		while ((slot + ra) > pjh->pjh_nents)
-			ra--;
+	for (slot = 0, ra=pjh->pjh_readahead; slot < pjh->pjh_nents; slot += count) {
 
-		if (pread(pj->pj_fd, jbuf, (pjh->pjh_entsz * ra),
-			   (off_t)(PJE_OFFSET + (slot * pjh->pjh_entsz)))
-		    != (pjh->pjh_entsz * ra))
+		count = (pjh->pjh_nents - slot <= ra) ? (pjh->pjh_nents - slot) : ra;
+		size = pread(pj->pj_fd, jbuf, (pjh->pjh_entsz * count), 
+			    (off_t)(PJE_OFFSET + (slot * pjh->pjh_entsz)));
+
+		if (size == -1 || size != (pjh->pjh_entsz * count))
 			psc_fatal("Failed to read entries");
 
-		for (i = 0; i < ra; i++) {
-			h = (void *)&jbuf[pjh->pjh_entsz * i];
-
+		for (i = 0; i < count; i++) {
+			pje = (void *)&jbuf[pjh->pjh_entsz * i];
+			if (pje->pje_magic != PJE_MAGIC) {
+				psc_warnx("journal slot %d has bad magic!", (slot+i));
+				continue;
+			}
+			PSC_CRC_INIT(chksum);
+			psc_crc_add(&chksum, pje, offsetof(struct psc_journal_enthdr, pje_chksum));
+			psc_crc_add(&chksum, pje->pje_data, pje->pje_len);
+			PSC_CRC_FIN(chksum);
+			if (pje->pje_chksum != chksum) {
+				psc_warnx("journal slot %d has bad checksum!", (slot+i));
+				continue;
+			}
 			psc_info("slot=%u magic=%"PRIx64
 				" type=%x xid=%"PRIx64" sid=%d\n",
-				(slot+i), h->pje_magic,
-				h->pje_type, h->pje_xid, h->pje_sid);
-
-			if (h->pje_magic != PJE_MAGIC)
-				psc_warnx("journal entry %u has bad magic!",
-					  (slot+i));
+				(slot+i), pje->pje_magic,
+				pje->pje_type, pje->pje_xid, pje->pje_sid);
 		}
+
 	}
 
 	if (close(pj->pj_fd) < 0)
