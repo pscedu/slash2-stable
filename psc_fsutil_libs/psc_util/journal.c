@@ -507,7 +507,8 @@ pjournal_load(const char *fn)
 	}
 
 	PSC_CRC_INIT(chksum);
-	psc_crc_add(&chksum, &pjh, offsetof(struct _psc_journal_hdr, _pjh_chksum));
+	i = offsetof(struct _psc_journal_hdr, _pjh_chksum);
+	psc_crc_add(&chksum, pjh, offsetof(struct _psc_journal_hdr, _pjh_chksum));
 	PSC_CRC_FIN(chksum);
 
 	if (pjh->pjh_chksum != chksum) {
@@ -568,6 +569,7 @@ pjournal_format(const char *fn, uint32_t nents, uint32_t entsz, uint32_t ra,
 	pj.pj_hdr = &pjh;
 	jbuf = pjournal_alloclog_ra(&pj);
 
+	errno = 0;
 	if ((fd = open(fn, O_WRONLY|O_CREAT|O_TRUNC, 0600)) < 0)
 		psc_fatal("Could not create or truncate the log file %s", fn);
 
