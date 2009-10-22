@@ -637,6 +637,15 @@ pjournal_dump(const char *fn)
 	ssize_t				 size;
 	int				 count;
 	uint64_t			 chksum;
+	int				 ntotal;
+	int				 nmagic;
+	int				 nchksum;
+	int				 nformat;
+
+	ntotal = 0;
+	nmagic = 0;
+	nchksum = 0;
+	nformat = 0;
 
 	pj = pjournal_load(fn);
 	pjh = pj->pj_hdr;
@@ -658,9 +667,15 @@ pjournal_dump(const char *fn)
 			psc_fatal("Failed to read entries");
 
 		for (i = 0; i < count; i++) {
+			ntotal++;
 			pje = (void *)&jbuf[pjh->pjh_entsz * i];
 			if (pje->pje_magic != PJE_MAGIC) {
+				nmagic++;
 				psc_warnx("journal slot %d has bad magic!", (slot+i));
+				continue;
+			}
+			if (pje->pje_magic == PJE_FORMAT) {
+				nformat++;
 				continue;
 			}
 			PSC_CRC_INIT(chksum);
@@ -668,6 +683,7 @@ pjournal_dump(const char *fn)
 			psc_crc_add(&chksum, pje->pje_data, pje->pje_len);
 			PSC_CRC_FIN(chksum);
 			if (pje->pje_chksum != chksum) {
+				nchksum++;
 				psc_warnx("journal slot %d has bad checksum!", (slot+i));
 				continue;
 			}
@@ -678,11 +694,13 @@ pjournal_dump(const char *fn)
 		}
 
 	}
-
 	if (close(pj->pj_fd) < 0)
 		psc_fatal("Failed to close journal fd");
 
 	psc_freenl(jbuf, PJ_PJESZ(pj));
 	pjournal_close(pj);
+
+	psc_info("Journal statistics: %d total, %d format, %d bad magic, %d bad checksum",
+		 ntotal, nformat, nmagic, nchksum);
 	return (0);
 }
