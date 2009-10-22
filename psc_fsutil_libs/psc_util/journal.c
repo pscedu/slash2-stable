@@ -345,20 +345,22 @@ pjournal_scan_slots(struct psc_journal *pj)
 	struct psc_journal_enthdr	*pje;
 	uint32_t			 slot;
 	unsigned char			*jbuf;
-	int				 nbad;
 	int				 count;
 	int				 nopen;
+	int				 nmagic;
 	int				 nclose;
 	uint64_t			 chksum;
 	int				 nformat;
+	int				 nchksum;
 	uint64_t			 last_xid;
 	int				 last_slot;
 
 	rc = 0;
 	slot = 0;
-	nbad = 0;
 	nopen = 0;
+	nmagic = 0;
 	nclose = 0;
+	nchksum = 0;
 	nformat = 0;
 	last_xid = PJE_XID_NONE;
 	last_slot = PJX_SLOT_ANY;
@@ -377,6 +379,11 @@ pjournal_scan_slots(struct psc_journal *pj)
 		}
 		for (i = 0; i < count; i++) {
 			pje = (struct psc_journal_enthdr *)&jbuf[pj->pj_hdr->pjh_entsz * i];
+			if (pje->pje_magic != PJE_MAGIC) {
+				nmagic++;
+				psc_warnx("journal slot %d has a bad magic number !", slot+i);
+				continue;
+			}
 
 			PSC_CRC_INIT(chksum);
 			psc_crc_add(&chksum, pje, offsetof(struct psc_journal_enthdr, pje_chksum));
@@ -385,10 +392,9 @@ pjournal_scan_slots(struct psc_journal *pj)
 
 			if (pje->pje_chksum != chksum) {
 				psc_warnx("Journal %p: found an invalid log entry at slot %d", pj, slot+i);
-				nbad++;
+				nchksum++;
 				rc = -1;
 			}
-	
 			if (pje->pje_type & PJE_FORMAT) {
 				nformat++;
 				continue;
@@ -412,8 +418,8 @@ pjournal_scan_slots(struct psc_journal *pj)
 	pj->pj_nextwrite = last_slot;
 	qsort(pj->pj_bufs.da_items, pj->pj_bufs.da_pos, sizeof(void *), pjournal_xid_cmp);
 	psc_freenl(jbuf, PJ_PJESZ(pj));
-	psc_warnx("Journal statistics: %d format, %d close, %d open, %d bad, %d scan, %d total", 
-		   nformat, nclose, nopen, nbad, slot, pj->pj_hdr->pjh_nents);
+	psc_warnx("Journal statistics: %d format, %d close, %d open, %d bad magic, %d bad checksum, %d scan, %d total", 
+		   nformat, nclose, nopen, nmagic, nchksum, slot, pj->pj_hdr->pjh_nents);
 	return (rc);
 }
 
