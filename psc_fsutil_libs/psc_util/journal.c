@@ -509,7 +509,7 @@ pjournal_load(const char *fn)
 	}
 
 	chksum = 0;
-	chksump = (uint64_t *) &pjh;
+	chksump = (uint64_t *) pjh;
 	psc_assert((offsetof(struct _psc_journal_hdr, _pjh_chksum) % 8) == 0);
 	for (i = 0; i < (int)offsetof(struct _psc_journal_hdr, _pjh_chksum) / 8; i++) {
 		chksum ^= * chksump++;
