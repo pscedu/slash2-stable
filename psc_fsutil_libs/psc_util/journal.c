@@ -160,13 +160,14 @@ pjournal_logwrite_internal(struct psc_journal *pj, struct psc_journal_xidhndl *x
 	PJ_LOCK(pj);
 	dynarray_add(&pj->pj_bufs, pje);
 	psc_waitq_wakeall(&pj->pj_waitq);
-	PJ_ULOCK(pj);
 
 	if ((xh->pjx_flags & PJX_XCLOSED) && (xh->pjx_tailslot == pj->pj_nextwrite)) {
 		/* We are the tail so unblock the journal.  */
 		psc_warnx("Journal %p unblocking slot %d - owned by xid %"PRIx64, pj, slot, xh->pjx_xid);
 		psc_waitq_wakeall(&pj->pj_waitq);
 	}
+	PJ_ULOCK(pj);
+
 	return (rc);
 }
 
@@ -531,6 +532,7 @@ pjournal_load(const char *fn)
 	LOCK_INIT(&pj->pj_lock);
 	INIT_PSCLIST_HEAD(&pj->pj_pndgxids);
 	psc_waitq_init(&pj->pj_waitq);
+	pj->pj_flags = PJ_NONE;
 
 	dynarray_init(&pj->pj_bufs);
 	dynarray_ensurelen(&pj->pj_bufs, MAX_NUM_PJBUF);

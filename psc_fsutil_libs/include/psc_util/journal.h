@@ -48,6 +48,10 @@ struct psc_journal_hdr {
 
 #define	MAX_NUM_PJBUF		 8		/* number of journal buffers to keep around */
 
+#define PJ_NONE			(0 << 0)
+#define PJ_WANTBUF		(1 << 0)
+#define PJ_WANTSLOT		(1 << 1)
+
 struct psc_journal {
 	psc_spinlock_t		 pj_lock;	/* contention lock */
 	int			 pj_fd;		/* open file descriptor to disk */
@@ -58,6 +62,7 @@ struct psc_journal {
 	struct dynarray		 pj_bufs;
 	struct psc_journal_hdr	*pj_hdr;
 	struct psc_waitq	 pj_waitq;
+	char			 pj_flags;
 };
 
 typedef void (*psc_jhandler)(struct dynarray *, int);
