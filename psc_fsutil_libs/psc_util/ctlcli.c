@@ -391,7 +391,7 @@ psc_ctlmsg_error_prdat(__unusedx const struct psc_ctlmsghdr *mh,
 {
 	const struct psc_ctlmsg_error *pce = m;
 
-	printf("error: %s\n", pce->pce_errmsg);
+	warnx("%s", pce->pce_errmsg);
 }
 
 int
@@ -794,8 +794,6 @@ psc_ctl_read(int s, void *buf, size_t siz)
 void
 psc_ctlcli_main(const char *osockfn)
 {
-	extern void usage(void);
-
 	struct psc_ctlmsg *pcm, *nextpcm;
 	struct psc_ctlmsghdr mh;
 	struct sockaddr_un sun;
@@ -805,7 +803,7 @@ psc_ctlcli_main(const char *osockfn)
 	int s;
 
 	if (psclist_empty(&psc_ctlmsgs))
-		usage();
+		errx(1, "no actions specified");
 
 	FMTSTR(sockfn, sizeof(sockfn), osockfn,
 		FMTSTRCASE('h', sockfn, sizeof(sockfn), "s",
