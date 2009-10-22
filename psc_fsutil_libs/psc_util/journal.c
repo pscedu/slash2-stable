@@ -96,6 +96,7 @@ pjournal_logwrite_internal(struct psc_journal *pj, struct psc_journal_xidhndl *x
 			    uint32_t slot, int type, void *data, size_t size)
 {
 	int				 rc;
+	ssize_t				 sz;
 	struct psc_journal_enthdr	*pje;
 	int				 ntries;
 	uint64_t			 chksum;
@@ -136,20 +137,20 @@ pjournal_logwrite_internal(struct psc_journal *pj, struct psc_journal_xidhndl *x
 	PSC_CRC_FIN(chksum);
 	pje->pje_chksum = chksum;
 	
-#ifdef NOT_READY
+#ifdef NOT_READY 
 
 	/* commit the log on disk before we can return */
 	while (ntries) {
-		rc = pwrite(pj->pj_fd, pje, pj->pj_hdr->pjh_entsz, 
+		sz = pwrite(pj->pj_fd, pje, pj->pj_hdr->pjh_entsz, 
 			   (off_t)(pj->pj_hdr->pjh_start_off + (slot * pj->pj_hdr->pjh_entsz)));
-		if (rc == -1 && errno == EAGAIN) {
+		if (sz == -1 && errno == EAGAIN) {
 			ntries--;
 			usleep(100);
 			continue;
 		}
 	}
 	/* we may want to turn off logging at this point and force write-through instead */
-	if (rc == -1 || rc != pj->pj_hdr->pjh_entsz) {
+	if (sz == -1 || sz != pj->pj_hdr->pjh_entsz) {
 		rc = -1;
 		psc_errorx("Problem writing journal log entries at slot %d", slot);
 	} else 
@@ -235,12 +236,14 @@ pjournal_logwrite(struct psc_journal_xidhndl *xh, int type, void *data,
 
 	rc = pjournal_logwrite_internal(pj, xh, slot, type, data, size);
 
+	PJ_LOCK(pj);
 	if (xh->pjx_flags & PJX_XCLOSED) {
 		psc_dbg("Transaction %p (xid = %"PRIx64") removed from journal %p: tail slot = %d, rc = %d",
 			 xh, xh->pjx_xid, pj, xh->pjx_tailslot, rc);
 		psclist_del(&xh->pjx_lentry);
 		PSCFREE(xh);
 	}
+	PJ_ULOCK(pj);
 	return (rc);
 }
 
