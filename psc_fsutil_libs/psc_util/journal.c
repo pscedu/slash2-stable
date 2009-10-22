@@ -100,6 +100,7 @@ pjournal_logwrite_internal(struct psc_journal *pj, struct psc_journal_xidhndl *x
 	struct psc_journal_enthdr	*pje;
 	int				 ntries;
 	uint64_t			 chksum;
+	int				 wakeup;
 
 	rc = 0;
 	ntries = MAX_LOG_TRY;
@@ -108,6 +109,7 @@ pjournal_logwrite_internal(struct psc_journal *pj, struct psc_journal_xidhndl *x
 
 	PJ_LOCK(pj);
 	while (!dynarray_len(&pj->pj_bufs)) {
+		pj->pj_flags |= PJ_WANTBUF;
 		psc_waitq_wait(&pj->pj_waitq, &pj->pj_lock);
 		PJ_LOCK(pj);
 	}
@@ -159,11 +161,18 @@ pjournal_logwrite_internal(struct psc_journal *pj, struct psc_journal_xidhndl *x
 
 	PJ_LOCK(pj);
 	dynarray_add(&pj->pj_bufs, pje);
-	psc_waitq_wakeall(&pj->pj_waitq);
-
-	if ((xh->pjx_flags & PJX_XCLOSED) && (xh->pjx_tailslot == pj->pj_nextwrite)) {
-		/* We are the tail so unblock the journal.  */
+	wakeup = 0;
+	if (pj->pj_flags & PJ_WANTBUF) {
+		wakeup = 1;
+		pj->pj_flags &= ~PJ_WANTBUF;
+	}
+	if ((pj->pj_flags & PJ_WANTSLOT) &&
+	    (xh->pjx_flags & PJX_XCLOSED) && (xh->pjx_tailslot == pj->pj_nextwrite)) {
+		wakeup = 1;
+		pj->pj_flags &= ~PJ_WANTSLOT;
 		psc_warnx("Journal %p unblocking slot %d - owned by xid %"PRIx64, pj, slot, xh->pjx_xid);
+	}
+	if (wakeup) {
 		psc_waitq_wakeall(&pj->pj_waitq);
 	}
 	PJ_ULOCK(pj);
@@ -206,6 +215,7 @@ pjournal_logwrite(struct psc_journal_xidhndl *xh, int type, void *data,
 			psc_warnx("Journal %p write is blocked on slot %d "
 				  "owned by transaction %p (xid = %"PRIx64")", 
 				   pj, pj->pj_nextwrite, t, t->pjx_xid);
+			pj->pj_flags |= PJ_WANTSLOT;
 			psc_waitq_wait(&pj->pj_waitq, &pj->pj_lock);
 			goto retry;
 		}
