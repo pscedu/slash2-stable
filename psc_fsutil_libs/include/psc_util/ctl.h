@@ -20,7 +20,7 @@
 
 #define PCTHRNAME_EVERYONE	"everyone"
 
-#define PCE_ERRMSG_MAX		50
+#define PCE_ERRMSG_MAX		128
 
 struct psc_ctlmsg_error {
 	char			pce_errmsg[PCE_ERRMSG_MAX];
