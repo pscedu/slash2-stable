@@ -7,6 +7,7 @@
 #include <string.h>
 #include <unistd.h>
 
+#include "pfl/pfl.h"
 #include "psc_util/alloc.h"
 #include "psc_util/atomic.h"
 #include "psc_util/log.h"
@@ -83,6 +84,7 @@ main(int argc, char *argv[])
 	pthread_t pthrs[4];
 	int rc, i;
 
+	pfl_init();
 	progname = argv[0];
 	if (getopt(argc, argv, "") != -1)
 		usage();
