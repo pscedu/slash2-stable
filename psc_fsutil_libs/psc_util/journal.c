@@ -54,8 +54,8 @@ pjournal_xnew(struct psc_journal *pj)
 }
 
 /*
- * This function is called to log changes to a piece of metadata.  We can't
- * reply to our clients until after the log entry is written.
+ * This function is called to log changes to a piece of metadata (i.e., journal flush item). 
+ * We can't reply to our clients until after the log entry is written.
  */
 int
 pjournal_xadd(struct psc_journal_xidhndl *xh, int type, void *data, size_t size)
@@ -114,8 +114,8 @@ pjournal_logwrite_internal(struct psc_journal *pj, struct psc_journal_xidhndl *x
 		PJ_LOCK(pj);
 	}
 	pje = dynarray_getpos(&pj->pj_bufs, 0);
-	psc_assert(pje);
 	dynarray_remove(&pj->pj_bufs, pje);
+	psc_assert(pje);
 	PJ_ULOCK(pj);
 
 	/* fill in contents for the log entry */
@@ -137,9 +137,9 @@ pjournal_logwrite_internal(struct psc_journal *pj, struct psc_journal_xidhndl *x
 	
 #ifdef NOT_READY 
 
-	/* commit the log on disk before we can return */
+	/* commit the log entry on disk before we can return */
 	while (ntries) {
-		sz = pwrite(pj->pj_fd, pje, pj->pj_hdr->pjh_entsz, 
+		sz = pwrite(pj->pj_fd, pje, PJ_PJESZ(pj),
 			   (off_t)(pj->pj_hdr->pjh_start_off + (slot * pj->pj_hdr->pjh_entsz)));
 		if (sz == -1 && errno == EAGAIN) {
 			ntries--;
@@ -178,9 +178,8 @@ pjournal_logwrite_internal(struct psc_journal *pj, struct psc_journal_xidhndl *x
 
 /*
  * pjournal_logwrite - store a new entry in a journal transaction.
- * @pj: the journal.
+ * @xh: the transaction to receive the log entry.
  * @type: the application-specific log entry type.
- * @xid: transaction ID.
  * @data: the journal entry contents to store.
  * @size: size of the data
  * Returns: 0 on success, -1 on error.
@@ -227,15 +226,16 @@ pjournal_logwrite(struct psc_journal_xidhndl *xh, int type, void *data,
 
 	if (!(xh->pjx_flags & PJX_XSTARTED)) {
 		type |= PJE_XSTARTED;
+		xh->pjx_flags |= PJX_XSTARTED;
 		xh->pjx_tailslot = slot;
 		psclist_xadd_tail(&xh->pjx_lentry, &pj->pj_pndgxids);
-		xh->pjx_flags |= PJX_XSTARTED;
 	}
 	if (xh->pjx_flags & PJX_XCLOSED) {
 		psc_assert(xh->pjx_tailslot != slot);
 		type |= PJE_XCLOSED;
 	}
 
+	/* Update the next slot to be written by a new log entry */
 	if ((++pj->pj_nextwrite) == pj->pj_hdr->pjh_nents) {
 		pj->pj_nextwrite = 0;
 	} else
@@ -275,8 +275,8 @@ pjournal_logread(struct psc_journal *pj, int32_t slot, int32_t count, void *data
 
 	rc = 0;
 	addr = pj->pj_hdr->pjh_start_off + slot * pj->pj_hdr->pjh_entsz;
-	size = pread(pj->pj_fd, data, pj->pj_hdr->pjh_entsz * count, addr);
-	if (size < 0 || size != pj->pj_hdr->pjh_entsz * count) {
+	size = pread(pj->pj_fd, data, PJ_PJESZ(pj) * count, addr);
+	if (size < 0 || size != PJ_PJESZ(pj) *  count) {
 		psc_warn("Fail to read %ld bytes from journal %p: rc = %d, errno = %d", size, pj, rc, errno);
 		rc = -1;
 	}
@@ -304,7 +304,7 @@ pjournal_start_mark(struct psc_journal *pj, int slot)
 }
 
 static void *
-pjournal_alloclog_ra(struct psc_journal *pj)
+pjournal_alloc_buf(struct psc_journal *pj)
 {
 	return (psc_alloc(PJ_PJESZ(pj) * pj->pj_hdr->pjh_readahead,
 			  PAF_PAGEALIGN | PAF_LOCK));
@@ -387,7 +387,7 @@ pjournal_scan_slots(struct psc_journal *pj)
 	last_slot = PJX_SLOT_ANY;
 
 	dynarray_init(&pj->pj_bufs);
-	jbuf = pjournal_alloclog_ra(pj);
+	jbuf = pjournal_alloc_buf(pj);
 	while (slot < pj->pj_hdr->pjh_nents) {
 		if (pj->pj_hdr->pjh_nents - slot >= pj->pj_hdr->pjh_readahead) {
 			count = pj->pj_hdr->pjh_readahead;
@@ -605,7 +605,7 @@ pjournal_format(const char *fn, uint32_t nents, uint32_t entsz, uint32_t ra,
 	pjh.pjh_chksum = chksum;
 
 	pj.pj_hdr = &pjh;
-	jbuf = pjournal_alloclog_ra(&pj);
+	jbuf = pjournal_alloc_buf(&pj);
 
 	errno = 0;
 	if ((fd = open(fn, O_WRONLY|O_CREAT|O_TRUNC, 0600)) < 0)
@@ -693,7 +693,7 @@ pjournal_dump(const char *fn)
 		 pjh->pjh_entsz, pjh->pjh_nents, pjh->pjh_version, pjh->pjh_options,
 		 pjh->pjh_readahead, pjh->pjh_start_off, pjh->pjh_magic);
 
-	jbuf = pjournal_alloclog_ra(pj);
+	jbuf = pjournal_alloc_buf(pj);
 
 	for (slot = 0, ra=pjh->pjh_readahead; slot < pjh->pjh_nents; slot += count) {
 
