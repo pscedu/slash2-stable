@@ -283,26 +283,6 @@ pjournal_logread(struct psc_journal *pj, int32_t slot, int32_t count, void *data
 	return (rc);
 }
 
-int
-pjournal_start_mark(struct psc_journal *pj, int slot)
-{
-	struct psc_journal_enthdr *pje;
-	int rc;
-
-	pje = psc_alloc(PJ_PJESZ(pj), PAF_PAGEALIGN | PAF_LOCK);
-
-	pje->pje_magic = PJE_MAGIC;
-	pje->pje_xid = PJE_XID_NONE;
-	pje->pje_type = PJE_STARTUP;
-
-	rc = pwrite(pj->pj_fd, pje, pj->pj_hdr->pjh_entsz,
-		    (off_t)(pj->pj_hdr->pjh_start_off +
-			    (slot * pj->pj_hdr->pjh_entsz)));
-
-	psc_freenl(pje, PJ_PJESZ(pj));
-	return (rc);
-}
-
 static void *
 pjournal_alloc_buf(struct psc_journal *pj)
 {
@@ -445,7 +425,8 @@ pjournal_scan_slots(struct psc_journal *pj)
 		}
 		slot += count;
 	}
-	pj->pj_nextwrite = last_slot;
+	pj->pj_nextxid = last_xid + 1;
+	pj->pj_nextwrite = (last_slot == pj->pj_hdr->pjh_nents) ? 0 : (last_slot + 1);
 	qsort(pj->pj_bufs.da_items, pj->pj_bufs.da_pos, sizeof(void *), pjournal_xid_cmp);
 	psc_freenl(jbuf, PJ_PJESZ(pj));
 	psc_warnx("Journal statistics: %d format, %d close, %d open, %d bad magic, %d bad checksum, %d scan, %d total", 
@@ -707,6 +688,7 @@ pjournal_replay(const char * fn, psc_jhandler pj_handler)
 	struct psc_journal		*pj;
 	uint64_t			 xid;
 	struct psc_journal_enthdr	*pje;
+	ssize_t				 size;
 	int				 nents;
 	int				 ntrans;
 	struct psc_journal_enthdr	*tmppje;
@@ -742,6 +724,25 @@ pjournal_replay(const char * fn, psc_jhandler pj_handler)
 		dynarray_free(&replaybufs);
 	}
 	dynarray_free(&pj->pj_bufs);
+
+	/* write a startup marker after replay all the log entries */
+	pje = psc_alloc(PJ_PJESZ(pj), PAF_PAGEALIGN | PAF_LOCK);
+
+	pje->pje_magic = PJE_MAGIC;
+	pje->pje_xid = pj->pj_nextxid++;
+	pje->pje_type = PJE_STARTUP;
+
+	size = pwrite(pj->pj_fd, pje, PJ_PJESZ(pj),
+		     (off_t)(pj->pj_hdr->pjh_start_off + 
+		     (pj->pj_nextwrite * pj->pj_hdr->pjh_entsz)));
+	if (size < 0 || size != PJ_PJESZ(pj)) {
+		psc_warnx("Fail to write a start up marer");
+	}
+	psc_freenl(pje, PJ_PJESZ(pj));
+
+	pj->pj_nextwrite++;
+	if (pj->pj_nextwrite == pj->pj_hdr->pjh_nents)
+		pj->pj_nextwrite = 0;
 
 	psc_warnx("Journal replay: %d log entries and %d transactions", nents, ntrans);
 	return pj;
