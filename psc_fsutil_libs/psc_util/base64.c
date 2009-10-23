@@ -22,7 +22,7 @@ psc_base64_encode(const void *buf, char *enc, size_t siz)
 	int i;
 
 	i = 0;
-	for (pos = 0, p = buf; pos < siz; pos += 3, p += 3) {
+	for (pos = 0, p = buf; pos <= siz + 3; pos += 3, p += 3) {
 		/*
 		 * Convert 3 bytes of input (3*8 bits) into
 		 * 4 bytes of output (4*6 bits).
