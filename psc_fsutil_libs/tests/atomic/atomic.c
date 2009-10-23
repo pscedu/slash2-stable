@@ -8,14 +8,18 @@
 #include <unistd.h>
 
 #include "pfl/pfl.h"
+#include "pfl/cdefs.h"
 #include "psc_util/alloc.h"
 #include "psc_util/atomic.h"
 #include "psc_util/log.h"
+#include "psc_util/printhex.h"
 
 struct thr {
 	int pos;
 };
 
+int nthr = 4;
+int niter = 1024 * 1024 * 2;
 pthread_barrier_t barrier;
 const char *progname;
 
@@ -59,21 +63,23 @@ startf(void *arg)
 	int i;
 
 	pthread_barrier_wait(&barrier);
-	for (i = 0; i < 1024 * 1024 * 10; i++) {
-		mask = 1 << (i % 4 + thr->pos * 4);
+	mask = 1 << thr->pos;
+	for (i = 0; i < niter; i++) {
 		ov = psc_atomic32_setmask_retold(&v32, mask);
 		psc_assert((ov & mask) == 0);
 
 		ov = psc_atomic32_clearmask_retold(&v32, mask);
 		psc_assert(ov & mask);
+		sched_yield();
 	}
+	pthread_barrier_wait(&barrier);
 	return (NULL);
 }
 
-void
+__dead void
 usage(void)
 {
-	fprintf(stderr, "usage: %s\n", progname);
+	fprintf(stderr, "usage: %s [-i niter] [-n nthr]\n", progname);
 	exit(1);
 }
 
@@ -81,13 +87,22 @@ int
 main(int argc, char *argv[])
 {
 	struct thr *thr;
-	pthread_t pthrs[4];
-	int rc, i;
+	pthread_t pthr;
+	int c, rc, i;
 
 	pfl_init();
 	progname = argv[0];
-	if (getopt(argc, argv, "") != -1)
-		usage();
+	while ((c = getopt(argc, argv, "i:n:")) != -1)
+		switch (c) {
+		case 'i':
+			niter = atoi(optarg);
+			break;
+		case 'n':
+			nthr = atoi(optarg);
+			break;
+		default:
+			usage();
+		}
 	argc -= optind;
 	if (argc)
 		usage();
@@ -114,20 +129,17 @@ main(int argc, char *argv[])
 	TEST1(psc_atomic16, inc, &v16, 1);
 	TEST1V(psc_atomic16, dec_test_zero, &v16, 0, 1);
 
-	rc = pthread_barrier_init(&barrier, NULL, 4);
+	rc = pthread_barrier_init(&barrier, NULL, nthr + 1);
 	if (rc)
 		psc_fatalx("pthread_barrier_init: %s", strerror(rc));
-	for (i = 0; i < 4; i++) {
+	for (i = 0; i < nthr; i++) {
 		thr = PSCALLOC(sizeof(*thr));
 		thr->pos = i;
-		rc = pthread_create(&pthrs[i], NULL, startf, thr);
+		rc = pthread_create(&pthr, NULL, startf, thr);
 		if (rc)
 			psc_fatalx("pthread_create: %s", strerror(rc));
 	}
-	for (i = 0; i < 4; i++) {
-		rc = pthread_join(pthrs[i], NULL);
-		if (rc)
-			psc_fatalx("pthread_join: %s", strerror(rc));
-	}
+	pthread_barrier_wait(&barrier);
+	pthread_barrier_wait(&barrier);
 	exit(0);
 }
