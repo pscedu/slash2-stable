@@ -119,6 +119,8 @@ main(int argc, char *argv[])
 
 /* start structs */
 	PRTYPE(list_cache_t);
+	PRTYPE(psc_crc32_t);
+	PRTYPE(psc_crc64_t);
 	PRTYPE(psc_crc_t);
 	PRTYPE(psc_spinlock_t);
 	PRTYPE(pscrpc_svc_handle_t);
@@ -126,6 +128,7 @@ main(int argc, char *argv[])
 	PRTYPE(s32);
 	PRTYPE(s64);
 	PRTYPE(s8);
+	PRTYPE(struct _psc_journal_hdr);
 	PRTYPE(struct hash_bucket);
 	PRTYPE(struct hash_entry);
 	PRTYPE(struct hash_entry_str);
@@ -167,7 +170,6 @@ main(int argc, char *argv[])
 	PRTYPE(struct psc_journal);
 	PRTYPE(struct psc_journal_enthdr);
 	PRTYPE(struct psc_journal_hdr);
-	PRTYPE(struct psc_journal_walker);
 	PRTYPE(struct psc_journal_xidhndl);
 	PRTYPE(struct psc_listcache);
 	PRTYPE(struct psc_listguts);
@@ -186,6 +188,7 @@ main(int argc, char *argv[])
 	PRTYPE(struct psc_thread);
 	PRTYPE(struct psc_usklndthr);
 	PRTYPE(struct psc_uuid);
+	PRTYPE(struct psc_vbitmap);
 	PRTYPE(struct psc_waitq);
 	PRTYPE(struct psc_wndmap);
 	PRTYPE(struct psc_wndmap_block);
@@ -210,7 +213,6 @@ main(int argc, char *argv[])
 	PRTYPE(struct pscrpc_svc_handle);
 	PRTYPE(struct pscrpc_thread);
 	PRTYPE(struct pscrpc_wait_callback);
-	PRTYPE(struct vbitmap);
 	PRTYPE(u16);
 	PRTYPE(u32);
 	PRTYPE(u64);
