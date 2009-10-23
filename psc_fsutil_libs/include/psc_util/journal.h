@@ -98,22 +98,22 @@ typedef void (*psc_jhandler)(struct dynarray *, int);
  */
 struct psc_journal_enthdr {
 	uint64_t		pje_magic;
-	uint32_t		pje_type;		/* see above */
 	uint64_t		pje_xid;
+	uint32_t		pje_type;		/* see above */
 	uint32_t		pje_sid;
 	/* 
 	 * This field is used to calculate the CRC checksum of the following data.
 	 * It also indicates if the log entry is a special one (i.e., one without
 	 * payload).
 	 */
-	uint32_t		pje_len;		
 	uint64_t		pje_chksum;
+	uint32_t		pje_len;		
 	/*
 	 * The length of the pje_data[0] is also embedded and can be figured out
 	 * by log replay functions.
 	 */
 	char			pje_data[0];
-};
+} __packed;
 
 #define	PJ_PJESZ(p)		((p)->pj_hdr->pjh_entsz)
 
