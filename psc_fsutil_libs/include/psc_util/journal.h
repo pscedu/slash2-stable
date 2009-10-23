@@ -143,8 +143,12 @@ struct psc_journal_xidhndl {
 	struct psc_journal	*pjx_pj;
 };
 
+/* Actions to be taked after open the log file */
+#define	PJOURNAL_LOG_DUMP	1
+#define	PJOURNAL_LOG_REPLAY	2
+
 /* definitions of journal handling functions */
-struct psc_journal *		pjournal_load(const char *);
+struct psc_journal *		pjournal_load(const char *, int);
 int				pjournal_dump(const char *);
 void				pjournal_format(const char *, uint32_t, uint32_t, uint32_t, uint32_t);
 

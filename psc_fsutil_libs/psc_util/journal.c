@@ -493,7 +493,9 @@ pjournal_replay(struct psc_journal *pj, psc_jhandler pj_handler)
 		}
 
 		ntrans++;
-		(pj_handler)(&replaybufs, rc);
+		if (pj_handler) {
+			(pj_handler)(&replaybufs, rc);
+		}
 
 		pjournal_remove_entries(pj, xid, 1);
 		dynarray_free(&replaybufs);
@@ -509,7 +511,7 @@ pjournal_replay(struct psc_journal *pj, psc_jhandler pj_handler)
  * return: pj on success, NULL on failure
  */
 struct psc_journal *
-pjournal_load(const char *fn)
+pjournal_load(const char *fn, int mode)
 {
 	int				 i;
 	ssize_t				 rc;
@@ -567,6 +569,13 @@ pjournal_load(const char *fn)
 	if (pj->pj_logname == NULL)
 		psc_fatal("strdup");
 
+	if (mode == PJOURNAL_LOG_DUMP) {
+		goto done;
+	}
+	if (mode == PJOURNAL_LOG_REPLAY) {
+		pjournal_replay(pj, NULL);
+		goto done;
+	}
 done:
 	return (pj);
 }
@@ -685,7 +694,7 @@ pjournal_dump(const char *fn)
 	nchksum = 0;
 	nformat = 0;
 
-	pj = pjournal_load(fn);
+	pj = pjournal_load(fn, PJOURNAL_LOG_DUMP);
 	pjh = pj->pj_hdr;
 
 	psc_info("Journal header info: "
