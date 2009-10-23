@@ -25,7 +25,7 @@
 static int pjournal_logwrite(struct psc_journal_xidhndl *, int, void *, size_t);
 
 /*
- * pjournal_xnew - obtain an unused journal transaction ID.
+ * pjournal_xnew - start a new transaction with a unique ID in the given journal.
  * @pj: the owning journal.
  * Returns: new transaction handle
  */
@@ -123,11 +123,7 @@ pjournal_logwrite_internal(struct psc_journal *pj, struct psc_journal_xidhndl *x
 	pje->pje_type = type;
 	pje->pje_xid = xh->pjx_xid;
 	pje->pje_len = size;
-	if (!(type & PJE_XCLOSED)) {
-		pje->pje_sid = atomic_inc_return(&xh->pjx_sid);
-	} else {
-		pje->pje_sid = atomic_read(&xh->pjx_sid);
-	}
+	pje->pje_sid = atomic_inc_return(&xh->pjx_sid);
 	if (data) {
 		psc_assert(size);
 		memcpy(pje->pje_data, data, size);
