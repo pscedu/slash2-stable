@@ -9,7 +9,7 @@
 #include <string.h>
 #include <unistd.h>
 
-#include "psc_util/cdefs.h"
+#include "pfl/cdefs.h"
 
 const char *progname;
 pthread_t thr1;

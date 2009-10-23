@@ -5,7 +5,7 @@
 
 #include "pfl/types.h"
 #include "psc_ds/list.h"
-#include "psc_util/cdefs.h"
+#include "pfl/cdefs.h"
 #include "psc_util/lock.h"
 
 #define LOCK_BUCKET(hb)		spinlock(&(hb)->hbucket_lock)

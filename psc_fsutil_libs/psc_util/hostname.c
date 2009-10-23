@@ -9,7 +9,7 @@
 
 #include <unistd.h>
 
-#include "psc_util/cdefs.h"
+#include "pfl/cdefs.h"
 #include "psc_util/log.h"
 
 char psc_hostname[HOST_NAME_MAX];

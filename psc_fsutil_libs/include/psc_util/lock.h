@@ -292,7 +292,7 @@ ureqlock(psc_spinlock_t *sl, int waslocked)
 
 #else /* !HAVE_LIBPTHREAD */
 
-#include "psc_util/cdefs.h"
+#include "pfl/cdefs.h"
 
 typedef int psc_spinlock_t;
 

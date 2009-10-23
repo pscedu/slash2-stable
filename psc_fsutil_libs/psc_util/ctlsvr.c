@@ -26,7 +26,7 @@
 #include "psc_ds/pool.h"
 #include "psc_ds/stree.h"
 #include "psc_util/atomic.h"
-#include "psc_util/cdefs.h"
+#include "pfl/cdefs.h"
 #include "psc_util/ctl.h"
 #include "psc_util/ctlsvr.h"
 #include "psc_util/fault.h"

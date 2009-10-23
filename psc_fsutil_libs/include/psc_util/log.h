@@ -12,7 +12,7 @@
 #endif
 
 #include "psc_util/subsys.h"
-#include "psc_util/cdefs.h"
+#include "pfl/cdefs.h"
 
 struct psclog_data {
 	char	pld_hostname[HOST_NAME_MAX];

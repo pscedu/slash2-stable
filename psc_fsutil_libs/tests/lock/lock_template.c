@@ -14,7 +14,7 @@
 #include "pfl/pfl.h"
 #include "psc_util/alloc.h"
 #include "psc_util/atomic.h"
-#include "psc_util/cdefs.h"
+#include "pfl/cdefs.h"
 #include TEST_LOCK_INCLUDE
 #include "psc_util/thread.h"
 

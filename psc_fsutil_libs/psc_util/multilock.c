@@ -16,7 +16,7 @@
 
 #include "psc_ds/vbitmap.h"
 #include "psc_util/alloc.h"
-#include "psc_util/cdefs.h"
+#include "pfl/cdefs.h"
 #include "psc_util/log.h"
 #include "psc_util/multilock.h"
 #include "psc_util/pthrutil.h"

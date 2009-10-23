@@ -21,7 +21,7 @@
 #include <unistd.h>
 
 #include "psc_util/alloc.h"
-#include "psc_util/cdefs.h"
+#include "pfl/cdefs.h"
 #include "psc_util/fmtstr.h"
 #include "psc_util/log.h"
 

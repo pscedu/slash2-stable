@@ -21,7 +21,7 @@
 #include "psc_ds/lockedlist.h"
 #include "psc_ds/vbitmap.h"
 #include "psc_util/alloc.h"
-#include "psc_util/cdefs.h"
+#include "pfl/cdefs.h"
 #include "psc_util/lock.h"
 #include "psc_util/mem.h"
 #include "psc_util/strlcpy.h"

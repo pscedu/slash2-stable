@@ -4,7 +4,7 @@
 #include <stdint.h>
 
 #include "psc_ds/vbitmap.h"
-#include "psc_util/cdefs.h"
+#include "pfl/cdefs.h"
 #include "psc_util/mspinlock.h"
 #include "psc_util/lock.h"
 

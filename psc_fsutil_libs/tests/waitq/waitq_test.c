@@ -12,7 +12,7 @@
 
 #include "pfl/pfl.h"
 #include "psc_util/alloc.h"
-#include "psc_util/cdefs.h"
+#include "pfl/cdefs.h"
 #include "psc_util/lock.h"
 #include "psc_util/log.h"
 #include "psc_util/thread.h"

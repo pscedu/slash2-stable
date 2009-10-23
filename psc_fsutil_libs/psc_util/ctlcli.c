@@ -14,7 +14,7 @@
 #include "psc_ds/list.h"
 #include "psc_ds/pool.h"
 #include "psc_ds/vbitmap.h"
-#include "psc_util/cdefs.h"
+#include "pfl/cdefs.h"
 #include "psc_util/ctl.h"
 #include "psc_util/ctlcli.h"
 #include "psc_util/fmt.h"

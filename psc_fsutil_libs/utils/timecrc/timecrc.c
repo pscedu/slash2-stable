@@ -10,7 +10,7 @@
 #include <string.h>
 #include <unistd.h>
 
-#include "psc_util/cdefs.h"
+#include "pfl/cdefs.h"
 #include "psc_util/crc.h"
 #include "psc_util/log.h"
 

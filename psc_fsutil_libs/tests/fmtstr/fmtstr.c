@@ -5,7 +5,7 @@
 #include <unistd.h>
 
 #include "psc_util/fmtstr.h"
-#include "psc_util/cdefs.h"
+#include "pfl/cdefs.h"
 
 const char *progname;
 

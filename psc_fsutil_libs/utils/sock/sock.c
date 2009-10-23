@@ -20,7 +20,7 @@
 #include "pfl.h"
 #include "psc_util/alloc.h"
 #include "psc_util/atomic.h"
-#include "psc_util/cdefs.h"
+#include "pfl/cdefs.h"
 #include "psc_util/fmt.h"
 #include "psc_util/iostats.h"
 #include "psc_util/log.h"

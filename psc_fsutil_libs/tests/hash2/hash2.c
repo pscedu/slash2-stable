@@ -7,7 +7,7 @@
 
 #include "psc_ds/hash2.h"
 #include "psc_util/alloc.h"
-#include "psc_util/cdefs.h"
+#include "pfl/cdefs.h"
 
 struct item {
 	struct psc_hashent	hentry;

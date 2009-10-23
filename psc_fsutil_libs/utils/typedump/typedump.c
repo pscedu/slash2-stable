@@ -29,7 +29,7 @@
 #include <psc_util/atomic.h>
 #include <psc_util/base64.h>
 #include <psc_util/bitflag.h>
-#include <psc_util/cdefs.h>
+#include <pfl/cdefs.h>
 #include <psc_util/completion.h>
 #include <psc_util/crc.h>
 #include <psc_util/ctl.h>

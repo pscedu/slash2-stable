@@ -4,7 +4,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 
-#include "psc_util/cdefs.h"
+#include "pfl/cdefs.h"
 #include "psc_util/prsig.h"
 
 const char *progname;

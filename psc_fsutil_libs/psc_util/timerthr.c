@@ -7,7 +7,7 @@
 
 #include "psc_ds/lockedlist.h"
 #include "psc_util/atomic.h"
-#include "psc_util/cdefs.h"
+#include "pfl/cdefs.h"
 #include "psc_util/iostats.h"
 #include "psc_util/thread.h"
 #include "psc_util/waitq.h"

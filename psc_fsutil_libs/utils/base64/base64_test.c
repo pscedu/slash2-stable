@@ -12,7 +12,7 @@
 
 #include "pfl/pfl.h"
 #include "psc_util/base64.h"
-#include "psc_util/cdefs.h"
+#include "pfl/cdefs.h"
 
 const char *progname;
 

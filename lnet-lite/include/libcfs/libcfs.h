@@ -63,7 +63,7 @@
 #include "psc_util/log.h"
 #endif
 
-#include "psc_util/cdefs.h"
+#include "pfl/cdefs.h"
 
 /* Controlled via configure key */
 #define LIBCFS_DEBUG
