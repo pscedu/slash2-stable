@@ -74,7 +74,7 @@ my $lines = eval {
 };
 close OUT;
 
-my $includes = join '', map { s!(?:include|\.\.)/!!g; "#include <$_>\n" } @hdrs;
+my $includes = join '', map { s!(?:include|\.\.)/!!g; qq{#include "$_"\n} } @hdrs;
 $lines =~ s!(?<=/\* start includes \*/\n).*?(?=/\* end includes \*/)!$includes!s;
 
 my $types = join '', map { "\tPRTYPE($_);\n" } uniq sort @types;
