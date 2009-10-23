@@ -93,7 +93,7 @@ pjournal_xend(struct psc_journal_xidhndl *xh)
  */
 static int
 pjournal_logwrite_internal(struct psc_journal *pj, struct psc_journal_xidhndl *xh,
-			    uint32_t slot, int type, void *data, size_t size)
+			   int32_t slot, int type, void *data, size_t size)
 {
 	int				 rc;
 	ssize_t				 sz;
@@ -105,7 +105,7 @@ pjournal_logwrite_internal(struct psc_journal *pj, struct psc_journal_xidhndl *x
 	rc = 0;
 	ntries = MAX_LOG_TRY;
 	psc_assert(slot < pj->pj_hdr->pjh_nents);
-	psc_assert(size + sizeof(*pje) <= PJ_PJESZ(pj));
+	psc_assert(size + sizeof(*pje) <= (size_t)PJ_PJESZ(pj));
 
 	PJ_LOCK(pj);
 	while (!dynarray_len(&pj->pj_bufs)) {
@@ -191,8 +191,8 @@ pjournal_logwrite(struct psc_journal_xidhndl *xh, int type, void *data,
 	struct psc_journal_xidhndl	*t;
 	int				 rc;
 	struct psc_journal		*pj;
-	uint32_t			 slot;
-	uint32_t			 tail_slot;
+	int32_t			 	 slot;
+	int32_t			 	 tail_slot;
 
 	pj = xh->pjx_pj;
 
@@ -344,7 +344,7 @@ pjournal_scan_slots(struct psc_journal *pj)
 	int				 i;
 	int				 rc;
 	struct psc_journal_enthdr	*pje;
-	uint32_t			 slot;
+	int32_t			 	 slot;
 	unsigned char			*jbuf;
 	int				 count;
 	int				 nopen;
@@ -354,7 +354,7 @@ pjournal_scan_slots(struct psc_journal *pj)
 	int				 nformat;
 	int				 nchksum;
 	uint64_t			 last_xid;
-	int				 last_slot;
+	int32_t				 last_slot;
 
 	rc = 0;
 	slot = 0;
@@ -425,8 +425,8 @@ pjournal_scan_slots(struct psc_journal *pj)
 		}
 		slot += count;
 	}
-	pj->pj_nextxid = last_xid + 1;
-	pj->pj_nextwrite = (last_slot == pj->pj_hdr->pjh_nents) ? 0 : (last_slot + 1);
+	pj->pj_nextxid = last_xid;
+	pj->pj_nextwrite = (last_slot == (int)pj->pj_hdr->pjh_nents) ? 0 : (last_slot + 1);
 	qsort(pj->pj_bufs.da_items, pj->pj_bufs.da_pos, sizeof(void *), pjournal_xid_cmp);
 	psc_freenl(jbuf, PJ_PJESZ(pj));
 	psc_warnx("Journal statistics: %d format, %d close, %d open, %d bad magic, %d bad checksum, %d scan, %d total", 
@@ -529,7 +529,7 @@ pjournal_format(const char *fn, uint32_t nents, uint32_t entsz, uint32_t ra,
 	struct psc_journal_hdr		 pjh;
 	ssize_t				 size;
 	unsigned char			*jbuf;
-	uint32_t			 slot;
+	int32_t			 	 slot;
 	int				 count;
 	uint64_t			 chksum;
 
@@ -598,11 +598,11 @@ int
 pjournal_dump(const char *fn)
 {
 	int				 i;
-	uint32_t			 ra;
+	int32_t			 	 ra;
 	struct psc_journal		*pj;
 	struct psc_journal_hdr		*pjh;
 	struct psc_journal_enthdr	*pje;
-	uint32_t			 slot;
+	int32_t			 	 slot;
 	unsigned char			*jbuf;
 	ssize_t				 size;
 	int				 count;
@@ -690,6 +690,7 @@ pjournal_replay(const char * fn, psc_jhandler pj_handler)
 	struct psc_journal_enthdr	*pje;
 	ssize_t				 size;
 	int				 nents;
+	uint64_t			 chksum;
 	int				 ntrans;
 	struct psc_journal_enthdr	*tmppje;
 	struct dynarray			 replaybufs;
@@ -729,14 +730,23 @@ pjournal_replay(const char * fn, psc_jhandler pj_handler)
 	pje = psc_alloc(PJ_PJESZ(pj), PAF_PAGEALIGN | PAF_LOCK);
 
 	pje->pje_magic = PJE_MAGIC;
-	pje->pje_xid = pj->pj_nextxid++;
+	pj->pj_nextxid++;
+	if (pj->pj_nextxid == PJE_XID_NONE)
+		pj->pj_nextxid++;
+	pje->pje_xid = pj->pj_nextxid;
 	pje->pje_type = PJE_STARTUP;
 
+	PSC_CRC_INIT(chksum);
+	psc_crc_add(&chksum, pje, offsetof(struct psc_journal_enthdr, pje_chksum));
+	psc_crc_add(&chksum, pje->pje_data, pje->pje_len);
+	PSC_CRC_FIN(chksum);
+	pje->pje_chksum = chksum;
+	
 	size = pwrite(pj->pj_fd, pje, PJ_PJESZ(pj),
 		     (off_t)(pj->pj_hdr->pjh_start_off + 
-		     (pj->pj_nextwrite * pj->pj_hdr->pjh_entsz)));
+		     (pj->pj_nextwrite * PJ_PJESZ(pj))));
 	if (size < 0 || size != PJ_PJESZ(pj)) {
-		psc_warnx("Fail to write a start up marer");
+		psc_warnx("Fail to write a start up marker in the journal");
 	}
 	psc_freenl(pje, PJ_PJESZ(pj));
 

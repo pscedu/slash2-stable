@@ -19,11 +19,11 @@
 #define PJH_VERSION     0x01
 
 struct _psc_journal_hdr {			
-	uint32_t	_pjh_entsz;
-	uint32_t	_pjh_nents;
+	int32_t		_pjh_entsz;
+	int32_t		_pjh_nents;
 	uint32_t	_pjh_version;
 	uint32_t	_pjh_options;
-	uint32_t	_pjh_readahead;
+	int32_t		_pjh_readahead;
 	uint32_t	_pjh_unused;
 	uint64_t	_pjh_start_off;
 	uint64_t	_pjh_magic;		
@@ -57,7 +57,7 @@ struct psc_journal {
 	int			 pj_fd;		/* open file descriptor to disk */
 	char			*pj_logname;	/* log file name */
 	uint64_t		 pj_nextxid;	/* next transaction ID */
-	uint32_t		 pj_nextwrite;	/* next entry slot to write to */
+	int32_t		 	 pj_nextwrite;	/* next entry slot to write to */
 	struct psclist_head	 pj_pndgxids;
 	struct dynarray		 pj_bufs;
 	struct psc_journal_hdr	*pj_hdr;
@@ -136,7 +136,7 @@ struct psc_journal_enthdr {
 struct psc_journal_xidhndl {
 	uint64_t		 pjx_xid;
 	atomic_t		 pjx_sid;
-	uint32_t		 pjx_tailslot;
+	int32_t		 	 pjx_tailslot;
 	uint32_t		 pjx_flags;
 	struct psclist_head	 pjx_lentry;
 	psc_spinlock_t		 pjx_lock;
