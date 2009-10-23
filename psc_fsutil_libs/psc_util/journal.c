@@ -730,11 +730,13 @@ pjournal_replay(const char * fn, psc_jhandler pj_handler)
 	pje = psc_alloc(PJ_PJESZ(pj), PAF_PAGEALIGN | PAF_LOCK);
 
 	pje->pje_magic = PJE_MAGIC;
+	pje->pje_type = PJE_STARTUP;
 	pj->pj_nextxid++;
 	if (pj->pj_nextxid == PJE_XID_NONE)
 		pj->pj_nextxid++;
 	pje->pje_xid = pj->pj_nextxid;
-	pje->pje_type = PJE_STARTUP;
+	pje->pje_sid = PJE_XID_NONE;
+	pje->pje_len = 0;	
 
 	PSC_CRC_INIT(chksum);
 	psc_crc_add(&chksum, pje, offsetof(struct psc_journal_enthdr, pje_chksum));
