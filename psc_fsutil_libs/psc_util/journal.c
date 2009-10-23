@@ -515,7 +515,6 @@ pjournal_load(const char *fn)
 	ssize_t				 rc;
 	struct psc_journal		*pj;
 	struct psc_journal_hdr		*pjh;
-	struct psc_journal_enthdr	*pje;
 	uint64_t			 chksum;
 
 	pj = PSCALLOC(sizeof(struct psc_journal));
@@ -527,7 +526,7 @@ pjournal_load(const char *fn)
 	 */
 	pj->pj_fd = open(fn, O_RDWR | O_SYNC | O_DIRECT);
 	if (pj->pj_fd == -1)
-		psc_fatal("open %s", fn);
+		psc_fatal("Fail to open log file %s", fn);
 
 	rc = pread(pj->pj_fd, pjh, sizeof(*pjh), 0);
 	if (rc != sizeof(*pjh))
@@ -556,18 +555,16 @@ pjournal_load(const char *fn)
 		pj = NULL;
 		goto done; 
 	}
-
+	/*
+	 * pj_nextxid and pj_nextwrite will be filled after log replay.
+ 	 */
 	LOCK_INIT(&pj->pj_lock);
 	INIT_PSCLIST_HEAD(&pj->pj_pndgxids);
 	psc_waitq_init(&pj->pj_waitq);
 	pj->pj_flags = PJ_NONE;
-
 	dynarray_init(&pj->pj_bufs);
-	dynarray_ensurelen(&pj->pj_bufs, MAX_NUM_PJBUF);
-	for (i = 0; i < MAX_NUM_PJBUF; i++) {
-		pje = psc_alloc(PJ_PJESZ(pj), PAF_PAGEALIGN | PAF_LOCK);
-		dynarray_add(&pj->pj_bufs, pje);
-	}
+	pj->pj_logname = strdup(fn);
+
 done:
 	return (pj);
 }
@@ -636,6 +633,7 @@ pjournal_format(const char *fn, uint32_t nents, uint32_t entsz, uint32_t ra,
 		}
 		size = pwrite(fd, jbuf, pjh.pjh_entsz * count, 
 			(off_t)(PJE_OFFSET + (slot * pjh.pjh_entsz)));
+		/* At least on one instance, short write actually returns success on a RAM-backed file system */
 		if (size < 0 || size != pjh.pjh_entsz * count) {
 			psc_fatal("Failed to write %d entries at slot %d", count, slot);
 		}
@@ -649,8 +647,8 @@ pjournal_format(const char *fn, uint32_t nents, uint32_t entsz, uint32_t ra,
 void
 pjournal_close(struct psc_journal *pj)
 {
-	struct psc_journal_enthdr *pje;
-	int n;
+	int				 n;
+	struct psc_journal_enthdr	*pje;
 
 	DYNARRAY_FOREACH(pje, n, &pj->pj_bufs)
 		psc_freenl(pje, PJ_PJESZ(pj));
@@ -702,14 +700,14 @@ pjournal_dump(const char *fn)
 			    (off_t)(PJE_OFFSET + (slot * pjh->pjh_entsz)));
 
 		if (size == -1 || size != (pjh->pjh_entsz * count))
-			psc_fatal("Failed to read entries");
+			psc_fatal("Failed to read %d log entries at slot %d", count, slot);
 
 		for (i = 0; i < count; i++) {
 			ntotal++;
 			pje = (void *)&jbuf[pjh->pjh_entsz * i];
 			if (pje->pje_magic != PJE_MAGIC) {
 				nmagic++;
-				psc_warnx("journal slot %d has bad magic!", (slot+i));
+				psc_warnx("Journal slot %d has a bad magic number!", (slot+i));
 				continue;
 			}
 			if (pje->pje_magic == PJE_FORMAT) {
@@ -722,10 +720,10 @@ pjournal_dump(const char *fn)
 			PSC_CRC_FIN(chksum);
 			if (pje->pje_chksum != chksum) {
 				nchksum++;
-				psc_warnx("journal slot %d has bad checksum!", (slot+i));
+				psc_warnx("Journal slot %d has a bad checksum!", (slot+i));
 				continue;
 			}
-			psc_info("slot=%u magic=%"PRIx64" type=%x xid=%"PRIx64" sid=%d\n",
+			psc_info("Journal: slot=%u magic=%"PRIx64" type=%x xid=%"PRIx64" sid=%d\n",
 				  (slot+i), pje->pje_magic,
 				  pje->pje_type, pje->pje_xid, pje->pje_sid);
 		}
