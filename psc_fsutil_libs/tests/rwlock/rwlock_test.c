@@ -96,7 +96,7 @@ wr_main(void *arg)
 		if (rc)
 			errx(1, "unlock: %s", strerror(rc));
 		sched_yield();
-		usleep(100);
+		usleep(5000);
 	}
 	return (NULL);
 }
