@@ -453,65 +453,13 @@ pjournal_scan_slots(struct psc_journal *pj)
 	return (rc);
 }
 
-/*
- * pjournal_replay - traverse each open transaction in a journal and reply them.
- * @pj: the journal.
- * @pj_handler: the master journal replay function.
- * Returns: 0 on success, -1 on error.
- */
-int
-pjournal_replay(struct psc_journal *pj, psc_jhandler pj_handler)
-{
-	int				 i;
-	int				 rc;
-	uint64_t			 xid;
-	struct psc_journal_enthdr	*pje;
-	int				 nents;
-	int				 ntrans;
-	struct psc_journal_enthdr	*tmppje;
-	struct dynarray			 replaybufs;
-
-	psc_assert(pj && pj_handler);
-
-	ntrans = 0;
-	rc = pjournal_scan_slots(pj);
-	while (dynarray_len(&pj->pj_bufs)) {
-
-		pje = dynarray_getpos(&pj->pj_bufs, 0);
-		xid = pje->pje_xid;
-
-		dynarray_init(&replaybufs);
-		dynarray_ensurelen(&replaybufs, 1024);
-
-		for (i = 0; i < dynarray_len(&pj->pj_bufs); i++) {
-			tmppje = dynarray_getpos(&pj->pj_bufs, i);
-			psc_assert(tmppje->pje_len != 0);
-			if (tmppje->pje_xid == xid) {
-				nents++;
-				dynarray_add(&replaybufs, tmppje);
-			}
-		}
-
-		ntrans++;
-		if (pj_handler) {
-			(pj_handler)(&replaybufs, rc);
-		}
-
-		pjournal_remove_entries(pj, xid, 1);
-		dynarray_free(&replaybufs);
-	}
-	dynarray_free(&pj->pj_bufs);
-
-	psc_warnx("Journal replay: %d log entries and %d transactions", nents, ntrans);
-	return (rc);
-}
 
 /*
  * pjournal_load - initialize the in-memory representation of a journal.
  * return: pj on success, NULL on failure
  */
-struct psc_journal *
-pjournal_load(const char *fn, int mode)
+static struct psc_journal *
+pjournal_load(const char *fn)
 {
 	int				 i;
 	ssize_t				 rc;
@@ -569,15 +517,21 @@ pjournal_load(const char *fn, int mode)
 	if (pj->pj_logname == NULL)
 		psc_fatal("strdup");
 
-	if (mode == PJOURNAL_LOG_DUMP) {
-		goto done;
-	}
-	if (mode == PJOURNAL_LOG_REPLAY) {
-		pjournal_replay(pj, NULL);
-		goto done;
-	}
 done:
 	return (pj);
+}
+
+static void
+pjournal_close(struct psc_journal *pj)
+{
+	int				 n;
+	struct psc_journal_enthdr	*pje;
+
+	DYNARRAY_FOREACH(pje, n, &pj->pj_bufs)
+		psc_freenl(pje, PJ_PJESZ(pj));
+	dynarray_free(&pj->pj_bufs);
+	psc_freenl(pj->pj_hdr, sizeof(*pj->pj_hdr));
+	PSCFREE(pj);
 }
 
 /*
@@ -655,18 +609,6 @@ pjournal_format(const char *fn, uint32_t nents, uint32_t entsz, uint32_t ra,
 	psc_freenl(jbuf, PJ_PJESZ(&pj));
 }
 
-void
-pjournal_close(struct psc_journal *pj)
-{
-	int				 n;
-	struct psc_journal_enthdr	*pje;
-
-	DYNARRAY_FOREACH(pje, n, &pj->pj_bufs)
-		psc_freenl(pje, PJ_PJESZ(pj));
-	dynarray_free(&pj->pj_bufs);
-	psc_freenl(pj->pj_hdr, sizeof(*pj->pj_hdr));
-	PSCFREE(pj);
-}
 
 /*
  * Dump the contents of a journal file.
@@ -694,7 +636,7 @@ pjournal_dump(const char *fn)
 	nchksum = 0;
 	nformat = 0;
 
-	pj = pjournal_load(fn, PJOURNAL_LOG_DUMP);
+	pj = pjournal_load(fn);
 	pjh = pj->pj_hdr;
 
 	psc_info("Journal header info: "
@@ -749,4 +691,58 @@ pjournal_dump(const char *fn)
 	psc_info("Journal statistics: %d total, %d format, %d bad magic, %d bad checksum",
 		 ntotal, nformat, nmagic, nchksum);
 	return (0);
+}
+
+/*
+ * pjournal_replay - traverse each open transaction in a journal and replay them.
+ * @pj: the journal.
+ * @pj_handler: the master journal replay function.
+ * Returns: 0 on success, -1 on error.
+ */
+struct psc_journal *
+pjournal_replay(const char * fn, psc_jhandler pj_handler)
+{
+	int				 i;
+	int				 rc;
+	struct psc_journal		*pj;
+	uint64_t			 xid;
+	struct psc_journal_enthdr	*pje;
+	int				 nents;
+	int				 ntrans;
+	struct psc_journal_enthdr	*tmppje;
+	struct dynarray			 replaybufs;
+
+	pj = pjournal_load(fn);
+	if (pj == NULL)
+		return NULL;
+
+	ntrans = 0;
+	rc = pjournal_scan_slots(pj);
+	while (dynarray_len(&pj->pj_bufs)) {
+
+		pje = dynarray_getpos(&pj->pj_bufs, 0);
+		xid = pje->pje_xid;
+
+		dynarray_init(&replaybufs);
+		dynarray_ensurelen(&replaybufs, 1024);
+
+		for (i = 0; i < dynarray_len(&pj->pj_bufs); i++) {
+			tmppje = dynarray_getpos(&pj->pj_bufs, i);
+			psc_assert(tmppje->pje_len != 0);
+			if (tmppje->pje_xid == xid) {
+				nents++;
+				dynarray_add(&replaybufs, tmppje);
+			}
+		}
+
+		ntrans++;
+		(pj_handler)(&replaybufs, &rc);
+
+		pjournal_remove_entries(pj, xid, 1);
+		dynarray_free(&replaybufs);
+	}
+	dynarray_free(&pj->pj_bufs);
+
+	psc_warnx("Journal replay: %d log entries and %d transactions", nents, ntrans);
+	return pj;
 }

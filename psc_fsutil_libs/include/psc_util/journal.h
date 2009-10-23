@@ -65,7 +65,7 @@ struct psc_journal {
 	int			 pj_flags;
 };
 
-typedef void (*psc_jhandler)(struct dynarray *, int);
+typedef void (*psc_jhandler)(struct dynarray *, int *);
 
 /*
  * Start offset to write journal entries (i.e., pje). This means that the log header must be smaller than PJE_OFFSET.
@@ -148,13 +148,13 @@ struct psc_journal_xidhndl {
 #define	PJOURNAL_LOG_REPLAY	2
 
 /* definitions of journal handling functions */
-struct psc_journal *		pjournal_load(const char *, int);
-int				pjournal_dump(const char *);
-void				pjournal_format(const char *, uint32_t, uint32_t, uint32_t, uint32_t);
+int				 pjournal_dump(const char *);
+void				 pjournal_format(const char *, uint32_t, uint32_t, uint32_t, uint32_t);
+struct psc_journal		*pjournal_replay(const char *, psc_jhandler);
 
 /* definitions of transaction handling functions */
-struct psc_journal_xidhndl *	pjournal_xnew(struct psc_journal *);
-int				pjournal_xadd(struct psc_journal_xidhndl *, int, void *, size_t);
-int				pjournal_xend(struct psc_journal_xidhndl *);
+struct psc_journal_xidhndl	*pjournal_xnew(struct psc_journal *);
+int				 pjournal_xadd(struct psc_journal_xidhndl *, int, void *, size_t);
+int				 pjournal_xend(struct psc_journal_xidhndl *);
 
 #endif /* _PFL_JOURNAL_H_ */
