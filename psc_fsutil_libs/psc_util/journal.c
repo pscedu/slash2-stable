@@ -564,6 +564,8 @@ pjournal_load(const char *fn)
 	pj->pj_flags = PJ_NONE;
 	dynarray_init(&pj->pj_bufs);
 	pj->pj_logname = strdup(fn);
+	if (pj->pj_logname == NULL)
+		psc_fatal("strdup");
 
 done:
 	return (pj);
