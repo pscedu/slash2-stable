@@ -238,10 +238,10 @@ pjournal_logwrite(struct psc_journal_xidhndl *xh, int type, void *data,
 	}
 
 	/* Update the next slot to be written by a new log entry */
+	psc_assert(pj->pj_nextwrite < pj->pj_hdr->pjh_nents);
 	if ((++pj->pj_nextwrite) == pj->pj_hdr->pjh_nents) {
 		pj->pj_nextwrite = 0;
-	} else
-		psc_assert(pj->pj_nextwrite < pj->pj_hdr->pjh_nents);
+	}
 
 	PJ_ULOCK(pj);
 
@@ -276,7 +276,7 @@ pjournal_logread(struct psc_journal *pj, int32_t slot, int32_t count, void *data
 	ssize_t		size;
 
 	rc = 0;
-	addr = pj->pj_hdr->pjh_start_off + slot * pj->pj_hdr->pjh_entsz;
+	addr = pj->pj_hdr->pjh_start_off + slot * PJ_PJESZ(pj);
 	size = pread(pj->pj_fd, data, PJ_PJESZ(pj) * count, addr);
 	if (size < 0 || size != PJ_PJESZ(pj) *  count) {
 		psc_warn("Fail to read %ld bytes from journal %p: rc = %d, errno = %d", size, pj, rc, errno);
