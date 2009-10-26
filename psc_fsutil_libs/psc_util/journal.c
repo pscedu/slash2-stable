@@ -104,8 +104,9 @@ pjournal_logwrite_internal(struct psc_journal *pj, struct psc_journal_xidhndl *x
 
 	rc = 0;
 	ntries = MAX_LOG_TRY;
+	psc_assert(slot >= 0);
 	psc_assert(slot < pj->pj_hdr->pjh_nents);
-	psc_assert(size + sizeof(*pje) <= (size_t)PJ_PJESZ(pj));
+	psc_assert(size + offsetof(struct psc_journal_enthdr, pje_data) <= (size_t)PJ_PJESZ(pj));
 
 	PJ_LOCK(pj);
 	while (!dynarray_len(&pj->pj_bufs)) {
@@ -227,6 +228,7 @@ pjournal_logwrite(struct psc_journal_xidhndl *xh, int type, void *data,
 	if (!(xh->pjx_flags & PJX_XSTARTED)) {
 		type |= PJE_XSTARTED;
 		xh->pjx_flags |= PJX_XSTARTED;
+		psc_assert(xh->pjx_tailslot == PJX_SLOT_ANY);
 		xh->pjx_tailslot = slot;
 		psclist_xadd_tail(&xh->pjx_lentry, &pj->pj_pndgxids);
 	}

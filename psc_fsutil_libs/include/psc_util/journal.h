@@ -128,7 +128,7 @@ struct psc_journal_enthdr {
  * @pjx_lock: serialize.
  * @pjx_pj: backpointer to our journal.
  */
-#define	PJX_SLOT_ANY		 (~0U)
+#define	PJX_SLOT_ANY		 (~0)
 
 #define	PJX_NONE		 (0 << 0)
 #define	PJX_XSTARTED		 (1 << 0)
