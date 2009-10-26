@@ -4,6 +4,8 @@
 #define _PFL_ATOMIC_H_
 
 #include <sys/types.h>
+
+#include <linux/autoconf.h>
 #include <asm/bitops.h>
 #include <asm/system.h>
 
