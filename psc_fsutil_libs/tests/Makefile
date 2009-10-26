@@ -9,6 +9,7 @@ SUBDIRS+=	fmtstr
 SUBDIRS+=	hash2
 SUBDIRS+=	lock
 SUBDIRS+=	lock2
+SUBDIRS+=	mlock
 SUBDIRS+=	multilock
 SUBDIRS+=	prsig
 SUBDIRS+=	random
