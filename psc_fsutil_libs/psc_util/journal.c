@@ -141,7 +141,7 @@ pjournal_logwrite_internal(struct psc_journal *pj, struct psc_journal_xidhndl *x
 	/* commit the log entry on disk before we can return */
 	while (ntries) {
 		sz = pwrite(pj->pj_fd, pje, PJ_PJESZ(pj),
-			   (off_t)(pj->pj_hdr->pjh_start_off + (slot * pj->pj_hdr->pjh_entsz)));
+			   (off_t)(pj->pj_hdr->pjh_start_off + (slot * PJ_PJESZ(pj))));
 		if (sz == -1 && errno == EAGAIN) {
 			ntries--;
 			usleep(100);
@@ -149,7 +149,7 @@ pjournal_logwrite_internal(struct psc_journal *pj, struct psc_journal_xidhndl *x
 		}
 	}
 	/* we may want to turn off logging at this point and force write-through instead */
-	if (sz == -1 || sz != pj->pj_hdr->pjh_entsz) {
+	if (sz == -1 || sz != PJ_PJESZ(pj)) {
 		rc = -1;
 		psc_errorx("Problem writing journal log entries at slot %d", slot);
 	} else 
