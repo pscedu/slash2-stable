@@ -43,6 +43,10 @@ pjournal_xnew(struct psc_journal *pj)
 	xh->pjx_tailslot = PJX_SLOT_ANY;
 	INIT_PSCLIST_ENTRY(&xh->pjx_lentry);
 
+	/*
+	 * Note that even though we issue xid in increasing order here, it does not
+	 * necessarily mean transactions will end up in the log in the same order.
+	 */
 	PJ_LOCK(pj);
 	do {
 		xh->pjx_xid = ++pj->pj_nextxid;
@@ -222,7 +226,8 @@ pjournal_logwrite(struct psc_journal_xidhndl *xh, int type, void *data,
 		 * No open transactions.  Insert a fresh startup to cut down replay
 		 * time in case of a crash.
 		 */
-		type |= PJE_STARTUP;
+		if (xh->pjx_xid == pj->pj_nextxid) 
+			type |= PJE_STARTUP;
 	}
 
 	if (!(xh->pjx_flags & PJX_XSTARTED)) {
