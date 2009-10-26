@@ -221,13 +221,6 @@ pjournal_logwrite(struct psc_journal_xidhndl *xh, int type, void *data,
 			goto retry;
 		}
 		tail_slot = t->pjx_tailslot;
-	} else {
-		/*
-		 * No open transactions.  Insert a fresh startup to cut down replay
-		 * time in case of a crash.
-		 */
-		if (xh->pjx_xid == pj->pj_nextxid) 
-			type |= PJE_STARTUP;
 	}
 
 	if (!(xh->pjx_flags & PJX_XSTARTED)) {
