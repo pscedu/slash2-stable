@@ -385,6 +385,7 @@ pjournal_scan_slots(struct psc_journal *pj)
 			if (pje->pje_magic != PJE_MAGIC) {
 				nmagic++;
 				psc_warnx("journal slot %d has a bad magic number!", slot+i);
+				rc = -1;
 				continue;
 			}
 
