@@ -82,7 +82,7 @@ ia64_atomic32_add(__s32 i, psc_atomic32_t *v)
 		new = old + i;
 	} while (ia64_cmpxchg(acq, v, old, new, sizeof(psc_atomic32_t)) != old);
 	return new;
-} 
+}
 
 static __inline int
 ia64_atomic64_add(__s64 i, psc_atomic64_t *v)
@@ -124,7 +124,7 @@ ia64_atomic16_sub(__s16 i, psc_atomic16_t *v)
 		new = old - i;
 	} while (ia64_cmpxchg(acq, v, old, new, sizeof(psc_atomic16_t)) != old);
 	return new;
-} 
+}
 
 static __inline int
 ia64_atomic32_sub(__s32 i, psc_atomic32_t *v)
@@ -138,7 +138,7 @@ ia64_atomic32_sub(__s32 i, psc_atomic32_t *v)
 		new = old - i;
 	} while (ia64_cmpxchg(acq, v, old, new, sizeof(psc_atomic32_t)) != old);
 	return new;
-} 
+}
 
 static __inline int
 ia64_atomic64_sub(__s64 i, psc_atomic64_t *v)
