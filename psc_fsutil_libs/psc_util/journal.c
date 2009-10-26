@@ -322,6 +322,9 @@ pjournal_remove_entries(struct psc_journal *pj, uint64_t xid, int mode)
         }
 }
 
+/*
+ * Order transactions based on xid and sub id.
+ */
 __static int
 pjournal_xid_cmp(const void *x, const void *y)
 {
