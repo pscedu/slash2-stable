@@ -356,6 +356,7 @@ pjournal_scan_slots(struct psc_journal *pj)
 	int				 count;
 	int				 nopen;
 	int				 nmagic;
+	int				 nentry;
 	int				 nclose;
 	uint64_t			 chksum;
 	int				 nformat;
@@ -439,9 +440,9 @@ pjournal_scan_slots(struct psc_journal *pj)
 			if (pje->pje_type & PJE_XCLOSE) {
 				nclose++;
 				psc_assert(pje->pje_len == 0);
-				count = pjournal_remove_entries(pj, pje->pje_xid, 1);
-				psc_assert(count <= (int) pje->pje_sid);
-				if (count == (int) pje->pje_sid) {
+				nentry = pjournal_remove_entries(pj, pje->pje_xid, 1);
+				psc_assert(nentry <= (int) pje->pje_sid);
+				if (nentry == (int) pje->pje_sid) {
 					continue;
 				}
 			}
