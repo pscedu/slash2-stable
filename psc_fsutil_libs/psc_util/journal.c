@@ -516,14 +516,17 @@ pjournal_load(const char *fn)
 		psc_fatal("Fail to stat log file %s", fn);
 	}
 	if (statbuf.st_size < (off_t)sizeof(*pjh)) {
-		psc_fatal("Log file size is too smaller than a log header");
+		psc_fatal("Log file size is smaller than a log header");
 	}
 	rc = pread(pj->pj_fd, pjh, sizeof(*pjh), 0);
-	if (rc != sizeof(*pjh))
+	if (rc != sizeof(*pjh)) {
 		psc_fatal("Fail to read journal header: want %zu got %zd",
 		    sizeof(*pjh), rc);
-
+	}
 	pj->pj_hdr = pjh;
+	if (statbuf.st_size != (off_t)(sizeof(*pjh) + pjh->pjh_nents * PJ_PJESZ(pj))) {
+		psc_fatal("Size of the log file does not match specs in its header");
+	}
 	if (pjh->pjh_magic != PJH_MAGIC) {
 		PSCFREE(pj);
 		psc_freenl(pjh, sizeof(struct psc_journal_hdr));
