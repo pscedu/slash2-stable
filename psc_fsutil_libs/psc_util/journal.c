@@ -358,6 +358,7 @@ pjournal_scan_slots(struct psc_journal *pj)
 	int				 nchksum;
 	uint64_t			 last_xid;
 	int32_t				 last_slot;
+	struct dynarray			 closetrans;
 
 	rc = 0;
 	slot = 0;
@@ -368,6 +369,16 @@ pjournal_scan_slots(struct psc_journal *pj)
 	nformat = 0;
 	last_xid = PJE_XID_NONE;
 	last_slot = PJX_SLOT_ANY;
+
+	/*
+	 * We scan the log from the first entry to the last one regardless where the log
+	 * really starts.  This poses a problem: we might see the CLOSE entry of a transaction
+	 * before its other entries.  As a result, we must save these CLOSE entries until
+	 * we have seen all the entries of the transaction (some of them might already be
+	 * overwritten, but that is perfectly fine).
+	 */
+	dynarray_init(&replaybufs);
+	dynarray_ensurelen(&replaybufs, pj->pj_hdr->pjh_nents / 2);
 
 	dynarray_init(&pj->pj_bufs);
 	jbuf = pjournal_alloc_buf(pj);
