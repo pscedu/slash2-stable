@@ -156,8 +156,7 @@ pjournal_logwrite_internal(struct psc_journal *pj, struct psc_journal_xidhndl *x
 	if (sz == -1 || sz != PJ_PJESZ(pj)) {
 		rc = -1;
 		psc_errorx("Problem writing journal log entries at slot %d", slot);
-	} else 
-		rc = 0;
+	}
 #endif
 
 	PJ_LOCK(pj);
