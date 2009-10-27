@@ -65,7 +65,7 @@ int
 pjournal_xadd(struct psc_journal_xidhndl *xh, int type, void *data, size_t size)
 {
 	spinlock(&xh->pjx_lock);
-	psc_assert(!(xh->pjx_flags & PJX_XCLOSED));
+	psc_assert(!(xh->pjx_flags & PJX_XCLOSE));
 	freelock(&xh->pjx_lock);
 
 	return (pjournal_logwrite(xh, type, data, size));
@@ -79,8 +79,8 @@ int
 pjournal_xend(struct psc_journal_xidhndl *xh)
 {
 	spinlock(&xh->pjx_lock);
-	psc_assert(!(xh->pjx_flags & PJX_XCLOSED));
-	xh->pjx_flags |= PJX_XCLOSED;
+	psc_assert(!(xh->pjx_flags & PJX_XCLOSE));
+	xh->pjx_flags |= PJX_XCLOSE;
 	freelock(&xh->pjx_lock);
 
 	return (pjournal_logwrite(xh, PJE_NONE, NULL, 0));
@@ -168,7 +168,7 @@ pjournal_logwrite_internal(struct psc_journal *pj, struct psc_journal_xidhndl *x
 		pj->pj_flags &= ~PJ_WANTBUF;
 	}
 	if ((pj->pj_flags & PJ_WANTSLOT) &&
-	    (xh->pjx_flags & PJX_XCLOSED) && (xh->pjx_tailslot == pj->pj_nextwrite)) {
+	    (xh->pjx_flags & PJX_XCLOSE) && (xh->pjx_tailslot == pj->pj_nextwrite)) {
 		wakeup = 1;
 		pj->pj_flags &= ~PJ_WANTSLOT;
 		psc_warnx("Journal %p unblocking slot %d - owned by xid %"PRIx64, pj, slot, xh->pjx_xid);
@@ -186,7 +186,7 @@ pjournal_logwrite_internal(struct psc_journal *pj, struct psc_journal_xidhndl *x
  * @xh: the transaction to receive the log entry.
  * @type: the application-specific log entry type.
  * @data: the journal entry contents to store.
- * @size: size of the data
+ * @size: size of the custom data
  * Returns: 0 on success, -1 on error.
  */
 static int
@@ -223,16 +223,16 @@ pjournal_logwrite(struct psc_journal_xidhndl *xh, int type, void *data,
 		tail_slot = t->pjx_tailslot;
 	}
 
-	if (!(xh->pjx_flags & PJX_XSTARTED)) {
-		type |= PJE_XSTARTED;
-		xh->pjx_flags |= PJX_XSTARTED;
+	if (!(xh->pjx_flags & PJX_XSTART)) {
+		type |= PJE_XSTART;
+		xh->pjx_flags |= PJX_XSTART;
 		psc_assert(xh->pjx_tailslot == PJX_SLOT_ANY);
 		xh->pjx_tailslot = slot;
 		psclist_xadd_tail(&xh->pjx_lentry, &pj->pj_pndgxids);
 	}
-	if (xh->pjx_flags & PJX_XCLOSED) {
+	if (xh->pjx_flags & PJX_XCLOSE) {
 		psc_assert(xh->pjx_tailslot != slot);
-		type |= PJE_XCLOSED;
+		type |= PJE_XCLOSE;
 	}
 
 	/* Update the next slot to be written by a new log entry */
@@ -249,7 +249,7 @@ pjournal_logwrite(struct psc_journal_xidhndl *xh, int type, void *data,
 	rc = pjournal_logwrite_internal(pj, xh, slot, type, data, size);
 
 	PJ_LOCK(pj);
-	if (xh->pjx_flags & PJX_XCLOSED) {
+	if (xh->pjx_flags & PJX_XCLOSE) {
 		psc_dbg("Transaction %p (xid = %"PRIx64") removed from journal %p: tail slot = %d, rc = %d",
 			 xh, xh->pjx_xid, pj, xh->pjx_tailslot, rc);
 		psclist_del(&xh->pjx_lentry);
@@ -419,6 +419,8 @@ pjournal_scan_slots(struct psc_journal *pj)
 				rc = -1;
 				continue;
 			}
+			psc_assert((pje->pje_type & PJE_XSTART) || (pje->pje_type & PJE_XCLOSE) ||
+				   (pje->pje_type & PJE_STRTUP) || (pje->pje_type & PJE_FORMAT));
 			if (pje->pje_type & PJE_FORMAT) {
 				nformat++;
 				psc_assert(pje->pje_len == 0);
@@ -428,14 +430,14 @@ pjournal_scan_slots(struct psc_journal *pj)
 				last_xid = pje->pje_xid;
 				last_slot = slot + i;
 			}
-			if (pje->pje_type & PJE_STARTUP) {
+			if (pje->pje_type & PJE_STRTUP) {
 				psc_assert(pje->pje_len == 0);
 				psc_warnx("Journal %p: found a startup entry at slot %d!", pj, slot+i);
 				if (pje->pje_xid > last_startup) {
 					last_startup = pje->pje_xid;
 				}
 			}
-			if (pje->pje_type & PJE_XCLOSED) {
+			if (pje->pje_type & PJE_XCLOSE) {
 				nclose++;
 				psc_assert(pje->pje_len == 0);
 				count = pjournal_remove_entries(pj, pje->pje_xid, 1);
@@ -449,7 +451,7 @@ pjournal_scan_slots(struct psc_journal *pj)
 			 */
 			pje = psc_alloc(PJ_PJESZ(pj), PAF_PAGEALIGN | PAF_LOCK);
 			memcpy(pje, &jbuf[pj->pj_hdr->pjh_entsz * i], sizeof(*pje));
-			if (pje->pje_type & PJE_XCLOSED) {
+			if (pje->pje_type & PJE_XCLOSE) {
 				dynarray_add(&closetrans, pje);
 			} else {
 				dynarray_add(&pj->pj_bufs, pje);
@@ -779,7 +781,7 @@ pjournal_replay(const char * fn, psc_jhandler pj_handler)
 	pje = psc_alloc(PJ_PJESZ(pj), PAF_PAGEALIGN | PAF_LOCK);
 
 	pje->pje_magic = PJE_MAGIC;
-	pje->pje_type = PJE_STARTUP;
+	pje->pje_type = PJE_STRTUP;
 	pj->pj_nextxid++;
 	if (pj->pj_nextxid == PJE_XID_NONE)
 		pj->pj_nextxid++;

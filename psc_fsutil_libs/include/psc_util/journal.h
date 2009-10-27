@@ -79,10 +79,10 @@ typedef void (*psc_jhandler)(struct dynarray *, int *);
  * Journal entry types - higher bits after PJET_LASTBIT are used to identify different log users.
  */
 #define PJE_NONE		(0 << 0)		/* null journal record */
-#define PJE_FORMAT		(1 << 0)		/* newly-formatted journal record */
-#define PJE_XCLOSED		(1 << 1)		/* xid is closed */
-#define PJE_XSTARTED		(1 << 2)		/* transaction began */
-#define PJE_STARTUP		(1 << 3)		/* system startup */
+#define PJE_FORMAT		(1 << 0)		/* newly-formatted journal entry */
+#define PJE_STRTUP		(1 << 1)		/* system startup */
+#define PJE_XSTART		(1 << 2)		/* start a transaction */
+#define PJE_XCLOSE		(1 << 3)		/* close a transaction */
 #define PJE_LASTBIT		 3			/* denote the last used bit */
 
 /*
@@ -135,8 +135,8 @@ struct psc_journal_enthdr {
 #define	PJX_SLOT_ANY		 (~0)
 
 #define	PJX_NONE		 (0 << 0)
-#define	PJX_XSTARTED		 (1 << 0)
-#define	PJX_XCLOSED		 (1 << 1)
+#define	PJX_XSTART		 (1 << 0)
+#define	PJX_XCLOSE		 (1 << 1)
 
 struct psc_journal_xidhndl {
 	uint64_t		 pjx_xid;
