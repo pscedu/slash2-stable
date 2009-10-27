@@ -294,14 +294,16 @@ pjournal_alloc_buf(struct psc_journal *pj)
  * Remove a journal entry if it either has the given xid (mode = 1) or has a xid that is
  * less than the give xid (mode = 2).
  */
-__static void 
+__static int
 pjournal_remove_entries(struct psc_journal *pj, uint64_t xid, int mode)
 {
 	int				 i;
 	struct psc_journal_enthdr	*pje;
 	int				 scan;
+	int				 count;
 
 	scan = 1;
+	count = 0;
 	while (scan) {
 		scan = 0;
 		for (i = 0; i < dynarray_len(&pj->pj_bufs); i++) {
@@ -310,16 +312,19 @@ pjournal_remove_entries(struct psc_journal *pj, uint64_t xid, int mode)
 				dynarray_remove(&pj->pj_bufs, pje);
 				psc_freenl(pje, PJ_PJESZ(pj));
 				scan = 1;
+				count++;
 				break;
 			}
 			if (mode == 2 && pje->pje_xid < xid) {
 				dynarray_remove(&pj->pj_bufs, pje);
 				psc_freenl(pje, PJ_PJESZ(pj));
 				scan = 1;
+				count++;
 				break;
 			}
 		}
         }
+	return count;
 }
 
 /*
@@ -358,6 +363,7 @@ pjournal_scan_slots(struct psc_journal *pj)
 	int				 nchksum;
 	uint64_t			 last_xid;
 	int32_t				 last_slot;
+	int32_t				 last_startup;
 	struct dynarray			 closetrans;
 
 	rc = 0;
@@ -369,6 +375,7 @@ pjournal_scan_slots(struct psc_journal *pj)
 	nformat = 0;
 	last_xid = PJE_XID_NONE;
 	last_slot = PJX_SLOT_ANY;
+	last_startup = PJE_XID_NONE;
 
 	/*
 	 * We scan the log from the first entry to the last one regardless where the log
@@ -377,8 +384,8 @@ pjournal_scan_slots(struct psc_journal *pj)
 	 * we have seen all the entries of the transaction (some of them might already be
 	 * overwritten, but that is perfectly fine).
 	 */
-	dynarray_init(&replaybufs);
-	dynarray_ensurelen(&replaybufs, pj->pj_hdr->pjh_nents / 2);
+	dynarray_init(&closetrans);
+	dynarray_ensurelen(&closetrans, pj->pj_hdr->pjh_nents / 2);
 
 	dynarray_init(&pj->pj_bufs);
 	jbuf = pjournal_alloc_buf(pj);
@@ -421,29 +428,37 @@ pjournal_scan_slots(struct psc_journal *pj)
 				last_xid = pje->pje_xid;
 				last_slot = slot + i;
 			}
-			if (pje->pje_type & PJE_XCLOSED) {
-				psc_assert(pje->pje_len == 0);
-				pjournal_remove_entries(pj, pje->pje_xid, 1);
-				nclose++;
-				continue;
-			}
 			if (pje->pje_type & PJE_STARTUP) {
-				pjournal_remove_entries(pj, pje->pje_xid, 2);
+				if (pje->pje_xid > last_startup) {
+					last_startup = pje->pje_xid;
+				}
 			}
-			if (pje->pje_len == 0) {
-				continue;
+			if (pje->pje_type & PJE_XCLOSED) {
+				nclose++;
+				psc_assert(pje->pje_len == 0);
+				count = pjournal_remove_entries(pj, pje->pje_xid, 1);
+				if (count == (int) pje->pje_sid)
+					continue;
 			}
-			nopen++;
 			pje = psc_alloc(PJ_PJESZ(pj), PAF_PAGEALIGN | PAF_LOCK);
-			dynarray_add(&pj->pj_bufs, pje);
 			memcpy(pje, &jbuf[pj->pj_hdr->pjh_entsz * i], sizeof(*pje));
+			if (pje->pje_type & PJE_XCLOSED) {
+				dynarray_add(&closetrans, pje);
+			} else {
+				dynarray_add(&pj->pj_bufs, pje);
+			}
 		}
 		slot += count;
+	}
+	if (last_startup != PJE_XID_NONE) {
+		pjournal_remove_entries(pj, pje->pje_xid, 2);
 	}
 	pj->pj_nextxid = last_xid;
 	pj->pj_nextwrite = (last_slot == (int)pj->pj_hdr->pjh_nents) ? 0 : (last_slot + 1);
 	qsort(pj->pj_bufs.da_items, pj->pj_bufs.da_pos, sizeof(void *), pjournal_xid_cmp);
 	psc_freenl(jbuf, PJ_PJESZ(pj));
+
+	nopen = dynarray_len(&pj->pj_bufs);
 	psc_warnx("Journal statistics: %d format, %d close, %d open, %d bad magic, %d bad checksum, %d scan, %d total", 
 		   nformat, nclose, nopen, nmagic, nchksum, slot, pj->pj_hdr->pjh_nents);
 	return (rc);
