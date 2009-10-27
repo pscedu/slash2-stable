@@ -523,6 +523,14 @@ pjournal_load(const char *fn)
 		psc_errorx("Journal header has a bad magic number!");
 		goto done; 
 	}
+	if (pjh->pjh_version != PJH_VERSION) {
+		PSCFREE(pj);
+		psc_freenl(pjh, sizeof(struct psc_journal_hdr));
+		pj = NULL;
+		psc_errorx("Journal header has a bad magic number!");
+		goto done; 
+	}
+
 
 	PSC_CRC_INIT(chksum);
 	i = offsetof(struct _psc_journal_hdr, _pjh_chksum);
