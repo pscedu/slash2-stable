@@ -465,8 +465,16 @@ pjournal_scan_slots(struct psc_journal *pj)
 	qsort(pj->pj_bufs.da_items, pj->pj_bufs.da_pos, sizeof(void *), pjournal_xid_cmp);
 	psc_freenl(jbuf, PJ_PJESZ(pj));
 
-	DYNARRAY_FOREACH(pje, i, &closetrans)
+	/*
+	 * We need this code because we don't start from the beginning of the log.
+	 * On the other hand, I don't expect either array will be long.
+	 */
+	while (dynarray_len(&closetrans)) {
+		pje = dynarray_getpos(&closetrans, 0);
+		(void)pjournal_remove_entries(pj, pje->pje_xid, 1);
+		dynarray_remove(&closetrans, pje);
 		psc_freenl(pje, PJ_PJESZ(pj));
+	}
 	dynarray_free(&closetrans);
 
 	nopen = dynarray_len(&pj->pj_bufs);
