@@ -524,9 +524,6 @@ pjournal_load(const char *fn)
 		    sizeof(*pjh), rc);
 	}
 	pj->pj_hdr = pjh;
-	if (statbuf.st_size != (off_t)(sizeof(*pjh) + pjh->pjh_nents * PJ_PJESZ(pj))) {
-		psc_fatal("Size of the log file does not match specs in its header");
-	}
 	if (pjh->pjh_magic != PJH_MAGIC) {
 		PSCFREE(pj);
 		psc_freenl(pjh, sizeof(struct psc_journal_hdr));
@@ -535,13 +532,12 @@ pjournal_load(const char *fn)
 		goto done; 
 	}
 	if (pjh->pjh_version != PJH_VERSION) {
-		PSCFREE(pj);
+		psc_errorx("Journal header has an invalid version number!");
 		psc_freenl(pjh, sizeof(struct psc_journal_hdr));
+		PSCFREE(pj);
 		pj = NULL;
-		psc_errorx("Journal header has a bad magic number!");
 		goto done; 
 	}
-
 
 	PSC_CRC_INIT(chksum);
 	i = offsetof(struct _psc_journal_hdr, _pjh_chksum);
@@ -549,10 +545,16 @@ pjournal_load(const char *fn)
 	PSC_CRC_FIN(chksum);
 
 	if (pjh->pjh_chksum != chksum) {
-		errx(1, "Journal header has an invalid checksum value "
-		    PRI_PSC_CRC" vs "PRI_PSC_CRC, pjh->pjh_chksum, chksum);
-		PSCFREE(pj);
+		psc_errorx("Journal header has an invalid checksum value " PRI_PSC_CRC" vs "PRI_PSC_CRC, pjh->pjh_chksum, chksum);
 		psc_freenl(pjh, sizeof(struct psc_journal_hdr));
+		PSCFREE(pj);
+		pj = NULL;
+		goto done; 
+	}
+	if (statbuf.st_size != (off_t)(sizeof(*pjh) + pjh->pjh_nents * PJ_PJESZ(pj))) {
+		psc_errorx("Size of the log file does not match specs in its header");
+		psc_freenl(pjh, sizeof(struct psc_journal_hdr));
+		PSCFREE(pj);
 		pj = NULL;
 		goto done; 
 	}
