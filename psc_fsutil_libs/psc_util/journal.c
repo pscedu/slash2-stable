@@ -498,6 +498,7 @@ pjournal_load(const char *fn)
 	struct psc_journal		*pj;
 	struct psc_journal_hdr		*pjh;
 	uint64_t			 chksum;
+	struct stat			 statbuf;
 
 	pj = PSCALLOC(sizeof(struct psc_journal));
 	pjh = psc_alloc(sizeof(struct psc_journal_hdr), PAF_PAGEALIGN | PAF_LOCK);
@@ -507,9 +508,16 @@ pjournal_load(const char *fn)
 	 * 512 byte log entries.
 	 */
 	pj->pj_fd = open(fn, O_RDWR | O_SYNC | O_DIRECT);
-	if (pj->pj_fd == -1)
+	if (pj->pj_fd == -1) {
 		psc_fatal("Fail to open log file %s", fn);
-
+	}
+	rc = fstat(pj->pj_fd, &statbuf);
+	if (rc < 0) {
+		psc_fatal("Fail to stat log file %s", fn);
+	}
+	if (statbuf.st_size < (off_t)sizeof(*pjh)) {
+		psc_fatal("Log file size is too smaller than a log header");
+	}
 	rc = pread(pj->pj_fd, pjh, sizeof(*pjh), 0);
 	if (rc != sizeof(*pjh))
 		psc_fatal("Fail to read journal header: want %zu got %zd",
