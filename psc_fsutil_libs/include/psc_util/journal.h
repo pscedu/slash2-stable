@@ -101,6 +101,10 @@ struct psc_journal_enthdr {
 	uint32_t		pje_type;		/* see above */
 	uint32_t		pje_padding;
 	uint64_t		pje_xid;
+	/*
+	 * This field can be used by the replay process to remove the CLOSE entry
+	 * when all other log entries of a transaction have been seen.
+	 */
 	uint32_t		pje_sid;
 	/* 
 	 * This field is used to calculate the CRC checksum of the following data.
