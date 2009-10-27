@@ -363,8 +363,8 @@ pjournal_scan_slots(struct psc_journal *pj)
 	int				 nchksum;
 	uint64_t			 last_xid;
 	int32_t				 last_slot;
-	int32_t				 last_startup;
 	struct dynarray			 closetrans;
+	uint64_t			 last_startup;
 
 	rc = 0;
 	slot = 0;
@@ -429,6 +429,8 @@ pjournal_scan_slots(struct psc_journal *pj)
 				last_slot = slot + i;
 			}
 			if (pje->pje_type & PJE_STARTUP) {
+				psc_assert(pje->pje_len == 0);
+				psc_warnx("Journal %p: found a startup entry at slot %d!", pj, slot+i);
 				if (pje->pje_xid > last_startup) {
 					last_startup = pje->pje_xid;
 				}
@@ -437,9 +439,14 @@ pjournal_scan_slots(struct psc_journal *pj)
 				nclose++;
 				psc_assert(pje->pje_len == 0);
 				count = pjournal_remove_entries(pj, pje->pje_xid, 1);
-				if (count == (int) pje->pje_sid)
+				psc_assert(count <= (int) pje->pje_sid);
+				if (count == (int) pje->pje_sid) {
 					continue;
+				}
 			}
+			/*
+			 * Okay, we need to keep this log entry for now.
+			 */
 			pje = psc_alloc(PJ_PJESZ(pj), PAF_PAGEALIGN | PAF_LOCK);
 			memcpy(pje, &jbuf[pj->pj_hdr->pjh_entsz * i], sizeof(*pje));
 			if (pje->pje_type & PJE_XCLOSED) {
@@ -457,6 +464,10 @@ pjournal_scan_slots(struct psc_journal *pj)
 	pj->pj_nextwrite = (last_slot == (int)pj->pj_hdr->pjh_nents) ? 0 : (last_slot + 1);
 	qsort(pj->pj_bufs.da_items, pj->pj_bufs.da_pos, sizeof(void *), pjournal_xid_cmp);
 	psc_freenl(jbuf, PJ_PJESZ(pj));
+
+	DYNARRAY_FOREACH(pje, i, &closetrans)
+		psc_freenl(pje, PJ_PJESZ(pj));
+	dynarray_free(&closetrans);
 
 	nopen = dynarray_len(&pj->pj_bufs);
 	psc_warnx("Journal statistics: %d format, %d close, %d open, %d bad magic, %d bad checksum, %d scan, %d total", 
