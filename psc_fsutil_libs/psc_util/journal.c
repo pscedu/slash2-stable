@@ -493,7 +493,6 @@ pjournal_scan_slots(struct psc_journal *pj)
 static struct psc_journal *
 pjournal_load(const char *fn)
 {
-	int				 i;
 	ssize_t				 rc;
 	struct psc_journal		*pj;
 	struct psc_journal_hdr		*pjh;
@@ -540,7 +539,6 @@ pjournal_load(const char *fn)
 	}
 
 	PSC_CRC_INIT(chksum);
-	i = offsetof(struct _psc_journal_hdr, _pjh_chksum);
 	psc_crc_add(&chksum, pjh, offsetof(struct _psc_journal_hdr, _pjh_chksum));
 	PSC_CRC_FIN(chksum);
 
@@ -559,7 +557,7 @@ pjournal_load(const char *fn)
 		goto done; 
 	}
 	/*
-	 * pj_nextxid and pj_nextwrite will be filled after log replay.
+	 * The remaining two fields pj_nextxid and pj_nextwrite will be filled after log replay.
  	 */
 	LOCK_INIT(&pj->pj_lock);
 	INIT_PSCLIST_HEAD(&pj->pj_pndgxids);
