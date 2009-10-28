@@ -149,6 +149,7 @@ pjournal_logwrite_internal(struct psc_journal *pj, struct psc_journal_xidhndl *x
 			usleep(100);
 			continue;
 		}
+		break;
 	}
 	/* we may want to turn off logging at this point and force write-through instead */
 	if (sz == -1 || sz != PJ_PJESZ(pj)) {
