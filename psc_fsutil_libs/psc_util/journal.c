@@ -140,8 +140,6 @@ pjournal_logwrite_internal(struct psc_journal *pj, struct psc_journal_xidhndl *x
 	PSC_CRC_FIN(chksum);
 	pje->pje_chksum = chksum;
 	
-#ifdef NOT_READY 
-
 	/* commit the log entry on disk before we can return */
 	while (ntries) {
 		sz = pwrite(pj->pj_fd, pje, PJ_PJESZ(pj),
@@ -157,7 +155,6 @@ pjournal_logwrite_internal(struct psc_journal *pj, struct psc_journal_xidhndl *x
 		rc = -1;
 		psc_errorx("Problem writing journal log entries at slot %d", slot);
 	}
-#endif
 
 	PJ_LOCK(pj);
 	dynarray_add(&pj->pj_bufs, pje);
@@ -336,7 +333,11 @@ pjournal_xid_cmp(const void *x, const void *y)
 
 	if (a->pje_xid < b->pje_xid)
 		return (-1);
+	if (a->pje_xid == b->pje_xid && a->pje_sid < b->pje_sid)
+		return (-1);
 	if (a->pje_xid > b->pje_xid)
+                return (1);
+	if (a->pje_xid == b->pje_xid && a->pje_sid > b->pje_sid)
                 return (1);
 	return (0);
 }
