@@ -840,6 +840,12 @@ pjournal_replay(const char * fn, psc_jhandler pj_handler)
 	if (pj->pj_nextwrite == pj->pj_hdr->pjh_nents)
 		pj->pj_nextwrite = 0;
 
+	/* pre-allocate some buffers for log writes */
+	for (i = 0; i < MAX_NUM_PJBUF; i++) {
+		pje = psc_alloc(PJ_PJESZ(pj), PAF_PAGEALIGN|PAF_LOCK);
+		dynarray_add(&pj->pj_bufs, pje);
+	}
+
 	psc_warnx("Journal replay: %d log entries and %d transactions have been redone, error = %d", nents, ntrans, nerrs);
 	return pj;
 }
