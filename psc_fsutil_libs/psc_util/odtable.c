@@ -183,6 +183,7 @@ odtable_load(const char *f, struct odtable **t)
 
 	odt->odt_fd = open(f, O_RDWR, 0600);
 	if (odt->odt_fd < 0) {
+		psc_warnx("Fail to open bmap ownership table file %s", f);
 		free(odt);
 		return (-errno);
 	}
