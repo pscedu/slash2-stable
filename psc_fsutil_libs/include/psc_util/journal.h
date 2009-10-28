@@ -152,15 +152,6 @@ struct psc_journal_xidhndl {
 #define	PJOURNAL_LOG_DUMP	1
 #define	PJOURNAL_LOG_REPLAY	2
 
-#ifdef _NOJOURNALING
-#define pjournal_dump(fn) 0
-#define pjournal_format(a,b,c,d,e)
-#define pjournal_replay(fn,h) NULL
-#define pjournal_xadd(a,b,c,d) 1
-#define pjournal_xend(a) 1
-#define pjournal_xnew(a) NULL
-#else
-
 /* definitions of journal handling functions */
 int				 pjournal_dump(const char *);
 void				 pjournal_format(const char *, uint32_t, uint32_t, uint32_t, uint32_t);
@@ -170,7 +161,5 @@ struct psc_journal		*pjournal_replay(const char *, psc_jhandler);
 struct psc_journal_xidhndl	*pjournal_xnew(struct psc_journal *);
 int				 pjournal_xadd(struct psc_journal_xidhndl *, int, void *, size_t);
 int				 pjournal_xend(struct psc_journal_xidhndl *);
-
-#endif /* _NOJOURNALING */
 
 #endif /* _PFL_JOURNAL_H_ */
