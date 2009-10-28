@@ -54,6 +54,7 @@
 #include "psc_util/net.h"
 #include "psc_util/odtable.h"
 #include "psc_util/parity.h"
+#include "psc_util/printhex.h"
 #include "psc_util/prsig.h"
 #include "psc_util/pthrutil.h"
 #include "psc_util/random.h"
@@ -97,10 +98,10 @@ main(int argc, char *argv[])
 		usage();
 
 #define PRTYPE(type) \
-	printf("%-32s %zu\n", #type, sizeof(type))
+	printf("%-52s %zu\n", #type, sizeof(type))
 
 #define PRVAL(val) \
-	printf("%-32s %lu\n", #val, (unsigned long)(val))
+	printf("%-52s %lu\n", #val, (unsigned long)(val))
 
 	PRTYPE(int);
 	PRTYPE(unsigned char);
@@ -220,6 +221,7 @@ main(int argc, char *argv[])
 /* end structs */
 
 	PRVAL(offsetof(struct psc_listcache, lc_listhd));
+	PRVAL(offsetof(struct psc_journal_enthdr, pje_data));
 	PRVAL(PSCFMT_HUMAN_BUFSIZ);
 	PRVAL(PSCFMT_RATIO_BUFSIZ);
 	PRVAL(PSC_NIDSTR_SIZE);
