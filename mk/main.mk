@@ -66,20 +66,6 @@ vpath %.c $(sort $(dir $(filter %.c,${_TSRCS})) ${OBJDIR})
 
 all: recurse-all ${TARGET}
 
-recurse-all:
-	@# XXX: factor recursion
-	@for i in ${SUBDIRS}; do							\
-		echo -n "===> ";							\
-		if [ -n "${DIRPREFIX}" ]; then						\
-			echo -n ${DIRPREFIX};						\
-		fi;									\
-		echo $$i;								\
-		(cd $$i && ${MAKE} SUBDIRS= DIRPREFIX=${DIRPREFIX}$$i/ all) || exit 1;	\
-		if [ -n "${DIRPREFIX}" ]; then						\
-			echo "<=== ${DIRPREFIX}" | sed 's!/$$!!';			\
-		fi;									\
-	done
-
 .SUFFIXES:
 
 ${OBJDIR}:
@@ -107,18 +93,21 @@ ${PROG}: ${OBJS}
 ${LIBRARY}: ${OBJS}
 	${AR} ${ARFLAGS} $@ ${OBJS}
 
-recurse-install:
+recurse-%:
 	@for i in ${SUBDIRS}; do							\
 		echo -n "===> ";							\
 		if [ -n "${DIRPREFIX}" ]; then						\
 			echo -n ${DIRPREFIX};						\
 		fi;									\
 		echo $$i;								\
-		(cd $$i && ${MAKE} SUBDIRS= DIRPREFIX=${DIRPREFIX}$$i/ $@) || exit 1;	\
+		(cd $$i && ${MAKE} SUBDIRS= DIRPREFIX=${DIRPREFIX}$$i/			\
+		    $(patsubst recurse-%,%,$@)) || exit 1;				\
 		if [ -n "${DIRPREFIX}" ]; then						\
 			echo "<=== ${DIRPREFIX}" | sed 's!/$$!!';			\
 		fi;									\
 	done
+
+install: recurse-install
 	@if [ -n "${LIBRARY}" ]; then							\
 		mkdir -p ${INSTALLDIR}/lib;						\
 		echo cp -pf ${LIBRARY} ${INSTALLDIR}/lib;				\
@@ -141,18 +130,7 @@ recurse-install:
 		done;									\
 	fi
 
-depend: ${_C_SRCS}
-	@for i in ${SUBDIRS}; do							\
-		echo -n "===> ";							\
-		if [ -n "${DIRPREFIX}" ]; then						\
-			echo -n ${DIRPREFIX};						\
-		fi;									\
-		echo $$i;								\
-		(cd $$i && ${MAKE} SUBDIRS= DIRPREFIX=${DIRPREFIX}$$i/ $@) || exit 1;	\
-		if [ -n "${DIRPREFIX}" ]; then						\
-			echo "<=== ${DIRPREFIX}" | sed 's!/$$!!';			\
-		fi;									\
-	done
+depend: ${_C_SRCS} recurse-depend
 	@if ${NOTEMPTY} "${_C_SRCS}"; then						\
 		${ECHORUN} ${MKDEP} ${_TINCLUDES} ${DEFINES} ${_C_SRCS};		\
 	fi
@@ -160,70 +138,27 @@ depend: ${_C_SRCS}
 		echo -n "${PROG}:" >> .depend;						\
 		perl ${ROOTDIR}/tools/libdep.pl ${LDFLAGS} >> .depend;			\
 	fi
+	@# XXX add cscope here?
 
-clean:
+clean: recurse-clean
 	@# Check existence of files to catch errors such as SRCS+=file.y instead of file.c
 	@for i in ${_TSRCS}; do								\
 		test -f $$i || { echo "file does not exist: $$i" >&2; exit 1; };	\
 	done
-	rm -rf ${OBJS} ${PROG} ${LIBRARY} $(addprefix ${OBJDIR}/,${CLEANFILES})		\
+	rm -f ${OBJS} ${PROG} ${LIBRARY} $(addprefix ${OBJDIR}/,${CLEANFILES})		\
 	    ${_YACCINTM} ${_LEXINTM} .depend* TAGS cscope.out core.[0-9]*
-	@for i in ${SUBDIRS}; do							\
-		echo -n "===> ";							\
-		if [ -n "${DIRPREFIX}" ]; then						\
-			echo -n ${DIRPREFIX};						\
-		fi;									\
-		echo $$i;								\
-		(cd $$i && ${MAKE} SUBDIRS= DIRPREFIX=${DIRPREFIX}$$i/ $@) || exit 1;	\
-		if [ -n "${DIRPREFIX}" ]; then						\
-			echo "<=== ${DIRPREFIX}" | sed 's!/$$!!';			\
-		fi;									\
-	done
 
-lint:
-	@for i in ${SUBDIRS}; do							\
-		echo -n "===> ";							\
-		if [ -n "${DIRPREFIX}" ]; then						\
-			echo -n ${DIRPREFIX};						\
-		fi;									\
-		echo $$i;								\
-		(cd $$i && ${MAKE} SUBDIRS= DIRPREFIX=${DIRPREFIX}$$i/ $@) || exit 1;	\
-		if [ -n "${DIRPREFIX}" ]; then						\
-			echo "<=== ${DIRPREFIX}" | sed 's!/$$!!';			\
-		fi;									\
-	done
+lint: recurse-lint
 	@if ${NOTEMPTY} "${_TSRCS}"; then						\
 		${ECHORUN} ${LINT} ${_TINCLUDES} ${DEFINES} ${_TSRCS};			\
 	fi
 
-listsrcs:
-	@for i in ${SUBDIRS}; do							\
-		echo -n "===> ";							\
-		if [ -n "${DIRPREFIX}" ]; then						\
-			echo -n ${DIRPREFIX};						\
-		fi;									\
-		echo $$i;								\
-		(cd $$i && ${MAKE} SUBDIRS= DIRPREFIX=${DIRPREFIX}$$i/ $@) || exit 1;	\
-		if [ -n "${DIRPREFIX}" ]; then						\
-			echo "<=== ${DIRPREFIX}" | sed 's!/$$!!';			\
-		fi;									\
-	done
+listsrcs: recurse-listsrcs
 	@if ${NOTEMPTY} "${_TSRCS}"; then						\
 		echo "${_TSRCS}";							\
 	fi
 
-test: all
-	@for i in ${SUBDIRS}; do							\
-		echo -n "===> ";							\
-		if [ -n "${DIRPREFIX}" ]; then						\
-			echo -n ${DIRPREFIX};						\
-		fi;									\
-		echo $$i;								\
-		(cd $$i && ${MAKE} SUBDIRS= DIRPREFIX=${DIRPREFIX}$$i/ $@) || exit 1;	\
-		if [ -n "${DIRPREFIX}" ]; then						\
-			echo "<=== ${DIRPREFIX}" | sed 's!/$$!!';			\
-		fi;									\
-	done
+test: all recurse-test
 	@if [ -n "${PROG}" ]; then							\
 		echo "./${PROG}";							\
 		./${PROG} || exit 1;							\
@@ -254,32 +189,10 @@ CS_ARGS+=-s${ZEST_BASE}
 ET_ARGS+="${ZEST_BASE}"
 endif
 
-cscope cs:
-	@for i in ${SUBDIRS}; do							\
-		echo -n "===> ";							\
-		if [ -n "${DIRPREFIX}" ]; then						\
-			echo -n ${DIRPREFIX};						\
-		fi;									\
-		echo $$i;								\
-		(cd $$i && ${MAKE} SUBDIRS= DIRPREFIX=${DIRPREFIX}$$i/ $@) || exit 1;	\
-		if [ -n "${DIRPREFIX}" ]; then						\
-			echo "<=== ${DIRPREFIX}" | sed 's!/$$!!';			\
-		fi;									\
-	done
+cscope cs: recurse-cs
 	cscope -Rb ${CS_ARGS} -s${PFL_BASE} -s${LNET_BASE}
 
-etags:
-	@for i in ${SUBDIRS}; do							\
-		echo -n "===> ";							\
-		if [ -n "${DIRPREFIX}" ]; then						\
-			echo -n ${DIRPREFIX};						\
-		fi;									\
-		echo $$i;								\
-		(cd $$i && ${MAKE} SUBDIRS= DIRPREFIX=${DIRPREFIX}$$i/ $@) || exit 1;	\
-		if [ -n "${DIRPREFIX}" ]; then						\
-			echo "<=== ${DIRPREFIX}" | sed 's!/$$!!';			\
-		fi;									\
-	done
+etags: recurse-etags
 	find ${ET_ARGS} ${PFL_BASE} ${PFL_BASE} -name \*.[chly] | xargs etags
 
 env:
