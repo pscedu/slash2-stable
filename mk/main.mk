@@ -2,16 +2,18 @@
 
 -include ${ROOTDIR}/mk/local.mk
 
-_TOBJS=		$(patsubst %.c,%.o,$(filter %.c,${SRCS}))
-_TOBJS+=	$(patsubst %.y,%.o,$(filter %.y,${SRCS}))
-_TOBJS+=	$(patsubst %.l,%.o,$(filter %.l,${SRCS}))
+_TSRCS=		$(foreach fn,${SRCS},$(realpath ${fn}))
+
+_TOBJS=		$(patsubst %.c,%.o,$(filter %.c,${_TSRCS}))
+_TOBJS+=	$(patsubst %.y,%.o,$(filter %.y,${_TSRCS}))
+_TOBJS+=	$(patsubst %.l,%.o,$(filter %.l,${_TSRCS}))
 OBJS=		$(addprefix ${OBJDIR}/,$(notdir ${_TOBJS}))
 
-_LEXINTM=	$(patsubst %.l,%.c,$(addprefix ${OBJDIR}/,$(notdir $(filter %.l,${SRCS}))))
-_YACCINTM=	$(patsubst %.y,%.c,$(addprefix ${OBJDIR}/,$(notdir $(filter %.y,${SRCS}))))
-CLEANFILES+=	$(patsubst %.y,%.h,$(notdir $(filter %.y,${SRCS})))
-_C_SRCS=	$(filter %.c,${SRCS}) ${_YACCINTM} ${_LEXINTM}
-ECHORUN=	echorun() { echo "$$@"; "$$@" }; echorun
+_LEXINTM=	$(patsubst %.l,%.c,$(addprefix ${OBJDIR}/,$(notdir $(filter %.l,${_TSRCS}))))
+_YACCINTM=	$(patsubst %.y,%.c,$(addprefix ${OBJDIR}/,$(notdir $(filter %.y,${_TSRCS}))))
+CLEANFILES+=	$(patsubst %.y,%.h,$(notdir $(filter %.y,${_TSRCS})))
+_C_SRCS=	$(filter %.c,${_TSRCS}) ${_YACCINTM} ${_LEXINTM}
+ECHORUN=	echorun() { echo "$$@"; "$$@"; }; echorun
 
 LNET_SOCKLND_SRCS+=	${LNET_BASE}/ulnds/socklnd/conn.c
 LNET_SOCKLND_SRCS+=	${LNET_BASE}/ulnds/socklnd/handlers.c
@@ -51,13 +53,16 @@ PSCRPC_SRCS+=		${PFL_BASE}/psc_rpc/packgeneric.c
 PSCRPC_SRCS+=		${PFL_BASE}/psc_rpc/rpcclient.c
 PSCRPC_SRCS+=		${PFL_BASE}/psc_rpc/service.c
 
-CFLAGS+=		${INCLUDES} ${DEFINES}
+_TINCLUDES=		$(filter-out -I%,${INCLUDES}) $(patsubst %,-I%,$(foreach \
+			dir,$(patsubst -I%,%,$(filter -I%,${INCLUDES})), $(realpath ${dir})))
+
+CFLAGS+=		${DEFINES} ${_TINCLUDES}
 TARGET?=		${PROG} ${LIBRARY}
 OBJDIR=			${CURDIR}/obj
 
-vpath %.y $(sort $(dir $(filter %.y,${SRCS})))
-vpath %.l $(sort $(dir $(filter %.l,${SRCS})))
-vpath %.c $(sort $(dir $(filter %.c,${SRCS})) ${OBJDIR})
+vpath %.y $(sort $(dir $(filter %.y,${_TSRCS})))
+vpath %.l $(sort $(dir $(filter %.l,${_TSRCS})))
+vpath %.c $(sort $(dir $(filter %.c,${_TSRCS})) ${OBJDIR})
 
 all: recurse-all ${TARGET}
 
@@ -81,15 +86,20 @@ ${OBJDIR}:
 	mkdir -p $@
 
 ${OBJDIR}/$(notdir %.c) : %.l | ${OBJDIR}
-	${LEX} ${LFLAGS} $(realpath $<) > $@
+	${LEX} ${LFLAGS} $< > $@
 
 ${OBJDIR}/$(notdir %.c) : %.y | ${OBJDIR}
-	${YACC} ${YFLAGS} -o $@ $(realpath $<)
+	${YACC} ${YFLAGS} -o $@ $<
 
 ${OBJDIR}/$(notdir %.o) : %.c | ${OBJDIR}
 	${CC} ${CFLAGS} ${$(subst .,_,$(subst -,_,$(subst /,_,$(subst			\
 	    ../,,$(subst //,/,$(subst $(realpath					\
-	    ${ROOTDIR})/,,$(realpath $<)))))))_CFLAGS} -c $(realpath $<) -o $@
+	    ${ROOTDIR})/,,$<))))))_CFLAGS} $< -c -o $@
+
+${OBJDIR}/$(notdir %.E) : %.c | ${OBJDIR}
+	${CC} ${CFLAGS} ${$(subst .,_,$(subst -,_,$(subst /,_,$(subst			\
+	    ../,,$(subst //,/,$(subst $(realpath					\
+	    ${ROOTDIR})/,,$<))))))_CFLAGS} $< -E -o $@
 
 ${PROG}: ${OBJS}
 	${CC} -o $@ ${OBJS} ${LDFLAGS}
@@ -127,8 +137,7 @@ recurse-install:
 				_dir=${INSTALLDIR}/include;				\
 			fi;								\
 			mkdir -p $$_dir;						\
-			echo cp -rfp $$i $$_dir;					\
-			cp -rfp $$i $$_dir;						\
+			${ECHORUN} cp -rfp $$i $$_dir;					\
 		done;									\
 	fi
 
@@ -145,8 +154,7 @@ depend: ${_C_SRCS}
 		fi;									\
 	done
 	@if ${NOTEMPTY} "${_C_SRCS}"; then						\
-		echo "${MKDEP} ${INCLUDES} ${DEFINES} ${_C_SRCS}";			\
-		${MKDEP} ${INCLUDES} ${DEFINES} ${_C_SRCS};				\
+		${ECHORUN} ${MKDEP} ${_TINCLUDES} ${DEFINES} ${_C_SRCS};		\
 	fi
 	@if [ -n "${PROG}" ]; then							\
 		echo -n "${PROG}:" >> .depend;						\
@@ -155,7 +163,7 @@ depend: ${_C_SRCS}
 
 clean:
 	@# Check existence of files to catch errors such as SRCS+=file.y instead of file.c
-	@for i in ${SRCS}; do								\
+	@for i in ${_TSRCS}; do								\
 		test -f $$i || { echo "file does not exist: $$i" >&2; exit 1; };	\
 	done
 	rm -rf ${OBJS} ${PROG} ${LIBRARY} $(addprefix ${OBJDIR}/,${CLEANFILES})		\
@@ -184,9 +192,8 @@ lint:
 			echo "<=== ${DIRPREFIX}" | sed 's!/$$!!';			\
 		fi;									\
 	done
-	@if ${NOTEMPTY} "${SRCS}"; then							\
-		echo "${LINT} ${INCLUDES} ${DEFINES} ${SRCS}";				\
-		${LINT} ${INCLUDES} ${DEFINES} ${SRCS} || true;				\
+	@if ${NOTEMPTY} "${_TSRCS}"; then						\
+		${ECHORUN} ${LINT} ${_TINCLUDES} ${DEFINES} ${_TSRCS};			\
 	fi
 
 listsrcs:
@@ -201,8 +208,8 @@ listsrcs:
 			echo "<=== ${DIRPREFIX}" | sed 's!/$$!!';			\
 		fi;									\
 	done
-	@if ${NOTEMPTY} "${SRCS}"; then							\
-		echo "${SRCS}";								\
+	@if ${NOTEMPTY} "${_TSRCS}"; then						\
+		echo "${_TSRCS}";							\
 	fi
 
 test: all
@@ -225,6 +232,7 @@ test: all
 hdrclean:
 	${HDRCLEAN} */*.[clyh]
 
+# empty but overrideable
 prereq:
 
 build: prereq
