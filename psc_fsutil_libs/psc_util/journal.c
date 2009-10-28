@@ -763,6 +763,7 @@ pjournal_replay(const char * fn, psc_jhandler pj_handler)
 	struct psc_journal_enthdr	*pje;
 	ssize_t				 size;
 	int				 nents;
+	int				 nerrs;
 	uint64_t			 chksum;
 	int				 ntrans;
 	struct psc_journal_enthdr	*tmppje;
@@ -772,8 +773,13 @@ pjournal_replay(const char * fn, psc_jhandler pj_handler)
 	if (pj == NULL)
 		return NULL;
 
+	nerrs = 0;
 	ntrans = 0;
 	rc = pjournal_scan_slots(pj);
+	if (rc) {
+		rc = 0;
+		nerrs++;
+	}
 	while (dynarray_len(&pj->pj_bufs)) {
 
 		pje = dynarray_getpos(&pj->pj_bufs, 0);
@@ -793,10 +799,15 @@ pjournal_replay(const char * fn, psc_jhandler pj_handler)
 
 		ntrans++;
 		(pj_handler)(&replaybufs, &rc);
+		if (rc) {
+			nerrs++;
+			rc = 0;
+		}
 
 		pjournal_remove_entries(pj, xid, 1);
 		dynarray_free(&replaybufs);
 	}
+	psc_assert(!dynarray_len(&pj->pj_bufs));
 	dynarray_free(&pj->pj_bufs);
 
 	/* write a startup marker after replaying all the log entries */
@@ -829,6 +840,6 @@ pjournal_replay(const char * fn, psc_jhandler pj_handler)
 	if (pj->pj_nextwrite == pj->pj_hdr->pjh_nents)
 		pj->pj_nextwrite = 0;
 
-	psc_warnx("Journal replay: %d log entries and %d transactions", nents, ntrans);
+	psc_warnx("Journal replay: %d log entries and %d transactions have been redone, error = %d", nents, ntrans, nerrs);
 	return pj;
 }
