@@ -465,7 +465,7 @@ pjournal_scan_slots(struct psc_journal *pj)
 	pj->pj_nextxid = last_xid;
 	pj->pj_nextwrite = (last_slot == (int)pj->pj_hdr->pjh_nents - 1) ? 0 : (last_slot + 1);
 	qsort(pj->pj_bufs.da_items, pj->pj_bufs.da_pos, sizeof(void *), pjournal_xid_cmp);
-	psc_freenl(jbuf, PJ_PJESZ(pj));
+	psc_freenl(jbuf, PJ_PJESZ(pj) * pj->pj_hdr->pjh_readahead);
 
 	/*
 	 * We need this code because we don't start from the beginning of the log.
@@ -657,7 +657,7 @@ pjournal_format(const char *fn, uint32_t nents, uint32_t entsz, uint32_t ra,
 	if (close(fd) < 0) {
 		psc_fatal("Failed to close journal fd");
 	}
-	psc_freenl(jbuf, PJ_PJESZ(&pj));
+	psc_freenl(jbuf, PJ_PJESZ(&pj) * ra);
 }
 
 
@@ -796,7 +796,7 @@ pjournal_replay(const char * fn, psc_jhandler pj_handler)
 	}
 	dynarray_free(&pj->pj_bufs);
 
-	/* write a startup marker after replay all the log entries */
+	/* write a startup marker after replaying all the log entries */
 	pje = psc_alloc(PJ_PJESZ(pj), PAF_PAGEALIGN | PAF_LOCK);
 
 	pje->pje_magic = PJE_MAGIC;
