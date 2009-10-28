@@ -15,10 +15,12 @@
 
 #include "psc_util/log.h"
 
-#define __bad_increment_for_ia64_fetch_and_add() ({ psc_fatalx("__bad_increment_for_ia64_fetch_and_add"); 0; })
-#define __bad_size_for_ia64_fetch_and_add()	 psc_fatalx("__bad_size_for_ia64_fetch_and_add")
-#define ia64_cmpxchg_called_with_bad_pointer()	 ({ psc_fatalx("ia64_cmpxchg_called_with_bad_pointer"); 0; })
-#define ia64_xchg_called_with_bad_pointer()	 psc_fatalx("ia64_xchg_called_with_bad_pointer")
+#define __bad_increment_for_ia64_fetch_and_add_guts	{ psc_fatalx("__bad_increment_for_ia64_fetch_and_add"); 0; }
+#define __bad_increment_for_ia64_fetch_and_add()	(__bad_increment_for_ia64_fetch_and_add_guts)
+#define __bad_size_for_ia64_fetch_and_add()		psc_fatalx("__bad_size_for_ia64_fetch_and_add")
+#define ia64_cmpxchg_called_with_bad_pointer_guts	{ psc_fatalx("ia64_cmpxchg_called_with_bad_pointer"); 0; }
+#define ia64_cmpxchg_called_with_bad_pointer()		(ia64_cmpxchg_called_with_bad_pointer_guts)
+#define ia64_xchg_called_with_bad_pointer()		psc_fatalx("ia64_xchg_called_with_bad_pointer")
 
 typedef struct { volatile __s32 value; } atomic_t;
 typedef struct { volatile __s16 value; } psc_atomic16_t;
@@ -590,6 +592,19 @@ atomic_dec(atomic_t *v)
 		LOCK_PREFIX "decl %0"
 		:"=m" (v->value)
 		:"m" (v->value));
+}
+
+/**
+ * psc_atomic16_dec - Atomically decrement by one.
+ * @v: atomic value.
+ */
+static __inline void
+psc_atomic16_dec(psc_atomic16_t *v)
+{
+	__asm__ __volatile__(
+		LOCK_PREFIX "decw %0"
+		: "=m" psc_atomic16_access(v)
+		: "m" psc_atomic16_access(v));
 }
 
 /**
