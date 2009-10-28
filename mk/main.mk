@@ -72,18 +72,18 @@ all: recurse-all ${TARGET}
 ${OBJDIR}:
 	mkdir -p $@
 
-${OBJDIR}/$(notdir %.c) : %.l
+${OBJDIR}/$(notdir %.c) : %.l | ${OBJDIR}
 	${LEX} ${LFLAGS} $(realpath $<) > $@
 
-${OBJDIR}/$(notdir %.c) : %.y
+${OBJDIR}/$(notdir %.c) : %.y | ${OBJDIR}
 	${YACC} ${YFLAGS} -o $@ $(realpath $<)
 
-${OBJDIR}/$(notdir %.o) : %.c
+${OBJDIR}/$(notdir %.o) : %.c | ${OBJDIR}
 	${CC} ${CFLAGS} ${$(subst .,_,$(subst -,_,$(subst /,_,$(subst			\
 	    ../,,$(subst //,/,$(subst $(realpath					\
 	    ${ROOTDIR})/,,$(realpath $<)))))))_CFLAGS} $(realpath $<) -c -o $@
 
-${OBJDIR}/$(notdir %.E) : %.c
+${OBJDIR}/$(notdir %.E) : %.c | ${OBJDIR}
 	${CC} ${CFLAGS} ${$(subst .,_,$(subst -,_,$(subst /,_,$(subst			\
 	    ../,,$(subst //,/,$(subst $(realpath					\
 	    ${ROOTDIR})/,,$(realpath $<)))))))_CFLAGS} $(realpath $<) -E -o $@
