@@ -3,10 +3,26 @@
 
 use strict;
 use warnings;
+use constant WIDTH => 78;
 
 my @l_opts;
 my @L_opts;
 my @libs;
+
+my $llen = 0;
+sub prdep {
+	my $dep = shift;
+	my $len = length $dep;
+	if ($llen + $len + 1 > WIDTH) {
+		print " \\\n  ";
+		$llen = 0;
+	} else {
+		print " ";
+		$llen++;
+	}
+	print $dep;
+	$llen += $len;
+}
 
 foreach my $arg (@ARGV) {
 	push(@l_opts, $'), next if $arg =~ /^-l/;
@@ -29,12 +45,12 @@ foreach my $line (@lines) {
 foreach my $lib (@l_opts) {
 	foreach my $path (@dirs) {
 		my $name = "$path/lib$lib.a";
-		print " ", $name if -f $name; # XXX call `last'
+		prdep $name if -f $name; # XXX call `last'
 	}
 }
 
 foreach my $lib (@libs) {
-	print " ", $lib;
+	prdep $lib;
 }
 
 print "\n";
