@@ -463,7 +463,7 @@ pjournal_scan_slots(struct psc_journal *pj)
 		pjournal_remove_entries(pj, pje->pje_xid, 2);
 	}
 	pj->pj_nextxid = last_xid;
-	pj->pj_nextwrite = (last_slot == (int)pj->pj_hdr->pjh_nents) ? 0 : (last_slot + 1);
+	pj->pj_nextwrite = (last_slot == (int)pj->pj_hdr->pjh_nents - 1) ? 0 : (last_slot + 1);
 	qsort(pj->pj_bufs.da_items, pj->pj_bufs.da_pos, sizeof(void *), pjournal_xid_cmp);
 	psc_freenl(jbuf, PJ_PJESZ(pj));
 
