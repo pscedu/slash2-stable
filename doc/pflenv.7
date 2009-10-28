@@ -13,6 +13,7 @@
 .It Ev LNET_ROUTES
 .It Ev LNET_USESDP
 .It Ev PSC_DUMPSTACK
+.It Ev PSC_LOG_FILE
 .It Ev PSC_LOG_FORMAT
 .It Ev PSC_LOG_LEVEL
 .It Ev PSC_LOG_LEVEL_ Ns Ar subsys
@@ -56,7 +57,9 @@ designating whether sockets direct should be used for
 sockets used by the networking stack.
 .It Ev PSC_DUMPSTACK Pq debugging
 When segmentation violations or fatal error conditions occur, try to
-print a stack trace.
+print a stack trace if this variable is defined.
+.It Ev PSC_LOG_FILE
+This path specifies the file name where log messages are written.
 .It Ev PSC_LOG_FORMAT
 This
 .Xr printf 3 Ns -like
@@ -65,7 +68,9 @@ The following specifiers are recognized:
 .Pp
 .Bl -tag -offset indent -compact -width 4n
 .It Ic d
-subsystem ID from where log message originated
+subsystem
+.Tn ID
+from where log message originated
 .It Ic F
 function name from where log message originated
 .It Ic f

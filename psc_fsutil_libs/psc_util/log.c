@@ -52,6 +52,8 @@ psc_log_init(void)
 	char *ep, *p;
 	long l;
 
+	if ((p = getenv("PSC_LOG_FILE")) != NULL)
+		freopen(p, "w", stderr);
 	if ((p = getenv("PSC_LOG_FORMAT")) != NULL)
 		psc_logfmt = p;
 	if ((p = getenv("PSC_LOG_LEVEL")) != NULL) {
