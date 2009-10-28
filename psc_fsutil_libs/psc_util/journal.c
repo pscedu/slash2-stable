@@ -437,6 +437,7 @@ pjournal_scan_slots(struct psc_journal *pj)
 				if (pje->pje_xid > last_startup) {
 					last_startup = pje->pje_xid;
 				}
+				continue;
 			}
 			if (pje->pje_type & PJE_XCLOSE) {
 				nclose++;
@@ -461,7 +462,7 @@ pjournal_scan_slots(struct psc_journal *pj)
 		slot += count;
 	}
 	if (last_startup != PJE_XID_NONE) {
-		pjournal_remove_entries(pj, pje->pje_xid, 2);
+		pjournal_remove_entries(pj, last_startup, 2);
 	}
 	pj->pj_nextxid = last_xid;
 	pj->pj_nextwrite = (last_slot == (int)pj->pj_hdr->pjh_nents - 1) ? 0 : (last_slot + 1);
