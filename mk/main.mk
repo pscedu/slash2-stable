@@ -60,6 +60,7 @@ CFLAGS+=		${DEFINES} ${_TINCLUDES}
 TARGET?=		${PROG} ${LIBRARY}
 OBJDIR=			${CURDIR}/obj
 
+# OBJDIR is added to .c below since lex/yacc intermediate files get generated there.
 vpath %.y $(sort $(dir $(filter %.y,${_TSRCS})))
 vpath %.l $(sort $(dir $(filter %.l,${_TSRCS})))
 vpath %.c $(sort $(dir $(filter %.c,${_TSRCS})) ${OBJDIR})
@@ -71,10 +72,10 @@ all: recurse-all ${TARGET}
 ${OBJDIR}:
 	mkdir -p $@
 
-${OBJDIR}/$(notdir %.c) : %.l | ${OBJDIR}
+${OBJDIR}/$(notdir %.c) : %.l
 	${LEX} ${LFLAGS} $(realpath $<) > $@
 
-${OBJDIR}/$(notdir %.c) : %.y | ${OBJDIR}
+${OBJDIR}/$(notdir %.c) : %.y
 	${YACC} ${YFLAGS} -o $@ $(realpath $<)
 
 ${OBJDIR}/$(notdir %.o) : %.c
