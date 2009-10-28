@@ -633,7 +633,8 @@ pjournal_format(const char *fn, uint32_t nents, uint32_t entsz, uint32_t ra,
 
 		count = (nents - slot <= ra) ? (nents - slot) : ra;
 		for (i = 0; i < count; i++) {
-			pje = (struct psc_journal_enthdr *)&jbuf[pjh.pjh_entsz * i];
+
+			pje = (struct psc_journal_enthdr *)&jbuf[PJ_PJESZ(&pj) * i];
 			pje->pje_magic = PJE_MAGIC;
 			pje->pje_type = PJE_FORMAT;
 			pje->pje_xid = PJE_XID_NONE;
@@ -647,10 +648,10 @@ pjournal_format(const char *fn, uint32_t nents, uint32_t entsz, uint32_t ra,
 
 			pje->pje_chksum = chksum;
 		}
-		size = pwrite(fd, jbuf, pjh.pjh_entsz * count, 
+		size = pwrite(fd, jbuf, PJ_PJESZ(&pj) * count, 
 			(off_t)(PJE_OFFSET + (slot * pjh.pjh_entsz)));
 		/* At least on one instance, short write actually returns success on a RAM-backed file system */
-		if (size < 0 || size != pjh.pjh_entsz * count) {
+		if (size < 0 || size != PJ_PJESZ(&pj) * count) {
 			psc_fatal("Failed to write %d entries at slot %d", count, slot);
 		}
 	}
