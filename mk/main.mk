@@ -72,20 +72,20 @@ ${OBJDIR}:
 	mkdir -p $@
 
 ${OBJDIR}/$(notdir %.c) : %.l | ${OBJDIR}
-	${LEX} ${LFLAGS} $< > $@
+	${LEX} ${LFLAGS} $(realpath $<) > $@
 
 ${OBJDIR}/$(notdir %.c) : %.y | ${OBJDIR}
-	${YACC} ${YFLAGS} -o $@ $<
+	${YACC} ${YFLAGS} -o $@ $(realpath $<)
 
-${OBJDIR}/$(notdir %.o) : %.c | ${OBJDIR}
+${OBJDIR}/$(notdir %.o) : %.c
 	${CC} ${CFLAGS} ${$(subst .,_,$(subst -,_,$(subst /,_,$(subst			\
 	    ../,,$(subst //,/,$(subst $(realpath					\
-	    ${ROOTDIR})/,,$<))))))_CFLAGS} $< -c -o $@
+	    ${ROOTDIR})/,,$(realpath $<)))))))_CFLAGS} $(realpath $<) -c -o $@
 
-${OBJDIR}/$(notdir %.E) : %.c | ${OBJDIR}
+${OBJDIR}/$(notdir %.E) : %.c
 	${CC} ${CFLAGS} ${$(subst .,_,$(subst -,_,$(subst /,_,$(subst			\
 	    ../,,$(subst //,/,$(subst $(realpath					\
-	    ${ROOTDIR})/,,$<))))))_CFLAGS} $< -E -o $@
+	    ${ROOTDIR})/,,$(realpath $<)))))))_CFLAGS} $(realpath $<) -E -o $@
 
 ${PROG}: ${OBJS}
 	${CC} -o $@ ${OBJS} ${LDFLAGS}
