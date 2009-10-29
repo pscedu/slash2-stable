@@ -439,6 +439,10 @@ pjournal_scan_slots(struct psc_journal *pj)
 			psc_assert((pje->pje_type & PJE_XSTART) || (pje->pje_type & PJE_XCLOSE) ||
 				   (pje->pje_type & PJE_STRTUP) || (pje->pje_type & PJE_FORMAT) || 
 				   (pje->pje_type & PJE_XNORML));
+			/*
+			 * We start from the first log entry. If we see a formatted log entry,
+			 * there should be no more real log entries after that.
+			 */
 			if (pje->pje_type & PJE_FORMAT) {
 				psc_assert(pje->pje_len == 0);
 				goto done;
