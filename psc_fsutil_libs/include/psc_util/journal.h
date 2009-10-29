@@ -95,23 +95,25 @@ typedef void (*psc_jhandler)(struct dynarray *, int *);
  * @pje_data: application data.
  * Notes: at some point we may want to make this into a footer which has
  *    a crc field.
+ *
+ * Note that the fields in this structure are arranged in a way so that
+ * the payload, if any, starts at a 64-bit boundary.
  */
 struct psc_journal_enthdr {
 	uint64_t		pje_magic;
-	uint32_t		pje_type;		/* see above */
-	uint32_t		pje_padding;
-	uint64_t		pje_xid;
+	uint16_t		pje_type;		/* see above */
+	/* 
+	 * This field is used to calculate the CRC checksum of the payload starting
+	 * from pje_data[0]. It also indicates if the log entry is a speciali-purpose
+	 * one (i.e., one without custom data).
+	 */
+	uint16_t		pje_len;		
 	/*
 	 * This field can be used by the replay process to remove the CLOSE entry
-	 * when all other log entries of a transaction have been seen.
+	 * when all other log entries of the same transaction have been seen.
 	 */
 	uint32_t		pje_sid;
-	/* 
-	 * This field is used to calculate the CRC checksum of the following data.
-	 * It also indicates if the log entry is a special one (i.e., one without
-	 * payload).
-	 */
-	uint32_t		pje_len;		
+	uint64_t		pje_xid;
 	uint64_t		pje_chksum;		/* last field before data */
 	/*
 	 * The length of the pje_data[0] is also embedded and can be figured out
