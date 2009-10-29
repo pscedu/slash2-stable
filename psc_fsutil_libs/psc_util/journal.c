@@ -393,8 +393,8 @@ pjournal_scan_slots(struct psc_journal *pj)
 	 * We scan the log from the first entry to the last one regardless where the log
 	 * really starts.  This poses a problem: we might see the CLOSE entry of a transaction
 	 * before its other entries.  As a result, we must save these CLOSE entries until
-	 * we have seen all the entries of the transaction (some of them might already be
-	 * overwritten, but that is perfectly fine).
+	 * we have seen all the entries of the transaction (some of them might have already
+	 * been overwritten, but that is perfectly fine).
 	 */
 	dynarray_init(&closetrans);
 	dynarray_ensurelen(&closetrans, pj->pj_hdr->pjh_nents / 2);
@@ -412,7 +412,7 @@ pjournal_scan_slots(struct psc_journal *pj)
 			break;
 		}
 		for (i = 0; i < count; i++) {
-			pje = (struct psc_journal_enthdr *)&jbuf[pj->pj_hdr->pjh_entsz * i];
+			pje = (struct psc_journal_enthdr *)&jbuf[PJ_PJESZ(pj) * i];
 			if (pje->pje_magic != PJE_MAGIC) {
 				nmagic++;
 				psc_warnx("journal slot %d has a bad magic number!", slot+i);
@@ -464,7 +464,7 @@ pjournal_scan_slots(struct psc_journal *pj)
 			 * Okay, we need to keep this log entry for now.
 			 */
 			pje = psc_alloc(PJ_PJESZ(pj), PAF_PAGEALIGN | PAF_LOCK);
-			memcpy(pje, &jbuf[pj->pj_hdr->pjh_entsz * i], sizeof(*pje));
+			memcpy(pje, &jbuf[PJ_PJESZ(pj) * i], sizeof(*pje));
 			if (pje->pje_type & PJE_XCLOSE) {
 				dynarray_add(&closetrans, pje);
 			} else {
@@ -663,7 +663,7 @@ pjournal_format(const char *fn, uint32_t nents, uint32_t entsz, uint32_t ra,
 			pje->pje_chksum = chksum;
 		}
 		size = pwrite(fd, jbuf, PJ_PJESZ(&pj) * count, 
-			(off_t)(PJE_OFFSET + (slot * pjh.pjh_entsz)));
+			(off_t)(PJE_OFFSET + (slot * PJ_PJESZ(&pj))));
 		/* At least on one instance, short write actually returns success on a RAM-backed file system */
 		if (size < 0 || size != PJ_PJESZ(&pj) * count) {
 			psc_fatal("Failed to write %d entries at slot %d", count, slot);
@@ -707,7 +707,7 @@ pjournal_dump(const char *fn)
 
 	psc_info("Journal header info: "
 		 "entsz=%u nents=%u vers=%u opts=%u ra=%u off=%"PRIx64" magic=%"PRIx64,
-		 pjh->pjh_entsz, pjh->pjh_nents, pjh->pjh_version, pjh->pjh_options,
+		 PJ_PJESZ(pj), pjh->pjh_nents, pjh->pjh_version, pjh->pjh_options,
 		 pjh->pjh_readahead, pjh->pjh_start_off, pjh->pjh_magic);
 
 	jbuf = pjournal_alloc_buf(pj);
@@ -715,15 +715,15 @@ pjournal_dump(const char *fn)
 	for (slot = 0, ra=pjh->pjh_readahead; slot < pjh->pjh_nents; slot += count) {
 
 		count = (pjh->pjh_nents - slot <= ra) ? (pjh->pjh_nents - slot) : ra;
-		size = pread(pj->pj_fd, jbuf, (pjh->pjh_entsz * count), 
-			    (off_t)(PJE_OFFSET + (slot * pjh->pjh_entsz)));
+		size = pread(pj->pj_fd, jbuf, (PJ_PJESZ(pj) * count), 
+			    (off_t)(PJE_OFFSET + (slot * PJ_PJESZ(pj))));
 
-		if (size == -1 || size != (pjh->pjh_entsz * count))
+		if (size == -1 || size != (PJ_PJESZ(pj)* count))
 			psc_fatal("Failed to read %d log entries at slot %d", count, slot);
 
 		for (i = 0; i < count; i++) {
 			ntotal++;
-			pje = (void *)&jbuf[pjh->pjh_entsz * i];
+			pje = (void *)&jbuf[PJ_PJESZ(pj) * i];
 			if (pje->pje_magic != PJE_MAGIC) {
 				nmagic++;
 				psc_warnx("Journal slot %d has a bad magic number!", (slot+i));
