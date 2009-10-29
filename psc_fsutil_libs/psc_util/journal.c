@@ -370,6 +370,7 @@ pjournal_scan_slots(struct psc_journal *pj)
 	int				 nmagic;
 	int				 nentry;
 	int				 nclose;
+	struct psc_journal_enthdr	*tmppje;
 	uint64_t			 chksum;
 	int				 nformat;
 	int				 nchksum;
@@ -463,12 +464,12 @@ pjournal_scan_slots(struct psc_journal *pj)
 			/*
 			 * Okay, we need to keep this log entry for now.
 			 */
-			pje = psc_alloc(PJ_PJESZ(pj), PAF_PAGEALIGN | PAF_LOCK);
-			memcpy(pje, &jbuf[PJ_PJESZ(pj) * i], sizeof(*pje));
+			tmppje = psc_alloc(PJ_PJESZ(pj), PAF_PAGEALIGN|PAF_LOCK);
+			memcpy(tmppje, &jbuf[PJ_PJESZ(pj) * i], sizeof(*tmppje));
 			if (pje->pje_type & PJE_XCLOSE) {
-				dynarray_add(&closetrans, pje);
+				dynarray_add(&closetrans, tmppje);
 			} else {
-				dynarray_add(&pj->pj_bufs, pje);
+				dynarray_add(&pj->pj_bufs, tmppje);
 			}
 		}
 		slot += count;
