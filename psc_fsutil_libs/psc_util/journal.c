@@ -371,12 +371,12 @@ pjournal_scan_slots(struct psc_journal *pj)
 	unsigned char			*jbuf;
 	int				 count;
 	int				 nopen;
+	int				 nscan;
 	int				 nmagic;
 	int				 nentry;
 	int				 nclose;
 	struct psc_journal_enthdr	*tmppje;
 	uint64_t			 chksum;
-	int				 nformat;
 	int				 nchksum;
 	uint64_t			 last_xid;
 	int32_t				 last_slot;
@@ -386,10 +386,10 @@ pjournal_scan_slots(struct psc_journal *pj)
 	rc = 0;
 	slot = 0;
 	nopen = 0;
+	nscan = 0;
 	nmagic = 0;
 	nclose = 0;
 	nchksum = 0;
-	nformat = 0;
 	last_xid = PJE_XID_NONE;
 	last_slot = PJX_SLOT_ANY;
 	last_startup = PJE_XID_NONE;
@@ -440,10 +440,10 @@ pjournal_scan_slots(struct psc_journal *pj)
 				   (pje->pje_type & PJE_STRTUP) || (pje->pje_type & PJE_FORMAT) || 
 				   (pje->pje_type & PJE_XNORML));
 			if (pje->pje_type & PJE_FORMAT) {
-				nformat++;
 				psc_assert(pje->pje_len == 0);
-				continue;
+				goto done;
 			}
+			nscan++;
 			if (pje->pje_xid >= last_xid) {
 				last_xid = pje->pje_xid;
 				last_slot = slot + i;
@@ -478,6 +478,7 @@ pjournal_scan_slots(struct psc_journal *pj)
 		}
 		slot += count;
 	}
+done:
 	if (last_startup != PJE_XID_NONE) {
 		pjournal_remove_entries(pj, last_startup, 2);
 	}
@@ -499,8 +500,8 @@ pjournal_scan_slots(struct psc_journal *pj)
 	dynarray_free(&closetrans);
 
 	nopen = dynarray_len(&pj->pj_bufs);
-	psc_warnx("Journal statistics: %d format, %d close, %d open, %d bad magic, %d bad checksum, %d scan, %d total", 
-		   nformat, nclose, nopen, nmagic, nchksum, slot, pj->pj_hdr->pjh_nents);
+	psc_warnx("Journal statistics: %d close, %d open, %d magic, %d chksum, %d scan, %d total", 
+		   nclose, nopen, nmagic, nchksum, nscan, pj->pj_hdr->pjh_nents);
 	return (rc);
 }
 
