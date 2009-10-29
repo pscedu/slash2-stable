@@ -445,7 +445,7 @@ pjournal_scan_slots(struct psc_journal *pj)
 			}
 			if (pje->pje_type & PJE_STRTUP) {
 				psc_assert(pje->pje_len == 0);
-				psc_warnx("Journal %p: found a startup entry at slot %d!", pj, slot+i);
+				psc_info("Journal %p: found a startup entry at slot %d!", pj, slot+i);
 				if (pje->pje_xid > last_startup) {
 					last_startup = pje->pje_xid;
 				}
