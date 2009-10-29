@@ -104,7 +104,7 @@ struct psc_journal_enthdr {
 	uint16_t		pje_type;		/* see above */
 	/* 
 	 * This field is used to calculate the CRC checksum of the payload starting
-	 * from pje_data[0]. It also indicates if the log entry is a speciali-purpose
+	 * from pje_data[0]. It also indicates if the log entry is a special-purpose
 	 * one (i.e., one without custom data).
 	 */
 	uint16_t		pje_len;		
