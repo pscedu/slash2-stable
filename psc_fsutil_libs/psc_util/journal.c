@@ -39,7 +39,7 @@ pjournal_xnew(struct psc_journal *pj)
 	xh->pjx_pj = pj;
 	LOCK_INIT(&xh->pjx_lock);
 	xh->pjx_flags = PJX_NONE;
-	atomic_set(&xh->pjx_sid, 0);
+	xh->pjx_sid = 0;
 	xh->pjx_tailslot = PJX_SLOT_ANY;
 	INIT_PSCLIST_ENTRY(&xh->pjx_lentry);
 
@@ -128,7 +128,11 @@ pjournal_logwrite_internal(struct psc_journal *pj, struct psc_journal_xidhndl *x
 	pje->pje_type = type;
 	pje->pje_xid = xh->pjx_xid;
 	pje->pje_len = size;
-	pje->pje_sid = atomic_inc_return(&xh->pjx_sid);
+
+	spinlock(&xh->pjx_lock);
+	pje->pje_sid = xh->pjx_sid++;
+	freelock(&xh->pjx_lock);
+
 	if (data) {
 		psc_assert(size);
 		memcpy(pje->pje_data, data, size);

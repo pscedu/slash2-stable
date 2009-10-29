@@ -143,7 +143,7 @@ struct psc_journal_enthdr {
 
 struct psc_journal_xidhndl {
 	uint64_t		 pjx_xid;
-	atomic_t		 pjx_sid;
+	int			 pjx_sid;
 	int32_t		 	 pjx_tailslot;
 	uint32_t		 pjx_flags;
 	struct psclist_head	 pjx_lentry;
