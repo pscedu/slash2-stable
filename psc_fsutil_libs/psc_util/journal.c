@@ -194,6 +194,7 @@ pjournal_logwrite(struct psc_journal_xidhndl *xh, int type, void *data,
 	int				 rc;
 	struct psc_journal		*pj;
 	int32_t			 	 slot;
+	int				 normal;
 	int32_t			 	 tail_slot;
 
 	pj = xh->pjx_pj;
@@ -220,16 +221,25 @@ pjournal_logwrite(struct psc_journal_xidhndl *xh, int type, void *data,
 		tail_slot = t->pjx_tailslot;
 	}
 
+	normal = 1;
 	if (!(xh->pjx_flags & PJX_XSTART)) {
+		normal = 0;
 		type |= PJE_XSTART;
 		xh->pjx_flags |= PJX_XSTART;
+		psc_assert(size != 0);
 		psc_assert(xh->pjx_tailslot == PJX_SLOT_ANY);
 		xh->pjx_tailslot = slot;
 		psclist_xadd_tail(&xh->pjx_lentry, &pj->pj_pndgxids);
 	}
 	if (xh->pjx_flags & PJX_XCLOSE) {
+		normal = 0;
+		psc_assert(size == 0);
 		psc_assert(xh->pjx_tailslot != slot);
 		type |= PJE_XCLOSE;
+	}
+	if (normal) {
+		type |= PJE_XNORML;
+		psc_assert(size != 0);
 	}
 
 	/* Update the next slot to be written by a new log entry */
@@ -422,7 +432,8 @@ pjournal_scan_slots(struct psc_journal *pj)
 				continue;
 			}
 			psc_assert((pje->pje_type & PJE_XSTART) || (pje->pje_type & PJE_XCLOSE) ||
-				   (pje->pje_type & PJE_STRTUP) || (pje->pje_type & PJE_FORMAT));
+				   (pje->pje_type & PJE_STRTUP) || (pje->pje_type & PJE_FORMAT) || 
+				   (pje->pje_type & PJE_XNORML));
 			if (pje->pje_type & PJE_FORMAT) {
 				nformat++;
 				psc_assert(pje->pje_len == 0);

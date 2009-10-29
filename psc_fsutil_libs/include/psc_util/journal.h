@@ -83,7 +83,8 @@ typedef void (*psc_jhandler)(struct dynarray *, int *);
 #define PJE_STRTUP		(1 << 1)		/* system startup */
 #define PJE_XSTART		(1 << 2)		/* start a transaction */
 #define PJE_XCLOSE		(1 << 3)		/* close a transaction */
-#define PJE_LASTBIT		 3			/* denote the last used bit */
+#define PJE_XNORML		(1 << 4)		/* normal transaction data */
+#define PJE_LASTBIT		 4			/* denote the last used bit */
 
 /*
  * psc_journal_enthdr - journal entry header.
