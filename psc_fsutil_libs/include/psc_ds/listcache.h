@@ -154,8 +154,8 @@ _lc_get(struct psc_listcache *lc, struct timespec *abstime,
 	e = pos & PLCP_HEAD ?
 	    psclist_first(&lc->lc_listhd) :
 	    psclist_last(&lc->lc_listhd);
+	psc_assert(lc->lc_size > 0);
 	if ((flags & PLCGF_PEEK) == 0) {
-		psc_assert(lc->lc_size > 0);
 		psclist_del(e);
 		lc->lc_size--;
 	}
@@ -189,7 +189,7 @@ _lc_get(struct psc_listcache *lc, struct timespec *abstime,
  * lc_peekhead - peek at head item or NULL if unavailable.
  * @lc: the list cache to access.
  */
-#define lc_peekhead(lc)		_lc_get((lc), NULL, PLCP_HEAD, PLCGF_NOBLOCK | PLCGF_PEEK)
+#define lc_peekheadwait(lc)	_lc_get((lc), NULL, PLCP_HEAD, PLCGF_PEEK)
 
 /**
  * lc_peektail - peek at tail item or NULL if unavailable.
