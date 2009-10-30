@@ -56,7 +56,7 @@ struct psc_journal {
 	psc_spinlock_t		 pj_lock;	/* contention lock */
 	int			 pj_fd;		/* open file descriptor to disk */
 	char			*pj_logname;	/* log file name */
-	uint64_t		 pj_nextxid;	/* next transaction ID */
+	uint64_t		 pj_lastxid;	/* last transaction ID used */
 	int32_t		 	 pj_nextwrite;	/* next entry slot to write to */
 	struct psclist_head	 pj_pndgxids;
 	struct dynarray		 pj_bufs;

@@ -44,12 +44,12 @@ pjournal_xnew(struct psc_journal *pj)
 	INIT_PSCLIST_ENTRY(&xh->pjx_lentry);
 
 	/*
-	 * Note that even though we issue xid in increasing order here, it does not
+	 * Note that even though we issue xids in increasing order here, it does not
 	 * necessarily mean transactions will end up in the log in the same order.
 	 */
 	PJ_LOCK(pj);
 	do {
-		xh->pjx_xid = ++pj->pj_nextxid;
+		xh->pjx_xid = ++pj->pj_lastxid;
 	} while (xh->pjx_xid == PJE_XID_NONE);
 	PJ_ULOCK(pj);
 
@@ -486,7 +486,7 @@ done:
 	if (last_startup != PJE_XID_NONE) {
 		pjournal_remove_entries(pj, last_startup, 2);
 	}
-	pj->pj_nextxid = last_xid;
+	pj->pj_lastxid = last_xid;
 	pj->pj_nextwrite = (last_slot == (int)pj->pj_hdr->pjh_nents - 1) ? 0 : (last_slot + 1);
 	qsort(pj->pj_bufs.da_items, pj->pj_bufs.da_pos, sizeof(void *), pjournal_xid_cmp);
 	psc_freenl(jbuf, PJ_PJESZ(pj) * pj->pj_hdr->pjh_readahead);
@@ -581,7 +581,7 @@ pjournal_load(const char *fn)
 		goto done; 
 	}
 	/*
-	 * The remaining two fields pj_nextxid and pj_nextwrite will be filled after log replay.
+	 * The remaining two fields pj_lastxid and pj_nextwrite will be filled after log replay.
  	 */
 	LOCK_INIT(&pj->pj_lock);
 	INIT_PSCLIST_HEAD(&pj->pj_pndgxids);
@@ -837,10 +837,10 @@ pjournal_replay(const char * fn, psc_jhandler pj_handler)
 
 	pje->pje_magic = PJE_MAGIC;
 	pje->pje_type = PJE_STRTUP;
-	pj->pj_nextxid++;
-	if (pj->pj_nextxid == PJE_XID_NONE)
-		pj->pj_nextxid++;
-	pje->pje_xid = pj->pj_nextxid;
+	pj->pj_lastxid++;
+	if (pj->pj_lastxid == PJE_XID_NONE)
+		pj->pj_lastxid++;
+	pje->pje_xid = pj->pj_lastxid;
 	pje->pje_sid = PJE_XID_NONE;
 	pje->pje_len = 0;	
 
