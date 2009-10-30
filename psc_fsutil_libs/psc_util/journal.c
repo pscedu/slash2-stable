@@ -53,7 +53,7 @@ pjournal_xnew(struct psc_journal *pj)
 	} while (xh->pjx_xid == PJE_XID_NONE);
 	PJ_ULOCK(pj);
 
-	psc_warnx("Start a new transaction %p (xid = %"PRIx64") for journal %p.", xh, xh->pjx_xid, xh->pjx_pj);
+	psc_warnx("Start a new transaction %p (xid = %"PRIx64") in journal %p.", xh, xh->pjx_xid, pj);
 	return (xh);
 }
 
@@ -87,8 +87,8 @@ pjournal_xend(struct psc_journal_xidhndl *xh)
 }
 
 /*
- * pjournal_logwrite_internal - store a new entry in a journal.
- * @pj: the journal.
+ * pjournal_logwrite_internal - write a new log entry for a transaction
+ * @xh: the transaction handle.
  * @slot: position location in journal to write.
  * @type: the application-specific log entry type.
  * @xid: transaction ID of entry.
@@ -96,18 +96,18 @@ pjournal_xend(struct psc_journal_xidhndl *xh)
  * Returns: 0 on success, -1 on error.
  */
 static int
-pjournal_logwrite_internal(struct psc_journal *pj, struct psc_journal_xidhndl *xh,
-			   int32_t slot, int type, void *data, size_t size)
+pjournal_logwrite_internal(struct psc_journal_xidhndl *xh, int32_t slot, int type, void *data, size_t size)
 {
 	int				 rc;
 	ssize_t				 sz;
+	struct psc_journal		*pj;
 	struct psc_journal_enthdr	*pje;
 	int				 ntries;
 	uint64_t			 chksum;
 	int				 wakeup;
 
 	rc = 0;
-	ntries = MAX_LOG_TRY;
+	pj = xh->pjx_pj;
 	psc_assert(slot >= 0);
 	psc_assert(slot < pj->pj_hdr->pjh_nents);
 	psc_assert(size + offsetof(struct psc_journal_enthdr, pje_data) <= (size_t)PJ_PJESZ(pj));
@@ -137,7 +137,7 @@ pjournal_logwrite_internal(struct psc_journal *pj, struct psc_journal_xidhndl *x
 		psc_assert(size);
 		memcpy(pje->pje_data, data, size);
 	}
-
+	/* calculating the CRC checksum, excluding the checksum field itself */
 	PSC_CRC_INIT(chksum);
 	psc_crc_add(&chksum, pje, offsetof(struct psc_journal_enthdr, pje_chksum));
 	psc_crc_add(&chksum, pje->pje_data, pje->pje_len);
@@ -145,6 +145,7 @@ pjournal_logwrite_internal(struct psc_journal *pj, struct psc_journal_xidhndl *x
 	pje->pje_chksum = chksum;
 	
 	/* commit the log entry on disk before we can return */
+	ntries = MAX_LOG_TRY;
 	while (ntries) {
 		sz = pwrite(pj->pj_fd, pje, PJ_PJESZ(pj),
 			   (off_t)(pj->pj_hdr->pjh_start_off + (slot * PJ_PJESZ(pj))));
@@ -233,12 +234,14 @@ pjournal_logwrite(struct psc_journal_xidhndl *xh, int type, void *data,
 		psc_assert(size != 0);
 		psc_assert(xh->pjx_tailslot == PJX_SLOT_ANY);
 		xh->pjx_tailslot = slot;
+		/* note we add transactions in the order of their starting point */
 		psclist_xadd_tail(&xh->pjx_lentry, &pj->pj_pndgxids);
 	}
 	if (xh->pjx_flags & PJX_XCLOSE) {
 		normal = 0;
 		psc_assert(size == 0);
 		psc_assert(xh->pjx_tailslot != slot);
+		psc_assert(xh->pjx_tailslot != PJX_SLOT_ANY);
 		type |= PJE_XCLOSE;
 	}
 	if (normal) {
@@ -254,10 +257,10 @@ pjournal_logwrite(struct psc_journal_xidhndl *xh, int type, void *data,
 
 	PJ_ULOCK(pj);
 
-	psc_info("Writing transaction %p into journal %p: transaction tail = %d, log tail = %d",
-		  xh, pj, xh->pjx_tailslot, tail_slot);
+	psc_info("Writing a log entry for transaction %"PRIx64": transaction tail = %d, log tail = %d",
+		  xh->pjx_xid, xh->pjx_tailslot, tail_slot);
 
-	rc = pjournal_logwrite_internal(pj, xh, slot, type, data, size);
+	rc = pjournal_logwrite_internal(xh, slot, type, data, size);
 
 	PJ_LOCK(pj);
 	if (xh->pjx_flags & PJX_XCLOSE) {
@@ -274,6 +277,7 @@ pjournal_logwrite(struct psc_journal_xidhndl *xh, int type, void *data,
  * pjournal_logread - get a specified entry from a journal.
  * @pj: the journal.
  * @slot: the position in the journal of the entry to obtain.
+ * @count: the number of slots to read.
  * @data: a pointer to buffer when we fill journal entries.
  * Returns: 'n' entries read on success, -1 on error.
  */
@@ -397,9 +401,9 @@ pjournal_scan_slots(struct psc_journal *pj)
 	/*
 	 * We scan the log from the first entry to the last one regardless where the log
 	 * really starts.  This poses a problem: we might see the CLOSE entry of a transaction
-	 * before its other entries.  As a result, we must save these CLOSE entries until
-	 * we have seen all the entries of the transaction (some of them might have already
-	 * been overwritten, but that is perfectly fine).
+	 * before its other entries due to log wraparound.  As a result, we must save these 
+	 * CLOSE entries until we have seen all the entries of the transaction (some of them 
+	 * might have already been overwritten, but that is perfectly fine).
 	 */
 	dynarray_init(&closetrans);
 	dynarray_ensurelen(&closetrans, pj->pj_hdr->pjh_nents / 2);
@@ -417,10 +421,11 @@ pjournal_scan_slots(struct psc_journal *pj)
 			break;
 		}
 		for (i = 0; i < count; i++) {
+			nscan++;
 			pje = (struct psc_journal_enthdr *)&jbuf[PJ_PJESZ(pj) * i];
 			if (pje->pje_magic != PJE_MAGIC) {
 				nmagic++;
-				psc_warnx("journal slot %d has a bad magic number!", slot+i);
+				psc_warnx("Journal %p: slot %d has a bad magic number!", slot+i);
 				rc = -1;
 				continue;
 			}
@@ -431,7 +436,7 @@ pjournal_scan_slots(struct psc_journal *pj)
 			PSC_CRC_FIN(chksum);
 
 			if (pje->pje_chksum != chksum) {
-				psc_warnx("Journal %p: found an invalid log entry at slot %d!", pj, slot+i);
+				psc_warnx("Journal %p: slot %d has a bad checksum!", pj, slot+i);
 				nchksum++;
 				rc = -1;
 				continue;
@@ -447,7 +452,6 @@ pjournal_scan_slots(struct psc_journal *pj)
 				psc_assert(pje->pje_len == 0);
 				goto done;
 			}
-			nscan++;
 			if (pje->pje_xid >= last_xid) {
 				last_xid = pje->pje_xid;
 				last_slot = slot + i;
@@ -606,6 +610,7 @@ pjournal_close(struct psc_journal *pj)
 		psc_freenl(pje, PJ_PJESZ(pj));
 	dynarray_free(&pj->pj_bufs);
 	psc_freenl(pj->pj_hdr, sizeof(*pj->pj_hdr));
+	free(pj->pj_logname);
 	PSCFREE(pj);
 }
 
