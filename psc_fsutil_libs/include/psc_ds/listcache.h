@@ -45,6 +45,10 @@ typedef struct psc_listcache list_cache_t;
 
 #define PLCF_DYING	(1 << 0)	/* listcache is about to go away */
 
+#define LIST_CACHE_FOREACH(p, plc)				\
+	psclist_for_each_entry2((p), &(plc)->lc_listhd,		\
+	    (plc)->lc_offset)
+
 #define LIST_CACHE_LOCK(lc)	spinlock(&(lc)->lc_lock)
 #define LIST_CACHE_ULOCK(lc)	freelock(&(lc)->lc_lock)
 #define LIST_CACHE_TRYLOCK(lc)	trylock(&(lc)->lc_lock)
