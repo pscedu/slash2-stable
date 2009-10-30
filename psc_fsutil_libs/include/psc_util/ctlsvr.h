@@ -46,7 +46,7 @@ struct psc_ctlop {
 int	psc_ctlsenderr(int, struct psc_ctlmsghdr *, const char *, ...);
 
 int	psc_ctlmsg_sendv(int, const struct psc_ctlmsghdr *, const void *);
-int	psc_ctlmsg_send(int, int, size_t, const void *);
+int	psc_ctlmsg_send(int, int, int, size_t, const void *);
 
 int	psc_ctlrep_gethashtable(int, struct psc_ctlmsghdr *, void *);
 int	psc_ctlrep_getiostats(int, struct psc_ctlmsghdr *, void *);

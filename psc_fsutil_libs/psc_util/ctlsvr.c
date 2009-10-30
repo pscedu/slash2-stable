@@ -102,6 +102,7 @@ psc_ctlmsg_sendv(int fd, const struct psc_ctlmsghdr *mh, const void *m)
 /*
  * psc_ctlmsg_send - send a control message back to client.
  * @fd: client socket descriptor.
+ * @id: client-provided passback identifier.
  * @type: type of message.
  * @siz: size of message.
  * @m: control message contents.
@@ -109,42 +110,15 @@ psc_ctlmsg_sendv(int fd, const struct psc_ctlmsghdr *mh, const void *m)
  *	written to the client preceding the message contents.
  */
 int
-psc_ctlmsg_send(int fd, int type, size_t siz, const void *m)
+psc_ctlmsg_send(int fd, int id, int type, size_t siz, const void *m)
 {
 	struct psc_ctlmsghdr mh;
-	struct iovec iov[2];
-	struct msghdr msg;
-	size_t tsiz;
-	ssize_t n;
 
 	memset(&mh, 0, sizeof(mh));
+	mh.mh_id = id;
 	mh.mh_type = type;
 	mh.mh_size = siz;
-
-	iov[0].iov_base = &mh;
-	iov[0].iov_len = sizeof(mh);
-
-	iov[1].iov_base = (void *)m;
-	iov[1].iov_len = siz;
-
-	memset(&msg, 0, sizeof(msg));
-	msg.msg_iov = iov;
-	msg.msg_iovlen = nitems(iov);
-	n = sendmsg(fd, &msg, MSG_NOSIGNAL);
-	if (n == -1) {
-		if (errno == EPIPE || errno == ECONNRESET) {
-			psc_ctlthr(pscthr_get())->pc_st_ndrop++;
-			sched_yield();
-			return (0);
-		}
-		psc_fatal("sendmsg");
-	}
-	tsiz = sizeof(mh) + siz;
-	if ((size_t)n != tsiz)
-		psc_warn("short sendmsg");
-	psc_ctlthr(pscthr_get())->pc_st_nsent++;
-	sched_yield();
-	return (1);
+	return (psc_ctlmsg_sendv(fd, &mh, m));
 }
 
 /*
