@@ -105,6 +105,7 @@ enum psclc_pos {
 	PLCP_HEAD
 };
 
+/* lc_get() position to grab from */
 #define PLCP_STACK	PLCP_HEAD
 #define PLCP_QUEUE	PLCP_TAIL
 
@@ -113,7 +114,7 @@ enum psclc_pos {
 #define PLCGF_WARN	(1 << 1)	/* emit messages */
 #define PLCGF_PEEK	(1 << 2)	/* don't remove item */
 
-static __inline struct psclist_head *
+static __inline void *
 _lc_get(struct psc_listcache *lc, struct timespec *abstime,
     enum psclc_pos pos, int flags)
 {
@@ -159,58 +160,42 @@ _lc_get(struct psc_listcache *lc, struct timespec *abstime,
 		lc->lc_size--;
 	}
 	ureqlock(&lc->lc_lock, locked);
-	return (e);
+	if (e)
+		return ((char *)e - lc->lc_offset);
+	return (NULL);
 }
 
 /**
  * lc_gettimed - try to grab an item from the head of a listcache.
- * @l: the list cache to access.
+ * @lc: the list cache to access.
  * @abstime: timer which tells how long to wait.
  */
-static inline void *
-lc_gettimed(struct psc_listcache *lc, struct timespec *abstime)
-{
-	void *p = _lc_get(lc, abstime, PLCP_HEAD, 0);
-
-	return (p ? (char *)p - lc->lc_offset : NULL);
-}
+#define lc_gettimed(lc, tm)	_lc_get((lc), (tm), PLCP_HEAD, 0)
 
 /**
  * lc_getwait - grab an item from a listcache,
  *	blocking if necessary until an item becomes available.
  * @lc: the list cache to access.
  */
-static inline void *
-lc_getwait(struct psc_listcache *lc)
-{
-	void *p = _lc_get(lc, NULL, PLCP_HEAD, 0);
-
-	return (p ? (char *)p - lc->lc_offset : NULL);
-}
+#define lc_getwait(lc)		_lc_get((lc), NULL, PLCP_HEAD, 0)
 
 /**
  * lc_getnb - grab an item from a listcache or NULL if none are available.
  * @lc: the list cache to access.
  */
-static inline void *
-lc_getnb(struct psc_listcache *lc)
-{
-	void *p = _lc_get(lc, NULL, PLCP_HEAD, PLCGF_NOBLOCK);
-
-	return (p ? (char *)p - lc->lc_offset : NULL);
-}
+#define lc_getnb(lc)		_lc_get((lc), NULL, PLCP_HEAD, PLCGF_NOBLOCK)
 
 /**
- * lc_gettailnb - grab tail item or NULL if unavailable.
+ * lc_peekhead - peek at head item or NULL if unavailable.
  * @lc: the list cache to access.
  */
-static inline void *
-lc_peektail(struct psc_listcache *lc)
-{
-	void *p = _lc_get(lc, NULL, PLCP_TAIL, PLCGF_NOBLOCK | PLCGF_PEEK);
+#define lc_peekhead(lc)		_lc_get((lc), NULL, PLCP_HEAD, PLCGF_NOBLOCK | PLCGF_PEEK)
 
-	return (p ? (char *)p - lc->lc_offset : NULL);
-}
+/**
+ * lc_peektail - peek at tail item or NULL if unavailable.
+ * @lc: the list cache to access.
+ */
+#define lc_peektail(lc)		_lc_get((lc), NULL, PLCP_TAIL, PLCGF_NOBLOCK | PLCGF_PEEK)
 
 /*
  * lc_kill - list wants to go away, notify waitors.
