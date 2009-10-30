@@ -425,7 +425,7 @@ pjournal_scan_slots(struct psc_journal *pj)
 			pje = (struct psc_journal_enthdr *)&jbuf[PJ_PJESZ(pj) * i];
 			if (pje->pje_magic != PJE_MAGIC) {
 				nmagic++;
-				psc_warnx("Journal %p: slot %d has a bad magic number!", slot+i);
+				psc_warnx("Journal %p: slot %d has a bad magic number!", pj, slot+i);
 				rc = -1;
 				continue;
 			}
@@ -689,7 +689,6 @@ pjournal_format(const char *fn, uint32_t nents, uint32_t entsz, uint32_t ra,
 	}
 	psc_freenl(jbuf, PJ_PJESZ(&pj) * ra);
 }
-
 
 /*
  * Dump the contents of a journal file.
