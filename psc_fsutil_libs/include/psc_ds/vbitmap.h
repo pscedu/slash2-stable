@@ -34,6 +34,22 @@ struct psc_vbitmap {
 		(vb) = NULL;					\
 	} while (0)
 
+#define vbitmap_printbin1(vb) {						\
+		unsigned char *PPp;					\
+		char *Bbufp, *Bbuf =					\
+			PSCALLOC(vbitmap_getsize((vb)) * NBBY + 256); \
+									\
+		for (PPp = (vb)->vb_start, Bbufp=Bbuf; PPp <= (vb)->vb_end; \
+		     PPp++, Bbufp += NBBY+1)				\
+			sprintf(Bbufp, "%d%d%d%d%d%d%d%d ",		\
+				 (*PPp >> 0) & 1, (*PPp >> 1) & 1,	\
+				 (*PPp >> 2) & 1, (*PPp >> 3) & 1,	\
+				 (*PPp >> 4) & 1, (*PPp >> 5) & 1,	\
+				 (*PPp >> 6) & 1, (*PPp >> 7) & 1);	\
+		psc_dbg("vbitmap=%p contents=%s", (vb), Bbuf);		\
+		PSCFREE(Bbuf);						\
+	}
+
 struct psc_vbitmap *
 	vbitmap_newf(size_t, int);
 
