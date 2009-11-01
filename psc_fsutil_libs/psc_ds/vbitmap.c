@@ -15,6 +15,8 @@
 #include "pfl/cdefs.h"
 #include "psc_util/log.h"
 
+#define CLEAR_UNUSED(vb, p)		*(p) &= ~(0xff << (vb)->vb_lastsize)
+
 /**
  * vbitmap_new - create a new variable-sized bitmap.
  * @nelems: number of entries in bitmap.
@@ -79,37 +81,72 @@ _vbitmap_free(struct vbitmap *vb)
 }
 
 /**
- * vbitmap_unset - unset bit for an element of a variable-sized bitmap.
+ * vbitmap_unset - unset a bit of a variable-sized bitmap.
  * @vb: variable bitmap.
- * @elem: element# to unset.
+ * @pos: position to unset.
  */
 void
-vbitmap_unset(struct vbitmap *vb, size_t elem)
+vbitmap_unset(struct vbitmap *vb, size_t pos)
 {
-	size_t pos, bytes;
+	size_t shft, bytes;
 
-	bytes = elem / NBBY;
-	pos = elem % NBBY;
-	vb->vb_start[bytes] &= ~(1 << pos);
+	bytes = pos / NBBY;
+	shft = pos % NBBY;
+	vb->vb_start[bytes] &= ~(1 << shft);
 }
 
 /**
- * vbitmap_set - set bit for an element of a variable-sized bitmap.
+ * vbitmap_set - set a bit of a variable-sized bitmap.
  * @vb: variable bitmap.
- * @elem: element# to set.
+ * @pos: position to set.
  */
 void
-vbitmap_set(struct vbitmap *vb, size_t elem)
+vbitmap_set(struct vbitmap *vb, size_t pos)
 {
-	size_t pos, bytes;
+	size_t shft, bytes;
 
-	bytes = elem / NBBY;
-	pos = elem % NBBY;
-	vb->vb_start[bytes] |= (1 << pos);
+	bytes = pos / NBBY;
+	shft = pos % NBBY;
+	vb->vb_start[bytes] |= (1 << shft);
 }
 
 /**
- * vbitmap_xset - set bit for an element of a variable-sized bitmap.
+ * vbitmap_setrange - set bits of a variable-sized bitmap.
+ * @vb: variable bitmap.
+ * @pos: starting position to set.
+ * @n: length of region (# of bits) to set.
+ */
+int
+vbitmap_setrange(struct vbitmap *vb, size_t pos, size_t size)
+{
+	size_t shft, bytes;
+	unsigned char *p;
+
+	if (pos + size >= vbitmap_getsize(vb))
+		return (EINVAL);
+
+	bytes = pos / NBBY;
+	shft = pos % NBBY;
+
+	p = &vb->vb_start[bytes];
+
+	/* set bits in first byte */
+	if (shft)
+		*p++ |= (~(0xff << (MAX(size, 8) + shft))) &
+		    (~(1 << MAX(size, 8)) << shft);
+
+	/* set whole bytes */
+	for (; size >= 8; p++, size -= 8)
+		*p = 0xff;
+
+	/* set bits in last byte */
+	if (size)
+		*p |= (~(0xff << size)) & (~(1 << size));
+	return (0);
+}
+
+/**
+ * vbitmap_xset - exclusively set a bit of a variable-sized bitmap.
  * @vb: variable bitmap.
  * @elem: element# to set.
  *
@@ -181,9 +218,7 @@ vbitmap_invert(struct vbitmap *vb)
 	unsigned char *p;
 
 	for (p = vb->vb_start; p <= vb->vb_end; p++)
-		*p = ~(*p);
-	if (vb->vb_lastsize)
-		*p &= vb->vb_lastsize - 1;
+		*p ^= 1;
 }
 
 /**
@@ -197,8 +232,34 @@ vbitmap_setall(struct vbitmap *vb)
 
 	for (p = vb->vb_start; p <= vb->vb_end; p++)
 		*p = 0xff;
-	if (vb->vb_lastsize)
-		*p &= vb->vb_lastsize - 1;
+}
+
+/**
+ * vbitmap_clearall - toggle off all bits in a vbitmap.
+ * @vb: variable bitmap.
+ */
+void
+vbitmap_clearall(struct vbitmap *vb)
+{
+	unsigned char *p;
+
+	for (p = vb->vb_start; p <= vb->vb_end; p++)
+		*p = 0;
+}
+
+/**
+ * vbitmap_isfull - determine if there are any empty slots in a vbitmap.
+ * @vb: variable bitmap.
+ */
+int
+vbitmap_isfull(struct vbitmap *vb)
+{
+	unsigned char *p;
+
+	for (p = vb->vb_start; p < vb->vb_end; p++)
+		if (*p != 0xff)
+			return (0);
+	return (ffs(~*p) > vb->vb_lastsize);
 }
 
 /**
@@ -215,7 +276,7 @@ vbitmap_lcr(const struct vbitmap *vb)
 	for (p = vb->vb_start; p <= vb->vb_end; p++)
 		/* ensure unused bits are masked off */
 		if (p == vb->vb_end && vb->vb_lastsize)
-			*p &= vb->vb_lastsize - 1;
+			CLEAR_UNUSED(vb, p);
 
 		if (*p == 0x00)
 			n += NBBY;
