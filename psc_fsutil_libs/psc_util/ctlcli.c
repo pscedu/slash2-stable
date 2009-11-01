@@ -753,9 +753,14 @@ psc_ctlmsg_print(struct psc_ctlmsghdr *mh, const void *m)
 	} else if (prf->prf_check == NULL)
 		/* Disallowed message type. */
 		psc_fatalx("invalid ctlmsg type %d", mh->mh_type);
-	else if ((n = prf->prf_check(mh, m)) != 0)
-		psc_fatalx("invalid ctlmsg size; type=%d; sizeof=%zu "
-		    "expected=%d", mh->mh_type, mh->mh_size, n);
+	else {
+		n = prf->prf_check(mh, m);
+		if (n == -1)
+			return;
+		else if (n)
+			psc_fatalx("invalid ctlmsg size; type=%d sizeof=%zu "
+			    "expected=%d", mh->mh_type, mh->mh_size, n);
+	}
 
 	/* Print display header. */
 	if (!psc_ctl_noheader && psc_ctl_lastmsgtype != mh->mh_type &&
