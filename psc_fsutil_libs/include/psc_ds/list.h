@@ -379,4 +379,16 @@ _psclist_next_entry(struct psclist_head *hd, void *p,
 	    (n) = (void *)(((char *)(((struct psclist_head *)(((char *)n) +	\
 	      (offset)))->znext)) - (offset)))
 
+static __inline void
+psclist_add_sorted(struct psclist_head *hd, struct psclist_head *elem,
+    int (*cmpf)(const void *a, const void *b), ptrdiff_t offset)
+{
+	struct psclist_head *e;
+
+	psc_assert(elem);
+	psclist_for_each_entry2(e, hd, offset)
+		if (cmpf((char *)elem - offset, (char*)e - offset) > 0)
+			psclist_xadd(elem, e);
+}
+
 #endif /* _PFL_LIST_H_ */
