@@ -122,7 +122,7 @@ vbitmap_setrange(struct vbitmap *vb, size_t pos, size_t size)
 	size_t shft, bytes;
 	unsigned char *p;
 
-	if (pos + size >= vbitmap_getsize(vb))
+	if (pos + size > vbitmap_getsize(vb))
 		return (EINVAL);
 
 	bytes = pos / NBBY;
