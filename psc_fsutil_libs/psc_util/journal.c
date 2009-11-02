@@ -618,11 +618,12 @@ pjournal_close(struct psc_journal *pj)
 /*
  * Initialize a new journal file.
  */
-void
+int
 pjournal_format(const char *fn, uint32_t nents, uint32_t entsz, uint32_t ra,
 		uint32_t opts)
 {
 	int32_t			 	 i;
+	int				 rc;
 	int				 fd;
 	struct psc_journal		 pj;
 	struct psc_journal_enthdr	*pje;
@@ -650,6 +651,7 @@ pjournal_format(const char *fn, uint32_t nents, uint32_t entsz, uint32_t ra,
 	pj.pj_hdr = &pjh;
 	jbuf = pjournal_alloc_buf(&pj);
 
+	rc = 0;
 	errno = 0;
 	if ((fd = open(fn, O_WRONLY|O_CREAT|O_TRUNC, 0600)) < 0)
 		psc_fatal("Could not create or truncate the log file %s", fn);
@@ -682,13 +684,16 @@ pjournal_format(const char *fn, uint32_t nents, uint32_t entsz, uint32_t ra,
 			(off_t)(PJE_OFFSET + (slot * PJ_PJESZ(&pj))));
 		/* At least on one instance, short write actually returns success on a RAM-backed file system */
 		if (size < 0 || size != PJ_PJESZ(&pj) * count) {
-			psc_fatal("Failed to write %d entries at slot %d", count, slot);
+			rc = -1;
+			psc_errorx("Failed to write %d entries at slot %d", count, slot);
+			break;
 		}
 	}
 	if (close(fd) < 0) {
 		psc_fatal("Failed to close journal fd");
 	}
 	psc_freenl(jbuf, PJ_PJESZ(&pj) * ra);
+	return rc;
 }
 
 /*

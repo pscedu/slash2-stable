@@ -157,7 +157,7 @@ struct psc_journal_xidhndl {
 
 /* definitions of journal handling functions */
 int				 pjournal_dump(const char *);
-void				 pjournal_format(const char *, uint32_t, uint32_t, uint32_t, uint32_t);
+int				 pjournal_format(const char *, uint32_t, uint32_t, uint32_t, uint32_t);
 struct psc_journal		*pjournal_replay(const char *, psc_jhandler);
 
 /* definitions of transaction handling functions */
