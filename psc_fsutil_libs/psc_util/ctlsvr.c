@@ -1392,6 +1392,7 @@ psc_ctlthr_main(const char *ofn, const struct psc_ctlop *ct, int nops)
 	if ((s = socket(AF_LOCAL, SOCK_STREAM, 0)) == -1)
 		psc_fatal("socket");
 
+	/* replace %h in fn with pld_hostname formatted with %s */
 	FMTSTR(fn, sizeof(fn), ofn,
 		FMTSTRCASE('h', fn, sizeof(fn), "s",
 		    psclog_getdata()->pld_hostname)
