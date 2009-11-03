@@ -35,13 +35,13 @@ struct psc_dynarray {
  * dynarray_len - Obtain the number of elements stored in a dynamic array.
  * @pda: dynamic array to access.
  */
-#define dynarray_len(pda)	(pda)->pda_pos
+#define psc_dynarray_len(pda)	(pda)->pda_pos
 
 /**
  * dynarray_get - Access a dynamic array's item list.
  * @pda: dynamic array to access.
  */
-#define dynarray_get(pda)	((void *)(pda)->pda_items)
+#define psc_dynarray_get(pda)	((void *)(pda)->pda_items)
 
 /**
  * dynarray_sort - Reorder elements of a dynarray.
@@ -54,15 +54,28 @@ struct psc_dynarray {
 	(sortf)((pda)->pda_items, (pda)->pda_pos,			\
 	    sizeof(*(pda)->pda_items), (cmpf))
 
-int	 dynarray_add(struct psc_dynarray *, void *);
-int	 dynarray_add_ifdne(struct psc_dynarray *, void *);
-int	 dynarray_ensurelen(struct psc_dynarray *, int);
-int	 dynarray_exists(const struct psc_dynarray *, const void *);
-void	 dynarray_free(struct psc_dynarray *);
-int	 dynarray_freeslack(struct psc_dynarray *);
-void	*dynarray_getpos(const struct psc_dynarray *, int);
-void	 dynarray_init(struct psc_dynarray *);
-void	 dynarray_remove(struct psc_dynarray *, const void *);
-void	 dynarray_reset(struct psc_dynarray *);
+int	 psc_dynarray_add(struct psc_dynarray *, void *);
+int	 psc_dynarray_add_ifdne(struct psc_dynarray *, void *);
+int	 psc_dynarray_ensurelen(struct psc_dynarray *, int);
+int	 psc_dynarray_exists(const struct psc_dynarray *, const void *);
+void	 psc_dynarray_free(struct psc_dynarray *);
+int	 psc_dynarray_freeslack(struct psc_dynarray *);
+void	*psc_dynarray_getpos(const struct psc_dynarray *, int);
+void	 psc_dynarray_init(struct psc_dynarray *);
+void	 psc_dynarray_remove(struct psc_dynarray *, const void *);
+void	 psc_dynarray_reset(struct psc_dynarray *);
+
+#define dynarray_add		psc_dynarray_add
+#define dynarray_add_ifdne	psc_dynarray_add_ifdne
+#define dynarray_ensurelen	psc_dynarray_ensurelen
+#define dynarray_exists		psc_dynarray_exists
+#define dynarray_free		psc_dynarray_free
+#define dynarray_freeslack	psc_dynarray_freeslack
+#define dynarray_get		psc_dynarray_get
+#define dynarray_getpos		psc_dynarray_getpos
+#define dynarray_init		psc_dynarray_init
+#define dynarray_len		psc_dynarray_len
+#define dynarray_remove		psc_dynarray_remove
+#define dynarray_reset		psc_dynarray_reset
 
 #endif /* _PFL_DYNARRAY_H_ */
