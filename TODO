@@ -49,6 +49,7 @@ pfl
 - add API for PSC mem failure, so we can plug into the memhandling
   paths when asprintf() fails instead of centralizing the logic over
   malloc().
+- add struct members to hdrclean.pl
 
 zest
 - research faster CRC operations
