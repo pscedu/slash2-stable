@@ -46,7 +46,7 @@
 static int psc_send_buf (lnet_handle_md_t *mdh, void *base, int len,
                           lnet_ack_req_t ack, struct pscrpc_cb_id *cbid,
                           struct pscrpc_connection *conn,
-                          int portal, u64 xid)
+                          int portal, uint64_t xid)
 {
         int              rc;
         lnet_md_t         md;
@@ -109,7 +109,7 @@ int pscrpc_start_bulk_transfer (struct pscrpc_bulk_desc *desc)
         int                        rc;
         int                        rc2;
         lnet_md_t                  md;
-        u64                        xid;
+        uint64_t                   xid;
         ENTRY;
 
         //if (OBD_FAIL_CHECK_ONCE(OBD_FAIL_PSCRPC_BULK_PUT_NET))

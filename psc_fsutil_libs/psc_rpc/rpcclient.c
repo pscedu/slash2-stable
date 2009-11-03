@@ -14,12 +14,12 @@
 #include "psc_util/lock.h"
 #include "psc_util/waitq.h"
 
-static u64 pscrpc_last_xid = 0;
+static uint64_t pscrpc_last_xid = 0;
 static psc_spinlock_t pscrpc_last_xid_lock = LOCK_INITIALIZER;
 
-u64 pscrpc_next_xid(void)
+uint64_t pscrpc_next_xid(void)
 {
-	u64 tmp;
+	uint64_t tmp;
 
 	spinlock(&pscrpc_last_xid_lock);
 	tmp = ++pscrpc_last_xid;
@@ -27,9 +27,9 @@ u64 pscrpc_next_xid(void)
 	return tmp;
 }
 
-u64 pscrpc_sample_next_xid(void)
+uint64_t pscrpc_sample_next_xid(void)
 {
-	u64 tmp;
+	uint64_t tmp;
 
 	spinlock(&pscrpc_last_xid_lock);
 	tmp = pscrpc_last_xid + 1;
@@ -1016,7 +1016,7 @@ int pscrpc_check_set(struct pscrpc_request_set *set, int check_allsent)
 					psc_msg_add_flags(req->rq_reqmsg,
 							     MSG_RESENT);
 					if (req->rq_bulk) {
-						u64 old_xid = req->rq_xid;
+						uint64_t old_xid = req->rq_xid;
 
 						pscrpc_unregister_bulk (req);
 
@@ -1621,7 +1621,7 @@ void pscrpc_resend_req(struct pscrpc_request *req)
 	req->rq_net_err = 0;
 	req->rq_timedout = 0;
 	if (req->rq_bulk) {
-		u64 old_xid = req->rq_xid;
+		uint64_t old_xid = req->rq_xid;
 
 		/* ensure previous bulk fails */
 		req->rq_xid = pscrpc_next_xid();

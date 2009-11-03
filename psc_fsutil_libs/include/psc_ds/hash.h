@@ -43,7 +43,7 @@ struct hash_table {
 
 struct hash_entry {
 	struct psclist_head	  hentry_lentry;/* Entry list pointers */
-	const u64		 *hentry_id;	/* Pointer to the hash element id */
+	const uint64_t		 *hentry_id;	/* Pointer to the hash element id */
 	void			 *private;	/* pointer to private data */
 };
 
@@ -103,26 +103,26 @@ str_hash(const char *s)
 	_hashbkt_search((t), (b), (id), (cmp), (cbf), 0)
 
 struct hash_entry *_hashbkt_search(const struct hash_table *,
-	struct hash_bucket *, u64, const void *, void (*)(void *), int);
+	struct hash_bucket *, uint64_t, const void *, void (*)(void *), int);
 
-struct hash_entry * get_hash_entry(const struct hash_table *, u64, const void *, void (*)(void *));
+struct hash_entry * get_hash_entry(const struct hash_table *, uint64_t, const void *, void (*)(void *));
 struct hash_entry_str * get_hash_entry_str(const struct hash_table *, const char *);
 
 void hashbkt_del_entry(struct hash_bucket *, struct hash_entry *);
 void hashbkt_add_entry(struct hash_bucket *, struct hash_entry *);
 
-void *del_hash_entry(const struct hash_table *, u64);
+void *del_hash_entry(const struct hash_table *, uint64_t);
 void *del_hash_entry_str(const struct hash_table *, const char *);
 void add_hash_entry(const struct hash_table *, struct hash_entry *);
 void add_hash_entry_str(const struct hash_table *, struct hash_entry_str *);
 void hash_table_printstats(const struct hash_table *);
 void hash_table_stats(const struct hash_table *, int *, int *, int *, int *);
-void init_hash_entry(struct hash_entry *, const u64 *, void *);
+void init_hash_entry(struct hash_entry *, const uint64_t *, void *);
 void init_hash_entry_str(struct hash_entry_str *, const char *, void *);
 void init_hash_table(struct hash_table *, int, const char *, ...);
-void spinlock_hash_bucket(const struct hash_table *, u64);
-int  trylock_hash_bucket(const struct hash_table *, u64);
-void freelock_hash_bucket(const struct hash_table *, u64);
+void spinlock_hash_bucket(const struct hash_table *, uint64_t);
+int  trylock_hash_bucket(const struct hash_table *, uint64_t);
+void freelock_hash_bucket(const struct hash_table *, uint64_t);
 
 /* XXX use a lockedlist */
 extern struct psclist_head hashTablesList;

@@ -12,5 +12,5 @@ DEFINES+=	-DHAVE_LIBPTHREAD -DHAVE_LIBPTHREAD_DEFINED \
 
 include ${PFLMK}
 
-gentypes:
+gentypes regen:
 	@${GENTYPES} -h '../../include/*/*.h' -x '../../include/psc_ds/{queue,tree}.h' typedump.c

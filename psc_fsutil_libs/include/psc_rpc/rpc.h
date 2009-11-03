@@ -169,9 +169,9 @@ struct pscrpc_import {
 	int                       imp_max_retries;
 	enum psc_imp_state        imp_state;
 	struct pscrpc_handle      imp_remote_handle;
-	u64                       imp_last_replay_transno;
-	u64                       imp_last_transno_checked; /* optimize */
-	u64                       imp_peer_committed_transno;
+	uint64_t                  imp_last_replay_transno;
+	uint64_t                  imp_last_transno_checked; /* optimize */
+	uint64_t                  imp_peer_committed_transno;
 	struct psc_waitq          imp_recovery_waitq;
 	struct psclist_head       imp_delayed_list;
 	unsigned int              imp_invalid:1,
@@ -196,7 +196,7 @@ struct pscrpc_async_args {
 	 * big enough.  For _tons_ of context, ZOBD_ALLOC a struct and store
 	 * a pointer to it here.  The pointer_arg ensures this struct is at
 	 * least big enough for that. */
-	u64      space[2];
+	uint64_t space[2];
 	void    *pointer_arg[5];
 };
 
@@ -236,7 +236,7 @@ struct pscrpc_bulk_desc {
 	int                       bd_max_iov;      /* alloc'd size of bd_iov */
 	int                       bd_nob;          /* # bytes covered        */
 	int                       bd_nob_transferred; /* # bytes GOT/PUT     */
-	u64                       bd_last_xid;     /* track xid for retry    */
+	uint64_t                  bd_last_xid;     /* track xid for retry    */
 	u32                       bd_portal;       /* which portal           */
 	struct pscrpc_cb_id       bd_cbid;         /* network callback info  */
 	lnet_handle_md_t          bd_md_h;         /* associated MD          */
@@ -249,9 +249,9 @@ struct psc_msg {
 	u32 type;
 	u32 version;
 	u32 opc;
-	u64 last_xid;
-	u64 last_committed;
-	u64 transno;
+	uint64_t last_xid;
+	uint64_t last_committed;
+	uint64_t transno;
 	u32 status;
 	u32 flags;
 	u32 conn_cnt;
@@ -282,9 +282,9 @@ struct pscrpc_request {
 	int			rq_import_generation;
 	time_t			rq_sent;
 	psc_spinlock_t		rq_lock;
-	u64			rq_transno;
-	u64			rq_xid;
-	u64			rq_history_seq;
+	uint64_t		rq_transno;
+	uint64_t		rq_xid;
+	uint64_t		rq_history_seq;
 	unsigned int		rq_intr:1,
 				rq_replied:1,
 				rq_err:1,
@@ -358,8 +358,8 @@ struct pscrpc_service {
 	int srv_count_peer_qlens:1;
 	u32 srv_req_portal;
 	u32 srv_rep_portal;
-	u64 srv_request_seq;       /* next request sequence # */
-	u64 srv_request_max_cull_seq; /* highest seq culled from history */
+	uint64_t srv_request_seq;       /* next request sequence # */
+	uint64_t srv_request_max_cull_seq; /* highest seq culled from history */
 	atomic_t            srv_outstanding_replies;
 	struct psclist_head srv_lentry;      /* chain thru all services */
 	struct psclist_head srv_threads;
@@ -409,7 +409,7 @@ struct pscrpc_reply_state {
 	struct pscrpc_cb_id    rs_cb_id;       /* reply callback */
 	struct psclist_head    rs_list_entry;
 	int                    rs_size;
-	u64                    rs_xid;
+	uint64_t               rs_xid;
 	unsigned int           rs_difficult:1; /* ACK/commit stuff */
 	unsigned int           rs_scheduled:1; /* being handled? */
 	unsigned int           rs_scheduled_ever:1;/* any schedule attempts? */

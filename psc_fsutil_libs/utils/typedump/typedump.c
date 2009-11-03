@@ -230,7 +230,6 @@ main(int argc, char *argv[])
 	PRTYPE(struct pscrpc_wait_callback);
 	PRTYPE(u16);
 	PRTYPE(u32);
-	PRTYPE(u64);
 	PRTYPE(u8);
 /* end structs */
 

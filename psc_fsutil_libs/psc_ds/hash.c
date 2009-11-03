@@ -57,7 +57,7 @@ init_hash_table(struct hash_table *t, int size, const char *fmt, ...)
  * @private: application data to be stored in the hash
  */
 void
-init_hash_entry(struct hash_entry *hentry, const u64 *id, void *private)
+init_hash_entry(struct hash_entry *hentry, const uint64_t *id, void *private)
 {
 	memset(hentry, 0, sizeof(*hentry));
 	hentry->hentry_id = id;
@@ -66,7 +66,7 @@ init_hash_entry(struct hash_entry *hentry, const u64 *id, void *private)
 
 struct hash_entry *
 _hashbkt_search(const struct hash_table *t, struct hash_bucket *b,
-    u64 id, const void *cmp, void (*cbf)(void *), int del)
+    uint64_t id, const void *cmp, void (*cbf)(void *), int del)
 {
 	struct hash_entry *e;
 	int locked;
@@ -130,7 +130,7 @@ hashbkt_del_entry(struct hash_bucket *hb, struct hash_entry *e)
  * 	conditions while the bucket is locked.
  */
 struct hash_entry *
-get_hash_entry(const struct hash_table *t, u64 id, const void *cmp,
+get_hash_entry(const struct hash_table *t, uint64_t id, const void *cmp,
     void (*cbf)(void *))
 {
 	struct hash_bucket *b;
@@ -140,7 +140,7 @@ get_hash_entry(const struct hash_table *t, u64 id, const void *cmp,
 }
 
 void
-spinlock_hash_bucket(const struct hash_table *t, u64 id)
+spinlock_hash_bucket(const struct hash_table *t, uint64_t id)
 {
 	struct hash_bucket *b=GET_BUCKET(t, id);
 
@@ -148,7 +148,7 @@ spinlock_hash_bucket(const struct hash_table *t, u64 id)
 }
 
 int
-trylock_hash_bucket(const struct hash_table *t, u64 id)
+trylock_hash_bucket(const struct hash_table *t, uint64_t id)
 {
 	struct hash_bucket *b=GET_BUCKET(t, id);
 
@@ -156,7 +156,7 @@ trylock_hash_bucket(const struct hash_table *t, u64 id)
 }
 
 void
-freelock_hash_bucket(const struct hash_table *t, u64 id)
+freelock_hash_bucket(const struct hash_table *t, uint64_t id)
 {
 	struct hash_bucket *b=GET_BUCKET(t, id);
 
@@ -169,7 +169,7 @@ freelock_hash_bucket(const struct hash_table *t, u64 id)
  * @id: element ID to look up in hash bucket.
  */
 void *
-del_hash_entry(const struct hash_table *t, u64 id)
+del_hash_entry(const struct hash_table *t, uint64_t id)
 {
 	struct hash_bucket *b;
 	struct hash_entry *e;
