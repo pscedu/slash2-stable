@@ -17,6 +17,7 @@ general reminders
 - check memset() for bad sizes sizeof(pg) vs. sizeof(*pg)
 - watch for realloc(p, 0) returning NULL being okay
 - deploy __thread in more places
+- change inline to __inline
 
 make
 - rename ROOTDIR -> PROJ_BASE
