@@ -1,5 +1,12 @@
 /* $Id$ */
 
+/*
+ * Variable-sized bitmaps.  Internally, bitmaps are arrays
+ * of chars that are realloc(3)'d to different lengths.
+ *
+ * This API is not thread-safe!
+ */
+
 #ifndef _PFL_VBITMAP_H_
 #define _PFL_VBITMAP_H_
 
@@ -22,22 +29,22 @@ struct psc_vbitmap {
 
 #define VBITMAP_INIT_AUTO	{ NULL, NULL, NULL, 0, PVBF_AUTO | PVBF_STATIC }
 
-#define vbitmap_new(siz)	vbitmap_newf((siz), 0)
+#define psc_vbitmap_new(siz)	psc_vbitmap_newf((siz), 0)
 
 /**
- * vbitmap_free - reclaim memory from a variable-sized bitmap.
+ * psc_vbitmap_free - reclaim memory from a variable-sized bitmap.
  * @vb: variable bitmap.
  */
-#define vbitmap_free(vb)					\
+#define psc_vbitmap_free(vb)					\
 	do {							\
-		_vbitmap_free(vb);				\
+		_psc_vbitmap_free(vb);				\
 		(vb) = NULL;					\
 	} while (0)
 
 #define vbitmap_printbin1(vb) {						\
 		unsigned char *PPp;					\
 		char *Bbufp, *Bbuf =					\
-			PSCALLOC(vbitmap_getsize((vb)) * NBBY + 256); \
+			PSCALLOC(psc_vbitmap_getsize((vb)) * NBBY + 256); \
 									\
 		for (PPp = (vb)->vb_start, Bbufp=Bbuf; PPp <= (vb)->vb_end; \
 		     PPp++, Bbufp += NBBY+1)				\
@@ -51,31 +58,57 @@ struct psc_vbitmap {
 	}
 
 struct psc_vbitmap *
-	vbitmap_newf(size_t, int);
+	psc_vbitmap_newf(size_t, int);
 
 struct psc_vbitmap *
-	vbitmap_attach(unsigned char *, size_t);
+	psc_vbitmap_attach(unsigned char *, size_t);
 
-int	vbitmap_get(const struct vbitmap *, size_t);
-void	vbitmap_clearall(struct vbitmap *);
-int	vbitmap_getncontig(struct vbitmap *, int *);
-size_t	vbitmap_getsize(const struct vbitmap *);
-void	vbitmap_invert(struct vbitmap *);
-int	vbitmap_lcr(const struct vbitmap *);
-int	vbitmap_next(struct vbitmap *, size_t *);
-int	vbitmap_nfree(const struct vbitmap *);
-int	vbitmap_resize(struct vbitmap *, size_t);
-void	vbitmap_set(struct vbitmap *, size_t);
-void	vbitmap_setall(struct vbitmap *);
-int	vbitmap_setnextpos(struct vbitmap *, int);
-int	vbitmap_setrange(struct vbitmap *, size_t, size_t);
-void	vbitmap_unset(struct vbitmap *, size_t);
-int	vbitmap_xset(struct vbitmap *, size_t);
-void	_vbitmap_free(struct vbitmap *);
+int	psc_vbitmap_get(const struct psc_vbitmap *, size_t);
+void	psc_vbitmap_clearall(struct psc_vbitmap *);
+int	psc_vbitmap_getncontig(struct psc_vbitmap *, int *);
+size_t	psc_vbitmap_getsize(const struct psc_vbitmap *);
+void	psc_vbitmap_invert(struct psc_vbitmap *);
+int	psc_vbitmap_lcr(const struct psc_vbitmap *);
+int	psc_vbitmap_next(struct psc_vbitmap *, size_t *);
+int	psc_vbitmap_nfree(const struct psc_vbitmap *);
+int	psc_vbitmap_resize(struct psc_vbitmap *, size_t);
+void	psc_vbitmap_set(struct psc_vbitmap *, size_t);
+void	psc_vbitmap_setall(struct psc_vbitmap *);
+int	psc_vbitmap_setnextpos(struct psc_vbitmap *, int);
+int	psc_vbitmap_setrange(struct psc_vbitmap *, size_t, size_t);
+void	psc_vbitmap_unset(struct psc_vbitmap *, size_t);
+int	psc_vbitmap_xset(struct psc_vbitmap *, size_t);
+void	_psc_vbitmap_free(struct psc_vbitmap *);
 
-void	vbitmap_printbin(const struct vbitmap *);
-void	vbitmap_printhex(const struct vbitmap *);
-void	vbitmap_printstats(const struct vbitmap *);
-void	vbitmap_getstats(const struct vbitmap *, int *, int *);
+void	psc_vbitmap_printbin(const struct psc_vbitmap *);
+void	psc_vbitmap_printhex(const struct psc_vbitmap *);
+void	psc_vbitmap_printstats(const struct psc_vbitmap *);
+void	psc_vbitmap_getstats(const struct psc_vbitmap *, int *, int *);
+
+#define vbitmap_new		psc_vbitmap_new
+#define vbitmap_free		psc_vbitmap_free
+#define vbitmap_printbin1	psc_vbitmap_printbin1
+#define vbitmap_newf		psc_vbitmap_newf
+#define vbitmap_attach		psc_vbitmap_attach
+#define vbitmap_get		psc_vbitmap_get
+#define vbitmap_clearall	psc_vbitmap_clearall
+#define vbitmap_getncontig	psc_vbitmap_getncontig
+#define vbitmap_getsize		psc_vbitmap_getsize
+#define vbitmap_invert		psc_vbitmap_invert
+#define vbitmap_lcr		psc_vbitmap_lcr
+#define vbitmap_next		psc_vbitmap_next
+#define vbitmap_nfree		psc_vbitmap_nfree
+#define vbitmap_resize		psc_vbitmap_resize
+#define vbitmap_set		psc_vbitmap_set
+#define vbitmap_setall		psc_vbitmap_setall
+#define vbitmap_setnextpos	psc_vbitmap_setnextpos
+#define vbitmap_setrange	psc_vbitmap_setrange
+#define vbitmap_unset		psc_vbitmap_unset
+#define vbitmap_xset		psc_vbitmap_xset
+
+#define vbitmap_printbin	psc_vbitmap_printbin
+#define vbitmap_printhex	psc_vbitmap_printhex
+#define vbitmap_printstats	psc_vbitmap_printstats
+#define vbitmap_getstats	psc_vbitmap_getstats
 
 #endif /* _PFL_VBITMAP_H_ */
