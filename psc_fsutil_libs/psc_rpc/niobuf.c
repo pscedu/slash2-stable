@@ -719,7 +719,7 @@ static void __pscrpc_free_req(struct pscrpc_request *request, int  locked)
         }
 
         if (request->rq_import != NULL) {
-                import_put(request->rq_import);
+                pscrpc_import_put(request->rq_import);
                 request->rq_import = NULL;
         }
 
@@ -790,7 +790,7 @@ void pscrpc_free_bulk(struct pscrpc_bulk_desc *desc)
         if (desc->bd_export)
                 pscrpc_export_put(desc->bd_export);
         else
-                import_put(desc->bd_import);
+                pscrpc_import_put(desc->bd_import);
 
         ZOBD_FREE(desc, offsetof(struct pscrpc_bulk_desc,
                                 bd_iov[desc->bd_max_iov]));

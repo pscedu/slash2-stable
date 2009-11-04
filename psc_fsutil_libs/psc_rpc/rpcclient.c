@@ -45,13 +45,20 @@ struct pscrpc_request *pscrpc_request_addref(struct pscrpc_request *req)
 }
 
 //struct psc_import *class_new_import(struct obd_device *obd)
-struct pscrpc_import *new_import(void)
+struct pscrpc_import *
+pscrpc_new_import(void)
 {
 	struct pscrpc_import *imp;
 
 	ZOBD_ALLOC(imp, sizeof(*imp));
 	if (imp == NULL)
 		return NULL;
+
+	ZOBD_ALLOC(imp->imp_client, sizeof(*imp->imp_client));
+	if (imp->imp_client == NULL) {
+		ZOBD_FREE(imp, sizeof(*imp));
+		return (NULL);
+	}
 
 	//INIT_PSCLIST_HEAD(&imp->imp_replay_list);
 	INIT_PSCLIST_HEAD(&imp->imp_sending_list);
@@ -81,7 +88,8 @@ struct pscrpc_import *import_get(struct pscrpc_import *import)
 	return import;
 }
 
-void import_put(struct pscrpc_import *import)
+void
+pscrpc_import_put(struct pscrpc_import *import)
 {
 	ENTRY;
 
@@ -99,10 +107,10 @@ void import_put(struct pscrpc_import *import)
 	psc_assert(import->imp_connection);
 	pscrpc_put_connection(import->imp_connection);
 
+	ZOBD_FREE(import->imp_client, sizeof(*import->imp_client));
 	ZOBD_FREE(import, sizeof(*import));
 	EXIT;
 }
-
 
 #if 0 //try to get away without uuid's
 struct pscrpc_connection *pscrpc_uuid_to_connection(struct obd_uuid *uuid)
@@ -1105,7 +1113,7 @@ int pscrpc_check_set(struct pscrpc_request_set *set, int check_allsent)
 
 		if (req->rq_interpret_reply)
 			req->rq_status = req->rq_interpret_reply(req,
-			        &req->rq_async_args);
+				&req->rq_async_args);
 		set->set_remaining--;
 
 		DEBUG_REQ(PLL_NOTICE, req, "set(%p) rem=(%d) ",

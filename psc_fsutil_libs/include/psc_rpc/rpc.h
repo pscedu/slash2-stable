@@ -509,9 +509,9 @@ struct pscrpc_bulk_desc *
 	 pscrpc_prep_bulk_imp(struct pscrpc_request *, int, int, int);
 struct pscrpc_request *
 	 pscrpc_request_addref(struct pscrpc_request *);
-void	 import_put(struct pscrpc_import *);
+void	 pscrpc_import_put(struct pscrpc_import *);
 struct pscrpc_import *
-	 new_import(void);
+	 pscrpc_new_import(void);
 int	 pscrpc_queue_wait(struct pscrpc_request *);
 struct pscrpc_request_set *
 	 pscrpc_prep_set(void);
