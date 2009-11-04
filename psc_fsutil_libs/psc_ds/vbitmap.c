@@ -192,7 +192,7 @@ bs_nfree(int b, int m)
 }
 
 /**
- * vbitmap_nfree - report the number of free bits in the bitmap.
+ * vbitmap_nfree - report the number of free (i.e., unset) bits in the bitmap.
  * @vb: variable bitmap.
  * Returns: number of free bits.
  */
