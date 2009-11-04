@@ -18,6 +18,9 @@ general reminders
 - watch for realloc(p, 0) returning NULL being okay
 - deploy __thread in more places
 - change inline to __inline
+- void *pri data members can be removed on structures to save
+  memory, as you can allocate >sizeof(struct) and point the
+  private data pointer past
 
 make
 - rename ROOTDIR -> PROJ_BASE
