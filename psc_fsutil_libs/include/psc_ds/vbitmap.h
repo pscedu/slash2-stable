@@ -41,7 +41,7 @@ struct psc_vbitmap {
 		(vb) = NULL;					\
 	} while (0)
 
-#define vbitmap_printbin1(vb) {						\
+#define psc_vbitmap_printbin1(vb) {					\
 		unsigned char *PPp;					\
 		char *Bbufp, *Bbuf =					\
 			PSCALLOC(psc_vbitmap_getsize((vb)) * NBBY + 256); \

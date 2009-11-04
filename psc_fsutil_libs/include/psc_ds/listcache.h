@@ -56,7 +56,7 @@ typedef struct psc_listcache list_cache_t;
 /**
  * lc_sz - how many items are in here.
  */
-static inline ssize_t
+static __inline ssize_t
 lc_sz(struct psc_listcache *lc)
 {
 	int locked;
@@ -68,7 +68,7 @@ lc_sz(struct psc_listcache *lc)
 	return (sz);
 }
 
-static inline void
+static __inline void
 lc_del(struct psclist_head *e, struct psc_listcache *lc)
 {
 	int locked;
@@ -85,7 +85,7 @@ lc_del(struct psclist_head *e, struct psc_listcache *lc)
  * @lc: the list cache.
  * @p: the item containing a psclist_head member.
  */
-static inline void
+static __inline void
 lc_remove(struct psc_listcache *lc, void *p)
 {
 	int locked;
@@ -201,7 +201,7 @@ _lc_get(struct psc_listcache *lc, struct timespec *abstime,
  * lc_kill - list wants to go away, notify waitors.
  * @lc: list cache to kill.
  */
-static inline void
+static __inline void
 lc_kill(struct psc_listcache *lc)
 {
 	spinlock(&lc->lc_lock);
@@ -220,7 +220,7 @@ lc_kill(struct psc_listcache *lc)
  * @pos: where to add the item, head or tail of list.
  * @flags: operational behavior.
  */
-static inline int
+static __inline int
 _lc_put(struct psc_listcache *lc, struct psclist_head *e,
     enum psclc_pos pos, int flags)
 {
@@ -255,7 +255,7 @@ _lc_put(struct psc_listcache *lc, struct psclist_head *e,
 	return (1);
 }
 
-static inline int
+static __inline int
 _lc_add(struct psc_listcache *lc, void *p, enum psclc_pos pos, int flags)
 {
 	void *e;
@@ -288,7 +288,7 @@ _lc_add(struct psc_listcache *lc, void *p, enum psclc_pos pos, int flags)
  * @e: item entry to move.
  * @pos: where to move the item entry; list head or tail.
  */
-static inline void
+static __inline void
 lc_move_entry(struct psc_listcache *lc, struct psclist_head *e,
     enum psclc_pos pos)
 {
@@ -309,7 +309,7 @@ lc_move_entry(struct psc_listcache *lc, struct psclist_head *e,
  * @p: item to move.
  * @pos: where to move the item; list head or tail.
  */
-static inline void
+static __inline void
 lc_move(struct psc_listcache *lc, void *p, enum psclc_pos pos)
 {
 	void *e;
@@ -323,16 +323,10 @@ lc_move(struct psc_listcache *lc, void *p, enum psclc_pos pos)
 #define lc_move2tail(lc, p)	lc_move((lc), (p), PLCP_TAIL)
 #define lc_move2head(lc, p)	lc_move((lc), (p), PLCP_HEAD)
 
-static inline void
+static __inline void
 _lc_init(struct psc_listcache *lc, ptrdiff_t offset, size_t entsize)
 {
-	lc->lc_size = 0;
-	lc->lc_nseen = 0;
-	lc->lc_entsize = entsize;
-	lc->lc_offset = offset;
-	INIT_PSCLIST_HEAD(&lc->lc_listhd);
-	INIT_PSCLIST_ENTRY(&lc->lc_index_lentry);
-	LOCK_INIT(&lc->lc_lock);
+	psclg_init(&lc->lc_guts, offset, entsize);
 	psc_waitq_init(&lc->lc_wq_empty);
 	psc_waitq_init(&lc->lc_wq_want);
 }
@@ -352,7 +346,7 @@ _lc_init(struct psc_listcache *lc, ptrdiff_t offset, size_t entsize)
  * @name: printf(3) format of name for list.
  * @ap: variable argument list for printf(3) name argument.
  */
-static inline void
+static __inline void
 lc_vregister(struct psc_listcache *lc, const char *name, va_list ap)
 {
 	int rc;
@@ -377,7 +371,7 @@ lc_vregister(struct psc_listcache *lc, const char *name, va_list ap)
  * @lc: the list cache to register.
  * @name: printf(3) format of name for list.
  */
-static inline void
+static __inline void
 lc_register(struct psc_listcache *lc, const char *name, ...)
 {
 	va_list ap;
@@ -387,7 +381,7 @@ lc_register(struct psc_listcache *lc, const char *name, ...)
 	va_end(ap);
 }
 
-static inline void
+static __inline void
 _lc_reginit(struct psc_listcache *lc, ptrdiff_t offset, size_t entsize,
     const char *name, ...)
 {
@@ -414,7 +408,7 @@ _lc_reginit(struct psc_listcache *lc, ptrdiff_t offset, size_t entsize,
  * lc_unregister - remove list cache external access registration.
  * @lc: the list cache to unregister, must be UNLOCKED.
  */
-static inline void
+static __inline void
 lc_unregister(struct psc_listcache *lc)
 {
 	PLL_LOCK(&pscListCaches);
@@ -429,7 +423,7 @@ lc_unregister(struct psc_listcache *lc)
  * @name: name of list cache.
  * Notes: returns the list cache locked if found.
  */
-static inline struct psc_listcache *
+static __inline struct psc_listcache *
 lc_lookup(const char *name)
 {
 	struct psc_listcache *lc;
@@ -449,7 +443,7 @@ lc_lookup(const char *name)
  * lc_empty - determine if the list cache has elements currently.
  * @lc: list cache to check.
  */
-static inline int
+static __inline int
 lc_empty(struct psc_listcache *lc)
 {
 	int rc, locked;
@@ -466,38 +460,6 @@ lc_empty(struct psc_listcache *lc)
  * @sortf: sort routine, such as qsort(3) or mergesort(3).
  * @cmpf: comparision routine passed as argument to sortf().
  */
-static inline void
-lc_sort(struct psc_listcache *lc,
-    void (*sortf)(void *, size_t, size_t, int (*)(const void *, const void *)),
-    int (*cmpf)(const void *, const void *))
-{
-	void **p, *next, *prev;
-	struct psclist_head *e;
-	int j, locked;
-
-	j = 0;
-	locked = reqlock(&lc->lc_lock);
-	if (lc->lc_size == 0 || lc->lc_size == 1) {
-		ureqlock(&lc->lc_lock, locked);
-		return;
-	}
-	p = PSCALLOC(lc->lc_size * sizeof(*p));
-	psclist_for_each(e, &lc->lc_listhd)
-		p[j++] = ((char *)e) - lc->lc_offset;
-	sortf(p, lc->lc_size, sizeof(*p), cmpf);
-	prev = lc->lc_offset + (char *)p[lc->lc_size - 1];
-	for (j = 0; j < lc->lc_size; j++, prev = e) {
-		e = (void *)(lc->lc_offset + (char *)p[j]);
-		if (j < lc->lc_size - 1)
-			next = lc->lc_offset + (char *)p[j + 1];
-		else
-			next = lc->lc_offset + (char *)p[0];
-		e->zprev = prev;
-		e->znext = next;
-	}
-	lc->lc_listhd.znext = (void *)(lc->lc_offset + (char *)p[0]);
-	lc->lc_listhd.zprev = (void *)(lc->lc_offset + (char *)p[lc->lc_size - 1]);
-	ureqlock(&lc->lc_lock, locked);
-}
+#define lc_sort(lc, sortf, cmpf)	psclg_sort(&(lc)->lc_guts, (sortf), (cmpf))
 
 #endif /* _PFL_LISTCACHE_H_ */

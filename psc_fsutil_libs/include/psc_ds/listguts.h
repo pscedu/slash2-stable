@@ -12,6 +12,7 @@
 #include <stddef.h>
 
 #include "psc_ds/list.h"
+#include "psc_util/alloc.h"
 #include "psc_util/lock.h"
 
 #define PLG_NAME_MAX 32
@@ -39,7 +40,19 @@ struct psc_listguts {
 #define LISTGUTS_FOREACH_SAFE(p, t, lg)				\
 	psclist_for_each_entry2_safe((p), (t), &(lg)->plg_listhd, (lg)->plg_offset)
 
-static inline int
+static __inline void
+psclg_init(struct psc_listguts *plg, ptrdiff_t offset, size_t entsize)
+{
+	plg->plg_size = 0;
+	plg->plg_nseen = 0;
+	plg->plg_entsize = entsize;
+	plg->plg_offset = offset;
+	INIT_PSCLIST_HEAD(&plg->plg_listhd);
+	INIT_PSCLIST_ENTRY(&plg->plg_index_lentry);
+	LOCK_INIT(&plg->plg_lock);
+}
+
+static __inline int
 psclg_size(struct psc_listguts *plg)
 {
 	int locked, n;
@@ -50,7 +63,7 @@ psclg_size(struct psc_listguts *plg)
 	return (n);
 }
 
-static inline int
+static __inline int
 psclg_conjoint(struct psc_listguts *plg, void *p)
 {
 	struct psclist_head *e;
@@ -63,6 +76,30 @@ psclg_conjoint(struct psc_listguts *plg, void *p)
 	conjoint = psclist_conjoint(e);
 	ureqlock(&plg->plg_lock, locked);
 	return (conjoint);
+}
+
+/**
+ * psclg_sort - sort items in a list.
+ * @lg: list to sort.
+ * @sortf: sort routine, such as qsort(3) or mergesort(3).
+ * @cmpf: comparison routine passed as argument to sortf().
+ */
+static __inline void
+psclg_sort(struct psc_listguts *plg, void (*sortf)(void *, size_t,
+    size_t, int (*)(const void *, const void *)),
+    int (*cmpf)(const void *, const void *))
+{
+	int locked;
+	void *p;
+
+	locked = reqlock(&plg->plg_lock);
+	if (plg->plg_size > 1) {
+		p = PSCALLOC(plg->plg_size * sizeof(*p));
+		psclist_sort(p, &plg->plg_listhd, plg->plg_size,
+		    plg->plg_offset, sortf, cmpf);
+		PSCFREE(p);
+	}
+	ureqlock(&plg->plg_lock, locked);
 }
 
 #endif /* _PFL_LISTGUTS_H_ */

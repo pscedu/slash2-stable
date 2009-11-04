@@ -394,4 +394,30 @@ psclist_add_sorted(struct psclist_head *hd, struct psclist_head *elem,
 	psclist_xadd_tail(elem, hd);
 }
 
+static __inline void
+psclist_sort(void **p, struct psclist_head *hd, int n, ptrdiff_t off,
+    void (*sortf)(void *, size_t, size_t, int (*)(const void *, const void *)),
+    int (*cmpf)(const void *, const void *))
+{
+	struct psclist_head *e;
+	void *next, *prev;
+	int j = 0;
+
+	psclist_for_each(e, hd)
+		p[j++] = ((char *)e) - off;
+	sortf(p, n, sizeof(*p), cmpf);
+	prev = off + (char *)p[n - 1];
+	for (j = 0; j < n; j++, prev = e) {
+		e = (void *)(off + (char *)p[j]);
+		if (j < n - 1)
+			next = off + (char *)p[j + 1];
+		else
+			next = off + (char *)p[0];
+		e->zprev = prev;
+		e->znext = next;
+	}
+	hd->znext = (void *)(off + (char *)p[0]);
+	hd->zprev = (void *)(off + (char *)p[n - 1]);
+}
+
 #endif /* _PFL_LIST_H_ */

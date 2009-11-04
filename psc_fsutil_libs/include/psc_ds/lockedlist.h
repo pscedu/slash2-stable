@@ -13,6 +13,7 @@
 #include <string.h>
 
 #include "psc_ds/list.h"
+#include "psc_util/alloc.h"
 #include "psc_util/lock.h"
 #include "psc_util/log.h"
 
@@ -175,6 +176,24 @@ pll_conjoint(struct psc_lockedlist *pll, void *p)
 	conjoint = psclist_conjoint(e);
 	PLL_URLOCK(pll, locked);
 	return (conjoint);
+}
+
+static __inline void
+pll_sort(struct psc_lockedlist *pll, void (*sortf)(void *, size_t,
+    size_t, int (*)(const void *, const void *)),
+    int (*cmpf)(const void *, const void *))
+{
+	int locked;
+	void *p;
+
+	locked = PLL_RLOCK(pll);
+	if (pll->pll_nitems > 1) {
+		p = PSCALLOC(pll->pll_nitems * sizeof(*p));
+		psclist_sort(p, &pll->pll_listhd, pll->pll_nitems,
+		    pll->pll_offset, sortf, cmpf);
+		PSCFREE(p);
+	}
+	PLL_URLOCK(pll, locked);
 }
 
 #endif /* _PFL_LOCKEDLIST_H_ */
