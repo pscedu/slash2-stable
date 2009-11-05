@@ -220,7 +220,7 @@ psc_vbitmap_invert(struct psc_vbitmap *vb)
 	unsigned char *p;
 
 	for (p = vb->vb_start; p <= vb->vb_end; p++)
-		*p ^= *p;
+		*p = ~(*p);
 }
 
 /**
