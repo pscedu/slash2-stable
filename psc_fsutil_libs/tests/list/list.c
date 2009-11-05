@@ -52,7 +52,7 @@ shift(void)
 int
 m_cmp(const void *a, const void *b)
 {
-	const struct m *x = a, *y = b;
+	const struct m **ma = a, *x = *ma, **mb = b, *y = *mb;
 
 	return (CMP(x->v, y->v));
 }
