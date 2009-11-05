@@ -7,6 +7,7 @@ SUBDIRS+=	atomic
 SUBDIRS+=	bitflag
 SUBDIRS+=	fmtstr
 SUBDIRS+=	hash2
+SUBDIRS+=	list
 SUBDIRS+=	lock
 SUBDIRS+=	lock2
 SUBDIRS+=	mlock
