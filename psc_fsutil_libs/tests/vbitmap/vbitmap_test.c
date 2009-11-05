@@ -70,8 +70,21 @@ main(int argc, char *argv[])
 		errx(1, "got another expected unused elem! %zu\n", elem);
 
 	/* free some slots */
-	for (elem = 0; elem < NELEM; elem += NELEM / 10)
+	for (i = 0, elem = 0; elem < NELEM; i++, elem += NELEM / 10)
 		vbitmap_unset(vb, elem);
+
+	t = vbitmap_nfree(vb);
+	if (t != i)
+		errx(1, "wrong number of free elements, has=%d, want=%d", t, i);
+	vbitmap_invert(vb);
+	t = vbitmap_nfree(vb);
+	if (t != NELEM - i)
+		errx(1, "wrong number of inverted elements, has=%d, want=%d",
+		    t, NELEM - i);
+	vbitmap_invert(vb);
+	t = vbitmap_nfree(vb);
+	if (t != i)
+		errx(1, "wrong number of original elements, has=%d, want=%d", t, i);
 
 	/* try to re-grab the freed slots */
 	for (i = 0; i <= 10; i++)
