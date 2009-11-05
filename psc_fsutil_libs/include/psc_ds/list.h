@@ -416,7 +416,7 @@ psclist_sort(void **p, struct psclist_head *hd, int n, ptrdiff_t off,
 		e->zprev = prev;
 		e->znext = next;
 	}
-	hd->znext = (char *)p[0] - off;
+	hd->znext = (void *)((char *)p[0] - off);
 	hd->zprev = prev;
 }
 
