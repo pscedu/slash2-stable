@@ -2,8 +2,8 @@
 
 include ../Makefile.path
 
-PROG=		list
-SRCS+=		list.c
+PROG=		list_test
+SRCS+=		list_test.c
 SRCS+=		${PFL_BASE}/psc_util/alloc.c
 SRCS+=		${PFL_BASE}/psc_util/init.c
 SRCS+=		${PFL_BASE}/psc_util/log.c
