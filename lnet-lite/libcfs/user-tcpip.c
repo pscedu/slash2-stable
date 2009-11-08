@@ -271,13 +271,12 @@ libcfs_sock_listen (int *sockp, __u32 local_ip, int local_port, int backlog)
                                           INADDR_ANY : htonl(local_ip);
 
                 if ( bind(*sockp, (struct sockaddr *)&locaddr, sizeof(locaddr)) ) {
+			char buf[16]; /* xxx.xxx.xxx.xxx + NUL */
+
                         rc = -errno;
-                        if ( errno == -EADDRINUSE )
-                                CDEBUG(D_NET, "Port %d already in use\n",
-                                       local_port);
-                        else
-                                CERROR("bind() to port %d failed: errno==%d\n",
-                                       local_port, errno);
+                        CERROR("bind(%s:%d%s): %s\n", inet_ntop(AF_INET,
+			    &locaddr.sin_addr, buf, sizeof(buf)), local_port,
+			    lnet_get_usesdp() ? " (SDP)" : "", strerror(errno));
                         goto failed;
                 }
         }
