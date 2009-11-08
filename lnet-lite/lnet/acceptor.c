@@ -50,7 +50,7 @@ static int accept_port = 988;
 static int accept_backlog;
 static int accept_timeout;
 
-static int la_init_ok = 1;	/* assume we initialize, if not then a thr will turn this off */
+static int la_init_ok;	/* bumped for each successful thread */
 static int la_shutdown;
 static struct cfs_completion la_compl;
 static struct list_head laps = CFS_LIST_HEAD_INIT(laps);
@@ -248,8 +248,8 @@ lnet_acceptor(void *arg)
 	}
 
 	/* set init status and unblock parent */
-	if (rc)
-		la_init_ok = 0;
+	if (rc == 0)
+		la_init_ok++;
 	cfs_complete(&lap->lap_compl);
 
 	if (rc != 0)
@@ -361,7 +361,7 @@ lnet_acceptor_start(void)
 
 			ina.s_addr = htonl(lap->lap_addr.s_addr);
 
-			rc = cfs_create_thread(lnet_acceptor, lap, "lnetacthr-%s:%d",
+			rc = cfs_create_thread(lnet_acceptor, lap, "lnacthr-%s:%d",
 			    inet_ntop(AF_INET, &ina, addrbuf, sizeof(addrbuf)),
 			    lap->lap_port);
 			if (rc != 0) {
@@ -380,7 +380,7 @@ lnet_acceptor_start(void)
 		return 0;
 	}
 
-	if (la_init_ok)
+	if (la_init_ok > 0)
 		return 0;
 
 	cfs_fini_completion(&la_compl);
