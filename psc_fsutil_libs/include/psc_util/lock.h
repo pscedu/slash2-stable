@@ -158,11 +158,11 @@ validlock(const psc_spinlock_t *sl)
 			psc_fatalx("%s: %#x: invalid value (lock %p)",	\
 			    (name), (sl)->sl_lock, (sl));		\
 		if ((sl)->sl_lock == SL_UNLOCKED)			\
-			psc_fatalx("freelock: not locked (lock %p)",	\
+			psc_fatalx("%s: not locked (lock %p)", (name),	\
 			    (sl));					\
 		if ((sl)->sl_who != pthread_self())			\
-			psc_fatalx("freelock: not owner "		\
-			    "(lock %p, owner %lu, self %lu)",		\
+			psc_fatalx("%s: not owner "			\
+			    "(lock %p, owner %lu, self %lu)", (name),	\
 			    (sl), (sl)->sl_who, pthread_self());	\
 		1;							\
 	}
