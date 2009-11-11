@@ -139,10 +139,6 @@ main(int argc, char *argv[])
 	PRTYPE(psc_crc_t);
 	PRTYPE(psc_spinlock_t);
 	PRTYPE(pscrpc_svc_handle_t);
-	PRTYPE(s16);
-	PRTYPE(s32);
-	PRTYPE(s64);
-	PRTYPE(s8);
 	PRTYPE(struct _psc_journal_hdr);
 	PRTYPE(struct hash_bucket);
 	PRTYPE(struct hash_entry);
