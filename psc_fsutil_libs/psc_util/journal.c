@@ -13,12 +13,12 @@
 #include <unistd.h>
 
 #include "pfl/types.h"
-#include "psc_util/crc.h"
+#include "psc_ds/dynarray.h"
 #include "psc_util/alloc.h"
 #include "psc_util/atomic.h"
+#include "psc_util/crc.h"
 #include "psc_util/journal.h"
 #include "psc_util/lock.h"
-#include "psc_ds/dynarray.h"
 
 #define MAX_LOG_TRY		3	/* # of times of retry in case of a log write problem */
 
@@ -349,16 +349,12 @@ __static int
 pjournal_xid_cmp(const void *x, const void *y)
 {
 	const struct psc_journal_enthdr	*a = x, *b = y;
+	int rc;
 
-	if (a->pje_xid < b->pje_xid)
-		return (-1);
-	if (a->pje_xid == b->pje_xid && a->pje_sid < b->pje_sid)
-		return (-1);
-	if (a->pje_xid > b->pje_xid)
-                return (1);
-	if (a->pje_xid == b->pje_xid && a->pje_sid > b->pje_sid)
-                return (1);
-	return (0);
+	rc = CMP(a->pje_xid, b->pje_xid);
+	if (rc)
+		return (rc);
+	return (CMP(a->pje_sid, b->pje_sid));
 }
 
 /*
