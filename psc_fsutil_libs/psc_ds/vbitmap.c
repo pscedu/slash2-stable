@@ -177,21 +177,6 @@ psc_vbitmap_get(const struct psc_vbitmap *vb, size_t elem)
 	return (vb->vb_start[bytes] & (1 << pos));
 }
 
-__static __inline int
-bs_nfree(int b, int m)
-{
-	int i, n;
-
-	if (b == 0)
-		return (NBBY);
-	if (b == 0xff)
-		return (0);
-	for (i = n = 0; i < m; i++)
-		if ((b & (1 << i)) == 0)
-			n++;
-	return (n);
-}
-
 /**
  * psc_vbitmap_nfree - Get the number of free (i.e. unset) bits
  *	in a variable bitmap.
@@ -202,11 +187,13 @@ int
 psc_vbitmap_nfree(const struct psc_vbitmap *vb)
 {
 	unsigned char *p;
-	int n;
+	int n, j;
 
-	for (n = 0, p = vb->vb_start; p < vb->vb_end; p++)
-		n += bs_nfree(*p, NBBY);
-	n += bs_nfree(*p, vb->vb_lastsize);
+	for (n = 0, p = vb->vb_start; p <= vb->vb_end; p++)
+		for (j = 0; j < (p == vb->vb_end ?
+		    vb->vb_lastsize : NBBY); j++)
+			if ((*p & (1 << j)) == 0)
+				n++;
 	return (n);
 }
 
