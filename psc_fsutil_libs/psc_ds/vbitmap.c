@@ -206,7 +206,8 @@ psc_vbitmap_invert(struct psc_vbitmap *vb)
 {
 	unsigned char *p;
 
-	for (p = vb->vb_start; p <= vb->vb_end; p++)
+	for (p = vb->vb_start; p < vb->vb_end ||
+	    (p == vb->vb_start && vb->vb_lastsize); p++)
 		*p = ~(*p);
 }
 
@@ -219,7 +220,8 @@ psc_vbitmap_setall(struct psc_vbitmap *vb)
 {
 	unsigned char *p;
 
-	for (p = vb->vb_start; p <= vb->vb_end; p++)
+	for (p = vb->vb_start; p < vb->vb_end ||
+	    (p == vb->vb_start && vb->vb_lastsize); p++)
 		*p = 0xff;
 }
 
@@ -232,7 +234,8 @@ psc_vbitmap_clearall(struct psc_vbitmap *vb)
 {
 	unsigned char *p;
 
-	for (p = vb->vb_start; p <= vb->vb_end; p++)
+	for (p = vb->vb_start; p < vb->vb_end ||
+	    (p == vb->vb_end && vb->vb_lastsize); p++)
 		*p = 0;
 }
 
@@ -249,6 +252,8 @@ psc_vbitmap_isfull(struct psc_vbitmap *vb)
 	for (p = vb->vb_start; p < vb->vb_end; p++)
 		if (*p != 0xff)
 			return (0);
+	if (vb->vb_lastsize == 0)
+		return (1);
 	return (ffs(~*p) > vb->vb_lastsize);
 }
 
@@ -263,7 +268,8 @@ psc_vbitmap_lcr(const struct psc_vbitmap *vb)
 	unsigned char *p;
 	int i, n=0, r=0;
 
-	for (p = vb->vb_start; p <= vb->vb_end; p++)
+	for (p = vb->vb_start; p < vb->vb_end ||
+	    (p == vb->vb_end && vb->vb_lastsize); p++) {
 		/* ensure unused bits are masked off */
 		if (p == vb->vb_end && vb->vb_lastsize)
 			CLEAR_UNUSED(vb, p);
@@ -285,6 +291,7 @@ psc_vbitmap_lcr(const struct psc_vbitmap *vb)
 				}
 			}
 		}
+	}
 	if (n > r)
 		r = n;
 	return (r);
@@ -315,7 +322,8 @@ psc_vbitmap_getncontig(struct psc_vbitmap *vb, int *nslots)
 	} while (0)
 
 	for (p = vb->vb_start; p <= vb->vb_end; p++)
-		for (i = 0; i < NBBY; i++, t2++) {
+		for (i = 0; i < (p == vb->vb_end ?
+		    vb->vb_lastsize : NBBY); i++, t2++) {
 			if (*p & (1 << i))
 				TEST_AND_SET;
 			else if (t2 - t1 == *nslots)
