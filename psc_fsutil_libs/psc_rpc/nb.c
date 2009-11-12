@@ -13,11 +13,10 @@
  *
  */
 static int
-nbreqset_push(struct pscrpc_request *req) {
+nbreqset_push(struct pscrpc_request *req)
+{
 	return (pscrpc_push_req(req));
 }
-
-#define breqset_push nbreqset_push
 
 /**
  * nbreqset_init - make a non-blocking set
@@ -26,15 +25,15 @@ nbreqset_push(struct pscrpc_request *req) {
  */
 struct pscrpc_nbreqset *
 nbreqset_init(set_interpreter_func nb_interpret,
-	      nbreq_callback       nb_callback) {
+	      nbreq_callback       nb_callback)
+{
 
 	struct pscrpc_nbreqset *nbs;
 
 	nbs = PSCALLOC(sizeof(struct pscrpc_nbreqset));
-	//LOCK_INIT(&nbs->nb_lock);
-	nbs->nb_reqset                = pscrpc_prep_set();
-	nbs->nb_reqset->set_interpret = nb_interpret;
-	nbs->nb_callback              = nb_callback;
+	pscrpc_set_init(&nbs->nb_reqset);
+	nbs->nb_reqset.set_interpret = nb_interpret;
+	nbs->nb_callback = nb_callback;
 	atomic_set(&nbs->nb_outstanding, 0);
 	return nbs;
 }
@@ -45,10 +44,11 @@ nbreqset_init(set_interpreter_func nb_interpret,
  */
 void
 nbreqset_add(struct pscrpc_nbreqset *nbs,
-	     struct pscrpc_request  *req) {
+	     struct pscrpc_request  *req)
+{
 
 	atomic_inc(&nbs->nb_outstanding);
-	pscrpc_set_add_new_req(nbs->nb_reqset, req);
+	pscrpc_set_add_new_req(&nbs->nb_reqset, req);
 	if (nbreqset_push(req)) {
 		DEBUG_REQ(PLL_ERROR, req, "Send Failure");
 		psc_fatalx("Send Failure");
@@ -59,11 +59,9 @@ nbreqset_add(struct pscrpc_nbreqset *nbs,
  * nbrequest_flush - sync all outstanding requests
  */
 int
-nbrequest_flush(struct pscrpc_nbreqset *nbs) {
-	int rc;
-
-	rc = pscrpc_set_wait(nbs->nb_reqset);
-	return rc;
+nbrequest_flush(struct pscrpc_nbreqset *nbs)
+{
+	return (pscrpc_set_wait(&nbs->nb_reqset));
 }
 
 /**
@@ -78,18 +76,19 @@ nbrequest_flush(struct pscrpc_nbreqset *nbs) {
  *        here as well.
  */
 int
-nbrequest_reap(struct pscrpc_nbreqset *nbs) {
+nbrequest_reap(struct pscrpc_nbreqset *nbs)
+{
 	int    nreaped=0, nchecked=0;
 	struct psclist_head          *i, *j;
 	struct pscrpc_request     *req;
-	struct pscrpc_request_set *set = nbs->nb_reqset;
-        struct l_wait_info lwi;
-        int timeout = 1;
+	struct pscrpc_request_set *set = &nbs->nb_reqset;
+	struct l_wait_info lwi;
+	int timeout = 1;
 
 	ENTRY;
 
-        lwi = LWI_TIMEOUT(timeout, NULL, NULL);
-        psc_cli_wait_event(&set->set_waitq,
+	lwi = LWI_TIMEOUT(timeout, NULL, NULL);
+	psc_cli_wait_event(&set->set_waitq,
 		       (nreaped=pscrpc_check_set(set, 0)), &lwi);
 
 	if (!nreaped)
@@ -99,7 +98,7 @@ nbrequest_reap(struct pscrpc_nbreqset *nbs) {
 
 	psclist_for_each_safe(i, j, &set->set_requests) {
 		nchecked++;
-		req = psclist_entry(i, struct pscrpc_request, 
+		req = psclist_entry(i, struct pscrpc_request,
 				    rq_set_chain_lentry);
 		DEBUG_REQ(PLL_INFO, req, "reap if Completed");
 		/*

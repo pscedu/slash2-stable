@@ -175,12 +175,12 @@ struct pscrpc_import {
 	struct psc_waitq          imp_recovery_waitq;
 	struct psclist_head       imp_delayed_list;
 	unsigned int              imp_invalid:1,
-		                  imp_server_timeout:1,
-		                  imp_deactive:1,
-		                  imp_replayable:1,
-		                  imp_force_verify:1,
-		                  imp_igntimeout:1,
-		                  imp_failed:1;
+				  imp_server_timeout:1,
+				  imp_deactive:1,
+				  imp_replayable:1,
+				  imp_force_verify:1,
+				  imp_igntimeout:1,
+				  imp_failed:1;
 #if 0
 	unsigned int
 		imp_dlm_fake:1,
@@ -319,7 +319,7 @@ struct pscrpc_request {
 	struct psc_msg             *rq_repmsg;
 	/* request and reply callbacks */
 	struct pscrpc_cb_id         rq_req_cbid;
-	struct pscrpc_cb_id         rq_reply_cbid;       
+	struct pscrpc_cb_id         rq_reply_cbid;
 	struct pscrpc_bulk_desc    *rq_bulk;    /* attach bulk */
 	int			  (*rq_interpret_reply)(struct pscrpc_request *,
 					struct pscrpc_async_args *);
@@ -429,11 +429,18 @@ typedef int (*nbreq_callback)(struct pscrpc_request *,
 			      struct pscrpc_async_args *);
 
 struct pscrpc_nbreqset {
-	//psc_spinlock_t            *nb_lock;
-	struct pscrpc_request_set *nb_reqset;
-	nbreq_callback             nb_callback;
-	atomic_t                   nb_outstanding;
+	struct pscrpc_request_set	nb_reqset;
+	nbreq_callback			nb_callback;
+	atomic_t			nb_outstanding;
 };
+
+#define PSCPRC_SET_INIT(v, cb, cbarg)					\
+	{ PSCLIST_HEAD_INIT((v).set_requests), 0, PSC_WAITQ_INIT,	\
+	    (cb), (cbarg), LOCK_INITIALIZER, 0 }
+
+#define PSCRPC_NBREQSET_INIT(v, setcb, rqcb)				\
+	{ PSCPRC_SET_INIT((v).nb_reqset, (setcb), NULL), (rqcb),	\
+	    ATOMIC_INIT(0) }
 
 struct pscrpc_nbreqset *
 	 nbreqset_init(set_interpreter_func, nbreq_callback);
@@ -515,6 +522,7 @@ struct pscrpc_import *
 int	 pscrpc_queue_wait(struct pscrpc_request *);
 struct pscrpc_request_set *
 	 pscrpc_prep_set(void);
+void	 pscrpc_set_init(struct pscrpc_request_set *);
 int	 pscrpc_push_req(struct pscrpc_request *);
 void	 pscrpc_set_add_new_req(struct pscrpc_request_set *, struct pscrpc_request *);
 int	 pscrpc_check_set(struct pscrpc_request_set *, int);

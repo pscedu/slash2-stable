@@ -331,6 +331,15 @@ pscrpc_prep_bulk_exp (struct pscrpc_request *req,
 	return desc;
 }
 
+void
+pscrpc_set_init(struct pscrpc_request_set *set)
+{
+	INIT_PSCLIST_HEAD(&set->set_requests);
+	psc_waitq_init(&set->set_waitq);
+	set->set_remaining = 0;
+	LOCK_INIT(&set->set_lock);
+}
+
 struct pscrpc_request_set *
 pscrpc_prep_set(void)
 {
@@ -339,12 +348,8 @@ pscrpc_prep_set(void)
 	ZOBD_ALLOC(set, sizeof *set);
 	if (!set)
 		RETURN(NULL);
-	INIT_PSCLIST_HEAD(&set->set_requests);
-	psc_waitq_init(&set->set_waitq);
-	set->set_remaining = 0;
-	LOCK_INIT(&set->set_lock);
-
-	RETURN(set);
+	pscrpc_set_init(set);
+	return (set);
 }
 
 /* XXX rename this terribly named function */
