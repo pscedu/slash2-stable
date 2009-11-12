@@ -347,6 +347,7 @@ pscrpc_prep_set(void)
 	RETURN(set);
 }
 
+/* XXX rename this terribly named function */
 void
 pscrpc_set_lock(struct pscrpc_request_set *set)
 {
@@ -900,7 +901,7 @@ int pscrpc_check_set(struct pscrpc_request_set *set, int check_allsent)
 	int ncompleted         = 0;
 	ENTRY;
 
-	spinlock(&set->set_lock);
+	pscrpc_set_lock(set);
 	psc_assert((set->set_flags & PSCRPC_SETF_CHECKING) == 0);
 	set->set_flags |= PSCRPC_SETF_CHECKING;
 	freelock(&set->set_lock);
