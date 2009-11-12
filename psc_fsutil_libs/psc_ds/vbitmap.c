@@ -207,7 +207,7 @@ psc_vbitmap_invert(struct psc_vbitmap *vb)
 	unsigned char *p;
 
 	for (p = vb->vb_start; p < vb->vb_end ||
-	    (p == vb->vb_start && vb->vb_lastsize); p++)
+	    (p == vb->vb_end && vb->vb_lastsize); p++)
 		*p = ~(*p);
 }
 
@@ -221,7 +221,7 @@ psc_vbitmap_setall(struct psc_vbitmap *vb)
 	unsigned char *p;
 
 	for (p = vb->vb_start; p < vb->vb_end ||
-	    (p == vb->vb_start && vb->vb_lastsize); p++)
+	    (p == vb->vb_end && vb->vb_lastsize); p++)
 		*p = 0xff;
 }
 
