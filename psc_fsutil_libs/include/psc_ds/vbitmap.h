@@ -43,6 +43,7 @@ struct psc_vbitmap {
 
 #define psc_vbitmap_set(vb, pos)	((void)psc_vbitmap_setval((vb), (pos), 1))
 #define psc_vbitmap_xset(vb, pos)	(psc_vbitmap_setval((vb), (pos), 1) == 0)
+#define psc_vbitmap_xsetval(vb, pos, v)	(psc_vbitmap_setval((vb), (pos), (v)) != (v))
 #define psc_vbitmap_unset(vb, pos)	((void)psc_vbitmap_setval((vb), (pos), 0))
 
 #define psc_vbitmap_printbin1(vb) {					\
