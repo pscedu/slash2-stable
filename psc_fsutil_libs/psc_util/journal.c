@@ -801,6 +801,7 @@ pjournal_replay(const char * fn, psc_jhandler pj_handler)
 	if (pj == NULL)
 		return NULL;
 
+	nents = 0;
 	nerrs = 0;
 	ntrans = 0;
 	rc = pjournal_scan_slots(pj);
