@@ -35,11 +35,15 @@ struct psc_vbitmap {
  * psc_vbitmap_free - reclaim memory from a variable-sized bitmap.
  * @vb: variable bitmap.
  */
-#define psc_vbitmap_free(vb)					\
-	do {							\
-		_psc_vbitmap_free(vb);				\
-		(vb) = NULL;					\
+#define psc_vbitmap_free(vb)						\
+	do {								\
+		_psc_vbitmap_free(vb);					\
+		(vb) = NULL;						\
 	} while (0)
+
+#define psc_vbitmap_set(vb, pos)	((void)psc_vbitmap_setval((vb), (pos), 1))
+#define psc_vbitmap_xset(vb, pos)	(psc_vbitmap_setval((vb), (pos), 1) == 0)
+#define psc_vbitmap_unset(vb, pos)	((void)psc_vbitmap_setval((vb), (pos), 0))
 
 #define psc_vbitmap_printbin1(vb) {					\
 		unsigned char *PPp;					\
@@ -72,12 +76,10 @@ int	psc_vbitmap_lcr(const struct psc_vbitmap *);
 int	psc_vbitmap_next(struct psc_vbitmap *, size_t *);
 int	psc_vbitmap_nfree(const struct psc_vbitmap *);
 int	psc_vbitmap_resize(struct psc_vbitmap *, size_t);
-void	psc_vbitmap_set(struct psc_vbitmap *, size_t);
+int	psc_vbitmap_setval(struct psc_vbitmap *, size_t, int);
 void	psc_vbitmap_setall(struct psc_vbitmap *);
 int	psc_vbitmap_setnextpos(struct psc_vbitmap *, int);
 int	psc_vbitmap_setrange(struct psc_vbitmap *, size_t, size_t);
-void	psc_vbitmap_unset(struct psc_vbitmap *, size_t);
-int	psc_vbitmap_xset(struct psc_vbitmap *, size_t);
 void	_psc_vbitmap_free(struct psc_vbitmap *);
 
 void	psc_vbitmap_printbin(const struct psc_vbitmap *);

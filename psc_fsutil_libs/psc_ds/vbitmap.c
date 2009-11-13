@@ -82,33 +82,25 @@ _psc_vbitmap_free(struct psc_vbitmap *vb)
 }
 
 /**
- * psc_vbitmap_unset - unset a bit of a vbitmap.
- * @vb: variable bitmap.
- * @pos: position to unset.
- */
-void
-psc_vbitmap_unset(struct psc_vbitmap *vb, size_t pos)
-{
-	size_t shft, bytes;
-
-	bytes = pos / NBBY;
-	shft = pos % NBBY;
-	vb->vb_start[bytes] &= ~(1 << shft);
-}
-
-/**
- * psc_vbitmap_set - set a bit of a vbitmap.
+ * psc_vbitmap_setval - set the value of a bit in a vbitmap.
  * @vb: variable bitmap.
  * @pos: position to set.
+ * @set: value bit should take on.
  */
-void
-psc_vbitmap_set(struct psc_vbitmap *vb, size_t pos)
+int
+psc_vbitmap_setval(struct psc_vbitmap *vb, size_t pos, int set)
 {
 	size_t shft, bytes;
+	int oldval;
 
 	bytes = pos / NBBY;
 	shft = pos % NBBY;
-	vb->vb_start[bytes] |= (1 << shft);
+	oldval = (vb->vb_start[bytes] >> shft) & 1;
+	if (set)
+		vb->vb_start[bytes] |= (1 << shft);
+	else
+		vb->vb_start[bytes] &= ~(1 << shft);
+	return (oldval);
 }
 
 /**
@@ -143,22 +135,6 @@ psc_vbitmap_setrange(struct psc_vbitmap *vb, size_t pos, size_t size)
 	/* set bits in last byte */
 	if (size)
 		*p |= (~(0xff << size)) & (~(1 << size));
-	return (0);
-}
-
-/**
- * psc_vbitmap_xset - exclusively set a bit of a vbitmap.
- * @vb: variable bitmap.
- * @elem: element# to set.
- *
- * Returns -1 if already set.
- */
-int
-psc_vbitmap_xset(struct psc_vbitmap *vb, size_t elem)
-{
-	if (psc_vbitmap_get(vb, elem))
-		return (-1);
-	psc_vbitmap_set(vb, elem);
 	return (0);
 }
 
