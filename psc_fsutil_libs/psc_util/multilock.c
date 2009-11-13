@@ -22,30 +22,26 @@
 #include "psc_util/pthrutil.h"
 
 /*
- * multilock_cmp - Compare two multilocks, used for sorting.  Sorting is
+ * psc_multilock_cmp - Compare two multilocks, used for sorting.  Sorting is
  *	necessary to avoid deadlocking.
  * @a: a multilock
  * @b: another multilock
  */
 __static int
-multilock_cmp(const void *a, const void *b)
+psc_multilock_cmp(const void *a, const void *b)
 {
-	struct multilock *const *mla = a, *const *mlb = b;
+	struct psc_multilock *const *mla = a, *const *mlb = b;
 
-	if (*mla < *mlb)
-		return (-1);
-	else if (*mla > *mlb)
-		return (1);
-	return (0);
+	return (CMP(*mla, *mlb));
 }
 
 /**
- * multilock_cond_init - initialize a multilock condition.
+ * psc_multilock_cond_init - initialize a multilock condition.
  * @mlc: the condition to initialize.
  * @data: pointer to user data.
  */
 void
-multilock_cond_init(struct multilock_cond *mlc, const void *data,
+psc_multilock_cond_init(struct psc_multilock_cond *mlc, const void *data,
     int flags, const char *name, ...)
 {
 	va_list ap;
@@ -62,15 +58,15 @@ multilock_cond_init(struct multilock_cond *mlc, const void *data,
 }
 
 /*
- * multilock_cond_trylockall - try to lock all multilocks this
+ * psc_multilock_cond_trylockall - try to lock all multilocks this
  *	condition is a member of.
  * @mlc: a multilock condition, which must itself be locked.
  * Returns zero on success, -1 on failure.
  */
 __static int
-multilock_cond_trylockall(struct multilock_cond *mlc)
+psc_multilock_cond_trylockall(struct psc_multilock_cond *mlc)
 {
-	struct multilock **mlv;
+	struct psc_multilock **mlv;
 	int nml, j, k;
 
 	nml = dynarray_len(&mlc->mlc_multilocks);
@@ -85,14 +81,14 @@ multilock_cond_trylockall(struct multilock_cond *mlc)
 }
 
 /*
- * multilock_cond_unlockall - unlock all multilocks this
+ * psc_multilock_cond_unlockall - unlock all multilocks this
  *	condition is a member of.
  * @mlc: a multilock condition, which must itself be locked.
  */
 __static void
-multilock_cond_unlockall(struct multilock_cond *mlc)
+psc_multilock_cond_unlockall(struct psc_multilock_cond *mlc)
 {
-	struct multilock **mlv;
+	struct psc_multilock **mlv;
 	int nml, j;
 
 	nml = dynarray_len(&mlc->mlc_multilocks);
@@ -102,13 +98,13 @@ multilock_cond_unlockall(struct multilock_cond *mlc)
 }
 
 /**
- * multilock_cond_destroy - release a multilock condition.
+ * psc_multilock_cond_destroy - release a multilock condition.
  * @mlc: the condition to release.
  */
 void
-multilock_cond_destroy(struct multilock_cond *mlc)
+psc_multilock_cond_destroy(struct psc_multilock_cond *mlc)
 {
-	struct multilock *ml, **mlv;
+	struct psc_multilock *ml, **mlv;
 	int nml, i, count;
 
 	count = 0;
@@ -136,16 +132,16 @@ multilock_cond_destroy(struct multilock_cond *mlc)
 }
 
 /*
- * multilock_masked_cond - determine if a condition is masked
+ * psc_multilock_masked_cond - determine if a condition is masked
  *	off in a multilock.
  * @ml: multilock to check in, which must be locked.
  * @mlc: condition to check for.
  */
 int
-multilock_masked_cond(const struct multilock *ml,
-    const struct multilock_cond *mlc)
+psc_multilock_masked_cond(const struct psc_multilock *ml,
+    const struct psc_multilock_cond *mlc)
 {
-	struct multilock_cond **mlcv;
+	struct psc_multilock_cond **mlcv;
 	int nmlc, j;
 
 	mlcv = dynarray_get(&ml->ml_conds);
@@ -157,20 +153,20 @@ multilock_masked_cond(const struct multilock *ml,
 }
 
 /*
- * multilock_cond_wakeup - wakeup multilocks waiting on a condition.
+ * psc_multilock_cond_wakeup - wakeup multilocks waiting on a condition.
  * @mlc: a multilock condition, which must be unlocked on entry
  *	and will be locked on exit.
  */
 void
-multilock_cond_wakeup(struct multilock_cond *mlc)
+psc_multilock_cond_wakeup(struct psc_multilock_cond *mlc)
 {
-	struct multilock **mlv;
+	struct psc_multilock **mlv;
 	int nml, j, count;
 
 	count = 0;
  restart:
 	psc_pthread_mutex_lock(&mlc->mlc_mutex);
-	if (multilock_cond_trylockall(mlc)) {
+	if (psc_multilock_cond_trylockall(mlc)) {
 		if (count++ == 300000)
 			psc_errorx("mlcond %s failed to lock his "
 			    "multilocks - possible deadlock if this "
@@ -182,26 +178,26 @@ multilock_cond_wakeup(struct multilock_cond *mlc)
 	nml = dynarray_len(&mlc->mlc_multilocks);
 	mlv = dynarray_get(&mlc->mlc_multilocks);
 	for (j = 0; j < nml; j++)
-		if (multilock_masked_cond(mlv[j], mlc)) {
+		if (psc_multilock_masked_cond(mlv[j], mlc)) {
 			mlv[j]->ml_waker = mlc;
 			pthread_cond_signal(&mlv[j]->ml_cond);
 		}
-	multilock_cond_unlockall(mlc);
+	psc_multilock_cond_unlockall(mlc);
 	pthread_mutex_unlock(&mlc->mlc_mutex);
 }
 
 /*
- * multilock_addcond - add a condition to a multilock.
+ * psc_multilock_addcond - add a condition to a multilock.
  * @ml: a multilock.
  * @mlc: the multilock condition to add.
  * @masked: whether condition is active.
  */
 int
-multilock_addcond(struct multilock *ml, struct multilock_cond *mlc,
-    int masked)
+psc_multilock_addcond(struct psc_multilock *ml,
+    struct psc_multilock_cond *mlc, int masked)
 {
-	struct multilock_cond **mlcv;
-	struct multilock **mlv;
+	struct psc_multilock_cond **mlcv;
+	struct psc_multilock **mlv;
 	int rc, nmlc, nml, j;
 
 	rc = 0;
@@ -250,7 +246,7 @@ multilock_addcond(struct multilock *ml, struct multilock_cond *mlc,
 	}
 	qsort(dynarray_get(&mlc->mlc_multilocks),
 	    dynarray_len(&mlc->mlc_multilocks),
-	    sizeof(void *), multilock_cmp);
+	    sizeof(void *), psc_multilock_cmp);
 	if (masked)
 		vbitmap_set(ml->ml_mask, nmlc - 1);
 	else
@@ -263,11 +259,11 @@ multilock_addcond(struct multilock *ml, struct multilock_cond *mlc,
 }
 
 /*
- * multilock_init - initialize a multilock.
+ * psc_multilock_init - initialize a multilock.
  * @ml: the multilock to initialize.
  */
 void
-multilock_init(struct multilock *ml, const char *name, ...)
+psc_multilock_init(struct psc_multilock *ml, const char *name, ...)
 {
 	va_list ap;
 
@@ -285,28 +281,28 @@ multilock_init(struct multilock *ml, const char *name, ...)
 }
 
 /*
- * multilock_free - destroy a multilock.
+ * psc_multilock_free - destroy a multilock.
  * @ml: the multilock to release.
  */
 void
-multilock_free(struct multilock *ml)
+psc_multilock_free(struct psc_multilock *ml)
 {
-	multilock_reset(ml);
+	psc_multilock_reset(ml);
 	dynarray_free(&ml->ml_conds);
 	vbitmap_free(ml->ml_mask);
 }
 
 /*
- * multilock_mask_cond - update multilock active condition mask.
+ * psc_multilock_mask_cond - update multilock active condition mask.
  * @ml: the multilock.
  * @mlc: the condition to mask.
  * @set: whether to add or remove it from the mask.
  */
 void
-multilock_mask_cond(struct multilock *ml,
-    const struct multilock_cond *mlc, int set)
+psc_multilock_mask_cond(struct psc_multilock *ml,
+    const struct psc_multilock_cond *mlc, int set)
 {
-	struct multilock_cond **mlcv;
+	struct psc_multilock_cond **mlcv;
 	int nmlc, j;
 
 	psc_pthread_mutex_lock(&ml->ml_mutex);
@@ -328,15 +324,15 @@ multilock_mask_cond(struct multilock *ml,
 }
 
 /*
- * multilock_wait - wait for any condition in a multilock to change.
+ * psc_multilock_wait - wait for any condition in a multilock to change.
  * @ml: the multilock to wait on.
  * @data: pointer to user data filled in from the multilock_cond.
  * @usec: # microseconds till timeout.
  */
 int
-multilock_wait(struct multilock *ml, void *datap, int usec)
+psc_multilock_wait(struct psc_multilock *ml, void *datap, int usec)
 {
-	struct multilock_cond *mlc, **mlcv;
+	struct psc_multilock_cond *mlc, **mlcv;
 	int allmasked, won, nmlc, j;
 
 	won = 0;
@@ -422,14 +418,14 @@ multilock_wait(struct multilock *ml, void *datap, int usec)
 }
 
 /*
- * multilock_reset - release all conditions from a multilock and reclaim
+ * psc_multilock_reset - release all conditions from a multilock and reclaim
  *	all of a multilock's associated memory.
  * @ml: the multilock to reset.
  */
 void
-multilock_reset(struct multilock *ml)
+psc_multilock_reset(struct psc_multilock *ml)
 {
-	struct multilock_cond **mlcv;
+	struct psc_multilock_cond **mlcv;
 	int nmlc, j;
 
  restart:
@@ -454,7 +450,7 @@ multilock_reset(struct multilock *ml)
 		dynarray_remove(&mlcv[0]->mlc_multilocks, ml);
 		qsort(dynarray_get(&mlcv[0]->mlc_multilocks),
 		    dynarray_len(&mlcv[0]->mlc_multilocks),
-		    sizeof(void *), multilock_cmp);
+		    sizeof(void *), psc_multilock_cmp);
 		pthread_mutex_unlock(&mlcv[0]->mlc_mutex);
 		/* Remove it so we don't process it twice. */
 		dynarray_remove(&ml->ml_conds, mlcv[0]);
@@ -468,14 +464,14 @@ multilock_reset(struct multilock *ml)
 }
 
 /*
- * multilock_cond_nwaitors - count the number of waitors sleeping
+ * psc_multilock_cond_nwaitors - count the number of waitors sleeping
  *	on a multilock condition.  The count may differ from the
  *	value in mlc->mlc_nmultilocks since there may be gaps in
  *	the array of multilocks when they are coming and going.
  * @mlc: the multilock condition to check.
  */
 size_t
-multilock_cond_nwaitors(struct multilock_cond *mlc)
+psc_multilock_cond_nwaitors(struct psc_multilock_cond *mlc)
 {
 	int n;
 
@@ -486,11 +482,11 @@ multilock_cond_nwaitors(struct multilock_cond *mlc)
 }
 
 /*
- * multilock_enter_critsect - enter a critical section.
+ * psc_multilock_enter_critsect - enter a critical section.
  * @ml: the multilock.
  */
 void
-multilock_enter_critsect(struct multilock *ml)
+psc_multilock_enter_critsect(struct psc_multilock *ml)
 {
 	psc_pthread_mutex_lock(&ml->ml_mutex);
 	ml->ml_flags |= PMLF_CRITSECT;
@@ -499,11 +495,11 @@ multilock_enter_critsect(struct multilock *ml)
 }
 
 /*
- * multilock_leave_critsect - leave a critical section.
+ * psc_multilock_leave_critsect - leave a critical section.
  * @ml: the multilock.
  */
 void
-multilock_leave_critsect(struct multilock *ml)
+psc_multilock_leave_critsect(struct psc_multilock *ml)
 {
 	psc_pthread_mutex_lock(&ml->ml_mutex);
 	ml->ml_flags &= ~PMLF_CRITSECT;
@@ -512,15 +508,15 @@ multilock_leave_critsect(struct multilock *ml)
 }
 
 /*
- * multilock_hascond - determine if a condition has been registered in a
+ * psc_multilock_hascond - determine if a condition has been registered in a
  *	multilock.
  * @ml: the multilock.
  * @mlc: the multilock condition to check the existence of.
  */
 int
-multilock_hascond(struct multilock *ml, struct multilock_cond *mlc)
+psc_multilock_hascond(struct psc_multilock *ml, struct psc_multilock_cond *mlc)
 {
-	struct multilock_cond **mlcv;
+	struct psc_multilock_cond **mlcv;
 	int nmlc, j, rc;
 
 	rc = 0;

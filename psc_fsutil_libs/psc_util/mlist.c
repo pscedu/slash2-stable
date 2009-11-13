@@ -72,7 +72,7 @@ psc_mlist_add(struct psc_mlist *pml, void *p)
 	    pml->pml_offset), &pml->pml_listhd);
 	pml->pml_size++;
 	pml->pml_nseen++;
-	multilock_cond_wakeup(&pml->pml_mlcond_empty);
+	psc_multilock_cond_wakeup(&pml->pml_mlcond_empty);
 	ureqlock(&pml->pml_lock, locked);
 }
 
@@ -122,7 +122,7 @@ _psc_mlist_initv(struct psc_mlist *pml, int flags, void *arg,
 	else if (rc >= (int)sizeof(pml->pml_name))
 		psc_fatalx("mlist name is too long: %s", fmt);
 
-	multilock_cond_init(&pml->pml_mlcond_empty, arg, flags,
+	psc_multilock_cond_init(&pml->pml_mlcond_empty, arg, flags,
 	    "%s-empty", pml->pml_name);
 }
 

@@ -24,18 +24,18 @@
 #include "psc_util/multilock.h"
 
 struct psc_mlist {
-	struct psc_listguts	pml_guts;
+	struct psc_listguts		pml_guts;
 
-//	struct multilock_cond	pml_mlcond_want;	/* when someone wants an obj */
-	struct multilock_cond	pml_mlcond_empty;	/* when we're empty */
-#define pml_index_lentry	pml_guts.plg_index_lentry
-#define pml_lock		pml_guts.plg_lock
-#define pml_name		pml_guts.plg_name
-#define pml_listhd		pml_guts.plg_listhd
-#define pml_size		pml_guts.plg_size
-#define pml_nseen		pml_guts.plg_nseen
-#define pml_entsize		pml_guts.plg_entsize
-#define pml_offset		pml_guts.plg_offset
+//	struct psc_multilock_cond	pml_mlcond_want;	/* when someone wants an obj */
+	struct psc_multilock_cond	pml_mlcond_empty;	/* when we're empty */
+#define pml_index_lentry		pml_guts.plg_index_lentry
+#define pml_lock			pml_guts.plg_lock
+#define pml_name			pml_guts.plg_name
+#define pml_listhd			pml_guts.plg_listhd
+#define pml_size			pml_guts.plg_size
+#define pml_nseen			pml_guts.plg_nseen
+#define pml_entsize			pml_guts.plg_entsize
+#define pml_offset			pml_guts.plg_offset
 };
 
 #define MLIST_LOCK(pml)		spinlock(&(pml)->pml_lock)

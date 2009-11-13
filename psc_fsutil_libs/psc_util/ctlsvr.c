@@ -41,7 +41,7 @@
 #define QLEN 15	/* listen(2) queue */
 
 __weak size_t
-multilock_cond_nwaitors(__unusedx struct multilock_cond *m)
+psc_multilock_cond_nwaitors(__unusedx struct psc_multilock_cond *m)
 {
 	psc_fatalx("multilock support not compiled in");
 }
@@ -424,7 +424,7 @@ psc_ctlrep_getpool(int fd, struct psc_ctlmsghdr *mh, void *msg)
 			pcpl->pcpl_nshrink = m->ppm_nshrink;
 			if (POOL_IS_MLIST(m)) {
 				pcpl->pcpl_free = psc_mlist_size(&m->ppm_ml);
-				pcpl->pcpl_nw_empty = multilock_cond_nwaitors(
+				pcpl->pcpl_nw_empty = psc_multilock_cond_nwaitors(
 				    &m->ppm_ml.pml_mlcond_empty);
 			} else {
 				pcpl->pcpl_free = lc_sz(&m->ppm_lc);
@@ -1197,7 +1197,7 @@ psc_ctlrep_getmlist(int fd, struct psc_ctlmsghdr *mh, void *m)
 			pcml->pcml_size = pml->pml_size;
 			pcml->pcml_nseen = pml->pml_nseen;
 			pcml->pcml_waitors =
-			    multilock_cond_nwaitors(&pml->pml_mlcond_empty);
+			    psc_multilock_cond_nwaitors(&pml->pml_mlcond_empty);
 			MLIST_ULOCK(pml);
 
 			rc = psc_ctlmsg_sendv(fd, mh, pcml);
