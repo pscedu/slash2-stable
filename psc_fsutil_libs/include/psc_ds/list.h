@@ -408,15 +408,15 @@ psclist_sort(void **p, struct psclist_head *hd, int n, ptrdiff_t off,
 	sortf(p, n, sizeof(*p), cmpf);
 	prev = hd;
 	for (j = 0; j < n; j++, prev = e) {
-		e = (void *)((char *)p[j] - off);
+		e = (void *)((char *)p[j] + off);
 		if (j + 1 == n)
 			next = hd;
 		else
-			next = (char *)p[j + 1] - off;
+			next = (char *)p[j + 1] + off;
 		e->zprev = prev;
 		e->znext = next;
 	}
-	hd->znext = (void *)((char *)p[0] - off);
+	hd->znext = (void *)((char *)p[0] + off);
 	hd->zprev = prev;
 }
 
