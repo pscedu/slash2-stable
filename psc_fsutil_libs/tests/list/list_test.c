@@ -20,8 +20,8 @@ usage(void)
 }
 
 struct m {
-	struct psclist_head lentry;
 	int v;
+	struct psclist_head lentry;
 };
 
 void
