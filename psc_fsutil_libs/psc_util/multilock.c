@@ -144,6 +144,8 @@ psc_multilock_masked_cond(const struct psc_multilock *ml,
 	struct psc_multilock_cond **mlcv;
 	int nmlc, j;
 
+	/* XXX ensure pthread mutex is held on ml */
+
 	mlcv = dynarray_get(&ml->ml_conds);
 	nmlc = dynarray_len(&ml->ml_conds);
 	for (j = 0; j < nmlc; j++)
@@ -247,10 +249,7 @@ psc_multilock_addcond(struct psc_multilock *ml,
 	qsort(dynarray_get(&mlc->mlc_multilocks),
 	    dynarray_len(&mlc->mlc_multilocks),
 	    sizeof(void *), psc_multilock_cmp);
-	if (masked)
-		vbitmap_set(ml->ml_mask, nmlc - 1);
-	else
-		vbitmap_unset(ml->ml_mask, nmlc - 1);
+	psc_vbitmap_setval(ml->ml_mask, nmlc - 1, masked);
 
  done:
 	pthread_mutex_unlock(&ml->ml_mutex);
@@ -530,4 +529,27 @@ psc_multilock_hascond(struct psc_multilock *ml, struct psc_multilock_cond *mlc)
 		}
 	pthread_mutex_unlock(&ml->ml_mutex);
 	return (rc);
+}
+
+/*
+ * psc_multilock_prconds - print list of conditions registered in a multilock.
+ * @ml: the multilock to dump.
+ */
+void
+psc_multilock_prconds(struct psc_multilock *ml)
+{
+	struct psc_multilock_cond **mlcv;
+	int j, nmlc;
+
+	psc_pthread_mutex_lock(&ml->ml_mutex);
+
+	nmlc = dynarray_len(&ml->ml_conds);
+	mlcv = dynarray_get(&ml->ml_conds);
+
+	for (j = 0; j < nmlc; j++)
+		printf(" ml %s has mlc %s (masked %s)\n",
+		    ml->ml_name, mlcv[j]->mlc_name,
+		    psc_multilock_masked_cond(ml, mlcv[j]) ? "on" : "off");
+
+	pthread_mutex_unlock(&ml->ml_mutex);
 }

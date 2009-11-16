@@ -23,7 +23,7 @@ struct psc_multilock_cond {
 	struct psc_multilock		*mlc_winner;	/* which multilock awoke first */
 	const void			*mlc_data;	/* pointer to user data */
 	int				 mlc_flags;
-	char				 mlc_name[24];
+	char				 mlc_name[48];	/* should 8-byte boundary */
 };
 
 #define PMLCF_WAKEALL			(1 << 0)	/* wake all multilocks, not just one */
@@ -45,7 +45,7 @@ struct psc_multilock {
 	struct dynarray			 ml_conds;	/* registered conditions */
 	struct vbitmap			*ml_mask;	/* which conds can wake us */
 	int				 ml_flags;
-	char				 ml_name[24];
+	char				 ml_name[32];	/* should be 8-byte boundary */
 };
 
 #define PMLF_CRITSECT			(1 << 0)	/* inside critical section */
@@ -59,6 +59,7 @@ void	psc_multilock_leave_critsect(struct psc_multilock *);
 void	psc_multilock_mask_cond(struct psc_multilock *, const struct psc_multilock_cond *, int);
 void	psc_multilock_reset(struct psc_multilock *);
 int	psc_multilock_wait(struct psc_multilock *, void *, int);
+void	psc_multilock_prconds(struct psc_multilock *);
 
 void	psc_multilock_cond_init(struct psc_multilock_cond *, const void *, int, const char *, ...);
 size_t	psc_multilock_cond_nwaitors(struct psc_multilock_cond *);
