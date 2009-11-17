@@ -6,7 +6,6 @@
 #include <inttypes.h>
 
 typedef uint32_t	u32;
-typedef uint8_t		u8;
 
 /* printf(3) specifier modifiers for custom types. */
 #define PRIxLNID	PRIx64

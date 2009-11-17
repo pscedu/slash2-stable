@@ -146,8 +146,6 @@ main(int argc, char *argv[])
 	PRTYPE(struct hash_table);
 	PRTYPE(struct iostats);
 	PRTYPE(struct l_wait_info);
-	PRTYPE(struct multilock);
-	PRTYPE(struct multilock_cond);
 	PRTYPE(struct odtable);
 	PRTYPE(struct odtable_entftr);
 	PRTYPE(struct odtable_hdr);
@@ -190,6 +188,8 @@ main(int argc, char *argv[])
 	PRTYPE(struct psc_mlist);
 	PRTYPE(struct psc_msg);
 	PRTYPE(struct psc_mspinlock);
+	PRTYPE(struct psc_multilock);
+	PRTYPE(struct psc_multilock_cond);
 	PRTYPE(struct psc_nodemask);
 	PRTYPE(struct psc_poolmaster);
 	PRTYPE(struct psc_poolmgr);
@@ -225,7 +225,6 @@ main(int argc, char *argv[])
 	PRTYPE(struct pscrpc_thread);
 	PRTYPE(struct pscrpc_wait_callback);
 	PRTYPE(u32);
-	PRTYPE(u8);
 /* end structs */
 
 	PRVAL(offsetof(struct psc_listcache, lc_listhd));

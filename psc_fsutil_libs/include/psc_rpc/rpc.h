@@ -104,8 +104,8 @@ enum psc_imp_state {
 };
 
 struct psc_uuid {
-	//u8 uuid[40];
-	u8 uuid[8];
+	//uint8_t uuid[40];
+	uint8_t uuid[8];
 };
 
 struct pscrpc_cb_id {
