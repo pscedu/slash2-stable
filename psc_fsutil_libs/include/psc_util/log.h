@@ -21,14 +21,15 @@ struct psclog_data {
 };
 
 /* Log levels. */
-#define PLL_FATAL	0 /* process/thread termination */
-#define PLL_ERROR	1 /* recoverable failure */
-#define PLL_WARN	2 /* something wrong, require attention */
-#define PLL_NOTICE	3 /* something unusual, recommend attention */
-#define PLL_NOTIFY	3
-#define PLL_INFO	4 /* general information */
-#define PLL_DEBUG	5 /* debug messages */
-#define PLL_TRACE	6 /* flow */
+#define PLL_FATAL	0	/* process/thread termination */
+#define PLL_ERROR	1	/* recoverable failure */
+#define PLL_WARN	2	/* something wrong, require attention */
+#define PLL_NOTICE	3	/* something unusual, recommend attention */
+#define PLL_NOTIFY	PLL_NOTICE
+#define PLL_INFO	4	/* general information */
+#define PLL_DEBUG	5	/* debug messages */
+#define PLL_TRACE	6	/* flow */
+#define PLL_MAX		(-1)	/* force log */
 #define PNLOGLEVELS	7
 
 /* Logging options. */
@@ -135,6 +136,9 @@ struct psclog_data {
 #define psc_tracesv(fmt, ap)		_psclogvck((ss), PLL_TRACE, 0, (fmt), (ap))
 #define psc_logsv(lvl, ss, fmt, ap)	_psclogvck((ss), (lvl), 0, (fmt), (ap))
 #define psc_logxsv(lvl, ss, fmt, ap)	_psclogvck((ss), (lvl), PLO_ERRNO, (fmt), (ap))
+
+#define psclog_lock()			flockfile(stderr)
+#define psclog_unlock()			funlockfile(stderr)
 
 #define ENTRY_MARKER			psc_trace("entry_marker")
 #define EXIT_MARKER			psc_trace("exit_marker")
