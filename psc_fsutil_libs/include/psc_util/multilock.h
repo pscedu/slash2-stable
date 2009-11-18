@@ -61,6 +61,10 @@ void	psc_multilock_reset(struct psc_multilock *);
 int	psc_multilock_wait(struct psc_multilock *, void *, int);
 void	psc_multilock_prconds(struct psc_multilock *);
 
+#define psc_multilock_wait_us(ml, p, tm)	psc_multilock_wait((ml), (p), (tm))
+#define psc_multilock_wait_ms(ml, p, tm)	psc_multilock_wait((ml), (p), (tm) * 1000)
+#define psc_multilock_wait_s(ml, p, tm)		psc_multilock_wait((ml), (p), (tm) * 1000 * 1000)
+
 void	psc_multilock_cond_init(struct psc_multilock_cond *, const void *, int, const char *, ...);
 size_t	psc_multilock_cond_nwaitors(struct psc_multilock_cond *);
 void	psc_multilock_cond_wakeup(struct psc_multilock_cond *);
