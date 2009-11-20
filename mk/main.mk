@@ -143,8 +143,11 @@ depend: ${_C_SRCS} recurse-depend
 
 clean: recurse-clean
 	@# Check existence of files to catch errors such as SRCS+=file.y instead of file.c
-	@for i in ${_TSRCS}; do								\
-		test -f $$i || { echo "file does not exist: $$i" >&2; exit 1; };	\
+	@for i in ${SRCS}; do								\
+		if ! test -f $$i; then							\
+			echo "file does not exist: $$(readlink -f $$i)" >&2;		\
+			exit 1;								\
+		fi;									\
 	done
 	rm -f ${OBJS} ${PROG} ${LIBRARY} $(addprefix ${OBJDIR}/,${CLEANFILES})		\
 	    ${_YACCINTM} ${_LEXINTM} .depend* TAGS cscope.out core.[0-9]*
@@ -159,7 +162,7 @@ listsrcs: recurse-listsrcs
 		echo "${_TSRCS}";							\
 	fi
 
-test: all recurse-test
+test: recurse-test ${TARGET}
 	@if [ -n "${PROG}" ]; then							\
 		echo "./${PROG}";							\
 		./${PROG} || exit 1;							\
