@@ -178,7 +178,7 @@ pscrpc_prep_req_from_pool(struct pscrpc_request_pool *pool)
 
 struct pscrpc_request *
 pscrpc_prep_req_pool(struct pscrpc_import *imp,
-		     u32 version, int opcode, int count,
+		     uint32_t version, int opcode, int count,
 		     int *lengths, char **bufs,
 		     struct pscrpc_request_pool *pool)
 {
@@ -252,7 +252,7 @@ pscrpc_prep_req_pool(struct pscrpc_import *imp,
 }
 
 struct pscrpc_request *
-pscrpc_prep_req(struct pscrpc_import *imp, __u32 version, int opcode,
+pscrpc_prep_req(struct pscrpc_import *imp, uint32_t version, int opcode,
 		 int count, int *lengths, char **bufs)
 {
 	return pscrpc_prep_req_pool(imp, version, opcode, count, lengths,
@@ -260,8 +260,8 @@ pscrpc_prep_req(struct pscrpc_import *imp, __u32 version, int opcode,
 }
 
 
-static inline struct pscrpc_bulk_desc *
-new_bulk(int npages, int type, int portal)
+static __inline struct pscrpc_bulk_desc *
+pscrpc_new_bulk(int npages, int type, int portal)
 {
 	struct pscrpc_bulk_desc *desc;
 
@@ -288,7 +288,7 @@ pscrpc_prep_bulk_imp (struct pscrpc_request *req, int npages,
 	struct pscrpc_bulk_desc *desc;
 
 	psc_assert(type == BULK_PUT_SINK || type == BULK_GET_SOURCE);
-	desc = new_bulk(npages, type, portal);
+	desc = pscrpc_new_bulk(npages, type, portal);
 	if (desc == NULL)
 		RETURN(NULL);
 
@@ -315,7 +315,7 @@ pscrpc_prep_bulk_exp (struct pscrpc_request *req,
 
 	psc_assert(type == BULK_PUT_SOURCE || type == BULK_GET_SINK);
 
-	desc = new_bulk(npages, type, portal);
+	desc = pscrpc_new_bulk(npages, type, portal);
 	if (desc == NULL)
 		RETURN(NULL);
 

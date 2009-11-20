@@ -142,8 +142,8 @@ struct pscrpc_connection {
 };
 
 struct pscrpc_client {
-	u32			 cli_request_portal;
-	u32			 cli_reply_portal;
+	uint32_t		 cli_request_portal;
+	uint32_t		 cli_reply_portal;
 	char			*cli_name;
 };
 
@@ -237,7 +237,7 @@ struct pscrpc_bulk_desc {
 	int                       bd_nob;          /* # bytes covered        */
 	int                       bd_nob_transferred; /* # bytes GOT/PUT     */
 	uint64_t                  bd_last_xid;     /* track xid for retry    */
-	u32                       bd_portal;       /* which portal           */
+	uint32_t                  bd_portal;       /* which portal           */
 	struct pscrpc_cb_id       bd_cbid;         /* network callback info  */
 	lnet_handle_md_t          bd_md_h;         /* associated MD          */
 	lnet_md_iovec_t           bd_iov[0];       /* must be last           */
@@ -245,18 +245,18 @@ struct pscrpc_bulk_desc {
 
 struct psc_msg {
 	struct pscrpc_handle handle;
-	u32 magic;
-	u32 type;
-	u32 version;
-	u32 opc;
+	uint32_t magic;
+	uint32_t type;
+	uint32_t version;
+	uint32_t opc;
 	uint64_t last_xid;
 	uint64_t last_committed;
 	uint64_t transno;
-	u32 status;
-	u32 flags;
-	u32 conn_cnt;
-	u32 bufcount;
-	u32 buflens[0];
+	uint32_t status;
+	uint32_t flags;
+	uint32_t conn_cnt;
+	uint32_t bufcount;
+	uint32_t buflens[0];
 };
 
 struct pscrpc_reply_state;
@@ -356,8 +356,8 @@ struct pscrpc_service {
 	int srv_max_history_rqbds; /* max # request buffers in history */
 	int srv_nbufs;             /* total # req buffer descs allocated */
 	int srv_count_peer_qlens:1;
-	u32 srv_req_portal;
-	u32 srv_rep_portal;
+	uint32_t srv_req_portal;
+	uint32_t srv_rep_portal;
 	uint64_t srv_request_seq;       /* next request sequence # */
 	uint64_t srv_request_max_cull_seq; /* highest seq culled from history */
 	atomic_t            srv_outstanding_replies;
@@ -511,7 +511,7 @@ struct pscrpc_connection *
 /* rpcclient.c */
 int	 pscrpc_expire_one_request(struct pscrpc_request *);
 struct pscrpc_request *
-	 pscrpc_prep_req(struct pscrpc_import *, __u32, int, int, int *, char **);
+	 pscrpc_prep_req(struct pscrpc_import *, uint32_t, int, int, int *, char **);
 struct pscrpc_bulk_desc *
 	 pscrpc_prep_bulk_imp(struct pscrpc_request *, int, int, int);
 struct pscrpc_request *
@@ -531,7 +531,7 @@ int	 pscrpc_set_wait(struct pscrpc_request_set *);
 void	 pscrpc_set_destroy(struct pscrpc_request_set *);
 void	 pscrpc_set_lock(struct pscrpc_request_set *);
 
-static inline int
+static __inline int
 pscrpc_bulk_active(struct pscrpc_bulk_desc *desc)
 {
 	int rc, l;
@@ -544,18 +544,18 @@ pscrpc_bulk_active(struct pscrpc_bulk_desc *desc)
 
 /* service.c */
 int	 target_send_reply_msg(struct pscrpc_request *, int, int);
-void	 pscrpc_fail_import(struct pscrpc_import *, __u32);
+void	 pscrpc_fail_import(struct pscrpc_import *, uint32_t);
 
 /* service.c done */
 
-static inline void
+static __inline void
 pscrpc_rs_addref(struct pscrpc_reply_state *rs)
 {
 	LASSERT(atomic_read(&rs->rs_refcount) > 0);
 	atomic_inc(&rs->rs_refcount);
 }
 
-static inline void
+static __inline void
 pscrpc_rs_decref(struct pscrpc_reply_state *rs)
 {
 	LASSERT(atomic_read(&rs->rs_refcount) > 0);
@@ -563,7 +563,7 @@ pscrpc_rs_decref(struct pscrpc_reply_state *rs)
 		psc_free_reply_state(rs);
 }
 
-static inline void
+static __inline void
 psc_str2uuid(struct psc_uuid *uuid, char *tmp)
 {
 	strncpy((char *)uuid->uuid, tmp, sizeof(uuid->uuid));
@@ -580,44 +580,44 @@ psc_str2uuid(struct psc_uuid *uuid, char *tmp)
 #define MSG_RESENT             2
 #define MSG_REPLAY             4
 
-static inline int
+static __inline int
 psc_msg_get_flags(struct psc_msg *msg)
 {
 	return (msg->flags & MSG_GEN_FLAG_MASK);
 }
 
-static inline void
+static __inline void
 psc_msg_add_flags(struct psc_msg *msg, int flags)
 {
 	msg->flags |= MSG_GEN_FLAG_MASK & flags;
 }
 
-static inline void
+static __inline void
 psc_msg_set_flags(struct psc_msg *msg, int flags)
 {
 	msg->flags &= ~MSG_GEN_FLAG_MASK;
 	psc_msg_add_flags(msg, flags);
 }
 
-static inline void
+static __inline void
 psc_msg_clear_flags(struct psc_msg *msg, int flags)
 {
 	msg->flags &= ~(MSG_GEN_FLAG_MASK & flags);
 }
 
-static inline int
+static __inline int
 psc_msg_get_op_flags(struct psc_msg *msg)
 {
 	return (msg->flags >> MSG_OP_FLAG_SHIFT);
 }
 
-static inline void
+static __inline void
 psc_msg_add_op_flags(struct psc_msg *msg, int flags)
 {
 	msg->flags |= ((flags & MSG_GEN_FLAG_MASK) << MSG_OP_FLAG_SHIFT);
 }
 
-static inline void
+static __inline void
 psc_msg_set_op_flags(struct psc_msg *msg, int flags)
 {
 	msg->flags &= ~MSG_OP_FLAG_MASK;
@@ -625,7 +625,7 @@ psc_msg_set_op_flags(struct psc_msg *msg, int flags)
 }
 
 
-static inline int
+static __inline int
 pscrpc_client_receiving_reply (struct pscrpc_request *req)
 {
 	int           rc;
@@ -636,7 +636,7 @@ pscrpc_client_receiving_reply (struct pscrpc_request *req)
 	return (rc);
 }
 
-static inline int
+static __inline int
 pscrpc_client_replied(struct pscrpc_request *req)
 {
 	int           rc;
@@ -647,7 +647,7 @@ pscrpc_client_replied(struct pscrpc_request *req)
 	return (rc);
 }
 
-static inline void
+static __inline void
 pscrpc_wake_client_req(struct pscrpc_request *req)
 {
 	if (req->rq_set == NULL)

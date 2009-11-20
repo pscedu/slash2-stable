@@ -252,7 +252,7 @@ void reply_in_callback(lnet_event_t *ev)
 	LASSERT (ev->unlinked);
 	LASSERT (ev->md.start == req->rq_repmsg);
 	LASSERT (ev->offset == 0);
-	LASSERT (ev->mlength <= (u32)req->rq_replen);
+	LASSERT (ev->mlength <= (uint32_t)req->rq_replen);
 
 	DEBUG_REQ((ev->status == 0) ? PLL_INFO : PLL_ERROR, req,
 		  "type %d, status %d initiator ;%s;",

@@ -53,7 +53,7 @@ int pscrpc_init_import(struct pscrpc_import *imp)
  *             (increasing the import->conn_cnt) the older failure should
  *             not also cause a reconnection.  If zero it forces a reconnect.
  */
-int pscrpc_set_import_discon(struct pscrpc_import *imp, u32 conn_cnt)
+int pscrpc_set_import_discon(struct pscrpc_import *imp, uint32_t conn_cnt)
 {
         int rc = 0;
 
@@ -63,7 +63,7 @@ int pscrpc_set_import_discon(struct pscrpc_import *imp, u32 conn_cnt)
 		  conn_cnt, imp->imp_conn_cnt, imp->imp_state);
 
         if (imp->imp_state == PSC_IMP_FULL &&
-            (conn_cnt == 0 || conn_cnt == (u32)imp->imp_conn_cnt)) {
+            (conn_cnt == 0 || conn_cnt == (uint32_t)imp->imp_conn_cnt)) {
 
 		psc_errorx("Connection to service via nid %s was "
 			   "lost; in progress operations using this "
@@ -88,7 +88,7 @@ int pscrpc_set_import_discon(struct pscrpc_import *imp, u32 conn_cnt)
                 psc_warnx("%s: import %p already %s (conn %u, was %u): %s",
 			imp->imp_client->cli_name, imp,
 			(imp->imp_state == PSC_IMP_FULL &&
-			 (u32)imp->imp_conn_cnt > conn_cnt) ?
+			 (uint32_t)imp->imp_conn_cnt > conn_cnt) ?
 			"reconnected" : "not connected", imp->imp_conn_cnt,
 			conn_cnt, pscrpc_import_state_name(imp->imp_state));
         }
@@ -155,7 +155,7 @@ void pscrpc_activate_import(struct pscrpc_import *imp)
         //pscobd_import_event(obd, imp, IMP_EVENT_ACTIVE);
 }
 
-void pscrpc_fail_import(struct pscrpc_import *imp, __u32 conn_cnt)
+void pscrpc_fail_import(struct pscrpc_import *imp, uint32_t conn_cnt)
 {
         ENTRY;
 
