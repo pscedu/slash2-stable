@@ -22,7 +22,7 @@ int niter = 1024 * 1024 * 2;
 pthread_barrier_t barrier;
 const char *progname;
 
-psc_atomic64_t v64 = PSC_ATOMIC64_INIT(100000000000ULL);
+psc_atomic64_t v64 = PSC_ATOMIC64_INIT(100000000000);
 psc_atomic32_t v32 = PSC_ATOMIC32_INIT(0);
 psc_atomic16_t v16 = PSC_ATOMIC16_INIT(0);
 atomic_t v = ATOMIC_INIT(10);
@@ -118,12 +118,12 @@ main(int argc, char *argv[])
 	TEST(atomic, set_mask, &v, 0x75, &v, 0x75);
 	TEST(atomic, clear_mask, &v, 0x41, &v, 0x34);
 
-	psc_assert(psc_atomic64_read(&v64) == 100000000000ULL);
-	TEST(psc_atomic64, set, &v64, &v64, 2000000000000ULL, 2000000000000ULL);
-	TEST(psc_atomic64, add, &v64, &v64, 15, 2000000000015ULL);
-	TEST(psc_atomic64, sub, &v64, &v64, 9, 2000000000006ULL);
-	TEST1(psc_atomic64, inc, &v64, 2000000000007ULL);
-	TEST1(psc_atomic64, dec, &v64, 2000000000006ULL);
+	psc_assert(psc_atomic64_read(&v64) == UINT64_C(100000000000));
+	TEST(psc_atomic64, set, &v64, &v64, UINT64_C(2000000000000), UINT64_C(2000000000000));
+	TEST(psc_atomic64, add, &v64, &v64, 15, UINT64_C(2000000000015));
+	TEST(psc_atomic64, sub, &v64, &v64, 9, UINT64_C(2000000000006));
+	TEST1(psc_atomic64, inc, &v64, UINT64_C(2000000000007));
+	TEST1(psc_atomic64, dec, &v64, UINT64_C(2000000000006));
 
 	TEST1(psc_atomic16, inc, &v16, 1);
 	TEST1V(psc_atomic16, dec_test_zero, &v16, 0, 1);

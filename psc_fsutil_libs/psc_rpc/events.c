@@ -285,7 +285,7 @@ void reply_in_callback(lnet_event_t *ev)
 	/* NB don't unlock till after wakeup; req can disappear under us
 	 * since we don't have our own ref */
 	pscrpc_wake_client_req(req);
-	
+
 	freelock(&req->rq_lock);
 	EXIT;
 }
@@ -583,7 +583,7 @@ int pscrpc_ni_init(int type)
 	if (LNetGetId(1, &my_id))
 		psc_fatalx("LNetGetId() failed");
 
-	psc_notify("nidpid is (0x%#"PRIxLNID",0x%x)", my_id.nid, my_id.pid);
+	psc_notify("nidpid is (0x%#"PSCPRIxLNID",0x%x)", my_id.nid, my_id.pid);
 
 	if (rc == 0)
 		return 0;
@@ -593,7 +593,6 @@ int pscrpc_ni_init(int type)
 
 	return (-ENOMEM);
 }
-
 
 void pscrpc_ni_fini(void)
 {

@@ -14,7 +14,7 @@
 #define PJ_LOCK(pj)     spinlock(&(pj)->pj_lock)
 #define PJ_ULOCK(pj)    freelock(&(pj)->pj_lock)
 
-#define PJH_MAGIC	0x45678912aabbccffULL	/* magic number of the journal header */
+#define PJH_MAGIC	UINT64_C(0x45678912aabbccff)	/* magic number of the journal header */
 
 #define PJH_VERSION     0x01
 
@@ -73,12 +73,12 @@ typedef void (*psc_jhandler)(struct dynarray *, int *);
 #define PJE_OFFSET		PJH_ALIGN_SIZE
 
 #define PJE_XID_NONE		0			/* invalid transaction ID */
-#define PJE_MAGIC		0x45678912aabbccddULL	/* magic number for each journal entry */
+#define PJE_MAGIC		UINT64_C(0x45678912aabbccdd)	/* magic number for each journal entry */
 
 /*
  * Journal entry types - higher bits after PJET_LASTBIT are used to identify different log users.
  */
-#define PJE_NONE		(0 << 0)		/* null journal record */
+#define PJE_NONE		0			/* null journal record */
 #define PJE_FORMAT		(1 << 0)		/* newly-formatted journal entry */
 #define PJE_STRTUP		(1 << 1)		/* system startup */
 #define PJE_XSTART		(1 << 2)		/* start a transaction */

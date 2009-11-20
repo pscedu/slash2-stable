@@ -35,10 +35,10 @@ odtable_sync(struct odtable *odt, __unusedx size_t elem)
 struct odtable_receipt *
 odtable_putitem(struct odtable *odt, void *data)
 {
-	void *p;
 	struct odtable_entftr *odtf;
-	struct odtable_receipt *odtr, todtr = {0, 0};
-	psc_crc_t crc;
+	struct odtable_receipt *odtr, todtr = { 0, 0 };
+	psc_crc64_t crc;
+	void *p;
 
 	do {
 		if (vbitmap_next(odt->odt_bitmap, &todtr.odtr_elem) <= 0)
@@ -49,7 +49,7 @@ odtable_putitem(struct odtable *odt, void *data)
 	p = odtable_getitem_addr(odt, todtr.odtr_elem);
 	odtf->odtf_inuse = ODTBL_INUSE;
 
-	psc_crc_calc(&crc, data, odt->odt_hdr->odth_elemsz);
+	psc_crc64_calc(&crc, data, odt->odt_hdr->odth_elemsz);
 	/* Setup the receipt.
 	 */
 	odtr = PSCALLOC(sizeof(*odtr));
@@ -79,9 +79,9 @@ odtable_getitem(struct odtable *odt, const struct odtable_receipt *odtr)
 		return (NULL);
 
 	if (odt->odt_hdr->odth_options & ODTBL_OPT_CRC) {
-		psc_crc_t crc;
+		psc_crc64_t crc;
 
-		psc_crc_calc(&crc, data, odt->odt_hdr->odth_elemsz);
+		psc_crc64_calc(&crc, data, odt->odt_hdr->odth_elemsz);
 		if (crc != odtf->odtf_crc) {
 			odtf->odtf_inuse = ODTBL_BAD;
 			psc_warnx("slot=%"PRId64" crc fail "
@@ -228,9 +228,9 @@ odtable_load(const char *f, struct odtable **t)
 			vbitmap_set(odt->odt_bitmap, z);
 
 			if (odth->odth_options & ODTBL_OPT_CRC) {
-				psc_crc_t crc;
+				psc_crc64_t crc;
 
-				psc_crc_calc(&crc, p, odt->odt_hdr->odth_elemsz);
+				psc_crc64_calc(&crc, p, odt->odt_hdr->odth_elemsz);
 				if (crc != odtf->odtf_crc) {
 					odtf->odtf_inuse = ODTBL_BAD;
 					psc_warnx("slot=%"PRId64" crc fail "

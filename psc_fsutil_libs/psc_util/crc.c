@@ -8,7 +8,7 @@
  * Shamelessly heisted from TelegraphCQ-0.2
  *   pauln 11/08/06
  */
-const uint64_t psc_crc_table[256] = {
+const uint64_t psc_crc64_table[] = {
 	UINT64_C(0x0000000000000000), UINT64_C(0x42F0E1EBA9EA3693),
 	UINT64_C(0x85E1C3D753D46D26), UINT64_C(0xC711223CFA3E5BB5),
 	UINT64_C(0x493366450E42ECDF), UINT64_C(0x0BC387AEA7A8DA4C),
@@ -140,13 +140,13 @@ const uint64_t psc_crc_table[256] = {
 };
 
 /*
- * psc_crc_add - Accumulate bytes into a CRC.
+ * psc_crc64_add - Accumulate bytes into a 64-bit CRC buffer.
  * @cp: pointer to an initialized CRC buffer.
  * @data: data region to add to CRC over.
  * @len: amount of data.
  */
-__inline void
-psc_crc_add(psc_crc_t *cp, const void *datap, int len)
+void
+psc_crc64_add(psc_crc64_t *cp, const void *datap, int len)
 {
 	const uint8_t *data = datap;
 	uint64_t crc0 = *cp;
@@ -154,21 +154,45 @@ psc_crc_add(psc_crc_t *cp, const void *datap, int len)
 
 	while (len-- > 0) {
 		idx = ((int)(crc0 >> 56) ^ *data++) & 0xff;
-		crc0 = psc_crc_table[idx] ^ (crc0 << 8);
+		crc0 = psc_crc64_table[idx] ^ (crc0 << 8);
 	}
 	*cp = crc0;
 }
 
+__inline int
+psc_crc64_verify(psc_crc64_t c, const void *datap, int len)
+{
+	psc_crc64_t tc;
+
+	psc_crc64_calc(&tc, datap, len);
+	return (tc == c);
+}
+
 /*
- * psc_crc_calc - Compute a CRC of a data chunk.
- * @cp: pointer to an uninitialized CRC buffer.
- * @data: data to perform CRC over.
+ * psc_crc32_add - Accumulate bytes into a 32-bit CRC buffer.
+ * @cp: pointer to an initialized CRC buffer.
+ * @data: data region to add to CRC over.
  * @len: amount of data.
  */
-__inline void
-psc_crc_calc(psc_crc_t *cp, const void *data, int len)
+void
+psc_crc32_add(psc_crc32_t *cp, const void *datap, int len)
 {
-	PSC_CRC_INIT(*cp);
-	psc_crc_add(cp, data, len);
-	PSC_CRC_FIN(*cp);
+	const uint8_t *data = datap;
+	uint32_t crc0 = *cp;
+	int idx;
+
+	while (len-- > 0) {
+		idx = ((int)(crc0 >> 24) ^ *data++) & 0xff;
+		crc0 = psc_crc64_table[idx] ^ (crc0 << 8);
+	}
+	*cp = crc0;
+}
+
+__inline int
+psc_crc32_verify(psc_crc32_t c, const void *datap, int len)
+{
+	psc_crc32_t tc;
+
+	psc_crc32_calc(&tc, datap, len);
+	return (tc == c);
 }

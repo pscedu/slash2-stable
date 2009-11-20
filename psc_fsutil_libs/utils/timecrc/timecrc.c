@@ -29,8 +29,8 @@ main(int argc, char *argv[])
 	struct timeval tm0, tm1, tmd, tm_total, tm_last;
 	struct stat stb;
 	char buf[BUFSIZ];
+	psc_crc64_t crc;
 	const char *fn;
-	psc_crc_t crc;
 	int fd, pad;
 	size_t acsz;
 	ssize_t rc;
@@ -53,7 +53,7 @@ main(int argc, char *argv[])
 	pad = snprintf(NULL, 0, "%ld", stb.st_size);
 
 	acsz = 0;
-	PSC_CRC_INIT(crc);
+	PSC_CRC64_INIT(&crc);
 	memset(&tm_total, 0, sizeof(tm_total));
 	memset(&tm_last, 0, sizeof(tm_last));
 	for (;;) {
@@ -66,7 +66,7 @@ main(int argc, char *argv[])
 
 		if (gettimeofday(&tm0, NULL) == -1)
 			psc_fatal("gettimeofday");
-		psc_crc_add(&crc, buf, rc);
+		psc_crc64_add(&crc, buf, rc);
 		if (gettimeofday(&tm1, NULL) == -1)
 			psc_fatal("gettimeofday");
 		timersub(&tm1, &tm0, &tmd);
@@ -83,7 +83,7 @@ main(int argc, char *argv[])
 	}
 	close(fd);
 
-	PSC_CRC_FIN(crc);
+	PSC_CRC64_FIN(&crc);
 	printf("\rcrc %lx size %lu time %.3fs\n", crc, stb.st_size,
 	    tm_total.tv_sec + tm_total.tv_usec * 1e-6);
 	exit(0);

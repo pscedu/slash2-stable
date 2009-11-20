@@ -136,7 +136,6 @@ main(int argc, char *argv[])
 	PRTYPE(list_cache_t);
 	PRTYPE(psc_crc32_t);
 	PRTYPE(psc_crc64_t);
-	PRTYPE(psc_crc_t);
 	PRTYPE(psc_spinlock_t);
 	PRTYPE(pscrpc_svc_handle_t);
 	PRTYPE(struct _psc_journal_hdr);
@@ -224,7 +223,6 @@ main(int argc, char *argv[])
 	PRTYPE(struct pscrpc_svc_handle);
 	PRTYPE(struct pscrpc_thread);
 	PRTYPE(struct pscrpc_wait_callback);
-	PRTYPE(u32);
 /* end structs */
 
 	PRVAL(offsetof(struct psc_listcache, lc_listhd));

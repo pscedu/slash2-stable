@@ -138,10 +138,10 @@ pjournal_logwrite_internal(struct psc_journal_xidhndl *xh, int32_t slot, int typ
 		memcpy(pje->pje_data, data, size);
 	}
 	/* calculating the CRC checksum, excluding the checksum field itself */
-	PSC_CRC_INIT(chksum);
-	psc_crc_add(&chksum, pje, offsetof(struct psc_journal_enthdr, pje_chksum));
-	psc_crc_add(&chksum, pje->pje_data, pje->pje_len);
-	PSC_CRC_FIN(chksum);
+	PSC_CRC64_INIT(&chksum);
+	psc_crc64_add(&chksum, pje, offsetof(struct psc_journal_enthdr, pje_chksum));
+	psc_crc64_add(&chksum, pje->pje_data, pje->pje_len);
+	PSC_CRC64_FIN(&chksum);
 	pje->pje_chksum = chksum;
 	
 	/* commit the log entry on disk before we can return */
@@ -426,10 +426,10 @@ pjournal_scan_slots(struct psc_journal *pj)
 				continue;
 			}
 
-			PSC_CRC_INIT(chksum);
-			psc_crc_add(&chksum, pje, offsetof(struct psc_journal_enthdr, pje_chksum));
-			psc_crc_add(&chksum, pje->pje_data, pje->pje_len);
-			PSC_CRC_FIN(chksum);
+			PSC_CRC64_INIT(&chksum);
+			psc_crc64_add(&chksum, pje, offsetof(struct psc_journal_enthdr, pje_chksum));
+			psc_crc64_add(&chksum, pje->pje_data, pje->pje_len);
+			PSC_CRC64_FIN(&chksum);
 
 			if (pje->pje_chksum != chksum) {
 				psc_warnx("Journal %p: slot %d has a bad checksum!", pj, slot+i);
@@ -563,12 +563,13 @@ pjournal_load(const char *fn)
 		goto done; 
 	}
 
-	PSC_CRC_INIT(chksum);
-	psc_crc_add(&chksum, pjh, offsetof(struct _psc_journal_hdr, _pjh_chksum));
-	PSC_CRC_FIN(chksum);
+	PSC_CRC64_INIT(&chksum);
+	psc_crc64_add(&chksum, pjh, offsetof(struct _psc_journal_hdr, _pjh_chksum));
+	PSC_CRC64_FIN&(chksum);
 
 	if (pjh->pjh_chksum != chksum) {
-		psc_errorx("Journal header has an invalid checksum value " PRI_PSC_CRC" vs "PRI_PSC_CRC, pjh->pjh_chksum, chksum);
+		psc_errorx("Journal header has an invalid checksum value "
+		    "%"PSCPRIxCRC64" vs %"PSCPRIxCRC64, pjh->pjh_chksum, chksum);
 		psc_freenl(pjh, sizeof(struct psc_journal_hdr));
 		PSCFREE(pj);
 		pj = NULL;
@@ -639,9 +640,9 @@ pjournal_format(const char *fn, uint32_t nents, uint32_t entsz, uint32_t ra,
 	pjh.pjh_start_off = PJE_OFFSET;
 	pjh.pjh_magic = PJH_MAGIC;
 	
-	PSC_CRC_INIT(chksum);
-	psc_crc_add(&chksum, &pjh, offsetof(struct _psc_journal_hdr, _pjh_chksum));
-	PSC_CRC_FIN(chksum);
+	PSC_CRC64_INIT(&chksum);
+	psc_crc64_add(&chksum, &pjh, offsetof(struct _psc_journal_hdr, _pjh_chksum));
+	PSC_CRC64_FIN(&chksum);
 	pjh.pjh_chksum = chksum;
 
 	pj.pj_hdr = &pjh;
@@ -669,10 +670,10 @@ pjournal_format(const char *fn, uint32_t nents, uint32_t entsz, uint32_t ra,
 			pje->pje_sid = PJE_XID_NONE;
 			pje->pje_len = 0;
 
-			PSC_CRC_INIT(chksum);
-			psc_crc_add(&chksum, pje, offsetof(struct psc_journal_enthdr, pje_chksum));
-			psc_crc_add(&chksum, pje->pje_data, pje->pje_len);
-			PSC_CRC_FIN(chksum);
+			PSC_CRC64_INIT(&chksum);
+			psc_crc64_add(&chksum, pje, offsetof(struct psc_journal_enthdr, pje_chksum));
+			psc_crc64_add(&chksum, pje->pje_data, pje->pje_len);
+			PSC_CRC64_FIN(&chksum);
 
 			pje->pje_chksum = chksum;
 		}
@@ -749,10 +750,10 @@ pjournal_dump(const char *fn)
 				nformat++;
 				continue;
 			}
-			PSC_CRC_INIT(chksum);
-			psc_crc_add(&chksum, pje, offsetof(struct psc_journal_enthdr, pje_chksum));
-			psc_crc_add(&chksum, pje->pje_data, pje->pje_len);
-			PSC_CRC_FIN(chksum);
+			PSC_CRC64_INIT(&chksum);
+			psc_crc64_add(&chksum, pje, offsetof(struct psc_journal_enthdr, pje_chksum));
+			psc_crc64_add(&chksum, pje->pje_data, pje->pje_len);
+			PSC_CRC64_FIN(&chksum);
 			if (pje->pje_chksum != chksum) {
 				nchksum++;
 				psc_warnx("Journal slot %d has a bad checksum!", (slot+i));
@@ -851,10 +852,10 @@ pjournal_replay(const char * fn, psc_jhandler pj_handler)
 	pje->pje_sid = PJE_XID_NONE;
 	pje->pje_len = 0;	
 
-	PSC_CRC_INIT(chksum);
-	psc_crc_add(&chksum, pje, offsetof(struct psc_journal_enthdr, pje_chksum));
-	psc_crc_add(&chksum, pje->pje_data, pje->pje_len);
-	PSC_CRC_FIN(chksum);
+	PSC_CRC64_INIT(&chksum);
+	psc_crc64_add(&chksum, pje, offsetof(struct psc_journal_enthdr, pje_chksum));
+	psc_crc64_add(&chksum, pje->pje_data, pje->pje_len);
+	PSC_CRC64_FIN(&chksum);
 	pje->pje_chksum = chksum;
 	
 	size = pwrite(pj->pj_fd, pje, PJ_PJESZ(pj),

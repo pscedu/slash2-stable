@@ -66,7 +66,7 @@ extern struct psclist_head	pscrpc_wait_callbacks;
 struct pscrpc_handle {
 	uint64_t		cookie;
 };
-#define DEAD_HANDLE_MAGIC 0xdeadbeefcafebabeULL
+#define DEAD_HANDLE_MAGIC	UINT64_C(0xdeadbeefcafebabe)
 
 struct l_wait_info {
 	time_t			  lwi_timeout;
