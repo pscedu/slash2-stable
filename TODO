@@ -51,6 +51,7 @@ pfl
   malloc().
 - add struct members to hdrclean.pl
 - have lc_getwait() do a sched_yield() after it grabs an item
+- have psc_pool_return() NULL out the pointer arg released
 
 zest
 - research faster CRC operations
