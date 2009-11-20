@@ -27,6 +27,7 @@ main(int argc, char *argv[])
 	int i, c, u, t;
 	size_t elem, j;
 
+	pfl_init();
 	progname = argv[0];
 	while ((c = getopt(argc, argv, "")) != -1)
 		switch (c) {

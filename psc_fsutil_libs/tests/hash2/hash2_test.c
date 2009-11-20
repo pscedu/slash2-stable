@@ -30,6 +30,7 @@ main(int argc, char *argv[])
 	struct item *i;
 	int c;
 
+	pfl_init();
 	if ((c = getopt(argc, argv, "")) != -1)
 		usage();
 	argc -= optind;
