@@ -9,5 +9,6 @@ SRCS+=		${PFL_BASE}/psc_util/init.c
 SRCS+=		${PFL_BASE}/psc_util/log.c
 SRCS+=		${PFL_BASE}/psc_util/random.c
 LDFLAGS+=	${THREAD_LIBS}
+DEFINES+=	-DHAVE_LIBPTHREAD
 
 include ${PFLMK}
