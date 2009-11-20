@@ -5,8 +5,9 @@
 #include <stdlib.h>
 #include <unistd.h>
 
-#include "psc_ds/vbitmap.h"
 #include "pfl/cdefs.h"
+#include "pfl/pfl.h"
+#include "psc_ds/vbitmap.h"
 #include "psc_util/alloc.h"
 
 const char *progname;

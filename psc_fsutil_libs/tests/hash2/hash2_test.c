@@ -5,9 +5,10 @@
 #include <stdlib.h>
 #include <unistd.h>
 
+#include "pfl/cdefs.h"
+#include "pfl/pfl.h"
 #include "psc_ds/hash2.h"
 #include "psc_util/alloc.h"
-#include "pfl/cdefs.h"
 
 struct item {
 	struct psc_hashent	hentry;
