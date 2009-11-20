@@ -565,7 +565,7 @@ pjournal_load(const char *fn)
 
 	PSC_CRC64_INIT(&chksum);
 	psc_crc64_add(&chksum, pjh, offsetof(struct _psc_journal_hdr, _pjh_chksum));
-	PSC_CRC64_FIN&(chksum);
+	PSC_CRC64_FIN(&chksum);
 
 	if (pjh->pjh_chksum != chksum) {
 		psc_errorx("Journal header has an invalid checksum value "
