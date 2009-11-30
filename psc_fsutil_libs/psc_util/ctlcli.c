@@ -24,8 +24,6 @@
 #include "psc_util/strlcpy.h"
 #include "psc_util/subsys.h"
 
-#define DISPLAY_WIDTH 80
-
 __static PSCLIST_HEAD(psc_ctlmsgs);
 
 struct psc_ctlmsg {
@@ -612,7 +610,7 @@ psc_ctlmsg_stats_prhdr(__unusedx struct psc_ctlmsghdr *mh,
 	    "memnid",
 #endif
 	    "flag");
-	printf("%*s%s\n", (DISPLAY_WIDTH - n - 1) / 2 -
+	printf("%*s%s\n", (PSC_CTL_DISPLAY_WIDTH - n - 1) / 2 -
 	    (int)strlen(msg) / 2, "", msg);
 }
 
@@ -769,7 +767,7 @@ psc_ctlmsg_print(struct psc_ctlmsghdr *mh, const void *m)
 		if (psc_ctl_lastmsgtype != -1)
 			printf("\n");
 		prf->prf_prhdr(mh, m);
-		for (n = 0; n < DISPLAY_WIDTH; n++)
+		for (n = 0; n < PSC_CTL_DISPLAY_WIDTH; n++)
 			putchar('=');
 		putchar('\n');
 	}
