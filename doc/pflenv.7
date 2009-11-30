@@ -67,10 +67,6 @@ value is prepended to each log message reported.
 The following specifiers are recognized:
 .Pp
 .Bl -tag -offset indent -compact -width 4n
-.It Ic d
-subsystem
-.Tn ID
-from where log message originated
 .It Ic F
 function name from where log message originated
 .It Ic f
@@ -92,6 +88,12 @@ symbolic name of thread which generated log message
 rank of process which generated log message
 .It Ic s
 seconds since epoch when message was generated
+.It Ic t
+subsystem
+.Tn ID
+from where log message originated
+.It Ic T
+subsystem name from where log message originated
 .It Ic U
 user ID of process on behalf of which fuse operates
 .It Ic u

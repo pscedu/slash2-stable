@@ -143,6 +143,15 @@ psclog_get_fuse_context(void)
 	return (NULL);
 }
 
+/**
+ * psc_subsys_name - dummy overrideable PFL subsystem ID -> name resolver.
+ */
+__weak const char *
+psc_subsys_name(__unusedx int ssid)
+{
+	return ("<unknown>");
+}
+
 struct psclog_data *
 psclog_getdata(void)
 {
@@ -206,6 +215,7 @@ _psclogv(const char *fn, const char *func, int line, int subsys,
 		FMTSTRCASE('P', prefix, sizeof(prefix), "d", ctx ? (int)ctx->pid : -1)
 		FMTSTRCASE('r', prefix, sizeof(prefix), "d", d->pld_rank)
 		FMTSTRCASE('s', prefix, sizeof(prefix), "lu", tv.tv_sec)
+		FMTSTRCASE('T', prefix, sizeof(prefix), "s", psc_subsys_name(subsys))
 		FMTSTRCASE('t', prefix, sizeof(prefix), "d", subsys)
 		FMTSTRCASE('U', prefix, sizeof(prefix), "d", ctx ? (int)ctx->uid : -1)
 		FMTSTRCASE('u', prefix, sizeof(prefix), "lu", tv.tv_usec)
