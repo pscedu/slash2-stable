@@ -51,6 +51,7 @@ main(int argc, char *argv[])
 	int error, c, j;
 	long l;
 
+	pfl_init();
 	while ((c = getopt(argc, argv, "i:n:")) != -1)
 		switch (c) {
 		case 'i':
@@ -68,6 +69,9 @@ main(int argc, char *argv[])
 		default:
 			usage();
 		}
+	argc -= optind;
+	if (argc)
+		usage();
 
 	if ((threads = calloc(nthreads, sizeof(*threads))) == NULL)
 		err(1, "calloc");
