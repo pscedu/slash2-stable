@@ -60,7 +60,6 @@ pfl
 	others waiting
 - in pscrpc_nbset_add(), try to push the RPC;
   if failure, do a reap(), and try once more
-- add subsys name to psclog
 
 zest
 - research faster CRC operations
