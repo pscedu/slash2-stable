@@ -24,10 +24,10 @@ psc_fmt_human(char buf[PSCFMT_HUMAN_BUFSIZ], double num)
 void
 psc_fmt_ratio(char buf[PSCFMT_RATIO_BUFSIZ], int n, int d)
 {
-	if (n == 0)
-		snprintf(buf, PSCFMT_RATIO_BUFSIZ, "   0%%");
-	else if (n == d)
+	if (n == d)
 		snprintf(buf, PSCFMT_RATIO_BUFSIZ, " 100%%");
+	else if (n == 0)
+		snprintf(buf, PSCFMT_RATIO_BUFSIZ, "   0%%");
 	else if (d)
 		snprintf(buf, PSCFMT_RATIO_BUFSIZ, "%5.2f%%",
 		    n * 100.0 / d);
