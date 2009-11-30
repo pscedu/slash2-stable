@@ -43,8 +43,6 @@ pfl
 - create vlocks: vector lock API when you need to lock multiple
   structures in a reqlock order fashion (hash tables and lists etc.)
 - add custom sleep intervals for timerthr API
-- make .depend target dependent on headers so it can rebuild itself
-  and remove from the `clean' target
 - fix endianess in RPCs
 - add API for PSC mem failure, so we can plug into the memhandling
   paths when asprintf() fails instead of centralizing the logic over

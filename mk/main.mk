@@ -131,7 +131,10 @@ install: recurse-install
 		done;									\
 	fi
 
-depend: ${_C_SRCS} recurse-depend
+cleandep: recurse-cleandep
+	rm -f .depend
+
+depend: cleandep ${_C_SRCS} recurse-depend
 	@if ${NOTEMPTY} "${_C_SRCS}"; then						\
 		${ECHORUN} ${MKDEP} ${_TINCLUDES} ${DEFINES} ${_C_SRCS};		\
 	fi
