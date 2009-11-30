@@ -32,9 +32,7 @@ const char *progname;
 __dead void
 usage(void)
 {
-	fprintf(stderr,
-	    "usage: %s [-n nruns] [-t nthr]\n",
-	    progname);
+	fprintf(stderr, "usage: %s [-n nruns] [-t nthr]\n", progname);
 	exit(1);
 }
 
@@ -92,7 +90,7 @@ main(int argc, char *argv[])
 		STOPWATCH(tv);
 		timersub(&tv[1], &tv[0], &res);
 		i = atomic_read(&idx);
-		fprintf(stderr, "%*d/%d current lock cnt; LPS %f\n",
+		printf("%*d/%d current lock cnt; LPS %f\n",
 		    slen, i, nruns * nthrs,
 		    (i - oldidx) / (res.tv_sec + res.tv_usec * 1e-6));
 		oldidx = i;
