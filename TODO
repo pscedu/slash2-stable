@@ -53,6 +53,14 @@ pfl
 - have lc_getwait() do a sched_yield() after it grabs an item
 - have psc_pool_return() NULL out the pointer arg released
 - pfl/tests/vbitmap does some strange allocations, examine
+- add a new lock API:
+    (o) agnostic to underlying type (spin, etc.)
+    (o) has a flag to mark for processing of critical
+	section and wakeup when leaving section and wakes up
+	others waiting
+- in pscrpc_nbset_add(), try to push the RPC;
+  if failure, do a reap(), and try once more
+- add subsys name to psclog
 
 zest
 - research faster CRC operations
