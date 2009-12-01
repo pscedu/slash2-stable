@@ -6,7 +6,7 @@ use strict;
 use warnings;
 
 sub usage {
-	die "usage: $0 [-h headers] [-x exclude] file\n";
+	die "usage: $0 [-g pat] [-h headers] [-x exclude] file\n";
 }
 
 sub in_array {
@@ -41,11 +41,12 @@ sub filter {
 }
 
 my %opts;
-getopts("h:x:", \%opts) or usage();
+getopts("g:h:x:", \%opts) or usage();
 usage() unless @ARGV == 1;
 
 my $outfn = $ARGV[0];
 
+my @vals;
 my @types;
 my @hdrs = uniq sort <$opts{h}>;
 if ($opts{x}) {
@@ -62,6 +63,8 @@ foreach my $hdr (@hdrs) {
 			$lvl = 1 if /^\s*#if\s+0\s*$/;
 			push @types, "struct $1" if /^struct\s+(\w+)\s*{/;
 			push @types, $1 if /^typedef\s+(?:struct\s+)?(?:\w+)\s+(\w+)\s*;\s*$/;
+
+			push @vals, /($opts{g})/ if $opts{g};
 		}
 	}
 	close HDR;
@@ -78,7 +81,10 @@ my $includes = join '', map { s!(?:include|\.\.)/!!g; qq{#include "$_"\n} } @hdr
 $lines =~ s!(?<=/\* start includes \*/\n).*?(?=/\* end includes \*/)!$includes!s;
 
 my $types = join '', map { "\tPRTYPE($_);\n" } uniq sort @types;
-$lines =~ s!(?<=/\* start structs \*/\n).*?(?=/\* end structs \*/)!$types!s;
+$lines =~ s!(?<=/\* start structs \*/\n).*?(?=/\* end structs \*/)!$types\t!s;
+
+my $vals = join '', map { "\tPRVAL($_);\n" } uniq sort @vals;
+$lines =~ s!(?<=/\* start constants \*/\n).*?(?=/\* end constants \*/)!$vals\t!s;
 
 open OUT, ">", $outfn;
 print OUT $lines;
