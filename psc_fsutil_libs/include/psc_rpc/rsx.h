@@ -8,6 +8,19 @@ struct pscrpc_import;
 struct pscrpc_bulk_desc;
 struct iovec;
 
+struct rsx_msg_conversion {
+	int	rmc_offset;
+	int	rmc_size;
+};
+
+#define RSX_PORT_NAME_MAX 50
+
+struct rsx_msg_portablizer {
+	char			 rmp_name[50];
+	int			 rmp_nconv;
+	struct rpcmsg_conv	*rmp_conv;
+};
+
 #define RSX_ALLOCREP(rq, mq, mp)					\
 	do {								\
 		int __rc, __psz;					\
@@ -52,5 +65,10 @@ int rsx_bulkserver(struct pscrpc_request *, struct pscrpc_bulk_desc **,
 	int, int, struct iovec *, int);
 int rsx_bulkclient(struct pscrpc_request *, struct pscrpc_bulk_desc **,
 	int, int, struct iovec *, int);
+int pfl_rsx_conv2net(int, void *);
+int pfl_rsx_conv2host(int, void *);
+
+extern struct rsx_msg_portablizer	rpcmsg_portablizers[];
+extern int				rpcmsg_nportablizers;
 
 #endif /* _PFL_RSX_H_ */
