@@ -132,7 +132,7 @@ install: recurse-install
 	fi
 
 cleandep: recurse-cleandep
-	rm -f .depend
+	@rm -f .depend
 
 depend: cleandep ${_C_SRCS} recurse-depend
 	@if ${NOTEMPTY} "${_C_SRCS}"; then						\
@@ -148,7 +148,7 @@ clean: recurse-clean
 	@# Check existence of files to catch errors such as SRCS+=file.y instead of file.c
 	@for i in ${SRCS}; do								\
 		if ! test -f $$i; then							\
-			echo "file does not exist: $$(readlink -f $$i)" >&2;		\
+			echo "file does not exist: $$i" >&2;				\
 			exit 1;								\
 		fi;									\
 	done
