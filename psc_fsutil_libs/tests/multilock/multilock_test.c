@@ -9,6 +9,7 @@
 #include <unistd.h>
 
 #include "pfl/cdefs.h"
+#include "pfl/pfl.h"
 #include "psc_util/log.h"
 #include "psc_util/multilock.h"
 

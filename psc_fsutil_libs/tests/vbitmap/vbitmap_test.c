@@ -57,7 +57,7 @@ main(int argc, char *argv[])
 
 	vbitmap_getstats(vb, &u, &t);
 	if (u != 213 || t != 213)
-		errx(1, "wrong size");
+		errx(1, "wrong size, got %d,%d want %d", u, t, 213);
 
 	if (vbitmap_resize(vb, NELEM) == -1)
 		err(1, "vbitmap_new");
