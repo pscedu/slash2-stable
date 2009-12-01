@@ -16,16 +16,20 @@
 #include <string.h>
 #include <strings.h>
 
+#include "pfl/cdefs.h"
 #include "psc_ds/vbitmap.h"
 #include "psc_util/alloc.h"
 #include "psc_util/bitflag.h"
-#include "pfl/cdefs.h"
 #include "psc_util/log.h"
 
-#define CLEAR_UNUSED(vb, p)		*(p) &= ~(0xff << (vb)->vb_lastsize)
+#define VB_CLEAR_UNALLOC(vb)						\
+	do {								\
+		if ((vb)->vb_lastsize && (vb)->vb_lastsize != NBBY)	\
+			*(vb)->vb_end &= ~(0xff << (vb)->vb_lastsize);	\
+	} while (0)
 
 /**
- * psc_vbitmap_new - create a new variable-sized bitmap.
+ * psc_vbitmap_newf - create a new variable-sized bitmap.
  * @nelems: number of entries in bitmap.
  * @flags: operational flags.
  */
@@ -239,17 +243,14 @@ psc_vbitmap_isfull(struct psc_vbitmap *vb)
  * Returns: size of the region.
  */
 int
-psc_vbitmap_lcr(const struct psc_vbitmap *vb)
+psc_vbitmap_lcr(struct psc_vbitmap *vb)
 {
 	unsigned char *p;
 	int i, n=0, r=0;
 
+	VB_CLEAR_UNALLOC(vb);
 	for (p = vb->vb_start; p < vb->vb_end ||
 	    (p == vb->vb_end && vb->vb_lastsize); p++) {
-		/* ensure unused bits are masked off */
-		if (p == vb->vb_end && vb->vb_lastsize)
-			CLEAR_UNUSED(vb, p);
-
 		if (*p == 0x00)
 			n += NBBY;
 		else if (*p == 0xff) {
@@ -485,13 +486,11 @@ psc_vbitmap_printhex(const struct psc_vbitmap *vb)
  * @vb: variable bitmap.
  */
 void
-psc_vbitmap_getstats(const struct psc_vbitmap *vb, int *used, int *total)
+psc_vbitmap_getstats(struct psc_vbitmap *vb, int *used, int *total)
 {
-	const unsigned char *p;
-
-	*used = 0;
-	for (p = vb->vb_start; p <= vb->vb_end; p++)
-		*used += psc_countbits(*p);
+	VB_CLEAR_UNALLOC(vb);
+	*used = pfl_bitstr_nset(vb->vb_start, (vb->vb_lastsize ? 1 : 0) +
+	    vb->vb_end - vb->vb_start);
 	*total = psc_vbitmap_getsize(vb);
 }
 
@@ -500,12 +499,11 @@ psc_vbitmap_getstats(const struct psc_vbitmap *vb, int *used, int *total)
  * @vb: variable bitmap.
  */
 void
-psc_vbitmap_printstats(const struct psc_vbitmap *vb)
+psc_vbitmap_printstats(struct psc_vbitmap *vb)
 {
 	int used, total;
 
 	psc_vbitmap_getstats(vb, &used, &total);
-
 	printf("vbitmap statistics: %d/%d (%.4f%%) in use\n", used, total,
 	    100.0 * used / total);
 }

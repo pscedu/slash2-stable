@@ -1,7 +1,7 @@
 /* $Id$ */
 
-#ifndef _PFL_BITFLAG_H_
-#define _PFL_BITFLAG_H_
+#ifndef _PFL_BITSTR_H_
+#define _PFL_BITSTR_H_
 
 #include <stdint.h>
 
@@ -9,11 +9,11 @@
 #include "psc_util/lock.h"
 #include "psc_util/log.h"
 
-#define BIT_STRICT		(1 << 0)
-#define BIT_ABORT		(1 << 1)
+#define PFL_BITSTR_SETCHK_STRICT	(1 << 0)
+#define PFL_BITSTR_SETCHK_ABORT		(1 << 1)
 
 /*
- * bitflag_sorc - check and/or set flags on a variable.
+ * pfl_bitstr_setchk - check and/or set bits in an integer.
  * @f: flags variable to perform operations on.
  * @lck: optional spinlock.
  * @checkon: values to ensure are enabled.
@@ -24,13 +24,13 @@
  * Notes: returns -1 on failure, 0 on success.
  */
 static __inline int
-bitflag_sorc(int *f, psc_spinlock_t *lck, int checkon, int checkoff,
+pfl_bitstr_setchk(int *f, psc_spinlock_t *lck, int checkon, int checkoff,
     int turnon, int turnoff, int flags)
 {
 	int strict, locked;
 
 	locked = 0; /* gcc */
-	strict = ATTR_ISSET(flags, BIT_STRICT);
+	strict = ATTR_ISSET(flags, PFL_BITSTR_SETCHK_STRICT);
 
 	if (lck)
 		locked = reqlock(lck);
@@ -67,25 +67,85 @@ bitflag_sorc(int *f, psc_spinlock_t *lck, int checkon, int checkoff,
  error:
 	if (lck)
 		ureqlock(lck, locked);
-	psc_assert((flags & BIT_ABORT) == 0);
+	psc_assert((flags & PFL_BITSTR_SETCHK_ABORT) == 0);
 	return (0);
 }
 
 /**
- * psc_countbits - count number of bits set in a value.
+ * pfl_bitstr_nset - count number of bits set in a bitstr.
  * @val: value to inspect.
+ * @len: length (# of bytes) of region.
  */
 static __inline int
-psc_countbits(size_t val)
+pfl_bitstr_nset(const void *val, int len)
 {
-	size_t n;
-	int c;
+	const unsigned char *p;
+	int n, c = 0;
 
-	c = 0;
-	for (n = 0; n < NBBY * sizeof(val); n++)
-		if (val & (UINT64_C(1) << n))
-			c++;
+	for (p = val; len > 0; p++, len--)
+		for (n = 0; n < NBBY; n++)
+			if (*p & (1 << n))
+				c++;
 	return (c);
 }
 
-#endif /* _PFL_BITFLAG_H_ */
+/**
+ * pfl_bitstr_copy - copy bits from one place to another.
+ */
+static __inline void
+pfl_bitstr_copy(void *dst, int doff, const void *src, int soff, int nbits)
+{
+	const unsigned char *in8;
+	const uint64_t *in64;
+	unsigned char *out8;
+	uint64_t *out64;
+
+	psc_assert(doff >= 0 && soff >= 0);
+
+	in64 = (const uint64_t *)src + soff / sizeof(*in64) / NBBY;
+	out64 = (uint64_t *)dst + doff / sizeof(*out64) / NBBY;
+
+	for (; nbits >= NBBY * (int)sizeof(*out64);
+	    in64++, out64++, nbits -= NBBY * (int)sizeof(*out64)) {
+		/* copy bits in the same byte position */
+		*out64 |= (*in64 >> soff) << doff;
+
+		/* copy bits from next src position to prev dst pos */
+		if (soff > doff)
+			*out64 |= in64[1] << (NBBY *
+			    (int)sizeof(*in64) - soff + doff);
+
+		/* copy bits from prev src position to next dst pos */
+		else if (soff < doff)
+			out64[1] |= *in64 >> (NBBY *
+			    (int)sizeof(*in64) - doff - soff);
+	}
+
+	in8 = (const unsigned char *)in64 + soff / NBBY;
+	out8 = (unsigned char *)out64 + doff / NBBY;
+	soff %= NBBY;
+	doff %= NBBY;
+
+	for (; nbits >= NBBY; in8++, out8++, nbits -= NBBY) {
+		*out8 |= (*in8 >> soff) << doff;
+
+		if (soff > doff)
+			*out8 |= in8[1] << (NBBY - soff + doff);
+		else if (soff < doff)
+			out8[1] |= *in8 >> (NBBY - doff - soff);
+	}
+	if (nbits) {
+		*out8 |= ((*in8 >> soff) & ~(0xff << nbits)) << doff;
+		nbits -= MIN(doff, NBBY - soff);
+	}
+	if (nbits > 0) {
+		if (soff > doff)
+			*out8 |= (in8[1] & ~(0xff << nbits)) <<
+			    (NBBY - soff + doff);
+		else if (soff < doff)
+			out8[1] |= (*in8 & ~(0xff << nbits)) >>
+			    (NBBY - doff - soff);
+	}
+}
+
+#endif /* _PFL_BITSTR_H_ */
