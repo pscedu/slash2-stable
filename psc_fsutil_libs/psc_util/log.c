@@ -32,7 +32,7 @@ char *APP_STRERROR(int);
 #endif
 
 #ifndef PSC_LOG_FMT
-#define PSC_LOG_FMT "[%s:%06u %n:%i:%F:%l] "
+#define PSC_LOG_FMT "[%s:%06u %n:%i:%T:%F:%l] "
 #endif
 
 struct fuse_context {
@@ -44,7 +44,7 @@ struct fuse_context {
 const char			*psc_logfmt = PSC_LOG_FMT;
 __static int			 psc_loglevel = PLL_TRACE;
 __static struct psclog_data	*psc_logdata;
-char				 psclog_eol[8] = "\n";
+char				 psclog_eol[8] = "\n";	/* overrideable with ncurses EOL */
 
 void
 psc_log_init(void)
