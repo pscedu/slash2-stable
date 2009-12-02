@@ -55,6 +55,7 @@ struct odtable_hdr {
 	off_t			 odth_start;
 };
 
+/* entry footer */
 struct odtable_entftr {
 	psc_crc64_t		 odtf_crc;
 	uint64_t		 odtf_inuse;
