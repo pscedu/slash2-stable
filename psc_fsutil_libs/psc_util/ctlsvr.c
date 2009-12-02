@@ -1353,8 +1353,6 @@ psc_ctlthr_service(int fd, const struct psc_ctlop *ct, int nops)
 		if (mh.mh_type < 0 ||
 		    mh.mh_type >= nops ||
 		    ct[mh.mh_type].pc_op == NULL) {
-			psc_warnx("unrecognized psc_ctlmsghdr type; "
-			    "type=%d size=%zu", mh.mh_type, mh.mh_size);
 			psc_ctlsenderr(fd, &mh,
 			    "unrecognized psc_ctlmsghdr type; "
 			    "type=%d size=%zu", mh.mh_type, mh.mh_size);
