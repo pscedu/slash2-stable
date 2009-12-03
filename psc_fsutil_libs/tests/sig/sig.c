@@ -72,6 +72,8 @@ report_sigs(void)
 			act = "ign";
 		else if (sa.sa_handler == SIG_DFL)
 			act = "dfl";
+		else
+			act = "?";
 		printf("thr %ld: sig %02d [%s]: %s\n", pthread_self(),
 		    i, signames[i], act);
 	}
