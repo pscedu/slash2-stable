@@ -58,6 +58,12 @@ pfl
 	others waiting
 - in pscrpc_nbset_add(), try to push the RPC;
   if failure, do a reap(), and try once more
+- change return codes in ctlapi to be two constants:
+
+    PSC_CTLRET_OK - continue processing
+    PSC_CTLRET_BAIL - drop the connection
+
+  give them obscure values (42,43) and ensure they are returned
 
 zest
 - research faster CRC operations
