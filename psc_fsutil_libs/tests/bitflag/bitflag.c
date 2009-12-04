@@ -9,6 +9,7 @@
 #include <unistd.h>
 
 #include "psc_util/bitflag.h"
+#include "psc_util/printhex.h"
 
 const char *progname;
 
@@ -22,20 +23,20 @@ usage(void)
 	exit(1);
 }
 
-#define CNT_ASSERT(code, xcode)				\
-	switch (fork()) {				\
-	case -1:					\
-		psc_fatal("fork");			\
-	case 0: /* child */				\
-		code;					\
-		exit(0);				\
-	default: /* parent */				\
-		if (wait(&st) == -1)			\
-			psc_fatal("wait");		\
-		if (!(xcode))				\
-			psc_fatalx("want %s, got %d",	\
-			    # xcode, st);		\
-		break;					\
+#define CNT_ASSERT(code, xcode)					\
+	switch (fork()) {					\
+	case -1:						\
+		psc_fatal("fork");				\
+	case 0: /* child */					\
+		code;						\
+		exit(0);					\
+	default: /* parent */					\
+		if (wait(&st) == -1)				\
+			psc_fatal("wait");			\
+		if (!(xcode))					\
+			psc_fatalx("want %s, got %d",		\
+			    # xcode, st);			\
+		break;						\
 	}
 
 #define CNT_ASSERT0(code)	CNT_ASSERT(code, st == 0)
@@ -50,10 +51,21 @@ usage(void)
 #define B6	(1 << 6)
 #define B7	(1 << 7)
 
+#define check(a, b)						\
+	do {							\
+		if ((a) != (b)) {				\
+			printf("shouldbe %016lx: ", (b));	\
+			printbin(b);				\
+			printf("      is %016lx: ", (a));	\
+			printbin(a);				\
+			psc_fatalx("values don't match");	\
+		}						\
+	} while (0)
+
 int
 main(int argc, char *argv[])
 {
-	unsigned char *in, *out;
+	uint64_t in, out;
 	int st, f, c;
 	int64_t v;
 
@@ -96,43 +108,39 @@ main(int argc, char *argv[])
 	v = 0xffffffffffffffff;
 	psc_assert(pfl_bitstr_nset(&v, sizeof(v)) == 64);
 
-	out = malloc(4);
-	in = malloc(4);
+	out = 0;
+	in = 0x7fffffff;
+	pfl_bitstr_copy(&out, 0, &in, 0, NBBY * 4);
+	check(out, UINT64_C(0x7fffffff));
 
-	memset(out, 0, 4);
-	in[0] = 0xff; in[1] = 0xff;
-	in[2] = 0xff; in[3] = 0x7f;
-	pfl_bitstr_copy(out, 0, in, 0, NBBY * 4);
-	psc_assert(out[0] == 0xff && out[1] == 0xff);
-	psc_assert(out[2] == 0xff && out[3] == 0x7f);
+	out = 0;
+	in = 0x7fffffff;
+	pfl_bitstr_copy(&out, 0, &in, 1, NBBY * 4);
+	check(out, UINT64_C(0x3fffffff));
 
-	memset(out, 0, 4);
-	in[0] = 0xff; in[1] = 0xff;
-	in[2] = 0xff; in[3] = 0x7f;
-	pfl_bitstr_copy(out, 0, in, 1, NBBY * 4);
-	psc_assert(out[0] == 0xff && out[1] == 0xff);
-	psc_assert(out[2] == 0xff && out[3] == 0x3f);
+	out = 0;
+	in = 0x7fffffff;
+	pfl_bitstr_copy(&out, 1, &in, 0, NBBY * 4);
+	check(out, UINT64_C(0xfffffffe));
 
-	memset(out, 0, 4);
-	in[0] = 0xff; in[1] = 0xff;
-	in[2] = 0xff; in[3] = 0x7f;
-	pfl_bitstr_copy(out, 1, in, 0, NBBY * 4);
-	psc_assert(out[0] == 0xfe && out[1] == 0xff);
-	psc_assert(out[2] == 0xff && out[3] == 0xff);
+	out = 0;
+	in = 0xffffffff;
+	pfl_bitstr_copy(&out, 3, &in, 10, 1);
+	check(out, UINT64_C(0x00000008));
 
-	memset(out, 0, 4);
-	in[0] = 0xff; in[1] = 0xff;
-	in[2] = 0xff; in[3] = 0xff;
-	pfl_bitstr_copy(out, 3, in, 10, 1);
-	psc_assert(out[0] == 0x08 && out[1] == 0x00);
-	psc_assert(out[2] == 0x00 && out[3] == 0x00);
+	out = 0;
+	in = 0xffffffff;
+	pfl_bitstr_copy(&out, 3, &in, 10, 13);
+	check(out, UINT64_C(0x0000fff8));
 
-	memset(out, 0, 4);
-	in[0] = 0xff; in[1] = 0xff;
-	in[2] = 0xff; in[3] = 0xff;
-	pfl_bitstr_copy(out, 3, in, 10, 13);
-	psc_assert(out[0] == 0xf8 && out[1] == 0xff);
-	psc_assert(out[2] == 0x00 && out[3] == 0x00);
+	out = 0;
+	in = 3;
+	pfl_bitstr_copy(&out, 8, &in, 0, 2);
+	check(out, UINT64_C(0x00000300));
+	pfl_bitstr_copy(&out, 18, &in, 0, 2);
+	check(out, UINT64_C(0x000c0300));
+	pfl_bitstr_copy(&out, 28, &in, 0, 2);
+	check(out, UINT64_C(0x300c0300));
 
 	exit(0);
 }
