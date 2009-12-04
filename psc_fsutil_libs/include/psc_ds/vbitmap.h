@@ -46,6 +46,8 @@ struct psc_vbitmap {
 #define psc_vbitmap_xsetval(vb, pos, v)	(psc_vbitmap_setval((vb), (pos), (v)) != (v))
 #define psc_vbitmap_unset(vb, pos)	((void)psc_vbitmap_setval((vb), (pos), 0))
 
+#define psc_vbitmap_nset(vb)		(psc_vbitmap_getsize(vb) - psc_vbitmap_nfree(vb))
+
 #define psc_vbitmap_printbin1(vb) {					\
 		unsigned char *PPp;					\
 		char *Bbufp, *Bbuf =					\
