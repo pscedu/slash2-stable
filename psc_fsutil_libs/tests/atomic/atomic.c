@@ -22,36 +22,35 @@ int niter = 1024 * 1024 * 2;
 pthread_barrier_t barrier;
 const char *progname;
 
-psc_atomic64_t v64 = PSC_ATOMIC64_INIT(100000000000);
-psc_atomic32_t v32 = PSC_ATOMIC32_INIT(0);
-psc_atomic16_t v16 = PSC_ATOMIC16_INIT(0);
-atomic_t v = ATOMIC_INIT(10);
+psc_atomic64_t v64 = PSC_ATOMIC_INIT(UINT64_C(100000000000));
+psc_atomic32_t v32 = PSC_ATOMIC_INIT(0);
+psc_atomic16_t v16 = PSC_ATOMIC_INIT(0);
 
-#define CHECKV(prefix, op, v, newval)					\
-	if (prefix ## _read(v) != (newval))				\
-		psc_fatalx(#prefix "_" #op ": got %"PRId64", "		\
+#define CHECKV(op, v, newval)						\
+	if (psc_atomic_read(v) != (newval))				\
+		psc_fatalx("psc_atomic_" #op ": got %"PRId64", "	\
 		    "wanted %"PRId64,					\
-		    (int64_t)prefix ## _read(v),			\
+		    (int64_t)psc_atomic_read(v),			\
 		    (int64_t)(newval))					\
 
-#define TEST(prefix, op, v, arg1, arg2, newval)				\
+#define TEST(op, v, arg1, arg2, newval)					\
 	do {								\
-		prefix ## _ ## op((arg1), (arg2));			\
-		CHECKV(prefix, op, v, newval);				\
+		psc_atomic_ ## op((arg1), (arg2));			\
+		CHECKV(op, v, newval);					\
 	} while (0)
 
-#define TEST1V(prefix, op, v, newval, rv)				\
+#define TEST1V(op, v, newval, rv)					\
 	do {								\
-		if (prefix ## _ ## op(v) != (rv))			\
-			psc_fatalx(#prefix "_" #op ": want rv %d",	\
+		if (psc_atomic_ ## op(v) != (rv))			\
+			psc_fatalx("psc_atomic_" #op ": want rv %d",	\
 			    (rv));					\
-		CHECKV(prefix, op, v, newval);				\
+		CHECKV(op, v, newval);					\
 	} while (0)
 
-#define TEST1(prefix, op, v, newval)					\
+#define TEST1(op, v, newval)						\
 	do {								\
-		prefix ## _ ## op(v);					\
-		CHECKV(prefix, op, v, newval);				\
+		psc_atomic_ ## op(v);					\
+		CHECKV(op, v, newval);					\
 	} while (0)
 
 void *
@@ -64,10 +63,10 @@ startf(void *arg)
 	pthread_barrier_wait(&barrier);
 	mask = 1 << thr->pos;
 	for (i = 0; i < niter; i++) {
-		ov = psc_atomic32_setmask_retold(&v32, mask);
+		ov = psc_atomic_setmask_getold(&v32, mask);
 		psc_assert((ov & mask) == 0);
 
-		ov = psc_atomic32_clearmask_retold(&v32, mask);
+		ov = psc_atomic_clearmask_getold(&v32, mask);
 		psc_assert(ov & mask);
 		sched_yield();
 	}
@@ -106,27 +105,27 @@ main(int argc, char *argv[])
 	if (argc)
 		usage();
 
-	psc_assert(atomic_read(&v) == 10);
-	TEST(atomic, set, &v, &v, 200, 200);
-	TEST(atomic, add, &v, 15, &v, 215);
-	TEST(atomic, sub, &v, 9, &v, 206);
-	TEST1(atomic, inc, &v, 207);
-	TEST1(atomic, dec, &v, 206);
-	TEST1V(atomic, dec_and_test, &v, 205, 0);
-	TEST(atomic, set, &v, &v, 1, 1);
-	TEST1V(atomic, dec_and_test, &v, 0, 1);
-	TEST(atomic, set_mask, &v, 0x75, &v, 0x75);
-	TEST(atomic, clear_mask, &v, 0x41, &v, 0x34);
+	psc_assert(psc_atomic_read(&v32) == 10);
+	TEST(set, &v32, &v32, 200, 200);
+	TEST(add, &v32, &v32, 15, 215);
+	TEST(sub, &v32, &v32, 9, 206);
+	TEST1(inc, &v32, 207);
+	TEST1(dec, &v32, 206);
+	TEST1V(dec_and_test0, &v32, 205, 0);
+	TEST(set, &v32, &v32, 1, 1);
+	TEST1V(dec_and_test0, &v32, 0, 1);
+	TEST(setmask, &v32, &v32, 0x75, 0x75);
+	TEST(clearmask, &v32, &v32, 0x41, 0x34);
 
-	psc_assert(psc_atomic64_read(&v64) == UINT64_C(100000000000));
-	TEST(psc_atomic64, set, &v64, &v64, UINT64_C(2000000000000), UINT64_C(2000000000000));
-	TEST(psc_atomic64, add, &v64, &v64, 15, UINT64_C(2000000000015));
-	TEST(psc_atomic64, sub, &v64, &v64, 9, UINT64_C(2000000000006));
-	TEST1(psc_atomic64, inc, &v64, UINT64_C(2000000000007));
-	TEST1(psc_atomic64, dec, &v64, UINT64_C(2000000000006));
+	psc_assert(psc_atomic_read(&v64) == UINT64_C(100000000000));
+	TEST(set, &v64, &v64, UINT64_C(2000000000000), UINT64_C(2000000000000));
+	TEST(add, &v64, &v64, 15, UINT64_C(2000000000015));
+	TEST(sub, &v64, &v64, 9, UINT64_C(2000000000006));
+	TEST1(inc, &v64, UINT64_C(2000000000007));
+	TEST1(dec, &v64, UINT64_C(2000000000006));
 
-	TEST1(psc_atomic16, inc, &v16, 1);
-	TEST1V(psc_atomic16, dec_test_zero, &v16, 0, 1);
+	TEST1(inc, &v16, 1);
+	TEST1V(dec_and_test0, &v16, 0, 1);
 
 	rc = pthread_barrier_init(&barrier, NULL, nthr + 1);
 	if (rc)
