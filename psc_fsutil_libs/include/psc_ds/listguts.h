@@ -94,7 +94,7 @@ psclg_sort(struct psc_listguts *plg, void (*sortf)(void *, size_t,
 
 	locked = reqlock(&plg->plg_lock);
 	if (plg->plg_size > 1) {
-		p = PSCALLOC(plg->plg_size * sizeof(*p));
+		p = PSCALLOC(plg->plg_size * sizeof(p));
 		psclist_sort(p, &plg->plg_listhd, plg->plg_size,
 		    plg->plg_offset, sortf, cmpf);
 		PSCFREE(p);
