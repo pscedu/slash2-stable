@@ -218,314 +218,318 @@ psc_atomic64_dec_and_test0(psc_atomic64_t *v)
 	return (c);
 }
 
-
-
-
 static __inline int
-_PFL_ATOMIC_ADD_AND_TEST_NEG(void *v, size_t siz, ...)
+psc_atomic16_add_and_test_neg(psc_atomic16_t *v, int16_t i)
 {
-	union pfl_atomic_arg arg;
 	unsigned char c;
-	va_list ap;
 
-	va_start(ap, siz);
-	_PFL_ATOMIC_GETARG(ap, siz, &arg);
-	va_end(ap);
-
-	switch (siz) {
-	case 2:
-		_PFL_ASM("addw %2, %0; sets %1" : "=m" _PFL_GETA16(v),
-		    "=qm" (c) : "ir" (arg.v16), "m" _PFL_GETA16(v) : "memory");
-		break;
-	case 4:
-		_PFL_ASM("addl %2, %0; sets %1" : "=m" _PFL_GETA32(v),
-		    "=qm" (c) : "ir" (arg.v32), "m" _PFL_GETA32(v) : "memory");
-		break;
-	case 8:
-		_PFL_ASM("addq %2, %0; sets %1" : "=m" _PFL_GETA64(v),
-		    "=qm" (c) : "ir" (arg.v64), "m" _PFL_GETA64(v) : "memory");
-		break;
-	}
+	_PFL_ASM("addw %2, %0; sets %1" : "=m" _PFL_GETA16(v),
+	    "=qm" (c) : "ir" (i), "m" _PFL_GETA16(v) : "memory");
 	return (c);
 }
 
 static __inline int
-_PFL_ATOMIC_SUB_AND_TEST_NEG(void *v, size_t siz, ...)
+psc_atomic32_add_and_test_neg(psc_atomic32_t *v, int32_t i)
 {
-	union pfl_atomic_arg arg;
 	unsigned char c;
-	va_list ap;
 
-	va_start(ap, siz);
-	_PFL_ATOMIC_GETARG(ap, siz, &arg);
-	va_end(ap);
-
-	switch (siz) {
-	case 2:
-		_PFL_ASM("subw %2, %0; sets %1" : "=m" _PFL_GETA16(v),
-		    "=qm" (c) : "ir" (arg.v16), "m" _PFL_GETA16(v) : "memory");
-		break;
-	case 4:
-		_PFL_ASM("subl %2, %0; sets %1" : "=m" _PFL_GETA32(v),
-		    "=qm" (c) : "ir" (arg.v32), "m" _PFL_GETA32(v) : "memory");
-		break;
-	case 8:
-		_PFL_ASM("subq %2, %0; sets %1" : "=m" _PFL_GETA64(v),
-		    "=qm" (c) : "ir" (arg.v64), "m" _PFL_GETA64(v) : "memory");
-		break;
-	}
+	_PFL_ASM("addl %2, %0; sets %1" : "=m" _PFL_GETA32(v),
+	    "=qm" (c) : "ir" (i), "m" _PFL_GETA32(v) : "memory");
 	return (c);
 }
 
-static __inline int64_t
-_PFL_ATOMIC_ADD_GETNEW(void *v, size_t siz, ...)
+static __inline int
+psc_atomic64_add_and_test_neg(psc_atomic64_t *v, int64_t i)
 {
-	union pfl_atomic_arg arg, adj;
-	va_list ap;
+	unsigned char c;
 
-	va_start(ap, siz);
-	_PFL_ATOMIC_GETARG(ap, siz, &arg);
-	va_end(ap);
+	_PFL_ASM("addq %2, %0; sets %1" : "=m" _PFL_GETA64(v),
+	    "=qm" (c) : "ir" (i), "m" _PFL_GETA64(v) : "memory");
+	return (c);
+}
 
-	adj = arg;
+static __inline int
+psc_atomic16_sub_and_test_neg(psc_atomic16_t *v, int16_t i)
+{
+	unsigned char c;
 
-	switch (siz) {
-	case 2:
-		_PFL_ASM("xaddw %0, %1" : "+r" (arg.v16),
-		    "+m" _PFL_GETA16(v) : : "memory");
-		return (adj.v16 + arg.v16);
-	case 4:
-		_PFL_ASM("xaddl %0, %1" : "+r" (arg.v32),
-		    "+m" _PFL_GETA32(v) : : "memory");
-		return (adj.v32 + arg.v32);
-	case 8:
-		_PFL_ASM("xaddq %0, %1" : "+r" (arg.v64),
-		    "+m" _PFL_GETA64(v) : : "memory");
-		return (adj.v64 + arg.v64);
-	default:
-		psc_fatalx("impossible");
-	}
+	_PFL_ASM("subw %2, %0; sets %1" : "=m" _PFL_GETA16(v),
+	    "=qm" (c) : "ir" (i), "m" _PFL_GETA16(v) : "memory");
+	return (c);
+}
+
+static __inline int
+psc_atomic32_sub_and_test_neg(psc_atomic32_t *v, int32_t i)
+{
+	unsigned char c;
+
+	_PFL_ASM("subl %2, %0; sets %1" : "=m" _PFL_GETA32(v),
+	    "=qm" (c) : "ir" (i), "m" _PFL_GETA32(v) : "memory");
+	return (c);
+}
+
+static __inline int
+psc_atomic64_sub_and_test_neg(psc_atomic64_t *v, int64_t i)
+{
+	unsigned char c;
+
+	_PFL_ASM("subq %2, %0; sets %1" : "=m" _PFL_GETA64(v),
+	    "=qm" (c) : "ir" (i), "m" _PFL_GETA64(v) : "memory");
+	return (c);
+}
+
+static __inline int16_t
+psc_atomic16_add_getnew(psc_atomic16_t *v, int16_t i)
+{
+	int16_t adj = i;
+
+	_PFL_ASM("xaddw %0, %1" : "+r" (i), "+m" _PFL_GETA16(v) : : "memory");
+	return (i + adj);
+}
+
+static __inline int32_t
+psc_atomic32_add_getnew(psc_atomic32_t *v, int32_t i)
+{
+	int32_t adj = i;
+
+	_PFL_ASM("xaddl %0, %1" : "+r" (i), "+m" _PFL_GETA32(v) : : "memory");
+	return (i + adj);
 }
 
 static __inline int64_t
-_PFL_ATOMIC_SUB_GETNEW(void *v, size_t siz, ...)
-{
-	union pfl_atomic_arg arg, adj;
-	va_list ap;
-
-	va_start(ap, siz);
-	_PFL_ATOMIC_GETARG(ap, siz, &arg);
-	va_end(ap);
-
-	adj = arg;
-
-	switch (siz) {
-	case 2:
-		_PFL_ASM("xsubw %0, %1" : "+r" (arg.v16),
-		    "+m" _PFL_GETA16(v) : : "memory");
-		return (arg.v16 - adj.v16);
-	case 4:
-		_PFL_ASM("xsubl %0, %1" : "+r" (arg.v32),
-		    "+m" _PFL_GETA32(v) : : "memory");
-		return (arg.v32 - adj.v32);
-	case 8:
-		_PFL_ASM("xsubq %0, %1" : "+r" (arg.v64),
-		    "+m" _PFL_GETA64(v) : : "memory");
-		return (arg.v64 - adj.v64);
-	default:
-		psc_fatalx("impossible");
-	}
-}
-
-static __inline void
-_PFL_ATOMIC_CLEARMASK(void *v, size_t siz, ...)
-{
-	union pfl_atomic_arg arg, adj;
-	va_list ap;
-
-	va_start(ap, siz);
-	_PFL_ATOMIC_GETARG(ap, siz, &arg);
-	va_end(ap);
-
-	adj = arg;
-
-	switch (siz) {
-	case 2:
-		_PFL_ASM("andw %0, %1" : : "r" (~arg.v16), "m" _PFL_GETA16(v) : "memory");
-		break;
-	case 4:
-		_PFL_ASM("andl %0, %1" : : "r" (~arg.v32), "m" _PFL_GETA32(v) : "memory");
-		break;
-	case 8:
-		_PFL_ASM("andq %0, %1" : : "r" (~arg.v64), "m" _PFL_GETA64(v) : "memory");
-		break;
-	}
-}
-
-static __inline void
-_PFL_ATOMIC_SETMASK(void *v, size_t siz, ...)
-{
-	union pfl_atomic_arg arg, adj;
-	va_list ap;
-
-	va_start(ap, siz);
-	_PFL_ATOMIC_GETARG(ap, siz, &arg);
-	va_end(ap);
-
-	adj = arg;
-
-	switch (siz) {
-	case 2:
-		_PFL_ASM("orw %0, %1" : : "r" (arg.v16),
-		    "m" _PFL_GETA16(v) : "memory");
-		break;
-	case 4:
-		_PFL_ASM("orl %0, %1" : : "r" (arg.v32),
-		    "m" _PFL_GETA32(v) : "memory");
-		break;
-	case 8:
-		_PFL_ASM("orq %0, %1" : : "r" (arg.v64),
-		    "m" _PFL_GETA64(v) : "memory");
-		break;
-	}
-}
-
-static __inline int64_t
-_PFL_ATOMIC_CLEARMASK_GETNEW(void *v, size_t siz, ...)
-{
-	union pfl_atomic_arg arg, adj;
-	va_list ap;
-
-	va_start(ap, siz);
-	_PFL_ATOMIC_GETARG(ap, siz, &arg);
-	va_end(ap);
-
-	adj = arg;
-	switch (siz) {
-	case 2:
-		adj.v16 = ~adj.v16;
-		_PFL_ASM("andw %0, %1;" : "=r" (arg.v16)
-		    : "m" _PFL_GETA16(v), "0" (adj.v16));
-		return (adj.v16 & ~arg.v16);
-	case 4:
-		adj.v32 = ~adj.v32;
-		_PFL_ASM("andl %0, %1;" : "=r" (arg.v32)
-		    : "m" _PFL_GETA32(v), "0" (adj.v32));
-		return (adj.v32 & ~arg.v32);
-	case 8:
-		adj.v64 = ~adj.v64;
-		_PFL_ASM("andq %0, %1;" : "=r" (arg.v64)
-		    : "m" _PFL_GETA64(v), "0" (adj.v64));
-		return (adj.v64 & ~arg.v64);
-	default:
-		psc_fatalx("%zu: bad size value", siz);
-	}
-}
-
-static __inline int64_t
-_PFL_ATOMIC_SETMASK_GETNEW(void *v, size_t siz, int64_t i)
+psc_atomic64_add_getnew(psc_atomic64_t *v, int64_t i)
 {
 	int64_t adj = i;
 
-	switch (siz) {
-	case 2:
-		_PFL_ASM("orw %0, %1;" : "=r" (i) : "m" _PFL_GETA16(v), "0" (adj));
-		break;
-	case 4:
-		_PFL_ASM("orl %0, %1;" : "=r" (i) : "m" _PFL_GETA32(v), "0" (adj));
-		break;
-	case 8:
-		_PFL_ASM("orq %0, %1;" : "=r" (i) : "m" _PFL_GETA64(v), "0" (adj));
-		break;
-	default:
-		psc_fatalx("%zu: bad size value", siz);
-	}
-	return (adj | i);
+	_PFL_ASM("xaddq %0, %1" : "+r" (i), "+m" _PFL_GETA64(v) : : "memory");
+	return (i + adj);
+}
+
+static __inline int16_t
+psc_atomic16_sub_getnew(psc_atomic16_t *v, int16_t i)
+{
+	int16_t adj = i;
+
+	_PFL_ASM("xsubw %0, %1" : "+r" (i), "+m" _PFL_GETA16(v) : : "memory");
+	return (i + adj);
+}
+
+static __inline int32_t
+psc_atomic32_sub_getnew(psc_atomic32_t *v, int32_t i)
+{
+	int32_t adj = i;
+
+	_PFL_ASM("xsubl %0, %1" : "+r" (i), "+m" _PFL_GETA32(v) : : "memory");
+	return (i + adj);
 }
 
 static __inline int64_t
-_PFL_ATOMIC_CLEARMASK_GETOLD(void *v, size_t siz, int64_t i)
+psc_atomic64_sub_getnew(psc_atomic64_t *v, int64_t i)
 {
 	int64_t adj = i;
+
+	_PFL_ASM("xsubq %0, %1" : "+r" (i), "+m" _PFL_GETA64(v) : : "memory");
+	return (i + adj);
+}
+
+static __inline void
+psc_atomic16_clearmask(psc_atomic16_t *v, int16_t mask)
+{
+	_PFL_ASM("andw %0, %1" : : "r" (~mask), "m" _PFL_GETA16(v) : "memory");
+}
+
+static __inline void
+psc_atomic32_clearmask(psc_atomic32_t *v, int32_t mask)
+{
+	_PFL_ASM("andl %0, %1" : : "r" (~mask), "m" _PFL_GETA32(v) : "memory");
+}
+
+static __inline void
+psc_atomic64_clearmask(psc_atomic64_t *v, int64_t mask)
+{
+	_PFL_ASM("andq %0, %1" : : "r" (~mask), "m" _PFL_GETA64(v) : "memory");
+}
+
+static __inline void
+psc_atomic16_setmask(psc_atomic16_t *v, int16_t mask)
+{
+	_PFL_ASM("orw %0, %1" : : "r" (mask), "m" _PFL_GETA16(v) : "memory");
+}
+
+static __inline void
+psc_atomic32_setmask(psc_atomic32_t *v, int32_t mask)
+{
+	_PFL_ASM("orl %0, %1" : : "r" (mask), "m" _PFL_GETA32(v) : "memory");
+}
+
+static __inline void
+psc_atomic64_setmask(psc_atomic64_t *v, int64_t mask)
+{
+	_PFL_ASM("orq %0, %1" : : "r" (mask), "m" _PFL_GETA64(v) : "memory");
+}
+
+static __inline int16_t
+psc_atomic16_clearmask_getnew(psc_atomic16_t *v, int16_t mask)
+{
+	int16_t oldv = mask;
+
+	mask = ~mask;
+	_PFL_ASM("andw %0, %1;" : "=r" (mask) : "m" _PFL_GETA16(v), "0" (oldv));
+	return (oldv & ~mask);
+}
+
+static __inline int32_t
+psc_atomic32_clearmask_getnew(psc_atomic32_t *v, int32_t mask)
+{
+	int32_t oldv = mask;
+
+	mask = ~mask;
+	_PFL_ASM("andl %0, %1;" : "=r" (mask) : "m" _PFL_GETA32(v), "0" (oldv));
+	return (oldv & ~mask);
+}
+
+static __inline int64_t
+psc_atomic64_clearmask_getnew(psc_atomic64_t *v, int64_t mask)
+{
+	int64_t oldv = mask;
+
+	mask = ~mask;
+	_PFL_ASM("andq %0, %1;" : "=r" (mask) : "m" _PFL_GETA32(v), "0" (oldv));
+	return (oldv & ~mask);
+}
+
+static __inline int16_t
+psc_atomic16_setmask_getnew(psc_atomic16_t *v, int16_t i)
+{
+	int16_t oldv = i;
+
+	_PFL_ASM("orw %0, %1;" : "=r" (i) : "m" _PFL_GETA16(v), "0" (oldv));
+	return (oldv | i);
+}
+
+static __inline int32_t
+psc_atomic32_setmask_getnew(psc_atomic32_t *v, int32_t i)
+{
+	int32_t oldv = i;
+
+	_PFL_ASM("orl %0, %1;" : "=r" (i) : "m" _PFL_GETA32(v), "0" (oldv));
+	return (oldv | i);
+}
+
+static __inline int64_t
+psc_atomic64_setmask_getnew(psc_atomic64_t *v, int64_t i)
+{
+	int64_t oldv = i;
+
+	_PFL_ASM("orq %0, %1;" : "=r" (i) : "m" _PFL_GETA64(v), "0" (oldv));
+	return (oldv | i);
+}
+
+static __inline int64_t
+psc_atomic16_clearmask_getold(psc_atomic_t *v, int16_t i)
+{
+	int16_t oldv = i;
 
 	i = ~i;
-	switch (siz) {
-	case 2:
-		_PFL_ASM("andw %0, %1" : "=r" (i) : "m" _PFL_GETA16(v), "0" (adj));
-		break;
-	case 4:
-		_PFL_ASM("andl %0, %1" : "=r" (i) : "m" _PFL_GETA32(v), "0" (adj));
-		break;
-	case 8:
-		_PFL_ASM("andq %0, %1" : "=r" (i) : "m" _PFL_GETA64(v), "0" (adj));
-		break;
-	default:
-		psc_fatalx("%zu: bad size value", siz);
-	}
-	return (adj);
+	_PFL_ASM("andw %0, %1" : "=r" (i) : "m" _PFL_GETA16(v), "0" (oldv));
+	return (oldv);
 }
 
 static __inline int64_t
-_PFL_ATOMIC_SETMASK_GETOLD(void *v, size_t siz, int64_t i)
+psc_atomic32_clearmask_getold(psc_atomic_t *v, int32_t i)
 {
-	int64_t adj = i;
+	int32_t oldv = i;
 
-	switch (siz) {
-	case 2:
-		_PFL_ASM("orw %0, %1;" : "=r" (i) : "m" _PFL_GETA16(v), "0" (adj));
-		break;
-	case 4:
-		_PFL_ASM("orl %0, %1;" : "=r" (i) : "m" _PFL_GETA32(v), "0" (adj));
-		break;
-	case 8:
-		_PFL_ASM("orq %0, %1;" : "=r" (i) : "m" _PFL_GETA64(v), "0" (adj));
-		break;
-	default:
-		psc_fatalx("%zu: bad size value", siz);
-	}
-	return (adj);
+	i = ~i;
+	_PFL_ASM("andl %0, %1" : "=r" (i) : "m" _PFL_GETA32(v), "0" (oldv));
+	return (oldv);
 }
 
 static __inline int64_t
-_PFL_ATOMIC_XCHG(void *v, size_t siz, int64_t i)
+psc_atomic64_clearmask_getold(psc_atomic_t *v, int64_t i)
 {
-	switch (siz) {
-	case 2:
-		_PFL_NL_ASM("xchgw %0, %1" : "=r" (i) : "m" _PFL_GETA16(v), "0" (i) : "memory");
-		break;
-	case 4:
-		_PFL_NL_ASM("xchgl %0, %1" : "=r" (i) : "m" _PFL_GETA32(v), "0" (i) : "memory");
-		break;
-	case 8:
-		_PFL_NL_ASM("xchgq %0, %1" : "=r" (i) : "m" _PFL_GETA64(v), "0" (i) : "memory");
-		break;
-	default:
-		psc_fatalx("%zu: bad size value", siz);
-	}
+	int64_t oldv = i;
+
+	i = ~i;
+	_PFL_ASM("andq %0, %1" : "=r" (i) : "m" _PFL_GETA64(v), "0" (oldv));
+	return (oldv);
+}
+
+static __inline int16_t
+psc_atomic16_setmask_getold(psc_atomic16_t *v, int16_t i)
+{
+	int64_t oldv = i;
+
+	_PFL_ASM("orw %0, %1;" : "=r" (i) : "m" _PFL_GETA16(v), "0" (oldv));
+	return (oldv);
+}
+
+static __inline int32_t
+psc_atomic32_setmask_getold(psc_atomic32_t *v, int32_t i)
+{
+	int64_t oldv = i;
+
+	_PFL_ASM("orl %0, %1;" : "=r" (i) : "m" _PFL_GETA32(v), "0" (oldv));
+	return (oldv);
+}
+
+static __inline int64_t
+psc_atomic64_setmask_getold(psc_atomic64_t *v, int64_t i)
+{
+	int64_t oldv = i;
+
+	_PFL_ASM("orq %0, %1;" : "=r" (i) : "m" _PFL_GETA64(v), "0" (oldv));
+	return (oldv);
+}
+
+static __inline int16_t
+psc_atomic16_xchg(psc_atomic16_t *v, int16_t i)
+{
+	_PFL_NL_ASM("xchgw %0, %1" : "=r" (i) : "m" _PFL_GETA16(v), "0" (i) : "memory");
+	return (i);
+}
+
+static __inline int32_t
+psc_atomic32_xchg(psc_atomic32_t *v, int32_t i)
+{
+	_PFL_NL_ASM("xchgl %0, %1" : "=r" (i) : "m" _PFL_GETA32(v), "0" (i) : "memory");
 	return (i);
 }
 
 static __inline int64_t
-_PFL_ATOMIC_CMPXCHG(void *v, size_t siz, int64_t newv, int64_t cmpv)
+psc_atomic64_xchg(psc_atomic64_t *v, int64_t i)
+{
+	_PFL_NL_ASM("xchgq %0, %1" : "=r" (i) : "m" _PFL_GETA64(v), "0" (i) : "memory");
+	return (i);
+}
+
+static __inline int16_t
+psc_atomic16_cmpxchg(psc_atomic64_t *v, int16_t newv, int16_t cmpv)
 {
 	int64_t oldv;
 
-	switch (siz) {
-	case 2:
-		_PFL_NL_ASM("cmpxchgw %1, %2" : "=a" (oldv) : "r" (newv),
-		    "m" _PFL_GETA16(v), "0" (cmpv) : "memory");
-		break;
-	case 4:
-		_PFL_NL_ASM("cmpxchgl %1, %2" : "=a" (oldv) : "r" (newv),
-		    "m" _PFL_GETA32(v), "0" (cmpv) : "memory");
-		break;
-	case 8:
-		_PFL_NL_ASM("cmpxchgq %1, %2" : "=a" (oldv) : "r" (newv),
-		    "m" _PFL_GETA64(v), "0" (cmpv) : "memory");
-		break;
-	default:
-		psc_fatalx("%zu: bad size value", siz);
-	}
+	_pfl_nl_ASM("cmpxchgw %1, %2" : "=a" (oldv) : "r" (newv),
+	    "m" _PFL_GETA16(v), "0" (cmpv) : "memory");
+	return (oldv);
+}
+
+static __inline int32_t
+psc_atomic32_cmpxchg(psc_atomic64_t *v, int32_t newv, int32_t cmpv)
+{
+	int64_t oldv;
+
+	_pfl_nl_ASM("cmpxchgl %1, %2" : "=a" (oldv) : "r" (newv),
+	    "m" _PFL_GETA32(v), "0" (cmpv) : "memory");
+	return (oldv);
+}
+
+static __inline int64_t
+psc_atomic64_cmpxchg(psc_atomic64_t *v, int64_t newv, int64_t cmpv)
+{
+	int64_t oldv;
+
+	_pfl_nl_ASM("cmpxchgq %1, %2" : "=a" (oldv) : "r" (newv),
+	    "m" _PFL_GETA64(v), "0" (cmpv) : "memory");
 	return (oldv);
 }
 
