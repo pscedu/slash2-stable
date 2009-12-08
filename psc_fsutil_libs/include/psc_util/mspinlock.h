@@ -140,7 +140,7 @@ psc_mspin_trylock(struct psc_mspinlock *pmsl)
 	int16_t oldval;
 
 	PMSL_MAGIC_CHECK(pmsl);
-	oldval = psc_atomic16_setmask_ret(&pmsl->pmsl_value,
+	oldval = psc_atomic16_setmask_getold(&pmsl->pmsl_value,
 	    PMSL_LOCKMASK);
 	if (oldval & PMSL_LOCKMASK) {
 		if ((oldval & PMSL_OWNERMASK) == _psc_mspin_getunthrid())
