@@ -67,16 +67,20 @@
 
 #ifdef __ia64
 # include "pfl/compat/ia64/atomic-types.h"
-#else
+#elif defined(__amd64)
 # include "pfl/compat/amd64/atomic-types.h"
+#else
+# include "pfl/compat/i386/atomic-types.h"
 #endif
 
 #include "pfl/compat/generic/atomic.h"
 
 #ifdef __ia64
 # include "pfl/compat/ia64/atomic.h"
-#else
+#elif defined(__amd64)
 # include "pfl/compat/amd64/atomic.h"
+#else
+# include "pfl/compat/i386/atomic.h"
 #endif
 
 static __inline void
