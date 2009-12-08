@@ -133,7 +133,9 @@ main(int argc, char *argv[])
 	PRTYPE(UINT64_MAX);
 
 /* start structs */
+	PRTYPE(atomic_t);
 	PRTYPE(list_cache_t);
+	PRTYPE(psc_atomic_t);
 	PRTYPE(psc_crc32_t);
 	PRTYPE(psc_crc64_t);
 	PRTYPE(psc_spinlock_t);
@@ -223,7 +225,9 @@ main(int argc, char *argv[])
 	PRTYPE(struct pscrpc_svc_handle);
 	PRTYPE(struct pscrpc_thread);
 	PRTYPE(struct pscrpc_wait_callback);
-/* end structs */
+	PRTYPE(struct rsx_msg_conversion);
+	PRTYPE(struct rsx_msg_portablizer);
+	/* end structs */
 
 	PRVAL(offsetof(struct psc_listcache, lc_listhd));
 	PRVAL(offsetof(struct psc_journal_enthdr, pje_data));

@@ -17,10 +17,10 @@
 #include <string.h>
 #include <unistd.h>
 
-#include "pfl.h"
+#include "pfl/cdefs.h"
+#include "pfl/pfl.h"
 #include "psc_util/alloc.h"
 #include "psc_util/atomic.h"
-#include "pfl/cdefs.h"
 #include "psc_util/fmt.h"
 #include "psc_util/iostats.h"
 #include "psc_util/log.h"
@@ -48,8 +48,8 @@ int			 forcesdp;		/* force sockets direct */
 const char		*progname;
 char			*buf;
 size_t			 bufsiz = 1024 * 1024;
-struct iostats	 	 rdst;			/* read stats */
-struct iostats	 	 wrst;			/* write stats */
+struct iostats		 rdst;			/* read stats */
+struct iostats		 wrst;			/* write stats */
 pthread_t		 rdthr;
 in_port_t		 port = PORT;
 
