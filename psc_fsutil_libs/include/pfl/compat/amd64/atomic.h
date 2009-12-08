@@ -13,21 +13,21 @@
 
 #undef psc_atomic16_read
 static __inline int16_t
-psc_atomic16_read(psc_atomic16_t *v)
+psc_atomic16_read(const psc_atomic16_t *v)
 {
 	return (_PFL_GETA16(v));
 }
 
 #undef psc_atomic32_read
 static __inline int32_t
-psc_atomic32_read(psc_atomic32_t *v)
+psc_atomic32_read(const psc_atomic32_t *v)
 {
 	return (_PFL_GETA32(v));
 }
 
 #undef psc_atomic64_read
 static __inline int64_t
-psc_atomic64_read(psc_atomic64_t *v)
+psc_atomic64_read(const psc_atomic64_t *v)
 {
 	return (_PFL_GETA64(v));
 }
@@ -364,39 +364,6 @@ psc_atomic64_add_getnew(psc_atomic64_t *v, int64_t i)
 	int64_t adj = i;
 
 	_PFL_ASM("xaddq %0, %1" : "+r" (i),
-	    "+m" _PFL_GETA64(v) : : "memory");
-	return (i + adj);
-}
-
-#undef psc_atomic16_sub_getnew
-static __inline int16_t
-psc_atomic16_sub_getnew(psc_atomic16_t *v, int16_t i)
-{
-	int16_t adj = i;
-
-	_PFL_ASM("xsubw %0, %1" : "+r" (i),
-	    "+m" _PFL_GETA16(v) : : "memory");
-	return (i + adj);
-}
-
-#undef psc_atomic32_sub_getnew
-static __inline int32_t
-psc_atomic32_sub_getnew(psc_atomic32_t *v, int32_t i)
-{
-	int32_t adj = i;
-
-	_PFL_ASM("xsubl %0, %1" : "+r" (i),
-	    "+m" _PFL_GETA32(v) : : "memory");
-	return (i + adj);
-}
-
-#undef psc_atomic64_sub_getnew
-static __inline int64_t
-psc_atomic64_sub_getnew(psc_atomic64_t *v, int64_t i)
-{
-	int64_t adj = i;
-
-	_PFL_ASM("xsubq %0, %1" : "+r" (i),
 	    "+m" _PFL_GETA64(v) : : "memory");
 	return (i + adj);
 }

@@ -1,8 +1,8 @@
 /* $Id$ */
 
-static __inline int16_t psc_atomic16_read(psc_atomic16_t *);
-static __inline int32_t psc_atomic32_read(psc_atomic32_t *);
-static __inline int64_t psc_atomic64_read(psc_atomic64_t *);
+static __inline int16_t psc_atomic16_read(const psc_atomic16_t *);
+static __inline int32_t psc_atomic32_read(const psc_atomic32_t *);
+static __inline int64_t psc_atomic64_read(const psc_atomic64_t *);
 
 static __inline int16_t psc_atomic16_cmpxchg(psc_atomic16_t *, int16_t, int16_t);
 static __inline int32_t psc_atomic32_cmpxchg(psc_atomic32_t *, int32_t, int32_t);

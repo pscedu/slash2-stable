@@ -108,7 +108,10 @@ recurse-%:
 		fi;									\
 	done
 
-install: recurse-install
+# empty but overrideable
+install-hook:
+
+install: recurse-install install-hook
 	@if [ -n "${LIBRARY}" ]; then							\
 		mkdir -p ${INSTALLDIR}/lib;						\
 		echo cp -pf ${LIBRARY} ${INSTALLDIR}/lib;				\
