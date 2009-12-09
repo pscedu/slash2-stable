@@ -208,6 +208,7 @@ psc_multilock_cond_wait(struct psc_multilock_cond *mlc, pthread_mutex_t *mutex)
 	rc = pthread_cond_wait(&mlc->mlc_cond, &mlc->mlc_mutex);
 	if (rc)
 		psc_fatalx("pthread_cond_wait: %s", strerror(rc));
+	psc_pthread_mutex_unlock(&mlc->mlc_mutex);
 }
 
 /*
