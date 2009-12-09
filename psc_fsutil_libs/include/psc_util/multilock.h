@@ -65,9 +65,10 @@ void	psc_multilock_prconds(struct psc_multilock *);
 #define psc_multilock_wait_ms(ml, p, tm)	psc_multilock_wait((ml), (p), (tm) * 1000)
 #define psc_multilock_wait_s(ml, p, tm)		psc_multilock_wait((ml), (p), (tm) * 1000 * 1000)
 
+void	psc_multilock_cond_destroy(struct psc_multilock_cond *);
 void	psc_multilock_cond_init(struct psc_multilock_cond *, const void *, int, const char *, ...);
 size_t	psc_multilock_cond_nwaitors(struct psc_multilock_cond *);
+void	psc_multilock_cond_wait(struct psc_multilock_cond *, pthread_mutex_t *);
 void	psc_multilock_cond_wakeup(struct psc_multilock_cond *);
-void	psc_multilock_cond_destroy(struct psc_multilock_cond *);
 
 #endif /* _PFL_MULTILOCK_H_ */

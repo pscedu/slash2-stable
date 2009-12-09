@@ -3,6 +3,8 @@
 /*
  * Multiple lock routines: for waiting on any number of
  * conditions to become available.
+ *
+ * XXX rename this to multiwaitq
  */
 
 #include <sys/time.h>
@@ -74,7 +76,7 @@ psc_multilock_cond_trylockall(struct psc_multilock_cond *mlc)
 	for (j = 0; j < nml; j++)
 		if (pthread_mutex_trylock(&mlv[j]->ml_mutex)) {
 			for (k = 0; k < j; k++)
-				pthread_mutex_unlock(&mlv[k]->ml_mutex);
+				psc_pthread_mutex_unlock(&mlv[k]->ml_mutex);
 			return (-1);
 		}
 	return (0);
@@ -94,7 +96,7 @@ psc_multilock_cond_unlockall(struct psc_multilock_cond *mlc)
 	nml = dynarray_len(&mlc->mlc_multilocks);
 	mlv = dynarray_get(&mlc->mlc_multilocks);
 	for (j = 0; j < nml; j++)
-		pthread_mutex_unlock(&mlv[j]->ml_mutex);
+		psc_pthread_mutex_unlock(&mlv[j]->ml_mutex);
 }
 
 /**
@@ -119,13 +121,13 @@ psc_multilock_cond_destroy(struct psc_multilock_cond *mlc)
 				psc_errorx("mlcond %s failed to lock his "
 				    "multilocks - possible deadlock if this "
 				    "message repeats", mlc->mlc_name);
-			pthread_mutex_unlock(&mlc->mlc_mutex);
+			psc_pthread_mutex_unlock(&mlc->mlc_mutex);
 			sched_yield();
 			goto restart;
 		}
 		dynarray_remove(&ml->ml_conds, mlc);
 		dynarray_remove(&mlc->mlc_multilocks, ml);
-		pthread_mutex_unlock(&ml->ml_mutex);
+		psc_pthread_mutex_unlock(&ml->ml_mutex);
 
 	}
 	dynarray_free(&mlc->mlc_multilocks);
@@ -173,7 +175,7 @@ psc_multilock_cond_wakeup(struct psc_multilock_cond *mlc)
 			psc_errorx("mlcond %s failed to lock his "
 			    "multilocks - possible deadlock if this "
 			    "message repeats", mlc->mlc_name);
-		pthread_mutex_unlock(&mlc->mlc_mutex);
+		psc_pthread_mutex_unlock(&mlc->mlc_mutex);
 		sched_yield();
 		goto restart;
 	}
@@ -185,7 +187,25 @@ psc_multilock_cond_wakeup(struct psc_multilock_cond *mlc)
 			pthread_cond_signal(&mlv[j]->ml_cond);
 		}
 	psc_multilock_cond_unlockall(mlc);
-	pthread_mutex_unlock(&mlc->mlc_mutex);
+	psc_pthread_mutex_unlock(&mlc->mlc_mutex);
+}
+
+/*
+ * psc_multilock_cond_wakeup - Wait for one condition to occur.
+ * @mlc: the multilockable condition to wait for.
+ * @mutex: an optional mutex that will be unlocked in the critical section,
+ *	for avoiding missed wakeups from races.
+ */
+void
+psc_multilock_cond_wakeup(struct psc_multilock_cond *mlc, pthread_mutex_t *mutex)
+{
+	int rc;
+
+	psc_pthread_mutex_lock(&mlc->mlc_mutex);
+	psc_pthread_mutex_unlock(mutex);
+	rc = pthread_cond_wait(&mlc->mlc_cond, &mlc->mlc_mutex);
+	if (rc)
+		psc_fatalx("pthread_cond_wait: %s", strerror(rc));
 }
 
 /*
@@ -208,7 +228,7 @@ psc_multilock_addcond(struct psc_multilock *ml,
 	psc_pthread_mutex_lock(&mlc->mlc_mutex);
 
 	if (pthread_mutex_trylock(&ml->ml_mutex)) {
-		pthread_mutex_unlock(&mlc->mlc_mutex);
+		psc_pthread_mutex_unlock(&mlc->mlc_mutex);
 		sched_yield();
 		goto restart;
 	}
@@ -252,8 +272,8 @@ psc_multilock_addcond(struct psc_multilock *ml,
 	psc_vbitmap_setval(ml->ml_mask, nmlc - 1, masked);
 
  done:
-	pthread_mutex_unlock(&ml->ml_mutex);
-	pthread_mutex_unlock(&mlc->mlc_mutex);
+	psc_pthread_mutex_unlock(&ml->ml_mutex);
+	psc_pthread_mutex_unlock(&mlc->mlc_mutex);
 	return (rc);
 }
 
@@ -315,7 +335,7 @@ psc_multilock_mask_cond(struct psc_multilock *ml,
 			else
 				vbitmap_unset(ml->ml_mask, j);
 			ml->ml_owner = 0;
-			pthread_mutex_unlock(&ml->ml_mutex);
+			psc_pthread_mutex_unlock(&ml->ml_mutex);
 			return;
 		}
 	psc_fatalx("couldn't find cond %s in multilock %s\n",
@@ -360,7 +380,7 @@ psc_multilock_wait(struct psc_multilock *ml, void *datap, int usec)
 
 		psc_pthread_mutex_lock(&mlcv[j]->mlc_mutex);
 		mlcv[j]->mlc_winner = NULL;
-		pthread_mutex_unlock(&mlcv[j]->mlc_mutex);
+		psc_pthread_mutex_unlock(&mlcv[j]->mlc_mutex);
 	}
 
 	if (allmasked)
@@ -382,20 +402,22 @@ psc_multilock_wait(struct psc_multilock *ml, void *datap, int usec)
 		rc = pthread_cond_timedwait(&ml->ml_cond,
 		    &ml->ml_mutex, &ntv);
 		if (rc == ETIMEDOUT) {
-			pthread_mutex_unlock(&ml->ml_mutex);
+			psc_pthread_mutex_unlock(&ml->ml_mutex);
 			return (-ETIMEDOUT);
 		}
 		if (rc)
 			psc_fatalx("pthread_cond_timedwait: %s",
 			    strerror(rc));
-	} else
-		if (pthread_cond_wait(&ml->ml_cond, &ml->ml_mutex) == -1)
-			psc_fatal("pthread_cond_wait");
+	} else {
+		rc = pthread_cond_wait(&ml->ml_cond, &ml->ml_mutex);
+		if (rc)
+			psc_fatalx("pthread_cond_wait: %s", strerror(rc));
+	}
 
  checkwaker:
 	mlc = ml->ml_waker;
 	ml->ml_owner = 0;
-	pthread_mutex_unlock(&ml->ml_mutex);
+	psc_pthread_mutex_unlock(&ml->ml_mutex);
 
 	psc_pthread_mutex_lock(&mlc->mlc_mutex);
 	if (mlc->mlc_flags & PMLCF_WAKEALL) {
@@ -407,7 +429,7 @@ psc_multilock_wait(struct psc_multilock *ml, void *datap, int usec)
 		won = 1;
 	}
 
-	pthread_mutex_unlock(&mlc->mlc_mutex);
+	psc_pthread_mutex_unlock(&mlc->mlc_mutex);
 
 	if (!won) {
 		sched_yield();
@@ -441,7 +463,7 @@ psc_multilock_reset(struct psc_multilock *ml)
 		 */
 		if (pthread_mutex_trylock(&mlcv[0]->mlc_mutex)) {
 			ml->ml_owner = 0;
-			pthread_mutex_unlock(&ml->ml_mutex);
+			psc_pthread_mutex_unlock(&ml->ml_mutex);
 			sched_yield();
 			goto restart;
 		}
@@ -450,7 +472,7 @@ psc_multilock_reset(struct psc_multilock *ml)
 		qsort(dynarray_get(&mlcv[0]->mlc_multilocks),
 		    dynarray_len(&mlcv[0]->mlc_multilocks),
 		    sizeof(void *), psc_multilock_cmp);
-		pthread_mutex_unlock(&mlcv[0]->mlc_mutex);
+		psc_pthread_mutex_unlock(&mlcv[0]->mlc_mutex);
 		/* Remove it so we don't process it twice. */
 		dynarray_remove(&ml->ml_conds, mlcv[0]);
 	}
@@ -459,7 +481,7 @@ psc_multilock_reset(struct psc_multilock *ml)
 	vbitmap_resize(ml->ml_mask, 0);
 	ml->ml_flags = 0;
 	ml->ml_owner = 0;
-	pthread_mutex_unlock(&ml->ml_mutex);
+	psc_pthread_mutex_unlock(&ml->ml_mutex);
 }
 
 /*
@@ -476,7 +498,7 @@ psc_multilock_cond_nwaitors(struct psc_multilock_cond *mlc)
 
 	psc_pthread_mutex_lock(&mlc->mlc_mutex);
 	n = dynarray_len(&mlc->mlc_multilocks);
-	pthread_mutex_unlock(&mlc->mlc_mutex);
+	psc_pthread_mutex_unlock(&mlc->mlc_mutex);
 	return (n);
 }
 
@@ -490,7 +512,7 @@ psc_multilock_enter_critsect(struct psc_multilock *ml)
 	psc_pthread_mutex_lock(&ml->ml_mutex);
 	ml->ml_flags |= PMLF_CRITSECT;
 	ml->ml_waker = NULL;
-	pthread_mutex_unlock(&ml->ml_mutex);
+	psc_pthread_mutex_unlock(&ml->ml_mutex);
 }
 
 /*
@@ -503,7 +525,7 @@ psc_multilock_leave_critsect(struct psc_multilock *ml)
 	psc_pthread_mutex_lock(&ml->ml_mutex);
 	ml->ml_flags &= ~PMLF_CRITSECT;
 	/* XXX should release any captured events */
-	pthread_mutex_unlock(&ml->ml_mutex);
+	psc_pthread_mutex_unlock(&ml->ml_mutex);
 }
 
 /*
@@ -527,7 +549,7 @@ psc_multilock_hascond(struct psc_multilock *ml, struct psc_multilock_cond *mlc)
 			rc = 1;
 			break;
 		}
-	pthread_mutex_unlock(&ml->ml_mutex);
+	psc_pthread_mutex_unlock(&ml->ml_mutex);
 	return (rc);
 }
 
@@ -551,5 +573,5 @@ psc_multilock_prconds(struct psc_multilock *ml)
 		    ml->ml_name, mlcv[j]->mlc_name,
 		    psc_multilock_masked_cond(ml, mlcv[j]) ? "on" : "off");
 
-	pthread_mutex_unlock(&ml->ml_mutex);
+	psc_pthread_mutex_unlock(&ml->ml_mutex);
 }
