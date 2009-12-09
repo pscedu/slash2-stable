@@ -16,7 +16,7 @@
 struct psc_waitq {
 	pthread_mutex_t		wq_mut;
 	pthread_cond_t		wq_cond;
-	atomic_t		wq_nwaitors;
+	atomic_t		wq_nwaiters;
 	struct timespec		wq_waitv;
 };
 
@@ -26,7 +26,7 @@ struct psc_waitq {
 #else /* HAVE_LIBPTHREAD */
 
 struct psc_waitq {
-	atomic_t		wq_nwaitors;
+	atomic_t		wq_nwaiters;
 };
 
 #define PSC_WAITQ_INIT	{ ATOMIC_INIT(0) }
@@ -46,10 +46,10 @@ struct psc_waitq {
 #define psc_waitq_waitrel_tv(wq, lk, tv) _psc_waitq_waitrelv((wq), (lk), (tv)->tv_sec, (tv)->tv_usec * 1000L)
 
 /**
- * psc_waitq_nwaitors - determine number of threads waiting on a waitq.
+ * psc_waitq_nwaiters - determine number of threads waiting on a waitq.
  * @wq: wait queue.
  */
-#define psc_waitq_nwaitors(wq)		atomic_read(&(wq)->wq_nwaitors)
+#define psc_waitq_nwaiters(wq)		atomic_read(&(wq)->wq_nwaiters)
 
 #define psc_waitq_timedwait(wq, lk, ts)	psc_waitq_waitabs((wq), (lk), (ts))
 

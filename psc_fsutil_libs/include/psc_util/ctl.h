@@ -41,8 +41,8 @@ struct psc_ctlmsg_lc {
 	uint64_t		pclc_size;	/* #items on list */
 	uint64_t		pclc_nseen;	/* max #items list can attain */
 	int32_t			pclc_flags;
-	int32_t			pclc_nw_want;	/* #waitors waking for a want */
-	int32_t			pclc_nw_empty;	/* #waitors waking on empty */
+	int32_t			pclc_nw_want;	/* #waiters waking for a want */
+	int32_t			pclc_nw_empty;	/* #waiters waking on empty */
 	char			pclc_name[PLG_NAME_MAX];
 };
 
@@ -121,7 +121,7 @@ struct psc_ctlmsg_pool {
 struct psc_ctlmsg_mlist {
 	uint64_t		 pcml_nseen;
 	uint32_t		 pcml_size;
-	uint32_t		 pcml_waitors;
+	uint32_t		 pcml_nwaiters;
 	char			 pcml_name[PLG_NAME_MAX];
 };
 

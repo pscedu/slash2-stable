@@ -19,17 +19,19 @@ struct vbitmap;
 
 struct psc_multilock_cond {
 	pthread_mutex_t			 mlc_mutex;
+	pthread_cond_t			 mlc_cond;	/* for single waiters */
 	struct dynarray			 mlc_multilocks;/* where cond is registered */
 	struct psc_multilock		*mlc_winner;	/* which multilock awoke first */
 	const void			*mlc_data;	/* pointer to user data */
 	int				 mlc_flags;
-	char				 mlc_name[48];	/* should 8-byte boundary */
+	char				 mlc_name[48];	/* should be on 8-byte boundary */
 };
 
 #define PMLCF_WAKEALL			(1 << 0)	/* wake all multilocks, not just one */
 
-#define MLCOND_INIT(data, name, flags) \
-	{ PTHREAD_MUTEX_INITIALIZER, DYNARRAY_INIT, NULL, (data), (flags), (name) }
+#define MLCOND_INIT(data, name, flags)				\
+	{ PTHREAD_MUTEX_INITIALIZER, PTHREAD_COND_INITIALIZER,	\
+	    DYNARRAY_INIT, NULL, (data), (flags), (name) }
 
 struct psc_multilock {
 	/*
@@ -67,7 +69,7 @@ void	psc_multilock_prconds(struct psc_multilock *);
 
 void	psc_multilock_cond_destroy(struct psc_multilock_cond *);
 void	psc_multilock_cond_init(struct psc_multilock_cond *, const void *, int, const char *, ...);
-size_t	psc_multilock_cond_nwaitors(struct psc_multilock_cond *);
+size_t	psc_multilock_cond_nwaiters(struct psc_multilock_cond *);
 void	psc_multilock_cond_wait(struct psc_multilock_cond *, pthread_mutex_t *);
 void	psc_multilock_cond_wakeup(struct psc_multilock_cond *);
 

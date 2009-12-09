@@ -18,6 +18,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 
+#include "pfl/cdefs.h"
 #include "pfl/pfl.h"
 #include "psc_ds/hash.h"
 #include "psc_ds/hash2.h"
@@ -26,7 +27,6 @@
 #include "psc_ds/pool.h"
 #include "psc_ds/stree.h"
 #include "psc_util/atomic.h"
-#include "pfl/cdefs.h"
 #include "psc_util/ctl.h"
 #include "psc_util/ctlsvr.h"
 #include "psc_util/fault.h"
@@ -41,7 +41,7 @@
 #define QLEN 15	/* listen(2) queue */
 
 __weak size_t
-psc_multilock_cond_nwaitors(__unusedx struct psc_multilock_cond *m)
+psc_multilock_cond_nwaiters(__unusedx struct psc_multilock_cond *m)
 {
 	psc_fatalx("multilock support not compiled in");
 }
@@ -367,9 +367,9 @@ psc_ctlrep_getlc(int fd, struct psc_ctlmsghdr *mh, void *m)
 			pclc->pclc_size = lc->lc_size;
 			pclc->pclc_nseen = lc->lc_nseen;
 			pclc->pclc_flags = lc->lc_flags;
-			pclc->pclc_nw_want = psc_waitq_nwaitors(
+			pclc->pclc_nw_want = psc_waitq_nwaiters(
 			    &lc->lc_wq_want);
-			pclc->pclc_nw_empty = psc_waitq_nwaitors(
+			pclc->pclc_nw_empty = psc_waitq_nwaiters(
 			    &lc->lc_wq_empty);
 			LIST_CACHE_ULOCK(lc);
 			rc = psc_ctlmsg_sendv(fd, mh, pclc);
@@ -424,13 +424,13 @@ psc_ctlrep_getpool(int fd, struct psc_ctlmsghdr *mh, void *msg)
 			pcpl->pcpl_nshrink = m->ppm_nshrink;
 			if (POOL_IS_MLIST(m)) {
 				pcpl->pcpl_free = psc_mlist_size(&m->ppm_ml);
-				pcpl->pcpl_nw_empty = psc_multilock_cond_nwaitors(
+				pcpl->pcpl_nw_empty = psc_multilock_cond_nwaiters(
 				    &m->ppm_ml.pml_mlcond_empty);
 			} else {
 				pcpl->pcpl_free = lc_sz(&m->ppm_lc);
-				pcpl->pcpl_nw_want = psc_waitq_nwaitors(
+				pcpl->pcpl_nw_want = psc_waitq_nwaiters(
 				    &m->ppm_lc.lc_wq_want);
-				pcpl->pcpl_nw_empty = psc_waitq_nwaitors(
+				pcpl->pcpl_nw_empty = psc_waitq_nwaiters(
 				    &m->ppm_lc.lc_wq_empty);
 			}
 			POOL_UNLOCK(m);
@@ -1196,8 +1196,8 @@ psc_ctlrep_getmlist(int fd, struct psc_ctlmsghdr *mh, void *m)
 			    "%s", pml->pml_name);
 			pcml->pcml_size = pml->pml_size;
 			pcml->pcml_nseen = pml->pml_nseen;
-			pcml->pcml_waitors =
-			    psc_multilock_cond_nwaitors(&pml->pml_mlcond_empty);
+			pcml->pcml_nwaiters =
+			    psc_multilock_cond_nwaiters(&pml->pml_mlcond_empty);
 			MLIST_ULOCK(pml);
 
 			rc = psc_ctlmsg_sendv(fd, mh, pcml);

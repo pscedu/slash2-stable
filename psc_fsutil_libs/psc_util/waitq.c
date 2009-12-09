@@ -26,7 +26,7 @@ psc_waitq_init(struct psc_waitq *q)
 	int rc;
 
 	memset(q, 0, sizeof(*q));
-	atomic_set(&q->wq_nwaitors, 0);
+	atomic_set(&q->wq_nwaiters, 0);
 
 	psc_pthread_mutex_init(&q->wq_mut);
 	rc = pthread_cond_init(&q->wq_cond, NULL);
@@ -63,11 +63,11 @@ psc_waitq_waitabs(struct psc_waitq *q, psc_spinlock_t *k,
 		goto out;
 	}
 
-	atomic_inc(&q->wq_nwaitors);
+	atomic_inc(&q->wq_nwaiters);
 	rv = pthread_cond_timedwait(&q->wq_cond, &q->wq_mut, abstime);
 	if (rv && rv != ETIMEDOUT)
 		psc_fatalx("pthread_cond_timedwait: %s", strerror(rv));
-	atomic_dec(&q->wq_nwaitors);
+	atomic_dec(&q->wq_nwaiters);
 
  out:
 	rc = pthread_mutex_unlock(&q->wq_mut);
@@ -100,7 +100,7 @@ psc_waitq_waitrel(struct psc_waitq *q, psc_spinlock_t *k,
 
 	clock_gettime(CLOCK_REALTIME, &q->wq_waitv);
 
-	atomic_inc(&q->wq_nwaitors);
+	atomic_inc(&q->wq_nwaiters);
 	if (reltime) {
 		if (clock_gettime(CLOCK_REALTIME, &abstime) == -1)
 			psc_fatal("clock_gettime");
@@ -113,7 +113,7 @@ psc_waitq_waitrel(struct psc_waitq *q, psc_spinlock_t *k,
 		if (rv)
 			psc_fatalx("pthread_cond_wait: %s", strerror(rv));
 	}
-	atomic_dec(&q->wq_nwaitors);
+	atomic_dec(&q->wq_nwaiters);
 	rc = pthread_mutex_unlock(&q->wq_mut);
 	if (rc)
 		psc_fatalx("pthread_mutex_unlock: %s", strerror(rc));
@@ -175,7 +175,7 @@ psc_waitq_wakeall(struct psc_waitq *q)
 void
 psc_waitq_init(struct psc_waitq *q)
 {
-	atomic_set(&q->wq_nwaitors, 0);
+	atomic_set(&q->wq_nwaiters, 0);
 }
 
 int

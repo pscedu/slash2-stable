@@ -51,6 +51,7 @@ psc_multilock_cond_init(struct psc_multilock_cond *mlc, const void *data,
 	memset(mlc, 0, sizeof(*mlc));
 	dynarray_init(&mlc->mlc_multilocks);
 	psc_pthread_mutex_init(&mlc->mlc_mutex);
+	pthread_cond_init(&mlc->mlc_cond, NULL);
 	mlc->mlc_data = data;
 	mlc->mlc_flags = flags;
 
@@ -187,17 +188,18 @@ psc_multilock_cond_wakeup(struct psc_multilock_cond *mlc)
 			pthread_cond_signal(&mlv[j]->ml_cond);
 		}
 	psc_multilock_cond_unlockall(mlc);
+	pthread_cond_signal(&mlc->mlc_cond);
 	psc_pthread_mutex_unlock(&mlc->mlc_mutex);
 }
 
 /*
- * psc_multilock_cond_wakeup - Wait for one condition to occur.
+ * psc_multilock_cond_wait - Wait for one condition to occur.
  * @mlc: the multilockable condition to wait for.
  * @mutex: an optional mutex that will be unlocked in the critical section,
  *	for avoiding missed wakeups from races.
  */
 void
-psc_multilock_cond_wakeup(struct psc_multilock_cond *mlc, pthread_mutex_t *mutex)
+psc_multilock_cond_wait(struct psc_multilock_cond *mlc, pthread_mutex_t *mutex)
 {
 	int rc;
 
@@ -352,7 +354,7 @@ int
 psc_multilock_wait(struct psc_multilock *ml, void *datap, int usec)
 {
 	struct psc_multilock_cond *mlc, **mlcv;
-	int allmasked, won, nmlc, j;
+	int rc, allmasked, won, nmlc, j;
 
 	won = 0;
  restart:
@@ -389,7 +391,6 @@ psc_multilock_wait(struct psc_multilock *ml, void *datap, int usec)
 	if (usec) {
 		struct timeval tv, res, adj;
 		struct timespec ntv;
-		int rc;
 
 		if (gettimeofday(&tv, NULL) == -1)
 			psc_fatal("gettimeoday");
@@ -485,14 +486,14 @@ psc_multilock_reset(struct psc_multilock *ml)
 }
 
 /*
- * psc_multilock_cond_nwaitors - count the number of waitors sleeping
+ * psc_multilock_cond_nwaiters - count the number of waiters sleeping
  *	on a multilock condition.  The count may differ from the
  *	value in mlc->mlc_nmultilocks since there may be gaps in
  *	the array of multilocks when they are coming and going.
  * @mlc: the multilock condition to check.
  */
 size_t
-psc_multilock_cond_nwaitors(struct psc_multilock_cond *mlc)
+psc_multilock_cond_nwaiters(struct psc_multilock_cond *mlc)
 {
 	int n;
 

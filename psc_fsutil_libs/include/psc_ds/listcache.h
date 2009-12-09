@@ -198,7 +198,7 @@ _lc_get(struct psc_listcache *lc, struct timespec *abstime,
 #define lc_peektail(lc)		_lc_get((lc), NULL, PLCP_TAIL, PLCGF_NOBLOCK | PLCGF_PEEK)
 
 /*
- * lc_kill - list wants to go away, notify waitors.
+ * lc_kill - list wants to go away, notify waiters.
  * @lc: list cache to kill.
  */
 static __inline void

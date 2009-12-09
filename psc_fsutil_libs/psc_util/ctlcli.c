@@ -10,11 +10,11 @@
 #include <stdlib.h>
 #include <unistd.h>
 
+#include "pfl/cdefs.h"
 #include "psc_ds/hash.h"
 #include "psc_ds/list.h"
 #include "psc_ds/pool.h"
 #include "psc_ds/vbitmap.h"
-#include "pfl/cdefs.h"
 #include "psc_util/ctl.h"
 #include "psc_util/ctlcli.h"
 #include "psc_util/fmt.h"
@@ -699,7 +699,7 @@ psc_ctlmsg_mlist_prdat(__unusedx const struct psc_ctlmsghdr *mh,
 
 	printf(" %-50s %8d %3d %15"PRIu64"\n",
 	    pcml->pcml_name, pcml->pcml_size,
-	    pcml->pcml_waitors, pcml->pcml_nseen);
+	    pcml->pcml_nwaiters, pcml->pcml_nseen);
 }
 
 void
