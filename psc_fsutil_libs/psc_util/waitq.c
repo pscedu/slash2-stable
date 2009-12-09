@@ -3,8 +3,8 @@
 #include <errno.h>
 #include <string.h>
 
-#include "psc_util/atomic.h"
 #include "pfl/cdefs.h"
+#include "psc_util/atomic.h"
 #include "psc_util/lock.h"
 #include "psc_util/log.h"
 #include "psc_util/waitq.h"
@@ -50,9 +50,7 @@ psc_waitq_waitabs(struct psc_waitq *q, psc_spinlock_t *k,
 {
 	int rc, rv;
 
-	rc = pthread_mutex_lock(&q->wq_mut);
-	if (rc)
-		psc_fatalx("pthread_mutex_lock: %s", strerror(rc));
+	psc_pthread_mutex_lock(&q->wq_mut);
 
 	if (k != NULL)
 		freelock(k);
@@ -70,9 +68,7 @@ psc_waitq_waitabs(struct psc_waitq *q, psc_spinlock_t *k,
 	atomic_dec(&q->wq_nwaiters);
 
  out:
-	rc = pthread_mutex_unlock(&q->wq_mut);
-	if (rc)
-		psc_fatalx("pthread_mutex_unlock: %s", strerror(rc));
+	psc_pthread_mutex_unlock(&q->wq_mut);
 	return (rv);
 }
 
@@ -91,9 +87,7 @@ psc_waitq_waitrel(struct psc_waitq *q, psc_spinlock_t *k,
 	struct timespec abstime;
 	int rc, rv;
 
-	rc = pthread_mutex_lock(&q->wq_mut);
-	if (rc)
-		psc_fatalx("pthread_mutex_lock: %s", strerror(rc));
+	psc_pthread_mutex_lock(&q->wq_mut);
 
 	if (k != NULL)
 		freelock(k);
@@ -114,9 +108,7 @@ psc_waitq_waitrel(struct psc_waitq *q, psc_spinlock_t *k,
 			psc_fatalx("pthread_cond_wait: %s", strerror(rv));
 	}
 	atomic_dec(&q->wq_nwaiters);
-	rc = pthread_mutex_unlock(&q->wq_mut);
-	if (rc)
-		psc_fatalx("pthread_mutex_unlock: %s", strerror(rc));
+	psc_pthread_mutex_unlock(&q->wq_mut);
 	return (rv);
 }
 
@@ -139,15 +131,11 @@ psc_waitq_wakeone(struct psc_waitq *q)
 {
 	int rc;
 
-	rc = pthread_mutex_lock(&q->wq_mut);
-	if (rc)
-		psc_fatalx("pthread_mutex_lock: %s", strerror(rc));
+	psc_pthread_mutex_lock(&q->wq_mut);
 	rc = pthread_cond_signal(&q->wq_cond);
 	if (rc)
 		psc_fatalx("pthread_cond_signal: %s", strerror(rc));
-	rc = pthread_mutex_unlock(&q->wq_mut);
-	if (rc)
-		psc_fatalx("pthread_mutex_unlock: %s", strerror(rc));
+	psc_pthread_mutex_unlock(&q->wq_mut);
 }
 
 /*
@@ -159,15 +147,11 @@ psc_waitq_wakeall(struct psc_waitq *q)
 {
 	int rc;
 
-	rc = pthread_mutex_lock(&q->wq_mut);
-	if (rc)
-		psc_fatalx("pthread_mutex_lock: %s", strerror(rc));
+	psc_pthread_mutex_lock(&q->wq_mut);
 	rc = pthread_cond_broadcast(&q->wq_cond);
 	if (rc)
 		psc_fatalx("pthread_cond_broadcast: %s", strerror(rc));
-	rc = pthread_mutex_unlock(&q->wq_mut);
-	if (rc)
-		psc_fatalx("pthread_mutex_unlock: %s", strerror(rc));
+	psc_pthread_mutex_unlock(&q->wq_mut);
 }
 
 #else /* HAVE_LIBPTHREAD */
