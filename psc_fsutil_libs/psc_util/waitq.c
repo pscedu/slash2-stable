@@ -48,7 +48,7 @@ int
 psc_waitq_waitabs(struct psc_waitq *q, psc_spinlock_t *k,
     const struct timespec *abstime)
 {
-	int rc, rv;
+	int rv;
 
 	psc_pthread_mutex_lock(&q->wq_mut);
 
@@ -85,7 +85,7 @@ psc_waitq_waitrel(struct psc_waitq *q, psc_spinlock_t *k,
     const struct timespec *reltime)
 {
 	struct timespec abstime;
-	int rc, rv;
+	int rv;
 
 	psc_pthread_mutex_lock(&q->wq_mut);
 
