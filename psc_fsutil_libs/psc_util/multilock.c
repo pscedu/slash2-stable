@@ -471,6 +471,11 @@ psc_multilock_reset(struct psc_multilock *ml)
 		}
 
 		dynarray_remove(&mlcv[0]->mlc_multilocks, ml);
+		/*
+		 * dynarray_remove() will swap the last elem with the
+		 * new empty slot, so we should resort to peserve
+		 * ordering semantics.
+		 */
 		qsort(dynarray_get(&mlcv[0]->mlc_multilocks),
 		    dynarray_len(&mlcv[0]->mlc_multilocks),
 		    sizeof(void *), psc_multilock_cmp);
