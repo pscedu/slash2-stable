@@ -630,28 +630,20 @@ void pscrpc_ni_fini(void)
 	/* notreached */
 }
 
-
-int pscrpc_init_portals(int type)
+void
+pscrpc_init_portals(int type)
 {
-	int    rc = pscrpc_ni_init(type);
+	int rc;
 
-	//libcfs_debug_init(1048576);
+	if (getenv("LNET_NETWORKS") == NULL)
+		psc_fatalx("please export LNET_NETWORKS");
 
-	if (rc != 0) {
-		CERROR("network initialisation failed\n");
-		return -EIO;
-	}
-#if 0 //ndef __KERNEL__
-	liblustre_services_callback =
-		liblustre_register_wait_callback(&liblustre_check_services, NULL);
-#endif
-	return 0;
+	if (pscrpc_ni_init(type))
+		psc_fatal("network initialization: %s", strerror(-rc));
 }
 
-void pscrpc_exit_portals(void)
+void
+pscrpc_exit_portals(void)
 {
-#if 0 //ndef __KERNEL__
-	liblustre_deregister_wait_callback(liblustre_services_callback);
-#endif
 	pscrpc_ni_fini();
 }

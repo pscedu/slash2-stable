@@ -340,53 +340,57 @@ typedef int (*svc_handler_t)(struct pscrpc_request *req);
 
 /* Server side request management */
 struct pscrpc_service {
-	int srv_max_req_size;      /* max request sz to recv  */
-	int srv_max_reply_size;    /* biggest reply to send   */
-	int srv_buf_size;          /* size of buffers         */
-	int srv_nbuf_per_group;
-	int srv_watchdog_timeout;  /* soft watchdog timeout, in ms */
-	int srv_n_active_reqs;     /* # reqs being served */
-	int srv_n_difficult_replies; /* # 'difficult' replies */
-	int srv_nthreads;          /* # running threads */
-	int srv_failure;           /* we've failed, no new requests */
-	int srv_rqbd_timeout;
-	int srv_n_queued_reqs;     /* # reqs waiting to be served */
-	int srv_nrqbd_receiving;   /* # posted request buffers */
-	int srv_n_history_rqbds;   /* # request buffers in history */
-	int srv_max_history_rqbds; /* max # request buffers in history */
-	int srv_nbufs;             /* total # req buffer descs allocated */
-	int srv_count_peer_qlens:1;
-	uint32_t srv_req_portal;
-	uint32_t srv_rep_portal;
-	uint64_t srv_request_seq;       /* next request sequence # */
-	uint64_t srv_request_max_cull_seq; /* highest seq culled from history */
-	atomic_t            srv_outstanding_replies;
-	struct psclist_head srv_lentry;      /* chain thru all services */
-	struct psclist_head srv_threads;
-	struct psclist_head srv_request_queue;   /* reqs waiting     */
-	struct psclist_head srv_request_history; /* request history */
-	struct psclist_head srv_idle_rqbds;      /* buffers to be reposted */
-	struct psclist_head srv_active_rqbds;    /* req buffers receiving */
-	struct psclist_head srv_history_rqbds;   /* request buffer history */
-	struct psclist_head srv_active_replies;  /* all the active replies */
-	struct psclist_head srv_reply_queue;     /* replies waiting  */
-	struct psclist_head srv_free_rs_list;
-	struct psc_waitq    srv_free_rs_waitq;
-	struct psc_waitq    srv_waitq; /* all threads sleep on this. This
-					* wait-queue is signalled when new
-					* incoming request arrives and when
-					* difficult reply has to be handled. */
-	struct psc_hashtbl srv_peer_qlentab;
+	int			 srv_max_req_size;	/* max request sz to recv  */
+	int			 srv_max_reply_size;	/* biggest reply to send   */
+	int			 srv_buf_size;		/* size of buffers         */
+	int			 srv_nbuf_per_group;
+	int			 srv_watchdog_timeout;	/* soft watchdog timeout, in ms */
+	int			 srv_n_active_reqs;	/* # reqs being served */
+	int			 srv_n_difficult_replies; /* # 'difficult' replies */
+	int			 srv_nthreads;		/* # running threads */
+	int			 srv_failure;		/* we've failed, no new requests */
+	int			 srv_rqbd_timeout;
+	int			 srv_n_queued_reqs;	/* # reqs waiting to be served */
+	int			 srv_nrqbd_receiving;	/* # posted request buffers */
+	int			 srv_n_history_rqbds;	/* # request buffers in history */
+	int			 srv_max_history_rqbds;	/* max # request buffers in history */
+	int			 srv_nbufs;		/* total # req buffer descs allocated */
+	int			 srv_count_peer_qlens:1;
+	uint32_t		 srv_req_portal;
+	uint32_t		 srv_rep_portal;
+	uint64_t		 srv_request_seq;	/* next request sequence # */
+	uint64_t		 srv_request_max_cull_seq; /* highest seq culled from history */
+	atomic_t		 srv_outstanding_replies;
+	struct psclist_head	 srv_lentry;		/* chain thru all services */
+	struct psclist_head	 srv_threads;
+	struct psclist_head	 srv_request_queue;	/* reqs waiting     */
+	struct psclist_head	 srv_request_history;	/* request history */
+	struct psclist_head	 srv_idle_rqbds;	/* buffers to be reposted */
+	struct psclist_head	 srv_active_rqbds;	/* req buffers receiving */
+	struct psclist_head	 srv_history_rqbds;	/* request buffer history */
+	struct psclist_head	 srv_active_replies;	/* all the active replies */
+	struct psclist_head	 srv_reply_queue;	/* replies waiting  */
+	struct psclist_head	 srv_free_rs_list;
+	struct psc_waitq	 srv_free_rs_waitq;
 
-	psc_spinlock_t srv_lock;
-	svc_handler_t  srv_handler;
-	char          *srv_name;  /* only statically allocated strings here,
-				   * we don't clean them */
+	/*
+	 * All threads sleep on this waitq, signalled when new incoming
+	 * requests arrives and when difficult replies are handled.
+	 */
+	struct psc_waitq	 srv_waitq;
+	struct psc_hashtbl	 srv_peer_qlentab;
+
+	psc_spinlock_t		 srv_lock;
+	svc_handler_t		 srv_handler;
+	char			*srv_name;  /* only statically allocated strings here,
+				     * we don't clean them */
+
 	/*
 	 * if non-NULL called during thread creation (pscrpc_start_thread())
 	 * to initialize service specific per-thread state.
 	 */
 	int (*srv_init)(struct psc_thread *);
+
 	/*
 	 * if non-NULL called during thread shutdown (pscrpc_main()) to
 	 * destruct state created by ->srv_init().
@@ -469,7 +473,7 @@ void	 pscrpc_deregister_wait_callback(void *);
 int	 pscrpc_check_events(int);
 int	 pscrpc_wait_event(int);
 int	 pscrpc_ni_init(int);
-int	 pscrpc_init_portals(int);
+void	 pscrpc_init_portals(int);
 
 /* packgeneric.c */
 int	 psc_msg_size(int, int *);
@@ -547,7 +551,11 @@ pscrpc_bulk_active(struct pscrpc_bulk_desc *desc)
 int	 target_send_reply_msg(struct pscrpc_request *, int, int);
 void	 pscrpc_fail_import(struct pscrpc_import *, uint32_t);
 
-/* service.c done */
+struct psc_dynarray;
+
+/* util.c */
+void		pscrpc_getlocalnids(struct psc_dynarray *);
+lnet_nid_t	pscrpc_getnidforpeer(struct psc_dynarray *, lnet_nid_t);
 
 static __inline void
 pscrpc_rs_addref(struct pscrpc_reply_state *rs)
