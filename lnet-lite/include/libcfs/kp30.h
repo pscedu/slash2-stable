@@ -300,12 +300,12 @@ int         libcfs_str2lnd(const char *str);
 char       *libcfs_net2str(__u32 net);
 void        libcfs_net2str2(__u32 net, char []);
 char       *libcfs_nid2str(lnet_nid_t nid);
-void        libcfs_nid2str2(lnet_nid_t nid, char []);
+const char *libcfs_nid2str2(lnet_nid_t nid, char []);
 __u32       libcfs_str2net(const char *str);
 lnet_nid_t  libcfs_str2nid(const char *str);
 int         libcfs_str2anynid(lnet_nid_t *nid, const char *str);
 char       *libcfs_id2str(lnet_process_id_t id);
-void        libcfs_id2str2(lnet_process_id_t id, char []);
+const char *libcfs_id2str2(lnet_process_id_t id, char []);
 void        libcfs_setnet0alias(int type);
 
 /* how an LNET NID encodes net:address */
