@@ -12,6 +12,7 @@ SUBDIRS+=	lock
 SUBDIRS+=	lock2
 SUBDIRS+=	mlock
 SUBDIRS+=	multilock
+SUBDIRS+=	mutex
 SUBDIRS+=	prsig
 SUBDIRS+=	random
 SUBDIRS+=	rwlock
