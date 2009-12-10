@@ -870,29 +870,6 @@ lnet_islocalnet (__u32 net)
         return ni != NULL;
 }
 
-int
-lnet_localnids_get (lnet_nid_t *nids, size_t max)
-{
-        size_t            n=0;
-        lnet_ni_t        *ni;
-        struct list_head *tmp;
-
-        LASSERT(nids);
-
-        LNET_LOCK();
-        LASSERT (the_lnet.ln_init);
-        list_for_each (tmp, &the_lnet.ln_nis) {
-                if (n == max) break;
-                ni = list_entry(tmp, lnet_ni_t, ni_list);
-                if (LNET_NETTYP(LNET_NIDNET(ni->ni_nid)) == LOLND)
-                        continue;
-                nids[n++] = ni->ni_nid;
-        }
-        LNET_UNLOCK();
-
-        return n;
-}
-
 lnet_ni_t  *
 lnet_nid2ni_locked (lnet_nid_t nid)
 {
