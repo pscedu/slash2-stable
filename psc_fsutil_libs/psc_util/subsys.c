@@ -19,8 +19,8 @@ struct psc_subsys {
 	int		 pss_loglevel;
 };
 
-struct dynarray	psc_subsystems = DYNARRAY_INIT;
-int		psc_nsubsys;
+struct psc_dynarray	psc_subsystems = DYNARRAY_INIT;
+int			psc_nsubsys;
 
 int
 psc_subsys_id(const char *name)

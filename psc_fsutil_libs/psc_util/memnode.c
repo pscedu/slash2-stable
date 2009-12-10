@@ -9,7 +9,7 @@
 #include "psc_util/memnode.h"
 
 __static psc_spinlock_t		psc_memnodes_lock = LOCK_INITIALIZER;
-__static struct dynarray	psc_memnodes = DYNARRAY_INIT;
+__static struct psc_dynarray	psc_memnodes = DYNARRAY_INIT;
 __static pthread_key_t		psc_memnodes_key;
 
 void

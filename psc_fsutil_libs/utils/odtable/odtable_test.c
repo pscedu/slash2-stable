@@ -9,14 +9,14 @@
 #include <strings.h>
 #include <unistd.h>
 
+#include "pfl/cdefs.h"
 #include "pfl/pfl.h"
 #include "psc_ds/dynarray.h"
 #include "psc_util/alloc.h"
-#include "pfl/cdefs.h"
 #include "psc_util/log.h"
 #include "psc_util/odtable.h"
 
-struct dynarray myReceipts = DYNARRAY_INIT;
+struct psc_dynarray myReceipts = DYNARRAY_INIT;
 const char *progname;
 
 void

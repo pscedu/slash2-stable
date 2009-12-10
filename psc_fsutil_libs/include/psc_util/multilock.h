@@ -20,7 +20,7 @@ struct vbitmap;
 struct psc_multilock_cond {
 	pthread_mutex_t			 mlc_mutex;
 	pthread_cond_t			 mlc_cond;	/* for single waiters */
-	struct dynarray			 mlc_multilocks;/* where cond is registered */
+	struct psc_dynarray		 mlc_multilocks;/* where cond is registered */
 	struct psc_multilock		*mlc_winner;	/* which multilock awoke first */
 	const void			*mlc_data;	/* pointer to user data */
 	int				 mlc_flags;
@@ -44,8 +44,8 @@ struct psc_multilock {
 	pthread_t			 ml_owner;	/* who woke us */
 	pthread_cond_t			 ml_cond;	/* master condition */
 	struct psc_multilock_cond	*ml_waker;	/* which mlcond woke us */
-	struct dynarray			 ml_conds;	/* registered conditions */
-	struct vbitmap			*ml_mask;	/* which conds can wake us */
+	struct psc_dynarray		 ml_conds;	/* registered conditions */
+	struct psc_vbitmap		*ml_mask;	/* which conds can wake us */
 	int				 ml_flags;
 	char				 ml_name[32];	/* should be 8-byte boundary */
 };

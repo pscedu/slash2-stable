@@ -17,7 +17,7 @@
 
 struct psc_memnode {
 	psc_spinlock_t		pmn_lock;
-	struct dynarray		pmn_keys;
+	struct psc_dynarray	pmn_keys;
 };
 
 struct psc_memnode *

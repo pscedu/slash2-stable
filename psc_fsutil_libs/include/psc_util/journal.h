@@ -59,13 +59,13 @@ struct psc_journal {
 	uint64_t		 pj_lastxid;	/* last transaction ID used */
 	int32_t		 	 pj_nextwrite;	/* next entry slot to write to */
 	struct psclist_head	 pj_pndgxids;
-	struct dynarray		 pj_bufs;
+	struct psc_dynarray	 pj_bufs;
 	struct psc_journal_hdr	*pj_hdr;
 	struct psc_waitq	 pj_waitq;
 	int			 pj_flags;
 };
 
-typedef void (*psc_jhandler)(struct dynarray *, int *);
+typedef void (*psc_jhandler)(struct psc_dynarray *, int *);
 
 /*
  * Start offset to write journal entries (i.e., pje). This means that the log header must be smaller than PJE_OFFSET.

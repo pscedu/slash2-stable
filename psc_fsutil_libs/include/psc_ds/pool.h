@@ -30,7 +30,7 @@ struct psc_poolmgr;
  */
 struct psc_poolset {
 	psc_spinlock_t		  pps_lock;
-	struct dynarray		  pps_pools;		/* poolmasters in set */
+	struct psc_dynarray	  pps_pools;		/* poolmasters in set */
 };
 
 /*
@@ -40,8 +40,8 @@ struct psc_poolset {
  */
 struct psc_poolmaster {
 	psc_spinlock_t		  pms_lock;
-	struct dynarray		  pms_poolmgrs;		/* NUMA pools */
-	struct dynarray		  pms_sets;		/* poolset memberships */
+	struct psc_dynarray	  pms_poolmgrs;		/* NUMA pools */
+	struct psc_dynarray	  pms_sets;		/* poolset memberships */
 
 	/* for initializing memnode poolmgrs */
 	char			  pms_name[PLG_NAME_MAX];

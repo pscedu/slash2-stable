@@ -380,7 +380,7 @@ pjournal_scan_slots(struct psc_journal *pj)
 	int				 nchksum;
 	uint64_t			 last_xid;
 	int32_t				 last_slot;
-	struct dynarray			 closetrans;
+	struct psc_dynarray		 closetrans;
 	uint64_t			 last_startup;
 
 	rc = 0;
@@ -796,7 +796,7 @@ pjournal_replay(const char * fn, psc_jhandler pj_handler)
 	uint64_t			 chksum;
 	int				 ntrans;
 	struct psc_journal_enthdr	*tmppje;
-	struct dynarray			 replaybufs;
+	struct psc_dynarray		 replaybufs;
 
 	pj = pjournal_load(fn);
 	if (pj == NULL)
