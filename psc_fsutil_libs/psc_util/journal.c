@@ -113,13 +113,13 @@ pjournal_logwrite_internal(struct psc_journal_xidhndl *xh, int32_t slot, int typ
 	psc_assert(size + offsetof(struct psc_journal_enthdr, pje_data) <= (size_t)PJ_PJESZ(pj));
 
 	PJ_LOCK(pj);
-	while (!dynarray_len(&pj->pj_bufs)) {
+	while (!psc_dynarray_len(&pj->pj_bufs)) {
 		pj->pj_flags |= PJ_WANTBUF;
 		psc_waitq_wait(&pj->pj_waitq, &pj->pj_lock);
 		PJ_LOCK(pj);
 	}
-	pje = dynarray_getpos(&pj->pj_bufs, 0);
-	dynarray_remove(&pj->pj_bufs, pje);
+	pje = psc_dynarray_getpos(&pj->pj_bufs, 0);
+	psc_dynarray_remove(&pj->pj_bufs, pje);
 	psc_assert(pje);
 	PJ_ULOCK(pj);
 
@@ -163,7 +163,7 @@ pjournal_logwrite_internal(struct psc_journal_xidhndl *xh, int32_t slot, int typ
 	}
 
 	PJ_LOCK(pj);
-	dynarray_add(&pj->pj_bufs, pje);
+	psc_dynarray_add(&pj->pj_bufs, pje);
 	wakeup = 0;
 	if (pj->pj_flags & PJ_WANTBUF) {
 		wakeup = 1;
@@ -321,17 +321,17 @@ pjournal_remove_entries(struct psc_journal *pj, uint64_t xid, int mode)
 	count = 0;
 	while (scan) {
 		scan = 0;
-		for (i = 0; i < dynarray_len(&pj->pj_bufs); i++) {
-			pje = dynarray_getpos(&pj->pj_bufs, i);
+		for (i = 0; i < psc_dynarray_len(&pj->pj_bufs); i++) {
+			pje = psc_dynarray_getpos(&pj->pj_bufs, i);
 			if (mode == 1 && pje->pje_xid == xid) {
-				dynarray_remove(&pj->pj_bufs, pje);
+				psc_dynarray_remove(&pj->pj_bufs, pje);
 				psc_freenl(pje, PJ_PJESZ(pj));
 				scan = 1;
 				count++;
 				break;
 			}
 			if (mode == 2 && pje->pje_xid < xid) {
-				dynarray_remove(&pj->pj_bufs, pje);
+				psc_dynarray_remove(&pj->pj_bufs, pje);
 				psc_freenl(pje, PJ_PJESZ(pj));
 				scan = 1;
 				count++;
@@ -401,10 +401,10 @@ pjournal_scan_slots(struct psc_journal *pj)
 	 * CLOSE entries until we have seen all the entries of the transaction (some of them 
 	 * might have already been overwritten, but that is perfectly fine).
 	 */
-	dynarray_init(&closetrans);
-	dynarray_ensurelen(&closetrans, pj->pj_hdr->pjh_nents / 2);
+	psc_dynarray_init(&closetrans);
+	psc_dynarray_ensurelen(&closetrans, pj->pj_hdr->pjh_nents / 2);
 
-	dynarray_init(&pj->pj_bufs);
+	psc_dynarray_init(&pj->pj_bufs);
 	jbuf = pjournal_alloc_buf(pj);
 	while (slot < pj->pj_hdr->pjh_nents) {
 		if (pj->pj_hdr->pjh_nents - slot >= pj->pj_hdr->pjh_readahead) {
@@ -475,9 +475,9 @@ pjournal_scan_slots(struct psc_journal *pj)
 			tmppje = psc_alloc(PJ_PJESZ(pj), PAF_PAGEALIGN|PAF_LOCK);
 			memcpy(tmppje, &jbuf[PJ_PJESZ(pj) * i], sizeof(*tmppje));
 			if (pje->pje_type & PJE_XCLOSE) {
-				dynarray_add(&closetrans, tmppje);
+				psc_dynarray_add(&closetrans, tmppje);
 			} else {
-				dynarray_add(&pj->pj_bufs, tmppje);
+				psc_dynarray_add(&pj->pj_bufs, tmppje);
 			}
 		}
 		slot += count;
@@ -496,15 +496,15 @@ done:
 	 * We need this code because we don't start from the beginning of the log.
 	 * On the other hand, I don't expect either array will be long.
 	 */
-	while (dynarray_len(&closetrans)) {
-		pje = dynarray_getpos(&closetrans, 0);
+	while (psc_dynarray_len(&closetrans)) {
+		pje = psc_dynarray_getpos(&closetrans, 0);
 		(void)pjournal_remove_entries(pj, pje->pje_xid, 1);
-		dynarray_remove(&closetrans, pje);
+		psc_dynarray_remove(&closetrans, pje);
 		psc_freenl(pje, PJ_PJESZ(pj));
 	}
-	dynarray_free(&closetrans);
+	psc_dynarray_free(&closetrans);
 
-	nopen = dynarray_len(&pj->pj_bufs);
+	nopen = psc_dynarray_len(&pj->pj_bufs);
 	psc_warnx("Journal statistics: %d close, %d open, %d magic, %d chksum, %d scan, %d total", 
 		   nclose, nopen, nmagic, nchksum, nscan, pj->pj_hdr->pjh_nents);
 	return (rc);
@@ -589,7 +589,7 @@ pjournal_load(const char *fn)
 	INIT_PSCLIST_HEAD(&pj->pj_pndgxids);
 	psc_waitq_init(&pj->pj_waitq);
 	pj->pj_flags = PJ_NONE;
-	dynarray_init(&pj->pj_bufs);
+	psc_dynarray_init(&pj->pj_bufs);
 	pj->pj_logname = strdup(fn);
 	if (pj->pj_logname == NULL)
 		psc_fatal("strdup");
@@ -606,7 +606,7 @@ pjournal_close(struct psc_journal *pj)
 
 	DYNARRAY_FOREACH(pje, n, &pj->pj_bufs)
 		psc_freenl(pje, PJ_PJESZ(pj));
-	dynarray_free(&pj->pj_bufs);
+	psc_dynarray_free(&pj->pj_bufs);
 	psc_freenl(pj->pj_hdr, sizeof(*pj->pj_hdr));
 	free(pj->pj_logname);
 	PSCFREE(pj);
@@ -810,20 +810,20 @@ pjournal_replay(const char * fn, psc_jhandler pj_handler)
 		rc = 0;
 		nerrs++;
 	}
-	while (dynarray_len(&pj->pj_bufs)) {
+	while (psc_dynarray_len(&pj->pj_bufs)) {
 
-		pje = dynarray_getpos(&pj->pj_bufs, 0);
+		pje = psc_dynarray_getpos(&pj->pj_bufs, 0);
 		xid = pje->pje_xid;
 
-		dynarray_init(&replaybufs);
-		dynarray_ensurelen(&replaybufs, 1024);
+		psc_dynarray_init(&replaybufs);
+		psc_dynarray_ensurelen(&replaybufs, 1024);
 
-		for (i = 0; i < dynarray_len(&pj->pj_bufs); i++) {
-			tmppje = dynarray_getpos(&pj->pj_bufs, i);
+		for (i = 0; i < psc_dynarray_len(&pj->pj_bufs); i++) {
+			tmppje = psc_dynarray_getpos(&pj->pj_bufs, i);
 			psc_assert(tmppje->pje_len != 0);
 			if (tmppje->pje_xid == xid) {
 				nents++;
-				dynarray_add(&replaybufs, tmppje);
+				psc_dynarray_add(&replaybufs, tmppje);
 			}
 		}
 
@@ -835,10 +835,10 @@ pjournal_replay(const char * fn, psc_jhandler pj_handler)
 		}
 
 		pjournal_remove_entries(pj, xid, 1);
-		dynarray_free(&replaybufs);
+		psc_dynarray_free(&replaybufs);
 	}
-	psc_assert(!dynarray_len(&pj->pj_bufs));
-	dynarray_free(&pj->pj_bufs);
+	psc_assert(!psc_dynarray_len(&pj->pj_bufs));
+	psc_dynarray_free(&pj->pj_bufs);
 
 	/* write a startup marker after replaying all the log entries */
 	pje = psc_alloc(PJ_PJESZ(pj), PAF_PAGEALIGN | PAF_LOCK);
@@ -873,7 +873,7 @@ pjournal_replay(const char * fn, psc_jhandler pj_handler)
 	/* pre-allocate some buffers for log writes */
 	for (i = 0; i < MAX_NUM_PJBUF; i++) {
 		pje = psc_alloc(PJ_PJESZ(pj), PAF_PAGEALIGN|PAF_LOCK);
-		dynarray_add(&pj->pj_bufs, pje);
+		psc_dynarray_add(&pj->pj_bufs, pje);
 	}
 
 	psc_warnx("Journal replay: %d log entries and %d transactions have been redone, error = %d", nents, ntrans, nerrs);

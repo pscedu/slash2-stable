@@ -27,7 +27,7 @@ my_odtcb(void *data, struct odtable_receipt *odtr)
 	psc_warnx("found %s at slot=%"PRId64" odtr=%p",
 		  item, odtr->odtr_elem, odtr);
 
-	dynarray_add(&myReceipts, odtr);
+	psc_dynarray_add(&myReceipts, odtr);
 }
 
 __dead void
@@ -125,16 +125,16 @@ main(int argc, char *argv[])
 	if (num_free) {
 		struct odtable_receipt *odtr = NULL;
 
-		while (dynarray_len(&myReceipts) && num_free--) {
-			odtr = dynarray_getpos(&myReceipts, 0);
+		while (psc_dynarray_len(&myReceipts) && num_free--) {
+			odtr = psc_dynarray_getpos(&myReceipts, 0);
 			psc_warnx("got odtr=%p key=%"PRIx64" slot=%"PRId64,
 				  odtr, odtr->odtr_key, odtr->odtr_elem);
 
 			if (!odtable_freeitem(odt, odtr))
-				dynarray_remove(&myReceipts, odtr);
+				psc_dynarray_remove(&myReceipts, odtr);
 		}
 
-		psc_warnx("# of items left is %d", dynarray_len(&myReceipts));
+		psc_warnx("# of items left is %d", psc_dynarray_len(&myReceipts));
 	}
 
 	rc = odtable_release(odt);

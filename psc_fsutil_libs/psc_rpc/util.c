@@ -24,9 +24,9 @@ pscrpc_getlocalnids(struct psc_dynarray *da)
 
 		nid = PSCALLOC(sizeof(*nid));
 		*nid = prid.nid;
-		dynarray_add(da, nid);
+		psc_dynarray_add(da, nid);
 	}
-	if (dynarray_len(da) == 0)
+	if (psc_dynarray_len(da) == 0)
 		psc_fatalx("no LNET_NETWORKS specified");
 }
 

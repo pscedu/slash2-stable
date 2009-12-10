@@ -49,7 +49,7 @@ psc_multilock_cond_init(struct psc_multilock_cond *mlc, const void *data,
 	va_list ap;
 
 	memset(mlc, 0, sizeof(*mlc));
-	dynarray_init(&mlc->mlc_multilocks);
+	psc_dynarray_init(&mlc->mlc_multilocks);
 	psc_pthread_mutex_init(&mlc->mlc_mutex);
 	pthread_cond_init(&mlc->mlc_cond, NULL);
 	mlc->mlc_data = data;
@@ -72,8 +72,8 @@ psc_multilock_cond_trylockall(struct psc_multilock_cond *mlc)
 	struct psc_multilock **mlv;
 	int nml, j, k;
 
-	nml = dynarray_len(&mlc->mlc_multilocks);
-	mlv = dynarray_get(&mlc->mlc_multilocks);
+	nml = psc_dynarray_len(&mlc->mlc_multilocks);
+	mlv = psc_dynarray_get(&mlc->mlc_multilocks);
 	for (j = 0; j < nml; j++)
 		if (pthread_mutex_trylock(&mlv[j]->ml_mutex)) {
 			for (k = 0; k < j; k++)
@@ -94,8 +94,8 @@ psc_multilock_cond_unlockall(struct psc_multilock_cond *mlc)
 	struct psc_multilock **mlv;
 	int nml, j;
 
-	nml = dynarray_len(&mlc->mlc_multilocks);
-	mlv = dynarray_get(&mlc->mlc_multilocks);
+	nml = psc_dynarray_len(&mlc->mlc_multilocks);
+	mlv = psc_dynarray_get(&mlc->mlc_multilocks);
 	for (j = 0; j < nml; j++)
 		psc_pthread_mutex_unlock(&mlv[j]->ml_mutex);
 }
@@ -113,8 +113,8 @@ psc_multilock_cond_destroy(struct psc_multilock_cond *mlc)
 	count = 0;
  restart:
 	psc_pthread_mutex_lock(&mlc->mlc_mutex);
-	nml = dynarray_len(&mlc->mlc_multilocks);
-	mlv = dynarray_get(&mlc->mlc_multilocks);
+	nml = psc_dynarray_len(&mlc->mlc_multilocks);
+	mlv = psc_dynarray_get(&mlc->mlc_multilocks);
 	for (i = 0; i < nml; i++) {
 		ml = mlv[i];
 		if (pthread_mutex_trylock(&ml->ml_mutex)) {
@@ -126,12 +126,12 @@ psc_multilock_cond_destroy(struct psc_multilock_cond *mlc)
 			sched_yield();
 			goto restart;
 		}
-		dynarray_remove(&ml->ml_conds, mlc);
-		dynarray_remove(&mlc->mlc_multilocks, ml);
+		psc_dynarray_remove(&ml->ml_conds, mlc);
+		psc_dynarray_remove(&mlc->mlc_multilocks, ml);
 		psc_pthread_mutex_unlock(&ml->ml_mutex);
 
 	}
-	dynarray_free(&mlc->mlc_multilocks);
+	psc_dynarray_free(&mlc->mlc_multilocks);
 }
 
 /*
@@ -149,8 +149,8 @@ psc_multilock_masked_cond(const struct psc_multilock *ml,
 
 	/* XXX ensure pthread mutex is held on ml */
 
-	mlcv = dynarray_get(&ml->ml_conds);
-	nmlc = dynarray_len(&ml->ml_conds);
+	mlcv = psc_dynarray_get(&ml->ml_conds);
+	nmlc = psc_dynarray_len(&ml->ml_conds);
 	for (j = 0; j < nmlc; j++)
 		if (mlcv[j] == mlc)
 			return (vbitmap_get(ml->ml_mask, j));
@@ -180,8 +180,8 @@ psc_multilock_cond_wakeup(struct psc_multilock_cond *mlc)
 		sched_yield();
 		goto restart;
 	}
-	nml = dynarray_len(&mlc->mlc_multilocks);
-	mlv = dynarray_get(&mlc->mlc_multilocks);
+	nml = psc_dynarray_len(&mlc->mlc_multilocks);
+	mlv = psc_dynarray_get(&mlc->mlc_multilocks);
 	for (j = 0; j < nml; j++)
 		if (psc_multilock_masked_cond(mlv[j], mlc)) {
 			mlv[j]->ml_waker = mlc;
@@ -237,10 +237,10 @@ psc_multilock_addcond(struct psc_multilock *ml,
 	}
 
 	/* Ensure no associations already exist. */
-	nmlc = dynarray_len(&ml->ml_conds);
-	mlcv = dynarray_get(&ml->ml_conds);
-	nml = dynarray_len(&mlc->mlc_multilocks);
-	mlv = dynarray_get(&mlc->mlc_multilocks);
+	nmlc = psc_dynarray_len(&ml->ml_conds);
+	mlcv = psc_dynarray_get(&ml->ml_conds);
+	nml = psc_dynarray_len(&mlc->mlc_multilocks);
+	mlv = psc_dynarray_get(&mlc->mlc_multilocks);
 
 	for (j = 0; j < nmlc; j++)
 		if (mlcv[j] == mlc)
@@ -252,25 +252,25 @@ psc_multilock_addcond(struct psc_multilock *ml,
 			    ml->ml_name, mlc->mlc_name);
 
 	/* Associate multilock with the condition. */
-	if (dynarray_add(&ml->ml_conds, mlc) == -1) {
+	if (psc_dynarray_add(&ml->ml_conds, mlc) == -1) {
 		rc = -1;
 		goto done;
 	}
-	if (dynarray_add(&mlc->mlc_multilocks, ml) == -1) {
+	if (psc_dynarray_add(&mlc->mlc_multilocks, ml) == -1) {
 		rc = -1;
-		dynarray_remove(&ml->ml_conds, mlc);
+		psc_dynarray_remove(&ml->ml_conds, mlc);
 		goto done;
 	}
 
-	nmlc = dynarray_len(&ml->ml_conds);
+	nmlc = psc_dynarray_len(&ml->ml_conds);
 	if (vbitmap_resize(ml->ml_mask, nmlc) == -1) {
 		rc = -1;
-		dynarray_remove(&mlc->mlc_multilocks, ml);
-		dynarray_remove(&ml->ml_conds, mlc);
+		psc_dynarray_remove(&mlc->mlc_multilocks, ml);
+		psc_dynarray_remove(&ml->ml_conds, mlc);
 		goto done;
 	}
-	qsort(dynarray_get(&mlc->mlc_multilocks),
-	    dynarray_len(&mlc->mlc_multilocks),
+	qsort(psc_dynarray_get(&mlc->mlc_multilocks),
+	    psc_dynarray_len(&mlc->mlc_multilocks),
 	    sizeof(void *), psc_multilock_cmp);
 	psc_vbitmap_setval(ml->ml_mask, nmlc - 1, masked);
 
@@ -290,7 +290,7 @@ psc_multilock_init(struct psc_multilock *ml, const char *name, ...)
 	va_list ap;
 
 	memset(ml, 0, sizeof(*ml));
-	dynarray_init(&ml->ml_conds);
+	psc_dynarray_init(&ml->ml_conds);
 	psc_pthread_mutex_init(&ml->ml_mutex);
 	pthread_cond_init(&ml->ml_cond, NULL);
 	ml->ml_mask = vbitmap_new(0);
@@ -310,7 +310,7 @@ void
 psc_multilock_free(struct psc_multilock *ml)
 {
 	psc_multilock_reset(ml);
-	dynarray_free(&ml->ml_conds);
+	psc_dynarray_free(&ml->ml_conds);
 	vbitmap_free(ml->ml_mask);
 }
 
@@ -329,8 +329,8 @@ psc_multilock_mask_cond(struct psc_multilock *ml,
 
 	psc_pthread_mutex_lock(&ml->ml_mutex);
 	ml->ml_owner = pthread_self();
-	nmlc = dynarray_len(&ml->ml_conds);
-	mlcv = dynarray_get(&ml->ml_conds);
+	nmlc = psc_dynarray_len(&ml->ml_conds);
+	mlcv = psc_dynarray_get(&ml->ml_conds);
 	for (j = 0; j < nmlc; j++)
 		if (mlcv[j] == mlc) {
 			if (set)
@@ -369,8 +369,8 @@ psc_multilock_wait(struct psc_multilock *ml, void *datap, int usec)
 			goto checkwaker;
 	}
 
-	nmlc = dynarray_len(&ml->ml_conds);
-	mlcv = dynarray_get(&ml->ml_conds);
+	nmlc = psc_dynarray_len(&ml->ml_conds);
+	mlcv = psc_dynarray_get(&ml->ml_conds);
 
 	if (nmlc == 0)
 		psc_fatalx("multilock has no conditions and will never wake up");
@@ -454,8 +454,8 @@ psc_multilock_reset(struct psc_multilock *ml)
  restart:
 	psc_pthread_mutex_lock(&ml->ml_mutex);
 	ml->ml_owner = pthread_self();
-	nmlc = dynarray_len(&ml->ml_conds);
-	mlcv = dynarray_get(&ml->ml_conds);
+	nmlc = psc_dynarray_len(&ml->ml_conds);
+	mlcv = psc_dynarray_get(&ml->ml_conds);
 
 	for (j = 0; j < nmlc; j++) {
 		/*
@@ -470,21 +470,21 @@ psc_multilock_reset(struct psc_multilock *ml)
 			goto restart;
 		}
 
-		dynarray_remove(&mlcv[0]->mlc_multilocks, ml);
+		psc_dynarray_remove(&mlcv[0]->mlc_multilocks, ml);
 		/*
-		 * dynarray_remove() will swap the last elem with the
+		 * psc_dynarray_remove() will swap the last elem with the
 		 * new empty slot, so we should resort to peserve
 		 * ordering semantics.
 		 */
-		qsort(dynarray_get(&mlcv[0]->mlc_multilocks),
-		    dynarray_len(&mlcv[0]->mlc_multilocks),
+		qsort(psc_dynarray_get(&mlcv[0]->mlc_multilocks),
+		    psc_dynarray_len(&mlcv[0]->mlc_multilocks),
 		    sizeof(void *), psc_multilock_cmp);
 		psc_pthread_mutex_unlock(&mlcv[0]->mlc_mutex);
 		/* Remove it so we don't process it twice. */
-		dynarray_remove(&ml->ml_conds, mlcv[0]);
+		psc_dynarray_remove(&ml->ml_conds, mlcv[0]);
 	}
 
-	dynarray_reset(&ml->ml_conds);
+	psc_dynarray_reset(&ml->ml_conds);
 	vbitmap_resize(ml->ml_mask, 0);
 	ml->ml_flags = 0;
 	ml->ml_owner = 0;
@@ -504,7 +504,7 @@ psc_multilock_cond_nwaiters(struct psc_multilock_cond *mlc)
 	int n;
 
 	psc_pthread_mutex_lock(&mlc->mlc_mutex);
-	n = dynarray_len(&mlc->mlc_multilocks);
+	n = psc_dynarray_len(&mlc->mlc_multilocks);
 	psc_pthread_mutex_unlock(&mlc->mlc_mutex);
 	return (n);
 }
@@ -549,8 +549,8 @@ psc_multilock_hascond(struct psc_multilock *ml, struct psc_multilock_cond *mlc)
 
 	rc = 0;
 	psc_pthread_mutex_lock(&ml->ml_mutex);
-	nmlc = dynarray_len(&ml->ml_conds);
-	mlcv = dynarray_get(&ml->ml_conds);
+	nmlc = psc_dynarray_len(&ml->ml_conds);
+	mlcv = psc_dynarray_get(&ml->ml_conds);
 	for (j = 0; j < nmlc; j++)
 		if (mlcv[j] == mlc) {
 			rc = 1;
@@ -572,8 +572,8 @@ psc_multilock_prconds(struct psc_multilock *ml)
 
 	psc_pthread_mutex_lock(&ml->ml_mutex);
 
-	nmlc = dynarray_len(&ml->ml_conds);
-	mlcv = dynarray_get(&ml->ml_conds);
+	nmlc = psc_dynarray_len(&ml->ml_conds);
+	mlcv = psc_dynarray_get(&ml->ml_conds);
 
 	for (j = 0; j < nmlc; j++)
 		printf(" ml %s has mlc %s (masked %s)\n",

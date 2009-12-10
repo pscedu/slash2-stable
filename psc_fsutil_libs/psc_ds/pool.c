@@ -57,8 +57,8 @@ _psc_poolmaster_init(struct psc_poolmaster *p, size_t entsize,
 
 	memset(p, 0, sizeof(*p));
 	LOCK_INIT(&p->pms_lock);
-	dynarray_init(&p->pms_poolmgrs);
-	dynarray_init(&p->pms_sets);
+	psc_dynarray_init(&p->pms_poolmgrs);
+	psc_dynarray_init(&p->pms_sets);
 	p->pms_reclaimcb = reclaimcb;
 	p->pms_destroyf = destroyf;
 	p->pms_entsize = entsize;
@@ -139,9 +139,9 @@ _psc_poolmaster_getmgr(struct psc_poolmaster *p, int memnid)
 	struct psc_poolmgr *m, **mv;
 
 	spinlock(&p->pms_lock);
-	if (dynarray_ensurelen(&p->pms_poolmgrs, memnid + 1) == -1)
+	if (psc_dynarray_ensurelen(&p->pms_poolmgrs, memnid + 1) == -1)
 		psc_fatal("unable to resize poolmgrs");
-	mv = dynarray_get(&p->pms_poolmgrs);
+	mv = psc_dynarray_get(&p->pms_poolmgrs);
 	m = mv[memnid];
 	if (m == NULL) {
 		mv[memnid] = m = PSCALLOC(sizeof(*m));
@@ -357,8 +357,8 @@ _psc_pool_reap(struct psc_poolset *s, struct psc_poolmaster *initiator,
 	culprit = NULL;
 	culpritmx = tmx = 0;
 	spinlock(&s->pps_lock);
-	np = dynarray_len(&s->pps_pools);
-	pv = dynarray_get(&s->pps_pools);
+	np = psc_dynarray_len(&s->pps_pools);
+	pv = psc_dynarray_get(&s->pps_pools);
 	for (i = 0; i < np; i++) {
 		p = pv[i];
 		if (p == initiator)
@@ -467,8 +467,8 @@ psc_pool_get(struct psc_poolmgr *m)
 
 	/* If communal, try reaping other pools in sets. */
 	locked = reqlock(&m->ppm_master->pms_lock);
-	for (n = 0; n < dynarray_len(&m->ppm_master->pms_sets); n++)
-		_psc_pool_reap(dynarray_getpos(&m->ppm_master->pms_sets, n),
+	for (n = 0; n < psc_dynarray_len(&m->ppm_master->pms_sets); n++)
+		_psc_pool_reap(psc_dynarray_getpos(&m->ppm_master->pms_sets, n),
 		    m->ppm_master, m->ppm_lg.plg_entsize);
 	ureqlock(&m->ppm_master->pms_lock, locked);
 	if (n)
@@ -606,7 +606,7 @@ void
 psc_poolset_init(struct psc_poolset *s)
 {
 	LOCK_INIT(&s->pps_lock);
-	dynarray_init(&s->pps_pools);
+	psc_dynarray_init(&s->pps_pools);
 }
 
 /*
@@ -623,14 +623,14 @@ psc_poolset_enlist(struct psc_poolset *s, struct psc_poolmaster *p)
 	locked2 = reqlock(&p->pms_lock);
 	if (locked == 0 && locked2)
 		psc_fatalx("deadlock ordering");
-	if (dynarray_exists(&s->pps_pools, p))
+	if (psc_dynarray_exists(&s->pps_pools, p))
 		psc_fatalx("pool already exists in set");
-	if (dynarray_exists(&p->pms_sets, s))
+	if (psc_dynarray_exists(&p->pms_sets, s))
 		psc_fatalx("pool already member of set");
-	if (dynarray_add(&s->pps_pools, p) == -1)
-		psc_fatalx("dynarray_add");
-	if (dynarray_add(&p->pms_sets, s) == -1)
-		psc_fatalx("dynarray_add");
+	if (psc_dynarray_add(&s->pps_pools, p) == -1)
+		psc_fatalx("psc_dynarray_add");
+	if (psc_dynarray_add(&p->pms_sets, s) == -1)
+		psc_fatalx("psc_dynarray_add");
 	ureqlock(&p->pms_lock, locked2);
 	ureqlock(&s->pps_lock, locked);
 }
@@ -649,8 +649,8 @@ psc_poolset_disbar(struct psc_poolset *s, struct psc_poolmaster *p)
 	locked2 = reqlock(&p->pms_lock);
 	if (locked == 0 && locked2)
 		psc_fatalx("deadlock ordering");
-	dynarray_remove(&s->pps_pools, p);
-	dynarray_remove(&p->pms_sets, s);
+	psc_dynarray_remove(&s->pps_pools, p);
+	psc_dynarray_remove(&p->pms_sets, s);
 	ureqlock(&p->pms_lock, locked2);
 	ureqlock(&s->pps_lock, locked);
 }

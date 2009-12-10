@@ -28,8 +28,8 @@ psc_subsys_id(const char *name)
 	const struct psc_subsys **ss;
 	int n, len;
 
-	ss = dynarray_get(&psc_subsystems);
-	len = dynarray_len(&psc_subsystems);
+	ss = psc_dynarray_get(&psc_subsystems);
+	len = psc_dynarray_len(&psc_subsystems);
 	for (n = 0; n < len; n++)
 		if (strcasecmp(name, ss[n]->pss_name) == 0)
 			return (n);
@@ -43,7 +43,7 @@ psc_subsys_name(int ssid)
 
 	if (ssid < 0 || ssid >= psc_nsubsys)
 		return ("<unknown>");
-	ss = dynarray_getpos(&psc_subsystems, ssid);
+	ss = psc_dynarray_getpos(&psc_subsystems, ssid);
 	return (ss->pss_name);
 }
 
@@ -70,7 +70,7 @@ psc_subsys_register(int ssid, const char *name)
 	} else
 		ss->pss_loglevel = psc_log_getlevel_global();
 
-	dynarray_add(&psc_subsystems, ss);
+	psc_dynarray_add(&psc_subsystems, ss);
 	if (psc_nsubsys++ != ssid)
 		psc_fatalx("bad ID %d for subsys %s [want %d], "
 		    "check order", ssid, name, psc_nsubsys);
@@ -84,7 +84,7 @@ psc_log_getlevel_ss(int ssid)
 	if (ssid >= psc_nsubsys || ssid < 0)
 		/* must use errx(3) here to avoid loops with psclog */
 		errx(1, "subsystem out of bounds (%d)", ssid);
-	ss = dynarray_getpos(&psc_subsystems, ssid);
+	ss = psc_dynarray_getpos(&psc_subsystems, ssid);
 	return (ss->pss_loglevel);
 }
 
@@ -97,7 +97,7 @@ psc_log_setlevel_ss(int ssid, int newlevel)
 	if (newlevel >= PNLOGLEVELS || newlevel < 0)
 		psc_fatalx("log level out of bounds (%d)", newlevel);
 
-	ss = dynarray_get(&psc_subsystems);
+	ss = psc_dynarray_get(&psc_subsystems);
 
 	if (ssid == PSS_ALL)
 		for (i = 0; i < psc_nsubsys; i++)
