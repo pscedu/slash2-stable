@@ -143,20 +143,6 @@ int pscrpc_put_connection(struct pscrpc_connection *c)
 	RETURN(rc);
 }
 
-char *
-psc_nid2str(lnet_nid_t addr, char str[PSC_NIDSTR_SIZE])
-{
-	libcfs_nid2str2(addr, str);
-	return (str);
-}
-
-char *
-psc_id2str(lnet_process_id_t addr, char str[PSC_NIDSTR_SIZE])
-{
-	libcfs_id2str2(addr, str);
-	return (str);
-}
-
 void
 pscrpc_drop_conns(lnet_process_id_t *peer)
 {
