@@ -48,10 +48,13 @@ PSCRPC_SRCS+=		${PFL_BASE}/psc_rpc/connection.c
 PSCRPC_SRCS+=		${PFL_BASE}/psc_rpc/events.c
 PSCRPC_SRCS+=		${PFL_BASE}/psc_rpc/export.c
 PSCRPC_SRCS+=		${PFL_BASE}/psc_rpc/import.c
+PSCRPC_SRCS+=		${PFL_BASE}/psc_rpc/nb.c
 PSCRPC_SRCS+=		${PFL_BASE}/psc_rpc/niobuf.c
 PSCRPC_SRCS+=		${PFL_BASE}/psc_rpc/packgeneric.c
 PSCRPC_SRCS+=		${PFL_BASE}/psc_rpc/rpcclient.c
+PSCRPC_SRCS+=		${PFL_BASE}/psc_rpc/rsx.c
 PSCRPC_SRCS+=		${PFL_BASE}/psc_rpc/service.c
+PSCRPC_SRCS+=		${PFL_BASE}/psc_rpc/util.c
 
 _TINCLUDES=		$(filter-out -I%,${INCLUDES}) $(patsubst %,-I%,$(foreach \
 			dir,$(patsubst -I%,%,$(filter -I%,${INCLUDES})), $(realpath ${dir})))
@@ -178,9 +181,9 @@ hdrclean:
 	${HDRCLEAN} */*.[clyh]
 
 # empty but overrideable
-prereq:
+build-prereq:
 
-build: prereq
+build: build-prereq
 	${MAKE} clean && ${MAKE} depend && ${MAKE}
 
 #CS_ARGS+=-s${APP_BASE}
