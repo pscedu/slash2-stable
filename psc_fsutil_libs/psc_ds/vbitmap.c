@@ -154,7 +154,7 @@ psc_vbitmap_get(const struct psc_vbitmap *vb, size_t elem)
 
 	bytes = elem / NBBY;
 	pos = elem % NBBY;
-	return (vb->vb_start[bytes] & (1 << pos));
+	return ((vb->vb_start[bytes] & (1 << pos)) >> pos);
 }
 
 /**
