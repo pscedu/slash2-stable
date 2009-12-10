@@ -32,7 +32,7 @@ _psc_pool_reapsome(__unusedx size_t size)
  * @flags: operational flags.
  */
 void *
-psc_realloc(void *p, size_t size, int flags)
+_psc_realloc(void *p, size_t size, int flags)
 {
 	int rc, save_errno;
 	void *newp;

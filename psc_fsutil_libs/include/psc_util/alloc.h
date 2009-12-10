@@ -28,17 +28,26 @@
 		(p) = NULL;						\
 	} while (0)
 
-#define psc_alloc(sz, fl)						\
-	({								\
+#define _PSC_REALLOC(oldp, sz, fl)					\
+	{								\
 		void *__p;						\
 									\
-		__p = psc_realloc(NULL, (sz), (fl));			\
-		if (((fl) & PAF_NOLOG) == 0)				\
-			psc_traces(PSS_MEM,				\
-			    "alloc %p sz=%zu fl=%d", __p,		\
-			    (size_t)(sz), (fl));			\
+		__p = _psc_realloc((oldp), (sz), (fl));			\
+		if (((fl) & PAF_NOLOG) == 0) {				\
+			if (oldp)					\
+				psc_traces(PSS_MEM,			\
+				    "realloc %p->%p sz=%zu fl=%d",	\
+				    (oldp), __p, (size_t)(sz), (fl));	\
+			else						\
+				psc_traces(PSS_MEM,			\
+				    "alloc %p sz=%zu fl=%d", __p,	\
+				    (size_t)(sz), (fl));		\
+		}							\
 		__p;							\
-	})
+	}
+
+#define psc_alloc(sz, fl)	(_PSC_REALLOC(NULL, (sz), (fl)))
+#define psc_realloc(p, sz, fl)	(_PSC_REALLOC((p), (sz), (fl)))
 
 /* allocation flags */
 #define PAF_CANFAIL	(1 << 0)	/* return NULL instead of fatal */
@@ -48,7 +57,7 @@
 #define PAF_NOZERO	(1 << 4)	/* don't force memory zeroing */
 #define PAF_NOLOG	(1 << 5)	/* don't psclog this allocation */
 
-void	*psc_realloc(void *, size_t, int);
+void	*_psc_realloc(void *, size_t, int);
 void	*psc_calloc(size_t, size_t, int);
 void	 psc_freel(void *, size_t);
 void	 psc_freen(void *);
