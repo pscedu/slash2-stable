@@ -63,6 +63,7 @@ pfl
     PSC_CTLRET_BAIL - drop the connection
 
   give them obscure values (42,43) and ensure they are returned
+- ensure everything in pscrpc land is prefixed with 'pscrpc'
 
 zest
 - research faster CRC operations
