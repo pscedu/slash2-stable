@@ -77,12 +77,12 @@ void
 _psc_vbitmap_free(struct psc_vbitmap *vb)
 {
 	if ((vb->vb_flags & PVBF_EXTALLOC) == 0)
-		free(vb->vb_start);
+		PSCFREE(vb->vb_start);
 	vb->vb_start = NULL;
 	vb->vb_end = NULL;
 	vb->vb_pos = NULL;
 	if ((vb->vb_flags & PVBF_STATIC) == 0)
-		free(vb);
+		PSCFREE(vb);
 }
 
 /**
@@ -353,6 +353,7 @@ psc_vbitmap_next(struct psc_vbitmap *vb, size_t *elem)
 		int newsiz;
 
 		newsiz = psc_vbitmap_getsize(vb) + 1;
+		/* XXX allocate some extra slack here too? */
 		if (psc_vbitmap_resize(vb, newsiz) == -1)
 			return (-1);
 		psc_vbitmap_setnextpos(vb, newsiz);
@@ -396,30 +397,35 @@ int
 psc_vbitmap_resize(struct psc_vbitmap *vb, size_t newsize)
 {
 	unsigned char *start;
-	ptrdiff_t pos, end;
+	ptrdiff_t pos, len;
 	size_t siz;
 
 	pos = vb->vb_pos - vb->vb_start;
-	end = vb->vb_end - vb->vb_start;
+	len = vb->vb_end - vb->vb_start;
 
 	siz = howmany(newsize, NBBY);
-	start = psc_realloc(vb->vb_start, siz, 0);
-	/* special case for resizing NULL vbitmaps */
-	if (vb->vb_start == NULL)
-		memset(start, 0, siz);
-	vb->vb_start = start;
-	if (siz)
-		vb->vb_end = start + siz - 1;
-	else
-		vb->vb_end = start;
+	if (vb->vb_start && siz == (size_t)len + 1)
+		/* resizing inside a byte; no mem alloc changes necessary */
+		VB_CLEAR_UNALLOC(vb);
+	else {
+		start = psc_realloc(vb->vb_start, siz, 0);
+		/* special case for resizing NULL vbitmaps */
+		if (vb->vb_start == NULL)
+			memset(start, 0, siz);
+		vb->vb_start = start;
+		if (siz)
+			vb->vb_end = start + siz - 1;
+		else
+			vb->vb_end = start;
+	}
 	vb->vb_lastsize = newsize % NBBY;
 	vb->vb_pos = start + pos;
 	if (vb->vb_pos > vb->vb_end)
 		vb->vb_pos = vb->vb_start;
 
 	/* Initialize new sections of the bitmap to zero. */
-	if (siz > (size_t)end)
-		memset(start + end + 1, 0, siz - end - 1);
+	if (siz > (size_t)len)
+		memset(start + len + 1, 0, siz - len - 1);
 	if (newsize && vb->vb_lastsize == 0)
 		vb->vb_lastsize = NBBY;
 	return (0);
