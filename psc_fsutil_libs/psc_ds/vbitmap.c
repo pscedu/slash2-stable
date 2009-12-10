@@ -328,7 +328,7 @@ int
 psc_vbitmap_next(struct psc_vbitmap *vb, size_t *elem)
 {
 	unsigned char *start, *pos;
-	int bytepos;
+	int rc, bytepos;
 
  retry:
 	pos = start = vb->vb_pos;
@@ -356,7 +356,9 @@ psc_vbitmap_next(struct psc_vbitmap *vb, size_t *elem)
 		/* XXX allocate some extra slack here too? */
 		if (psc_vbitmap_resize(vb, newsiz) == -1)
 			return (-1);
-		psc_vbitmap_setnextpos(vb, newsiz);
+		rc = psc_vbitmap_setnextpos(vb, newsiz - 1);
+		if (rc)
+			psc_fatalx("setnextpos: %d", rc);
 		goto retry;
 	}
 	return (0);
@@ -380,11 +382,13 @@ psc_vbitmap_next(struct psc_vbitmap *vb, size_t *elem)
 int
 psc_vbitmap_setnextpos(struct psc_vbitmap *vb, int slot)
 {
-	if (slot)
-		slot >>= 3;
-	if (slot < 0 || vb->vb_start + slot > vb->vb_end)
+	if (slot < 0)
 		return (EINVAL);
-	vb->vb_pos = vb->vb_start + slot;
+	if (vb->vb_start + slot / NBBY > vb->vb_end)
+		return (EINVAL);
+	if (slot % NBBY > vb->vb_lastsize)
+		return (EINVAL);
+	vb->vb_pos = vb->vb_start + slot / NBBY;
 	return (0);
 }
 
