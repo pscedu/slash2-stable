@@ -95,7 +95,6 @@ zest
 - when ppm_total is set less than lc_size for !PPMF_AUTO, set
   ppm_max and check this value in other places to eventually
   decrease pool size
-- move zestThread.h into zestion/ subdir
 - think about more ways to shorten disk idle time
 - add auth checks into fdbuf from slash
 - auto tune hash table sizes
