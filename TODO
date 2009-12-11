@@ -64,6 +64,10 @@ pfl
 
   give them obscure values (42,43) and ensure they are returned
 - ensure everything in pscrpc land is prefixed with 'pscrpc'
+- RETURN() used in code is actually from libcfs.h
+- rename bitflag.h -> bitstr.h
+- let caller worry about memory for vbitmaps, don't return pointers
+- bail if multiwait_addcond() fails
 
 zest
 - research faster CRC operations
@@ -83,7 +87,7 @@ zest
   because there could still be open fd's to it, built into zsyncmgt
 - new pull model for zest server to client:
   server RPCIO threads issue GETs to connected mount_zests
-    (o) need some way to "multilock" on multiple requests sent
+    (o) need some way to "multiwait" on multiple requests sent
 	to different clients
 - when mount_zest is idle, have it merge dirty zcf zsb channels
 - ensure libzestclient is not paritying over partial buffers

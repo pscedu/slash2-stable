@@ -189,8 +189,8 @@ main(int argc, char *argv[])
 	PRTYPE(struct psc_mlist);
 	PRTYPE(struct psc_msg);
 	PRTYPE(struct psc_mspinlock);
-	PRTYPE(struct psc_multilock);
-	PRTYPE(struct psc_multilock_cond);
+	PRTYPE(struct psc_multiwait);
+	PRTYPE(struct psc_multiwaitcond);
 	PRTYPE(struct psc_nodemask);
 	PRTYPE(struct psc_poolmaster);
 	PRTYPE(struct psc_poolmgr);

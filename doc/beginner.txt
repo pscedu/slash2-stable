@@ -1,6 +1,6 @@
 $Id$
 
-Starting Guide for PFL, Zest, and Slash
+Starting Guide for PFL, Zest, and SLASH
 
 Terminology
 ===========
@@ -105,8 +105,8 @@ psc_fsutil_libs (PFL) - utility library defining common data structures
      +-	psc_types.h - primitive data types
      +-	psc_ds - code implementing various data structures
      |
-     |	 	dynarray - dynamically resizable arrays using realloc()
-     |	 	hash2 - hash table API
+     |		dynarray - dynamically resizable arrays using realloc()
+     |		hash2 - hash table API
      |			(o) automatically registered for export/control
      |		list - linux/list.h rewrite, lightweight linked list implementation,
      |			NOT thread-safe (these routines must be invoked mutually
@@ -193,7 +193,7 @@ psc_fsutil_libs (PFL) - utility library defining common data structures
      |
      |		meter - API for progress meters
      |		mkdirs - "mkdir -p" in a function
-     |		multilock - pthread_cond-like API for waiting of any of
+     |		multiwait - pthread_cond/psc_waitq-like API for waiting of any of
      |			number of conditions to occur
      |		printhex - simple data printer in hexadecimal for debugging
      |		prsig - signal(2) behavior dumper
@@ -216,7 +216,7 @@ psc_fsutil_libs (PFL) - utility library defining common data structures
 slash_nara - root of slash-specific code
  +- include - shared include files
  |
- |   	buffer - slab buffers for memory-resident file portions
+ |	buffer - slab buffers for memory-resident file portions
  |	fid - global file ID definitions
  |	fidcache - managing a collection of in-core files
  |	inode - one in-core file
@@ -339,7 +339,7 @@ Writing a PFL Program
   Every PFL application must invoke pfl_init() before it can access most
   PFL APIs.  This routine:
     (o) creates the subsystem facility to allow fine-grained logging
-        capabilities
+	capabilities
     (o) initializes the thread subsystem
     (o) initializes the NUMA local memory access subsystem
     (o) parses the environment as described in pflenv(7)

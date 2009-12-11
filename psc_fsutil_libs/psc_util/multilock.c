@@ -1,10 +1,8 @@
 /* $Id$ */
 
 /*
- * Multiple lock routines: for waiting on any number of
- * conditions to become available.
- *
- * XXX rename this to multiwaitq
+ * Multiwait: for waiting on any of a number of conditions to become
+ * available.
  */
 
 #include <sys/time.h>
@@ -16,379 +14,377 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "pfl/cdefs.h"
 #include "psc_ds/vbitmap.h"
 #include "psc_util/alloc.h"
-#include "pfl/cdefs.h"
+#include "psc_util/bitflag.h"
 #include "psc_util/log.h"
 #include "psc_util/multilock.h"
 #include "psc_util/pthrutil.h"
 
-/*
- * psc_multilock_cmp - Compare two multilocks, used for sorting.  Sorting is
- *	necessary to avoid deadlocking.
- * @a: a multilock
- * @b: another multilock
+/**
+ * psc_multiwait_cmp - Compare two multiwaits, used for sorting.
+ *	Sorting is necessary to avoid deadlocking as everyone will
+ *	try to quire locks in the same order instead of in the
+ *	order they were registered.
+ * @a: a multiwait.
+ * @b: another multiwait.
  */
 __static int
-psc_multilock_cmp(const void *a, const void *b)
+psc_multiwait_cmp(const void *a, const void *b)
 {
-	struct psc_multilock *const *mla = a, *const *mlb = b;
+	struct psc_multiwait *const *mwa = a, *const *mwb = b;
 
-	return (CMP(*mla, *mlb));
+	return (CMP(*mwa, *mwb));
 }
 
 /**
- * psc_multilock_cond_init - initialize a multilock condition.
- * @mlc: the condition to initialize.
+ * psc_multiwaitcond_init - Initialize a multiwait condition.
+ * @mwc: the condition to initialize.
  * @data: pointer to user data.
+ * @flags: behavioral flags.
+ * @name: printf(3)-like name.
  */
 void
-psc_multilock_cond_init(struct psc_multilock_cond *mlc, const void *data,
+psc_multiwaitcond_init(struct psc_multiwaitcond *mwc, const void *data,
     int flags, const char *name, ...)
 {
 	va_list ap;
 
-	memset(mlc, 0, sizeof(*mlc));
-	psc_dynarray_init(&mlc->mlc_multilocks);
-	psc_pthread_mutex_init(&mlc->mlc_mutex);
-	pthread_cond_init(&mlc->mlc_cond, NULL);
-	mlc->mlc_data = data;
-	mlc->mlc_flags = flags;
+	memset(mwc, 0, sizeof(*mwc));
+	psc_dynarray_init(&mwc->mwc_multiwaits);
+	psc_pthread_mutex_init(&mwc->mwc_mutex);
+	pthread_cond_init(&mwc->mwc_cond, NULL);
+	mwc->mwc_data = data;
+	mwc->mwc_flags = flags;
 
 	va_start(ap, name);
-	vsnprintf(mlc->mlc_name, sizeof(mlc->mlc_name), name, ap);
+	vsnprintf(mwc->mwc_name, sizeof(mwc->mwc_name), name, ap);
 	va_end(ap);
 }
 
-/*
- * psc_multilock_cond_trylockall - try to lock all multilocks this
+/**
+ * psc_multiwaitcond_trylockallmw - Try to lock all multiwaits this
  *	condition is a member of.
- * @mlc: a multilock condition, which must itself be locked.
+ * @mwc: a multiwaitcond, which must itself be locked.
  * Returns zero on success, -1 on failure.
  */
 __static int
-psc_multilock_cond_trylockall(struct psc_multilock_cond *mlc)
+psc_multiwaitcond_trylockallmw(struct psc_multiwaitcond *mwc)
 {
-	struct psc_multilock **mlv;
-	int nml, j, k;
+	struct psc_multiwait *mw;
+	int rc, j, k;
 
-	nml = psc_dynarray_len(&mlc->mlc_multilocks);
-	mlv = psc_dynarray_get(&mlc->mlc_multilocks);
-	for (j = 0; j < nml; j++)
-		if (pthread_mutex_trylock(&mlv[j]->ml_mutex)) {
-			for (k = 0; k < j; k++)
-				psc_pthread_mutex_unlock(&mlv[k]->ml_mutex);
+	DYNARRAY_FOREACH(mw, j, &mwc->mwc_multiwaits) {
+		rc = pthread_mutex_trylock(&mw->mw_mutex);
+		if (rc == EBUSY) {
+			/*
+			 * Unable to lock them all; release what we did
+			 * lock and give up.
+			 */
+			for (k = 0; k < j; k++) {
+				mw = psc_dynarray_getpos(&mwc->mwc_multiwaits, k);
+				psc_pthread_mutex_unlock(&mw->mw_mutex);
+			}
 			return (-1);
 		}
+		if (rc)
+			psc_fatalx("pthread_mutex_trylock: %s", strerror(rc));
+	}
 	return (0);
 }
 
-/*
- * psc_multilock_cond_unlockall - unlock all multilocks this
+/**
+ * psc_multiwaitcond_unlockallmw - Unlock all multiwaits this
  *	condition is a member of.
- * @mlc: a multilock condition, which must itself be locked.
+ * @mwc: a multiwait condition, which must itself be locked.
  */
 __static void
-psc_multilock_cond_unlockall(struct psc_multilock_cond *mlc)
+psc_multiwaitcond_unlockallmw(struct psc_multiwaitcond *mwc)
 {
-	struct psc_multilock **mlv;
-	int nml, j;
+	struct psc_multiwait *mw;
+	int j;
 
-	nml = psc_dynarray_len(&mlc->mlc_multilocks);
-	mlv = psc_dynarray_get(&mlc->mlc_multilocks);
-	for (j = 0; j < nml; j++)
-		psc_pthread_mutex_unlock(&mlv[j]->ml_mutex);
+	DYNARRAY_FOREACH(mw, j, &mwc->mwc_multiwaits)
+		psc_pthread_mutex_unlock(&mw->mw_mutex);
 }
 
 /**
- * psc_multilock_cond_destroy - release a multilock condition.
- * @mlc: the condition to release.
+ * psc_multiwaitcond_destroy - Release a multiwait condition.
+ * @mwc: the condition to release.
  */
 void
-psc_multilock_cond_destroy(struct psc_multilock_cond *mlc)
+psc_multiwaitcond_destroy(struct psc_multiwaitcond *mwc)
 {
-	struct psc_multilock *ml, **mlv;
-	int nml, i, count;
+	struct psc_multiwait *mw;
+	int j, k, count;
 
 	count = 0;
  restart:
-	psc_pthread_mutex_lock(&mlc->mlc_mutex);
-	nml = psc_dynarray_len(&mlc->mlc_multilocks);
-	mlv = psc_dynarray_get(&mlc->mlc_multilocks);
-	for (i = 0; i < nml; i++) {
-		ml = mlv[i];
-		if (pthread_mutex_trylock(&ml->ml_mutex)) {
+	psc_pthread_mutex_lock(&mwc->mwc_mutex);
+	DYNARRAY_FOREACH(mw, j, &mwc->mwc_multiwaits) {
+		if (pthread_mutex_trylock(&mw->mw_mutex)) {
 			if (count++ == 300000)
-				psc_errorx("mlcond %s failed to lock his "
-				    "multilocks - possible deadlock if this "
-				    "message repeats", mlc->mlc_name);
-			psc_pthread_mutex_unlock(&mlc->mlc_mutex);
+				psc_errorx("mwcond %s failed to lock his "
+				    "multiwaits after many attempts, "
+				    "possible deadlock", mwc->mwc_name);
+			psc_pthread_mutex_unlock(&mwc->mwc_mutex);
 			sched_yield();
 			goto restart;
 		}
-		psc_dynarray_remove(&ml->ml_conds, mlc);
-		psc_dynarray_remove(&mlc->mlc_multilocks, ml);
-		psc_pthread_mutex_unlock(&ml->ml_mutex);
+		if (mw->mw_flags & PMWF_CRITSECT &&
+		    mw->mw_waker == mwc)
+			psc_fatalx("waking condition %s wants to go away "
+			    "but may corrupt integrity of multiwait %s",
+			    mwc->mwc_name, mw->mw_name);
+		psc_assert(psc_dynarray_len(&mw->mw_conds) ==
+		    (int)psc_vbitmap_getsize(mw->mw_condmask));
 
+		k = psc_dynarray_remove(&mw->mw_conds, mwc);
+		pfl_bitstr_copy(&mw->mw_condmask, k, &mw->mw_condmask,
+		    k + 1, psc_vbitmap_getsize(mw->mw_condmask) - k);
+		psc_vbitmap_resize(mw->mw_condmask,
+		    psc_dynarray_len(&mw->mw_conds));
+		psc_pthread_mutex_unlock(&mw->mw_mutex);
+
+		psc_dynarray_remove(&mwc->mwc_multiwaits, mw);
 	}
-	psc_dynarray_free(&mlc->mlc_multilocks);
+	/* XXX: ensure no one is waiting on this mutex? */
+	psc_dynarray_free(&mwc->mwc_multiwaits);
 }
 
-/*
- * psc_multilock_masked_cond - determine if a condition is masked
- *	off in a multilock.
- * @ml: multilock to check in, which must be locked.
- * @mlc: condition to check for.
+/**
+ * psc_multiwait_iscondwakeable - Determine if a condition is masked
+ *	off in a multiwait.
+ * @mw: multiwait to check in, which must be locked.
+ * @mwc: condition to check for.
  */
 int
-psc_multilock_masked_cond(const struct psc_multilock *ml,
-    const struct psc_multilock_cond *mlc)
+psc_multiwait_iscondwakeable(struct psc_multiwait *mw,
+    const struct psc_multiwaitcond *mwc)
 {
-	struct psc_multilock_cond **mlcv;
-	int nmlc, j;
+	struct psc_multiwaitcond *c;
+	int j;
 
-	/* XXX ensure pthread mutex is held on ml */
-
-	mlcv = psc_dynarray_get(&ml->ml_conds);
-	nmlc = psc_dynarray_len(&ml->ml_conds);
-	for (j = 0; j < nmlc; j++)
-		if (mlcv[j] == mlc)
-			return (vbitmap_get(ml->ml_mask, j));
-	psc_fatalx("could not find condition in multilock");
+	psc_pthread_mutex_ensure_locked(&mw->mw_mutex);
+	DYNARRAY_FOREACH(c, j, &mw->mw_conds)
+		if (c == mwc)
+			return (psc_vbitmap_get(mw->mw_condmask, j));
+	psc_fatalx("could not find condition %s in multiwait %s",
+	    mwc->mwc_name, mw->mw_name);
 }
 
-/*
- * psc_multilock_cond_wakeup - wakeup multilocks waiting on a condition.
- * @mlc: a multilock condition, which must be unlocked on entry
+/**
+ * psc_multiwaitcond_wakeup - wakeup multiwaits waiting on a condition.
+ * @mwc: a multiwait condition, which must be unlocked on entry
  *	and will be locked on exit.
  */
 void
-psc_multilock_cond_wakeup(struct psc_multilock_cond *mlc)
+psc_multiwaitcond_wakeup(struct psc_multiwaitcond *mwc)
 {
-	struct psc_multilock **mlv;
-	int nml, j, count;
+	struct psc_multiwait *mw;
+	int j, count;
 
 	count = 0;
  restart:
-	psc_pthread_mutex_lock(&mlc->mlc_mutex);
-	if (psc_multilock_cond_trylockall(mlc)) {
+	psc_pthread_mutex_lock(&mwc->mwc_mutex);
+	if (psc_multiwaitcond_trylockallmw(mwc)) {
 		if (count++ == 300000)
-			psc_errorx("mlcond %s failed to lock his "
-			    "multilocks - possible deadlock if this "
-			    "message repeats", mlc->mlc_name);
-		psc_pthread_mutex_unlock(&mlc->mlc_mutex);
+			psc_errorx("mwcond %s failed to lock his "
+			    "multiwaits after attempting many times,"
+			    "possible deadlock", mwc->mwc_name);
+		psc_pthread_mutex_unlock(&mwc->mwc_mutex);
 		sched_yield();
 		goto restart;
 	}
-	nml = psc_dynarray_len(&mlc->mlc_multilocks);
-	mlv = psc_dynarray_get(&mlc->mlc_multilocks);
-	for (j = 0; j < nml; j++)
-		if (psc_multilock_masked_cond(mlv[j], mlc)) {
-			mlv[j]->ml_waker = mlc;
-			pthread_cond_signal(&mlv[j]->ml_cond);
+	DYNARRAY_FOREACH(mw, j, &mwc->mwc_multiwaits)
+		if (psc_multiwait_iscondwakeable(mw, mwc)) {
+			mw->mw_waker = mwc;
+			pthread_cond_signal(&mw->mw_cond);
 		}
-	psc_multilock_cond_unlockall(mlc);
-	pthread_cond_signal(&mlc->mlc_cond);
-	psc_pthread_mutex_unlock(&mlc->mlc_mutex);
+	psc_multiwaitcond_unlockallmw(mwc);
+	pthread_cond_signal(&mwc->mwc_cond);
+	mwc->mwc_winner = NULL;
+	psc_pthread_mutex_unlock(&mwc->mwc_mutex);
 }
 
-/*
- * psc_multilock_cond_wait - Wait for one condition to occur.
- * @mlc: the multilockable condition to wait for.
+/**
+ * psc_multiwaitcond_wait - Wait for one condition to occur.
+ * @mwc: the multiwait condition to wait for.
  * @mutex: an optional mutex that will be unlocked in the critical section,
  *	for avoiding missed wakeups from races.
  */
 void
-psc_multilock_cond_wait(struct psc_multilock_cond *mlc, pthread_mutex_t *mutex)
+psc_multiwaitcond_wait(struct psc_multiwaitcond *mwc, pthread_mutex_t *mutex)
 {
 	int rc;
 
-	psc_pthread_mutex_lock(&mlc->mlc_mutex);
-	psc_pthread_mutex_unlock(mutex);
-	rc = pthread_cond_wait(&mlc->mlc_cond, &mlc->mlc_mutex);
+	psc_pthread_mutex_lock(&mwc->mwc_mutex);
+	if (mutex)
+		psc_pthread_mutex_unlock(mutex);
+	rc = pthread_cond_wait(&mwc->mwc_cond, &mwc->mwc_mutex);
 	if (rc)
 		psc_fatalx("pthread_cond_wait: %s", strerror(rc));
-	psc_pthread_mutex_unlock(&mlc->mlc_mutex);
+	psc_pthread_mutex_unlock(&mwc->mwc_mutex);
 }
 
-/*
- * psc_multilock_addcond - add a condition to a multilock.
- * @ml: a multilock.
- * @mlc: the multilock condition to add.
- * @masked: whether condition is active.
+/**
+ * psc_multiwait_addcond - add a condition to a multiwait.
+ * @mw: a multiwait.
+ * @mwc: the condition to add.
+ * @active: whether condition is active.
  */
 int
-psc_multilock_addcond(struct psc_multilock *ml,
-    struct psc_multilock_cond *mlc, int masked)
+_psc_multiwait_addcond(struct psc_multiwait *mw,
+    struct psc_multiwaitcond *mwc, int active)
 {
-	struct psc_multilock_cond **mlcv;
-	struct psc_multilock **mlv;
-	int rc, nmlc, nml, j;
+	struct psc_multiwaitcond *c;
+	struct psc_multiwait *m;
+	int rc, j;
 
-	rc = 0;
-
- restart:
-	psc_pthread_mutex_lock(&mlc->mlc_mutex);
-
-	if (pthread_mutex_trylock(&ml->ml_mutex)) {
-		psc_pthread_mutex_unlock(&mlc->mlc_mutex);
+	/* Acquire locks. */
+	for (;;) {
+		psc_pthread_mutex_lock(&mwc->mwc_mutex);
+		rc = pthread_mutex_trylock(&mw->mw_mutex);
+		if (rc == 0)
+			break;
+		if (rc != EBUSY)
+			psc_fatalx("pthread_mutex_trylock: %s",
+			    strerror(rc));
+		psc_pthread_mutex_unlock(&mwc->mwc_mutex);
 		sched_yield();
-		goto restart;
 	}
 
 	/* Ensure no associations already exist. */
-	nmlc = psc_dynarray_len(&ml->ml_conds);
-	mlcv = psc_dynarray_get(&ml->ml_conds);
-	nml = psc_dynarray_len(&mlc->mlc_multilocks);
-	mlv = psc_dynarray_get(&mlc->mlc_multilocks);
+	DYNARRAY_FOREACH(c, j, &mw->mw_conds)
+		if (c == mwc)
+			psc_fatalx("mwc %s already registered in multiwait %s",
+			    mwc->mwc_name, mw->mw_name);
+	DYNARRAY_FOREACH(m, j, &mwc->mwc_multiwaits)
+		if (m == mw)
+			psc_fatalx("mw %s already registered multiwaitcond %s",
+			    mw->mw_name, mwc->mwc_name);
 
-	for (j = 0; j < nmlc; j++)
-		if (mlcv[j] == mlc)
-			psc_fatalx("mlc %s already registered in multilock %s",
-			    mlc->mlc_name, ml->ml_name);
-	for (j = 0; j < nml; j++)
-		if (mlv[j] == ml)
-			psc_fatalx("ml %s already registered multilock_cond %s",
-			    ml->ml_name, mlc->mlc_name);
+	psc_assert(psc_dynarray_len(&mw->mw_conds) ==
+	    (int)psc_vbitmap_getsize(mw->mw_condmask));
 
-	/* Associate multilock with the condition. */
-	if (psc_dynarray_add(&ml->ml_conds, mlc) == -1) {
+	/* Associate each with each other. */
+	if (psc_dynarray_add(&mw->mw_conds, mwc) == -1) {
 		rc = -1;
 		goto done;
 	}
-	if (psc_dynarray_add(&mlc->mlc_multilocks, ml) == -1) {
+	if (psc_dynarray_add(&mwc->mwc_multiwaits, mw) == -1) {
 		rc = -1;
-		psc_dynarray_remove(&ml->ml_conds, mlc);
+		psc_dynarray_remove(&mw->mw_conds, mwc);
 		goto done;
 	}
 
-	nmlc = psc_dynarray_len(&ml->ml_conds);
-	if (vbitmap_resize(ml->ml_mask, nmlc) == -1) {
+	j = psc_dynarray_len(&mw->mw_conds);
+	if (psc_vbitmap_resize(mw->mw_condmask, j) == -1) {
 		rc = -1;
-		psc_dynarray_remove(&mlc->mlc_multilocks, ml);
-		psc_dynarray_remove(&ml->ml_conds, mlc);
+		psc_dynarray_remove(&mwc->mwc_multiwaits, mw);
+		psc_dynarray_remove(&mw->mw_conds, mwc);
 		goto done;
 	}
-	qsort(psc_dynarray_get(&mlc->mlc_multilocks),
-	    psc_dynarray_len(&mlc->mlc_multilocks),
-	    sizeof(void *), psc_multilock_cmp);
-	psc_vbitmap_setval(ml->ml_mask, nmlc - 1, masked);
+	qsort(psc_dynarray_get(&mwc->mwc_multiwaits),
+	    psc_dynarray_len(&mwc->mwc_multiwaits),
+	    sizeof(void *), psc_multiwait_cmp);
+	psc_vbitmap_setval(mw->mw_condmask, j - 1, active);
 
  done:
-	psc_pthread_mutex_unlock(&ml->ml_mutex);
-	psc_pthread_mutex_unlock(&mlc->mlc_mutex);
+	psc_pthread_mutex_unlock(&mw->mw_mutex);
+	psc_pthread_mutex_unlock(&mwc->mwc_mutex);
 	return (rc);
 }
 
-/*
- * psc_multilock_init - initialize a multilock.
- * @ml: the multilock to initialize.
+/**
+ * psc_multiwait_init - Initialize a multiwait.
+ * @mw: the multiwait to initialize.
  */
 void
-psc_multilock_init(struct psc_multilock *ml, const char *name, ...)
+psc_multiwait_init(struct psc_multiwait *mw, const char *name, ...)
 {
 	va_list ap;
 
-	memset(ml, 0, sizeof(*ml));
-	psc_dynarray_init(&ml->ml_conds);
-	psc_pthread_mutex_init(&ml->ml_mutex);
-	pthread_cond_init(&ml->ml_cond, NULL);
-	ml->ml_mask = vbitmap_new(0);
-	if (ml->ml_mask == NULL)
+	memset(mw, 0, sizeof(*mw));
+	psc_dynarray_init(&mw->mw_conds);
+	psc_pthread_mutex_init(&mw->mw_mutex);
+	pthread_cond_init(&mw->mw_cond, NULL);
+	mw->mw_condmask = psc_vbitmap_new(0);
+	if (mw->mw_condmask == NULL)
 		psc_fatal("vbitmap_new");
 
 	va_start(ap, name);
-	vsnprintf(ml->ml_name, sizeof(ml->ml_name), name, ap);
+	vsnprintf(mw->mw_name, sizeof(mw->mw_name), name, ap);
 	va_end(ap);
 }
 
-/*
- * psc_multilock_free - destroy a multilock.
- * @ml: the multilock to release.
+/**
+ * psc_multiwait_free - Destroy a multiwait.
+ * @mw: the multiwait to release.
  */
 void
-psc_multilock_free(struct psc_multilock *ml)
+psc_multiwait_free(struct psc_multiwait *mw)
 {
-	psc_multilock_reset(ml);
-	psc_dynarray_free(&ml->ml_conds);
-	vbitmap_free(ml->ml_mask);
+	psc_multiwait_reset(mw);
+	psc_dynarray_free(&mw->mw_conds);
+	psc_vbitmap_free(mw->mw_condmask);
 }
 
-/*
- * psc_multilock_mask_cond - update multilock active condition mask.
- * @ml: the multilock.
- * @mlc: the condition to mask.
- * @set: whether to add or remove it from the mask.
+/**
+ * psc_multiwait_setcondwakeable - Update a multiwait's active
+ *	conditions mask.
+ * @mw: the multiwait whose mask to modify.
+ * @mwc: the condition in the mask to modify.
+ * @active: whether the condition can wake the multiwait.
  */
 void
-psc_multilock_mask_cond(struct psc_multilock *ml,
-    const struct psc_multilock_cond *mlc, int set)
+psc_multiwait_setcondwakeable(struct psc_multiwait *mw,
+    const struct psc_multiwaitcond *mwc, int active)
 {
-	struct psc_multilock_cond **mlcv;
-	int nmlc, j;
+	struct psc_multiwaitcond *c;
+	int j;
 
-	psc_pthread_mutex_lock(&ml->ml_mutex);
-	ml->ml_owner = pthread_self();
-	nmlc = psc_dynarray_len(&ml->ml_conds);
-	mlcv = psc_dynarray_get(&ml->ml_conds);
-	for (j = 0; j < nmlc; j++)
-		if (mlcv[j] == mlc) {
-			if (set)
-				vbitmap_set(ml->ml_mask, j);
-			else
-				vbitmap_unset(ml->ml_mask, j);
-			ml->ml_owner = 0;
-			psc_pthread_mutex_unlock(&ml->ml_mutex);
+	psc_pthread_mutex_lock(&mw->mw_mutex);
+	DYNARRAY_FOREACH(c, j, &mw->mw_conds)
+		if (c == mwc) {
+			psc_vbitmap_setval(mw->mw_condmask, j, active);
+			psc_pthread_mutex_unlock(&mw->mw_mutex);
 			return;
 		}
-	psc_fatalx("couldn't find cond %s in multilock %s\n",
-	    mlc->mlc_name, ml->ml_name);
+	psc_fatalx("couldn't find mwcond %s in multiwait %s",
+	    mwc->mwc_name, mw->mw_name);
 }
 
-/*
- * psc_multilock_wait - wait for any condition in a multilock to change.
- * @ml: the multilock to wait on.
- * @data: pointer to user data filled in from the multilock_cond.
- * @usec: # microseconds till timeout.
- */
 int
-psc_multilock_wait(struct psc_multilock *ml, void *datap, int usec)
+psc_multiwaitus(struct psc_multiwait *mw, void *datap, int usec)
 {
-	struct psc_multilock_cond *mlc, **mlcv;
-	int rc, allmasked, won, nmlc, j;
+	struct psc_multiwaitcond *mwc;
+	int rc, won, j;
 
 	won = 0;
  restart:
-	psc_pthread_mutex_lock(&ml->ml_mutex);
-	ml->ml_owner = pthread_self();
+	psc_pthread_mutex_lock(&mw->mw_mutex);
 
 	/* Check for missed wakeups during a critical section. */
-	if (ml->ml_flags & PMLF_CRITSECT) {
-		ml->ml_flags &= ~PMLF_CRITSECT;
-		if (ml->ml_waker)
+	if (mw->mw_flags & PMWF_CRITSECT) {
+		mw->mw_flags &= ~PMWF_CRITSECT;
+		if (mw->mw_waker)
 			goto checkwaker;
 	}
 
-	nmlc = psc_dynarray_len(&ml->ml_conds);
-	mlcv = psc_dynarray_get(&ml->ml_conds);
+	if (psc_dynarray_len(&mw->mw_conds) == 0)
+		psc_fatalx("multiwait %s has no conditions and "
+		    "will never wake up", mw->mw_name);
 
-	if (nmlc == 0)
-		psc_fatalx("multilock has no conditions and will never wake up");
+	/* check for no active conditions */
+	for (j = 0; j < psc_dynarray_len(&mw->mw_conds); j++)
+		if (psc_vbitmap_get(mw->mw_condmask, j))
+			goto wait;
+	psc_fatalx("multiwait %s has all conditions masked and "
+	    "will never wake up", mw->mw_name);
 
-	allmasked = 1;
-	for (j = 0; j < nmlc; j++) {
-		/* check if all conditions have been masked off */
-		if (allmasked && vbitmap_get(ml->ml_mask, j))
-			allmasked = 0;
-
-		psc_pthread_mutex_lock(&mlcv[j]->mlc_mutex);
-		mlcv[j]->mlc_winner = NULL;
-		psc_pthread_mutex_unlock(&mlcv[j]->mlc_mutex);
-	}
-
-	if (allmasked)
-		psc_fatalx("multilock has all conditions masked and will never wake up");
-
+ wait:
 	if (usec) {
 		struct timeval tv, res, adj;
 		struct timespec ntv;
@@ -401,184 +397,170 @@ psc_multilock_wait(struct psc_multilock *ml, void *datap, int usec)
 		ntv.tv_sec = res.tv_sec;
 		ntv.tv_nsec = res.tv_usec * 1000;
 
-		rc = pthread_cond_timedwait(&ml->ml_cond,
-		    &ml->ml_mutex, &ntv);
+		rc = pthread_cond_timedwait(&mw->mw_cond,
+		    &mw->mw_mutex, &ntv);
 		if (rc == ETIMEDOUT) {
-			psc_pthread_mutex_unlock(&ml->ml_mutex);
+			psc_pthread_mutex_unlock(&mw->mw_mutex);
 			return (-ETIMEDOUT);
 		}
 		if (rc)
 			psc_fatalx("pthread_cond_timedwait: %s",
 			    strerror(rc));
 	} else {
-		rc = pthread_cond_wait(&ml->ml_cond, &ml->ml_mutex);
+		rc = pthread_cond_wait(&mw->mw_cond, &mw->mw_mutex);
 		if (rc)
 			psc_fatalx("pthread_cond_wait: %s", strerror(rc));
 	}
 
  checkwaker:
-	mlc = ml->ml_waker;
-	ml->ml_owner = 0;
-	psc_pthread_mutex_unlock(&ml->ml_mutex);
+	mwc = mw->mw_waker;
+	mw->mw_waker = NULL;
+	mw->mw_flags |= PMWF_CRITSECT;
+	psc_pthread_mutex_unlock(&mw->mw_mutex);
 
-	psc_pthread_mutex_lock(&mlc->mlc_mutex);
-	if (mlc->mlc_flags & PMLCF_WAKEALL) {
-		*(void **)datap = (void *)mlc->mlc_data;
+	psc_pthread_mutex_lock(&mwc->mwc_mutex);
+	if (mwc->mwc_flags & PMWCF_WAKEALL) {
+		*(void **)datap = (void *)mwc->mwc_data;
 		won = 1;
-	} else if (mlc->mlc_winner == NULL) {
-		*(void **)datap = (void *)mlc->mlc_data;
-		mlc->mlc_winner = ml;
+	} else if (mwc->mwc_winner == NULL) {
+		*(void **)datap = (void *)mwc->mwc_data;
+		mwc->mwc_winner = mw;
 		won = 1;
 	}
 
-	psc_pthread_mutex_unlock(&mlc->mlc_mutex);
+	psc_pthread_mutex_unlock(&mwc->mwc_mutex);
 
 	if (!won) {
 		sched_yield();
 		goto restart;
 	}
+	psc_multiwait_leavecritsect(mw);
 	return (0);
 }
 
-/*
- * psc_multilock_reset - release all conditions from a multilock and reclaim
- *	all of a multilock's associated memory.
- * @ml: the multilock to reset.
+/**
+ * psc_multiwait_reset - Release all conditions and release all*
+ *	associated memory rom a multiwait.
+ * @mw: the multiwait to reset.
  */
 void
-psc_multilock_reset(struct psc_multilock *ml)
+psc_multiwait_reset(struct psc_multiwait *mw)
 {
-	struct psc_multilock_cond **mlcv;
-	int nmlc, j;
+	struct psc_multiwaitcond *mwc;
 
  restart:
-	psc_pthread_mutex_lock(&ml->ml_mutex);
-	ml->ml_owner = pthread_self();
-	nmlc = psc_dynarray_len(&ml->ml_conds);
-	mlcv = psc_dynarray_get(&ml->ml_conds);
+	psc_pthread_mutex_lock(&mw->mw_mutex);
+	while (psc_dynarray_len(&mw->mw_conds) > 0) {
+		mwc = psc_dynarray_getpos(&mw->mw_conds, 0);
 
-	for (j = 0; j < nmlc; j++) {
-		/*
-		 * XXX the order everywhere else here is to
-		 * lock the mlc then the ml, so our violation
-		 * here may be bad news.
-		 */
-		if (pthread_mutex_trylock(&mlcv[0]->mlc_mutex)) {
-			ml->ml_owner = 0;
-			psc_pthread_mutex_unlock(&ml->ml_mutex);
+		/* XXX we violate the locking order of mwc then mw */
+		if (pthread_mutex_trylock(&mwc->mwc_mutex)) {
+			psc_pthread_mutex_unlock(&mw->mw_mutex);
 			sched_yield();
 			goto restart;
 		}
 
-		psc_dynarray_remove(&mlcv[0]->mlc_multilocks, ml);
+		psc_dynarray_remove(&mwc->mwc_multiwaits, mw);
+
 		/*
-		 * psc_dynarray_remove() will swap the last elem with the
-		 * new empty slot, so we should resort to peserve
+		 * psc_dynarray_remove() will swap the last elem with
+		 * the new empty slot, so we should resort to peserve
 		 * ordering semantics.
 		 */
-		qsort(psc_dynarray_get(&mlcv[0]->mlc_multilocks),
-		    psc_dynarray_len(&mlcv[0]->mlc_multilocks),
-		    sizeof(void *), psc_multilock_cmp);
-		psc_pthread_mutex_unlock(&mlcv[0]->mlc_mutex);
+		qsort(psc_dynarray_get(&mwc->mwc_multiwaits),
+		    psc_dynarray_len(&mwc->mwc_multiwaits),
+		    sizeof(void *), psc_multiwait_cmp);
+		psc_pthread_mutex_unlock(&mwc->mwc_mutex);
 		/* Remove it so we don't process it twice. */
-		psc_dynarray_remove(&ml->ml_conds, mlcv[0]);
+		psc_dynarray_remove(&mw->mw_conds, mwc);
 	}
-
-	psc_dynarray_reset(&ml->ml_conds);
-	vbitmap_resize(ml->ml_mask, 0);
-	ml->ml_flags = 0;
-	ml->ml_owner = 0;
-	psc_pthread_mutex_unlock(&ml->ml_mutex);
+	psc_dynarray_reset(&mw->mw_conds);
+	vbitmap_resize(mw->mw_condmask, 0);
+	mw->mw_flags = 0;
+	mw->mw_waker = NULL;
+	psc_pthread_mutex_unlock(&mw->mw_mutex);
 }
 
 /*
- * psc_multilock_cond_nwaiters - count the number of waiters sleeping
- *	on a multilock condition.  The count may differ from the
- *	value in mlc->mlc_nmultilocks since there may be gaps in
- *	the array of multilocks when they are coming and going.
- * @mlc: the multilock condition to check.
+ * psc_multiwaitcond_nwaiters - count the number of waiters sleeping
+ *	on a multiwait condition.
+ * @mwc: the multiwait condition to check.
  */
 size_t
-psc_multilock_cond_nwaiters(struct psc_multilock_cond *mlc)
+psc_multiwaitcond_nwaiters(struct psc_multiwaitcond *mwc)
 {
 	int n;
 
-	psc_pthread_mutex_lock(&mlc->mlc_mutex);
-	n = psc_dynarray_len(&mlc->mlc_multilocks);
-	psc_pthread_mutex_unlock(&mlc->mlc_mutex);
+	psc_pthread_mutex_lock(&mwc->mwc_mutex);
+	n = psc_dynarray_len(&mwc->mwc_multiwaits);
+	psc_pthread_mutex_unlock(&mwc->mwc_mutex);
 	return (n);
 }
 
-/*
- * psc_multilock_enter_critsect - enter a critical section.
- * @ml: the multilock.
+/**
+ * psc_multiwait_entercritsect - Enter a multiwait critical section.
+ * @mw: the multiwait.
  */
 void
-psc_multilock_enter_critsect(struct psc_multilock *ml)
+psc_multiwait_entercritsect(struct psc_multiwait *mw)
 {
-	psc_pthread_mutex_lock(&ml->ml_mutex);
-	ml->ml_flags |= PMLF_CRITSECT;
-	ml->ml_waker = NULL;
-	psc_pthread_mutex_unlock(&ml->ml_mutex);
+	psc_pthread_mutex_lock(&mw->mw_mutex);
+	mw->mw_flags |= PMWF_CRITSECT;
+	mw->mw_waker = NULL;
+	psc_pthread_mutex_unlock(&mw->mw_mutex);
 }
 
 /*
- * psc_multilock_leave_critsect - leave a critical section.
- * @ml: the multilock.
+ * psc_multiwait_leavecritsect - Leave a multiwait critical section.
+ * @mw: the multiwait.
  */
 void
-psc_multilock_leave_critsect(struct psc_multilock *ml)
+psc_multiwait_leavecritsect(struct psc_multiwait *mw)
 {
-	psc_pthread_mutex_lock(&ml->ml_mutex);
-	ml->ml_flags &= ~PMLF_CRITSECT;
-	/* XXX should release any captured events */
-	psc_pthread_mutex_unlock(&ml->ml_mutex);
+	psc_pthread_mutex_lock(&mw->mw_mutex);
+	mw->mw_flags &= ~PMWF_CRITSECT;
+	mw->mw_waker = NULL;
+	psc_pthread_mutex_unlock(&mw->mw_mutex);
 }
 
 /*
- * psc_multilock_hascond - determine if a condition has been registered in a
- *	multilock.
- * @ml: the multilock.
- * @mlc: the multilock condition to check the existence of.
+ * psc_multiwait_hascond - Determine if a condition has been registered in a
+ *	multiwait.
+ * @mw: the multiwait.
+ * @mwc: the multiwait condition to check the existence of.
  */
 int
-psc_multilock_hascond(struct psc_multilock *ml, struct psc_multilock_cond *mlc)
+psc_multiwait_hascond(struct psc_multiwait *mw, struct psc_multiwaitcond *mwc)
 {
-	struct psc_multilock_cond **mlcv;
-	int nmlc, j, rc;
+	struct psc_multiwaitcond *c;
+	int j, rc;
 
 	rc = 0;
-	psc_pthread_mutex_lock(&ml->ml_mutex);
-	nmlc = psc_dynarray_len(&ml->ml_conds);
-	mlcv = psc_dynarray_get(&ml->ml_conds);
-	for (j = 0; j < nmlc; j++)
-		if (mlcv[j] == mlc) {
+	psc_pthread_mutex_lock(&mw->mw_mutex);
+	DYNARRAY_FOREACH(c, j, &mw->mw_conds)
+		if (c == mwc) {
 			rc = 1;
 			break;
 		}
-	psc_pthread_mutex_unlock(&ml->ml_mutex);
+	psc_pthread_mutex_unlock(&mw->mw_mutex);
 	return (rc);
 }
 
 /*
- * psc_multilock_prconds - print list of conditions registered in a multilock.
- * @ml: the multilock to dump.
+ * psc_multiwait_prconds - Print list of conditions registered in a multiwait.
+ * @mw: the multiwait to dump.
  */
 void
-psc_multilock_prconds(struct psc_multilock *ml)
+psc_multiwait_prconds(struct psc_multiwait *mw)
 {
-	struct psc_multilock_cond **mlcv;
-	int j, nmlc;
+	struct psc_multiwaitcond *mwc;
+	int locked, j;
 
-	psc_pthread_mutex_lock(&ml->ml_mutex);
-
-	nmlc = psc_dynarray_len(&ml->ml_conds);
-	mlcv = psc_dynarray_get(&ml->ml_conds);
-
-	for (j = 0; j < nmlc; j++)
-		printf(" ml %s has mlc %s (masked %s)\n",
-		    ml->ml_name, mlcv[j]->mlc_name,
-		    psc_multilock_masked_cond(ml, mlcv[j]) ? "on" : "off");
-
-	psc_pthread_mutex_unlock(&ml->ml_mutex);
+	locked = psc_pthread_mutex_reqlock(&mw->mw_mutex);
+	DYNARRAY_FOREACH(mwc, j, &mw->mw_conds)
+		printf(" multiwait %s has mwc %s (%s)\n",
+		    mw->mw_name, mwc->mwc_name,
+		    psc_multiwait_iscondwakeable(mw, mwc) ?
+		    "enabled" : "disabled");
+	psc_pthread_mutex_ureqlock(&mw->mw_mutex, locked);
 }

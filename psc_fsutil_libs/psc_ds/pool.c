@@ -11,12 +11,12 @@
 
 #include <errno.h>
 
+#include "pfl/cdefs.h"
 #include "psc_ds/dynarray.h"
 #include "psc_ds/listcache.h"
 #include "psc_ds/lockedlist.h"
 #include "psc_ds/pool.h"
 #include "psc_util/alloc.h"
-#include "pfl/cdefs.h"
 #include "psc_util/lock.h"
 #include "psc_util/log.h"
 #include "psc_util/pthrutil.h"
@@ -51,7 +51,7 @@ _psc_poolmaster_init(struct psc_poolmaster *p, size_t entsize,
     ptrdiff_t offset, int flags, int total, int min, int max,
     int (*initf)(struct psc_poolmgr *, void *), void (*destroyf)(void *),
     int (*reclaimcb)(struct psc_poolmgr *),
-    void *mlcarg, const char *namefmt, ...)
+    void *mwcarg, const char *namefmt, ...)
 {
 	va_list ap;
 
@@ -69,7 +69,7 @@ _psc_poolmaster_init(struct psc_poolmaster *p, size_t entsize,
 	p->pms_min = min;
 	p->pms_max = max;
 	p->pms_thres = POOL_AUTOSIZE_THRESH;
-	p->pms_mlcarg = mlcarg;
+	p->pms_mwcarg = mwcarg;
 
 	va_start(ap, namefmt);
 	vsnprintf(p->pms_name, sizeof(p->pms_name), namefmt, ap);
@@ -95,11 +95,11 @@ _psc_poolmaster_initmgr(struct psc_poolmaster *p, struct psc_poolmgr *m)
 
 	if (POOL_IS_MLIST(m)) {
 #ifdef HAVE_NUMA
-		_psc_mlist_init(&m->ppm_ml, PMLCF_WAKEALL, p->pms_mlcarg,
+		_psc_mlist_init(&m->ppm_ml, PMWCF_WAKEALL, p->pms_mwcarg,
 		    p->pms_entsize, p->pms_offset, "%s:%d", p->pms_name,
 		    psc_memnode_getid());
 #else
-		_psc_mlist_init(&m->ppm_ml, PMLCF_WAKEALL, p->pms_mlcarg,
+		_psc_mlist_init(&m->ppm_ml, PMWCF_WAKEALL, p->pms_mwcarg,
 		    p->pms_entsize, p->pms_offset, "%s", p->pms_name);
 #endif
 	} else {
@@ -476,8 +476,8 @@ psc_pool_get(struct psc_poolmgr *m)
 
 	/*
 	 * Try once more, if nothing, a condition should be added to the
-	 * multilock.  This invocation should have been done in a
-	 * multilock critical section to prevent dropping notifications.
+	 * multiwait.  This invocation should have been done in a
+	 * multiwait critical section to prevent dropping notifications.
 	 */
 	if (POOL_IS_MLIST(m))
 		return (POOL_GETOBJ(m));

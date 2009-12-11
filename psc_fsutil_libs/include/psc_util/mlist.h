@@ -1,15 +1,15 @@
 /* $Id$ */
 
 /*
- * Multilockable lists.
+ * Lists which interface with multiwaits.
  *
- * mlists are like psclist_caches but work with multilocks, so threads
+ * mlists are like psclist_caches but work with multiwaits so threads
  * can pull a single item off any of a number of lists whenever an
  * item becomes available on any of them.
  *
  * A single psc_mlist variable represent one list, so to properly
  * poll a set, there is a bit of custom setup required by adding each
- * mlist's mlockcond to a multilock and then waiting on it.
+ * mlist's mwcond to a multiwait and then waiting on it.
  */
 
 #ifndef _PFL_MLIST_H_
@@ -26,8 +26,8 @@
 struct psc_mlist {
 	struct psc_listguts		pml_guts;
 
-//	struct psc_multilock_cond	pml_mlcond_want;	/* when someone wants an obj */
-	struct psc_multilock_cond	pml_mlcond_empty;	/* when we're empty */
+//	struct psc_multiwaitcond	pml_mwcond_want;	/* when someone wants an obj */
+	struct psc_multiwaitcond	pml_mwcond_empty;	/* when we're empty */
 #define pml_index_lentry		pml_guts.plg_index_lentry
 #define pml_lock			pml_guts.plg_lock
 #define pml_name			pml_guts.plg_name
@@ -43,12 +43,12 @@ struct psc_mlist {
 
 /**
  * psc_mlist_empty - check if an mlist is empty.
- * @pml: the multilockable list to check.
+ * @pml: the mlist to check.
  */
 #define psc_mlist_empty(pml)	(psc_mlist_size(pml) == 0)
 
-#define psc_mlist_reginit(pml, mlcarg, type, member, namefmt, ...)	\
-	_psc_mlist_reginit((pml), 0, (mlcarg), sizeof(type),		\
+#define psc_mlist_reginit(pml, mwcarg, type, member, namefmt, ...)	\
+	_psc_mlist_reginit((pml), 0, (mwcarg), sizeof(type),		\
 	    offsetof(type, member), (namefmt), ## __VA_ARGS__)
 
 void	*psc_mlist_tryget(struct psc_mlist *);

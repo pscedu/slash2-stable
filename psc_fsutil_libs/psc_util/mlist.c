@@ -1,7 +1,7 @@
 /* $Id$ */
 
 /*
- * Multilockable lists are essentially multilock-aware list caches.
+ * mlists are psclist_caches that can interface with multiwaits.
  */
 
 #include <stdarg.h>
@@ -17,8 +17,8 @@ struct psc_lockedlist psc_mlists =
     PLL_INITIALIZER(&psc_mlists, struct psc_mlist, pml_index_lentry);
 
 /**
- * psc_mlist_size - determine number of elements on an mlist.
- * @pml: the multilockable list to inspect.
+ * psc_mlist_size - Determine number of elements on an mlist.
+ * @pml: the mlist to inspect.
  */
 int
 psc_mlist_size(struct psc_mlist *pml)
@@ -32,8 +32,8 @@ psc_mlist_size(struct psc_mlist *pml)
 }
 
 /**
- * psc_mlist_tryget - get an item from a multilockable list.
- * @pml: the multilockable list to access.
+ * psc_mlist_tryget - Get an item from an mlist.
+ * @pml: the mlist to access.
  * Note: returns an item locked.
  */
 void *
@@ -57,8 +57,8 @@ psc_mlist_tryget(struct psc_mlist *pml)
 }
 
 /**
- * psc_mlist_add - put an item on a multilockable list.
- * @pml: the multilockable list to access.
+ * psc_mlist_add - Put an item on an mlist.
+ * @pml: the mlist to access.
  * @p: item to return.
  */
 void
@@ -72,13 +72,13 @@ psc_mlist_add(struct psc_mlist *pml, void *p)
 	    pml->pml_offset), &pml->pml_listhd);
 	pml->pml_size++;
 	pml->pml_nseen++;
-	psc_multilock_cond_wakeup(&pml->pml_mlcond_empty);
+	psc_multiwaitcond_wakeup(&pml->pml_mwcond_empty);
 	ureqlock(&pml->pml_lock, locked);
 }
 
 /**
- * psc_mlist_remove - remove an item's membership from a multilockable list.
- * @pml: the multilockable list to access.
+ * psc_mlist_remove - Remove an item's membership from a mlist.
+ * @pml: the mlist to access.
  * @p: item to unlink.
  */
 void
@@ -95,17 +95,17 @@ psc_mlist_remove(struct psc_mlist *pml, void *p)
 }
 
 /**
- * _psc_mlist_initv - initialize a multilockable list.
+ * _psc_mlist_initv - Initialize an mlist.
  * @pml: mlist to initialize.
- * @flags: multilock condition flags.
- * @arg: multilock condition to use for availability notification.
+ * @flags: multiwaitcond flags.
+ * @mwcarg: multiwaitcond to use for availability notification.
  * @entsize: size of an entry on this mlist.
  * @offset: offset into entry for the psclist_head for list mgt.
  * @fmt: printf(3) format for mlist name.
  * @ap: va_list of arguments to mlist name printf(3) format.
  */
 void
-_psc_mlist_initv(struct psc_mlist *pml, int flags, void *arg,
+_psc_mlist_initv(struct psc_mlist *pml, int flags, void *mwcarg,
     size_t entsize, ptrdiff_t offset, const char *fmt, va_list ap)
 {
 	int rc;
@@ -122,36 +122,32 @@ _psc_mlist_initv(struct psc_mlist *pml, int flags, void *arg,
 	else if (rc >= (int)sizeof(pml->pml_name))
 		psc_fatalx("mlist name is too long: %s", fmt);
 
-	psc_multilock_cond_init(&pml->pml_mlcond_empty, arg, flags,
+	psc_multiwaitcond_init(&pml->pml_mwcond_empty, mwcarg, flags,
 	    "%s-empty", pml->pml_name);
 }
 
 /**
- * _psc_mlist_init - initialize a multilockable list.
+ * _psc_mlist_init - Initialize an mlist.
  * @pml: mlist to initialize.
- * @arg: multilock condition to use for availability notification.
+ * @mwcarg: multiwaitcond to use for availability notification.
  * @entsize: size of an entry on this mlist.
  * @offset: offset into entry for the psclist_head for list mgt.
  * @fmt: printf(3) format for mlist name.
  */
 void
-_psc_mlist_init(struct psc_mlist *pml, int flags, void *arg,
+_psc_mlist_init(struct psc_mlist *pml, int flags, void *mwcarg,
     size_t entsize, ptrdiff_t offset, const char *fmt, ...)
 {
 	va_list ap;
 
 	va_start(ap, fmt);
-	_psc_mlist_initv(pml, flags, arg, entsize, offset, fmt, ap);
+	_psc_mlist_initv(pml, flags, mwcarg, entsize, offset, fmt, ap);
 	va_end(ap);
 }
 
 /**
- * _psc_mlist_reginit - initialize a multilockable list.
- * @pml: mlist to initialize.
- * @arg: multilock condition to use for availability notification.
- * @entsize: size of an entry on this mlist.
- * @offset: offset into entry for the psclist_head for list mgt.
- * @fmt: printf(3) format for mlist name.
+ * _psc_mlist_reginit - Register an mlist for external control.
+ * @pml: mlist to register.
  */
 void
 psc_mlist_register(struct psc_mlist *pml)
@@ -164,21 +160,21 @@ psc_mlist_register(struct psc_mlist *pml)
 }
 
 /**
- * _psc_mlist_reginit - initialize a multilockable list.
+ * _psc_mlist_reginit - Initialize and register an mlist.
  * @pml: mlist to initialize.
- * @arg: multilock condition to use for availability notification.
+ * @mwcarg: multiwaitcond to use for availability notification.
  * @entsize: size of an entry on this mlist.
  * @offset: offset into entry for the psclist_head for list mgt.
  * @fmt: printf(3) format for mlist name.
  */
 void
-_psc_mlist_reginit(struct psc_mlist *pml, int flags, void *arg,
+_psc_mlist_reginit(struct psc_mlist *pml, int flags, void *mwcarg,
     size_t entsize, ptrdiff_t offset, const char *fmt, ...)
 {
 	va_list ap;
 
 	va_start(ap, fmt);
-	_psc_mlist_initv(pml, flags, arg, entsize, offset, fmt, ap);
+	_psc_mlist_initv(pml, flags, mwcarg, entsize, offset, fmt, ap);
 	va_end(ap);
 
 	psc_mlist_register(pml);

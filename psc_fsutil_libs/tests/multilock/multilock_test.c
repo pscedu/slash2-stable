@@ -15,11 +15,11 @@
 
 struct thr {
 	pthread_t			t_pthread;
-	struct psc_multilock		t_ml;
-	struct psc_multilock_cond	t_mlc;
+	struct psc_multiwait		t_ml;
+	struct psc_multiwaitcond	t_mlc;
 };
 
-struct psc_multilock_cond mastermlc;
+struct psc_multiwaitcond mastermlc;
 int nthreads = 32;
 int iterations = 1000;
 const char *progname;
@@ -32,7 +32,7 @@ thr_main(void *arg)
 	int i;
 
 	for (i = 0; i < iterations; i++) {
-		psc_multilock_wait(&t->t_ml, &p, 0);
+		psc_multiwait(&t->t_ml, &p);
 		usleep(200);
 	}
 	return (NULL);
@@ -49,7 +49,7 @@ int
 main(int argc, char *argv[])
 {
 	struct thr *t, *threads;
-	int error, c, j;
+	int rc, c, j;
 	long l;
 
 	pfl_init();
@@ -77,22 +77,23 @@ main(int argc, char *argv[])
 	if ((threads = calloc(nthreads, sizeof(*threads))) == NULL)
 		err(1, "calloc");
 
-	psc_multilock_cond_init(&mastermlc, NULL, 0, "master");
+	psc_multiwaitcond_init(&mastermlc, NULL, 0, "master");
 
 	for (j = 0, t = threads; j < nthreads; j++, t++) {
-		psc_multilock_cond_init(&t->t_mlc, NULL, 0, "cond%d", j);
-		psc_multilock_init(&t->t_ml, "ml%d", j);
-		psc_multilock_addcond(&t->t_ml, &mastermlc, 1);
-		psc_multilock_addcond(&t->t_ml, &t->t_mlc, 1);
+		psc_multiwaitcond_init(&t->t_mlc, NULL, 0, "cond%d", j);
 
-		if ((error = pthread_create(&t->t_pthread, NULL,
-		    thr_main, t)) != 0)
-			errx(1, "pthread_create: %s", strerror(error));
+		psc_multiwait_init(&t->t_ml, "ml%d", j);
+		psc_multiwait_addcond(&t->t_ml, &mastermlc);
+		psc_multiwait_addcond(&t->t_ml, &t->t_mlc);
+
+		rc = pthread_create(&t->t_pthread, NULL, thr_main, t);
+		if (rc)
+			errx(1, "pthread_create: %s", strerror(rc));
 		sched_yield();
 	}
 
 	for (j = 0; j < iterations; j++) {
-		psc_multilock_cond_wakeup(&mastermlc);
+		psc_multiwaitcond_wakeup(&mastermlc);
 		usleep(100);
 	}
 	exit(0);
