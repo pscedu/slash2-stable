@@ -65,30 +65,30 @@ struct psc_vbitmap {
 	}
 
 struct psc_vbitmap *
-	psc_vbitmap_newf(size_t, int);
+	 psc_vbitmap_newf(size_t, int);
 
 struct psc_vbitmap *
-	psc_vbitmap_attach(unsigned char *, size_t);
+	 psc_vbitmap_attach(unsigned char *, size_t);
 
-int	psc_vbitmap_get(const struct psc_vbitmap *, size_t);
-void	psc_vbitmap_clearall(struct psc_vbitmap *);
-int	psc_vbitmap_getncontig(struct psc_vbitmap *, int *);
-size_t	psc_vbitmap_getsize(const struct psc_vbitmap *);
-void	psc_vbitmap_invert(struct psc_vbitmap *);
-int	psc_vbitmap_lcr(struct psc_vbitmap *);
-int	psc_vbitmap_next(struct psc_vbitmap *, size_t *);
-int	psc_vbitmap_nfree(const struct psc_vbitmap *);
-int	psc_vbitmap_resize(struct psc_vbitmap *, size_t);
-int	psc_vbitmap_setval(struct psc_vbitmap *, size_t, int);
-void	psc_vbitmap_setall(struct psc_vbitmap *);
-int	psc_vbitmap_setnextpos(struct psc_vbitmap *, int);
-int	psc_vbitmap_setrange(struct psc_vbitmap *, size_t, size_t);
+int	 psc_vbitmap_get(const struct psc_vbitmap *, size_t);
+void	 psc_vbitmap_clearall(struct psc_vbitmap *);
+int	 psc_vbitmap_getncontig(struct psc_vbitmap *, int *);
+size_t	 psc_vbitmap_getsize(const struct psc_vbitmap *);
+void	 psc_vbitmap_invert(struct psc_vbitmap *);
+int	 psc_vbitmap_lcr(struct psc_vbitmap *);
+int	 psc_vbitmap_next(struct psc_vbitmap *, size_t *);
+int	 psc_vbitmap_nfree(const struct psc_vbitmap *);
+int	 psc_vbitmap_resize(struct psc_vbitmap *, size_t);
+int	 psc_vbitmap_setval(struct psc_vbitmap *, size_t, int);
+void	 psc_vbitmap_setall(struct psc_vbitmap *);
+int	 psc_vbitmap_setnextpos(struct psc_vbitmap *, int);
+int	 psc_vbitmap_setrange(struct psc_vbitmap *, size_t, size_t);
 void	_psc_vbitmap_free(struct psc_vbitmap *);
 
-void	psc_vbitmap_printbin(const struct psc_vbitmap *);
-void	psc_vbitmap_printhex(const struct psc_vbitmap *);
-void	psc_vbitmap_printstats(struct psc_vbitmap *);
-void	psc_vbitmap_getstats(struct psc_vbitmap *, int *, int *);
+void	 psc_vbitmap_printbin(const struct psc_vbitmap *);
+void	 psc_vbitmap_printhex(const struct psc_vbitmap *);
+void	 psc_vbitmap_printstats(struct psc_vbitmap *);
+void	 psc_vbitmap_getstats(struct psc_vbitmap *, int *, int *);
 
 #define vbitmap_new		psc_vbitmap_new
 #define vbitmap_free		psc_vbitmap_free
