@@ -48,9 +48,9 @@ struct psc_mspinlock {
 # define PMSL_INIT		{ PSC_ATOMIC16_INIT(0) }
 #endif
 
-extern struct vbitmap	*_psc_mspin_unthridmap;
-extern psc_spinlock_t	 _psc_mspin_unthridmap_lock;
-extern pthread_key_t	 _psc_mspin_thrkey;
+extern struct psc_vbitmap	*_psc_mspin_unthridmap;
+extern psc_spinlock_t		 _psc_mspin_unthridmap_lock;
+extern pthread_key_t		 _psc_mspin_thrkey;
 
 #define psc_mspin_init(pmsl)						\
 	do {								\
@@ -86,8 +86,8 @@ _psc_mspin_thrteardown(void *arg)
 	uint16_t thrid = (unsigned long)arg;
 
 	spinlock(&_psc_mspin_unthridmap_lock);
-	vbitmap_unset(_psc_mspin_unthridmap, thrid);
-	vbitmap_setnextpos(_psc_mspin_unthridmap, 0);
+	psc_vbitmap_unset(_psc_mspin_unthridmap, thrid);
+	psc_vbitmap_setnextpos(_psc_mspin_unthridmap, 0);
 	freelock(&_psc_mspin_unthridmap_lock);
 }
 
@@ -111,7 +111,7 @@ _psc_mspin_getunthrid(void)
 			if (rc)
 				psc_fatalx("pthread_key_create: %s",
 				    strerror(rc));
-			_psc_mspin_unthridmap = vbitmap_newf(0, PVBF_AUTO);
+			_psc_mspin_unthridmap = psc_vbitmap_newf(0, PVBF_AUTO);
 			init = 1;
 		}
 		freelock(&_psc_mspin_unthridmap_lock);
@@ -122,8 +122,8 @@ _psc_mspin_getunthrid(void)
 		size_t arg;
 
 		spinlock(&_psc_mspin_unthridmap_lock);
-		if (vbitmap_next(_psc_mspin_unthridmap, &arg) == -1)
-			psc_fatal("vbitmap_next");
+		if (psc_vbitmap_next(_psc_mspin_unthridmap, &arg) == -1)
+			psc_fatal("psc_vbitmap_next");
 		thrid = arg + 1;
 		freelock(&_psc_mspin_unthridmap_lock);
 

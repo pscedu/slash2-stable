@@ -312,7 +312,7 @@ psc_multiwait_init(struct psc_multiwait *mw, const char *name, ...)
 	pthread_cond_init(&mw->mw_cond, NULL);
 	mw->mw_condmask = psc_vbitmap_new(0);
 	if (mw->mw_condmask == NULL)
-		psc_fatal("vbitmap_new");
+		psc_fatal("psc_vbitmap_new");
 
 	va_start(ap, name);
 	vsnprintf(mw->mw_name, sizeof(mw->mw_name), name, ap);
@@ -475,7 +475,7 @@ psc_multiwait_reset(struct psc_multiwait *mw)
 		psc_dynarray_remove(&mw->mw_conds, mwc);
 	}
 	psc_dynarray_reset(&mw->mw_conds);
-	vbitmap_resize(mw->mw_condmask, 0);
+	psc_vbitmap_resize(mw->mw_condmask, 0);
 	mw->mw_flags = 0;
 	mw->mw_waker = NULL;
 	psc_pthread_mutex_unlock(&mw->mw_mutex);

@@ -65,7 +65,7 @@ struct odtable_entftr {
 };
 
 struct odtable {
-	struct vbitmap		*odt_bitmap;
+	struct psc_vbitmap	*odt_bitmap;
 	int			 odt_fd;
 	void			*odt_base;
 	struct odtable_hdr	*odt_hdr;
@@ -125,7 +125,7 @@ odtable_createmmap(struct odtable *odt)
 			     odt->odt_hdr->odth_start);
 
 	if (odt->odt_base == MAP_FAILED)
-		return (-errno); 
+		return (-errno);
 	return (0);
 }
 

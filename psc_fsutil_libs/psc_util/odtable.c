@@ -41,7 +41,7 @@ odtable_putitem(struct odtable *odt, void *data)
 	void *p;
 
 	do {
-		if (vbitmap_next(odt->odt_bitmap, &todtr.odtr_elem) <= 0)
+		if (psc_vbitmap_next(odt->odt_bitmap, &todtr.odtr_elem) <= 0)
 			return (NULL);
 		odtf = odtable_getfooter(odt, todtr.odtr_elem);
 	} while (odtable_footercheck(odtf, &todtr, 0));
@@ -110,7 +110,7 @@ odtable_freeitem(struct odtable *odt, struct odtable_receipt *odtr)
 	odtf->odtf_inuse = ODTBL_FREE;
 
 	odtable_sync(odt, odtr->odtr_elem);
-	vbitmap_unset(odt->odt_bitmap, odtr->odtr_elem);
+	psc_vbitmap_unset(odt->odt_bitmap, odtr->odtr_elem);
 	PSCFREE(odtr);
 
 	return (0);
@@ -204,7 +204,7 @@ odtable_load(const char *f, struct odtable **t)
 	if ((rc = odtable_createmmap(odt)))
 		goto out;
 
-	odt->odt_bitmap = vbitmap_new(odt->odt_hdr->odth_nelems);
+	odt->odt_bitmap = psc_vbitmap_new(odt->odt_hdr->odth_nelems);
 	if (!odt->odt_bitmap) {
 		rc = -ENOMEM;
 		goto out_unmap;
@@ -222,10 +222,10 @@ odtable_load(const char *f, struct odtable **t)
 		psc_assert(frc != ODTBL_SLOT_ERR);
 
 		if (odtf->odtf_inuse == ODTBL_FREE)
-			vbitmap_unset(odt->odt_bitmap, z);
+			psc_vbitmap_unset(odt->odt_bitmap, z);
 
 		else if (odtf->odtf_inuse == ODTBL_INUSE) {
-			vbitmap_set(odt->odt_bitmap, z);
+			psc_vbitmap_set(odt->odt_bitmap, z);
 
 			if (odth->odth_options & ODTBL_OPT_CRC) {
 				psc_crc64_t crc;
@@ -239,7 +239,7 @@ odtable_load(const char *f, struct odtable **t)
 				}
 			}
 		} else {
-			vbitmap_set(odt->odt_bitmap, z);
+			psc_vbitmap_set(odt->odt_bitmap, z);
 			psc_warnx("slot=%"PRId64" ignoring, bad inuse value"
 				  "inuse=0x%"PRIx64,
 				  z, odtf->odtf_inuse);
@@ -248,7 +248,7 @@ odtable_load(const char *f, struct odtable **t)
 
 	psc_notify("odtable=%p base=%p has %d/%"PRId64" slots available"
 		   " elemsz=%"PRId64" magic=%"PRIx64,
-		   odt, odt->odt_base, vbitmap_nfree(odt->odt_bitmap),
+		   odt, odt->odt_base, psc_vbitmap_nfree(odt->odt_bitmap),
 		   odth->odth_nelems, odth->odth_elemsz, odth->odth_magic);
 
 	*t = odt;
@@ -259,7 +259,7 @@ odtable_load(const char *f, struct odtable **t)
 		if (odt->odt_base)
 			munmap(odt->odt_base, ODTABLE_MAPSZ(odt));
 		if (odt->odt_bitmap)
-			vbitmap_free(odt->odt_bitmap);
+			psc_vbitmap_free(odt->odt_bitmap);
 		free(odt->odt_hdr);
 		free(odt);
 	}
@@ -275,7 +275,7 @@ odtable_release(struct odtable *odt)
 {
 	int rc;
 
-	vbitmap_free(odt->odt_bitmap);
+	psc_vbitmap_free(odt->odt_bitmap);
 	odt->odt_bitmap = NULL;
 
 	if (odtable_freemap(odt))
@@ -302,7 +302,7 @@ odtable_scan(struct odtable *odt, void (*odt_handler)(void *, struct odtable_rec
 
 	for (todtr.odtr_elem=0; todtr.odtr_elem < odt->odt_hdr->odth_nelems;
 	     todtr.odtr_elem++) {
-		if (!vbitmap_get(odt->odt_bitmap, todtr.odtr_elem))
+		if (!psc_vbitmap_get(odt->odt_bitmap, todtr.odtr_elem))
 			continue;
 
 		odtf = odtable_getfooter(odt, todtr.odtr_elem);

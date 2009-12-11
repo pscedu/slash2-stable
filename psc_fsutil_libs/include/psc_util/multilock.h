@@ -15,7 +15,7 @@
 #include "psc_ds/dynarray.h"
 
 struct psc_multiwait;
-struct vbitmap;
+struct psc_vbitmap;
 
 struct psc_multiwaitcond {
 	pthread_mutex_t			 mwc_mutex;
