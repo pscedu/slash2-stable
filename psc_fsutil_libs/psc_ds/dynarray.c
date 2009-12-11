@@ -163,8 +163,11 @@ psc_dynarray_reset(struct psc_dynarray *da)
  * psc_dynarray_remove - Remove an item from a dynamic array.
  * @da: dynamic array to remove from.
  * @item: item to remove.
+ * Returns the position index the item had.
+ * Notes: this routine swaps the last element in the dynarray array
+ *	into the slot opened up by the removal.
  */
-void
+int
 psc_dynarray_remove(struct psc_dynarray *da, const void *item)
 {
 	int j, len;
@@ -178,7 +181,7 @@ psc_dynarray_remove(struct psc_dynarray *da, const void *item)
 			da->da_pos--;
 
 			psc_dynarray_freeslack(da);
-			return;
+			return (j);
 		}
 	psc_fatalx("element not found");
 }

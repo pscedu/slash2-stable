@@ -60,7 +60,7 @@ void	 psc_dynarray_free(struct psc_dynarray *);
 int	 psc_dynarray_freeslack(struct psc_dynarray *);
 void	*psc_dynarray_getpos(const struct psc_dynarray *, int);
 void	 psc_dynarray_init(struct psc_dynarray *);
-void	 psc_dynarray_remove(struct psc_dynarray *, const void *);
+int	 psc_dynarray_remove(struct psc_dynarray *, const void *);
 void	 psc_dynarray_reset(struct psc_dynarray *);
 
 #endif /* _PFL_DYNARRAY_H_ */
