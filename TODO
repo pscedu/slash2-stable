@@ -49,7 +49,6 @@ pfl
 - add struct members to hdrclean.pl
 - have lc_getwait() do a sched_yield() after it grabs an item
 - have psc_pool_return() NULL out the pointer arg released
-- pfl/tests/vbitmap does some strange allocations, examine
 - add a new lock API:
     (o) agnostic to underlying type (spin, etc.)
     (o) has a flag to mark for processing of critical
