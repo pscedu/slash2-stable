@@ -12,7 +12,7 @@
 #define PFL_BITSTR_SETCHK_STRICT	(1 << 0)
 #define PFL_BITSTR_SETCHK_ABORT		(1 << 1)
 
-/*
+/**
  * pfl_bitstr_setchk - check and/or set bits in an integer.
  * @f: flags variable to perform operations on.
  * @lck: optional spinlock.
@@ -91,6 +91,22 @@ pfl_bitstr_nset(const void *val, int len)
 
 /**
  * pfl_bitstr_copy - copy bits from one place to another.
+ * @dst: place to copy to.
+ * @doff: offset into destination bitstring where to begin copying bits to.
+ * @src: place to copy from.
+ * @soff: offset into source bitstring where to begin copying bits from.
+ * @nbits: length of copy.
+ *
+ * Note: Only overlapped cases where src+soff > dst+doff are implemented.
+ *
+ *	      |=========== memory ===========|
+ * SUPPORTED:
+ *	src:         |-----------------------|
+ *	dst:  |-----------------------|
+ *
+ * NOT SUPPORTED:
+ *	src:  |-----------------------|
+ *	dst:         |-----------------------|
  */
 static __inline void
 pfl_bitstr_copy(void *dst, int doff, const void *src, int soff, int nbits)
@@ -101,6 +117,9 @@ pfl_bitstr_copy(void *dst, int doff, const void *src, int soff, int nbits)
 	uint64_t *out64;
 
 	psc_assert(doff >= 0 && soff >= 0);
+	if (dst + doff > src + soff &&
+	    dst + doff < src + soff + nbits)
+		psc_fatalx("overlap case not implemented");
 
 	in64 = (const uint64_t *)src + soff / sizeof(*in64) / NBBY;
 	out64 = (uint64_t *)dst + doff / sizeof(*out64) / NBBY;
