@@ -320,6 +320,7 @@ struct pscrpc_request {
 	/* request and reply callbacks */
 	struct pscrpc_cb_id         rq_req_cbid;
 	struct pscrpc_cb_id         rq_reply_cbid;
+	struct psc_waitq           *rq_waitq;   /* others block here */
 	struct pscrpc_bulk_desc    *rq_bulk;    /* attach bulk */
 	int			  (*rq_interpret_reply)(struct pscrpc_request *,
 					struct pscrpc_async_args *);
@@ -436,7 +437,11 @@ struct pscrpc_nbreqset {
 	struct pscrpc_request_set	nb_reqset;
 	nbreq_callback			nb_callback;
 	atomic_t			nb_outstanding;
+	psc_spinlock_t                  nb_lock;
+	uint32_t                        nb_flags;
 };
+
+#define NBREQSET_WORK_INPROG 1
 
 #define PSCPRC_SET_INIT(v, cb, cbarg)					\
 	{ PSCLIST_HEAD_INIT((v).set_requests), 0, PSC_WAITQ_INIT,	\
@@ -444,7 +449,7 @@ struct pscrpc_nbreqset {
 
 #define PSCRPC_NBREQSET_INIT(v, setcb, rqcb)				\
 	{ PSCPRC_SET_INIT((v).nb_reqset, (setcb), NULL), (rqcb),	\
-	    ATOMIC_INIT(0) }
+			ATOMIC_INIT(0), LOCK_INITIALIZER, 0 }
 
 struct pscrpc_nbreqset *
 	 nbreqset_init(set_interpreter_func, nbreq_callback);

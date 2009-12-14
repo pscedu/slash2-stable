@@ -282,6 +282,9 @@ void reply_in_callback(lnet_event_t *ev)
 		 */
 		atomic_inc(req->rq_compl_cntr);
 
+	if (req->rq_waitq)
+		psc_waitq_wakeall(req->rq_waitq);
+
 	/* NB don't unlock till after wakeup; req can disappear under us
 	 * since we don't have our own ref */
 	pscrpc_wake_client_req(req);
