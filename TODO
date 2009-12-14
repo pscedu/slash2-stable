@@ -67,6 +67,7 @@ pfl
 - rename bitflag.h -> bitstr.h
 - let caller worry about memory for vbitmaps, don't return pointers
 - bail if multiwait_addcond() fails
+- psclist_add_sorted() - maintain a median element for faster sorting
 
 zest
 - research faster CRC operations
