@@ -179,6 +179,21 @@ pll_conjoint(struct psc_lockedlist *pll, void *p)
 }
 
 static __inline void
+pll_add_sorted(struct psc_lockedlist *pll, void *p,
+    int (*cmpf)(const void *, const void *))
+{
+	int locked;
+	void *e;
+
+	psc_assert(p);
+	e = (char *)p + pll->pll_offset;
+
+	locked = PLL_RLOCK(pll);
+	psclist_add_sorted(&pll->pll_listhd, e, cmpf, pll->pll_offset);
+	PLL_URLOCK(pll, locked);
+}
+
+static __inline void
 pll_sort(struct psc_lockedlist *pll, void (*sortf)(void *, size_t,
     size_t, int (*)(const void *, const void *)),
     int (*cmpf)(const void *, const void *))

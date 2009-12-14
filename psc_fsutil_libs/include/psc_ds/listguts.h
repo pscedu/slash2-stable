@@ -79,6 +79,27 @@ psclg_conjoint(struct psc_listguts *plg, void *p)
 }
 
 /**
+ * psclg_add_sorted - Add an item to a list in its sorted position.
+ * @lg: list to sort.
+ * @sortf: sort routine, such as qsort(3) or mergesort(3).
+ * @cmpf: comparison routine passed as argument to sortf().
+ */
+static __inline void
+psclg_add_sorted(struct psc_listguts *plg, void *p,
+    int (*cmpf)(const void *, const void *))
+{
+	int locked;
+	void *e;
+
+	psc_assert(p);
+	e = (char *)p + plg->plg_offset;
+
+	locked = reqlock(&plg->plg_lock);
+	psclist_add_sorted(&plg->plg_listhd, e, cmpf, plg->plg_offset);
+	ureqlock(&plg->plg_lock, locked);
+}
+
+/**
  * psclg_sort - sort items in a list.
  * @lg: list to sort.
  * @sortf: sort routine, such as qsort(3) or mergesort(3).

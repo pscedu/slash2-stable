@@ -375,7 +375,7 @@ _psclist_next_entry(struct psclist_head *hd, void *p,
 
 static __inline void
 psclist_add_sorted(struct psclist_head *hd, struct psclist_head *elem,
-    int (*cmpf)(const void *a, const void *b), ptrdiff_t offset)
+    int (*cmpf)(const void *, const void *), ptrdiff_t offset)
 {
 	struct psclist_head *e;
 
