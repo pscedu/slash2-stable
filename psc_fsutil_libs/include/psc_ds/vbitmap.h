@@ -39,12 +39,15 @@ struct psc_vbitmap {
 		(vb) = NULL;						\
 	} while (0)
 
-#define psc_vbitmap_set(vb, pos)	((void)psc_vbitmap_setval((vb), (pos), 1))
-#define psc_vbitmap_xset(vb, pos)	(psc_vbitmap_setval((vb), (pos), 1) == 0)
-#define psc_vbitmap_xsetval(vb, pos, v)	(psc_vbitmap_setval((vb), (pos), (v)) != (v))
-#define psc_vbitmap_unset(vb, pos)	((void)psc_vbitmap_setval((vb), (pos), 0))
+#define psc_vbitmap_set(vb, pos)		((void)psc_vbitmap_setval((vb), (pos), 1))
+#define psc_vbitmap_xset(vb, pos)		(psc_vbitmap_setval((vb), (pos), 1) == 0)
+#define psc_vbitmap_xsetval(vb, pos, v)		(psc_vbitmap_setval((vb), (pos), (v)) != (v))
+#define psc_vbitmap_unset(vb, pos)		((void)psc_vbitmap_setval((vb), (pos), 0))
 
-#define psc_vbitmap_nset(vb)		(psc_vbitmap_getsize(vb) - psc_vbitmap_nfree(vb))
+#define psc_vbitmap_setrange(vb, pos, siz)	psc_vbitmap_setval_range((vb), (pos), (siz), 1)
+#define psc_vbitmap_unsetrange(vb, pos, siz)	psc_vbitmap_setval_range((vb), (pos), (siz), 0)
+
+#define psc_vbitmap_nset(vb)			(psc_vbitmap_getsize(vb) - psc_vbitmap_nfree(vb))
 
 #define psc_vbitmap_printbin1(vb) {					\
 		unsigned char *PPp;					\
@@ -77,10 +80,10 @@ int	 psc_vbitmap_lcr(struct psc_vbitmap *);
 int	 psc_vbitmap_next(struct psc_vbitmap *, size_t *);
 int	 psc_vbitmap_nfree(const struct psc_vbitmap *);
 int	 psc_vbitmap_resize(struct psc_vbitmap *, size_t);
-int	 psc_vbitmap_setval(struct psc_vbitmap *, size_t, int);
 void	 psc_vbitmap_setall(struct psc_vbitmap *);
 int	 psc_vbitmap_setnextpos(struct psc_vbitmap *, int);
-int	 psc_vbitmap_setrange(struct psc_vbitmap *, size_t, size_t);
+int	 psc_vbitmap_setval(struct psc_vbitmap *, size_t, int);
+int	 psc_vbitmap_setval_range(struct psc_vbitmap *, size_t, size_t, int);
 void	_psc_vbitmap_free(struct psc_vbitmap *);
 
 void	 psc_vbitmap_printbin(const struct psc_vbitmap *);

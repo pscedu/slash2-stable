@@ -108,15 +108,17 @@ psc_vbitmap_setval(struct psc_vbitmap *vb, size_t pos, int set)
 }
 
 /**
- * psc_vbitmap_setrange - set bits of a vbitmap.
+ * psc_vbitmap_setval_range - Set a range bits of a vbitmap.
  * @vb: variable bitmap.
  * @pos: starting position to set.
- * @n: length of region (# of bits) to set.
+ * @size: length of region (# of bits) to set.
+ * @set: true or false on whether to set or unset the values.
  */
 int
-psc_vbitmap_setrange(struct psc_vbitmap *vb, size_t pos, size_t size)
+psc_vbitmap_setval_range(struct psc_vbitmap *vb,
+    size_t pos, size_t size, int set)
 {
-	size_t shft, bytes;
+	size_t shft, bytes, len;
 	unsigned char *p;
 
 	if (pos + size > psc_vbitmap_getsize(vb))
@@ -127,18 +129,32 @@ psc_vbitmap_setrange(struct psc_vbitmap *vb, size_t pos, size_t size)
 
 	p = &vb->vb_start[bytes];
 
-	/* set bits in first byte */
-	if (shft)
-		*p++ |= (~(0xff << (MAX(size, 8) + shft))) &
-		    (~(1 << MAX(size, 8)) << shft);
+	/* change bits in first byte */
+	if (shft) {
+		len = MIN(size, NBBY - shft);
+		if (set)
+			*p++ |= ~(0xff << len) << shft;
+		else
+			*p++ &= (0xff << (len + shft)) |
+			    (0xff >> (NBBY - shft));
+		size -= len;
+	}
 
-	/* set whole bytes */
-	for (; size >= 8; p++, size -= 8)
-		*p = 0xff;
+	/* change whole bytes */
+	if (set)
+		for (; size >= 8; p++, size -= 8)
+			*p = 0xff;
+	else
+		for (; size >= 8; p++, size -= 8)
+			*p = 0;
 
-	/* set bits in last byte */
-	if (size)
-		*p |= (~(0xff << size)) & (~(1 << size));
+	/* change bits in last byte */
+	if (size) {
+		if (set)
+			*p |= 0xff >> (NBBY - size);
+		else
+			*p &= 0xff >> (NBBY - size);
+	}
 	return (0);
 }
 
@@ -401,24 +417,25 @@ int
 psc_vbitmap_resize(struct psc_vbitmap *vb, size_t newsize)
 {
 	unsigned char *start;
-	ptrdiff_t pos, len;
-	size_t siz;
+	ptrdiff_t pos, osiz;
+	size_t nsiz;
 
 	pos = vb->vb_pos - vb->vb_start;
-	len = vb->vb_end - vb->vb_start;
+	osiz = vb->vb_end - vb->vb_start;
 
-	siz = howmany(newsize, NBBY);
-	if (vb->vb_start && siz == (size_t)len + 1)
+	nsiz = howmany(newsize, NBBY);
+	if (vb->vb_start && nsiz == (size_t)osiz + 1)
 		/* resizing inside a byte; no mem alloc changes necessary */
 		VB_CLEAR_UNALLOC(vb);
 	else {
-		start = psc_realloc(vb->vb_start, siz, 0);
+		start = psc_realloc(vb->vb_start, nsiz, 0);
+		/* XXX check start for == NULL */
 		/* special case for resizing NULL vbitmaps */
 		if (vb->vb_start == NULL)
-			memset(start, 0, siz);
+			memset(start, 0, nsiz);
 		vb->vb_start = start;
-		if (siz)
-			vb->vb_end = start + siz - 1;
+		if (nsiz)
+			vb->vb_end = start + nsiz - 1;
 		else
 			vb->vb_end = start;
 	}
@@ -428,8 +445,8 @@ psc_vbitmap_resize(struct psc_vbitmap *vb, size_t newsize)
 		vb->vb_pos = vb->vb_start;
 
 	/* Initialize new sections of the bitmap to zero. */
-	if (siz > (size_t)len)
-		memset(start + len + 1, 0, siz - len - 1);
+	if (nsiz > (size_t)osiz)
+		memset(start + osiz + 1, 0, nsiz - osiz - 1);
 	if (newsize && vb->vb_lastsize == 0)
 		vb->vb_lastsize = NBBY;
 	return (0);
