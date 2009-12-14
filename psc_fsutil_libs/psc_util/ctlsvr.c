@@ -464,7 +464,7 @@ psc_ctlmsg_param_send(int fd, const struct psc_ctlmsghdr *mh,
 	/*
 	 * Save original request threadname and copy actual in
 	 * for this message.  These will differ in cases such as
-	 * "all" or "ziothr" against "ziothr9".
+	 * "all" or "mythr" against "mythr9".
 	 */
 	snprintf(othrname, sizeof(othrname), "%s", pcp->pcp_thrname);
 	snprintf(pcp->pcp_thrname, sizeof(pcp->pcp_thrname), "%s", thrname);
@@ -1127,7 +1127,7 @@ psc_ctlrep_getiostats(int fd, struct psc_ctlmsghdr *mh, void *m)
 }
 
 /*
- * zctlrep_getmeter - respond to a "getmeter" inquiry.
+ * psc_ctlrep_getmeter - respond to a "getmeter" inquiry.
  * @fd: client socket descriptor.
  * @mh: already filled-in control message header.
  * @m: control message to examine and reuse.
