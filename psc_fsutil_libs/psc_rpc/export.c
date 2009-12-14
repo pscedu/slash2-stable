@@ -27,7 +27,7 @@ __pscrpc_export_put(struct pscrpc_export *exp)
 #if PAULS_TODO
                 obd_destroy_export(exp);
 #endif
-                ZOBD_FREE(exp, sizeof(*exp));
+                PSCRPC_OBD_FREE(exp, sizeof(*exp));
 		/**
 		 * pscrpc is not using obd's and our exports are attached to
                 class_decref(obd);

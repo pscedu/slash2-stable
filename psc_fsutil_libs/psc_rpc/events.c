@@ -97,7 +97,7 @@ void request_in_callback(lnet_event_t *ev)
 			return;
 		}
 #if 0
-		ZOBD_ALLOC_GFP(req, sizeof(*req), GFP_ATOMIC);
+		PSCRPC_OBD_ALLOC_GFP(req, sizeof(*req), GFP_ATOMIC);
 #endif
 		req = TRY_PSCALLOC(sizeof(*req));
 		if (req == NULL) {
@@ -121,7 +121,7 @@ void request_in_callback(lnet_event_t *ev)
 	req->rq_peer = ev->initiator;
 	req->rq_self = ev->target.nid;
 	req->rq_rqbd = rqbd;
-	req->rq_phase = ZRQ_PHASE_NEW;
+	req->rq_phase = PSCRQ_PHASE_NEW;
 #ifdef CRAY_XT3
 	//req->rq_uid = ev->uid;
 #endif
@@ -446,7 +446,7 @@ pscrpc_deregister_wait_callback (void *opaque)
 	struct pscrpc_wait_callback *llwc = opaque;
 
 	psclist_del(&llwc->llwc_list);
-	ZOBD_FREE(llwc, sizeof(*llwc));
+	PSCRPC_OBD_FREE(llwc, sizeof(*llwc));
 }
 #endif
 

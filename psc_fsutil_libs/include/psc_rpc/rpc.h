@@ -33,9 +33,9 @@
 #define BULK_GET_SINK		2
 #define BULK_PUT_SOURCE		3
 
-#define PSC_RPC_MSG_REQUEST	4711
-#define PSC_RPC_MSG_ERR		4712
-#define PSC_RPC_MSG_REPLY	4713
+#define PSCRPC_MSG_REQUEST	4711
+#define PSCRPC_MSG_ERR		4712
+#define PSCRPC_MSG_REPLY	4713
 
 #define PSCRPC_MSG_MAGIC	0x0BD00BD0
 #if !CATAMOUNT_CLIENT
@@ -44,8 +44,8 @@
 #define PSCRPC_MSG_VERSION	0x00000004
 #endif
 
-#define ZOBD_FREE(ptr, size)	PSCFREE(ptr)
-#define ZOBD_ALLOC(ptr, size)	((ptr) = PSCALLOC(size))
+#define PSCRPC_OBD_FREE(ptr, size)	PSCFREE(ptr)
+#define PSCRPC_OBD_ALLOC(ptr, size)	((ptr) = PSCALLOC(size))
 
 #ifndef PAGE_SIZE
 #define PAGE_SIZE		4096
@@ -58,7 +58,7 @@
 #define PSCNET_CLIENT		0x0f
 #define PSC_SVR_PID		54321
 #define PSC_NIDSTR_SIZE		32
-#define ZOBD_TIMEOUT		60
+#define PSCRPC_OBD_TIMEOUT		60
 
 extern lnet_handle_eq_t		pscrpc_eq_h;
 extern struct psclist_head	pscrpc_wait_callbacks;
@@ -83,11 +83,11 @@ struct pscrpc_wait_callback {
 };
 
 enum psc_rq_phase {
-	ZRQ_PHASE_NEW		= 0xebc0de00,
-	ZRQ_PHASE_RPC		= 0xebc0de01,
-	ZRQ_PHASE_BULK		= 0xebc0de02,
-	ZRQ_PHASE_INTERPRET	= 0xebc0de03,
-	ZRQ_PHASE_COMPLETE	= 0xebc0de04,
+	PSCRQ_PHASE_NEW		= 0xebc0de00,
+	PSCRQ_PHASE_RPC		= 0xebc0de01,
+	PSCRQ_PHASE_BULK		= 0xebc0de02,
+	PSCRQ_PHASE_INTERPRET	= 0xebc0de03,
+	PSCRQ_PHASE_COMPLETE	= 0xebc0de04,
 };
 
 enum psc_imp_state {
@@ -193,7 +193,7 @@ struct pscrpc_import {
 struct pscrpc_async_args {
 	/* Scratchpad for passing args to completion interpreter. Users
 	 * cast to the struct of their choosing, and LASSERT that this is
-	 * big enough.  For _tons_ of context, ZOBD_ALLOC a struct and store
+	 * big enough.  For _tons_ of context, PSCRPC_OBD_ALLOC a struct and store
 	 * a pointer to it here.  The pointer_arg ensures this struct is at
 	 * least big enough for that. */
 	uint64_t space[2];

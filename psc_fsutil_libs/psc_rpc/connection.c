@@ -108,7 +108,7 @@ pscrpc_get_connection(lnet_process_id_t peer,
 	if (c2 == NULL)
 		RETURN (c);
 
-	ZOBD_FREE(c, sizeof(*c));
+	PSCRPC_OBD_FREE(c, sizeof(*c));
 	RETURN (c2);
 }
 

@@ -10,15 +10,15 @@ static inline const char *
 pscrpc_rqphase2str(struct pscrpc_request *req)
 {
 	switch (req->rq_phase) {
-	case ZRQ_PHASE_NEW:
+	case PSCRQ_PHASE_NEW:
 		return "New";
-	case ZRQ_PHASE_RPC:
+	case PSCRQ_PHASE_RPC:
 		return "Rpc";
-	case ZRQ_PHASE_BULK:
+	case PSCRQ_PHASE_BULK:
 		return "Bulk";
-	case ZRQ_PHASE_INTERPRET:
+	case PSCRQ_PHASE_INTERPRET:
 		return "Interpret";
-	case ZRQ_PHASE_COMPLETE:
+	case PSCRQ_PHASE_COMPLETE:
 		return "Complete";
 	default:
 		return "?Phase?";

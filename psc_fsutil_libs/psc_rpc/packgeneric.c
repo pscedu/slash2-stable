@@ -64,7 +64,7 @@ int psc_pack_request (struct pscrpc_request *req,
 			 reqlen);
                 memset(req->rq_reqmsg, 0, reqlen);
         } else {
-                ZOBD_ALLOC(req->rq_reqmsg, reqlen);
+                PSCRPC_OBD_ALLOC(req->rq_reqmsg, reqlen);
                 if (req->rq_reqmsg == NULL)
                         RETURN(-ENOMEM);
         }
@@ -94,7 +94,7 @@ int psc_pack_reply (struct pscrpc_request *req,
 
         msg_len = psc_msg_size (count, lens);
         size = offsetof (struct pscrpc_reply_state, rs_msg) + msg_len;
-        ZOBD_ALLOC (rs, size);
+        PSCRPC_OBD_ALLOC (rs, size);
         if (unlikely(rs == NULL)) {
                 //rs = lustre_get_emerg_rs(req->rq_rqbd->rqbd_service, size);
                 if (!rs)

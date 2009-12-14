@@ -388,15 +388,15 @@ int pscrpc_send_reply (struct pscrpc_request *req, int may_be_difficult)
         if (req->rq_export && req->rq_export->exp_obd &&
             req->rq_export->exp_obd->obd_fail) {
                 /* Failed obd's only send ENODEV */
-                req->rq_type = PSC_RPC_MSG_ERR;
+                req->rq_type = PSCRPC_MSG_ERR;
                 req->rq_status = -ENODEV;
                 CDEBUG(D_HA, "sending ENODEV from failed obd %d\n",
                        req->rq_export->exp_obd->obd_minor);
         }
 #endif
 
-        if (req->rq_type != PSC_RPC_MSG_ERR)
-                req->rq_type = PSC_RPC_MSG_REPLY;
+        if (req->rq_type != PSCRPC_MSG_ERR)
+                req->rq_type = PSCRPC_MSG_REPLY;
 
         req->rq_repmsg->type   = req->rq_type;
         req->rq_repmsg->status = req->rq_status;
@@ -442,7 +442,7 @@ int pscrpc_error(struct pscrpc_request *req)
                         RETURN(rc);
         }
 
-        req->rq_type = PSC_RPC_MSG_ERR;
+        req->rq_type = PSCRPC_MSG_ERR;
 
         rc = pscrpc_send_reply (req, 0);
         RETURN(rc);
@@ -465,7 +465,7 @@ int psc_send_rpc(struct pscrpc_request *request, int noreply)
         //OBD_FAIL_RETURN(OBD_FAIL_PSCRPC_DROP_RPC, 0);
 	DEBUG_REQ(PLL_INFO, request, "sending rpc");
 
-        psc_assert (request->rq_type == PSC_RPC_MSG_REQUEST);
+        psc_assert (request->rq_type == PSCRPC_MSG_REQUEST);
 
         /* If this is a re-transmit, we're required to have disengaged
          * cleanly from the previous attempt */
@@ -490,13 +490,13 @@ int psc_send_rpc(struct pscrpc_request *request, int noreply)
         }
 
         request->rq_reqmsg->handle = request->rq_import->imp_remote_handle;
-        request->rq_reqmsg->type = PSC_RPC_MSG_REQUEST;
+        request->rq_reqmsg->type = PSCRPC_MSG_REQUEST;
         request->rq_reqmsg->conn_cnt = request->rq_import->imp_conn_cnt;
 
         if (!noreply) {
                 psc_assert (request->rq_replen != 0);
                 if (request->rq_repmsg == NULL)
-                        ZOBD_ALLOC(request->rq_repmsg, request->rq_replen);
+                        PSCRPC_OBD_ALLOC(request->rq_repmsg, request->rq_replen);
 
                 if (request->rq_repmsg == NULL)
                         GOTO(cleanup_bulk, rc = -ENOMEM);
@@ -594,7 +594,7 @@ int psc_send_rpc(struct pscrpc_request *request, int noreply)
         psc_assert (!request->rq_receiving_reply);
 
  cleanup_repmsg:
-        ZOBD_FREE(request->rq_repmsg, request->rq_replen);
+        PSCRPC_OBD_FREE(request->rq_repmsg, request->rq_replen);
         request->rq_repmsg = NULL;
 
  cleanup_bulk:
@@ -680,7 +680,7 @@ void psc_free_reply_state (struct pscrpc_reply_state *rs)
                 psc_waitq_wakeall(&svc->srv_free_rs_waitq);
         }
 #endif
-        ZOBD_FREE(rs, rs->rs_size);
+        PSCRPC_OBD_FREE(rs, rs->rs_size);
 }
 
 static void __pscrpc_free_req(struct pscrpc_request *request, int  locked)
@@ -714,7 +714,7 @@ static void __pscrpc_free_req(struct pscrpc_request *request, int  locked)
         }
 
         if (request->rq_repmsg != NULL) {
-                ZOBD_FREE(request->rq_repmsg, request->rq_replen);
+                PSCRPC_OBD_FREE(request->rq_repmsg, request->rq_replen);
                 request->rq_repmsg = NULL;
         }
 
@@ -733,10 +733,10 @@ static void __pscrpc_free_req(struct pscrpc_request *request, int  locked)
 
         } else {
                 if (request->rq_reqmsg != NULL) {
-                        ZOBD_FREE(request->rq_reqmsg, request->rq_reqlen);
+                        PSCRPC_OBD_FREE(request->rq_reqmsg, request->rq_reqlen);
                         request->rq_reqmsg = NULL;
                 }
-                ZOBD_FREE(request, sizeof(*request));
+                PSCRPC_OBD_FREE(request, sizeof(*request));
         }
         EXIT;
 }
@@ -792,7 +792,7 @@ void pscrpc_free_bulk(struct pscrpc_bulk_desc *desc)
         else
                 pscrpc_import_put(desc->bd_import);
 
-        ZOBD_FREE(desc, offsetof(struct pscrpc_bulk_desc,
+        PSCRPC_OBD_FREE(desc, offsetof(struct pscrpc_bulk_desc,
                                 bd_iov[desc->bd_max_iov]));
         EXIT;
 }

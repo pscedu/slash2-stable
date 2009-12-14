@@ -31,14 +31,14 @@ pscrpc_alloc_request_buffer (int size)
 {
 	char *ptr;
 
-	ZOBD_ALLOC(ptr, size);
+	PSCRPC_OBD_ALLOC(ptr, size);
 	return (ptr);
 }
 
 static void
 pscrpc_free_request_buffer (char *ptr, __unusedx int size)
 {
-	ZOBD_FREE(ptr, size);
+	PSCRPC_OBD_FREE(ptr, size);
 }
 
 /**
@@ -51,7 +51,7 @@ pscrpc_alloc_rqbd (struct pscrpc_service *svc)
 {
 	struct pscrpc_request_buffer_desc *rqbd;
 
-	ZOBD_ALLOC(rqbd, sizeof (*rqbd));
+	PSCRPC_OBD_ALLOC(rqbd, sizeof (*rqbd));
 	if (rqbd == NULL)
 		return (NULL);
 
@@ -65,7 +65,7 @@ pscrpc_alloc_rqbd (struct pscrpc_service *svc)
 	rqbd->rqbd_buffer = pscrpc_alloc_request_buffer(svc->srv_buf_size);
 
 	if (rqbd->rqbd_buffer == NULL) {
-		ZOBD_FREE(rqbd, sizeof (*rqbd));
+		PSCRPC_OBD_FREE(rqbd, sizeof (*rqbd));
 		return (NULL);
 	}
 
@@ -91,7 +91,7 @@ pscrpc_free_rqbd (struct pscrpc_request_buffer_desc *rqbd)
 	freelock(&svc->srv_lock);
 
 	pscrpc_free_request_buffer (rqbd->rqbd_buffer, svc->srv_buf_size);
-	ZOBD_FREE (rqbd, sizeof (*rqbd));
+	PSCRPC_OBD_FREE (rqbd, sizeof (*rqbd));
 }
 
 /**
@@ -167,7 +167,7 @@ __pscrpc_server_free_request(struct pscrpc_request *req)
 		 * req if the incoming req unlinked the
 		 * MD; this isn't one of them!
 		 */
-		ZOBD_FREE(req, sizeof(*req));
+		PSCRPC_OBD_FREE(req, sizeof(*req));
 	}
 }
 
@@ -304,7 +304,7 @@ pscrpc_server_handle_request(struct pscrpc_service *svc,
 	}
 
 	rc = -EINVAL;
-	if (request->rq_reqmsg->type != PSC_RPC_MSG_REQUEST) {
+	if (request->rq_reqmsg->type != PSCRPC_MSG_REQUEST) {
 		CERROR("wrong packet type received (type=%u) from %s\n",
 		       request->rq_reqmsg->type,
 		       libcfs_id2str(request->rq_peer));
@@ -326,7 +326,7 @@ pscrpc_server_handle_request(struct pscrpc_service *svc,
 	if (request->rq_conn->c_exp == NULL) {
 		struct pscrpc_export *exp;
 
-		ZOBD_ALLOC(exp, sizeof(*exp));
+		PSCRPC_OBD_ALLOC(exp, sizeof(*exp));
 		if (exp == NULL)
 			psc_fatal("Couldn't allocate export");
 		/*
@@ -345,7 +345,7 @@ pscrpc_server_handle_request(struct pscrpc_service *svc,
 	/* Discard requests queued for longer than my timeout.  If the
 	 * client's timeout is similar to mine, she'll be timing out this
 	 * REQ anyway (bug 1502) */
-	if (timediff / 1000000 > ZOBD_TIMEOUT) {
+	if (timediff / 1000000 > PSCRPC_OBD_TIMEOUT) {
 		CERROR("Dropping timed-out opc %d request from %s"
 		       ": %ld seconds old\n", request->rq_reqmsg->opc,
 		       libcfs_id2str(request->rq_peer),
@@ -353,7 +353,7 @@ pscrpc_server_handle_request(struct pscrpc_service *svc,
 		goto put_rpc_export;
 	}
 
-	request->rq_phase = ZRQ_PHASE_INTERPRET;
+	request->rq_phase = PSCRQ_PHASE_INTERPRET;
 
 	psc_info("Handling RPC peer+ref:pid:xid:nid:opc "
 		 "%s+%d:%d:%"PRIu64":%d",
@@ -365,7 +365,7 @@ pscrpc_server_handle_request(struct pscrpc_service *svc,
 
 	rc = svc->srv_handler(request);
 
-	request->rq_phase = ZRQ_PHASE_COMPLETE;
+	request->rq_phase = PSCRQ_PHASE_COMPLETE;
 
 	psc_info("Handled RPC peer+ref:pid:xid:nid:opc "
 		 "%s+%d:%d:%"PRIu64":%d",
@@ -410,7 +410,7 @@ pscrpc_server_handle_request(struct pscrpc_service *svc,
 
 	timediff = cfs_timeval_sub(&work_end, &work_start, NULL);
 
-	if (timediff / 1000000 > ZOBD_TIMEOUT)
+	if (timediff / 1000000 > PSCRPC_OBD_TIMEOUT)
 		CERROR("request %"PRIu64" opc %u from %s processed in %lds "
 		       "trans %"PRIu64" rc %d/%d\n",
 		       request->rq_xid, request->rq_reqmsg->opc,
@@ -551,8 +551,8 @@ int
 target_send_reply_msg (struct pscrpc_request *req, int rc, int fail_id)
 {
 #if PAULS_TODO
-	if (ZOBD_FAIL_CHECK(fail_id | ZOBD_FAIL_ONCE)) {
-		obd_fail_loc |= ZOBD_FAIL_ONCE | ZOBD_FAILED;
+	if (PSCRPC_OBD_FAIL_CHECK(fail_id | PSCRPC_OBD_FAIL_ONCE)) {
+		obd_fail_loc |= PSCRPC_OBD_FAIL_ONCE | PSCRPC_OBD_FAILED;
 		DEBUG_REQ(PLL_ERROR, req, "dropping reply");
 		return (-ECOMM);
 	}
@@ -656,7 +656,7 @@ pscrpc_main(struct psc_thread *thread, struct pscrpc_service *svc)
 			goto out;
 	}
 	/* Alloc reply state structure for this one */
-	ZOBD_ALLOC(rs, svc->srv_max_reply_size);
+	PSCRPC_OBD_ALLOC(rs, svc->srv_max_reply_size);
 	INIT_PSCLIST_ENTRY(&rs->rs_list_entry);
 
 	spinlock(&svc->srv_lock);
@@ -779,7 +779,7 @@ pscrpc_stop_thread(struct pscrpc_service *svc, struct pscrpc_thread *thread)
 	psclist_del(&thread->t_link);
 	freelock(&svc->srv_lock);
 
-	ZOBD_FREE(thread, sizeof(*thread));
+	PSCRPC_OBD_FREE(thread, sizeof(*thread));
 }
 
 void pscrpc_stop_all_threads(struct pscrpc_service *svc)
@@ -916,10 +916,10 @@ pscrpc_unregister_service(struct pscrpc_service *service)
 	psclist_for_each_entry_safe(rs, t, &service->srv_free_rs_list,
 	    rs_list_entry) {
 		psclist_del(&rs->rs_list_entry);
-		ZOBD_FREE(rs, service->srv_max_reply_size);
+		PSCRPC_OBD_FREE(rs, service->srv_max_reply_size);
 	}
 
-	ZOBD_FREE(service, sizeof(*service));
+	PSCRPC_OBD_FREE(service, sizeof(*service));
 	return 0;
 }
 
@@ -944,7 +944,7 @@ pscrpc_init_svc(int nbufs, int bufsize, int max_req_size, int max_reply_size,
 	LASSERT (nbufs > 0);
 	LASSERT (bufsize >= max_req_size);
 
-	ZOBD_ALLOC(service, sizeof(*service));
+	PSCRPC_OBD_ALLOC(service, sizeof(*service));
 	if (service == NULL)
 		RETURN(NULL);
 
