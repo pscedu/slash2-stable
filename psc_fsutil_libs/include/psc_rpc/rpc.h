@@ -122,7 +122,7 @@ struct pscrpc_export {
 	int			  exp_failed;
 	void			(*exp_hldropf)(void *);
 	void			 *exp_private; /* app-specific data */
-//	struct psclist_head       exp_outstanding_replies;
+//	struct psclist_head	  exp_outstanding_replies;
 };
 
 struct pscrpc_import;
@@ -155,38 +155,39 @@ struct pscrpc_request_pool {
 };
 
 struct pscrpc_import {
-	struct pscrpc_connection *imp_connection;
-	struct pscrpc_client     *imp_client;
-	struct psclist_head       imp_sending_list;  /* in-flight? */
-	struct psclist_head       imp_uncomitted;    /* post send  */
-	struct psclist_head       imp_rpcsets;       /* list of sets */
-	size_t                    imp_nsets;
-	psc_spinlock_t            imp_lock;
-	atomic_t                  imp_inflight;
-	atomic_t                  imp_refcount;
-	int                       imp_generation;
-	int                       imp_conn_cnt;
-	int                       imp_max_retries;
-	enum psc_imp_state        imp_state;
-	struct pscrpc_handle      imp_remote_handle;
-	uint64_t                  imp_last_replay_transno;
-	uint64_t                  imp_last_transno_checked; /* optimize */
-	uint64_t                  imp_peer_committed_transno;
-	struct psc_waitq          imp_recovery_waitq;
-	struct psclist_head       imp_delayed_list;
-	unsigned int              imp_invalid:1,
-				  imp_server_timeout:1,
-				  imp_deactive:1,
-				  imp_replayable:1,
-				  imp_force_verify:1,
-				  imp_igntimeout:1,
-				  imp_failed:1;
+	struct pscrpc_connection	*imp_connection;
+	struct pscrpc_client		*imp_client;
+	struct psclist_head		 imp_sending_list;	/* in-flight? */
+	struct psclist_head		 imp_uncomitted;	/* post send  */
+	struct psclist_head		 imp_rpcsets;		/* list of sets */
+	size_t				 imp_nsets;
+	psc_spinlock_t			 imp_lock;
+	atomic_t			 imp_inflight;
+	atomic_t			 imp_refcount;
+	int				 imp_generation;
+	int				 imp_conn_cnt;
+	int				 imp_max_retries;
+	enum psc_imp_state		 imp_state;
+	struct pscrpc_handle		 imp_remote_handle;
+	uint64_t			 imp_last_replay_transno;
+	uint64_t			 imp_last_transno_checked; /* optimize */
+	uint64_t			 imp_peer_committed_transno;
+	struct psc_waitq		 imp_recovery_waitq;
+	struct psclist_head		 imp_delayed_list;
+	unsigned int			 imp_invalid:1,
+					 imp_server_timeout:1,
+					 imp_deactive:1,
+					 imp_replayable:1,
+					 imp_force_verify:1,
+					 imp_igntimeout:1,
+					 imp_failed:1;
 #if 0
 	unsigned int
-		imp_dlm_fake:1,
-		imp_initial_recov:1, imp_initial_recov_bk:1,
-		imp_pingable:1,
-		imp_resend_replay:1
+					 imp_dlm_fake:1,
+					 imp_initial_recov:1,
+					 imp_initial_recov_bk:1,
+					 imp_pingable:1,
+					 imp_resend_replay:1
 #endif
 };
 
@@ -204,16 +205,16 @@ struct pscrpc_request_set;
 typedef int (*set_interpreter_func)(struct pscrpc_request_set *, void *, int);
 
 struct pscrpc_request_set {
-	struct psclist_head  set_requests;
-	int                  set_remaining;
-	struct psc_waitq     set_waitq;        /* I block here          */
-	set_interpreter_func set_interpret;    /* callback function     */
-	void                *set_arg;          /* callback pointer      */
-	psc_spinlock_t       set_lock;
-	int                  set_flags;
+	struct psclist_head	 set_requests;
+	int			 set_remaining;
+	struct psc_waitq	 set_waitq;		/* I block here          */
+	set_interpreter_func	 set_interpret;		/* callback function     */
+	void			*set_arg;		/* callback pointer      */
+	psc_spinlock_t		 set_lock;
+	int			 set_flags;
 #if 0
-	//psc_spinlock_t     rqset_lock;
-	//psclist_cache_t    rqset_reqs;       /* the request list      */
+	psc_spinlock_t		 rqset_lock;
+	psclist_cache_t		 rqset_reqs;		/* the request list      */
 #endif
 };
 
@@ -221,26 +222,26 @@ struct pscrpc_request_set {
 #define PSCRPC_SETF_CHECKING	(1 << 0)
 
 struct pscrpc_bulk_desc {
-	unsigned int              bd_success:1;    /* completed successfully */
-	unsigned int              bd_network_rw:1; /* accessible to network  */
-	unsigned int              bd_type:2;       /* {put,get}{source,sink} */
-	unsigned int              bd_registered:1; /* client side            */
-	psc_spinlock_t            bd_lock;         /* serialise w/ callback  */
-	int                       bd_import_generation;
-	struct pscrpc_import     *bd_import;       /* client only            */
-	struct pscrpc_connection *bd_connection;   /* server only            */
-	struct pscrpc_export     *bd_export;       /* server only            */
-	struct pscrpc_request    *bd_req;          /* associated request     */
-	struct psc_waitq          bd_waitq;        /* server side only WQ    */
-	int                       bd_iov_count;    /* # entries in bd_iov    */
-	int                       bd_max_iov;      /* alloc'd size of bd_iov */
-	int                       bd_nob;          /* # bytes covered        */
-	int                       bd_nob_transferred; /* # bytes GOT/PUT     */
-	uint64_t                  bd_last_xid;     /* track xid for retry    */
-	uint32_t                  bd_portal;       /* which portal           */
-	struct pscrpc_cb_id       bd_cbid;         /* network callback info  */
-	lnet_handle_md_t          bd_md_h;         /* associated MD          */
-	lnet_md_iovec_t           bd_iov[0];       /* must be last           */
+	unsigned int			 bd_success:1;		/* completed successfully */
+	unsigned int			 bd_network_rw:1;	/* accessible to network  */
+	unsigned int			 bd_type:2;		/* {put,get}{source,sink} */
+	unsigned int			 bd_registered:1;	/* client side            */
+	psc_spinlock_t			 bd_lock;		/* serialise w/ callback  */
+	int				 bd_import_generation;
+	struct pscrpc_import		*bd_import;		/* client only            */
+	struct pscrpc_connection	*bd_connection;		/* server only            */
+	struct pscrpc_export		*bd_export;		/* server only            */
+	struct pscrpc_request		*bd_req;		/* associated request     */
+	struct psc_waitq		 bd_waitq;		/* server side only WQ    */
+	int				 bd_iov_count;		/* # entries in bd_iov    */
+	int				 bd_max_iov;		/* alloc'd size of bd_iov */
+	int				 bd_nob;		/* # bytes covered        */
+	int				 bd_nob_transferred;	/* # bytes GOT/PUT     */
+	uint64_t			 bd_last_xid;		/* track xid for retry    */
+	uint32_t			 bd_portal;		/* which portal           */
+	struct pscrpc_cb_id		 bd_cbid;		/* network callback info  */
+	lnet_handle_md_t		 bd_md_h;		/* associated MD          */
+	lnet_md_iovec_t			 bd_iov[0];		/* must be last           */
 };
 
 struct psc_msg {
@@ -261,79 +262,78 @@ struct psc_msg {
 
 struct pscrpc_reply_state;
 struct pscrpc_request_buffer_desc;
-struct pscrpc_nbrequests;
 
 struct pscrpc_peer_qlen {
-	atomic_t		 qlen;
-	lnet_process_id_t	 id;
-	struct psc_hashent	 hentry;
+	atomic_t			 pql_qlen;
+	lnet_process_id_t		 pql_id;
+	struct psc_hashent		 pql_hentry;
 };
 
 struct pscrpc_request {
-	int			rq_type;
-	int			rq_status;
-	int			rq_retry;
-	int			rq_timeout;         /* time to wait for reply (seconds) */
-	int			rq_request_portal;
-	int			rq_reply_portal;
-	int			rq_nob_received;    /* client-side # reply bytes received */
-	int			rq_reqlen;
-	int			rq_replen;
-	int			rq_import_generation;
-	time_t			rq_sent;
-	psc_spinlock_t		rq_lock;
-	uint64_t		rq_transno;
-	uint64_t		rq_xid;
-	uint64_t		rq_history_seq;
-	unsigned int		rq_intr:1,
-				rq_replied:1,
-				rq_err:1,
-				rq_timedout:1,
-				rq_resend:1,
-				rq_restart:1,
-				rq_replay:1,
-				rq_no_resend:1,
-				rq_waiting:1,
-				rq_receiving_reply:1,
-				rq_no_delay:1,
-				rq_net_err:1;
-	atomic_t		rq_refcount; /* client-side refcnt for SENT race */
-	atomic_t		rq_retries;  /* count retries */
-	atomic_t               *rq_compl_cntr;
-	lnet_process_id_t	rq_peer;
-	lnet_nid_t		rq_self;
-	enum   psc_rq_phase         rq_phase; /* one of RQ_PHASE_* */
-	enum   psc_imp_state        rq_send_state;
-	struct psclist_head         rq_list_entry;
-	struct psclist_head         rq_set_chain_lentry;
-	struct psclist_head         rq_history_lentry;
-	struct pscrpc_import       *rq_import;     /* client side */
-	struct pscrpc_request_pool *rq_pool;
-	struct pscrpc_connection   *rq_conn;       /* svr-side */
-	struct pscrpc_export       *rq_export;
-	struct psc_thread          *rq_svc_thread; /* who's servicing req */
-	struct pscrpc_request_set  *rq_set;
-	struct pscrpc_nbrequests   *rq_nbreqs;
+	int				 rq_type;
+	int				 rq_status;
+	int				 rq_retry;
+	int				 rq_timeout;		/* time to wait for reply (seconds) */
+	int				 rq_request_portal;
+	int				 rq_reply_portal;
+	int				 rq_nob_received;	/* client-side # reply bytes received */
+	int				 rq_reqlen;
+	int				 rq_replen;
+	int				 rq_import_generation;
+	time_t				 rq_sent;
+	psc_spinlock_t			 rq_lock;
+	uint64_t			 rq_transno;
+	uint64_t			 rq_xid;
+	uint64_t			 rq_history_seq;
+	unsigned int			 rq_intr:1,
+					 rq_replied:1,
+					 rq_err:1,
+					 rq_timedout:1,
+					 rq_resend:1,
+					 rq_restart:1,
+					 rq_replay:1,
+					 rq_no_resend:1,
+					 rq_waiting:1,
+					 rq_receiving_reply:1,
+					 rq_no_delay:1,
+					 rq_net_err:1;
+	atomic_t			 rq_refcount;		/* client-side refcnt for SENT race */
+	atomic_t			 rq_retries;		/* count retries */
+	atomic_t			*rq_compl_cntr;
+	lnet_process_id_t		 rq_peer;
+	lnet_nid_t			 rq_self;
+	enum psc_rq_phase		 rq_phase;		/* one of PSCRQ_PHASE_* */
+	enum psc_imp_state		 rq_send_state;
+	struct psclist_head		 rq_list_entry;
+	struct psclist_head		 rq_set_chain_lentry;
+	struct psclist_head		 rq_history_lentry;
+	struct pscrpc_import		*rq_import;		/* client side */
+	struct pscrpc_request_pool	*rq_pool;
+	struct pscrpc_connection	*rq_conn;		/* svr-side */
+	struct pscrpc_export		*rq_export;
+	struct psc_thread		*rq_svc_thread;		/* who's servicing req */
+	struct pscrpc_request_set	*rq_set;
+
 	/* client+server request */
-	struct psc_msg             *rq_reqmsg;
-	struct psc_msg             *rq_repmsg;
+	struct psc_msg			*rq_reqmsg;
+	struct psc_msg			*rq_repmsg;
 	/* request and reply callbacks */
-	struct pscrpc_cb_id         rq_req_cbid;
-	struct pscrpc_cb_id         rq_reply_cbid;
-	struct psc_waitq           *rq_waitq;   /* others block here */
-	struct pscrpc_bulk_desc    *rq_bulk;    /* attach bulk */
-	int			  (*rq_interpret_reply)(struct pscrpc_request *,
-					struct pscrpc_async_args *);
-	struct pscrpc_async_args    rq_async_args;      /* Async completion context */
-	lnet_handle_md_t            rq_req_md_h;
+	struct pscrpc_cb_id		 rq_req_cbid;
+	struct pscrpc_cb_id		 rq_reply_cbid;
+	struct psc_waitq		*rq_waitq;		/* completion notification for others */
+	struct pscrpc_bulk_desc		*rq_bulk;		/* attach bulk */
+	int				(*rq_interpret_reply)(struct pscrpc_request *,
+					    struct pscrpc_async_args *);
+	struct pscrpc_async_args	 rq_async_args;		/* Async completion context */
+	lnet_handle_md_t		 rq_req_md_h;
 	/* client-only incoming reply */
-	lnet_handle_md_t            rq_reply_md_h;
-	struct psc_waitq            rq_reply_waitq;
+	lnet_handle_md_t		 rq_reply_md_h;
+	struct psc_waitq		 rq_reply_waitq;
 	/* server-side... */
-	struct timeval              rq_arrival_time; /* request arrival time */
-	struct pscrpc_reply_state  *rq_reply_state;  /* separated reply state */
-	struct pscrpc_request_buffer_desc *rq_rqbd;  /* incoming req  buffer*/
-	struct pscrpc_peer_qlen	   *rq_peer_qlen;
+	struct timeval			 rq_arrival_time;	/* request arrival time */
+	struct pscrpc_reply_state	 *rq_reply_state;	/* separated reply state */
+	struct pscrpc_request_buffer_desc *rq_rqbd;		/* incoming req  buffer*/
+	struct pscrpc_peer_qlen		 *rq_peer_qlen;
 };
 
 /* Each service installs its own request handler */
@@ -400,31 +400,31 @@ struct pscrpc_service {
 };
 
 struct pscrpc_request_buffer_desc {
-	int                    rqbd_refcount;
-	char                  *rqbd_buffer;
-	lnet_handle_md_t       rqbd_md_h;
-	struct psclist_head    rqbd_lentry;
-	struct psclist_head    rqbd_reqs;
-	struct pscrpc_service *rqbd_service;
-	struct pscrpc_cb_id    rqbd_cbid;
-	struct pscrpc_request  rqbd_req;
+	int			 rqbd_refcount;
+	char			*rqbd_buffer;
+	lnet_handle_md_t	 rqbd_md_h;
+	struct psclist_head	 rqbd_lentry;
+	struct psclist_head	 rqbd_reqs;
+	struct pscrpc_service	*rqbd_service;
+	struct pscrpc_cb_id	 rqbd_cbid;
+	struct pscrpc_request	 rqbd_req;
 };
 
 struct pscrpc_reply_state {
-	struct pscrpc_cb_id    rs_cb_id;       /* reply callback */
-	struct psclist_head    rs_list_entry;
-	int                    rs_size;
-	uint64_t               rs_xid;
-	unsigned int           rs_difficult:1; /* ACK/commit stuff */
-	unsigned int           rs_scheduled:1; /* being handled? */
-	unsigned int           rs_scheduled_ever:1;/* any schedule attempts? */
-	unsigned int           rs_handled:1;   /* been handled yet? */
-	unsigned int           rs_on_net:1;    /* reply_out_callback pending?*/
-	unsigned int           rs_prealloc:1;  /* rs from prealloc list */
-	atomic_t               rs_refcount;
-	lnet_handle_md_t       rs_md_h;
-	struct pscrpc_service *rs_service;     /* backpointer to my service */
-	struct psc_msg         rs_msg;         /* msg struct -- MUST BE LAST MEMBER */
+	struct pscrpc_cb_id	 rs_cb_id;		/* reply callback */
+	struct psclist_head	 rs_list_entry;
+	int			 rs_size;
+	uint64_t		 rs_xid;
+	unsigned int		 rs_difficult:1;	/* ACK/commit stuff */
+	unsigned int		 rs_scheduled:1;	/* being handled? */
+	unsigned int		 rs_scheduled_ever:1;	/* any schedule attempts? */
+	unsigned int		 rs_handled:1;		/* been handled yet? */
+	unsigned int		 rs_on_net:1;		/* reply_out_callback pending?*/
+	unsigned int		 rs_prealloc:1;		/* rs from prealloc list */
+	atomic_t		 rs_refcount;
+	lnet_handle_md_t	 rs_md_h;
+	struct pscrpc_service	*rs_service;		/* backpointer to my service */
+	struct psc_msg		 rs_msg;		/* msg struct -- MUST BE LAST MEMBER */
 };
 
 /*
@@ -439,6 +439,7 @@ struct pscrpc_nbreqset {
 	atomic_t			nb_outstanding;
 	psc_spinlock_t                  nb_lock;
 	uint32_t                        nb_flags;
+	struct psc_waitq		nb_waitq;	/* notification to reap */
 };
 
 #define NBREQSET_WORK_INPROG 1
@@ -449,13 +450,15 @@ struct pscrpc_nbreqset {
 
 #define PSCRPC_NBREQSET_INIT(v, setcb, rqcb)				\
 	{ PSCPRC_SET_INIT((v).nb_reqset, (setcb), NULL), (rqcb),	\
-			ATOMIC_INIT(0), LOCK_INITIALIZER, 0 }
+	    ATOMIC_INIT(0), LOCK_INITIALIZER, 0, PSC_WAITQ_INIT }
 
 struct pscrpc_nbreqset *
 	 nbreqset_init(set_interpreter_func, nbreq_callback);
 void	 nbreqset_add(struct pscrpc_nbreqset *, struct pscrpc_request *);
-int	 nbrequest_reap(struct pscrpc_nbreqset *nbs);
-int	 nbrequest_flush(struct pscrpc_nbreqset *);
+int	 nbreqset_reap(struct pscrpc_nbreqset *);
+int	 nbreqset_flush(struct pscrpc_nbreqset *);
+
+void	 pscrpc_nbreapthr_spawn(struct pscrpc_nbreqset *, int, const char *);
 
 struct pscrpc_bulk_desc *
 	 pscrpc_prep_bulk_exp(struct pscrpc_request *, int, int, int);

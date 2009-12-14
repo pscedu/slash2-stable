@@ -54,7 +54,7 @@ pscrpc_bump_peer_qlen(void *arg)
 {
 	struct pscrpc_peer_qlen *pq = arg;
 
-	atomic_inc(&pq->qlen);
+	atomic_inc(&pq->pql_qlen);
 }
 
 /*
@@ -168,8 +168,8 @@ void request_in_callback(lnet_event_t *ev)
 			struct psc_hashbkt *b;
 
 			tpq = PSCALLOC(sizeof(*tpq));
-			tpq->id = req->rq_peer;
-			atomic_set(&tpq->qlen, 1);
+			tpq->pql_id = req->rq_peer;
+			atomic_set(&tpq->pql_qlen, 1);
 
 			/*
 			 * Search again in case it was created by

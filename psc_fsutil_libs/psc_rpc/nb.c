@@ -4,9 +4,17 @@
 
 #include <inttypes.h>
 
-#include "psc_util/alloc.h"
 #include "psc_rpc/rpc.h"
 #include "psc_rpc/rpclog.h"
+#include "psc_util/alloc.h"
+#include "psc_util/atomic.h"
+#include "psc_util/log.h"
+#include "psc_util/thread.h"
+#include "psc_util/waitq.h"
+
+struct pscrpc_nbreapthr {
+	struct pscrpc_nbreqset	*pnbt_nbset;
+};
 
 /**
  * nbreqset_push - send out new requests
@@ -24,13 +32,13 @@ nbreqset_push(struct pscrpc_request *req)
  * @nb_callback:   application callback
  */
 struct pscrpc_nbreqset *
-nbreqset_init(set_interpreter_func nb_interpret,
-	      nbreq_callback       nb_callback)
+nbreqset_init(set_interpreter_func nb_interpret, nbreq_callback nb_callback)
 {
 
 	struct pscrpc_nbreqset *nbs;
 
 	nbs = PSCALLOC(sizeof(struct pscrpc_nbreqset));
+	psc_waitq_init(&nbs->nb_waitq);
 	pscrpc_set_init(&nbs->nb_reqset);
 	nbs->nb_reqset.set_interpret = nb_interpret;
 	nbs->nb_callback = nb_callback;
@@ -43,10 +51,9 @@ nbreqset_init(set_interpreter_func nb_interpret,
  *
  */
 void
-nbreqset_add(struct pscrpc_nbreqset *nbs,
-	     struct pscrpc_request  *req)
+nbreqset_add(struct pscrpc_nbreqset *nbs, struct pscrpc_request *req)
 {
-
+	req->rq_waitq = &nbs->nb_waitq;
 	atomic_inc(&nbs->nb_outstanding);
 	pscrpc_set_add_new_req(&nbs->nb_reqset, req);
 	if (nbreqset_push(req)) {
@@ -59,7 +66,7 @@ nbreqset_add(struct pscrpc_nbreqset *nbs,
  * nbrequest_flush - sync all outstanding requests
  */
 int
-nbrequest_flush(struct pscrpc_nbreqset *nbs)
+nbreqset_flush(struct pscrpc_nbreqset *nbs)
 {
 	return (pscrpc_set_wait(&nbs->nb_reqset));
 }
@@ -76,7 +83,7 @@ nbrequest_flush(struct pscrpc_nbreqset *nbs)
  *        here as well.
  */
 int
-nbrequest_reap(struct pscrpc_nbreqset *nbs)
+nbreqset_reap(struct pscrpc_nbreqset *nbs)
 {
 	int    nreaped=0, nchecked=0;
 	struct psclist_head          *i, *j;
@@ -130,4 +137,31 @@ nbrequest_reap(struct pscrpc_nbreqset *nbs)
 	freelock(&set->set_lock);
 	psc_dbg("checked %d requests", nchecked);
 	RETURN(nreaped);
+}
+
+void *
+_pscrpc_nbreapthr_main(void *arg)
+{
+	struct pscrpc_nbreapthr *pnbt;
+	struct psc_thread *thr = arg;
+
+	pnbt = thr->pscthr_private;
+	for (;;) {
+		nbreqset_reap(pnbt->pnbt_nbset);
+		psc_waitq_waitrel_s(&pnbt->pnbt_nbset->nb_waitq, NULL, 1);
+	}
+}
+
+void
+pscrpc_nbreapthr_spawn(struct pscrpc_nbreqset *nbset, int thrtype,
+    const char *thrname)
+{
+	struct pscrpc_nbreapthr *pnbt;
+	struct psc_thread *thr;
+
+	thr = pscthr_init(thrtype, 0, _pscrpc_nbreapthr_main,
+	    NULL, sizeof(*pnbt), "%s", thrname);
+	pnbt = thr->pscthr_private;
+	pnbt->pnbt_nbset = nbset;
+	pscthr_setready(thr);
 }

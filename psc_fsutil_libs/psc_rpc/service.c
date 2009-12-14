@@ -390,7 +390,7 @@ pscrpc_server_handle_request(struct pscrpc_service *svc,
 	 * XXX optimization: perform destruction only if export was destroyed.
 	 */
 	if (svc->srv_count_peer_qlens &&
-	    atomic_dec_return(&request->rq_peer_qlen->qlen) == 0) {
+	    atomic_dec_return(&request->rq_peer_qlen->pql_qlen) == 0) {
 		struct pscrpc_peer_qlen *pq;
 		struct psc_hashbkt *b;
 
@@ -400,7 +400,7 @@ pscrpc_server_handle_request(struct pscrpc_service *svc,
 		/* Look up the struct again in case it disappeared. */
 		pq = psc_hashbkt_search(&svc->srv_peer_qlentab,
 		    b, &request->rq_peer, NULL, request->rq_peer.nid);
-		if (pq && atomic_read(&pq->qlen) == 0)
+		if (pq && atomic_read(&pq->pql_qlen) == 0)
 			psc_hashent_remove(&svc->srv_peer_qlentab, pq);
 		else
 			pq = NULL;
@@ -928,7 +928,7 @@ pscrpc_peer_qlen_cmp(const void *a, const void *b)
 {
 	const struct pscrpc_peer_qlen *qa = a, *qb = b;
 
-	return (memcmp(&qa->id, &qb->id, sizeof(qa->id)));
+	return (memcmp(&qa->pql_id, &qb->pql_id, sizeof(qa->pql_id)));
 }
 
 struct pscrpc_service *
@@ -989,7 +989,7 @@ pscrpc_init_svc(int nbufs, int bufsize, int max_req_size, int max_reply_size,
 		service->srv_count_peer_qlens = 1;
 #define QLENTABSZ 511
 		psc_hashtbl_init(&service->srv_peer_qlentab, 0,
-		    struct pscrpc_peer_qlen, id, hentry, QLENTABSZ,
+		    struct pscrpc_peer_qlen, pql_id, pql_hentry, QLENTABSZ,
 		    pscrpc_peer_qlen_cmp, "qlen-%s", service->srv_name);
 	}
 
