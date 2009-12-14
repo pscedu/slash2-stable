@@ -510,7 +510,7 @@ psc_multiwait_entercritsect(struct psc_multiwait *mw)
 	psc_pthread_mutex_unlock(&mw->mw_mutex);
 }
 
-/*
+/**
  * psc_multiwait_leavecritsect - Leave a multiwait critical section.
  * @mw: the multiwait.
  */
@@ -523,7 +523,7 @@ psc_multiwait_leavecritsect(struct psc_multiwait *mw)
 	psc_pthread_mutex_unlock(&mw->mw_mutex);
 }
 
-/*
+/**
  * psc_multiwait_hascond - Determine if a condition has been registered in a
  *	multiwait.
  * @mw: the multiwait.
@@ -546,7 +546,7 @@ psc_multiwait_hascond(struct psc_multiwait *mw, struct psc_multiwaitcond *mwc)
 	return (rc);
 }
 
-/*
+/**
  * psc_multiwait_prconds - Print list of conditions registered in a multiwait.
  * @mw: the multiwait to dump.
  */
