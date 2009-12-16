@@ -187,7 +187,7 @@ build: build-prereq
 	${MAKE} clean && ${MAKE} depend && ${MAKE}
 
 qbuild:
-	@(${MAKE} build-prereq && ${MAKE} clean && ${MAKE} depend && ${MAKE}) >/dev/null
+	@${MAKE} build >/dev/null
 
 #CS_ARGS+=-s${APP_BASE}
 #ET_ARGS+="${APP_BASE}"
