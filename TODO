@@ -69,6 +69,7 @@ pfl
 - bail if multiwait_addcond() fails
 - psclist_add_sorted() - maintain a median element for faster sorting
 - add a variable printbin()
+- rename psc_bitstr_setchk -> psc_bitfield_setchk
 
 zest
 - research faster CRC operations
