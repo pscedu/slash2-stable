@@ -61,6 +61,7 @@ int
 main(int argc, char *argv[])
 {
 	void *p;
+	int i;
 
 	pfl_init();
 	progname = argv[0];
@@ -78,10 +79,12 @@ main(int argc, char *argv[])
 	addelem(5);
 	addelem(8);
 
-	p = PSCALLOC(sizeof(void *) * nitems);
-	psclist_sort(p, &hd, nitems, offsetof(struct m, lentry),
-	    qsort, m_cmp);
-	PSCFREE(p);
+	for (i = 0; i < 100; i++) {
+		p = PSCALLOC(sizeof(void *) * nitems);
+		psclist_sort(p, &hd, nitems, offsetof(struct m, lentry),
+		    qsort, m_cmp);
+		PSCFREE(p);
+	}
 
 	while (shift())
 		;
