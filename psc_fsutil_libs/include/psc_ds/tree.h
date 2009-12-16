@@ -116,7 +116,6 @@ void name##_SPLAY(struct name *, struct type *);			\
 void name##_SPLAY_MINMAX(struct name *, int);				\
 struct type *name##_SPLAY_INSERT(struct name *, struct type *);		\
 struct type *name##_SPLAY_REMOVE(struct name *, struct type *);		\
-void name##_SPLAY_XREMOVE(struct name *, struct type *);		\
 									\
 /* Finds the node with the same key as elm */				\
 static __inline struct type *						\
@@ -208,13 +207,6 @@ name##_SPLAY_REMOVE(struct name *head, struct type *elm)		\
 }									\
 									\
 void									\
-name##_SPLAY_XREMOVE(struct name *head, struct type *elm)		\
-{									\
-	if (name##_SPLAY_REMOVE(head, elm) != elm)			\
-		psc_fatalx("splay inconsistency");			\
-}									\
-									\
-void									\
 name##_SPLAY(struct name *head, struct type *elm)			\
 {									\
 	struct type __node, *__left, *__right, *__tmp;			\
@@ -290,7 +282,6 @@ void name##_SPLAY_MINMAX(struct name *head, int __comp) \
 
 #define SPLAY_INSERT(name, x, y)	name##_SPLAY_INSERT(x, y)
 #define SPLAY_REMOVE(name, x, y)	name##_SPLAY_REMOVE(x, y)
-#define SPLAY_XREMOVE(name, x, y)	name##_SPLAY_XREMOVE(x, y)
 #define SPLAY_FIND(name, x, y)		name##_SPLAY_FIND(x, y)
 #define SPLAY_NEXT(name, x, y)		name##_SPLAY_NEXT(x, y)
 #define SPLAY_ENTRY_DISJOINT(name, x)	name##_SPLAY_ENTRY_DISJOINT(x)
