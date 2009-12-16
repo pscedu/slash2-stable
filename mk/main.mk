@@ -146,9 +146,9 @@ depend: cleandep ${_C_SRCS} recurse-depend
 	fi
 	@if [ -n "${PROG}" ]; then							\
 		echo -n "${PROG}:" >> .depend;						\
-		perl ${ROOTDIR}/tools/libdep.pl ${LDFLAGS} >> .depend;			\
+		${LIBDEP} ${LDFLAGS} ${LIBDEP_ADD} >> .depend;				\
 	fi
-	@# XXX add cscope here?
+	@# XXX rebuild etags/cscope here?
 
 clean: recurse-clean
 	@# Check existence of files to catch errors such as SRCS+=file.y instead of file.c
