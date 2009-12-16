@@ -203,7 +203,7 @@ pll_sort(struct psc_lockedlist *pll, void (*sortf)(void *, size_t,
 
 	locked = PLL_RLOCK(pll);
 	if (pll->pll_nitems > 1) {
-		p = PSCALLOC(pll->pll_nitems * sizeof(*p));
+		p = PSCALLOC(pll->pll_nitems * sizeof(p));
 		psclist_sort(p, &pll->pll_listhd, pll->pll_nitems,
 		    pll->pll_offset, sortf, cmpf);
 		PSCFREE(p);
