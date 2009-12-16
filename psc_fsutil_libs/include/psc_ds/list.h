@@ -397,6 +397,10 @@ psclist_sort(void **p, struct psclist_head *hd, int n, ptrdiff_t off,
 	void *next, *prev;
 	int j = 0;
 
+	psc_assert(n >= 0);
+	if (n < 2)
+		return;
+
 	psclist_for_each(e, hd)
 		p[j++] = ((char *)e) - off;
 	sortf(p, n, sizeof(*p), cmpf);
