@@ -10,7 +10,7 @@ usage()
 
 parg=
 # uncomment to force copyrights into all files
-parg=-F
+#parg=-F
 
 shift $(($OPTIND - 1))
 
@@ -23,6 +23,7 @@ for i; do
 use warnings;
 use strict;
 use Getopt::Std;
+use File::Basename;
 
 my %opts;
 getopts("F", \%opts);
@@ -34,7 +35,9 @@ my $data = <>;
 my $startyr = 2006;		# obviously not always correct...
 my $yr;
 
-if ($data =~ m{/\* \$Id: \Q$ARGV\E \d+ (\d+)-}) {
+my $fn = basename $ARGV;
+
+if ($data =~ m{/\* \$Id: \Q$fn\E \d+ (\d+)-}) {
 	$yr = $1;
 } else {
 	$yr = 1900 + (localtime((stat $ARGV)[9]))[5];
