@@ -8,9 +8,9 @@ usage()
 	exit 1
 }
 
-if getopts "" c; then
-	usage
-fi
+parg=
+# uncomment to force copyrights into all files
+parg=-F
 
 shift $(($OPTIND - 1))
 
@@ -19,7 +19,14 @@ if [ $# -eq 0 ]; then
 fi
 
 for i; do
-	perl -W -i - $i <<'EOF'
+	perl -W -i - $parg $i <<'EOF'
+use warnings;
+use strict;
+use Getopt::Std;
+
+my %opts;
+getopts("F", \%opts);
+
 local $/;
 
 my $data = <>;
@@ -41,11 +48,23 @@ if ($yr < $startyr) {
 my $cpyears = $startyr;
 $cpyears .= "-$yr" if $yr > $startyr;
 
-# If the file does not contain a copyright section, insert at the top
-# after any $Id tags.
-unless ($data =~ /%PSC_START_COPYRIGHT%/) {
+if ($opts{F}) {
+	# If the file does not contain a copyright section, insert at the top
+	# after any $Id tags.
+	unless ($data =~ /%PSC_START_COPYRIGHT%/) {
 
-	$data =~ s{((/\*\s*\$Id.*?\*/\n)?)}{$1/\*
+		$data =~ s{((/\*\s*\$Id.*?\*/\n)?)}{$1/\*
+ \* %PSC_START_COPYRIGHT%
+ \* -----------------------------------------------------------------------------
+ \* -----------------------------------------------------------------------------
+ \* %PSC_END_COPYRIGHT%
+ \*/
+};
+	}
+} else {
+		$data =~ s
+{/* %PSC_COPYRIGHT% */
+}{/\*
  \* %PSC_START_COPYRIGHT%
  \* -----------------------------------------------------------------------------
  \* -----------------------------------------------------------------------------
