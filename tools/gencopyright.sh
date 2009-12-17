@@ -41,21 +41,23 @@ if ($yr < $startyr) {
 my $cpyears = $startyr;
 $cpyears .= "-$yr" if $yr > $startyr;
 
-# Recognize short tags for copyright generation
-$data =~ s{/\* %PSC_COPYRIGHT% \*/
-}
-{/\*
+# If the file does not contain a copyright section, insert at the top
+# after any $Id$ tags.
+unless ($data =~ /%PSC_START_COPYRIGHT%/) {
+
+	$data =~ s{((/\*\s*\$Id.*?\*/\n)?)}{$1/\*
  \* %PSC_START_COPYRIGHT%
  \* -----------------------------------------------------------------------------
  \* -----------------------------------------------------------------------------
  \* %PSC_END_COPYRIGHT%
  \*/
 };
+}
 
 $data =~ s
 {/\*
  \* %PSC_START_COPYRIGHT%
- \* -----------------------------------------------------------------------------
+ \* -----------------------------------------------------------------------------.*?
  \* -----------------------------------------------------------------------------(.*?)
  \* %PSC_END_COPYRIGHT%
  \*/
