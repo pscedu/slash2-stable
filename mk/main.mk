@@ -151,7 +151,7 @@ depend: cleandep ${_C_SRCS} recurse-depend
 	@# XXX rebuild etags/cscope here?
 
 clean: recurse-clean
-	@# Check existence of files to catch errors such as SRCS+=file.y instead of file.c
+	@# Check existence of files to catch errors such as SRCS+=file.c instead of file.y
 	@for i in ${SRCS}; do								\
 		if ! test -f $$i; then							\
 			echo "file does not exist: $$i" >&2;				\
@@ -188,6 +188,11 @@ build: build-prereq
 
 qbuild:
 	@${MAKE} build >/dev/null
+
+copyright: recurse-lint
+	@if ${NOTEMPTY} "${_TSRCS}"; then						\
+		${ROOTDIR}/tools/gencopyright.sh ${_TSRCS};				\
+	fi
 
 #CS_ARGS+=-s${APP_BASE}
 #ET_ARGS+="${APP_BASE}"
