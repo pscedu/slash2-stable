@@ -42,7 +42,7 @@ my $cpyears = $startyr;
 $cpyears .= "-$yr" if $yr > $startyr;
 
 # If the file does not contain a copyright section, insert at the top
-# after any $Id$ tags.
+# after any $Id tags.
 unless ($data =~ /%PSC_START_COPYRIGHT%/) {
 
 	$data =~ s{((/\*\s*\$Id.*?\*/\n)?)}{$1/\*
