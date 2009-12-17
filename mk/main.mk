@@ -189,7 +189,7 @@ build: build-prereq
 qbuild:
 	@${MAKE} build >/dev/null
 
-copyright: recurse-lint
+copyright: recurse-copyright
 	@if ${NOTEMPTY} "${_TSRCS}"; then						\
 		${ROOTDIR}/tools/gencopyright.sh ${_TSRCS};				\
 	fi
