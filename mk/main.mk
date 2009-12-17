@@ -191,8 +191,11 @@ qbuild:
 
 copyright: recurse-copyright
 	@if ${NOTEMPTY} "${_TSRCS}"; then						\
-		${ROOTDIR}/tools/gencopyright.sh ${_TSRCS};				\
+		${ECHORUN} ${ROOTDIR}/tools/gencopyright.sh ${_TSRCS};			\
 	fi
+	@for i in $$(find . -mindepth 2 -maxdepth 2 -name '*.h'); do			\
+		${ECHORUN} ${ROOTDIR}/tools/gencopyright.sh $$i;			\
+	done
 
 #CS_ARGS+=-s${APP_BASE}
 #ET_ARGS+="${APP_BASE}"
