@@ -36,7 +36,7 @@
 #include "psc_util/alloc.h"
 #include "psc_util/bitflag.h"
 #include "psc_util/log.h"
-#include "psc_util/multilock.h"
+#include "psc_util/multiwait.h"
 #include "psc_util/pthrutil.h"
 
 /**

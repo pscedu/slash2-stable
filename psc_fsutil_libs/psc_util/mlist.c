@@ -28,7 +28,7 @@
 #include "psc_util/lock.h"
 #include "psc_util/log.h"
 #include "psc_util/mlist.h"
-#include "psc_util/multilock.h"
+#include "psc_util/multiwait.h"
 
 struct psc_lockedlist psc_mlists =
     PLL_INITIALIZER(&psc_mlists, struct psc_mlist, pml_index_lentry);

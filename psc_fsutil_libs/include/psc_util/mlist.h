@@ -21,7 +21,7 @@
 #include "psc_ds/listguts.h"
 #include "psc_ds/lockedlist.h"
 #include "psc_util/lock.h"
-#include "psc_util/multilock.h"
+#include "psc_util/multiwait.h"
 
 struct psc_mlist {
 	struct psc_listguts		pml_guts;
