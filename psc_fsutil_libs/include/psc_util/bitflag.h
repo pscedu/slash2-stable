@@ -123,6 +123,8 @@ pfl_bitstr_copy(void *dst, int doff, const void *src, int soff, int nbits)
 
 	in64 = (const uint64_t *)src + soff / sizeof(*in64) / NBBY;
 	out64 = (uint64_t *)dst + doff / sizeof(*out64) / NBBY;
+	soff %= sizeof(*in64) * NBBY;
+	doff %= sizeof(*out64) * NBBY;
 
 	for (; nbits >= NBBY * (int)sizeof(*out64);
 	    in64++, out64++, nbits -= NBBY * (int)sizeof(*out64)) {
@@ -153,6 +155,7 @@ pfl_bitstr_copy(void *dst, int doff, const void *src, int soff, int nbits)
 		else if (soff < doff)
 			out8[1] |= *in8 >> (NBBY - doff - soff);
 	}
+
 	if (nbits) {
 		*out8 |= ((*in8 >> soff) & ~(0xff << nbits)) << doff;
 		nbits -= MIN(doff, NBBY - soff);

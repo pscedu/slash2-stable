@@ -159,5 +159,14 @@ main(int argc, char *argv[])
 	pfl_bitstr_copy(&out, 28, &in, 0, 2);
 	check(out, UINT64_C(0x300c0300));
 
+	uint64_t outbuf[4];
+	memset(outbuf, 0, sizeof(outbuf));
+	int repl = 3;
+	pfl_bitstr_copy(&outbuf, 68, &repl, 0, 4);
+	check(outbuf[0], UINT64_C(0));
+	check(outbuf[1], UINT64_C(0x30));
+	check(outbuf[2], UINT64_C(0));
+	check(outbuf[3], UINT64_C(0));
+
 	exit(0);
 }
