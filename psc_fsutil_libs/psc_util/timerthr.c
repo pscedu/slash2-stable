@@ -29,9 +29,9 @@
 #include "psc_util/thread.h"
 
 #define psc_timercmp_addsec(tvp, s, uvp, cmp)				\
-    (((tvp)->tv_sec + (s) == (uvp)->tv_sec) ?				\
-     ((tvp)->tv_usec cmp (uvp)->tv_usec) :				\
-     ((tvp)->tv_sec + (s) cmp (uvp)->tv_sec))
+	(((tvp)->tv_sec + (s) == (uvp)->tv_sec) ?			\
+	    ((tvp)->tv_usec cmp (uvp)->tv_usec) :			\
+	    ((tvp)->tv_sec + (s) cmp (uvp)->tv_sec))
 
 
 struct timeval psc_tiosthr_lastv[IST_NINTV];
@@ -45,24 +45,21 @@ psc_tiosthr_main(__unusedx void *arg)
 	uint64_t intv_len;
 	int i, stoff;
 
-	/* initialize time */
-	if (gettimeofday(&tv, NULL) == -1)
-		psc_fatal("gettimeofday");
-	wakev = tv;
-	for (i = 0; i < IST_NINTV; i++)
-		psc_tiosthr_lastv[i] = tv;
-
 	for (;;) {
-		/* sleep until next interval */
+		if (gettimeofday(&tv, NULL) == -1)
+			psc_fatal("gettimeofday");
 		usleep(1000000 - tv.tv_usec);
 		if (gettimeofday(&tv, NULL) == -1)
 			psc_fatal("gettimeofday");
 
 		/* find largest interval to update */
-		for (stoff = 0; stoff < IST_NINTV - 1; stoff++)
-			if (psc_timercmp_addsec(&tv, psc_iostat_intvs[stoff],
-			    &psc_tiosthr_lastv[stoff], <))
+		for (stoff = 0; stoff < IST_NINTV; stoff++) {
+			if (psc_timercmp_addsec(&psc_tiosthr_lastv[stoff],
+			    psc_iostat_intvs[stoff], &tv, >))
 				break;
+			psc_tiosthr_lastv[stoff] = tv;
+		}
+
 		/* if we woke from signal, skip */
 		if (stoff == 0)
 			continue;
@@ -70,7 +67,7 @@ psc_tiosthr_main(__unusedx void *arg)
 		PLL_LOCK(&psc_iostats);
 		psclist_for_each_entry(ist,
 		    &psc_iostats.pll_listhd, ist_lentry)
-			for (i = stoff; i >= 0; i--) {
+			for (i = 0; i < stoff; i++) {
 				istv = &ist->ist_intv[i];
 
 				/* reset counter to zero for this interval */
@@ -78,12 +75,12 @@ psc_tiosthr_main(__unusedx void *arg)
 				intv_len = psc_atomic64_xchg(
 				    &ist->ist_intv[i].istv_cur_len, intv_len);
 
-				if (i == stoff && stoff < IST_NINTV)
-					psc_atomic64_add(&ist->ist_intv[i +
-					    1].istv_cur_len, intv_len);
-
 				if (gettimeofday(&tv, NULL) == -1)
 					psc_fatal("gettimeofday");
+
+				if (i == stoff - 1 && i < IST_NINTV - 1)
+					psc_atomic64_add(&ist->ist_intv[i +
+					    1].istv_cur_len, intv_len);
 
 				ist->ist_intv[i].istv_intv_len = intv_len;
 

@@ -31,7 +31,7 @@ struct psc_iostats {
 };
 
 #define psc_iostats_calcrate(len, tv)					\
-	((len) / ((tv)->tv_sec * UINT64_C(1000000) + (tv)->tv_usec) * 1e-6)
+	((len) / (((tv)->tv_sec * UINT64_C(1000000) + (tv)->tv_usec) * 1e-6))
 
 #define psc_iostats_getintvrate(ist, n)					\
 	psc_iostats_calcrate((ist)->ist_intv[n].istv_intv_len,		\

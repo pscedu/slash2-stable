@@ -67,24 +67,34 @@ displaythr_main(__unusedx void *arg)
 {
 	char ratebuf[PSCFMT_HUMAN_BUFSIZ];
 	struct psc_iostats myist;
+	struct timeval tv;
+	int n = 0;
 
-	center("-- read --", 8 * 3);
-	printf("\t|\t");
-	center("-- write --", 8 * 3);
-	printf("\n"
-	    "%7s\t%7s\t%7s\t\t|\t"
-	    "%7s\t%7s\t%7s\n",
-	    "time", "intvamt", "total",
-	    "time", "intvamt", "total");
-	printf("================================="
-	    "==============================\n");
 	for (;;) {
-		sleep(1);
+		if (gettimeofday(&tv, NULL) == -1)
+			psc_fatal("gettimeofday");
+		usleep(1000000 - tv.tv_usec);
+		if (gettimeofday(&tv, NULL) == -1)
+			psc_fatal("gettimeofday");
+
+		if ((++n % 30) == 0) {
+			center("-- read --", 8 * 3);
+			printf("\t|\t");
+			center("-- write --", 8 * 3);
+			printf("\n"
+			    "%7s\t%7s\t%7s\t\t|\t"
+			    "%7s\t%7s\t%7s\n",
+			    "time", "intvamt", "total",
+			    "time", "intvamt", "total");
+			printf("================================="
+			    "==============================\n");
+			n = 0;
+		}
 
 		memcpy(&myist, &rdst, sizeof(myist));
 		psc_fmt_human(ratebuf,
 		    psc_iostats_getintvrate(&myist, 0));
-		printf("\r%6.2fs\t%7s\t",
+		printf("%6.2fs\t%7s\t",
 		    psc_iostats_getintvdur(&myist, 0), ratebuf);
 		psc_fmt_human(ratebuf, myist.ist_len_total);
 		printf("%7s\t\t|\t", ratebuf);
@@ -95,9 +105,7 @@ displaythr_main(__unusedx void *arg)
 		printf("%6.2fs\t%7s\t",
 		    psc_iostats_getintvdur(&myist, 0), ratebuf);
 		psc_fmt_human(ratebuf, myist.ist_len_total);
-		printf("%7s", ratebuf);
-
-		fflush(stdout);
+		printf("%7s\n", ratebuf);
 	}
 }
 

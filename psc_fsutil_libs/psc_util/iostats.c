@@ -41,8 +41,9 @@ int psc_iostat_intvs[] = {
 void
 psc_iostats_init(struct psc_iostats *ist, const char *fmt, ...)
 {
+	struct timeval tv;
 	va_list ap;
-	int rc;
+	int i, rc;
 
 	memset(ist, 0, sizeof(*ist));
 
@@ -51,6 +52,14 @@ psc_iostats_init(struct psc_iostats *ist, const char *fmt, ...)
 	va_end(ap);
 	if (rc == -1 || rc >= (int)sizeof(ist->ist_name))
 		psc_fatal("vsnprintf");
+
+	if (gettimeofday(&tv, NULL) == -1)
+		psc_fatal("gettimeofday");
+
+	for (i = 0; i < IST_NINTV; i++) {
+		ist->ist_intv[i].istv_lastv = tv;
+		ist->ist_intv[i].istv_intv_dur.tv_sec = 1;
+	}
 
 	pll_add(&psc_iostats, ist);
 }
