@@ -27,6 +27,9 @@ struct psc_iostats {
 	}			ist_intv[IST_NINTV];
 };
 
+#define psc_iostats_calcrate(len, tv)					\
+	((len) / ((tv)->tv_sec * UINT64_C(1000000) + (tv)->tv_usec) * 1e-6)
+
 #define psc_iostats_remove(ist)	pll_remove(&psc_iostats, (ist))
 
 void psc_iostats_init(struct psc_iostats *, const char *, ...);

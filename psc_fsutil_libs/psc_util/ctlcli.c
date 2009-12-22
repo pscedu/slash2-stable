@@ -468,8 +468,7 @@ psc_ctlmsg_iostats_prdat(__unusedx const struct psc_ctlmsghdr *mh,
 		for (j = 0; j < i; j++)
 			v += psc_atomic64_read(&ist->ist_intv[j].istv_len);
 
-		d = v / ((max.tv_sec * UINT64_C(1000000) +
-		    max.tv_usec) * 1e-6);
+		d = psc_iostats_calcrate(v, &max);
 
 		if (psc_ctl_inhuman)
 			printf("%10.2f ", d);
