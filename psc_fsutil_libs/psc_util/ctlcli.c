@@ -463,7 +463,7 @@ psc_ctlmsg_iostats_prdat(__unusedx const struct psc_ctlmsghdr *mh,
 			max = ist->ist_intv[i].istv_lastv;
 
 	printf(" %-42s ", ist->ist_name);
-	for (i = IST_NINTV - 1; i > 0; i++) {
+	for (i = IST_NINTV - 1; i >= 0; i--) {
 		v = psc_atomic64_read(&ist->ist_intv[i].istv_len);
 		for (j = 0; j < i; j++)
 			v += psc_atomic64_read(&ist->ist_intv[j].istv_len);

@@ -61,7 +61,7 @@ psc_tiosthr_main(__unusedx void *arg)
 		tv = wakev;
 
 		/* find largest interval to update */
-		for (stoff = 0; stoff < IST_NINTV; stoff++)
+		for (stoff = 0; stoff < IST_NINTV - 1; stoff++)
 			if (psc_timercmp_addsec(&tv, psc_iostat_intvs[stoff],
 			    &psc_tiosthr_lastv[stoff], <))
 				break;
