@@ -71,7 +71,7 @@ psc_tiosthr_main(__unusedx void *arg)
 		PLL_LOCK(&psc_iostats);
 		psclist_for_each_entry(ist,
 		    &psc_iostats.pll_listhd, ist_lentry)
-			for (i = stoff; i >= 0; i++) {
+			for (i = stoff; i >= 0; i--) {
 				istv = &ist->ist_intv[i];
 
 				/* reset counter to zero for this interval */
