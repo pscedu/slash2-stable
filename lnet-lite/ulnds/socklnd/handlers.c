@@ -953,11 +953,11 @@ usocklnd_send_tx(usock_conn_t *conn, usock_tx_t *tx)
                 if (nob <= 0) /* write queue is flow-controlled or error */
                         return nob;
 
-		iostats_intv_add(
+		psc_iostats_intv_add(
 		    peer && peer->up_ni ? &peer->up_ni->ni_send_ist :
 		    (conn->uc_ni ? &conn->uc_ni->ni_send_ist :
 		     &usock_pasv_send_ist), nob);
-		iostats_intv_add(&usock_aggr_send_ist, nob);
+		psc_iostats_intv_add(&usock_aggr_send_ist, nob);
                 LASSERT (nob <= tx->tx_resid);
                 tx->tx_resid -= nob;
                 t = cfs_time_current();
@@ -1011,11 +1011,11 @@ usocklnd_read_data(usock_conn_t *conn)
                         return nob;
                 }
 
-		iostats_intv_add(
+		psc_iostats_intv_add(
 		    peer && peer->up_ni ? &peer->up_ni->ni_recv_ist :
 		    (conn->uc_ni ? &conn->uc_ni->ni_recv_ist :
 		     &usock_pasv_recv_ist), nob);
-		iostats_intv_add(&usock_aggr_recv_ist, nob);
+		psc_iostats_intv_add(&usock_aggr_recv_ist, nob);
                 LASSERT (nob <= conn->uc_rx_nob_wanted);
                 conn->uc_rx_nob_wanted -= nob;
                 conn->uc_rx_nob_left -= nob;

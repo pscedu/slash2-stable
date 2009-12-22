@@ -11,30 +11,29 @@
 #include "psc_ds/lockedlist.h"
 #include "psc_util/atomic.h"
 
-#define IST_NAME_MAX 24
+#define IST_NAME_MAX	24
+#define IST_NINTV	2
 
-struct iostats {
+struct psc_iostats {
 	char			ist_name[IST_NAME_MAX];
 	struct psclist_head	ist_lentry;
 
-	struct timeval		ist_lasttv;
-	struct timeval		ist_intv;		/* amt over collection period */
+	psc_atomic64_t		ist_len_total;			/* lifetime */
 
-	atomic_t		ist_bytes_intv;
-	uint64_t		ist_bytes_total;
-	double			ist_rate;
-
-	atomic_t		ist_errors_intv;
-	uint64_t		ist_errors_total;
-	double			ist_erate;
+	struct psc_iostatv {
+		struct timeval	istv_lastv;			/* time of last accumulation */
+		struct timeval	istv_intv;			/* duration of accumulation */
+		psc_atomic64_t	istv_len;			/* length of accumulation */
+	}			ist_intv[IST_NINTV];
 };
 
-#define iostats_intv_add(ist, amt)	atomic_add((amt), &(ist)->ist_bytes_intv)
-#define iostats_remove(ist)		pll_remove(&psc_iostats, (ist))
+#define psc_iostats_remove(ist)	pll_remove(&psc_iostats, (ist))
 
-void iostats_init(struct iostats *, const char *, ...);
-void iostats_rename(struct iostats *, const char *, ...);
+void psc_iostats_init(struct psc_iostats *, const char *, ...);
+void psc_iostats_intv_add(struct psc_iostats *, uint64_t);
+void psc_iostats_rename(struct psc_iostats *, const char *, ...);
 
 extern struct psc_lockedlist	psc_iostats;
+extern int			psc_iostat_intvs[];
 
 #endif /* _PFL_IOSTATS_H_ */

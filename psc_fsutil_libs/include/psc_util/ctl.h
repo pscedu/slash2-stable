@@ -90,7 +90,7 @@ struct psc_ctlmsg_param {
 #define PCPF_SUB	(1 << 1)	/* relative: subtraction */
 
 struct psc_ctlmsg_iostats {
-	struct iostats		pci_ist;
+	struct psc_iostats	pci_ist;
 };
 
 #define PCI_NAME_ALL		"all"

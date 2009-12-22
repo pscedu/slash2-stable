@@ -24,18 +24,27 @@
 #include "psc_util/iostats.h"
 #include "psc_util/log.h"
 
-struct psc_lockedlist psc_iostats =
-    PLL_INITIALIZER(&psc_iostats, struct iostats, ist_lentry);
+struct psc_lockedlist	psc_iostats =
+    PLL_INITIALIZER(&psc_iostats, struct psc_iostats, ist_lentry);
+
+/*
+ * I/O statistic interval lengths:
+ *	(o) values are in seconds,
+ *	(o) must be even divisors and multipliers of each other, and
+ *	(o) must be sorted by increasing lengths (1,2,3) not (3,2,1).
+ */
+int psc_iostat_intvs[] = {
+	1,
+	10
+};
 
 void
-iostats_init(struct iostats *ist, const char *fmt, ...)
+psc_iostats_init(struct psc_iostats *ist, const char *fmt, ...)
 {
 	va_list ap;
 	int rc;
 
 	memset(ist, 0, sizeof(*ist));
-	if (gettimeofday(&ist->ist_lasttv, NULL) == -1)
-		psc_fatal("gettimeofday");
 
 	va_start(ap, fmt);
 	rc = vsnprintf(ist->ist_name, sizeof(ist->ist_name), fmt, ap);
@@ -47,7 +56,7 @@ iostats_init(struct iostats *ist, const char *fmt, ...)
 }
 
 void
-iostats_rename(struct iostats *ist, const char *fmt, ...)
+psc_iostats_rename(struct psc_iostats *ist, const char *fmt, ...)
 {
 	va_list ap;
 	int rc;
@@ -62,4 +71,11 @@ iostats_rename(struct iostats *ist, const char *fmt, ...)
 
 	if (rc == -1 || rc >= (int)sizeof(ist->ist_name))
 		psc_fatal("vsnprintf");
+}
+
+void
+psc_iostats_intv_add(struct psc_iostats *ist, uint64_t amt)
+{
+	psc_atomic64_add(&ist->ist_intv[0].istv_len, amt);
+	psc_atomic64_add(&ist->ist_len_total, amt);
 }

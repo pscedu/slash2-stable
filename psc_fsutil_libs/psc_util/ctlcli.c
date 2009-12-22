@@ -442,8 +442,8 @@ psc_ctlmsg_iostats_prhdr(__unusedx struct psc_ctlmsghdr *mh,
     __unusedx const void *m)
 {
 	printf("iostats\n"
-	    " %-37s %10s %12s %8s %8s\n",
-	    "name", "ratecur", "total", "erate", "#err");
+	    " %-42s %10s %10s %10s\n",
+	    "name", "rate10s", "ratecur", "total");
 }
 
 void
@@ -451,22 +451,40 @@ psc_ctlmsg_iostats_prdat(__unusedx const struct psc_ctlmsghdr *mh,
     const void *m)
 {
 	const struct psc_ctlmsg_iostats *pci = m;
-	const struct iostats *ist = &pci->pci_ist;
+	const struct psc_iostats *ist = &pci->pci_ist;
 	char buf[PSCFMT_HUMAN_BUFSIZ];
+	struct timeval max;
+	uint64_t v;
+	double d;
+	int j, i;
 
-	printf(" %-37s ", ist->ist_name);
-	if (psc_ctl_inhuman) {
-		printf("%10.2f ", ist->ist_rate);
-		printf("%12"PRIu64" ", ist->ist_bytes_total);
-	} else {
-		psc_fmt_human(buf, ist->ist_rate);
-		printf("%8s/s ", buf);
+	for (i = 0; i < IST_NINTV; i++)
+		if (timercmp(&ist->ist_intv[i].istv_lastv, &max, >))
+			max = ist->ist_intv[i].istv_lastv;
 
-		psc_fmt_human(buf, ist->ist_bytes_total);
-		printf("%12s ", buf);
+	printf(" %-42s ", ist->ist_name);
+	for (i = IST_NINTV - 1; i > 0; i++) {
+		v = psc_atomic64_read(&ist->ist_intv[i].istv_len);
+		for (j = 0; j < i; j++)
+			v += psc_atomic64_read(&ist->ist_intv[j].istv_len);
+
+		d = v / ((max.tv_sec * UINT64_C(1000000) +
+		    max.tv_usec) * 1e-6);
+
+		if (psc_ctl_inhuman)
+			printf("%10.2f ", d);
+		else {
+			psc_fmt_human(buf, d);
+			printf("%8s/s ", buf);
+		}
 	}
-	printf("%6.1f/s %8"PRIu64"\n", ist->ist_erate,
-	    ist->ist_errors_total);
+	if (psc_ctl_inhuman)
+		printf("%10"PRIu64, psc_atomic64_read(&ist->ist_len_total));
+	else {
+		psc_fmt_human(buf, psc_atomic64_read(&ist->ist_len_total));
+		printf("%10s", buf);
+	}
+	printf("\n");
 }
 
 void

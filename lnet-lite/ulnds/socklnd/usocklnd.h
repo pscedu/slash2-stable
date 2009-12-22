@@ -376,7 +376,7 @@ void usocklnd_rx_lnethdr_state_transition(usock_conn_t *conn);
 void usocklnd_rx_ksmhdr_state_transition(usock_conn_t *conn);
 void usocklnd_rx_skipping_state_transition(usock_conn_t *conn);
 
-extern struct iostats usock_pasv_send_ist;
-extern struct iostats usock_pasv_recv_ist;
-extern struct iostats usock_aggr_send_ist;
-extern struct iostats usock_aggr_recv_ist;
+extern struct psc_iostats usock_pasv_send_ist;
+extern struct psc_iostats usock_pasv_recv_ist;
+extern struct psc_iostats usock_aggr_send_ist;
+extern struct psc_iostats usock_aggr_recv_ist;

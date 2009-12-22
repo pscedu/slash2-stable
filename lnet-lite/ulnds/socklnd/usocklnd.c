@@ -49,10 +49,10 @@
 
 #include "psc_util/iostats.h"
 
-struct iostats usock_pasv_send_ist;	/* passive interface */
-struct iostats usock_pasv_recv_ist;
-struct iostats usock_aggr_send_ist;	/* aggregate across all interfaces */
-struct iostats usock_aggr_recv_ist;
+struct psc_iostats usock_pasv_send_ist;	/* passive interface */
+struct psc_iostats usock_pasv_recv_ist;
+struct psc_iostats usock_aggr_send_ist;	/* aggregate across all interfaces */
+struct psc_iostats usock_aggr_recv_ist;
 
 lnd_t the_tcplnd = {
         .lnd_type      = SOCKLND,
@@ -381,10 +381,10 @@ usocklnd_base_startup()
 
         pthread_rwlock_init(&usock_data.ud_peers_lock, NULL);
 
-	iostats_init(&usock_pasv_send_ist, "lusklnd-pasv-snd");
-	iostats_init(&usock_pasv_recv_ist, "lusklnd-pasv-rcv");
-	iostats_init(&usock_aggr_send_ist, "lusklnd-aggr-snd");
-	iostats_init(&usock_aggr_recv_ist, "lusklnd-aggr-rcv");
+	psc_iostats_init(&usock_pasv_send_ist, "lusklnd-pasv-snd");
+	psc_iostats_init(&usock_pasv_recv_ist, "lusklnd-pasv-rcv");
+	psc_iostats_init(&usock_aggr_send_ist, "lusklnd-aggr-snd");
+	psc_iostats_init(&usock_aggr_recv_ist, "lusklnd-aggr-rcv");
 
         /* Spawn poll threads */
         for (i = 0; i < usock_data.ud_npollthreads; i++) {

@@ -1114,7 +1114,7 @@ psc_ctlrep_getiostats(int fd, struct psc_ctlmsghdr *mh, void *m)
 {
 	struct psc_ctlmsg_iostats *pci = m;
 	char name[IST_NAME_MAX];
-	struct iostats *ist;
+	struct psc_iostats *ist;
 	int rc, found, all;
 
 	rc = 1;

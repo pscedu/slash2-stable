@@ -22,68 +22,81 @@
 
 #include <unistd.h>
 
+#include "pfl/cdefs.h"
 #include "psc_ds/lockedlist.h"
 #include "psc_util/atomic.h"
-#include "pfl/cdefs.h"
 #include "psc_util/iostats.h"
 #include "psc_util/thread.h"
-#include "psc_util/waitq.h"
 
-struct psc_waitq psc_timerwtq;
+#define psc_timercmp_addsec(tvp, s, uvp, cmp)				\
+    (((tvp)->tv_sec + (s) == (uvp)->tv_sec) ?				\
+     ((tvp)->tv_usec cmp (uvp)->tv_usec) :				\
+     ((tvp)->tv_sec + (s) cmp (uvp)->tv_sec))
 
-__static void *
-psc_timerthr_main(__unusedx void *arg)
-{
-	for (;;) {
-		sleep(1);
-		psc_waitq_wakeall(&psc_timerwtq);
-		/* XXX subtract the time this took from next sleep */
-	}
-}
+
+struct timeval psc_tiosthr_lastv[IST_NINTV];
 
 void *
-psc_timer_iosthr_main(__unusedx void *arg)
+psc_tiosthr_main(__unusedx void *arg)
 {
-	struct iostats *ist;
-	struct timeval tv;
-	unsigned long intv;
+	struct timeval tv, wakev;
+	struct psc_iostatv *istv;
+	struct psc_iostats *ist;
+	uint64_t intv_len;
+	int i, stoff;
+
+	/* initialize time */
+	if (gettimeofday(&tv, NULL) == -1)
+		psc_fatal("gettimeofday");
+	wakev = tv;
+	for (i = 0; i < IST_NINTV; i++)
+		psc_tiosthr_lastv[i] = tv;
 
 	for (;;) {
-		psc_waitq_wait(&psc_timerwtq, NULL);
+		/* sleep until next interval */
+		usleep((tv.tv_usec - wakev.tv_usec) + (psc_iostat_intvs[0] -
+		    (tv.tv_sec - wakev.tv_sec)) * 1000000);
+		if (gettimeofday(&wakev, NULL) == -1)
+			psc_fatal("gettimeofday");
+		tv = wakev;
+
+		/* find largest interval to update */
+		for (stoff = 0; stoff < IST_NINTV; stoff++)
+			if (psc_timercmp_addsec(&tv, psc_iostat_intvs[stoff],
+			    &psc_tiosthr_lastv[stoff], <))
+				break;
+		if (stoff == 0)
+			continue;
 
 		PLL_LOCK(&psc_iostats);
-		if (gettimeofday(&tv, NULL) == -1)
-			psc_fatal("gettimeofday");
 		psclist_for_each_entry(ist,
-		    &psc_iostats.pll_listhd, ist_lentry) {
-			if (tv.tv_sec != ist->ist_lasttv.tv_sec) {
-				timersub(&tv, &ist->ist_lasttv,
-				    &ist->ist_intv);
-				ist->ist_lasttv = tv;
+		    &psc_iostats.pll_listhd, ist_lentry)
+			for (i = stoff; i >= 0; i++) {
+				istv = &ist->ist_intv[i];
 
-				intv = 0;
-				intv = atomic_xchg(&ist->ist_bytes_intv, intv);
-				ist->ist_rate = intv /
-				    ((ist->ist_intv.tv_sec * UINT64_C(1000000) +
-				    ist->ist_intv.tv_usec) * 1e-6);
-				ist->ist_bytes_total += intv;
+				/* reset counter to zero for this interval */
+				intv_len = 0;
+				intv_len = psc_atomic64_xchg(
+				    &ist->ist_intv[i].istv_len, intv_len);
 
-				intv = 0;
-				intv = atomic_xchg(&ist->ist_errors_intv, intv);
-				ist->ist_erate = intv /
-				    ((ist->ist_intv.tv_sec * UINT64_C(1000000) +
-				    ist->ist_intv.tv_usec) * 1e-6);
-				ist->ist_errors_total += intv;
+				if (i == stoff && stoff < IST_NINTV)
+					psc_atomic64_add(&ist->ist_intv[i +
+					    1].istv_len, intv_len);
+
+				if (gettimeofday(&tv, NULL) == -1)
+					psc_fatal("gettimeofday");
+
+				/* calculate acculumation duration */
+				timersub(&tv, &ist->ist_intv[i].istv_lastv,
+				    &ist->ist_intv[i].istv_intv);
+				ist->ist_intv[i].istv_lastv = tv;
 			}
-		}
 		PLL_ULOCK(&psc_iostats);
-		sched_yield();
 	}
 }
 
 void
-psc_timerthr_spawn(int thrtype, const char *name)
+psc_tiosthr_spawn(int thrtype, const char *name)
 {
-	psc_waitq_init(&psc_timerwtq);
-	pscthr_init(thrtype, 0, psc_timerthr_main, NULL, 0, name);
+	pscthr_init(thrtype, 0, psc_tiosthr_main, NULL, 0, name);
 }

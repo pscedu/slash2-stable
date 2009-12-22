@@ -355,7 +355,7 @@ psc_vbitmap_getncontig(struct psc_vbitmap *vb, int *nslots)
  * psc_vbitmap_next - return next unused slot from a vbitmap.
  * @vb: variable bitmap.
  * @elem: pointer to element#.
- * Returns: true on success.
+ * Returns: Boolean true on success, false on failure.
  */
 int
 psc_vbitmap_next(struct psc_vbitmap *vb, size_t *elem)

@@ -71,11 +71,13 @@ struct psc_vbitmap *
 struct psc_vbitmap *
 	 psc_vbitmap_attach(unsigned char *, size_t);
 
-int	 psc_vbitmap_get(const struct psc_vbitmap *, size_t);
+void	_psc_vbitmap_free(struct psc_vbitmap *);
 void	 psc_vbitmap_clearall(struct psc_vbitmap *);
+int	 psc_vbitmap_get(const struct psc_vbitmap *, size_t);
 int	 psc_vbitmap_getncontig(struct psc_vbitmap *, int *);
 size_t	 psc_vbitmap_getsize(const struct psc_vbitmap *);
 void	 psc_vbitmap_invert(struct psc_vbitmap *);
+int	 psc_vbitmap_isfull(struct psc_vbitmap *);
 int	 psc_vbitmap_lcr(struct psc_vbitmap *);
 int	 psc_vbitmap_next(struct psc_vbitmap *, size_t *);
 int	 psc_vbitmap_nfree(const struct psc_vbitmap *);
@@ -84,7 +86,6 @@ void	 psc_vbitmap_setall(struct psc_vbitmap *);
 int	 psc_vbitmap_setnextpos(struct psc_vbitmap *, int);
 int	 psc_vbitmap_setval(struct psc_vbitmap *, size_t, int);
 int	 psc_vbitmap_setval_range(struct psc_vbitmap *, size_t, size_t, int);
-void	_psc_vbitmap_free(struct psc_vbitmap *);
 
 void	 psc_vbitmap_printbin(const struct psc_vbitmap *);
 void	 psc_vbitmap_printhex(const struct psc_vbitmap *);

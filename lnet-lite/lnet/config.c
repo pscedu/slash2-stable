@@ -158,8 +158,8 @@ lnet_new_ni(__u32 net, struct list_head *nilist)
         memset(ni, 0, sizeof(*ni));
 
 	libcfs_net2str2(net, buf);
-	iostats_init(&ni->ni_send_ist, "lni-rcv-%s", buf);
-	iostats_init(&ni->ni_recv_ist, "lni-snd-%s", buf);
+	psc_iostats_init(&ni->ni_send_ist, "lni-rcv-%s", buf);
+	psc_iostats_init(&ni->ni_recv_ist, "lni-snd-%s", buf);
 
         /* LND will fill in the address part of the NID */
         ni->ni_nid = LNET_MKNID(net, 0);
@@ -320,8 +320,8 @@ lnet_parse_networks(struct list_head *nilist, char *networks)
                 ni = list_entry(nilist->next, lnet_ni_t, ni_list);
 
                 list_del(&ni->ni_list);
-		iostats_remove(&ni->ni_send_ist);
-		iostats_remove(&ni->ni_recv_ist);
+		psc_iostats_remove(&ni->ni_send_ist);
+		psc_iostats_remove(&ni->ni_recv_ist);
                 LIBCFS_FREE(ni, sizeof(*ni));
         }
 	LIBCFS_FREE(tokens, tokensize);
