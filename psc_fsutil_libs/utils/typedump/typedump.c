@@ -146,7 +146,6 @@ main(int argc, char *argv[])
 	PRTYPE(struct hash_entry);
 	PRTYPE(struct hash_entry_str);
 	PRTYPE(struct hash_table);
-	PRTYPE(struct iostats);
 	PRTYPE(struct l_wait_info);
 	PRTYPE(struct odtable);
 	PRTYPE(struct odtable_entftr);
@@ -178,6 +177,7 @@ main(int argc, char *argv[])
 	PRTYPE(struct psc_hashbkt);
 	PRTYPE(struct psc_hashent);
 	PRTYPE(struct psc_hashtbl);
+	PRTYPE(struct psc_iostats);
 	PRTYPE(struct psc_journal);
 	PRTYPE(struct psc_journal_enthdr);
 	PRTYPE(struct psc_journal_hdr);
