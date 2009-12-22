@@ -54,17 +54,16 @@ psc_tiosthr_main(__unusedx void *arg)
 
 	for (;;) {
 		/* sleep until next interval */
-		usleep((tv.tv_usec - wakev.tv_usec) + (psc_iostat_intvs[0] -
-		    (tv.tv_sec - wakev.tv_sec)) * 1000000);
-		if (gettimeofday(&wakev, NULL) == -1)
+		usleep(1000000 - tv.tv_usec);
+		if (gettimeofday(&tv, NULL) == -1)
 			psc_fatal("gettimeofday");
-		tv = wakev;
 
 		/* find largest interval to update */
 		for (stoff = 0; stoff < IST_NINTV - 1; stoff++)
 			if (psc_timercmp_addsec(&tv, psc_iostat_intvs[stoff],
 			    &psc_tiosthr_lastv[stoff], <))
 				break;
+		/* if we woke from signal, skip */
 		if (stoff == 0)
 			continue;
 
@@ -77,19 +76,24 @@ psc_tiosthr_main(__unusedx void *arg)
 				/* reset counter to zero for this interval */
 				intv_len = 0;
 				intv_len = psc_atomic64_xchg(
-				    &ist->ist_intv[i].istv_len, intv_len);
+				    &ist->ist_intv[i].istv_cur_len, intv_len);
 
 				if (i == stoff && stoff < IST_NINTV)
 					psc_atomic64_add(&ist->ist_intv[i +
-					    1].istv_len, intv_len);
+					    1].istv_cur_len, intv_len);
 
 				if (gettimeofday(&tv, NULL) == -1)
 					psc_fatal("gettimeofday");
 
+				ist->ist_intv[i].istv_intv_len = intv_len;
+
 				/* calculate acculumation duration */
 				timersub(&tv, &ist->ist_intv[i].istv_lastv,
-				    &ist->ist_intv[i].istv_intv);
+				    &ist->ist_intv[i].istv_intv_dur);
 				ist->ist_intv[i].istv_lastv = tv;
+
+				if (i == 0)
+					ist->ist_len_total += intv_len;
 			}
 		PLL_ULOCK(&psc_iostats);
 	}

@@ -453,22 +453,12 @@ psc_ctlmsg_iostats_prdat(__unusedx const struct psc_ctlmsghdr *mh,
 	const struct psc_ctlmsg_iostats *pci = m;
 	const struct psc_iostats *ist = &pci->pci_ist;
 	char buf[PSCFMT_HUMAN_BUFSIZ];
-	struct timeval max;
-	uint64_t v;
 	double d;
-	int j, i;
-
-	for (i = 0; i < IST_NINTV; i++)
-		if (timercmp(&ist->ist_intv[i].istv_lastv, &max, >))
-			max = ist->ist_intv[i].istv_lastv;
+	int i;
 
 	printf(" %-42s ", ist->ist_name);
 	for (i = IST_NINTV - 1; i >= 0; i--) {
-		v = psc_atomic64_read(&ist->ist_intv[i].istv_len);
-		for (j = 0; j < i; j++)
-			v += psc_atomic64_read(&ist->ist_intv[j].istv_len);
-
-		d = psc_iostats_calcrate(v, &max);
+		d = psc_iostats_getintvrate(ist, i);
 
 		if (psc_ctl_inhuman)
 			printf("%10.2f ", d);
@@ -478,9 +468,9 @@ psc_ctlmsg_iostats_prdat(__unusedx const struct psc_ctlmsghdr *mh,
 		}
 	}
 	if (psc_ctl_inhuman)
-		printf("%10"PRIu64, psc_atomic64_read(&ist->ist_len_total));
+		printf("%10"PRIu64, ist->ist_len_total);
 	else {
-		psc_fmt_human(buf, psc_atomic64_read(&ist->ist_len_total));
+		psc_fmt_human(buf, ist->ist_len_total);
 		printf("%10s", buf);
 	}
 	printf("\n");

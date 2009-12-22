@@ -18,22 +18,35 @@ struct psc_iostats {
 	char			ist_name[IST_NAME_MAX];
 	struct psclist_head	ist_lentry;
 
-	psc_atomic64_t		ist_len_total;			/* lifetime */
+	uint64_t		ist_len_total;			/* lifetime acculumator */
 
 	struct psc_iostatv {
 		struct timeval	istv_lastv;			/* time of last accumulation */
-		struct timeval	istv_intv;			/* duration of accumulation */
-		psc_atomic64_t	istv_len;			/* length of accumulation */
+		psc_atomic64_t	istv_cur_len;			/* current accumulator */
+
+		struct timeval	istv_intv_dur;			/* duration of accumulation */
+		uint64_t	istv_intv_len;			/* length of accumulation */
+
 	}			ist_intv[IST_NINTV];
 };
 
 #define psc_iostats_calcrate(len, tv)					\
 	((len) / ((tv)->tv_sec * UINT64_C(1000000) + (tv)->tv_usec) * 1e-6)
 
-#define psc_iostats_remove(ist)	pll_remove(&psc_iostats, (ist))
+#define psc_iostats_getintvrate(ist, n)					\
+	psc_iostats_calcrate((ist)->ist_intv[n].istv_intv_len,		\
+	    &(ist)->ist_intv[n].istv_intv_dur)
+
+#define psc_iostats_getintvdur(ist, n)					\
+	((ist)->ist_intv[n].istv_intv_dur.tv_sec +			\
+	    (ist)->ist_intv[n].istv_intv_dur.tv_usec * 1e-6)
+
+#define psc_iostats_intv_add(ist, amt)					\
+	psc_atomic64_add(&(ist)->ist_intv[0].istv_cur_len, (amt))
+
+#define psc_iostats_remove(ist)		pll_remove(&psc_iostats, (ist))
 
 void psc_iostats_init(struct psc_iostats *, const char *, ...);
-void psc_iostats_intv_add(struct psc_iostats *, uint64_t);
 void psc_iostats_rename(struct psc_iostats *, const char *, ...);
 
 extern struct psc_lockedlist	psc_iostats;

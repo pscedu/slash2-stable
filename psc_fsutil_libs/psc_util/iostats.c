@@ -72,10 +72,3 @@ psc_iostats_rename(struct psc_iostats *ist, const char *fmt, ...)
 	if (rc == -1 || rc >= (int)sizeof(ist->ist_name))
 		psc_fatal("vsnprintf");
 }
-
-void
-psc_iostats_intv_add(struct psc_iostats *ist, uint64_t amt)
-{
-	psc_atomic64_add(&ist->ist_intv[0].istv_len, amt);
-	psc_atomic64_add(&ist->ist_len_total, amt);
-}

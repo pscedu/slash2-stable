@@ -48,8 +48,8 @@ int			 forcesdp;		/* force sockets direct */
 const char		*progname;
 char			*buf;
 size_t			 bufsiz = 1024 * 1024;
-struct iostats		 rdst;			/* read stats */
-struct iostats		 wrst;			/* write stats */
+struct psc_iostats	 rdst;			/* read stats */
+struct psc_iostats	 wrst;			/* write stats */
 pthread_t		 rdthr;
 in_port_t		 port = PORT;
 
@@ -66,7 +66,7 @@ __dead void *
 displaythr_main(__unusedx void *arg)
 {
 	char ratebuf[PSCFMT_HUMAN_BUFSIZ];
-	struct iostats myist;
+	struct psc_iostats myist;
 
 	center("-- read --", 8 * 3);
 	printf("\t|\t");
@@ -79,35 +79,32 @@ displaythr_main(__unusedx void *arg)
 	printf("================================="
 	    "==============================\n");
 	for (;;) {
-		psc_waitq_wait(&psc_timerwtq, NULL);
+		sleep(1);
 
 		memcpy(&myist, &rdst, sizeof(myist));
-		psc_fmt_human(ratebuf, myist.ist_rate);
+		psc_fmt_human(ratebuf,
+		    psc_iostats_getintvrate(&myist, 0));
 		printf("\r%6.2fs\t%7s\t",
-		    myist.ist_intv.tv_sec +
-		    myist.ist_intv.tv_usec * 1e-6,
-		    ratebuf);
-		psc_fmt_human(ratebuf, myist.ist_bytes_total);
+		    psc_iostats_getintvdur(&myist, 0), ratebuf);
+		psc_fmt_human(ratebuf, myist.ist_len_total);
 		printf("%7s\t\t|\t", ratebuf);
 
 		memcpy(&myist, &wrst, sizeof(myist));
-		psc_fmt_human(ratebuf, myist.ist_rate);
+		psc_fmt_human(ratebuf,
+		    psc_iostats_getintvrate(&myist, 0));
 		printf("%6.2fs\t%7s\t",
-		    myist.ist_intv.tv_sec +
-		    myist.ist_intv.tv_usec * 1e-6,
-		    ratebuf);
-		psc_fmt_human(ratebuf, myist.ist_bytes_total);
+		    psc_iostats_getintvdur(&myist, 0), ratebuf);
+		psc_fmt_human(ratebuf, myist.ist_len_total);
 		printf("%7s", ratebuf);
 
 		fflush(stdout);
-		sched_yield();
 	}
 }
 
 __dead void
 ioloop(int s, int ioflags)
 {
-	struct iostats *ist;
+	struct psc_iostats *ist;
 	int wr, rem;
 	ssize_t rv;
 	fd_set set;
@@ -146,7 +143,7 @@ ioloop(int s, int ioflags)
 				psc_fatalx("%s: reached EOF", wr ? "send" : "recv");
 
 			/* tally amount transferred */
-			atomic_add(rv, &ist->ist_bytes_intv);
+			psc_iostats_intv_add(ist, rv);
 			rem -= rv;
 		} while (rem);
 	}
@@ -326,12 +323,10 @@ main(int argc, char *argv[])
 	pfl_init();
 	buf = PSCALLOC(bufsiz);
 
-	psc_timerthr_spawn(THRT_TINTV, "tintvthr");
-	pscthr_init(THRT_TIOS, 0, psc_timer_iosthr_main,
-	    NULL, 0, "tiosthr");
+	psc_iostats_init(&rdst, "read");
+	psc_iostats_init(&wrst, "write");
 
-	iostats_init(&rdst, "read");
-	iostats_init(&wrst, "write");
+	psc_tiosthr_spawn(THRT_TINTV, "tiosthr");
 
 	if (listenif)
 		dolisten(listenif);
