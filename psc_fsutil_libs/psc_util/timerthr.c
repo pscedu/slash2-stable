@@ -39,9 +39,9 @@ struct timeval psc_tiosthr_lastv[IST_NINTV];
 void *
 psc_tiosthr_main(__unusedx void *arg)
 {
-	struct timeval tv, wakev;
 	struct psc_iostatv *istv;
 	struct psc_iostats *ist;
+	struct timeval tv;
 	uint64_t intv_len;
 	int i, stoff;
 
