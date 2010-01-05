@@ -71,6 +71,8 @@ pfl
 - add a variable printbin()
 - rename psc_bitstr_setchk -> psc_bitfield_setchk
 - introduce refmgr
+- ensure no mp RPC message bodies are used after a pscrpc_req_finished()
+- add 'psc_' prefix to nbrequest API
 
 zest
 - research faster CRC operations
