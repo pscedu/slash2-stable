@@ -154,10 +154,8 @@ pscrpc_drop_conns(lnet_process_id_t *peer)
 		    c->c_peer.pid == peer->pid) {
 			if (c->c_exp)
 				pscrpc_export_hldrop(c->c_exp);
-#if 0
-			else if (c->c_imp)
-				pscrpc_import_hldrop(c->c_imp);
-#endif
+			if (c->c_imp)
+				pscrpc_fail_import(c->c_imp, 0);
 		}
 	freelock(&conn_lock);
 }
