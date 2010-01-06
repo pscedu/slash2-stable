@@ -128,17 +128,13 @@ struct pscrpc_export {
 struct pscrpc_import;
 
 struct pscrpc_connection {
-	struct psclist_head	c_link;
-	lnet_nid_t		c_self;
-	lnet_process_id_t	c_peer;
-	struct psc_uuid		c_remote_uuid;
-	atomic_t		c_refcount;
-	union {
-		struct pscrpc_export *cu_exp;		/* meaningful only on server */
-		struct pscrpc_import *cu_imp;
-	} c_u;
-#define c_exp c_u.cu_exp
-#define c_imp c_u.cu_imp
+	struct psclist_head	 c_link;
+	lnet_nid_t		 c_self;
+	lnet_process_id_t	 c_peer;
+	struct psc_uuid		 c_remote_uuid;
+	atomic_t		 c_refcount;
+	struct pscrpc_export	*c_exp;
+	struct pscrpc_import	*c_imp;
 };
 
 struct pscrpc_client {
