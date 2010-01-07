@@ -1,6 +1,5 @@
 #!/bin/sh
 # $Id$
-# XXX preserve authors
 
 usage()
 {
