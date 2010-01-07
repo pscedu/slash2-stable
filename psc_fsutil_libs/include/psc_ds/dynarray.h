@@ -26,7 +26,7 @@ struct psc_dynarray {
  * Notes: do not invoke psc_dynarray_add/remove() in the body of this loop.
  */
 #define DYNARRAY_FOREACH(p, n, pda)					\
-	for ((n) = 0; (n) < psc_dynarray_len(pda) &&			\
+	for ((n) = 0; ((n) < psc_dynarray_len(pda) || ((p) = NULL)) &&	\
 	    (((p) = psc_dynarray_getpos((pda), (n))) || 1); (n)++)
 
 /**
