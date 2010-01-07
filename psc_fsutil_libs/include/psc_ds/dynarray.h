@@ -49,8 +49,11 @@ struct psc_dynarray {
  * Returns -1 on failure or zero on success.
  */
 #define psc_dynarray_sort(pda, sortf, cmpf)				\
-	(sortf)((pda)->pda_items, (pda)->pda_pos,			\
-	    sizeof(*(pda)->pda_items), (cmpf))
+	do {								\
+		if (psc_dynarray_len(pda) > 1)				\
+			(sortf)((pda)->pda_items, (pda)->pda_pos,	\
+			    sizeof(*(pda)->pda_items), (cmpf));		\
+	} while (0)
 
 int	 psc_dynarray_add(struct psc_dynarray *, void *);
 int	 psc_dynarray_add_ifdne(struct psc_dynarray *, void *);
