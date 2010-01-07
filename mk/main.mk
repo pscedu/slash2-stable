@@ -13,7 +13,6 @@ _LEXINTM=	$(patsubst %.l,%.c,$(addprefix ${OBJDIR}/,$(notdir $(filter %.l,${_TSR
 _YACCINTM=	$(patsubst %.y,%.c,$(addprefix ${OBJDIR}/,$(notdir $(filter %.y,${_TSRCS}))))
 CLEANFILES+=	$(patsubst %.y,%.h,$(notdir $(filter %.y,${_TSRCS})))
 _C_SRCS=	$(filter %.c,${_TSRCS}) ${_YACCINTM} ${_LEXINTM}
-ECHORUN=	echorun() { echo "$$@"; "$$@"; }; echorun
 
 LNET_SOCKLND_SRCS+=	${LNET_BASE}/ulnds/socklnd/conn.c
 LNET_SOCKLND_SRCS+=	${LNET_BASE}/ulnds/socklnd/handlers.c
@@ -193,9 +192,7 @@ copyright: recurse-copyright
 	@if ${NOTEMPTY} "${_TSRCS}"; then						\
 		${ECHORUN} ${ROOTDIR}/tools/gencopyright.sh ${_TSRCS};			\
 	fi
-	@for i in $$(find . -mindepth 2 -maxdepth 2 -name '*.h'); do			\
-		${ECHORUN} ${ROOTDIR}/tools/gencopyright.sh $$i;			\
-	done
+	@find . -mindepth 2 -name '*.h' | xargs -r ${ECHORUN} ${ROOTDIR}/tools/gencopyright.sh
 
 #CS_ARGS+=-s${APP_BASE}
 #ET_ARGS+="${APP_BASE}"
