@@ -46,6 +46,7 @@ main(int argc, char *argv[])
 {
 	struct psc_hashtbl t;
 	struct item *i;
+	uint64_t key;
 	int c;
 
 	pfl_init();
@@ -74,7 +75,8 @@ main(int argc, char *argv[])
 	i->id = 4;
 	psc_hashtbl_add_item(&t, i);
 
-	i = psc_hashtbl_search(&t, NULL, NULL, 3);
+	key = 3;
+	i = psc_hashtbl_search(&t, NULL, NULL, &key);
 	printf("%"PRId64"\n", i->id);
 
 	exit(0);
