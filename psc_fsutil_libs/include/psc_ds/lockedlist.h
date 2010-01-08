@@ -47,7 +47,7 @@ struct psc_lockedlist {
 #define pll_lock	pll_u.pllu_lock
 };
 
-#define PLLF_EXTLOCK	(1 << 0)	/* lock is external */
+#define PLLF_EXTLOCK		(1 << 0)	/* lock is external */
 
 #define PLL_GETLOCK(pll) ((pll)->pll_flags & PLLF_EXTLOCK ?	\
 	(pll)->pll_lockp : &(pll)->pll_lock)
@@ -55,7 +55,7 @@ struct psc_lockedlist {
 #define PLL_LOCK(pll)		spinlock(PLL_GETLOCK(pll))
 #define PLL_RLOCK(pll)		reqlock(PLL_GETLOCK(pll))
 #define PLL_ULOCK(pll)		freelock(PLL_GETLOCK(pll))
-#define PLL_URLOCK(pll, l)	ureqlock(PLL_GETLOCK(pll), (l))
+#define PLL_URLOCK(pll, lk)	ureqlock(PLL_GETLOCK(pll), (lk))
 
 #define PLL_FOREACH(p, pll)					\
 	psclist_for_each_entry2((p), &(pll)->pll_listhd,	\
