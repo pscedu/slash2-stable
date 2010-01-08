@@ -29,8 +29,10 @@ struct psc_refmgr {
 #define PRMF_HASH			(1 << 2)
 #define PRMF_TREE			(1 << 3)
 #define PRMF_MULTIWAIT			(1 << 4)
+#define PRMF_AUTOSIZE			(1 << 5)	/* pool is dynamically sized */
+#define PRMF_NOMEMPIN			(1 << 6)	/* do not pin in mem with mlock */
 
-/* additional lookup flags */
+/* additional lookup preference flags */
 #define PRMF_ANY			(PRMF_LIST | PRMF_LRU | PRMF_HASH | PRMF_TREE)
 
 struct psc_objref {

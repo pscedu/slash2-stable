@@ -1,12 +1,16 @@
 /* $Id$ */
 
 /*
- *
+ * TODO
+ *	- convert hashapi to take void *
  */
 
 void
-psc_refmgr_init(struct psc_refmgr *prm, int flags)
+psc_refmgr_init(struct psc_refmgr *prm, int flags, int objsiz, int nobjs,
+    int min, int max, int (*initf)(struct psc_poolmgr *, void *),
+    void (*destroyf)(void *), const char *namefmt, ...)
 {
+	va_list ap;
 	int off;
 
 	off = 0;
