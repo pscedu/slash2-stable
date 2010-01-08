@@ -2,7 +2,6 @@
 
 /*
  * TODO
- *	- convert hashapi to take void *
  */
 
 void
@@ -10,21 +9,33 @@ psc_refmgr_init(struct psc_refmgr *prm, int flags, int objsiz, int nobjs,
     int min, int max, int (*initf)(struct psc_poolmgr *, void *),
     void (*destroyf)(void *), const char *namefmt, ...)
 {
+	int off = 0, pool_lentry_avail = 1;
 	va_list ap;
-	int off;
 
-	off = 0;
 	memset(prm, 0, sizeof(*prm));
 	prm->prm_flags = flags;
 
 	if (prm->prm_flags & PRMF_LIST) {
+		if (pool_lentry_avail)
+			pool_lentry_avail = 0;
 		prm->prm_list_offset = off;
 		off += sizeof(struct psclist_head);
 	}
 	if (prm->prm_flags & PRMF_LRU) {
+		if (pool_lentry_avail)
+			pool_lentry_avail = 0;
 		prm->prm_lru_offset = off;
 		off += sizeof(struct psclist_head);
 	}
+	if (prm->prm_flags & PRMF_HASH) {
+		if (pool_lentry_avail)
+			pool_lentry_avail = 0;
+		prm->prm_hash_offset = off;
+		off += sizeof(struct psc_hashent);
+	}
+	/* The pool list_head was not reused, force space for it */
+	if (pool_lentry_avail)
+		off += sizeof(struct psclist_head);
 	if (prm->prm_flags & PRMF_TREE) {
 		prm->prm_tree_offset = off;
 		off += sizeof(SPLAY_ENTRY(psc_objref));
@@ -32,22 +43,37 @@ psc_refmgr_init(struct psc_refmgr *prm, int flags, int objsiz, int nobjs,
 		prm->prm_refmgr_offset = off;
 		off += sizeof(void *);
 	}
-	if (prm->prm_flags & PRMF_HASH) {
-		prm->prm_hash_offset = off;
-		off += sizeof(struct psc_hashent);
-	}
 	prm->prm_private_offset = off;
 
-	psc_poolmaster_init(prm->prm_pms);
+	flags = 0;
+	if (prm->prm_flags & PRMF_AUTOSIZE)
+		flags |= PPMF_AUTO;
+	if (prm->prm_flags & PRMF_NOMEMPIN)
+		flags |= PPMF_NOLOCK;
+
+	va_start(ap, namefmt);
+	_psc_poolmaster_initv(&prm->prm_pms, objsiz, off, flags, nobjs,
+	    min, max, initf, destroyf, NULL, psc_refmgr_reclaimcb,
+	    namefmt, ap);
+	va_end(ap);
 
 	if (prm->prm_flags & PRMF_LIST)
-		pll_init(&prm->prm_list);
+		lc_reginit(&prm->prm_list, prm->prm_pms->pms_name, NULL);
 	if (prm->prm_flags & PRMF_LRU)
-		lc_init(&prm->prm_list);
-	if (prm->prm_flags & PRMF_TREE)
+		lc_reginit(&prm->prm_lru);
+	if (prm->prm_flags & PRMF_TREE) {
 		SPLAY_INIT(&prm->prm_tree);
-	if (prm->prm_flags & PRMF_HASH)
-		psc_hashtbl_init(&prm->prm_hashtbl);
+		LOCK_INIT(&prm->prm_lock);
+	}
+	if (prm->prm_flags & PRMF_HASH) {
+		flags = 0;
+		if (prm->prm_flags & PRMF_HASHSTR)
+			flags |= PHTF_STR;
+
+		_psc_hashtbl_init(&prm->prm_hashtbl, flags, idmemboff,
+		    prm->prm_hash_offset, nbuckets, hashcmpf, "%s",
+		    prm->prm_pms->pms_name);
+	}
 }
 
 /*
@@ -58,10 +84,10 @@ psc_refmgr_lock(struct psc_refmgr *prm, void *key)
 {
 	struct psc_hashbkt *b;
 
-	if (prm->prm_flags & PRMF_LRU)
-		LIST_CACHE_LOCK(&prm->prm_lru);
 	if (prm->prm_flags & PRMF_LIST)
 		PLL_LOCK(&prm->prm_list);
+	if (prm->prm_flags & PRMF_LRU)
+		PLL_LOCK(&prm->prm_lru);
 	if (prm->prm_flags & PRMF_TREE)
 		spinlock(&prm->prm_trlock);
 	if (prm->prm_flags & PRMF_HASH) {
@@ -71,7 +97,8 @@ psc_refmgr_lock(struct psc_refmgr *prm, void *key)
 	}
 }
 
-psc_refmgr_reap()
+int
+psc_refmgr_reclaimcb(struct psc_poolmgr *m)
 {
 }
 
@@ -86,7 +113,7 @@ psc_refmgr_unlock(struct psc_refmgr *prm, void *key)
 	if (prm->prm_flags & PRMF_TREE)
 		freelock(&prm->prm_trlock);
 	if (prm->prm_flags & PRMF_LRU)
-		LIST_CACHE_LOCK(&prm->prm_lru);
+		PLL_LOCK(&prm->prm_lru);
 	if (prm->prm_flags & PRMF_LIST)
 		PLL_LOCK(&prm->prm_list);
 }
@@ -104,8 +131,8 @@ psc_refmgr_findobj(struct psc_refmgr *prm, int pref, void *key)
 		locked = PLL_RLOCK(&prm->prm_list);
 		PLL_URLOCK(&prm->prm_list, locked);
 	} else if ((prm->prm_flags & pref) == PRMF_LRU) {
-		locked = LIST_CACHE_RLOCK(&prm->prm_lru);
-		LIST_CACHE_URLOCK(&prm->prm_lru, locked);
+		locked = PLL_RLOCK(&prm->prm_lru);
+		PLL_URLOCK(&prm->prm_lru, locked);
 	} else if ((prm->prm_flags & pref) == PRMF_TREE) {
 		reqlock(&prm->prm_lock);
 		SPLAY_SEARCH();

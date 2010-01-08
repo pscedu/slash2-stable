@@ -9,7 +9,7 @@ struct psc_refmgr {
 	struct psc_poolmaster		 prm_pms;
 
 	/* object access mechanisms */
-	struct psc_lockedlist		 prm_list;
+	struct psc_listcache		 prm_list;
 	struct psc_listcache		 prm_lru;
 	struct psc_hashtbl		 prm_hashtbl;
 	struct psc_refmgr_tree		*prm_tree;
@@ -22,6 +22,7 @@ struct psc_refmgr {
 	int				 prm_tree_offset;
 	int				 prm_refmgr_offset;
 	int				 prm_private_offset;
+#define prm_pool_offset prm_list_offset
 };
 
 #define PRMF_LIST			(1 << 0)
@@ -31,6 +32,7 @@ struct psc_refmgr {
 #define PRMF_MULTIWAIT			(1 << 4)
 #define PRMF_AUTOSIZE			(1 << 5)	/* pool is dynamically sized */
 #define PRMF_NOMEMPIN			(1 << 6)	/* do not pin in mem with mlock */
+#define PRMF_HASHSTR			(1 << 7)	/* use strings as hash table keys */
 
 /* additional lookup preference flags */
 #define PRMF_ANY			(PRMF_LIST | PRMF_LRU | PRMF_HASH | PRMF_TREE)
