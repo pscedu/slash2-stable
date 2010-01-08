@@ -5,6 +5,7 @@
 #include <inttypes.h>
 #include <stdio.h>
 
+#include "pfl/cdefs.h"
 #include "psc_ds/list.h"
 #include "psc_rpc/export.h"
 #include "psc_rpc/rpc.h"
@@ -12,7 +13,6 @@
 #include "psc_rpc/service.h"
 #include "psc_util/alloc.h"
 #include "psc_util/atomic.h"
-#include "pfl/cdefs.h"
 #include "psc_util/lock.h"
 #include "psc_util/log.h"
 #include "psc_util/waitq.h"
@@ -395,11 +395,11 @@ pscrpc_server_handle_request(struct pscrpc_service *svc,
 		struct psc_hashbkt *b;
 
 		b = psc_hashbkt_get(&svc->srv_peer_qlentab,
-		    request->rq_peer.nid);
+		    &request->rq_peer.nid);
 		psc_hashbkt_lock(b);
 		/* Look up the struct again in case it disappeared. */
 		pq = psc_hashbkt_search(&svc->srv_peer_qlentab,
-		    b, &request->rq_peer, NULL, request->rq_peer.nid);
+		    b, &request->rq_peer, NULL, &request->rq_peer.nid);
 		if (pq && atomic_read(&pq->pql_qlen) == 0)
 			psc_hashent_remove(&svc->srv_peer_qlentab, pq);
 		else

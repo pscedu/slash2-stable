@@ -162,7 +162,7 @@ void request_in_callback(lnet_event_t *ev)
 		struct pscrpc_peer_qlen *pq;
 
 		pq = psc_hashtbl_search(&service->srv_peer_qlentab,
-		    &req->rq_peer, pscrpc_bump_peer_qlen, req->rq_peer.nid);
+		    &req->rq_peer, pscrpc_bump_peer_qlen, &req->rq_peer.nid);
 		if (pq == NULL) {
 			struct pscrpc_peer_qlen *tpq;
 			struct psc_hashbkt *b;
@@ -176,11 +176,11 @@ void request_in_callback(lnet_event_t *ev)
 			 * another thread in the interim.
 			 */
 			b = psc_hashbkt_get(&service->srv_peer_qlentab,
-			    req->rq_peer.nid);
+			    &req->rq_peer.nid);
 			psc_hashbkt_lock(b);
 			pq = psc_hashbkt_search(&service->srv_peer_qlentab,
 			    b, &req->rq_peer, pscrpc_bump_peer_qlen,
-			    req->rq_peer.nid);
+			    &req->rq_peer.nid);
 			if (pq == NULL) {
 				psc_hashbkt_add_item(
 				    &service->srv_peer_qlentab, b, tpq);

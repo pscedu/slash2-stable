@@ -80,7 +80,7 @@ struct psc_hashent {
  * @hentmemb: the field used to link the structure into the hash table.
  * @nb: number of buckets to create.
  * @cmp: optional function to differentiate items of the same ID.
- * @fmt: name of hash for lookups and external control.
+ * @fmt: printf(3)-like name of hash for lookups and external control.
  */
 #define psc_hashtbl_init(t, flags, type, idmemb, hentmemb, nb, cmp,	\
 	    fmt, ...)							\
@@ -99,24 +99,24 @@ struct psc_hashent {
  * @cmp: optional value to compare with to differentiate entries with same ID.
  * @cbf: optional callback routine invoked when the entry is found, executed
  *	while the bucket is locked.
- * The variable argument list should consist of a single argument of either type of:
+ * @key: search key pointer to either of:
  *	- uint64_t hash ID value
  *	- const char * string ID
  */
-#define psc_hashtbl_search(t, cmp, cbf, ...)				\
-	_psc_hashtbl_search((t), 0, (cmp), (cbf), ## __VA_ARGS__)
+#define psc_hashtbl_search(t, cmp, cbf, key)				\
+	_psc_hashtbl_search((t), 0, (cmp), (cbf), (key))
 
 /**
  * psc_hashtbl_del_item - search a hash table for an item by its hash ID
  *	and remove and return if found.
  * @t: the hash table.
  * @cmp: optional value to compare with to differentiate entries with same ID.
- * The variable argument list should consist of a single argument of either type of:
+ * @key: search key pointer to either of:
  *	- uint64_t hash ID value
  *	- const char * string ID
  */
-#define psc_hashtbl_del_item(t, cmp, ...)				\
-	_psc_hashtbl_search((t), 0, (cmp), (cbf), ## __VA_ARGS__)
+#define psc_hashtbl_del_item(t, cmp, key)				\
+	_psc_hashtbl_search((t), 0, (cmp), (cbf), (key))
 
 struct psc_hashtbl *
 	 psc_hashtbl_lookup(const char *);
@@ -126,7 +126,7 @@ void	 psc_hashtbl_getstats(const struct psc_hashtbl *, int *, int *, int *, int 
 void	 psc_hashtbl_destroy(struct psc_hashtbl *);
 void	 psc_hashtbl_remove(const struct psc_hashtbl *, void *);
 void	*_psc_hashtbl_search(const struct psc_hashtbl *, int, const void *,
-	    void (*)(void *), ...);
+	    void (*)(void *), const void *);
 void	_psc_hashtbl_init(struct psc_hashtbl *, int, ptrdiff_t, ptrdiff_t, int,
 	    int (*)(const void *, const void *), const char *, ...);
 
@@ -137,12 +137,12 @@ void	_psc_hashtbl_init(struct psc_hashtbl *, int, ptrdiff_t, ptrdiff_t, int,
  * @cmp: optional value to compare with to differentiate entries with same ID.
  * @cbf: optional callback routine invoked when the entry is found, executed
  *	while the bucket is locked.
- * The variable argument list should consist of a single argument of either type of:
+ * @key: search key pointer to either of:
  *	- uint64_t hash ID value
  *	- const char * string ID
  */
-#define	psc_hashbkt_search(t, b, cmp, cbf, ...)				\
-	_psc_hashbkt_search((t), (b), 0, (cmp), (cbf), ## __VA_ARGS__)
+#define	psc_hashbkt_search(t, b, cmp, cbf, key)				\
+	_psc_hashbkt_search((t), (b), 0, (cmp), (cbf), (key))
 
 /**
  * psc_hashtbl_del_item - search a bucket for an item by its hash ID and
@@ -150,24 +150,25 @@ void	_psc_hashtbl_init(struct psc_hashtbl *, int, ptrdiff_t, ptrdiff_t, int,
  * @t: the hash table.
  * @b: the bucket to search.
  * @cmp: optional value to compare with to differentiate entries with same ID.
- * The variable argument list should consist of a single argument of either type of:
+ * @key: search key pointer to either of:
  *	- uint64_t hash ID value
  *	- const char * string ID
  */
-#define	psc_hashbkt_del_item(t, b, cmp, ...)				\
-	_psc_hashbkt_search((t), (b), PHLF_DEL, (cmp), NULL,		\
-	    ## __VA_ARGS__)
+#define	psc_hashbkt_del_item(t, b, cmp, key)				\
+	_psc_hashbkt_search((t), (b), PHLF_DEL, (cmp), NULL, (key))
 
 struct psc_hashbkt *
-	 psc_hashbkt_get(const struct psc_hashtbl *, ...);
+	 psc_hashbkt_get(const struct psc_hashtbl *, const void *);
 void	 psc_hashbkt_add_item(const struct psc_hashtbl *,
 		struct psc_hashbkt *, void *);
 void	*_psc_hashbkt_search(const struct psc_hashtbl *,
-		struct psc_hashbkt *, int, const void *,
-		void (*)(void *), ...);
+		struct psc_hashbkt *, int, const void *, void (*)(void *),
+		const void *);
 
-#define psc_hashbkt_lock(b)	spinlock(&(b)->phb_lock)
-#define psc_hashbkt_unlock(b)	freelock(&(b)->phb_lock)
+#define psc_hashbkt_lock(b)		spinlock(&(b)->phb_lock)
+#define psc_hashbkt_unlock(b)		freelock(&(b)->phb_lock)
+#define psc_hashbkt_reqlock(b)		reqlock(&(b)->phb_lock)
+#define psc_hashbkt_ureqlock(b, lk)	ureqlock(&(b)->phb_lock, (lk))
 
 void	 psc_hashent_init(const struct psc_hashtbl *, void *);
 void	 psc_hashent_remove(const struct psc_hashtbl *, void *);

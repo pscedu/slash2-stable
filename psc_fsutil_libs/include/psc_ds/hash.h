@@ -20,9 +20,9 @@
 #ifndef _PFL_HASH_H_
 #define _PFL_HASH_H_
 
+#include "pfl/cdefs.h"
 #include "pfl/types.h"
 #include "psc_ds/list.h"
-#include "pfl/cdefs.h"
 #include "psc_util/lock.h"
 
 #define LOCK_BUCKET(hb)		spinlock(&(hb)->hbucket_lock)
