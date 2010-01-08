@@ -24,6 +24,7 @@
 #ifndef _PFL_POOL_H_
 #define _PFL_POOL_H_
 
+#include <sys/stdarg.h>
 #include <sys/types.h>
 
 #include "psc_ds/dynarray.h"
@@ -180,6 +181,10 @@ void	_psc_poolmaster_init(struct psc_poolmaster *, size_t, ptrdiff_t,
 		int, int, int, int, int (*)(struct psc_poolmgr *, void *),
 		void (*)(void *), int (*)(struct psc_poolmgr *),
 		void *, const char *, ...);
+void	_psc_poolmaster_initv(struct psc_poolmaster *, size_t, ptrdiff_t,
+		int, int, int, int, int (*)(struct psc_poolmgr *, void *),
+		void (*)(void *), int (*)(struct psc_poolmgr *),
+		void *, const char *, va_list);
 
 int	 psc_pool_gettotal(struct psc_poolmgr *);
 int	 psc_pool_grow(struct psc_poolmgr *, int);

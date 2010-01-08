@@ -64,11 +64,11 @@ psc_mlist_tryget(__unusedx struct psc_mlist *pml)
 }
 
 void
-_psc_poolmaster_init(struct psc_poolmaster *p, size_t entsize,
+_psc_poolmaster_initv(struct psc_poolmaster *p, size_t entsize,
     ptrdiff_t offset, int flags, int total, int min, int max,
     int (*initf)(struct psc_poolmgr *, void *), void (*destroyf)(void *),
-    int (*reclaimcb)(struct psc_poolmgr *),
-    void *mwcarg, const char *namefmt, ...)
+    int (*reclaimcb)(struct psc_poolmgr *), void *mwcarg,
+    const char *namefmt, va_list ap)
 {
 	va_list ap;
 
@@ -88,8 +88,21 @@ _psc_poolmaster_init(struct psc_poolmaster *p, size_t entsize,
 	p->pms_thres = POOL_AUTOSIZE_THRESH;
 	p->pms_mwcarg = mwcarg;
 
-	va_start(ap, namefmt);
 	vsnprintf(p->pms_name, sizeof(p->pms_name), namefmt, ap);
+}
+
+void
+_psc_poolmaster_init(struct psc_poolmaster *p, size_t entsize,
+    ptrdiff_t offset, int flags, int total, int min, int max,
+    int (*initf)(struct psc_poolmgr *, void *), void (*destroyf)(void *),
+    int (*reclaimcb)(struct psc_poolmgr *), void *mwcarg,
+    const char *namefmt, ...)
+{
+	va_list ap;
+
+	va_start(ap, namefmt);
+	_psc_poolmaster_initv(p, entsize, offset, flags, total, min, max,
+	    initf, destroyf, reclaimcb, mwcarg, namefmt, ap);
 	va_end(ap);
 }
 
