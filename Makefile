@@ -1,12 +1,13 @@
 # $Id$
 
 ROOTDIR=../..
-PROJECT_BASE=.
 include ${ROOTDIR}/Makefile.path
 
 PROG?=		sft
 SRCS+=		sft.c
+SRCS+=		${PFL_BASE}/psc_util/alloc.c
 SRCS+=		${PFL_BASE}/psc_util/crc.c
+SRCS+=		${PFL_BASE}/psc_util/log.c
 
 CFLAGS+=	-Wall -W -g
 CFLAGS+=	-D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64

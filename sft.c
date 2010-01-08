@@ -3,6 +3,7 @@
 #include <sys/param.h>
 #include <sys/stat.h>
 
+#include <err.h>
 #include <fcntl.h>
 #include <limits.h>
 #include <stdio.h>
@@ -15,75 +16,30 @@
 MPI_Group world;
 #endif
 
-#include "psc_util/cdefs.h"
+#include "pfl/cdefs.h"
+#include "psc_util/alloc.h"
 #include "psc_util/crc.h"
-
-#if 0
-#ifndef MIN
-# define MIN(a,b) (((a)<(b)) ? (a): (b))
-#endif
-#ifndef MAX
-# define MAX(a,b) (((a)>(b)) ? (a): (b))
-#endif
-#endif
+#include "psc_util/log.h"
 
 int pes, mype;
 unsigned long crc=0, debug=0;
 ssize_t bufsz=131072;
 
-psc_crc_t filecrc;
+psc_crc64_t filecrc;
 
-char file[PATH_MAX];
+char *file;
 char *buf;
 
-void
-sft_help(void)
+const char *progname;
+
+__dead void
+usage(void)
 {
-	fprintf(stderr, "sft [-n] [-d] [-f filename] [-c]\n"
+	fprintf(stderr, "usage: %s [-cdn] [-f filename]\n"
 		"\t -d (enable debugging output)\n"
 		"\t -c (enable MD5 checksummming)\n"
-		"\t -f filename (specify the filename to read)\n");
+		"\t -f filename (specify the filename to read)\n", progname);
 	exit(1);
-}
-
-void
-sft_getopt(int argc,  char *argv[]) {
-#define ARGS "dhcn:f:"
-	int have_file=0;
-	char c;
-	optarg = NULL;
-
-	while ((c = getopt(argc, argv, ARGS)) != -1) {
-		switch (c) {
-
-		case 'h':
-			sft_help();
-			break;
-		case 'c':
-			crc = 1;
-			PSC_CRC_INIT(filecrc);
-			break;
-		case 'd':
-			debug = strtol(optarg, NULL, 10);
-			break;
-		case 'f':
-			strncpy(file, optarg, PATH_MAX);
-			have_file = 1;
-			break;
-		case 'b':
-			bufsz = strtol(optarg, NULL, 10);
-			break;
-
-		default :
-			fprintf(stderr, "Invalid option '%s'\n", optarg);
-			sft_help();
-		}
-	}
-
-	if (!have_file) {
-		fprintf(stderr, "No input file specified");
-		sft_help();
-	}
 }
 
 void
@@ -128,16 +84,40 @@ sft_parallel_finalize(void)
 int
 main(int argc, char *argv[])
 {
-	int fd;
+	int c, fd;
 	struct stat stb;
 	ssize_t rem, szrc;
 	size_t tmp;
 
-	sft_getopt(argc, argv);
+	progname = argv[0];
+	while ((c = getopt(argc, argv, "dhcn:f:")) != -1)
+		switch (c) {
+		case 'c':
+			crc = 1;
+			PSC_CRC64_INIT(&filecrc);
+			break;
+		case 'd':
+			debug = strtol(optarg, NULL, 10);
+			break;
+		case 'f':
+			file = optarg;
+			break;
+		case 'b':
+			bufsz = strtol(optarg, NULL, 10);
+			break;
+		default:
+			usage();
+		}
+	argc -= optind;
+	if (argc)
+		usage();
 
-	buf = malloc(bufsz);
-	if (!buf)
-		abort();
+	if (!file) {
+		warnx("No input file specified");
+		usage();
+	}
+
+	buf = PSCALLOC(bufsz);
 
 	sft_parallel_init(argc, argv);
 	sft_barrier();
@@ -163,12 +143,12 @@ main(int argc, char *argv[])
 		} else {
 			rem -= tmp;
 			if (crc)
-				PSC_CRC_ADD(filecrc, buf, tmp);
+				psc_crc64_add(&filecrc, buf, tmp);
 		}
 	}
 
 	if (crc) {
-		PSC_CRC_FIN(filecrc);
+		PSC_CRC64_FIN(&filecrc);
 		fprintf(stdout, "F '%s' CRC=0x%lx\n", file, filecrc);
 	}
 	close(fd);
