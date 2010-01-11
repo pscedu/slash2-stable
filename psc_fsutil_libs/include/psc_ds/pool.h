@@ -24,8 +24,9 @@
 #ifndef _PFL_POOL_H_
 #define _PFL_POOL_H_
 
-#include <sys/stdarg.h>
 #include <sys/types.h>
+
+#include <stdarg.h>
 
 #include "psc_ds/dynarray.h"
 #include "psc_ds/listcache.h"
