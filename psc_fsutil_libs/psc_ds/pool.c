@@ -70,8 +70,6 @@ _psc_poolmaster_initv(struct psc_poolmaster *p, size_t entsize,
     int (*reclaimcb)(struct psc_poolmgr *), void *mwcarg,
     const char *namefmt, va_list ap)
 {
-	va_list ap;
-
 	memset(p, 0, sizeof(*p));
 	LOCK_INIT(&p->pms_lock);
 	psc_dynarray_init(&p->pms_poolmgrs);
