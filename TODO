@@ -73,6 +73,7 @@ pfl
 - introduce refmgr
 - ensure no mp RPC message bodies are used after a pscrpc_req_finished()
 - add 'psc_' prefix to nbrequest API
+- move pool to psc_util
 
 zest
 - research faster CRC operations
