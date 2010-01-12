@@ -1,23 +1,35 @@
 /* $Id$ */
 
 /*
- * TODO
- *
  * An object reference has the following memory layout:
  *
- *	+-----------------------------------------------+
- *	| struct psc_objref				|
- *	+-----------------------------------------------+
- *	| struct psc_refmgr * if PRMF_TREE		|
- *	| struct psclist_head if PRMF_LIST and PRMF_LRU	|
- *	| struct psclist_head if (LIST or LRU) and HASH	|
- *	| SPLAY_ENTRY() if PRMF_TREE			|
- *	+-----------------------------------------------+
- *	| private object-specific data			|
- *	+-----------------------------------------------+
+ *	+-------------------------------------------------------+
+ *	| struct psc_objref					|
+ *	+-------------------------------------------------------+
+ *	| SPLAY_ENTRY() if PRMF_TREE				|
+ *	| struct psc_refmgr * if PRMF_TREE			|
+ *	| struct psclist_head (for pool and (LIST|LRU|HASH))	|
+ *	| struct psclist_head (if LIST and LRU)			|
+ *	| struct psclist_head (if (LIST or LRU) and HASH)	|
+ *	+-------------------------------------------------------+
+ *	| private object-specific data				|
+ *	+-------------------------------------------------------+
  *
  * XXX need a poolmgr pointer to avoid returning to different poolmgrs.
  */
+
+#include <stdarg.h>
+#include <string.h>
+
+#include "psc_ds/dynarray.h"
+#include "psc_ds/hash2.h"
+#include "psc_ds/list.h"
+#include "psc_ds/lockedlist.h"
+#include "psc_ds/pool.h"
+#include "psc_ds/tree.h"
+#include "psc_util/lock.h"
+#include "psc_util/log.h"
+#include "psc_util/refmgr.h"
 
 void
 psc_refmgr_init(struct psc_refmgr *prm, int flags, int privsiz, int nobjs,
@@ -32,6 +44,9 @@ psc_refmgr_init(struct psc_refmgr *prm, int flags, int privsiz, int nobjs,
 
 	off = sizeof(struct psc_objref);
 	if (prm->prm_flags & PRMF_TREE) {
+		prm->prm_tree_offset = off;
+		off += sizeof(SPLAY_ENTRY(psc_objref));
+
 		prm->prm_refmgr_offset = off;
 		off += sizeof(void *);
 	}
@@ -60,10 +75,6 @@ psc_refmgr_init(struct psc_refmgr *prm, int flags, int privsiz, int nobjs,
 			off += sizeof(struct psc_hashent);
 		}
 	}
-	if (prm->prm_flags & PRMF_TREE) {
-		prm->prm_tree_offset = off;
-		off += sizeof(SPLAY_ENTRY(psc_objref));
-	}
 	prm->prm_private_offset = off;
 
 	flags = 0;
@@ -79,12 +90,14 @@ psc_refmgr_init(struct psc_refmgr *prm, int flags, int privsiz, int nobjs,
 	va_end(ap);
 
 	if (prm->prm_flags & PRMF_LIST)
-		lc_reginit(&prm->prm_list, prm->prm_pms->pms_name, NULL);
+		pll_init(&prm->prm_list, struct psc_objref,
+		    prm->prm_list_offset);
 	if (prm->prm_flags & PRMF_LRU)
-		lc_reginit(&prm->prm_lru);
+		pll_init(&prm->prm_lru, struct psc_objref,
+		    prm->prm_lru_offset);
 	if (prm->prm_flags & PRMF_TREE) {
 		SPLAY_INIT(psc_objref_tree, &prm->prm_tree);
-		LOCK_INIT(&prm->prm_lock);
+		LOCK_INIT(&prm->prm_trlock);
 	}
 	if (prm->prm_flags & PRMF_HASH) {
 		flags = 0;
