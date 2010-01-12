@@ -7,8 +7,8 @@
 
 #include "psc_ds/hash2.h"
 #include "psc_ds/lockedlist.h"
-#include "psc_ds/pool.h"
 #include "psc_ds/tree.h"
+#include "psc_util/pool.h"
 
 SPLAY_HEAD(psc_objref_tree, psc_objref);
 

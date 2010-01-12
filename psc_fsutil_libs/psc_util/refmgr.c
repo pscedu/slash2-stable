@@ -25,10 +25,10 @@
 #include "psc_ds/hash2.h"
 #include "psc_ds/list.h"
 #include "psc_ds/lockedlist.h"
-#include "psc_ds/pool.h"
 #include "psc_ds/tree.h"
 #include "psc_util/lock.h"
 #include "psc_util/log.h"
+#include "psc_util/pool.h"
 #include "psc_util/refmgr.h"
 
 void

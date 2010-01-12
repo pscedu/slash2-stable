@@ -32,10 +32,10 @@
 #include "psc_ds/dynarray.h"
 #include "psc_ds/listcache.h"
 #include "psc_ds/lockedlist.h"
-#include "psc_ds/pool.h"
 #include "psc_util/alloc.h"
 #include "psc_util/lock.h"
 #include "psc_util/log.h"
+#include "psc_util/pool.h"
 #include "psc_util/pthrutil.h"
 #include "psc_util/waitq.h"
 

@@ -30,7 +30,7 @@
 #include "pfl/cdefs.h"
 #include "psc_ds/hash.h"
 #include "psc_ds/list.h"
-#include "psc_ds/pool.h"
+#include "psc_util/pool.h"
 #include "psc_ds/vbitmap.h"
 #include "psc_util/ctl.h"
 #include "psc_util/ctlcli.h"
