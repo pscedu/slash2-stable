@@ -4,8 +4,7 @@ general reminders
 - watch out for sizeof(type var[0])
 - constify RPC replies in clients and requests in servers
 - check all bulkserver()'s for free_desc()
-- sweep tree for \b0[0-9] and fix bad permissions (711 -> 700 - slash?)
-- ctlapi GETTREE?
+- ensure file permissions in code aren't too permissive
 - investigate pthread_rwlocks for things like trees and large lists
 - watch out for "a - b" in cmp functions overflowing, use CMP() instead
 - investigate if our sched_yield() calls are correct
@@ -15,21 +14,23 @@ general reminders
 - keep "make build > /dev/null" clean
 - check memset() for bad sizes sizeof(pg) vs. sizeof(*pg)
 - watch for realloc(p, 0) returning NULL being okay
-- deploy __thread in more places
+- convert the localmem API to just use __thread, unless __thread isn't
+  supported, then convert __thread to the localmem API
 - change inline to __inline
 - void *pri data members can be removed on structures to save
   memory, as you can allocate >sizeof(struct) and point the
   private data pointer past
+- ensure no mp RPC message bodies are used after a pscrpc_req_finished()
 
 make
 - rename ROOTDIR -> PROJ_BASE
 - introduce APP_BASE
 
 pfl
+- ctlapi GETTREE?
 - pfl: use "psc_/pfl_" prefix and "_mt" (multithread-safe) postfix
 - for psclog(), add extensibility mechanism for fmtstr,
   allowing app-specific callbacks (e.g. %r for zest clients)
-- create a generic refcnt manager for thread-safe activity
 - add a pscthr_get() check in pscalloc and test
 - psclog format specifier: timestamp difference
 - investigate proper control socket permissions checks.  regular
@@ -47,7 +48,8 @@ pfl
   paths when asprintf() fails instead of centralizing the logic over
   malloc().
 - add struct members to hdrclean.pl
-- have lc_getwait() do a sched_yield() after it grabs an item
+- have psc_pool_get() and lc_getwait() do sched_yield()'s after
+  they grab an item and remove the manual sched_yield()'s
 - have psc_pool_return() NULL out the pointer arg released
 - add a new lock API:
     (o) agnostic to underlying type (spin, etc.)
@@ -68,10 +70,8 @@ pfl
 - let caller worry about memory for vbitmaps, don't return pointers
 - bail if multiwait_addcond() fails
 - psclist_add_sorted() - maintain a median element for faster sorting
-- add a variable printbin()
+- add a variable-length printbin() dumper
 - rename psc_bitstr_setchk -> psc_bitfield_setchk
-- introduce refmgr
-- ensure no mp RPC message bodies are used after a pscrpc_req_finished()
 - add 'psc_' prefix to nbrequest API
 - move pool to psc_util
 
