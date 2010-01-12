@@ -516,7 +516,7 @@ void
 psc_ctlmsg_pool_prhdr(__unusedx struct psc_ctlmsghdr *mh,
     __unusedx const void *m)
 {
-	printf("pools\n"
+	printf("memory pools\n"
 	    " %-8s %3s %6s %6s %6s "
 	    "%6s %6s %6s %2s "
 	    "%6s %6s %3s %3s\n",
