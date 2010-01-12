@@ -5,13 +5,20 @@
 #ifndef _PFL_REFMGR_H_
 #define _PFL_REFMGR_H_
 
+#include "psc_ds/hash2.h"
+#include "psc_ds/lockedlist.h"
+#include "psc_ds/pool.h"
+#include "psc_ds/tree.h"
+
+SPLAY_HEAD(psc_objref_tree, psc_objref);
+
 struct psc_refmgr {
 	struct psc_poolmaster		 prm_pms;
 	int				 prm_flags;
 
 	/* object access mechanisms */
-	struct psc_listcache		 prm_list;
-	struct psc_listcache		 prm_lru;
+	struct psc_lockedlist		 prm_list;
+	struct psc_lockedlist		 prm_lru;
 	struct psc_hashtbl		 prm_hashtbl;
 	struct psc_refmgr_tree		*prm_tree;
 	psc_spinlock_t			 prm_trlock;
@@ -25,6 +32,7 @@ struct psc_refmgr {
 	int				 prm_private_offset;
 };
 
+/* prm_flags */
 #define PRMF_LIST			(1 << 0)
 #define PRMF_LRU			(1 << 1)
 #define PRMF_HASH			(1 << 2)
@@ -34,6 +42,7 @@ struct psc_refmgr {
 #define PRMF_NOMEMPIN			(1 << 6)	/* do not pin in mem with mlock */
 #define PRMF_HASHSTR			(1 << 7)	/* use strings as hash table keys */
 #define PRMF_LINGER			(1 << 8)	/* don't destroy unref'd objs until out of space */
+#define PRMF_MLIST			(1 << 9)	/* use mlist for pool backend */
 
 /* additional lookup preference flags */
 #define PRMF_ANY			(PRMF_LIST | PRMF_LRU | PRMF_HASH | PRMF_TREE)
@@ -56,6 +65,7 @@ struct psc_objref {
 #define pobj_mwcond	pobj_waitu.pobj_waitu_mwcond
 };
 
+/* pobj_flags */
 #define POBJF_DYING			(1 << 0)
 #define POBJF_BUSY			(1 << 1)
 #define POBJF_MULTIWAIT			(1 << 2)
@@ -66,6 +76,24 @@ struct psc_objref {
 #define PSC_OBJREF_RLOCK(p)		reqlock(PSC_GETOBJLOCK(p))
 #define PSC_OBJREF_ULOCK(p)		freelock(PSC_GETOBJLOCK(p))
 #define PSC_OBJREF_URLOCK(p, lk)	ureqlock(PSC_GETOBJLOCK(p), (lk))
+
+#define PSC_OBJ_LOCK(p)			psc_objref_lock(psc_obj_getref(p))
+#define PSC_OBJ_ULOCK(p)		psc_objref_unlock(psc_obj_getref(p))
+#define PSC_OBJ_RLOCK(p)		psc_objref_reqlock(psc_obj_getref(p))
+#define PSC_OBJ_URLOCK(p, lk)		psc_objref_ureqlock(psc_obj_getref(p), (lk))
+
+void	 psc_refmgr_init(struct psc_refmgr *, int, int, int, int, int,
+	    int (*)(struct psc_poolmgr *, void *), void (*)(void *),
+	    const char *, ...);
+
+void	*psc_refmgr_findobj(struct psc_refmgr *, int, void *);
+void	*psc_refmgr_getobj(struct psc_refmgr *, int, void *);
+
+int	 psc_objref_cmp(const void *, const void *);
+
+void	 psc_obj_share(struct psc_refmgr *prm, void *);
+void	 psc_obj_incref(struct psc_refmgr *prm, void *);
+void	 psc_obj_decref(struct psc_refmgr *prm, void *);
 
 static __inline struct psc_objref *
 psc_obj_getref(const struct psc_refmgr *prm, void *p)
@@ -128,9 +156,6 @@ psc_objref_ureqlock(struct psc_objref *pobj, int locked)
 		ureqlock(&pobj->pobj_lock, locked);
 }
 
-#define PSC_OBJ_LOCK(p)		psc_objref_lock(psc_obj_getref(p))
-#define PSC_OBJ_ULOCK(p)	psc_objref_unlock(psc_obj_getref(p))
-#define PSC_OBJ_RLOCK(p)	psc_objref_reqlock(psc_obj_getref(p))
-#define PSC_OBJ_URLOCK(p, lk)	psc_objref_ureqlock(psc_obj_getref(p), (lk))
+SPLAY_GENERATE(psc_objref_tree, psc_objref, pobjf_tree_tentry, psc_objref_cmp);
 
 #endif /* _PFL_REFMGR_H_ */

@@ -82,6 +82,8 @@ psc_refmgr_init(struct psc_refmgr *prm, int flags, int privsiz, int nobjs,
 		flags |= PPMF_AUTO;
 	if (prm->prm_flags & PRMF_NOMEMPIN)
 		flags |= PPMF_NOLOCK;
+	if (prm->prm_flags & PRMF_MLIST)
+		flags |= PPMF_MLIST;
 
 	va_start(ap, namefmt);
 	_psc_poolmaster_initv(&prm->prm_pms, off + privsiz, off, flags,
@@ -371,6 +373,12 @@ psc_refmgr_getobj(struct psc_refmgr *prm, int pref, void *key)
 		psc_hashtbl_add(&prm->prm_hashtbl, pobj);
 	psc_refmgr_unlock(prm);
 	return ((char *)pobj + prm->prm_private_off);
+}
+
+int
+psc_objref_cmp(const void *a, const void *b)
+{
+	struct psc_obj
 }
 
 void
