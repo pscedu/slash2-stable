@@ -110,7 +110,6 @@ void pscrpc_deactivate_import(struct pscrpc_import *imp)
 	imp->imp_generation++;
 	freelock(&imp->imp_lock);
 
-	psc_errorx("Here's where failover is supposed to happen!!!");
 	pscrpc_abort_inflight(imp);
 	//pscobd_import_event(imp->imp_obd, imp, IMP_EVENT_INACTIVE);
 }
