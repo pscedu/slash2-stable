@@ -68,8 +68,6 @@ _psc_hashtbl_init(struct psc_hashtbl *t, int flags,
 	if (nbuckets == 0)
 		psc_fatalx("hash table size must be non-zero for modulus to work");
 
-	psc_assert(cmpf);
-
 	memset(t, 0, sizeof(*t));
 	INIT_PSCLIST_ENTRY(&t->pht_lentry);
 	LOCK_INIT(&t->pht_lock);
