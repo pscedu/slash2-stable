@@ -73,7 +73,6 @@ pfl
 - add a variable-length printbin() dumper
 - rename psc_bitstr_setchk -> psc_bitfield_setchk
 - add 'psc_' prefix to nbrequest API
-- move pool to psc_util
 
 zest
 - research faster CRC operations
