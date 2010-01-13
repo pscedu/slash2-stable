@@ -34,20 +34,18 @@ struct psc_lockedlist psc_hashtbls =
     PLL_INITIALIZER(&psc_hashtbls, struct psc_hashtbl, pht_lentry);
 
 /*
- * "This well-known hash function
- *    was used in P.J. Weinberger's C compiler
- *    (cf. Compilers: Principles, Techniques,
- *    and Tools, by Aho, Sethi & Ullman,
- *    Addison-Wesley, 1988, p. 436)."
+ * "This well-known hash function was used in P.J. Weinberger's
+ * C compiler (cf. Compilers: Principles, Techniques, and Tools,
+ * by Aho, Sethi & Ullman, Addison-Wesley, 1988, p. 436)."
  */
 __static inline int
-psc_hash_stringify(const char *s)
+psc_str_hashify(const char *s)
 {
 	const char *p;
 	unsigned h = 0, g;
 
 	if (s == NULL)
-		return -1;
+		return (-1);
 	for (p = s; *p != '\0'; p++) {
 		h = (h << 4) + (*p);
 		if ((g = h & 0xf0000000)) {
@@ -61,7 +59,7 @@ psc_hash_stringify(const char *s)
 void
 _psc_hashtbl_init(struct psc_hashtbl *t, int flags,
     ptrdiff_t idoff, ptrdiff_t hentoff, int nbuckets,
-    int (*cmp)(const void *, const void *), const char *fmt, ...)
+    int (*cmpf)(const void *, const void *), const char *fmt, ...)
 {
 	struct psc_hashbkt *b;
 	va_list ap;
@@ -69,6 +67,8 @@ _psc_hashtbl_init(struct psc_hashtbl *t, int flags,
 
 	if (nbuckets == 0)
 		psc_fatalx("hash table size must be non-zero for modulus to work");
+
+	psc_assert(cmpf);
 
 	memset(t, 0, sizeof(*t));
 	INIT_PSCLIST_ENTRY(&t->pht_lentry);
@@ -78,7 +78,7 @@ _psc_hashtbl_init(struct psc_hashtbl *t, int flags,
 	t->pht_flags = flags;
 	t->pht_idoff = idoff;
 	t->pht_hentoff = hentoff;
-	t->pht_cmp = cmp;
+	t->pht_cmpf = cmpf;
 
 	va_start(ap, fmt);
 	vsnprintf(t->pht_name, sizeof(t->pht_name), fmt, ap);
@@ -87,7 +87,7 @@ _psc_hashtbl_init(struct psc_hashtbl *t, int flags,
 	for (i = 0, b = t->pht_buckets; i < nbuckets; i++, b++) {
 		INIT_PSCLIST_HEAD(&b->phb_listhd);
 		LOCK_INIT(&b->phb_lock);
-		atomic_set(&b->phb_nitems, 0);
+		psc_atomic32_set(&b->phb_nitems, 0);
 	}
 	pll_add(&psc_hashtbls, t);
 }
@@ -112,18 +112,17 @@ psc_hashtbl_lookup(const char *name)
 /**
  * psc_hashtbl_destroy - reclaim a hash table's resources.
  * @t: table to destroy.
- * Notes: make sure the hash table has been emptied!
  */
 void
 psc_hashtbl_destroy(struct psc_hashtbl *t)
 {
+	int i;
+
 	pll_remove(&psc_hashtbls, t);
-#if 0
 	for (i = 0; i < t->pht_nbuckets; i++)
-		if (atomic_read(&t->pht_buckets[i].phb_nitems))
+		if (psc_atomic32_read(&t->pht_buckets[i].phb_nitems))
 			psc_fatalx("psc_hashtbl_destroy: "
 			    "hash table not empty");
-#endif
 	PSCFREE(t->pht_buckets);
 }
 
@@ -131,27 +130,18 @@ psc_hashtbl_destroy(struct psc_hashtbl *t)
  * psc_hashbkt_get - locate the bucket containing an item with the
  *	given ID.
  * @t: table to search.
- * @key: search key pointer to either of:
- *	- uint64_t hash ID value
- *	- const char * string ID value
+ * @key: search key.
  */
 struct psc_hashbkt *
 psc_hashbkt_get(const struct psc_hashtbl *t, const void *key)
 {
 	struct psc_hashbkt *b;
 
-//	PSC_HASHTBL_LOCK(t);
-
 	if (t->pht_flags & PHTF_STR)
-		b = &t->pht_buckets[psc_hash_stringify(key) %
+		b = &t->pht_buckets[psc_str_hashify(key) %
 		    t->pht_nbuckets];
 	else
 		b = &t->pht_buckets[*(uint64_t *)key % t->pht_nbuckets];
-
-//	psc_hashbkt_lock(b);
-//	b->phb_refcnt++;
-//	psc_hashbkt_unlock(b);
-//	PSC_HASHTBL_ULOCK(t);
 
 	return (b);
 }
@@ -164,7 +154,7 @@ _psc_hashtbl_search(const struct psc_hashtbl *t, int flags,
 
 	b = psc_hashbkt_get(t, key);
 	return (_psc_hashbkt_search(t, b, flags, cmp, cbf, key));
-} 
+}
 
 void *
 _psc_hashbkt_search(const struct psc_hashtbl *t, struct psc_hashbkt *b,
@@ -173,7 +163,7 @@ _psc_hashbkt_search(const struct psc_hashtbl *t, struct psc_hashbkt *b,
 	void *p, *pk;
 	int locked;
 
-	if (t->pht_cmp)
+	if (t->pht_cmpf)
 		psc_assert(cmp);
 	else
 		psc_assert(cmp == NULL);
@@ -186,7 +176,7 @@ _psc_hashbkt_search(const struct psc_hashtbl *t, struct psc_hashbkt *b,
 				continue;
 		} else if (*(uint64_t *)key != *(uint64_t *)pk)
 			continue;
-		if (t->pht_cmp == NULL || t->pht_cmp(cmp, p)) {
+		if (t->pht_cmpf == NULL || t->pht_cmpf(cmp, p)) {
 			if (cbf)
 				cbf(p);
 			break;
@@ -195,7 +185,7 @@ _psc_hashbkt_search(const struct psc_hashtbl *t, struct psc_hashbkt *b,
 	if (p && (flags & PHLF_DEL)) {
 		psclist_del((struct psclist_head *)((char *)p +
 		    t->pht_hentoff));
-		atomic_dec(&b->phb_nitems);
+		psc_atomic32_dec(&b->phb_nitems);
 	}
 	ureqlock(&b->phb_lock, locked);
 	return (p);
@@ -248,7 +238,8 @@ psc_hashent_remove(const struct psc_hashtbl *t, void *p)
 	b = psc_hashbkt_get(t, pk);
 	locked = reqlock(&b->phb_lock);
 	psclist_del((struct psclist_head *)((char *)p + t->pht_hentoff));
-	atomic_dec(&b->phb_nitems);
+	psc_assert(psc_atomic32_read(&b->phb_nitems) > 0);
+	psc_atomic32_dec(&b->phb_nitems);
 	ureqlock(&b->phb_lock, locked);
 }
 
@@ -267,7 +258,7 @@ psc_hashbkt_add_item(const struct psc_hashtbl *t, struct psc_hashbkt *b,
 	locked = reqlock(&b->phb_lock);
 	psclist_xadd((struct psclist_head *)((char *)p + t->pht_hentoff),
 	    &b->phb_listhd);
-	atomic_inc(&b->phb_nitems);
+	psc_atomic32_inc(&b->phb_nitems);
 	ureqlock(&b->phb_lock, locked);
 }
 
@@ -289,7 +280,7 @@ psc_hashtbl_add_item(const struct psc_hashtbl *t, void *p)
 	locked = reqlock(&b->phb_lock);
 	psclist_xadd((struct psclist_head *)((char *)p +
 	    t->pht_hentoff), &b->phb_listhd);
-	atomic_inc(&b->phb_nitems);
+	psc_atomic32_inc(&b->phb_nitems);
 	ureqlock(&b->phb_lock, locked);
 }
 
@@ -313,7 +304,7 @@ psc_hashtbl_getstats(const struct psc_hashtbl *t, int *totalbucks,
 	*maxbucklen = 0;
 	*totalbucks = t->pht_nbuckets;
 	PSC_HASHTBL_FOREACH_BUCKET(b, t) {
-		bucklen = atomic_read(&b->phb_nitems);
+		bucklen = psc_atomic32_read(&b->phb_nitems);
 		if (bucklen) {
 			++*usedbucks;
 			*nents += bucklen;

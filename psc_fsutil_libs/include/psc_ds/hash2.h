@@ -29,12 +29,12 @@
 #define PSC_HASHTBL_LOCK(t)	spinlock(&(t)->pht_lock)
 #define PSC_HASHTBL_ULOCK(t)	freelock(&(t)->pht_lock)
 
-#define PSC_HTNAME_MAX 30
+#define PSC_HTNAME_MAX		30
 
 struct psc_hashbkt {
 	struct psclist_head	  phb_listhd;
 	psc_spinlock_t		  phb_lock;
-	atomic_t		  phb_nitems;
+	psc_atomic32_t		  phb_nitems;
 	int			  phb_refcnt;
 };
 
@@ -42,12 +42,12 @@ struct psc_hashtbl {
 	char			  pht_name[PSC_HTNAME_MAX];
 	struct psclist_head	  pht_lentry;
 	psc_spinlock_t		  pht_lock;
-	int			  pht_flags;	/* hash table flags, see below */
 	ptrdiff_t		  pht_idoff;	/* offset into item to its ID field */
 	ptrdiff_t		  pht_hentoff;	/* offset to the hash table linkage */
+	int			  pht_flags;	/* hash table flags, see below */
 	int			  pht_nbuckets;
 	struct psc_hashbkt	 *pht_buckets;
-	int			(*pht_cmp)(const void *, const void *);
+	int			(*pht_cmpf)(const void *, const void *);
 };
 
 struct psc_hashent {
@@ -72,24 +72,23 @@ struct psc_hashent {
 
 /**
  * psc_hashtbl_init - initialize a hash table.
- *
  * @t: hash table to initialize.
  * @flags: optional modifier flags.
  * @type: type of the structure to be put into the hash table.
  * @idmemb: the field that stores the ID information (aka key).
  * @hentmemb: the field used to link the structure into the hash table.
  * @nb: number of buckets to create.
- * @cmp: optional function to differentiate items of the same ID.
+ * @cmpf: optional function to differentiate items of the same ID.
  * @fmt: printf(3)-like name of hash for lookups and external control.
  */
-#define psc_hashtbl_init(t, flags, type, idmemb, hentmemb, nb, cmp,	\
+#define psc_hashtbl_init(t, flags, type, idmemb, hentmemb, nb, cmpf,	\
 	    fmt, ...)							\
 	do {								\
 		if (sizeof(((type *)NULL)->hentmemb) !=			\
 		    sizeof(struct psc_hashent))				\
 			psc_fatalx("invalid hash ID field");		\
 		_psc_hashtbl_init((t), (flags), offsetof(type, idmemb),	\
-		    offsetof(type, hentmemb), (nb), (cmp), (fmt),	\
+		    offsetof(type, hentmemb), (nb), (cmpf), (fmt),	\
 		    ## __VA_ARGS__);					\
 	} while (0)
 
