@@ -68,7 +68,8 @@ pfl
 - RETURN() used in code is actually from libcfs.h
 - rename bitflag.h -> bitstr.h
 - let caller worry about memory for vbitmaps, don't return pointers
-- bail if multiwait_addcond() fails
+- bail if multiwait_addcond() fails, its a mem condition (dynarray)
+  that should be remedied by shrinking pools
 - psclist_add_sorted() - maintain a median element for faster sorting
 - add a variable-length printbin() dumper
 - rename psc_bitstr_setchk -> psc_bitfield_setchk
