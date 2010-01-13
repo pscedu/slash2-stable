@@ -166,6 +166,7 @@ void	*_psc_hashbkt_search(const struct psc_hashtbl *,
 
 #define psc_hashbkt_lock(b)		spinlock(&(b)->phb_lock)
 #define psc_hashbkt_unlock(b)		freelock(&(b)->phb_lock)
+#define psc_hashbkt_trylock(b)		trylock(&(b)->phb_lock)
 #define psc_hashbkt_reqlock(b)		reqlock(&(b)->phb_lock)
 #define psc_hashbkt_ureqlock(b, lk)	ureqlock(&(b)->phb_lock, (lk))
 
@@ -174,6 +175,8 @@ void	 psc_hashent_remove(const struct psc_hashtbl *, void *);
 int	 psc_hashent_conjoint(const struct psc_hashtbl *, void *);
 
 #define psc_hashent_disjoint(t, p)	(!psc_hashent_conjoint((t), (p)))
+
+int	 psc_str_hashify(const char *);
 
 extern struct psc_lockedlist psc_hashtbls;
 

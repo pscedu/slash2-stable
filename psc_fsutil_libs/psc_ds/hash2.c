@@ -38,7 +38,7 @@ struct psc_lockedlist psc_hashtbls =
  * C compiler (cf. Compilers: Principles, Techniques, and Tools,
  * by Aho, Sethi & Ullman, Addison-Wesley, 1988, p. 436)."
  */
-__static inline int
+int
 psc_str_hashify(const char *s)
 {
 	const char *p;
