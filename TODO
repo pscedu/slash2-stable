@@ -39,7 +39,6 @@ pfl
   inspect remote port to determine "authorization"
 - should hash tables be enforced by to n^^2-1 ??
 - rename stree to vtree (variable number of children per branch)
-- phase out hash1
 - create vlocks: vector lock API when you need to lock multiple
   structures in a reqlock order fashion (hash tables and lists etc.)
 - add custom sleep intervals for timerthr API

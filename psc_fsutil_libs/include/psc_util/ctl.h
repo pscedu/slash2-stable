@@ -27,7 +27,7 @@
 
 #include <sys/types.h>
 
-#include "psc_ds/hash.h"
+#include "psc_ds/hash2.h"
 #include "psc_ds/listcache.h"
 #include "psc_util/fault.h"
 #include "psc_util/iostats.h"
@@ -88,7 +88,7 @@ struct psc_ctlmsg_hashtable {
 	int32_t			pcht_nents;
 	int32_t			pcht_maxbucklen;
 	int32_t			pcht_flags;
-	char			pcht_name[HTNAME_MAX];
+	char			pcht_name[PSC_HTNAME_MAX];
 };
 
 #define PCHT_NAME_ALL		"all"

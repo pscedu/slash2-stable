@@ -57,6 +57,7 @@ struct psc_hashent {
 /* Table flags. */
 #define PHTF_NONE	0		/* no table flags specified */
 #define PHTF_STR	(1 << 0)	/* IDs are strings */
+#define PHTF_RESORT	(1 << 1)	/* reorder queues on lookup */
 
 /* Lookup flags. */
 #define PHLF_NONE	0		/* no lookup flags specified */

@@ -37,7 +37,6 @@
 
 #include "pfl/cdefs.h"
 #include "pfl/pfl.h"
-#include "psc_ds/hash.h"
 #include "psc_ds/hash2.h"
 #include "psc_ds/list.h"
 #include "psc_ds/listcache.h"
@@ -296,35 +295,13 @@ psc_ctlrep_gethashtable(int fd, struct psc_ctlmsghdr *mh, void *m)
 {
 	struct psc_ctlmsg_hashtable *pcht = m;
 	struct psc_hashtbl *pht;
-	struct hash_table *ht;
-	char name[HTNAME_MAX];
+	char name[PSC_HTNAME_MAX];
 	int rc, found, all;
 
 	rc = 1;
 	found = 0;
 	snprintf(name, sizeof(name), "%s", pcht->pcht_name); /* XXX */
 	all = (strcmp(name, PCHT_NAME_ALL) == 0);
-	spinlock(&hashTablesListLock);
-	psclist_for_each_entry(ht, &hashTablesList, htable_entry) {
-		if (all ||
-		    strncmp(name, ht->htable_name, strlen(name)) == 0) {
-			found = 1;
-
-			snprintf(pcht->pcht_name, sizeof(pcht->pcht_name),
-			    "%s", ht->htable_name);
-			hash_table_stats(ht, &pcht->pcht_totalbucks,
-			    &pcht->pcht_usedbucks, &pcht->pcht_nents,
-			    &pcht->pcht_maxbucklen);
-			rc = psc_ctlmsg_sendv(fd, mh, pcht);
-			if (!rc)
-				break;
-
-			/* Terminate on exact match. */
-			if (strcmp(ht->htable_name, name) == 0)
-				break;
-		}
-	}
-	freelock(&hashTablesListLock);
 
 	PLL_LOCK(&psc_hashtbls);
 	PLL_FOREACH(pht, &psc_hashtbls) {
@@ -357,7 +334,7 @@ psc_ctlrep_gethashtable(int fd, struct psc_ctlmsghdr *mh, void *m)
  * psc_ctlrep_getlc - send a response to a "getlc" inquiry.
  * @fd: client socket descriptor.
  * @mh: already filled-in control message header.
- * @pclc: control message to examine and reuse.
+ * @m: control message to examine and reuse.
  */
 int
 psc_ctlrep_getlc(int fd, struct psc_ctlmsghdr *mh, void *m)
@@ -408,7 +385,7 @@ psc_ctlrep_getlc(int fd, struct psc_ctlmsghdr *mh, void *m)
  * psc_ctlrep_getpool - send a response to a "getpool" inquiry.
  * @fd: client socket descriptor.
  * @mh: already filled-in control message header.
- * @pcpl: control message to examine and reuse.
+ * @msg: control message to examine and reuse.
  */
 int
 psc_ctlrep_getpool(int fd, struct psc_ctlmsghdr *mh, void *msg)

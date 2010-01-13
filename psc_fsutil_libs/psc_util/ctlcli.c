@@ -28,9 +28,7 @@
 #include <unistd.h>
 
 #include "pfl/cdefs.h"
-#include "psc_ds/hash.h"
 #include "psc_ds/list.h"
-#include "psc_util/pool.h"
 #include "psc_ds/vbitmap.h"
 #include "psc_util/ctl.h"
 #include "psc_util/ctlcli.h"
@@ -38,6 +36,7 @@
 #include "psc_util/fmtstr.h"
 #include "psc_util/log.h"
 #include "psc_util/meter.h"
+#include "psc_util/pool.h"
 #include "psc_util/strlcpy.h"
 #include "psc_util/subsys.h"
 
@@ -385,15 +384,14 @@ psc_ctlmsg_hashtable_prdat(__unusedx const struct psc_ctlmsghdr *mh,
 	char rbuf[PSCFMT_RATIO_BUFSIZ];
 
 	psc_fmt_ratio(rbuf, pcht->pcht_usedbucks, pcht->pcht_totalbucks);
-	printf(" %-31s   %c%c%c "
+	printf(" %-31s    %c%c "
 	    "%6d %6d "
 	    "%6s %6d "
 	    "%6.1f "
 	    "%6d\n",
 	    pcht->pcht_name,
-	    pcht->pcht_flags & HTF_ALLOWDUPS ? 'D' : '-',
-	    pcht->pcht_flags & HTF_RESORT ? 'R' : '-',
-	    pcht->pcht_flags & HTF_STR ? 'S' : '-',
+	    pcht->pcht_flags & PHTF_RESORT ? 'R' : '-',
+	    pcht->pcht_flags & PHTF_STR ? 'S' : '-',
 	    pcht->pcht_usedbucks, pcht->pcht_totalbucks,
 	    rbuf, pcht->pcht_nents,
 	    pcht->pcht_nents * 1.0 / pcht->pcht_totalbucks,
