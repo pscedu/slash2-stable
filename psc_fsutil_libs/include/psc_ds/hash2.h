@@ -116,7 +116,7 @@ struct psc_hashent {
  *	- const char * string ID
  */
 #define psc_hashtbl_del_item(t, cmp, key)				\
-	_psc_hashtbl_search((t), 0, (cmp), (cbf), (key))
+	_psc_hashtbl_search((t), PHLF_DEL, (cmp), NULL, (key))
 
 struct psc_hashtbl *
 	 psc_hashtbl_lookup(const char *);

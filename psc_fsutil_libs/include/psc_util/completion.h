@@ -20,6 +20,9 @@
 #ifndef _PFL_COMPLETION_H_
 #define _PFL_COMPLETION_H_
 
+#include "psc_util/lock.h"
+#include "psc_util/waitq.h"
+
 #define PCV_DONE	42
 #define PCV_NOTDONE	43
 
