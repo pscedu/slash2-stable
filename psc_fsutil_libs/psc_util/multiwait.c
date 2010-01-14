@@ -93,7 +93,7 @@ psc_multiwaitcond_trylockallmw(struct psc_multiwaitcond *mwc)
 	int rc, j, k;
 
 	DYNARRAY_FOREACH(mw, j, &mwc->mwc_multiwaits) {
-		rc = pthread_mutex_trylock(&mw->mw_mutex);
+		rc = psc_pthread_mutex_trylock(&mw->mw_mutex);
 		if (rc == EBUSY) {
 			/*
 			 * Unable to lock them all; release what we did
@@ -140,7 +140,7 @@ psc_multiwaitcond_destroy(struct psc_multiwaitcond *mwc)
  restart:
 	psc_pthread_mutex_lock(&mwc->mwc_mutex);
 	DYNARRAY_FOREACH(mw, j, &mwc->mwc_multiwaits) {
-		if (pthread_mutex_trylock(&mw->mw_mutex)) {
+		if (psc_pthread_mutex_trylock(&mw->mw_mutex)) {
 			if (count++ == 300000)
 				psc_errorx("mwcond %s failed to lock his "
 				    "multiwaits after many attempts, "
@@ -262,7 +262,7 @@ _psc_multiwait_addcond(struct psc_multiwait *mw,
 	/* Acquire locks. */
 	for (;;) {
 		psc_pthread_mutex_lock(&mwc->mwc_mutex);
-		rc = pthread_mutex_trylock(&mw->mw_mutex);
+		rc = psc_pthread_mutex_trylock(&mw->mw_mutex);
 		if (rc == 0)
 			break;
 		if (rc != EBUSY)
@@ -471,7 +471,7 @@ psc_multiwait_reset(struct psc_multiwait *mw)
 		mwc = psc_dynarray_getpos(&mw->mw_conds, 0);
 
 		/* XXX we violate the locking order of mwc then mw */
-		if (pthread_mutex_trylock(&mwc->mwc_mutex)) {
+		if (psc_pthread_mutex_trylock(&mwc->mwc_mutex)) {
 			psc_pthread_mutex_unlock(&mw->mw_mutex);
 			sched_yield();
 			goto restart;

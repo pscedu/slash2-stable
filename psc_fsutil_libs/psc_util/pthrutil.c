@@ -97,9 +97,9 @@ psc_pthread_mutex_trylock(pthread_mutex_t *mut)
 	memset(&ts, 0, sizeof(ts));
 	rc = pthread_mutex_timedlock(mut, &ts);
 	if (rc == 0)
-		return (1);
-	if (rc == ETIMEDOUT)
 		return (0);
+	if (rc == ETIMEDOUT)
+		return (EBUSY);
 	psc_fatalx("psc_pthread_mutex_trylock: %s", strerror(rc));
 }
 

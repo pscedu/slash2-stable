@@ -43,32 +43,19 @@ typedef pthread_mutex_t psc_spinlock_t;
 static __inline int
 LOCK_ENSURE(psc_spinlock_t *lk)
 {
-	int rc;
-
-	rc = pthread_mutex_trylock(lk);
-	if (rc == EDEADLK)
-		return (1);
-	psc_fatalx("LOCK_ENSURE: not locked");
+	psc_pthread_mutex_ensure_locked(lk);
 }
 
 static __inline void
 freelock(psc_spinlock_t *lk)
 {
-	int rc;
-
-	rc = pthread_mutex_unlock(lk);
-	if (rc)
-		psc_fatalx("freelock: %s", strerror(rc));
+	psc_pthread_mutex_unlock(lk);
 }
 
 static __inline void
 spinlock(psc_spinlock_t *lk)
 {
-	int rc;
-
-	rc = pthread_mutex_lock(lk);
-	if (rc)
-		psc_fatalx("spinlock: %s", strerror(rc));
+	psc_pthread_mutex_lock(lk);
 }
 
 static __inline int
@@ -76,7 +63,7 @@ trylock(psc_spinlock_t *lk)
 {
 	int rc;
 
-	rc = pthread_mutex_trylock(lk);
+	rc = psc_pthread_mutex_trylock(lk);
 	if (rc == 0)
 		return (1);
 	else if (rc == EBUSY)
@@ -107,9 +94,11 @@ reqlock(psc_spinlock_t *lk)
 static __inline int
 tryreqlock(psc_spinlock_t *lk, int *locked)
 {
+	struct timespec ts;
 	int rc;
 
-	rc = pthread_mutex_trylock(lk);
+	memset(&ts, 0, sizeof(ts));
+	rc = pthread_mutex_timedlock(lk, &ts);
 	if (rc == 0) {
 		*locked = 0;
 		return (1);

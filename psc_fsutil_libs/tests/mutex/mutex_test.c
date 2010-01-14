@@ -70,7 +70,7 @@ main(int argc, char *argv[])
 	rc = pthread_create(&pt, NULL, spawn, NULL);
 	psc_completion_wait(&compl);
 
-	rc = pthread_mutex_trylock(&m);
+	rc = psc_pthread_mutex_trylock(&m);
 	psc_assert(rc == EBUSY);
 
 	psc_waitq_wakeall(&wq);
