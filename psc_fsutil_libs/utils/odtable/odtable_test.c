@@ -119,12 +119,11 @@ main(int argc, char *argv[])
 
 	if (create_table &&
 	    (rc = odtable_create(table_name, table_size, elem_size)))
-		errx(1, "odtable_create: %s: %s", table_name,
-		    strerror(-rc));
+		errx(1, "create %s: %s", table_name, strerror(-rc));
 
 	if (load_table &&
 	    (rc = odtable_load(table_name, &odt)))
-		errx(1, "odtable_load: %s", strerror(-rc));
+		errx(1, "load %s: %s", table_name, strerror(-rc));
 
 	if (scan_table)
 		odtable_scan(odt, my_odtcb);
