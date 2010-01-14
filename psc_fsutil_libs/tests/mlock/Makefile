@@ -3,7 +3,7 @@
 include ../Makefile.path
 
 PROG=		mlock
-SRCS=		mlock.c
+SRCS+=		mlock.c
 SRCS+=		${PFL_BASE}/psc_ds/dynarray.c
 SRCS+=		${PFL_BASE}/psc_ds/vbitmap.c
 SRCS+=		${PFL_BASE}/psc_util/alloc.c
@@ -16,7 +16,6 @@ SRCS+=		${PFL_BASE}/psc_util/subsys.c
 SRCS+=		${PFL_BASE}/psc_util/thread.c
 SRCS+=		${PFL_BASE}/psc_util/waitq.c
 
-DEFINES+=	-DHAVE_LIBPTHREAD
-LDFLAGS+=	${THREAD_LIBS} -lrt ${NUMA_LIBS}
+MODULES+=	pthread
 
 include ${PFLMK}

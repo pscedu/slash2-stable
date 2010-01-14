@@ -3,7 +3,7 @@
 include ../Makefile.path
 
 PROG=		sig
-SRCS=		sig.c
-LDFLAGS+=	${THREAD_LIBS}
+SRCS+=		sig.c
+MODULES+=	pthread
 
 include ${PFLMK}

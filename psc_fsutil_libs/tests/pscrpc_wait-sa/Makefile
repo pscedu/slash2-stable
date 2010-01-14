@@ -2,10 +2,11 @@
 
 include ../Makefile.path
 
-PROG=		zrpcwait-sa
-SRCS=		zrpcwait-sa.c
-SRCS+=		${ZEST_BASE}/zestion/zestWaitq.c
-SRCS+=		${ZEST_BASE}/zestion/log.c
-INCLUDES+=	-I${ZEST_BASE}/zestrpc -I${LNET_BASE}/include
+PROG=		rpcwait-sa
+SRCS+=		rpcwait-sa.c
+SRCS+=		${PFL_BASE}/psc_util/waitq.c
+SRCS+=		${PFL_BASE}/psc_util/log.c
 
-include ${ZESTMK}
+MODULES+=	lnet
+
+include ${PFLMK}
