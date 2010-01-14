@@ -70,7 +70,7 @@ main(int argc, char *argv[])
 	int num_puts     = 0;
 	int num_free     = 0;
 
-	size_t table_size = 1024;
+	size_t table_size = 1024 * 128;
 	size_t elem_size  = 128;
 
 	struct odtable *odt;
