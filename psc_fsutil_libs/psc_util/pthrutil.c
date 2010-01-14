@@ -82,3 +82,12 @@ psc_pthread_mutex_ureqlock(pthread_mutex_t *mut, int waslocked)
 	if (!waslocked)
 		psc_pthread_mutex_unlock(mut);
 }
+
+void
+psc_pthread_mutex_ensure_locked(pthread_mutex_t *mut)
+{
+	int rc;
+
+	rc = pthread_mutex_trylock(mut);
+	psc_assert(rc == EDEADLK);
+}
