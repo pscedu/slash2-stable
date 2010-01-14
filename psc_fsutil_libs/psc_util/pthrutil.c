@@ -23,6 +23,7 @@
 
 #include "psc_util/log.h"
 #include "psc_util/pthrutil.h"
+#include "psc_util/time.h"
 
 void
 psc_pthread_mutex_init(pthread_mutex_t *mut)
@@ -83,11 +84,32 @@ psc_pthread_mutex_ureqlock(pthread_mutex_t *mut, int waslocked)
 		psc_pthread_mutex_unlock(mut);
 }
 
+int
+psc_pthread_mutex_trylock(pthread_mutex_t *mut)
+{
+	struct timespec ts;
+	int rc;
+
+	/*
+	 * pthread_mutex_trylock() may not return EDEADLK while we are
+	 * holding the lock, so use an immediate timeout instead.
+	 */
+	memset(&ts, 0, sizeof(ts));
+	rc = pthread_mutex_timedlock(mut, &ts);
+	if (rc == 0)
+		return (1);
+	if (rc == ETIMEDOUT)
+		return (0);
+	psc_fatalx("psc_pthread_mutex_trylock: %s", strerror(rc));
+}
+
 void
 psc_pthread_mutex_ensure_locked(pthread_mutex_t *mut)
 {
+	struct timespec ts;
 	int rc;
 
-	rc = pthread_mutex_trylock(mut);
+	memset(&ts, 0, sizeof(ts));
+	rc = pthread_mutex_timedlock(mut, &ts);
 	psc_assert(rc == EDEADLK);
 }

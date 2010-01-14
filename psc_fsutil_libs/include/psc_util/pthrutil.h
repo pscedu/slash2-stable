@@ -26,6 +26,7 @@ void	psc_pthread_mutex_ensure_locked(pthread_mutex_t *);
 void	psc_pthread_mutex_init(pthread_mutex_t *);
 void	psc_pthread_mutex_lock(pthread_mutex_t *);
 int	psc_pthread_mutex_reqlock(pthread_mutex_t *);
+int	psc_pthread_mutex_trylock(pthread_mutex_t *);
 void	psc_pthread_mutex_unlock(pthread_mutex_t *);
 void	psc_pthread_mutex_ureqlock(pthread_mutex_t *, int);
 
