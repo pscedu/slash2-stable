@@ -9,9 +9,7 @@ SRCS+=		${PFL_BASE}/psc_util/alloc.c
 SRCS+=		${PFL_BASE}/psc_util/crc.c
 SRCS+=		${PFL_BASE}/psc_util/log.c
 
-CFLAGS+=	-Wall -W -g
-CFLAGS+=	-D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64
-CFLAGS+=	-I${PFL_BASE}/include
+INCLUDES+=	-I${PFL_BASE}/include
 
 sft.mpi:	CC=		mpicc
 sft.mpi:	CFLAGS+=	-DMPI
