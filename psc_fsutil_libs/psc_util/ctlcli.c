@@ -440,7 +440,7 @@ psc_ctlmsg_iostats_prhdr(__unusedx struct psc_ctlmsghdr *mh,
     __unusedx const void *m)
 {
 	printf("iostats\n"
-	    " %-42s %10s %10s %10s\n",
+	    " %-46s %10s %10s %10s\n",
 	    "name", "rate10s", "ratecur", "total");
 }
 
@@ -454,7 +454,7 @@ psc_ctlmsg_iostats_prdat(__unusedx const struct psc_ctlmsghdr *mh,
 	double d;
 	int i;
 
-	printf(" %-42s ", ist->ist_name);
+	printf(" %-46s ", ist->ist_name);
 	for (i = IST_NINTV - 1; i >= 0; i--) {
 		d = psc_iostats_getintvrate(ist, i);
 
