@@ -25,7 +25,6 @@ LNET_SOCKLND_SRCS+=	${LNET_BASE}/ulnds/socklnd/usocklnd.c
 LNET_SOCKLND_SRCS+=	${LNET_BASE}/ulnds/socklnd/usocklnd_cb.c
 
 LNET_CFS_SRCS+=		${LNET_BASE}/libcfs/debug.c
-LNET_CFS_SRCS+=		${LNET_BASE}/libcfs/nidstrings.c
 LNET_CFS_SRCS+=		${LNET_BASE}/libcfs/user-lock.c
 LNET_CFS_SRCS+=		${LNET_BASE}/libcfs/user-prim.c
 LNET_CFS_SRCS+=		${LNET_BASE}/libcfs/user-tcpip.c
@@ -85,16 +84,24 @@ endif
 ifneq ($(filter lnet,${MODULES}),)
 SRCS+=		${LNET_CFS_SRCS}
 SRCS+=		${LNET_LIB_SRCS}
-MODULES+=	lnet-hdrs
+MODULES+=	lnet-hdrs lnet-nid
 endif
 
 ifneq ($(filter lnet-hdrs,${MODULES}),)
 INCLUDES+=	-I${LNET_BASE}/include
 endif
 
+ifneq ($(filter lnet-nid,${MODULES}),)
+SRCS+=		${LNET_BASE}/libcfs/nidstrings.c
+endif
+
 ifneq ($(filter pthread,${MODULES}),)
 LDFLAGS+=	${THREAD_LIBS}
 DEFINES+=	-DHAVE_LIBPTHREAD
+endif
+
+ifneq ($(filter curses,${MODULES}),)
+LDFLAGS+=	${LIBCURSES}
 endif
 
 ifneq ($(filter z,${MODULES}),)

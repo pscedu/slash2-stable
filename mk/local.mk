@@ -60,6 +60,7 @@ ZFS_LIBS=	-L${ZFS_BASE}/zfs-fuse					\
 LIBL=		-ll
 LIBZ=		-lz
 THREAD_LIBS=	-pthread -lrt
+LIBCURSES=	-lncurses
 
 # global file-specific settings
 psc_fsutil_libs_psc_util_crc_c_CFLAGS=		-O2 -g0
