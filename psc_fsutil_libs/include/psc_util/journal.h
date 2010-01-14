@@ -174,13 +174,15 @@ struct psc_journal_xidhndl {
 #define	PJOURNAL_LOG_REPLAY	2
 
 /* definitions of journal handling functions */
-int				 pjournal_dump(const char *);
-int				 pjournal_format(const char *, uint32_t, uint32_t, uint32_t, uint32_t);
-struct psc_journal		*pjournal_replay(const char *, psc_jhandler);
+struct psc_journal
+	*pjournal_replay(const char *, psc_jhandler);
+int	 pjournal_dump(const char *, int);
+int	 pjournal_format(const char *, uint32_t, uint32_t, uint32_t, uint32_t);
 
 /* definitions of transaction handling functions */
-struct psc_journal_xidhndl	*pjournal_xnew(struct psc_journal *);
-int				 pjournal_xadd(struct psc_journal_xidhndl *, int, void *, size_t);
-int				 pjournal_xend(struct psc_journal_xidhndl *);
+struct psc_journal_xidhndl
+	*pjournal_xnew(struct psc_journal *);
+int	 pjournal_xadd(struct psc_journal_xidhndl *, int, void *, size_t);
+int	 pjournal_xend(struct psc_journal_xidhndl *);
 
 #endif /* _PFL_JOURNAL_H_ */

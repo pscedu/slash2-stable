@@ -711,10 +711,11 @@ pjournal_format(const char *fn, uint32_t nents, uint32_t entsz, uint32_t ra,
 }
 
 /*
- * Dump the contents of a journal file.
+ * pjournal_dump - Dump the contents of a journal file.
+ * @fn: journal filename to query.
  */
 int
-pjournal_dump(const char *fn)
+pjournal_dump(const char *fn, int verbose)
 {
 	int				 i;
 	int32_t				 ra;
@@ -739,21 +740,28 @@ pjournal_dump(const char *fn)
 	pj = pjournal_load(fn);
 	pjh = pj->pj_hdr;
 
-	psc_info("Journal header info: "
-		 "entsz=%u nents=%u vers=%u opts=%u ra=%u off=%"PRIx64" magic=%"PRIx64,
-		 PJ_PJESZ(pj), pjh->pjh_nents, pjh->pjh_version, pjh->pjh_options,
-		 pjh->pjh_readahead, pjh->pjh_start_off, pjh->pjh_magic);
+	printf("journal header info for %s:\n"
+	    "  entsize %u\n"
+	    "  nents %u\n"
+	    "  version %u\n"
+	    "  options %u\n"
+	    "  readahead %u\n"
+	    "  start_offset %"PRIx64"\n"
+	    "  magic=%"PRIx64"\n",
+	    fn, PJ_PJESZ(pj), pjh->pjh_nents, pjh->pjh_version, pjh->pjh_options,
+	    pjh->pjh_readahead, pjh->pjh_start_off, pjh->pjh_magic);
 
 	jbuf = pjournal_alloc_buf(pj);
 
 	for (slot = 0, ra=pjh->pjh_readahead; slot < pjh->pjh_nents; slot += count) {
-
 		count = (pjh->pjh_nents - slot <= ra) ? (pjh->pjh_nents - slot) : ra;
 		size = pread(pj->pj_fd, jbuf, (PJ_PJESZ(pj) * count),
 			    (off_t)(PJE_OFFSET + (slot * PJ_PJESZ(pj))));
 
-		if (size == -1 || size != (PJ_PJESZ(pj)* count))
+		if (size == -1)
 			psc_fatal("Failed to read %d log entries at slot %d", count, slot);
+		if (size != (PJ_PJESZ(pj)* count))
+			psc_fatalx("Short read for %d log entries at slot %d", count, slot);
 
 		for (i = 0; i < count; i++) {
 			ntotal++;
@@ -776,20 +784,22 @@ pjournal_dump(const char *fn)
 				psc_warnx("Journal slot %d has a bad checksum!", (slot+i));
 				continue;
 			}
-			psc_info("Journal: slot=%u magic=%"PRIx64" type=%x xid=%"PRIx64" sid=%d\n",
-				  (slot+i), pje->pje_magic,
-				  pje->pje_type, pje->pje_xid, pje->pje_sid);
+			if (verbose)
+				printf("slot %u: type %x "
+				    "xid %"PRIx64" sid %d\n",
+				    slot + i, pje->pje_type,
+				    pje->pje_xid, pje->pje_sid);
 		}
 
 	}
-	if (close(pj->pj_fd) < 0)
-		psc_fatal("Failed to close journal fd");
+	if (close(pj->pj_fd) == -1)
+		psc_fatal("failed closing journal %s", fn);
 
 	psc_freenl(jbuf, PJ_PJESZ(pj));
 	pjournal_close(pj);
 
-	psc_info("Journal statistics: %d total, %d format, %d bad magic, %d bad checksum",
-		 ntotal, nformat, nmagic, nchksum);
+	printf("%d slot(s) total, %d formatted, %d bad magic, %d bad checksum(s)\n",
+	    ntotal, nformat, nmagic, nchksum);
 	return (0);
 }
 
