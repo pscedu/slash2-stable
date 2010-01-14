@@ -46,7 +46,7 @@ struct test_group_t {
   int    num_pes;                        /* num of processes    */
   int    iteration;
   int    test_type;                      /* what this test does */
-#ifdef PTHREADS
+#ifdef HAVE_LIBPTHREAD
   barrier_t  group_barrier;
 #endif
 };

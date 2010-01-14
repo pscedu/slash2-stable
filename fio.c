@@ -403,7 +403,7 @@ init_barriers(
 
 	free(iptr);
 
-#elif PTHREADS
+#elif HAVE_LIBPTHREAD
 	struct list_head *tmp;
 	GROUP_t          *group;
 
@@ -423,7 +423,7 @@ destroy_barriers(void)
 
 	list_for_each(tmp, &groupList) {
 		group = list_entry(tmp, GROUP_t, group_list);
-#ifdef PTHREADS
+#ifdef HAVE_LIBPTHREAD
 		barrier_destroy(&group->group_barrier);
 #elif MPI
 		WARN("Mpi implementation not complete\n");
@@ -983,7 +983,7 @@ usage(void)
 int
 main(int argc, char *argv[])
 {
-#ifdef PTHREADS
+#ifdef HAVE_LIBPTHREAD
 	struct list_head *tmp;
 	GROUP_t          *group = NULL;
 	int rc, i;
@@ -1043,7 +1043,7 @@ main(int argc, char *argv[])
 	worker(&mype);
 	MPI_Finalize();
 
-#elif PTHREADS
+#elif HAVE_LIBPTHREAD
 	init_barriers(0);
 	list_for_each(tmp, &groupList) {
 		group = list_entry(tmp, GROUP_t, group_list);

@@ -39,10 +39,10 @@ qk:		CFLAGS+=	-I/opt/xt-mpt/default/mpich2-64/P2/include/
 qk:		LDFLAGS+=	-lmpich -L/opt/xt-mpt/default/mpich2-64/P2/lib
 
 zest:		CC=		ZINCPATH=../zest/intercept/include ZLIBPATH=../zest/client/linux-mt ../zest/scripts/zcc
-zest:		CFLAGS+=	-DPTHREADS ${LINUXFLAGS}
+zest:		CFLAGS+=	-DHAVE_LIBPTHREAD ${LINUXFLAGS}
 zest:		LDFLAGS+=	-lpthread
 
-pthreads:	CFLAGS+=	-DPTHREADS ${LINUXFLAGS}
+pthreads:	CFLAGS+=	-DHAVE_LIBPTHREAD ${LINUXFLAGS}
 pthreads:	LDFLAGS+=	-lpthread
 
 mpi:		CC=		mpicc
@@ -59,7 +59,7 @@ debian_mpi mpi zmpi pthreads zest qk: ${OBJS}
 	${CC} -o fio.$@ ${OBJS} ${LDFLAGS}
 
 .c.o:
-	${CC} ${CFLAGS} ${LINUXFLAGS} -c -o $@ $<
+	${CC} ${CFLAGS} -c -o $@ $<
 
 .y.c:
 	${YACC} ${YFLAGS} $<

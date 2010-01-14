@@ -23,7 +23,7 @@
  * parallel section of code.
  */
 
-#ifdef PTHREADS
+#ifdef HAVE_LIBPTHREAD
 
 #include <errno.h>
 #include <pthread.h>

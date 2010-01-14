@@ -28,7 +28,7 @@
 
 #include "fio_list.h"
 
-#ifdef PTHREADS
+#ifdef HAVE_LIBPTHREAD
 #include <pthread.h>
 #include "fio_pthread_barrier.h"
 barrier_t  barrier;
@@ -120,7 +120,7 @@ enum TEST_OPTIONS {
  */
 #ifdef  MPI
 #define WORKPE 1
-#elif   PTHREADS
+#elif   HAVE_LIBPTHREAD
 #define WORKPE ((iot->mytest_pe == mygroup->work_pe) ? 1 : 0)
 #endif
 
@@ -269,7 +269,7 @@ struct io_routine_t {
 typedef struct io_routine_t IOROUTINE_t;
 
 struct io_thread_t {
-#ifdef PTHREADS
+#ifdef HAVE_LIBPTHREAD
 	pthread_t thread_id;
 #endif
 	int       mype;                    /* mype is the absolute pe */
@@ -314,7 +314,7 @@ struct test_group_t {
 	int    tree_width;
 	int    depth_change;
 	int    debug_flags;
-#ifdef PTHREADS
+#ifdef HAVE_LIBPTHREAD
 	barrier_t  group_barrier;
 	THREAD_t  *threads;
 #elif  MPI
@@ -509,7 +509,7 @@ static inline char * clock_2_str(int clock) {
 
 static inline void _BARRIER(GROUP_t *mygroup, struct io_toolbox *iot)
 {
-#ifdef PTHREADS
+#ifdef HAVE_LIBPTHREAD
 	barrier_wait(&mygroup->group_barrier);
 #elif MPI
 	MPI_Barrier(mygroup->group_barrier);

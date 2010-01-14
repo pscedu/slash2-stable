@@ -57,7 +57,7 @@ group_blocks:	/* NULL */ |
 group_block:	group_start statements GROUP_END {
 	ASSERT(currentGroup->num_pes);
 
-#ifdef PTHREADS
+#ifdef HAVE_LIBPTHREAD
 	BDEBUG("Allocating %d Thread Structs\n",
 	 currentGroup->num_pes);
 
