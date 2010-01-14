@@ -1,22 +1,22 @@
 # $Id$
 
-OBJDIR=			${CURDIR}/obj
-DEPEND_FILE=		${OBJDIR}/.depend
-
 -include ${ROOTDIR}/mk/local.mk
 
-_TSRCS=		$(foreach fn,${SRCS},$(realpath ${fn}))
+_TSRCS=			$(foreach fn,${SRCS},$(realpath ${fn}))
 
-_TOBJS=		$(patsubst %.c,%.o,$(filter %.c,${_TSRCS}))
-_TOBJS+=	$(patsubst %.y,%.o,$(filter %.y,${_TSRCS}))
-_TOBJS+=	$(patsubst %.l,%.o,$(filter %.l,${_TSRCS}))
-OBJS=		$(addprefix ${OBJDIR}/,$(notdir ${_TOBJS}))
+_TOBJS=			$(patsubst %.c,%.o,$(filter %.c,${_TSRCS}))
+_TOBJS+=		$(patsubst %.y,%.o,$(filter %.y,${_TSRCS}))
+_TOBJS+=		$(patsubst %.l,%.o,$(filter %.l,${_TSRCS}))
+OBJS=			$(addprefix ${OBJDIR}/,$(notdir ${_TOBJS}))
 
-_TSUBDIRS=	$(foreach dir,${SUBDIRS},$(realpath ${dir}))
+_TSUBDIRS=		$(foreach dir,${SUBDIRS},$(realpath ${dir}))
 
-_LEXINTM=	$(patsubst %.l,%.c,$(addprefix ${OBJDIR}/,$(notdir $(filter %.l,${_TSRCS}))))
-_YACCINTM=	$(patsubst %.y,%.c,$(addprefix ${OBJDIR}/,$(notdir $(filter %.y,${_TSRCS}))))
-_C_SRCS=	$(filter %.c,${_TSRCS}) ${_YACCINTM} ${_LEXINTM}
+_LEXINTM=		$(patsubst %.l,%.c,$(addprefix ${OBJDIR}/,$(notdir $(filter %.l,${_TSRCS}))))
+_YACCINTM=		$(patsubst %.y,%.c,$(addprefix ${OBJDIR}/,$(notdir $(filter %.y,${_TSRCS}))))
+_C_SRCS=		$(filter %.c,${_TSRCS}) ${_YACCINTM} ${_LEXINTM}
+
+OBJDIR=			${CURDIR}/obj
+DEPEND_FILE=		${OBJDIR}/.depend
 
 LNET_SOCKLND_SRCS+=	${LNET_BASE}/ulnds/socklnd/conn.c
 LNET_SOCKLND_SRCS+=	${LNET_BASE}/ulnds/socklnd/handlers.c
@@ -148,7 +148,8 @@ install: recurse-install install-hook
 
 ${DEPEND_FILE}: ${_C_SRCS} | ${OBJDIR}
 	@if ${NOTEMPTY} "${_C_SRCS}"; then						\
-		${ECHORUN} ${MKDEP} ${_TINCLUDES} ${DEFINES} ${_C_SRCS};		\
+		${ECHORUN} ${MKDEP} -f ${DEPEND_FILE} ${_TINCLUDES} ${DEFINES}		\
+		    ${_C_SRCS};								\
 	fi
 	@if [ -n "${PROG}" ]; then							\
 		echo -n "${PROG}:" >> ${DEPEND_FILE};					\

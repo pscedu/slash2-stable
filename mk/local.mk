@@ -1,6 +1,6 @@
 # $Id$
 
-MKDEP_PROG=	env CC="${CC}" ${ROOTDIR}/tools/unwrapcc ${ROOTDIR}/tools/mkdep -f ${DEPEND_FILE}
+MKDEP_PROG=	env CC="${CC}" ${ROOTDIR}/tools/unwrapcc ${ROOTDIR}/tools/mkdep
 
 # Disappointingly, recent versions of gcc hide
 # standard headers in places other than /usr/include.

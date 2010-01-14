@@ -25,6 +25,7 @@ general reminders
 make
 - rename ROOTDIR -> PROJ_BASE
 - introduce APP_BASE
+- track deps per-file
 
 pfl
 - ctlapi GETTREE?
