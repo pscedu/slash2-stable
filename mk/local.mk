@@ -55,6 +55,7 @@ LDFLAGS+=	-L${ZFS_BASE}/zfs-fuse				\
 		-L${ZFS_BASE}/lib/libzpool			\
 		-lzfs-fuse -lzpool-kernel -lzfscommon-kernel	\
 		-lnvpair-kernel -lavl -lumem -lsolkerncompat
+MODULES+=	z dl
 endif
 
 ifneq ($(filter lnet,${MODULES}),)
@@ -69,8 +70,21 @@ INCLUDES+=	-I${LNET_BASE}/include
 endif
 
 ifneq ($(filter pthread,${MODULES}),)
-LDFLAGS+=	-pthread -lrt
+LDFLAGS+=	-pthread
 DEFINES+=	-DHAVE_LIBPTHREAD
+MODULES+=	rt
+endif
+
+ifneq ($(filter rt,${MODULES}),)
+LDFLAGS+=	-lrt
+endif
+
+ifneq ($(filter dl,${MODULES}),)
+LDFLAGS+=	-ldl
+endif
+
+ifneq ($(filter z,${MODULES}),)
+LDFLAGS+=	-lz
 endif
 
 ifneq ($(wildcard /opt/sgi),)
