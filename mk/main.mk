@@ -1,5 +1,8 @@
 # $Id$
 
+OBJDIR=			${CURDIR}/obj
+DEPEND_FILE=		${OBJDIR}/.depend
+
 -include ${ROOTDIR}/mk/local.mk
 
 _TSRCS=		$(foreach fn,${SRCS},$(realpath ${fn}))
@@ -9,9 +12,10 @@ _TOBJS+=	$(patsubst %.y,%.o,$(filter %.y,${_TSRCS}))
 _TOBJS+=	$(patsubst %.l,%.o,$(filter %.l,${_TSRCS}))
 OBJS=		$(addprefix ${OBJDIR}/,$(notdir ${_TOBJS}))
 
+_TSUBDIRS=	$(foreach dir,${SUBDIRS},$(realpath ${dir}))
+
 _LEXINTM=	$(patsubst %.l,%.c,$(addprefix ${OBJDIR}/,$(notdir $(filter %.l,${_TSRCS}))))
 _YACCINTM=	$(patsubst %.y,%.c,$(addprefix ${OBJDIR}/,$(notdir $(filter %.y,${_TSRCS}))))
-CLEANFILES+=	$(patsubst %.y,%.h,$(notdir $(filter %.y,${_TSRCS})))
 _C_SRCS=	$(filter %.c,${_TSRCS}) ${_YACCINTM} ${_LEXINTM}
 
 LNET_SOCKLND_SRCS+=	${LNET_BASE}/ulnds/socklnd/conn.c
@@ -60,14 +64,21 @@ _TINCLUDES=		$(filter-out -I%,${INCLUDES}) $(patsubst %,-I%,$(foreach \
 
 CFLAGS+=		${DEFINES} ${_TINCLUDES}
 TARGET?=		${PROG} ${LIBRARY}
-OBJDIR=			${CURDIR}/obj
+
+EXTRACT_INCLUDES=	perl -ne 'print $$& while /-I\S+\s?/gc'
+EXTRACT_DEFINES=	perl -ne 'print $$& while /-D\S+\s?/gc'
+EXTRACT_CFLAGS=		perl -ne 'print $$& while /-[^ID]\S+\s?/gc'
 
 # OBJDIR is added to .c below since lex/yacc intermediate files get generated there.
 vpath %.y $(sort $(dir $(filter %.y,${_TSRCS})))
 vpath %.l $(sort $(dir $(filter %.l,${_TSRCS})))
 vpath %.c $(sort $(dir $(filter %.c,${_TSRCS})) ${OBJDIR})
 
-all: recurse-all ${TARGET}
+all: recurse-all
+	@if ${NOTEMPTY} "${TARGET}"; then						\
+		${MAKE} -s ${DEPEND_FILE};						\
+		MAKEFILES=${DEPEND_FILE} ${MAKE} ${TARGET};				\
+	fi
 
 .SUFFIXES:
 
@@ -97,7 +108,7 @@ ${LIBRARY}: ${OBJS}
 	${AR} ${ARFLAGS} $@ ${OBJS}
 
 recurse-%:
-	@for i in ${SUBDIRS}; do							\
+	@for i in ${_TSUBDIRS}; do							\
 		echo -n "===> ";							\
 		if [ -n "${DIRPREFIX}" ]; then						\
 			echo -n ${DIRPREFIX};						\
@@ -113,16 +124,15 @@ recurse-%:
 # empty but overrideable
 install-hook:
 
+# XXX use install(1)
 install: recurse-install install-hook
 	@if [ -n "${LIBRARY}" ]; then							\
-		mkdir -p ${INSTALLDIR}/lib;						\
-		echo cp -pf ${LIBRARY} ${INSTALLDIR}/lib;				\
-		cp -pf ${LIBRARY} ${INSTALLDIR}/lib;					\
+		${ECHORUN} mkdir -p ${INSTALLDIR}/lib;					\
+		${ECHORUN} cp -pf ${LIBRARY} ${INSTALLDIR}/lib;				\
 	fi
 	@if [ -n "${PROG}" ]; then							\
-		mkdir -p ${INSTALLDIR}/bin;						\
-		echo cp -pf ${PROG} ${INSTALLDIR}/bin;					\
-		cp -pf ${PROG} ${INSTALLDIR}/bin;					\
+		${ECHORUN} mkdir -p ${INSTALLDIR}/bin;					\
+		${ECHORUN} cp -pf ${PROG} ${INSTALLDIR}/bin;				\
 	fi
 	@if ${NOTEMPTY} "${HEADERS}"; then						\
 		for i in "${HEADERS}"; do						\
@@ -131,38 +141,27 @@ install: recurse-install install-hook
 			else								\
 				_dir=${INSTALLDIR}/include;				\
 			fi;								\
-			mkdir -p $$_dir;						\
+			${ECHORUN} mkdir -p $$_dir;					\
 			${ECHORUN} cp -rfp $$i $$_dir;					\
 		done;									\
 	fi
 
-cleandep: recurse-cleandep
-	@rm -f .depend
-
-depend: cleandep ${_C_SRCS} recurse-depend
+${DEPEND_FILE}: ${_C_SRCS} | ${OBJDIR}
 	@if ${NOTEMPTY} "${_C_SRCS}"; then						\
 		${ECHORUN} ${MKDEP} ${_TINCLUDES} ${DEFINES} ${_C_SRCS};		\
 	fi
 	@if [ -n "${PROG}" ]; then							\
-		echo -n "${PROG}:" >> .depend;						\
-		${LIBDEP} ${LDFLAGS} ${LIBDEP_ADD} >> .depend;				\
+		echo -n "${PROG}:" >> ${DEPEND_FILE};					\
+		${LIBDEP} ${LDFLAGS} ${LIBDEP_ADD} >> ${DEPEND_FILE};			\
 	fi
-	@# XXX rebuild etags/cscope here?
 
 clean: recurse-clean
-	@# Check existence of files to catch errors such as SRCS+=file.c instead of file.y
-	@for i in ${SRCS}; do								\
-		if ! test -f $$i; then							\
-			echo "file does not exist: $$i" >&2;				\
-			exit 1;								\
-		fi;									\
-	done
-	rm -f ${OBJS} ${PROG} ${LIBRARY} $(addprefix ${OBJDIR}/,${CLEANFILES})		\
-	    ${_YACCINTM} ${_LEXINTM} .depend* TAGS cscope.out core.[0-9]*
+	rm -rf ${OBJDIR}
+	rm -f ${PROG} ${LIBRARY} TAGS cscope.out core.[0-9]*
 
-lint: recurse-lint
+lint: recurse-lint ${_C_SRCS}
 	@if ${NOTEMPTY} "${_TSRCS}"; then						\
-		${ECHORUN} ${LINT} ${_TINCLUDES} ${DEFINES} ${_TSRCS};			\
+		${ECHORUN} ${LINT} ${_TINCLUDES} ${DEFINES} ${_C_SRCS};			\
 	fi
 
 listsrcs: recurse-listsrcs
@@ -183,7 +182,7 @@ hdrclean:
 build-prereq:
 
 build: build-prereq
-	${MAKE} clean && ${MAKE} depend && ${MAKE}
+	${MAKE} clean && ${MAKE}
 
 qbuild:
 	@${MAKE} build >/dev/null
@@ -216,7 +215,5 @@ cscope cs: recurse-cs
 etags: recurse-etags
 	find ${ET_ARGS} ${PFL_BASE} ${PFL_BASE} -name \*.[chly] | xargs etags
 
-env:
+printenv:
 	@env
-
--include .depend

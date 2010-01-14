@@ -19,16 +19,8 @@
 /* cpu_online found */
 #define HAVE_CPU_ONLINE 1
 
-#ifndef HAVE_GETHOSTBYNAME_DEFINED
-#error "please set -DHAVE_GETHOSTBYNAME_DEFINED and perhaps -DHAVE_GETHOSTBYNAME"
-#endif
-
 /* kmem_cache_destroy(cachep) return int */
 #define HAVE_KMEM_CACHE_DESTROY_INT 1
-
-#ifndef HAVE_LIBPTHREAD_DEFINED
-#error "please set -DHAVE_LIBPTHREAD_DEFINED and perhaps -DHAVE_LIBPTHREAD"
-#endif
 
 /* readline library is available */
 #define HAVE_LIBREADLINE 1
