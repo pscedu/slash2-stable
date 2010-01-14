@@ -3,12 +3,10 @@
 include ../Makefile.path
 
 PROG=		typedump
-SRCS=		typedump.c
-SRCS+=		${PFL_BASE}/psc_util/log.c
-SRCS+=		${PFL_BASE}/psc_util/alloc.c
-INCLUDES+=	-I${LNET_BASE}/include
-DEFINES+=	-DHAVE_LIBPTHREAD -DHAVE_LIBPTHREAD_DEFINED \
-		-DHAVE_GETHOSTBYNAME -DHAVE_GETHOSTBYNAME_DEFINED
+SRCS+=		typedump.c
+
+# pthread is specified here to use correct struct sizes
+MODULES+=	lnet-hdrs pthread
 
 include ${PFLMK}
 
