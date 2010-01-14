@@ -122,6 +122,26 @@ main(int argc, char *argv[])
 	if (argc)
 		usage();
 
+	psc_assert(psc_atomic64_read(&v64) == UINT64_C(100000000000));
+	TEST(psc_atomic64, set, &v64, &v64, UINT64_C(2000000000000), UINT64_C(2000000000000));
+	TEST(psc_atomic64, add, &v64, &v64, 15, UINT64_C(2000000000015));
+	TEST(psc_atomic64, sub, &v64, &v64, 9, UINT64_C(2000000000006));
+	TEST1(psc_atomic64, inc, &v64, UINT64_C(2000000000007));
+	TEST1(psc_atomic64, dec, &v64, UINT64_C(2000000000006));
+
+	psc_atomic16_set(&v16, 2);
+	TEST(psc_atomic16, set, &v16, &v16, 200, 200);
+	TEST(psc_atomic16, add, &v16, &v16, 15, 215);
+	TEST(psc_atomic16, sub, &v16, &v16, 9, 206);
+	TEST1(psc_atomic16, inc, &v16, 207);
+	TEST1(psc_atomic16, dec, &v16, 206);
+	TEST1V(psc_atomic16, dec_and_test0, &v16, 205, 0);
+	TEST(psc_atomic16, set, &v16, &v16, 1, 1);
+	TEST1V(psc_atomic16, dec_and_test0, &v16, 0, 1);
+	TEST(psc_atomic16, setmask, &v16, &v16, 0x75, 0x75);
+	TEST(psc_atomic16, clearmask, &v16, &v16, 0x41, 0x34);
+	TEST(psc_atomic16, set, &v16, &v16, 0, 0);
+
 	psc_atomic32_set(&v32, 2);
 	TEST(psc_atomic32, set, &v32, &v32, 200, 200);
 	TEST(psc_atomic32, add, &v32, &v32, 15, 215);
@@ -135,12 +155,18 @@ main(int argc, char *argv[])
 	TEST(psc_atomic32, clearmask, &v32, &v32, 0x41, 0x34);
 	TEST(psc_atomic32, set, &v32, &v32, 0, 0);
 
-	psc_assert(psc_atomic64_read(&v64) == UINT64_C(100000000000));
-	TEST(psc_atomic64, set, &v64, &v64, UINT64_C(2000000000000), UINT64_C(2000000000000));
-	TEST(psc_atomic64, add, &v64, &v64, 15, UINT64_C(2000000000015));
-	TEST(psc_atomic64, sub, &v64, &v64, 9, UINT64_C(2000000000006));
-	TEST1(psc_atomic64, inc, &v64, UINT64_C(2000000000007));
-	TEST1(psc_atomic64, dec, &v64, UINT64_C(2000000000006));
+	psc_atomic64_set(&v64, 2);
+	TEST(psc_atomic64, set, &v64, &v64, 200, 200);
+	TEST(psc_atomic64, add, &v64, &v64, 15, 215);
+	TEST(psc_atomic64, sub, &v64, &v64, 9, 206);
+	TEST1(psc_atomic64, inc, &v64, 207);
+	TEST1(psc_atomic64, dec, &v64, 206);
+	TEST1V(psc_atomic64, dec_and_test0, &v64, 205, 0);
+	TEST(psc_atomic64, set, &v64, &v64, 1, 1);
+	TEST1V(psc_atomic64, dec_and_test0, &v64, 0, 1);
+	TEST(psc_atomic64, setmask, &v64, &v64, 0x75, 0x75);
+	TEST(psc_atomic64, clearmask, &v64, &v64, 0x41, 0x34);
+	TEST(psc_atomic64, set, &v64, &v64, 0, 0);
 
 	TEST1(psc_atomic16, inc, &v16, 1);
 	TEST1V(psc_atomic16, dec_and_test0, &v16, 0, 1);
