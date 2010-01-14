@@ -7,6 +7,6 @@ SRCS+=		rpcwait-sa.c
 SRCS+=		${PFL_BASE}/psc_util/waitq.c
 SRCS+=		${PFL_BASE}/psc_util/log.c
 
-MODULES+=	lnet
+MODULES+=	lnet-hdrs
 
 include ${PFLMK}

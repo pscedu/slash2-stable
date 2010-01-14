@@ -4,6 +4,7 @@ include ../Makefile.path
 
 PROG=		rpcwait
 SRCS+=		rpcwait.c
-MODULES+=	lnet
+
+MODULES+=	lnet-hdrs
 
 include ${PFLMK}
