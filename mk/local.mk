@@ -1,12 +1,11 @@
 # $Id$
 
-MKDEP_PROG=	env CC="${CC}" ${ROOTDIR}/tools/unwrapcc ${ROOTDIR}/tools/mkdep
+MKDEP=		env CC="${CC}" ${ROOTDIR}/tools/unwrapcc ${ROOTDIR}/tools/mkdep
 
 # Disappointingly, recent versions of gcc hide
 # standard headers in places other than /usr/include.
-MKDEP=		${MKDEP_PROG} -D ${OBJDIR} $$(if ${CC} -v 2>&1 | grep -q gcc; then \
-		    ${CC} -print-search-dirs | grep install | \
-		    awk '{print "-I" $$2 "include"}' | sed 's/:/ -I/'; fi)
+LIBC_INCLUDES+=	$$(if ${CC} -v 2>&1 | grep -q gcc; then ${CC} -print-search-dirs | \
+		    grep install | awk '{print "-I" $$2 "include"}' | sed 's/:/ -I/'; fi)
 LINT=		splint +posixlib
 NOTEMPTY=	${ROOTDIR}/tools/notempty
 SCONS=		scons

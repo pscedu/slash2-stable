@@ -148,8 +148,8 @@ install: recurse-install install-hook
 
 ${DEPEND_FILE}: ${_C_SRCS} | ${OBJDIR}
 	@if ${NOTEMPTY} "${_C_SRCS}"; then						\
-		${ECHORUN} ${MKDEP} -f ${DEPEND_FILE} ${_TINCLUDES} ${DEFINES}		\
-		    ${_C_SRCS};								\
+		${ECHORUN} ${MKDEP} -D ${OBJDIR} -f ${DEPEND_FILE} ${LIBC_INCLUDES}	\
+		    ${_TINCLUDES} ${DEFINES} ${_C_SRCS};				\
 	fi
 	@if [ -n "${PROG}" ]; then							\
 		echo -n "${PROG}:" >> ${DEPEND_FILE};					\
