@@ -9,16 +9,12 @@ LIBC_INCLUDES+=	$$(if ${CC} -v 2>&1 | grep -q gcc; then ${CC} -print-search-dirs
 LINT=		splint +posixlib
 NOTEMPTY=	${ROOTDIR}/tools/notempty
 SCONS=		scons
-PKG_CONFIG_PROG=pkg-config
-PKG_CONFIG=	PKG_CONFIG_PATH=/usr/local/lib/pkgconfig ${PKG_CONFIG_PROG}
+PKG_CONFIG=	pkg-config
 GENTYPES=	${ROOTDIR}/tools/gentypes.pl
 HDRCLEAN=	${ROOTDIR}/tools/hdrclean.pl
 LIBDEP=		${ROOTDIR}/tools/libdep.pl
 ECHORUN=	${ROOTDIR}/tools/echorun.sh
 MAKEFLAGS+=	--no-print-directory
-
-# XXX this needs bumped
-LKERNEL_BASE=	${ROOTDIR}/kernel/2.6.9-42.0.8.EL_lustre.1.4.9.1
 
 LFLAGS+=	-t
 YFLAGS+=	-d
@@ -32,60 +28,7 @@ DEFINES+=	-D_LARGEFILE_SOURCE -D_LARGEFILE64_SOURCE -D_FILE_OFFSET_BITS=64
 DEFINES+=	-D_REENTRANT -D_GNU_SOURCE -DYY_NO_UNPUT
 DEFINES+=	-DHAVE_GETHOSTBYNAME
 
-LIBL?=		-ll
-
 KERNEL_BASE=	/usr/src/kernels/linux
-
-ifneq ($(filter fuse,${MODULES}),)
-CFLAGS+=	$$(PKG_CONFIG_PATH=${FUSE_BASE} ${PKG_CONFIG_PROG} --cflags fuse | ${EXTRACT_CFLAGS})
-DEFINES+=	$$(PKG_CONFIG_PATH=${FUSE_BASE} ${PKG_CONFIG_PROG} --cflags fuse | ${EXTRACT_DEFINES})
-INCLUDES+=	$$(PKG_CONFIG_PATH=${FUSE_BASE} ${PKG_CONFIG_PROG} --cflags fuse | ${EXTRACT_INCLUDES})
-LDFLAGS+=	$$(PKG_CONFIG_PATH=${FUSE_BASE} ${PKG_CONFIG_PROG} --libs fuse)
-endif
-
-ifneq ($(filter zfs,${MODULES}),)
-INCLUDES+=	-I${ZFS_BASE}
-
-LDFLAGS+=	-L${ZFS_BASE}/zfs-fuse				\
-		-L${ZFS_BASE}/lib/libavl			\
-		-L${ZFS_BASE}/lib/libnvpair			\
-		-L${ZFS_BASE}/lib/libsolkerncompat		\
-		-L${ZFS_BASE}/lib/libumem			\
-		-L${ZFS_BASE}/lib/libzfscommon			\
-		-L${ZFS_BASE}/lib/libzpool			\
-		-lzfs-fuse -lzpool-kernel -lzfscommon-kernel	\
-		-lnvpair-kernel -lavl -lumem -lsolkerncompat
-MODULES+=	z dl
-endif
-
-ifneq ($(filter lnet,${MODULES}),)
-SRCS+=		${LNET_CFS_SRCS}
-SRCS+=		${LNET_LIB_SRCS}
-
-INCLUDES+=	-I${LNET_BASE}/include
-endif
-
-ifneq ($(filter lnet-hdrs,${MODULES}),)
-INCLUDES+=	-I${LNET_BASE}/include
-endif
-
-ifneq ($(filter pthread,${MODULES}),)
-LDFLAGS+=	-pthread
-DEFINES+=	-DHAVE_LIBPTHREAD
-MODULES+=	rt
-endif
-
-ifneq ($(filter rt,${MODULES}),)
-LDFLAGS+=	-lrt
-endif
-
-ifneq ($(filter dl,${MODULES}),)
-LDFLAGS+=	-ldl
-endif
-
-ifneq ($(filter z,${MODULES}),)
-LDFLAGS+=	-lz
-endif
 
 ifneq ($(wildcard /opt/sgi),)
   # on altix
@@ -99,6 +42,26 @@ ifneq ($(wildcard /opt/xt-pe),)
   DEFINES+=	-DHOST_NAME_MAX=MAXHOSTNAMELEN
 endif
 
+FUSE_CFLAGS=	$$(PKG_CONFIG_PATH=${FUSE_BASE} ${PKG_CONFIG} --cflags fuse | ${EXTRACT_CFLAGS})
+FUSE_DEFINES=	$$(PKG_CONFIG_PATH=${FUSE_BASE} ${PKG_CONFIG} --cflags fuse | ${EXTRACT_DEFINES})
+FUSE_INCLUDES=	$$(PKG_CONFIG_PATH=${FUSE_BASE} ${PKG_CONFIG} --cflags fuse | ${EXTRACT_INCLUDES})
+FUSE_LIBS=	$$(PKG_CONFIG_PATH=${FUSE_BASE} ${PKG_CONFIG} --libs fuse)
+
+ZFS_LIBS=	-L${ZFS_BASE}/zfs-fuse					\
+		-L${ZFS_BASE}/lib/libavl				\
+		-L${ZFS_BASE}/lib/libnvpair				\
+		-L${ZFS_BASE}/lib/libsolkerncompat			\
+		-L${ZFS_BASE}/lib/libumem				\
+		-L${ZFS_BASE}/lib/libzfscommon				\
+		-L${ZFS_BASE}/lib/libzpool				\
+		-lzfs-fuse -lzpool-kernel -lzfscommon-kernel		\
+		-lnvpair-kernel -lavl -lumem -lsolkerncompat -ldl
+
+LIBL=		-ll
+LIBZ=		-lz
+THREAD_LIBS=	-pthread -lrt
+
+# global file-specific settings
 psc_fsutil_libs_psc_util_crc_c_CFLAGS=		-O2 -g0
 psc_fsutil_libs_psc_util_parity_c_CFLAGS=	-O2 -g0
 

@@ -69,6 +69,42 @@ EXTRACT_INCLUDES=	perl -ne 'print $$& while /-I\S+\s?/gc'
 EXTRACT_DEFINES=	perl -ne 'print $$& while /-D\S+\s?/gc'
 EXTRACT_CFLAGS=		perl -ne 'print $$& while /-[^ID]\S+\s?/gc'
 
+ifneq ($(filter fuse,${MODULES}),)
+CFLAGS+=	${FUSE_CFLAGS}
+DEFINES+=	${FUSE_DEFINES}
+INCLUDES+=	${FUSE_INCLUDES}
+LDFLAGS+=	${FUSE_LIBS}
+endif
+
+ifneq ($(filter zfs,${MODULES}),)
+INCLUDES+=	-I${ZFS_BASE}
+LDFLAGS+=	${ZFS_LIBS}
+MODULES+=	z
+endif
+
+ifneq ($(filter lnet,${MODULES}),)
+SRCS+=		${LNET_CFS_SRCS}
+SRCS+=		${LNET_LIB_SRCS}
+MODULES+=	lnet-hdrs
+endif
+
+ifneq ($(filter lnet-hdrs,${MODULES}),)
+INCLUDES+=	-I${LNET_BASE}/include
+endif
+
+ifneq ($(filter pthread,${MODULES}),)
+LDFLAGS+=	${THREAD_LIBS}
+DEFINES+=	-DHAVE_LIBPTHREAD
+endif
+
+ifneq ($(filter z,${MODULES}),)
+LDFLAGS+=	${LIBZ}
+endif
+
+ifneq ($(filter l,${MODULES}),)
+LDFLAGS+=	${LIBL}
+endif
+
 # OBJDIR is added to .c below since lex/yacc intermediate files get generated there.
 vpath %.y $(sort $(dir $(filter %.y,${_TSRCS})))
 vpath %.l $(sort $(dir $(filter %.l,${_TSRCS})))
