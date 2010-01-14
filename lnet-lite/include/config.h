@@ -2,7 +2,7 @@
 #define CONFIG_RH_2_4_20 1
 
 /* Define to 1 if you have the <asm/page.h> header file. */
-#define HAVE_ASM_PAGE_H 1
+/* #undef HAVE_ASM_PAGE_H */
 
 /* Define to 1 if you have the <asm/types.h> header file. */
 #define HAVE_ASM_TYPES_H 1

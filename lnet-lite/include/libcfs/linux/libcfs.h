@@ -131,7 +131,9 @@ struct ptldebug_header {
 #ifdef __KERNEL__
 # include <linux/sched.h> /* THREAD_SIZE */
 #else
+#ifdef HAVE_ASM_PAGE_H
 #include <asm/page.h>
+#endif
 # ifndef THREAD_SIZE /* x86_64 has THREAD_SIZE in userspace */
 #  define THREAD_SIZE 8192
 # endif
