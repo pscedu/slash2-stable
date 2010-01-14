@@ -28,14 +28,14 @@
 #include "psc_util/thread.h"
 #include "psc_util/waitq.h"
 
-#define PJ_LOCK(pj)     spinlock(&(pj)->pj_lock)
-#define PJ_ULOCK(pj)    freelock(&(pj)->pj_lock)
+#define PJ_LOCK(pj)	spinlock(&(pj)->pj_lock)
+#define PJ_ULOCK(pj)	freelock(&(pj)->pj_lock)
 
 #define PJH_MAGIC	UINT64_C(0x45678912aabbccff)	/* magic number of the journal header */
 
-#define PJH_VERSION     0x01
+#define PJH_VERSION	0x01
 
-struct _psc_journal_hdr {			
+struct _psc_journal_hdr {
 	int32_t		_pjh_entsz;
 	int32_t		_pjh_nents;
 	uint32_t	_pjh_version;
@@ -43,10 +43,11 @@ struct _psc_journal_hdr {
 	int32_t		_pjh_readahead;
 	uint32_t	_pjh_unused;
 	uint64_t	_pjh_start_off;
-	uint64_t	_pjh_magic;		
+	uint64_t	_pjh_magic;
 	uint64_t	_pjh_chksum;		/* keep it last and aligned at a 8 byte boundary */
 };
 
+/* XXX replace with pscPageSize */
 #define PJH_ALIGN_SIZE	PSC_ALIGN(sizeof(struct _psc_journal_hdr), PAGE_SIZE)
 
 struct psc_journal_hdr {
@@ -74,7 +75,7 @@ struct psc_journal {
 	int			 pj_fd;		/* open file descriptor to disk */
 	char			*pj_logname;	/* log file name */
 	uint64_t		 pj_lastxid;	/* last transaction ID used */
-	int32_t		 	 pj_nextwrite;	/* next entry slot to write to */
+	int32_t			 pj_nextwrite;	/* next entry slot to write to */
 	struct psclist_head	 pj_pndgxids;
 	struct psc_dynarray	 pj_bufs;
 	struct psc_journal_hdr	*pj_hdr;
@@ -120,12 +121,12 @@ typedef void (*psc_jhandler)(struct psc_dynarray *, int *);
 struct psc_journal_enthdr {
 	uint64_t		pje_magic;
 	uint16_t		pje_type;		/* see above */
-	/* 
+	/*
 	 * This field is used to calculate the CRC checksum of the payload starting
 	 * from pje_data[0]. It also indicates if the log entry is a special-purpose
 	 * one (i.e., one without custom data).
 	 */
-	uint16_t		pje_len;		
+	uint16_t		pje_len;
 	/*
 	 * This field can be used by the replay process to remove the CLOSE entry
 	 * when all other log entries of the same transaction have been seen.
@@ -161,7 +162,7 @@ struct psc_journal_enthdr {
 struct psc_journal_xidhndl {
 	uint64_t		 pjx_xid;
 	int			 pjx_sid;
-	int32_t		 	 pjx_tailslot;
+	int32_t			 pjx_tailslot;
 	uint32_t		 pjx_flags;
 	struct psclist_head	 pjx_lentry;
 	psc_spinlock_t		 pjx_lock;
