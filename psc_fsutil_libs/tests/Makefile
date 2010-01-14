@@ -14,6 +14,7 @@ SUBDIRS+=	mlock
 SUBDIRS+=	multiwait
 SUBDIRS+=	mutex
 SUBDIRS+=	prsig
+SUBDIRS+=	pthread
 SUBDIRS+=	rwlock
 SUBDIRS+=	setprocesstitle
 SUBDIRS+=	sig
