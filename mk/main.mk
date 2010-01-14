@@ -71,8 +71,12 @@ EXTRACT_CFLAGS=		perl -ne 'print $$& while /-[^ID]\S+\s?/gc'
 ifneq ($(filter fuse,${MODULES}),)
 CFLAGS+=	${FUSE_CFLAGS}
 DEFINES+=	${FUSE_DEFINES}
-INCLUDES+=	${FUSE_INCLUDES}
 LDFLAGS+=	${FUSE_LIBS}
+MODULES+=	fuse-hdrs
+endif
+
+ifneq ($(filter fuse-hdrs,${MODULES}),)
+INCLUDES+=	${FUSE_INCLUDES}
 endif
 
 ifneq ($(filter zfs,${MODULES}),)
