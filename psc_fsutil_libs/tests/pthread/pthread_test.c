@@ -21,13 +21,28 @@
 #include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <unistd.h>
 
 #include "pfl/cdefs.h"
 #include "pfl/pfl.h"
 #include "psc_util/pthrutil.h"
+#include "psc_util/completion.h"
 
 const char *progname;
+pthread_mutex_t mut;
+struct psc_completion compl = PSC_COMPLETION_INIT;
+struct psc_waitq wq = PSC_WAITQ_INIT;
+
+void *
+spawn(__unusedx void *arg)
+{
+	psc_pthread_mutex_lock(&mut);
+	psc_completion_done(&compl, 0);
+	psc_waitq_wait(&wq, NULL);
+	psc_pthread_mutex_unlock(&mut);
+	return (NULL);
+}
 
 __dead void
 usage(void)
@@ -39,7 +54,7 @@ usage(void)
 int
 main(int argc, char *argv[])
 {
-	pthread_mutex_t mut;
+	pthread_t pt;
 	int rc;
 
 	pfl_init();
@@ -50,9 +65,20 @@ main(int argc, char *argv[])
 	if (argc)
 		usage();
 
-	pthread_mutex_init(&mut, NULL);
 	psc_pthread_mutex_init(&mut);
+
+	rc = pthread_create(&pt, NULL, spawn, NULL);
+	psc_completion_wait(&compl);
+
+	rc = pthread_mutex_trylock(&mut);
+	printf("master thread trylock rc=%d %s\n", rc, strerror(rc));
+
+	psc_waitq_wakeall(&wq);
+
+	printf("locking...\n");
 	psc_pthread_mutex_lock(&mut);
+	rc = pthread_mutex_lock(&mut);
+	psc_assert(rc == EDEADLK);
 	psc_pthread_mutex_ensure_locked(&mut);
 	exit(0);
 }
