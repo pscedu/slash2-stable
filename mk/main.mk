@@ -112,6 +112,9 @@ vpath %.c $(sort $(dir $(filter %.c,${_TSRCS})) ${OBJDIR})
 
 all: recurse-all
 	@if ${NOTEMPTY} "${TARGET}"; then						\
+		if ${NOTEMPTY} "${SUBDIRS}"; then					\
+			echo "===> ${DIRPREFIX:+.}";					\
+		fi;									\
 		${MAKE} -s ${DEPEND_FILE};						\
 		MAKEFILES=${DEPEND_FILE} ${MAKE} ${TARGET};				\
 	fi
@@ -193,6 +196,9 @@ ${DEPEND_FILE}: ${_C_SRCS} | ${OBJDIR}
 	fi
 
 clean: recurse-clean
+	@if ${NOTEMPTY} "${SUBDIRS}"; then						\
+		echo "<=== ${CURDIR}";							\
+	fi
 	rm -rf ${OBJDIR}
 	rm -f ${PROG} ${LIBRARY} TAGS cscope.out core.[0-9]*
 
