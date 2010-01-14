@@ -11,7 +11,6 @@
 #include "pfl/pfl.h"
 #include "pfl/types.h"
 #include "psc_ds/dynarray.h"
-#include "psc_ds/hash.h"
 #include "psc_ds/hash2.h"
 #include "psc_ds/list.h"
 #include "psc_ds/listcache.h"
@@ -142,10 +141,6 @@ main(int argc, char *argv[])
 	PRTYPE(psc_spinlock_t);
 	PRTYPE(pscrpc_svc_handle_t);
 	PRTYPE(struct _psc_journal_hdr);
-	PRTYPE(struct hash_bucket);
-	PRTYPE(struct hash_entry);
-	PRTYPE(struct hash_entry_str);
-	PRTYPE(struct hash_table);
 	PRTYPE(struct l_wait_info);
 	PRTYPE(struct odtable);
 	PRTYPE(struct odtable_entftr);
