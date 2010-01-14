@@ -76,6 +76,7 @@ MODULES+=	fuse-hdrs
 endif
 
 ifneq ($(filter fuse-hdrs,${MODULES}),)
+DEFINES+=	-DFUSE_USE_VERSION=${FUSE_VERSION}
 INCLUDES+=	${FUSE_INCLUDES}
 endif
 
