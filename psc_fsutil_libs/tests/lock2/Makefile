@@ -2,8 +2,8 @@
 
 include ../Makefile.path
 
-PROG=		lock2
-SRCS+=		lock2.c
+PROG=		lock2_test
+SRCS+=		lock2_test.c
 SRCS+=		${PFL_BASE}/psc_ds/dynarray.c
 SRCS+=		${PFL_BASE}/psc_ds/vbitmap.c
 SRCS+=		${PFL_BASE}/psc_util/alloc.c

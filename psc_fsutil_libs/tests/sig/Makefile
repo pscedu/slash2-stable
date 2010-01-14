@@ -2,8 +2,8 @@
 
 include ../Makefile.path
 
-PROG=		sig
-SRCS+=		sig.c
+PROG=		sig_test
+SRCS+=		sig_test.c
 MODULES+=	pthread
 
 include ${PFLMK}
