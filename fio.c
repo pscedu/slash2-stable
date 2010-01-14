@@ -2,7 +2,7 @@
 
 #include <err.h>
 
-#include "psc_util/cdefs.h"
+#include "pfl/cdefs.h"
 
 #include "fio_sym.h"
 #include "fio.h"
@@ -225,11 +225,7 @@ write_output(IOT_t *iot)
 }
 
 void
-print_pe_map(
-#ifndef CATAMOUNT
-    __unusedx
-#endif
-    struct io_toolbox *iot)
+print_pe_map(__unusedx struct io_toolbox *iot)
 {
 	// if i'm the first process then print the map
 #ifdef CATAMOUNT
