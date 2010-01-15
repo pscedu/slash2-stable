@@ -75,6 +75,7 @@ pfl
 - rename psc_bitstr_setchk -> psc_bitfield_setchk
 - add 'psc_' prefix to nbrequest API
 - remove lc_ ops that operate on psclist_head's
+- multithread ctlcli programs to prevent sock buffer fills
 
 zest
 - research faster CRC operations
