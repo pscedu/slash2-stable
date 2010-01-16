@@ -143,13 +143,6 @@ name##_SPLAY_NEXT(struct name *head, struct type *elm)			\
 	return (elm);							\
 }									\
 									\
-static __inline int							\
-name##_SPLAY_ENTRY_DISJOINT(struct type *elm)				\
-{									\
-	return (SPLAY_LEFT(elm, field) == NULL &&			\
-	     SPLAY_RIGHT(elm, field) == NULL);				\
-}									\
-									\
 static __inline struct type *						\
 name##_SPLAY_MIN_MAX(struct name *head, int val)			\
 {									\
@@ -201,6 +194,8 @@ name##_SPLAY_REMOVE(struct name *head, struct type *elm)		\
 			name##_SPLAY(head, elm);			\
 			SPLAY_RIGHT((head)->sph_root, field) = __tmp;	\
 		}							\
+		SPLAY_LEFT(elm, field) = NULL;				\
+		SPLAY_RIGHT(elm, field) = NULL;				\
 		return (elm);						\
 	}								\
 	return (NULL);							\
@@ -239,6 +234,13 @@ name##_SPLAY(struct name *head, struct type *elm)			\
 		}							\
 	}								\
 	SPLAY_ASSEMBLE(head, &__node, __left, __right, field);		\
+}									\
+									\
+struct type **								\
+name ## _SPLAY_GETFIELD(struct type *elm, int getleft)			\
+{									\
+	return (getleft ? &SPLAY_LEFT(elm, field) :			\
+	    &SPLAY_RIGHT(elm, field));					\
 }									\
 									\
 /* Splay with either the minimum or the maximum element			\
@@ -284,7 +286,8 @@ void name##_SPLAY_MINMAX(struct name *head, int __comp) \
 #define SPLAY_REMOVE(name, x, y)	name##_SPLAY_REMOVE(x, y)
 #define SPLAY_FIND(name, x, y)		name##_SPLAY_FIND(x, y)
 #define SPLAY_NEXT(name, x, y)		name##_SPLAY_NEXT(x, y)
-#define SPLAY_ENTRY_DISJOINT(name, x)	name##_SPLAY_ENTRY_DISJOINT(x)
+#define SPLAY_GETLEFT(name, x)		name##_SPLAY_GETFIELD(x, 1)
+#define SPLAY_GETRIGHT(name, x)		name##_SPLAY_GETFIELD(x, 0)
 #define SPLAY_MIN(name, x)		(SPLAY_EMPTY(x) ? NULL	\
 					: name##_SPLAY_MIN_MAX(x, SPLAY_NEGINF))
 #define SPLAY_MAX(name, x)		(SPLAY_EMPTY(x) ? NULL	\
