@@ -40,6 +40,9 @@
 #include "psc_util/strlcpy.h"
 #include "psc_util/subsys.h"
 
+#define PCTHRT_RD	0
+#define PCTHRT_WR	1
+
 __static PSCLIST_HEAD(psc_ctlmsgs);
 
 struct psc_ctlmsg {
@@ -47,11 +50,12 @@ struct psc_ctlmsg {
 	struct psc_ctlmsghdr	pcm_mh;
 };
 
-int psc_ctl_noheader;
-int psc_ctl_inhuman;
-int psc_ctl_nsubsys;
-char **psc_ctl_subsys_names;
-__static int psc_ctl_lastmsgtype = -1;
+int		  psc_ctl_noheader;
+int		  psc_ctl_inhuman;
+int		  psc_ctl_nsubsys;
+char		**psc_ctl_subsys_names;
+__static int	  psc_ctl_sock;
+__static int	  psc_ctl_lastmsgtype = -1;
 
 __static struct psc_ctlshow_ent *
 psc_ctlshow_lookup(const char *name)
@@ -816,16 +820,37 @@ psc_ctl_read(int s, void *buf, size_t siz)
 	}
 }
 
+void *
+psc_ctlcli_wr_main(__unusedx void *arg)
+{
+	struct psc_ctlmsg *pcm, *nextpcm;
+	ssize_t siz;
+
+	/* Send queued control messages. */
+	psclist_for_each_entry_safe(pcm, nextpcm,
+	    &psc_ctlmsgs, pcm_lentry) {
+		siz = pcm->pcm_mh.mh_size + sizeof(pcm->pcm_mh);
+		if (write(psc_ctl_sock, &pcm->pcm_mh, siz) != siz)
+			psc_fatal("write");
+		free(pcm);
+	}
+	if (shutdown(psc_ctl_sock, SHUT_WR) == -1)
+		psc_fatal("shutdown");
+	return (NULL);
+}
+
 void
 psc_ctlcli_main(const char *osockfn)
 {
-	struct psc_ctlmsg *pcm, *nextpcm;
+	extern const char *progname;
 	struct psc_ctlmsghdr mh;
 	struct sockaddr_un sun;
 	char sockfn[PATH_MAX];
-	ssize_t siz, n;
+	ssize_t n, siz;
 	void *m;
-	int s;
+
+	pscthr_init(PCTHRT_RD, 0, NULL,
+	    NULL, 0, "%srdthr", progname);
 
 	if (psclist_empty(&psc_ctlmsgs))
 		errx(1, "no actions specified");
@@ -836,30 +861,22 @@ psc_ctlcli_main(const char *osockfn)
 	);
 
 	/* Connect to control socket. */
-	if ((s = socket(AF_UNIX, SOCK_STREAM, 0)) == -1)
+	if ((psc_ctl_sock = socket(AF_UNIX, SOCK_STREAM, 0)) == -1)
 		psc_fatal("socket");
 
 	bzero(&sun, sizeof(sun));
 	sun.sun_family = AF_UNIX;
 	snprintf(sun.sun_path, sizeof(sun.sun_path), "%s", sockfn);
-	if (connect(s, (struct sockaddr *)&sun, sizeof(sun)) == -1)
+	if (connect(psc_ctl_sock, (struct sockaddr *)&sun, sizeof(sun)) == -1)
 		err(1, "connect: %s", sockfn);
 
-	/* Send queued control messages. */
-	psclist_for_each_entry_safe(pcm, nextpcm,
-	    &psc_ctlmsgs, pcm_lentry) {
-		siz = pcm->pcm_mh.mh_size + sizeof(pcm->pcm_mh);
-		if (write(s, &pcm->pcm_mh, siz) != siz)
-			psc_fatal("write");
-		free(pcm);
-	}
-	if (shutdown(s, SHUT_WR) == -1)
-		psc_fatal("shutdown");
+	pscthr_init(PCTHRT_WR, 0, psc_ctlcli_wr_main,
+	    NULL, 0, "%dwrthr", progname);
 
 	/* Read and print response messages. */
 	m = NULL;
 	siz = 0;
-	while ((n = read(s, &mh, sizeof(mh))) != -1 && n != 0) {
+	while ((n = read(psc_ctl_sock, &mh, sizeof(mh))) != -1 && n != 0) {
 		if (n != sizeof(mh)) {
 			psc_warnx("short read");
 			continue;
@@ -871,11 +888,11 @@ psc_ctlcli_main(const char *osockfn)
 			if ((m = realloc(m, siz)) == NULL)
 				psc_fatal("realloc");
 		}
-		psc_ctl_read(s, m, mh.mh_size);
+		psc_ctl_read(psc_ctl_sock, m, mh.mh_size);
 		psc_ctlmsg_print(&mh, m);
 	}
 	if (n == -1)
 		psc_fatal("read");
 	free(m);
-	close(s);
+	close(psc_ctl_sock);
 }
