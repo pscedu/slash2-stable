@@ -53,8 +53,11 @@ struct psc_thread {
 	size_t			   pscthr_privsiz;		/* size of app data */
 };
 
-#define PTF_PAUSED	(1 << 0)	/* thread is frozen */
-#define PTF_FREE	(1 << 1)	/* thr mem should be free(3)'d on exit */
+/* behavioral flags to pass to pscthr_init() */
+#define PTF_FREE	(1 << 0)	/* thr mem should be free(3)'d on exit */
+
+/* internal operation flags */
+#define PTF_PAUSED	(1 << 1)	/* thread is frozen */
 #define PTF_RUN		(1 << 2)	/* thread should operate normally */
 #define PTF_READY	(1 << 3)	/* thread can start (used during initialization) */
 
