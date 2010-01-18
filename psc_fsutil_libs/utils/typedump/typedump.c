@@ -134,7 +134,6 @@ main(int argc, char *argv[])
 
 /* start structs */
 	PRTYPE(atomic_t);
-	PRTYPE(list_cache_t);
 	PRTYPE(psc_atomic_t);
 	PRTYPE(psc_crc32_t);
 	PRTYPE(psc_crc64_t);
@@ -178,6 +177,7 @@ main(int argc, char *argv[])
 	PRTYPE(struct psc_journal_hdr);
 	PRTYPE(struct psc_journal_xidhndl);
 	PRTYPE(struct psc_listcache);
+	PRTYPE(struct psc_listcache_entry);
 	PRTYPE(struct psc_listguts);
 	PRTYPE(struct psc_lockedlist);
 	PRTYPE(struct psc_memnode);
