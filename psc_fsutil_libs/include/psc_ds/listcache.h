@@ -83,27 +83,27 @@ struct psc_listcache_entry {
 	} while (0)
 #endif
 
-#define LIST_CACHE_FOREACH(p, plc)					\
-	psclist_for_each_entry2((p), &(plc)->lc_listhd,	(plc)->lc_offset)
+#define LIST_CACHE_FOREACH(p, lc)					\
+	psclist_for_each_entry2((p), &(lc)->lc_listhd, (lc)->lc_offset)
 
-#define LIST_CACHE_LOCK(plc)		spinlock(&(plc)->lc_lock)
-#define LIST_CACHE_ULOCK(plc)		freelock(&(plc)->lc_lock)
-#define LIST_CACHE_RLOCK(plc)		reqlock(&(plc)->lc_lock)
-#define LIST_CACHE_URLOCK(plc, lk)	ureqlock(&(plc)->lc_lock, (lk))
-#define LIST_CACHE_TRYLOCK(plc)		trylock(&(plc)->lc_lock)
+#define LIST_CACHE_LOCK(lc)		spinlock(&(lc)->lc_lock)
+#define LIST_CACHE_ULOCK(lc)		freelock(&(lc)->lc_lock)
+#define LIST_CACHE_RLOCK(lc)		reqlock(&(lc)->lc_lock)
+#define LIST_CACHE_URLOCK(lc, lk)	ureqlock(&(lc)->lc_lock, (lk))
+#define LIST_CACHE_TRYLOCK(lc)		trylock(&(lc)->lc_lock)
 
 /**
  * lc_sz - how many items are in here.
  */
 static __inline ssize_t
-lc_sz(struct psc_listcache *plc)
+lc_sz(struct psc_listcache *lc)
 {
 	int locked;
 	ssize_t sz;
 
-	locked = reqlock(&plc->lc_lock);
-	sz = plc->lc_size;
-	ureqlock(&plc->lc_lock, locked);
+	locked = reqlock(&lc->lc_lock);
+	sz = lc->lc_size;
+	ureqlock(&lc->lc_lock, locked);
 	return (sz);
 }
 
@@ -115,14 +115,18 @@ lc_sz(struct psc_listcache *plc)
 static __inline void
 lc_remove(struct psc_listcache *lc, void *p)
 {
+	struct psc_listcache_entry *e;
 	int locked;
-	void *e;
 
 	psc_assert(p);
-	e = (char *)p + lc->lc_offset;
+	e = (void *)((char *)p + lc->lc_offset);
+#ifdef DEBUG
+	psc_assert(e->ple_magic == PLCE_MAGIC);
+	psc_assert(e->ple_owner == lc);
+#endif
 	locked = reqlock(&lc->lc_lock);
 	psc_assert(lc->lc_size > 0);
-	psclist_del(e);
+	psclist_del(&e->ple_entry);
 	lc->lc_size--;
 	ureqlock(&lc->lc_lock, locked);
 }
@@ -145,7 +149,7 @@ static __inline void *
 _lc_get(struct psc_listcache *lc, struct timespec *abstime,
     enum psclc_pos pos, int flags)
 {
-	struct psclist_head *e;
+	struct psc_listcache_entry *e;
 	int locked, rc;
 
 	psc_assert(pos == PLCP_HEAD || pos ==  PLCP_TAIL);
@@ -178,12 +182,15 @@ _lc_get(struct psc_listcache *lc, struct timespec *abstime,
 			psc_waitq_wait(&lc->lc_wq_empty, &lc->lc_lock);
 		spinlock(&lc->lc_lock);
 	}
-	e = pos & PLCP_HEAD ?
+	e = (void *)(pos & PLCP_HEAD ?
 	    psclist_first(&lc->lc_listhd) :
-	    psclist_last(&lc->lc_listhd);
+	    psclist_last(&lc->lc_listhd));
 	psc_assert(lc->lc_size > 0);
 	if ((flags & PLCGF_PEEK) == 0) {
-		psclist_del(e);
+#ifdef DEBUG
+		e->ple_owner = NULL;
+#endif
+		psclist_del(&e->ple_entry);
 		lc->lc_size--;
 	}
 	ureqlock(&lc->lc_lock, locked);
@@ -225,14 +232,18 @@ static __inline int
 _lc_add(struct psc_listcache *lc, void *p,
     enum psclc_pos pos, int flags)
 {
-	struct psclist_head *e;
+	struct psc_listcache_entry *e;
 	int locked;
 
 	psc_assert(p);
 	psc_assert(pos == PLCP_HEAD || pos == PLCP_TAIL);
 
 	e = (void *)((char *)p + lc->lc_offset);
-	psc_assert(psclist_disjoint(e));
+	psc_assert(psclist_disjoint(&e->ple_entry));
+#ifdef DEBUG
+	psc_assert(e->ple_owner == NULL);
+	psc_assert(e->ple_magic == PLCE_MAGIC);
+#endif
 
 	locked = reqlock(&lc->lc_lock);
 
@@ -243,9 +254,13 @@ _lc_add(struct psc_listcache *lc, void *p,
 	}
 
 	if (pos == PLCP_TAIL)
-		psclist_xadd_tail(e, &lc->lc_listhd);
+		psclist_xadd_tail(&e->ple_entry, &lc->lc_listhd);
 	else
-		psclist_xadd(e, &lc->lc_listhd);
+		psclist_xadd(&e->ple_entry, &lc->lc_listhd);
+
+#ifdef DEBUG
+	e->ple_owner = lc;
+#endif
 
 	lc->lc_size++;
 	lc->lc_nseen++;
