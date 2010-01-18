@@ -73,8 +73,9 @@ pfl
 - psclist_add_sorted() - maintain a median element for faster sorting
 - add a variable-length printbin() dumper
 - rename psc_bitstr_setchk -> psc_bitfield_setchk
-- add 'psc_' prefix to nbrequest API
-- remove lc_ ops that operate on psclist_head's
+- when ppm_total is set less than lc_size for !PPMF_AUTO, set
+  ppm_max and check this value in other places to eventually
+  decrease pool size
 
 zest
 - research faster CRC operations
@@ -99,9 +100,6 @@ zest
 - when mount_zest is idle, have it merge dirty zcf zsb channels
 - ensure libzestclient is not paritying over partial buffers
 - investigate libgru for NUMA memory staging
-- when ppm_total is set less than lc_size for !PPMF_AUTO, set
-  ppm_max and check this value in other places to eventually
-  decrease pool size
 - think about more ways to shorten disk idle time
 - add auth checks into fdbuf from slash
 - auto tune hash table sizes
