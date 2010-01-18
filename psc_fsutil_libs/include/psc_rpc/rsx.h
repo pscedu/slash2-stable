@@ -20,6 +20,8 @@
 #ifndef _PFL_RSX_H_
 #define _PFL_RSX_H_
 
+#include "psc_rpc/rpc.h"
+
 struct pscrpc_request;
 struct pscrpc_import;
 struct pscrpc_bulk_desc;
@@ -38,6 +40,31 @@ struct rsx_msg_portablizer {
 	struct rpcmsg_conv	*rmp_conv;
 };
 
+static __inline void
+_RSX_ALLOCREP(struct pscrpc_request *rq, void *mqp, void *mpp,
+    int qsz, int psz)
+{
+	int rc;
+
+	if (psz > rq->rq_rqbd->rqbd_service->srv_max_reply_size)
+		psc_fatalx("reply size greater than max");
+	rc = psc_pack_reply(rq, 1, &psz, NULL);
+	if (rc)
+		psc_fatal("psc_pack_reply");
+	*(void **)mpp = psc_msg_buf(rq->rq_repmsg, 0, psz);
+	if (*(void **)mpp == NULL)
+		psc_fatal("msg_buf reply is NULL");
+	*(void **)mqp = psc_msg_buf(rq->rq_reqmsg, 0, qsz);
+	if (*(void **)mqp == NULL)
+		psc_fatal("msg_buf request is NULL");
+}
+
+#define RSX_ALLOCREP(rq, mq, mp)					\
+	_RSX_ALLOCREP((rq), &(mq), &(mp),				\
+	    (int)sizeof(*(mq)), (int)sizeof(*(mp)));			\
+	psc_assert((mp)->rc == 0)
+
+#if 0
 #define RSX_ALLOCREP(rq, mq, mp)					\
 	do {								\
 		int __rc, __psz;					\
@@ -67,6 +94,7 @@ struct rsx_msg_portablizer {
 			return (0);					\
 		}							\
 	} while (0)
+#endif
 
 #define RSX_NEWREQ(imp, version, op, rq, mq, mp)			\
 	pfl_rsx_newreq((imp), (version), (op), sizeof(*(mq)),		\

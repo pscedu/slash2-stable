@@ -198,13 +198,13 @@ struct pscrpc_async_args {
 };
 
 struct pscrpc_request_set;
-typedef int (*set_interpreter_func)(struct pscrpc_request_set *, void *, int);
+typedef int (*pscrpc_set_interpreterf)(struct pscrpc_request_set *, void *, int);
 
 struct pscrpc_request_set {
 	struct psclist_head	 set_requests;
 	int			 set_remaining;
 	struct psc_waitq	 set_waitq;		/* I block here          */
-	set_interpreter_func	 set_interpret;		/* callback function     */
+	pscrpc_set_interpreterf	 set_interpret;		/* callback function     */
 	void			*set_arg;		/* callback pointer      */
 	psc_spinlock_t		 set_lock;
 	int			 set_flags;
@@ -216,6 +216,10 @@ struct pscrpc_request_set {
 
 /* set flags */
 #define PSCRPC_SETF_CHECKING	(1 << 0)
+
+#define PSCPRC_SET_INIT(v, cb, cbarg)					\
+	{ PSCLIST_HEAD_INIT((v).set_requests), 0, PSC_WAITQ_INIT,	\
+	    (cb), (cbarg), LOCK_INITIALIZER, 0 }
 
 struct pscrpc_bulk_desc {
 	unsigned int			 bd_success:1;		/* completed successfully */
@@ -426,12 +430,12 @@ struct pscrpc_reply_state {
 /*
  * Non-blocking request sets
  */
-typedef int (*nbreq_callback)(struct pscrpc_request *,
+typedef int (*pscrpc_nbreq_callback)(struct pscrpc_request *,
 			      struct pscrpc_async_args *);
 
 struct pscrpc_nbreqset {
 	struct pscrpc_request_set	nb_reqset;
-	nbreq_callback			nb_callback;
+	pscrpc_nbreq_callback		nb_callback;
 	atomic_t			nb_outstanding;
 	psc_spinlock_t                  nb_lock;
 	uint32_t                        nb_flags;
@@ -440,19 +444,15 @@ struct pscrpc_nbreqset {
 
 #define NBREQSET_WORK_INPROG 1
 
-#define PSCPRC_SET_INIT(v, cb, cbarg)					\
-	{ PSCLIST_HEAD_INIT((v).set_requests), 0, PSC_WAITQ_INIT,	\
-	    (cb), (cbarg), LOCK_INITIALIZER, 0 }
-
 #define PSCRPC_NBREQSET_INIT(v, setcb, rqcb)				\
 	{ PSCPRC_SET_INIT((v).nb_reqset, (setcb), NULL), (rqcb),	\
 	    ATOMIC_INIT(0), LOCK_INITIALIZER, 0, PSC_WAITQ_INIT }
 
 struct pscrpc_nbreqset *
-	 nbreqset_init(set_interpreter_func, nbreq_callback);
-void	 nbreqset_add(struct pscrpc_nbreqset *, struct pscrpc_request *);
-int	 nbreqset_reap(struct pscrpc_nbreqset *);
-int	 nbreqset_flush(struct pscrpc_nbreqset *);
+	 pscrpc_nbreqset_init(pscrpc_set_interpreterf, pscrpc_nbreq_callback);
+void	 pscrpc_nbreqset_add(struct pscrpc_nbreqset *, struct pscrpc_request *);
+int	 pscrpc_nbreqset_reap(struct pscrpc_nbreqset *);
+int	 pscrpc_nbreqset_flush(struct pscrpc_nbreqset *);
 
 void	 pscrpc_nbreapthr_spawn(struct pscrpc_nbreqset *, int, const char *);
 

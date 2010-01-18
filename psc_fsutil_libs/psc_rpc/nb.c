@@ -17,27 +17,27 @@ struct pscrpc_nbreapthr {
 };
 
 /**
- * nbreqset_push - send out new requests
+ * pscrpc_nbreqset_push - send out new requests
  *
  */
 static int
-nbreqset_push(struct pscrpc_request *req)
+pscrpc_nbreqset_push(struct pscrpc_request *req)
 {
 	return (pscrpc_push_req(req));
 }
 
 /**
- * nbreqset_init - make a non-blocking set
+ * pscrpc_nbreqset_init - make a non-blocking set
  * @nb_interpret:  this must only take into account completed rpcs
  * @nb_callback:   application callback
  */
 struct pscrpc_nbreqset *
-nbreqset_init(set_interpreter_func nb_interpret, nbreq_callback nb_callback)
+pscrpc_nbreqset_init(pscrpc_set_interpreterf nb_interpret,
+    pscrpc_nbreq_callback nb_callback)
 {
-
 	struct pscrpc_nbreqset *nbs;
 
-	nbs = PSCALLOC(sizeof(struct pscrpc_nbreqset));
+	nbs = PSCALLOC(sizeof(*nbs));
 	psc_waitq_init(&nbs->nb_waitq);
 	pscrpc_set_init(&nbs->nb_reqset);
 	nbs->nb_reqset.set_interpret = nb_interpret;
@@ -47,32 +47,32 @@ nbreqset_init(set_interpreter_func nb_interpret, nbreq_callback nb_callback)
 }
 
 /**
- * nbreqset_add - add a new non-blocking request to the mix
+ * pscrpc_nbreqset_add - add a new non-blocking request to the mix
  *
  */
 void
-nbreqset_add(struct pscrpc_nbreqset *nbs, struct pscrpc_request *req)
+pscrpc_nbreqset_add(struct pscrpc_nbreqset *nbs, struct pscrpc_request *req)
 {
 	req->rq_waitq = &nbs->nb_waitq;
 	atomic_inc(&nbs->nb_outstanding);
 	pscrpc_set_add_new_req(&nbs->nb_reqset, req);
-	if (nbreqset_push(req)) {
+	if (pscrpc_nbreqset_push(req)) {
 		DEBUG_REQ(PLL_ERROR, req, "Send Failure");
 		psc_fatalx("Send Failure");
 	}
 }
 
 /**
- * nbrequest_flush - sync all outstanding requests
+ * pscrpc_nbrequest_flush - sync all outstanding requests
  */
 int
-nbreqset_flush(struct pscrpc_nbreqset *nbs)
+pscrpc_nbreqset_flush(struct pscrpc_nbreqset *nbs)
 {
 	return (pscrpc_set_wait(&nbs->nb_reqset));
 }
 
 /**
- * nbrequest_reap - remove completed requests from the
+ * pscrpc_nbrequest_reap - remove completed requests from the
  *                  request set and place them into the
  *                  'completed' list.
  * @nbs: the non-blocking set
@@ -83,7 +83,7 @@ nbreqset_flush(struct pscrpc_nbreqset *nbs)
  *        here as well.
  */
 int
-nbreqset_reap(struct pscrpc_nbreqset *nbs)
+pscrpc_nbreqset_reap(struct pscrpc_nbreqset *nbs)
 {
 	int    nreaped=0, nchecked=0;
 	struct psclist_head          *i, *j;
@@ -126,8 +126,7 @@ nbreqset_reap(struct pscrpc_nbreqset *nbs)
 			 *  error handling, we can't do much from here
 			 */
 			if (nbs->nb_callback != NULL)
-				(int)nbs->nb_callback(req,
-						      &req->rq_async_args);
+				nbs->nb_callback(req, &req->rq_async_args);
 			/*
 			 * Be done with it..
 			 */
@@ -147,7 +146,7 @@ _pscrpc_nbreapthr_main(void *arg)
 
 	pnbt = thr->pscthr_private;
 	for (;;) {
-		nbreqset_reap(pnbt->pnbt_nbset);
+		pscrpc_nbreqset_reap(pnbt->pnbt_nbset);
 		psc_waitq_waitrel_s(&pnbt->pnbt_nbset->nb_waitq, NULL, 1);
 	}
 }
