@@ -173,6 +173,12 @@ struct psclog_data {
 		return (_pfl_rc);				\
 	} while (0)
 
+#define PFL_RETURN_STRLIT(str)					\
+	do {							\
+		psc_trace("exit rc='%s'", (str));		\
+		return (str);					\
+	} while (0)
+
 #define psc_assert(cond)					\
 	do {							\
 		if (!(cond))					\
