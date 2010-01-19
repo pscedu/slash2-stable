@@ -8,6 +8,7 @@ _TOBJS=			$(patsubst %.c,%.o,$(filter %.c,${_TSRCS}))
 _TOBJS+=		$(patsubst %.y,%.o,$(filter %.y,${_TSRCS}))
 _TOBJS+=		$(patsubst %.l,%.o,$(filter %.l,${_TSRCS}))
 OBJS=			$(addprefix ${OBJDIR}/,$(notdir ${_TOBJS}))
+DEPS=			$(patsubst %.o,%.dep,${OBJS})
 
 _TSUBDIRS=		$(foreach dir,${SUBDIRS},$(realpath ${dir}))
 
@@ -64,9 +65,17 @@ _TINCLUDES=		$(filter-out -I%,${INCLUDES}) $(patsubst %,-I%,$(foreach \
 CFLAGS+=		${DEFINES} ${_TINCLUDES}
 TARGET?=		${PROG} ${LIBRARY}
 
+XDEPS=			Makefile ${MAINMK}
+#			${LOCALMK} ${APP_BASE}/mk/local.mk ${APP_BASE}/mk/main.mk
+
 EXTRACT_INCLUDES=	perl -ne 'print $$& while /-I\S+\s?/gc'
 EXTRACT_DEFINES=	perl -ne 'print $$& while /-D\S+\s?/gc'
 EXTRACT_CFLAGS=		perl -ne 'print $$& while /-[^ID]\S+\s?/gc'
+
+STRIPROOTDIR=		$(subst $(realpath ${ROOTDIR})/,,$1)
+PATH_NAMIFY=		$(subst .,_,$(subst -,_,$(subst /,_,$1)))
+FILE_CFLAGS_VAR=	$(call PATH_NAMIFY,$(call STRIPROOTDIR,$(realpath $1)))_CFLAGS
+FILE_CFLAGS=		${$(call FILE_CFLAGS_VAR,$1)}
 
 ifneq ($(filter fuse,${MODULES}),)
 CFLAGS+=	${FUSE_CFLAGS}
@@ -121,42 +130,70 @@ endif
 vpath %.y $(sort $(dir $(filter %.y,${_TSRCS})))
 vpath %.l $(sort $(dir $(filter %.l,${_TSRCS})))
 vpath %.c $(sort $(dir $(filter %.c,${_TSRCS})) ${OBJDIR})
+vpath %.dep ${OBJDIR}
 
 all: recurse-all
+	@if ${NOTEMPTY} "${TARGET}" && ${NOTEMPTY} "${SUBDIRS}"; then			\
+		echo "===> ${DIRPREFIX:+.}";						\
+	fi
 	@if ${NOTEMPTY} "${TARGET}"; then						\
-		if ${NOTEMPTY} "${SUBDIRS}"; then					\
-			echo "===> ${DIRPREFIX:+.}";					\
-		fi;									\
-		${MAKE} -s ${DEPEND_FILE};						\
-		MAKEFILES=${DEPEND_FILE} ${MAKE} ${TARGET};				\
+		mkdir -p ${OBJDIR};							\
+		${MAKE} ${TARGET};							\
 	fi
 
 .SUFFIXES:
 
-${OBJDIR}:
-	mkdir -p $@
+.PRECIOUS: ${OBJDIR}/$(notdir %.dep)
 
-${OBJDIR}/$(notdir %.c) : %.l | ${OBJDIR}
+# XXX this doesn't work as advertised
+.SILENT: ${OBJDIR}/$(notdir %.dep)
+
+${OBJDIR}/$(notdir %.dep) : %.c ${XDEPS}
+	${MKDEP} -D ${OBJDIR} -f $@ ${DEFINES} $(					\
+	    ) $$(echo $(call FILE_CFLAGS,$<) | ${EXTRACT_DEFINES}) $(			\
+	    ) ${LIBC_INCLUDES} ${_TINCLUDES} $(						\
+	    ) $$(echo $(call FILE_CFLAGS,$<) | ${EXTRACT_INCLUDES}) -I${CURDIR} $(realpath $<)
+
+${OBJDIR}/$(notdir %.o) : %.c ${XDEPS}
+	${CC} ${CFLAGS} $(call FILE_CFLAGS,$<) -I${CURDIR} $(realpath $<) -c -o $@
+
+${OBJDIR}/$(notdir %.E) : %.c ${XDEPS}
+	${CC} ${CFLAGS} $(call FILE_CFLAGS,$<) -I${CURDIR} $(realpath $<) -E -o $@
+
+${OBJDIR}/$(notdir %.c) : %.l ${XDEPS}
+	echo "${LEX} ${LFLAGS} $(realpath $<) > $@"
 	${LEX} ${LFLAGS} $(realpath $<) > $@
 
-${OBJDIR}/$(notdir %.c) : %.y | ${OBJDIR}
-	${YACC} ${YFLAGS} -o $@ $(realpath $<)
+${OBJDIR}/$(notdir %.c) : %.y ${XDEPS}
+	${ECHORUN} ${YACC} ${YFLAGS} -o $@ $(realpath $<)
 
-${OBJDIR}/$(notdir %.o) : %.c | ${OBJDIR}
-	${CC} ${CFLAGS} ${$(subst .,_,$(subst -,_,$(subst /,_,$(subst			\
-	    ../,,$(subst //,/,$(subst $(realpath					\
-	    ${ROOTDIR})/,,$(realpath $<)))))))_CFLAGS} -I$(dir $<) $(realpath $<) -c -o $@
-
-${OBJDIR}/$(notdir %.E) : %.c | ${OBJDIR}
-	${CC} ${CFLAGS} ${$(subst .,_,$(subst -,_,$(subst /,_,$(subst			\
-	    ../,,$(subst //,/,$(subst $(realpath					\
-	    ${ROOTDIR})/,,$(realpath $<)))))))_CFLAGS} -I$(dir $<) $(realpath $<) -E -o $@
-
-${PROG}: ${OBJS}
+ifdef HASDEPS
+  ifdef PROG
+    ${PROG}: ${OBJS} ${XDEPS}
 	${CC} -o $@ ${OBJS} ${LDFLAGS}
+	@echo -n "${PROG}:" > ${DEPEND_FILE}
+	@${LIBDEP} ${LDFLAGS} ${LIBDEP_ADD} >> ${DEPEND_FILE}
+  endif
 
-${LIBRARY}: ${OBJS}
+  ifdef LIBRARY
+    ${LIBRARY}: ${OBJS} ${XDEPS}
 	${AR} ${ARFLAGS} $@ ${OBJS}
+  endif
+else
+  ifdef PROG
+    .PHONY: ${PROG}
+    ${PROG}:
+	@${MAKE} -s ${DEPS}
+	@MAKEFILES="${DEPS} ${DEPEND_FILE}" ${MAKE} HASDEPS=1 $@
+  endif
+
+  ifdef LIBRARY
+    .PHONY: ${LIBRARY}
+    ${LIBRARY}:
+	@${MAKE} -s ${DEPS}
+	MAKEFILES="${DEPS}" ${MAKE} HASDEPS=1 $@
+  endif
+endif
 
 recurse-%:
 	@for i in ${_TSUBDIRS}; do							\
@@ -195,16 +232,6 @@ install: recurse-install install-hook
 			${ECHORUN} mkdir -p $$_dir;					\
 			${ECHORUN} cp -rfp $$i $$_dir;					\
 		done;									\
-	fi
-
-${DEPEND_FILE}: ${_C_SRCS} | ${OBJDIR}
-	@if ${NOTEMPTY} "${_C_SRCS}"; then						\
-		${ECHORUN} ${MKDEP} -D ${OBJDIR} -f ${DEPEND_FILE} ${LIBC_INCLUDES}	\
-		    ${_TINCLUDES} ${DEFINES} ${_C_SRCS};				\
-	fi
-	@if [ -n "${PROG}" ]; then							\
-		echo -n "${PROG}:" >> ${DEPEND_FILE};					\
-		${LIBDEP} ${LDFLAGS} ${LIBDEP_ADD} >> ${DEPEND_FILE};			\
 	fi
 
 clean: recurse-clean
