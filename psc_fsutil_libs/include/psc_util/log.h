@@ -154,16 +154,23 @@ struct psclog_data {
 #define psc_logsv(lvl, ss, fmt, ap)	_psclogvck((ss), (lvl), 0, (fmt), (ap))
 #define psc_logxsv(lvl, ss, fmt, ap)	_psclogvck((ss), (lvl), PLO_ERRNO, (fmt), (ap))
 
-#define psclog_lock()			flockfile(stderr)
-#define psclog_unlock()			funlockfile(stderr)
+#define PSCLOG_LOCK()			flockfile(stderr)
+#define PSCLOG_UNLOCK()			funlockfile(stderr)
 
-#define ENTRY_MARKER			psc_trace("entry_marker")
-#define EXIT_MARKER			psc_trace("exit_marker")
+#define PFL_ENTER()			psc_trace("enter")
 
-#define RETURN_MARKER(v)					\
+#define PFL_RETURNX()						\
 	do {							\
-		psc_trace("exit_marker");			\
-		return v;					\
+		psc_trace("exit");				\
+		return;						\
+	} while (0)
+
+#define PFL_RETURN(rc)						\
+	do {							\
+		typeof(rc) _pfl_rc = (rc);			\
+		psc_trace("exit rc=%ld %p", (long)_pfl_rc,	\
+		    (void *)(unsigned long)_pfl_rc);		\
+		return (_pfl_rc);				\
 	} while (0)
 
 #define psc_assert(cond)					\
