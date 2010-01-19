@@ -13,20 +13,23 @@ close F;
 print qq{# 1 "$ARGV[0]"\n};
 
 if ($c =~ m!psc_util/log\.h! && $ARGV[0] !~ m!/log\.c$!) {
+	# strip comments
+	$c =~ s!/\*(.*?)\*/! join '', $1 =~ /\n/g !ges;
+
 	# add enter markers
-	$c =~ s/^{$/{ PFL_ENTER();/g;
+	$c =~ s/^{\s*$/{ PFL_ENTER();/g;
 
 	# make return explicit
-	$c =~ s/^}$/return; }/g;
+	$c =~ s/^}\s*$/return; }/g;
 
 	# catch 'return' without an arg
 	$c =~ s/\breturn;/PFL_RETURNX();/g;
 
 	# catch 'return' with a string literal arg
-	$c =~ s/\breturn\s*\(?\s*(".*?")\s*\)?\s*;/PFL_RETURN_STRLIT($1);/g;
+	$c =~ s/\breturn\s*\(?\s*(".*?")\s*\)?\s*;/PFL_RETURN_STRLIT($1);/gs;
 
-	# catch 'return' with an args
-	$c =~ s/\breturn\s*(.*?)\s*;/PFL_RETURN($1);/g;
+	# catch 'return' with an arg
+	$c =~ s/\breturn\b\s*(.*?)\s*;/PFL_RETURN($1);/gs;
 }
 
 print $c;
