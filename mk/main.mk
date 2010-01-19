@@ -145,12 +145,12 @@ ${OBJDIR}/$(notdir %.c) : %.y | ${OBJDIR}
 ${OBJDIR}/$(notdir %.o) : %.c | ${OBJDIR}
 	${CC} ${CFLAGS} ${$(subst .,_,$(subst -,_,$(subst /,_,$(subst			\
 	    ../,,$(subst //,/,$(subst $(realpath					\
-	    ${ROOTDIR})/,,$(realpath $<)))))))_CFLAGS} $(realpath $<) -c -o $@
+	    ${ROOTDIR})/,,$(realpath $<)))))))_CFLAGS} -I$(dir $<) $(realpath $<) -c -o $@
 
 ${OBJDIR}/$(notdir %.E) : %.c | ${OBJDIR}
 	${CC} ${CFLAGS} ${$(subst .,_,$(subst -,_,$(subst /,_,$(subst			\
 	    ../,,$(subst //,/,$(subst $(realpath					\
-	    ${ROOTDIR})/,,$(realpath $<)))))))_CFLAGS} $(realpath $<) -E -o $@
+	    ${ROOTDIR})/,,$(realpath $<)))))))_CFLAGS} -I$(dir $<) $(realpath $<) -E -o $@
 
 ${PROG}: ${OBJS}
 	${CC} -o $@ ${OBJS} ${LDFLAGS}
