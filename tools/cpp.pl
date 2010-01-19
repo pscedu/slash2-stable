@@ -13,8 +13,11 @@ close F;
 print qq{# 1 "$ARGV[0]"\n};
 
 if ($c =~ m!psc_util/log\.h! && $ARGV[0] !~ m!/log\.c$!) {
-	# add missing return statements
-	$c =~ s/^}$/return;}/g;
+	# add enter markers
+	$c =~ s/^{$/{ PFL_ENTER();/g;
+
+	# make return explicit
+	$c =~ s/^}$/return; }/g;
 
 	# catch 'return' without an arg
 	$c =~ s/\breturn;/PFL_RETURNX();/g;
