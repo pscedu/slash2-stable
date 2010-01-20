@@ -148,11 +148,11 @@ for ($i = 0; $i < length $data; ) {
 	} elsif (substr($data, $i, 1) eq "}") {
 		$lvl--;
 		if ($lvl == 0) {
-			$foff = undef;
 			if (substr($data, $i + 1) =~ /^\s*\n/s) {
 				# catch implicit 'return'
 				print "PFL_RETURNX();" unless containing_func_is_dead();
 			}
+			$foff = undef;
 		}
 		advance(1);
 	} else {
