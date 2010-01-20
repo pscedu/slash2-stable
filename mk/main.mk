@@ -152,13 +152,14 @@ ${OBJDIR}/$(notdir %.dep) : %.c ${XDEPS}
 	${MKDEP} -D ${OBJDIR} -f $@ ${DEFINES} $(					\
 	    ) $$(echo $(call FILE_CFLAGS,$<) | ${EXTRACT_DEFINES}) $(			\
 	    ) ${LIBC_INCLUDES} ${_TINCLUDES} $(						\
-	    ) $$(echo $(call FILE_CFLAGS,$<) | ${EXTRACT_INCLUDES}) -I${CURDIR} $(realpath $<)
+	    ) $$(echo $(call FILE_CFLAGS,$<) | ${EXTRACT_INCLUDES}) -I$(dir $<) -I. $(realpath $<)
 
 ${OBJDIR}/$(notdir %.o) : %.c ${XDEPS}
-	${CC} ${CFLAGS} $(call FILE_CFLAGS,$<) -I${CURDIR} $(realpath $<) -c -o $@
+	${PCPP} $(realpath $<) | $(							\
+	) ${CC} -x c ${CFLAGS} $(call FILE_CFLAGS,$<) -I$(dir $<) -I. - -c -o $@
 
 ${OBJDIR}/$(notdir %.E) : %.c ${XDEPS}
-	${CC} ${CFLAGS} $(call FILE_CFLAGS,$<) -I${CURDIR} $(realpath $<) -E -o $@
+	${CC} ${CFLAGS} $(call FILE_CFLAGS,$<) -I$(dir $<) -I. $(realpath $<) -E -o $@
 
 ${OBJDIR}/$(notdir %.c) : %.l ${XDEPS}
 	echo "${LEX} ${LFLAGS} $(realpath $<) > $@"

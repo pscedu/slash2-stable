@@ -14,6 +14,7 @@ GENTYPES=	${ROOTDIR}/tools/gentypes.pl
 HDRCLEAN=	${ROOTDIR}/tools/hdrclean.pl
 LIBDEP=		${ROOTDIR}/tools/libdep.pl
 ECHORUN=	${ROOTDIR}/tools/echorun.sh
+PCPP=		${ROOTDIR}/tools/pcpp.pl -e
 MAKEFLAGS+=	--no-print-directory
 
 LFLAGS+=	-t
