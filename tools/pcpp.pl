@@ -71,37 +71,36 @@ for ($i = 0; $i < length $data; ) {
 		advance($+[0] - 1);
 		print "PFL_ENTER();";
 		advance(1);
-	} elsif (substr($data, $i) =~ /^\n}\s*$/m) {
+	} elsif (substr($data, $i) =~ /^\n}[ \t]*\n/s) {
 		# catch implicit 'return'
 		my $len = $+[0];
 		advance(1);
 		print "PFL_RETURNX();";
 		advance($len - 1);
-	} elsif (substr($data, $i) =~ /^.\breturn(;\s*}?)/s) {
+	} elsif (substr($data, $i) =~ /^return(;\s*}?\s*)/s) {
 		# catch 'return' without an arg
 		my $end = $1;
-		my $len = $+[0] - 1;
-		advance(1);
+		my $len = $+[0];
 		$i += $len;
 		print "PFL_RETURNX()$end";
-	} elsif (substr($data, $i) =~ /^.\breturn\s*(\(\s*".*?"\s*\)|".*?")\s*(;\s*}?)/s) {
+	} elsif (substr($data, $i) =~ /^return\s*(\(\s*".*?"\s*\)|".*?")\s*(;\s*}?\s*)/s) {
 		# catch 'return' with string literal arg
 		my $rv = $1;
 		my $end = $2;
-		my $len = $+[0] - 1;
-		advance(1);
+		my $len = $+[0];
 		$i += $len;
-		$rv =~ /^\s*\(\s*|\s*\)\s*$/g;
 		print "PFL_RETURN_STRLIT($rv)$end";
-	} elsif (substr($data, $i) =~ /^.\breturn\b\s*(.*?)\s*(;\s*}?)/s) {
+	} elsif (substr($data, $i) =~ /^return\b\s*(.*?)\s*(;\s*}?\s*)/s) {
 		# catch 'return' with an arg
 		my $rv = $1;
 		my $end = $2;
-		my $len = $+[0] - 1;
-		advance(1);
+		my $len = $+[0];
 		$i += $len;
-		$rv =~ /^\s*\(\s*|\s*\)\s*$/g;
 		print "PFL_RETURN($rv)$end";
+	} elsif (substr($data, $i) =~ /^(psc_fatalx?|exit|errx?)\s*\(.*?\)\s*(;\s*}?\s*)/s) {
+		advance($+[0]);
+	} elsif (substr($data, $i) =~ /^\w+/) {
+		advance($+[0]);
 	} else {
 		advance(1);
 	}
