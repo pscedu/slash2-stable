@@ -4,6 +4,7 @@
 use strict;
 use warnings;
 use Getopt::Std;
+use File::Basename;
 
 sub usage {
 	warn "usage: $0 [-e] file\n";
@@ -14,16 +15,19 @@ my %opts;
 getopts("e", \%opts) or usage;
 usage unless @ARGV == 1;
 
-open F, "<", $ARGV[0] or die "$ARGV[0]: $!\n";
+my $fn = $ARGV[0];
+
+open F, "<", $fn or die "$fn: $!\n";
 local $/;
 my $data = <F>;
 close F;
 
 # debug file ID
-print qq{# 1 "$ARGV[0]"\n};
+print qq{# 1 "$fn"\n};
 
 if ($data !~ m!psc_util/log\.h! or
-    $ARGV[0] =~ m|/log\.c$| or
+    basename($fn) eq "log.c" or
+    basename($fn) eq "thread.c" or
     !$opts{e}) {
 	print $data;
 	exit 0;
