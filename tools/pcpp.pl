@@ -122,7 +122,7 @@ for ($i = 0; $i < length $data; ) {
 		advance(1);
 	} elsif (substr($data, $i, 1) eq "}") {
 		$lvl--;
-		if ($lvl == 0 && substr($data, $i + 1) !~ /^.*;/) {
+		if ($lvl == 0 && substr($data, $i + 1) =~ /^\s*$/) {
 			# catch implicit 'return'
 			print "PFL_RETURNX();";
 		}
