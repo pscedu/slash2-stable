@@ -54,6 +54,7 @@ sub get_containing_func {
 }
 
 sub containing_func_is_dead {
+	return 0 unless defined $foff;
 	my $j = $foff;
 	while (--$j > 0) {
 		last if substr($data, $j, 1) eq ";";
@@ -145,9 +146,12 @@ for ($i = 0; $i < length $data; ) {
 		advance(1);
 	} elsif (substr($data, $i, 1) eq "}") {
 		$lvl--;
-		if ($lvl == 0 && substr($data, $i + 1) =~ /^\s*\n/s) {
-			# catch implicit 'return'
-			print "PFL_RETURNX();" unless containing_func_is_dead();
+		if ($lvl == 0) {
+			$foff = undef;
+			if (substr($data, $i + 1) =~ /^\s*\n/s) {
+				# catch implicit 'return'
+				print "PFL_RETURNX();" unless containing_func_is_dead();
+			}
 		}
 		advance(1);
 	} else {
