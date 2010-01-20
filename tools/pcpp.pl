@@ -26,6 +26,7 @@ close F;
 print qq{# 1 "$fn"\n};
 
 if ($data !~ m!psc_util/log\.h! or
+    basename($fn) eq "alloc.c" or
     basename($fn) eq "init.c" or
     basename($fn) eq "log.c" or
     basename($fn) eq "subsys.c" or
@@ -137,6 +138,7 @@ for ($i = 0; $i < length $data; ) {
 		print "PFL_RETURN($rv)$end";
 		$lvl-- if $end =~ /}/;
 	} elsif ($lvl == 1 && substr($data, $i) =~ /^(?:psc_fatalx?|exit|errx?)\s*\(.*?\)\s*(;\s*}?\s*)/s) {
+		# add goto and brace matching
 		my $end = $1;
 		advance($+[0]);
 		$lvl-- if $end =~ /}/;
