@@ -27,6 +27,7 @@ print qq{# 1 "$fn"\n};
 
 if ($data !~ m!psc_util/log\.h! or
     basename($fn) eq "log.c" or
+    basename($fn) eq "subsys.c" or
     basename($fn) eq "thread.c" or
     !$opts{e}) {
 	print $data;
@@ -35,12 +36,29 @@ if ($data !~ m!psc_util/log\.h! or
 
 my $i;
 my $lvl = 0;
+my $foff;
 
 sub advance {
 	my ($len) = @_;
 
 	print substr($data, $i, $len);
 	$i += $len;
+}
+
+sub get_containing_func {
+	my $s = reverse substr($data,0,$i);
+	if ($s =~ /^\s*{\s*\).*?\((\w+)/s) {
+		return scalar reverse $1;
+	}
+	return "";
+}
+
+sub containing_func_is_dead {
+	my $j = $foff;
+	while (--$j > 0) {
+		last if substr($data, $j, 1) eq ";";
+	}
+	return substr($data, $j, $foff - $j) =~ /\b__dead\b/;
 }
 
 for ($i = 0; $i < length $data; ) {
@@ -89,9 +107,10 @@ for ($i = 0; $i < length $data; ) {
 	} elsif ($lvl == 0 && substr($data, $i) =~ /^[^=]\s*\n{\s*\n/s) {
 		# catch routine entrance
 		advance($+[0] - 1);
-		print "PFL_ENTER();";
+		print "PFL_ENTER();" unless get_containing_func() eq "main";
 		advance(1);
 		$lvl++;
+		$foff = $i;
 	} elsif (substr($data, $i) =~ /^return(;\s*}?\s*)/s) {
 		# catch 'return' without an arg
 		my $end = $1;
@@ -126,9 +145,9 @@ for ($i = 0; $i < length $data; ) {
 		advance(1);
 	} elsif (substr($data, $i, 1) eq "}") {
 		$lvl--;
-		if ($lvl == 0 && substr($data, $i + 1) =~ /^\s*$/) {
+		if ($lvl == 0 && substr($data, $i + 1) =~ /^\s*$/m) {
 			# catch implicit 'return'
-			print "PFL_RETURNX();";
+			print "PFL_RETURNX();" unless containing_func_is_dead();
 		}
 		advance(1);
 	} else {
