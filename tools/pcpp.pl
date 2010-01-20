@@ -30,6 +30,7 @@ if ($data !~ m!psc_util/log\.h! or
 }
 
 my $i;
+my $lvl = 0;
 
 sub advance {
 	my ($len) = @_;
@@ -39,7 +40,20 @@ sub advance {
 }
 
 for ($i = 0; $i < length $data; ) {
-	if (substr($data, $i, 2) eq "/*") {
+	if (substr($data, $i, 1) eq "#") {
+		advance(1);
+		my $esc = 0;
+		for (; $i < length($data) && $esc == 0 &&
+		    substr($data, $i, 1) ne qq{\n}; advance(1)) {
+			if ($esc) {
+				$esc = 0;
+			} elsif (substr($data, $i, 1) eq "\\") {
+				$esc = 1;
+				$esc = 0;
+			}
+		}
+		advance(1);
+	} elsif (substr($data, $i, 2) eq "/*") {
 		# skip comments
 		if (substr($data, $i + 2) =~ m[\*/]) {
 			advance($+[0] + 2);
@@ -66,23 +80,19 @@ for ($i = 0; $i < length $data; ) {
 			}
 		}
 		advance(1);
-	} elsif (substr($data, $i) =~ /^[^=]\s*\n{\s*\n/s) {
+	} elsif ($lvl == 0 && substr($data, $i) =~ /^[^=]\s*\n{\s*\n/s) {
 		# catch routine entrance
 		advance($+[0] - 1);
 		print "PFL_ENTER();";
 		advance(1);
-	} elsif (substr($data, $i) =~ /^\n}[ \t]*\n/s) {
-		# catch implicit 'return'
-		my $len = $+[0];
-		advance(1);
-		print "PFL_RETURNX();";
-		advance($len - 1);
+		$lvl++;
 	} elsif (substr($data, $i) =~ /^return(;\s*}?\s*)/s) {
 		# catch 'return' without an arg
 		my $end = $1;
 		my $len = $+[0];
 		$i += $len;
 		print "PFL_RETURNX()$end";
+		$lvl-- if $end =~ /}/;
 	} elsif (substr($data, $i) =~ /^return\s*(\(\s*".*?"\s*\)|".*?")\s*(;\s*}?\s*)/s) {
 		# catch 'return' with string literal arg
 		my $rv = $1;
@@ -90,6 +100,7 @@ for ($i = 0; $i < length $data; ) {
 		my $len = $+[0];
 		$i += $len;
 		print "PFL_RETURN_STRLIT($rv)$end";
+		$lvl-- if $end =~ /}/;
 	} elsif (substr($data, $i) =~ /^return\b\s*(.*?)\s*(;\s*}?\s*)/s) {
 		# catch 'return' with an arg
 		my $rv = $1;
@@ -97,10 +108,23 @@ for ($i = 0; $i < length $data; ) {
 		my $len = $+[0];
 		$i += $len;
 		print "PFL_RETURN($rv)$end";
-	} elsif (substr($data, $i) =~ /^(psc_fatalx?|exit|errx?)\s*\(.*?\)\s*(;\s*}?\s*)/s) {
+		$lvl-- if $end =~ /}/;
+	} elsif ($lvl == 1 && substr($data, $i) =~ /^(?:psc_fatalx?|exit|errx?)\s*\(.*?\)\s*(;\s*}?\s*)/s) {
+		my $end = $1;
 		advance($+[0]);
+		$lvl-- if $end =~ /}/;
 	} elsif (substr($data, $i) =~ /^\w+/) {
 		advance($+[0]);
+	} elsif (substr($data, $i, 1) eq "{") {
+		$lvl++;
+		advance(1);
+	} elsif (substr($data, $i, 1) eq "}") {
+		$lvl--;
+		if ($lvl == 0 && substr($data, $i + 1) !~ /^\s*;/s) {
+			# catch implicit 'return'
+			print "PFL_RETURNX();";
+		}
+		advance(1);
 	} else {
 		advance(1);
 	}
