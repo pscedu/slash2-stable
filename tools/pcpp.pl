@@ -4,32 +4,88 @@
 use strict;
 use warnings;
 
-open F, "<", $ARGV[0];
-local $/;
-my $c = <F>;
-close F;
-
-# debugging file ID
+# debug file ID
 print qq{# 1 "$ARGV[0]"\n};
 
-if ($c =~ m!psc_util/log\.h! && $ARGV[0] !~ m!/log\.c$!) {
-	# strip comments
-	$c =~ s!/\*(.*?)\*/! join '', $1 =~ /\n/g !ges;
+open F, "<", $ARGV[0];
+local $/;
+my $data = <F>;
+close F;
 
-	# add enter markers
-	$c =~ s/^{\s*$/{ PFL_ENTER();/g;
-
-	# make return explicit
-	$c =~ s/^}\s*$/return; }/g;
-
-	# catch 'return' without an arg
-	$c =~ s/\breturn;/PFL_RETURNX();/g;
-
-	# catch 'return' with a string literal arg
-	$c =~ s/\breturn\s*\(?\s*(".*?")\s*\)?\s*;/PFL_RETURN_STRLIT($1);/gs;
-
-	# catch 'return' with an arg
-	$c =~ s/\breturn\b\s*(.*?)\s*;/PFL_RETURN($1);/gs;
+if ($data !~ m!psc_util/log\.h! || $ARGV[0] =~ m|/log\.c$|) {
+	print $data;
+	exit 0;
 }
 
-print $c;
+my $i;
+
+sub advance {
+	my ($len) = @_;
+
+	print substr($data, $i, $len);
+	$i += $len;
+}
+
+for ($i = 0; $i < length $data; ) {
+	if (substr($data, $i, 2) eq "/*") {
+		# skip comments
+		if (substr($data, $i + 2) =~ m[\*/]) {
+			advance($+[0]);
+		} else {
+			advance(length($data) - $i);
+		}
+	} elsif (substr($data, $i, 2) eq q{//}) {
+		if (substr($data, $i + 2) =~ m[\n]) {
+			advance($+[0]);
+		} else {
+			advance(length($data) - $i);
+		}
+	} elsif (substr($data, $i, 1) eq q{"}) {
+		# skip strings
+		advance(1);
+		my $esc = 0;
+		for (; $i < length($data) && $esc == 0 &&
+		    substr($data, $i, 1) ne q{"}; advance(1)) {
+			if (substr($data, $i, 1) eq "\\") {
+				$esc = 1;
+			} elsif ($esc) {
+				$esc = 0;
+			}
+		}
+	} elsif (substr($data, $i) =~ /^\n{\s*\n/s) {
+		# catch routine entrance
+		my $len = $+[0];
+		advance(2);
+		print "PFL_ENTER();";
+		advance($len - 2);
+	} elsif (substr($data, $i) =~ /^\n}\s*$/m) {
+		# catch implicit 'return'
+		my $len = $+[0];
+		advance(1);
+		print "PFL_RETURNX();";
+		advance($len - 1);
+	} elsif (substr($data, $i) =~ /^.\breturn;/) {
+		# catch 'return' without an arg
+		$i += $+[0];
+		advance(1);
+		print "PFL_RETURNX();";
+	} elsif (substr($data, $i) =~ /^.\breturn\s*(\(\s*".*?"\s*\)|".*?")\s*;/s) {
+		# catch 'return' with string literal arg
+		my $rc = $1;
+		my $len = $+[0];
+		advance(1);
+		$i += $len - 1;
+		$rc =~ /^\s*\(\s*|\s*\)\s*$/g;
+		print "PFL_RETURN_STRLIT($rc);";
+	} elsif (substr($data, $i) =~ /^.\breturn\b\s*(.*?)\s*;/s) {
+		# catch 'return' with an arg
+		my $rc = $1;
+		my $len = $+[0];
+		advance(1);
+		$i += $len - 1;
+		$rc =~ /^\s*\(\s*|\s*\)\s*$/g;
+		print "PFL_RETURN($rc);";
+	} else {
+		advance(1);
+	}
+}
