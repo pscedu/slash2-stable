@@ -3,6 +3,15 @@
 
 use strict;
 use warnings;
+use Getopt::Std;
+
+sub usage {
+	warn "usage: $0 [-e] file\n";
+	exit 1;
+}
+
+my %opts;
+getopts("e", \%opts) or usage;
 
 # debug file ID
 print qq{# 1 "$ARGV[0]"\n};
@@ -12,7 +21,9 @@ local $/;
 my $data = <F>;
 close F;
 
-if ($data !~ m!psc_util/log\.h! || $ARGV[0] =~ m|/log\.c$|) {
+if ($data !~ m!psc_util/log\.h! or
+    $ARGV[0] =~ m|/log\.c$| or
+    !$opts{e}) {
 	print $data;
 	exit 0;
 }
@@ -30,13 +41,13 @@ for ($i = 0; $i < length $data; ) {
 	if (substr($data, $i, 2) eq "/*") {
 		# skip comments
 		if (substr($data, $i + 2) =~ m[\*/]) {
-			advance($+[0]);
+			advance($+[0] + 2);
 		} else {
 			advance(length($data) - $i);
 		}
 	} elsif (substr($data, $i, 2) eq q{//}) {
 		if (substr($data, $i + 2) =~ m[\n]) {
-			advance($+[0]);
+			advance($+[0] + 1);
 		} else {
 			advance(length($data) - $i);
 		}
@@ -46,12 +57,14 @@ for ($i = 0; $i < length $data; ) {
 		my $esc = 0;
 		for (; $i < length($data) && $esc == 0 &&
 		    substr($data, $i, 1) ne q{"}; advance(1)) {
-			if (substr($data, $i, 1) eq "\\") {
+			if ($esc) {
+				$esc = 0;
+			} elsif (substr($data, $i, 1) eq "\\") {
 				$esc = 1;
-			} elsif ($esc) {
 				$esc = 0;
 			}
 		}
+		advance(1);
 	} elsif (substr($data, $i) =~ /^\n{\s*\n/s) {
 		# catch routine entrance
 		my $len = $+[0];
