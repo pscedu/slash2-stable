@@ -23,7 +23,6 @@ void request_out_callback(lnet_event_t *ev)
 {
 	struct pscrpc_cb_id   *cbid = ev->md.user_ptr;
 	struct pscrpc_request *req = cbid->cbid_arg;
-	ENTRY;
 
 	LASSERT (ev->type == LNET_EVENT_SEND ||
 		 ev->type == LNET_EVENT_UNLINK);
@@ -45,8 +44,6 @@ void request_out_callback(lnet_event_t *ev)
 	/* these balance the references in ptl_send_rpc() */
 	atomic_dec(&req->rq_import->imp_inflight);
 	pscrpc_req_finished(req);
-
-	EXIT;
 }
 
 void
@@ -66,7 +63,6 @@ void request_in_callback(lnet_event_t *ev)
 	struct pscrpc_request_buffer_desc *rqbd = cbid->cbid_arg;
 	struct pscrpc_service             *service = rqbd->rqbd_service;
 	struct pscrpc_request             *req;
-	ENTRY;
 
 	LASSERT (ev->type == LNET_EVENT_PUT ||
 		 ev->type == LNET_EVENT_UNLINK);
@@ -93,7 +89,6 @@ void request_in_callback(lnet_event_t *ev)
 		LASSERT (ev->type == LNET_EVENT_PUT);
 		if (ev->status != 0) {
 			/* We moaned above already... */
-			EXIT;
 			return;
 		}
 #if 0
@@ -105,7 +100,6 @@ void request_in_callback(lnet_event_t *ev)
 			       "Dropping %s RPC from %s\n",
 			       service->srv_name,
 			       libcfs_id2str(ev->initiator));
-			EXIT;
 			return;
 		}
 	}
@@ -199,7 +193,6 @@ void request_in_callback(lnet_event_t *ev)
 	psc_waitq_wakeall(&service->srv_waitq);
 
 	freelock(&service->srv_lock);
-	EXIT;
 }
 
 /*
@@ -209,7 +202,6 @@ void client_bulk_callback (lnet_event_t *ev)
 {
 	struct pscrpc_cb_id     *cbid = ev->md.user_ptr;
 	struct pscrpc_bulk_desc *desc = cbid->cbid_arg;
-	ENTRY;
 
 	LASSERT ((desc->bd_type == BULK_PUT_SINK &&
 		  ev->type == LNET_EVENT_PUT) ||
@@ -237,7 +229,6 @@ void client_bulk_callback (lnet_event_t *ev)
 	pscrpc_wake_client_req(desc->bd_req);
 
 	freelock(&desc->bd_lock);
-	EXIT;
 }
 
 
@@ -245,7 +236,6 @@ void reply_in_callback(lnet_event_t *ev)
 {
 	struct pscrpc_cb_id   *cbid = ev->md.user_ptr;
 	struct pscrpc_request *req = cbid->cbid_arg;
-	ENTRY;
 
 	LASSERT (ev->type == LNET_EVENT_PUT ||
 		 ev->type == LNET_EVENT_UNLINK);
@@ -290,7 +280,6 @@ void reply_in_callback(lnet_event_t *ev)
 	pscrpc_wake_client_req(req);
 
 	freelock(&req->rq_lock);
-	EXIT;
 }
 
 /*
@@ -301,7 +290,6 @@ void reply_out_callback(lnet_event_t *ev)
 	struct pscrpc_cb_id       *cbid = ev->md.user_ptr;
 	struct pscrpc_reply_state *rs = cbid->cbid_arg;
 	struct pscrpc_service     *svc = rs->rs_service;
-	ENTRY;
 
 	LASSERT (ev->type == LNET_EVENT_SEND ||
 		 ev->type == LNET_EVENT_ACK ||
@@ -313,7 +301,6 @@ void reply_out_callback(lnet_event_t *ev)
 		LASSERT (ev->unlinked);
 		pscrpc_rs_decref(rs);
 		atomic_dec (&svc->srv_outstanding_replies);
-		EXIT;
 		return;
 	}
 
@@ -331,8 +318,6 @@ void reply_out_callback(lnet_event_t *ev)
 #endif
 		freelock(&svc->srv_lock);
 	}
-
-	EXIT;
 }
 
 /*
@@ -342,7 +327,6 @@ void server_bulk_callback (lnet_event_t *ev)
 {
 	struct pscrpc_cb_id     *cbid = ev->md.user_ptr;
 	struct pscrpc_bulk_desc *desc = cbid->cbid_arg;
-	ENTRY;
 
 	LASSERT (ev->type == LNET_EVENT_SEND ||
 		 ev->type == LNET_EVENT_UNLINK ||
@@ -374,7 +358,6 @@ void server_bulk_callback (lnet_event_t *ev)
 	}
 
 	freelock(&desc->bd_lock);
-	EXIT;
 }
 
 static void
@@ -464,12 +447,11 @@ pscrpc_check_events (int timeout)
 	lnet_event_t ev;
 	int         rc;
 	int         i;
-	ENTRY;
 
 	psc_trace("timeo_ms %d", timeout * 1000);
 	rc = LNetEQPoll(&pscrpc_eq_h, 1, timeout * 1000, &ev, &i);
 	if (rc == 0)
-		RETURN(0);
+		return (0);
 
 	LASSERT (rc == -EOVERFLOW || rc == 1);
 
@@ -481,7 +463,7 @@ pscrpc_check_events (int timeout)
 	}
 
 	pscrpc_master_callback (&ev);
-	RETURN(1);
+	return (1);
 }
 
 /**

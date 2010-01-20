@@ -44,57 +44,56 @@
  * @mdh:  md handle to
  */
 static int psc_send_buf (lnet_handle_md_t *mdh, void *base, int len,
-                          lnet_ack_req_t ack, struct pscrpc_cb_id *cbid,
-                          struct pscrpc_connection *conn,
-                          int portal, uint64_t xid)
+			  lnet_ack_req_t ack, struct pscrpc_cb_id *cbid,
+			  struct pscrpc_connection *conn,
+			  int portal, uint64_t xid)
 {
-        int              rc;
-        lnet_md_t         md;
-        ENTRY;
+	int              rc;
+	lnet_md_t         md;
 
-        psc_assert (portal != 0);
-        psc_assert (conn != NULL);
-        CDEBUG (D_INFO, "conn=%p id %s\n", conn, libcfs_id2str(conn->c_peer));
-        md.start     = base;
-        md.length    = len;
-        md.threshold = (ack == LNET_ACK_REQ) ? 2 : 1;
-        md.options   = PSCRPC_MD_OPTIONS;
-        md.user_ptr  = cbid;
-        md.eq_handle = pscrpc_eq_h;
+	psc_assert (portal != 0);
+	psc_assert (conn != NULL);
+	CDEBUG (D_INFO, "conn=%p id %s\n", conn, libcfs_id2str(conn->c_peer));
+	md.start     = base;
+	md.length    = len;
+	md.threshold = (ack == LNET_ACK_REQ) ? 2 : 1;
+	md.options   = PSCRPC_MD_OPTIONS;
+	md.user_ptr  = cbid;
+	md.eq_handle = pscrpc_eq_h;
 
 #if 0
-        if (ack == LNET_ACK_REQ &&
-            OBD_FAIL_CHECK(OBD_FAIL_PSCRPC_ACK | OBD_FAIL_ONCE)) {
-                /* don't ask for the ack to simulate failing client */
-                ack = LNET_NOACK_REQ;
-                obd_fail_loc |= OBD_FAIL_ONCE | OBD_FAILED;
-        }
+	if (ack == LNET_ACK_REQ &&
+	    OBD_FAIL_CHECK(OBD_FAIL_PSCRPC_ACK | OBD_FAIL_ONCE)) {
+		/* don't ask for the ack to simulate failing client */
+		ack = LNET_NOACK_REQ;
+		obd_fail_loc |= OBD_FAIL_ONCE | OBD_FAILED;
+	}
 #endif
 
-        rc = LNetMDBind (md, LNET_UNLINK, mdh);
-        if (rc != 0) {
-                psc_errorx("LNetMDBind failed: %d", rc);
-                psc_assert (rc == -ENOMEM);
-                RETURN (-ENOMEM);
-        }
+	rc = LNetMDBind (md, LNET_UNLINK, mdh);
+	if (rc != 0) {
+		psc_errorx("LNetMDBind failed: %d", rc);
+		psc_assert (rc == -ENOMEM);
+		return (-ENOMEM);
+	}
 
-        psc_info("Sending %d bytes to portal %d, xid %"PRIx64,
+	psc_info("Sending %d bytes to portal %d, xid %"PRIx64,
 		 len, portal, xid);
 
-        rc = LNetPut (conn->c_self, *mdh, ack,
-                      conn->c_peer, portal, xid, 0, 0);
-        if (rc != 0) {
-                int rc2;
-                /* We're going to get an UNLINK event when I unlink below,
-                 * which will complete just like any other failed send, so
-                 * I fall through and return success here! */
-                psc_errorx("LNetPut(%s, %d, %"PRIu64") failed: %d",
+	rc = LNetPut (conn->c_self, *mdh, ack,
+		      conn->c_peer, portal, xid, 0, 0);
+	if (rc != 0) {
+		int rc2;
+		/* We're going to get an UNLINK event when I unlink below,
+		 * which will complete just like any other failed send, so
+		 * I fall through and return success here! */
+		psc_errorx("LNetPut(%s, %d, %"PRIu64") failed: %d",
 			libcfs_id2str(conn->c_peer), portal, xid, rc);
-                rc2 = LNetMDUnlink(*mdh);
-                psc_assert_msg(rc2 == 0, "rc2 = %d\n", rc2);
-        }
+		rc2 = LNetMDUnlink(*mdh);
+		psc_assert_msg(rc2 == 0, "rc2 = %d\n", rc2);
+	}
 
-        RETURN (0);
+	return (0);
 }
 
 /**
@@ -103,115 +102,114 @@ static int psc_send_buf (lnet_handle_md_t *mdh, void *base, int len,
  */
 int pscrpc_start_bulk_transfer (struct pscrpc_bulk_desc *desc)
 {
-        /* the lustre way: */
-        //struct pscrpc_connection *conn = desc->bd_export->exp_connection;
-        struct pscrpc_connection *conn = desc->bd_connection;
-        int                        rc;
-        int                        rc2;
-        lnet_md_t                  md;
-        uint64_t                   xid;
-        ENTRY;
+	/* the lustre way: */
+	//struct pscrpc_connection *conn = desc->bd_export->exp_connection;
+	struct pscrpc_connection *conn = desc->bd_connection;
+	int                        rc;
+	int                        rc2;
+	lnet_md_t                  md;
+	uint64_t                   xid;
 
-        //if (OBD_FAIL_CHECK_ONCE(OBD_FAIL_PSCRPC_BULK_PUT_NET))
-        //        RETURN(0);
+	//if (OBD_FAIL_CHECK_ONCE(OBD_FAIL_PSCRPC_BULK_PUT_NET))
+	//        return (0);
 
-        /* NB no locking required until desc is on the network */
-        psc_assert (!desc->bd_network_rw);
-        psc_assert (desc->bd_type == BULK_PUT_SOURCE ||
-                 desc->bd_type == BULK_GET_SINK);
+	/* NB no locking required until desc is on the network */
+	psc_assert (!desc->bd_network_rw);
+	psc_assert (desc->bd_type == BULK_PUT_SOURCE ||
+		 desc->bd_type == BULK_GET_SINK);
 	psc_assert (conn != NULL);
 
-        desc->bd_success = 0;
-	
+	desc->bd_success = 0;
+
 	md.max_size = 0;
-        md.user_ptr = &desc->bd_cbid;
-        md.eq_handle = pscrpc_eq_h;
-        md.threshold = 2; /* SENT and ACK/REPLY */
-        md.options = PSCRPC_MD_OPTIONS;
-        pscrpc_fill_bulk_md(&md, desc);
+	md.user_ptr = &desc->bd_cbid;
+	md.eq_handle = pscrpc_eq_h;
+	md.threshold = 2; /* SENT and ACK/REPLY */
+	md.options = PSCRPC_MD_OPTIONS;
+	pscrpc_fill_bulk_md(&md, desc);
 
-        psc_assert (desc->bd_cbid.cbid_fn == server_bulk_callback);
-        psc_assert (desc->bd_cbid.cbid_arg == desc);
+	psc_assert (desc->bd_cbid.cbid_fn == server_bulk_callback);
+	psc_assert (desc->bd_cbid.cbid_arg == desc);
 
-        /* NB total length may be 0 for a read past EOF, so we send a 0
-         * length bulk, since the client expects a bulk event. */
+	/* NB total length may be 0 for a read past EOF, so we send a 0
+	 * length bulk, since the client expects a bulk event. */
 
-        rc = LNetMDBind(md, LNET_UNLINK, &desc->bd_md_h);
-        if (rc != 0) {
-                CERROR("LNetMDBind failed: %d\n", rc);
-                psc_assert (rc == -ENOMEM);
-                RETURN(-ENOMEM);
-        }
+	rc = LNetMDBind(md, LNET_UNLINK, &desc->bd_md_h);
+	if (rc != 0) {
+		CERROR("LNetMDBind failed: %d\n", rc);
+		psc_assert (rc == -ENOMEM);
+		return (-ENOMEM);
+	}
 
-        /* Client's bulk and reply matchbits are the same */
-        xid = desc->bd_req->rq_xid;
-        CDEBUG(D_NET, "Transferring %u pages %u bytes via portal %d "
-               "id %s xid %"PRIx64"\n",
-               desc->bd_iov_count, desc->bd_nob, desc->bd_portal,
-               libcfs_id2str(conn->c_peer), xid);
+	/* Client's bulk and reply matchbits are the same */
+	xid = desc->bd_req->rq_xid;
+	CDEBUG(D_NET, "Transferring %u pages %u bytes via portal %d "
+	       "id %s xid %"PRIx64"\n",
+	       desc->bd_iov_count, desc->bd_nob, desc->bd_portal,
+	       libcfs_id2str(conn->c_peer), xid);
 
-        /* Network is about to get at the memory */
-        desc->bd_network_rw = 1;
+	/* Network is about to get at the memory */
+	desc->bd_network_rw = 1;
 
-        if (desc->bd_type == BULK_PUT_SOURCE)
-                rc = LNetPut (conn->c_self, desc->bd_md_h, LNET_ACK_REQ,
-                              conn->c_peer, desc->bd_portal, xid, 0, 0);
-        else
-                rc = LNetGet (conn->c_self, desc->bd_md_h,
-                              conn->c_peer, desc->bd_portal, xid, 0);
+	if (desc->bd_type == BULK_PUT_SOURCE)
+		rc = LNetPut (conn->c_self, desc->bd_md_h, LNET_ACK_REQ,
+			      conn->c_peer, desc->bd_portal, xid, 0, 0);
+	else
+		rc = LNetGet (conn->c_self, desc->bd_md_h,
+			      conn->c_peer, desc->bd_portal, xid, 0);
 
-        if (rc != 0) {
-                /* Can't send, so we unlink the MD bound above.  The UNLINK
-                 * event this creates will signal completion with failure,
-                 * so we return SUCCESS here! */
-                CERROR("Transfer(%s, %d, %"PRIx64") failed: %d\n",
-                       libcfs_id2str(conn->c_peer), desc->bd_portal, xid, rc);
-                rc2 = LNetMDUnlink(desc->bd_md_h);
-                psc_assert (rc2 == 0);
-        }
+	if (rc != 0) {
+		/* Can't send, so we unlink the MD bound above.  The UNLINK
+		 * event this creates will signal completion with failure,
+		 * so we return SUCCESS here! */
+		CERROR("Transfer(%s, %d, %"PRIx64") failed: %d\n",
+		       libcfs_id2str(conn->c_peer), desc->bd_portal, xid, rc);
+		rc2 = LNetMDUnlink(desc->bd_md_h);
+		psc_assert (rc2 == 0);
+	}
 
-        RETURN(0);
+	return (0);
 }
 
 void pscrpc_abort_bulk (struct pscrpc_bulk_desc *desc)
 {
-        /* Server side bulk abort. Idempotent. Not thread-safe (i.e. only
-         * serialises with completion callback) */
-        struct l_wait_info  lwi;
-        int    rc;
+	/* Server side bulk abort. Idempotent. Not thread-safe (i.e. only
+	 * serialises with completion callback) */
+	struct l_wait_info  lwi;
+	int    rc;
 
-        //psc_assert (!in_interrupt ());             /* might sleep */
+	//psc_assert (!in_interrupt ());             /* might sleep */
 
-        if (!pscrpc_bulk_active(desc))          /* completed or */
-                return;                         /* never started */
+	if (!pscrpc_bulk_active(desc))          /* completed or */
+		return;                         /* never started */
 
-        /* Do not send any meaningful data over the wire for evicted clients */
+	/* Do not send any meaningful data over the wire for evicted clients */
 #if 0
-        if (desc->bd_export && desc->bd_export->exp_failed)
-                ptl_rpc_wipe_bulk_pages(desc);
+	if (desc->bd_export && desc->bd_export->exp_failed)
+		ptl_rpc_wipe_bulk_pages(desc);
 #endif
 
-        /* The unlink ensures the callback happens ASAP and is the last
-         * one.  If it fails, it must be because completion just happened,
-         * but we must still l_wait_event() in this case, to give liblustre
-         * a chance to run server_bulk_callback()*/
+	/* The unlink ensures the callback happens ASAP and is the last
+	 * one.  If it fails, it must be because completion just happened,
+	 * but we must still l_wait_event() in this case, to give liblustre
+	 * a chance to run server_bulk_callback()*/
 
-        LNetMDUnlink (desc->bd_md_h);
+	LNetMDUnlink (desc->bd_md_h);
 
-        for (;;) {
-                /* Network access will complete in finite time but the HUGE
-                 * timeout lets us CWARN for visibility of sluggish NALs */
-                lwi = LWI_TIMEOUT (300, NULL, NULL);
-                rc = psc_svr_wait_event(&desc->bd_waitq,
+	for (;;) {
+		/* Network access will complete in finite time but the HUGE
+		 * timeout lets us CWARN for visibility of sluggish NALs */
+		lwi = LWI_TIMEOUT (300, NULL, NULL);
+		rc = psc_svr_wait_event(&desc->bd_waitq,
 					!pscrpc_bulk_active(desc),
 					&lwi, NULL);
 
-                if (rc == 0)
-                        return;
+		if (rc == 0)
+			return;
 
-                psc_assert(rc == -ETIMEDOUT);
-                CWARN("Unexpectedly long timeout: desc %p\n", desc);
-        }
+		psc_assert(rc == -ETIMEDOUT);
+		CWARN("Unexpectedly long timeout: desc %p\n", desc);
+	}
 }
 
 /**
@@ -220,75 +218,74 @@ void pscrpc_abort_bulk (struct pscrpc_bulk_desc *desc)
  */
 int pscrpc_register_bulk (struct pscrpc_request *req)
 {
-        struct pscrpc_bulk_desc *desc = req->rq_bulk;
-        lnet_process_id_t peer;
-        int rc;
-        int rc2;
-        lnet_handle_me_t  me_h;
-        lnet_md_t         md;
-        ENTRY;
+	struct pscrpc_bulk_desc *desc = req->rq_bulk;
+	lnet_process_id_t peer;
+	int rc;
+	int rc2;
+	lnet_handle_me_t  me_h;
+	lnet_md_t         md;
 
-        //if (OBD_FAIL_CHECK_ONCE(OBD_FAIL_PSCRPC_BULK_GET_NET))
-        //        RETURN(0);
+	//if (OBD_FAIL_CHECK_ONCE(OBD_FAIL_PSCRPC_BULK_GET_NET))
+	//        return (0);
 
-        /* NB no locking required until desc is on the network */
-        psc_assert (desc->bd_nob > 0);
-        psc_assert (!desc->bd_network_rw);
-        psc_assert (desc->bd_iov_count <= (int)PSCRPC_MAX_BRW_PAGES);
-        psc_assert (desc->bd_req != NULL);
-        psc_assert (desc->bd_type == BULK_PUT_SINK ||
-                 desc->bd_type == BULK_GET_SOURCE);
+	/* NB no locking required until desc is on the network */
+	psc_assert (desc->bd_nob > 0);
+	psc_assert (!desc->bd_network_rw);
+	psc_assert (desc->bd_iov_count <= (int)PSCRPC_MAX_BRW_PAGES);
+	psc_assert (desc->bd_req != NULL);
+	psc_assert (desc->bd_type == BULK_PUT_SINK ||
+		 desc->bd_type == BULK_GET_SOURCE);
 	psc_assert (desc->bd_connection != NULL);
 
-        desc->bd_success = 0;
-        peer = desc->bd_import->imp_connection->c_peer;
+	desc->bd_success = 0;
+	peer = desc->bd_import->imp_connection->c_peer;
 
-        md.user_ptr = &desc->bd_cbid;
-        md.eq_handle = pscrpc_eq_h;
-        md.threshold = 1;                       /* PUT or GET */
-        md.options = PSCRPC_MD_OPTIONS |
-                     ((desc->bd_type == BULK_GET_SOURCE) ?
-                      LNET_MD_OP_GET : LNET_MD_OP_PUT);
-        pscrpc_fill_bulk_md(&md, desc);
+	md.user_ptr = &desc->bd_cbid;
+	md.eq_handle = pscrpc_eq_h;
+	md.threshold = 1;                       /* PUT or GET */
+	md.options = PSCRPC_MD_OPTIONS |
+		     ((desc->bd_type == BULK_GET_SOURCE) ?
+		      LNET_MD_OP_GET : LNET_MD_OP_PUT);
+	pscrpc_fill_bulk_md(&md, desc);
 
-        psc_assert (desc->bd_cbid.cbid_fn == client_bulk_callback);
-        psc_assert (desc->bd_cbid.cbid_arg == desc);
+	psc_assert (desc->bd_cbid.cbid_fn == client_bulk_callback);
+	psc_assert (desc->bd_cbid.cbid_arg == desc);
 
-        /* XXX Registering the same xid on retried bulk makes my head
-         * explode trying to understand how the original request's bulk
-         * might interfere with the retried request -eeb */
-        psc_assert_msg(!desc->bd_registered || req->rq_xid != desc->bd_last_xid,
-                  "registered: %d  rq_xid: %"PRIx64" bd_last_xid: %"PRIx64"\n",
-                  desc->bd_registered, req->rq_xid, desc->bd_last_xid);
-        desc->bd_registered = 1;
-        desc->bd_last_xid = req->rq_xid;
+	/* XXX Registering the same xid on retried bulk makes my head
+	 * explode trying to understand how the original request's bulk
+	 * might interfere with the retried request -eeb */
+	psc_assert_msg(!desc->bd_registered || req->rq_xid != desc->bd_last_xid,
+		  "registered: %d  rq_xid: %"PRIx64" bd_last_xid: %"PRIx64"\n",
+		  desc->bd_registered, req->rq_xid, desc->bd_last_xid);
+	desc->bd_registered = 1;
+	desc->bd_last_xid = req->rq_xid;
 
-        rc = LNetMEAttach(desc->bd_portal, peer,
-                         req->rq_xid, 0, LNET_UNLINK, LNET_INS_AFTER, &me_h);
-        if (rc != 0) {
-                psc_errorx("LNetMEAttach failed: %d", rc);
-                psc_assert (rc == -ENOMEM);
-                RETURN (-ENOMEM);
-        }
+	rc = LNetMEAttach(desc->bd_portal, peer,
+			 req->rq_xid, 0, LNET_UNLINK, LNET_INS_AFTER, &me_h);
+	if (rc != 0) {
+		psc_errorx("LNetMEAttach failed: %d", rc);
+		psc_assert (rc == -ENOMEM);
+		return (-ENOMEM);
+	}
 
-        /* About to let the network at it... */
-        desc->bd_network_rw = 1;
-        rc = LNetMDAttach(me_h, md, LNET_UNLINK, &desc->bd_md_h);
-        if (rc != 0) {
-                psc_errorx("LNetMDAttach failed: %d", rc);
-                psc_assert (rc == -ENOMEM);
-                desc->bd_network_rw = 0;
-                rc2 = LNetMEUnlink (me_h);
-                psc_assert (rc2 == 0);
-                RETURN (-ENOMEM);
-        }
+	/* About to let the network at it... */
+	desc->bd_network_rw = 1;
+	rc = LNetMDAttach(me_h, md, LNET_UNLINK, &desc->bd_md_h);
+	if (rc != 0) {
+		psc_errorx("LNetMDAttach failed: %d", rc);
+		psc_assert (rc == -ENOMEM);
+		desc->bd_network_rw = 0;
+		rc2 = LNetMEUnlink (me_h);
+		psc_assert (rc2 == 0);
+		return (-ENOMEM);
+	}
 
-        psc_info("Setup bulk %s buffers: %u pages %u bytes, xid %"PRIx64", "
+	psc_info("Setup bulk %s buffers: %u pages %u bytes, xid %"PRIx64", "
 		 "portal %u",
 		 desc->bd_type == BULK_GET_SOURCE ? "get-source" : "put-sink",
 		 desc->bd_iov_count, desc->bd_nob,
 		 req->rq_xid, desc->bd_portal);
-        RETURN(0);
+	return (0);
 }
 
 /**
@@ -297,25 +294,25 @@ int pscrpc_register_bulk (struct pscrpc_request *req)
  */
 void pscrpc_unregister_bulk (struct pscrpc_request *req)
 {
-        /* Disconnect a bulk desc from the network. Idempotent. Not
-         * thread-safe (i.e. only interlocks with completion callback). */
-        struct pscrpc_bulk_desc *desc = req->rq_bulk;
-        struct psc_waitq        *wq;
-        struct l_wait_info       lwi;
-        int                      rc, l, registered=0;
+	/* Disconnect a bulk desc from the network. Idempotent. Not
+	 * thread-safe (i.e. only interlocks with completion callback). */
+	struct pscrpc_bulk_desc *desc = req->rq_bulk;
+	struct psc_waitq        *wq;
+	struct l_wait_info       lwi;
+	int                      rc, l, registered=0;
 
 	l = reqlock(&desc->bd_lock);
 
 	psc_info("desc->bd_registered=(%d) pscrpc_bulk_active(desc)=(%d)",
 		 desc->bd_registered, pscrpc_bulk_active(desc));
 
-        if (!desc->bd_registered && !pscrpc_bulk_active(desc)) {  /* completed or */
+	if (!desc->bd_registered && !pscrpc_bulk_active(desc)) {  /* completed or */
 		ureqlock(&desc->bd_lock, l);                      /* never registered */
-                return;
+		return;
 	}
 	/* bd_req NULL until registered
 	 */
-        psc_assert(desc->bd_req == req);
+	psc_assert(desc->bd_req == req);
 	/* Signify that this is being unlinked.
 	 */
 	if (desc->bd_registered) {
@@ -325,33 +322,33 @@ void pscrpc_unregister_bulk (struct pscrpc_request *req)
 
 	ureqlock(&desc->bd_lock, l);
 
-        /* the unlink ensures the callback happens ASAP and is the last
-         * one.  If it fails, it must be because completion just happened,
-         * but we must still l_wait_event() in this case to give liblustre
-         * a chance to run client_bulk_callback() */
+	/* the unlink ensures the callback happens ASAP and is the last
+	 * one.  If it fails, it must be because completion just happened,
+	 * but we must still l_wait_event() in this case to give liblustre
+	 * a chance to run client_bulk_callback() */
 	if (registered)
 		LNetMDUnlink (desc->bd_md_h);
 
-        if (req->rq_set != NULL)
-                wq = &req->rq_set->set_waitq;
-        else
-                wq = &req->rq_reply_waitq;
+	if (req->rq_set != NULL)
+		wq = &req->rq_set->set_waitq;
+	else
+		wq = &req->rq_reply_waitq;
 
 	/* This segment should only be needed for single threaded nals.
 	 */
-        for (;;) {
-                /* Network access will complete in finite time but the HUGE
-                 * timeout lets us CWARN for visibility of sluggish NALs */
-                lwi = LWI_TIMEOUT (300, NULL, NULL);
-                rc = psc_cli_wait_event(wq, !pscrpc_bulk_active(desc),
+	for (;;) {
+		/* Network access will complete in finite time but the HUGE
+		 * timeout lets us CWARN for visibility of sluggish NALs */
+		lwi = LWI_TIMEOUT (300, NULL, NULL);
+		rc = psc_cli_wait_event(wq, !pscrpc_bulk_active(desc),
 				    &lwi);
-                if (rc == 0)
-                        return;
+		if (rc == 0)
+			return;
 
-                psc_assert (rc == -ETIMEDOUT);
-                DEBUG_REQ(PLL_WARN, req,
+		psc_assert (rc == -ETIMEDOUT);
+		DEBUG_REQ(PLL_WARN, req,
 			  "Unexpectedly long timeout: desc %p", desc);
-        }
+	}
 }
 
 /**
@@ -361,91 +358,90 @@ void pscrpc_unregister_bulk (struct pscrpc_request *req)
  */
 int pscrpc_send_reply (struct pscrpc_request *req, int may_be_difficult)
 {
-        struct pscrpc_service     *svc = req->rq_rqbd->rqbd_service;
-        struct pscrpc_reply_state *rs  = req->rq_reply_state;
-        int                        rc;
+	struct pscrpc_service     *svc = req->rq_rqbd->rqbd_service;
+	struct pscrpc_reply_state *rs  = req->rq_reply_state;
+	int                        rc;
 
-        /* We must already have a reply buffer (only pscrpc_error() may be
-         * called without one).  We must also have a request buffer which
-         * is either the actual (swabbed) incoming request, or a saved copy
-         * if this is a req saved in target_queue_final_reply(). */
-        psc_assert (req->rq_reqmsg != NULL);
-        psc_assert (rs != NULL);
-        psc_assert (req->rq_repmsg != NULL);
-        psc_assert (may_be_difficult || !rs->rs_difficult);
-        psc_assert (req->rq_repmsg == &rs->rs_msg);
-        psc_assert (rs->rs_cb_id.cbid_fn == reply_out_callback);
-        psc_assert (rs->rs_cb_id.cbid_arg == rs);
-        psc_assert (req->rq_repmsg != NULL);
+	/* We must already have a reply buffer (only pscrpc_error() may be
+	 * called without one).  We must also have a request buffer which
+	 * is either the actual (swabbed) incoming request, or a saved copy
+	 * if this is a req saved in target_queue_final_reply(). */
+	psc_assert (req->rq_reqmsg != NULL);
+	psc_assert (rs != NULL);
+	psc_assert (req->rq_repmsg != NULL);
+	psc_assert (may_be_difficult || !rs->rs_difficult);
+	psc_assert (req->rq_repmsg == &rs->rs_msg);
+	psc_assert (rs->rs_cb_id.cbid_fn == reply_out_callback);
+	psc_assert (rs->rs_cb_id.cbid_arg == rs);
+	psc_assert (req->rq_repmsg != NULL);
 
 #if PAULS_TODO
-        /*
-         * pscrpc will have to place portions of the export
-         *   functionality into the service - so here the request
-         *   should probably be linked with the pscrpc_service
-         * For now we'll just shelf this check - paul
-         */
-        if (req->rq_export && req->rq_export->exp_obd &&
-            req->rq_export->exp_obd->obd_fail) {
-                /* Failed obd's only send ENODEV */
-                req->rq_type = PSCRPC_MSG_ERR;
-                req->rq_status = -ENODEV;
-                CDEBUG(D_HA, "sending ENODEV from failed obd %d\n",
-                       req->rq_export->exp_obd->obd_minor);
-        }
+	/*
+	 * pscrpc will have to place portions of the export
+	 *   functionality into the service - so here the request
+	 *   should probably be linked with the pscrpc_service
+	 * For now we'll just shelf this check - paul
+	 */
+	if (req->rq_export && req->rq_export->exp_obd &&
+	    req->rq_export->exp_obd->obd_fail) {
+		/* Failed obd's only send ENODEV */
+		req->rq_type = PSCRPC_MSG_ERR;
+		req->rq_status = -ENODEV;
+		CDEBUG(D_HA, "sending ENODEV from failed obd %d\n",
+		       req->rq_export->exp_obd->obd_minor);
+	}
 #endif
 
-        if (req->rq_type != PSCRPC_MSG_ERR)
-                req->rq_type = PSCRPC_MSG_REPLY;
+	if (req->rq_type != PSCRPC_MSG_ERR)
+		req->rq_type = PSCRPC_MSG_REPLY;
 
-        req->rq_repmsg->type   = req->rq_type;
-        req->rq_repmsg->status = req->rq_status;
-        req->rq_repmsg->opc    = req->rq_reqmsg->opc;
-        if (req->rq_conn == NULL)
-                req->rq_conn = pscrpc_get_connection(req->rq_peer,
+	req->rq_repmsg->type   = req->rq_type;
+	req->rq_repmsg->status = req->rq_status;
+	req->rq_repmsg->opc    = req->rq_reqmsg->opc;
+	if (req->rq_conn == NULL)
+		req->rq_conn = pscrpc_get_connection(req->rq_peer,
 						      req->rq_self, NULL);
-        else
-                (struct pscrpc_connection *)pscrpc_connection_addref(req->rq_conn);
+	else
+		(struct pscrpc_connection *)pscrpc_connection_addref(req->rq_conn);
 
-        if (req->rq_conn == NULL) {
-                psc_errorx("not replying on NULL connection"); /* bug 9635 */
-                return -ENOTCONN;
-        }
-        atomic_inc (&svc->srv_outstanding_replies);
-        pscrpc_rs_addref(rs);                   /* +1 ref for the network */
+	if (req->rq_conn == NULL) {
+		psc_errorx("not replying on NULL connection"); /* bug 9635 */
+		return -ENOTCONN;
+	}
+	atomic_inc (&svc->srv_outstanding_replies);
+	pscrpc_rs_addref(rs);                   /* +1 ref for the network */
 
-        rc = psc_send_buf (&rs->rs_md_h, req->rq_repmsg, req->rq_replen,
-                           rs->rs_difficult ? LNET_ACK_REQ : LNET_NOACK_REQ,
-                           &rs->rs_cb_id, req->rq_conn,
-                           svc->srv_rep_portal, req->rq_xid);
-        if (rc != 0) {
-                atomic_dec (&svc->srv_outstanding_replies);
-                pscrpc_rs_decref(rs);
-        }
-        pscrpc_put_connection(req->rq_conn);
-        return rc;
+	rc = psc_send_buf (&rs->rs_md_h, req->rq_repmsg, req->rq_replen,
+			   rs->rs_difficult ? LNET_ACK_REQ : LNET_NOACK_REQ,
+			   &rs->rs_cb_id, req->rq_conn,
+			   svc->srv_rep_portal, req->rq_xid);
+	if (rc != 0) {
+		atomic_dec (&svc->srv_outstanding_replies);
+		pscrpc_rs_decref(rs);
+	}
+	pscrpc_put_connection(req->rq_conn);
+	return rc;
 }
 
 int pscrpc_reply (struct pscrpc_request *req)
 {
-        return (pscrpc_send_reply (req, 0));
+	return (pscrpc_send_reply (req, 0));
 }
 
 int pscrpc_error(struct pscrpc_request *req)
 {
-        int rc;
-        ENTRY;
+	int rc;
 
-        if (!req->rq_repmsg) {
-                rc = psc_pack_reply(req, 0, NULL, NULL);
-                if (rc)
-                        RETURN(rc);
-        }
+	if (!req->rq_repmsg) {
+		rc = psc_pack_reply(req, 0, NULL, NULL);
+		if (rc)
+			return (rc);
+	}
 
-        req->rq_type = PSCRPC_MSG_ERR;
+	req->rq_type = PSCRPC_MSG_ERR;
 
-        rc = pscrpc_send_reply (req, 0);
-        RETURN(rc);
+	rc = pscrpc_send_reply (req, 0);
+	return (rc);
 }
 
 /**
@@ -455,153 +451,152 @@ int pscrpc_error(struct pscrpc_request *req)
  */
 int psc_send_rpc(struct pscrpc_request *request, int noreply)
 {
-        int rc;
-        int rc2;
-        struct pscrpc_connection *connection;
-        lnet_handle_me_t  reply_me_h;
-        lnet_md_t         reply_md;
-        ENTRY;
+	int rc;
+	int rc2;
+	struct pscrpc_connection *connection;
+	lnet_handle_me_t  reply_me_h;
+	lnet_md_t         reply_md;
 
-        //OBD_FAIL_RETURN(OBD_FAIL_PSCRPC_DROP_RPC, 0);
+	//OBD_FAIL_RETURN(OBD_FAIL_PSCRPC_DROP_RPC, 0);
 	DEBUG_REQ(PLL_INFO, request, "sending rpc");
 
-        psc_assert (request->rq_type == PSCRPC_MSG_REQUEST);
+	psc_assert (request->rq_type == PSCRPC_MSG_REQUEST);
 
-        /* If this is a re-transmit, we're required to have disengaged
-         * cleanly from the previous attempt */
-        psc_assert (!request->rq_receiving_reply);
+	/* If this is a re-transmit, we're required to have disengaged
+	 * cleanly from the previous attempt */
+	psc_assert (!request->rq_receiving_reply);
 
 #if PAULS_TODO
-        if (request->rq_import->imp_obd &&
-            request->rq_import->imp_obd->obd_fail) {
-                CDEBUG(D_HA, "muting rpc for failed imp obd %s\n",
-                       request->rq_import->imp_obd->obd_name);
-                /* this prevents us from waiting in pscrpc_queue_wait */
-                request->rq_err = 1;
-                RETURN(-ENODEV);
-        }
+	if (request->rq_import->imp_obd &&
+	    request->rq_import->imp_obd->obd_fail) {
+		CDEBUG(D_HA, "muting rpc for failed imp obd %s\n",
+		       request->rq_import->imp_obd->obd_name);
+		/* this prevents us from waiting in pscrpc_queue_wait */
+		request->rq_err = 1;
+		return (-ENODEV);
+	}
 #endif
-        connection = request->rq_import->imp_connection;
+	connection = request->rq_import->imp_connection;
 
-        if (request->rq_bulk != NULL) {
-                rc = pscrpc_register_bulk (request);
-                if (rc != 0)
-                        RETURN(rc);
-        }
+	if (request->rq_bulk != NULL) {
+		rc = pscrpc_register_bulk (request);
+		if (rc != 0)
+			return (rc);
+	}
 
-        request->rq_reqmsg->handle = request->rq_import->imp_remote_handle;
-        request->rq_reqmsg->type = PSCRPC_MSG_REQUEST;
-        request->rq_reqmsg->conn_cnt = request->rq_import->imp_conn_cnt;
+	request->rq_reqmsg->handle = request->rq_import->imp_remote_handle;
+	request->rq_reqmsg->type = PSCRPC_MSG_REQUEST;
+	request->rq_reqmsg->conn_cnt = request->rq_import->imp_conn_cnt;
 
-        if (!noreply) {
-                psc_assert (request->rq_replen != 0);
-                if (request->rq_repmsg == NULL)
-                        PSCRPC_OBD_ALLOC(request->rq_repmsg, request->rq_replen);
+	if (!noreply) {
+		psc_assert (request->rq_replen != 0);
+		if (request->rq_repmsg == NULL)
+			PSCRPC_OBD_ALLOC(request->rq_repmsg, request->rq_replen);
 
-                if (request->rq_repmsg == NULL)
-                        GOTO(cleanup_bulk, rc = -ENOMEM);
+		if (request->rq_repmsg == NULL)
+			GOTO(cleanup_bulk, rc = -ENOMEM);
 
-                rc = LNetMEAttach(request->rq_reply_portal,/*XXX FIXME bug 249*/
-                                  connection->c_peer, request->rq_xid, 0,
-                                  LNET_UNLINK, LNET_INS_AFTER, &reply_me_h);
-                if (rc != 0) {
-                        CERROR("LNetMEAttach failed: %d\n", rc);
-                        psc_assert (rc == -ENOMEM);
-                        GOTO(cleanup_repmsg, rc = -ENOMEM);
-                }
+		rc = LNetMEAttach(request->rq_reply_portal,/*XXX FIXME bug 249*/
+				  connection->c_peer, request->rq_xid, 0,
+				  LNET_UNLINK, LNET_INS_AFTER, &reply_me_h);
+		if (rc != 0) {
+			CERROR("LNetMEAttach failed: %d\n", rc);
+			psc_assert (rc == -ENOMEM);
+			GOTO(cleanup_repmsg, rc = -ENOMEM);
+		}
 		psc_info("LNetMEAttach() gave handle %"PRIx64, (uint64_t)reply_me_h.cookie);
-        }
+	}
 
-        spinlock(&request->rq_lock);
-        /* If the MD attach succeeds, there _will_ be a reply_in callback */
-        request->rq_receiving_reply = !noreply;
-        /* Clear any flags that may be present from previous sends. */
-        request->rq_replied = 0;
-        request->rq_err = 0;
-        request->rq_timedout = 0;
-        request->rq_net_err = 0;
-        request->rq_resend = 0;
-        request->rq_restart = 0;
-        freelock(&request->rq_lock);
+	spinlock(&request->rq_lock);
+	/* If the MD attach succeeds, there _will_ be a reply_in callback */
+	request->rq_receiving_reply = !noreply;
+	/* Clear any flags that may be present from previous sends. */
+	request->rq_replied = 0;
+	request->rq_err = 0;
+	request->rq_timedout = 0;
+	request->rq_net_err = 0;
+	request->rq_resend = 0;
+	request->rq_restart = 0;
+	freelock(&request->rq_lock);
 
-        if (!noreply) {
-                reply_md.start     = request->rq_repmsg;
-                reply_md.length    = request->rq_replen;
-                reply_md.threshold = 1;
-                reply_md.options   = PSCRPC_MD_OPTIONS | LNET_MD_OP_PUT;
-                reply_md.user_ptr  = &request->rq_reply_cbid;
-                reply_md.eq_handle = pscrpc_eq_h;
+	if (!noreply) {
+		reply_md.start     = request->rq_repmsg;
+		reply_md.length    = request->rq_replen;
+		reply_md.threshold = 1;
+		reply_md.options   = PSCRPC_MD_OPTIONS | LNET_MD_OP_PUT;
+		reply_md.user_ptr  = &request->rq_reply_cbid;
+		reply_md.eq_handle = pscrpc_eq_h;
 
 		psc_info("LNetMDAttach() try w/ handle %"PRIx64,
 		      (uint64_t)reply_me_h.cookie);
 
-                rc = LNetMDAttach(reply_me_h, reply_md, LNET_UNLINK,
-                                 &request->rq_reply_md_h);
-                if (rc != 0) {
+		rc = LNetMDAttach(reply_me_h, reply_md, LNET_UNLINK,
+				 &request->rq_reply_md_h);
+		if (rc != 0) {
 			psc_errorx("LNetMDAttach failed: %d", rc);
-                        psc_assert (rc == -ENOMEM);
-                        spinlock(&request->rq_lock);
-                        /* ...but the MD attach didn't succeed... */
-                        request->rq_receiving_reply = 0;
-                        freelock(&request->rq_lock);
-                        GOTO(cleanup_me, rc = -ENOMEM);
-                }
+			psc_assert (rc == -ENOMEM);
+			spinlock(&request->rq_lock);
+			/* ...but the MD attach didn't succeed... */
+			request->rq_receiving_reply = 0;
+			freelock(&request->rq_lock);
+			GOTO(cleanup_me, rc = -ENOMEM);
+		}
 
-                psc_info("Setup reply buffer: %u bytes, xid %"PRIx64
+		psc_info("Setup reply buffer: %u bytes, xid %"PRIx64
 			 ", portal %u",
 			 request->rq_replen, request->rq_xid,
 			 request->rq_reply_portal);
-        }
+	}
 
-        /* add references on request and import for request_out_callback */
-        pscrpc_request_addref(request);
-        atomic_inc(&request->rq_import->imp_inflight);
+	/* add references on request and import for request_out_callback */
+	pscrpc_request_addref(request);
+	atomic_inc(&request->rq_import->imp_inflight);
 
 #if PAULS_TODO
-        OBD_FAIL_TIMEOUT(OBD_FAIL_PSCRPC_DELAY_SEND, request->rq_timeout + 5);
+	OBD_FAIL_TIMEOUT(OBD_FAIL_PSCRPC_DELAY_SEND, request->rq_timeout + 5);
 #endif
 
-        request->rq_sent = CURRENT_SECONDS;
+	request->rq_sent = CURRENT_SECONDS;
 #if 0
-        pscrpc_pinger_sending_on_import(request->rq_import);
+	pscrpc_pinger_sending_on_import(request->rq_import);
 #endif
-        rc = psc_send_buf(&request->rq_req_md_h,
-                          request->rq_reqmsg, request->rq_reqlen,
-                          LNET_NOACK_REQ, &request->rq_req_cbid,
-                          connection,
-                          request->rq_request_portal,
-                          request->rq_xid);
-        if (rc == 0) {
-                //pscrpc_lprocfs_rpc_sent(request);
-                RETURN(rc);
-        }
+	rc = psc_send_buf(&request->rq_req_md_h,
+			  request->rq_reqmsg, request->rq_reqlen,
+			  LNET_NOACK_REQ, &request->rq_req_cbid,
+			  connection,
+			  request->rq_request_portal,
+			  request->rq_xid);
+	if (rc == 0) {
+		//pscrpc_lprocfs_rpc_sent(request);
+		return (rc);
+	}
 
 	/* drop request_out_callback refs, we couldn't start the send */
-        atomic_dec(&request->rq_import->imp_inflight);
-        pscrpc_req_finished (request);
+	atomic_dec(&request->rq_import->imp_inflight);
+	pscrpc_req_finished (request);
 
-        if (noreply)
-                RETURN(rc);
-        else
-                GOTO(cleanup_me, rc);
+	if (noreply)
+		return (rc);
+	else
+		GOTO(cleanup_me, rc);
  cleanup_me:
-        /* MEUnlink is safe; the PUT didn't even get off the ground, and
-         * nobody apart from the PUT's target has the right nid+XID to
-         * access the reply buffer. */
-        rc2 = LNetMEUnlink(reply_me_h);
-        psc_assert (rc2 == 0);
-        /* UNLINKED callback called synchronously */
-        psc_assert (!request->rq_receiving_reply);
+	/* MEUnlink is safe; the PUT didn't even get off the ground, and
+	 * nobody apart from the PUT's target has the right nid+XID to
+	 * access the reply buffer. */
+	rc2 = LNetMEUnlink(reply_me_h);
+	psc_assert (rc2 == 0);
+	/* UNLINKED callback called synchronously */
+	psc_assert (!request->rq_receiving_reply);
 
  cleanup_repmsg:
-        PSCRPC_OBD_FREE(request->rq_repmsg, request->rq_replen);
-        request->rq_repmsg = NULL;
+	PSCRPC_OBD_FREE(request->rq_repmsg, request->rq_replen);
+	request->rq_repmsg = NULL;
 
  cleanup_bulk:
-        if (request->rq_bulk != NULL)
-                pscrpc_unregister_bulk(request);
+	if (request->rq_bulk != NULL)
+		pscrpc_unregister_bulk(request);
 
-        return rc;
+	return rc;
 }
 
 /**
@@ -610,207 +605,201 @@ int psc_send_rpc(struct pscrpc_request *request, int noreply)
  */
 int pscrpc_register_rqbd (struct pscrpc_request_buffer_desc *rqbd)
 {
-        struct pscrpc_service   *service = rqbd->rqbd_service;
-        static lnet_process_id_t  match_id = {LNET_NID_ANY, LNET_PID_ANY};
-        int                      rc;
-        lnet_md_t                 md;
-        lnet_handle_me_t          me_h;
+	struct pscrpc_service   *service = rqbd->rqbd_service;
+	static lnet_process_id_t  match_id = {LNET_NID_ANY, LNET_PID_ANY};
+	int                      rc;
+	lnet_md_t                 md;
+	lnet_handle_me_t          me_h;
 
-        CDEBUG(D_NET, "LNetMEAttach: portal %d\n",
-               service->srv_req_portal);
+	CDEBUG(D_NET, "LNetMEAttach: portal %d\n",
+	       service->srv_req_portal);
 
-        //        if (OBD_FAIL_CHECK_ONCE(OBD_FAIL_PSCRPC_RQBD))
-        //        return (-ENOMEM);
+	//        if (OBD_FAIL_CHECK_ONCE(OBD_FAIL_PSCRPC_RQBD))
+	//        return (-ENOMEM);
 
-        rc = LNetMEAttach(service->srv_req_portal,
-                          match_id, 0, ~0, LNET_UNLINK, LNET_INS_AFTER, &me_h);
-        if (rc != 0) {
-                CERROR("LNetMEAttach failed: %d\n", rc);
-                return (-ENOMEM);
-        }
+	rc = LNetMEAttach(service->srv_req_portal,
+			  match_id, 0, ~0, LNET_UNLINK, LNET_INS_AFTER, &me_h);
+	if (rc != 0) {
+		CERROR("LNetMEAttach failed: %d\n", rc);
+		return (-ENOMEM);
+	}
 
-        psc_assert(rqbd->rqbd_refcount == 0);
-        rqbd->rqbd_refcount = 1;
+	psc_assert(rqbd->rqbd_refcount == 0);
+	rqbd->rqbd_refcount = 1;
 
-        md.start     = rqbd->rqbd_buffer;
-        md.length    = service->srv_buf_size;
-        md.max_size  = service->srv_max_req_size;
-        md.threshold = LNET_MD_THRESH_INF;
-        md.options   = PSCRPC_MD_OPTIONS | LNET_MD_OP_PUT | LNET_MD_MAX_SIZE;
-        md.user_ptr  = &rqbd->rqbd_cbid;
-        md.eq_handle = pscrpc_eq_h;
+	md.start     = rqbd->rqbd_buffer;
+	md.length    = service->srv_buf_size;
+	md.max_size  = service->srv_max_req_size;
+	md.threshold = LNET_MD_THRESH_INF;
+	md.options   = PSCRPC_MD_OPTIONS | LNET_MD_OP_PUT | LNET_MD_MAX_SIZE;
+	md.user_ptr  = &rqbd->rqbd_cbid;
+	md.eq_handle = pscrpc_eq_h;
 
-        rc = LNetMDAttach(me_h, md, LNET_UNLINK, &rqbd->rqbd_md_h);
-        if (rc == 0)
-                return (0);
+	rc = LNetMDAttach(me_h, md, LNET_UNLINK, &rqbd->rqbd_md_h);
+	if (rc == 0)
+		return (0);
 
-        CERROR("LNetMDAttach failed: %d; \n", rc);
-        psc_assert (rc == -ENOMEM);
-        rc = LNetMEUnlink (me_h);
-        psc_assert (rc == 0);
-        rqbd->rqbd_refcount = 0;
+	CERROR("LNetMDAttach failed: %d; \n", rc);
+	psc_assert (rc == -ENOMEM);
+	rc = LNetMEUnlink (me_h);
+	psc_assert (rc == 0);
+	rqbd->rqbd_refcount = 0;
 
-        return (-ENOMEM);
+	return (-ENOMEM);
 }
 
 void psc_free_reply_state (struct pscrpc_reply_state *rs)
 {
 #if 0
-        PTLRPC_RS_DEBUG_LRU_DEL(rs);
+	PTLRPC_RS_DEBUG_LRU_DEL(rs);
 #endif
 
-        psc_assert (atomic_read(&rs->rs_refcount) == 0);
-        psc_assert (!rs->rs_on_net);
-        psc_assert (!rs->rs_scheduled);
+	psc_assert (atomic_read(&rs->rs_refcount) == 0);
+	psc_assert (!rs->rs_on_net);
+	psc_assert (!rs->rs_scheduled);
 
 #if WEAREEVERATTHISPOINT
-        psc_assert (!rs->rs_difficult || rs->rs_handled);
-        psc_assert (rs->rs_export == NULL);
-        psc_assert (rs->rs_nlocks == 0);
-        psc_assert (psclist_empty(&rs->rs_exp_list));
-        psc_assert (psclist_empty(&rs->rs_obd_list));
+	psc_assert (!rs->rs_difficult || rs->rs_handled);
+	psc_assert (rs->rs_export == NULL);
+	psc_assert (rs->rs_nlocks == 0);
+	psc_assert (psclist_empty(&rs->rs_exp_list));
+	psc_assert (psclist_empty(&rs->rs_obd_list));
 
-        if (unlikely(rs->rs_prealloc)) {
-                struct ptlrpc_service *svc = rs->rs_service;
+	if (unlikely(rs->rs_prealloc)) {
+		struct ptlrpc_service *svc = rs->rs_service;
 
-                spinlock(&svc->srv_lock);
-                psclist_xadd(&rs->rs_list_entry,
-                         &svc->srv_free_rs_list);
-                freelock(&svc->srv_lock);
-                psc_waitq_wakeall(&svc->srv_free_rs_waitq);
-        }
+		spinlock(&svc->srv_lock);
+		psclist_xadd(&rs->rs_list_entry,
+			 &svc->srv_free_rs_list);
+		freelock(&svc->srv_lock);
+		psc_waitq_wakeall(&svc->srv_free_rs_waitq);
+	}
 #endif
-        PSCRPC_OBD_FREE(rs, rs->rs_size);
+	PSCRPC_OBD_FREE(rs, rs->rs_size);
 }
 
 static void __pscrpc_free_req(struct pscrpc_request *request, int  locked)
 {
-        ENTRY;
-        if (request == NULL) {
-                EXIT;
-                return;
-        }
+	if (request == NULL)
+		return;
 
-        psc_assert_msg(!request->rq_receiving_reply, "req %p\n", request);
-        psc_assert_msg(request->rq_rqbd == NULL, "req %p\n",request);/* client-side */
-        psc_assert_msg(psclist_disjoint(&request->rq_list_entry), "req %p\n", request);
-        psc_assert_msg(psclist_disjoint(&request->rq_set_chain_lentry), "req %p\n", request);
+	psc_assert_msg(!request->rq_receiving_reply, "req %p\n", request);
+	psc_assert_msg(request->rq_rqbd == NULL, "req %p\n",request);/* client-side */
+	psc_assert_msg(psclist_disjoint(&request->rq_list_entry), "req %p\n", request);
+	psc_assert_msg(psclist_disjoint(&request->rq_set_chain_lentry), "req %p\n", request);
 
-        /* We must take it off the imp_replay_list first.  Otherwise, we'll set
+	/* We must take it off the imp_replay_list first.  Otherwise, we'll set
 	 * request->rq_reqmsg to NULL while osc_close is dereferencing it. */
-        if (request->rq_import != NULL) {
-                if (!locked)
-                        spinlock(&request->rq_import->imp_lock);
-                //psclist_del_init(&request->rq_replay_list);
-                if (!locked)
-                        freelock(&request->rq_import->imp_lock);
-        }
-        //psc_assertF(psclist_empty(&request->rq_replay_list), "req %p\n", request);
+	if (request->rq_import != NULL) {
+		if (!locked)
+			spinlock(&request->rq_import->imp_lock);
+		//psclist_del_init(&request->rq_replay_list);
+		if (!locked)
+			freelock(&request->rq_import->imp_lock);
+	}
+	//psc_assertF(psclist_empty(&request->rq_replay_list), "req %p\n", request);
 
 	if (atomic_read(&request->rq_refcount) != 0) {
-                DEBUG_REQ(PLL_ERROR, request,
+		DEBUG_REQ(PLL_ERROR, request,
 			  "freeing request with nonzero refcount");
-                LBUG();
-        }
+		LBUG();
+	}
 
-        if (request->rq_repmsg != NULL) {
-                PSCRPC_OBD_FREE(request->rq_repmsg, request->rq_replen);
-                request->rq_repmsg = NULL;
-        }
+	if (request->rq_repmsg != NULL) {
+		PSCRPC_OBD_FREE(request->rq_repmsg, request->rq_replen);
+		request->rq_repmsg = NULL;
+	}
 
-        if (request->rq_import != NULL) {
-                pscrpc_import_put(request->rq_import);
-                request->rq_import = NULL;
-        }
+	if (request->rq_import != NULL) {
+		pscrpc_import_put(request->rq_import);
+		request->rq_import = NULL;
+	}
 
-        if (request->rq_bulk != NULL)
-                pscrpc_free_bulk(request->rq_bulk);
+	if (request->rq_bulk != NULL)
+		pscrpc_free_bulk(request->rq_bulk);
 
 	psc_assert(request->rq_reply_state == NULL);
 
-        if (request->rq_pool) {
-                //__ptlrpc_free_req_to_pool(request);
+	if (request->rq_pool) {
+		//__ptlrpc_free_req_to_pool(request);
 
-        } else {
-                if (request->rq_reqmsg != NULL) {
-                        PSCRPC_OBD_FREE(request->rq_reqmsg, request->rq_reqlen);
-                        request->rq_reqmsg = NULL;
-                }
-                PSCRPC_OBD_FREE(request, sizeof(*request));
-        }
-        EXIT;
+	} else {
+		if (request->rq_reqmsg != NULL) {
+			PSCRPC_OBD_FREE(request->rq_reqmsg, request->rq_reqlen);
+			request->rq_reqmsg = NULL;
+		}
+		PSCRPC_OBD_FREE(request, sizeof(*request));
+	}
 }
 
 void pscrpc_free_req(struct pscrpc_request *request)
 {
-        __pscrpc_free_req(request, 0);
+	__pscrpc_free_req(request, 0);
 }
 
 static int __pscrpc_req_finished(struct pscrpc_request *request, int locked)
 {
-        ENTRY;
-        if (request == NULL)
-                RETURN(1);
+	if (request == NULL)
+		return (1);
 
-        if (request == LP_POISON ||
-            request->rq_reqmsg == LP_POISON) {
-                CERROR("dereferencing freed request (bug 575)\n");
-                LBUG();
-                RETURN(1);
-        }
+	if (request == LP_POISON ||
+	    request->rq_reqmsg == LP_POISON) {
+		CERROR("dereferencing freed request (bug 575)\n");
+		LBUG();
+		return (1);
+	}
 
 #if 0
-        DEBUG_REQ(D_INFO, request, "refcount now %u",
-                  atomic_read(&request->rq_refcount) - 1);
+	DEBUG_REQ(D_INFO, request, "refcount now %u",
+		  atomic_read(&request->rq_refcount) - 1);
 #endif
 
-        if (atomic_dec_and_test(&request->rq_refcount)) {
-                __pscrpc_free_req(request, locked);
-                RETURN(1);
-        }
+	if (atomic_dec_and_test(&request->rq_refcount)) {
+		__pscrpc_free_req(request, locked);
+		return (1);
+	}
 
-        RETURN(0);
+	return (0);
 }
 
 void pscrpc_req_finished(struct pscrpc_request *request)
 {
-        __pscrpc_req_finished(request, 0);
+	__pscrpc_req_finished(request, 0);
 }
 
 void pscrpc_free_bulk(struct pscrpc_bulk_desc *desc)
 {
 	psc_trace("free desc=%p", desc);
 
-        psc_assert(desc != NULL);
-        psc_assert(desc->bd_iov_count != LI_POISON); /* not freed already */
-        psc_assert(!desc->bd_network_rw);            /* network hands off or */
+	psc_assert(desc != NULL);
+	psc_assert(desc->bd_iov_count != LI_POISON); /* not freed already */
+	psc_assert(!desc->bd_network_rw);            /* network hands off or */
 	psc_assert(!desc->bd_registered);
 
-        psc_assert((desc->bd_export != NULL) ^ (desc->bd_import != NULL));
-        if (desc->bd_export)
-                pscrpc_export_put(desc->bd_export);
-        else
-                pscrpc_import_put(desc->bd_import);
+	psc_assert((desc->bd_export != NULL) ^ (desc->bd_import != NULL));
+	if (desc->bd_export)
+		pscrpc_export_put(desc->bd_export);
+	else
+		pscrpc_import_put(desc->bd_import);
 
-        PSCRPC_OBD_FREE(desc, offsetof(struct pscrpc_bulk_desc,
-                                bd_iov[desc->bd_max_iov]));
-        EXIT;
+	PSCRPC_OBD_FREE(desc, offsetof(struct pscrpc_bulk_desc,
+				bd_iov[desc->bd_max_iov]));
 }
 
 void pscrpc_fill_bulk_md(lnet_md_t *md, struct pscrpc_bulk_desc *desc)
 {
-        psc_assert (!(md->options & (LNET_MD_IOVEC | LNET_MD_KIOV | LNET_MD_PHYS)));
-        if (desc->bd_iov_count == 1) {
-                md->start = desc->bd_iov[0].iov_base;
-                md->length = desc->bd_iov[0].iov_len;
-                return;
-        }
-	/* Note that md->length is used differently depending on the 
+	psc_assert (!(md->options & (LNET_MD_IOVEC | LNET_MD_KIOV | LNET_MD_PHYS)));
+	if (desc->bd_iov_count == 1) {
+		md->start = desc->bd_iov[0].iov_base;
+		md->length = desc->bd_iov[0].iov_len;
+		return;
+	}
+	/* Note that md->length is used differently depending on the
 	 *   number of iov's given.  If > 1 iov, set LNET_MD_IOVEC
 	 *   otherwise assume a single iovec (above).
 	 */
-        md->options |= LNET_MD_IOVEC;
-        md->start = &desc->bd_iov[0];
-        md->length = desc->bd_iov_count;
+	md->options |= LNET_MD_IOVEC;
+	md->start = &desc->bd_iov[0];
+	md->length = desc->bd_iov_count;
 }
 

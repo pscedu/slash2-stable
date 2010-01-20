@@ -102,8 +102,6 @@ int pscrpc_set_import_discon(struct pscrpc_import *imp, uint32_t conn_cnt)
  */
 void pscrpc_deactivate_import(struct pscrpc_import *imp)
 {
-	ENTRY;
-
 	spinlock(&imp->imp_lock);
 	psc_warnx("setting import %p INVALID", imp);
 	imp->imp_invalid = 1;
@@ -156,8 +154,6 @@ void pscrpc_activate_import(struct pscrpc_import *imp)
 
 void pscrpc_fail_import(struct pscrpc_import *imp, uint32_t conn_cnt)
 {
-	ENTRY;
-
 	if (imp->imp_state == PSC_IMP_NEW) {
 		psc_info("Failing new import %p", imp);
 		pscrpc_deactivate_import(imp);
@@ -181,5 +177,4 @@ void pscrpc_fail_import(struct pscrpc_import *imp, uint32_t conn_cnt)
 		imp->imp_failed = 1;
 		freelock(&imp->imp_lock);
 	}
-	EXIT;
 }

@@ -92,14 +92,12 @@ pscrpc_nbreqset_reap(struct pscrpc_nbreqset *nbs)
 	struct l_wait_info lwi;
 	int timeout = 1;
 
-	ENTRY;
-
 	lwi = LWI_TIMEOUT(timeout, NULL, NULL);
 	psc_cli_wait_event(&set->set_waitq,
 		       (nreaped=pscrpc_check_set(set, 0)), &lwi);
 
 	if (!nreaped)
-		RETURN(0);
+		return (0);
 
 	pscrpc_set_lock(set);
 
@@ -135,10 +133,10 @@ pscrpc_nbreqset_reap(struct pscrpc_nbreqset *nbs)
 	}
 	freelock(&set->set_lock);
 	psc_dbg("checked %d requests", nchecked);
-	RETURN(nreaped);
+	return (nreaped);
 }
 
-void *
+__dead void *
 _pscrpc_nbreapthr_main(void *arg)
 {
 	struct pscrpc_nbreapthr *pnbt;

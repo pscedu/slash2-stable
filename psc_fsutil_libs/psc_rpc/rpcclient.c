@@ -39,9 +39,8 @@ uint64_t pscrpc_sample_next_xid(void)
 
 struct pscrpc_request *pscrpc_request_addref(struct pscrpc_request *req)
 {
-	ENTRY;
 	atomic_inc(&req->rq_refcount);
-	RETURN(req);
+	return (req);
 }
 
 //struct psc_import *class_new_import(struct obd_device *obd)
@@ -91,15 +90,12 @@ struct pscrpc_import *import_get(struct pscrpc_import *import)
 void
 pscrpc_import_put(struct pscrpc_import *import)
 {
-	ENTRY;
-
 	psc_info("import %p refcount=%d", import,
 	      atomic_read(&import->imp_refcount) - 1);
 
 	psc_assert(atomic_read(&import->imp_refcount) > 0);
 	psc_assert(atomic_read(&import->imp_refcount) < 0x5a5a5a);
 	if (!atomic_dec_and_test(&import->imp_refcount)) {
-		EXIT;
 		return;
 	}
 	psc_dbg("destroying import %p", import);
@@ -109,7 +105,6 @@ pscrpc_import_put(struct pscrpc_import *import)
 
 	PSCRPC_OBD_FREE(import->imp_client, sizeof(*import->imp_client));
 	PSCRPC_OBD_FREE(import, sizeof(*import));
-	EXIT;
 }
 
 #if 0 //try to get away without uuid's
@@ -184,7 +179,6 @@ pscrpc_prep_req_pool(struct pscrpc_import *imp,
 {
 	struct pscrpc_request *request = NULL;
 	int rc;
-	ENTRY;
 
 	psc_assert((unsigned long)imp > 0x1000);
 	psc_assert(imp != LP_POISON);
@@ -200,14 +194,14 @@ pscrpc_prep_req_pool(struct pscrpc_import *imp,
 
 	if (!request) {
 		CERROR("request allocation out of memory\n");
-		RETURN(NULL);
+		return (NULL);
 	}
 
 	rc = psc_pack_request(request, count, lengths, bufs);
 	if (rc) {
 		psc_assert(!request->rq_pool);
 		PSCRPC_OBD_FREE(request, sizeof(*request));
-		RETURN(NULL);
+		return (NULL);
 	}
 
 	psc_info("request %p request->rq_reqmsg %p",
@@ -248,7 +242,7 @@ pscrpc_prep_req_pool(struct pscrpc_import *imp,
 	request->rq_reqmsg->opc = opcode;
 	request->rq_reqmsg->flags = 0;
 
-	RETURN(request);
+	return (request);
 }
 
 struct pscrpc_request *
@@ -290,7 +284,7 @@ pscrpc_prep_bulk_imp (struct pscrpc_request *req, int npages,
 	psc_assert(type == BULK_PUT_SINK || type == BULK_GET_SOURCE);
 	desc = pscrpc_new_bulk(npages, type, portal);
 	if (desc == NULL)
-		RETURN(NULL);
+		return (NULL);
 
 	//desc->bd_import_generation = req->rq_import_generation;
 	desc->bd_connection = imp->imp_connection;
@@ -317,7 +311,7 @@ pscrpc_prep_bulk_exp (struct pscrpc_request *req,
 
 	desc = pscrpc_new_bulk(npages, type, portal);
 	if (desc == NULL)
-		RETURN(NULL);
+		return (NULL);
 
 	desc->bd_connection = req->rq_conn;
 	desc->bd_export = pscrpc_export_get(exp);
@@ -347,7 +341,7 @@ pscrpc_prep_set(void)
 
 	PSCRPC_OBD_ALLOC(set, sizeof *set);
 	if (!set)
-		RETURN(NULL);
+		return (NULL);
 	pscrpc_set_init(set);
 	return (set);
 }
@@ -390,14 +384,13 @@ static int expired_request(void *data)
 {
 	struct pscrpc_request *req = data;
 	struct pscrpc_import *imp = req->rq_import;
-	ENTRY;
 
 	atomic_inc(&req->rq_retries);
 
 	DEBUG_REQ(PLL_INFO, req, "request timeout");
 
 	if (atomic_read(&req->rq_retries) >= imp->imp_max_retries) {
-		RETURN(pscrpc_expire_one_request(req));
+		return (pscrpc_expire_one_request(req));
 	}
 
 	spinlock(&req->rq_lock);
@@ -420,7 +413,6 @@ static int pscrpc_send_new_req_locked(struct pscrpc_request *req)
 {
 	struct pscrpc_import     *imp;
 	int rc;
-	ENTRY;
 
 	LOCK_ENSURE(&req->rq_lock);
 	DEBUG_REQ(PLL_INFO, req, "about to send rpc");
@@ -447,14 +439,14 @@ static int pscrpc_send_new_req_locked(struct pscrpc_request *req)
 
 		psclist_xadd_tail(&req->rq_list_entry, &imp->imp_delayed_list);
 		freelock(&imp->imp_lock);
-		RETURN(0);
+		return (0);
 	}
 
 	if (rc != 0) {
 		freelock(&imp->imp_lock);
 		req->rq_status = rc;
 		req->rq_phase = PSCRQ_PHASE_INTERPRET;
-		RETURN(rc);
+		return (rc);
 	}
 #endif
 
@@ -469,9 +461,9 @@ static int pscrpc_send_new_req_locked(struct pscrpc_request *req)
 		DEBUG_REQ(PLL_WARN, req,
 			  "send failed (%d); expect timeout", rc);
 		req->rq_net_err = 1;
-		RETURN(rc);
+		return (rc);
 	}
-	RETURN(0);
+	return (0);
 }
 
 int
@@ -497,7 +489,6 @@ static int
 pscrpc_check_reply(struct pscrpc_request *req)
 {
 	int rc = 0;
-	ENTRY;
 
 	/* serialise with network callback */
 	spinlock(&req->rq_lock);
@@ -529,7 +520,6 @@ pscrpc_check_reply(struct pscrpc_request *req)
 		DEBUG_REQ(PLL_WARN, req, "RESTART:");
 		GOTO(out, rc = 1);
 	}
-	EXIT;
  out:
 	freelock(&req->rq_lock);
 	DEBUG_REQ(PLL_INFO, req, "rc = %d", rc);
@@ -576,13 +566,12 @@ void pscrpc_unregister_reply (struct pscrpc_request *request)
 static int pscrpc_check_status(struct pscrpc_request *req)
 {
 	int err;
-	ENTRY;
 
 	err = req->rq_repmsg->status;
 	if (req->rq_repmsg->type == PSCRPC_MSG_ERR) {
 		DEBUG_REQ(PLL_ERROR, req, "type == PSCRPC_MSG_ERR, err == %d",
 			  err);
-		RETURN(err < 0 ? err : -EINVAL);
+		return (err < 0 ? err : -EINVAL);
 	}
 
 	if (err < 0) {
@@ -592,7 +581,7 @@ static int pscrpc_check_status(struct pscrpc_request *req)
 		DEBUG_REQ(PLL_INFO, req, "status is %d", err);
 	}
 
-	RETURN(err);
+	return (err);
 }
 
 
@@ -600,7 +589,6 @@ static int after_reply(struct pscrpc_request *req)
 {
 	//struct pscrpc_import *imp = req->rq_import;
 	int rc;
-	ENTRY;
 
 	psc_assert(!req->rq_receiving_reply);
 
@@ -615,14 +603,14 @@ static int after_reply(struct pscrpc_request *req)
 	rc = psc_unpack_msg(req->rq_repmsg, req->rq_nob_received);
 	if (rc) {
 		DEBUG_REQ(PLL_ERROR, req, "unpack_rep failed: %d", rc);
-		RETURN(-EPROTO);
+		return (-EPROTO);
 	}
 
 	if (req->rq_repmsg->type != PSCRPC_MSG_REPLY &&
 	    req->rq_repmsg->type != PSCRPC_MSG_ERR) {
 		DEBUG_REQ(PLL_ERROR, req, "invalid packet received (type=%u)",
 			  req->rq_repmsg->type);
-		RETURN(-EPROTO);
+		return (-EPROTO);
 	}
 
 	rc = pscrpc_check_status(req);
@@ -635,12 +623,12 @@ static int after_reply(struct pscrpc_request *req)
 #if 0
 		if (req->rq_send_state != PSC_IMP_FULL ||
 		    imp->imp_obd->obd_no_recov || imp->imp_dlm_fake) {
-			RETURN(-ENOTCONN);
+			return (-ENOTCONN);
 		}
 
 		pscrpc_request_handle_notconn(req);
 #endif
-		RETURN(rc);
+		return (rc);
 	}
 
 	/* Store transno in reqmsg for replay. */
@@ -665,7 +653,7 @@ static int after_reply(struct pscrpc_request *req)
 		freelock(&imp->imp_lock);
 	}
 #endif
-	RETURN(rc);
+	return (rc);
 }
 
 int pscrpc_queue_wait(struct pscrpc_request *req)
@@ -675,7 +663,6 @@ int pscrpc_queue_wait(struct pscrpc_request *req)
 	struct l_wait_info lwi;
 	struct pscrpc_import *imp = req->rq_import;
 	int timeout = 0;
-	ENTRY;
 
 	psc_assert(req->rq_set == NULL);
 	psc_assert(!req->rq_receiving_reply);
@@ -886,7 +873,7 @@ int pscrpc_queue_wait(struct pscrpc_request *req)
 
 	atomic_dec(&imp->imp_inflight);
 	psc_waitq_wakeall(&imp->imp_recovery_waitq);
-	RETURN(rc);
+	return (rc);
 }
 
 /**
@@ -904,7 +891,6 @@ int pscrpc_check_set(struct pscrpc_request_set *set, int check_allsent)
 	struct psclist_head *tmp;
 	int force_timer_recalc = 0;
 	int ncompleted         = 0;
-	ENTRY;
 
 	pscrpc_set_lock(set);
 	psc_assert((set->set_flags & PSCRPC_SETF_CHECKING) == 0);
@@ -916,7 +902,7 @@ int pscrpc_check_set(struct pscrpc_request_set *set, int check_allsent)
 		set->set_flags &= ~PSCRPC_SETF_CHECKING;
 		psc_waitq_wakeall(&set->set_waitq);
 		freelock(&set->set_lock);
-		RETURN(1);
+		return (1);
 	}
 
 	psclist_for_each(tmp, &set->set_requests) {
@@ -1137,10 +1123,9 @@ int pscrpc_check_set(struct pscrpc_request_set *set, int check_allsent)
 	/* If we hit an error, we want to recover promptly. */
 	if (check_allsent)
 		/* old behavior */
-		RETURN(set->set_remaining == 0 || force_timer_recalc);
-	else
-		/* new (single non-blocking req) behavior */
-		RETURN(ncompleted || force_timer_recalc);
+		return (set->set_remaining == 0 || force_timer_recalc);
+	/* new (single non-blocking req) behavior */
+	return (ncompleted || force_timer_recalc);
 }
 
 void pscrpc_set_destroy(struct pscrpc_request_set *set)
@@ -1149,7 +1134,6 @@ void pscrpc_set_destroy(struct pscrpc_request_set *set)
 	struct psclist_head *next;
 	unsigned expected_phase;
 	int               n = 0;
-	ENTRY;
 
 	/* Requests on the set should either all be completed, or all be new */
 	expected_phase = (set->set_remaining == 0) ?
@@ -1188,14 +1172,12 @@ void pscrpc_set_destroy(struct pscrpc_request_set *set)
 	psc_assert(set->set_remaining == 0);
 
 	PSCRPC_OBD_FREE(set, sizeof(*set));
-	EXIT;
 }
 
 
 int pscrpc_expire_one_request(struct pscrpc_request *req)
 {
 	struct pscrpc_import *imp = req->rq_import;
-	ENTRY;
 
 	DEBUG_REQ(PLL_ERROR, req,
 		  "timeout (sent at %lu, %lus ago)",
@@ -1220,7 +1202,7 @@ int pscrpc_expire_one_request(struct pscrpc_request *req)
 
 	if (imp == NULL) {
 		DEBUG_REQ(PLL_WARN, req, "NULL import: already cleaned up?");
-		RETURN(1);
+		return (1);
 	}
 
 	/* If this request is for recovery or other primordial tasks,
@@ -1233,15 +1215,15 @@ int pscrpc_expire_one_request(struct pscrpc_request *req)
 		req->rq_status = -ETIMEDOUT;
 		req->rq_err = 1;
 		freelock(&req->rq_lock);
-		RETURN(1);
+		return (1);
 	}
 
 	if (!imp->imp_igntimeout) {
 		pscrpc_fail_import(imp, req->rq_reqmsg->conn_cnt);
-		RETURN(1);
+		return (1);
 	}
 
-	RETURN(0);
+	return (0);
 }
 
 int pscrpc_expired_set(void *data)
@@ -1249,7 +1231,6 @@ int pscrpc_expired_set(void *data)
 	struct pscrpc_request_set *set = data;
 	struct psclist_head          *tmp;
 	time_t                     now = CURRENT_SECONDS;
-	ENTRY;
 
 	psc_assert(set != NULL);
 
@@ -1276,7 +1257,7 @@ int pscrpc_expired_set(void *data)
 	 * sleep so we can recalculate the timeout, or enable interrupts
 	 * iff everyone's timed out.
 	 */
-	RETURN(1);
+	return (1);
 }
 
 
@@ -1287,7 +1268,6 @@ int pscrpc_set_next_timeout(struct pscrpc_request_set *set)
 	time_t                 deadline;
 	int                    timeout = 0;
 	struct pscrpc_request *req;
-	ENTRY;
 
 	//SIGNAL_MASK_ASSERT(); /* XXX BUG 1511 */
 
@@ -1308,7 +1288,7 @@ int pscrpc_set_next_timeout(struct pscrpc_request_set *set)
 		else if (timeout == 0 || timeout > deadline - now)
 			timeout = deadline - now;
 	}
-	RETURN(timeout);
+	return (timeout);
 }
 
 void pscrpc_mark_interrupted(struct pscrpc_request *req)
@@ -1342,7 +1322,6 @@ static int pscrpc_import_delay_req(struct pscrpc_import *imp,
 				   struct pscrpc_request *req, int *status)
 {
 	int delay = 0;
-	ENTRY;
 
 	psc_assert (status != NULL);
 	*status = 0;
@@ -1374,7 +1353,7 @@ static int pscrpc_import_delay_req(struct pscrpc_import *imp,
 			delay = 1;
 	}
 
-	RETURN(delay);
+	return (delay);
 }
 #endif
 
@@ -1384,10 +1363,9 @@ int pscrpc_set_wait(struct pscrpc_request_set *set)
 	struct pscrpc_request *req;
 	struct l_wait_info     lwi;
 	int                    rc=0, timeout;
-	ENTRY;
 
 	if (psclist_empty(&set->set_requests))
-		RETURN(0);
+		return (0);
 
 	psclist_for_each(tmp, &set->set_requests) {
 		req = psclist_entry(tmp, struct pscrpc_request,
@@ -1424,7 +1402,7 @@ int pscrpc_set_wait(struct pscrpc_request_set *set)
 		/* let the real timeouts bubble back up to the caller
 		 */
 		if (rc == -ETIMEDOUT)
-			RETURN(rc);
+			return (rc);
 	} while (rc != 0 || set->set_remaining != 0);
 
 	psc_assert(set->set_remaining == 0);
@@ -1464,7 +1442,7 @@ int pscrpc_set_wait(struct pscrpc_request_set *set)
 		if (rc)
 			psc_errorx("set interpreter failed (%d)", rc);
 	}
-	RETURN(rc);
+	return (rc);
 }
 
 /**
@@ -1513,7 +1491,6 @@ void pscrpc_free_committed(struct pscrpc_import *imp)
 	struct psclist_head *tmp, *saved;
 	struct pscrpc_request *req;
 	struct pscrpc_request *last_req = NULL; /* temporary fire escape */
-	ENTRY;
 
 	psc_assert(imp != NULL);
 
@@ -1563,9 +1540,6 @@ void pscrpc_free_committed(struct pscrpc_import *imp)
 		psclist_del_init(&req->rq_replay_list);
 		__pscrpc_req_finished(req, 1);
 	}
-
-	EXIT;
-	return;
 }
 #endif
 
@@ -1573,7 +1547,6 @@ void pscrpc_free_committed(struct pscrpc_import *imp)
 void pscrpc_abort_inflight(struct pscrpc_import *imp)
 {
 	 struct psclist_head *tmp, *n;
-	 ENTRY;
 
 	 /* Make sure that no new requests get processed for this import.
 	  * pscrpc_{queue,set}_wait must (and does) hold imp_lock while testing
@@ -1622,8 +1595,6 @@ void pscrpc_abort_inflight(struct pscrpc_import *imp)
 #endif
 
 	 freelock(&imp->imp_lock);
-
-	 EXIT;
 }
 
 void pscrpc_resend_req(struct pscrpc_request *req)

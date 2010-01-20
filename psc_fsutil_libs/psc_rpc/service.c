@@ -251,7 +251,6 @@ pscrpc_server_handle_request(struct pscrpc_service *svc,
 	struct timeval         work_end;
 	long                   timediff;
 	int                    rc;
-	ENTRY;
 
 	LASSERT(svc);
 
@@ -265,7 +264,7 @@ pscrpc_server_handle_request(struct pscrpc_service *svc,
 		 * block them
 		 */
 		freelock(&svc->srv_lock);
-		RETURN(0);
+		return (0);
 	}
 
 	request = psclist_entry (psclist_next(&svc->srv_request_queue),
@@ -446,7 +445,7 @@ pscrpc_server_handle_request(struct pscrpc_service *svc,
 
 	pscrpc_server_free_request(request);
 
-	RETURN(1);
+	return (1);
 }
 
 static int
@@ -459,12 +458,11 @@ pscrpc_server_handle_reply (struct pscrpc_service *svc)
 	struct obd_device         *obd;
 	int                        nlocks;
 	int                        been_handled;
-	ENTRY;
 
 	spinlock(&svc->srv_lock);
 	if (psclist_empty (&svc->srv_reply_queue)) {
 		freelock(&svc->srv_lock);
-		RETURN(0);
+		return (0);
 	}
 
 	rs = psclist_entry (svc->srv_reply_queue.next,
@@ -538,13 +536,13 @@ pscrpc_server_handle_reply (struct pscrpc_service *svc)
 		rs->rs_export = NULL;
 		pscrpc_rs_decref (rs);
 		atomic_dec (&svc->srv_outstanding_replies);
-		RETURN(1);
+		return (1);
 	}
 
 	/* still on the net; callback will schedule */
 	freelock(&svc->srv_lock);
 #endif
-	RETURN(1);
+	return (1);
 }
 
 int
@@ -605,7 +603,6 @@ pscrpc_check_rqbd_pool(struct pscrpc_service *svc)
 	int low_water = test_req_buffer_pressure ? 0 :
 		svc->srv_nbuf_per_group/2;
 
-	//ENTRY;
 	/* NB I'm not locking; just looking. */
 
 	/* CAVEAT EMPTOR: We might be allocating buffers here because we've
@@ -617,7 +614,6 @@ pscrpc_check_rqbd_pool(struct pscrpc_service *svc)
 		pscrpc_grow_req_bufs(svc);
 
 	//lprocfs_counter_add(svc->srv_stats, PTLRPC_REQBUF_AVAIL_CNTR, avail);
-	//EXIT;
 }
 
 static int
@@ -635,9 +631,7 @@ pscrpc_main(struct psc_thread *thread, struct pscrpc_service *svc)
 	struct pscrpc_reply_state *rs;
 	struct pscrpc_thread *prt;
 	struct sigaction sa;
-
 	int rc = 0;
-	ENTRY;
 
 	prt = pscrpcthr(thread);
 	psc_assert(svc != NULL);
@@ -937,7 +931,6 @@ pscrpc_init_svc(int nbufs, int bufsize, int max_req_size, int max_reply_size,
 {
 	int                    rc;
 	struct pscrpc_service *service;
-	ENTRY;
 
 	psc_info("bufsize %d  max_req_size %d", bufsize, max_req_size);
 
@@ -946,7 +939,7 @@ pscrpc_init_svc(int nbufs, int bufsize, int max_req_size, int max_reply_size,
 
 	PSCRPC_OBD_ALLOC(service, sizeof(*service));
 	if (service == NULL)
-		RETURN(NULL);
+		return (NULL);
 
 	/* First initialise enough for early teardown */
 
@@ -1013,7 +1006,7 @@ pscrpc_init_svc(int nbufs, int bufsize, int max_req_size, int max_reply_size,
 	CDEBUG(D_NET, "%s: Started, listening on portal %d\n",
 	       service->srv_name, service->srv_req_portal);
 
-	RETURN(service);
+	return (service);
  failed:
 	pscrpc_unregister_service(service);
 //	psc_hashtbl_del();
