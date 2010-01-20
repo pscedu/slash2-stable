@@ -41,26 +41,28 @@ sub advance {
 
 for ($i = 0; $i < length $data; ) {
 	if (substr($data, $i, 1) eq "#") {
+		# skip preprocessor
 		advance(1);
 		my $esc = 0;
-		for (; $i < length($data) && $esc == 0 &&
-		    substr($data, $i, 1) ne qq{\n}; advance(1)) {
+		for (; $i < length($data); advance(1)) {
 			if ($esc) {
 				$esc = 0;
 			} elsif (substr($data, $i, 1) eq "\\") {
 				$esc = 1;
-				$esc = 0;
+			} elsif (substr($data, $i, 1) eq "\n") {
+				last;
 			}
 		}
 		advance(1);
 	} elsif (substr($data, $i, 2) eq "/*") {
-		# skip comments
+		# skip multi-line comments
 		if (substr($data, $i + 2) =~ m[\*/]) {
 			advance($+[0] + 2);
 		} else {
 			advance(length($data) - $i);
 		}
 	} elsif (substr($data, $i, 2) eq q{//}) {
+		# skip single-line comments
 		if (substr($data, $i + 2) =~ m[\n]) {
 			advance($+[0] + 1);
 		} else {
@@ -70,13 +72,13 @@ for ($i = 0; $i < length $data; ) {
 		# skip strings
 		advance(1);
 		my $esc = 0;
-		for (; $i < length($data) && $esc == 0 &&
-		    substr($data, $i, 1) ne q{"}; advance(1)) {
+		for (; $i < length($data); advance(1)) {
 			if ($esc) {
 				$esc = 0;
 			} elsif (substr($data, $i, 1) eq "\\") {
 				$esc = 1;
-				$esc = 0;
+			} elsif (substr($data, $i, 1) eq q{"}) {
+				last;
 			}
 		}
 		advance(1);
