@@ -26,6 +26,7 @@ close F;
 print qq{# 1 "$fn"\n};
 
 if ($data !~ m!psc_util/log\.h! or
+    basename($fn) eq "init.c" or
     basename($fn) eq "log.c" or
     basename($fn) eq "subsys.c" or
     basename($fn) eq "thread.c" or
