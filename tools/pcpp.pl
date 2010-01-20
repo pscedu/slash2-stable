@@ -12,14 +12,15 @@ sub usage {
 
 my %opts;
 getopts("e", \%opts) or usage;
+usage unless @ARGV == 1;
 
-# debug file ID
-print qq{# 1 "$ARGV[0]"\n};
-
-open F, "<", $ARGV[0];
+open F, "<", $ARGV[0] or die "$ARGV[0]: $!\n";
 local $/;
 my $data = <F>;
 close F;
+
+# debug file ID
+print qq{# 1 "$ARGV[0]"\n};
 
 if ($data !~ m!psc_util/log\.h! or
     $ARGV[0] =~ m|/log\.c$| or
@@ -65,39 +66,42 @@ for ($i = 0; $i < length $data; ) {
 			}
 		}
 		advance(1);
-	} elsif (substr($data, $i) =~ /^\n{\s*\n/s) {
+	} elsif (substr($data, $i) =~ /^[^=]\s*\n{\s*\n/s) {
 		# catch routine entrance
-		my $len = $+[0];
-		advance(2);
+		advance($+[0] - 1);
 		print "PFL_ENTER();";
-		advance($len - 2);
+		advance(1);
 	} elsif (substr($data, $i) =~ /^\n}\s*$/m) {
 		# catch implicit 'return'
 		my $len = $+[0];
 		advance(1);
 		print "PFL_RETURNX();";
 		advance($len - 1);
-	} elsif (substr($data, $i) =~ /^.\breturn;/) {
+	} elsif (substr($data, $i) =~ /^.\breturn(;\s*}?)/s) {
 		# catch 'return' without an arg
-		$i += $+[0];
+		my $end = $1;
+		my $len = $+[0] - 1;
 		advance(1);
-		print "PFL_RETURNX();";
-	} elsif (substr($data, $i) =~ /^.\breturn\s*(\(\s*".*?"\s*\)|".*?")\s*;/s) {
+		$i += $len;
+		print "PFL_RETURNX()$end";
+	} elsif (substr($data, $i) =~ /^.\breturn\s*(\(\s*".*?"\s*\)|".*?")\s*(;\s*}?)/s) {
 		# catch 'return' with string literal arg
-		my $rc = $1;
-		my $len = $+[0];
+		my $rv = $1;
+		my $end = $2;
+		my $len = $+[0] - 1;
 		advance(1);
-		$i += $len - 1;
-		$rc =~ /^\s*\(\s*|\s*\)\s*$/g;
-		print "PFL_RETURN_STRLIT($rc);";
-	} elsif (substr($data, $i) =~ /^.\breturn\b\s*(.*?)\s*;/s) {
+		$i += $len;
+		$rv =~ /^\s*\(\s*|\s*\)\s*$/g;
+		print "PFL_RETURN_STRLIT($rv)$end";
+	} elsif (substr($data, $i) =~ /^.\breturn\b\s*(.*?)\s*(;\s*}?)/s) {
 		# catch 'return' with an arg
-		my $rc = $1;
-		my $len = $+[0];
+		my $rv = $1;
+		my $end = $2;
+		my $len = $+[0] - 1;
 		advance(1);
-		$i += $len - 1;
-		$rc =~ /^\s*\(\s*|\s*\)\s*$/g;
-		print "PFL_RETURN($rc);";
+		$i += $len;
+		$rv =~ /^\s*\(\s*|\s*\)\s*$/g;
+		print "PFL_RETURN($rv)$end";
 	} else {
 		advance(1);
 	}
