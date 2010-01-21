@@ -25,6 +25,7 @@
 #include <inttypes.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <unistd.h>
 
 #include "pfl/cdefs.h"
@@ -846,11 +847,17 @@ psc_ctlcli_main(const char *osockfn)
 	struct psc_ctlmsghdr mh;
 	struct sockaddr_un sun;
 	char sockfn[PATH_MAX];
+	const char *prg;
 	ssize_t n, siz;
 	void *m;
 
-	pscthr_init(PCTHRT_RD, 0, NULL,
-	    NULL, 0, "%srdthr", progname);
+	prg = strrchr(progname, '/');
+	if (prg)
+		prg++;
+	else
+		prg = progname;
+
+	pscthr_init(PCTHRT_RD, 0, NULL, NULL, 0, "%srdthr", prg);
 
 	if (psclist_empty(&psc_ctlmsgs))
 		errx(1, "no actions specified");
