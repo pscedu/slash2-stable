@@ -165,12 +165,18 @@ struct psclog_data {
 		return;						\
 	} while (0)
 
-#define PFL_RETURN(rc)						\
+#define PFL_RETURN(rv)						\
 	do {							\
-		typeof(rc) _pfl_rc = (rc);			\
-		psc_trace("exit rc=%ld %p", (long)_pfl_rc,	\
-		    (void *)(unsigned long)_pfl_rc);		\
-		return (_pfl_rc);				\
+		typeof(rv) _pfl_rv = (rv);			\
+		psc_trace("exit rc=%ld %p", (long)_pfl_rv,	\
+		    (void *)(unsigned long)_pfl_rv);		\
+		return (_pfl_rv);				\
+	} while (0)
+
+#define PFL_RETURN_LIT(rv)					\
+	do {							\
+		psc_trace("exit rc=%ld", (long)(rv));		\
+		return (rv);					\
 	} while (0)
 
 #define PFL_RETURN_STRLIT(str)					\
