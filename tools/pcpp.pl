@@ -32,6 +32,7 @@ if ($data !~ m!psc_util/log\.h! or
     basename($fn) eq "log.c" or
     basename($fn) eq "subsys.c" or
     basename($fn) eq "thread.c" or
+    basename($fn) eq "typedump.c" or
     !$opts{e}) {
 	print $data;
 	exit 0;
@@ -115,14 +116,14 @@ for ($i = 0; $i < length $data; ) {
 		advance(1);
 		$lvl++;
 		$foff = $i;
-	} elsif (substr($data, $i) =~ /^return(;\s*}?\s*)/s) {
+	} elsif (substr($data, $i) =~ /^return(\s*;\s*}?\s*)/s) {
 		# catch 'return' without an arg
 		my $end = $1;
 		my $len = $+[0];
 		$i += $len;
 		print "PFL_RETURNX()$end";
 		$lvl-- if $end =~ /}/;
-	} elsif (substr($data, $i) =~ /^return\s*(\(\s*".*?"\s*\)|".*?")\s*(;\s*}?\s*)/s) {
+	} elsif (substr($data, $i) =~ /^return(\s*(?:\(\s*".*?"\s*\)|".*?"))(\s*;\s*}?\s*)/s) {
 		# catch 'return' with string literal arg
 		my $rv = $1;
 		my $end = $2;
@@ -130,7 +131,7 @@ for ($i = 0; $i < length $data; ) {
 		$i += $len;
 		print "PFL_RETURN_STRLIT($rv)$end";
 		$lvl-- if $end =~ /}/;
-	} elsif (substr($data, $i) =~ /^return\s*(\(\s*\d+\s*\)|\d+)\s*(;\s*}?\s*)/s) {
+	} elsif (substr($data, $i) =~ /^return(\s*(?:\(\s*\d+\s*\)|\d+))(\s*;\s*}?\s*)/s) {
 		# catch 'return' with numeric literal arg
 		my $rv = $1;
 		my $end = $2;
@@ -138,7 +139,7 @@ for ($i = 0; $i < length $data; ) {
 		$i += $len;
 		print "PFL_RETURN_LIT($rv)$end";
 		$lvl-- if $end =~ /}/;
-	} elsif (substr($data, $i) =~ /^return\b\s*(.*?)\s*(;\s*}?\s*)/s) {
+	} elsif (substr($data, $i) =~ /^return\b(\s*.*?)(\s*;\s*}?\s*)/s) {
 		# catch 'return' with an arg
 		my $rv = $1;
 		my $end = $2;
@@ -146,11 +147,21 @@ for ($i = 0; $i < length $data; ) {
 		$i += $len;
 		print "PFL_RETURN($rv)$end";
 		$lvl-- if $end =~ /}/;
-	} elsif ($lvl == 1 && substr($data, $i) =~ /^(?:psc_fatalx?|exit|errx?)\s*\(.*?\)\s*(;\s*}?\s*)/s) {
-		# add goto and brace matching
-		my $end = $1;
+	} elsif ($lvl == 1 && substr($data, $i) =~ /^(?:psc_fatalx?|exit|errx?)\s*\([^;]*?\)\s*;\s*}\s*/s) {
+		# XXX this pattern skips psc_fatal("foo; bar")
+		# because of the embedded semi-colon
+
+		# skip no return conditions
 		advance($+[0]);
-		$lvl-- if $end =~ /}/;
+		$lvl--;
+	} elsif ($lvl == 1 && substr($data, $i) =~ /^goto\s*\w+\s*;\s*}\s*/s) {
+		# skip no return conditions
+		advance($+[0]);
+		$lvl--;
+	} elsif ($lvl == 1 && substr($data, $i) =~ m[^\s*/\*\s*NOTREACHED\s*\*/\s*}\s*]s) {
+		# skip no return conditions
+		advance($+[0]);
+		$lvl--;
 	} elsif (substr($data, $i) =~ /^\w+/) {
 		advance($+[0]);
 	} elsif (substr($data, $i, 1) eq "{") {
