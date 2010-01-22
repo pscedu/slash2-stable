@@ -22,6 +22,7 @@
 #include <unistd.h>
 
 #include "pfl/cdefs.h"
+#include "pfl/pfl.h"
 #include "psc_util/prsig.h"
 
 const char *progname;
@@ -36,6 +37,7 @@ usage(void)
 int
 main(int argc, char *argv[])
 {
+	pfl_init();
 	progname = argv[0];
 	if (getopt(argc, argv, "") != -1)
 		usage();
