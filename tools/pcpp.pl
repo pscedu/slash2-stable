@@ -130,6 +130,14 @@ for ($i = 0; $i < length $data; ) {
 		$i += $len;
 		print "PFL_RETURN_STRLIT($rv)$end";
 		$lvl-- if $end =~ /}/;
+	} elsif (substr($data, $i) =~ /^return\s*(\(\s*\d+\s*\)|\d+)\s*(;\s*}?\s*)/s) {
+		# catch 'return' with numeric literal arg
+		my $rv = $1;
+		my $end = $2;
+		my $len = $+[0];
+		$i += $len;
+		print "PFL_RETURN_LIT($rv)$end";
+		$lvl-- if $end =~ /}/;
 	} elsif (substr($data, $i) =~ /^return\b\s*(.*?)\s*(;\s*}?\s*)/s) {
 		# catch 'return' with an arg
 		my $rv = $1;
