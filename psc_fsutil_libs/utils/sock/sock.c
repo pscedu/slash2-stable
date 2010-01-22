@@ -345,4 +345,5 @@ main(int argc, char *argv[])
 		}
 		doconnect(argv[0]);
 	}
+	exit(0);
 }
