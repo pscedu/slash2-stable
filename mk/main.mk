@@ -192,7 +192,7 @@ else
     .PHONY: ${LIBRARY}
     ${LIBRARY}:
 	@${MAKE} -s ${DEPS}
-	MAKEFILES="${DEPS}" ${MAKE} HASDEPS=1 $@
+	@MAKEFILES="${DEPS}" ${MAKE} HASDEPS=1 $@
   endif
 endif
 
