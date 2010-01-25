@@ -149,7 +149,7 @@ all: recurse-all
 .SILENT: ${OBJDIR}/$(notdir %.dep)
 
 ${OBJDIR}/$(notdir %.dep) : %.c ${XDEPS}
-	${MKDEP} -D ${OBJDIR} -f $@ ${DEFINES} $(					\
+	${ECHORUN} ${MKDEP} -D ${OBJDIR} -f $@ ${DEFINES} $(					\
 	    ) $$(echo $(call FILE_CFLAGS,$<) | ${EXTRACT_DEFINES}) $(			\
 	    ) ${LIBC_INCLUDES} ${_TINCLUDES} $(						\
 	    ) $$(echo $(call FILE_CFLAGS,$<) | ${EXTRACT_INCLUDES}) -I$(dir $<) -I. $(realpath $<)
