@@ -199,11 +199,11 @@ void
 _psclogv(const char *fn, const char *func, int line, int subsys,
     int level, int options, const char *fmt, va_list ap)
 {
-	char prefix[LINE_MAX], emsg[LINE_MAX], umsg[LINE_MAX];
 	struct fuse_context *ctx;
 	struct psclog_data *d;
-	struct timeval tv;
+	char prefix[LINE_MAX];
 	const char *thrname;
+	struct timeval tv;
 	int save_errno;
 
 	save_errno = errno;
@@ -238,21 +238,17 @@ _psclogv(const char *fn, const char *func, int line, int subsys,
 		FMTSTRCASE('u', prefix, sizeof(prefix), "lu", tv.tv_usec)
 	);
 
-	/*
-	 * Write into intermediate buffers and send it all at once
-	 * to prevent threads weaving between printf() calls.
-	 */
-	vsnprintf(umsg, sizeof(umsg), fmt, ap);
-	if (umsg[strlen(umsg) - 1] == '\n')
-		umsg[strlen(umsg) - 1] = '\0';
-
+	PSCLOG_LOCK();
+	/* consider using fprintf_unlocked() for speed */
+	fprintf(stderr, "%s", prefix);
+	vfprintf(stderr, fmt, ap);
 	if (options & PLO_ERRNO)
-		snprintf(emsg, sizeof(emsg), ": %s",
-		    APP_STRERROR(save_errno));
-	else
-		emsg[0] = '\0';
-	fprintf(stderr, "%s%s%s%s", prefix, umsg, emsg, psclog_eol);
-	errno = save_errno; /* Restore in case it is needed further. */
+		fprintf(stderr, ": %s", APP_STRERROR(save_errno));
+	fprintf(stderr, "%s", psclog_eol);
+	PSCLOG_UNLOCK();
+
+	/* Restore in case app needs it after our fprintf()'s may have modified it. */
+	errno = save_errno;
 
 	if (level == PLL_FATAL) {
 		abort();
