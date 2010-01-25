@@ -79,7 +79,7 @@ psc_enter_debugger(const char *str)
 
 	gettimeofday(&tv, NULL);
 	printf("timestamp %lu:%lu, enter debugger (%s) ...\n", tv.tv_sec, tv.tv_usec, str);
-	psc_notify("timestamp %lu:%lu, enter debugger (%s) ...\n", tv.tv_sec, tv.tv_usec, str);
+	psc_notify("timestamp %lu:%lu, enter debugger (%s) ...", tv.tv_sec, tv.tv_usec, str);
 	/*
 	 * Another way to drop into debugger is to use
 	 *

@@ -90,7 +90,7 @@ static int psc_send_buf (lnet_handle_md_t *mdh, void *base, int len,
 		psc_errorx("LNetPut(%s, %d, %"PRIu64") failed: %d",
 			libcfs_id2str(conn->c_peer), portal, xid, rc);
 		rc2 = LNetMDUnlink(*mdh);
-		psc_assert_msg(rc2 == 0, "rc2 = %d\n", rc2);
+		psc_assert_msg(rc2 == 0, "rc2 = %d", rc2);
 	}
 
 	return (0);
@@ -683,10 +683,10 @@ static void __pscrpc_free_req(struct pscrpc_request *request, int  locked)
 	if (request == NULL)
 		return;
 
-	psc_assert_msg(!request->rq_receiving_reply, "req %p\n", request);
-	psc_assert_msg(request->rq_rqbd == NULL, "req %p\n",request);/* client-side */
-	psc_assert_msg(psclist_disjoint(&request->rq_list_entry), "req %p\n", request);
-	psc_assert_msg(psclist_disjoint(&request->rq_set_chain_lentry), "req %p\n", request);
+	psc_assert_msg(!request->rq_receiving_reply, "req %p", request);
+	psc_assert_msg(request->rq_rqbd == NULL, "req %p",request);/* client-side */
+	psc_assert_msg(psclist_disjoint(&request->rq_list_entry), "req %p", request);
+	psc_assert_msg(psclist_disjoint(&request->rq_set_chain_lentry), "req %p", request);
 
 	/* We must take it off the imp_replay_list first.  Otherwise, we'll set
 	 * request->rq_reqmsg to NULL while osc_close is dereferencing it. */
