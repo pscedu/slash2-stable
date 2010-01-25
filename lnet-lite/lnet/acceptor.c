@@ -49,7 +49,6 @@ static char *accept_type;
 static int accept_port = 988;
 static int accept_backlog;
 static int accept_timeout;
-static int accept_masquerade;
 
 static int la_init_ok;	/* bumped for each successful thread */
 static int la_shutdown;
@@ -60,12 +59,6 @@ int
 lnet_acceptor_port(void)
 {
 	return accept_port;
-}
-
-int
-lnet_acceptor_masquerading(void)
-{
-	return (accept_masquerade);
 }
 
 int
@@ -120,11 +113,6 @@ lnet_acceptor_get_tunables()
 		return rc;
 
 	rc = lnet_parse_int_tunable(&accept_timeout, "LNET_ACCEPT_TIMEOUT", 5);
-
-	if (rc != 0)
-		return rc;
-
-	rc = lnet_parse_int_tunable(&accept_masquerade, "LNET_ACCEPT_MASQUERADE", 0);
 
 	if (rc != 0)
 		return rc;
@@ -191,9 +179,6 @@ lnet_accept(int sock, __u32 magic, __u32 peer_ip, __unusedx int peer_port)
 		__swab64s(&cr.acr_nid);
 
 	ni = lnet_net2ni(LNET_NIDNET(cr.acr_nid));
-
-	if (accept_masquerade)
-		cr.acr_nid = ni->ni_nid;
 
 	if (ni == NULL ||                    /* no matching net */
 	     ni->ni_nid != cr.acr_nid) {     /* right NET, wrong NID! */

@@ -194,10 +194,6 @@ usocklnd_read_msg(usock_conn_t *conn, int *cont_flag)
                 conn->uc_rx_state = UC_RX_PARSE;
                 usocklnd_conn_addref(conn); /* ++ref while parsing */
 
-		if (lnet_acceptor_masquerading())
-			conn->uc_rx_msg.ksm_u.lnetmsg.ksnm_hdr.dest_nid =
-			    cpu_to_le64(conn->uc_peer->up_ni->ni_nid);
-
                 rc = lnet_parse(conn->uc_peer->up_ni,
                                 &conn->uc_rx_msg.ksm_u.lnetmsg.ksnm_hdr,
                                 conn->uc_peerid.nid, conn, 0);
