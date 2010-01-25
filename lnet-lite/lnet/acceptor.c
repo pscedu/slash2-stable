@@ -63,6 +63,12 @@ lnet_acceptor_port(void)
 }
 
 int
+lnet_acceptor_masquerading(void)
+{
+	return (accept_masquerade);
+}
+
+int
 lnet_parse_int_tunable(int *value, char *name, int dflt)
 {
 	char    *env = getenv(name);
@@ -118,7 +124,7 @@ lnet_acceptor_get_tunables()
 	if (rc != 0)
 		return rc;
 
-	rc = lnet_parse_int_tunable(&accept_timeout, "LNET_ACCEPT_MASQUERADE", 0);
+	rc = lnet_parse_int_tunable(&accept_masquerade, "LNET_ACCEPT_MASQUERADE", 0);
 
 	if (rc != 0)
 		return rc;

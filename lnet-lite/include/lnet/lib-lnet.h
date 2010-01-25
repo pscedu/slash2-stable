@@ -698,6 +698,8 @@ int lnet_acceptor_port(void);
 int lnet_acceptor_start(void);
 void lnet_acceptor_stop(void);
 
+int lnet_acceptor_masquerading(void);
+
 int lnet_peers_start_down(void);
 int lnet_router_checker_start(void);
 void lnet_router_checker_stop(void);
