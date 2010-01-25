@@ -250,8 +250,11 @@ doconnect(const char *addr)
 
 	memset(&ss, 0, sizeof(ss));
 	sin = (struct sockaddr_in *)&ss;
-	if (inet_pton(AF_INET, addr, &sin->sin_addr.s_addr) != 1)
-		psc_fatal("inet_pton");
+	rc = inet_pton(AF_INET, addr, &sin->sin_addr.s_addr);
+	if (rc == -1)
+		psc_fatal("inet_pton: %s", addr);
+	if (rc == 0)
+		psc_fatalx("address cannot be parsed: %s", addr);
 	sin->sin_port = htons(port);
 	sin->sin_family = AF_INET;
 
