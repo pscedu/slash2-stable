@@ -611,8 +611,8 @@ int pscrpc_register_rqbd (struct pscrpc_request_buffer_desc *rqbd)
 	lnet_md_t                 md;
 	lnet_handle_me_t          me_h;
 
-	CDEBUG(D_NET, "LNetMEAttach: portal %d\n",
-	       service->srv_req_portal);
+        CDEBUG(D_RPCTRACE, "LNetMEAttach: portal %d\n",
+               service->srv_req_portal);
 
 	//        if (OBD_FAIL_CHECK_ONCE(OBD_FAIL_PSCRPC_RQBD))
 	//        return (-ENOMEM);
@@ -717,6 +717,9 @@ static void __pscrpc_free_req(struct pscrpc_request *request, int  locked)
 
 	if (request->rq_bulk != NULL)
 		pscrpc_free_bulk(request->rq_bulk);
+
+	if (request->rq_compl_cntr)
+                atomic_dec(request->rq_compl_cntr);
 
 	psc_assert(request->rq_reply_state == NULL);
 
