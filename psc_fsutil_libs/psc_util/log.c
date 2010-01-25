@@ -41,6 +41,7 @@
 #include "psc_util/alloc.h"
 #include "psc_util/fmtstr.h"
 #include "psc_util/log.h"
+#include "psc_util/strlcpy.h"
 
 #ifndef APP_STRERROR
 #define APP_STRERROR strerror
@@ -199,12 +200,12 @@ void
 _psclogv(const char *fn, const char *func, int line, int subsys,
     int level, int options, const char *fmt, va_list ap)
 {
+	char *p, prefix[LINE_MAX], fmtbuf[LINE_MAX];
 	struct fuse_context *ctx;
 	struct psclog_data *d;
-	char prefix[LINE_MAX];
-	const char *thrname;
 	struct timeval tv;
-	int save_errno;
+	const char *thrname;
+	int rc, save_errno;
 
 	save_errno = errno;
 
@@ -238,22 +239,30 @@ _psclogv(const char *fn, const char *func, int line, int subsys,
 		FMTSTRCASE('u', prefix, sizeof(prefix), "lu", tv.tv_usec)
 	);
 
+	rc = strlcpy(fmtbuf, fmt, sizeof(fmtbuf));
+	if (rc >= (int)sizeof(fmtbuf)) {
+		warnx("psclog error: string too long");
+		rc = sizeof(fmtbuf) - 1;
+	}
+	for (p = fmtbuf + rc - 1; p >= fmtbuf && *p == '\n'; p--)
+		*p = '\0';
+
 	PSCLOG_LOCK();
 	/* consider using fprintf_unlocked() for speed */
 	fprintf(stderr, "%s", prefix);
-	vfprintf(stderr, fmt, ap);
+	vfprintf(stderr, fmtbuf, ap);
 	if (options & PLO_ERRNO)
 		fprintf(stderr, ": %s", APP_STRERROR(save_errno));
 	fprintf(stderr, "%s", psclog_eol);
 	PSCLOG_UNLOCK();
 
-	/* Restore in case app needs it after our fprintf()'s may have modified it. */
-	errno = save_errno;
-
 	if (level == PLL_FATAL) {
 		abort();
 		_exit(1);
 	}
+
+	/* Restore in case app needs it after our fprintf()'s may have modified it. */
+	errno = save_errno;
 }
 
 void
