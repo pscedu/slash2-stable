@@ -301,6 +301,7 @@ main(int argc, char *argv[])
 	char *p;
 	int c;
 
+	pfl_init();
 	listenif = NULL;
 	progname = argv[0];
 	while ((c = getopt(argc, argv, "l:p:S")) != -1)
@@ -328,7 +329,6 @@ main(int argc, char *argv[])
 			usage();
 	}
 
-	pfl_init();
 	buf = PSCALLOC(bufsiz);
 
 	psc_iostats_init(&rdst, "read");
