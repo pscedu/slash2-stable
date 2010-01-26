@@ -278,9 +278,10 @@ copyright: recurse-copyright
 
 doc: recurse-doc
 	@if ${NOTEMPTY} "${MAN}"; then							\
-		for i in "${MAN}"; do							\
-			${ECHORUN} ${MDPROC} $$i;					\
-		done;									\
+		${ECHORUN} ${MDPROC} $$(echo ${MAN} $(					\
+		    ) $$([ -e ${PROG}.[0-9] ] && echo ${PROG}.[0-9]) $(			\
+		    ) $$([ -e ${LIBRARY}.[0-9] ] && echo ${LIBRARY}.[0-9]) |		\
+		    sed 's/ /\n/' | sort -u);						\
 	fi
 
 #CS_ARGS+=-s${APP_BASE}
