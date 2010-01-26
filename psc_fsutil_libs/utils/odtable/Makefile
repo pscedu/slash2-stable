@@ -3,6 +3,7 @@
 include ../Makefile.path
 
 PROG=		odtable
+MAN+=		odtable.1
 SRCS=		odtable_test.c
 SRCS+=		${PFL_BASE}/psc_ds/dynarray.c
 SRCS+=		${PFL_BASE}/psc_ds/vbitmap.c
