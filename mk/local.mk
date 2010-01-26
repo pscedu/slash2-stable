@@ -15,6 +15,7 @@ HDRCLEAN=	${ROOTDIR}/tools/hdrclean.pl
 LIBDEP=		${ROOTDIR}/tools/libdep.pl
 ECHORUN=	${ROOTDIR}/tools/echorun.sh
 PCPP=		${ROOTDIR}/tools/pcpp.pl -e
+MDPROC=		${ROOTDIR}/tools/mdproc.pl
 MAKEFLAGS+=	--no-print-directory
 
 LFLAGS+=	-t

@@ -276,6 +276,13 @@ copyright: recurse-copyright
 	fi
 	@find . -mindepth 2 -name '*.h' | xargs -r ${ECHORUN} ${ROOTDIR}/tools/gencopyright.sh
 
+doc: recurse-doc
+	@if ${NOTEMPTY} "${MAN}"; then							\
+		for i in "${MAN}"; do							\
+			${ECHORUN} ${MDPROC} $$i;					\
+		done;									\
+	fi
+
 #CS_ARGS+=-s${APP_BASE}
 #ET_ARGS+="${APP_BASE}"
 
