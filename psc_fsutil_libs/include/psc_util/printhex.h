@@ -17,5 +17,16 @@
  * %PSC_END_COPYRIGHT%
  */
 
-void printhex(void *, size_t);
-void printbin(uint64_t);
+#ifndef _PFL_PRINTHEX_H_
+#define _PFL_PRINTHEX_H_
+
+void printhex(const void *, size_t);
+void printvbin(const void *, size_t);
+
+static inline void
+printbin(uint64_t val)
+{
+	printvbin(&val, sizeof(val));
+}
+
+#endif /* _PFL_PRINTHEX_H_ */

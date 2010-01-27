@@ -23,13 +23,12 @@
 #include "psc_util/lock.h"
 
 void
-printhex(void *ptr, size_t len)
+printhex(const void *ptr, size_t len)
 {
-	static psc_spinlock_t lk = LOCK_INITIALIZER;
-	unsigned char *p = ptr;
+	const unsigned char *p = ptr;
 	size_t n;
 
-	spinlock(&lk);
+	flockfile(stdout);
 	for (n = 0; n < len; p++, n++) {
 		if (n) {
 			if (n % 32 == 0)
@@ -43,18 +42,28 @@ printhex(void *ptr, size_t len)
 		printf("%02x", *p);
 	}
 	printf("\n------------------------------------------\n");
-	freelock(&lk);
+	funlockfile(stdout);
 }
 
+/*
+ * printvbin - display the bit representation of some data.
+ */
 void
-printbin(uint64_t val)
+printvbin(const void *ptr, size_t len)
 {
-	static psc_spinlock_t lk = LOCK_INITIALIZER;
+	const unsigned char *p = ptr;
+	size_t n;
 	int i;
 
-	spinlock(&lk);
-	for (i = (int)sizeof(val) * NBBY - 1; i >= 0; i--)
-		putchar(val & (UINT64_C(1) << i) ? '1': '0');
+	flockfile(stdout);
+	for (n = 0, p = ptr + len - 1; n < len; p--, n++) {
+		if (n && n % 8 == 0)
+			printf("\n");
+		for (i = NBBY - 1; i >= 0; i--)
+			putchar((*p & (1 << i)) ? '1': '0');
+		if (n % 8 != 7 && n != len - 1)
+			putchar(' ');
+	}
 	putchar('\n');
-	freelock(&lk);
+	funlockfile(stdout);
 }
