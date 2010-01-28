@@ -1,6 +1,7 @@
 /* $Id$ */
 
 #include <ctype.h>
+#include <inttypes.h>
 
 #include "fio.h"
 #include "fio_sym.h"
@@ -165,12 +166,12 @@ store_tok_val(const char *tok, char *val)
 			ASSERT(0);
 		}
 
-		BDEBUG("ival   = %llu \n", i);
+		BDEBUG("ival   = %"PRIu64"\n", i);
 
 		val[j-1] = '\0';
 		*z = (u64)(i * strtoull(val, NULL, 10));
 
-		BDEBUG("FIO_SIZET Tok '%s' set to '%llu'\n",
+		BDEBUG("FIO_SIZET Tok '%s' set to '%"PRIu64"'\n",
 		    e->name, (u64)*z);
 		break;
 

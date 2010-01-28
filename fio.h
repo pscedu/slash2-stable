@@ -21,6 +21,7 @@
 #include <signal.h>
 #include <stdarg.h>
 #include <stddef.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -186,7 +187,7 @@ enum debug_channels_short {
 
 #define LONGSZ sizeof(long int)
 
-typedef unsigned long long u64;
+typedef uint64_t u64;
 
 struct op_log_t {
 	int    oplog_magic;
@@ -369,14 +370,14 @@ extern GROUP_t		*currentGroup;
 	fprintf(stderr, "%s() %s, %d :: "format,			\
 	    __FUNCTION__, __FILE__, __LINE__, ##__VA_ARGS__);
 
-#define ASSERT(cond) 							\
+#define ASSERT(cond)							\
     if (!(cond)) {							\
 	    fprintf(stderr, "ASSERT %s() %s, %d %s\n",			\
 		__FUNCTION__, __FILE__, __LINE__, strerror(errno));	\
 	    exit(1);							\
     }
 
-#define ASSERTPE(cond) 							\
+#define ASSERTPE(cond)							\
     if (!(cond)) {							\
 	    fprintf(stderr, "ASSERT PE_%d %s() %s, %d %s\n",		\
 		iot->mype, __FUNCTION__, __FILE__,			\
@@ -395,7 +396,8 @@ extern GROUP_t		*currentGroup;
     fprintf(stderr, "WARNING %s() %s, %d :: :: "format,			\
 	__FUNCTION__, __FILE__, __LINE__, ##args)
 
-static inline char * get_dbg_prefix(int dbg_channel)
+static inline char *
+get_dbg_prefix(int dbg_channel)
 {
 	switch (dbg_channel) {
 	case FIO_DBG_BLOCK:
@@ -432,8 +434,8 @@ static inline char * get_dbg_prefix(int dbg_channel)
 	    "\tnum_pes %d\n"						\
 	    "\tnum_tests %d\n"						\
 	    "\tpath '%s'\n"						\
-	    "\tfile_size %llu\n"					\
-	    "\tblock_size %llu\n"					\
+	    "\tfile_size %"PRIu64"\n"					\
+	    "\tblock_size %"PRIu64"\n"					\
 	    "\titeratons %d\n"						\
 	    "\ttest_opts %d\n"						\
 	    "\tfile_per_pe %d\n"					\
@@ -469,11 +471,14 @@ static inline char * get_dbg_prefix(int dbg_channel)
 
 #define STARTWATCH(test) gettimeofday(&(iot->times[test]), NULL)
 #define STOPWATCH(test)							\
-	gettimeofday(&(iot->times[test+1]), NULL);			\
-	log_op(test, iot);
+	do {								\
+		gettimeofday(&(iot->times[test+1]), NULL);		\
+		log_op(test, iot);					\
+	} while (0)
 
-static inline double calc_run_time(struct timeval *tv1,
-    struct timeval *tv2) {
+static inline double
+calc_run_time(struct timeval *tv1, struct timeval *tv2)
+{
 	float t;
 
 	t = ( ((tv2->tv_usec/1000000.0) + tv2->tv_sec) -
@@ -482,7 +487,9 @@ static inline double calc_run_time(struct timeval *tv1,
 	return t;
 }
 
-static inline char * clock_2_str(int clock) {
+static inline char *
+clock_2_str(int clock)
+{
 	switch (clock) {
 	case WRITE_clk:   return "WRITE";
 	case READ_clk:    return "READ";
@@ -507,7 +514,8 @@ static inline char * clock_2_str(int clock) {
  *  method.
  */
 
-static inline void _BARRIER(GROUP_t *mygroup, struct io_toolbox *iot)
+static inline void
+_BARRIER(GROUP_t *mygroup, struct io_toolbox *iot)
 {
 #ifdef HAVE_LIBPTHREAD
 	barrier_wait(&mygroup->group_barrier);
@@ -641,9 +649,9 @@ static inline void _BARRIER(GROUP_t *mygroup, struct io_toolbox *iot)
 #define FSTAT do {							\
 	APP_BARRIER;							\
 	STARTWATCH(FSTAT_clk);						\
-	if (iot->unlink) { 						\
+	if (iot->unlink) {						\
 		ASSERT(!fstat(iot->myfd, &iot->stb_unlink));		\
-	} else { 							\
+	} else {							\
 		ASSERT(!fstat(iot->myfd, &iot->stb));			\
 	}								\
 	STOPWATCH(FSTAT_clk);						\
@@ -669,8 +677,8 @@ static inline void _BARRIER(GROUP_t *mygroup, struct io_toolbox *iot)
 	e, e->oplog_type, e->oplog_used, e->oplog_time,			\
 	e->oplog_barrier_time, e->sub.oplog_sublog)
 
-static inline void log_op(int    op_type,
-    IOT_t *iot)
+static inline void
+log_op(int op_type, IOT_t *iot)
 {
 	GROUP_t *mygroup = iot->mygroup;
 	/*
@@ -709,7 +717,8 @@ static inline void log_op(int    op_type,
 
 #define LOG(op) log_op(op, iot)
 
-static inline void * iolog_alloc(IOTESTLOG_t *iolog, size_t size)
+static inline void *
+iolog_alloc(IOTESTLOG_t *iolog, size_t size)
 {
 	BDEBUG("size %zu\n", size);
 	ASSERT( (size > 0) && !(size % OPLOGSZ) );
@@ -722,7 +731,8 @@ static inline void * iolog_alloc(IOTESTLOG_t *iolog, size_t size)
 /*
  * Path making macros
  */
-static inline char * trunc_path(int depth, char *p)
+static inline char *
+trunc_path(int depth, char *p)
 {
 	/* goto the end of the string */
 	while (*p != '\0') p++;
@@ -735,7 +745,8 @@ static inline char * trunc_path(int depth, char *p)
 	return (p+1);
 }
 
-static inline char * str_end(char *p)
+static inline char *
+str_end(char *p)
 {
 	/* goto the end of the string */
 	while (*p != '\0') p++;
@@ -743,8 +754,8 @@ static inline char * str_end(char *p)
 	return (p);
 }
 
-
-static inline void make_fnam(struct io_toolbox *iot)
+static inline void
+make_fnam(struct io_toolbox *iot)
 {
 	GROUP_t *mygroup = iot->mygroup;
 	int      tmp_pe  = iot->mytest_pe;
@@ -768,7 +779,8 @@ static inline void make_fnam(struct io_toolbox *iot)
 	    iot->micro_iterations);
 }
 
-static inline void clear_fnam(struct io_toolbox *iot)
+static inline void
+clear_fnam(struct io_toolbox *iot)
 {
 	char *ptr = trunc_path(1, iot->mypath);
 
@@ -777,7 +789,8 @@ static inline void clear_fnam(struct io_toolbox *iot)
 	*ptr      = '\0';
 }
 
-static inline void make_pe_specific_dir(struct io_toolbox *iot)
+static inline void
+make_pe_specific_dir(struct io_toolbox *iot)
 {
 	iot->myfnam = str_end(iot->mypath);
 	DEBUG(D_DTREE, "PATH %s\n", iot->mypath);
@@ -791,7 +804,8 @@ static inline void make_pe_specific_dir(struct io_toolbox *iot)
 	DEBUG(D_DTREE, "PATH %s\n", iot->myfnam);
 }
 
-static inline void make_rel_pathname(struct io_toolbox *iot)
+static inline void
+make_rel_pathname(struct io_toolbox *iot)
 {
 	//GROUP_t *mygroup = iot->mygroup;
 	iot->myfnam = str_end(iot->mypath);
@@ -814,7 +828,8 @@ static inline void make_rel_pathname(struct io_toolbox *iot)
 	DEBUG(D_DTREE, "mypath PATH %s\n", iot->mypath);
 }
 
-static inline void make_abs_pathname(struct io_toolbox *iot)
+static inline void
+make_abs_pathname(struct io_toolbox *iot)
 {
 	GROUP_t *mygroup = iot->mygroup;
 
@@ -827,7 +842,9 @@ static inline void make_abs_pathname(struct io_toolbox *iot)
 	DEBUG(D_DTREE, "PATH %s\n", iot->mypath);
 }
 
-static inline void push_dirstack(IOT_t *iot) {
+static inline void
+push_dirstack(IOT_t *iot)
+{
 	DIR_t   *new_dir;
 	GROUP_t *mygroup = iot->mygroup;
 
@@ -849,11 +866,10 @@ static inline void push_dirstack(IOT_t *iot) {
 		MKDIR;
 	}
 	BARRIER;
-
-	return;
 }
 
-static inline void pop_dirstack(IOT_t *iot)
+static inline void
+pop_dirstack(IOT_t *iot)
 {
 	struct list_head *tmp, *tmp1;
 	GROUP_t          *mygroup = iot->mygroup;
@@ -919,7 +935,9 @@ static inline void pop_dirstack(IOT_t *iot)
 /*
  * Buffer Related functions and macros
  */
-static inline void xor_buffer(struct buffer_t *bdesc){
+static inline void
+xor_buffer(struct buffer_t *bdesc)
+{
 	size_t t = 0;
 	long int *buf_long_ints = (long int *)bdesc->buffer;
 
@@ -928,8 +946,9 @@ static inline void xor_buffer(struct buffer_t *bdesc){
 	}
 }
 
-static inline int compare_buffer(const struct buffer_t *bdesc_a,
-    const struct buffer_t *bdesc_b) {
+static inline int
+compare_buffer(const struct buffer_t *bdesc_a, const struct buffer_t *bdesc_b)
+{
 	size_t t = 0;
 	size_t i = bdesc_a->buffer_size / LONGSZ;
 
@@ -951,13 +970,19 @@ static inline int compare_buffer(const struct buffer_t *bdesc_a,
 	return 0;
 }
 
-#define SWABBUFFER(bdesc) \
-    if ( ACTIVETYPE(FIO_VERIFY) ) xor_buffer(bdesc)
+#define SWABBUFFER(bdesc)							\
+	do {									\
+		if (ACTIVETYPE(FIO_VERIFY))					\
+			xor_buffer(bdesc);					\
+	} while (0)
 
 #define CLEANBUFFER SWABBUFFER
 
-#define COMPAREBUFFERS(a, b) \
-    if ( ACTIVETYPE(FIO_VERIFY) ) compare_buffer(a, b)
+#define COMPAREBUFFERS(a, b)							\
+	do {									\
+		if (ACTIVETYPE(FIO_VERIFY))					\
+			compare_buffer((a), (b));				\
+	} while (0)
 
 int do_unlink(struct io_toolbox *);
 int do_rdopen(struct io_toolbox *);

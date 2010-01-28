@@ -1,6 +1,7 @@
 /* $Id$ */
 
 #include <err.h>
+#include <inttypes.h>
 
 #include "pfl/cdefs.h"
 
