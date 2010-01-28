@@ -146,7 +146,7 @@ subsect_block:	subsect_begin statements SUBSECT_END |
 		iotests SUBSECT_END {};
 
 subsect_begin:	SUB STR SUBSECT_START {
-	struct symtable_t *sym = get_symbol($2);
+	struct symtable *sym = get_symbol($2);
 
 	if (sym == NULL)
 		err(1, "invalid config entry '%s'", $2);

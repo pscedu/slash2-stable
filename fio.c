@@ -821,7 +821,7 @@ void *
 worker(void *arg)
 {
 	int f, i, j, k, l, m, num_files, rc = 0;
-	struct symtable_t   *e;
+	struct symtable   *e;
 	int                 *mype        = (int*)arg;
 	struct io_toolbox   *iot         = init_pe(*mype);
 	GROUP_t             *mygroup     = iot->mygroup;

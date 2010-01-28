@@ -1,7 +1,10 @@
+/* $Id$ */
+
+#include "fio.h"
+#include "fio_sym.h"
 
 /* declare and initialize the global table */
-struct symtable_t sym_table[] =
-{
+struct symtable sym_table[] = {
   {"creat",   FIO_FUNCTION, FIO_NONE, .io_func = do_creat},
   {"create",  FIO_FUNCTION, FIO_NONE, .io_func = do_creat},
   {"trunc",   FIO_FUNCTION, FIO_NONE, .io_func = do_trunc},

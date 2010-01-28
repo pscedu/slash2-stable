@@ -8,6 +8,7 @@ SRCS+=		fio_config_lex.l
 SRCS+=		fio_config_parser.y
 SRCS+=		fio_pthread_barrier.c
 SRCS+=		fio_sym.c
+SRCS+=		fio_symtable.c
 
 ifdef DEBUG
 CFLAGS+=	-g
