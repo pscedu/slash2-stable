@@ -24,9 +24,9 @@
 #define PSC_ATOMIC32_INIT(i)		{ i }
 #define PSC_ATOMIC64_INIT(i)		{ i }
 
-#define _PFL_GETA16(v)			(((psc_atomic16_t *)(v))->value16)
-#define _PFL_GETA32(v)			(((psc_atomic32_t *)(v))->value32)
-#define _PFL_GETA64(v)			(((psc_atomic64_t *)(v))->value64)
+#define _PFL_GETA16(v)			((v)->value16)
+#define _PFL_GETA32(v)			((v)->value32)
+#define _PFL_GETA64(v)			((v)->value64)
 
 #undef psc_atomic16_read
 static __inline int16_t
@@ -468,7 +468,7 @@ psc_atomic64_clearmask_getnew(psc_atomic64_t *v, int64_t mask)
 
 	mask = ~mask;
 	_PFL_ASM("andq %0, %1;" : "=r" (mask)
-	    : "m" _PFL_GETA32(v), "0" (oldv));
+	    : "m" _PFL_GETA64(v), "0" (oldv));
 	return (oldv & ~mask);
 }
 
