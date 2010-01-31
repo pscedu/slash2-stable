@@ -82,9 +82,13 @@
 #define psc_atomic64_setmask_getold		_pfl_gen_atomic64_setmask_getold
 #define psc_atomic64_xchg			_pfl_gen_atomic64_xchg
 
-typedef struct { volatile int16_t value16; } __packed psc_atomic16_t;
-typedef struct { volatile int32_t value32; } __packed psc_atomic32_t;
-typedef struct { volatile int64_t value64; } __packed psc_atomic64_t;
+struct psc_atomic16 { volatile int16_t value16; } __packed;
+struct psc_atomic32 { volatile int32_t value32; } __packed;
+struct psc_atomic64 { volatile int64_t value64; } __packed;
+
+#define psc_atomic16_t struct psc_atomic16
+#define psc_atomic32_t struct psc_atomic32
+#define psc_atomic64_t struct psc_atomic64
 
 #include "pfl/compat/generic/atomic.h"
 
