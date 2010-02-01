@@ -52,21 +52,21 @@ psc_atomic16_t v16 = PSC_ATOMIC16_INIT(0);
 
 #define TEST(prefix, op, v, arg1, arg2, newval)				\
 	do {								\
-		psc_atomic_ ## op((arg1), (arg2));			\
+		prefix ## _ ## op((arg1), (arg2));			\
 		CHECKV(prefix, op, v, newval);				\
 	} while (0)
 
 #define TEST1V(prefix, op, v, newval, rv)				\
 	do {								\
-		if (psc_atomic_ ## op(v) != (rv))			\
-			psc_fatalx("psc_atomic_" #op ": want rv %d",	\
-			    (rv));					\
+		if (prefix ## _ ## op(v) != (rv))			\
+			psc_fatalx(#prefix "_" #op ": "			\
+			    "want rv %d", (rv));			\
 		CHECKV(prefix, op, v, newval);				\
 	} while (0)
 
 #define TEST1(prefix, op, v, newval)					\
 	do {								\
-		psc_atomic_ ## op(v);					\
+		prefix ## _ ## op(v);					\
 		CHECKV(prefix, op, v, newval);				\
 	} while (0)
 
