@@ -30,6 +30,7 @@
 #include <sys/resource.h>
 
 #include <errno.h>
+#include <inttypes.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -655,7 +656,7 @@ psc_ctlparam_rlim_nofile(int fd, struct psc_ctlmsghdr *mh,
 			return (psc_ctlsenderr(fd, mh,
 			    "getrlimit", strerror(errno)));
 		}
-		snprintf(buf, sizeof(buf), "%ld", nfd);
+		snprintf(buf, sizeof(buf), "%"PRId64, nfd);
 		rc = psc_ctlmsg_param_send(fd, mh, pcp,
 		    PCTHRNAME_EVERYONE, levels, 2, buf);
 	}
