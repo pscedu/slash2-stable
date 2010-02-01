@@ -28,23 +28,41 @@
 #define _PFL_GETA32(v)			((v)->value32)
 #define _PFL_GETA64(v)			((v)->value64)
 
+#undef psc_atomic16_init
+static __inline void
+psc_atomic16_init(__unusedx psc_atomic16_t *v)
+{
+}
+
+#undef psc_atomic32_init
+static __inline void
+psc_atomic32_init(__unusedx psc_atomic32_t *v)
+{
+}
+
+#undef psc_atomic64_init
+static __inline void
+psc_atomic64_init(__unusedx psc_atomic64_t *v)
+{
+}
+
 #undef psc_atomic16_read
 static __inline int16_t
-psc_atomic16_read(const psc_atomic16_t *v)
+psc_atomic16_read(psc_atomic16_t *v)
 {
 	return (_PFL_GETA16(v));
 }
 
 #undef psc_atomic32_read
 static __inline int32_t
-psc_atomic32_read(const psc_atomic32_t *v)
+psc_atomic32_read(psc_atomic32_t *v)
 {
 	return (_PFL_GETA32(v));
 }
 
 #undef psc_atomic64_read
 static __inline int64_t
-psc_atomic64_read(const psc_atomic64_t *v)
+psc_atomic64_read(psc_atomic64_t *v)
 {
 	return (_PFL_GETA64(v));
 }

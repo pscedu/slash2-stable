@@ -17,12 +17,14 @@
  * %PSC_END_COPYRIGHT%
  */
 
+#include "psc_util/lock.h"
+
 #define _PFL_ASM(code, ...)		__asm__ __volatile__("lock; " code, ## __VA_ARGS__)
 #define _PFL_NL_ASM(code, ...)		__asm__ __volatile__(code, ## __VA_ARGS__)
 
 struct psc_i386_atomic64 {
-	volatile int64_t value64;
-	psc_spinlock_t lock64;
+	volatile int64_t		value64;
+	psc_spinlock_t			lock64;
 } __packed;
 
 #undef psc_atomic64_t
@@ -36,23 +38,42 @@ struct psc_i386_atomic64 {
 #define _PFL_GETA32(v)			((v)->value32)
 #define _PFL_GETA64(v)			((v)->value64)
 
+#undef psc_atomic16_init
+static __inline void
+psc_atomic16_init(__unusedx psc_atomic16_t *v)
+{
+}
+
+#undef psc_atomic32_init
+static __inline void
+psc_atomic32_init(__unusedx psc_atomic32_t *v)
+{
+}
+
+#undef psc_atomic64_init
+static __inline void
+psc_atomic64_init(psc_atomic64_t *v)
+{
+	LOCK_INIT(&v->lock64);
+}
+
 #undef psc_atomic16_read
 static __inline int16_t
-psc_atomic16_read(const psc_atomic16_t *v)
+psc_atomic16_read(psc_atomic16_t *v)
 {
 	return (_PFL_GETA16(v));
 }
 
 #undef psc_atomic32_read
 static __inline int32_t
-psc_atomic32_read(const psc_atomic32_t *v)
+psc_atomic32_read(psc_atomic32_t *v)
 {
 	return (_PFL_GETA32(v));
 }
 
 #undef psc_atomic64_read
 static __inline int64_t
-psc_atomic64_read(const psc_atomic64_t *v)
+psc_atomic64_read(psc_atomic64_t *v)
 {
 	uint64_t val;
 
@@ -542,6 +563,7 @@ psc_atomic32_xchg(psc_atomic32_t *v, int32_t i)
 	return (i);
 }
 
+#if 0
 #undef psc_atomic64_xchg
 static __inline int64_t
 psc_atomic64_xchg(psc_atomic64_t *v, int64_t i)
@@ -550,6 +572,7 @@ psc_atomic64_xchg(psc_atomic64_t *v, int64_t i)
 	    : "m" _PFL_GETA64(v), "0" (i) : "memory");
 	return (i);
 }
+#endif
 
 #undef psc_atomic16_cmpxchg
 static __inline int16_t

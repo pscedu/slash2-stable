@@ -25,6 +25,7 @@
 
 #include "psc_util/log.h"
 
+#define psc_atomic16_init			_pfl_gen_atomic16_init
 #define psc_atomic16_add			_pfl_gen_atomic16_add
 #define psc_atomic16_sub			_pfl_gen_atomic16_sub
 #define psc_atomic16_sub_and_test0		_pfl_gen_atomic16_sub_and_test0
@@ -44,6 +45,7 @@
 #define psc_atomic16_setmask_getold		_pfl_gen_atomic16_setmask_getold
 #define psc_atomic16_xchg			_pfl_gen_atomic16_xchg
 
+#define psc_atomic32_init			_pfl_gen_atomic32_init
 #define psc_atomic32_add			_pfl_gen_atomic32_add
 #define psc_atomic32_sub			_pfl_gen_atomic32_sub
 #define psc_atomic32_sub_and_test0		_pfl_gen_atomic32_sub_and_test0
@@ -63,6 +65,7 @@
 #define psc_atomic32_setmask_getold		_pfl_gen_atomic32_setmask_getold
 #define psc_atomic32_xchg			_pfl_gen_atomic32_xchg
 
+#define psc_atomic64_init			_pfl_gen_atomic64_init
 #define psc_atomic64_add			_pfl_gen_atomic64_add
 #define psc_atomic64_sub			_pfl_gen_atomic64_sub
 #define psc_atomic64_sub_and_test0		_pfl_gen_atomic64_sub_and_test0
@@ -90,8 +93,6 @@ struct psc_atomic64 { volatile int64_t value64; } __packed;
 #define psc_atomic32_t struct psc_atomic32
 #define psc_atomic64_t struct psc_atomic64
 
-#include "pfl/compat/generic/atomic.h"
-
 #ifdef __ia64
 # include "pfl/compat/ia64/atomic.h"
 #elif defined(__amd64)
@@ -99,6 +100,26 @@ struct psc_atomic64 { volatile int64_t value64; } __packed;
 #else
 # include "pfl/compat/i386/atomic.h"
 #endif
+
+#include "pfl/compat/generic/atomic.h"
+
+static __inline void
+_pfl_atomic_init(void *v, size_t siz)
+{
+	switch (siz) {
+	case 2:
+		psc_atomic16_init(v);
+		break;
+	case 4:
+		psc_atomic32_init(v);
+		break;
+	case 8:
+		psc_atomic64_init(v);
+		break;
+	default:
+		psc_fatalx("%zd: invalid integer width", siz);
+	}
+}
 
 static __inline void
 _pfl_atomic_set(void *v, size_t siz, ...)
@@ -409,7 +430,8 @@ _pfl_atomic_cmpxchg(void *v, size_t siz, ...)
 	va_end(ap);
 }
 
-#define psc_atomic_set(v, i)			_pfl_atomic_set((v), sizeof(*(v)), i)
+#define psc_atomic_init(v)			_pfl_atomic_init((v), sizeof(*(v)))
+#define psc_atomic_set(v, i)			_pfl_atomic_set((v), sizeof(*(v)), (i))
 #define psc_atomic_add(v, i)			_pfl_atomic_add((v), sizeof(*(v)), (i))
 #define psc_atomic_sub(v, i)			_pfl_atomic_sub((v), sizeof(*(v)), (i))
 #define psc_atomic_sub_and_test0(v, i)		_pfl_atomic_sub_and_test0((v), sizeof(*(v)), (i))
