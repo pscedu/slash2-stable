@@ -54,3 +54,7 @@
 
 /* Max LNET payload */
 #define LNET_MAX_PAYLOAD LNET_MTU
+
+#ifndef __LP64__
+#define HAVE_U64_LONG_LONG
+#endif
