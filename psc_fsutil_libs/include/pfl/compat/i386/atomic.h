@@ -487,7 +487,7 @@ psc_atomic64_clearmask_getnew(psc_atomic64_t *v, int64_t mask)
 
 	mask = ~mask;
 	_PFL_ASM("andq %0, %1;" : "=r" (mask)
-	    : "m" _PFL_GETA32(v), "0" (oldv));
+	    : "m" _PFL_GETA64(v), "0" (oldv));
 	return (oldv & ~mask);
 }
 
@@ -557,7 +557,7 @@ psc_atomic16_cmpxchg(psc_atomic16_t *v, int16_t cmpv, int16_t newv)
 {
 	int16_t oldv;
 
-	_PFL_ASM("cmpxchgw %1, %2" : "=a" (oldv) : "r" (newv),
+	_PFL_ASM("cmpxchgw %w1, %2" : "=a" (oldv) : "r" (newv),
 	    "m" _PFL_GETA16(v), "0" (cmpv) : "memory");
 	return (oldv);
 }
