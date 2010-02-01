@@ -20,6 +20,7 @@
 #include <sys/types.h>
 #include <sys/wait.h>
 
+#include <inttypes.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -71,9 +72,9 @@ usage(void)
 #define check(a, b)						\
 	do {							\
 		if ((a) != (b)) {				\
-			printf("shouldbe %016lx: ", (b));	\
+			printf("shouldbe %016"PRIx64": ", (b));	\
 			printbin(b);				\
-			printf("      is %016lx: ", (a));	\
+			printf("      is %016"PRIx64": ", (a));	\
 			printbin(a);				\
 			psc_fatalx("values don't match");	\
 		}						\
@@ -122,7 +123,7 @@ main(int argc, char *argv[])
 	psc_assert(pfl_bitstr_nset(&v, 1) == 4);
 	v = 0xffff;
 	psc_assert(pfl_bitstr_nset(&v, 2) == 16);
-	v = 0xffffffffffffffff;
+	v = UINT64_C(0xffffffffffffffff);
 	psc_assert(pfl_bitstr_nset(&v, sizeof(v)) == 64);
 
 	out = 0;
