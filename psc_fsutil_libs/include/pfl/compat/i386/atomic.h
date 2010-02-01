@@ -141,12 +141,14 @@ psc_atomic32_sub(psc_atomic32_t *v, int32_t i)
 	_PFL_ASM("subl %1,%0" : "=m" _PFL_GETA32(v) : "ir" (i), "m" _PFL_GETA32(v));
 }
 
+#if 0
 #undef psc_atomic64_sub
 static __inline void
 psc_atomic64_sub(psc_atomic64_t *v, int64_t i)
 {
 	_PFL_ASM("subq %1,%0" : "=m" _PFL_GETA64(v) : "ir" (i), "m" _PFL_GETA64(v));
 }
+#endif
 
 #undef psc_atomic16_sub_and_test0
 static __inline int
@@ -170,6 +172,7 @@ psc_atomic32_sub_and_test0(psc_atomic32_t *v, int32_t i)
 	return (c);
 }
 
+#if 0
 #undef psc_atomic64_sub_and_test0
 static __inline int
 psc_atomic64_sub_and_test0(psc_atomic64_t *v, int64_t i)
@@ -180,6 +183,7 @@ psc_atomic64_sub_and_test0(psc_atomic64_t *v, int64_t i)
 	    "=qm" (c) : "ir" (i), "m" _PFL_GETA64(v) : "memory");
 	return (c);
 }
+#endif
 
 #undef psc_atomic16_add_and_test0
 static __inline int
@@ -203,6 +207,7 @@ psc_atomic32_add_and_test0(psc_atomic32_t *v, int32_t i)
 	return (c);
 }
 
+#if 0
 #undef psc_atomic64_add_and_test0
 static __inline int
 psc_atomic64_add_and_test0(psc_atomic64_t *v, int64_t i)
@@ -213,6 +218,7 @@ psc_atomic64_add_and_test0(psc_atomic64_t *v, int64_t i)
 	    "=qm" (c) : "ir" (i), "m" _PFL_GETA64(v) : "memory");
 	return (c);
 }
+#endif
 
 #undef psc_atomic16_inc
 static __inline void
@@ -282,6 +288,7 @@ psc_atomic32_inc_and_test0(psc_atomic32_t *v)
 	return (c);
 }
 
+#if 0
 #undef psc_atomic64_inc_and_test0
 static __inline int
 psc_atomic64_inc_and_test0(psc_atomic64_t *v)
@@ -292,6 +299,7 @@ psc_atomic64_inc_and_test0(psc_atomic64_t *v)
 	    "=qm" (c) : "m" _PFL_GETA64(v) : "memory");
 	return (c);
 }
+#endif
 
 #undef psc_atomic16_dec_and_test0
 static __inline int
@@ -315,6 +323,7 @@ psc_atomic32_dec_and_test0(psc_atomic32_t *v)
 	return (c);
 }
 
+#if 0
 #undef psc_atomic64_dec_and_test0
 static __inline int
 psc_atomic64_dec_and_test0(psc_atomic64_t *v)
@@ -325,6 +334,7 @@ psc_atomic64_dec_and_test0(psc_atomic64_t *v)
 	    "=qm" (c) : "m" _PFL_GETA64(v) : "memory");
 	return (c);
 }
+#endif
 
 #undef psc_atomic16_add_and_test_neg
 static __inline int
@@ -348,6 +358,7 @@ psc_atomic32_add_and_test_neg(psc_atomic32_t *v, int32_t i)
 	return (c);
 }
 
+#if 0
 #undef psc_atomic64_add_and_test_neg
 static __inline int
 psc_atomic64_add_and_test_neg(psc_atomic64_t *v, int64_t i)
@@ -358,6 +369,7 @@ psc_atomic64_add_and_test_neg(psc_atomic64_t *v, int64_t i)
 	    "=qm" (c) : "ir" (i), "m" _PFL_GETA64(v) : "memory");
 	return (c);
 }
+#endif
 
 #undef psc_atomic16_sub_and_test_neg
 static __inline int
@@ -381,6 +393,7 @@ psc_atomic32_sub_and_test_neg(psc_atomic32_t *v, int32_t i)
 	return (c);
 }
 
+#if 0
 #undef psc_atomic64_sub_and_test_neg
 static __inline int
 psc_atomic64_sub_and_test_neg(psc_atomic64_t *v, int64_t i)
@@ -391,6 +404,7 @@ psc_atomic64_sub_and_test_neg(psc_atomic64_t *v, int64_t i)
 	    "=qm" (c) : "ir" (i), "m" _PFL_GETA64(v) : "memory");
 	return (c);
 }
+#endif
 
 #undef psc_atomic16_add_getnew
 static __inline int16_t
@@ -414,6 +428,7 @@ psc_atomic32_add_getnew(psc_atomic32_t *v, int32_t i)
 	return (i + adj);
 }
 
+#if 0
 #undef psc_atomic64_add_getnew
 static __inline int64_t
 psc_atomic64_add_getnew(psc_atomic64_t *v, int64_t i)
@@ -424,6 +439,7 @@ psc_atomic64_add_getnew(psc_atomic64_t *v, int64_t i)
 	    "+m" _PFL_GETA64(v) : : "memory");
 	return (i + adj);
 }
+#endif
 
 #undef psc_atomic16_clearmask
 static __inline void
@@ -443,6 +459,7 @@ psc_atomic32_clearmask(psc_atomic32_t *v, int32_t mask)
 	    "m" _PFL_GETA32(v) : "memory");
 }
 
+#if 0
 #undef psc_atomic64_clearmask
 static __inline void
 psc_atomic64_clearmask(psc_atomic64_t *v, int64_t mask)
@@ -451,6 +468,7 @@ psc_atomic64_clearmask(psc_atomic64_t *v, int64_t mask)
 	_PFL_ASM("andq %0, %1" : : "r" (mask),
 	    "m" _PFL_GETA64(v) : "memory");
 }
+#endif
 
 #undef psc_atomic16_setmask
 static __inline void
@@ -468,6 +486,7 @@ psc_atomic32_setmask(psc_atomic32_t *v, int32_t mask)
 	    "m" _PFL_GETA32(v) : "memory");
 }
 
+#if 0
 #undef psc_atomic64_setmask
 static __inline void
 psc_atomic64_setmask(psc_atomic64_t *v, int64_t mask)
@@ -475,6 +494,7 @@ psc_atomic64_setmask(psc_atomic64_t *v, int64_t mask)
 	_PFL_ASM("orq %0, %1" : : "r" (mask),
 	    "m" _PFL_GETA64(v) : "memory");
 }
+#endif
 
 #undef psc_atomic16_clearmask_getnew
 static __inline int16_t
@@ -500,6 +520,7 @@ psc_atomic32_clearmask_getnew(psc_atomic32_t *v, int32_t mask)
 	return (oldv & ~mask);
 }
 
+#if 0
 #undef psc_atomic64_clearmask_getnew
 static __inline int64_t
 psc_atomic64_clearmask_getnew(psc_atomic64_t *v, int64_t mask)
@@ -511,6 +532,7 @@ psc_atomic64_clearmask_getnew(psc_atomic64_t *v, int64_t mask)
 	    : "m" _PFL_GETA64(v), "0" (oldv));
 	return (oldv & ~mask);
 }
+#endif
 
 #undef psc_atomic16_setmask_getnew
 static __inline int16_t
@@ -534,6 +556,7 @@ psc_atomic32_setmask_getnew(psc_atomic32_t *v, int32_t i)
 	return (oldv | i);
 }
 
+#if 0
 #undef psc_atomic64_setmask_getnew
 static __inline int64_t
 psc_atomic64_setmask_getnew(psc_atomic64_t *v, int64_t i)
@@ -544,6 +567,7 @@ psc_atomic64_setmask_getnew(psc_atomic64_t *v, int64_t i)
 	    : "m" _PFL_GETA64(v), "0" (oldv));
 	return (oldv | i);
 }
+#endif
 
 #undef psc_atomic16_xchg
 static __inline int16_t

@@ -103,22 +103,48 @@ struct psc_atomic64 { volatile int64_t value64; } __packed;
 
 #include "pfl/compat/generic/atomic.h"
 
+#define PSC_ATOMIC16_SIZE	sizeof(psc_atomic16_t)
+#define PSC_ATOMIC32_SIZE	sizeof(psc_atomic32_t)
+#define PSC_ATOMIC64_SIZE	sizeof(psc_atomic64_t)
+
 static __inline void
 _pfl_atomic_init(void *v, size_t siz)
 {
 	switch (siz) {
-	case 2:
+	case PSC_ATOMIC16_SIZE:
 		psc_atomic16_init(v);
 		break;
-	case 4:
+	case PSC_ATOMIC32_SIZE:
 		psc_atomic32_init(v);
 		break;
-	case 8:
+	case PSC_ATOMIC64_SIZE:
 		psc_atomic64_init(v);
 		break;
 	default:
 		psc_fatalx("%zd: invalid integer width", siz);
 	}
+}
+
+static __inline void
+_pfl_atomic_read(void *v, size_t siz, ...)
+{
+	va_list ap;
+
+	va_start(ap, siz);
+	switch (siz) {
+	case PSC_ATOMIC16_SIZE:
+		*va_arg(ap, int16_t *) = psc_atomic16_read(v);
+		break;
+	case PSC_ATOMIC32_SIZE:
+		*va_arg(ap, int32_t *) = psc_atomic32_read(v);
+		break;
+	case PSC_ATOMIC64_SIZE:
+		*va_arg(ap, int64_t *) = psc_atomic64_read(v);
+		break;
+	default:
+		psc_fatalx("%zd: invalid integer width", siz);
+	}
+	va_end(ap);
 }
 
 static __inline void
@@ -128,13 +154,13 @@ _pfl_atomic_set(void *v, size_t siz, ...)
 
 	va_start(ap, siz);
 	switch (siz) {
-	case 2:
+	case PSC_ATOMIC16_SIZE:
 		psc_atomic16_set(v, va_arg(ap, int32_t));
 		break;
-	case 4:
+	case PSC_ATOMIC32_SIZE:
 		psc_atomic32_set(v, va_arg(ap, int32_t));
 		break;
-	case 8:
+	case PSC_ATOMIC64_SIZE:
 		psc_atomic64_set(v, va_arg(ap, int64_t));
 		break;
 	default:
@@ -150,13 +176,13 @@ _pfl_atomic_add(void *v, size_t siz, ...)
 
 	va_start(ap, siz);
 	switch (siz) {
-	case 2:
+	case PSC_ATOMIC16_SIZE:
 		psc_atomic16_add(v, va_arg(ap, int32_t));
 		break;
-	case 4:
+	case PSC_ATOMIC32_SIZE:
 		psc_atomic32_add(v, va_arg(ap, int32_t));
 		break;
-	case 8:
+	case PSC_ATOMIC64_SIZE:
 		psc_atomic64_add(v, va_arg(ap, int64_t));
 		break;
 	default:
@@ -172,13 +198,13 @@ _pfl_atomic_sub(void *v, size_t siz, ...)
 
 	va_start(ap, siz);
 	switch (siz) {
-	case 2:
+	case PSC_ATOMIC16_SIZE:
 		psc_atomic16_sub(v, va_arg(ap, int32_t));
 		break;
-	case 4:
+	case PSC_ATOMIC32_SIZE:
 		psc_atomic32_sub(v, va_arg(ap, int32_t));
 		break;
-	case 8:
+	case PSC_ATOMIC64_SIZE:
 		psc_atomic64_sub(v, va_arg(ap, int64_t));
 		break;
 	default:
@@ -195,13 +221,13 @@ _pfl_atomic_sub_and_test0(void *v, size_t siz, ...)
 
 	va_start(ap, siz);
 	switch (siz) {
-	case 2:
+	case PSC_ATOMIC16_SIZE:
 		rc = psc_atomic16_sub_and_test0(v, va_arg(ap, int32_t));
 		break;
-	case 4:
+	case PSC_ATOMIC32_SIZE:
 		rc = psc_atomic32_sub_and_test0(v, va_arg(ap, int32_t));
 		break;
-	case 8:
+	case PSC_ATOMIC64_SIZE:
 		rc = psc_atomic64_sub_and_test0(v, va_arg(ap, int64_t));
 		break;
 	default:
@@ -219,13 +245,13 @@ _pfl_atomic_add_and_test0(void *v, size_t siz, ...)
 
 	va_start(ap, siz);
 	switch (siz) {
-	case 2:
+	case PSC_ATOMIC16_SIZE:
 		rc = psc_atomic16_add_and_test0(v, va_arg(ap, int32_t));
 		break;
-	case 4:
+	case PSC_ATOMIC32_SIZE:
 		rc = psc_atomic32_add_and_test0(v, va_arg(ap, int32_t));
 		break;
-	case 8:
+	case PSC_ATOMIC64_SIZE:
 		rc = psc_atomic64_add_and_test0(v, va_arg(ap, int64_t));
 		break;
 	default:
@@ -239,13 +265,13 @@ static __inline void
 _pfl_atomic_inc(void *v, size_t siz)
 {
 	switch (siz) {
-	case 2:
+	case PSC_ATOMIC16_SIZE:
 		psc_atomic16_inc(v);
 		break;
-	case 4:
+	case PSC_ATOMIC32_SIZE:
 		psc_atomic32_inc(v);
 		break;
-	case 8:
+	case PSC_ATOMIC64_SIZE:
 		psc_atomic64_inc(v);
 		break;
 	default:
@@ -257,13 +283,13 @@ static __inline void
 _pfl_atomic_dec(void *v, size_t siz)
 {
 	switch (siz) {
-	case 2:
+	case PSC_ATOMIC16_SIZE:
 		psc_atomic16_dec(v);
 		break;
-	case 4:
+	case PSC_ATOMIC32_SIZE:
 		psc_atomic32_dec(v);
 		break;
-	case 8:
+	case PSC_ATOMIC64_SIZE:
 		psc_atomic64_dec(v);
 		break;
 	default:
@@ -277,13 +303,13 @@ _pfl_atomic_inc_and_test0(void *v, size_t siz)
 	int rc;
 
 	switch (siz) {
-	case 2:
+	case PSC_ATOMIC16_SIZE:
 		rc = psc_atomic16_inc_and_test0(v);
 		break;
-	case 4:
+	case PSC_ATOMIC32_SIZE:
 		rc = psc_atomic32_inc_and_test0(v);
 		break;
-	case 8:
+	case PSC_ATOMIC64_SIZE:
 		rc = psc_atomic64_inc_and_test0(v);
 		break;
 	default:
@@ -298,13 +324,13 @@ _pfl_atomic_dec_and_test0(void *v, size_t siz)
 	int rc;
 
 	switch (siz) {
-	case 2:
+	case PSC_ATOMIC16_SIZE:
 		rc = psc_atomic16_dec_and_test0(v);
 		break;
-	case 4:
+	case PSC_ATOMIC32_SIZE:
 		rc = psc_atomic32_dec_and_test0(v);
 		break;
-	case 8:
+	case PSC_ATOMIC64_SIZE:
 		rc = psc_atomic64_dec_and_test0(v);
 		break;
 	default:
@@ -321,13 +347,13 @@ _pfl_atomic_add_and_test_neg(void *v, size_t siz, ...)
 
 	va_start(ap, siz);
 	switch (siz) {
-	case 2:
+	case PSC_ATOMIC16_SIZE:
 		rc = psc_atomic16_add_and_test_neg(v, va_arg(ap, int32_t));
 		break;
-	case 4:
+	case PSC_ATOMIC32_SIZE:
 		rc = psc_atomic32_add_and_test_neg(v, va_arg(ap, int32_t));
 		break;
-	case 8:
+	case PSC_ATOMIC64_SIZE:
 		rc = psc_atomic64_add_and_test_neg(v, va_arg(ap, int64_t));
 		break;
 	default:
@@ -345,13 +371,13 @@ _pfl_atomic_sub_and_test_neg(void *v, size_t siz, ...)
 
 	va_start(ap, siz);
 	switch (siz) {
-	case 2:
+	case PSC_ATOMIC16_SIZE:
 		rc = psc_atomic16_sub_and_test_neg(v, va_arg(ap, int32_t));
 		break;
-	case 4:
+	case PSC_ATOMIC32_SIZE:
 		rc = psc_atomic32_sub_and_test_neg(v, va_arg(ap, int32_t));
 		break;
-	case 8:
+	case PSC_ATOMIC64_SIZE:
 		rc = psc_atomic64_sub_and_test_neg(v, va_arg(ap, int64_t));
 		break;
 	default:
@@ -368,13 +394,13 @@ _pfl_atomic_clearmask(void *v, size_t siz, ...)
 
 	va_start(ap, siz);
 	switch (siz) {
-	case 2:
+	case PSC_ATOMIC16_SIZE:
 		psc_atomic16_clearmask(v, va_arg(ap, int32_t));
 		break;
-	case 4:
+	case PSC_ATOMIC32_SIZE:
 		psc_atomic32_clearmask(v, va_arg(ap, int32_t));
 		break;
-	case 8:
+	case PSC_ATOMIC64_SIZE:
 		psc_atomic64_clearmask(v, va_arg(ap, int64_t));
 		break;
 	default:
@@ -390,13 +416,13 @@ _pfl_atomic_setmask(void *v, size_t siz, ...)
 
 	va_start(ap, siz);
 	switch (siz) {
-	case 2:
+	case PSC_ATOMIC16_SIZE:
 		psc_atomic16_setmask(v, va_arg(ap, int32_t));
 		break;
-	case 4:
+	case PSC_ATOMIC32_SIZE:
 		psc_atomic32_setmask(v, va_arg(ap, int32_t));
 		break;
-	case 8:
+	case PSC_ATOMIC64_SIZE:
 		psc_atomic64_setmask(v, va_arg(ap, int64_t));
 		break;
 	default:
@@ -412,18 +438,27 @@ _pfl_atomic_cmpxchg(void *v, size_t siz, ...)
 
 	va_start(ap, siz);
 	switch (siz) {
-	case 2:
-		psc_atomic16_cmpxchg(v, va_arg(ap, int32_t),
-		    va_arg(ap, int32_t));
+	case PSC_ATOMIC16_SIZE: {
+		int16_t cmpv;
+
+		cmpv = va_arg(ap, int32_t);
+		psc_atomic16_cmpxchg(v, cmpv, va_arg(ap, int32_t));
 		break;
-	case 4:
-		psc_atomic32_cmpxchg(v, va_arg(ap, int32_t),
-		    va_arg(ap, int32_t));
+	    }
+	case PSC_ATOMIC32_SIZE: {
+		int32_t cmpv;
+
+		cmpv = va_arg(ap, int32_t);
+		psc_atomic32_cmpxchg(v, cmpv, va_arg(ap, int32_t));
 		break;
-	case 8:
-		psc_atomic64_cmpxchg(v, va_arg(ap, int64_t),
-		    va_arg(ap, int64_t));
+	    }
+	case PSC_ATOMIC64_SIZE: {
+		int64_t cmpv;
+
+		cmpv = va_arg(ap, int64_t);
+		psc_atomic64_cmpxchg(v, cmpv, va_arg(ap, int64_t));
 		break;
+	    }
 	default:
 		psc_fatalx("%zd: invalid integer width", siz);
 	}
@@ -431,6 +466,7 @@ _pfl_atomic_cmpxchg(void *v, size_t siz, ...)
 }
 
 #define psc_atomic_init(v)			_pfl_atomic_init((v), sizeof(*(v)))
+#define psc_atomic_read(v, i)			_pfl_atomic_read((v), sizeof(*(v)), (i))
 #define psc_atomic_set(v, i)			_pfl_atomic_set((v), sizeof(*(v)), (i))
 #define psc_atomic_add(v, i)			_pfl_atomic_add((v), sizeof(*(v)), (i))
 #define psc_atomic_sub(v, i)			_pfl_atomic_sub((v), sizeof(*(v)), (i))
