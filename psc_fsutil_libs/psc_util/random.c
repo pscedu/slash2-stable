@@ -116,7 +116,7 @@ psc_random32u(uint32_t max)
 	if (max < 2)
 		return (0);
 
-	min = 0x100000000UL % max;
+	min = UINT64_C(0x100000000) % max;
 
 	for (;;) {
 		r = psc_random32();
