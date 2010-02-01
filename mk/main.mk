@@ -289,19 +289,19 @@ doc: recurse-doc
 
 ifdef SLASH_BASE
 CS_ARGS+=-s${SLASH_BASE}
-ET_ARGS+="${SLASH_BASE}"
+ET_ARGS+=${SLASH_BASE}
 
-CS_ARGS+=-s${ZFS_BASE}/zfs-fuse
-ET_ARGS+="${ZFS_BASE}/zfs-fuse"
+CS_ARGS+=-s${ZFS_BASE}
+ET_ARGS+=${ZFS_BASE}
 endif
 
 ifdef ZEST_BASE
 CS_ARGS+=-s${ZEST_BASE}
-ET_ARGS+="${ZEST_BASE}"
+ET_ARGS+=${ZEST_BASE}
 endif
 
 cscope cs: recurse-cs
-	cscope -Rb ${CS_ARGS} -s${PFL_BASE} -s${LNET_BASE}
+	cscope -Rbq ${CS_ARGS} -s${PFL_BASE} -s${LNET_BASE}
 
 etags: recurse-etags
 	find ${ET_ARGS} ${PFL_BASE} ${PFL_BASE} -name \*.[chly] | xargs etags
