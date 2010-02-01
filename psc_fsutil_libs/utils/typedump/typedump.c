@@ -237,5 +237,7 @@ main(int argc, char *argv[])
 	PRVAL(sizeof(((struct stat *)NULL)->st_nlink));
 	PRVAL(sizeof(((struct stat *)NULL)->st_blksize));
 
+	PRTYPE(rlim_t);
+
 	exit(0);
 }
