@@ -1,6 +1,9 @@
 #!/usr/bin/perl -W -i
 # $Id$
 
+# Better algorithm:
+# use file mtime as long as mtime != ctime
+
 use strict;
 use warnings;
 use Getopt::Std;
