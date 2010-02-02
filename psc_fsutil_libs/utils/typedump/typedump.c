@@ -117,6 +117,7 @@ main(int argc, char *argv[])
 #define PRTYPE(type)	pr(#type, sizeof(type))
 #define PRVAL(val)	pr(#val, (unsigned long)(val))
 
+	/* base types/values */
 	PRTYPE(int);
 	PRTYPE(unsigned char);
 	PRTYPE(unsigned short);
@@ -131,6 +132,26 @@ main(int argc, char *argv[])
 	PRTYPE(int64_t);
 	PRTYPE(INT_MAX);
 	PRTYPE(UINT64_MAX);
+
+	/* system types/values */
+	PRVAL(PATH_MAX);
+
+	PRVAL(sizeof(((struct stat *)NULL)->st_dev));
+	PRVAL(sizeof(((struct stat *)NULL)->st_nlink));
+	PRVAL(sizeof(((struct stat *)NULL)->st_blksize));
+
+	PRTYPE(dev_t);
+	PRTYPE(ino_t);
+	PRTYPE(mode_t);
+	PRTYPE(nlink_t);
+	PRTYPE(uid_t);
+	PRTYPE(gid_t);
+	PRTYPE(off_t);
+	PRTYPE(blksize_t);
+	PRTYPE(blkcnt_t);
+	PRTYPE(time_t);
+
+	PRTYPE(rlim_t);
 
 /* start structs */
 	PRTYPE(atomic_t);
@@ -230,14 +251,6 @@ main(int argc, char *argv[])
 	PRVAL(PSCFMT_HUMAN_BUFSIZ);
 	PRVAL(PSCFMT_RATIO_BUFSIZ);
 	PRVAL(PSC_NIDSTR_SIZE);
-	/* system types/values */
-	PRVAL(PATH_MAX);
-
-	PRVAL(sizeof(((struct stat *)NULL)->st_dev));
-	PRVAL(sizeof(((struct stat *)NULL)->st_nlink));
-	PRVAL(sizeof(((struct stat *)NULL)->st_blksize));
-
-	PRTYPE(rlim_t);
 
 	exit(0);
 }
