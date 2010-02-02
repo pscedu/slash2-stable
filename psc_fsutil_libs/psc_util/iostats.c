@@ -59,6 +59,7 @@ psc_iostats_init(struct psc_iostats *ist, const char *fmt, ...)
 	for (i = 0; i < IST_NINTV; i++) {
 		ist->ist_intv[i].istv_lastv = tv;
 		ist->ist_intv[i].istv_intv_dur.tv_sec = 1;
+		psc_atomic64_init(&ist->ist_intv[i].istv_cur_len);
 	}
 
 	pll_add(&psc_iostats, ist);
