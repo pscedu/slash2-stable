@@ -25,6 +25,6 @@
 #include "psc_util/lock.h"
 #include "psc_util/mspinlock.h"
 
-struct psc_vbitmap	*_psc_mspin_unthridmap;
+struct psc_vbitmap	 _psc_mspin_unthridmap = VBITMAP_INIT_AUTO;
 psc_spinlock_t		 _psc_mspin_unthridmap_lock = LOCK_INITIALIZER;
 pthread_key_t		 _psc_mspin_thrkey;
