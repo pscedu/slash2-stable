@@ -252,7 +252,7 @@ listsrcs: recurse-listsrcs
 		echo "${_TSRCS}";							\
 	fi
 
-test: recurse-test ${TARGET}
+test: recurse-test all
 	@if [ -n "${PROG}" ]; then							\
 		echo "./${PROG}";							\
 		./${PROG} || exit 1;							\
