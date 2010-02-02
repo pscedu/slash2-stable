@@ -92,7 +92,7 @@ psc_spin_unlock(struct psc_spinlock *psl)
 	max.tv_usec = 500;
 	timersub(&now, &psl->psl_time, &diff);
 	if (timercmp(&diff, &max, >))
-		psc_errorx("psc_spin_unlock: lock held long;"
+		psc_errorx("psc_spin_unlock: lock held long; "
 		    "psl=%p, len=%luus", psl, diff.tv_sec *
 		    1000 * 1000 + diff.tv_usec);
 	psl->psl_who = 0;
