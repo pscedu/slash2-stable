@@ -62,7 +62,7 @@ foreach my $hdr (@hdrs) {
 		} else {
 			$lvl = 1 if /^\s*#if\s+0\s*$/;
 			push @types, "struct $1" if /^struct\s+(\w+)\s*{/;
-			push @types, $1 if /^typedef\s+(?:struct\s+)?(?:\w+)\s+(\w+)\s*;\s*$/;
+			push @types, $1 if /^typedef\s+(?:struct\s+)?(?:\w+)\s+(\w+)\s*;/;
 
 			push @vals, /($opts{g})/ if $opts{g};
 		}
