@@ -21,6 +21,7 @@ general reminders
   memory, as you can allocate >sizeof(struct) and point the
   private data pointer past
 - ensure no mp RPC message bodies are used after a pscrpc_req_finished()
+- check -Wuninitialized and others
 
 make
 - rename ROOTDIR -> PROJ_BASE
