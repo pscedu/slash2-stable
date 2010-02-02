@@ -153,6 +153,10 @@ main(int argc, char *argv[])
 
 	PRTYPE(rlim_t);
 
+	PRTYPE(lnet_nid_t);
+	PRTYPE(lnet_pid_t);
+	PRTYPE(lnet_process_id_t);
+
 /* start structs */
 	PRTYPE(atomic_t);
 	PRTYPE(psc_atomic_t);
