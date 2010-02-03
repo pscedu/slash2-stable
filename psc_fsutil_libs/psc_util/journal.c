@@ -747,10 +747,9 @@ pjournal_dump(const char *fn, int verbose)
 	    "  version %u\n"
 	    "  options %u\n"
 	    "  readahead %u\n"
-	    "  start_offset %"PRIx64"\n"
-	    "  magic=%"PRIx64"\n",
+	    "  start_offset %"PRIx64"\n",
 	    fn, PJ_PJESZ(pj), pjh->pjh_nents, pjh->pjh_version, pjh->pjh_options,
-	    pjh->pjh_readahead, pjh->pjh_start_off, pjh->pjh_magic);
+	    pjh->pjh_readahead, pjh->pjh_start_off);
 
 	jbuf = pjournal_alloc_buf(pj);
 
