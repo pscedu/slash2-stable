@@ -309,7 +309,8 @@ pjournal_logread(struct psc_journal *pj, int32_t slot, int32_t count, void *data
 	addr = pj->pj_hdr->pjh_start_off + slot * PJ_PJESZ(pj);
 	size = pread(pj->pj_fd, data, PJ_PJESZ(pj) * count, addr);
 	if (size < 0 || size != PJ_PJESZ(pj) *  count) {
-		psc_warn("Fail to read %ld bytes from journal %p: rc = %d, errno = %d", size, pj, rc, errno);
+		psc_warn("Fail to read %zd bytes from journal %p: "
+		    "rc = %d, errno = %d", size, pj, rc, errno);
 		rc = -1;
 	}
 	return (rc);
