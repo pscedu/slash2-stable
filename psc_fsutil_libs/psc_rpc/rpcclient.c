@@ -260,6 +260,7 @@ pscrpc_new_bulk(int npages, int type, int portal)
 	struct pscrpc_bulk_desc *desc;
 
 	PSCRPC_OBD_ALLOC(desc, offsetof (struct pscrpc_bulk_desc, bd_iov[npages]));
+	psc_trace("new desc=%p", desc);
 	if (!desc)
 		return NULL;
 
@@ -899,6 +900,7 @@ int pscrpc_check_set(struct pscrpc_request_set *set, int check_allsent)
 
 	if (set->set_remaining == 0) {
 		spinlock(&set->set_lock);
+		psc_assert(set->set_flags & PSCRPC_SETF_CHECKING);
 		set->set_flags &= ~PSCRPC_SETF_CHECKING;
 		psc_waitq_wakeall(&set->set_waitq);
 		freelock(&set->set_lock);
@@ -1116,6 +1118,7 @@ int pscrpc_check_set(struct pscrpc_request_set *set, int check_allsent)
 	}
 
 	spinlock(&set->set_lock);
+	psc_assert(set->set_flags & PSCRPC_SETF_CHECKING);
 	set->set_flags &= ~PSCRPC_SETF_CHECKING;
 	psc_waitq_wakeall(&set->set_waitq);
 	freelock(&set->set_lock);
@@ -1436,12 +1439,15 @@ int pscrpc_set_wait(struct pscrpc_request_set *set)
 		}
 	}
 
-	if (!rc && /* don't bother unless it completed successfully */
-	    set->set_interpret){
-		rc = set->set_interpret(set, set->set_arg, rc);
-		if (rc)
-			psc_errorx("set interpreter failed (%d)", rc);
-	}
+	if (rc)
+		psc_errorx("set %p failed, rc=%d", set, rc);
+	else
+		if (set->set_interpret) {
+			rc = set->set_interpret(set, set->set_arg, rc);
+			if (rc)
+				psc_errorx("set interpreter failed (%d)", rc);
+		} 
+	
 	return (rc);
 }
 
