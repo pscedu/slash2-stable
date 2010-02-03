@@ -559,7 +559,7 @@ psc_ctlmsg_pool_prdat(__unusedx const struct psc_ctlmsghdr *mh,
 		printf(" %6s %6s %2s", "-", "-", "-");
 
 	if (pcpl->pcpl_flags & PPMF_AUTO)
-		printf(" %6zu %6zu", pcpl->pcpl_ngrow,
+		printf(" %6"PRIu64" %6"PRIu64, pcpl->pcpl_ngrow,
 		    pcpl->pcpl_nshrink);
 	else
 		printf(" %6s %6s", "-", "-");
@@ -587,9 +587,8 @@ psc_ctlmsg_lc_prdat(__unusedx const struct psc_ctlmsghdr *mh,
 {
 	const struct psc_ctlmsg_lc *pclc = m;
 
-	printf(
-	    " %-42s   %c "
-	    "%8zu %3d %3d %15zu\n",
+	printf(" %-42s   %c "
+	    "%8"PRIu64" %3d %3d %15"PRIu64"\n",
 	    pclc->pclc_name,
 	    pclc->pclc_flags & PLCF_DYING ? 'D' : '-',
 	    pclc->pclc_size,
