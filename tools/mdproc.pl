@@ -2,7 +2,8 @@
 # $Id$
 
 # Better algorithm:
-# use file mtime as long as mtime != ctime
+#	use file mtime as long as mtime != ctime
+#	and svn diff -I\$Id yields isn't empty
 
 use strict;
 use warnings;
