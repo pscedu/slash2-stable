@@ -17,4 +17,4 @@
  * %PSC_END_COPYRIGHT%
  */
 
-char *psc_get_hostname(void);
+const char *psc_get_hostname(void);

@@ -182,7 +182,9 @@ psclog_getdata(void)
 		if (gethostname(d->pld_hostname,
 		    sizeof(d->pld_hostname)) == -1)
 			err(1, "gethostname");
-		if ((p = strchr(d->pld_hostname, '.')) != NULL)
+		strlcpy(d->pld_hostshort, d->pld_hostname,
+		    sizeof(d->pld_hostshort));
+		if ((p = strchr(d->pld_hostshort, '.')) != NULL)
 			*p = '\0';
 #ifdef HAVE_CNOS
 		int cnos_get_rank(void);
@@ -225,7 +227,8 @@ _psclogv(const char *fn, const char *func, int line, int subsys,
 	FMTSTR(prefix, sizeof(prefix), psc_logfmt,
 		FMTSTRCASE('F', prefix, sizeof(prefix), "s", func)
 		FMTSTRCASE('f', prefix, sizeof(prefix), "s", fn)
-		FMTSTRCASE('h', prefix, sizeof(prefix), "s", d->pld_hostname)
+		FMTSTRCASE('H', prefix, sizeof(prefix), "s", d->pld_hostname)
+		FMTSTRCASE('h', prefix, sizeof(prefix), "s", d->pld_hostshort)
 		FMTSTRCASE('i', prefix, sizeof(prefix), "ld", syscall(SYS_gettid))
 		FMTSTRCASE('L', prefix, sizeof(prefix), "d", level)
 		FMTSTRCASE('l', prefix, sizeof(prefix), "d", line)

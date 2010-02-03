@@ -434,9 +434,10 @@ psclog_setdatamem(struct psclog_data *d)
 
 /**
  * psc_get_hostname - Override hostname retrieval to access thread-local
- *	storage for hostname.
+ *	storage for hostname.  Local memory improves the speediness of
+ *	logging.
  */
-char *
+const char *
 psc_get_hostname(void)
 {
 	return (psclog_getdata()->pld_hostname);

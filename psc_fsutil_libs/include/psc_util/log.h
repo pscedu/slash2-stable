@@ -32,6 +32,7 @@
 #include "pfl/cdefs.h"
 
 struct psclog_data {
+	char	pld_hostshort[HOST_NAME_MAX];
 	char	pld_hostname[HOST_NAME_MAX];
 	char	pld_nothrname[20];
 	int	pld_rank;

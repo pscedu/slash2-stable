@@ -14,7 +14,7 @@
 
 char psc_hostname[HOST_NAME_MAX];
 
-__weak char *
+__weak const char *
 psc_get_hostname(void)
 {
 	if (psc_hostname[0] == '\0')
