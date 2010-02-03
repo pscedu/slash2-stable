@@ -310,7 +310,7 @@ pscrpc_server_handle_request(struct pscrpc_service *svc,
 		goto out;
 	}
 
-	psc_info("got req %"PRId64, request->rq_xid);
+	psc_info("got req xid=%"PRId64, request->rq_xid);
 
 	request->rq_svc_thread = thread;
 	request->rq_conn = pscrpc_get_connection(request->rq_peer,
@@ -354,6 +354,8 @@ pscrpc_server_handle_request(struct pscrpc_service *svc,
 
 	request->rq_phase = PSCRQ_PHASE_INTERPRET;
 
+	DEBUG_REQ(PLL_TRACE, request, "Handling RPC");
+#if 0
 	psc_info("Handling RPC peer+ref:pid:xid:nid:opc "
 		 "%s+%d:%d:%"PRIu64":%d",
 		 libcfs_id2str(request->rq_conn->c_peer),
@@ -361,11 +363,15 @@ pscrpc_server_handle_request(struct pscrpc_service *svc,
 		 request->rq_reqmsg->status,
 		 request->rq_xid,
 		 request->rq_reqmsg->opc);
+#endif
 
 	rc = svc->srv_handler(request);
 
 	request->rq_phase = PSCRQ_PHASE_COMPLETE;
 
+	DEBUG_REQ(PLL_TRACE, request, "Handled RPC");
+
+#if 0
 	psc_info("Handled RPC peer+ref:pid:xid:nid:opc "
 		 "%s+%d:%d:%"PRIu64":%d",
 		 libcfs_id2str(request->rq_conn->c_peer),
@@ -373,7 +379,7 @@ pscrpc_server_handle_request(struct pscrpc_service *svc,
 		 request->rq_reqmsg->status,
 		 request->rq_xid,
 		 request->rq_reqmsg->opc);
-
+#endif
  put_rpc_export:
 	pscrpc_export_rpc_put(request->rq_export);
 	request->rq_export = NULL;
