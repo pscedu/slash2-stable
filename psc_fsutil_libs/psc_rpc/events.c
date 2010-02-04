@@ -623,7 +623,8 @@ pscrpc_init_portals(int type)
 	if (getenv("LNET_NETWORKS") == NULL)
 		psc_fatalx("please export LNET_NETWORKS");
 
-	if (pscrpc_ni_init(type))
+	rc = pscrpc_ni_init(type);
+	if (rc)
 		psc_fatal("network initialization: %s", strerror(-rc));
 }
 
