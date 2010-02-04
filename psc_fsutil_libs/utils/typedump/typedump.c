@@ -73,6 +73,8 @@
 #include "psc_util/wndmap.h"
 /* end includes */
 
+#include "lnet/socklnd.h"
+
 const char *progname;
 
 void
@@ -156,6 +158,7 @@ main(int argc, char *argv[])
 	PRTYPE(lnet_nid_t);
 	PRTYPE(lnet_pid_t);
 	PRTYPE(lnet_process_id_t);
+	PRTYPE(ksock_msg_t);
 
 /* start structs */
 	PRTYPE(atomic_t);
