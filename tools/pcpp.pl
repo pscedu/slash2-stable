@@ -11,6 +11,11 @@ sub usage {
 	exit 1;
 }
 
+sub fatal {
+	warn "$0: ", @_, "\n";
+	exit 1;
+}
+
 my %opts;
 getopts("e", \%opts) or usage;
 usage unless @ARGV == 1;
@@ -66,6 +71,11 @@ sub containing_func_is_dead {
 	return substr($data, $j, $foff - $j) =~ /\b__dead\b/;
 }
 
+sub dec_level {
+	$lvl--;
+	fatal "$lvl < 0" if $lvl < 0;
+}
+
 for ($i = 0; $i < length $data; ) {
 	if (substr($data, $i, 1) eq "#") {
 		# skip preprocessor
@@ -95,7 +105,8 @@ for ($i = 0; $i < length $data; ) {
 		} else {
 			advance(length($data) - $i);
 		}
-	} elsif (substr($data, $i, 1) eq q{"}) {
+	} elsif (substr($data, $i, 1) =~ /['"]/) {
+		my $ch = $&;
 		# skip strings
 		advance(1);
 		my $esc = 0;
@@ -104,7 +115,7 @@ for ($i = 0; $i < length $data; ) {
 				$esc = 0;
 			} elsif (substr($data, $i, 1) eq "\\") {
 				$esc = 1;
-			} elsif (substr($data, $i, 1) eq q{"}) {
+			} elsif (substr($data, $i, 1) eq $ch) {
 				last;
 			}
 		}
@@ -122,7 +133,7 @@ for ($i = 0; $i < length $data; ) {
 		my $len = $+[0];
 		$i += $len;
 		print "PFL_RETURNX()$end";
-		$lvl-- if $end =~ /}/;
+		dec_level() if $end =~ /}/;
 	} elsif (substr($data, $i) =~ /^return(\s*(?:\(\s*".*?"\s*\)|".*?"))(\s*;\s*}?\s*)/s) {
 		# catch 'return' with string literal arg
 		my $rv = $1;
@@ -130,7 +141,7 @@ for ($i = 0; $i < length $data; ) {
 		my $len = $+[0];
 		$i += $len;
 		print "PFL_RETURN_STRLIT($rv)$end";
-		$lvl-- if $end =~ /}/;
+		dec_level() if $end =~ /}/;
 	} elsif (substr($data, $i) =~ /^return(\s*(?:\(\s*\d+\s*\)|\d+))(\s*;\s*}?\s*)/s) {
 		# catch 'return' with numeric literal arg
 		my $rv = $1;
@@ -138,7 +149,7 @@ for ($i = 0; $i < length $data; ) {
 		my $len = $+[0];
 		$i += $len;
 		print "PFL_RETURN_LIT($rv)$end";
-		$lvl-- if $end =~ /}/;
+		dec_level() if $end =~ /}/;
 	} elsif (substr($data, $i) =~ /^return\b(\s*.*?)(\s*;\s*}?\s*)/s) {
 		# catch 'return' with an arg
 		my $rv = $1;
@@ -146,29 +157,29 @@ for ($i = 0; $i < length $data; ) {
 		my $len = $+[0];
 		$i += $len;
 		print "PFL_RETURN($rv)$end";
-		$lvl-- if $end =~ /}/;
+		dec_level() if $end =~ /}/;
 	} elsif ($lvl == 1 && substr($data, $i) =~ /^(?:psc_fatalx?|exit|errx?)\s*\([^;]*?\)\s*;\s*}\s*/s) {
 		# XXX this pattern skips psc_fatal("foo; bar")
 		# because of the embedded semi-colon
 
 		# skip no return conditions
 		advance($+[0]);
-		$lvl--;
+		dec_level();
 	} elsif ($lvl == 1 && substr($data, $i) =~ /^goto\s*\w+\s*;\s*}\s*/s) {
 		# skip no return conditions
 		advance($+[0]);
-		$lvl--;
+		dec_level();
 	} elsif ($lvl == 1 && substr($data, $i) =~ m[^\s*/\*\s*NOTREACHED\s*\*/\s*}\s*]s) {
 		# skip no return conditions
 		advance($+[0]);
-		$lvl--;
+		dec_level();
 	} elsif (substr($data, $i) =~ /^\w+/) {
 		advance($+[0]);
 	} elsif (substr($data, $i, 1) eq "{") {
 		$lvl++;
 		advance(1);
 	} elsif (substr($data, $i, 1) eq "}") {
-		$lvl--;
+		dec_level();
 		if ($lvl == 0) {
 			if (substr($data, $i + 1) =~ /^\s*\n/s) {
 				# catch implicit 'return'
