@@ -39,10 +39,10 @@
 
 #define MAX_LOG_TRY		3	/* # of times of retry in case of a log write problem */
 
-static int pjournal_logwrite(struct psc_journal_xidhndl *, int, void *, size_t);
+__static int pjournal_logwrite(struct psc_journal_xidhndl *, int, void *, size_t);
 
 /*
- * pjournal_xnew - start a new transaction with a unique ID in the given journal.
+ * pjournal_xnew - Start a new transaction with a unique ID in the given journal.
  * @pj: the owning journal.
  * Returns: new transaction handle
  */
@@ -61,8 +61,9 @@ pjournal_xnew(struct psc_journal *pj)
 	INIT_PSCLIST_ENTRY(&xh->pjx_lentry);
 
 	/*
-	 * Note that even though we issue xids in increasing order here, it does not
-	 * necessarily mean transactions will end up in the log in the same order.
+	 * Note that even though we issue xids in increasing order here,
+	 * it does not necessarily mean transactions will end up in the
+	 * log in the same order.
 	 */
 	PJ_LOCK(pj);
 	do {
@@ -70,13 +71,14 @@ pjournal_xnew(struct psc_journal *pj)
 	} while (xh->pjx_xid == PJE_XID_NONE);
 	PJ_ULOCK(pj);
 
-	psc_warnx("Start a new transaction %p (xid = %"PRIx64") in journal %p.", xh, xh->pjx_xid, pj);
+	psc_info("starting a new transaction %p (xid = %"PRIx64") in "
+	    "journal %p", xh, xh->pjx_xid, pj);
 	return (xh);
 }
 
 /*
- * This function is called to log changes to a piece of metadata (i.e., journal flush item).
- * We can't reply to our clients until after the log entry is written.
+ * pjournal_xadd - Log changes to a piece of metadata (i.e. journal flush item).
+ *	We can't reply to our clients until after the log entry is written.
  */
 int
 pjournal_xadd(struct psc_journal_xidhndl *xh, int type, void *data, size_t size)
@@ -89,8 +91,7 @@ pjournal_xadd(struct psc_journal_xidhndl *xh, int type, void *data, size_t size)
 }
 
 /*
- * This function is called after a piece of metadata has been updated in place
- * so that we can close the transaction that logs its changes.
+ * pjournal_xend - Close a transaction of changes to a piece of metadata.
  */
 int
 pjournal_xend(struct psc_journal_xidhndl *xh)
@@ -112,8 +113,9 @@ pjournal_xend(struct psc_journal_xidhndl *xh)
  * @data: the journal entry contents to store.
  * Returns: 0 on success, -1 on error.
  */
-static int
-pjournal_logwrite_internal(struct psc_journal_xidhndl *xh, int32_t slot, int type, void *data, size_t size)
+__static int
+pjournal_logwrite_internal(struct psc_journal_xidhndl *xh, int32_t slot,
+    int type, void *data, size_t size)
 {
 	int				 rc;
 	ssize_t				 sz;
@@ -127,11 +129,12 @@ pjournal_logwrite_internal(struct psc_journal_xidhndl *xh, int32_t slot, int typ
 	pj = xh->pjx_pj;
 	psc_assert(slot >= 0);
 	psc_assert(slot < pj->pj_hdr->pjh_nents);
-	psc_assert(size + offsetof(struct psc_journal_enthdr, pje_data) <= (size_t)PJ_PJESZ(pj));
+	psc_assert(size + offsetof(struct psc_journal_enthdr, pje_data) <=
+	    (size_t)PJ_PJESZ(pj));
 
 	PJ_LOCK(pj);
 	while (!psc_dynarray_len(&pj->pj_bufs)) {
-		pj->pj_flags |= PJ_WANTBUF;
+		pj->pj_flags |= PJF_WANTBUF;
 		psc_waitq_wait(&pj->pj_waitq, &pj->pj_lock);
 		PJ_LOCK(pj);
 	}
@@ -164,8 +167,8 @@ pjournal_logwrite_internal(struct psc_journal_xidhndl *xh, int32_t slot, int typ
 	/* commit the log entry on disk before we can return */
 	ntries = MAX_LOG_TRY;
 	while (ntries) {
-		sz = pwrite(pj->pj_fd, pje, PJ_PJESZ(pj),
-			   (off_t)(pj->pj_hdr->pjh_start_off + (slot * PJ_PJESZ(pj))));
+		sz = pwrite(pj->pj_fd, pje, PJ_PJESZ(pj), (off_t)
+		    (pj->pj_hdr->pjh_start_off + (slot * PJ_PJESZ(pj))));
 		if (sz == -1 && errno == EAGAIN) {
 			ntries--;
 			usleep(100);
@@ -182,14 +185,14 @@ pjournal_logwrite_internal(struct psc_journal_xidhndl *xh, int32_t slot, int typ
 	PJ_LOCK(pj);
 	psc_dynarray_add(&pj->pj_bufs, pje);
 	wakeup = 0;
-	if (pj->pj_flags & PJ_WANTBUF) {
+	if (pj->pj_flags & PJF_WANTBUF) {
 		wakeup = 1;
-		pj->pj_flags &= ~PJ_WANTBUF;
+		pj->pj_flags &= ~PJF_WANTBUF;
 	}
-	if ((pj->pj_flags & PJ_WANTSLOT) &&
+	if ((pj->pj_flags & PJF_WANTSLOT) &&
 	    (xh->pjx_flags & PJX_XCLOSE) && (xh->pjx_tailslot == pj->pj_nextwrite)) {
 		wakeup = 1;
-		pj->pj_flags &= ~PJ_WANTSLOT;
+		pj->pj_flags &= ~PJF_WANTSLOT;
 		psc_warnx("Journal %p unblocking slot %d - owned by xid %"PRIx64, pj, slot, xh->pjx_xid);
 	}
 	if (wakeup) {
@@ -208,9 +211,9 @@ pjournal_logwrite_internal(struct psc_journal_xidhndl *xh, int32_t slot, int typ
  * @size: size of the custom data
  * Returns: 0 on success, -1 on error.
  */
-static int
+__static int
 pjournal_logwrite(struct psc_journal_xidhndl *xh, int type, void *data,
-		  size_t size)
+    size_t size)
 {
 	struct psc_journal_xidhndl	*t;
 	int				 rc;
@@ -236,7 +239,7 @@ pjournal_logwrite(struct psc_journal_xidhndl *xh, int type, void *data,
 			psc_warnx("Journal %p write is blocked on slot %d "
 				  "owned by transaction %p (xid = %"PRIx64")",
 				   pj, pj->pj_nextwrite, t, t->pjx_xid);
-			pj->pj_flags |= PJ_WANTSLOT;
+			pj->pj_flags |= PJF_WANTSLOT;
 			psc_waitq_wait(&pj->pj_waitq, &pj->pj_lock);
 			goto retry;
 		}
@@ -274,15 +277,17 @@ pjournal_logwrite(struct psc_journal_xidhndl *xh, int type, void *data,
 
 	PJ_ULOCK(pj);
 
-	psc_info("Writing a log entry for transaction %"PRIx64": transaction tail = %d, log tail = %d",
-		  xh->pjx_xid, xh->pjx_tailslot, tail_slot);
+	psc_info("Writing a log entry for transaction %"PRIx64": "
+	    "transaction tail = %d, log tail = %d",
+	    xh->pjx_xid, xh->pjx_tailslot, tail_slot);
 
 	rc = pjournal_logwrite_internal(xh, slot, type, data, size);
 
 	PJ_LOCK(pj);
 	if (xh->pjx_flags & PJX_XCLOSE) {
-		psc_dbg("Transaction %p (xid = %"PRIx64") removed from journal %p: tail slot = %d, rc = %d",
-			 xh, xh->pjx_xid, pj, xh->pjx_tailslot, rc);
+		psc_dbg("Transaction %p (xid = %"PRIx64") removed from "
+		    "journal %p: tail slot = %d, rc = %d",
+		    xh, xh->pjx_xid, pj, xh->pjx_tailslot, rc);
 		psclist_del(&xh->pjx_lentry);
 		PSCFREE(xh);
 	}
@@ -298,8 +303,9 @@ pjournal_logwrite(struct psc_journal_xidhndl *xh, int type, void *data,
  * @data: a pointer to buffer when we fill journal entries.
  * Returns: 'n' entries read on success, -1 on error.
  */
-static int
-pjournal_logread(struct psc_journal *pj, int32_t slot, int32_t count, void *data)
+__static int
+pjournal_logread(struct psc_journal *pj, int32_t slot, int32_t count,
+    void *data)
 {
 	int		rc;
 	off_t		addr;
@@ -308,7 +314,7 @@ pjournal_logread(struct psc_journal *pj, int32_t slot, int32_t count, void *data
 	rc = 0;
 	addr = pj->pj_hdr->pjh_start_off + slot * PJ_PJESZ(pj);
 	size = pread(pj->pj_fd, data, PJ_PJESZ(pj) * count, addr);
-	if (size < 0 || size != PJ_PJESZ(pj) *  count) {
+	if (size == -1 || size != PJ_PJESZ(pj) *  count) {
 		psc_warn("Fail to read %zd bytes from journal %p: "
 		    "rc = %d, errno = %d", size, pj, rc, errno);
 		rc = -1;
@@ -316,7 +322,7 @@ pjournal_logread(struct psc_journal *pj, int32_t slot, int32_t count, void *data
 	return (rc);
 }
 
-static void *
+__static void *
 pjournal_alloc_buf(struct psc_journal *pj)
 {
 	return (psc_alloc(PJ_PJESZ(pj) * pj->pj_hdr->pjh_readahead,
@@ -360,8 +366,8 @@ pjournal_remove_entries(struct psc_journal *pj, uint64_t xid, int mode)
 	return count;
 }
 
-/*
- * Order transactions based on xid and sub id.
+/**
+ * pjournal_xid_cmp - Compare tranactions for use in sorting.
  */
 __static int
 pjournal_xid_cmp(const void *x, const void *y)
@@ -500,14 +506,16 @@ pjournal_scan_slots(struct psc_journal *pj)
 		}
 		slot += count;
 	}
-done:
+ done:
 	if (last_startup != PJE_XID_NONE) {
 		pjournal_remove_entries(pj, last_startup, 2);
 	}
 	pj->pj_lastxid = last_xid;
 	/* If last_slot is PJX_SLOT_ANY, then nextwrite will be 0 */
-	pj->pj_nextwrite = (last_slot == (int)pj->pj_hdr->pjh_nents - 1) ? 0 : (last_slot + 1);
-	qsort(pj->pj_bufs.da_items, pj->pj_bufs.da_pos, sizeof(void *), pjournal_xid_cmp);
+	pj->pj_nextwrite = (last_slot == (int)pj->pj_hdr->pjh_nents - 1) ?
+	    0 : (last_slot + 1);
+	qsort(pj->pj_bufs.da_items, pj->pj_bufs.da_pos,
+	    sizeof(void *), pjournal_xid_cmp);
 	psc_freenl(jbuf, PJ_PJESZ(pj) * pj->pj_hdr->pjh_readahead);
 
 	/*
@@ -516,7 +524,7 @@ done:
 	 */
 	while (psc_dynarray_len(&closetrans)) {
 		pje = psc_dynarray_getpos(&closetrans, 0);
-		(void)pjournal_remove_entries(pj, pje->pje_xid, 1);
+		pjournal_remove_entries(pj, pje->pje_xid, 1);
 		psc_dynarray_remove(&closetrans, pje);
 		psc_freenl(pje, PJ_PJESZ(pj));
 	}
@@ -533,7 +541,7 @@ done:
  * pjournal_load - initialize the in-memory representation of a journal.
  * return: pj on success, NULL on failure
  */
-static struct psc_journal *
+__static struct psc_journal *
 pjournal_load(const char *fn)
 {
 	ssize_t				 rc;
@@ -542,81 +550,74 @@ pjournal_load(const char *fn)
 	uint64_t			 chksum;
 	struct stat			 statbuf;
 
-	pj = PSCALLOC(sizeof(struct psc_journal));
-	pjh = psc_alloc(sizeof(struct psc_journal_hdr), PAF_PAGEALIGN | PAF_LOCK);
-	/*
-	 * To quote open(2), the O_DIRECT flag may impose alignment restrictions on the length
-	 * and address of userspace buffers and the file offset of I/Os. Note that we are using
-	 * 512 byte log entries.
-	 */
+	pj = PSCALLOC(sizeof(*pj));
 	pj->pj_fd = open(fn, O_RDWR | O_SYNC | O_DIRECT);
-	if (pj->pj_fd == -1) {
+	if (pj->pj_fd == -1)
 		psc_fatal("Fail to open log file %s", fn);
-	}
 	rc = fstat(pj->pj_fd, &statbuf);
-	if (rc < 0) {
+	if (rc == -1)
 		psc_fatal("Fail to stat log file %s", fn);
-	}
-	if (statbuf.st_size < (off_t)sizeof(*pjh)) {
-		psc_fatal("Log file size is smaller than a log header");
-	}
-	rc = pread(pj->pj_fd, pjh, sizeof(*pjh), 0);
-	if (rc != sizeof(*pjh)) {
+
+	/*
+	 * O_DIRECT may impose alignment restrictions so align to page
+	 * and perform I/O in multiples of file system block size.
+	 */
+	pj->pj_hdrlen = PSC_ALIGN(sizeof(*pjh), statbuf.st_blksize);
+	pjh = psc_alloc(pj->pj_hdrlen, PAF_PAGEALIGN | PAF_LOCK);
+	rc = pread(pj->pj_fd, pjh, pj->pj_hdrlen, 0);
+	if (rc != pj->pj_hdrlen)
 		psc_fatal("Fail to read journal header: want %zu got %zd",
-		    sizeof(*pjh), rc);
-	}
+		    pj->pj_hdrlen, rc);
 	pj->pj_hdr = pjh;
 	if (pjh->pjh_magic != PJH_MAGIC) {
 		PSCFREE(pj);
-		psc_freenl(pjh, sizeof(struct psc_journal_hdr));
+		psc_freenl(pjh, pj->pj_hdrlen);
 		pj = NULL;
-		psc_errorx("Journal header has a bad magic number!");
+		psc_errorx("Journal header has a bad magic number");
 		goto done;
 	}
 	if (pjh->pjh_version != PJH_VERSION) {
-		psc_errorx("Journal header has an invalid version number!");
-		psc_freenl(pjh, sizeof(struct psc_journal_hdr));
+		psc_errorx("Journal header has an invalid version number");
+		psc_freenl(pjh, pj->pj_hdrlen);
 		PSCFREE(pj);
 		pj = NULL;
 		goto done;
 	}
 
 	PSC_CRC64_INIT(&chksum);
-	psc_crc64_add(&chksum, pjh, offsetof(struct _psc_journal_hdr, _pjh_chksum));
+	psc_crc64_add(&chksum, pjh, offsetof(struct psc_journal_hdr, pjh_chksum));
 	PSC_CRC64_FIN(&chksum);
 
 	if (pjh->pjh_chksum != chksum) {
 		psc_errorx("Journal header has an invalid checksum value "
 		    "%"PSCPRIxCRC64" vs %"PSCPRIxCRC64, pjh->pjh_chksum, chksum);
-		psc_freenl(pjh, sizeof(struct psc_journal_hdr));
+		psc_freenl(pjh, pj->pj_hdrlen);
 		PSCFREE(pj);
 		pj = NULL;
 		goto done;
 	}
-	if (statbuf.st_size != (off_t)(sizeof(*pjh) + pjh->pjh_nents * PJ_PJESZ(pj))) {
+	if (statbuf.st_size != (off_t)(pj->pj_hdrlen + pjh->pjh_nents * PJ_PJESZ(pj))) {
 		psc_errorx("Size of the log file does not match specs in its header");
-		psc_freenl(pjh, sizeof(struct psc_journal_hdr));
+		psc_freenl(pjh, pj->pj_hdrlen);
 		PSCFREE(pj);
 		pj = NULL;
 		goto done;
 	}
 	/*
-	 * The remaining two fields pj_lastxid and pj_nextwrite will be filled after log replay.
+	 * The remaining two fields pj_lastxid and pj_nextwrite will be
+	 * filled after log replay.
 	 */
 	LOCK_INIT(&pj->pj_lock);
 	INIT_PSCLIST_HEAD(&pj->pj_pndgxids);
 	psc_waitq_init(&pj->pj_waitq);
-	pj->pj_flags = PJ_NONE;
+	pj->pj_flags = PJF_NONE;
 	psc_dynarray_init(&pj->pj_bufs);
-	pj->pj_logname = strdup(fn);
-	if (pj->pj_logname == NULL)
-		psc_fatal("strdup");
 
-done:
+ done:
 	return (pj);
 }
 
-static void
+__static void
 pjournal_close(struct psc_journal *pj)
 {
 	int				 n;
@@ -625,17 +626,16 @@ pjournal_close(struct psc_journal *pj)
 	DYNARRAY_FOREACH(pje, n, &pj->pj_bufs)
 		psc_freenl(pje, PJ_PJESZ(pj));
 	psc_dynarray_free(&pj->pj_bufs);
-	psc_freenl(pj->pj_hdr, sizeof(*pj->pj_hdr));
-	free(pj->pj_logname);
+	psc_freenl(pj->pj_hdr, pj->pj_hdrlen);
 	PSCFREE(pj);
 }
 
 /*
- * Initialize a new journal file.
+ * pjournal_format - Initialize an on-disk journal.
  */
 int
-pjournal_format(const char *fn, uint32_t nents, uint32_t entsz, uint32_t ra,
-		uint32_t opts)
+pjournal_format(const char *fn, uint32_t nents, uint32_t entsz,
+    uint32_t ra, uint32_t opts)
 {
 	int32_t				 i;
 	int				 rc;
@@ -655,11 +655,11 @@ pjournal_format(const char *fn, uint32_t nents, uint32_t entsz, uint32_t ra,
 	pjh.pjh_options = opts;
 	pjh.pjh_readahead = ra;
 	pjh.pjh_unused = 0;
-	pjh.pjh_start_off = PJE_OFFSET;
+	pjh.pjh_start_off = ;
 	pjh.pjh_magic = PJH_MAGIC;
 
 	PSC_CRC64_INIT(&chksum);
-	psc_crc64_add(&chksum, &pjh, offsetof(struct _psc_journal_hdr, _pjh_chksum));
+	psc_crc64_add(&chksum, &pjh, offsetof(struct psc_journal_hdr, pjh_chksum));
 	PSC_CRC64_FIN(&chksum);
 	pjh.pjh_chksum = chksum;
 
@@ -667,20 +667,17 @@ pjournal_format(const char *fn, uint32_t nents, uint32_t entsz, uint32_t ra,
 	jbuf = pjournal_alloc_buf(&pj);
 
 	rc = 0;
-	errno = 0;
-	if ((fd = open(fn, O_WRONLY|O_CREAT|O_TRUNC, 0600)) < 0)
+	fd = open(fn, O_WRONLY | O_CREAT | O_TRUNC, 0600);
+	if (fd == -1)
 		psc_fatal("Could not create or truncate the log file %s", fn);
 
-	psc_assert(PJE_OFFSET >= sizeof(pjh));
-	size = pwrite(fd, &pjh, sizeof(pjh), 0);
-	if (size < 0 || size != sizeof(pjh))
+	size = pwrite(fd, &pjh, pjh->pjh_iolen, 0);
+	if (size == -1 || size != pjh->pjh_iolen)
 		psc_fatal("Failed to write header");
 
-	for (slot = 0;  slot < pjh.pjh_nents; slot += count) {
-
+	for (slot = 0; slot < pjh.pjh_nents; slot += count) {
 		count = (nents - slot <= ra) ? (nents - slot) : ra;
 		for (i = 0; i < count; i++) {
-
 			pje = (struct psc_journal_enthdr *)&jbuf[PJ_PJESZ(&pj) * i];
 			pje->pje_magic = PJE_MAGIC;
 			pje->pje_type = PJE_FORMAT;
@@ -689,7 +686,8 @@ pjournal_format(const char *fn, uint32_t nents, uint32_t entsz, uint32_t ra,
 			pje->pje_len = 0;
 
 			PSC_CRC64_INIT(&chksum);
-			psc_crc64_add(&chksum, pje, offsetof(struct psc_journal_enthdr, pje_chksum));
+			psc_crc64_add(&chksum, pje,
+			    offsetof(struct psc_journal_enthdr, pje_chksum));
 			psc_crc64_add(&chksum, pje->pje_data, pje->pje_len);
 			PSC_CRC64_FIN(&chksum);
 
@@ -697,16 +695,18 @@ pjournal_format(const char *fn, uint32_t nents, uint32_t entsz, uint32_t ra,
 		}
 		size = pwrite(fd, jbuf, PJ_PJESZ(&pj) * count,
 			(off_t)(PJE_OFFSET + (slot * PJ_PJESZ(&pj))));
-		/* At least on one instance, short write actually returns success on a RAM-backed file system */
-		if (size < 0 || size != PJ_PJESZ(&pj) * count) {
+		/*
+		 * At least on one instance, short write actually
+		 * returns success on a RAM-backed file system.
+		 */
+		if (size == -1 || size != PJ_PJESZ(&pj) * count) {
 			rc = -1;
-			psc_errorx("Failed to write %d entries at slot %d", count, slot);
+			psc_errorx("failed to write %d entries at slot %d", count, slot);
 			break;
 		}
 	}
-	if (close(fd) < 0) {
-		psc_fatal("Failed to close journal fd");
-	}
+	if (close(fd) == -1)
+		psc_fatal("failed to close journal");
 	psc_freenl(jbuf, PJ_PJESZ(&pj) * ra);
 	return rc;
 }
@@ -888,7 +888,7 @@ pjournal_replay(const char * fn, psc_jhandler pj_handler)
 	size = pwrite(pj->pj_fd, pje, PJ_PJESZ(pj),
 		     (off_t)(pj->pj_hdr->pjh_start_off +
 		     (pj->pj_nextwrite * PJ_PJESZ(pj))));
-	if (size < 0 || size != PJ_PJESZ(pj)) {
+	if (size == -1 || size != PJ_PJESZ(pj)) {
 		psc_warnx("Fail to write a start up marker in the journal");
 	}
 	psc_freenl(pje, PJ_PJESZ(pj));
@@ -899,10 +899,11 @@ pjournal_replay(const char * fn, psc_jhandler pj_handler)
 
 	/* pre-allocate some buffers for log writes */
 	for (i = 0; i < MAX_NUM_PJBUF; i++) {
-		pje = psc_alloc(PJ_PJESZ(pj), PAF_PAGEALIGN|PAF_LOCK);
+		pje = psc_alloc(PJ_PJESZ(pj), PAF_PAGEALIGN | PAF_LOCK);
 		psc_dynarray_add(&pj->pj_bufs, pje);
 	}
 
-	psc_warnx("Journal replay: %d log entries and %d transactions have been redone, error = %d", nents, ntrans, nerrs);
-	return pj;
+	psc_info("journal replayed: %d log entries with %d transactions "
+	    "have been redone, error = %d", nents, ntrans, nerrs);
+	return (pj);
 }
