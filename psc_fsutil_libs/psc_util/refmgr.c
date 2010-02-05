@@ -60,7 +60,7 @@ psc_refmgr_tryreclaimobj(struct psc_refmgr *prm, struct psc_objref *pobj,
 			    &prm->prm_tree, pobj);
 		if (prm->prm_flags & PRMF_HASH)
 			psc_hashbkt_del_item(&prm->prm_hashtbl, bkt,
-			    prm->prm_objcmpf, );
+			    prm->prm_objcmpf, key);
 
 		psc_dynarray_add(da, pobj);
 	}
@@ -425,7 +425,8 @@ psc_obj_decref(struct psc_refmgr *prm, void *p)
 		psc_objref_lock(prm, pobj);
 		if (psc_atomic32_dec_and_test0(&pobj->pobj_refcnt)) {
 			if (prm->prm_flags & PRMF_HASH)
-				psc_hashtbl_del_item(&prm->prm_hashtbl, );
+				psc_hashtbl_del_item(&prm->prm_hashtbl,
+				    prm->prm_objcmpf, key);
 			if (prm->prm_flags & PRMF_TREE)
 				PSC_SPLAY_XREMOVE(psc_objref_tree,
 				    &prm->prm_tree, pobj);
