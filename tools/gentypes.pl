@@ -103,7 +103,11 @@ foreach my $hdr (@hdrs) {
 			push @types, "struct $1" if /^(?:typedef\s+)?struct\s+(\w+)\s*{/;
 			push @types, $1 if /^typedef\s+(?:struct\s+)?(?:\w+)\s+(\w+)\s*;/;
 
-			push @vals, /($opts{g})/ if $opts{g};
+			if ($opts{g}) {
+				foreach my $pat (@{ $opts{g} }) {
+					push @vals, /($pat)/;
+				}
+			}
 		}
 	}
 	close HDR;
