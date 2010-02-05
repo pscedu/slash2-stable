@@ -569,7 +569,7 @@ pjournal_load(const char *fn)
 	struct psc_journal_hdr		*pjh;
 	uint64_t			 chksum;
 	struct stat			 statbuf;
-	int pjhlen;
+	ssize_t pjhlen;
 
 	pj = PSCALLOC(sizeof(*pj));
 	pj->pj_fd = open(fn, O_RDWR | O_SYNC | O_DIRECT);
@@ -587,16 +587,16 @@ pjournal_load(const char *fn)
 	pjh = psc_alloc(pjhlen, PAF_PAGEALIGN | PAF_LOCK);
 	rc = pread(pj->pj_fd, pjh, pjhlen, 0);
 	if (rc != pjhlen)
-		psc_fatal("Fail to read journal header: want %zu got %zd",
+		psc_fatal("Fail to read journal header: want %zd got %zd",
 		    pjhlen, rc);
 	pj->pj_hdr = pjh;
 	if (pjh->pjh_magic != PJH_MAGIC) {
 		psc_errorx("Journal header has a bad magic number");
-		goto done;
+		goto err;
 	}
 	if (pjh->pjh_version != PJH_VERSION) {
 		psc_errorx("Journal header has an invalid version number");
-		goto done;
+		goto err;
 	}
 
 	PSC_CRC64_INIT(&chksum);
@@ -606,7 +606,7 @@ pjournal_load(const char *fn)
 	if (pjh->pjh_chksum != chksum) {
 		psc_errorx("Journal header has an invalid checksum value "
 		    "%"PSCPRIxCRC64" vs %"PSCPRIxCRC64, pjh->pjh_chksum, chksum);
-		goto done;
+		goto err;
 	}
 	if (statbuf.st_size != (off_t)(pjhlen + pjh->pjh_nents * PJ_PJESZ(pj))) {
 		psc_errorx("Size of the log file does not match specs in its header");
@@ -695,7 +695,7 @@ pjournal_format(const char *fn, uint32_t nents, uint32_t entsz,
 	PSC_CRC64_FIN(&pjh.pjh_chksum);
 
 	size = pwrite(fd, &pjh, pjh.pjh_iolen, 0);
-	if (size == -1 || size != pjh.pjh_iolen)
+	if (size == -1 || size != (ssize_t)pjh.pjh_iolen)
 		psc_fatal("Failed to write header");
 
 	jbuf = pjournal_alloc_buf(&pj);
@@ -711,16 +711,15 @@ pjournal_format(const char *fn, uint32_t nents, uint32_t entsz,
 			pje->pje_sid = PJE_XID_NONE;
 			pje->pje_len = 0;
 
-			PSC_CRC64_INIT(&chksum);
-			psc_crc64_add(&chksum, pje,
+			PSC_CRC64_INIT(&pje->pje_chksum);
+			psc_crc64_add(&pje->pje_chksum, pje,
 			    offsetof(struct psc_journal_enthdr, pje_chksum));
-			psc_crc64_add(&chksum, pje->pje_data, pje->pje_len);
-			PSC_CRC64_FIN(&chksum);
-
-			pje->pje_chksum = chksum;
+			psc_crc64_add(&pje->pje_chksum, pje->pje_data,
+			    pje->pje_len);
+			PSC_CRC64_FIN(&pje->pje_chksum);
 		}
 		size = pwrite(fd, jbuf, PJ_PJESZ(&pj) * count,
-			(off_t)(PJE_OFFSET + (slot * PJ_PJESZ(&pj))));
+			(off_t)(pjh.pjh_start_off + (slot * PJ_PJESZ(&pj))));
 		/*
 		 * At least on one instance, short write actually
 		 * returns success on a RAM-backed file system.
@@ -786,7 +785,7 @@ pjournal_dump(const char *fn, int verbose)
 		count = (pjh->pjh_nents - slot <= ra) ?
 		    (pjh->pjh_nents - slot) : ra;
 		size = pread(pj->pj_fd, jbuf, (PJ_PJESZ(pj) * count),
-		    (off_t)(PJE_OFFSET + (slot * PJ_PJESZ(pj))));
+		    (off_t)(pjh->pjh_start_off + (slot * PJ_PJESZ(pj))));
 
 		if (size == -1)
 			psc_fatal("Failed to read %d log entries "
