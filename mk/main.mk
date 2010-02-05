@@ -65,9 +65,6 @@ _TINCLUDES=		$(filter-out -I%,${INCLUDES}) $(patsubst %,-I%,$(foreach \
 CFLAGS+=		${DEFINES} ${_TINCLUDES}
 TARGET?=		${PROG} ${LIBRARY}
 
-XDEPS=			Makefile ${MAINMK}
-#			${LOCALMK} ${APP_BASE}/mk/local.mk ${APP_BASE}/mk/main.mk
-
 EXTRACT_INCLUDES=	perl -ne 'print $$& while /-I\S+\s?/gc'
 EXTRACT_DEFINES=	perl -ne 'print $$& while /-D\S+\s?/gc'
 EXTRACT_CFLAGS=		perl -ne 'print $$& while /-[^ID]\S+\s?/gc'
@@ -145,36 +142,36 @@ all: recurse-all
 # XXX this doesn't seem to work as advertised
 .SILENT: ${OBJDIR}/$(notdir %.dep)
 
-${OBJDIR}/$(notdir %.dep) : %.c ${XDEPS}
+${OBJDIR}/$(notdir %.dep) : %.c
 	${ECHORUN} ${MKDEP} -D ${OBJDIR} -f $@ ${DEFINES} $(				\
 	    ) $$(echo $(call FILE_CFLAGS,$<) | ${EXTRACT_DEFINES}) $(			\
 	    ) ${LIBC_INCLUDES} ${_TINCLUDES} $(						\
 	    ) $$(echo $(call FILE_CFLAGS,$<) | ${EXTRACT_INCLUDES}) -I$(dir $<) -I. $(realpath $<)
 
-${OBJDIR}/$(notdir %.o) : %.c ${XDEPS}
+${OBJDIR}/$(notdir %.o) : %.c
 	${PCPP} $(realpath $<) | $(							\
 	) ${CC} -x c ${CFLAGS} $(call FILE_CFLAGS,$<) -I$(dir $<) -I. - -c -o $@
 
-${OBJDIR}/$(notdir %.E) : %.c ${XDEPS}
+${OBJDIR}/$(notdir %.E) : %.c
 	${CC} ${CFLAGS} $(call FILE_CFLAGS,$<) -I$(dir $<) -I. $(realpath $<) -E -o $@
 
-${OBJDIR}/$(notdir %.c) : %.l ${XDEPS}
+${OBJDIR}/$(notdir %.c) : %.l
 	echo "${LEX} ${LFLAGS} $(realpath $<) > $@"
 	${LEX} ${LFLAGS} $(realpath $<) > $@
 
-${OBJDIR}/$(notdir %.c) : %.y ${XDEPS}
+${OBJDIR}/$(notdir %.c) : %.y
 	${ECHORUN} ${YACC} ${YFLAGS} -o $@ $(realpath $<)
 
 ifdef HASDEPS
   ifdef PROG
-    ${PROG}: ${OBJS} ${XDEPS}
+    ${PROG}: ${OBJS}
 	${CC} -o $@ ${OBJS} ${LDFLAGS}
 	@echo -n "${PROG}:" > ${DEPEND_FILE}
 	@${LIBDEP} ${LDFLAGS} ${LIBDEP_ADD} >> ${DEPEND_FILE}
   endif
 
   ifdef LIBRARY
-    ${LIBRARY}: ${OBJS} ${XDEPS}
+    ${LIBRARY}: ${OBJS}
 	${AR} ${ARFLAGS} $@ ${OBJS}
   endif
 else
@@ -198,8 +195,10 @@ recurse-%:
 		echo -n "===> ";							\
 		echo $$i;								\
 		(cd $$i && SUBDIRS= ${MAKE} $(patsubst recurse-%,%,$@)) || exit 1;	\
-		echo "<=== ${CURDIR}";							\
 	done
+	@if ${NOTEMPTY} "${_TSUBDIRS}"; then						\
+		echo "<=== ${CURDIR}";							\
+	fi
 
 # empty but overrideable
 install-hook:
