@@ -203,7 +203,7 @@ recurse-%:
 			echo -n ${DIRPREFIX};						\
 		fi;									\
 		echo $$i;								\
-		(cd $$i && ${MAKE} SUBDIRS= DIRPREFIX=${DIRPREFIX}$$i/			\
+		(cd $$i && SUBDIRS= ${MAKE} DIRPREFIX=${DIRPREFIX}$$i/			\
 		    $(patsubst recurse-%,%,$@)) || exit 1;				\
 		if [ -n "${DIRPREFIX}" ]; then						\
 			echo "<=== ${DIRPREFIX}" | sed 's!/$$!!';			\
