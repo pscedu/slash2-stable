@@ -134,7 +134,7 @@ vpath %.dep ${OBJDIR}
 
 all: recurse-all
 	@if ${NOTEMPTY} "${TARGET}" && ${NOTEMPTY} "${SUBDIRS}"; then			\
-		echo "===> ${DIRPREFIX:+.}";						\
+		echo "===> ${CURDIR}";							\
 	fi
 	@if ${NOTEMPTY} "${TARGET}"; then						\
 		mkdir -p ${OBJDIR};							\
@@ -145,11 +145,11 @@ all: recurse-all
 
 .PRECIOUS: ${OBJDIR}/$(notdir %.dep)
 
-# XXX this doesn't work as advertised
+# XXX this doesn't seem to work as advertised
 .SILENT: ${OBJDIR}/$(notdir %.dep)
 
 ${OBJDIR}/$(notdir %.dep) : %.c ${XDEPS}
-	${ECHORUN} ${MKDEP} -D ${OBJDIR} -f $@ ${DEFINES} $(					\
+	${ECHORUN} ${MKDEP} -D ${OBJDIR} -f $@ ${DEFINES} $(				\
 	    ) $$(echo $(call FILE_CFLAGS,$<) | ${EXTRACT_DEFINES}) $(			\
 	    ) ${LIBC_INCLUDES} ${_TINCLUDES} $(						\
 	    ) $$(echo $(call FILE_CFLAGS,$<) | ${EXTRACT_INCLUDES}) -I$(dir $<) -I. $(realpath $<)
@@ -199,15 +199,8 @@ endif
 recurse-%:
 	@for i in ${_TSUBDIRS}; do							\
 		echo -n "===> ";							\
-		if [ -n "${DIRPREFIX}" ]; then						\
-			echo -n ${DIRPREFIX};						\
-		fi;									\
 		echo $$i;								\
-		(cd $$i && SUBDIRS= ${MAKE} DIRPREFIX=${DIRPREFIX}$$i/			\
-		    $(patsubst recurse-%,%,$@)) || exit 1;				\
-		if [ -n "${DIRPREFIX}" ]; then						\
-			echo "<=== ${DIRPREFIX}" | sed 's!/$$!!';			\
-		fi;									\
+		(cd $$i && SUBDIRS= ${MAKE} $(patsubst recurse-%,%,$@)) || exit 1;	\
 	done
 
 # empty but overrideable
