@@ -1,7 +1,5 @@
 $Id$
 
-TEST
-
 
 general reminders
 - watch out for sizeof(type var[0])
