@@ -133,9 +133,6 @@ vpath %.c $(sort $(dir $(filter %.c,${_TSRCS})) ${OBJDIR})
 vpath %.dep ${OBJDIR}
 
 all: recurse-all
-	@if ${NOTEMPTY} "${TARGET}" && ${NOTEMPTY} "${SUBDIRS}"; then			\
-		echo "===> ${CURDIR}";							\
-	fi
 	@if ${NOTEMPTY} "${TARGET}"; then						\
 		mkdir -p ${OBJDIR};							\
 		${MAKE} ${TARGET};							\
@@ -201,6 +198,7 @@ recurse-%:
 		echo -n "===> ";							\
 		echo $$i;								\
 		(cd $$i && SUBDIRS= ${MAKE} $(patsubst recurse-%,%,$@)) || exit 1;	\
+		echo "<=== ${CURDIR}";							\
 	done
 
 # empty but overrideable
@@ -229,9 +227,6 @@ install: recurse-install install-hook
 	fi
 
 clean: recurse-clean
-	@if ${NOTEMPTY} "${SUBDIRS}"; then						\
-		echo "<=== ${CURDIR}";							\
-	fi
 	rm -rf ${OBJDIR}
 	rm -f ${PROG} ${LIBRARY} TAGS cscope.out core.[0-9]*
 
