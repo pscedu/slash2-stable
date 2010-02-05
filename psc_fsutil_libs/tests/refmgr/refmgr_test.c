@@ -22,10 +22,16 @@
 #include <unistd.h>
 
 #include "pfl/cdefs.h"
+#include "psc_util/atomic.h"
 #include "psc_util/refmgr.h"
 
-const char *progname;
-struct psc_refmgr refmgr;
+const char		*progname;
+struct psc_refmgr	 refmgr;
+psc_atomic32_t		 c = PSC_ATOMIC32_INIT(0);
+
+struct obj {
+	int	obj_val;
+};
 
 __dead void
 usage(void)
@@ -35,8 +41,28 @@ usage(void)
 }
 
 int
+init_obj(__unusedx struct psc_poolmgr *m, void *p)
+{
+	struct obj *o = p;
+
+	o->obj_val = psc_atomic32_inc_getnew(&c);
+	printf("created obj %d\n", o->obj_val);
+	return (0);
+}
+
+void
+destroy_obj(void *p)
+{
+	struct obj *o = p;
+
+	printf("destroy obj %d\n", o->obj_val);
+}
+
+int
 main(int argc, char *argv[])
 {
+	struct obj *o;
+
 	progname = argv[0];
 	if (getopt(argc, argv, "") != -1)
 		usage();
@@ -44,6 +70,7 @@ main(int argc, char *argv[])
 	if (argc)
 		usage();
 
-	psc_refmgr_init(&refmgr, "test");
+	psc_refmgr_init(&refmgr, PRMF_LIST | PRMF_NOMEMPIN, sizeof(*o),
+	    128, 64, 256, init_obj, destroy_obj, "test");
 	exit(0);
 }

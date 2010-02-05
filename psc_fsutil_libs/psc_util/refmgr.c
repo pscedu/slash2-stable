@@ -31,6 +31,77 @@
 #include "psc_util/pool.h"
 #include "psc_util/refmgr.h"
 
+SPLAY_GENERATE(psc_objref_tree, psc_objref, pobj_tree_entry, psc_objref_cmp);
+
+void
+psc_refmgr_tryreclaimobj(struct psc_refmgr *prm, struct psc_objref *pobj,
+    struct psc_dynarray *da)
+{
+	struct psc_hashbkt *bkt = NULL;
+	int locked;
+
+	locked = 0; /* gcc */
+
+	if (prm->prm_flags & PRMF_HASH) {
+		bkt = psc_hashbkt_get(&prm->prm_hashtbl, key);
+		locked = psc_hashbkt_rlock(bkt);
+	}
+
+	psc_objref_lock(prm, pobj);
+	if (pobj->pobj_refcnt == 0 &&
+	    pobj->pobj_flags & (POBJF_BUSY | POBJF_DYING) == 0) {
+		pobj->pobj_flags |= POBJF_DYING;
+		if (prm->prm_flags & PRMF_LIST)
+			lc_remove(&prm->prm_list, pobj);
+		if (prm->prm_flags & PRMF_LRU)
+			lc_remove(&prm->prm_lru, pobj);
+		if (prm->prm_flags & PRMF_TREE)
+			PSC_SPLAY_XREMOVE(psc_objref_tree,
+			    &prm->prm_tree, pobj);
+		if (prm->prm_flags & PRMF_HASH)
+			psc_hashbkt_del_item(&prm->prm_hashtbl, bkt,
+			    prm->prm_objcmpf, );
+
+		psc_dynarray_add(da, pobj);
+	}
+	psc_objref_unlock(prm, pobj);
+
+	if (prm->prm_flags & PRMF_HASH)
+		psc_hashbkt_ureqlock(bkt, locked);
+}
+
+int
+psc_refmgr_reclaimcb(struct psc_poolmgr *m)
+{
+	struct psc_dynarray da = DYNARRAY_INIT;
+	struct psc_objref *pobj;
+
+	psc_refmgr_lock_generic(prm);
+	if (prm->prm_flags & PRMF_LRU) {
+		PLC_FOREACH_BACKWARDS(pobj, &prm->prm_lru)
+			psc_refmgr_tryreclaimobj(prm, pobj, &da);
+	} else if (prm->prm_flags & PRMF_LIST) {
+		PLC_FOREACH(pobj, &prm->prm_list)
+			psc_refmgr_tryreclaimobj(prm, pobj, &da);
+	} else if (prm->prm_flags & PRMF_TREE) {
+		SPLAY_FOREACH(psc_objref_tree, &prm->prm_tree, pobj)
+			psc_refmgr_tryreclaimobj(prm, pobj, &da);
+	} else if (prm->prm_flags & PRMF_HASH) {
+		struct psc_hashbkt *bkt;
+
+		PSC_HASHTBL_FOREACH_BUCKET(bkt, &prm->prm_hashtbl) {
+			psc_hashbkt_lock(bkt);
+			PSC_HASHBKT_FOREACH_ENTRY(&prm->prm_hashtbl,
+			    pobj, bkt)
+				psc_refmgr_tryreclaimobj(prm, pobj, &da);
+			psc_hashbkt_unlock(bkt);
+		}
+	}
+	psc_refmgr_unlock_generic(prm);
+
+	psc_dynarray_free(&da);
+}
+
 void
 psc_refmgr_init(struct psc_refmgr *prm, int flags, int privsiz, int nobjs,
     int min, int max, int (*initf)(struct psc_poolmgr *, void *),
@@ -42,12 +113,11 @@ psc_refmgr_init(struct psc_refmgr *prm, int flags, int privsiz, int nobjs,
 	memset(prm, 0, sizeof(*prm));
 	prm->prm_flags = flags;
 
-	off = sizeof(struct psc_objref);
+	off = offsetof(struct psc_objref, pobj_tree_entry);
 	if (prm->prm_flags & PRMF_TREE) {
-		prm->prm_tree_offset = off;
 		off += sizeof(SPLAY_ENTRY(psc_objref));
 
-		prm->prm_refmgr_offset = off;
+		prm->prm_refmgrtree_offset = off;
 		off += sizeof(void *);
 	}
 	if (prm->prm_flags & PRMF_LIST) {
@@ -98,7 +168,7 @@ psc_refmgr_init(struct psc_refmgr *prm, int flags, int privsiz, int nobjs,
 		pll_init(&prm->prm_lru, struct psc_objref,
 		    prm->prm_lru_offset);
 	if (prm->prm_flags & PRMF_TREE) {
-		SPLAY_INIT(psc_objref_tree, &prm->prm_tree);
+		SPLAY_INIT(&prm->prm_tree);
 		LOCK_INIT(&prm->prm_trlock);
 	}
 	if (prm->prm_flags & PRMF_HASH) {
@@ -170,6 +240,8 @@ psc_refmgr_unlock_generic(struct psc_refmgr *prm)
 void
 psc_refmgr_unlock_specific(struct psc_refmgr *prm, void *key)
 {
+	struct psc_hashbkt *b;
+
 	if (prm->prm_flags & PRMF_HASH) {
 		psc_assert(key);
 		b = psc_hashbkt_get(&prm->prm_hashtbl,
@@ -177,75 +249,6 @@ psc_refmgr_unlock_specific(struct psc_refmgr *prm, void *key)
 		psc_hashtbl_lockbkt(&prm->prm_hash);
 	}
 	psc_refmgr_unlock_generic(prm);
-}
-
-void
-psc_refmgr_tryreclaimobj(struct psc_refmgr *prm, struct psc_objref *pobj,
-    struct psc_dynarray *da)
-{
-	struct psc_hashbkt *bkt = NULL;
-	int locked;
-
-	locked = 0; /* gcc */
-
-	if (prm->prm_flags & PRMF_HASH) {
-		bkt = psc_hashbkt_get(&prm->prm_hashtbl, key);
-		locked = psc_hashbkt_rlock(bkt);
-	}
-
-	psc_objref_lock(pobj);
-	if (pobj->pobj_refcnt == 0 &&
-	    pobj->pobj_flags & (POBJF_BUSY | POBJF_DYING) == 0) {
-		pobj->pobj_flags |= POBJF_DYING;
-		if (prm->prm_flags & PRMF_LIST)
-			lc_remove(&prm->prm_list, pobj);
-		if (prm->prm_flags & PRMF_LRU)
-			lc_remove(&prm->prm_lru, pobj);
-		if (prm->prm_flags & PRMF_TREE)
-			PSC_SPLAY_XREMOVE(psc_objref_tree,
-			    &prm->prm_tree, pobj);
-		if (prm->prm_flags & PRMF_HASH)
-			psc_hashbkt_del_item(&prm->prm_hashtbl, bkt,
-			    prm->prm_objcmpf, );
-
-		psc_dynarray_add(da, pobj);
-	}
-	psc_objref_unlock(pobj);
-
-	if (prm->prm_flags & PRMF_HASH)
-		psc_hashbkt_ureqlock(bkt, locked);
-}
-
-int
-psc_refmgr_reclaimcb(struct psc_poolmgr *m)
-{
-	struct psc_dynarray da = DYNARRAY_INIT;
-	struct psc_objref *pobj;
-
-	psc_refmgr_lock_generic(prm);
-	if (prm->prm_flags & PRMF_LRU) {
-		PLC_FOREACH_BACKWARDS(pobj, &prm->prm_lru)
-			psc_refmgr_tryreclaimobj(prm, pobj, &da);
-	} else if (prm->prm_flags & PRMF_LIST) {
-		PLC_FOREACH(pobj, &prm->prm_list)
-			psc_refmgr_tryreclaimobj(prm, pobj, &da);
-	} else if (prm->prm_flags & PRMF_TREE) {
-		SPLAY_FOREACH(psc_objref_tree, &prm->prm_tree, pobj)
-			psc_refmgr_tryreclaimobj(prm, pobj, &da);
-	} else if (prm->prm_flags & PRMF_HASH) {
-		struct psc_hashbkt *bkt;
-
-		PSC_HASHTBL_FOREACH_BUCKET(bkt, &prm->prm_hashtbl) {
-			psc_hashbkt_lock(bkt);
-			PSC_HASHBKT_FOREACH_ENTRY(&prm->prm_hashtbl,
-			    pobj, bkt)
-				psc_refmgr_tryreclaimobj(prm, pobj, &da);
-			psc_hashbkt_unlock(bkt);
-		}
-	}
-	psc_refmgr_unlock_generic(prm);
-
-	psc_dynarray_free(&da);
 }
 
 void
@@ -265,13 +268,6 @@ psc_objref_repos_lru(struct psc_refmgr *prm, struct psc_objref *pobj)
 }
 
 void *
-psc_objref_getpriv(struct psc_refmgr *prm, struct psc_objref *pobj)
-{
-	psc_assert(pobj);
-	return ((char *)pobj + prm->prm_private_offset);
-}
-
-void *
 psc_refmgr_findobj(struct psc_refmgr *prm, int pref, void *key)
 {
 	struct psc_objref q;
@@ -285,8 +281,8 @@ psc_refmgr_findobj(struct psc_refmgr *prm, int pref, void *key)
 		locked = PLL_RLOCK(&prm->prm_list);
 		PLL_FOREACH(pobj, &prm->prm_list)
 			if (prm->prm_objcmpf(key,
-			    psc_objref_getpriv(pobj)) == 0) {
-				psc_objref_lock(pobj);
+			    psc_objref_getpriv(prm, pobj)) == 0) {
+				psc_objref_lock(prm, pobj);
 				break;
 			}
 		PLL_URLOCK(&prm->prm_list, locked);
@@ -294,18 +290,19 @@ psc_refmgr_findobj(struct psc_refmgr *prm, int pref, void *key)
 		locked = PLL_RLOCK(&prm->prm_lru);
 		PLL_FOREACH(pobj, &prm->prm_)
 			if (prm->prm_objcmpf(key,
-			    psc_objref_getpriv(pobj)) == 0) {
-				psc_objref_lock(pobj);
+			    psc_objref_getpriv(prm, pobj)) == 0) {
+				psc_objref_lock(prm, pobj);
 				break;
 			}
+		/* we must reposition on the LRU before unlocking */
 		if (pobj)
-			psc_objref_repos_lru(pobj);
+			psc_objref_repos_lru(prm, pobj);
 		PLL_URLOCK(&prm->prm_lru, locked);
 	} else if ((prm->prm_flags & pref) == PRMF_TREE) {
 		reqlock(&prm->prm_lock);
 		pobj = SPLAY_FIND(psc_objref_tree, &prm->prm_tree, key);
 		if (pobj)
-			psc_objref_lock(pobj);
+			psc_objref_lock(prm, pobj);
 		ureqlock(&prm->prm_lock, locked);
 	} else if ((prm->prm_flags & pref) == PRMF_HASH) {
 		bkt = psc_hashtbl_getbucket();
@@ -314,29 +311,29 @@ psc_refmgr_findobj(struct psc_refmgr *prm, int pref, void *key)
 		    prm->prm_objcmpf, NULL,
 		    (char *)key + prm->prm_privhashidmemb_off);
 		if (pobj)
-			psc_objref_lock(pobj);
+			psc_objref_lock(prm, pobj);
 		psc_hashbkt_ureqlock(&prm->prm_hash, locked);
 	}
 	if (pobj == NULL)
 		return (NULL);
-	psc_objref_repos_lru(pobj);
+	psc_objref_repos_lru(prm, pobj);
 	pobj->pobj_refcnt++;
 
 	/* Wait for someone else to finish processing. */
 	while (pobj->pobj_flags & POBJF_BUSY) {
-		psc_objref_wait(pobj);
-		psc_objref_lock(pobj);
+		psc_objref_wait(prm, pobj);
+		psc_objref_lock(prm, pobj);
 	}
 
 	/* Release immediately if going away. */
 	if (pobj->pobj_flags & POBJF_DYING) {
 		pobj->pobj_refcnt--;
-		psc_objref_unlock(pobj);
+		psc_objref_unlock(prm, pobj);
 		return (NULL);
 	}
 	pobj->pobj_flags |= POBJF_BUSY;
-	psc_objref_unlock(pobj);
-	return ((char *)pobj + prm->prm_private_off);
+	psc_objref_unlock(prm, pobj);
+	return (PSC_OBJREF_GETPRIVATE(prm, pobj));
 }
 
 void *
@@ -372,27 +369,27 @@ psc_refmgr_getobj(struct psc_refmgr *prm, int pref, void *key)
 	if (prm->prm_flags & PRMF_HASH)
 		psc_hashtbl_add(&prm->prm_hashtbl, pobj);
 	psc_refmgr_unlock(prm);
-	return ((char *)pobj + prm->prm_private_off);
+	return (PSC_OBJREF_GETPRIVATE(prm, pobj));
 }
 
 int
 psc_objref_cmp(const void *a, const void *b)
 {
-	struct psc_obj
+	const struct psc_objref *x = a, *y = b;
+
+	return (CMP(x, y));
 }
 
 void
 psc_obj_share(struct psc_refmgr *prm, void *p)
 {
-	struct psc_objref *pobj, *pp;
+	struct psc_objref *pobj;
 	int locked;
 
-	psc_assert(p);
-	pp = (char *)p - prm->prm_private_offset;
-	pobj = pp;
-	locked = reqlock(&pobj->pobj_lock);
+	pobj = psc_obj_getref(prm, p);
+	locked = psc_objref_reqlock(prm, pobj);
 	pobj->pobj_flags &= ~POBJF_BUSY;
-	ureqlock(&pobj->pobj_lock, locked);
+	psc_objref_ureqlock(prm, pobj, locked);
 }
 
 void
@@ -401,12 +398,10 @@ psc_obj_incref(struct psc_refmgr *prm, void *p)
 	struct psc_objref *pobj, *pp;
 	int locked;
 
-	psc_assert(p);
-	pp = (char *)p - prm->prm_private_offset;
-	pobj = pp;
-	locked = reqlock(&pobj->pobj_lock);
+	pobj = psc_obj_getref(prm, p);
+	locked = psc_objref_reqlock(prm, pobj);
 	pobj->pobj_refcnt++;
-	ureqlock(&pobj->pobj_lock);
+	psc_objref_ureqlock(prm, pobj);
 }
 
 void
@@ -417,19 +412,17 @@ psc_obj_decref(struct psc_refmgr *prm, void *p)
 
 	freeobj = NULL;
 
-	psc_assert(p);
-	pp = (char *)p - prm->prm_private_offset;
-	pobj = pp;
-	psc_objref_lock(pobj);
+	pobj = psc_obj_getref(prm, p);
+	psc_objref_lock(prm, pobj);
 	pobj->pobj_flags &= ~POBJF_BUSY;
 	if (prm->prm_flags & PRMF_LINGER ||
 	    psc_atomic32_read(&pobj->pobj_refcnt) != 1)
 		psc_atomic32_dec(&pobj->pobj_refcnt);
 	else {
-		freelock(&pobj->pobj_lock);
+		psc_objref_unlock(prm, pobj);
 
 		psc_refmgr_lock_specific(prm, pobj);
-		psc_objref_lock(pobj);
+		psc_objref_lock(prm, pobj);
 		if (psc_atomic32_dec_and_test0(&pobj->pobj_refcnt)) {
 			if (prm->prm_flags & PRMF_HASH)
 				psc_hashtbl_del_item(&prm->prm_hashtbl, );
@@ -452,7 +445,7 @@ psc_obj_decref(struct psc_refmgr *prm, void *p)
 		}
 	}
 	if (pobj) {
-		psc_objref_wake(pobj);
-		psc_objref_unlock(pobj);
+		psc_objref_wake(prm, pobj);
+		psc_objref_unlock(prm, pobj);
 	}
 }
