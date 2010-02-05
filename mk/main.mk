@@ -272,6 +272,9 @@ doc: recurse-doc
 		    sed 's/ /\n/' | sort -u);						\
 	fi
 
+printvar-%:
+	@echo ${$(patsubst printvar-%,%,$@)}
+
 #CS_ARGS+=-s${APP_BASE}
 #ET_ARGS+="${APP_BASE}"
 
