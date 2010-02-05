@@ -85,7 +85,7 @@ struct pscrpc_wait_callback {
 enum psc_rq_phase {
 	PSCRQ_PHASE_NEW		= 0xebc0de00,
 	PSCRQ_PHASE_RPC		= 0xebc0de01,
-	PSCRQ_PHASE_BULK		= 0xebc0de02,
+	PSCRQ_PHASE_BULK	= 0xebc0de02,
 	PSCRQ_PHASE_INTERPRET	= 0xebc0de03,
 	PSCRQ_PHASE_COMPLETE	= 0xebc0de04,
 };
