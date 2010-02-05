@@ -26,8 +26,9 @@
 #include <string.h>
 #include <unistd.h>
 
-#include "psc_util/alloc.h"
 #include "pfl/cdefs.h"
+#include "pfl/types.h"
+#include "psc_util/alloc.h"
 #include "psc_util/lock.h"
 #include "psc_util/log.h"
 #include "psc_util/odtable.h"
@@ -73,13 +74,13 @@ odtable_putitem(struct odtable *odt, void *data)
 	odtr->odtr_elem = todtr.odtr_elem;
 	odtr->odtr_key = (uint64_t)crc;
 	/* Write metadata into into the mmap'd footer.  For now the key and
-	 *  crc are the same.
+	 *  CRC are the same.
 	 */
 	odtf->odtf_crc = crc;
 	odtf->odtf_inuse = ODTBL_INUSE;
 	memcpy(p, data, odt->odt_hdr->odth_elemsz);
 
-	psc_trace("slot=%"PRId64" elemcrc=%"PRIx64, todtr.odtr_elem, crc);
+	psc_trace("slot=%zd elemcrc=%"PSCPRIxCRC64, todtr.odtr_elem, crc);
 
 	odtable_sync(odt, todtr.odtr_elem);
 
@@ -101,8 +102,8 @@ odtable_getitem(struct odtable *odt, const struct odtable_receipt *odtr)
 		psc_crc64_calc(&crc, data, odt->odt_hdr->odth_elemsz);
 		if (crc != odtf->odtf_crc) {
 			odtf->odtf_inuse = ODTBL_BAD;
-			psc_warnx("slot=%"PRId64" crc fail "
-			    "odtfcrc=%"PRIx64" elemcrc=%"PRIx64,
+			psc_warnx("slot=%zd crc fail "
+			    "odtfcrc=%"PSCPRIxCRC64" elemcrc=%"PSCPRIxCRC64,
 			    odtr->odtr_elem, odtf->odtf_crc, crc);
 		}
 		return (NULL);
@@ -168,7 +169,7 @@ odtable_create(const char *f, size_t nelems, size_t elemsz)
 	for (z=0; z < nelems; z++) {
 		odtf.odtf_slotno = z;
 
-		psc_trace("elem=%"PRId64" offset=%"PRIu64, z,
+		psc_trace("elem=%zd offset=%"PRIu64, z,
 			   odtable_getoffset(&odt, z));
 
 		if (pwrite(odt.odt_fd, &odtf, sizeof(odtf),
@@ -250,21 +251,21 @@ odtable_load(const char *f, struct odtable **t)
 				psc_crc64_calc(&crc, p, odt->odt_hdr->odth_elemsz);
 				if (crc != odtf->odtf_crc) {
 					odtf->odtf_inuse = ODTBL_BAD;
-					psc_warnx("slot=%"PRId64" crc fail "
-					    "odtfcrc=%"PRIx64" elemcrc=%"PRIx64,
+					psc_warnx("slot=%zd crc fail "
+					    "odtfcrc=%"PSCPRIxCRC64" elemcrc=%"PSCPRIxCRC64,
 					    z, odtf->odtf_crc, crc);
 				}
 			}
 		} else {
 			psc_vbitmap_set(odt->odt_bitmap, z);
-			psc_warnx("slot=%"PRId64" ignoring, bad inuse value"
-				  "inuse=0x%"PRIx64,
-				  z, odtf->odtf_inuse);
+			psc_warnx("slot=%zd ignoring, bad inuse value"
+			    "inuse=0x%"PRIx64,
+			    z, odtf->odtf_inuse);
 		}
 	}
 
-	psc_notify("odtable=%p base=%p has %d/%"PRId64" slots available"
-		   " elemsz=%"PRId64" magic=%"PRIx64,
+	psc_notify("odtable=%p base=%p has %d/%zd slots available"
+		   " elemsz=%zd magic=%"PRIx64,
 		   odt, odt->odt_base, psc_vbitmap_nfree(odt->odt_bitmap),
 		   odth->odth_nelems, odth->odth_elemsz, odth->odth_magic);
 
@@ -311,7 +312,8 @@ odtable_release(struct odtable *odt)
 }
 
 void
-odtable_scan(struct odtable *odt, void (*odt_handler)(void *, struct odtable_receipt *))
+odtable_scan(struct odtable *odt,
+    void (*odt_handler)(void *, struct odtable_receipt *))
 {
 	int rc;
 	struct odtable_receipt *odtr, todtr = {0, 0};
@@ -327,8 +329,8 @@ odtable_scan(struct odtable *odt, void (*odt_handler)(void *, struct odtable_rec
 		rc = odtable_footercheck(odtf, &todtr, 2);
 		psc_assert(rc != ODTBL_FREE_ERR);
 		if (rc) {
-			psc_warnx("slot=%"PRId64" marked bad, skipping",
-				  todtr.odtr_elem);
+			psc_warnx("slot=%zd marked bad, skipping",
+			    todtr.odtr_elem);
 			continue;
 		}
 
@@ -336,8 +338,8 @@ odtable_scan(struct odtable *odt, void (*odt_handler)(void *, struct odtable_rec
 		odtr->odtr_key  = odtf->odtf_key;
 		odtr->odtr_elem = todtr.odtr_elem;
 
-		psc_warnx("handing back key=%"PRIx64" slot=%"PRId64" odtr=%p",
-			  odtr->odtr_key, odtr->odtr_elem, odtr);
+		psc_warnx("handing back key=%"PRIx64" slot=%zd odtr=%p",
+		    odtr->odtr_key, odtr->odtr_elem, odtr);
 
 		if (odt_handler)
 			(odt_handler)(odtable_getitem_addr(odt,
