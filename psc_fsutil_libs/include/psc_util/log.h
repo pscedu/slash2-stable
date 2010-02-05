@@ -192,13 +192,6 @@ struct psclog_data {
 			psc_fatalx("[assert] %s", #cond);	\
 	} while (0)
 
-#define psc_assert_msg(cond, format, ...)			\
-	do {							\
-		if (!(cond))					\
-			psc_fatalx("[assert] " format,		\
-			    ## __VA_ARGS__);			\
-	} while (0)
-
 #define psc_assert_perror(cond)					\
 	do {							\
 		if (!(cond))					\

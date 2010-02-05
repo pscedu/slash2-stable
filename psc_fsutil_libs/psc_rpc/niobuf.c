@@ -90,7 +90,7 @@ static int psc_send_buf (lnet_handle_md_t *mdh, void *base, int len,
 		psc_errorx("LNetPut(%s, %d, %"PRIu64") failed: %d",
 			libcfs_id2str(conn->c_peer), portal, xid, rc);
 		rc2 = LNetMDUnlink(*mdh);
-		psc_assert_msg(rc2 == 0, "rc2 = %d", rc2);
+		psc_assert(rc2 == 0);
 	}
 
 	return (0);
@@ -254,8 +254,8 @@ int pscrpc_register_bulk (struct pscrpc_request *req)
 	/* XXX Registering the same xid on retried bulk makes my head
 	 * explode trying to understand how the original request's bulk
 	 * might interfere with the retried request -eeb */
-	psc_assert_msg(!desc->bd_registered || req->rq_xid != desc->bd_last_xid,
-		  "registered: %d  rq_xid: %"PRIx64" bd_last_xid: %"PRIx64"\n",
+	if (desc->bd_registered && req->rq_xid == desc->bd_last_xid)
+		psc_fatalx("registered: %d  rq_xid: %"PRIx64" bd_last_xid: %"PRIx64"\n",
 		  desc->bd_registered, req->rq_xid, desc->bd_last_xid);
 	desc->bd_registered = 1;
 	desc->bd_last_xid = req->rq_xid;
@@ -611,8 +611,8 @@ int pscrpc_register_rqbd (struct pscrpc_request_buffer_desc *rqbd)
 	lnet_md_t                 md;
 	lnet_handle_me_t          me_h;
 
-        CDEBUG(D_RPCTRACE, "LNetMEAttach: portal %d\n",
-               service->srv_req_portal);
+	CDEBUG(D_RPCTRACE, "LNetMEAttach: portal %d\n",
+	       service->srv_req_portal);
 
 	//        if (OBD_FAIL_CHECK_ONCE(OBD_FAIL_PSCRPC_RQBD))
 	//        return (-ENOMEM);
@@ -678,15 +678,16 @@ void psc_free_reply_state (struct pscrpc_reply_state *rs)
 	PSCRPC_OBD_FREE(rs, rs->rs_size);
 }
 
-static void __pscrpc_free_req(struct pscrpc_request *request, int  locked)
+static void
+__pscrpc_free_req(struct pscrpc_request *request, int locked)
 {
 	if (request == NULL)
 		return;
 
-	psc_assert_msg(!request->rq_receiving_reply, "req %p", request);
-	psc_assert_msg(request->rq_rqbd == NULL, "req %p",request);/* client-side */
-	psc_assert_msg(psclist_disjoint(&request->rq_list_entry), "req %p", request);
-	psc_assert_msg(psclist_disjoint(&request->rq_set_chain_lentry), "req %p", request);
+	psc_assert(!request->rq_receiving_reply);
+	psc_assert(request->rq_rqbd == NULL);/* client-side */
+	psc_assert(psclist_disjoint(&request->rq_list_entry));
+	psc_assert(psclist_disjoint(&request->rq_set_chain_lentry));
 
 	/* We must take it off the imp_replay_list first.  Otherwise, we'll set
 	 * request->rq_reqmsg to NULL while osc_close is dereferencing it. */
@@ -719,7 +720,7 @@ static void __pscrpc_free_req(struct pscrpc_request *request, int  locked)
 		pscrpc_free_bulk(request->rq_bulk);
 
 	if (request->rq_compl_cntr)
-                atomic_dec(request->rq_compl_cntr);
+		atomic_dec(request->rq_compl_cntr);
 
 	psc_assert(request->rq_reply_state == NULL);
 

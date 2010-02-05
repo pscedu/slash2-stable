@@ -1446,15 +1446,17 @@ int pscrpc_set_wait(struct pscrpc_request_set *set)
 			rc = set->set_interpret(set, set->set_arg, rc);
 			if (rc)
 				psc_errorx("set interpreter failed (%d)", rc);
-		} 
-	
+		}
+
 	return (rc);
 }
 
 /**
- * pscrpc_set_finalize - call set_wait or check_set depending on blocking mode.  If the set has completed then free it.
+ * pscrpc_set_finalize - call set_wait or check_set depending on blocking
+ *	mode.  If the set has completed then free it.
  * @set: the set.
- * @block: call set_wait right away or otherwise only if check_set reports the set as being done.
+ * @block: call set_wait right away or otherwise only if check_set reports
+ *	the set as being done.
  * @destroy: call destroy if the set has completed.
  * Notes: return 0 when the set has been completed, otherwise return 1
  */
@@ -1500,7 +1502,7 @@ void pscrpc_free_committed(struct pscrpc_import *imp)
 
 	psc_assert(imp != NULL);
 
-	psc_assert_SPIN_LOCKED(&imp->imp_lock);
+	LOCK_ENSURE(&imp->imp_lock);
 
 	if (imp->imp_peer_committed_transno == imp->imp_last_transno_checked &&
 	    imp->imp_generation == imp->imp_last_generation_checked) {
