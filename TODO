@@ -76,6 +76,9 @@ pfl
 - when ppm_total is set less than lc_size for !PPMF_AUTO, set
   ppm_max and check this value in other places to eventually
   decrease pool size
+- make the timer thread grack a global timeval which other threads can
+  use up to second resolution to ease syscalls
+- add func args to pfl_enter()
 
 zest
 - research faster CRC operations
