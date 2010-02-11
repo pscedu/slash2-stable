@@ -74,4 +74,11 @@
 			(vsp)->tv_nsec += 1000000000L;			\
 		}							\
 	} while (0)
+
+#define PFL_GETTIME(tv)							\
+	do {								\
+		if (gettimeofday((tv), NULL) == -1)			\
+			psc_fatal("gettimeofday");			\
+	} while (0)
+
 #endif
