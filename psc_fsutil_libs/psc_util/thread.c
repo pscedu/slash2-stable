@@ -510,3 +510,10 @@ pscthr_getbyid(pthread_t id)
 	PLL_ULOCK(&psc_threads);
 	return (thr);
 }
+
+void
+psc_enter_debugger(const char *str)
+{
+	psc_log(PLL_MAX, "enter debugger (%s)", str);
+	pthread_kill(pthread_self(), SIGINT);
+}

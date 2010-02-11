@@ -71,15 +71,11 @@ psc_dumpstack(__unusedx int sig)
 	_exit(1);
 }
 
-#include <sys/time.h>
-void
+__weak void
 psc_enter_debugger(const char *str)
 {
-	struct timeval	tv;
-
-	gettimeofday(&tv, NULL);
-	printf("timestamp %lu:%lu, enter debugger (%s) ...\n", tv.tv_sec, tv.tv_usec, str);
-	psc_notify("timestamp %lu:%lu, enter debugger (%s) ...", tv.tv_sec, tv.tv_usec, str);
+	psc_log(PLL_MAX, "enter debugger (%s)", str);
+	kill(0, SIGINT);
 	/*
 	 * Another way to drop into debugger is to use
 	 *
@@ -87,7 +83,7 @@ psc_enter_debugger(const char *str)
 	 *
 	 * However, it does not seem to work well with backtrace (bt) command.
 	 */
-	__asm__ __volatile__ ("int3");
+//	__asm__ __volatile__ ("int3");
 }
 
 void
