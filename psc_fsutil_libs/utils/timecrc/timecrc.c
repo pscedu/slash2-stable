@@ -13,6 +13,7 @@
 #include "pfl/cdefs.h"
 #include "psc_util/crc.h"
 #include "psc_util/log.h"
+#include "psc_util/time.h"
 
 const char *progname;
 
@@ -64,11 +65,9 @@ main(int argc, char *argv[])
 			break;
 		acsz += rc;
 
-		if (gettimeofday(&tm0, NULL) == -1)
-			psc_fatal("gettimeofday");
+		PFL_GETTIME(&tm0);
 		psc_crc64_add(&crc, buf, rc);
-		if (gettimeofday(&tm1, NULL) == -1)
-			psc_fatal("gettimeofday");
+		PFL_GETTIME(&tm1);
 		timersub(&tm1, &tm0, &tmd);
 
 		memcpy(&tm0, &tm_total, sizeof(tm0));

@@ -11,15 +11,17 @@
 #include <time.h>
 #include <unistd.h>
 
+#include "pfl/cdefs.h"
 #include "pfl/pfl.h"
 #include "psc_util/alloc.h"
 #include "psc_util/atomic.h"
-#include "pfl/cdefs.h"
-#include TEST_LOCK_INCLUDE
 #include "psc_util/thread.h"
+#include "psc_util/time.h"
 
-#define STARTWATCH(t) gettimeofday(&(t)[0], NULL)
-#define STOPWATCH(t)  gettimeofday(&(t)[1], NULL)
+#include TEST_LOCK_INCLUDE
+
+#define STARTWATCH(t) PFL_GETTIME(&(t)[0])
+#define STOPWATCH(t)  PFL_GETTIME(&(t)[1])
 
 TEST_LOCK_TYPE lock = TEST_LOCK_INITIALIZER;
 atomic_t idx = ATOMIC_INIT(0);

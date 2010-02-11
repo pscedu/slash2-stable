@@ -26,7 +26,9 @@
 #include <sched.h>
 #include <unistd.h>
 
+#include "psc_util/atomic.h"
 #include "psc_util/log.h"
+#include "psc_util/time.h"
 
 struct psc_spinlock {
 	psc_atomic32_t	psl_value;
@@ -55,7 +57,7 @@ struct psc_spinlock {
  * psc_spin_ensure - Ensure that a spinlock is owned by the caller.
  * @psl: spinlock.
  */
-static inline int
+static __inline int
 psc_spin_ensure(struct psc_spinlock *psl)
 {
 	int v;
@@ -76,7 +78,7 @@ psc_spin_ensure(struct psc_spinlock *psl)
  * psc_spin_unlock - Release a spinlock.
  * @psl: spinlock.
  */
-static inline void
+static __inline void
 psc_spin_unlock(struct psc_spinlock *psl)
 {
 	struct timeval now, max, diff;
@@ -86,8 +88,7 @@ psc_spin_unlock(struct psc_spinlock *psl)
 		psc_fatalx("psc_spin_unlock: not owner; "
 		    "psl=%p, owner=%lu, self=%lu",
 		    psl, psl->psl_who, pthread_self());
-	if (gettimeofday(&now, NULL) == -1)
-		psc_fatal("gettimeofday");
+	PFL_GETTIME(&now);
 	max.tv_sec = 0;
 	max.tv_usec = 500;
 	timersub(&now, &psl->psl_time, &diff);
@@ -104,7 +105,7 @@ psc_spin_unlock(struct psc_spinlock *psl)
  * @psl: spinlock.
  * Returns Boolean true if attempt was successful or false otherwise.
  */
-static inline int
+static __inline int
 psc_spin_trylock(struct psc_spinlock *psl)
 {
 	int v;
@@ -116,8 +117,7 @@ psc_spin_trylock(struct psc_spinlock *psl)
 		return (0);			/* someone else has it */
 	} else if (v == PSL_UNLOCKED) {
 		psl->psl_who = pthread_self();	/* we got it */
-		if (gettimeofday(&psl->psl_time, NULL) == -1)
-			psc_fatalx("gettimeofday");
+		PFL_GETTIME(&psl->psl_time);
 		return (1);
 	}
 	psc_fatalx("psc_spin_trylock: invalid value; psl=%p, value=%d",
@@ -128,7 +128,7 @@ psc_spin_trylock(struct psc_spinlock *psl)
  * psc_spin_lock - Acquire a spinlock, waiting as long as necessary.
  * @psl: spinlock.
  */
-static inline void
+static __inline void
 psc_spin_lock(struct psc_spinlock *psl)
 {
 	int i;
@@ -149,7 +149,7 @@ psc_spin_lock(struct psc_spinlock *psl)
  *	this value should usually be passed to a corresponding
  *	psc_spin_ureqlock() call.
  */
-static inline int
+static __inline int
 psc_spin_reqlock(struct psc_spinlock *psl)
 {
 	if (psc_atomic32_read(&psl->psl_value) == PSL_LOCKED &&
@@ -165,7 +165,7 @@ psc_spin_reqlock(struct psc_spinlock *psl)
  * @locked: value-result Boolean of whether we already own the lock.
  * Returns Boolean true if lock attempt was successful, false otherwise.
  */
-static inline int
+static __inline int
 psc_spin_tryreqlock(struct psc_spinlock *psl, int *locked)
 {
 	if (psc_atomic32_read(&psl->psl_value) == PSL_LOCKED &&
@@ -185,7 +185,7 @@ psc_spin_tryreqlock(struct psc_spinlock *psl, int *locked)
  * @psl: the lock.
  * @waslocked: return value from psc_spin_reqlock().
  */
-static inline void
+static __inline void
 psc_spin_ureqlock(struct psc_spinlock *psl, int waslocked)
 {
 	if (waslocked == PRSL_WASNOTLOCKED)

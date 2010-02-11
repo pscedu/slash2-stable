@@ -23,6 +23,7 @@
 #include "psc_ds/lockedlist.h"
 #include "psc_util/iostats.h"
 #include "psc_util/log.h"
+#include "psc_util/time.h"
 
 struct psc_lockedlist	psc_iostats =
     PLL_INITIALIZER(&psc_iostats, struct psc_iostats, ist_lentry);
@@ -53,8 +54,7 @@ psc_iostats_init(struct psc_iostats *ist, const char *fmt, ...)
 	if (rc == -1 || rc >= (int)sizeof(ist->ist_name))
 		psc_fatal("vsnprintf");
 
-	if (gettimeofday(&tv, NULL) == -1)
-		psc_fatal("gettimeofday");
+	PFL_GETTIME(&tv);
 
 	for (i = 0; i < IST_NINTV; i++) {
 		ist->ist_intv[i].istv_lastv = tv;

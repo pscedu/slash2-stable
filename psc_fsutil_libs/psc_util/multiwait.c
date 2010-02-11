@@ -38,6 +38,7 @@
 #include "psc_util/log.h"
 #include "psc_util/multiwait.h"
 #include "psc_util/pthrutil.h"
+#include "psc_util/time.h"
 
 /**
  * psc_multiwait_cmp - Compare two multiwaits, used for sorting.
@@ -406,8 +407,7 @@ psc_multiwaitus(struct psc_multiwait *mw, void *datap, int usec)
 		struct timeval tv, res, adj;
 		struct timespec ntv;
 
-		if (gettimeofday(&tv, NULL) == -1)
-			psc_fatal("gettimeoday");
+		PFL_GETTIME(&tv);
 		adj.tv_sec = usec / 1000000;
 		adj.tv_usec = usec % 1000000;
 		timeradd(&tv, &adj, &res);

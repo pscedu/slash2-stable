@@ -27,6 +27,7 @@
 #include "psc_util/atomic.h"
 #include "psc_util/iostats.h"
 #include "psc_util/thread.h"
+#include "psc_util/time.h"
 
 #define psc_timercmp_addsec(tvp, s, uvp, cmp)				\
 	(((tvp)->tv_sec + (s) == (uvp)->tv_sec) ?			\
@@ -46,11 +47,9 @@ psc_tiosthr_main(__unusedx void *arg)
 	int i, stoff;
 
 	for (;;) {
-		if (gettimeofday(&tv, NULL) == -1)
-			psc_fatal("gettimeofday");
+		PFL_GETTIME(&tv);
 		usleep(1000000 - tv.tv_usec);
-		if (gettimeofday(&tv, NULL) == -1)
-			psc_fatal("gettimeofday");
+		PFL_GETTIME(&tv);
 
 		/* find largest interval to update */
 		for (stoff = 0; stoff < IST_NINTV; stoff++) {
@@ -75,8 +74,7 @@ psc_tiosthr_main(__unusedx void *arg)
 				intv_len = psc_atomic64_xchg(
 				    &ist->ist_intv[i].istv_cur_len, intv_len);
 
-				if (gettimeofday(&tv, NULL) == -1)
-					psc_fatal("gettimeofday");
+				PFL_GETTIME(&tv);
 
 				if (i == stoff - 1 && i < IST_NINTV - 1)
 					psc_atomic64_add(&ist->ist_intv[i +

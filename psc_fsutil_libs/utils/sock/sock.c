@@ -26,6 +26,7 @@
 #include "psc_util/log.h"
 #include "psc_util/strlcpy.h"
 #include "psc_util/thread.h"
+#include "psc_util/time.h"
 #include "psc_util/timerthr.h"
 
 #include "sdp_inet.h"
@@ -71,11 +72,9 @@ displaythr_main(__unusedx void *arg)
 	int n = 0;
 
 	for (;;) {
-		if (gettimeofday(&tv, NULL) == -1)
-			psc_fatal("gettimeofday");
+		PFL_GETTIME(&tv);
 		usleep(1000000 - tv.tv_usec);
-		if (gettimeofday(&tv, NULL) == -1)
-			psc_fatal("gettimeofday");
+		PFL_GETTIME(&tv);
 
 		if ((++n % 30) == 0) {
 			center("-- read --", 8 * 3);
