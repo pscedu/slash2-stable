@@ -226,8 +226,8 @@ install: recurse-install install-hook
 	fi
 
 clean: recurse-clean
-	rm -rf ${OBJDIR}
-	rm -f ${PROG} ${LIBRARY} TAGS cscope.out core.[0-9]*
+	${RM} -rf ${OBJDIR}
+	${RM} -f ${PROG} ${LIBRARY} TAGS cscope.out core.[0-9]*
 
 lint: recurse-lint ${_C_SRCS}
 	@if ${NOTEMPTY} "${_TSRCS}"; then						\
