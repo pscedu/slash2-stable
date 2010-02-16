@@ -42,8 +42,6 @@ pfl
   inspect remote port to determine "authorization"
 - should hash tables be enforced by to n^^2-1 ??
 - rename stree to vtree (variable number of children per branch)
-- create vlocks: vector lock API when you need to lock multiple
-  structures in a reqlock order fashion (hash tables and lists etc.)
 - add custom sleep intervals for timerthr API
 - fix endianess in RPCs
 - add API for PSC mem failure, so we can plug into the memhandling
@@ -76,7 +74,7 @@ pfl
 - when ppm_total is set less than lc_size for !PPMF_AUTO, set
   ppm_max and check this value in other places to eventually
   decrease pool size
-- make the timer thread grack a global timeval which other threads can
+- make the timer thread track a global timeval which other threads can
   use up to second resolution to ease syscalls
 - add func args to pfl_enter()
 
