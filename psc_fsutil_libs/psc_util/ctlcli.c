@@ -863,7 +863,7 @@ psc_ctlcli_main(const char *osockfn)
 
 	FMTSTR(sockfn, sizeof(sockfn), osockfn,
 		FMTSTRCASE('h', sockfn, sizeof(sockfn), "s",
-		    psclog_getdata()->pld_hostname)
+		    psclog_getdata()->pld_hostshort)
 	);
 
 	/* Connect to control socket. */

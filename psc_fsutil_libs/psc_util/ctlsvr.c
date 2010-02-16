@@ -1388,7 +1388,7 @@ psc_ctlthr_main(const char *ofn, const struct psc_ctlop *ct, int nops)
 	/* replace literal `%h' in fn with hostname */
 	FMTSTR(fn, sizeof(fn), ofn,
 		FMTSTRCASE('h', fn, sizeof(fn), "s",
-		    psclog_getdata()->pld_hostname)
+		    psclog_getdata()->pld_hostshort)
 	);
 
 	bzero(&sun, sizeof(sun));
