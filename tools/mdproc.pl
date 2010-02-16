@@ -26,21 +26,23 @@ my %m;
 sub get_unless_last_rev {
 	my ($fn, $d, $m, $y) = @_;
 
-	my $out = `svn log '$fn'`;
+	my @out = `svn log '$fn'`;
 
-	my ($t_rev, $t_y, $t_m, $t_d) =
-	    $out =~ /^r(\d+) \s+ \| \s+ (?:\w+) \s+ \| \s+
-	    (\d+)-(\d+)-0*(\d+) \s+ (\d+):(\d+):(\d+)/mx or return;
+	foreach my $ln (@out) {
+		my ($t_rev, $t_y, $t_m, $t_d) =
+		    ($ln =~ /^r(\d+) \s+ \| \s+ (?:\w+) \s+ \| \s+
+		    (\d+)-(\d+)-0*(\d+) \s+ (\d+):(\d+):(\d+)/x) or next;
 
-	return if $t_y == $y && $t_m == $m && $t_d == $d;
+		# if this revision solely comprised a date bump, ignore
+		my $prev_rev = $t_rev - 1;
+		my $t_out = `svn diff -r $prev_rev:$t_rev --diff-cmd=diff -x '-I.Dd ' '$fn'`;
+		my $cnt = ($t_out =~ tr/\n//);
 
-	# if the last revision solely comprised a date bump, ignore
-	my $prev_rev = $t_rev - 1;
-	$out = `svn diff -r $prev_rev:$t_rev --diff-cmd=diff -x '-I.Dd ' '$fn'`;
-	my $cnt = ($out =~ tr/\n//);
+		next unless $cnt > 2;
 
-	return unless $cnt > 2;
-	return ($t_d, $t_m, $t_y);
+		return if $t_y == $y && $t_m == $m && $t_d == $d;
+		return ($t_d, $t_m, $t_y);
+	}
 }
 
 sub slurp {
@@ -54,10 +56,6 @@ sub slurp {
 	return $data;
 }
 
-my ($day, $mon, $yr) = (localtime)[3, 4, 5];
-$yr += 1900;
-$mon++;
-
 my ($d, $m, $y, $sm);
 
 foreach my $fn (@ARGV) {
@@ -68,9 +66,10 @@ foreach my $fn (@ARGV) {
 	if ($cnt > 2) {
 		# has local changes, bump date
 		$data = slurp $fn;
-		$y = $yr;
-		$m = $mon;
-		$d = $day;
+		my ($mt) = (stat $fn)[9];
+		($d, $m, $y) = (localtime $mt)[3 .. 5];
+		$y += 1900;
+		$m++;
 		goto bump;
 	}
 
