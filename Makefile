@@ -67,3 +67,5 @@ debian_mpi mpi zmpi pthreads zest qk: ${OBJS}
 clean:
 	rm -f ${OBJS} ${_YACCINTM} ${_LEXINTM} $(\
 	    ) fio.debian_mpi fio.pthreads fio.zest fio.qk fio.mpi fio.zmpi
+
+doc:
