@@ -15,6 +15,8 @@ SUBDIRS+=	zest/client/linux
 SUBDIRS+=	zest/tests
 SUBDIRS+=	zest/utils
 
+MAN+=		${ROOTDIR}/doc/pflenv.7
+
 include mk/main.mk
 
 build-prereq:
