@@ -64,7 +64,7 @@ struct rsx_msg_portablizer {
 			/* XXX psc_fatalx */				\
 			psc_errorx("request is NULL");			\
 			(mp)->rc = -ENOMEM;				\
-			return (0);					\
+			return (-ENOMEM);				\
 		}							\
 	} while (0)
 
