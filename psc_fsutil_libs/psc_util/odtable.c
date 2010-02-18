@@ -139,7 +139,6 @@ odtable_create(const char *f, size_t nelems, size_t elemsz)
 {
 	int rc = 0;
 	size_t z;
-	struct stat stb;
 	struct odtable odt;
 	struct odtable_entftr odtf = {0, ODTBL_FREE, 0, ODTBL_MAGIC};
 	struct odtable_hdr odth = {nelems, elemsz, ODTBL_MAGIC, ODTBL_VERS,
@@ -147,13 +146,7 @@ odtable_create(const char *f, size_t nelems, size_t elemsz)
 
 	odt.odt_hdr = &odth;
 
-	if (!stat(f, &stb))
-		return (-EEXIST);
-
-	if (errno != ENOENT)
-		return (-errno);
-
-	odt.odt_fd = open(f, O_CREAT|O_TRUNC|O_WRONLY, 0600);
+	odt.odt_fd = open(f, O_CREAT | O_EXCL | O_WRONLY, 0600);
 	if (odt.odt_fd < 0) {
 		rc = -errno;
 		goto out;
@@ -166,14 +159,14 @@ odtable_create(const char *f, size_t nelems, size_t elemsz)
 
 	psc_trace("odt.odt_hdr.odth_start=%"PRIx64, odt.odt_hdr->odth_start);
 
-	for (z=0; z < nelems; z++) {
+	for (z = 0; z < nelems; z++) {
 		odtf.odtf_slotno = z;
 
-		psc_trace("elem=%zd offset=%"PRIu64, z,
-			   odtable_getoffset(&odt, z));
+		psc_trace("elem=%zd offset=%"PRIu64" size=%zu",
+		    z, odtable_getoffset(&odt, z), sizeof(odtf));
 
 		if (pwrite(odt.odt_fd, &odtf, sizeof(odtf),
-			   (elemsz + odtable_getoffset(&odt, z))) !=
+		    (elemsz + odtable_getoffset(&odt, z))) !=
 		    sizeof(odtf)) {
 			rc = -errno;
 			goto out;
