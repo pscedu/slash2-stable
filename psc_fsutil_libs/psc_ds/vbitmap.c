@@ -85,7 +85,7 @@ psc_vbitmap_attach(unsigned char *buf, size_t size)
 	vb = PSCALLOC(sizeof(*vb));
 	vb->vb_flags |= PVBF_EXTALLOC;
 	vb->vb_pos = vb->vb_start = buf;
-	vb->vb_end = buf + (size - 1);
+	vb->vb_end = buf + (size - 1); /* XXX does not handle 0 */
 	vb->vb_lastsize = NBBY;
 	return (vb);
 }
@@ -440,7 +440,7 @@ psc_vbitmap_resize(struct psc_vbitmap *vb, size_t newsize)
 	osiz = vb->vb_end - vb->vb_start;
 
 	nsiz = howmany(newsize, NBBY);
-	if (vb->vb_start && nsiz == (size_t)osiz + 1)
+	if (vb->vb_start && nsiz == (size_t)osiz + howmany(vb->vb_lastsize, NBBY))
 		/* resizing inside a byte; no mem alloc changes necessary */
 		VB_CLEAR_UNALLOC(vb);
 	else {
