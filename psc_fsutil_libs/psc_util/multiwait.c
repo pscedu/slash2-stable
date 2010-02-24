@@ -159,6 +159,8 @@ psc_multiwaitcond_destroy(struct psc_multiwaitcond *mwc)
 		    (int)psc_vbitmap_getsize(mw->mw_condmask));
 
 		k = psc_dynarray_remove(&mw->mw_conds, mwc);
+		/* XXX qsort?? */
+
 		pfl_bitstr_copy(&mw->mw_condmask, k, &mw->mw_condmask,
 		    k + 1, psc_vbitmap_getsize(mw->mw_condmask) - k);
 		psc_vbitmap_resize(mw->mw_condmask,
@@ -291,6 +293,7 @@ _psc_multiwait_addcond(struct psc_multiwait *mw,
 		rc = -1;
 		goto done;
 	}
+
 	if (psc_dynarray_add(&mwc->mwc_multiwaits, mw) == -1) {
 		rc = -1;
 		psc_dynarray_remove(&mw->mw_conds, mwc);
@@ -304,9 +307,12 @@ _psc_multiwait_addcond(struct psc_multiwait *mw,
 		psc_dynarray_remove(&mw->mw_conds, mwc);
 		goto done;
 	}
+
 	qsort(psc_dynarray_get(&mwc->mwc_multiwaits),
 	    psc_dynarray_len(&mwc->mwc_multiwaits),
 	    sizeof(void *), psc_multiwait_cmp);
+	/* XXX resort condmask vbitmap!! */
+
 	psc_vbitmap_setval(mw->mw_condmask, j - 1, active);
 
  done:
@@ -575,8 +581,8 @@ psc_multiwait_prconds(struct psc_multiwait *mw)
 
 	locked = psc_pthread_mutex_reqlock(&mw->mw_mutex);
 	DYNARRAY_FOREACH(mwc, j, &mw->mw_conds)
-		printf(" multiwait %s has mwc %s (%s)\n",
-		    mw->mw_name, mwc->mwc_name,
+		printf(" multiwait %s@%p has condition %s@%p (%s)\n",
+		    mw->mw_name, mw, mwc->mwc_name, mwc,
 		    psc_multiwait_iscondwakeable(mw, mwc) ?
 		    "enabled" : "disabled");
 	psc_pthread_mutex_ureqlock(&mw->mw_mutex, locked);
