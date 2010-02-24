@@ -63,8 +63,12 @@ _psc_realloc(void *p, size_t size, int flags)
 		}
 	} else {
 		newp = realloc(p, size);
-		if (newp == NULL && size == 0)
+		if (newp == NULL && size == 0) {
+			psc_assert(p);
+			newp = malloc(0);
+			psc_assert(newp);
 			return (newp);
+		}
 	}
 	if (newp == NULL) {
 		/*
