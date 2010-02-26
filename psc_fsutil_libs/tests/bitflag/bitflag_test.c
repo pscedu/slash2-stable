@@ -169,5 +169,11 @@ main(int argc, char *argv[])
 	check(outbuf[2], UINT64_C(0));
 	check(outbuf[3], UINT64_C(0));
 
+	memset(outbuf, 0, sizeof(outbuf));
+	repl = 3;
+	pfl_bitstr_copy(&outbuf, 63, &repl, 0, 3);
+	check(outbuf[0], UINT64_C(0x8000000000000000));
+	check(outbuf[1], UINT64_C(0x1));
+
 	exit(0);
 }
