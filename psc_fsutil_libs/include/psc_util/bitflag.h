@@ -175,15 +175,15 @@ pfl_bitstr_copy(void *dst, int doff, const void *src, int soff, int nbits)
 
 	if (nbits) {
 		*out8 |= ((*in8 >> soff) & ~(0xff << nbits)) << doff;
-		nbits -= MIN(doff, NBBY - soff);
+		nbits -= NBBY - doff;
 	}
 	if (nbits > 0) {
 		if (soff > doff)
 			*out8 |= (in8[1] & ~(0xff << nbits)) <<
 			    (NBBY - soff + doff);
 		else if (soff < doff)
-			out8[1] |= (*in8 & ~(0xff << nbits)) >>
-			    (NBBY - doff - soff);
+			out8[1] |= (*in8 >> (NBBY - doff - soff)) &
+			    ~(0xff << nbits);
 	}
 }
 
