@@ -152,6 +152,11 @@ main(int argc, char *argv[])
 	check(out, UINT64_C(0x0000fff8));
 
 	out = 0;
+	in = 0x1b;
+	pfl_bitstr_copy(&out, 22, &in, 0, 6);
+	check(out, UINT64_C(0x6c00000));
+
+	out = 0;
 	in = 3;
 	pfl_bitstr_copy(&out, 8, &in, 0, 2);
 	check(out, UINT64_C(0x00000300));
