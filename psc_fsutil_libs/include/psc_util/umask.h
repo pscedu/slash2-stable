@@ -2,7 +2,7 @@
 /*
  * %PSC_START_COPYRIGHT%
  * -----------------------------------------------------------------------------
- * Copyright (c) 2006-2010, Pittsburgh Supercomputing Center (PSC).
+ * Copyright (c) 2006-2009, Pittsburgh Supercomputing Center (PSC).
  *
  * Permission to use, copy, and modify this software and its documentation
  * without fee for personal use or non-commercial use within your organization
@@ -17,12 +17,11 @@
  * %PSC_END_COPYRIGHT%
  */
 
-#ifndef _PFL_H_
-#define _PFL_H_
+#ifndef _PFL_UMASK_H_
+#define _PFL_UMASK_H_
 
-#include "pfl/compat.h"
+#include "psc_util/lock.h"
 
-void pfl_init(void);
-void psc_enter_debugger(const char *);
+extern psc_spinlock_t psc_umask_lock;
 
-#endif /* _PFL_H_ */
+#endif /* _PFL_UMASK_H_ */
