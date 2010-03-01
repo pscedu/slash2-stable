@@ -192,8 +192,7 @@ endif
 
 recurse-%:
 	@for i in ${_TSUBDIRS}; do							\
-		echo -n "===> ";							\
-		echo $$i;								\
+		echo "===> $$i $(patsubst recurse-%,%,$@))";				\
 		(cd $$i && SUBDIRS= ${MAKE} $(patsubst recurse-%,%,$@)) || exit 1;	\
 	done
 	@if ${NOTEMPTY} "${_TSUBDIRS}"; then						\
@@ -253,8 +252,8 @@ build-prereq:
 
 build-prereq-hook: recurse-build-prereq-hook build-prereq
 
-build: clean build-prereq-hook
-	${MAKE}
+build:
+	${MAKE} clean && ${MAKE} build-prereq-hook && ${MAKE} all
 
 qbuild:
 	@${MAKE} build >/dev/null
