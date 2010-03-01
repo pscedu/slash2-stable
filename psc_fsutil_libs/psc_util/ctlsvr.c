@@ -54,6 +54,7 @@
 #include "psc_util/rlimit.h"
 #include "psc_util/strlcpy.h"
 #include "psc_util/thread.h"
+#include "psc_util/umask.h"
 
 #define QLEN 15	/* listen(2) queue */
 

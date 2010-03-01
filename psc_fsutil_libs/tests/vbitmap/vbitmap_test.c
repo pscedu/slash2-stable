@@ -26,6 +26,7 @@
 #include "pfl/pfl.h"
 #include "psc_ds/vbitmap.h"
 #include "psc_util/alloc.h"
+#include "psc_util/log.h"
 
 const char *progname;
 

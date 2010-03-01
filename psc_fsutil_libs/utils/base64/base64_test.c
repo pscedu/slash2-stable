@@ -10,9 +10,10 @@
 #include <stdlib.h>
 #include <unistd.h>
 
+#include "pfl/cdefs.h"
 #include "pfl/pfl.h"
 #include "psc_util/base64.h"
-#include "pfl/cdefs.h"
+#include "psc_util/log.h"
 
 const char *progname;
 
