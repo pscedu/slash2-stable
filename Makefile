@@ -70,3 +70,4 @@ clean:
 
 doc:
 copyright:
+build-prereq-hook:
