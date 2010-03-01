@@ -26,6 +26,7 @@
 #include <string.h>
 #include <unistd.h>
 
+#include "pfl/pfl.h"
 #include "psc_util/bitflag.h"
 #include "psc_util/printhex.h"
 
@@ -87,6 +88,7 @@ main(int argc, char *argv[])
 	int st, f, c;
 	int64_t v;
 
+	pfl_init();
 	progname = argv[0];
 	while ((c = getopt(argc, argv, "")) != -1)
 		switch (c) {
