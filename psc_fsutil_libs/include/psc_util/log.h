@@ -28,8 +28,9 @@
 # define PSC_SUBSYS PSS_GEN
 #endif
 
-#include "psc_util/subsys.h"
 #include "pfl/cdefs.h"
+#include "pfl/pfl.h"
+#include "psc_util/subsys.h"
 
 struct psclog_data {
 	char	pld_hostshort[HOST_NAME_MAX];
