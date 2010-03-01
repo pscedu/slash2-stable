@@ -69,3 +69,4 @@ clean:
 	    ) fio.debian_mpi fio.pthreads fio.zest fio.qk fio.mpi fio.zmpi
 
 doc:
+copyright:
