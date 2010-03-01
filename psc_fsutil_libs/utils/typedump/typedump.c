@@ -8,6 +8,7 @@
 
 /* start includes */
 #include "pfl/cdefs.h"
+#include "pfl/compat.h"
 #include "pfl/pfl.h"
 #include "pfl/types.h"
 #include "psc_ds/dynarray.h"
@@ -68,6 +69,7 @@
 #include "psc_util/thread.h"
 #include "psc_util/time.h"
 #include "psc_util/timerthr.h"
+#include "psc_util/umask.h"
 #include "psc_util/usklndthr.h"
 #include "psc_util/waitq.h"
 #include "psc_util/wndmap.h"
