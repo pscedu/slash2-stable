@@ -251,8 +251,10 @@ hdrclean:
 # empty but overrideable
 build-prereq:
 
-build: build-prereq
-	${MAKE} clean && ${MAKE}
+build-prereq-hook: recurse-build-prereq-hook build-prereq
+
+build: clean build-prereq-hook
+	${MAKE}
 
 qbuild:
 	@${MAKE} build >/dev/null
