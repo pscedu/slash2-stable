@@ -27,9 +27,9 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "pfl/cdefs.h"
 #include "psc_util/alloc.h"
 #include "psc_util/log.h"
-#include "pfl/cdefs.h"
 
 long pscPageSize;
 
