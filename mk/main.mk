@@ -192,7 +192,7 @@ endif
 
 recurse-%:
 	@for i in ${_TSUBDIRS}; do							\
-		echo "===> $$i $(patsubst recurse-%,%,$@))";				\
+		echo "===> $$i $(patsubst recurse-%,%,$@)";				\
 		(cd $$i && SUBDIRS= ${MAKE} $(patsubst recurse-%,%,$@)) || exit 1;	\
 	done
 	@if ${NOTEMPTY} "${_TSUBDIRS}"; then						\
