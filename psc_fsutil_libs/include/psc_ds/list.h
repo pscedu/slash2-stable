@@ -28,6 +28,7 @@
 
 #include "psc_util/log.h"
 
+/* note: this structure is used for both a head and an entry */
 struct psclist_head {
 	struct psclist_head *znext;
 	struct psclist_head *zprev;
