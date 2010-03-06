@@ -30,6 +30,7 @@
 #include "pfl/cdefs.h"
 #include "psc_util/alloc.h"
 #include "psc_util/log.h"
+#include "psc_util/strlcpy.h"
 
 long pscPageSize;
 
@@ -156,4 +157,16 @@ psc_freenl(void *p, size_t size)
 	if (p && munlock(p, size) == -1)
 		psc_fatal("munlock %p", p);
 	PSCFREE(p);
+}
+
+char *
+psc_strdup(const char *str)
+{
+	size_t len;
+	char *p;
+
+	len = strlen(str) + 1;
+	p = PSCALLOC(len);
+	strlcpy(p, str, len);
+	return (p);
 }

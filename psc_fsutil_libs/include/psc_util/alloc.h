@@ -80,6 +80,8 @@ void	 psc_freel(void *, size_t);
 void	 psc_freen(void *);
 void	 psc_freenl(void *, size_t);
 
+char	*psc_strdup(const char *);
+
 extern long pscPageSize;
 
 #endif /* _PFL_ALLOC_H_ */
