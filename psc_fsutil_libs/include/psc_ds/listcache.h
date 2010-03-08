@@ -86,6 +86,9 @@ struct psc_listcache_entry {
 #define LIST_CACHE_FOREACH(p, lc)					\
 	psclist_for_each_entry2((p), &(lc)->lc_listhd, (lc)->lc_offset)
 
+#define LIST_CACHE_FOREACH_SAFE(p, t, lc)				\
+	psclist_for_each_entry2_safe((p), (t), &(lc)->lc_listhd, (lc)->lc_offset)
+
 #define LIST_CACHE_LOCK(lc)		spinlock(&(lc)->lc_lock)
 #define LIST_CACHE_ULOCK(lc)		freelock(&(lc)->lc_lock)
 #define LIST_CACHE_RLOCK(lc)		reqlock(&(lc)->lc_lock)
