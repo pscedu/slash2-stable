@@ -58,7 +58,12 @@
 #define PSCNET_CLIENT		0x0f
 #define PSC_SVR_PID		54321
 #define PSC_NIDSTR_SIZE		32
+
+#ifdef NAMESPACE_EXPERIMENTAL
+#define PSCRPC_OBD_TIMEOUT		3600
+#else
 #define PSCRPC_OBD_TIMEOUT		60
+#endif
 
 extern lnet_handle_eq_t		pscrpc_eq_h;
 extern struct psclist_head	pscrpc_wait_callbacks;
