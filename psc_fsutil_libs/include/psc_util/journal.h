@@ -36,17 +36,58 @@
 struct psc_journal_hdr {
 	uint64_t		pjh_magic;
 	uint64_t		pjh_start_off;
-	int32_t			pjh_entsz;
-	int32_t			pjh_nents;
+	uint32_t		pjh_entsz;
+	uint32_t		pjh_nents;
 	uint32_t		pjh_version;
 	uint32_t		pjh_options;
-	int32_t			pjh_readahead;
+	uint32_t		pjh_readahead;
 	uint32_t		pjh__pad;
 	uint64_t		pjh_chksum;	/* keep it last and aligned at a 8 byte boundary */
 #define pjh_iolen pjh_start_off
 };
 
 #define	MAX_NUM_PJBUF		 8		/* number of journal buffers to keep around */
+
+#define PJSHDW_DEFTILES    4
+#define PJSHDW_DEFTILEENTS 1024
+#define PJSHDW_MAXAGE      {1, 0} /* seconds, nanoseconds */
+
+#define JRNLTHRT_SHDW 0
+
+struct psc_journal_shdw_tile {
+        void *pjst_base;
+        uint8_t pjst_state;
+        uint32_t pjst_nused;
+        uint32_t pjst_sjent;
+	psc_atomic32_t pjst_ref; /* Outstanding journal puts */
+        psc_spinlock_t pjst_lock;
+};
+
+enum PJSHDW_STATES {
+	PJSHDWT_FREE    = 0,
+        PJSHDWT_INUSE   = (1<<0),  /* Tile is actively assigned to a
+			   	    *  journal region */
+        PJSHDWT_PROC    = (1<<1),  /* Tile is held by the post-processor */
+	PJSHDWT_PROCRDY = (1<<2)
+};
+
+struct psc_journal;
+/* In-memory 'journal shadowing'.
+ */
+struct psc_journal_shdw {
+        uint32_t pjs_ntiles;            /* Number of tiles */
+        uint32_t pjs_njents;            /* Number of entries per tile */
+        uint32_t pjs_pjents;            /* Number of processed jents */
+        uint32_t pjs_curtile;           /* Current tile */
+	uint32_t pjs_state;
+        psc_spinlock_t pjs_lock;        /* Sync between logwrite and shdwthr */
+	struct psc_waitq pjs_waitq;
+        struct timespec pjs_lastflush;  /* Time since last tile process */
+	struct psc_journal *pjs_journal;
+        struct psc_journal_shdw_tile *pjs_pjsts[PJSHDW_DEFTILES];
+};
+
+#define PJSHDW_ADVTILE 1
 
 struct psc_journal {
 	psc_spinlock_t		 pj_lock;	/* contention lock */
@@ -55,14 +96,16 @@ struct psc_journal {
 	struct psclist_head	 pj_pndgxids;
 	struct psc_dynarray	 pj_bufs;
 	struct psc_waitq	 pj_waitq;
+	struct psc_journal_shdw *pj_shdw;
 	int			 pj_fd;		/* open file descriptor to disk */
 	int			 pj_flags;
-	int32_t			 pj_nextwrite;	/* next entry slot to write to */
+	uint32_t		 pj_nextwrite;	/* next entry slot to write to */
 };
 
 #define PJF_NONE		0
 #define PJF_WANTBUF		(1 << 0)
 #define PJF_WANTSLOT		(1 << 1)
+#define PJF_SHADOW              (1 << 2)
 
 typedef void (*psc_jhandler)(struct psc_dynarray *, int *);
 
@@ -115,6 +158,7 @@ struct psc_journal_enthdr {
 	 * by log replay functions.
 	 */
 	char			pje_data[0];
+#define pje_shdw_slot pje_sid
 } __packed;
 
 #define	PJ_PJESZ(p)		((p)->pj_hdr->pjh_entsz)
@@ -129,7 +173,7 @@ struct psc_journal_enthdr {
  * @pjx_lock: serialize.
  * @pjx_pj: backpointer to our journal.
  */
-#define	PJX_SLOT_ANY		 (~0)
+#define	PJX_SLOT_ANY		 (~0U)
 
 #define	PJX_NONE		 0
 #define	PJX_XSTART		 (1 << 0)
@@ -138,7 +182,7 @@ struct psc_journal_enthdr {
 struct psc_journal_xidhndl {
 	uint64_t		 pjx_xid;
 	int			 pjx_sid;
-	int32_t			 pjx_tailslot;
+	uint32_t		 pjx_tailslot;
 	uint32_t		 pjx_flags;
 	struct psclist_head	 pjx_lentry;
 	psc_spinlock_t		 pjx_lock;
