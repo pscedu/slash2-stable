@@ -154,11 +154,13 @@ void	_psc_hashtbl_init(struct psc_hashtbl *, int, ptrdiff_t, ptrdiff_t, int,
  *	- uint64_t hash ID value
  *	- const char * string ID
  */
-#define	psc_hashbkt_del_item(t, b, cmp, key)				\
+#define	psc_hashbkt_del_item2(t, b, cmp, key)				\
 	_psc_hashbkt_search((t), (b), PHLF_DEL, (cmp), NULL, (key))
 
 struct psc_hashbkt *
 	 psc_hashbkt_get(const struct psc_hashtbl *, const void *);
+void	 psc_hashbkt_del_item(const struct psc_hashtbl *,
+		struct psc_hashbkt *, void *);
 void	 psc_hashbkt_add_item(const struct psc_hashtbl *,
 		struct psc_hashbkt *, void *);
 void	*_psc_hashbkt_search(const struct psc_hashtbl *,

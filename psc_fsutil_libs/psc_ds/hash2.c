@@ -242,6 +242,23 @@ psc_hashent_remove(const struct psc_hashtbl *t, void *p)
 }
 
 /**
+ * psc_hashbkt_del_item - del an item to a hash bucket.
+ * @t: the hash table.
+ * @p: item to add.
+ */
+void
+psc_hashbkt_del_item(const struct psc_hashtbl *t, struct psc_hashbkt *b,
+    void *p)
+{
+	int locked;
+
+	psc_assert(p);
+	locked = reqlock(&b->phb_lock);
+	psclist_del((struct psclist_head *)((char *)p + t->pht_hentoff));
+	psc_atomic32_inc(&b->phb_nitems);
+	ureqlock(&b->phb_lock, locked);
+}
+/**
  * psc_hashbkt_add_item - add an item to a hash bucket.
  * @t: the hash table.
  * @p: item to add.
