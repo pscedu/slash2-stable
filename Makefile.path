@@ -2,7 +2,6 @@
 
 LNET_BASE=	${ROOTDIR}/lnet-lite
 PFL_BASE?=	${ROOTDIR}/psc_fsutil_libs
-#ZFS_BASE=	${ROOTDIR}/zfs/zfs-fuse-0.6.0/src
-ZFS_BASE=	${ROOTDIR}/zfs/zfs-fuse-0.5.0_slash/src
+ZFS_BASE=	${ROOTDIR}/zfs/zfs-fuse-0.6.0/src
 FUSE_BASE=	${ROOTDIR}/fuse/fuse-2.8.1
 MAINMK=		${ROOTDIR}/mk/main.mk
