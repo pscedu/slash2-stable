@@ -190,15 +190,18 @@ extern struct psc_lockedlist psc_hashtbls;
 static __inline struct psclist_head *
 psc_hashent_getlentry(const struct psc_hashtbl *t, void *p)
 {
+	void *e;
+
 	psc_assert(p);
-	return ((void *)((char *)p + t->pht_hentoff));
+	e = (char *)p + t->pht_hentoff;
+	return (e);
 }
 
 static __inline const void *
 psc_hashent_getid(const struct psc_hashtbl *t, const void *p)
 {
 	psc_assert(p);
-	return ((void *)((const char *)p + t->pht_idoff));
+	return ((const char *)p + t->pht_idoff);
 }
 
 #endif /* _PFL_HASH2_H_ */
