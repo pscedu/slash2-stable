@@ -197,7 +197,6 @@ void
 psc_hashent_remove(const struct psc_hashtbl *t, void *p)
 {
 	struct psc_hashbkt *b;
-	int locked;
 	void *pk;
 
 	psc_assert(p);
