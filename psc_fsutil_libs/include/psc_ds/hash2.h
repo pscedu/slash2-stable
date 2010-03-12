@@ -154,7 +154,7 @@ void	_psc_hashtbl_init(struct psc_hashtbl *, int, ptrdiff_t, ptrdiff_t, int,
  *	- uint64_t hash ID value
  *	- const char * string ID
  */
-#define	psc_hashbkt_del_item2(t, b, cmp, key)				\
+#define	psc_hashbkt_getdel(t, b, cmp, key)				\
 	_psc_hashbkt_search((t), (b), PHLF_DEL, (cmp), NULL, (key))
 
 struct psc_hashbkt *
@@ -178,9 +178,27 @@ void	 psc_hashent_remove(const struct psc_hashtbl *, void *);
 int	 psc_hashent_conjoint(const struct psc_hashtbl *, void *);
 
 #define psc_hashent_disjoint(t, p)	(!psc_hashent_conjoint((t), (p)))
+#define psc_hashent_conjoint(t, p)	psclist_conjoint(			\
+					    psc_hashent_getlentry((t), (p)))
+#define psc_hashent_init(t, p)		INIT_PSCLIST_ENTRY(			\
+					    psc_hashent_getlentry((t), (p)))
 
 int	 psc_str_hashify(const char *);
 
 extern struct psc_lockedlist psc_hashtbls;
+
+static __inline struct psclist_head *
+psc_hashent_getlentry(const struct psc_hashtbl *t, void *p)
+{
+	psc_assert(p);
+	return ((char *)p + t->pht_hentoff);
+}
+
+static __inline const void *
+psc_hashent_getid(const struct psc_hashtbl *t, const void *p)
+{
+	psc_assert(p);
+	return ((const char *)p + t->pht_idoff);
+}
 
 #endif /* _PFL_HASH2_H_ */

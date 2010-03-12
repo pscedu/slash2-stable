@@ -91,7 +91,7 @@ _psc_hashtbl_init(struct psc_hashtbl *t, int flags,
 }
 
 /**
- * psc_hashtbl_lookup - find a hash table by its name, return NULL if none exists.
+ * psc_hashtbl_lookup - Find a hash table by its name.
  * @name: name of hash table.
  */
 struct psc_hashtbl *
@@ -108,7 +108,7 @@ psc_hashtbl_lookup(const char *name)
 }
 
 /**
- * psc_hashtbl_destroy - reclaim a hash table's resources.
+ * psc_hashtbl_destroy - Reclaim a hash table's resources.
  * @t: table to destroy.
  */
 void
@@ -125,7 +125,7 @@ psc_hashtbl_destroy(struct psc_hashtbl *t)
 }
 
 /**
- * psc_hashbkt_get - locate the bucket containing an item with the
+ * psc_hashbkt_get - Locate the bucket containing an item with the
  *	given ID.
  * @t: table to search.
  * @key: search key.
@@ -181,8 +181,7 @@ _psc_hashbkt_search(const struct psc_hashtbl *t, struct psc_hashbkt *b,
 		}
 	}
 	if (p && (flags & PHLF_DEL)) {
-		psclist_del((struct psclist_head *)((char *)p +
-		    t->pht_hentoff));
+		psclist_del(psc_hashent_getlentry(t, p));
 		psc_atomic32_dec(&b->phb_nitems);
 	}
 	ureqlock(&b->phb_lock, locked);
@@ -190,37 +189,7 @@ _psc_hashbkt_search(const struct psc_hashtbl *t, struct psc_hashbkt *b,
 }
 
 /**
- * psc_hashent_init - initialize a item for use with a hash table.
- * @t: the hash table the item will be associated with.
- * @p: item to initialize.
- */
-void
-psc_hashent_init(const struct psc_hashtbl *t, void *p)
-{
-	struct psclist_head *e;
-
-	psc_assert(p);
-	e = (struct psclist_head *)((char *)p + t->pht_hentoff);
-	INIT_PSCLIST_ENTRY(e);
-}
-
-/**
- * psc_hashent_conjoint - test if an item belongs in a hash table.
- * @t: the hash table.
- * @p: item to check.
- */
-int
-psc_hashent_conjoint(const struct psc_hashtbl *t, void *p)
-{
-	struct psclist_head *e;
-
-	psc_assert(p);
-	e = (struct psclist_head *)((char *)p + t->pht_hentoff);
-	return (psclist_conjoint(e));
-}
-
-/**
- * psc_hashent_remove - remove an item from the hash table its in.
+ * psc_hashent_remove - Remove an item from the hash table it's in.
  * @t: the hash table.
  * @p: the item to remove from hash table.
  */
@@ -235,42 +204,42 @@ psc_hashent_remove(const struct psc_hashtbl *t, void *p)
 	pk = (char *)p + t->pht_idoff;
 	b = psc_hashbkt_get(t, pk);
 	locked = reqlock(&b->phb_lock);
-	psclist_del((struct psclist_head *)((char *)p + t->pht_hentoff));
+	psclist_del(psc_hashent_getlentry(t, p));
 	psc_assert(psc_atomic32_read(&b->phb_nitems) > 0);
 	psc_atomic32_dec(&b->phb_nitems);
 	ureqlock(&b->phb_lock, locked);
 }
 
 /**
- * psc_hashbkt_del_item - del an item to a hash bucket.
+ * psc_hashbkt_del_item - Remove an item from the hash bucket it's in.
  * @t: the hash table.
+ * @b: bucket to remove from.
  * @p: item to add.
- *
- * It is the caller's responsibility to lock the given bucket.
  */
 void
 psc_hashbkt_del_item(const struct psc_hashtbl *t, struct psc_hashbkt *b,
     void *p)
 {
-	psc_assert(p);
-	psclist_del((struct psclist_head *)((char *)p + t->pht_hentoff));
-	psc_atomic32_inc(&b->phb_nitems);
+	locked = reqlock(&b->phb_lock);
+	psclist_del(psc_hashent_getlentry(t, p));
+	psc_assert(psc_atomic32_read(&b->phb_nitems) > 0);
+	psc_atomic32_dec(&b->phb_nitems);
+	ureqlock(&b->phb_lock, locked);
 }
+
 /**
  * psc_hashbkt_add_item - add an item to a hash bucket.
  * @t: the hash table.
  * @p: item to add.
- *
- * It is the caller's responsibility to lock the given bucket.
  */
 void
 psc_hashbkt_add_item(const struct psc_hashtbl *t, struct psc_hashbkt *b,
     void *p)
 {
-	psc_assert(p);
-	psclist_xadd((struct psclist_head *)((char *)p + t->pht_hentoff),
-	    &b->phb_listhd);
+	locked = reqlock(&b->phb_lock);
+	psclist_xadd(psc_hashent_getlentry(t, p), &b->phb_listhd);
 	psc_atomic32_inc(&b->phb_nitems);
+	ureqlock(&b->phb_lock, locked);
 }
 
 /**
@@ -289,8 +258,7 @@ psc_hashtbl_add_item(const struct psc_hashtbl *t, void *p)
 	pk = (char *)p + t->pht_idoff;
 	b = psc_hashbkt_get(t, pk);
 	locked = reqlock(&b->phb_lock);
-	psclist_xadd((struct psclist_head *)((char *)p +
-	    t->pht_hentoff), &b->phb_listhd);
+	psclist_xadd(psc_hashent_getlentry(t, p), &b->phb_listhd);
 	psc_atomic32_inc(&b->phb_nitems);
 	ureqlock(&b->phb_lock, locked);
 }
