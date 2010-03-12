@@ -107,7 +107,7 @@ struct psc_hashent {
 	_psc_hashtbl_search((t), 0, (cmp), (cbf), (key))
 
 /**
- * psc_hashtbl_del_item - search a hash table for an item by its hash ID
+ * psc_hashtbl_searchdel - search a hash table for an item by its hash ID
  *	and remove and return if found.
  * @t: the hash table.
  * @cmp: optional value to compare with to differentiate entries with same ID.
@@ -115,7 +115,7 @@ struct psc_hashent {
  *	- uint64_t hash ID value
  *	- const char * string ID
  */
-#define psc_hashtbl_del_item(t, cmp, key)				\
+#define psc_hashtbl_searchdel(t, cmp, key)				\
 	_psc_hashtbl_search((t), PHLF_DEL, (cmp), NULL, (key))
 
 struct psc_hashtbl *
@@ -131,7 +131,7 @@ void	_psc_hashtbl_init(struct psc_hashtbl *, int, ptrdiff_t, ptrdiff_t, int,
 	    int (*)(const void *, const void *), const char *, ...);
 
 /**
- * psc_hashbkt_search - search a bucket for an item by its hash ID.
+ * psc_hashbkt_search - Search a bucket for an item by its hash ID.
  * @t: the hash table.
  * @b: the bucket to search.
  * @cmp: optional value to compare with to differentiate entries with same ID.
@@ -145,7 +145,7 @@ void	_psc_hashtbl_init(struct psc_hashtbl *, int, ptrdiff_t, ptrdiff_t, int,
 	_psc_hashbkt_search((t), (b), 0, (cmp), (cbf), (key))
 
 /**
- * psc_hashtbl_del_item - search a bucket for an item by its hash ID and
+ * psc_hashtbl_searchdel - Search a bucket for an item by its hash ID and
  *	remove and return if found.
  * @t: the hash table.
  * @b: the bucket to search.
@@ -154,7 +154,7 @@ void	_psc_hashtbl_init(struct psc_hashtbl *, int, ptrdiff_t, ptrdiff_t, int,
  *	- uint64_t hash ID value
  *	- const char * string ID
  */
-#define	psc_hashbkt_getdel(t, b, cmp, key)				\
+#define	psc_hashbkt_searchdel(t, b, cmp, key)				\
 	_psc_hashbkt_search((t), (b), PHLF_DEL, (cmp), NULL, (key))
 
 struct psc_hashbkt *

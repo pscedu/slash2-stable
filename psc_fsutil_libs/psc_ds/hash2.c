@@ -203,11 +203,8 @@ psc_hashent_remove(const struct psc_hashtbl *t, void *p)
 	psc_assert(p);
 	pk = (char *)p + t->pht_idoff;
 	b = psc_hashbkt_get(t, pk);
-	locked = reqlock(&b->phb_lock);
-	psclist_del(psc_hashent_getlentry(t, p));
-	psc_assert(psc_atomic32_read(&b->phb_nitems) > 0);
-	psc_atomic32_dec(&b->phb_nitems);
-	ureqlock(&b->phb_lock, locked);
+
+	psc_hashbkt_del_item(t, b, p);
 }
 
 /**
