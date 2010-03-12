@@ -220,6 +220,8 @@ void
 psc_hashbkt_del_item(const struct psc_hashtbl *t, struct psc_hashbkt *b,
     void *p)
 {
+	int locked;
+
 	locked = reqlock(&b->phb_lock);
 	psclist_del(psc_hashent_getlentry(t, p));
 	psc_assert(psc_atomic32_read(&b->phb_nitems) > 0);
@@ -236,6 +238,8 @@ void
 psc_hashbkt_add_item(const struct psc_hashtbl *t, struct psc_hashbkt *b,
     void *p)
 {
+	int locked;
+
 	locked = reqlock(&b->phb_lock);
 	psclist_xadd(psc_hashent_getlentry(t, p), &b->phb_listhd);
 	psc_atomic32_inc(&b->phb_nitems);
