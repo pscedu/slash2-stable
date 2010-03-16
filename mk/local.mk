@@ -18,7 +18,7 @@ PCPP=		${ROOTDIR}/tools/pcpp.pl -e
 MDPROC=		${ROOTDIR}/tools/mdproc.pl
 MAKEFLAGS+=	--no-print-directory
 
-LFLAGS+=	-t
+LFLAGS+=	-t --nounput
 YFLAGS+=	-d
 
 CFLAGS+=	-Wall -W
