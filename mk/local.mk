@@ -10,15 +10,17 @@ LINT=		splint +posixlib
 NOTEMPTY=	${ROOTDIR}/tools/notempty
 SCONS=		scons
 PKG_CONFIG=	pkg-config
+ECHORUN=	${ROOTDIR}/tools/echorun.sh
 GENTYPES=	${ROOTDIR}/tools/gentypes.pl
 HDRCLEAN=	${ROOTDIR}/tools/hdrclean.pl
 LIBDEP=		${ROOTDIR}/tools/libdep.pl
-ECHORUN=	${ROOTDIR}/tools/echorun.sh
-PCPP=		${ROOTDIR}/tools/pcpp.pl -e
 MDPROC=		${ROOTDIR}/tools/mdproc.pl
+MINVER=		${ROOTDIR}/tools/minver.pl
+PCPP=		${ROOTDIR}/tools/pcpp.pl -e
+
 MAKEFLAGS+=	--no-print-directory
 
-LFLAGS+=	-t --nounput
+LFLAGS+=	-t $$(if ${MINVER} $$(lex -V | sed 's/[a-z ]*//g') 2.5.5; then echo --nounput; fi)
 YFLAGS+=	-d
 
 CFLAGS+=	-Wall -W
