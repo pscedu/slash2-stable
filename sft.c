@@ -17,6 +17,7 @@ MPI_Group world;
 #endif
 
 #include "pfl/cdefs.h"
+#include "pfl/types.h"
 #include "psc_util/alloc.h"
 #include "psc_util/crc.h"
 #include "psc_util/log.h"
@@ -130,7 +131,7 @@ main(int argc, char *argv[])
 		abort();
 
 	if (debug)
-		fprintf(stdout, "filesize=%lu", stb.st_size);
+		fprintf(stdout, "filesize=%"PSCPRIdOFF, stb.st_size);
 
 	rem = stb.st_size;
 
@@ -149,7 +150,7 @@ main(int argc, char *argv[])
 
 	if (crc) {
 		PSC_CRC64_FIN(&filecrc);
-		fprintf(stdout, "F '%s' CRC=0x%lx\n", file, filecrc);
+		fprintf(stdout, "F '%s' CRC=%"PSCPRIxCRC64"\n", file, filecrc);
 	}
 	close(fd);
 
