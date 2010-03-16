@@ -41,8 +41,8 @@ my_odtcb(void *data, struct odtable_receipt *odtr)
 {
 	char *item = data;
 
-	psc_warnx("found %s at slot=%"PRId64" odtr=%p",
-		  item, odtr->odtr_elem, odtr);
+	psc_warnx("found %s at slot=%zd odtr=%p",
+	    item, odtr->odtr_elem, odtr);
 
 	psc_dynarray_add(&myReceipts, odtr);
 }
@@ -143,8 +143,8 @@ main(int argc, char *argv[])
 
 		while (psc_dynarray_len(&myReceipts) && num_free--) {
 			odtr = psc_dynarray_getpos(&myReceipts, 0);
-			psc_warnx("got odtr=%p key=%"PRIx64" slot=%"PRId64,
-				  odtr, odtr->odtr_key, odtr->odtr_elem);
+			psc_warnx("got odtr=%p key=%"PRIx64" slot=%zd",
+			    odtr, odtr->odtr_key, odtr->odtr_elem);
 
 			if (!odtable_freeitem(odt, odtr))
 				psc_dynarray_remove(&myReceipts, odtr);

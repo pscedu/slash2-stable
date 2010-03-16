@@ -11,6 +11,7 @@
 #include <unistd.h>
 
 #include "pfl/cdefs.h"
+#include "pfl/types.h"
 #include "psc_util/crc.h"
 #include "psc_util/log.h"
 #include "psc_util/time.h"
@@ -51,7 +52,7 @@ main(int argc, char *argv[])
 	if (fstat(fd, &stb) == -1)
 		psc_fatal("fstat %s", fn);
 
-	pad = snprintf(NULL, 0, "%ld", stb.st_size);
+	pad = snprintf(NULL, 0, "%"PSCPRIdOFF, stb.st_size);
 
 	acsz = 0;
 	PSC_CRC64_INIT(&crc);
@@ -76,14 +77,14 @@ main(int argc, char *argv[])
 		timersub(&tm1, &tm_last, &tmd);
 		if (tmd.tv_usec > 1000000 / 32) { /* 32 fps */
 			memcpy(&tm_last, &tm1, sizeof(tm_last));
-			printf("\r%*zd/%ld", pad, acsz, stb.st_size);
+			printf("\r%*zd/%"PSCPRIdOFF, pad, acsz, stb.st_size);
 			fflush(stdout);
 		}
 	}
 	close(fd);
 
 	PSC_CRC64_FIN(&crc);
-	printf("\rcrc %lx size %lu time %.3fs\n", crc, stb.st_size,
-	    tm_total.tv_sec + tm_total.tv_usec * 1e-6);
+	printf("\rcrc %"PSCPRIxCRC64" size %"PSCPRIdOFF" time %.3fs\n",
+	    crc, stb.st_size, tm_total.tv_sec + tm_total.tv_usec * 1e-6);
 	exit(0);
 }
