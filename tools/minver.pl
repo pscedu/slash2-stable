@@ -18,7 +18,7 @@ my @has = split m[\.], $ARGV[0];
 my @need = split m[\.], $ARGV[1];
 
 for (my $i = 0; $i < @has; $i++) {
-	exit 1 if $i < @need;
+	exit 1 if $i >= @need;
 	exit 1 if $has[$i] < $need[$i];
 	exit 0 if $has[$i] > $need[$i];
 }
