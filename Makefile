@@ -20,7 +20,6 @@ CFLAGS+=	-Wall -W
 CFLAGS+=	-I${PFL_BASE}/include
 LINUXFLAGS=	-D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64 -DYY_NO_UNPUT
 YFLAGS=		-d -o $@
-LFLAGS=		--nounput
 LDFLAGS=	-lm
 
 OBJS+=		$(patsubst %.c,%.o,$(filter %.c,${SRCS}))
