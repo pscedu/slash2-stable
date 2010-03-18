@@ -3,6 +3,7 @@
 ROOTDIR=..
 include ${ROOTDIR}/Makefile.path
 
+PROG=		fio
 SRCS+=		fio.c
 SRCS+=		fio_config_lex.l
 SRCS+=		fio_config_parser.y
@@ -10,64 +11,26 @@ SRCS+=		fio_pthread_barrier.c
 SRCS+=		fio_sym.c
 SRCS+=		fio_symtable.c
 
-ifdef DEBUG
-CFLAGS+=	-g
-else
-CFLAGS+=	-O2
+DEBUG?=		0
+LDFLAGS=	-lm
+MODULES+=	pfl
+
+ifdef QK
+MODULES+=	mpi qk
+SKIPTHR=	1
 endif
 
-CFLAGS+=	-Wall -W
-CFLAGS+=	-I${PFL_BASE}/include
-LINUXFLAGS=	-D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64 -DYY_NO_UNPUT
-YFLAGS=		-d -o $@
-LDFLAGS=	-lm
+ifdef ZCC
+MODULES+=	zcc
+endif
 
-OBJS+=		$(patsubst %.c,%.o,$(filter %.c,${SRCS}))
-OBJS+=		$(patsubst %.y,%.o,$(filter %.y,${SRCS}))
-OBJS+=		$(patsubst %.l,%.o,$(filter %.l,${SRCS}))
+ifdef MPI
+MODULES+=	mpi
+SKIPTHR=	1
+endif
 
-_YACCINTM=	$(patsubst %.y,%.c,$(filter %.y,${SRCS}))
-_LEXINTM=	$(patsubst %.l,%.c,$(filter %.l,${SRCS}))
+ifneq (${SKIPPTHR},1)
+MODULES+=	pthread
+endif
 
-all: pthreads
-
-pthreads:	CFLAGS+=	-DHAVE_LIBPTHREAD ${LINUXFLAGS}
-pthreads:	LDFLAGS+=	-lpthread
-
-qk:		CC=		qk-gcc
-qk:		CFLAGS+=	-DQK -DMPI ${LINUXFLAGS}
-qk:		CFLAGS+=	-I/opt/xt-mpt/default/mpich2-64/P2/include/
-qk:		LDFLAGS+=	-lmpich -L/opt/xt-mpt/default/mpich2-64/P2/lib
-
-zest:		CC=		ZINCPATH=../zest/intercept/include ZLIBPATH=../zest/client/linux-mt ../zest/scripts/zcc
-zest:		CFLAGS+=	-DHAVE_LIBPTHREAD ${LINUXFLAGS}
-zest:		LDFLAGS+=	-lpthread
-
-mpi:		CC=		mpicc
-mpi:		CFLAGS+=	-DMPI
-
-zmpi:		CC=		ZINCPATH=../zest/intercept/include ZLIBPATH=../zest/client/linux-mt ../zest/scripts/zcc
-zmpi:		CFLAGS+=	-DMPI ${LINUXFLAGS}
-zmpi:		LDFLAGS+=	-lmpi
-
-debian_mpi:	CC=		mpicc.mpich
-debian_mpi:	CFLAGS+=	-DMPI
-
-debian_mpi mpi zmpi pthreads zest qk: ${OBJS}
-	${CC} -o fio.$@ ${OBJS} ${LDFLAGS}
-
-.c.o:
-	${CC} ${CFLAGS} -c -o $@ $<
-
-.y.c:
-	${YACC} ${YFLAGS} $<
-
-.PRECIOUS: %.c
-
-clean:
-	rm -f ${OBJS} ${_YACCINTM} ${_LEXINTM} $(\
-	    ) fio.debian_mpi fio.pthreads fio.zest fio.qk fio.mpi fio.zmpi
-
-doc:
-copyright:
-build-prereq-hook:
+include ${MAINMK}
