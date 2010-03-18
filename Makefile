@@ -16,8 +16,7 @@ LDFLAGS=	-lm
 MODULES+=	pfl
 
 ifdef QK
-MODULES+=	mpi qk
-SKIPTHR=	1
+MODULES+=	qk
 endif
 
 ifdef ZCC
@@ -26,10 +25,7 @@ endif
 
 ifdef MPI
 MODULES+=	mpi
-SKIPTHR=	1
-endif
-
-ifneq (${SKIPTHR},1)
+else
 MODULES+=	pthread
 endif
 
