@@ -3,25 +3,21 @@
 ROOTDIR=../..
 include ${ROOTDIR}/Makefile.path
 
-PROG?=		sft
+PROG=		sft
 SRCS+=		sft.c
 SRCS+=		${PFL_BASE}/psc_util/alloc.c
 SRCS+=		${PFL_BASE}/psc_util/crc.c
 SRCS+=		${PFL_BASE}/psc_util/log.c
 SRCS+=		${PFL_BASE}/psc_util/strlcpy.c
 
-INCLUDES+=	-I${PFL_BASE}/include
+ifdef MPI
+MODULES+=	mpi
+endif
 
-sft.mpi:	CC=		mpicc
-sft.mpi:	CFLAGS+=	-DMPI
-sft.mpi:	LDFLAGS+=	-lmpi
+ifdef QK
+MODULES+=	mpi qk
+endif
 
-sft.qk:		CC=		qk-gcc
-sft.qk:		CFLAGS+=	-I/opt/xt-mpt/default/mpich2-64/P2/include
-sft.qk:		CFLAGS+=	-DMPI
-sft.qk:		LDFLAGS+=	-L/opt/xt-mpt/default/mpich2-64/P2/lib -lmpich
+MODULES+=	pfl
 
 include ${MAINMK}
-
-mpi qk:
-	@PROG=sft.$@ ${MAKE}
