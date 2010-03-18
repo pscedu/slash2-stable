@@ -115,8 +115,6 @@ init_log_buffers(IOT_t *iot)
 	bzero(iolog->iolog_oplog, oplog_size);
 
 	iot->op_log = iolog->iolog_oplog;
-
-	return;
 }
 
 /*
@@ -222,7 +220,6 @@ write_output(IOT_t *iot)
 	}
 
 	close(fd);
-	return;
 }
 
 void
@@ -246,7 +243,6 @@ print_pe_map(__unusedx struct io_toolbox *iot)
 		}
 	}
 #endif
-	return;
 }
 
 IOT_t *
@@ -366,11 +362,7 @@ init_pe(int mype)
  *  work.
  */
 void
-init_barriers(
-#ifndef MPI
-    __unusedx
-#endif
-    int mype)
+init_barriers(int mype)
 {
 #ifdef MPI
 	GROUP_t *mygroup;
@@ -412,8 +404,8 @@ init_barriers(
 		group = list_entry(tmp, GROUP_t, group_list);
 		barrier_init(&group->group_barrier, group->num_pes);
 	}
+	(void)mype;
 #endif
-	return;
 }
 
 void
@@ -430,7 +422,6 @@ destroy_barriers(void)
 		WARN("Mpi implementation not complete\n");
 #endif
 	}
-	return;
 }
 
 /*
@@ -453,7 +444,6 @@ init_buffer(struct buffer_t *bdesc, int id)
 		lrand48_r(&bdesc->rand_data, &buf_long_ints[t]);
 		//BDEBUG("PE_%d %d %lu\n", id, t,  buf_long_ints[t]);
 	}
-	return;
 }
 
 int
@@ -917,7 +907,7 @@ worker(void *arg)
 							rc = e->io_func(iot);
 							if (rc)
 								WARN("Error rc = %d, %s\n",
-							    	    rc, strerror(errno));
+								    rc, strerror(errno));
 						}
 						(void)clear_fnam(iot);
 					}
@@ -988,11 +978,11 @@ main(int argc, char *argv[])
 	struct list_head *tmp;
 	GROUP_t          *group = NULL;
 	int rc, i;
-	struct stat sbuf;
 #elif MPI
 	int mype = 0;
 	MPI_Init(&argc, &argv);
 #endif
+	struct stat sbuf;
 	int c, fd;
 
 	TOTAL_PES = 0;

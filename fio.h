@@ -3,10 +3,6 @@
 #ifndef _FIO_H_
 #define _FIO_H_
 
-#ifndef _GNU_SOURCE
-#define _GNU_SOURCE
-#endif
-
 #include <sys/stat.h>
 #include <sys/time.h>
 #include <sys/types.h>
@@ -27,6 +23,8 @@
 #include <string.h>
 #include <unistd.h>
 
+#include "pfl/types.h"
+
 #include "fio_list.h"
 
 #ifdef HAVE_LIBPTHREAD
@@ -34,12 +32,9 @@
 #include "fio_pthread_barrier.h"
 barrier_t  barrier;
 
-#elif  MPI
-//#include <mpi/mpi.h>
+#elif defined(MPI)
 #include <mpi.h>
 #endif
-
-#define strtoull strtoul
 
 #ifdef CATAMOUNT
 #include <catamount/cnos_mpi_os.h>
@@ -51,33 +46,27 @@ barrier_t  barrier;
 
 #define MAXROUTINE 16
 
-//#define strtoull strtoul
-
 #define FIO_DIR_PREFIX  "fio_d."
 #define FIO_FILE_PREFIX "fio_f."
 
 #ifdef OS64
 #define TIMET  "%u"
 #define UTIMET "%06u"
-#define OFFT   "%lu"
 #define INOT   "%u"
 
 #elif QK
 #define TIMET  "%lu"
 #define UTIMET "%06lu"
-#define OFFT   "%llu"
 #define INOT   "%lu"
 
 #elif __WORDSIZE == 64
 #define TIMET  "%lu"
 #define UTIMET "%06lu"
-#define OFFT   "%lu"
 #define INOT   "%lu"
 
 #else
 #define TIMET  "%lu"
 #define UTIMET "%06lu"
-#define OFFT   "%llu"
 #define INOT   "%llu"
 #endif
 
@@ -109,7 +98,7 @@ enum TEST_OPTIONS {
 	FIO_APP_BARRIER        = 1 << 17
 };
 
-#define ACTIVETYPE(t) ((t & mygroup->test_opts) ? 1 : 0)
+#define ACTIVETYPE(t) (((t) & mygroup->test_opts) ? 1 : 0)
 
 #define GETSKEW (ACTIVETYPE(FIO_THRASH_LOCK) ? 1 : 0)
 
@@ -121,7 +110,7 @@ enum TEST_OPTIONS {
  */
 #ifdef  MPI
 #define WORKPE 1
-#elif   HAVE_LIBPTHREAD
+#elif defined(HAVE_LIBPTHREAD)
 #define WORKPE ((iot->mytest_pe == mygroup->work_pe) ? 1 : 0)
 #endif
 
@@ -574,8 +563,8 @@ _BARRIER(GROUP_t *mygroup, struct io_toolbox *iot)
 #define SEEKOFF do {							\
 	iot->mysize = (mygroup->file_size / mygroup->num_pes);		\
 	off_t seekv =  iot->mysize * iot->mype;				\
-	DEBUG(D_BLOCK, "PE %d, seeking "OFFT" bytes\n",			\
-	    iot->mype, (off_t)seekv);					\
+	DEBUG(D_BLOCK, "PE %d, seeking %"PSCPRIdOFF" bytes\n",		\
+	    iot->mype, seekv);						\
 	APP_BARRIER;							\
 	ASSERT(lseek(iot->myfd, seekv, SEEK_SET) >= 0 );		\
 } while (0)
@@ -583,13 +572,14 @@ _BARRIER(GROUP_t *mygroup, struct io_toolbox *iot)
 #define INTERSPERSE_SEEK do {						\
 	off_t seekv;							\
 	if (!iot->bdesc.block_number)					\
-	seekv = (iot->bdesc.buffer_size * iot->mype);			\
-	else seekv = (iot->bdesc.buffer_size * mygroup->num_pes);	\
-	DEBUG(D_BLOCK, "PE %d, seeking "OFFT" bytes\n",			\
-	    iot->mype, (off_t)seekv);					\
+		seekv = (iot->bdesc.buffer_size * iot->mype);		\
+	else								\
+		seekv = (iot->bdesc.buffer_size * mygroup->num_pes);	\
+	DEBUG(D_BLOCK, "PE %d, seeking %"PSCPRIdOFF" bytes\n",		\
+	    iot->mype, seekv);						\
 	ASSERT(lseek(iot->myfd, seekv, SEEK_CUR) >= 0 );		\
-	DEBUG(D_BLOCK, "PE %d, curr off "OFFT"\n",			\
-	    iot->mype, (off_t)lseek(iot->myfd, (off_t)0, SEEK_CUR));	\
+	DEBUG(D_BLOCK, "PE %d, curr off %"PSCPRIdOFF"\n",		\
+	    iot->mype, lseek(iot->myfd, (off_t)0, SEEK_CUR));		\
 } while (0)
 
 #define RDOPEN do {							\

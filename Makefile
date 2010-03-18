@@ -29,7 +29,7 @@ MODULES+=	mpi
 SKIPTHR=	1
 endif
 
-ifneq (${SKIPPTHR},1)
+ifneq (${SKIPTHR},1)
 MODULES+=	pthread
 endif
 
