@@ -24,10 +24,22 @@ LFLAGS+=	-t $$(if ${MINVER} $$(lex -V | sed 's/[a-z ]*//g') 2.5.5; then echo --n
 YFLAGS+=	-d
 
 CFLAGS+=	-Wall -W
+
+ifdef DEBIAN
+MPICC=		mpicc.mpich
+else
+MPICC=		mpicc
+endif
+
+DEBUG?=		1
+ifeq (${DEBUG},1)
 CFLAGS+=	-g
 #CFLAGS+=	-ggdb3
-#CFLAGS+=	-Wunused -Wuninitialized -O
+else
+CFLAGS+=	-Wunused -Wuninitialized -O2
 #CFLAGS+=	-Wshadow
+endif
+
 DEFINES+=	-D_LARGEFILE_SOURCE -D_LARGEFILE64_SOURCE -D_FILE_OFFSET_BITS=64
 DEFINES+=	-D_REENTRANT -D_GNU_SOURCE -DYY_NO_UNPUT -DYY_NO_INPUT -DYYERROR_VERBOSE
 DEFINES+=	-DHAVE_GETHOSTBYNAME
@@ -45,6 +57,7 @@ ifneq ($(wildcard /opt/xt-pe),)
   # on xt3
   SRCS+=	${PFL_BASE}/compat/posix_memalign.c
   DEFINES+=	-DHOST_NAME_MAX=MAXHOSTNAMELEN
+  QKCC=		qk-gcc
 endif
 
 FUSE_CFLAGS=	$$(PKG_CONFIG_PATH=${FUSE_BASE} ${PKG_CONFIG} --cflags fuse | ${EXTRACT_CFLAGS})

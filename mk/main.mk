@@ -123,6 +123,27 @@ ifneq ($(filter l,${MODULES}),)
 LDFLAGS+=	${LIBL}
 endif
 
+ifneq ($(filter pfl,${MODULES}),)
+INCLUDES+=	-I${PFL_BASE}/include
+endif
+
+ifneq ($(filter mpi,${MODULES}),)
+CC=		${MPICC}
+DEFINES+=	-DMPI
+endif
+
+ifneq ($(filter qk,${MODULES}),)
+CC=		${QKCC}
+DEFINES+=	-DQK
+#INCLUDES+=	-I/opt/xt-mpt/default/mpich2-64/P2/include
+#LDFLAGS+=	-L/opt/xt-mpt/default/mpich2-64/P2/lib -lmpich
+endif
+
+ifneq ($(filter zcc,${MODULES}),)
+CC=		ZINCPATH=${ZEST_BASE}/intercept/include \
+		ZLIBPATH=${ZEST_BASE}/client/linux-mt ${ZEST_BASE}/scripts/zcc
+endif
+
 # OBJDIR is added to .c below since lex/yacc intermediate files get generated there.
 vpath %.y $(sort $(dir $(filter %.y,${_TSRCS})))
 vpath %.l $(sort $(dir $(filter %.l,${_TSRCS})))
