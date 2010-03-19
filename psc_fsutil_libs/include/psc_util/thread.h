@@ -87,6 +87,8 @@ void	pscthr_setrun(struct psc_thread *, int);
 int	pscthr_run(void);
 void	pscthr_setloglevel(int, int);
 
+pid_t	pfl_getsysthrid(void);
+
 struct psc_thread *pscthr_get(void);
 struct psc_thread *pscthr_get_canfail(void);
 struct psc_thread *

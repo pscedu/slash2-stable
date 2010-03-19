@@ -150,6 +150,18 @@ pscthr_get(void)
 	return (thr);
 }
 
+__inline pid_t
+pfl_getsysthrid(void)
+{
+#ifdef SYS_gettid
+	return (syscall(SYS_gettid));
+#elif defined(SYS_getthrid)
+	return (syscall(SYS_getthrid));
+#else
+	return (pthread_self());
+#endif
+}
+
 /**
  * _pscthr_finish_init: final initilization code common among all
  *	instantiation methods.
@@ -170,7 +182,7 @@ _pscthr_finish_init(struct psc_thread *thr)
 	for (n = 0; n < psc_nsubsys; n++)
 		thr->pscthr_loglevels[n] = psc_log_getlevel_ss(n);
 	thr->pscthr_pthread = pthread_self();
-	thr->pscthr_thrid = syscall(SYS_gettid);
+	thr->pscthr_thrid = pfl_getsysthrid();
 	rc = pthread_setspecific(psc_thrkey, thr);
 	if (rc)
 		psc_fatalx("pthread_setspecific: %s", strerror(rc));
