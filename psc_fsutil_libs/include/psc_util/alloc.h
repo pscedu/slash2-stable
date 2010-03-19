@@ -54,7 +54,8 @@
 			if (oldp)					\
 				psc_traces(PSS_MEM,			\
 				    "realloc %p->%p sz=%zu fl=%d",	\
-				    (oldp), __p, (size_t)(sz), (fl));	\
+				    (void *)(oldp), __p, (size_t)(sz),	\
+				    (fl));				\
 			else						\
 				psc_traces(PSS_MEM,			\
 				    "alloc %p sz=%zu fl=%d", __p,	\
