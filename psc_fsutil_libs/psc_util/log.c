@@ -42,6 +42,7 @@
 #include "psc_util/fmtstr.h"
 #include "psc_util/log.h"
 #include "psc_util/strlcpy.h"
+#include "psc_util/thread.h"
 
 #ifndef APP_STRERROR
 #define APP_STRERROR strerror
@@ -136,10 +137,16 @@ psc_log_setlevel(int subsys, int newlevel)
 	psc_log_setlevel_ss(subsys, newlevel);
 }
 
-__weak const char *
-pscthr_getname(void)
+__weak struct psc_thread *
+pscthr_get_canfail(void)
 {
 	return (NULL);
+}
+
+__weak pid_t
+pfl_getsysthrid(void)
+{
+	return (getpid());
 }
 
 /**
@@ -204,20 +211,25 @@ _psclogv(const char *fn, const char *func, int line, int subsys,
 {
 	char *p, prefix[LINE_MAX], fmtbuf[LINE_MAX];
 	struct fuse_context *ctx;
+	struct psc_thread *thr;
 	struct psclog_data *d;
 	struct timeval tv;
 	const char *thrname;
 	int rc, save_errno;
+	pid_t thrid;
 
 	save_errno = errno;
 
 	d = psclog_getdata();
-	thrname = pscthr_getname();
-	if (thrname == NULL) {
+	thr = pscthr_get_canfail();
+	if (thr) {
+		thrid = thr->pscthr_thrid;
+		thrname = thr->pscthr_name;
+	} else {
+		thrid = pfl_getsysthrid();
 		if (d->pld_nothrname[0] == '\0')
 			snprintf(d->pld_nothrname,
-			    sizeof(d->pld_nothrname),
-			    "<%ld>", syscall(SYS_gettid));
+			    sizeof(d->pld_nothrname), "<%d>", thrid);
 		thrname = d->pld_nothrname;
 	}
 
@@ -229,7 +241,7 @@ _psclogv(const char *fn, const char *func, int line, int subsys,
 		FMTSTRCASE('f', prefix, sizeof(prefix), "s", fn)
 		FMTSTRCASE('H', prefix, sizeof(prefix), "s", d->pld_hostname)
 		FMTSTRCASE('h', prefix, sizeof(prefix), "s", d->pld_hostshort)
-		FMTSTRCASE('i', prefix, sizeof(prefix), "ld", syscall(SYS_gettid))
+		FMTSTRCASE('i', prefix, sizeof(prefix), "d", thrid)
 		FMTSTRCASE('L', prefix, sizeof(prefix), "d", level)
 		FMTSTRCASE('l', prefix, sizeof(prefix), "d", line)
 		FMTSTRCASE('n', prefix, sizeof(prefix), "s", thrname)
@@ -336,7 +348,7 @@ psc_loglevel_getid(const char *name)
 		{ "notify",	PLL_NOTICE },
 		{ "all",	PLL_TRACE }
 	};
-	int n;
+	size_t n;
 
 	for (n = 0; n < PNLOGLEVELS; n++)
 		if (strcasecmp(name, psc_loglevel_names[n]) == 0)
