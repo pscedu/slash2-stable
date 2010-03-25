@@ -43,6 +43,12 @@ _psc_pool_reapsome(__unusedx size_t size)
 {
 }
 
+__weak int
+posix_memalign(__unusedx void **p, __unusedx size_t align, __unusedx size_t size)
+{
+	psc_fatal("not implemented");
+}
+
 /*
  * psc_realloc - Allocate or resize a chunk of memory.
  * @p: current chunk of memory to resize or NULL for new chunk.
