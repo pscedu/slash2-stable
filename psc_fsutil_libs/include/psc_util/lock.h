@@ -24,109 +24,19 @@
 
 #ifdef __ia64
 
-#ifndef _XOPEN_SOURCE
-#define _XOPEN_SOURCE
-#endif
+#include "psc_util/spinlock.h"
 
-#include <errno.h>
-#include <string.h>
-#include <pthread.h>
+typedef struct psc_spinlock psc_spinlock_t;
 
-#include "psc_util/pthrutil.h"
-
-typedef pthread_mutex_t psc_spinlock_t;
-
-#define LOCK_INIT(lk)		psc_pthread_mutex_init(lk)
-
-#define LOCK_INITIALIZER	PTHREAD_ERRORCHECK_MUTEX_INITIALIZER_NP
-
-static __inline int
-LOCK_ENSURE(psc_spinlock_t *lk)
-{
-	psc_pthread_mutex_ensure_locked(lk);
-	return (1);
-}
-
-static __inline void
-freelock(psc_spinlock_t *lk)
-{
-	psc_pthread_mutex_unlock(lk);
-}
-
-static __inline void
-spinlock(psc_spinlock_t *lk)
-{
-	psc_pthread_mutex_lock(lk);
-}
-
-static __inline int
-trylock(psc_spinlock_t *lk)
-{
-	int rc;
-
-	rc = psc_pthread_mutex_trylock(lk);
-	if (rc == 0)
-		return (1);
-	else if (rc == EBUSY)
-		return (0);
-	psc_fatalx("trylock: %s", strerror(rc));
-}
-
-/*
- * reqlock - require a lock for a critical section.
- *	locks if unlocked, doesn't if already locked
- *	(to avoid deadlock).
- * @lk: the lock.
- * Returns true if the lock is already locked.
- */
-static __inline int
-reqlock(psc_spinlock_t *lk)
-{
-	int rc;
-
-	rc = pthread_mutex_lock(lk);
-	if (rc == 0)
-		return (0);
-	else if (rc == EDEADLK)
-		return (1);
-	psc_fatalx("reqlock: %s", strerror(rc));
-}
-
-static __inline int
-tryreqlock(psc_spinlock_t *lk, int *locked)
-{
-	struct timespec ts;
-	int rc;
-
-	memset(&ts, 0, sizeof(ts));
-	rc = pthread_mutex_timedlock(lk, &ts);
-	if (rc == 0) {
-		*locked = 0;
-		return (1);
-	} else if (rc == EBUSY) {
-		*locked = 0;
-		return (0);
-	} else if (rc == EDEADLK) {
-		*locked = 1;
-		return (1);
-	}
-	psc_fatalx("tryreqlock: %s", strerror(rc));
-}
-
-/*
- * ureqlock - "unrequire" a lock -- unlocks the lock if
- *	it was locked for the nearest "reqlock ... ureqlock"
- *	section and doesn't if the lock was already locked
- *	before the critical section began.
- * @lk: the lock.
- * @waslocked: return value from reqlock().
- */
-static __inline void
-ureqlock(psc_spinlock_t *lk, int waslocked)
-{
-	if (!waslocked)
-		freelock(lk);
-}
+#define LOCK_INITIALIZER	PSC_SPINLOCK_INIT
+#define LOCK_INIT(psl)		psc_spin_init(psl)
+#define LOCK_ENSURE(psl)	psc_spin_ensure(psl)
+#define freelock(psl)		psc_spin_unlock(psl)
+#define trylock(psl)		psc_spin_trylock(psl)
+#define spinlock(psl)		psc_spin_lock(psl)
+#define reqlock(psl)		psc_spin_reqlock(psl)
+#define tryreqlock(psl, lk)	psc_spin_tryreqlock((psl), (lk))
+#define ureqlock(psl, lk)	psc_spin_ureqlock((psl), (lk))
 
 #else
 
