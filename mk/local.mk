@@ -49,7 +49,7 @@ KERNEL_BASE=	/usr/src/kernels/linux
 
 ifneq ($(wildcard /opt/sgi),)
   # on altix
-  DEFINES+=	-DCONFIG_NR_CPUS=2 -DHAVE_NUMA
+  NUMA_DEFINES=	-DCONFIG_NR_CPUS=2 -DHAVE_NUMA
   NUMA_LIBS=	-lcpuset -lbitmask -lnuma
 endif
 

@@ -133,6 +133,10 @@ endif
 ifneq ($(filter pfl,${MODULES}),)
 INCLUDES+=	-I${PFL_BASE}/include
 SRC_PATH+=	${PFL_BASE}
+
+ ifneq ($(filter pthread,${MODULES}),)
+ MODULES+=	numa
+ endif
 endif
 
 ifneq ($(filter mpi,${MODULES}),)
@@ -150,6 +154,11 @@ endif
 ifneq ($(filter zcc,${MODULES}),)
 CC=		ZINCPATH=${ZEST_BASE}/intercept/include \
 		ZLIBPATH=${ZEST_BASE}/client/linux-mt ${ZEST_BASE}/scripts/zcc
+endif
+
+ifneq ($(filter numa,${MODULES}),)
+DEFINES+=	${NUMA_DEFINES}
+LDFLAGS+=	${NUMA_LIBS}
 endif
 
 # OBJDIR is added to .c below since lex/yacc intermediate files get generated there.
