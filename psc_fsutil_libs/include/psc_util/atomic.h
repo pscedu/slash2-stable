@@ -25,7 +25,7 @@
 
 #include "psc_util/log.h"
 
-#define psc_atomic16_init			_pfl_gen_atomic16_init
+#define psc_atomic16_init(v)
 #define psc_atomic16_add			_pfl_gen_atomic16_add
 #define psc_atomic16_sub			_pfl_gen_atomic16_sub
 #define psc_atomic16_sub_and_test0		_pfl_gen_atomic16_sub_and_test0
@@ -45,7 +45,7 @@
 #define psc_atomic16_setmask_getold		_pfl_gen_atomic16_setmask_getold
 #define psc_atomic16_xchg			_pfl_gen_atomic16_xchg
 
-#define psc_atomic32_init			_pfl_gen_atomic32_init
+#define psc_atomic32_init(v)
 #define psc_atomic32_add			_pfl_gen_atomic32_add
 #define psc_atomic32_sub			_pfl_gen_atomic32_sub
 #define psc_atomic32_sub_and_test0		_pfl_gen_atomic32_sub_and_test0
@@ -65,7 +65,7 @@
 #define psc_atomic32_setmask_getold		_pfl_gen_atomic32_setmask_getold
 #define psc_atomic32_xchg			_pfl_gen_atomic32_xchg
 
-#define psc_atomic64_init			_pfl_gen_atomic64_init
+#define psc_atomic64_init(v)
 #define psc_atomic64_add			_pfl_gen_atomic64_add
 #define psc_atomic64_sub			_pfl_gen_atomic64_sub
 #define psc_atomic64_sub_and_test0		_pfl_gen_atomic64_sub_and_test0
