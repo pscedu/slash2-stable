@@ -17,6 +17,11 @@
  * %PSC_END_COPYRIGHT%
  */
 
+/*
+ * XXX: i386 atomic recursively depends on this to implement 64-bit
+ * cmpxchg on machines that do not have the cmpxchg8b extension.
+ */
+
 #ifndef _PFL_SPINLOCK_H_
 #define _PFL_SPINLOCK_H_
 
@@ -51,7 +56,12 @@ struct psc_spinlock {
  * psc_spin_init - Initialize a spinlock.
  * @psl: spinlock.
  */
-#define psc_spin_init(psl)	((psl)->psl_value = PSL_UNLOCKED)
+static __inline void
+psc_spin_init(struct psc_spinlock *psl)
+{
+	memset(psl, 0, sizeof(*psl));
+	psc_atomic32_set(&psl->psl_value, PSL_UNLOCKED);
+}
 
 /**
  * psc_spin_ensure - Ensure that a spinlock is owned by the caller.
