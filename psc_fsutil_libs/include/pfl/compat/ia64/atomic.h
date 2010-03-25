@@ -90,21 +90,6 @@ psc_atomic64_add(psc_atomic64_t *v, int64_t i)
 	return newv;
 }
 
-#undef psc_atomic32_sub
-static __inline int32_t
-psc_atomic32_sub(psc_atomic32_t *v, int32_t i)
-{
-	int32_t old, newv;
-	CMPXCHG_BUGCHECK_DECL
-
-	do {
-		CMPXCHG_BUGCHECK(v);
-		old = psc_atomic32_read(v);
-		newv = old - i;
-	} while (ia64_cmpxchg(acq, v, old, newv, sizeof(psc_atomic32_t)) != old);
-	return newv;
-}
-
 #undef psc_atomic16_sub
 static __inline int16_t
 psc_atomic16_sub(psc_atomic16_t *v, int16_t i)
@@ -121,7 +106,7 @@ psc_atomic16_sub(psc_atomic16_t *v, int16_t i)
 }
 
 #undef psc_atomic32_sub
-static __inline int
+static __inline int32_t
 psc_atomic32_sub(psc_atomic32_t *v, int32_t i)
 {
 	int32_t old, newv;
@@ -136,7 +121,7 @@ psc_atomic32_sub(psc_atomic32_t *v, int32_t i)
 }
 
 #undef psc_atomic64_sub
-static __inline int
+static __inline int64_t
 psc_atomic64_sub(psc_atomic64_t *v, int64_t i)
 {
 	int64_t old, newv;
@@ -225,92 +210,94 @@ psc_atomic64_sub(psc_atomic64_t *v, int64_t i)
 #undef psc_atomic64_dec
 #define psc_atomic64_dec(v)			psc_atomic64_sub((v), 1)
 
-static __inline void
-psc_atomic32_set_mask(psc_atomic32_t *v, int32_t mask)
-{
-	int32_t oldval, newval;
-	CMPXCHG_BUGCHECK_DECL
-
-	do {
-		CMPXCHG_BUGCHECK(v);
-		oldval = psc_atomic32_read(v);
-		newval = oldval | mask;
-	} while (ia64_cmpxchg(acq, v, oldval,
-	    newval, sizeof(newval)) != oldval);
-}
-
-static __inline void
-psc_atomic32_clear_mask(psc_atomic32_t *v, int32_t mask)
-{
-	int32_t oldval, newval;
-	CMPXCHG_BUGCHECK_DECL
-
-	do {
-		CMPXCHG_BUGCHECK(v);
-		oldval = psc_atomic32_read(v);
-		newval = oldval & ~mask;
-	} while (ia64_cmpxchg(acq, v, oldval,
-	    newval, sizeof(newval)) != oldval);
-}
-
 #undef psc_atomic32_setmask
 static __inline void
 psc_atomic32_setmask(psc_atomic32_t *v, int32_t mask)
 {
-	int32_t oldval, newval;
+	int32_t oldv, newv;
 	CMPXCHG_BUGCHECK_DECL
 
 	do {
 		CMPXCHG_BUGCHECK(v);
-		oldval = psc_atomic32_read(v);
-		newval = oldval | mask;
-	} while (ia64_cmpxchg(acq, v, oldval,
-	    newval, sizeof(newval)) != oldval);
+		oldv = psc_atomic32_read(v);
+		newv = oldv | mask;
+	} while (ia64_cmpxchg(acq, v, oldv,
+	    newv, sizeof(newv)) != oldv);
 }
 
 #undef psc_atomic64_setmask
 static __inline void
 psc_atomic64_setmask(psc_atomic64_t *v, int64_t mask)
 {
-	int64_t oldval, newval;
+	int64_t oldv, newv;
 	CMPXCHG_BUGCHECK_DECL
 
 	do {
 		CMPXCHG_BUGCHECK(v);
-		oldval = psc_atomic64_read(v);
-		newval = oldval | mask;
-	} while (ia64_cmpxchg(acq, v, oldval,
-	    newval, sizeof(newval)) != oldval);
+		oldv = psc_atomic64_read(v);
+		newv = oldv | mask;
+	} while (ia64_cmpxchg(acq, v, oldv,
+	    newv, sizeof(newv)) != oldv);
 }
 
 #undef psc_atomic32_clearmask
 static __inline void
 psc_atomic32_clearmask(psc_atomic32_t *v, int32_t mask)
 {
-	int32_t oldval, newval;
+	int32_t oldv, newv;
 	CMPXCHG_BUGCHECK_DECL
 
 	do {
 		CMPXCHG_BUGCHECK(v);
-		oldval = psc_atomic32_read(v);
-		newval = oldval & ~mask;
-	} while (ia64_cmpxchg(acq, v, oldval,
-	    newval, sizeof(newval)) != oldval);
+		oldv = psc_atomic32_read(v);
+		newv = oldv & ~mask;
+	} while (ia64_cmpxchg(acq, v, oldv,
+	    newv, sizeof(newv)) != oldv);
 }
 
 #undef psc_atomic64_clearmask
 static __inline void
 psc_atomic64_clearmask(psc_atomic64_t *v, int64_t mask)
 {
-	int64_t oldval, newval;
+	int64_t oldv, newv;
 	CMPXCHG_BUGCHECK_DECL
 
 	do {
 		CMPXCHG_BUGCHECK(v);
-		oldval = psc_atomic64_read(v);
-		newval = oldval & ~mask;
-	} while (ia64_cmpxchg(acq, v, oldval,
-	    newval, sizeof(newval)) != oldval);
+		oldv = psc_atomic64_read(v);
+		newv = oldv & ~mask;
+	} while (ia64_cmpxchg(acq, v, oldv,
+	    newv, sizeof(newv)) != oldv);
+}
+
+#undef psc_atomic16_cmpxchg
+static __inline int16_t
+psc_atomic16_cmpxchg(psc_atomic16_t *v, int16_t cmpv, int16_t newv)
+{
+	CMPXCHG_BUGCHECK_DECL
+
+	CMPXCHG_BUGCHECK(v);
+	return (ia64_cmpxchg(acq, v, cmpv, newv, sizeof(newv)));
+}
+
+#undef psc_atomic32_cmpxchg
+static __inline int32_t
+psc_atomic32_cmpxchg(psc_atomic32_t *v, int32_t cmpv, int32_t newv)
+{
+	CMPXCHG_BUGCHECK_DECL
+
+	CMPXCHG_BUGCHECK(v);
+	return (ia64_cmpxchg(acq, v, cmpv, newv, sizeof(newv)));
+}
+
+#undef psc_atomic64_cmpxchg
+static __inline int64_t
+psc_atomic64_cmpxchg(psc_atomic64_t *v, int64_t cmpv, int64_t newv)
+{
+	CMPXCHG_BUGCHECK_DECL
+
+	CMPXCHG_BUGCHECK(v);
+	return (ia64_cmpxchg(acq, v, cmpv, newv, sizeof(newv)));
 }
 
 #endif /* _PFL_COMPAT_IA64_ATOMIC_H_ */
