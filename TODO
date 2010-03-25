@@ -26,7 +26,6 @@ general reminders
 
 make
 - rename ROOTDIR -> PROJ_BASE
-- introduce APP_BASE
 - ensure all SRCS exist
 - make spins if no SRCS or SUBDIRS
 

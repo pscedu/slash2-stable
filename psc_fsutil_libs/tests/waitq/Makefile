@@ -1,6 +1,7 @@
 # $Id$
 
-include ../Makefile.path
+ROOTDIR=../../..
+include ${ROOTDIR}/Makefile.path
 
 PROG=		waitq_test
 SRCS+=		waitq_test.c

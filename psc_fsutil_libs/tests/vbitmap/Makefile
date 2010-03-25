@@ -1,6 +1,7 @@
 # $Id$
 
-include ../Makefile.path
+ROOTDIR=../../..
+include ${ROOTDIR}/Makefile.path
 
 PROG=		vbitmap_test
 SRCS+=		vbitmap_test.c

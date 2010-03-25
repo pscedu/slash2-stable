@@ -1,6 +1,7 @@
 # $Id$
 
-include ../Makefile.path
+ROOTDIR=../../..
+include ${ROOTDIR}/Makefile.path
 
 PROG=		atomic_test
 SRCS+=		atomic_test.c
@@ -9,6 +10,6 @@ SRCS+=		${PFL_BASE}/psc_util/init.c
 SRCS+=		${PFL_BASE}/psc_util/log.c
 SRCS+=		${PFL_BASE}/psc_util/strlcpy.c
 
-MODULES+=	pthread
+MODULES+=	pthread pfl
 
 include ${PFLMK}

@@ -1,7 +1,7 @@
 # $Id$
 
 ROOTDIR=.
-include Makefile.path
+include ${ROOTDIR}/Makefile.path
 
 SUBDIRS+=	apps/sft
 SUBDIRS+=	fio
@@ -17,7 +17,7 @@ SUBDIRS+=	zest/utils
 
 MAN+=		${ROOTDIR}/doc/pflenv.7
 
-include mk/main.mk
+include ${MAINMK}
 
 build-prereq:
 	(cd zest/utils/typedump && ${MAKE} regen)

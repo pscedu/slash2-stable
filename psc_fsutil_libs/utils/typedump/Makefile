@@ -1,12 +1,13 @@
 # $Id$
 
-include ../Makefile.path
+ROOTDIR=../../..
+include ${ROOTDIR}/Makefile.path
 
 PROG=		typedump
 SRCS+=		typedump.c
 
 # pthread is specified here to use correct struct sizes
-MODULES+=	lnet-hdrs pthread
+MODULES+=	lnet-hdrs pthread pfl
 
 include ${PFLMK}
 

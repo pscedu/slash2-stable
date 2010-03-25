@@ -1,7 +1,13 @@
 # $Id$
 
+FUSE_BASE=	${ROOTDIR}/fuse/fuse-2.8.1
 LNET_BASE=	${ROOTDIR}/lnet-lite
 PFL_BASE?=	${ROOTDIR}/psc_fsutil_libs
+SLASH_BASE=	${ROOTDIR}/slash_nara
+ZEST_BASE=	${ROOTDIR}/zest
 ZFS_BASE=	${ROOTDIR}/zfs/zfs-fuse-0.6.0/src
-FUSE_BASE=	${ROOTDIR}/fuse/fuse-2.8.1
+
 MAINMK=		${ROOTDIR}/mk/main.mk
+PFLMK=		${PFL_BASE}/mk/main.mk
+SLASHMK=	${SLASH_BASE}/mk/main.mk
+ZESTMK=		${ZEST_BASE}/mk/main.mk

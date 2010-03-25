@@ -1,4 +1,0 @@
-# $Id$
-
-PFL_BASE:=${PFL_BASE}../
-include ${PFL_BASE}/Makefile.path

@@ -1,5 +1,9 @@
 # $Id$
 
+ifneq ($(filter ${ROOTDIR}/psc_fsutil_libs/psc_%.c,${SRCS}),)
+MODULES+=		pfl
+endif
+
 -include ${ROOTDIR}/mk/local.mk
 
 _TSRCS=			$(foreach fn,${SRCS},$(realpath ${fn}))
@@ -15,6 +19,8 @@ _TSUBDIRS=		$(foreach dir,${SUBDIRS},$(realpath ${dir}))
 _LEXINTM=		$(patsubst %.l,%.c,$(addprefix ${OBJDIR}/,$(notdir $(filter %.l,${_TSRCS}))))
 _YACCINTM=		$(patsubst %.y,%.c,$(addprefix ${OBJDIR}/,$(notdir $(filter %.y,${_TSRCS}))))
 _C_SRCS=		$(filter %.c,${_TSRCS}) ${_YACCINTM} ${_LEXINTM}
+
+SRC_PATH+=		.
 
 OBJDIR=			${CURDIR}/obj
 DEPEND_FILE=		${OBJDIR}/.depend
@@ -100,6 +106,7 @@ endif
 
 ifneq ($(filter lnet-hdrs,${MODULES}),)
 INCLUDES+=	-I${LNET_BASE}/include
+SRC_PATH+=	${LNET_BASE}
 endif
 
 ifneq ($(filter lnet-nid,${MODULES}),)
@@ -125,6 +132,7 @@ endif
 
 ifneq ($(filter pfl,${MODULES}),)
 INCLUDES+=	-I${PFL_BASE}/include
+SRC_PATH+=	${PFL_BASE}
 endif
 
 ifneq ($(filter mpi,${MODULES}),)
@@ -276,9 +284,6 @@ build-prereq-hook: recurse-build-prereq-hook build-prereq
 build:
 	${MAKE} clean && ${MAKE} build-prereq-hook && ${MAKE} all
 
-qbuild:
-	@${MAKE} build >/dev/null
-
 copyright: recurse-copyright
 	@if ${NOTEMPTY} "${_TSRCS}"; then						\
 		${ECHORUN} ${ROOTDIR}/tools/gencopyright.sh ${_TSRCS};			\
@@ -296,27 +301,11 @@ doc: recurse-doc
 printvar-%:
 	@echo ${$(patsubst printvar-%,%,$@)}
 
-#CS_ARGS+=-s${APP_BASE}
-#ET_ARGS+="${APP_BASE}"
-
-ifdef SLASH_BASE
-CS_ARGS+=-s${SLASH_BASE}
-ET_ARGS+=${SLASH_BASE}
-
-CS_ARGS+=-s${ZFS_BASE}
-ET_ARGS+=${ZFS_BASE}
-endif
-
-ifdef ZEST_BASE
-CS_ARGS+=-s${ZEST_BASE}
-ET_ARGS+=${ZEST_BASE}
-endif
-
 cscope cs: recurse-cs
-	cscope -Rbq ${CS_ARGS} -s${PFL_BASE} -s${LNET_BASE}
+	cscope -Rbq $(addprefix -s,${SRC_PATH})
 
 etags: recurse-etags
-	find ${ET_ARGS} ${PFL_BASE} ${PFL_BASE} -name \*.[chly] | xargs etags
+	find ${SRC_PATH} -name \*.[chly] | xargs etags
 
 printenv:
 	@env
