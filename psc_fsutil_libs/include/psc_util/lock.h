@@ -44,6 +44,7 @@ static __inline int
 LOCK_ENSURE(psc_spinlock_t *lk)
 {
 	psc_pthread_mutex_ensure_locked(lk);
+	return (1);
 }
 
 static __inline void
