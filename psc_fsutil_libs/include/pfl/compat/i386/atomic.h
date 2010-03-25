@@ -38,18 +38,6 @@ struct psc_i386_atomic64 {
 #define _PFL_GETA32(v)			((v)->value32)
 #define _PFL_GETA64(v)			((v)->value64)
 
-#undef psc_atomic16_init
-static __inline void
-psc_atomic16_init(__unusedx psc_atomic16_t *v)
-{
-}
-
-#undef psc_atomic32_init
-static __inline void
-psc_atomic32_init(__unusedx psc_atomic32_t *v)
-{
-}
-
 #undef psc_atomic64_init
 static __inline void
 psc_atomic64_init(psc_atomic64_t *v)
