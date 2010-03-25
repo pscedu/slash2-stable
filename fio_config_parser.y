@@ -84,7 +84,8 @@ group_start:	GROUP STR GROUP_START {
 	bzero(group, sizeof(GROUP_t));
 	INIT_LIST_HEAD(&group->group_list);
 	list_add_tail(&group->group_list, &groupList);
-	strncpy(group->test_name, $2, TEST_GROUP_NAME_MAX);
+	strncpy(group->test_name, $2, TEST_GROUP_NAME_MAX - 1);
+	group->test_name[TEST_GROUP_NAME_MAX - 1] = '\0';
 	currentGroup = group;
 
 	BDEBUG("New Group Declared: Name '%s' Addr %p\n",
