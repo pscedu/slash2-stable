@@ -47,24 +47,6 @@ DEFINES+=	-DHAVE_GETHOSTBYNAME
 
 KERNEL_BASE=	/usr/src/kernels/linux
 
-ifneq ($(wildcard /opt/sgi),)
-  # on altix
-  NUMA_DEFINES=	-DCONFIG_NR_CPUS=2 -DHAVE_NUMA
-  NUMA_LIBS=	-lcpuset -lbitmask -lnuma
-
-  slash_nara_mount_slash_obj_lconf_c_PCPP_FLAGS=	-x
-  slash_nara_slashd_obj_lconf_c_PCPP_FLAGS=		-x
-  slash_nara_sliod_slash_obj_lconf_c_PCPP_FLAGS=	-x
-  slash_nara_tests_config_slash_obj_lconf_c_PCPP_FLAGS=	-x
-endif
-
-ifneq ($(wildcard /opt/xt-pe),)
-  # on xt3
-  SRCS+=	${PFL_BASE}/compat/posix_memalign.c
-  DEFINES+=	-DHOST_NAME_MAX=MAXHOSTNAMELEN
-  QKCC=		qk-gcc
-endif
-
 FUSE_CFLAGS=	$$(PKG_CONFIG_PATH=${FUSE_BASE} ${PKG_CONFIG} --cflags fuse | ${EXTRACT_CFLAGS})
 FUSE_DEFINES=	$$(PKG_CONFIG_PATH=${FUSE_BASE} ${PKG_CONFIG} --cflags fuse | ${EXTRACT_DEFINES})
 FUSE_INCLUDES=	$$(PKG_CONFIG_PATH=${FUSE_BASE} ${PKG_CONFIG} --cflags fuse | ${EXTRACT_INCLUDES})
@@ -115,3 +97,26 @@ lnet_lite_lnet_lo_c_CFLAGS=			-DPSC_SUBSYS=PSS_LNET -Wno-shadow
 lnet_lite_lnet_peer_c_CFLAGS=			-DPSC_SUBSYS=PSS_LNET -Wno-shadow
 lnet_lite_lnet_router_c_CFLAGS=			-DPSC_SUBSYS=PSS_LNET -Wno-shadow
 lnet_lite_lnet_router_proc_c_CFLAGS=		-DPSC_SUBSYS=PSS_LNET -Wno-shadow
+
+# system-specific settings/overrides
+ifneq ($(wildcard /opt/sgi),)
+  # on altix
+  NUMA_DEFINES=					-DCONFIG_NR_CPUS=2 -DHAVE_NUMA
+  NUMA_LIBS=					-lcpuset -lbitmask -lnuma
+  LIBL=						-lfl
+
+  slash_nara_mount_slash_obj_lconf_c_PCPP_FLAGS=	-x
+  slash_nara_slashd_obj_lconf_c_PCPP_FLAGS=		-x
+  slash_nara_sliod_obj_lconf_c_PCPP_FLAGS=		-x
+  slash_nara_tests_config_slash_obj_lconf_c_PCPP_FLAGS=	-x
+
+  zest_zestFormat_obj_zestLexConfig_c_PCPP_FLAGS=	-x
+  zest_zestion_obj_zestLexConfig_c_PCPP_FLAGS=		-x
+endif
+
+ifneq ($(wildcard /opt/xt-pe),)
+  # on xt3
+  SRCS+=					${PFL_BASE}/compat/posix_memalign.c
+  DEFINES+=					-DHOST_NAME_MAX=MAXHOSTNAMELEN
+  QKCC=						qk-gcc
+endif
