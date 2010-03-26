@@ -28,6 +28,8 @@ make
 - rename ROOTDIR -> PROJ_BASE
 - ensure all SRCS exist
 - make spins if no SRCS or SUBDIRS
+- setting variables such as CFLAGS on the command line recursively
+  propagates all additive assignments in subdirs
 
 pfl
 - ctlapi GETTREE?
