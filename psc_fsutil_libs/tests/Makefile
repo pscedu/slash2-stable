@@ -4,6 +4,7 @@ ROOTDIR=../..
 include ${ROOTDIR}/Makefile.path
 
 SUBDIRS+=	acsvc
+SUBDIRS+=	alloc
 SUBDIRS+=	atomic
 SUBDIRS+=	bitflag
 SUBDIRS+=	fmtstr
