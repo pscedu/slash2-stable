@@ -67,6 +67,9 @@ struct psc_ctlmsg_lc {
 
 struct psc_ctlmsg_stats {
 	char			pcst_thrname[PSC_THRNAME_MAX];
+#ifdef HAVE_NUMA
+	int32_t			pcst_memnode;
+#endif
 	int32_t			pcst_thrtype;
 	int32_t			pcst_thrid;
 	uint32_t		pcst_flags;
