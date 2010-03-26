@@ -29,15 +29,16 @@
 #endif
 
 #ifndef offsetof
-#define offsetof(s, e)	((size_t)&((s *)0)->e)
+#define offsetof(s, e)	((size_t)&((s *)NULL)->e)
 #endif
 
+#ifndef CMP
 #define CMP(a, b)	((a) < (b) ? -1 : ((a) > (b) ? 1 : 0))
+#endif
 
-/* Define __GNUC_PREREQ__(maj, min). */
 #ifndef __GNUC_PREREQ__
 # ifdef __GNUC__
-#  define __GNUC_PREREQ__(maj, min) \
+#  define __GNUC_PREREQ__(maj, min)					\
 	((__GNUC__ > (maj)) || (__GNUC__ == (maj) && __GNUC_MINOR__ >= (min)))
 # else
 #  define __GNUC_PREREQ__(maj, min) 0
@@ -59,13 +60,11 @@
 
 #define __unusedx	__attribute__((__unused__))
 
-#undef __weak
-#define __weak		__attribute__((__weak__))
+#ifndef __weak
+# define __weak		__attribute__((__weak__))
+#endif
 
-/*
- * Keyword to mark something as file-scoped
- * without the side effects of using `static'.
- */
+/* For marking something as file-scoped without side effects of `static'. */
 #define __static
 
 #define ATTR_HASALL(c, a)	(((c) & (a)) == (a))
@@ -78,21 +77,21 @@
 #define ATTR_NOTSET(c, a)	ATTR_NONESET((c), (a))
 #define ATTR_RESET(c)		((c) = 0)
 
-#define ATTR_XSET(c, a)						\
-	do {							\
-		if (ATTR_ISSET(c, a))				\
-			abort();				\
-		ATTR_SET(c, a);					\
+#define ATTR_XSET(c, a)							\
+	do {								\
+		if (ATTR_ISSET((c), (a)))				\
+			abort();					\
+		ATTR_SET((c), (a));					\
 	} while (0)
 
-#define ATTR_XUNSET(c, a)					\
-	do {							\
-		if (!ATTR_HASALL(c, a))				\
-			abort();				\
-		ATTR_UNSET(c, a);				\
+#define ATTR_XUNSET(c, a)						\
+	do {								\
+		if (!ATTR_HASALL((c), (a)))				\
+			abort();					\
+		ATTR_UNSET((c), (a));					\
 	} while (0)
 
 /* if multiple of 2, use bitwise ops to simplify math */
-#define PSC_ALIGN(sz, incr)	(incr * ((sz + (incr - 1)) / incr))
+#define PSC_ALIGN(sz, incr)	((incr) * (((sz) + ((incr) - 1)) / (incr)))
 
 #endif /* _PFL_CDEFS_H_ */
