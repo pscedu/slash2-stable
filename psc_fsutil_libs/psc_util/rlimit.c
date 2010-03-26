@@ -20,7 +20,10 @@
 #include <sys/types.h>
 #include <sys/resource.h>
 
+#include <inttypes.h>
+
 #include "psc_util/lock.h"
+#include "psc_util/log.h"
 
 psc_spinlock_t psc_rlimit_lock = LOCK_INITIALIZER;
 
@@ -54,4 +57,24 @@ psc_getrlimit(int field, rlim_t *soft, rlim_t *hard)
 			*hard = rlim.rlim_max;
 	}
 	return (rc);
+}
+
+int
+psc_rlim_adj(int field, int adjv)
+{
+	rlim_t v;
+	int rc;
+
+	spinlock(&psc_rlimit_lock);
+	rc = psc_getrlimit(field, NULL, &v);
+	if (rc == -1)
+		psc_warn("getrlimit %d", field);
+	else {
+		v += adjv;
+		rc = psc_setrlimit(field, v, v);
+		if (rc == -1)
+			psc_warn("setrlimit %d %"PRId64, field, v);
+	}
+	freelock(&psc_rlimit_lock);
+	return (rc == 0);
 }
