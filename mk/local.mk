@@ -120,3 +120,11 @@ ifneq ($(wildcard /opt/xt-pe),)
   DEFINES+=					-DHOST_NAME_MAX=MAXHOSTNAMELEN
   QKCC=						qk-gcc
 endif
+
+#HAVE_POSIX_MEMALIGN=					$(shell)
+#
+#ifneq ($(filter ${ROOTDIR}/psc_fsutil_libs/psc_util/alloc.c,${SRCS}),)
+# ifndef HAVE_POSIX_MEMALIGN
+# SRCS+=						${ROOTDIR}/psc_fsutil_libs/compat/posix_memalign.c
+# endif
+#endif
