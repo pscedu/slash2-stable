@@ -3,6 +3,8 @@
 ROOTDIR=../..
 include ${ROOTDIR}/Makefile.path
 
+SRC_PATH+=	.
+
 PROG=		sft
 SRCS+=		sft.c
 SRCS+=		${PFL_BASE}/psc_util/alloc.c
