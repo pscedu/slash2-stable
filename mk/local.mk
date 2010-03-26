@@ -16,7 +16,7 @@ HDRCLEAN=	${ROOTDIR}/tools/hdrclean.pl
 LIBDEP=		${ROOTDIR}/tools/libdep.pl
 MDPROC=		${ROOTDIR}/tools/mdproc.pl
 MINVER=		${ROOTDIR}/tools/minver.pl
-PCPP=		${ROOTDIR}/tools/pcpp.pl -e
+PCPP=		${ROOTDIR}/tools/pcpp.pl
 
 MAKEFLAGS+=	--no-print-directory
 
@@ -51,6 +51,11 @@ ifneq ($(wildcard /opt/sgi),)
   # on altix
   NUMA_DEFINES=	-DCONFIG_NR_CPUS=2 -DHAVE_NUMA
   NUMA_LIBS=	-lcpuset -lbitmask -lnuma
+
+  slash_nara_mount_slash_obj_lconf_c_PCPP_FLAGS=	-x
+  slash_nara_slashd_obj_lconf_c_PCPP_FLAGS=		-x
+  slash_nara_sliod_slash_obj_lconf_c_PCPP_FLAGS=	-x
+  slash_nara_tests_config_slash_obj_lconf_c_PCPP_FLAGS=	-x
 endif
 
 ifneq ($(wildcard /opt/xt-pe),)

@@ -79,6 +79,8 @@ STRIPROOTDIR=		$(subst $(realpath ${ROOTDIR})/,,$1)
 PATH_NAMIFY=		$(subst .,_,$(subst -,_,$(subst /,_,$1)))
 FILE_CFLAGS_VAR=	$(call PATH_NAMIFY,$(call STRIPROOTDIR,$(realpath $1)))_CFLAGS
 FILE_CFLAGS=		${$(call FILE_CFLAGS_VAR,$1)}
+FILE_PCPP_FLAGS_VAR=	$(call PATH_NAMIFY,$(call STRIPROOTDIR,$(realpath $1)))_PCPP_FLAGS
+FILE_PCPP_FLAGS=	${$(call FILE_PCPP_FLAGS_VAR,$1)}
 
 ifneq ($(filter fuse,${MODULES}),)
 CFLAGS+=	${FUSE_CFLAGS}
@@ -187,7 +189,7 @@ ${OBJDIR}/$(notdir %.dep) : %.c
 	    ) $$(echo $(call FILE_CFLAGS,$<) | ${EXTRACT_INCLUDES}) -I$(dir $<) -I. $(realpath $<)
 
 ${OBJDIR}/$(notdir %.o) : %.c
-	${PCPP} $(realpath $<) | $(							\
+	${PCPP} $(call FILE_PCPP_FLAGS,$<) $(realpath $<) | $(				\
 	) ${CC} -x c ${CFLAGS} $(call FILE_CFLAGS,$<) -I$(dir $<) -I. - -c -o $@
 
 ${OBJDIR}/$(notdir %.E) : %.c

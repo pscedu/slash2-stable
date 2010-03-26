@@ -7,7 +7,7 @@ use Getopt::Std;
 use File::Basename;
 
 sub usage {
-	warn "usage: $0 [-e] file\n";
+	warn "usage: $0 [-x] file\n";
 	exit 1;
 }
 
@@ -17,7 +17,7 @@ sub fatal {
 }
 
 my %opts;
-getopts("e", \%opts) or usage;
+getopts("x", \%opts) or usage;
 usage unless @ARGV == 1;
 
 my $fn = $ARGV[0];
@@ -38,7 +38,7 @@ if ($data !~ m!psc_util/log\.h! or
     basename($fn) eq "subsys.c" or
     basename($fn) eq "thread.c" or
     basename($fn) eq "typedump.c" or
-    !$opts{e}) {
+    $opts{x}) {
 	print $data;
 	exit 0;
 }
