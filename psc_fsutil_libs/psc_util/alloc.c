@@ -17,8 +17,6 @@
  * %PSC_END_COPYRIGHT%
  */
 
-#define _XOPEN_SOURCE 600
-
 #include <sys/types.h>
 #include <sys/mman.h>
 
@@ -35,18 +33,12 @@
 long pscPageSize;
 
 /*
- * _psc_pool_reapsome - Provide an overrideable reclaimer for when
- *	pools are not in use.
+ * _psc_pool_reapsome - Provide an overrideable reclaimer for when pools
+ *	are not in use.
  */
 __weak void
 _psc_pool_reapsome(__unusedx size_t size)
 {
-}
-
-__weak int
-posix_memalign(__unusedx void **p, __unusedx size_t align, __unusedx size_t size)
-{
-	psc_fatal("not implemented");
 }
 
 /*
