@@ -3,6 +3,8 @@
 ROOTDIR=..
 include ${ROOTDIR}/Makefile.path
 
+SRC_PATH+=	.
+
 PROG=		fio
 SRCS+=		fio.c
 SRCS+=		fio_config_lex.l
