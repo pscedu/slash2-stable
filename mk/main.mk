@@ -20,8 +20,6 @@ _LEXINTM=		$(patsubst %.l,%.c,$(addprefix ${OBJDIR}/,$(notdir $(filter %.l,${_TS
 _YACCINTM=		$(patsubst %.y,%.c,$(addprefix ${OBJDIR}/,$(notdir $(filter %.y,${_TSRCS}))))
 _C_SRCS=		$(filter %.c,${_TSRCS}) ${_YACCINTM} ${_LEXINTM}
 
-SRC_PATH+=		.
-
 OBJDIR=			${CURDIR}/obj
 DEPEND_FILE=		${OBJDIR}/.depend
 
