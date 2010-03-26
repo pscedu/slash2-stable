@@ -24,6 +24,8 @@
 
 #include <stdlib.h>
 
+#include "psc_util/log.h"
+
 /* aliases for common usage */
 #define PSCALLOC(sz)		psc_alloc((sz), 0)
 #define TRY_PSCALLOC(sz)	psc_alloc((sz), PAF_CANFAIL)
