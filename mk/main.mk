@@ -264,7 +264,7 @@ install: recurse-install install-hook
 
 clean: recurse-clean
 	${RM} -rf ${OBJDIR}
-	${RM} -f ${PROG} ${LIBRARY} TAGS cscope.out core.[0-9]*
+	${RM} -f ${PROG} ${LIBRARY} TAGS cscope.*out core.[0-9]* *.core
 
 lint: recurse-lint ${_C_SRCS}
 	@if ${NOTEMPTY} "${_TSRCS}"; then						\
@@ -317,4 +317,4 @@ etags: recurse-etags
 	find ${SRC_PATH} -name \*.[chly] | xargs etags
 
 printenv:
-	@env
+	@env | sort
