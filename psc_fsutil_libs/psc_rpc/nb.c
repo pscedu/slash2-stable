@@ -43,6 +43,7 @@ pscrpc_nbreqset_init(pscrpc_set_interpreterf nb_interpret,
 	nbs->nb_reqset.set_interpret = nb_interpret;
 	nbs->nb_callback = nb_callback;
 	atomic_set(&nbs->nb_outstanding, 0);
+	LOCK_INIT(&nbs->nb_lock);
 	return nbs;
 }
 
@@ -92,6 +93,15 @@ pscrpc_nbreqset_reap(struct pscrpc_nbreqset *nbs)
 	struct l_wait_info lwi;
 	int timeout = 1;
 
+	spinlock(&nbs->nb_lock);
+	if (nbs->nb_flags & NBREQSET_WORK_INPROG) {
+		freelock(&nbs->nb_lock);
+		RETURN(0);
+	} else {
+		nbs->nb_flags |= NBREQSET_WORK_INPROG;
+		freelock(&nbs->nb_lock);
+	}
+		
 	lwi = LWI_TIMEOUT(timeout, NULL, NULL);
 	psc_cli_wait_event(&set->set_waitq,
 		       (nreaped=pscrpc_check_set(set, 0)), &lwi);
@@ -132,7 +142,14 @@ pscrpc_nbreqset_reap(struct pscrpc_nbreqset *nbs)
 		}
 	}
 	freelock(&set->set_lock);
+
+	spinlock(&nbs->nb_lock);
+	psc_assert(nbs->nb_flags & NBREQSET_WORK_INPROG);
+	nbs->nb_flags &= ~NBREQSET_WORK_INPROG;
+	freelock(&nbs->nb_lock);
+
 	psc_trace("checked %d requests", nchecked);
+
 	return (nreaped);
 }
 
