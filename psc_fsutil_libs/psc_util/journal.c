@@ -78,6 +78,21 @@ pjournal_xnew(struct psc_journal *pj)
 	return (xh);
 }
 
+int 
+pjournal_xadd_sngl(struct psc_journal *pj, int type, void *data, size_t size)
+{
+	struct psc_journal_xidhndl *xh;
+	int rc;
+
+	xh = pjournal_xnew(pj);
+	xh->pjx_flags |= (PJX_XSTART | PJX_XCLOSE);
+	
+	rc = pjournal_logwrite(xh, type, data, size);
+	PSCFREE(xh);
+
+	return (rc);
+}
+
 /**
  * pjournal_xadd - Log changes to a piece of metadata (i.e. journal
  *	flush item).  We can't reply to our clients until after the log

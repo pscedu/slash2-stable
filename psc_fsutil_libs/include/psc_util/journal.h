@@ -204,5 +204,6 @@ struct psc_journal_xidhndl
 	*pjournal_xnew(struct psc_journal *);
 int	 pjournal_xadd(struct psc_journal_xidhndl *, int, void *, size_t);
 int	 pjournal_xend(struct psc_journal_xidhndl *);
+int      pjournal_xadd_sngl(struct psc_journal *, int, void *, size_t);
 
 #endif /* _PFL_JOURNAL_H_ */
