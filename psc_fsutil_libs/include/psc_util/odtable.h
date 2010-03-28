@@ -102,6 +102,7 @@ void	*odtable_getitem(struct odtable *, const struct odtable_receipt *);
 int	 odtable_load(const char *, struct odtable **);
 int	 odtable_release(struct odtable *);
 void	 odtable_scan(struct odtable *, void (*)(void *, struct odtable_receipt *));
+struct odtable_receipt * odtable_replaceitem(struct odtable *, struct odtable_receipt *, void *);
 
 static __inline off_t
 odtable_getoffset(const struct odtable *odt, size_t elem)

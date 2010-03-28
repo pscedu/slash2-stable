@@ -105,11 +105,39 @@ odtable_getitem(struct odtable *odt, const struct odtable_receipt *odtr)
 			psc_warnx("slot=%zd crc fail "
 			    "odtfcrc=%"PSCPRIxCRC64" elemcrc=%"PSCPRIxCRC64,
 			    odtr->odtr_elem, odtf->odtf_crc, crc);
+			return (NULL);
 		}
-		return (NULL);
 	}
 	return (data);
- }
+}
+
+struct odtable_receipt * 
+odtable_replaceitem(struct odtable *odt, struct odtable_receipt *odtr, 
+	    void *data)
+{
+	struct odtable_entftr *odtf;
+	psc_crc64_t crc;
+	void *p;
+
+	p = odtable_getitem(odt, odtr);
+	odtf = odtable_getfooter(odt, odtr->odtr_elem);
+
+	if (!p || odtable_footercheck(odtf, odtr, 1))
+		return (NULL);
+
+	p = odtable_getitem_addr(odt, odtr->odtr_elem);
+	psc_crc64_calc(&crc, data, odt->odt_hdr->odth_elemsz);
+
+	odtr->odtr_key = (uint64_t)crc;
+	odtf->odtf_crc = crc;
+	memcpy(p, data, odt->odt_hdr->odth_elemsz);
+
+	psc_trace("slot=%zd elemcrc=%"PSCPRIxCRC64, odtr->odtr_elem, crc);
+
+	odtable_sync(odt, odtr->odtr_elem);
+
+	return (odtr);
+}
 
 /**
  * odtable_freeitem - free the odtable slot which corresponds to the provided
@@ -126,6 +154,8 @@ odtable_freeitem(struct odtable *odt, struct odtable_receipt *odtr)
 		return (rc);
 
 	odtf->odtf_inuse = ODTBL_FREE;
+
+	psc_trace("slot=%zd", odtr->odtr_elem);
 
 	odtable_sync(odt, odtr->odtr_elem);
 	psc_vbitmap_unset(odt->odt_bitmap, odtr->odtr_elem);
