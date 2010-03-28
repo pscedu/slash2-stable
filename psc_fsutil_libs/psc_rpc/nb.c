@@ -132,7 +132,7 @@ pscrpc_nbreqset_reap(struct pscrpc_nbreqset *nbs)
 		}
 	}
 	freelock(&set->set_lock);
-	psc_dbg("checked %d requests", nchecked);
+	psc_trace("checked %d requests", nchecked);
 	return (nreaped);
 }
 
