@@ -5,6 +5,10 @@
 int
 main(int argc, char *argv[])
 {
-	void *p = posix_memalign;
+	void *p;
+
+	(void)argc;
+	(void)argv;
+	p = posix_memalign;
 	exit(0);
 }
