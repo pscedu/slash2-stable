@@ -1,8 +1,11 @@
 /* $Id$ */
 
+#include <sys/types.h>
+#include <sys/time.h>
+
+#include <err.h>
 #include <time.h>
 
-#include "psc_util/log.h"
 #include "pfl/compat/clock_gettime.h"
 
 long
@@ -16,7 +19,7 @@ clock_gettime(clockid_t cid, struct timespec *ts)
 		rc = gettimeofday(&tv, NULL);
 		break;
 	default:
-		psc_fatalx("invalid clock ID: %d", cid);
+		errx(1, "invalid clock ID: %d", cid);
 	}
 
 	if (rc == 0) {
