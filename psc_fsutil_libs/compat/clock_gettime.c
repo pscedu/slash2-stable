@@ -3,8 +3,7 @@
 #include <time.h>
 
 #include "psc_util/log.h"
-
-#include "compat/clock_gettime.h"
+#include "pfl/compat/clock_gettime.h"
 
 long
 clock_gettime(clockid_t cid, struct timespec *ts)
