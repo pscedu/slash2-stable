@@ -18,6 +18,7 @@ MDPROC=		${ROOTDIR}/tools/mdproc.pl
 MINVER=		${ROOTDIR}/tools/minver.pl
 PCPP=		${ROOTDIR}/tools/pcpp.pl
 
+QMAKE=		${MAKE} >/dev/null 2>&1
 MAKEFLAGS+=	--no-print-directory
 
 LFLAGS+=	-t $$(if ${MINVER} $$(lex -V | sed 's/[a-z ]*//g') 2.5.5; then echo --nounput; fi)
@@ -65,7 +66,7 @@ ZFS_LIBS=	-L${ZFS_BASE}/zfs-fuse					\
 
 LIBL=		-ll
 LIBZ=		-lz
-THREAD_LIBS=	-pthread -lrt
+THREAD_LIBS=	-pthread
 LIBCURSES=	-lncurses
 
 # global file-specific settings
@@ -98,6 +99,8 @@ lnet_lite_lnet_peer_c_CFLAGS=			-DPSC_SUBSYS=PSS_LNET -Wno-shadow
 lnet_lite_lnet_router_c_CFLAGS=			-DPSC_SUBSYS=PSS_LNET -Wno-shadow
 lnet_lite_lnet_router_proc_c_CFLAGS=		-DPSC_SUBSYS=PSS_LNET -Wno-shadow
 
+OSTYPE:=					$(shell uname)
+
 # system-specific settings/overrides
 ifneq ($(wildcard /opt/sgi),)
   # on altix
@@ -115,16 +118,28 @@ ifneq ($(wildcard /opt/sgi),)
 endif
 
 ifneq ($(wildcard /opt/xt-pe),)
-  # on xt3
-  SRCS+=					${PFL_BASE}/compat/posix_memalign.c
-  DEFINES+=					-DHOST_NAME_MAX=MAXHOSTNAMELEN
-  QKCC=						qk-gcc
+  # on XT3
+  QKCC=							qk-gcc
 endif
 
-#HAVE_POSIX_MEMALIGN=					$(shell)
-#
-#ifneq ($(filter ${ROOTDIR}/psc_fsutil_libs/psc_util/alloc.c,${SRCS}),)
-# ifndef HAVE_POSIX_MEMALIGN
-# SRCS+=						${ROOTDIR}/psc_fsutil_libs/compat/posix_memalign.c
-# endif
-#endif
+ifeq (${OSTYPE},Linux)
+  THREAD_LIBS+=						-lrt
+endif
+
+include ${ROOTDIR}/mk/pickle.mk
+
+ifndef PICKLE_HAVE_POSIX_MEMALIGN
+  SRCS+=						${ROOTDIR}/psc_fsutil_libs/compat/posix_memalign.c
+endif
+
+ifdef PICKLE_HAVE_PTHREAD_MUTEX_TIMEDLOCK
+  DEFINES+=						-DHAVE_PTHREAD_MUTEX_TIMEDLOCK
+endif
+
+ifndef PICKLE_HAVE_CLOCK_GETTIME
+  SRCS+=						${ROOTDIR}/psc_fsutil_libs/compat/clock_gettime.c
+endif
+
+ifndef PICKLE_HAVE_HOST_NAME_MAX
+  DEFINES+=						-DHOST_NAME_MAX=MAXHOSTNAMELEN
+endif
