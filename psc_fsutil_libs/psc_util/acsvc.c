@@ -496,7 +496,7 @@ access_fsop(int op, uid_t uid, gid_t gid, const char *fn, ...)
 		arq->arq_data_access.mode = va_arg(ap, int);
 		break;
 	case ACSOP_CHMOD:
-		arq->arq_data_chmod.mode = va_arg(ap, mode_t);
+		arq->arq_data_chmod.mode = va_arg(ap, int);
 		break;
 	case ACSOP_CHOWN:
 		arq->arq_data_chown.uid = va_arg(ap, uid_t);
@@ -510,16 +510,16 @@ access_fsop(int op, uid_t uid, gid_t gid, const char *fn, ...)
 	case ACSOP_LSTAT:
 		break;
 	case ACSOP_MKDIR:
-		arq->arq_data_mkdir.mode = va_arg(ap, mode_t);
+		arq->arq_data_mkdir.mode = va_arg(ap, int);
 		break;
 	case ACSOP_MKNOD:
-		arq->arq_data_mknod.mode = va_arg(ap, mode_t);
+		arq->arq_data_mknod.mode = va_arg(ap, int);
 		arq->arq_data_mknod.dev = va_arg(ap, dev_t);
 		break;
 	case ACSOP_OPEN:
 		arq->arq_data_open.flags = va_arg(ap, int);
 		if (arq->arq_data_open.flags & O_CREAT)
-			arq->arq_data_open.mode = va_arg(ap, mode_t);
+			arq->arq_data_open.mode = va_arg(ap, int);
 		break;
 	case ACSOP_READLINK:
 		break;
