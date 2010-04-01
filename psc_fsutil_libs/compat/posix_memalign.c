@@ -21,7 +21,7 @@
  * Implementation of posix_memalign(3).
  *
  * XXX: need to track the original pointer and pass that as
- * the value to free(3).
+ * the value to psc_freen(3).
  */
 
 #include <sys/param.h>
@@ -32,7 +32,6 @@
 
 #include "psc_util/alloc.h"
 #include "psc_util/bitflag.h"
-#include "psc_util/log.h"
 
 /**
  * posix_memalign - An overrideable aligned memory allocator for systems
@@ -41,15 +40,18 @@
  * @alignment: alignment size, must be power-of-two.
  * @size: amount of memory to allocate.
  */
-__weak int
+int
 posix_memalign(void **p, size_t alignment, size_t size)
 {
 	void *startp;
 
-psc_fatalx("broken");
-	if (pfl_bitstr_nset(alignment) != 1)
-		psc_fatalx("%zu: bad alignment size, must be power of two (%x bits)",
-		    size, pfl_bitstr_nset(alignment));
+errno = ENOTSUP;
+err(1, "posix_memalign");
+
+	if (pfl_bitstr_nset(&alignment, sizeof(alignment)) != 1)
+		errx(1, "posix_memalign: %zu: bad alignment size, "
+		    "must be power of two (%x bits)",
+		    size, pfl_bitstr_nset(&alignment, sizeof(alignment)));
 
 	size += alignment;
 	startp = malloc(size);
@@ -63,13 +65,15 @@ psc_fatalx("broken");
 	return (0);
 }
 
+#if 0
 /*
  * psc_freen - Free aligned memory.
  * @p: memory chunk to free.
  */
-__weak void
+void
 psc_freen(void *p)
 {
 	/* XXX recover original pointer value. */
 	PSCFREE(p);
 }
+#endif
