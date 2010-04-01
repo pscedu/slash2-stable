@@ -50,9 +50,8 @@
 # define __attribute__(x)
 #endif
 
-#ifndef __dead
-# define __dead		__attribute__((__noreturn__))
-#endif
+#undef __dead
+#define __dead		__attribute__((__noreturn__))
 
 #ifndef __packed
 # define __packed	__attribute__((__packed__))
