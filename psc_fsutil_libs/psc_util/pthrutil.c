@@ -35,7 +35,7 @@ psc_pthread_mutex_init(pthread_mutex_t *mut)
 	if (rc)
 		psc_fatalx("pthread_mutexattr_init: %s", strerror(rc));
 	rc = pthread_mutexattr_settype(&attr,
-	    PTHREAD_MUTEX_ERRORCHECK_NP);
+	    PTHREAD_MUTEX_ERRORCHECK);
 	if (rc)
 		psc_fatalx("pthread_mutexattr_settype: %s",
 		    strerror(rc));
@@ -84,6 +84,8 @@ psc_pthread_mutex_ureqlock(pthread_mutex_t *mut, int waslocked)
 		psc_pthread_mutex_unlock(mut);
 }
 
+#ifdef HAVE_PTHREAD_MUTEX_TIMEDLOCK
+
 int
 psc_pthread_mutex_trylock(pthread_mutex_t *mut)
 {
@@ -100,7 +102,7 @@ psc_pthread_mutex_trylock(pthread_mutex_t *mut)
 		return (0);
 	if (rc == ETIMEDOUT)
 		return (EBUSY);
-	psc_fatalx("psc_pthread_mutex_trylock: %s", strerror(rc));
+	psc_fatalx("pthread_mutex_timedlock: %s", strerror(rc));
 }
 
 void
@@ -113,3 +115,29 @@ psc_pthread_mutex_ensure_locked(pthread_mutex_t *mut)
 	rc = pthread_mutex_timedlock(mut, &ts);
 	psc_assert(rc == EDEADLK);
 }
+
+#else
+
+int
+psc_pthread_mutex_trylock(pthread_mutex_t *mut)
+{
+	int rc;
+
+	rc = pthread_mutex_trylock(mut);
+	if (rc == 0)
+		return (0);
+	if (rc == EBUSY)
+		return (EBUSY);
+	psc_fatalx("pthread_mutex_trylock: %s", strerror(rc));
+}
+
+void
+psc_pthread_mutex_ensure_locked(pthread_mutex_t *mut)
+{
+	int rc;
+
+	rc = pthread_mutex_trylock(mut);
+	psc_assert(rc == EDEADLK);
+}
+
+#endif
