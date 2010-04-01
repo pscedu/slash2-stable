@@ -517,7 +517,7 @@ pscthr_getbyid(pthread_t id)
 	psclist_for_each_entry(thr, &psc_threads.pll_listhd,
 	    pscthr_lentry)
 		if (thr->pscthr_pthread == id ||
-		    (unsigned long)thr->pscthr_thrid == id)
+		    (unsigned long)thr->pscthr_thrid == (unsigned long)id)
 			break;
 	PLL_ULOCK(&psc_threads);
 	return (thr);
