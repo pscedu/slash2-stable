@@ -127,19 +127,3 @@ ifeq (${OSTYPE},Linux)
 endif
 
 include ${ROOTDIR}/mk/pickle.mk
-
-ifndef PICKLE_HAVE_POSIX_MEMALIGN
-  SRCS+=						${ROOTDIR}/psc_fsutil_libs/compat/posix_memalign.c
-endif
-
-ifdef PICKLE_HAVE_PTHREAD_MUTEX_TIMEDLOCK
-  DEFINES+=						-DHAVE_PTHREAD_MUTEX_TIMEDLOCK
-endif
-
-ifndef PICKLE_HAVE_CLOCK_GETTIME
-  SRCS+=						${ROOTDIR}/psc_fsutil_libs/compat/clock_gettime.c
-endif
-
-ifndef PICKLE_HAVE_HOST_NAME_MAX
-  DEFINES+=						-DHOST_NAME_MAX=MAXHOSTNAMELEN
-endif
