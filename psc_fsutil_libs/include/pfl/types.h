@@ -29,6 +29,16 @@
 #define PSCPRIxCRC32	"08u"
 #define PSCPRIxCRC64	"016"PRIx64
 
+#ifdef __APPLE__
+# define PSCPRI_PTHRT	"p"
+#else
+# define PSCPRI_PTHRT	"lu"
+#endif
+
+#define PSCPRIuTIMET	"u"
+#define PSCPRIuUTIMET	"06u"
+#define PSCPRIuINOT	"u"
+
 #include "psc_util/subsys.h"
 
 #endif /* _PFL_TYPES_H_ */

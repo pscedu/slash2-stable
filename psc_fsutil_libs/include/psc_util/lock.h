@@ -20,6 +20,7 @@
 #ifndef _PFL_LOCK_H_
 #define _PFL_LOCK_H_
 
+#include "pfl/types.h"
 #include "psc_util/log.h"
 
 #ifdef __ia64
@@ -79,7 +80,8 @@ validlock(const psc_spinlock_t *sl)
 			    (sl));					\
 		if ((sl)->sl_who != pthread_self())			\
 			psc_fatalx("%s: not owner "			\
-			    "(lock %p, owner %lu, self %lu)", (name),	\
+			    "(lock %p, owner %"PSCPRI_PTHRT", "		\
+			    "self %"PSCPRI_PTHRT")", (name),		\
 			    (sl), (sl)->sl_who, pthread_self());	\
 		1;							\
 	}
