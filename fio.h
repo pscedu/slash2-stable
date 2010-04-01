@@ -59,6 +59,11 @@ barrier_t  barrier;
 #define UTIMET "%06lu"
 #define INOT   "%lu"
 
+#elif __APPLE__
+#define TIMET  "%lu"
+#define UTIMET "%06u"
+#define INOT   "%llu"
+
 #elif __WORDSIZE == 64
 #define TIMET  "%lu"
 #define UTIMET "%06lu"
@@ -70,10 +75,10 @@ barrier_t  barrier;
 #define INOT   "%llu"
 #endif
 
-int   TOTAL_PES;
-int   fio_global_debug, fio_lexyacc_debug;
-int   stderr_redirect;
-char *stderr_fnam_prefix;
+extern int   TOTAL_PES;
+extern int   fio_global_debug, fio_lexyacc_debug;
+extern int   stderr_redirect;
+extern char *stderr_fnam_prefix;
 
 /*
  *  Test type bits
@@ -142,6 +147,7 @@ enum path_depth {
 	ASCEND_DIR  = 3
 };
 
+/* XXX use stdbool.h */
 enum bool_t {
 	NO  = 0,
 	YES = 1
@@ -174,147 +180,146 @@ enum debug_channels_short {
 #define MAXTESTS            16
 #define TEST_GROUP_NAME_MAX PATH_MAX
 
-#define LONGSZ sizeof(long int)
+#define LONGSZ sizeof(long)
 
-typedef uint64_t u64;
-
-struct op_log_t {
-	int    oplog_magic;
-	enum   CLOCKS    oplog_type;
-	enum   bool_t    oplog_used;
-	enum   bool_t    oplog_checksum_ok;
-	int    oplog_subcnt;
-	float  oplog_time;
-	float  oplog_barrier_time;
+struct op_log {
+	int		oplog_magic;
+	enum CLOCKS	oplog_type;
+	enum bool_t	oplog_used;
+	enum bool_t	oplog_checksum_ok;
+	int		oplog_subcnt;
+	float		oplog_time;
+	float		oplog_barrier_time;
 	union {
-		struct op_log_t *oplog_sublog;
-		off_t  oplog_offset;
+		struct op_log *oplog_sublog;
+		off_t	oplog_offset;
 	} sub;
 };
-typedef struct op_log_t OPLOG_t;
-#define OPLOGSZ sizeof(OPLOG_t)
-#define OPLOG_MAGIC 0x6e1eafe9
+typedef struct op_log OPLOG_t;
 
-struct iotest_log_t {
-	char     iolog_tname[TEST_GROUP_NAME_MAX];
-	int      iolog_pe;
-	int      iolog_iteration;
-	OPLOG_t *iolog_oplog;
-	int      iolog_oplog_cnt;
-	size_t   iolog_size;
-};
-typedef struct iotest_log_t IOTESTLOG_t;
-#define IOTESTLOGSZ sizeof(IOTESTLOG_t)
+#define OPLOGSZ		sizeof(OPLOG_t)
+#define OPLOG_MAGIC	0x6e1eafe9
 
-struct buffer_t {
-	void  *buffer;
-	size_t buffer_size;
-	size_t data_size;
-	off_t  current_offset;
-	int    block_number;
-	struct drand48_data rand_data;
+struct iotest_log {
+	char		 iolog_tname[TEST_GROUP_NAME_MAX];
+	int		 iolog_pe;
+	int		 iolog_iteration;
+	OPLOG_t		*iolog_oplog;
+	int		 iolog_oplog_cnt;
+	size_t		 iolog_size;
 };
-typedef struct buffer_t BUF_t;
+typedef struct iotest_log IOTESTLOG_t;
+
+#define IOTESTLOGSZ	sizeof(IOTESTLOG_t)
+
+struct buffer {
+	void		*buffer;
+	size_t		 buffer_size;
+	size_t		 data_size;
+	off_t		 current_offset;
+	int		 block_number;
+};
+typedef struct buffer BUF_t;
 
 
 struct io_toolbox {
-	void  *mygroup;                        /* pointer back to my group */
-	struct buffer_t      bdesc;
-	struct buffer_t      rd_bdesc;
-	struct timeval       times[NUMCLOCKS];
-	struct stat          stb;
-	struct stat          stb_unlink;
-	IOTESTLOG_t          io_log;
-	OPLOG_t             *op_log;
-	u64    mysize;
-	char   mypath[PATH_MAX];
-	char  *myfnam;
-	char  *logBuf;
-	char  *logBufPtr;
-	int    micro_iterations;               /* how many times..    */
-	int    macro_iterations;
-	int    myfd;
-	int    mype;
-	int    mytest_pe;
-	int    param;
-	int    unlink;
-	int    num_blocks;
-	int    path_len;
-	int    path_isdir;
-	enum   path_depth depth;
-	int    filenum;
-	int    current_depth;
-	int    current_width;
-	int    current_test;
-	int    barrier_cnt;
-	int    debug_flags;
+	void		*mygroup;                        /* pointer back to my group */
+	struct buffer	 bdesc;
+	struct buffer	 rd_bdesc;
+	struct timeval	 times[NUMCLOCKS];
+	struct stat	 stb;
+	struct stat	 stb_unlink;
+	IOTESTLOG_t	 io_log;
+	OPLOG_t		*op_log;
+	uint64_t	 mysize;
+	char		 mypath[PATH_MAX];
+	char		*myfnam;
+	char		*logBuf;
+	char		*logBufPtr;
+	int		 micro_iterations;               /* how many times..    */
+	int		 macro_iterations;
+	int		 myfd;
+	int		 mype;
+	int		 mytest_pe;
+	int		 param;
+	int		 unlink;
+	int		 num_blocks;
+	int		 path_len;
+	int		 path_isdir;
+	enum path_depth	 depth;
+	int		 filenum;
+	int		 current_depth;
+	int		 current_width;
+	int		 current_test;
+	int		 barrier_cnt;
+	int		 debug_flags;
 };
 typedef struct io_toolbox IOT_t;
 
-struct io_routine_t {
-	int   num_routines;
-	char  io_testname[TEST_GROUP_NAME_MAX];
-	char *io_routine[MAXROUTINE];
+struct io_routine {
+	int		 num_routines;
+	char		 io_testname[TEST_GROUP_NAME_MAX];
+	char		*io_routine[MAXROUTINE];
 };
-typedef struct io_routine_t IOROUTINE_t;
+typedef struct io_routine IOROUTINE_t;
 
-struct io_thread_t {
+struct io_thread {
 #ifdef HAVE_LIBPTHREAD
-	pthread_t thread_id;
+	pthread_t	 thread_id;
 #endif
-	int       mype;                    /* mype is the absolute pe */
-	int       rc;
+	int		 mype;                    /* mype is the absolute pe */
+	int		 rc;
 };
-typedef struct io_thread_t THREAD_t;
+typedef struct io_thread THREAD_t;
 
 
-struct dirnode_t {
+struct dirnode {
 	struct list_head dir_stack;
-	int   depth;
-	int   child_cnt;
-	int   test_done;
-	char *path_comp;
+	int		 depth;
+	int		 child_cnt;
+	int		 test_done;
+	char		*path_comp;
 };
-typedef struct dirnode_t DIR_t;
+typedef struct dirnode DIR_t;
 
 
-struct test_group_t {
+struct test_group {
 	struct list_head group_list;
-	struct io_routine_t  iotests[MAXTESTS];
-	struct io_routine_t *current_iotest;
+	struct io_routine  iotests[MAXTESTS];
+	struct io_routine *current_iotest;
 
-	int    num_iotests;
+	int		 num_iotests;
 
-	struct timeval      test_freq;         /* how often io occurs */
-	struct timeval      block_freq;        /* sleep in between block */
-	char   test_name[TEST_GROUP_NAME_MAX]; /* name of the group   */
-	char   test_path[PATH_MAX];            /* starting path       */
-	char   output_path[PATH_MAX];          /* starting path       */
-	char   test_filename[PATH_MAX];
-	u64    block_size;                     /* chunk size          */
-	u64    file_size;                      /* file size           */
-	int    num_pes;                        /* num of processes    */
-	int    work_pe;                        /* pe next up for work */
-	int    iterations;
-	int    test_opts;                      /* what this test does */
-	int    files_per_pe;
-	int    files_per_dir;
-	int    thrash_lock;
-	int    tree_depth;
-	int    tree_width;
-	int    depth_change;
-	int    debug_flags;
+	struct timeval	 test_freq;			/* how often io occurs */
+	struct timeval	 block_freq;			/* sleep in between block */
+	char		 test_name[TEST_GROUP_NAME_MAX];/* name of the group   */
+	char		 test_path[PATH_MAX];		/* starting path       */
+	char		 output_path[PATH_MAX];		/* starting path       */
+	char		 test_filename[PATH_MAX];
+	uint64_t	 block_size;			/* chunk size          */
+	uint64_t	 file_size;			/* file size           */
+	int		 num_pes;			/* num of processes    */
+	int		 work_pe;			/* pe next up for work */
+	int		 iterations;
+	int		 test_opts;			/* what this test does */
+	int		 files_per_pe;
+	int		 files_per_dir;
+	int		 thrash_lock;
+	int		 tree_depth;
+	int		 tree_width;
+	int		 depth_change;
+	int		 debug_flags;
 #ifdef HAVE_LIBPTHREAD
-	barrier_t  group_barrier;
-	THREAD_t  *threads;
-#elif  MPI
-	MPI_Group  group;
-	MPI_Comm   group_barrier;
+	barrier_t	 group_barrier;
+	THREAD_t	*threads;
+#elif MPI
+	MPI_Group	 group;
+	MPI_Comm	 group_barrier;
 #endif
-	DIR_t  *dirRoot;
+	DIR_t		*dirRoot;
 	struct list_head dirStack;
 };
-typedef struct test_group_t GROUP_t;
+typedef struct test_group GROUP_t;
 
 extern struct list_head	 groupList;
 extern GROUP_t		*currentGroup;
@@ -414,8 +419,8 @@ get_dbg_prefix(int dbg_channel)
 #define DUMP_BUFFER(b)							\
     DEBUG(D_BUFFER, "buffer_t %p: buffer %p, offset %llu, "		\
 	"block_num %d, block_size %i\n",				\
-	b, b->buffer, (off_t)b->current_offset,				\
-	b->block_number, b->buffer_size)
+	(b), (b)->buffer, (off_t)(b)->current_offset,			\
+	(b)->block_number, (b)->buffer_size)
 
 #define DUMP_GROUP(g) do {						\
 	int i,j;							\
@@ -431,21 +436,21 @@ get_dbg_prefix(int dbg_channel)
 	    "\tfile_per_dir %d\n"					\
 	    "\ttree_depth %d\n"						\
 	    "\ttree_width %d\n"						\
-	    "\ttest_freq "TIMET TIMET"\n",				\
-	    g->test_name,						\
-	    g,								\
-	    g->num_pes,							\
-	    g->num_iotests,						\
-	    g->test_path,						\
-	    (u64)g->file_size,						\
-	    (u64)g->block_size,						\
-	    g->iterations,						\
-	    g->test_opts,						\
-	    g->files_per_pe,						\
-	    g->files_per_dir,						\
-	    g->tree_depth,						\
-	    g->tree_width,						\
-	    g->test_freq.tv_sec, g->test_freq.tv_usec);			\
+	    "\ttest_freq "TIMET UTIMET"\n",				\
+	    (g)->test_name,						\
+	    (g),							\
+	    (g)->num_pes,						\
+	    (g)->num_iotests,						\
+	    (g)->test_path,						\
+	    (g)->file_size,						\
+	    (g)->block_size,						\
+	    (g)->iterations,						\
+	    (g)->test_opts,						\
+	    (g)->files_per_pe,						\
+	    (g)->files_per_dir,						\
+	    (g)->tree_depth,						\
+	    (g)->tree_width,						\
+	    (g)->test_freq.tv_sec, (g)->test_freq.tv_usec);		\
 									\
 	for (i=0; i < g->num_iotests; i++) {				\
 		BDEBUG("\t%s:\n",					\
@@ -461,8 +466,8 @@ get_dbg_prefix(int dbg_channel)
 #define STARTWATCH(test) gettimeofday(&(iot->times[test]), NULL)
 #define STOPWATCH(test)							\
 	do {								\
-		gettimeofday(&(iot->times[test+1]), NULL);		\
-		log_op(test, iot);					\
+		gettimeofday(&(iot->times[(test)+1]), NULL);		\
+		log_op((test), iot);					\
 	} while (0)
 
 static inline double
@@ -713,7 +718,7 @@ iolog_alloc(IOTESTLOG_t *iolog, size_t size)
 	BDEBUG("size %zu\n", size);
 	ASSERT( (size > 0) && !(size % OPLOGSZ) );
 	void *p = malloc(size);
-	ASSERT(p != NULL);
+	ASSERT(p);
 	iolog->iolog_size += size;
 	return p;
 }
@@ -926,18 +931,17 @@ pop_dirstack(IOT_t *iot)
  * Buffer Related functions and macros
  */
 static inline void
-xor_buffer(struct buffer_t *bdesc)
+xor_buffer(struct buffer *bdesc)
 {
 	size_t t = 0;
-	long int *buf_long_ints = (long int *)bdesc->buffer;
+	long *buf_long_ints = bdesc->buffer;
 
-	for(t = 0; t < bdesc->buffer_size / sizeof(long int); t++){
+	for(t = 0; t < bdesc->buffer_size / sizeof(long); t++)
 		buf_long_ints[t] ^= bdesc->block_number;
-	}
 }
 
 static inline int
-compare_buffer(const struct buffer_t *bdesc_a, const struct buffer_t *bdesc_b)
+compare_buffer(const struct buffer *bdesc_a, const struct buffer *bdesc_b)
 {
 	size_t t = 0;
 	size_t i = bdesc_a->buffer_size / LONGSZ;
@@ -988,7 +992,7 @@ int do_open(struct io_toolbox *);
 int do_read(struct io_toolbox *);
 int do_link(struct io_toolbox *);
 int do_null(struct io_toolbox *);
-void init_buffer(struct buffer_t *, int);
+void init_buffer(struct buffer *, int);
 
 int run_yacc(void);
 

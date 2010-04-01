@@ -8,6 +8,11 @@
 #include "fio_sym.h"
 #include "fio.h"
 
+int   TOTAL_PES;
+int   fio_global_debug, fio_lexyacc_debug;
+int   stderr_redirect;
+char *stderr_fnam_prefix;
+
 GROUP_t *
 find_group(int mype, int *start_pe)
 {
@@ -121,7 +126,7 @@ init_log_buffers(IOT_t *iot)
  * this macro should return the maximum number of
  *  files needed to handle group 'g'
  */
-#define GETMAXFILES(g) get_nfiles(0, g)
+#define GETMAXFILES(g) get_nfiles(0, (g))
 
 void
 dump_groups(void)
@@ -419,31 +424,28 @@ destroy_barriers(void)
 #ifdef HAVE_LIBPTHREAD
 		barrier_destroy(&group->group_barrier);
 #elif MPI
-		WARN("Mpi implementation not complete\n");
+		WARN("MPI implementation not complete\n");
 #endif
 	}
 }
 
 /*
- * Create a buffer which is the 'seeded' for
+ * Create a buffer which is 'seeded' for
  *   this PE
  */
 void
-init_buffer(struct buffer_t *bdesc, int id)
+init_buffer(struct buffer *bdesc, int id)
 {
-	long int *buf_long_ints = (long int *)bdesc->buffer;
-	size_t    i             = bdesc->buffer_size / LONGSZ;
+	long *buf_long_ints = bdesc->buffer;
+	size_t i = bdesc->buffer_size / LONGSZ;
 	size_t t;
 
 	bzero(bdesc->buffer, bdesc->buffer_size);
 
-	/* seed the random number generator */
-	srand48_r(id, &bdesc->rand_data);
+	srandom(id);
 
-	for (t=0; t < i; t++){
-		lrand48_r(&bdesc->rand_data, &buf_long_ints[t]);
-		//BDEBUG("PE_%d %d %lu\n", id, t,  buf_long_ints[t]);
-	}
+	for (t=0; t < i; t++)
+		buf_long_ints[t] = random();
 }
 
 int
@@ -462,7 +464,6 @@ do_creat(struct io_toolbox *iot)
 			TPRINT(iot->times[CREAT_clk + 1],
 			 "cr_op %011.6f '%s'\n",
 			 op_tmp->oplog_time, iot->mypath);
-
 		} else
 			BARRIER;
 	} else {
@@ -522,7 +523,7 @@ do_open(struct io_toolbox *iot)
 int
 do_unlink(struct io_toolbox *iot)
 {
-	struct test_group_t *mygroup = iot->mygroup;
+	struct test_group *mygroup = iot->mygroup;
 
 	OPLOG_t *op_tmp = iot->op_log;
 	iot->unlink = 1;
@@ -752,7 +753,7 @@ do_trunc(IOT_t *iot)
 int
 do_close(IOT_t *iot)
 {
-	struct test_group_t *mygroup = iot->mygroup;
+	struct test_group *mygroup = iot->mygroup;
 	OPLOG_t *op_tmp = iot->op_log;
 
 	CLOSE;
@@ -767,21 +768,21 @@ do_close(IOT_t *iot)
 int
 do_rename(__unusedx IOT_t *iot)
 {
-	//struct test_group_t *mygroup = iot->mygroup;
+	//struct test_group *mygroup = iot->mygroup;
 	return 0;
 }
 
 int
 do_link(__unusedx IOT_t *iot)
 {
-	//struct test_group_t *mygroup = iot->mygroup;
+	//struct test_group *mygroup = iot->mygroup;
 	return 0;
 }
 
 int
 do_stat(IOT_t *iot)
 {
-	struct test_group_t *mygroup = iot->mygroup;
+	struct test_group *mygroup = iot->mygroup;
 	OPLOG_t *op_tmp = iot->op_log;
 
 	STAT;
@@ -796,7 +797,7 @@ do_stat(IOT_t *iot)
 int
 do_fstat(IOT_t *iot)
 {
-	struct test_group_t *mygroup = iot->mygroup;
+	struct test_group *mygroup = iot->mygroup;
 	OPLOG_t *op_tmp = iot->op_log;
 
 	FSTAT;
@@ -813,10 +814,10 @@ worker(void *arg)
 {
 	int f, i, j, k, l, m, num_files, rc = 0;
 	struct symtable   *e;
-	int                 *mype        = (int*)arg;
+	int                 *mype        = arg;
 	struct io_toolbox   *iot         = init_pe(*mype);
 	GROUP_t             *mygroup     = iot->mygroup;
-	struct io_routine_t *io_routines = mygroup->iotests;
+	struct io_routine   *io_routines = mygroup->iotests;
 	struct list_head    *tmp, *tmp1;
 	DIR_t               *current_dir = NULL;
 

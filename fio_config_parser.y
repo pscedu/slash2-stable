@@ -166,7 +166,7 @@ test_recipe:	test_recipe_decl test_recipe_comps RECIPE_END {
 
 test_recipe_decl: STR RECIPE_START {
 	int num_iotests          =  currentGroup->num_iotests;
-	struct io_routine_t *ior = &currentGroup->iotests[num_iotests];
+	struct io_routine *ior = &currentGroup->iotests[num_iotests];
 
 	if (num_iotests >= MAXTESTS)
 		errx(1, "num_iotests (%d) >= MAXTESTS (%d)",

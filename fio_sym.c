@@ -61,7 +61,7 @@ store_func(const char *func_name)
 	extern GROUP_t      *currentGroup;
 	struct symtable   *sym =  get_symbol(func_name);
 	int num_iotests          =  currentGroup->num_iotests;
-	struct io_routine_t *ior = &currentGroup->iotests[num_iotests];
+	struct io_routine *ior = &currentGroup->iotests[num_iotests];
 
 	ASSERT(sym != NULL && ior != NULL);
 
@@ -78,11 +78,11 @@ store_tok_val(const char *tok, char *val)
 	extern GROUP_t    *currentGroup;
 	struct symtable *e = get_symbol(tok);
 	char    floatbuf[17];
-	void   *ptr = ((void*)currentGroup) + e->offset;
-	u64    *z   = (u64*)ptr;
-	int    *t   = (int*)   ptr;
-	char   *s   = (char*)  ptr;
-	u64     i   = 0;
+	void   *ptr = ((char *)currentGroup) + e->offset;
+	uint64_t    *z   = ptr;
+	int    *t   = ptr;
+	char   *s   = ptr;
+	uint64_t     i   = 0;
 	char   *c;
 	float   f;
 	int     j;
@@ -147,19 +147,19 @@ store_tok_val(const char *tok, char *val)
 
 		switch (tolower(*c)) {
 		case 'b':
-			i = (u64)1;
+			i = UINT64_C(1);
 			break;
 		case 'k':
-			i = (u64)1024;
+			i = UINT64_C(1024);
 			break;
 		case 'm':
-			i = (u64)1024*1024;
+			i = UINT64_C(1024)*1024;
 			break;
 		case 'g':
-			i = (u64)1024*1024*1024;
+			i = UINT64_C(1024)*1024*1024;
 			break;
 		case 't':
-			i = (u64)1024*1024*1024*1024;
+			i = UINT64_C(1024)*1024*1024*1024;
 			break;
 		default:
 			WARN("Sizeval '%c' is not valid\n", *c);
@@ -169,10 +169,10 @@ store_tok_val(const char *tok, char *val)
 		BDEBUG("ival   = %"PRIu64"\n", i);
 
 		val[j-1] = '\0';
-		*z = (u64)(i * strtoull(val, NULL, 10));
+		*z = i * strtoull(val, NULL, 10);
 
 		BDEBUG("FIO_SIZET Tok '%s' set to '%"PRIu64"'\n",
-		    e->name, (u64)*z);
+		    e->name, *z);
 		break;
 
 	default:
