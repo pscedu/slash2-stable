@@ -27,7 +27,13 @@
 #include "psc_util/log.h"
 #include "psc_util/prsig.h"
 
-extern char *sys_sigabbrev[];
+#ifdef HAVE_SYS_SIGABBREV
+# define pfl_sys_signame sys_sigabbrev
+
+extern const char * const sys_sigabbrev[];
+#else
+# define pfl_sys_signame sys_signame
+#endif
 
 void
 psc_sigappend(char buf[LINE_MAX], const char *str)
@@ -71,6 +77,6 @@ psc_prsig(void)
 			if (sigismember(&sa.sa_mask, j))
 				mask |= 1 << (j - 1);
 		printf("%3d %-6s %016"PRIx64" %s\n",
-		    i, sys_sigabbrev[i], mask, buf);
+		    i, pfl_sys_signame[i], mask, buf);
 	}
 }
