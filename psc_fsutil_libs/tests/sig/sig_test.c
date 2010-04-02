@@ -27,6 +27,7 @@
 #include <unistd.h>
 
 #include "pfl/cdefs.h"
+#include "pfl/types.h"
 
 const char *progname;
 pthread_t thr1;
@@ -91,8 +92,8 @@ report_sigs(void)
 			act = "dfl";
 		else
 			act = "?";
-		printf("thr %ld: sig %02d [%s]: %s\n", pthread_self(),
-		    i, signames[i], act);
+		printf("thr %"PSCPRI_PTHRT": sig %02d [%s]: %s\n",
+		    pthread_self(), i, signames[i], act);
 	}
 }
 
