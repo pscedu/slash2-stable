@@ -26,6 +26,10 @@
 
 #include "psc_util/log.h"
 
+#ifndef HAVE_POSIX_MEMALIGN
+# include "pfl/compat/posix_memalign.h"
+#endif
+
 /* aliases for common usage */
 #define PSCALLOC(sz)		psc_alloc((sz), 0)
 #define TRY_PSCALLOC(sz)	psc_alloc((sz), PAF_CANFAIL)
