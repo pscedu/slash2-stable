@@ -28,7 +28,7 @@
 
 struct psc_completion {
 	struct psc_waitq	pc_wq;
-	psc_spinlock_t		pc_lock;
+	psc_spinlock_t		pc_lock;	/* XXX use the waitq mutex? */
 	int			pc_done;
 	int			pc_rc;
 };
