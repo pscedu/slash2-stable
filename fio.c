@@ -146,7 +146,7 @@ write_output(IOT_t *iot)
 	char outpath[PATH_MAX];
 	int fd;
 
-	enum bool_t  hole_detect, hole_found;
+	bool hole_detect, hole_found;
 
 	int          num_log_ops, i;
 	off_t        offset, end;
@@ -167,7 +167,7 @@ write_output(IOT_t *iot)
 		exit(1);
 	}
 
-	for (i=0, hole_detect=hole_found=NO, num_log_ops=0;
+	for (i=0, hole_detect=hole_found=false, num_log_ops=0;
 	    i < iolog->iolog_oplog_cnt; i++, oplog++) {
 
 		if (oplog->oplog_used) {
@@ -175,13 +175,13 @@ write_output(IOT_t *iot)
 			ASSERT(oplog->oplog_magic == OPLOG_MAGIC);
 
 			if (hole_detect) {
-				hole_found = YES;
+				hole_found = true;
 				WARN("Found a hole at %p\n", oplog);
 			}
 			num_log_ops++;
 			DUMP_OPLOG_ENTRY(oplog);
 		} else {
-			hole_detect =YES;
+			hole_detect = true;
 		}
 	}
 	end = num_log_ops * OPLOGSZ;
@@ -407,7 +407,8 @@ init_barriers(int mype)
 
 	list_for_each(tmp, &groupList) {
 		group = list_entry(tmp, GROUP_t, group_list);
-		barrier_init(&group->group_barrier, group->num_pes);
+		pthread_barrier_init(&group->group_barrier,
+		    NULL, group->num_pes);
 	}
 	(void)mype;
 #endif
@@ -422,7 +423,7 @@ destroy_barriers(void)
 	list_for_each(tmp, &groupList) {
 		group = list_entry(tmp, GROUP_t, group_list);
 #ifdef HAVE_LIBPTHREAD
-		barrier_destroy(&group->group_barrier);
+		pthread_barrier_destroy(&group->group_barrier);
 #elif MPI
 		WARN("MPI implementation not complete\n");
 #endif
@@ -552,7 +553,7 @@ do_io(IOT_t *iot, int op)
 	IOTESTLOG_t *iolog;
 	size_t       logsz = iot->num_blocks * OPLOGSZ;
 	int          rc = 0;
-	enum bool_t  checksum_ok = YES;
+	bool checksum_ok = true;
 	enum CLOCKS  clk_type;
 
 	op_tmp = op_log_save = sublog = NULL;
@@ -645,7 +646,7 @@ do_io(IOT_t *iot, int op)
 			if (clk_type == READ_clk) {
 				if (compare_buffer(&iot->bdesc,
 				    &iot->rd_bdesc) != 0)
-					checksum_ok = NO;
+					checksum_ok = false;
 			}
 		}
 		/*
@@ -710,7 +711,7 @@ do_io(IOT_t *iot, int op)
 
 		op_tmp->oplog_checksum_ok = checksum_ok;
 
-		if (checksum_ok == NO)
+		if (checksum_ok == false)
 			WARN("Bad Checksum File '%s'\n",
 			    iot->mypath);
 		else
@@ -1040,8 +1041,10 @@ main(int argc, char *argv[])
 	list_for_each(tmp, &groupList) {
 		group = list_entry(tmp, GROUP_t, group_list);
 		if (group->files_per_dir < group->num_pes) {
-			fprintf(stderr, "# of files per directory (%d) should be no less than # of PEs (%d), a multiple is preferred.\n",
-				group->files_per_dir, group->num_pes);
+			fprintf(stderr, "# of files per directory (%d) "
+			    "should be no less than # of PEs (%d), a "
+			    "multiple is preferred.\n",
+			    group->files_per_dir, group->num_pes);
 			continue;
 		}
 		/*

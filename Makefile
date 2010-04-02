@@ -9,9 +9,11 @@ PROG=		fio
 SRCS+=		fio.c
 SRCS+=		fio_config_lex.l
 SRCS+=		fio_config_parser.y
-SRCS+=		fio_pthread_barrier.c
 SRCS+=		fio_sym.c
 SRCS+=		fio_symtable.c
+SRCS+=		${PFL_BASE}/psc_util/alloc.c
+SRCS+=		${PFL_BASE}/psc_util/log.c
+SRCS+=		${PFL_BASE}/psc_util/pthrutil.c
 
 DEBUG?=		0
 LDFLAGS=	-lm

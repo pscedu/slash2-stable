@@ -16,6 +16,7 @@
 #include <math.h>
 #include <signal.h>
 #include <stdarg.h>
+#include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -29,8 +30,10 @@
 
 #ifdef HAVE_LIBPTHREAD
 #include <pthread.h>
-#include "fio_pthread_barrier.h"
-barrier_t  barrier;
+
+#include "psc_util/pthrutil.h"
+
+extern pthread_barrier_t barrier;
 
 #elif defined(MPI)
 #include <mpi.h>
@@ -147,12 +150,6 @@ enum path_depth {
 	ASCEND_DIR  = 3
 };
 
-/* XXX use stdbool.h */
-enum bool_t {
-	NO  = 0,
-	YES = 1
-};
-
 enum debug_channels {
 	FIO_DBG_BLOCK   = 1 << 1,
 	FIO_DBG_MEMORY  = 1 << 2,
@@ -185,8 +182,8 @@ enum debug_channels_short {
 struct op_log {
 	int		oplog_magic;
 	enum CLOCKS	oplog_type;
-	enum bool_t	oplog_used;
-	enum bool_t	oplog_checksum_ok;
+	bool		oplog_used;
+	bool		oplog_checksum_ok;
 	int		oplog_subcnt;
 	float		oplog_time;
 	float		oplog_barrier_time;
@@ -310,7 +307,7 @@ struct test_group {
 	int		 depth_change;
 	int		 debug_flags;
 #ifdef HAVE_LIBPTHREAD
-	barrier_t	 group_barrier;
+	pthread_barrier_t group_barrier;
 	THREAD_t	*threads;
 #elif MPI
 	MPI_Group	 group;
@@ -512,7 +509,7 @@ static inline void
 _BARRIER(GROUP_t *mygroup, struct io_toolbox *iot)
 {
 #ifdef HAVE_LIBPTHREAD
-	barrier_wait(&mygroup->group_barrier);
+	pthread_barrier_wait(&mygroup->group_barrier);
 #elif MPI
 	MPI_Barrier(mygroup->group_barrier);
 #else
@@ -705,7 +702,7 @@ log_op(int op_type, IOT_t *iot)
 	iot->op_log->oplog_time = calc_run_time(&iot->times[op_type],
 	    &iot->times[op_type+1]);
 	iot->op_log->oplog_type = op_type;
-	iot->op_log->oplog_used = YES;
+	iot->op_log->oplog_used = true;
 	DUMP_OPLOG_ENTRY(iot->op_log);
 	iot->op_log++;
 }
