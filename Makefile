@@ -10,7 +10,6 @@ SRCS+=		sft.c
 SRCS+=		${PFL_BASE}/psc_util/alloc.c
 SRCS+=		${PFL_BASE}/psc_util/crc.c
 SRCS+=		${PFL_BASE}/psc_util/log.c
-SRCS+=		${PFL_BASE}/psc_util/strlcpy.c
 
 ifdef MPI
 MODULES+=	mpi
