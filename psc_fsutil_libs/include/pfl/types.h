@@ -36,9 +36,12 @@
 #endif
 
 #define PSCPRIuTIMET	"lu"
-#define PSCPRIuUTIMET	"06u"
+#define PSCPRIuUTIMET	"06lu"
+#define PSCPRIdUTIMET	"06ld"
+#define PSCPRIuNTIMET	"06lu"
+#define PSCPRIdNTIMET	"06ld"
 
-#if defined(_FILE_OFFSET64) || defined(__APPLE__)
+#if defined(__USE_FILE_OFFSET64) || defined(__APPLE__)
 # define PSCPRIuINOT	PRIu64
 #elif defined(__linux)
 # define PSCPRIuINOT	"lu"
