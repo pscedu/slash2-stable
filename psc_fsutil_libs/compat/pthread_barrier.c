@@ -27,8 +27,8 @@
 #include <errno.h>
 #include <stdio.h>
 
+#include "pfl/compat/pthread_barrier.h"
 #include "psc_util/pthrutil.h"
-#include "compat/pthread_barrier.h"
 
 /*
  * Initialize a barrier for use.

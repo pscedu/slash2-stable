@@ -22,6 +22,10 @@
 
 #include <pthread.h>
 
+#ifndef HAVE_PTHREAD_BARRIER
+# include "pfl/compat/pthread_barrier.h"
+#endif
+
 void	psc_pthread_mutex_ensure_locked(pthread_mutex_t *);
 void	psc_pthread_mutex_init(pthread_mutex_t *);
 void	psc_pthread_mutex_lock(pthread_mutex_t *);
