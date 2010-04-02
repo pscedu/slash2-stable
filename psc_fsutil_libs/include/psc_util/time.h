@@ -34,6 +34,9 @@
  *	@(#)time.h	8.2 (Berkeley) 7/10/94
  */
 
+#ifndef _PFL_TIME_H_
+#define _PFL_TIME_H_
+
 #include <sys/time.h>
 
 #ifndef HAVE_CLOCK_GETTIME
@@ -77,6 +80,7 @@
 			(vsp)->tv_nsec += 1000000000L;			\
 		}							\
 	} while (0)
+#endif
 
 #define PFL_GETTIME(tv)							\
 	do {								\
@@ -84,4 +88,4 @@
 			psc_fatal("gettimeofday");			\
 	} while (0)
 
-#endif
+#endif /* _PFL_TIME_H_ */
