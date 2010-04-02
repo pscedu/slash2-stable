@@ -18,7 +18,6 @@ SRCS+=		${PFL_BASE}/psc_util/thread.c
 SRCS+=		${PFL_BASE}/psc_util/timerthr.c
 SRCS+=		${PFL_BASE}/psc_util/waitq.c
 
-DEFINES+=	-DHAVE_LIBPTHREAD
-LDFLAGS+=	${THREAD_LIBS} -lrt
+MODULES+=	pthread pfl
 
 include ${PFLMK}
