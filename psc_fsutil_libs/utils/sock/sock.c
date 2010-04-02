@@ -42,6 +42,7 @@
 #include "psc_util/fmt.h"
 #include "psc_util/iostats.h"
 #include "psc_util/log.h"
+#include "psc_util/net.h"
 #include "psc_util/thread.h"
 #include "psc_util/time.h"
 #include "psc_util/timerthr.h"
@@ -158,9 +159,9 @@ ioloop(int s, int ioflags)
 		rem = bufsiz;
 		do {
 			if (wr)
-				rv = send(s, buf, rem, MSG_NOSIGNAL | MSG_WAITALL);
+				rv = send(s, buf, rem, PFL_MSG_NOSIGNAL | MSG_WAITALL);
 			else
-				rv = recv(s, buf, rem, MSG_NOSIGNAL | MSG_WAITALL);
+				rv = recv(s, buf, rem, PFL_MSG_NOSIGNAL | MSG_WAITALL);
 			if (rv == -1)
 				psc_fatal("%s", wr ? "send" : "recv");
 			else if (rv == 0)
@@ -179,6 +180,27 @@ worker_main(void *arg)
 	struct sockarg *sarg = arg;
 
 	ioloop(sarg->s, IOF_RD);
+}
+
+void
+sock_setoptions(int s)
+{
+	socklen_t sz;
+	int opt;
+
+	sz = sizeof(opt);
+
+	opt = 1;
+	if (setsockopt(s, IPPROTO_TCP, TCP_NODELAY, &opt, sz) == -1)
+		psc_fatal("setsockopt");
+	opt = bufsiz;
+	if (setsockopt(s, SOL_SOCKET, SO_SNDBUF, &opt, sz) == -1)
+		psc_fatal("setsockopt");
+	opt = bufsiz;
+	if (setsockopt(s, SOL_SOCKET, SO_RCVBUF, &opt, sz) == -1)
+		psc_fatal("setsockopt");
+
+	pfl_socket_setnosig(s);
 }
 
 __dead void
@@ -235,18 +257,7 @@ dolisten(const char *listenif)
 	    &sin->sin_addr.s_addr, addrbuf, sizeof(addrbuf)),
 	    ntohs(sin->sin_port));
 
-	opt = 1;
-	if (setsockopt(clisock, IPPROTO_TCP,
-	    TCP_NODELAY, &opt, sizeof(opt)) == -1)
-		psc_fatal("setsockopt");
-	opt = bufsiz;
-	if (setsockopt(clisock, SOL_SOCKET, SO_SNDBUF,
-	    &opt, sizeof(opt)) == -1)
-		psc_fatal("setsockopt");
-	opt = bufsiz;
-	if (setsockopt(clisock, SOL_SOCKET, SO_RCVBUF,
-	    &opt, sizeof(opt)) == -1)
-		psc_fatal("setsockopt");
+	sock_setoptions(clisock);
 
 	memset(&sarg, 0, sizeof(sarg));
 	sarg.s = clisock;
@@ -282,6 +293,8 @@ doconnect(const char *addr)
 	printf("connected to %s:%d\n", inet_ntop(sin->sin_family,
 	    &sin->sin_addr.s_addr, addrbuf, sizeof(addrbuf)),
 	    ntohs(sin->sin_port));
+
+	sock_setoptions(s);
 
 	memset(&sarg, 0, sizeof(sarg));
 	sarg.s = s;

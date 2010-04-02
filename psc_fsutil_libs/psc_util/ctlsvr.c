@@ -51,6 +51,7 @@
 #include "psc_util/iostats.h"
 #include "psc_util/log.h"
 #include "psc_util/mlist.h"
+#include "psc_util/net.h"
 #include "psc_util/pool.h"
 #include "psc_util/rlimit.h"
 #include "psc_util/thread.h"
@@ -100,7 +101,7 @@ psc_ctlmsg_sendv(int fd, const struct psc_ctlmsghdr *mh, const void *m)
 	memset(&msg, 0, sizeof(msg));
 	msg.msg_iov = iov;
 	msg.msg_iovlen = nitems(iov);
-	n = sendmsg(fd, &msg, MSG_NOSIGNAL);
+	n = sendmsg(fd, &msg, PFL_MSG_NOSIGNAL);
 	if (n == -1) {
 		if (errno == EPIPE || errno == ECONNRESET) {
 			psc_ctlthr(pscthr_get())->pc_st_ndrop++;
@@ -1308,7 +1309,7 @@ psc_ctlthr_service(int fd, const struct psc_ctlop *ct, int nops)
 	m = NULL;
 	siz = 0;
 	for (;;) {
-		n = recv(fd, &mh, sizeof(mh), MSG_WAITALL | MSG_NOSIGNAL);
+		n = recv(fd, &mh, sizeof(mh), MSG_WAITALL | PFL_MSG_NOSIGNAL);
 		if (n == 0)
 			break;
 		if (n == -1) {
@@ -1331,7 +1332,7 @@ psc_ctlthr_service(int fd, const struct psc_ctlop *ct, int nops)
 
  again:
 		if (mh.mh_size) {
-			n = recv(fd, m, mh.mh_size, MSG_WAITALL | MSG_NOSIGNAL);
+			n = recv(fd, m, mh.mh_size, MSG_WAITALL | PFL_MSG_NOSIGNAL);
 			if (n == -1) {
 				if (errno == EPIPE)
 					break;
