@@ -14,15 +14,18 @@
  * except by reinitializing.
  */
 
+#ifndef _PFL_COMPAT_PTHREAD_BARRIER_H_
+#define _PFL_COMPAT_PTHREAD_BARRIER_H_
+
 #include <pthread.h>
 
 typedef struct {
-	pthread_mutex_t     mutex;          /* Control access to barrier */
-	pthread_cond_t      cv;             /* wait for barrier */
-	int                 valid;          /* set when valid */
-	int                 threshold;      /* number of threads required */
-	int                 counter;        /* current number of threads */
-	unsigned long       cycle;          /* count cycles */
+	pthread_mutex_t		 mutex;			/* Control access to barrier */
+	pthread_cond_t		 cv;			/* wait for barrier */
+	int			 valid;			/* set when valid */
+	int			 threshold;		/* number of threads required */
+	int			 counter;		/* current number of threads */
+	unsigned long		 cycle;			/* count cycles */
 } pthread_barrier_t;
 
 typedef struct {
@@ -30,10 +33,12 @@ typedef struct {
 
 #define BARRIER_VALID   0xdbcafe
 
-#define BARRIER_INITIALIZER(cnt) \
-    { PTHREAD_MUTEX_INITIALIZER, PTHREAD_COND_INITIALIZER, \
-    BARRIER_VALID, cnt, cnt, 0 }
+#define BARRIER_INITIALIZER(cnt)				\
+    { PTHREAD_MUTEX_INITIALIZER, PTHREAD_COND_INITIALIZER,	\
+      BARRIER_VALID, cnt, cnt, 0 }
 
-int pthread_barrier_init(pthread_barrier_t *, pthread_barrierattr_t *, int);
+int pthread_barrier_init(pthread_barrier_t *, const pthread_barrierattr_t *, unsigned);
 int pthread_barrier_destroy(pthread_barrier_t *);
 int pthread_barrier_wait(pthread_barrier_t *);
+
+#endif /* _PFL_COMPAT_PTHREAD_BARRIER_H_ */

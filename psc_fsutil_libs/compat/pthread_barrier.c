@@ -27,6 +27,7 @@
 #include <errno.h>
 #include <stdio.h>
 
+#include "pfl/cdefs.h"
 #include "pfl/compat/pthread_barrier.h"
 #include "psc_util/pthrutil.h"
 
@@ -35,7 +36,7 @@
  */
 int
 pthread_barrier_init(pthread_barrier_t *barrier, __unusedx
-    pthread_barrierattr_t *attr, int count)
+    const pthread_barrierattr_t *attr, unsigned count)
 {
 	int status;
 
