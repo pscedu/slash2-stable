@@ -106,7 +106,7 @@ wr_main(void *arg)
 			errx(1, "wrlock: %s", strerror(rc));
 
 		rc = pthread_rwlock_wrlock(&lk);
-		if (rc != EDEADLOCK)
+		if (rc != EDEADLK)
 			errx(1, "wrlock: %s", strerror(rc));
 
 		usleep(SLEEP_US);
