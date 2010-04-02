@@ -75,13 +75,13 @@ psc_spin_ensure(struct psc_spinlock *psl)
 
 	v = psc_atomic32_read(&psl->psl_value);
 	if (v == PSL_UNLOCKED)
-		psc_fatalx("psc_spin_ensure: not locked");
+		psc_fatalx("not locked");
 	if (v != PSL_LOCKED)
-		psc_fatalx("psc_spin_ensure: invalid value");
+		psc_fatalx("invalid value");
 	if (psl->psl_who != pthread_self())
-		psc_fatalx("psc_spin_ensure: not our lock; "
-		    "psl=%p, owner=%lu, self=%lu", (psl),
-		    psl->psl_who, pthread_self());
+		psc_fatalx("not our lock; psl=%p, "
+		    "owner=%"PSCPRI_PTHRT", self=%"PSCPRI_PTHRT,
+		    psl, psl->psl_who, pthread_self());
 	return (1);
 }
 
@@ -96,17 +96,16 @@ psc_spin_unlock(struct psc_spinlock *psl)
 
 	psc_spin_ensure(psl);
 	if (psl->psl_who != pthread_self())
-		psc_fatalx("psc_spin_unlock: not owner; "
-		    "psl=%p, owner=%lu, self=%lu",
+		psc_fatalx("not owner; psl=%p, "
+		    "owner=%"PSCPRI_PTHRT", self=%"PSCPRI_PTHRT,
 		    psl, psl->psl_who, pthread_self());
 	PFL_GETTIME(&now);
 	max.tv_sec = 0;
 	max.tv_usec = 500;
 	timersub(&now, &psl->psl_time, &diff);
 	if (timercmp(&diff, &max, >))
-		psc_errorx("psc_spin_unlock: lock held long; "
-		    "psl=%p, len=%luus", psl, diff.tv_sec *
-		    1000 * 1000 + diff.tv_usec);
+		psc_errorx("lock held long; psl=%p, len=%luus",
+		    psl, diff.tv_sec * 1000 * 1000 + diff.tv_usec);
 	psl->psl_who = 0;
 	psc_atomic32_set(&psl->psl_value, PSL_UNLOCKED);
 }
@@ -131,8 +130,7 @@ psc_spin_trylock(struct psc_spinlock *psl)
 		PFL_GETTIME(&psl->psl_time);
 		return (1);
 	}
-	psc_fatalx("psc_spin_trylock: invalid value; psl=%p, value=%d",
-	    psl, v);
+	psc_fatalx("invalid value; psl=%p, value=%d", psl, v);
 }
 
 /**
@@ -202,7 +200,7 @@ psc_spin_ureqlock(struct psc_spinlock *psl, int waslocked)
 	if (waslocked == PRSL_WASNOTLOCKED)
 		psc_spin_unlock(psl);
 	else if (waslocked != PRSL_WASLOCKED)
-		psc_fatalx("psc_spin_ureqlock: bad value");
+		psc_fatalx("bad value");
 }
 
 #endif /* _PFL_SPINLOCK_H_ */
