@@ -32,10 +32,10 @@ PICKLE_NEED_VERSION=					3
  endif
 
  ifneq ($(filter pthread,${MODULES}),)
-  ifndef PICKLE_HAVE_PTHREAD_BARRIER
-   SRCS+=						${ROOTDIR}/psc_fsutil_libs/compat/pthread_barrier.c
-  else
+  ifdef PICKLE_HAVE_PTHREAD_BARRIER
    DEFINES+=						-DHAVE_PTHREAD_BARRIER
+  else
+   SRCS+=						${ROOTDIR}/psc_fsutil_libs/compat/pthread_barrier.c
   endif
  endif
 
