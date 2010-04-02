@@ -1,12 +1,17 @@
 # $Id$
 
+STRIPROOTDIR=		$(subst $(realpath ${ROOTDIR})/,,$1)
+PATH_NAMIFY=		$(subst .,_,$(subst -,_,$(subst /,_,$1)))
+FILE_CFLAGS=		${$(call PATH_NAMIFY,$(call STRIPROOTDIR,$(realpath $1)))_CFLAGS}
+FILE_PCPP_FLAGS=	${$(call PATH_NAMIFY,$(call STRIPROOTDIR,$(realpath $1)))_PCPP_FLAGS}
+
 ifneq ($(filter ${ROOTDIR}/psc_fsutil_libs/psc_%.c,${SRCS}),)
 MODULES+=		pfl
 endif
 
 -include ${ROOTDIR}/mk/local.mk
 
-_TSRCS=			$(foreach fn,${SRCS},$(realpath ${fn}))
+_TSRCS=			$(foreach fn,$(sort ${SRCS}),$(realpath ${fn}))
 
 _TOBJS=			$(patsubst %.c,%.o,$(filter %.c,${_TSRCS}))
 _TOBJS+=		$(patsubst %.y,%.o,$(filter %.y,${_TSRCS}))
@@ -72,13 +77,6 @@ TARGET?=		${PROG} ${LIBRARY}
 EXTRACT_INCLUDES=	perl -ne 'print $$& while /-I\S+\s?/gc'
 EXTRACT_DEFINES=	perl -ne 'print $$& while /-D\S+\s?/gc'
 EXTRACT_CFLAGS=		perl -ne 'print $$& while /-[^ID]\S+\s?/gc'
-
-STRIPROOTDIR=		$(subst $(realpath ${ROOTDIR})/,,$1)
-PATH_NAMIFY=		$(subst .,_,$(subst -,_,$(subst /,_,$1)))
-FILE_CFLAGS_VAR=	$(call PATH_NAMIFY,$(call STRIPROOTDIR,$(realpath $1)))_CFLAGS
-FILE_CFLAGS=		${$(call FILE_CFLAGS_VAR,$1)}
-FILE_PCPP_FLAGS_VAR=	$(call PATH_NAMIFY,$(call STRIPROOTDIR,$(realpath $1)))_PCPP_FLAGS
-FILE_PCPP_FLAGS=	${$(call FILE_PCPP_FLAGS_VAR,$1)}
 
 ifneq ($(filter fuse,${MODULES}),)
 CFLAGS+=	${FUSE_CFLAGS}
@@ -168,6 +166,13 @@ vpath %.c $(sort $(dir $(filter %.c,${_TSRCS})) ${OBJDIR})
 vpath %.dep ${OBJDIR}
 
 all: recurse-all
+	@for i in ${SRCS}; do								\
+		[ -n "$$i" ] || continue;						\
+		if ! [ -e "$$i" ]; then							\
+			echo "$$i does not exist" >&2;					\
+			exit 1;								\
+		fi;									\
+	done
 	@if ${NOTEMPTY} "${TARGET}"; then						\
 		mkdir -p ${OBJDIR};							\
 		${MAKE} ${TARGET};							\
@@ -251,7 +256,7 @@ install: recurse-install install-hook
 		${ECHORUN} cp -pf ${PROG} ${INSTALLDIR}/bin;				\
 	fi
 	@if ${NOTEMPTY} "${HEADERS}"; then						\
-		for i in "${HEADERS}"; do						\
+		for i in ${HEADERS}; do							\
 			if [ x"$${i%/*}" = x"$$i" ]; then				\
 				_dir=${INSTALLDIR}/include/$${i%/*};			\
 			else								\
