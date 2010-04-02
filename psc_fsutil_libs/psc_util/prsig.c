@@ -39,8 +39,8 @@ void
 psc_sigappend(char buf[LINE_MAX], const char *str)
 {
 	if (buf[0] != '\0')
-		strlcat(buf, ",", sizeof(buf));
-	strlcat(buf, str, sizeof(buf));
+		strlcat(buf, ",", LINE_MAX);
+	strlcat(buf, str, LINE_MAX);
 }
 
 #define PNSIG 32
