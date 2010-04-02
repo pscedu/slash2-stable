@@ -34,8 +34,11 @@
  *	@(#)time.h	8.2 (Berkeley) 7/10/94
  */
 
-
 #include <sys/time.h>
+
+#ifndef HAVE_CLOCK_GETTIME
+# include "pfl/compat/clock_gettime.h"
+#endif
 
 #ifndef timespecclear
 #define timespecclear(tsp)		(tsp)->tv_sec = (tsp)->tv_nsec = 0
