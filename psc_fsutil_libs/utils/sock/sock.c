@@ -36,12 +36,12 @@
 
 #include "pfl/cdefs.h"
 #include "pfl/pfl.h"
+#include "pfl/str.h"
 #include "psc_util/alloc.h"
 #include "psc_util/atomic.h"
 #include "psc_util/fmt.h"
 #include "psc_util/iostats.h"
 #include "psc_util/log.h"
-#include "psc_util/strlcpy.h"
 #include "psc_util/thread.h"
 #include "psc_util/time.h"
 #include "psc_util/timerthr.h"

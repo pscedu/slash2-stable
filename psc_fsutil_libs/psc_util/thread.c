@@ -34,13 +34,13 @@
 #include <unistd.h>
 
 #include "pfl/cdefs.h"
+#include "pfl/str.h"
 #include "psc_ds/dynarray.h"
 #include "psc_ds/lockedlist.h"
 #include "psc_ds/vbitmap.h"
 #include "psc_util/alloc.h"
 #include "psc_util/lock.h"
 #include "psc_util/mem.h"
-#include "psc_util/strlcpy.h"
 #include "psc_util/thread.h"
 
 __static pthread_key_t	 psc_thrkey;

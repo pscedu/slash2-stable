@@ -23,8 +23,8 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "pfl/str.h"
 #include "psc_util/setprocesstitle.h"
-#include "psc_util/strlcpy.h"
 
 int
 setprocesstitle(char **av, const char *fmt, ...)

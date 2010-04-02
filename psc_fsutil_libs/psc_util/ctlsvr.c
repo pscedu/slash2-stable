@@ -38,6 +38,7 @@
 
 #include "pfl/cdefs.h"
 #include "pfl/pfl.h"
+#include "pfl/str.h"
 #include "psc_ds/hash2.h"
 #include "psc_ds/list.h"
 #include "psc_ds/listcache.h"
@@ -52,7 +53,6 @@
 #include "psc_util/mlist.h"
 #include "psc_util/pool.h"
 #include "psc_util/rlimit.h"
-#include "psc_util/strlcpy.h"
 #include "psc_util/thread.h"
 #include "psc_util/umask.h"
 

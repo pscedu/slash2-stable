@@ -80,8 +80,6 @@
 #include "psc_util/semaphore.h"
 #include "psc_util/setprocesstitle.h"
 #include "psc_util/spinlock.h"
-#include "psc_util/strlcat.h"
-#include "psc_util/strlcpy.h"
 #include "psc_util/subsys.h"
 #include "psc_util/thread.h"
 #include "psc_util/time.h"

@@ -23,9 +23,9 @@
 #include <signal.h>
 #include <stdio.h>
 
+#include "pfl/str.h"
 #include "psc_util/log.h"
 #include "psc_util/prsig.h"
-#include "psc_util/strlcat.h"
 
 extern char *sys_sigabbrev[];
 
@@ -33,8 +33,8 @@ void
 psc_sigappend(char buf[LINE_MAX], const char *str)
 {
 	if (buf[0] != '\0')
-		psc_strlcat(buf, ",", sizeof(buf));
-	psc_strlcat(buf, str, sizeof(buf));
+		strlcat(buf, ",", sizeof(buf));
+	strlcat(buf, str, sizeof(buf));
 }
 
 #define PNSIG 32

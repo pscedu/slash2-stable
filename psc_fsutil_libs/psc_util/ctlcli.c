@@ -29,6 +29,7 @@
 #include <unistd.h>
 
 #include "pfl/cdefs.h"
+#include "pfl/str.h"
 #include "psc_ds/list.h"
 #include "psc_ds/vbitmap.h"
 #include "psc_util/ctl.h"
@@ -38,7 +39,6 @@
 #include "psc_util/log.h"
 #include "psc_util/meter.h"
 #include "psc_util/pool.h"
-#include "psc_util/strlcpy.h"
 #include "psc_util/subsys.h"
 
 #define PCTHRT_RD	0

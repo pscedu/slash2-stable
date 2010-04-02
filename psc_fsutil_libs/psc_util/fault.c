@@ -24,6 +24,7 @@
 #include <string.h>
 #include <unistd.h>
 
+#include "pfl/str.h"
 #include "psc_ds/hash2.h"
 #include "psc_util/alloc.h"
 #include "psc_util/ctl.h"
@@ -31,7 +32,6 @@
 #include "psc_util/fault.h"
 #include "psc_util/lock.h"
 #include "psc_util/random.h"
-#include "psc_util/strlcpy.h"
 
 #define PSC_FAULT_NBUCKETS	16
 

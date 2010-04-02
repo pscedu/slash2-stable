@@ -80,7 +80,7 @@ strlcpy(char *dst, const char *src, size_t siz)
  * If retval >= siz, truncation occurred.
  */
 size_t
-psc_strlcat(char *dst, const char *src, size_t siz)
+strlcat(char *dst, const char *src, size_t siz)
 {
 	char *d = dst;
 	const char *s = src;
