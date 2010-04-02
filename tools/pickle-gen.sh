@@ -28,6 +28,7 @@ localdefsmk=$4
 		pushd $i >/dev/null || continue
 
 		name=$(echo ${i##*/} | tr 'a-z' 'A-Z')
+		$make clean >/dev/null
 		$make >/dev/null && echo "PICKLE_HAVE_$name=1"
 		popd >/dev/null
 	done
