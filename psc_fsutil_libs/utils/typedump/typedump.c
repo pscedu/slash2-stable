@@ -27,6 +27,7 @@
 #include "pfl/cdefs.h"
 #include "pfl/compat.h"
 #include "pfl/pfl.h"
+#include "pfl/str.h"
 #include "pfl/types.h"
 #include "psc_ds/dynarray.h"
 #include "psc_ds/hash2.h"
