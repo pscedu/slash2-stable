@@ -77,7 +77,7 @@ EXTRACT_CFLAGS=		perl -ne 'print $$& while /-[^ID]\S+\s?/gc'
 # Pre-modules processing
 
 ifneq ($(filter ${PFL_BASE}/psc_%.c,${SRCS}),)
-MODULES+=		pfl
+MODULES+=	pfl
 endif
 
 # Process modules
@@ -166,11 +166,11 @@ endif
 # Post-modules processing
 
 ifneq ($(filter ${PFL_BASE}/psc_util/pthrutil.c,${SRCS}),)
-SRCS+=			${ROOTDIR}/psc_fsutil_libs/psc_util/log.c
+SRCS+=		${ROOTDIR}/psc_fsutil_libs/psc_util/log.c
 endif
 
 ifneq ($(filter ${PFL_BASE}/psc_util/log.c,${SRCS}),)
-SRCS+=			${ROOTDIR}/psc_fsutil_libs/psc_util/alloc.c
+SRCS+=		${ROOTDIR}/psc_fsutil_libs/psc_util/alloc.c
 endif
 
 # OBJDIR is added to .c below since lex/yacc intermediate files get generated there.
