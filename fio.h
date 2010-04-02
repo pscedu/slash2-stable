@@ -296,10 +296,10 @@ extern struct list_head	 groupList;
 extern GROUP_t		*currentGroup;
 
 #define DEBUG(chan, format, ...) do {					\
-	if (chan & iot->debug_flags) {					\
+	if (iot->debug_flags & (chan)) {				\
 		struct timeval tv;					\
 		gettimeofday(&tv, NULL);				\
-		fprintf(stderr,	PSCPRIuTIMET"."PSCPRIuUTIMET		\
+		fprintf(stderr,	"%"PSCPRIuTIMET".%"PSCPRIuUTIMET	\
 		    " %s PE_%05d %s() %s, %d :: "format,		\
 		    tv.tv_sec, tv.tv_usec, get_dbg_prefix(chan),	\
 		    iot->mype, __func__, __FILE__, __LINE__,		\
@@ -312,8 +312,8 @@ extern GROUP_t		*currentGroup;
 	__func__, __FILE__, __LINE__, ##__VA_ARGS__)
 
 #define TPRINT(tv, format, ...)						\
-    fprintf(stderr, PSCPRIuTIMET"."PSCPRIuUTIMET" PE_%05d %s() :: "	\
-	format, tv.tv_sec, tv.tv_usec, iot->mype, __func__, ##__VA_ARGS__)
+    fprintf(stderr, "%"PSCPRIuTIMET".%"PSCPRIuUTIMET" PE_%05d %s() :: "	\
+	format, (tv).tv_sec, (tv).tv_usec, iot->mype, __func__, ##__VA_ARGS__)
 
 #define TPRINTPE TPRINT
 
@@ -327,7 +327,7 @@ extern GROUP_t		*currentGroup;
 	if (fio_global_debug) {						\
 		struct timeval tv;					\
 		gettimeofday(&tv, NULL);				\
-		fprintf(stderr, PSCPRIuTIMET"."PSCPRIuUTIMET		\
+		fprintf(stderr, "%"PSCPRIuTIMET".%"PSCPRIuUTIMET	\
 		    "GDBG %s() PE_%05d %s, %d :: "format,		\
 		    tv.tv_sec, tv.tv_usec, __func__, iot->mype,		\
 		    __FILE__, __LINE__, ##__VA_ARGS__);			\
@@ -414,7 +414,7 @@ get_dbg_prefix(int dbg_channel)
 	    "\tfile_per_dir %d\n"					\
 	    "\ttree_depth %d\n"						\
 	    "\ttree_width %d\n"						\
-	    "\ttest_freq "PSCPRIuTIMET"."PSCPRIuUTIMET"\n",		\
+	    "\ttest_freq %"PSCPRIuTIMET".%"PSCPRIuUTIMET"\n",		\
 	    (g)->test_name,						\
 	    (g),							\
 	    (g)->num_pes,						\
@@ -497,8 +497,7 @@ _BARRIER(GROUP_t *mygroup, struct io_toolbox *iot)
 	WARN("No barrier support..\n");
 #endif
 	iot->barrier_cnt++;
-	DEBUG(D_BARRIER, "barrier_cnt %d\n",
-	    iot->barrier_cnt);
+	DEBUG(D_BARRIER, "barrier_cnt %d\n", iot->barrier_cnt);
 	//  sleep(1);
 }
 
@@ -647,8 +646,8 @@ _BARRIER(GROUP_t *mygroup, struct io_toolbox *iot)
 
 #define DUMP_OPLOG_ENTRY(e)						\
     BDEBUGPE("Addr %p Type %d Used %d Time %f btime %f sublog %p\n",	\
-	e, e->oplog_type, e->oplog_used, e->oplog_time,			\
-	e->oplog_barrier_time, e->sub.oplog_sublog)
+	(e), (e)->oplog_type, (e)->oplog_used, (e)->oplog_time,		\
+	(e)->oplog_barrier_time, (e)->sub.oplog_sublog)
 
 static inline void
 log_op(int op_type, IOT_t *iot)
