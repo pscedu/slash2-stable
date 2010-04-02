@@ -36,6 +36,7 @@ PICKLE_NEED_VERSION=					4
    DEFINES+=						-DHAVE_PTHREAD_BARRIER
   else
    SRCS+=						${ROOTDIR}/psc_fsutil_libs/compat/pthread_barrier.c
+   SRCS+=						${ROOTDIR}/psc_fsutil_libs/psc_util/pthrutil.c
   endif
  endif
 
