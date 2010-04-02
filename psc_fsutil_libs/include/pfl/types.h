@@ -29,15 +29,22 @@
 #define PSCPRIxCRC32	"08u"
 #define PSCPRIxCRC64	"016"PRIx64
 
-#ifdef __APPLE__
+#if defined(__APPLE__) || defined(__OpenBSD__)
 # define PSCPRI_PTHRT	"p"
 #else
 # define PSCPRI_PTHRT	"lu"
 #endif
 
-#define PSCPRIuTIMET	"u"
+#define PSCPRIuTIMET	"lu"
 #define PSCPRIuUTIMET	"06u"
-#define PSCPRIuINOT	"u"
+
+#if defined(_FILE_OFFSET64) || defined(__APPLE__)
+# define PSCPRIuINOT	PRIu64
+#elif defined(__linux)
+# define PSCPRIuINOT	"lu"
+#else
+# define PSCPRIuINOT	"u"
+#endif
 
 #include "psc_util/subsys.h"
 
