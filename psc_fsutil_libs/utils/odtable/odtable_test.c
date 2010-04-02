@@ -26,12 +26,14 @@
 #include <strings.h>
 #include <unistd.h>
 
-#include "pfl/cdefs.h"
 #include "pfl/pfl.h"
 #include "psc_ds/dynarray.h"
 #include "psc_util/alloc.h"
 #include "psc_util/log.h"
 #include "psc_util/odtable.h"
+
+/* based on SL_PATH_DATADIR and SL_FN_IONBMAPS_ODT */
+char *def_table_name = "/var/lib/slashd/ion_bmaps.odt";
 
 struct psc_dynarray myReceipts = DYNARRAY_INIT;
 const char *progname;
@@ -115,7 +117,7 @@ main(int argc, char *argv[])
 		usage();
 
 	if (!table_name)
-		usage();
+		table_name = def_table_name;
 
 	if (create_table &&
 	    (rc = odtable_create(table_name, table_size, elem_size)))
