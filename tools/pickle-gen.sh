@@ -25,11 +25,11 @@ localdefsmk=$4
 	echo "PICKLE_HAS_VERSION=$hasvers"
 
 	for i in $rootdir/compat/*; do
-		pushd $i >/dev/null || continue
+		cd $i >/dev/null || continue
 
 		name=$(echo ${i##*/} | tr 'a-z' 'A-Z')
 		$make clean >/dev/null
 		$make >/dev/null && echo "PICKLE_HAVE_$name=1"
-		popd >/dev/null
+		cd - >/dev/null
 	done
 } > $localdefsmk
