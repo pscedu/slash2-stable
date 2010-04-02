@@ -22,6 +22,7 @@
 #include <sys/stat.h>
 #include <sys/statvfs.h>
 #include <sys/time.h>
+#include <sys/uio.h>
 
 #include <errno.h>
 #include <fcntl.h>
