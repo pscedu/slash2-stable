@@ -53,15 +53,14 @@
 #undef __dead
 #define __dead		__attribute__((__noreturn__))
 
-#ifndef __packed
-# define __packed	__attribute__((__packed__))
-#endif
+#undef __packed
+#define __packed	__attribute__((__packed__))
 
+#undef __unusedx
 #define __unusedx	__attribute__((__unused__))
 
-#ifndef __weak
-# define __weak		__attribute__((__weak__))
-#endif
+#undef __weak
+#define __weak		__attribute__((__weak__))
 
 /* For marking something as file-scoped without side effects of `static'. */
 #define __static
