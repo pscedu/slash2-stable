@@ -26,12 +26,13 @@
 #include <string.h>
 #include <unistd.h>
 
+#include "pfl/cdefs.h"
 #include "pfl/pfl.h"
 #include "psc_ds/list.h"
 #include "psc_util/alloc.h"
 #include "psc_util/atomic.h"
-#include "pfl/cdefs.h"
 #include "psc_util/log.h"
+#include "psc_util/pthrutil.h"
 #include "psc_util/random.h"
 
 #define NTHRS_MAX	32
@@ -48,7 +49,7 @@ int nlocks = 2000;
 int nrd = 8;
 int nwr = 3;
 
-pthread_rwlock_t lk = PTHREAD_RWLOCK_WRITER_NONRECURSIVE_INITIALIZER_NP;
+pthread_rwlock_t lk = PSC_PTHREAD_RWLOCK_INITIALIZER;
 struct psclist_head thrs = PSCLIST_HEAD_INIT(thrs);
 const char *progname;
 

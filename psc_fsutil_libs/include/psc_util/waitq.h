@@ -25,6 +25,7 @@
 #include "psc_ds/list.h"
 #include "psc_util/atomic.h"
 #include "psc_util/lock.h"
+#include "psc_util/pthrutil.h"
 
 #if HAVE_LIBPTHREAD
 
@@ -37,7 +38,7 @@ struct psc_waitq {
 	struct timespec		wq_waitv;
 };
 
-#define PSC_WAITQ_INIT	{ PTHREAD_ERRORCHECK_MUTEX_INITIALIZER_NP, \
+#define PSC_WAITQ_INIT	{ PSC_PTHREAD_MUTEX_INITIALIZER,		\
 			  PTHREAD_COND_INITIALIZER, ATOMIC_INIT(0), { 0, 0 } }
 
 #else /* HAVE_LIBPTHREAD */
