@@ -31,10 +31,10 @@ PICKLE_NEED_VERSION=					4
   DEFINES+=						-DHOST_NAME_MAX=MAXHOSTNAMELEN
  endif
 
- ifneq ($(filter pthread,${MODULES}),)
-  ifdef PICKLE_HAVE_PTHREAD_BARRIER
-   DEFINES+=						-DHAVE_PTHREAD_BARRIER
-  else
+ ifdef PICKLE_HAVE_PTHREAD_BARRIER
+  DEFINES+=						-DHAVE_PTHREAD_BARRIER
+ else
+  ifneq ($(filter pthread,${MODULES}),)
    SRCS+=						${ROOTDIR}/psc_fsutil_libs/compat/pthread_barrier.c
    SRCS+=						${ROOTDIR}/psc_fsutil_libs/psc_util/pthrutil.c
   endif
