@@ -5,10 +5,6 @@ PATH_NAMIFY=		$(subst .,_,$(subst -,_,$(subst /,_,$1)))
 FILE_CFLAGS=		${$(call PATH_NAMIFY,$(call STRIPROOTDIR,$(realpath $1)))_CFLAGS}
 FILE_PCPP_FLAGS=	${$(call PATH_NAMIFY,$(call STRIPROOTDIR,$(realpath $1)))_PCPP_FLAGS}
 
-ifneq ($(filter ${ROOTDIR}/psc_fsutil_libs/psc_%.c,${SRCS}),)
-MODULES+=		pfl
-endif
-
 -include ${ROOTDIR}/mk/local.mk
 
 _TSRCS=			$(foreach fn,$(sort ${SRCS}),$(realpath ${fn}))
@@ -77,6 +73,14 @@ TARGET?=		${PROG} ${LIBRARY}
 EXTRACT_INCLUDES=	perl -ne 'print $$& while /-I\S+\s?/gc'
 EXTRACT_DEFINES=	perl -ne 'print $$& while /-D\S+\s?/gc'
 EXTRACT_CFLAGS=		perl -ne 'print $$& while /-[^ID]\S+\s?/gc'
+
+# Pre-modules processing
+
+ifneq ($(filter ${PFL_BASE}/psc_%.c,${SRCS}),)
+MODULES+=		pfl
+endif
+
+# Process modules
 
 ifneq ($(filter fuse,${MODULES}),)
 CFLAGS+=	${FUSE_CFLAGS}
@@ -157,6 +161,16 @@ endif
 ifneq ($(filter numa,${MODULES}),)
 DEFINES+=	${NUMA_DEFINES}
 LDFLAGS+=	${NUMA_LIBS}
+endif
+
+# Post-modules processing
+
+ifneq ($(filter ${PFL_BASE}/psc_util/pthrutil.c,${SRCS}),)
+SRCS+=			${ROOTDIR}/psc_fsutil_libs/psc_util/log.c
+endif
+
+ifneq ($(filter ${PFL_BASE}/psc_util/log.c,${SRCS}),)
+SRCS+=			${ROOTDIR}/psc_fsutil_libs/psc_util/alloc.c
 endif
 
 # OBJDIR is added to .c below since lex/yacc intermediate files get generated there.
