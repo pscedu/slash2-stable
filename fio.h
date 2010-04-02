@@ -52,32 +52,6 @@ extern pthread_barrier_t barrier;
 #define FIO_DIR_PREFIX  "fio_d."
 #define FIO_FILE_PREFIX "fio_f."
 
-#ifdef OS64
-#define TIMET  "%u"
-#define UTIMET "%06u"
-#define INOT   "%u"
-
-#elif QK
-#define TIMET  "%lu"
-#define UTIMET "%06lu"
-#define INOT   "%lu"
-
-#elif __APPLE__
-#define TIMET  "%lu"
-#define UTIMET "%06u"
-#define INOT   "%llu"
-
-#elif __WORDSIZE == 64
-#define TIMET  "%lu"
-#define UTIMET "%06lu"
-#define INOT   "%lu"
-
-#else
-#define TIMET  "%lu"
-#define UTIMET "%06lu"
-#define INOT   "%llu"
-#endif
-
 extern int   TOTAL_PES;
 extern int   fio_global_debug, fio_lexyacc_debug;
 extern int   stderr_redirect;
@@ -87,23 +61,23 @@ extern char *stderr_fnam_prefix;
  *  Test type bits
  */
 enum TEST_OPTIONS {
-	FIO_SAMEDIR            = 1 << 1,  // all nsops happen in samedir
-	FIO_BLOCK_BARRIER      = 1 << 2,  // time each block (read/write)
-	FIO_BARRIER            = 1 << 3,  // barrier stuff with mpi
-	FIO_BARRDBG            = 1 << 4,
-	FIO_SAMEFILE           = 1 << 5,  // io goes to same file..
-	FIO_STAGGER            = 1 << 6,  // each process runs independently of other
-	//FIO_PAROPEN            = 1 << 7,  // processes write to the same file
-	FIO_VERIFY             = 1 << 8,  // perform blocklevel checksumming
-	FIO_WRITE              = 1 << 9,
-	FIO_READ               = 1 << 10,
-	FIO_SEEKOFF            = 1 << 11,
-	FIO_TIME_BARRIER       = 1 << 12,
-	FIO_THRASH_LOCK        = 1 << 13,
-	FIO_TIME_BLOCK         = 1 << 14,
-	FIO_FSYNC_BLOCK        = 1 << 15,
-	FIO_INTERSPERSE        = 1 << 16,
-	FIO_APP_BARRIER        = 1 << 17
+	FIO_SAMEDIR            = 1 << 0,  // all fsops happen in samedir
+	FIO_BLOCK_BARRIER      = 1 << 1,  // time each block (read/write)
+	FIO_BARRIER            = 1 << 2,  // barrier stuff with mpi
+	FIO_BARRDBG            = 1 << 3,
+	FIO_SAMEFILE           = 1 << 4,  // io goes to same file..
+	FIO_STAGGER            = 1 << 5,  // each process runs independently of other
+//	FIO_PAROPEN            = 1 << 6,  // processes write to the same file
+	FIO_VERIFY             = 1 << 7,  // perform blocklevel checksumming
+	FIO_WRITE              = 1 << 8,
+	FIO_READ               = 1 << 9,
+	FIO_SEEKOFF            = 1 << 10,
+	FIO_TIME_BARRIER       = 1 << 11,
+	FIO_THRASH_LOCK        = 1 << 12,
+	FIO_TIME_BLOCK         = 1 << 13,
+	FIO_FSYNC_BLOCK        = 1 << 14,
+	FIO_INTERSPERSE        = 1 << 15,
+	FIO_APP_BARRIER        = 1 << 16
 };
 
 #define ACTIVETYPE(t) (((t) & mygroup->test_opts) ? 1 : 0)
@@ -321,71 +295,78 @@ typedef struct test_group GROUP_t;
 extern struct list_head	 groupList;
 extern GROUP_t		*currentGroup;
 
-#define DEBUG(chan, format, args...) do {				\
-	struct timeval tv;						\
-	gettimeofday(&tv, NULL);					\
-	if (chan & iot->debug_flags)					\
-	fprintf(stderr,							\
-	    TIMET"."UTIMET " %s PE_%05d %s() %s, %d :: "format,		\
-	    tv.tv_sec, tv.tv_usec, get_dbg_prefix(chan), iot->mype,	\
-	    __FUNCTION__, __FILE__, __LINE__, ##args);			\
+#define DEBUG(chan, format, ...) do {					\
+	if (chan & iot->debug_flags) {					\
+		struct timeval tv;					\
+		gettimeofday(&tv, NULL);				\
+		fprintf(stderr,	PSCPRIuTIMET"."PSCPRIuUTIMET		\
+		    " %s PE_%05d %s() %s, %d :: "format,		\
+		    tv.tv_sec, tv.tv_usec, get_dbg_prefix(chan),	\
+		    iot->mype, __func__, __FILE__, __LINE__,		\
+		    ##__VA_ARGS__);					\
+	}								\
 } while (0)
 
-#define PRINT(format, args...)						\
+#define PRINT(format, ...)						\
     fprintf(stderr, "%s() %s, %d :: "format,				\
-	__FUNCTION__, __FILE__, __LINE__, ##args)
+	__func__, __FILE__, __LINE__, ##__VA_ARGS__)
 
-#define TPRINT(tv, format, args...)					\
-    fprintf(stderr, TIMET"."UTIMET" PE_%05d %s() :: "format,		\
-	tv.tv_sec, tv.tv_usec, iot->mype, __FUNCTION__, ##args)
+#define TPRINT(tv, format, ...)						\
+    fprintf(stderr, PSCPRIuTIMET"."PSCPRIuUTIMET" PE_%05d %s() :: "	\
+	format, tv.tv_sec, tv.tv_usec, iot->mype, __func__, ##__VA_ARGS__)
 
 #define TPRINTPE TPRINT
 
-#define BDEBUG(format, args...)						\
+#define BDEBUG(format, ...) do {					\
     if (fio_global_debug)						\
 	fprintf(stderr, "%s() %s, %d :: "format,			\
-	    __FUNCTION__, __FILE__, __LINE__, ##args);
-
-#define BDEBUGPE(format, args...) do {					\
-	struct timeval tv;						\
-	gettimeofday(&tv, NULL);					\
-	if (fio_global_debug)						\
-	fprintf(stderr,							\
-	    TIMET"."UTIMET "GDBG %s() PE_%05d %s, %d :: "format,	\
-	    tv.tv_sec, tv.tv_usec, __FUNCTION__, iot->mype,		\
-	    __FILE__, __LINE__, ##args);				\
+	    __func__, __FILE__, __LINE__, ##__VA_ARGS__);		\
 } while (0)
 
-#define CDEBUG(format, ...)						\
+#define BDEBUGPE(format, ...) do {					\
+	if (fio_global_debug) {						\
+		struct timeval tv;					\
+		gettimeofday(&tv, NULL);				\
+		fprintf(stderr, PSCPRIuTIMET"."PSCPRIuUTIMET		\
+		    "GDBG %s() PE_%05d %s, %d :: "format,		\
+		    tv.tv_sec, tv.tv_usec, __func__, iot->mype,		\
+		    __FILE__, __LINE__, ##__VA_ARGS__);			\
+	}								\
+} while (0)
+
+#define CDEBUG(format, ...) do {					\
     if (fio_lexyacc_debug)						\
 	fprintf(stderr, "%s() %s, %d :: "format,			\
-	    __FUNCTION__, __FILE__, __LINE__, ##__VA_ARGS__);
+	    __func__, __FILE__, __LINE__, ##__VA_ARGS__);		\
+} while (0)
 
-#define ASSERT(cond)							\
+#define ASSERT(cond) do {						\
     if (!(cond)) {							\
 	    fprintf(stderr, "ASSERT %s() %s, %d %s\n",			\
-		__FUNCTION__, __FILE__, __LINE__, strerror(errno));	\
+		__func__, __FILE__, __LINE__, strerror(errno));		\
 	    exit(1);							\
-    }
+    }									\
+} while (0)
 
-#define ASSERTPE(cond)							\
+#define ASSERTPE(cond) do {						\
     if (!(cond)) {							\
-	    fprintf(stderr, "ASSERT PE_%d %s() %s, %d %s\n",		\
-		iot->mype, __FUNCTION__, __FILE__,			\
-		__LINE__, strerror(errno));				\
+	    fprintf(stderr, "ASSERT PE_%d %s() %s, %d %s\n", iot->mype,	\
+		__func__, __FILE__, __LINE__, strerror(errno));		\
 	    exit(1);							\
-    }
+    }									\
+} while (0)
 
-#define ASSERTMSG(cond, format, args...)				\
+#define ASSERTMSG(cond, format, ...) do {				\
     if (!(cond)) {							\
 	    fprintf(stderr, "ASSERT %s() %s, %d msg:"format,		\
-		__FUNCTION__, __FILE__, __LINE__, ##args);		\
+		__func__, __FILE__, __LINE__, ##__VA_ARGS__);		\
 	    exit(1);							\
-    }
+    }									\
+} while (0)
 
-#define WARN(format, args...)						\
+#define WARN(format, ...)						\
     fprintf(stderr, "WARNING %s() %s, %d :: :: "format,			\
-	__FUNCTION__, __FILE__, __LINE__, ##args)
+	__func__, __FILE__, __LINE__, ##__VA_ARGS__)
 
 static inline char *
 get_dbg_prefix(int dbg_channel)
@@ -433,7 +414,7 @@ get_dbg_prefix(int dbg_channel)
 	    "\tfile_per_dir %d\n"					\
 	    "\ttree_depth %d\n"						\
 	    "\ttree_width %d\n"						\
-	    "\ttest_freq "TIMET UTIMET"\n",				\
+	    "\ttest_freq "PSCPRIuTIMET"."PSCPRIuUTIMET"\n",		\
 	    (g)->test_name,						\
 	    (g),							\
 	    (g)->num_pes,						\
@@ -648,7 +629,7 @@ _BARRIER(GROUP_t *mygroup, struct io_toolbox *iot)
 	}								\
 	STOPWATCH(FSTAT_clk);						\
 	DEBUG(D_DTREE,							\
-	    "%s\t%#09x Filesize = %zu, Inode = "INOT"\n",		\
+	    "%s\t%#09x Filesize = %zu, Inode = %"PSCPRIuINOT"\n",	\
 	    clock_2_str(BLOCK_clk), iot->filenum,			\
 	    (size_t)iot->stb.st_size, iot->stb.st_ino);			\
 } while (0)
@@ -659,7 +640,7 @@ _BARRIER(GROUP_t *mygroup, struct io_toolbox *iot)
 	ASSERT(!stat(iot->mypath, &iot->stb));				\
 	STOPWATCH(STAT_clk);						\
 	DEBUG(D_DTREE,							\
-	    "%s\t%#09x Filesize = %zu, Inode = "INOT"\n",		\
+	    "%s\t%#09x Filesize = %zu, Inode = %"PSCPRIuINOT"\n",	\
 	    clock_2_str(STAT_clk), iot->filenum,			\
 	    (size_t)iot->stb.st_size, iot->stb.st_ino);			\
 } while (0)
