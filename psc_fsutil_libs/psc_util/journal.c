@@ -85,7 +85,7 @@ pjournal_xadd_sngl(struct psc_journal *pj, int type, void *data, size_t size)
 	int rc;
 
 	xh = pjournal_xnew(pj);
-	xh->pjx_flags |= (PJX_XSTART | PJX_XCLOSE);
+	xh->pjx_flags |= (PJX_XSTART | PJX_XCLOSE | PJX_XSNGL);
 	
 	rc = pjournal_logwrite(xh, type, data, size);
 	PSCFREE(xh);
@@ -301,7 +301,8 @@ pjournal_logwrite(struct psc_journal_xidhndl *xh, int type, void *data,
 	}
 	if (xh->pjx_flags & PJX_XCLOSE) {
 		normal = 0;
-		psc_assert(size == 0);
+		if (!(xh->pjx_flags & PJX_XSNGL))
+			psc_assert(size == 0);
 		psc_assert(xh->pjx_tailslot != slot);
 		psc_assert(xh->pjx_tailslot != PJX_SLOT_ANY);
 		type |= PJE_XCLOSE;

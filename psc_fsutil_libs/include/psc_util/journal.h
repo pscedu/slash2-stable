@@ -178,6 +178,8 @@ struct psc_journal_enthdr {
 #define	PJX_NONE		 0
 #define	PJX_XSTART		 (1 << 0)
 #define	PJX_XCLOSE		 (1 << 1)
+#define	PJX_XSNGL		 (1 << 2)
+
 
 struct psc_journal_xidhndl {
 	uint64_t		 pjx_xid;
