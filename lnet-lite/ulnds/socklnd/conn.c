@@ -273,15 +273,13 @@ usocklnd_create_active_conn(usock_peer_t *peer, int type,
         usock_conn_t *conn;
         __u32         dst_ip   = LNET_NIDADDR(peer->up_peerid.nid);
         __u16         dst_port = usocklnd_get_cport();
-	lnet_nid_t peernid;
         
         conn = usocklnd_conn_allocate();
         if (conn == NULL)
                 return -ENOMEM;
 
-	peernid = usock_get_masq_nid(peer->up_peerid.nid);
-        conn->uc_tx_hello = usocklnd_create_cr_hello_tx(peer->up_ni, type,
-                                                        peernid);
+	conn->uc_tx_hello = usocklnd_create_cr_hello_tx(peer->up_ni, type,
+							peer->up_peerid.nid);
         if (conn->uc_tx_hello == NULL) {
                 usocklnd_conn_free(conn);
                 return -ENOMEM;

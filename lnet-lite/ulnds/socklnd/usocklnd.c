@@ -79,14 +79,6 @@ usock_tunables_t usock_tuns = {
         .ut_portpid         = 1,
 };
 
-struct usock_masq_pair {
-	lnet_nid_t		from;
-	lnet_nid_t		to;
-	struct list_head	entry;
-};
-
-CFS_LIST_HEAD(usock_masq_pairs);
-
 #define MAX_REASONABLE_TIMEOUT 36000 /* 10 hours */
 #define MAX_REASONABLE_NPT 1000
 
@@ -197,55 +189,6 @@ usocklnd_release_poll_states(int n)
 }
 
 int
-usock_parse_masq_pairs(void)
-{
-	struct usock_masq_pair *mp;
-	char *masq, *p, *next, *d;
-
-	masq = getenv("USOCK_MASQUERADE");
-	for (p = masq; p; p = next) {
-		next = strchr(p, ',');
-		if (next)
-			*next++ = '\0';
-
-		d = strstr(p, "->");
-		if (d == NULL) {
-                        CERROR("USOCK_MASQUERADE: invalid format: %s\n", p);
-			return (-1);
-		}
-		*d = '\0';
-		d += 2;
-
-                LIBCFS_ALLOC(mp, sizeof(*mp));
-		mp->from = libcfs_str2nid(p);
-		if (mp->from == LNET_NID_ANY) {
-                        CERROR("USOCK_MASQUERADE: invalid nid: %s\n", p);
-			return (-1);
-		}
-		mp->to = libcfs_str2nid(d);
-		if (mp->to == LNET_NID_ANY) {
-                        CERROR("USOCK_MASQUERADE: invalid nid: %s\n", d);
-			return (-1);
-		}
-		list_add(&mp->entry, &usock_masq_pairs);
-	}
-	return (0);
-}
-
-lnet_nid_t
-usock_get_masq_nid(lnet_nid_t dst)
-{
-	struct usock_masq_pair *mp;
-	__u32 net;
-
-	net = LNET_NIDNET(dst);
-	list_for_each_entry(mp, &usock_masq_pairs, entry)
-		if (LNET_MKNID(net, LNET_NIDADDR(mp->from)) == dst)
-			return LNET_MKNID(net, LNET_NIDADDR(mp->to));
-	return dst;
-}
-
-int
 usocklnd_update_tunables()
 {
         int rc;
@@ -305,10 +248,6 @@ usocklnd_update_tunables()
                                       "USOCK_CPORT");
         if (rc)
                 return rc;
-
-	rc = usock_parse_masq_pairs();
-	if (rc)
-		return rc;
 
         if (usocklnd_validate_tunables())
                 return -EINVAL;
