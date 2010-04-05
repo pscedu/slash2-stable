@@ -41,18 +41,18 @@ struct psc_journal_hdr {
 	uint32_t		pjh_version;
 	uint32_t		pjh_options;
 	uint32_t		pjh_readahead;
-	uint32_t		pjh__pad;
+	uint32_t		pjh_pad;
 	uint64_t		pjh_chksum;	/* keep it last and aligned at a 8 byte boundary */
 #define pjh_iolen pjh_start_off
 };
 
-#define	MAX_NUM_PJBUF		 8		/* number of journal buffers to keep around */
+#define	MAX_NUM_PJBUF		8		/* number of journal buffers to keep around */
 
-#define PJSHDW_DEFTILES    4
-#define PJSHDW_DEFTILEENTS 1024
-#define PJSHDW_MAXAGE      {1, 0} /* seconds, nanoseconds */
+#define PJSHDW_DEFTILES    	4
+#define PJSHDW_DEFTILEENTS	1024
+#define PJSHDW_MAXAGE		{1, 0} /* seconds, nanoseconds */
 
-#define JRNLTHRT_SHDW 0
+#define JRNLTHRT_SHDW		0
 
 struct psc_journal_shdw_tile {
         void *pjst_base;
