@@ -41,7 +41,7 @@ struct psc_journal_hdr {
 	uint32_t		pjh_version;
 	uint32_t		pjh_options;
 	uint32_t		pjh_readahead;
-	uint32_t		pjh_pad;
+	uint32_t		pjh__pad;
 	uint64_t		pjh_chksum;	/* keep it last and aligned at a 8 byte boundary */
 #define pjh_iolen pjh_start_off
 };
