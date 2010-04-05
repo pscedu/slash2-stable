@@ -1,6 +1,5 @@
 $Id$
 
-
 general reminders
 - watch out for sizeof(type var[0])
 - constify RPC replies in clients and requests in servers
@@ -26,7 +25,6 @@ general reminders
 
 make
 - rename ROOTDIR -> PROJ_BASE
-- ensure all SRCS exist
 - make spins if no SRCS or SUBDIRS
 - setting variables such as CFLAGS on the command line recursively
   propagates all additive assignments in subdirs
