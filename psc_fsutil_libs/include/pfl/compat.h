@@ -20,12 +20,16 @@
 #ifndef _PFL_COMPAT_H_
 #define _PFL_COMPAT_H_
 
-#ifdef __APPLE__
+#include <sys/param.h>
 
-#define HOST_NAME_MAX	MAXHOSTNAMELEN
+#include <errno.h>
 
+#ifndef ECOMM
 #define ECOMM		EPROTO
+#endif
 
+#ifndef HOST_NAME_MAX
+#define HOST_NAME_MAX	MAXHOSTNAMELEN
 #endif
 
 size_t psc_strnlen(const char *, size_t);
