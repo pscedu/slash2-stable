@@ -43,8 +43,8 @@
 
 #ifndef __KERNEL__
 
+#include <sys/types.h>
 #include <sys/uio.h>
-#include <endian.h>
 
 /*
  * Functions to get network interfaces info

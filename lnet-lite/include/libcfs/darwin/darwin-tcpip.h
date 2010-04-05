@@ -101,6 +101,10 @@ void libcfs_sock_reset_cb(cfs_socket_t *sock);
 
 #endif /* !__DARWIN8__ */
 
+#else /* __KERNEL */
+
+#include "../user-tcpip.h"
+
 #endif	/* __KERNEL END */
 
 #endif  /* __XNU_CFS_TYPES_H__ */
