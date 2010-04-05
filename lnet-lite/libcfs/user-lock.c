@@ -294,7 +294,7 @@ void cfs_wait_for_completion(struct cfs_completion *c)
  * atomic primitives
  */
 
-static pthread_mutex_t atomic_guard_lock = PTHREAD_ERRORCHECK_MUTEX_INITIALIZER_NP;
+static pthread_mutex_t atomic_guard_lock = PSC_PTHREAD_MUTEX_INITIALIZER;
 
 int cfs_atomic_read(cfs_atomic_t *a)
 {
