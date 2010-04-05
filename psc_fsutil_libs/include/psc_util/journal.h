@@ -50,17 +50,17 @@ struct psc_journal_hdr {
 
 #define PJSHDW_DEFTILES    	4
 #define PJSHDW_DEFTILEENTS	1024
-#define PJSHDW_MAXAGE		{1, 0} /* seconds, nanoseconds */
+#define PJSHDW_MAXAGE		{1, 0}		/* seconds, nanoseconds */
 
 #define JRNLTHRT_SHDW		0
 
 struct psc_journal_shdw_tile {
-        void *pjst_base;
-        uint8_t pjst_state;
-        uint32_t pjst_nused;
-        uint32_t pjst_sjent;
-	psc_atomic32_t pjst_ref; /* Outstanding journal puts */
-        psc_spinlock_t pjst_lock;
+        void			*pjst_base;
+        uint8_t			 pjst_state;
+        uint32_t		 pjst_nused;
+        uint32_t		 pjst_sjent;
+	psc_atomic32_t		 pjst_ref;	/* Outstanding journal puts */
+        psc_spinlock_t		 pjst_lock;
 };
 
 enum PJSHDW_STATES {
@@ -75,16 +75,16 @@ struct psc_journal;
 /* In-memory 'journal shadowing'.
  */
 struct psc_journal_shdw {
-        uint32_t pjs_ntiles;            /* Number of tiles */
-        uint32_t pjs_njents;            /* Number of entries per tile */
-        uint32_t pjs_pjents;            /* Number of processed jents */
-        uint32_t pjs_curtile;           /* Current tile */
-	uint32_t pjs_state;
-        psc_spinlock_t pjs_lock;        /* Sync between logwrite and shdwthr */
-	struct psc_waitq pjs_waitq;
-        struct timespec pjs_lastflush;  /* Time since last tile process */
-	struct psc_journal *pjs_journal;
-        struct psc_journal_shdw_tile *pjs_pjsts[PJSHDW_DEFTILES];
+        uint32_t			 pjs_ntiles;            /* Number of tiles */
+        uint32_t			 pjs_njents;            /* Number of entries per tile */
+        uint32_t			 pjs_pjents;            /* Number of processed jents */
+        uint32_t			 pjs_curtile;           /* Current tile */
+	uint32_t			 pjs_state;
+        psc_spinlock_t			 pjs_lock;        	/* Sync between logwrite and shdwthr */
+	struct psc_waitq		 pjs_waitq;
+        struct timespec			 pjs_lastflush;		/* Time since last tile process */
+	struct psc_journal		*pjs_journal;
+        struct psc_journal_shdw_tile	*pjs_pjsts[PJSHDW_DEFTILES];
 };
 
 #define PJSHDW_ADVTILE 1
@@ -175,11 +175,9 @@ struct psc_journal_enthdr {
  */
 #define	PJX_SLOT_ANY		 (~0U)
 
-#define	PJX_NONE		 0
+#define	PJX_NONE		 (0 << 0)
 #define	PJX_XSTART		 (1 << 0)
 #define	PJX_XCLOSE		 (1 << 1)
-#define	PJX_XSNGL		 (1 << 2)
-
 
 struct psc_journal_xidhndl {
 	uint64_t		 pjx_xid;
