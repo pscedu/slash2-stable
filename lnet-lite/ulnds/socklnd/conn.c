@@ -38,6 +38,8 @@
  * Author: Maxim Patlasov <maxim@clusterfs.com>
  */
 
+#include "psc_util/pthrutil.h"
+
 #include "usocklnd.h"
 
 /* Return 1 if the conn is timed out, 0 else */
@@ -253,7 +255,7 @@ usocklnd_create_passive_conn(lnet_ni_t *ni, int fd, usock_conn_t **connp)
 	pthread_mutexattr_init(&attr);
 	pthread_mutexattr_settype(&attr,
 	    PTHREAD_MUTEX_ERRORCHECK_NP);
-        pthread_mutex_init(&conn->uc_lock, NULL);
+        psc_pthread_mutex_init(&conn->uc_lock);
         cfs_atomic_set(&conn->uc_refcount, 1); /* 1 ref for me */
 
         *connp = conn;
@@ -315,7 +317,7 @@ usocklnd_create_active_conn(usock_peer_t *peer, int type,
 	pthread_mutexattr_init(&attr);
 	pthread_mutexattr_settype(&attr,
 	    PTHREAD_MUTEX_ERRORCHECK_NP);
-        pthread_mutex_init(&conn->uc_lock, NULL);
+        psc_pthread_mutex_init(&conn->uc_lock);
         cfs_atomic_set(&conn->uc_refcount, 1); /* 1 ref for me */
 
         *connp = conn;
@@ -730,7 +732,6 @@ int
 usocklnd_create_peer(lnet_ni_t *ni, lnet_process_id_t id,
                      usock_peer_t **peerp)
 {
-	pthread_mutexattr_t attr;
         usock_net_t  *net = ni->ni_data;
         usock_peer_t *peer;
         int           i;
@@ -748,10 +749,7 @@ usocklnd_create_peer(lnet_ni_t *ni, lnet_process_id_t id,
         peer->up_errored      = 0;
         peer->up_last_alive   = 0;
         cfs_atomic_set (&peer->up_refcount, 1); /* 1 ref for caller */
-	pthread_mutexattr_init(&attr);
-	pthread_mutexattr_settype(&attr,
-	    PTHREAD_MUTEX_ERRORCHECK_NP);
-        pthread_mutex_init(&peer->up_lock, NULL);        
+        psc_pthread_mutex_init(&peer->up_lock);        
 
         pthread_mutex_lock(&net->un_lock);
         net->un_peercount++;        

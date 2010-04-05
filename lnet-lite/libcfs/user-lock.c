@@ -62,6 +62,8 @@
 #include <libcfs/libcfs.h>
 #include <libcfs/kp30.h>
 
+#include "psc_util/pthrutil.h"
+
 /*
  * Optional debugging (magic stamping and checking ownership) can be added.
  */
@@ -256,14 +258,9 @@ void up_write(struct rw_semaphore *s)
 
 void cfs_init_completion(struct cfs_completion *c)
 {
-	pthread_mutexattr_t attr;
-
         LASSERT(c != NULL);
         c->c_done = 0;
-	pthread_mutexattr_init(&attr);
-	pthread_mutexattr_settype(&attr,
-	    PTHREAD_MUTEX_ERRORCHECK_NP);
-        pthread_mutex_init(&c->c_mut, &attr);
+        psc_pthread_mutex_init(&c->c_mut);
         pthread_cond_init(&c->c_cond, NULL);
 }
 

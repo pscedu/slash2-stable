@@ -42,6 +42,7 @@
 #include <lnet/lib-lnet.h>
 
 #include "psc_util/lock.h"
+#include "psc_util/pthrutil.h"
 
 #ifdef __KERNEL__
 #define D_LNI D_CONSOLE
@@ -249,15 +250,10 @@ void lnet_fini_locks(void)
 
 void lnet_init_locks(void)
 {
-	pthread_mutexattr_t attr;
-
         pthread_cond_init(&the_lnet.ln_cond, NULL);
-	pthread_mutexattr_init(&attr);
-	pthread_mutexattr_settype(&attr,
-	    PTHREAD_MUTEX_ERRORCHECK_NP);
-        pthread_mutex_init(&the_lnet.ln_lock, &attr);
-        pthread_mutex_init(&the_lnet.ln_lnd_mutex, &attr);
-        pthread_mutex_init(&the_lnet.ln_api_mutex, &attr);
+        psc_pthread_mutex_init(&the_lnet.ln_lock);
+        psc_pthread_mutex_init(&the_lnet.ln_lnd_mutex);
+        psc_pthread_mutex_init(&the_lnet.ln_api_mutex);
 }
 
 void lnet_fini_locks(void)
