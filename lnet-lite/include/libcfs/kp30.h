@@ -53,6 +53,8 @@
 #error Unsupported operating system
 #endif
 
+#include <sys/ioctl.h>
+
 #ifndef DEBUG_SUBSYSTEM
 # define DEBUG_SUBSYSTEM S_UNDEFINED
 #endif
