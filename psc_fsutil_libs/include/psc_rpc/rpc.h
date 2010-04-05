@@ -3,12 +3,7 @@
 #ifndef _PFL_RPC_H_
 #define _PFL_RPC_H_
 
-#ifndef _XOPEN_SOURCE
-#define _XOPEN_SOURCE 500
-#endif
-
 #include <sys/uio.h>
-#include <asm/param.h>
 
 #include <time.h>
 #include <unistd.h>
@@ -27,37 +22,33 @@
 #include "psc_util/thread.h"
 #include "psc_util/waitq.h"
 
-#define PSCRPC_MD_OPTIONS	0
-#define BULK_GET_SOURCE		0
-#define BULK_PUT_SINK		1
-#define BULK_GET_SINK		2
-#define BULK_PUT_SOURCE		3
+#define PSCRPC_MD_OPTIONS		0
+#define BULK_GET_SOURCE			0
+#define BULK_PUT_SINK			1
+#define BULK_GET_SINK			2
+#define BULK_PUT_SOURCE			3
 
-#define PSCRPC_MSG_REQUEST	4711
-#define PSCRPC_MSG_ERR		4712
-#define PSCRPC_MSG_REPLY	4713
+#define PSCRPC_MSG_REQUEST		4711
+#define PSCRPC_MSG_ERR			4712
+#define PSCRPC_MSG_REPLY		4713
 
-#define PSCRPC_MSG_MAGIC	0x0BD00BD0
-#if !CATAMOUNT_CLIENT
-#define PSCRPC_MSG_VERSION	0x00000003
-#else
-#define PSCRPC_MSG_VERSION	0x00000004
-#endif
+#define PSCRPC_MSG_MAGIC		0x0BD00BD0
+#define PSCRPC_MSG_VERSION		0x00000003
 
 #define PSCRPC_OBD_FREE(ptr, size)	PSCFREE(ptr)
 #define PSCRPC_OBD_ALLOC(ptr, size)	((ptr) = PSCALLOC(size))
 
 #ifndef PAGE_SIZE
-#define PAGE_SIZE		4096
+#define PAGE_SIZE			4096
 #endif
 
-#define PSCRPC_MAX_BRW_SIZE	LNET_MTU
-#define PSCRPC_MAX_BRW_PAGES	(PSCRPC_MAX_BRW_SIZE/PAGE_SIZE)
-#define CURRENT_SECONDS		time(NULL)
-#define PSCNET_SERVER		0xff	/* differentiate client and server for ni init */
-#define PSCNET_CLIENT		0x0f
-#define PSC_SVR_PID		54321
-#define PSC_NIDSTR_SIZE		32
+#define PSCRPC_MAX_BRW_SIZE		LNET_MTU
+#define PSCRPC_MAX_BRW_PAGES		(PSCRPC_MAX_BRW_SIZE / PAGE_SIZE)
+#define CURRENT_SECONDS			time(NULL)
+#define PSCNET_SERVER			0xff	/* differentiate client and server for ni init */
+#define PSCNET_CLIENT			0x0f
+#define PSC_SVR_PID			54321
+#define PSC_NIDSTR_SIZE			32
 
 #ifdef NAMESPACE_EXPERIMENTAL
 #define PSCRPC_OBD_TIMEOUT		3600
