@@ -20,6 +20,18 @@
 #ifndef _PFL_TYPES_H_
 #define _PFL_TYPES_H_
 
+#include <sys/types.h>
+
+#if 0
+#ifdef __APPLE__
+#include <machine/endian.h>
+#elif defined(__linux)
+#include <endian.h>
+#else
+#include <sys/endian.h>
+#endif
+#endif
+
 #include <inttypes.h>
 
 /* printf(3) specifier modifiers for custom types. */
