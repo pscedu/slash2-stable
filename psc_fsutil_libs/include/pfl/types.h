@@ -56,6 +56,24 @@
 # define PSCPRIuINOT	"u"
 #endif
 
+#ifdef BYTE_ORDER
+# if BYTE_ORDER == LITTLE_ENDIAN
+#  define PFL_LITTLE_ENDIAN
+# elif BYTE_ORDER == BIG_ENDIAN
+#  define PFL_BIG_ENDIAN
+# endif
+#elif defined(__BYTE_ORDER)
+# if __BYTE_ORDER == __LITTLE_ENDIAN
+#  define PFL_LITTLE_ENDIAN
+# elif __BYTE_ORDER == __BIG_ENDIAN
+#  define PFL_BIG_ENDIAN
+# endif
+#endif
+
+#if !defined(PFL_LITTLE_ENDIAN) && !defined(PFL_BIG_ENDIAN)
+# error "cannot determine machine endianess"
+#endif
+
 #include "psc_util/subsys.h"
 
 #endif /* _PFL_TYPES_H_ */

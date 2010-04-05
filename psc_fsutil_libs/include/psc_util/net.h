@@ -22,11 +22,6 @@
 
 #include <sys/socket.h>
 
-#if __BYTE_ORDER == __LITTLE_ENDIAN
-#elif __BYTE_ORDER != __BIG_ENDIAN
-# error "unknown system"
-#endif
-
 #ifdef MSG_NOSIGNAL
 # define PFL_MSG_NOSIGNAL MSG_NOSIGNAL
 #else
