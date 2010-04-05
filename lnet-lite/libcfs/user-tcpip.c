@@ -465,12 +465,7 @@ libcfs_sock_set_nagle(int fd, int nagle)
         int rc;
         int option = nagle ? 0 : 1;
 
-#if defined(__sun__) || defined(__sun)
         rc = setsockopt(fd, IPPROTO_TCP, TCP_NODELAY, &option, sizeof(option));
-#else
-        rc = setsockopt(fd, SOL_TCP, TCP_NODELAY, &option, sizeof(option));
-#endif
-
         if (rc != 0) {
                 rc = -errno;
                 CERROR ("Cannot set NODELAY socket option\n");
