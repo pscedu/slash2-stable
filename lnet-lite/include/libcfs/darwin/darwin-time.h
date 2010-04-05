@@ -124,7 +124,7 @@
 typedef u_int64_t cfs_time_t; /* nanoseconds */
 typedef int64_t cfs_duration_t;
 
-#define CFS_TIME_T		"%llu"
+#define CFS_TIME_T		"%lu"
 #define CFS_DURATION_T		"%lld"
 
 typedef struct timeval cfs_fs_time_t;
@@ -244,6 +244,8 @@ static inline void cfs_duration_nsec(cfs_duration_t d, struct timespec *s)
 
 /* __KERNEL__ */
 #else
+
+#define CFS_TIME_T		"%lu"
 
 /*
  * User level
