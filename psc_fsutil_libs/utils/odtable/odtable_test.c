@@ -80,7 +80,7 @@ main(int argc, char *argv[])
 	char *item;
 
 	pfl_init();
-
+	progname = argv[0];
 	while ((c = getopt(argc, argv, "Cce:f:lN:n:sz:")) != -1)
 		switch (c) {
 		case 'C':
