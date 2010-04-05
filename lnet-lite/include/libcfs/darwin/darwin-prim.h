@@ -522,7 +522,7 @@ typedef struct cfs_proc_dir_entry {
 } cfs_proc_dir_entry_t;
 
 #include <libcfs/user-prim.h>
-#define __WORDSIZE	32
+//#define __WORDSIZE	32
 
 #endif	/* END __KERNEL__ */
 /*
