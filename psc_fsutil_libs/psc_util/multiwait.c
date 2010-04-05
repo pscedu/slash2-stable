@@ -159,6 +159,7 @@ psc_multiwaitcond_destroy(struct psc_multiwaitcond *mwc)
 		    (int)psc_vbitmap_getsize(mw->mw_condmask));
 
 		k = psc_dynarray_remove(&mw->mw_conds, mwc);
+psc_fatalx("need to sort");
 		/* XXX qsort?? */
 
 		pfl_bitstr_copy(&mw->mw_condmask, k, &mw->mw_condmask,
@@ -312,6 +313,7 @@ _psc_multiwait_addcond(struct psc_multiwait *mw,
 	    psc_dynarray_len(&mwc->mwc_multiwaits),
 	    sizeof(void *), psc_multiwait_cmp);
 	/* XXX resort condmask vbitmap!! */
+psc_fatalx("need to fix mask");
 
 	psc_vbitmap_setval(mw->mw_condmask, j - 1, active);
 
@@ -476,7 +478,7 @@ psc_multiwait_reset(struct psc_multiwait *mw)
 	while (psc_dynarray_len(&mw->mw_conds) > 0) {
 		mwc = psc_dynarray_getpos(&mw->mw_conds, 0);
 
-		/* XXX we violate the locking order of mwc then mw */
+		/* XXX we violate the locking order of "mwc then mw" */
 		if (psc_pthread_mutex_trylock(&mwc->mwc_mutex)) {
 			psc_pthread_mutex_unlock(&mw->mw_mutex);
 			sched_yield();
@@ -487,7 +489,7 @@ psc_multiwait_reset(struct psc_multiwait *mw)
 
 		/*
 		 * psc_dynarray_remove() will swap the last elem with
-		 * the new empty slot, so we should resort to peserve
+		 * the new empty slot, so we should resort to preserve
 		 * ordering semantics.
 		 */
 		qsort(psc_dynarray_get(&mwc->mwc_multiwaits),
