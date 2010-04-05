@@ -36,8 +36,15 @@
 #endif
 
 #define PSCPRIuTIMET	"lu"
-#define PSCPRIuUTIMET	"06lu"
-#define PSCPRIdUTIMET	"06ld"
+
+#ifdef __APPLE__
+# define PSCPRIuUTIMET	"06u"
+# define PSCPRIdUTIMET	"06d"
+#else
+# define PSCPRIuUTIMET	"06lu"
+# define PSCPRIdUTIMET	"06ld"
+#endif
+
 #define PSCPRIuNTIMET	"06lu"
 #define PSCPRIdNTIMET	"06ld"
 
