@@ -47,6 +47,7 @@
 #include <sys/ioctl.h>
 #include <unistd.h>
 #include <string.h>
+#include <fcntl.h>
 #include <unistd.h>
 #include <poll.h>
 #include <net/if.h>
