@@ -5,7 +5,7 @@ include ${ROOTDIR}/Makefile.path
 
 PROG=		odtable
 MAN+=		odtable.1
-SRCS=		odtable_test.c
+SRCS=		odtable_main.c
 SRCS+=		${PFL_BASE}/psc_ds/dynarray.c
 SRCS+=		${PFL_BASE}/psc_ds/vbitmap.c
 SRCS+=		${PFL_BASE}/psc_util/alloc.c
