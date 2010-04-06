@@ -57,6 +57,7 @@
 # include <sys/time.h>
 # define do_gettimeofday(tv) microuptime(tv)
 #else
+# include <sys/types.h>
 # include <sys/time.h>
 # define do_gettimeofday(tv) gettimeofday(tv, NULL);
 typedef unsigned long long cycles_t;
