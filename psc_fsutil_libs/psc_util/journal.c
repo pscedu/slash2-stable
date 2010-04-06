@@ -253,6 +253,7 @@ pjournal_logwrite(struct psc_journal_xidhndl *xh, int type, void *data,
 	int				 normal, rc;
 
 	pj = xh->pjx_pj;
+	tail_slot = PJX_SLOT_ANY;
 
  retry:
 	/*
@@ -262,19 +263,8 @@ pjournal_logwrite(struct psc_journal_xidhndl *xh, int type, void *data,
 	 * the head of the list to find out the oldest pending transaction.
 	 */
 	PJ_LOCK(pj);
-
 	slot = pj->pj_nextwrite;
-	tail_slot = PJX_SLOT_ANY;
-
-	if (pj->pj_hdr->pjh_options & PJF_SHADOW)
-		/* Reference the shadow tile and ensure the corresponding 
-		 *   tile slot is available.  Note, the pjs may advance
-		 *   to the next tile before this operations completes.
-		 */
-                pjournal_shdw_prepslot(pj->pj_shdw, slot, 1);
-	
-	t = psclist_first_entry(&pj->pj_pndgxids,
-				struct psc_journal_xidhndl, pjx_lentry);
+	t = psclist_first_entry(&pj->pj_pndgxids, struct psc_journal_xidhndl, pjx_lentry);
 	if (t) {
 		if (t->pjx_tailslot == slot) {
 			psc_warnx("Journal %p write is blocked on slot %d "
@@ -286,6 +276,16 @@ pjournal_logwrite(struct psc_journal_xidhndl *xh, int type, void *data,
 		}
 		tail_slot = t->pjx_tailslot;
 	}
+	/* 
+	 * Optionally write into our shadow area only AFTER we have decided
+	 * on the slot to be used.
+	 *
+	 * Reference the shadow tile and ensure the corresponding tile slot 
+	 * is available.  Note, the pjs may advance to the next tile before 
+	 * this operations completes.
+	 */
+	if (pj->pj_hdr->pjh_options & PJF_SHADOW)
+                pjournal_shdw_prepslot(pj->pj_shdw, slot, 1);
 
 	normal = 1;
 	if (!(xh->pjx_flags & PJX_XSTART)) {
