@@ -85,10 +85,9 @@ pjournal_xadd_sngl(struct psc_journal *pj, int type, void *data, size_t size)
 	int rc;
 
 	xh = pjournal_xnew(pj);
-	xh->pjx_flags |= (PJX_XSTART | PJX_XCLOSE);
+	xh->pjx_flags |= (PJX_XSTART | PJX_XCLOSE | PJX_XSNGL);
 	
 	rc = pjournal_logwrite(xh, type, data, size);
-	PSCFREE(xh);
 
 	return (rc);
 }
@@ -273,14 +272,14 @@ pjournal_logwrite(struct psc_journal_xidhndl *xh, int type, void *data,
 		 *   to the next tile before this operations completes.
 		 */
                 pjournal_shdw_prepslot(pj->pj_shdw, slot, 1);
-
+	
 	t = psclist_first_entry(&pj->pj_pndgxids,
 				struct psc_journal_xidhndl, pjx_lentry);
 	if (t) {
 		if (t->pjx_tailslot == slot) {
 			psc_warnx("Journal %p write is blocked on slot %d "
-			    "owned by transaction %p (xid = %"PRIx64")",
-			    pj, pj->pj_nextwrite, t, t->pjx_xid);
+			  "owned by transaction %p (xid = %"PRIx64")",
+			  pj, pj->pj_nextwrite, t, t->pjx_xid);
 			pj->pj_flags |= PJF_WANTSLOT;
 			psc_waitq_wait(&pj->pj_waitq, &pj->pj_lock);
 			goto retry;
@@ -301,10 +300,15 @@ pjournal_logwrite(struct psc_journal_xidhndl *xh, int type, void *data,
 	}
 	if (xh->pjx_flags & PJX_XCLOSE) {
 		normal = 0;
-		if (!(xh->pjx_flags & PJX_XSTART))
+		if (xh->pjx_flags & PJX_XSNGL) {
+			psc_assert(xh->pjx_tailslot == PJX_SLOT_ANY);
+			type |= PJE_XSNGL;
+		} else {
 			psc_assert(size == 0);
-		psc_assert(xh->pjx_tailslot != slot);
-		psc_assert(xh->pjx_tailslot != PJX_SLOT_ANY);
+			psc_assert(xh->pjx_tailslot != PJX_SLOT_ANY);
+			psc_assert(xh->pjx_tailslot != slot);
+		}
+
 		type |= PJE_XCLOSE;
 	}
 	if (normal) {
@@ -331,7 +335,10 @@ pjournal_logwrite(struct psc_journal_xidhndl *xh, int type, void *data,
 		psc_dbg("Transaction %p (xid = %"PRIx64") removed from "
 		    "journal %p: tail slot = %d, rc = %d",
 		    xh, xh->pjx_xid, pj, xh->pjx_tailslot, rc);
-		psclist_del(&xh->pjx_lentry);
+		if (!(xh->pjx_flags & PJX_XSNGL))
+			/* Single entries aren't tracked on the list.
+			 */
+			psclist_del(&xh->pjx_lentry);
 		PSCFREE(xh);
 	}
 	PJ_ULOCK(pj);
@@ -544,7 +551,8 @@ pjournal_scan_slots(struct psc_journal *pj)
 			}
 			if (pje->pje_type & PJE_XCLOSE) {
 				nclose++;
-				psc_assert(pje->pje_len == 0);
+				if (!(pje->pje_type & PJE_XSNGL))
+					psc_assert(pje->pje_len == 0);
 				nentry = pjournal_remove_entries(pj,
 				    pje->pje_xid, 1);
 				psc_assert(nentry <= (int)pje->pje_sid);

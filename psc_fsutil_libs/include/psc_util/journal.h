@@ -120,8 +120,9 @@ typedef void (*psc_jhandler)(struct psc_dynarray *, int *);
 #define PJE_STRTUP		(1 << 1)	/* system startup */
 #define PJE_XSTART		(1 << 2)	/* start a transaction */
 #define PJE_XCLOSE		(1 << 3)	/* close a transaction */
-#define PJE_XNORML		(1 << 4)	/* normal transaction data */
-#define PJE_LASTBIT		4		/* denote the last used bit */
+#define PJE_XSNGL               (1 << 4)
+#define PJE_XNORML		(1 << 5)	/* normal transaction data */
+#define PJE_LASTBIT		5		/* denote the last used bit */
 
 /*
  * psc_journal_enthdr - journal entry header.
@@ -178,6 +179,8 @@ struct psc_journal_enthdr {
 #define	PJX_NONE		 (0 << 0)
 #define	PJX_XSTART		 (1 << 0)
 #define	PJX_XCLOSE		 (1 << 1)
+#define	PJX_XSNGL		 (1 << 2)
+
 
 struct psc_journal_xidhndl {
 	uint64_t		 pjx_xid;
