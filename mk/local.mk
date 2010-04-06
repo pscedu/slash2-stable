@@ -122,7 +122,7 @@ ifeq (${OSTYPE},Linux)
 endif
 
 ifeq (${OSTYPE},Darwin)
-  DEFINES+=					-D_DARWIN_SOURCE
+  DEFINES+=					-D_DARWIN_C_SOURCE
 endif
 
 ifdef DEBIAN
