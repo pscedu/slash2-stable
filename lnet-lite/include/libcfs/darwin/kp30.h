@@ -98,6 +98,8 @@
 # include <time.h>
 # include <machine/limits.h>
 # include <sys/types.h>
+
+#define CFS_MODULE_PARM(name, t, type, perm, desc)
 #endif
 
 #define BITS_PER_LONG   LONG_BIT
