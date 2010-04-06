@@ -896,7 +896,7 @@ pjournal_prep_pjst(struct psc_journal_shdw_tile *pjst,
 	spinlock(&pjst->pjst_lock);
 	psc_assert(pjst->pjst_base);
 	memset(pjst->pjst_base, 0, (size_t)(PJ_PJESZ(pj) * 
-					    pj->pj_shdw->pjs_njents));
+					    pj->pj_shdw->pjs_tilesize));
 	psc_assert(!psc_atomic32_read(&pjst->pjst_ref));
 	pjst->pjst_state = PJSHDWT_FREE;
 	pjst->pjst_sjent = sjent;
@@ -956,7 +956,7 @@ pjournal_shdw_prepslot(struct psc_journal_shdw *pjs, uint32_t slot,
 
 	spinlock(&pjs->pjs_lock);
 	
-	if (slot == (pjst->pjst_sjent + pjs->pjs_njents)) {
+	if (slot == (pjst->pjst_sjent + pjs->pjs_tilesize)) {
 		if (pjs->pjs_state & PJSHDW_ADVTILE)
 			/* Another thread has already begun the tile advance
 			 *    procedures.  Wait for it to complete then 
@@ -986,7 +986,7 @@ pjournal_shdw_prepslot(struct psc_journal_shdw *pjs, uint32_t slot,
 
 	psc_assert(pjs->pjs_curtile < pjs->pjs_ntiles);
 	psc_assert(slot >= pjst->pjst_sjent &&
-		   (slot <= (pjst->pjst_sjent + pjs->pjs_njents)));
+		   (slot <= (pjst->pjst_sjent + pjs->pjs_tilesize)));
 
 	psc_atomic32_inc(&pjst->pjst_ref);
 	pje = (struct psc_journal_enthdr *)
@@ -1024,7 +1024,7 @@ pjournal_getbyslot_pjst(struct psc_journal_shdw *pjs, uint32_t slot)
 	do {
 		pjst = pjs->pjs_pjsts[i];
 		if (slot >= pjst->pjst_sjent &&
-		    (slot <= (pjst->pjst_sjent + pjs->pjs_njents - 1))) {
+		    (slot <= (pjst->pjst_sjent + pjs->pjs_tilesize - 1))) {
 			found = 1;
 			break;
 
@@ -1149,7 +1149,7 @@ pjournal_init_shdw(struct psc_journal *pj)
 
         pj->pj_shdw = PSCALLOC(sizeof(struct psc_journal_shdw));
         pj->pj_shdw->pjs_ntiles = PJSHDW_DEFTILES;
-        pj->pj_shdw->pjs_njents = PJSHDW_DEFTILEENTS;
+        pj->pj_shdw->pjs_tilesize = PJSHDW_TILESIZE;
         pj->pj_shdw->pjs_pjents = 0;
 
         clock_gettime(CLOCK_REALTIME, &pj->pj_shdw->pjs_lastflush);
@@ -1158,10 +1158,10 @@ pjournal_init_shdw(struct psc_journal *pj)
 
         for (i=0; i < PJSHDW_DEFTILES; i++) {
                 pj->pj_shdw->pjs_pjsts[i] = PSCALLOC(pj->pj_hdr->pjh_entsz * 
-						     pj->pj_shdw->pjs_njents);
+						     pj->pj_shdw->pjs_tilesize);
 
 		pjournal_prep_pjst(pj->pj_shdw->pjs_pjsts[i], pj,
-				   (uint32_t)(i * pj->pj_shdw->pjs_njents));
+				   (uint32_t)(i * pj->pj_shdw->pjs_tilesize));
 	}
 
         thr = pscthr_init(JRNLTHRT_SHDW, 0, pjournal_shdwthr_main, NULL, 0,

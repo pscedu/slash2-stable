@@ -49,7 +49,7 @@ struct psc_journal_hdr {
 #define	MAX_NUM_PJBUF		8		/* number of journal buffers to keep around */
 
 #define PJSHDW_DEFTILES    	4
-#define PJSHDW_DEFTILEENTS	1024
+#define PJSHDW_TILESIZE		1024
 #define PJSHDW_MAXAGE		{1, 0}		/* seconds, nanoseconds */
 
 #define JRNLTHRT_SHDW		0
@@ -58,7 +58,7 @@ struct psc_journal_shdw_tile {
         void			*pjst_base;
         uint8_t			 pjst_state;
         uint32_t		 pjst_nused;
-        uint32_t		 pjst_sjent;
+        uint32_t		 pjst_sjent;	/* start journal entry for the tile */
 	psc_atomic32_t		 pjst_ref;	/* Outstanding journal puts */
         psc_spinlock_t		 pjst_lock;
 };
@@ -76,7 +76,7 @@ struct psc_journal;
  */
 struct psc_journal_shdw {
         uint32_t			 pjs_ntiles;            /* Number of tiles */
-        uint32_t			 pjs_njents;            /* Number of entries per tile */
+        uint32_t			 pjs_tilesize;		/* Number of entries per tile */
         uint32_t			 pjs_pjents;            /* Number of processed jents */
         uint32_t			 pjs_curtile;           /* Current tile */
 	uint32_t			 pjs_state;
