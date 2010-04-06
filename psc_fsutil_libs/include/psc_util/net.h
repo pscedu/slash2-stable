@@ -20,12 +20,9 @@
 #ifndef _PFL_NET_H_
 #define _PFL_NET_H_
 
+#include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
-
-#if HAVE_NETINET6_IN6
-#include <netinet6/in6.h>
-#endif
 
 #ifdef MSG_NOSIGNAL
 # define PFL_MSG_NOSIGNAL MSG_NOSIGNAL
