@@ -52,6 +52,8 @@
 #include <libcfs/darwin/darwin-fs.h>
 #include <libcfs/darwin/darwin-tcpip.h>
 
+#include <libkern/OSByteOrder.h>
+
 #ifdef __KERNEL__
 # include <sys/types.h>
 # include <sys/time.h>
