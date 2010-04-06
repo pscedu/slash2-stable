@@ -730,7 +730,7 @@ pscrpc_main(struct psc_thread *thread, struct pscrpc_service *svc)
 			/* I just failed to repost request buffers.  Wait
 			 * for a timeout (unless something else happens)
 			 * before I try again */
-			svc->srv_rqbd_timeout = HZ/10;
+			svc->srv_rqbd_timeout = 10;
 			CDEBUG(D_RPCTRACE,"Posted buffers: %d\n",
 			       svc->srv_nrqbd_receiving);
 		}
@@ -846,7 +846,7 @@ pscrpc_unregister_service(struct pscrpc_service *service)
 
 		/* Network access will complete in finite time but the HUGE
 		 * timeout lets us CWARN for visibility of sluggish NALs */
-		lwi = LWI_TIMEOUT(300 * HZ, NULL, NULL);
+		lwi = LWI_TIMEOUT(300 * 100, NULL, NULL);
 		rc = psc_svr_wait_event(&service->srv_waitq,
 					service->srv_nrqbd_receiving == 0,
 					&lwi, &service->srv_lock);
@@ -897,7 +897,7 @@ pscrpc_unregister_service(struct pscrpc_service *service)
 	/* wait for all outstanding replies to complete (they were
 	 * scheduled having been flagged to abort above) */
 	while (atomic_read(&service->srv_outstanding_replies) != 0) {
-		lwi = LWI_TIMEOUT(10 * HZ, NULL, NULL);
+		lwi = LWI_TIMEOUT(10 * 100, NULL, NULL);
 
 		rc = psc_svr_wait_event(&service->srv_waitq,
 					!psclist_empty(&service->srv_reply_queue),

@@ -762,7 +762,7 @@ int pscrpc_queue_wait(struct pscrpc_request *req)
 		DEBUG_REQ(PLL_INFO, req, "send failed (%d); recovering", rc);
 		timeout = 1;
 	} else {
-		//timeout = MAX(req->rq_timeout * HZ, 1);
+		//timeout = MAX(req->rq_timeout * 100, 1);
 		timeout = MAX(req->rq_timeout, 1);
 		DEBUG_REQ(PLL_INFO, req,
 			  "-- sleeping for %d jiffies", timeout);
@@ -1385,7 +1385,7 @@ int pscrpc_set_wait(struct pscrpc_request_set *set)
 		 */
 		CDEBUG(D_NET, "set %p going to sleep for %d seconds\n",
 		       set, timeout);
-		lwi = LWI_TIMEOUT_INTR((timeout ? timeout : 1) * HZ,
+		lwi = LWI_TIMEOUT_INTR((timeout ? timeout : 1) * 100,
 				       pscrpc_expired_set,
 				       pscrpc_interrupted_set, set);
 

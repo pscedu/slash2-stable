@@ -127,7 +127,7 @@ rsx_bulkserver(struct pscrpc_request *rq, struct pscrpc_bulk_desc **descp,
 		rc = pscrpc_start_bulk_transfer(desc);
 	if (rc == 0) {
 		lwi = LWI_TIMEOUT_INTERVAL(OBD_TIMEOUT / 2,
-		    HZ, pfl_rsx_timeout, desc);
+		    100, pfl_rsx_timeout, desc);
 
 		rc = psc_svr_wait_event(&desc->bd_waitq,
 		    (!pscrpc_bulk_active(desc) || desc->bd_export->exp_failed),
