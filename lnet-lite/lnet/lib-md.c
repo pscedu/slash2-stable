@@ -66,11 +66,11 @@ lnet_md_unlink(lnet_libmd_t *md)
         }
 
         if (md->md_refcount != 0) {
-                CDEBUG(D_NET, "Queueing unlink of md %p\n", md);
+                CDEBUG(D_TRACE, "Queueing unlink of md %p\n", md);
                 return;
         }
 
-        CDEBUG(D_NET, "Unlinking md %p\n", md);
+        CDEBUG(D_TRACE, "Unlinking md %p\n", md);
 
         if (md->md_eq != NULL) {
                 md->md_eq->eq_refcount--;
