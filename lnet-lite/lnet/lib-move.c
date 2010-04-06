@@ -160,7 +160,7 @@ lnet_match_md(int index, int op_mask, lnet_process_id_t src,
         lnet_libmd_t     *md;
         int               rc;
 
-        CDEBUG (D_NET, "Request from %s of length %d into portal %d "
+        CDEBUG (D_TRACE, "Request from %s of length %d into portal %d "
                 "MB="LPX64"\n", libcfs_id2str(src), rlength, index, match_bits);
 
         if (index < 0 || index >= the_lnet.ln_nportals) {

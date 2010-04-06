@@ -147,7 +147,7 @@ lib_get_event (lnet_eq_t *eq, lnet_event_t *ev)
         int           rc;
         ENTRY;
 
-        CDEBUG(D_INFO, "event: %p, sequence: %lu, eq->size: %u\n",
+        CDEBUG(D_TRACE, "event: %p, sequence: %lu, eq->size: %u\n",
                new_event, eq->eq_deq_seq, eq->eq_size);
 
         if (LNET_SEQ_GT (eq->eq_deq_seq, new_event->sequence)) {
