@@ -21,6 +21,11 @@
 #define _PFL_NET_H_
 
 #include <sys/socket.h>
+#include <netinet/in.h>
+
+#if HAVE_NETINET6_IN6
+#include <netinet6/in6.h>
+#endif
 
 #ifdef MSG_NOSIGNAL
 # define PFL_MSG_NOSIGNAL MSG_NOSIGNAL
@@ -29,5 +34,12 @@
 #endif
 
 void pfl_socket_setnosig(int);
+
+union pfl_sockaddr {
+	struct sockaddr_storage ss;
+	struct sockaddr_in sin;
+	struct sockaddr_in6 sin6;
+	struct sockaddr sa;
+};
 
 #endif /* _PFL_NET_H_ */

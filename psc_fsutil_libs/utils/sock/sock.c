@@ -207,7 +207,7 @@ __dead void
 dolisten(const char *listenif)
 {
 	int opt, rc, s, clisock;
-	struct sockaddr_storage ss;
+	union pfl_sockaddr psa;
 	struct sockaddr_in *sin;
 	struct sockarg sarg;
 	struct ifreq ifr;
@@ -243,11 +243,11 @@ dolisten(const char *listenif)
 	printf("listening on %s:%d\n", inet_ntop(AF_INET,
 	    &sin->sin_addr.s_addr, addrbuf, sizeof(addrbuf)),
 	    ntohs(sin->sin_port));
-	salen = sizeof(ss);
-	clisock = accept(s, (struct sockaddr *)&ss, &salen);
+	salen = sizeof(psa);
+	clisock = accept(s, &psa.sa, &salen);
 	close(s);
 
-	sin = (struct sockaddr_in *)&ss;
+	sin = (struct sockaddr_in *)&psa.sin;
 	if (sin->sin_family != AF_INET &&
 	    sin->sin_family != AF_INET_SDP)
 		psc_fatalx("accept: impossible address family %d",
@@ -269,14 +269,14 @@ dolisten(const char *listenif)
 __dead void
 doconnect(const char *addr)
 {
-	struct sockaddr_storage ss;
 	struct sockaddr_in *sin;
+	union pfl_sockaddr psa;
 	struct sockarg sarg;
 	char addrbuf[50];
 	int rc, s;
 
-	memset(&ss, 0, sizeof(ss));
-	sin = (struct sockaddr_in *)&ss;
+	memset(&psa, 0, sizeof(psa));
+	sin = (struct sockaddr_in *)&psa.sin;
 	rc = inet_pton(AF_INET, addr, &sin->sin_addr.s_addr);
 	if (rc == -1)
 		psc_fatal("inet_pton: %s", addr);
@@ -288,7 +288,7 @@ doconnect(const char *addr)
 	s = socket(forcesdp ? AF_INET_SDP : AF_INET, SOCK_STREAM, 0);
 	if (s == -1)
 		psc_fatal("socket");
-	if (connect(s, (struct sockaddr *)sin, sizeof(*sin)) == -1)
+	if (connect(s, &psa.sa, sizeof(*sin)) == -1)
 		psc_fatal("connect");
 	printf("connected to %s:%d\n", inet_ntop(sin->sin_family,
 	    &sin->sin_addr.s_addr, addrbuf, sizeof(addrbuf)),
