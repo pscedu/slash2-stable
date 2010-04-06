@@ -42,6 +42,12 @@ PICKLE_NEED_VERSION=					4
   SRCS+=						${ROOTDIR}/psc_fsutil_libs/compat/strlcpy.c
  endif
 
+ ifdef PICKLE_HAVE_STRNLEN
+  DEFINES+=						-DHAVE_STRNLEN
+ else
+  SRCS+=						${ROOTDIR}/psc_fsutil_libs/compat/strnlen.c
+ endif
+
  ifdef PICKLE_HAVE_SYS_SIGABBREV
   DEFINES+=						-DHAVE_SYS_SIGABBREV
  endif
