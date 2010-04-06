@@ -129,7 +129,7 @@ void pscrpc_invalidate_import(struct pscrpc_import *imp)
 	LASSERT(imp->imp_invalid);
 
 	/* wait for all requests to error out and call completion callbacks */
-	lwi = LWI_TIMEOUT_INTERVAL(MAX(PSCRPC_OBD_TIMEOUT, 1), HZ, NULL, NULL);
+	lwi = LWI_TIMEOUT_INTERVAL(MAX(PSCRPC_OBD_TIMEOUT, 1), 100, NULL, NULL);
 	rc = psc_cli_wait_event(&imp->imp_recovery_waitq,
 			    (atomic_read(&imp->imp_inflight) == 0),
 			    &lwi);
