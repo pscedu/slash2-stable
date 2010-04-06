@@ -889,7 +889,7 @@ pjournal_dump(const char *fn, int verbose)
  *   must have already undergone initialization.  This function mainly serves
  *   as a sanity check on the tile.
  */
-static void
+static inline void
 pjournal_prep_pjst(struct psc_journal_shdw_tile *pjst, 
 		   const struct psc_journal *pj, uint32_t sjent)
 {
