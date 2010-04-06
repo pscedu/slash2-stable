@@ -224,7 +224,6 @@ usocklnd_check_peer_stale(lnet_ni_t *ni, lnet_process_id_t id)
 int
 usocklnd_create_passive_conn(lnet_ni_t *ni, int fd, usock_conn_t **connp)
 {
-	pthread_mutexattr_t attr;
         int           rc;
         __u32         peer_ip;
         __u16         peer_port;
@@ -252,9 +251,6 @@ usocklnd_create_passive_conn(lnet_ni_t *ni, int fd, usock_conn_t **connp)
         conn->uc_ni = ni;
         CFS_INIT_LIST_HEAD (&conn->uc_tx_list);
         CFS_INIT_LIST_HEAD (&conn->uc_zcack_list);
-	pthread_mutexattr_init(&attr);
-	pthread_mutexattr_settype(&attr,
-	    PTHREAD_MUTEX_ERRORCHECK_NP);
         psc_pthread_mutex_init(&conn->uc_lock);
         cfs_atomic_set(&conn->uc_refcount, 1); /* 1 ref for me */
 
@@ -267,7 +263,6 @@ int
 usocklnd_create_active_conn(usock_peer_t *peer, int type,
                             usock_conn_t **connp)
 {
-	pthread_mutexattr_t attr;
         int           rc;
         int           fd;
         usock_conn_t *conn;
@@ -312,9 +307,6 @@ usocklnd_create_active_conn(usock_peer_t *peer, int type,
         usocklnd_peer_addref(peer);
         CFS_INIT_LIST_HEAD (&conn->uc_tx_list);
         CFS_INIT_LIST_HEAD (&conn->uc_zcack_list);
-	pthread_mutexattr_init(&attr);
-	pthread_mutexattr_settype(&attr,
-	    PTHREAD_MUTEX_ERRORCHECK_NP);
         psc_pthread_mutex_init(&conn->uc_lock);
         cfs_atomic_set(&conn->uc_refcount, 1); /* 1 ref for me */
 
