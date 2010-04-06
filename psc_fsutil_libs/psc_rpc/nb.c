@@ -106,8 +106,12 @@ pscrpc_nbreqset_reap(struct pscrpc_nbreqset *nbs)
 	psc_cli_wait_event(&set->set_waitq,
 		       (nreaped=pscrpc_check_set(set, 0)), &lwi);
 
-	if (!nreaped)
+	if (!nreaped) {
+		spinlock(&nbs->nb_lock);
+		nbs->nb_flags &= ~NBREQSET_WORK_INPROG;
+		freelock(&nbs->nb_lock);
 		return (0);
+	}
 
 	pscrpc_set_lock(set);
 
