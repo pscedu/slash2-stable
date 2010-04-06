@@ -27,10 +27,6 @@ PICKLE_NEED_VERSION=					4
   SRCS+=						${ROOTDIR}/psc_fsutil_libs/compat/clock_gettime.c
  endif
 
- ifndef PICKLE_HAVE_HOST_NAME_MAX
-  DEFINES+=						-DHOST_NAME_MAX=MAXHOSTNAMELEN
- endif
-
  ifdef PICKLE_HAVE_PTHREAD_BARRIER
   DEFINES+=						-DHAVE_PTHREAD_BARRIER
  else
@@ -48,6 +44,10 @@ PICKLE_NEED_VERSION=					4
 
  ifdef PICKLE_HAVE_SYS_SIGABBREV
   DEFINES+=						-DHAVE_SYS_SIGABBREV
+ endif
+
+ ifdef PICKLE_HAVE_GETHOSTBYNAME
+  DEFINES+=						-DHAVE_GETHOSTBYNAME
  endif
 
 endif
