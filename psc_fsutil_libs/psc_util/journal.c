@@ -226,6 +226,13 @@ pjournal_logwrite_internal(struct psc_journal_xidhndl *xh, uint32_t slot,
 		psc_warnx("Journal %p unblocking slot %d - "
 		    "owned by xid %"PRIx64, pj, slot, xh->pjx_xid);
 	}
+	if ((xh->pjx_flags & PJX_XCLOSE) && !(xh->pjx_flags & PJX_XSNGL)) {
+		psc_dbg("Transaction %p (xid = %"PRIx64") removed from "
+		    "journal %p: tail slot = %d, rc = %d",
+		    xh, xh->pjx_xid, pj, xh->pjx_tailslot, rc);
+		psclist_del(&xh->pjx_lentry);
+		PSCFREE(xh);
+	}
 	if (wakeup)
 		psc_waitq_wakeall(&pj->pj_waitq);
 	PJ_ULOCK(pj);
@@ -309,7 +316,6 @@ pjournal_logwrite(struct psc_journal_xidhndl *xh, int type, void *data,
 			psc_assert(xh->pjx_tailslot != PJX_SLOT_ANY);
 			psc_assert(xh->pjx_tailslot != slot);
 		}
-
 		type |= PJE_XCLOSE;
 	}
 	if (normal) {
@@ -330,19 +336,6 @@ pjournal_logwrite(struct psc_journal_xidhndl *xh, int type, void *data,
 	    xh->pjx_xid, xh->pjx_tailslot, tail_slot);
 
 	rc = pjournal_logwrite_internal(xh, slot, type, data, size);
-
-	PJ_LOCK(pj);
-	if (xh->pjx_flags & PJX_XCLOSE) {
-		psc_dbg("Transaction %p (xid = %"PRIx64") removed from "
-		    "journal %p: tail slot = %d, rc = %d",
-		    xh, xh->pjx_xid, pj, xh->pjx_tailslot, rc);
-		if (!(xh->pjx_flags & PJX_XSNGL))
-			/* Single entries aren't tracked on the list.
-			 */
-			psclist_del(&xh->pjx_lentry);
-		PSCFREE(xh);
-	}
-	PJ_ULOCK(pj);
 	return (rc);
 }
 
