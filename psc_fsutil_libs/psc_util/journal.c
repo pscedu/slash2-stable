@@ -30,6 +30,7 @@
 #include <string.h>
 #include <unistd.h>
 
+#include "pfl/fcntl.h"
 #include "pfl/types.h"
 #include "psc_ds/dynarray.h"
 #include "psc_util/alloc.h"
@@ -48,8 +49,6 @@ __static void	pjournal_shdw_logwrite(struct psc_journal *,
 			const struct psc_journal_enthdr *, uint32_t);
 __static void	pjournal_shdw_prepslot(struct psc_journal_shdw *,
 			uint32_t, int32_t);
-
-
 
 /**
  * pjournal_xnew - Start a new transaction with a unique ID in the given
