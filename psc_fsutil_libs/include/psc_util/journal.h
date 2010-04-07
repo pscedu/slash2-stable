@@ -84,7 +84,7 @@ struct psc_journal_shdw {
 	struct psc_waitq		 pjs_waitq;
         struct timespec			 pjs_lastflush;		/* Time since last tile process */
 	struct psc_journal		*pjs_journal;
-        struct psc_journal_shdw_tile	*pjs_pjsts[PJSHDW_DEFTILES];
+        struct psc_journal_shdw_tile	*pjs_tiles[PJSHDW_DEFTILES];
 };
 
 #define PJSHDW_ADVTILE 1

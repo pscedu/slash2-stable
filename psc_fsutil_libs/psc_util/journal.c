@@ -908,14 +908,14 @@ pjournal_shdw_advtile_locked(struct psc_journal_shdw *pjs, int block)
 	 */
 	next_tile = (pjs->pjs_curtile + 1) % (pjs->pjs_ntiles - 1);
 
-	while (pjs->pjs_pjsts[next_tile]->pjst_state != PJSHDWT_FREE) {
+	while (pjs->pjs_tiles[next_tile]->pjst_state != PJSHDWT_FREE) {
 		psc_assert(block);
 		psc_waitq_wait(&pjs->pjs_waitq, &pjs->pjs_lock);
 		spinlock(&pjs->pjs_lock);
 	}
 
-	pjs->pjs_pjsts[next_tile]->pjst_state = PJSHDWT_INUSE;
-	pjs->pjs_pjsts[pjs->pjs_curtile]->pjst_state = PJSHDWT_PROCRDY;
+	pjs->pjs_tiles[next_tile]->pjst_state = PJSHDWT_INUSE;
+	pjs->pjs_tiles[pjs->pjs_curtile]->pjst_state = PJSHDWT_PROCRDY;
 	pjs->pjs_curtile = next_tile;
 	pjs->pjs_state &= ~PJSHDW_ADVTILE;
 	psc_waitq_wakeall(&pjs->pjs_waitq);
@@ -943,7 +943,7 @@ pjournal_shdw_prepslot(struct psc_journal_shdw *pjs, uint32_t slot,
 		psc_waitq_wait(&pjs->pjs_waitq, &pjs->pjs_lock);
 		spinlock(&pjs->pjs_lock);
 	}
-	pjst = pjs->pjs_pjsts[pjs->pjs_curtile];
+	pjst = pjs->pjs_tiles[pjs->pjs_curtile];
 	if (slot == (pjst->pjst_sjent + pjs->pjs_tilesize)) {
 		/* Tile advancementment is our job.  Note the pjs lock
 		 *    may be dropped if the next tile is still busy.
@@ -951,7 +951,7 @@ pjournal_shdw_prepslot(struct psc_journal_shdw *pjs, uint32_t slot,
 		pjs->pjs_state |= PJSHDW_ADVTILE;
 		pjournal_shdw_advtile_locked(pjs, block);
 	}
-	pjst = pjs->pjs_pjsts[pjs->pjs_curtile];
+	pjst = pjs->pjs_tiles[pjs->pjs_curtile];
 	freelock(&pjs->pjs_lock);
 	/* No other states are allowed, this must be the active tile.
 	 * The big journal lock is being held so our slot # is the
@@ -994,7 +994,7 @@ pjournal_getbyslot_pjst(struct psc_journal_shdw *pjs, uint32_t slot)
 	i = pjs->pjs_curtile;
 
 	do {
-		pjst = pjs->pjs_pjsts[i];
+		pjst = pjs->pjs_tiles[i];
 		if (slot >= pjst->pjst_sjent &&
 		    (slot <= (pjst->pjst_sjent + pjs->pjs_tilesize - 1))) {
 			found = 1;
@@ -1057,7 +1057,7 @@ pjournal_shdwthr_main(__unusedx void *arg)
 		/* Look for full tiles and process them.
 		 */
 		for (i=0; i < pjs->pjs_ntiles; i++) {
-			pjst = pjs->pjs_pjsts[j];
+			pjst = pjs->pjs_tiles[j];
 			spinlock(&pjst->pjst_lock);
 
 			if (pjst->pjst_state & PJSHDWT_PROCRDY) {
@@ -1126,10 +1126,11 @@ pjournal_init_shdw(struct psc_journal *pj)
 	psc_waitq_init(&pj->pj_shdw->pjs_waitq);
 
 	for (i=0; i < PJSHDW_DEFTILES; i++) {
-		pj->pj_shdw->pjs_pjsts[i] = PSCALLOC(pj->pj_hdr->pjh_entsz *
+		pj->pj_shdw->pjs_tiles[i] = PSCALLOC(pj->pj_hdr->pjh_entsz *
 						     pj->pj_shdw->pjs_tilesize);
 
-		pjournal_prep_pjst(pj->pj_shdw->pjs_pjsts[i], pj,
+		LOCK_INIT(&pj->pj_shdw->pjs_tiles[i]->pjst_lock);
+		pjournal_prep_pjst(pj->pj_shdw->pjs_tiles[i], pj,
 				   (uint32_t)(i * pj->pj_shdw->pjs_tilesize));
 	}
 
