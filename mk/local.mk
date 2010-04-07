@@ -68,6 +68,7 @@ LIBL=		-ll
 LIBZ=		-lz
 THREAD_LIBS=	-pthread
 LIBCURSES=	-lncurses
+LIBAIO=		-laio
 
 OSTYPE:=	$(shell uname)
 

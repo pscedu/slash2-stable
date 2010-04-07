@@ -174,6 +174,10 @@ LDFLAGS+=	${GCRYPT_LIBS}
 INCLUDES+=	${GCRYPT_INCLUDES}
 endif
 
+ifneq ($(filter aio,${MODULES}),)
+LDFLAGS+=	${LIBAIO}
+endif
+
 # Post-modules processing
 
 ifneq ($(filter ${PFL_BASE}/psc_util/pthrutil.c,${SRCS}),)
