@@ -62,10 +62,10 @@ pfl_socket_getpeercred(int s, uid_t *uid, gid_t *gid)
 	socklen_t len;
 
 	len = sizeof(ucr);
-	if (getsockopt(fd, SOL_SOCKET, SO_PEERCRED, &ucr, &len))
+	if (getsockopt(s, SOL_SOCKET, SO_PEERCRED, &ucr, &len))
 		return (-errno);
-	cr->uid = ucr.uid;
-	cr->gid = ucr.gid;
+	*uid = ucr.uid;
+	*gid = ucr.gid;
 #endif
 	return (0);
 }
@@ -159,7 +159,7 @@ pflnet_getifnfordst_rtnetlink(const struct sockaddr *sa, char ifn[IFNAMSIZ])
 	} rq;
 	const struct sockaddr_in *sin;
 	struct rtattr *rta;
-	int n, s, ifidx;
+	int s, ifidx;
 	ssize_t rc;
 
 	sin = (void *)sa;
@@ -201,8 +201,7 @@ pflnet_getifnfordst_rtnetlink(const struct sockaddr *sa, char ifn[IFNAMSIZ])
 		struct nlmsgerr *nlerr;
 
 		nlerr = NLMSG_DATA(&rq.nmh);
-		psc_fatalx("netlink: %s",
-		    slstrerror(nlerr->error));
+		psc_fatalx("netlink: %s", strerror(nlerr->error));
 	}
 
 	rc -= NLMSG_SPACE(sizeof(rq.rtm));
