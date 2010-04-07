@@ -948,18 +948,17 @@ pjournal_shdw_prepslot(struct psc_journal_shdw *pjs, uint32_t slot,
 	struct psc_journal_shdw_tile *pjst=NULL;
 	struct psc_journal_enthdr *pje;
 
+restart:
 	spinlock(&pjs->pjs_lock);
-	
 	if (slot == (pjst->pjst_sjent + pjs->pjs_tilesize)) {
 		if (pjs->pjs_state & PJSHDW_ADVTILE)
 			/* Another thread has already begun the tile advance
 			 *    procedures.  Wait for it to complete then 
-			 *    return.
+			 *    retry.
 			 */		
 			while (pjs->pjs_state & PJSHDW_ADVTILE) {
-				psc_waitq_wait(&pjs->pjs_waitq, 
-					       &pjs->pjs_lock);
-				spinlock(&pjs->pjs_lock);
+				psc_waitq_wait(&pjs->pjs_waitq, &pjs->pjs_lock);
+				goto restart;
 			}			
 		else {
 			/* Tile advancementment is our job.  Note the pjs lock
