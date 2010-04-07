@@ -870,12 +870,12 @@ pjournal_dump(const char *fn, int verbose)
 }
 
 /**
- * pjournal_prep_pjst - prepare a journal shadow tile for action.  The pjst
+ * pjournal_shdw_preptile - prepare a journal shadow tile for action.  The pjst
  *   must have already undergone initialization.  This function mainly serves
  *   as a sanity check on the tile.
  */
 __static __inline void
-pjournal_prep_pjst(struct psc_journal_shdw_tile *pjst,
+pjournal_shdw_preptile(struct psc_journal_shdw_tile *pjst,
 		   const struct psc_journal *pj, uint32_t sjent)
 {
 	spinlock(&pjst->pjst_lock);
@@ -901,10 +901,10 @@ pjournal_shdw_advtile_locked(struct psc_journal_shdw *pjs, int block)
 	uint32_t next_tile;
 
 	LOCK_ENSURE(&pjs->pjs_lock);
-	psc_assert(pjs->pjs_state & PJSHDW_ADVTILE);
+	psc_assert(pjs->pjs_state & PJ_SHDW_ADVTILE);
 
 	/* Map the current and next tiles whose values will be protected
-	 *    by PJSHDW_ADVTILE.
+	 *    by PJ_SHDW_ADVTILE.
 	 */
 	next_tile = (pjs->pjs_curtile + 1) % (pjs->pjs_ntiles - 1);
 
@@ -917,7 +917,7 @@ pjournal_shdw_advtile_locked(struct psc_journal_shdw *pjs, int block)
 	pjs->pjs_tiles[next_tile]->pjst_state = PJ_SHDW_TILE_INUSE;
 	pjs->pjs_tiles[pjs->pjs_curtile]->pjst_state = PJ_SHDW_TILE_PROCRDY;
 	pjs->pjs_curtile = next_tile;
-	pjs->pjs_state &= ~PJSHDW_ADVTILE;
+	pjs->pjs_state &= ~PJ_SHDW_ADVTILE;
 	psc_waitq_wakeall(&pjs->pjs_waitq);
 }
 
@@ -939,7 +939,7 @@ pjournal_shdw_prepslot(struct psc_journal_shdw *pjs, uint32_t slot,
 	 * If another thread is moving a tile, wait for it to complete.
 	 */
 	spinlock(&pjs->pjs_lock);
-	while (pjs->pjs_state & PJSHDW_ADVTILE) {
+	while (pjs->pjs_state & PJ_SHDW_ADVTILE) {
 		psc_waitq_wait(&pjs->pjs_waitq, &pjs->pjs_lock);
 		spinlock(&pjs->pjs_lock);
 	}
@@ -948,7 +948,7 @@ pjournal_shdw_prepslot(struct psc_journal_shdw *pjs, uint32_t slot,
 		/* Tile advancementment is our job.  Note the pjs lock
 		 *    may be dropped if the next tile is still busy.
 		 */
-		pjs->pjs_state |= PJSHDW_ADVTILE;
+		pjs->pjs_state |= PJ_SHDW_ADVTILE;
 		pjournal_shdw_advtile_locked(pjs, block);
 	}
 	pjst = pjs->pjs_tiles[pjs->pjs_curtile];
@@ -1047,40 +1047,22 @@ pjournal_shdwthr_main(__unusedx void *arg)
 	struct psc_journal *pj = thr->pscthr_private;
 	struct psc_journal_shdw *pjs = pj->pj_shdw;
 	struct psc_journal_shdw_tile *pjst;
-	struct timespec ctm, rtm, mtm = PJSHDW_MAXAGE;
+	struct timespec ctm, rtm, mtm = PJ_SHDW_MAXAGE;
 	uint32_t i, j;
 
 	while (1) {
-		j = (pjs->pjs_curtile + 1) < pjs->pjs_ntiles ?
-			(pjs->pjs_curtile + 1) : 0;
-
 		/* Look for full tiles and process them.
 		 */
 		for (i=0; i < pjs->pjs_ntiles; i++) {
 			pjst = pjs->pjs_tiles[j];
 			spinlock(&pjst->pjst_lock);
-
 			if (pjst->pjst_state & PJ_SHDW_TILE_PROCRDY) {
-				/* Sanity.
-				 */
-				psc_assert(pjst->pjst_state ==
-					   PJ_SHDW_TILE_PROCRDY);
-				/* Only quiet pjst's may be processed.
-				 */
-				if (psc_atomic32_read(&pjst->pjst_ref)) {
-					psc_warnx("pjst@%p has ref=%d", pjst,
-					   psc_atomic32_read(&pjst->pjst_ref));
-					continue;
-				}
 				pjst->pjst_state = PJ_SHDW_TILE_PROC;
 				freelock(&pjst->pjst_lock);
 				//XXX Call tile entry processor here
-				pjournal_prep_pjst(pjst, pj, pjst->pjst_sjent);
+				pjournal_shdw_preptile(pjst, pj, pjst->pjst_sjent);
 			}
-
-			if (j == (pjs->pjs_ntiles - 1))
-				j = 0;
-		 }
+		}
 		/* Check the current tile to see if it has expired.
 		 */
 		clock_gettime(CLOCK_REALTIME, &ctm);
@@ -1103,7 +1085,6 @@ pjournal_shdwthr_main(__unusedx void *arg)
 			       ((rtm.tv_nsec * 1000000)/1000));
 		}
 	}
-
 	return (NULL);
 }
 
@@ -1134,7 +1115,7 @@ pjournal_init_shdw(struct psc_journal *pj)
 		pj->pj_shdw->pjs_tiles[i]->pjst_base = 
 			(void *)(pj->pj_shdw->pjs_tiles[i] + 1);
 		LOCK_INIT(&pj->pj_shdw->pjs_tiles[i]->pjst_lock);
-		pjournal_prep_pjst(pj->pj_shdw->pjs_tiles[i], pj,
+		pjournal_shdw_preptile(pj->pj_shdw->pjs_tiles[i], pj,
 				   (uint32_t)(i * pj->pj_shdw->pjs_tilesize));
 	}
 
@@ -1153,8 +1134,7 @@ pjournal_init_shdw(struct psc_journal *pj)
  * Returns: 0 on success, -1 on error.
  */
 struct psc_journal *
-pjournal_replay(const char *fn, psc_jhandler pj_handler)
-{
+pjournal_replay(const char *fn, psc_jhandler pj_handler) {
 	int				 i;
 	int				 rc;
 	struct psc_journal		*pj;
