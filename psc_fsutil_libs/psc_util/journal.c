@@ -42,7 +42,14 @@
 
 #define MAX_LOG_TRY		3	/* # log write failure retry attempts */
 
-__static int pjournal_logwrite(struct psc_journal_xidhndl *, int, void *, size_t);
+__static int	pjournal_logwrite(struct psc_journal_xidhndl *, int,
+			void *, size_t);
+__static void	pjournal_shdw_logwrite(struct psc_journal *,
+			const struct psc_journal_enthdr *, uint32_t);
+__static void	pjournal_shdw_prepslot(struct psc_journal_shdw *,
+			uint32_t, int32_t);
+
+
 
 /**
  * pjournal_xnew - Start a new transaction with a unique ID in the given
@@ -79,7 +86,7 @@ pjournal_xnew(struct psc_journal *pj)
 	return (xh);
 }
 
-int 
+int
 pjournal_xadd_sngl(struct psc_journal *pj, int type, void *data, size_t size)
 {
 	struct psc_journal_xidhndl *xh;
@@ -87,9 +94,8 @@ pjournal_xadd_sngl(struct psc_journal *pj, int type, void *data, size_t size)
 
 	xh = pjournal_xnew(pj);
 	xh->pjx_flags |= (PJX_XSTART | PJX_XCLOSE | PJX_XSNGL);
-	
-	rc = pjournal_logwrite(xh, type, data, size);
 
+	rc = pjournal_logwrite(xh, type, data, size);
 	return (rc);
 }
 
@@ -122,11 +128,6 @@ pjournal_xend(struct psc_journal_xidhndl *xh)
 
 	return (pjournal_logwrite(xh, PJE_NONE, NULL, 0));
 }
-
-
-static void 
-pjournal_shdw_logwrite(struct psc_journal *, const struct psc_journal_enthdr *,
-		       uint32_t);
 
 /**
  * pjournal_logwrite_internal - Write a new log entry for a transaction.
@@ -201,7 +202,7 @@ pjournal_logwrite_internal(struct psc_journal_xidhndl *xh, uint32_t slot,
 			continue;
 		}
 		break;
-	}	
+	}
 	/*
 	 * We may want to turn off logging at this point and force
 	 * write-through instead.
@@ -238,10 +239,6 @@ pjournal_logwrite_internal(struct psc_journal_xidhndl *xh, uint32_t slot,
 	PJ_ULOCK(pj);
 	return (rc);
 }
-
-
-static void
-pjournal_shdw_prepslot(struct psc_journal_shdw *, uint32_t, int32_t);
 
 /**
  * pjournal_logwrite - store a new entry in a journal transaction.
@@ -284,16 +281,16 @@ pjournal_logwrite(struct psc_journal_xidhndl *xh, int type, void *data,
 		}
 		tail_slot = t->pjx_tailslot;
 	}
-	/* 
+	/*
 	 * Optionally write into our shadow area only AFTER we have decided
 	 * on the slot to be used.
 	 *
-	 * Reference the shadow tile and ensure the corresponding tile slot 
-	 * is available.  Note, the pjs may advance to the next tile before 
+	 * Reference the shadow tile and ensure the corresponding tile slot
+	 * is available.  Note, the pjs may advance to the next tile before
 	 * this operations completes.
 	 */
 	if (pj->pj_hdr->pjh_options & PJF_SHADOW)
-                pjournal_shdw_prepslot(pj->pj_shdw, slot, 1);
+		pjournal_shdw_prepslot(pj->pj_shdw, slot, 1);
 
 	normal = 1;
 	if (!(xh->pjx_flags & PJX_XSTART)) {
@@ -384,10 +381,8 @@ pjournal_alloc_buf(struct psc_journal *pj)
 __static int
 pjournal_remove_entries(struct psc_journal *pj, uint64_t xid, int mode)
 {
-	int				 i;
-	struct psc_journal_enthdr	*pje;
-	int				 scan;
-	int				 count;
+	struct psc_journal_enthdr *pje;
+	int i, scan, count;
 
 	scan = 1;
 	count = 0;
@@ -411,7 +406,7 @@ pjournal_remove_entries(struct psc_journal *pj, uint64_t xid, int mode)
 			}
 		}
 	}
-	return count;
+	return (count);
 }
 
 /**
@@ -566,9 +561,8 @@ pjournal_scan_slots(struct psc_journal *pj)
 		slot += count;
 	}
  done:
-	if (last_startup != PJE_XID_NONE) {
+	if (last_startup != PJE_XID_NONE)
 		pjournal_remove_entries(pj, last_startup, 2);
-	}
 	pj->pj_lastxid = last_xid;
 	/* If last_slot is PJX_SLOT_ANY, then nextwrite will be 0 */
 	pj->pj_nextwrite = (last_slot == (int)pj->pj_hdr->pjh_nents - 1) ?
@@ -602,12 +596,11 @@ pjournal_scan_slots(struct psc_journal *pj)
 __static struct psc_journal *
 pjournal_load(const char *fn)
 {
-	ssize_t				 rc;
-	struct psc_journal		*pj;
-	struct psc_journal_hdr		*pjh;
-	uint64_t			 chksum;
-	struct stat			 statbuf;
-	ssize_t pjhlen;
+	struct psc_journal_hdr *pjh;
+	struct psc_journal *pj;
+	struct stat statbuf;
+	ssize_t rc, pjhlen;
+	uint64_t chksum;
 
 	pj = PSCALLOC(sizeof(*pj));
 	pj->pj_fd = open(fn, O_RDWR | O_SYNC | O_DIRECT);
@@ -877,19 +870,18 @@ pjournal_dump(const char *fn, int verbose)
 	return (0);
 }
 
-
-/** 
+/**
  * pjournal_prep_pjst - prepare a journal shadow tile for action.  The pjst
  *   must have already undergone initialization.  This function mainly serves
  *   as a sanity check on the tile.
  */
-static inline void
-pjournal_prep_pjst(struct psc_journal_shdw_tile *pjst, 
+__static __inline void
+pjournal_prep_pjst(struct psc_journal_shdw_tile *pjst,
 		   const struct psc_journal *pj, uint32_t sjent)
 {
 	spinlock(&pjst->pjst_lock);
 	psc_assert(pjst->pjst_base);
-	memset(pjst->pjst_base, 0, (size_t)(PJ_PJESZ(pj) * 
+	memset(pjst->pjst_base, 0, (size_t)(PJ_PJESZ(pj) *
 					    pj->pj_shdw->pjs_tilesize));
 	psc_assert(!psc_atomic32_read(&pjst->pjst_ref));
 	pjst->pjst_state = PJSHDWT_FREE;
@@ -897,20 +889,19 @@ pjournal_prep_pjst(struct psc_journal_shdw_tile *pjst,
 	freelock(&pjst->pjst_lock);
 }
 
-
 /**
  * pjournal_shdw_advtile_locked - advance to the next journal shadow tile.
  * @pjs:  pointer to the journal shadow.
- * @block:  caller specifies whether he is blockable.  The shadow thread 
+ * @block:  caller specifies whether he is blockable.  The shadow thread
  *   must not block.
  * Notes:  The pjs lock is used to synchronize tile activity.
  */
-static void
+__static void
 pjournal_shdw_advtile_locked(struct psc_journal_shdw *pjs, int block)
 {
 	uint32_t next_tile;
 
-        LOCK_ENSURE(&pjs->pjs_lock);
+	LOCK_ENSURE(&pjs->pjs_lock);
 	psc_assert(pjs->pjs_state & PJSHDW_ADVTILE);
 
 	/* Map the current and next tiles whose values will be protected
@@ -919,10 +910,9 @@ pjournal_shdw_advtile_locked(struct psc_journal_shdw *pjs, int block)
 	next_tile = pjs->pjs_curtile % (pjs->pjs_ntiles - 1);
 
 	while (pjs->pjs_pjsts[next_tile]->pjst_state != PJSHDWT_FREE) {
-		if (!block)
-			abort();
+		psc_assert(block);
 		psc_waitq_wait(&pjs->pjs_waitq, &pjs->pjs_lock);
-		spinlock(&pjs->pjs_lock);	
+		spinlock(&pjs->pjs_lock);
 	}
 
 	psc_assert(pjs->pjs_pjsts[next_tile]->pjst_state == PJSHDWT_FREE);
@@ -933,34 +923,33 @@ pjournal_shdw_advtile_locked(struct psc_journal_shdw *pjs, int block)
 	psc_waitq_wakeall(&pjs->pjs_waitq);
 }
 
-
 /**
- * pjournal_getcur_pjst_locked - retrieve the current shadow tile in a 
+ * pjournal_getcur_pjst_locked - retrieve the current shadow tile in a
  *   manner which accounts for tile advancement.
  * @pjs:  the journal shadow in question
  * @slot:  requested journal slot number
  * @block:  permitted to block?
  */
-static void
-pjournal_shdw_prepslot(struct psc_journal_shdw *pjs, uint32_t slot, 
+__static void
+pjournal_shdw_prepslot(struct psc_journal_shdw *pjs, uint32_t slot,
 		      int32_t block)
 {
 	struct psc_journal_shdw_tile *pjst;
 	struct psc_journal_enthdr *pje;
 
-restart:
+ restart:
 	spinlock(&pjs->pjs_lock);
 	pjst = pjs->pjs_pjsts[pjs->pjs_curtile];
 	if (slot == (pjst->pjst_sjent + pjs->pjs_tilesize)) {
 		if (pjs->pjs_state & PJSHDW_ADVTILE) {
 			/* Another thread has already begun the tile advance
-			 *    procedures.  Wait for it to complete then 
+			 *    procedures.  Wait for it to complete then
 			 *    retry.
-			 */		
+			 */
 			while (pjs->pjs_state & PJSHDW_ADVTILE) {
 				psc_waitq_wait(&pjs->pjs_waitq, &pjs->pjs_lock);
 				goto restart;
-			}			
+			}
 		} else {
 			/* Tile advancementment is our job.  Note the pjs lock
 			 *    may be dropped if the next tile is still busy.
@@ -971,8 +960,8 @@ restart:
 	}
 	freelock(&pjs->pjs_lock);
 	/* No other states are allowed, this must be the active tile.
-	 * The big journal lock is being held so our slot # is the 
-	 *    largest in the system meaning that the tile could not 
+	 * The big journal lock is being held so our slot # is the
+	 *    largest in the system meaning that the tile could not
 	 *    have been advanced ahead of us.
 	 */
 	psc_assert(pjst->pjst_state == PJSHDWT_INUSE);
@@ -982,28 +971,24 @@ restart:
 		   (slot <= (pjst->pjst_sjent + pjs->pjs_tilesize)));
 
 	psc_atomic32_inc(&pjst->pjst_ref);
-	pje = (struct psc_journal_enthdr *)
-		((void *)pjst->pjst_base + 
-		 (PJ_PJESZ(pjs->pjs_journal) * (slot - pjst->pjst_sjent)));
+	pje = (void *)((char *)pjst->pjst_base +
+	    (PJ_PJESZ(pjs->pjs_journal) * (slot - pjst->pjst_sjent)));
 
 	psc_assert(pje->pje_magic == 0);
-	/* 'Reserve' the slot by writing it into the structure so it may be 
+	/* 'Reserve' the slot by writing it into the structure so it may be
 	 *    checked later.
 	 */
 	pje->pje_shdw_slot = slot;
-
-	return;
 }
 
-
 /**
- * pjournal_getbyslot_pjst - retrieve the current shadow tile in a 
- *   manner which accounts for tile advancement.
+ * pjournal_getbyslot_pjst - retrieve the current shadow tile in a
+ *	manner which accounts for tile advancement.
  * @pjs:  the journal shadow in question
  * @slot:  requested journal slot number
  * Return:  Returns a referenced shadow tile.
  */
-static struct psc_journal_shdw_tile *
+__static struct psc_journal_shdw_tile *
 pjournal_getbyslot_pjst(struct psc_journal_shdw *pjs, uint32_t slot)
 {
 	struct psc_journal_shdw_tile *pjst;
@@ -1029,7 +1014,7 @@ pjournal_getbyslot_pjst(struct psc_journal_shdw *pjs, uint32_t slot)
 
 	if (found)
 		psc_assert(psc_atomic32_read(&pjst->pjst_ref) > 0);
-	else 
+	else
 		//pjst = NULL;
 		abort();
 
@@ -1038,8 +1023,7 @@ pjournal_getbyslot_pjst(struct psc_journal_shdw *pjs, uint32_t slot)
 	return (pjst);
 }
 
-
-static void 
+__static void
 pjournal_shdw_logwrite(struct psc_journal *pj,
 		       const struct psc_journal_enthdr *pje, uint32_t slot)
 {
@@ -1049,7 +1033,7 @@ pjournal_shdw_logwrite(struct psc_journal *pj,
 
 	pjst = pjournal_getbyslot_pjst(pjs, slot);
 
-	pje_shdw = (struct psc_journal_enthdr *)((void *)pjst->pjst_base + 
+	pje_shdw = (void *)((char *)pjst->pjst_base +
 			 (PJ_PJESZ(pj) * (slot - pjst->pjst_sjent)));
 
 	psc_assert(pje_shdw->pje_magic == 0);
@@ -1062,109 +1046,106 @@ pjournal_shdw_logwrite(struct psc_journal *pj,
 	psc_atomic32_dec(&pjst->pjst_ref);
 }
 
-
 void *
 pjournal_shdwthr_main(__unusedx void *arg)
 {
-        struct psc_thread *thr = pscthr_get();
-        struct psc_journal *pj = thr->pscthr_private;
-        struct psc_journal_shdw *pjs = pj->pj_shdw;
-        struct psc_journal_shdw_tile *pjst;
-        struct timespec ctm, rtm, mtm = PJSHDW_MAXAGE;
-        uint32_t i, j;
+	struct psc_thread *thr = pscthr_get();
+	struct psc_journal *pj = thr->pscthr_private;
+	struct psc_journal_shdw *pjs = pj->pj_shdw;
+	struct psc_journal_shdw_tile *pjst;
+	struct timespec ctm, rtm, mtm = PJSHDW_MAXAGE;
+	uint32_t i, j;
 
-        while (1) {
-                j = (pjs->pjs_curtile + 1) < pjs->pjs_ntiles ?
-                        (pjs->pjs_curtile + 1) : 0;
+	while (1) {
+		j = (pjs->pjs_curtile + 1) < pjs->pjs_ntiles ?
+			(pjs->pjs_curtile + 1) : 0;
 
-                /* Look for full tiles and process them.
+		/* Look for full tiles and process them.
 		 */
-                for (i=0; i < pjs->pjs_ntiles; i++) {
-                        pjst = pjs->pjs_pjsts[j];
-                        spinlock(&pjst->pjst_lock);
+		for (i=0; i < pjs->pjs_ntiles; i++) {
+			pjst = pjs->pjs_pjsts[j];
+			spinlock(&pjst->pjst_lock);
 
-                        if (pjst->pjst_state & PJSHDWT_PROCRDY) {
+			if (pjst->pjst_state & PJSHDWT_PROCRDY) {
 				/* Sanity.
 				 */
-				psc_assert(pjst->pjst_state == 
+				psc_assert(pjst->pjst_state ==
 					   PJSHDWT_PROCRDY);
 				/* Only quiet pjst's may be processed.
 				 */
 				if (psc_atomic32_read(&pjst->pjst_ref)) {
-					psc_warnx("pjst@%p has ref=%d", pjst, 
+					psc_warnx("pjst@%p has ref=%d", pjst,
 					   psc_atomic32_read(&pjst->pjst_ref));
 					continue;
 				}
 				pjst->pjst_state = PJSHDWT_PROC;
 				freelock(&pjst->pjst_lock);
-                                //XXX Call tile entry processor here
+				//XXX Call tile entry processor here
 				pjournal_prep_pjst(pjst, pj, pjst->pjst_sjent);
-                        }
+			}
 
-                        if (j == (pjs->pjs_ntiles - 1))
-                                j = 0;
-                 }
-                /* Check the current tile to see if it has expired.
+			if (j == (pjs->pjs_ntiles - 1))
+				j = 0;
+		 }
+		/* Check the current tile to see if it has expired.
 		 */
-                clock_gettime(CLOCK_REALTIME, &ctm);
-                spinlock(&pjs->pjs_lock);
+		clock_gettime(CLOCK_REALTIME, &ctm);
+		spinlock(&pjs->pjs_lock);
 
-                timespecsub(&ctm, &pjs->pjs_lastflush, &rtm);
-                if (timespeccmp(&rtm, &mtm, >)) {
+		timespecsub(&ctm, &pjs->pjs_lastflush, &rtm);
+		if (timespeccmp(&rtm, &mtm, >)) {
 			/* If a tile is being forced out due to low
-			 *   system activity then the proceeding tile 
+			 *   system activity then the proceeding tile
 			 *   MUST be ready for use.
 			 */
-                        pjournal_shdw_advtile_locked(pjs, 0);
-                        freelock(&pjs->pjs_lock);
-			usleep((mtm.tv_sec * 1000000) + 
+			pjournal_shdw_advtile_locked(pjs, 0);
+			freelock(&pjs->pjs_lock);
+			usleep((mtm.tv_sec * 1000000) +
 			       ((mtm.tv_nsec * 1000000)/1000));
-                        //XXX Call tile entry processor here on pjst
-                } else {
-                        freelock(&pjs->pjs_lock);
-			usleep((rtm.tv_sec * 1000000) + 
+			//XXX Call tile entry processor here on pjst
+		} else {
+			freelock(&pjs->pjs_lock);
+			usleep((rtm.tv_sec * 1000000) +
 			       ((rtm.tv_nsec * 1000000)/1000));
 		}
-        }
+	}
 
-        return (NULL);
+	return (NULL);
 }
 
-
-static void
+__static void
 pjournal_init_shdw(struct psc_journal *pj)
 {
-        int i;
-        struct psc_thread *thr;
+	struct psc_thread *thr;
+	int i;
 
-        psc_assert(pj->pj_hdr->pjh_options & PJF_SHADOW);
-        psc_assert(!pj->pj_shdw);
+	psc_assert(pj->pj_hdr->pjh_options & PJF_SHADOW);
+	psc_assert(!pj->pj_shdw);
 
-        pj->pj_shdw = PSCALLOC(sizeof(struct psc_journal_shdw));
-        pj->pj_shdw->pjs_ntiles = PJSHDW_DEFTILES;
-        pj->pj_shdw->pjs_tilesize = PJSHDW_TILESIZE;
-        pj->pj_shdw->pjs_pjents = 0;
+	pj->pj_shdw = PSCALLOC(sizeof(struct psc_journal_shdw));
+	pj->pj_shdw->pjs_ntiles = PJSHDW_DEFTILES;
+	pj->pj_shdw->pjs_tilesize = PJSHDW_TILESIZE;
+	pj->pj_shdw->pjs_pjents = 0;
 
-        clock_gettime(CLOCK_REALTIME, &pj->pj_shdw->pjs_lastflush);
-        LOCK_INIT(&pj->pj_shdw->pjs_lock);
+	clock_gettime(CLOCK_REALTIME, &pj->pj_shdw->pjs_lastflush);
+	LOCK_INIT(&pj->pj_shdw->pjs_lock);
 	psc_waitq_init(&pj->pj_shdw->pjs_waitq);
 
-        for (i=0; i < PJSHDW_DEFTILES; i++) {
-                pj->pj_shdw->pjs_pjsts[i] = PSCALLOC(pj->pj_hdr->pjh_entsz * 
+	for (i=0; i < PJSHDW_DEFTILES; i++) {
+		pj->pj_shdw->pjs_pjsts[i] = PSCALLOC(pj->pj_hdr->pjh_entsz *
 						     pj->pj_shdw->pjs_tilesize);
 
 		pjournal_prep_pjst(pj->pj_shdw->pjs_pjsts[i], pj,
 				   (uint32_t)(i * pj->pj_shdw->pjs_tilesize));
 	}
 
-        thr = pscthr_init(JRNLTHRT_SHDW, 0, pjournal_shdwthr_main, NULL, 0,
-                          "pjrnlshdw");
-        psc_assert(thr);
+	thr = pscthr_init(JRNLTHRT_SHDW, 0, pjournal_shdwthr_main, NULL, 0,
+			  "pjrnlshdw");
+	psc_assert(thr);
 
-        thr->pscthr_private = pj;
-        pscthr_setready(thr);
+	thr->pscthr_private = pj;
+	pscthr_setready(thr);
 }
-
 
 /**
  * pjournal_replay - Replay all open transactions in a journal.
@@ -1173,7 +1154,7 @@ pjournal_init_shdw(struct psc_journal *pj)
  * Returns: 0 on success, -1 on error.
  */
 struct psc_journal *
-pjournal_replay(const char * fn, psc_jhandler pj_handler)
+pjournal_replay(const char *fn, psc_jhandler pj_handler)
 {
 	int				 i;
 	int				 rc;
