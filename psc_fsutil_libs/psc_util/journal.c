@@ -21,6 +21,7 @@
 #include "psc_util/subsys.h"
 
 #include <sys/types.h>
+#include <sys/stat.h>
 
 #include <err.h>
 #include <errno.h>
