@@ -883,7 +883,7 @@ pjournal_prep_pjst(struct psc_journal_shdw_tile *pjst,
 	memset(pjst->pjst_base, 0, (size_t)(PJ_PJESZ(pj) *
 					    pj->pj_shdw->pjs_tilesize));
 	psc_assert(!psc_atomic32_read(&pjst->pjst_ref));
-	pjst->pjst_state = PJSHDWT_FREE;
+	pjst->pjst_state = PJ_SHDW_TILE_FREE;
 	pjst->pjst_sjent = sjent;
 	freelock(&pjst->pjst_lock);
 }
@@ -908,14 +908,14 @@ pjournal_shdw_advtile_locked(struct psc_journal_shdw *pjs, int block)
 	 */
 	next_tile = (pjs->pjs_curtile + 1) % (pjs->pjs_ntiles - 1);
 
-	while (pjs->pjs_tiles[next_tile]->pjst_state != PJSHDWT_FREE) {
+	while (pjs->pjs_tiles[next_tile]->pjst_state != PJ_SHDW_TILE_FREE) {
 		psc_assert(block);
 		psc_waitq_wait(&pjs->pjs_waitq, &pjs->pjs_lock);
 		spinlock(&pjs->pjs_lock);
 	}
 
-	pjs->pjs_tiles[next_tile]->pjst_state = PJSHDWT_INUSE;
-	pjs->pjs_tiles[pjs->pjs_curtile]->pjst_state = PJSHDWT_PROCRDY;
+	pjs->pjs_tiles[next_tile]->pjst_state = PJ_SHDW_TILE_INUSE;
+	pjs->pjs_tiles[pjs->pjs_curtile]->pjst_state = PJ_SHDW_TILE_PROCRDY;
 	pjs->pjs_curtile = next_tile;
 	pjs->pjs_state &= ~PJSHDW_ADVTILE;
 	psc_waitq_wakeall(&pjs->pjs_waitq);
@@ -958,7 +958,7 @@ pjournal_shdw_prepslot(struct psc_journal_shdw *pjs, uint32_t slot,
 	 *    largest in the system meaning that the tile could not
 	 *    have been advanced ahead of us.
 	 */
-	psc_assert(pjst->pjst_state == PJSHDWT_INUSE);
+	psc_assert(pjst->pjst_state == PJ_SHDW_TILE_INUSE);
 
 	psc_assert(pjs->pjs_curtile < pjs->pjs_ntiles);
 	psc_assert(slot >= pjst->pjst_sjent &&
@@ -1060,11 +1060,11 @@ pjournal_shdwthr_main(__unusedx void *arg)
 			pjst = pjs->pjs_tiles[j];
 			spinlock(&pjst->pjst_lock);
 
-			if (pjst->pjst_state & PJSHDWT_PROCRDY) {
+			if (pjst->pjst_state & PJ_SHDW_TILE_PROCRDY) {
 				/* Sanity.
 				 */
 				psc_assert(pjst->pjst_state ==
-					   PJSHDWT_PROCRDY);
+					   PJ_SHDW_TILE_PROCRDY);
 				/* Only quiet pjst's may be processed.
 				 */
 				if (psc_atomic32_read(&pjst->pjst_ref)) {
@@ -1072,7 +1072,7 @@ pjournal_shdwthr_main(__unusedx void *arg)
 					   psc_atomic32_read(&pjst->pjst_ref));
 					continue;
 				}
-				pjst->pjst_state = PJSHDWT_PROC;
+				pjst->pjst_state = PJ_SHDW_TILE_PROC;
 				freelock(&pjst->pjst_lock);
 				//XXX Call tile entry processor here
 				pjournal_prep_pjst(pjst, pj, pjst->pjst_sjent);

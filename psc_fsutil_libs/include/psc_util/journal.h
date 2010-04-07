@@ -48,9 +48,9 @@ struct psc_journal_hdr {
 
 #define	MAX_NUM_PJBUF		8		/* number of journal buffers to keep around */
 
-#define PJSHDW_DEFTILES    	4
-#define PJSHDW_TILESIZE		1024
-#define PJSHDW_MAXAGE		{1, 0}		/* seconds, nanoseconds */
+#define PJ_SHDW_DEFTILES    	4
+#define PJ_SHDW_TILESIZE	1024
+#define PJ_SHDW_MAXAGE		{1, 0}		/* seconds, nanoseconds */
 
 #define JRNLTHRT_SHDW		0
 
@@ -63,12 +63,12 @@ struct psc_journal_shdw_tile {
         psc_spinlock_t		 pjst_lock;
 };
 
-enum PJSHDW_STATES {
-	PJSHDWT_FREE    = 0,
-        PJSHDWT_INUSE   = (1<<0),  /* Tile is actively assigned to a
-			   	    *  journal region */
-        PJSHDWT_PROC    = (1<<1),  /* Tile is held by the post-processor */
-	PJSHDWT_PROCRDY = (1<<2)
+enum PJ_SHDW_TILE_STATES {
+	PJ_SHDW_TILE_NONE    = (0 << 0),
+	PJ_SHDW_TILE_FREE    = (1 << 0),
+        PJ_SHDW_TILE_INUSE   = (1 << 1),  /* Tile is actively assigned to a journal region */
+        PJ_SHDW_TILE_PROC    = (1 << 2),  /* Tile is held by the post-processor */
+	PJ_SHDW_TILE_PROCRDY = (1 << 3)
 };
 
 struct psc_journal;
@@ -78,7 +78,7 @@ struct psc_journal_shdw {
         uint32_t			 pjs_ntiles;            	/* Number of tiles */
         uint32_t			 pjs_curtile;           	/* Current tile index */
         uint32_t			 pjs_tilesize;			/* Number of entries per tile */
-        struct psc_journal_shdw_tile	*pjs_tiles[PJSHDW_DEFTILES];	/* tile buffer pointers */
+        struct psc_journal_shdw_tile	*pjs_tiles[PJ_SHDW_DEFTILES];	/* tile buffer pointers */
 
         uint32_t			 pjs_pjents;            	/* Number of processed jents */
 	uint32_t			 pjs_state;
@@ -88,7 +88,7 @@ struct psc_journal_shdw {
 	struct psc_journal		*pjs_journal;
 };
 
-#define PJSHDW_ADVTILE 1
+#define PJ_SHDW_ADVTILE 1
 
 struct psc_journal {
 	psc_spinlock_t		 pj_lock;	/* contention lock */
