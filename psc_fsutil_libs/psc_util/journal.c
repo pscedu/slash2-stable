@@ -962,7 +962,7 @@ pjournal_shdw_prepslot(struct psc_journal_shdw *pjs, uint32_t slot,
 
 	psc_assert(pjs->pjs_curtile < pjs->pjs_ntiles);
 	psc_assert(slot >= pjst->pjst_sjent &&
-		   (slot <= (pjst->pjst_sjent + pjs->pjs_tilesize)));
+		   (slot < (pjst->pjst_sjent + pjs->pjs_tilesize)));
 
 	psc_atomic32_inc(&pjst->pjst_ref);
 	pje = (void *)((char *)pjst->pjst_base +
