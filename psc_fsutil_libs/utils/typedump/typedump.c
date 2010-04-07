@@ -26,6 +26,7 @@
 /* start includes */
 #include "pfl/cdefs.h"
 #include "pfl/compat.h"
+#include "pfl/fcntl.h"
 #include "pfl/pfl.h"
 #include "pfl/str.h"
 #include "pfl/types.h"
