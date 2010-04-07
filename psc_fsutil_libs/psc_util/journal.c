@@ -1240,7 +1240,7 @@ pjournal_replay(const char *fn, psc_jhandler pj_handler)
 		pj->pj_nextwrite = 0;
 
 	/* pre-allocate some buffers for log writes */
-	for (i = 0; i < MAX_NUM_PJBUF; i++) {
+	for (i = 0; i < PJ_MAX_BUF; i++) {
 		pje = psc_alloc(PJ_PJESZ(pj), PAF_PAGEALIGN | PAF_LOCK);
 		psc_dynarray_add(&pj->pj_bufs, pje);
 	}
