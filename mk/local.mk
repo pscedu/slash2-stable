@@ -10,6 +10,7 @@ LINT=		splint +posixlib
 NOTEMPTY=	${ROOTDIR}/tools/notempty
 SCONS=		scons
 PKG_CONFIG=	pkg-config
+LIBGCRYPT_CONFIG=libgcrypt-config
 MPICC=		mpicc
 ECHORUN=	${ROOTDIR}/tools/echorun.sh
 GENTYPES=	${ROOTDIR}/tools/gentypes.pl
@@ -17,6 +18,7 @@ HDRCLEAN=	${ROOTDIR}/tools/hdrclean.pl
 LIBDEP=		${ROOTDIR}/tools/libdep.pl
 MDPROC=		${ROOTDIR}/tools/mdproc.pl
 MINVER=		${ROOTDIR}/tools/minver.pl
+MYECHO=		${ROOTDIR}/tools/myecho.pl
 PCPP=		${ROOTDIR}/tools/pcpp.pl
 PICKLEGEN=	${ROOTDIR}/tools/pickle-gen.sh
 
@@ -46,6 +48,11 @@ FUSE_DEFINES=	$$(PKG_CONFIG_PATH=${FUSE_BASE} ${PKG_CONFIG} --cflags fuse | ${EX
 FUSE_INCLUDES=	$$(PKG_CONFIG_PATH=${FUSE_BASE} ${PKG_CONFIG} --cflags fuse | ${EXTRACT_INCLUDES})
 FUSE_LIBS=	$$(PKG_CONFIG_PATH=${FUSE_BASE} ${PKG_CONFIG} --libs fuse)
 FUSE_VERSION=	$$(PKG_CONFIG_PATH=${FUSE_BASE} ${PKG_CONFIG} --modversion fuse | sed 's/\([0-9]\)*\.\([0-9]*\).*/\1\2/')
+
+GCRYPT_CFLAGS=	$$(${LIBGCRYPT_CONFIG} --cflags | ${EXTRACT_CFLAGS})
+GCRYPT_DEFINES=	$$(${LIBGCRYPT_CONFIG} --cflags | ${EXTRACT_DEFINES})
+GCRYPT_INCLUDES=$$(${LIBGCRYPT_CONFIG} --cflags | ${EXTRACT_INCLUDES})
+GCRYPT_LIBS=	$$(${LIBGCRYPT_CONFIG} --libs)
 
 ZFS_LIBS=	-L${ZFS_BASE}/zfs-fuse					\
 		-L${ZFS_BASE}/lib/libavl				\

@@ -84,13 +84,12 @@ endif
 
 ifneq ($(filter fuse,${MODULES}),)
 CFLAGS+=	${FUSE_CFLAGS}
-DEFINES+=	${FUSE_DEFINES}
 LDFLAGS+=	${FUSE_LIBS}
 MODULES+=	fuse-hdrs
 endif
 
 ifneq ($(filter fuse-hdrs,${MODULES}),)
-DEFINES+=	-DFUSE_USE_VERSION=${FUSE_VERSION}
+DEFINES+=	-DFUSE_USE_VERSION=${FUSE_VERSION} ${FUSE_DEFINES}
 INCLUDES+=	${FUSE_INCLUDES}
 endif
 
@@ -163,6 +162,13 @@ DEFINES+=	${NUMA_DEFINES}
 LDFLAGS+=	${NUMA_LIBS}
 endif
 
+ifneq ($(filter gcrypt,${MODULES}),)
+CFLAGS+=	${GCRYPT_CFLAGS}
+DEFINES+=	${GCRYPT_DEFINES}
+LDFLAGS+=	${GCRYPT_LIBS}
+INCLUDES+=	${GCRYPT_INCLUDES}
+endif
+
 # Post-modules processing
 
 ifneq ($(filter ${PFL_BASE}/psc_util/pthrutil.c,${SRCS}),)
@@ -223,7 +229,7 @@ ifdef HASDEPS
   ifdef PROG
     ${PROG}: ${OBJS}
 	${CC} -o $@ ${OBJS} ${LDFLAGS}
-	@echo -n "${PROG}:" > ${DEPEND_FILE}
+	@${MYECHO} -n "${PROG}:" > ${DEPEND_FILE}
 	@${LIBDEP} ${LDFLAGS} ${LIBDEP_ADD} >> ${DEPEND_FILE}
   endif
 
