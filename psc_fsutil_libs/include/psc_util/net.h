@@ -32,6 +32,7 @@ struct ifaddrs;
 # define PFL_MSG_NOSIGNAL 0
 #endif
 
+int  pfl_socket_getpeercred(int, uid_t *, gid_t *);
 void pfl_socket_setnosig(int);
 
 void pflnet_freeifaddrs(struct ifaddrs *);
