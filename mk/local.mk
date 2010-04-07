@@ -66,7 +66,7 @@ ZFS_LIBS=	-L${ZFS_BASE}/zfs-fuse					\
 
 LIBL=		-ll
 LIBZ=		-lz
-THREAD_LIBS=	-pthread ${LIBRT}
+THREAD_LIBS=	-pthread
 LIBCURSES=	-lncurses
 
 OSTYPE:=	$(shell uname)
@@ -129,7 +129,7 @@ ifeq (${OSTYPE},Linux)
 endif
 
 ifeq (${OSTYPE},Darwin)
-  DEFINES+=					-D_DARWIN_C_SOURCE
+  DEFINES+=					-D_DARWIN_C_SOURCE -D_DARWIN_FEATURE_64_BIT_INODE
 endif
 
 ifdef DEBIAN

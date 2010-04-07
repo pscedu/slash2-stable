@@ -117,6 +117,11 @@ endif
 ifneq ($(filter pthread,${MODULES}),)
 LDFLAGS+=	${THREAD_LIBS}
 DEFINES+=	-DHAVE_LIBPTHREAD
+MODULES+=	rt
+endif
+
+ifneq ($(filter rt,${MODULES}),)
+LDFLAGS+=	${LIBRT}
 endif
 
 ifneq ($(filter curses,${MODULES}),)
