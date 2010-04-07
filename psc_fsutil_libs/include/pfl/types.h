@@ -47,6 +47,12 @@
 # define PSCPRI_PTHRT	"lu"
 #endif
 
+#if defined(__APPLE__)
+# define PSCPRI_BLKSIZE_T "u"
+#else
+# define PSCPRI_BLKSIZE_T "ld"
+#endif
+
 #define PSCPRIuTIMET	"lu"
 
 #ifdef __APPLE__
