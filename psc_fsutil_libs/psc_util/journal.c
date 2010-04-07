@@ -906,7 +906,7 @@ pjournal_shdw_advtile_locked(struct psc_journal_shdw *pjs, int block)
 	/* Map the current and next tiles whose values will be protected
 	 *    by PJSHDW_ADVTILE.
 	 */
-	next_tile = pjs->pjs_curtile % (pjs->pjs_ntiles - 1);
+	next_tile = (pjs->pjs_curtile + 1) % (pjs->pjs_ntiles - 1);
 
 	while (pjs->pjs_pjsts[next_tile]->pjst_state != PJSHDWT_FREE) {
 		psc_assert(block);
@@ -914,7 +914,6 @@ pjournal_shdw_advtile_locked(struct psc_journal_shdw *pjs, int block)
 		spinlock(&pjs->pjs_lock);
 	}
 
-	psc_assert(pjs->pjs_pjsts[next_tile]->pjst_state == PJSHDWT_FREE);
 	pjs->pjs_pjsts[next_tile]->pjst_state = PJSHDWT_INUSE;
 	pjs->pjs_pjsts[pjs->pjs_curtile]->pjst_state = PJSHDWT_PROCRDY;
 	pjs->pjs_curtile = next_tile;
