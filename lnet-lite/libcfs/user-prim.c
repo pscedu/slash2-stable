@@ -391,9 +391,9 @@ void *cfs_stack_trace_frame(struct cfs_stack_trace *trace, int frame_no)
 
 #else
 
-void cfs_stack_trace_fill(struct cfs_stack_trace *trace)
+void cfs_stack_trace_fill(__unusedx struct cfs_stack_trace *trace)
 {}
-void *cfs_stack_trace_frame(struct cfs_stack_trace *trace, int frame_no)
+void *cfs_stack_trace_frame(__unusedx struct cfs_stack_trace *trace, __unusedx int frame_no)
 {
         return NULL;
 }
