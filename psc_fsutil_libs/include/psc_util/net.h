@@ -24,6 +24,8 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 
+struct ifaddrs;
+
 #ifdef MSG_NOSIGNAL
 # define PFL_MSG_NOSIGNAL MSG_NOSIGNAL
 #else
@@ -31,6 +33,10 @@
 #endif
 
 void pfl_socket_setnosig(int);
+
+void pflnet_freeifaddrs(struct ifaddrs *);
+int  pflnet_getifaddrs(struct ifaddrs **);
+void pflnet_getifnfordst(const struct ifaddrs *, const struct sockaddr *, char []);
 
 union pfl_sockaddr {
 	struct sockaddr_storage ss;
