@@ -75,16 +75,17 @@ struct psc_journal;
 /* In-memory 'journal shadowing'.
  */
 struct psc_journal_shdw {
-        uint32_t			 pjs_ntiles;            /* Number of tiles */
-        uint32_t			 pjs_tilesize;		/* Number of entries per tile */
-        uint32_t			 pjs_pjents;            /* Number of processed jents */
-        uint32_t			 pjs_curtile;           /* Current tile */
+        uint32_t			 pjs_ntiles;            	/* Number of tiles */
+        uint32_t			 pjs_curtile;           	/* Current tile index */
+        uint32_t			 pjs_tilesize;			/* Number of entries per tile */
+        struct psc_journal_shdw_tile	*pjs_tiles[PJSHDW_DEFTILES];	/* tile buffer pointers */
+
+        uint32_t			 pjs_pjents;            	/* Number of processed jents */
 	uint32_t			 pjs_state;
-        psc_spinlock_t			 pjs_lock;        	/* Sync between logwrite and shdwthr */
+        psc_spinlock_t			 pjs_lock;        		/* Sync between logwrite and shdwthr */
 	struct psc_waitq		 pjs_waitq;
-        struct timespec			 pjs_lastflush;		/* Time since last tile process */
+        struct timespec			 pjs_lastflush;			/* Time since last tile process */
 	struct psc_journal		*pjs_journal;
-        struct psc_journal_shdw_tile	*pjs_tiles[PJSHDW_DEFTILES];
 };
 
 #define PJSHDW_ADVTILE 1
