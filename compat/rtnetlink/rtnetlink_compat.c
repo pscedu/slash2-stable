@@ -1,6 +1,10 @@
 /* $Id$ */
 
-#include <rtnetlink.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+
+#include <linux/rtnetlink.h>
+
 #include <stdlib.h>
 
 int
