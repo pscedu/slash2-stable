@@ -936,27 +936,23 @@ pjournal_shdw_prepslot(struct psc_journal_shdw *pjs, uint32_t slot,
 	struct psc_journal_shdw_tile *pjst;
 	struct psc_journal_enthdr *pje;
 
- restart:
+	/*
+	 * If another thread is moving a tile, wait for it to complete.
+	 */
 	spinlock(&pjs->pjs_lock);
+	while (pjs->pjs_state & PJSHDW_ADVTILE) {
+		psc_waitq_wait(&pjs->pjs_waitq, &pjs->pjs_lock);
+		spinlock(&pjs->pjs_lock);
+	}
 	pjst = pjs->pjs_pjsts[pjs->pjs_curtile];
 	if (slot == (pjst->pjst_sjent + pjs->pjs_tilesize)) {
-		if (pjs->pjs_state & PJSHDW_ADVTILE) {
-			/* Another thread has already begun the tile advance
-			 *    procedures.  Wait for it to complete then
-			 *    retry.
-			 */
-			while (pjs->pjs_state & PJSHDW_ADVTILE) {
-				psc_waitq_wait(&pjs->pjs_waitq, &pjs->pjs_lock);
-				goto restart;
-			}
-		} else {
-			/* Tile advancementment is our job.  Note the pjs lock
-			 *    may be dropped if the next tile is still busy.
-			 */
-			pjs->pjs_state |= PJSHDW_ADVTILE;
-			pjournal_shdw_advtile_locked(pjs, block);
-		}
+		/* Tile advancementment is our job.  Note the pjs lock
+		 *    may be dropped if the next tile is still busy.
+		 */
+		pjs->pjs_state |= PJSHDW_ADVTILE;
+		pjournal_shdw_advtile_locked(pjs, block);
 	}
+	pjst = pjs->pjs_pjsts[pjs->pjs_curtile];
 	freelock(&pjs->pjs_lock);
 	/* No other states are allowed, this must be the active tile.
 	 * The big journal lock is being held so our slot # is the
