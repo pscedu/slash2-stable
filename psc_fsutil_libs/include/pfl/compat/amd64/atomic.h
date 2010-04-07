@@ -550,7 +550,6 @@ psc_atomic64_xchg(psc_atomic64_t *v, int64_t i)
 	return (i);
 }
 
-#undef psc_atomic16_cmpxchg
 static __inline int16_t
 psc_atomic16_cmpxchg(psc_atomic16_t *v, int16_t cmpv, int16_t newv)
 {
@@ -561,7 +560,6 @@ psc_atomic16_cmpxchg(psc_atomic16_t *v, int16_t cmpv, int16_t newv)
 	return (oldv);
 }
 
-#undef psc_atomic32_cmpxchg
 static __inline int32_t
 psc_atomic32_cmpxchg(psc_atomic32_t *v, int32_t cmpv, int32_t newv)
 {
@@ -572,7 +570,6 @@ psc_atomic32_cmpxchg(psc_atomic32_t *v, int32_t cmpv, int32_t newv)
 	return (oldv);
 }
 
-#undef psc_atomic64_cmpxchg
 static __inline int64_t
 psc_atomic64_cmpxchg(psc_atomic64_t *v, int64_t cmpv, int64_t newv)
 {
