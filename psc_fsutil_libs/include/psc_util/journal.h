@@ -46,7 +46,7 @@ struct psc_journal_hdr {
 #define pjh_iolen pjh_start_off
 };
 
-#define	MAX_NUM_PJBUF		8		/* number of journal buffers to keep around */
+#define	PJ_MAX_BUF		8		/* number of journal buffers to keep around */
 
 #define PJ_SHDW_DEFTILES    	4
 #define PJ_SHDW_TILESIZE	1024
@@ -64,11 +64,11 @@ struct psc_journal_shdw_tile {
 };
 
 enum PJ_SHDW_TILE_STATES {
-	PJ_SHDW_TILE_NONE    = (0 << 0),
-	PJ_SHDW_TILE_FREE    = (1 << 0),
-        PJ_SHDW_TILE_INUSE   = (1 << 1),  /* Tile is actively assigned to a journal region */
-        PJ_SHDW_TILE_PROC    = (1 << 2),  /* Tile is held by the post-processor */
-	PJ_SHDW_TILE_PROCRDY = (1 << 3)
+	PJ_SHDW_TILE_NONE	= (0 << 0),
+	PJ_SHDW_TILE_FREE	= (1 << 0),
+        PJ_SHDW_TILE_INUSE	= (1 << 1),  /* Tile is actively assigned to a journal region */
+        PJ_SHDW_TILE_PROC	= (1 << 2),  /* Tile is held by the post-processor */
+	PJ_SHDW_TILE_PROCRDY	= (1 << 3)
 };
 
 struct psc_journal;

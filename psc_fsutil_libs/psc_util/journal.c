@@ -1112,23 +1112,27 @@ pjournal_init_shdw(struct psc_journal *pj)
 {
 	struct psc_thread *thr;
 	int i;
+	int size;
 
 	psc_assert(pj->pj_hdr->pjh_options & PJF_SHADOW);
 	psc_assert(!pj->pj_shdw);
 
 	pj->pj_shdw = PSCALLOC(sizeof(struct psc_journal_shdw));
-	pj->pj_shdw->pjs_ntiles = PJSHDW_DEFTILES;
-	pj->pj_shdw->pjs_tilesize = PJSHDW_TILESIZE;
+	pj->pj_shdw->pjs_ntiles = PJ_SHDW_DEFTILES;
+	pj->pj_shdw->pjs_tilesize = PJ_SHDW_TILESIZE;
 	pj->pj_shdw->pjs_pjents = 0;
 
 	clock_gettime(CLOCK_REALTIME, &pj->pj_shdw->pjs_lastflush);
 	LOCK_INIT(&pj->pj_shdw->pjs_lock);
 	psc_waitq_init(&pj->pj_shdw->pjs_waitq);
 
-	for (i=0; i < PJSHDW_DEFTILES; i++) {
-		pj->pj_shdw->pjs_tiles[i] = PSCALLOC(pj->pj_hdr->pjh_entsz *
-						     pj->pj_shdw->pjs_tilesize);
+	size = sizeof(struct psc_journal_shdw_tile) + 
+		pj->pj_hdr->pjh_entsz * pj->pj_shdw->pjs_tilesize;
 
+	for (i=0; i < PJ_SHDW_DEFTILES; i++) {
+		pj->pj_shdw->pjs_tiles[i] = PSCALLOC(size);
+		pj->pj_shdw->pjs_tiles[i]->pjst_base = 
+			(void *)(pj->pj_shdw->pjs_tiles[i] + 1);
 		LOCK_INIT(&pj->pj_shdw->pjs_tiles[i]->pjst_lock);
 		pjournal_prep_pjst(pj->pj_shdw->pjs_tiles[i], pj,
 				   (uint32_t)(i * pj->pj_shdw->pjs_tilesize));
