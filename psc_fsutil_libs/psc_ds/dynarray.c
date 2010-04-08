@@ -232,10 +232,9 @@ int
 psc_dynarray_splice(struct psc_dynarray *da, int startpos, int len,
     const void *base, int nitems)
 {
-	int rc, endpos, rem;
+	int rc, rem;
 
-	endpos = startpos + len;
-	rem = psc_dynarray_len(da) - endpos;
+	rem = psc_dynarray_len(da) - startpos - len;
 	psc_assert(nitems >= 0);
 	psc_assert(len >= 0);
 	psc_assert(len <= psc_dynarray_len(da));
@@ -243,8 +242,9 @@ psc_dynarray_splice(struct psc_dynarray *da, int startpos, int len,
 	if (rc)
 		return (rc);
 
-	memcpy(da->da_items + endpos, da->da_items + startpos,
-	    rem * sizeof(void *));
+	if (nitems != len)
+		memmove(da->da_items + startpos + nitems - len,
+		    da->da_items + startpos, rem * sizeof(void *));
 	memcpy(da->da_items + startpos, base, nitems * sizeof(void *));
 	da->da_pos += nitems - len;
 	return (0);
