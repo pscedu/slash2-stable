@@ -50,9 +50,14 @@
  * is processed so that we can distill information into a separate change log for
  * namespace operation.
  *
- * If a tile is full of log entries, we wake up a thread to process its contents.
+ * If a tile is full of log entries, we wake up a tiling thread to process its contents.
  * If a tile has old log entries, the same thread will process them.  In the
  * meanwhile, the tile can continue to accept new log entries until it is full.
+ *
+ * The tiling thread wakes up on its own periodically to process log entries recorded
+ * in a tile.  For simplicity, we don't track the age of each individual log entry. 
+ * This means a log entry can be processed any time after it is written.  We also
+ * cannot guarantee when a log entry will be processed.
  */
 struct psc_waitq	pjournal_tilewaitq = PSC_WAITQ_INIT;
 psc_spinlock_t		pjournal_tilewaitqlock = LOCK_INITIALIZER;
@@ -1071,11 +1076,12 @@ pjournal_shdwthr_main(__unusedx void *arg)
 	struct psc_journal_shdw *pjs = pj->pj_shdw;
 	struct psc_journal_shdw_tile *pjst;
 	int32_t i;
+	int rv = 0;
 
 	while (1) {
 		/* Look for full tiles and process them.
 		 */
-		for (i=0; i < pjs->pjs_ntiles; i++) {
+		for (i = 0; i < pjs->pjs_ntiles; i++) {
 			pjst = pjs->pjs_tiles[i];
 			spinlock(&pjst->pjst_lock);
 			if (pjst->pjst_state & PJ_SHDW_TILE_FULL) {
@@ -1085,8 +1091,14 @@ pjournal_shdwthr_main(__unusedx void *arg)
 				pjournal_shdw_preptile(pjst, pj, pjst->pjst_first);
 			}
 		}
+		/*
+		 * If we woke up on our own, process log entries in the current tile.
+		 */
+		if (rv == ETIMEDOUT) {
+			//XXX Call tile entry processor here
+		}
 		spinlock(&pjournal_tilewaitqlock);
-		psc_waitq_waitrel_s(&pjournal_tilewaitq, &pjournal_tilewaitqlock, PJ_SHDW_MAXAGE);
+		rv = psc_waitq_waitrel_s(&pjournal_tilewaitq, &pjournal_tilewaitqlock, PJ_SHDW_MAXAGE);
 	}
 	return (NULL);
 }
