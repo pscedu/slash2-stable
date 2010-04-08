@@ -69,8 +69,6 @@ __static int		pjournal_logwrite(struct psc_journal_xidhndl *, int,
 				void *, size_t);
 __static void		pjournal_shdw_logwrite(struct psc_journal *,
 				const struct psc_journal_enthdr *, uint32_t);
-__static void		pjournal_shdw_prepslot(struct psc_journal_shdw *,
-				uint32_t, int32_t);
 
 /**
  * pjournal_xnew - Start a new transaction with a unique ID in the given
@@ -302,16 +300,6 @@ pjournal_logwrite(struct psc_journal_xidhndl *xh, int type, void *data,
 		}
 		tail_slot = t->pjx_tailslot;
 	}
-	/*
-	 * Optionally write into our shadow area only AFTER we have decided
-	 * on the slot to be used.
-	 *
-	 * Reference the shadow tile and ensure the corresponding tile slot
-	 * is available.  Note, the pjs may advance to the next tile before
-	 * this operations completes.
-	 */
-	if (pj->pj_hdr->pjh_options & PJF_SHADOW)
-		pjournal_shdw_prepslot(pj->pj_shdw, slot, 1);
 
 	normal = 1;
 	if (!(xh->pjx_flags & PJX_XSTART)) {
@@ -960,12 +948,11 @@ pjournal_shdw_advtile_locked(struct psc_journal_shdw *pjs, int block)
  * @slot:  requested journal slot number
  * @block:  permitted to block?
  */
-__static void
+__static struct psc_journal_shdw_tile *
 pjournal_shdw_prepslot(struct psc_journal_shdw *pjs, uint32_t slot,
 		      int32_t block)
 {
 	struct psc_journal_shdw_tile *pjst;
-	struct psc_journal_enthdr *pje;
 
 	/*
 	 * If another thread is moving a tile, wait for it to complete.
@@ -982,85 +969,35 @@ pjournal_shdw_prepslot(struct psc_journal_shdw *pjs, uint32_t slot,
 		 */
 		pjs->pjs_state |= PJ_SHDW_ADVTILE;
 		pjournal_shdw_advtile_locked(pjs, block);
+		pjst = pjs->pjs_tiles[pjs->pjs_curtile];
 	}
-	pjst = pjs->pjs_tiles[pjs->pjs_curtile];
 	freelock(&pjs->pjs_lock);
-	/* No other states are allowed, this must be the active tile.
-	 * The big journal lock is being held so our slot # is the
-	 *    largest in the system meaning that the tile could not
-	 *    have been advanced ahead of us.
-	 */
-	psc_assert(pjst->pjst_state == PJ_SHDW_TILE_INUSE);
-
-	psc_assert(pjs->pjs_curtile < pjs->pjs_ntiles);
-	psc_assert(slot >= pjst->pjst_first &&
-		   (slot < (pjst->pjst_first + pjs->pjs_tilesize)));
-
-	pje = (void *)((char *)pjst->pjst_base +
-	    (PJ_PJESZ(pjs->pjs_journal) * (slot - pjst->pjst_first)));
-
-	psc_assert(pje->pje_magic == PJE_MAGIC);
-	psc_assert(pje->pje_type == PJE_FORMAT);
-
-	/* 'Reserve' the slot by writing it into the structure so it may be
-	 *    checked later.
-	 */
-	pje->pje_shdw_slot = slot;
-}
-
-/**
- * pjournal_getbyslot_pjst - retrieve the current shadow tile in a
- *	manner which accounts for tile advancement.
- * @pjs:  the journal shadow in question
- * @slot:  requested journal slot number
- * Return:  Returns a referenced shadow tile.
- */
-__static struct psc_journal_shdw_tile *
-pjournal_getbyslot_pjst(struct psc_journal_shdw *pjs, uint32_t slot)
-{
-	struct psc_journal_shdw_tile *pjst;
-	int32_t i, found=0;
-
-	spinlock(&pjs->pjs_lock);
-	psc_assert(pjs->pjs_curtile < pjs->pjs_ntiles);
-
-	i = pjs->pjs_curtile;
-
-	do {
-		pjst = pjs->pjs_tiles[i];
-		if (slot >= pjst->pjst_first &&
-		    (slot <= (pjst->pjst_first + pjs->pjs_tilesize - 1))) {
-			found = 1;
-			break;
-
-		} else
-			if (++i == pjs->pjs_ntiles)
-				i = 0;
-
-	} while (i != pjs->pjs_curtile);
-
-	freelock(&pjs->pjs_lock);
-
 	return (pjst);
+
 }
 
 __static void
 pjournal_shdw_logwrite(struct psc_journal *pj,
 		       const struct psc_journal_enthdr *pje, uint32_t slot)
 {
-	struct psc_journal_shdw *pjs = pj->pj_shdw;
 	struct psc_journal_shdw_tile *pjst;
 	struct psc_journal_enthdr *pje_shdw;
 
-	pjst = pjournal_getbyslot_pjst(pjs, slot);
+	pjst = pjournal_shdw_prepslot(pj->pj_shdw, slot, 1);
+	/*
+	 * Hold the tile lock while updating its contents.  By checking
+	 * the magic field, the tiling thread can figure out if the log 
+	 * entry is filled or not.
+	 */
+	spinlock(&pjst->pjst_lock);
 
-	pje_shdw = (void *)((char *)pjst->pjst_base +
-			 (PJ_PJESZ(pj) * (slot - pjst->pjst_first)));
-
-	psc_assert(pje_shdw->pje_magic == 0);
-	psc_assert(pje_shdw->pje_shdw_slot == slot);
-
+	pje = (void *)((char *)pjst->pjst_base + 
+		(PJ_PJESZ(pj) * (slot - pjst->pjst_first)));
+	psc_assert(pje->pje_magic == PJE_MAGIC);
+	psc_assert(pje->pje_type == PJE_FORMAT);
 	memcpy(pje_shdw, pje, PJ_PJESZ(pj));
+
+	freelock(&pjst->pjst_lock);
 }
 
 void *
