@@ -887,9 +887,11 @@ pjournal_dump(const char *fn, int verbose)
  *   been processed, the tile can be freed and reused to map a new region.
  *
  */
-void pjournal_shdw_proctile(struct psc_journal_shdw_tile *pjst)
+void
+pjournal_shdw_proctile(struct psc_journal_shdw_tile *pjst)
 {
-
+	if (pjst->pjst_state)		/* bogus code for now */
+		return;
 }
 
 /**
@@ -899,21 +901,30 @@ void pjournal_shdw_proctile(struct psc_journal_shdw_tile *pjst)
  */
 __static __inline void
 pjournal_shdw_preptile(struct psc_journal_shdw_tile *pjst,
-		   const struct psc_journal *pj, uint32_t slot)
+		   const struct psc_journal *pj)
 {
 	int				 i;
 	struct psc_journal_enthdr	*pje;
+	struct psc_journal_shdw		*pjs = pj->pj_shdw;
 
+	spinlock(&pjs->pjs_lock);
 	spinlock(&pjst->pjst_lock);
-	for (i = 0; i < pj->pj_shdw->pjs_tilesize; i++) {
+
+	pjst->pjst_state = PJ_SHDW_TILE_FREE;
+	for (i = 0; i < pjs->pjs_tilesize; i++) {
 		pje = (struct psc_journal_enthdr *)((char *)pjst->pjst_base + PJ_PJESZ(pj) * i);
 		pje->pje_magic = PJE_MAGIC;
 		pje->pje_type = PJE_FORMAT;
 	}
-	pjst->pjst_tail = 0;
-	pjst->pjst_first = slot;
-	pjst->pjst_state = PJ_SHDW_TILE_FREE;
+
+	pjst->pjst_tail = pjs->pjs_endslot;
+	pjst->pjst_first = pjs->pjs_endslot;
+	pjs->pjs_endslot += PJ_SHDW_TILESIZE;
+	if  (pjs->pjs_endslot > pj->pj_hdr->pjh_nents)
+		pjs->pjs_endslot = 0;
+
 	freelock(&pjst->pjst_lock);
+	freelock(&pjs->pjs_lock);
 }
 
 /**
@@ -1034,7 +1045,7 @@ pjournal_shdwthr_main(__unusedx void *arg)
 			}
 			freelock(&pjst->pjst_lock);
 			pjournal_shdw_proctile(pjst);
-			pjournal_shdw_preptile(pjst, pj, pjst->pjst_first);
+			pjournal_shdw_preptile(pjst, pj);
 		}
 		spinlock(&pjournal_tilewaitqlock);
 		rv = psc_waitq_waitrel_s(&pjournal_tilewaitq, &pjournal_tilewaitqlock, PJ_SHDW_MAXAGE);
@@ -1055,7 +1066,7 @@ pjournal_init_shdw(struct psc_journal *pj)
 	pj->pj_shdw = PSCALLOC(sizeof(struct psc_journal_shdw));
 	pj->pj_shdw->pjs_ntiles = PJ_SHDW_DEFTILES;
 	pj->pj_shdw->pjs_tilesize = PJ_SHDW_TILESIZE;
-	pj->pj_shdw->pjs_endslot = PJ_SHDW_DEFTILES * PJ_SHDW_TILESIZE;
+	pj->pj_shdw->pjs_endslot = 0;
 
 	LOCK_INIT(&pj->pj_shdw->pjs_lock);
 	psc_waitq_init(&pj->pj_shdw->pjs_waitq);
@@ -1069,9 +1080,10 @@ pjournal_init_shdw(struct psc_journal *pj)
 		pj->pj_shdw->pjs_tiles[i]->pjst_base =
 			(void *)(pj->pj_shdw->pjs_tiles[i] + 1);
 		LOCK_INIT(&pj->pj_shdw->pjs_tiles[i]->pjst_lock);
-		pjournal_shdw_preptile(pj->pj_shdw->pjs_tiles[i], pj,
-				   (uint32_t)(i * pj->pj_shdw->pjs_tilesize));
+		pjournal_shdw_preptile(pj->pj_shdw->pjs_tiles[i], pj);
 	}
+	psc_assert(pj->pj_shdw->pjs_endslot == PJ_SHDW_DEFTILES * PJ_SHDW_TILESIZE);
+
 	thr = pscthr_init(JRNLTHRT_SHDW, 0, pjournal_shdwthr_main, NULL, 0,
 			  "pjrnlshdw");
 	psc_assert(thr);
