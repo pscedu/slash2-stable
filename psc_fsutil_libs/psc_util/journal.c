@@ -878,10 +878,15 @@ __static __inline void
 pjournal_shdw_preptile(struct psc_journal_shdw_tile *pjst,
 		   const struct psc_journal *pj, uint32_t sjent)
 {
+	int				 i;
+	struct psc_journal_enthdr	*pje;
+
 	spinlock(&pjst->pjst_lock);
-	psc_assert(pjst->pjst_base);
-	memset(pjst->pjst_base, 0, (size_t)(PJ_PJESZ(pj) *
-					    pj->pj_shdw->pjs_tilesize));
+	for (i = 0; i < pj->pj_shdw->pjs_tilesize; i++) {
+		pje = (struct psc_journal_enthdr *)((char *)pjst->pjst_base + PJ_PJESZ(pj) * i);
+		pje->pje_magic = PJE_MAGIC;
+		pje->pje_type = PJE_FORMAT;
+	}
 	psc_assert(!psc_atomic32_read(&pjst->pjst_ref));
 	pjst->pjst_state = PJ_SHDW_TILE_FREE;
 	pjst->pjst_sjent = sjent;
@@ -901,7 +906,6 @@ pjournal_shdw_advtile_locked(struct psc_journal_shdw *pjs, int block)
 	uint32_t next_tile;
 
 	LOCK_ENSURE(&pjs->pjs_lock);
-	psc_assert(pjs->pjs_state & PJ_SHDW_ADVTILE);
 
 	/* Map the current and next tiles whose values will be protected
 	 *    by PJ_SHDW_ADVTILE.
@@ -915,7 +919,7 @@ pjournal_shdw_advtile_locked(struct psc_journal_shdw *pjs, int block)
 	}
 
 	pjs->pjs_tiles[next_tile]->pjst_state = PJ_SHDW_TILE_INUSE;
-	pjs->pjs_tiles[pjs->pjs_curtile]->pjst_state = PJ_SHDW_TILE_PROCRDY;
+	pjs->pjs_tiles[pjs->pjs_curtile]->pjst_state = PJ_SHDW_TILE_FULL;
 	pjs->pjs_curtile = next_tile;
 	pjs->pjs_state &= ~PJ_SHDW_ADVTILE;
 	psc_waitq_wakeall(&pjs->pjs_waitq);
@@ -1056,7 +1060,7 @@ pjournal_shdwthr_main(__unusedx void *arg)
 		for (i=0; i < pjs->pjs_ntiles; i++) {
 			pjst = pjs->pjs_tiles[j];
 			spinlock(&pjst->pjst_lock);
-			if (pjst->pjst_state & PJ_SHDW_TILE_PROCRDY) {
+			if (pjst->pjst_state & PJ_SHDW_TILE_FULL) {
 				pjst->pjst_state = PJ_SHDW_TILE_PROC;
 				freelock(&pjst->pjst_lock);
 				//XXX Call tile entry processor here

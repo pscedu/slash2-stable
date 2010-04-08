@@ -68,7 +68,7 @@ enum PJ_SHDW_TILE_STATES {
 	PJ_SHDW_TILE_FREE	= (1 << 0),
         PJ_SHDW_TILE_INUSE	= (1 << 1),  /* Tile is actively assigned to a journal region */
         PJ_SHDW_TILE_PROC	= (1 << 2),  /* Tile is held by the post-processor */
-	PJ_SHDW_TILE_PROCRDY	= (1 << 3)
+	PJ_SHDW_TILE_FULL	= (1 << 3)
 };
 
 struct psc_journal;
