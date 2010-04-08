@@ -39,6 +39,10 @@ usage(void)
 #define PTR_3	((void *)0x03)
 #define PTR_4	((void *)0x04)
 
+#define PTR_a	((void *)0x0a)
+#define PTR_b	((void *)0x0b)
+#define PTR_c	((void *)0x0c)
+
 void
 dump(struct psc_dynarray *da)
 {
@@ -68,6 +72,11 @@ main(int argc, char *argv[])
 	p = PTR_3; psc_dynarray_splice(&da, 0, 0, &p, 1); dump(&da);
 	p = PTR_2; psc_dynarray_splice(&da, 0, 0, &p, 1); dump(&da);
 	p = PTR_1; psc_dynarray_splice(&da, 0, 0, &p, 1); dump(&da);
+
+	psc_dynarray_splice(&da, 0, 0, NULL, 0); dump(&da);
+
+	p = PTR_a; psc_dynarray_splice(&da, 2, 1, &p, 1); dump(&da);
+	p = PTR_b; psc_dynarray_splice(&da, 3, 0, &p, 1); dump(&da);
 
 	exit(0);
 }
