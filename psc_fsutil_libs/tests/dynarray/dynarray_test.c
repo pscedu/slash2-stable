@@ -50,8 +50,8 @@ dump(struct psc_dynarray *da)
 	int j;
 
 	DYNARRAY_FOREACH(p, j, da)
-		fprintf(stderr, "%p ", p);
-	fprintf(stderr, "\n");
+		printf("%p ", p);
+	printf("\n");
 }
 
 int
