@@ -722,6 +722,8 @@ pjournal_format(const char *fn, uint32_t nents, uint32_t entsz,
 		psc_fatal("stat %s", fn);
 
 	nents = ((nents + PJ_SHDW_TILESIZE - 1) / PJ_SHDW_TILESIZE) * PJ_SHDW_TILESIZE;
+	if (nents < PJ_SHDW_TILESIZE * PJ_SHDW_DEFTILES)
+		nents = PJ_SHDW_TILESIZE * PJ_SHDW_DEFTILES;
 
 	pjh.pjh_entsz = entsz;
 	pjh.pjh_nents = nents;
@@ -1007,7 +1009,7 @@ pjournal_shdw_logwrite(struct psc_journal *pj,
 	 * entry is filled or not.
 	 *
 	 * Without me writing into the slot, the tile won't be fully
-	 * processed and reused.
+	 * processed and reused.  That's why we don't need a reference count.
 	 */
 	spinlock(&pjst->pjst_lock);
 
