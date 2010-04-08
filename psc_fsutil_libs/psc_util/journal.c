@@ -41,6 +41,18 @@
 #include "psc_util/lock.h"
 #include "psc_util/time.h"
 
+/*
+ * A short description of our tiling code:
+ *
+ * A tile is a memory copy of a on-disk log region.  Whenever we write a log entry,
+ * we make a copy of it in the tile in addition to writing it to the disk.  A tile
+ * is processed so that we can distill information into a separate change log for
+ * namespace operation.
+ *
+ * If a tile is full of log entries, we wake up a thread to process its contents.
+ * If a tile has old log entries, the same thread will process them.  In the
+ * meanwhile, the tile can continue to accept new log entries until it is full.
+ */
 struct psc_waitq	pjournal_tilewaitq;
 psc_spinlock_t		pjournal_tilewaitlock;
 
