@@ -733,6 +733,8 @@ pjournal_format(const char *fn, uint32_t nents, uint32_t entsz,
 	if (fstat(fd, &stb) == -1)
 		psc_fatal("stat %s", fn);
 
+	nents = ((nents + PJ_SHDW_TILESIZE - 1) / PJ_SHDW_TILESIZE) * PJ_SHDW_TILESIZE;
+
 	pjh.pjh_entsz = entsz;
 	pjh.pjh_nents = nents;
 	pjh.pjh_version = PJH_VERSION;
