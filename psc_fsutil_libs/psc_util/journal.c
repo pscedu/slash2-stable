@@ -41,8 +41,6 @@
 #include "psc_util/lock.h"
 #include "psc_util/time.h"
 
-#define MAX_LOG_TRY		3	/* # log write failure retry attempts */
-
 struct psc_waitq	pjournal_tilewaitq;
 psc_spinlock_t		pjournal_tilewaitlock;
 
@@ -194,7 +192,7 @@ pjournal_logwrite_internal(struct psc_journal_xidhndl *xh, uint32_t slot,
 		pjournal_shdw_logwrite(pj, pje, slot);
 
 	/* commit the log entry on disk before we can return */
-	ntries = MAX_LOG_TRY;
+	ntries = PJ_MAX_TRY;
 	while (ntries) {
 		sz = pwrite(pj->pj_fd, pje, PJ_PJESZ(pj), (off_t)
 		    (pj->pj_hdr->pjh_start_off + (slot * PJ_PJESZ(pj))));
@@ -1118,9 +1116,9 @@ pjournal_init_shdw(struct psc_journal *pj)
 	psc_waitq_init(&pj->pj_shdw->pjs_waitq);
 
 	size = sizeof(struct psc_journal_shdw_tile) + 
-		pj->pj_hdr->pjh_entsz * pj->pj_shdw->pjs_tilesize;
+		PJ_PJESZ(pj) * pj->pj_shdw->pjs_tilesize;
 
-	for (i=0; i < PJ_SHDW_DEFTILES; i++) {
+	for (i = 0; i < PJ_SHDW_DEFTILES; i++) {
 		pj->pj_shdw->pjs_tiles[i] = PSCALLOC(size);
 		pj->pj_shdw->pjs_tiles[i]->pjst_base = 
 			(void *)(pj->pj_shdw->pjs_tiles[i] + 1);
@@ -1128,7 +1126,6 @@ pjournal_init_shdw(struct psc_journal *pj)
 		pjournal_shdw_preptile(pj->pj_shdw->pjs_tiles[i], pj,
 				   (uint32_t)(i * pj->pj_shdw->pjs_tilesize));
 	}
-
 	thr = pscthr_init(JRNLTHRT_SHDW, 0, pjournal_shdwthr_main, NULL, 0,
 			  "pjrnlshdw");
 	psc_assert(thr);

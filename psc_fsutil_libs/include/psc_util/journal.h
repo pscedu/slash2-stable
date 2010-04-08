@@ -26,11 +26,17 @@
 #include "psc_util/thread.h"
 #include "psc_util/waitq.h"
 
+#define	PJ_MAX_TRY		3		/* number of retry before giving up */
+#define	PJ_MAX_BUF		8		/* number of journal buffers to keep around */
+
+#define PJ_SHDW_DEFTILES    	4
+#define PJ_SHDW_TILESIZE	1024
+#define PJ_SHDW_MAXAGE		{1, 0}		/* seconds, nanoseconds */
+
 #define PJ_LOCK(pj)		spinlock(&(pj)->pj_lock)
 #define PJ_ULOCK(pj)		freelock(&(pj)->pj_lock)
 
 #define PJH_MAGIC		UINT64_C(0x45678912aabbccff)	/* magic number of the journal header */
-
 #define PJH_VERSION		0x02
 
 struct psc_journal_hdr {
@@ -45,12 +51,6 @@ struct psc_journal_hdr {
 	uint64_t		pjh_chksum;	/* keep it last and aligned at a 8 byte boundary */
 #define pjh_iolen pjh_start_off
 };
-
-#define	PJ_MAX_BUF		8		/* number of journal buffers to keep around */
-
-#define PJ_SHDW_DEFTILES    	4
-#define PJ_SHDW_TILESIZE	1024
-#define PJ_SHDW_MAXAGE		{1, 0}		/* seconds, nanoseconds */
 
 #define JRNLTHRT_SHDW		0
 
@@ -110,7 +110,7 @@ struct psc_journal {
 
 typedef void (*psc_jhandler)(struct psc_dynarray *, int *);
 
-#define PJE_XID_NONE		0		/* invalid transaction ID */
+#define PJE_XID_NONE		0				/* invalid transaction ID */
 #define PJE_MAGIC		UINT64_C(0x45678912aabbccdd)	/* magic number for each journal entry */
 
 /*
