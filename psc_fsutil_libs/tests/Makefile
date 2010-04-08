@@ -7,6 +7,7 @@ SUBDIRS+=	acsvc
 SUBDIRS+=	alloc
 SUBDIRS+=	atomic
 SUBDIRS+=	bitflag
+SUBDIRS+=	dynarray
 SUBDIRS+=	fmtstr
 SUBDIRS+=	hash2
 SUBDIRS+=	list
