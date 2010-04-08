@@ -906,7 +906,6 @@ pjournal_shdw_preptile(struct psc_journal_shdw_tile *pjst,
 		pje->pje_magic = PJE_MAGIC;
 		pje->pje_type = PJE_FORMAT;
 	}
-	psc_assert(!psc_atomic32_read(&pjst->pjst_ref));
 	pjst->pjst_state = PJ_SHDW_TILE_FREE;
 	pjst->pjst_first = sjent;
 	freelock(&pjst->pjst_lock);
@@ -990,7 +989,6 @@ pjournal_shdw_prepslot(struct psc_journal_shdw *pjs, uint32_t slot,
 	psc_assert(slot >= pjst->pjst_first &&
 		   (slot < (pjst->pjst_first + pjs->pjs_tilesize)));
 
-	psc_atomic32_inc(&pjst->pjst_ref);
 	pje = (void *)((char *)pjst->pjst_base +
 	    (PJ_PJESZ(pjs->pjs_journal) * (slot - pjst->pjst_first)));
 
@@ -1034,12 +1032,6 @@ pjournal_getbyslot_pjst(struct psc_journal_shdw *pjs, uint32_t slot)
 
 	} while (i != pjs->pjs_curtile);
 
-	if (found)
-		psc_assert(psc_atomic32_read(&pjst->pjst_ref) > 0);
-	else
-		//pjst = NULL;
-		abort();
-
 	freelock(&pjs->pjs_lock);
 
 	return (pjst);
@@ -1062,10 +1054,6 @@ pjournal_shdw_logwrite(struct psc_journal *pj,
 	psc_assert(pje_shdw->pje_shdw_slot == slot);
 
 	memcpy(pje_shdw, pje, PJ_PJESZ(pj));
-	/* Finished with the slot.  Note this pjst may no longer be
-	 *   'active'.
-	 */
-	psc_atomic32_dec(&pjst->pjst_ref);
 }
 
 void *
@@ -1118,7 +1106,6 @@ pjournal_init_shdw(struct psc_journal *pj)
 	pj->pj_shdw->pjs_tilesize = PJ_SHDW_TILESIZE;
 	pj->pj_shdw->pjs_pjents = 0;
 
-	clock_gettime(CLOCK_REALTIME, &pj->pj_shdw->pjs_lastflush);
 	LOCK_INIT(&pj->pj_shdw->pjs_lock);
 	psc_waitq_init(&pj->pj_shdw->pjs_waitq);
 
