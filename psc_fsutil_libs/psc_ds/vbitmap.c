@@ -115,7 +115,7 @@ psc_vbitmap_setval(struct psc_vbitmap *vb, size_t pos, int set)
 	size_t shft, bytes;
 	int oldval;
 
-	psc_assert(pos >= 0 && pos < psc_vbitmap_getsize(vb));
+	psc_assert(pos < psc_vbitmap_getsize(vb));
 
 	bytes = pos / NBBY;
 	shft = pos % NBBY;
@@ -188,7 +188,7 @@ psc_vbitmap_get(const struct psc_vbitmap *vb, size_t pos)
 {
 	size_t shft, bytes;
 
-	psc_assert(pos >= 0 && pos < psc_vbitmap_getsize(vb));
+	psc_assert(pos < psc_vbitmap_getsize(vb));
 
 	bytes = pos / NBBY;
 	shft = pos % NBBY;
@@ -412,13 +412,13 @@ psc_vbitmap_next(struct psc_vbitmap *vb, size_t *elem)
  * psc_vbitmap_setnextpos - Set position where psc_vbitmap_next() looks
  *	for next unset bit.
  * @vb: variable bitmap.
- * @slot: bit position where searching will continue from.
+ * @pos: bit position where searching will continue from.
  */
 void
-psc_vbitmap_setnextpos(struct psc_vbitmap *vb, int slot)
+psc_vbitmap_setnextpos(struct psc_vbitmap *vb, size_t pos)
 {
-	psc_assert(slot >= 0 && slot < psc_vbitmap_getsize(vb));
-	vb->vb_pos = vb->vb_start + slot / NBBY;
+	psc_assert(pos < psc_vbitmap_getsize(vb));
+	vb->vb_pos = vb->vb_start + pos / NBBY;
 }
 
 /**
