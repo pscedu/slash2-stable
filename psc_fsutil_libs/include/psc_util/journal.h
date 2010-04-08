@@ -75,9 +75,9 @@ struct psc_journal;
 /* In-memory 'journal shadowing'.
  */
 struct psc_journal_shdw {
-        uint32_t			 pjs_ntiles;            	/* Number of tiles */
-        uint32_t			 pjs_curtile;           	/* Current tile index */
-        uint32_t			 pjs_tilesize;			/* Number of entries per tile */
+        int32_t				 pjs_ntiles;            	/* Number of tiles */
+        int32_t				 pjs_curtile;           	/* Current tile index */
+        int32_t				 pjs_tilesize;			/* Number of entries per tile */
         struct psc_journal_shdw_tile	*pjs_tiles[PJ_SHDW_DEFTILES];	/* tile buffer pointers */
 
         uint32_t			 pjs_pjents;            	/* Number of processed jents */

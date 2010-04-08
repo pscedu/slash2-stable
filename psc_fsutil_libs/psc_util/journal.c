@@ -43,11 +43,14 @@
 
 #define MAX_LOG_TRY		3	/* # log write failure retry attempts */
 
-__static int	pjournal_logwrite(struct psc_journal_xidhndl *, int,
+struct psc_waitq	pjournal_tilewaitq;
+psc_spinlock_t		pjournal_tilewaitlock;
+
+__static int		pjournal_logwrite(struct psc_journal_xidhndl *, int, 
 			void *, size_t);
-__static void	pjournal_shdw_logwrite(struct psc_journal *,
+__static void		pjournal_shdw_logwrite(struct psc_journal *, 
 			const struct psc_journal_enthdr *, uint32_t);
-__static void	pjournal_shdw_prepslot(struct psc_journal_shdw *,
+__static void		pjournal_shdw_prepslot(struct psc_journal_shdw *, 
 			uint32_t, int32_t);
 
 /**
@@ -990,7 +993,7 @@ __static struct psc_journal_shdw_tile *
 pjournal_getbyslot_pjst(struct psc_journal_shdw *pjs, uint32_t slot)
 {
 	struct psc_journal_shdw_tile *pjst;
-	uint32_t i, found=0;
+	int32_t i, found=0;
 
 	spinlock(&pjs->pjs_lock);
 	psc_assert(pjs->pjs_curtile < pjs->pjs_ntiles);
@@ -1052,7 +1055,7 @@ pjournal_shdwthr_main(__unusedx void *arg)
 	struct psc_journal_shdw *pjs = pj->pj_shdw;
 	struct psc_journal_shdw_tile *pjst;
 	struct timespec ctm, rtm, mtm = PJ_SHDW_MAXAGE;
-	uint32_t i, j;
+	int32_t i, j;
 
 	while (1) {
 		/* Look for full tiles and process them.
@@ -1101,6 +1104,9 @@ pjournal_init_shdw(struct psc_journal *pj)
 
 	psc_assert(pj->pj_hdr->pjh_options & PJF_SHADOW);
 	psc_assert(!pj->pj_shdw);
+
+	LOCK_INIT(&pjournal_tilewaitlock);
+	psc_waitq_init(&pjournal_tilewaitq);
 
 	pj->pj_shdw = PSCALLOC(sizeof(struct psc_journal_shdw));
 	pj->pj_shdw->pjs_ntiles = PJ_SHDW_DEFTILES;
