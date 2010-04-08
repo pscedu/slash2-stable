@@ -238,7 +238,7 @@ psc_dynarray_splice(struct psc_dynarray *da, int startpos, int len,
 	rem = psc_dynarray_len(da) - endpos;
 	psc_assert(nitems >= 0);
 	psc_assert(len >= 0);
-	psc_assert(len >= psc_dynarray_len(da));
+	psc_assert(len <= psc_dynarray_len(da));
 	rc = psc_dynarray_ensurelen(da, psc_dynarray_len(da) - len + nitems);
 	if (rc)
 		return (rc);
