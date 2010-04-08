@@ -84,6 +84,8 @@ report_sigs(void)
 	int i;
 
 	for (i = 1; i < nitems(signames); i++) {
+		if (i == SIGKILL || i == SIGSTOP)
+			continue;
 		if (sigaction(i, NULL, &sa) == -1)
 			err(1, "sigaction");
 		if (sa.sa_handler == SIG_IGN)
@@ -114,7 +116,6 @@ thr2_main(__unusedx void *arg)
 void *
 thr3_main(__unusedx void *arg)
 {
-
 	report_sigs();
 	return (NULL);
 }
