@@ -294,7 +294,7 @@ _psc_multiwait_addcond(struct psc_multiwait *mw,
 		goto done;
 	}
 
-	psc_vbitmap_setval(mw->mw_condmask, j, active);
+	psc_vbitmap_setval(mw->mw_condmask, j - 1, active);
 
  done:
 	psc_pthread_mutex_unlock(&mw->mw_mutex);
