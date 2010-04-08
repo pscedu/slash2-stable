@@ -882,6 +882,15 @@ pjournal_dump(const char *fn, int verbose)
 }
 
 /**
+ * pjournal_shdw_proctile - process log entries in a tile.
+ *
+ */
+void pjournal_shdw_proctile(struct psc_journal_shdw_tile *pjst)
+{
+
+}
+
+/**
  * pjournal_shdw_preptile - prepare a journal shadow tile for action.  The pjst
  *   must have already undergone initialization.  This function mainly serves
  *   as a sanity check on the tile.
@@ -900,7 +909,6 @@ pjournal_shdw_preptile(struct psc_journal_shdw_tile *pjst,
 		pje->pje_type = PJE_FORMAT;
 	}
 	pjst->pjst_tail = 0;
-	pjst->pjst_head = 0;
 	pjst->pjst_first = slot;
 	pjst->pjst_state = PJ_SHDW_TILE_FREE;
 	freelock(&pjst->pjst_lock);
@@ -935,7 +943,7 @@ pjournal_shdw_advtile_locked(struct psc_journal_shdw *pjs, int block)
 		spinlock(&pjs->pjs_lock);
 	}
 
-	pjs->pjs_tiles[next_tile]->pjst_state = PJ_SHDW_TILE_INUSE;
+	pjs->pjs_tiles[next_tile]->pjst_state = PJ_SHDW_TILE_ACTIVE;
 	pjs->pjs_curtile = next_tile;
 	pjs->pjs_state &= ~PJ_SHDW_ADVTILE;
 	psc_waitq_wakeall(&pjs->pjs_waitq);
@@ -1011,23 +1019,19 @@ pjournal_shdwthr_main(__unusedx void *arg)
 	int rv = 0;
 
 	while (1) {
-		/* Look for full tiles and process them.
+		/* 
+		 * Look for full tiles and process them. If we woke up on our own, 
+		 * process log entries in the current tile.
 		 */
 		for (i = 0; i < pjs->pjs_ntiles; i++) {
 			pjst = pjs->pjs_tiles[i];
 			spinlock(&pjst->pjst_lock);
-			if (pjst->pjst_state & PJ_SHDW_TILE_FULL) {
-				pjst->pjst_state = PJ_SHDW_TILE_PROC;
+			if (!(pjst->pjst_state & PJ_SHDW_TILE_FULL) && rv != ETIMEDOUT) {
 				freelock(&pjst->pjst_lock);
-				//XXX Call tile entry processor here
-				pjournal_shdw_preptile(pjst, pj, pjst->pjst_first);
+				continue;
 			}
-		}
-		/*
-		 * If we woke up on our own, process log entries in the current tile.
-		 */
-		if (rv == ETIMEDOUT) {
-			//XXX Call tile entry processor here
+			pjournal_shdw_proctile(pjst);
+			pjournal_shdw_preptile(pjst, pj, pjst->pjst_first);
 		}
 		spinlock(&pjournal_tilewaitqlock);
 		rv = psc_waitq_waitrel_s(&pjournal_tilewaitq, &pjournal_tilewaitqlock, PJ_SHDW_MAXAGE);

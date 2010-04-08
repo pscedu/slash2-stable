@@ -57,18 +57,16 @@ struct psc_journal_hdr {
 struct psc_journal_shdw_tile {
         void			*pjst_base;	/* memory for log entries */
         uint8_t			 pjst_state;
-	uint16_t		 pjst_tail;	/* log entries that need to be processed */
-	uint16_t		 pjst_head;
-        uint32_t		 pjst_first;	/* first journal slot for the tile */
+	uint16_t		 pjst_tail;	/* first entry that may need to be processed */
+        uint32_t		 pjst_first;	/* first journal slot represented by the tile */
         psc_spinlock_t		 pjst_lock;
 };
 
 enum PJ_SHDW_TILE_STATES {
 	PJ_SHDW_TILE_NONE	= (0 << 0),
 	PJ_SHDW_TILE_FREE	= (1 << 0),
-        PJ_SHDW_TILE_INUSE	= (1 << 1),	/* Tile is actively assigned to a journal region */
-        PJ_SHDW_TILE_PROC	= (1 << 2),	/* Tile is held by the post-processor */
-	PJ_SHDW_TILE_FULL	= (1 << 3)
+        PJ_SHDW_TILE_ACTIVE	= (1 << 1),	/* current tile being used -- has free slots */
+	PJ_SHDW_TILE_FULL	= (1 << 3)	/* All entries have been allocated */
 };
 
 struct psc_journal;
