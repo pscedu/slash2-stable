@@ -27,25 +27,60 @@
 #include <unistd.h>
 
 #include "pfl/cdefs.h"
+#include "pfl/pfl.h"
 #include "psc_util/log.h"
 #include "psc_util/setprocesstitle.h"
 
 #define _PATH_CMDLINE "/proc/self/cmdline"
 
+const char *progname;
+
+__dead void
+usage(void)
+{
+	fprintf(stderr, "usage: %s\n", progname);
+	exit(1);
+}
+
 int
 main(__unusedx int argc, char *argv[])
 {
 	char buf[BUFSIZ];
-	int fd;
+	int pipe = 0;
+	ssize_t rc;
+	FILE *fp;
+
+	pfl_init();
+	progname = argv[0];
+	if (getopt(argc, argv, "") != -1)
+		usage();
+	argc -= optind;
+	if (argc)
+		usage();
 
 	setprocesstitle(argv, "foobar %d", 13);
 
-	fd = open(_PATH_CMDLINE, O_RDONLY);
-	if (fd == -1)
+	fp = fopen(_PATH_CMDLINE, "r");
+	if (fp == NULL) {
+		pipe = 1;
+		snprintf(buf, sizeof(buf),
+		    "ps -o command -p %d | tail -1", getpid());
+		fp = popen(buf, "r");
+		if (fp == NULL)
+			err(1, "popen %s", buf);
+	}
+	rc = fread(buf, 1, sizeof(buf), fp);
+	if (!feof(fp))
 		err(1, _PATH_CMDLINE);
-	read(fd, buf, sizeof(buf));
-	close(fd);
+	if (ferror(fp))
+		err(1, _PATH_CMDLINE);
+	if (pipe)
+		pclose(fp);
+	else
+		fclose(fp);
 
+	buf[rc] = '\0';
+	buf[strcspn(buf, "\n")] = '\0';
 	psc_assert(strcmp(buf, "foobar 13") == 0);
 	exit(0);
 }
