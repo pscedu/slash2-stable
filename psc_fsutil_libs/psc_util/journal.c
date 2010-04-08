@@ -34,12 +34,13 @@
 #include "pfl/types.h"
 #include "psc_ds/dynarray.h"
 #include "psc_util/alloc.h"
-#include "psc_util/thread.h"
 #include "psc_util/atomic.h"
 #include "psc_util/crc.h"
 #include "psc_util/journal.h"
 #include "psc_util/lock.h"
+#include "psc_util/thread.h"
 #include "psc_util/time.h"
+#include "psc_util/waitq.h"
 
 /*
  * A short description of our tiling code:
@@ -53,15 +54,15 @@
  * If a tile has old log entries, the same thread will process them.  In the
  * meanwhile, the tile can continue to accept new log entries until it is full.
  */
-struct psc_waitq	pjournal_tilewaitq;
-psc_spinlock_t		pjournal_tilewaitlock;
+struct psc_waitq	pjournal_tilewaitq = PSC_WAITQ_INIT;
+psc_spinlock_t		pjournal_tilewaitlock = LOCK_INITIALIZER;
 
-__static int		pjournal_logwrite(struct psc_journal_xidhndl *, int, 
-			void *, size_t);
-__static void		pjournal_shdw_logwrite(struct psc_journal *, 
-			const struct psc_journal_enthdr *, uint32_t);
-__static void		pjournal_shdw_prepslot(struct psc_journal_shdw *, 
-			uint32_t, int32_t);
+__static int		pjournal_logwrite(struct psc_journal_xidhndl *, int,
+				void *, size_t);
+__static void		pjournal_shdw_logwrite(struct psc_journal *,
+				const struct psc_journal_enthdr *, uint32_t);
+__static void		pjournal_shdw_prepslot(struct psc_journal_shdw *,
+				uint32_t, int32_t);
 
 /**
  * pjournal_xnew - Start a new transaction with a unique ID in the given
@@ -1067,13 +1068,13 @@ pjournal_shdwthr_main(__unusedx void *arg)
 	struct psc_journal_shdw *pjs = pj->pj_shdw;
 	struct psc_journal_shdw_tile *pjst;
 	struct timespec ctm, rtm, mtm = PJ_SHDW_MAXAGE;
-	int32_t i, j;
+	int32_t i;
 
 	while (1) {
 		/* Look for full tiles and process them.
 		 */
 		for (i=0; i < pjs->pjs_ntiles; i++) {
-			pjst = pjs->pjs_tiles[j];
+			pjst = pjs->pjs_tiles[i];
 			spinlock(&pjst->pjst_lock);
 			if (pjst->pjst_state & PJ_SHDW_TILE_FULL) {
 				pjst->pjst_state = PJ_SHDW_TILE_PROC;
@@ -1117,9 +1118,6 @@ pjournal_init_shdw(struct psc_journal *pj)
 	psc_assert(pj->pj_hdr->pjh_options & PJF_SHADOW);
 	psc_assert(!pj->pj_shdw);
 
-	LOCK_INIT(&pjournal_tilewaitlock);
-	psc_waitq_init(&pjournal_tilewaitq);
-
 	pj->pj_shdw = PSCALLOC(sizeof(struct psc_journal_shdw));
 	pj->pj_shdw->pjs_ntiles = PJ_SHDW_DEFTILES;
 	pj->pj_shdw->pjs_tilesize = PJ_SHDW_TILESIZE;
@@ -1129,12 +1127,12 @@ pjournal_init_shdw(struct psc_journal *pj)
 	LOCK_INIT(&pj->pj_shdw->pjs_lock);
 	psc_waitq_init(&pj->pj_shdw->pjs_waitq);
 
-	size = sizeof(struct psc_journal_shdw_tile) + 
+	size = sizeof(struct psc_journal_shdw_tile) +
 		PJ_PJESZ(pj) * pj->pj_shdw->pjs_tilesize;
 
 	for (i = 0; i < PJ_SHDW_DEFTILES; i++) {
 		pj->pj_shdw->pjs_tiles[i] = PSCALLOC(size);
-		pj->pj_shdw->pjs_tiles[i]->pjst_base = 
+		pj->pj_shdw->pjs_tiles[i]->pjst_base =
 			(void *)(pj->pj_shdw->pjs_tiles[i] + 1);
 		LOCK_INIT(&pj->pj_shdw->pjs_tiles[i]->pjst_lock);
 		pjournal_shdw_preptile(pj->pj_shdw->pjs_tiles[i], pj,
