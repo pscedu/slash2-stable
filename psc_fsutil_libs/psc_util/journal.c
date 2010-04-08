@@ -930,12 +930,10 @@ pjournal_shdw_preptile(struct psc_journal_shdw_tile *pjst,
 /**
  * pjournal_shdw_advtile_locked - advance to the next journal shadow tile.
  * @pjs:  pointer to the journal shadow.
- * @block:  caller specifies whether he is blockable.  The shadow thread
- *   must not block.
  * Notes:  The pjs lock is used to synchronize tile activity.
  */
 __static void
-pjournal_shdw_advtile_locked(struct psc_journal_shdw *pjs, int block)
+pjournal_shdw_advtile_locked(struct psc_journal_shdw *pjs)
 {
 	uint32_t next_tile;
 
@@ -951,7 +949,6 @@ pjournal_shdw_advtile_locked(struct psc_journal_shdw *pjs, int block)
 
 	next_tile = (pjs->pjs_curtile + 1) % (pjs->pjs_ntiles - 1);
 	while (pjs->pjs_tiles[next_tile]->pjst_state != PJ_SHDW_TILE_FREE) {
-		psc_assert(block);
 		psc_waitq_wait(&pjs->pjs_waitq, &pjs->pjs_lock);
 		spinlock(&pjs->pjs_lock);
 	}
@@ -970,8 +967,7 @@ pjournal_shdw_advtile_locked(struct psc_journal_shdw *pjs, int block)
  * @block:  permitted to block?
  */
 __static struct psc_journal_shdw_tile *
-pjournal_shdw_prepslot(struct psc_journal_shdw *pjs, uint32_t slot,
-		      int32_t block)
+pjournal_shdw_prepslot(struct psc_journal_shdw *pjs, uint32_t slot)
 {
 	struct psc_journal_shdw_tile *pjst;
 
@@ -989,7 +985,7 @@ pjournal_shdw_prepslot(struct psc_journal_shdw *pjs, uint32_t slot,
 		 *    may be dropped if the next tile is still busy.
 		 */
 		pjs->pjs_state |= PJ_SHDW_ADVTILE;
-		pjournal_shdw_advtile_locked(pjs, block);
+		pjournal_shdw_advtile_locked(pjs);
 		pjst = pjs->pjs_tiles[pjs->pjs_curtile];
 	}
 	freelock(&pjs->pjs_lock);
@@ -1004,11 +1000,14 @@ pjournal_shdw_logwrite(struct psc_journal *pj,
 	struct psc_journal_shdw_tile *pjst;
 	struct psc_journal_enthdr *pje_shdw;
 
-	pjst = pjournal_shdw_prepslot(pj->pj_shdw, slot, 1);
+	pjst = pjournal_shdw_prepslot(pj->pj_shdw, slot);
 	/*
 	 * Hold the tile lock while updating its contents.  By checking
 	 * the magic field, the tiling thread can figure out if the log 
 	 * entry is filled or not.
+	 *
+	 * Without me writing into the slot, the tile won't be fully
+	 * processed and reused.
 	 */
 	spinlock(&pjst->pjst_lock);
 
