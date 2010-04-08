@@ -107,12 +107,15 @@ _psc_vbitmap_free(struct psc_vbitmap *vb)
  * @vb: variable bitmap.
  * @pos: position to set.
  * @set: value bit should take on.
+ * Returns the previous value of the bit in the specified position.
  */
 int
 psc_vbitmap_setval(struct psc_vbitmap *vb, size_t pos, int set)
 {
 	size_t shft, bytes;
 	int oldval;
+
+	psc_assert(pos >= 0 && pos < psc_vbitmap_getsize(vb));
 
 	bytes = pos / NBBY;
 	shft = pos % NBBY;
@@ -178,16 +181,18 @@ psc_vbitmap_setval_range(struct psc_vbitmap *vb,
 /**
  * psc_vbitmap_get - get bit for an element of a vbitmap.
  * @vb: variable bitmap.
- * @elem: element # to get.
+ * @pos: element # to get.
  */
 int
-psc_vbitmap_get(const struct psc_vbitmap *vb, size_t elem)
+psc_vbitmap_get(const struct psc_vbitmap *vb, size_t pos)
 {
-	size_t pos, bytes;
+	size_t shft, bytes;
 
-	bytes = elem / NBBY;
-	pos = elem % NBBY;
-	return ((vb->vb_start[bytes] & (1 << pos)) >> pos);
+	psc_assert(pos >= 0 && pos < psc_vbitmap_getsize(vb));
+
+	bytes = pos / NBBY;
+	shft = pos % NBBY;
+	return ((vb->vb_start[bytes] & (1 << shft)) >> shft);
 }
 
 /**
@@ -361,7 +366,7 @@ int
 psc_vbitmap_next(struct psc_vbitmap *vb, size_t *elem)
 {
 	unsigned char *start, *pos;
-	int rc, bytepos;
+	int bytepos;
 
  retry:
 	pos = start = vb->vb_pos;
@@ -389,9 +394,7 @@ psc_vbitmap_next(struct psc_vbitmap *vb, size_t *elem)
 		/* XXX allocate some extra slack here too? */
 		if (psc_vbitmap_resize(vb, newsiz) == -1)
 			return (-1);
-		rc = psc_vbitmap_setnextpos(vb, newsiz - 1);
-		if (rc)
-			psc_fatalx("setnextpos: %d", rc);
+		psc_vbitmap_setnextpos(vb, newsiz - 1);
 		goto retry;
 	}
 	return (0);
@@ -410,19 +413,12 @@ psc_vbitmap_next(struct psc_vbitmap *vb, size_t *elem)
  *	for next unset bit.
  * @vb: variable bitmap.
  * @slot: bit position where searching will continue from.
- * Returns zero on success or errno on error.
  */
-int
+void
 psc_vbitmap_setnextpos(struct psc_vbitmap *vb, int slot)
 {
-	if (slot < 0)
-		return (EINVAL);
-	if (vb->vb_start + slot / NBBY > vb->vb_end)
-		return (EINVAL);
-	if (slot % NBBY > vb->vb_lastsize)
-		return (EINVAL);
+	psc_assert(slot >= 0 && slot < psc_vbitmap_getsize(vb));
 	vb->vb_pos = vb->vb_start + slot / NBBY;
-	return (0);
 }
 
 /**

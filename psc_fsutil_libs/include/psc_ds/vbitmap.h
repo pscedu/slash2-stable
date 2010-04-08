@@ -100,7 +100,7 @@ int	 psc_vbitmap_next(struct psc_vbitmap *, size_t *);
 int	 psc_vbitmap_nfree(const struct psc_vbitmap *);
 int	 psc_vbitmap_resize(struct psc_vbitmap *, size_t);
 void	 psc_vbitmap_setall(struct psc_vbitmap *);
-int	 psc_vbitmap_setnextpos(struct psc_vbitmap *, int);
+void	 psc_vbitmap_setnextpos(struct psc_vbitmap *, int);
 int	 psc_vbitmap_setval(struct psc_vbitmap *, size_t, int);
 int	 psc_vbitmap_setval_range(struct psc_vbitmap *, size_t, size_t, int);
 
