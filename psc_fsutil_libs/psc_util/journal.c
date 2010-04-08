@@ -882,7 +882,9 @@ pjournal_dump(const char *fn, int verbose)
 }
 
 /**
- * pjournal_shdw_proctile - process log entries in a tile.
+ * pjournal_shdw_proctile - process log entries in a tile.  A log entry can be
+ *   processed if its type is not PJE_FORMAT.  when all its log entries have
+ *   been processed, the tile can be freed and reused to map a new region.
  *
  */
 void pjournal_shdw_proctile(struct psc_journal_shdw_tile *pjst)
@@ -1030,6 +1032,7 @@ pjournal_shdwthr_main(__unusedx void *arg)
 				freelock(&pjst->pjst_lock);
 				continue;
 			}
+			freelock(&pjst->pjst_lock);
 			pjournal_shdw_proctile(pjst);
 			pjournal_shdw_preptile(pjst, pj, pjst->pjst_first);
 		}
