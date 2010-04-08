@@ -902,7 +902,7 @@ pjournal_shdw_preptile(struct psc_journal_shdw_tile *pjst,
 	}
 	psc_assert(!psc_atomic32_read(&pjst->pjst_ref));
 	pjst->pjst_state = PJ_SHDW_TILE_FREE;
-	pjst->pjst_sjent = sjent;
+	pjst->pjst_first = sjent;
 	freelock(&pjst->pjst_lock);
 }
 
@@ -961,7 +961,7 @@ pjournal_shdw_prepslot(struct psc_journal_shdw *pjs, uint32_t slot,
 		spinlock(&pjs->pjs_lock);
 	}
 	pjst = pjs->pjs_tiles[pjs->pjs_curtile];
-	if (slot == (pjst->pjst_sjent + pjs->pjs_tilesize)) {
+	if (slot == (pjst->pjst_first + pjs->pjs_tilesize)) {
 		/* Tile advancementment is our job.  Note the pjs lock
 		 *    may be dropped if the next tile is still busy.
 		 */
@@ -978,14 +978,16 @@ pjournal_shdw_prepslot(struct psc_journal_shdw *pjs, uint32_t slot,
 	psc_assert(pjst->pjst_state == PJ_SHDW_TILE_INUSE);
 
 	psc_assert(pjs->pjs_curtile < pjs->pjs_ntiles);
-	psc_assert(slot >= pjst->pjst_sjent &&
-		   (slot < (pjst->pjst_sjent + pjs->pjs_tilesize)));
+	psc_assert(slot >= pjst->pjst_first &&
+		   (slot < (pjst->pjst_first + pjs->pjs_tilesize)));
 
 	psc_atomic32_inc(&pjst->pjst_ref);
 	pje = (void *)((char *)pjst->pjst_base +
-	    (PJ_PJESZ(pjs->pjs_journal) * (slot - pjst->pjst_sjent)));
+	    (PJ_PJESZ(pjs->pjs_journal) * (slot - pjst->pjst_first)));
 
-	psc_assert(pje->pje_magic == 0);
+	psc_assert(pje->pje_magic == PJE_MAGIC);
+	psc_assert(pje->pje_type == PJE_FORMAT);
+
 	/* 'Reserve' the slot by writing it into the structure so it may be
 	 *    checked later.
 	 */
@@ -1012,8 +1014,8 @@ pjournal_getbyslot_pjst(struct psc_journal_shdw *pjs, uint32_t slot)
 
 	do {
 		pjst = pjs->pjs_tiles[i];
-		if (slot >= pjst->pjst_sjent &&
-		    (slot <= (pjst->pjst_sjent + pjs->pjs_tilesize - 1))) {
+		if (slot >= pjst->pjst_first &&
+		    (slot <= (pjst->pjst_first + pjs->pjs_tilesize - 1))) {
 			found = 1;
 			break;
 
@@ -1045,7 +1047,7 @@ pjournal_shdw_logwrite(struct psc_journal *pj,
 	pjst = pjournal_getbyslot_pjst(pjs, slot);
 
 	pje_shdw = (void *)((char *)pjst->pjst_base +
-			 (PJ_PJESZ(pj) * (slot - pjst->pjst_sjent)));
+			 (PJ_PJESZ(pj) * (slot - pjst->pjst_first)));
 
 	psc_assert(pje_shdw->pje_magic == 0);
 	psc_assert(pje_shdw->pje_shdw_slot == slot);
@@ -1077,7 +1079,7 @@ pjournal_shdwthr_main(__unusedx void *arg)
 				pjst->pjst_state = PJ_SHDW_TILE_PROC;
 				freelock(&pjst->pjst_lock);
 				//XXX Call tile entry processor here
-				pjournal_shdw_preptile(pjst, pj, pjst->pjst_sjent);
+				pjournal_shdw_preptile(pjst, pj, pjst->pjst_first);
 			}
 		}
 		/* Check the current tile to see if it has expired.

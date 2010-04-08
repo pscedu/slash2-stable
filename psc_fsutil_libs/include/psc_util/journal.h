@@ -58,7 +58,7 @@ struct psc_journal_shdw_tile {
         void			*pjst_base;
         uint8_t			 pjst_state;
         uint32_t		 pjst_nused;
-        uint32_t		 pjst_sjent;	/* start journal entry for the tile */
+        uint32_t		 pjst_first;	/* first journal slot for the tile */
 	psc_atomic32_t		 pjst_ref;	/* Outstanding journal puts */
         psc_spinlock_t		 pjst_lock;
 };
