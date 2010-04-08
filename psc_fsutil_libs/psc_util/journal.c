@@ -45,19 +45,22 @@
 /*
  * A short description of our tiling code:
  *
- * A tile is a memory copy of a on-disk log region.  Whenever we write a log entry,
- * we make a copy of it in the tile in addition to writing it to the disk.  A tile
- * is processed so that we can distill information into a separate change log for
- * namespace operation.
+ * A tile is a memory copy of a on-disk log region.  It is used to avoid I/O when a log
+ * entry needs to be further processed after being written to the disk.  More than one
+ * tiles are used for better performance.  These tiles must map to continuous region of 
+ * the on-disk log.  A tile at the tail is moved to the head when it is done mapping its 
+ * old region.
+ *
+ * Whenever we write a log entry, we make a copy of it in a tile in addition to writing 
+ * it to the disk.  A tile is processed so that we can distill information into separate 
+ * change logs needed for tracking namespace and truncation operations.
  *
  * If a tile is full of log entries, we wake up a tiling thread to process its contents.
- * If a tile has old log entries, the same thread will process them.  In the
- * meanwhile, the tile can continue to accept new log entries until it is full.
- *
- * The tiling thread wakes up on its own periodically to process log entries recorded
- * in a tile.  For simplicity, we don't track the age of each individual log entry. 
- * This means a log entry can be processed any time after it is written.  We also
- * cannot guarantee when a log entry will be processed.
+ * The tiling thread also wakes up on its own periodically to process log entries recorded
+ * in a tile.  For simplicity, we don't track the age of each individual log entry. This 
+ * means a log entry can be processed any time after it is written.  We also cannot 
+ * guarantee when a log entry will be processed.  The tiling thread may fail to keep up
+ * with an influx of log entries.
  */
 struct psc_waitq	pjournal_tilewaitq = PSC_WAITQ_INIT;
 psc_spinlock_t		pjournal_tilewaitqlock = LOCK_INITIALIZER;
@@ -895,7 +898,7 @@ pjournal_dump(const char *fn, int verbose)
  */
 __static __inline void
 pjournal_shdw_preptile(struct psc_journal_shdw_tile *pjst,
-		   const struct psc_journal *pj, uint32_t sjent)
+		   const struct psc_journal *pj, uint32_t slot)
 {
 	int				 i;
 	struct psc_journal_enthdr	*pje;
@@ -906,8 +909,10 @@ pjournal_shdw_preptile(struct psc_journal_shdw_tile *pjst,
 		pje->pje_magic = PJE_MAGIC;
 		pje->pje_type = PJE_FORMAT;
 	}
+	pjst->pjst_tail = 0;
+	pjst->pjst_head = 0;
+	pjst->pjst_first = slot;
 	pjst->pjst_state = PJ_SHDW_TILE_FREE;
-	pjst->pjst_first = sjent;
 	freelock(&pjst->pjst_lock);
 }
 
@@ -1104,7 +1109,7 @@ pjournal_init_shdw(struct psc_journal *pj)
 	pj->pj_shdw = PSCALLOC(sizeof(struct psc_journal_shdw));
 	pj->pj_shdw->pjs_ntiles = PJ_SHDW_DEFTILES;
 	pj->pj_shdw->pjs_tilesize = PJ_SHDW_TILESIZE;
-	pj->pj_shdw->pjs_pjents = 0;
+	pj->pj_shdw->pjs_endslot = PJ_SHDW_DEFTILES * PJ_SHDW_TILESIZE;
 
 	LOCK_INIT(&pj->pj_shdw->pjs_lock);
 	psc_waitq_init(&pj->pj_shdw->pjs_waitq);
@@ -1114,6 +1119,7 @@ pjournal_init_shdw(struct psc_journal *pj)
 
 	for (i = 0; i < PJ_SHDW_DEFTILES; i++) {
 		pj->pj_shdw->pjs_tiles[i] = PSCALLOC(size);
+
 		pj->pj_shdw->pjs_tiles[i]->pjst_base =
 			(void *)(pj->pj_shdw->pjs_tiles[i] + 1);
 		LOCK_INIT(&pj->pj_shdw->pjs_tiles[i]->pjst_lock);

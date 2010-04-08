@@ -80,7 +80,7 @@ struct psc_journal_shdw {
         int32_t				 pjs_tilesize;			/* Number of entries per tile */
         struct psc_journal_shdw_tile	*pjs_tiles[PJ_SHDW_DEFTILES];	/* tile buffer pointers */
 
-        uint32_t			 pjs_pjents;            	/* Number of processed jents */
+        uint32_t			 pjs_endslot;			/* last slot covered by the tiles */
 	uint32_t			 pjs_state;
         psc_spinlock_t			 pjs_lock;        		/* Sync between logwrite and shdwthr */
 	struct psc_waitq		 pjs_waitq;
