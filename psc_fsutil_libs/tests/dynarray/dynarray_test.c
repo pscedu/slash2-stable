@@ -17,6 +17,7 @@
  * %PSC_END_COPYRIGHT%
  */
 
+#include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -24,6 +25,7 @@
 #include "pfl/cdefs.h"
 #include "pfl/pfl.h"
 #include "psc_ds/dynarray.h"
+#include "psc_util/log.h"
 
 const char *progname;
 
@@ -44,14 +46,20 @@ usage(void)
 #define PTR_c	((void *)0x0c)
 
 void
-dump(struct psc_dynarray *da)
+check(struct psc_dynarray *da, ...)
 {
-	void *p;
+	void *p, *checkp;
+	va_list ap;
 	int j;
 
-	DYNARRAY_FOREACH(p, j, da)
-		printf("%p ", p);
-	printf("\n");
+	va_start(ap, da);
+	DYNARRAY_FOREACH(p, j, da) {
+		checkp = va_arg(ap, void *);
+		psc_assert(p == checkp);
+//		printf("%p ", p);
+}
+	va_end(ap);
+//	printf("\n");
 }
 
 int
@@ -68,15 +76,16 @@ main(int argc, char *argv[])
 	if (argc)
 		usage();
 
-	p = PTR_4; psc_dynarray_splice(&da, 0, 0, &p, 1); dump(&da);
-	p = PTR_3; psc_dynarray_splice(&da, 0, 0, &p, 1); dump(&da);
-	p = PTR_2; psc_dynarray_splice(&da, 0, 0, &p, 1); dump(&da);
-	p = PTR_1; psc_dynarray_splice(&da, 0, 0, &p, 1); dump(&da);
 
-	psc_dynarray_splice(&da, 0, 0, NULL, 0); dump(&da);
+	p = PTR_4; psc_dynarray_splice(&da, 0, 0, &p, 1); check(&da, PTR_4, NULL);
+	p = PTR_3; psc_dynarray_splice(&da, 0, 0, &p, 1); check(&da, PTR_3, PTR_4, NULL);
+	p = PTR_2; psc_dynarray_splice(&da, 0, 0, &p, 1); check(&da, PTR_2, PTR_3, PTR_4, NULL);
+	p = PTR_1; psc_dynarray_splice(&da, 0, 0, &p, 1); check(&da, PTR_1, PTR_2, PTR_3, PTR_4, NULL);
 
-	p = PTR_a; psc_dynarray_splice(&da, 2, 1, &p, 1); dump(&da);
-	p = PTR_b; psc_dynarray_splice(&da, 3, 0, &p, 1); dump(&da);
+	psc_dynarray_splice(&da, 0, 0, NULL, 0); check(&da, PTR_1, PTR_2, PTR_3, PTR_4, NULL);
+
+	p = PTR_a; psc_dynarray_splice(&da, 2, 1, &p, 1); check(&da, PTR_1, PTR_2, PTR_a, PTR_4, NULL);
+	p = PTR_b; psc_dynarray_splice(&da, 3, 0, &p, 1); check(&da, PTR_1, PTR_2, PTR_a, PTR_b, PTR_4, NULL);
 
 	exit(0);
 }
