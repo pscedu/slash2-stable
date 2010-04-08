@@ -148,7 +148,8 @@ psc_dynarray_add_ifdne(struct psc_dynarray *da, void *item)
 void *
 psc_dynarray_getpos(const struct psc_dynarray *da, int pos)
 {
-	if (pos >= da->da_pos)
+	psc_assert(pos >= 0);
+	if (pos >= psc_dynarray_len(da))
 		psc_fatalx("out of bounds array access");
 	return (da->da_items[pos]);
 }
@@ -256,7 +257,7 @@ psc_dynarray_bsearch(const struct psc_dynarray *da, const void *item)
 	void *p;
 
 	min = 0;
-	max = psc_dynarray_len(da);
+	max = psc_dynarray_len(da) - 1;
 	while (min <= max) {
 		mid = min + (max - min) / 2;
 		p = psc_dynarray_getpos(da, mid);
