@@ -100,8 +100,12 @@ main(int argc, char *argv[])
 		psc_multiwaitcond_init(&t->t_mlc, NULL, 0, "cond%d", j);
 
 		psc_multiwait_init(&t->t_ml, "ml%d", j);
-		psc_multiwait_addcond(&t->t_ml, &mastermlc);
-		psc_multiwait_addcond(&t->t_ml, &t->t_mlc);
+		rc = psc_multiwait_addcond(&t->t_ml, &mastermlc);
+		if (rc)
+			psc_fatal("addcond");
+		rc = psc_multiwait_addcond(&t->t_ml, &t->t_mlc);
+		if (rc)
+			psc_fatal("addcond");
 
 		rc = pthread_create(&t->t_pthread, NULL, thr_main, t);
 		if (rc)
