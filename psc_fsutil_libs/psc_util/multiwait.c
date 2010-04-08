@@ -41,22 +41,6 @@
 #include "psc_util/time.h"
 
 /**
- * psc_multiwait_cmp - Compare two multiwaits, used for sorting.
- *	Sorting is necessary to avoid deadlocking as everyone will
- *	try to quire locks in the same order instead of in the
- *	order they were registered.
- * @a: a multiwait.
- * @b: another multiwait.
- */
-__static int
-psc_multiwait_cmp(const void *a, const void *b)
-{
-	struct psc_multiwait *const *mwa = a, *const *mwb = b;
-
-	return (CMP(*mwa, *mwb));
-}
-
-/**
  * psc_multiwaitcond_init - Initialize a multiwait condition.
  * @mwc: the condition to initialize.
  * @data: pointer to user data.
@@ -140,7 +124,7 @@ psc_multiwaitcond_destroy(struct psc_multiwaitcond *mwc)
 	count = 0;
  restart:
 	psc_pthread_mutex_lock(&mwc->mwc_mutex);
-	DYNARRAY_FOREACH(mw, j, &mwc->mwc_multiwaits) {
+	DYNARRAY_FOREACH_REVERSE(mw, j, &mwc->mwc_multiwaits) {
 		if (psc_pthread_mutex_trylock(&mw->mw_mutex)) {
 			if (count++ == 300000)
 				psc_errorx("mwcond %s failed to lock his "
@@ -158,17 +142,16 @@ psc_multiwaitcond_destroy(struct psc_multiwaitcond *mwc)
 		psc_assert(psc_dynarray_len(&mw->mw_conds) ==
 		    (int)psc_vbitmap_getsize(mw->mw_condmask));
 
-		k = psc_dynarray_remove(&mw->mw_conds, mwc);
-psc_fatalx("need to sort");
-		/* XXX qsort?? */
+		k = psc_dynarray_bsearch(&mwc->mwc_multiwaits, mw);
+		psc_dynarray_splice(&mwc->mwc_multiwaits, k, 1, NULL, 0);
 
+		k = psc_dynarray_remove(&mw->mw_conds, mw);
 		pfl_bitstr_copy(&mw->mw_condmask, k, &mw->mw_condmask,
 		    k + 1, psc_vbitmap_getsize(mw->mw_condmask) - k);
 		psc_vbitmap_resize(mw->mw_condmask,
 		    psc_dynarray_len(&mw->mw_conds));
-		psc_pthread_mutex_unlock(&mw->mw_mutex);
 
-		psc_dynarray_remove(&mwc->mwc_multiwaits, mw);
+		psc_pthread_mutex_unlock(&mw->mw_mutex);
 	}
 	/* XXX: ensure no one is waiting on this mutex? */
 	psc_dynarray_free(&mwc->mwc_multiwaits);
@@ -250,7 +233,7 @@ psc_multiwaitcond_wait(struct psc_multiwaitcond *mwc, pthread_mutex_t *mutex)
 }
 
 /**
- * psc_multiwait_addcond - add a condition to a multiwait.
+ * psc_multiwait_addcond - Add a condition to a multiwait.
  * @mw: a multiwait.
  * @mwc: the condition to add.
  * @active: whether condition is active.
@@ -261,7 +244,7 @@ _psc_multiwait_addcond(struct psc_multiwait *mw,
 {
 	struct psc_multiwaitcond *c;
 	struct psc_multiwait *m;
-	int rc, j;
+	int rc, k, j;
 
 	/* Acquire locks. */
 	for (;;) {
@@ -289,33 +272,29 @@ _psc_multiwait_addcond(struct psc_multiwait *mw,
 	psc_assert(psc_dynarray_len(&mw->mw_conds) ==
 	    (int)psc_vbitmap_getsize(mw->mw_condmask));
 
-	/* Associate each with each other. */
+	/* Associate condition and multiwait with each other. */
 	if (psc_dynarray_add(&mw->mw_conds, mwc) == -1) {
 		rc = -1;
-		goto done;
-	}
-
-	if (psc_dynarray_add(&mwc->mwc_multiwaits, mw) == -1) {
-		rc = -1;
-		psc_dynarray_remove(&mw->mw_conds, mwc);
 		goto done;
 	}
 
 	j = psc_dynarray_len(&mw->mw_conds);
 	if (psc_vbitmap_resize(mw->mw_condmask, j) == -1) {
 		rc = -1;
-		psc_dynarray_remove(&mwc->mwc_multiwaits, mw);
 		psc_dynarray_remove(&mw->mw_conds, mwc);
 		goto done;
 	}
 
-	qsort(psc_dynarray_get(&mwc->mwc_multiwaits),
-	    psc_dynarray_len(&mwc->mwc_multiwaits),
-	    sizeof(void *), psc_multiwait_cmp);
-	/* XXX resort condmask vbitmap!! */
-psc_fatalx("need to fix mask");
+	k = psc_dynarray_bsearch(&mwc->mwc_multiwaits, mw);
+	if (psc_dynarray_splice(&mwc->mwc_multiwaits, k, 0, &mw, 1) == -1) {
+		rc = -1;
+		if (psc_vbitmap_resize(mw->mw_condmask, j - 1) == -1)
+			psc_fatalx("unable to undo bitmask changes");
+		psc_dynarray_remove(&mw->mw_conds, mwc);
+		goto done;
+	}
 
-	psc_vbitmap_setval(mw->mw_condmask, j - 1, active);
+	psc_vbitmap_setval(mw->mw_condmask, j, active);
 
  done:
 	psc_pthread_mutex_unlock(&mw->mw_mutex);
@@ -472,6 +451,7 @@ void
 psc_multiwait_reset(struct psc_multiwait *mw)
 {
 	struct psc_multiwaitcond *mwc;
+	int k;
 
  restart:
 	psc_pthread_mutex_lock(&mw->mw_mutex);
@@ -485,16 +465,9 @@ psc_multiwait_reset(struct psc_multiwait *mw)
 			goto restart;
 		}
 
-		psc_dynarray_remove(&mwc->mwc_multiwaits, mw);
+		k = psc_dynarray_bsearch(&mwc->mwc_multiwaits, mw);
+		psc_dynarray_splice(&mwc->mwc_multiwaits, k, 0, NULL, 0);
 
-		/*
-		 * psc_dynarray_remove() will swap the last elem with
-		 * the new empty slot, so we should resort to preserve
-		 * ordering semantics.
-		 */
-		qsort(psc_dynarray_get(&mwc->mwc_multiwaits),
-		    psc_dynarray_len(&mwc->mwc_multiwaits),
-		    sizeof(void *), psc_multiwait_cmp);
 		psc_pthread_mutex_unlock(&mwc->mwc_mutex);
 		/* Remove it so we don't process it twice. */
 		psc_dynarray_remove(&mw->mw_conds, mwc);
