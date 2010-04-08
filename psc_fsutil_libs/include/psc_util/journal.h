@@ -31,7 +31,7 @@
 
 #define PJ_SHDW_DEFTILES    	4
 #define PJ_SHDW_TILESIZE	1024
-#define PJ_SHDW_MAXAGE		{1, 0}		/* seconds, nanoseconds */
+#define PJ_SHDW_MAXAGE		30		/* 10 seconds */
 
 #define PJ_LOCK(pj)		spinlock(&(pj)->pj_lock)
 #define PJ_ULOCK(pj)		freelock(&(pj)->pj_lock)

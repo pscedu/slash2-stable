@@ -55,7 +55,7 @@
  * meanwhile, the tile can continue to accept new log entries until it is full.
  */
 struct psc_waitq	pjournal_tilewaitq = PSC_WAITQ_INIT;
-psc_spinlock_t		pjournal_tilewaitlock = LOCK_INITIALIZER;
+psc_spinlock_t		pjournal_tilewaitqlock = LOCK_INITIALIZER;
 
 __static int		pjournal_logwrite(struct psc_journal_xidhndl *, int,
 				void *, size_t);
@@ -921,11 +921,15 @@ pjournal_shdw_advtile_locked(struct psc_journal_shdw *pjs, int block)
 
 	LOCK_ENSURE(&pjs->pjs_lock);
 
-	/* Map the current and next tiles whose values will be protected
-	 *    by PJ_SHDW_ADVTILE.
+	/*
+	 * Kick the process thread to work on the full tile now.
 	 */
-	next_tile = (pjs->pjs_curtile + 1) % (pjs->pjs_ntiles - 1);
+	pjs->pjs_tiles[pjs->pjs_curtile]->pjst_state = PJ_SHDW_TILE_FULL;
+	spinlock(&pjournal_tilewaitqlock);
+	psc_waitq_wakeall(&pjournal_tilewaitq);
+	freelock(&pjournal_tilewaitqlock);
 
+	next_tile = (pjs->pjs_curtile + 1) % (pjs->pjs_ntiles - 1);
 	while (pjs->pjs_tiles[next_tile]->pjst_state != PJ_SHDW_TILE_FREE) {
 		psc_assert(block);
 		psc_waitq_wait(&pjs->pjs_waitq, &pjs->pjs_lock);
@@ -933,7 +937,6 @@ pjournal_shdw_advtile_locked(struct psc_journal_shdw *pjs, int block)
 	}
 
 	pjs->pjs_tiles[next_tile]->pjst_state = PJ_SHDW_TILE_INUSE;
-	pjs->pjs_tiles[pjs->pjs_curtile]->pjst_state = PJ_SHDW_TILE_FULL;
 	pjs->pjs_curtile = next_tile;
 	pjs->pjs_state &= ~PJ_SHDW_ADVTILE;
 	psc_waitq_wakeall(&pjs->pjs_waitq);
@@ -1067,7 +1070,6 @@ pjournal_shdwthr_main(__unusedx void *arg)
 	struct psc_journal *pj = thr->pscthr_private;
 	struct psc_journal_shdw *pjs = pj->pj_shdw;
 	struct psc_journal_shdw_tile *pjst;
-	struct timespec ctm, rtm, mtm = PJ_SHDW_MAXAGE;
 	int32_t i;
 
 	while (1) {
@@ -1083,27 +1085,8 @@ pjournal_shdwthr_main(__unusedx void *arg)
 				pjournal_shdw_preptile(pjst, pj, pjst->pjst_first);
 			}
 		}
-		/* Check the current tile to see if it has expired.
-		 */
-		clock_gettime(CLOCK_REALTIME, &ctm);
-		spinlock(&pjs->pjs_lock);
-
-		timespecsub(&ctm, &pjs->pjs_lastflush, &rtm);
-		if (timespeccmp(&rtm, &mtm, >)) {
-			/* If a tile is being forced out due to low
-			 *   system activity then the proceeding tile
-			 *   MUST be ready for use.
-			 */
-			pjournal_shdw_advtile_locked(pjs, 0);
-			freelock(&pjs->pjs_lock);
-			usleep((mtm.tv_sec * 1000000) +
-			       ((mtm.tv_nsec * 1000000)/1000));
-			//XXX Call tile entry processor here on pjst
-		} else {
-			freelock(&pjs->pjs_lock);
-			usleep((rtm.tv_sec * 1000000) +
-			       ((rtm.tv_nsec * 1000000)/1000));
-		}
+		spinlock(&pjournal_tilewaitqlock);
+		psc_waitq_waitrel_s(&pjournal_tilewaitq, &pjournal_tilewaitqlock, PJ_SHDW_MAXAGE);
 	}
 	return (NULL);
 }
