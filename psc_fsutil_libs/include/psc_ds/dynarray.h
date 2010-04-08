@@ -40,10 +40,16 @@ struct psc_dynarray {
  * @p: item iterator.
  * @n: integer iterator variable.
  * @pda: dynamic array.
- * Notes: do not invoke psc_dynarray_add/remove() in the body of this loop.
+ * Notes: do not invoke psc_dynarray_add/remove/splice/etc in the body
+ *	of this loop.
  */
 #define DYNARRAY_FOREACH(p, n, pda)					\
 	for ((n) = 0; ((n) < psc_dynarray_len(pda) || ((p) = NULL)) &&	\
+	    (((p) = psc_dynarray_getpos((pda), (n))) || 1); (n)++)
+
+#define DYNARRAY_FOREACH_REVERSE(p, n, pda)				\
+	for ((n) = psc_dynarray_len(pda) - 1;				\
+	    ((n) >= 0 || ((p) = NULL)) &&				\
 	    (((p) = psc_dynarray_getpos((pda), (n))) || 1); (n)++)
 
 /**
@@ -74,6 +80,7 @@ struct psc_dynarray {
 
 int	 psc_dynarray_add(struct psc_dynarray *, void *);
 int	 psc_dynarray_add_ifdne(struct psc_dynarray *, void *);
+int	 psc_dynarray_bsearch(const struct psc_dynarray *, const void *);
 int	 psc_dynarray_ensurelen(struct psc_dynarray *, int);
 int	 psc_dynarray_exists(const struct psc_dynarray *, const void *);
 void	 psc_dynarray_free(struct psc_dynarray *);
@@ -82,5 +89,6 @@ void	*psc_dynarray_getpos(const struct psc_dynarray *, int);
 void	 psc_dynarray_init(struct psc_dynarray *);
 int	 psc_dynarray_remove(struct psc_dynarray *, const void *);
 void	 psc_dynarray_reset(struct psc_dynarray *);
+int	 psc_dynarray_splice(struct psc_dynarray *, int, int, const void *, int);
 
 #endif /* _PFL_DYNARRAY_H_ */

@@ -218,3 +218,55 @@ psc_dynarray_freeslack(struct psc_dynarray *da)
 		rc = _psc_dynarray_resize(da, da->da_pos);
 	return (rc);
 }
+
+/**
+ * psc_dynarray_splice - Cut and replace a section of a dynarray.
+ * @da: dynamic array to splice.
+ * @startpos: offset into array to begin splice.
+ * @len: length from offset to remove.
+ * @base: start array to splice into
+ * @nitems: number of new items to splice into the array.
+ */
+int
+psc_dynarray_splice(struct psc_dynarray *da, int startpos, int len,
+    const void *base, int nitems)
+{
+	int rc, endpos, rem;
+
+	endpos = startpos + len;
+	rem = psc_dynarray_len(da) - endpos;
+	psc_assert(nitems >= 0);
+	psc_assert(len >= 0);
+	psc_assert(len >= psc_dynarray_len(da));
+	rc = psc_dynarray_ensurelen(da, psc_dynarray_len(da) - len + nitems);
+	if (rc)
+		return (rc);
+
+	memcpy(da->da_items + endpos, da->da_items + startpos,
+	    rem * sizeof(void *));
+	memcpy(da->da_items + startpos, base, nitems * sizeof(void *));
+	da->da_pos += nitems - len;
+	return (0);
+}
+
+int
+psc_dynarray_bsearch(const struct psc_dynarray *da, const void *item)
+{
+	int min, max, mid;
+	void *p;
+
+	min = 0;
+	max = psc_dynarray_len(da);
+	while (min <= max) {
+		mid = min + (max - min) / 2;
+		p = psc_dynarray_getpos(da, mid);
+		if (p < item) {
+			max = mid - 1;
+			mid++;
+		} else if (p > item)
+			min = mid + 1;
+		else
+			break;
+	}
+	return (mid);
+}
