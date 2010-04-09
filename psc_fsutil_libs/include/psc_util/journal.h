@@ -122,7 +122,15 @@ typedef void (*psc_jhandler)(struct psc_dynarray *, int *);
 #define PJE_XCLOSE		(1 << 3)	/* close a transaction */
 #define PJE_XSNGL		(1 << 4)	/* transaction begins and ends insantly*/
 #define PJE_XNORML		(1 << 5)	/* normal transaction data */
+
 #define _PJE_FLSHFT		(1 << 6)	/* denote the last used bit */
+
+#define	PJE_BMAP_REPL		(_PJE_FLSHFT << 0)
+#define	PJE_BMAP_SEQ		(_PJE_FLSHFT << 2)
+#define	PJE_INO_ADDREPL		(_PJE_FLSHFT << 3)
+#define	PJE_NAMESPACE		(_PJE_FLSHFT << 4)
+
+struct bmapc_memb;
 
 /*
  * psc_journal_enthdr - journal entry header.

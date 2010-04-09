@@ -941,6 +941,11 @@ pjournal_shdw_proctile(struct psc_journal_shdw_tile *pjst,
 
 	for (i = 0; i < pjs->pjs_tilesize; i++) {
 		pje = (struct psc_journal_enthdr *)((char *)pjst->pjst_base + PJ_PJESZ(pj) * i);
+		if (!(pje->pje_type & PJE_XSNGL))
+			continue;
+		if (pje->pje_type & PJE_NAMESPACE) {
+			;
+		}
 	}
 }
 
