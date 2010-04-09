@@ -158,7 +158,6 @@ struct psc_journal_enthdr {
 	 * by log replay functions.
 	 */
 	char			pje_data[0];
-#define pje_shdw_slot pje_sid
 } __packed;
 
 #define	PJ_PJESZ(p)		((p)->pj_hdr->pjh_entsz)
