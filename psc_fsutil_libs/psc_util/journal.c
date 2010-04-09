@@ -894,10 +894,16 @@ pjournal_dump(const char *fn, int verbose)
  *
  */
 void
-pjournal_shdw_proctile(struct psc_journal_shdw_tile *pjst)
+pjournal_shdw_proctile(struct psc_journal_shdw_tile *pjst,
+		const struct psc_journal *pj)
 {
-	if (pjst->pjst_state)		/* bogus code for now */
-		return;
+	int				 i;
+	struct psc_journal_enthdr	*pje;
+	struct psc_journal_shdw		*pjs = pj->pj_shdw;
+
+	for (i = 0; i < pjs->pjs_tilesize; i++) {
+		pje = (struct psc_journal_enthdr *)((char *)pjst->pjst_base + PJ_PJESZ(pj) * i);
+	}
 }
 
 /**
@@ -921,6 +927,8 @@ pjournal_shdw_preptile(struct psc_journal_shdw_tile *pjst,
 		pje = (struct psc_journal_enthdr *)((char *)pjst->pjst_base + PJ_PJESZ(pj) * i);
 		pje->pje_magic = PJE_MAGIC;
 		pje->pje_type = PJE_FORMAT;
+		pje->pje_xid = PJE_XID_NONE;
+		pje->pje_sid = PJE_XID_NONE;
 	}
 
 	pjst->pjst_tail = pjs->pjs_endslot;
@@ -1057,7 +1065,7 @@ pjournal_shdwthr_main(__unusedx void *arg)
 				continue;
 			}
 			freelock(&pjst->pjst_lock);
-			pjournal_shdw_proctile(pjst);
+			pjournal_shdw_proctile(pjst, pj);
 			pjournal_shdw_preptile(pjst, pj);
 		}
 		spinlock(&pjournal_tilewaitqlock);
