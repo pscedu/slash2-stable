@@ -43,7 +43,7 @@
 #include "psc_util/waitq.h"
 
 /*
- * A short description of our tiling code:
+ * A short description of our shadow tiling code:
  *
  * A tile is a memory copy of a on-disk log region.  It is used to avoid I/O when a log
  * entry needs to be further processed after being written to the disk.  More than one
@@ -1015,19 +1015,21 @@ pjournal_shdw_logwrite(struct psc_journal *pj,
 	/*
 	 * Hold the tile lock while updating its contents.  By checking
 	 * the magic field, the shadow thread can figure out if the log 
-	 * entry is filled or not.
+	 * entry has been filled or not.
 	 *
-	 * Without me writing into the slot, the tile won't be fully
-	 * processed and reused.  That's why we don't need a reference
-	 * count.
+	 * Without me writing into the slot, the corresponding tile won't
+	 * be fully processed and reused.  That's why we don't need a 
+	 * reference count.
 	 */
 	spinlock(&pjst->pjst_lock);
 
-	pje = (void *)((char *)pjst->pjst_base + 
-		(PJ_PJESZ(pj) * (slot - pjst->pjst_first)));
-	psc_assert(pje->pje_magic == PJE_MAGIC);
-	psc_assert(pje->pje_type == PJE_FORMAT);
-	memcpy(pje_shdw, pje, PJ_PJESZ(pj));
+	pje_shdw = (struct psc_journal_enthdr *) ((char *)pjst->pjst_base + 
+			(PJ_PJESZ(pj) * (slot - pjst->pjst_first)));
+
+	psc_assert(pje_shdw->pje_magic == PJE_MAGIC);
+	psc_assert(pje_shdw->pje_type == PJE_FORMAT);
+
+	memcpy((void*)pje_shdw, (void *)pje, PJ_PJESZ(pj));
 
 	freelock(&pjst->pjst_lock);
 }
