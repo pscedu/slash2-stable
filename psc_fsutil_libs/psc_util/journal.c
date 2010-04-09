@@ -55,11 +55,11 @@
  * it to the disk.  A tile is processed so that we can distill information into separate 
  * change logs needed for tracking namespace and truncation operations.
  *
- * If a tile is full of log entries, we wake up a tiling thread to process its contents.
- * The tiling thread also wakes up on its own periodically to process log entries recorded
+ * If a tile is full of log entries, we wake up a shadow thread to process its contents.
+ * The shadow thread also wakes up on its own periodically to process log entries recorded
  * in a tile.  For simplicity, we don't track the age of each individual log entry. This 
  * means a log entry can be processed any time after it is written.  We also cannot 
- * guarantee when a log entry will be processed.  The tiling thread may fail to keep up
+ * guarantee when a log entry will be processed.  The shadow thread may fail to keep up
  * with an influx of log entries.
  */
 struct psc_waitq	pjournal_tilewaitq = PSC_WAITQ_INIT;
@@ -721,6 +721,10 @@ pjournal_format(const char *fn, uint32_t nents, uint32_t entsz,
 	if (fstat(fd, &stb) == -1)
 		psc_fatal("stat %s", fn);
 
+	/* 
+	 * The number of log entries must be a multiple of the tile size and
+	 * it must be no less than the sum of all tile sizes.
+	 */
 	nents = ((nents + PJ_SHDW_TILESIZE - 1) / PJ_SHDW_TILESIZE) * PJ_SHDW_TILESIZE;
 	if (nents < PJ_SHDW_TILESIZE * PJ_SHDW_NTILES)
 		nents = PJ_SHDW_TILESIZE * PJ_SHDW_NTILES;
@@ -925,6 +929,7 @@ pjournal_shdw_preptile(struct psc_journal_shdw_tile *pjst,
 	if  (pjs->pjs_endslot > pj->pj_hdr->pjh_nents)
 		pjs->pjs_endslot = 0;
 
+	psc_waitq_wakeall(&pjs->pjs_waitq);
 	freelock(&pjst->pjst_lock);
 	freelock(&pjs->pjs_lock);
 }
@@ -940,7 +945,6 @@ pjournal_shdw_advtile_locked(struct psc_journal_shdw *pjs)
 	uint32_t next_tile;
 
 	LOCK_ENSURE(&pjs->pjs_lock);
-
 	/*
 	 * Kick the process thread to work on the full tile now.
 	 */
@@ -992,7 +996,6 @@ pjournal_shdw_prepslot(struct psc_journal_shdw *pjs, uint32_t slot)
 	}
 	freelock(&pjs->pjs_lock);
 	return (pjst);
-
 }
 
 __static void
@@ -1005,7 +1008,7 @@ pjournal_shdw_logwrite(struct psc_journal *pj,
 	pjst = pjournal_shdw_prepslot(pj->pj_shdw, slot);
 	/*
 	 * Hold the tile lock while updating its contents.  By checking
-	 * the magic field, the tiling thread can figure out if the log 
+	 * the magic field, the shadow thread can figure out if the log 
 	 * entry is filled or not.
 	 *
 	 * Without me writing into the slot, the tile won't be fully
