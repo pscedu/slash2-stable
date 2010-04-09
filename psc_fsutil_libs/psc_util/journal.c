@@ -73,7 +73,7 @@ struct psc_journalthr {
 	struct psc_journal *pjt_pj;
 };
 
-void (*pjournal_shdw_handler)(struct psc_journal_enthdr *);
+void (*pjournal_shadow_handler)(struct psc_journal_enthdr *);
 
 struct psc_waitq	pjournal_tilewaitq = PSC_WAITQ_INIT;
 psc_spinlock_t		pjournal_tilewaitqlock = LOCK_INITIALIZER;
@@ -945,7 +945,7 @@ pjournal_shdw_proctile(struct psc_journal_shdw_tile *pjst,
 		pje = (struct psc_journal_enthdr *)((char *)pjst->pjst_base + PJ_PJESZ(pj) * i);
 		if (!(pje->pje_type & PJE_XSNGL))
 			continue;
-		(*pjournal_shdw_handler)(pje);
+		(*pjournal_shadow_handler)(pje);
 	}
 }
 
@@ -1164,7 +1164,7 @@ pjournal_init_shdw(int thrtype, const char *thrname, struct psc_journal *pj)
  * Returns: 0 on success, -1 on error.
  */
 struct psc_journal *
-pjournal_replay(const char *fn, psc_jhandler pj_handler, psc_shdw_handler pj_shdw_handler, int thrtype,
+pjournal_replay(const char *fn, psc_replay_handler pj_replay_handler, psc_shadow_handler pj_shadow_handler, int thrtype,
     const char *thrname)
 {
 	int				 i;
@@ -1209,7 +1209,7 @@ pjournal_replay(const char *fn, psc_jhandler pj_handler, psc_shdw_handler pj_shd
 		}
 
 		ntrans++;
-		(pj_handler)(&replaybufs, &rc);
+		(pj_replay_handler)(&replaybufs, &rc);
 		if (rc) {
 			nerrs++;
 			rc = 0;
@@ -1259,7 +1259,7 @@ pjournal_replay(const char *fn, psc_jhandler pj_handler, psc_shdw_handler pj_shd
 	if (pj->pj_hdr->pjh_options & PJF_SHADOW)
 		pjournal_init_shdw(thrtype, thrname, pj);
 
-	pjournal_shdw_handler = pj_shdw_handler;
+	pjournal_shadow_handler = pj_shadow_handler;
 
 	psc_info("journal replayed: %d log entries with %d transactions "
 	    "have been redone, error = %d", nents, ntrans, nerrs);

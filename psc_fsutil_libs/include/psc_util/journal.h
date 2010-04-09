@@ -107,9 +107,6 @@ struct psc_journal {
 #define PJF_WANTSLOT		(1 << 1)
 #define PJF_SHADOW		(1 << 2)
 
-typedef void (*psc_jhandler)(struct psc_dynarray *, int *);
-typedef void (*psc_shdw_handler)(struct psc_journal_enthdr *);
-
 #define PJE_XID_NONE		0				/* invalid transaction ID */
 #define PJE_MAGIC		UINT64_C(0x45678912aabbccdd)	/* magic number for each journal entry */
 
@@ -196,17 +193,19 @@ struct psc_journal_xidhndl {
 #define	PJOURNAL_LOG_DUMP	1
 #define	PJOURNAL_LOG_REPLAY	2
 
+typedef void (*psc_shadow_handler)(struct psc_journal_enthdr *);
+typedef void (*psc_replay_handler)(struct psc_dynarray *, int *);
+
 /* definitions of journal handling functions */
-struct psc_journal
-	*pjournal_replay(const char *, psc_jhandler, psc_shdw_handler, int, const char *);
-int	 pjournal_dump(const char *, int);
-int	 pjournal_format(const char *, uint32_t, uint32_t, uint32_t, uint32_t);
+int			 pjournal_dump(const char *, int);
+int			 pjournal_format(const char *, uint32_t, uint32_t, uint32_t, uint32_t);
+struct psc_journal	*pjournal_replay(const char *, psc_replay_handler, 
+				psc_shadow_handler, int, const char *);
 
 /* definitions of transaction handling functions */
-struct psc_journal_xidhndl
-	*pjournal_xnew(struct psc_journal *);
-int	 pjournal_xadd(struct psc_journal_xidhndl *, int, void *, size_t);
-int	 pjournal_xend(struct psc_journal_xidhndl *);
-int	 pjournal_xadd_sngl(struct psc_journal *, int, void *, size_t);
+struct psc_journal_xidhndl	*pjournal_xnew(struct psc_journal *);
+int				 pjournal_xadd(struct psc_journal_xidhndl *, int, void *, size_t);
+int				 pjournal_xend(struct psc_journal_xidhndl *);
+int				 pjournal_xadd_sngl(struct psc_journal *, int, void *, size_t);
 
 #endif /* _PFL_JOURNAL_H_ */
