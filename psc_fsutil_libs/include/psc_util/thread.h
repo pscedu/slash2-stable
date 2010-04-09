@@ -60,6 +60,7 @@ struct psc_thread {
 #define PTF_PAUSED	(1 << 1)	/* thread is frozen */
 #define PTF_RUN		(1 << 2)	/* thread should operate normally */
 #define PTF_READY	(1 << 3)	/* thread can start (used during initialization) */
+#define PTF_DEAD	(1 << 4)	/* thread will end pscthr_main() iteration */
 
 #define PSCTHR_MKCAST(label, name, type)				\
 static inline struct name *						\
@@ -70,7 +71,7 @@ label(struct psc_thread *pt)						\
 }
 
 /*
- * pscthr_init - initialization a process thread.
+ * pscthr_init - initialization a application thread.
  */
 #define pscthr_init(thrtype, flags, startf, dtor, privsiz, namefmt,	\
 	    ...)							\
@@ -84,6 +85,7 @@ const char *
 void	pscthr_setpause(struct psc_thread *, int);
 void	pscthr_setready(struct psc_thread *);
 void	pscthr_setrun(struct psc_thread *, int);
+void	pscthr_setdead(struct psc_thread *, int);
 int	pscthr_run(void);
 void	pscthr_setloglevel(int, int);
 

@@ -474,13 +474,27 @@ pscthr_setrun(struct psc_thread *thr, int run)
 	ureqlock(&thr->pscthr_lock, locked);
 }
 
+void
+pscthr_setdead(struct psc_thread *thr, int dead)
+{
+	int locked;
+
+	locked = reqlock(&thr->pscthr_lock);
+	if (dead)
+		thr->pscthr_flags |= PTF_DEAD;
+	else
+		thr->pscthr_flags &= ~PTF_DEAD;
+	ureqlock(&thr->pscthr_lock, locked);
+}
+
 /**
- * pscthr_run - Ensure a thread should a main loop iteration.
+ * pscthr_run - Control point of thread main loop.
  */
 int
 pscthr_run(void)
 {
 	struct psc_thread *thr;
+	int dead;
 
 	thr = pscthr_get();
 	spinlock(&thr->pscthr_lock);
@@ -490,8 +504,22 @@ pscthr_run(void)
 			    &thr->pscthr_lock);
 			spinlock(&thr->pscthr_lock);
 		} while ((thr->pscthr_flags) == 0);
+	dead = thr->pscthr_flags & PTF_DEAD;
 	freelock(&thr->pscthr_lock);
-	return (1);
+	return (!dead);
+}
+
+/**
+ * pscthr_run - Shared thread main loop.
+ */
+void *
+pscthr_main(void *arg)
+{
+	struct psc_thread *thr = arg;
+
+	while (pscthr_run())
+		thr->pscthr_startf(thr);
+	return (thr);
 }
 
 struct psc_thread *
