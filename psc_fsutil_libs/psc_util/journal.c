@@ -722,8 +722,8 @@ pjournal_format(const char *fn, uint32_t nents, uint32_t entsz,
 		psc_fatal("stat %s", fn);
 
 	nents = ((nents + PJ_SHDW_TILESIZE - 1) / PJ_SHDW_TILESIZE) * PJ_SHDW_TILESIZE;
-	if (nents < PJ_SHDW_TILESIZE * PJ_SHDW_DEFTILES)
-		nents = PJ_SHDW_TILESIZE * PJ_SHDW_DEFTILES;
+	if (nents < PJ_SHDW_TILESIZE * PJ_SHDW_NTILES)
+		nents = PJ_SHDW_TILESIZE * PJ_SHDW_NTILES;
 
 	pjh.pjh_entsz = entsz;
 	pjh.pjh_nents = nents;
@@ -898,8 +898,8 @@ pjournal_shdw_proctile(struct psc_journal_shdw_tile *pjst)
 
 /**
  * pjournal_shdw_preptile - prepare a journal shadow tile for action.  The pjst
- *   must have already undergone initialization.  This function mainly serves
- *   as a sanity check on the tile.
+ *   must have already been cleaned by the shadow thread.  We mark it as FREE
+ *   so that it can be used later.  Also adjust the range covered by the tiles.
  */
 __static __inline void
 pjournal_shdw_preptile(struct psc_journal_shdw_tile *pjst,
@@ -1065,8 +1065,9 @@ pjournal_init_shdw(struct psc_journal *pj)
 	psc_assert(!pj->pj_shdw);
 
 	pj->pj_shdw = PSCALLOC(sizeof(struct psc_journal_shdw));
-	pj->pj_shdw->pjs_ntiles = PJ_SHDW_DEFTILES;
+	pj->pj_shdw->pjs_ntiles = PJ_SHDW_NTILES;
 	pj->pj_shdw->pjs_tilesize = PJ_SHDW_TILESIZE;
+	pj->pj_shdw->pjs_curtile = 0;
 	pj->pj_shdw->pjs_endslot = 0;
 
 	LOCK_INIT(&pj->pj_shdw->pjs_lock);
@@ -1075,7 +1076,7 @@ pjournal_init_shdw(struct psc_journal *pj)
 	size = sizeof(struct psc_journal_shdw_tile) +
 		PJ_PJESZ(pj) * pj->pj_shdw->pjs_tilesize;
 
-	for (i = 0; i < PJ_SHDW_DEFTILES; i++) {
+	for (i = 0; i < PJ_SHDW_NTILES; i++) {
 		pj->pj_shdw->pjs_tiles[i] = PSCALLOC(size);
 
 		pj->pj_shdw->pjs_tiles[i]->pjst_base =
@@ -1083,7 +1084,7 @@ pjournal_init_shdw(struct psc_journal *pj)
 		LOCK_INIT(&pj->pj_shdw->pjs_tiles[i]->pjst_lock);
 		pjournal_shdw_preptile(pj->pj_shdw->pjs_tiles[i], pj);
 	}
-	psc_assert(pj->pj_shdw->pjs_endslot == PJ_SHDW_DEFTILES * PJ_SHDW_TILESIZE);
+	psc_assert(pj->pj_shdw->pjs_endslot == PJ_SHDW_NTILES * PJ_SHDW_TILESIZE);
 
 	thr = pscthr_init(JRNLTHRT_SHDW, 0, pjournal_shdwthr_main, NULL, 0,
 			  "pjrnlshdw");

@@ -29,9 +29,9 @@
 #define	PJ_MAX_TRY		3		/* number of retry before giving up */
 #define	PJ_MAX_BUF		8		/* number of journal buffers to keep around */
 
-#define PJ_SHDW_DEFTILES    	4
+#define PJ_SHDW_NTILES    	4
 #define PJ_SHDW_TILESIZE	1024
-#define PJ_SHDW_MAXAGE		30		/* 10 seconds */
+#define PJ_SHDW_MAXAGE		30		/* 30 seconds */
 
 #define PJ_LOCK(pj)		spinlock(&(pj)->pj_lock)
 #define PJ_ULOCK(pj)		freelock(&(pj)->pj_lock)
@@ -76,7 +76,7 @@ struct psc_journal_shdw {
         int32_t				 pjs_ntiles;            	/* Number of tiles */
         int32_t				 pjs_curtile;           	/* Current tile index */
         int32_t				 pjs_tilesize;			/* Number of entries per tile */
-        struct psc_journal_shdw_tile	*pjs_tiles[PJ_SHDW_DEFTILES];	/* tile buffer pointers */
+        struct psc_journal_shdw_tile	*pjs_tiles[PJ_SHDW_NTILES];	/* tile buffer pointers */
 
         uint32_t			 pjs_endslot;			/* last slot covered by the tiles */
 	uint32_t			 pjs_state;
@@ -88,14 +88,14 @@ struct psc_journal_shdw {
 #define PJ_SHDW_ADVTILE 1
 
 struct psc_journal {
-	psc_spinlock_t		 pj_lock;	/* contention lock */
+	psc_spinlock_t		 pj_lock;
 	uint64_t		 pj_lastxid;	/* last transaction ID used */
 	struct psc_journal_hdr	*pj_hdr;
 	struct psclist_head	 pj_pndgxids;
 	struct psc_dynarray	 pj_bufs;
 	struct psc_waitq	 pj_waitq;
 	struct psc_journal_shdw *pj_shdw;
-	int			 pj_fd;		/* open file descriptor to disk */
+	int			 pj_fd;		/* open file descriptor to backing disk file */
 	int			 pj_flags;
 	uint32_t		 pj_nextwrite;	/* next entry slot to write to */
 };
