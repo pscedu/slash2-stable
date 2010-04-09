@@ -925,9 +925,11 @@ pjournal_shdw_preptile(struct psc_journal_shdw_tile *pjst,
 
 	pjst->pjst_tail = pjs->pjs_endslot;
 	pjst->pjst_first = pjs->pjs_endslot;
+
 	pjs->pjs_endslot += PJ_SHDW_TILESIZE;
 	if  (pjs->pjs_endslot > pj->pj_hdr->pjh_nents)
 		pjs->pjs_endslot = 0;
+	pjst->pjst_last = pjs->pjs_endslot;
 
 	psc_waitq_wakeall(&pjs->pjs_waitq);
 	freelock(&pjst->pjst_lock);
@@ -980,21 +982,21 @@ pjournal_shdw_prepslot(struct psc_journal_shdw *pjs, uint32_t slot)
 	/*
 	 * If another thread is moving a tile, wait for it to complete.
 	 */
-	spinlock(&pjs->pjs_lock);
 	while (pjs->pjs_state & PJ_SHDW_ADVTILE) {
 		psc_waitq_wait(&pjs->pjs_waitq, &pjs->pjs_lock);
 		spinlock(&pjs->pjs_lock);
 	}
 	pjst = pjs->pjs_tiles[pjs->pjs_curtile];
-	if (slot == (pjst->pjst_first + pjs->pjs_tilesize)) {
-		/* Tile advancementment is our job.  Note the pjs lock
-		 *    may be dropped if the next tile is still busy.
-		 */
+	/*
+	 * If we move beyond the current tile, start using the next
+	 * tile.  Note if a tile is aligned at the very end of the
+	 * log area, its last slot is set to zero due to wrap-around.
+	 */
+	if (slot == pjst->pjst_last) {
 		pjs->pjs_state |= PJ_SHDW_ADVTILE;
 		pjournal_shdw_advtile_locked(pjs);
 		pjst = pjs->pjs_tiles[pjs->pjs_curtile];
 	}
-	freelock(&pjs->pjs_lock);
 	return (pjst);
 }
 
@@ -1002,17 +1004,22 @@ __static void
 pjournal_shdw_logwrite(struct psc_journal *pj,
 		       const struct psc_journal_enthdr *pje, uint32_t slot)
 {
+	struct psc_journal_shdw *pjs;
 	struct psc_journal_shdw_tile *pjst;
 	struct psc_journal_enthdr *pje_shdw;
 
-	pjst = pjournal_shdw_prepslot(pj->pj_shdw, slot);
+	pjs = pj->pj_shdw;
+	spinlock(&pjs->pjs_lock);
+	pjst = pjournal_shdw_prepslot(pjs, slot);
+	freelock(&pjs->pjs_lock);
 	/*
 	 * Hold the tile lock while updating its contents.  By checking
 	 * the magic field, the shadow thread can figure out if the log 
 	 * entry is filled or not.
 	 *
 	 * Without me writing into the slot, the tile won't be fully
-	 * processed and reused.  That's why we don't need a reference count.
+	 * processed and reused.  That's why we don't need a reference
+	 * count.
 	 */
 	spinlock(&pjst->pjst_lock);
 

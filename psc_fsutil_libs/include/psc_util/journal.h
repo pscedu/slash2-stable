@@ -57,8 +57,9 @@ struct psc_journal_hdr {
 struct psc_journal_shdw_tile {
         void			*pjst_base;	/* memory for log entries */
         uint8_t			 pjst_state;
-	uint16_t		 pjst_tail;	/* first entry that may need to be processed */
+	uint32_t		 pjst_tail;	/* first entry that may need to be processed */
         uint32_t		 pjst_first;	/* first journal slot represented by the tile */
+        uint32_t		 pjst_last;	/* first journal slot represented by the next tile */
         psc_spinlock_t		 pjst_lock;
 };
 
