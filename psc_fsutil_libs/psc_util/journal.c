@@ -1032,7 +1032,7 @@ pjournal_shdwthr_main(__unusedx void *arg)
 	int32_t i;
 	int rv = 0;
 
-	while (1) {
+	while (pscthr_run()) {
 		/* 
 		 * Look for full tiles and process them. If we woke up on our own, 
 		 * process log entries in the current tile.
