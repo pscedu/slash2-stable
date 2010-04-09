@@ -47,21 +47,28 @@
  *
  * A tile is a memory copy of a on-disk log region.  It is used to avoid I/O when a log
  * entry needs to be further processed after being written to the disk.  More than one
- * tiles are used for better performance.  These tiles must map to continuous region of 
- * the on-disk log.  A tile at the tail is moved to the head when it is done mapping its 
+ * tiles are used for better performance.  These tiles must map to continuous region of
+ * the on-disk log.  A tile at the tail is moved to the head when it is done mapping its
  * old region.
  *
- * Whenever we write a log entry, we make a copy of it in a tile in addition to writing 
- * it to the disk.  A tile is processed so that we can distill information into separate 
+ * Whenever we write a log entry, we make a copy of it in a tile in addition to writing
+ * it to the disk.  A tile is processed so that we can distill information into separate
  * change logs needed for tracking namespace and truncation operations.
  *
  * If a tile is full of log entries, we wake up a shadow thread to process its contents.
  * The shadow thread also wakes up on its own periodically to process log entries recorded
- * in a tile.  For simplicity, we don't track the age of each individual log entry. This 
- * means a log entry can be processed any time after it is written.  We also cannot 
+ * in a tile.  For simplicity, we don't track the age of each individual log entry. This
+ * means a log entry can be processed any time after it is written.  We also cannot
  * guarantee when a log entry will be processed.  The shadow thread may fail to keep up
  * with an influx of log entries.
  */
+
+#define TILE_GETENT(pj, tile, i)					\
+	((void *)((char *)(tile)->pjst_base + PJ_PJESZ(pj) * (i)))
+
+#define PJ_GETENTOFF(pj, i)						\
+	((off_t)(pj)->pj_hdr->pjh_start_off + (i) * PJ_PJESZ(pj))
+
 struct psc_waitq	pjournal_tilewaitq = PSC_WAITQ_INIT;
 psc_spinlock_t		pjournal_tilewaitqlock = LOCK_INITIALIZER;
 
@@ -213,8 +220,8 @@ pjournal_logwrite_internal(struct psc_journal_xidhndl *xh, uint32_t slot,
 	/* commit the log entry on disk before we can return */
 	ntries = PJ_MAX_TRY;
 	while (ntries) {
-		sz = pwrite(pj->pj_fd, pje, PJ_PJESZ(pj), (off_t)
-		    (pj->pj_hdr->pjh_start_off + (slot * PJ_PJESZ(pj))));
+		sz = pwrite(pj->pj_fd, pje, PJ_PJESZ(pj),
+		    PJ_GETENTOFF(pj, slot));
 		if (sz == -1 && errno == EAGAIN) {
 			ntries--;
 			usleep(100);
@@ -362,7 +369,7 @@ pjournal_logread(struct psc_journal *pj, int32_t slot, int32_t count,
 	ssize_t		size;
 
 	rc = 0;
-	addr = pj->pj_hdr->pjh_start_off + slot * PJ_PJESZ(pj);
+	addr = PJ_GETENTOFF(pj, slot);
 	size = pread(pj->pj_fd, data, PJ_PJESZ(pj) * count, addr);
 	if (size == -1 || (size_t)size != PJ_PJESZ(pj) *  count) {
 		psc_warn("Fail to read %zd bytes from journal %p: "
@@ -721,7 +728,7 @@ pjournal_format(const char *fn, uint32_t nents, uint32_t entsz,
 	if (fstat(fd, &stb) == -1)
 		psc_fatal("stat %s", fn);
 
-	/* 
+	/*
 	 * The number of log entries must be a multiple of the tile size and
 	 * it must be no less than the sum of all tile sizes.
 	 */
@@ -767,7 +774,8 @@ pjournal_format(const char *fn, uint32_t nents, uint32_t entsz,
 			PSC_CRC64_FIN(&pje->pje_chksum);
 		}
 		size = pwrite(fd, jbuf, PJ_PJESZ(&pj) * count,
-			(off_t)(pjh.pjh_start_off + (slot * PJ_PJESZ(&pj))));
+		    PJ_GETENTOFF(&pj, slot));
+
 		/*
 		 * At least on one instance, short write actually
 		 * returns success on a RAM-backed file system.
@@ -833,7 +841,7 @@ pjournal_dump(const char *fn, int verbose)
 		count = (pjh->pjh_nents - slot <= ra) ?
 		    (pjh->pjh_nents - slot) : ra;
 		size = pread(pj->pj_fd, jbuf, (PJ_PJESZ(pj) * count),
-		    (off_t)(pjh->pjh_start_off + (slot * PJ_PJESZ(pj))));
+		    PJ_GETENTOFF(pj, slot));
 
 		if (size == -1)
 			psc_fatal("Failed to read %d log entries "
@@ -949,7 +957,7 @@ pjournal_shdw_preptile(struct psc_journal_shdw_tile *pjst,
 
 	pjst->pjst_state = PJ_SHDW_TILE_FREE;
 	for (i = 0; i < pjs->pjs_tilesize; i++) {
-		pje = (struct psc_journal_enthdr *)((char *)pjst->pjst_base + PJ_PJESZ(pj) * i);
+		pje = TILE_GETENT(pj, pjst, i);
 		pje->pje_magic = PJE_MAGIC;
 		pje->pje_type = PJE_FORMAT;
 		pje->pje_xid = PJE_XID_NONE;
@@ -1047,22 +1055,20 @@ pjournal_shdw_logwrite(struct psc_journal *pj,
 	freelock(&pjs->pjs_lock);
 	/*
 	 * Hold the tile lock while updating its contents.  By checking
-	 * the magic field, the shadow thread can figure out if the log 
+	 * the magic field, the shadow thread can figure out if the log
 	 * entry has been filled or not.
 	 *
 	 * Without me writing into the slot, the corresponding tile won't
-	 * be fully processed and reused.  That's why we don't need a 
+	 * be fully processed and reused.  That's why we don't need a
 	 * reference count.
 	 */
 	spinlock(&pjst->pjst_lock);
 
-	pje_shdw = (struct psc_journal_enthdr *) ((char *)pjst->pjst_base + 
-			(PJ_PJESZ(pj) * (slot - pjst->pjst_first)));
-
+	pje_shdw = TILE_GETENT(pj, pjst, slot - pjst->pjst_first);
 	psc_assert(pje_shdw->pje_magic == PJE_MAGIC);
 	psc_assert(pje_shdw->pje_type == PJE_FORMAT);
 
-	memcpy((void*)pje_shdw, (void *)pje, PJ_PJESZ(pj));
+	memcpy(pje_shdw, pje, PJ_PJESZ(pj));
 
 	freelock(&pjst->pjst_lock);
 }
@@ -1078,8 +1084,8 @@ pjournal_shdwthr_main(__unusedx void *arg)
 	int rv = 0;
 
 	while (pscthr_run()) {
-		/* 
-		 * Look for full tiles and process them. If we woke up on our own, 
+		/*
+		 * Look for full tiles and process them. If we woke up on our own,
 		 * process log entries in the current tile.
 		 */
 		for (i = 0; i < pjs->pjs_ntiles; i++) {
@@ -1221,8 +1227,7 @@ pjournal_replay(const char *fn, psc_jhandler pj_handler) {
 	pje->pje_chksum = chksum;
 
 	size = pwrite(pj->pj_fd, pje, PJ_PJESZ(pj),
-		     (off_t)(pj->pj_hdr->pjh_start_off +
-		     (pj->pj_nextwrite * PJ_PJESZ(pj))));
+	    PJ_GETENTOFF(pj, pj->pj_nextwrite));
 	if (size == -1 || (size_t)size != PJ_PJESZ(pj))
 		psc_warnx("Fail to write a start up marker in the journal");
 	psc_freenl(pje, PJ_PJESZ(pj));

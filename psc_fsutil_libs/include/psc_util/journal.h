@@ -29,7 +29,7 @@
 #define	PJ_MAX_TRY		3		/* number of retry before giving up */
 #define	PJ_MAX_BUF		8		/* number of journal buffers to keep around */
 
-#define PJ_SHDW_NTILES    	4
+#define PJ_SHDW_NTILES		4
 #define PJ_SHDW_TILESIZE	1024
 #define PJ_SHDW_MAXAGE		30		/* 30 seconds */
 
@@ -52,21 +52,21 @@ struct psc_journal_hdr {
 #define pjh_iolen pjh_start_off
 };
 
-#define JRNLTHRT_SHDW		0
+#define JRNLTHRT_SHDW		(-1)
 
 struct psc_journal_shdw_tile {
-        void			*pjst_base;	/* memory for log entries */
-        uint8_t			 pjst_state;
+	void			*pjst_base;	/* memory for log entries */
+	uint8_t			 pjst_state;
 	uint32_t		 pjst_tail;	/* first entry that may need to be processed */
-        uint32_t		 pjst_first;	/* first journal slot represented by the tile */
-        uint32_t		 pjst_last;	/* first journal slot represented by the next tile */
-        psc_spinlock_t		 pjst_lock;
+	uint32_t		 pjst_first;	/* first journal slot represented by the tile */
+	uint32_t		 pjst_last;	/* first journal slot represented by the next tile */
+	psc_spinlock_t		 pjst_lock;
 };
 
 enum PJ_SHDW_TILE_STATES {
 	PJ_SHDW_TILE_NONE	= (0 << 0),
 	PJ_SHDW_TILE_FREE	= (1 << 0),
-        PJ_SHDW_TILE_ACTIVE	= (1 << 1),	/* current tile being used -- has free slots */
+	PJ_SHDW_TILE_ACTIVE	= (1 << 1),	/* current tile being used -- has free slots */
 	PJ_SHDW_TILE_FULL	= (1 << 3)	/* All entries have been allocated */
 };
 
@@ -74,16 +74,16 @@ struct psc_journal;
 /* In-memory 'journal shadowing'.
  */
 struct psc_journal_shdw {
-        int32_t				 pjs_ntiles;            	/* Number of tiles */
-        int32_t				 pjs_curtile;           	/* Current tile index */
-        int32_t				 pjs_tilesize;			/* Number of entries per tile */
-        struct psc_journal_shdw_tile	*pjs_tiles[PJ_SHDW_NTILES];	/* tile buffer pointers */
+	int32_t				 pjs_ntiles;			/* Number of tiles */
+	int32_t				 pjs_curtile;			/* Current tile index */
+	int32_t				 pjs_tilesize;			/* Number of entries per tile */
+	struct psc_journal_shdw_tile	*pjs_tiles[PJ_SHDW_NTILES];	/* tile buffer pointers */
 
 	struct psc_journal_xidhndl	*pjs_xidhndl;			/* first transaction that needs special processing */
 
-        uint32_t			 pjs_endslot;			/* last slot covered by the tiles */
+	uint32_t			 pjs_endslot;			/* last slot covered by the tiles */
 	uint32_t			 pjs_state;
-        psc_spinlock_t			 pjs_lock;        		/* Sync between logwrite and shdwthr */
+	psc_spinlock_t			 pjs_lock;			/* Sync between logwrite and shdwthr */
 	struct psc_waitq		 pjs_waitq;
 	struct psc_journal		*pjs_journal;
 };
@@ -106,7 +106,7 @@ struct psc_journal {
 #define PJF_NONE		0
 #define PJF_WANTBUF		(1 << 0)
 #define PJF_WANTSLOT		(1 << 1)
-#define PJF_SHADOW              (1 << 2)
+#define PJF_SHADOW		(1 << 2)
 
 typedef void (*psc_jhandler)(struct psc_dynarray *, int *);
 
@@ -121,9 +121,9 @@ typedef void (*psc_jhandler)(struct psc_dynarray *, int *);
 #define PJE_STRTUP		(1 << 1)	/* system startup */
 #define PJE_XSTART		(1 << 2)	/* start a transaction */
 #define PJE_XCLOSE		(1 << 3)	/* close a transaction */
-#define PJE_XSNGL               (1 << 4)
+#define PJE_XSNGL		(1 << 4)	/* transaction begins and ends insantly*/
 #define PJE_XNORML		(1 << 5)	/* normal transaction data */
-#define PJE_LASTBIT		5		/* denote the last used bit */
+#define _PJE_FLSHFT		(1 << 6)	/* denote the last used bit */
 
 /*
  * psc_journal_enthdr - journal entry header.
@@ -207,6 +207,6 @@ struct psc_journal_xidhndl
 	*pjournal_xnew(struct psc_journal *);
 int	 pjournal_xadd(struct psc_journal_xidhndl *, int, void *, size_t);
 int	 pjournal_xend(struct psc_journal_xidhndl *);
-int      pjournal_xadd_sngl(struct psc_journal *, int, void *, size_t);
+int	 pjournal_xadd_sngl(struct psc_journal *, int, void *, size_t);
 
 #endif /* _PFL_JOURNAL_H_ */
