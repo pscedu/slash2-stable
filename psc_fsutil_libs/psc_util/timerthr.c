@@ -34,7 +34,6 @@
 	    ((tvp)->tv_usec cmp (uvp)->tv_usec) :			\
 	    ((tvp)->tv_sec + (s) cmp (uvp)->tv_sec))
 
-
 struct timeval psc_tiosthr_lastv[IST_NINTV];
 
 void *

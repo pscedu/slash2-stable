@@ -69,6 +69,10 @@
 #define PJ_GETENTOFF(pj, i)						\
 	((off_t)(pj)->pj_hdr->pjh_start_off + (i) * PJ_PJESZ(pj))
 
+struct psc_journalthr {
+	struct psc_journal *pjt_pj;
+};
+
 struct psc_waitq	pjournal_tilewaitq = PSC_WAITQ_INIT;
 psc_spinlock_t		pjournal_tilewaitqlock = LOCK_INITIALIZER;
 
@@ -907,7 +911,7 @@ pjournal_shdw_del_xidhndl(struct psc_journal *pj, uint64_t xid)
 
 	PJ_LOCK(pj);
 	if (xh == NULL) {
-		xh = psclist_first_entry(&pj->pj_pndgxids, 
+		xh = psclist_first_entry(&pj->pj_pndgxids,
 			   struct psc_journal_xidhndl, pjx_lentry);
 	}
 	while (xh) {
@@ -1077,7 +1081,8 @@ void *
 pjournal_shdwthr_main(__unusedx void *arg)
 {
 	struct psc_thread *thr = pscthr_get();
-	struct psc_journal *pj = thr->pscthr_private;
+	struct psc_journalthr *pjt = thr->pscthr_private;
+	struct psc_journal *pj = pjt->pjt_pj;
 	struct psc_journal_shdw *pjs = pj->pj_shdw;
 	struct psc_journal_shdw_tile *pjst;
 	int32_t i;
@@ -1091,7 +1096,8 @@ pjournal_shdwthr_main(__unusedx void *arg)
 		for (i = 0; i < pjs->pjs_ntiles; i++) {
 			pjst = pjs->pjs_tiles[i];
 			spinlock(&pjst->pjst_lock);
-			if (!(pjst->pjst_state & PJ_SHDW_TILE_FULL) && rv != ETIMEDOUT) {
+			if (!(pjst->pjst_state & PJ_SHDW_TILE_FULL) &&
+			    rv != ETIMEDOUT) {
 				freelock(&pjst->pjst_lock);
 				continue;
 			}
@@ -1100,17 +1106,18 @@ pjournal_shdwthr_main(__unusedx void *arg)
 			pjournal_shdw_preptile(pjst, pj);
 		}
 		spinlock(&pjournal_tilewaitqlock);
-		rv = psc_waitq_waitrel_s(&pjournal_tilewaitq, &pjournal_tilewaitqlock, PJ_SHDW_MAXAGE);
+		rv = psc_waitq_waitrel_s(&pjournal_tilewaitq,
+		    &pjournal_tilewaitqlock, PJ_SHDW_MAXAGE);
 	}
 	return (NULL);
 }
 
 __static void
-pjournal_init_shdw(struct psc_journal *pj)
+pjournal_init_shdw(int thrtype, const char *thrname, struct psc_journal *pj)
 {
+	struct psc_journalthr *pjt;
 	struct psc_thread *thr;
-	int i;
-	int size;
+	int i, size;
 
 	psc_assert(pj->pj_hdr->pjh_options & PJF_SHADOW);
 	psc_assert(!pj->pj_shdw);
@@ -1137,11 +1144,10 @@ pjournal_init_shdw(struct psc_journal *pj)
 	}
 	psc_assert(pj->pj_shdw->pjs_endslot == PJ_SHDW_NTILES * PJ_SHDW_TILESIZE);
 
-	thr = pscthr_init(JRNLTHRT_SHDW, 0, pjournal_shdwthr_main, NULL, 0,
-			  "pjrnlshdw");
-	psc_assert(thr);
-
-	thr->pscthr_private = pj;
+	thr = pscthr_init(thrtype, 0, pjournal_shdwthr_main,
+	    NULL, sizeof(*pjt), thrname);
+	pjt = thr->pscthr_private;
+	pjt->pjt_pj = pj;
 	pscthr_setready(thr);
 }
 
@@ -1152,7 +1158,9 @@ pjournal_init_shdw(struct psc_journal *pj)
  * Returns: 0 on success, -1 on error.
  */
 struct psc_journal *
-pjournal_replay(const char *fn, psc_jhandler pj_handler) {
+pjournal_replay(const char *fn, psc_jhandler pj_handler, int thrtype,
+    const char *thrname)
+{
 	int				 i;
 	int				 rc;
 	struct psc_journal		*pj;
@@ -1243,7 +1251,7 @@ pjournal_replay(const char *fn, psc_jhandler pj_handler) {
 	}
 
 	if (pj->pj_hdr->pjh_options & PJF_SHADOW)
-		pjournal_init_shdw(pj);
+		pjournal_init_shdw(thrtype, thrname, pj);
 
 	psc_info("journal replayed: %d log entries with %d transactions "
 	    "have been redone, error = %d", nents, ntrans, nerrs);

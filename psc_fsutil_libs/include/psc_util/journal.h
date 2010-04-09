@@ -26,6 +26,8 @@
 #include "psc_util/thread.h"
 #include "psc_util/waitq.h"
 
+struct psc_journal;
+
 #define	PJ_MAX_TRY		3		/* number of retry before giving up */
 #define	PJ_MAX_BUF		8		/* number of journal buffers to keep around */
 
@@ -40,37 +42,34 @@
 #define PJH_VERSION		0x02
 
 struct psc_journal_hdr {
-	uint64_t		pjh_magic;
-	uint64_t		pjh_start_off;
-	uint32_t		pjh_entsz;
-	uint32_t		pjh_nents;
-	uint32_t		pjh_version;
-	uint32_t		pjh_options;
-	uint32_t		pjh_readahead;
-	uint32_t		pjh__pad;
-	uint64_t		pjh_chksum;	/* keep it last and aligned at a 8 byte boundary */
+	uint64_t			 pjh_magic;
+	uint64_t			 pjh_start_off;
+	uint32_t			 pjh_entsz;
+	uint32_t			 pjh_nents;
+	uint32_t			 pjh_version;
+	uint32_t			 pjh_options;
+	uint32_t			 pjh_readahead;
+	uint32_t			 pjh__pad;
+	uint64_t			 pjh_chksum;	/* keep it last and aligned at a 8 byte boundary */
 #define pjh_iolen pjh_start_off
 };
 
-#define JRNLTHRT_SHDW		(-1)
-
 struct psc_journal_shdw_tile {
-	void			*pjst_base;	/* memory for log entries */
-	uint8_t			 pjst_state;
-	uint32_t		 pjst_tail;	/* first entry that may need to be processed */
-	uint32_t		 pjst_first;	/* first journal slot represented by the tile */
-	uint32_t		 pjst_last;	/* first journal slot represented by the next tile */
-	psc_spinlock_t		 pjst_lock;
+	void				*pjst_base;	/* memory for log entries */
+	uint8_t				 pjst_state;
+	uint32_t			 pjst_tail;	/* first entry that may need to be processed */
+	uint32_t			 pjst_first;	/* first journal slot represented by the tile */
+	uint32_t			 pjst_last;	/* first journal slot represented by the next tile */
+	psc_spinlock_t			 pjst_lock;
 };
 
 enum PJ_SHDW_TILE_STATES {
-	PJ_SHDW_TILE_NONE	= (0 << 0),
-	PJ_SHDW_TILE_FREE	= (1 << 0),
-	PJ_SHDW_TILE_ACTIVE	= (1 << 1),	/* current tile being used -- has free slots */
-	PJ_SHDW_TILE_FULL	= (1 << 3)	/* All entries have been allocated */
+	PJ_SHDW_TILE_NONE		= (0 << 0),
+	PJ_SHDW_TILE_FREE		= (1 << 0),
+	PJ_SHDW_TILE_ACTIVE		= (1 << 1),	/* current tile being used -- has free slots */
+	PJ_SHDW_TILE_FULL		= (1 << 3)	/* All entries have been allocated */
 };
 
-struct psc_journal;
 /* In-memory 'journal shadowing'.
  */
 struct psc_journal_shdw {
@@ -97,7 +96,7 @@ struct psc_journal {
 	struct psclist_head	 pj_pndgxids;
 	struct psc_dynarray	 pj_bufs;
 	struct psc_waitq	 pj_waitq;
-	struct psc_journal_shdw *pj_shdw;
+	struct psc_journal_shdw	*pj_shdw;
 	int			 pj_fd;		/* open file descriptor to backing disk file */
 	int			 pj_flags;
 	uint32_t		 pj_nextwrite;	/* next entry slot to write to */
@@ -181,7 +180,6 @@ struct psc_journal_enthdr {
 #define	PJX_XCLOSE		 (1 << 1)
 #define	PJX_XSNGL		 (1 << 2)
 
-
 struct psc_journal_xidhndl {
 	uint64_t		 pjx_xid;
 	int			 pjx_sid;
@@ -198,7 +196,7 @@ struct psc_journal_xidhndl {
 
 /* definitions of journal handling functions */
 struct psc_journal
-	*pjournal_replay(const char *, psc_jhandler);
+	*pjournal_replay(const char *, psc_jhandler, int, const char *);
 int	 pjournal_dump(const char *, int);
 int	 pjournal_format(const char *, uint32_t, uint32_t, uint32_t, uint32_t);
 
