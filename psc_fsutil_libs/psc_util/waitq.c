@@ -188,6 +188,13 @@ psc_waitq_waitrel(__unusedx struct psc_waitq *q,
 }
 
 int
+_psc_waitq_waitrelv(__unusedx struct psc_waitq *wq,
+    __unusedx psc_spinlock_t *lk, __unusedx long s, __unusedx long ns)
+{
+	psc_fatalx("wait will sleep forever, single threaded");
+}
+
+int
 psc_waitq_waitabs(__unusedx struct psc_waitq *q,
     __unusedx psc_spinlock_t *k,
     __unusedx const struct timespec *abstime)
