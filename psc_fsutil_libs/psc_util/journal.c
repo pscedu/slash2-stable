@@ -920,7 +920,8 @@ pjournal_shdw_del_xidhndl(struct psc_journal *pj, uint64_t xid)
 			found = 1;
 			break;
 		}
-		xh = (struct psc_journal_xidhndl *)xh->pjx_lentry.znext;
+		xh = (struct psc_journal_xidhndl *)
+			psclist_next_entry(&pj->pj_pndgxids, xh, pjx_lentry);
 	}
 	PJ_ULOCK(pj);
 }
