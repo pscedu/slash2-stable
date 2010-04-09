@@ -77,7 +77,6 @@ pfl
 - make the timer thread track a global timeval which other threads can
   use up to second resolution to ease syscalls
 - add func args to pfl_enter()
-- you can't sort the mwc's in a multiwait without reordering the mask bitfield
 - add relative timestamps to psclog
 
 zest
