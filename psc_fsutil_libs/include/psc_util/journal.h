@@ -108,6 +108,7 @@ struct psc_journal {
 #define PJF_SHADOW		(1 << 2)
 
 typedef void (*psc_jhandler)(struct psc_dynarray *, int *);
+typedef void (*psc_shdw_handler)(struct psc_journal_enthdr *);
 
 #define PJE_XID_NONE		0				/* invalid transaction ID */
 #define PJE_MAGIC		UINT64_C(0x45678912aabbccdd)	/* magic number for each journal entry */
@@ -124,13 +125,6 @@ typedef void (*psc_jhandler)(struct psc_dynarray *, int *);
 #define PJE_XNORML		(1 << 5)	/* normal transaction data */
 
 #define _PJE_FLSHFT		(1 << 6)	/* denote the last used bit */
-
-#define	PJE_BMAP_REPL		(_PJE_FLSHFT << 0)
-#define	PJE_BMAP_SEQ		(_PJE_FLSHFT << 2)
-#define	PJE_INO_ADDREPL		(_PJE_FLSHFT << 3)
-#define	PJE_NAMESPACE		(_PJE_FLSHFT << 4)
-
-struct bmapc_memb;
 
 /*
  * psc_journal_enthdr - journal entry header.
@@ -204,7 +198,7 @@ struct psc_journal_xidhndl {
 
 /* definitions of journal handling functions */
 struct psc_journal
-	*pjournal_replay(const char *, psc_jhandler, int, const char *);
+	*pjournal_replay(const char *, psc_jhandler, psc_shdw_handler, int, const char *);
 int	 pjournal_dump(const char *, int);
 int	 pjournal_format(const char *, uint32_t, uint32_t, uint32_t, uint32_t);
 
