@@ -939,13 +939,12 @@ void
 pjournal_shdw_proctile(struct psc_journal_shdw_tile *pjst,
 		const struct psc_journal *pj)
 {
-	int				 i;
 	struct psc_journal_enthdr	*pje;
 	struct psc_journal_shdw		*pjs = pj->pj_shdw;
 
 	spinlock(&pjst->pjst_lock);
 	while (pjst->pjst_tail < pjst->pjst_first + pjs->pjs_tilesize) {
-		pje = TILE_GETENT(pj, pjst, i);
+		pje = TILE_GETENT(pj, pjst, pjst->pjst_tail);
 		/*
 		 * If the log entry has not been written, we break.  This means
 		 * we only process log entries in order.
