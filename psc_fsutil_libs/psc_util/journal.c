@@ -941,8 +941,18 @@ pjournal_shdw_proctile(struct psc_journal_shdw_tile *pjst,
 	struct psc_journal_enthdr	*pje;
 	struct psc_journal_shdw		*pjs = pj->pj_shdw;
 
-	for (i = 0; i < pjs->pjs_tilesize; i++) {
+	for (i = pjst->pjst_tail; i < pjs->pjs_tilesize; i++) {
 		pje = (struct psc_journal_enthdr *)((char *)pjst->pjst_base + PJ_PJESZ(pj) * i);
+		/*
+		 * If the log entry has not been written, we break.  This means
+		 * we only process log entries in order.
+		 */
+		if (pje->pje_type & PJE_FORMAT)
+			break;
+		/*
+		 * If we are not interested in the log entry, move on to the next
+		 * log entry.
+		 */
 		if (!(pje->pje_type & PJE_XSNGL))
 			continue;
 		(*pjournal_shadow_handler)(pje);
