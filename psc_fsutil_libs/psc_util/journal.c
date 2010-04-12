@@ -985,6 +985,11 @@ pjournal_shdw_preptile(struct psc_journal_shdw_tile *pjst,
 
 	spinlock(&pjs->pjs_lock);
 	spinlock(&pjst->pjst_lock);
+	if (pjst->pjst_tail < pjst->pjst_first + pjs->pjs_tilesize) {
+		freelock(&pjst->pjst_lock);
+		freelock(&pjs->pjs_lock);
+		return;
+	}
 
 	pjst->pjst_state = PJ_SHDW_TILE_FREE;
 	for (i = 0; i < pjs->pjs_tilesize; i++) {
