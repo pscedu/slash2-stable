@@ -41,6 +41,9 @@ struct psc_journal;
 #define PJH_MAGIC		UINT64_C(0x45678912aabbccff)	/* magic number of the journal header */
 #define PJH_VERSION		0x02
 
+#define PJH_OPT_NONE		0x00
+#define PJH_OPT_SHADOW		0x01
+
 struct psc_journal_hdr {
 	uint64_t			 pjh_magic;
 	uint64_t			 pjh_start_off;
@@ -105,7 +108,6 @@ struct psc_journal {
 #define PJF_NONE		0
 #define PJF_WANTBUF		(1 << 0)
 #define PJF_WANTSLOT		(1 << 1)
-#define PJF_SHADOW		(1 << 2)
 
 #define PJE_XID_NONE		0				/* invalid transaction ID */
 #define PJE_MAGIC		UINT64_C(0x45678912aabbccdd)	/* magic number for each journal entry */

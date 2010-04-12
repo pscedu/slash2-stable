@@ -220,7 +220,7 @@ pjournal_logwrite_internal(struct psc_journal_xidhndl *xh, uint32_t slot,
 	PSC_CRC64_FIN(&chksum);
 	pje->pje_chksum = chksum;
 
-	if (pj->pj_hdr->pjh_options & PJF_SHADOW)
+	if (pj->pj_hdr->pjh_options & PJH_OPT_SHADOW)
 		pjournal_shdw_logwrite(pj, pje, slot);
 
 	/* commit the log entry on disk before we can return */
@@ -1148,7 +1148,7 @@ pjournal_init_shdw(int thrtype, const char *thrname, struct psc_journal *pj)
 	struct psc_thread *thr;
 	int i, size;
 
-	psc_assert(pj->pj_hdr->pjh_options & PJF_SHADOW);
+	psc_assert(pj->pj_hdr->pjh_options & PJH_OPT_SHADOW);
 	psc_assert(!pj->pj_shdw);
 
 	pj->pj_shdw = PSCALLOC(sizeof(struct psc_journal_shdw));
@@ -1279,7 +1279,7 @@ pjournal_replay(const char *fn, psc_replay_handler pj_replay_handler,
 		psc_dynarray_add(&pj->pj_bufs, pje);
 	}
 
-	if (pj->pj_hdr->pjh_options & PJF_SHADOW)
+	if (pj->pj_hdr->pjh_options & PJH_OPT_SHADOW)
 		pjournal_init_shdw(thrtype, thrname, pj);
 
 	pjournal_shadow_handler = pj_shadow_handler;
