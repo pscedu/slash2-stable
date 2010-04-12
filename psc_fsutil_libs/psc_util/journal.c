@@ -301,7 +301,8 @@ pjournal_logwrite(struct psc_journal_xidhndl *xh, int type, void *data,
 	 */
 	PJ_LOCK(pj);
 	slot = pj->pj_nextwrite;
-	t = psclist_first_entry(&pj->pj_pndgxids, struct psc_journal_xidhndl, pjx_lentry);
+	t = psclist_first_entry(&pj->pj_pndgxids,
+	    struct psc_journal_xidhndl, pjx_lentry);
 	if (t) {
 		if (t->pjx_tailslot == slot) {
 			psc_warnx("Journal %p write is blocked on slot %d "
@@ -738,7 +739,8 @@ pjournal_format(const char *fn, uint32_t nents, uint32_t entsz,
 	 * The number of log entries must be a multiple of the tile size and
 	 * it must be no less than the sum of all tile sizes.
 	 */
-	nents = ((nents + PJ_SHDW_TILESIZE - 1) / PJ_SHDW_TILESIZE) * PJ_SHDW_TILESIZE;
+	nents = ((nents + PJ_SHDW_TILESIZE - 1) /
+	    PJ_SHDW_TILESIZE) * PJ_SHDW_TILESIZE;
 	if (nents < PJ_SHDW_TILESIZE * PJ_SHDW_NTILES)
 		nents = PJ_SHDW_TILESIZE * PJ_SHDW_NTILES;
 
@@ -943,7 +945,7 @@ pjournal_shdw_proctile(struct psc_journal_shdw_tile *pjst,
 
 	spinlock(&pjst->pjst_lock);
 	while (pjst->pjst_tail < pjst->pjst_first + pjs->pjs_tilesize) {
-		pje = (struct psc_journal_enthdr *)((char *)pjst->pjst_base + PJ_PJESZ(pj) * i);
+		pje = TILE_GETENT(pj, pjst, i);
 		/*
 		 * If the log entry has not been written, we break.  This means
 		 * we only process log entries in order.
@@ -1102,10 +1104,9 @@ pjournal_shdw_logwrite(struct psc_journal *pj,
 	freelock(&pjst->pjst_lock);
 }
 
-void *
-pjournal_shdwthr_main(__unusedx void *arg)
+void 
+pjournal_shdwthr_main(struct psc_thread *thr)
 {
-	struct psc_thread *thr = pscthr_get();
 	struct psc_journalthr *pjt = thr->pscthr_private;
 	struct psc_journal *pj = pjt->pjt_pj;
 	struct psc_journal_shdw *pjs = pj->pj_shdw;
@@ -1134,7 +1135,6 @@ pjournal_shdwthr_main(__unusedx void *arg)
 		rv = psc_waitq_waitrel_s(&pjournal_tilewaitq,
 		    &pjournal_tilewaitqlock, PJ_SHDW_MAXAGE);
 	}
-	return (NULL);
 }
 
 __static void
@@ -1183,8 +1183,8 @@ pjournal_init_shdw(int thrtype, const char *thrname, struct psc_journal *pj)
  * Returns: 0 on success, -1 on error.
  */
 struct psc_journal *
-pjournal_replay(const char *fn, psc_replay_handler pj_replay_handler, psc_shadow_handler pj_shadow_handler, int thrtype,
-    const char *thrname)
+pjournal_replay(const char *fn, psc_replay_handler pj_replay_handler,
+    psc_shadow_handler pj_shadow_handler, int thrtype, const char *thrname)
 {
 	int				 i;
 	int				 rc;

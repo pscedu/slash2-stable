@@ -199,7 +199,7 @@ typedef void (*psc_replay_handler)(struct psc_dynarray *, int *);
 /* definitions of journal handling functions */
 int			 pjournal_dump(const char *, int);
 int			 pjournal_format(const char *, uint32_t, uint32_t, uint32_t, uint32_t);
-struct psc_journal	*pjournal_replay(const char *, psc_replay_handler, 
+struct psc_journal	*pjournal_replay(const char *, psc_replay_handler,
 				psc_shadow_handler, int, const char *);
 
 /* definitions of transaction handling functions */
