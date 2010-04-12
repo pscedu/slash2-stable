@@ -941,21 +941,32 @@ pjournal_shdw_proctile(struct psc_journal_shdw_tile *pjst,
 	struct psc_journal_enthdr	*pje;
 	struct psc_journal_shdw		*pjs = pj->pj_shdw;
 
-	for (i = pjst->pjst_tail; i < pjs->pjs_tilesize; i++) {
+	spinlock(&pjst->pjst_lock);
+	while (pjst->pjst_tail < pjst->pjst_first + pjs->pjs_tilesize) {
 		pje = (struct psc_journal_enthdr *)((char *)pjst->pjst_base + PJ_PJESZ(pj) * i);
 		/*
 		 * If the log entry has not been written, we break.  This means
 		 * we only process log entries in order.
 		 */
-		if (pje->pje_type & PJE_FORMAT)
+		if (pje->pje_type & PJE_FORMAT) {
+			freelock(&pjst->pjst_lock);
 			break;
+		}
 		/*
 		 * If we are not interested in the log entry, move on to the next
 		 * log entry.
 		 */
 		if (!(pje->pje_type & PJE_XSNGL))
 			continue;
+
+		/*
+		 * Move the pointer forward for us, ignoring wrap-araound.  Note
+		 * that another thread can bump it further as soon as we drop the lock.
+		 */
+		pjst->pjst_tail++;
+		freelock(&pjst->pjst_lock);
 		(*pjournal_shadow_handler)(pje);
+		spinlock(&pjst->pjst_lock);
 	}
 }
 
