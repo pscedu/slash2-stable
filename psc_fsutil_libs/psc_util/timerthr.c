@@ -36,8 +36,8 @@
 
 struct timeval psc_tiosthr_lastv[IST_NINTV];
 
-void *
-psc_tiosthr_main(__unusedx void *arg)
+void
+psc_tiosthr_main(__unusedx struct psc_thread *thr)
 {
 	struct psc_iostatv *istv;
 	struct psc_iostats *ist;
@@ -45,7 +45,7 @@ psc_tiosthr_main(__unusedx void *arg)
 	uint64_t intv_len;
 	int i, stoff;
 
-	for (;;) {
+	while (pscthr_run()) {
 		PFL_GETTIME(&tv);
 		usleep(1000000 - tv.tv_usec);
 		PFL_GETTIME(&tv);

@@ -55,8 +55,8 @@ usage(void)
 	exit(1);
 }
 
-void *
-thr_main(__unusedx void *arg)
+void
+thr_main(__unusedx struct psc_thread *thr)
 {
 	int *p, i;
 
@@ -68,7 +68,6 @@ thr_main(__unusedx void *arg)
 		usleep(1);
 	}
 	atomic_dec(&nworkers);
-	return 0;
 }
 
 int

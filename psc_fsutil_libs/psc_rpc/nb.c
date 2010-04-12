@@ -86,12 +86,10 @@ pscrpc_nbreqset_flush(struct pscrpc_nbreqset *nbs)
 int
 pscrpc_nbreqset_reap(struct pscrpc_nbreqset *nbs)
 {
-	int    nreaped=0, nchecked=0;
-	struct psclist_head          *i, *j;
-	struct pscrpc_request     *req;
+	int nreaped = 0, nchecked = 0, timeout = 1;
 	struct pscrpc_request_set *set = &nbs->nb_reqset;
+	struct pscrpc_request *req, *next;
 	struct l_wait_info lwi;
-	int timeout = 1;
 
 	spinlock(&nbs->nb_lock);
 	if (nbs->nb_flags & NBREQSET_WORK_INPROG) {
@@ -101,7 +99,7 @@ pscrpc_nbreqset_reap(struct pscrpc_nbreqset *nbs)
 		nbs->nb_flags |= NBREQSET_WORK_INPROG;
 		freelock(&nbs->nb_lock);
 	}
-		
+
 	lwi = LWI_TIMEOUT(timeout, NULL, NULL);
 	psc_cli_wait_event(&set->set_waitq,
 		       (nreaped=pscrpc_check_set(set, 0)), &lwi);
@@ -115,10 +113,9 @@ pscrpc_nbreqset_reap(struct pscrpc_nbreqset *nbs)
 
 	pscrpc_set_lock(set);
 
-	psclist_for_each_safe(i, j, &set->set_requests) {
+	psclist_for_each_entry_safe(req, next,
+	    &set->set_requests, rq_set_chain_lentry) {
 		nchecked++;
-		req = psclist_entry(i, struct pscrpc_request,
-				    rq_set_chain_lentry);
 		DEBUG_REQ(PLL_INFO, req, "reap if Completed");
 		/*
 		 * Move sent rpcs to the set_requests list
@@ -157,14 +154,13 @@ pscrpc_nbreqset_reap(struct pscrpc_nbreqset *nbs)
 	return (nreaped);
 }
 
-__dead void *
-_pscrpc_nbreapthr_main(void *arg)
+void
+_pscrpc_nbreapthr_main(struct psc_thread *thr)
 {
 	struct pscrpc_nbreapthr *pnbt;
-	struct psc_thread *thr = arg;
 
 	pnbt = thr->pscthr_private;
-	for (;;) {
+	while (pscthr_run()) {
 		pscrpc_nbreqset_reap(pnbt->pnbt_nbset);
 		psc_waitq_waitrel_s(&pnbt->pnbt_nbset->nb_waitq, NULL, 1);
 	}

@@ -820,8 +820,8 @@ psc_ctl_read(int s, void *buf, size_t siz)
 	}
 }
 
-void *
-psc_ctlcli_wr_main(__unusedx void *arg)
+void
+psc_ctlcli_wr_main(__unusedx struct psc_thread *thr)
 {
 	struct psc_ctlmsg *pcm, *nextpcm;
 	ssize_t siz;
@@ -836,7 +836,6 @@ psc_ctlcli_wr_main(__unusedx void *arg)
 	}
 	if (shutdown(psc_ctl_sock, SHUT_WR) == -1)
 		psc_fatal("shutdown");
-	return (NULL);
 }
 
 void

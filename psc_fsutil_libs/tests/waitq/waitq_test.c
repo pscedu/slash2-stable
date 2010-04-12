@@ -47,10 +47,9 @@ usage(void)
 	exit(1);
 }
 
-void *
-child_main(__unusedx void *arg)
+void
+child_main(struct psc_thread *thr)
 {
-	struct psc_thread *t;
 	int i;
 
 	/*
@@ -58,17 +57,13 @@ child_main(__unusedx void *arg)
 	 */
 	psc_waitq_wait(&waitq, NULL);
 
-	t = pscthr_get();
+	psc_dbg("after pseudo barrier");
 
-	psc_dbg("t%d: after pseudo barrier", t->pscthr_thrid);
-
-	for (i=0; i < iterations; i++) {
+	for (i = 0; i < iterations; i++) {
 		psc_waitq_wait(&waitq, NULL);
 		psc_dbg("tid=%d, i=%d awake",
-			t->pscthr_thrid, i);
+		    thr->pscthr_thrid, i);
 	}
-
-	return NULL;
 }
 
 int

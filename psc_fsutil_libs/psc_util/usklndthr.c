@@ -23,15 +23,13 @@
 #include "psc_util/thread.h"
 #include "psc_util/usklndthr.h"
 
-void *
-psc_usklndthr_begin(void *arg)
+void
+psc_usklndthr_begin(struct psc_thread *thr)
 {
-	struct psc_thread *thr = arg;
 	struct psc_usklndthr *put;
 
 	put = thr->pscthr_private;
 	put->put_startf(put->put_arg);
-	return (NULL);
 }
 
 int

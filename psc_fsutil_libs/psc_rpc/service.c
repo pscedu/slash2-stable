@@ -631,19 +631,20 @@ pscrpc_retry_rqbds(void *arg)
 	return (-ETIMEDOUT);
 }
 
-static void *
-pscrpc_main(struct psc_thread *thread, struct pscrpc_service *svc)
+__static void
+pscrpcthr_main(struct psc_thread *thr)
 {
 	struct pscrpc_reply_state *rs;
+	struct pscrpc_service *svc;
 	struct pscrpc_thread *prt;
 	struct sigaction sa;
 	int rc = 0;
 
-	prt = pscrpcthr(thread);
-	psc_assert(svc != NULL);
-
-	psc_dbg("thread %p pscthr_type is %d", thread,
-		thread->pscthr_type);
+	prt = pscrpcthr(thr);
+	if (prt->prt_svh->svh_initf)
+		prt->prt_svh->svh_initf();
+	svc = prt->prt_svh->svh_service;
+	psc_assert(svc);
 
 	memset(&sa, 0, sizeof(sa));
 	sa.sa_handler = SIG_IGN;
@@ -651,7 +652,7 @@ pscrpc_main(struct psc_thread *thread, struct pscrpc_service *svc)
 		psc_fatal("sigaction");
 
 	if (svc->srv_init != NULL) {
-		rc = svc->srv_init(thread);
+		rc = svc->srv_init(thr);
 		if (rc)
 			goto out;
 	}
@@ -684,11 +685,11 @@ pscrpc_main(struct psc_thread *thread, struct pscrpc_service *svc)
 		       "svc->srv_n_active_reqs %d svc->srv_nthreads %d"
 		       "COND 1=%d, COND 2=%d, COND 3=%d",
 
-		       thread->pscthr_run, svc->srv_n_difficult_replies,
+		       thr->pscthr_run, svc->srv_n_difficult_replies,
 		       psclist_empty(&svc->srv_idle_rqbds), svc->srv_rqbd_timeout,
 		       psclist_empty (&svc->srv_reply_queue), psclist_empty(&svc->srv_request_queue),
 		       svc->srv_n_active_reqs, svc->srv_nthreads,
-		       (thread->pscthr_run != 0 && svc->srv_n_difficult_replies == 0),
+		       (thr->pscthr_run != 0 && svc->srv_n_difficult_replies == 0),
 		       (!psclist_empty(&svc->srv_idle_rqbds) && svc->srv_rqbd_timeout == 0),
 		       (!psclist_empty (&svc->srv_request_queue) &&
 			(svc->srv_n_difficult_replies == 0 ||
@@ -696,7 +697,7 @@ pscrpc_main(struct psc_thread *thread, struct pscrpc_service *svc)
 		       );
 		*/
 		psc_svr_wait_event(&svc->srv_waitq,
-				   (!(thread->pscthr_flags & PTF_RUN) &&
+				   (!(thr->pscthr_flags & PTF_RUN) &&
 				    svc->srv_n_difficult_replies == 0) ||
 				   (!psclist_empty(&svc->srv_idle_rqbds) &&
 				    svc->srv_rqbd_timeout == 0) ||
@@ -723,7 +724,7 @@ pscrpc_main(struct psc_thread *thread, struct pscrpc_service *svc)
 		if (!psclist_empty (&svc->srv_request_queue) &&
 		    (svc->srv_n_difficult_replies == 0 ||
 		     svc->srv_n_active_reqs < (svc->srv_nthreads - 1)))
-			pscrpc_server_handle_request(svc, thread);
+			pscrpc_server_handle_request(svc, thr);
 
 		if (!psclist_empty(&svc->srv_idle_rqbds) &&
 		    pscrpc_server_post_idle_rqbds(svc) < 0) {
@@ -743,7 +744,7 @@ pscrpc_main(struct psc_thread *thread, struct pscrpc_service *svc)
 	 * deconstruct service specific state created by pscrpc_start_thread()
 	 */
 	if (svc->srv_done != NULL)
-		svc->srv_done(thread);
+		svc->srv_done(thr);
 
  out:
 	CDEBUG(D_NET, "service thread exiting: rc %d", rc);
@@ -751,14 +752,12 @@ pscrpc_main(struct psc_thread *thread, struct pscrpc_service *svc)
 	spinlock(&svc->srv_lock);
 	svc->srv_nthreads--;			/* must know immediately */
 #if 0 //ptlrpc
-	thread->t_id = rc;
-	thread->t_flags = SVC_STOPPED;
+	thr->t_id = rc;
+	thr->t_flags = SVC_STOPPED;
 
-	psc_waitq_wakeall(&thread->t_ctl_waitq);
+	psc_waitq_wakeall(&thr->t_ctl_waitq);
 #endif
 	freelock(&svc->srv_lock);
-
-	return NULL;
 }
 
 #if 0
@@ -1020,18 +1019,6 @@ pscrpc_init_svc(int nbufs, int bufsize, int max_req_size, int max_reply_size,
 	return NULL;
 }
 
-void *
-pscrpcthr_begin(void *arg)
-{
-	struct psc_thread *thr = arg;
-	struct pscrpc_thread *prt;
-
-	prt = thr->pscthr_private;
-	if (prt->prt_svh->svh_initf)
-		prt->prt_svh->svh_initf();
-	return (pscrpc_main(thr, prt->prt_svh->svh_service));
-}
-
 int
 pscrpcsvh_addthr(struct pscrpc_svc_handle *svh)
 {
@@ -1041,7 +1028,7 @@ pscrpcsvh_addthr(struct pscrpc_svc_handle *svh)
 
 	svc = svh->svh_service;
 	spinlock(&svc->srv_lock);
-	thr = pscthr_init(svh->svh_type, 0, pscrpcthr_begin, NULL,
+	thr = pscthr_init(svh->svh_type, 0, pscrpcthr_main, NULL,
 	    svh->svh_thrsiz, "%sthr%02d", svh->svh_svc_name,
 	    svh->svh_nthreads);
 	if (thr) {

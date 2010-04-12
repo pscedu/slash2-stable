@@ -81,8 +81,8 @@ center(const char *s, int width)
 	printf("%*s%s%*s", len, "", s, len, "");
 }
 
-__dead void *
-displaythr_main(__unusedx void *arg)
+void
+displaythr_main(__unusedx struct psc_thread *thr)
 {
 	char ratebuf[PSCFMT_HUMAN_BUFSIZ];
 	struct psc_iostats myist;

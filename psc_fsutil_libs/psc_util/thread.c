@@ -265,7 +265,8 @@ _pscthr_begin(void *arg)
 		spinlock(&thr->pscthr_lock);
 	} while ((thr->pscthr_flags & PTF_READY) == 0);
 	freelock(&thr->pscthr_lock);
-	return (thr->pscthr_startf(thr));
+	thr->pscthr_startf(thr);
+	return (thr);
 }
 
 /**
@@ -281,7 +282,7 @@ _pscthr_begin(void *arg)
  * @namefmt: application-specific printf(3) name for thread.
  */
 struct psc_thread *
-_pscthr_init(int type, int flags, void *(*startf)(void *),
+_pscthr_init(int type, int flags, void (*startf)(struct psc_thread *),
     void (*dtor)(void *), size_t privsiz, int memnid,
     const char *namefmt, ...)
 {
@@ -494,32 +495,27 @@ int
 pscthr_run(void)
 {
 	struct psc_thread *thr;
-	int dead;
+	int yield, run;
 
+	run = 0;
+	yield = 1;
 	thr = pscthr_get();
-	spinlock(&thr->pscthr_lock);
-	if ((thr->pscthr_flags & PTF_RUN) == 0)
-		do {
+	do {
+		spinlock(&thr->pscthr_lock);
+		if (thr->pscthr_flags & PTF_DEAD)
+			break;
+		if ((thr->pscthr_flags & PTF_RUN) == 0) {
 			psc_waitq_wait(&thr->pscthr_waitq,
 			    &thr->pscthr_lock);
-			spinlock(&thr->pscthr_lock);
-		} while ((thr->pscthr_flags) == 0);
-	dead = thr->pscthr_flags & PTF_DEAD;
-	freelock(&thr->pscthr_lock);
-	return (!dead);
-}
-
-/**
- * pscthr_run - Shared thread main loop.
- */
-void *
-pscthr_main(void *arg)
-{
-	struct psc_thread *thr = arg;
-
-	while (pscthr_run())
-		thr->pscthr_startf(thr);
-	return (thr);
+			yield = 0;
+			continue;
+		}
+		run = 1;
+		freelock(&thr->pscthr_lock);
+	} while (0);
+	if (yield)
+		sched_yield();
+	return (run);
 }
 
 struct psc_thread *

@@ -38,7 +38,7 @@ struct psc_thread {
 	pthread_t		   pscthr_pthread;		/* pthread_self() */
 	pid_t			   pscthr_thrid;		/* gettid(2) */
 
-	void			*(*pscthr_startf)(void *);	/* thread main */
+	void			 (*pscthr_startf)(struct psc_thread *);	/* thread main */
 	void			 (*pscthr_dtor)(void *);	/* custom destructor */
 
 	int			   pscthr_flags;		/* operational flags */
@@ -54,13 +54,16 @@ struct psc_thread {
 };
 
 /* behavioral flags to pass to pscthr_init() */
-#define PTF_FREE	(1 << 0)	/* thr mem should be free(3)'d on exit */
+#define PTF_FREE		(1 << 0)			/* thr mem must be free(3)'d on exit */
 
 /* internal operation flags */
-#define PTF_PAUSED	(1 << 1)	/* thread is frozen */
-#define PTF_RUN		(1 << 2)	/* thread should operate normally */
-#define PTF_READY	(1 << 3)	/* thread can start (used during initialization) */
-#define PTF_DEAD	(1 << 4)	/* thread will end pscthr_main() iteration */
+#define PTF_PAUSED		(1 << 1)			/* thread is frozen */
+#define PTF_RUN			(1 << 2)			/* thread should operate normally */
+#define PTF_READY		(1 << 3)			/* thread can start (used during init) */
+#define PTF_DEAD		(1 << 4)			/* thread will terminate now */
+
+#define PSCTHR_LOCK(thr)	spinlock(&(thr)->pscthr_lock)
+#define PSCTHR_UNLOCK(thr)	freelock(&(thr)->pscthr_lock)
 
 #define PSCTHR_MKCAST(label, name, type)				\
 static inline struct name *						\
@@ -82,19 +85,19 @@ label(struct psc_thread *pt)						\
 
 const char *
 	pscthr_getname(void);
+int	pscthr_run(void);
+void	pscthr_setdead(struct psc_thread *, int);
+void	pscthr_setloglevel(int, int);
 void	pscthr_setpause(struct psc_thread *, int);
 void	pscthr_setready(struct psc_thread *);
 void	pscthr_setrun(struct psc_thread *, int);
-void	pscthr_setdead(struct psc_thread *, int);
-int	pscthr_run(void);
-void	pscthr_setloglevel(int, int);
 
 pid_t	pfl_getsysthrid(void);
 
 struct psc_thread *pscthr_get(void);
 struct psc_thread *pscthr_get_canfail(void);
 struct psc_thread *
-	_pscthr_init(int, int, void *(*)(void *), void (*)(void *),
+	_pscthr_init(int, int, void (*)(struct psc_thread *), void (*)(void *),
 	    size_t, int, const char *, ...);
 
 extern struct psc_lockedlist	psc_threads;
