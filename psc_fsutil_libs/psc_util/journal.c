@@ -47,9 +47,8 @@
  *
  * A tile is a memory copy of a on-disk log region.  It is used to avoid I/O when a log
  * entry needs to be further processed after being written to the disk.  More than one
- * tiles are used for better performance.  These tiles must map to continuous region of
- * the on-disk log.  A tile at the tail is moved to the head when it is done mapping its
- * old region.
+ * tile is used for performance.  These tiles map continuous regions of the on-disk log.
+ * A tile at the tail is moved to the head when it is done mapping its old region.
  *
  * Whenever we write a log entry, we make a copy of it in a tile in addition to writing
  * it to the disk.  A tile is processed so that we can distill information into separate
@@ -57,7 +56,7 @@
  *
  * If a tile is full of log entries, we wake up a shadow thread to process its contents.
  * The shadow thread also wakes up on its own periodically to process log entries recorded
- * in a tile.  For simplicity, we don't track the age of each individual log entry. This
+ * in a tile.  For simplicity, we don't track the age of each individual log entry.  This
  * means a log entry can be processed any time after it is written.  We also cannot
  * guarantee when a log entry will be processed.  The shadow thread may fail to keep up
  * with an influx of log entries.
@@ -904,7 +903,7 @@ pjournal_dump(const char *fn, int verbose)
 }
 
 /*
- * Remove a transaction from the global pending list given its XID. This is
+ * Remove a transaction from the global pending list given its XID.  This is
  * only done for single transactions such as namespace operations.
  */
 void
@@ -1108,7 +1107,7 @@ pjournal_shdw_logwrite(struct psc_journal *pj,
 	freelock(&pjst->pjst_lock);
 }
 
-void 
+void
 pjournal_shdwthr_main(struct psc_thread *thr)
 {
 	struct psc_journalthr *pjt = thr->pscthr_private;
@@ -1120,7 +1119,7 @@ pjournal_shdwthr_main(struct psc_thread *thr)
 
 	while (pscthr_run()) {
 		/*
-		 * Look for full tiles and process them. If we woke up on our own,
+		 * Look for full tiles and process them.  If we woke up on our own,
 		 * process log entries in the current tile.
 		 */
 		for (i = 0; i < pjs->pjs_ntiles; i++) {
