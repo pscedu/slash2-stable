@@ -953,16 +953,16 @@ pjournal_shdw_proctile(struct psc_journal_shdw_tile *pjst,
 		if (pje->pje_type & PJE_FORMAT)
 			break;
 		/*
+		 * Move the pointer forward for ourselves, no wrap-araound.  Note
+		 * that another thread can bump it further as soon as we drop the lock.
+		 */
+		pjst->pjst_tail++;
+		/*
 		 * If we are not interested in the log entry, move on to the next
 		 * log entry.
 		 */
 		if (!(pje->pje_type & PJE_XSNGL))
 			continue;
-		/*
-		 * Move the pointer forward for us, ignoring wrap-araound.  Note
-		 * that another thread can bump it further as soon as we drop the lock.
-		 */
-		pjst->pjst_tail++;
 		freelock(&pjst->pjst_lock);
 		(*pjournal_shadow_handler)(pje);
 		spinlock(&pjst->pjst_lock);
