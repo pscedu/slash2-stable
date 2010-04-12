@@ -948,17 +948,14 @@ pjournal_shdw_proctile(struct psc_journal_shdw_tile *pjst,
 		 * If the log entry has not been written, we break.  This means
 		 * we only process log entries in order.
 		 */
-		if (pje->pje_type & PJE_FORMAT) {
-			freelock(&pjst->pjst_lock);
+		if (pje->pje_type & PJE_FORMAT)
 			break;
-		}
 		/*
 		 * If we are not interested in the log entry, move on to the next
 		 * log entry.
 		 */
 		if (!(pje->pje_type & PJE_XSNGL))
 			continue;
-
 		/*
 		 * Move the pointer forward for us, ignoring wrap-araound.  Note
 		 * that another thread can bump it further as soon as we drop the lock.
@@ -968,6 +965,7 @@ pjournal_shdw_proctile(struct psc_journal_shdw_tile *pjst,
 		(*pjournal_shadow_handler)(pje);
 		spinlock(&pjst->pjst_lock);
 	}
+	freelock(&pjst->pjst_lock);
 }
 
 /**
