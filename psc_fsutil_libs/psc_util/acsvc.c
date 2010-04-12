@@ -240,11 +240,6 @@ acsvc_svrmain(int s)
 				c->cmsg_type = SCM_RIGHTS;
 				*(int *)CMSG_DATA(c) = fd;
 			}
-#if USE_GDB_FORK_WORKAROUND
-			if (fd != 1) {
-				chown(arq.arq_fn, arq.arq_uid, arq.arq_gid);
-			}
-#endif
 			break;
 		case ACSOP_READLINK:
 			rc = readlink(arq.arq_fn,
@@ -304,8 +299,8 @@ acsvc_svrmain(int s)
 	}
 }
 
-__dead void *
-acsvc_climain(__unusedx void *arg)
+void
+acsvc_climain(__unusedx struct psc_thread *thr)
 {
 	struct access_pendreq *apr;
 	struct access_reply arp;
@@ -363,31 +358,6 @@ acsvc_climain(__unusedx void *arg)
 	}
 }
 
-#if USE_GDB_FORK_WORKAROUND
-
-static int acsvc_fd_server;
-
-__static __dead void *
-acsvc_svrmain_zestiond(__unusedx void *arg)
-{
-	acsvc_svrmain(acsvc_fd_server);
-}
-
-struct psc_thread *
-acsvc_init(int thrtype, __unusedx const char *name, __unusedx char **av)
-{
-	int fds[2];
-	if (socketpair(AF_LOCAL, SOCK_STREAM, PF_UNSPEC, fds) == -1)
-		psc_fatal("socketpair");
-
-	acsvc_fd_server = fds[0];
-	acsvc_fd = fds[1];
-	pscthr_init(thrtype, 0, acsvc_svrmain_zestiond, NULL, 0, "acsvc");
-	return (pscthr_init(thrtype, 0, acsvc_climain, NULL, 0, "zacsthr"));
-}
-
-#else
-
 struct psc_thread *
 acsvc_init(int thrtype, const char *name, char **av)
 {
@@ -417,8 +387,6 @@ acsvc_init(int thrtype, const char *name, char **av)
 
 	return (pscthr_init(thrtype, 0, acsvc_climain, NULL, 0, name));
 }
-
-#endif
 
 __static struct access_request *
 acsreq_new(int op, uid_t uid, gid_t gid)
