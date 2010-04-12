@@ -35,7 +35,7 @@
 
 #define PSC_FAULT_NBUCKETS	16
 
-static	int	fault_enabled = 0;
+static	int		fault_enabled = 0;
 
 atomic_t		psc_fault_count;
 struct psc_hashtbl	psc_fault_table;
@@ -46,7 +46,7 @@ psc_fault_init(void)
 	atomic_set(&psc_fault_count, 0);
 
 	psc_hashtbl_init(&psc_fault_table, PHTF_STR, struct psc_fault,
-		pflt_name, pflt_hentry, PSC_FAULT_NBUCKETS, NULL, "faults");
+	    pflt_name, pflt_hentry, PSC_FAULT_NBUCKETS, NULL, "faults");
 }
 
 int
@@ -62,12 +62,11 @@ psc_fault_add(const char *name)
 
 	i = 0;
 	rc = 0;
-	while (1) {
+	for (i = 0; psc_fault_names[i]; i++) {
 		if (psc_fault_names[i] == NULL)
-			return ENOENT;
+			return (ENOENT);
 		if (strcmp(name, psc_fault_names[i]) == 0)
 			break;
-		i++;
 	}
 
 	pflt = PSCALLOC(sizeof(*pflt));
@@ -148,13 +147,11 @@ psc_fault_register(const char *name, int delay, int begin, int chance, int count
 	if (strlen(name) >= sizeof(pflt->pflt_name))
 		return (ENAMETOOLONG);
 
-	i = 0;
-	while (1) {
+	for (i = 0; psc_fault_names[i]; i++) {
 		if (psc_fault_names[i] == NULL)
-			return ENOENT;
+			return (ENOENT);
 		if (strcmp(name, psc_fault_names[i]) == 0)
 			break;
-		i++;
 	}
 
 	pflt = PSCALLOC(sizeof(*pflt));
@@ -186,11 +183,11 @@ psc_fault_here(const char *name, int *rc)
 	struct psc_fault	*pflt;
 	int			 dice;
 
-	if (!fault_enabled) {
+	if (!fault_enabled)
 		return;
-	}
 
-	pflt = psc_hashtbl_search(&psc_fault_table, NULL, psc_fault_take_lock, name);
+	pflt = psc_hashtbl_search(&psc_fault_table,
+	    NULL, psc_fault_take_lock, name);
 	if (pflt == NULL)
 		return;
 
@@ -215,12 +212,10 @@ psc_fault_here(const char *name, int *rc)
 		return;
 	}
 	pflt->pflt_hits++;
-	if (pflt->pflt_delay) {
+	if (pflt->pflt_delay)
 		usleep(pflt->pflt_delay);
-	}
-	if (pflt->pflt_retval) {
+	if (pflt->pflt_retval)
 		*rc = pflt->pflt_retval;
-	}
 	psc_fault_unlock(pflt);
 }
 
