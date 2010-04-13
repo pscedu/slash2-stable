@@ -72,7 +72,7 @@ struct psc_journalthr {
 	struct psc_journal *pjt_pj;
 };
 
-void (*pjournal_shadow_handler)(struct psc_journal_enthdr *);
+void (*pjournal_shadow_handler)(struct psc_journal_enthdr *, int);
 
 struct psc_waitq	pjournal_tilewaitq = PSC_WAITQ_INIT;
 psc_spinlock_t		pjournal_tilewaitqlock = LOCK_INITIALIZER;
@@ -963,7 +963,7 @@ pjournal_shdw_proctile(struct psc_journal_shdw_tile *pjst,
 		if (!(pje->pje_type & PJE_XSNGL))
 			continue;
 		freelock(&pjst->pjst_lock);
-		(*pjournal_shadow_handler)(pje);
+		(*pjournal_shadow_handler)(pje, PJ_PJESZ(pj));
 		spinlock(&pjst->pjst_lock);
 	}
 	freelock(&pjst->pjst_lock);

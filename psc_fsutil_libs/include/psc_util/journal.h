@@ -195,8 +195,8 @@ struct psc_journal_xidhndl {
 #define	PJOURNAL_LOG_DUMP	1
 #define	PJOURNAL_LOG_REPLAY	2
 
-typedef void (*psc_shadow_handler)(struct psc_journal_enthdr *);
 typedef void (*psc_replay_handler)(struct psc_dynarray *, int *);
+typedef void (*psc_shadow_handler)(struct psc_journal_enthdr *, int);
 
 /* definitions of journal handling functions */
 int			 pjournal_dump(const char *, int);
