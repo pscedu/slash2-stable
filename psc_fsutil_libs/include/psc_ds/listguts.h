@@ -120,7 +120,8 @@ psclg_add_sorted(struct psc_listguts *plg, void *p,
  * psclg_sort - sort items in a list.
  * @lg: list to sort.
  * @sortf: sort routine, such as qsort(3) or mergesort(3).
- * @cmpf: comparison routine passed as argument to sortf().
+ * @cmpf: comparison routine passed as argument to sortf() which
+ *	operates on two pointer-to-a-pointer of type.
  */
 static __inline void
 psclg_sort(struct psc_listguts *plg, void (*sortf)(void *, size_t,
