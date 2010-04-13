@@ -27,22 +27,26 @@
 #include "psc_util/waitq.h"
 
 struct psc_journal;
+struct psc_journal_enthdr;
 
-#define	PJ_MAX_TRY		3		/* number of retry before giving up */
-#define	PJ_MAX_BUF		8		/* number of journal buffers to keep around */
+#define	PJ_MAX_TRY			3		/* number of retry before giving up */
+#define	PJ_MAX_BUF			8		/* number of journal buffers to keep around */
 
-#define PJ_SHDW_NTILES		4
-#define PJ_SHDW_TILESIZE	1024
-#define PJ_SHDW_MAXAGE		30		/* 30 seconds */
+#define PJ_SHDW_NTILES			4
+#define PJ_SHDW_TILESIZE		1024
+#define PJ_SHDW_MAXAGE			30		/* 30 seconds */
 
-#define PJ_LOCK(pj)		spinlock(&(pj)->pj_lock)
-#define PJ_ULOCK(pj)		freelock(&(pj)->pj_lock)
+#define PJ_LOCK(pj)			spinlock(&(pj)->pj_lock)
+#define PJ_ULOCK(pj)			freelock(&(pj)->pj_lock)
 
-#define PJH_MAGIC		UINT64_C(0x45678912aabbccff)	/* magic number of the journal header */
-#define PJH_VERSION		0x02
+#define PJH_MAGIC			UINT64_C(0x45678912aabbccff)
+#define PJH_VERSION			0x02
 
-#define PJH_OPT_NONE		0x00
-#define PJH_OPT_SHADOW		0x01
+#define PJH_OPT_NONE			0x00
+#define PJH_OPT_SHADOW			0x01
+
+typedef void (*psc_replay_handler)(struct psc_dynarray *, int *);
+typedef void (*psc_shadow_handler)(struct psc_journal_enthdr *, int);
 
 struct psc_journal_hdr {
 	uint64_t			 pjh_magic;
@@ -66,65 +70,65 @@ struct psc_journal_shdw_tile {
 	psc_spinlock_t			 pjst_lock;
 };
 
-enum PJ_SHDW_TILE_STATES {
-	PJ_SHDW_TILE_NONE		= (0 << 0),
+enum {
 	PJ_SHDW_TILE_FREE		= (1 << 0),
 	PJ_SHDW_TILE_ACTIVE		= (1 << 1),	/* current tile being used -- has free slots */
-	PJ_SHDW_TILE_FULL		= (1 << 3)	/* All entries have been allocated */
+	PJ_SHDW_TILE_FULL		= (1 << 2)	/* All entries have been allocated */
 };
 
 /* In-memory 'journal shadowing'.
  */
 struct psc_journal_shdw {
-	int32_t				 pjs_ntiles;			/* Number of tiles */
-	int32_t				 pjs_curtile;			/* Current tile index */
-	int32_t				 pjs_tilesize;			/* Number of entries per tile */
+	int32_t				 pjs_ntiles;	/* Number of tiles */
+	int32_t				 pjs_curtile;	/* Current tile index */
+	int32_t				 pjs_tilesize;	/* Number of entries per tile */
 	struct psc_journal_shdw_tile	*pjs_tiles[PJ_SHDW_NTILES];	/* tile buffer pointers */
 
-	struct psc_journal_xidhndl	*pjs_xidhndl;			/* first transaction that needs special processing */
+	struct psc_journal_xidhndl	*pjs_xidhndl;	/* first transaction that needs special processing */
 
-	uint32_t			 pjs_endslot;			/* last slot covered by the tiles */
-	uint32_t			 pjs_state;
-	psc_spinlock_t			 pjs_lock;			/* Sync between logwrite and shdwthr */
+	uint32_t			 pjs_endslot;	/* last slot covered by the tiles */
+	uint32_t			 pjs_state;	/* see PJ_SHDW_* flags below */
+	psc_spinlock_t			 pjs_lock;	/* Sync between logwrite and shdwthr */
 	struct psc_waitq		 pjs_waitq;
 	struct psc_journal		*pjs_journal;
 };
 
-#define PJ_SHDW_ADVTILE 1
+/* pjs_state flags */
+#define PJ_SHDW_ADVTILE			(1 << 0)
 
 struct psc_journal {
-	psc_spinlock_t		 pj_lock;
-	uint64_t		 pj_lastxid;	/* last transaction ID used */
-	struct psc_journal_hdr	*pj_hdr;
-	struct psclist_head	 pj_pndgxids;
-	struct psc_dynarray	 pj_bufs;
-	struct psc_waitq	 pj_waitq;
-	struct psc_journal_shdw	*pj_shdw;
-	int			 pj_fd;		/* open file descriptor to backing disk file */
-	int			 pj_flags;
-	uint32_t		 pj_nextwrite;	/* next entry slot to write to */
-    	psc_shadow_handler	 pj_shadow_handler;
+	psc_spinlock_t			 pj_lock;
+	uint64_t			 pj_lastxid;	/* last transaction ID used */
+	struct psc_journal_hdr		*pj_hdr;
+	struct psclist_head		 pj_pndgxids;
+	struct psc_dynarray		 pj_bufs;
+	struct psc_waitq		 pj_waitq;
+	struct psc_journal_shdw		*pj_shdw;
+	int				 pj_fd;		/* open file descriptor to backing disk file */
+	int				 pj_flags;
+	uint32_t			 pj_nextwrite;	/* next entry slot to write to */
+	psc_shadow_handler		 pj_shadow_handler;
 };
 
-#define PJF_NONE		0
-#define PJF_WANTBUF		(1 << 0)
-#define PJF_WANTSLOT		(1 << 1)
+#define PJF_NONE			0
+#define PJF_WANTBUF			(1 << 0)
+#define PJF_WANTSLOT			(1 << 1)
 
-#define PJE_XID_NONE		0				/* invalid transaction ID */
-#define PJE_MAGIC		UINT64_C(0x45678912aabbccdd)	/* magic number for each journal entry */
+#define PJE_XID_NONE			0		/* invalid transaction ID */
+#define PJE_MAGIC			UINT64_C(0x45678912aabbccdd)
 
 /*
  * Journal entry types - higher bits after PJET_LASTBIT are used to identify different log users.
  */
-#define PJE_NONE		0		/* null journal record */
-#define PJE_FORMAT		(1 << 0)	/* newly-formatted journal entry */
-#define PJE_STRTUP		(1 << 1)	/* system startup */
-#define PJE_XSTART		(1 << 2)	/* start a transaction */
-#define PJE_XCLOSE		(1 << 3)	/* close a transaction */
-#define PJE_XSNGL		(1 << 4)	/* transaction begins and ends insantly*/
-#define PJE_XNORML		(1 << 5)	/* normal transaction data */
+#define PJE_NONE			0		/* null journal record */
+#define PJE_FORMAT			(1 << 0)	/* newly-formatted journal entry */
+#define PJE_STRTUP			(1 << 1)	/* system startup */
+#define PJE_XSTART			(1 << 2)	/* start a transaction */
+#define PJE_XCLOSE			(1 << 3)	/* close a transaction */
+#define PJE_XSNGL			(1 << 4)	/* transaction begins and ends insantly*/
+#define PJE_XNORML			(1 << 5)	/* normal transaction data */
 
-#define _PJE_FLSHFT		(1 << 6)	/* denote the last used bit */
+#define _PJE_FLSHFT			(1 << 6)	/* denote the last used bit */
 
 /*
  * psc_journal_enthdr - journal entry header.
@@ -141,29 +145,29 @@ struct psc_journal {
  * the payload, if any, starts at a 64-bit boundary.
  */
 struct psc_journal_enthdr {
-	uint64_t		pje_magic;
-	uint16_t		pje_type;		/* see above */
+	uint64_t			pje_magic;
+	uint16_t			pje_type;	/* see above */
 	/*
 	 * This field is used to calculate the CRC checksum of the payload starting
 	 * from pje_data[0]. It also indicates if the log entry is a special-purpose
 	 * one (i.e., one without custom data).
 	 */
-	uint16_t		pje_len;
+	uint16_t			pje_len;
 	/*
 	 * This field can be used by the replay process to remove the CLOSE entry
 	 * when all other log entries of the same transaction have been seen.
 	 */
-	uint32_t		pje_sid;
-	uint64_t		pje_xid;
-	uint64_t		pje_chksum;		/* last field before data */
+	uint32_t			pje_sid;
+	uint64_t			pje_xid;
+	uint64_t			pje_chksum;	/* last field before data */
 	/*
 	 * The length of the pje_data[0] is also embedded and can be figured out
 	 * by log replay functions.
 	 */
-	char			pje_data[0];
+	char				pje_data[0];
 } __packed;
 
-#define	PJ_PJESZ(p)		((p)->pj_hdr->pjh_entsz)
+#define	PJ_PJESZ(p)			((p)->pj_hdr->pjh_entsz)
 
 /*
  * psc_journal_xidhndl - journal transaction ID handle.
@@ -175,34 +179,31 @@ struct psc_journal_enthdr {
  * @pjx_lock: serialize.
  * @pjx_pj: backpointer to our journal.
  */
-#define	PJX_SLOT_ANY		 (~0U)
+#define	PJX_SLOT_ANY			(~0U)
 
-#define	PJX_NONE		 (0 << 0)
-#define	PJX_XSTART		 (1 << 0)
-#define	PJX_XCLOSE		 (1 << 1)
-#define	PJX_XSNGL		 (1 << 2)
+#define	PJX_NONE			(0 << 0)
+#define	PJX_XSTART			(1 << 0)
+#define	PJX_XCLOSE			(1 << 1)
+#define	PJX_XSNGL			(1 << 2)
 
 struct psc_journal_xidhndl {
-	uint64_t		 pjx_xid;
-	int			 pjx_sid;
-	uint32_t		 pjx_tailslot;
-	uint32_t		 pjx_flags;
-	struct psclist_head	 pjx_lentry;
-	psc_spinlock_t		 pjx_lock;
-	struct psc_journal	*pjx_pj;
+	uint64_t			 pjx_xid;
+	int				 pjx_sid;
+	uint32_t			 pjx_tailslot;
+	uint32_t			 pjx_flags;
+	struct psclist_head		 pjx_lentry;
+	psc_spinlock_t			 pjx_lock;
+	struct psc_journal		*pjx_pj;
 };
 
 /* Actions to be taked after open the log file */
-#define	PJOURNAL_LOG_DUMP	1
-#define	PJOURNAL_LOG_REPLAY	2
-
-typedef void (*psc_replay_handler)(struct psc_dynarray *, int *);
-typedef void (*psc_shadow_handler)(struct psc_journal_enthdr *, int);
+#define	PJOURNAL_LOG_DUMP		1
+#define	PJOURNAL_LOG_REPLAY		2
 
 /* definitions of journal handling functions */
 int			 pjournal_dump(const char *, int);
 int			 pjournal_format(const char *, uint32_t, uint32_t, uint32_t, uint32_t);
-struct psc_journal	*pjournal_init(const char *, psc_replay_handler, psc_shadow_handler);
+struct psc_journal	*pjournal_init(const char *, int, const char *, psc_replay_handler, psc_shadow_handler);
 
 /* definitions of transaction handling functions */
 struct psc_journal_xidhndl	*pjournal_xnew(struct psc_journal *);

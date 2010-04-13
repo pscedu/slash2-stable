@@ -72,13 +72,13 @@ struct psc_journalthr {
 	struct psc_journal *pjt_pj;
 };
 
-struct psc_waitq	pjournal_tilewaitq = PSC_WAITQ_INIT;
-psc_spinlock_t		pjournal_tilewaitqlock = LOCK_INITIALIZER;
-
 __static int		pjournal_logwrite(struct psc_journal_xidhndl *, int,
 				void *, size_t);
 __static void		pjournal_shdw_logwrite(struct psc_journal *,
 				const struct psc_journal_enthdr *, uint32_t);
+
+struct psc_waitq	pjournal_tilewaitq = PSC_WAITQ_INIT;
+psc_spinlock_t		pjournal_tilewaitqlock = LOCK_INITIALIZER;
 
 /**
  * pjournal_xnew - Start a new transaction with a unique ID in the given
@@ -611,7 +611,7 @@ pjournal_scan_slots(struct psc_journal *pj)
 }
 
 /**
- * pjournal_load - Initialize the in-memory representation of a journal.
+ * pjournal_open - Initialize the in-memory representation of a journal.
  */
 __static struct psc_journal *
 pjournal_open(const char *fn)
@@ -826,7 +826,7 @@ pjournal_dump(const char *fn, int verbose)
 	nchksum = 0;
 	nformat = 0;
 
-	pj = pjournal_load(fn);
+	pj = pjournal_open(fn);
 	pjh = pj->pj_hdr;
 
 	printf("journal header info for %s:\n"
@@ -1179,14 +1179,17 @@ pjournal_init_shdw(int thrtype, const char *thrname, struct psc_journal *pj)
 }
 
 /**
- * pjournal_replay - Replay all open transactions in a journal.
- * @pj: the journal.
- * @pj_handler: the master journal replay function.
- * Returns: 0 on success, -1 on error.
+ * pjournal_init - Replay all open transactions in a journal.
+ * @fn: location on journal file on file system.
+ * @thrtype: application-specified thread type ID for shadow processor.
+ * @thrname: application-specified thread name for shadow processor.
+ * @replay_handler: the journal replay callback.
+ * @shadow_handler: the shadow processor callback.
  */
 struct psc_journal *
-pjournal_init(const char *fn, psc_replay_handler pj_replay_handler,
-    psc_shadow_handler pj_shadow_handler)
+pjournal_init(const char *fn, int thrtype, const char *thrname,
+    psc_replay_handler replay_handler,
+    psc_shadow_handler shadow_handler)
 {
 	int				 i;
 	int				 rc;
@@ -1230,7 +1233,7 @@ pjournal_init(const char *fn, psc_replay_handler pj_replay_handler,
 		}
 
 		ntrans++;
-		(pj_replay_handler)(&replaybufs, &rc);
+		replay_handler(&replaybufs, &rc);
 		if (rc) {
 			nerrs++;
 			rc = 0;
@@ -1278,8 +1281,8 @@ pjournal_init(const char *fn, psc_replay_handler pj_replay_handler,
 	}
 
 	if (pj->pj_hdr->pjh_options & PJH_OPT_SHADOW) {
-		pjournal_init_shdw(SLMTHRT_JRNL_SHDW, "slmjshadowthr", pj);
-		pj->pj_shadow_handler = pj_shadow_handler;
+		pjournal_init_shdw(thrtype, thrname, pj);
+		pj->pj_shadow_handler = shadow_handler;
 	}
 
 	psc_info("journal replayed: %d log entries with %d transactions "
