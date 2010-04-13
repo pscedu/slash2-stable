@@ -103,6 +103,7 @@ struct psc_journal {
 	int			 pj_fd;		/* open file descriptor to backing disk file */
 	int			 pj_flags;
 	uint32_t		 pj_nextwrite;	/* next entry slot to write to */
+    	psc_shadow_handler	 pj_shadow_handler;
 };
 
 #define PJF_NONE		0

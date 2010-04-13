@@ -72,8 +72,6 @@ struct psc_journalthr {
 	struct psc_journal *pjt_pj;
 };
 
-void (*pjournal_shadow_handler)(struct psc_journal_enthdr *, int);
-
 struct psc_waitq	pjournal_tilewaitq = PSC_WAITQ_INIT;
 psc_spinlock_t		pjournal_tilewaitqlock = LOCK_INITIALIZER;
 
@@ -963,7 +961,7 @@ pjournal_shdw_proctile(struct psc_journal_shdw_tile *pjst,
 		if (!(pje->pje_type & PJE_XSNGL))
 			continue;
 		freelock(&pjst->pjst_lock);
-		(*pjournal_shadow_handler)(pje, PJ_PJESZ(pj));
+		(pj->pj_shadow_handler)(pje, PJ_PJESZ(pj));
 		spinlock(&pjst->pjst_lock);
 	}
 	freelock(&pjst->pjst_lock);
@@ -1281,7 +1279,7 @@ pjournal_replay(const char *fn, psc_replay_handler pj_replay_handler,
 
 	if (pj->pj_hdr->pjh_options & PJH_OPT_SHADOW) {
 		pjournal_init_shdw(SLMTHRT_JRNL_SHDW, "slmjshadowthr", pj);
-		pjournal_shadow_handler = pj_shadow_handler;
+		pj->pj_shadow_handler = pj_shadow_handler;
 	}
 
 	psc_info("journal replayed: %d log entries with %d transactions "
