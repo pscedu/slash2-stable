@@ -614,7 +614,7 @@ pjournal_scan_slots(struct psc_journal *pj)
  * pjournal_load - Initialize the in-memory representation of a journal.
  */
 __static struct psc_journal *
-pjournal_load(const char *fn)
+pjournal_open(const char *fn)
 {
 	struct psc_journal_hdr *pjh;
 	struct psc_journal *pj;
@@ -1185,7 +1185,7 @@ pjournal_init_shdw(int thrtype, const char *thrname, struct psc_journal *pj)
  * Returns: 0 on success, -1 on error.
  */
 struct psc_journal *
-pjournal_replay(const char *fn, psc_replay_handler pj_replay_handler,
+pjournal_init(const char *fn, psc_replay_handler pj_replay_handler,
     psc_shadow_handler pj_shadow_handler)
 {
 	int				 i;
@@ -1201,7 +1201,7 @@ pjournal_replay(const char *fn, psc_replay_handler pj_replay_handler,
 	struct psc_journal_enthdr	*tmppje;
 	struct psc_dynarray		 replaybufs;
 
-	pj = pjournal_load(fn);
+	pj = pjournal_open(fn);
 	if (pj == NULL)
 		return (NULL);
 
