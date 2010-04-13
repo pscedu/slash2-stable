@@ -1109,12 +1109,6 @@ pjournal_shdw_logwrite(struct psc_journal *pj,
 }
 
 void
-pjournal_sendthr_main(__unusedx struct psc_thread *thr)
-{
-
-}
-
-void
 pjournal_shdwthr_main(struct psc_thread *thr)
 {
 	struct psc_journalthr *pjt = thr->pscthr_private;
@@ -1199,7 +1193,6 @@ pjournal_replay(const char *fn, psc_replay_handler pj_replay_handler,
 	int				 i;
 	int				 rc;
 	struct psc_journal		*pj;
-	struct psc_thread		*thr;
 	uint64_t			 xid;
 	struct psc_journal_enthdr	*pje;
 	ssize_t				 size;
@@ -1290,9 +1283,6 @@ pjournal_replay(const char *fn, psc_replay_handler pj_replay_handler,
 		pjournal_init_shdw(SLMTHRT_JRNL_SHDW, "slmjshadowthr", pj);
 		pjournal_shadow_handler = pj_shadow_handler;
 	}
-
-	thr = pscthr_init(SLMTHRT_JRNL_SEND, 0, pjournal_sendthr_main,
-	    NULL, 0, "slmjsendthr");
 
 	psc_info("journal replayed: %d log entries with %d transactions "
 	    "have been redone, error = %d", nents, ntrans, nerrs);
