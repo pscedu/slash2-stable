@@ -37,40 +37,34 @@ struct psclist_head {
 #define PSCLIST_HEAD_INIT(name)		{ &(name), &(name) }
 #define PSCLIST_ENTRY_INIT		{ NULL, NULL }
 
-#define PSCLIST_HEAD(name) \
+#define PSCLIST_HEAD(name)							\
 	struct psclist_head name = PSCLIST_HEAD_INIT(name)
 
-#define INIT_PSCLIST_HEAD(ptr)		\
-	do {				\
-		(ptr)->znext = (ptr);	\
-		(ptr)->zprev = (ptr);	\
+#define INIT_PSCLIST_HEAD(ptr)							\
+	do {									\
+		(ptr)->znext = (ptr);						\
+		(ptr)->zprev = (ptr);						\
 	} while (0)
 
-#define INIT_PSCLIST_ENTRY(ptr)		\
-	do {				\
-		(ptr)->znext = NULL;	\
-		(ptr)->zprev = NULL;	\
+#define INIT_PSCLIST_ENTRY(ptr)							\
+	do {									\
+		(ptr)->znext = NULL;						\
+		(ptr)->zprev = NULL;						\
 	} while (0)
 
-/*
- * Insert a new entry between two known consecutive entries.
- *
- * This is only for internal psclist manipulation where we know
- * the prev/next entries already!
- */
 static __inline void
-_psclist_add(struct psclist_head *new, struct psclist_head *prev,
+_psclist_add(struct psclist_head *e, struct psclist_head *prev,
 	struct psclist_head *next)
 {
-	next->zprev = new;
-	new->znext = next;
-	new->zprev = prev;
-	prev->znext = new;
+	next->zprev = e;
+	e->znext = next;
+	e->zprev = prev;
+	prev->znext = e;
 }
 
 /**
- * psclist_xadd - add an element to a list and check for exclusive membership.
- * @new: entry to be added
+ * psclist_xadd - Add an entry to the beginning of a list.
+ * @e: entry to be added
  * @head: psclist_head to add it after
  *
  * Insert a new entry after the specified head.
@@ -78,11 +72,11 @@ _psclist_add(struct psclist_head *new, struct psclist_head *prev,
  * This is good for implementing stacks.
  */
 static __inline void
-psclist_xadd(struct psclist_head *new, struct psclist_head *head)
+psclist_xadd(struct psclist_head *e, struct psclist_head *head)
 {
 	/* ensure entry exists on only one list */
-	psc_assert(new->zprev == NULL && new->znext == NULL);
-	_psclist_add(new, head, head->znext);
+	psc_assert(e->zprev == NULL && e->znext == NULL);
+	_psclist_add(e, head, head->znext);
 }
 
 #define psclist_xadd_head(e, hd)	psclist_xadd((e), (hd))
@@ -90,8 +84,8 @@ psclist_xadd(struct psclist_head *new, struct psclist_head *head)
 #define psclist_xadd_before(e, t)	psclist_xadd_tail((e), (t))
 
 /**
- * psclist_xadd_tail - add a new entry and check for exclusive membership.
- * @new: new entry to be added
+ * psclist_xadd_tail - Add an entry to the end of list.
+ * @e: entry to be added
  * @head: psclist head to add it before
  *
  * Insert a new entry before the specified head.
@@ -99,19 +93,12 @@ psclist_xadd(struct psclist_head *new, struct psclist_head *head)
  * This is useful for implementing queues.
  */
 static __inline void
-psclist_xadd_tail(struct psclist_head *new, struct psclist_head *head)
+psclist_xadd_tail(struct psclist_head *e, struct psclist_head *head)
 {
-	psc_assert(new->zprev == NULL && new->znext == NULL);
-	_psclist_add(new, head->zprev, head);
+	psc_assert(e->zprev == NULL && e->znext == NULL);
+	_psclist_add(e, head->zprev, head);
 }
 
-/*
- * Delete a psclist entry by making the prev/next entries
- * point to each other.
- *
- * This is only for internal psclist manipulation where we know
- * the prev/next entries already!
- */
 static __inline void
 _psclist_del(struct psclist_head *prev, struct psclist_head *next)
 {
@@ -120,10 +107,8 @@ _psclist_del(struct psclist_head *prev, struct psclist_head *next)
 }
 
 /**
- * psclist_del - deletes entry from psclist.
- * @entry: the element to delete from the psclist.
- * Note: psclist_empty on entry does not return true after this,
- *	the entry is in an undefined state.
+ * psclist_del - Delete an entry from the list it is contained within.
+ * @entry: the entry to be removed.
  */
 static __inline void
 psclist_del(struct psclist_head *entry)
@@ -133,8 +118,8 @@ psclist_del(struct psclist_head *entry)
 }
 
 /**
- * psclist_empty - tests whether a psclist is empty.
- * @head: the psclist head to test.
+ * psclist_empty - Tests whether a list is has no items.
+ * @hd: the list head to test.
  */
 static __inline int
 psclist_empty(const struct psclist_head *hd)
@@ -164,28 +149,6 @@ psclist_empty(const struct psclist_head *hd)
 #define psclist_conjoint(ent)	((ent)->znext != NULL && (ent)->zprev != NULL)
 
 /**
- * psclist_splice - join two psclists
- * @psclist: the new psclist to add.
- * @head: the place to add it in the first psclist.
- */
-static __inline void
-psclist_splice(struct psclist_head *list, struct psclist_head *head)
-{
-	struct psclist_head *first = list->znext;
-
-	if (first != list) {
-		struct psclist_head *last = list->zprev;
-		struct psclist_head *at = head->znext;
-
-		first->zprev = head;
-		head->znext = first;
-
-		last->znext = at;
-		at->zprev = last;
-	}
-}
-
-/**
  * psclist_entry - get the struct for this entry
  * @ptr: the &struct psclist_head pointer.
  * @type: the type of the struct this is embedded in.
@@ -200,52 +163,53 @@ psclist_splice(struct psclist_head *list, struct psclist_head *head)
  * @pos: the &struct psclist_head to use as a loop counter.
  * @head: the head for your psclist.
  */
-#define psclist_for_each(pos, head)				\
-	for ((pos) = (head)->znext;				\
-	    ((pos) != (head)) || ((pos) = NULL);		\
+#define psclist_for_each(pos, head)						\
+	for ((pos) = (head)->znext;						\
+	    ((pos) != (head)) || ((pos) = NULL);				\
 		(pos) = (pos)->znext)
 
 /**
- * psclist_for_each_safe - iterate over a psclist safe against removal of psclist entry
- * @pos: the &struct psclist_head to use as a loop counter.
- * @n: another &struct psclist_head to use as temporary storage
- * @head: the head for your psclist.
+ * psclist_for_each_safe - Iterate over a list safe against removal
+ *	of the iterating entry.
+ * @pos: the entry to use as a loop counter.
+ * @n: another entry to use as temporary storage.
+ * @head: the head for the list.
  */
-#define psclist_for_each_safe(pos, n, head)			\
-	for ((pos) = (head)->znext, (n) = (pos)->znext;		\
-	    ((pos) != (head)) || ((pos) = (n) = NULL);		\
+#define psclist_for_each_safe(pos, n, head)					\
+	for ((pos) = (head)->znext, (n) = (pos)->znext;				\
+	    ((pos) != (head)) || ((pos) = (n) = NULL);				\
 	    (pos) = (n), (n) = (pos)->znext)
 
 /**
- * psclist_first - grab first entry from a psclist
- * @head: the head for your psclist.
+ * psclist_first - Grab first entry from a list.
+ * @head: the head of the list.
  */
 #define psclist_first(head) (head)->znext
 
 /**
- * psclist_first_entry - grab first item from a psclist
+ * psclist_first_entry - Grab first item from a list.
  * @hd: list head.
  * @type: entry type.
- * @memb: list_head member name in entry structure.
+ * @memb: psclist_head member name in item structure.
  */
-#define psclist_first_entry(hd, type, memb)			\
-	(psclist_empty(hd) ? NULL :				\
+#define psclist_first_entry(hd, type, memb)					\
+	(psclist_empty(hd) ? NULL :						\
 	 psclist_entry((hd)->znext, type, memb))
 
 /**
- * psclist_last - grab last list entry.
+ * psclist_last - Grab last entry from a list.
  * @hd: list head.
  */
 #define psclist_last(hd) (hd)->zprev
 
 /**
- * psclist_last_entry - grab last list item.
+ * psclist_last_entry - Grab last item from a list.
  * @hd: list head.
  * @type: entry type.
- * @memb: list_head member name in entry structure.
+ * @memb: psclist_head member name in item structure.
  */
-#define psclist_last_entry(hd, type, memb)			\
-	(psclist_empty(hd) ? NULL :				\
+#define psclist_last_entry(hd, type, memb)					\
+	(psclist_empty(hd) ? NULL :						\
 	 psclist_entry((hd)->zprev, type, memb))
 
 /**
@@ -261,7 +225,7 @@ psclist_splice(struct psclist_head *list, struct psclist_head *head)
  * @type: entry type.
  * @memb: list_head member name in entry structure.
  */
-#define psclist_next_entry(hd, p, memb)				\
+#define psclist_next_entry(hd, p, memb)						\
 	_psclist_next_entry((hd), (p), offsetof(typeof(*(p)), memb), 0)
 
 static __inline void *
@@ -298,7 +262,7 @@ _psclist_next_entry(struct psclist_head *hd, void *p,
  * @type: entry type.
  * @memb: list_head member name in entry structure.
  */
-#define psclist_prev_entry(hd, p, memb)				\
+#define psclist_prev_entry(hd, p, memb)						\
 	_psclist_next_entry((hd), (p), offsetof(typeof(*(p)), memb), 1)
 
 /**
