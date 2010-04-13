@@ -927,6 +927,7 @@ pjournal_shdw_del_xidhndl(struct psc_journal *pj, uint64_t xid)
 			psclist_next_entry(&pj->pj_pndgxids, xh, pjx_lentry);
 	}
 	PJ_ULOCK(pj);
+	psc_assert(found);
 }
 /**
  * pjournal_shdw_proctile - process log entries in a tile.  A log entry can be
