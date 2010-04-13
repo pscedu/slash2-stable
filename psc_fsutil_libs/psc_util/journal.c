@@ -1188,7 +1188,7 @@ pjournal_init_shdw(int thrtype, const char *thrname, struct psc_journal *pj)
  */
 struct psc_journal *
 pjournal_replay(const char *fn, psc_replay_handler pj_replay_handler,
-    psc_shadow_handler pj_shadow_handler, int thrtype, const char *thrname)
+    psc_shadow_handler pj_shadow_handler)
 {
 	int				 i;
 	int				 rc;
@@ -1280,7 +1280,7 @@ pjournal_replay(const char *fn, psc_replay_handler pj_replay_handler,
 	}
 
 	if (pj->pj_hdr->pjh_options & PJH_OPT_SHADOW)
-		pjournal_init_shdw(thrtype, thrname, pj);
+		pjournal_init_shdw(SLMTHRT_JRNL_SHDW, "slmjshadowthr", pj);
 
 	pjournal_shadow_handler = pj_shadow_handler;
 
