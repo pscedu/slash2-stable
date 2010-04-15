@@ -5,6 +5,7 @@
 #include <sys/ioctl.h>
 #include <netinet/in.h>
 #include <net/route.h>
+#include <arpa/inet.h>
 
 #ifdef HAVE_RTNETLINK
 # include <linux/netlink.h>
@@ -17,6 +18,8 @@
 # include <ifaddrs.h>
 #endif
 
+#include <stdio.h>
+#include <strings.h>
 #include <unistd.h>
 
 #include "pfl/cdefs.h"
@@ -225,7 +228,7 @@ pflnet_getifnfordst_rtsock(const struct sockaddr *sa, char ifn[IFNAMSIZ])
 {
 	struct {
 		struct rt_msghdr	rtm;
-#define RT_SPACE 256
+#define RT_SPACE 512
 		unsigned char		buf[RT_SPACE];
 	} m;
 	struct rt_msghdr *rtm = &m.rtm;
@@ -237,17 +240,19 @@ pflnet_getifnfordst_rtsock(const struct sockaddr *sa, char ifn[IFNAMSIZ])
 
 	memset(&m, 0, sizeof(m));
 
-#define ADDSOCK(p, sa)							\
+#define SOCKADDRLEN(sa)							\
+	((sa)->sa_len ? PSC_ALIGN((sa)->sa_len, sizeof(int32_t)) : sizeof(int32_t))
+#define ADDSOCKADDR(p, sa)						\
 	do {								\
 		memcpy((p), (sa), (sa)->sa_len);			\
-		(p) += PSC_ALIGN((sa)->sa_len, sizeof(long));		\
+		(p) += SOCKADDRLEN(sa);					\
 	} while (0)
+	ADDSOCKADDR(p, sa);
 
-	ADDSOCK(p, sa);
-
+	memset(&psa, 0, sizeof(psa));
 	psa.sdl.sdl_family = AF_LINK;
 	psa.sdl.sdl_len = sizeof(psa.sdl);
-	ADDSOCK(p, &psa.sa);
+	ADDSOCKADDR(p, &psa.sa);
 
 	rtm->rtm_type = RTM_GET;
 	rtm->rtm_flags = RTF_STATIC | RTF_UP | RTF_HOST | RTF_GATEWAY;
@@ -277,8 +282,6 @@ pflnet_getifnfordst_rtsock(const struct sockaddr *sa, char ifn[IFNAMSIZ])
 	if (rc == -1)
 		psc_fatal("read from routing socket");
 
-	close(s);
-
 	if (rtm->rtm_version != RTM_VERSION)
 		psc_fatalx("routing message version mismatch; has=%d got=%d",
 		    RTM_VERSION, rtm->rtm_version);
@@ -287,8 +290,11 @@ pflnet_getifnfordst_rtsock(const struct sockaddr *sa, char ifn[IFNAMSIZ])
 	if (rtm->rtm_msglen > rc)
 		psc_fatalx("routing message too large");
 
+	close(s);
+
 	p = m.buf;
-	for (; rtm->rtm_addrs; rtm->rtm_addrs &= ~(1 << j)) {
+	for (; rtm->rtm_addrs; rtm->rtm_addrs &= ~(1 << j),
+	    p += SOCKADDRLEN(&psap->sa)) {
 		j = ffs(rtm->rtm_addrs) - 1;
 		psap = (void *)p;
 		switch (1 << j) {
