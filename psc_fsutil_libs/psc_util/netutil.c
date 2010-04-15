@@ -4,16 +4,17 @@
 #include <sys/socket.h>
 #include <sys/ioctl.h>
 #include <netinet/in.h>
+#include <net/route.h>
 
 #ifdef HAVE_RTNETLINK
-#include <linux/netlink.h>
-#include <linux/rtnetlink.h>
+# include <linux/netlink.h>
+# include <linux/rtnetlink.h>
 #endif
 
 #ifdef HAVE_GETIFADDRS
-#include <net/if.h>
+# include <net/if.h>
 
-#include <ifaddrs.h>
+# include <ifaddrs.h>
 #endif
 
 #include <unistd.h>
@@ -22,6 +23,7 @@
 #include "pfl/str.h"
 #include "psc_util/alloc.h"
 #include "psc_util/log.h"
+#include "psc_util/net.h"
 
 /*
  * pfl_socket_setnosig - Try to set "no SIGPIPE" on a socket.
@@ -155,7 +157,7 @@ pflnet_getifnfordst_rtnetlink(const struct sockaddr *sa, char ifn[IFNAMSIZ])
 		struct nlmsghdr	nmh;
 		struct rtmsg	rtm;
 #define RT_SPACE 8192
-		char		buf[RT_SPACE];
+		unsigned char	buf[RT_SPACE];
 	} rq;
 	const struct sockaddr_in *sin;
 	struct rtattr *rta;
@@ -221,8 +223,87 @@ pflnet_getifnfordst_rtnetlink(const struct sockaddr *sa, char ifn[IFNAMSIZ])
 __static void
 pflnet_getifnfordst_rtsock(const struct sockaddr *sa, char ifn[IFNAMSIZ])
 {
-	(void)sa;
-	(void)ifn;
+	struct {
+		struct rt_msghdr	rtm;
+#define RT_SPACE 256
+		unsigned char		buf[RT_SPACE];
+	} m;
+	struct rt_msghdr *rtm = &m.rtm;
+	union pfl_sockaddr psa, *psap;
+	unsigned char *p = m.buf;
+	ssize_t len, rc;
+	pid_t pid;
+	int j, s;
+
+	memset(&m, 0, sizeof(m));
+
+#define ADDSOCK(p, sa)							\
+	do {								\
+		memcpy((p), (sa), (sa)->sa_len);			\
+		(p) += PSC_ALIGN((sa)->sa_len, sizeof(long));		\
+	} while (0)
+
+	ADDSOCK(p, sa);
+
+	psa.sdl.sdl_family = AF_LINK;
+	psa.sdl.sdl_len = sizeof(psa.sdl);
+	ADDSOCK(p, &psa.sa);
+
+	rtm->rtm_type = RTM_GET;
+	rtm->rtm_flags = RTF_STATIC | RTF_UP | RTF_HOST | RTF_GATEWAY;
+	rtm->rtm_version = RTM_VERSION;
+	rtm->rtm_addrs = RTA_DST | RTA_IFP;
+#ifdef HAVE_RTM_HDRLEN
+	rtm->rtm_hdrlen = sizeof(m.rtm);
+#endif
+	rtm->rtm_msglen = len = p - (unsigned char *)&m;
+
+	s = socket(PF_ROUTE, SOCK_RAW, 0);
+	if (s == -1)
+		psc_fatal("socket");
+
+	rc = write(s, &m, len);
+	if (rc == -1)
+		psc_fatal("writing to routing socket");
+	if (rc != len)
+		psc_fatalx("writing to routing socket: short write");
+
+	pid = getpid();
+	do {
+		rc = read(s, &m, sizeof(m));
+	} while (rc > 0 && (rtm->rtm_version != RTM_VERSION ||
+	    rtm->rtm_seq || rtm->rtm_pid != pid));
+
+	if (rc == -1)
+		psc_fatal("read from routing socket");
+
+	close(s);
+
+	if (rtm->rtm_version != RTM_VERSION)
+		psc_fatalx("routing message version mismatch; has=%d got=%d",
+		    RTM_VERSION, rtm->rtm_version);
+	if (rtm->rtm_errno)
+		psc_fatalx("routing error: %s", strerror(rtm->rtm_errno));
+	if (rtm->rtm_msglen > rc)
+		psc_fatalx("routing message too large");
+
+	p = m.buf;
+	for (; rtm->rtm_addrs; rtm->rtm_addrs &= ~(1 << j)) {
+		j = ffs(rtm->rtm_addrs) - 1;
+		psap = (void *)p;
+		switch (1 << j) {
+		case RTA_IFP:
+			if (psap->sdl.sdl_family == AF_LINK &&
+			    psap->sdl.sdl_nlen) {
+				strncpy(ifn, psap->sdl.sdl_data, IFNAMSIZ - 1);
+				ifn[IFNAMSIZ - 1] = '\0';
+				return;
+			}
+			break;
+		}
+	}
+
+	psc_fatalx("interface message not received");
 }
 #endif
 

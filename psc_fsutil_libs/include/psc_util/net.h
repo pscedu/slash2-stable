@@ -24,6 +24,10 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 
+#if HAVE_NET_IF_DL_H
+# include <net/if_dl.h>
+#endif
+
 struct ifaddrs;
 
 #ifdef MSG_NOSIGNAL
@@ -41,8 +45,9 @@ void pflnet_getifnfordst(const struct ifaddrs *, const struct sockaddr *, char [
 
 union pfl_sockaddr {
 	struct sockaddr_storage ss;
-	struct sockaddr_in sin;
 	struct sockaddr_in6 sin6;
+	struct sockaddr_in sin;
+	struct sockaddr_dl sdl;
 	struct sockaddr sa;
 };
 
