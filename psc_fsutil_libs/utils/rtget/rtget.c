@@ -20,6 +20,11 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
+#include <arpa/inet.h>
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 #include "psc_util/net.h"
 
@@ -34,10 +39,10 @@ main(int argc, char *argv[])
 	psa.sin.sin_family = AF_INET;
 	psa.sin.sin_len = sizeof(psa.sin);
 	inet_pton(AF_INET, "127.0.0.1",
-	    &psa->sin.sin_addr.s_addr);
+	    &psa.sin.sin_addr.s_addr);
 
 	pflnet_getifaddrs(&ifa);
-	pflnet_getifnfordst(ifa, &psa.sa, ifn)
+	pflnet_getifnfordst(ifa, &psa.sa, ifn);
 	pflnet_freeifaddrs(ifa);
 
 	printf("%s\n", ifn);

@@ -3,10 +3,10 @@
 ROOTDIR=../../..
 include ${ROOTDIR}/Makefile.path
 
-PROG=		timecrc
-SRCS=		timecrc.c
+PROG=		rtget
+SRCS=		rtget.c
 SRCS+=		${PFL_BASE}/psc_util/alloc.c
-SRCS+=		${PFL_BASE}/psc_util/crc.c
 SRCS+=		${PFL_BASE}/psc_util/log.c
+SRCS+=		${PFL_BASE}/psc_util/netutil.c
 
 include ${PFLMK}
