@@ -25,8 +25,21 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 
+#include "pfl/cdefs.h"
+#include "pfl/pfl.h"
 #include "psc_util/net.h"
+
+const char *dst = "0.0.0.0";
+const char *progname;
+
+__dead void
+usage(void)
+{
+	fprintf(stderr, "usage: %s [addr]\n", progname);
+	exit(0);
+}
 
 int
 main(int argc, char *argv[])
@@ -35,15 +48,26 @@ main(int argc, char *argv[])
 	struct ifaddrs *ifa;
 	char ifn[IFNAMSIZ];
 
+	progname = argv[0];
+	    pfl_init();
+	if (getopt(argc, argv, "") != -1)
+		usage();
+	argc -= optind;
+	argv += optind;
+	if (argc == 1)
+		dst = argv[0];
+	else if (argc)
+		usage();
+
 	memset(&psa, 0, sizeof(psa));
 	psa.sin.sin_family = AF_INET;
 	psa.sin.sin_len = sizeof(psa.sin);
-	inet_pton(AF_INET, "127.0.0.1",
-	    &psa.sin.sin_addr.s_addr);
+	inet_pton(AF_INET, dst, &psa.sin.sin_addr.s_addr);
 
 	pflnet_getifaddrs(&ifa);
 	pflnet_getifnfordst(ifa, &psa.sa, ifn);
 	pflnet_freeifaddrs(ifa);
 
 	printf("%s\n", ifn);
+	exit(0);
 }
