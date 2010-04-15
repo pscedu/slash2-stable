@@ -153,7 +153,9 @@ pscthr_get(void)
 __inline pid_t
 pfl_getsysthrid(void)
 {
-#ifdef SYS_gettid
+#ifdef SYS_thread_selfid
+	return (syscall(SYS_thread_selfid));
+#elif defined(SYS_gettid)
 	return (syscall(SYS_gettid));
 #elif defined(SYS_getthrid)
 	return (syscall(SYS_getthrid));
