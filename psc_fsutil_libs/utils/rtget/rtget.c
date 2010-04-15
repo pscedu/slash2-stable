@@ -1,0 +1,44 @@
+/* $Id$ */
+/*
+ * %PSC_START_COPYRIGHT%
+ * -----------------------------------------------------------------------------
+ * Copyright (c) 2006-2010, Pittsburgh Supercomputing Center (PSC).
+ *
+ * Permission to use, copy, and modify this software and its documentation
+ * without fee for personal use or non-commercial use within your organization
+ * is hereby granted, provided that the above copyright notice is preserved in
+ * all copies and that the copyright and this permission notice appear in
+ * supporting documentation.  Permission to redistribute this software to other
+ * organizations or individuals is not permitted without the written permission
+ * of the Pittsburgh Supercomputing Center.  PSC makes no representations about
+ * the suitability of this software for any purpose.  It is provided "as is"
+ * without express or implied warranty.
+ * -----------------------------------------------------------------------------
+ * %PSC_END_COPYRIGHT%
+ */
+
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+
+#include "psc_util/net.h"
+
+int
+main(int argc, char *argv[])
+{
+	union pfl_sockaddr psa;
+	struct ifaddrs *ifa;
+	char ifn[IFNAMSIZ];
+
+	memset(&psa, 0, sizeof(psa));
+	psa.sin.sin_family = AF_INET;
+	psa.sin.sin_len = sizeof(psa.sin);
+	inet_pton(AF_INET, "127.0.0.1",
+	    &psa->sin.sin_addr.s_addr);
+
+	pflnet_getifaddrs(&ifa);
+	pflnet_getifnfordst(ifa, &psa.sa, ifn)
+	pflnet_freeifaddrs(ifa);
+
+	printf("%s\n", ifn);
+}
