@@ -23,6 +23,7 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
+#include <net/if.h>
 
 #if HAVE_NET_IF_DL_H
 # include <net/if_dl.h>
