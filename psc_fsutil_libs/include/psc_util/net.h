@@ -48,7 +48,9 @@ union pfl_sockaddr {
 	struct sockaddr_storage ss;
 	struct sockaddr_in6 sin6;
 	struct sockaddr_in sin;
+#ifdef HAVE_NET_IF_DL_H
 	struct sockaddr_dl sdl;
+#endif
 	struct sockaddr sa;
 };
 

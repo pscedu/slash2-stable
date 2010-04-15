@@ -61,7 +61,9 @@ main(int argc, char *argv[])
 
 	memset(&psa, 0, sizeof(psa));
 	psa.sin.sin_family = AF_INET;
+#ifdef SA_LEN
 	psa.sin.sin_len = sizeof(psa.sin);
+#endif
 	inet_pton(AF_INET, dst, &psa.sin.sin_addr.s_addr);
 
 	pflnet_getifaddrs(&ifa);
