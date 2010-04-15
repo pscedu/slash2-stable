@@ -33,4 +33,4 @@ localdefsmk=$4
 	done
 
 	echo "PICKLE_HAS_VERSION=$hasvers"
-} > $localdefsmk
+} 2>&1 >$localdefsmk
