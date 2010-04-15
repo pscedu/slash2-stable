@@ -77,68 +77,71 @@ EXTRACT_CFLAGS=		perl -ne 'print $$& while /-[^ID]\S+\s?/gc'
 # Pre-modules processing
 
 ifneq ($(filter ${PFL_BASE}/psc_%.c,${SRCS}),)
-MODULES+=	pfl
+  MODULES+=	pfl
 endif
 
 # Process modules
 
 ifneq ($(filter fuse,${MODULES}),)
-CFLAGS+=	${FUSE_CFLAGS}
-LDFLAGS+=	${FUSE_LIBS}
-MODULES+=	fuse-hdrs
+  CFLAGS+=	${FUSE_CFLAGS}
+  LDFLAGS+=	${FUSE_LIBS}
+  MODULES+=	fuse-hdrs
 endif
 
 ifneq ($(filter fuse-hdrs,${MODULES}),)
-DEFINES+=	-DFUSE_USE_VERSION=${FUSE_VERSION} ${FUSE_DEFINES}
-INCLUDES+=	${FUSE_INCLUDES}
+  DEFINES+=	-DFUSE_USE_VERSION=${FUSE_VERSION} ${FUSE_DEFINES}
+  INCLUDES+=	${FUSE_INCLUDES}
 endif
 
 ifneq ($(filter zfs,${MODULES}),)
-INCLUDES+=	-I${ZFS_BASE}
-LDFLAGS+=	${ZFS_LIBS}
-MODULES+=	z
+  INCLUDES+=	-I${ZFS_BASE}
+  LDFLAGS+=	${ZFS_LIBS}
+  MODULES+=	z
 endif
 
 ifneq ($(filter lnet,${MODULES}),)
-SRCS+=		${LNET_CFS_SRCS}
-SRCS+=		${LNET_LIB_SRCS}
-MODULES+=	lnet-hdrs lnet-nid
+  SRCS+=		${LNET_CFS_SRCS}
+  SRCS+=		${LNET_LIB_SRCS}
+  MODULES+=	lnet-hdrs lnet-nid
 endif
 
 ifneq ($(filter lnet-hdrs,${MODULES}),)
-INCLUDES+=	-I${LNET_BASE}/include
-SRC_PATH+=	${LNET_BASE}
+  INCLUDES+=	-I${LNET_BASE}/include
+  SRC_PATH+=	${LNET_BASE}
 endif
 
 ifneq ($(filter lnet-nid,${MODULES}),)
-SRCS+=		${LNET_BASE}/libcfs/nidstrings.c
+  SRCS+=	${LNET_BASE}/libcfs/nidstrings.c
 endif
 
 ifneq ($(filter pthread,${MODULES}),)
-LDFLAGS+=	${THREAD_LIBS}
-DEFINES+=	-DHAVE_LIBPTHREAD
-MODULES+=	rt
+  LDFLAGS+=	${THREAD_LIBS}
+  DEFINES+=	-DHAVE_LIBPTHREAD
+  MODULES+=	rt
 endif
 
 ifneq ($(filter rt,${MODULES}),)
-LDFLAGS+=	${LIBRT}
+  LDFLAGS+=	${LIBRT}
 endif
 
 ifneq ($(filter curses,${MODULES}),)
-LDFLAGS+=	${LIBCURSES}
+  LDFLAGS+=	${LIBCURSES}
 endif
 
 ifneq ($(filter z,${MODULES}),)
-LDFLAGS+=	${LIBZ}
+  LDFLAGS+=	${LIBZ}
 endif
 
 ifneq ($(filter l,${MODULES}),)
-LDFLAGS+=	${LIBL}
+  LDFLAGS+=	${LIBL}
 endif
 
 ifneq ($(filter pfl,${MODULES}),)
 INCLUDES+=	-I${PFL_BASE}/include
 SRC_PATH+=	${PFL_BASE}
+
+# XXX only do this if DEBUG is set
+SRCS+=		${PFL_BASE}/psc_util/printhex.c
 
  ifneq ($(filter pthread,${MODULES}),)
  MODULES+=	numa
@@ -146,46 +149,46 @@ SRC_PATH+=	${PFL_BASE}
 endif
 
 ifneq ($(filter mpi,${MODULES}),)
-CC=		${MPICC}
-DEFINES+=	-DMPI
+  CC=		${MPICC}
+  DEFINES+=	-DMPI
 endif
 
 ifneq ($(filter qk,${MODULES}),)
-CC=		${QKCC}
-DEFINES+=	-DQK
+  CC=		${QKCC}
+  DEFINES+=	-DQK
 #INCLUDES+=	-I/opt/xt-mpt/default/mpich2-64/P2/include
 #LDFLAGS+=	-L/opt/xt-mpt/default/mpich2-64/P2/lib -lmpich
 endif
 
 ifneq ($(filter zcc,${MODULES}),)
-CC=		ZINCPATH=${ZEST_BASE}/intercept/include \
+  CC=		ZINCPATH=${ZEST_BASE}/intercept/include \
 		ZLIBPATH=${ZEST_BASE}/client/linux-mt ${ZEST_BASE}/scripts/zcc
 endif
 
 ifneq ($(filter numa,${MODULES}),)
-DEFINES+=	${NUMA_DEFINES}
-LDFLAGS+=	${NUMA_LIBS}
+  DEFINES+=	${NUMA_DEFINES}
+  LDFLAGS+=	${NUMA_LIBS}
 endif
 
 ifneq ($(filter gcrypt,${MODULES}),)
-CFLAGS+=	${GCRYPT_CFLAGS}
-DEFINES+=	${GCRYPT_DEFINES}
-LDFLAGS+=	${GCRYPT_LIBS}
-INCLUDES+=	${GCRYPT_INCLUDES}
+  CFLAGS+=	${GCRYPT_CFLAGS}
+  DEFINES+=	${GCRYPT_DEFINES}
+  LDFLAGS+=	${GCRYPT_LIBS}
+  INCLUDES+=	${GCRYPT_INCLUDES}
 endif
 
 ifneq ($(filter aio,${MODULES}),)
-LDFLAGS+=	${LIBAIO}
+  LDFLAGS+=	${LIBAIO}
 endif
 
 # Post-modules processing
 
 ifneq ($(filter ${PFL_BASE}/psc_util/pthrutil.c,${SRCS}),)
-SRCS+=		${ROOTDIR}/psc_fsutil_libs/psc_util/log.c
+  SRCS+=	${ROOTDIR}/psc_fsutil_libs/psc_util/log.c
 endif
 
 ifneq ($(filter ${PFL_BASE}/psc_util/log.c,${SRCS}),)
-SRCS+=		${ROOTDIR}/psc_fsutil_libs/psc_util/alloc.c
+  SRCS+=	${ROOTDIR}/psc_fsutil_libs/psc_util/alloc.c
 endif
 
 # OBJDIR is added to .c below since lex/yacc intermediate files get generated there.
