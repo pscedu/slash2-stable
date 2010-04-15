@@ -100,6 +100,7 @@ pscrpc_import_put(struct pscrpc_import *import)
 	}
 	psc_dbg("destroying import %p", import);
 
+	/* XXX what if we fail to establish a connect for a new import */
 	psc_assert(import->imp_connection);
 	pscrpc_put_connection(import->imp_connection);
 
