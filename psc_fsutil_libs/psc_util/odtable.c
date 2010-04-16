@@ -111,8 +111,8 @@ odtable_getitem(struct odtable *odt, const struct odtable_receipt *odtr)
 	return (data);
 }
 
-struct odtable_receipt * 
-odtable_replaceitem(struct odtable *odt, struct odtable_receipt *odtr, 
+struct odtable_receipt *
+odtable_replaceitem(struct odtable *odt, struct odtable_receipt *odtr,
 	    void *data)
 {
 	struct odtable_entftr *odtf;
