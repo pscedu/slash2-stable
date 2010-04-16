@@ -545,9 +545,9 @@ int pscrpc_ni_init(int type)
 		/* kernel portals calls our master callback when events are added to
 		 * the event queue.  In fact lustre never pulls events off this queue,
 		 * so it's only sized for some debug history. */
-		psc_info("Requesting PID %u", PSC_SVR_PID);
+		psc_info("Requesting PID %u", PSCRPC_SVR_PID);
 		lnet_server_mode();
-		if ((rc = LNetNIInit(PSC_SVR_PID)))
+		if ((rc = LNetNIInit(PSCRPC_SVR_PID)))
 			psc_fatalx("failed LNetNIInit() (%d)", rc);
 
 		rc = LNetEQAlloc(1024, pscrpc_master_callback, &pscrpc_eq_h);

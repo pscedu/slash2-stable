@@ -47,7 +47,7 @@
 #define CURRENT_SECONDS			time(NULL)
 #define PSCNET_SERVER			0xff	/* differentiate client and server for ni init */
 #define PSCNET_CLIENT			0x0f
-#define PSC_SVR_PID			54321
+#define PSCRPC_SVR_PID			54321
 #define PSC_NIDSTR_SIZE			32
 
 #ifdef NAMESPACE_EXPERIMENTAL
