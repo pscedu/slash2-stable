@@ -187,6 +187,7 @@ main(int argc, char *argv[])
 	PRTYPE(psc_crc64_t);
 	PRTYPE(psc_spinlock_t);
 	PRTYPE(pscrpc_svc_handle_t);
+	PRTYPE(struct ifaddrs);
 	PRTYPE(struct l_wait_info);
 	PRTYPE(struct odtable);
 	PRTYPE(struct odtable_entftr);
