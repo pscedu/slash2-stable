@@ -25,24 +25,22 @@
 #include <netinet/in.h>
 #include <net/if.h>
 
-#if HAVE_NET_IF_DL_H
+#ifdef HAVE_NET_IF_DL_H
 # include <net/if_dl.h>
 #endif
 
-struct ifaddrs;
+#ifdef HAVE_GETIFADDRS
+# include <ifaddrs.h>
+#else
+struct ifaddrs {
+};
+#endif
 
 #ifdef MSG_NOSIGNAL
 # define PFL_MSG_NOSIGNAL MSG_NOSIGNAL
 #else
 # define PFL_MSG_NOSIGNAL 0
 #endif
-
-int  pfl_socket_getpeercred(int, uid_t *, gid_t *);
-void pfl_socket_setnosig(int);
-
-void pflnet_freeifaddrs(struct ifaddrs *);
-int  pflnet_getifaddrs(struct ifaddrs **);
-void pflnet_getifnfordst(const struct ifaddrs *, const struct sockaddr *, char []);
 
 union pfl_sockaddr {
 	struct sockaddr_storage ss;
@@ -53,5 +51,25 @@ union pfl_sockaddr {
 #endif
 	struct sockaddr sa;
 };
+
+#ifndef SA_SIZE
+
+# ifdef __APPLE__
+#  define SOCKADDR_ALIGN	int32_t
+# else
+#  define SOCKADDR_ALIGN	long
+# endif
+
+# define SA_SIZE(sa)							\
+    ((sa)->sa_len ? PSC_ALIGN((sa)->sa_len,				\
+	sizeof(SOCKADDR_ALIGN)) : sizeof(SOCKADDR_ALIGN))
+#endif
+
+int  pfl_socket_getpeercred(int, uid_t *, gid_t *);
+void pfl_socket_setnosig(int);
+
+void pflnet_freeifaddrs(struct ifaddrs *);
+int  pflnet_getifaddrs(struct ifaddrs **);
+void pflnet_getifnfordst(const struct ifaddrs *, const struct sockaddr *, char []);
 
 #endif /* _PFL_NET_H_ */
