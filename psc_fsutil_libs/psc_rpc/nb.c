@@ -84,7 +84,7 @@ pscrpc_nbreqset_flush(struct pscrpc_nbreqset *nbs)
 int
 pscrpc_nbreqset_reap(struct pscrpc_nbreqset *nbs)
 {
-	int nreaped = 0, nchecked = 0, timeout = 1;
+	int rc, nreaped = 0, nchecked = 0, timeout = 1;
 	struct pscrpc_request_set *set = &nbs->nb_reqset;
 	struct pscrpc_request *req, *next;
 	struct l_wait_info lwi;
@@ -129,15 +129,17 @@ pscrpc_nbreqset_reap(struct pscrpc_nbreqset *nbs)
 			/*
 			 * This is the caller's last shot at accessing
 			 *  this msg..
-			 * Let the callback deal with it's own
+			 * Let the callback deal with its own
 			 *  error handling, we can't do much from here
 			 */
-			if (nbs->nb_callback != NULL)
-				nbs->nb_callback(req, &req->rq_async_args);
+			rc = 0;
+			if (nbs->nb_callback)
+				rc = nbs->nb_callback(req, &req->rq_async_args);
 			/*
 			 * Be done with it..
 			 */
-			pscrpc_req_finished(req);
+			if (rc == 0)
+				pscrpc_req_finished(req);
 		}
 	}
 	freelock(&set->set_lock);
