@@ -518,20 +518,14 @@ pscrpc_wait_event (int timeout)
 	return found_something;
 }
 
-lnet_pid_t psc_get_pid(void)
+lnet_pid_t
+pscrpc_get_pid(void)
 {
-	lnet_pid_t        pid;
-
-#ifndef  __KERNEL__
-	pid = getpid();
-#else
-	pid = LUSTRE_SRV_LNET_PID;
-#endif
-	return pid;
+	return (LUSTRE_SRV_LNET_PID);
 }
 
-
-int pscrpc_ni_init(int type)
+int
+pscrpc_ni_init(int type)
 {
 	int               rc;
 	lnet_process_id_t my_id;
@@ -557,7 +551,7 @@ int pscrpc_ni_init(int type)
 		/* liblustre calls the master callback when it removes events from the
 		 * event queue.  The event queue has to be big enough not to drop
 		 * anything */
-		if ((rc = LNetNIInit(psc_get_pid())))
+		if ((rc = LNetNIInit(pscrpc_get_pid())))
 			psc_fatalx("failed LNetNIInit() (%d)", rc);
 
 		rc = LNetEQAlloc(10240, 0, &pscrpc_eq_h);
