@@ -99,9 +99,14 @@ ifneq ($(filter zfs,${MODULES}),)
   MODULES+=	z
 endif
 
+ifneq ($(filter rpc,${MODULES}),)
+  SRCS+=	${PSCRPC_SRCS}
+  MODULES+=	lnet
+endif
+
 ifneq ($(filter lnet,${MODULES}),)
-  SRCS+=		${LNET_CFS_SRCS}
-  SRCS+=		${LNET_LIB_SRCS}
+  SRCS+=	${LNET_CFS_SRCS}
+  SRCS+=	${LNET_LIB_SRCS}
   MODULES+=	lnet-hdrs lnet-nid
 endif
 
