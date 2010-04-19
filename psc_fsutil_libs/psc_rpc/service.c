@@ -552,7 +552,8 @@ pscrpc_server_handle_reply (struct pscrpc_service *svc)
 }
 
 int
-target_send_reply_msg (struct pscrpc_request *req, int rc, int fail_id)
+pscrpc_target_send_reply_msg(struct pscrpc_request *req, int rc,
+    int fail_id)
 {
 #if PAULS_TODO
 	if (PSCRPC_OBD_FAIL_CHECK(fail_id | PSCRPC_OBD_FAIL_ONCE)) {

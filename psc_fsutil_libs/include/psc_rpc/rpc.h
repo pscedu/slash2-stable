@@ -548,7 +548,7 @@ pscrpc_bulk_active(struct pscrpc_bulk_desc *desc)
 }
 
 /* service.c */
-int	 target_send_reply_msg(struct pscrpc_request *, int, int);
+int	 pscrpc_target_send_reply_msg(struct pscrpc_request *, int, int);
 void	 pscrpc_fail_import(struct pscrpc_import *, uint32_t);
 
 struct psc_dynarray;
