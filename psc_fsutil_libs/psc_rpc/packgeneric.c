@@ -17,15 +17,16 @@
 #include "psc_util/waitq.h"
 
 #define HDR_SIZE(count) \
-    size_round(offsetof (struct psc_msg, buflens[(count)]))
+    size_round(offsetof(struct psc_msg, buflens[(count)]))
 
-int psc_msg_swabbed(struct psc_msg *msg)
+int
+psc_msg_swabbed(struct psc_msg *msg)
 {
 	return (msg->magic == __swab32(PSCRPC_MSG_MAGIC));
 }
 
 static void
-psc_init_msg (struct psc_msg *msg, int count, int *lens, char **bufs)
+psc_init_msg(struct psc_msg *msg, int count, int *lens, char **bufs)
 {
 	char *ptr;
 	int   i;
@@ -46,12 +47,13 @@ psc_init_msg (struct psc_msg *msg, int count, int *lens, char **bufs)
 	}
 }
 
-int psc_pack_request (struct pscrpc_request *req,
-			 int count, int *lens, char **bufs)
+int
+psc_pack_request(struct pscrpc_request *req, int count, int *lens,
+    char **bufs)
 {
 	int reqlen;
 
-	reqlen = psc_msg_size (count, lens);
+	reqlen = psc_msg_size(count, lens);
 	/* See if we got it from prealloc pool */
 	if (req->rq_reqmsg) {
 		/* Cannot return error here, that would create
@@ -73,7 +75,7 @@ int psc_pack_request (struct pscrpc_request *req,
 	//pscinfo("request %p request->rq_reqmsg %p",
 	//      req, req->rq_reqmsg);
 
-	psc_init_msg (req->rq_reqmsg, count, lens, bufs);
+	psc_init_msg(req->rq_reqmsg, count, lens, bufs);
 
 	//	pscinfo("request %p request->rq_reqmsg %p",
 	//      req, req->rq_reqmsg);
@@ -81,19 +83,19 @@ int psc_pack_request (struct pscrpc_request *req,
 	return (0);
 }
 
-
-int psc_pack_reply (struct pscrpc_request *req,
-		       int count, int *lens, char **bufs)
+int
+psc_pack_reply(struct pscrpc_request *req, int count, int *lens,
+    char **bufs)
 {
 	struct pscrpc_reply_state *rs;
 	int                         msg_len;
 	int                         size;
 
-	LASSERT (req->rq_reply_state == NULL);
+	LASSERT(req->rq_reply_state == NULL);
 
-	msg_len = psc_msg_size (count, lens);
-	size = offsetof (struct pscrpc_reply_state, rs_msg) + msg_len;
-	PSCRPC_OBD_ALLOC (rs, size);
+	msg_len = psc_msg_size(count, lens);
+	size = offsetof(struct pscrpc_reply_state, rs_msg) + msg_len;
+	PSCRPC_OBD_ALLOC(rs, size);
 	if (unlikely(rs == NULL)) {
 		//rs = lustre_get_emerg_rs(req->rq_rqbd->rqbd_service, size);
 		if (!rs)
@@ -113,28 +115,32 @@ int psc_pack_reply (struct pscrpc_request *req,
 	req->rq_replen = msg_len;
 	req->rq_reply_state = rs;
 	req->rq_repmsg = &rs->rs_msg;
-	psc_init_msg (&rs->rs_msg, count, lens, bufs);
+	psc_init_msg(&rs->rs_msg, count, lens, bufs);
 
 	//PSCRPC_RS_DEBUG_LRU_ADD(rs);
 
 	return (0);
 }
 
-/* This returns the size of the buffer that is required to hold a psc_msg
- * with the given sub-buffer lengths. */
-int psc_msg_size(int count, int *lengths)
+/*
+ * pscrpc_msg_size -  Calculate the size of the buffer that is required
+ *	to hold a pscrpc_msg with the given sub-buffer lengths.
+ */
+int
+psc_msg_size(int count, int *lengths)
 {
 	int size;
 	int i;
 
-	size = HDR_SIZE (count);
+	size = HDR_SIZE(count);
 	for (i = 0; i < count; i++)
 		size += size_round(lengths[i]);
 
 	return size;
 }
 
-int psc_unpack_msg(struct psc_msg *m, int len)
+int
+psc_unpack_msg(struct psc_msg *m, int len)
 {
 	int   flipped;
 	int   required_len;
@@ -146,20 +152,20 @@ int psc_unpack_msg(struct psc_msg *m, int len)
 	 * rather than a short message.
 	 *
 	 */
-	required_len = MAX (offsetof (struct psc_msg, version) +
-			    sizeof (m->version),
-			    offsetof (struct psc_msg, magic) +
-			    sizeof (m->magic));
+	required_len = MAX(offsetof(struct psc_msg, version) +
+			    sizeof(m->version),
+			    offsetof(struct psc_msg, magic) +
+			    sizeof(m->magic));
 	if (len < required_len) {
 		/* can't even look inside the message */
-		CERROR ("msg length %d too small for magic/version check\n",
+		CERROR("msg length %d too small for magic/version check\n",
 			len);
 		return (-EINVAL);
 	}
 
 	flipped = psc_msg_swabbed(m);
 	if (flipped)
-		__swab32s (&m->version);
+		__swab32s(&m->version);
 	else if (m->magic != PSCRPC_MSG_MAGIC) {
 		CERROR("wrong psc_msg magic %#08x\n", m->magic);
 		return (-EINVAL);
@@ -176,34 +182,34 @@ int psc_unpack_msg(struct psc_msg *m, int len)
 	required_len = HDR_SIZE(0);
 	if (len < required_len) {
 		/* can't even look inside the message */
-		CERROR ("message length %d too small for psc_msg\n", len);
+		CERROR("message length %d too small for psc_msg\n", len);
 		return (-EINVAL);
 	}
 
 	if (flipped) {
-		__swab32s (&m->type);
-		__swab32s (&m->opc);
-		__swab64s (&m->last_xid);
-		__swab64s (&m->last_committed);
-		__swab64s (&m->transno);
-		__swab32s (&m->status);
-		__swab32s (&m->flags);
-		__swab32s (&m->conn_cnt);
-		__swab32s (&m->bufcount);
+		__swab32s(&m->type);
+		__swab32s(&m->opc);
+		__swab64s(&m->last_xid);
+		__swab64s(&m->last_committed);
+		__swab64s(&m->transno);
+		__swab32s(&m->status);
+		__swab32s(&m->flags);
+		__swab32s(&m->conn_cnt);
+		__swab32s(&m->bufcount);
 	}
 
 	required_len = HDR_SIZE(m->bufcount);
 
 	if (len < required_len) {
 		/* didn't receive all the buffer lengths */
-		CERROR ("message length %d too small for %d buflens\n",
+		CERROR("message length %d too small for %d buflens\n",
 			len, m->bufcount);
 		return (-EINVAL);
 	}
 
 	for (i = 0; i < (int)m->bufcount; i++) {
 		if (flipped)
-			__swab32s (&m->buflens[i]);
+			__swab32s(&m->buflens[i]);
 		required_len += size_round(m->buflens[i]);
 	}
 
@@ -218,7 +224,6 @@ int psc_unpack_msg(struct psc_msg *m, int len)
 	return (0);
 }
 
-
 /**
  * psc_msg_buflen - return the length of buffer @n in message @m
  * @m - psc_msg (request or reply) to look at
@@ -226,7 +231,8 @@ int psc_unpack_msg(struct psc_msg *m, int len)
  *
  * returns zero for non-existent message indices
  */
-int psc_msg_buflen(struct psc_msg *m, int n)
+int
+psc_msg_buflen(struct psc_msg *m, int n)
 {
 	if (n >= (int)m->bufcount)
 		return 0;
@@ -235,15 +241,22 @@ int psc_msg_buflen(struct psc_msg *m, int n)
 }
 //EXPORT_SYMBOL(psc_msg_buflen);
 
-void *psc_msg_buf(struct psc_msg *m, int n, int min_size)
+/**
+ * pscrpc_msg_buf -
+ * @m:
+ * @n:
+ * @min_size:
+ */
+void *
+psc_msg_buf(struct psc_msg *m, int n, int min_size)
 {
 	int i;
 	int offset;
 	int buflen;
 	int bufcount;
 
-	LASSERT (m != NULL);
-	LASSERT (n >= 0);
+	LASSERT(m != NULL);
+	LASSERT(n >= 0);
 
 	bufcount = m->bufcount;
 	if (n >= bufcount) {
@@ -266,38 +279,38 @@ void *psc_msg_buf(struct psc_msg *m, int n, int min_size)
 	return (char *)m + offset;
 }
 
-
-char *psc_msg_string (struct psc_msg *m, int idx, int max_len)
+char *
+psc_msg_string(struct psc_msg *m, int idx, int max_len)
 {
 	/* max_len == 0 means the string should fill the buffer */
-	char *str = psc_msg_buf (m, idx, 0);
+	char *str = psc_msg_buf(m, idx, 0);
 	int   slen;
 	int   blen;
 
 	if (str == NULL) {
-		CERROR ("can't unpack string in msg %p buffer[%d]\n",
+		CERROR("can't unpack string in msg %p buffer[%d]\n",
 			m, idx);
 		return (NULL);
 	}
 
 	blen = m->buflens[idx];
-	slen = strnlen (str, blen);
+	slen = strnlen(str, blen);
 
 	if (slen == blen) {                     /* not NULL terminated */
-		CERROR ("can't unpack non-NULL terminated string in "
+		CERROR("can't unpack non-NULL terminated string in "
 			"msg %p buffer[%d] len %d\n", m, idx, blen);
 		return (NULL);
 	}
 
 	if (max_len == 0) {
 		if (slen != blen - 1) {
-			CERROR ("can't unpack short string in msg %p "
+			CERROR("can't unpack short string in msg %p "
 				"buffer[%d] len %d: strlen %d\n",
 				m, idx, blen, slen);
 			return (NULL);
 		}
 	} else if (slen > max_len) {
-		CERROR ("can't unpack oversized string in msg %p "
+		CERROR("can't unpack oversized string in msg %p "
 			"buffer[%d] len %d strlen %d: max %d expected\n",
 			m, idx, blen, slen, max_len);
 		return (NULL);
