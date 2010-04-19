@@ -13,13 +13,14 @@
 #include "psc_util/log.h"
 #include "psc_util/waitq.h"
 
-lnet_handle_eq_t pscrpc_eq_h;
-struct psclist_head pscrpc_wait_callbacks;
+lnet_handle_eq_t	pscrpc_eq_h;
+struct psclist_head	pscrpc_wait_callbacks;
 
 /*
  *  Client's outgoing request callback
  */
-void request_out_callback(lnet_event_t *ev)
+void
+pscrpc_request_out_callback(lnet_event_t *ev)
 {
 	struct pscrpc_cb_id   *cbid = ev->md.user_ptr;
 	struct pscrpc_request *req = cbid->cbid_arg;
@@ -57,7 +58,8 @@ pscrpc_bump_peer_qlen(void *arg)
 /*
  * Server's incoming request callback
  */
-void request_in_callback(lnet_event_t *ev)
+void
+pscrpc_request_in_callback(lnet_event_t *ev)
 {
 	struct pscrpc_cb_id               *cbid = ev->md.user_ptr;
 	struct pscrpc_request_buffer_desc *rqbd = cbid->cbid_arg;
@@ -115,7 +117,7 @@ void request_in_callback(lnet_event_t *ev)
 	req->rq_peer = ev->initiator;
 	req->rq_self = ev->target.nid;
 	req->rq_rqbd = rqbd;
-	req->rq_phase = PSCRQ_PHASE_NEW;
+	req->rq_phase = PSCRPC_RQ_PHASE_NEW;
 #ifdef CRAY_XT3
 	//req->rq_uid = ev->uid;
 #endif
@@ -198,7 +200,8 @@ void request_in_callback(lnet_event_t *ev)
 /*
  * Client's bulk has been written/read
  */
-void client_bulk_callback (lnet_event_t *ev)
+void
+pscrpc_client_bulk_callback(lnet_event_t *ev)
 {
 	struct pscrpc_cb_id     *cbid = ev->md.user_ptr;
 	struct pscrpc_bulk_desc *desc = cbid->cbid_arg;
@@ -231,8 +234,8 @@ void client_bulk_callback (lnet_event_t *ev)
 	freelock(&desc->bd_lock);
 }
 
-
-void reply_in_callback(lnet_event_t *ev)
+void
+pscrpc_reply_in_callback(lnet_event_t *ev)
 {
 	struct pscrpc_cb_id   *cbid = ev->md.user_ptr;
 	struct pscrpc_request *req = cbid->cbid_arg;
@@ -285,7 +288,8 @@ void reply_in_callback(lnet_event_t *ev)
 /*
  *  Server's outgoing reply callback
  */
-void reply_out_callback(lnet_event_t *ev)
+void
+pscrpc_reply_out_callback(lnet_event_t *ev)
 {
 	struct pscrpc_cb_id       *cbid = ev->md.user_ptr;
 	struct pscrpc_reply_state *rs = cbid->cbid_arg;
@@ -323,7 +327,8 @@ void reply_out_callback(lnet_event_t *ev)
 /*
  * Server's bulk completion callback
  */
-void server_bulk_callback (lnet_event_t *ev)
+void
+pscrpc_server_bulk_callback(lnet_event_t *ev)
 {
 	struct pscrpc_cb_id     *cbid = ev->md.user_ptr;
 	struct pscrpc_bulk_desc *desc = cbid->cbid_arg;
@@ -361,7 +366,7 @@ void server_bulk_callback (lnet_event_t *ev)
 }
 
 static void
-drop_callback(lnet_event_t *ev)
+pscrpc_drop_callback(lnet_event_t *ev)
 {
 	pscrpc_drop_conns(&ev->initiator);
 }
@@ -377,13 +382,14 @@ drop_callback(lnet_event_t *ev)
  * pscrpc_master_callback().
  * @ev: the event passed up from lnet
  */
-static void pscrpc_master_callback(lnet_event_t *ev)
+static void
+pscrpc_master_callback(lnet_event_t *ev)
 {
 	struct pscrpc_cb_id *cbid;
 	void (*callback)(lnet_event_t *);
 
 	if (ev->type == LNET_EVENT_DROP) {
-		drop_callback(ev);
+		pscrpc_drop_callback(ev);
 		return;
 	}
 
@@ -391,12 +397,12 @@ static void pscrpc_master_callback(lnet_event_t *ev)
 	callback = cbid->cbid_fn;
 	/* Honestly, it's best to find out early. */
 	LASSERT (cbid->cbid_arg != LP_POISON);
-	LASSERT (callback == request_out_callback ||
-		 callback == reply_in_callback    ||
-		 callback == client_bulk_callback ||
-		 callback == request_in_callback  ||
-		 callback == reply_out_callback   ||
-		 callback == server_bulk_callback);
+	LASSERT (callback == pscrpc_request_out_callback ||
+		 callback == pscrpc_reply_in_callback    ||
+		 callback == pscrpc_client_bulk_callback ||
+		 callback == pscrpc_request_in_callback  ||
+		 callback == pscrpc_reply_out_callback   ||
+		 callback == pscrpc_server_bulk_callback);
 
 	callback (ev);
 }
@@ -408,7 +414,7 @@ static void pscrpc_master_callback(lnet_event_t *ev)
  * NOTES: Client context only
  */
 void *
-pscrpc_register_wait_callback (int (*fn)(void *arg), void *arg)
+pscrpc_register_wait_callback(int (*fn)(void *arg), void *arg)
 {
 	struct pscrpc_wait_callback *llwc = NULL;
 
@@ -427,7 +433,7 @@ pscrpc_register_wait_callback (int (*fn)(void *arg), void *arg)
  * NOTES: Client context only
  */
 void
-pscrpc_deregister_wait_callback (void *opaque)
+pscrpc_deregister_wait_callback(void *opaque)
 {
 	struct pscrpc_wait_callback *llwc = opaque;
 
@@ -442,7 +448,7 @@ pscrpc_deregister_wait_callback (void *opaque)
  * NOTES: Client context only
  */
 int
-pscrpc_check_events (int timeout)
+pscrpc_check_events(int timeout)
 {
 	lnet_event_t ev;
 	int         rc;
@@ -467,14 +473,15 @@ pscrpc_check_events (int timeout)
 }
 
 /**
- * pscrpc_wait_event - called from the macro psc_cli_wait_event() (rpc.h), calls pscrpc_check_events().
- * See psc_cli_wait_event for more detail.
+ * pscrpc_wait_event - called from the macro pscrpc_cli_wait_event(),
+ *	calls pscrpc_check_events().
+ * See pscrpc_cli_wait_event() for more detail.
  * @timeout: number of seconds to block (0 is forever i think)
  * Returns: 0 if nothing found, 1 if something found, -ETIMEDOUT on timeout.
  * NOTES: Client context only
  */
 int
-pscrpc_wait_event (int timeout)
+pscrpc_wait_event(int timeout)
 {
 #if CLIENT_IS_A_SERVER_TOO
 	struct psclist_head             *tmp;
@@ -573,7 +580,8 @@ pscrpc_ni_init(int type)
 	return (-ENOMEM);
 }
 
-void pscrpc_ni_fini(void)
+void
+pscrpc_ni_fini(void)
 {
 	struct psc_waitq   waitq;
 	struct l_wait_info  lwi;
@@ -602,7 +610,7 @@ void pscrpc_ni_fini(void)
 			/* Wait for a bit */
 			psc_waitq_init(&waitq);
 			lwi = LWI_TIMEOUT(2, NULL, NULL);
-			psc_svr_wait_event(&waitq, 0, &lwi, NULL);
+			pscrpc_svr_wait_event(&waitq, 0, &lwi, NULL);
 			break;
 		}
 	}

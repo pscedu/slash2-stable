@@ -42,23 +42,23 @@ struct rsx_msg_portablizer {
 	do {								\
 		int _rc;						\
 									\
-		if (psc_msg_size(nreplens, replens) >			\
+		if (pscrpc_msg_size(nreplens, replens) >		\
 		    (rq)->rq_rqbd->rqbd_service->srv_max_reply_size)	\
 			psc_fatalx("reply size greater than max");	\
-		_rc = psc_pack_reply((rq), nreplens, replens, NULL);	\
+		_rc = pscrpc_pack_reply((rq), nreplens, replens, NULL);	\
 		if (_rc) {						\
 			psc_assert(_rc == -ENOMEM);			\
-			psc_errorx("psc_pack_reply failed: %s",		\
+			psc_errorx("pscrpc_pack_reply failed: %s",	\
 			    strerror(_rc));				\
 			return (_rc);					\
 		}							\
-		if (((mp0) = psc_msg_buf((rq)->rq_repmsg,		\
+		if (((mp0) = pscrpc_msg_buf((rq)->rq_repmsg,		\
 		    0, (replens)[0])) == NULL) {			\
 			psc_errorx("reply is NULL");			\
 			return (-ENOMEM);				\
 		}							\
 		(mp0)->rc = 0;						\
-		if (((mq0) = psc_msg_buf((rq)->rq_reqmsg,		\
+		if (((mq0) = pscrpc_msg_buf((rq)->rq_reqmsg,		\
 		    0, sizeof(*(mq0)))) == NULL) {			\
 			/* XXX psc_fatalx */				\
 			psc_errorx("request is NULL");			\

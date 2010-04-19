@@ -9,7 +9,7 @@
 #include "psc_util/atomic.h"
 #include "psc_util/lock.h"
 
-static psc_spinlock_t  conn_lock        = LOCK_INITIALIZER;
+static psc_spinlock_t	   conn_lock        = LOCK_INITIALIZER;
 static struct psclist_head conn_list        = PSCLIST_HEAD_INIT(conn_list);
 static struct psclist_head conn_unused_list = PSCLIST_HEAD_INIT(conn_unused_list);
 
@@ -24,7 +24,7 @@ pscrpc_connection_addref(struct pscrpc_connection *c)
 }
 
 struct pscrpc_connection *
-pscrpc_lookup_conn_locked (lnet_process_id_t peer, lnet_nid_t self)
+pscrpc_lookup_conn_locked(lnet_process_id_t peer, lnet_nid_t self)
 {
 	struct pscrpc_connection *c;
 	struct psclist_head          *tmp;
@@ -57,7 +57,7 @@ pscrpc_lookup_conn_locked (lnet_process_id_t peer, lnet_nid_t self)
 
 struct pscrpc_connection *
 pscrpc_get_connection(lnet_process_id_t peer,
-		       lnet_nid_t self, struct psc_uuid *uuid)
+    lnet_nid_t self, struct pscrpc_uuid *uuid)
 {
 	struct pscrpc_connection *c;
 	struct pscrpc_connection *c2;
@@ -90,7 +90,7 @@ pscrpc_get_connection(lnet_process_id_t peer,
 	c->c_peer = peer;
 	c->c_self = self;
 	if (uuid != NULL)
-		psc_str2uuid(&c->c_remote_uuid, (char *)uuid->uuid);
+		pscrpc_str2uuid(&c->c_remote_uuid, (char *)uuid->uuid);
 
 	spinlock(&conn_lock);
 
@@ -110,7 +110,8 @@ pscrpc_get_connection(lnet_process_id_t peer,
 	return (c2);
 }
 
-int pscrpc_put_connection(struct pscrpc_connection *c)
+int
+pscrpc_put_connection(struct pscrpc_connection *c)
 {
 	int rc = 0;
 

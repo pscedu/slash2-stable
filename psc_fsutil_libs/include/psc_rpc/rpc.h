@@ -78,28 +78,28 @@ struct pscrpc_wait_callback {
 	void				 *llwc_arg;
 };
 
-enum psc_rq_phase {
-	PSCRQ_PHASE_NEW			= 0xebc0de00,
-	PSCRQ_PHASE_RPC			= 0xebc0de01,
-	PSCRQ_PHASE_BULK		= 0xebc0de02,
-	PSCRQ_PHASE_INTERPRET		= 0xebc0de03,
-	PSCRQ_PHASE_COMPLETE		= 0xebc0de04,
+enum pscrpc_rq_phase {
+	PSCRPC_RQ_PHASE_NEW		= 0xebc0de00,
+	PSCRPC_RQ_PHASE_RPC		= 0xebc0de01,
+	PSCRPC_RQ_PHASE_BULK		= 0xebc0de02,
+	PSCRPC_RQ_PHASE_INTERPRET	= 0xebc0de03,
+	PSCRPC_RQ_PHASE_COMPLETE	= 0xebc0de04,
 };
 
-enum psc_imp_state {
-	PSC_IMP_CLOSED			= 1,
-	PSC_IMP_NEW			= 2,
-	PSC_IMP_DISCON			= 3,
-	PSC_IMP_CONNECTING		= 4,
-	PSC_IMP_REPLAY			= 5,
-	PSC_IMP_REPLAY_LOCKS		= 6,
-	PSC_IMP_REPLAY_WAIT		= 7,
-	PSC_IMP_RECOVER			= 8,
-	PSC_IMP_FULL			= 9,
-	PSC_IMP_EVICTED			= 10
+enum pscrpc_imp_state {
+	PSCRPC_IMP_CLOSED		= 1,
+	PSCRPC_IMP_NEW			= 2,
+	PSCRPC_IMP_DISCON		= 3,
+	PSCRPC_IMP_CONNECTING		= 4,
+	PSCRPC_IMP_REPLAY		= 5,
+	PSCRPC_IMP_REPLAY_LOCKS		= 6,
+	PSCRPC_IMP_REPLAY_WAIT		= 7,
+	PSCRPC_IMP_RECOVER		= 8,
+	PSCRPC_IMP_FULL			= 9,
+	PSCRPC_IMP_EVICTED		= 10
 };
 
-struct psc_uuid {
+struct pscrpc_uuid {
 	//uint8_t uuid[40];
 	uint8_t uuid[8];
 };
@@ -127,7 +127,7 @@ struct pscrpc_connection {
 	struct psclist_head		 c_link;
 	lnet_nid_t			 c_self;
 	lnet_process_id_t		 c_peer;
-	struct psc_uuid			 c_remote_uuid;
+	struct pscrpc_uuid		 c_remote_uuid;
 	atomic_t			 c_refcount;
 	struct pscrpc_export		*c_exp;
 	struct pscrpc_import		*c_imp;
@@ -159,7 +159,7 @@ struct pscrpc_import {
 	int				 imp_generation;
 	int				 imp_conn_cnt;
 	int				 imp_max_retries;
-	enum psc_imp_state		 imp_state;
+	enum pscrpc_imp_state		 imp_state;
 	struct pscrpc_handle		 imp_remote_handle;
 	uint64_t			 imp_last_replay_transno;
 	uint64_t			 imp_last_transno_checked; /* optimize */
@@ -240,7 +240,7 @@ struct pscrpc_bulk_desc {
 	lnet_md_iovec_t			 bd_iov[0];		/* must be last           */
 };
 
-struct psc_msg {
+struct pscrpc_msg {
 	struct pscrpc_handle		 handle;
 	uint32_t			 magic;
 	uint32_t			 type;
@@ -298,8 +298,8 @@ struct pscrpc_request {
 	atomic_t			*rq_compl_cntr;
 	lnet_process_id_t		 rq_peer;
 	lnet_nid_t			 rq_self;
-	enum psc_rq_phase		 rq_phase;		/* one of PSCRQ_PHASE_* */
-	enum psc_imp_state		 rq_send_state;
+	enum pscrpc_rq_phase		 rq_phase;		/* one of PSCRQ_PHASE_* */
+	enum pscrpc_imp_state		 rq_send_state;
 	struct psclist_head		 rq_list_entry;
 	struct psclist_head		 rq_set_chain_lentry;
 	struct psclist_head		 rq_history_lentry;
@@ -311,8 +311,8 @@ struct pscrpc_request {
 	struct pscrpc_request_set	*rq_set;
 
 	/* client+server request */
-	struct psc_msg			*rq_reqmsg;
-	struct psc_msg			*rq_repmsg;
+	struct pscrpc_msg		*rq_reqmsg;
+	struct pscrpc_msg		*rq_repmsg;
 	/* request and reply callbacks */
 	struct pscrpc_cb_id		 rq_req_cbid;
 	struct pscrpc_cb_id		 rq_reply_cbid;
@@ -420,7 +420,7 @@ struct pscrpc_reply_state {
 	atomic_t		 rs_refcount;
 	lnet_handle_md_t	 rs_md_h;
 	struct pscrpc_service	*rs_service;		/* backpointer to my service */
-	struct psc_msg		 rs_msg;		/* msg struct -- MUST BE LAST MEMBER */
+	struct pscrpc_msg	 rs_msg;		/* msg struct -- MUST BE LAST MEMBER */
 };
 
 /*
@@ -454,21 +454,21 @@ void	 pscrpc_nbreapthr_spawn(struct pscrpc_nbreqset *, int, const char *);
 
 struct pscrpc_bulk_desc *
 	 pscrpc_prep_bulk_exp(struct pscrpc_request *, int, int, int);
-void	 psc_free_reply_state(struct pscrpc_reply_state *);
+void	 pscrpc_free_reply_state(struct pscrpc_reply_state *);
 void	 pscrpc_req_finished(struct pscrpc_request *);
 void	 pscrpc_free_bulk(struct pscrpc_bulk_desc *);
-int	 psc_pack_reply(struct pscrpc_request *, int, int *, char **);
+int	 pscrpc_pack_reply(struct pscrpc_request *, int, int *, char **);
 int	 pscrpc_put_connection(struct pscrpc_connection *);
 void	 pscrpc_fill_bulk_md(lnet_md_t *, struct pscrpc_bulk_desc *);
 
 /*  events.c */
 lnet_pid_t pscrpc_get_pid(void);
-void	 request_in_callback(lnet_event_t *);
-void	 request_out_callback(lnet_event_t *);
-void	 client_bulk_callback (lnet_event_t *);
-void	 server_bulk_callback (lnet_event_t *);
-void	 reply_in_callback(lnet_event_t *);
-void	 reply_out_callback(lnet_event_t *);
+void	 pscrpc_request_in_callback(lnet_event_t *);
+void	 pscrpc_request_out_callback(lnet_event_t *);
+void	 pscrpc_client_bulk_callback(lnet_event_t *);
+void	 pscrpc_server_bulk_callback(lnet_event_t *);
+void	 pscrpc_reply_in_callback(lnet_event_t *);
+void	 pscrpc_reply_out_callback(lnet_event_t *);
 void	 pscrpc_deregister_wait_callback(void *);
 int	 pscrpc_check_events(int);
 int	 pscrpc_wait_event(int);
@@ -476,18 +476,18 @@ int	 pscrpc_ni_init(int);
 void	 pscrpc_init_portals(int);
 
 /* packgeneric.c */
-int	 psc_msg_size(int, int *);
-int	 psc_msg_swabbed(struct psc_msg *);
-int	 psc_pack_request (struct pscrpc_request *, int, int *, char **);
-int	 psc_pack_reply (struct pscrpc_request *, int, int *, char **);
-int	 psc_unpack_msg(struct psc_msg *, int);
-void	*psc_msg_buf(struct psc_msg *, int, int);
-int	 psc_msg_buflen(struct psc_msg *, int);
-char	*psc_msg_string(struct psc_msg *, int, int);
+int	 pscrpc_msg_size(int, int *);
+int	 pscrpc_msg_swabbed(struct pscrpc_msg *);
+int	 pscrpc_pack_request(struct pscrpc_request *, int, int *, char **);
+int	 pscrpc_pack_reply(struct pscrpc_request *, int, int *, char **);
+int	 pscrpc_unpack_msg(struct pscrpc_msg *, int);
+void	*pscrpc_msg_buf(struct pscrpc_msg *, int, int);
+int	 pscrpc_msg_buflen(struct pscrpc_msg *, int);
+char	*pscrpc_msg_string(struct pscrpc_msg *, int, int);
 
 /* niobuf.c */
-void	 psc_free_reply_state(struct pscrpc_reply_state *rs);
-int	 psc_send_rpc(struct pscrpc_request *request, int noreply);
+void	 pscrpc_free_reply_state(struct pscrpc_reply_state *rs);
+int	 pscrpc_send_rpc(struct pscrpc_request *request, int noreply);
 void	 pscrpc_abort_bulk(struct pscrpc_bulk_desc *desc);
 int	 pscrpc_error(struct pscrpc_request *req);
 void	 pscrpc_fill_bulk_md(lnet_md_t *md, struct pscrpc_bulk_desc *desc);
@@ -507,7 +507,7 @@ void	 pscrpc_drop_conns(lnet_process_id_t *);
 #define psc_id2str(addr, buf)	libcfs_id2str2((addr), (buf))
 
 struct pscrpc_connection *
-	 pscrpc_get_connection(lnet_process_id_t, lnet_nid_t, struct psc_uuid *);
+	 pscrpc_get_connection(lnet_process_id_t, lnet_nid_t, struct pscrpc_uuid *);
 struct pscrpc_connection *
 	 pscrpc_lookup_conn_locked(lnet_process_id_t, lnet_nid_t);
 struct pscrpc_connection *
@@ -569,70 +569,69 @@ pscrpc_rs_decref(struct pscrpc_reply_state *rs)
 {
 	LASSERT(atomic_read(&rs->rs_refcount) > 0);
 	if (atomic_dec_and_test(&rs->rs_refcount))
-		psc_free_reply_state(rs);
+		pscrpc_free_reply_state(rs);
 }
 
 static __inline void
-psc_str2uuid(struct psc_uuid *uuid, char *tmp)
+pscrpc_str2uuid(struct pscrpc_uuid *uuid, char *tmp)
 {
 	strncpy((char *)uuid->uuid, tmp, sizeof(uuid->uuid));
 	uuid->uuid[sizeof(uuid->uuid) - 1] = '\0';
 }
 
 /* Flags that are operation-specific go in the top 16 bits. */
-#define MSG_OP_FLAG_MASK   0xffff0000
-#define MSG_OP_FLAG_SHIFT  16
+#define MSG_OP_FLAG_MASK	0xffff0000
+#define MSG_OP_FLAG_SHIFT	16
 
 /* Flags that apply to all requests are in the bottom 16 bits */
-#define MSG_GEN_FLAG_MASK      0x0000ffff
-#define MSG_LAST_REPLAY        1
-#define MSG_RESENT             2
-#define MSG_REPLAY             4
+#define MSG_GEN_FLAG_MASK	0x0000ffff
+#define MSG_LAST_REPLAY		1
+#define MSG_RESENT		2
+#define MSG_REPLAY		4
 
 static __inline int
-psc_msg_get_flags(struct psc_msg *msg)
+pscrpc_msg_get_flags(struct pscrpc_msg *msg)
 {
 	return (msg->flags & MSG_GEN_FLAG_MASK);
 }
 
 static __inline void
-psc_msg_add_flags(struct psc_msg *msg, int flags)
+pscrpc_msg_add_flags(struct pscrpc_msg *msg, int flags)
 {
 	msg->flags |= MSG_GEN_FLAG_MASK & flags;
 }
 
 static __inline void
-psc_msg_set_flags(struct psc_msg *msg, int flags)
+pscrpc_msg_set_flags(struct pscrpc_msg *msg, int flags)
 {
 	msg->flags &= ~MSG_GEN_FLAG_MASK;
-	psc_msg_add_flags(msg, flags);
+	pscrpc_msg_add_flags(msg, flags);
 }
 
 static __inline void
-psc_msg_clear_flags(struct psc_msg *msg, int flags)
+pscrpc_msg_clear_flags(struct pscrpc_msg *msg, int flags)
 {
 	msg->flags &= ~(MSG_GEN_FLAG_MASK & flags);
 }
 
 static __inline int
-psc_msg_get_op_flags(struct psc_msg *msg)
+pscrpc_msg_get_op_flags(struct pscrpc_msg *msg)
 {
 	return (msg->flags >> MSG_OP_FLAG_SHIFT);
 }
 
 static __inline void
-psc_msg_add_op_flags(struct psc_msg *msg, int flags)
+pscrpc_msg_add_op_flags(struct pscrpc_msg *msg, int flags)
 {
 	msg->flags |= ((flags & MSG_GEN_FLAG_MASK) << MSG_OP_FLAG_SHIFT);
 }
 
 static __inline void
-psc_msg_set_op_flags(struct psc_msg *msg, int flags)
+pscrpc_msg_set_op_flags(struct pscrpc_msg *msg, int flags)
 {
 	msg->flags &= ~MSG_OP_FLAG_MASK;
-	psc_msg_add_op_flags(msg, flags);
+	pscrpc_msg_add_op_flags(msg, flags);
 }
-
 
 static __inline int
 pscrpc_client_receiving_reply (struct pscrpc_request *req)
@@ -666,39 +665,39 @@ pscrpc_wake_client_req(struct pscrpc_request *req)
 }
 
 /* NB: LWI_TIMEOUT ignores signals completely */
-#define LWI_TIMEOUT(time, cb, data)             \
-((struct l_wait_info) {                         \
-	.lwi_timeout    = time,                 \
-	.lwi_on_timeout = cb,                   \
-	.lwi_cb_data    = data,                 \
-	.lwi_interval   = 0                     \
+#define LWI_TIMEOUT(time, cb, data)					\
+((struct l_wait_info) {							\
+	.lwi_timeout	= time,						\
+	.lwi_on_timeout	= cb,						\
+	.lwi_cb_data	= data,						\
+	.lwi_interval	= 0						\
 })
 
-#define LWI_TIMEOUT_INTERVAL(time, interval, cb, data)  \
-((struct l_wait_info) {                                 \
-	.lwi_timeout    = time,                         \
-	.lwi_on_timeout = cb,                           \
-	.lwi_cb_data    = data,                         \
-	.lwi_interval   = interval                      \
+#define LWI_TIMEOUT_INTERVAL(time, interval, cb, data)			\
+((struct l_wait_info) {							\
+	.lwi_timeout	= time,						\
+	.lwi_on_timeout	= cb,						\
+	.lwi_cb_data	= data,						\
+	.lwi_interval	= interval					\
 })
 
-#define LWI_TIMEOUT_INTR(time, time_cb, sig_cb, data)                        \
-((struct l_wait_info) {                                                      \
-	.lwi_timeout    = time,                                              \
-	.lwi_on_timeout = time_cb,                                           \
-	.lwi_on_signal  = sig_cb,                                            \
-	.lwi_cb_data    = data,                                              \
-	.lwi_interval   = 0                                                  \
+#define LWI_TIMEOUT_INTR(time, time_cb, sig_cb, data)			\
+((struct l_wait_info) {							\
+	.lwi_timeout	= time,						\
+	.lwi_on_timeout	= time_cb,					\
+	.lwi_on_signal	= sig_cb,					\
+	.lwi_cb_data	= data,						\
+	.lwi_interval	= 0						\
 })
 
 #define LWI_INTR(cb, data)  LWI_TIMEOUT_INTR(0, NULL, (cb), (data))
 
-#define PSC_FATAL_SIGS (sigmask(SIGKILL) | sigmask(SIGINT)  |              \
-			sigmask(SIGTERM) | sigmask(SIGQUIT) |              \
+#define PSC_FATAL_SIGS (sigmask(SIGKILL) | sigmask(SIGINT)  |		\
+			sigmask(SIGTERM) | sigmask(SIGQUIT) |		\
 			sigmask(SIGALRM))
 
 /**
- * __psc_server_wait_event - implement a timed wait using waitqs and pthread_cond_timedwait
+ * _pscrpc_server_wait_event - implement a timed wait using waitqs and pthread_cond_timedwait
  * @wq: the waitq to block on
  * @condition: condition to check on
  * @info: the timeout info strict (l_wait_info)
@@ -707,102 +706,109 @@ pscrpc_wake_client_req(struct pscrpc_request *req)
  * @lck: optional spinlock used for waitq - see psc_util/waitq.h
  */
 
-#define SVR_TIMEOUT 60
-#define SVR_SHORT_TIMEO 1
-#define  __psc_server_wait_event(wq, condition, info, ret, excl, lck)	\
+#define PSCRPC_SVR_TIMEOUT 60
+#define PSCRPC_SVR_SHORT_TIMEO 1
+#define  _pscrpc_server_wait_event(wq, condition, info, ret, excl, lck)	\
 	do {								\
-		time_t __now       = time(NULL);			\
-		time_t __timeout   = SVR_TIMEOUT;			\
-		time_t __then      = __now;				\
-		int    __timed_out = 0;					\
-		struct timespec abstime = {0, 0};			\
+		time_t _now       = time(NULL);				\
+		time_t _timeout   = PSCRPC_SVR_TIMEOUT;			\
+		time_t _then      = _now;				\
+		int    _timed_out = 0;					\
+		struct timespec _abstime = { 0, 0 };			\
 									\
-		ret = 0;						\
+		(ret) = 0;						\
 									\
 		while (!(condition)) {					\
-			if (__timeout)					\
-				abstime.tv_sec = SVR_SHORT_TIMEO + __now; \
-			abstime.tv_nsec = 0;				\
-			ret = psc_waitq_timedwait(wq, lck, &abstime);	\
-			if (ret && (ret != ETIMEDOUT)) {		\
-				ret = -ret;				\
+			if (_timeout)					\
+				_abstime.tv_sec = _now +		\
+				    PSCRPC_SVR_SHORT_TIMEO;		\
+			_abstime.tv_nsec = 0;				\
+			ret = psc_waitq_timedwait((wq), (lck),		\
+			    &_abstime);					\
+			if ((ret) && (ret) != ETIMEDOUT) {		\
+				(ret) = -(ret);				\
 				break;					\
 			} else						\
-				ret = 0;				\
+				(ret) = 0;				\
 									\
 			if (condition)					\
 				break;					\
 									\
-			if (!__timed_out && info->lwi_timeout != 0) {	\
-				__now = time(NULL);			\
-				__timeout -= __now - __then;		\
-				__then = __now;				\
+			if (!_timed_out && (info)->lwi_timeout != 0) {	\
+				_now = time(NULL);			\
+				_timeout -= _now - _then;		\
+				_then = _now;				\
 									\
-				if (__timeout > 0) continue;		\
-				__timeout = 0;				\
-				__timed_out = 1;			\
-				if (info->lwi_on_timeout == NULL ||	\
-				    info->lwi_on_timeout(info->lwi_cb_data)) { \
-					ret = -ETIMEDOUT;		\
+				if (_timeout > 0)			\
+					continue;			\
+				_timeout = 0;				\
+				_timed_out = 1;				\
+				if ((info)->lwi_on_timeout == NULL ||	\
+				    (info)->lwi_on_timeout(		\
+				     (info)->lwi_cb_data)) {		\
+					(ret) = -ETIMEDOUT;		\
 					break;				\
 				}					\
 			} else						\
-				__now = time(NULL);			\
+				_now = time(NULL);			\
 		}							\
 	} while (0)
 
 
 /**
- * __psc_client_wait_event - the below call is for clients.  Clients are
+ * _psc_client_wait_event - the below call is for clients.  Clients are
  *	single threaded due to catamount/panther.  This means that clients must
  *	block in LNetEQPoll - this occurs in liblustre_wait_event().  A similar
  *	model can be used for server threads so long as liblustre_wait_event()
  *	is replaced with something that uses timed waitq's.
  */
 #define pscrpc_timeout 1
-#define __psc_client_wait_event(wq, condition, info, ret, excl)		\
+#define _psc_client_wait_event(wq, condition, info, ret, excl)		\
 	do {								\
-		time_t __timeout = info->lwi_timeout;			\
-		long __now;						\
-		long __then = 0;					\
-		int  __timed_out = 0;					\
-		int  __interval = pscrpc_timeout;			\
+		time_t _timeout = (info)->lwi_timeout;			\
+		long _now;						\
+		long _then = 0;						\
+		int  _timed_out = 0;					\
+		int  _interval = pscrpc_timeout;			\
 									\
-		ret = 0;						\
+		(ret) = 0;						\
 		if (condition)						\
 			break;						\
 									\
-		if (__timeout != 0)					\
-			__then = time(NULL);				\
-		if (__timeout && __timeout < __interval)		\
-			__interval = __timeout;				\
-		if (info->lwi_interval && info->lwi_interval < __interval) \
-			__interval = info->lwi_interval;		\
+		if (_timeout != 0)					\
+			_then = time(NULL);				\
+		if (_timeout && _timeout < _interval)			\
+			_interval = _timeout;				\
+		if ((info)->lwi_interval &&				\
+		    (info)->lwi_interval < _interval)			\
+			_interval = (info)->lwi_interval;		\
 									\
 		for (; !(condition); (ret) = 0) {			\
-			ret = pscrpc_wait_event(__interval);		\
-			if (0<ret) ret=0; /* preserve the previous semantics */	\
-			if (condition){					\
-				if (ret){				\
-					ret = 0; /* if it's true now */ \
-					/* don't claim timeout */	\
-				}					\
+			(ret) = pscrpc_wait_event(_interval);		\
+			if ((ret) > 0)					\
+				(ret) = 0; /* reset previous value */	\
+			if (condition) {				\
+				/* don't claim timeout if true now */	\
+				if (ret)				\
+					(ret) = 0;			\
 				break;					\
 			}						\
-			if (-ETIMEDOUT==ret) break;			\
-			if (!__timed_out && info->lwi_timeout != 0) {	\
-				__now = time(NULL);			\
-				__timeout -= __now - __then;		\
-				__then = __now;				\
+			if ((ret) == -ETIMEDOUT)			\
+				break;					\
+			if (!_timed_out && (info)->lwi_timeout != 0) {	\
+				_now = time(NULL);			\
+				_timeout -= _now - _then;		\
+				_then = _now;				\
 									\
-				if (__timeout > 0)			\
+				if (_timeout > 0)			\
 					continue;			\
 									\
-				__timeout = 0;				\
-				__timed_out = 1;			\
-				if (info->lwi_on_timeout == NULL ||	\
-				    info->lwi_on_timeout(info->lwi_cb_data)) { \
-					ret = -ETIMEDOUT;		\
+				_timeout = 0;				\
+				_timed_out = 1;				\
+				if ((info)->lwi_on_timeout == NULL ||	\
+				    (info)->lwi_on_timeout(		\
+				     (info)->lwi_cb_data)) {		\
+					(ret) = -ETIMEDOUT;		\
 					break;				\
 				}					\
 			}						\
@@ -810,28 +816,28 @@ pscrpc_wake_client_req(struct pscrpc_request *req)
 	} while (0)
 
 #ifdef HAVE_LIBPTHREAD
-# define psc_cli_wait_event(wq, condition, info)			\
-	psc_svr_wait_event((wq), (condition), (info), NULL)
+# define pscrpc_cli_wait_event(wq, condition, info)			\
+	pscrpc_svr_wait_event((wq), (condition), (info), NULL)
 #else
-# define psc_cli_wait_event(wq, condition, info)			\
+# define pscrpc_cli_wait_event(wq, condition, info)			\
 	({								\
-		int                 __ret;				\
-		struct l_wait_info *__info = (info);			\
+		int                 _ret;				\
+		struct l_wait_info *_info = (info);			\
 									\
-		__psc_client_wait_event((wq), (condition), __info,	\
-		    __ret, 0);						\
-		__ret;							\
+		_pscrpc_client_wait_event((wq), (condition), _info,	\
+		    _ret, 0);						\
+		_ret;							\
 	})
 #endif
 
-#define psc_svr_wait_event(wq, condition, info, lck)			\
+#define pscrpc_svr_wait_event(wq, condition, info, lck)			\
 	({								\
-		int                 __ret;				\
-		struct l_wait_info *__info = (info);			\
+		int                 _ret;				\
+		struct l_wait_info *_info = (info);			\
 									\
-		__psc_server_wait_event((wq), (condition), __info,	\
-		    __ret, 0, (lck));					\
-		__ret;							\
+		_pscrpc_server_wait_event((wq), (condition), _info,	\
+		    _ret, 0, (lck));					\
+		_ret;							\
 	})
 
 #endif /* _PFL_RPC_H_ */

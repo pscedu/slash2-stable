@@ -8,29 +8,29 @@
 #include "psc_util/log.h"
 
 void
-__pscrpc_export_put(struct pscrpc_export *exp)
+_pscrpc_export_put(struct pscrpc_export *exp)
 {
-        if (atomic_dec_and_test(&exp->exp_refcount)) {
-                psc_info("destroying export %p/%s",
+	if (atomic_dec_and_test(&exp->exp_refcount)) {
+		psc_info("destroying export %p/%s",
 			 exp, (exp->exp_connection) ?
 			 libcfs_id2str(exp->exp_connection->c_peer) : "<?>");
 
-                if (exp->exp_connection)
-                        pscrpc_put_connection(exp->exp_connection);
-		
+		if (exp->exp_connection)
+			pscrpc_put_connection(exp->exp_connection);
+
 		pscrpc_export_hldrop(exp);
 
 		/* Outstanding replies refers to 'difficult' replies
 		   Not sure what h_link is for - pauln */
-                //LASSERT(list_empty(&exp->exp_outstanding_replies));
-                //LASSERT(list_empty(&exp->exp_handle.h_link));
+		//LASSERT(list_empty(&exp->exp_outstanding_replies));
+		//LASSERT(list_empty(&exp->exp_handle.h_link));
 #if PAULS_TODO
-                obd_destroy_export(exp);
+		obd_destroy_export(exp);
 #endif
-                PSCRPC_OBD_FREE(exp, sizeof(*exp));
-		/**
+		PSCRPC_OBD_FREE(exp, sizeof(*exp));
+		/*
 		 * pscrpc is not using obd's and our exports are attached to
-                class_decref(obd);
+		class_decref(obd);
 		*/
-        }
+	}
 }

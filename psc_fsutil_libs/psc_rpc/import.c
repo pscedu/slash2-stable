@@ -5,7 +5,7 @@
 #include "psc_rpc/rpc.h"
 
 static inline char *
-pscrpc_import_state_name(enum psc_imp_state state)
+pscrpc_import_state_name(enum pscrpc_imp_state state)
 {
 	static char* import_state_names[] = {
 		"<UNKNOWN>", "CLOSED",  "NEW", "DISCONN",
@@ -13,29 +13,29 @@ pscrpc_import_state_name(enum psc_imp_state state)
 		"RECOVER", "FULL", "EVICTED",
 	};
 
-	LASSERT (state <= PSC_IMP_EVICTED);
+	LASSERT (state <= PSCRPC_IMP_EVICTED);
 	return import_state_names[state];
 }
 
 /* A CLOSED import should remain so. */
 #define PSCIMPORT_SET_STATE_NOLOCK(imp, state)					\
 	do {									\
-		if (imp->imp_state != PSC_IMP_CLOSED) {				\
+		if (imp->imp_state != PSCRPC_IMP_CLOSED) {			\
 			psc_warnx("%p %s: changing import state from %s to %s",	\
 			       imp, libcfs_id2str(imp->imp_connection->c_peer),	\
 			       pscrpc_import_state_name(imp->imp_state),	\
 			       pscrpc_import_state_name(state));		\
 			imp->imp_state = state;					\
 		}								\
-	} while(0)
+	} while (0)
 
-
-int pscrpc_init_import(struct pscrpc_import *imp)
+int
+pscrpc_init_import(struct pscrpc_import *imp)
 {
 	spinlock(&imp->imp_lock);
 
 	imp->imp_generation++;
-	imp->imp_state =  PSC_IMP_NEW;
+	imp->imp_state =  PSCRPC_IMP_NEW;
 
 	freelock(&imp->imp_lock);
 
@@ -53,7 +53,8 @@ int pscrpc_init_import(struct pscrpc_import *imp)
  *             (increasing the import->conn_cnt) the older failure should
  *             not also cause a reconnection.  If zero it forces a reconnect.
  */
-int pscrpc_set_import_discon(struct pscrpc_import *imp, uint32_t conn_cnt)
+int
+pscrpc_set_import_discon(struct pscrpc_import *imp, uint32_t conn_cnt)
 {
 	int rc = 0;
 
@@ -62,7 +63,7 @@ int pscrpc_set_import_discon(struct pscrpc_import *imp, uint32_t conn_cnt)
 	psc_warnx("inhere conn_cnt %u imp_conn_cnt %u, imp->imp_state = %d",
 		  conn_cnt, imp->imp_conn_cnt, imp->imp_state);
 
-	if (imp->imp_state == PSC_IMP_FULL &&
+	if (imp->imp_state == PSCRPC_IMP_FULL &&
 	    (conn_cnt == 0 || conn_cnt == (uint32_t)imp->imp_conn_cnt)) {
 
 		psc_errorx("Connection to service via nid %s was "
@@ -72,7 +73,7 @@ int pscrpc_set_import_discon(struct pscrpc_import *imp, uint32_t conn_cnt)
 			   imp->imp_replayable ?
 			   "wait for recovery to complete" : "fail");
 
-		PSCIMPORT_SET_STATE_NOLOCK(imp, PSC_IMP_DISCON);
+		PSCIMPORT_SET_STATE_NOLOCK(imp, PSCRPC_IMP_DISCON);
 		freelock(&imp->imp_lock);
 
 		//if (obd_dump_on_timeout)
@@ -87,7 +88,7 @@ int pscrpc_set_import_discon(struct pscrpc_import *imp, uint32_t conn_cnt)
 		freelock(&imp->imp_lock);
 		psc_warnx("%s: import %p already %s (conn %u, was %u): %s",
 			imp->imp_client->cli_name, imp,
-			(imp->imp_state == PSC_IMP_FULL &&
+			(imp->imp_state == PSCRPC_IMP_FULL &&
 			 (uint32_t)imp->imp_conn_cnt > conn_cnt) ?
 			"reconnected" : "not connected", imp->imp_conn_cnt,
 			conn_cnt, pscrpc_import_state_name(imp->imp_state));
@@ -100,7 +101,8 @@ int pscrpc_set_import_discon(struct pscrpc_import *imp, uint32_t conn_cnt)
  * This acts as a barrier; all existing requests are rejected, and
  * no new requests will be accepted until the import is valid again.
  */
-void pscrpc_deactivate_import(struct pscrpc_import *imp)
+void
+pscrpc_deactivate_import(struct pscrpc_import *imp)
 {
 	spinlock(&imp->imp_lock);
 	psc_warnx("setting import %p INVALID", imp);
@@ -118,7 +120,8 @@ void pscrpc_deactivate_import(struct pscrpc_import *imp)
  * invalidate its state (ie cancel locks, clear pending requests,
  * etc).
  */
-void pscrpc_invalidate_import(struct pscrpc_import *imp)
+void
+pscrpc_invalidate_import(struct pscrpc_import *imp)
 {
 	struct l_wait_info lwi;
 	int rc;
@@ -130,7 +133,7 @@ void pscrpc_invalidate_import(struct pscrpc_import *imp)
 
 	/* wait for all requests to error out and call completion callbacks */
 	lwi = LWI_TIMEOUT_INTERVAL(MAX(PSCRPC_OBD_TIMEOUT, 1), 100, NULL, NULL);
-	rc = psc_cli_wait_event(&imp->imp_recovery_waitq,
+	rc = pscrpc_cli_wait_event(&imp->imp_recovery_waitq,
 			    (atomic_read(&imp->imp_inflight) == 0),
 			    &lwi);
 
@@ -141,7 +144,8 @@ void pscrpc_invalidate_import(struct pscrpc_import *imp)
 	//pscobd_import_event(imp->imp_obd, imp, IMP_EVENT_INVALIDATE);
 }
 
-void pscrpc_activate_import(struct pscrpc_import *imp)
+void
+pscrpc_activate_import(struct pscrpc_import *imp)
 {
 	//struct obd_device *obd = imp->imp_obd;
 
@@ -152,9 +156,10 @@ void pscrpc_activate_import(struct pscrpc_import *imp)
 	//pscobd_import_event(obd, imp, IMP_EVENT_ACTIVE);
 }
 
-void pscrpc_fail_import(struct pscrpc_import *imp, uint32_t conn_cnt)
+void
+pscrpc_fail_import(struct pscrpc_import *imp, uint32_t conn_cnt)
 {
-	if (imp->imp_state == PSC_IMP_NEW) {
+	if (imp->imp_state == PSCRPC_IMP_NEW) {
 		psc_info("Failing new import %p", imp);
 		pscrpc_deactivate_import(imp);
 		return;

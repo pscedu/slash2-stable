@@ -57,7 +57,7 @@ pscrpc_alloc_rqbd (struct pscrpc_service *svc)
 
 	rqbd->rqbd_service       = svc;
 	rqbd->rqbd_refcount      = 0;
-	rqbd->rqbd_cbid.cbid_fn  = request_in_callback;
+	rqbd->rqbd_cbid.cbid_fn  = pscrpc_request_in_callback;
 	rqbd->rqbd_cbid.cbid_arg = rqbd;
 
 	INIT_PSCLIST_HEAD(&rqbd->rqbd_reqs);
@@ -294,7 +294,7 @@ pscrpc_server_handle_request(struct pscrpc_service *svc,
 	/* Clear request swab mask; this is a new request */
 	request->rq_req_swab_mask = 0;
 #endif
-	rc = psc_unpack_msg (request->rq_reqmsg, request->rq_reqlen);
+	rc = pscrpc_unpack_msg (request->rq_reqmsg, request->rq_reqlen);
 	if (rc != 0) {
 		CERROR ("error unpacking request: ptl %d from %s"
 			" xid %"PRIx64"\n", svc->srv_req_portal,
@@ -352,7 +352,7 @@ pscrpc_server_handle_request(struct pscrpc_service *svc,
 		goto put_rpc_export;
 	}
 
-	request->rq_phase = PSCRQ_PHASE_INTERPRET;
+	request->rq_phase = PSCRPC_RQ_PHASE_INTERPRET;
 
 	DEBUG_REQ(PLL_TRACE, request, "Handling RPC");
 #if 0
@@ -367,7 +367,7 @@ pscrpc_server_handle_request(struct pscrpc_service *svc,
 
 	rc = svc->srv_handler(request);
 
-	request->rq_phase = PSCRQ_PHASE_COMPLETE;
+	request->rq_phase = PSCRPC_RQ_PHASE_COMPLETE;
 
 	DEBUG_REQ(PLL_TRACE, request, "Handled RPC");
 
@@ -696,7 +696,7 @@ pscrpcthr_main(struct psc_thread *thr)
 			 svc->srv_n_active_reqs < (svc->srv_nthreads - 1)))
 		       );
 		*/
-		psc_svr_wait_event(&svc->srv_waitq,
+		pscrpc_svr_wait_event(&svc->srv_waitq,
 				   (!(thr->pscthr_flags & PTF_RUN) &&
 				    svc->srv_n_difficult_replies == 0) ||
 				   (!psclist_empty(&svc->srv_idle_rqbds) &&
@@ -846,7 +846,7 @@ pscrpc_unregister_service(struct pscrpc_service *service)
 		/* Network access will complete in finite time but the HUGE
 		 * timeout lets us CWARN for visibility of sluggish NALs */
 		lwi = LWI_TIMEOUT(300 * 100, NULL, NULL);
-		rc = psc_svr_wait_event(&service->srv_waitq,
+		rc = pscrpc_svr_wait_event(&service->srv_waitq,
 					service->srv_nrqbd_receiving == 0,
 					&lwi, &service->srv_lock);
 		if (rc == -ETIMEDOUT)
@@ -898,7 +898,7 @@ pscrpc_unregister_service(struct pscrpc_service *service)
 	while (atomic_read(&service->srv_outstanding_replies) != 0) {
 		lwi = LWI_TIMEOUT(10 * 100, NULL, NULL);
 
-		rc = psc_svr_wait_event(&service->srv_waitq,
+		rc = pscrpc_svr_wait_event(&service->srv_waitq,
 					!psclist_empty(&service->srv_reply_queue),
 					&lwi, &service->srv_lock);
 

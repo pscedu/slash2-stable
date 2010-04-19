@@ -57,10 +57,8 @@ pscrpc_nbreqset_add(struct pscrpc_nbreqset *nbs, struct pscrpc_request *req)
 	req->rq_waitq = &nbs->nb_waitq;
 	atomic_inc(&nbs->nb_outstanding);
 	pscrpc_set_add_new_req(&nbs->nb_reqset, req);
-	if (pscrpc_nbreqset_push(req)) {
-		DEBUG_REQ(PLL_ERROR, req, "Send Failure");
-		psc_fatalx("Send Failure");
-	}
+	if (pscrpc_nbreqset_push(req))
+		DEBUG_REQ(PLL_FATAL, req, "Send Failure");
 }
 
 /**
@@ -101,7 +99,7 @@ pscrpc_nbreqset_reap(struct pscrpc_nbreqset *nbs)
 	}
 
 	lwi = LWI_TIMEOUT(timeout, NULL, NULL);
-	psc_cli_wait_event(&set->set_waitq,
+	pscrpc_cli_wait_event(&set->set_waitq,
 		       (nreaped=pscrpc_check_set(set, 0)), &lwi);
 
 	if (!nreaped) {
@@ -120,7 +118,7 @@ pscrpc_nbreqset_reap(struct pscrpc_nbreqset *nbs)
 		/*
 		 * Move sent rpcs to the set_requests list
 		 */
-		if (req->rq_phase == PSCRQ_PHASE_COMPLETE) {
+		if (req->rq_phase == PSCRPC_RQ_PHASE_COMPLETE) {
 			psclist_del(&req->rq_set_chain_lentry);
 			atomic_dec(&nbs->nb_outstanding);
 			nreaped++;

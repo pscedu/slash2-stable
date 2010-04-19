@@ -10,15 +10,15 @@ static inline const char *
 pscrpc_rqphase2str(struct pscrpc_request *req)
 {
 	switch (req->rq_phase) {
-	case PSCRQ_PHASE_NEW:
+	case PSCRPC_RQ_PHASE_NEW:
 		return "New";
-	case PSCRQ_PHASE_RPC:
+	case PSCRPC_RQ_PHASE_RPC:
 		return "Rpc";
-	case PSCRQ_PHASE_BULK:
+	case PSCRPC_RQ_PHASE_BULK:
 		return "Bulk";
-	case PSCRQ_PHASE_INTERPRET:
+	case PSCRPC_RQ_PHASE_INTERPRET:
 		return "Interpret";
-	case PSCRQ_PHASE_COMPLETE:
+	case PSCRPC_RQ_PHASE_COMPLETE:
 		return "Complete";
 	default:
 		return "?Phase?";
@@ -65,10 +65,12 @@ pscrpc_rqphase2str(struct pscrpc_request *req)
 	    (rq)->rq_reqlen, (rq)->rq_replen,				\
 	    atomic_read(&(rq)->rq_refcount), (rq)->rq_resend,		\
 	    atomic_read(&(rq)->rq_retries), DEBUG_REQ_FLAGS(rq),	\
-	    (rq)->rq_reqmsg ? psc_msg_get_flags((rq)->rq_reqmsg) : -1,	\
-	    (rq)->rq_repmsg ? psc_msg_get_flags((rq)->rq_repmsg) : 0,	\
+	    (rq)->rq_reqmsg ?						\
+		pscrpc_msg_get_flags((rq)->rq_reqmsg) : -1,		\
 	    (rq)->rq_repmsg ?						\
-	      (rq)->rq_repmsg->handle.cookie : 0xdeadbeef,		\
+		pscrpc_msg_get_flags((rq)->rq_repmsg) : 0,		\
+	    (rq)->rq_repmsg ?						\
+		(rq)->rq_repmsg->handle.cookie : 0xdeadbeef,		\
 	    (rq)->rq_status,						\
 	    (rq)->rq_repmsg ? (rq)->rq_repmsg->status : 0,		\
 	    (rq)->rq_timeout, ## __VA_ARGS__);				\

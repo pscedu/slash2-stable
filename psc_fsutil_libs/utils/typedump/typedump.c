@@ -236,7 +236,6 @@ main(int argc, char *argv[])
 	PRTYPE(struct psc_memnode);
 	PRTYPE(struct psc_meter);
 	PRTYPE(struct psc_mlist);
-	PRTYPE(struct psc_msg);
 	PRTYPE(struct psc_mspinlock);
 	PRTYPE(struct psc_multiwait);
 	PRTYPE(struct psc_multiwaitcond);
@@ -248,7 +247,6 @@ main(int argc, char *argv[])
 	PRTYPE(struct psc_streenode);
 	PRTYPE(struct psc_thread);
 	PRTYPE(struct psc_usklndthr);
-	PRTYPE(struct psc_uuid);
 	PRTYPE(struct psc_vbitmap);
 	PRTYPE(struct psc_waitq);
 	PRTYPE(struct psc_wndmap);
@@ -263,6 +261,7 @@ main(int argc, char *argv[])
 	PRTYPE(struct pscrpc_export);
 	PRTYPE(struct pscrpc_handle);
 	PRTYPE(struct pscrpc_import);
+	PRTYPE(struct pscrpc_msg);
 	PRTYPE(struct pscrpc_nbreqset);
 	PRTYPE(struct pscrpc_peer_qlen);
 	PRTYPE(struct pscrpc_reply_state);
@@ -273,6 +272,7 @@ main(int argc, char *argv[])
 	PRTYPE(struct pscrpc_service);
 	PRTYPE(struct pscrpc_svc_handle);
 	PRTYPE(struct pscrpc_thread);
+	PRTYPE(struct pscrpc_uuid);
 	PRTYPE(struct pscrpc_wait_callback);
 	PRTYPE(struct rsx_msg_conversion);
 	PRTYPE(struct rsx_msg_portablizer);

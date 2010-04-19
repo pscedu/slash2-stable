@@ -38,21 +38,22 @@
 #include "psc_rpc/rpclog.h"
 
 /**
- * psc_send_buf - rudimentary send function which uses LNetPut.  This is called
- *	by pscrpc_send_reply & psc_send_rpc which use psc_send_buf to PUT rpc
+ * pscrpc_send_buf - rudimentary send function which uses LNetPut.  This is called
+ *	by pscrpc_send_reply & pscrpc_send_rpc which use pscrpc_send_buf to PUT RPC
  *	replies and requests.
  * @mdh:  md handle to
  */
-static int psc_send_buf (lnet_handle_md_t *mdh, void *base, int len,
-			  lnet_ack_req_t ack, struct pscrpc_cb_id *cbid,
-			  struct pscrpc_connection *conn,
-			  int portal, uint64_t xid)
+static int
+pscrpc_send_buf(lnet_handle_md_t *mdh, void *base, int len,
+    lnet_ack_req_t ack, struct pscrpc_cb_id *cbid,
+    struct pscrpc_connection *conn,
+    int portal, uint64_t xid)
 {
 	int              rc;
 	lnet_md_t         md;
 
-	psc_assert (portal != 0);
-	psc_assert (conn != NULL);
+	psc_assert(portal != 0);
+	psc_assert(conn != NULL);
 	CDEBUG (D_INFO, "conn=%p id %s\n", conn, libcfs_id2str(conn->c_peer));
 	md.start     = base;
 	md.length    = len;
@@ -100,7 +101,8 @@ static int psc_send_buf (lnet_handle_md_t *mdh, void *base, int len,
  * pscrpc_start_bulk_transfer - server initiated bulk data xfer
  * @desc: the bulk data desc
  */
-int pscrpc_start_bulk_transfer (struct pscrpc_bulk_desc *desc)
+int
+pscrpc_start_bulk_transfer(struct pscrpc_bulk_desc *desc)
 {
 	/* the lustre way: */
 	//struct pscrpc_connection *conn = desc->bd_export->exp_connection;
@@ -128,8 +130,8 @@ int pscrpc_start_bulk_transfer (struct pscrpc_bulk_desc *desc)
 	md.options = PSCRPC_MD_OPTIONS;
 	pscrpc_fill_bulk_md(&md, desc);
 
-	psc_assert (desc->bd_cbid.cbid_fn == server_bulk_callback);
-	psc_assert (desc->bd_cbid.cbid_arg == desc);
+	psc_assert(desc->bd_cbid.cbid_fn == pscrpc_server_bulk_callback);
+	psc_assert(desc->bd_cbid.cbid_arg == desc);
 
 	/* NB total length may be 0 for a read past EOF, so we send a 0
 	 * length bulk, since the client expects a bulk event. */
@@ -171,7 +173,8 @@ int pscrpc_start_bulk_transfer (struct pscrpc_bulk_desc *desc)
 	return (0);
 }
 
-void pscrpc_abort_bulk (struct pscrpc_bulk_desc *desc)
+void
+pscrpc_abort_bulk(struct pscrpc_bulk_desc *desc)
 {
 	/* Server side bulk abort. Idempotent. Not thread-safe (i.e. only
 	 * serialises with completion callback) */
@@ -192,7 +195,7 @@ void pscrpc_abort_bulk (struct pscrpc_bulk_desc *desc)
 	/* The unlink ensures the callback happens ASAP and is the last
 	 * one.  If it fails, it must be because completion just happened,
 	 * but we must still l_wait_event() in this case, to give liblustre
-	 * a chance to run server_bulk_callback()*/
+	 * a chance to run pscrpc_server_bulk_callback()*/
 
 	LNetMDUnlink (desc->bd_md_h);
 
@@ -200,7 +203,7 @@ void pscrpc_abort_bulk (struct pscrpc_bulk_desc *desc)
 		/* Network access will complete in finite time but the HUGE
 		 * timeout lets us CWARN for visibility of sluggish NALs */
 		lwi = LWI_TIMEOUT (300, NULL, NULL);
-		rc = psc_svr_wait_event(&desc->bd_waitq,
+		rc = pscrpc_svr_wait_event(&desc->bd_waitq,
 					!pscrpc_bulk_active(desc),
 					&lwi, NULL);
 
@@ -216,7 +219,8 @@ void pscrpc_abort_bulk (struct pscrpc_bulk_desc *desc)
  * pscrpc_register_bulk - client-side registration of bulk data buffer
  * @req: the request associated with the bulk
  */
-int pscrpc_register_bulk (struct pscrpc_request *req)
+int
+pscrpc_register_bulk(struct pscrpc_request *req)
 {
 	struct pscrpc_bulk_desc *desc = req->rq_bulk;
 	lnet_process_id_t peer;
@@ -229,13 +233,13 @@ int pscrpc_register_bulk (struct pscrpc_request *req)
 	//        return (0);
 
 	/* NB no locking required until desc is on the network */
-	psc_assert (desc->bd_nob > 0);
-	psc_assert (!desc->bd_network_rw);
-	psc_assert (desc->bd_iov_count <= (int)PSCRPC_MAX_BRW_PAGES);
-	psc_assert (desc->bd_req != NULL);
-	psc_assert (desc->bd_type == BULK_PUT_SINK ||
+	psc_assert(desc->bd_nob > 0);
+	psc_assert(!desc->bd_network_rw);
+	psc_assert(desc->bd_iov_count <= (int)PSCRPC_MAX_BRW_PAGES);
+	psc_assert(desc->bd_req != NULL);
+	psc_assert(desc->bd_type == BULK_PUT_SINK ||
 		 desc->bd_type == BULK_GET_SOURCE);
-	psc_assert (desc->bd_connection != NULL);
+	psc_assert(desc->bd_connection != NULL);
 
 	desc->bd_success = 0;
 	peer = desc->bd_import->imp_connection->c_peer;
@@ -248,7 +252,7 @@ int pscrpc_register_bulk (struct pscrpc_request *req)
 		      LNET_MD_OP_GET : LNET_MD_OP_PUT);
 	pscrpc_fill_bulk_md(&md, desc);
 
-	psc_assert (desc->bd_cbid.cbid_fn == client_bulk_callback);
+	psc_assert (desc->bd_cbid.cbid_fn == pscrpc_client_bulk_callback);
 	psc_assert (desc->bd_cbid.cbid_arg == desc);
 
 	/* XXX Registering the same xid on retried bulk makes my head
@@ -292,7 +296,8 @@ int pscrpc_register_bulk (struct pscrpc_request *req)
  * pscrpc_unregister_bulk - client-side deregistration of bulk data buffer
  * @req: the request associated with the bulk
  */
-void pscrpc_unregister_bulk (struct pscrpc_request *req)
+void
+pscrpc_unregister_bulk(struct pscrpc_request *req)
 {
 	/* Disconnect a bulk desc from the network. Idempotent. Not
 	 * thread-safe (i.e. only interlocks with completion callback). */
@@ -340,7 +345,7 @@ void pscrpc_unregister_bulk (struct pscrpc_request *req)
 		/* Network access will complete in finite time but the HUGE
 		 * timeout lets us CWARN for visibility of sluggish NALs */
 		lwi = LWI_TIMEOUT (300, NULL, NULL);
-		rc = psc_cli_wait_event(wq, !pscrpc_bulk_active(desc),
+		rc = pscrpc_cli_wait_event(wq, !pscrpc_bulk_active(desc),
 				    &lwi);
 		if (rc == 0)
 			return;
@@ -356,7 +361,8 @@ void pscrpc_unregister_bulk (struct pscrpc_request *req)
  * @req: the request in question
  * @may_be_difficult:   not sure if we're going to use this.
  */
-int pscrpc_send_reply (struct pscrpc_request *req, int may_be_difficult)
+int
+pscrpc_send_reply(struct pscrpc_request *req, int may_be_difficult)
 {
 	struct pscrpc_service     *svc = req->rq_rqbd->rqbd_service;
 	struct pscrpc_reply_state *rs  = req->rq_reply_state;
@@ -366,14 +372,14 @@ int pscrpc_send_reply (struct pscrpc_request *req, int may_be_difficult)
 	 * called without one).  We must also have a request buffer which
 	 * is either the actual (swabbed) incoming request, or a saved copy
 	 * if this is a req saved in target_queue_final_reply(). */
-	psc_assert (req->rq_reqmsg != NULL);
-	psc_assert (rs != NULL);
-	psc_assert (req->rq_repmsg != NULL);
-	psc_assert (may_be_difficult || !rs->rs_difficult);
-	psc_assert (req->rq_repmsg == &rs->rs_msg);
-	psc_assert (rs->rs_cb_id.cbid_fn == reply_out_callback);
-	psc_assert (rs->rs_cb_id.cbid_arg == rs);
-	psc_assert (req->rq_repmsg != NULL);
+	psc_assert(req->rq_reqmsg != NULL);
+	psc_assert(rs != NULL);
+	psc_assert(req->rq_repmsg != NULL);
+	psc_assert(may_be_difficult || !rs->rs_difficult);
+	psc_assert(req->rq_repmsg == &rs->rs_msg);
+	psc_assert(rs->rs_cb_id.cbid_fn == pscrpc_reply_out_callback);
+	psc_assert(rs->rs_cb_id.cbid_arg == rs);
+	psc_assert(req->rq_repmsg != NULL);
 
 #if PAULS_TODO
 	/*
@@ -411,10 +417,10 @@ int pscrpc_send_reply (struct pscrpc_request *req, int may_be_difficult)
 	atomic_inc (&svc->srv_outstanding_replies);
 	pscrpc_rs_addref(rs);                   /* +1 ref for the network */
 
-	rc = psc_send_buf (&rs->rs_md_h, req->rq_repmsg, req->rq_replen,
-			   rs->rs_difficult ? LNET_ACK_REQ : LNET_NOACK_REQ,
-			   &rs->rs_cb_id, req->rq_conn,
-			   svc->srv_rep_portal, req->rq_xid);
+	rc = pscrpc_send_buf(&rs->rs_md_h, req->rq_repmsg, req->rq_replen,
+	    rs->rs_difficult ? LNET_ACK_REQ : LNET_NOACK_REQ,
+	    &rs->rs_cb_id, req->rq_conn,
+	    svc->srv_rep_portal, req->rq_xid);
 	if (rc != 0) {
 		atomic_dec (&svc->srv_outstanding_replies);
 		pscrpc_rs_decref(rs);
@@ -423,33 +429,36 @@ int pscrpc_send_reply (struct pscrpc_request *req, int may_be_difficult)
 	return rc;
 }
 
-int pscrpc_reply (struct pscrpc_request *req)
+int
+pscrpc_reply(struct pscrpc_request *req)
 {
-	return (pscrpc_send_reply (req, 0));
+	return (pscrpc_send_reply(req, 0));
 }
 
-int pscrpc_error(struct pscrpc_request *req)
+int
+pscrpc_error(struct pscrpc_request *req)
 {
 	int rc;
 
 	if (!req->rq_repmsg) {
-		rc = psc_pack_reply(req, 0, NULL, NULL);
+		rc = pscrpc_pack_reply(req, 0, NULL, NULL);
 		if (rc)
 			return (rc);
 	}
 
 	req->rq_type = PSCRPC_MSG_ERR;
 
-	rc = pscrpc_send_reply (req, 0);
+	rc = pscrpc_send_reply(req, 0);
 	return (rc);
 }
 
 /**
- * psc_send_rpc - client-side push of rpc request to a server
+ * pscrpc_send_rpc - client-side push of rpc request to a server
  * @request: the request in question
  * @reply:   not sure if we're going to use this.
  */
-int psc_send_rpc(struct pscrpc_request *request, int noreply)
+int
+pscrpc_send_rpc(struct pscrpc_request *request, int noreply)
 {
 	int rc;
 	int rc2;
@@ -548,7 +557,7 @@ int psc_send_rpc(struct pscrpc_request *request, int noreply)
 			 request->rq_reply_portal);
 	}
 
-	/* add references on request and import for request_out_callback */
+	/* add references on request and import for pscrpc_request_out_callback */
 	pscrpc_request_addref(request);
 	atomic_inc(&request->rq_import->imp_inflight);
 
@@ -560,18 +569,18 @@ int psc_send_rpc(struct pscrpc_request *request, int noreply)
 #if 0
 	pscrpc_pinger_sending_on_import(request->rq_import);
 #endif
-	rc = psc_send_buf(&request->rq_req_md_h,
-			  request->rq_reqmsg, request->rq_reqlen,
-			  LNET_NOACK_REQ, &request->rq_req_cbid,
-			  connection,
-			  request->rq_request_portal,
-			  request->rq_xid);
+	rc = pscrpc_send_buf(&request->rq_req_md_h,
+	    request->rq_reqmsg, request->rq_reqlen,
+	    LNET_NOACK_REQ, &request->rq_req_cbid,
+	    connection,
+	    request->rq_request_portal,
+	    request->rq_xid);
 	if (rc == 0) {
 		//pscrpc_lprocfs_rpc_sent(request);
 		return (rc);
 	}
 
-	/* drop request_out_callback refs, we couldn't start the send */
+	/* drop pscrpc_request_out_callback refs, we couldn't start the send */
 	atomic_dec(&request->rq_import->imp_inflight);
 	pscrpc_req_finished (request);
 
@@ -603,7 +612,8 @@ int psc_send_rpc(struct pscrpc_request *request, int noreply)
  * pscrpc_register_rqbd - server-side registration of rpc request buffers
  * @rqbd: the request buffer pointer
  */
-int pscrpc_register_rqbd (struct pscrpc_request_buffer_desc *rqbd)
+int
+pscrpc_register_rqbd(struct pscrpc_request_buffer_desc *rqbd)
 {
 	struct pscrpc_service   *service = rqbd->rqbd_service;
 	static lnet_process_id_t  match_id = {LNET_NID_ANY, LNET_PID_ANY};
@@ -648,7 +658,8 @@ int pscrpc_register_rqbd (struct pscrpc_request_buffer_desc *rqbd)
 	return (-ENOMEM);
 }
 
-void psc_free_reply_state (struct pscrpc_reply_state *rs)
+void
+pscrpc_free_reply_state(struct pscrpc_reply_state *rs)
 {
 #if 0
 	PTLRPC_RS_DEBUG_LRU_DEL(rs);
@@ -679,7 +690,7 @@ void psc_free_reply_state (struct pscrpc_reply_state *rs)
 }
 
 static void
-__pscrpc_free_req(struct pscrpc_request *request, int locked)
+_pscrpc_free_req(struct pscrpc_request *request, int locked)
 {
 	if (request == NULL)
 		return;
@@ -725,7 +736,7 @@ __pscrpc_free_req(struct pscrpc_request *request, int locked)
 	psc_assert(request->rq_reply_state == NULL);
 
 	if (request->rq_pool) {
-		//__ptlrpc_free_req_to_pool(request);
+		//_ptlrpc_free_req_to_pool(request);
 
 	} else {
 		if (request->rq_reqmsg != NULL) {
@@ -736,12 +747,14 @@ __pscrpc_free_req(struct pscrpc_request *request, int locked)
 	}
 }
 
-void pscrpc_free_req(struct pscrpc_request *request)
+void
+pscrpc_free_req(struct pscrpc_request *request)
 {
-	__pscrpc_free_req(request, 0);
+	_pscrpc_free_req(request, 0);
 }
 
-static int __pscrpc_req_finished(struct pscrpc_request *request, int locked)
+static int
+_pscrpc_req_finished(struct pscrpc_request *request, int locked)
 {
 	if (request == NULL)
 		return (1);
@@ -759,19 +772,21 @@ static int __pscrpc_req_finished(struct pscrpc_request *request, int locked)
 #endif
 
 	if (atomic_dec_and_test(&request->rq_refcount)) {
-		__pscrpc_free_req(request, locked);
+		_pscrpc_free_req(request, locked);
 		return (1);
 	}
 
 	return (0);
 }
 
-void pscrpc_req_finished(struct pscrpc_request *request)
+void
+pscrpc_req_finished(struct pscrpc_request *request)
 {
-	__pscrpc_req_finished(request, 0);
+	_pscrpc_req_finished(request, 0);
 }
 
-void pscrpc_free_bulk(struct pscrpc_bulk_desc *desc)
+void
+pscrpc_free_bulk(struct pscrpc_bulk_desc *desc)
 {
 	psc_trace("free desc=%p", desc);
 
@@ -790,7 +805,8 @@ void pscrpc_free_bulk(struct pscrpc_bulk_desc *desc)
 				bd_iov[desc->bd_max_iov]));
 }
 
-void pscrpc_fill_bulk_md(lnet_md_t *md, struct pscrpc_bulk_desc *desc)
+void
+pscrpc_fill_bulk_md(lnet_md_t *md, struct pscrpc_bulk_desc *desc)
 {
 	psc_assert (!(md->options & (LNET_MD_IOVEC | LNET_MD_KIOV | LNET_MD_PHYS)));
 	if (desc->bd_iov_count == 1) {
@@ -806,4 +822,3 @@ void pscrpc_fill_bulk_md(lnet_md_t *md, struct pscrpc_bulk_desc *desc)
 	md->start = &desc->bd_iov[0];
 	md->length = desc->bd_iov_count;
 }
-

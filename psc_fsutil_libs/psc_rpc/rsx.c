@@ -51,12 +51,12 @@ _pfl_rsx_newreq(struct pscrpc_import *imp, int version, int op,
 		return (-ENOMEM);
 
 	/* Setup request buffer. */
-	*(void **)mq0p = psc_msg_buf((*rqp)->rq_reqmsg, 0, qlens[0]);
+	*(void **)mq0p = pscrpc_msg_buf((*rqp)->rq_reqmsg, 0, qlens[0]);
 	if (*(void **)mq0p == NULL)
-		psc_fatalx("psc_msg_buf");
+		psc_fatalx("pscrpc_msg_buf");
 
 	/* Setup reply buffer now so asynchronous RPCs work, too. */
-	(*rqp)->rq_replen = psc_msg_size(nplens, plens);
+	(*rqp)->rq_replen = pscrpc_msg_size(nplens, plens);
 	return (0);
 }
 
@@ -77,7 +77,7 @@ pfl_rsx_waitrep(struct pscrpc_request *rq, int replen, void *mpp)
 	rc = pscrpc_queue_wait(rq);
 	if (rc)
 		return (rc);
-	*(void **)mpp = psc_msg_buf(rq->rq_repmsg, 0, replen);
+	*(void **)mpp = pscrpc_msg_buf(rq->rq_repmsg, 0, replen);
 	if (*(void **)mpp == NULL)
 		return (-ENOMEM);
 	return (0);
@@ -132,7 +132,7 @@ rsx_bulkserver(struct pscrpc_request *rq, struct pscrpc_bulk_desc **descp,
 		lwi = LWI_TIMEOUT_INTERVAL(OBD_TIMEOUT / 2,
 		    100, pfl_rsx_timeout, desc);
 
-		rc = psc_svr_wait_event(&desc->bd_waitq,
+		rc = pscrpc_svr_wait_event(&desc->bd_waitq,
 		    (!pscrpc_bulk_active(desc) || desc->bd_export->exp_failed),
 		    &lwi, NULL);
 

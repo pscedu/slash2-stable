@@ -14,7 +14,7 @@
 		(e)->exp_private = NULL;			\
 	} while (0)
 
-void __pscrpc_export_put(struct pscrpc_export *);
+void _pscrpc_export_put(struct pscrpc_export *);
 
 static inline struct pscrpc_export *
 pscrpc_export_get(struct pscrpc_export *exp)
@@ -45,7 +45,7 @@ pscrpc_export_put(struct pscrpc_export *exp)
 	psc_trace("PUTting export %p : new refcount %d", exp, rc - 1);
 	psc_assert(rc > 0);
 	psc_assert(rc < 0x5a5a5a);
-	__pscrpc_export_put(exp);
+	_pscrpc_export_put(exp);
 }
 
 static inline void
