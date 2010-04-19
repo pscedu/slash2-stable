@@ -38,50 +38,73 @@ struct rsx_msg_portablizer {
 	struct rpcmsg_conv	*rmp_conv;
 };
 
-#define RSX_ALLOCREP(rq, mq, mp)					\
+#define RSX_ALLOCREPN(rq, mq0, mp0, nreplens, replens)			\
 	do {								\
-		int __rc, __psz;					\
+		int _rc;						\
 									\
-		__psz = sizeof(*(mp));					\
-		if (__psz >						\
+		if (psc_msg_size(nreplens, replens) >			\
 		    (rq)->rq_rqbd->rqbd_service->srv_max_reply_size)	\
 			psc_fatalx("reply size greater than max");	\
-		__rc = psc_pack_reply((rq), 1, &__psz, NULL);		\
-		if (__rc) {						\
-			psc_assert(__rc == -ENOMEM);			\
+		_rc = psc_pack_reply((rq), nreplens, replens, NULL);	\
+		if (_rc) {						\
+			psc_assert(_rc == -ENOMEM);			\
 			psc_errorx("psc_pack_reply failed: %s",		\
-			    strerror(__rc));				\
-			return (__rc);					\
+			    strerror(_rc));				\
+			return (_rc);					\
 		}							\
-		if (((mp) = psc_msg_buf((rq)->rq_repmsg,		\
-		    0, __psz)) == NULL) {				\
+		if (((mp0) = psc_msg_buf((rq)->rq_repmsg,		\
+		    0, (replens)[0])) == NULL) {			\
 			psc_errorx("reply is NULL");			\
 			return (-ENOMEM);				\
 		}							\
-		(mp)->rc = 0;						\
-		if (((mq) = psc_msg_buf((rq)->rq_reqmsg,		\
-		    0, sizeof(*(mq)))) == NULL) {			\
+		(mp0)->rc = 0;						\
+		if (((mq0) = psc_msg_buf((rq)->rq_reqmsg,		\
+		    0, sizeof(*(mq0)))) == NULL) {			\
 			/* XXX psc_fatalx */				\
 			psc_errorx("request is NULL");			\
-			(mp)->rc = -ENOMEM;				\
+			(mp0)->rc = -ENOMEM;				\
 			return (-ENOMEM);				\
 		}							\
 	} while (0)
 
+#define RSX_ALLOCREP(rq, mq, mp)					\
+	do {								\
+		int _replen;						\
+									\
+		_replen = sizeof(*(mp));				\
+		RSX_ALLOCREPN((rq), (mq), (mp), 1, &_replen);		\
+	} while (0)
+
+#define RSX_NEWREQN(imp, version, op, rq, nqlens, qlens,		\
+	    nplens, plens, mq0)						\
+	_pfl_rsx_newreq((imp), (version), (op), &(rq),			\
+	    (nqlens), (qlens), (nplens), (plens), &(mq0))
+
+#define _RSX_NEWREQ(imp, version, op, rq, mq, mp)			\
+	{								\
+		int _reqlen, _replen;					\
+									\
+		_reqlen = sizeof(*(mq));				\
+		_replen = sizeof(*(mp));				\
+		RSX_NEWREQN((imp), (version), (op), (rq),		\
+		    1, &_reqlen, 1, &_replen, (mq));			\
+	}
+
 #define RSX_NEWREQ(imp, version, op, rq, mq, mp)			\
-	pfl_rsx_newreq((imp), (version), (op), sizeof(*(mq)),		\
-	    sizeof(*(mp)), &(rq), &(mq))
+	(_RSX_NEWREQ((imp), (version), (op), (rq), (mq), (mp)))
 
 #define RSX_WAITREP(rq, mp)						\
 	pfl_rsx_waitrep((rq), sizeof(*(mp)), &(mp))
 
-int pfl_rsx_newreq(struct pscrpc_import *, int, int, int, int,
-	struct pscrpc_request **, void *);
+int _pfl_rsx_newreq(struct pscrpc_import *, int, int,
+	struct pscrpc_request **, int, int *, int, int *, void *);
 int pfl_rsx_waitrep(struct pscrpc_request *, int, void *);
+
 int rsx_bulkserver(struct pscrpc_request *, struct pscrpc_bulk_desc **,
 	int, int, struct iovec *, int);
 int rsx_bulkclient(struct pscrpc_request *, struct pscrpc_bulk_desc **,
 	int, int, struct iovec *, int);
+
 int pfl_rsx_conv2net(int, void *);
 int pfl_rsx_conv2host(int, void *);
 

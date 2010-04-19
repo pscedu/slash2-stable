@@ -27,37 +27,40 @@
 #include "psc_rpc/rpc.h"
 #include "psc_rpc/rsx.h"
 
-/*
+/**
  * pfl_rsx_newreq - Create a new request and associate it with the import.
  * @imp: import portal on which to create the request.
  * @version: version of communication protocol of channel.
  * @op: operation ID of command to send.
- * @reqlen: length of request buffer.
- * @replen: length of expected reply buffer.
  * @rqp: value-result of pointer to RPC request.
+ * @nqlens: number of request buffers.
+ * @qlens: lengths of request buffers.
+ * @nplens: number of reply buffers.
+ * @plens: lengths of reply buffers.
  * @mqp: value-result of pointer to start of request buffer.
  */
 int
-pfl_rsx_newreq(struct pscrpc_import *imp, int version, int op, int reqlen,
-    int replen, struct pscrpc_request **rqp, void *mqp)
+_pfl_rsx_newreq(struct pscrpc_import *imp, int version, int op,
+    struct pscrpc_request **rqp, int nqlens, int *qlens,
+    int nplens, int *plens, void *mq0p)
 {
-	*(void **)mqp = NULL;
+	*(void **)mq0p = NULL;
 
-	*rqp = pscrpc_prep_req(imp, version, op, 1, &reqlen, NULL);
+	*rqp = pscrpc_prep_req(imp, version, op, nqlens, qlens, NULL);
 	if (*rqp == NULL)
 		return (-ENOMEM);
 
 	/* Setup request buffer. */
-	*(void **)mqp = psc_msg_buf((*rqp)->rq_reqmsg, 0, reqlen);
-	if (*(void **)mqp == NULL)
+	*(void **)mq0p = psc_msg_buf((*rqp)->rq_reqmsg, 0, qlens[0]);
+	if (*(void **)mq0p == NULL)
 		psc_fatalx("psc_msg_buf");
 
 	/* Setup reply buffer now so asynchronous RPCs work, too. */
-	(*rqp)->rq_replen = psc_msg_size(1, &replen);
+	(*rqp)->rq_replen = psc_msg_size(nplens, plens);
 	return (0);
 }
 
-/*
+/**
  * pfl_rsx_waitrep - Wait for a reply of a "simple" command, i.e. an error code.
  * @rq: the RPC request we sent.
  * @replen: anticipated size of response.
@@ -88,7 +91,7 @@ pfl_rsx_timeout(__unusedx void *arg)
 	return (1);
 }
 
-/*
+/**
  * rsx_bulkserver - setup a source or sink for a server.
  * @rq: RPC request associated with GET.
  * @descp: pointer to bulk xfer descriptor.
@@ -204,7 +207,7 @@ rsx_bulkserver(struct pscrpc_request *rq, struct pscrpc_bulk_desc **descp,
 	return (rc);
 }
 
-/*
+/**
  * rsx_bulkclient - setup a source or sink for a client.
  * @type: GET_SOURCE lets server to pull our buffer,
  *	PUT_SINK sets up a buffer filled in by the server
