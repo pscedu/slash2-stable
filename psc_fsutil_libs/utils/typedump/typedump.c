@@ -169,8 +169,8 @@ main(int argc, char *argv[])
 	PRTYPE(uid_t);
 	PRTYPE(gid_t);
 	PRTYPE(off_t);
-	PRTYPE(blksize_t);
-	PRTYPE(blkcnt_t);
+	PRTYPE(typeof(((struct stat *)NULL)->st_blksize));
+	PRTYPE(typeof(((struct stat *)NULL)->st_blocks));
 	PRTYPE(time_t);
 
 	PRTYPE(rlim_t);
