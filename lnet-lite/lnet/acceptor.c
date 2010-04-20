@@ -41,6 +41,8 @@
 #else /* __KERNEL__ */
 #ifdef HAVE_LIBPTHREAD
 
+#include <sys/types.h>
+#include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <pthread.h>

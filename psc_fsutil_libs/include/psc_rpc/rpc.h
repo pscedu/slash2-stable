@@ -3,6 +3,7 @@
 #ifndef _PFL_RPC_H_
 #define _PFL_RPC_H_
 
+#include <sys/types.h>
 #include <sys/uio.h>
 
 #include <time.h>
