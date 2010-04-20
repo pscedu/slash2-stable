@@ -23,13 +23,15 @@
 #include <sys/types.h>
 
 #if 0
-#ifdef __APPLE__
-#include <machine/endian.h>
-#elif defined(__linux)
-#include <endian.h>
-#else
-#include <sys/endian.h>
+
+#ifdef HAVE_MACHINE_ENDIAN_H
+# include <machine/endian.h>
+#elif defined(HAVE_ENDIAN_H)
+# include <endian.h>
+#elif defined(HAVE_SYS_ENDIAN_H)
+# include <sys/endian.h>
 #endif
+
 #endif
 
 #include <inttypes.h>
@@ -74,18 +76,22 @@
 # define PSCPRIuINOT	"u"
 #endif
 
-#ifdef BYTE_ORDER
-# if BYTE_ORDER == LITTLE_ENDIAN
-#  define PFL_LITTLE_ENDIAN
-# elif BYTE_ORDER == BIG_ENDIAN
-#  define PFL_BIG_ENDIAN
+#ifndef _BYTE_ORDER
+# ifdef BYTE_ORDER
+#  define _BYTE_ORDER		BYTE_ORDER
+#  define _LITTLE_ENDIAN	LITTLE_ENDIAN
+#  define _BIG_ENDIAN		BIG_ENDIAN
+# elif defined(__BYTE_ORDER)
+#  define _BYTE_ORDER		__BYTE_ORDER
+#  define _LITTLE_ENDIAN	__LITTLE_ENDIAN
+#  define _BIG_ENDIAN		__BIG_ENDIAN
 # endif
-#elif defined(__BYTE_ORDER)
-# if __BYTE_ORDER == __LITTLE_ENDIAN
-#  define PFL_LITTLE_ENDIAN
-# elif __BYTE_ORDER == __BIG_ENDIAN
-#  define PFL_BIG_ENDIAN
-# endif
+#endif
+
+#if _BYTE_ORDER == _LITTLE_ENDIAN
+# define PFL_LITTLE_ENDIAN
+#elif _BYTE_ORDER == _BIG_ENDIAN
+# define PFL_BIG_ENDIAN
 #endif
 
 #if !defined(PFL_LITTLE_ENDIAN) && !defined(PFL_BIG_ENDIAN)
