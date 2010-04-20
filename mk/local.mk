@@ -134,6 +134,10 @@ ifeq (${OSTYPE},Darwin)
   DEFINES+=					-D_DARWIN_C_SOURCE -D_DARWIN_FEATURE_64_BIT_INODE
 endif
 
+ifeq (${OSTYPE},OpenBSD)
+  DEFINES+=					-D_BSD_SOURCE
+endif
+
 ifdef DEBIAN
 MPICC=						mpicc.mpich
 endif
