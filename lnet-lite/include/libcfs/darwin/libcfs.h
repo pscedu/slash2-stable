@@ -41,7 +41,10 @@
 #error Do not #include this file directly. #include <libcfs/libcfs.h> instead
 #endif
 
+#ifdef HAVE_MACH_MACH_TYPES_H
 #include <mach/mach_types.h>
+#endif
+
 #include <sys/errno.h>
 #include <string.h>
 #include <libcfs/darwin/darwin-types.h>
@@ -52,7 +55,9 @@
 #include <libcfs/darwin/darwin-fs.h>
 #include <libcfs/darwin/darwin-tcpip.h>
 
+#ifdef HAVE_LIBKERN_OSBYTEORDER_H
 #include <libkern/OSByteOrder.h>
+#endif
 
 #ifdef __KERNEL__
 # include <sys/types.h>

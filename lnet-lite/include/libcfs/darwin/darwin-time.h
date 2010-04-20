@@ -245,7 +245,11 @@ static inline void cfs_duration_nsec(cfs_duration_t d, struct timespec *s)
 /* __KERNEL__ */
 #else
 
-#define CFS_TIME_T		"%lu"
+#ifdef __APPLE__
+# define CFS_TIME_T		"%lu"
+#else
+# define CFS_TIME_T		"%u"
+#endif
 
 /*
  * User level

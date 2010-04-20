@@ -45,7 +45,7 @@
 
 #if defined(__linux__)
 #include <libcfs/linux/kp30.h>
-#elif defined(__APPLE__)
+#elif defined(__APPLE__) || defined(__OpenBSD__)
 #include <libcfs/darwin/kp30.h>
 #elif defined(__WINNT__)
 #include <libcfs/winnt/kp30.h>

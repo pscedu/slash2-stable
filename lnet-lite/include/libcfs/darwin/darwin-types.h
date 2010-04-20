@@ -45,7 +45,10 @@
 #error Do not #include this file directly. #include <libcfs/libcfs.h> instead
 #endif
 
+#ifdef HAVE_MACH_MACH_TYPES_H
 #include <mach/mach_types.h>
+#endif
+
 #include <sys/types.h>
 
 #ifndef _BLKID_TYPES_H

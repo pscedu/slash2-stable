@@ -43,7 +43,7 @@
 
 #if defined(__linux__)
 #include <lnet/linux/lib-lnet.h>
-#elif defined(__APPLE__)
+#elif defined(__APPLE__) || defined(__OpenBSD__)
 #include <lnet/darwin/lib-lnet.h>
 #elif defined(__WINNT__)
 #include <lnet/winnt/lib-lnet.h>

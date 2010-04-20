@@ -42,7 +42,7 @@
 
 #if defined(__linux__)
 #include <libcfs/linux/lltrace.h>
-#elif defined(__APPLE__)
+#elif defined(__APPLE__) || defined(__OpenBSD__)
 #include <libcfs/darwin/lltrace.h>
 #elif defined(__WINNT__)
 #include <libcfs/winnt/lltrace.h>

@@ -44,7 +44,7 @@
 #include <lustre/ll_fiemap.h>
 #if defined(__linux__)
 #include <linux/lustre_user.h>
-#elif defined(__APPLE__)
+#elif defined(__APPLE__) || defined(__OpenBSD__)
 #include <darwin/lustre_user.h>
 #elif defined(__WINNT__)
 #include <winnt/lustre_user.h>

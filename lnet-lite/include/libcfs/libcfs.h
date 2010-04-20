@@ -46,7 +46,7 @@
 
 #if defined(__linux__)
 #include <libcfs/linux/libcfs.h>
-#elif defined(__APPLE__)
+#elif defined(__APPLE__) || defined(__OpenBSD__)
 #include <libcfs/darwin/libcfs.h>
 #elif defined(__WINNT__)
 #include <libcfs/winnt/libcfs.h>

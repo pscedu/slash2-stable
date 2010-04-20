@@ -43,7 +43,7 @@
  */
 #if defined(__linux__)
 #include <libcfs/linux/portals_utils.h>
-#elif defined(__APPLE__)
+#elif defined(__APPLE__) || defined(__OpenBSD__)
 #include <libcfs/darwin/portals_utils.h>
 #elif defined(__WINNT__)
 #include <libcfs/winnt/portals_utils.h>
