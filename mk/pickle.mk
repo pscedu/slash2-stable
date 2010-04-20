@@ -6,7 +6,7 @@ PICKLELOCALMK=${ROOTDIR}/mk/gen-localdefs-pickle.mk
 
 -include ${PICKLELOCALMK}
 
-PICKLE_NEED_VERSION=					$$Rev$$
+PICKLE_NEED_VERSION=					$(word 2,$$Rev$$)
 
  ifneq (${PICKLE_NEED_VERSION},${PICKLE_HAS_VERSION})
   $(shell ${PICKLEGEN} "${ROOTDIR}" "${PICKLE_NEED_VERSION}" "${MAKE}" "${PICKLELOCALMK}" >&2)
