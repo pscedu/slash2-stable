@@ -9,7 +9,6 @@ general reminders
 - watch out for "a - b" in cmp functions overflowing, use CMP() instead
 - investigate if our sched_yield() calls are correct
 - watch out for lock reinitialization (i.e. LOCK_INIT twice)
-- minimize ifdef's in pfl
 - remove XXX comments
 - keep "make build > /dev/null" clean
 - check memset() for bad sizes sizeof(pg) vs. sizeof(*pg)
@@ -48,9 +47,7 @@ pfl
   paths when asprintf() fails instead of centralizing the logic over
   malloc().
 - add struct members to hdrclean.pl
-- have psc_pool_get() and lc_getwait() do sched_yield()'s after
-  they grab an item and remove the manual sched_yield()'s
-- have psc_pool_return() NULL out the pointer arg released
+- have psc_pool_return() macro NULL out the pointer arg released
 - add a new lock API:
     (o) agnostic to underlying type (spin, etc.)
     (o) has a flag to mark for processing of critical
@@ -65,49 +62,19 @@ pfl
 
   give them obscure values (42,43) and ensure they are returned
 - ensure everything in pscrpc land is prefixed with 'pscrpc'
-- rename bitflag.h -> bitstr.h
+- rename bitflag.h -> bit.h
 - let caller worry about memory for vbitmaps, don't return pointers
 - bail if multiwait_addcond() fails, its a mem condition (dynarray)
   that should be remedied by shrinking pools
 - psclist_add_sorted() - maintain a median element for faster sorting
-- rename psc_bitstr_setchk -> psc_bitfield_setchk
 - when ppm_total is set less than lc_size for !PPMF_AUTO, set
   ppm_max and check this value in other places to eventually
   decrease pool size
 - make the timer thread track a global timeval which other threads can
   use up to second resolution to ease syscalls
 - add func args to pfl_enter()
-- add relative timestamps to psclog
-
-zest
-- research faster CRC operations
-- do not allow clients to sit on parity groups, need some
-  kind of reap/reclamation mechanism
-- new RAID scheme: have the fastest disks grab each successive block
-  in a pg, obviates need for zigs
-- pass sizeof(iovs) to client on CONNECT
-- add extattrs to zfs fuse
-- get xattr working on fruits /bessemer
-- the *at family of routines allow any fd, not just a dirfd.
-  (1) fatalx where we cant use a non-dir fd
-  (2) extended attribute use obviously cannot be implemented
-  (3) try to support ../ paths that access other dirs/files
-- zest user command to tag a file sync disregard
-  rm(1) (link count reaches zero of file in fid namespace) won't do
-  because there could still be open fd's to it, built into zsyncmgt
-- new pull model for zest server to client:
-  server RPCIO threads issue GETs to connected mount_zests
-    (o) need some way to "multiwait" on multiple requests sent
-	to different clients
-- when mount_zest is idle, have it merge dirty zcf zsb channels
-- ensure libzestclient is not paritying over partial buffers
-- investigate libgru for NUMA memory staging
-- think about more ways to shorten disk idle time
-- add auth checks into fdbuf from slash
-- auto tune hash table sizes
-- allow zctl to add disks/fix mode operation
-- separate all ctlapi structures into substructures for easier copying vs.
-  in-mem respresentations which need locks etc.
+- add relative (to previous log) timestamps to psclog
+- do enums in typedump
 
 development tool
 - let wiki changes automatically email zest/slash2-devel@ like svn commits
