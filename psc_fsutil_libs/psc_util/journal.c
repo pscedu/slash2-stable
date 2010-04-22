@@ -631,9 +631,9 @@ pjournal_open(const char *fn)
 	struct psc_journal_hdr *pjh;
 	struct psc_journal *pj;
 	struct stat statbuf;
-	ssize_t rc, pjhlen;
 	const char *basefn;
 	uint64_t chksum;
+	ssize_t pjhlen;
 
 	pj = PSCALLOC(sizeof(*pj));
 	pj->pj_fd = open(fn, O_RDWR | O_SYNC | O_DIRECT);
