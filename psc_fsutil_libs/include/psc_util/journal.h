@@ -22,6 +22,7 @@
 
 #include "psc_ds/dynarray.h"
 #include "psc_util/atomic.h"
+#include "psc_util/iostats.h"
 #include "psc_util/lock.h"
 #include "psc_util/thread.h"
 #include "psc_util/waitq.h"
@@ -108,6 +109,8 @@ struct psc_journal {
 	int				 pj_flags;
 	uint32_t			 pj_nextwrite;	/* next entry slot to write to */
 	psc_shadow_handler		 pj_shadow_handler;
+	struct psc_iostats		 pj_rdist;	/* read I/O stats */
+	struct psc_iostats		 pj_wrist;	/* write I/O stats */
 };
 
 #define PJF_NONE			0

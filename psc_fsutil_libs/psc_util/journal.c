@@ -36,6 +36,7 @@
 #include "psc_util/alloc.h"
 #include "psc_util/atomic.h"
 #include "psc_util/crc.h"
+#include "psc_util/iostats.h"
 #include "psc_util/journal.h"
 #include "psc_util/lock.h"
 #include "psc_util/thread.h"
@@ -79,6 +80,44 @@ __static void		pjournal_shdw_logwrite(struct psc_journal *,
 
 struct psc_waitq	pjournal_tilewaitq = PSC_WAITQ_INIT;
 psc_spinlock_t		pjournal_tilewaitqlock = LOCK_INITIALIZER;
+
+#define JIO_READ	0
+#define JIO_WRITE	1
+
+#define psc_journal_read(pj, p, len, off)	psc_journal_io((pj), (p), (len), (off), JIO_READ)
+#define psc_journal_write(pj, p, len, off)	psc_journal_io((pj), (p), (len), (off), JIO_WRITE)
+
+/**
+ * psc_journal_io - Perform a low-level I/O operation on the journal store.
+ * @pj: the owning journal.
+ */
+__static int
+psc_journal_io(struct psc_journal *pj, void *p, size_t len, off_t off,
+    int rw)
+{
+	ssize_t nb;
+	int rc;
+
+	if (rw == JIO_READ)
+		nb = pread(pj->pj_fd, p, len, off);
+	else
+		nb = pwrite(pj->pj_fd, p, len, off);
+	if (nb == -1) {
+		rc = errno;
+		psc_error("journal %s (pj=%p, len=%zd, off=%"PSCPRIdOFF")",
+		    rw == JIO_READ ? "read" : "write", pj, len, off);
+	} else if ((size_t)nb != len) {
+		rc = -1;
+		psc_errorx("journal %s (pj=%p, len=%zd, off=%"PSCPRIdOFF", "
+		    "nb=%zd): short I/O", rw == JIO_READ ? "read" : "write",
+		    pj, len, off, nb);
+	} else {
+		rc = 0;
+		psc_iostats_intv_add(rw == JIO_READ ?
+		    &pj->pj_rdist : &pj->pj_wrist, nb);
+	}
+	return (rc);
+}
 
 /**
  * pjournal_xnew - Start a new transaction with a unique ID in the given
@@ -172,7 +211,6 @@ pjournal_logwrite_internal(struct psc_journal_xidhndl *xh, uint32_t slot,
     int type, void *data, size_t size)
 {
 	int				 rc;
-	ssize_t				 sz;
 	struct psc_journal		*pj;
 	struct psc_journal_enthdr	*pje;
 	int				 ntries;
@@ -222,23 +260,24 @@ pjournal_logwrite_internal(struct psc_journal_xidhndl *xh, uint32_t slot,
 
 	/* commit the log entry on disk before we can return */
 	ntries = PJ_MAX_TRY;
-	while (ntries) {
-		sz = pwrite(pj->pj_fd, pje, PJ_PJESZ(pj),
+	while (ntries > 0) {
+		rc = psc_journal_write(pj, pje, PJ_PJESZ(pj),
 		    PJ_GETENTOFF(pj, slot));
-		if (sz == -1 && errno == EAGAIN) {
+		if (rc == EAGAIN) {
 			ntries--;
 			usleep(100);
 			continue;
 		}
 		break;
 	}
+
 	/*
 	 * We may want to turn off logging at this point and force
 	 * write-through instead.
 	 */
-	if (sz == -1 || (size_t)sz != PJ_PJESZ(pj)) {
+	if (rc) {
 		rc = -1;
-		psc_errorx("Problem writing journal log entries at slot %d", slot);
+		psc_fatal("failed writing journal log entry at slot %d", slot);
 	}
 
 	PJ_LOCK(pj);
@@ -342,9 +381,8 @@ pjournal_logwrite(struct psc_journal_xidhndl *xh, int type, void *data,
 
 	/* Update the next slot to be written by a new log entry */
 	psc_assert(pj->pj_nextwrite < pj->pj_hdr->pjh_nents);
-	if ((++pj->pj_nextwrite) == pj->pj_hdr->pjh_nents) {
+	if ((++pj->pj_nextwrite) == pj->pj_hdr->pjh_nents)
 		pj->pj_nextwrite = 0;
-	}
 
 	PJ_ULOCK(pj);
 
@@ -356,38 +394,11 @@ pjournal_logwrite(struct psc_journal_xidhndl *xh, int type, void *data,
 	return (rc);
 }
 
-/**
- * pjournal_logread - Get a specified entry from a journal.
- * @pj: the journal.
- * @slot: the position in the journal of the entry to obtain.
- * @count: the number of slots to read.
- * @data: a pointer to buffer when we fill journal entries.
- * Returns: 'n' entries read on success, -1 on error.
- */
-__static int
-pjournal_logread(struct psc_journal *pj, int32_t slot, int32_t count,
-    void *data)
-{
-	int		rc;
-	off_t		addr;
-	ssize_t		size;
-
-	rc = 0;
-	addr = PJ_GETENTOFF(pj, slot);
-	size = pread(pj->pj_fd, data, PJ_PJESZ(pj) * count, addr);
-	if (size == -1 || (size_t)size != PJ_PJESZ(pj) *  count) {
-		psc_warn("Fail to read %zd bytes from journal %p: "
-		    "rc = %d, errno = %d", size, pj, rc, errno);
-		rc = -1;
-	}
-	return (rc);
-}
-
 __static void *
 pjournal_alloc_buf(struct psc_journal *pj)
 {
 	return (psc_alloc(PJ_PJESZ(pj) * pj->pj_hdr->pjh_readahead,
-			  PAF_PAGEALIGN | PAF_LOCK));
+	    PAF_PAGEALIGN | PAF_LOCK));
 }
 
 /**
@@ -497,15 +508,15 @@ pjournal_scan_slots(struct psc_journal *pj)
 	psc_dynarray_init(&pj->pj_bufs);
 	jbuf = pjournal_alloc_buf(pj);
 	while (slot < pj->pj_hdr->pjh_nents) {
-		if (pj->pj_hdr->pjh_nents - slot >= pj->pj_hdr->pjh_readahead) {
+		if (pj->pj_hdr->pjh_nents - slot >=
+		    pj->pj_hdr->pjh_readahead)
 			count = pj->pj_hdr->pjh_readahead;
-		} else {
+		else
 			count = pj->pj_hdr->pjh_nents - slot;
-		}
-		if (pjournal_logread(pj, slot, count, jbuf) < 0) {
-			rc = -1;
+		rc = psc_journal_read(pj, jbuf, PJ_PJESZ(pj) * count,
+		    PJ_GETENTOFF(pj, slot));
+		if (rc)
 			break;
-		}
 		for (i = 0; i < count; i++) {
 			nscan++;
 			pje = (struct psc_journal_enthdr *)
@@ -612,6 +623,7 @@ pjournal_scan_slots(struct psc_journal *pj)
 
 /**
  * pjournal_open - Initialize the in-memory representation of a journal.
+ * @fn: path to journal on file system.
  */
 __static struct psc_journal *
 pjournal_open(const char *fn)
@@ -620,15 +632,22 @@ pjournal_open(const char *fn)
 	struct psc_journal *pj;
 	struct stat statbuf;
 	ssize_t rc, pjhlen;
+	const char *basefn;
 	uint64_t chksum;
 
 	pj = PSCALLOC(sizeof(*pj));
 	pj->pj_fd = open(fn, O_RDWR | O_SYNC | O_DIRECT);
 	if (pj->pj_fd == -1)
-		psc_fatal("Fail to open log file %s", fn);
-	rc = fstat(pj->pj_fd, &statbuf);
-	if (rc == -1)
-		psc_fatal("Fail to stat log file %s", fn);
+		psc_fatal("failed to open journal %s", fn);
+	if (fstat(pj->pj_fd, &statbuf) == -1)
+		psc_fatal("failed to stat journal %s", fn);
+	basefn = strrchr(fn, '/');
+	if (basefn)
+		basefn++;
+	else
+		basefn = fn;
+	psc_iostats_init(&pj->pj_rdist, "jrnlrd-%s", basefn);
+	psc_iostats_init(&pj->pj_wrist, "jrnlwr-%s", basefn);
 
 	/*
 	 * O_DIRECT may impose alignment restrictions so align to page
@@ -636,10 +655,9 @@ pjournal_open(const char *fn)
 	 */
 	pjhlen = PSC_ALIGN(sizeof(*pjh), statbuf.st_blksize);
 	pjh = psc_alloc(pjhlen, PAF_PAGEALIGN | PAF_LOCK);
-	rc = pread(pj->pj_fd, pjh, pjhlen, 0);
-	if (rc != pjhlen)
-		psc_fatal("Fail to read journal header: want %zd got %zd",
-		    pjhlen, rc);
+	if (psc_journal_read(pj, pjh, pjhlen, 0))
+		psc_fatalx("Fail to read journal header");
+
 	pj->pj_hdr = pjh;
 	if (pjh->pjh_magic != PJH_MAGIC) {
 		psc_errorx("Journal header has a bad magic number");
@@ -705,6 +723,7 @@ pjournal_release(struct psc_journal *pj)
  * @entsz: size of a journal entry.
  * @ra: number of entries to operate on in one disk I/O operation.
  * @opts: journal operational flags.
+ * Returns 0 on success, errno on error.
  */
 int
 pjournal_format(const char *fn, uint32_t nents, uint32_t entsz,
@@ -716,7 +735,6 @@ pjournal_format(const char *fn, uint32_t nents, uint32_t entsz,
 	struct psc_journal		 pj;
 	struct psc_journal_enthdr	*pje;
 	struct psc_journal_hdr		 pjh;
-	ssize_t				 size;
 	unsigned char			*jbuf;
 	uint32_t			 slot;
 	int				 count;
@@ -754,9 +772,8 @@ pjournal_format(const char *fn, uint32_t nents, uint32_t entsz,
 	    offsetof(struct psc_journal_hdr, pjh_chksum));
 	PSC_CRC64_FIN(&pjh.pjh_chksum);
 
-	size = pwrite(fd, &pjh, pjh.pjh_iolen, 0);
-	if (size == -1 || size != (ssize_t)pjh.pjh_iolen)
-		psc_fatal("Failed to write header");
+	if (psc_journal_write(&pj, &pjh, pjh.pjh_iolen, 0))
+		psc_fatal("failed to write journal header");
 
 	jbuf = pjournal_alloc_buf(&pj);
 
@@ -778,24 +795,20 @@ pjournal_format(const char *fn, uint32_t nents, uint32_t entsz,
 			    pje->pje_len);
 			PSC_CRC64_FIN(&pje->pje_chksum);
 		}
-		size = pwrite(fd, jbuf, PJ_PJESZ(&pj) * count,
-		    PJ_GETENTOFF(&pj, slot));
 
 		/*
 		 * At least on one instance, short write actually
 		 * returns success on a RAM-backed file system.
 		 */
-		if (size == -1 || (size_t)size != PJ_PJESZ(&pj) * count) {
-			rc = -1;
-			psc_errorx("failed to write %d entries "
-			    "at slot %d", count, slot);
+		rc = psc_journal_write(&pj, jbuf, PJ_PJESZ(&pj) * count,
+		    PJ_GETENTOFF(&pj, slot));
+		if (rc)
 			break;
-		}
 	}
 	if (close(fd) == -1)
 		psc_fatal("failed to close journal");
 	psc_freenl(jbuf, PJ_PJESZ(&pj) * ra);
-	return rc;
+	return (rc);
 }
 
 /**
@@ -813,7 +826,6 @@ pjournal_dump(const char *fn, int verbose)
 	struct psc_journal_enthdr	*pje;
 	uint32_t			 slot;
 	unsigned char			*jbuf;
-	ssize_t				 size;
 	int				 count;
 	uint64_t			 chksum;
 	int				 ntotal;
@@ -845,14 +857,9 @@ pjournal_dump(const char *fn, int verbose)
 	    slot < pjh->pjh_nents; slot += count) {
 		count = (pjh->pjh_nents - slot <= ra) ?
 		    (pjh->pjh_nents - slot) : ra;
-		size = pread(pj->pj_fd, jbuf, (PJ_PJESZ(pj) * count),
-		    PJ_GETENTOFF(pj, slot));
-
-		if (size == -1)
-			psc_fatal("Failed to read %d log entries "
-			    "at slot %d", count, slot);
-		if ((size_t)size != (PJ_PJESZ(pj)* count))
-			psc_fatalx("Short read for %d log entries "
+		if (psc_journal_read(pj, jbuf, PJ_PJESZ(pj) * count,
+		    PJ_GETENTOFF(pj, slot)))
+			psc_fatal("failed to read %d log entries "
 			    "at slot %d", count, slot);
 
 		for (i = 0; i < count; i++) {
@@ -900,9 +907,10 @@ pjournal_dump(const char *fn, int verbose)
 	return (0);
 }
 
-/*
- * Remove a transaction from the global pending list given its XID.  This is
- * only done for single transactions such as namespace operations.
+/**
+ * pjournal_shdw_del_xidhndl - Remove a transaction from the global
+ *	pending list given its XID.  This is * only done for single
+ *	transactions such as namespace operations.
  */
 void
 pjournal_shdw_del_xidhndl(struct psc_journal *pj, uint64_t xid)
@@ -1196,7 +1204,6 @@ pjournal_init(const char *fn, int thrtype, const char *thrname,
 	struct psc_journal		*pj;
 	uint64_t			 xid;
 	struct psc_journal_enthdr	*pje;
-	ssize_t				 size;
 	int				 nents;
 	int				 nerrs;
 	uint64_t			 chksum;
@@ -1264,10 +1271,9 @@ pjournal_init(const char *fn, int thrtype, const char *thrname,
 	PSC_CRC64_FIN(&chksum);
 	pje->pje_chksum = chksum;
 
-	size = pwrite(pj->pj_fd, pje, PJ_PJESZ(pj),
-	    PJ_GETENTOFF(pj, pj->pj_nextwrite));
-	if (size == -1 || (size_t)size != PJ_PJESZ(pj))
-		psc_warnx("Fail to write a start up marker in the journal");
+	if (psc_journal_write(pj, pje, PJ_PJESZ(pj),
+	    PJ_GETENTOFF(pj, pj->pj_nextwrite)))
+		psc_fatalx("failed to write a start up marker in the journal");
 	psc_freenl(pje, PJ_PJESZ(pj));
 
 	pj->pj_nextwrite++;
