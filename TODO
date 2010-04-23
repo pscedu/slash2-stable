@@ -35,8 +35,8 @@ pfl
   allowing app-specific callbacks (e.g. %r for zest clients)
 - add a pscthr_get() check in pscalloc and test
 - psclog format specifier: timestamp difference
-- investigate proper control socket permissions checks.  regular
-  users should be able to read some stats but only root users
+- investigate proper control socket permissions checks in ctlapi.
+  regular users should be able to read some stats but only root users
   should be able to issue exit commands, etc.  TCP sockets should
   inspect remote port to determine "authorization"
 - should hash tables be enforced by to n^^2-1 ??
@@ -66,7 +66,6 @@ pfl
 - let caller worry about memory for vbitmaps, don't return pointers
 - bail if multiwait_addcond() fails, its a mem condition (dynarray)
   that should be remedied by shrinking pools
-- psclist_add_sorted() - maintain a median element for faster sorting
 - when ppm_total is set less than lc_size for !PPMF_AUTO, set
   ppm_max and check this value in other places to eventually
   decrease pool size
