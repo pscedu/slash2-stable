@@ -104,6 +104,7 @@ void  psc_ctlmsg_fault_prdat(const struct psc_ctlmsghdr *, const void *);
 
 extern int psc_ctl_noheader;
 extern int psc_ctl_inhuman;
+extern int psc_ctl_lastmsgtype;
 
 extern struct psc_ctl_thrstatfmt psc_ctl_thrstatfmts[];
 extern int			 psc_ctl_nthrstatfmts;

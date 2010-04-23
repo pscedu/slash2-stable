@@ -55,8 +55,8 @@ int		  psc_ctl_noheader;
 int		  psc_ctl_inhuman;
 int		  psc_ctl_nsubsys;
 char		**psc_ctl_subsys_names;
+int		  psc_ctl_lastmsgtype = -1;
 __static int	  psc_ctl_sock;
-__static int	  psc_ctl_lastmsgtype = -1;
 
 __static struct psc_ctlshow_ent *
 psc_ctlshow_lookup(const char *name)
