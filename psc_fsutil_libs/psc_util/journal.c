@@ -111,7 +111,7 @@ psc_journal_io(struct psc_journal *pj, void *p, size_t len, off_t off,
 		 * At least on one instance, short write actually
 		 * returns "success" on a RAM-backed file system.
 		 */
-		rc = -1;
+		rc = ENOSPC;
 		psc_errorx("journal %s (pj=%p, len=%zd, off=%"PSCPRIdOFF", "
 		    "nb=%zd): short I/O", rw == JIO_READ ? "read" : "write",
 		    pj, len, off, nb);
