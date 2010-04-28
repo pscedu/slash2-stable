@@ -107,6 +107,10 @@ psc_journal_io(struct psc_journal *pj, void *p, size_t len, off_t off,
 		psc_error("journal %s (pj=%p, len=%zd, off=%"PSCPRIdOFF")",
 		    rw == JIO_READ ? "read" : "write", pj, len, off);
 	} else if ((size_t)nb != len) {
+		/*
+		 * At least on one instance, short write actually
+		 * returns "success" on a RAM-backed file system.
+		 */
 		rc = -1;
 		psc_errorx("journal %s (pj=%p, len=%zd, off=%"PSCPRIdOFF", "
 		    "nb=%zd): short I/O", rw == JIO_READ ? "read" : "write",
@@ -740,6 +744,7 @@ pjournal_format(const char *fn, uint32_t nents, uint32_t entsz,
 	int				 count;
 	struct stat stb;
 
+	memset(&pj, 0, sizeof(struct psc_journal));
 	pj.pj_hdr = &pjh;
 
 	rc = 0;
@@ -749,6 +754,8 @@ pjournal_format(const char *fn, uint32_t nents, uint32_t entsz,
 
 	if (fstat(fd, &stb) == -1)
 		psc_fatal("stat %s", fn);
+
+	pj.pj_fd = fd;
 
 	/*
 	 * The number of log entries must be a multiple of the tile size and
@@ -796,10 +803,6 @@ pjournal_format(const char *fn, uint32_t nents, uint32_t entsz,
 			PSC_CRC64_FIN(&pje->pje_chksum);
 		}
 
-		/*
-		 * At least on one instance, short write actually
-		 * returns success on a RAM-backed file system.
-		 */
 		rc = psc_journal_write(&pj, jbuf, PJ_PJESZ(&pj) * count,
 		    PJ_GETENTOFF(&pj, slot));
 		if (rc)
