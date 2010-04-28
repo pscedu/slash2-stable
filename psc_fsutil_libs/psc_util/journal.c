@@ -813,6 +813,8 @@ pjournal_format(const char *fn, uint32_t nents, uint32_t entsz,
 	if (close(fd) == -1)
 		psc_fatal("failed to close journal");
 	psc_freenl(jbuf, PJ_PJESZ(&pj) * ra);
+	psc_info("journal %s formatted: %d slots, %d readahead, error = %d", 
+		  fn, nents, ra, rc);
 	return (rc);
 }
 
