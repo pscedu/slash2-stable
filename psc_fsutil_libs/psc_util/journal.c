@@ -737,12 +737,11 @@ pjournal_format(const char *fn, uint32_t nents, uint32_t entsz,
 	int				 rc;
 	int				 fd;
 	struct psc_journal		 pj;
+	struct stat			 stb;
 	struct psc_journal_enthdr	*pje;
 	struct psc_journal_hdr		 pjh;
 	unsigned char			*jbuf;
 	uint32_t			 slot;
-	int				 count;
-	struct stat stb;
 
 	if (nents % ra) {
 		printf("Number of slots should be a multiple of readahead.\n");
@@ -788,7 +787,7 @@ pjournal_format(const char *fn, uint32_t nents, uint32_t entsz,
 		psc_fatal("failed to write journal header");
 
 	jbuf = pjournal_alloc_buf(&pj);
-	for (i = 0; i < count; i++) {
+	for (i = 0; i < (int)ra; i++) {
 		pje = (struct psc_journal_enthdr *)
 		    &jbuf[PJ_PJESZ(&pj) * i];
 		pje->pje_magic = PJE_MAGIC;
@@ -805,9 +804,8 @@ pjournal_format(const char *fn, uint32_t nents, uint32_t entsz,
 		PSC_CRC64_FIN(&pje->pje_chksum);
 	}
 
-	count = ra;
-	for (slot = 0; slot < pjh.pjh_nents; slot += count) {
-		rc = psc_journal_write(&pj, jbuf, PJ_PJESZ(&pj) * count,
+	for (slot = 0; slot < pjh.pjh_nents; slot += ra) {
+		rc = psc_journal_write(&pj, jbuf, PJ_PJESZ(&pj) * ra,
 		    PJ_GETENTOFF(&pj, slot));
 		if (rc)
 			break;
