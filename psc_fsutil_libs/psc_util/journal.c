@@ -744,6 +744,11 @@ pjournal_format(const char *fn, uint32_t nents, uint32_t entsz,
 	int				 count;
 	struct stat stb;
 
+	if (nents % ra) {
+		printf("Number of slots should be a multiple of readahead.\n");
+		return (EINVAL);
+	}
+
 	memset(&pj, 0, sizeof(struct psc_journal));
 	pj.pj_hdr = &pjh;
 
@@ -783,26 +788,25 @@ pjournal_format(const char *fn, uint32_t nents, uint32_t entsz,
 		psc_fatal("failed to write journal header");
 
 	jbuf = pjournal_alloc_buf(&pj);
+	for (i = 0; i < count; i++) {
+		pje = (struct psc_journal_enthdr *)
+		    &jbuf[PJ_PJESZ(&pj) * i];
+		pje->pje_magic = PJE_MAGIC;
+		pje->pje_type = PJE_FORMAT;
+		pje->pje_xid = PJE_XID_NONE;
+		pje->pje_sid = PJE_XID_NONE;
+		pje->pje_len = 0;
 
+		PSC_CRC64_INIT(&pje->pje_chksum);
+		psc_crc64_add(&pje->pje_chksum, pje,
+		    offsetof(struct psc_journal_enthdr, pje_chksum));
+		psc_crc64_add(&pje->pje_chksum, pje->pje_data,
+		    pje->pje_len);
+		PSC_CRC64_FIN(&pje->pje_chksum);
+	}
+
+	count = ra;
 	for (slot = 0; slot < pjh.pjh_nents; slot += count) {
-		count = (nents - slot <= ra) ? (nents - slot) : ra;
-		for (i = 0; i < count; i++) {
-			pje = (struct psc_journal_enthdr *)
-			    &jbuf[PJ_PJESZ(&pj) * i];
-			pje->pje_magic = PJE_MAGIC;
-			pje->pje_type = PJE_FORMAT;
-			pje->pje_xid = PJE_XID_NONE;
-			pje->pje_sid = PJE_XID_NONE;
-			pje->pje_len = 0;
-
-			PSC_CRC64_INIT(&pje->pje_chksum);
-			psc_crc64_add(&pje->pje_chksum, pje,
-			    offsetof(struct psc_journal_enthdr, pje_chksum));
-			psc_crc64_add(&pje->pje_chksum, pje->pje_data,
-			    pje->pje_len);
-			PSC_CRC64_FIN(&pje->pje_chksum);
-		}
-
 		rc = psc_journal_write(&pj, jbuf, PJ_PJESZ(&pj) * count,
 		    PJ_GETENTOFF(&pj, slot));
 		if (rc)
