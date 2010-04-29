@@ -1170,6 +1170,8 @@ pjournal_init_shdw(int thrtype, const char *thrname, struct psc_journal *pj)
 	struct psc_journalthr *pjt;
 	struct psc_thread *thr;
 	int i, size;
+	struct psc_journal_shdw_tile *pjst;
+	struct psc_journal_enthdr *pje;
 
 	psc_assert(pj->pj_hdr->pjh_options & PJH_OPT_SHADOW);
 	psc_assert(!pj->pj_shdw);
@@ -1197,6 +1199,14 @@ pjournal_init_shdw(int thrtype, const char *thrname, struct psc_journal *pj)
 		pjournal_shdw_preptile(pj->pj_shdw->pjs_tiles[i], pj);
 	}
 	psc_assert(pj->pj_shdw->pjs_endslot == PJ_SHDW_NTILES * PJ_SHDW_TILESIZE);
+
+	/*
+	 * Fill in the very first slot by hand so that our shadow handler
+	 * can skip it.
+	 */
+	pjst = pj->pj_shdw->pjs_tiles[0];
+	pje = TILE_GETENT(pj, pjst, pjst->pjst_tail - pjst->pjst_first);
+	pje->pje_type = PJE_STRTUP;
 
 	thr = pscthr_init(thrtype, 0, pjournal_shdwthr_main,
 	    NULL, sizeof(*pjt), thrname);
