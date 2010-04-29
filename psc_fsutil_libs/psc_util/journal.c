@@ -498,8 +498,8 @@ pjournal_scan_slots(struct psc_journal *pj)
 	last_startup = PJE_XID_NONE;
 
 	/*
-	 * We scan the log from the first entry to the last one
-	 * regardless where the log really starts.  This poses a
+	 * We scan the log from the first physical entry to the last physical
+	 * one regardless where the log really starts and ends.  This poses a
 	 * problem: we might see the CLOSE entry of a transaction before
 	 * its other entries due to log wraparound.  As a result, we
 	 * must save these CLOSE entries until we have seen all the
@@ -596,8 +596,9 @@ pjournal_scan_slots(struct psc_journal *pj)
 		slot += count;
 	}
  done:
-	if (last_startup != PJE_XID_NONE)
-		pjournal_remove_entries(pj, last_startup, 2);
+	psc_assert(last_startup != PJE_XID_NONE);
+	pjournal_remove_entries(pj, last_startup, 2);
+
 	pj->pj_lastxid = last_xid;
 	/* If last_slot is PJX_SLOT_ANY, then nextwrite will be 0 */
 	pj->pj_nextwrite = (last_slot == (int)pj->pj_hdr->pjh_nents - 1) ?
