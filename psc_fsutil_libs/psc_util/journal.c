@@ -1113,6 +1113,11 @@ pjournal_shdw_logwrite(struct psc_journal *pj,
 	 */
 	spinlock(&pjst->pjst_lock);
 
+	/* Make sure that the slot fall within the range covered by
+	 * the current tile */
+	psc_assert(slot >= pjst->pjst_first);
+	psc_assert(slot < pjst->pjst_last);
+
 	pje_shdw = TILE_GETENT(pj, pjst, slot - pjst->pjst_first);
 	psc_assert(pje_shdw->pje_magic == PJE_MAGIC);
 	psc_assert(pje_shdw->pje_type == PJE_FORMAT);
