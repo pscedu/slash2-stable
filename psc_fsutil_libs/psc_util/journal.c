@@ -511,12 +511,9 @@ pjournal_scan_slots(struct psc_journal *pj)
 
 	psc_dynarray_init(&pj->pj_bufs);
 	jbuf = pjournal_alloc_buf(pj);
+	count = pj->pj_hdr->pjh_readahead;
+	psc_assert((pj->pj_hdr->pjh_nents % count) == 0);
 	while (slot < pj->pj_hdr->pjh_nents) {
-		if (pj->pj_hdr->pjh_nents - slot >=
-		    pj->pj_hdr->pjh_readahead)
-			count = pj->pj_hdr->pjh_readahead;
-		else
-			count = pj->pj_hdr->pjh_nents - slot;
 		rc = psc_journal_read(pj, jbuf, PJ_PJESZ(pj) * count,
 		    PJ_GETENTOFF(pj, slot));
 		if (rc)
