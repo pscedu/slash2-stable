@@ -997,7 +997,8 @@ pjournal_shdw_preptile(struct psc_journal_shdw_tile *pjst,
 
 	spinlock(&pjs->pjs_lock);
 	spinlock(&pjst->pjst_lock);
-	if (pjst->pjst_tail < pjst->pjst_first + pjs->pjs_tilesize) {
+	if (pjst->pjst_state == PJ_SHDW_TILE_ACTIVE &&
+	    pjst->pjst_tail < pjst->pjst_first + pjs->pjs_tilesize) {
 		freelock(&pjst->pjst_lock);
 		freelock(&pjs->pjs_lock);
 		return;
@@ -1182,6 +1183,8 @@ pjournal_init_shdw(int thrtype, const char *thrname, struct psc_journal *pj)
 		pj->pj_shdw->pjs_tiles[i]->pjst_base =
 			(void *)(pj->pj_shdw->pjs_tiles[i] + 1);
 		LOCK_INIT(&pj->pj_shdw->pjs_tiles[i]->pjst_lock);
+		pj->pj_shdw->pjs_tiles[i]->pjst_state = PJ_SHDW_TILE_FREE;
+
 		pjournal_shdw_preptile(pj->pj_shdw->pjs_tiles[i], pj);
 	}
 	psc_assert(pj->pj_shdw->pjs_endslot == PJ_SHDW_NTILES * PJ_SHDW_TILESIZE);
