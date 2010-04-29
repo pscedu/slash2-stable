@@ -1180,7 +1180,9 @@ pjournal_init_shdw(int thrtype, const char *thrname, struct psc_journal *pj)
 	pj->pj_shdw->pjs_ntiles = PJ_SHDW_NTILES;
 	pj->pj_shdw->pjs_tilesize = PJ_SHDW_TILESIZE;
 	pj->pj_shdw->pjs_curtile = 0;
-	pj->pj_shdw->pjs_endslot = 0;
+	pj->pj_shdw->pjs_endslot = pj->pj_nextwrite - 1;
+
+	psc_assert(!((pj->pj_nextwrite - 1) % PJ_SHDW_TILESIZE));
 
 	LOCK_INIT(&pj->pj_shdw->pjs_lock);
 	psc_waitq_init(&pj->pj_shdw->pjs_waitq);
@@ -1198,7 +1200,8 @@ pjournal_init_shdw(int thrtype, const char *thrname, struct psc_journal *pj)
 
 		pjournal_shdw_preptile(pj->pj_shdw->pjs_tiles[i], pj);
 	}
-	psc_assert(pj->pj_shdw->pjs_endslot == PJ_SHDW_NTILES * PJ_SHDW_TILESIZE);
+	psc_assert(pj->pj_shdw->pjs_endslot == 
+		   pj->pj_nextwrite - 1 + PJ_SHDW_NTILES * PJ_SHDW_TILESIZE);
 
 	/*
 	 * Fill in the very first slot by hand so that our shadow handler
