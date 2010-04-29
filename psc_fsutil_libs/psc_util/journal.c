@@ -553,11 +553,17 @@ pjournal_scan_slots(struct psc_journal *pj)
 			 * We start from the first log entry.  If we see
 			 * a formatted log entry, there should be no
 			 * more real log entries after that.
+			 *
+			 * If the log has wrapped around, then we will 
+			 * never see such an entry.
 			 */
 			if (pje->pje_type & PJE_FORMAT) {
 				psc_assert(pje->pje_len == 0);
 				goto done;
 			}
+			/*
+			 * Remember the slot with the largest XID.
+			 */
 			if (pje->pje_xid >= last_xid) {
 				last_xid = pje->pje_xid;
 				last_slot = slot + i;
@@ -1284,14 +1290,21 @@ pjournal_init(const char *fn, int thrtype, const char *thrname,
 	PSC_CRC64_FIN(&chksum);
 	pje->pje_chksum = chksum;
 
+	/*
+	 * Move the slot to the next tile boundary to simplify our initial
+	 * tile alignment.
+	 */
+	if (pj->pj_nextwrite % PJ_SHDW_TILESIZE)
+		pj->pj_nextwrite = (pj->pj_nextwrite / PJ_SHDW_TILESIZE + 1) * PJ_SHDW_TILESIZE;
+	if (pj->pj_nextwrite >= pj->pj_hdr->pjh_nents)
+		pj->pj_nextwrite = 0;
+
 	if (psc_journal_write(pj, pje, PJ_PJESZ(pj),
 	    PJ_GETENTOFF(pj, pj->pj_nextwrite)))
 		psc_fatalx("failed to write a start up marker in the journal");
 	psc_freenl(pje, PJ_PJESZ(pj));
 
 	pj->pj_nextwrite++;
-	if (pj->pj_nextwrite == pj->pj_hdr->pjh_nents)
-		pj->pj_nextwrite = 0;
 
 	/* pre-allocate some buffers for log writes */
 	for (i = 0; i < PJ_MAX_BUF; i++) {
