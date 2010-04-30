@@ -1044,7 +1044,6 @@ pjournal_shdw_advtile_locked(struct psc_journal_shdw *pjs)
 	/*
 	 * Kick the process thread to work on the full tile now.
 	 */
-	pjs->pjs_tiles[pjs->pjs_curtile]->pjst_state = PJ_SHDW_TILE_FULL;
 	spinlock(&pjournal_tilewaitqlock);
 	psc_waitq_wakeall(&pjournal_tilewaitq);
 	freelock(&pjournal_tilewaitqlock);
@@ -1149,7 +1148,6 @@ pjournal_shdwthr_main(struct psc_thread *thr)
 	struct psc_journal_shdw *pjs = pj->pj_shdw;
 	struct psc_journal_shdw_tile *pjst;
 	int32_t i;
-	int rv = 0;
 
 	while (pscthr_run()) {
 		/*
@@ -1158,18 +1156,11 @@ pjournal_shdwthr_main(struct psc_thread *thr)
 		 */
 		for (i = 0; i < pjs->pjs_ntiles; i++) {
 			pjst = pjs->pjs_tiles[i];
-			spinlock(&pjst->pjst_lock);
-			if (!(pjst->pjst_state & PJ_SHDW_TILE_FULL) &&
-			    rv != ETIMEDOUT) {
-				freelock(&pjst->pjst_lock);
-				continue;
-			}
-			freelock(&pjst->pjst_lock);
 			pjournal_shdw_proctile(pjst, pj);
 			pjournal_shdw_preptile(pjst, pj);
 		}
 		spinlock(&pjournal_tilewaitqlock);
-		rv = psc_waitq_waitrel_s(&pjournal_tilewaitq,
+		(void)psc_waitq_waitrel_s(&pjournal_tilewaitq,
 		    &pjournal_tilewaitqlock, PJ_SHDW_MAXAGE);
 	}
 }

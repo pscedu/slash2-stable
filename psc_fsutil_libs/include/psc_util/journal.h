@@ -73,8 +73,7 @@ struct psc_journal_shdw_tile {
 
 enum {
 	PJ_SHDW_TILE_FREE		= (1 << 0),
-	PJ_SHDW_TILE_ACTIVE		= (1 << 1),	/* current tile being used -- has free slots */
-	PJ_SHDW_TILE_FULL		= (1 << 2)	/* All entries have been allocated */
+	PJ_SHDW_TILE_ACTIVE		= (1 << 1) 	/* current tile being used -- has free slots */
 };
 
 /* In-memory 'journal shadowing'.
