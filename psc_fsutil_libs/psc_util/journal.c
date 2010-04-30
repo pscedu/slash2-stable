@@ -1071,6 +1071,7 @@ pjournal_shdw_advtile_locked(struct psc_journal_shdw *pjs)
 __static struct psc_journal_shdw_tile *
 pjournal_shdw_prepslot(struct psc_journal_shdw *pjs, uint32_t slot)
 {
+	int tile;
 	struct psc_journal_shdw_tile *pjst;
 
 	/*
@@ -1086,11 +1087,20 @@ pjournal_shdw_prepslot(struct psc_journal_shdw *pjs, uint32_t slot)
 	 * tile.  Note if a tile is aligned at the very end of the
 	 * log area, its last slot is set to zero due to wrap-around.
 	 */
-	if (slot == pjst->pjst_last) {
+	if ((slot % PJ_SHDW_TILESIZE) == 0) {
 		pjs->pjs_state |= PJ_SHDW_ADVTILE;
 		pjournal_shdw_advtile_locked(pjs);
-		pjst = pjs->pjs_tiles[pjs->pjs_curtile];
 	}
+	/*
+	 * Don't assume that the tile your slot belongs to is the 
+	 * current tile.
+	 */
+	tile = pjs->pjs_curtile;
+	while (slot < pjs->pjs_tiles[tile]->pjst_first)
+		tile = (tile + 1) % (pjs->pjs_ntiles - 1);
+		
+	pjst = pjs->pjs_tiles[tile];
+
 	return (pjst);
 }
 
