@@ -1188,14 +1188,13 @@ pjournal_init_shdw(int thrtype, const char *thrname, struct psc_journal *pj)
 	LOCK_INIT(&pj->pj_shdw->pjs_lock);
 	psc_waitq_init(&pj->pj_shdw->pjs_waitq);
 
-	size = sizeof(struct psc_journal_shdw_tile) +
-		PJ_PJESZ(pj) * pj->pj_shdw->pjs_tilesize;
+	size = PJ_PJESZ(pj) * pj->pj_shdw->pjs_tilesize;
 
 	for (i = 0; i < PJ_SHDW_NTILES; i++) {
-		pj->pj_shdw->pjs_tiles[i] = PSCALLOC(size);
-
-		pj->pj_shdw->pjs_tiles[i]->pjst_base =
-			(void *)(pj->pj_shdw->pjs_tiles[i] + 1);
+		pj->pj_shdw->pjs_tiles[i] = 
+			PSCALLOC(sizeof(struct psc_journal_shdw_tile));
+		pj->pj_shdw->pjs_tiles[i]->pjst_base = 
+			psc_alloc(size, PAF_PAGEALIGN | PAF_LOCK);		/* align for O_DIRECT */
 		LOCK_INIT(&pj->pj_shdw->pjs_tiles[i]->pjst_lock);
 		pj->pj_shdw->pjs_tiles[i]->pjst_state = PJ_SHDW_TILE_FREE;
 
