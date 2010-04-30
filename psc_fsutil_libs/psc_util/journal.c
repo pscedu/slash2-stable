@@ -987,9 +987,10 @@ pjournal_shdw_proctile(struct psc_journal_shdw_tile *pjst,
 }
 
 /**
- * pjournal_shdw_preptile - prepare a journal shadow tile for action.  The pjst
- *   must have already been cleaned by the shadow thread.  We mark it as FREE
- *   so that it can be used later.  Also adjust the range covered by the tiles.
+ * pjournal_shdw_preptile - prepare a journal shadow tile for reuse.  The pjst
+ *   must have already been completely cleaned by the shadow thread.  We mark 
+ *   it as FREE so that it can be used later.  Also adjust the range covered 
+ *   by the tile.
  */
 __static __inline void
 pjournal_shdw_preptile(struct psc_journal_shdw_tile *pjst,
@@ -1048,7 +1049,7 @@ pjournal_shdw_advtile_locked(struct psc_journal_shdw *pjs)
 	psc_waitq_wakeall(&pjournal_tilewaitq);
 	freelock(&pjournal_tilewaitqlock);
 
-	next_tile = (pjs->pjs_curtile + 1) % (pjs->pjs_ntiles - 1);
+	next_tile = (pjs->pjs_curtile + 1) % pjs->pjs_ntiles;
 	while (pjs->pjs_tiles[next_tile]->pjst_state != PJ_SHDW_TILE_FREE) {
 		psc_waitq_wait(&pjs->pjs_waitq, &pjs->pjs_lock);
 		spinlock(&pjs->pjs_lock);
@@ -1096,7 +1097,7 @@ pjournal_shdw_prepslot(struct psc_journal_shdw *pjs, uint32_t slot)
 	 */
 	tile = pjs->pjs_curtile;
 	while (slot < pjs->pjs_tiles[tile]->pjst_first)
-		tile = (tile + 1) % (pjs->pjs_ntiles - 1);
+		tile = (tile + 1) % pjs->pjs_ntiles;
 		
 	pjst = pjs->pjs_tiles[tile];
 
@@ -1151,8 +1152,7 @@ pjournal_shdwthr_main(struct psc_thread *thr)
 
 	while (pscthr_run()) {
 		/*
-		 * Look for full tiles and process them.  If we woke up on our own,
-		 * process log entries in the current tile.
+		 * XXX: must process tiles in strict order.
 		 */
 		for (i = 0; i < pjs->pjs_ntiles; i++) {
 			pjst = pjs->pjs_tiles[i];
@@ -1209,6 +1209,7 @@ pjournal_init_shdw(int thrtype, const char *thrname, struct psc_journal *pj)
 	 * can skip it.
 	 */
 	pjst = pj->pj_shdw->pjs_tiles[0];
+	pjst->pjst_state = PJ_SHDW_TILE_ACTIVE;
 	pje = TILE_GETENT(pj, pjst, pjst->pjst_tail - pjst->pjst_first);
 	pje->pje_type = PJE_STRTUP;
 
