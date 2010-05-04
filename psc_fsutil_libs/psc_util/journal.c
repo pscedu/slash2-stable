@@ -599,8 +599,14 @@ pjournal_scan_slots(struct psc_journal *pj)
 		slot += count;
 	}
  done:
-	psc_assert(last_startup != PJE_XID_NONE);
-	pjournal_remove_entries(pj, last_startup, 2);
+	/*
+	 * If we are dealing with a brand new log file, we will stop
+	 * at the very first slot, which is marked as PJE_FORMAT.
+	 */
+	if (slot == 0) {
+		psc_assert(last_startup != PJE_XID_NONE);
+		pjournal_remove_entries(pj, last_startup, 2);
+	}
 
 	pj->pj_lastxid = last_xid;
 	/* If last_slot is PJX_SLOT_ANY, then nextwrite will be 0 */
