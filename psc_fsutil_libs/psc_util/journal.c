@@ -603,7 +603,7 @@ pjournal_scan_slots(struct psc_journal *pj)
 	 * If we are dealing with a brand new log file, we will stop
 	 * at the very first slot, which is marked as PJE_FORMAT.
 	 */
-	if (slot == 0) {
+	if (slot != 0) {
 		psc_assert(last_startup != PJE_XID_NONE);
 		pjournal_remove_entries(pj, last_startup, 2);
 	}
