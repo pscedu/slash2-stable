@@ -21,6 +21,7 @@ general reminders
   private data pointer past
 - ensure no mp RPC message bodies are used after a pscrpc_req_finished()
 - check -Wuninitialized and others
+- no strcpy, strcat, gets, sscanf without bounds
 
 make
 - rename ROOTDIR -> PROJ_BASE
