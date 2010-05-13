@@ -467,7 +467,7 @@ pscrpc_send_rpc(struct pscrpc_request *request, int noreply)
 	lnet_md_t         reply_md;
 
 	//OBD_FAIL_RETURN(OBD_FAIL_PSCRPC_DROP_RPC, 0);
-	DEBUG_REQ(PLL_INFO, request, "sending rpc");
+	DEBUG_REQ(PLL_DEBUG, request, "sending rpc");
 
 	psc_assert (request->rq_type == PSCRPC_MSG_REQUEST);
 
@@ -551,7 +551,7 @@ pscrpc_send_rpc(struct pscrpc_request *request, int noreply)
 			GOTO(cleanup_me, rc = -ENOMEM);
 		}
 
-		psc_info("Setup reply buffer: %u bytes, xid %"PRIx64
+		psc_dbg("Setup reply buffer: %u bytes, xid %"PRIx64
 			 ", portal %u",
 			 request->rq_replen, request->rq_xid,
 			 request->rq_reply_portal);
