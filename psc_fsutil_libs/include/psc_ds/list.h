@@ -362,7 +362,7 @@ psclist_add_sorted(struct psclist_head *hd, struct psclist_head *elem,
 	struct psclist_head *e;
 
 	psc_assert(elem);
-	psclist_for_each_entry2(e, hd, offset)
+	psclist_for_each(e, hd)
 		if (cmpf((char *)elem - offset, (char *)e - offset) > 0) {
 			psclist_xadd(elem, e);
 			return;
