@@ -206,7 +206,12 @@ pll_add_sorted(struct psc_lockedlist *pll, void *p,
 	e = (char *)p + pll->pll_offset;
 
 	locked = PLL_RLOCK(pll);
-	psclist_add_sorted(&pll->pll_listhd, e, cmpf, pll->pll_offset);
+	if (pll_empty(pll))
+		psclist_xadd_head(e, &pll->pll_listhd);
+	else
+		psclist_add_sorted(&pll->pll_listhd, e, cmpf, pll->pll_offset);
+
+	pll->pll_nitems++;
 	PLL_URLOCK(pll, locked);
 }
 
