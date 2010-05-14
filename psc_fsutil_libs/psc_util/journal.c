@@ -390,11 +390,15 @@ pjournal_logwrite(struct psc_journal_xidhndl *xh, int type, void *data,
 
 	PJ_ULOCK(pj);
 
-	psc_info("Writing a log entry for transaction %"PRIx64": "
-	    "transaction tail = %d, log tail = %d",
+	psc_info("Writing a log entry xid=%"PRIx64": xtail = %d, ltail = %d",
 	    xh->pjx_xid, xh->pjx_tailslot, tail_slot);
 
 	rc = pjournal_logwrite_internal(xh, slot, type, data, size);
+	
+	psc_info("Completed writing log entry xid=%"PRIx64
+		 ": xtail = %d, ltail = %d",
+		 xh->pjx_xid, xh->pjx_tailslot, tail_slot);
+
 	return (rc);
 }
 
