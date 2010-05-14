@@ -73,6 +73,9 @@ pfl_rsx_waitrep(struct pscrpc_request *rq, int replen, void *mpp)
 
 	*(void **)mpp = NULL;
 
+	if (rq->rq_reqmsg->opc == 0)
+		abort();
+
 	/* Send the request and block on its completion. */
 	rc = pscrpc_queue_wait(rq);
 	if (rc)
