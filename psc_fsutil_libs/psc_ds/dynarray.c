@@ -256,7 +256,7 @@ psc_dynarray_bsearch(const struct psc_dynarray *da, const void *item)
 	int min, max, mid;
 	void *p;
 
-	min = 0;
+	min = mid = 0;
 	max = psc_dynarray_len(da) - 1;
 	while (min <= max) {
 		mid = min + (max - min) / 2;
