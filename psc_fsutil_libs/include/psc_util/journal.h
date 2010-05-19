@@ -120,7 +120,8 @@ struct psc_journal {
 #define PJE_MAGIC			UINT64_C(0x45678912aabbccdd)
 
 /*
- * Journal entry types - higher bits after PJET_LASTBIT are used to identify different log users.
+ * Journal entry types - higher bits after PJET_LASTBIT are used to identify different log users
+ * 			 which are defined in slashd/mdslog.h.
  */
 #define PJE_NONE			0		/* null journal record */
 #define PJE_FORMAT			(1 << 0)	/* newly-formatted journal entry */

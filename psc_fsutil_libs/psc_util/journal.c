@@ -929,34 +929,6 @@ pjournal_dump(const char *fn, int verbose)
 }
 
 /**
- * pjournal_shdw_del_xidhndl - Remove a transaction from the global
- *	pending list given its XID.  This is * only done for single
- *	transactions such as namespace operations.
- */
-void
-pjournal_shdw_del_xidhndl(struct psc_journal *pj, uint64_t xid)
-{
-	int found = 0;
-	static struct psc_journal_xidhndl *xh = NULL;
-
-	PJ_LOCK(pj);
-	if (xh == NULL) {
-		xh = psclist_first_entry(&pj->pj_pndgxids,
-			   struct psc_journal_xidhndl, pjx_lentry);
-	}
-	while (xh) {
-		if ((xh->pjx_flags & PJX_XSNGL) && (xh->pjx_xid == xid)) {
-			psclist_del(&xh->pjx_lentry);
-			found = 1;
-			break;
-		}
-		xh = (struct psc_journal_xidhndl *)
-			psclist_next_entry(&pj->pj_pndgxids, xh, pjx_lentry);
-	}
-	PJ_ULOCK(pj);
-	psc_assert(found);
-}
-/**
  * pjournal_shdw_proctile - process log entries in a tile.  A log entry can be
  *   processed if its type is not PJE_FORMAT.  when all its log entries have
  *   been processed, the tile can be freed and reused to map a new region.
