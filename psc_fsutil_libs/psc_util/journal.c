@@ -961,6 +961,11 @@ pjournal_shdw_proctile(struct psc_journal_shdw_tile *pjst,
 		 */
 		if (!(pje->pje_type & PJE_XSNGL))
 			continue;
+		/*
+		 * For now, we only need to process namespace log entries. In
+		 * the future, we may need an array of handlers we can choose
+		 * from based on the log entry type.
+		 */
 		freelock(&pjst->pjst_lock);
 		(pj->pj_shadow_handler)(pje, PJ_PJESZ(pj));	/* mds_shadow_handler() */
 		spinlock(&pjst->pjst_lock);
