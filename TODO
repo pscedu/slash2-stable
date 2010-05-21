@@ -75,6 +75,7 @@ pfl
 - add func args to pfl_enter()
 - add relative (to previous log) timestamps to psclog
 - do enums in typedump
+- add a ctl -p? value to dump out the ctlparam tree
 
 development tool
 - let wiki changes automatically email zest/slash2-devel@ like svn commits
