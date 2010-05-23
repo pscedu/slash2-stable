@@ -341,8 +341,7 @@ pjournal_logwrite(struct psc_journal_xidhndl *xh, int type, void *data,
 	 */
 	PJ_LOCK(pj);
 	slot = pj->pj_nextwrite;
-	t = psclist_first_entry(&pj->pj_pndgxids,
-	    struct psc_journal_xidhndl, pjx_lentry);
+	t = pll_gethdpeek(&pj->pj_pndgxids);
 	if (t) {
 		if (t->pjx_tailslot == slot) {
 			psc_warnx("Journal %p write is blocked on slot %d "
@@ -363,8 +362,8 @@ pjournal_logwrite(struct psc_journal_xidhndl *xh, int type, void *data,
 		psc_assert(size != 0);
 		psc_assert(xh->pjx_tailslot == PJX_SLOT_ANY);
 		xh->pjx_tailslot = slot;
-		/* note we add transactions in the order of their starting point */
-		psclist_xadd_tail(&xh->pjx_lentry, &pj->pj_pndgxids);
+		/* note we add transaction in the order of their starting point */
+		pll_addtail(&pj->pj_pndgxids, xh);
 	}
 	if (xh->pjx_flags & PJX_XCLOSE) {
 		normal = 0;
@@ -705,7 +704,8 @@ pjournal_open(const char *fn)
 	 * filled after log replay.
 	 */
 	LOCK_INIT(&pj->pj_lock);
-	INIT_PSCLIST_HEAD(&pj->pj_pndgxids);
+	pll_init(&pj->pj_pndgxids, struct psc_journal_xidhndl, 
+		 pjx_lentry, &pj->pj_lock);
 	psc_waitq_init(&pj->pj_waitq);
 	pj->pj_flags = PJF_NONE;
 	psc_dynarray_init(&pj->pj_bufs);

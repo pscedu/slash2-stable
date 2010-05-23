@@ -103,8 +103,8 @@ odtable_getitem(struct odtable *odt, const struct odtable_receipt *odtr)
 		if (crc != odtf->odtf_crc) {
 			odtf->odtf_inuse = ODTBL_BAD;
 			psc_warnx("slot=%zd crc fail "
-			    "odtfcrc=%"PSCPRIxCRC64" elemcrc=%"PSCPRIxCRC64,
-			    odtr->odtr_elem, odtf->odtf_crc, crc);
+				  "odtfcrc=%"PSCPRIxCRC64" elemcrc=%"PSCPRIxCRC64,
+				  odtr->odtr_elem, odtf->odtf_crc, crc);
 			return (NULL);
 		}
 	}

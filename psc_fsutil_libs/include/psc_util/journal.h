@@ -100,7 +100,7 @@ struct psc_journal {
 	psc_spinlock_t			 pj_lock;
 	uint64_t			 pj_lastxid;	/* last transaction ID used */
 	struct psc_journal_hdr		*pj_hdr;
-	struct psclist_head		 pj_pndgxids;
+	struct psc_lockedlist            pj_pndgxids;
 	struct psc_dynarray		 pj_bufs;
 	struct psc_waitq		 pj_waitq;
 	struct psc_journal_shdw		*pj_shdw;
