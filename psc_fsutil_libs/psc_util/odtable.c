@@ -73,14 +73,14 @@ odtable_putitem(struct odtable *odt, void *data)
 	odtr = PSCALLOC(sizeof(*odtr));
 	odtr->odtr_elem = todtr.odtr_elem;
 	odtr->odtr_key = (uint64_t)crc;
-	/* Write metadata into into the mmap'd footer.  For now the key and
+	/* Write metadata into the mmap'd footer.  For now the key and
 	 *  CRC are the same.
 	 */
 	odtf->odtf_crc = crc;
 	odtf->odtf_inuse = ODTBL_INUSE;
 	memcpy(p, data, odt->odt_hdr->odth_elemsz);
 
-	psc_trace("slot=%zd elemcrc=%"PSCPRIxCRC64, todtr.odtr_elem, crc);
+	psc_info("slot=%zd elemcrc=%"PSCPRIxCRC64, todtr.odtr_elem, crc);
 
 	odtable_sync(odt, todtr.odtr_elem);
 
@@ -102,8 +102,8 @@ odtable_getitem(struct odtable *odt, const struct odtable_receipt *odtr)
 		psc_crc64_calc(&crc, data, odt->odt_hdr->odth_elemsz);
 		if (crc != odtf->odtf_crc) {
 			odtf->odtf_inuse = ODTBL_BAD;
-			psc_warnx("slot=%zd crc fail "
-				  "odtfcrc=%"PSCPRIxCRC64" elemcrc=%"PSCPRIxCRC64,
+			psc_warnx("slot=%zd crc fail odtfcrc=%"PSCPRIxCRC64
+				  " elemcrc=%"PSCPRIxCRC64,
 				  odtr->odtr_elem, odtf->odtf_crc, crc);
 			return (NULL);
 		}
@@ -119,10 +119,8 @@ odtable_replaceitem(struct odtable *odt, struct odtable_receipt *odtr,
 	psc_crc64_t crc;
 	void *p;
 
-	p = odtable_getitem(odt, odtr);
 	odtf = odtable_getfooter(odt, odtr->odtr_elem);
-
-	if (!p || odtable_footercheck(odtf, odtr, 1))
+	if (odtable_footercheck(odtf, odtr, 1))
 		return (NULL);
 
 	p = odtable_getitem_addr(odt, odtr->odtr_elem);
@@ -132,7 +130,7 @@ odtable_replaceitem(struct odtable *odt, struct odtable_receipt *odtr,
 	odtf->odtf_crc = crc;
 	memcpy(p, data, odt->odt_hdr->odth_elemsz);
 
-	psc_trace("slot=%zd elemcrc=%"PSCPRIxCRC64, odtr->odtr_elem, crc);
+	psc_info("slot=%zd elemcrc=%"PSCPRIxCRC64, odtr->odtr_elem, crc);
 
 	odtable_sync(odt, odtr->odtr_elem);
 
@@ -155,7 +153,7 @@ odtable_freeitem(struct odtable *odt, struct odtable_receipt *odtr)
 
 	odtf->odtf_inuse = ODTBL_FREE;
 
-	psc_trace("slot=%zd", odtr->odtr_elem);
+	psc_info("slot=%zd", odtr->odtr_elem);
 
 	odtable_sync(odt, odtr->odtr_elem);
 	psc_vbitmap_unset(odt->odt_bitmap, odtr->odtr_elem);
