@@ -1,4 +1,5 @@
 /*	$OpenBSD: tree.h,v 1.12 2009/03/02 09:42:55 mikeb Exp $	*/
+/* %PSC_NO_COPYRIGHT% */
 /*
  * Copyright 2002 Niels Provos <provos@citi.umich.edu>
  * All rights reserved.

@@ -1,4 +1,5 @@
 /* $Id$ */
+/* %PSC_COPYRIGHT% */
 
 #include "pfl/str.h"
 

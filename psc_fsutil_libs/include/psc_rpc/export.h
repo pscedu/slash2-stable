@@ -1,4 +1,5 @@
 /* $Id$ */
+/* %PSC_NO_COPYRIGHT% */
 
 #ifndef _PFL_EXPORT_H_
 #define _PFL_EXPORT_H_

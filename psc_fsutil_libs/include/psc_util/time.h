@@ -1,4 +1,5 @@
 /* $Id$ */
+/* %PSC_NO_COPYRIGHT% */
 
 /*	$OpenBSD: time.h,v 1.25 2007/05/09 17:42:19 deraadt Exp $	*/
 /*	$NetBSD: time.h,v 1.18 1996/04/23 10:29:33 mycroft Exp $	*/

@@ -1,4 +1,5 @@
 /* $Id$ */
+/* %PSC_NO_COPYRIGHT% */
 
 /*
  * barrier.c

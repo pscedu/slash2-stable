@@ -1,5 +1,6 @@
 /*	$OpenBSD: queue.h,v 1.32 2007/04/30 18:42:34 pedro Exp $	*/
 /*	$NetBSD: queue.h,v 1.11 1996/05/16 05:17:14 mycroft Exp $	*/
+/* %PSC_NO_COPYRIGHT% */
 
 /*
  * Copyright (c) 1991, 1993
