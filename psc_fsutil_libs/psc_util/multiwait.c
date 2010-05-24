@@ -114,9 +114,7 @@ psc_multiwaitcond_unlockallmw(struct psc_multiwaitcond *mwc)
 __static int
 psc_multiwaitcond_cmp(const void *a, const void *b)
 {
-	const struct psc_multiwaitcond *pa = a, *pb = b;
-
-	return (CMP(pa, pb));
+	return (CMP(a, b));
 }
 
 /**
