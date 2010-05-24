@@ -955,6 +955,8 @@ psc_ctlrep_param(int fd, struct psc_ctlmsghdr *mh, void *m)
 	pcf = NULL;
 	INIT_PSCLIST_HEAD(&stack);
 
+	pcp->pcp_field[sizeof(pcp->pcp_field) - 1] = '\0';
+
 	set = (mh->mh_type == PCMT_SETPARAM);
 
 	for (nlevels = 0, t = pcp->pcp_field;
@@ -969,6 +971,16 @@ psc_ctlrep_param(int fd, struct psc_ctlmsghdr *mh, void *m)
 	if (nlevels == 0 || nlevels >= MAX_LEVELS)
 		goto invalid;
 
+	if (nlevels == 1 && strcmp(levels[0], "?") == 0) {
+		PSC_STREE_FOREACH_CHILD(c, &psc_ctlparamtree) {
+			pcn = c->ptn_data;
+			if (!psc_ctlsenderr(fd, mh, "parameter node: %s",
+			    pcn->pcn_name))
+				return (0);
+		}
+		return (1);
+	}
+
 	pcf = PSCALLOC(sizeof(*pcf));
 	pcf->pcf_ptn = &psc_ctlparamtree;
 	psclist_xadd(&pcf->pcf_lentry, &stack);
@@ -982,7 +994,7 @@ psc_ctlrep_param(int fd, struct psc_ctlmsghdr *mh, void *m)
 		ptn = pcf->pcf_ptn;
 		do {
 			k = 0;
-			psc_stree_foreach_child(c, ptn) {
+			PSC_STREE_FOREACH_CHILD(c, ptn) {
 				pcn = c->ptn_data;
 				if (pcf->pcf_flags & PCFF_USEPOS) {
 					if (pcf->pcf_pos == k)
@@ -1005,7 +1017,7 @@ psc_ctlrep_param(int fd, struct psc_ctlmsghdr *mh, void *m)
 					goto invalid;
 
 				k = 0;
-				psc_stree_foreach_child(d, c) {
+				PSC_STREE_FOREACH_CHILD(d, c) {
 					pcn = d->ptn_data;
 					if (psclist_empty(&d->ptn_children)) {
 						if (!pcn->pcn_cbf(fd, mh,
@@ -1064,7 +1076,7 @@ psc_ctlparam_register(const char *oname, int (*cbf)(int, struct psc_ctlmsghdr *,
 	for (subname = name; subname != NULL; subname = next) {
 		if ((next = strchr(subname, '.')) != NULL)
 			*next++ = '\0';
-		psc_stree_foreach_child(c, ptn) {
+		PSC_STREE_FOREACH_CHILD(c, ptn) {
 			pcn = c->ptn_data;
 			if (strcmp(pcn->pcn_name, subname) == 0)
 				break;
