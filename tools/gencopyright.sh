@@ -1,5 +1,7 @@
 #!/bin/sh
 # $Id$
+# TODO:
+# - run "svn status" and get the start year instead of hardcode 2006
 
 usage()
 {
@@ -31,7 +33,7 @@ local $/;
 
 my $data = <>;
 
-my $startyr = 2006;		# obviously not always correct...
+my $startyr = 2006;
 my $yr;
 
 my $fn = basename $ARGV;
@@ -51,10 +53,9 @@ my $cpyears = $startyr;
 $cpyears .= "-$yr" if $yr > $startyr;
 
 if ($opts{F}) {
-	# If the file does not contain a copyright section, insert at the top
-	# after any $Id tags.
-	unless ($data =~ /%PSC_START_COPYRIGHT%/) {
-
+	# Force insertion: if the file does not contain a copyright section,
+	# insert at the top after any $Id tags.
+	unless ($data =~ /%PSC_(?:START|NO)_COPYRIGHT%/) {
 		$data =~ s{((/\*\s*\$Id.*?\*/\n)?)}{$1/\*
  \* %PSC_START_COPYRIGHT%
  \* -----------------------------------------------------------------------------
@@ -64,7 +65,7 @@ if ($opts{F}) {
 };
 	}
 } else {
-		$data =~ s
+	$data =~ s
 {/* %PSC_COPYRIGHT% */
 }{/\*
  \* %PSC_START_COPYRIGHT%
