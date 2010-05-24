@@ -250,10 +250,21 @@ psc_dynarray_splice(struct psc_dynarray *da, int startpos, int len,
 	return (0);
 }
 
+/**
+ * psc_dynarray_bsearch_pos - Find the position of an item in a sorted
+ *	dynarray.
+ * @da: sorted dynamic array to search.
+ * @item: item contained within whose array index is desired.
+ * @cmpf: comparison routine.
+ * Returns the item's index into the array.  If the item is not in the
+ * dynarray, the index value returned is the position the element should
+ * take on to maintain sort order.
+ */
 int
-psc_dynarray_bsearch(const struct psc_dynarray *da, const void *item)
+psc_dynarray_bsearch(const struct psc_dynarray *da, const void *item,
+    int (*cmpf)(const void *, const void *))
 {
-	int min, max, mid;
+	int rc, min, max, mid;
 	void *p;
 
 	min = mid = 0;
@@ -261,10 +272,17 @@ psc_dynarray_bsearch(const struct psc_dynarray *da, const void *item)
 	while (min <= max) {
 		mid = min + (max - min) / 2;
 		p = psc_dynarray_getpos(da, mid);
-		if (p < item) {
+		rc = cmpf(p, item);
+		if (rc < 0) {
 			max = mid - 1;
+
+			/*
+			 * If the item doesn't exist, inform caller that
+			 * the position the item should take on is after
+			 * this mid index.
+			 */
 			mid++;
-		} else if (p > item)
+		} else if (rc > 0)
 			min = mid + 1;
 		else
 			break;

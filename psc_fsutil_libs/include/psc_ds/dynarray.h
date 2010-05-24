@@ -80,7 +80,8 @@ struct psc_dynarray {
 
 int	 psc_dynarray_add(struct psc_dynarray *, void *);
 int	 psc_dynarray_add_ifdne(struct psc_dynarray *, void *);
-int	 psc_dynarray_bsearch(const struct psc_dynarray *, const void *);
+int	 psc_dynarray_bsearch(const struct psc_dynarray *, const void *,
+	    int (*)(const void *, const void *));
 int	 psc_dynarray_ensurelen(struct psc_dynarray *, int);
 int	 psc_dynarray_exists(const struct psc_dynarray *, const void *);
 void	 psc_dynarray_free(struct psc_dynarray *);

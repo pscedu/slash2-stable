@@ -111,6 +111,14 @@ psc_multiwaitcond_unlockallmw(struct psc_multiwaitcond *mwc)
 		psc_pthread_mutex_unlock(&mw->mw_mutex);
 }
 
+__static int
+psc_multiwaitcond_cmp(const void *a, const void *b)
+{
+	const struct psc_multiwaitcond *pa = a, *pb = b;
+
+	return (CMP(pa, pb));
+}
+
 /**
  * psc_multiwaitcond_destroy - Release a multiwait condition.
  * @mwc: the condition to release.
@@ -142,7 +150,8 @@ psc_multiwaitcond_destroy(struct psc_multiwaitcond *mwc)
 		psc_assert(psc_dynarray_len(&mw->mw_conds) ==
 		    (int)psc_vbitmap_getsize(mw->mw_condmask));
 
-		k = psc_dynarray_bsearch(&mwc->mwc_multiwaits, mw);
+		k = psc_dynarray_bsearch(&mwc->mwc_multiwaits, mw,
+		    psc_multiwaitcond_cmp);
 		psc_dynarray_splice(&mwc->mwc_multiwaits, k, 1, NULL, 0);
 
 		k = psc_dynarray_remove(&mw->mw_conds, mw);
@@ -285,7 +294,8 @@ _psc_multiwait_addcond(struct psc_multiwait *mw,
 		goto done;
 	}
 
-	k = psc_dynarray_bsearch(&mwc->mwc_multiwaits, mw);
+	k = psc_dynarray_bsearch(&mwc->mwc_multiwaits, mw,
+	    psc_multiwaitcond_cmp);
 	if (psc_dynarray_splice(&mwc->mwc_multiwaits, k, 0, &mw, 1) == -1) {
 		rc = -1;
 		if (psc_vbitmap_resize(mw->mw_condmask, j - 1) == -1)
@@ -465,7 +475,8 @@ psc_multiwait_reset(struct psc_multiwait *mw)
 			goto restart;
 		}
 
-		k = psc_dynarray_bsearch(&mwc->mwc_multiwaits, mw);
+		k = psc_dynarray_bsearch(&mwc->mwc_multiwaits, mw,
+		    psc_multiwaitcond_cmp);
 		psc_dynarray_splice(&mwc->mwc_multiwaits, k, 0, NULL, 0);
 
 		psc_pthread_mutex_unlock(&mwc->mwc_mutex);
