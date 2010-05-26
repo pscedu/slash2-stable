@@ -393,7 +393,7 @@ pjournal_logwrite(struct psc_journal_xidhndl *xh, int type, void *data,
 	    xh->pjx_xid, xh->pjx_tailslot, tail_slot);
 
 	rc = pjournal_logwrite_internal(xh, slot, type, data, size);
-	
+
 	psc_info("Completed writing log entry xid=%"PRIx64
 		 ": xtail = %d, ltail = %d",
 		 xh->pjx_xid, xh->pjx_tailslot, tail_slot);
@@ -557,7 +557,7 @@ pjournal_scan_slots(struct psc_journal *pj)
 			 * a formatted log entry, there should be no
 			 * more real log entries after that.
 			 *
-			 * If the log has wrapped around, then we will 
+			 * If the log has wrapped around, then we will
 			 * never see such an entry.
 			 */
 			if (pje->pje_type & PJE_FORMAT) {
@@ -632,7 +632,7 @@ pjournal_scan_slots(struct psc_journal *pj)
 	psc_dynarray_free(&closetrans);
 
 	nopen = psc_dynarray_len(&pj->pj_bufs);
-	psc_warnx("Journal statistics: %d close, %d open, %d magic, "
+	psc_info("Journal statistics: %d close, %d open, %d magic, "
 	    "%d chksum, %d scan, %d total",
 	    nclose, nopen, nmagic, nchksum, nscan, pj->pj_hdr->pjh_nents);
 	return (rc);
@@ -704,7 +704,7 @@ pjournal_open(const char *fn)
 	 * filled after log replay.
 	 */
 	LOCK_INIT(&pj->pj_lock);
-	pll_init(&pj->pj_pndgxids, struct psc_journal_xidhndl, 
+	pll_init(&pj->pj_pndgxids, struct psc_journal_xidhndl,
 		 pjx_lentry, &pj->pj_lock);
 	psc_waitq_init(&pj->pj_waitq);
 	pj->pj_flags = PJF_NONE;
@@ -827,7 +827,7 @@ pjournal_format(const char *fn, uint32_t nents, uint32_t entsz,
 	if (close(fd) == -1)
 		psc_fatal("failed to close journal");
 	psc_freenl(jbuf, PJ_PJESZ(&pj) * ra);
-	psc_info("journal %s formatted: %d slots, %d readahead, error = %d", 
+	psc_info("journal %s formatted: %d slots, %d readahead, error = %d",
 		  fn, nents, ra, rc);
 	return (rc);
 }
@@ -975,8 +975,8 @@ pjournal_shdw_proctile(struct psc_journal_shdw_tile *pjst,
 
 /**
  * pjournal_shdw_preptile - prepare a journal shadow tile for reuse.  The pjst
- *   must have already been completely cleaned by the shadow thread.  We mark 
- *   it as FREE so that it can be used later.  Also adjust the range covered 
+ *   must have already been completely cleaned by the shadow thread.  We mark
+ *   it as FREE so that it can be used later.  Also adjust the range covered
  *   by the tile.
  */
 __static __inline void
@@ -1079,13 +1079,13 @@ pjournal_shdw_prepslot(struct psc_journal_shdw *pjs, uint32_t slot)
 		pjournal_shdw_advtile_locked(pjs);
 	}
 	/*
-	 * Don't assume that the tile your slot belongs to is the 
+	 * Don't assume that the tile your slot belongs to is the
 	 * current tile.
 	 */
 	tile = pjs->pjs_curtile;
 	while (slot < pjs->pjs_tiles[tile]->pjst_first)
 		tile = (tile + 1) % pjs->pjs_ntiles;
-		
+
 	pjst = pjs->pjs_tiles[tile];
 
 	return (pjst);
@@ -1178,16 +1178,16 @@ pjournal_init_shdw(int thrtype, const char *thrname, struct psc_journal *pj)
 	size = PJ_PJESZ(pj) * pj->pj_shdw->pjs_tilesize;
 
 	for (i = 0; i < PJ_SHDW_NTILES; i++) {
-		pj->pj_shdw->pjs_tiles[i] = 
+		pj->pj_shdw->pjs_tiles[i] =
 			PSCALLOC(sizeof(struct psc_journal_shdw_tile));
-		pj->pj_shdw->pjs_tiles[i]->pjst_base = 
+		pj->pj_shdw->pjs_tiles[i]->pjst_base =
 			psc_alloc(size, PAF_PAGEALIGN | PAF_LOCK);		/* align for O_DIRECT */
 		LOCK_INIT(&pj->pj_shdw->pjs_tiles[i]->pjst_lock);
 		pj->pj_shdw->pjs_tiles[i]->pjst_state = PJ_SHDW_TILE_FREE;
 
 		pjournal_shdw_preptile(pj->pj_shdw->pjs_tiles[i], pj);
 	}
-	psc_assert(pj->pj_shdw->pjs_endslot == 
+	psc_assert(pj->pj_shdw->pjs_endslot ==
 		   pj->pj_nextwrite - 1 + PJ_SHDW_NTILES * PJ_SHDW_TILESIZE);
 
 	/*
