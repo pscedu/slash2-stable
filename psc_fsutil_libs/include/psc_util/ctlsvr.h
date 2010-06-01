@@ -32,6 +32,7 @@ struct psc_ctlmsg_stats;
 /* XXX use PSCTHR_MKCAST */
 #define psc_ctlthr(thr)	((struct psc_ctlthr *)(thr)->pscthr_private)
 
+/* default control operations shared by MDS, I/O server, and client */
 #define PSC_CTLDEFOPS								\
 /* 0 */	{ NULL,				0 },					\
 /* 1 */	{ psc_ctlrep_getloglevel,	sizeof(struct psc_ctlmsg_loglevel) },	\
