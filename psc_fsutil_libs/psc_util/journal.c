@@ -603,13 +603,17 @@ pjournal_scan_slots(struct psc_journal *pj)
 	}
  done:
 	/*
-	 * If we are dealing with a brand new log file, we will stop
-	 * at the very first slot, which is marked as PJE_FORMAT.
+	 * If we are dealing with a brand new log or the log has wrapped around, 
+	 * we won't see a startup record because we currently only write it when 
+	 * we start.
+	 *
+	 * The main use of the startup record is to prevent us from considering 
+	 * log records from previous instance of the file system. For the current 
+	 * run, we rely on PJE_XCLOSE records to reduce replay.  In other words, 
+	 * inserting more startup records won't help.
 	 */
-	if (slot != 0) {
-		psc_assert(last_startup != PJE_XID_NONE);
+	if (last_startup != PJE_XID_NONE)
 		pjournal_remove_entries(pj, last_startup, 2);
-	}
 
 	pj->pj_lastxid = last_xid;
 	/* If last_slot is PJX_SLOT_ANY, then nextwrite will be 0 */
