@@ -159,6 +159,7 @@ struct psc_journal_enthdr {
 	/*
 	 * This field can be used by the replay process to remove the CLOSE entry
 	 * when all other log entries of the same transaction have been seen.
+	 * Log entries of different transactions can be interleaved.
 	 */
 	uint32_t			pje_sid;
 	uint64_t			pje_xid;
