@@ -312,6 +312,38 @@ pjournal_logwrite_internal(struct psc_journal_xidhndl *xh, uint32_t slot,
 	return (rc);
 }
 
+/*
+ * pjournal_reserve_space - wait for log space to be available.
+ *
+ * @xh: the transaction to receive the log entry.
+ * @size: size of the custom data
+ * Returns: slot number
+ */
+__static int
+pjournal_reserve_space(struct psc_journal_xidhndl *xh, size_t size)
+{
+	int nslot;
+	struct psc_journal *pj;
+	struct psc_journal_xidhndl *t;
+
+	pj = xh->pjx_pj;
+	PJ_LOCK(pj);
+
+	slot = pj->pj_nextwrite;
+	t = pll_gethdpeek(&pj->pj_pndgxids);
+	if (t) {
+		if (t->pjx_tailslot == slot) {
+			psc_warnx("Journal %p write is blocked on slot %d "
+			  "owned by transaction %p (xid = %"PRIx64")",
+			  pj, pj->pj_nextwrite, t, t->pjx_xid);
+			pj->pj_flags |= PJF_WANTSLOT;
+			psc_waitq_wait(&pj->pj_waitq, &pj->pj_lock);
+			goto retry;
+		}
+		tail_slot = t->pjx_tailslot;
+	}
+}
+
 /**
  * pjournal_logwrite - store a new entry in a journal transaction.
  * @xh: the transaction to receive the log entry.
