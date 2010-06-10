@@ -207,6 +207,7 @@ _lc_get(struct psc_listcache *lc, struct timespec *abstime,
 #define lc_getnb(lc)		_lc_get((lc), NULL, PLCP_HEAD, PLCGF_NOBLOCK)
 #define lc_peekheadtimed(lc, tm)	_lc_get((lc), (tm), PLCP_HEAD, PLCGF_PEEK)
 #define lc_peekheadwait(lc)	_lc_get((lc), NULL, PLCP_HEAD, PLCGF_PEEK)
+#define lc_peekhead(lc)		_lc_get((lc), NULL, PLCP_HEAD, PLCGF_NOBLOCK | PLCGF_PEEK)
 #define lc_peektail(lc)		_lc_get((lc), NULL, PLCP_TAIL, PLCGF_NOBLOCK | PLCGF_PEEK)
 
 /*
