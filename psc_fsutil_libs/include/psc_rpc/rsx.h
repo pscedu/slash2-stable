@@ -26,11 +26,11 @@ struct pscrpc_bulk_desc;
 struct iovec;
 
 struct rsx_msg_conversion {
-	int	rmc_offset;
-	int	rmc_size;
+	int			 rmc_offset;
+	int			 rmc_size;
 };
 
-#define RSX_PORT_NAME_MAX 50
+#define RSX_PORT_NAME_MAX	50
 
 struct rsx_msg_portablizer {
 	char			 rmp_name[50];
@@ -42,10 +42,11 @@ struct rsx_msg_portablizer {
 	do {								\
 		int _rc;						\
 									\
-		if (pscrpc_msg_size(nreplens, replens) >		\
+		if (pscrpc_msg_size((nreplens), (replens)) >		\
 		    (rq)->rq_rqbd->rqbd_service->srv_max_reply_size)	\
 			psc_fatalx("reply size greater than max");	\
-		_rc = pscrpc_pack_reply((rq), nreplens, replens, NULL);	\
+		_rc = pscrpc_pack_reply((rq), (nreplens), (replens),	\
+		    NULL);						\
 		if (_rc) {						\
 			psc_assert(_rc == -ENOMEM);			\
 			psc_errorx("pscrpc_pack_reply failed: %s",	\
