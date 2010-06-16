@@ -251,7 +251,7 @@ psc_dynarray_splice(struct psc_dynarray *da, int startpos, int len,
 }
 
 /**
- * psc_dynarray_bsearch_pos - Find the position of an item in a sorted
+ * psc_dynarray_bsearch - Find the position of an item in a sorted
  *	dynarray.
  * @da: sorted dynamic array to search.
  * @item: item contained within whose array index is desired.
