@@ -466,14 +466,15 @@ psc_pool_get(struct psc_poolmgr *m)
 	}
 
 	/* If autoresizable, try to grow the pool. */
-	if (_psc_pool_flagtest(m, PPMF_AUTO)) {
-		do {
-			n = psc_pool_grow(m, 2);
-			p = POOL_GETOBJ(m);
-			if (p)
-				return (p);
-			/* If we've grown to pool max, quit. */
-		} while (n && _psc_pool_flagtest(m, PPMF_AUTO));
+	while (_psc_pool_flagtest(m, PPMF_AUTO)) {
+		n = psc_pool_grow(m, 2);
+		p = POOL_GETOBJ(m);
+		if (p)
+			return (p);
+
+		/* If we were unable to grow, stop. */
+		if (n == 0)
+			break;
 	}
 
 	/*
