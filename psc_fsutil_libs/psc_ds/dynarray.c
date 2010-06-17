@@ -273,7 +273,9 @@ psc_dynarray_bsearch(const struct psc_dynarray *da, const void *item,
 		mid = min + (max - min) / 2;
 		p = psc_dynarray_getpos(da, mid);
 		rc = cmpf(p, item);
-		if (rc < 0) {
+		if (rc < 0)
+			min = mid + 1;
+		else if (rc > 0) {
 			max = mid - 1;
 
 			/*
@@ -282,9 +284,7 @@ psc_dynarray_bsearch(const struct psc_dynarray *da, const void *item,
 			 * this mid index.
 			 */
 			mid++;
-		} else if (rc > 0)
-			min = mid + 1;
-		else
+		} else
 			break;
 	}
 	return (mid);
