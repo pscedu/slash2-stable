@@ -941,13 +941,15 @@ pjournal_distillthr_main(struct psc_thread *thr)
 /**
  * pjournal_init - Replay all open transactions in a journal.
  * @fn: location on journal file on file system.
+ * @txg: the first transaction group number to be used by ZFS.
  * @thrtype: application-specified thread type ID for distill processor.
  * @thrname: application-specified thread name for distill processor.
  * @replay_handler: the journal replay callback.
  * @distill_handler: the distill processor callback.
  */
 struct psc_journal *
-pjournal_init(const char *fn, int thrtype, const char *thrname,
+pjournal_init(const char *fn, uint64_t txg,
+    int thrtype, const char *thrname,
     psc_replay_handler replay_handler,
     psc_distill_handler distill_handler)
 {
@@ -964,6 +966,8 @@ pjournal_init(const char *fn, int thrtype, const char *thrname,
 	struct psc_dynarray		 replaybufs;
 	struct psc_journalthr		*pjt;
 	struct psc_thread		*thr;
+
+	psc_info("First ZFS transaction group number is %"PRIx64, txg);
 
 	pj = pjournal_open(fn);
 	if (pj == NULL)
