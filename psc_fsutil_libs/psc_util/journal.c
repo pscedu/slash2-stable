@@ -925,7 +925,6 @@ pjournal_distillthr_main(struct psc_thread *thr)
 		 * Walk the list until we find a log entry that needs processing.
 		 */
 		while ((xh = pll_get(&pj->pj_distillxids))) {
-			psclist_del(&xh->pjx_lentry2);
 			pje = (struct psc_journal_enthdr *) xh->pjx_data;
 			(pj->pj_distill_handler)(pje, PJ_PJESZ(pj));
 			pjournal_xrelease(xh);
