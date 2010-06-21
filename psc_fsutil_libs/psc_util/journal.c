@@ -43,43 +43,15 @@
 #include "psc_util/time.h"
 #include "psc_util/waitq.h"
 
-/*
- * A short description of our shadow tiling code:
- *
- * A tile is a memory copy of a on-disk log region.  It is used to avoid I/O when a log
- * entry needs to be further processed after being written to the disk.  More than one
- * tile is used for performance.  These tiles map continuous regions of the on-disk log.
- * A tile at the tail is moved to the head when it is done mapping its old region.
- *
- * Whenever we write a log entry, we make a copy of it in a tile in addition to writing
- * it to the disk.  A tile is processed so that we can distill information into separate
- * change logs needed for tracking namespace and truncation operations.
- *
- * If a tile is full of log entries, we wake up a shadow thread to process its contents.
- * The shadow thread also wakes up on its own periodically to process log entries recorded
- * in a tile.  For simplicity, we don't track the age of each individual log entry.  This
- * means a log entry can be processed any time after it is written.  We also cannot
- * guarantee when a log entry will be processed.  The shadow thread may fail to keep up
- * with an influx of log entries.
- */
-
-#define TILE_GETENT(pj, tile, i)					\
-	((void *)((char *)(tile)->pjst_base + PJ_PJESZ(pj) * (i)))
-
-#define PJ_GETENTOFF(pj, i)						\
-	((off_t)(pj)->pj_hdr->pjh_start_off + (i) * PJ_PJESZ(pj))
-
 struct psc_journalthr {
 	struct psc_journal *pjt_pj;
 };
 
 __static int		pjournal_logwrite(struct psc_journal_xidhndl *, int,
 				void *, size_t);
-__static void		pjournal_shdw_logwrite(struct psc_journal *,
-				const struct psc_journal_enthdr *, uint32_t);
 
-struct psc_waitq	pjournal_tilewaitq = PSC_WAITQ_INIT;
-psc_spinlock_t		pjournal_tilewaitqlock = LOCK_INITIALIZER;
+struct psc_waitq	pjournal_waitq = PSC_WAITQ_INIT;
+psc_spinlock_t		pjournal_waitqlock = LOCK_INITIALIZER;
 
 #define JIO_READ	0
 #define JIO_WRITE	1
@@ -140,7 +112,8 @@ pjournal_xnew(struct psc_journal *pj)
 	xh->pjx_flags = PJX_NONE;
 	xh->pjx_sid = 0;
 	xh->pjx_tailslot = PJX_SLOT_ANY;
-	INIT_PSCLIST_ENTRY(&xh->pjx_lentry);
+	INIT_PSCLIST_ENTRY(&xh->pjx_lentry1);
+	INIT_PSCLIST_ENTRY(&xh->pjx_lentry2);
 
 	/*
 	 * Note that even though we issue xids in increasing order here,
@@ -158,6 +131,11 @@ pjournal_xnew(struct psc_journal *pj)
 	return (xh);
 }
 
+/**
+ * pjournal_xadd_sngl - Add a single entry transaction in the system log.
+ *     These transactions must be further processed by the distill process
+ *     before their log space can be reclaimed.
+ */
 int
 pjournal_xadd_sngl(struct psc_journal *pj, int type, void *data, size_t size)
 {
@@ -165,16 +143,16 @@ pjournal_xadd_sngl(struct psc_journal *pj, int type, void *data, size_t size)
 	int rc;
 
 	xh = pjournal_xnew(pj);
-	xh->pjx_flags |= (PJX_XSTART | PJX_XCLOSE | PJX_XSNGL);
+	xh->pjx_flags |= PJX_XSNGL | PJX_XCLOSE;
 
 	rc = pjournal_logwrite(xh, type, data, size);
 	return (rc);
 }
 
 /**
- * pjournal_xadd - Log changes to a piece of metadata (i.e. journal
- *	flush item).  We can't reply to our clients until after the log
- *	entry is written.
+ * pjournal_xadd - Log changes to a piece of metadata (e.g., journal flush 
+ *     item).  We can't reply to our clients until after the log entry is 
+ *     written.
  */
 int
 pjournal_xadd(struct psc_journal_xidhndl *xh, int type, void *data,
@@ -202,6 +180,47 @@ pjournal_xend(struct psc_journal_xidhndl *xh)
 }
 
 /**
+ * pjournal_xrelease - Release the resources used the transaction.
+ */
+void
+pjournal_xrelease(struct psc_journal_xidhndl *xh)
+{
+	int wakeup = 0;
+	struct psc_journal *pj;
+	struct psc_journal_enthdr *pje;
+
+	pj = xh->pjx_pj;
+	
+	pje = (struct psc_journal_enthdr *) xh->pjx_data;
+
+	PJ_LOCK(pj);
+	psc_dynarray_add(&pj->pj_bufs, pje);
+	wakeup = 0;
+	if (pj->pj_flags & PJF_WANTBUF) {
+		wakeup = 1;
+		pj->pj_flags &= ~PJF_WANTBUF;
+	}
+	if (xh->pjx_flags & PJX_XCLOSE) {
+		if ((pj->pj_flags & PJF_WANTSLOT) &&
+		    (xh->pjx_tailslot == pj->pj_nextwrite)) {
+			wakeup = 1;
+			pj->pj_flags &= ~PJF_WANTSLOT;
+			psc_warnx("Journal %p unblocking slot %d - "
+				  "owned by xid %"PRIx64, pj, 
+				  xh->pjx_tailslot, xh->pjx_xid);
+		}
+		psc_dbg("Transaction %p (xid = %"PRIx64") removed from "
+		    "journal %p: tail slot = %d",
+		    xh, xh->pjx_xid, pj, xh->pjx_tailslot);
+		psclist_del(&xh->pjx_lentry1);
+		PSCFREE(xh);
+	}
+	if (wakeup)
+		psc_waitq_wakeall(&pj->pj_waitq);
+	PJ_ULOCK(pj);
+}
+
+/**
  * pjournal_logwrite_internal - Write a new log entry for a transaction.
  * @xh: the transaction handle.
  * @slot: position location in journal to write.
@@ -219,7 +238,6 @@ pjournal_logwrite_internal(struct psc_journal_xidhndl *xh, uint32_t slot,
 	struct psc_journal_enthdr	*pje;
 	int				 ntries;
 	uint64_t			 chksum;
-	int				 wakeup;
 
 	rc = 0;
 	pj = xh->pjx_pj;
@@ -238,6 +256,8 @@ pjournal_logwrite_internal(struct psc_journal_xidhndl *xh, uint32_t slot,
 	psc_assert(pje);
 	PJ_ULOCK(pj);
 
+	xh->pjx_data = (void *)pje;
+
 	/* fill in contents for the log entry */
 	pje->pje_magic = PJE_MAGIC;
 	pje->pje_type = type;
@@ -252,15 +272,13 @@ pjournal_logwrite_internal(struct psc_journal_xidhndl *xh, uint32_t slot,
 		psc_assert(size);
 		memcpy(pje->pje_data, data, size);
 	}
+
 	/* calculating the CRC checksum, excluding the checksum field itself */
 	PSC_CRC64_INIT(&chksum);
 	psc_crc64_add(&chksum, pje, offsetof(struct psc_journal_enthdr, pje_chksum));
 	psc_crc64_add(&chksum, pje->pje_data, pje->pje_len);
 	PSC_CRC64_FIN(&chksum);
 	pje->pje_chksum = chksum;
-
-	if (pj->pj_hdr->pjh_options & PJH_OPT_SHADOW)
-		pjournal_shdw_logwrite(pj, pje, slot);
 
 	/* commit the log entry on disk before we can return */
 	ntries = PJ_MAX_TRY;
@@ -283,34 +301,17 @@ pjournal_logwrite_internal(struct psc_journal_xidhndl *xh, uint32_t slot,
 		rc = -1;
 		psc_fatal("failed writing journal log entry at slot %d", slot);
 	}
+	if (xh->pjx_flags & PJX_XSNGL) {
+		pll_addtail(&pj->pj_distillxids, xh);
+		spinlock(&pjournal_waitqlock);
+		psc_waitq_wakeall(&pjournal_waitq);
+		freelock(&pjournal_waitqlock);
+	} else
+		pjournal_xrelease(xh);
 
-	PJ_LOCK(pj);
-	psc_dynarray_add(&pj->pj_bufs, pje);
-	wakeup = 0;
-	if (pj->pj_flags & PJF_WANTBUF) {
-		wakeup = 1;
-		pj->pj_flags &= ~PJF_WANTBUF;
-	}
-	if ((pj->pj_flags & PJF_WANTSLOT) &&
-	    (xh->pjx_flags & PJX_XCLOSE) &&
-	    (xh->pjx_tailslot == pj->pj_nextwrite)) {
-		wakeup = 1;
-		pj->pj_flags &= ~PJF_WANTSLOT;
-		psc_warnx("Journal %p unblocking slot %d - "
-		    "owned by xid %"PRIx64, pj, slot, xh->pjx_xid);
-	}
-	if ((xh->pjx_flags & PJX_XCLOSE) && !(xh->pjx_flags & PJX_XSNGL)) {
-		psc_dbg("Transaction %p (xid = %"PRIx64") removed from "
-		    "journal %p: tail slot = %d, rc = %d",
-		    xh, xh->pjx_xid, pj, xh->pjx_tailslot, rc);
-		psclist_del(&xh->pjx_lentry);
-		PSCFREE(xh);
-	}
-	if (wakeup)
-		psc_waitq_wakeall(&pj->pj_waitq);
-	PJ_ULOCK(pj);
-	return (rc);
+	return (0);
 }
+
 
 /**
  * pjournal_logwrite - store a new entry in a journal transaction.
@@ -327,21 +328,21 @@ pjournal_logwrite(struct psc_journal_xidhndl *xh, int type, void *data,
 	struct psc_journal_xidhndl	*t;
 	struct psc_journal		*pj;
 	uint32_t			 slot, tail_slot;
-	int				 normal, rc;
+	int				 rc;
 
 	pj = xh->pjx_pj;
 	tail_slot = PJX_SLOT_ANY;
 
  retry:
 	/*
-	 * Make sure that the next slot to be written does not have a
+	 * Make sure that the next slot to be written is not used by a
 	 * pending transaction.  Since we add a new transaction at the
 	 * tail of the pending transaction list, we only need to check
-	 * the head of the list to find out the oldest pending transaction.
+	 * the head of the list to find out the oldest transaction.
 	 */
 	PJ_LOCK(pj);
 	slot = pj->pj_nextwrite;
-	t = pll_gethdpeek(&pj->pj_pndgxids);
+	t = pll_gethdpeek(&pj->pj_pendingxids);
 	if (t) {
 		if (t->pjx_tailslot == slot) {
 			psc_warnx("Journal %p write is blocked on slot %d "
@@ -354,35 +355,21 @@ pjournal_logwrite(struct psc_journal_xidhndl *xh, int type, void *data,
 		tail_slot = t->pjx_tailslot;
 	}
 
-	normal = 1;
 	if (!(xh->pjx_flags & PJX_XSTART)) {
-		normal = 0;
 		type |= PJE_XSTART;
 		xh->pjx_flags |= PJX_XSTART;
 		psc_assert(size != 0);
 		psc_assert(xh->pjx_tailslot == PJX_SLOT_ANY);
 		xh->pjx_tailslot = slot;
 		/* note we add transaction in the order of their starting point */
-		pll_addtail(&pj->pj_pndgxids, xh);
+		pll_addtail(&pj->pj_pendingxids, xh);
 	}
 	if (xh->pjx_flags & PJX_XCLOSE) {
-		normal = 0;
-		if (xh->pjx_flags & PJX_XSNGL) {
-			psc_assert(xh->pjx_tailslot == PJX_SLOT_ANY);
-			type |= PJE_XSNGL;
-		} else {
-			psc_assert(size == 0);
-			psc_assert(xh->pjx_tailslot != PJX_SLOT_ANY);
-			psc_assert(xh->pjx_tailslot != slot);
-		}
+		psc_assert(xh->pjx_tailslot != PJX_SLOT_ANY);
 		type |= PJE_XCLOSE;
 	}
-	if (normal) {
-		type |= PJE_XNORML;
-		psc_assert(size != 0);
-	}
 
-	/* Update the next slot to be written by a new log entry */
+	/* Update the next slot to be written by a next log entry */
 	psc_assert(pj->pj_nextwrite < pj->pj_hdr->pjh_nents);
 	if ((++pj->pj_nextwrite) == pj->pj_hdr->pjh_nents)
 		pj->pj_nextwrite = 0;
@@ -395,8 +382,8 @@ pjournal_logwrite(struct psc_journal_xidhndl *xh, int type, void *data,
 	rc = pjournal_logwrite_internal(xh, slot, type, data, size);
 
 	psc_info("Completed writing log entry xid=%"PRIx64
-		 ": xtail = %d, ltail = %d",
-		 xh->pjx_xid, xh->pjx_tailslot, tail_slot);
+		 ": xtail = %d, slot = %d",
+		 xh->pjx_xid, xh->pjx_tailslot, slot);
 
 	return (rc);
 }
@@ -475,11 +462,6 @@ pjournal_scan_slots(struct psc_journal *pj)
 	struct psc_journal_enthdr	*pje;
 	uint32_t			 slot;
 	unsigned char			*jbuf;
-	int				 count;
-	int				 nopen;
-	int				 nscan;
-	int				 nmagic;
-	int				 nentry;
 	int				 nclose;
 	struct psc_journal_enthdr	*tmppje;
 	uint64_t			 chksum;
@@ -488,6 +470,7 @@ pjournal_scan_slots(struct psc_journal *pj)
 	int32_t				 last_slot;
 	struct psc_dynarray		 closetrans;
 	uint64_t			 last_startup;
+	int				 count, nopen, nscan, nmagic, nentry;
 
 	rc = 0;
 	slot = 0;
@@ -581,13 +564,14 @@ pjournal_scan_slots(struct psc_journal *pj)
 			}
 			if (pje->pje_type & PJE_XCLOSE) {
 				nclose++;
-				if (!(pje->pje_type & PJE_XSNGL))
+				if (!(pje->pje_type & PJE_XSNGL)) {
 					psc_assert(pje->pje_len == 0);
-				nentry = pjournal_remove_entries(pj,
-				    pje->pje_xid, 1);
-				psc_assert(nentry <= (int)pje->pje_sid);
-				if (nentry == (int)pje->pje_sid)
-					continue;
+					nentry = pjournal_remove_entries(pj, 
+					    pje->pje_xid, 1);
+					psc_assert(nentry <= (int)pje->pje_sid);
+					if (nentry == (int)pje->pje_sid)
+						continue;
+				}
 			}
 
 			/* Okay, we need to keep this log entry for now.  */
@@ -671,7 +655,7 @@ pjournal_open(const char *fn)
 	psc_iostats_init(&pj->pj_wrist, "jrnlwr-%s", basefn);
 
 	/*
-	 * O_DIRECT may impose alignment restrictions so align to page
+	 * O_DIRECT may impose alignment restrictions so align the buffer
 	 * and perform I/O in multiples of file system block size.
 	 */
 	pjhlen = PSC_ALIGN(sizeof(*pjh), statbuf.st_blksize);
@@ -681,11 +665,11 @@ pjournal_open(const char *fn)
 
 	pj->pj_hdr = pjh;
 	if (pjh->pjh_magic != PJH_MAGIC) {
-		psc_errorx("Journal header has a bad magic number");
+		psc_errorx("Journal header has a bad magic number %lx", pjh->pjh_magic);
 		goto err;
 	}
 	if (pjh->pjh_version != PJH_VERSION) {
-		psc_errorx("Journal header has an invalid version number");
+		psc_errorx("Journal header has an invalid version number %d", pjh->pjh_version);
 		goto err;
 	}
 
@@ -708,8 +692,14 @@ pjournal_open(const char *fn)
 	 * filled after log replay.
 	 */
 	LOCK_INIT(&pj->pj_lock);
-	pll_init(&pj->pj_pndgxids, struct psc_journal_xidhndl,
-		 pjx_lentry, &pj->pj_lock);
+	LOCK_INIT(&pj->pj_pendinglock);
+	LOCK_INIT(&pj->pj_distilllock);
+
+	pll_init(&pj->pj_pendingxids, struct psc_journal_xidhndl,
+		 pjx_lentry1, &pj->pj_pendinglock);
+	pll_init(&pj->pj_distillxids, struct psc_journal_xidhndl,
+		 pjx_lentry2, &pj->pj_distilllock);
+
 	psc_waitq_init(&pj->pj_waitq);
 	pj->pj_flags = PJF_NONE;
 	psc_dynarray_init(&pj->pj_bufs);
@@ -744,12 +734,10 @@ pjournal_release(struct psc_journal *pj)
  * @nents: number of entries journal may contain.
  * @entsz: size of a journal entry.
  * @ra: number of entries to operate on in one disk I/O operation.
- * @opts: journal operational flags.
  * Returns 0 on success, errno on error.
  */
 int
-pjournal_format(const char *fn, uint32_t nents, uint32_t entsz,
-    uint32_t ra, uint32_t opts)
+pjournal_format(const char *fn, uint32_t nents, uint32_t entsz, uint32_t ra)
 {
 	int32_t				 i;
 	int				 rc;
@@ -779,19 +767,9 @@ pjournal_format(const char *fn, uint32_t nents, uint32_t entsz,
 
 	pj.pj_fd = fd;
 
-	/*
-	 * The number of log entries must be a multiple of the tile size and
-	 * it must be no less than the sum of all tile sizes.
-	 */
-	nents = ((nents + PJ_SHDW_TILESIZE - 1) /
-	    PJ_SHDW_TILESIZE) * PJ_SHDW_TILESIZE;
-	if (nents < PJ_SHDW_TILESIZE * PJ_SHDW_NTILES)
-		nents = PJ_SHDW_TILESIZE * PJ_SHDW_NTILES;
-
 	pjh.pjh_entsz = entsz;
 	pjh.pjh_nents = nents;
 	pjh.pjh_version = PJH_VERSION;
-	pjh.pjh_options = opts;
 	pjh.pjh_readahead = ra;
 	pjh.pjh_iolen = PSC_ALIGN(sizeof(pjh), stb.st_blksize);
 	pjh.pjh_magic = PJH_MAGIC;
@@ -832,7 +810,7 @@ pjournal_format(const char *fn, uint32_t nents, uint32_t entsz,
 		psc_fatal("failed to close journal");
 	psc_freenl(jbuf, PJ_PJESZ(&pj) * ra);
 	psc_info("journal %s formatted: %d slots, %d readahead, error = %d",
-		  fn, nents, ra, rc);
+	    fn, nents, ra, rc);
 	return (rc);
 }
 
@@ -932,296 +910,45 @@ pjournal_dump(const char *fn, int verbose)
 	return (0);
 }
 
-/**
- * pjournal_shdw_proctile - process log entries in a tile.  A log entry can be
- *   processed if its type is not PJE_FORMAT.  when all its log entries have
- *   been processed, the tile can be freed and reused to map a new region.
- *
- */
 void
-pjournal_shdw_proctile(struct psc_journal_shdw_tile *pjst,
-		const struct psc_journal *pj)
-{
-	struct psc_journal_enthdr	*pje;
-	struct psc_journal_shdw		*pjs = pj->pj_shdw;
-
-	spinlock(&pjst->pjst_lock);
-	while (pjst->pjst_tail < pjst->pjst_first + pjs->pjs_tilesize) {
-		pje = TILE_GETENT(pj, pjst, pjst->pjst_tail - pjst->pjst_first);
-		/*
-		 * If the log entry has not been written, we break.  This means
-		 * we only process log entries in order.
-		 */
-		if (pje->pje_type & PJE_FORMAT)
-			break;
-		/*
-		 * Move the pointer forward for ourselves, no wrap-araound.  Note
-		 * that another thread can bump it further as soon as we drop the lock.
-		 */
-		pjst->pjst_tail++;
-		/*
-		 * If we are not interested in the log entry, move on to the next
-		 * log entry.
-		 */
-		if (!(pje->pje_type & PJE_XSNGL))
-			continue;
-		/*
-		 * For now, we only need to process namespace log entries. In
-		 * the future, we may need an array of handlers we can choose
-		 * from based on the log entry type.
-		 */
-		freelock(&pjst->pjst_lock);
-		(pj->pj_shadow_handler)(pje, PJ_PJESZ(pj));	/* mds_shadow_handler() */
-		spinlock(&pjst->pjst_lock);
-	}
-	freelock(&pjst->pjst_lock);
-}
-
-/**
- * pjournal_shdw_preptile - prepare a journal shadow tile for reuse.  The pjst
- *   must have already been completely cleaned by the shadow thread.  We mark
- *   it as FREE so that it can be used later.  Also adjust the range covered
- *   by the tile.
- */
-__static __inline void
-pjournal_shdw_preptile(struct psc_journal_shdw_tile *pjst,
-		   const struct psc_journal *pj)
-{
-	int				 i;
-	struct psc_journal_enthdr	*pje;
-	struct psc_journal_shdw		*pjs = pj->pj_shdw;
-
-	spinlock(&pjs->pjs_lock);
-	spinlock(&pjst->pjst_lock);
-	if (pjst->pjst_state == PJ_SHDW_TILE_ACTIVE &&
-	    pjst->pjst_tail < pjst->pjst_first + pjs->pjs_tilesize) {
-		freelock(&pjst->pjst_lock);
-		freelock(&pjs->pjs_lock);
-		return;
-	}
-
-	pjst->pjst_state = PJ_SHDW_TILE_FREE;
-	for (i = 0; i < pjs->pjs_tilesize; i++) {
-		pje = TILE_GETENT(pj, pjst, i);
-		pje->pje_magic = PJE_MAGIC;
-		pje->pje_type = PJE_FORMAT;
-		pje->pje_xid = PJE_XID_NONE;
-		pje->pje_sid = PJE_XID_NONE;
-	}
-
-	pjst->pjst_tail = pjs->pjs_endslot;
-	pjst->pjst_first = pjs->pjs_endslot;
-
-	pjs->pjs_endslot += PJ_SHDW_TILESIZE;
-	if  (pjs->pjs_endslot > pj->pj_hdr->pjh_nents)
-		pjs->pjs_endslot = 0;
-	pjst->pjst_last = pjs->pjs_endslot;
-
-	psc_waitq_wakeall(&pjs->pjs_waitq);
-	freelock(&pjst->pjst_lock);
-	freelock(&pjs->pjs_lock);
-}
-
-/**
- * pjournal_shdw_advtile_locked - advance to the next journal shadow tile.
- * @pjs:  pointer to the journal shadow.
- * Notes:  The pjs lock is used to synchronize tile activity.
- */
-__static void
-pjournal_shdw_advtile_locked(struct psc_journal_shdw *pjs)
-{
-	uint32_t next_tile;
-
-	LOCK_ENSURE(&pjs->pjs_lock);
-	/*
-	 * Kick the process thread to work on the full tile now.
-	 */
-	spinlock(&pjournal_tilewaitqlock);
-	psc_waitq_wakeall(&pjournal_tilewaitq);
-	freelock(&pjournal_tilewaitqlock);
-
-	next_tile = (pjs->pjs_curtile + 1) % pjs->pjs_ntiles;
-	while (pjs->pjs_tiles[next_tile]->pjst_state != PJ_SHDW_TILE_FREE) {
-		psc_waitq_wait(&pjs->pjs_waitq, &pjs->pjs_lock);
-		spinlock(&pjs->pjs_lock);
-	}
-
-	pjs->pjs_tiles[next_tile]->pjst_state = PJ_SHDW_TILE_ACTIVE;
-	pjs->pjs_curtile = next_tile;
-	pjs->pjs_state &= ~PJ_SHDW_ADVTILE;
-	psc_waitq_wakeall(&pjs->pjs_waitq);
-}
-
-/**
- * pjournal_getcur_pjst_locked - retrieve the current shadow tile in a
- *   manner which accounts for tile advancement.
- * @pjs:  the journal shadow in question
- * @slot:  requested journal slot number
- * @block:  permitted to block?
- */
-__static struct psc_journal_shdw_tile *
-pjournal_shdw_prepslot(struct psc_journal_shdw *pjs, uint32_t slot)
-{
-	int tile;
-	struct psc_journal_shdw_tile *pjst;
-
-	/*
-	 * If another thread is moving a tile, wait for it to complete.
-	 */
-	while (pjs->pjs_state & PJ_SHDW_ADVTILE) {
-		psc_waitq_wait(&pjs->pjs_waitq, &pjs->pjs_lock);
-		spinlock(&pjs->pjs_lock);
-	}
-	pjst = pjs->pjs_tiles[pjs->pjs_curtile];
-	/*
-	 * If we move beyond the current tile, start using the next
-	 * tile.  Note if a tile is aligned at the very end of the
-	 * log area, its last slot is set to zero due to wrap-around.
-	 */
-	if ((slot % PJ_SHDW_TILESIZE) == 0) {
-		pjs->pjs_state |= PJ_SHDW_ADVTILE;
-		pjournal_shdw_advtile_locked(pjs);
-	}
-	/*
-	 * Don't assume that the tile your slot belongs to is the
-	 * current tile.
-	 */
-	tile = pjs->pjs_curtile;
-	while (slot < pjs->pjs_tiles[tile]->pjst_first)
-		tile = (tile + 1) % pjs->pjs_ntiles;
-
-	pjst = pjs->pjs_tiles[tile];
-
-	return (pjst);
-}
-
-__static void
-pjournal_shdw_logwrite(struct psc_journal *pj,
-		       const struct psc_journal_enthdr *pje, uint32_t slot)
-{
-	struct psc_journal_shdw *pjs;
-	struct psc_journal_shdw_tile *pjst;
-	struct psc_journal_enthdr *pje_shdw;
-
-	pjs = pj->pj_shdw;
-	spinlock(&pjs->pjs_lock);
-	pjst = pjournal_shdw_prepslot(pjs, slot);
-	freelock(&pjs->pjs_lock);
-	/*
-	 * Hold the tile lock while updating its contents.  By checking
-	 * the magic field, the shadow thread can figure out if the log
-	 * entry has been filled or not.
-	 *
-	 * Without me writing into the slot, the corresponding tile won't
-	 * be fully processed and reused.  That's why we don't need a
-	 * reference count.
-	 */
-	spinlock(&pjst->pjst_lock);
-
-	/* Make sure that the slot fall within the range covered by
-	 * the current tile */
-	psc_assert(slot >= pjst->pjst_first);
-	psc_assert(slot < pjst->pjst_last);
-
-	pje_shdw = TILE_GETENT(pj, pjst, slot - pjst->pjst_first);
-	psc_assert(pje_shdw->pje_magic == PJE_MAGIC);
-	psc_assert(pje_shdw->pje_type == PJE_FORMAT);
-
-	memcpy(pje_shdw, pje, PJ_PJESZ(pj));
-
-	freelock(&pjst->pjst_lock);
-}
-
-void
-pjournal_shdwthr_main(struct psc_thread *thr)
+pjournal_distillthr_main(struct psc_thread *thr)
 {
 	struct psc_journalthr *pjt = thr->pscthr_private;
 	struct psc_journal *pj = pjt->pjt_pj;
-	struct psc_journal_shdw *pjs = pj->pj_shdw;
-	struct psc_journal_shdw_tile *pjst;
-	int32_t i;
+	struct psc_journal_enthdr *pje;
+	struct psc_journal_xidhndl *xh;
 
 	while (pscthr_run()) {
 		/*
-		 * XXX: must process tiles in strict order.
+		 * Walk the list until we find a log entry that needs processing.
 		 */
-		for (i = 0; i < pjs->pjs_ntiles; i++) {
-			pjst = pjs->pjs_tiles[i];
-			pjournal_shdw_proctile(pjst, pj);
-			pjournal_shdw_preptile(pjst, pj);
+		while ((xh = pll_get(&pj->pj_distillxids))) {
+			psclist_del(&xh->pjx_lentry2);
+			pje = (struct psc_journal_enthdr *) xh->pjx_data;
+			(pj->pj_distill_handler)(pje, PJ_PJESZ(pj));
+			pjournal_xrelease(xh);
 		}
-		spinlock(&pjournal_tilewaitqlock);
-		(void)psc_waitq_waitrel_s(&pjournal_tilewaitq,
-		    &pjournal_tilewaitqlock, PJ_SHDW_MAXAGE);
+		spinlock(&pjournal_waitqlock);
+		if ((xh = pll_gethdpeek(&pj->pj_distillxids))) {
+			freelock(&pjournal_waitqlock);
+			continue;
+		}
+		psc_waitq_wait(&pjournal_waitq, &pjournal_waitqlock);
 	}
-}
-
-__static void
-pjournal_init_shdw(int thrtype, const char *thrname, struct psc_journal *pj)
-{
-	struct psc_journalthr *pjt;
-	struct psc_thread *thr;
-	int i, size;
-	struct psc_journal_shdw_tile *pjst;
-	struct psc_journal_enthdr *pje;
-
-	psc_assert(pj->pj_hdr->pjh_options & PJH_OPT_SHADOW);
-	psc_assert(!pj->pj_shdw);
-
-	pj->pj_shdw = PSCALLOC(sizeof(struct psc_journal_shdw));
-	pj->pj_shdw->pjs_ntiles = PJ_SHDW_NTILES;
-	pj->pj_shdw->pjs_tilesize = PJ_SHDW_TILESIZE;
-	pj->pj_shdw->pjs_curtile = 0;
-	pj->pj_shdw->pjs_endslot = pj->pj_nextwrite - 1;
-
-	psc_assert(!((pj->pj_nextwrite - 1) % PJ_SHDW_TILESIZE));
-
-	LOCK_INIT(&pj->pj_shdw->pjs_lock);
-	psc_waitq_init(&pj->pj_shdw->pjs_waitq);
-
-	size = PJ_PJESZ(pj) * pj->pj_shdw->pjs_tilesize;
-
-	for (i = 0; i < PJ_SHDW_NTILES; i++) {
-		pj->pj_shdw->pjs_tiles[i] =
-			PSCALLOC(sizeof(struct psc_journal_shdw_tile));
-		pj->pj_shdw->pjs_tiles[i]->pjst_base =
-			psc_alloc(size, PAF_PAGEALIGN | PAF_LOCK);		/* align for O_DIRECT */
-		LOCK_INIT(&pj->pj_shdw->pjs_tiles[i]->pjst_lock);
-		pj->pj_shdw->pjs_tiles[i]->pjst_state = PJ_SHDW_TILE_FREE;
-
-		pjournal_shdw_preptile(pj->pj_shdw->pjs_tiles[i], pj);
-	}
-	psc_assert(pj->pj_shdw->pjs_endslot ==
-		   pj->pj_nextwrite - 1 + PJ_SHDW_NTILES * PJ_SHDW_TILESIZE);
-
-	/*
-	 * Fill in the very first slot by hand so that our shadow handler
-	 * can skip it.
-	 */
-	pjst = pj->pj_shdw->pjs_tiles[0];
-	pjst->pjst_state = PJ_SHDW_TILE_ACTIVE;
-	pje = TILE_GETENT(pj, pjst, pjst->pjst_tail - pjst->pjst_first);
-	pje->pje_type = PJE_STRTUP;
-
-	thr = pscthr_init(thrtype, 0, pjournal_shdwthr_main,
-	    NULL, sizeof(*pjt), thrname);
-	pjt = thr->pscthr_private;
-	pjt->pjt_pj = pj;
-	pscthr_setready(thr);
 }
 
 /**
  * pjournal_init - Replay all open transactions in a journal.
  * @fn: location on journal file on file system.
- * @thrtype: application-specified thread type ID for shadow processor.
- * @thrname: application-specified thread name for shadow processor.
+ * @thrtype: application-specified thread type ID for distill processor.
+ * @thrname: application-specified thread name for distill processor.
  * @replay_handler: the journal replay callback.
- * @shadow_handler: the shadow processor callback.
+ * @distill_handler: the distill processor callback.
  */
 struct psc_journal *
 pjournal_init(const char *fn, int thrtype, const char *thrname,
     psc_replay_handler replay_handler,
-    psc_shadow_handler shadow_handler)
+    psc_distill_handler distill_handler)
 {
 	int				 i;
 	int				 rc;
@@ -1234,6 +961,8 @@ pjournal_init(const char *fn, int thrtype, const char *thrname,
 	int				 ntrans;
 	struct psc_journal_enthdr	*tmppje;
 	struct psc_dynarray		 replaybufs;
+	struct psc_journalthr		*pjt;
+	struct psc_thread		*thr;
 
 	pj = pjournal_open(fn);
 	if (pj == NULL)
@@ -1295,12 +1024,6 @@ pjournal_init(const char *fn, int thrtype, const char *thrname,
 	PSC_CRC64_FIN(&chksum);
 	pje->pje_chksum = chksum;
 
-	/*
-	 * Move the slot to the next tile boundary to simplify our initial
-	 * tile alignment.
-	 */
-	if (pj->pj_nextwrite % PJ_SHDW_TILESIZE)
-		pj->pj_nextwrite = (pj->pj_nextwrite / PJ_SHDW_TILESIZE + 1) * PJ_SHDW_TILESIZE;
 	if (pj->pj_nextwrite >= pj->pj_hdr->pjh_nents)
 		pj->pj_nextwrite = 0;
 
@@ -1311,16 +1034,17 @@ pjournal_init(const char *fn, int thrtype, const char *thrname,
 
 	pj->pj_nextwrite++;
 
-	/* pre-allocate some buffers for log writes */
+	/* pre-allocate some buffers for log writes/distill */
 	for (i = 0; i < PJ_MAX_BUF; i++) {
 		pje = psc_alloc(PJ_PJESZ(pj), PAF_PAGEALIGN | PAF_LOCK);
 		psc_dynarray_add(&pj->pj_bufs, pje);
 	}
 
-	if (pj->pj_hdr->pjh_options & PJH_OPT_SHADOW) {
-		pjournal_init_shdw(thrtype, thrname, pj);
-		pj->pj_shadow_handler = shadow_handler;
-	}
+	thr = pscthr_init(thrtype, 0, pjournal_distillthr_main, NULL, sizeof(*pjt), thrname);
+	pjt = thr->pscthr_private;
+	pjt->pjt_pj = pj;
+	
+	pj->pj_distill_handler = distill_handler;
 
 	psc_info("journal replayed: %d log entries with %d transactions "
 	    "have been redone, error = %d", nents, ntrans, nerrs);

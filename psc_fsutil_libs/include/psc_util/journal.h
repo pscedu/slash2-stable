@@ -31,11 +31,7 @@ struct psc_journal;
 struct psc_journal_enthdr;
 
 #define	PJ_MAX_TRY			3		/* number of retry before giving up */
-#define	PJ_MAX_BUF			8		/* number of journal buffers to keep around */
-
-#define PJ_SHDW_NTILES			4
-#define PJ_SHDW_TILESIZE		1024
-#define PJ_SHDW_MAXAGE			30		/* 30 seconds */
+#define	PJ_MAX_BUF			1024		/* number of journal buffers to keep around */
 
 #define PJ_LOCK(pj)			spinlock(&(pj)->pj_lock)
 #define PJ_ULOCK(pj)			freelock(&(pj)->pj_lock)
@@ -44,10 +40,9 @@ struct psc_journal_enthdr;
 #define PJH_VERSION			0x02
 
 #define PJH_OPT_NONE			0x00
-#define PJH_OPT_SHADOW			0x01
 
 typedef void (*psc_replay_handler)(struct psc_dynarray *, int *);
-typedef void (*psc_shadow_handler)(struct psc_journal_enthdr *, int);
+typedef void (*psc_distill_handler)(struct psc_journal_enthdr *, int);
 
 struct psc_journal_hdr {
 	uint64_t			 pjh_magic;
@@ -62,52 +57,23 @@ struct psc_journal_hdr {
 #define pjh_iolen pjh_start_off
 };
 
-struct psc_journal_shdw_tile {
-	void				*pjst_base;	/* memory for log entries */
-	uint8_t				 pjst_state;
-	uint32_t			 pjst_tail;	/* first entry that may need to be processed */
-	uint32_t			 pjst_first;	/* first journal slot represented by the tile */
-	uint32_t			 pjst_last;	/* first journal slot represented by the next tile */
-	psc_spinlock_t			 pjst_lock;
-};
-
-enum {
-	PJ_SHDW_TILE_FREE		= (1 << 0),
-	PJ_SHDW_TILE_ACTIVE		= (1 << 1) 	/* current tile being used -- has free slots */
-};
-
-/* In-memory 'journal shadowing'.
- */
-struct psc_journal_shdw {
-	int32_t				 pjs_ntiles;	/* Number of tiles */
-	int32_t				 pjs_curtile;	/* Current tile index */
-	int32_t				 pjs_tilesize;	/* Number of entries per tile */
-	struct psc_journal_shdw_tile	*pjs_tiles[PJ_SHDW_NTILES];	/* tile buffer pointers */
-
-	struct psc_journal_xidhndl	*pjs_xidhndl;	/* first transaction that needs special processing */
-
-	uint32_t			 pjs_endslot;	/* last slot covered by the tiles */
-	uint32_t			 pjs_state;	/* see PJ_SHDW_* flags below */
-	psc_spinlock_t			 pjs_lock;	/* Sync between logwrite and shdwthr */
-	struct psc_waitq		 pjs_waitq;
-	struct psc_journal		*pjs_journal;
-};
-
-/* pjs_state flags */
-#define PJ_SHDW_ADVTILE			(1 << 0)
-
 struct psc_journal {
 	psc_spinlock_t			 pj_lock;
 	uint64_t			 pj_lastxid;	/* last transaction ID used */
 	struct psc_journal_hdr		*pj_hdr;
-	struct psc_lockedlist            pj_pndgxids;
+
+	psc_spinlock_t			 pj_pendinglock;
+	struct psc_lockedlist            pj_pendingxids;
+
+	psc_spinlock_t			 pj_distilllock;
+	struct psc_lockedlist            pj_distillxids;
+
 	struct psc_dynarray		 pj_bufs;
 	struct psc_waitq		 pj_waitq;
-	struct psc_journal_shdw		*pj_shdw;
 	int				 pj_fd;		/* open file descriptor to backing disk file */
 	int				 pj_flags;
 	uint32_t			 pj_nextwrite;	/* next entry slot to write to */
-	psc_shadow_handler		 pj_shadow_handler;
+	psc_distill_handler		 pj_distill_handler;
 	struct psc_iostats		 pj_rdist;	/* read I/O stats */
 	struct psc_iostats		 pj_wrist;	/* write I/O stats */
 };
@@ -195,9 +161,11 @@ struct psc_journal_xidhndl {
 	int				 pjx_sid;
 	uint32_t			 pjx_tailslot;
 	uint32_t			 pjx_flags;
-	struct psclist_head		 pjx_lentry;
+	struct psclist_head		 pjx_lentry1;		/* pending transaction list */
+	struct psclist_head		 pjx_lentry2;		/* distill transaction list */
 	psc_spinlock_t			 pjx_lock;
 	struct psc_journal		*pjx_pj;
+	void				*pjx_data;
 };
 
 /* Actions to be taked after open the log file */
@@ -206,13 +174,15 @@ struct psc_journal_xidhndl {
 
 /* definitions of journal handling functions */
 int			 pjournal_dump(const char *, int);
-int			 pjournal_format(const char *, uint32_t, uint32_t, uint32_t, uint32_t);
-struct psc_journal	*pjournal_init(const char *, int, const char *, psc_replay_handler, psc_shadow_handler);
+int			 pjournal_format(const char *, uint32_t, uint32_t, uint32_t);
+struct psc_journal	*pjournal_init(const char *, int, const char *, psc_replay_handler, psc_distill_handler);
 
 /* definitions of transaction handling functions */
 struct psc_journal_xidhndl	*pjournal_xnew(struct psc_journal *);
 int				 pjournal_xadd(struct psc_journal_xidhndl *, int, void *, size_t);
 int				 pjournal_xend(struct psc_journal_xidhndl *);
 int				 pjournal_xadd_sngl(struct psc_journal *, int, void *, size_t);
+
+#define PJ_GETENTOFF(pj, i)	((off_t)(pj)->pj_hdr->pjh_start_off + (i) * PJ_PJESZ(pj))
 
 #endif /* _PFL_JOURNAL_H_ */
