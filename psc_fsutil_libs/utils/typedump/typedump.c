@@ -226,8 +226,6 @@ main(int argc, char *argv[])
 	PRTYPE(struct psc_journal);
 	PRTYPE(struct psc_journal_enthdr);
 	PRTYPE(struct psc_journal_hdr);
-	PRTYPE(struct psc_journal_shdw);
-	PRTYPE(struct psc_journal_shdw_tile);
 	PRTYPE(struct psc_journal_xidhndl);
 	PRTYPE(struct psc_listcache);
 	PRTYPE(struct psc_listcache_entry);
