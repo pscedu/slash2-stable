@@ -984,6 +984,7 @@ pjournal_init(const char *fn, int thrtype, const char *thrname,
 		psc_dynarray_init(&replaybufs);
 		psc_dynarray_ensurelen(&replaybufs, 1024);
 
+		/* Collect buffer belonging to the same transaction */
 		for (i = 0; i < psc_dynarray_len(&pj->pj_bufs); i++) {
 			tmppje = psc_dynarray_getpos(&pj->pj_bufs, i);
 			psc_assert(tmppje->pje_len != 0);
@@ -991,6 +992,8 @@ pjournal_init(const char *fn, int thrtype, const char *thrname,
 				nents++;
 				psc_dynarray_add(&replaybufs, tmppje);
 			}
+			if (tmppje->pje_type & PJE_XSNGL)
+				break;
 		}
 
 		ntrans++;
