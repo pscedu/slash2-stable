@@ -366,6 +366,8 @@ pjournal_logwrite(struct psc_journal_xidhndl *xh, int type, void *data,
 	}
 	if (xh->pjx_flags & PJX_XCLOSE) {
 		psc_assert(xh->pjx_tailslot != PJX_SLOT_ANY);
+		if (xh->pjx_flags & PJX_XSNGL)
+			type |= PJE_XSNGL;
 		type |= PJE_XCLOSE;
 	}
 
