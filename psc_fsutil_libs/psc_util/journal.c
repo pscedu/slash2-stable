@@ -1041,12 +1041,12 @@ pjournal_init(const char *fn, int thrtype, const char *thrname,
 		pje = psc_alloc(PJ_PJESZ(pj), PAF_PAGEALIGN | PAF_LOCK);
 		psc_dynarray_add(&pj->pj_bufs, pje);
 	}
+	pj->pj_distill_handler = distill_handler;
 
 	thr = pscthr_init(thrtype, 0, pjournal_distillthr_main, NULL, sizeof(*pjt), thrname);
 	pjt = thr->pscthr_private;
 	pjt->pjt_pj = pj;
-	
-	pj->pj_distill_handler = distill_handler;
+	pscthr_setready(thr);
 
 	psc_info("journal replayed: %d log entries with %d transactions "
 	    "have been redone, error = %d", nents, ntrans, nerrs);
