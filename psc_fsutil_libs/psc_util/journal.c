@@ -967,7 +967,7 @@ pjournal_init(const char *fn, uint64_t txg,
 	struct psc_journalthr		*pjt;
 	struct psc_thread		*thr;
 
-	psc_info("First ZFS transaction group number is %"PRIx64, txg);
+	psc_notify("First ZFS transaction group number is %"PRIx64, txg);
 
 	pj = pjournal_open(fn);
 	if (pj == NULL)
