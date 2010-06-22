@@ -824,19 +824,14 @@ pjournal_format(const char *fn, uint32_t nents, uint32_t entsz, uint32_t ra)
 int
 pjournal_dump(const char *fn, int verbose)
 {
-	int				 i;
 	uint32_t			 ra;
 	struct psc_journal		*pj;
 	struct psc_journal_hdr		*pjh;
 	struct psc_journal_enthdr	*pje;
 	uint32_t			 slot;
 	unsigned char			*jbuf;
-	int				 count;
 	uint64_t			 chksum;
-	int				 ntotal;
-	int				 nmagic;
-	int				 nchksum;
-	int				 nformat;
+	int				 i, count, ntotal, nmagic, nchksum, nformat;
 
 	ntotal = 0;
 	nmagic = 0;
