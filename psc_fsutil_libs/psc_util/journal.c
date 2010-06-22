@@ -611,7 +611,7 @@ pjournal_scan_slots(struct psc_journal *pj)
 
 	/*
 	 * We need this code because we don't start from the beginning of the log.
-	 * On the other hand, I don't expect either array will be long.
+	 * On the other hand, I don't expect either array to be long.
 	 */
 	while (psc_dynarray_len(&closetrans)) {
 		pje = psc_dynarray_getpos(&closetrans, 0);
@@ -948,17 +948,12 @@ pjournal_init(const char *fn, uint64_t txg,
     psc_replay_handler replay_handler,
     psc_distill_handler distill_handler)
 {
-	int				 i;
-	int				 rc;
+	int				 i, rc;
 	struct psc_journal		*pj;
-	uint64_t			 xid;
 	struct psc_journal_enthdr	*pje;
-	int				 nents;
 	int				 nerrs;
 	uint64_t			 chksum;
-	int				 ntrans;
-	struct psc_journal_enthdr	*tmppje;
-	struct psc_dynarray		 replaybufs;
+	int				 nentries;
 	struct psc_journalthr		*pjt;
 	struct psc_thread		*thr;
 
@@ -968,42 +963,31 @@ pjournal_init(const char *fn, uint64_t txg,
 	if (pj == NULL)
 		return (NULL);
 
-	nents = 0;
 	nerrs = 0;
-	ntrans = 0;
+	nentries = 0;
 	rc = pjournal_scan_slots(pj);
 	if (rc) {
 		rc = 0;
 		nerrs++;
 	}
+	/*
+	 * We used to collect all log entries for the same transaction
+	 * and replay one transaction at a time.  However, because log
+	 * entries of transactions can interpose, it is inefficient to
+	 * scan all entries just to find all entries of a particular 
+	 * transaction.  Fortunately, we can replay one log entry at 
+	 * a time.
+	 */
 	while (psc_dynarray_len(&pj->pj_bufs)) {
 		pje = psc_dynarray_getpos(&pj->pj_bufs, 0);
-		xid = pje->pje_xid;
-
-		psc_dynarray_init(&replaybufs);
-		psc_dynarray_ensurelen(&replaybufs, 1024);
-
-		/* Collect buffer belonging to the same transaction */
-		for (i = 0; i < psc_dynarray_len(&pj->pj_bufs); i++) {
-			tmppje = psc_dynarray_getpos(&pj->pj_bufs, i);
-			psc_assert(tmppje->pje_len != 0);
-			if (tmppje->pje_xid == xid) {
-				nents++;
-				psc_dynarray_add(&replaybufs, tmppje);
-			}
-			if (tmppje->pje_type & PJE_XSNGL)
-				break;
-		}
-
-		ntrans++;
-		replay_handler(&replaybufs, &rc);
+		psc_dynarray_remove(&pj->pj_bufs, pje);
+		nentries++;
+		replay_handler(pje, &rc);
 		if (rc) {
 			nerrs++;
 			rc = 0;
 		}
-
-		pjournal_remove_entries(pj, xid, 1);
-		psc_dynarray_free(&replaybufs);
+		psc_freenl(pje, PJ_PJESZ(pj));
 	}
 	psc_assert(!psc_dynarray_len(&pj->pj_bufs));
 	psc_dynarray_free(&pj->pj_bufs);
@@ -1049,7 +1033,7 @@ pjournal_init(const char *fn, uint64_t txg,
 	pjt->pjt_pj = pj;
 	pscthr_setready(thr);
 
-	psc_info("journal replayed: %d log entries with %d transactions "
-	    "have been redone, error = %d", nents, ntrans, nerrs);
+	psc_info("journal replayed: %d log entries "
+	    "have been redone, # of errors = %d", nentries, nerrs);
 	return (pj);
 }

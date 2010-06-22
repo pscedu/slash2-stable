@@ -41,7 +41,7 @@ struct psc_journal_enthdr;
 
 #define PJH_OPT_NONE			0x00
 
-typedef void (*psc_replay_handler)(struct psc_dynarray *, int *);
+typedef void (*psc_replay_handler)(struct psc_journal_enthdr *, int *);
 typedef void (*psc_distill_handler)(struct psc_journal_enthdr *, int);
 
 struct psc_journal_hdr {
