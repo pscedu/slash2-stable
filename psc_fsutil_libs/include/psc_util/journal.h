@@ -89,7 +89,7 @@ struct psc_journal {
  * Journal entry types - higher bits after PJET_LASTBIT are used to identify different log users
  * 			 which are defined in slashd/mdslog.h.
  */
-#define PJE_NONE			0		/* null journal record */
+#define PJE_NONE			      0		/* null journal record */
 #define PJE_FORMAT			(1 << 0)	/* newly-formatted journal entry */
 #define PJE_STRTUP			(1 << 1)	/* system startup */
 #define PJE_XSTART			(1 << 2)	/* start a transaction */
@@ -97,7 +97,7 @@ struct psc_journal {
 #define PJE_XSNGL			(1 << 4)	/* transaction begins and ends insantly*/
 #define PJE_XNORML			(1 << 5)	/* normal transaction data */
 
-#define _PJE_FLSHFT			(1 << 6)	/* denote the last used bit */
+#define _PJE_FLSHFT			      6		/* denote the last used bit */
 
 /*
  * psc_journal_enthdr - journal entry header.
