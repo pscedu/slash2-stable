@@ -41,7 +41,19 @@ struct psc_journal_enthdr;
 
 #define PJH_OPT_NONE			0x00
 
+/*
+ * Embed handler is used to insert some information (such as a sequence number) 
+ * into the journal. It should be invoked periodically so that the lastest version
+ * of the information is always available in the journal somewhere and never 
+ * overwritten.
+ */
+typedef int (*psc_embed_handler)(int);
 typedef void (*psc_replay_handler)(struct psc_journal_enthdr *, int *);
+/*
+ * Distill handler is used to further process certain log entries. These
+ * log entries carry information that we might need to preserve long 
+ * time.
+ */
 typedef void (*psc_distill_handler)(struct psc_journal_enthdr *, int);
 
 struct psc_journal_hdr {
@@ -73,6 +85,7 @@ struct psc_journal {
 	int				 pj_fd;		/* open file descriptor to backing disk file */
 	int				 pj_flags;
 	uint32_t			 pj_nextwrite;	/* next entry slot to write to */
+	psc_embed_handler		 pj_embed_handler;
 	psc_distill_handler		 pj_distill_handler;
 	struct psc_iostats		 pj_rdist;	/* read I/O stats */
 	struct psc_iostats		 pj_wrist;	/* write I/O stats */
@@ -175,7 +188,8 @@ struct psc_journal_xidhndl {
 /* definitions of journal handling functions */
 int			 pjournal_dump(const char *, int);
 int			 pjournal_format(const char *, uint32_t, uint32_t, uint32_t);
-struct psc_journal	*pjournal_init(const char *, uint64_t, int, const char *, psc_replay_handler, psc_distill_handler);
+struct psc_journal	*pjournal_init(const char *, uint64_t, int, const char *, \
+				psc_embed_handler, psc_replay_handler, psc_distill_handler);
 
 /* definitions of transaction handling functions */
 struct psc_journal_xidhndl	*pjournal_xnew(struct psc_journal *);

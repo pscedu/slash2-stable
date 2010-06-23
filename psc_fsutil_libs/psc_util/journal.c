@@ -309,6 +309,18 @@ pjournal_logwrite(struct psc_journal_xidhndl *xh, int type, void *data,
 		tail_slot = t->pjx_tailslot;
 	}
 
+	/* Update the next slot to be written by a next log entry */
+	psc_assert(pj->pj_nextwrite < pj->pj_hdr->pjh_nents);
+	if ((++pj->pj_nextwrite) == pj->pj_hdr->pjh_nents)
+		pj->pj_nextwrite = 0;
+
+	/*
+	 * If we need to consume the slot to embed some information
+	 * into the journal, try to get another slot.
+	 */ 
+	if (pj->pj_embed_handler(slot))
+		goto retry;
+
 	if (!(xh->pjx_flags & PJX_XSTART)) {
 		type |= PJE_XSTART;
 		xh->pjx_flags |= PJX_XSTART;
@@ -324,12 +336,6 @@ pjournal_logwrite(struct psc_journal_xidhndl *xh, int type, void *data,
 			type |= PJE_XSNGL;
 		type |= PJE_XCLOSE;
 	}
-
-	/* Update the next slot to be written by a next log entry */
-	psc_assert(pj->pj_nextwrite < pj->pj_hdr->pjh_nents);
-	if ((++pj->pj_nextwrite) == pj->pj_hdr->pjh_nents)
-		pj->pj_nextwrite = 0;
-
 
 	psc_assert(slot < pj->pj_hdr->pjh_nents);
 	psc_assert(size + offsetof(struct psc_journal_enthdr, pje_data) <=
@@ -363,7 +369,8 @@ pjournal_logwrite(struct psc_journal_xidhndl *xh, int type, void *data,
 		memcpy(pje->pje_data, data, size);
 	}
 
-	psc_info("Writing a log entry xid=%"PRIx64": xtail = %d, ltail = %d",
+	psc_info("Writing a log entry xid=%"PRIx64
+	    ": xtail = %d, ltail = %d",
 	    xh->pjx_xid, xh->pjx_tailslot, tail_slot);
 
 	/* Calculate checksum and commit to the disk */
@@ -378,8 +385,8 @@ pjournal_logwrite(struct psc_journal_xidhndl *xh, int type, void *data,
 		pjournal_xrelease(xh);
 
 	psc_info("Completed writing log entry xid=%"PRIx64
-		 ": xtail = %d, slot = %d",
-		 xh->pjx_xid, xh->pjx_tailslot, slot);
+	    ": xtail = %d, slot = %d",
+	    xh->pjx_xid, xh->pjx_tailslot, slot);
 
 	return (rc);
 }
@@ -933,12 +940,14 @@ pjournal_distillthr_main(struct psc_thread *thr)
  * @txg: the first transaction group number to be used by ZFS.
  * @thrtype: application-specified thread type ID for distill processor.
  * @thrname: application-specified thread name for distill processor.
+ * @embed_handler: the journal embed callback.
  * @replay_handler: the journal replay callback.
  * @distill_handler: the distill processor callback.
  */
 struct psc_journal *
 pjournal_init(const char *fn, uint64_t txg,
     int thrtype, const char *thrname,
+    psc_embed_handler embed_handler,
     psc_replay_handler replay_handler,
     psc_distill_handler distill_handler)
 {
@@ -1020,6 +1029,7 @@ pjournal_init(const char *fn, uint64_t txg,
 		pje = psc_alloc(PJ_PJESZ(pj), PAF_PAGEALIGN | PAF_LOCK);
 		psc_dynarray_add(&pj->pj_bufs, pje);
 	}
+	pj->pj_embed_handler = embed_handler;
 	pj->pj_distill_handler = distill_handler;
 
 	thr = pscthr_init(thrtype, 0, pjournal_distillthr_main, NULL, sizeof(*pjt), thrname);
