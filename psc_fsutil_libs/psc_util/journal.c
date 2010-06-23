@@ -222,56 +222,17 @@ pjournal_xrelease(struct psc_journal_xidhndl *xh)
 
 /**
  * pjournal_logwrite_internal - Write a new log entry for a transaction.
- * @xh: the transaction handle.
- * @slot: position location in journal to write.
- * @type: the application-specific log entry type.
- * @data: the journal entry contents to store.
- * @size: length of entry contents.
+ * @pj: the journal.
+ * @pje: the log entry to be written.
+ * @slot: the slot to contain the entry.
  * Returns: 0 on success, -1 on error.
  */
 __static int
-pjournal_logwrite_internal(struct psc_journal_xidhndl *xh, uint32_t slot,
-    int type, void *data, size_t size)
+pjournal_logwrite_internal(struct psc_journal *pj, struct psc_journal_enthdr *pje, uint32_t slot)
 {
 	int				 rc;
-	struct psc_journal		*pj;
-	struct psc_journal_enthdr	*pje;
 	int				 ntries;
 	uint64_t			 chksum;
-
-	rc = 0;
-	pj = xh->pjx_pj;
-	psc_assert(slot < pj->pj_hdr->pjh_nents);
-	psc_assert(size + offsetof(struct psc_journal_enthdr, pje_data) <=
-	    (size_t)PJ_PJESZ(pj));
-
-	PJ_LOCK(pj);
-	while (!psc_dynarray_len(&pj->pj_bufs)) {
-		pj->pj_flags |= PJF_WANTBUF;
-		psc_waitq_wait(&pj->pj_waitq, &pj->pj_lock);
-		PJ_LOCK(pj);
-	}
-	pje = psc_dynarray_getpos(&pj->pj_bufs, 0);
-	psc_dynarray_remove(&pj->pj_bufs, pje);
-	psc_assert(pje);
-	PJ_ULOCK(pj);
-
-	xh->pjx_data = (void *)pje;
-
-	/* fill in contents for the log entry */
-	pje->pje_magic = PJE_MAGIC;
-	pje->pje_type = type;
-	pje->pje_xid = xh->pjx_xid;
-	pje->pje_len = size;
-
-	spinlock(&xh->pjx_lock);
-	pje->pje_sid = xh->pjx_sid++;
-	freelock(&xh->pjx_lock);
-
-	if (data) {
-		psc_assert(size);
-		memcpy(pje->pje_data, data, size);
-	}
 
 	/* calculating the CRC checksum, excluding the checksum field itself */
 	PSC_CRC64_INIT(&chksum);
@@ -301,14 +262,6 @@ pjournal_logwrite_internal(struct psc_journal_xidhndl *xh, uint32_t slot,
 		rc = -1;
 		psc_fatal("failed writing journal log entry at slot %d", slot);
 	}
-	if (xh->pjx_flags & PJX_XSNGL) {
-		pll_addtail(&pj->pj_distillxids, xh);
-		spinlock(&pjournal_waitqlock);
-		psc_waitq_wakeall(&pjournal_waitq);
-		freelock(&pjournal_waitqlock);
-	} else
-		pjournal_xrelease(xh);
-
 	return (0);
 }
 
@@ -327,6 +280,7 @@ pjournal_logwrite(struct psc_journal_xidhndl *xh, int type, void *data,
 {
 	struct psc_journal_xidhndl	*t;
 	struct psc_journal		*pj;
+	struct psc_journal_enthdr	*pje;
 	uint32_t			 slot, tail_slot;
 	int				 rc;
 
@@ -376,12 +330,52 @@ pjournal_logwrite(struct psc_journal_xidhndl *xh, int type, void *data,
 	if ((++pj->pj_nextwrite) == pj->pj_hdr->pjh_nents)
 		pj->pj_nextwrite = 0;
 
+
+	psc_assert(slot < pj->pj_hdr->pjh_nents);
+	psc_assert(size + offsetof(struct psc_journal_enthdr, pje_data) <=
+	    (size_t)PJ_PJESZ(pj));
+
+	/* Now grab a buffer for the log entry to be written. */
+	while (!psc_dynarray_len(&pj->pj_bufs)) {
+		pj->pj_flags |= PJF_WANTBUF;
+		psc_waitq_wait(&pj->pj_waitq, &pj->pj_lock);
+		PJ_LOCK(pj);
+	}
+	pje = psc_dynarray_getpos(&pj->pj_bufs, 0);
+	psc_dynarray_remove(&pj->pj_bufs, pje);
+	psc_assert(pje);
 	PJ_ULOCK(pj);
+
+	xh->pjx_data = (void *)pje;
+
+	/* fill in contents for the log entry */
+	pje->pje_magic = PJE_MAGIC;
+	pje->pje_type = type;
+	pje->pje_xid = xh->pjx_xid;
+	pje->pje_len = size;
+
+	spinlock(&xh->pjx_lock);
+	pje->pje_sid = xh->pjx_sid++;
+	freelock(&xh->pjx_lock);
+
+	if (data) {
+		psc_assert(size);
+		memcpy(pje->pje_data, data, size);
+	}
 
 	psc_info("Writing a log entry xid=%"PRIx64": xtail = %d, ltail = %d",
 	    xh->pjx_xid, xh->pjx_tailslot, tail_slot);
 
-	rc = pjournal_logwrite_internal(xh, slot, type, data, size);
+	/* Calculate checksum and commit to the disk */
+	rc = pjournal_logwrite_internal(pj, pje, slot);
+
+	if (xh->pjx_flags & PJX_XSNGL) {
+		pll_addtail(&pj->pj_distillxids, xh);
+		spinlock(&pjournal_waitqlock);
+		psc_waitq_wakeall(&pjournal_waitq);
+		freelock(&pjournal_waitqlock);
+	} else
+		pjournal_xrelease(xh);
 
 	psc_info("Completed writing log entry xid=%"PRIx64
 		 ": xtail = %d, slot = %d",
