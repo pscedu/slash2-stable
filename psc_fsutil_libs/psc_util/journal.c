@@ -137,7 +137,8 @@ retry:
 			psc_waitq_wait(&pj->pj_waitq, &pj->pj_lock);
 			goto retry;
 		}
-		*tail = t->pjx_tailslot;
+		if (tail)
+			*tail = t->pjx_tailslot;
 	}
 
 	/* Update the next slot to be written by a next log entry */
@@ -173,6 +174,40 @@ pjournal_xnew(struct psc_journal *pj)
 	psc_info("starting a new transaction %p (xid = %"PRIx64") in "
 	    "journal %p", xh, xh->pjx_xid, pj);
 	return (xh);
+}
+
+int
+pjournal_xembed_sngl(struct psc_journal *pj, int type, void *data, size_t size)
+{
+	int rc;
+	uint64_t xid;
+	uint32_t slot;
+	struct psc_journal_enthdr *pje;
+
+	xid = pjournal_next_xid(pj);
+	slot = pjournal_next_slot(pj, NULL);
+
+	PJ_LOCK(pj);
+	while (!psc_dynarray_len(&pj->pj_bufs)) {
+		pj->pj_flags |= PJF_WANTBUF;
+		psc_waitq_wait(&pj->pj_waitq, &pj->pj_lock);
+		PJ_LOCK(pj);
+	}
+	pje = psc_dynarray_getpos(&pj->pj_bufs, 0);
+	psc_dynarray_remove(&pj->pj_bufs, pje);
+	PJ_ULOCK(pj);
+
+	rc = pjournal_logwrite_internal(pj, pje, slot);
+
+	PJ_LOCK(pj);
+	psc_dynarray_add(&pj->pj_bufs, pje);
+	if (pj->pj_flags & PJF_WANTBUF) {
+		pj->pj_flags &= ~PJF_WANTBUF;
+		psc_waitq_wakeall(&pj->pj_waitq);
+	}
+	PJ_ULOCK(pj);
+
+	return (rc);
 }
 
 /**
