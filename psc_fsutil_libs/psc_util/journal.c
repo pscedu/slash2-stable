@@ -95,6 +95,24 @@ psc_journal_io(struct psc_journal *pj, void *p, size_t len, off_t off,
 	return (rc);
 }
 
+uint64_t
+pjournal_next_xid(struct psc_journal *pj)
+{
+	uint64_t xid;
+	/*
+	 * Note that even though we issue xids in increasing order here,
+	 * it does not necessarily mean transactions will end up in the
+	 * log in the same order.
+	 */
+	PJ_LOCK(pj);
+	do {
+		xid = ++pj->pj_lastxid;
+	} while (xid == PJE_XID_NONE);
+	PJ_ULOCK(pj);
+
+	return (xid);
+}
+
 /**
  * pjournal_xnew - Start a new transaction with a unique ID in the given
  *	journal.
@@ -114,17 +132,7 @@ pjournal_xnew(struct psc_journal *pj)
 	xh->pjx_tailslot = PJX_SLOT_ANY;
 	INIT_PSCLIST_ENTRY(&xh->pjx_lentry1);
 	INIT_PSCLIST_ENTRY(&xh->pjx_lentry2);
-
-	/*
-	 * Note that even though we issue xids in increasing order here,
-	 * it does not necessarily mean transactions will end up in the
-	 * log in the same order.
-	 */
-	PJ_LOCK(pj);
-	do {
-		xh->pjx_xid = ++pj->pj_lastxid;
-	} while (xh->pjx_xid == PJE_XID_NONE);
-	PJ_ULOCK(pj);
+	xh->pjx_xid = pjournal_next_xid(pj);
 
 	psc_info("starting a new transaction %p (xid = %"PRIx64") in "
 	    "journal %p", xh, xh->pjx_xid, pj);
