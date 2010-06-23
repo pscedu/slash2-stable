@@ -113,6 +113,42 @@ pjournal_next_xid(struct psc_journal *pj)
 	return (xid);
 }
 
+uint32_t
+pjournal_next_slot(struct psc_journal *pj, uint32_t *tail)
+{
+	uint32_t slot;
+	struct psc_journal_xidhndl *t;
+retry:
+	/*
+	 * Make sure that the next slot to be written is not used by a
+	 * pending transaction.  Since we add a new transaction at the
+	 * tail of the pending transaction list, we only need to check
+	 * the head of the list to find out the oldest transaction.
+	 */
+	PJ_LOCK(pj);
+	slot = pj->pj_nextwrite;
+	t = pll_gethdpeek(&pj->pj_pendingxids);
+	if (t) {
+		if (t->pjx_tailslot == slot) {
+			psc_warnx("Journal %p write is blocked on slot %d "
+			  "owned by transaction %p (xid = %"PRIx64")",
+			  pj, pj->pj_nextwrite, t, t->pjx_xid);
+			pj->pj_flags |= PJF_WANTSLOT;
+			psc_waitq_wait(&pj->pj_waitq, &pj->pj_lock);
+			goto retry;
+		}
+		*tail = t->pjx_tailslot;
+	}
+
+	/* Update the next slot to be written by a next log entry */
+	psc_assert(pj->pj_nextwrite < pj->pj_hdr->pjh_nents);
+	if ((++pj->pj_nextwrite) == pj->pj_hdr->pjh_nents)
+		pj->pj_nextwrite = 0;
+
+	PJ_ULOCK(pj);
+	return (slot);
+}
+
 /**
  * pjournal_xnew - Start a new transaction with a unique ID in the given
  *	journal.
@@ -286,7 +322,6 @@ __static int
 pjournal_logwrite(struct psc_journal_xidhndl *xh, int type, void *data,
     size_t size)
 {
-	struct psc_journal_xidhndl	*t;
 	struct psc_journal		*pj;
 	struct psc_journal_enthdr	*pje;
 	uint32_t			 slot, tail_slot;
@@ -296,32 +331,7 @@ pjournal_logwrite(struct psc_journal_xidhndl *xh, int type, void *data,
 	tail_slot = PJX_SLOT_ANY;
 
  retry:
-	/*
-	 * Make sure that the next slot to be written is not used by a
-	 * pending transaction.  Since we add a new transaction at the
-	 * tail of the pending transaction list, we only need to check
-	 * the head of the list to find out the oldest transaction.
-	 */
-	PJ_LOCK(pj);
-	slot = pj->pj_nextwrite;
-	t = pll_gethdpeek(&pj->pj_pendingxids);
-	if (t) {
-		if (t->pjx_tailslot == slot) {
-			psc_warnx("Journal %p write is blocked on slot %d "
-			  "owned by transaction %p (xid = %"PRIx64")",
-			  pj, pj->pj_nextwrite, t, t->pjx_xid);
-			pj->pj_flags |= PJF_WANTSLOT;
-			psc_waitq_wait(&pj->pj_waitq, &pj->pj_lock);
-			goto retry;
-		}
-		tail_slot = t->pjx_tailslot;
-	}
-
-	/* Update the next slot to be written by a next log entry */
-	psc_assert(pj->pj_nextwrite < pj->pj_hdr->pjh_nents);
-	if ((++pj->pj_nextwrite) == pj->pj_hdr->pjh_nents)
-		pj->pj_nextwrite = 0;
-
+	slot = pjournal_next_slot(pj, &tail_slot);
 	/*
 	 * If we need to consume the slot to embed some information
 	 * into the journal, try to get another slot.
@@ -350,6 +360,7 @@ pjournal_logwrite(struct psc_journal_xidhndl *xh, int type, void *data,
 	    (size_t)PJ_PJESZ(pj));
 
 	/* Now grab a buffer for the log entry to be written. */
+	PJ_LOCK(pj);
 	while (!psc_dynarray_len(&pj->pj_bufs)) {
 		pj->pj_flags |= PJF_WANTBUF;
 		psc_waitq_wait(&pj->pj_waitq, &pj->pj_lock);
