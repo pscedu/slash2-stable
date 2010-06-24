@@ -33,7 +33,7 @@ local $/;
 
 my $data = <>;
 
-my $startyr = 2006;
+my $startyr = 2006; # read from svn info
 my $yr;
 
 my $fn = basename $ARGV;
@@ -54,7 +54,7 @@ $cpyears .= "-$yr" if $yr > $startyr;
 
 if ($opts{F}) {
 	# Force insertion: if the file does not contain a copyright section,
-	# insert at the top after any $Id tags.
+	# insert at the top after any Id tags.
 	unless ($data =~ /%PSC_(?:START|NO)_COPYRIGHT%/) {
 		$data =~ s{((/\*\s*\$Id.*?\*/\n)?)}{$1/\*
  \* %PSC_START_COPYRIGHT%
@@ -66,13 +66,13 @@ if ($opts{F}) {
 	}
 } else {
 	$data =~ s
-{/* %PSC_COPYRIGHT% */
-}{/\*
- \* %PSC_START_COPYRIGHT%
- \* -----------------------------------------------------------------------------
- \* -----------------------------------------------------------------------------
- \* %PSC_END_COPYRIGHT%
- \*/
+{/\* %PSC_COPYRIGHT% \*/
+}{/*
+ * %PSC_START_COPYRIGHT%
+ * -----------------------------------------------------------------------------
+ * -----------------------------------------------------------------------------
+ * %PSC_END_COPYRIGHT%
+ */
 };
 }
 
