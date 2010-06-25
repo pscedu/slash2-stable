@@ -42,16 +42,17 @@ struct psc_journal_enthdr;
 #define PJH_OPT_NONE			0x00
 
 /*
- * Embed handler is used to insert some information (such as a sequence number) 
+ * Embed handler is used to insert some information (such as a sequence number)
  * into the journal. It should be invoked periodically so that the lastest version
- * of the information is always available in the journal somewhere and never 
+ * of the information is always available in the journal somewhere and never
  * overwritten.
  */
 typedef int (*psc_embed_handler)(int);
 typedef void (*psc_replay_handler)(struct psc_journal_enthdr *, int *);
+
 /*
  * Distill handler is used to further process certain log entries. These
- * log entries carry information that we might need to preserve long 
+ * log entries carry information that we might need to preserve long
  * time.
  */
 typedef void (*psc_distill_handler)(struct psc_journal_enthdr *, int);
@@ -75,10 +76,10 @@ struct psc_journal {
 	struct psc_journal_hdr		*pj_hdr;
 
 	psc_spinlock_t			 pj_pendinglock;
-	struct psc_lockedlist            pj_pendingxids;
+	struct psc_lockedlist		 pj_pendingxids;
 
 	psc_spinlock_t			 pj_distilllock;
-	struct psc_lockedlist            pj_distillxids;
+	struct psc_lockedlist		 pj_distillxids;
 
 	struct psc_dynarray		 pj_bufs;
 	struct psc_waitq		 pj_waitq;
@@ -99,18 +100,17 @@ struct psc_journal {
 #define PJE_MAGIC			UINT64_C(0x45678912aabbccdd)
 
 /*
- * Journal entry types - higher bits after PJET_LASTBIT are used to identify different log users
- * 			 which are defined in slashd/mdslog.h.
+ * Journal entry types - higher bits after _PJE_FLSHFT are used for
+ * application-specific codes.
  */
-#define PJE_NONE			      0		/* null journal record */
+#define PJE_NONE			0		/* null journal record */
 #define PJE_FORMAT			(1 << 0)	/* newly-formatted journal entry */
 #define PJE_STRTUP			(1 << 1)	/* system startup */
 #define PJE_XSTART			(1 << 2)	/* start a transaction */
 #define PJE_XCLOSE			(1 << 3)	/* close a transaction */
 #define PJE_XSNGL			(1 << 4)	/* transaction begins and ends insantly*/
 #define PJE_XNORML			(1 << 5)	/* normal transaction data */
-
-#define _PJE_FLSHFT			      6		/* denote the last used bit */
+#define _PJE_FLSHFT			(1 << 6)	/* denote the last used bit */
 
 /*
  * psc_journal_enthdr - journal entry header.
