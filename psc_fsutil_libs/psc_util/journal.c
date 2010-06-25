@@ -739,7 +739,9 @@ pjournal_open(const char *fn)
 		    "%"PSCPRIxCRC64" vs %"PSCPRIxCRC64, pjh->pjh_chksum, chksum);
 		goto err;
 	}
-	if (statbuf.st_size != (off_t)(pjhlen + pjh->pjh_nents * PJ_PJESZ(pj))) {
+	       
+	if (!S_ISBLK(statbuf.st_mode) &&
+	    (statbuf.st_size != (off_t)(pjhlen + pjh->pjh_nents * PJ_PJESZ(pj)))) {
 		psc_errorx("Size of the log file does not match specs in its header");
 		goto err;
 	}
