@@ -50,6 +50,9 @@ struct psc_journalthr {
 __static int		pjournal_logwrite(struct psc_journal_xidhndl *, int,
 				void *, size_t);
 
+__static int		pjournal_logwrite_internal(struct psc_journal *,
+				struct psc_journal_enthdr *, uint32_t);
+
 struct psc_waitq	pjournal_waitq = PSC_WAITQ_INIT;
 psc_spinlock_t		pjournal_waitqlock = LOCK_INITIALIZER;
 
@@ -229,8 +232,8 @@ pjournal_xadd_sngl(struct psc_journal *pj, int type, void *data, size_t size)
 }
 
 /**
- * pjournal_xadd - Log changes to a piece of metadata (e.g., journal flush 
- *     item).  We can't reply to our clients until after the log entry is 
+ * pjournal_xadd - Log changes to a piece of metadata (e.g., journal flush
+ *     item).  We can't reply to our clients until after the log entry is
  *     written.
  */
 int
@@ -269,7 +272,7 @@ pjournal_xrelease(struct psc_journal_xidhndl *xh)
 	struct psc_journal_enthdr *pje;
 
 	pj = xh->pjx_pj;
-	
+
 	pje = (struct psc_journal_enthdr *) xh->pjx_data;
 
 	PJ_LOCK(pj);
@@ -285,7 +288,7 @@ pjournal_xrelease(struct psc_journal_xidhndl *xh)
 			wakeup = 1;
 			pj->pj_flags &= ~PJF_WANTSLOT;
 			psc_warnx("Journal %p unblocking slot %d - "
-				  "owned by xid %"PRIx64, pj, 
+				  "owned by xid %"PRIx64, pj,
 				  xh->pjx_tailslot, xh->pjx_xid);
 		}
 		psc_dbg("Transaction %p (xid = %"PRIx64") removed from "
@@ -370,7 +373,7 @@ pjournal_logwrite(struct psc_journal_xidhndl *xh, int type, void *data,
 	/*
 	 * If we need to consume the slot to embed some information
 	 * into the journal, try to get another slot.
-	 */ 
+	 */
 	if (pj->pj_embed_handler(slot))
 		goto retry;
 
@@ -623,7 +626,7 @@ pjournal_scan_slots(struct psc_journal *pj)
 				nclose++;
 				if (!(pje->pje_type & PJE_XSNGL)) {
 					psc_assert(pje->pje_len == 0);
-					nentry = pjournal_remove_entries(pj, 
+					nentry = pjournal_remove_entries(pj,
 					    pje->pje_xid, 1);
 					psc_assert(nentry <= (int)pje->pje_sid);
 					if (nentry == (int)pje->pje_sid)
@@ -644,13 +647,13 @@ pjournal_scan_slots(struct psc_journal *pj)
 	}
  done:
 	/*
-	 * If we are dealing with a brand new log or the log has wrapped around, 
-	 * we won't see a startup record because we currently only write it when 
+	 * If we are dealing with a brand new log or the log has wrapped around,
+	 * we won't see a startup record because we currently only write it when
 	 * we start.
 	 *
-	 * The main use of the startup record is to prevent us from considering 
-	 * log records from previous instance of the file system. For the current 
-	 * run, we rely on PJE_XCLOSE records to reduce replay.  In other words, 
+	 * The main use of the startup record is to prevent us from considering
+	 * log records from previous instance of the file system. For the current
+	 * run, we rely on PJE_XCLOSE records to reduce replay.  In other words,
 	 * inserting more startup records won't help.
 	 */
 	if (last_startup != PJE_XID_NONE)
@@ -739,7 +742,7 @@ pjournal_open(const char *fn)
 		    "%"PSCPRIxCRC64" vs %"PSCPRIxCRC64, pjh->pjh_chksum, chksum);
 		goto err;
 	}
-	       
+
 	if (!S_ISBLK(statbuf.st_mode) &&
 	    (statbuf.st_size != (off_t)(pjhlen + pjh->pjh_nents * PJ_PJESZ(pj)))) {
 		psc_errorx("Size of the log file does not match specs in its header");
@@ -1033,8 +1036,8 @@ pjournal_init(const char *fn, uint64_t txg,
 	 * We used to collect all log entries for the same transaction
 	 * and replay one transaction at a time.  However, because log
 	 * entries of transactions can interpose, it is inefficient to
-	 * scan all entries just to find all entries of a particular 
-	 * transaction.  Fortunately, we can replay one log entry at 
+	 * scan all entries just to find all entries of a particular
+	 * transaction.  Fortunately, we can replay one log entry at
 	 * a time.
 	 */
 	while (psc_dynarray_len(&pj->pj_bufs)) {
