@@ -1020,6 +1020,7 @@ pjournal_init(const char *fn, uint64_t txg,
 	struct psc_thread		*thr;
 
 	psc_notify("First ZFS transaction group number is %"PRId64, txg);
+	psc_notify("Journal device %s", fn);
 
 	pj = pjournal_open(fn);
 	if (pj == NULL)
