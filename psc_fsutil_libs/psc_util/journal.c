@@ -374,7 +374,7 @@ pjournal_logwrite(struct psc_journal_xidhndl *xh, int type, void *data,
 	 * If we need to consume the slot to embed some information
 	 * into the journal, try to get another slot.
 	 */
-	if (pj->pj_embed_handler(slot))
+	if (pj->pj_embed_handler && pj->pj_embed_handler(slot))
 		goto retry;
 
 	if (!(xh->pjx_flags & PJX_XSTART)) {
