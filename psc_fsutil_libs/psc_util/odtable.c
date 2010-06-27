@@ -59,8 +59,13 @@ odtable_putitem(struct odtable *odt, void *data)
 	void *p;
 
 	do {
-		if (psc_vbitmap_next(odt->odt_bitmap, &todtr.odtr_elem) <= 0)
+		spinlock(&odt->odt_lock);
+		if (psc_vbitmap_next(odt->odt_bitmap, &todtr.odtr_elem) <= 0) {
+			freelock(&odt->odt_lock);
 			return (NULL);
+		}
+		freelock(&odt->odt_lock);
+
 		odtf = odtable_getfooter(odt, todtr.odtr_elem);
 	} while (odtable_footercheck(odtf, &todtr, 0));
 
