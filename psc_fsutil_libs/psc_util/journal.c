@@ -180,7 +180,7 @@ pjournal_xnew(struct psc_journal *pj)
 }
 
 int
-pjournal_xembed_sngl(struct psc_journal *pj, int type, void *data, size_t size)
+pjournal_xembed_sngl(struct psc_journal *pj, __unusedx int type, __unusedx void *data, __unusedx size_t size)
 {
 	int rc;
 	uint64_t xid;
@@ -206,7 +206,7 @@ pjournal_xembed_sngl(struct psc_journal *pj, int type, void *data, size_t size)
 	psc_dynarray_add(&pj->pj_bufs, pje);
 	if (pj->pj_flags & PJF_WANTBUF) {
 		pj->pj_flags &= ~PJF_WANTBUF;
-		psc_waitq_wakeall(&pj->pj_waitq);
+		psc_waitq_wakeone(&pj->pj_waitq);
 	}
 	PJ_ULOCK(pj);
 
@@ -326,8 +326,10 @@ pjournal_logwrite_internal(struct psc_journal *pj, struct psc_journal_enthdr *pj
 	/* commit the log entry on disk before we can return */
 	ntries = PJ_MAX_TRY;
 	while (ntries > 0) {
+		psc_trace("io_start slot=%u", slot);
 		rc = psc_journal_write(pj, pje, PJ_PJESZ(pj),
 		    PJ_GETENTOFF(pj, slot));
+		psc_trace("io_done slot=%u (rc=%d)", slot, rc);
 		if (rc == EAGAIN) {
 			ntries--;
 			usleep(100);
@@ -705,7 +707,7 @@ pjournal_open(const char *fn)
 	ssize_t pjhlen;
 
 	pj = PSCALLOC(sizeof(*pj));
-	pj->pj_fd = open(fn, O_RDWR | O_SYNC | O_DIRECT);
+	pj->pj_fd = open(fn, O_RDWR | O_DIRECT);
 	if (pj->pj_fd == -1)
 		psc_fatal("failed to open journal %s", fn);
 	if (fstat(pj->pj_fd, &statbuf) == -1)
@@ -1094,12 +1096,17 @@ pjournal_init(const char *fn, uint64_t txg,
 		psc_dynarray_add(&pj->pj_bufs, pje);
 	}
 	pj->pj_embed_handler = embed_handler;
-	pj->pj_distill_handler = distill_handler;
 
-	thr = pscthr_init(thrtype, 0, pjournal_distillthr_main, NULL, sizeof(*pjt), thrname);
-	pjt = thr->pscthr_private;
-	pjt->pjt_pj = pj;
-	pscthr_setready(thr);
+	if (distill_handler) {
+		pj->pj_distill_handler = distill_handler;
+
+		thr = pscthr_init(thrtype, 0, pjournal_distillthr_main, 
+			  NULL, sizeof(*pjt), thrname);
+
+		pjt = thr->pscthr_private;
+		pjt->pjt_pj = pj;
+		pscthr_setready(thr);
+	}
 
 	psc_info("journal replayed: %d log entries "
 	    "have been redone, # of errors = %d", nentries, nerrs);
