@@ -433,6 +433,7 @@ pjournal_logwrite(struct psc_journal_xidhndl *xh, int type, void *data,
 	/* Calculate checksum and commit to the disk */
 	rc = pjournal_logwrite_internal(pj, pje, slot);
 
+#if 0
 	if (xh->pjx_flags & PJX_XSNGL) {
 		pll_addtail(&pj->pj_distillxids, xh);
 		spinlock(&pjournal_waitqlock);
@@ -440,6 +441,9 @@ pjournal_logwrite(struct psc_journal_xidhndl *xh, int type, void *data,
 		freelock(&pjournal_waitqlock);
 	} else
 		pjournal_xrelease(xh);
+#else
+	pjournal_xrelease(xh);
+#endif
 
 	psc_info("Completed writing log entry xid=%"PRIx64
 	    ": xtail = %d, slot = %d",
