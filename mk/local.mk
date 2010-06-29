@@ -119,9 +119,11 @@ ifneq ($(wildcard /opt/sgi),)
   zest_tests_config_obj_zestLexConfig_c_PCPP_FLAGS=	-x
 endif
 
-ifneq ($(wildcard /opt/xt-pe),)
+ifneq ($(wildcard /opt/xt-os),)
   # on XT3
   QKCC=						qk-gcc
+  LIBL=						-lfl
+  DEFINES+=					-DHAVE_CNOS
 endif
 
 ifeq (${OSTYPE},Linux)

@@ -88,4 +88,12 @@ PICKLE_NEED_VERSION=					$(word 2,$$Rev$$)
   DEFINES+=						-DHAVE_LIBKERN_OSBYTEORDER_H
  endif
 
+ ifdef PICKLE_HAVE_INOTIFY
+  DEFINES+=						-DHAVE_INOTIFY
+ endif
+
+ ifdef PICKLE_HAVE_ATSYSCALLS
+  DEFINES+=						-DHAVE_ATSYSCALLS
+ endif
+
 endif
