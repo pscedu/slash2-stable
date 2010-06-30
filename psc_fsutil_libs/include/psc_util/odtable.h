@@ -128,10 +128,10 @@ _odtable_getitemoff(const struct odtable *odt, size_t elem, int allow_max)
 #define odtable_getitemoff(odt, elem)	_odtable_getitemoff((odt), (elem), 0)
 
 /**
- * odtable_getfoffset - Get disk file offset of a table entry.
+ * odtable_getitem_foff - Get offset into disk file of table entry.
  */
-static __inline off_t
-odtable_getfoffset(const struct odtable *odt, size_t elem)
+static __inline void *
+odtable_getitem_foff(const struct odtable *odt, size_t elem)
 {
 	return (odt->odt_hdr->odth_start + odtable_getitemoff(odt, elem));
 }

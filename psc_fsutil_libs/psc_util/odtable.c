@@ -202,10 +202,10 @@ odtable_create(const char *fn, size_t nelems, size_t elemsz)
 		odtf.odtf_slotno = z;
 
 		psc_trace("elem=%zd offset=%"PRIu64" size=%zu",
-		    z, odtable_getfoffset(&odt, z), sizeof(odtf));
+		    z, odtable_getitem_foff(&odt, z), sizeof(odtf));
 
 		if (pwrite(odt.odt_fd, &odtf, sizeof(odtf),
-		    odtable_getfoffset(&odt, z) + elemsz) !=
+		    odtable_getitem_foff(&odt, z) + elemsz) !=
 		    sizeof(odtf)) {
 			rc = -errno;
 			goto out;
