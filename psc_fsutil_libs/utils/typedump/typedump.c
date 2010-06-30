@@ -208,6 +208,7 @@ main(int argc, char *argv[])
 	PRTYPE(struct psc_ctlmsg_loglevel);
 	PRTYPE(struct psc_ctlmsg_meter);
 	PRTYPE(struct psc_ctlmsg_mlist);
+	PRTYPE(struct psc_ctlmsg_odtable);
 	PRTYPE(struct psc_ctlmsg_param);
 	PRTYPE(struct psc_ctlmsg_pool);
 	PRTYPE(struct psc_ctlmsg_prfmt);
