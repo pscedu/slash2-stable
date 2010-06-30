@@ -122,8 +122,7 @@ _odtable_getitemoff(const struct odtable *odt, size_t elem, int allow_max)
 		psc_assert(elem <= odt->odt_hdr->odth_nelems);
 	else
 		psc_assert(elem < odt->odt_hdr->odth_nelems);
-	return (sizeof(struct odtable_hdr) + elem *
-	    (odt->odt_hdr->odth_elemsz + sizeof(struct odtable_entftr)));
+	return (elem * (odt->odt_hdr->odth_elemsz + sizeof(struct odtable_entftr)));
 }
 
 #define odtable_getitemoff(odt, elem)	_odtable_getitemoff((odt), (elem), 0)

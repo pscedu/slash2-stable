@@ -205,7 +205,7 @@ odtable_create(const char *fn, size_t nelems, size_t elemsz)
 		    z, odtable_getfoffset(&odt, z), sizeof(odtf));
 
 		if (pwrite(odt.odt_fd, &odtf, sizeof(odtf),
-		    odtable_getfoffset(&odt, z)) !=
+		    odtable_getfoffset(&odt, z) + elemsz) !=
 		    sizeof(odtf)) {
 			rc = -errno;
 			goto out;
@@ -231,6 +231,8 @@ odtable_load(struct odtable **t, const char *fn, const char *fmt, ...)
 
 	psc_assert(t);
 	*t = NULL;
+
+	LOCK_INIT(&odt->odt_lock);
 
 	odt->odt_fd = open(fn, O_RDWR, 0600);
 	if (odt->odt_fd < 0) {
