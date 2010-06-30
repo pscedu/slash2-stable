@@ -33,9 +33,6 @@
 #include "psc_util/log.h"
 #include "psc_util/odtable.h"
 
-/* based on SL_PATH_DATADIR and SL_FN_IONBMAPS_ODT */
-char *def_table_name = "/var/lib/slashd/ion_bmaps.odt";
-
 struct psc_dynarray myReceipts = DYNARRAY_INIT;
 const char *progname;
 
@@ -55,7 +52,7 @@ usage(void)
 {
 	fprintf(stderr,
 	    "usage: %s [-Ccls] [-e elem_size] [-f #frees] [-n #puts]\n"
-	    "\t[-z table_size] -N table_file\n", progname);
+	    "\t[-z table_size] file\n", progname);
 	exit(1);
 }
 
@@ -64,7 +61,7 @@ main(int argc, char *argv[])
 {
 	int c, rc, i;
 
-	char *table_name = NULL;
+	char *fn = NULL;
 
 	int create_table = 0;
 	int load_table   = 1;
@@ -99,7 +96,8 @@ main(int argc, char *argv[])
 			load_table = 1;
 			break;
 		case 'N':
-			table_name = optarg;
+			psc_warnx("-N is deprecated");
+			fn = optarg;
 			break;
 		case 'n':
 			num_puts = atoi(optarg);
@@ -114,26 +112,28 @@ main(int argc, char *argv[])
 			usage();
 		}
 	argc -= optind;
-	if (argc)
+	argv += optind;
+	if (argc == 1)
+		fn = argv[0];
+	else if (argc == 0 && fn)
+		;
+	else
 		usage();
 
-	if (!table_name)
-		table_name = def_table_name;
-
 	if (create_table &&
-	    (rc = odtable_create(table_name, table_size, elem_size)))
-		errx(1, "create %s: %s", table_name, strerror(-rc));
+	    (rc = odtable_create(fn, table_size, elem_size)))
+		errx(1, "create %s: %s", fn, strerror(-rc));
 
 	if (load_table &&
-	    (rc = odtable_load(table_name, &odt)))
-		errx(1, "load %s: %s", table_name, strerror(-rc));
+	    (rc = odtable_load(&odt, fn, "%s", fn)))
+		errx(1, "load %s: %s", fn, strerror(-rc));
 
 	if (scan_table)
 		odtable_scan(odt, my_odtcb);
 
 	item = psc_alloc(elem_size, 0);
 
-	for (i=0; i < num_puts; i++) {
+	for (i = 0; i < num_puts; i++) {
 		snprintf(item, elem_size, "... put_number=%d ...", i);
 		if (!odtable_putitem(odt, item))
 			psc_errorx("odtable_putitem() failed, no slots available");

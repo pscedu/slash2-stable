@@ -1,7 +1,7 @@
 .\" $Id$
 .Dd September 4, 2009
 .Dt ODTABLE 1
-.ds volume PSC \- Slash Administrator's Manual
+.ds volume PSC \- Administrator's Manual
 .Os http://www.psc.edu/
 .Sh NAME
 .Nm odtable
@@ -9,22 +9,19 @@
 .Sh SYNOPSIS
 .Nm odtable
 .Bk -words
-.Op Fl C
+.Op Fl Ccls
 .Op Fl e Ar elem_size
 .Op Fl f Ar #frees
 .Op Fl n Ar #puts
 .Op Fl z Ar table_size
 .Ek
 .Bk -words
-.Fl N Ar table_file
+.Ar table_file
 .Ek
 .Sh DESCRIPTION
 The
 .Nm
-utility creates and manipulates on-disk data storage tables in the
-format
-.Xr slashd 8
-understands.
+utility creates and manipulates on-disk data storage tables.
 .Pp
 The following options are available:
 .Bl -tag -width Ds
@@ -43,12 +40,7 @@ Store the given number of elements
 .Ar #puts
 as fabricated entries in the odtable.
 .It Fl z Ar table_size
-Specify the number of entries with which new tables should be created.
-.El
-.Sh FILES
-.Bl -tag -width 39n -compact
-.It Pa /var/lib/slashd/bmap_assignments.odt
-I/O server file block map leases
+Specify the number of entries a new table will be created with.
 .El
 .Sh SEE ALSO
-.Xr slashd 8
+.Xr od 1

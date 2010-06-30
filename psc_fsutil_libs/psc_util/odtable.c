@@ -23,15 +23,20 @@
 
 #include <fcntl.h>
 #include <inttypes.h>
+#include <stdarg.h>
 #include <string.h>
 #include <unistd.h>
 
 #include "pfl/cdefs.h"
 #include "pfl/types.h"
+#include "psc_ds/lockedlist.h"
 #include "psc_util/alloc.h"
 #include "psc_util/lock.h"
 #include "psc_util/log.h"
 #include "psc_util/odtable.h"
+
+struct psc_lockedlist psc_odtables =
+    PLL_INITIALIZER(&psc_odtables, struct odtable, odt_lentry);
 
 static void
 odtable_sync(struct odtable *odt, __unusedx size_t elem)
@@ -168,7 +173,7 @@ odtable_freeitem(struct odtable *odt, struct odtable_receipt *odtr)
 }
 
 int
-odtable_create(const char *f, size_t nelems, size_t elemsz)
+odtable_create(const char *fn, size_t nelems, size_t elemsz)
 {
 	int rc = 0;
 	size_t z;
@@ -179,7 +184,7 @@ odtable_create(const char *f, size_t nelems, size_t elemsz)
 
 	odt.odt_hdr = &odth;
 
-	odt.odt_fd = open(f, O_CREAT | O_EXCL | O_WRONLY, 0600);
+	odt.odt_fd = open(fn, O_CREAT | O_EXCL | O_WRONLY, 0600);
 	if (odt.odt_fd < 0) {
 		rc = -errno;
 		goto out;
@@ -196,10 +201,10 @@ odtable_create(const char *f, size_t nelems, size_t elemsz)
 		odtf.odtf_slotno = z;
 
 		psc_trace("elem=%zd offset=%"PRIu64" size=%zu",
-		    z, odtable_getoffset(&odt, z), sizeof(odtf));
+		    z, odtable_getfoffset(&odt, z), sizeof(odtf));
 
 		if (pwrite(odt.odt_fd, &odtf, sizeof(odtf),
-		    (elemsz + odtable_getoffset(&odt, z))) !=
+		    odtable_getfoffset(&odt, z)) !=
 		    sizeof(odtf)) {
 			rc = -errno;
 			goto out;
@@ -212,22 +217,23 @@ odtable_create(const char *f, size_t nelems, size_t elemsz)
 }
 
 int
-odtable_load(const char *f, struct odtable **t)
+odtable_load(struct odtable **t, const char *fn, const char *fmt, ...)
 {
-	int rc = 0, frc;
-	size_t z;
-	void *p;
 	struct odtable *odt = PSCALLOC(sizeof(struct odtable));
 	struct odtable_entftr *odtf;
-	struct odtable_hdr *odth;;
+	struct odtable_hdr *odth;
 	struct odtable_receipt todtr = {0, 0};
+	int rc = 0, frc;
+	va_list ap;
+	size_t z;
+	void *p;
 
 	psc_assert(t);
 	*t = NULL;
 
-	odt->odt_fd = open(f, O_RDWR, 0600);
+	odt->odt_fd = open(fn, O_RDWR, 0600);
 	if (odt->odt_fd < 0) {
-		psc_warnx("Fail to open bmap ownership table file %s", f);
+		psc_warnx("open %s", fn);
 		free(odt);
 		return (-errno);
 	}
@@ -295,13 +301,17 @@ odtable_load(const char *f, struct odtable **t)
 		   odt, odt->odt_base, psc_vbitmap_nfree(odt->odt_bitmap),
 		   odth->odth_nelems, odth->odth_elemsz, odth->odth_magic);
 
+	va_start(ap, fmt);
+	vsnprintf(odt->odt_name, sizeof(odt->odt_name), fmt, ap);
+	va_end(ap);
+
 	*t = odt;
+	pll_add(&psc_odtables, odt);
  out:
 	close(odt->odt_fd);
 	odt->odt_fd = -1;
 	if (rc) {
-		if (odt->odt_base)
-			munmap(odt->odt_base, ODTABLE_MAPSZ(odt));
+		odtable_freemap(odt);
 		if (odt->odt_bitmap)
 			psc_vbitmap_free(odt->odt_bitmap);
 		free(odt->odt_hdr);
