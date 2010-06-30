@@ -78,6 +78,13 @@ psc_ctlrep_getfault(__unusedx int a, __unusedx struct psc_ctlmsghdr *b,
 	psc_fatalx("fault support not compiled in");
 }
 
+__weak int
+psc_ctlrep_getodtable(__unusedx int a, __unusedx struct psc_ctlmsghdr *b,
+    __unusedx void *c)
+{
+	psc_fatalx("odtable support not compiled in");
+}
+
 /*
  * psc_ctlmsg_sendv - send a control message back to client.
  * @fd: client socket descriptor.

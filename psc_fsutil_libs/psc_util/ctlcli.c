@@ -140,6 +140,18 @@ psc_ctl_packshow_faults(const char *thr)
 }
 
 void
+psc_ctl_packshow_odtables(const char *thr)
+{
+	struct psc_ctlmsg_odtable *pco;
+	int n;
+
+	pco = psc_ctlmsg_push(PCMT_GETODTABLE, sizeof(*pco));
+	n = strlcpy(pco->pco_name, PCODT_NAME_ALL, sizeof(pco->pco_name));
+	if (n == 0 || n >= (int)sizeof(pco->pco_name))
+		errx(1, "invalid odtable name: %s", thr);
+}
+
+void
 psc_ctlparse_show(char *showspec)
 {
 	char *thrlist, *thr, *thrnext;
@@ -754,6 +766,30 @@ psc_ctlmsg_fault_prdat(__unusedx const struct psc_ctlmsghdr *mh,
 	    pcflt->pcflt_hits, pcflt->pcflt_unhits, pcflt->pcflt_delay,
 	    pcflt->pcflt_count, pcflt->pcflt_begin, pcflt->pcflt_retval,
 	    pcflt->pcflt_chance);
+}
+
+void
+psc_ctlmsg_odtable_prhdr(__unusedx struct psc_ctlmsghdr *mh,
+    __unusedx const void *m)
+{
+	printf("on-disk data table(s)\n"
+	    " %-35s %3s %7s %7s %5s "
+	    "%10s %5s %5s %5s\n",
+	    "name", "flg", "#hit", "#uhit", "delay",
+	    "count", "begin", "code", "prob");
+}
+
+void
+psc_ctlmsg_odtable_prdat(__unusedx const struct psc_ctlmsghdr *mh,
+    const void *m)
+{
+	const struct psc_ctlmsg_odtable *pco = m;
+
+	printf(" %-20s   %c "
+	    "%7d %7d %5d "
+	    "%10d %5d %5d "
+	    "%5d\n",
+	    pco->pco_name, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 __static void

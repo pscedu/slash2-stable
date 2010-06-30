@@ -33,6 +33,7 @@
 #include "psc_util/iostats.h"
 #include "psc_util/meter.h"
 #include "psc_util/mlist.h"
+#include "psc_util/odtable.h"
 #include "psc_util/thread.h"
 
 #define PCTHRNAME_EVERYONE	"everyone"
@@ -166,6 +167,16 @@ struct psc_ctlmsg_fault {
 
 #define PCFLT_NAME_ALL		"all"
 
+struct psc_ctlmsg_odtable {
+	char			pco_name[ODT_NAME_MAX];
+	int32_t			pco_inuse;
+	int32_t			pco_total;
+	int32_t			pco_elemsz;
+	int32_t			pco_opts;
+};
+
+#define PCODT_NAME_ALL		"all"
+
 /* Control message types. */
 #define PCMT_ERROR		0
 #define PCMT_GETLOGLEVEL	1
@@ -180,8 +191,9 @@ struct psc_ctlmsg_fault {
 #define PCMT_GETPOOL		10
 #define PCMT_GETMLIST		11
 #define PCMT_GETFAULTS		12
-#define PCMT_CMD		13
-#define NPCMT			14
+#define PCMT_GETODTABLE		13
+#define PCMT_CMD		14
+#define NPCMT			15
 
 /*
  * Control message header.
