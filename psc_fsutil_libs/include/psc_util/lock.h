@@ -55,8 +55,8 @@ typedef struct {
 	pthread_t	sl_who;
 } psc_spinlock_t;
 
-#define MAX_SPIN_CNT		100
-#define SPIN_SLEEP_DURATION	2000001
+#define MAX_SPIN_CNT		256
+#define SPIN_SLEEP_DURATION     5001
 
 /* XXX provide some way to detect reinitializing already-initialized locks. */
 #define LOCK_INIT(l)		((l)->sl_lock = SL_UNLOCKED)
