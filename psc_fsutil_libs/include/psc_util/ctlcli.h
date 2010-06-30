@@ -72,6 +72,7 @@ void  psc_ctlparse_show(char *);
 
 void  psc_ctl_packshow_faults(const char *);
 void  psc_ctl_packshow_loglevel(const char *);
+void  psc_ctl_packshow_odtables(const char *);
 void  psc_ctl_packshow_stats(const char *);
 
 void *psc_ctlmsg_push(int, size_t);

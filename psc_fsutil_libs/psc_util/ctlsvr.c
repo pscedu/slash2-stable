@@ -78,15 +78,8 @@ psc_ctlrep_getfault(__unusedx int a, __unusedx struct psc_ctlmsghdr *b,
 	psc_fatalx("fault support not compiled in");
 }
 
-__weak int
-psc_ctlrep_getodtable(__unusedx int a, __unusedx struct psc_ctlmsghdr *b,
-    __unusedx void *c)
-{
-	psc_fatalx("odtable support not compiled in");
-}
-
-/*
- * psc_ctlmsg_sendv - send a control message back to client.
+/**
+ * psc_ctlmsg_sendv - Send a control message back to client.
  * @fd: client socket descriptor.
  * @mh: already filled-out control message header.
  * @m: control message contents.
@@ -125,8 +118,8 @@ psc_ctlmsg_sendv(int fd, const struct psc_ctlmsghdr *mh, const void *m)
 	return (1);
 }
 
-/*
- * psc_ctlmsg_send - send a control message back to client.
+/**
+ * psc_ctlmsg_send - Send a control message back to client.
  * @fd: client socket descriptor.
  * @id: client-provided passback identifier.
  * @type: type of message.
@@ -147,8 +140,8 @@ psc_ctlmsg_send(int fd, int id, int type, size_t siz, const void *m)
 	return (psc_ctlmsg_sendv(fd, &mh, m));
 }
 
-/*
- * psc_ctlsenderr - send an error to client over control interface.
+/**
+ * psc_ctlsenderr - Send an error to client over control interface.
  * @fd: client socket descriptor.
  * @fmt: printf(3) format of error message.
  */
@@ -167,8 +160,8 @@ psc_ctlsenderr(int fd, struct psc_ctlmsghdr *mh, const char *fmt, ...)
 	return (psc_ctlmsg_sendv(fd, mh, &pce));
 }
 
-/*
- * psc_ctlthr_stat - export control thread stats.
+/**
+ * psc_ctlthr_stat - Export control thread stats.
  * @thr: thread begin queried.
  * @pcst: thread stats control message to be filled in.
  */
@@ -180,8 +173,8 @@ psc_ctlthr_stat(struct psc_thread *thr, struct psc_ctlmsg_stats *pcst)
 	pcst->pcst_nrecv	= psc_ctlthr(thr)->pc_st_nrecv;
 }
 
-/*
- * psc_ctlmsg_stats_send - send a response to a "getstats" inquiry.
+/**
+ * psc_ctlmsg_stats_send - Send a reply to a "GETSTATS" inquiry.
  * @fd: client socket descriptor.
  * @mh: already filled-in control message header.
  * @m: control message to be filled in and sent out.
@@ -204,8 +197,8 @@ psc_ctlmsg_stats_send(int fd, struct psc_ctlmsghdr *mh, void *m,
 	return (psc_ctlmsg_sendv(fd, mh, pcst));
 }
 
-/*
- * psc_ctlrep_getstats - send a response to a "getstats" inquiry.
+/**
+ * psc_ctlrep_getstats - Respond to a "GETSTATS" inquiry.
  * @fd: client socket descriptor.
  * @mh: already filled-in control message header.
  * @m: control message to examine and reuse.
@@ -219,8 +212,8 @@ psc_ctlrep_getstats(int fd, struct psc_ctlmsghdr *mh, void *m)
 	    psc_ctlmsg_stats_send));
 }
 
-/*
- * psc_ctlrep_getsubsys - send a response to a "getsubsys" inquiry.
+/**
+ * psc_ctlrep_getsubsys - Send a response to a "GETSUBSYS" inquiry.
  * @fd: client socket descriptor.
  * @mh: already filled-in control message header.
  */
@@ -250,8 +243,8 @@ psc_ctlrep_getsubsys(int fd, struct psc_ctlmsghdr *mh, __unusedx void *m)
 	return (rc);
 }
 
-/*
- * psc_ctlmsg_getloglevel_send - send a response to a "getloglevel" inquiry.
+/**
+ * psc_ctlmsg_getloglevel_send - Send a reply to a "GETLOGLEVEL" inquiry.
  * @fd: client socket descriptor.
  * @mh: already filled-in control message header.
  * @thr: thread begin queried.
@@ -277,8 +270,8 @@ psc_ctlmsg_loglevel_send(int fd, struct psc_ctlmsghdr *mh, void *m,
 	return (rc);
 }
 
-/*
- * psc_ctlmsg_getloglevel_send - send a response to a "getloglevel" inquiry.
+/**
+ * psc_ctlmsg_getloglevel - Respond to a "GETLOGLEVEL" inquiry.
  * @fd: client socket descriptor.
  * @mh: already filled-in control message header.
  * @m: control message to examine.
@@ -292,8 +285,8 @@ psc_ctlrep_getloglevel(int fd, struct psc_ctlmsghdr *mh, void *m)
 	    psc_ctlmsg_loglevel_send));
 }
 
-/*
- * psc_ctlrep_gethashtable - respond to a "gethashtable" inquiry.
+/**
+ * psc_ctlrep_gethashtable - Respond to a "GETHASHTABLE" inquiry.
  *	This computes bucket usage statistics of a hash table and
  *	sends the results back to the client.
  * @fd: client socket descriptor.
@@ -310,7 +303,7 @@ psc_ctlrep_gethashtable(int fd, struct psc_ctlmsghdr *mh, void *m)
 
 	rc = 1;
 	found = 0;
-	snprintf(name, sizeof(name), "%s", pcht->pcht_name); /* XXX */
+	strlcpy(name, pcht->pcht_name, sizeof(name));
 	all = (strcmp(name, PCHT_NAME_ALL) == 0);
 
 	PLL_LOCK(&psc_hashtbls);
@@ -340,8 +333,8 @@ psc_ctlrep_gethashtable(int fd, struct psc_ctlmsghdr *mh, void *m)
 	return (rc);
 }
 
-/*
- * psc_ctlrep_getlc - send a response to a "getlc" inquiry.
+/**
+ * psc_ctlrep_getlc - Respond to a "GETLC" inquiry.
  * @fd: client socket descriptor.
  * @mh: already filled-in control message header.
  * @m: control message to examine and reuse.
@@ -391,8 +384,8 @@ psc_ctlrep_getlc(int fd, struct psc_ctlmsghdr *mh, void *m)
 	return (rc);
 }
 
-/*
- * psc_ctlrep_getpool - send a response to a "getpool" inquiry.
+/**
+ * psc_ctlrep_getpool - Send a response to a "GETPOOL" inquiry.
  * @fd: client socket descriptor.
  * @mh: already filled-in control message header.
  * @msg: control message to examine and reuse.
@@ -717,8 +710,8 @@ psc_ctlparam_run(int fd, struct psc_ctlmsghdr *mh,
 	return (rc);
 }
 
-/*
- * psc_ctlparam_pause - handle thread pause state parameter.
+/**
+ * psc_ctlparam_pause - Handle thread pause state parameter.
  * @fd: control connection file descriptor.
  * @mh: already filled-in control message header.
  * @pcp: parameter control message.
@@ -1103,7 +1096,7 @@ psc_ctlparam_register(const char *oname, int (*cbf)(int, struct psc_ctlmsghdr *,
 }
 
 /*
- * psc_ctlrep_getiostats - send a response to a "getiostats" inquiry.
+ * psc_ctlrep_getiostats - Respond to a "GETIOSTATS" inquiry.
  * @fd: client socket descriptor.
  * @mh: already filled-in control message header.
  * @m: iostats control message to be filled in and sent out.
@@ -1142,8 +1135,8 @@ psc_ctlrep_getiostats(int fd, struct psc_ctlmsghdr *mh, void *m)
 	return (rc);
 }
 
-/*
- * psc_ctlrep_getmeter - respond to a "getmeter" inquiry.
+/**
+ * psc_ctlrep_getmeter - Respond to a "GETMETER" inquiry.
  * @fd: client socket descriptor.
  * @mh: already filled-in control message header.
  * @m: control message to examine and reuse.
@@ -1182,7 +1175,7 @@ psc_ctlrep_getmeter(int fd, struct psc_ctlmsghdr *mh, void *m)
 }
 
 /*
- * psc_ctlrep_getmlist - respond to a "getmlist" inquiry.
+ * psc_ctlrep_getmlist - Respond to a "GETMLIST" inquiry.
  * @fd: client socket descriptor.
  * @mh: already filled-in control message header.
  * @m: control message to examine and reuse.
@@ -1230,8 +1223,55 @@ psc_ctlrep_getmlist(int fd, struct psc_ctlmsghdr *mh, void *m)
 	return (rc);
 }
 
+/**
+ * psc_ctlrep_getodtable - Respond to a "GETODTABLE" control inquiry.
+ * @fd: client socket descriptor.
+ * @mh: already filled-in control message header.
+ * @m: control message to be filled in and sent out.
+ */
+int
+psc_ctlrep_getodtable(int fd, struct psc_ctlmsghdr *mh, void *m)
+{
+	struct psc_ctlmsg_odtable *pco = m;
+	struct odtable *odt;
+	char name[ODT_NAME_MAX];
+	int rc, found, all;
+
+	rc = 1;
+	found = 0;
+	strlcpy(name, pco->pco_name, sizeof(name));
+	all = (strcmp(name, PCODT_NAME_ALL) == 0);
+
+	PLL_LOCK(&psc_odtables);
+	PLL_FOREACH(odt, &psc_odtables) {
+		if (all || strncmp(name,
+		    odt->odt_name, strlen(name)) == 0) {
+			found = 1;
+
+			snprintf(pco->pco_name, sizeof(pco->pco_name),
+			    "%s", odt->odt_name);
+			pco->pco_elemsz = odt->odt_hdr->odth_elemsz;
+			pco->pco_opts = odt->odt_hdr->odth_options;
+			psc_vbitmap_getstats(odt->odt_bitmap,
+			    &pco->pco_inuse, &pco->pco_total);
+			rc = psc_ctlmsg_sendv(fd, mh, pco);
+			if (!rc)
+				break;
+
+			/* Terminate on exact match. */
+			if (strcmp(odt->odt_name, name) == 0)
+				break;
+		}
+	}
+	PLL_ULOCK(&psc_odtables);
+
+	if (rc && !found && !all)
+		rc = psc_ctlsenderr(fd, mh, "unknown odtable: %s", name);
+	return (rc);
+}
+
 /*
- * psc_ctlhnd_cmd - invoke an action from a "command" inquiry.
+ * psc_ctlhnd_cmd - Invoke an action from a command inquiry.
  * @fd: client socket descriptor.
  * @mh: already filled-in control message header.
  * @m: control message to examine.
@@ -1252,7 +1292,7 @@ psc_ctlhnd_cmd(int fd, struct psc_ctlmsghdr *mh, void *m)
 }
 
 /*
- * psc_ctl_applythrop - invoke an operation on all applicable threads.
+ * psc_ctl_applythrop - Invoke an operation on all applicable threads.
  * @fd: client socket descriptor.
  * @mh: already filled-in control message header.
  * @m: control message to examine.
@@ -1300,7 +1340,7 @@ psc_ctl_applythrop(int fd, struct psc_ctlmsghdr *mh, void *m, const char *thrnam
 }
 
 /*
- * psc_ctlthr_service - satisfy a client connection.
+ * psc_ctlthr_service - Satisfy a client connection.
  * @fd: client socket descriptor.
  *
  * Notes: sched_yield() is not explicity called throughout this routine,
@@ -1388,8 +1428,8 @@ psc_ctlthr_service(int fd, const struct psc_ctlop *ct, int nops)
 	PSCFREE(m);
 }
 
-/*
- * psc_ctlthr_main - main control thread client-servicing loop.
+/**
+ * psc_ctlthr_main - Main control thread client-servicing loop.
  * @ofn: path to control socket.
  * @ct: control operations.
  * @nops: number of operations in @ct table.
