@@ -62,7 +62,6 @@ pfl
     PSC_CTLRET_BAIL - drop the connection
 
   give them obscure values (42,43) and ensure they are returned
-- ensure everything in pscrpc land is prefixed with 'pscrpc'
 - rename bitflag.h -> bit.h
 - let caller worry about memory for vbitmaps, don't return pointers
 - bail if multiwait_addcond() fails, its a mem condition (dynarray)
