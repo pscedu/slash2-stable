@@ -156,6 +156,15 @@ psc_ctlparse_show(char *showspec)
 {
 	char *thrlist, *thr, *thrnext;
 	struct psc_ctlshow_ent *pse;
+	int n;
+
+	if (strcmp(showspec, "?") == 0) {
+		printf("available show specs:\n");
+
+		for (n = 0; n < psc_ctlshow_ntabents; n++)
+			printf("  %s\n", psc_ctlshow_tab[n].pse_name);
+		exit(1);
+	}
 
 	if ((thrlist = strchr(showspec, ':')) == NULL)
 		thrlist = PCTHRNAME_EVERYONE;
