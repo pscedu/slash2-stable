@@ -52,11 +52,11 @@ typedef void (*psc_distill_handler)(struct psc_journal_enthdr *, int);
 struct psc_journal_hdr {
 	uint64_t			 pjh_magic;
 	uint64_t			 pjh_start_off;
-	int32_t			 	 pjh_entsz;
+	int32_t				 pjh_entsz;
 	uint32_t			 pjh_nents;
 	uint32_t			 pjh_version;
 	uint32_t			 pjh_options;
-	int32_t			 	 pjh_readahead;
+	int32_t				 pjh_readahead;
 	uint32_t			 pjh__pad;
 	uint64_t			 pjh_chksum;	/* keep it last and aligned at a 8 byte boundary */
 #define pjh_iolen pjh_start_off
@@ -101,8 +101,7 @@ struct psc_journal {
 #define PJE_FORMAT			(1 << 0)		/* newly-formatted */
 #define PJE_NORMAL			(1 << 1)		/* has data */
 #define PJE_DISTILL			(1 << 2)		/* needs distill */
-
-#define _PJE_FLSHFT			(1 << 6)		/* denote the last used bit */
+#define _PJE_FLSHFT			(1 << 3)		/* denote the last used bit */
 
 /*
  * psc_journal_enthdr - journal entry header.
@@ -168,11 +167,11 @@ struct psc_journal_xidhndl {
 /* definitions of journal handling functions */
 int			 pjournal_dump(const char *, int);
 int			 pjournal_format(const char *, uint32_t, uint32_t, uint32_t);
-struct psc_journal	*pjournal_init(const char *, uint64_t, int, const char *, 
+struct psc_journal	*pjournal_init(const char *, uint64_t, int, const char *,
 			     psc_replay_handler, psc_distill_handler);
 
-char	*pjournal_get_buf(struct psc_journal *, int);
-void	 pjournal_put_buf(struct psc_journal *, char *);
+void	*pjournal_get_buf(struct psc_journal *, size_t);
+void	 pjournal_put_buf(struct psc_journal *, void *);
 
 void	 pjournal_add_entry(struct psc_journal *, uint64_t, int, void *, int);
 void	 pjournal_add_entry_distill(struct psc_journal *, uint64_t, int, void *, int);

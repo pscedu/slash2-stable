@@ -47,7 +47,7 @@ struct psc_journalthr {
 	struct psc_journal *pjt_pj;
 };
 
-__static void		pjournal_logwrite(struct psc_journal_xidhndl *, int, 
+__static void		pjournal_logwrite(struct psc_journal_xidhndl *, int,
 				struct psc_journal_enthdr *, int);
 
 __static int		pjournal_logwrite_internal(struct psc_journal *,
@@ -134,12 +134,12 @@ retry:
 	freed = 1;
 	while (freed && (t = pll_gethdpeek(&pj->pj_pendingxids))) {
 		freed = 0;
-		spinlock(&t->pjx_lock);	
+		spinlock(&t->pjx_lock);
 		if ((t->pjx_txg < xh->pjx_txg) && ((t->pjx_flags & PJX_DISTILL) == 0)) {
 			pll_remove(&pj->pj_pendingxids, t);
 			freed = 1;
 		}
-		freelock(&t->pjx_lock);	
+		freelock(&t->pjx_lock);
 	}
 
 	/*
@@ -239,12 +239,12 @@ pjournal_add_entry_distill(struct psc_journal *pj, uint64_t txg, int type, void 
 	pjournal_logwrite(xh, type|PJE_NORMAL|PJE_DISTILL, pje, size);
 }
 
-char *
-pjournal_get_buf(struct psc_journal *pj, int size)
+void *
+pjournal_get_buf(struct psc_journal *pj, size_t size)
 {
 	struct psc_journal_enthdr *pje;
 
-	psc_assert(size <= PJ_PJESZ(pj) - (int)offsetof(struct psc_journal_enthdr, pje_data));
+	psc_assert(size <= PJ_PJESZ(pj) - offsetof(struct psc_journal_enthdr, pje_data));
 
 	PJ_LOCK(pj);
 	while (!psc_dynarray_len(&pj->pj_bufs)) {
@@ -257,15 +257,16 @@ pjournal_get_buf(struct psc_journal *pj, int size)
 	psc_assert(pje);
 	PJ_ULOCK(pj);
 	pje->pje_magic = PJE_MAGIC;
-	return ((char *)pje + offsetof(struct psc_journal_enthdr, pje_data));
+	return ((void *)((char *)pje + offsetof(struct psc_journal_enthdr, pje_data)));
 }
 
 void
-pjournal_put_buf(struct psc_journal *pj, char *buf)
+pjournal_put_buf(struct psc_journal *pj, void *buf)
 {
 	struct psc_journal_enthdr *pje;
 
-	pje = (struct psc_journal_enthdr *)(buf - offsetof(struct psc_journal_enthdr, pje_data));
+	pje = (struct psc_journal_enthdr *)((char *)buf -
+	    offsetof(struct psc_journal_enthdr, pje_data));
 	psc_assert(pje->pje_magic == PJE_MAGIC);
 
 	PJ_LOCK(pj);
@@ -332,8 +333,8 @@ pjournal_logwrite_internal(struct psc_journal *pj, struct psc_journal_enthdr *pj
  * @data: the journal entry contents to store.
  * @size: size of the custom data
  */
-__static void 
-pjournal_logwrite(struct psc_journal_xidhndl *xh, int type, 
+__static void
+pjournal_logwrite(struct psc_journal_xidhndl *xh, int type,
     struct psc_journal_enthdr *pje, int size)
 {
 	struct psc_journal		*pj;
@@ -453,7 +454,7 @@ pjournal_scan_slots(struct psc_journal *pj)
 				rc = -1;
 				continue;
 			}
-			psc_assert((pje->pje_type & PJE_FORMAT) || 
+			psc_assert((pje->pje_type & PJE_FORMAT) ||
 				   (pje->pje_type & PJE_NORMAL));
 
 			/*
@@ -802,9 +803,9 @@ pjournal_distillthr_main(struct psc_thread *thr)
 
 			(pj->pj_distill_handler)(pje, PJ_PJESZ(pj));
 
-			spinlock(&xh->pjx_lock);	
+			spinlock(&xh->pjx_lock);
 			xh->pjx_flags &= ~PJX_DISTILL;
-			freelock(&xh->pjx_lock);	
+			freelock(&xh->pjx_lock);
 
 			buf = (char *)pje + offsetof(struct psc_journal_enthdr, pje_data);
 			pjournal_put_buf(pj, buf);
@@ -898,7 +899,7 @@ pjournal_init(const char *fn, uint64_t txg,
 	if (distill_handler) {
 		pj->pj_distill_handler = distill_handler;
 
-		thr = pscthr_init(thrtype, 0, pjournal_distillthr_main, 
+		thr = pscthr_init(thrtype, 0, pjournal_distillthr_main,
 			  NULL, sizeof(*pjt), thrname);
 
 		pjt = thr->pscthr_private;
