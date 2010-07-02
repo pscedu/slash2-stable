@@ -47,8 +47,8 @@ struct psc_journalthr {
 	struct psc_journal *pjt_pj;
 };
 
-__static int		pjournal_logwrite(struct psc_journal_xidhndl *, int,
-				void *, size_t);
+__static void		pjournal_logwrite(struct psc_journal_xidhndl *, int, 
+				struct psc_journal_enthdr *, int);
 
 __static int		pjournal_logwrite_internal(struct psc_journal *,
 				struct psc_journal_enthdr *, uint32_t);
@@ -116,32 +116,50 @@ pjournal_next_xid(struct psc_journal *pj)
 	return (xid);
 }
 
-uint32_t
-pjournal_next_slot(struct psc_journal *pj, uint32_t *tail)
+void
+pjournal_next_slot(struct psc_journal_xidhndl *xh)
 {
-	uint32_t slot;
+	int freed;
+	uint32_t slot, tail_slot;
 	struct psc_journal_xidhndl *t;
+	struct psc_journal *pj;
+
+	tail_slot = PJX_SLOT_ANY;
+	pj = xh->pjx_pj;
 retry:
+	/*
+	 * Remove completed transactions off the pending list.
+	 */
+	PJ_LOCK(pj);
+	freed = 1;
+	while (freed && (t = pll_gethdpeek(&pj->pj_pendingxids))) {
+		freed = 0;
+		spinlock(&t->pjx_lock);	
+		if ((t->pjx_txg < xh->pjx_txg) && ((t->pjx_flags & PJX_DISTILL) == 0)) {
+			pll_remove(&pj->pj_pendingxids, t);
+			freed = 1;
+		}
+		freelock(&t->pjx_lock);	
+	}
+
 	/*
 	 * Make sure that the next slot to be written is not used by a
 	 * pending transaction.  Since we add a new transaction at the
 	 * tail of the pending transaction list, we only need to check
 	 * the head of the list to find out the oldest transaction.
 	 */
-	PJ_LOCK(pj);
 	slot = pj->pj_nextwrite;
 	t = pll_gethdpeek(&pj->pj_pendingxids);
 	if (t) {
-		if (t->pjx_tailslot == slot) {
+		if (t->pjx_slot == slot) {
 			psc_warnx("Journal %p write is blocked on slot %d "
-			  "owned by transaction %p (xid = %"PRIx64")",
-			  pj, pj->pj_nextwrite, t, t->pjx_xid);
+			  "owned by transaction %p (xid = %"PRIx64", flags = 0x%x)",
+			  pj, pj->pj_nextwrite, t, t->pjx_xid, t->pjx_flags);
 			pj->pj_flags |= PJF_WANTSLOT;
 			psc_waitq_wait(&pj->pj_waitq, &pj->pj_lock);
 			goto retry;
 		}
-		if (tail)
-			*tail = t->pjx_tailslot;
+		tail_slot = t->pjx_slot;
 	}
 
 	/* Update the next slot to be written by a next log entry */
@@ -149,8 +167,14 @@ retry:
 	if ((++pj->pj_nextwrite) == pj->pj_hdr->pjh_nents)
 		pj->pj_nextwrite = 0;
 
+	xh->pjx_slot = slot;
+	pll_addtail(&pj->pj_pendingxids, xh);
+
 	PJ_ULOCK(pj);
-	return (slot);
+
+	psc_info("Writing a log entry xid=%"PRIx64
+	    ": slot = %d, tail_slot = %d",
+	    xh->pjx_xid, xh->pjx_slot, tail_slot);
 }
 
 /**
@@ -168,8 +192,7 @@ pjournal_xnew(struct psc_journal *pj)
 	xh->pjx_pj = pj;
 	LOCK_INIT(&xh->pjx_lock);
 	xh->pjx_flags = PJX_NONE;
-	xh->pjx_sid = 0;
-	xh->pjx_tailslot = PJX_SLOT_ANY;
+	xh->pjx_slot = PJX_SLOT_ANY;
 	INIT_PSCLIST_ENTRY(&xh->pjx_lentry1);
 	INIT_PSCLIST_ENTRY(&xh->pjx_lentry2);
 	xh->pjx_xid = pjournal_next_xid(pj);
@@ -179,16 +202,49 @@ pjournal_xnew(struct psc_journal *pj)
 	return (xh);
 }
 
-int
-pjournal_xembed_sngl(struct psc_journal *pj, __unusedx int type, __unusedx void *data, __unusedx size_t size)
+/**
+ * pjournal_add_entry - Add a log entry into the journal.
+ */
+void
+pjournal_add_entry(struct psc_journal *pj, uint64_t txg, int type, void *buf, int size)
 {
-	int rc;
-	uint64_t xid;
-	uint32_t slot;
+	struct psc_journal_xidhndl *xh;
 	struct psc_journal_enthdr *pje;
 
-	xid = pjournal_next_xid(pj);
-	slot = pjournal_next_slot(pj, NULL);
+	xh = pjournal_xnew(pj);
+	xh->pjx_txg = txg;
+	xh->pjx_flags = PJX_NONE;
+	pje = (struct psc_journal_enthdr *)(buf - offsetof(struct psc_journal_enthdr, pje_data));
+	psc_assert(pje->pje_magic == PJE_MAGIC);
+
+	pjournal_logwrite(xh, type|PJE_NORMAL, pje, size);
+}
+
+/**
+ * pjournal_add_entry_distill - Add a log entry into the journal.  The log entry needs to be
+ *     distilled.
+ */
+void
+pjournal_add_entry_distill(struct psc_journal *pj, uint64_t txg, int type, void *buf, int size)
+{
+	struct psc_journal_xidhndl *xh;
+	struct psc_journal_enthdr *pje;
+
+	xh = pjournal_xnew(pj);
+	xh->pjx_txg = txg;
+	xh->pjx_flags = PJX_DISTILL;
+	pje = (struct psc_journal_enthdr *)(buf - offsetof(struct psc_journal_enthdr, pje_data));
+	psc_assert(pje->pje_magic == PJE_MAGIC);
+
+	pjournal_logwrite(xh, type|PJE_NORMAL|PJE_DISTILL, pje, size);
+}
+
+char *
+pjournal_get_buf(struct psc_journal *pj, int size)
+{
+	struct psc_journal_enthdr *pje;
+
+	psc_assert(size <= PJ_PJESZ(pj) - (int)offsetof(struct psc_journal_enthdr, pje_data));
 
 	PJ_LOCK(pj);
 	while (!psc_dynarray_len(&pj->pj_bufs)) {
@@ -198,107 +254,26 @@ pjournal_xembed_sngl(struct psc_journal *pj, __unusedx int type, __unusedx void 
 	}
 	pje = psc_dynarray_getpos(&pj->pj_bufs, 0);
 	psc_dynarray_remove(&pj->pj_bufs, pje);
+	psc_assert(pje);
 	PJ_ULOCK(pj);
-
-	rc = pjournal_logwrite_internal(pj, pje, slot);
-
-	PJ_LOCK(pj);
-	psc_dynarray_add(&pj->pj_bufs, pje);
-	if (pj->pj_flags & PJF_WANTBUF) {
-		pj->pj_flags &= ~PJF_WANTBUF;
-		psc_waitq_wakeone(&pj->pj_waitq);
-	}
-	PJ_ULOCK(pj);
-
-	return (rc);
+	pje->pje_magic = PJE_MAGIC;
+	return ((char *)pje + offsetof(struct psc_journal_enthdr, pje_data));
 }
 
-/**
- * pjournal_xadd_sngl - Add a single entry transaction in the system log.
- *     These transactions must be further processed by the distill process
- *     before their log space can be reclaimed.
- */
-int
-pjournal_xadd_sngl(struct psc_journal *pj, int type, void *data, size_t size)
-{
-	struct psc_journal_xidhndl *xh;
-	int rc;
-
-	xh = pjournal_xnew(pj);
-	xh->pjx_flags |= PJX_XSNGL | PJX_XCLOSE;
-
-	rc = pjournal_logwrite(xh, type, data, size);
-	return (rc);
-}
-
-/**
- * pjournal_xadd - Log changes to a piece of metadata (e.g., journal flush
- *     item).  We can't reply to our clients until after the log entry is
- *     written.
- */
-int
-pjournal_xadd(struct psc_journal_xidhndl *xh, int type, void *data,
-    size_t size)
-{
-	spinlock(&xh->pjx_lock);
-	psc_assert(!(xh->pjx_flags & PJX_XCLOSE));
-	freelock(&xh->pjx_lock);
-
-	return (pjournal_logwrite(xh, type, data, size));
-}
-
-/**
- * pjournal_xend - Close a transaction of changes to a piece of metadata.
- */
-int
-pjournal_xend(struct psc_journal_xidhndl *xh)
-{
-	spinlock(&xh->pjx_lock);
-	psc_assert(!(xh->pjx_flags & PJX_XCLOSE));
-	xh->pjx_flags |= PJX_XCLOSE;
-	freelock(&xh->pjx_lock);
-
-	return (pjournal_logwrite(xh, PJE_NONE, NULL, 0));
-}
-
-/**
- * pjournal_xrelease - Release the resources used the transaction.
- */
 void
-pjournal_xrelease(struct psc_journal_xidhndl *xh)
+pjournal_put_buf(struct psc_journal *pj, char *buf)
 {
-	int wakeup = 0;
-	struct psc_journal *pj;
 	struct psc_journal_enthdr *pje;
 
-	pj = xh->pjx_pj;
-
-	pje = (struct psc_journal_enthdr *) xh->pjx_data;
+	pje = (struct psc_journal_enthdr *)(buf - offsetof(struct psc_journal_enthdr, pje_data));
+	psc_assert(pje->pje_magic == PJE_MAGIC);
 
 	PJ_LOCK(pj);
 	psc_dynarray_add(&pj->pj_bufs, pje);
-	wakeup = 0;
 	if (pj->pj_flags & PJF_WANTBUF) {
-		wakeup = 1;
 		pj->pj_flags &= ~PJF_WANTBUF;
-	}
-	if (xh->pjx_flags & PJX_XCLOSE) {
-		if ((pj->pj_flags & PJF_WANTSLOT) &&
-		    (xh->pjx_tailslot == pj->pj_nextwrite)) {
-			wakeup = 1;
-			pj->pj_flags &= ~PJF_WANTSLOT;
-			psc_warnx("Journal %p unblocking slot %d - "
-				  "owned by xid %"PRIx64, pj,
-				  xh->pjx_tailslot, xh->pjx_xid);
-		}
-		psc_dbg("Transaction %p (xid = %"PRIx64") removed from "
-		    "journal %p: tail slot = %d",
-		    xh, xh->pjx_xid, pj, xh->pjx_tailslot);
-		psclist_del(&xh->pjx_lentry1);
-		PSCFREE(xh);
-	}
-	if (wakeup)
 		psc_waitq_wakeall(&pj->pj_waitq);
+	}
 	PJ_ULOCK(pj);
 }
 
@@ -356,102 +331,39 @@ pjournal_logwrite_internal(struct psc_journal *pj, struct psc_journal_enthdr *pj
  * @type: the application-specific log entry type.
  * @data: the journal entry contents to store.
  * @size: size of the custom data
- * Returns: 0 on success, -1 on error.
  */
-__static int
-pjournal_logwrite(struct psc_journal_xidhndl *xh, int type, void *data,
-    size_t size)
+__static void 
+pjournal_logwrite(struct psc_journal_xidhndl *xh, int type, 
+    struct psc_journal_enthdr *pje, int size)
 {
 	struct psc_journal		*pj;
-	struct psc_journal_enthdr	*pje;
-	uint32_t			 slot, tail_slot;
-	int				 rc;
 
 	pj = xh->pjx_pj;
-	tail_slot = PJX_SLOT_ANY;
-
- retry:
-	slot = pjournal_next_slot(pj, &tail_slot);
-	/*
-	 * If we need to consume the slot to embed some information
-	 * into the journal, try to get another slot.
-	 */
-	if (pj->pj_embed_handler && pj->pj_embed_handler(slot))
-		goto retry;
-
-	if (!(xh->pjx_flags & PJX_XSTART)) {
-		type |= PJE_XSTART;
-		xh->pjx_flags |= PJX_XSTART;
-		psc_assert(size != 0);
-		psc_assert(xh->pjx_tailslot == PJX_SLOT_ANY);
-		xh->pjx_tailslot = slot;
-		/* note we add transaction in the order of their starting point */
-		pll_addtail(&pj->pj_pendingxids, xh);
-	}
-	if (xh->pjx_flags & PJX_XCLOSE) {
-		psc_assert(xh->pjx_tailslot != PJX_SLOT_ANY);
-		if (xh->pjx_flags & PJX_XSNGL)
-			type |= PJE_XSNGL;
-		type |= PJE_XCLOSE;
-	}
-
-	psc_assert(slot < pj->pj_hdr->pjh_nents);
-	psc_assert(size + offsetof(struct psc_journal_enthdr, pje_data) <=
-	    (size_t)PJ_PJESZ(pj));
-
-	/* Now grab a buffer for the log entry to be written. */
-	PJ_LOCK(pj);
-	while (!psc_dynarray_len(&pj->pj_bufs)) {
-		pj->pj_flags |= PJF_WANTBUF;
-		psc_waitq_wait(&pj->pj_waitq, &pj->pj_lock);
-		PJ_LOCK(pj);
-	}
-	pje = psc_dynarray_getpos(&pj->pj_bufs, 0);
-	psc_dynarray_remove(&pj->pj_bufs, pje);
-	psc_assert(pje);
-	PJ_ULOCK(pj);
-
 	xh->pjx_data = (void *)pje;
 
-	/* fill in contents for the log entry */
-	pje->pje_magic = PJE_MAGIC;
+	/*
+	 * Fill in the header of the log entry, its
+	 * payload is already filled by our caller.
+	 */
 	pje->pje_type = type;
-	pje->pje_xid = xh->pjx_xid;
 	pje->pje_len = size;
+	pje->pje_xid = xh->pjx_xid;
+	pje->pje_txg = xh->pjx_txg;
 
-	spinlock(&xh->pjx_lock);
-	pje->pje_sid = xh->pjx_sid++;
-	freelock(&xh->pjx_lock);
+	pjournal_next_slot(xh);
 
-	if (data) {
-		psc_assert(size);
-		memcpy(pje->pje_data, data, size);
-	}
+	pjournal_logwrite_internal(pj, pje, xh->pjx_slot);
 
-	psc_info("Writing a log entry xid=%"PRIx64
-	    ": xtail = %d, ltail = %d",
-	    xh->pjx_xid, xh->pjx_tailslot, tail_slot);
-
-	/* Calculate checksum and commit to the disk */
-	rc = pjournal_logwrite_internal(pj, pje, slot);
-
-#if 0
-	if (xh->pjx_flags & PJX_XSNGL) {
+	/*
+	 * If this log entry needs further processing, hand it
+	 * off to the distill thread.
+	 */
+	if (xh->pjx_flags & PJX_DISTILL) {
 		pll_addtail(&pj->pj_distillxids, xh);
 		spinlock(&pjournal_waitqlock);
 		psc_waitq_wakeall(&pjournal_waitq);
 		freelock(&pjournal_waitqlock);
-	} else
-		pjournal_xrelease(xh);
-#else
-	pjournal_xrelease(xh);
-#endif
-
-	psc_info("Completed writing log entry xid=%"PRIx64
-	    ": xtail = %d, slot = %d",
-	    xh->pjx_xid, xh->pjx_tailslot, slot);
-
-	return (rc);
+	}
 }
 
 __static void *
@@ -459,45 +371,6 @@ pjournal_alloc_buf(struct psc_journal *pj)
 {
 	return (psc_alloc(PJ_PJESZ(pj) * pj->pj_hdr->pjh_readahead,
 	    PAF_PAGEALIGN | PAF_LOCK));
-}
-
-/**
- * pjournal_remove_entries - Remove a journal entry if it either has the
- *	given xid (mode = 1) or has a xid that is less than the give xid
- *	(mode = 2).
- * @pj: in-memory journal to remove from.
- * @xid: transaction ID of entries to remove.
- * @mode: operation.
- */
-__static int
-pjournal_remove_entries(struct psc_journal *pj, uint64_t xid, int mode)
-{
-	struct psc_journal_enthdr *pje;
-	int i, scan, count;
-
-	scan = 1;
-	count = 0;
-	while (scan) {
-		scan = 0;
-		for (i = 0; i < psc_dynarray_len(&pj->pj_bufs); i++) {
-			pje = psc_dynarray_getpos(&pj->pj_bufs, i);
-			if (mode == 1 && pje->pje_xid == xid) {
-				psc_dynarray_remove(&pj->pj_bufs, pje);
-				psc_freenl(pje, PJ_PJESZ(pj));
-				scan = 1;
-				count++;
-				break;
-			}
-			if (mode == 2 && pje->pje_xid < xid) {
-				psc_dynarray_remove(&pj->pj_bufs, pje);
-				psc_freenl(pje, PJ_PJESZ(pj));
-				scan = 1;
-				count++;
-				break;
-			}
-		}
-	}
-	return (count);
 }
 
 /**
@@ -512,7 +385,7 @@ pjournal_xid_cmp(const void *x, const void *y)
 	rc = CMP(a->pje_xid, b->pje_xid);
 	if (rc)
 		return (rc);
-	return (CMP(a->pje_sid, b->pje_sid));
+	return (CMP(a->pje_txg, b->pje_txg));
 }
 
 /*
@@ -523,8 +396,7 @@ pjournal_xid_cmp(const void *x, const void *y)
 __static int
 pjournal_scan_slots(struct psc_journal *pj)
 {
-	int				 i;
-	int				 rc;
+	int				 i, rc;
 	struct psc_journal_enthdr	*pje;
 	uint32_t			 slot;
 	unsigned char			*jbuf;
@@ -534,33 +406,19 @@ pjournal_scan_slots(struct psc_journal *pj)
 	int				 nchksum;
 	uint64_t			 last_xid;
 	int32_t				 last_slot;
-	struct psc_dynarray		 closetrans;
 	uint64_t			 last_startup;
-	int				 count, nopen, nscan, nmagic, nentry;
+	int				 count, nopen, nscan, nmagic;
 
 	rc = 0;
-	slot = 0;
-	nopen = 0;
-	nscan = 0;
-	nmagic = 0;
-	nclose = 0;
-	nchksum = 0;
 	last_xid = PJE_XID_NONE;
 	last_slot = PJX_SLOT_ANY;
 	last_startup = PJE_XID_NONE;
+	slot = nopen = nscan = nmagic = nclose = nchksum = 0;
 
 	/*
 	 * We scan the log from the first physical entry to the last physical
-	 * one regardless where the log really starts and ends.  This poses a
-	 * problem: we might see the CLOSE entry of a transaction before
-	 * its other entries due to log wraparound.  As a result, we
-	 * must save these CLOSE entries until we have seen all the
-	 * entries of the transaction (some of them might have already
-	 * been overwritten, but that is perfectly fine).
+	 * one regardless where the log really starts and ends.
 	 */
-	psc_dynarray_init(&closetrans);
-	psc_dynarray_ensurelen(&closetrans, pj->pj_hdr->pjh_nents / 2);
-
 	psc_dynarray_init(&pj->pj_bufs);
 	jbuf = pjournal_alloc_buf(pj);
 	count = pj->pj_hdr->pjh_readahead;
@@ -595,11 +453,8 @@ pjournal_scan_slots(struct psc_journal *pj)
 				rc = -1;
 				continue;
 			}
-			psc_assert((pje->pje_type & PJE_XSTART) ||
-			    (pje->pje_type & PJE_XCLOSE) ||
-			    (pje->pje_type & PJE_STRTUP) ||
-			    (pje->pje_type & PJE_FORMAT) ||
-			    (pje->pje_type & PJE_XNORML));
+			psc_assert((pje->pje_type & PJE_FORMAT) || 
+				   (pje->pje_type & PJE_NORMAL));
 
 			/*
 			 * We start from the first log entry.  If we see
@@ -620,50 +475,17 @@ pjournal_scan_slots(struct psc_journal *pj)
 				last_xid = pje->pje_xid;
 				last_slot = slot + i;
 			}
-			if (pje->pje_type & PJE_STRTUP) {
-				psc_assert(pje->pje_len == 0);
-				psc_info("Journal %p: found a startup "
-				    "entry at slot %d!", pj, slot+i);
-				if (pje->pje_xid > last_startup)
-					last_startup = pje->pje_xid;
+			if (pje->pje_txg <= pj->pj_txg)
 				continue;
-			}
-			if (pje->pje_type & PJE_XCLOSE) {
-				nclose++;
-				if (!(pje->pje_type & PJE_XSNGL)) {
-					psc_assert(pje->pje_len == 0);
-					nentry = pjournal_remove_entries(pj,
-					    pje->pje_xid, 1);
-					psc_assert(nentry <= (int)pje->pje_sid);
-					if (nentry == (int)pje->pje_sid)
-						continue;
-				}
-			}
 
 			/* Okay, we need to keep this log entry for now.  */
 			tmppje = psc_alloc(PJ_PJESZ(pj), PAF_PAGEALIGN|PAF_LOCK);
 			memcpy(tmppje, &jbuf[PJ_PJESZ(pj) * i], sizeof(*tmppje));
-			if (pje->pje_type & PJE_XCLOSE) {
-				psc_dynarray_add(&closetrans, tmppje);
-			} else {
-				psc_dynarray_add(&pj->pj_bufs, tmppje);
-			}
+			psc_dynarray_add(&pj->pj_bufs, tmppje);
 		}
 		slot += count;
 	}
  done:
-	/*
-	 * If we are dealing with a brand new log or the log has wrapped around,
-	 * we won't see a startup record because we currently only write it when
-	 * we start.
-	 *
-	 * The main use of the startup record is to prevent us from considering
-	 * log records from previous instance of the file system. For the current
-	 * run, we rely on PJE_XCLOSE records to reduce replay.  In other words,
-	 * inserting more startup records won't help.
-	 */
-	if (last_startup != PJE_XID_NONE)
-		pjournal_remove_entries(pj, last_startup, 2);
 
 	pj->pj_lastxid = last_xid;
 	/* If last_slot is PJX_SLOT_ANY, then nextwrite will be 0 */
@@ -672,18 +494,6 @@ pjournal_scan_slots(struct psc_journal *pj)
 	qsort(pj->pj_bufs.da_items, pj->pj_bufs.da_pos,
 	    sizeof(void *), pjournal_xid_cmp);
 	psc_freenl(jbuf, PJ_PJESZ(pj) * pj->pj_hdr->pjh_readahead);
-
-	/*
-	 * We need this code because we don't start from the beginning of the log.
-	 * On the other hand, I don't expect either array to be long.
-	 */
-	while (psc_dynarray_len(&closetrans)) {
-		pje = psc_dynarray_getpos(&closetrans, 0);
-		pjournal_remove_entries(pj, pje->pje_xid, 1);
-		psc_dynarray_remove(&closetrans, pje);
-		psc_freenl(pje, PJ_PJESZ(pj));
-	}
-	psc_dynarray_free(&closetrans);
 
 	nopen = psc_dynarray_len(&pj->pj_bufs);
 	psc_info("Journal statistics: %d close, %d open, %d magic, "
@@ -707,7 +517,7 @@ pjournal_open(const char *fn)
 	ssize_t pjhlen;
 
 	pj = PSCALLOC(sizeof(*pj));
-	pj->pj_fd = open(fn, O_RDWR | O_DIRECT);
+	pj->pj_fd = open(fn, O_RDWR | O_DIRECT | O_SYNC);
 	if (pj->pj_fd == -1)
 		psc_fatal("failed to open journal %s", fn);
 	if (fstat(pj->pj_fd, &statbuf) == -1)
@@ -857,7 +667,6 @@ pjournal_format(const char *fn, uint32_t nents, uint32_t entsz, uint32_t ra)
 		pje->pje_magic = PJE_MAGIC;
 		pje->pje_type = PJE_FORMAT;
 		pje->pje_xid = PJE_XID_NONE;
-		pje->pje_sid = PJE_XID_NONE;
 		pje->pje_len = 0;
 
 		PSC_CRC64_INIT(&pje->pje_chksum);
@@ -956,9 +765,9 @@ pjournal_dump(const char *fn, int verbose)
 			}
 			if (verbose)
 				printf("slot %u: type %x "
-				    "xid %"PRIx64" sid %d\n",
+				    "txg %"PRIx64" xid %"PRIx64"\n",
 				    slot + i, pje->pje_type,
-				    pje->pje_xid, pje->pje_sid);
+				    pje->pje_xid, pje->pje_txg);
 		}
 
 	}
@@ -976,6 +785,7 @@ pjournal_dump(const char *fn, int verbose)
 void
 pjournal_distillthr_main(struct psc_thread *thr)
 {
+	char *buf;
 	struct psc_journalthr *pjt = thr->pscthr_private;
 	struct psc_journal *pj = pjt->pjt_pj;
 	struct psc_journal_enthdr *pje;
@@ -986,9 +796,18 @@ pjournal_distillthr_main(struct psc_thread *thr)
 		 * Walk the list until we find a log entry that needs processing.
 		 */
 		while ((xh = pll_get(&pj->pj_distillxids))) {
+
+			psc_assert(xh->pjx_flags & PJX_DISTILL);
 			pje = (struct psc_journal_enthdr *) xh->pjx_data;
+
 			(pj->pj_distill_handler)(pje, PJ_PJESZ(pj));
-			pjournal_xrelease(xh);
+
+			spinlock(&xh->pjx_lock);	
+			xh->pjx_flags &= ~PJX_DISTILL;
+			freelock(&xh->pjx_lock);	
+
+			buf = (char *)pje + offsetof(struct psc_journal_enthdr, pje_data);
+			pjournal_put_buf(pj, buf);
 		}
 		spinlock(&pjournal_waitqlock);
 		if ((xh = pll_gethdpeek(&pj->pj_distillxids))) {
@@ -1012,7 +831,6 @@ pjournal_distillthr_main(struct psc_thread *thr)
 struct psc_journal *
 pjournal_init(const char *fn, uint64_t txg,
     int thrtype, const char *thrname,
-    psc_embed_handler embed_handler,
     psc_replay_handler replay_handler,
     psc_distill_handler distill_handler)
 {
@@ -1020,7 +838,6 @@ pjournal_init(const char *fn, uint64_t txg,
 	struct psc_journal		*pj;
 	struct psc_journal_enthdr	*pje;
 	int				 nerrs;
-	uint64_t			 chksum;
 	int				 nentries;
 	struct psc_journalthr		*pjt;
 	struct psc_thread		*thr;
@@ -1031,6 +848,14 @@ pjournal_init(const char *fn, uint64_t txg,
 	pj = pjournal_open(fn);
 	if (pj == NULL)
 		return (NULL);
+
+	pj->pj_txg = txg;
+	/*
+	 * Figure out the last XID whose log entry has been distilled
+	 * if need be.  A naive way is to simply maintain a log named
+	 * distill.log.
+	 */
+	pj->pj_distillxid = 0;
 
 	nerrs = 0;
 	nentries = 0;
@@ -1061,41 +886,14 @@ pjournal_init(const char *fn, uint64_t txg,
 	psc_assert(!psc_dynarray_len(&pj->pj_bufs));
 	psc_dynarray_free(&pj->pj_bufs);
 
-	/* write a startup marker after replaying all the log entries */
-	pje = psc_alloc(PJ_PJESZ(pj), PAF_PAGEALIGN | PAF_LOCK);
-
-	pje->pje_magic = PJE_MAGIC;
-	pje->pje_type = PJE_STRTUP;
-	pj->pj_lastxid++;
-	if (pj->pj_lastxid == PJE_XID_NONE)
-		pj->pj_lastxid++;
-	pje->pje_xid = pj->pj_lastxid;
-	pje->pje_sid = PJE_XID_NONE;
-	pje->pje_len = 0;
-
-	PSC_CRC64_INIT(&chksum);
-	psc_crc64_add(&chksum, pje,
-	    offsetof(struct psc_journal_enthdr, pje_chksum));
-	psc_crc64_add(&chksum, pje->pje_data, pje->pje_len);
-	PSC_CRC64_FIN(&chksum);
-	pje->pje_chksum = chksum;
-
-	if (pj->pj_nextwrite >= pj->pj_hdr->pjh_nents)
-		pj->pj_nextwrite = 0;
-
-	if (psc_journal_write(pj, pje, PJ_PJESZ(pj),
-	    PJ_GETENTOFF(pj, pj->pj_nextwrite)))
-		psc_fatalx("failed to write a start up marker in the journal");
-	psc_freenl(pje, PJ_PJESZ(pj));
-
-	pj->pj_nextwrite++;
+	/* start at the first slot of the journal */
+	pj->pj_nextwrite = 0;
 
 	/* pre-allocate some buffers for log writes/distill */
 	for (i = 0; i < PJ_MAX_BUF; i++) {
 		pje = psc_alloc(PJ_PJESZ(pj), PAF_PAGEALIGN | PAF_LOCK);
 		psc_dynarray_add(&pj->pj_bufs, pje);
 	}
-	pj->pj_embed_handler = embed_handler;
 
 	if (distill_handler) {
 		pj->pj_distill_handler = distill_handler;
