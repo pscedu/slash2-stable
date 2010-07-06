@@ -107,7 +107,7 @@ psc_journal_io(struct psc_journal *pj, void *p, size_t len, off_t off,
 	return (rc);
 }
 
-uint64_t
+__static uint64_t
 pjournal_next_xid(struct psc_journal *pj)
 {
 	uint64_t xid;
@@ -125,7 +125,7 @@ pjournal_next_xid(struct psc_journal *pj)
 	return (xid);
 }
 
-void
+__static void
 pjournal_next_slot(struct psc_journal_xidhndl *xh)
 {
 	int freed;
@@ -489,8 +489,8 @@ pjournal_scan_slots(struct psc_journal *pj)
 			    (pje->pje_txg <= pj->pj_commit_txg))
 				continue;
 
-			if (((pje->pje_type & PJE_DISTILL) != 0) &&
-			    (pje->pje_txg <= pj->pj_commit_txg) &&
+			if (((pje->pje_type & PJE_DISTILL) != 0) && 
+                            (pje->pje_txg <= pj->pj_commit_txg) &&
 			    (pje->pje_xid <= pj->pj_distill_xid))
 				continue;
 
