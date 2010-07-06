@@ -77,7 +77,7 @@ psc_journal_io(struct psc_journal *pj, void *p, size_t len, off_t off,
 		nb = pread(pj->pj_fd, p, len, off);
 	else
 		nb = pwrite(pj->pj_fd, p, len, off);
-	
+
 	if (nb == -1) {
 		rc = errno;
 		psc_error("journal %s (pj=%p, len=%zd, off=%"PSCPRIdOFF")",
@@ -95,9 +95,9 @@ psc_journal_io(struct psc_journal *pj, void *p, size_t len, off_t off,
 		rc = 0;
 		psc_iostats_intv_add(rw == JIO_READ ?
 		    &pj->pj_rdist : &pj->pj_wrist, nb);
-		
+
 		if (rw == JIO_WRITE) {
-			rc = sync_file_range(pj->pj_fd, off, len, 
+			rc = sync_file_range(pj->pj_fd, off, len,
 				     SYNC_FILE_RANGE_WRITE | SYNC_FILE_RANGE_WAIT_AFTER);
 			if (rc)
 				psc_error("sync_file_range failed (len=%zd, off=%"
@@ -485,12 +485,12 @@ pjournal_scan_slots(struct psc_journal *pj)
 				last_xid = pje->pje_xid;
 				last_slot = slot + i;
 			}
-			if (((pje->pje_type & PJE_DISTILL) == 0) && 
-                            (pje->pje_txg <= pj->pj_commit_txg))
+			if (((pje->pje_type & PJE_DISTILL) == 0) &&
+			    (pje->pje_txg <= pj->pj_commit_txg))
 				continue;
 
-			if (((pje->pje_type & PJE_DISTILL) != 0) && 
-                            (pje->pje_txg <= pj->pj_commit_txg) &&
+			if (((pje->pje_type & PJE_DISTILL) != 0) &&
+			    (pje->pje_txg <= pj->pj_commit_txg) &&
 			    (pje->pje_xid <= pj->pj_distill_xid))
 				continue;
 
@@ -557,7 +557,7 @@ pjournal_open(const char *fn)
 
 	pj->pj_hdr = pjh;
 	if (pjh->pjh_magic != PJH_MAGIC) {
-		psc_errorx("Journal header has a bad magic number %lx", pjh->pjh_magic);
+		psc_errorx("Journal header has a bad magic number %"PRIx64, pjh->pjh_magic);
 		goto err;
 	}
 	if (pjh->pjh_version != PJH_VERSION) {

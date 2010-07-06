@@ -201,7 +201,7 @@ odtable_create(const char *fn, size_t nelems, size_t elemsz)
 	for (z = 0; z < nelems; z++) {
 		odtf.odtf_slotno = z;
 
-		psc_trace("elem=%zd offset=%"PRIu64" size=%zu",
+		psc_trace("elem=%zd offset=%zu size=%zu",
 		    z, odtable_getitem_foff(&odt, z), sizeof(odtf));
 
 		if (pwrite(odt.odt_fd, &odtf, sizeof(odtf),
