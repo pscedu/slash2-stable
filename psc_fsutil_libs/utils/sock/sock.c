@@ -203,6 +203,12 @@ sock_setoptions(int s)
 	pfl_socket_setnosig(s);
 }
 
+void *
+get_ifr_addr(struct ifreq *ifr)
+{
+	return (&ifr->ifr_addr);
+}
+
 __dead void
 dolisten(const char *listenif)
 {
@@ -223,7 +229,7 @@ dolisten(const char *listenif)
 		psc_fatal("ioctl GIFADDR %s", listenif);
 	close(s);
 
-	sin = (struct sockaddr_in *)&ifr.ifr_addr;
+	sin = get_ifr_addr(&ifr);
 	if (sin->sin_family != AF_INET)
 		psc_fatalx("non-ipv4 not supported");
 
