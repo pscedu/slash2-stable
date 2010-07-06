@@ -77,6 +77,7 @@ psc_journal_io(struct psc_journal *pj, void *p, size_t len, off_t off,
 		nb = pread(pj->pj_fd, p, len, off);
 	else
 		nb = pwrite(pj->pj_fd, p, len, off);
+	
 	if (nb == -1) {
 		rc = errno;
 		psc_error("journal %s (pj=%p, len=%zd, off=%"PSCPRIdOFF")",
@@ -94,6 +95,13 @@ psc_journal_io(struct psc_journal *pj, void *p, size_t len, off_t off,
 		rc = 0;
 		psc_iostats_intv_add(rw == JIO_READ ?
 		    &pj->pj_rdist : &pj->pj_wrist, nb);
+		
+		if (rw == JIO_WRITE) {
+			rc = sync_file_range(pj->pj_fd, off, len, 0);
+			if (rc)
+				psc_error("sync_file_range failed (len=%zd, off=%"
+					  PSCPRIdOFF")", len, off);
+		}
 	}
 	return (rc);
 }
@@ -302,10 +310,10 @@ pjournal_logwrite_internal(struct psc_journal *pj, struct psc_journal_enthdr *pj
 	/* commit the log entry on disk before we can return */
 	ntries = PJ_MAX_TRY;
 	while (ntries > 0) {
-		psc_trace("io_start slot=%u", slot);
+		psc_dbg("io_start slot=%u", slot);
 		rc = psc_journal_write(pj, pje, PJ_PJESZ(pj),
 		    PJ_GETENTOFF(pj, slot));
-		psc_trace("io_done slot=%u (rc=%d)", slot, rc);
+		psc_dbg("io_done slot=%u (rc=%d)", slot, rc);
 		if (rc == EAGAIN) {
 			ntries--;
 			usleep(100);
@@ -476,11 +484,11 @@ pjournal_scan_slots(struct psc_journal *pj)
 				last_xid = pje->pje_xid;
 				last_slot = slot + i;
 			}
-			if ((pje->pje_type & PJE_DISTILL == 0) && 
+			if (((pje->pje_type & PJE_DISTILL) == 0) && 
                             (pje->pje_txg <= pj->pj_commit_txg))
 				continue;
 
-			if ((pje->pje_type & PJE_DISTILL != 0) && 
+			if (((pje->pje_type & PJE_DISTILL) != 0) && 
                             (pje->pje_txg <= pj->pj_commit_txg) &&
 			    (pje->pje_xid <= pj->pj_distill_xid))
 				continue;
@@ -524,7 +532,7 @@ pjournal_open(const char *fn)
 	ssize_t pjhlen;
 
 	pj = PSCALLOC(sizeof(*pj));
-	pj->pj_fd = open(fn, O_RDWR | O_DIRECT | O_SYNC);
+	pj->pj_fd = open(fn, O_RDWR | O_DIRECT);
 	if (pj->pj_fd == -1)
 		psc_fatal("failed to open journal %s", fn);
 	if (fstat(pj->pj_fd, &statbuf) == -1)
@@ -844,7 +852,7 @@ pjournal_init(const char *fn, uint64_t txg,
 	int				 i, rc;
 	struct psc_journal		*pj;
 	struct psc_journal_enthdr	*pje;
-	int				 nerrs;
+	int				 nerrs=0;
 	int				 nentries;
 	struct psc_journalthr		*pjt;
 	struct psc_thread		*thr;
