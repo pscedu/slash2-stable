@@ -97,7 +97,8 @@ psc_journal_io(struct psc_journal *pj, void *p, size_t len, off_t off,
 		    &pj->pj_rdist : &pj->pj_wrist, nb);
 		
 		if (rw == JIO_WRITE) {
-			rc = sync_file_range(pj->pj_fd, off, len, 0);
+			rc = sync_file_range(pj->pj_fd, off, len, 
+				     SYNC_FILE_RANGE_WRITE | SYNC_FILE_RANGE_WAIT_AFTER);
 			if (rc)
 				psc_error("sync_file_range failed (len=%zd, off=%"
 					  PSCPRIdOFF")", len, off);
