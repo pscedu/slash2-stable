@@ -231,6 +231,8 @@ acsvc_svrmain(int s)
 			    arq.arq_data_open.flags,
 			    arq.arq_data_open.mode);
 			if (fd != -1) {
+				int *p;
+
 				m.msg_control = ac.ac_buf;
 				m.msg_controllen = sizeof(ac.ac_buf);
 
@@ -238,7 +240,10 @@ acsvc_svrmain(int s)
 				c->cmsg_len = CMSG_LEN(sizeof(int));
 				c->cmsg_level = SOL_SOCKET;
 				c->cmsg_type = SCM_RIGHTS;
-				*(int *)CMSG_DATA(c) = fd;
+
+				/* workaround gcc aliasing complaint */
+				p = (void *)CMSG_DATA(c);
+				*p = fd;
 			}
 			break;
 		case ACSOP_READLINK:
@@ -347,9 +352,12 @@ acsvc_climain(__unusedx struct psc_thread *thr)
 			if (c->cmsg_len == CMSG_LEN(sizeof(int)) &&
 			    c->cmsg_level == SOL_SOCKET &&
 			    c->cmsg_type == SCM_RIGHTS) {
+				int *p;
+
+				p = (void *)CMSG_DATA(c);
 				if (apr->apr_op == ACSOP_OPEN &&
 				    arp.arp_rc == 0)
-					arp.arp_data_open.fd = *(int *)CMSG_DATA(c);
+					arp.arp_data_open.fd = *p;
 				break;
 			}
 		apr->apr_rep = arp;
