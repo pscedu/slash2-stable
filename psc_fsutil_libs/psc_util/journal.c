@@ -476,7 +476,13 @@ pjournal_scan_slots(struct psc_journal *pj)
 				last_xid = pje->pje_xid;
 				last_slot = slot + i;
 			}
-			if (pje->pje_txg <= pj->pj_txg)
+			if ((pje->pje_type & PJE_DISTILL == 0) && 
+                            (pje->pje_txg <= pj->pj_commit_txg))
+				continue;
+
+			if ((pje->pje_type & PJE_DISTILL != 0) && 
+                            (pje->pje_txg <= pj->pj_commit_txg) &&
+			    (pje->pje_xid <= pj->pj_distill_xid))
 				continue;
 
 			/* Okay, we need to keep this log entry for now.  */
@@ -850,29 +856,20 @@ pjournal_init(const char *fn, uint64_t txg,
 	if (pj == NULL)
 		return (NULL);
 
-	pj->pj_txg = txg;
+	pj->pj_commit_txg = txg;
 	/*
 	 * Figure out the last XID whose log entry has been distilled
 	 * if need be.  A naive way is to simply maintain a log named
 	 * distill.log.
 	 */
-	pj->pj_distillxid = 0;
+	pj->pj_distill_xid = 0;
 
-	nerrs = 0;
-	nentries = 0;
 	rc = pjournal_scan_slots(pj);
 	if (rc) {
 		rc = 0;
 		nerrs++;
 	}
-	/*
-	 * We used to collect all log entries for the same transaction
-	 * and replay one transaction at a time.  However, because log
-	 * entries of transactions can interpose, it is inefficient to
-	 * scan all entries just to find all entries of a particular
-	 * transaction.  Fortunately, we can replay one log entry at
-	 * a time.
-	 */
+	nentries = 0;
 	while (psc_dynarray_len(&pj->pj_bufs)) {
 		pje = psc_dynarray_getpos(&pj->pj_bufs, 0);
 		psc_dynarray_remove(&pj->pj_bufs, pje);

@@ -66,8 +66,8 @@ struct psc_journal {
 	psc_spinlock_t			 pj_lock;
 	int				 pj_flags;
 	uint64_t			 pj_lastxid;		/* last transaction ID used */
-	uint64_t			 pj_distillxid;		/* last transaction ID distilled */
-	uint64_t			 pj_txg;		/* current ZFS transaction group number  */
+	uint64_t			 pj_distill_xid;	/* last transaction ID distilled */
+	uint64_t			 pj_commit_txg;		/* committed ZFS transaction group number  */
 	struct psc_journal_hdr		*pj_hdr;
 
 	psc_spinlock_t			 pj_pendinglock;
