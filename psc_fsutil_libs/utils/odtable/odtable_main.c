@@ -33,6 +33,10 @@
 #include "psc_util/log.h"
 #include "psc_util/odtable.h"
 
+/* copied from include/pathnames.h */
+#define SL_PATH_DATADIR         "/var/lib/slashd"
+#define SL_FN_IONBMAPS_ODT      "ion_bmaps.odt"
+
 struct psc_dynarray myReceipts = DYNARRAY_INIT;
 const char *progname;
 
@@ -61,7 +65,7 @@ main(int argc, char *argv[])
 {
 	int c, rc, i;
 
-	char *fn = NULL;
+	char fn[PATH_MAX];
 
 	int create_table = 0;
 	int load_table   = 1;
@@ -76,6 +80,7 @@ main(int argc, char *argv[])
 	struct odtable *odt;
 	char *item;
 
+	fn[0] = '\0';
 	pfl_init();
 	progname = argv[0];
 	while ((c = getopt(argc, argv, "Cce:f:lN:n:sz:")) != -1)
@@ -97,7 +102,7 @@ main(int argc, char *argv[])
 			break;
 		case 'N':
 			psc_warnx("-N is deprecated");
-			fn = optarg;
+			strncpy(fn, optarg, sizeof(fn));
 			break;
 		case 'n':
 			num_puts = atoi(optarg);
@@ -114,11 +119,12 @@ main(int argc, char *argv[])
 	argc -= optind;
 	argv += optind;
 	if (argc == 1)
-		fn = argv[0];
-	else if (argc == 0 && fn)
-		;
-	else
+		strncpy(fn, argv[0], sizeof(argv[0]));
+	else if (argc != 0)
 		usage();
+
+	if (fn[0] == '\0') 
+		snprintf(fn, PATH_MAX, "%s/%s", SL_PATH_DATADIR, SL_FN_IONBMAPS_ODT);
 
 	if (create_table &&
 	    (rc = odtable_create(fn, table_size, elem_size)))
