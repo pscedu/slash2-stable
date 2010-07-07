@@ -89,6 +89,7 @@ struct psc_journal {
 #define PJF_NONE			0
 #define PJF_WANTBUF			(1 << 0)
 #define PJF_WANTSLOT			(1 << 1)
+#define PJF_ISBLKDEV                    (1 << 2)
 
 #define PJE_XID_NONE			0			/* invalid transaction ID */
 #define PJE_MAGIC			UINT64_C(0x4567abcd)

@@ -97,8 +97,17 @@ psc_journal_io(struct psc_journal *pj, void *p, size_t len, off_t off,
 		    &pj->pj_rdist : &pj->pj_wrist, nb);
 
 		if (rw == JIO_WRITE) {
-			rc = sync_file_range(pj->pj_fd, off, len,
-				     SYNC_FILE_RANGE_WRITE | SYNC_FILE_RANGE_WAIT_AFTER);
+			if (pj->pj_flags & PJF_ISBLKDEV) {
+#ifdef SLASH2_USE_SYNC_FILE_RANGE
+				rc = sync_file_range(pj->pj_fd, off, len,
+					     SYNC_FILE_RANGE_WRITE | 
+					     SYNC_FILE_RANGE_WAIT_AFTER);
+#else
+				rc = fdatasync(pj->pj_fd);
+#endif
+			} else
+				rc = fsync(pj->pj_fd);
+
 			if (rc)
 				psc_error("sync_file_range failed (len=%zd, off=%"
 					  PSCPRIdOFF")", len, off);
@@ -575,8 +584,11 @@ pjournal_open(const char *fn)
 		goto err;
 	}
 
-	if (!S_ISBLK(statbuf.st_mode) &&
-	    (statbuf.st_size != (off_t)(pjhlen + pjh->pjh_nents * PJ_PJESZ(pj)))) {
+	if (S_ISBLK(statbuf.st_mode))
+		pj->pj_flags |= PJF_ISBLKDEV;
+
+	else if (statbuf.st_size != 
+		 (off_t)(pjhlen + pjh->pjh_nents * PJ_PJESZ(pj))) {
 		psc_errorx("Size of the log file does not match specs in its header");
 		goto err;
 	}
