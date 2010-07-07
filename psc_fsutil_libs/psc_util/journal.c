@@ -43,6 +43,8 @@
 #include "psc_util/time.h"
 #include "psc_util/waitq.h"
 
+#include "zfs-fuse/zfs_slashlib.h"
+
 struct psc_journalthr {
 	struct psc_journal *pjt_pj;
 };
@@ -137,54 +139,27 @@ pjournal_next_xid(struct psc_journal *pj)
 __static void
 pjournal_next_slot(struct psc_journal_xidhndl *xh)
 {
-	int freed;
 	uint32_t slot, tail_slot;
 	struct psc_journal_xidhndl *t;
 	struct psc_journal *pj;
 
 	tail_slot = PJX_SLOT_ANY;
 	pj = xh->pjx_pj;
-retry:
-	/*
-	 * Remove completed transactions off the pending list.
-	 */
-	PJ_LOCK(pj);
-	freed = 1;
-	while (freed && (t = pll_gethdpeek(&pj->pj_pendingxids))) {
-		freed = 0;
-		spinlock(&t->pjx_lock);
-		if ((t->pjx_txg < xh->pjx_txg) && ((t->pjx_flags & PJX_DISTILL) == 0)) {
-			pll_remove(&pj->pj_pendingxids, t);
-			freed = 1;
-		}
-		freelock(&t->pjx_lock);
-	}
 
-	/*
-	 * Make sure that the next slot to be written is not used by a
-	 * pending transaction.  Since we add a new transaction at the
-	 * tail of the pending transaction list, we only need to check
-	 * the head of the list to find out the oldest transaction.
-	 */
-	slot = pj->pj_nextwrite;
+	PJ_LOCK(pj);
+
 	t = pll_gethdpeek(&pj->pj_pendingxids);
-	if (t) {
-		if (t->pjx_slot == slot) {
-			psc_warnx("Journal %p write is blocked on slot %d "
-			  "owned by transaction %p (xid = %"PRIx64", flags = 0x%x)",
-			  pj, pj->pj_nextwrite, t, t->pjx_xid, t->pjx_flags);
-			pj->pj_flags |= PJF_WANTSLOT;
-			psc_waitq_wait(&pj->pj_waitq, &pj->pj_lock);
-			goto retry;
-		}
+	if (t) 
 		tail_slot = t->pjx_slot;
-	}
+
+	slot = pj->pj_nextwrite;
 
 	/* Update the next slot to be written by a next log entry */
-	psc_assert(pj->pj_nextwrite < pj->pj_hdr->pjh_nents);
-	if ((++pj->pj_nextwrite) == pj->pj_hdr->pjh_nents)
+	psc_assert(pj->pj_nextwrite < pj->pj_total);
+	if ((++pj->pj_nextwrite) == pj->pj_total)
 		pj->pj_nextwrite = 0;
 
+	pj->pj_inuse++;
 	xh->pjx_slot = slot;
 	pll_addtail(&pj->pj_pendingxids, xh);
 
@@ -200,7 +175,7 @@ retry:
  *	journal.
  * @pj: the owning journal.
  */
-struct psc_journal_xidhndl *
+__static struct psc_journal_xidhndl *
 pjournal_xnew(struct psc_journal *pj)
 {
 	struct psc_journal_xidhndl *xh;
@@ -218,6 +193,73 @@ pjournal_xnew(struct psc_journal *pj)
 	psc_info("starting a new transaction %p (xid = %"PRIx64") in "
 	    "journal %p", xh, xh->pjx_xid, pj);
 	return (xh);
+}
+
+void
+pjournal_reserve_slot(struct psc_journal *pj)
+{
+	struct psc_journal_xidhndl *t;
+
+	while (1) {
+		PJ_LOCK(pj);
+		if (pj->pj_resrv + pj->pj_inuse <  pj->pj_total)
+			break;
+
+		pj->pj_commit_txg = zfsslash2_return_synced();
+
+		t = pll_gethdpeek(&pj->pj_pendingxids);
+		if (!t) {
+
+			/* this should never happen in practice */
+			psc_warnx("Journal %p reservation is blocked on over-reservation: "
+			  "resrv = %d, inuse = %d", pj, pj->pj_resrv, pj->pj_inuse);
+
+			pj->pj_flags |= PJF_WANTSLOT;
+			psc_waitq_wait(&pj->pj_waitq, &pj->pj_lock);
+			continue;
+		}
+		spinlock(&t->pjx_lock);
+		if (t->pjx_txg > pj->pj_commit_txg) {
+
+			psc_warnx("Journal %p reservation is blocked on slot %d "
+			  "owned by transaction %p (xid = %"PRIx64", txg = %"PRId64")",
+			  pj, pj->pj_nextwrite, t, t->pjx_xid, t->pjx_txg);
+
+			freelock(&t->pjx_lock);
+			PJ_ULOCK(pj);
+			zfsslash2_wait_synced(t->pjx_txg);
+			continue;
+		} 
+		if (t->pjx_flags & PJX_DISTILL) {
+
+			psc_warnx("Journal %p reservation is blocked on slot %d "
+			  "owned by transaction %p (xid = %"PRIx64", flags = 0x%x)",
+			  pj, pj->pj_nextwrite, t, t->pjx_xid, t->pjx_flags);
+
+			freelock(&t->pjx_lock);
+			PJ_ULOCK(pj);
+			usleep(100);
+			continue;
+		}
+		pll_remove(&pj->pj_pendingxids, t);
+		freelock(&t->pjx_lock);
+		pj->pj_inuse--;
+		break;
+	}
+	pj->pj_resrv++;
+	PJ_ULOCK(pj);
+}
+
+void
+pjournal_unreserve_slot(struct psc_journal *pj)
+{
+	PJ_LOCK(pj);
+	pj->pj_resrv--;
+	if (pj->pj_flags & PJF_WANTSLOT) {
+		pj->pj_flags &= ~PJF_WANTSLOT;
+		psc_waitq_wakeone(&pj->pj_waitq);
+	}
+	PJ_ULOCK(pj);
 }
 
 /**
@@ -441,8 +483,8 @@ pjournal_scan_slots(struct psc_journal *pj)
 	psc_dynarray_init(&pj->pj_bufs);
 	jbuf = pjournal_alloc_buf(pj);
 	count = pj->pj_hdr->pjh_readahead;
-	psc_assert((pj->pj_hdr->pjh_nents % count) == 0);
-	while (slot < pj->pj_hdr->pjh_nents) {
+	psc_assert((pj->pj_total % count) == 0);
+	while (slot < pj->pj_total) {
 		rc = psc_journal_read(pj, jbuf, PJ_PJESZ(pj) * count,
 		    PJ_GETENTOFF(pj, slot));
 		if (rc)
@@ -498,7 +540,7 @@ pjournal_scan_slots(struct psc_journal *pj)
 			    (pje->pje_txg <= pj->pj_commit_txg))
 				continue;
 
-			if (((pje->pje_type & PJE_DISTILL) != 0) && 
+			if (((pje->pje_type & PJE_DISTILL) != 0) &&
                             (pje->pje_txg <= pj->pj_commit_txg) &&
 			    (pje->pje_xid <= pj->pj_distill_xid))
 				continue;
@@ -514,7 +556,7 @@ pjournal_scan_slots(struct psc_journal *pj)
 
 	pj->pj_lastxid = last_xid;
 	/* If last_slot is PJX_SLOT_ANY, then nextwrite will be 0 */
-	pj->pj_nextwrite = (last_slot == (int)pj->pj_hdr->pjh_nents - 1) ?
+	pj->pj_nextwrite = (last_slot == (int)pj->pj_total - 1) ?
 	    0 : (last_slot + 1);
 	qsort(pj->pj_bufs.da_items, pj->pj_bufs.da_pos,
 	    sizeof(void *), pjournal_xid_cmp);
@@ -523,7 +565,7 @@ pjournal_scan_slots(struct psc_journal *pj)
 	nopen = psc_dynarray_len(&pj->pj_bufs);
 	psc_info("Journal statistics: %d close, %d open, %d magic, "
 	    "%d chksum, %d scan, %d total",
-	    nclose, nopen, nmagic, nchksum, nscan, pj->pj_hdr->pjh_nents);
+	    nclose, nopen, nmagic, nchksum, nscan, pj->pj_total);
 	return (rc);
 }
 
@@ -884,6 +926,10 @@ pjournal_init(const char *fn, uint64_t txg,
 	 * distill.log.
 	 */
 	pj->pj_distill_xid = 0;
+
+	pj->pj_inuse = 0;
+	pj->pj_resrv = 0;
+	pj->pj_total = pj->pj_hdr->pjh_nents;
 
 	rc = pjournal_scan_slots(pj);
 	if (rc) {

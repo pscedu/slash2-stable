@@ -65,9 +65,14 @@ struct psc_journal_hdr {
 struct psc_journal {
 	psc_spinlock_t			 pj_lock;
 	int				 pj_flags;
+
+	uint32_t			 pj_inuse;
+	uint32_t			 pj_total;
+	uint32_t			 pj_resrv;
+
 	uint64_t			 pj_lastxid;		/* last transaction ID used */
-	uint64_t			 pj_distill_xid;	/* last transaction ID distilled */
 	uint64_t			 pj_commit_txg;		/* committed ZFS transaction group number  */
+	uint64_t			 pj_distill_xid;	/* last transaction ID distilled */
 	struct psc_journal_hdr		*pj_hdr;
 
 	psc_spinlock_t			 pj_pendinglock;
@@ -170,6 +175,9 @@ int			 pjournal_dump(const char *, int);
 int			 pjournal_format(const char *, uint32_t, uint32_t, uint32_t);
 struct psc_journal	*pjournal_init(const char *, uint64_t, int, const char *,
 			     psc_replay_handler, psc_distill_handler);
+
+void	 pjournal_reserve_slot(struct psc_journal *);
+void	 pjournal_unreserve_slot(struct psc_journal *);
 
 void	*pjournal_get_buf(struct psc_journal *, size_t);
 void	 pjournal_put_buf(struct psc_journal *, void *);
