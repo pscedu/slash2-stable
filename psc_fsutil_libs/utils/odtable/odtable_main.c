@@ -102,7 +102,7 @@ main(int argc, char *argv[])
 			break;
 		case 'N':
 			psc_warnx("-N is deprecated");
-			strncpy(fn, optarg, sizeof(fn));
+			strncpy(fn, optarg, sizeof(fn) - 1);
 			break;
 		case 'n':
 			num_puts = atoi(optarg);
@@ -119,7 +119,7 @@ main(int argc, char *argv[])
 	argc -= optind;
 	argv += optind;
 	if (argc == 1)
-		strncpy(fn, argv[0], sizeof(argv[0]));
+		strncpy(fn, argv[0], sizeof(fn) - 1);
 	else if (argc != 0)
 		usage();
 
