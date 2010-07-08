@@ -174,18 +174,24 @@ odtable_freeitem(struct odtable *odt, struct odtable_receipt *odtr)
 }
 
 int
-odtable_create(const char *fn, size_t nelems, size_t elemsz)
+odtable_create(const char *fn, size_t nelems, size_t elemsz, int overwrite)
 {
 	int rc = 0;
 	size_t z;
+	int flags = O_CREAT | O_EXCL | O_WRONLY;
 	struct odtable odt;
 	struct odtable_entftr odtf = {0, ODTBL_FREE, 0, ODTBL_MAGIC};
 	struct odtable_hdr odth = {nelems, elemsz, ODTBL_MAGIC, ODTBL_VERS,
 				   ODTBL_OPT_CRC, ODTBL_ALIGN};
 
+	if (overwrite)
+		flags = O_CREAT | O_TRUNC | O_WRONLY;
+	else
+		flags = O_CREAT | O_EXCL | O_WRONLY;
+
 	odt.odt_hdr = &odth;
 
-	odt.odt_fd = open(fn, O_CREAT | O_EXCL | O_WRONLY, 0600);
+	odt.odt_fd = open(fn, flags, 0600);
 	if (odt.odt_fd < 0) {
 		rc = -errno;
 		goto out;

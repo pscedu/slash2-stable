@@ -55,7 +55,7 @@ __dead void
 usage(void)
 {
 	fprintf(stderr,
-	    "usage: %s [-Ccls] [-e elem_size] [-f #frees] [-n #puts]\n"
+	    "usage: %s [-Cclos] [-e elem_size] [-f #frees] [-n #puts]\n"
 	    "\t[-z table_size] file\n", progname);
 	exit(1);
 }
@@ -73,6 +73,7 @@ main(int argc, char *argv[])
 	int crc_enabled  = 1;
 	int num_puts     = 0;
 	int num_free     = 0;
+	int overwrite    = 0;
 
 	size_t table_size = 1024 * 128;
 	size_t elem_size  = 128;
@@ -83,7 +84,7 @@ main(int argc, char *argv[])
 	fn[0] = '\0';
 	pfl_init();
 	progname = argv[0];
-	while ((c = getopt(argc, argv, "Cce:f:lN:n:sz:")) != -1)
+	while ((c = getopt(argc, argv, "Cce:f:lN:n:osz:")) != -1)
 		switch (c) {
 		case 'C':
 			create_table = 1;
@@ -110,6 +111,9 @@ main(int argc, char *argv[])
 		case 's':
 			scan_table = 1;
 			break;
+		case 'o':
+			overwrite = 1;
+			break;
 		case 'z':
 			table_size = atoi(optarg);
 			break;
@@ -127,7 +131,7 @@ main(int argc, char *argv[])
 		snprintf(fn, PATH_MAX, "%s/%s", SL_PATH_DATADIR, SL_FN_IONBMAPS_ODT);
 
 	if (create_table &&
-	    (rc = odtable_create(fn, table_size, elem_size)))
+	    (rc = odtable_create(fn, table_size, elem_size, overwrite)))
 		errx(1, "create %s: %s", fn, strerror(-rc));
 
 	if (load_table &&
