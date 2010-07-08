@@ -28,6 +28,7 @@
 #include "pfl/compat.h"
 #include "pfl/fcntl.h"
 #include "pfl/pfl.h"
+#include "pfl/stat.h"
 #include "pfl/str.h"
 #include "pfl/types.h"
 #include "psc_ds/dynarray.h"
