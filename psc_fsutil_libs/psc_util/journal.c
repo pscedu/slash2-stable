@@ -467,13 +467,11 @@ pjournal_scan_slots(struct psc_journal *pj)
 	int				 nchksum;
 	uint64_t			 last_xid;
 	int32_t				 last_slot;
-	uint64_t			 last_startup;
 	int				 count, nopen, nscan, nmagic;
 
 	rc = 0;
 	last_xid = PJE_XID_NONE;
 	last_slot = PJX_SLOT_ANY;
-	last_startup = PJE_XID_NONE;
 	slot = nopen = nscan = nmagic = nclose = nchksum = 0;
 
 	/*
@@ -547,7 +545,8 @@ pjournal_scan_slots(struct psc_journal *pj)
 
 			/* Okay, we need to keep this log entry for now.  */
 			tmppje = psc_alloc(PJ_PJESZ(pj), PAF_PAGEALIGN|PAF_LOCK);
-			memcpy(tmppje, &jbuf[PJ_PJESZ(pj) * i], sizeof(*tmppje));
+			memcpy(tmppje, pje, pje->pje_len + 
+				offsetof(struct psc_journal_enthdr, pje_data));
 			psc_dynarray_add(&pj->pj_bufs, tmppje);
 		}
 		slot += count;

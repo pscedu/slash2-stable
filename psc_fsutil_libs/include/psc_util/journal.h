@@ -128,12 +128,13 @@ struct psc_journal_enthdr {
 	uint16_t			pje_type;	/* see above */
 	/*
 	 * This field is used to calculate the CRC checksum of the payload starting
-	 * from pje_data[0]. It should be always greater than zero.
+	 * from pje_data[0]. It should always be greater than zero and it does NOT
+	 * include the header.
 	 */
 	uint16_t			pje_len;
 	uint64_t			pje_xid;
 	uint64_t			pje_txg;
-	uint64_t			pje_chksum;	/* last field before data */
+	uint64_t			pje_chksum;	/* must be the last field before data */
 	char				pje_data[0];
 } __packed;
 
