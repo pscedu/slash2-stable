@@ -133,6 +133,11 @@ struct psc_journal_enthdr {
 	 */
 	uint16_t			pje_len;
 	uint64_t			pje_xid;
+	/*
+	 * Even if our journal lives outside of the ZFS pools, this field tells us
+	 * exactly if we should apply a log entry.  And we can expect success if
+	 * we do.  No need to poke inside ZFS for clues.
+	 */
 	uint64_t			pje_txg;
 	uint64_t			pje_chksum;	/* must be the last field before data */
 	char				pje_data[0];
