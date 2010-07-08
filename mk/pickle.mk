@@ -96,4 +96,8 @@ PICKLE_NEED_VERSION=					$(word 2,$$Rev$$)
   DEFINES+=						-DHAVE_ATSYSCALLS
  endif
 
+ ifdef PICKLE_HAVE_STB_TIM
+  DEFINES+=						-DHAVE_STB_TIM
+ endif
+
 endif
