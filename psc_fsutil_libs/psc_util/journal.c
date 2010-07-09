@@ -296,7 +296,7 @@ pjournal_add_entry_distill(struct psc_journal *pj, uint64_t txg, int type, void 
 	pje = (struct psc_journal_enthdr *)(buf - offsetof(struct psc_journal_enthdr, pje_data));
 	psc_assert(pje->pje_magic == PJE_MAGIC);
 
-	pjournal_logwrite(xh, type|PJE_NORMAL|PJE_DISTILL, pje, size);
+	pjournal_logwrite(xh, type|PJE_NORMAL, pje, size);
 }
 
 void *
@@ -402,6 +402,12 @@ pjournal_logwrite(struct psc_journal_xidhndl *xh, int type,
 	pj = xh->pjx_pj;
 	xh->pjx_data = (void *)pje;
 
+	/* honor distill request only when we have a handler */
+	if (!pj->pj_distill_handler)
+		xh->pjx_flags &= ~PJX_DISTILL;
+	if (xh->pjx_flags & PJX_DISTILL) 
+		type |= PJE_DISTILL;
+	
 	/*
 	 * Fill in the header of the log entry, its
 	 * payload is already filled by our caller.
