@@ -87,6 +87,7 @@ struct psc_journal {
 	psc_distill_handler		 pj_distill_handler;
 
 	int				 pj_fd;			/* file descriptor to backing disk file */
+	int				 pj_txgfd;		/* file descriptor to txg file */
 	struct psc_iostats		 pj_rdist;		/* read I/O stats */
 	struct psc_iostats		 pj_wrist;		/* write I/O stats */
 };
@@ -179,7 +180,7 @@ struct psc_journal_xidhndl {
 /* definitions of journal handling functions */
 int			 pjournal_dump(const char *, int);
 int			 pjournal_format(const char *, uint32_t, uint32_t, uint32_t);
-struct psc_journal	*pjournal_init(const char *, uint64_t, int, const char *,
+struct psc_journal	*pjournal_init(const char *, const char *, uint64_t, int, const char *,
 			     psc_replay_handler, psc_distill_handler);
 
 void	 pjournal_reserve_slot(struct psc_journal *);

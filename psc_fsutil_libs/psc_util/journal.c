@@ -268,6 +268,7 @@ pjournal_unreserve_slot(struct psc_journal *pj)
 void
 pjournal_add_entry(struct psc_journal *pj, uint64_t txg, int type, void *buf, int size)
 {
+	static uint64_t last_txg = 0;
 	struct psc_journal_xidhndl *xh;
 	struct psc_journal_enthdr *pje;
 
@@ -278,6 +279,10 @@ pjournal_add_entry(struct psc_journal *pj, uint64_t txg, int type, void *buf, in
 	psc_assert(pje->pje_magic == PJE_MAGIC);
 
 	pjournal_logwrite(xh, type|PJE_NORMAL, pje, size);
+	if (last_txg != txg) {
+		last_txg = txg;
+		pwrite(pj->pj_txgfd, &last_txg, sizeof(uint64_t), 0);
+	}
 }
 
 /**
@@ -904,18 +909,19 @@ pjournal_distillthr_main(struct psc_thread *thr)
  * @distill_handler: the distill processor callback.
  */
 struct psc_journal *
-pjournal_init(const char *fn, uint64_t txg,
+pjournal_init(const char *fn, 
+    const char *txgfn, uint64_t txg,
     int thrtype, const char *thrname,
     psc_replay_handler replay_handler,
     psc_distill_handler distill_handler)
 {
-	int				 i, rc;
-	struct psc_journal		*pj;
-	struct psc_journal_enthdr	*pje;
-	int				 nerrs=0;
-	int				 nentries;
-	struct psc_journalthr		*pjt;
-	struct psc_thread		*thr;
+	int i, rc;
+	struct psc_journal *pj;
+	struct psc_journal_enthdr *pje;
+	int nerrs=0;
+	int nentries;
+	struct psc_journalthr *pjt;
+	struct psc_thread *thr;
 
 	psc_notify("Last synced ZFS transaction group number is %"PRId64, txg);
 	psc_notify("Journal device %s", fn);
@@ -931,6 +937,9 @@ pjournal_init(const char *fn, uint64_t txg,
 	 * distill.log.
 	 */
 	pj->pj_distill_xid = 0;
+
+	pj->pj_txgfd = open(txgfn, O_RDWR);
+	pread(pj->pj_txgfd, &pj->pj_commit_txg, sizeof(uint64_t), 0);
 
 	pj->pj_inuse = 0;
 	pj->pj_resrv = 0;
