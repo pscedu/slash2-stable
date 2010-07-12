@@ -9,7 +9,7 @@
 .Sh SYNOPSIS
 .Nm odtable
 .Bk -words
-.Op Fl Ccls
+.Op Fl Cclos
 .Op Fl e Ar elem_size
 .Op Fl f Ar #frees
 .Op Fl n Ar #puts
@@ -27,20 +27,27 @@ The following options are available:
 .Bl -tag -width Ds
 .It Fl C
 Create a new table.
+.It Fl c
+Enable
+.Tn CRC
+checks on data stored in the table.
 .It Fl e Ar elem_size
 Set the entry size of elements to be stored in the odtable.
 .It Fl f Ar #frees
 Clear out the given number of elements
 .Ar #frees
 from the beginning of the odtable.
-.It Fl N Ar table_file
-Specify the file name of the odtable to create or manipulate.
 .It Fl n Ar #puts
 Store the given number of elements
 .Ar #puts
 as fabricated entries in the odtable.
+.It Fl o
+By default,
+.Nm
+will refuse overwrite of an existing file.
+This option will force an overwrite.
 .It Fl z Ar table_size
 Specify the number of entries a new table will be created with.
 .El
 .Sh SEE ALSO
-.Xr od 1
+.Xr sh 1
