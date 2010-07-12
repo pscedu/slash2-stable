@@ -162,6 +162,10 @@ main(int argc, char *argv[])
 	PRVAL(sizeof(((struct stat *)NULL)->st_dev));
 	PRVAL(sizeof(((struct stat *)NULL)->st_nlink));
 	PRVAL(sizeof(((struct stat *)NULL)->st_blksize));
+	PRVAL(sizeof(((struct stat *)NULL)->st_mtime));
+#ifdef HAVE_STB_MTIM
+	PRVAL(sizeof(((struct stat *)NULL)->st_mtim));
+#endif
 
 	PRTYPE(dev_t);
 	PRTYPE(ino_t);
