@@ -18,8 +18,8 @@
  */
 
 /*
- * Multiwait: for waiting on any of a number of conditions to become
- * available.
+ * Multiwait is an API for waiting on any of a number of conditions to
+ * become available.
  */
 
 #include <sys/time.h>
@@ -186,7 +186,7 @@ psc_multiwait_iscondwakeable(struct psc_multiwait *mw,
 }
 
 /**
- * psc_multiwaitcond_wakeup - wakeup multiwaits waiting on a condition.
+ * psc_multiwaitcond_wakeup - Wakeup multiwaits waiting on a condition.
  * @mwc: a multiwait condition, which must be unlocked on entry
  *	and will be locked on exit.
  */
@@ -475,7 +475,7 @@ psc_multiwait_reset(struct psc_multiwait *mw)
 
 		k = psc_dynarray_bsearch(&mwc->mwc_multiwaits, mw,
 		    psc_multiwaitcond_cmp);
-		psc_dynarray_splice(&mwc->mwc_multiwaits, k, 0, NULL, 0);
+		psc_dynarray_splice(&mwc->mwc_multiwaits, k, 1, NULL, 0);
 
 		psc_pthread_mutex_unlock(&mwc->mwc_mutex);
 		/* Remove it so we don't process it twice. */
@@ -488,8 +488,8 @@ psc_multiwait_reset(struct psc_multiwait *mw)
 	psc_pthread_mutex_unlock(&mw->mw_mutex);
 }
 
-/*
- * psc_multiwaitcond_nwaiters - count the number of waiters sleeping
+/**
+ * psc_multiwaitcond_nwaiters - Count the number of waiters sleeping
  *	on a multiwait condition.
  * @mwc: the multiwait condition to check.
  */
@@ -570,4 +570,22 @@ psc_multiwait_prconds(struct psc_multiwait *mw)
 		    psc_multiwait_iscondwakeable(mw, mwc) ?
 		    "enabled" : "disabled");
 	psc_pthread_mutex_ureqlock(&mw->mw_mutex, locked);
+}
+
+/**
+ * psc_multiwaitcond_prmwaits - Print list of multiwaits a condition is
+ *	registered in.
+ * @mw: the multiwait to dump.
+ */
+void
+psc_multiwaitcond_prmwaits(struct psc_multiwaitcond *mwc)
+{
+	struct psc_multiwait *mw;
+	int locked, j;
+
+	locked = psc_pthread_mutex_reqlock(&mwc->mwc_mutex);
+	DYNARRAY_FOREACH(mw, j, &mwc->mwc_multiwaits)
+		printf(" multiwaitcond %s@%p on multiwait %s@%p\n",
+		    mwc->mwc_name, mwc, mw->mw_name, mw);
+	psc_pthread_mutex_ureqlock(&mwc->mwc_mutex, locked);
 }

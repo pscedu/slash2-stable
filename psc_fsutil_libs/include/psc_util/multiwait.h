@@ -100,6 +100,7 @@ int	 psc_multiwaitus(struct psc_multiwait *, void *, int);
 void	 psc_multiwaitcond_destroy(struct psc_multiwaitcond *);
 void	 psc_multiwaitcond_init(struct psc_multiwaitcond *, const void *, int, const char *, ...);
 size_t	 psc_multiwaitcond_nwaiters(struct psc_multiwaitcond *);
+void	 psc_multiwaitcond_prmwaits(struct psc_multiwaitcond *);
 void	 psc_multiwaitcond_wait(struct psc_multiwaitcond *, pthread_mutex_t *);
 void	 psc_multiwaitcond_wakeup(struct psc_multiwaitcond *);
 
