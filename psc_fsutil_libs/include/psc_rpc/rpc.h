@@ -713,7 +713,8 @@ pscrpc_wake_client_req(struct pscrpc_request *req)
 #define  _pscrpc_server_wait_event(wq, condition, info, ret, excl, lck)	\
 	do {								\
 		time_t _now       = time(NULL);				\
-		time_t _timeout   = PSCRPC_SVR_TIMEOUT;			\
+		time_t _timeout   = (info)->lwi_timeout ?		\
+			(info)->lwi_timeout : PSCRPC_SVR_TIMEOUT;	\
 		time_t _then      = _now;				\
 		int    _timed_out = 0;					\
 		struct timespec _abstime = { 0, 0 };			\
