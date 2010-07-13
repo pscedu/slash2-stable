@@ -270,7 +270,6 @@ void
 pjournal_add_entry(struct psc_journal *pj, uint64_t txg, int type, void *buf, int size)
 {
 	int distilled;
-	static uint64_t last_txg = 0;
 	struct psc_journal_xidhndl *xh;
 	struct psc_journal_enthdr *pje;
 
@@ -282,10 +281,6 @@ pjournal_add_entry(struct psc_journal *pj, uint64_t txg, int type, void *buf, in
 
 	distilled = pjournal_logwrite(xh, type|PJE_NORMAL, pje, size);
 	psc_assert(distilled == 0);
-	if (last_txg != txg) {
-		last_txg = txg;
-		pwrite(pj->pj_txgfd, &last_txg, sizeof(uint64_t), 0);
-	}
 }
 
 /**
@@ -409,6 +404,7 @@ pjournal_logwrite(struct psc_journal_xidhndl *xh, int type,
 {
 	int distilled = 0;
 	struct psc_journal *pj;
+	static uint64_t last_txg = 0;
 
 	pj = xh->pjx_pj;
 
@@ -442,6 +438,10 @@ pjournal_logwrite(struct psc_journal_xidhndl *xh, int type,
 		psc_waitq_wakeall(&pjournal_waitq);
 		freelock(&pjournal_waitqlock);
 		distilled = 1;
+	}
+	if (last_txg != xh->pjx_txg) {
+		last_txg = xh->pjx_txg;
+		pwrite(pj->pj_txgfd, &last_txg, sizeof(uint64_t), 0);
 	}
 	return (distilled);
 }
