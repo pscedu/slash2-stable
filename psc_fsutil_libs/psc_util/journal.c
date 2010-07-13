@@ -961,7 +961,7 @@ pjournal_init(const char *fn,
 	pj->pj_txg_handler = txg_handler;
 	pj->pj_distill_handler = distill_handler;
 
-	(pj->pj_txg_handler)(&pj->pj_commit_txg, NULL, PJRNL_TXG_PUT);
+	(pj->pj_txg_handler)(&pj->pj_commit_txg, NULL, PJRNL_TXG_GET);
 
 	psc_notify("Last synced ZFS transaction group number is %"PRId64, pj->pj_commit_txg);
 	psc_notify("Journal device %s", fn);
