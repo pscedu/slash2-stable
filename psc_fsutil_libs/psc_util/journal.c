@@ -925,8 +925,8 @@ pjournal_thr_main(struct psc_thread *thr)
 			pj->pj_inuse--;
 		}
 		PJ_ULOCK(pj);
-
-		psc_waitq_wait(&pjournal_waitq, &pjournal_waitqlock);
+		/* 30 seconds is the ZFS txg sync interval */
+		psc_waitq_waitrel_s(&pjournal_waitq, &pjournal_waitqlock, 30);
 	}
 }
 
