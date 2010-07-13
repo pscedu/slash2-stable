@@ -48,6 +48,10 @@ typedef void (*psc_replay_handler)(struct psc_journal_enthdr *, int *);
  * time, and outside the journal.
  */
 typedef void (*psc_distill_handler)(struct psc_journal_enthdr *, int);
+typedef void (*psc_txg_handler)(uint64_t *, void *, int);
+
+#define PJRNL_TXG_GET 0
+#define PJRNL_TXG_PUT 1
 
 struct psc_journal_hdr {
 	uint64_t			 pjh_magic;
@@ -85,9 +89,9 @@ struct psc_journal {
 	struct psc_waitq		 pj_waitq;
 	uint32_t			 pj_nextwrite;		/* next entry slot to write to */
 	psc_distill_handler		 pj_distill_handler;
-
+	psc_txg_handler                  pj_txg_handler;
 	int				 pj_fd;			/* file descriptor to backing disk file */
-	int				 pj_txgfd;		/* file descriptor to txg file */
+	void                            *pj_txg_state;
 	struct psc_iostats		 pj_rdist;		/* read I/O stats */
 	struct psc_iostats		 pj_wrist;		/* write I/O stats */
 };
@@ -180,8 +184,8 @@ struct psc_journal_xidhndl {
 /* definitions of journal handling functions */
 int			 pjournal_dump(const char *, int);
 int			 pjournal_format(const char *, uint32_t, uint32_t, uint32_t);
-struct psc_journal	*pjournal_init(const char *, const char *, uint64_t, int, const char *,
-			     psc_replay_handler, psc_distill_handler);
+struct psc_journal	*pjournal_init(const char *, int, const char *,
+			     psc_txg_handler, psc_replay_handler, psc_distill_handler);
 
 void	 pjournal_reserve_slot(struct psc_journal *);
 void	 pjournal_unreserve_slot(struct psc_journal *);

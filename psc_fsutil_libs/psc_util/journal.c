@@ -404,7 +404,6 @@ pjournal_logwrite(struct psc_journal_xidhndl *xh, int type,
 {
 	int distilled = 0;
 	struct psc_journal *pj;
-	static uint64_t last_txg = 0;
 
 	pj = xh->pjx_pj;
 
@@ -439,10 +438,9 @@ pjournal_logwrite(struct psc_journal_xidhndl *xh, int type,
 		freelock(&pjournal_waitqlock);
 		distilled = 1;
 	}
-	if (last_txg != xh->pjx_txg) {
-		last_txg = xh->pjx_txg;
-		pwrite(pj->pj_txgfd, &last_txg, sizeof(uint64_t), 0);
-	}
+	
+	(pj->pj_txg_handler)(&xh->pjx_txg, NULL, PJRNL_TXG_PUT);
+
 	return (distilled);
 }
 
@@ -942,9 +940,9 @@ pjournal_thr_main(struct psc_thread *thr)
  * @distill_handler: the distill processor callback.
  */
 struct psc_journal *
-pjournal_init(const char *fn, 
-    const char *txgfn, uint64_t txg,
+pjournal_init(const char *fn,
     int thrtype, const char *thrname,
+    psc_txg_handler txg_handler,
     psc_replay_handler replay_handler,
     psc_distill_handler distill_handler)
 {
@@ -956,23 +954,24 @@ pjournal_init(const char *fn,
 	struct psc_journalthr *pjt;
 	struct psc_thread *thr;
 
-	psc_notify("Last synced ZFS transaction group number is %"PRId64, txg);
-	psc_notify("Journal device %s", fn);
-
 	pj = pjournal_open(fn);
 	if (pj == NULL)
 		return (NULL);
 
-	pj->pj_commit_txg = txg;
+	pj->pj_txg_handler = txg_handler;
+	pj->pj_distill_handler = distill_handler;
+
+	(pj->pj_txg_handler)(&pj->pj_commit_txg, NULL, PJRNL_TXG_PUT);
+
+	psc_notify("Last synced ZFS transaction group number is %"PRId64, pj->pj_commit_txg);
+	psc_notify("Journal device %s", fn);
+
 	/*
 	 * Figure out the last XID whose log entry has been distilled
 	 * if need be.  A naive way is to simply maintain a log named
 	 * distill.log.
 	 */
 	pj->pj_distill_xid = 0;
-
-	pj->pj_txgfd = open(txgfn, O_RDWR);
-	pread(pj->pj_txgfd, &pj->pj_commit_txg, sizeof(uint64_t), 0);
 
 	pj->pj_inuse = 0;
 	pj->pj_resrv = 0;
@@ -1006,8 +1005,6 @@ pjournal_init(const char *fn,
 		pje = psc_alloc(PJ_PJESZ(pj), PAF_PAGEALIGN | PAF_LOCK);
 		psc_dynarray_add(&pj->pj_bufs, pje);
 	}
-
-	pj->pj_distill_handler = distill_handler;
 
 	thr = pscthr_init(thrtype, 0, pjournal_thr_main,
 		  NULL, sizeof(*pjt), thrname);
