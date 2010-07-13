@@ -871,7 +871,7 @@ pjournal_dump(const char *fn, int verbose)
 }
 
 void
-pjournal_distillthr_main(struct psc_thread *thr)
+pjournal_thr_main(struct psc_thread *thr)
 {
 	char *buf;
 	struct psc_journalthr *pjt = thr->pscthr_private;
@@ -902,6 +902,30 @@ pjournal_distillthr_main(struct psc_thread *thr)
 			freelock(&pjournal_waitqlock);
 			continue;
 		}
+
+		/*
+		 * Free committed pending transactions to avoid hogging memory.
+		 */
+		PJ_LOCK(pj);
+		pj->pj_commit_txg = zfsslash2_return_synced();
+		while ((xh = pll_gethdpeek(&pj->pj_pendingxids)) != NULL) {
+			spinlock(&xh->pjx_lock);
+			if (xh->pjx_txg > pj->pj_commit_txg) {
+				freelock(&xh->pjx_lock);
+				break;
+			}
+			if (xh->pjx_flags & PJX_DISTILL) {
+				freelock(&xh->pjx_lock);
+				break;
+			}
+			pll_remove(&pj->pj_pendingxids, xh);
+			freelock(&xh->pjx_lock);
+			PSCFREE(xh);
+			psc_assert(pj->pj_inuse > 0);
+			pj->pj_inuse--;
+		}
+		PJ_ULOCK(pj);
+
 		psc_waitq_wait(&pjournal_waitq, &pjournal_waitqlock);
 	}
 }
@@ -982,16 +1006,14 @@ pjournal_init(const char *fn,
 		psc_dynarray_add(&pj->pj_bufs, pje);
 	}
 
-	if (distill_handler) {
-		pj->pj_distill_handler = distill_handler;
+	pj->pj_distill_handler = distill_handler;
 
-		thr = pscthr_init(thrtype, 0, pjournal_distillthr_main,
-			  NULL, sizeof(*pjt), thrname);
+	thr = pscthr_init(thrtype, 0, pjournal_thr_main,
+		  NULL, sizeof(*pjt), thrname);
 
-		pjt = thr->pscthr_private;
-		pjt->pjt_pj = pj;
-		pscthr_setready(thr);
-	}
+	pjt = thr->pscthr_private;
+	pjt->pjt_pj = pj;
+	pscthr_setready(thr);
 
 	psc_info("journal replayed: %d log entries "
 	    "have been redone, # of errors = %d", nentries, nerrs);
