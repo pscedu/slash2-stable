@@ -34,7 +34,7 @@
 #include <pthread.h>
 
 /**
- * psc_waitq_init - prepare the queue struct for use.
+ * psc_waitq_init - Prepare a wait queue for use.
  * @q: the struct to be initialized.
  */
 void
@@ -51,8 +51,8 @@ psc_waitq_init(struct psc_waitq *q)
 		psc_fatalx("pthread_cond_init: %s", strerror(rc));
 }
 
-/*
- * psc_waitq_waitabs - wait until the time specified for the
+/**
+ * psc_waitq_waitabs - Wait until the time specified for the
  *	resource managed by wq_cond to become available.
  * @q: the wait queue to wait on.
  * @k: optional lock needed to protect the list.
@@ -89,9 +89,10 @@ psc_waitq_waitabs(struct psc_waitq *q, psc_spinlock_t *k,
 	return (rv);
 }
 
-/*
- * psc_waitq_waitrel - wait at most the amount of time specified for the
- *	resource managed by wq_cond to become available.
+/**
+ * psc_waitq_waitrel - Wait at most the amount of time specified
+ *	(relative to calling time) for the resource managed by wq_cond
+ *	to become available.
  * @q: the wait queue to wait on.
  * @k: optional lock needed to protect the list.
  * @reltime: amount of time to wait for.
@@ -139,8 +140,8 @@ _psc_waitq_waitrelv(struct psc_waitq *wq, psc_spinlock_t *lk, long s, long ns)
 	return (psc_waitq_waitrel(wq, lk, &ts));
 }
 
-/*
- * psc_waitq_wakeone - unblock one waiting thread.
+/**
+ * psc_waitq_wakeone - Unblock one thread waiting on a wait queue.
  * @q: wait queue to operate on.
  */
 void
@@ -155,8 +156,8 @@ psc_waitq_wakeone(struct psc_waitq *q)
 	psc_pthread_mutex_unlock(&q->wq_mut);
 }
 
-/*
- * psc_waitq_wakeall - wake everyone waiting on a wait queue.
+/**
+ * psc_waitq_wakeall - Wake everyone waiting on a wait queue.
  * @q: wait queue to operate on.
  */
 void
