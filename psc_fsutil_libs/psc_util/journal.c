@@ -897,12 +897,6 @@ pjournal_thr_main(struct psc_thread *thr)
 			buf = (char *)pje + offsetof(struct psc_journal_enthdr, pje_data);
 			pjournal_put_buf(pj, buf);
 		}
-		spinlock(&pjournal_waitqlock);
-		if ((xh = pll_gethdpeek(&pj->pj_distillxids))) {
-			freelock(&pjournal_waitqlock);
-			continue;
-		}
-
 		/*
 		 * Free committed pending transactions to avoid hogging memory.
 		 */
@@ -925,6 +919,13 @@ pjournal_thr_main(struct psc_thread *thr)
 			pj->pj_inuse--;
 		}
 		PJ_ULOCK(pj);
+
+		spinlock(&pjournal_waitqlock);
+		if ((xh = pll_gethdpeek(&pj->pj_distillxids))) {
+			freelock(&pjournal_waitqlock);
+			continue;
+		}
+
 		/* 30 seconds is the ZFS txg sync interval */
 		psc_waitq_waitrel_s(&pjournal_waitq, &pjournal_waitqlock, 30);
 	}
