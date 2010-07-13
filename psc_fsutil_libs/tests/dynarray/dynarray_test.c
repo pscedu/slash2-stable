@@ -76,6 +76,8 @@ main(int argc, char *argv[])
 	if (argc)
 		usage();
 
+	p = PTR_4; psc_dynarray_splice(&da, 0, 0, &p, 1); check(&da, PTR_4, NULL);
+	psc_dynarray_splice(&da, 0, 1, NULL, 0); check(&da, NULL);
 
 	p = PTR_4; psc_dynarray_splice(&da, 0, 0, &p, 1); check(&da, PTR_4, NULL);
 	p = PTR_3; psc_dynarray_splice(&da, 0, 0, &p, 1); check(&da, PTR_3, PTR_4, NULL);
