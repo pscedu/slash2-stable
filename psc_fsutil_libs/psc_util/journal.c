@@ -49,7 +49,7 @@ struct psc_journalthr {
 	struct psc_journal *pjt_pj;
 };
 
-__static void		pjournal_logwrite(struct psc_journal_xidhndl *, int,
+__static int		pjournal_logwrite(struct psc_journal_xidhndl *, int,
 				struct psc_journal_enthdr *, int);
 
 __static int		pjournal_logwrite_internal(struct psc_journal *,
@@ -269,6 +269,7 @@ pjournal_unreserve_slot(struct psc_journal *pj)
 void
 pjournal_add_entry(struct psc_journal *pj, uint64_t txg, int type, void *buf, int size)
 {
+	int distilled;
 	static uint64_t last_txg = 0;
 	struct psc_journal_xidhndl *xh;
 	struct psc_journal_enthdr *pje;
@@ -279,7 +280,8 @@ pjournal_add_entry(struct psc_journal *pj, uint64_t txg, int type, void *buf, in
 	pje = (struct psc_journal_enthdr *)(buf - offsetof(struct psc_journal_enthdr, pje_data));
 	psc_assert(pje->pje_magic == PJE_MAGIC);
 
-	pjournal_logwrite(xh, type|PJE_NORMAL, pje, size);
+	distilled = pjournal_logwrite(xh, type|PJE_NORMAL, pje, size);
+	psc_assert(distilled == 0);
 	if (last_txg != txg) {
 		last_txg = txg;
 		pwrite(pj->pj_txgfd, &last_txg, sizeof(uint64_t), 0);
@@ -290,9 +292,10 @@ pjournal_add_entry(struct psc_journal *pj, uint64_t txg, int type, void *buf, in
  * pjournal_add_entry_distill - Add a log entry into the journal.  The log entry needs to be
  *     distilled.
  */
-void
+int
 pjournal_add_entry_distill(struct psc_journal *pj, uint64_t txg, int type, void *buf, int size)
 {
+	int distilled;
 	struct psc_journal_xidhndl *xh;
 	struct psc_journal_enthdr *pje;
 
@@ -302,7 +305,8 @@ pjournal_add_entry_distill(struct psc_journal *pj, uint64_t txg, int type, void 
 	pje = (struct psc_journal_enthdr *)(buf - offsetof(struct psc_journal_enthdr, pje_data));
 	psc_assert(pje->pje_magic == PJE_MAGIC);
 
-	pjournal_logwrite(xh, type|PJE_NORMAL, pje, size);
+	distilled = pjournal_logwrite(xh, type|PJE_NORMAL, pje, size);
+	return (distilled);
 }
 
 void *
@@ -399,11 +403,12 @@ pjournal_logwrite_internal(struct psc_journal *pj, struct psc_journal_enthdr *pj
  * @data: the journal entry contents to store.
  * @size: size of the custom data
  */
-__static void
+__static int
 pjournal_logwrite(struct psc_journal_xidhndl *xh, int type,
     struct psc_journal_enthdr *pje, int size)
 {
-	struct psc_journal		*pj;
+	int distilled = 0;
+	struct psc_journal *pj;
 
 	pj = xh->pjx_pj;
 	xh->pjx_data = (void *)pje;
@@ -436,7 +441,9 @@ pjournal_logwrite(struct psc_journal_xidhndl *xh, int type,
 		spinlock(&pjournal_waitqlock);
 		psc_waitq_wakeall(&pjournal_waitq);
 		freelock(&pjournal_waitqlock);
+		distilled = 1;
 	}
+	return (distilled);
 }
 
 __static void *
