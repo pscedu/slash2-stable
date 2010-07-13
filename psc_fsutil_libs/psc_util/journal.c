@@ -411,7 +411,6 @@ pjournal_logwrite(struct psc_journal_xidhndl *xh, int type,
 	struct psc_journal *pj;
 
 	pj = xh->pjx_pj;
-	xh->pjx_data = (void *)pje;
 
 	/* honor distill request only when we have a handler */
 	if (!pj->pj_distill_handler)
@@ -437,6 +436,7 @@ pjournal_logwrite(struct psc_journal_xidhndl *xh, int type,
 	 * off to the distill thread.
 	 */
 	if (xh->pjx_flags & PJX_DISTILL) {
+		xh->pjx_data = (void *)pje;
 		pll_addtail(&pj->pj_distillxids, xh);
 		spinlock(&pjournal_waitqlock);
 		psc_waitq_wakeall(&pjournal_waitq);
