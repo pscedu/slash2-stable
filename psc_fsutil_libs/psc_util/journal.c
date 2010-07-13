@@ -243,6 +243,7 @@ pjournal_reserve_slot(struct psc_journal *pj)
 		}
 		pll_remove(&pj->pj_pendingxids, t);
 		freelock(&t->pjx_lock);
+		PSCFREE(t);
 		pj->pj_inuse--;
 		break;
 	}
