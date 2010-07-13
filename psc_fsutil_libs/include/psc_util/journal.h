@@ -148,10 +148,12 @@ struct psc_journal_enthdr {
 	char				pje_data[0];
 } __packed;
 
+#define PJE_DATA(pje)			((void *)(pje)->pje_data)
+
 #define	PJ_PJESZ(p)			((p)->pj_hdr->pjh_entsz)
 
-/*
- * psc_journal_xidhndl - journal transaction ID handle.
+/**
+ * psc_journal_xidhndl - Journal transaction ID handle.
  * @pjx_xid: the transaction ID.
  * @pjx_sid: the xid sub-operation ID.
  * @pjx_tailslot: the address of our starting / oldest slot.
