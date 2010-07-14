@@ -565,6 +565,8 @@ pjournal_scan_slots(struct psc_journal *pj)
 			memcpy(tmppje, pje, pje->pje_len + 
 				offsetof(struct psc_journal_enthdr, pje_data));
 			psc_dynarray_add(&pj->pj_bufs, tmppje);
+			psc_info("tmppje=%p, type=%hu xid=%"PRId64" txg=%"PRId64, 
+				 tmppje, tmppje->pje_type, tmppje->pje_xid, tmppje->pje_txg);
 		}
 		slot += count;
 	}
@@ -574,8 +576,8 @@ pjournal_scan_slots(struct psc_journal *pj)
 	/* If last_slot is PJX_SLOT_ANY, then nextwrite will be 0 */
 	pj->pj_nextwrite = (last_slot == (int)pj->pj_total - 1) ?
 	    0 : (last_slot + 1);
-	qsort(pj->pj_bufs.da_items, pj->pj_bufs.da_pos,
-	    sizeof(void *), pjournal_xid_cmp);
+	//	qsort(pj->pj_bufs.da_items, pj->pj_bufs.da_pos,
+	//	    sizeof(void *), pjournal_xid_cmp);
 	psc_freenl(jbuf, PJ_PJESZ(pj) * pj->pj_hdr->pjh_readahead);
 
 	nopen = psc_dynarray_len(&pj->pj_bufs);
@@ -665,7 +667,6 @@ pjournal_open(const char *fn)
 		 pjx_lentry2, &pj->pj_distilllock);
 
 	psc_waitq_init(&pj->pj_waitq);
-	pj->pj_flags = PJF_NONE;
 	psc_dynarray_init(&pj->pj_bufs);
 	return (pj);
  err:
@@ -985,18 +986,19 @@ pjournal_init(const char *fn,
 	nentries = 0;
 	len = psc_dynarray_len(&pj->pj_bufs);
 	psc_notify("Number of entries to be replayed is %d", len);
-	while (psc_dynarray_len(&pj->pj_bufs)) {
-		pje = psc_dynarray_getpos(&pj->pj_bufs, 0);
-		psc_dynarray_remove(&pj->pj_bufs, pje);
+
+	for (i=0; i < len; i++) {
+		pje = psc_dynarray_getpos(&pj->pj_bufs, i);
 		nentries++;
+		psc_notify("pje=%p", pje);
 		replay_handler(pje, &rc);
 		if (rc) {
 			nerrs++;
 			rc = 0;
 		}
-		psc_freenl(pje, PJ_PJESZ(pj));
+		psc_freenl(pje, PJ_PJESZ(pj));		
 	}
-	psc_assert(!psc_dynarray_len(&pj->pj_bufs));
+
 	psc_dynarray_free(&pj->pj_bufs);
 
 	/* start at the first slot of the journal */
