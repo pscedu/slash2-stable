@@ -54,14 +54,15 @@ typedef void (*psc_txg_handler)(uint64_t *, void *, int);
 #define PJRNL_TXG_PUT 1
 
 /*
- * Contents of file .sltxg that live in ZFS. We trust ZFS do the
- * checksum for us.
+ * Contents of file SL_PATH_CURSOR used to remember where we are in terms
+ * processing the log entries.  This file lives in ZFS, so we don't need 
+ * do any checksum.
  */
-struct psc_journal_init {
-	uint64_t			 pji_txg;	/* last synced ZFS transaction group number */
-	uint64_t			 pji_xid;	/* last XID whose entry has been distilled */
-	uint64_t			 pji_s2id;	/* last SLASH2 ID */
-	uint64_t			 pji_seqno;	/* last bmap sequence number */
+struct psc_journal_cursor {
+	uint64_t			 pjc_txg;	/* last synced ZFS transaction group number */
+	uint64_t			 pjc_xid;	/* last XID whose entry has been distilled */
+	uint64_t			 pjc_s2id;	/* last SLASH2 ID */
+	uint64_t			 pjc_seqno;	/* last bmap sequence number */
 };
 
 struct psc_journal_hdr {
