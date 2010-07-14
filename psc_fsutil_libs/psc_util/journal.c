@@ -946,7 +946,7 @@ pjournal_init(const char *fn,
     psc_replay_handler replay_handler,
     psc_distill_handler distill_handler)
 {
-	int i, rc;
+	int i, rc, len;
 	struct psc_journal *pj;
 	struct psc_journal_enthdr *pje;
 	int nerrs=0;
@@ -983,6 +983,8 @@ pjournal_init(const char *fn,
 		nerrs++;
 	}
 	nentries = 0;
+	len = psc_dynarray_len(&pj->pj_bufs);
+	psc_notify("Number of entries to be replayed is %d", len);
 	while (psc_dynarray_len(&pj->pj_bufs)) {
 		pje = psc_dynarray_getpos(&pj->pj_bufs, 0);
 		psc_dynarray_remove(&pj->pj_bufs, pje);
@@ -1013,7 +1015,7 @@ pjournal_init(const char *fn,
 	pjt->pjt_pj = pj;
 	pscthr_setready(thr);
 
-	psc_info("journal replayed: %d log entries "
+	psc_notify("journal replayed: %d log entries "
 	    "have been redone, # of errors = %d", nentries, nerrs);
 	return (pj);
 }
