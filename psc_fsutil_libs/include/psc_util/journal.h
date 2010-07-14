@@ -53,6 +53,17 @@ typedef void (*psc_txg_handler)(uint64_t *, void *, int);
 #define PJRNL_TXG_GET 0
 #define PJRNL_TXG_PUT 1
 
+/*
+ * Contents of file .sltxg that live in ZFS. We trust ZFS do the
+ * checksum for us.
+ */
+struct psc_journal_init {
+	uint64_t			 pji_txg;	/* last synced ZFS transaction group number */
+	uint64_t			 pji_xid;	/* last XID whose entry has been distilled */
+	uint64_t			 pji_s2id;	/* last SLASH2 ID */
+	uint64_t			 pji_seqno;	/* last bmap sequence number */
+};
+
 struct psc_journal_hdr {
 	uint64_t			 pjh_magic;
 	uint64_t			 pjh_start_off;
