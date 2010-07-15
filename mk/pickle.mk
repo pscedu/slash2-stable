@@ -100,4 +100,8 @@ PICKLE_NEED_VERSION=					$(word 2,$$Rev$$)
   DEFINES+=						-DHAVE_STB_TIM
  endif
 
+ ifdef PICKLE_HAVE_STB_TIMESPEC
+  DEFINES+=						-DHAVE_STB_TIMESPEC
+ endif
+
 endif
