@@ -25,12 +25,14 @@
 #include <string.h>
 
 #ifndef HAVE_STRLCPY
-size_t strlcpy(char *, const char *, size_t);
-size_t strlcat(char *, const char *, size_t);
+size_t	strlcpy(char *, const char *, size_t);
+size_t	strlcat(char *, const char *, size_t);
 #endif
 
 #ifndef HAVE_STRNLEN
-size_t strnlen(const char *, size_t);
+size_t	strnlen(const char *, size_t);
 #endif
+
+int	psc_str_hashify(const char *);
 
 #endif /* _PFL_STR_H_ */
