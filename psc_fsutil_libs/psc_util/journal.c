@@ -943,7 +943,7 @@ pjournal_thr_main(struct psc_thread *thr)
 struct psc_journal *
 pjournal_init(const char *fn,
     int thrtype, const char *thrname,
-    psc_txg_handler txg_handler,
+    struct psc_journal_cursor *cursor,
     psc_replay_handler replay_handler,
     psc_distill_handler distill_handler)
 {
@@ -959,11 +959,9 @@ pjournal_init(const char *fn,
 	if (pj == NULL)
 		return (NULL);
 
-	pj->pj_txg_handler = txg_handler;
 	pj->pj_distill_handler = distill_handler;
 
-	(pj->pj_txg_handler)(&pj->pj_commit_txg, NULL, PJRNL_TXG_GET);
-
+	pj->pj_commit_txg = cursor->pjc_txg;
 	psc_notify("Last synced ZFS transaction group number is %"PRId64, pj->pj_commit_txg);
 	psc_notify("Journal device %s", fn);
 
