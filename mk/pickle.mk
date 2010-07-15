@@ -104,4 +104,8 @@ PICKLE_NEED_VERSION=					$(word 2,$$Rev$$)
   DEFINES+=						-DHAVE_STB_TIMESPEC
  endif
 
+ ifdef PICKLE_HAVE_SETRESUID
+  DEFINES+=						-DHAVE_SETRESUID
+ endif
+
 endif
