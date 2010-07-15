@@ -230,6 +230,7 @@ main(int argc, char *argv[])
 	PRTYPE(struct psc_hashtbl);
 	PRTYPE(struct psc_iostats);
 	PRTYPE(struct psc_journal);
+	PRTYPE(struct psc_journal_cursor);
 	PRTYPE(struct psc_journal_enthdr);
 	PRTYPE(struct psc_journal_hdr);
 	PRTYPE(struct psc_journal_xidhndl);
