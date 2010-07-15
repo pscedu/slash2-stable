@@ -106,6 +106,7 @@ PICKLE_NEED_VERSION=					$(word 2,$$Rev$$)
 
  ifdef PICKLE_HAVE_SETRESUID
   DEFINES+=						-DHAVE_SETRESUID
+ else
   SETRESUID_SRC=					${PFL_ROOT}/compat/setresuid.c
  endif
 
