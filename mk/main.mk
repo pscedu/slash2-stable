@@ -1,4 +1,5 @@
 # $Id$
+# %PSC_COPYRIGHT%
 
 STRIPROOTDIR=		$(subst $(realpath ${ROOTDIR})/,,$1)
 PATH_NAMIFY=		$(subst .,_,$(subst -,_,$(subst /,_,$1)))
@@ -68,7 +69,8 @@ _TINCLUDES=		$(filter-out -I%,${INCLUDES}) $(patsubst %,-I%,$(foreach \
 			dir,$(patsubst -I%,%,$(filter -I%,${INCLUDES})), $(realpath ${dir})))
 
 CFLAGS+=		${DEFINES} ${_TINCLUDES}
-TARGET?=		${PROG} ${LIBRARY}
+TARGET?=		${PROG} ${LIBRARY} ${TEST}
+PROG?=			${TEST}
 
 EXTRACT_INCLUDES=	perl -ne 'print $$& while /-I\S+\s?/gc'
 EXTRACT_DEFINES=	perl -ne 'print $$& while /-D\S+\s?/gc'
@@ -288,7 +290,8 @@ install: recurse-install install-hook
 		${ECHORUN} mkdir -p ${INSTALLDIR}/lib;					\
 		${ECHORUN} cp -pf ${LIBRARY} ${INSTALLDIR}/lib;				\
 	fi
-	@if [ -n "${PROG}" ]; then							\
+	# skip programs part of test suites
+	@if [ -n "${PROG}" -a x"${PROG}" -ne x"${TEST}" ]; then				\
 		${ECHORUN} mkdir -p ${INSTALLDIR}/bin;					\
 		${ECHORUN} cp -pf ${PROG} ${INSTALLDIR}/bin;				\
 	fi
@@ -324,9 +327,9 @@ listsrcs: recurse-listsrcs
 	fi
 
 test: recurse-test all
-	@if [ -n "${PROG}" ]; then							\
-		echo "./${PROG}";							\
-		./${PROG} || exit 1;							\
+	@if [ -n "${TEST}" ]; then							\
+		echo "./${TEST}";							\
+		./${TEST} ${TESTOPTS} || exit 1;					\
 	fi
 
 hdrclean:
