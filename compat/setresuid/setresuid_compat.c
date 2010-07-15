@@ -1,4 +1,4 @@
-/* $Id: strnlen_compat.c 11469 2010-04-19 17:27:25Z yanovich $ */
+/* $Id$ */
 
 #include <sys/types.h>
 
