@@ -23,8 +23,8 @@
 #include <unistd.h>
 
 #include "pfl/cdefs.h"
+#include "pfl/hashtbl.h"
 #include "pfl/pfl.h"
-#include "psc_ds/hash2.h"
 #include "psc_util/alloc.h"
 
 struct item {

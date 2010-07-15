@@ -22,7 +22,7 @@
 #ifndef _PFL_REFMGR_H_
 #define _PFL_REFMGR_H_
 
-#include "psc_ds/hash2.h"
+#include "pfl/hashtbl.h"
 #include "psc_ds/lockedlist.h"
 #include "psc_ds/tree.h"
 #include "psc_util/pool.h"

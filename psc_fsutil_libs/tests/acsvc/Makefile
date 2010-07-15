@@ -6,7 +6,7 @@ include ${ROOTDIR}/Makefile.path
 PROG=		acsvc_test
 SRCS+=		acsvc_test.c
 SRCS+=		${PFL_BASE}/psc_ds/dynarray.c
-SRCS+=		${PFL_BASE}/psc_ds/hash2.c
+SRCS+=		${PFL_BASE}/psc_ds/hashtbl.c
 SRCS+=		${PFL_BASE}/psc_ds/vbitmap.c
 SRCS+=		${PFL_BASE}/psc_util/acsvc.c
 SRCS+=		${PFL_BASE}/psc_util/alloc.c

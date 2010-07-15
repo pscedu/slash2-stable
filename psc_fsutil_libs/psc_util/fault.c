@@ -25,7 +25,7 @@
 #include <unistd.h>
 
 #include "pfl/str.h"
-#include "psc_ds/hash2.h"
+#include "pfl/hashtbl.h"
 #include "psc_util/alloc.h"
 #include "psc_util/ctl.h"
 #include "psc_util/ctlsvr.h"

@@ -39,7 +39,7 @@
 #include <string.h>
 
 #include "psc_ds/dynarray.h"
-#include "psc_ds/hash2.h"
+#include "pfl/hashtbl.h"
 #include "psc_ds/list.h"
 #include "psc_ds/lockedlist.h"
 #include "psc_ds/tree.h"

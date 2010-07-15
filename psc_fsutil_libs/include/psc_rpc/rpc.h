@@ -16,7 +16,7 @@
 #include "lnet/types.h"
 
 #include "pfl/types.h"
-#include "psc_ds/hash2.h"
+#include "pfl/hashtbl.h"
 #include "psc_ds/list.h"
 #include "psc_ds/listcache.h"
 #include "psc_util/atomic.h"

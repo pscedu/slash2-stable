@@ -39,7 +39,7 @@
 #include "pfl/cdefs.h"
 #include "pfl/pfl.h"
 #include "pfl/str.h"
-#include "psc_ds/hash2.h"
+#include "pfl/hashtbl.h"
 #include "psc_ds/list.h"
 #include "psc_ds/listcache.h"
 #include "psc_ds/stree.h"

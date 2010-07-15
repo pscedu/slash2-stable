@@ -17,8 +17,8 @@
  * %PSC_END_COPYRIGHT%
  */
 
-#ifndef _PFL_HASH2_H_
-#define _PFL_HASH2_H_
+#ifndef _PFL_HASHTBL_H_
+#define _PFL_HASHTBL_H_
 
 #include "psc_ds/list.h"
 #include "psc_ds/lockedlist.h"
@@ -183,8 +183,6 @@ int	 psc_hashent_conjoint(const struct psc_hashtbl *, void *);
 #define psc_hashent_init(t, p)		INIT_PSCLIST_ENTRY(			\
 					    psc_hashent_getlentry((t), (p)))
 
-int	 psc_str_hashify(const char *);
-
 extern struct psc_lockedlist psc_hashtbls;
 
 static __inline struct psclist_head *
@@ -204,4 +202,4 @@ psc_hashent_getid(const struct psc_hashtbl *t, const void *p)
 	return ((const char *)p + t->pht_idoff);
 }
 
-#endif /* _PFL_HASH2_H_ */
+#endif /* _PFL_HASHTBL_H_ */
