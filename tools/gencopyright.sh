@@ -20,6 +20,9 @@ if [ $# -eq 0 ]; then
 fi
 
 for i; do
+	if [ -h "$i" ]; then
+		continue
+	fi
 	perl -W -i - $parg $i <<'EOF'
 use warnings;
 use strict;
