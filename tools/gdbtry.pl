@@ -1,5 +1,6 @@
 #!/usr/bin/perl -W
 # $Id$
+# %PSC_COPYRIGHT%
 
 use POSIX qw(:errno_h);
 use IPC::Open3;

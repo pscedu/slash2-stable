@@ -1,4 +1,5 @@
 #!/usr/bin/perl
+# $Id$
 
 my $arg = shift || "";
 $arg =~ s/^\s+|\s$//g;

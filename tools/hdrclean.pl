@@ -1,5 +1,6 @@
 #!/usr/bin/perl -W
 # $Id$
+# %PSC_COPYRIGHT%
 
 use Getopt::Std;
 use strict;

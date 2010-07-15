@@ -1,5 +1,6 @@
 #!/bin/sh
 # $Id$
+# %PSC_COPYRIGHT%
 
 # setcc: set env `CC' appropriately to avoid recursion with wrappers.
 

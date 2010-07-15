@@ -1,5 +1,7 @@
 #!/bin/sh
 # $Id$
+# %PSC_COPYRIGHT%
+
 # TODO:
 # - run "svn status" and get the start year instead of hardcode 2006
 

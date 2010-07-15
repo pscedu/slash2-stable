@@ -1,4 +1,5 @@
 # $Id$
+# %PSC_COPYRIGHT%
 
 ifeq ($(filter $(realpath ${ROOTDIR})/compat/%,${CURDIR}),)
 

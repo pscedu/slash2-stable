@@ -1,5 +1,6 @@
 #!/usr/bin/perl -W
 # $Id$
+# %PSC_COPYRIGHT%
 
 # Better algorithm:
 #	use file mtime as long as mtime != ctime
