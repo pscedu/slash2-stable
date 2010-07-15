@@ -41,14 +41,14 @@ struct psc_journal_enthdr;
 
 #define PJH_OPT_NONE			0x00
 
-typedef void (*psc_replay_handler)(struct psc_journal_enthdr *, int *);
+typedef void (*psc_replay_handler_t)(struct psc_journal_enthdr *, int *);
 /*
  * Distill handler is used to further process certain log entries. These
  * log entries carry information that we might need to preserve a longer
  * time, and outside the journal.
  */
-typedef void (*psc_distill_handler)(struct psc_journal_enthdr *, int);
-typedef void (*psc_txg_handler)(uint64_t *, void *, int);
+typedef void (*psc_distill_handler_t)(struct psc_journal_enthdr *, int);
+typedef void (*psc_txg_handler_t)(uint64_t *, void *, int);
 
 #define PJRNL_TXG_GET 0
 #define PJRNL_TXG_PUT 1
@@ -56,7 +56,7 @@ typedef void (*psc_txg_handler)(uint64_t *, void *, int);
 #define PJRNL_CURSOR_MAGIC		0x12345678abcdefgh
 /*
  * Contents of file SL_PATH_CURSOR used to remember where we are in terms
- * processing the log entries.  This file lives in ZFS, so we don't need 
+ * processing the log entries.  This file lives in ZFS, so we don't need
  * do any checksum.
  */
 struct psc_journal_cursor {
@@ -103,10 +103,10 @@ struct psc_journal {
 	struct psc_dynarray		 pj_bufs;
 	struct psc_waitq		 pj_waitq;
 	uint32_t			 pj_nextwrite;		/* next entry slot to write to */
-	psc_distill_handler		 pj_distill_handler;
-	psc_txg_handler                  pj_txg_handler;
+	psc_distill_handler_t		 pj_distill_handler;
+	psc_txg_handler_t		 pj_txg_handler;
 	int				 pj_fd;			/* file descriptor to backing disk file */
-	void                            *pj_txg_state;
+	void				*pj_txg_state;
 	struct psc_iostats		 pj_rdist;		/* read I/O stats */
 	struct psc_iostats		 pj_wrist;		/* write I/O stats */
 };
@@ -114,7 +114,7 @@ struct psc_journal {
 #define PJF_NONE			0
 #define PJF_WANTBUF			(1 << 0)
 #define PJF_WANTSLOT			(1 << 1)
-#define PJF_ISBLKDEV                    (1 << 2)
+#define PJF_ISBLKDEV			(1 << 2)
 
 #define PJE_XID_NONE			0			/* invalid transaction ID */
 #define PJE_MAGIC			UINT64_C(0x4567abcd)
@@ -202,7 +202,8 @@ struct psc_journal_xidhndl {
 int			 pjournal_dump(const char *, int);
 int			 pjournal_format(const char *, uint32_t, uint32_t, uint32_t);
 struct psc_journal	*pjournal_init(const char *, int, const char *,
-			     struct psc_journal_cursor *, psc_replay_handler, psc_distill_handler);
+			     struct psc_journal_cursor *, psc_replay_handler_t,
+			     psc_distill_handler_t);
 
 void	 pjournal_reserve_slot(struct psc_journal *);
 void	 pjournal_unreserve_slot(struct psc_journal *);

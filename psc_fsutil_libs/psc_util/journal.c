@@ -102,7 +102,7 @@ psc_journal_io(struct psc_journal *pj, void *p, size_t len, off_t off,
 			if (pj->pj_flags & PJF_ISBLKDEV) {
 #ifdef SLASH2_USE_SYNC_FILE_RANGE
 				rc = sync_file_range(pj->pj_fd, off, len,
-					     SYNC_FILE_RANGE_WRITE | 
+					     SYNC_FILE_RANGE_WRITE |
 					     SYNC_FILE_RANGE_WAIT_AFTER);
 #else
 				rc = fdatasync(pj->pj_fd);
@@ -149,7 +149,7 @@ pjournal_next_slot(struct psc_journal_xidhndl *xh)
 	PJ_LOCK(pj);
 
 	t = pll_gethdpeek(&pj->pj_pendingxids);
-	if (t) 
+	if (t)
 		tail_slot = t->pjx_slot;
 
 	slot = pj->pj_nextwrite;
@@ -229,7 +229,7 @@ pjournal_reserve_slot(struct psc_journal *pj)
 			PJ_ULOCK(pj);
 			zfsslash2_wait_synced(t->pjx_txg);
 			continue;
-		} 
+		}
 		if (t->pjx_flags & PJX_DISTILL) {
 
 			psc_warnx("Journal %p reservation is blocked on slot %d "
@@ -410,9 +410,9 @@ pjournal_logwrite(struct psc_journal_xidhndl *xh, int type,
 	/* honor distill request only when we have a handler */
 	if (!pj->pj_distill_handler)
 		xh->pjx_flags &= ~PJX_DISTILL;
-	if (xh->pjx_flags & PJX_DISTILL) 
+	if (xh->pjx_flags & PJX_DISTILL)
 		type |= PJE_DISTILL;
-	
+
 	/*
 	 * Fill in the header of the log entry, its
 	 * payload is already filled by our caller.
@@ -438,7 +438,7 @@ pjournal_logwrite(struct psc_journal_xidhndl *xh, int type,
 		freelock(&pjournal_waitqlock);
 		distilled = 1;
 	}
-	
+
 	(pj->pj_txg_handler)(&xh->pjx_txg, NULL, PJRNL_TXG_PUT);
 
 	return (distilled);
@@ -556,16 +556,16 @@ pjournal_scan_slots(struct psc_journal *pj)
 				continue;
 
 			if (((pje->pje_type & PJE_DISTILL) != 0) &&
-                            (pje->pje_txg <= pj->pj_commit_txg) &&
+			    (pje->pje_txg <= pj->pj_commit_txg) &&
 			    (pje->pje_xid <= pj->pj_distill_xid))
 				continue;
 
 			/* Okay, we need to keep this log entry for now.  */
 			tmppje = psc_alloc(PJ_PJESZ(pj), PAF_PAGEALIGN|PAF_LOCK);
-			memcpy(tmppje, pje, pje->pje_len + 
+			memcpy(tmppje, pje, pje->pje_len +
 				offsetof(struct psc_journal_enthdr, pje_data));
 			psc_dynarray_add(&pj->pj_bufs, tmppje);
-			psc_info("tmppje=%p, type=%hu xid=%"PRId64" txg=%"PRId64, 
+			psc_info("tmppje=%p, type=%hu xid=%"PRId64" txg=%"PRId64,
 				 tmppje, tmppje->pje_type, tmppje->pje_xid, tmppje->pje_txg);
 		}
 		slot += count;
@@ -647,7 +647,7 @@ pjournal_open(const char *fn)
 	if (S_ISBLK(statbuf.st_mode))
 		pj->pj_flags |= PJF_ISBLKDEV;
 
-	else if (statbuf.st_size != 
+	else if (statbuf.st_size !=
 		 (off_t)(pjhlen + pjh->pjh_nents * PJ_PJESZ(pj))) {
 		psc_errorx("Size of the log file does not match specs in its header");
 		goto err;
@@ -944,8 +944,8 @@ struct psc_journal *
 pjournal_init(const char *fn,
     int thrtype, const char *thrname,
     struct psc_journal_cursor *cursor,
-    psc_replay_handler replay_handler,
-    psc_distill_handler distill_handler)
+    psc_replay_handler_t replay_handler,
+    psc_distill_handler_t distill_handler)
 {
 	int i, rc, len;
 	struct psc_journal *pj;
@@ -994,7 +994,7 @@ pjournal_init(const char *fn,
 			nerrs++;
 			rc = 0;
 		}
-		psc_freenl(pje, PJ_PJESZ(pj));		
+		psc_freenl(pje, PJ_PJESZ(pj));
 	}
 
 	psc_dynarray_free(&pj->pj_bufs);
