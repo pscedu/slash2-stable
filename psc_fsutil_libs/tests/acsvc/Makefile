@@ -3,7 +3,7 @@
 ROOTDIR=../../..
 include ${ROOTDIR}/Makefile.path
 
-PROG=		acsvc_test
+TEST=		acsvc_test
 SRCS+=		acsvc_test.c
 SRCS+=		${PFL_BASE}/psc_ds/dynarray.c
 SRCS+=		${PFL_BASE}/psc_ds/hashtbl.c

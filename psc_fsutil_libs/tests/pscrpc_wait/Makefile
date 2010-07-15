@@ -3,7 +3,7 @@
 ROOTDIR=../../..
 include ${ROOTDIR}/Makefile.path
 
-PROG=		rpcwait
+TEST=		rpcwait
 SRCS+=		rpcwait.c
 
 MODULES+=	lnet-hdrs
