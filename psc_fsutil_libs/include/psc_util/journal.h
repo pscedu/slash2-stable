@@ -202,8 +202,7 @@ struct psc_journal_xidhndl {
 int			 pjournal_dump(const char *, int);
 int			 pjournal_format(const char *, uint32_t, uint32_t, uint32_t);
 struct psc_journal	*pjournal_init(const char *, int, const char *,
-			     struct psc_journal_cursor *, psc_replay_handler_t,
-			     psc_distill_handler_t, psc_txg_handler_t);
+			     struct psc_journal_cursor *, psc_replay_handler_t, psc_distill_handler_t);
 
 void	 pjournal_reserve_slot(struct psc_journal *);
 void	 pjournal_unreserve_slot(struct psc_journal *);

@@ -439,8 +439,6 @@ pjournal_logwrite(struct psc_journal_xidhndl *xh, int type,
 		distilled = 1;
 	}
 
-	(pj->pj_txg_handler)(&xh->pjx_txg, NULL, PJRNL_TXG_PUT);
-
 	return (distilled);
 }
 
@@ -945,8 +943,7 @@ pjournal_init(const char *fn,
     int thrtype, const char *thrname,
     struct psc_journal_cursor *cursor,
     psc_replay_handler_t replay_handler,
-    psc_distill_handler_t distill_handler,
-    psc_txg_handler_t txg_handler)
+    psc_distill_handler_t distill_handler)
 {
 	int i, rc, len;
 	struct psc_journal *pj;
@@ -961,7 +958,6 @@ pjournal_init(const char *fn,
 		return (NULL);
 
 	pj->pj_distill_handler = distill_handler;
-	pj->pj_txg_handler = txg_handler;
 
 	pj->pj_commit_txg = cursor->pjc_txg;
 	psc_notify("Last synced ZFS transaction group number is %"PRId64, pj->pj_commit_txg);
