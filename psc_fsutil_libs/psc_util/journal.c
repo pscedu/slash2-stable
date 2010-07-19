@@ -118,6 +118,18 @@ psc_journal_io(struct psc_journal *pj, void *p, size_t len, off_t off,
 	return (rc);
 }
 
+uint64_t
+pjournal_next_distill(struct psc_journal *pj)
+{
+	uint64_t xid;
+
+	PJ_LOCK(pj);
+	xid = pj->pj_distill_xid;
+	PJ_ULOCK(pj);
+
+	return (xid);
+}
+
 __static uint64_t
 pjournal_next_xid(struct psc_journal *pj)
 {
@@ -472,17 +484,16 @@ pjournal_xid_cmp(const void *x, const void *y)
 __static int
 pjournal_scan_slots(struct psc_journal *pj)
 {
-	int				 i, rc;
-	struct psc_journal_enthdr	*pje;
-	uint32_t			 slot;
-	unsigned char			*jbuf;
-	int				 nclose;
-	struct psc_journal_enthdr	*tmppje;
-	uint64_t			 chksum;
-	int				 nchksum;
-	uint64_t			 last_xid;
-	int32_t				 last_slot;
-	int				 count, nopen, nscan, nmagic;
+	int i, rc;
+	struct psc_journal_enthdr *pje;
+	uint32_t slot;
+	unsigned char *jbuf;
+	int nclose;
+	struct psc_journal_enthdr *tmppje;
+	uint64_t chksum;
+	uint64_t last_xid;
+	int32_t last_slot;
+	int count, nopen, nscan, nmagic, nchksum;
 
 	rc = 0;
 	last_xid = PJE_XID_NONE;
@@ -871,6 +882,7 @@ void
 pjournal_thr_main(struct psc_thread *thr)
 {
 	char *buf;
+	uint64_t xid;
 	struct psc_journalthr *pjt;
 	struct psc_journal *pj;
 	struct psc_journal_enthdr *pje;
@@ -878,6 +890,7 @@ pjournal_thr_main(struct psc_thread *thr)
 
 	pjt = thr->pscthr_private;
 	pj = pjt->pjt_pj;
+	xid = pj->pj_distill_xid;
 	while (pscthr_run()) {
 		/*
 		 * Walk the list until we find a log entry that needs processing.
@@ -893,6 +906,9 @@ pjournal_thr_main(struct psc_thread *thr)
 			xh->pjx_flags &= ~PJX_DISTILL;
 			freelock(&xh->pjx_lock);
 
+			psc_assert(xid < xh->pjx_xid);
+			xid = xh->pjx_xid;
+
 			buf = (char *)pje + offsetof(struct psc_journal_enthdr, pje_data);
 			pjournal_put_buf(pj, buf);
 		}
@@ -900,6 +916,7 @@ pjournal_thr_main(struct psc_thread *thr)
 		 * Free committed pending transactions to avoid hogging memory.
 		 */
 		PJ_LOCK(pj);
+		pj->pj_distill_xid = xid;
 		pj->pj_commit_txg = zfsslash2_return_synced();
 		while ((xh = pll_gethdpeek(&pj->pj_pendingxids)) != NULL) {
 			spinlock(&xh->pjx_lock);
