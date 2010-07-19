@@ -111,4 +111,8 @@ PICKLE_NEED_VERSION=					$(word 2,$$Rev$$)
   SETRESUID_SRC=					${PFL_BASE}/compat/setresuid.c
  endif
 
+ ifdef PICKLE_HAVE_SYNC_FILE_RANGE
+  DEFINES+=						-DHAVE_SYNC_FILE_RANGE
+ endif
+
 endif
