@@ -1024,5 +1024,4 @@ pjournal_replay(
 
 	psc_notify("journal replayed: %d log entries "
 	    "have been redone, # of errors = %d", nentries, nerrs);
-	return (pj);
 }
