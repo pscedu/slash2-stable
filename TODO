@@ -29,6 +29,8 @@ make
 - setting variables such as CFLAGS on the command line recursively
   propagates all additive assignments in subdirs
 
+- fix cscope: remove the curdir when the parent includes it
+
 pfl
 - ctlapi GETTREE?
 - pfl: use "psc_/pfl_" prefix and "_mt" (multithread-safe) postfix
