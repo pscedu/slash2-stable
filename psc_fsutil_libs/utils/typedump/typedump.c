@@ -56,7 +56,6 @@
 #include "psc_util/ctl.h"
 #include "psc_util/ctlcli.h"
 #include "psc_util/ctlsvr.h"
-#include "psc_util/daemon.h"
 #include "psc_util/eqpollthr.h"
 #include "psc_util/fault.h"
 #include "psc_util/fmt.h"
