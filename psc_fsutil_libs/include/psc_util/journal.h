@@ -53,7 +53,9 @@ typedef void (*psc_txg_handler_t)(uint64_t *, void *, int);
 #define PJRNL_TXG_GET 0
 #define PJRNL_TXG_PUT 1
 
-#define PJRNL_CURSOR_MAGIC		0x12345678abcdefgh
+#define PJRNL_CURSOR_MAGIC		0x12345678abcd1234
+#define PJRNL_CURSOR_VERSION		1
+
 /*
  * Contents of file SL_PATH_CURSOR used to remember where we are in terms
  * processing the log entries.  This file lives in ZFS, so we don't need
