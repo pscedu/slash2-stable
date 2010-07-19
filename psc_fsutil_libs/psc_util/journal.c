@@ -670,6 +670,10 @@ pjournal_open(const char *fn)
 	LOCK_INIT(&pj->pj_pendinglock);
 	LOCK_INIT(&pj->pj_distilllock);
 
+	pj->pj_inuse = 0;
+	pj->pj_resrv = 0;
+	pj->pj_total = pj->pj_hdr->pjh_nents;
+
 	pll_init(&pj->pj_pendingxids, struct psc_journal_xidhndl,
 		 pjx_lentry1, &pj->pj_pendinglock);
 	pll_init(&pj->pj_distillxids, struct psc_journal_xidhndl,
@@ -969,20 +973,6 @@ pjournal_replay(
 	struct psc_journalthr *pjt;
 	struct psc_thread *thr;
 
-	pj->pj_distill_handler = distill_handler;
-
-
-	/*
-	 * Figure out the last XID whose log entry has been distilled
-	 * if need be.  A naive way is to simply maintain a log named
-	 * distill.log.
-	 */
-	pj->pj_distill_xid = 0;
-
-	pj->pj_inuse = 0;
-	pj->pj_resrv = 0;
-	pj->pj_total = pj->pj_hdr->pjh_nents;
-
 	rc = pjournal_scan_slots(pj);
 	if (rc) {
 		rc = 0;
@@ -1015,13 +1005,15 @@ pjournal_replay(
 		psc_dynarray_add(&pj->pj_bufs, pje);
 	}
 
+	psc_notify("journal replayed: %d log entries "
+	    "have been redone, # of errors = %d", nentries, nerrs);
+
+	pj->pj_distill_handler = distill_handler;
+
 	thr = pscthr_init(thrtype, 0, pjournal_thr_main,
 		  NULL, sizeof(*pjt), thrname);
 
 	pjt = thr->pscthr_private;
 	pjt->pjt_pj = pj;
 	pscthr_setready(thr);
-
-	psc_notify("journal replayed: %d log entries "
-	    "have been redone, # of errors = %d", nentries, nerrs);
 }
