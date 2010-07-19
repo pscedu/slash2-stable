@@ -100,7 +100,7 @@ psc_journal_io(struct psc_journal *pj, void *p, size_t len, off_t off,
 
 		if (rw == JIO_WRITE) {
 			if (pj->pj_flags & PJF_ISBLKDEV) {
-#ifdef SLASH2_USE_SYNC_FILE_RANGE
+#ifdef HAVE_SYNC_FILE_RANGE
 				rc = sync_file_range(pj->pj_fd, off, len,
 					     SYNC_FILE_RANGE_WRITE |
 					     SYNC_FILE_RANGE_WAIT_AFTER);
