@@ -201,10 +201,11 @@ struct psc_journal_xidhndl {
 #define	PJOURNAL_LOG_REPLAY		2
 
 /* definitions of journal handling functions */
+struct psc_journal	*pjournal_open(const char *);
 int			 pjournal_dump(const char *, int);
 int			 pjournal_format(const char *, uint32_t, uint32_t, uint32_t);
-struct psc_journal	*pjournal_init(const char *, int, const char *,
-			     struct psc_journal_cursor *, psc_replay_handler_t, psc_distill_handler_t);
+void			 pjournal_replay(struct psc_journal *, int, const char *, 
+				psc_replay_handler_t, psc_distill_handler_t);
 
 uint64_t		 pjournal_next_distill(struct psc_journal *);
 

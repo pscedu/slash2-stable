@@ -600,7 +600,7 @@ pjournal_scan_slots(struct psc_journal *pj)
  * pjournal_open - Initialize the in-memory representation of a journal.
  * @fn: path to journal on file system.
  */
-__static struct psc_journal *
+struct psc_journal *
 pjournal_open(const char *fn)
 {
 	struct psc_journal_hdr *pjh;
@@ -949,38 +949,28 @@ pjournal_thr_main(struct psc_thread *thr)
 
 /**
  * pjournal_init - Replay all open transactions in a journal.
- * @fn: location on journal file on file system.
- * @txg: the first transaction group number to be used by ZFS.
  * @thrtype: application-specified thread type ID for distill processor.
  * @thrname: application-specified thread name for distill processor.
- * @embed_handler: the journal embed callback.
  * @replay_handler: the journal replay callback.
  * @distill_handler: the distill processor callback.
  */
-struct psc_journal *
-pjournal_init(const char *fn,
-    int thrtype, const char *thrname,
-    struct psc_journal_cursor *cursor,
+void
+pjournal_replay(
+    struct psc_journal *pj,
+    int thrtype, 
+    const char *thrname,
     psc_replay_handler_t replay_handler,
     psc_distill_handler_t distill_handler)
 {
 	int i, rc, len;
-	struct psc_journal *pj;
 	struct psc_journal_enthdr *pje;
 	int nerrs=0;
 	int nentries;
 	struct psc_journalthr *pjt;
 	struct psc_thread *thr;
 
-	pj = pjournal_open(fn);
-	if (pj == NULL)
-		return (NULL);
-
 	pj->pj_distill_handler = distill_handler;
 
-	pj->pj_commit_txg = cursor->pjc_txg;
-	psc_notify("Last synced ZFS transaction group number is %"PRId64, pj->pj_commit_txg);
-	psc_notify("Journal device %s", fn);
 
 	/*
 	 * Figure out the last XID whose log entry has been distilled
