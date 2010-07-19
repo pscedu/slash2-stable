@@ -871,11 +871,13 @@ void
 pjournal_thr_main(struct psc_thread *thr)
 {
 	char *buf;
-	struct psc_journalthr *pjt = thr->pscthr_private;
-	struct psc_journal *pj = pjt->pjt_pj;
+	struct psc_journalthr *pjt;
+	struct psc_journal *pj;
 	struct psc_journal_enthdr *pje;
 	struct psc_journal_xidhndl *xh;
 
+	pjt = thr->pscthr_private;
+	pj = pjt->pjt_pj;
 	while (pscthr_run()) {
 		/*
 		 * Walk the list until we find a log entry that needs processing.
