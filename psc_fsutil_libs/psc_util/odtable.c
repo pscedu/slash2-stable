@@ -167,7 +167,10 @@ odtable_freeitem(struct odtable *odt, struct odtable_receipt *odtr)
 	psc_info("slot=%zd", odtr->odtr_elem);
 
 	odtable_sync(odt, odtr->odtr_elem);
+	spinlock(&odt->odt_lock);
 	psc_vbitmap_unset(odt->odt_bitmap, odtr->odtr_elem);
+	freelock(&odt->odt_lock);
+
 	PSCFREE(odtr);
 
 	return (0);
