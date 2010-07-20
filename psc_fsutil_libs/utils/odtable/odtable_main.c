@@ -63,7 +63,7 @@ main(int argc, char *argv[])
 {
 	int c, rc, i;
 
-	char *fn = DEF_FN;
+	char *fn;
 
 	int create_table = 0;
 	int load_table   = 1;
@@ -115,10 +115,16 @@ main(int argc, char *argv[])
 		}
 	argc -= optind;
 	argv += optind;
-	if (argc == 1)
+	switch (argc) {
+	    case 0:
+		fn = DEF_FN;
+		break;
+	    case 1:
 		fn = argv[0];
-	else
+		break;
+	    default:
 		usage();
+	}
 
 	if (create_table &&
 	    (rc = odtable_create(fn, table_size, elem_size, overwrite)))
