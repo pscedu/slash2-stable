@@ -78,7 +78,6 @@ psc_waitq_waitabs(struct psc_waitq *q, psc_spinlock_t *k,
 		psc_fatalx("pthread_cond_timedwait: %s", strerror(rc));
 	atomic_dec(&q->wq_nwaiters);
 
- out:
 	psc_pthread_mutex_unlock(&q->wq_mut);
 	return (rc);
 }
