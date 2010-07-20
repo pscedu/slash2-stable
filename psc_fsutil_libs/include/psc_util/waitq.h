@@ -22,7 +22,6 @@
 
 #include <time.h>
 
-#include "psc_ds/list.h"
 #include "psc_util/atomic.h"
 #include "psc_util/lock.h"
 #include "psc_util/pthrutil.h"
@@ -35,11 +34,10 @@ struct psc_waitq {
 	pthread_mutex_t		wq_mut;
 	pthread_cond_t		wq_cond;
 	atomic_t		wq_nwaiters;
-	struct timespec		wq_waitv;
 };
 
-#define PSC_WAITQ_INIT	{ PSC_PTHREAD_MUTEX_INITIALIZER,		\
-			  PTHREAD_COND_INITIALIZER, ATOMIC_INIT(0), { 0, 0 } }
+# define PSC_WAITQ_INIT	{ PSC_PTHREAD_MUTEX_INITIALIZER,		\
+			  PTHREAD_COND_INITIALIZER, ATOMIC_INIT(0) }
 
 #else /* HAVE_LIBPTHREAD */
 
@@ -47,12 +45,12 @@ struct psc_waitq {
 	atomic_t		wq_nwaiters;
 };
 
-#define PSC_WAITQ_INIT	{ ATOMIC_INIT(0) }
+# define PSC_WAITQ_INIT	{ ATOMIC_INIT(0) }
 
 #endif
 
 /**
- * psc_waitq_wait - wait until resource managed by wq_cond is available.
+ * psc_waitq_wait - Wait until resource managed by wq_cond is available.
  * @wq: wait queue.
  * @lk: optional lock to prevent race condition in waiting.
  */
@@ -64,7 +62,7 @@ struct psc_waitq {
 #define psc_waitq_waitrel_tv(wq, lk, tv) _psc_waitq_waitrelv((wq), (lk), (tv)->tv_sec, (tv)->tv_usec * 1000L)
 
 /**
- * psc_waitq_nwaiters - determine number of threads waiting on a waitq.
+ * psc_waitq_nwaiters - Determine number of threads waiting on a waitq.
  * @wq: wait queue.
  */
 #define psc_waitq_nwaiters(wq)		atomic_read(&(wq)->wq_nwaiters)
