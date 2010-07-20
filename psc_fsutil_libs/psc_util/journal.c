@@ -582,9 +582,6 @@ pjournal_scan_slots(struct psc_journal *pj)
  done:
 
 	pj->pj_lastxid = last_xid;
-	/* If last_slot is PJX_SLOT_ANY, then nextwrite will be 0 */
-	pj->pj_nextwrite = (last_slot == (int)pj->pj_total - 1) ?
-	    0 : (last_slot + 1);
 	//	qsort(pj->pj_bufs.da_items, pj->pj_bufs.da_pos,
 	//	    sizeof(void *), pjournal_xid_cmp);
 	psc_freenl(jbuf, PJ_PJESZ(pj) * pj->pj_hdr->pjh_readahead);
