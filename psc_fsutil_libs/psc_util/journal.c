@@ -582,8 +582,8 @@ pjournal_scan_slots(struct psc_journal *pj)
  done:
 
 	pj->pj_lastxid = last_xid;
-	//	qsort(pj->pj_bufs.da_items, pj->pj_bufs.da_pos,
-	//	    sizeof(void *), pjournal_xid_cmp);
+	qsort(pj->pj_bufs.da_items, pj->pj_bufs.da_pos,
+	    sizeof(void *), pjournal_xid_cmp);
 	psc_freenl(jbuf, PJ_PJESZ(pj) * pj->pj_hdr->pjh_readahead);
 
 	nopen = psc_dynarray_len(&pj->pj_bufs);
@@ -982,7 +982,6 @@ pjournal_replay(
 	for (i=0; i < len; i++) {
 		pje = psc_dynarray_getpos(&pj->pj_bufs, i);
 		nentries++;
-		psc_notify("pje=%p", pje);
 		replay_handler(pje, &rc);
 		if (rc) {
 			nerrs++;
@@ -990,7 +989,6 @@ pjournal_replay(
 		}
 		psc_freenl(pje, PJ_PJESZ(pj));
 	}
-
 	psc_dynarray_free(&pj->pj_bufs);
 
 	/* start at the first slot of the journal */
