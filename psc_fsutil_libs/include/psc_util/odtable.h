@@ -197,11 +197,7 @@ odtable_freemap(struct odtable *odt)
 		else if ((odtf)->odtf_inuse == ODTBL_BAD)		\
 			__ret = ODTBL_BADSL_ERR;			\
 									\
-		else if ((inuse) && (inuse) > 0 &&			\
-			 (odtf)->odtf_inuse != ODTBL_INUSE)		\
-			__ret = ODTBL_INUSE_ERR;			\
-									\
-		else if (!(inuse) && (inuse) > 0 &&			\
+		else if (!(inuse) &&					\
 			 (odtf)->odtf_inuse != ODTBL_FREE)		\
 			__ret = ODTBL_FREE_ERR;				\
 									\
@@ -209,6 +205,10 @@ odtable_freemap(struct odtable *odt)
 			 ((odtf)->odtf_inuse == ODTBL_INUSE) &&		\
 			 ((odtf)->odtf_key != (odtr)->odtr_key))	\
 			__ret = ODTBL_KEY_ERR;				\
+									\
+		else if ((inuse) > 0 &&					\
+			 (odtf)->odtf_inuse != ODTBL_INUSE)		\
+			__ret = ODTBL_INUSE_ERR;			\
 									\
 		if (__ret)						\
 			psc_errorx("slot=%zd has error %d",		\
