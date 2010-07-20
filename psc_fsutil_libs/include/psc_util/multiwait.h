@@ -102,6 +102,7 @@ void	 psc_multiwaitcond_init(struct psc_multiwaitcond *, const void *, int, cons
 size_t	 psc_multiwaitcond_nwaiters(struct psc_multiwaitcond *);
 void	 psc_multiwaitcond_prmwaits(struct psc_multiwaitcond *);
 void	 psc_multiwaitcond_wait(struct psc_multiwaitcond *, pthread_mutex_t *);
+int	 psc_multiwaitcond_waitrel(struct psc_multiwaitcond *, pthread_mutex_t *, const struct timespec *);
 void	 psc_multiwaitcond_wakeup(struct psc_multiwaitcond *);
 
 #endif /* _PFL_MULTIWAIT_H_ */

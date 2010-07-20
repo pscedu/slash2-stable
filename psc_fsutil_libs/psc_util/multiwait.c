@@ -239,6 +239,29 @@ psc_multiwaitcond_wait(struct psc_multiwaitcond *mwc, pthread_mutex_t *mutex)
 	psc_pthread_mutex_unlock(&mwc->mwc_mutex);
 }
 
+int
+psc_multiwaitcond_waitrel(struct psc_multiwaitcond *mwc,
+    pthread_mutex_t *mutex, const struct timespec *reltime)
+{
+	struct timespec abstime;
+	int rc;
+
+	psc_pthread_mutex_lock(&mwc->mwc_mutex);
+	if (mutex)
+		psc_pthread_mutex_unlock(mutex);
+
+	if (clock_gettime(CLOCK_REALTIME, &abstime) == -1)
+		psc_fatal("clock_gettime");
+	timespecadd(&abstime, reltime, &abstime);
+
+	rc = pthread_cond_timedwait(&mwc->mwc_cond,
+	    &mwc->mwc_mutex, &abstime);
+	if (rc && rc != ETIMEDOUT)
+		psc_fatalx("pthread_cond_timedwait: %s", strerror(rc));
+	psc_pthread_mutex_unlock(&mwc->mwc_mutex);
+	return (rc);
+}
+
 /**
  * psc_multiwait_addcond - Add a condition to a multiwait.
  * @mw: a multiwait.
