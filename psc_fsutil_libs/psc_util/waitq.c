@@ -65,28 +65,22 @@ int
 psc_waitq_waitabs(struct psc_waitq *q, psc_spinlock_t *k,
     const struct timespec *abstime)
 {
-	int rv;
+	int rc;
 
 	psc_pthread_mutex_lock(&q->wq_mut);
 
 	if (k != NULL)
 		freelock(k);
 
-	if (clock_gettime(CLOCK_REALTIME, &q->wq_waitv) == 0 &&
-	    timespeccmp(&q->wq_waitv, abstime, >)) {
-		rv = ETIMEDOUT;
-		goto out;
-	}
-
 	atomic_inc(&q->wq_nwaiters);
-	rv = pthread_cond_timedwait(&q->wq_cond, &q->wq_mut, abstime);
-	if (rv && rv != ETIMEDOUT)
-		psc_fatalx("pthread_cond_timedwait: %s", strerror(rv));
+	rc = pthread_cond_timedwait(&q->wq_cond, &q->wq_mut, abstime);
+	if (rc && rc != ETIMEDOUT)
+		psc_fatalx("pthread_cond_timedwait: %s", strerror(rc));
 	atomic_dec(&q->wq_nwaiters);
 
  out:
 	psc_pthread_mutex_unlock(&q->wq_mut);
-	return (rv);
+	return (rc);
 }
 
 /**
@@ -103,31 +97,29 @@ psc_waitq_waitrel(struct psc_waitq *q, psc_spinlock_t *k,
     const struct timespec *reltime)
 {
 	struct timespec abstime;
-	int rv;
+	int rc;
 
 	psc_pthread_mutex_lock(&q->wq_mut);
 
 	if (k != NULL)
 		freelock(k);
 
-	clock_gettime(CLOCK_REALTIME, &q->wq_waitv);
-
 	atomic_inc(&q->wq_nwaiters);
 	if (reltime) {
 		if (clock_gettime(CLOCK_REALTIME, &abstime) == -1)
 			psc_fatal("clock_gettime");
 		timespecadd(&abstime, reltime, &abstime);
-		rv = pthread_cond_timedwait(&q->wq_cond, &q->wq_mut, &abstime);
-		if (rv && rv != ETIMEDOUT)
-			psc_fatalx("pthread_cond_timedwait: %s", strerror(rv));
+		rc = pthread_cond_timedwait(&q->wq_cond, &q->wq_mut, &abstime);
+		if (rc && rc != ETIMEDOUT)
+			psc_fatalx("pthread_cond_timedwait: %s", strerror(rc));
 	} else {
-		rv = pthread_cond_wait(&q->wq_cond, &q->wq_mut);
-		if (rv)
-			psc_fatalx("pthread_cond_wait: %s", strerror(rv));
+		rc = pthread_cond_wait(&q->wq_cond, &q->wq_mut);
+		if (rc)
+			psc_fatalx("pthread_cond_wait: %s", strerror(rc));
 	}
 	atomic_dec(&q->wq_nwaiters);
 	psc_pthread_mutex_unlock(&q->wq_mut);
-	return (rv);
+	return (rc);
 }
 
 __inline int
