@@ -580,7 +580,15 @@ pjournal_scan_slots(struct psc_journal *pj)
 		slot += count;
 	}
  done:
-
+	/*
+	 * Our cursor file lives within ZFS, while system journal lives ourside
+	 * ZFS. This is a hack for debugging convenience.
+	 */
+	if (last_xid < pj->pj_distill_xid) {
+		psc_warnx("System journal and cursor file mismatch!");
+		last_xid = pj->pj_distill_xid;
+	}
+	
 	pj->pj_lastxid = last_xid;
 	qsort(pj->pj_bufs.da_items, pj->pj_bufs.da_pos,
 	    sizeof(void *), pjournal_xid_cmp);
