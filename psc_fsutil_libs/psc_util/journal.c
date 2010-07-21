@@ -420,7 +420,7 @@ pjournal_logwrite(struct psc_journal_xidhndl *xh, int type,
 	pj = xh->pjx_pj;
 
 	/* honor distill request only when we have a handler */
-	if (!pj->pj_distill_handler)
+	if (pj->pj_distill_handler == NULL)
 		xh->pjx_flags &= ~PJX_DISTILL;
 	if (xh->pjx_flags & PJX_DISTILL)
 		type |= PJE_DISTILL;
@@ -893,6 +893,8 @@ pjournal_thr_main(struct psc_thread *thr)
 	pj = pjt->pjt_pj;
 	xid = pj->pj_distill_xid;
 	while (pscthr_run()) {
+		if (pj->pj_distill_handler == NULL)
+			psc_assert(pll_empty(&pj->pj_distillxids));
 		/*
 		 * Walk the list until we find a log entry that needs processing.
 		 */
