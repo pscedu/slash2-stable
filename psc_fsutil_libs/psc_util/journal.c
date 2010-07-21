@@ -892,6 +892,7 @@ pjournal_thr_main(struct psc_thread *thr)
 {
 	char *buf;
 	uint64_t xid;
+	uint64_t txg;
 	struct psc_journalthr *pjt;
 	struct psc_journal *pj;
 	struct psc_journal_enthdr *pje;
@@ -928,7 +929,11 @@ pjournal_thr_main(struct psc_thread *thr)
 		 */
 		PJ_LOCK(pj);
 		pj->pj_distill_xid = xid;
-		pj->pj_commit_txg = zfsslash2_return_synced();
+
+		txg = zfsslash2_return_synced();
+		psc_assert(pj->pj_commit_txg <= txg);
+		pj->pj_commit_txg = txg;
+
 		while ((xh = pll_gethdpeek(&pj->pj_pendingxids)) != NULL) {
 			spinlock(&xh->pjx_lock);
 			if (xh->pjx_txg > pj->pj_commit_txg) {
