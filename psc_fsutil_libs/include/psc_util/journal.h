@@ -68,6 +68,7 @@ struct psc_journal_cursor {
 	uint64_t			 pjc_xid;	/* last XID whose entry has been distilled */
 	uint64_t			 pjc_s2id;	/* last SLASH2 ID */
 	uint64_t			 pjc_seqno;	/* last bmap sequence number */
+	uint64_t			 pjc_tail;	/* tail slot of our system journal */
 };
 
 struct psc_journal_hdr {
