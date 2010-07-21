@@ -2,9 +2,6 @@
 # $Id$
 # %PSC_COPYRIGHT%
 
-# TODO:
-# - run "svn status" and get the start year instead of hardcode 2006
-
 usage()
 {
 	echo "usage: $0 file ..." >&2
@@ -37,13 +34,22 @@ getopts("F", \%opts);
 local $/;
 
 my $data = <>;
+my $yr;
+my $fn = $ARGV;
+my $bn = basename $fn;
+
+my @out = split /\n/, join '\n', `svn log '$fn'`;
 
 my $startyr = 2006; # read from svn info
-my $yr;
 
-my $fn = basename $ARGV;
+foreach my $ln (@out) {
+	my (undef, $t_yr) =
+	    ($ln =~ /^r(\d+) \s+ \| \s+ (?:\w+) \s+ \| \s+
+	    (\d+)-(?:\d+)-0*(?:\d+) \s+ (?:\d+):(?:\d+):(?:\d+)/x) or next;
+	$startyr = $t_yr;
+}
 
-if ($data =~ m{/\* \$Id: \Q$fn\E \d+ (\d+)-}) {
+if ($data =~ m{/\* \$Id: \Q$bn\E \d+ (\d+)-}) {
 	$yr = $1;
 } else {
 	$yr = 1900 + (localtime((stat $ARGV)[9]))[5];
