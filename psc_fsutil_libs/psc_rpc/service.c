@@ -126,6 +126,9 @@ pscrpc_server_post_idle_rqbds (struct pscrpc_service *svc)
 
 		freelock(&svc->srv_lock);
 
+		if (!rqbd->rqbd_buffer)
+			abort();
+
 		rc = pscrpc_register_rqbd(rqbd);
 		if (rc != 0)
 			break;
