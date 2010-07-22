@@ -24,7 +24,7 @@ PICKLEGEN=	${ROOTDIR}/tools/pickle-gen.sh
 
 MAKEFLAGS+=	--no-print-directory
 
-LFLAGS+=	-t $$(if ${MINVER} $$(lex -V | sed 's/[a-z ]*//g') 2.5.5; then echo --nounput; fi)
+LFLAGS+=	-t $$(if ${MINVER} $$(lex -V | sed 's![a-z /]*!!g') 2.5.5; then echo --nounput; fi)
 YFLAGS+=	-d
 
 CFLAGS+=	-Wall -W
