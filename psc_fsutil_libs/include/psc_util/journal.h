@@ -56,6 +56,13 @@ typedef int (*psc_distill_handler_t)(struct psc_journal_enthdr *);
 #define PJRNL_CURSOR_VERSION		1
 
 /*
+ * The following SLASHIDs are automatically assigned:
+ *      0       not used
+ *      1       -> /
+ */
+#define PJRNL_CURSOR_INIT_S2ID		2
+
+/*
  * Contents of file SL_PATH_CURSOR used to remember where we are in terms
  * processing the log entries.  This file lives in ZFS, so we don't need
  * do any checksum.
