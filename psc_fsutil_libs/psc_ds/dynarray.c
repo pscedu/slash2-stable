@@ -186,7 +186,7 @@ psc_dynarray_reset(struct psc_dynarray *da)
  *	into the slot opened up by the removal.
  */
 int
-psc_dynarray_remove(struct psc_dynarray *da, const void *item)
+_psc_dynarray_remove(struct psc_dynarray *da, const void *item, int fs)
 {
 	int j, len;
 	void **p;
@@ -197,8 +197,8 @@ psc_dynarray_remove(struct psc_dynarray *da, const void *item)
 		if (p[j] == item) {
 			p[j] = p[len - 1];
 			da->da_pos--;
-
-			psc_dynarray_freeslack(da);
+			if (fs)
+				psc_dynarray_freeslack(da);
 			return (j);
 		}
 	psc_fatalx("element not found");
