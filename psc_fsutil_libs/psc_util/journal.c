@@ -1002,11 +1002,14 @@ pjournal_replay(
 			if (rc)
 				nerrs++;
 		}
+#if 0
+		/* turn off for now until distill function is re-written */
 		if (pje->pje_xid > pj->pj_distill_xid) {
 			rc = distill_handler(pje);
 			if (rc) 
 				nerrs++;
 		}
+#endif
 		psc_freenl(pje, PJ_PJESZ(pj));
 	}
 	psc_dynarray_free(&pj->pj_bufs);
