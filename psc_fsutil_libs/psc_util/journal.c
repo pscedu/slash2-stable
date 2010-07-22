@@ -997,12 +997,12 @@ pjournal_replay(
 	for (i=0; i < len; i++) {
 		pje = psc_dynarray_getpos(&pj->pj_bufs, i);
 		nentries++;
-		if (pje->pje_txg < pj->pj_commit_txg) {
+		if (pje->pje_txg > pj->pj_commit_txg) {
 			rc = replay_handler(pje);
 			if (rc)
 				nerrs++;
 		}
-		if (pje->pje_xid < pj->pj_distill_xid) {
+		if (pje->pje_xid > pj->pj_distill_xid) {
 			rc = distill_handler(pje);
 			if (rc) 
 				nerrs++;
