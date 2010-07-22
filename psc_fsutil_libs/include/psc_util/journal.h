@@ -41,14 +41,13 @@ struct psc_journal_enthdr;
 
 #define PJH_OPT_NONE			0x00
 
-typedef void (*psc_replay_handler_t)(struct psc_journal_enthdr *, int *);
+typedef int (*psc_replay_handler_t)(struct psc_journal_enthdr *);
 /*
  * Distill handler is used to further process certain log entries. These
  * log entries carry information that we might need to preserve a longer
  * time, and outside the journal.
  */
-typedef void (*psc_distill_handler_t)(struct psc_journal_enthdr *, int);
-typedef void (*psc_txg_handler_t)(uint64_t *, void *, int);
+typedef int (*psc_distill_handler_t)(struct psc_journal_enthdr *);
 
 #define PJRNL_TXG_GET 0
 #define PJRNL_TXG_PUT 1
@@ -107,7 +106,6 @@ struct psc_journal {
 	struct psc_waitq		 pj_waitq;
 	uint32_t			 pj_nextwrite;		/* next entry slot to write to */
 	psc_distill_handler_t		 pj_distill_handler;
-	psc_txg_handler_t		 pj_txg_handler;
 	int				 pj_fd;			/* file descriptor to backing disk file */
 	void				*pj_txg_state;
 	struct psc_iostats		 pj_rdist;		/* read I/O stats */

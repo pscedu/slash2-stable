@@ -912,7 +912,7 @@ pjournal_thr_main(struct psc_thread *thr)
 			psc_assert(xh->pjx_flags & PJX_DISTILL);
 			pje = (struct psc_journal_enthdr *) xh->pjx_data;
 
-			(pj->pj_distill_handler)(pje, PJ_PJESZ(pj));
+			(pj->pj_distill_handler)(pje);
 
 			spinlock(&xh->pjx_lock);
 			xh->pjx_flags &= ~PJX_DISTILL;
@@ -997,10 +997,15 @@ pjournal_replay(
 	for (i=0; i < len; i++) {
 		pje = psc_dynarray_getpos(&pj->pj_bufs, i);
 		nentries++;
-		replay_handler(pje, &rc);
-		if (rc) {
-			nerrs++;
-			rc = 0;
+		if (pje->pje_txg < pj->pj_commit_txg) {
+			rc = replay_handler(pje);
+			if (rc)
+				nerrs++;
+		}
+		if (pje->pje_xid < pj->pj_distill_xid) {
+			rc = distill_handler(pje);
+			if (rc) 
+				nerrs++;
 		}
 		psc_freenl(pje, PJ_PJESZ(pj));
 	}
