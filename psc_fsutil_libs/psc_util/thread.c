@@ -71,8 +71,8 @@ _pscthr_destroy(void *arg)
 		free(thr);
 }
 
-/*
- * pscthr_sigusr1 - catch SIGUSR1: pause the thread.
+/**
+ * pscthr_sigusr1 - Catch SIGUSR1: pause the thread.
  * @sig: signal number.
  */
 void
@@ -93,8 +93,8 @@ _pscthr_sigusr1(__unusedx int sig)
 	ureqlock(&thr->pscthr_lock, locked);
 }
 
-/*
- * pscthr_sigusr2 - catch SIGUSR2: unpause the thread.
+/**
+ * pscthr_sigusr2 - Catch SIGUSR2: unpause the thread.
  * @sig: signal number.
  */
 void
@@ -165,7 +165,7 @@ pfl_getsysthrid(void)
 }
 
 /**
- * _pscthr_finish_init: final initilization code common among all
+ * _pscthr_finish_init: Final initilization code common among all
  *	instantiation methods.
  * @thr: thread to finish initializing.
  */
@@ -203,22 +203,25 @@ _pscthr_finish_init(struct psc_thread *thr)
 }
 
 /**
- * pscthr_bind_memnode: bind a thread to a specific NUMA memnode.
+ * pscthr_bind_memnode: Bind a thread to a specific NUMA memnode.
  * @thr: thread structure.
  */
 void
 _pscthr_bind_memnode(struct psc_thread *thr)
 {
 #ifdef HAVE_NUMA
-	nodemask_t nm;
+	struct bitmask *bm;
 
 	if (thr->pscthr_memnid != -1) {
-		nodemask_zero(&nm);
-		nodemask_set(&nm, cpuset_p_rel_to_sys_mem(syscall(SYS_gettid),
+		bm = numa_allocate_nodemask();
+		numa_bitmask_clearall(bm);
+		numa_bitmask_setbit(bm,
+		    cpuset_p_rel_to_sys_mem(syscall(SYS_gettid),
 		    thr->pscthr_memnid));
-		if (numa_run_on_node_mask(&nm) == -1)
+		if (numa_run_on_node_mask(bm) == -1)
 			psc_fatal("numa");
-		numa_set_membind(&nm);
+		numa_set_membind(bm);
+		numa_bitmask_free(bm);
 	}
 #else
 	(void)thr; /* avoid unused warnings */
@@ -226,10 +229,9 @@ _pscthr_bind_memnode(struct psc_thread *thr)
 }
 
 /**
- * pscthr_begin: each new thread begins its life here.
- *	This routine invokes the thread's real start routine once
- *	it's safe after the thread who created us has finished our
- *	(external) initialization.
+ * pscthr_begin: Thread start routine.  This routine invokes the
+ *	thread's real start routine once it is safe after the thread who
+ *	created us has finished our (external) initialization.
  * @arg: thread structure.
  */
 __static void *
@@ -340,7 +342,7 @@ _pscthr_init(int type, int flags, void (*startf)(struct psc_thread *),
 }
 
 /**
- * pscthr_setready - set thread state to READY.
+ * pscthr_setready - Set thread state to READY.
  * @thr: thread ready to start.
  */
 void
@@ -353,7 +355,7 @@ pscthr_setready(struct psc_thread *thr)
 }
 
 /**
- * psc_log_getlevel - get thread logging level for the specified subsystem.
+ * psc_log_getlevel - Get thread logging level for the specified subsystem.
  * @subsys: subsystem ID.
  */
 int
@@ -370,7 +372,7 @@ psc_log_getlevel(int subsys)
 }
 
 /**
- * pscthr_setloglevel - set thread logging level for the specified subsystem.
+ * pscthr_setloglevel - Set thread logging level for the specified subsystem.
  * @ssid: subsystem ID to change logging level for.
  * @newlevel: new logging level value to take on.
  */
@@ -393,8 +395,8 @@ pscthr_setloglevel(int ssid, int newlevel)
 		thr->pscthr_loglevels[ssid] = newlevel;
 }
 
-/*
- * pscthr_getname - get thread name.
+/**
+ * pscthr_getname - Get current thread name.
  */
 const char *
 pscthr_getname(void)
@@ -407,8 +409,8 @@ pscthr_getname(void)
 	return (thr->pscthr_name);
 }
 
-/*
- * pscthr_setpause - set thread pause state.
+/**
+ * pscthr_setpause - Set thread pause state.
  * @thr: the thread.
  * @pauseval: whether to pause or unpause the thread.
  */
@@ -459,7 +461,8 @@ psc_get_hostname(void)
 }
 
 /*
- * pscthr_setrun - Set the PTF_RUN flag of a thread.
+ * pscthr_setrun - Set the PTF_RUN flag of a thread, enabling it to
+ *	begin its life.
  * @thr: thread to modify.
  * @run: boolean whether or not the thread should run.
  */
