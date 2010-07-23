@@ -183,7 +183,6 @@ acsvc_svrmain(int s)
 		m.msg_iov = &iov;
 		m.msg_iovlen = 1;
 
-#if !USE_GDB_FORK_WORKAROUND
 		/*
 		 * Looks like that a client does send an open request
 		 * to us instead of doing it locally. So I have to do a
@@ -199,7 +198,6 @@ acsvc_svrmain(int s)
 				psc_fatal("seteuid %d", arq.arq_uid);
 			euid = arq.arq_uid;
 		}
-#endif
 
 		/* Invoke access operation. */
 		switch (arq.arq_op) {
