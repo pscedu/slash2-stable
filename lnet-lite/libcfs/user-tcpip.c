@@ -421,7 +421,7 @@ libcfs_socketpair(int *fdp)
         rc = socketpair(AF_UNIX, SOCK_STREAM, 0, fdp);
         if (rc != 0) {
                 rc = -errno;
-                CERROR ("Cannot create socket pair\n");
+                CERROR ("Cannot create socket pair: %s\n", strerror(errno));
                 return rc;
         }
         
