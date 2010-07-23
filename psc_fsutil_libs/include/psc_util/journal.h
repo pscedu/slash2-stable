@@ -70,6 +70,11 @@ typedef int (*psc_distill_handler_t)(struct psc_journal_enthdr *);
 struct psc_journal_cursor {
 	uint64_t			 pjc_magic;
 	uint64_t			 pjc_version;
+	/*
+ 	 * pjc_txg is the only trustworthy information recorded in the file
+ 	 * after a crash.  Other information can be stale and need to be
+ 	 * adjusted before use.
+ 	 */
 	uint64_t			 pjc_txg;	/* last synced ZFS transaction group number */
 	uint64_t			 pjc_xid;	/* last XID whose entry has been distilled */
 	uint64_t			 pjc_s2id;	/* last SLASH2 ID */
