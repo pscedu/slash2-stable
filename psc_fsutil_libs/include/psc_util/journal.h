@@ -52,7 +52,7 @@ typedef int (*psc_distill_handler_t)(struct psc_journal_enthdr *);
 #define PJRNL_TXG_GET 0
 #define PJRNL_TXG_PUT 1
 
-#define PJRNL_CURSOR_MAGIC		0x12345678abcd1234
+#define PJRNL_CURSOR_MAGIC		UINT64_C(0x12345678abcd1234)
 #define PJRNL_CURSOR_VERSION		1
 
 /*
@@ -71,10 +71,10 @@ struct psc_journal_cursor {
 	uint64_t			 pjc_magic;
 	uint64_t			 pjc_version;
 	/*
- 	 * pjc_txg is the only trustworthy information recorded in the file
- 	 * after a crash.  Other information can be stale and need to be
- 	 * adjusted before use.
- 	 */
+	 * pjc_txg is the only trustworthy information recorded in the file
+	 * after a crash.  Other information can be stale and need to be
+	 * adjusted before use.
+	 */
 	uint64_t			 pjc_txg;	/* last synced ZFS transaction group number */
 	uint64_t			 pjc_xid;	/* last XID whose entry has been distilled */
 	uint64_t			 pjc_s2id;	/* last SLASH2 ID */
@@ -216,7 +216,7 @@ struct psc_journal_xidhndl {
 struct psc_journal	*pjournal_open(const char *);
 int			 pjournal_dump(const char *, int);
 int			 pjournal_format(const char *, uint32_t, uint32_t, uint32_t);
-void			 pjournal_replay(struct psc_journal *, int, const char *, 
+void			 pjournal_replay(struct psc_journal *, int, const char *,
 				psc_replay_handler_t, psc_distill_handler_t);
 
 uint64_t		 pjournal_next_distill(struct psc_journal *);
