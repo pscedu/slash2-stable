@@ -33,6 +33,8 @@ size_t	strlcat(char *, const char *, size_t);
 size_t	strnlen(const char *, size_t);
 #endif
 
-int	psc_str_hashify(const char *);
+#define psc_str_hashify(c) _psc_str_hashify(c, -1)
+#define psc_strn_hashify(c, n) _psc_str_hashify(c, n)
+int	_psc_str_hashify(const char *, int);
 
 #endif /* _PFL_STR_H_ */

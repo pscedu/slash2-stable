@@ -24,6 +24,7 @@
 #include <string.h>
 
 #include "pfl/hashtbl.h"
+#include "pfl/str.h"
 #include "psc_ds/list.h"
 #include "psc_ds/lockedlist.h"
 #include "psc_util/alloc.h"
@@ -39,14 +40,14 @@ struct psc_lockedlist psc_hashtbls =
  * by Aho, Sethi & Ullman, Addison-Wesley, 1988, p. 436)."
  */
 int
-psc_str_hashify(const char *s)
+_psc_str_hashify(const char *s, int len)
 {
 	const char *p;
 	unsigned h = 0, g;
 
 	if (s == NULL)
 		return (-1);
-	for (p = s; *p != '\0'; p++) {
+	for (p = s; *p != '\0' && len; p++, len--) {
 		h = (h << 4) + (*p);
 		if ((g = h & 0xf0000000)) {
 			h = h ^ (g >> 24);
