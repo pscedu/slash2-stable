@@ -1020,7 +1020,10 @@ pjournal_replay(
 	}
 	psc_dynarray_free(&pj->pj_bufs);
 
-	/* start at the first slot of the journal */
+	psc_notify("journal replayed: %d log entries "
+	    "have been redone, # of errors = %d", nentries, nerrs);
+
+	/* always start at the first slot of the journal */
 	pj->pj_nextwrite = 0;
 
 	/* pre-allocate some buffers for log writes/distill */
@@ -1030,9 +1033,6 @@ pjournal_replay(
 		pje = psc_alloc(PJ_PJESZ(pj), PAF_PAGEALIGN | PAF_LOCK);
 		psc_dynarray_add(&pj->pj_bufs, pje);
 	}
-
-	psc_notify("journal replayed: %d log entries "
-	    "have been redone, # of errors = %d", nentries, nerrs);
 
 	pj->pj_distill_handler = distill_handler;
 
