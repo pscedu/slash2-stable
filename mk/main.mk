@@ -336,17 +336,17 @@ hdrclean:
 	${HDRCLEAN} */*.[clyh]
 
 # empty but overrideable
-regen:
+regen-hook:
 
-regen-hook: recurse-regen-hook regen
+regen: recurse-regen regen-hook
 
 # empty but overrideable
-prereq:
+prereq-hook:
 
-prereq-hook: recurse-prereq-hook prereq
+prereq: recurse-prereq prereq-hook
 
 build:
-	${MAKE} clean && ${MAKE} prereq-hook && ${MAKE} regen-hook && ${MAKE} all
+	${MAKE} clean && ${MAKE} prereq && ${MAKE} regen && ${MAKE} all
 
 copyright: recurse-copyright
 	@if ${NOTEMPTY} "${_TSRCS}"; then						\
