@@ -148,6 +148,10 @@ pjournal_next_xid(struct psc_journal *pj)
 	return (xid);
 }
 
+/**
+ * pjournal_next_slot - determine where to write the transaction's log.  Because we have
+ *     already reserved a slot for it, we can simple write at the next slot.
+ */
 __static void
 pjournal_next_slot(struct psc_journal_xidhndl *xh)
 {
@@ -160,11 +164,13 @@ pjournal_next_slot(struct psc_journal_xidhndl *xh)
 
 	PJ_LOCK(pj);
 
-	t = pll_gethdpeek(&pj->pj_pendingxids);
-	if (t)
-		tail_slot = t->pjx_slot;
-
 	slot = pj->pj_nextwrite;
+
+	t = pll_gethdpeek(&pj->pj_pendingxids);
+	if (t) {
+		tail_slot = t->pjx_slot;
+		psc_assert(tail_slot != slot);
+	}
 
 	/* Update the next slot to be written by a next log entry */
 	psc_assert(pj->pj_nextwrite < pj->pj_total);
