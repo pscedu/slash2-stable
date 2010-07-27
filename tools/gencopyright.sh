@@ -8,10 +8,9 @@ usage()
 	exit 1
 }
 
-parg=
-# uncomment to force copyrights into all files
-#parg=-F
-
+if getopts ""; then
+	usage
+fi
 shift $(($OPTIND - 1))
 
 if [ $# -eq 0 ]; then
@@ -22,14 +21,10 @@ for i; do
 	if [ -h "$i" ]; then
 		continue
 	fi
-	perl -W -i - $parg $i <<'EOF'
+	perl -W -i - $i <<'EOF'
+use File::Basename;
 use warnings;
 use strict;
-use Getopt::Std;
-use File::Basename;
-
-my %opts;
-getopts("F", \%opts);
 
 local $/;
 
@@ -40,7 +35,7 @@ my $bn = basename $fn;
 
 my @out = split /\n/, join '\n', `svn log '$fn'`;
 
-my $startyr = 2006; # read from svn info
+$startyr ||= 2006;
 
 foreach my $ln (@out) {
 	my (undef, $t_yr) =
@@ -49,43 +44,42 @@ foreach my $ln (@out) {
 	$startyr = $t_yr;
 }
 
-if ($data =~ m{/\* \$Id: \Q$bn\E \d+ (\d+)-}) {
-	$yr = $1;
+$startyr = $1 if $data =~
+    m{Copyright \(c\) (\d+)(?:-\d+)?, Pittsburgh Supercomputing Center \(PSC\)\.};
+
+if ($data =~ m{/\A(?:.*\n)?.*\$Id: \Q$bn\E \d+ (\d+)-}m) {
+	$endyr = $1;
 } else {
-	$yr = 1900 + (localtime((stat $ARGV)[9]))[5];
+	$endyr = 1900 + (localtime((stat $ARGV)[9]))[5];
 }
 
-if ($yr < $startyr) {
-	warn "$ARGV: $yr from Id tag before $startyr\n";
-	$yr = $startyr;
+if ($endyr < $startyr) {
+	warn "$ARGV: $endyr from Id tag before $startyr\n";
+	$endyr = $startyr;
 }
 
 my $cpyears = $startyr;
-$cpyears .= "-$yr" if $yr > $startyr;
+$cpyears .= "-$endyr" if $endyr > $startyr;
 
-if ($opts{F}) {
-	# Force insertion: if the file does not contain a copyright section,
-	# insert at the top after any Id tags.
-	unless ($data =~ /%PSC_(?:START|NO)_COPYRIGHT%/) {
-		$data =~ s{((/\*\s*\$Id.*?\*/\n)?)}{$1/\*
- \* %PSC_START_COPYRIGHT%
- \* -----------------------------------------------------------------------------
- \* -----------------------------------------------------------------------------
- \* %PSC_END_COPYRIGHT%
- \*/
-};
-	}
-} else {
-	$data =~ s
-{/\* %PSC_COPYRIGHT% \*/
-}{/*
- * %PSC_START_COPYRIGHT%
- * -----------------------------------------------------------------------------
- * -----------------------------------------------------------------------------
- * %PSC_END_COPYRIGHT%
- */
-};
-}
+$data =~ s
+{/^(.*) %PSC_COPYRIGHT%.*
+}{
+ my $delim = $1;
+ my $cdeli = $delim;
+ my $end = "";
+
+ if ($delim eq "/*") {
+	 $cdeli = " *";
+	 $end = "\n */";
+ }
+
+ <<EOF2
+$delim %PSC_START_COPYRIGHT%
+$cdeli -----------------------------------------------------------------------------
+$cdeli -----------------------------------------------------------------------------
+$cdeli %PSC_END_COPYRIGHT%$end
+EOF2
+}e;
 
 $data =~ s
 {/\*
