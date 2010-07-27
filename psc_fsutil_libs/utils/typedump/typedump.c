@@ -287,7 +287,7 @@ main(int argc, char *argv[])
 	PRVAL(offsetof(struct psc_journal_enthdr, pje_data));
 	PRVAL(PSCFMT_HUMAN_BUFSIZ);
 	PRVAL(PSCFMT_RATIO_BUFSIZ);
-	PRVAL(PSC_NIDSTR_SIZE);
+	PRVAL(PSCRPC_NIDSTR_SIZE);
 
 	exit(0);
 }

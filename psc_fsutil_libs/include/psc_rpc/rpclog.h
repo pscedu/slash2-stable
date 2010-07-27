@@ -45,7 +45,7 @@ pscrpc_rqphase2str(struct pscrpc_request *req)
 #define DEBUG_REQ(level, rq, fmt, ...)					\
     do {								\
 	struct pscrpc_import *__imp = (rq)->rq_import;			\
-	char __nidstr[PSC_NIDSTR_SIZE], __idstr[PSC_NIDSTR_SIZE];	\
+	char __nidstr[PSCRPC_NIDSTR_SIZE], __idstr[PSCRPC_NIDSTR_SIZE];	\
 									\
 	psc_logs((level), PSS_RPC,					\
 	    "req@%p x%"PRId64"/t%"PRId64" "				\
@@ -58,9 +58,10 @@ pscrpc_rqphase2str(struct pscrpc_request *req)
 	      (rq)->rq_reqmsg->handle.cookie : 0xdeadbeef,		\
 	    (rq)->rq_reqmsg ? (int)(rq)->rq_reqmsg->opc : -1,		\
 	    __imp ?							\
-	      psc_id2str(__imp->imp_connection->c_peer, __idstr) :	\
+	      pscrpc_id2str(__imp->imp_connection->c_peer, __idstr) :	\
 	      (rq)->rq_conn ?						\
-	      psc_nid2str((rq)->rq_conn->c_peer.nid, __nidstr) : "<?>",	\
+	      pscrpc_nid2str((rq)->rq_conn->c_peer.nid, __nidstr) :	\
+	      "<?>",							\
 	    __imp && __imp->imp_client ?				\
 	      (int)__imp->imp_client->cli_request_portal : -1,		\
 	    (rq)->rq_reqlen, (rq)->rq_replen,				\

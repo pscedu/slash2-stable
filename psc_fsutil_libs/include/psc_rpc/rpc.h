@@ -50,7 +50,7 @@
 #define PSCNET_SERVER			0xff	/* differentiate client and server for ni init */
 #define PSCNET_CLIENT			0x0f
 #define PSCRPC_SVR_PID			54321
-#define PSC_NIDSTR_SIZE			32
+#define PSCRPC_NIDSTR_SIZE		32
 
 #ifdef NAMESPACE_EXPERIMENTAL
 #define PSCRPC_OBD_TIMEOUT		3600
@@ -505,8 +505,9 @@ void	 pscrpc_unregister_bulk(struct pscrpc_request *req);
 void	 pscrpc_abort_inflight(struct pscrpc_import *imp);
 void	 pscrpc_drop_conns(lnet_process_id_t *);
 
-#define psc_nid2str(addr, buf)	libcfs_nid2str2((addr), (buf))
-#define psc_id2str(addr, buf)	libcfs_id2str2((addr), (buf))
+#define pscrpc_nid2str(addr, buf)	libcfs_nid2str2((addr), (buf))
+#define pscrpc_id2str(addr, buf)	libcfs_id2str2((addr), (buf))
+#define pscrpc_net2str(net, buf)	libcfs_net2str2((net), (buf))
 
 struct pscrpc_connection *
 	 pscrpc_get_connection(lnet_process_id_t, lnet_nid_t, struct pscrpc_uuid *);
