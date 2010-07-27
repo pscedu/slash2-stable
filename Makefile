@@ -18,6 +18,3 @@ SUBDIRS+=	zest/utils
 MAN+=		${ROOTDIR}/doc/pflenv.7
 
 include ${MAINMK}
-
-prereq-hook:
-	(cd ${SLASH_BASE}/slashd && ${MAKE} zbuild)
