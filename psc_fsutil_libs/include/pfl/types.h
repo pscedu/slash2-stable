@@ -37,43 +37,46 @@
 #include <inttypes.h>
 
 /* printf(3) specifier modifiers for custom types. */
-#define PSCPRIxLNID	PRIx64
-#define PSCPRIxOFF	PRIx64
-#define PSCPRIdOFF	PRId64
-#define PSCPRIxCRC32	"08u"
-#define PSCPRIxCRC64	"016"PRIx64
+#define PSCPRIxLNID		PRIx64
+#define PSCPRIxOFF		PRIx64
+#define PSCPRIdOFF		PRId64
+#define PSCPRIxCRC32		"08u"
+#define PSCPRIxCRC64		"016"PRIx64
 
 #if defined(__APPLE__) || defined(__OpenBSD__)
-# define PSCPRI_PTHRT	"p"
+# define PSCPRI_PTHRT		"p"
 #else
-# define PSCPRI_PTHRT	"lu"
+# define PSCPRI_PTHRT		"lu"
 #endif
 
 #if defined(__APPLE__)
-# define PSCPRI_BLKSIZE_T "u"
+# define PSCPRI_BLKSIZE_T	"u"
 #else
-# define PSCPRI_BLKSIZE_T "ld"
+# define PSCPRI_BLKSIZE_T	"ld"
 #endif
 
-#define PSCPRIuTIMET	"lu"
+#define PSCPRI_TIMET		"lu"
 
 #ifdef __APPLE__
-# define PSCPRIuUTIMET	"06u"
-# define PSCPRIdUTIMET	"06d"
+# define PSCPRI_UTIMET		"06d"
 #else
-# define PSCPRIuUTIMET	"06lu"
-# define PSCPRIdUTIMET	"06ld"
+# define PSCPRI_UTIMET		"06ld"
 #endif
 
-#define PSCPRIuNTIMET	"06lu"
-#define PSCPRIdNTIMET	"06ld"
+#define PSCPRI_NTIMET		"06ld"
+
+#define PSCPRI_TIMEVAL		"%"PSCPRI_TIMET":%"PSCPRI_UTIMET
+#define PSCPRI_TIMESPEC		"%"PSCPRI_TIMET":%"PSCPRI_NTIMET
+
+#define PSCPRI_TIMEVAL_ARGS(tv)	(tv)->tv_sec, (tv)->tv_usec
+#define PSCPRI_TIMESPEC_ARGS(ts)(ts)->tv_sec, (ts)->tv_nsec
 
 #if defined(__USE_FILE_OFFSET64) || defined(__APPLE__)
-# define PSCPRIuINOT	PRIu64
+# define PSCPRIuINOT		PRIu64
 #elif defined(__linux)
-# define PSCPRIuINOT	"lu"
+# define PSCPRIuINOT		"lu"
 #else
-# define PSCPRIuINOT	"u"
+# define PSCPRIuINOT		"u"
 #endif
 
 #ifndef _BYTE_ORDER
