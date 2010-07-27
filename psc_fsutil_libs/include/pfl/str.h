@@ -33,8 +33,9 @@ size_t	strlcat(char *, const char *, size_t);
 size_t	strnlen(const char *, size_t);
 #endif
 
-#define psc_str_hashify(c) _psc_str_hashify(c, -1)
-#define psc_strn_hashify(c, n) _psc_str_hashify(c, n)
+#define psc_str_hashify(c)	_psc_str_hashify((c), -1)
+#define psc_strn_hashify(c, n)	_psc_str_hashify((c), (n))
+
 int	_psc_str_hashify(const char *, int);
 
 int	pfl_strncmp2(const char *, size_t, const char *, size_t);
