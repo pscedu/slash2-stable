@@ -19,7 +19,5 @@ MAN+=		${ROOTDIR}/doc/pflenv.7
 
 include ${MAINMK}
 
-build-prereq:
-	(cd zest/utils/typedump && ${MAKE} regen)
-	(cd psc_fsutil_libs/utils/typedump && ${MAKE} regen)
-	(cd slash_nara/utils/typedump && ${MAKE} regen)
+prereq-hook:
+	(cd ${SLASH_BASE}/slashd && make zbuild)
