@@ -138,12 +138,15 @@ _psc_waitq_waitrelv(struct psc_waitq *wq, psc_spinlock_t *lk, long s, long ns)
 void
 psc_waitq_wakeone(struct psc_waitq *q)
 {
-	int rc;
 
 	psc_pthread_mutex_lock(&q->wq_mut);
-	rc = pthread_cond_signal(&q->wq_cond);
-	if (rc)
-		psc_fatalx("pthread_cond_signal: %s", strerror(rc));
+	if (atomic_read(&q->wq_nwaiters)) {
+		int rc;
+
+		rc = pthread_cond_signal(&q->wq_cond);
+		if (rc)
+			psc_fatalx("pthread_cond_signal: %s", strerror(rc));
+	}
 	psc_pthread_mutex_unlock(&q->wq_mut);
 }
 
@@ -154,12 +157,15 @@ psc_waitq_wakeone(struct psc_waitq *q)
 void
 psc_waitq_wakeall(struct psc_waitq *q)
 {
-	int rc;
-
 	psc_pthread_mutex_lock(&q->wq_mut);
-	rc = pthread_cond_broadcast(&q->wq_cond);
-	if (rc)
-		psc_fatalx("pthread_cond_broadcast: %s", strerror(rc));
+
+	if (atomic_read(&q->wq_nwaiters)) {
+		int rc;
+
+		rc = pthread_cond_broadcast(&q->wq_cond);
+		if (rc)
+			psc_fatalx("pthread_cond_broadcast: %s", strerror(rc));
+	}
 	psc_pthread_mutex_unlock(&q->wq_mut);
 }
 
