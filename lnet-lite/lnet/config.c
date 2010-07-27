@@ -34,6 +34,8 @@
  * Lustre is a trademark of Sun Microsystems, Inc.
  */
 
+#define LOOPBACK_IFNAME "lo"
+
 #define DEBUG_SUBSYSTEM S_LNET
 #include <lnet/lib-lnet.h>
 
@@ -201,6 +203,7 @@ lnet_parse_networks(struct list_head *nilist, char *networks)
         ni = lnet_new_ni(LNET_MKNET(LOLND, 0), nilist);
         if (ni == NULL)
                 goto failed;
+	ni->ni_interfaces[0] = LOOPBACK_IFNAME; 
 
         while (str != NULL && *str != 0) {
                 char      *comma = strchr(str, ',');
@@ -1251,7 +1254,7 @@ lnet_ipaddr_enumerate (__u32 **ipaddrsp)
         }
 
         for (i = nip = 0; i < nif; i++) {
-                if (!strcmp(ifnames[i], "lo"))
+                if (!strcmp(ifnames[i], LOOPBACK_IFNAME))
                         continue;
 
                 rc = libcfs_ipif_query(ifnames[i], &up,
@@ -1380,7 +1383,7 @@ lnet_set_ip_niaddr (lnet_ni_t *ni)
         }
 
         for (i = 0; i < n; i++) {
-                if (!strcmp(names[i], "lo")) /* skip the loopback IF */
+                if (!strcmp(names[i], LOOPBACK_IFNAME)) /* skip the loopback IF */
                         continue;
 
                 rc = libcfs_ipif_query(names[i], &up, &ip, &netmask);
