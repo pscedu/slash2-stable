@@ -17,19 +17,30 @@
  * %PSC_END_COPYRIGHT%
  */
 
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+
 #include <errno.h>
 #include <string.h>
 
 #include "psc_ds/dynarray.h"
+#include "psc_ds/list.h"
 #include "psc_rpc/rpc.h"
 #include "psc_util/alloc.h"
 #include "psc_util/log.h"
+#include "psc_util/net.h"
+
+#include "lnet/lib-types.h"
+#include "lnet/lib-lnet.h"
 
 void
-pscrpc_getlocalnids(struct psc_dynarray *da)
+pscrpc_getlocalnids(struct ifaddrs *ifa, struct psc_dynarray *da)
 {
+	struct sockaddr_in *sin;
 	lnet_process_id_t prid;
 	lnet_nid_t *nid;
+	lnet_ni_t *ni;
 	int rc, n;
 
 	for (n = 0; ; n++) {
@@ -38,6 +49,16 @@ pscrpc_getlocalnids(struct psc_dynarray *da)
 			break;
 		else if (rc)
 			psc_fatalx("LNetGetId: %s", strerror(-rc));
+
+		if (LNET_NIDADDR(prid.nid) == 0) {
+			LNET_LOCK();
+			ni = lnet_net2ni_locked(LNET_NIDNET(prid.nid));
+			if (pflnet_getifaddr(ifa, ni->ni_interfaces[0], &sin))
+				/* yes this is bad, but stuff in LNET is worse */
+				prid.nid |= ntohl(sin->sin_addr.s_addr);
+			lnet_ni_decref_locked(ni);
+			LNET_UNLOCK();
+		}
 
 		nid = PSCALLOC(sizeof(*nid));
 		*nid = prid.nid;
