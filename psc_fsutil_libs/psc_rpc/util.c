@@ -35,10 +35,9 @@
 #include "lnet/lib-lnet.h"
 
 void
-pscrpc_getlocalnids(struct psc_dynarray *da)
+pscrpc_getlocalprids(struct psc_dynarray *da)
 {
-	lnet_process_id_t prid;
-	lnet_nid_t *nid;
+	lnet_process_id_t prid, *pp;
 	int rc, n;
 
 	for (n = 0; ; n++) {
@@ -48,22 +47,25 @@ pscrpc_getlocalnids(struct psc_dynarray *da)
 		else if (rc)
 			psc_fatalx("LNetGetId: %s", strerror(-rc));
 
-		nid = PSCALLOC(sizeof(*nid));
-		*nid = prid.nid;
-		psc_dynarray_add(da, nid);
+		pp = PSCALLOC(sizeof(*pp));
+		*pp = prid;
+		psc_dynarray_add(da, pp);
 	}
 	if (psc_dynarray_len(da) == 0)
 		psc_fatalx("no LNET_NETWORKS specified");
 }
 
-lnet_nid_t
-pscrpc_getnidforpeer(struct psc_dynarray *da, lnet_nid_t peer)
+void
+pscrpc_getpridforpeer(lnet_process_id_t *pridp, struct psc_dynarray *da,
+    lnet_nid_t peer)
 {
-	lnet_nid_t *np;
+	lnet_process_id_t *pp;
 	int i;
 
-	DYNARRAY_FOREACH(np, i, da)
-		if (LNET_NIDNET(peer) == LNET_NIDNET(*np))
-			return (*np);
-	return (LNET_NID_ANY);
+	DYNARRAY_FOREACH(pp, i, da)
+		if (LNET_NIDNET(peer) == LNET_NIDNET(pp->nid)) {
+			*pridp = *pp;
+			return;
+		}
+	pp->nid = LNET_NID_ANY;
 }

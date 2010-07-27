@@ -557,8 +557,8 @@ int	 pscrpc_target_send_reply_msg(struct pscrpc_request *, int, int);
 void	 pscrpc_fail_import(struct pscrpc_import *, uint32_t);
 
 /* util.c */
-void		pscrpc_getlocalnids(struct psc_dynarray *);
-lnet_nid_t	pscrpc_getnidforpeer(struct psc_dynarray *, lnet_nid_t);
+void	pscrpc_getlocalprids(struct psc_dynarray *);
+void	pscrpc_getpridforpeer(lnet_process_id_t *, struct psc_dynarray *, lnet_nid_t);
 
 static __inline void
 pscrpc_rs_addref(struct pscrpc_reply_state *rs)
