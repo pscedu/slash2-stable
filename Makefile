@@ -20,4 +20,4 @@ MAN+=		${ROOTDIR}/doc/pflenv.7
 include ${MAINMK}
 
 prereq-hook:
-	(cd ${SLASH_BASE}/slashd && make zbuild)
+	(cd ${SLASH_BASE}/slashd && ${MAKE} zbuild)
