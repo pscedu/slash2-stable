@@ -25,7 +25,6 @@
 #include "psc_util/waitq.h"
 
 struct psc_dynarray;
-struct ifaddrs;
 
 #define PSCRPC_MD_OPTIONS		0
 #define BULK_GET_SOURCE			0
@@ -558,7 +557,7 @@ int	 pscrpc_target_send_reply_msg(struct pscrpc_request *, int, int);
 void	 pscrpc_fail_import(struct pscrpc_import *, uint32_t);
 
 /* util.c */
-void		pscrpc_getlocalnids(struct ifaddrs *, struct psc_dynarray *);
+void		pscrpc_getlocalnids(struct psc_dynarray *);
 lnet_nid_t	pscrpc_getnidforpeer(struct psc_dynarray *, lnet_nid_t);
 
 static __inline void
