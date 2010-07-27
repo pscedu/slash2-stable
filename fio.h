@@ -315,46 +315,48 @@ extern GROUP_t		*currentGroup;
 #define DEBUG(chan, format, ...) do {					\
 	if (iot->debug_flags & (chan)) {				\
 		struct timeval tv;					\
+									\
 		gettimeofday(&tv, NULL);				\
-		fprintf(stderr,	"%"PSCPRIuTIMET".%"PSCPRIuUTIMET	\
+		fprintf(stderr,	PSCPRI_TIMEVAL				\
 		    " %s PE_%05d %s() %s, %d :: "format,		\
-		    tv.tv_sec, tv.tv_usec, get_dbg_prefix(chan),	\
+		    PSCPRI_TIMEVAL_ARGS(&tv), get_dbg_prefix(chan),	\
 		    iot->mype, __func__, __FILE__, __LINE__,		\
 		    ##__VA_ARGS__);					\
 	}								\
 } while (0)
 
 #define PRINT(format, ...)						\
-    fprintf(stderr, "%s() %s, %d :: "format,				\
-	__func__, __FILE__, __LINE__, ##__VA_ARGS__)
+	fprintf(stderr, "%s() %s, %d :: "format,			\
+	    __func__, __FILE__, __LINE__, ##__VA_ARGS__)
 
 #define TPRINT(tv, format, ...)						\
-    fprintf(stderr, "%"PSCPRIuTIMET".%"PSCPRIuUTIMET" PE_%05d %s() :: "	\
-	format, (tv).tv_sec, (tv).tv_usec, iot->mype, __func__, ##__VA_ARGS__)
+	fprintf(stderr, PSCPRI_TIMEVAL " PE_%05d %s() :: " format,	\
+	    PSCPRI_TIMEVAL_ARGS(tv), iot->mype, __func__, ##__VA_ARGS__)
 
 #define TPRINTPE TPRINT
 
 #define BDEBUG(format, ...) do {					\
-    if (fio_global_debug)						\
-	fprintf(stderr, "%s() %s, %d :: "format,			\
-	    __func__, __FILE__, __LINE__, ##__VA_ARGS__);		\
+	if (fio_global_debug)						\
+		fprintf(stderr, "%s() %s, %d :: "format,		\
+		    __func__, __FILE__, __LINE__, ##__VA_ARGS__);	\
 } while (0)
 
 #define BDEBUGPE(format, ...) do {					\
 	if (fio_global_debug) {						\
 		struct timeval tv;					\
+									\
 		gettimeofday(&tv, NULL);				\
-		fprintf(stderr, "%"PSCPRIuTIMET".%"PSCPRIuUTIMET	\
-		    "GDBG %s() PE_%05d %s, %d :: "format,		\
-		    tv.tv_sec, tv.tv_usec, __func__, iot->mype,		\
+		fprintf(stderr, PSCPRI_TIMEVAL				\
+		    " GDBG %s() PE_%05d %s, %d :: "format,		\
+		    PSCPRI_TIMEVAL_ARGS(&tv), __func__, iot->mype,	\
 		    __FILE__, __LINE__, ##__VA_ARGS__);			\
 	}								\
 } while (0)
 
 #define CDEBUG(format, ...) do {					\
-    if (fio_lexyacc_debug)						\
-	fprintf(stderr, "%s() %s, %d :: "format,			\
-	    __func__, __FILE__, __LINE__, ##__VA_ARGS__);		\
+	if (fio_lexyacc_debug)						\
+		fprintf(stderr, "%s() %s, %d :: "format,		\
+		    __func__, __FILE__, __LINE__, ##__VA_ARGS__);	\
 } while (0)
 
 #define ASSERT(cond) do {						\
@@ -418,7 +420,8 @@ get_dbg_prefix(int dbg_channel)
 	(b)->block_number, (b)->buffer_size)
 
 #define DUMP_GROUP(g) do {						\
-	int i,j;							\
+	int _i, _j;							\
+									\
 	BDEBUG("Group '%s' %p\n"					\
 	    "\tnum_pes %d\n"						\
 	    "\tnum_tests %d\n"						\
@@ -431,7 +434,7 @@ get_dbg_prefix(int dbg_channel)
 	    "\tfile_per_dir %d\n"					\
 	    "\ttree_depth %d\n"						\
 	    "\ttree_width %d\n"						\
-	    "\ttest_freq %"PSCPRIuTIMET".%"PSCPRIuUTIMET"\n",		\
+	    "\ttest_freq "PSCPRI_TIMEVAL "\n",				\
 	    (g)->test_name,						\
 	    (g),							\
 	    (g)->num_pes,						\
@@ -445,15 +448,15 @@ get_dbg_prefix(int dbg_channel)
 	    (g)->files_per_dir,						\
 	    (g)->tree_depth,						\
 	    (g)->tree_width,						\
-	    (g)->test_freq.tv_sec, (g)->test_freq.tv_usec);		\
+	    PSCPRI_TIMEVAL_ARGS(&(g)->test_freq));			\
 									\
-	for (i=0; i < g->num_iotests; i++) {				\
+	for (_i = 0; _i < (g)->num_iotests; _i++) {			\
 		BDEBUG("\t%s:\n",					\
-		    g->iotests[i].io_testname);				\
-		for (j=0; j < g->iotests[i].num_routines; j++) {	\
+		    (g)->iotests[_i].io_testname);			\
+		for (_j = 0; _j < (g)->iotests[_i].num_routines; _j++) {\
 			BDEBUG("\t\t%s %p:\n",				\
-			    (char *)g->iotests[i].io_routine[j],	\
-			    g->iotests[i].io_routine[j]);		\
+			    (char *)(g)->iotests[_i].io_routine[_j],	\
+			    (g)->iotests[_i].io_routine[_j]);		\
 		}							\
 	}								\
 } while (0)
@@ -461,7 +464,7 @@ get_dbg_prefix(int dbg_channel)
 #define STARTWATCH(test) gettimeofday(&(iot->times[test]), NULL)
 #define STOPWATCH(test)							\
 	do {								\
-		gettimeofday(&(iot->times[(test)+1]), NULL);		\
+		gettimeofday(&(iot->times[(test) + 1]), NULL);		\
 		log_op((test), iot);					\
 	} while (0)
 

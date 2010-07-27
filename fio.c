@@ -479,7 +479,7 @@ do_creat(struct io_toolbox *iot)
 			    iot->mypath);
 			CREAT;
 
-			TPRINT(iot->times[CREAT_clk + 1],
+			TPRINT(&iot->times[CREAT_clk + 1],
 			 "cr_op %011.6f '%s'\n",
 			 op_tmp->oplog_time, iot->mypath);
 		} else
@@ -489,7 +489,7 @@ do_creat(struct io_toolbox *iot)
 		DEBUG(D_DTREE, "creat '%s'\n", iot->mypath);
 		CREAT;
 
-		TPRINT(iot->times[CREAT_clk + 1],
+		TPRINT(&iot->times[CREAT_clk + 1],
 		 "cr_op %011.6f '%s'\n",
 		 op_tmp->oplog_time, iot->mypath);
 	}
@@ -530,7 +530,7 @@ do_open(struct io_toolbox *iot)
 		SEEKOFF;
 	}
 
-	TPRINT(iot->times[clk + 1],
+	TPRINT(&iot->times[clk + 1],
 	 "op_op %011.6f '%s'\n",
 	 op_tmp->oplog_time, iot->mypath);
 
@@ -556,7 +556,7 @@ do_unlink(struct io_toolbox *iot)
 	STARTWATCH(UNLINK_clk);
 	ASSERT(!unlink(iot->mypath));
 	STOPWATCH(UNLINK_clk);
-	TPRINT(iot->times[UNLINK_clk + 1],
+	TPRINT(&iot->times[UNLINK_clk + 1],
 	 "ul_op %011.6f '%s'\n",
 	 op_tmp->oplog_time, iot->mypath);
 	return 0;
@@ -679,7 +679,7 @@ do_io(IOT_t *iot, int op)
 			if (clk_type == WRITE_clk)
 				op_type = "bl_wr";
 
-			TPRINT(iot->times[BLOCK_clk + 1],
+			TPRINT(&iot->times[BLOCK_clk + 1],
 			 "%s %011.6f MB/s %011.6f block# %d bwait %09.6f\n",
 			 op_type, op_tmp->oplog_time,
 			 (float)(((mygroup->block_size)/op_tmp->oplog_time)/1048576),
@@ -720,7 +720,7 @@ do_io(IOT_t *iot, int op)
 	STOPWATCH(clk_type);
 
 	if (clk_type == READ_clk) {
-		TPRINT(iot->times[READ_clk + 1],
+		TPRINT(&iot->times[READ_clk + 1],
 		 "rd_op %011.6f MB/s %011.6f '%s' chksum_ok %d\n",
 		 op_tmp->oplog_time,
 		 (float)(((mygroup->block_size*iot->bdesc.block_number)/op_tmp->oplog_time)/1048576),
@@ -736,7 +736,7 @@ do_io(IOT_t *iot, int op)
 			    iot->mypath);
 
 	} else
-		TPRINT(iot->times[WRITE_clk + 1],
+		TPRINT(&iot->times[WRITE_clk + 1],
 		 "wr_op %011.6f MB/s %011.6f '%s'\n",
 		 op_tmp->oplog_time,
 		 (float)(((mygroup->block_size*iot->bdesc.block_number)/op_tmp->oplog_time)/1048576),
@@ -776,7 +776,7 @@ do_close(IOT_t *iot)
 
 	CLOSE;
 
-	TPRINT(iot->times[CLOSE_clk + 1],
+	TPRINT(&iot->times[CLOSE_clk + 1],
 	 "cl_op %011.6f '%s'\n",
 	 op_tmp->oplog_time, iot->mypath);
 
@@ -805,7 +805,7 @@ do_stat(IOT_t *iot)
 
 	STAT;
 
-	TPRINT(iot->times[STAT_clk + 1],
+	TPRINT(&iot->times[STAT_clk + 1],
 	 "st_op %011.6f '%s'\n",
 	 op_tmp->oplog_time, iot->mypath);
 
@@ -820,7 +820,7 @@ do_fstat(IOT_t *iot)
 
 	FSTAT;
 
-	TPRINT(iot->times[FSTAT_clk + 1],
+	TPRINT(&iot->times[FSTAT_clk + 1],
 	 "fs_op %011.6f '%s'\n",
 	 op_tmp->oplog_time, iot->mypath);
 
