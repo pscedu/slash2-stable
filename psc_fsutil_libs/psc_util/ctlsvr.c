@@ -1417,8 +1417,8 @@ psc_ctlthr_service(int fd, const struct psc_ctlop *ct, int nops)
 		if (ct[mh.mh_type].pc_siz &&
 		    ct[mh.mh_type].pc_siz != mh.mh_size) {
 			psc_ctlsenderr(fd, &mh,
-			    "invalid ctlmsg size; type=%d, size=%zu",
-			    mh.mh_type, mh.mh_size);
+			    "invalid ctlmsg size; type=%d, size=%zu, want=%zu",
+			    mh.mh_type, mh.mh_size, ct[mh.mh_type].pc_siz);
 			continue;
 		}
 		psc_ctlthr(pscthr_get())->pc_st_nrecv++;
