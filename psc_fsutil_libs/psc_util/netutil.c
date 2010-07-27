@@ -45,7 +45,7 @@
 #include "psc_util/log.h"
 #include "psc_util/net.h"
 
-/*
+/**
  * pfl_socket_setnosig - Try to set "no SIGPIPE" on a socket.
  * @sock: socket file descriptor.
  */
@@ -66,7 +66,7 @@ pfl_socket_setnosig(int sock)
 #endif
 }
 
-/*
+/**
  * pfl_socket_getpeercred - Retrieve credentials of process on other end
  *	of a UNIX domain socket.
  * @s: socket file descriptor.
@@ -92,7 +92,7 @@ pfl_socket_getpeercred(int s, uid_t *uid, gid_t *gid)
 	return (0);
 }
 
-/*
+/**
  * pflnet_getifaddrs - Acquire list of network interface addresses.
  * @ifap: value-result base of addresses array, must be when finished.
  */
@@ -137,7 +137,7 @@ pflnet_getifaddrs(struct ifaddrs **ifap)
 	return (0);
 }
 
-/*
+/**
  * pflnet_freeifaddrs - Release network interface addresses.
  * @ifa: addresses to free.
  */
@@ -328,7 +328,7 @@ pflnet_getifnfordst_rtsock(const struct sockaddr *sa, char ifn[IFNAMSIZ])
 }
 #endif
 
-/*
+/**
  * pflnet_getifnfordst - Obtain an interface name (e.g. eth0) for the
  *	given destination address.
  * @ifa0: base of ifaddrs list to directly compare for localhost.
@@ -364,4 +364,19 @@ pflnet_getifnfordst(const struct ifaddrs *ifa0,
 #else
 	pflnet_getifnfordst_rtsock(sa, ifn);
 #endif
+}
+
+int
+pflnet_getifaddr(const struct ifaddrs *ifa0, const char *ifname,
+    void *sap)
+{
+	const struct ifaddrs *ifa;
+
+	for (ifa = ifa0; ifa; ifa = ifa->ifa_next)
+		if (strcmp(ifa->ifa_name, ifname) == 0 &&
+		   ifa->ifa_addr->sa_family == AF_INET) {
+			*(void **)sap = ifa->ifa_addr;
+			return (1);
+		}
+	return (0);
 }

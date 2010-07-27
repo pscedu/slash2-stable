@@ -71,5 +71,6 @@ void pfl_socket_setnosig(int);
 void pflnet_freeifaddrs(struct ifaddrs *);
 int  pflnet_getifaddrs(struct ifaddrs **);
 void pflnet_getifnfordst(const struct ifaddrs *, const struct sockaddr *, char []);
+int  pflnet_getifaddr(const struct ifaddrs *, const char *, void *);
 
 #endif /* _PFL_NET_H_ */
