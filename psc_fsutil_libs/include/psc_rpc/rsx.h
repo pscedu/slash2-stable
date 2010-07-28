@@ -44,7 +44,11 @@ struct rsx_msg_portablizer {
 									\
 		if (pscrpc_msg_size((nreplens), (replens)) >		\
 		    (rq)->rq_rqbd->rqbd_service->srv_max_reply_size)	\
-			psc_fatalx("reply size greater than max");	\
+			psc_fatalx("reply size (%d) greater than "	\
+			    "max (%d)",					\
+			    pscrpc_msg_size((nreplens),	(replens)),	\
+			    (rq)->rq_rqbd->rqbd_service->		\
+			     srv_max_reply_size);			\
 		_rc = pscrpc_pack_reply((rq), (nreplens), (replens),	\
 		    NULL);						\
 		if (_rc) {						\
