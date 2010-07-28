@@ -368,15 +368,32 @@ pflnet_getifnfordst(const struct ifaddrs *ifa0,
 
 int
 pflnet_getifaddr(const struct ifaddrs *ifa0, const char *ifname,
-    void *sap)
+    __unusedx void *sap)
 {
 	const struct ifaddrs *ifa;
+	struct ifreq ifr;
+	int rc, s;
+psc_fatal("broke");
 
-	for (ifa = ifa0; ifa; ifa = ifa->ifa_next)
-		if (strcmp(ifa->ifa_name, ifname) == 0 &&
-		   ifa->ifa_addr->sa_family == AF_INET) {
-			*(void **)sap = ifa->ifa_addr;
-			return (1);
-		}
+	if (ifa0) {
+		for (ifa = ifa0; ifa; ifa = ifa->ifa_next)
+			if (strcmp(ifa->ifa_name, ifname) == 0 &&
+			    ifa->ifa_addr->sa_family == AF_INET) {
+//				memcpy(sap, ifa->ifa_addr, );
+				return (1);
+			}
+	} else {
+		strlcpy(ifr.ifr_name, ifname, sizeof(ifr.ifr_name));
+		s = socket(AF_INET, SOCK_DGRAM, 0);
+		if (s == -1)
+			psc_fatal("socket");
+
+		rc = ioctl(s, SIOCGIFADDR, &ifr);
+		if (rc == -1)
+			psc_fatal("ioctl SIOCGIFNAME");
+		close(s);
+
+//		memcpy(sap, ifr.ifr_addr, );
+	}
 	return (0);
 }
