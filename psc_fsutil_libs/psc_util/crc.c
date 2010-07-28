@@ -1,5 +1,4 @@
 /* $Id$ */
-/* %PSC_NO_COPYRIGHT% */
 
 #include <stdint.h>
 

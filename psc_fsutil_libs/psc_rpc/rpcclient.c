@@ -1,5 +1,4 @@
 /* $Id$ */
-/* %PSC_NO_COPYRIGHT% */
 
 #define PSC_SUBSYS PSS_RPC
 

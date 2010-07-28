@@ -1,5 +1,4 @@
 /* $Id$ */
-/* %PSC_NO_COPYRIGHT% */
 
 /* -*- mode: c; c-basic-offset: 8; indent-tabs-mode: nil; -*-
  * vim:expandtab:shiftwidth=8:tabstop=8:
