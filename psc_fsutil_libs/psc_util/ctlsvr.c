@@ -1470,7 +1470,7 @@ psc_ctlacthr_main(struct psc_thread *thr)
 		psc_ctlacthr(pscthr_get())->pcat_stat.nclients++;
 
 		spinlock(&psc_ctl_clifds_lock);
-		psc_dynarray_add(&psc_ctl_clifds, (void *)fd);
+		psc_dynarray_add(&psc_ctl_clifds, (void *)(long)fd);
 		psc_waitq_wakeall(&psc_ctl_clifds_waitq);
 		freelock(&psc_ctl_clifds_lock);
 	}
@@ -1549,12 +1549,12 @@ psc_ctlthr_main(const char *ofn, const struct psc_ctlop *ct, int nops,
 		if (psc_dynarray_len(&psc_ctl_clifds) == 0)
 			psc_waitq_wait(&psc_ctl_clifds_waitq, &psc_ctl_clifds_lock);
 		rnd = psc_random32u(psc_dynarray_len(&psc_ctl_clifds));
-		s = (int)psc_dynarray_getpos(&psc_ctl_clifds, rnd);
+		s = (int)(long)psc_dynarray_getpos(&psc_ctl_clifds, rnd);
 		freelock(&psc_ctl_clifds_lock);
 
 		if (psc_ctlthr_service(s, ct, nops, &bufsiz, &buf)) {
 			spinlock(&psc_ctl_clifds_lock);
-			psc_dynarray_remove(&psc_ctl_clifds, (void *)s);
+			psc_dynarray_remove(&psc_ctl_clifds, (void *)(long)s);
 			freelock(&psc_ctl_clifds_lock);
 			close(s);
 		}
