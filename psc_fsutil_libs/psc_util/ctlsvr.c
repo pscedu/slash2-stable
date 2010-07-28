@@ -49,15 +49,22 @@
 #include "psc_util/fault.h"
 #include "psc_util/fmtstr.h"
 #include "psc_util/iostats.h"
+#include "psc_util/lock.h"
 #include "psc_util/log.h"
 #include "psc_util/mlist.h"
 #include "psc_util/net.h"
 #include "psc_util/pool.h"
+#include "psc_util/random.h"
 #include "psc_util/rlimit.h"
 #include "psc_util/thread.h"
 #include "psc_util/umask.h"
+#include "psc_util/waitq.h"
 
 #define QLEN 15	/* listen(2) queue */
+
+struct psc_dynarray	psc_ctl_clifds = DYNARRAY_INIT;
+psc_spinlock_t		psc_ctl_clifds_lock = LOCK_INITIALIZER;
+struct psc_waitq	psc_ctl_clifds_waitq = PSC_WAITQ_INIT;
 
 __weak size_t
 psc_multiwaitcond_nwaiters(__unusedx struct psc_multiwaitcond *m)
@@ -104,7 +111,7 @@ psc_ctlmsg_sendv(int fd, const struct psc_ctlmsghdr *mh, const void *m)
 	n = sendmsg(fd, &msg, PFL_MSG_NOSIGNAL);
 	if (n == -1) {
 		if (errno == EPIPE || errno == ECONNRESET) {
-			psc_ctlthr(pscthr_get())->pc_st_ndrop++;
+			psc_ctlthr(pscthr_get())->pct_stat.ndrop++;
 			sched_yield();
 			return (0);
 		}
@@ -113,7 +120,7 @@ psc_ctlmsg_sendv(int fd, const struct psc_ctlmsghdr *mh, const void *m)
 	tsiz = sizeof(*mh) + mh->mh_size;
 	if ((size_t)n != tsiz)
 		psc_warn("short sendmsg");
-	psc_ctlthr(pscthr_get())->pc_st_nsent++;
+	psc_ctlthr(pscthr_get())->pct_stat.nsent++;
 	sched_yield();
 	return (1);
 }
@@ -168,9 +175,20 @@ psc_ctlsenderr(int fd, struct psc_ctlmsghdr *mh, const char *fmt, ...)
 void
 psc_ctlthr_stat(struct psc_thread *thr, struct psc_ctlmsg_stats *pcst)
 {
-	pcst->pcst_nclients	= psc_ctlthr(thr)->pc_st_nclients;
-	pcst->pcst_nsent	= psc_ctlthr(thr)->pc_st_nsent;
-	pcst->pcst_nrecv	= psc_ctlthr(thr)->pc_st_nrecv;
+	pcst->pcst_nsent	= psc_ctlthr(thr)->pct_stat.nsent;
+	pcst->pcst_nrecv	= psc_ctlthr(thr)->pct_stat.nrecv;
+	pcst->pcst_ndrop	= psc_ctlthr(thr)->pct_stat.ndrop;
+}
+
+/**
+ * psc_ctlacthr_stat - Export control thread stats.
+ * @thr: thread begin queried.
+ * @pcst: thread stats control message to be filled in.
+ */
+void
+psc_ctlacthr_stat(struct psc_thread *thr, struct psc_ctlmsg_stats *pcst)
+{
+	pcst->pcst_nclients	= psc_ctlacthr(thr)->pcat_stat.nclients;
 }
 
 /**
@@ -1342,6 +1360,11 @@ psc_ctl_applythrop(int fd, struct psc_ctlmsghdr *mh, void *m, const char *thrnam
 /*
  * psc_ctlthr_service - Satisfy a client connection.
  * @fd: client socket descriptor.
+ * @ct: control operation table.
+ * @nops: number of operations in table.
+ * @msiz: value-result of buffer size allocated to subsequent message
+ *	processing.
+ * @pm: value-result buffer for subsequent message processing.
  *
  * Notes: sched_yield() is not explicity called throughout this routine,
  * which has implications, advantages, and disadvantages.
@@ -1354,95 +1377,134 @@ psc_ctl_applythrop(int fd, struct psc_ctlmsghdr *mh, void *m, const char *thrnam
  * other threads doesn't happen while control messages which modify
  * operation are being processed.
  *
- * Disadvantages: if we don't go to sleep during processing of client
- * connection, anyone can denial the service quite easily.
+ * Disadvantages: if we sleep during processing of client connection,
+ * we deny service to new clients.
  */
-__static void
-psc_ctlthr_service(int fd, const struct psc_ctlop *ct, int nops)
+__static int
+psc_ctlthr_service(int fd, const struct psc_ctlop *ct, int nops,
+    size_t *msiz, void *pm)
 {
 	struct psc_ctlmsghdr mh;
-	size_t siz;
 	ssize_t n;
 	void *m;
 
-	m = NULL;
-	siz = 0;
-	for (;;) {
-		n = recv(fd, &mh, sizeof(mh), MSG_WAITALL | PFL_MSG_NOSIGNAL);
-		if (n == 0)
-			break;
-		if (n == -1) {
-			if (errno == EPIPE)
-				break;
-			if (errno == EINTR)
-				continue;
-			psc_fatal("recvmsg");
-		}
+	m = *(void **)pm;
 
-		if (n != sizeof(mh)) {
-			psc_notice("short recvmsg on psc_ctlmsghdr; nbytes=%zd", n);
-			continue;
-		}
-		if (mh.mh_size > siz) {
-			siz = mh.mh_size;
-			if ((m = realloc(m, siz)) == NULL)
-				psc_fatal("realloc");
-		}
+	n = recv(fd, &mh, sizeof(mh), MSG_WAITALL | PFL_MSG_NOSIGNAL);
+	if (n == 0)
+		return (EOF);
+	if (n == -1) {
+		if (errno == EPIPE)
+			return (EOF);
+		if (errno == EINTR)
+			return (0);
+		psc_fatal("recvmsg");
+	}
+
+	if (n != sizeof(mh)) {
+		psc_notice("short recvmsg on psc_ctlmsghdr; nbytes=%zd", n);
+		return (0);
+	}
+	if (mh.mh_size > *msiz) {
+		*msiz = mh.mh_size;
+		m = *(void **)pm = realloc(m, *msiz);
+		if (m == NULL)
+			psc_fatal("realloc");
+	}
 
  again:
-		if (mh.mh_size) {
-			n = recv(fd, m, mh.mh_size, MSG_WAITALL | PFL_MSG_NOSIGNAL);
-			if (n == -1) {
-				if (errno == EPIPE)
-					break;
-				if (errno == EINTR)
-					goto again;
-				psc_fatal("recv");
-			}
-			if ((size_t)n != mh.mh_size) {
-				psc_warn("short recv on psc_ctlmsg contents; "
-				    "got=%zu; expected=%zu",
-				    n, mh.mh_size);
-				break;
-			}
+	if (mh.mh_size) {
+		n = recv(fd, m, mh.mh_size, MSG_WAITALL | PFL_MSG_NOSIGNAL);
+		if (n == -1) {
+			if (errno == EPIPE)
+				return (EOF);
+			if (errno == EINTR)
+				goto again;
+			psc_fatal("recv");
 		}
-		if (mh.mh_type < 0 ||
-		    mh.mh_type >= nops ||
-		    ct[mh.mh_type].pc_op == NULL) {
-			psc_ctlsenderr(fd, &mh,
-			    "unrecognized psc_ctlmsghdr type; "
-			    "type=%d size=%zu", mh.mh_type, mh.mh_size);
-			continue;
+		if ((size_t)n != mh.mh_size) {
+			psc_warn("short recv on psc_ctlmsg contents; "
+			    "got=%zu; expected=%zu",
+			    n, mh.mh_size);
+			return (EOF);
 		}
-		if (ct[mh.mh_type].pc_siz &&
-		    ct[mh.mh_type].pc_siz != mh.mh_size) {
-			psc_ctlsenderr(fd, &mh,
-			    "invalid ctlmsg size; type=%d, size=%zu, want=%zu",
-			    mh.mh_type, mh.mh_size, ct[mh.mh_type].pc_siz);
-			continue;
-		}
-		psc_ctlthr(pscthr_get())->pc_st_nrecv++;
-		if (!ct[mh.mh_type].pc_op(fd, &mh, m))
-			break;
 	}
-	PSCFREE(m);
+	if (mh.mh_type < 0 ||
+	    mh.mh_type >= nops ||
+	    ct[mh.mh_type].pc_op == NULL) {
+		psc_ctlsenderr(fd, &mh,
+		    "unrecognized psc_ctlmsghdr type; "
+		    "type=%d size=%zu", mh.mh_type, mh.mh_size);
+		return (0);
+	}
+	if (ct[mh.mh_type].pc_siz &&
+	    ct[mh.mh_type].pc_siz != mh.mh_size) {
+		psc_ctlsenderr(fd, &mh,
+		    "invalid ctlmsg size; type=%d, size=%zu, want=%zu",
+		    mh.mh_type, mh.mh_size, ct[mh.mh_type].pc_siz);
+		return (0);
+	}
+	psc_ctlthr(pscthr_get())->pct_stat.nrecv++;
+	if (!ct[mh.mh_type].pc_op(fd, &mh, m))
+		return (EOF);
+	return (0);
 }
 
 /**
- * psc_ctlthr_main - Main control thread client-servicing loop.
+ * psc_ctlacthr_main - Control thread connection acceptor.
  * @ofn: path to control socket.
  * @ct: control operations.
  * @nops: number of operations in @ct table.
  */
 __dead void
-psc_ctlthr_main(const char *ofn, const struct psc_ctlop *ct, int nops)
+psc_ctlacthr_main(struct psc_thread *thr)
 {
-	struct sockaddr_un sun;
-	char fn[PATH_MAX];
-	mode_t old_umask;
 	int s, fd;
 
 	/* Create control socket. */
+	s = psc_ctlacthr(thr)->pcat_sock;
+	for (;;) {
+		fd = accept(s, NULL, NULL);
+		if (fd == -1)
+			psc_fatal("accept");
+		psc_ctlacthr(pscthr_get())->pcat_stat.nclients++;
+
+		spinlock(&psc_ctl_clifds_lock);
+		psc_dynarray_add(&psc_ctl_clifds, (void *)fd);
+		psc_waitq_wakeall(&psc_ctl_clifds_waitq);
+		freelock(&psc_ctl_clifds_lock);
+	}
+	/* NOTREACHED */
+}
+
+/**
+ * psc_ctlthr_main - Main control thread client service loop.
+ * @ofn: path to control socket.
+ * @ct: control operations.
+ * @nops: number of operations in @ct table.
+ * @acthrtype: control acceptor thread type.
+ */
+__dead void
+psc_ctlthr_main(const char *ofn, const struct psc_ctlop *ct, int nops,
+    int acthrtype)
+{
+	struct psc_thread *thr, *me;
+	struct sockaddr_un sun;
+	char fn[PATH_MAX];
+	mode_t old_umask;
+	const char *p;
+	size_t bufsiz;
+	uint32_t rnd;
+	void *buf;
+	int s;
+
+	bufsiz = 0;
+	buf = NULL;
+
+	p = strstr(thr->pscthr_name, "ctlthr");
+	if (p == NULL)
+		psc_fatalx("'ctlthr' not found in control thread name");
+
 	if ((s = socket(AF_LOCAL, SOCK_STREAM, 0)) == -1)
 		psc_fatal("socket");
 
@@ -1455,9 +1517,8 @@ psc_ctlthr_main(const char *ofn, const struct psc_ctlop *ct, int nops)
 	bzero(&sun, sizeof(sun));
 	sun.sun_family = AF_LOCAL;
 	snprintf(sun.sun_path, sizeof(sun.sun_path), "%s", fn);
-	if (unlink(fn) == -1)
-		if (errno != ENOENT)
-			psc_error("unlink %s", fn);
+	if (unlink(fn) == -1 && errno != ENOENT)
+		psc_error("unlink %s", fn);
 
 	spinlock(&psc_umask_lock);
 	old_umask = umask(S_IXUSR | S_IXGRP | S_IWOTH | S_IROTH | S_IXOTH);
@@ -1468,21 +1529,35 @@ psc_ctlthr_main(const char *ofn, const struct psc_ctlop *ct, int nops)
 
 	/* XXX fchmod */
 	if (chmod(fn, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP |
-	    S_IROTH | S_IWOTH) == -1) {
-		unlink(fn);
+	    S_IROTH | S_IWOTH) == -1)
 		psc_fatal("chmod %s", fn); /* XXX errno */
-	}
 
 	/* Serve client connections. */
 	if (listen(s, QLEN) == -1)
 		psc_fatal("listen");
 
+	/* Spawn a thread to separate processing from acceptor. */
+	me = pscthr_get();
+	thr = pscthr_init(acthrtype, 0, psc_ctlacthr_main,
+	    NULL, sizeof(struct psc_ctlacthr), "%.*sctlacthr",
+	    p - me->pscthr_name, me->pscthr_name);
+	psc_ctlacthr(thr)->pcat_sock = s;
+	pscthr_setready(thr);
+
 	for (;;) {
-		if ((fd = accept(s, NULL, NULL)) == -1)
-			psc_fatal("accept");
-		psc_ctlthr(pscthr_get())->pc_st_nclients++;
-		psc_ctlthr_service(fd, ct, nops);
-		close(fd);
+		spinlock(&psc_ctl_clifds_lock);
+		if (psc_dynarray_len(&psc_ctl_clifds) == 0)
+			psc_waitq_wait(&psc_ctl_clifds_waitq, &psc_ctl_clifds_lock);
+		rnd = psc_random32u(psc_dynarray_len(&psc_ctl_clifds));
+		s = (int)psc_dynarray_getpos(&psc_ctl_clifds, rnd);
+		freelock(&psc_ctl_clifds_lock);
+
+		if (psc_ctlthr_service(s, ct, nops, &bufsiz, &buf)) {
+			spinlock(&psc_ctl_clifds_lock);
+			psc_dynarray_remove(&psc_ctl_clifds, (void *)s);
+			freelock(&psc_ctl_clifds_lock);
+			close(s);
+		}
 	}
-	/* NOTREACHED */
+	PSCFREE(buf);
 }

@@ -30,7 +30,8 @@ struct psc_ctlmsg_stats;
 		    strcmp((thrname), PCTHRNAME_EVERYONE) == 0)
 
 /* XXX use PSCTHR_MKCAST */
-#define psc_ctlthr(thr)	((struct psc_ctlthr *)(thr)->pscthr_private)
+#define psc_ctlthr(thr)		((struct psc_ctlthr *)(thr)->pscthr_private)
+#define psc_ctlacthr(thr)	((struct psc_ctlacthr *)(thr)->pscthr_private)
 
 /* default control operations shared by all controllable daemons */
 #define PSC_CTLDEFOPS								\
@@ -50,11 +51,19 @@ struct psc_ctlmsg_stats;
 /*12 */	{ psc_ctlrep_getodtable,	sizeof(struct psc_ctlmsg_odtable) },	\
 /*13 */	{ psc_ctlhnd_cmd,		sizeof(struct psc_ctlmsg_cmd) }
 
+struct psc_ctlacthr {
+	int		pcat_sock;
+	struct {
+		int nclients;
+	}		pcat_stat;
+};
+
 struct psc_ctlthr {
-	int	  pc_st_nclients;
-	int	  pc_st_nsent;
-	int	  pc_st_nrecv;
-	int	  pc_st_ndrop;
+	struct {
+		int nsent;
+		int nrecv;
+		int ndrop;
+	}		pct_stat;
 };
 
 struct psc_ctlop {
@@ -82,6 +91,7 @@ int	psc_ctlrep_param(int, struct psc_ctlmsghdr *, void *);
 int	psc_ctlhnd_cmd(int, struct psc_ctlmsghdr *, void *);
 
 void	psc_ctlthr_stat(struct psc_thread *, struct psc_ctlmsg_stats *);
+void	psc_ctlacthr_stat(struct psc_thread *, struct psc_ctlmsg_stats *);
 
 int	psc_ctlparam_log_file(int, struct psc_ctlmsghdr *,
 		struct psc_ctlmsg_param *, char **, int);
@@ -107,7 +117,7 @@ int	psc_ctlmsg_param_send(int, const struct psc_ctlmsghdr *,
 		struct psc_ctlmsg_param *, const char *, char **, int, const char *);
 
 __dead void
-	psc_ctlthr_main(const char *, const struct psc_ctlop *, int);
+	psc_ctlthr_main(const char *, const struct psc_ctlop *, int, int);
 int	psc_ctl_applythrop(int, struct psc_ctlmsghdr *, void *, const char *,
 		int (*)(int, struct psc_ctlmsghdr *, void *, struct psc_thread *));
 

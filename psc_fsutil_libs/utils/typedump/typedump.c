@@ -203,6 +203,7 @@ main(int argc, char *argv[])
 	PRTYPE(struct psc_atomic64);
 	PRTYPE(struct psc_completion);
 	PRTYPE(struct psc_ctl_thrstatfmt);
+	PRTYPE(struct psc_ctlacthr);
 	PRTYPE(struct psc_ctlcmd_req);
 	PRTYPE(struct psc_ctlmsg_cmd);
 	PRTYPE(struct psc_ctlmsg_error);
