@@ -76,6 +76,10 @@ pfl
 - add func args to pfl_enter()
 - add relative (to previous log) timestamps to psclog
 - do enums in typedump
+- consolidate naming conventions for initializers:
+	LOCK_INITIALIZER
+	DYNARRAY_INIT
+	PSC_WAITQ_INIT
 
 development tool
 - let wiki changes automatically email zest/slash2-devel@ like svn commits
