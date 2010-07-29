@@ -1547,8 +1547,10 @@ psc_ctlthr_main(const char *ofn, const struct psc_ctlop *ct, int nops,
 
 	for (;;) {
 		spinlock(&psc_ctl_clifds_lock);
-		if (psc_dynarray_len(&psc_ctl_clifds) == 0)
+		if (psc_dynarray_len(&psc_ctl_clifds) == 0) {
 			psc_waitq_wait(&psc_ctl_clifds_waitq, &psc_ctl_clifds_lock);
+			continue;
+		}
 		rnd = psc_random32u(psc_dynarray_len(&psc_ctl_clifds));
 		s = (int)(long)psc_dynarray_getpos(&psc_ctl_clifds, rnd);
 		freelock(&psc_ctl_clifds_lock);
