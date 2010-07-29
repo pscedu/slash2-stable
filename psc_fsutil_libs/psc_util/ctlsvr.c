@@ -1501,7 +1501,9 @@ psc_ctlthr_main(const char *ofn, const struct psc_ctlop *ct, int nops,
 	bufsiz = 0;
 	buf = NULL;
 
-	p = strstr(thr->pscthr_name, "ctlthr");
+	me = pscthr_get();
+
+	p = strstr(me->pscthr_name, "ctlthr");
 	if (p == NULL)
 		psc_fatalx("'ctlthr' not found in control thread name");
 
@@ -1537,7 +1539,6 @@ psc_ctlthr_main(const char *ofn, const struct psc_ctlop *ct, int nops,
 		psc_fatal("listen");
 
 	/* Spawn a thread to separate processing from acceptor. */
-	me = pscthr_get();
 	thr = pscthr_init(acthrtype, 0, psc_ctlacthr_main,
 	    NULL, sizeof(struct psc_ctlacthr), "%.*sctlacthr",
 	    p - me->pscthr_name, me->pscthr_name);
