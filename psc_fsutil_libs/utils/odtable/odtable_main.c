@@ -33,7 +33,10 @@
 #include "psc_util/log.h"
 #include "psc_util/odtable.h"
 
-#define DEF_FN	"/var/lib/slashd/ion_bmaps.odt"
+/*
+ * Please keep in sync with SL_PATH_DATADIR and SL_FN_IONBMAPS_ODT
+ */
+#define DEF_FN	"/var/lib/slash/ion_bmaps.odt"
 
 struct psc_dynarray myReceipts = DYNARRAY_INIT;
 const char *progname;
