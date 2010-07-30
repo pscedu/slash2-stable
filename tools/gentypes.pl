@@ -88,21 +88,27 @@ my $outfn = $ARGV[0];
 my @vals;
 my @types;
 my @hdrs;
+my @enums;
 @hdrs = uniq sort map { glob } @{ $opts{h} } if $opts{h};
 if ($opts{x}) {
 	@hdrs = filter [ map { glob } @{ $opts{x} } ], @hdrs;
 }
 my $lvl = 0;
+my $in_enum = 0;
 foreach my $hdr (@hdrs) {
 	open HDR, "<", $hdr or die "$hdr: $!\n";
 	while (<HDR>) {
 		if ($lvl) {
-			$lvl++ if /^\s*#if/;
-			$lvl-- if /^\s*#endif/;
+			$lvl++ if /^\s*#\s*if/;
+			$lvl-- if /^\s*#\s*endif/;
+		} elsif ($in_enum) {
+			$in_enum = 0 if /}/;
+			push @enums, $1 if /^\s*(\w+)/;
 		} else {
-			$lvl = 1 if /^\s*#if\s+0\s*$/;
-			push @types, "struct $1" if /^(?:typedef\s+)?struct\s+(\w+)\s*{/;
-			push @types, $1 if /^typedef\s+(?:struct\s+)?(?:\w+)\s+(\w+)\s*;/;
+			$lvl = 1 if /^\s*#\s*if\s+0\s*$/;
+			push @types, "struct $1" if /^(?:typedef\s+)?struct\s+(\w+)\s*{\s*/;
+			push @types, $1 if /^typedef\s+(?:struct\s+)?(?:\w+)\s+(\w+)\s*;\s*/;
+			$in_enum = 1 if /^enum\s*(\w*)\s*{\s*/;
 
 			if ($opts{g}) {
 				foreach my $pat (@{ $opts{g} }) {
@@ -129,6 +135,9 @@ $lines =~ s!(?<=/\* start structs \*/\n).*?(?=/\* end structs \*/)!$types\t!s;
 
 my $vals = join '', map { "\tPRVAL($_);\n" } uniq sort @vals;
 $lines =~ s!(?<=/\* start constants \*/\n).*?(?=/\* end constants \*/)!$vals\t!s;
+
+my $enums = join '', map { "\tPRVAL($_);\n" } uniq sort @enums;
+$lines =~ s!(?<=/\* start enums \*/\n).*?(?=/\* end enums \*/)!$enums\t!s;
 
 open OUT, ">", $outfn;
 print OUT $lines;
