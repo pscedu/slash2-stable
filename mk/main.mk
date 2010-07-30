@@ -1,7 +1,8 @@
 # $Id$
 # %PSC_COPYRIGHT%
 
-STRIPROOTDIR=		$(subst $(realpath ${ROOTDIR})/,,$1)
+CROOTDIR=		$(realpath ${ROOTDIR})
+STRIPROOTDIR=		$(subst ${CROOTDIR}/,,$1)
 PATH_NAMIFY=		$(subst .,_,$(subst -,_,$(subst /,_,$1)))
 FILE_CFLAGS=		${$(call PATH_NAMIFY,$(call STRIPROOTDIR,$(realpath $1)))_CFLAGS}
 FILE_PCPP_FLAGS=	${$(call PATH_NAMIFY,$(call STRIPROOTDIR,$(realpath $1)))_PCPP_FLAGS}
