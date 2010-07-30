@@ -114,8 +114,13 @@ ifneq ($(wildcard /opt/sgi),)
   slash_nara_sliod_obj_lconf_c_PCPP_FLAGS=		-x
   slash_nara_tests_config_obj_lconf_c_PCPP_FLAGS=	-x
 
+  slash_nara_mount_slash_obj_yconf_c_PCPP_FLAGS=	-x
+  slash_nara_slashd_obj_yconf_c_PCPP_FLAGS=		-x
+  slash_nara_sliod_obj_yconf_c_PCPP_FLAGS=		-x
+  slash_nara_tests_config_obj_yconf_c_PCPP_FLAGS=	-x
+
   zest_zestFormat_obj_zestLexConfig_c_PCPP_FLAGS=	-x
-  zest_zestion_obj_zestLexConfig_c_PCPP_FLAGS=		-x
+  zest_zestiond_obj_zestLexConfig_c_PCPP_FLAGS=		-x
   zest_tests_config_obj_zestLexConfig_c_PCPP_FLAGS=	-x
 endif
 
@@ -138,10 +143,6 @@ endif
 
 ifeq (${OSTYPE},OpenBSD)
   DEFINES+=					-D_BSD_SOURCE
-endif
-
-ifdef DEBIAN
-MPICC=						mpicc.mpich
 endif
 
 include ${ROOTDIR}/mk/pickle.mk
