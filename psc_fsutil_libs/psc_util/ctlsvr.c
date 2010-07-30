@@ -150,21 +150,24 @@ psc_ctlmsg_send(int fd, int id, int type, size_t siz, const void *m)
 /**
  * psc_ctlsenderr - Send an error to client over control interface.
  * @fd: client socket descriptor.
+ * @mh: message header to use.
  * @fmt: printf(3) format of error message.
  */
 int
-psc_ctlsenderr(int fd, struct psc_ctlmsghdr *mh, const char *fmt, ...)
+psc_ctlsenderr(int fd, const struct psc_ctlmsghdr *mhp, const char *fmt, ...)
 {
 	struct psc_ctlmsg_error pce;
+	struct psc_ctlmsghdr mh;
 	va_list ap;
 
 	va_start(ap, fmt);
 	vsnprintf(pce.pce_errmsg, sizeof(pce.pce_errmsg), fmt, ap); /* XXX */
 	va_end(ap);
 
-	mh->mh_type = PCMT_ERROR;
-	mh->mh_size = sizeof(pce);
-	return (psc_ctlmsg_sendv(fd, mh, &pce));
+	mh.mh_id = mhp->mh_id;
+	mh.mh_type = PCMT_ERROR;
+	mh.mh_size = sizeof(pce);
+	return (psc_ctlmsg_sendv(fd, &mh, &pce));
 }
 
 /**
