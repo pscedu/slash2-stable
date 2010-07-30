@@ -205,7 +205,9 @@ vpath %.l $(sort $(dir $(filter %.l,${_TSRCS})))
 vpath %.c $(sort $(dir $(filter %.c,${_TSRCS})) ${OBJDIR})
 vpath %.dep ${OBJDIR}
 
-all: recurse-all
+all: recurse-all all-hook
+
+all-hook:
 	@for i in ${SRCS}; do								\
 		[ -n "$$i" ] || continue;						\
 		if ! [ -e "$$i" ]; then							\
@@ -327,11 +329,16 @@ listsrcs: recurse-listsrcs
 		echo "${_TSRCS}";							\
 	fi
 
-test: recurse-test all
+runtest: recurse-runtest
 	@if [ -n "${TEST}" ]; then							\
 		echo "./${TEST}";							\
 		./${TEST} ${TESTOPTS} || exit 1;					\
 	fi
+
+maketest: recurse-maketest ${TEST}
+
+test:
+	${MAKE} maketest && ${MAKE} runtest
 
 hdrclean:
 	${HDRCLEAN} */*.[clyh]
