@@ -109,19 +109,19 @@ ifneq ($(wildcard /opt/sgi),)
   NUMA_LIBS=					-lcpuset -lbitmask -lnuma
   LIBL=						-lfl
 
-  slash_nara_mount_slash_obj_lconf_c_PCPP_FLAGS=	-x
-  slash_nara_slashd_obj_lconf_c_PCPP_FLAGS=		-x
-  slash_nara_sliod_obj_lconf_c_PCPP_FLAGS=		-x
-  slash_nara_tests_config_obj_lconf_c_PCPP_FLAGS=	-x
+  slash_nara_mount_slash_obj_lconf_c_PCPP_FLAGS=	-H yytext
+  slash_nara_slashd_obj_lconf_c_PCPP_FLAGS=		-H yytext
+  slash_nara_sliod_obj_lconf_c_PCPP_FLAGS=		-H yytext
+  slash_nara_tests_config_obj_lconf_c_PCPP_FLAGS=	-H yytext
 
-  slash_nara_mount_slash_obj_yconf_c_PCPP_FLAGS=	-x
-  slash_nara_slashd_obj_yconf_c_PCPP_FLAGS=		-x
-  slash_nara_sliod_obj_yconf_c_PCPP_FLAGS=		-x
-  slash_nara_tests_config_obj_yconf_c_PCPP_FLAGS=	-x
+  slash_nara_mount_slash_obj_yconf_c_PCPP_FLAGS=	-H yytext
+  slash_nara_slashd_obj_yconf_c_PCPP_FLAGS=		-H yytext
+  slash_nara_sliod_obj_yconf_c_PCPP_FLAGS=		-H yytext
+  slash_nara_tests_config_obj_yconf_c_PCPP_FLAGS=	-H yytext
 
-  zest_zestFormat_obj_zestLexConfig_c_PCPP_FLAGS=	-x
-  zest_zestiond_obj_zestLexConfig_c_PCPP_FLAGS=		-x
-  zest_tests_config_obj_zestLexConfig_c_PCPP_FLAGS=	-x
+  zest_zestFormat_obj_zestLexConfig_c_PCPP_FLAGS=	-H yytext
+  zest_zestiond_obj_zestLexConfig_c_PCPP_FLAGS=		-H yytext
+  zest_tests_config_obj_zestLexConfig_c_PCPP_FLAGS=	-H yytext
 endif
 
 ifneq ($(wildcard /opt/xt-os),)
