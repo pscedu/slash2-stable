@@ -40,6 +40,7 @@
 
 #include "usocklnd.h"
 #include <sys/time.h>
+#include <sys/resource.h>
 
 #if defined(__sun__) || defined(__sun)
 #include <sys/types.h>
@@ -80,6 +81,7 @@ usock_tunables_t usock_tuns = {
 };
 
 #define MAX_REASONABLE_TIMEOUT 36000 /* 10 hours */
+#define MIN_UNREASONABLE_NPT 100
 #define MAX_REASONABLE_NPT 1000
 
 int
@@ -253,7 +255,19 @@ usocklnd_update_tunables()
                 return -EINVAL;
 
         if (usock_tuns.ut_npollthreads == 0) {
+		struct rlimit rlim;
+
                 usock_tuns.ut_npollthreads = cfs_online_cpus();
+
+		rc = getrlimit(RLIMIT_NOFILE, &rlim);
+		if (rc) {
+			CERROR("Unable to determine max filedesc rlimit\n");
+			return -EINVAL;
+		}
+		/* there are too many CPUs!  restrict to a quarter of nfiledes */
+		if (usock_tuns.ut_npollthreads > MIN_UNREASONABLE_NPT &&
+		    usock_tuns.ut_npollthreads > (int)rlim.rlim_cur / 4)
+			usock_tuns.ut_npollthreads = rlim.rlim_cur / 4;
 
                 if (usock_tuns.ut_npollthreads <= 0) {
                         CERROR("Cannot find out the number of online CPUs\n");
