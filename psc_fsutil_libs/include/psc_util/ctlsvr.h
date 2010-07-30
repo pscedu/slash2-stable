@@ -71,7 +71,7 @@ struct psc_ctlop {
 	size_t	  pc_siz;
 };
 
-int	psc_ctlsenderr(int, struct psc_ctlmsghdr *, const char *, ...);
+int	psc_ctlsenderr(int, const struct psc_ctlmsghdr *, const char *, ...);
 
 int	psc_ctlmsg_sendv(int, const struct psc_ctlmsghdr *, const void *);
 int	psc_ctlmsg_send(int, int, int, size_t, const void *);
