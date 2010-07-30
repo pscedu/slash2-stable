@@ -171,7 +171,7 @@ for ($i = 0; $i < length $data; ) {
 		$rv = "PCPP_STR($rv)" if $rv eq "yytext" && $hacks{yytext};
 
 		my $tag = "PFL_RETURN";
-		if ($rv =~ /^PCPP_STR\((.*)\)$/) {
+		if ($rv =~ /^\s*\(\s*PCPP_STR\s*\((.*)\)\s*\)$/) {
 			$rv = $1;
 			$tag = "PFL_RETURN_STR";
 		}
