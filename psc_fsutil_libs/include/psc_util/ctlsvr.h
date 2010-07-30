@@ -35,21 +35,21 @@ struct psc_ctlmsg_stats;
 
 /* default control operations shared by all controllable daemons */
 #define PSC_CTLDEFOPS								\
-/* 0 */	{ NULL,				0 },					\
-/* 1 */	{ psc_ctlrep_getloglevel,	sizeof(struct psc_ctlmsg_loglevel) },	\
-/* 2 */	{ psc_ctlrep_getlc,		sizeof(struct psc_ctlmsg_lc) },		\
-/* 3 */	{ psc_ctlrep_getstats,		sizeof(struct psc_ctlmsg_stats) },	\
-/* 4 */	{ psc_ctlrep_getsubsys,		0 },					\
-/* 5 */	{ psc_ctlrep_gethashtable,	sizeof(struct psc_ctlmsg_hashtable) },	\
-/* 6 */	{ psc_ctlrep_param,		sizeof(struct psc_ctlmsg_param) },	\
-/* 7 */	{ psc_ctlrep_param,		sizeof(struct psc_ctlmsg_param) },	\
-/* 8 */	{ psc_ctlrep_getiostats,	sizeof(struct psc_ctlmsg_iostats) },	\
-/* 9 */	{ psc_ctlrep_getmeter,		sizeof(struct psc_ctlmsg_meter) },	\
-/*10 */	{ psc_ctlrep_getpool,		sizeof(struct psc_ctlmsg_pool) },	\
-/*11 */	{ psc_ctlrep_getmlist,		sizeof(struct psc_ctlmsg_mlist) },	\
-/*12 */	{ psc_ctlrep_getfault,		sizeof(struct psc_ctlmsg_fault) },	\
-/*12 */	{ psc_ctlrep_getodtable,	sizeof(struct psc_ctlmsg_odtable) },	\
-/*13 */	{ psc_ctlhnd_cmd,		sizeof(struct psc_ctlmsg_cmd) }
+/*  0 */ { NULL,				0 },				\
+/*  1 */ { psc_ctlrep_getloglevel,	sizeof(struct psc_ctlmsg_loglevel) },	\
+/*  2 */ { psc_ctlrep_getlc,		sizeof(struct psc_ctlmsg_lc) },		\
+/*  3 */ { psc_ctlrep_getstats,		sizeof(struct psc_ctlmsg_stats) },	\
+/*  4 */ { psc_ctlrep_getsubsys,		0 },				\
+/*  5 */ { psc_ctlrep_gethashtable,	sizeof(struct psc_ctlmsg_hashtable) },	\
+/*  6 */ { psc_ctlrep_param,		sizeof(struct psc_ctlmsg_param) },	\
+/*  7 */ { psc_ctlrep_param,		sizeof(struct psc_ctlmsg_param) },	\
+/*  8 */ { psc_ctlrep_getiostats,	sizeof(struct psc_ctlmsg_iostats) },	\
+/*  9 */ { psc_ctlrep_getmeter,		sizeof(struct psc_ctlmsg_meter) },	\
+/* 10 */ { psc_ctlrep_getpool,		sizeof(struct psc_ctlmsg_pool) },	\
+/* 11 */ { psc_ctlrep_getmlist,		sizeof(struct psc_ctlmsg_mlist) },	\
+/* 12 */ { psc_ctlrep_getfault,		sizeof(struct psc_ctlmsg_fault) },	\
+/* 12 */ { psc_ctlrep_getodtable,	sizeof(struct psc_ctlmsg_odtable) },	\
+/* 13 */ { psc_ctlhnd_cmd,		sizeof(struct psc_ctlmsg_cmd) }
 
 struct psc_ctlacthr {
 	int		pcat_sock;

@@ -197,7 +197,7 @@ struct psc_ctlmsg_odtable {
 
 /*
  * Control message header.
- * This structure precedes each actual message.
+ * This structure precedes each control message.
  */
 struct psc_ctlmsghdr {
 	int			mh_type;
