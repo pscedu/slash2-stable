@@ -49,27 +49,28 @@ struct psc_lockedlist {
 
 #define PLLF_EXTLOCK		(1 << 0)	/* lock is external */
 
-#define PLL_GETLOCK(pll) ((pll)->pll_flags & PLLF_EXTLOCK ?	\
+#define PLL_GETLOCK(pll) ((pll)->pll_flags & PLLF_EXTLOCK ?		\
 	(pll)->pll_lockp : &(pll)->pll_lock)
 
 #define PLL_LOCK(pll)		spinlock(PLL_GETLOCK(pll))
 #define PLL_RLOCK(pll)		reqlock(PLL_GETLOCK(pll))
 #define PLL_ULOCK(pll)		freelock(PLL_GETLOCK(pll))
 #define PLL_URLOCK(pll, lk)	ureqlock(PLL_GETLOCK(pll), (lk))
+#define PLL_ENSURE_LOCKED(pll)	LOCK_ENSURE(PLL_GETLOCK(pll))
 
-#define PLL_FOREACH(p, pll)					\
-	psclist_for_each_entry2((p), &(pll)->pll_listhd,	\
+#define PLL_FOREACH(p, pll)						\
+	psclist_for_each_entry2((p), &(pll)->pll_listhd,		\
 	    (pll)->pll_offset)
 
-#define PLL_FOREACH_SAFE(p, t, pll)				\
-	psclist_for_each_entry2_safe((p), (t),			\
+#define PLL_FOREACH_SAFE(p, t, pll)					\
+	psclist_for_each_entry2_safe((p), (t),				\
 	    &(pll)->pll_listhd, (pll)->pll_offset)
 
-#define PLL_INITIALIZER(pll, type, member)			\
-	{ PSCLIST_HEAD_INIT((pll)->pll_listhd), 0,		\
+#define PLL_INITIALIZER(pll, type, member)				\
+	{ PSCLIST_HEAD_INIT((pll)->pll_listhd), 0,			\
 	  offsetof(type, member), 0, { LOCK_INITIALIZER } }
 
-#define pll_init(pll, type, member, lock)			\
+#define pll_init(pll, type, member, lock)				\
 	_pll_init((pll), offsetof(type, member), (lock))
 
 static __inline void
