@@ -338,7 +338,7 @@ runtest: recurse-runtest
 maketest: recurse-maketest ${TEST}
 
 test:
-	${MAKE} maketest && ${MAKE} runtest
+	@${MAKE} maketest && ${MAKE} runtest
 
 hdrclean:
 	${HDRCLEAN} */*.[clyh]
