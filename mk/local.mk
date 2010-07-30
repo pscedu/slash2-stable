@@ -13,13 +13,13 @@ PKG_CONFIG=	pkg-config
 LIBGCRYPT_CONFIG=libgcrypt-config
 MPICC=		mpicc
 ECHORUN=	${ROOTDIR}/tools/echorun.sh
-GENTYPES=	${ROOTDIR}/tools/gentypes.pl
+GENTYPES=	PERL5LIB=${PERL5LIB}:${ROOTDIR}/tools/lib ${ROOTDIR}/tools/gentypes.pl
 HDRCLEAN=	${ROOTDIR}/tools/hdrclean.pl
 LIBDEP=		${ROOTDIR}/tools/libdep.pl
 MDPROC=		${ROOTDIR}/tools/mdproc.pl
 MINVER=		${ROOTDIR}/tools/minver.pl
 MYECHO=		${ROOTDIR}/tools/myecho.pl
-PCPP=		${ROOTDIR}/tools/pcpp.pl
+PCPP=		PERL5LIB=${PERL5LIB}:${ROOTDIR}/tools/lib ${ROOTDIR}/tools/pcpp.pl
 PICKLEGEN=	${ROOTDIR}/tools/pickle-gen.sh
 
 MAKEFLAGS+=	--no-print-directory
