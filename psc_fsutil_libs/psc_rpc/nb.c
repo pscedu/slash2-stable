@@ -84,6 +84,7 @@ pscrpc_nbreqset_flush(struct pscrpc_nbreqset *nbs)
 int
 pscrpc_nbreqset_reap(struct pscrpc_nbreqset *nbs)
 {
+	int saved_rc = 0;
 	int rc, nreaped = 0, nchecked = 0, timeout = 1;
 	struct pscrpc_request_set *set = &nbs->nb_reqset;
 	struct pscrpc_request *req, *next;
@@ -140,6 +141,11 @@ pscrpc_nbreqset_reap(struct pscrpc_nbreqset *nbs)
 			 */
 			if (rc == 0)
 				pscrpc_req_finished(req);
+			/*
+			 * Record the first error.
+			 */
+			if (saved_rc == 0 && rc)
+				saved_rc = rc;
 		}
 	}
 	freelock(&set->set_lock);
@@ -151,7 +157,7 @@ pscrpc_nbreqset_reap(struct pscrpc_nbreqset *nbs)
 
 	psc_trace("checked %d requests", nchecked);
 
-	return (nreaped);
+	return (saved_rc);
 }
 
 void
