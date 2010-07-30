@@ -12,6 +12,6 @@ MODULES+=	lnet-hdrs pthread pfl
 include ${PFLMK}
 
 regen-hook:
-	${GENTYPES} -h '../../include/*/*.h' $(
-	    ) -x '../../include/psc_ds/{queue,tree}.h' $(
+	${GENTYPES} -h '../../include/*/*.h' $(				\
+	    ) -x '../../include/psc_ds/{queue,tree}.h' $(		\
 	    ) -x '../../include/psc_util/refmgr.h' typedump.c
