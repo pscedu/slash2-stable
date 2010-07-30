@@ -4,7 +4,7 @@
 
 use strict;
 use warnings;
-use Getopt::Std;
+use PFL::Getoptv;
 use File::Basename;
 
 sub usage {
@@ -17,9 +17,19 @@ sub fatal {
 	exit 1;
 }
 
+my %hacks = (
+	yytext => 0,
+);
 my %opts;
-getopts("x", \%opts) or usage;
+getoptv("xH:", \%opts) or usage;
 usage unless @ARGV == 1;
+
+if ($opts{H}) {
+	foreach my $hack ($opts{H}) {
+		die "$0: invalid hack: $hack" unless exists $hacks{$hack};
+		$hacks{$hack} = 1;
+	}
+}
 
 my $fn = $ARGV[0];
 
@@ -141,7 +151,7 @@ for ($i = 0; $i < length $data; ) {
 		my $end = $2;
 		my $len = $+[0];
 		$i += $len;
-		print "PFL_RETURN_STRLIT($rv)$end";
+		print "PFL_RETURN_STR($rv)$end";
 		dec_level() if $end =~ /}/;
 	} elsif (substr($data, $i) =~ /^return(\s*(?:\(\s*\d+\s*\)|\d+))(\s*;\s*}?\s*)/s) {
 		# catch 'return' with numeric literal arg
@@ -157,7 +167,16 @@ for ($i = 0; $i < length $data; ) {
 		my $end = $2;
 		my $len = $+[0];
 		$i += $len;
-		print "PFL_RETURN($rv)$end";
+
+		$rv = "PCPP_STR($rv)" if $rv eq "yytext" && $hacks{yytext};
+
+		my $tag = "PFL_RETURN";
+		if ($rv =~ /^PCPP_STR\((.*)\)$/) {
+			$rv = $1;
+			$tag = "PFL_RETURN_STR";
+		}
+
+		print "$tag($rv)$end";
 		dec_level() if $end =~ /}/;
 	} elsif ($lvl == 1 && substr($data, $i) =~ /^(?:psc_fatalx?|exit|errx?)\s*\([^;]*?\)\s*;\s*}\s*/s) {
 		# XXX this pattern skips psc_fatal("foo; bar")

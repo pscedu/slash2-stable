@@ -182,7 +182,7 @@ struct psclog_data {
 		return (rv);					\
 	} while (0)
 
-#define PFL_RETURN_STRLIT(str)					\
+#define PFL_RETURN_STR(str)					\
 	do {							\
 		psc_trace("exit rc='%s'", (str));		\
 		return (str);					\
