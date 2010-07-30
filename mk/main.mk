@@ -205,9 +205,7 @@ vpath %.l $(sort $(dir $(filter %.l,${_TSRCS})))
 vpath %.c $(sort $(dir $(filter %.c,${_TSRCS})) ${OBJDIR})
 vpath %.dep ${OBJDIR}
 
-all: recurse-all all-hook
-
-all-hook:
+all: recurse-all
 	@for i in ${SRCS}; do								\
 		[ -n "$$i" ] || continue;						\
 		if ! [ -e "$$i" ]; then							\
