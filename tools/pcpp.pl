@@ -25,7 +25,7 @@ getoptv("xH:", \%opts) or usage;
 usage unless @ARGV == 1;
 
 if ($opts{H}) {
-	foreach my $hack ($opts{H}) {
+	foreach my $hack (@{ $opts{H} }) {
 		die "$0: invalid hack: $hack" unless exists $hacks{$hack};
 		$hacks{$hack} = 1;
 	}
@@ -168,7 +168,7 @@ for ($i = 0; $i < length $data; ) {
 		my $len = $+[0];
 		$i += $len;
 
-		$rv = "PCPP_STR($rv)" if $rv eq "yytext" && $hacks{yytext};
+		$rv = "(PCPP_STR($rv))" if $rv =~ /^\s*\(?\s*yytext\s*\)?\s*$/ && $hacks{yytext};
 
 		my $tag = "PFL_RETURN";
 		if ($rv =~ /^\s*\(\s*PCPP_STR\s*\((.*)\)\s*\)$/) {
