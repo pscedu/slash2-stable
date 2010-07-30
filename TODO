@@ -80,6 +80,8 @@ pfl
 	LOCK_INITIALIZER
 	DYNARRAY_INIT
 	PSC_WAITQ_INIT
+- simplify ctlapi return by not having pass an rc.  if write() fails,
+  then read() will fail and it will solve itself the same way.
 
 development tool
 - let wiki changes automatically email zest/slash2-devel@ like svn commits
