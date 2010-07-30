@@ -185,7 +185,7 @@ main(int argc, char *argv[])
 	PRTYPE(lnet_process_id_t);
 	PRTYPE(ksock_msg_t);
 
-/* start structs */
+	/* start structs */
 	PRTYPE(atomic_t);
 	PRTYPE(psc_atomic_t);
 	PRTYPE(psc_crc32_t);
@@ -283,6 +283,57 @@ main(int argc, char *argv[])
 	PRTYPE(struct rsx_msg_conversion);
 	PRTYPE(struct rsx_msg_portablizer);
 	/* end structs */
+
+	/* start typedefs */
+	/* end typedefs */
+
+	/* start constants */
+	/* end constants */
+
+	/* start enums */
+	PRVAL(ACSOP_ACCESS);
+	PRVAL(ACSOP_CHMOD);
+	PRVAL(ACSOP_CHOWN);
+	PRVAL(ACSOP_LINK);
+	PRVAL(ACSOP_LSTAT);
+	PRVAL(ACSOP_MKDIR);
+	PRVAL(ACSOP_MKNOD);
+	PRVAL(ACSOP_OPEN);
+	PRVAL(ACSOP_READLINK);
+	PRVAL(ACSOP_RENAME);
+	PRVAL(ACSOP_RMDIR);
+	PRVAL(ACSOP_STAT);
+	PRVAL(ACSOP_STATFS);
+	PRVAL(ACSOP_SYMLINK);
+	PRVAL(ACSOP_TRUNCATE);
+	PRVAL(ACSOP_UNLINK);
+	PRVAL(ACSOP_UTIMES);
+	PRVAL(ODTBL_BADSL_ERR);
+	PRVAL(ODTBL_CRC_ERR);
+	PRVAL(ODTBL_FREE_ERR);
+	PRVAL(ODTBL_INUSE_ERR);
+	PRVAL(ODTBL_KEY_ERR);
+	PRVAL(ODTBL_MAGIC_ERR);
+	PRVAL(ODTBL_NO_ERR);
+	PRVAL(ODTBL_SLOT_ERR);
+	PRVAL(PLCP_HEAD);
+	PRVAL(PLCP_TAIL);
+	PRVAL(PSCRPC_IMP_CLOSED);
+	PRVAL(PSCRPC_IMP_CONNECTING);
+	PRVAL(PSCRPC_IMP_DISCON);
+	PRVAL(PSCRPC_IMP_EVICTED);
+	PRVAL(PSCRPC_IMP_FULL);
+	PRVAL(PSCRPC_IMP_NEW);
+	PRVAL(PSCRPC_IMP_RECOVER);
+	PRVAL(PSCRPC_IMP_REPLAY);
+	PRVAL(PSCRPC_IMP_REPLAY_LOCKS);
+	PRVAL(PSCRPC_IMP_REPLAY_WAIT);
+	PRVAL(PSCRPC_RQ_PHASE_BULK);
+	PRVAL(PSCRPC_RQ_PHASE_COMPLETE);
+	PRVAL(PSCRPC_RQ_PHASE_INTERPRET);
+	PRVAL(PSCRPC_RQ_PHASE_NEW);
+	PRVAL(PSCRPC_RQ_PHASE_RPC);
+	/* end enums */
 
 	PRVAL(offsetof(struct psc_listcache, lc_listhd));
 	PRVAL(offsetof(struct psc_journal_enthdr, pje_data));
