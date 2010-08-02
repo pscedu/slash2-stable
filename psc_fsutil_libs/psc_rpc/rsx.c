@@ -112,6 +112,7 @@ rsx_bulkserver(struct pscrpc_request *rq, struct pscrpc_bulk_desc **descp,
 	struct pscrpc_bulk_desc *desc;
 	struct l_wait_info lwi;
 	uint8_t *v1;
+	uint64_t *v8;
 
 	psc_assert(type == BULK_GET_SINK || type == BULK_PUT_SOURCE);
 
@@ -163,6 +164,7 @@ rsx_bulkserver(struct pscrpc_request *rq, struct pscrpc_bulk_desc **descp,
 	/* count the number of bytes received, and hold for later... */
 	if (rc == 0) {
 		v1 = desc->bd_iov[0].iov_base;
+		v8 = desc->bd_iov[0].iov_base;
 		if (v1 == NULL) {
 			psc_errorx("desc->bd_iov[0].iov_base is NULL");
 			rc = -ENXIO;
@@ -170,8 +172,8 @@ rsx_bulkserver(struct pscrpc_request *rq, struct pscrpc_bulk_desc **descp,
 		}
 
 		psc_info("got %u bytes of bulk data across %d IOVs: "
-		      "first byte is 0x%x",
-		      desc->bd_nob, desc->bd_iov_count, *v1);
+		      "first byte is 0x%x (%"PRIx64")",
+			 desc->bd_nob, desc->bd_iov_count, *v1, *v8);
 
 		sum = 0;
 		for (i = 0; i < desc->bd_iov_count; i++)
