@@ -878,6 +878,7 @@ psc_ctlcli_wr_main(__unusedx struct psc_thread *thr)
 		if (write(psc_ctl_sock, &pcm->pcm_mh, siz) != siz)
 			psc_fatal("write");
 		free(pcm);
+		sched_yield();
 	}
 	if (shutdown(psc_ctl_sock, SHUT_WR) == -1)
 		psc_fatal("shutdown");
@@ -940,6 +941,7 @@ psc_ctlcli_main(const char *osockfn)
 		}
 		psc_ctl_read(psc_ctl_sock, m, mh.mh_size);
 		psc_ctlmsg_print(&mh, m);
+		sched_yield();
 	}
 	if (n == -1)
 		psc_fatal("read");
