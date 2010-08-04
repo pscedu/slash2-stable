@@ -222,6 +222,7 @@ main(int argc, char *argv[])
 	PRTYPE(struct psc_ctlmsg_subsys);
 	PRTYPE(struct psc_ctlmsghdr);
 	PRTYPE(struct psc_ctlop);
+	PRTYPE(struct psc_ctlopt);
 	PRTYPE(struct psc_ctlshow_ent);
 	PRTYPE(struct psc_ctlthr);
 	PRTYPE(struct psc_dynarray);
@@ -316,6 +317,8 @@ main(int argc, char *argv[])
 	PRVAL(ODTBL_MAGIC_ERR);
 	PRVAL(ODTBL_NO_ERR);
 	PRVAL(ODTBL_SLOT_ERR);
+	PRVAL(PCOF_FLAG);
+	PRVAL(PCOF_FUNC);
 	PRVAL(PLCP_HEAD);
 	PRVAL(PLCP_TAIL);
 	PRVAL(PSCRPC_IMP_CLOSED);
