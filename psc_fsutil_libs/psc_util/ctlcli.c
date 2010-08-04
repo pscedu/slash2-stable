@@ -40,10 +40,6 @@
 #include "psc_util/meter.h"
 #include "psc_util/pool.h"
 #include "psc_util/subsys.h"
-#include "psc_util/thread.h"
-
-#define PCTHRT_RD 0
-#define PCTHRT_WR 1
 
 struct psc_ctlmsghdr	 *psc_ctl_msghdr;
 int			  psc_ctl_noheader;
@@ -873,57 +869,18 @@ psc_ctl_read(int s, void *buf, size_t siz)
 	}
 }
 
-void
-psc_ctlcli_rd_main(__unusedx struct psc_thread *thr)
-{
-	struct psc_ctlmsghdr mh;
-	ssize_t n, siz;
-	void *m;
-
-	/* Read and print response messages. */
-	m = NULL;
-	siz = 0;
-	while ((n = read(psc_ctl_sock, &mh, sizeof(mh))) != -1 && n != 0) {
-		if (n != sizeof(mh)) {
-			psc_warnx("short read");
-			continue;
-		}
-		if (mh.mh_size == 0)
-			psc_fatalx("received invalid message from daemon");
-		if (mh.mh_size >= (size_t)siz) {
-			siz = mh.mh_size;
-			if ((m = realloc(m, siz)) == NULL)
-				psc_fatal("realloc");
-		}
-		psc_ctl_read(psc_ctl_sock, m, mh.mh_size);
-		psc_ctlmsg_print(&mh, m);
-		sched_yield();
-	}
-	if (n == -1)
-		psc_fatal("read");
-	free(m);
-	close(psc_ctl_sock);
-}
-
 extern void usage(void);
 
 void
 psc_ctlcli_main(const char *osockfn, int ac, char *av[],
     const struct psc_ctlopt *otab, int notab)
 {
-	extern const char *progname;
 	char optstr[LINE_MAX], chbuf[2], sockfn[PATH_MAX];
+	struct psc_ctlmsghdr mh;
 	struct sockaddr_un sun;
-	const char *prg;
+	ssize_t n, siz;
 	int c, i;
-
-	prg = strrchr(progname, '/');
-	if (prg)
-		prg++;
-	else
-		prg = progname;
-
-	pscthr_init(PCTHRT_WR, 0, NULL, NULL, 0, "%swrthr", prg);
+	void *m;
 
 	psc_ctl_sockfn = osockfn;
 	optstr[0] = '\0';
@@ -963,9 +920,6 @@ psc_ctlcli_main(const char *osockfn, int ac, char *av[],
 	if (connect(psc_ctl_sock, (struct sockaddr *)&sun, sizeof(sun)) == -1)
 		err(1, "connect: %s", sockfn);
 
-	pscthr_init(PCTHRT_RD, 0, psc_ctlcli_rd_main,
-	    NULL, 0, "%drdthr", progname);
-
 	/* Parse options for real this time. */
 	optind = 0;
 	while ((c = getopt(ac, av, optstr)) != -1) {
@@ -993,4 +947,28 @@ psc_ctlcli_main(const char *osockfn, int ac, char *av[],
 	psc_ctlmsg_sendlast();
 	if (shutdown(psc_ctl_sock, SHUT_WR) == -1)
 		psc_fatal("shutdown");
+
+	/* Read and print response messages. */
+	m = NULL;
+	siz = 0;
+	while ((n = read(psc_ctl_sock, &mh, sizeof(mh))) != -1 && n != 0) {
+		if (n != sizeof(mh)) {
+			psc_warnx("short read");
+			continue;
+		}
+		if (mh.mh_size == 0)
+			psc_fatalx("received invalid message from daemon");
+		if (mh.mh_size >= (size_t)siz) {
+			siz = mh.mh_size;
+			if ((m = realloc(m, siz)) == NULL)
+				psc_fatal("realloc");
+		}
+		psc_ctl_read(psc_ctl_sock, m, mh.mh_size);
+		psc_ctlmsg_print(&mh, m);
+		sched_yield();
+	}
+	if (n == -1)
+		psc_fatal("read");
+	free(m);
+	close(psc_ctl_sock);
 }
