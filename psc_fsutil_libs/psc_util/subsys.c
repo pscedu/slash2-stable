@@ -100,7 +100,8 @@ psc_log_getlevel_ss(int ssid)
 
 	if (ssid >= psc_nsubsys || ssid < 0)
 		/* must use errx(3) here to avoid loops with psclog */
-		errx(1, "subsystem out of bounds (%d)", ssid);
+		errx(1, "subsystem out of bounds (%d, max %d)", ssid,
+		    psc_nsubsys);
 	ss = psc_dynarray_getpos(&psc_subsystems, ssid);
 	return (ss->pss_loglevel);
 }
@@ -112,7 +113,8 @@ psc_log_setlevel_ss(int ssid, int newlevel)
 	int i;
 
 	if (newlevel >= PNLOGLEVELS || newlevel < 0)
-		psc_fatalx("log level out of bounds (%d)", newlevel);
+		psc_fatalx("log level out of bounds (%d, max %d)",
+		    newlevel, PNLOGLEVELS);
 
 	ss = psc_dynarray_get(&psc_subsystems);
 
@@ -120,7 +122,8 @@ psc_log_setlevel_ss(int ssid, int newlevel)
 		for (i = 0; i < psc_nsubsys; i++)
 			ss[i]->pss_loglevel = newlevel;
 	else if (ssid >= psc_nsubsys || ssid < 0)
-		psc_fatalx("subsystem out of bounds (%d)", ssid);
+		psc_fatalx("subsystem out of bounds (%d, max %d)", ssid,
+		    psc_nsubsys);
 	else
 		ss[ssid]->pss_loglevel = newlevel;
 }
