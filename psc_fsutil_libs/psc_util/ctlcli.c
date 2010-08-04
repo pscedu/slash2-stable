@@ -882,7 +882,6 @@ psc_ctlcli_main(const char *osockfn, int ac, char *av[],
 	int c, i;
 	void *m;
 
-	pfl_init();
 	psc_ctl_sockfn = osockfn;
 	optstr[0] = '\0';
 	chbuf[2] = '\0';
