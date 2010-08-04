@@ -922,6 +922,7 @@ psc_ctlcli_main(const char *osockfn, int ac, char *av[],
 		err(1, "connect: %s", sockfn);
 
 	/* Parse options for real this time. */
+	optind = 0;
 	while ((c = getopt(ac, av, optstr)) != -1) {
 		for (i = 0; i < notab; i++) {
 			if (c != otab[i].pco_ch)
