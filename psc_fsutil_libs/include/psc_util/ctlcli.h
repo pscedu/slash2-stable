@@ -60,6 +60,17 @@ struct psc_ctlmsg_prfmt {
 	int		(*prf_check)(struct psc_ctlmsghdr *, const void *);
 };
 
+enum psc_ctlopt_type {
+	PCOF_FLAG,
+	PCOF_FUNC
+};
+
+struct psc_ctlopt {
+	char			 pco_ch;
+	enum psc_ctlopt_type	 pco_type;
+	void			*pco_data;
+};
+
 void  psc_ctlparse_cmd(char *);
 void  psc_ctlparse_hashtable(const char *);
 void  psc_ctlparse_iostats(char *);
@@ -76,7 +87,7 @@ void  psc_ctl_packshow_odtables(const char *);
 void  psc_ctl_packshow_stats(const char *);
 
 void *psc_ctlmsg_push(int, size_t);
-void  psc_ctlcli_main(const char *);
+void  psc_ctlcli_main(const char *, int, char **, const struct psc_ctlopt *, int);
 
 void  psc_ctlthr_prdat(const struct psc_ctlmsg_stats *);
 

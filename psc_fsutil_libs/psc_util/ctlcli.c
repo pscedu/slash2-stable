@@ -41,22 +41,25 @@
 #include "psc_util/pool.h"
 #include "psc_util/subsys.h"
 
-#define PCTHRT_RD	0
-#define PCTHRT_WR	1
+struct psc_ctlmsghdr	 *psc_ctl_msghdr;
+int			  psc_ctl_noheader;
+int			  psc_ctl_inhuman;
+int			  psc_ctl_nsubsys;
+char			**psc_ctl_subsys_names;
+const char		 *psc_ctl_sockfn;
+int			  psc_ctl_lastmsgtype = -1;
+__static int		  psc_ctl_sock;
 
-__static PSCLIST_HEAD(psc_ctlmsgs);
+__static void
+psc_ctlmsg_sendlast(void)
+{
+	ssize_t siz;
 
-struct psc_ctlmsg {
-	struct psclist_head	pcm_lentry;
-	struct psc_ctlmsghdr	pcm_mh;
-};
-
-int		  psc_ctl_noheader;
-int		  psc_ctl_inhuman;
-int		  psc_ctl_nsubsys;
-char		**psc_ctl_subsys_names;
-int		  psc_ctl_lastmsgtype = -1;
-__static int	  psc_ctl_sock;
+	/* Send last queued control messages. */
+	siz = psc_ctl_msghdr->mh_size + sizeof(*psc_ctl_msghdr);
+	if (write(psc_ctl_sock, psc_ctl_msghdr, siz) != siz)
+		psc_fatal("write");
+}
 
 __static struct psc_ctlshow_ent *
 psc_ctlshow_lookup(const char *name)
@@ -75,17 +78,18 @@ psc_ctlshow_lookup(const char *name)
 void *
 psc_ctlmsg_push(int type, size_t msiz)
 {
-	struct psc_ctlmsg *pcm;
 	static int id;
 	size_t tsiz;
 
-	tsiz = msiz + sizeof(*pcm);
-	pcm = psc_alloc(tsiz, PAF_NOLOG);
-	psclist_xadd_tail(&pcm->pcm_lentry, &psc_ctlmsgs);
-	pcm->pcm_mh.mh_type = type;
-	pcm->pcm_mh.mh_size = msiz;
-	pcm->pcm_mh.mh_id = id++;
-	return (&pcm->pcm_mh.mh_data);
+	if (psc_ctl_msghdr)
+		psc_ctlmsg_sendlast();
+
+	tsiz = msiz + sizeof(*psc_ctl_msghdr);
+	psc_ctl_msghdr = psc_realloc(psc_ctl_msghdr, tsiz, PAF_NOLOG);
+	psc_ctl_msghdr->mh_type = type;
+	psc_ctl_msghdr->mh_size = msiz;
+	psc_ctl_msghdr->mh_id = id++;
+	return (&psc_ctl_msghdr->mh_data);
 }
 
 void
@@ -865,53 +869,49 @@ psc_ctl_read(int s, void *buf, size_t siz)
 	}
 }
 
-void
-psc_ctlcli_wr_main(__unusedx struct psc_thread *thr)
-{
-	struct psc_ctlmsg *pcm, *nextpcm;
-	ssize_t siz;
-
-	/* Send queued control messages. */
-	psclist_for_each_entry_safe(pcm, nextpcm,
-	    &psc_ctlmsgs, pcm_lentry) {
-		siz = pcm->pcm_mh.mh_size + sizeof(pcm->pcm_mh);
-		if (write(psc_ctl_sock, &pcm->pcm_mh, siz) != siz)
-			psc_fatal("write");
-		free(pcm);
-		sched_yield();
-	}
-	if (shutdown(psc_ctl_sock, SHUT_WR) == -1)
-		psc_fatal("shutdown");
-}
+extern void usage(void);
 
 void
-psc_ctlcli_main(const char *osockfn)
+psc_ctlcli_main(const char *osockfn, int ac, char *av[],
+    const struct psc_ctlopt *otab, int notab)
 {
-	extern const char *progname;
+	char optstr[LINE_MAX], chbuf[2], sockfn[PATH_MAX];
 	struct psc_ctlmsghdr mh;
 	struct sockaddr_un sun;
-	char sockfn[PATH_MAX];
-	const char *prg;
 	ssize_t n, siz;
+	int c, i;
 	void *m;
 
-	prg = strrchr(progname, '/');
-	if (prg)
-		prg++;
-	else
-		prg = progname;
+	pfl_init();
+	psc_ctl_sockfn = osockfn;
+	optstr[0] = '\0';
+	chbuf[2] = '\0';
+	strlcat(optstr, "S:", sizeof(optstr));
+	for (i = 0; i < notab; i++) {
+		chbuf[0] = otab[i].pco_ch;
+		chbuf[1] = otab[i].pco_type == PCOF_FLAG ? '\0' : ':';
+		strlcat(optstr, chbuf, sizeof(optstr));
+	}
 
-	pscthr_init(PCTHRT_RD, 0, NULL, NULL, 0, "%srdthr", prg);
+	/* First pass through arguments for validity and sockfn. */
+	while ((c = getopt(ac, av, optstr)) != -1) {
+		if (c == 'S') {
+			psc_ctl_sockfn = optarg;
+			continue;
+		}
+		for (i = 0; i < notab; i++)
+			if (c == otab[i].pco_ch)
+				break;
+		if (i == notab)
+			usage();
+	}
 
-	if (psclist_empty(&psc_ctlmsgs))
-		errx(1, "no actions specified");
-
-	FMTSTR(sockfn, sizeof(sockfn), osockfn,
+	/* Connect to control socket. */
+	FMTSTR(sockfn, sizeof(sockfn), psc_ctl_sockfn,
 		FMTSTRCASE('h', sockfn, sizeof(sockfn), "s",
 		    psclog_getdata()->pld_hostshort)
 	);
 
-	/* Connect to control socket. */
 	if ((psc_ctl_sock = socket(AF_UNIX, SOCK_STREAM, 0)) == -1)
 		psc_fatal("socket");
 
@@ -921,8 +921,32 @@ psc_ctlcli_main(const char *osockfn)
 	if (connect(psc_ctl_sock, (struct sockaddr *)&sun, sizeof(sun)) == -1)
 		err(1, "connect: %s", sockfn);
 
-	pscthr_init(PCTHRT_WR, 0, psc_ctlcli_wr_main,
-	    NULL, 0, "%dwrthr", progname);
+	/* Parse options for real this time. */
+	while ((c = getopt(ac, av, optstr)) != -1) {
+		for (i = 0; i < notab; i++) {
+			if (c != otab[i].pco_ch)
+				continue;
+			switch (otab[i].pco_type) {
+			case PCOF_FLAG:
+				*(int *)otab[i].pco_data = 1;
+				break;
+			case PCOF_FUNC:
+				((void (*)(const char *))otab[i].pco_data)(optarg);
+				break;
+			}
+			break;
+		}
+	}
+	ac -= optind;
+	if (ac)
+	    usage();
+
+	if (psc_ctl_msghdr == NULL)
+		errx(1, "no actions specified");
+
+	psc_ctlmsg_sendlast();
+	if (shutdown(psc_ctl_sock, SHUT_WR) == -1)
+		psc_fatal("shutdown");
 
 	/* Read and print response messages. */
 	m = NULL;
