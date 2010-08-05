@@ -33,7 +33,7 @@ typedef	uint32_t		psc_crc32_t;
 #define PSC_CRC32_FIN(crcp)	(*(crcp) ^= 0xffffffff)
 #define PSC_CRC64_FIN(crcp)	(*(crcp) ^= UINT64_C(0xffffffffffffffff))
 
-/*
+/**
  * psc_crc64_calc - Compute a 64-bit CRC of some data.
  * @cp: pointer to an uninitialized CRC buffer.
  * @data: data to perform CRC over.
@@ -46,7 +46,7 @@ typedef	uint32_t		psc_crc32_t;
 		PSC_CRC64_FIN(cp);					\
 	} while (0)
 
-/*
+/**
  * psc_crc32_calc - Compute a 32-bit CRC of some data.
  * @cp: pointer to an uninitialized CRC buffer.
  * @data: data to perform CRC over.
