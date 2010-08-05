@@ -82,10 +82,16 @@
 	} while (0)
 #endif
 
-#define PFL_GETTIME(tv)							\
+#define PFL_GETTIMEVAL(tv)						\
 	do {								\
 		if (gettimeofday((tv), NULL) == -1)			\
 			psc_fatal("gettimeofday");			\
+	} while (0)
+
+#define PFL_GETTIMESPEC(ts)						\
+	do {								\
+		if (clock_gettime(CLOCK_REALTIME, (ts)) == -1)		\
+			psc_fatal("clock_gettime");			\
 	} while (0)
 
 #endif /* _PFL_TIME_H_ */
