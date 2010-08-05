@@ -147,14 +147,15 @@ ifneq ($(filter l,${MODULES}),)
 endif
 
 ifneq ($(filter pfl,${MODULES}),)
-INCLUDES+=	-I${PFL_BASE}/include
-SRC_PATH+=	${PFL_BASE}
+  INCLUDES+=	-I${PFL_BASE}/include
+  SRC_PATH+=	${PFL_BASE}
 
 # XXX only do this if DEBUG is set
-SRCS+=		${PFL_BASE}/psc_util/printhex.c
+  SRCS+=	${PFL_BASE}/psc_util/dbgutil.c
+  SRCS+=	${PFL_BASE}/psc_util/printhex.c
 
  ifneq ($(filter pthread,${MODULES}),)
- MODULES+=	numa
+   MODULES+=	numa
  endif
 endif
 

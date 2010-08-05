@@ -20,6 +20,8 @@
 #ifndef _PFL_STAT_H_
 #define _PFL_STAT_H_
 
+struct stat;
+
 #if defined(HAVE_STB_TIM) || defined(HAVE_STB_TIMESPEC)
 
 # ifdef HAVE_STB_TIM
@@ -48,5 +50,19 @@
 # define PFL_STB_MTIME_GET(stb, s, ns)	do { *(s) = (stb)->st_mtime; *(ns) = 0; } while (0)
 # define PFL_STB_CTIME_GET(stb, s, ns)	do { *(s) = (stb)->st_ctime; *(ns) = 0; } while (0)
 #endif
+
+#define DEBUG_STATBUF(level, stb, fmt, ...)					\
+	psc_log((level),							\
+	    "stb (%p) dev:%"PRIu64" inode:%"PRId64" mode:0%o "			\
+	    "nlink:%"PRIu64" uid:%u gid:%u "					\
+	    "rdev:%"PRIu64" sz:%"PRId64" blksz:%"PSCPRI_BLKSIZE_T" "		\
+	    "blkcnt:%"PRId64" atime:%lu mtime:%lu ctime:%lu " fmt,		\
+	    (stb), (uint64_t)(stb)->st_dev, (stb)->st_ino, (stb)->st_mode,	\
+	    (uint64_t)(stb)->st_nlink, (stb)->st_uid, (stb)->st_gid,		\
+	    (uint64_t)(stb)->st_rdev, (stb)->st_size, (stb)->st_blksize,	\
+	    (stb)->st_blocks, (stb)->st_atime, (stb)->st_mtime,			\
+	    (stb)->st_ctime, ## __VA_ARGS__)
+
+void	pfl_dump_statbuf(int, const struct stat *);
 
 #endif /* _PFL_STAT_H_ */

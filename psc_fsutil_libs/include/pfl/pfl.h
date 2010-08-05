@@ -17,12 +17,17 @@
  * %PSC_END_COPYRIGHT%
  */
 
-#ifndef _PFL_H_
-#define _PFL_H_
+#ifndef _PFL_PFL_H_
+#define _PFL_PFL_H_
 
 #include "pfl/compat.h"
 
 void pfl_init(void);
+
 void psc_enter_debugger(const char *);
 
-#endif /* _PFL_H_ */
+void pfl_print_flag(const char *, int *);
+
+void pfl_dump_fflags(int);
+
+#endif /* _PFL_PFL_H_ */
