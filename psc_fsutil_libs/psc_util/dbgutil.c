@@ -7,7 +7,6 @@
 #include "pfl/fcntl.h"
 #include "pfl/stat.h"
 #include "pfl/types.h"
-#include "psc_util/log.h"
 
 void
 pfl_print_flag(const char *str, int *seq)
@@ -23,12 +22,6 @@ pfl_print_flag(const char *str, int *seq)
 			(val) &= ~(fl);					\
 		}							\
 	} while (0)
-
-void
-pfl_dump_statbuf(int level, const struct stat *stb)
-{
-	DEBUG_STATBUF(level, stb, "");
-}
 
 void
 pfl_dump_fflags(int fflags)

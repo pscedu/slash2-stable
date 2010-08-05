@@ -20,6 +20,9 @@
 #ifndef _PFL_STAT_H_
 #define _PFL_STAT_H_
 
+#include "pfl/types.h"
+#include "psc_util/log.h"
+
 struct stat;
 
 #if defined(HAVE_STB_TIM) || defined(HAVE_STB_TIMESPEC)
@@ -63,6 +66,10 @@ struct stat;
 	    (stb)->st_blocks, (stb)->st_atime, (stb)->st_mtime,			\
 	    (stb)->st_ctime, ## __VA_ARGS__)
 
-void	pfl_dump_statbuf(int, const struct stat *);
+static __inline void
+pfl_dump_statbuf(const struct stat *stb)
+{
+	DEBUG_STATBUF(PLL_MAX, stb, "");
+}
 
 #endif /* _PFL_STAT_H_ */
