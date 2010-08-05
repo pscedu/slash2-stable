@@ -4,6 +4,8 @@
 CROOTDIR=		$(realpath ${ROOTDIR})
 STRIPROOTDIR=		$(subst ${CROOTDIR}/,,$1)
 PATH_NAMIFY=		$(subst .,_,$(subst -,_,$(subst /,_,$1)))
+FILE_CFLAGS_VARNAME=	$(call PATH_NAMIFY,$(call STRIPROOTDIR,$(abspath $1)))_CFLAGS
+FILE_PCPP_FLAGS_VARNAME=$(call PATH_NAMIFY,$(call STRIPROOTDIR,$(abspath $1)))_PCPP_FLAGS
 FILE_CFLAGS=		${$(call PATH_NAMIFY,$(call STRIPROOTDIR,$(realpath $1)))_CFLAGS}
 FILE_PCPP_FLAGS=	${$(call PATH_NAMIFY,$(call STRIPROOTDIR,$(realpath $1)))_PCPP_FLAGS}
 
@@ -241,6 +243,9 @@ ${OBJDIR}/$(notdir %.E) : %.c
 ${OBJDIR}/$(notdir %.c) : %.l
 	echo "${LEX} ${LFLAGS} $(realpath $<) > $@"
 	${LEX} ${LFLAGS} $(realpath $<) > $@
+
+#	$(eval $$(call FILE_PCPP_FLAGS_VARNAME,$@)+=$$(call FILE_PCPP_FLAGS,$<))
+#	$(eval $$(call FILE_CFLAGS_VARNAME,$@)+=$$(call FILE_CFLAGS,$<))
 
 ${OBJDIR}/$(notdir %.c) : %.y
 	${ECHORUN} ${YACC} ${YFLAGS} -o $@ $(realpath $<)
