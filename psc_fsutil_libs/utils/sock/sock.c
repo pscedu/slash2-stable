@@ -90,9 +90,9 @@ displaythr_main(__unusedx struct psc_thread *thr)
 	int n = 0;
 
 	for (;;) {
-		PFL_GETTIME(&tv);
+		PFL_GETTIMEVAL(&tv);
 		usleep(1000000 - tv.tv_usec);
-		PFL_GETTIME(&tv);
+		PFL_GETTIMEVAL(&tv);
 
 		if ((++n % 30) == 0) {
 			center("-- read --", 8 * 3);

@@ -37,8 +37,8 @@
 
 #include TEST_LOCK_INCLUDE
 
-#define STARTWATCH(t) PFL_GETTIME(&(t)[0])
-#define STOPWATCH(t)  PFL_GETTIME(&(t)[1])
+#define STARTWATCH(t) PFL_GETTIMEVAL(&(t)[0])
+#define STOPWATCH(t)  PFL_GETTIMEVAL(&(t)[1])
 
 TEST_LOCK_TYPE lock = TEST_LOCK_INITIALIZER;
 atomic_t idx = ATOMIC_INIT(0);

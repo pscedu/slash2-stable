@@ -46,9 +46,9 @@ psc_tiosthr_main(__unusedx struct psc_thread *thr)
 	int i, stoff;
 
 	while (pscthr_run()) {
-		PFL_GETTIME(&tv);
+		PFL_GETTIMEVAL(&tv);
 		usleep(1000000 - tv.tv_usec);
-		PFL_GETTIME(&tv);
+		PFL_GETTIMEVAL(&tv);
 
 		/* find largest interval to update */
 		for (stoff = 0; stoff < IST_NINTV; stoff++) {
@@ -73,7 +73,7 @@ psc_tiosthr_main(__unusedx struct psc_thread *thr)
 				intv_len = psc_atomic64_xchg(
 				    &ist->ist_intv[i].istv_cur_len, intv_len);
 
-				PFL_GETTIME(&tv);
+				PFL_GETTIMEVAL(&tv);
 
 				if (i == stoff - 1 && i < IST_NINTV - 1)
 					psc_atomic64_add(&ist->ist_intv[i +

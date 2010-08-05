@@ -54,7 +54,7 @@ psc_iostats_init(struct psc_iostats *ist, const char *fmt, ...)
 	if (rc == -1 || rc >= (int)sizeof(ist->ist_name))
 		psc_fatal("vsnprintf");
 
-	PFL_GETTIME(&tv);
+	PFL_GETTIMEVAL(&tv);
 
 	for (i = 0; i < IST_NINTV; i++) {
 		ist->ist_intv[i].istv_lastv = tv;

@@ -99,7 +99,7 @@ psc_spin_unlock(struct psc_spinlock *psl)
 		psc_fatalx("not owner; psl=%p, "
 		    "owner=%"PSCPRI_PTHRT", self=%"PSCPRI_PTHRT,
 		    psl, psl->psl_who, pthread_self());
-	PFL_GETTIME(&now);
+	PFL_GETTIMEVAL(&now);
 	max.tv_sec = 0;
 	max.tv_usec = 500;
 	timersub(&now, &psl->psl_time, &diff);
@@ -127,7 +127,7 @@ psc_spin_trylock(struct psc_spinlock *psl)
 		return (0);			/* someone else has it */
 	} else if (v == PSL_UNLOCKED) {
 		psl->psl_who = pthread_self();	/* we got it */
-		PFL_GETTIME(&psl->psl_time);
+		PFL_GETTIMEVAL(&psl->psl_time);
 		return (1);
 	}
 	psc_fatalx("invalid value; psl=%p, value=%d", psl, v);

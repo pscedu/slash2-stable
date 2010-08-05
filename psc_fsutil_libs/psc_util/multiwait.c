@@ -425,7 +425,7 @@ psc_multiwaitus(struct psc_multiwait *mw, void *datap, int usec)
 		struct timeval tv, res, adj;
 		struct timespec ntv;
 
-		PFL_GETTIME(&tv);
+		PFL_GETTIMEVAL(&tv);
 		adj.tv_sec = usec / 1000000;
 		adj.tv_usec = usec % 1000000;
 		timeradd(&tv, &adj, &res);

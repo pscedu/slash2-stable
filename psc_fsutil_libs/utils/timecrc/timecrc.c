@@ -83,9 +83,9 @@ main(int argc, char *argv[])
 			break;
 		acsz += rc;
 
-		PFL_GETTIME(&tm0);
+		PFL_GETTIMEVAL(&tm0);
 		psc_crc64_add(&crc, buf, rc);
-		PFL_GETTIME(&tm1);
+		PFL_GETTIMEVAL(&tm1);
 		timersub(&tm1, &tm0, &tmd);
 
 		memcpy(&tm0, &tm_total, sizeof(tm0));
