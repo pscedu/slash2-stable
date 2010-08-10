@@ -20,6 +20,8 @@
 #ifndef _PFL_STAT_H_
 #define _PFL_STAT_H_
 
+#include <sys/stat.h>
+
 #include "pfl/types.h"
 #include "psc_util/log.h"
 
