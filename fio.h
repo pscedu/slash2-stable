@@ -565,7 +565,7 @@ _BARRIER(GROUP_t *mygroup, struct io_toolbox *iot)
 #define SEEKOFF do {							\
 	iot->mysize = (mygroup->file_size / mygroup->num_pes);		\
 	off_t seekv =  iot->mysize * iot->mype;				\
-	DEBUG(D_BLOCK, "PE %d, seeking %"PSCPRIdOFF" bytes\n",		\
+	DEBUG(D_BLOCK, "PE %d, seeking %"PSCPRIdOFFT" bytes\n",		\
 	    iot->mype, seekv);						\
 	APP_BARRIER;							\
 	ASSERT(lseek(iot->myfd, seekv, SEEK_SET) >= 0 );		\
@@ -577,10 +577,10 @@ _BARRIER(GROUP_t *mygroup, struct io_toolbox *iot)
 		seekv = (iot->bdesc.buffer_size * iot->mype);		\
 	else								\
 		seekv = (iot->bdesc.buffer_size * mygroup->num_pes);	\
-	DEBUG(D_BLOCK, "PE %d, seeking %"PSCPRIdOFF" bytes\n",		\
+	DEBUG(D_BLOCK, "PE %d, seeking %"PSCPRIdOFFT" bytes\n",		\
 	    iot->mype, seekv);						\
 	ASSERT(lseek(iot->myfd, seekv, SEEK_CUR) >= 0 );		\
-	DEBUG(D_BLOCK, "PE %d, curr off %"PSCPRIdOFF"\n",		\
+	DEBUG(D_BLOCK, "PE %d, curr off %"PSCPRIdOFFT"\n",		\
 	    iot->mype, lseek(iot->myfd, (off_t)0, SEEK_CUR));		\
 } while (0)
 
