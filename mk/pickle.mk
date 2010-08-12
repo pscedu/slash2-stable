@@ -15,7 +15,7 @@ PICKLE_NEED_VERSION=					$(word 2,$$Rev$$)
  endif
 
  ifndef PICKLE_HAVE_POSIX_MEMALIGN
-  SRCS+=						${ROOTDIR}/psc_fsutil_libs/compat/posix_memalign.c
+  SRCS+=						${PFL_BASE}/compat/posix_memalign.c
  endif
 
  ifdef PICKLE_HAVE_PTHREAD_MUTEX_TIMEDLOCK
@@ -25,28 +25,28 @@ PICKLE_NEED_VERSION=					$(word 2,$$Rev$$)
  ifdef PICKLE_HAVE_CLOCK_GETTIME
   DEFINES+=						-DHAVE_CLOCK_GETTIME
  else
-  SRCS+=						${ROOTDIR}/psc_fsutil_libs/compat/clock_gettime.c
+  SRCS+=						${PFL_BASE}/compat/clock_gettime.c
  endif
 
  ifdef PICKLE_HAVE_PTHREAD_BARRIER
   DEFINES+=						-DHAVE_PTHREAD_BARRIER
  else
   ifneq ($(filter pthread,${MODULES}),)
-   SRCS+=						${ROOTDIR}/psc_fsutil_libs/compat/pthread_barrier.c
-   SRCS+=						${ROOTDIR}/psc_fsutil_libs/psc_util/pthrutil.c
+   SRCS+=						${PFL_BASE}/compat/pthread_barrier.c
+   SRCS+=						${PFL_BASE}/psc_util/pthrutil.c
   endif
  endif
 
  ifdef PICKLE_HAVE_STRLCPY
   DEFINES+=						-DHAVE_STRLCPY
  else
-  SRCS+=						${ROOTDIR}/psc_fsutil_libs/compat/strlcpy.c
+  SRCS+=						${PFL_BASE}/compat/strlcpy.c
  endif
 
  ifdef PICKLE_HAVE_STRNLEN
   DEFINES+=						-DHAVE_STRNLEN
  else
-  SRCS+=						${ROOTDIR}/psc_fsutil_libs/compat/strnlen.c
+  SRCS+=						${PFL_BASE}/compat/strnlen.c
  endif
 
  ifdef PICKLE_HAVE_SYS_SIGABBREV

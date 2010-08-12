@@ -10,6 +10,7 @@ FILE_CFLAGS=		${$(call PATH_NAMIFY,$(call STRIPROOTDIR,$(realpath $1)))_CFLAGS}
 FILE_PCPP_FLAGS=	${$(call PATH_NAMIFY,$(call STRIPROOTDIR,$(realpath $1)))_PCPP_FLAGS}
 
 -include ${ROOTDIR}/mk/local.mk
+include ${ROOTDIR}/mk/pickle.mk
 
 _TSRCS=			$(foreach fn,$(sort ${SRCS}),$(realpath ${fn}))
 
@@ -195,11 +196,11 @@ endif
 # Post-modules processing
 
 ifneq ($(filter ${PFL_BASE}/psc_util/pthrutil.c,${SRCS}),)
-  SRCS+=	${ROOTDIR}/psc_fsutil_libs/psc_util/log.c
+  SRCS+=	${PFL_BASE}/psc_util/log.c
 endif
 
 ifneq ($(filter ${PFL_BASE}/psc_util/log.c,${SRCS}),)
-  SRCS+=	${ROOTDIR}/psc_fsutil_libs/psc_util/alloc.c
+  SRCS+=	${PFL_BASE}/psc_util/alloc.c
 endif
 
 # OBJDIR is added to .c below since lex/yacc intermediate files get generated there.

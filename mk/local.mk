@@ -144,5 +144,3 @@ endif
 ifeq (${OSTYPE},OpenBSD)
   DEFINES+=					-D_BSD_SOURCE
 endif
-
-include ${ROOTDIR}/mk/pickle.mk

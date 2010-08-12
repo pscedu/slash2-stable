@@ -5,17 +5,17 @@ include ${ROOTDIR}/Makefile.path
 
 SUBDIRS+=	apps/sft
 SUBDIRS+=	fio
-SUBDIRS+=	psc_fsutil_libs/tests
-SUBDIRS+=	psc_fsutil_libs/utils
-SUBDIRS+=	slash_nara
-SUBDIRS+=	zest
+SUBDIRS+=	${PFL_BASE}/tests
+SUBDIRS+=	${PFL_BASE}/utils
+SUBDIRS+=	${SLASH_BASE}
+SUBDIRS+=	${ZEST_BASE}
 
 MAN+=		${ROOTDIR}/doc/pflenv.7
 
 include ${MAINMK}
 
 zbuild:
-	@(cd slash_nara/slashd && ${MAKE} zbuild)
+	@(cd ${SLASH_BASE}/slashd && ${MAKE} zbuild)
 
 rezbuild:
-	@(cd slash_nara/slashd && ${MAKE} rezbuild)
+	@(cd ${SLASH_BASE}/slashd && ${MAKE} rezbuild)
