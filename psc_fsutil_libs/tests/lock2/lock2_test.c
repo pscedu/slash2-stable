@@ -17,7 +17,7 @@
  * %PSC_END_COPYRIGHT%
  */
 
-#define TEST_LOCK_INCLUDE	"psc_util/spinlock.h"
+#define TEST_LOCK_INCLUDE	"pfl/spinlock.h"
 #define TEST_LOCK_TYPE		struct psc_spinlock
 #define TEST_LOCK_INITIALIZER	PSC_SPINLOCK_INIT
 #define TEST_LOCK_ACQUIRE(lk)	psc_spin_lock(lk)
