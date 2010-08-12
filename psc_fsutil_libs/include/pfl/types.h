@@ -37,11 +37,9 @@
 #include <inttypes.h>
 
 /* printf(3) specifier modifiers for custom types. */
-#define PSCPRIxLNID		PRIx64
-#define PSCPRIxOFF		PRIx64
-#define PSCPRIdOFF		PRId64
-#define PSCPRIxCRC32		"08u"
-#define PSCPRIxCRC64		"016"PRIx64
+#define PSCPRIxLNID		"#"PRIx64
+#define PSCPRIxCRC32		"#08x"
+#define PSCPRIxCRC64		"#016"PRIx64
 
 #if defined(__APPLE__) || defined(__OpenBSD__)
 # define PSCPRI_PTHRT		"p"
@@ -71,7 +69,15 @@
 #define PSCPRI_TIMEVAL_ARGS(tv)	(tv)->tv_sec, (tv)->tv_usec
 #define PSCPRI_TIMESPEC_ARGS(ts)(ts)->tv_sec, (ts)->tv_nsec
 
-#if defined(__USE_FILE_OFFSET64) || defined(__APPLE__)
+#if HAVE_FILE_OFFSET32
+# define PSCPRIxOFFT		"#"PRIx64
+# define PSCPRIdOFFT		PRId64
+#else
+# define PSCPRIxOFFT		"#lx"
+# define PSCPRIdOFFT		"ld"
+#endif
+
+#if !defined(HAVE_FILE_OFFSET32) && (defined(__USE_FILE_OFFSET64) || defined(__APPLE__))
 # define PSCPRIuINOT		PRIu64
 #elif defined(__linux)
 # define PSCPRIuINOT		"lu"
