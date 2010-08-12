@@ -70,11 +70,11 @@
 #define PSCPRI_TIMESPEC_ARGS(ts)(ts)->tv_sec, (ts)->tv_nsec
 
 #ifdef HAVE_FILE_OFFSET32
-# define _PSCPRIxOFFT		PRIx64
-# define PSCPRIdOFFT		PRId64
-#else
 # define _PSCPRIxOFFT		"lx"
 # define PSCPRIdOFFT		"ld"
+#else
+# define _PSCPRIxOFFT		PRIx64
+# define PSCPRIdOFFT		PRId64
 #endif
 
 # define PSCPRIxOFFT		"#"_PSCPRIxOFFT
