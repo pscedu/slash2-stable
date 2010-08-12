@@ -69,15 +69,15 @@
 #define PSCPRI_TIMEVAL_ARGS(tv)	(tv)->tv_sec, (tv)->tv_usec
 #define PSCPRI_TIMESPEC_ARGS(ts)(ts)->tv_sec, (ts)->tv_nsec
 
-#if HAVE_FILE_OFFSET32
-# define PSCPRIxOFFT		"#"PRIx64
-# define _PSCPRIxOFFT		""PRIx64
+#ifdef HAVE_FILE_OFFSET32
+# define _PSCPRIxOFFT		PRIx64
 # define PSCPRIdOFFT		PRId64
 #else
-# define PSCPRIxOFFT		"#lx"
 # define _PSCPRIxOFFT		"lx"
 # define PSCPRIdOFFT		"ld"
 #endif
+
+# define PSCPRIxOFFT		"#"_PSCPRIxOFFT
 
 #if !defined(HAVE_FILE_OFFSET32) && (defined(__USE_FILE_OFFSET64) || defined(__APPLE__))
 # define PSCPRIuINOT		PRIu64
