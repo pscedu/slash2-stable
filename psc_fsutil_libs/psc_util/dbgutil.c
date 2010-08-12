@@ -1,9 +1,13 @@
 /* $Id$ */
 
+#include <sys/types.h>
+#include <sys/stat.h>
+
 #include <fcntl.h>
 #include <inttypes.h>
 #include <stdio.h>
 
+#include "pfl/cdefs.h"
 #include "pfl/fcntl.h"
 #include "pfl/stat.h"
 #include "pfl/types.h"
@@ -60,4 +64,30 @@ pfl_dump_fflags(int fflags)
 		printf("%x", fflags);
 	}
 	printf("\n");
+}
+
+__weak int
+psc_log_getlevel(__unusedx int subsys)
+{
+	return (0);
+}
+
+__weak void
+_psclog(__unusedx const char *fn, __unusedx const char *func,
+    __unusedx int line, __unusedx int subsys, __unusedx int level,
+    __unusedx int options, const char *fmt, ...)
+{
+	va_list ap;
+
+	va_start(ap, fmt);
+	vprintf(fmt, ap);
+	va_end(ap);
+
+	printf("\n");
+}
+
+void
+pfl_dump_statbuf(const struct stat *stb)
+{
+	DEBUG_STATBUF(PLL_MAX, stb, "");
 }

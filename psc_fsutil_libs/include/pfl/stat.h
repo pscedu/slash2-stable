@@ -58,20 +58,17 @@ struct stat;
 
 #define DEBUG_STATBUF(level, stb, fmt, ...)					\
 	psc_log((level),							\
-	    "stb (%p) dev:%"PRIu64" inode:%"PRId64" mode:0%o "			\
+	    "stb (%p) dev:%"PRIu64" inode:%"PSCPRIuINOT" mode:0%o "		\
 	    "nlink:%"PRIu64" uid:%u gid:%u "					\
-	    "rdev:%"PRIu64" sz:%"PRId64" blksz:%"PSCPRI_BLKSIZE_T" "		\
-	    "blkcnt:%"PRId64" atime:%lu mtime:%lu ctime:%lu " fmt,		\
+	    "rdev:%"PRIu64" sz:%"PSCPRIdOFFT" blksz:%"PSCPRI_BLKSIZE_T" "	\
+	    "blkcnt:%"PRId64" atime:%"PSCPRI_TIMET" mtime:%"PSCPRI_TIMET" "	\
+	    "ctime:%"PSCPRI_TIMET" " fmt,					\
 	    (stb), (uint64_t)(stb)->st_dev, (stb)->st_ino, (stb)->st_mode,	\
 	    (uint64_t)(stb)->st_nlink, (stb)->st_uid, (stb)->st_gid,		\
 	    (uint64_t)(stb)->st_rdev, (stb)->st_size, (stb)->st_blksize,	\
 	    (stb)->st_blocks, (stb)->st_atime, (stb)->st_mtime,			\
 	    (stb)->st_ctime, ## __VA_ARGS__)
 
-static __inline void
-pfl_dump_statbuf(const struct stat *stb)
-{
-	DEBUG_STATBUF(PLL_MAX, stb, "");
-}
+void pfl_dump_statbuf(const struct stat *stb);
 
 #endif /* _PFL_STAT_H_ */
