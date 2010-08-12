@@ -272,11 +272,11 @@ psc_dynarray_bsearch(const struct psc_dynarray *da, const void *item,
 	while (min <= max) {
 		mid = min + (max - min) / 2;
 		p = psc_dynarray_getpos(da, mid);
-		rc = cmpf(p, item);
+		rc = cmpf(item, p);
 		if (rc < 0)
-			min = mid + 1;
-		else if (rc > 0) {
 			max = mid - 1;
+		else if (rc > 0) {
+			min = mid + 1;
 
 			/*
 			 * If the item doesn't exist, inform caller that
