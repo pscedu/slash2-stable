@@ -13,3 +13,9 @@ SUBDIRS+=	zest
 MAN+=		${ROOTDIR}/doc/pflenv.7
 
 include ${MAINMK}
+
+zbuild:
+	@(cd slashd && ${MAKE} zbuild)
+
+rezbuild:
+	@(cd slashd && ${MAKE} rezbuild)
