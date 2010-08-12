@@ -791,9 +791,9 @@ psc_ctlmsg_odtable_prhdr(__unusedx struct psc_ctlmsghdr *mh,
     __unusedx const void *m)
 {
 	printf("on-disk data table(s)\n"
-	    " %-35s %3s %7s %7s %5s "
+	    " %-24s %3s %7s %7s %5s "
 	    "%10s %5s %5s %5s\n",
-	    "name", "flg", "#hit", "#uhit", "delay",
+	    "name", "opt", "#hit", "#uhit", "delay",
 	    "count", "begin", "code", "prob");
 }
 
@@ -803,11 +803,16 @@ psc_ctlmsg_odtable_prdat(__unusedx const struct psc_ctlmsghdr *mh,
 {
 	const struct psc_ctlmsg_odtable *pco = m;
 
-	printf(" %-20s   %c "
+	printf(" %-24s  %c%c "
 	    "%7d %7d %5d "
 	    "%10d %5d %5d "
 	    "%5d\n",
-	    pco->pco_name, 0, 0, 0, 0, 0, 0, 0, 0);
+	    pco->pco_name,
+	    pco->pco_opts & ODTBL_OPT_CRC	? 'c' : '-',
+	    pco->pco_opts & ODTBL_OPT_SYNC	? 's' : '-',
+	    0, 0, 0,
+	    0, 0, 0,
+	    0);
 }
 
 __static void
