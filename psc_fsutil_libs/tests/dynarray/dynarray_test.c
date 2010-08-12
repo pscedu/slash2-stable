@@ -36,6 +36,7 @@ usage(void)
 	exit(1);
 }
 
+#define PTR_0	((void *)0x00)
 #define PTR_1	((void *)0x01)
 #define PTR_2	((void *)0x02)
 #define PTR_3	((void *)0x03)
@@ -56,10 +57,34 @@ check(struct psc_dynarray *da, ...)
 	DYNARRAY_FOREACH(p, j, da) {
 		checkp = va_arg(ap, void *);
 		psc_assert(p == checkp);
-//		printf("%p ", p);
-}
+	}
 	va_end(ap);
-//	printf("\n");
+}
+
+void
+display(struct psc_dynarray *da)
+{
+	void *p;
+	int j;
+
+	DYNARRAY_FOREACH(p, j, da)
+		printf("%p ", p);
+	printf("\n");
+}
+
+int
+cmp(const void *a, const void *b)
+{
+	return (CMP(a, b));
+}
+
+int
+pcmp(const void *a, const void *b)
+{
+	const void * const *x = a;
+	const void * const *y = b;
+
+	return (CMP(*x, *y));
 }
 
 int
@@ -88,6 +113,17 @@ main(int argc, char *argv[])
 
 	p = PTR_a; psc_dynarray_splice(&da, 2, 1, &p, 1); check(&da, PTR_1, PTR_2, PTR_a, PTR_4, NULL);
 	p = PTR_b; psc_dynarray_splice(&da, 3, 0, &p, 1); check(&da, PTR_1, PTR_2, PTR_a, PTR_b, PTR_4, NULL);
+
+	psc_dynarray_sort(&da, qsort, pcmp); check(&da, PTR_1, PTR_2, PTR_4, PTR_a, PTR_b, NULL);
+
+	psc_assert(psc_dynarray_bsearch(&da, PTR_0, cmp) == 0);
+	psc_assert(psc_dynarray_bsearch(&da, PTR_1, cmp) == 0);
+	psc_assert(psc_dynarray_bsearch(&da, PTR_2, cmp) == 1);
+	psc_assert(psc_dynarray_bsearch(&da, PTR_3, cmp) == 2);
+	psc_assert(psc_dynarray_bsearch(&da, PTR_4, cmp) == 2);
+	psc_assert(psc_dynarray_bsearch(&da, PTR_a, cmp) == 3);
+	psc_assert(psc_dynarray_bsearch(&da, PTR_b, cmp) == 4);
+	psc_assert(psc_dynarray_bsearch(&da, PTR_c, cmp) == 5);
 
 	exit(0);
 }
