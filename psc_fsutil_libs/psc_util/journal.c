@@ -82,7 +82,7 @@ psc_journal_io(struct psc_journal *pj, void *p, size_t len, off_t off,
 
 	if (nb == -1) {
 		rc = errno;
-		psc_error("journal %s (pj=%p, len=%zd, off=%"PSCPRIdOFF")",
+		psc_error("journal %s (pj=%p, len=%zd, off=%"PSCPRIdOFFT")",
 		    rw == JIO_READ ? "read" : "write", pj, len, off);
 	} else if ((size_t)nb != len) {
 		/*
@@ -90,7 +90,7 @@ psc_journal_io(struct psc_journal *pj, void *p, size_t len, off_t off,
 		 * returns "success" on a RAM-backed file system.
 		 */
 		rc = ENOSPC;
-		psc_errorx("journal %s (pj=%p, len=%zd, off=%"PSCPRIdOFF", "
+		psc_errorx("journal %s (pj=%p, len=%zd, off=%"PSCPRIdOFFT", "
 		    "nb=%zd): short I/O", rw == JIO_READ ? "read" : "write",
 		    pj, len, off, nb);
 	} else {
@@ -112,7 +112,7 @@ psc_journal_io(struct psc_journal *pj, void *p, size_t len, off_t off,
 
 			if (rc)
 				psc_error("sync_file_range failed (len=%zd, off=%"
-					  PSCPRIdOFF")", len, off);
+				    PSCPRIdOFFT")", len, off);
 		}
 	}
 	return (rc);
@@ -594,7 +594,7 @@ pjournal_scan_slots(struct psc_journal *pj)
 		psc_warnx("System journal and cursor file mismatch!");
 		last_xid = pj->pj_distill_xid;
 	}
-	
+
 	pj->pj_lastxid = last_xid;
 	qsort(pj->pj_bufs.da_items, pj->pj_bufs.da_pos,
 	    sizeof(void *), pjournal_xid_cmp);
@@ -979,7 +979,7 @@ pjournal_thr_main(struct psc_thread *thr)
 void
 pjournal_replay(
     struct psc_journal *pj,
-    int thrtype, 
+    int thrtype,
     const char *thrname,
     psc_replay_handler_t replay_handler,
     psc_distill_handler_t distill_handler)
@@ -1012,7 +1012,7 @@ pjournal_replay(
 		/* turn off for now until distill function is re-written */
 		if (pje->pje_xid > pj->pj_distill_xid) {
 			rc = distill_handler(pje);
-			if (rc) 
+			if (rc)
 				nerrs++;
 		}
 #endif

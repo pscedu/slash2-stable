@@ -69,7 +69,7 @@ main(int argc, char *argv[])
 	if (fstat(fd, &stb) == -1)
 		psc_fatal("fstat %s", fn);
 
-	pad = snprintf(NULL, 0, "%"PSCPRIdOFF, stb.st_size);
+	pad = snprintf(NULL, 0, "%"PSCPRIdOFFT, stb.st_size);
 
 	acsz = 0;
 	PSC_CRC64_INIT(&crc);
@@ -94,14 +94,14 @@ main(int argc, char *argv[])
 		timersub(&tm1, &tm_last, &tmd);
 		if (tmd.tv_usec > 1000000 / 32) { /* 32 fps */
 			memcpy(&tm_last, &tm1, sizeof(tm_last));
-			printf("\r%*zd/%"PSCPRIdOFF, pad, acsz, stb.st_size);
+			printf("\r%*zd/%"PSCPRIdOFFT, pad, acsz, stb.st_size);
 			fflush(stdout);
 		}
 	}
 	close(fd);
 
 	PSC_CRC64_FIN(&crc);
-	printf("\rcrc %"PSCPRIxCRC64" size %"PSCPRIdOFF" time %.3fs\n",
+	printf("\rcrc %"PSCPRIxCRC64" size %"PSCPRIdOFFT" time %.3fs\n",
 	    crc, stb.st_size, tm_total.tv_sec + tm_total.tv_usec * 1e-6);
 	exit(0);
 }

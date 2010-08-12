@@ -71,9 +71,11 @@
 
 #if HAVE_FILE_OFFSET32
 # define PSCPRIxOFFT		"#"PRIx64
+# define _PSCPRIxOFFT		""PRIx64
 # define PSCPRIdOFFT		PRId64
 #else
 # define PSCPRIxOFFT		"#lx"
+# define _PSCPRIxOFFT		"lx"
 # define PSCPRIdOFFT		"ld"
 #endif
 
