@@ -15,7 +15,7 @@ MAN+=		${ROOTDIR}/doc/pflenv.7
 include ${MAINMK}
 
 zbuild:
-	@(cd slashd && ${MAKE} zbuild)
+	@(cd slash_nara/slashd && ${MAKE} zbuild)
 
 rezbuild:
-	@(cd slashd && ${MAKE} rezbuild)
+	@(cd slash_nara/slashd && ${MAKE} rezbuild)
