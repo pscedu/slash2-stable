@@ -148,7 +148,7 @@ main(int argc, char *argv[])
 		abort();
 
 	if (debug)
-		fprintf(stdout, "filesize=%"PSCPRIdOFF, stb.st_size);
+		fprintf(stdout, "filesize=%"PSCPRIdOFFT, stb.st_size);
 
 	rem = stb.st_size;
 
