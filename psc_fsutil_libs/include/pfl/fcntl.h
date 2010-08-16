@@ -58,4 +58,8 @@
 #define O_CLOEXEC	0
 #endif
 
+#ifndef O_DIRECTORY
+#define O_DIRECTORY	0
+#endif
+
 #endif /* _PFL_FCNTL_H_ */
