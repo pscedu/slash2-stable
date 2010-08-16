@@ -473,7 +473,8 @@ pjournal_alloc_buf(struct psc_journal *pj)
 __static int
 pjournal_xid_cmp(const void *x, const void *y)
 {
-	const struct psc_journal_enthdr	*a = x, *b = y;
+	const struct psc_journal_enthdr	* const *pa = x, *a = *pa;
+	const struct psc_journal_enthdr	* const *pb = y, *b = *pb;
 	int rc;
 
 	rc = CMP(a->pje_xid, b->pje_xid);
@@ -596,8 +597,7 @@ pjournal_scan_slots(struct psc_journal *pj)
 	}
 
 	pj->pj_lastxid = last_xid;
-	qsort(pj->pj_bufs.da_items, pj->pj_bufs.da_pos,
-	    sizeof(void *), pjournal_xid_cmp);
+	psc_dynarray_sort(&pj->pj_bufs, qsort, pjournal_xid_cmp);
 	psc_freenl(jbuf, PJ_PJESZ(pj) * pj->pj_hdr->pjh_readahead);
 
 	nopen = psc_dynarray_len(&pj->pj_bufs);
