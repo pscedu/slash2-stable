@@ -443,7 +443,9 @@ pscrpc_deregister_wait_callback(void *opaque)
 #endif
 
 /**
- * pscrpc_check_events - check event queue by calling LNetEQPoll, if an event is found call pscrpc_master_callback().  This call implies single threaded operation.
+ * pscrpc_check_events - check event queue by calling LNetEQPoll, if an
+ * event is found call pscrpc_master_callback().  This call implies
+ * single threaded operation.
  * @timeout: number of seconds to block (0 is forever i think)
  * NOTES: Client context only
  */
@@ -484,11 +486,10 @@ int
 pscrpc_wait_event(int timeout)
 {
 #if CLIENT_IS_A_SERVER_TOO
-	struct psclist_head             *tmp;
 	struct pscrpc_wait_callback *llwc;
-	extern struct psclist_head       pscrpc_wait_callbacks;
+	extern struct psclist_head   pscrpc_wait_callbacks;
 #endif
-	int                           found_something = 0;
+	int                          found_something = 0;
 
 	/* single threaded recursion check... */
 	//liblustre_waiting = 1;
@@ -500,10 +501,7 @@ pscrpc_wait_event(int timeout)
 
 #if CLIENT_IS_A_SERVER_TOO
 		/* Give all registered callbacks a bite at the cherry */
-		psclist_for_each(tmp, &pscrpc_wait_callbacks) {
-			llwc = psclist_entry(tmp, struct pscrpc_wait_callback,
-					     llwc_lentry);
-
+		psclist_for_each_entry(llwc, &pscrpc_wait_callbacks, llwc_lentry) {
 			if (llwc->llwc_fn(llwc->llwc_arg))
 				found_something = 1;
 		}
@@ -583,7 +581,7 @@ pscrpc_ni_init(int type)
 void
 pscrpc_ni_fini(void)
 {
-	struct psc_waitq   waitq;
+	struct psc_waitq    waitq;
 	struct l_wait_info  lwi;
 	int                 rc;
 	int                 retries;
@@ -614,7 +612,7 @@ pscrpc_ni_fini(void)
 			break;
 		}
 	}
-	/* notreached */
+	/* NOTREACHED */
 }
 
 void
