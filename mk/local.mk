@@ -30,13 +30,17 @@ YFLAGS+=	-d
 CFLAGS+=	-Wall -W
 
 DEBUG?=		1
-ifeq (${DEBUG},1)
-CFLAGS+=	-g
-#CFLAGS+=	-ggdb3
-#DEFINES+=	-DDEBUG
+ifeq (${DEBUG},2)
+    CFLAGS+=	-ggdb3
+    #DEFINES+=	-DDEBUG
 else
-CFLAGS+=	-Wunused -Wuninitialized -O2
-#CFLAGS+=	-Wshadow
+  ifeq (${DEBUG},1)
+    CFLAGS+=	-g
+    #DEFINES+=	-DDEBUG
+  else
+    CFLAGS+=	-Wunused -Wuninitialized -O2
+    #CFLAGS+=	-Wshadow
+  endif
 endif
 
 DEFINES+=	-D_REENTRANT -DYY_NO_UNPUT -DYY_NO_INPUT -DYYERROR_VERBOSE
