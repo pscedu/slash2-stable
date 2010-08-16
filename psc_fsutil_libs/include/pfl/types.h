@@ -53,7 +53,11 @@
 # define PSCPRI_BLKSIZE_T	"ld"
 #endif
 
-#define PSCPRI_TIMET		"lu"
+#ifdef __OpenBSD__
+# define PSCPRI_TIMET		"d"
+#else
+# define PSCPRI_TIMET		"lu"
+#endif
 
 #ifdef __APPLE__
 # define PSCPRI_UTIMET		"06d"
@@ -63,8 +67,13 @@
 
 #define PSCPRI_NTIMET		"06ld"
 
-#define PSCPRI_TIMEVAL		"%"PSCPRI_TIMET":%"PSCPRI_UTIMET
-#define PSCPRI_TIMESPEC		"%"PSCPRI_TIMET":%"PSCPRI_NTIMET
+#ifdef __OpenBSD__
+# define PSCPRI_TIMEVAL		"%ld:%"PSCPRI_UTIMET
+# define PSCPRI_TIMESPEC	"%ld:%"PSCPRI_NTIMET
+#else
+# define PSCPRI_TIMEVAL		"%"PSCPRI_TIMET":%"PSCPRI_UTIMET
+# define PSCPRI_TIMESPEC	"%"PSCPRI_TIMET":%"PSCPRI_NTIMET
+#endif
 
 #define PSCPRI_TIMEVAL_ARGS(tv)	(tv)->tv_sec, (tv)->tv_usec
 #define PSCPRI_TIMESPEC_ARGS(ts)(ts)->tv_sec, (ts)->tv_nsec
