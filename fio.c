@@ -21,6 +21,7 @@
 #include <inttypes.h>
 
 #include "pfl/cdefs.h"
+#include "psc_util/alloc.h"
 
 #include "fio_sym.h"
 #include "fio.h"
@@ -33,13 +34,10 @@ char *stderr_fnam_prefix;
 GROUP_t *
 find_group(int mype, int *start_pe)
 {
-	struct list_head *tmp;
 	GROUP_t          *group;
 	int               total = 0;
 
-	list_for_each(tmp, &groupList) {
-		group = list_entry(tmp, GROUP_t, group_list);
-
+	psclist_for_each_entry(group, &groupList, group_lentry) {
 		if (mype < (total + group->num_pes)) {
 			if (start_pe != NULL)
 				*start_pe = total;
@@ -107,7 +105,6 @@ init_log_buffers(IOT_t *iot)
 
 	bzero(iolog, sizeof(IOTESTLOG_t));
 
-
 	for (i=mygroup->tree_depth, tree_size=0; i > -1; i--) {
 		tree_size += pow(mygroup->tree_width, i);
 	}
@@ -148,13 +145,10 @@ init_log_buffers(IOT_t *iot)
 void
 dump_groups(void)
 {
-	struct list_head *tmp;
 	GROUP_t          *group;
 
-	list_for_each(tmp, &groupList) {
-		group = list_entry(tmp, GROUP_t, group_list);
+	psclist_for_each_entry(group, &groupList, group_lentry)
 		DUMP_GROUP(group);
-	}
 }
 
 void
@@ -275,10 +269,7 @@ init_pe(int mype)
 	struct stat  stb;
 	int          fd;
 
-	iot = malloc(sizeof(IOT_t));
-	ASSERT(iot != NULL);
-
-	bzero(iot, sizeof(IOT_t));
+	iot = PSCALLOC(sizeof(IOT_t));
 
 	mygroup = find_group(mype, NULL);
 	ASSERT(mygroup != NULL);
@@ -419,14 +410,11 @@ init_barriers(int mype)
 	free(iptr);
 
 #elif HAVE_LIBPTHREAD
-	struct list_head *tmp;
 	GROUP_t          *group;
 
-	list_for_each(tmp, &groupList) {
-		group = list_entry(tmp, GROUP_t, group_list);
+	psclist_for_each_entry(group, &groupList, group_lentry)
 		pthread_barrier_init(&group->group_barrier,
 		    NULL, group->num_pes);
-	}
 	(void)mype;
 #endif
 }
@@ -434,11 +422,9 @@ init_barriers(int mype)
 void
 destroy_barriers(void)
 {
-	struct list_head *tmp;
 	GROUP_t          *group;
 
-	list_for_each(tmp, &groupList) {
-		group = list_entry(tmp, GROUP_t, group_list);
+	psclist_for_each_entry(group, &groupList, group_lentry) {
 #ifdef HAVE_LIBPTHREAD
 		pthread_barrier_destroy(&group->group_barrier);
 #elif MPI
@@ -483,7 +469,7 @@ do_creat(struct io_toolbox *iot)
 			 "cr_op %011.6f '%s'\n",
 			 op_tmp->oplog_time, iot->mypath);
 		} else
-			BARRIER;
+			BARRIER();
 	} else {
 		// all nodes create unique file
 		DEBUG(D_DTREE, "creat '%s'\n", iot->mypath);
@@ -494,7 +480,7 @@ do_creat(struct io_toolbox *iot)
 		 op_tmp->oplog_time, iot->mypath);
 	}
 
-	APP_BARRIER;
+	APP_BARRIER();
 	return 0;
 }
 
@@ -534,7 +520,7 @@ do_open(struct io_toolbox *iot)
 	 "op_op %011.6f '%s'\n",
 	 op_tmp->oplog_time, iot->mypath);
 
-	BARRIER;
+	BARRIER();
 	return 0;
 }
 
@@ -552,7 +538,7 @@ do_unlink(struct io_toolbox *iot)
 		return -1;
 	}
 #endif
-	BARRIER;
+	BARRIER();
 	STARTWATCH(UNLINK_clk);
 	ASSERT(!unlink(iot->mypath));
 	STOPWATCH(UNLINK_clk);
@@ -583,7 +569,7 @@ do_io(IOT_t *iot, int op)
 	DEBUG(D_BLOCK, "Entry: do_io(%d) blocks %d\n",
 	iot->myfd, iot->num_blocks);
 
-	BARRIER;
+	BARRIER();
 	/*
 	 * set the op log to write the sub log
 	 *   for this write op if we're interested
@@ -687,7 +673,7 @@ do_io(IOT_t *iot, int op)
 			 op_tmp->oplog_barrier_time);
 
 		} else if ( ACTIVETYPE(FIO_BLOCK_BARRIER) ) {
-			BARRIER;
+			BARRIER();
 		}
 		/*
 		 * Manage block_freq here
@@ -836,7 +822,6 @@ worker(void *arg)
 	struct io_toolbox   *iot         = init_pe(*mype);
 	GROUP_t             *mygroup     = iot->mygroup;
 	struct io_routine   *io_routines = mygroup->iotests;
-	struct list_head    *tmp, *tmp1;
 	DIR_t               *current_dir = NULL;
 
 	ASSERT(iot != NULL);
@@ -853,7 +838,7 @@ worker(void *arg)
 			 *  it protects  against some pe's
 			 *  loop wrapping before the others are ready
 			 */
-			BARRIER;
+			BARRIER();
 
 			mygroup->current_iotest = &io_routines[l];
 
@@ -869,45 +854,44 @@ worker(void *arg)
 
 			if (WORKPE) {
 				/* initialize the phantom directory tree */
-				mygroup->dirRoot = malloc(sizeof(DIR_t));
-				bzero(mygroup->dirRoot, sizeof(DIR_t));
-				INIT_LIST_HEAD(&mygroup->dirRoot->dir_stack);
-				INIT_LIST_HEAD(&mygroup->dirStack);
-				list_add(&mygroup->dirRoot->dir_stack, &mygroup->dirStack);
-				MKDIR;
+				mygroup->dirRoot = PSCALLOC(sizeof(DIR_t));
+				INIT_PSCLIST_ENTRY(&mygroup->dirRoot->dir_stack_lentry);
+				INIT_PSCLIST_HEAD(&mygroup->dirStack);
+				psclist_xadd(&mygroup->dirRoot->dir_stack_lentry, &mygroup->dirStack);
+				MKDIR();
 			}
 			/* everyone wait here for the creation of the
 			 *  root test dir
 			 */
-			BARRIER;
+			BARRIER();
 
 			if ( !ACTIVETYPE(FIO_SAMEDIR) ) {
 				make_pe_specific_dir(iot);
-				MKDIR;
-				BARRIER;
+				MKDIR();
+				BARRIER();
 			}
 
 			DEBUG(D_IOFUNC, "BEGIN Test '%s' mypath '%s' nfiles %d\n",
 			io_routines[l].io_testname, iot->mypath, num_files);
 
 			do {
-				list_for_each_safe(tmp, tmp1, &mygroup->dirStack) {
-					current_dir = list_entry(tmp, DIR_t, dir_stack);
+				psclist_for_each_entry(current_dir,
+				    &mygroup->dirStack, dir_stack_lentry);
 					break;
-				}
 
 				if (current_dir == NULL) {
 					WARN("Null current_dir\n");
 					break;
 				}
 
-				BARRIER;
+				BARRIER();
 
 				/* get the parent dir */
 				DEBUG(D_DTREE, "current_dir %p root %p path %s test_done %d\n",
 					current_dir, mygroup->dirRoot,
 					iot->mypath, current_dir->test_done);
-				BARRIER;
+
+				BARRIER();
 
 				if (!current_dir->test_done) {
 
@@ -931,11 +915,10 @@ worker(void *arg)
 						(void)clear_fnam(iot);
 					}
 
-					BARRIER;
-					if (WORKPE) {
+					BARRIER();
+					if (WORKPE)
 						current_dir->test_done = 1;
-					}
-					BARRIER;
+					BARRIER();
 
 					/*
 					 * Manage test_freq here
@@ -955,21 +938,20 @@ worker(void *arg)
 				 */
 				if ((iot->current_depth >= mygroup->tree_depth)) {
 
-					(void)pop_dirstack(iot);
+					pop_dirstack(iot);
 
 				} else {
 					/* descend to a lower part of the tree */
 					iot->current_width = current_dir->child_cnt;
 
-					BARRIER;
-					if (WORKPE) {
+					BARRIER();
+					if (WORKPE)
 						current_dir->child_cnt++;
-					}
-					BARRIER;
+					BARRIER();
 
-					(void)push_dirstack(iot);
+					push_dirstack(iot);
 				}
-			} while (!list_empty(&mygroup->dirStack));
+			} while (!psclist_empty(&mygroup->dirStack));
 
 			write_output(iot);
 
@@ -994,8 +976,7 @@ int
 main(int argc, char *argv[])
 {
 #ifdef HAVE_LIBPTHREAD
-	struct list_head *tmp;
-	GROUP_t          *group = NULL;
+	GROUP_t          *group;
 	int rc, i;
 #elif MPI
 	int mype = 0;
@@ -1055,8 +1036,7 @@ main(int argc, char *argv[])
 
 #elif HAVE_LIBPTHREAD
 	init_barriers(0);
-	list_for_each(tmp, &groupList) {
-		group = list_entry(tmp, GROUP_t, group_list);
+	psclist_for_each_entry(group, &groupList, group_lentry) {
 		if (group->files_per_dir < group->num_pes) {
 			fprintf(stderr, "# of files per directory (%d) "
 			    "should be no less than # of PEs (%d), a "

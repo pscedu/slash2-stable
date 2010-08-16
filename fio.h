@@ -41,9 +41,10 @@
 #include <string.h>
 #include <unistd.h>
 
+#include "pfl/fcntl.h"
 #include "pfl/types.h"
-
-#include "fio_list.h"
+#include "psc_ds/list.h"
+#include "psc_util/alloc.h"
 
 #ifdef HAVE_LIBPTHREAD
 #include <pthread.h>
@@ -53,21 +54,17 @@
 extern pthread_barrier_t barrier;
 
 #elif defined(MPI)
-#include <mpi.h>
+# include <mpi.h>
 #endif
 
 #ifdef CATAMOUNT
-#include <catamount/cnos_mpi_os.h>
+# include <catamount/cnos_mpi_os.h>
 #endif
 
-#ifndef O_DIRECTORY
-#define O_DIRECTORY 0200000
-#endif
+#define MAXROUTINE	16
 
-#define MAXROUTINE 16
-
-#define FIO_DIR_PREFIX  "fio_d."
-#define FIO_FILE_PREFIX "fio_f."
+#define FIO_DIR_PREFIX	"fio_d."
+#define FIO_FILE_PREFIX	"fio_f."
 
 extern int   TOTAL_PES;
 extern int   fio_global_debug, fio_lexyacc_debug;
@@ -78,28 +75,28 @@ extern char *stderr_fnam_prefix;
  *  Test type bits
  */
 enum TEST_OPTIONS {
-	FIO_SAMEDIR            = 1 << 0,  // all fsops happen in samedir
-	FIO_BLOCK_BARRIER      = 1 << 1,  // time each block (read/write)
-	FIO_BARRIER            = 1 << 2,  // barrier stuff with mpi
-	FIO_BARRDBG            = 1 << 3,
-	FIO_SAMEFILE           = 1 << 4,  // io goes to same file..
-	FIO_STAGGER            = 1 << 5,  // each process runs independently of other
-//	FIO_PAROPEN            = 1 << 6,  // processes write to the same file
-	FIO_VERIFY             = 1 << 7,  // perform blocklevel checksumming
-	FIO_WRITE              = 1 << 8,
-	FIO_READ               = 1 << 9,
-	FIO_SEEKOFF            = 1 << 10,
-	FIO_TIME_BARRIER       = 1 << 11,
-	FIO_THRASH_LOCK        = 1 << 12,
-	FIO_TIME_BLOCK         = 1 << 13,
-	FIO_FSYNC_BLOCK        = 1 << 14,
-	FIO_INTERSPERSE        = 1 << 15,
-	FIO_APP_BARRIER        = 1 << 16
+	FIO_SAMEDIR		= 1 << 0,  // all fsops happen in samedir
+	FIO_BLOCK_BARRIER	= 1 << 1,  // time each block (read/write)
+	FIO_BARRIER		= 1 << 2,  // barrier stuff with mpi
+	FIO_BARRDBG		= 1 << 3,
+	FIO_SAMEFILE		= 1 << 4,  // io goes to same file..
+	FIO_STAGGER		= 1 << 5,  // each process runs independently of other
+//	FIO_PAROPEN		= 1 << 6,  // processes write to the same file
+	FIO_VERIFY		= 1 << 7,  // perform blocklevel checksumming
+	FIO_WRITE		= 1 << 8,
+	FIO_READ		= 1 << 9,
+	FIO_SEEKOFF		= 1 << 10,
+	FIO_TIME_BARRIER	= 1 << 11,
+	FIO_THRASH_LOCK		= 1 << 12,
+	FIO_TIME_BLOCK		= 1 << 13,
+	FIO_FSYNC_BLOCK		= 1 << 14,
+	FIO_INTERSPERSE		= 1 << 15,
+	FIO_APP_BARRIER		= 1 << 16
 };
 
-#define ACTIVETYPE(t) (((t) & mygroup->test_opts) ? 1 : 0)
+#define ACTIVETYPE(t)		(((t) & mygroup->test_opts) ? 1 : 0)
 
-#define GETSKEW (ACTIVETYPE(FIO_THRASH_LOCK) ? 1 : 0)
+#define GETSKEW			(ACTIVETYPE(FIO_THRASH_LOCK) ? 1 : 0)
 
 /*
  * This construct is used to provide protection
@@ -114,61 +111,60 @@ enum TEST_OPTIONS {
 #endif
 
 enum CLOCKS {
-	WRITE_clk    = 0,
-	READ_clk     = 2,
-	CREAT_clk    = 4,
-	RDOPEN_clk   = 6,
-	UNLINK_clk   = 8,
-	RENAME_clk   = 10,
-	LINK_clk     = 12,
-	BLOCK_clk    = 14, // time each block action
-	STAT_clk     = 16,
-	FSTAT_clk    = 18,
-	CLOSE_clk    = 20,
-	WROPEN_clk   = 22,
-	APPOPEN_clk  = 24,
-	BARRIER_clk  = 26,
-	RDWROPEN_clk = 28,
-	TRUNC_clk    = 30,
-	MKDIR_clk    = 32,
-	FSYNC_clk    = 34
+	WRITE_clk	= 0,
+	READ_clk	= 2,
+	CREAT_clk	= 4,
+	RDOPEN_clk	= 6,
+	UNLINK_clk	= 8,
+	RENAME_clk	= 10,
+	LINK_clk	= 12,
+	BLOCK_clk	= 14, // time each block action
+	STAT_clk	= 16,
+	FSTAT_clk	= 18,
+	CLOSE_clk	= 20,
+	WROPEN_clk	= 22,
+	APPOPEN_clk	= 24,
+	BARRIER_clk	= 26,
+	RDWROPEN_clk	= 28,
+	TRUNC_clk	= 30,
+	MKDIR_clk	= 32,
+	FSYNC_clk	= 34
 };
-#define NUMCLOCKS 36
+#define NUMCLOCKS	36
 
 enum path_depth {
-	KEEP_DIR    = 1,
-	CHANGE_DIR  = 2,
-	ASCEND_DIR  = 3
+	KEEP_DIR	= 1,
+	CHANGE_DIR	= 2,
+	ASCEND_DIR	= 3
 };
 
 enum debug_channels {
-	FIO_DBG_BLOCK   = 1 << 1,
-	FIO_DBG_MEMORY  = 1 << 2,
-	FIO_DBG_BARRIER = 1 << 3,
-	FIO_DBG_DTREE   = 1 << 4,
-	FIO_DBG_SYMTBL  = 1 << 5,
-	FIO_DBG_CONF    = 1 << 6,
-	FIO_DBG_OUTPUT  = 1 << 7,
-	FIO_DBG_IOFUNC  = 1 << 8,
-	FIO_DBG_BUFFER  = 1 << 9
+	FIO_DBG_BLOCK	= 1 << 1,
+	FIO_DBG_MEMORY	= 1 << 2,
+	FIO_DBG_BARRIER	= 1 << 3,
+	FIO_DBG_DTREE	= 1 << 4,
+	FIO_DBG_SYMTBL	= 1 << 5,
+	FIO_DBG_CONF	= 1 << 6,
+	FIO_DBG_OUTPUT	= 1 << 7,
+	FIO_DBG_IOFUNC	= 1 << 8,
+	FIO_DBG_BUFFER	= 1 << 9
 };
 
 enum debug_channels_short {
-	D_BLOCK   = 1 << 1,
-	D_MEMORY  = 1 << 2,
-	D_BARRIER = 1 << 3,
-	D_DTREE   = 1 << 4,
-	D_SYMTBL  = 1 << 5,
-	D_CONF    = 1 << 6,
-	D_OUTPUT  = 1 << 7,
-	D_IOFUNC  = 1 << 8,
-	D_BUFFER  = 1 << 9
+	D_BLOCK		= 1 << 1,
+	D_MEMORY	= 1 << 2,
+	D_BARRIER	= 1 << 3,
+	D_DTREE		= 1 << 4,
+	D_SYMTBL	= 1 << 5,
+	D_CONF		= 1 << 6,
+	D_OUTPUT	= 1 << 7,
+	D_IOFUNC	= 1 << 8,
+	D_BUFFER	= 1 << 9
 };
 
-#define MAXTESTS            16
-#define TEST_GROUP_NAME_MAX PATH_MAX
+#define MAXTESTS	16
 
-#define LONGSZ sizeof(long)
+#define LONGSZ		sizeof(long)
 
 struct op_log {
 	int		oplog_magic;
@@ -189,7 +185,7 @@ typedef struct op_log OPLOG_t;
 #define OPLOG_MAGIC	0x6e1eafe9
 
 struct iotest_log {
-	char		 iolog_tname[TEST_GROUP_NAME_MAX];
+	char		 iolog_tname[PATH_MAX];
 	int		 iolog_pe;
 	int		 iolog_iteration;
 	OPLOG_t		*iolog_oplog;
@@ -211,7 +207,7 @@ typedef struct buffer BUF_t;
 
 
 struct io_toolbox {
-	void		*mygroup;                        /* pointer back to my group */
+	void		*mygroup;				/* pointer back to my group */
 	struct buffer	 bdesc;
 	struct buffer	 rd_bdesc;
 	struct timeval	 times[NUMCLOCKS];
@@ -224,7 +220,7 @@ struct io_toolbox {
 	char		*myfnam;
 	char		*logBuf;
 	char		*logBufPtr;
-	int		 micro_iterations;               /* how many times..    */
+	int		 micro_iterations;			/* how many times..    */
 	int		 macro_iterations;
 	int		 myfd;
 	int		 mype;
@@ -246,7 +242,7 @@ typedef struct io_toolbox IOT_t;
 
 struct io_routine {
 	int		 num_routines;
-	char		 io_testname[TEST_GROUP_NAME_MAX];
+	char		 io_testname[PATH_MAX];
 	char		*io_routine[MAXROUTINE];
 };
 typedef struct io_routine IOROUTINE_t;
@@ -260,9 +256,8 @@ struct io_thread {
 };
 typedef struct io_thread THREAD_t;
 
-
 struct dirnode {
-	struct list_head dir_stack;
+	struct psclist_head dir_stack_lentry;
 	int		 depth;
 	int		 child_cnt;
 	int		 test_done;
@@ -270,9 +265,8 @@ struct dirnode {
 };
 typedef struct dirnode DIR_t;
 
-
 struct test_group {
-	struct list_head group_list;
+	struct psclist_head group_lentry;
 	struct io_routine  iotests[MAXTESTS];
 	struct io_routine *current_iotest;
 
@@ -280,7 +274,7 @@ struct test_group {
 
 	struct timeval	 test_freq;			/* how often io occurs */
 	struct timeval	 block_freq;			/* sleep in between block */
-	char		 test_name[TEST_GROUP_NAME_MAX];/* name of the group   */
+	char		 test_name[PATH_MAX];		/* name of the group   */
 	char		 test_path[PATH_MAX];		/* starting path       */
 	char		 output_path[PATH_MAX];		/* starting path       */
 	char		 test_filename[PATH_MAX];
@@ -305,11 +299,11 @@ struct test_group {
 	MPI_Comm	 group_barrier;
 #endif
 	DIR_t		*dirRoot;
-	struct list_head dirStack;
+	struct psclist_head dirStack;
 };
 typedef struct test_group GROUP_t;
 
-extern struct list_head	 groupList;
+extern struct psclist_head	 groupList;
 extern GROUP_t		*currentGroup;
 
 #define DEBUG(chan, format, ...) do {					\
@@ -360,32 +354,33 @@ extern GROUP_t		*currentGroup;
 } while (0)
 
 #define ASSERT(cond) do {						\
-    if (!(cond)) {							\
-	    fprintf(stderr, "ASSERT %s() %s, %d %s\n",			\
-		__func__, __FILE__, __LINE__, strerror(errno));		\
-	    exit(1);							\
-    }									\
+	if (!(cond)) {							\
+		fprintf(stderr, "ASSERT %s() %s, %d %s\n",		\
+		    __func__, __FILE__, __LINE__, strerror(errno));	\
+		exit(1);						\
+	}								\
 } while (0)
 
 #define ASSERTPE(cond) do {						\
-    if (!(cond)) {							\
-	    fprintf(stderr, "ASSERT PE_%d %s() %s, %d %s\n", iot->mype,	\
-		__func__, __FILE__, __LINE__, strerror(errno));		\
-	    exit(1);							\
-    }									\
+	if (!(cond)) {							\
+		fprintf(stderr, "ASSERT PE_%d %s() %s, %d %s\n",	\
+		    iot->mype, __func__, __FILE__, __LINE__,		\
+		    strerror(errno));					\
+		exit(1);						\
+	}								\
 } while (0)
 
 #define ASSERTMSG(cond, format, ...) do {				\
-    if (!(cond)) {							\
-	    fprintf(stderr, "ASSERT %s() %s, %d msg:"format,		\
-		__func__, __FILE__, __LINE__, ##__VA_ARGS__);		\
-	    exit(1);							\
-    }									\
+	if (!(cond)) {							\
+		fprintf(stderr, "ASSERT %s() %s, %d msg:"format,	\
+		    __func__, __FILE__, __LINE__, ##__VA_ARGS__);	\
+		exit(1);						\
+	}								\
 } while (0)
 
 #define WARN(format, ...)						\
-    fprintf(stderr, "WARNING %s() %s, %d :: :: "format,			\
-	__func__, __FILE__, __LINE__, ##__VA_ARGS__)
+	fprintf(stderr, "WARNING %s() %s, %d :: :: "format,		\
+	    __func__, __FILE__, __LINE__, ##__VA_ARGS__)
 
 static inline char *
 get_dbg_prefix(int dbg_channel)
@@ -501,7 +496,7 @@ clock_2_str(int clock)
 }
 
 /*
- * Barrier Macros provide the same interface
+ * Barrier macros provide the same interface
  *  regardless of the underlying syncronization
  *  method.
  */
@@ -522,19 +517,23 @@ _BARRIER(GROUP_t *mygroup, struct io_toolbox *iot)
 }
 
 #ifdef CATAMOUNT
-#define YY_BARRIER cnos_barrier()
+# define YY_BARRIER	cnos_barrier()
 #endif
 
-#define __BARRIER  ( ACTIVETYPE(FIO_BARRIER) && \
-    !ACTIVETYPE(FIO_STAGGER) ? _BARRIER(mygroup, iot) : 0)
+#define __BARRIER()	(ACTIVETYPE(FIO_BARRIER) &&			\
+			!ACTIVETYPE(FIO_STAGGER) ? _BARRIER(mygroup, iot) : 0)
 
-#define SBARRIER ( ACTIVETYPE(FIO_BARRIER) ? _BARRIER(mygroup) : 0)
+#define SBARRIER()	(ACTIVETYPE(FIO_BARRIER) ? _BARRIER(mygroup) : 0)
 
-#define BARRIER __BARRIER
-#define APP_BARRIER if (ACTIVETYPE(FIO_APP_BARRIER)) BARRIER
+#define BARRIER()	__BARRIER()
+#define APP_BARRIER()							\
+	do {								\
+		if (ACTIVETYPE(FIO_APP_BARRIER))			\
+			BARRIER();					\
+	} while (0)
 
 // figure out how long we waited at this barrier
-#define LOG_BARRIER_WAIT(fn,i) do {					\
+#define LOG_BARRIER_WAIT(fn, i) do {					\
 	STARTWATCH(BARRIER_clk);					\
 	BARRIER;							\
 	STOPWATCH(BARRIER_clk);						\
@@ -544,7 +543,7 @@ _BARRIER(GROUP_t *mygroup, struct io_toolbox *iot)
 } while (0)
 
 #define CREAT do {							\
-	APP_BARRIER;							\
+	APP_BARRIER();							\
 	STARTWATCH(CREAT_clk);						\
 	iot->myfd = creat(iot->mypath, 0644);				\
 	if (iot->myfd == -1) {						\
@@ -556,7 +555,7 @@ _BARRIER(GROUP_t *mygroup, struct io_toolbox *iot)
 } while (0)
 
 #define TRUNC do {							\
-	APP_BARRIER;							\
+	APP_BARRIER();							\
 	STARTWATCH(TRUNC_clk);						\
 	ASSERT(!ftruncate(iot->myfd, iot->stb.st_size));		\
 	STOPWATCH(TRUNC_clk);						\
@@ -567,8 +566,8 @@ _BARRIER(GROUP_t *mygroup, struct io_toolbox *iot)
 	off_t seekv =  iot->mysize * iot->mype;				\
 	DEBUG(D_BLOCK, "PE %d, seeking %"PSCPRIdOFFT" bytes\n",		\
 	    iot->mype, seekv);						\
-	APP_BARRIER;							\
-	ASSERT(lseek(iot->myfd, seekv, SEEK_SET) >= 0 );		\
+	APP_BARRIER();							\
+	ASSERT(lseek(iot->myfd, seekv, SEEK_SET) >= 0);		\
 } while (0)
 
 #define INTERSPERSE_SEEK do {						\
@@ -579,55 +578,57 @@ _BARRIER(GROUP_t *mygroup, struct io_toolbox *iot)
 		seekv = (iot->bdesc.buffer_size * mygroup->num_pes);	\
 	DEBUG(D_BLOCK, "PE %d, seeking %"PSCPRIdOFFT" bytes\n",		\
 	    iot->mype, seekv);						\
-	ASSERT(lseek(iot->myfd, seekv, SEEK_CUR) >= 0 );		\
+	ASSERT(lseek(iot->myfd, seekv, SEEK_CUR) >= 0);			\
 	DEBUG(D_BLOCK, "PE %d, curr off %"PSCPRIdOFFT"\n",		\
 	    iot->mype, lseek(iot->myfd, (off_t)0, SEEK_CUR));		\
 } while (0)
 
 #define RDOPEN do {							\
-	APP_BARRIER;							\
+	APP_BARRIER();							\
 	STARTWATCH(RDOPEN_clk);						\
 	DEBUG(D_DTREE, "about to open %s\n", iot->mypath);		\
-	ASSERT( (iot->myfd = open(iot->mypath, O_RDONLY)) >= 0 );	\
+	ASSERT( (iot->myfd = open(iot->mypath, O_RDONLY)) >= 0);	\
 	STOPWATCH(RDOPEN_clk);						\
 } while (0)
 
 #define WROPEN do {							\
-	APP_BARRIER;							\
+	APP_BARRIER();							\
 	STARTWATCH(WROPEN_clk);						\
 	ASSERT((iot->myfd =						\
-	    open(iot->mypath, O_CREAT| O_WRONLY, 0644)) >= 0 );		\
+	    open(iot->mypath, O_CREAT| O_WRONLY, 0644)) >= 0);		\
 	DEBUG(D_DTREE, "opened %s fd = %d\n", iot->mypath, iot->myfd);	\
 	STOPWATCH(WROPEN_clk);						\
 } while (0)
 
 #define APPOPEN do {							\
-	APP_BARRIER;							\
+	APP_BARRIER();							\
 	STARTWATCH(APPOPEN_clk);					\
 	ASSERT((iot->myfd =						\
-	    open(iot->mypath, O_WRONLY|O_APPEND)) >= 0 );		\
+	    open(iot->mypath, O_WRONLY|O_APPEND)) >= 0);		\
 	STOPWATCH(APPOPEN_clk);						\
 } while (0)
 
 #define RDWROPEN do {							\
-	APP_BARRIER;							\
+	APP_BARRIER();							\
 	DEBUG(D_DTREE, "rdwr open path ;%s;\n", iot->mypath);		\
-	if ( !ACTIVETYPE(FIO_STAGGER) ) BARRIER;			\
+	if ( !ACTIVETYPE(FIO_STAGGER) )					\
+		BARRIER();						\
 	STARTWATCH(RDWROPEN_clk);					\
-	ASSERT( (iot->myfd = open(iot->mypath, O_RDWR)) >= 0 );		\
+	ASSERT( (iot->myfd = open(iot->mypath, O_RDWR)) >= 0);		\
 	STOPWATCH(RDWROPEN_clk);					\
 } while (0)
 
 #define CLOSE do {							\
-	APP_BARRIER;							\
+	APP_BARRIER();							\
 	STARTWATCH(CLOSE_clk);						\
 	ASSERT( !close(iot->myfd) );					\
 	STOPWATCH(CLOSE_clk);						\
 } while (0)
 
-#define MKDIR do {							\
+#define MKDIR() do {							\
 	int rc = 0;							\
-	APP_BARRIER;							\
+									\
+	APP_BARRIER();							\
 	STARTWATCH(MKDIR_clk);						\
 	rc = mkdir(iot->mypath, 0755);					\
 	if (rc == -1 && (errno != EEXIST)) {				\
@@ -639,7 +640,7 @@ _BARRIER(GROUP_t *mygroup, struct io_toolbox *iot)
 } while (0)
 
 #define FSTAT do {							\
-	APP_BARRIER;							\
+	APP_BARRIER();							\
 	STARTWATCH(FSTAT_clk);						\
 	if (iot->unlink) {						\
 		ASSERT(!fstat(iot->myfd, &iot->stb_unlink));		\
@@ -654,7 +655,7 @@ _BARRIER(GROUP_t *mygroup, struct io_toolbox *iot)
 } while (0)
 
 #define STAT do {							\
-	APP_BARRIER;							\
+	APP_BARRIER();							\
 	STARTWATCH(STAT_clk);						\
 	ASSERT(!stat(iot->mypath, &iot->stb));				\
 	STOPWATCH(STAT_clk);						\
@@ -688,9 +689,7 @@ log_op(int op_type, IOT_t *iot)
 		 * cant use startwatch here (infinite loop)
 		 */
 		gettimeofday(&(iot->times[BARRIER_clk]), NULL);
-
-		BARRIER;
-
+		BARRIER();
 		gettimeofday(&(iot->times[BARRIER_clk+1]), NULL);
 
 		iot->op_log->oplog_barrier_time =
@@ -707,7 +706,7 @@ log_op(int op_type, IOT_t *iot)
 	iot->op_log++;
 }
 
-#define LOG(op) log_op(op, iot)
+#define LOG(op) log_op((op), iot)
 
 static inline void *
 iolog_alloc(IOTESTLOG_t *iolog, size_t size)
@@ -848,24 +847,21 @@ push_dirstack(IOT_t *iot)
 
 	/* only the workpe does this.. */
 	if (WORKPE) {
-		new_dir = malloc(sizeof(DIR_t));
-		ASSERT(new_dir != NULL);
-		bzero(new_dir, (sizeof(DIR_t)));
-		INIT_LIST_HEAD(&new_dir->dir_stack);
-		list_add(&new_dir->dir_stack, &mygroup->dirStack);
+		new_dir = PSCALLOC(sizeof(DIR_t));
+		INIT_PSCLIST_ENTRY(&new_dir->dir_stack_lentry);
+		psclist_xadd(&new_dir->dir_stack_lentry, &mygroup->dirStack);
 		DEBUG(D_DTREE, "added dir %p %s\n",
 		    new_dir, iot->mypath);
-		MKDIR;
+		MKDIR();
 	}
-	BARRIER;
+	BARRIER();
 }
 
 static inline void
 pop_dirstack(IOT_t *iot)
 {
-	struct list_head *tmp, *tmp1;
 	GROUP_t          *mygroup = iot->mygroup;
-	DIR_t            *current_dir;
+	DIR_t            *current_dir, *tmp;
 	char             *p;
 	int               del_cnt = 0;
 
@@ -873,9 +869,8 @@ pop_dirstack(IOT_t *iot)
 
 	/* only the workpe does this.. */
 	if (WORKPE) {
-		list_for_each_safe(tmp, tmp1, &mygroup->dirStack) {
-
-			current_dir = list_entry(tmp, DIR_t, dir_stack);
+		psclist_for_each_entry_safe(current_dir, tmp,
+		    &mygroup->dirStack, dir_stack_lentry) {
 
 			DEBUG(D_DTREE, "list_del_check current_dir %p root %p %d\n",
 			    current_dir, &mygroup->dirStack, del_cnt);
@@ -885,7 +880,7 @@ pop_dirstack(IOT_t *iot)
 				DEBUG(D_DTREE, "about to list_del %p\n",
 				    current_dir);
 
-				list_del(&current_dir->dir_stack);
+				psclist_del(&current_dir->dir_stack_lentry);
 
 				DEBUG(D_DTREE, "did list_del %p\n",
 				    current_dir);
@@ -893,27 +888,18 @@ pop_dirstack(IOT_t *iot)
 				del_cnt++;
 				//free(current_dir);
 
-			} else break;
+			} else
+				break;
 		}
 		mygroup->depth_change = del_cnt;
 	}
 
-	BARRIER;
+	BARRIER();
 
-	tmp = NULL;
+	psclist_for_each_entry(current_dir, &mygroup->dirStack, dir_stack_lentry)
+		DEBUG(D_DTREE, "list empty? no, item: %p\n", current_dir);
 
-	/*
-	 *
-	 */
-	list_for_each(tmp, &mygroup->dirStack) {
-		DEBUG(D_DTREE, "list_for_each() %p empty? %d\n",
-		    tmp, list_empty(&mygroup->dirStack));
-	}
-
-	DEBUG(D_DTREE, "list_for_each() DONE %p empty? %d\n",
-	    tmp, list_empty(&mygroup->dirStack));
-
-	BARRIER;
+	BARRIER();
 	iot->current_depth -= mygroup->depth_change;
 
 	DEBUG(D_DTREE, "CURRENT DEPTH %d\n", iot->current_depth);
