@@ -21,6 +21,7 @@
 #include <err.h>
 #include <stdarg.h>
 
+#include "pfl/str.h"
 #include "psc_util/alloc.h"
 
 #include "fio.h"
