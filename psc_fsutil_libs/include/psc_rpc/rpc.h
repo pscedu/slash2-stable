@@ -713,18 +713,17 @@ pscrpc_wake_client_req(struct pscrpc_request *req)
 #define  _pscrpc_server_wait_event(wq, condition, info, ret, excl, lck)	\
 	do {								\
 		time_t _now       = time(NULL);				\
+		time_t _then      = _now;				\
 		time_t _timeout   = (info)->lwi_timeout ?		\
 			(info)->lwi_timeout : PSCRPC_SVR_TIMEOUT;	\
-		time_t _then      = _now;				\
 		int    _timed_out = 0;					\
 		struct timespec _abstime = { 0, 0 };			\
 									\
 		(ret) = 0;						\
 									\
 		while (!(condition)) {					\
-			if (_timeout)					\
-				_abstime.tv_sec = _now +		\
-				    PSCRPC_SVR_SHORT_TIMEO;		\
+			_abstime.tv_sec = _now +			\
+				PSCRPC_SVR_SHORT_TIMEO;			\
 			_abstime.tv_nsec = 0;				\
 			ret = psc_waitq_timedwait((wq), (lck),		\
 			    &_abstime);					\
@@ -737,23 +736,22 @@ pscrpc_wake_client_req(struct pscrpc_request *req)
 			if (condition)					\
 				break;					\
 									\
-			if (!_timed_out && (info)->lwi_timeout != 0) {	\
-				_now = time(NULL);			\
+			_now = time(NULL);				\
+									\
+			if ((info)->lwi_timeout != 0) {			\
 				_timeout -= _now - _then;		\
 				_then = _now;				\
 									\
 				if (_timeout > 0)			\
 					continue;			\
 				_timeout = 0;				\
-				_timed_out = 1;				\
 				if ((info)->lwi_on_timeout == NULL ||	\
 				    (info)->lwi_on_timeout(		\
 				     (info)->lwi_cb_data)) {		\
 					(ret) = -ETIMEDOUT;		\
 					break;				\
 				}					\
-			} else						\
-				_now = time(NULL);			\
+			}						\
 		}							\
 	} while (0)
 
