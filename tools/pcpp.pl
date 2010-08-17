@@ -66,11 +66,52 @@ sub advance {
 }
 
 sub get_containing_func {
-	my $s = reverse substr($data,0,$i);
-	if ($s =~ /^\s*{\s*\).*?\((\w+)/s) {
-		return scalar reverse $1;
+	my $plevel = 0;
+	my $j;
+	for ($j = $i; $j > 0; $j--) {
+		if (substr($data, $j, 1) eq ")") {
+			$plevel++;
+		} elsif (substr($data, $j, 1) eq "(") {
+			if (--$plevel == 0) {
+				$j--;
+				last;
+			}
+		}
 	}
-	return "";
+	my $len = 1;
+	$j--, $len++ while substr($data, $j, 1) =~ /[a-zA-Z0-9_]/;
+	return substr($data, $j, $len);
+}
+
+sub get_func_args {
+	my $plevel = 0;
+	my ($j, $k, @av);
+	for ($j = $i; $j > 0; $j--) {
+		if (substr($data, $j, 1) eq "," && $plevel == 1) {
+			unshift @av, substr($data, $j + 1, $k - $j);
+			$k = $j - 1;
+		} elsif (substr($data, $j, 1) eq ")") {
+			$k = $j - 1 if ++$plevel == 1;
+		} elsif (substr($data, $j, 1) eq "(") {
+			if (--$plevel == 0) {
+				unshift @av, substr($data, $j + 1, $k - $j);
+				last;
+			}
+		}
+	}
+	local $_;
+	s/^\s+|\s+$//g for @av;
+	@av = () if @av == 1 && $av[0] eq "void";
+	for (@av) {
+		# void (*foo)(const char *, int)
+		unless (s/^.*?\(\s*\*(.*?)\).*/$1/s) {
+			# __unusedx const char *foo[BLAH]
+			s/\[.*//;
+			s/^.*?(\w+)$/$1/;
+		}
+	}
+	pop @av if @av > 1 && $av[$#av] eq "...";
+	return @av;
 }
 
 sub containing_func_is_dead {
@@ -134,7 +175,16 @@ for ($i = 0; $i < length $data; ) {
 	} elsif ($lvl == 0 && substr($data, $i) =~ /^[^=]\s*\n{\s*\n/s) {
 		# catch routine entrance
 		advance($+[0] - 1);
-		print "PFL_ENTER();" unless get_containing_func() eq "main";
+		unless (get_containing_func() eq "main") {
+			print qq{psc_trace("enter};
+			my @args = get_func_args();
+			my $endstr = "";
+			foreach my $arg (@args) {
+				print " $arg=%p:%ld";
+				$endstr .= ", (void *)(unsigned long)$arg, (long)$arg";
+			}
+			print qq{"$endstr);};
+		}
 		advance(1);
 		$lvl++;
 		$foff = $i;
