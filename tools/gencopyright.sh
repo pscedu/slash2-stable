@@ -8,7 +8,7 @@ usage()
 	exit 1
 }
 
-if getopts ""; then
+if getopts "" c; then
 	usage
 fi
 shift $(($OPTIND - 1))
@@ -35,7 +35,7 @@ my $bn = basename $fn;
 
 my @out = split /\n/, join '\n', `svn log '$fn'`;
 
-$startyr ||= 2006;
+my $startyr = 2006;
 
 foreach my $ln (@out) {
 	my (undef, $t_yr) =
@@ -47,10 +47,9 @@ foreach my $ln (@out) {
 $startyr = $1 if $data =~
     m{Copyright \(c\) (\d+)(?:-\d+)?, Pittsburgh Supercomputing Center \(PSC\)\.};
 
+my $endyr = 1900 + (localtime((stat $ARGV)[9]))[5];
 if ($data =~ m{/\A(?:.*\n)?.*\$Id: \Q$bn\E \d+ (\d+)-}m) {
 	$endyr = $1;
-} else {
-	$endyr = 1900 + (localtime((stat $ARGV)[9]))[5];
 }
 
 if ($endyr < $startyr) {
@@ -64,22 +63,21 @@ $cpyears .= "-$endyr" if $endyr > $startyr;
 $data =~ s
 {/^(.*) %PSC_COPYRIGHT%.*
 }{
- my $delim = $1;
- my $cdeli = $delim;
- my $end = "";
+	my $delim = $1;
+	my $cdeli = $delim;
+	my $end = "";
 
- if ($delim eq "/*") {
-	 $cdeli = " *";
-	 $end = "\n */";
- }
+	if ($delim eq "/*") {
+		$cdeli = " *";
+		$end = "\n */";
+	}
 
- <<EOF2
+	<<EOF2}e;
 $delim %PSC_START_COPYRIGHT%
 $cdeli -----------------------------------------------------------------------------
 $cdeli -----------------------------------------------------------------------------
 $cdeli %PSC_END_COPYRIGHT%$end
 EOF2
-}e;
 
 $data =~ s
 {/\*
