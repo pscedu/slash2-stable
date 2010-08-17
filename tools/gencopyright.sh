@@ -48,9 +48,7 @@ $startyr = $1 if $data =~
     m{Copyright \(c\) (\d+)(?:-\d+)?, Pittsburgh Supercomputing Center \(PSC\)\.};
 
 my $endyr = 1900 + (localtime((stat $ARGV)[9]))[5];
-if ($data =~ m{/\A(?:.*\n)?.*\$Id: \Q$bn\E \d+ (\d+)-}m) {
-	$endyr = $1;
-}
+$endyr = $1 if $data =~ m{\A(?:.*\n)?.*\$Id: \Q$bn\E \d+ (\d+)-}m;
 
 if ($endyr < $startyr) {
 	warn "$ARGV: $endyr from Id tag before $startyr\n";
@@ -60,50 +58,48 @@ if ($endyr < $startyr) {
 my $cpyears = $startyr;
 $cpyears .= "-$endyr" if $endyr > $startyr;
 
-$data =~ s
-{/^(.*) %PSC_COPYRIGHT%.*
-}{
-	my $delim = $1;
-	my $cdeli = $delim;
-	my $end = "";
+my $d_start = "/*\n";
+my $d_cont = " *";
+my $d_end = "\n */";
 
-	if ($delim eq "/*") {
-		$cdeli = " *";
-		$end = "\n */";
+if ($data =~ m{^(.*) %PSC_(START_)?COPYRIGHT%}m) {
+	$d_cont = $1;
+	$d_cont = " *" if $d_cont eq "/*";
+
+	unless ($d_cont eq " *") {
+		$d_start = "";
+		$d_end = "";
 	}
+}
 
-	<<EOF2}e;
-$delim %PSC_START_COPYRIGHT%
-$cdeli -----------------------------------------------------------------------------
-$cdeli -----------------------------------------------------------------------------
-$cdeli %PSC_END_COPYRIGHT%$end
+$data =~ s{/^(.*) %PSC_COPYRIGHT%.*\n}{<<EOF2}me;
+$d_start$d_cont %PSC_START_COPYRIGHT%
+$d_cont -----------------------------------------------------------------------------
+$d_cont -----------------------------------------------------------------------------
+$d_cont %PSC_END_COPYRIGHT%$d_end
 EOF2
 
 $data =~ s
-{/\*
- \* %PSC_START_COPYRIGHT%
- \* -----------------------------------------------------------------------------.*?
- \* -----------------------------------------------------------------------------(.*?)
- \* %PSC_END_COPYRIGHT%
- \*/
+{\Q$d_start$d_cont\E %PSC_START_COPYRIGHT%
+\Q$d_cont\E -----------------------------------------------------------------------------.*?
+\Q$d_cont\E -----------------------------------------------------------------------------(.*?)
+\Q$d_cont\E %PSC_END_COPYRIGHT%\Q$d_end\E
 }
-{/*
- * %PSC_START_COPYRIGHT%
- * -----------------------------------------------------------------------------
- * Copyright (c) $cpyears, Pittsburgh Supercomputing Center (PSC).
- *
- * Permission to use, copy, and modify this software and its documentation
- * without fee for personal use or non-commercial use within your organization
- * is hereby granted, provided that the above copyright notice is preserved in
- * all copies and that the copyright and this permission notice appear in
- * supporting documentation.  Permission to redistribute this software to other
- * organizations or individuals is not permitted without the written permission
- * of the Pittsburgh Supercomputing Center.  PSC makes no representations about
- * the suitability of this software for any purpose.  It is provided "as is"
- * without express or implied warranty.
- * -----------------------------------------------------------------------------$1
- * %PSC_END_COPYRIGHT%
- */
+{$d_start$d_cont %PSC_START_COPYRIGHT%
+$d_cont -----------------------------------------------------------------------------
+$d_cont Copyright (c) $cpyears, Pittsburgh Supercomputing Center (PSC).
+$d_cont
+$d_cont Permission to use, copy, and modify this software and its documentation
+$d_cont without fee for personal use or non-commercial use within your organization
+$d_cont is hereby granted, provided that the above copyright notice is preserved in
+$d_cont all copies and that the copyright and this permission notice appear in
+$d_cont supporting documentation.  Permission to redistribute this software to other
+$d_cont organizations or individuals is not permitted without the written permission
+$d_cont of the Pittsburgh Supercomputing Center.  PSC makes no representations about
+$d_cont the suitability of this software for any purpose.  It is provided "as is"
+$d_cont without express or implied warranty.
+$d_cont -----------------------------------------------------------------------------$1
+$d_cont %PSC_END_COPYRIGHT%$d_end
 }s;
 
 print $data;
