@@ -1020,6 +1020,12 @@ pjournal_replay(
 	}
 	psc_dynarray_free(&pj->pj_bufs);
 
+	/*
+ 	 * Make the current replay in effect. Othwise, a crash may
+ 	 * lose previous work.
+ 	 */
+	zfsslash2_wait_synced(0);
+
 	psc_notify("journal replayed: %d log entries "
 	    "have been redone, # of errors = %d", nentries, nerrs);
 
