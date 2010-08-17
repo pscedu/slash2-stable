@@ -94,7 +94,8 @@ sub get_func_args {
 			$k = $j - 1 if ++$plevel == 1;
 		} elsif (substr($data, $j, 1) eq "(") {
 			if (--$plevel == 0) {
-				unshift @av, substr($data, $j + 1, $k - $j);
+				unshift @av, substr($data, $j + 1, $k - $j) if
+				    $k - $j;
 				last;
 			}
 		}
