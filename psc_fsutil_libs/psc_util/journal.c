@@ -1021,7 +1021,7 @@ pjournal_replay(
 	psc_dynarray_free(&pj->pj_bufs);
 
 	/*
- 	 * Make the current replay in effect. Othwise, a crash may
+ 	 * Make the current replay in effect. Otherwise, a crash may
  	 * lose previous work.
  	 */
 	zfsslash2_wait_synced(0);
