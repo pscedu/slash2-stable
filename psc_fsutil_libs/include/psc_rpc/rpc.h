@@ -716,7 +716,6 @@ pscrpc_wake_client_req(struct pscrpc_request *req)
 		time_t _then      = _now;				\
 		time_t _timeout   = (info)->lwi_timeout ?		\
 			(info)->lwi_timeout : PSCRPC_SVR_TIMEOUT;	\
-		int    _timed_out = 0;					\
 		struct timespec _abstime = { 0, 0 };			\
 									\
 		(ret) = 0;						\
