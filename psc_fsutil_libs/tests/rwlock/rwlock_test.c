@@ -99,20 +99,11 @@ wr_main(void *arg)
 	int rc;
 
 	for (; thr->st < nlocks; thr->st++) {
-		if (psc_random32u(10) == 20) {
+		if (psc_random32u(10) == 2) {
 			rc = pthread_rwlock_rdlock(&lk);
 			if (rc)
 				errx(1, "rdlock: %s", strerror(rc));
 			usleep(SLEEP_US);
-
-			memset(&ts, 0, sizeof(ts));
-			rc = pthread_rwlock_timedrdlock(&lk, &ts);
-			if (rc)
-				errx(1, "timedrdlock: %s", strerror(rc));
-
-			rc = pthread_rwlock_tryrdlock(&lk);
-			if (rc)
-				errx(1, "tryrdlock: %s", strerror(rc));
 
 			rc = pthread_rwlock_unlock(&lk);
 			if (rc)
