@@ -95,7 +95,6 @@ void *
 wr_main(void *arg)
 {
 	struct thr *thr = arg;
-	struct timespec ts;
 	int rc;
 
 	for (; thr->st < nlocks; thr->st++) {
