@@ -77,6 +77,8 @@ m_cmp(const void *a, const void *b)
 int
 main(int argc, char *argv[])
 {
+	struct psc_listcache lc;
+	struct m *m;
 	void *p;
 	int i;
 
@@ -105,5 +107,24 @@ main(int argc, char *argv[])
 
 	while (shift())
 		;
+
+	lc_init(&lc, struct m, lentry);
+
+	m = PSCALLOC(sizeof(*m));
+	m->v = 5;
+	lc_addqueue(&lc, m);
+
+	m = PSCALLOC(sizeof(*m));
+	m->v = 8;
+	lc_addqueue(&lc, m);
+
+	m = lc_getnb(&lc);
+	psc_assert(m->v == 8);
+	PSCFREE(m);
+
+	m = lc_getnb(&lc);
+	psc_assert(m->v == 5);
+	PSCFREE(m);
+
 	exit(0);
 }
