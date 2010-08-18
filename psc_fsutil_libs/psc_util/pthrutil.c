@@ -142,3 +142,45 @@ psc_pthread_mutex_ensure_locked(pthread_mutex_t *mut)
 }
 
 #endif
+
+void
+psc_pthread_rwlock_init(pthread_rwlock_t *rw)
+{
+	int rc;
+
+	rc = pthread_rwlock_init(rw, NULL);
+	if (rc)
+		psc_fatalx("pthread_rwlock_init: %s", strerror(rc));
+}
+
+void
+psc_pthread_rwlock_rdlock(pthread_mutex_t *rw)
+{
+	int rc;
+
+	do {
+		rc = pthread_rwlock_timedtryrdlock(rw);
+		if (rc)
+			psc_fatalx("pthread_rwlock_rdlock: %s", strerror(rc));
+	} while (rc);
+}
+
+void
+psc_pthread_rwlock_unlock(pthread_mutex_t *rw)
+{
+	int rc;
+
+	rc = pthread_rwlock_unlock(rw);
+	if (rc)
+		psc_fatalx("pthread_rwlock_unlock: %s", strerror(rc));
+}
+
+void
+psc_pthread_rwlock_wrlock(pthread_mutex_t *rw)
+{
+	int rc;
+
+	rc = pthread_rwlock_wrlock(rw);
+	if (rc)
+		psc_fatalx("pthread_rwlock_unlock: %s", strerror(rc));
+}
