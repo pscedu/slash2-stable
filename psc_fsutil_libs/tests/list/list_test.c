@@ -119,11 +119,11 @@ main(int argc, char *argv[])
 	lc_addqueue(&lc, m);
 
 	m = lc_getnb(&lc);
-	psc_assert(m->v == 8);
+	psc_assert(m->v == 5);
 	PSCFREE(m);
 
 	m = lc_getnb(&lc);
-	psc_assert(m->v == 5);
+	psc_assert(m->v == 8);
 	PSCFREE(m);
 
 	exit(0);
