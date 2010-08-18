@@ -67,9 +67,10 @@ pfl_dump_fflags(int fflags)
 }
 
 void
-pfl_dump_mode(mode_t m)
+pfl_dump_mode(mode_t modes)
 {
 	char ch, buf[10];
+	uint32_t m = modes;
 
 	if (S_ISDIR(m))
 		ch = 'd';
