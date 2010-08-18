@@ -17,6 +17,9 @@
  * %PSC_END_COPYRIGHT%
  */
 
+#include <sys/types.h>
+#include <sys/time.h>
+
 #include <err.h>
 #include <errno.h>
 #include <pthread.h>
@@ -92,6 +95,7 @@ void *
 wr_main(void *arg)
 {
 	struct thr *thr = arg;
+	struct timespec ts;
 	int rc;
 
 	for (; thr->st < nlocks; thr->st++) {
@@ -100,9 +104,26 @@ wr_main(void *arg)
 			if (rc)
 				errx(1, "rdlock: %s", strerror(rc));
 			usleep(SLEEP_US);
+
+			memset(&ts, 0, sizeof(ts));
+			rc = pthread_rwlock_timedrdlock(&lk, &ts);
+			if (rc)
+				errx(1, "timedrdlock: %s", strerror(rc));
+
+			rc = pthread_rwlock_tryrdlock(&lk);
+			if (rc)
+				errx(1, "tryrdlock: %s", strerror(rc));
+
+			rc = pthread_rwlock_unlock(&lk);
+			if (rc)
+				errx(1, "unlock: %s", strerror(rc));
 		}
 		rc = pthread_rwlock_wrlock(&lk);
 		if (rc)
+			errx(1, "wrlock: %s", strerror(rc));
+
+		rc = pthread_rwlock_rdlock(&lk);
+		if (rc != EDEADLK)
 			errx(1, "wrlock: %s", strerror(rc));
 
 		rc = pthread_rwlock_wrlock(&lk);
@@ -161,14 +182,14 @@ main(int argc, char *argv[])
 			break;
 		case 'r':
 			l = strtol(optarg, &endp, 10);
-			if (l < 1 || l > NTHRS_MAX ||
+			if (l < 0 || l > NTHRS_MAX ||
 			    *endp != '\0' || optarg == endp)
 				errx(1, "invalid argument: %s", optarg);
 			nrd = (int)l;
 			break;
 		case 'w':
 			l = strtol(optarg, &endp, 10);
-			if (l < 1 || l > NTHRS_MAX ||
+			if (l < 0 || l > NTHRS_MAX ||
 			    *endp != '\0' || optarg == endp)
 				errx(1, "invalid argument: %s", optarg);
 			nwr = (int)l;
@@ -184,12 +205,12 @@ main(int argc, char *argv[])
 		spawn(rd_main, "rd%d", i);
 	for (i = 0; i < nwr; i++)
 		spawn(wr_main, "wr%d", i);
-	printf("total");
+	printf("target");
 	psclist_for_each_entry(thr, &thrs, lentry)
 		printf(" %5s", thr->name);
 	printf("\n");
 	do {
-		printf("\r%5d", nlocks);
+		printf("\r%6d", nlocks);
 
 		run = 0;
 		psclist_for_each_entry(thr, &thrs, lentry) {
