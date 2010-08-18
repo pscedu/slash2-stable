@@ -56,6 +56,8 @@ struct psc_vbitmap {
 		(vb) = NULL;						\
 	} while (0)
 
+#define psc_vbitmap_getnextpos(vb)		(((vb)->vb_pos - (vb)->vb_start) * NBBY)
+
 #define psc_vbitmap_set(vb, pos)		((void)psc_vbitmap_setval((vb), (pos), 1))
 #define psc_vbitmap_xset(vb, pos)		(psc_vbitmap_setval((vb), (pos), 1) == 0)
 #define psc_vbitmap_xsetval(vb, pos, v)		(psc_vbitmap_setval((vb), (pos), (v)) != (v))
@@ -66,21 +68,22 @@ struct psc_vbitmap {
 
 #define psc_vbitmap_nset(vb)			(psc_vbitmap_getsize(vb) - psc_vbitmap_nfree(vb))
 
-#define psc_vbitmap_printbin1(vb) {					\
-		unsigned char *PPp;					\
-		char *Bbufp, *Bbuf =					\
-			PSCALLOC(psc_vbitmap_getsize((vb)) * NBBY + 256); \
-									\
-		for (PPp = (vb)->vb_start, Bbufp=Bbuf; PPp <= (vb)->vb_end; \
-		     PPp++, Bbufp += NBBY+1)				\
-			sprintf(Bbufp, "%d%d%d%d%d%d%d%d ",		\
-				 (*PPp >> 0) & 1, (*PPp >> 1) & 1,	\
-				 (*PPp >> 2) & 1, (*PPp >> 3) & 1,	\
-				 (*PPp >> 4) & 1, (*PPp >> 5) & 1,	\
-				 (*PPp >> 6) & 1, (*PPp >> 7) & 1);	\
-		psc_dbg("vbitmap=%p contents=%s", (vb), Bbuf);		\
-		PSCFREE(Bbuf);						\
-	}
+#define psc_vbitmap_printbin1(vb)						\
+	do {									\
+		unsigned char *PPp;						\
+		char *Bbufp, *Bbuf =						\
+			PSCALLOC(psc_vbitmap_getsize((vb)) * NBBY + 256);	\
+										\
+		for (PPp = (vb)->vb_start, Bbufp=Bbuf; PPp <= (vb)->vb_end;	\
+		     PPp++, Bbufp += NBBY+1)					\
+			sprintf(Bbufp, "%d%d%d%d%d%d%d%d ",			\
+				 (*PPp >> 0) & 1, (*PPp >> 1) & 1,		\
+				 (*PPp >> 2) & 1, (*PPp >> 3) & 1,		\
+				 (*PPp >> 4) & 1, (*PPp >> 5) & 1,		\
+				 (*PPp >> 6) & 1, (*PPp >> 7) & 1);		\
+		psc_dbg("vbitmap=%p contents=%s", (vb), Bbuf);			\
+		PSCFREE(Bbuf);							\
+	} while (0)
 
 struct psc_vbitmap *
 	 psc_vbitmap_newf(size_t, int);
