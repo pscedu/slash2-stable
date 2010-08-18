@@ -59,6 +59,7 @@ struct psc_listcache {
 #define lc_offset		lc_guts.plg_offset
 };
 
+/* lc_flags */
 #define PLCF_DYING		(1 << 0)	/* listcache is about to go away */
 
 struct psc_listcache_entry {
@@ -318,6 +319,7 @@ lc_move(struct psc_listcache *lc, void *p, enum psclc_pos pos)
 static __inline void
 _lc_init(struct psc_listcache *lc, ptrdiff_t offset, size_t entsize)
 {
+	memset(lc, 0, sizeof(*lc));
 	psclg_init(&lc->lc_guts, offset, entsize);
 	psc_waitq_init(&lc->lc_wq_empty);
 	psc_waitq_init(&lc->lc_wq_want);
