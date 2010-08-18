@@ -196,7 +196,18 @@ endif
 # Post-modules processing
 
 ifneq ($(filter ${PFL_BASE}/psc_util/pthrutil.c,${SRCS}),)
+  SRCS+=	${PFL_BASE}/psc_ds/vbitmap.c
   SRCS+=	${PFL_BASE}/psc_util/log.c
+  SRCS+=	${PFL_BASE}/psc_util/thread.c
+endif
+
+ifneq ($(filter ${PFL_BASE}/psc_util/thread.c,${SRCS}),)
+  SRCS+=	${PFL_BASE}/psc_util/subsys.c
+  SRCS+=	${PFL_BASE}/psc_util/waitq.c
+endif
+
+ifneq ($(filter ${PFL_BASE}/psc_util/subsys.c,${SRCS}),)
+  SRCS+=	${PFL_BASE}/psc_ds/dynarray.c
 endif
 
 ifneq ($(filter ${PFL_BASE}/psc_util/log.c,${SRCS}),)
