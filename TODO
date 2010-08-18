@@ -73,7 +73,6 @@ pfl
   decrease pool size
 - make the timer thread track a global timeval which other threads can
   use up to second resolution to ease syscalls
-- add func args to pfl_enter()
 - add relative (to previous log) timestamps to psclog
 - do enums in typedump
 - consolidate naming conventions for initializers:
@@ -83,6 +82,8 @@ pfl
 - simplify ctlapi return by not having pass an rc.  if write() fails,
   then read() will fail and it will solve itself the same way.
 - put lnet copyright on pscrpc files
+- add a superstructure for listcache member entry and store the owning
+  listguts and sanity check membership on removal
 
 development tool
 - let wiki changes automatically email zest/slash2-devel@ like svn commits
