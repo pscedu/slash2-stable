@@ -37,6 +37,7 @@ struct psc_thread {
 	psc_spinlock_t		   pscthr_lock;			/* for mutex */
 	pthread_t		   pscthr_pthread;		/* pthread_self() */
 	pid_t			   pscthr_thrid;		/* gettid(2) */
+	int			   pscthr_uniqid;		/* transiency bookkeeping */
 
 	void			 (*pscthr_startf)(struct psc_thread *);	/* thread main */
 	void			 (*pscthr_dtor)(void *);	/* custom destructor */
@@ -85,6 +86,7 @@ label(struct psc_thread *pt)						\
 
 const char *
 	pscthr_getname(void);
+void	pscthr_getuniqid(void);
 int	pscthr_run(void);
 void	pscthr_setdead(struct psc_thread *, int);
 void	pscthr_setloglevel(int, int);
