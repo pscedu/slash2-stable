@@ -60,9 +60,9 @@ struct psc_pthread_rwlock {
 
 void	psc_pthread_rwlock_init(struct psc_pthread_rwlock *);
 void	psc_pthread_rwlock_rdlock(struct psc_pthread_rwlock *);
-void	psc_pthread_rwlock_rdreqlock(struct psc_pthread_rwlock *);
+int	psc_pthread_rwlock_rdreqlock(struct psc_pthread_rwlock *);
 void	psc_pthread_rwlock_rdunlock(struct psc_pthread_rwlock *);
-void	psc_pthread_rwlock_rdureqlock(struct psc_pthread_rwlock *);
+void	psc_pthread_rwlock_rdureqlock(struct psc_pthread_rwlock *, int);
 void	psc_pthread_rwlock_unlock(struct psc_pthread_rwlock *);
 void	psc_pthread_rwlock_wrlock(struct psc_pthread_rwlock *);
 

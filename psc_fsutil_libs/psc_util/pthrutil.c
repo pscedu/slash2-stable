@@ -191,7 +191,7 @@ psc_pthread_rwlock_rdlock(struct psc_pthread_rwlock *ppr)
 }
 
 int
-psc_pthread_rwlock_reqrdlock(struct psc_pthread_rwlock *ppr)
+psc_pthread_rwlock_rdreqlock(struct psc_pthread_rwlock *ppr)
 {
 	struct psc_thread *thr;
 	int rc;
@@ -221,7 +221,7 @@ psc_pthread_rwlock_reqrdlock(struct psc_pthread_rwlock *ppr)
 }
 
 void
-psc_pthread_rwlock_ureqrdlock(struct psc_pthread_rwlock *ppr, int waslocked)
+psc_pthread_rwlock_rdureqlock(struct psc_pthread_rwlock *ppr, int waslocked)
 {
 	struct psc_thread *thr;
 	int rc;
