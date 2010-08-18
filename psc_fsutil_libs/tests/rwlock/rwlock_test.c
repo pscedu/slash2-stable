@@ -52,7 +52,7 @@ int nlocks = 2000;
 int nrd = 8;
 int nwr = 3;
 
-pthread_rwlock_t lk = PTHREAD_RWLOCK_INITIALIZER;
+pthread_rwlock_t lk = PSC_PTHREAD_RWLOCK_INITIALIZER;
 struct psclist_head thrs = PSCLIST_HEAD_INIT(thrs);
 const char *progname;
 
@@ -122,9 +122,13 @@ wr_main(void *arg)
 		if (rc)
 			errx(1, "wrlock: %s", strerror(rc));
 
+		rc = pthread_rwlock_tryrdlock(&lk);
+		if (rc != EBUSY)
+			errx(1, "rdlock: %s", strerror(rc));
+
 		rc = pthread_rwlock_rdlock(&lk);
 		if (rc != EDEADLK)
-			errx(1, "wrlock: %s", strerror(rc));
+			errx(1, "rdlock: %s", strerror(rc));
 
 		rc = pthread_rwlock_wrlock(&lk);
 		if (rc != EDEADLK)
