@@ -168,6 +168,7 @@ pll_remove(struct psc_lockedlist *pll, void *p)
 	locked = PLL_RLOCK(pll);
 	psclist_del(e);
 	pll->pll_nitems--;
+	psc_assert(pll->pll_nitems >= 0);
 	PLL_URLOCK(pll, locked);
 }
 
