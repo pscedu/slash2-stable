@@ -186,6 +186,7 @@ psclog_getdata(void)
 	d = psclog_getdatamem();
 	if (d == NULL) {
 		d = psc_alloc(sizeof(*d), PAF_NOLOG);
+		/* XXX use psc_get_hostname() */
 		if (gethostname(d->pld_hostname,
 		    sizeof(d->pld_hostname)) == -1)
 			err(1, "gethostname");
@@ -193,6 +194,8 @@ psclog_getdata(void)
 		    sizeof(d->pld_hostshort));
 		if ((p = strchr(d->pld_hostshort, '.')) != NULL)
 			*p = '\0';
+		/* XXX try to read this if the pscthr is available */
+		d->pld_thrid = pfl_getsysthrid();
 #ifdef HAVE_CNOS
 		int cnos_get_rank(void);
 
@@ -226,7 +229,7 @@ _psclogv(const char *fn, const char *func, int line, int subsys,
 		thrid = thr->pscthr_thrid;
 		thrname = thr->pscthr_name;
 	} else {
-		thrid = pfl_getsysthrid();
+		thrid = d->pld_thrid;
 		if (d->pld_nothrname[0] == '\0')
 			snprintf(d->pld_nothrname,
 			    sizeof(d->pld_nothrname), "<%d>", thrid);

@@ -37,6 +37,7 @@ struct psclog_data {
 	char	pld_hostname[HOST_NAME_MAX];
 	char	pld_nothrname[24];
 	int	pld_rank;
+	pid_t	pld_thrid;
 };
 
 /* Log levels. */
