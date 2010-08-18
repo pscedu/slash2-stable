@@ -49,7 +49,7 @@ int nlocks = 2000;
 int nrd = 8;
 int nwr = 3;
 
-pthread_rwlock_t lk = PSC_PTHREAD_RWLOCK_INITIALIZER;
+pthread_rwlock_t lk = PTHREAD_RWLOCK_INITIALIZER;
 struct psclist_head thrs = PSCLIST_HEAD_INIT(thrs);
 const char *progname;
 
