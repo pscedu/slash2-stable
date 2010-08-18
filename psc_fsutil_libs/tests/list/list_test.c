@@ -17,6 +17,9 @@
  * %PSC_END_COPYRIGHT%
  */
 
+#include <sys/types.h>
+#include <sys/time.h>
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -78,6 +81,7 @@ int
 main(int argc, char *argv[])
 {
 	struct psc_listcache lc;
+	struct timespec ts;
 	struct m *m;
 	void *p;
 	int i;
@@ -118,12 +122,23 @@ main(int argc, char *argv[])
 	m->v = 8;
 	lc_addqueue(&lc, m);
 
-	m = lc_getnb(&lc);
+	m = PSCALLOC(sizeof(*m));
+	m->v = 13;
+	lc_addqueue(&lc, m);
+
+	memset(&ts, 0, sizeof(ts));
+	ts.tv_sec = time(NULL) + 1;
+
+	m = lc_gettimed(&lc, &ts);
 	psc_assert(m->v == 5);
 	PSCFREE(m);
 
-	m = lc_getnb(&lc);
+	m = lc_gettimed(&lc, &ts);
 	psc_assert(m->v == 8);
+	PSCFREE(m);
+
+	m = lc_gettimed(&lc, &ts);
+	psc_assert(m->v == 13);
 	PSCFREE(m);
 
 	exit(0);
