@@ -204,8 +204,10 @@ psc_pthread_rwlock_unlock(struct psc_pthread_rwlock *ppr)
 	if ((int)psc_vbitmap_getsize(ppr->ppr_readers) <
 	    thr->pscthr_uniqid + 1)
 		psc_fatal("unlocking a rwlock we could have locked");
-	psc_assert(psc_vbitmap_xsetval(ppr->ppr_readers,
-	    thr->pscthr_uniqid, 0));
+	rc = psc_vbitmap_xsetval(ppr->ppr_readers, thr->pscthr_uniqid, 0);
+#ifdef GNUC
+	psc_assert(rc || ppr->ppr_rwlock.__writer == thr->pscthr_thrid);
+#endif
 	freelock(&ppr->ppr_lock);
 
 	rc = pthread_rwlock_unlock(&ppr->ppr_rwlock);
