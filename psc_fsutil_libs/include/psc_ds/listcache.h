@@ -185,7 +185,7 @@ _lc_get(struct psc_listcache *lc, struct timespec *abstime,
 			psc_waitq_wait(&lc->lc_wq_empty, &lc->lc_lock);
 		spinlock(&lc->lc_lock);
 	}
-	e = (void *)(pos & PLCP_HEAD ?
+	e = (void *)(pos == PLCP_HEAD ?
 	    psclist_first(&lc->lc_listhd) :
 	    psclist_last(&lc->lc_listhd));
 	psc_assert(lc->lc_size > 0);
