@@ -22,9 +22,13 @@
 
 #include <pthread.h>
 
+#include "psc_util/lock.h"
+
 #ifndef HAVE_PTHREAD_BARRIER
 # include "pfl/compat/pthread_barrier.h"
 #endif
+
+struct psc_vbitmap;
 
 #ifdef PTHREAD_MUTEX_ERRORCHECK_INITIALIZER
 # define PSC_PTHREAD_MUTEX_INITIALIZER PTHREAD_MUTEX_ERRORCHECK_INITIALIZER
@@ -42,9 +46,15 @@ int	psc_pthread_mutex_trylock(pthread_mutex_t *);
 void	psc_pthread_mutex_unlock(pthread_mutex_t *);
 void	psc_pthread_mutex_ureqlock(pthread_mutex_t *, int);
 
-void	psc_pthread_rwlock_init(pthread_rwlock_t *);
-void	psc_pthread_rwlock_rdlock(pthread_mutex_t *);
-void	psc_pthread_rwlock_unlock(pthread_mutex_t *);
-void	psc_pthread_rwlock_wrlock(pthread_mutex_t *);
+struct psc_pthread_rwlock {
+	struct psc_vbitmap	*ppr_readers;
+	pthread_rwlock_t	 ppr_rwlock;
+	psc_spinlock_t		 ppr_lock;
+};
+
+void	psc_pthread_rwlock_init(struct psc_pthread_rwlock *);
+void	psc_pthread_rwlock_rdlock(struct psc_pthread_rwlock *);
+void	psc_pthread_rwlock_unlock(struct psc_pthread_rwlock *);
+void	psc_pthread_rwlock_wrlock(struct psc_pthread_rwlock *);
 
 #endif /* _PFL_PTHRUTIL_H_ */

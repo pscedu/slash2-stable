@@ -21,8 +21,10 @@
 #include <pthread.h>
 #include <string.h>
 
+#include "psc_ds/vbitmap.h"
 #include "psc_util/log.h"
 #include "psc_util/pthrutil.h"
+#include "psc_util/thread.h"
 #include "psc_util/time.h"
 
 void
@@ -144,43 +146,91 @@ psc_pthread_mutex_ensure_locked(pthread_mutex_t *mut)
 #endif
 
 void
-psc_pthread_rwlock_init(pthread_rwlock_t *rw)
+psc_pthread_rwlock_destroy(struct psc_pthread_rwlock *ppr)
+{
+	psc_vbitmap_free(ppr->ppr_readers);
+}
+
+void
+psc_pthread_rwlock_init(struct psc_pthread_rwlock *ppr)
 {
 	int rc;
 
-	rc = pthread_rwlock_init(rw, NULL);
+	LOCK_INIT(&ppr->ppr_lock);
+	ppr->ppr_readers = psc_vbitmap_newf(1, PVBF_AUTO);
+	rc = pthread_rwlock_init(&ppr->ppr_rwlock, NULL);
 	if (rc)
 		psc_fatalx("pthread_rwlock_init: %s", strerror(rc));
 }
 
 void
-psc_pthread_rwlock_rdlock(pthread_mutex_t *rw)
+psc_pthread_rwlock_rdlock(struct psc_pthread_rwlock *ppr)
 {
+	struct psc_thread *thr;
 	int rc;
 
+	thr = pscthr_get();
+#ifdef GNUC
+	if (ppr->ppr_rwlock.__writer == pscthr_thrid)
+		psc_fatal("deadlock: we hold writer lock");
+#endif
+
 	do {
-		rc = pthread_rwlock_timedtryrdlock(rw);
+		rc = pthread_rwlock_tryrdlock(&ppr->ppr_rwlock);
 		if (rc)
-			psc_fatalx("pthread_rwlock_rdlock: %s", strerror(rc));
+			psc_fatalx("pthread_rwlock_tryrdlock: %s", strerror(rc));
 	} while (rc);
+
+	pscthr_getuniqid();
+	spinlock(&ppr->ppr_lock);
+	if ((int)psc_vbitmap_getsize(ppr->ppr_readers) <
+	    thr->pscthr_uniqid + 1)
+		psc_vbitmap_resize(ppr->ppr_readers,
+		    thr->pscthr_uniqid + 1);
+	psc_assert(psc_vbitmap_xsetval(ppr->ppr_readers,
+	    thr->pscthr_uniqid, 1));
+	freelock(&ppr->ppr_lock);
 }
 
 void
-psc_pthread_rwlock_unlock(pthread_mutex_t *rw)
+psc_pthread_rwlock_unlock(struct psc_pthread_rwlock *ppr)
 {
+	struct psc_thread *thr;
 	int rc;
 
-	rc = pthread_rwlock_unlock(rw);
+	thr = pscthr_get();
+	pscthr_getuniqid();
+	spinlock(&ppr->ppr_lock);
+	if ((int)psc_vbitmap_getsize(ppr->ppr_readers) <
+	    thr->pscthr_uniqid + 1)
+		psc_fatal("unlocking a rwlock we could have locked");
+	psc_assert(psc_vbitmap_xsetval(ppr->ppr_readers,
+	    thr->pscthr_uniqid, 0));
+	freelock(&ppr->ppr_lock);
+
+	rc = pthread_rwlock_unlock(&ppr->ppr_rwlock);
 	if (rc)
 		psc_fatalx("pthread_rwlock_unlock: %s", strerror(rc));
 }
 
 void
-psc_pthread_rwlock_wrlock(pthread_mutex_t *rw)
+psc_pthread_rwlock_wrlock(struct psc_pthread_rwlock *ppr)
 {
+	struct psc_thread *thr;
 	int rc;
 
-	rc = pthread_rwlock_wrlock(rw);
+	thr = pscthr_get();
+	pscthr_getuniqid();
+	spinlock(&ppr->ppr_lock);
+	if ((int)psc_vbitmap_getsize(ppr->ppr_readers) <
+	    thr->pscthr_uniqid + 1)
+		psc_vbitmap_resize(ppr->ppr_readers,
+		    thr->pscthr_uniqid + 1);
+	if (psc_vbitmap_get(ppr->ppr_readers, thr->pscthr_uniqid))
+		psc_fatal("deadlock: we hold read lock");
+	freelock(&ppr->ppr_lock);
+
+	rc = pthread_rwlock_wrlock(&ppr->ppr_rwlock);
 	if (rc)
 		psc_fatalx("pthread_rwlock_unlock: %s", strerror(rc));
 }
