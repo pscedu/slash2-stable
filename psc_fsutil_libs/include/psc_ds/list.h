@@ -63,7 +63,7 @@ _psclist_add(struct psclist_head *e, struct psclist_head *prev,
 }
 
 /**
- * psclist_xadd - Add an entry to the beginning of a list.
+ * psclist_add - Add an entry to the beginning of a list.
  * @e: entry to be added
  * @head: psclist_head to add it after
  *
@@ -72,19 +72,15 @@ _psclist_add(struct psclist_head *e, struct psclist_head *prev,
  * This is good for implementing stacks.
  */
 static __inline void
-psclist_xadd(struct psclist_head *e, struct psclist_head *head)
+psclist_add_head(struct psclist_head *e, struct psclist_head *head)
 {
 	/* ensure entry exists on only one list */
 	psc_assert(e->zprev == NULL && e->znext == NULL);
 	_psclist_add(e, head, head->znext);
 }
 
-#define psclist_xadd_head(e, hd)	psclist_xadd((e), (hd))
-#define psclist_xadd_after(e, t)	psclist_xadd((e), (t))
-#define psclist_xadd_before(e, t)	psclist_xadd_tail((e), (t))
-
 /**
- * psclist_xadd_tail - Add an entry to the end of list.
+ * psclist_add_tail - Add an entry to the end of list.
  * @e: entry to be added
  * @head: psclist head to add it before
  *
@@ -93,11 +89,18 @@ psclist_xadd(struct psclist_head *e, struct psclist_head *head)
  * This is useful for implementing queues.
  */
 static __inline void
-psclist_xadd_tail(struct psclist_head *e, struct psclist_head *head)
+psclist_add_tail(struct psclist_head *e, struct psclist_head *head)
 {
 	psc_assert(e->zprev == NULL && e->znext == NULL);
 	_psclist_add(e, head->zprev, head);
 }
+
+#define psclist_add_after(e, t)		psclist_add((e), (t))
+#define psclist_add_before(e, t)	psclist_add_tail((e), (t))
+
+#define psclist_xadd(e, hd)		psclist_add_head((e), (hd))
+#define psclist_xadd_tail(e, hd)	psclist_add_tail((e), (hd))
+#define psclist_xadd_head(e, hd)	psclist_add_head((e), (hd))
 
 static __inline void
 _psclist_del(struct psclist_head *prev, struct psclist_head *next)

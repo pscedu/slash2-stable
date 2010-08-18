@@ -156,7 +156,7 @@ _lc_get(struct psc_listcache *lc, struct timespec *abstime,
 	struct psc_listcache_entry *e;
 	int locked, rc;
 
-	psc_assert(pos == PLCP_HEAD || pos ==  PLCP_TAIL);
+	psc_assert(pos == PLCP_HEAD || pos == PLCP_TAIL);
 
 	locked = reqlock(&lc->lc_lock);
 	while (psclist_empty(&lc->lc_listhd)) {
@@ -170,7 +170,7 @@ _lc_get(struct psc_listcache *lc, struct timespec *abstime,
 		psc_waitq_wakeall(&lc->lc_wq_want);
 		if (abstime)
 			psc_logx(flags & PLCGF_WARN ? PLL_WARN : PLL_TRACE,
-			    "lc_get(%s:%p): waiting %p", lc->lc_name, lc, abstime);
+			    "lc_get(%s:%p): timed wait %p", lc->lc_name, lc, abstime);
 		else
 			psc_logx(flags & PLCGF_WARN ? PLL_WARN : PLL_TRACE,
 			    "lc_get(%s:%p): blocking wait", lc->lc_name, lc);
@@ -203,13 +203,13 @@ _lc_get(struct psc_listcache *lc, struct timespec *abstime,
 	return (NULL);
 }
 
-#define lc_gettimed(lc, tm)	_lc_get((lc), (tm), PLCP_HEAD, 0)
-#define lc_getwait(lc)		_lc_get((lc), NULL, PLCP_HEAD, 0)
-#define lc_getnb(lc)		_lc_get((lc), NULL, PLCP_HEAD, PLCGF_NOBLOCK)
+#define lc_gettimed(lc, tm)		_lc_get((lc), (tm), PLCP_HEAD, 0)
+#define lc_getwait(lc)			_lc_get((lc), NULL, PLCP_HEAD, 0)
+#define lc_getnb(lc)			_lc_get((lc), NULL, PLCP_HEAD, PLCGF_NOBLOCK)
 #define lc_peekheadtimed(lc, tm)	_lc_get((lc), (tm), PLCP_HEAD, PLCGF_PEEK)
-#define lc_peekheadwait(lc)	_lc_get((lc), NULL, PLCP_HEAD, PLCGF_PEEK)
-#define lc_peekhead(lc)		_lc_get((lc), NULL, PLCP_HEAD, PLCGF_NOBLOCK | PLCGF_PEEK)
-#define lc_peektail(lc)		_lc_get((lc), NULL, PLCP_TAIL, PLCGF_NOBLOCK | PLCGF_PEEK)
+#define lc_peekheadwait(lc)		_lc_get((lc), NULL, PLCP_HEAD, PLCGF_PEEK)
+#define lc_peekhead(lc)			_lc_get((lc), NULL, PLCP_HEAD, PLCGF_NOBLOCK | PLCGF_PEEK)
+#define lc_peektail(lc)			_lc_get((lc), NULL, PLCP_TAIL, PLCGF_NOBLOCK | PLCGF_PEEK)
 
 /*
  * lc_kill - list wants to go away, notify waiters.
@@ -260,9 +260,9 @@ _lc_add(struct psc_listcache *lc, void *p,
 	}
 
 	if (pos == PLCP_TAIL)
-		psclist_xadd_tail(&e->ple_entry, &lc->lc_listhd);
+		psclist_add_tail(&e->ple_entry, &lc->lc_listhd);
 	else
-		psclist_xadd(&e->ple_entry, &lc->lc_listhd);
+		psclist_add_head(&e->ple_entry, &lc->lc_listhd);
 
 #ifdef DEBUG
 	e->ple_owner = lc;
@@ -307,9 +307,9 @@ lc_move(struct psc_listcache *lc, void *p, enum psclc_pos pos)
 	locked = reqlock(&lc->lc_lock);
 	psclist_del(e);
 	if (pos == PLCP_TAIL)
-		psclist_xadd_tail(e, &lc->lc_listhd);
+		psclist_add_tail(e, &lc->lc_listhd);
 	else
-		psclist_xadd(e, &lc->lc_listhd);
+		psclist_add_head(e, &lc->lc_listhd);
 	ureqlock(&lc->lc_lock, locked);
 }
 
