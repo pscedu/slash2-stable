@@ -61,7 +61,7 @@ struct fuse_context {
 };
 
 const char			*psc_logfmt = PSC_LOG_FMT;
-__static int			 psc_loglevel = PLL_WARN;
+__static enum psclog_level	 psc_loglevel = PLL_WARN;
 __static struct psclog_data	*psc_logdata;
 char				 psclog_eol[8] = "\n";	/* overrideable with ncurses EOL */
 
@@ -111,14 +111,14 @@ psc_log_getlevel_ss(__unusedx int subsys)
 	return (psc_log_getlevel_global());
 }
 
-__weak int
+__weak enum psclog_level
 psc_log_getlevel(int subsys)
 {
 	return (psc_log_getlevel_ss(subsys));
 }
 
 void
-psc_log_setlevel_global(int newlevel)
+psc_log_setlevel_global(enum psclog_level newlevel)
 {
 	if (newlevel >= PNLOGLEVELS || newlevel < 0)
 		errx(1, "log level out of bounds (%d)", newlevel);
@@ -126,13 +126,13 @@ psc_log_setlevel_global(int newlevel)
 }
 
 __weak void
-psc_log_setlevel_ss(__unusedx int subsys, int newlevel)
+psc_log_setlevel_ss(__unusedx int subsys, enum psclog_level newlevel)
 {
 	psc_log_setlevel_global(newlevel);
 }
 
 __weak void
-psc_log_setlevel(int subsys, int newlevel)
+psc_log_setlevel(int subsys, enum psclog_level newlevel)
 {
 	psc_log_setlevel_ss(subsys, newlevel);
 }
@@ -210,7 +210,7 @@ psclog_getdata(void)
 
 void
 _psclogv(const char *fn, const char *func, int line, int subsys,
-    int level, int options, const char *fmt, va_list ap)
+    enum psclog_level level, int options, const char *fmt, va_list ap)
 {
 	char *p, prefix[LINE_MAX], fmtbuf[LINE_MAX];
 	struct fuse_context *ctx;
@@ -285,7 +285,7 @@ _psclogv(const char *fn, const char *func, int line, int subsys,
 
 void
 _psclog(const char *fn, const char *func, int line, int subsys,
-    int level, int options, const char *fmt, ...)
+    enum psclog_level level, int options, const char *fmt, ...)
 {
 	va_list ap;
 
@@ -296,7 +296,7 @@ _psclog(const char *fn, const char *func, int line, int subsys,
 
 __dead void
 _psc_fatal(const char *fn, const char *func, int line, int subsys,
-    int level, int options, const char *fmt, ...)
+    enum psclog_level level, int options, const char *fmt, ...)
 {
 	va_list ap;
 
@@ -309,7 +309,7 @@ _psc_fatal(const char *fn, const char *func, int line, int subsys,
 
 __dead void
 _psc_fatalv(const char *fn, const char *func, int line, int subsys,
-    int level, int options, const char *fmt, va_list ap)
+    enum psclog_level level, int options, const char *fmt, va_list ap)
 {
 	_psclogv(fn, func, line, subsys, level, options, fmt, ap);
 	psc_fatalx("should not reach here");
@@ -327,7 +327,7 @@ const char *psc_loglevel_names[] = {
 };
 
 const char *
-psc_loglevel_getname(int id)
+psc_loglevel_getname(enum psclog_level id)
 {
 	if (id < 0)
 		return ("<unknown>");
@@ -336,12 +336,12 @@ psc_loglevel_getname(int id)
 	return (psc_loglevel_names[id]);
 }
 
-int
+enum psclog_level
 psc_loglevel_getid(const char *name)
 {
 	struct {
-		const char	*lvl_name;
-		int		 lvl_value;
+		const char		*lvl_name;
+		enum psclog_level	 lvl_value;
 	} altloglevels[] = {
 		{ "none",	PLL_FATAL },
 		{ "fatals",	PLL_FATAL },
@@ -359,5 +359,5 @@ psc_loglevel_getid(const char *name)
 	for (n = 0; n < nitems(altloglevels); n++)
 		if (strcasecmp(name, altloglevels[n].lvl_name) == 0)
 			return (altloglevels[n].lvl_value);
-	return (-1);
+	return (PNLOGLEVELS);
 }
