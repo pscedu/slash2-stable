@@ -22,6 +22,8 @@ general reminders
 - ensure no mp RPC message bodies are used after a pscrpc_req_finished()
 - check -Wuninitialized and others
 - no strcpy, strcat, gets, sscanf without bounds
+- nbreqset req callbacks run in conjunction with any req interpret reply callbacks.
+  this is confusing because the async_args is identical in both callbacks.
 
 make
 - rename ROOTDIR -> PROJ_BASE
@@ -84,6 +86,7 @@ pfl
 - put lnet copyright on pscrpc files
 - add a superstructure for listcache member entry and store the owning
   listguts and sanity check membership on removal
+- merge extra header line on ctl displays into columnal view
 
 development tool
 - let wiki changes automatically email zest/slash2-devel@ like svn commits
