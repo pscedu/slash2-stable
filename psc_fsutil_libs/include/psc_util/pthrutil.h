@@ -58,6 +58,7 @@ struct psc_pthread_rwlock {
 	psc_spinlock_t		 ppr_lock;
 };
 
+void	psc_pthread_rwlock_destroy(struct psc_pthread_rwlock *);
 void	psc_pthread_rwlock_init(struct psc_pthread_rwlock *);
 void	psc_pthread_rwlock_rdlock(struct psc_pthread_rwlock *);
 int	psc_pthread_rwlock_rdreqlock(struct psc_pthread_rwlock *);
