@@ -58,7 +58,7 @@ pscrpc_nbreqset_add(struct pscrpc_nbreqset *nbs, struct pscrpc_request *req)
 	atomic_inc(&nbs->nb_outstanding);
 	pscrpc_set_add_new_req(&nbs->nb_reqset, req);
 	if (pscrpc_nbreqset_push(req))
-		DEBUG_REQ(PLL_FATAL, req, "Send Failure");
+		DEBUG_REQ(PLL_FATAL, req, "send failure");
 }
 
 /**
@@ -123,27 +123,25 @@ pscrpc_nbreqset_reap(struct pscrpc_nbreqset *nbs)
 			psclist_del(&req->rq_set_chain_lentry);
 			atomic_dec(&nbs->nb_outstanding);
 			nreaped++;
-			/*
-			 * paranoia
-			 */
+
+			/* paranoia */
 			psc_assert(atomic_read(&nbs->nb_outstanding) >= 0);
+
 			/*
 			 * This is the caller's last shot at accessing
-			 *  this msg..
+			 *  this msg.
 			 * Let the callback deal with its own
-			 *  error handling, we can't do much from here
+			 *  error handling; we can't do much from here.
 			 */
 			rc = 0;
 			if (nbs->nb_callback)
 				rc = nbs->nb_callback(req, &req->rq_async_args);
-			/*
-			 * Be done with it..
-			 */
+
+			/* Be done with it. */
 			if (rc == 0)
 				pscrpc_req_finished(req);
-			/*
-			 * Record the first error.
-			 */
+
+			/* Record the first error. */
 			if (saved_rc == 0 && rc)
 				saved_rc = rc;
 		}
