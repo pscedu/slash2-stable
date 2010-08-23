@@ -22,6 +22,11 @@
 
 #include "psc_util/lock.h"
 
+/**
+ * printhex - Display the hexadecimal representation of some data.
+ * @ptr: data to display.
+ * @len: number of bytes to display.
+ */
 void
 printhex(const void *ptr, size_t len)
 {
@@ -45,8 +50,35 @@ printhex(const void *ptr, size_t len)
 	funlockfile(stdout);
 }
 
-/*
- * printvbin - display the bit representation of some data.
+/**
+ * printvbinr - Display the bit representation of some data in reverse.
+ * @ptr: data to display.
+ * @len: number of bytes to display.
+ */
+void
+printvbinr(const void *ptr, size_t len)
+{
+	const unsigned char *p;
+	size_t n;
+	int i;
+
+	flockfile(stdout);
+	for (n = 0, p = ptr + len - 1; n < len; p--, n++) {
+		if (n && n % 8 == 0)
+			printf("\n");
+		for (i = NBBY - 1; i >= 0; i--)
+			putchar((*p & (1 << i)) ? '1': '0');
+		if (n % 8 != 7 && n != len - 1)
+			putchar(' ');
+	}
+	putchar('\n');
+	funlockfile(stdout);
+}
+
+/**
+ * printvbin - Display the bit representation of some data in.
+ * @ptr: data to display.
+ * @len: number of bytes to display.
  */
 void
 printvbin(const void *ptr, size_t len)
@@ -56,10 +88,10 @@ printvbin(const void *ptr, size_t len)
 	int i;
 
 	flockfile(stdout);
-	for (n = 0, p = ptr + len - 1; n < len; p--, n++) {
+	for (n = 0, p = ptr; n < len; p++, n++) {
 		if (n && n % 8 == 0)
 			printf("\n");
-		for (i = NBBY - 1; i >= 0; i--)
+		for (i = 0; i < NBBY; i++)
 			putchar((*p & (1 << i)) ? '1': '0');
 		if (n % 8 != 7 && n != len - 1)
 			putchar(' ');

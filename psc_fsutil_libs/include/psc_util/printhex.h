@@ -22,11 +22,12 @@
 
 void printhex(const void *, size_t);
 void printvbin(const void *, size_t);
+void printvbinr(const void *, size_t);
 
-static inline void
+static __inline void
 printbin(uint64_t val)
 {
-	printvbin(&val, sizeof(val));
+	printvbinr(&val, sizeof(val));
 }
 
 #endif /* _PFL_PRINTHEX_H_ */
