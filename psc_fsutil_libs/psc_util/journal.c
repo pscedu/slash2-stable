@@ -958,7 +958,7 @@ pjournal_thr_main(struct psc_thread *thr)
 		PJ_ULOCK(pj);
 
 		spinlock(&pjournal_waitqlock);
-		if ((xh = pll_gethdpeek(&pj->pj_distillxids))) {
+		if (pll_gethdpeek(&pj->pj_distillxids)) {
 			freelock(&pjournal_waitqlock);
 			continue;
 		}
