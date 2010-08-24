@@ -164,6 +164,11 @@ main(int argc, char *argv[])
 	pfl_bitstr_copy(&out, 14, &in, 0, 8);
 	check(out, 0x1300);
 
+	out = 0xffffffffffffffff;
+	in = 0;
+	pfl_bitstr_copy(&out, 14, &in, 0, 8);
+	check(out, 0xffffffffffc03fff);
+
 	in = 0x13;
 	pfl_bitstr_copy(&out, 22, &in, 0, 6);
 	check(out, 0x4c01300);
