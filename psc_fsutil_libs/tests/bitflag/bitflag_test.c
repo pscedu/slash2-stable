@@ -76,7 +76,7 @@ usage(void)
 			printf("shouldbe %016"PRIx64": ",	\
 			    UINT64_C(b));			\
 			printbin(UINT64_C(b));			\
-			printf("      is %016"PRIx64": ", (a));	\
+			printf("     was %016"PRIx64": ", (a));	\
 			printbin(a);				\
 			psc_fatalx("values don't match");	\
 		}						\
@@ -169,6 +169,11 @@ main(int argc, char *argv[])
 	pfl_bitstr_copy(&out, 14, &in, 0, 8);
 	check(out, 0xffffffffffc03fff);
 
+	in = 0x13;
+	pfl_bitstr_copy(&out, 22, &in, 0, 6);
+	check(out, 0xfffffffff4c03fff);
+
+	out = 0x1300;
 	in = 0x13;
 	pfl_bitstr_copy(&out, 22, &in, 0, 6);
 	check(out, 0x4c01300);
