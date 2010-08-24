@@ -134,9 +134,9 @@ pfl_bitstr_copy(void *dst, int doff, const void *src, int soff, int nbits)
 	uint64_t *out64;
 
 	psc_assert(doff >= 0 && soff >= 0);
-	if (dst + doff > src + soff &&
-	    dst + doff < src + soff + nbits)
-		psc_fatalx("overlap case not implemented");
+//	if (dst + doff  > src + soff &&
+//	    dst + doff < src + soff + nbits)
+//		psc_fatalx("overlap case not implemented");
 
 	in64 = (const uint64_t *)src + soff / sizeof(*in64) / NBBY;
 	out64 = (uint64_t *)dst + doff / sizeof(*out64) / NBBY;
