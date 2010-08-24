@@ -27,13 +27,12 @@
 #define _PFL_SUBSYS_H_
 
 #define PSS_ALL		(-1)
-#define PSS_JOURNAL	0
-#define PSS_RPC		1
-#define PSS_LNET	2
-#define PSS_MEM		3
-#define PSS_GEN		4		/* generic/catch other */
-#define PSS_TMP		5		/* temporary debug use */
-#define _PSS_LAST	6
+#define PSS_RPC		0
+#define PSS_LNET	1
+#define PSS_MEM		2
+#define PSS_GEN		3		/* generic/catch other */
+#define PSS_TMP		4		/* temporary debug use */
+#define _PSS_LAST	5
 
 int		 psc_subsys_id(const char *);
 const char	*psc_subsys_name(int);

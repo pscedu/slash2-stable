@@ -17,7 +17,6 @@
  * %PSC_END_COPYRIGHT%
  */
 
-#define PSC_SUBSYS PSS_JOURNAL
 #include "psc_util/subsys.h"
 
 #include <sys/types.h>
@@ -1021,9 +1020,9 @@ pjournal_replay(
 	psc_dynarray_free(&pj->pj_bufs);
 
 	/*
- 	 * Make the current replay in effect. Otherwise, a crash may
- 	 * lose previous work.
- 	 */
+	 * Make the current replay in effect. Otherwise, a crash may
+	 * lose previous work.
+	 */
 	zfsslash2_wait_synced(0);
 
 	psc_notify("journal replayed: %d log entries "
