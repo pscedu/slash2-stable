@@ -89,5 +89,13 @@ pfl
   listguts and sanity check membership on removal
 - merge extra header line on ctl displays into columnal view
 
+mem pool|flg|#free|#use|total| %use|  min|   max|th|#grows|#shrnx|#em|#wa
+--------+---+-----+----+-----+-----+-----+------+--+------+------+---+---
+replwkrq|A--|  256|   0|  256|   0%|  256| <inf>|80|   256|     0|  0|  0
+slab    |A--|    0| 128|  128| 100%|   64|   128|80|   128|     0|  0|  0
+fcmh    |---|32766|   2|32768|0.01%|    -|     -| -|     -|     -|  0|  0
+bmap    |A--|   62|   2|   64|3.12%|   64| <inf>|80|    64|     0|  0|  0
+
+
 development tool
 - let wiki changes automatically email zest/slash2-devel@ like svn commits
