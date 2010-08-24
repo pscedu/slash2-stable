@@ -9,10 +9,15 @@
 
 #define pscrpc_export_hldrop(e)					\
 	do {							\
-		if ((e)->exp_hldropf && (e)->exp_private)	\
-			(e)->exp_hldropf((e)->exp_private);	\
-		(e)->exp_private = NULL;			\
+		if ((e)->exp_hldropf)				\
+			(e)->exp_hldropf(e);			\
+		psc_assert((e)->exp_private == NULL);		\
 	} while (0)
+
+#define EXPORT_LOCK(e)		spinlock(&(e)->exp_lock)
+#define EXPORT_RLOCK(e)		reqlock(&(e)->exp_lock)
+#define EXPORT_UNLOCK(e)	freelock(&(e)->exp_lock)
+#define EXPORT_URLOCK(e, lk)	ureqlock(&(e)->exp_lock, (lk))
 
 void _pscrpc_export_put(struct pscrpc_export *);
 
