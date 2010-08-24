@@ -72,8 +72,9 @@ usage(void)
 
 #define check(a, b)						\
 	do {							\
-		if ((a) != (b)) {				\
-			printf("shouldbe %016"PRIx64": ", (b));	\
+		if ((a) != UINT64_C(b)) {			\
+			printf("shouldbe %016"PRIx64": ",	\
+			    UINT64_C(b));			\
 			printbin(b);				\
 			printf("      is %016"PRIx64": ", (a));	\
 			printbin(a);				\
@@ -131,56 +132,65 @@ main(int argc, char *argv[])
 	out = 0;
 	in = 0x7fffffff;
 	pfl_bitstr_copy(&out, 0, &in, 0, NBBY * 4);
-	check(out, UINT64_C(0x7fffffff));
+	check(out, 0x7fffffff);
 
 	out = 0;
 	in = 0x7fffffff;
 	pfl_bitstr_copy(&out, 0, &in, 1, NBBY * 4);
-	check(out, UINT64_C(0x3fffffff));
+	check(out, 0x3fffffff);
 
 	out = 0;
 	in = 0x7fffffff;
 	pfl_bitstr_copy(&out, 1, &in, 0, NBBY * 4);
-	check(out, UINT64_C(0xfffffffe));
+	check(out, 0xfffffffe);
 
 	out = 0;
 	in = 0xffffffff;
 	pfl_bitstr_copy(&out, 3, &in, 10, 1);
-	check(out, UINT64_C(0x00000008));
+	check(out, 0x00000008);
 
 	out = 0;
 	in = 0xffffffff;
 	pfl_bitstr_copy(&out, 3, &in, 10, 13);
-	check(out, UINT64_C(0x0000fff8));
+	check(out, 0x0000fff8);
 
 	out = 0;
 	in = 0x1b;
 	pfl_bitstr_copy(&out, 22, &in, 0, 6);
-	check(out, UINT64_C(0x6c00000));
+	check(out, 0x6c00000);
+
+	out = 0x1300;
+	in = 0;
+	pfl_bitstr_copy(&out, 14, &in, 0, 8);
+	check(out, 0x1300);
+
+	in = 0x13;
+	pfl_bitstr_copy(&out, 22, &in, 0, 6);
+	check(out, 0x4c01300);
 
 	out = 0;
 	in = 3;
 	pfl_bitstr_copy(&out, 8, &in, 0, 2);
-	check(out, UINT64_C(0x00000300));
+	check(out, 0x00000300);
 	pfl_bitstr_copy(&out, 18, &in, 0, 2);
-	check(out, UINT64_C(0x000c0300));
+	check(out, 0x000c0300);
 	pfl_bitstr_copy(&out, 28, &in, 0, 2);
-	check(out, UINT64_C(0x300c0300));
+	check(out, 0x300c0300);
 
 	uint64_t outbuf[4];
 	memset(outbuf, 0, sizeof(outbuf));
 	int repl = 3;
 	pfl_bitstr_copy(&outbuf, 68, &repl, 0, 4);
-	check(outbuf[0], UINT64_C(0));
-	check(outbuf[1], UINT64_C(0x30));
-	check(outbuf[2], UINT64_C(0));
-	check(outbuf[3], UINT64_C(0));
+	check(outbuf[0], 0);
+	check(outbuf[1], 0x30);
+	check(outbuf[2], 0);
+	check(outbuf[3], 0);
 
 	memset(outbuf, 0, sizeof(outbuf));
 	repl = 3;
 	pfl_bitstr_copy(&outbuf, 63, &repl, 0, 3);
-	check(outbuf[0], UINT64_C(0x8000000000000000));
-	check(outbuf[1], UINT64_C(0x1));
+	check(outbuf[0], 0x8000000000000000);
+	check(outbuf[1], 0x1);
 
 	exit(0);
 }
