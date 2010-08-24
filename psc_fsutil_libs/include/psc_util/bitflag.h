@@ -107,7 +107,7 @@ pfl_bitstr_nset(const void *val, int len)
 }
 
 /**
- * pfl_bitstr_copy - copy bits from one place to another.
+ * pfl_bitstr_copy - Copy bits from one place to another.
  * @dst: place to copy to.
  * @doff: offset into destination bitstring where to begin copying bits to.
  * @src: place to copy from.
@@ -124,6 +124,9 @@ pfl_bitstr_nset(const void *val, int len)
  * NOT SUPPORTED:
  *	src:  |-----------------------|
  *	dst:         |-----------------------|
+ *
+ * XXX 32-bit architectures should use 32-bit values instead of 64-bit
+ * since the wordsize will be faster.
  */
 static __inline void
 pfl_bitstr_copy(void *dst, int doff, const void *src, int soff, int nbits)
@@ -146,7 +149,7 @@ pfl_bitstr_copy(void *dst, int doff, const void *src, int soff, int nbits)
 	for (; nbits >= NBBY * (int)sizeof(*out64);
 	    in64++, out64++, nbits -= NBBY * (int)sizeof(*out64)) {
 		/* copy bits in the same byte position */
-		*out64 = (*out64 & (~0 >> ((sizeof(*out64) * NBBY) - doff))) |
+		*out64 = (*out64 & (UINT64_MAX >> ((sizeof(*out64) * NBBY) - doff))) |
 		    ((*in64 >> soff) << doff);
 
 		/* copy bits from next src position to prev dst pos */
@@ -156,7 +159,7 @@ pfl_bitstr_copy(void *dst, int doff, const void *src, int soff, int nbits)
 
 		/* copy bits from prev src position to next dst pos */
 		else if (soff < doff)
-			out64[1] = (out64[1] & (~0 >> ((sizeof(out64[1]) * NBBY) - doff))) |
+			out64[1] = (out64[1] & (UINT64_MAX << doff)) |
 			    (*in64 >> (NBBY * (int)sizeof(*in64) - doff - soff));
 	}
 
@@ -166,18 +169,18 @@ pfl_bitstr_copy(void *dst, int doff, const void *src, int soff, int nbits)
 	doff %= NBBY;
 
 	for (; nbits >= NBBY; in8++, out8++, nbits -= NBBY) {
-		*out8 = (*out8 & (~0 >> (NBBY - doff))) |
+		*out8 = (*out8 & (UINT8_MAX >> (NBBY - doff))) |
 		    ((*in8 >> soff) << doff);
 
 		if (soff > doff)
 			*out8 |= in8[1] << (NBBY - soff + doff);
 		else if (soff < doff)
-			out8[1] = (out8[1] & (~0 >> (NBBY - doff))) |
+			out8[1] = (out8[1] & (UINT8_MAX << doff)) |
 			    (*in8 >> (NBBY - doff - soff));
 	}
 
 	if (nbits) {
-		*out8 = (*out8 & (~0 >> (NBBY - doff))) |
+		*out8 = (*out8 & (UINT8_MAX >> (NBBY - doff))) |
 		    (((*in8 >> soff) & ~(0xff << nbits)) << doff);
 		nbits -= NBBY - doff;
 	}
@@ -186,7 +189,7 @@ pfl_bitstr_copy(void *dst, int doff, const void *src, int soff, int nbits)
 			*out8 |= (in8[1] & ~(0xff << nbits)) <<
 			    (NBBY - soff + doff);
 		else if (soff < doff)
-			out8[1] = (out8[1] & (~0 >> (NBBY - doff))) |
+			out8[1] = (out8[1] & (UINT8_MAX << (doff - (NBBY - doff)))) |
 			    ((*in8 >> (NBBY - doff - soff)) & ~(0xff << nbits));
 	}
 }
