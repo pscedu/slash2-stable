@@ -75,7 +75,7 @@ usage(void)
 		if ((a) != UINT64_C(b)) {			\
 			printf("shouldbe %016"PRIx64": ",	\
 			    UINT64_C(b));			\
-			printbin(b);				\
+			printbin(UINT64_C(b));			\
 			printf("      is %016"PRIx64": ", (a));	\
 			printbin(a);				\
 			psc_fatalx("values don't match");	\
