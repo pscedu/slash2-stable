@@ -8,6 +8,7 @@ FILE_CFLAGS_VARNAME=	$(call PATH_NAMIFY,$(call STRIPROOTDIR,$(abspath $1)))_CFLA
 FILE_PCPP_FLAGS_VARNAME=$(call PATH_NAMIFY,$(call STRIPROOTDIR,$(abspath $1)))_PCPP_FLAGS
 FILE_CFLAGS=		${$(call PATH_NAMIFY,$(call STRIPROOTDIR,$(realpath $1)))_CFLAGS}
 FILE_PCPP_FLAGS=	${$(call PATH_NAMIFY,$(call STRIPROOTDIR,$(realpath $1)))_PCPP_FLAGS}
+ADD_FILE_CFLAGS=	$(eval $(call FILE_CFLAGS_VARNAME,$1)+=$2)
 
 -include ${ROOTDIR}/mk/local.mk
 include ${ROOTDIR}/mk/pickle.mk
