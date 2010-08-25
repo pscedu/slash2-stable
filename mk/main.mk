@@ -374,11 +374,10 @@ prereq: recurse-prereq prereq-hook
 build:
 	${MAKE} clean && ${MAKE} prereq && ${MAKE} regen && ${MAKE} all
 
-copyright: recurse-copyright
-	@if ${NOTEMPTY} "${_TSRCS}"; then						\
-		${ECHORUN} ${ROOTDIR}/tools/gencopyright.sh ${_TSRCS};			\
-	fi
-	@find . -mindepth 2 -name '*.h' | xargs -r ${ECHORUN} ${ROOTDIR}/tools/gencopyright.sh
+copyright:
+	@find . \( -name '*.[chyl]' -o -name '*.[0-9]' -o -name '*.pl' -o $(		\
+	    ) -name '*.sh' -o -name '*.mk' -o -name Makefile \) $(			\
+	    ) -exec ${ECHORUN} ${ROOTDIR}/tools/gencopyright.sh {} \;
 
 doc: recurse-doc
 	@if ${NOTEMPTY} "${MAN}"; then							\
