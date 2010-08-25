@@ -96,8 +96,6 @@
 # define PSCPRIuINOT		"u"
 #endif
 
-#ifdef PLEASE_FIX_THIS
-
 #ifndef _BYTE_ORDER
 # ifdef BYTE_ORDER
 #  define _BYTE_ORDER		BYTE_ORDER
@@ -110,17 +108,10 @@
 # endif
 #endif
 
-
 #if _BYTE_ORDER == _LITTLE_ENDIAN
+# define PFL_LITTLE_ENDIAN
 #elif _BYTE_ORDER == _BIG_ENDIAN
 # define PFL_BIG_ENDIAN
-
-#endif
-
-#else
-
-# define PFL_LITTLE_ENDIAN
-
 #endif
 
 #if !defined(PFL_LITTLE_ENDIAN) && !defined(PFL_BIG_ENDIAN)
