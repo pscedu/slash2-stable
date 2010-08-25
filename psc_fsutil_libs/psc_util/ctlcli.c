@@ -918,7 +918,7 @@ psc_ctlcli_main(const char *osockfn, int ac, char *av[],
     const struct psc_ctlopt *otab, int notab)
 {
 	extern const char *progname;
-	char optstr[LINE_MAX], chbuf[2], sockfn[PATH_MAX];
+	char optstr[LINE_MAX], chbuf[3], sockfn[PATH_MAX];
 	struct psc_thread *thr;
 	struct sockaddr_un sun;
 	const char *prg;
