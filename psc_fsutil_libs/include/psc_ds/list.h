@@ -34,6 +34,8 @@ struct psclist_head {
 	struct psclist_head *zprev;
 };
 
+//#define psclist_entry psclist_head
+
 #define PSCLIST_HEAD_INIT(name)		{ &(name), &(name) }
 #define PSCLIST_ENTRY_INIT		{ NULL, NULL }
 
