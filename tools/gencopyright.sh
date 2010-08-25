@@ -45,7 +45,7 @@ foreach my $ln (@out) {
 }
 
 $startyr = $1 if $data =~
-    m{Copyright \(c\) (\d+)(?:-\d+)?, Pittsburgh Supercomputing Center \(PSC\)\.};
+    m{Copyright \(c\) (\d+)(?:-\d+)?,? Pittsburgh Supercomputing Center \(PSC\)\.};
 
 my $endyr = 1900 + (localtime((stat $ARGV)[9]))[5];
 $endyr = $1 if $data =~ m{\A(?:.*\n)?.*\$Id: \Q$bn\E \d+ (\d+)-}m;
@@ -72,7 +72,7 @@ if ($data =~ m{^(.*) %PSC_(START_)?COPYRIGHT%}m) {
 	}
 }
 
-$data =~ s{/^(.*) %PSC_COPYRIGHT%.*\n}{<<EOF2}me;
+$data =~ s{^(.*)\s*%PSC_COPYRIGHT%.*}{<<EOF2}me;
 $d_start$d_cont %PSC_START_COPYRIGHT%
 $d_cont -----------------------------------------------------------------------------
 $d_cont -----------------------------------------------------------------------------
@@ -87,7 +87,7 @@ $data =~ s
 }
 {$d_start$d_cont %PSC_START_COPYRIGHT%
 $d_cont -----------------------------------------------------------------------------
-$d_cont Copyright (c) $cpyears, Pittsburgh Supercomputing Center (PSC).
+$d_cont Copyright (c) $cpyears Pittsburgh Supercomputing Center (PSC).
 $d_cont
 $d_cont Permission to use, copy, and modify this software and its documentation
 $d_cont without fee for personal use or non-commercial use within your organization
