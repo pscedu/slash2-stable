@@ -77,34 +77,34 @@ LIBAIO=		-laio
 OSTYPE:=	$(shell uname)
 
 # global file-specific settings
-psc_fsutil_libs_psc_util_crc_c_CFLAGS=		-O2 -g0
-psc_fsutil_libs_psc_util_parity_c_CFLAGS=	-O2 -g0
+$(call ADD_FILE_CFLAGS,${PFL_BASE}/psc_util/crc.c,			-O2 -g0)
+$(call ADD_FILE_CFLAGS,${PFL_BASE}/psc_util/parity.c,			-O2 -g0)
 
-lnet_lite_ulnds_socklnd_conn_c_CFLAGS=		-DPSC_SUBSYS=PSS_LNET -Wno-shadow
-lnet_lite_ulnds_socklnd_handlers_c_CFLAGS=	-DPSC_SUBSYS=PSS_LNET -Wno-shadow
-lnet_lite_ulnds_socklnd_poll_c_CFLAGS=		-DPSC_SUBSYS=PSS_LNET -Wno-shadow
-lnet_lite_ulnds_socklnd_usocklnd_c_CFLAGS=	-DPSC_SUBSYS=PSS_LNET -Wno-shadow
-lnet_lite_ulnds_socklnd_usocklnd_cb_c_CFLAGS=	-DPSC_SUBSYS=PSS_LNET -Wno-shadow
+$(call ADD_FILE_CFLAGS,${LNET_BASE}/ulnds/socklnd/conn.c,		-DPSC_SUBSYS=PSS_LNET -Wno-shadow)
+$(call ADD_FILE_CFLAGS,${LNET_BASE}/ulnds/socklnd/handlers.c,		-DPSC_SUBSYS=PSS_LNET -Wno-shadow)
+$(call ADD_FILE_CFLAGS,${LNET_BASE}/ulnds/socklnd/poll.c,		-DPSC_SUBSYS=PSS_LNET -Wno-shadow)
+$(call ADD_FILE_CFLAGS,${LNET_BASE}/ulnds/socklnd/usocklnd.c,		-DPSC_SUBSYS=PSS_LNET -Wno-shadow)
+$(call ADD_FILE_CFLAGS,${LNET_BASE}/ulnds/socklnd/usocklnd_cb.c,	-DPSC_SUBSYS=PSS_LNET -Wno-shadow)
 
-lnet_lite_libcfs_debug_c_CFLAGS=		-DPSC_SUBSYS=PSS_LNET -Wno-shadow
-lnet_lite_libcfs_nidstrings_c_CFLAGS=		-DPSC_SUBSYS=PSS_LNET -Wno-shadow
-lnet_lite_libcfs_user_lock_c_CFLAGS=		-DPSC_SUBSYS=PSS_LNET -Wno-shadow
-lnet_lite_libcfs_user_prim_c_CFLAGS=		-DPSC_SUBSYS=PSS_LNET -Wno-shadow
-lnet_lite_libcfs_user_tcpip_c_CFLAGS=		-DPSC_SUBSYS=PSS_LNET -Wno-shadow
+$(call ADD_FILE_CFLAGS,${LNET_BASE}/libcfs/debug.c,			-DPSC_SUBSYS=PSS_LNET -Wno-shadow)
+$(call ADD_FILE_CFLAGS,${LNET_BASE}/libcfs/nidstrings.c,		-DPSC_SUBSYS=PSS_LNET -Wno-shadow)
+$(call ADD_FILE_CFLAGS,${LNET_BASE}/libcfs/user-lock.c,			-DPSC_SUBSYS=PSS_LNET -Wno-shadow)
+$(call ADD_FILE_CFLAGS,${LNET_BASE}/libcfs/user-prim.c,			-DPSC_SUBSYS=PSS_LNET -Wno-shadow)
+$(call ADD_FILE_CFLAGS,${LNET_BASE}/libcfs/user-tcpip.c,		-DPSC_SUBSYS=PSS_LNET -Wno-shadow)
 
-lnet_lite_lnet_acceptor_c_CFLAGS=		-DPSC_SUBSYS=PSS_LNET -Wno-shadow
-lnet_lite_lnet_api_errno_c_CFLAGS=		-DPSC_SUBSYS=PSS_LNET -Wno-shadow
-lnet_lite_lnet_api_ni_c_CFLAGS=			-DPSC_SUBSYS=PSS_LNET -Wno-shadow
-lnet_lite_lnet_config_c_CFLAGS=			-DPSC_SUBSYS=PSS_LNET -Wno-shadow
-lnet_lite_lnet_lib_eq_c_CFLAGS=			-DPSC_SUBSYS=PSS_LNET -Wno-shadow
-lnet_lite_lnet_lib_md_c_CFLAGS=			-DPSC_SUBSYS=PSS_LNET -Wno-shadow
-lnet_lite_lnet_lib_me_c_CFLAGS=			-DPSC_SUBSYS=PSS_LNET -Wno-shadow
-lnet_lite_lnet_lib_move_c_CFLAGS=		-DPSC_SUBSYS=PSS_LNET -Wno-shadow
-lnet_lite_lnet_lib_msg_c_CFLAGS=		-DPSC_SUBSYS=PSS_LNET -Wno-shadow
-lnet_lite_lnet_lo_c_CFLAGS=			-DPSC_SUBSYS=PSS_LNET -Wno-shadow
-lnet_lite_lnet_peer_c_CFLAGS=			-DPSC_SUBSYS=PSS_LNET -Wno-shadow
-lnet_lite_lnet_router_c_CFLAGS=			-DPSC_SUBSYS=PSS_LNET -Wno-shadow
-lnet_lite_lnet_router_proc_c_CFLAGS=		-DPSC_SUBSYS=PSS_LNET -Wno-shadow
+$(call ADD_FILE_CFLAGS,${LNET_BASE}/lnet/acceptor.c,			-DPSC_SUBSYS=PSS_LNET -Wno-shadow)
+$(call ADD_FILE_CFLAGS,${LNET_BASE}/lnet/api-errno.c,			-DPSC_SUBSYS=PSS_LNET -Wno-shadow)
+$(call ADD_FILE_CFLAGS,${LNET_BASE}/lnet/api-ni.c,			-DPSC_SUBSYS=PSS_LNET -Wno-shadow)
+$(call ADD_FILE_CFLAGS,${LNET_BASE}/lnet/config.c,			-DPSC_SUBSYS=PSS_LNET -Wno-shadow)
+$(call ADD_FILE_CFLAGS,${LNET_BASE}/lnet/lib-eq.c,			-DPSC_SUBSYS=PSS_LNET -Wno-shadow)
+$(call ADD_FILE_CFLAGS,${LNET_BASE}/lnet/lib-md.c,			-DPSC_SUBSYS=PSS_LNET -Wno-shadow)
+$(call ADD_FILE_CFLAGS,${LNET_BASE}/lnet/lib-me.c,			-DPSC_SUBSYS=PSS_LNET -Wno-shadow)
+$(call ADD_FILE_CFLAGS,${LNET_BASE}/lnet/lib-move.c,			-DPSC_SUBSYS=PSS_LNET -Wno-shadow)
+$(call ADD_FILE_CFLAGS,${LNET_BASE}/lnet/lib-msg.c,			-DPSC_SUBSYS=PSS_LNET -Wno-shadow)
+$(call ADD_FILE_CFLAGS,${LNET_BASE}/lnet/lo.c,				-DPSC_SUBSYS=PSS_LNET -Wno-shadow)
+$(call ADD_FILE_CFLAGS,${LNET_BASE}/lnet/peer.c,			-DPSC_SUBSYS=PSS_LNET -Wno-shadow)
+$(call ADD_FILE_CFLAGS,${LNET_BASE}/lnet/router.c,			-DPSC_SUBSYS=PSS_LNET -Wno-shadow)
+$(call ADD_FILE_CFLAGS,${LNET_BASE}/lnet/router_proc.c,			-DPSC_SUBSYS=PSS_LNET -Wno-shadow)
 
 # system-specific settings/overrides
 ifneq ($(wildcard /opt/sgi),)
