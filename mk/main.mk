@@ -375,7 +375,7 @@ build:
 	${MAKE} clean && ${MAKE} prereq && ${MAKE} regen && ${MAKE} all
 
 copyright:
-	@find . \( -name '*.[chyl]' -o -name '*.[0-9]' -o -name '*.pl' -o $(		\
+	@find . -type f \( -name '*.[chyl]' -o -name '*.[0-9]' -o -name '*.pl' -o $(	\
 	    ) -name '*.sh' -o -name '*.mk' -o -name Makefile \) $(			\
 	    ) -exec ${ECHORUN} ${ROOTDIR}/tools/gencopyright.sh {} \;
 
