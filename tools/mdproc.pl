@@ -34,9 +34,9 @@ sub get_unless_last_rev {
 		    ($ln =~ /^r(\d+) \s+ \| \s+ (?:\w+) \s+ \| \s+
 		    (\d+)-(\d+)-0*(\d+) \s+ (\d+):(\d+):(\d+)/x) or next;
 
-		# if this revision solely comprised a date bump, ignore
+		# if this revision solely was comprised of comments or date bump, ignore
 		my $prev_rev = $t_rev - 1;
-		my $t_out = `svn diff -r $prev_rev:$t_rev --diff-cmd=diff -x '-I.Dd ' '$fn'`;
+		my $t_out = `svn diff -r $prev_rev:$t_rev --diff-cmd=diff -x '-I^\\.Dd ' -x '-I^\\.\\\\"' '$fn'`;
 		my $cnt = ($t_out =~ tr/\n//);
 
 		next unless $cnt > 2;
@@ -60,7 +60,7 @@ sub slurp {
 my ($d, $m, $y, $sm);
 
 foreach my $fn (@ARGV) {
-	my $out = `svn diff --diff-cmd=diff -x '-I\$Id' '$fn'`;
+	my $out = `svn diff --diff-cmd=diff -x '-I\$Id' -x '-I^\\.\\\\"' '$fn'`;
 	my $cnt = ($out =~ tr/\n//);
 	my $data;
 
