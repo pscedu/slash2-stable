@@ -60,6 +60,7 @@ my $in_enum = 0;
 foreach my $hdr (@hdrs) {
 	open HDR, "<", $hdr or die "$hdr: $!\n";
 	while (<HDR>) {
+		s{/\*.*?\*/}{}g;
 		if ($lvl) {
 			$lvl++ if /^\s*#\s*if/;
 			$lvl-- if /^\s*#\s*endif/;
