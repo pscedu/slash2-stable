@@ -1,6 +1,21 @@
 #!/bin/sh
 # $Id$
-# %PSC_COPYRIGHT%
+# %PSC_START_COPYRIGHT%
+# -----------------------------------------------------------------------------
+# Copyright (c) 2009-2010 Pittsburgh Supercomputing Center (PSC).
+#
+# Permission to use, copy, and modify this software and its documentation
+# without fee for personal use or non-commercial use within your organization
+# is hereby granted, provided that the above copyright notice is preserved in
+# all copies and that the copyright and this permission notice appear in
+# supporting documentation.  Permission to redistribute this software to other
+# organizations or individuals is not permitted without the written permission
+# of the Pittsburgh Supercomputing Center.  PSC makes no representations about
+# the suitability of this software for any purpose.  It is provided "as is"
+# without express or implied warranty.
+# -----------------------------------------------------------------------------
+# %PSC_END_COPYRIGHT%
+
 
 usage()
 {
@@ -72,7 +87,7 @@ if ($data =~ m{^(.*) %PSC_(START_)?COPYRIGHT%}m) {
 	}
 }
 
-$data =~ s{^(.*)\s*%PSC_COPYRIGHT%.*}{<<EOF2}me;
+$data =~ s{^(.*)\s*%PSC_COPYRIGHT%.*\n}{<<EOF2}me;
 $d_start$d_cont %PSC_START_COPYRIGHT%
 $d_cont -----------------------------------------------------------------------------
 $d_cont -----------------------------------------------------------------------------
@@ -82,12 +97,12 @@ EOF2
 $data =~ s
 {\Q$d_start$d_cont\E %PSC_START_COPYRIGHT%
 \Q$d_cont\E -----------------------------------------------------------------------------.*?
-\Q$d_cont\E -----------------------------------------------------------------------------(.*?)
+\Q$d_cont\E -----------------------------------------------------------------------------(.*)
 \Q$d_cont\E %PSC_END_COPYRIGHT%\Q$d_end\E
 }
 {$d_start$d_cont %PSC_START_COPYRIGHT%
 $d_cont -----------------------------------------------------------------------------
-$d_cont Copyright (c) $cpyears Pittsburgh Supercomputing Center (PSC).
+$d_cont Copyright (c) $cpyears, Pittsburgh Supercomputing Center (PSC).
 $d_cont
 $d_cont Permission to use, copy, and modify this software and its documentation
 $d_cont without fee for personal use or non-commercial use within your organization
