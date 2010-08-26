@@ -290,10 +290,6 @@ pjournal_add_entry(struct psc_journal *pj, uint64_t txg, int type, void *buf, in
 	struct psc_journal_xidhndl *xh;
 	struct psc_journal_enthdr *pje;
 
-	/* should be good in practice, but I have no control when ZFS commits */
-	if (txg == 0)
-		txg = pj->pj_commit_txg;
-
 	xh = pjournal_xnew(pj);
 	xh->pjx_txg = txg;
 	xh->pjx_flags = PJX_NONE;
