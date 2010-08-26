@@ -2,7 +2,7 @@
 # $Id$
 # %PSC_START_COPYRIGHT%
 # -----------------------------------------------------------------------------
-# Copyright (c) 2009-2010 Pittsburgh Supercomputing Center (PSC).
+# Copyright (c) 2009-2010, Pittsburgh Supercomputing Center (PSC).
 #
 # Permission to use, copy, and modify this software and its documentation
 # without fee for personal use or non-commercial use within your organization
@@ -87,7 +87,7 @@ if ($data =~ m{^(.*) %PSC_(START_)?COPYRIGHT%}m) {
 	}
 }
 
-$data =~ s{^(.*)\s*%PSC_COPYRIGHT%.*\n}{<<EOF2}me;
+$data =~ s{^(.*)\s*%PSC_()COPYRIGHT%.*\n}{<<EOF2}me;
 $d_start$d_cont %PSC_START_COPYRIGHT%
 $d_cont -----------------------------------------------------------------------------
 $d_cont -----------------------------------------------------------------------------
