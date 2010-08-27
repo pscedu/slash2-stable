@@ -40,13 +40,13 @@
 #define STARTWATCH(t) PFL_GETTIMEVAL(&(t)[0])
 #define STOPWATCH(t)  PFL_GETTIMEVAL(&(t)[1])
 
-TEST_LOCK_TYPE lock = TEST_LOCK_INITIALIZER;
-atomic_t idx = ATOMIC_INIT(0);
-atomic_t nworkers = ATOMIC_INIT(0);
-int nthrs = 32;
-int nruns = 4000;
-int *buf;
-const char *progname;
+TEST_LOCK_TYPE	 lock = TEST_LOCK_INITIALIZER;
+atomic_t	 idx = ATOMIC_INIT(0);
+atomic_t	 nworkers = ATOMIC_INIT(0);
+int		 nthrs = 32;
+int		 nruns = 4000;
+int		*buf;
+const char	*progname;
 
 __dead void
 usage(void)
