@@ -18,7 +18,6 @@ HDRCLEAN=	${ROOTDIR}/tools/hdrclean.pl
 LIBDEP=		${ROOTDIR}/tools/libdep.pl
 MDPROC=		${ROOTDIR}/tools/mdproc.pl
 MINVER=		${ROOTDIR}/tools/minver.pl
-MYECHO=		${ROOTDIR}/tools/myecho.pl
 PCPP=		PERL5LIB=${PERL5LIB}:${CROOTDIR}/tools/lib ${CROOTDIR}/tools/pcpp.pl
 PICKLEGEN=	${ROOTDIR}/tools/pickle-gen.sh
 

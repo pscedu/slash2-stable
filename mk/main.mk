@@ -283,7 +283,7 @@ ifdef HASDEPS
   ifdef PROG
     ${PROG}: ${OBJS}
 	${CC} -o $@ ${OBJS} ${LDFLAGS}
-	@${MYECHO} -n "${PROG}:" > ${DEPEND_FILE}
+	@printf "%s" "${PROG}:" > ${DEPEND_FILE}
 	@${LIBDEP} ${LDFLAGS} ${LIBDEP_ADD} >> ${DEPEND_FILE}
   endif
 
