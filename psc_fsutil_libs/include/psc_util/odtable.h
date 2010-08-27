@@ -169,7 +169,7 @@ odtable_createmmap(struct odtable *odt)
 static __inline int
 odtable_freemap(struct odtable *odt)
 {
-	int rc;
+	int rc = 0;
 
 	if (odt->odt_base)
 		rc = munmap(odt->odt_base, ODTABLE_MAPSZ(odt));
