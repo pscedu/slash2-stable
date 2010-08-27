@@ -1,5 +1,6 @@
 #!/bin/sh
 # $Id$
+# %PSC_COPYRIGHT%
 
 getopts "f" opt
 
