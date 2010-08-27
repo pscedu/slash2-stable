@@ -439,6 +439,8 @@ psc_ctlmsg_error_prdat(__unusedx const struct psc_ctlmsghdr *mh,
 {
 	const struct psc_ctlmsg_error *pce = m;
 
+	if (psc_ctl_lastmsgtype != mh->mh_type)
+		fprintf(stderr, "\n");
 	warnx("%s", pce->pce_errmsg);
 }
 
