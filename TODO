@@ -40,7 +40,7 @@ pfl
 - for psclog(), add extensibility mechanism for fmtstr,
   allowing app-specific callbacks (e.g. %r for zest clients)
 - add a pscthr_get() check in pscalloc and test
-- psclog format specifier: timestamp difference
+- psclog format specifier: relative log timestamp difference
 - investigate proper control socket permissions checks in ctlapi.
   regular users should be able to read some stats but only root users
   should be able to issue exit commands, etc.  TCP sockets should
@@ -67,6 +67,9 @@ pfl
     PSC_CTLRET_BAIL - drop the connection
 
   give them obscure values (42,43) and ensure they are returned
+
+  better way: if psc_ctlmsg_send() fails, use setjmp to exit call stack
+  return to after ctl loop
 - rename bitflag.h -> bit.h
 - let caller worry about memory for vbitmaps, don't return pointers
 - bail if multiwait_addcond() fails, its a mem condition (dynarray)
@@ -76,12 +79,10 @@ pfl
   decrease pool size
 - make the timer thread track a global timeval which other threads can
   use up to second resolution to ease syscalls
-- add relative (to previous log) timestamps to psclog
-- do enums in typedump
 - consolidate naming conventions for initializers:
-	LOCK_INITIALIZER
-	DYNARRAY_INIT
-	PSC_WAITQ_INIT
+	LOCK_INITIALIZER -> LOCK_INIT
+	LOCK_INIT() -> INIT_SPINLOCK()
+	PSC_WAITQ_INIT -> WAITQ_INIT
 - simplify ctlapi return by not having pass an rc.  if write() fails,
   then read() will fail and it will solve itself the same way.
 - put lnet copyright on pscrpc files
@@ -95,7 +96,6 @@ replwkrq|A--|  256|   0|  256|   0%|  256| <inf>|80|   256|     0|  0|  0
 slab    |A--|    0| 128|  128| 100%|   64|   128|80|   128|     0|  0|  0
 fcmh    |---|32766|   2|32768|0.01%|    -|     -| -|     -|     -|  0|  0
 bmap    |A--|   62|   2|   64|3.12%|   64| <inf>|80|    64|     0|  0|  0
-
 
 development tool
 - let wiki changes automatically email zest/slash2-devel@ like svn commits
