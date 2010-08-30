@@ -88,7 +88,6 @@ pfl
 - put lnet copyright on pscrpc files
 - add a superstructure for listcache member entry and store the owning
   listguts and sanity check membership on removal
-- merge extra header line on ctl displays into columnal view
 
 mem pool|flg|#free|#use|total| %use|  min|   max|th|#grows|#shrnx|#em|#wa
 --------+---+-----+----+-----+-----+-----+------+--+------+------+---+---
