@@ -76,7 +76,7 @@ psc_subsys_register(int ssid, const char *name)
 
 	snprintf(buf, sizeof(buf), "PSC_LOG_LEVEL_%s", name);
 	p = getenv(buf);
-	if (p && (ss->pss_loglevel = psc_loglevel_getid(buf)) !=
+	if (p && (ss->pss_loglevel = psc_loglevel_getid(p)) !=
 	    PNLOGLEVELS) {
 	} else if (p) {
 		errno = 0;
