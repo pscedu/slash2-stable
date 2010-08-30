@@ -76,14 +76,18 @@ psc_subsys_register(int ssid, const char *name)
 
 	snprintf(buf, sizeof(buf), "PSC_LOG_LEVEL_%s", name);
 	p = getenv(buf);
-	if (p) {
+	if (p && (ss->pss_loglevel = psc_loglevel_getid(buf)) !=
+	    PNLOGLEVELS) {
+	} else if (p) {
 		errno = 0;
 		endp = NULL;
 		l = strtol(p, &endp, 10);
 		if (endp == p || *endp != '\0' ||
-		    l < 0 || l >= PNLOGLEVELS)
-			err(1, "invalid log level env: %s", p);
-		ss->pss_loglevel = (int)l;
+		    l < 0 || l >= PNLOGLEVELS) {
+			warnx("invalid log level env: %s", p);
+			ss->pss_loglevel = psc_log_getlevel_global();
+		} else
+			ss->pss_loglevel = (int)l;
 	} else
 		ss->pss_loglevel = psc_log_getlevel_global();
 
