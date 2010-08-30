@@ -711,8 +711,8 @@ psc_ctlmsg_loglevel_prhdr(__unusedx struct psc_ctlmsghdr *mh,
 {
 	int n;
 
-	n = printf("%-*s ", PSC_THRNAME_MAX, "thread");
-	printf("%*s ", PSC_THRNAME_MAX - n, "loglevel:");
+	printf("thread %*s", PSC_THRNAME_MAX - strlen("thread"),
+	    "loglevel:");
 	for (n = 0; n < psc_ctl_nsubsys; n++)
 		printf(" %*s", psc_ctl_loglevel_namelen(n),
 		    psc_ctl_subsys_names[n]);
