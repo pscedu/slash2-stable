@@ -272,6 +272,7 @@ _psclogv(const char *fn, const char *func, int line, int subsys,
 	if (options & PLO_ERRNO)
 		fprintf(stderr, ": %s", APP_STRERROR(save_errno));
 	fprintf(stderr, "%s", psclog_eol);
+	fflush(stderr);
 	PSCLOG_UNLOCK();
 
 	if (level == PLL_FATAL) {
