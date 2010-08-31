@@ -99,13 +99,13 @@ psclog_setdatamem(struct psclog_data *d)
 	psc_logdata = d;
 }
 
-int
+enum psclog_level
 psc_log_getlevel_global(void)
 {
 	return (psc_loglevel);
 }
 
-__weak int
+__weak enum psclog_level
 psc_log_getlevel_ss(__unusedx int subsys)
 {
 	return (psc_log_getlevel_global());
