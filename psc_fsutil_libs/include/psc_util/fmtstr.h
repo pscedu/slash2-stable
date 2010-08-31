@@ -24,37 +24,37 @@
 
 #include "psc_util/alloc.h"
 
+extern __thread char	*pfl_fmtstr_buf;
+extern __thread size_t	 pfl_fmtstr_len;
+
 #define FMTSTRCASE(ch, buf, siz, convfmt, ...)				\
-	case ch: {							\
-		size_t _len;						\
-									\
-		_len = _t - _p + strlen(convfmt) + 1;			\
-		if (_len > _tfmt_len && (_tfmt_new =			\
-		    psc_realloc(_tfmt, _len,				\
+	case ch:							\
+		_tlen = _t - _p + strlen(convfmt) + 1;			\
+		if (_tlen > pfl_fmtstr_len && (_tfmt_new =		\
+		    psc_realloc(pfl_fmtstr_buf, _tlen,			\
 		    PAF_CANFAIL | PAF_NOLOG)) == NULL)			\
 			_twant = -1;					\
 		else {							\
-			_tfmt = _tfmt_new;				\
-			_tfmt_len = _len;				\
+			pfl_fmtstr_buf = _tfmt_new;			\
+			pfl_fmtstr_len = _tlen;				\
 									\
-			if ((_twant = snprintf(_tfmt, _len, "%.*s%s",	\
-			    (int)(_t - _p), _p, convfmt) != -1))	\
+			_twant = snprintf(pfl_fmtstr_buf, _tlen,	\
+			    "%.*s%s", (int)(_t - _p), _p, convfmt);	\
+			if (_twant != -1)				\
 				_twant = snprintf(_s, buf + siz - _s,	\
-				    _tfmt, ## __VA_ARGS__);		\
+				    pfl_fmtstr_buf, ## __VA_ARGS__);	\
 		}							\
-		break;							\
-	}
+		break;
 
 #define FMTSTR(buf, siz, fmt, cases)					\
 	({								\
-		const char *_p, *_t;					\
-		char *_s, *_tfmt, *_tfmt_new;				\
 		int _want, _twant, _sawch;				\
-		size_t _tfmt_len;					\
+		char *_s, *_tfmt_new;					\
+		const char *_p, *_t;					\
+		size_t _tlen;						\
 									\
 		_s = buf;						\
-		_tfmt = _tfmt_new = NULL;				\
-		_tfmt_len = 0;						\
+		_tfmt_new = NULL;					\
 		for (_p = fmt; *_p != '\0'; _p++) {			\
 			_sawch = 0;					\
 			if (*_p == '%') {				\
@@ -103,6 +103,5 @@
 		 */							\
 		if (siz > 0)						\
 			*_s = '\0';					\
-		free(_tfmt);						\
 		_want;							\
 	})

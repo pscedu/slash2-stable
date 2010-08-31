@@ -24,16 +24,17 @@
 #include <string.h>
 #include <unistd.h>
 
+#include "pfl/cdefs.h"
 #include "pfl/pfl.h"
 #include "psc_util/alloc.h"
 #include "psc_util/atomic.h"
-#include "pfl/cdefs.h"
 #include "psc_util/lock.h"
 #include "psc_util/log.h"
 
-psc_spinlock_t psc_umask_lock = LOCK_INITIALIZER;
-extern long pscPageSize;
-extern char **environ;
+psc_spinlock_t	  psc_umask_lock = LOCK_INITIALIZER;
+extern long	  pscPageSize;
+__thread char	 *pfl_fmtstr_buf;
+__thread size_t	 *pfl_fmtstr_len;
 
 __weak void
 pscthrs_init(void)
