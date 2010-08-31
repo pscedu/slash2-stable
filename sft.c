@@ -34,6 +34,7 @@ MPI_Group world;
 #endif
 
 #include "pfl/cdefs.h"
+#include "pfl/pfl.h"
 #include "pfl/types.h"
 #include "psc_util/alloc.h"
 #include "psc_util/crc.h"
@@ -53,7 +54,7 @@ const char *progname;
 __dead void
 usage(void)
 {
-	fprintf(stderr, "usage: %s [-cdn] [-f filename]\n"
+	fprintf(stderr, "usage: %s [-cd] [-b bufsz] [-f filename]\n"
 		"\t -d (enable debugging output)\n"
 		"\t -c (enable MD5 checksummming)\n"
 		"\t -f filename (specify the filename to read)\n", progname);
@@ -102,14 +103,18 @@ sft_parallel_finalize(void)
 int
 main(int argc, char *argv[])
 {
-	int c, fd;
-	struct stat stb;
 	ssize_t rem, szrc;
+	struct stat stb;
 	size_t tmp;
+	int c, fd;
 
+	pfl_init();
 	progname = argv[0];
-	while ((c = getopt(argc, argv, "dhcn:f:")) != -1)
+	while ((c = getopt(argc, argv, "b:cdf:")) != -1)
 		switch (c) {
+		case 'b':
+			bufsz = strtol(optarg, NULL, 10);
+			break;
 		case 'c':
 			crc = 1;
 			PSC_CRC64_INIT(&filecrc);
@@ -119,9 +124,6 @@ main(int argc, char *argv[])
 			break;
 		case 'f':
 			file = optarg;
-			break;
-		case 'b':
-			bufsz = strtol(optarg, NULL, 10);
 			break;
 		default:
 			usage();
