@@ -33,8 +33,6 @@
 
 psc_spinlock_t	  psc_umask_lock = LOCK_INITIALIZER;
 extern long	  pscPageSize;
-__thread char	 *pfl_fmtstr_buf;
-__thread size_t	 *pfl_fmtstr_len;
 
 __weak void
 pscthrs_init(void)
