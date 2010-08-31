@@ -21,6 +21,7 @@
 #include <inttypes.h>
 
 #include "pfl/cdefs.h"
+#include "pfl/pfl.h"
 #include "psc_util/alloc.h"
 
 #include "fio_sym.h"
@@ -987,6 +988,7 @@ main(int argc, char *argv[])
 
 	TOTAL_PES = 0;
 
+	pfl_init();
 	if (argc == 1) {
 		/* make sure that a configuration file is provided via redirection */
 		fstat(STDIN_FILENO, &sbuf);
@@ -998,6 +1000,12 @@ main(int argc, char *argv[])
 
 	while (((c = getopt(argc, argv, "dDi:o:")) != -1))
 		switch (c) {
+		case 'D':
+			fio_lexyacc_debug = 1;
+			break;
+		case 'd':
+			fio_global_debug = 1;
+			break;
 		case 'i':
 			fd = open(optarg, O_RDONLY);
 			if (fd < 0)
@@ -1008,12 +1016,6 @@ main(int argc, char *argv[])
 		case 'o':
 			stderr_redirect     = 1;
 			stderr_fnam_prefix  = strdup(optarg);
-			break;
-		case 'd':
-			fio_global_debug = 1;
-			break;
-		case 'D':
-			fio_lexyacc_debug = 1;
 			break;
 		default:
 			usage();
