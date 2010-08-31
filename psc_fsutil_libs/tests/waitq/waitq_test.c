@@ -30,6 +30,7 @@
 #include "pfl/cdefs.h"
 #include "pfl/pfl.h"
 #include "psc_util/alloc.h"
+#include "psc_util/fmtstr.h"
 #include "psc_util/lock.h"
 #include "psc_util/log.h"
 #include "psc_util/thread.h"
@@ -50,6 +51,7 @@ usage(void)
 void
 child_main(struct psc_thread *thr)
 {
+	char buf[40];
 	int i;
 
 	/*
@@ -58,6 +60,12 @@ child_main(struct psc_thread *thr)
 	psc_waitq_wait(&waitq, NULL);
 
 	psc_dbg("after pseudo barrier");
+
+	/* Connect to control socket. */
+	FMTSTR(buf, sizeof(buf), "foobar%h",
+		FMTSTRCASE('h', buf, sizeof(buf), "s", "test")
+	);
+
 
 	for (i = 0; i < iterations; i++) {
 		psc_waitq_wait(&waitq, NULL);
