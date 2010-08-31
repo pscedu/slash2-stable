@@ -47,18 +47,25 @@ main(int argc, char *argv[])
 	if (argc)
 		usage();
 
+	p = PSCALLOC(128);
+	PSCFREE(p);
+
 	p = psc_alloc(24, PAF_PAGEALIGN);
-	psc_freen(p);
+	psc_free_aligned(p);
 
 	p = PSCALLOC(24);
 	psc_assert(p);
-	p = psc_realloc(p, 28, 0);
+	p = psc_realloc(p, 128, 0);
 	psc_assert(p);
 	PSCFREE(p);
 
 	p = psc_alloc(8, PAF_LOCK);
 	*(uint64_t *)p = 0;
-	psc_freel(p, 8);
+	psc_free_locked(p, 8);
+
+	p = psc_alloc(8, PAF_LOCK | PAF_PAGEALIGN);
+	*(uint64_t *)p = 0;
+	psc_free_locked_aligned(p, 8);
 
 	exit(0);
 }
