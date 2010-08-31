@@ -228,7 +228,6 @@ endif
 
 ifneq ($(filter ${PFL_BASE}/psc_util/log.c,${SRCS}),)
   SRCS+=	${PFL_BASE}/psc_util/alloc.c
-  SRCS+=	${PFL_BASE}/psc_util/init.c
 endif
 
 # OBJDIR is added to .c below since lex/yacc intermediate files get generated there.
