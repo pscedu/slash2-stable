@@ -96,3 +96,25 @@ psc_memnode_setkey(struct psc_memnode *pmn, int pos, void *val)
 	v[pos] = val;
 	ureqlock(&pmn->pmn_lock, locked);
 }
+
+void *
+psc_memnode_getobj(int pos, void *(*initf)(void *), void *arg)
+{
+	struct psc_memnode *pmn;
+	void *p;
+
+	pmn = psc_memnode_get();
+	p = psc_memnode_getkey(pmn, pos);
+	if (p)
+		return (p);
+	spinlock(&pmn->pmn_lock);
+	p = psc_memnode_getkey(pmn, pos);
+	if (p) {
+		freelock(&pmn->pmn_lock);
+		return (p);
+	}
+	p = initf(arg);
+	psc_memnode_setkey(pmn, pos, p);
+	freelock(&pmn->pmn_lock);
+	return (p);
+}

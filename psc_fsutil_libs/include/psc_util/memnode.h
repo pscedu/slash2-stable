@@ -32,6 +32,8 @@
 # define psc_memnode_getid()	0
 #endif
 
+#define PFL_NMEMKEYS		0
+
 struct psc_memnode {
 	psc_spinlock_t		pmn_lock;
 	struct psc_dynarray	pmn_keys;
@@ -40,7 +42,8 @@ struct psc_memnode {
 struct psc_memnode *
 	 psc_memnode_get(void);
 void	*psc_memnode_getkey(struct psc_memnode *, int);
-void	 psc_memnode_setkey(struct psc_memnode *, int, void *);
+void	*psc_memnode_getobj(int, void *(*)(void *), void *);
 void	 psc_memnode_init(void);
+void	 psc_memnode_setkey(struct psc_memnode *, int, void *);
 
 #endif /* _PFL_MEMNODE_H_ */
