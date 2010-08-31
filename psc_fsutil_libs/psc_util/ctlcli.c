@@ -910,7 +910,7 @@ psc_ctlcli_main(const char *osockfn, int ac, char *av[],
     const struct psc_ctlopt *otab, int notab)
 {
 	extern const char *progname;
-	char optstr[LINE_MAX], chbuf[3], sockfn[PATH_MAX];
+	char optstr[LINE_MAX], chbuf[3];
 	struct psc_thread *thr;
 	struct sockaddr_un sun;
 	const char *prg;
@@ -948,19 +948,18 @@ psc_ctlcli_main(const char *osockfn, int ac, char *av[],
 	}
 
 	/* Connect to control socket. */
-	FMTSTR(sockfn, sizeof(sockfn), psc_ctl_sockfn,
-		FMTSTRCASE('h', sockfn, sizeof(sockfn), "s",
-		    psclog_getdata()->pld_hostshort)
-	);
-
 	if ((psc_ctl_sock = socket(AF_UNIX, SOCK_STREAM, 0)) == -1)
 		psc_fatal("socket");
 
 	bzero(&sun, sizeof(sun));
 	sun.sun_family = AF_UNIX;
-	snprintf(sun.sun_path, sizeof(sun.sun_path), "%s", sockfn);
+
+	FMTSTR(sun.sun_path, sizeof(sun.sun_path), psc_ctl_sockfn,
+		FMTSTRCASE('h', "s", psclog_getdata()->pld_hostshort)
+	);
+
 	if (connect(psc_ctl_sock, (struct sockaddr *)&sun, sizeof(sun)) == -1)
-		err(1, "connect: %s", sockfn);
+		err(1, "connect: %s", sun.sun_path);
 
 	thr = pscthr_init(PCTHRT_RD, 0, psc_ctlcli_rd_main,
 	    NULL, 0, "%srdthr", prg);

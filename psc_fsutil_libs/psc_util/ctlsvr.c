@@ -1455,9 +1455,7 @@ psc_ctlthr_service(int fd, const struct psc_ctlop *ct, int nops,
 
 /**
  * psc_ctlacthr_main - Control thread connection acceptor.
- * @ofn: path to control socket.
- * @ct: control operations.
- * @nops: number of operations in @ct table.
+ * @thr: thread.
  */
 __dead void
 psc_ctlacthr_main(struct psc_thread *thr)
@@ -1493,7 +1491,6 @@ psc_ctlthr_main(const char *ofn, const struct psc_ctlop *ct, int nops,
 {
 	struct psc_thread *thr, *me;
 	struct sockaddr_un sun;
-	char fn[PATH_MAX];
 	mode_t old_umask;
 	const char *p;
 	size_t bufsiz;
@@ -1513,29 +1510,28 @@ psc_ctlthr_main(const char *ofn, const struct psc_ctlop *ct, int nops,
 	if ((s = socket(AF_LOCAL, SOCK_STREAM, 0)) == -1)
 		psc_fatal("socket");
 
-	/* replace literal `%h' in fn with hostname */
-	FMTSTR(fn, sizeof(fn), ofn,
-		FMTSTRCASE('h', fn, sizeof(fn), "s",
-		    psclog_getdata()->pld_hostshort)
-	);
-
 	bzero(&sun, sizeof(sun));
 	sun.sun_family = AF_LOCAL;
-	snprintf(sun.sun_path, sizeof(sun.sun_path), "%s", fn);
-	if (unlink(fn) == -1 && errno != ENOENT)
-		psc_error("unlink %s", fn);
+
+	/* replace literal `%h' in filename with hostname */
+	FMTSTR(sun.sun_path, sizeof(sun.sun_path), ofn,
+		FMTSTRCASE('h', "s", psclog_getdata()->pld_hostshort)
+	);
+
+	if (unlink(sun.sun_path) == -1 && errno != ENOENT)
+		psc_error("unlink %s", sun.sun_path);
 
 	spinlock(&psc_umask_lock);
 	old_umask = umask(S_IXUSR | S_IXGRP | S_IWOTH | S_IROTH | S_IXOTH);
 	if (bind(s, (struct sockaddr *)&sun, sizeof(sun)) == -1)
-		psc_fatal("bind %s", fn);
+		psc_fatal("bind %s", sun.sun_path);
 	umask(old_umask);
 	freelock(&psc_umask_lock);
 
 	/* XXX fchmod */
-	if (chmod(fn, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP |
+	if (chmod(sun.sun_path, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP |
 	    S_IROTH | S_IWOTH) == -1)
-		psc_fatal("chmod %s", fn); /* XXX errno */
+		psc_fatal("chmod %s", sun.sun_path); /* XXX errno */
 
 	/* Serve client connections. */
 	if (listen(s, QLEN) == -1)
