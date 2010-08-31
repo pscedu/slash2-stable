@@ -22,13 +22,11 @@
 
 #ifdef HAVE_NUMA
 
-#include <sys/types.h>
-
+#include <bitmask.h>
 #include <numa.h>
-#include <cpuset.h>
 
 struct psc_nodemask {
-	nodemask_t	pnm_mask;
+	struct bitmask	*pnm_mask;
 };
 
 #define	psc_numa_get_run_node_mask(m)				\
@@ -37,7 +35,7 @@ struct psc_nodemask {
 	} while (0)
 
 #define	psc_numa_tonodemask_memory(p, siz, m)			\
-	numa_tonodemask_memory((p), (siz), &(m)->pnm_mask)
+	numa_tonodemask_memory((p), (siz), (m)->pnm_mask)
 
 #else
 
