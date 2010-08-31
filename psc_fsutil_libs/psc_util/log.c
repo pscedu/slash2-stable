@@ -240,21 +240,21 @@ _psclogv(const char *fn, const char *func, int line, int subsys,
 
 	gettimeofday(&tv, NULL);
 	FMTSTR(prefix, sizeof(prefix), psc_logfmt,
-		FMTSTRCASE('F', prefix, sizeof(prefix), "s", func)
-		FMTSTRCASE('f', prefix, sizeof(prefix), "s", fn)
-		FMTSTRCASE('H', prefix, sizeof(prefix), "s", d->pld_hostname)
-		FMTSTRCASE('h', prefix, sizeof(prefix), "s", d->pld_hostshort)
-		FMTSTRCASE('i', prefix, sizeof(prefix), "d", thrid)
-		FMTSTRCASE('L', prefix, sizeof(prefix), "d", level)
-		FMTSTRCASE('l', prefix, sizeof(prefix), "d", line)
-		FMTSTRCASE('n', prefix, sizeof(prefix), "s", thrname)
-		FMTSTRCASE('P', prefix, sizeof(prefix), "d", ctx ? (int)ctx->pid : -1)
-		FMTSTRCASE('r', prefix, sizeof(prefix), "d", d->pld_rank)
-		FMTSTRCASE('s', prefix, sizeof(prefix), "lu", tv.tv_sec)
-		FMTSTRCASE('T', prefix, sizeof(prefix), "s", psc_subsys_name(subsys))
-		FMTSTRCASE('t', prefix, sizeof(prefix), "d", subsys)
-		FMTSTRCASE('U', prefix, sizeof(prefix), "d", ctx ? (int)ctx->uid : -1)
-		FMTSTRCASE('u', prefix, sizeof(prefix), "lu", tv.tv_usec)
+		FMTSTRCASE('F', "s", func)
+		FMTSTRCASE('f', "s", fn)
+		FMTSTRCASE('H', "s", d->pld_hostname)
+		FMTSTRCASE('h', "s", d->pld_hostshort)
+		FMTSTRCASE('i', "d", thrid)
+		FMTSTRCASE('L', "d", level)
+		FMTSTRCASE('l', "d", line)
+		FMTSTRCASE('n', "s", thrname)
+		FMTSTRCASE('P', "d", ctx ? (int)ctx->pid : -1)
+		FMTSTRCASE('r', "d", d->pld_rank)
+		FMTSTRCASE('s', "lu", tv.tv_sec)
+		FMTSTRCASE('T', "s", psc_subsys_name(subsys))
+		FMTSTRCASE('t', "d", subsys)
+		FMTSTRCASE('U', "d", ctx ? (int)ctx->uid : -1)
+		FMTSTRCASE('u', "lu", tv.tv_usec)
 	);
 
 	rc = strlcpy(fmtbuf, fmt, sizeof(fmtbuf));

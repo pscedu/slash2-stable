@@ -48,9 +48,9 @@ main(int argc, char *argv[])
 		}
 
 	FMTSTR(b, sizeof(b), "[<%a>:<%b>:<%c>]",
-		FMTSTRCASE('a', b, sizeof(b), "d", 1)
-		FMTSTRCASE('b', b, sizeof(b), "s", "foobar")
-		FMTSTRCASE('c', b, sizeof(b), "lu", 0UL)
+		FMTSTRCASE('a', "d", 1)
+		FMTSTRCASE('b', "s", "foobar")
+		FMTSTRCASE('c', "lu", 0UL)
 	);
 
 	printf("%s\n", b);
