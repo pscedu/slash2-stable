@@ -88,6 +88,8 @@ pfl
 - put lnet copyright on pscrpc files
 - add a superstructure for listcache member entry and store the owning
   listguts and sanity check membership on removal
+- mspinlock is not going to work on NUMA, use thruniqid instead of
+  int init+pthread_key
 
 mem pool|flg|#free|#use|total| %use|  min|   max|th|#grows|#shrnx|#em|#wa
 --------+---+-----+----+-----+-----+-----+------+--+------+------+---+---
