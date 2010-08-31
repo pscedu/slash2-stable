@@ -12,6 +12,7 @@ SRCS+=		fio_config_parser.y
 SRCS+=		fio_sym.c
 SRCS+=		fio_symtable.c
 SRCS+=		${PFL_BASE}/psc_util/alloc.c
+SRCS+=		${PFL_BASE}/psc_util/init.c
 SRCS+=		${PFL_BASE}/psc_util/log.c
 SRCS+=		${PFL_BASE}/psc_util/pthrutil.c
 
