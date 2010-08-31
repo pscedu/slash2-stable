@@ -109,10 +109,7 @@ struct psc_journal {
 	uint64_t			 pj_distill_xid;	/* last transaction ID distilled */
 	struct psc_journal_hdr		*pj_hdr;
 
-	psc_spinlock_t			 pj_pendinglock;
 	struct psc_lockedlist		 pj_pendingxids;
-
-	psc_spinlock_t			 pj_distilllock;
 	struct psc_lockedlist		 pj_distillxids;
 
 	struct psc_dynarray		 pj_bufs;
@@ -178,6 +175,8 @@ struct psc_journal_enthdr {
 } __packed;
 
 #define PJE_DATA(pje)			((void *)(pje)->pje_data)
+#define DATA_2_PJE(data)		((struct psc_journal_enthdr *)((char *)(data) -	\
+					    offsetof(struct psc_journal_enthdr, pje_data)))
 
 #define	PJ_PJESZ(p)			((p)->pj_hdr->pjh_entsz)
 

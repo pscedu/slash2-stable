@@ -148,8 +148,9 @@ pjournal_next_xid(struct psc_journal *pj)
 }
 
 /**
- * pjournal_next_slot - determine where to write the transaction's log.  Because we have
- *     already reserved a slot for it, we can simple write at the next slot.
+ * pjournal_next_slot - Determine where to write the transaction's log.
+ *	Because we have already reserved a slot for it, we can simple
+ *	write at the next slot.
  */
 __static void
 pjournal_next_slot(struct psc_journal_xidhndl *xh)
@@ -217,7 +218,7 @@ pjournal_reserve_slot(struct psc_journal *pj)
 {
 	struct psc_journal_xidhndl *t;
 
-	while (1) {
+	for (;;) {
 		PJ_LOCK(pj);
 		if (pj->pj_resrv + pj->pj_inuse <  pj->pj_total)
 			break;
@@ -226,7 +227,6 @@ pjournal_reserve_slot(struct psc_journal *pj)
 
 		t = pll_gethdpeek(&pj->pj_pendingxids);
 		if (!t) {
-
 			/* this should never happen in practice */
 			psc_warnx("Journal %p reservation is blocked on over-reservation: "
 			  "resrv = %d, inuse = %d", pj, pj->pj_resrv, pj->pj_inuse);
@@ -237,18 +237,19 @@ pjournal_reserve_slot(struct psc_journal *pj)
 		}
 		spinlock(&t->pjx_lock);
 		if (t->pjx_txg > pj->pj_commit_txg) {
+			uint64_t txg;
 
 			psc_warnx("Journal %p reservation is blocked on slot %d "
 			  "owned by transaction %p (xid = %"PRIx64", txg = %"PRId64")",
 			  pj, pj->pj_nextwrite, t, t->pjx_xid, t->pjx_txg);
 
+			txg = t->pjx_txg;
 			freelock(&t->pjx_lock);
 			PJ_ULOCK(pj);
-			zfsslash2_wait_synced(t->pjx_txg);
+			zfsslash2_wait_synced(txg);
 			continue;
 		}
 		if (t->pjx_flags & PJX_DISTILL) {
-
 			psc_warnx("Journal %p reservation is blocked on slot %d "
 			  "owned by transaction %p (xid = %"PRIx64", flags = 0x%x)",
 			  pj, pj->pj_nextwrite, t, t->pjx_xid, t->pjx_flags);
@@ -284,28 +285,30 @@ pjournal_unreserve_slot(struct psc_journal *pj)
  * pjournal_add_entry - Add a log entry into the journal.
  */
 void
-pjournal_add_entry(struct psc_journal *pj, uint64_t txg, int type, void *buf, int size)
+pjournal_add_entry(struct psc_journal *pj, uint64_t txg, int type,
+    void *buf, int size)
 {
-	int distilled;
 	struct psc_journal_xidhndl *xh;
 	struct psc_journal_enthdr *pje;
+	int distilled;
 
 	xh = pjournal_xnew(pj);
 	xh->pjx_txg = txg;
 	xh->pjx_flags = PJX_NONE;
-	pje = (struct psc_journal_enthdr *)(buf - offsetof(struct psc_journal_enthdr, pje_data));
+	pje = DATA_2_PJE(buf);
 	psc_assert(pje->pje_magic == PJE_MAGIC);
 
-	distilled = pjournal_logwrite(xh, type|PJE_NORMAL, pje, size);
+	distilled = pjournal_logwrite(xh, type | PJE_NORMAL, pje, size);
 	psc_assert(distilled == 0);
 }
 
 /**
- * pjournal_add_entry_distill - Add a log entry into the journal.  The log entry needs to be
- *     distilled.
+ * pjournal_add_entry_distill - Add a log entry into the journal.  The
+ *	log entry needs to be distilled.
  */
 int
-pjournal_add_entry_distill(struct psc_journal *pj, uint64_t txg, int type, void *buf, int size)
+pjournal_add_entry_distill(struct psc_journal *pj, uint64_t txg,
+    int type, void *buf, int size)
 {
 	int distilled;
 	struct psc_journal_xidhndl *xh;
@@ -314,10 +317,10 @@ pjournal_add_entry_distill(struct psc_journal *pj, uint64_t txg, int type, void 
 	xh = pjournal_xnew(pj);
 	xh->pjx_txg = txg;
 	xh->pjx_flags = PJX_DISTILL;
-	pje = (struct psc_journal_enthdr *)(buf - offsetof(struct psc_journal_enthdr, pje_data));
+	pje = DATA_2_PJE(buf);
 	psc_assert(pje->pje_magic == PJE_MAGIC);
 
-	distilled = pjournal_logwrite(xh, type|PJE_NORMAL, pje, size);
+	distilled = pjournal_logwrite(xh, type | PJE_NORMAL, pje, size);
 	return (distilled);
 }
 
@@ -326,7 +329,8 @@ pjournal_get_buf(struct psc_journal *pj, size_t size)
 {
 	struct psc_journal_enthdr *pje;
 
-	psc_assert(size <= PJ_PJESZ(pj) - offsetof(struct psc_journal_enthdr, pje_data));
+	psc_assert(size <= PJ_PJESZ(pj) -
+	    offsetof(struct psc_journal_enthdr, pje_data));
 
 	PJ_LOCK(pj);
 	while (!psc_dynarray_len(&pj->pj_bufs)) {
@@ -339,7 +343,7 @@ pjournal_get_buf(struct psc_journal *pj, size_t size)
 	psc_assert(pje);
 	PJ_ULOCK(pj);
 	pje->pje_magic = PJE_MAGIC;
-	return ((void *)((char *)pje + offsetof(struct psc_journal_enthdr, pje_data)));
+	return (PJE_DATA(pje));
 }
 
 void
@@ -347,8 +351,7 @@ pjournal_put_buf(struct psc_journal *pj, void *buf)
 {
 	struct psc_journal_enthdr *pje;
 
-	pje = (struct psc_journal_enthdr *)((char *)buf -
-	    offsetof(struct psc_journal_enthdr, pje_data));
+	pje = DATA_2_PJE(buf);
 	psc_assert(pje->pje_magic == PJE_MAGIC);
 
 	PJ_LOCK(pj);
@@ -368,13 +371,14 @@ pjournal_put_buf(struct psc_journal *pj, void *buf)
  * Returns: 0 on success, -1 on error.
  */
 __static int
-pjournal_logwrite_internal(struct psc_journal *pj, struct psc_journal_enthdr *pje, uint32_t slot)
+pjournal_logwrite_internal(struct psc_journal *pj,
+    struct psc_journal_enthdr *pje, uint32_t slot)
 {
 	int				 rc;
 	int				 ntries;
 	uint64_t			 chksum;
 
-	/* calculating the CRC checksum, excluding the checksum field itself */
+	/* calculate the CRC checksum, excluding the checksum field itself */
 	PSC_CRC64_INIT(&chksum);
 	psc_crc64_add(&chksum, pje, offsetof(struct psc_journal_enthdr, pje_chksum));
 	psc_crc64_add(&chksum, pje->pje_data, pje->pje_len);
@@ -448,11 +452,13 @@ pjournal_logwrite(struct psc_journal_xidhndl *xh, int type,
 	 * off to the distill thread.
 	 */
 	if (xh->pjx_flags & PJX_DISTILL) {
-		xh->pjx_data = (void *)pje;
+		xh->pjx_data = pje;
 		pll_addtail(&pj->pj_distillxids, xh);
+
 		spinlock(&pjournal_waitqlock);
 		psc_waitq_wakeall(&pjournal_waitq);
 		freelock(&pjournal_waitqlock);
+
 		distilled = 1;
 	}
 
@@ -667,7 +673,7 @@ pjournal_open(const char *fn)
 		pj->pj_flags |= PJF_ISBLKDEV;
 
 	else if (statbuf.st_size !=
-		 (off_t)(pjhlen + pjh->pjh_nents * PJ_PJESZ(pj))) {
+	    (off_t)(pjhlen + pjh->pjh_nents * PJ_PJESZ(pj))) {
 		psc_errorx("Size of the log file does not match specs in its header");
 		goto err;
 	}
@@ -677,17 +683,15 @@ pjournal_open(const char *fn)
 	 * filled after log replay.
 	 */
 	LOCK_INIT(&pj->pj_lock);
-	LOCK_INIT(&pj->pj_pendinglock);
-	LOCK_INIT(&pj->pj_distilllock);
 
 	pj->pj_inuse = 0;
 	pj->pj_resrv = 0;
 	pj->pj_total = pj->pj_hdr->pjh_nents;
 
 	pll_init(&pj->pj_pendingxids, struct psc_journal_xidhndl,
-		 pjx_lentry1, &pj->pj_pendinglock);
+	    pjx_lentry1, &pj->pj_lock);
 	pll_init(&pj->pj_distillxids, struct psc_journal_xidhndl,
-		 pjx_lentry2, &pj->pj_distilllock);
+	    pjx_lentry2, NULL);
 
 	psc_waitq_init(&pj->pj_waitq);
 	psc_dynarray_init(&pj->pj_bufs);
@@ -895,13 +899,12 @@ pjournal_dump(const char *fn, int verbose)
 void
 pjournal_thr_main(struct psc_thread *thr)
 {
-	char *buf;
-	uint64_t xid;
-	uint64_t txg;
-	struct psc_journalthr *pjt;
-	struct psc_journal *pj;
 	struct psc_journal_enthdr *pje;
 	struct psc_journal_xidhndl *xh;
+	struct psc_journalthr *pjt;
+	struct psc_journal *pj;
+	uint64_t xid;
+	uint64_t txg;
 
 	pjt = thr->pscthr_private;
 	pj = pjt->pjt_pj;
@@ -909,15 +912,16 @@ pjournal_thr_main(struct psc_thread *thr)
 	while (pscthr_run()) {
 		if (pj->pj_distill_handler == NULL)
 			psc_assert(pll_empty(&pj->pj_distillxids));
+
 		/*
 		 * Walk the list until we find a log entry that needs processing.
 		 */
 		while ((xh = pll_get(&pj->pj_distillxids))) {
 
 			psc_assert(xh->pjx_flags & PJX_DISTILL);
-			pje = (struct psc_journal_enthdr *) xh->pjx_data;
+			pje = xh->pjx_data;
 
-			(pj->pj_distill_handler)(pje);
+			pj->pj_distill_handler(pje);
 
 			spinlock(&xh->pjx_lock);
 			xh->pjx_flags &= ~PJX_DISTILL;
@@ -926,8 +930,7 @@ pjournal_thr_main(struct psc_thread *thr)
 			psc_assert(xid < xh->pjx_xid);
 			xid = xh->pjx_xid;
 
-			buf = (char *)pje + offsetof(struct psc_journal_enthdr, pje_data);
-			pjournal_put_buf(pj, buf);
+			pjournal_put_buf(pj, PJE_DATA(pje));
 		}
 		/*
 		 * Free committed pending transactions to avoid hogging memory.
@@ -958,13 +961,11 @@ pjournal_thr_main(struct psc_thread *thr)
 		PJ_ULOCK(pj);
 
 		spinlock(&pjournal_waitqlock);
-		if (pll_gethdpeek(&pj->pj_distillxids)) {
+		if (pll_empty(&pj->pj_distillxids))
+			/* 30 seconds is the ZFS txg sync interval */
+			psc_waitq_waitrel_s(&pjournal_waitq, &pjournal_waitqlock, 30);
+		else
 			freelock(&pjournal_waitqlock);
-			continue;
-		}
-
-		/* 30 seconds is the ZFS txg sync interval */
-		psc_waitq_waitrel_s(&pjournal_waitq, &pjournal_waitqlock, 30);
 	}
 }
 
