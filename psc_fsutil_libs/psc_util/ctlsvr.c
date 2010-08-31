@@ -1089,7 +1089,7 @@ psc_ctlparam_register(const char *oname, int (*cbf)(int, struct psc_ctlmsghdr *,
 	struct psc_ctlparam_node *pcn;
 	char *subname, *next, *name;
 
-	name = strdup(oname);
+	name = psc_strdup(oname);
 	if (name == NULL)
 		psc_fatal("strdup");
 
