@@ -120,25 +120,10 @@ pfl_dump_mode(mode_t modes)
 	printf("\n");
 }
 
-__weak int
-psc_log_getlevel(__unusedx int subsys)
-{
-	return (0);
-}
+#define psc_log_getlevel(ss)	PLL_MAX
 
-__weak void
-_psclog(__unusedx const char *fn, __unusedx const char *func,
-    __unusedx int line, __unusedx int subsys, __unusedx int level,
-    __unusedx int options, const char *fmt, ...)
-{
-	va_list ap;
-
-	va_start(ap, fmt);
-	vprintf(fmt, ap);
-	va_end(ap);
-
-	printf("\n");
-}
+#define _psclog(fn, func, ln, ss, lvl, flg, fmt, ...)			\
+	printf(fmt, ## __VA_ARGS__)
 
 void
 pfl_dump_statbuf(const struct stat *stb)
