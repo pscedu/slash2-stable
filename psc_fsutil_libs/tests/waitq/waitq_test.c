@@ -27,16 +27,16 @@
 #include <time.h>
 #include <unistd.h>
 
+#include "pfl/cdefs.h"
 #include "pfl/pfl.h"
 #include "psc_util/alloc.h"
-#include "pfl/cdefs.h"
 #include "psc_util/lock.h"
 #include "psc_util/log.h"
 #include "psc_util/thread.h"
 #include "psc_util/waitq.h"
 
-int nthreads = 1;
-int iterations = 1;
+int nthreads = 4;
+int iterations = 4;
 const char *progname;
 struct psc_waitq waitq;
 
