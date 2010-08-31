@@ -37,6 +37,8 @@ usage(void)
 int
 main(int argc, char *argv[])
 {
+	void *p;
+
 	pfl_init();
 	progname = argv[0];
 	if (getopt(argc, argv, "") != -1)
@@ -46,6 +48,9 @@ main(int argc, char *argv[])
 		usage();
 
 	psc_alloc(24, PAF_PAGEALIGN);
-	PSCALLOC(24);
+	p = PSCALLOC(24);
+
+	p = psc_realloc(p, 28, 0);
+	psc_assert(p);
 	exit(0);
 }
