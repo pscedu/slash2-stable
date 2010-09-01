@@ -96,26 +96,38 @@
 # define PSCPRIuINOT		"u"
 #endif
 
-#ifndef _BYTE_ORDER
-# ifdef BYTE_ORDER
-#  define _BYTE_ORDER		BYTE_ORDER
-#  define _LITTLE_ENDIAN	LITTLE_ENDIAN
-#  define _BIG_ENDIAN		BIG_ENDIAN
-# elif defined(__BYTE_ORDER)
-#  define _BYTE_ORDER		__BYTE_ORDER
-#  define _LITTLE_ENDIAN	__LITTLE_ENDIAN
-#  define _BIG_ENDIAN		__BIG_ENDIAN
-# endif
-#endif
-
-#if _BYTE_ORDER == _LITTLE_ENDIAN
-# define PFL_LITTLE_ENDIAN
-#elif _BYTE_ORDER == _BIG_ENDIAN
-# define PFL_BIG_ENDIAN
+#if defined(BYTE_ORDER)			/* macos */
+#  if BYTE_ORDER == LITTLE_ENDIAN
+#    define PFL_LITTLE_ENDIAN
+#  elif BYTE_ORDER == BIG_ENDIAN
+#    define PFL_BIG_ENDIAN
+#  endif
+#elif defined(_BYTE_ORDER)		/* bsd */
+#  if _BYTE_ORDER == _LITTLE_ENDIAN
+#    define PFL_LITTLE_ENDIAN
+#  elif _BYTE_ORDER == _BIG_ENDIAN
+#    define PFL_BIG_ENDIAN
+#  endif
+#elif defined(__BYTE_ORDER)		/* linux */
+#  if __BYTE_ORDER == __LITTLE_ENDIAN
+#    define PFL_LITTLE_ENDIAN
+#  elif __BYTE_ORDER == __BIG_ENDIAN
+#    define PFL_BIG_ENDIAN
+#  endif
+#elif defined(_LITTLE_ENDIAN)		/* solaris */
+#  if defined(_BIG_ENDIAN)
+#    error machine endian ambiguous
+#  endif
+#  define PFL_LITTLE_ENDIAN
+#elif defined(_BIG_ENDIAN)
+#  if defined(_LITTLE_ENDIAN)
+#    error machine endian ambiguous
+#  endif
+#    define PFL_BIG_ENDIAN
 #endif
 
 #if !defined(PFL_LITTLE_ENDIAN) && !defined(PFL_BIG_ENDIAN)
-# error "cannot determine machine endianess"
+# error cannot determine machine endianess
 #endif
 
 #include "psc_util/subsys.h"
