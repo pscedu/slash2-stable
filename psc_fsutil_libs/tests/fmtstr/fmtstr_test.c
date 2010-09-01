@@ -17,11 +17,18 @@
  * %PSC_END_COPYRIGHT%
  */
 
+#include <sys/types.h>
+#include <sys/stat.h>
+
+#include <fcntl.h>
 #include <limits.h>
 #include <stdio.h>
 #include <unistd.h>
 
 #include "pfl/cdefs.h"
+#include "pfl/fcntl.h"
+#include "pfl/pfl.h"
+#include "pfl/stat.h"
 #include "psc_util/fmtstr.h"
 #include "psc_util/log.h"
 
@@ -38,6 +45,7 @@ int
 main(int argc, char *argv[])
 {
 	char b[LINE_MAX];
+	struct stat stb;
 	int ch;
 
 	progname = argv[0];
@@ -46,6 +54,9 @@ main(int argc, char *argv[])
 		default:
 			usage();
 		}
+	argc -= optind;
+	if (argc)
+		usage();
 
 	FMTSTR(b, sizeof(b), "[<%a>:<%b>:<%c>]",
 		FMTSTRCASE('a', "d", 1)
@@ -54,5 +65,11 @@ main(int argc, char *argv[])
 	);
 
 	printf("%s\n", b);
+
+	pfl_dump_fflags(O_RDONLY | O_NONBLOCK);
+	psc_assert(stat(".", &stb) == 0);
+	pfl_dump_mode(stb.st_mode);
+	pfl_dump_statbuf(&stb);
+
 	exit(0);
 }
