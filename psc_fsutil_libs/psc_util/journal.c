@@ -214,6 +214,14 @@ pjournal_xnew(struct psc_journal *pj)
 }
 
 void
+pjournal_xdestroy(struct psc_journal_xidhndl *xh)
+{
+	psc_assert(psclist_disjoint(&xh->pjx_lentry1));
+	psc_assert(psclist_disjoint(&xh->pjx_lentry2));
+	PSCFREE(xh);
+}
+
+void
 pjournal_reserve_slot(struct psc_journal *pj)
 {
 	struct psc_journal_xidhndl *t;
@@ -261,7 +269,7 @@ pjournal_reserve_slot(struct psc_journal *pj)
 		}
 		pll_remove(&pj->pj_pendingxids, t);
 		freelock(&t->pjx_lock);
-		PSCFREE(t);
+		pjournal_xdestroy(t);
 		pj->pj_inuse--;
 		break;
 	}
@@ -310,7 +318,6 @@ int
 pjournal_add_entry_distill(struct psc_journal *pj, uint64_t txg,
     int type, void *buf, int size)
 {
-	int distilled;
 	struct psc_journal_xidhndl *xh;
 	struct psc_journal_enthdr *pje;
 
@@ -320,8 +327,7 @@ pjournal_add_entry_distill(struct psc_journal *pj, uint64_t txg,
 	pje = DATA_2_PJE(buf);
 	psc_assert(pje->pje_magic == PJE_MAGIC);
 
-	distilled = pjournal_logwrite(xh, type | PJE_NORMAL, pje, size);
-	return (distilled);
+	return (pjournal_logwrite(xh, type | PJE_NORMAL, pje, size));
 }
 
 void *
@@ -423,8 +429,8 @@ __static int
 pjournal_logwrite(struct psc_journal_xidhndl *xh, int type,
     struct psc_journal_enthdr *pje, int size)
 {
-	int distilled = 0;
 	struct psc_journal *pj;
+	int distilled = 0;
 
 	pj = xh->pjx_pj;
 
@@ -496,16 +502,12 @@ pjournal_xid_cmp(const void *x, const void *y)
 __static int
 pjournal_scan_slots(struct psc_journal *pj)
 {
-	int i, rc;
-	struct psc_journal_enthdr *pje;
-	uint32_t slot;
+	int i, rc, count, nopen, nscan, nmagic, nchksum, nclose;
+	struct psc_journal_enthdr *pje, *tmppje;
+	uint64_t chksum, last_xid;
 	unsigned char *jbuf;
-	int nclose;
-	struct psc_journal_enthdr *tmppje;
-	uint64_t chksum;
-	uint64_t last_xid;
 	int32_t last_slot;
-	int count, nopen, nscan, nmagic, nchksum;
+	uint32_t slot;
 
 	rc = 0;
 	last_xid = PJE_XID_NONE;
@@ -582,12 +584,12 @@ pjournal_scan_slots(struct psc_journal *pj)
 				continue;
 
 			/* Okay, we need to keep this log entry for now.  */
-			tmppje = psc_alloc(PJ_PJESZ(pj), PAF_PAGEALIGN|PAF_LOCK);
+			tmppje = psc_alloc(PJ_PJESZ(pj), PAF_PAGEALIGN | PAF_LOCK);
 			memcpy(tmppje, pje, pje->pje_len +
-				offsetof(struct psc_journal_enthdr, pje_data));
+			    offsetof(struct psc_journal_enthdr, pje_data));
 			psc_dynarray_add(&pj->pj_bufs, tmppje);
 			psc_info("tmppje=%p, type=%hu xid=%"PRId64" txg=%"PRId64,
-				 tmppje, tmppje->pje_type, tmppje->pje_xid, tmppje->pje_txg);
+			    tmppje, tmppje->pje_type, tmppje->pje_xid, tmppje->pje_txg);
 		}
 		slot += count;
 	}
@@ -603,7 +605,7 @@ pjournal_scan_slots(struct psc_journal *pj)
 
 	pj->pj_lastxid = last_xid;
 	psc_dynarray_sort(&pj->pj_bufs, qsort, pjournal_xid_cmp);
-	psc_freenl(jbuf, PJ_PJESZ(pj) * pj->pj_hdr->pjh_readahead);
+	psc_free_locked_aligned(jbuf, PJ_PJESZ(pj) * pj->pj_hdr->pjh_readahead);
 
 	nopen = psc_dynarray_len(&pj->pj_bufs);
 	psc_info("Journal statistics: %d close, %d open, %d magic, "
@@ -697,7 +699,7 @@ pjournal_open(const char *fn)
 	psc_dynarray_init(&pj->pj_bufs);
 	return (pj);
  err:
-	psc_freenl(pjh, pjhlen);
+	psc_free_locked_aligned(pjh, pjhlen);
 	PSCFREE(pj);
 	return (NULL);
 }
@@ -710,13 +712,13 @@ pjournal_open(const char *fn)
 __static void
 pjournal_release(struct psc_journal *pj)
 {
-	int				 n;
-	struct psc_journal_enthdr	*pje;
+	struct psc_journal_enthdr *pje;
+	int n;
 
 	DYNARRAY_FOREACH(pje, n, &pj->pj_bufs)
-		psc_freenl(pje, PJ_PJESZ(pj));
+		psc_free_locked_aligned(pje, PJ_PJESZ(pj));
 	psc_dynarray_free(&pj->pj_bufs);
-	psc_freenl(pj->pj_hdr, pj->pj_hdr->pjh_iolen);
+	psc_free_locked_aligned(pj->pj_hdr, pj->pj_hdr->pjh_iolen);
 	PSCFREE(pj);
 }
 
@@ -731,20 +733,18 @@ pjournal_release(struct psc_journal *pj)
 int
 pjournal_format(const char *fn, uint32_t nents, uint32_t entsz, uint32_t ra)
 {
-	int32_t				 i;
-	int				 rc;
-	int				 fd;
-	struct psc_journal		 pj;
-	struct stat			 stb;
-	struct psc_journal_enthdr	*pje;
-	struct psc_journal_hdr		 pjh;
-	unsigned char			*jbuf;
-	uint32_t			 slot;
+	struct psc_journal_enthdr *pje;
+	struct psc_journal_hdr pjh;
+	struct psc_journal pj;
+	struct stat stb;
+	unsigned char *jbuf;
+	uint32_t slot;
+	int rc, fd;
+	int32_t i;
 
-	if (nents % ra) {
-		printf("Number of slots should be a multiple of readahead.\n");
-		return (EINVAL);
-	}
+	if (nents % ra)
+		psc_fatal("number of slots (%u) should be a multiple of "
+		    "readahead (%u)", nents, ra);
 
 	memset(&pj, 0, sizeof(struct psc_journal));
 	pj.pj_hdr = &pjh;
@@ -799,7 +799,7 @@ pjournal_format(const char *fn, uint32_t nents, uint32_t entsz, uint32_t ra)
 	}
 	if (close(fd) == -1)
 		psc_fatal("failed to close journal");
-	psc_freenl(jbuf, PJ_PJESZ(&pj) * ra);
+	psc_free_locked_aligned(jbuf, PJ_PJESZ(&pj) * ra);
 	psc_info("journal %s formatted: %d slots, %d readahead, error = %d",
 	    fn, nents, ra, rc);
 	return (rc);
@@ -888,7 +888,7 @@ pjournal_dump(const char *fn, int verbose)
 	if (close(pj->pj_fd) == -1)
 		psc_fatal("failed closing journal %s", fn);
 
-	psc_freenl(jbuf, PJ_PJESZ(pj));
+	psc_free_locked_aligned(jbuf, PJ_PJESZ(pj));
 	pjournal_release(pj);
 
 	printf("%d slot(s) total, %d formatted, %d bad magic, %d bad checksum(s)\n",
@@ -954,7 +954,7 @@ pjournal_thr_main(struct psc_thread *thr)
 			}
 			pll_remove(&pj->pj_pendingxids, xh);
 			freelock(&xh->pjx_lock);
-			PSCFREE(xh);
+			pjournal_xdestroy(xh);
 			psc_assert(pj->pj_inuse > 0);
 			pj->pj_inuse--;
 		}
@@ -1016,7 +1016,7 @@ pjournal_replay(
 				nerrs++;
 		}
 #endif
-		psc_freenl(pje, PJ_PJESZ(pj));
+		psc_free_locked_aligned(pje, PJ_PJESZ(pj));
 	}
 	psc_dynarray_free(&pj->pj_bufs);
 
