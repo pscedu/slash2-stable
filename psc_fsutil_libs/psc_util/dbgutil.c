@@ -123,7 +123,10 @@ pfl_dump_mode(mode_t modes)
 #define psc_log_getlevel(ss)	PLL_MAX
 
 #define _psclog(fn, func, ln, ss, lvl, flg, fmt, ...)			\
-	printf(fmt, ## __VA_ARGS__)
+	do {								\
+		fprintf(stderr, fmt, ## __VA_ARGS__);			\
+		fprintf(stderr, "\n");					\
+	} while (0)
 
 void
 pfl_dump_statbuf(const struct stat *stb)
