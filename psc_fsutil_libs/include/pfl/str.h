@@ -40,4 +40,15 @@ int	_psc_str_hashify(const char *, int);
 
 int	pfl_strncmp2(const char *, size_t, const char *, size_t);
 
+static __inline int
+pfl_iszeros(const void *buf, size_t len)
+{
+	const char *p;
+
+	for (p = buf; p < (const char *)buf + len; p++)
+		if (*p)
+			return (0);
+	return (1);
+}
+
 #endif /* _PFL_STR_H_ */
