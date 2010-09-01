@@ -19,6 +19,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <unistd.h>
 
 #include "pfl/cdefs.h"
@@ -37,6 +38,7 @@ usage(void)
 int
 main(int argc, char *argv[])
 {
+	size_t sz;
 	void *p;
 
 	pfl_init();
@@ -63,9 +65,10 @@ main(int argc, char *argv[])
 	*(uint64_t *)p = 0;
 	psc_free_locked(p, 8);
 
-	p = psc_alloc(8, PAF_LOCK | PAF_PAGEALIGN);
-	*(uint64_t *)p = 0;
-	psc_free_locked_aligned(p, 8);
+	sz = 1024;
+	p = psc_alloc(sz, PAF_LOCK | PAF_PAGEALIGN);
+	memset(p, 0, sz);
+	psc_free_locked_aligned(p, sz);
 
 	exit(0);
 }
