@@ -49,21 +49,14 @@ typedef int (*psc_replay_handler_t)(struct psc_journal_enthdr *);
  */
 typedef int (*psc_distill_handler_t)(struct psc_journal_enthdr *);
 
-#define PJRNL_TXG_GET 0
-#define PJRNL_TXG_PUT 1
+#define PJRNL_TXG_GET			0
+#define PJRNL_TXG_PUT			1
 
 #define PJRNL_CURSOR_MAGIC		UINT64_C(0x12345678abcd1234)
 #define PJRNL_CURSOR_VERSION		1
 
 /*
- * The following SLASHIDs are automatically assigned:
- *      0       not used
- *      1       -> /
- */
-#define PJRNL_CURSOR_INIT_S2ID		2
-
-/*
- * Contents of file SL_PATH_CURSOR used to remember where we are in terms
+ * The cursor, stored on disk, is used to remember where we are in terms
  * processing the log entries.  This file lives in ZFS, so we don't need
  * do any checksum.
  */
@@ -77,7 +70,7 @@ struct psc_journal_cursor {
 	 */
 	uint64_t			 pjc_txg;	/* last synced ZFS transaction group number */
 	uint64_t			 pjc_xid;	/* last XID whose entry has been distilled */
-	uint64_t			 pjc_s2id;	/* last SLASH2 ID */
+	uint64_t			 pjc_fid;	/* last SLASH2 FID */
 	uint64_t			 pjc_seqno_lwm;	/* low water mark of last bmap sequence number */
 	uint64_t			 pjc_seqno_hwm;	/* high water mark of last bmap sequence number */
 	uint64_t			 pjc_tail;	/* tail slot of our system journal */
@@ -184,16 +177,13 @@ struct psc_journal_enthdr {
  * psc_journal_xidhndl - Journal transaction ID handle.
  * @pjx_xid: the transaction ID.
  * @pjx_sid: the xid sub-operation ID.
- * @pjx_tailslot: the address of our starting / oldest slot.
+ * @pjx_tailslot: the address of our starting/oldest slot.
  * @pjx_flags: app-specific log entry bits.
  * @pjx_lentry: open xid handles are chained in journal structure.
  * @pjx_lock: serialize.
  * @pjx_pj: backpointer to our journal.
  */
 #define	PJX_SLOT_ANY			(~0U)
-
-#define	PJX_NONE			      0
-#define	PJX_DISTILL			(1 << 0)
 
 struct psc_journal_xidhndl {
 	uint64_t			 pjx_txg;		/* associated ZFS transaction group number */
@@ -207,7 +197,10 @@ struct psc_journal_xidhndl {
 	void				*pjx_data;
 };
 
-/* Actions to be taked after open the log file */
+#define	PJX_NONE			      0
+#define	PJX_DISTILL			(1 << 0)
+
+/* Actions to be take after the journal log is open */
 #define	PJOURNAL_LOG_DUMP		1
 #define	PJOURNAL_LOG_REPLAY		2
 
