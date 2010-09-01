@@ -22,6 +22,14 @@
 
 #include "pfl/compat.h"
 
+#define PFL_PRFLAG(fl, val, seq)					\
+	do {								\
+		if ((val) & (fl)) {					\
+			pfl_print_flag(#fl, (seq));			\
+			(val) &= ~(fl);					\
+		}							\
+	} while (0)
+
 void pfl_init(void);
 
 void psc_enter_debugger(const char *);
