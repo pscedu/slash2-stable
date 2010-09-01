@@ -23,6 +23,7 @@
 #include <errno.h>
 #include <stdint.h>
 #include <stdlib.h>
+#include <stdio.h>
 #include <string.h>
 
 #include "pfl/cdefs.h"
@@ -32,7 +33,7 @@
 
 long pscPageSize;
 
-/*
+/**
  * _psc_pool_reapsome - Provide an overrideable reclaimer for when pools
  *	are not in use.
  */
@@ -41,7 +42,7 @@ _psc_pool_reapsome(__unusedx size_t size)
 {
 }
 
-/*
+/**
  * psc_realloc - Allocate or resize a chunk of memory.
  * @p: current chunk of memory to resize or NULL for new chunk.
  * @size: desired size of memory chunk.
@@ -106,8 +107,8 @@ _psc_realloc(void *p, size_t size, int flags)
 	return (newp);
 }
 
-/*
- * psc_calloc - Allocate zeroed memory.
+/**
+ * psc_calloc - Allocate zeroed memory for an array.
  * @size: size of chunk to allocate.
  * @flags: operational flags.
  */
@@ -118,45 +119,17 @@ psc_calloc(size_t num, size_t size, int flags)
 		errno = ENOMEM;
 		return (NULL);
 	}
-	return (psc_realloc(NULL, size * num, flags));
+	return (psc_alloc(size * num, flags));
 }
 
-/*
- * psc_freel - Free locked memory.
- * @p: memory chunk to free.
- * @size: size of chunk.
+/**
+ * psc_strdup - Duplicate a string, allocating memory as necessary for
+ *	duplicate.
+ * @str: original string to duplicate.
+ *
+ * Advantages of using this over strdup(2) are ties into reaping pool
+ * hogs and logging.
  */
-void
-psc_freel(void *p, size_t size)
-{
-	if (p && munlock(p, size) == -1)
-		psc_fatal("munlock %p", p);
-	PSCFREE(p);
-}
-
-/*
- * psc_freen - Free aligned memory.
- * @p: memory chunk to free.
- */
-__weak void
-psc_freen(void *p)
-{
-	PSCFREE(p);
-}
-
-/*
- * psc_freenl - Free locked aligned memory.
- * @p: memory chunk to free.
- * @size: size of chunk.
- */
-__weak void
-psc_freenl(void *p, size_t size)
-{
-	if (p && munlock(p, size) == -1)
-		psc_fatal("munlock %p", p);
-	PSCFREE(p);
-}
-
 char *
 psc_strdup(const char *str)
 {
