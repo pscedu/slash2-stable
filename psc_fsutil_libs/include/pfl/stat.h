@@ -58,7 +58,7 @@ struct stat;
 
 #define DEBUG_STATBUF(level, stb, fmt, ...)					\
 	psc_log((level),							\
-	    "stb (%p) dev:%"PRIu64" inode:%"PSCPRIuINOT" mode:0%o "		\
+	    "stb@%p dev:%"PRIu64" inode:%"PSCPRIuINOT" mode:0%o "		\
 	    "nlink:%"PRIu64" uid:%u gid:%u "					\
 	    "rdev:%"PRIu64" sz:%"PSCPRIdOFFT" blksz:%"PSCPRI_BLKSIZE_T" "	\
 	    "blkcnt:%"PRId64" atime:%"PSCPRI_TIMET" mtime:%"PSCPRI_TIMET" "	\
@@ -69,6 +69,7 @@ struct stat;
 	    (stb)->st_blocks, (stb)->st_atime, (stb)->st_mtime,			\
 	    (stb)->st_ctime, ## __VA_ARGS__)
 
-void pfl_dump_statbuf(const struct stat *stb);
+void pfl_dump_statbuf(const struct stat *);
+void pfl_dump_mode(mode_t);
 
 #endif /* _PFL_STAT_H_ */
