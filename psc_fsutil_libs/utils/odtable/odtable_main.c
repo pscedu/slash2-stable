@@ -140,7 +140,7 @@ main(int argc, char *argv[])
 	if (scan_table)
 		odtable_scan(odt, my_odtcb);
 
-	item = psc_alloc(elem_size, 0);
+	item = PSCALLOC(elem_size);
 
 	for (i = 0; i < num_puts; i++) {
 		snprintf(item, elem_size, "... put_number=%d ...", i);
@@ -148,7 +148,7 @@ main(int argc, char *argv[])
 			psc_errorx("odtable_putitem() failed, no slots available");
 	}
 
-	free(item);
+	PSCFREE(item);
 
 	if (num_free) {
 		struct odtable_receipt *odtr = NULL;
