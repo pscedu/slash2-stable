@@ -21,6 +21,8 @@
  * Routines for handling simple RPC message exchanges.
  */
 
+#define PSC_SUBSYS PSS_RPC
+
 #include <errno.h>
 #include <stdio.h>
 
