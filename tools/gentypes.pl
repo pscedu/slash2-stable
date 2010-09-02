@@ -108,12 +108,15 @@ my $includes = join '', map { s!(?:include|\.\.)/!!g; qq{#include "$_"\n} } @hdr
 $lines =~ s!(?<=/\* start includes \*/\n).*?(?=/\* end includes \*/)!$includes!s;
 
 my $types = join '', map { "\tPRTYPE($_);\n" } uniq sort @types;
+$types = "\tprintf(\"structures:\\n\");\n" . $types if $types;
 $lines =~ s!(?<=/\* start structs \*/\n).*?(?=/\* end structs \*/)!$types\t!s;
 
 my $vals = join '', map { "\tPRVAL($_);\n" } uniq sort @vals;
+$vals = "\tprintf(\"\\nvalues:\\n\");\n" . $vals if $vals;
 $lines =~ s!(?<=/\* start constants \*/\n).*?(?=/\* end constants \*/)!$vals\t!s;
 
 my $enums = join '', map { "\tPRVAL($_);\n" } uniq sort @enums;
+$enums = "\tprintf(\"\\nenums:\\n\");\n" . $enums if $enums;
 $lines =~ s!(?<=/\* start enums \*/\n).*?(?=/\* end enums \*/)!$enums\t!s;
 
 open OUT, ">", $outfn;
