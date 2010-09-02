@@ -70,7 +70,6 @@ pfl
 
   better way: if psc_ctlmsg_send() fails, use setjmp to exit call stack
   return to after ctl loop
-- rename bitflag.h -> bit.h
 - let caller worry about memory for vbitmaps, don't return pointers
 - bail if multiwait_addcond() fails, its a mem condition (dynarray)
   that should be remedied by shrinking pools
@@ -83,11 +82,11 @@ pfl
 	LOCK_INITIALIZER -> LOCK_INIT
 	LOCK_INIT() -> INIT_SPINLOCK()
 	PSC_WAITQ_INIT -> WAITQ_INIT
-- simplify ctlapi return by not having pass an rc.  if write() fails,
-  then read() will fail and it will solve itself the same way.
 - put lnet copyright on pscrpc files
-- add a superstructure for listcache member entry and store the owning
-  listguts and sanity check membership on removal
+- DEBUG knob
+    (o) add a superstructure for listcache member entry and store the owning
+	listguts and sanity check membership on removal
+    (o) PROT_NONE page before/after allocations
 - mspinlock is not going to work on NUMA, use thruniqid instead of
   int init+pthread_key
 
