@@ -111,7 +111,7 @@ my $types = join '', map { "\tPRTYPE($_);\n" } uniq sort @types;
 $types = "\tprintf(\"structures:\\n\");\n" . $types if $types;
 $lines =~ s!(?<=/\* start structs \*/\n).*?(?=/\* end structs \*/)!$types\t!s;
 
-my $vals = join '', map { "\tPRVAL($_);\n" } uniq sort @vals;
+my $vals = join '', map { s/^\s+|\s+$//g; "\tPRVAL($_);\n" } uniq sort @vals;
 $vals = "\tprintf(\"\\nvalues:\\n\");\n" . $vals if $vals;
 $lines =~ s!(?<=/\* start constants \*/\n).*?(?=/\* end constants \*/)!$vals\t!s;
 
