@@ -185,6 +185,7 @@ main(int argc, char *argv[])
 	PRTYPE(ksock_msg_t);
 
 	/* start structs */
+	printf("structures:\n");
 	PRTYPE(atomic_t);
 	PRTYPE(psc_atomic_t);
 	PRTYPE(psc_crc32_t);
@@ -292,6 +293,7 @@ main(int argc, char *argv[])
 	/* end constants */
 
 	/* start enums */
+	printf("\nenums:\n");
 	PRVAL(ACSOP_ACCESS);
 	PRVAL(ACSOP_CHMOD);
 	PRVAL(ACSOP_CHOWN);
