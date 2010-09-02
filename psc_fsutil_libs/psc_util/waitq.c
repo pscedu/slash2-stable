@@ -105,8 +105,7 @@ psc_waitq_waitrel(struct psc_waitq *q, psc_spinlock_t *k,
 
 	atomic_inc(&q->wq_nwaiters);
 	if (reltime) {
-		if (clock_gettime(CLOCK_REALTIME, &abstime) == -1)
-			psc_fatal("clock_gettime");
+		PFL_GETTIMESPEC(&abstime);
 		timespecadd(&abstime, reltime, &abstime);
 		rc = pthread_cond_timedwait(&q->wq_cond, &q->wq_mut, &abstime);
 		if (rc && rc != ETIMEDOUT)

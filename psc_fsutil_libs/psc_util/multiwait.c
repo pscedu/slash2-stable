@@ -250,8 +250,7 @@ psc_multiwaitcond_waitrel(struct psc_multiwaitcond *mwc,
 	if (mutex)
 		psc_pthread_mutex_unlock(mutex);
 
-	if (clock_gettime(CLOCK_REALTIME, &abstime) == -1)
-		psc_fatal("clock_gettime");
+	PFL_GETTIMESPEC(&abstime);
 	timespecadd(&abstime, reltime, &abstime);
 
 	rc = pthread_cond_timedwait(&mwc->mwc_cond,
