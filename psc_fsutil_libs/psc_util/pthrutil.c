@@ -25,7 +25,7 @@
 #include "psc_util/log.h"
 #include "psc_util/pthrutil.h"
 #include "psc_util/thread.h"
-#include "psc_util/time.h"
+#include "pfl/time.h"
 
 void
 psc_pthread_mutex_init(pthread_mutex_t *mut)

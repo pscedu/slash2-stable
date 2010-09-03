@@ -31,7 +31,7 @@
 #include "pfl/types.h"
 #include "psc_util/crc.h"
 #include "psc_util/log.h"
-#include "psc_util/time.h"
+#include "pfl/time.h"
 
 const char *progname;
 

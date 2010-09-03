@@ -39,7 +39,7 @@
 #include "psc_util/journal.h"
 #include "psc_util/lock.h"
 #include "psc_util/thread.h"
-#include "psc_util/time.h"
+#include "pfl/time.h"
 #include "psc_util/waitq.h"
 
 #include "zfs-fuse/zfs_slashlib.h"

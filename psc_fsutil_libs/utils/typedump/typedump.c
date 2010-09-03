@@ -85,7 +85,7 @@
 #include "psc_util/setprocesstitle.h"
 #include "psc_util/subsys.h"
 #include "psc_util/thread.h"
-#include "psc_util/time.h"
+#include "pfl/time.h"
 #include "psc_util/timerthr.h"
 #include "psc_util/umask.h"
 #include "psc_util/usklndthr.h"

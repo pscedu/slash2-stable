@@ -23,7 +23,7 @@
 #include "psc_ds/lockedlist.h"
 #include "psc_util/iostats.h"
 #include "psc_util/log.h"
-#include "psc_util/time.h"
+#include "pfl/time.h"
 
 struct psc_lockedlist	psc_iostats =
     PLL_INITIALIZER(&psc_iostats, struct psc_iostats, ist_lentry);

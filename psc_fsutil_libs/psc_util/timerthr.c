@@ -27,7 +27,7 @@
 #include "psc_util/atomic.h"
 #include "psc_util/iostats.h"
 #include "psc_util/thread.h"
-#include "psc_util/time.h"
+#include "pfl/time.h"
 
 #define psc_timercmp_addsec(tvp, s, uvp, cmp)				\
 	(((tvp)->tv_sec + (s) == (uvp)->tv_sec) ?			\

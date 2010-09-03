@@ -34,7 +34,7 @@
 
 #include "psc_util/atomic.h"
 #include "psc_util/log.h"
-#include "psc_util/time.h"
+#include "pfl/time.h"
 
 struct psc_spinlock {
 	psc_atomic32_t	psl_value;

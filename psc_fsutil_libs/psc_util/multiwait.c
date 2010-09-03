@@ -38,7 +38,7 @@
 #include "psc_util/log.h"
 #include "psc_util/multiwait.h"
 #include "psc_util/pthrutil.h"
-#include "psc_util/time.h"
+#include "pfl/time.h"
 
 /**
  * psc_multiwaitcond_init - Initialize a multiwait condition.

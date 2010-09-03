@@ -29,7 +29,7 @@
 #if HAVE_LIBPTHREAD
 
 #include "psc_util/pthrutil.h"
-#include "psc_util/time.h"
+#include "pfl/time.h"
 
 #include <pthread.h>
 
