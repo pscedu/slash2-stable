@@ -33,6 +33,10 @@
 #include <string.h>
 #include <unistd.h>
 
+#ifdef HAVE_NUMA
+#include <cpuset.h>
+#endif
+
 #include "pfl/cdefs.h"
 #include "pfl/str.h"
 #include "psc_ds/dynarray.h"
