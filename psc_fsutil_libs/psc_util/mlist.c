@@ -66,7 +66,7 @@ psc_mlist_tryget(struct psc_mlist *pml)
 		return (NULL);
 	}
 	e = psc_listhd_first(&pml->pml_listhd);
-	psclist_del(e);
+	psclist_del(e, &pml->pml_listhd);
 	psc_assert(pml->pml_size-- > 0);
 	p = (char *)e - pml->pml_offset;
 	ureqlock(&pml->pml_lock, locked);
@@ -106,7 +106,7 @@ psc_mlist_remove(struct psc_mlist *pml, void *p)
 	psc_assert(p);
 	locked = reqlock(&pml->pml_lock);
 	psclist_del((struct psclist_head *)((char *)p +
-	    pml->pml_offset));
+	    pml->pml_offset), &pml->pml_listhd);
 	psc_assert(pml->pml_size-- > 0);
 	ureqlock(&pml->pml_lock, locked);
 }
