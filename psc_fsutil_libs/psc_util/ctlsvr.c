@@ -18,8 +18,8 @@
  */
 
 /*
- * Control interface for querying and modifying
- * parameters of a running daemon instance.
+ * Control interface for querying and modifying parameters of a
+ * running daemon instance.
  */
 
 #include <sys/types.h>
