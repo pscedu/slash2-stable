@@ -189,6 +189,12 @@ psc_listhd_empty(const struct psclist_head *hd)
  */
 #define psclist_first(head) (head)->znext
 
+#ifdef DEBUG
+#define psc_lentry_hd(e)		(e)->plh_owner
+#else
+#define psc_lentry_hd(e)		NULL
+#endif
+
 /**
  * psclist_first_entry - Grab first item from a list.
  * @hd: list head.
