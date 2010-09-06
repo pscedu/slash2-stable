@@ -228,13 +228,13 @@ psc_listhd_empty(const struct psclist_head *hd)
 #define psclist_next(e) (e)->znext
 
 /**
- * psclist_next_entry - grab the item following the specified entry.
+ * psclist_next_obj - grab the item following the specified entry.
  * @hd: list head
  * @p: item on list.
  * @type: entry type.
  * @memb: list_head member name in entry structure.
  */
-#define psclist_next_entry(hd, p, memb)						\
+#define psclist_next_obj(hd, p, memb)						\
 	_psclist_next_entry((hd), (p), offsetof(typeof(*(p)), memb), 0)
 
 static __inline void *
@@ -265,13 +265,13 @@ _psclist_next_entry(struct psclist_head *hd, void *p,
 #define psclist_prev(e) (e)->zprev
 
 /**
- * psclist_prev_entry - grab the item before the specified entry.
+ * psclist_prev_obj - grab the item before the specified entry.
  * @hd: list head
  * @e: entry
  * @type: entry type.
  * @memb: list_head member name in entry structure.
  */
-#define psclist_prev_entry(hd, p, memb)						\
+#define psclist_prev_obj(hd, p, memb)						\
 	_psclist_next_entry((hd), (p), offsetof(typeof(*(p)), memb), 1)
 
 /**
