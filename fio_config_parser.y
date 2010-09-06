@@ -102,7 +102,7 @@ group_start		: GROUP STR GROUP_START {
 
 				group = PSCALLOC(sizeof(GROUP_t));
 				INIT_PSCLIST_HEAD(&group->group_lentry);
-				psclist_xadd_tail(&group->group_lentry, &groupList);
+				psclist_add_tail(&group->group_lentry, &groupList);
 				strlcpy(group->test_name, $2, sizeof(group->test_name));
 				currentGroup = group;
 
