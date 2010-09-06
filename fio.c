@@ -952,7 +952,7 @@ worker(void *arg)
 
 					push_dirstack(iot);
 				}
-			} while (!psclist_empty(&mygroup->dirStack));
+			} while (!psc_listhd_empty(&mygroup->dirStack));
 
 			write_output(iot);
 
