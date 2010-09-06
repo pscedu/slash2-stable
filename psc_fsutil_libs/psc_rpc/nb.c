@@ -120,7 +120,7 @@ pscrpc_nbreqset_reap(struct pscrpc_nbreqset *nbs)
 		 * Move sent rpcs to the set_requests list
 		 */
 		if (req->rq_phase == PSCRPC_RQ_PHASE_COMPLETE) {
-			psclist_del(&req->rq_set_chain_lentry);
+			psclist_del(&req->rq_set_chain_lentry, &set->set_requests);
 			atomic_dec(&nbs->nb_outstanding);
 			nreaped++;
 
