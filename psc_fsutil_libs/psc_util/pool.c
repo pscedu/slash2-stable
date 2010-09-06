@@ -523,8 +523,8 @@ psc_pool_get(struct psc_poolmgr *m)
 			return (p);
 		}
 		atomic_inc(&m->ppm_nwaiters);
-		psc_waitq_waitrel_us(&m->ppm_lc.lc_wq_empty,
-		    &m->ppm_lc.lc_lock, 100);
+		psc_waitq_waitrel_us(&m->ppm_lc.plc_wq_empty,
+		    &m->ppm_lc.plc_lock, 100);
 		atomic_dec(&m->ppm_nwaiters);
 
 		p = POOL_GETOBJ(m);

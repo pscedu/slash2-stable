@@ -375,27 +375,27 @@ psc_ctlrep_getlc(int fd, struct psc_ctlmsghdr *mh, void *m)
 	PLL_LOCK(&pscListCaches);
 	psclist_for_each_entry(lc,
 	    &pscListCaches.pll_listhd, lc_index_lentry) {
-		if (all || strncmp(lc->lc_name,
+		if (all || strncmp(lc->plc_name,
 		    name, strlen(name)) == 0) {
 			found = 1;
 
 			LIST_CACHE_LOCK(lc);
-			strlcpy(pclc->pclc_name, lc->lc_name,
+			strlcpy(pclc->pclc_name, lc->plc_name,
 			    sizeof(pclc->pclc_name));
-			pclc->pclc_size = lc->lc_size;
-			pclc->pclc_nseen = lc->lc_nseen;
-			pclc->pclc_flags = lc->lc_flags;
+			pclc->pclc_size = lc->plc_size;
+			pclc->pclc_nseen = lc->plc_nseen;
+			pclc->pclc_flags = lc->plc_flags;
 			pclc->pclc_nw_want = psc_waitq_nwaiters(
-			    &lc->lc_wq_want);
+			    &lc->plc_wq_want);
 			pclc->pclc_nw_empty = psc_waitq_nwaiters(
-			    &lc->lc_wq_empty);
+			    &lc->plc_wq_empty);
 			LIST_CACHE_ULOCK(lc);
 			rc = psc_ctlmsg_sendv(fd, mh, pclc);
 			if (!rc)
 				break;
 
 			/* Terminate on exact match. */
-			if (strcmp(lc->lc_name, name) == 0)
+			if (strcmp(lc->plc_name, name) == 0)
 				break;
 		}
 	}
@@ -447,9 +447,9 @@ psc_ctlrep_getpool(int fd, struct psc_ctlmsghdr *mh, void *msg)
 			} else {
 				pcpl->pcpl_free = lc_sz(&m->ppm_lc);
 				pcpl->pcpl_nw_want = psc_waitq_nwaiters(
-				    &m->ppm_lc.lc_wq_want);
+				    &m->ppm_lc.plc_wq_want);
 				pcpl->pcpl_nw_empty = psc_waitq_nwaiters(
-				    &m->ppm_lc.lc_wq_empty);
+				    &m->ppm_lc.plc_wq_empty);
 			}
 			POOL_UNLOCK(m);
 			rc = psc_ctlmsg_sendv(fd, mh, pcpl);
