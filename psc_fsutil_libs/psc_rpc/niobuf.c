@@ -673,8 +673,8 @@ pscrpc_free_reply_state(struct pscrpc_reply_state *rs)
 	psc_assert (!rs->rs_difficult || rs->rs_handled);
 	psc_assert (rs->rs_export == NULL);
 	psc_assert (rs->rs_nlocks == 0);
-	psc_assert (psclist_empty(&rs->rs_exp_list));
-	psc_assert (psclist_empty(&rs->rs_obd_list));
+	psc_assert (psc_listhd_empty(&rs->rs_exp_list));
+	psc_assert (psc_listhd_empty(&rs->rs_obd_list));
 
 	if (unlikely(rs->rs_prealloc)) {
 		struct ptlrpc_service *svc = rs->rs_service;
@@ -709,7 +709,7 @@ _pscrpc_free_req(struct pscrpc_request *request, int locked)
 		if (!locked)
 			freelock(&request->rq_import->imp_lock);
 	}
-	//psc_assertF(psclist_empty(&request->rq_replay_list), "req %p\n", request);
+	//psc_assertF(psc_listhd_empty(&request->rq_replay_list), "req %p\n", request);
 
 	if (atomic_read(&request->rq_refcount) != 0) {
 		DEBUG_REQ(PLL_ERROR, request,

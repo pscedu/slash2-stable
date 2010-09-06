@@ -155,7 +155,7 @@ pscrpc_prep_req_from_pool(struct pscrpc_request_pool *pool)
 	 * in writeout path, where this matters, this is safe to do, because
 	 * nothing is lost in this case, and when some in-flight requests
 	 * complete, this code will be called again. */
-	if (unlikely(psclist_empty(&pool->prp_req_list))) {
+	if (unlikely(psc_listhd_empty(&pool->prp_req_list))) {
 		freelock(&pool->prp_lock);
 		return NULL;
 	}
@@ -1384,7 +1384,7 @@ int pscrpc_set_wait(struct pscrpc_request_set *set)
 	struct l_wait_info     lwi;
 	int                    rc=0, timeout;
 
-	if (psclist_empty(&set->set_requests))
+	if (psc_listhd_empty(&set->set_requests))
 		return (0);
 
 	psclist_for_each(tmp, &set->set_requests) {

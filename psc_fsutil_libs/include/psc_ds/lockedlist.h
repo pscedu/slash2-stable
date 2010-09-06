@@ -135,7 +135,7 @@ _pll_get(struct psc_lockedlist *pll, int flags)
 	psc_assert((flags & PLLF_HEAD) ^ (flags & PLLF_TAIL));
 
 	locked = PLL_RLOCK(pll);
-	if (psclist_empty(&pll->pll_listhd)) {
+	if (psc_listhd_empty(&pll->pll_listhd)) {
 		PLL_URLOCK(pll, locked);
 		return (NULL);
 	}
@@ -178,7 +178,7 @@ pll_empty(struct psc_lockedlist *pll)
 	int locked, empty;
 
 	locked = PLL_RLOCK(pll);
-	empty = psclist_empty(&pll->pll_listhd);
+	empty = psc_listhd_empty(&pll->pll_listhd);
 	PLL_URLOCK(pll, locked);
 	return (empty);
 }

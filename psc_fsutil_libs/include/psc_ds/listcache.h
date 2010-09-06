@@ -159,7 +159,7 @@ _lc_get(struct psc_listcache *lc, struct timespec *abstime,
 	psc_assert(pos == PLCP_HEAD || pos == PLCP_TAIL);
 
 	locked = reqlock(&lc->lc_lock);
-	while (psclist_empty(&lc->lc_listhd)) {
+	while (psc_listhd_empty(&lc->lc_listhd)) {
 		if ((lc->lc_flags & PLCF_DYING) ||
 		    (flags & PLCGF_NOBLOCK)) {
 			ureqlock(&lc->lc_lock, locked);
@@ -443,7 +443,7 @@ lc_empty(struct psc_listcache *lc)
 	int rc, locked;
 
 	locked = reqlock(&lc->lc_lock);
-	rc = psclist_empty(&lc->lc_listhd);
+	rc = psc_listhd_empty(&lc->lc_listhd);
 	ureqlock(&lc->lc_lock, locked);
 	return (rc);
 }

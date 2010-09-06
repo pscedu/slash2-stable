@@ -61,7 +61,7 @@ psc_mlist_tryget(struct psc_mlist *pml)
 	void *p;
 
 	locked = reqlock(&pml->pml_lock);
-	if (psclist_empty(&pml->pml_listhd)) {
+	if (psc_listhd_empty(&pml->pml_listhd)) {
 		ureqlock(&pml->pml_lock, locked);
 		return (NULL);
 	}

@@ -121,11 +121,11 @@ psclist_del(struct psclist_head *entry)
 }
 
 /**
- * psclist_empty - Tests whether a list is has no items.
+ * psc_listhd_empty - Tests whether a list is has no items.
  * @hd: the list head to test.
  */
 static __inline int
-psclist_empty(const struct psclist_head *hd)
+psc_listhd_empty(const struct psclist_head *hd)
 {
 	psc_assert(hd->znext && hd->zprev);
 #if 0
@@ -196,7 +196,7 @@ psclist_empty(const struct psclist_head *hd)
  * @memb: psclist_head member name in item structure.
  */
 #define psclist_first_entry(hd, type, memb)					\
-	(psclist_empty(hd) ? NULL :						\
+	(psc_listhd_empty(hd) ? NULL :						\
 	 psclist_entry((hd)->znext, type, memb))
 
 /**
@@ -212,7 +212,7 @@ psclist_empty(const struct psclist_head *hd)
  * @memb: psclist_head member name in item structure.
  */
 #define psclist_last_entry(hd, type, memb)					\
-	(psclist_empty(hd) ? NULL :						\
+	(psc_listhd_empty(hd) ? NULL :						\
 	 psclist_entry((hd)->zprev, type, memb))
 
 /**

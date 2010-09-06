@@ -1006,7 +1006,7 @@ psc_ctlrep_param(int fd, struct psc_ctlmsghdr *mh, void *m)
 	pcf->pcf_ptn = &psc_ctlparamtree;
 	psclist_add(&pcf->pcf_lentry, &stack);
 
-	while (!psclist_empty(&stack)) {
+	while (!psc_listhd_empty(&stack)) {
 		pcf = psclist_first_entry(&stack,
 		    struct psc_ctlparam_procframe, pcf_lentry);
 		psclist_del(&pcf->pcf_lentry);
@@ -1027,7 +1027,7 @@ psc_ctlrep_param(int fd, struct psc_ctlmsghdr *mh, void *m)
 			}
 			if (c == NULL)
 				goto invalid;
-			if (psclist_empty(&c->ptn_children)) {
+			if (psc_listhd_empty(&c->ptn_children)) {
 				if (!pcn->pcn_cbf(fd, mh,
 				    pcp, levels, nlevels))
 					goto shortcircuit;
@@ -1040,7 +1040,7 @@ psc_ctlrep_param(int fd, struct psc_ctlmsghdr *mh, void *m)
 				k = 0;
 				PSC_STREE_FOREACH_CHILD(d, c) {
 					pcn = d->ptn_data;
-					if (psclist_empty(&d->ptn_children)) {
+					if (psc_listhd_empty(&d->ptn_children)) {
 						if (!pcn->pcn_cbf(fd, mh,
 						    pcp, levels, nlevels))
 							goto shortcircuit;

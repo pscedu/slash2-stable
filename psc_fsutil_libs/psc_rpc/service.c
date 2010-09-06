@@ -83,7 +83,7 @@ pscrpc_free_rqbd (struct pscrpc_request_buffer_desc *rqbd)
 	struct pscrpc_service *svc = rqbd->rqbd_service;
 
 	LASSERT (rqbd->rqbd_refcount == 0);
-	LASSERT (psclist_empty(&rqbd->rqbd_reqs));
+	LASSERT (psc_listhd_empty(&rqbd->rqbd_reqs));
 
 	spinlock(&svc->srv_lock);
 	psclist_del(&rqbd->rqbd_lentry);
@@ -110,7 +110,7 @@ pscrpc_server_post_idle_rqbds (struct pscrpc_service *svc)
 	for (;;) {
 		spinlock(&svc->srv_lock);
 
-		if (psclist_empty (&svc->srv_idle_rqbds)) {
+		if (psc_listhd_empty (&svc->srv_idle_rqbds)) {
 			freelock(&svc->srv_lock);
 			return (posted);
 		}
@@ -259,7 +259,7 @@ pscrpc_server_handle_request(struct pscrpc_service *svc,
 
 	spinlock(&svc->srv_lock);
 
-	if (psclist_empty (&svc->srv_request_queue) ||
+	if (psc_listhd_empty (&svc->srv_request_queue) ||
 	    (svc->srv_n_difficult_replies != 0 &&
 	     svc->srv_n_active_reqs >= (svc->srv_nthreads - 1))) {
 		/* If all the other threads are handling requests, I must
@@ -469,7 +469,7 @@ pscrpc_server_handle_reply (struct pscrpc_service *svc)
 	int                        been_handled;
 
 	spinlock(&svc->srv_lock);
-	if (psclist_empty (&svc->srv_reply_queue)) {
+	if (psc_listhd_empty (&svc->srv_reply_queue)) {
 		freelock(&svc->srv_lock);
 		return (0);
 	}
@@ -684,18 +684,18 @@ pscrpcthr_main(struct psc_thread *thr)
 		//l_wait_event_exclusive (svc->srv_waitq,
 		/*
 		psc_dbg("run %d, svc->srv_n_difficult_replies %d, "
-		       "psclist_empty(&svc->srv_idle_rqbds) %d,  svc->srv_rqbd_timeout %d "
-		       "psclist_empty (&svc->srv_reply_queue) %d, psclist_empty(&svc->srv_request_queue) %d "
+		       "psc_listhd_empty(&svc->srv_idle_rqbds) %d,  svc->srv_rqbd_timeout %d "
+		       "psc_listhd_empty (&svc->srv_reply_queue) %d, psc_listhd_empty(&svc->srv_request_queue) %d "
 		       "svc->srv_n_active_reqs %d svc->srv_nthreads %d"
 		       "COND 1=%d, COND 2=%d, COND 3=%d",
 
 		       thr->pscthr_run, svc->srv_n_difficult_replies,
-		       psclist_empty(&svc->srv_idle_rqbds), svc->srv_rqbd_timeout,
-		       psclist_empty (&svc->srv_reply_queue), psclist_empty(&svc->srv_request_queue),
+		       psc_listhd_empty(&svc->srv_idle_rqbds), svc->srv_rqbd_timeout,
+		       psc_listhd_empty (&svc->srv_reply_queue), psc_listhd_empty(&svc->srv_request_queue),
 		       svc->srv_n_active_reqs, svc->srv_nthreads,
 		       (thr->pscthr_run != 0 && svc->srv_n_difficult_replies == 0),
-		       (!psclist_empty(&svc->srv_idle_rqbds) && svc->srv_rqbd_timeout == 0),
-		       (!psclist_empty (&svc->srv_request_queue) &&
+		       (!psc_listhd_empty(&svc->srv_idle_rqbds) && svc->srv_rqbd_timeout == 0),
+		       (!psc_listhd_empty (&svc->srv_request_queue) &&
 			(svc->srv_n_difficult_replies == 0 ||
 			 svc->srv_n_active_reqs < (svc->srv_nthreads - 1)))
 		       );
@@ -703,10 +703,10 @@ pscrpcthr_main(struct psc_thread *thr)
 		pscrpc_svr_wait_event(&svc->srv_waitq,
 				   (!(thr->pscthr_flags & PTF_RUN) &&
 				    svc->srv_n_difficult_replies == 0) ||
-				   (!psclist_empty(&svc->srv_idle_rqbds) &&
+				   (!psc_listhd_empty(&svc->srv_idle_rqbds) &&
 				    svc->srv_rqbd_timeout == 0) ||
-				   !psclist_empty (&svc->srv_reply_queue) ||
-				   (!psclist_empty (&svc->srv_request_queue) &&
+				   !psc_listhd_empty (&svc->srv_reply_queue) ||
+				   (!psc_listhd_empty (&svc->srv_request_queue) &&
 				    (svc->srv_n_difficult_replies == 0 ||
 				     svc->srv_n_active_reqs <
 				     (svc->srv_nthreads - 1))),
@@ -719,18 +719,18 @@ pscrpcthr_main(struct psc_thread *thr)
 		 *  put'ing replies onto this list after they've sync'ed
 		 *  the blocks to disk.. paul
 		 */
-		//if (!psclist_empty (&svc->srv_reply_queue))
+		//if (!psc_listhd_empty (&svc->srv_reply_queue))
 		//	pscrpc_server_handle_reply (svc);
 
 		/* only handle requests if there are no difficult replies
 		 * outstanding, or I'm not the last thread handling
 		 * requests */
-		if (!psclist_empty (&svc->srv_request_queue) &&
+		if (!psc_listhd_empty (&svc->srv_request_queue) &&
 		    (svc->srv_n_difficult_replies == 0 ||
 		     svc->srv_n_active_reqs < (svc->srv_nthreads - 1)))
 			pscrpc_server_handle_request(svc, thr);
 
-		if (!psclist_empty(&svc->srv_idle_rqbds) &&
+		if (!psc_listhd_empty(&svc->srv_idle_rqbds) &&
 		    pscrpc_server_post_idle_rqbds(svc) < 0) {
 			/* I just failed to repost request buffers.  Wait
 			 * for a timeout (unless something else happens)
@@ -790,7 +790,7 @@ void pscrpc_stop_all_threads(struct pscrpc_service *svc)
 	struct pscrpc_thread *thread;
 
 	spinlock(&svc->srv_lock);
-	while (!psclist_empty(&svc->srv_threads)) {
+	while (!psc_listhd_empty(&svc->srv_threads)) {
 		thread = psclist_entry(svc->srv_threads.next,
 			struct pscrpc_thread, t_link);
 
@@ -812,7 +812,7 @@ pscrpc_unregister_service(struct pscrpc_service *service)
 	struct pscrpc_reply_state *rs, *t;
 
 	//pscrpc_stop_all_threads(service);
-	LASSERT(psclist_empty(&service->srv_threads));
+	LASSERT(psc_listhd_empty(&service->srv_threads));
 
 	spinlock (&pscrpc_all_services_lock);
 	psclist_del(&service->srv_lentry);
@@ -860,7 +860,7 @@ pscrpc_unregister_service(struct pscrpc_service *service)
 
 	/* schedule all outstanding replies to terminate them */
 	spinlock(&service->srv_lock);
-	while (!psclist_empty(&service->srv_active_replies)) {
+	while (!psc_listhd_empty(&service->srv_active_replies)) {
 		rs = psclist_entry(psclist_next(&service->srv_active_replies),
 			struct pscrpc_reply_state, rs_list_entry);
 		CWARN("Active reply found?? %p", rs);
@@ -871,7 +871,7 @@ pscrpc_unregister_service(struct pscrpc_service *service)
 	/* purge the request queue.  NB No new replies (rqbds all unlinked)
 	 * and no service threads, so I'm the only thread noodling the
 	 * request queue now */
-	while (!psclist_empty(&service->srv_request_queue)) {
+	while (!psc_listhd_empty(&service->srv_request_queue)) {
 		struct pscrpc_request *req =
 			psclist_entry(psclist_next(&service->srv_request_queue),
 			struct pscrpc_request, rq_list_entry);
@@ -885,11 +885,11 @@ pscrpc_unregister_service(struct pscrpc_service *service)
 	LASSERT(service->srv_n_queued_reqs == 0);
 	LASSERT(service->srv_n_active_reqs == 0);
 	LASSERT(service->srv_n_history_rqbds == 0);
-	LASSERT(psclist_empty(&service->srv_active_rqbds));
+	LASSERT(psc_listhd_empty(&service->srv_active_rqbds));
 
 	/* Now free all the request buffers since nothing references them
 	 * any more... */
-	while (!psclist_empty(&service->srv_idle_rqbds)) {
+	while (!psc_listhd_empty(&service->srv_idle_rqbds)) {
 		struct pscrpc_request_buffer_desc *rqbd =
 			psclist_entry(psclist_next(&service->srv_idle_rqbds),
 			struct pscrpc_request_buffer_desc, rqbd_lentry);
@@ -903,7 +903,7 @@ pscrpc_unregister_service(struct pscrpc_service *service)
 		lwi = LWI_TIMEOUT(10 * 100, NULL, NULL);
 
 		rc = pscrpc_svr_wait_event(&service->srv_waitq,
-					!psclist_empty(&service->srv_reply_queue),
+					!psc_listhd_empty(&service->srv_reply_queue),
 					&lwi, &service->srv_lock);
 
 		LASSERT(rc == 0 || rc == -ETIMEDOUT);
