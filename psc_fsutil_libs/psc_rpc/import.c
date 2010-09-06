@@ -13,7 +13,7 @@ pscrpc_import_state_name(enum pscrpc_imp_state state)
 		"RECOVER", "FULL", "EVICTED",
 	};
 
-	LASSERT (state <= PSCRPC_IMP_EVICTED);
+	LASSERT(state <= PSCRPC_IMP_EVICTED);
 	return import_state_names[state];
 }
 

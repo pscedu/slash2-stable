@@ -265,7 +265,7 @@ pscrpc_new_bulk(int npages, int type, int portal)
 {
 	struct pscrpc_bulk_desc *desc;
 
-	PSCRPC_OBD_ALLOC(desc, offsetof (struct pscrpc_bulk_desc, bd_iov[npages]));
+	PSCRPC_OBD_ALLOC(desc, offsetof(struct pscrpc_bulk_desc, bd_iov[npages]));
 	psc_trace("new desc=%p", desc);
 	if (!desc)
 		return NULL;
@@ -282,7 +282,7 @@ pscrpc_new_bulk(int npages, int type, int portal)
 }
 
 struct pscrpc_bulk_desc *
-pscrpc_prep_bulk_imp (struct pscrpc_request *req, int npages,
+pscrpc_prep_bulk_imp(struct pscrpc_request *req, int npages,
 		      int type, int portal)
 {
 	struct pscrpc_import    *imp = req->rq_import;
@@ -308,7 +308,7 @@ pscrpc_prep_bulk_imp (struct pscrpc_request *req, int npages,
 }
 
 struct pscrpc_bulk_desc *
-pscrpc_prep_bulk_exp (struct pscrpc_request *req,
+pscrpc_prep_bulk_exp(struct pscrpc_request *req,
 		      int npages, int type, int portal)
 {
 	struct pscrpc_export   *exp = req->rq_export;
@@ -437,9 +437,9 @@ pscrpc_send_new_req_locked(struct pscrpc_request *req)
 	req->rq_import_generation = imp->imp_generation;
 #if 0
 	if (pscrpc_import_delay_req(imp, req, &rc)) {
-		spinlock (&req->rq_lock);
+		spinlock(&req->rq_lock);
 		req->rq_waiting = 1;
-		freelock (&req->rq_lock);
+		freelock(&req->rq_lock);
 
 		DEBUG_REQ(D_HA, req, "req from PID %d waiting for recovery: "
 			  "(%s != %s)",
@@ -543,12 +543,12 @@ pscrpc_unregister_reply(struct pscrpc_request *request)
 	struct psc_waitq *wq;
 	struct l_wait_info lwi;
 
-	psc_assert(!in_interrupt ());             /* might sleep */
+	psc_assert(!in_interrupt());             /* might sleep */
 
 	if (!pscrpc_client_receiving_reply(request))
 		return;
 
-	LNetMDUnlink (request->rq_reply_md_h);
+	LNetMDUnlink(request->rq_reply_md_h);
 
 	/* We have to l_wait_event() whatever the result, to give liblustre
 	 * a chance to run reply_in_callback() */
@@ -568,7 +568,7 @@ pscrpc_unregister_reply(struct pscrpc_request *request)
 		if (rc == 0)
 			return;
 
-		psc_assert (rc == -ETIMEDOUT);
+		psc_assert(rc == -ETIMEDOUT);
 		DEBUG_REQ(PLL_WARN, request, "Unexpectedly long timeout");
 	}
 }
@@ -610,7 +610,7 @@ after_reply(struct pscrpc_request *req)
 	/* Clear reply swab mask; this is a new reply in sender's byte order */
 	req->rq_rep_swab_mask = 0;
 #endif
-	psc_assert (req->rq_nob_received <= req->rq_replen);
+	psc_assert(req->rq_nob_received <= req->rq_replen);
 	rc = pscrpc_unpack_msg(req->rq_repmsg, req->rq_nob_received);
 	if (rc) {
 		DEBUG_REQ(PLL_ERROR, req, "unpack_rep failed: %d", rc);
@@ -722,15 +722,12 @@ pscrpc_queue_wait(struct pscrpc_request *req)
 
 		if (req->rq_err) {
 			rc = -EIO;
-		}
-		else if (req->rq_intr) {
+		} else if (req->rq_intr) {
 			rc = -EINTR;
-		}
-		else if (req->rq_no_resend) {
+		} else if (req->rq_no_resend) {
 			freelock(&imp->imp_lock);
 			GOTO(out, rc = -ETIMEDOUT);
-		}
-		else {
+		} else {
 			GOTO(restart, rc);
 		}
 	}
@@ -748,7 +745,7 @@ pscrpc_queue_wait(struct pscrpc_request *req)
 		pscrpc_msg_add_flags(req->rq_reqmsg, MSG_RESENT);
 
 		if (req->rq_bulk != NULL) {
-			pscrpc_unregister_bulk (req);
+			pscrpc_unregister_bulk(req);
 
 			/* bulk requests are supposed to be
 			 * idempotent, so we are free to bump the xid
@@ -807,7 +804,7 @@ pscrpc_queue_wait(struct pscrpc_request *req)
 	/* If the reply was received normally, this just grabs the spinlock
 	 * (ensuring the reply callback has returned), sees that
 	 * req->rq_receiving_reply is clear and returns. */
-	pscrpc_unregister_reply (req);
+	pscrpc_unregister_reply(req);
 
 	if (rc)
 		GOTO(out, 0);
@@ -848,7 +845,7 @@ pscrpc_queue_wait(struct pscrpc_request *req)
 #endif
 	}
 
-	rc = after_reply (req);
+	rc = after_reply(req);
 	/* NB may return +ve success rc */
 	if (req->rq_resend) {
 		spinlock(&imp->imp_lock);
@@ -879,7 +876,7 @@ pscrpc_queue_wait(struct pscrpc_request *req)
 			}
 		}
 		//if (rc < 0)
-			pscrpc_unregister_bulk (req);
+			pscrpc_unregister_bulk(req);
 	}
 
 	psc_assert(!req->rq_receiving_reply);
@@ -1037,7 +1034,7 @@ pscrpc_check_set(struct pscrpc_request_set *set, int check_allsent)
 					if (req->rq_bulk) {
 						uint64_t old_xid = req->rq_xid;
 
-						pscrpc_unregister_bulk (req);
+						pscrpc_unregister_bulk(req);
 
 						/* ensure previous bulk fails */
 						req->rq_xid = pscrpc_next_xid();
@@ -1118,7 +1115,7 @@ pscrpc_check_set(struct pscrpc_request_set *set, int check_allsent)
 
 		pscrpc_unregister_reply(req);
 		if (req->rq_bulk != NULL)
-			pscrpc_unregister_bulk (req);
+			pscrpc_unregister_bulk(req);
 
 		req->rq_phase = PSCRPC_RQ_PHASE_COMPLETE;
 		ncompleted++;
@@ -1160,7 +1157,7 @@ pscrpc_set_destroy(struct pscrpc_request_set *set)
 	/* Requests on the set should either all be completed, or all be new */
 	expected_phase = (set->set_remaining == 0) ?
 		PSCRPC_RQ_PHASE_COMPLETE : PSCRPC_RQ_PHASE_NEW;
-	psclist_for_each (tmp, &set->set_requests) {
+	psclist_for_each(tmp, &set->set_requests) {
 		struct pscrpc_request *req =
 			psclist_entry(tmp, struct pscrpc_request, rq_set_chain_lentry);
 
@@ -1188,7 +1185,7 @@ pscrpc_set_destroy(struct pscrpc_request_set *set)
 		}
 
 		req->rq_set = NULL;
-		pscrpc_req_finished (req);
+		pscrpc_req_finished(req);
 	}
 
 	psc_assert(set->set_remaining == 0);
@@ -1214,13 +1211,13 @@ pscrpc_expire_one_request(struct pscrpc_request *req)
 	req->rq_timedout = 1;
 	freelock(&req->rq_lock);
 
-	pscrpc_unregister_reply (req);
+	pscrpc_unregister_reply(req);
 
 	//if (obd_dump_on_timeout)
 	//        libcfs_debug_dumplog();
 
 	if (req->rq_bulk != NULL)
-		pscrpc_unregister_bulk (req);
+		pscrpc_unregister_bulk(req);
 
 	if (imp == NULL) {
 		DEBUG_REQ(PLL_WARN, req, "NULL import: already cleaned up?");
@@ -1258,7 +1255,7 @@ pscrpc_expired_set(void *data)
 	psc_assert(set != NULL);
 
 	/* A timeout expired; see which reqs it applies to... */
-	psclist_for_each (tmp, &set->set_requests) {
+	psclist_for_each(tmp, &set->set_requests) {
 		struct pscrpc_request *req =
 			psclist_entry(tmp, struct pscrpc_request, rq_set_chain_lentry);
 
@@ -1273,7 +1270,7 @@ pscrpc_expired_set(void *data)
 			continue;
 
 		/* deal with this guy */
-		pscrpc_expire_one_request (req);
+		pscrpc_expire_one_request(req);
 	}
 
 	/* When waiting for a whole set, we always to break out of the
@@ -1349,7 +1346,7 @@ pscrpc_import_delay_req(struct pscrpc_import *imp,
 {
 	int delay = 0;
 
-	psc_assert (status != NULL);
+	psc_assert(status != NULL);
 	*status = 0;
 
 	if (imp->imp_state == PSCRPC_IMP_NEW) {
@@ -1596,13 +1593,13 @@ void pscrpc_abort_inflight(struct pscrpc_import *imp)
 
 		DEBUG_REQ(PLL_WARN, req, "inflight");
 
-		spinlock (&req->rq_lock);
+		spinlock(&req->rq_lock);
 		if (req->rq_import_generation < imp->imp_generation) {
 			req->rq_err = 1;
 			pscrpc_wake_client_req(req);
 		}
 		//__pscrpc_req_finished(req, 1);
-		freelock (&req->rq_lock);
+		freelock(&req->rq_lock);
 	 }
 
 #if 0
@@ -1612,12 +1609,12 @@ void pscrpc_abort_inflight(struct pscrpc_import *imp)
 
 		DEBUG_REQ(PLL_WARN, req, "aborting waiting req");
 
-		spinlock (&req->rq_lock);
+		spinlock(&req->rq_lock);
 		if (req->rq_import_generation < imp->imp_generation) {
 			req->rq_err = 1;
 			pscrpc_wake_client_req(req);
 		}
-		freelock (&req->rq_lock);
+		freelock(&req->rq_lock);
 	 }
 
 	 /* Last chance to free reqs left on the replay list, but we

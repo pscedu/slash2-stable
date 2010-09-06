@@ -54,7 +54,7 @@ pscrpc_send_buf(lnet_handle_md_t *mdh, void *base, int len,
 
 	psc_assert(portal != 0);
 	psc_assert(conn != NULL);
-	CDEBUG (D_INFO, "conn=%p id %s\n", conn, libcfs_id2str(conn->c_peer));
+	CDEBUG(D_INFO, "conn=%p id %s\n", conn, libcfs_id2str(conn->c_peer));
 	md.start     = base;
 	md.length    = len;
 	md.threshold = (ack == LNET_ACK_REQ) ? 2 : 1;
@@ -71,17 +71,17 @@ pscrpc_send_buf(lnet_handle_md_t *mdh, void *base, int len,
 	}
 #endif
 
-	rc = LNetMDBind (md, LNET_UNLINK, mdh);
+	rc = LNetMDBind(md, LNET_UNLINK, mdh);
 	if (rc != 0) {
 		psc_errorx("LNetMDBind failed: %d", rc);
-		psc_assert (rc == -ENOMEM);
+		psc_assert(rc == -ENOMEM);
 		return (-ENOMEM);
 	}
 
 	psc_info("Sending %d bytes to portal %d, xid %"PRIx64,
 		 len, portal, xid);
 
-	rc = LNetPut (conn->c_self, *mdh, ack,
+	rc = LNetPut(conn->c_self, *mdh, ack,
 		      conn->c_peer, portal, xid, 0, 0);
 	if (rc != 0) {
 		int rc2;
@@ -116,10 +116,10 @@ pscrpc_start_bulk_transfer(struct pscrpc_bulk_desc *desc)
 	//        return (0);
 
 	/* NB no locking required until desc is on the network */
-	psc_assert (!desc->bd_network_rw);
-	psc_assert (desc->bd_type == BULK_PUT_SOURCE ||
+	psc_assert(!desc->bd_network_rw);
+	psc_assert(desc->bd_type == BULK_PUT_SOURCE ||
 		 desc->bd_type == BULK_GET_SINK);
-	psc_assert (conn != NULL);
+	psc_assert(conn != NULL);
 
 	desc->bd_success = 0;
 
@@ -139,7 +139,7 @@ pscrpc_start_bulk_transfer(struct pscrpc_bulk_desc *desc)
 	rc = LNetMDBind(md, LNET_UNLINK, &desc->bd_md_h);
 	if (rc != 0) {
 		CERROR("LNetMDBind failed: %d\n", rc);
-		psc_assert (rc == -ENOMEM);
+		psc_assert(rc == -ENOMEM);
 		return (-ENOMEM);
 	}
 
@@ -154,11 +154,11 @@ pscrpc_start_bulk_transfer(struct pscrpc_bulk_desc *desc)
 	desc->bd_network_rw = 1;
 
 	if (desc->bd_type == BULK_PUT_SOURCE)
-		rc = LNetPut (conn->c_self, desc->bd_md_h, LNET_ACK_REQ,
-			      conn->c_peer, desc->bd_portal, xid, 0, 0);
+		rc = LNetPut(conn->c_self, desc->bd_md_h, LNET_ACK_REQ,
+			     conn->c_peer, desc->bd_portal, xid, 0, 0);
 	else
-		rc = LNetGet (conn->c_self, desc->bd_md_h,
-			      conn->c_peer, desc->bd_portal, xid, 0);
+		rc = LNetGet(conn->c_self, desc->bd_md_h,
+			     conn->c_peer, desc->bd_portal, xid, 0);
 
 	if (rc != 0) {
 		/* Can't send, so we unlink the MD bound above.  The UNLINK
@@ -167,7 +167,7 @@ pscrpc_start_bulk_transfer(struct pscrpc_bulk_desc *desc)
 		CERROR("Transfer(%s, %d, %"PRIx64") failed: %d\n",
 		       libcfs_id2str(conn->c_peer), desc->bd_portal, xid, rc);
 		rc2 = LNetMDUnlink(desc->bd_md_h);
-		psc_assert (rc2 == 0);
+		psc_assert(rc2 == 0);
 	}
 
 	return (0);
@@ -181,7 +181,7 @@ pscrpc_abort_bulk(struct pscrpc_bulk_desc *desc)
 	struct l_wait_info  lwi;
 	int    rc;
 
-	//psc_assert (!in_interrupt ());             /* might sleep */
+	//psc_assert(!in_interrupt ());             /* might sleep */
 
 	if (!pscrpc_bulk_active(desc))          /* completed or */
 		return;                         /* never started */
@@ -197,12 +197,12 @@ pscrpc_abort_bulk(struct pscrpc_bulk_desc *desc)
 	 * but we must still l_wait_event() in this case, to give liblustre
 	 * a chance to run pscrpc_server_bulk_callback()*/
 
-	LNetMDUnlink (desc->bd_md_h);
+	LNetMDUnlink(desc->bd_md_h);
 
 	for (;;) {
 		/* Network access will complete in finite time but the HUGE
 		 * timeout lets us CWARN for visibility of sluggish NALs */
-		lwi = LWI_TIMEOUT (300, NULL, NULL);
+		lwi = LWI_TIMEOUT(300, NULL, NULL);
 		rc = pscrpc_svr_wait_event(&desc->bd_waitq,
 					!pscrpc_bulk_active(desc),
 					&lwi, NULL);
@@ -252,8 +252,8 @@ pscrpc_register_bulk(struct pscrpc_request *req)
 		      LNET_MD_OP_GET : LNET_MD_OP_PUT);
 	pscrpc_fill_bulk_md(&md, desc);
 
-	psc_assert (desc->bd_cbid.cbid_fn == pscrpc_client_bulk_callback);
-	psc_assert (desc->bd_cbid.cbid_arg == desc);
+	psc_assert(desc->bd_cbid.cbid_fn == pscrpc_client_bulk_callback);
+	psc_assert(desc->bd_cbid.cbid_arg == desc);
 
 	/* XXX Registering the same xid on retried bulk makes my head
 	 * explode trying to understand how the original request's bulk
@@ -268,7 +268,7 @@ pscrpc_register_bulk(struct pscrpc_request *req)
 			 req->rq_xid, 0, LNET_UNLINK, LNET_INS_AFTER, &me_h);
 	if (rc != 0) {
 		psc_errorx("LNetMEAttach failed: %d", rc);
-		psc_assert (rc == -ENOMEM);
+		psc_assert(rc == -ENOMEM);
 		return (-ENOMEM);
 	}
 
@@ -277,10 +277,10 @@ pscrpc_register_bulk(struct pscrpc_request *req)
 	rc = LNetMDAttach(me_h, md, LNET_UNLINK, &desc->bd_md_h);
 	if (rc != 0) {
 		psc_errorx("LNetMDAttach failed: %d", rc);
-		psc_assert (rc == -ENOMEM);
+		psc_assert(rc == -ENOMEM);
 		desc->bd_network_rw = 0;
-		rc2 = LNetMEUnlink (me_h);
-		psc_assert (rc2 == 0);
+		rc2 = LNetMEUnlink(me_h);
+		psc_assert(rc2 == 0);
 		return (-ENOMEM);
 	}
 
@@ -332,7 +332,7 @@ pscrpc_unregister_bulk(struct pscrpc_request *req)
 	 * but we must still l_wait_event() in this case to give liblustre
 	 * a chance to run client_bulk_callback() */
 	if (registered)
-		LNetMDUnlink (desc->bd_md_h);
+		LNetMDUnlink(desc->bd_md_h);
 
 	if (req->rq_set != NULL)
 		wq = &req->rq_set->set_waitq;
@@ -344,13 +344,13 @@ pscrpc_unregister_bulk(struct pscrpc_request *req)
 	for (;;) {
 		/* Network access will complete in finite time but the HUGE
 		 * timeout lets us CWARN for visibility of sluggish NALs */
-		lwi = LWI_TIMEOUT (300, NULL, NULL);
+		lwi = LWI_TIMEOUT(300, NULL, NULL);
 		rc = pscrpc_cli_wait_event(wq, !pscrpc_bulk_active(desc),
 				    &lwi);
 		if (rc == 0)
 			return;
 
-		psc_assert (rc == -ETIMEDOUT);
+		psc_assert(rc == -ETIMEDOUT);
 		DEBUG_REQ(PLL_WARN, req,
 			  "Unexpectedly long timeout: desc %p", desc);
 	}
@@ -414,7 +414,7 @@ pscrpc_send_reply(struct pscrpc_request *req, int may_be_difficult)
 		psc_errorx("not replying on NULL connection"); /* bug 9635 */
 		return -ENOTCONN;
 	}
-	atomic_inc (&svc->srv_outstanding_replies);
+	atomic_inc(&svc->srv_outstanding_replies);
 	pscrpc_rs_addref(rs);                   /* +1 ref for the network */
 
 	rc = pscrpc_send_buf(&rs->rs_md_h, req->rq_repmsg, req->rq_replen,
@@ -422,7 +422,7 @@ pscrpc_send_reply(struct pscrpc_request *req, int may_be_difficult)
 	    &rs->rs_cb_id, req->rq_conn,
 	    svc->srv_rep_portal, req->rq_xid);
 	if (rc != 0) {
-		atomic_dec (&svc->srv_outstanding_replies);
+		atomic_dec(&svc->srv_outstanding_replies);
 		pscrpc_rs_decref(rs);
 	}
 	pscrpc_put_connection(req->rq_conn);
@@ -469,11 +469,11 @@ pscrpc_send_rpc(struct pscrpc_request *request, int noreply)
 	//OBD_FAIL_RETURN(OBD_FAIL_PSCRPC_DROP_RPC, 0);
 	DEBUG_REQ(PLL_DEBUG, request, "sending rpc");
 
-	psc_assert (request->rq_type == PSCRPC_MSG_REQUEST);
+	psc_assert(request->rq_type == PSCRPC_MSG_REQUEST);
 
 	/* If this is a re-transmit, we're required to have disengaged
 	 * cleanly from the previous attempt */
-	psc_assert (!request->rq_receiving_reply);
+	psc_assert(!request->rq_receiving_reply);
 
 #if PAULS_TODO
 	if (request->rq_import->imp_obd &&
@@ -488,7 +488,7 @@ pscrpc_send_rpc(struct pscrpc_request *request, int noreply)
 	connection = request->rq_import->imp_connection;
 
 	if (request->rq_bulk != NULL) {
-		rc = pscrpc_register_bulk (request);
+		rc = pscrpc_register_bulk(request);
 		if (rc != 0)
 			return (rc);
 	}
@@ -498,7 +498,7 @@ pscrpc_send_rpc(struct pscrpc_request *request, int noreply)
 	request->rq_reqmsg->conn_cnt = request->rq_import->imp_conn_cnt;
 
 	if (!noreply) {
-		psc_assert (request->rq_replen != 0);
+		psc_assert(request->rq_replen != 0);
 		if (request->rq_repmsg == NULL)
 			PSCRPC_OBD_ALLOC(request->rq_repmsg, request->rq_replen);
 
@@ -510,7 +510,7 @@ pscrpc_send_rpc(struct pscrpc_request *request, int noreply)
 				  LNET_UNLINK, LNET_INS_AFTER, &reply_me_h);
 		if (rc != 0) {
 			CERROR("LNetMEAttach failed: %d\n", rc);
-			psc_assert (rc == -ENOMEM);
+			psc_assert(rc == -ENOMEM);
 			GOTO(cleanup_repmsg, rc = -ENOMEM);
 		}
 		psc_info("LNetMEAttach() gave handle %"PRIx64, (uint64_t)reply_me_h.cookie);
@@ -543,7 +543,7 @@ pscrpc_send_rpc(struct pscrpc_request *request, int noreply)
 				 &request->rq_reply_md_h);
 		if (rc != 0) {
 			psc_errorx("LNetMDAttach failed: %d", rc);
-			psc_assert (rc == -ENOMEM);
+			psc_assert(rc == -ENOMEM);
 			spinlock(&request->rq_lock);
 			/* ...but the MD attach didn't succeed... */
 			request->rq_receiving_reply = 0;
@@ -582,7 +582,7 @@ pscrpc_send_rpc(struct pscrpc_request *request, int noreply)
 
 	/* drop pscrpc_request_out_callback refs, we couldn't start the send */
 	atomic_dec(&request->rq_import->imp_inflight);
-	pscrpc_req_finished (request);
+	pscrpc_req_finished(request);
 
 	if (noreply)
 		return (rc);
@@ -593,9 +593,9 @@ pscrpc_send_rpc(struct pscrpc_request *request, int noreply)
 	 * nobody apart from the PUT's target has the right nid+XID to
 	 * access the reply buffer. */
 	rc2 = LNetMEUnlink(reply_me_h);
-	psc_assert (rc2 == 0);
+	psc_assert(rc2 == 0);
 	/* UNLINKED callback called synchronously */
-	psc_assert (!request->rq_receiving_reply);
+	psc_assert(!request->rq_receiving_reply);
 
  cleanup_repmsg:
 	PSCRPC_OBD_FREE(request->rq_repmsg, request->rq_replen);
@@ -650,9 +650,9 @@ pscrpc_register_rqbd(struct pscrpc_request_buffer_desc *rqbd)
 		return (0);
 
 	CERROR("LNetMDAttach failed: %d; \n", rc);
-	psc_assert (rc == -ENOMEM);
-	rc = LNetMEUnlink (me_h);
-	psc_assert (rc == 0);
+	psc_assert(rc == -ENOMEM);
+	rc = LNetMEUnlink(me_h);
+	psc_assert(rc == 0);
 	rqbd->rqbd_refcount = 0;
 
 	return (-ENOMEM);
@@ -665,16 +665,16 @@ pscrpc_free_reply_state(struct pscrpc_reply_state *rs)
 	PTLRPC_RS_DEBUG_LRU_DEL(rs);
 #endif
 
-	psc_assert (atomic_read(&rs->rs_refcount) == 0);
-	psc_assert (!rs->rs_on_net);
-	psc_assert (!rs->rs_scheduled);
+	psc_assert(atomic_read(&rs->rs_refcount) == 0);
+	psc_assert(!rs->rs_on_net);
+	psc_assert(!rs->rs_scheduled);
 
 #if WEAREEVERATTHISPOINT
-	psc_assert (!rs->rs_difficult || rs->rs_handled);
-	psc_assert (rs->rs_export == NULL);
-	psc_assert (rs->rs_nlocks == 0);
-	psc_assert (psc_listhd_empty(&rs->rs_exp_list));
-	psc_assert (psc_listhd_empty(&rs->rs_obd_list));
+	psc_assert(!rs->rs_difficult || rs->rs_handled);
+	psc_assert(rs->rs_export == NULL);
+	psc_assert(rs->rs_nlocks == 0);
+	psc_assert(psc_listhd_empty(&rs->rs_exp_list));
+	psc_assert(psc_listhd_empty(&rs->rs_obd_list));
 
 	if (unlikely(rs->rs_prealloc)) {
 		struct ptlrpc_service *svc = rs->rs_service;
@@ -808,7 +808,7 @@ pscrpc_free_bulk(struct pscrpc_bulk_desc *desc)
 void
 pscrpc_fill_bulk_md(lnet_md_t *md, struct pscrpc_bulk_desc *desc)
 {
-	psc_assert (!(md->options & (LNET_MD_IOVEC | LNET_MD_KIOV | LNET_MD_PHYS)));
+	psc_assert(!(md->options & (LNET_MD_IOVEC | LNET_MD_KIOV | LNET_MD_PHYS)));
 	if (desc->bd_iov_count == 1) {
 		md->start = desc->bd_iov[0].iov_base;
 		md->length = desc->bd_iov[0].iov_len;

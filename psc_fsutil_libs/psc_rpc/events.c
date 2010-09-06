@@ -25,9 +25,9 @@ pscrpc_request_out_callback(lnet_event_t *ev)
 	struct pscrpc_cb_id   *cbid = ev->md.user_ptr;
 	struct pscrpc_request *req = cbid->cbid_arg;
 
-	LASSERT (ev->type == LNET_EVENT_SEND ||
+	LASSERT(ev->type == LNET_EVENT_SEND ||
 		 ev->type == LNET_EVENT_UNLINK);
-	LASSERT (ev->unlinked);
+	LASSERT(ev->unlinked);
 
 	DEBUG_REQ((ev->status == 0) ? PLL_INFO : PLL_ERROR, req,
 		  "type %d, status %d", ev->type, ev->status);
@@ -66,10 +66,10 @@ pscrpc_request_in_callback(lnet_event_t *ev)
 	struct pscrpc_service             *service = rqbd->rqbd_service;
 	struct pscrpc_request             *req;
 
-	LASSERT (ev->type == LNET_EVENT_PUT ||
+	LASSERT(ev->type == LNET_EVENT_PUT ||
 		 ev->type == LNET_EVENT_UNLINK);
-	LASSERT ((char *)ev->md.start >= rqbd->rqbd_buffer);
-	LASSERT ((char *)ev->md.start + ev->offset + ev->mlength <=
+	LASSERT((char *)ev->md.start >= rqbd->rqbd_buffer);
+	LASSERT((char *)ev->md.start + ev->offset + ev->mlength <=
 		 rqbd->rqbd_buffer + service->srv_buf_size);
 
 	if (!ev->status)
@@ -86,7 +86,7 @@ pscrpc_request_in_callback(lnet_event_t *ev)
 		 * we'd have to re-post the rqbd, which we can't do in this
 		 * context. */
 		req = &rqbd->rqbd_req;
-		memset(req, 0, sizeof (*req));
+		memset(req, 0, sizeof(*req));
 	} else {
 		LASSERT (ev->type == LNET_EVENT_PUT);
 		if (ev->status != 0) {
@@ -206,12 +206,12 @@ pscrpc_client_bulk_callback(lnet_event_t *ev)
 	struct pscrpc_cb_id     *cbid = ev->md.user_ptr;
 	struct pscrpc_bulk_desc *desc = cbid->cbid_arg;
 
-	LASSERT ((desc->bd_type == BULK_PUT_SINK &&
+	LASSERT((desc->bd_type == BULK_PUT_SINK &&
 		  ev->type == LNET_EVENT_PUT) ||
 		 (desc->bd_type == BULK_GET_SOURCE &&
 		  ev->type == LNET_EVENT_GET) ||
 		 ev->type == LNET_EVENT_UNLINK);
-	LASSERT (ev->unlinked);
+	LASSERT(ev->unlinked);
 
 	CDEBUG((ev->status == 0) ? D_NET : D_ERROR,
 	       "event type %d, status %d, desc %p\n",
@@ -240,12 +240,12 @@ pscrpc_reply_in_callback(lnet_event_t *ev)
 	struct pscrpc_cb_id   *cbid = ev->md.user_ptr;
 	struct pscrpc_request *req = cbid->cbid_arg;
 
-	LASSERT (ev->type == LNET_EVENT_PUT ||
+	LASSERT(ev->type == LNET_EVENT_PUT ||
 		 ev->type == LNET_EVENT_UNLINK);
-	LASSERT (ev->unlinked);
-	LASSERT (ev->md.start == req->rq_repmsg);
-	LASSERT (ev->offset == 0);
-	LASSERT (ev->mlength <= (uint32_t)req->rq_replen);
+	LASSERT(ev->unlinked);
+	LASSERT(ev->md.start == req->rq_repmsg);
+	LASSERT(ev->offset == 0);
+	LASSERT(ev->mlength <= (uint32_t)req->rq_replen);
 
 	DEBUG_REQ((ev->status == 0) ? PLL_INFO : PLL_ERROR, req,
 		  "type %d, status %d initiator ;%s;",
@@ -260,7 +260,7 @@ pscrpc_reply_in_callback(lnet_event_t *ev)
 	spinlock(&req->rq_lock);
 
 #if 0 /* this fails in a recovery scenario */
-	LASSERT (req->rq_receiving_reply);
+	LASSERT(req->rq_receiving_reply);
 #endif
 	req->rq_receiving_reply = 0;
 
@@ -295,20 +295,20 @@ pscrpc_reply_out_callback(lnet_event_t *ev)
 	struct pscrpc_reply_state *rs = cbid->cbid_arg;
 	struct pscrpc_service     *svc = rs->rs_service;
 
-	LASSERT (ev->type == LNET_EVENT_SEND ||
-		 ev->type == LNET_EVENT_ACK ||
-		 ev->type == LNET_EVENT_UNLINK);
+	LASSERT(ev->type == LNET_EVENT_SEND ||
+		ev->type == LNET_EVENT_ACK ||
+		ev->type == LNET_EVENT_UNLINK);
 
 	if (!rs->rs_difficult) {
 		/* 'Easy' replies have no further processing so I drop the
 		 * net's ref on 'rs' */
-		LASSERT (ev->unlinked);
+		LASSERT(ev->unlinked);
 		pscrpc_rs_decref(rs);
-		atomic_dec (&svc->srv_outstanding_replies);
+		atomic_dec(&svc->srv_outstanding_replies);
 		return;
 	}
 
-	LASSERT (rs->rs_on_net);
+	LASSERT(rs->rs_on_net);
 
 	if (ev->unlinked) {
 		/* Last network callback.  The net's ref on 'rs' stays put
@@ -318,7 +318,7 @@ pscrpc_reply_out_callback(lnet_event_t *ev)
 #if 0
 		// not sure if we're going to need these
 		//  pauln - 05082007
-		pscrpc_schedule_difficult_reply (rs);
+		pscrpc_schedule_difficult_reply(rs);
 #endif
 		freelock(&svc->srv_lock);
 	}
@@ -333,12 +333,12 @@ pscrpc_server_bulk_callback(lnet_event_t *ev)
 	struct pscrpc_cb_id     *cbid = ev->md.user_ptr;
 	struct pscrpc_bulk_desc *desc = cbid->cbid_arg;
 
-	LASSERT (ev->type == LNET_EVENT_SEND ||
-		 ev->type == LNET_EVENT_UNLINK ||
-		 (desc->bd_type == BULK_PUT_SOURCE &&
-		  ev->type == LNET_EVENT_ACK) ||
-		 (desc->bd_type == BULK_GET_SINK &&
-		  ev->type == LNET_EVENT_REPLY));
+	LASSERT(ev->type == LNET_EVENT_SEND ||
+		ev->type == LNET_EVENT_UNLINK ||
+		(desc->bd_type == BULK_PUT_SOURCE &&
+		 ev->type == LNET_EVENT_ACK) ||
+		(desc->bd_type == BULK_GET_SINK &&
+		 ev->type == LNET_EVENT_REPLY));
 
 	CDEBUG((ev->status == 0) ? D_NET : D_ERROR,
 	       "event type %d, status %d, desc %p\n",
@@ -396,15 +396,15 @@ pscrpc_master_callback(lnet_event_t *ev)
 	cbid = ev->md.user_ptr;
 	callback = cbid->cbid_fn;
 	/* Honestly, it's best to find out early. */
-	LASSERT (cbid->cbid_arg != LP_POISON);
-	LASSERT (callback == pscrpc_request_out_callback ||
+	LASSERT(cbid->cbid_arg != LP_POISON);
+	LASSERT(callback == pscrpc_request_out_callback ||
 		 callback == pscrpc_reply_in_callback    ||
 		 callback == pscrpc_client_bulk_callback ||
 		 callback == pscrpc_request_in_callback  ||
 		 callback == pscrpc_reply_out_callback   ||
 		 callback == pscrpc_server_bulk_callback);
 
-	callback (ev);
+	callback(ev);
 }
 
 #if 0
@@ -461,16 +461,16 @@ pscrpc_check_events(int timeout)
 	if (rc == 0)
 		return (0);
 
-	LASSERT (rc == -EOVERFLOW || rc == 1);
+	LASSERT(rc == -EOVERFLOW || rc == 1);
 
 	/* liblustre: no asynch callback so we can't affort to miss any
 	 * events... */
 	if (rc == -EOVERFLOW) {
-		CERROR ("Dropped an event!!!\n");
+		CERROR("Dropped an event!!!\n");
 		abort();
 	}
 
-	pscrpc_master_callback (&ev);
+	pscrpc_master_callback(&ev);
 	return (1);
 }
 
@@ -572,7 +572,7 @@ pscrpc_ni_init(int type)
 	if (rc == 0)
 		return 0;
 
-	CERROR ("Failed to allocate event queue: %d\n", rc);
+	CERROR("Failed to allocate event queue: %d\n", rc);
 	LNetNIFini();
 
 	return (-ENOMEM);

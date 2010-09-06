@@ -19,15 +19,15 @@
 
 static int test_req_buffer_pressure = 0;
 
-static int pscrpc_server_post_idle_rqbds (struct pscrpc_service *svc);
+static int pscrpc_server_post_idle_rqbds(struct pscrpc_service *svc);
 
-static PSCLIST_HEAD (pscrpc_all_services);
+static PSCLIST_HEAD(pscrpc_all_services);
 static psc_spinlock_t pscrpc_all_services_lock = LOCK_INITIALIZER;
 
-PSCLIST_HEAD (pscrpc_svh_list);
+PSCLIST_HEAD(pscrpc_svh_list);
 
 static char *
-pscrpc_alloc_request_buffer (int size)
+pscrpc_alloc_request_buffer(int size)
 {
 	char *ptr;
 
@@ -36,7 +36,7 @@ pscrpc_alloc_request_buffer (int size)
 }
 
 static void
-pscrpc_free_request_buffer (char *ptr, __unusedx int size)
+pscrpc_free_request_buffer(char *ptr, __unusedx int size)
 {
 	PSCRPC_OBD_FREE(ptr, size);
 }
@@ -47,11 +47,11 @@ pscrpc_free_request_buffer (char *ptr, __unusedx int size)
  * @svc: pointer to the service which owns this request buffer ptr.
  */
 struct pscrpc_request_buffer_desc *
-pscrpc_alloc_rqbd (struct pscrpc_service *svc)
+pscrpc_alloc_rqbd(struct pscrpc_service *svc)
 {
 	struct pscrpc_request_buffer_desc *rqbd;
 
-	PSCRPC_OBD_ALLOC(rqbd, sizeof (*rqbd));
+	PSCRPC_OBD_ALLOC(rqbd, sizeof(*rqbd));
 	if (rqbd == NULL)
 		return (NULL);
 
@@ -65,7 +65,7 @@ pscrpc_alloc_rqbd (struct pscrpc_service *svc)
 	rqbd->rqbd_buffer = pscrpc_alloc_request_buffer(svc->srv_buf_size);
 
 	if (rqbd->rqbd_buffer == NULL) {
-		PSCRPC_OBD_FREE(rqbd, sizeof (*rqbd));
+		PSCRPC_OBD_FREE(rqbd, sizeof(*rqbd));
 		return (NULL);
 	}
 
@@ -78,20 +78,20 @@ pscrpc_alloc_rqbd (struct pscrpc_service *svc)
 }
 
 void
-pscrpc_free_rqbd (struct pscrpc_request_buffer_desc *rqbd)
+pscrpc_free_rqbd(struct pscrpc_request_buffer_desc *rqbd)
 {
 	struct pscrpc_service *svc = rqbd->rqbd_service;
 
-	LASSERT (rqbd->rqbd_refcount == 0);
-	LASSERT (psc_listhd_empty(&rqbd->rqbd_reqs));
+	LASSERT(rqbd->rqbd_refcount == 0);
+	LASSERT(psc_listhd_empty(&rqbd->rqbd_reqs));
 
 	spinlock(&svc->srv_lock);
 	psclist_del(&rqbd->rqbd_lentry, psc_lentry_hd(&rqbd->rqbd_lentry));
 	svc->srv_nbufs--;
 	freelock(&svc->srv_lock);
 
-	pscrpc_free_request_buffer (rqbd->rqbd_buffer, svc->srv_buf_size);
-	PSCRPC_OBD_FREE (rqbd, sizeof (*rqbd));
+	pscrpc_free_request_buffer(rqbd->rqbd_buffer, svc->srv_buf_size);
+	PSCRPC_OBD_FREE(rqbd, sizeof(*rqbd));
 }
 
 /**
@@ -101,7 +101,7 @@ pscrpc_free_rqbd (struct pscrpc_request_buffer_desc *rqbd)
  * @svc: pointer to the service
  */
 int
-pscrpc_server_post_idle_rqbds (struct pscrpc_service *svc)
+pscrpc_server_post_idle_rqbds(struct pscrpc_service *svc)
 {
 	struct pscrpc_request_buffer_desc *rqbd;
 	int                                rc;
@@ -110,18 +110,18 @@ pscrpc_server_post_idle_rqbds (struct pscrpc_service *svc)
 	for (;;) {
 		spinlock(&svc->srv_lock);
 
-		if (psc_listhd_empty (&svc->srv_idle_rqbds)) {
+		if (psc_listhd_empty(&svc->srv_idle_rqbds)) {
 			freelock(&svc->srv_lock);
 			return (posted);
 		}
 
 		rqbd = psclist_entry(psclist_next(&svc->srv_idle_rqbds),
 			struct pscrpc_request_buffer_desc, rqbd_lentry);
-		psclist_del (&rqbd->rqbd_lentry, &svc->srv_idle_rqbds);
+		psclist_del(&rqbd->rqbd_lentry, &svc->srv_idle_rqbds);
 
 		/* assume we will post successfully */
 		svc->srv_nrqbd_receiving++;
-		psclist_add (&rqbd->rqbd_lentry, &svc->srv_active_rqbds);
+		psclist_add(&rqbd->rqbd_lentry, &svc->srv_active_rqbds);
 
 		freelock(&svc->srv_lock);
 
@@ -260,7 +260,7 @@ pscrpc_server_handle_request(struct pscrpc_service *svc,
 
 	spinlock(&svc->srv_lock);
 
-	if (psc_listhd_empty (&svc->srv_request_queue) ||
+	if (psc_listhd_empty(&svc->srv_request_queue) ||
 	    (svc->srv_n_difficult_replies != 0 &&
 	     svc->srv_n_active_reqs >= (svc->srv_nthreads - 1))) {
 		/* If all the other threads are handling requests, I must
@@ -271,7 +271,7 @@ pscrpc_server_handle_request(struct pscrpc_service *svc,
 		return (0);
 	}
 
-	request = psclist_entry (psclist_next(&svc->srv_request_queue),
+	request = psclist_entry(psclist_next(&svc->srv_request_queue),
 			      struct pscrpc_request, rq_list_entry);
 
 	psclist_del(&request->rq_list_entry, &svc->srv_request_queue);
@@ -298,9 +298,9 @@ pscrpc_server_handle_request(struct pscrpc_service *svc,
 	/* Clear request swab mask; this is a new request */
 	request->rq_req_swab_mask = 0;
 #endif
-	rc = pscrpc_unpack_msg (request->rq_reqmsg, request->rq_reqlen);
+	rc = pscrpc_unpack_msg(request->rq_reqmsg, request->rq_reqlen);
 	if (rc != 0) {
-		CERROR ("error unpacking request: ptl %d from %s"
+		CERROR("error unpacking request: ptl %d from %s"
 			" xid %"PRIx64"\n", svc->srv_req_portal,
 			libcfs_id2str(request->rq_peer), request->rq_xid);
 		goto out;
@@ -459,7 +459,7 @@ pscrpc_server_handle_request(struct pscrpc_service *svc,
 }
 
 static int
-pscrpc_server_handle_reply (struct pscrpc_service *svc)
+pscrpc_server_handle_reply(struct pscrpc_service *svc)
 {
 	LASSERT(svc != NULL);
 #if 0
@@ -470,34 +470,34 @@ pscrpc_server_handle_reply (struct pscrpc_service *svc)
 	int                        been_handled;
 
 	spinlock(&svc->srv_lock);
-	if (psc_listhd_empty (&svc->srv_reply_queue)) {
+	if (psc_listhd_empty(&svc->srv_reply_queue)) {
 		freelock(&svc->srv_lock);
 		return (0);
 	}
 
-	rs = psclist_entry (svc->srv_reply_queue.next,
+	rs = psclist_entry(svc->srv_reply_queue.next,
 			 struct pscrpc_reply_state, rs_list_entry);
 
 	exp = rs->rs_export;
 	obd = exp->exp_obd;
 
-	LASSERT (rs->rs_difficult);
-	LASSERT (rs->rs_scheduled);
+	LASSERT(rs->rs_difficult);
+	LASSERT(rs->rs_scheduled);
 
 	psclist_del(&rs->rs_list_entry);
 
 	/* Disengage from notifiers carefully (lock order - irqrestore below!)*/
 	freelock(&svc->srv_lock);
 
-	spinlock (&obd->obd_uncommitted_replies_lock);
+	spinlock(&obd->obd_uncommitted_replies_lock);
 	/* Noop if removed already */
-	psclist_del_init (&rs->rs_obd_list);
-	freelock (&obd->obd_uncommitted_replies_lock);
+	psclist_del_init(&rs->rs_obd_list);
+	freelock(&obd->obd_uncommitted_replies_lock);
 
-	spinlock (&exp->exp_lock);
+	spinlock(&exp->exp_lock);
 	/* Noop if removed already */
-	psclist_del_init (&rs->rs_exp_list);
-	freelock (&exp->exp_lock);
+	psclist_del_init(&rs->rs_exp_list);
+	freelock(&exp->exp_lock);
 
 	spinlock(&svc->srv_lock);
 
@@ -542,10 +542,10 @@ pscrpc_server_handle_reply (struct pscrpc_service *svc)
 		svc->srv_n_difficult_replies--;
 		freelock(&svc->srv_lock);
 
-		pscrpc_export_put (exp);
+		pscrpc_export_put(exp);
 		rs->rs_export = NULL;
-		pscrpc_rs_decref (rs);
-		atomic_dec (&svc->srv_outstanding_replies);
+		pscrpc_rs_decref(rs);
+		atomic_dec(&svc->srv_outstanding_replies);
 		return (1);
 	}
 
@@ -595,7 +595,7 @@ pscrpc_grow_req_bufs(struct pscrpc_service *svc)
 		rqbd = pscrpc_alloc_rqbd(svc);
 
 		if (rqbd == NULL) {
-			CERROR ("%s: Can't allocate request buffer\n",
+			CERROR("%s: Can't allocate request buffer\n",
 				svc->srv_name);
 			return (-ENOMEM);
 		}
@@ -682,21 +682,21 @@ pscrpcthr_main(struct psc_thread *thr)
 						     pscrpc_retry_rqbds, svc);
 
 		//lc_watchdog_disable(watchdog);
-		//l_wait_event_exclusive (svc->srv_waitq,
+		//l_wait_event_exclusive(svc->srv_waitq,
 		/*
 		psc_dbg("run %d, svc->srv_n_difficult_replies %d, "
 		       "psc_listhd_empty(&svc->srv_idle_rqbds) %d,  svc->srv_rqbd_timeout %d "
-		       "psc_listhd_empty (&svc->srv_reply_queue) %d, psc_listhd_empty(&svc->srv_request_queue) %d "
+		       "psc_listhd_empty(&svc->srv_reply_queue) %d, psc_listhd_empty(&svc->srv_request_queue) %d "
 		       "svc->srv_n_active_reqs %d svc->srv_nthreads %d"
 		       "COND 1=%d, COND 2=%d, COND 3=%d",
 
 		       thr->pscthr_run, svc->srv_n_difficult_replies,
 		       psc_listhd_empty(&svc->srv_idle_rqbds), svc->srv_rqbd_timeout,
-		       psc_listhd_empty (&svc->srv_reply_queue), psc_listhd_empty(&svc->srv_request_queue),
+		       psc_listhd_empty(&svc->srv_reply_queue), psc_listhd_empty(&svc->srv_request_queue),
 		       svc->srv_n_active_reqs, svc->srv_nthreads,
 		       (thr->pscthr_run != 0 && svc->srv_n_difficult_replies == 0),
 		       (!psc_listhd_empty(&svc->srv_idle_rqbds) && svc->srv_rqbd_timeout == 0),
-		       (!psc_listhd_empty (&svc->srv_request_queue) &&
+		       (!psc_listhd_empty(&svc->srv_request_queue) &&
 			(svc->srv_n_difficult_replies == 0 ||
 			 svc->srv_n_active_reqs < (svc->srv_nthreads - 1)))
 		       );
@@ -706,8 +706,8 @@ pscrpcthr_main(struct psc_thread *thr)
 				    svc->srv_n_difficult_replies == 0) ||
 				   (!psc_listhd_empty(&svc->srv_idle_rqbds) &&
 				    svc->srv_rqbd_timeout == 0) ||
-				   !psc_listhd_empty (&svc->srv_reply_queue) ||
-				   (!psc_listhd_empty (&svc->srv_request_queue) &&
+				   !psc_listhd_empty(&svc->srv_reply_queue) ||
+				   (!psc_listhd_empty(&svc->srv_request_queue) &&
 				    (svc->srv_n_difficult_replies == 0 ||
 				     svc->srv_n_active_reqs <
 				     (svc->srv_nthreads - 1))),
@@ -720,13 +720,13 @@ pscrpcthr_main(struct psc_thread *thr)
 		 *  put'ing replies onto this list after they've sync'ed
 		 *  the blocks to disk.. paul
 		 */
-		//if (!psc_listhd_empty (&svc->srv_reply_queue))
-		//	pscrpc_server_handle_reply (svc);
+		//if (!psc_listhd_empty(&svc->srv_reply_queue))
+		//	pscrpc_server_handle_reply(svc);
 
 		/* only handle requests if there are no difficult replies
 		 * outstanding, or I'm not the last thread handling
 		 * requests */
-		if (!psc_listhd_empty (&svc->srv_request_queue) &&
+		if (!psc_listhd_empty(&svc->srv_request_queue) &&
 		    (svc->srv_n_difficult_replies == 0 ||
 		     svc->srv_n_active_reqs < (svc->srv_nthreads - 1)))
 			pscrpc_server_handle_request(svc, thr);
@@ -815,9 +815,9 @@ pscrpc_unregister_service(struct pscrpc_service *service)
 	//pscrpc_stop_all_threads(service);
 	LASSERT(psc_listhd_empty(&service->srv_threads));
 
-	spinlock (&pscrpc_all_services_lock);
+	spinlock(&pscrpc_all_services_lock);
 	psclist_del(&service->srv_lentry, &pscrpc_all_services);
-	freelock (&pscrpc_all_services_lock);
+	freelock(&pscrpc_all_services_lock);
 
 	/* All history will be culled when the next request buffer is
 	 * freed */
@@ -826,7 +826,7 @@ pscrpc_unregister_service(struct pscrpc_service *service)
 	CDEBUG(D_NET, "%s: tearing down\n", service->srv_name);
 
 	rc = LNetClearLazyPortal(service->srv_req_portal);
-	LASSERT (rc == 0);
+	LASSERT(rc == 0);
 
 	/* Unlink all the request buffers.  This forces a 'final' event with
 	 * its 'unlink' flag set for each posted rqbd */
@@ -835,7 +835,7 @@ pscrpc_unregister_service(struct pscrpc_service *service)
 		    struct pscrpc_request_buffer_desc, rqbd_lentry);
 
 		rc = LNetMDUnlink(rqbd->rqbd_md_h);
-		LASSERT (rc == 0 || rc == -ENOENT);
+		LASSERT(rc == 0 || rc == -ENOENT);
 	}
 
 	/* Wait for the network to release any buffers it's currently
@@ -944,8 +944,8 @@ pscrpc_init_svc(int nbufs, int bufsize, int max_req_size, int max_reply_size,
 
 	psc_info("bufsize %d  max_req_size %d", bufsize, max_req_size);
 
-	LASSERT (nbufs > 0);
-	LASSERT (bufsize >= max_req_size);
+	LASSERT(nbufs > 0);
+	LASSERT(bufsize >= max_req_size);
 
 	PSCRPC_OBD_ALLOC(service, sizeof(*service));
 	if (service == NULL)
@@ -970,7 +970,7 @@ pscrpc_init_svc(int nbufs, int bufsize, int max_req_size, int max_reply_size,
 	service->srv_request_max_cull_seq = 0;
 
 	rc = LNetSetLazyPortal(service->srv_req_portal);
-	LASSERT (rc == 0);
+	LASSERT(rc == 0);
 
 	INIT_PSCLIST_ENTRY(&service->srv_lentry);
 	INIT_PSCLIST_HEAD(&service->srv_request_queue);
@@ -996,9 +996,9 @@ pscrpc_init_svc(int nbufs, int bufsize, int max_req_size, int max_reply_size,
 		    pscrpc_peer_qlen_cmp, "qlen-%s", service->srv_name);
 	}
 
-	spinlock (&pscrpc_all_services_lock);
-	psclist_add (&service->srv_lentry, &pscrpc_all_services);
-	freelock (&pscrpc_all_services_lock);
+	spinlock(&pscrpc_all_services_lock);
+	psclist_add(&service->srv_lentry, &pscrpc_all_services);
+	freelock(&pscrpc_all_services_lock);
 
 	/* Now allocate the request buffers */
 	rc = pscrpc_grow_req_bufs(service);
