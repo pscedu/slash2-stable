@@ -100,9 +100,7 @@ psclist_add_tail(struct psclist_head *e, struct psclist_head *head)
 #define psclist_add_after(e, t)		psclist_add((e), (t))
 #define psclist_add_before(e, t)	psclist_add_tail((e), (t))
 
-#define psclist_xadd(e, hd)		psclist_add_head((e), (hd))
-#define psclist_xadd_tail(e, hd)	psclist_add_tail((e), (hd))
-#define psclist_xadd_head(e, hd)	psclist_add_head((e), (hd))
+#define psclist_add(e, hd)		psclist_add_head((e), (hd))
 
 static __inline void
 _psclist_del(struct psclist_head *prev, struct psclist_head *next)
@@ -369,10 +367,10 @@ psclist_add_sorted(struct psclist_head *hd, struct psclist_head *elem,
 	psc_assert(elem);
 	psclist_for_each(e, hd)
 		if (cmpf((char *)elem - offset, (char *)e - offset) > 0) {
-			psclist_xadd(elem, e);
+			psclist_add(elem, e);
 			return;
 		}
-	psclist_xadd_tail(elem, hd);
+	psclist_add_tail(elem, hd);
 }
 
 void psclist_sort(void **, struct psclist_head *, int, ptrdiff_t,

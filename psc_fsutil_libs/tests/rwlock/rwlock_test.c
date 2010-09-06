@@ -144,7 +144,7 @@ spawn(void *(*f)(void *), const char *namefmt, ...)
 
 	thr = PSCALLOC(sizeof(*thr));
 
-	psclist_xadd_tail(&thr->lentry, &thrs);
+	psclist_add_tail(&thr->lentry, &thrs);
 
 	va_start(ap, namefmt);
 	vsnprintf(thr->name, sizeof(thr->name), namefmt, ap);

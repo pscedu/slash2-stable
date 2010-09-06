@@ -125,7 +125,7 @@ pscrpc_request_in_callback(lnet_event_t *ev)
 	spinlock(&service->srv_lock);
 
 	req->rq_history_seq = service->srv_request_seq++;
-	psclist_xadd_tail(&req->rq_history_lentry, &service->srv_request_history);
+	psclist_add_tail(&req->rq_history_lentry, &service->srv_request_history);
 
 	if (ev->unlinked) {
 		service->srv_nrqbd_receiving--;
@@ -150,7 +150,7 @@ pscrpc_request_in_callback(lnet_event_t *ev)
 		rqbd->rqbd_refcount++;
 	}
 
-	psclist_xadd_tail(&req->rq_list_entry, &service->srv_request_queue);
+	psclist_add_tail(&req->rq_list_entry, &service->srv_request_queue);
 	service->srv_n_queued_reqs++;
 
 	/* count the RPC request queue length for this peer if enabled */
@@ -422,7 +422,7 @@ pscrpc_register_wait_callback(int (*fn)(void *arg), void *arg)
 
 	llwc->llwc_fn = fn;
 	llwc->llwc_arg = arg;
-	psclist_xadd_tail(&llwc->llwc_list, &pscrpc_wait_callbacks);
+	psclist_add_tail(&llwc->llwc_list, &pscrpc_wait_callbacks);
 
 	return (llwc);
 }

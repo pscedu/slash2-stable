@@ -85,7 +85,7 @@ psc_mlist_add(struct psc_mlist *pml, void *p)
 
 	psc_assert(p);
 	locked = reqlock(&pml->pml_lock);
-	psclist_xadd_tail((struct psclist_head *)((char *)p +
+	psclist_add_tail((struct psclist_head *)((char *)p +
 	    pml->pml_offset), &pml->pml_listhd);
 	pml->pml_size++;
 	pml->pml_nseen++;

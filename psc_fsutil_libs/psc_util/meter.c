@@ -46,7 +46,7 @@ psc_meter_init(struct psc_meter *pm, size_t max, const char *fmt, ...)
 		psc_fatal("vsnprintf");
 
 	spinlock(&pscMetersLock);
-	psclist_xadd(&pm->pm_lentry, &pscMetersList);
+	psclist_add(&pm->pm_lentry, &pscMetersList);
 	freelock(&pscMetersLock);
 }
 

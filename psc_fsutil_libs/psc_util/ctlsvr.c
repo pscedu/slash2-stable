@@ -1004,7 +1004,7 @@ psc_ctlrep_param(int fd, struct psc_ctlmsghdr *mh, void *m)
 
 	pcf = PSCALLOC(sizeof(*pcf));
 	pcf->pcf_ptn = &psc_ctlparamtree;
-	psclist_xadd(&pcf->pcf_lentry, &stack);
+	psclist_add(&pcf->pcf_lentry, &stack);
 
 	while (!psclist_empty(&stack)) {
 		pcf = psclist_first_entry(&stack,
@@ -1050,7 +1050,7 @@ psc_ctlrep_param(int fd, struct psc_ctlmsghdr *mh, void *m)
 						npcf->pcf_level = n + 1;
 						npcf->pcf_pos = k++;
 						npcf->pcf_flags = PCFF_USEPOS;
-						psclist_xadd(&npcf->pcf_lentry, &stack);
+						psclist_add(&npcf->pcf_lentry, &stack);
 					}
 				}
 			}

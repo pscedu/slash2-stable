@@ -51,7 +51,7 @@ addelem(int v)
 
 	m = PSCALLOC(sizeof(*m));
 	m->v = v;
-	psclist_xadd(&m->lentry, &hd);
+	psclist_add(&m->lentry, &hd);
 	nitems++;
 }
 

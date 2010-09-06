@@ -372,7 +372,7 @@ pscrpc_set_add_new_req(struct pscrpc_request_set *set,
 {
 	pscrpc_set_lock(set);
 	/* The set takes over the caller's request reference */
-	psclist_xadd_tail(&req->rq_set_chain_lentry, &set->set_requests);
+	psclist_add_tail(&req->rq_set_chain_lentry, &set->set_requests);
 	req->rq_set = set;
 	set->set_remaining++;
 	atomic_inc(&req->rq_import->imp_inflight);
@@ -447,7 +447,7 @@ pscrpc_send_new_req_locked(struct pscrpc_request *req)
 			pscrpc_import_state_name(req->rq_send_state),
 			  pscrpc_import_state_name(imp->imp_state));
 
-		psclist_xadd_tail(&req->rq_list_entry, &imp->imp_delayed_list);
+		psclist_add_tail(&req->rq_list_entry, &imp->imp_delayed_list);
 		freelock(&imp->imp_lock);
 		return (0);
 	}
@@ -461,7 +461,7 @@ pscrpc_send_new_req_locked(struct pscrpc_request *req)
 #endif
 
 	/* XXX this is the same as pscrpc_queue_wait */
-	psclist_xadd_tail(&req->rq_list_entry, &imp->imp_sending_list);
+	psclist_add_tail(&req->rq_list_entry, &imp->imp_sending_list);
 	freelock(&imp->imp_lock);
 
 	// we don't have a 'current' struct - paul
@@ -699,7 +699,7 @@ pscrpc_queue_wait(struct pscrpc_request *req)
 	if (pscrpc_import_delay_req(imp, req, &rc)) {
 		psclist_del(&req->rq_list_entry);
 
-		psclist_xadd_tail(&req->rq_list_entry, &imp->imp_delayed_list);
+		psclist_add_tail(&req->rq_list_entry, &imp->imp_delayed_list);
 		freelock(&imp->imp_lock);
 
 		DEBUG_REQ(PLL_WARN, req, "\"%s\" waiting for recovery: (%s != %s)",
@@ -762,7 +762,7 @@ pscrpc_queue_wait(struct pscrpc_request *req)
 		DEBUG_REQ(PLL_WARN, req, "resending: ");
 	}
 	/* XXX this is the same as pscrpc_set_wait */
-	psclist_xadd_tail(&req->rq_list_entry, &imp->imp_sending_list);
+	psclist_add_tail(&req->rq_list_entry, &imp->imp_sending_list);
 	freelock(&imp->imp_lock);
 
 	psc_info("request %p request->rq_reqmsg %p",
@@ -1020,7 +1020,7 @@ pscrpc_check_set(struct pscrpc_request_set *set, int check_allsent)
 					freelock(&imp->imp_lock);
 					GOTO(interpret, req->rq_status);
 				}
-				psclist_xadd_tail(&req->rq_list_entry,
+				psclist_add_tail(&req->rq_list_entry,
 					      &imp->imp_sending_list);
 
 				freelock(&imp->imp_lock);
@@ -1072,7 +1072,7 @@ pscrpc_check_set(struct pscrpc_request_set *set, int check_allsent)
 				   it can be errored if the import is
 				   evicted after recovery. */
 				spinlock(&req->rq_lock);
-				psclist_xadd_tail(&req->rq_list_entry,
+				psclist_add_tail(&req->rq_list_entry,
 					      &imp->imp_delayed_list);
 				freelock(&req->rq_lock);
 				continue;

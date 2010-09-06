@@ -429,7 +429,7 @@ acsreq_issue(struct access_request *arq)
 	psc_waitq_init(&apr->apr_wq);
 
 	spinlock(&acsvc_pendlistlock);
-	psclist_xadd(&apr->apr_lentry, &acsvc_pendlist);
+	psclist_add(&apr->apr_lentry, &acsvc_pendlist);
 	freelock(&acsvc_pendlistlock);
 
 	/* Issue request. */
