@@ -184,10 +184,10 @@ psc_listhd_empty(const struct psclist_head *hd)
 	    (pos) = (n), (n) = (pos)->znext)
 
 /**
- * psclist_first - Grab first entry from a list.
+ * psc_listhd_first - Grab first entry from a list.
  * @head: the head of the list.
  */
-#define psclist_first(head) (head)->znext
+#define psc_listhd_first(head) (head)->znext
 
 #ifdef DEBUG
 #define psc_lentry_hd(e)		(e)->plh_owner
@@ -206,10 +206,10 @@ psc_listhd_empty(const struct psclist_head *hd)
 	 psclist_entry((hd)->znext, type, memb))
 
 /**
- * psclist_last - Grab last entry from a list.
+ * psc_listhd_last - Grab last entry from a list.
  * @hd: list head.
  */
-#define psclist_last(hd) (hd)->zprev
+#define psc_listhd_last(hd) (hd)->zprev
 
 /**
  * psc_listhd_last_obj - Grab last item from a list.

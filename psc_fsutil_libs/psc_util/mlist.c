@@ -65,7 +65,7 @@ psc_mlist_tryget(struct psc_mlist *pml)
 		ureqlock(&pml->pml_lock, locked);
 		return (NULL);
 	}
-	e = psclist_first(&pml->pml_listhd);
+	e = psc_listhd_first(&pml->pml_listhd);
 	psclist_del(e);
 	psc_assert(pml->pml_size-- > 0);
 	p = (char *)e - pml->pml_offset;

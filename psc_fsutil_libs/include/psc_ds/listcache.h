@@ -187,8 +187,8 @@ _lc_get(struct psc_listcache *lc, struct timespec *abstime,
 		spinlock(&lc->plc_lock);
 	}
 	e = (void *)(pos == PLCP_HEAD ?
-	    psclist_first(&lc->plc_listhd) :
-	    psclist_last(&lc->plc_listhd));
+	    psc_listhd_first(&lc->plc_listhd) :
+	    psc_listhd_last(&lc->plc_listhd));
 	psc_assert(lc->plc_size > 0);
 	if ((flags & PLCGF_PEEK) == 0) {
 #ifdef DEBUG

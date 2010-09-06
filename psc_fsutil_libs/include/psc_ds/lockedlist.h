@@ -140,9 +140,9 @@ _pll_get(struct psc_lockedlist *pll, int flags)
 		return (NULL);
 	}
 	if (flags & PLLF_TAIL)
-		e = psclist_last(&pll->pll_listhd);
+		e = psc_listhd_last(&pll->pll_listhd);
 	else
-		e = psclist_first(&pll->pll_listhd);
+		e = psc_listhd_first(&pll->pll_listhd);
 	if ((flags & PLLF_PEEK) == 0) {
 		psclist_del(e);
 		pll->pll_nitems--;
