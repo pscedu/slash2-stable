@@ -31,7 +31,7 @@
 #include "psc_util/multiwait.h"
 
 struct psc_lockedlist psc_mlists =
-    PLL_INITIALIZER(&psc_mlists, struct psc_mlist, pml_index_lentry);
+    PLL_INIT(&psc_mlists, struct psc_mlist, pml_index_lentry);
 
 /**
  * psc_mlist_size - Determine number of elements on an mlist.

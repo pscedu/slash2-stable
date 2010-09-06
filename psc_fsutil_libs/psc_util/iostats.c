@@ -26,7 +26,7 @@
 #include "pfl/time.h"
 
 struct psc_lockedlist	psc_iostats =
-    PLL_INITIALIZER(&psc_iostats, struct psc_iostats, ist_lentry);
+    PLL_INIT(&psc_iostats, struct psc_iostats, ist_lentry);
 
 /*
  * I/O statistic interval lengths:

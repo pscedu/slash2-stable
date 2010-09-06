@@ -37,7 +37,7 @@
 #include "psc_util/odtable.h"
 
 struct psc_lockedlist psc_odtables =
-    PLL_INITIALIZER(&psc_odtables, struct odtable, odt_lentry);
+    PLL_INIT(&psc_odtables, struct odtable, odt_lentry);
 
 static void
 odtable_sync(struct odtable *odt, __unusedx size_t elem)

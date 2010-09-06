@@ -21,7 +21,7 @@
 #include "psc_ds/lockedlist.h"
 
 struct psc_lockedlist pscListCaches =
-    PLL_INITIALIZER(&pscListCaches, struct psc_listcache, lc_index_lentry);
+    PLL_INIT(&pscListCaches, struct psc_listcache, lc_index_lentry);
 
 void
 psclist_sort(void **p, struct psclist_head *hd, int n, ptrdiff_t off,

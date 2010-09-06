@@ -32,7 +32,7 @@
 #include "psc_util/log.h"
 
 struct psc_lockedlist psc_hashtbls =
-    PLL_INITIALIZER(&psc_hashtbls, struct psc_hashtbl, pht_lentry);
+    PLL_INIT(&psc_hashtbls, struct psc_hashtbl, pht_lentry);
 
 /*
  * "This well-known hash function was used in P.J. Weinberger's

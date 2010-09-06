@@ -41,7 +41,7 @@
 
 __static struct psc_poolset psc_poolset_main = PSC_POOLSET_INIT;
 struct psc_lockedlist psc_pools =
-    PLL_INITIALIZER(&psc_pools, struct psc_poolmgr, ppm_all_lentry);
+    PLL_INIT(&psc_pools, struct psc_poolmgr, ppm_all_lentry);
 
 __weak void
 _psc_mlist_init(__unusedx struct psc_mlist *m, __unusedx int flags,
