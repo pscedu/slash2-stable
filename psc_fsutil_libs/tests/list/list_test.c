@@ -26,6 +26,7 @@
 
 #include "pfl/cdefs.h"
 #include "pfl/pfl.h"
+#include "psc_ds/list.h"
 #include "psc_ds/listcache.h"
 
 const char *progname;
@@ -50,6 +51,7 @@ addelem(int v)
 	struct m *m;
 
 	m = PSCALLOC(sizeof(*m));
+	INIT_PSCLIST_ENTRY(&m->lentry);
 	m->v = v;
 	psclist_add(&m->lentry, &hd);
 	nitems++;
@@ -63,7 +65,7 @@ shift(void)
 	m = psc_listhd_first_obj(&hd, struct m, lentry);
 	if (m == NULL)
 		return (0);
-	psclist_del(&m->lentry);
+	psclist_del(&m->lentry, &hd);
 	printf("v: %d\n", m->v);
 	PSCFREE(m);
 	return (1);
@@ -115,14 +117,17 @@ main(int argc, char *argv[])
 	lc_init(&lc, struct m, lentry);
 
 	m = PSCALLOC(sizeof(*m));
+	INIT_PSCLIST_ENTRY(&m->lentry);
 	m->v = 5;
 	lc_addqueue(&lc, m);
 
 	m = PSCALLOC(sizeof(*m));
+	INIT_PSCLIST_ENTRY(&m->lentry);
 	m->v = 8;
 	lc_addqueue(&lc, m);
 
 	m = PSCALLOC(sizeof(*m));
+	INIT_PSCLIST_ENTRY(&m->lentry);
 	m->v = 13;
 	lc_addqueue(&lc, m);
 

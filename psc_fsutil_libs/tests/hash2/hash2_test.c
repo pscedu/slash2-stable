@@ -60,18 +60,22 @@ main(int argc, char *argv[])
 	    id, hentry, 127, NULL, "t");
 
 	i = PSCALLOC(sizeof(*i));
+	psc_hashent_init(&t, i);
 	i->id = 1;
 	psc_hashtbl_add_item(&t, i);
 
 	i = PSCALLOC(sizeof(*i));
+	psc_hashent_init(&t, i);
 	i->id = 2;
 	psc_hashtbl_add_item(&t, i);
 
 	i = PSCALLOC(sizeof(*i));
+	psc_hashent_init(&t, i);
 	i->id = 3;
 	psc_hashtbl_add_item(&t, i);
 
 	i = PSCALLOC(sizeof(*i));
+	psc_hashent_init(&t, i);
 	i->id = 4;
 	psc_hashtbl_add_item(&t, i);
 
