@@ -153,7 +153,7 @@ pscrpc_server_post_idle_rqbds (struct pscrpc_service *svc)
 
 
 static void
-__pscrpc_server_free_request(struct pscrpc_request *req)
+_pscrpc_server_free_request(struct pscrpc_request *req)
 {
 	struct pscrpc_request_buffer_desc *rqbd = req->rq_rqbd;
 
@@ -224,7 +224,7 @@ pscrpc_server_free_request(struct pscrpc_request *req)
 			psclist_for_each_safe(tmp, nxt, &rqbd->rqbd_reqs) {
 				req = psclist_entry(psclist_next(&rqbd->rqbd_reqs),
 				    struct pscrpc_request, rq_list_entry);
-				__pscrpc_server_free_request(req);
+				_pscrpc_server_free_request(req);
 			}
 
 			spinlock(&svc->srv_lock);
@@ -239,7 +239,7 @@ pscrpc_server_free_request(struct pscrpc_request *req)
 		   history */
 		psclist_del(&req->rq_history_lentry,
 		    psc_lentry_hd(&req->rq_history_lentry));
-		__pscrpc_server_free_request(req);
+		_pscrpc_server_free_request(req);
 	}
 
 	freelock(&svc->srv_lock);
