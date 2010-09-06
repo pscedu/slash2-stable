@@ -425,12 +425,12 @@ psc_ctlrep_getpool(int fd, struct psc_ctlmsghdr *mh, void *msg)
 	all = (strcmp(name, PCPL_NAME_ALL) == 0);
 	PLL_LOCK(&psc_pools);
 	psclist_for_each_entry(m, &psc_pools.pll_listhd, ppm_all_lentry) {
-		if (all || strncmp(m->ppm_lg.plg_name, name,
+		if (all || strncmp(m->ppm_name, name,
 		    strlen(name)) == 0) {
 			found = 1;
 
 			POOL_LOCK(m);
-			strlcpy(pcpl->pcpl_name, m->ppm_lg.plg_name,
+			strlcpy(pcpl->pcpl_name, m->ppm_name,
 			    sizeof(pcpl->pcpl_name));
 			pcpl->pcpl_min = m->ppm_min;
 			pcpl->pcpl_max = m->ppm_max;
@@ -457,7 +457,7 @@ psc_ctlrep_getpool(int fd, struct psc_ctlmsghdr *mh, void *msg)
 				break;
 
 			/* Terminate on exact match. */
-			if (strcmp(m->ppm_lg.plg_name, name) == 0)
+			if (strcmp(m->ppm_name, name) == 0)
 				break;
 		}
 	}
@@ -795,7 +795,7 @@ psc_ctlparam_pool_handle(int fd, struct psc_ctlmsghdr *mh,
 	int set;
 
 	levels[0] = "pool";
-	levels[1] = m->ppm_lg.plg_name;
+	levels[1] = m->ppm_name;
 
 	set = (mh->mh_type == PCMT_SETPARAM);
 

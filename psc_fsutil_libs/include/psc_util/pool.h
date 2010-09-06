@@ -111,6 +111,7 @@ struct psc_poolmgr {
 #define ppm_lg ppm_u.ppmu_lg
 
 #define _ppm_nfree ppm_u.ppmu_lg.plg_size
+#define ppm_name ppm_u.ppmu_lg.plg_name
 };
 
 /* Pool manager flags. */

@@ -134,15 +134,15 @@ _psc_poolmaster_initmgr(struct psc_poolmaster *p, struct psc_poolmgr *m)
 		_lc_init(&m->ppm_lc, p->pms_offset, p->pms_entsize);
 
 #ifdef HAVE_NUMA
-		n = snprintf(m->ppm_lg.plg_name, sizeof(m->ppm_lg.plg_name),
+		n = snprintf(m->ppm_name, sizeof(m->ppm_name),
 		    "%s:%d", p->pms_name, psc_memnode_getid());
 #else
-		n = snprintf(m->ppm_lg.plg_name, sizeof(m->ppm_lg.plg_name),
+		n = snprintf(m->ppm_name, sizeof(m->ppm_name),
 		    "%s", p->pms_name);
 #endif
 		if (n == -1)
 			psc_fatal("snprintf %s", p->pms_name);
-		if (n >= (int)sizeof(m->ppm_lg.plg_name))
+		if (n >= (int)sizeof(m->ppm_name))
 			psc_fatalx("%s: name too long", p->pms_name);
 	}
 
@@ -614,7 +614,7 @@ psc_pool_lookup(const char *name)
 
 	PLL_LOCK(&psc_pools);
 	psclist_for_each_entry(m, &psc_pools.pll_listhd, ppm_all_lentry)
-		if (strcmp(name, m->ppm_lg.plg_name) == 0) {
+		if (strcmp(name, m->ppm_name) == 0) {
 			POOL_LOCK(m);
 			break;
 		}
