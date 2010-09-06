@@ -372,9 +372,9 @@ psc_ctlrep_getlc(int fd, struct psc_ctlmsghdr *mh, void *m)
 	found = 0;
 	strlcpy(name, pclc->pclc_name, sizeof(name));
 	all = (strcmp(name, PCLC_NAME_ALL) == 0);
-	PLL_LOCK(&pscListCaches);
+	PLL_LOCK(&psc_listcaches);
 	psclist_for_each_entry(lc,
-	    &pscListCaches.pll_listhd, plc_index_lentry) {
+	    &psc_listcaches.pll_listhd, plc_index_lentry) {
 		if (all || strncmp(lc->plc_name,
 		    name, strlen(name)) == 0) {
 			found = 1;
@@ -399,7 +399,7 @@ psc_ctlrep_getlc(int fd, struct psc_ctlmsghdr *mh, void *m)
 				break;
 		}
 	}
-	PLL_ULOCK(&pscListCaches);
+	PLL_ULOCK(&psc_listcaches);
 	if (rc && !found && !all)
 		rc = psc_ctlsenderr(fd, mh, "unknown listcache: %s", name);
 	return (rc);

@@ -41,7 +41,7 @@
 #include "psc_util/log.h"
 #include "psc_util/waitq.h"
 
-extern struct psc_lockedlist	pscListCaches;
+extern struct psc_lockedlist	psc_listcaches;
 
 struct psc_listcache {
 	struct psc_listguts	plc_guts;
@@ -345,7 +345,7 @@ lc_vregister(struct psc_listcache *lc, const char *name, va_list ap)
 {
 	int rc;
 
-	PLL_LOCK(&pscListCaches);
+	PLL_LOCK(&psc_listcaches);
 	spinlock(&lc->plc_lock);
 
 	rc = vsnprintf(lc->plc_name, sizeof(lc->plc_name), name, ap);
@@ -354,10 +354,10 @@ lc_vregister(struct psc_listcache *lc, const char *name, va_list ap)
 	else if (rc > (int)sizeof(lc->plc_name))
 		psc_fatalx("lc_name is too large (%s)", name);
 
-	pll_add(&pscListCaches, lc);
+	pll_add(&psc_listcaches, lc);
 
 	freelock(&lc->plc_lock);
-	PLL_ULOCK(&pscListCaches);
+	PLL_ULOCK(&psc_listcaches);
 }
 
 /**
@@ -405,11 +405,11 @@ _lc_reginit(struct psc_listcache *lc, ptrdiff_t offset, size_t entsize,
 static __inline void
 lc_unregister(struct psc_listcache *lc)
 {
-	PLL_LOCK(&pscListCaches);
+	PLL_LOCK(&psc_listcaches);
 	spinlock(&lc->plc_lock);
-	pll_remove(&pscListCaches, lc);
+	pll_remove(&psc_listcaches, lc);
 	freelock(&lc->plc_lock);
-	PLL_ULOCK(&pscListCaches);
+	PLL_ULOCK(&psc_listcaches);
 }
 
 /**
@@ -422,14 +422,14 @@ lc_lookup(const char *name)
 {
 	struct psc_listcache *lc;
 
-	PLL_LOCK(&pscListCaches);
+	PLL_LOCK(&psc_listcaches);
 	psclist_for_each_entry(lc,
-	    &pscListCaches.pll_listhd, plc_index_lentry)
+	    &psc_listcaches.pll_listhd, plc_index_lentry)
 		if (strcmp(name, lc->plc_name) == 0) {
 			LIST_CACHE_LOCK(lc);
 			break;
 		}
-	PLL_ULOCK(&pscListCaches);
+	PLL_ULOCK(&psc_listcaches);
 	return (lc);
 }
 

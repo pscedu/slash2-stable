@@ -20,8 +20,8 @@
 #include "psc_ds/listcache.h"
 #include "psc_ds/lockedlist.h"
 
-struct psc_lockedlist pscListCaches =
-    PLL_INIT(&pscListCaches, struct psc_listcache, plc_index_lentry);
+struct psc_lockedlist psc_listcaches =
+    PLL_INIT(&psc_listcaches, struct psc_listcache, plc_index_lentry);
 
 void
 psclist_sort(void **p, struct psclist_head *hd, int n, ptrdiff_t off,
