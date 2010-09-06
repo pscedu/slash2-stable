@@ -40,7 +40,6 @@
 #define PSC_TRY_REALLOC(p, sz)	psc_realloc((p), (sz), PAF_CANFAIL)
 
 #ifdef DEBUG
-#else
 
 #define PSC_ALLOC_MAGIC		UINT64_C(0xb4fa95df87b8a7fd)
 
@@ -112,7 +111,6 @@
 		_p;							\
 	}
 
-
 /**
  * psc_free_locked - Free mlock(2)'d memory.
  * @p: mlock(2)'d memory chunk to free.
@@ -140,10 +138,12 @@
  * psc_free_aligned - Free page-aligned memory.
  * @p: memory chunk to free.
  *
+ * posix_memalign(3) states that free(3) may be used to release memory.
+ *
  * No guards are provided since the region must start at a page-aligned
  * boundary and we don't have the length.
  */
-#define psc_free_aligned(p)			_psc_free_noguard(p)
+#define psc_free_aligned(p)	_psc_free_noguard(p)
 
 /**
  * psc_free_locked_aligned - Free mlock(2)'d, page-aligned memory.
@@ -166,6 +166,54 @@
 			psc_assert(*_kp == PSC_ALLOC_MAGIC);		\
 		}							\
 		_psc_free_noguard(p);					\
+	} while (0)
+
+#else
+
+#define psc_free_nolog(p)						\
+	do {								\
+		free(p);						\
+		(p) = NULL;						\
+	} while (0)
+
+#define PSCFREE(p)							\
+	do {								\
+		psc_debugs(PSS_MEM, "free(%p)", (p));			\
+		psc_free_nolog(p);					\
+	} while (0)
+
+#define _PSC_REALLOC(oldp, sz, fl)					\
+	{								\
+		void *_p;						\
+									\
+		_p = _psc_realloc((oldp), (sz), (fl));			\
+		if (((fl) & PAF_NOLOG) == 0) {				\
+			if (oldp)					\
+				psc_debugs(PSS_MEM, "realloc(%p)=%p "	\
+				    "sz=%zu fl=%d", (oldp), _p,		\
+				    (size_t)(sz), (fl));		\
+			else						\
+				psc_debugs(PSS_MEM, "alloc()=%p "	\
+				    "sz=%zu fl=%d", _p, (size_t)(sz),	\
+				    (fl));				\
+		}							\
+		_p;							\
+	}
+
+#define psc_free_locked(p, size)					\
+	do {								\
+		if ((p) && munlock((p), (size)) == -1)			\
+			psc_fatal("munlock %p", (p));			\
+		PSCFREE(p);						\
+	} while (0)
+
+#define psc_free_aligned(p)	PSCFREE(p)
+
+#define psc_free_locked_aligned(p, size)				\
+	do {								\
+		if ((p) && munlock((p), (size)) == -1)			\
+			psc_fatal("munlock %p", (p));			\
+		PSCFREE(p);						\
 	} while (0)
 
 #endif
