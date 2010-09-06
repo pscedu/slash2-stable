@@ -60,7 +60,7 @@ shift(void)
 {
 	struct m *m;
 
-	m = psclist_first_entry(&hd, struct m, lentry);
+	m = psc_listhd_first_obj(&hd, struct m, lentry);
 	if (m == NULL)
 		return (0);
 	psclist_del(&m->lentry);

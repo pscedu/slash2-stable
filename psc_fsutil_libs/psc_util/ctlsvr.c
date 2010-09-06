@@ -1007,7 +1007,7 @@ psc_ctlrep_param(int fd, struct psc_ctlmsghdr *mh, void *m)
 	psclist_add(&pcf->pcf_lentry, &stack);
 
 	while (!psc_listhd_empty(&stack)) {
-		pcf = psclist_first_entry(&stack,
+		pcf = psc_listhd_first_obj(&stack,
 		    struct psc_ctlparam_procframe, pcf_lentry);
 		psclist_del(&pcf->pcf_lentry);
 

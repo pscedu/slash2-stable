@@ -1064,7 +1064,7 @@ pscrpcsvh_delthr(struct pscrpc_svc_handle *svh)
 		rc = -1;
 	else {
 		svc->srv_nthreads--;
-		prt = psclist_first_entry(&svc->srv_threads,
+		prt = psc_listhd_first_obj(&svc->srv_threads,
 		    struct pscrpc_thread, prt_lentry);
 		prt->prt_alive = 0;
 	}
