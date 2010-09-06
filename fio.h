@@ -880,7 +880,8 @@ pop_dirstack(IOT_t *iot)
 				DEBUG(D_DTREE, "about to list_del %p\n",
 				    current_dir);
 
-				psclist_del(&current_dir->dir_stack_lentry);
+				psclist_del(&current_dir->dir_stack_lentry,
+				    &mygroup->dirStack);
 
 				DEBUG(D_DTREE, "did list_del %p\n",
 				    current_dir);

@@ -858,7 +858,8 @@ worker(void *arg)
 				mygroup->dirRoot = PSCALLOC(sizeof(DIR_t));
 				INIT_PSCLIST_ENTRY(&mygroup->dirRoot->dir_stack_lentry);
 				INIT_PSCLIST_HEAD(&mygroup->dirStack);
-				psclist_add(&mygroup->dirRoot->dir_stack_lentry, &mygroup->dirStack);
+				psclist_add(&mygroup->dirRoot->dir_stack_lentry,
+				    &mygroup->dirStack);
 				MKDIR();
 			}
 			/* everyone wait here for the creation of the
