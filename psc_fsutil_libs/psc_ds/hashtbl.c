@@ -42,8 +42,8 @@ struct psc_lockedlist psc_hashtbls =
 int
 _psc_str_hashify(const char *s, int len)
 {
-	const char *p;
 	unsigned h = 0, g;
+	const char *p;
 
 	if (s == NULL)
 		return (-1);
@@ -66,8 +66,7 @@ _psc_hashtbl_init(struct psc_hashtbl *t, int flags,
 	va_list ap;
 	int i;
 
-	if (nbuckets == 0)
-		psc_fatalx("hash table size must be non-zero for modulus to work");
+	psc_assert(nbuckets > 0);
 
 	memset(t, 0, sizeof(*t));
 	INIT_PSCLIST_ENTRY(&t->pht_lentry);
@@ -101,7 +100,7 @@ psc_hashtbl_lookup(const char *name)
 	struct psc_hashtbl *t;
 
 	PLL_LOCK(&psc_hashtbls);
-	psclist_for_each_entry(t, &psc_hashtbls.pll_listhd, pht_lentry)
+	PLL_FOREACH(t, &psc_hashtbls)
 		if (strcmp(t->pht_name, name) == 0)
 			break;
 	PLL_ULOCK(&psc_hashtbls);
@@ -182,7 +181,7 @@ _psc_hashbkt_search(const struct psc_hashtbl *t, struct psc_hashbkt *b,
 		}
 	}
 	if (p && (flags & PHLF_DEL)) {
-		psclist_del(psc_hashent_getlentry(t, p));
+		psclist_del(psc_hashent_getlentry(t, p), &b->phb_listhd);
 		psc_atomic32_dec(&b->phb_nitems);
 	}
 	ureqlock(&b->phb_lock, locked);
@@ -220,7 +219,7 @@ psc_hashbkt_del_item(const struct psc_hashtbl *t, struct psc_hashbkt *b,
 	int locked;
 
 	locked = reqlock(&b->phb_lock);
-	psclist_del(psc_hashent_getlentry(t, p));
+	psclist_del(psc_hashent_getlentry(t, p), &b->phb_listhd);
 	psc_assert(psc_atomic32_read(&b->phb_nitems) > 0);
 	psc_atomic32_dec(&b->phb_nitems);
 	ureqlock(&b->phb_lock, locked);
@@ -262,6 +261,19 @@ psc_hashtbl_add_item(const struct psc_hashtbl *t, void *p)
 	psclist_add(psc_hashent_getlentry(t, p), &b->phb_listhd);
 	psc_atomic32_inc(&b->phb_nitems);
 	ureqlock(&b->phb_lock, locked);
+}
+
+int
+psc_hashent_conjoint(const struct psc_hashtbl *t, void *p)
+{
+	struct psc_hashbkt *b;
+	void *pk;
+
+	psc_assert(p);
+	pk = (char *)p + t->pht_idoff;
+	b = psc_hashbkt_get(t, pk);
+	return (psclist_conjoint(psc_hashent_getlentry(t, p),
+	    &b->phb_listhd));
 }
 
 /**

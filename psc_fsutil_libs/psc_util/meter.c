@@ -26,8 +26,8 @@
 #include "psc_util/log.h"
 #include "psc_util/meter.h"
 
-struct psclist_head	pscMetersList = PSCLIST_HEAD_INIT(pscMetersList);
-psc_spinlock_t		pscMetersLock = LOCK_INITIALIZER;
+struct psc_lockedlist	psc_meters =
+    PLL_INIT(&psc_meters, struct psc_meter, pm_lentry);
 
 void
 psc_meter_init(struct psc_meter *pm, size_t max, const char *fmt, ...)
@@ -45,15 +45,5 @@ psc_meter_init(struct psc_meter *pm, size_t max, const char *fmt, ...)
 	if (rc == -1)
 		psc_fatal("vsnprintf");
 
-	spinlock(&pscMetersLock);
-	psclist_add(&pm->pm_lentry, &pscMetersList);
-	freelock(&pscMetersLock);
-}
-
-void
-psc_meter_free(struct psc_meter *pm)
-{
-	spinlock(&pscMetersLock);
-	psclist_del(&pm->pm_lentry);
-	freelock(&pscMetersLock);
+	pll_addtail(&psc_meters, pm);
 }

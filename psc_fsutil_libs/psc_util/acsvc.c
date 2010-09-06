@@ -130,15 +130,15 @@ struct access_pendreq {
 };
 
 union access_ctlmsg {
-	struct cmsghdr	ac_hdr;
-	unsigned char	ac_buf[CMSG_SPACE(sizeof(int))];
+	struct cmsghdr		ac_hdr;
+	unsigned char		ac_buf[CMSG_SPACE(sizeof(int))];
 };
 
-__static int acsvc_fd;
-__static atomic_t acsvc_id = ATOMIC_INIT(0);
+__static int		acsvc_fd;
+__static psc_atomic32_t	acsvc_id = PSC_ATOMIC32_INIT(0);
 
-__static psc_spinlock_t acsvc_pendlistlock = LOCK_INITIALIZER;
-__static struct psclist_head acsvc_pendlist = PSCLIST_HEAD_INIT(acsvc_pendlist);
+__static struct psc_lockedlist acsvc_pendlist =
+    PLL_INIT(&acsvc_pendlist, struct access_pendreq, apr_lentry);
 
 __static __dead void
 acsvc_svrmain(int s)
@@ -337,11 +337,11 @@ acsvc_climain(__unusedx struct psc_thread *thr)
 			psc_fatalx("recvmsg: received truncated message");
 
 		/* Scan through our active requests for the corresponder. */
-		spinlock(&acsvc_pendlistlock);
-		psclist_for_each_entry(apr, &acsvc_pendlist, apr_lentry)
+		PLL_LOCK(&acsvc_pendlist);
+		PLL_FOREACH(apr, &acsvc_pendlist)
 			if (apr->apr_id == arp.arp_id)
 				break;
-		freelock(&acsvc_pendlistlock);
+		PLL_ULOCK(&acsvc_pendlist);
 
 		if (apr == NULL)
 			psc_fatalx("received a bogus reply");
@@ -403,7 +403,7 @@ acsreq_new(int op, uid_t uid, gid_t gid)
 	arq->arq_op = op;
 	arq->arq_uid = uid;
 	arq->arq_gid = gid;
-	arq->arq_id = atomic_inc_return(&acsvc_id);
+	arq->arq_id = psc_atomic32_inc_getnew(&acsvc_id);
 	return (arq);
 }
 
@@ -422,15 +422,14 @@ acsreq_issue(struct access_request *arq)
 	m.msg_iovlen = 1;
 
 	apr = PSCALLOC(sizeof(*apr));
+	INIT_PSCLIST_ENTRY(&apr->apr_lentry);
 	LOCK_INIT(&apr->apr_lock);
 	spinlock(&apr->apr_lock);
 	apr->apr_id = arq->arq_id;
 	apr->apr_op = arq->arq_op;
 	psc_waitq_init(&apr->apr_wq);
 
-	spinlock(&acsvc_pendlistlock);
-	psclist_add(&apr->apr_lentry, &acsvc_pendlist);
-	freelock(&acsvc_pendlistlock);
+	pll_add(&acsvc_pendlist, apr);
 
 	/* Issue request. */
 	nbytes = sendmsg(acsvc_fd, &m, MSG_WAITALL);
@@ -443,9 +442,7 @@ acsreq_issue(struct access_request *arq)
 	/* Wait for request return. */
 	psc_waitq_wait(&apr->apr_wq, &apr->apr_lock);	/* XXX check return */
 
-	spinlock(&acsvc_pendlistlock);
-	psclist_del(&apr->apr_lentry);
-	freelock(&acsvc_pendlistlock);
+	pll_remove(&acsvc_pendlist, apr);
 	return (apr);
 }
 

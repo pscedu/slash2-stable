@@ -17,17 +17,17 @@
  * %PSC_END_COPYRIGHT%
  */
 
-#ifndef __PFL_METER_H__
-#define __PFL_METER_H__
+#ifndef _PFL_METER_H_
+#define _PFL_METER_H_
 
 #include <sys/types.h>
 
 #include <stdarg.h>
 
 #include "psc_ds/list.h"
-#include "psc_util/lock.h"
+#include "psc_ds/lockedlist.h"
 
-#define PSC_METER_NAME_MAX 30
+#define PSC_METER_NAME_MAX	32
 
 struct psc_meter {
 	struct psclist_head	pm_lentry;
@@ -36,10 +36,10 @@ struct psc_meter {
 	size_t			pm_max;
 };
 
-extern struct psclist_head	pscMetersList;
-extern psc_spinlock_t		pscMetersLock;
+#define psc_meter_free(pm)	pll_remove(&psc_meters, (m))
 
 void psc_meter_init(struct psc_meter *, size_t, const char *, ...);
-void psc_meter_free(struct psc_meter *);
 
-#endif /* __PFL_METER_H__ */
+extern struct psc_lockedlist	psc_meters;
+
+#endif /* _PFL_METER_H_ */

@@ -72,7 +72,7 @@ struct psc_hashent {
 	psclist_for_each_entry2(p, &(b)->phb_listhd, (t)->pht_hentoff)
 
 /**
- * psc_hashtbl_init - initialize a hash table.
+ * psc_hashtbl_init - Initialize a hash table.
  * @t: hash table to initialize.
  * @flags: optional modifier flags.
  * @type: type of the structure to be put into the hash table.
@@ -94,7 +94,7 @@ struct psc_hashent {
 	} while (0)
 
 /**
- * psc_hashtbl_search - search a hash table for an item by its hash ID.
+ * psc_hashtbl_search - Search a hash table for an item by its hash ID.
  * @t: the hash table.
  * @cmp: optional value to compare with to differentiate entries with same ID.
  * @cbf: optional callback routine invoked when the entry is found, executed
@@ -107,7 +107,7 @@ struct psc_hashent {
 	_psc_hashtbl_search((t), 0, (cmp), (cbf), (key))
 
 /**
- * psc_hashtbl_searchdel - search a hash table for an item by its hash ID
+ * psc_hashtbl_searchdel - Search a hash table for an item by its hash ID
  *	and remove and return if found.
  * @t: the hash table.
  * @cmp: optional value to compare with to differentiate entries with same ID.
@@ -177,8 +177,7 @@ void	 psc_hashent_init(const struct psc_hashtbl *, void *);
 void	 psc_hashent_remove(const struct psc_hashtbl *, void *);
 int	 psc_hashent_conjoint(const struct psc_hashtbl *, void *);
 
-#define psc_hashent_disjoint(t, p)	(!psc_hashent_conjoint((t), (p)))
-#define psc_hashent_conjoint(t, p)	psclist_conjoint(			\
+#define psc_hashent_disjoint(t, p)	psclist_disjoint(			\
 					    psc_hashent_getlentry((t), (p)))
 #define psc_hashent_init(t, p)		INIT_PSCLIST_ENTRY(			\
 					    psc_hashent_getlentry((t), (p)))
