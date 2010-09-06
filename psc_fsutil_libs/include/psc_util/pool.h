@@ -109,6 +109,8 @@ struct psc_poolmgr {
 #define ppm_lc ppm_u.ppmu_lc
 #define ppm_ml ppm_u.ppmu_ml
 #define ppm_lg ppm_u.ppmu_lg
+
+#define _ppm_nfree ppm_u.ppmu_lg.plg_size
 };
 
 /* Pool manager flags. */
@@ -187,17 +189,18 @@ void	_psc_poolmaster_initv(struct psc_poolmaster *, size_t, ptrdiff_t,
 		void (*)(void *), int (*)(struct psc_poolmgr *),
 		void *, const char *, va_list);
 
-int	 psc_pool_gettotal(struct psc_poolmgr *);
-int	 psc_pool_grow(struct psc_poolmgr *, int);
-int	_psc_pool_shrink(struct psc_poolmgr *, int, int);
-int	 psc_pool_settotal(struct psc_poolmgr *, int);
-void	 psc_pool_resize(struct psc_poolmgr *);
-void	 psc_pool_reapmem(size_t);
-void	*psc_pool_get(struct psc_poolmgr *);
-void	 psc_pool_return(struct psc_poolmgr *, void *);
 struct psc_poolmgr *
 	 psc_pool_lookup(const char *);
+void	*psc_pool_get(struct psc_poolmgr *);
+int	 psc_pool_gettotal(struct psc_poolmgr *);
+int	 psc_pool_grow(struct psc_poolmgr *, int);
+int	 psc_pool_nfree(struct psc_poolmgr *);
+void	 psc_pool_reapmem(size_t);
+void	 psc_pool_resize(struct psc_poolmgr *);
+void	 psc_pool_return(struct psc_poolmgr *, void *);
+int	 psc_pool_settotal(struct psc_poolmgr *, int);
 void	 psc_pool_share(struct psc_poolmaster *);
+int	_psc_pool_shrink(struct psc_poolmgr *, int, int);
 void	 psc_pool_unshare(struct psc_poolmaster *);
 
 void	 psc_poolset_init(struct psc_poolset *);

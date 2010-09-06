@@ -588,6 +588,21 @@ psc_pool_gettotal(struct psc_poolmgr *m)
 	return (n);
 }
 
+/**
+ * psc_pool_nfree - Retrieve the number of free/available items in a pool.
+ * @m: pool.
+ */
+int
+psc_pool_nfree(struct psc_poolmgr *m)
+{
+	int locked, nf;
+
+	locked = POOL_RLOCK(m);
+	nf = pll_nitems(&m->ppm_pll);
+	POOL_URLOCK(m, locked);
+	return (nf);
+}
+
 /*
  * psc_pool_lookup - find a pool by name.
  * @name: name of pool to find.
