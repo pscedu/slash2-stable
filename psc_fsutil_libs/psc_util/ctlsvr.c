@@ -374,7 +374,7 @@ psc_ctlrep_getlc(int fd, struct psc_ctlmsghdr *mh, void *m)
 	all = (strcmp(name, PCLC_NAME_ALL) == 0);
 	PLL_LOCK(&pscListCaches);
 	psclist_for_each_entry(lc,
-	    &pscListCaches.pll_listhd, lc_index_lentry) {
+	    &pscListCaches.pll_listhd, plc_index_lentry) {
 		if (all || strncmp(lc->plc_name,
 		    name, strlen(name)) == 0) {
 			found = 1;
@@ -1009,7 +1009,7 @@ psc_ctlrep_param(int fd, struct psc_ctlmsghdr *mh, void *m)
 	while (!psc_listhd_empty(&stack)) {
 		pcf = psc_listhd_first_obj(&stack,
 		    struct psc_ctlparam_procframe, pcf_lentry);
-		psclist_del(&pcf->pcf_lentry);
+		psclist_del(&pcf->pcf_lentry, &stack);
 
 		n = pcf->pcf_level;
 		ptn = pcf->pcf_ptn;
@@ -1174,8 +1174,8 @@ psc_ctlrep_getmeter(int fd, struct psc_ctlmsghdr *mh, void *m)
 	found = 0;
 	snprintf(name, sizeof(name), "%s", pcm->pcm_mtr.pm_name);
 	all = (strcmp(name, PCM_NAME_ALL) == 0);
-	spinlock(&pscMetersLock);
-	psclist_for_each_entry(pm, &pscMetersList, pm_lentry)
+	PLL_LOCK(&psc_meters);
+	PLL_FOREACH(pm, &psc_meters)
 		if (all || strncmp(pm->pm_name, name,
 		    strlen(name)) == 0) {
 			found = 1;
@@ -1189,7 +1189,7 @@ psc_ctlrep_getmeter(int fd, struct psc_ctlmsghdr *mh, void *m)
 			if (strcmp(pm->pm_name, name) == 0)
 				break;
 		}
-	freelock(&pscMetersLock);
+	PLL_ULOCK(&psc_meters);
 	if (rc && !found && !all)
 		rc = psc_ctlsenderr(fd, mh, "unknown meter: %s", name);
 	return (rc);

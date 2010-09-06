@@ -90,7 +90,7 @@ psclg_conjoint(struct psc_listguts *plg, void *p)
 	e = (struct psclist_head *)((char *)p + plg->plg_offset);
 	locked = reqlock(&plg->plg_lock);
 	/* XXX can scan list to ensure membership */
-	conjoint = psclist_conjoint(e);
+	conjoint = psclist_conjoint(e, &plg->plg_listhd);
 	ureqlock(&plg->plg_lock, locked);
 	return (conjoint);
 }

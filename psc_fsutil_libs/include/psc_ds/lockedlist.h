@@ -144,7 +144,7 @@ _pll_get(struct psc_lockedlist *pll, int flags)
 	else
 		e = psc_listhd_first(&pll->pll_listhd);
 	if ((flags & PLLF_PEEK) == 0) {
-		psclist_del(e);
+		psclist_del(e, &pll->pll_listhd);
 		pll->pll_nitems--;
 	}
 	PLL_URLOCK(pll, locked);
@@ -166,7 +166,7 @@ pll_remove(struct psc_lockedlist *pll, void *p)
 	psc_assert(p);
 	e = (char *)p + pll->pll_offset;
 	locked = PLL_RLOCK(pll);
-	psclist_del(e);
+	psclist_del(e, &pll->pll_listhd);
 	pll->pll_nitems--;
 	psc_assert(pll->pll_nitems >= 0);
 	PLL_URLOCK(pll, locked);
@@ -193,7 +193,7 @@ pll_conjoint(struct psc_lockedlist *pll, void *p)
 	e = (struct psclist_head *)((char *)p + pll->pll_offset);
 	locked = PLL_RLOCK(pll);
 	/* XXX can scan list to ensure membership */
-	conjoint = psclist_conjoint(e);
+	conjoint = psclist_conjoint(e, &pll->pll_listhd);
 	PLL_URLOCK(pll, locked);
 	return (conjoint);
 }

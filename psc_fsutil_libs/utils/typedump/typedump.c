@@ -349,7 +349,7 @@ main(int argc, char *argv[])
 	PRVAL(PSCRPC_RQ_PHASE_RPC);
 	/* end enums */
 
-	PRVAL(offsetof(struct psc_listcache, lc_listhd));
+	PRVAL(offsetof(struct psc_listcache, plc_listhd));
 	PRVAL(offsetof(struct psc_journal_enthdr, pje_data));
 	PRVAL(PSCFMT_HUMAN_BUFSIZ);
 	PRVAL(PSCFMT_RATIO_BUFSIZ);

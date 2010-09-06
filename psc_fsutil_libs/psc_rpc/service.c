@@ -86,7 +86,7 @@ pscrpc_free_rqbd (struct pscrpc_request_buffer_desc *rqbd)
 	LASSERT (psc_listhd_empty(&rqbd->rqbd_reqs));
 
 	spinlock(&svc->srv_lock);
-	psclist_del(&rqbd->rqbd_lentry);
+	psclist_del(&rqbd->rqbd_lentry, psc_lentry_hd(&rqbd->rqbd_lentry));
 	svc->srv_nbufs--;
 	freelock(&svc->srv_lock);
 
@@ -117,7 +117,7 @@ pscrpc_server_post_idle_rqbds (struct pscrpc_service *svc)
 
 		rqbd = psclist_entry(psclist_next(&svc->srv_idle_rqbds),
 			struct pscrpc_request_buffer_desc, rqbd_lentry);
-		psclist_del (&rqbd->rqbd_lentry);
+		psclist_del (&rqbd->rqbd_lentry, &svc->srv_idle_rqbds);
 
 		/* assume we will post successfully */
 		svc->srv_nrqbd_receiving++;
@@ -138,7 +138,7 @@ pscrpc_server_post_idle_rqbds (struct pscrpc_service *svc)
 	spinlock(&svc->srv_lock);
 
 	svc->srv_nrqbd_receiving--;
-	psclist_del(&rqbd->rqbd_lentry);
+	psclist_del(&rqbd->rqbd_lentry, &svc->srv_active_rqbds);
 	psclist_add_tail(&rqbd->rqbd_lentry, &svc->srv_idle_rqbds);
 
 	/*
@@ -157,7 +157,7 @@ __pscrpc_server_free_request(struct pscrpc_request *req)
 {
 	struct pscrpc_request_buffer_desc *rqbd = req->rq_rqbd;
 
-	psclist_del(&req->rq_list_entry);
+	psclist_del(&req->rq_list_entry, psc_lentry_hd(&req->rq_list_entry));
 
 	if (req->rq_reply_state != NULL) {
 		pscrpc_rs_decref(req->rq_reply_state);
@@ -191,7 +191,7 @@ pscrpc_server_free_request(struct pscrpc_request *req)
 	refcount = --(rqbd->rqbd_refcount);
 	if (refcount == 0) {
 		/* request buffer is now idle: add to history */
-		psclist_del(&rqbd->rqbd_lentry);
+		psclist_del(&rqbd->rqbd_lentry, psc_lentry_hd(&rqbd->rqbd_lentry));
 		psclist_add_tail(&rqbd->rqbd_lentry, &svc->srv_history_rqbds);
 		svc->srv_n_history_rqbds++;
 
@@ -202,7 +202,7 @@ pscrpc_server_free_request(struct pscrpc_request *req)
 				struct pscrpc_request_buffer_desc,
 				rqbd_lentry);
 
-			psclist_del(&rqbd->rqbd_lentry);
+			psclist_del(&rqbd->rqbd_lentry, &svc->srv_history_rqbds);
 			svc->srv_n_history_rqbds--;
 
 			/* remove rqbd's reqs from svc's req history while
@@ -215,7 +215,7 @@ pscrpc_server_free_request(struct pscrpc_request *req)
 				    svc->srv_request_max_cull_seq)
 					svc->srv_request_max_cull_seq =
 						req->rq_history_seq;
-				psclist_del(&req->rq_history_lentry);
+				psclist_del(&req->rq_history_lentry, &rqbd->rqbd_reqs);
 			}
 
 			freelock(&svc->srv_lock);
@@ -237,7 +237,8 @@ pscrpc_server_free_request(struct pscrpc_request *req)
 	} else if (req->rq_reply_state && req->rq_reply_state->rs_prealloc) {
 		/* If we are low on memory, we are not interested in
 		   history */
-		psclist_del(&req->rq_history_lentry);
+		psclist_del(&req->rq_history_lentry,
+		    psc_lentry_hd(&req->rq_history_lentry));
 		__pscrpc_server_free_request(req);
 	}
 
@@ -273,7 +274,7 @@ pscrpc_server_handle_request(struct pscrpc_service *svc,
 	request = psclist_entry (psclist_next(&svc->srv_request_queue),
 			      struct pscrpc_request, rq_list_entry);
 
-	psclist_del(&request->rq_list_entry);
+	psclist_del(&request->rq_list_entry, &svc->srv_request_queue);
 	svc->srv_n_queued_reqs--;
 	svc->srv_n_active_reqs++;
 
@@ -815,7 +816,7 @@ pscrpc_unregister_service(struct pscrpc_service *service)
 	LASSERT(psc_listhd_empty(&service->srv_threads));
 
 	spinlock (&pscrpc_all_services_lock);
-	psclist_del(&service->srv_lentry);
+	psclist_del(&service->srv_lentry, &pscrpc_all_services);
 	freelock (&pscrpc_all_services_lock);
 
 	/* All history will be culled when the next request buffer is
@@ -876,7 +877,7 @@ pscrpc_unregister_service(struct pscrpc_service *service)
 			psclist_entry(psclist_next(&service->srv_request_queue),
 			struct pscrpc_request, rq_list_entry);
 
-		psclist_del(&req->rq_list_entry);
+		psclist_del(&req->rq_list_entry, &service->srv_request_queue);
 		service->srv_n_queued_reqs--;
 		service->srv_n_active_reqs++;
 
@@ -918,7 +919,7 @@ pscrpc_unregister_service(struct pscrpc_service *service)
 	//list_for_each_entry_safe(rs, t, &service->srv_free_rs_list,
 	psclist_for_each_entry_safe(rs, t, &service->srv_free_rs_list,
 	    rs_list_entry) {
-		psclist_del(&rs->rs_list_entry);
+		psclist_del(&rs->rs_list_entry,  &service->srv_free_rs_list);
 		PSCRPC_OBD_FREE(rs, service->srv_max_reply_size);
 	}
 

@@ -46,7 +46,7 @@ pscrpc_lookup_conn_locked(lnet_process_id_t peer, lnet_nid_t self)
 		if (peer.nid == c->c_peer.nid &&
 		    peer.pid == c->c_peer.pid &&
 		    self     == c->c_self) {
-			psclist_del(&c->c_link);
+			psclist_del(&c->c_link, &conn_unused_list);
 			psclist_add(&c->c_link, &conn_list);
 			return pscrpc_connection_addref(c);
 		}
@@ -129,7 +129,7 @@ pscrpc_put_connection(struct pscrpc_connection *c)
 		psc_info("connection=%p to unused_list", c);
 
 		locked = reqlock(&conn_lock);
-		psclist_del(&c->c_link);
+		psclist_del(&c->c_link, &conn_list);
 		psclist_add(&c->c_link, &conn_unused_list);
 		ureqlock(&conn_lock, locked);
 		rc = 1;

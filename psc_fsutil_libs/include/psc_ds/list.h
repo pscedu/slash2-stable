@@ -114,7 +114,7 @@ _psclist_del(struct psclist_head *prev, struct psclist_head *next)
  * @entry: the entry to be removed.
  */
 static __inline void
-psclist_del(struct psclist_head *entry, const void *hd)
+psclist_del(struct psclist_head *entry, __unusedx const void *hd)
 {
 	_psclist_del(entry->zprev, entry->znext);
 	entry->znext = entry->zprev = NULL;

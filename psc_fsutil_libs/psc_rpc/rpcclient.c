@@ -737,7 +737,8 @@ pscrpc_queue_wait(struct pscrpc_request *req)
 #endif
 	*/
 	if (rc != 0) {
-		psclist_del(&req->rq_list_entry);
+		psclist_del(&req->rq_list_entry,
+		    psc_lentry_hd(&req->rq_list_entry));
 		freelock(&imp->imp_lock);
 		req->rq_status = rc; // XXX this ok?
 		GOTO(out, rc);
@@ -799,7 +800,8 @@ pscrpc_queue_wait(struct pscrpc_request *req)
 		DEBUG_REQ(PLL_INFO, req, "REPLIED:");
 
 	spinlock(&imp->imp_lock);
-	psclist_del(&req->rq_list_entry);
+	psclist_del(&req->rq_list_entry,
+	    psc_lentry_hd(&req->rq_list_entry));
 	freelock(&imp->imp_lock);
 
 	/* If the reply was received normally, this just grabs the spinlock
@@ -968,7 +970,8 @@ pscrpc_check_set(struct pscrpc_request_set *set, int check_allsent)
 			req->rq_phase = PSCRPC_RQ_PHASE_INTERPRET;
 
 			spinlock(&imp->imp_lock);
-			psclist_del(&req->rq_list_entry);
+			psclist_del(&req->rq_list_entry,
+			    psc_lentry_hd(&req->rq_list_entry));
 			freelock(&imp->imp_lock);
 
 			GOTO(interpret, req->rq_status);
@@ -986,7 +989,8 @@ pscrpc_check_set(struct pscrpc_request_set *set, int check_allsent)
 			req->rq_phase = PSCRPC_RQ_PHASE_INTERPRET;
 
 			spinlock(&imp->imp_lock);
-			psclist_del(&req->rq_list_entry);
+			psclist_del(&req->rq_list_entry,
+			    psc_lentry_hd(&req->rq_list_entry));
 			freelock(&imp->imp_lock);
 
 			GOTO(interpret, req->rq_status);
@@ -1007,7 +1011,8 @@ pscrpc_check_set(struct pscrpc_request_set *set, int check_allsent)
 					continue;
 				}
 #endif
-				psclist_del(&req->rq_list_entry);
+				psclist_del(&req->rq_list_entry,
+				    psc_lentry_hd(&req->rq_list_entry));
 				if (status != 0) {
 					req->rq_status = status;
 					req->rq_phase = PSCRPC_RQ_PHASE_INTERPRET;
@@ -1063,7 +1068,8 @@ pscrpc_check_set(struct pscrpc_request_set *set, int check_allsent)
 				continue;
 
 			spinlock(&imp->imp_lock);
-			psclist_del(&req->rq_list_entry);
+			psclist_del(&req->rq_list_entry,
+			    psc_lentry_hd(&req->rq_list_entry));
 			freelock(&imp->imp_lock);
 
 			req->rq_status = after_reply(req);
@@ -1167,7 +1173,7 @@ pscrpc_set_destroy(struct pscrpc_request_set *set)
 	psclist_for_each_safe(tmp, next, &set->set_requests) {
 		struct pscrpc_request *req =
 			psclist_entry(tmp, struct pscrpc_request, rq_set_chain_lentry);
-		psclist_del(&req->rq_set_chain_lentry);
+		psclist_del(&req->rq_set_chain_lentry, &set->set_requests);
 
 		psc_assert(req->rq_phase == expected_phase);
 

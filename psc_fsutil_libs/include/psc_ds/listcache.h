@@ -49,14 +49,14 @@ struct psc_listcache {
 
 	struct psc_waitq	plc_wq_want;	/* when someone wants an ent */
 	struct psc_waitq	plc_wq_empty;	/* when we're empty */
-#define plc_index_lentry	lc_guts.plg_index_lentry
-#define plc_lock		lc_guts.plg_lock
-#define plc_name		lc_guts.plg_name
-#define plc_listhd		lc_guts.plg_listhd
-#define plc_size		lc_guts.plg_size
-#define plc_nseen		lc_guts.plg_nseen
-#define plc_entsize		lc_guts.plg_entsize
-#define plc_offset		lc_guts.plg_offset
+#define plc_index_lentry	plc_guts.plg_index_lentry
+#define plc_lock		plc_guts.plg_lock
+#define plc_name		plc_guts.plg_name
+#define plc_listhd		plc_guts.plg_listhd
+#define plc_size		plc_guts.plg_size
+#define plc_nseen		plc_guts.plg_nseen
+#define plc_entsize		plc_guts.plg_entsize
+#define plc_offset		plc_guts.plg_offset
 };
 
 /* lc_flags */
@@ -85,10 +85,10 @@ struct psc_listcache_entry {
 #endif
 
 #define LIST_CACHE_FOREACH(p, lc)					\
-	psclist_for_each_entry2((p), &(lc)->plc_listhd, (lc)->lc_offset)
+	psclist_for_each_entry2((p), &(lc)->plc_listhd, (lc)->plc_offset)
 
 #define LIST_CACHE_FOREACH_SAFE(p, t, lc)				\
-	psclist_for_each_entry2_safe((p), (t), &(lc)->plc_listhd, (lc)->lc_offset)
+	psclist_for_each_entry2_safe((p), (t), &(lc)->plc_listhd, (lc)->plc_offset)
 
 #define LIST_CACHE_LOCK(lc)		spinlock(&(lc)->plc_lock)
 #define LIST_CACHE_ULOCK(lc)		freelock(&(lc)->plc_lock)
@@ -130,7 +130,7 @@ lc_remove(struct psc_listcache *lc, void *p)
 #endif
 	locked = reqlock(&lc->plc_lock);
 	psc_assert(lc->plc_size > 0);
-	psclist_del(&e->ple_entry);
+	psclist_del(&e->ple_entry, &lc->plc_listhd);
 	lc->plc_size--;
 	ureqlock(&lc->plc_lock, locked);
 }
@@ -183,7 +183,7 @@ _lc_get(struct psc_listcache *lc, struct timespec *abstime,
 				return (NULL);
 			}
 		} else
-			psc_waitq_wait(&lc->plc_wq_empty, &lc->lc_lock);
+			psc_waitq_wait(&lc->plc_wq_empty, &lc->plc_lock);
 		spinlock(&lc->plc_lock);
 	}
 	e = (void *)(pos == PLCP_HEAD ?
@@ -194,7 +194,7 @@ _lc_get(struct psc_listcache *lc, struct timespec *abstime,
 #ifdef DEBUG
 		e->ple_owner = NULL;
 #endif
-		psclist_del(&e->ple_entry);
+		psclist_del(&e->ple_entry, &lc->plc_listhd);
 		lc->plc_size--;
 	}
 	ureqlock(&lc->plc_lock, locked);
@@ -305,7 +305,7 @@ lc_move(struct psc_listcache *lc, void *p, enum psclc_pos pos)
 	psc_assert(p);
 	e = (void *)((char *)p + lc->plc_offset);
 	locked = reqlock(&lc->plc_lock);
-	psclist_del(e);
+	psclist_del(e, &lc->plc_listhd);
 	if (pos == PLCP_TAIL)
 		psclist_add_tail(e, &lc->plc_listhd);
 	else
@@ -348,7 +348,7 @@ lc_vregister(struct psc_listcache *lc, const char *name, va_list ap)
 	PLL_LOCK(&pscListCaches);
 	spinlock(&lc->plc_lock);
 
-	rc = vsnprintf(lc->plc_name, sizeof(lc->lc_name), name, ap);
+	rc = vsnprintf(lc->plc_name, sizeof(lc->plc_name), name, ap);
 	if (rc == -1)
 		psc_fatal("vsnprintf");
 	else if (rc > (int)sizeof(lc->plc_name))
@@ -424,7 +424,7 @@ lc_lookup(const char *name)
 
 	PLL_LOCK(&pscListCaches);
 	psclist_for_each_entry(lc,
-	    &pscListCaches.pll_listhd, lc_index_lentry)
+	    &pscListCaches.pll_listhd, plc_index_lentry)
 		if (strcmp(name, lc->plc_name) == 0) {
 			LIST_CACHE_LOCK(lc);
 			break;
