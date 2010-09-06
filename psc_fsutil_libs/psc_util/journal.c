@@ -166,7 +166,7 @@ pjournal_next_slot(struct psc_journal_xidhndl *xh)
 
 	slot = pj->pj_nextwrite;
 
-	t = pll_gethdpeek(&pj->pj_pendingxids);
+	t = pll_peekhead(&pj->pj_pendingxids);
 	if (t) {
 		tail_slot = t->pjx_slot;
 		psc_assert(tail_slot != slot);
@@ -233,7 +233,7 @@ pjournal_reserve_slot(struct psc_journal *pj)
 
 		pj->pj_commit_txg = zfsslash2_return_synced();
 
-		t = pll_gethdpeek(&pj->pj_pendingxids);
+		t = pll_peekhead(&pj->pj_pendingxids);
 		if (!t) {
 			/* this should never happen in practice */
 			psc_warnx("Journal %p reservation is blocked on over-reservation: "
@@ -942,7 +942,7 @@ pjournal_thr_main(struct psc_thread *thr)
 		psc_assert(pj->pj_commit_txg <= txg);
 		pj->pj_commit_txg = txg;
 
-		while ((xh = pll_gethdpeek(&pj->pj_pendingxids)) != NULL) {
+		while ((xh = pll_peekhead(&pj->pj_pendingxids)) != NULL) {
 			spinlock(&xh->pjx_lock);
 			if (xh->pjx_txg > pj->pj_commit_txg) {
 				freelock(&xh->pjx_lock);

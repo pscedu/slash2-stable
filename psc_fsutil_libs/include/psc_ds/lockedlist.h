@@ -154,8 +154,8 @@ _pll_get(struct psc_lockedlist *pll, int flags)
 #define pll_get(pll)		_pll_get((pll), PLLF_HEAD)
 #define pll_gethd(pll)		_pll_get((pll), PLLF_HEAD)
 #define pll_gettail(pll)	_pll_get((pll), PLLF_TAIL)
-#define pll_gethdpeek(pll)	_pll_get((pll), PLLF_HEAD | PLLF_PEEK)
-#define pll_gettlpeek(pll)	_pll_get((pll), PLLF_TAIL | PLLF_PEEK)
+#define pll_peekhead(pll)	_pll_get((pll), PLLF_HEAD | PLLF_PEEK)
+#define pll_peektail(pll)	_pll_get((pll), PLLF_TAIL | PLLF_PEEK)
 
 static __inline void
 pll_remove(struct psc_lockedlist *pll, void *p)

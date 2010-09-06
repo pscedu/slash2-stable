@@ -114,7 +114,7 @@ _psclist_del(struct psclist_head *prev, struct psclist_head *next)
  * @entry: the entry to be removed.
  */
 static __inline void
-psclist_del(struct psclist_head *entry)
+psclist_del(struct psclist_head *entry, const void *hd)
 {
 	_psclist_del(entry->zprev, entry->znext);
 	entry->znext = entry->zprev = NULL;
@@ -149,7 +149,7 @@ psc_listhd_empty(const struct psclist_head *hd)
  * psclist_conjoint - tests whether a psclist entry is a member of a list.
  * @entry: the psclist entry to test.
  */
-#define psclist_conjoint(ent)	((ent)->znext != NULL && (ent)->zprev != NULL)
+#define psclist_conjoint(ent, hd)	((ent)->znext != NULL && (ent)->zprev != NULL)
 
 /**
  * psclist_entry - get the struct for this entry
