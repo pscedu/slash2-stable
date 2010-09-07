@@ -229,15 +229,15 @@ psc_pool_grow(struct psc_poolmgr *m, int n)
 			errno = ENOMEM;
 			return (i);
 		}
+		INIT_PSC_LISTENTRY(psclist_entry2(p,
+		    m->ppm_explist.pexl_offset));
 		if (m->ppm_initf && m->ppm_initf(m, p)) {
 			if (flags & PAF_LOCK)
 				psc_free_mlocked(p, m->ppm_entsize);
 			else
 				PSCFREE(p);
 			return (i);
-		} else
-			INIT_PSC_LISTENTRY(psclist_entry2(p,
-			    m->ppm_explist.pexl_offset));
+		}
 		locked = POOL_RLOCK(m);
 		if (m->ppm_total < m->ppm_max ||
 		    m->ppm_max == 0) {
