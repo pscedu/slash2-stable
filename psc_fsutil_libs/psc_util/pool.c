@@ -598,7 +598,7 @@ psc_pool_nfree(struct psc_poolmgr *m)
 	int locked, nf;
 
 	locked = POOL_RLOCK(m);
-	nf = m->_ppm_nfree;
+	nf = m->ppm_nfree;
 	POOL_URLOCK(m, locked);
 	return (nf);
 }
