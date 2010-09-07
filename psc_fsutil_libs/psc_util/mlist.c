@@ -43,7 +43,7 @@ psc_mlist_size(struct psc_mlist *pml)
 	int locked, size;
 
 	locked = reqlock(&pml->pml_lock);
-	size = pml->pml_size;
+	size = pml->pml_nitems;
 	ureqlock(&pml->pml_lock, locked);
 	return (size);
 }
@@ -67,7 +67,7 @@ psc_mlist_tryget(struct psc_mlist *pml)
 	}
 	e = psc_listhd_first(&pml->pml_listhd);
 	psclist_del(e, &pml->pml_listhd);
-	psc_assert(pml->pml_size-- > 0);
+	psc_assert(pml->pml_nitems-- > 0);
 	p = (char *)e - pml->pml_offset;
 	ureqlock(&pml->pml_lock, locked);
 	return (p);
@@ -87,7 +87,7 @@ psc_mlist_add(struct psc_mlist *pml, void *p)
 	locked = reqlock(&pml->pml_lock);
 	psclist_add_tail((struct psclist_head *)((char *)p +
 	    pml->pml_offset), &pml->pml_listhd);
-	pml->pml_size++;
+	pml->pml_nitems++;
 	pml->pml_nseen++;
 	psc_multiwaitcond_wakeup(&pml->pml_mwcond_empty);
 	ureqlock(&pml->pml_lock, locked);
@@ -107,7 +107,7 @@ psc_mlist_remove(struct psc_mlist *pml, void *p)
 	locked = reqlock(&pml->pml_lock);
 	psclist_del((struct psclist_head *)((char *)p +
 	    pml->pml_offset), &pml->pml_listhd);
-	psc_assert(pml->pml_size-- > 0);
+	psc_assert(pml->pml_nitems-- > 0);
 	ureqlock(&pml->pml_lock, locked);
 }
 

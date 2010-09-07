@@ -49,7 +49,7 @@ struct psc_mlist {
 #define pml_lock			pml_guts.plg_lock
 #define pml_name			pml_guts.plg_name
 #define pml_listhd			pml_guts.plg_listhd
-#define pml_size			pml_guts.plg_size
+#define pml_nitems			pml_guts.plg_size
 #define pml_nseen			pml_guts.plg_nseen
 #define pml_entsize			pml_guts.plg_entsize
 #define pml_offset			pml_guts.plg_offset

@@ -1224,7 +1224,7 @@ psc_ctlrep_getmlist(int fd, struct psc_ctlmsghdr *mh, void *m)
 			snprintf(pcml->pcml_name,
 			    sizeof(pcml->pcml_name),
 			    "%s", pml->pml_name);
-			pcml->pcml_size = pml->pml_size;
+			pcml->pcml_size = pml->pml_nitems;
 			pcml->pcml_nseen = pml->pml_nseen;
 			pcml->pcml_nwaiters =
 			    psc_multiwaitcond_nwaiters(&pml->pml_mwcond_empty);
