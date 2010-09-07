@@ -212,7 +212,7 @@ psclist_conjoint(const struct psc_listentry *e, const struct psclist_head *hd)
 }
 
 #define psclist_entry2(p, offset)						\
-	((struct psc_listentry *)((char *)(p)) + (offset))
+	((struct psc_listentry *)((char *)(p) + (offset)))
 
 #define psclist_entry(p, type, memb)						\
 	psclist_entry2((p), offsetof(type, memb))
