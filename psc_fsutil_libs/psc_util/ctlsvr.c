@@ -382,7 +382,7 @@ psc_ctlrep_getlc(int fd, struct psc_ctlmsghdr *mh, void *m)
 			LIST_CACHE_LOCK(lc);
 			strlcpy(pclc->pclc_name, lc->plc_name,
 			    sizeof(pclc->pclc_name));
-			pclc->pclc_size = lc->plc_size;
+			pclc->pclc_size = lc->plc_nitems;
 			pclc->pclc_nseen = lc->plc_nseen;
 			pclc->pclc_flags = lc->plc_flags;
 			pclc->pclc_nw_want = psc_waitq_nwaiters(

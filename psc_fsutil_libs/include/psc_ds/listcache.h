@@ -53,7 +53,7 @@ struct psc_listcache {
 #define plc_lock		plc_guts.plg_lock
 #define plc_name		plc_guts.plg_name
 #define plc_listhd		plc_guts.plg_listhd
-#define plc_size		plc_guts.plg_size
+#define plc_nitems		plc_guts.plg_size
 #define plc_nseen		plc_guts.plg_nseen
 #define plc_entsize		plc_guts.plg_entsize
 #define plc_offset		plc_guts.plg_offset
@@ -109,7 +109,7 @@ lc_sz(struct psc_listcache *lc)
 	ssize_t sz;
 
 	locked = reqlock(&lc->plc_lock);
-	sz = lc->plc_size;
+	sz = lc->plc_nitems;
 	ureqlock(&lc->plc_lock, locked);
 	return (sz);
 }
@@ -132,9 +132,9 @@ lc_remove(struct psc_listcache *lc, void *p)
 	psc_assert(e->ple_owner == lc);
 #endif
 	locked = reqlock(&lc->plc_lock);
-	psc_assert(lc->plc_size > 0);
+	psc_assert(lc->plc_nitems > 0);
 	psclist_del(&e->ple_entry, &lc->plc_listhd);
-	lc->plc_size--;
+	lc->plc_nitems--;
 	ureqlock(&lc->plc_lock, locked);
 }
 
@@ -192,13 +192,13 @@ _lc_get(struct psc_listcache *lc, struct timespec *abstime,
 	e = (void *)(pos == PLCP_HEAD ?
 	    psc_listhd_first(&lc->plc_listhd) :
 	    psc_listhd_last(&lc->plc_listhd));
-	psc_assert(lc->plc_size > 0);
+	psc_assert(lc->plc_nitems > 0);
 	if ((flags & PLCGF_PEEK) == 0) {
 #ifdef DEBUG
 		e->ple_owner = NULL;
 #endif
 		psclist_del(&e->ple_entry, &lc->plc_listhd);
-		lc->plc_size--;
+		lc->plc_nitems--;
 	}
 	ureqlock(&lc->plc_lock, locked);
 	if (e)
@@ -271,7 +271,7 @@ _lc_add(struct psc_listcache *lc, void *p,
 	e->ple_owner = lc;
 #endif
 
-	lc->plc_size++;
+	lc->plc_nitems++;
 	lc->plc_nseen++;
 
 	ureqlock(&lc->plc_lock, locked);
