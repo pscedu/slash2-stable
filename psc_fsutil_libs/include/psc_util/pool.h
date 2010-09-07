@@ -110,15 +110,16 @@ struct psc_poolmgr {
 #define ppm_ml ppm_u.ppmu_ml
 #define ppm_lg ppm_u.ppmu_lg
 
-#define _ppm_nfree ppm_u.ppmu_lg.plg_size
-#define ppm_name ppm_u.ppmu_lg.plg_name
+#define _ppm_nfree	ppm_u.ppmu_lg.plg_size
+#define ppm_name	ppm_u.ppmu_lg.plg_name
+#define ppm_nseen	ppm_u.ppmu_lg.plg_nseen
 };
 
 /* Pool manager flags. */
-#define PPMF_NONE	0		/* no pool manager flag specified */
-#define PPMF_AUTO	(1 << 0)	/* pool automatically resizes */
-#define PPMF_NOLOCK	(1 << 1)	/* pool ents shouldn't be mlock'd */
-#define PPMF_MLIST	(1 << 2)	/* backend storage is mgt'd via mlist */
+#define PPMF_NONE		0		/* no pool manager flag specified */
+#define PPMF_AUTO		(1 << 0)	/* pool automatically resizes */
+#define PPMF_NOLOCK		(1 << 1)	/* pool ents shouldn't be mlock'd */
+#define PPMF_MLIST		(1 << 2)	/* backend storage is mgt'd via mlist */
 
 #define POOL_LOCK(m)		spinlock(&(m)->ppm_lg.plg_lock)
 #define POOL_TRYLOCK(m)		trylock(&(m)->ppm_lg.plg_lock)

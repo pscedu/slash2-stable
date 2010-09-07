@@ -437,7 +437,7 @@ psc_ctlrep_getpool(int fd, struct psc_ctlmsghdr *mh, void *msg)
 			pcpl->pcpl_total = m->ppm_total;
 			pcpl->pcpl_flags = m->ppm_flags;
 			pcpl->pcpl_thres = m->ppm_thres;
-			pcpl->pcpl_nseen = m->ppm_lg.plg_nseen;
+			pcpl->pcpl_nseen = m->ppm_nseen;
 			pcpl->pcpl_ngrow = m->ppm_ngrow;
 			pcpl->pcpl_nshrink = m->ppm_nshrink;
 			if (POOL_IS_MLIST(m)) {
