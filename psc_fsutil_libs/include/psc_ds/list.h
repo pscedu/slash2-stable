@@ -100,7 +100,7 @@ struct psclist_head {
 #endif
 
 static __inline void
-_psclist_add(struct psc_listentry *e, struct psclist_entry *prev,
+_psclist_add(struct psc_listentry *e, struct psc_listentry *prev,
     struct psc_listentry *next)
 {
 #ifdef DEBUG
