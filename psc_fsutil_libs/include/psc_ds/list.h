@@ -211,6 +211,12 @@ psclist_conjoint(const struct psc_listentry *e, const struct psclist_head *hd)
 	return (psc_lentry_prev(e) && psc_lentry_next(e));
 }
 
+#define psclist_entry2(p, offset)						\
+	((struct psc_listentry *)((char *)(p)) + (offset))
+
+#define psclist_entry(p, type, memb)						\
+	psclist_entry2((p), offsetof(type, memb))
+
 /**
  * psc_lentry_obj2 - Get the struct for a list entry given offset.
  * @e: the psc_listentry.

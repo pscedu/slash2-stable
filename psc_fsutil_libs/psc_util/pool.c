@@ -105,16 +105,6 @@ _psc_poolmaster_initmgr(struct psc_poolmaster *p, struct psc_poolmgr *m)
 
 	memset(m, 0, sizeof(*m));
 	psc_pthread_mutex_init(&m->ppm_reclaim_mutex);
-	locked = reqlock(&p->pms_lock);
-	m->ppm_reclaimcb = p->pms_reclaimcb;
-	m->ppm_destroyf = p->pms_destroyf;
-	m->ppm_thres = p->pms_thres;
-	m->ppm_flags = p->pms_flags;
-	m->ppm_initf = p->pms_initf;
-	m->ppm_entsize = p->pms_entsize;
-	m->ppm_min = p->pms_min;
-	m->ppm_max = p->pms_max;
-	m->ppm_master = p;
 
 	if (POOL_IS_MLIST(m)) {
 #ifdef HAVE_NUMA
@@ -141,6 +131,20 @@ _psc_poolmaster_initmgr(struct psc_poolmaster *p, struct psc_poolmgr *m)
 			psc_fatalx("%s: name too long", p->pms_name);
 	}
 
+	INIT_PSC_LISTENTRY(&m->ppm_lentry);
+
+	locked = reqlock(&p->pms_lock);
+	m->ppm_reclaimcb = p->pms_reclaimcb;
+	m->ppm_destroyf = p->pms_destroyf;
+	m->ppm_initf = p->pms_initf;
+
+	m->ppm_thres = p->pms_thres;
+	m->ppm_flags = p->pms_flags;
+	m->ppm_entsize = p->pms_entsize;
+	m->ppm_min = p->pms_min;
+	m->ppm_max = p->pms_max;
+	m->ppm_master = p;
+
 	n = p->pms_total;
 	ureqlock(&p->pms_lock, locked);
 
@@ -155,6 +159,7 @@ _psc_poolmaster_initmgr(struct psc_poolmaster *p, struct psc_poolmgr *m)
  * psc_poolmaster_getmgr - Obtain a pool manager for this NUMA from the
  *	master.
  * @p: pool master.
+ * @memnid: memory node ID.
  */
 struct psc_poolmgr *
 _psc_poolmaster_getmgr(struct psc_poolmaster *p, int memnid)
@@ -230,7 +235,9 @@ psc_pool_grow(struct psc_poolmgr *m, int n)
 			else
 				PSCFREE(p);
 			return (i);
-		}
+		} else
+			INIT_PSC_LISTENTRY(psclist_entry2(p,
+			    m->ppm_explist.pexl_offset));
 		locked = POOL_RLOCK(m);
 		if (m->ppm_total < m->ppm_max ||
 		    m->ppm_max == 0) {
