@@ -138,7 +138,7 @@ _psclist_add(struct psc_listentry *e, struct psc_listentry *prev,
  * @hd: containing list head.
  */
 static __inline void
-psclist_del(struct psclist_head *entry, __unusedx const void *hd)
+psclist_del(struct psclist_head *e, __unusedx const void *hd)
 {
 	struct psc_listentry *prev, *next;
 
