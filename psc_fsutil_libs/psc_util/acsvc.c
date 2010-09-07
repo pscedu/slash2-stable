@@ -423,7 +423,7 @@ acsreq_issue(struct access_request *arq)
 
 	apr = PSCALLOC(sizeof(*apr));
 	INIT_PSC_LISTENTRY(&apr->apr_lentry);
-	LOCK_INIT(&apr->apr_lock);
+	INIT_SPINLOCK(&apr->apr_lock);
 	spinlock(&apr->apr_lock);
 	apr->apr_id = arq->arq_id;
 	apr->apr_op = arq->arq_op;

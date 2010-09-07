@@ -59,7 +59,7 @@ psc_memnode_get(void)
 	if (pmn == NULL) {
 		pmn = pmnv[memnid] = psc_alloc(sizeof(*pmn),
 		    PAF_NOLOG);
-		LOCK_INIT(&pmn->pmn_lock);
+		INIT_SPINLOCK(&pmn->pmn_lock);
 		psc_dynarray_init(&pmn->pmn_keys);
 	}
 	freelock(&psc_memnodes_lock);

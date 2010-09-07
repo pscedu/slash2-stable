@@ -156,7 +156,7 @@ psc_pthread_rwlock_init(struct psc_pthread_rwlock *ppr)
 {
 	int rc;
 
-	LOCK_INIT(&ppr->ppr_lock);
+	INIT_SPINLOCK(&ppr->ppr_lock);
 	ppr->ppr_readers = psc_vbitmap_newf(1, PVBF_AUTO);
 	rc = pthread_rwlock_init(&ppr->ppr_rwlock, NULL);
 	if (rc)

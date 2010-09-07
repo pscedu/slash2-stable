@@ -331,7 +331,7 @@ pscrpc_server_handle_request(struct pscrpc_service *svc,
 		 * init and associate the connection and export structs
 		 *  see pscrpc_new_export() for more detail
 		 */
-		LOCK_INIT(&exp->exp_lock);
+		INIT_SPINLOCK(&exp->exp_lock);
 		atomic_set(&exp->exp_refcount, 1);
 		atomic_set(&exp->exp_rpc_count, 0);
 		exp->exp_connection = request->rq_conn;
@@ -949,7 +949,7 @@ pscrpc_init_svc(int nbufs, int bufsize, int max_req_size, int max_reply_size,
 	/* First initialise enough for early teardown */
 
 	service->srv_name = name;
-	LOCK_INIT(&service->srv_lock);
+	INIT_SPINLOCK(&service->srv_lock);
 	INIT_PSCLIST_HEAD(&service->srv_threads);
 	psc_waitq_init(&service->srv_waitq);
 

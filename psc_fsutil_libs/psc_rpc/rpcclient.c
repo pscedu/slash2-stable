@@ -65,7 +65,7 @@ pscrpc_new_import(void)
 	//INIT_PSCLIST_HEAD(&imp->imp_replay_list);
 	INIT_PSCLIST_HEAD(&imp->imp_sending_list);
 	//INIT_PSCLIST_HEAD(&imp->imp_delayed_list);
-	LOCK_INIT(&imp->imp_lock);
+	INIT_SPINLOCK(&imp->imp_lock);
 	//imp->imp_last_success_conn = 0;
 	imp->imp_state = PSCRPC_IMP_NEW;
 	//imp->imp_obd = class_incref(obd);
@@ -236,7 +236,7 @@ pscrpc_prep_req_pool(struct pscrpc_import *imp, uint32_t version,
 	request->rq_request_portal = imp->imp_client->cli_request_portal;
 	request->rq_reply_portal = imp->imp_client->cli_reply_portal;
 
-	LOCK_INIT(&request->rq_lock);
+	INIT_SPINLOCK(&request->rq_lock);
 	INIT_PSC_LISTENTRY(&request->rq_list_entry);
 	//INIT_PSCLIST_HEAD(&request->rq_replay_list);
 	INIT_PSC_LISTENTRY(&request->rq_set_chain_lentry);
@@ -269,7 +269,7 @@ pscrpc_new_bulk(int npages, int type, int portal)
 	if (!desc)
 		return NULL;
 
-	LOCK_INIT(&desc->bd_lock);
+	INIT_SPINLOCK(&desc->bd_lock);
 	psc_waitq_init(&desc->bd_waitq);
 	desc->bd_max_iov = npages;
 	desc->bd_iov_count = 0;
@@ -337,7 +337,7 @@ pscrpc_set_init(struct pscrpc_request_set *set)
 	INIT_PSCLIST_HEAD(&set->set_requests);
 	psc_waitq_init(&set->set_waitq);
 	set->set_remaining = 0;
-	LOCK_INIT(&set->set_lock);
+	INIT_SPINLOCK(&set->set_lock);
 }
 
 struct pscrpc_request_set *

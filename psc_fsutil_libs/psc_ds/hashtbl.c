@@ -70,7 +70,7 @@ _psc_hashtbl_init(struct psc_hashtbl *t, int flags,
 
 	memset(t, 0, sizeof(*t));
 	INIT_PSC_LISTENTRY(&t->pht_lentry);
-	LOCK_INIT(&t->pht_lock);
+	INIT_SPINLOCK(&t->pht_lock);
 	t->pht_nbuckets = nbuckets;
 	t->pht_buckets = PSCALLOC(nbuckets * sizeof(*t->pht_buckets));
 	t->pht_flags = flags;
@@ -84,7 +84,7 @@ _psc_hashtbl_init(struct psc_hashtbl *t, int flags,
 
 	for (i = 0, b = t->pht_buckets; i < nbuckets; i++, b++) {
 		INIT_PSCLIST_HEAD(&b->phb_listhd);
-		LOCK_INIT(&b->phb_lock);
+		INIT_SPINLOCK(&b->phb_lock);
 		psc_atomic32_set(&b->phb_nitems, 0);
 	}
 	pll_add(&psc_hashtbls, t);

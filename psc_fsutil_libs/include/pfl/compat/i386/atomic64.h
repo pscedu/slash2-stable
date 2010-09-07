@@ -41,7 +41,7 @@ struct psc_i386_atomic64 {
 static __inline void
 psc_atomic64_init(psc_atomic64_t *v)
 {
-	LOCK_INIT(&v->lock64);
+	INIT_SPINLOCK(&v->lock64);
 }
 #endif
 

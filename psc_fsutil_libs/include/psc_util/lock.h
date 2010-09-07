@@ -30,7 +30,7 @@
 typedef struct psc_spinlock psc_spinlock_t;
 
 #define LOCK_INITIALIZER	PSC_SPINLOCK_INIT
-#define LOCK_INIT(psl)		psc_spin_init(psl)
+#define INIT_SPINLOCK(psl)		psc_spin_init(psl)
 #define LOCK_ENSURE(psl)	psc_spin_ensure(psl)
 #define freelock(psl)		psc_spin_unlock(psl)
 #define trylock(psl)		psc_spin_trylock(psl)
@@ -59,7 +59,7 @@ typedef struct {
 #define SPIN_SLEEP_DURATION     5001
 
 /* XXX provide some way to detect reinitializing already-initialized locks. */
-#define LOCK_INIT(l)		((l)->sl_lock = SL_UNLOCKED)
+#define INIT_SPINLOCK(l)		((l)->sl_lock = SL_UNLOCKED)
 #define LOCK_INITIALIZER	{ SL_UNLOCKED, 0 }
 
 static __inline int
@@ -219,7 +219,7 @@ ureqlock(psc_spinlock_t *sl, int waslocked)
 typedef int psc_spinlock_t;
 
 /* XXX provide some way to detect reinitializing already-initialized locks. */
-#define LOCK_INIT(l)		(*(l) = SL_UNLOCKED)
+#define INIT_SPINLOCK(l)		(*(l) = SL_UNLOCKED)
 #define LOCK_INITIALIZER	SL_UNLOCKED
 
 #define _LOCK_VALID(l)		(*(l) == SL_LOCKED || *(l) == SL_UNLOCKED)

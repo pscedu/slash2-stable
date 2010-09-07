@@ -43,7 +43,7 @@ pscrpc_nbreqset_init(pscrpc_set_interpreterf nb_interpret,
 	nbs->nb_reqset.set_interpret = nb_interpret;
 	nbs->nb_callback = nb_callback;
 	atomic_set(&nbs->nb_outstanding, 0);
-	LOCK_INIT(&nbs->nb_lock);
+	INIT_SPINLOCK(&nbs->nb_lock);
 	return nbs;
 }
 

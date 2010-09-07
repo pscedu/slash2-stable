@@ -241,7 +241,7 @@ odtable_load(struct odtable **t, const char *fn, const char *fmt, ...)
 	psc_assert(t);
 	*t = NULL;
 
-	LOCK_INIT(&odt->odt_lock);
+	INIT_SPINLOCK(&odt->odt_lock);
 
 	odt->odt_fd = open(fn, O_RDWR, 0600);
 	if (odt->odt_fd < 0) {

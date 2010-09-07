@@ -201,7 +201,7 @@ pjournal_xnew(struct psc_journal *pj)
 	xh = PSCALLOC(sizeof(*xh));
 
 	xh->pjx_pj = pj;
-	LOCK_INIT(&xh->pjx_lock);
+	INIT_SPINLOCK(&xh->pjx_lock);
 	xh->pjx_flags = PJX_NONE;
 	xh->pjx_slot = PJX_SLOT_ANY;
 	INIT_PSC_LISTENTRY(&xh->pjx_lentry1);
@@ -684,7 +684,7 @@ pjournal_open(const char *fn)
 	 * The remaining two fields pj_lastxid and pj_nextwrite will be
 	 * filled after log replay.
 	 */
-	LOCK_INIT(&pj->pj_lock);
+	INIT_SPINLOCK(&pj->pj_lock);
 
 	pj->pj_inuse = 0;
 	pj->pj_resrv = 0;

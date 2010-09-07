@@ -186,7 +186,7 @@ psc_refmgr_init(struct psc_refmgr *prm, int flags, int privsiz, int nobjs,
 		    prm->prm_lru_offset);
 	if (prm->prm_flags & PRMF_TREE) {
 		SPLAY_INIT(&prm->prm_tree);
-		LOCK_INIT(&prm->prm_trlock);
+		INIT_SPINLOCK(&prm->prm_trlock);
 	}
 	if (prm->prm_flags & PRMF_HASH) {
 		flags = 0;

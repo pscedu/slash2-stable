@@ -40,7 +40,7 @@ psc_completion_init(struct psc_completion *pc)
 {
 	pc->pc_done = PCV_NOTDONE;
 	psc_waitq_init(&pc->pc_wq);
-	LOCK_INIT(&pc->pc_lock);
+	INIT_SPINLOCK(&pc->pc_lock);
 	pc->pc_rc = 1;
 }
 

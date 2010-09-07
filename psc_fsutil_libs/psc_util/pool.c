@@ -65,7 +65,7 @@ _psc_poolmaster_initv(struct psc_poolmaster *p, size_t entsize,
     const char *namefmt, va_list ap)
 {
 	memset(p, 0, sizeof(*p));
-	LOCK_INIT(&p->pms_lock);
+	INIT_SPINLOCK(&p->pms_lock);
 	psc_dynarray_init(&p->pms_poolmgrs);
 	psc_dynarray_init(&p->pms_sets);
 	p->pms_reclaimcb = reclaimcb;
@@ -651,7 +651,7 @@ psc_pool_unshare(struct psc_poolmaster *p)
 void
 psc_poolset_init(struct psc_poolset *s)
 {
-	LOCK_INIT(&s->pps_lock);
+	INIT_SPINLOCK(&s->pps_lock);
 	psc_dynarray_init(&s->pps_pools);
 }
 

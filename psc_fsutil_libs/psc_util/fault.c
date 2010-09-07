@@ -70,7 +70,7 @@ psc_fault_add(const char *name)
 	}
 
 	pflt = PSCALLOC(sizeof(*pflt));
-	LOCK_INIT(&pflt->pflt_lock);
+	INIT_SPINLOCK(&pflt->pflt_lock);
 	strlcpy(pflt->pflt_name, name, sizeof(pflt->pflt_name));
 	pflt->pflt_flags = PFLTF_ACTIVE;
 	pflt->pflt_delay = 0;		/* no internal delay enforced */
@@ -155,7 +155,7 @@ psc_fault_register(const char *name, int delay, int begin, int chance, int count
 	}
 
 	pflt = PSCALLOC(sizeof(*pflt));
-	LOCK_INIT(&pflt->pflt_lock);
+	INIT_SPINLOCK(&pflt->pflt_lock);
 	strlcpy(pflt->pflt_name, name, sizeof(pflt->pflt_name));
 
 	b = psc_hashbkt_get(&psc_fault_table, name);

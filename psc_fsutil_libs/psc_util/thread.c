@@ -257,7 +257,7 @@ _pscthr_begin(void *arg)
 	thr = psc_alloc(sizeof(*thr), PAF_NOLOG);
 	INIT_PSC_LISTENTRY(&thr->pscthr_lentry);
 	psc_waitq_init(&thr->pscthr_waitq);
-	LOCK_INIT(&thr->pscthr_lock);
+	INIT_SPINLOCK(&thr->pscthr_lock);
 	spinlock(&thr->pscthr_lock);
 
 	/* Copy values from original. */
@@ -314,7 +314,7 @@ _pscthr_init(int type, int flags, void (*startf)(struct psc_thread *),
 	memset(thr, 0, sizeof(*thr));
 	INIT_PSC_LISTENTRY(&thr->pscthr_lentry);
 	psc_waitq_init(&thr->pscthr_waitq);
-	LOCK_INIT(&thr->pscthr_lock);
+	INIT_SPINLOCK(&thr->pscthr_lock);
 	thr->pscthr_type = type;
 	thr->pscthr_startf = startf;
 	thr->pscthr_privsiz = privsiz;

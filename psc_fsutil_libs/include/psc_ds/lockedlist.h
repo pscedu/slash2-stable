@@ -98,7 +98,7 @@ _pll_init(struct psc_lockedlist *pll, int offset, psc_spinlock_t *lkp)
 		pll->pll_flags |= PLLF_EXTLOCK;
 		pll->pll_lockp = lkp;
 	} else
-		LOCK_INIT(&pll->pll_lock);
+		INIT_SPINLOCK(&pll->pll_lock);
 	pll->pll_offset = offset;
 }
 
