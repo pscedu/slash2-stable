@@ -28,9 +28,9 @@
 
 #include <stdarg.h>
 
+#include "pfl/explist.h"
 #include "psc_ds/dynarray.h"
 #include "psc_ds/listcache.h"
-#include "psc_ds/listguts.h"
 #include "psc_ds/lockedlist.h"
 #include "psc_util/lock.h"
 #include "psc_util/log.h"
@@ -63,9 +63,9 @@ struct psc_poolmaster {
 	struct psc_dynarray	  pms_sets;		/* poolset memberships */
 
 	/* for initializing memnode poolmgrs */
-	char			  pms_name[PLG_NAME_MAX];
-	ptrdiff_t		  pms_offset;		/* entry offset to listhead */
-	int			  pms_entsize;		/* size of entry in pool */
+	char			  pms_name[PEXL_NAME_MAX];
+	ptrdiff_t		  pms_offset;		/* item offset to psc_listentry */
+	int			  pms_entsize;		/* size of an entry item */
 	int			  pms_total;		/* #items to populate */
 	int			  pms_min;		/* min bound of #items */
 	int			  pms_max;		/* max bound of #items */
@@ -87,9 +87,8 @@ struct psc_poolmgr {
 	union {
 		struct psc_listcache	ppmu_lc;	/* free pool entries */
 		struct psc_mlist	ppmu_ml;
-		struct psc_listguts	ppmu_lg;
+		struct psc_explist	ppmu_explist;
 	} ppm_u;
-	struct psclist_head	  ppm_all_lentry;
 	struct psc_poolmaster	 *ppm_master;
 
 	int			  ppm_total;		/* #items in circulation */
@@ -97,6 +96,7 @@ struct psc_poolmgr {
 	int			  ppm_max;		/* max bound of #items */
 	int			  ppm_thres;		/* autoresize threshold */
 	int			  ppm_flags;		/* flags */
+	int			  ppm_entsize;		/* flags */
 	uint64_t		  ppm_ngrow;		/* #allocs */
 	uint64_t		  ppm_nshrink;		/* #deallocs */
 	atomic_t		  ppm_nwaiters;		/* #thrs waiting for item */
@@ -106,14 +106,15 @@ struct psc_poolmgr {
 	int			(*ppm_initf)(struct psc_poolmgr *, void *);
 	void			(*ppm_destroyf)(void *);
 	int			(*ppm_reclaimcb)(struct psc_poolmgr *);
-#define ppm_lc ppm_u.ppmu_lc
-#define ppm_ml ppm_u.ppmu_ml
-#define ppm_lg ppm_u.ppmu_lg
+#define ppm_explist	ppm_u.ppmu_explist
+#define ppm_lc		ppm_u.ppmu_lc
+#define ppm_ml		ppm_u.ppmu_ml
 
-#define ppm_entsize	ppm_u.ppmu_lg.plg_entsize
-#define ppm_name	ppm_u.ppmu_lg.plg_name
-#define ppm_nfree	ppm_u.ppmu_lg.plg_size
-#define ppm_nseen	ppm_u.ppmu_lg.plg_nseen
+#define ppm_lentry	ppm_explist.pexl_lentry
+#define ppm_nfree	ppm_explist.pexl_nitems
+#define ppm_name	ppm_explist.pexl_name
+#define ppm_nseen	ppm_explist.pexl_nseen
+#define ppm_pll		ppm_explist.pexl_pll
 };
 
 /* Pool manager flags. */
@@ -122,11 +123,11 @@ struct psc_poolmgr {
 #define PPMF_NOLOCK		(1 << 1)	/* pool ents shouldn't be mlock'd */
 #define PPMF_MLIST		(1 << 2)	/* backend storage is mgt'd via mlist */
 
-#define POOL_LOCK(m)		spinlock(&(m)->ppm_lg.plg_lock)
-#define POOL_TRYLOCK(m)		trylock(&(m)->ppm_lg.plg_lock)
-#define POOL_ULOCK(m)		freelock(&(m)->ppm_lg.plg_lock)
-#define POOL_RLOCK(m)		reqlock(&(m)->ppm_lg.plg_lock)
-#define POOL_URLOCK(m, lk)	ureqlock(&(m)->ppm_lg.plg_lock, (lk))
+#define POOL_LOCK(m)		PLL_LOCK(&(m)->ppm_pll)
+#define POOL_TRYLOCK(m)		PLL_TRYLOCK(&(m)->ppm_pll)
+#define POOL_UNLOCK(m)		PLL_ULOCK(&(m)->ppm_pll)
+#define POOL_RLOCK(m)		PLL_RLOCK(&(m)->ppm_pll)
+#define POOL_URLOCK(m, lk)	PLL_URLOCK(&(m)->ppm_pll, (lk))
 
 /* Sanity check */
 #define POOL_CHECK(m)							\
@@ -206,9 +207,9 @@ void	 psc_pool_share(struct psc_poolmaster *);
 int	_psc_pool_shrink(struct psc_poolmgr *, int, int);
 void	 psc_pool_unshare(struct psc_poolmaster *);
 
-void	 psc_poolset_init(struct psc_poolset *);
-void	 psc_poolset_enlist(struct psc_poolset *, struct psc_poolmaster *);
 void	 psc_poolset_disbar(struct psc_poolset *, struct psc_poolmaster *);
+void	 psc_poolset_enlist(struct psc_poolset *, struct psc_poolmaster *);
+void	 psc_poolset_init(struct psc_poolset *);
 
 extern struct psc_lockedlist	psc_pools;
 

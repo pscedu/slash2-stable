@@ -27,6 +27,7 @@
 
 #include <sys/types.h>
 
+#include "pfl/explist.h"
 #include "pfl/hashtbl.h"
 #include "psc_ds/listcache.h"
 #include "psc_util/fault.h"
@@ -56,12 +57,12 @@ struct psc_ctlmsg_loglevel {
 };
 
 struct psc_ctlmsg_lc {
+	char			pclc_name[PEXL_NAME_MAX];
 	uint64_t		pclc_size;	/* #items on list */
 	uint64_t		pclc_nseen;	/* max #items list can attain */
 	int32_t			pclc_flags;
 	int32_t			pclc_nw_want;	/* #waiters waking for a want */
 	int32_t			pclc_nw_empty;	/* #waiters waking on empty */
-	char			pclc_name[PLG_NAME_MAX];
 };
 
 #define PCLC_NAME_ALL		"all"
@@ -134,7 +135,7 @@ struct psc_ctlmsg_pool {
 	uint64_t		pcpl_ngrow;
 	uint64_t		pcpl_nshrink;
 	uint64_t		pcpl_nseen;
-	char			pcpl_name[PLG_NAME_MAX];
+	char			pcpl_name[PEXL_NAME_MAX];
 };
 
 #define PCPL_NAME_ALL		"all"
@@ -143,7 +144,7 @@ struct psc_ctlmsg_mlist {
 	uint64_t		 pcml_nseen;
 	uint32_t		 pcml_size;
 	uint32_t		 pcml_nwaiters;
-	char			 pcml_name[PLG_NAME_MAX];
+	char			 pcml_name[PEXL_NAME_MAX];
 };
 
 #define PCML_NAME_ALL		"all"
