@@ -13,12 +13,13 @@ PKG_CONFIG=	pkg-config
 LIBGCRYPT_CONFIG=libgcrypt-config
 MPICC=		mpicc
 ECHORUN=	${ROOTDIR}/tools/echorun.sh
-GENTYPES=	PERL5LIB=${PERL5LIB}:${CROOTDIR}/tools/lib ${CROOTDIR}/tools/gentypes.pl
+_PERLENV=	PERL5LIB=${PERL5LIB}:${CROOTDIR}/tools/lib
+GENTYPES=	${_PERLENV} ${CROOTDIR}/tools/gentypes.pl
 HDRCLEAN=	${ROOTDIR}/tools/hdrclean.pl
 LIBDEP=		${ROOTDIR}/tools/libdep.pl
 MDPROC=		${ROOTDIR}/tools/mdproc.pl
 MINVER=		${ROOTDIR}/tools/minver.pl
-PCPP=		PERL5LIB=${PERL5LIB}:${CROOTDIR}/tools/lib ${CROOTDIR}/tools/pcpp.pl
+PCPP=		${_PERLENV} ${CROOTDIR}/tools/pcpp.pl
 PICKLEGEN=	${ROOTDIR}/tools/pickle-gen.sh
 
 MAKEFLAGS+=	--no-print-directory
@@ -29,17 +30,12 @@ YFLAGS+=	-d
 CFLAGS+=	-Wall -W
 
 DEBUG?=		1
-ifeq (${DEBUG},2)
-    CFLAGS+=	-ggdb3
-    #DEFINES+=	-DDEBUG
+ifeq (${DEBUG},0)
+  CFLAGS+=	-Wunused -Wuninitialized -O2
+# CFLAGS+=	-Wshadow
 else
-  ifeq (${DEBUG},1)
-    CFLAGS+=	-g
-    #DEFINES+=	-DDEBUG
-  else
-    CFLAGS+=	-Wunused -Wuninitialized -O2
-    #CFLAGS+=	-Wshadow
-  endif
+  CFLAGS+=	-g
+  DEFINES+=	-DDEBUG=${DEBUG}
 endif
 
 DEFINES+=	-D_REENTRANT -DYY_NO_UNPUT -DYY_NO_INPUT -DYYERROR_VERBOSE
