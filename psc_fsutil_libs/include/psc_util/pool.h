@@ -125,7 +125,7 @@ struct psc_poolmgr {
 
 #define POOL_LOCK(m)		PLL_LOCK(&(m)->ppm_pll)
 #define POOL_TRYLOCK(m)		PLL_TRYLOCK(&(m)->ppm_pll)
-#define POOL_UNLOCK(m)		PLL_ULOCK(&(m)->ppm_pll)
+#define POOL_ULOCK(m)		PLL_ULOCK(&(m)->ppm_pll)
 #define POOL_RLOCK(m)		PLL_RLOCK(&(m)->ppm_pll)
 #define POOL_URLOCK(m, lk)	PLL_URLOCK(&(m)->ppm_pll, (lk))
 

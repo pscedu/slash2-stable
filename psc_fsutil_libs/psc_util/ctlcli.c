@@ -655,12 +655,12 @@ psc_ctlmsg_stats_prhdr(__unusedx struct psc_ctlmsghdr *mh,
 #ifdef HAVE_NUMA
 	    " %6s"
 #endif
-	    " %4s ",
+	    " %3s ",
 	    "thread", "thrid",
 #ifdef HAVE_NUMA
 	    "memnid",
 #endif
-	    "flag");
+	    "flg");
 	printf("%*s%s\n", (PSC_CTL_DISPLAY_WIDTH - n - 1) / 2 -
 	    (int)strlen(msg) / 2, "", msg);
 }
@@ -676,13 +676,12 @@ psc_ctlmsg_stats_prdat(__unusedx const struct psc_ctlmsghdr *mh,
 #ifdef HAVE_NUMA
 	    " %6d"
 #endif
-	    " %c%c%c%c",
+	    " %c%c%c",
 	    pcst->pcst_thrname, pcst->pcst_thrid,
 #ifdef HAVE_NUMA
 	    pcst->pcst_memnode,
 #endif
 	    pcst->pcst_flags & PTF_PAUSED	? 'P' : '-',
-	    pcst->pcst_flags & PTF_FREE		? 'F' : '-',
 	    pcst->pcst_flags & PTF_RUN		? 'R' : '-',
 	    pcst->pcst_flags & PTF_READY	? 'I' : '-');
 	if (pcst->pcst_thrtype < psc_ctl_nthrstatfmts) {
