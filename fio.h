@@ -848,7 +848,7 @@ push_dirstack(IOT_t *iot)
 	/* only the workpe does this.. */
 	if (WORKPE) {
 		new_dir = PSCALLOC(sizeof(DIR_t));
-		INIT_PSCLIST_ENTRY(&new_dir->dir_stack_lentry);
+		INIT_PSC_LISTENTRY(&new_dir->dir_stack_lentry);
 		psclist_add(&new_dir->dir_stack_lentry, &mygroup->dirStack);
 		DEBUG(D_DTREE, "added dir %p %s\n",
 		    new_dir, iot->mypath);

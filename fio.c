@@ -856,7 +856,7 @@ worker(void *arg)
 			if (WORKPE) {
 				/* initialize the phantom directory tree */
 				mygroup->dirRoot = PSCALLOC(sizeof(DIR_t));
-				INIT_PSCLIST_ENTRY(&mygroup->dirRoot->dir_stack_lentry);
+				INIT_PSC_LISTENTRY(&mygroup->dirRoot->dir_stack_lentry);
 				INIT_PSCLIST_HEAD(&mygroup->dirStack);
 				psclist_add(&mygroup->dirRoot->dir_stack_lentry,
 				    &mygroup->dirStack);
