@@ -73,7 +73,7 @@ struct psc_lockedlist {
 
 #define PLL_INIT(pll, type, member)					\
 	{ PSCLIST_HEAD_INIT((pll)->pll_listhd), 0, 0,			\
-	  offsetof(type, member), { LOCK_INITIALIZER } }
+	  offsetof(type, member), { SPINLOCK_INIT } }
 
 static __inline struct psc_listentry *
 _pll_obj2entry(struct psc_lockedlist *pll, void *p)

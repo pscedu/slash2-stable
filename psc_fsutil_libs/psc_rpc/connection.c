@@ -9,7 +9,7 @@
 #include "psc_util/atomic.h"
 #include "psc_util/lock.h"
 
-static psc_spinlock_t	   conn_lock        = LOCK_INITIALIZER;
+static psc_spinlock_t	   conn_lock        = SPINLOCK_INIT;
 static struct psclist_head conn_list        = PSCLIST_HEAD_INIT(conn_list);
 static struct psclist_head conn_unused_list = PSCLIST_HEAD_INIT(conn_unused_list);
 

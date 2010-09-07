@@ -31,7 +31,7 @@
 #define _PATH_URANDOM "/dev/urandom"
 #define SMALL_BUF 128
 
-psc_spinlock_t	 psc_random_lock = LOCK_INITIALIZER;
+psc_spinlock_t	 psc_random_lock = SPINLOCK_INIT;
 unsigned char	 psc_random_buf[SMALL_BUF];
 ssize_t		 psc_random_siz;
 unsigned char	*psc_random_pos;

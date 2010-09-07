@@ -33,7 +33,7 @@ struct psc_completion {
 	int			pc_rc;
 };
 
-#define PSC_COMPLETION_INIT	{ PSC_WAITQ_INIT, LOCK_INITIALIZER, PCV_NOTDONE, 0 }
+#define PSC_COMPLETION_INIT	{ PSC_WAITQ_INIT, SPINLOCK_INIT, PCV_NOTDONE, 0 }
 
 static __inline void
 psc_completion_init(struct psc_completion *pc)

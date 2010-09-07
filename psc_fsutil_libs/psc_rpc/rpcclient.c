@@ -15,7 +15,7 @@
 #include "psc_util/waitq.h"
 
 static uint64_t pscrpc_last_xid = 0;
-static psc_spinlock_t pscrpc_last_xid_lock = LOCK_INITIALIZER;
+static psc_spinlock_t pscrpc_last_xid_lock = SPINLOCK_INIT;
 
 uint64_t
 pscrpc_next_xid(void)

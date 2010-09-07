@@ -25,7 +25,7 @@
 #include "psc_util/lock.h"
 #include "psc_util/log.h"
 
-psc_spinlock_t psc_rlimit_lock = LOCK_INITIALIZER;
+psc_spinlock_t psc_rlimit_lock = SPINLOCK_INIT;
 
 int
 psc_setrlimit(int field, rlim_t soft, rlim_t hard)

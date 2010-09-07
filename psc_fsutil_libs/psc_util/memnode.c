@@ -25,7 +25,7 @@
 #include "psc_util/lock.h"
 #include "psc_util/memnode.h"
 
-__static psc_spinlock_t		psc_memnodes_lock = LOCK_INITIALIZER;
+__static psc_spinlock_t		psc_memnodes_lock = SPINLOCK_INIT;
 __static struct psc_dynarray	psc_memnodes = DYNARRAY_INIT;
 __static pthread_key_t		psc_memnodes_key;
 

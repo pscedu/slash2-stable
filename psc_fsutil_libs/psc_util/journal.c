@@ -55,7 +55,7 @@ __static int		pjournal_logwrite_internal(struct psc_journal *,
 				struct psc_journal_enthdr *, uint32_t);
 
 struct psc_waitq	pjournal_waitq = PSC_WAITQ_INIT;
-psc_spinlock_t		pjournal_waitqlock = LOCK_INITIALIZER;
+psc_spinlock_t		pjournal_waitqlock = SPINLOCK_INIT;
 
 #define JIO_READ	0
 #define JIO_WRITE	1

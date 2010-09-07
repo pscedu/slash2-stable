@@ -29,7 +29,7 @@
 
 typedef struct psc_spinlock psc_spinlock_t;
 
-#define LOCK_INITIALIZER	PSC_SPINLOCK_INIT
+#define SPINLOCK_INIT	PSC_SPINLOCK_INIT
 #define INIT_SPINLOCK(psl)		psc_spin_init(psl)
 #define LOCK_ENSURE(psl)	psc_spin_ensure(psl)
 #define freelock(psl)		psc_spin_unlock(psl)
@@ -60,7 +60,7 @@ typedef struct {
 
 /* XXX provide some way to detect reinitializing already-initialized locks. */
 #define INIT_SPINLOCK(l)		((l)->sl_lock = SL_UNLOCKED)
-#define LOCK_INITIALIZER	{ SL_UNLOCKED, 0 }
+#define SPINLOCK_INIT	{ SL_UNLOCKED, 0 }
 
 static __inline int
 validlock(const psc_spinlock_t *sl)
@@ -220,7 +220,7 @@ typedef int psc_spinlock_t;
 
 /* XXX provide some way to detect reinitializing already-initialized locks. */
 #define INIT_SPINLOCK(l)		(*(l) = SL_UNLOCKED)
-#define LOCK_INITIALIZER	SL_UNLOCKED
+#define SPINLOCK_INIT	SL_UNLOCKED
 
 #define _LOCK_VALID(l)		(*(l) == SL_LOCKED || *(l) == SL_UNLOCKED)
 

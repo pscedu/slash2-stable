@@ -31,7 +31,7 @@
 #include "psc_util/lock.h"
 #include "psc_util/log.h"
 
-psc_spinlock_t	  psc_umask_lock = LOCK_INITIALIZER;
+psc_spinlock_t	  psc_umask_lock = SPINLOCK_INIT;
 extern long	  psc_pagesize;
 
 __weak void
@@ -57,7 +57,7 @@ psc_subsys_register(__unusedx int level, __unusedx const char *name)
 void
 psc_dumpstack(__unusedx int sig)
 {
-	static psc_spinlock_t lock = LOCK_INITIALIZER;
+	static psc_spinlock_t lock = SPINLOCK_INIT;
 	char buf[BUFSIZ];
 
 	spinlock(&lock);

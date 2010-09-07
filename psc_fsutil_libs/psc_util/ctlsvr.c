@@ -64,7 +64,7 @@
 #define QLEN 15	/* listen(2) queue */
 
 struct psc_dynarray	psc_ctl_clifds = DYNARRAY_INIT;
-psc_spinlock_t		psc_ctl_clifds_lock = LOCK_INITIALIZER;
+psc_spinlock_t		psc_ctl_clifds_lock = SPINLOCK_INIT;
 struct psc_waitq	psc_ctl_clifds_waitq = PSC_WAITQ_INIT;
 
 __weak size_t

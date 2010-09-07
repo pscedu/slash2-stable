@@ -139,7 +139,7 @@ struct psc_poolmgr {
 
 #define POOL_IS_MLIST(m)	((m)->ppm_flags & PPMF_MLIST)
 
-#define PSC_POOLSET_INIT	{ LOCK_INITIALIZER, DYNARRAY_INIT }
+#define PSC_POOLSET_INIT	{ SPINLOCK_INIT, DYNARRAY_INIT }
 
 /* default value of pool fill before freeing items directly on pool_return */
 #define POOL_AUTOSIZE_THRESH 80

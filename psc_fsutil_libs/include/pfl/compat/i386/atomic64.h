@@ -35,7 +35,7 @@ struct psc_i386_atomic64 {
 
 # undef psc_atomic64_t
 # define psc_atomic64_t			struct psc_i386_atomic64
-# define PSC_ATOMIC64_INIT(i)		{ (i), LOCK_INITIALIZER }
+# define PSC_ATOMIC64_INIT(i)		{ (i), SPINLOCK_INIT }
 
 # undef psc_atomic64_init
 static __inline void
