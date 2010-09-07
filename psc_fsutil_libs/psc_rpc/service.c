@@ -61,7 +61,7 @@ pscrpc_alloc_rqbd(struct pscrpc_service *svc)
 	rqbd->rqbd_cbid.cbid_arg = rqbd;
 
 	INIT_PSCLIST_HEAD(&rqbd->rqbd_reqs);
-	INIT_PSCLIST_ENTRY(&rqbd->rqbd_lentry);
+	INIT_PSC_LISTENTRY(&rqbd->rqbd_lentry);
 	rqbd->rqbd_buffer = pscrpc_alloc_request_buffer(svc->srv_buf_size);
 
 	if (rqbd->rqbd_buffer == NULL) {
@@ -658,7 +658,7 @@ pscrpcthr_main(struct psc_thread *thr)
 	}
 	/* Alloc reply state structure for this one */
 	PSCRPC_OBD_ALLOC(rs, svc->srv_max_reply_size);
-	INIT_PSCLIST_ENTRY(&rs->rs_list_entry);
+	INIT_PSC_LISTENTRY(&rs->rs_list_entry);
 
 	spinlock(&svc->srv_lock);
 	svc->srv_nthreads++;
@@ -967,7 +967,7 @@ pscrpc_init_svc(int nbufs, int bufsize, int max_req_size, int max_reply_size,
 	rc = LNetSetLazyPortal(service->srv_req_portal);
 	LASSERT(rc == 0);
 
-	INIT_PSCLIST_ENTRY(&service->srv_lentry);
+	INIT_PSC_LISTENTRY(&service->srv_lentry);
 	INIT_PSCLIST_HEAD(&service->srv_request_queue);
 	INIT_PSCLIST_HEAD(&service->srv_request_history);
 

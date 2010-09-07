@@ -106,7 +106,7 @@ pscrpc_pack_reply(struct pscrpc_request *req, int count, int *lens,
 	rs->rs_cb_id.cbid_arg = rs;
 	rs->rs_service = req->rq_rqbd->rqbd_service;
 	rs->rs_size = size;
-	INIT_PSCLIST_ENTRY(&rs->rs_list_entry);
+	INIT_PSC_LISTENTRY(&rs->rs_list_entry);
 #if 0
 	INIT_PSCLIST_HEAD(&rs->rs_exp_list);
 	INIT_PSCLIST_HEAD(&rs->rs_obd_list);

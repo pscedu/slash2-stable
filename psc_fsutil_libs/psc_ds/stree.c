@@ -29,7 +29,7 @@ psc_stree_init(struct psc_streenode *ptn)
 {
 	memset(ptn, 0, sizeof(*ptn));
 	INIT_PSCLIST_HEAD(&ptn->ptn_children);
-	INIT_PSCLIST_ENTRY(&ptn->ptn_sibling);
+	INIT_PSC_LISTENTRY(&ptn->ptn_sibling);
 }
 
 struct psc_streenode *

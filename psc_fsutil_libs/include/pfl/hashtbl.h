@@ -179,7 +179,7 @@ int	 psc_hashent_conjoint(const struct psc_hashtbl *, void *);
 
 #define psc_hashent_disjoint(t, p)	psclist_disjoint(			\
 					    psc_hashent_getlentry((t), (p)))
-#define psc_hashent_init(t, p)		INIT_PSCLIST_ENTRY(			\
+#define psc_hashent_init(t, p)		INIT_PSC_LISTENTRY(			\
 					    psc_hashent_getlentry((t), (p)))
 
 extern struct psc_lockedlist psc_hashtbls;

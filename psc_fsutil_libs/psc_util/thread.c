@@ -255,7 +255,7 @@ _pscthr_begin(void *arg)
 
 	/* Setup a localised copy of the thread. */
 	thr = psc_alloc(sizeof(*thr), PAF_NOLOG);
-	INIT_PSCLIST_ENTRY(&thr->pscthr_lentry);
+	INIT_PSC_LISTENTRY(&thr->pscthr_lentry);
 	psc_waitq_init(&thr->pscthr_waitq);
 	LOCK_INIT(&thr->pscthr_lock);
 	spinlock(&thr->pscthr_lock);
@@ -312,7 +312,7 @@ _pscthr_init(int type, int flags, void (*startf)(struct psc_thread *),
 
 	thr = startf ? &mythr : psc_alloc(sizeof(*thr), PAF_NOLOG);
 	memset(thr, 0, sizeof(*thr));
-	INIT_PSCLIST_ENTRY(&thr->pscthr_lentry);
+	INIT_PSC_LISTENTRY(&thr->pscthr_lentry);
 	psc_waitq_init(&thr->pscthr_waitq);
 	LOCK_INIT(&thr->pscthr_lock);
 	thr->pscthr_type = type;

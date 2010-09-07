@@ -51,7 +51,7 @@ addelem(int v)
 	struct m *m;
 
 	m = PSCALLOC(sizeof(*m));
-	INIT_PSCLIST_ENTRY(&m->lentry);
+	INIT_PSC_LISTENTRY(&m->lentry);
 	m->v = v;
 	psclist_add(&m->lentry, &hd);
 	nitems++;
@@ -117,17 +117,17 @@ main(int argc, char *argv[])
 	lc_init(&lc, struct m, lentry);
 
 	m = PSCALLOC(sizeof(*m));
-	INIT_PSCLIST_ENTRY(&m->lentry);
+	INIT_PSC_LISTENTRY(&m->lentry);
 	m->v = 5;
 	lc_addqueue(&lc, m);
 
 	m = PSCALLOC(sizeof(*m));
-	INIT_PSCLIST_ENTRY(&m->lentry);
+	INIT_PSC_LISTENTRY(&m->lentry);
 	m->v = 8;
 	lc_addqueue(&lc, m);
 
 	m = PSCALLOC(sizeof(*m));
-	INIT_PSCLIST_ENTRY(&m->lentry);
+	INIT_PSC_LISTENTRY(&m->lentry);
 	m->v = 13;
 	lc_addqueue(&lc, m);
 

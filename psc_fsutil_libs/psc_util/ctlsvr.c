@@ -1002,7 +1002,7 @@ psc_ctlrep_param(int fd, struct psc_ctlmsghdr *mh, void *m)
 	}
 
 	pcf = PSCALLOC(sizeof(*pcf));
-	INIT_PSCLIST_ENTRY(&pcf->pcf_lentry);
+	INIT_PSC_LISTENTRY(&pcf->pcf_lentry);
 	pcf->pcf_ptn = &psc_ctlparamtree;
 	psclist_add(&pcf->pcf_lentry, &stack);
 

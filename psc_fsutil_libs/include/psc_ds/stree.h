@@ -27,7 +27,7 @@ struct psc_streenode {
 };
 
 #define PSC_STREE_INIT(t)						\
-	{ PSCLIST_ENTRY_INIT, PSCLIST_HEAD_INIT((t).ptn_children), NULL }
+	{ PSC_LISTENTRY_INIT, PSCLIST_HEAD_INIT((t).ptn_children), NULL }
 
 #define PSC_STREE_FOREACH_CHILD(child, ptn)				\
 	psclist_for_each_entry((child), &(ptn)->ptn_children, ptn_sibling)

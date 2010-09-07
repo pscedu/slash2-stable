@@ -69,7 +69,7 @@ _psc_hashtbl_init(struct psc_hashtbl *t, int flags,
 	psc_assert(nbuckets > 0);
 
 	memset(t, 0, sizeof(*t));
-	INIT_PSCLIST_ENTRY(&t->pht_lentry);
+	INIT_PSC_LISTENTRY(&t->pht_lentry);
 	LOCK_INIT(&t->pht_lock);
 	t->pht_nbuckets = nbuckets;
 	t->pht_buckets = PSCALLOC(nbuckets * sizeof(*t->pht_buckets));

@@ -204,8 +204,8 @@ pjournal_xnew(struct psc_journal *pj)
 	LOCK_INIT(&xh->pjx_lock);
 	xh->pjx_flags = PJX_NONE;
 	xh->pjx_slot = PJX_SLOT_ANY;
-	INIT_PSCLIST_ENTRY(&xh->pjx_lentry1);
-	INIT_PSCLIST_ENTRY(&xh->pjx_lentry2);
+	INIT_PSC_LISTENTRY(&xh->pjx_lentry1);
+	INIT_PSC_LISTENTRY(&xh->pjx_lentry2);
 	xh->pjx_xid = pjournal_next_xid(pj);
 
 	psc_info("starting a new transaction %p (xid = %"PRIx64") in "

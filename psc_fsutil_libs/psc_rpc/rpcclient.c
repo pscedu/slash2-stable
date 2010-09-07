@@ -237,9 +237,9 @@ pscrpc_prep_req_pool(struct pscrpc_import *imp, uint32_t version,
 	request->rq_reply_portal = imp->imp_client->cli_reply_portal;
 
 	LOCK_INIT(&request->rq_lock);
-	INIT_PSCLIST_ENTRY(&request->rq_list_entry);
+	INIT_PSC_LISTENTRY(&request->rq_list_entry);
 	//INIT_PSCLIST_HEAD(&request->rq_replay_list);
-	INIT_PSCLIST_ENTRY(&request->rq_set_chain_lentry);
+	INIT_PSC_LISTENTRY(&request->rq_set_chain_lentry);
 	psc_waitq_init(&request->rq_reply_waitq);
 	request->rq_xid = pscrpc_next_xid();
 	atomic_set(&request->rq_refcount, 1);

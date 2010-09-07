@@ -45,10 +45,10 @@ struct psclist_head {
 
 #ifdef DEBUG
 # define PSCLIST_HEAD_INIT(name)	{ &(name), &(name), PLENT_MAGIC, &(name) }
-# define PSCLIST_ENTRY_INIT		{ NULL, NULL, PLENT_MAGIC, NULL }
+# define PSC_LISTENTRY_INIT		{ NULL, NULL, PLENT_MAGIC, NULL }
 #else
 # define PSCLIST_HEAD_INIT(name)	{ &(name), &(name) }
-# define PSCLIST_ENTRY_INIT		{ NULL, NULL }
+# define PSC_LISTENTRY_INIT		{ NULL, NULL }
 #endif
 
 #define PSCLIST_HEAD(name)							\
@@ -78,7 +78,7 @@ struct psclist_head {
 		(hd)->plh_magic = PLENT_MAGIC;					\
 	} while (0)
 
-#define INIT_PSCLIST_ENTRY(e)							\
+#define INIT_PSC_LISTENTRY(e)							\
 	do {									\
 		psc_lentry_prev(e) = NULL;					\
 		psc_lentry_next(e) = NULL;					\
@@ -92,7 +92,7 @@ struct psclist_head {
 		psc_listhd_last(hd) = (hd);					\
 	} while (0)
 
-#define INIT_PSCLIST_ENTRY(e)							\
+#define INIT_PSC_LISTENTRY(e)							\
 	do {									\
 		psc_lentry_prev(e) = NULL;					\
 		psc_lentry_next(e) = NULL;					\
