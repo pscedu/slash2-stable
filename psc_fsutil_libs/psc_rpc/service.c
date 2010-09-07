@@ -213,7 +213,8 @@ pscrpc_server_free_request(struct pscrpc_request *req)
 				    svc->srv_request_max_cull_seq)
 					svc->srv_request_max_cull_seq =
 						req->rq_history_seq;
-				psclist_del(&req->rq_history_lentry, &rqbd->rqbd_reqs);
+				psclist_del(&req->rq_history_lentry,
+				    &svc->srv_request_history);
 			}
 
 			freelock(&svc->srv_lock);
