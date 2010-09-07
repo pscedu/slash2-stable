@@ -84,12 +84,11 @@ pfl
 	PSC_WAITQ_INIT -> WAITQ_INIT
 - put lnet copyright on pscrpc files
 - DEBUG knob
-    (o) add a superstructure for listcache member entry and store the owning
-	listguts and sanity check membership on removal
     (o) PROT_NONE page before/after allocations
 - mspinlock is not going to work on NUMA, use thruniqid instead of
   int init+pthread_key
-- dont acess nseen on lc/mlist without a lock
+- dont access nseen on lc/mlist without a lock
+- eliminate flags arg to pscthr_init()
 
 mem pool|flg|#free|#use|total| %use|  min|   max|th|#grows|#shrnx|#em|#wa
 --------+---+-----+----+-----+-----+-----+------+--+------+------+---+---
