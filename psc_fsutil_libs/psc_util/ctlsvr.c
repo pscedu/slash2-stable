@@ -451,7 +451,7 @@ psc_ctlrep_getpool(int fd, struct psc_ctlmsghdr *mh, void *msg)
 				pcpl->pcpl_nw_empty = psc_waitq_nwaiters(
 				    &m->ppm_lc.plc_wq_empty);
 			}
-			POOL_UNLOCK(m);
+			POOL_ULOCK(m);
 			rc = psc_ctlmsg_sendv(fd, mh, pcpl);
 			if (!rc)
 				break;
@@ -862,7 +862,7 @@ psc_ctlparam_pool_handle(int fd, struct psc_ctlmsghdr *mh,
 				m->ppm_thres = 1;
 			else if (m->ppm_thres > 99)
 				m->ppm_thres = 99;
-			POOL_UNLOCK(m);
+			POOL_ULOCK(m);
 		} else {
 			levels[2] = "thres";
 			snprintf(nbuf, sizeof(nbuf), "%d", m->ppm_thres);
@@ -925,7 +925,7 @@ psc_ctlparam_pool(int fd, struct psc_ctlmsghdr *mh,
 			POOL_LOCK(m);
 			rc = psc_ctlparam_pool_handle(fd, mh, pcp,
 			    levels, nlevels, m, val);
-			POOL_UNLOCK(m);
+			POOL_ULOCK(m);
 			if (!rc)
 				break;
 		}
@@ -937,7 +937,7 @@ psc_ctlparam_pool(int fd, struct psc_ctlmsghdr *mh,
 			    "invalid pool: %s", levels[1]));
 		rc = psc_ctlparam_pool_handle(fd, mh,
 		    pcp, levels, nlevels, m, val);
-		POOL_UNLOCK(m);
+		POOL_ULOCK(m);
 	}
 	return (rc);
 }

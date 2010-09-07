@@ -124,7 +124,7 @@ struct psc_poolmgr {
 
 #define POOL_LOCK(m)		spinlock(&(m)->ppm_lg.plg_lock)
 #define POOL_TRYLOCK(m)		trylock(&(m)->ppm_lg.plg_lock)
-#define POOL_UNLOCK(m)		freelock(&(m)->ppm_lg.plg_lock)
+#define POOL_ULOCK(m)		freelock(&(m)->ppm_lg.plg_lock)
 #define POOL_RLOCK(m)		reqlock(&(m)->ppm_lg.plg_lock)
 #define POOL_URLOCK(m, lk)	ureqlock(&(m)->ppm_lg.plg_lock, (lk))
 

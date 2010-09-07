@@ -397,7 +397,7 @@ _psc_pool_reap(struct psc_poolset *s, struct psc_poolmaster *initiator,
 			continue;
 		tmx = m->ppm_lg.plg_entsize * m->ppm_lg.plg_size;
 		nobj = MAX(size / m->ppm_lg.plg_entsize, 1);
-		POOL_UNLOCK(m);
+		POOL_ULOCK(m);
 
 		if (tmx > culpritmx) {
 			culprit = m;
@@ -519,7 +519,7 @@ psc_pool_get(struct psc_poolmgr *m)
 		POOL_LOCK(m);
 		p = POOL_GETOBJ(m);
 		if (p) {
-			POOL_UNLOCK(m);
+			POOL_ULOCK(m);
 			return (p);
 		}
 		atomic_inc(&m->ppm_nwaiters);
