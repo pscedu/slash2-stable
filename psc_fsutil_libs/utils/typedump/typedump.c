@@ -26,6 +26,7 @@
 /* start includes */
 #include "pfl/cdefs.h"
 #include "pfl/compat.h"
+#include "pfl/explist.h"
 #include "pfl/fcntl.h"
 #include "pfl/hashtbl.h"
 #include "pfl/pfl.h"
@@ -38,7 +39,6 @@
 #include "psc_ds/dynarray.h"
 #include "psc_ds/list.h"
 #include "psc_ds/listcache.h"
-#include "psc_ds/listguts.h"
 #include "psc_ds/lockedlist.h"
 #include "psc_ds/stree.h"
 #include "psc_ds/treeutil.h"
@@ -226,6 +226,7 @@ main(int argc, char *argv[])
 	PRTYPE(struct psc_ctlshow_ent);
 	PRTYPE(struct psc_ctlthr);
 	PRTYPE(struct psc_dynarray);
+	PRTYPE(struct psc_explist);
 	PRTYPE(struct psc_fault);
 	PRTYPE(struct psc_hashbkt);
 	PRTYPE(struct psc_hashent);
@@ -237,8 +238,6 @@ main(int argc, char *argv[])
 	PRTYPE(struct psc_journal_hdr);
 	PRTYPE(struct psc_journal_xidhndl);
 	PRTYPE(struct psc_listcache);
-	PRTYPE(struct psc_listcache_entry);
-	PRTYPE(struct psc_listguts);
 	PRTYPE(struct psc_lockedlist);
 	PRTYPE(struct psc_memnode);
 	PRTYPE(struct psc_meter);
@@ -321,8 +320,6 @@ main(int argc, char *argv[])
 	PRVAL(ODTBL_SLOT_ERR);
 	PRVAL(PCOF_FLAG);
 	PRVAL(PCOF_FUNC);
-	PRVAL(PLCP_HEAD);
-	PRVAL(PLCP_TAIL);
 	PRVAL(PLL_DEBUG);
 	PRVAL(PLL_ERROR);
 	PRVAL(PLL_FATAL);
