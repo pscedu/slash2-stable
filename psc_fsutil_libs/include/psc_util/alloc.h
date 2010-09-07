@@ -233,6 +233,6 @@ void	*_psc_realloc(void *, size_t, int);
 void	*psc_calloc(size_t, size_t, int);
 char	*psc_strdup(const char *);
 
-extern long pscPageSize;
+extern long psc_pagesize;
 
 #endif /* _PFL_ALLOC_H_ */

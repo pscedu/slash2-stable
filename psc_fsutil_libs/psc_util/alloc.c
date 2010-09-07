@@ -31,7 +31,7 @@
 #include "psc_util/alloc.h"
 #include "psc_util/log.h"
 
-long pscPageSize;
+long psc_pagesize;
 
 /**
  * _psc_pool_reapsome - Provide an overrideable reclaimer for when pools
@@ -56,7 +56,7 @@ _psc_realloc(void *p, size_t size, int flags)
 
  retry:
 	if ((flags & PAF_PAGEALIGN) && p == NULL) {
-		rc = posix_memalign(&newp, pscPageSize, size);
+		rc = posix_memalign(&newp, psc_pagesize, size);
 		if (rc) {
 			errno = rc;
 			newp = NULL;

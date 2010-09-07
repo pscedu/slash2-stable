@@ -32,7 +32,7 @@
 #include "psc_util/log.h"
 
 psc_spinlock_t	  psc_umask_lock = LOCK_INITIALIZER;
-extern long	  pscPageSize;
+extern long	  psc_pagesize;
 
 __weak void
 pscthrs_init(void)
@@ -112,7 +112,7 @@ pfl_init(void)
 
 	psc_fault_init();
 
-	pscPageSize = sysconf(_SC_PAGESIZE);
-	if (pscPageSize == -1)
+	psc_pagesize = sysconf(_SC_PAGESIZE);
+	if (psc_pagesize == -1)
 		psc_fatal("sysconf");
 }
