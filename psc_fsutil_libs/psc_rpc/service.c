@@ -155,7 +155,7 @@ _pscrpc_server_free_request(struct pscrpc_request *req)
 {
 	struct pscrpc_request_buffer_desc *rqbd = req->rq_rqbd;
 
-	psclist_del(&req->rq_list_entry, psc_lentry_hd(&req->rq_list_entry));
+	psclist_del(&req->rq_lentry, psc_lentry_hd(&req->rq_lentry));
 
 	if (req->rq_reply_state != NULL) {
 		pscrpc_rs_decref(req->rq_reply_state);
@@ -185,7 +185,7 @@ pscrpc_server_free_request(struct pscrpc_request *req)
 	spinlock(&svc->srv_lock);
 
 	svc->srv_n_active_reqs--;
-	psclist_add(&req->rq_list_entry, &rqbd->rqbd_reqs);
+	psclist_add(&req->rq_lentry, &rqbd->rqbd_reqs);
 
 	refcount = --(rqbd->rqbd_refcount);
 	if (refcount == 0) {
@@ -207,7 +207,7 @@ pscrpc_server_free_request(struct pscrpc_request *req)
 			 * I've got the service lock */
 			psclist_for_each(tmp, &rqbd->rqbd_reqs) {
 				req = psc_lentry_obj(tmp, struct pscrpc_request,
-						    rq_list_entry);
+						    rq_lentry);
 				/* Track the highest culled req seq */
 				if (req->rq_history_seq >
 				    svc->srv_request_max_cull_seq)
@@ -219,7 +219,7 @@ pscrpc_server_free_request(struct pscrpc_request *req)
 			freelock(&svc->srv_lock);
 
 			psclist_for_each_entry_safe(req, nxt,
-			    &rqbd->rqbd_reqs, rq_list_entry)
+			    &rqbd->rqbd_reqs, rq_lentry)
 				_pscrpc_server_free_request(req);
 
 			spinlock(&svc->srv_lock);
@@ -267,9 +267,9 @@ pscrpc_server_handle_request(struct pscrpc_service *svc,
 	}
 
 	request = psc_listhd_first_obj(&svc->srv_request_queue,
-	    struct pscrpc_request, rq_list_entry);
+	    struct pscrpc_request, rq_lentry);
 
-	psclist_del(&request->rq_list_entry, &svc->srv_request_queue);
+	psclist_del(&request->rq_lentry, &svc->srv_request_queue);
 	svc->srv_n_queued_reqs--;
 	svc->srv_n_active_reqs++;
 
@@ -870,9 +870,9 @@ pscrpc_unregister_service(struct pscrpc_service *service)
 	while (!psc_listhd_empty(&service->srv_request_queue)) {
 		struct pscrpc_request *req = psc_listhd_first_obj(
 		    &service->srv_request_queue, struct pscrpc_request,
-		    rq_list_entry);
+		    rq_lentry);
 
-		psclist_del(&req->rq_list_entry, &service->srv_request_queue);
+		psclist_del(&req->rq_lentry, &service->srv_request_queue);
 		service->srv_n_queued_reqs--;
 		service->srv_n_active_reqs++;
 

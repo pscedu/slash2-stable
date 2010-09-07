@@ -697,7 +697,7 @@ _pscrpc_free_req(struct pscrpc_request *request, int locked)
 
 	psc_assert(!request->rq_receiving_reply);
 	psc_assert(request->rq_rqbd == NULL);/* client-side */
-	psc_assert(psclist_disjoint(&request->rq_list_entry));
+	psc_assert(psclist_disjoint(&request->rq_lentry));
 	psc_assert(psclist_disjoint(&request->rq_set_chain_lentry));
 
 	/* We must take it off the imp_replay_list first.  Otherwise, we'll set

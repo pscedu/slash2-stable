@@ -14,8 +14,8 @@
 #include "psc_util/lock.h"
 #include "psc_util/waitq.h"
 
-static uint64_t pscrpc_last_xid = 0;
-static psc_spinlock_t pscrpc_last_xid_lock = SPINLOCK_INIT;
+static uint64_t		pscrpc_last_xid = 0;
+static psc_spinlock_t	pscrpc_last_xid_lock = SPINLOCK_INIT;
 
 uint64_t
 pscrpc_next_xid(void)
@@ -237,7 +237,8 @@ pscrpc_prep_req_pool(struct pscrpc_import *imp, uint32_t version,
 	request->rq_reply_portal = imp->imp_client->cli_reply_portal;
 
 	INIT_SPINLOCK(&request->rq_lock);
-	INIT_PSC_LISTENTRY(&request->rq_list_entry);
+	INIT_PSC_LISTENTRY(&request->rq_lentry);
+	INIT_PSC_LISTENTRY(&request->rq_history_lentry);
 	//INIT_PSCLIST_HEAD(&request->rq_replay_list);
 	INIT_PSC_LISTENTRY(&request->rq_set_chain_lentry);
 	psc_waitq_init(&request->rq_reply_waitq);
@@ -446,7 +447,7 @@ pscrpc_send_new_req_locked(struct pscrpc_request *req)
 			pscrpc_import_state_name(req->rq_send_state),
 			  pscrpc_import_state_name(imp->imp_state));
 
-		psclist_add_tail(&req->rq_list_entry, &imp->imp_delayed_list);
+		psclist_add_tail(&req->rq_lentry, &imp->imp_delayed_list);
 		freelock(&imp->imp_lock);
 		return (0);
 	}
@@ -460,7 +461,7 @@ pscrpc_send_new_req_locked(struct pscrpc_request *req)
 #endif
 
 	/* XXX this is the same as pscrpc_queue_wait */
-	psclist_add_tail(&req->rq_list_entry, &imp->imp_sending_list);
+	psclist_add_tail(&req->rq_lentry, &imp->imp_sending_list);
 	freelock(&imp->imp_lock);
 
 	// we don't have a 'current' struct - paul
@@ -696,9 +697,9 @@ pscrpc_queue_wait(struct pscrpc_request *req)
 	/*
 #if 0
 	if (pscrpc_import_delay_req(imp, req, &rc)) {
-		psclist_del(&req->rq_list_entry);
+		psclist_del(&req->rq_lentry);
 
-		psclist_add_tail(&req->rq_list_entry, &imp->imp_delayed_list);
+		psclist_add_tail(&req->rq_lentry, &imp->imp_delayed_list);
 		freelock(&imp->imp_lock);
 
 		DEBUG_REQ(PLL_WARN, req, "\"%s\" waiting for recovery: (%s != %s)",
@@ -717,7 +718,7 @@ pscrpc_queue_wait(struct pscrpc_request *req)
 			  req->rq_err, req->rq_intr);
 
 		spinlock(&imp->imp_lock);
-		psclist_del(&req->rq_list_entry);
+		psclist_del(&req->rq_lentry);
 
 		if (req->rq_err) {
 			rc = -EIO;
@@ -733,8 +734,8 @@ pscrpc_queue_wait(struct pscrpc_request *req)
 #endif
 	*/
 	if (rc != 0) {
-		psclist_del(&req->rq_list_entry,
-		    psc_lentry_hd(&req->rq_list_entry));
+		psclist_del(&req->rq_lentry,
+		    psc_lentry_hd(&req->rq_lentry));
 		freelock(&imp->imp_lock);
 		req->rq_status = rc; // XXX this ok?
 		GOTO(out, rc);
@@ -759,7 +760,7 @@ pscrpc_queue_wait(struct pscrpc_request *req)
 		DEBUG_REQ(PLL_WARN, req, "resending: ");
 	}
 	/* XXX this is the same as pscrpc_set_wait */
-	psclist_add_tail(&req->rq_list_entry, &imp->imp_sending_list);
+	psclist_add_tail(&req->rq_lentry, &imp->imp_sending_list);
 	freelock(&imp->imp_lock);
 
 	psc_info("request %p request->rq_reqmsg %p",
@@ -796,8 +797,8 @@ pscrpc_queue_wait(struct pscrpc_request *req)
 		DEBUG_REQ(PLL_INFO, req, "REPLIED:");
 
 	spinlock(&imp->imp_lock);
-	psclist_del(&req->rq_list_entry,
-	    psc_lentry_hd(&req->rq_list_entry));
+	psclist_del(&req->rq_lentry,
+	    psc_lentry_hd(&req->rq_lentry));
 	freelock(&imp->imp_lock);
 
 	/* If the reply was received normally, this just grabs the spinlock
@@ -966,8 +967,8 @@ pscrpc_check_set(struct pscrpc_request_set *set, int check_allsent)
 			req->rq_phase = PSCRPC_RQ_PHASE_INTERPRET;
 
 			spinlock(&imp->imp_lock);
-			psclist_del(&req->rq_list_entry,
-			    psc_lentry_hd(&req->rq_list_entry));
+			psclist_del(&req->rq_lentry,
+			    psc_lentry_hd(&req->rq_lentry));
 			freelock(&imp->imp_lock);
 
 			GOTO(interpret, req->rq_status);
@@ -985,8 +986,8 @@ pscrpc_check_set(struct pscrpc_request_set *set, int check_allsent)
 			req->rq_phase = PSCRPC_RQ_PHASE_INTERPRET;
 
 			spinlock(&imp->imp_lock);
-			psclist_del(&req->rq_list_entry,
-			    psc_lentry_hd(&req->rq_list_entry));
+			psclist_del(&req->rq_lentry,
+			    psc_lentry_hd(&req->rq_lentry));
 			freelock(&imp->imp_lock);
 
 			GOTO(interpret, req->rq_status);
@@ -1007,8 +1008,8 @@ pscrpc_check_set(struct pscrpc_request_set *set, int check_allsent)
 					continue;
 				}
 #endif
-				psclist_del(&req->rq_list_entry,
-				    psc_lentry_hd(&req->rq_list_entry));
+				psclist_del(&req->rq_lentry,
+				    psc_lentry_hd(&req->rq_lentry));
 				if (status != 0) {
 					req->rq_status = status;
 					req->rq_phase = PSCRPC_RQ_PHASE_INTERPRET;
@@ -1021,7 +1022,7 @@ pscrpc_check_set(struct pscrpc_request_set *set, int check_allsent)
 					freelock(&imp->imp_lock);
 					GOTO(interpret, req->rq_status);
 				}
-				psclist_add_tail(&req->rq_list_entry,
+				psclist_add_tail(&req->rq_lentry,
 					      &imp->imp_sending_list);
 
 				freelock(&imp->imp_lock);
@@ -1064,8 +1065,8 @@ pscrpc_check_set(struct pscrpc_request_set *set, int check_allsent)
 				continue;
 
 			spinlock(&imp->imp_lock);
-			psclist_del(&req->rq_list_entry,
-			    psc_lentry_hd(&req->rq_list_entry));
+			psclist_del(&req->rq_lentry,
+			    psc_lentry_hd(&req->rq_lentry));
 			freelock(&imp->imp_lock);
 
 			req->rq_status = after_reply(req);
@@ -1074,7 +1075,7 @@ pscrpc_check_set(struct pscrpc_request_set *set, int check_allsent)
 				   it can be errored if the import is
 				   evicted after recovery. */
 				spinlock(&req->rq_lock);
-				psclist_add_tail(&req->rq_list_entry,
+				psclist_add_tail(&req->rq_lentry,
 					      &imp->imp_delayed_list);
 				freelock(&req->rq_lock);
 				continue;
@@ -1589,7 +1590,7 @@ void pscrpc_abort_inflight(struct pscrpc_import *imp)
 	  */
 	 psclist_for_each_safe(tmp, n, &imp->imp_sending_list) {
 		struct pscrpc_request *req =
-			psc_lentry_obj(tmp, struct pscrpc_request, rq_list_entry);
+			psc_lentry_obj(tmp, struct pscrpc_request, rq_lentry);
 
 		DEBUG_REQ(PLL_WARN, req, "inflight");
 
@@ -1605,7 +1606,7 @@ void pscrpc_abort_inflight(struct pscrpc_import *imp)
 #if 0
 	 psclist_for_each_safe(tmp, n, &imp->imp_delayed_list) {
 		struct pscrpc_request *req =
-			psc_lentry_obj(tmp, struct pscrpc_request, rq_list_entry);
+			psc_lentry_obj(tmp, struct pscrpc_request, rq_lentry);
 
 		DEBUG_REQ(PLL_WARN, req, "aborting waiting req");
 

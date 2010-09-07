@@ -303,7 +303,7 @@ struct pscrpc_request {
 	lnet_nid_t			 rq_self;
 	enum pscrpc_rq_phase		 rq_phase;		/* one of PSCRQ_PHASE_* */
 	enum pscrpc_imp_state		 rq_send_state;
-	struct psclist_head		 rq_list_entry;
+	struct psclist_head		 rq_lentry;
 	struct psclist_head		 rq_set_chain_lentry;
 	struct psclist_head		 rq_history_lentry;
 	struct pscrpc_import		*rq_import;		/* client side */

@@ -150,7 +150,7 @@ pscrpc_request_in_callback(lnet_event_t *ev)
 		rqbd->rqbd_refcount++;
 	}
 
-	psclist_add_tail(&req->rq_list_entry, &service->srv_request_queue);
+	psclist_add_tail(&req->rq_lentry, &service->srv_request_queue);
 	service->srv_n_queued_reqs++;
 
 	/* count the RPC request queue length for this peer if enabled */
