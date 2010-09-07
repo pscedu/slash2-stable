@@ -110,8 +110,9 @@ struct psc_poolmgr {
 #define ppm_ml ppm_u.ppmu_ml
 #define ppm_lg ppm_u.ppmu_lg
 
-#define ppm_nfree	ppm_u.ppmu_lg.plg_size
+#define ppm_entsize	ppm_u.ppmu_lg.plg_entsize
 #define ppm_name	ppm_u.ppmu_lg.plg_name
+#define ppm_nfree	ppm_u.ppmu_lg.plg_size
 #define ppm_nseen	ppm_u.ppmu_lg.plg_nseen
 };
 

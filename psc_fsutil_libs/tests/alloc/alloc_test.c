@@ -64,12 +64,12 @@ main(int argc, char *argv[])
 
 	p = psc_alloc(8, PAF_LOCK);
 	*(uint64_t *)p = 0;
-	psc_free_locked(p, 8);
+	psc_free_mlocked(p, 8);
 
 	sz = 1024;
 	p = psc_alloc(sz, PAF_LOCK | PAF_PAGEALIGN);
 	memset(p, 0, sz);
-	psc_free_locked_aligned(p, sz);
+	psc_free_mlocked_aligned(p, sz);
 
 	exit(0);
 }

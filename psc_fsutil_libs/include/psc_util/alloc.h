@@ -112,14 +112,14 @@
 	}
 
 /**
- * psc_free_locked - Free mlock(2)'d memory.
+ * psc_free_mlocked - Free mlock(2)'d memory.
  * @p: mlock(2)'d memory chunk to free.
  * @size: size of chunk.
  *
  * If DEBUG is enabled, this will check guards before and after the
  * memory region.
  */
-#define psc_free_locked(p, size)					\
+#define psc_free_mlocked(p, size)					\
 	do {								\
 		void *_p = (p);						\
 		uint64_t *_kp;						\
@@ -146,14 +146,14 @@
 #define psc_free_aligned(p)	_psc_free_noguard(p)
 
 /**
- * psc_free_locked_aligned - Free mlock(2)'d, page-aligned memory.
+ * psc_free_mlocked_aligned - Free mlock(2)'d, page-aligned memory.
  * @p: memory chunk to free.
  * @size: size of chunk.
  *
  * If DEBUG is enabled, this will check guards only after the memory
  * region.
  */
-#define psc_free_locked_aligned(p, size)				\
+#define psc_free_mlocked_aligned(p, size)				\
 	do {								\
 		void *_p = (p);						\
 									\
@@ -200,7 +200,7 @@
 		_p;							\
 	}
 
-#define psc_free_locked(p, size)					\
+#define psc_free_mlocked(p, size)					\
 	do {								\
 		if ((p) && munlock((p), (size)) == -1)			\
 			psc_fatal("munlock %p", (p));			\
@@ -209,7 +209,7 @@
 
 #define psc_free_aligned(p)	PSCFREE(p)
 
-#define psc_free_locked_aligned(p, size)				\
+#define psc_free_mlocked_aligned(p, size)				\
 	do {								\
 		if ((p) && munlock((p), (size)) == -1)			\
 			psc_fatal("munlock %p", (p));			\
