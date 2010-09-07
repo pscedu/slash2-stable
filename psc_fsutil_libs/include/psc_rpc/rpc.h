@@ -14,8 +14,8 @@
 #include "lnet/api.h"
 #include "lnet/types.h"
 
-#include "pfl/types.h"
 #include "pfl/hashtbl.h"
+#include "pfl/types.h"
 #include "psc_ds/list.h"
 #include "psc_ds/listcache.h"
 #include "psc_util/atomic.h"
@@ -127,7 +127,7 @@ struct pscrpc_export {
 struct pscrpc_import;
 
 struct pscrpc_connection {
-	struct psclist_head		 c_link;
+	struct psc_listentry		 c_lentry;
 	lnet_nid_t			 c_self;
 	lnet_process_id_t		 c_peer;
 	struct pscrpc_uuid		 c_remote_uuid;

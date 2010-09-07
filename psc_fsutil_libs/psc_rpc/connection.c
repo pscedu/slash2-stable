@@ -30,7 +30,7 @@ pscrpc_lookup_conn_locked(lnet_process_id_t peer, lnet_nid_t self)
 	struct psclist_head          *tmp;
 
 	psclist_for_each(tmp, &conn_list) {
-		c = psc_lentry_obj(tmp, struct pscrpc_connection, c_link);
+		c = psc_lentry_obj(tmp, struct pscrpc_connection, c_lentry);
 
 		if (peer.nid == c->c_peer.nid &&
 		    peer.pid == c->c_peer.pid &&
@@ -39,15 +39,15 @@ pscrpc_lookup_conn_locked(lnet_process_id_t peer, lnet_nid_t self)
 	}
 
 	psclist_for_each(tmp, &conn_unused_list) {
-		c = psc_lentry_obj(tmp, struct pscrpc_connection, c_link);
+		c = psc_lentry_obj(tmp, struct pscrpc_connection, c_lentry);
 		psc_dbg("unused conn %p@%s looking for %s",
 			c, libcfs_id2str(c->c_peer), libcfs_id2str(peer));
 
 		if (peer.nid == c->c_peer.nid &&
 		    peer.pid == c->c_peer.pid &&
 		    self     == c->c_self) {
-			psclist_del(&c->c_link, &conn_unused_list);
-			psclist_add(&c->c_link, &conn_list);
+			psclist_del(&c->c_lentry, &conn_unused_list);
+			psclist_add(&c->c_lentry, &conn_list);
 			return pscrpc_connection_addref(c);
 		}
 	}
@@ -86,6 +86,7 @@ pscrpc_get_connection(lnet_process_id_t peer,
 	if (c == NULL)
 		return (NULL);
 
+	INIT_PSC_LISTENTRY(&c->c_lentry);
 	atomic_set(&c->c_refcount, 1);
 	c->c_peer = peer;
 	c->c_self = self;
@@ -98,7 +99,7 @@ pscrpc_get_connection(lnet_process_id_t peer,
 	if (c2 == NULL) {
 		psc_notify("adding connection %p for %s",
 			   c, libcfs_id2str(peer));
-		psclist_add(&c->c_link, &conn_list);
+		psclist_add(&c->c_lentry, &conn_list);
 	}
 
 	freelock(&conn_lock);
@@ -129,8 +130,8 @@ pscrpc_put_connection(struct pscrpc_connection *c)
 		psc_info("connection=%p to unused_list", c);
 
 		locked = reqlock(&conn_lock);
-		psclist_del(&c->c_link, &conn_list);
-		psclist_add(&c->c_link, &conn_unused_list);
+		psclist_del(&c->c_lentry, &conn_list);
+		psclist_add(&c->c_lentry, &conn_unused_list);
 		ureqlock(&conn_lock, locked);
 		rc = 1;
 	}
@@ -147,7 +148,7 @@ pscrpc_drop_conns(lnet_process_id_t *peer)
 	struct pscrpc_connection *c;
 
 	spinlock(&conn_lock);
-	psclist_for_each_entry(c, &conn_list, c_link)
+	psclist_for_each_entry(c, &conn_list, c_lentry)
 		if (c->c_peer.nid == peer->nid &&
 		    c->c_peer.pid == peer->pid) {
 			if (c->c_exp)
