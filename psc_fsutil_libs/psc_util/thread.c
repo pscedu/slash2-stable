@@ -80,8 +80,7 @@ _pscthr_destroy(void *arg)
 		free(thr->pscthr_private);
 	}
 	PSCFREE(thr->pscthr_loglevels);
-	if (thr->pscthr_flags & PTF_FREE)
-		free(thr);
+	free(thr);
 }
 
 /**
@@ -256,6 +255,7 @@ _pscthr_begin(void *arg)
 
 	/* Setup a localised copy of the thread. */
 	thr = psc_alloc(sizeof(*thr), PAF_NOLOG);
+	INIT_PSCLIST_ENTRY(&thr->pscthr_lentry);
 	psc_waitq_init(&thr->pscthr_waitq);
 	LOCK_INIT(&thr->pscthr_lock);
 	spinlock(&thr->pscthr_lock);
@@ -308,10 +308,11 @@ _pscthr_init(int type, int flags, void (*startf)(struct psc_thread *),
 	int rc;
 
 	if (flags & PTF_PAUSED)
-		psc_fatalx("pscthr_init: PTF_PAUSED specified");
+		psc_fatalx("PTF_PAUSED specified");
 
 	thr = startf ? &mythr : psc_alloc(sizeof(*thr), PAF_NOLOG);
 	memset(thr, 0, sizeof(*thr));
+	INIT_PSCLIST_ENTRY(&thr->pscthr_lentry);
 	psc_waitq_init(&thr->pscthr_waitq);
 	LOCK_INIT(&thr->pscthr_lock);
 	thr->pscthr_type = type;
@@ -329,7 +330,7 @@ _pscthr_init(int type, int flags, void (*startf)(struct psc_thread *),
 	if (rc == -1)
 		psc_fatal("vsnprintf: %s", namefmt);
 	if (rc >= (int)sizeof(thr->pscthr_name))
-		psc_fatalx("pscthr_init: thread name too long: %s", namefmt);
+		psc_fatalx("thread name too long: %s", namefmt);
 
 	/* Pin thread until initialization is complete. */
 	spinlock(&thr->pscthr_lock);
@@ -558,8 +559,7 @@ pscthr_getbyname(const char *name)
 	struct psc_thread *thr;
 
 	PLL_LOCK(&psc_threads);
-	psclist_for_each_entry(thr, &psc_threads.pll_listhd,
-	    pscthr_lentry)
+	PLL_FOREACH(thr, &psc_threads)
 		if (strcmp(thr->pscthr_name, name) == 0)
 			break;
 	PLL_ULOCK(&psc_threads);
@@ -572,8 +572,7 @@ pscthr_getbyid(pthread_t id)
 	struct psc_thread *thr;
 
 	PLL_LOCK(&psc_threads);
-	psclist_for_each_entry(thr, &psc_threads.pll_listhd,
-	    pscthr_lentry)
+	PLL_FOREACH(thr, &psc_threads)
 		if (thr->pscthr_pthread == id ||
 		    (unsigned long)thr->pscthr_thrid == (unsigned long)id)
 			break;
