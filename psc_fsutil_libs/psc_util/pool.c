@@ -156,8 +156,8 @@ _psc_poolmaster_initmgr(struct psc_poolmaster *p, struct psc_poolmgr *m)
 	return (n);
 }
 
-/*
- * psc_poolmaster_getmgr - obtain a pool manager for this NUMA from the
+/**
+ * psc_poolmaster_getmgr - Obtain a pool manager for this NUMA from the
  *	master.
  * @p: pool master.
  */
@@ -179,7 +179,7 @@ _psc_poolmaster_getmgr(struct psc_poolmaster *p, int memnid)
 	return (m);
 }
 
-/*
+/**
  * _psc_pool_destroy_obj - Release an object allocated by pool.
  * @m: pool manager.
  * @p: item to free.
@@ -192,11 +192,11 @@ _psc_pool_destroy_obj(struct psc_poolmgr *m, void *p)
 	if (m->ppm_flags & PPMF_NOLOCK)
 		PSCFREE(p);
 	else
-		psc_free_mlocked(p, m->ppm_lg.plg_entsize);
+		psc_free_mlocked(p, m->ppm_entsize);
 }
 
-/*
- * psc_pool_grow - increase #items in a pool.
+/**
+ * psc_pool_grow - Increase #items in a pool.
  * @m: the pool manager.
  * @n: #items to add to pool.
  */
@@ -224,14 +224,14 @@ psc_pool_grow(struct psc_poolmgr *m, int n)
 	if ((m->ppm_flags & PPMF_NOLOCK) == 0)
 		flags |= PAF_LOCK;
 	for (i = 0; i < n; i++) {
-		p = psc_alloc(m->ppm_lg.plg_entsize, flags);
+		p = psc_alloc(m->ppm_entsize, flags);
 		if (p == NULL) {
 			errno = ENOMEM;
 			return (i);
 		}
 		if (m->ppm_initf && m->ppm_initf(m, p)) {
 			if (flags & PAF_LOCK)
-				psc_free_mlocked(p, m->ppm_lg.plg_entsize);
+				psc_free_mlocked(p, m->ppm_entsize);
 			else
 				PSCFREE(p);
 			return (i);
@@ -303,8 +303,8 @@ _psc_pool_shrink(struct psc_poolmgr *m, int n, int failok)
 	return (i);
 }
 
-/*
- * psc_pool_settotal - set #items in a pool.
+/**
+ * psc_pool_settotal - Set #items in a pool.
  * @m: the pool manager.
  * @total: #items the pool should contain.
  */
@@ -329,8 +329,8 @@ psc_pool_settotal(struct psc_poolmgr *m, int total)
 	return (adj);
 }
 
-/*
- * psc_pool_resize - resize a pool so the current total is between
+/**
+ * psc_pool_resize - Resize a pool so the current total is between
  *	ppm_min and ppm_max.  Note the pool size may not go into
  *	effect immediately if enough entries are not on the free list.
  * @m: the pool manager.
@@ -354,8 +354,8 @@ psc_pool_resize(struct psc_poolmgr *m)
 		psc_pool_grow(m, adj);
 }
 
-/*
- * _psc_pool_reap - reap other pools in attempt to reclaim memory in the
+/**
+ * _psc_pool_reap - Reap other pools in attempt to reclaim memory in the
  *	dire situation of pool exhaustion.
  * @s: set to reap from.
  * @initiator: the requestor pool, which should be a member of @s, but
@@ -395,8 +395,8 @@ _psc_pool_reap(struct psc_poolset *s, struct psc_poolmaster *initiator,
 
 		if (!POOL_TRYLOCK(m))
 			continue;
-		tmx = m->ppm_lg.plg_entsize * m->ppm_lg.plg_size;
-		nobj = MAX(size / m->ppm_lg.plg_entsize, 1);
+		tmx = m->ppm_entsize * m->ppm_nfree;
+		nobj = MAX(size / m->ppm_entsize, 1);
 		POOL_ULOCK(m);
 
 		if (tmx > culpritmx) {
@@ -410,8 +410,8 @@ _psc_pool_reap(struct psc_poolset *s, struct psc_poolmaster *initiator,
 		psc_pool_tryshrink(culprit, nobj);
 }
 
-/*
- * _psc_pool_reap - reap some memory from a global (or local on NUMAs)
+/**
+ * _psc_pool_reap - Reap some memory from a global (or local on NUMAs)
  *	memory pool.
  * @size: desired amount of memory to reclaim.
  */
@@ -421,8 +421,8 @@ psc_pool_reapmem(size_t size)
 	_psc_pool_reap(&psc_poolset_main, NULL, size);
 }
 
-/*
- * _psc_pool_flagtest - test pool state.
+/**
+ * _psc_pool_flagtest - Test pool state.
  * @m: pool to inspect.
  * @flags: flags to check.
  */
@@ -437,11 +437,11 @@ _psc_pool_flagtest(struct psc_poolmgr *m, int flags)
 	return (rc);
 }
 
-#define POOL_GETOBJ(m) \
+#define POOL_GETOBJ(m)							\
 	(POOL_IS_MLIST(m) ? psc_mlist_tryget(&(m)->ppm_ml) : lc_getnb(&(m)->ppm_lc))
 
-/*
- * psc_pool_get - grab an item from a pool.
+/**
+ * psc_pool_get - Grab an item from a pool.
  * @m: the pool manager.
  */
 void *
@@ -498,7 +498,7 @@ psc_pool_get(struct psc_poolmgr *m)
 	locked = reqlock(&m->ppm_master->pms_lock);
 	for (n = 0; n < psc_dynarray_len(&m->ppm_master->pms_sets); n++)
 		_psc_pool_reap(psc_dynarray_getpos(&m->ppm_master->pms_sets, n),
-		    m->ppm_master, m->ppm_lg.plg_entsize);
+		    m->ppm_master, m->ppm_entsize);
 	ureqlock(&m->ppm_master->pms_lock, locked);
 	if (n)
 		psc_pool_grow(m, 2);
@@ -538,8 +538,8 @@ psc_pool_get(struct psc_poolmgr *m)
 	return (lc_getwait(&m->ppm_lc));
 }
 
-/*
- * psc_pool_return - return an item to a pool.
+/**
+ * psc_pool_return - Return an item to a pool.
  * @m: the pool manager.
  * @p: item to return.
  */
@@ -556,7 +556,7 @@ psc_pool_return(struct psc_poolmgr *m, void *p)
 	locked = POOL_RLOCK(m);
 	if ((m->ppm_flags & PPMF_AUTO) && m->ppm_total > m->ppm_min &&
 	    ((m->ppm_max && m->ppm_max < m->ppm_total) ||
-	     m->ppm_lg.plg_size * 100 > m->ppm_thres * m->ppm_total)) {
+	     m->ppm_nfree * 100 > m->ppm_thres * m->ppm_total)) {
 		m->ppm_total--;
 		m->ppm_nshrink++;
 		POOL_URLOCK(m, locked);
@@ -571,8 +571,8 @@ psc_pool_return(struct psc_poolmgr *m, void *p)
 	}
 }
 
-/*
- * psc_pool_gettotal - obtain the number of objects in a pool
+/**
+ * psc_pool_gettotal - Obtain the number of objects in a pool
  *	circulation (note: this is not the number of free objects
  *	available for use).
  * @m: pool to query.
@@ -603,8 +603,8 @@ psc_pool_nfree(struct psc_poolmgr *m)
 	return (nf);
 }
 
-/*
- * psc_pool_lookup - find a pool by name.
+/**
+ * psc_pool_lookup - Find a pool by name.
  * @name: name of pool to find.
  */
 struct psc_poolmgr *
@@ -613,7 +613,7 @@ psc_pool_lookup(const char *name)
 	struct psc_poolmgr *m;
 
 	PLL_LOCK(&psc_pools);
-	psclist_for_each_entry(m, &psc_pools.pll_listhd, ppm_all_lentry)
+	PLL_FOREACH(m, &psc_pools)
 		if (strcmp(name, m->ppm_name) == 0) {
 			POOL_LOCK(m);
 			break;
@@ -622,8 +622,8 @@ psc_pool_lookup(const char *name)
 	return (m);
 }
 
-/*
- * psc_pool_share - allow a pool to share its resources with everyone.
+/**
+ * psc_pool_share - Allow a pool to share its resources with everyone.
  * @p: pool master to share.
  */
 void
@@ -632,8 +632,8 @@ psc_pool_share(struct psc_poolmaster *p)
 	psc_poolset_enlist(&psc_poolset_main, p);
 }
 
-/*
- * psc_pool_unshare - disallow a pool from sharing its resources with everyone.
+/**
+ * psc_pool_unshare - Disallow a pool from sharing its resources with everyone.
  * @p: pool master to unshare.
  */
 void
@@ -642,8 +642,8 @@ psc_pool_unshare(struct psc_poolmaster *p)
 	psc_poolset_disbar(&psc_poolset_main, p);
 }
 
-/*
- * psc_poolset_init - initialize a pool set.
+/**
+ * psc_poolset_init - Initialize a pool set.
  * @s: set to initialize.
  */
 void
@@ -653,8 +653,8 @@ psc_poolset_init(struct psc_poolset *s)
 	psc_dynarray_init(&s->pps_pools);
 }
 
-/*
- * psc_poolset_enlist - add a pool master to a pool set.
+/**
+ * psc_poolset_enlist - Add a pool master to a pool set.
  * @s: set to which pool master should be added.
  * @p: pool master to add.
  */
@@ -679,8 +679,8 @@ psc_poolset_enlist(struct psc_poolset *s, struct psc_poolmaster *p)
 	ureqlock(&s->pps_lock, locked);
 }
 
-/*
- * psc_poolset_disbar - remove a pool master from from a pool set.
+/**
+ * psc_poolset_disbar - Remove a pool master from from a pool set.
  * @s: set from which pool master should be removed.
  * @p: pool master to remove from set.
  */
