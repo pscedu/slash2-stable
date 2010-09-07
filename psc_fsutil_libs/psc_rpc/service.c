@@ -180,6 +180,7 @@ pscrpc_server_free_request(struct pscrpc_request *req)
 	struct pscrpc_service             *svc  = rqbd->rqbd_service;
 	struct pscrpc_request *nxt;
 	int                                refcount;
+	struct psclist_head		  *tmp;
 
 	spinlock(&svc->srv_lock);
 
