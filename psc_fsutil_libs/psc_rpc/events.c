@@ -109,6 +109,7 @@ pscrpc_request_in_callback(lnet_event_t *ev)
 	/* NB we ABSOLUTELY RELY on req being zeroed, so pointers are NULL,
 	 * flags are reset and scalars are zero.  We only set the message
 	 * size to non-zero if this was a successful receive. */
+	INIT_PSC_LISTENTRY(&req->rq_history_lentry);
 	req->rq_xid = ev->match_bits;
 	req->rq_reqmsg = ev->md.start + ev->offset;
 	if (ev->type == LNET_EVENT_PUT && ev->status == 0)
