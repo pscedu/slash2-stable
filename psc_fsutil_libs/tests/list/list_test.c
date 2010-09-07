@@ -84,7 +84,7 @@ main(int argc, char *argv[])
 {
 	struct psc_listcache lc;
 	struct timespec ts;
-	struct m *m;
+	struct m *m, *next;
 	void *p;
 	int i;
 
@@ -110,6 +110,9 @@ main(int argc, char *argv[])
 		    qsort, m_cmp);
 		PSCFREE(p);
 	}
+
+	psclist_for_each_entry_safe(m, next, &hd, lentry)
+		printf("v: %d\n", m->v);
 
 	while (shift())
 		;
