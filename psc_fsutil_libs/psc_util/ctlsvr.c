@@ -37,9 +37,10 @@
 #include <unistd.h>
 
 #include "pfl/cdefs.h"
+#include "pfl/explist.h"
+#include "pfl/hashtbl.h"
 #include "pfl/pfl.h"
 #include "pfl/str.h"
-#include "pfl/hashtbl.h"
 #include "psc_ds/list.h"
 #include "psc_ds/listcache.h"
 #include "psc_ds/stree.h"
@@ -365,7 +366,7 @@ psc_ctlrep_getlc(int fd, struct psc_ctlmsghdr *mh, void *m)
 {
 	struct psc_ctlmsg_lc *pclc = m;
 	struct psc_listcache *lc;
-	char name[PLG_NAME_MAX];
+	char name[PEXL_NAME_MAX];
 	int rc, found, all;
 
 	rc = 1;
@@ -373,8 +374,7 @@ psc_ctlrep_getlc(int fd, struct psc_ctlmsghdr *mh, void *m)
 	strlcpy(name, pclc->pclc_name, sizeof(name));
 	all = (strcmp(name, PCLC_NAME_ALL) == 0);
 	PLL_LOCK(&psc_listcaches);
-	psclist_for_each_entry(lc,
-	    &psc_listcaches.pll_listhd, plc_index_lentry) {
+	PLL_FOREACH(lc, &psc_listcaches) {
 		if (all || strncmp(lc->plc_name,
 		    name, strlen(name)) == 0) {
 			found = 1;
@@ -416,7 +416,7 @@ psc_ctlrep_getpool(int fd, struct psc_ctlmsghdr *mh, void *msg)
 {
 	struct psc_ctlmsg_pool *pcpl = msg;
 	struct psc_poolmgr *m;
-	char name[PLG_NAME_MAX];
+	char name[PEXL_NAME_MAX];
 	int rc, found, all;
 
 	rc = 1;
@@ -424,7 +424,7 @@ psc_ctlrep_getpool(int fd, struct psc_ctlmsghdr *mh, void *msg)
 	strlcpy(name, pcpl->pcpl_name, sizeof(name));
 	all = (strcmp(name, PCPL_NAME_ALL) == 0);
 	PLL_LOCK(&psc_pools);
-	psclist_for_each_entry(m, &psc_pools.pll_listhd, ppm_all_lentry) {
+	PLL_FOREACH(m, &psc_pools) {
 		if (all || strncmp(m->ppm_name, name,
 		    strlen(name)) == 0) {
 			found = 1;
@@ -920,8 +920,7 @@ psc_ctlparam_pool(int fd, struct psc_ctlmsghdr *mh,
 
 	if (nlevels == 1) {
 		PLL_LOCK(&psc_pools);
-		psclist_for_each_entry(m,
-		    &psc_pools.pll_listhd, ppm_all_lentry) {
+		PLL_FOREACH(m, &psc_pools) {
 			POOL_LOCK(m);
 			rc = psc_ctlparam_pool_handle(fd, mh, pcp,
 			    levels, nlevels, m, val);
@@ -1003,6 +1002,7 @@ psc_ctlrep_param(int fd, struct psc_ctlmsghdr *mh, void *m)
 	}
 
 	pcf = PSCALLOC(sizeof(*pcf));
+	INIT_PSCLIST_ENTRY(&pcf->pcf_lentry);
 	pcf->pcf_ptn = &psc_ctlparamtree;
 	psclist_add(&pcf->pcf_lentry, &stack);
 
@@ -1205,7 +1205,7 @@ int
 psc_ctlrep_getmlist(int fd, struct psc_ctlmsghdr *mh, void *m)
 {
 	struct psc_ctlmsg_mlist *pcml = m;
-	char name[PLG_NAME_MAX];
+	char name[PEXL_NAME_MAX];
 	struct psc_mlist *pml;
 	int rc, found, all;
 
@@ -1214,8 +1214,7 @@ psc_ctlrep_getmlist(int fd, struct psc_ctlmsghdr *mh, void *m)
 	snprintf(name, sizeof(name), "%s", pcml->pcml_name);
 	all = (strcmp(name, PCML_NAME_ALL) == 0);
 	PLL_LOCK(&psc_mlists);
-	psclist_for_each_entry(pml, &psc_mlists.pll_listhd,
-	    pml_index_lentry)
+	PLL_FOREACH(pml, &psc_mlists)
 		if (all || strncmp(pml->pml_name, name,
 		    strlen(name)) == 0) {
 			found = 1;
