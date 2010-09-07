@@ -39,7 +39,7 @@
 #define PSC_REALLOC(p, sz)	psc_realloc((p), (sz), 0)
 #define PSC_TRY_REALLOC(p, sz)	psc_realloc((p), (sz), PAF_CANFAIL)
 
-#ifdef DEBUG
+#ifdef PFL_DEBUG
 
 #define PSC_ALLOC_MAGIC		UINT64_C(0xb4fa95df87b8a7fd)
 
@@ -116,7 +116,7 @@
  * @p: mlock(2)'d memory chunk to free.
  * @size: size of chunk.
  *
- * If DEBUG is enabled, this will check guards before and after the
+ * If PFL_DEBUG is enabled, this will check guards before and after the
  * memory region.
  */
 #define psc_free_mlocked(p, size)					\
@@ -150,7 +150,7 @@
  * @p: memory chunk to free.
  * @size: size of chunk.
  *
- * If DEBUG is enabled, this will check guards only after the memory
+ * If PFL_DEBUG is enabled, this will check guards only after the memory
  * region.
  */
 #define psc_free_mlocked_aligned(p, size)				\

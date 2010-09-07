@@ -33,7 +33,7 @@
 struct psclist_head {
 	struct psclist_head		*plh_next;
 	struct psclist_head		*plh_prev;
-#ifdef DEBUG
+#ifdef PFL_DEBUG
 	uint64_t			 plh_magic;
 	struct psclist_head		*plh_owner;
 #endif
@@ -43,7 +43,7 @@ struct psclist_head {
 
 #define PLENT_MAGIC			UINT64_C(0x1234123412341234)
 
-#ifdef DEBUG
+#ifdef PFL_DEBUG
 # define PSCLIST_HEAD_INIT(name)	{ &(name), &(name), PLENT_MAGIC, &(name) }
 # define PSC_LISTENTRY_INIT		{ NULL, NULL, PLENT_MAGIC, NULL }
 #else
@@ -69,7 +69,7 @@ struct psclist_head {
  */
 #define psc_lentry_prev(e)			(e)->plh_prev
 
-#ifdef DEBUG
+#ifdef PFL_DEBUG
 #define INIT_PSCLIST_HEAD(hd)							\
 	do {									\
 		psc_listhd_first(hd) = (hd);					\
@@ -103,7 +103,7 @@ static __inline void
 _psclist_add(struct psc_listentry *e, struct psc_listentry *prev,
     struct psc_listentry *next)
 {
-#ifdef DEBUG
+#ifdef PFL_DEBUG
 	psc_assert(e->plh_owner == NULL);
 	psc_assert(prev->plh_owner && next->plh_owner);
 	psc_assert(prev->plh_owner == next->plh_owner);
@@ -142,7 +142,7 @@ psclist_del(struct psclist_head *e, __unusedx const void *hd)
 {
 	struct psc_listentry *prev, *next;
 
-#ifdef DEBUG
+#ifdef PFL_DEBUG
 	psc_assert(e->plh_owner == hd);
 	psc_assert(e->plh_magic == PLENT_MAGIC);
 	psc_assert(psc_lentry_prev(e) && psc_lentry_next(e));
@@ -158,7 +158,7 @@ psclist_del(struct psclist_head *e, __unusedx const void *hd)
 	psc_lentry_next(prev) = next;
 	psc_lentry_prev(next) = prev;
 
-#ifdef DEBUG
+#ifdef PFL_DEBUG
 	e->plh_owner = NULL;
 	psc_lentry_next(e) = psc_lentry_prev(e) = NULL;
 #endif
@@ -171,7 +171,7 @@ psclist_del(struct psclist_head *e, __unusedx const void *hd)
 static __inline int
 psc_listhd_empty(const struct psclist_head *hd)
 {
-#ifdef DEBUG
+#ifdef PFL_DEBUG
 	psc_assert(hd->plh_magic == PLENT_MAGIC);
 	psc_assert(hd->plh_owner == hd);
 	psc_assert(psc_lentry_prev(hd) && psc_lentry_next(hd));
@@ -196,7 +196,7 @@ psc_listhd_empty(const struct psclist_head *hd)
 static __inline int
 psclist_conjoint(const struct psc_listentry *e, const struct psclist_head *hd)
 {
-#ifdef DEBUG
+#ifdef PFL_DEBUG
 	psc_assert(e->plh_magic == PLENT_MAGIC);
 	if (hd == NULL) {
 		psc_warnx("conjoint passed NULL");
@@ -235,7 +235,7 @@ psclist_conjoint(const struct psc_listentry *e, const struct psclist_head *hd)
 #define psc_lentry_obj(e, type, memb)						\
 	psc_lentry_obj2((e), type, offsetof(type, memb))
 
-#ifdef DEBUG
+#ifdef PFL_DEBUG
 #define psc_lentry_hd(e)		(e)->plh_owner
 #else
 #define psc_lentry_hd(e)		NULL

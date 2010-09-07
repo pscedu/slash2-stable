@@ -68,7 +68,7 @@ struct psc_refmgr {
 #define PRMF_ANY			(PRMF_LIST | PRMF_LRU | PRMF_HASH | PRMF_TREE)
 
 struct psc_objref {
-#ifdef DEBUG
+#ifdef PFL_DEBUG
 	uint64_t			 pobj_magic;
 #endif
 	int				 pobj_refcnt;
@@ -79,7 +79,7 @@ struct psc_objref {
 	SPLAY_ENTRY(psc_objref)		 pobj_tree_entry;
 };
 
-#ifdef DEBUG
+#ifdef PFL_DEBUG
 # define PSC_OBJ_MAGIC			UINT64_C(0x3452341223456345)
 # define PSC_OBJ_CHECK(pr)						\
 	do {								\
