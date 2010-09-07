@@ -24,170 +24,210 @@
 #ifndef _PFL_LIST_H_
 #define _PFL_LIST_H_
 
+#include <stdint.h>
 #include <stdio.h>
 
 #include "psc_util/log.h"
 
 /* note: this structure is used for both a head and an entry */
 struct psclist_head {
-	struct psclist_head *znext;
-	struct psclist_head *zprev;
+	struct psclist_head		*plh_next;
+	struct psclist_head		*plh_prev;
+#ifdef DEBUG
+	uint64_t			 plh_magic;
+	struct psclist_head		*plh_owner;
+#endif
 };
 
 #define psc_listentry psclist_head
 
-#define PSCLIST_HEAD_INIT(name)		{ &(name), &(name) }
-#define PSCLIST_ENTRY_INIT		{ NULL, NULL }
+#define PLENT_MAGIC			UINT64_C(0x1234123412341234)
+
+#ifdef DEBUG
+# define PSCLIST_HEAD_INIT(name)	{ &(name), &(name), PLENT_MAGIC, &(name) }
+# define PSCLIST_ENTRY_INIT		{ NULL, NULL, PLENT_MAGIC, NULL }
+#else
+# define PSCLIST_HEAD_INIT(name)	{ &(name), &(name) }
+# define PSCLIST_ENTRY_INIT		{ NULL, NULL }
+#endif
 
 #define PSCLIST_HEAD(name)							\
 	struct psclist_head name = PSCLIST_HEAD_INIT(name)
 
-#define INIT_PSCLIST_HEAD(ptr)							\
-	do {									\
-		(ptr)->znext = (ptr);						\
-		(ptr)->zprev = (ptr);						\
-	} while (0)
-
-#define INIT_PSCLIST_ENTRY(ptr)							\
-	do {									\
-		(ptr)->znext = NULL;						\
-		(ptr)->zprev = NULL;						\
-	} while (0)
-
-static __inline void
-_psclist_add(struct psclist_head *e, struct psclist_head *prev,
-	struct psclist_head *next)
-{
-	next->zprev = e;
-	e->znext = next;
-	e->zprev = prev;
-	prev->znext = e;
-}
+#define psc_listhd_first(hd)			(hd)->plh_next
+#define psc_listhd_last(hd)			(hd)->plh_prev
 
 /**
- * psclist_add - Add an entry to the beginning of a list.
- * @e: entry to be added
- * @head: psclist_head to add it after
- *
- * Insert a new entry after the specified head.
- * Ensure entry doesn't already belong to another list.
- * This is good for implementing stacks.
+ * psc_lentry_next - Access the entry following the specified entry.
+ * @e: entry
  */
-static __inline void
-psclist_add_head(struct psclist_head *e, struct psclist_head *head)
-{
-	/* ensure entry exists on only one list */
-	psc_assert(e->zprev == NULL && e->znext == NULL);
-	_psclist_add(e, head, head->znext);
-}
+#define psc_lentry_next(e)			(e)->plh_next
 
 /**
- * psclist_add_tail - Add an entry to the end of list.
- * @e: entry to be added
- * @head: psclist head to add it before
- *
- * Insert a new entry before the specified head.
- * Ensure entry doesn't already belong to another list.
- * This is useful for implementing queues.
+ * psc_lentry_prev - Access the entry before the specified entry.
+ * @e: entry
  */
+#define psc_lentry_prev(e)			(e)->plh_prev
+
+#ifdef DEBUG
+#define INIT_PSCLIST_HEAD(hd)							\
+	do {									\
+		psc_listhd_first(hd) = (hd);					\
+		psc_listhd_last(hd) = (hd);					\
+		(hd)->plh_owner = (hd);						\
+		(hd)->plh_magic = PLENT_MAGIC;					\
+	} while (0)
+
+#define INIT_PSCLIST_ENTRY(e)							\
+	do {									\
+		psc_lentry_prev(e) = NULL;					\
+		psc_lentry_next(e) = NULL;					\
+		(e)->plh_owner = NULL;						\
+		(e)->plh_magic = PLENT_MAGIC;					\
+	} while (0)
+#else
+#define INIT_PSCLIST_HEAD(hd)							\
+	do {									\
+		psc_listhd_first(hd) = (hd);					\
+		psc_listhd_last(hd) = (hd);					\
+	} while (0)
+
+#define INIT_PSCLIST_ENTRY(e)							\
+	do {									\
+		psc_lentry_prev(e) = NULL;					\
+		psc_lentry_next(e) = NULL;					\
+	} while (0)
+#endif
+
 static __inline void
-psclist_add_tail(struct psclist_head *e, struct psclist_head *head)
+_psclist_add(struct psc_listentry *e, struct psclist_entry *prev,
+    struct psc_listentry *next)
 {
-	psc_assert(e->zprev == NULL && e->znext == NULL);
-	_psclist_add(e, head->zprev, head);
+#ifdef DEBUG
+	psc_assert(e->plh_owner == NULL);
+	psc_assert(prev->plh_owner && next->plh_owner);
+	psc_assert(prev->plh_owner == next->plh_owner);
+
+	psc_assert(e->plh_magic == PLENT_MAGIC);
+	psc_assert(prev->plh_magic == PLENT_MAGIC);
+	psc_assert(next->plh_magic == PLENT_MAGIC);
+
+	psc_assert(psc_lentry_prev(e) == NULL && psc_lentry_next(e) == NULL);
+	psc_assert(psc_lentry_prev(prev) && psc_lentry_next(prev));
+	psc_assert(psc_lentry_prev(next) && psc_lentry_next(next));
+
+	e->plh_owner = prev->plh_owner;
+#endif
+
+	psc_lentry_prev(next) = e;
+	psc_lentry_next(e) = next;
+	psc_lentry_prev(e) = prev;
+	psc_lentry_next(prev) = e;
 }
 
-#define psclist_add_after(e, t)		psclist_add((e), (t))
-#define psclist_add_before(e, t)	psclist_add_tail((e), (t))
+#define psclist_add_head(e, hd)		_psclist_add((e), (hd), psc_listhd_first(hd))
+#define psclist_add_tail(e, hd)		_psclist_add((e), psc_listhd_last(hd), (hd))
+#define psclist_add_after(e, before)	_psclist_add((e), (before), psc_lentry_next(before))
+#define psclist_add_before(e, after)	_psclist_add((e), psc_lentry_prev(after), (after))
 
-#define psclist_add(e, hd)		psclist_add_head((e), (hd))
-
-static __inline void
-_psclist_del(struct psclist_head *prev, struct psclist_head *next)
-{
-	next->zprev = prev;
-	prev->znext = next;
-}
+#define psclist_add(e, hd)		psclist_add_tail((e), (hd))
 
 /**
  * psclist_del - Delete an entry from the list it is contained within.
- * @entry: the entry to be removed.
+ * @e: the entry to remove from a list.
+ * @hd: containing list head.
  */
 static __inline void
 psclist_del(struct psclist_head *entry, __unusedx const void *hd)
 {
-	_psclist_del(entry->zprev, entry->znext);
-	entry->znext = entry->zprev = NULL;
+	struct psc_listentry *prev, *next;
+
+#ifdef DEBUG
+	psc_assert(e->plh_owner == hd);
+	psc_assert(e->plh_magic == PLENT_MAGIC);
+	psc_assert(psc_lentry_prev(e) && psc_lentry_next(e));
+	if (psc_lentry_prev(e) == psc_lentry_next(e))
+		psc_assert(psc_lentry_prev(e) == hd);
+#else
+	(void)hd;
+#endif
+
+	prev = psc_lentry_prev(e);
+	next = psc_lentry_next(e);
+
+	psc_lentry_next(prev) = next;
+	psc_lentry_prev(next) = prev;
+
+#ifdef DEBUG
+	e->plh_owner = NULL;
+	psc_lentry_next(e) = psc_lentry_prev(e) = NULL;
+#endif
 }
 
 /**
- * psc_listhd_empty - Tests whether a list is has no items.
+ * psc_listhd_empty - Tests whether a list has no items.
  * @hd: the list head to test.
  */
 static __inline int
 psc_listhd_empty(const struct psclist_head *hd)
 {
-	psc_assert(hd->znext && hd->zprev);
-#if 0
-	if (hd->znext == head) {
-		if (hd->zprev != hd)
-			abort();
-		return (1);
-	} else
-		return (0);
+#ifdef DEBUG
+	psc_assert(hd->plh_magic == PLENT_MAGIC);
+	psc_assert(hd->plh_owner == hd);
+	psc_assert(psc_lentry_prev(hd) && psc_lentry_next(hd));
+	if (psc_lentry_prev(hd) == hd)
+		psc_assert(psc_lentry_next(hd) == hd);
+	if (psc_lentry_next(hd) == hd)
+		psc_assert(psc_lentry_prev(hd) == hd);
 #endif
-	return (hd->znext == hd);
+	return (psc_listhd_first(hd) == hd);
 }
 
 /**
- * psclist_disjoint - tests whether a psclist entry is not a member of a list.
- * @entry: the psclist entry to test.
+ * psclist_disjoint - Test whether a psc_listentry is not on a list.
+ * @entry: the psc_listentry to test.
  */
-#define psclist_disjoint(ent)	((ent)->znext == NULL && (ent)->zprev == NULL)
+#define psclist_disjoint(e)	(psc_lentry_prev(e) == NULL && psc_lentry_next(e) == NULL)
 
 /**
- * psclist_conjoint - tests whether a psclist entry is a member of a list.
- * @entry: the psclist entry to test.
+ * psclist_conjoint - Test whether a psc_listentry is on a list.
+ * @entry: the psc_listentry to test.
  */
-#define psclist_conjoint(ent, hd)	((ent)->znext != NULL && (ent)->zprev != NULL)
+static __inline int
+psclist_conjoint(const struct psc_listentry *e, const struct psclist_head *hd)
+{
+#ifdef DEBUG
+	psc_assert(e->plh_magic == PLENT_MAGIC);
+	if (hd == NULL) {
+		psc_warnx("conjoint passed NULL");
+		hd = e->plh_owner;
+	}
+	psc_assert(psc_lentry_prev(e) && psc_lentry_next(e));
+	if (psc_lentry_prev(e) == psc_lentry_next(e))
+		psc_assert(psc_lentry_prev(e) == (hd));
+#else
+	(void)hd;
+#endif
+	return (psc_lentry_prev(e) && psc_lentry_next(e));
+}
 
 /**
- * psc_lentry_obj - get the struct for this entry
- * @ptr: the &struct psclist_head pointer.
- * @type: the type of the struct this is embedded in.
- * @member: the name of the struct psclist_head within the struct.
- * XXX rewrite using offsetof().
+ * psc_lentry_obj2 - Get the struct for a list entry given offset.
+ * @e: the psc_listentry.
+ * @type: the type of the struct this entry is embedded in.
+ * @memb: the structure member name of the psc_listentry.
  */
-#define psc_lentry_obj(ptr, type, member) \
-	((type *)((char *)(ptr)-(unsigned long)(&((type *)0)->member)))
+#define psc_lentry_obj2(e, type, offset)					\
+	((type *)((char *)(e) - (offset)))
 
 /**
- * psclist_for_each - iterate over a psclist
- * @pos: the &struct psclist_head to use as a loop counter.
- * @head: the head for your psclist.
+ * psc_lentry_obj - Get the struct for a list entry.
+ * @e: the psc_listentry.
+ * @type: the type of the struct this entry is embedded in.
+ * @memb: the structure member name of the psc_listentry.
  */
-#define psclist_for_each(pos, head)						\
-	for ((pos) = (head)->znext;						\
-	    ((pos) != (head)) || ((pos) = NULL);				\
-		(pos) = (pos)->znext)
-
-/**
- * psclist_for_each_safe - Iterate over a list safe against removal
- *	of the iterating entry.
- * @pos: the entry to use as a loop counter.
- * @n: another entry to use as temporary storage.
- * @head: the head for the list.
- */
-#define psclist_for_each_safe(pos, n, head)					\
-	for ((pos) = (head)->znext, (n) = (pos)->znext;				\
-	    ((pos) != (head)) || ((pos) = (n) = NULL);				\
-	    (pos) = (n), (n) = (pos)->znext)
-
-/**
- * psc_listhd_first - Grab first entry from a list.
- * @head: the head of the list.
- */
-#define psc_listhd_first(head) (head)->znext
+#define psc_lentry_obj(e, type, memb)						\
+	psc_lentry_obj2((e), type, offsetof(type, memb))
 
 #ifdef DEBUG
 #define psc_lentry_hd(e)		(e)->plh_owner
@@ -196,52 +236,38 @@ psc_listhd_empty(const struct psclist_head *hd)
 #endif
 
 /**
- * psc_listhd_first_obj - Grab first item from a list.
+ * psc_listhd_first_obj - Grab first item from a list head or NULL if empty.
  * @hd: list head.
- * @type: entry type.
- * @memb: psclist_head member name in item structure.
+ * @type: structure type containing a psc_listentry.
+ * @memb: structure member name of psc_listentry.
  */
 #define psc_listhd_first_obj(hd, type, memb)					\
 	(psc_listhd_empty(hd) ? NULL :						\
-	 psc_lentry_obj((hd)->znext, type, memb))
+	 psc_lentry_obj(psc_listhd_first(hd), type, memb))
+
+#define psc_listhd_first_obj2(hd, type, offset)					\
+	(psc_listhd_empty(hd) ? NULL :						\
+	 psc_lentry_obj2(psc_listhd_first(hd), type, offset))
 
 /**
- * psc_listhd_last - Grab last entry from a list.
+ * psc_listhd_last_obj - Grab last item from a list head or NULL if empty.
  * @hd: list head.
- */
-#define psc_listhd_last(hd) (hd)->zprev
-
-/**
- * psc_listhd_last_obj - Grab last item from a list.
- * @hd: list head.
- * @type: entry type.
- * @memb: psclist_head member name in item structure.
+ * @type: structure type containing a psc_listentry.
+ * @memb: structure member name of psc_listentry.
  */
 #define psc_listhd_last_obj(hd, type, memb)					\
 	(psc_listhd_empty(hd) ? NULL :						\
-	 psc_lentry_obj((hd)->zprev, type, memb))
+	 psc_lentry_obj(psc_listhd_last(hd), type, memb))
 
-/**
- * psclist_next - grab the entry following the specified entry.
- * @e: entry
- */
-#define psclist_next(e) (e)->znext
-
-/**
- * psclist_next_obj - grab the item following the specified entry.
- * @hd: list head
- * @p: item on list.
- * @type: entry type.
- * @memb: list_head member name in entry structure.
- */
-#define psclist_next_obj(hd, p, memb)						\
-	_psclist_next_entry((hd), (p), offsetof(typeof(*(p)), memb), 0)
+#define psc_listhd_last_obj2(hd, type, offset)					\
+	(psc_listhd_empty(hd) ? NULL :						\
+	 psc_lentry_obj2(psc_listhd_last(hd), type, offset))
 
 static __inline void *
-_psclist_next_entry(struct psclist_head *hd, void *p,
+_psclist_next_obj(struct psclist_head *hd, void *p,
     unsigned long offset, int wantprev)
 {
-	struct psclist_head *e, *n;
+	struct psc_listentry *e, *n;
 
 	psc_assert(p);
 	e = (void *)((char *)p + offset);
@@ -250,8 +276,8 @@ _psclist_next_entry(struct psclist_head *hd, void *p,
 	 * Ensure integrity of entry: must be contained in
 	 * a list and must not inadvertenly be a head!
 	 */
-	psc_assert(e->znext && e->zprev);
-	n = wantprev ? e->zprev : e->znext;
+	psc_assert(psc_lentry_next(e) && psc_lentry_prev(e));
+	n = wantprev ? psc_lentry_prev(e) : psc_lentry_next(e);
 	psc_assert(n != e);
 	if (n == hd)
 		return (NULL);
@@ -259,128 +285,149 @@ _psclist_next_entry(struct psclist_head *hd, void *p,
 }
 
 /**
- * psclist_prev - grab the entry before the specified entry.
- * @e: entry
- */
-#define psclist_prev(e) (e)->zprev
-
-/**
- * psclist_prev_obj - grab the item before the specified entry.
- * @hd: list head
- * @e: entry
- * @type: entry type.
- * @memb: list_head member name in entry structure.
+ * psclist_prev_obj - Grab the item before the specified item on a list.
+ * @hd: head of the list.
+ * @p: item on list.
+ * @memb: psc_listentry member name in structure.
  */
 #define psclist_prev_obj(hd, p, memb)						\
-	_psclist_next_entry((hd), (p), offsetof(typeof(*(p)), memb), 1)
+	_psclist_next_obj((hd), (p), offsetof(typeof(*(p)), memb), 1)
+
+#define psclist_prev_obj2(hd, p, offset)					\
+	_psclist_next_obj((hd), (p), (offset), 1)
 
 /**
- * psclist_for_each_entry_safe - iterate over list of given type safe
+ * psclist_next_obj - Grab the item following the specified item on a list.
+ * @hd: head of the list.
+ * @p: item on list.
+ * @memb: psc_listentry member name in structure.
+ */
+#define psclist_next_obj(hd, p, memb)						\
+	_psclist_next_obj((hd), (p), offsetof(typeof(*(p)), memb), 0)
+
+#define psclist_next_obj2(hd, p, offset)					\
+	_psclist_next_obj((hd), (p), (offset), 0)
+
+/**
+ * psclist_for_each - Iterate over a psclist.
+ * @e: the &struct psclist_head to use as a loop counter.
+ * @head: the head for your psclist.
+ */
+#define psclist_for_each(e, hd)							\
+	for ((e) = psc_listhd_first(hd);					\
+	     (e) != (hd) || ((e) = NULL);					\
+	     (e) = psc_lentry_next(e))
+
+/**
+ * psclist_for_each_safe - Iterate over a list safe against removal
+ *	of the iterating entry.
+ * @e: the entry to use as a loop counter.
+ * @n: another entry to use as temporary storage.
+ * @hd: the head of the list.
+ */
+#define psclist_for_each_safe(e, n, hd)						\
+	for ((e) = psc_listhd_first(hd), (n) = psc_lentry_next(e);		\
+	    (e) != (hd) || ((e) = (n) = NULL);					\
+	    (e) = (n), (n) = psc_lentry_next(e))
+
+/**
+ * psclist_for_each_entry_safe - Iterate over list of given type safe
  *	against removal of list entry
- * @pos: the type * to use as a loop counter.
+ * @p: the type * to use as a loop counter.
  * @n: another type * to use as temporary storage.
  * @hd: the head for your list.
- * @member: list entry member of structure.
+ * @memb: list entry member of structure.
  */
-#define psclist_for_each_entry_safe(pos, n, hd, member)				\
-	for ((pos) = psc_lentry_obj((hd)->znext, typeof(*(pos)), member),	\
-	    (n) = psc_lentry_obj((pos)->member.znext, typeof(*(n)), member);	\
-	    (&(pos)->member != (hd)) || ((pos) = (n) = NULL);			\
-	    (pos) = (n), (n) = psc_lentry_obj((n)->member.znext, typeof(*(n)), member))
+#define psclist_for_each_entry_safe(p, n, hd, memb)				\
+	for ((p) = psc_listhd_first_obj((hd), typeof(*(p)), memb),		\
+	     (n) = psclist_next_obj((hd), (p), memb);				\
+	     (p) || ((n) = NULL);						\
+	     (p) = (n), (n) = psclist_next_obj((hd), (n), memb))
 
 /**
- * psclist_for_each_entry_safe_backwards - iterate backwards over a list safe
+ * psclist_for_each_entry_safe_backwards - Iterate backwards over a list safe
  *	against removal of entries.
- * @pos: the type * to use as a loop counter.
+ * @p: the type * to use as a loop counter.
  * @n: another type * to use as temporary storage.
  * @hd: the head for your list.
- * @member: list entry member of structure.
+ * @memb: list entry member of structure.
  */
-#define psclist_for_each_entry_safe_backwards(pos, n, hd, member)		\
-	for ((pos) = psc_lentry_obj((hd)->zprev, typeof(*(pos)), member),	\
-	    (n) = psc_lentry_obj((pos)->member.zprev, typeof(*(n)), member);	\
-	    (&(pos)->member != (hd)) || ((pos) = (n) = NULL);			\
-	    (pos) = (n), (n) = psc_lentry_obj((pos)->member.zprev, typeof(*(n)), member))
+#define psclist_for_each_entry_safe_backwards(p, n, hd, memb)			\
+	for ((p) = psc_listhd_first_obj((hd), typeof(*(p)), memb),		\
+	     (n) = psclist_prev_obj((hd), (p), memb);				\
+	     (p) || ((n) = NULL);						\
+	     (p) = (n), (n) = psclist_prev_obj((hd), (n), memb))
 
 /**
- * psclist_for_each_entry - iterate over list of given type.
- * @pos: the type * to use as a loop counter.
+ * psclist_for_each_entry - Iterate over list of given type.
+ * @p: the type * to use as a loop counter.
  * @hd: the head for your list.
- * @member: list entry member of structure.
+ * @memb: list entry member of structure.
  */
-#define psclist_for_each_entry(pos, hd, member)					\
-	for ((pos) = psc_lentry_obj((hd)->znext, typeof(*(pos)), member);	\
-	    (&(pos)->member != (hd)) || ((pos) = NULL);				\
-	    (pos) = psc_lentry_obj((pos)->member.znext, typeof(*(pos)), member))
+#define psclist_for_each_entry(p, hd, memb)					\
+	for ((p) = psc_listhd_first_obj((hd), typeof(*(p)), memb);		\
+	     (p); (p) = psclist_next_obj((hd), (p), memb))
 
 /**
- * psclist_for_each_entry_backwards - iterate backwards over a list.
- * @pos: the type * to use as a loop counter.
+ * psclist_for_each_entry_backwards - Iterate backwards over a list.
+ * @p: the type * to use as a loop counter.
  * @hd: the head for your list.
- * @member: list entry member of structure.
+ * @memb: list entry member of structure.
  */
-#define psclist_for_each_entry_backwards(pos, hd, member)			\
-	for ((pos) = psc_lentry_obj((hd)->zprev, typeof(*(pos)), member);	\
-	    (&(pos)->member != (hd)) || ((pos) = NULL);				\
-	    (pos) = psc_lentry_obj((pos)->member.zprev, typeof(*(pos)), member))
+#define psclist_for_each_entry_backwards(p, hd, memb)				\
+	for ((p) = psc_listhd_last_obj((hd), typeof(*(p)), memb);		\
+	     (p); (p) = psclist_prev_obj((hd), (p), memb))
 
 /**
- * psclist_for_each_entry2 - iterate over list of given type.
- * @pos: the type * to use as a loop counter.
- * @head: the head for your list.
+ * psclist_for_each_entry2 - Iterate over list of given type.
+ * @p: the type * to use as a loop counter.
+ * @hd: the head for your list.
  * @offset: offset into type * of list entry.
  */
-#define psclist_for_each_entry2(pos, head, offset)				\
-	for ((pos) = (void *)(((char *)(head)->znext) - (offset));		\
-	    (((char *)pos) + (offset) != (void *)(head)) || ((pos) = NULL);	\
-	    (pos) = (void *)(((char *)(((struct psclist_head *)(((char *)pos) +	\
-	      (offset)))->znext)) - (offset)))
+#define psclist_for_each_entry2(p, hd, offset)					\
+	for ((p) = psc_listhd_first_obj2((hd), typeof(*(p)), (offset));		\
+	     (p); (p) = psclist_next_obj2((hd), (p), (offset)))
 
 /**
  * psclist_for_each_entry2_backwards - iterate backwards over a list.
- * @pos: the type * to use as a loop counter.
- * @head: the head for your list.
+ * @p: the type * to use as a loop counter.
+ * @hd: the head for your list.
  * @offset: offset into type * of list entry.
  */
-#define psclist_for_each_entry2_backwards(pos, head, offset)			\
-	for ((pos) = (void *)(((char *)(head)->zprev) - (offset));		\
-	    (((char *)pos) + (offset) != (void *)(head)) || ((pos) = NULL);	\
-	    (pos) = (void *)(((char *)(((struct psclist_head *)(((char *)pos) +	\
-	      (offset)))->zprev)) - (offset)))
+#define psclist_for_each_entry2_backwards(p, hd, offset)			\
+	for ((p) = psc_listhd_last_obj2((hd), typeof(*(p)), (offset));		\
+	     (p); (p) = psclist_prev_obj2((hd), (p), (offset)))
 
 /**
  * psclist_for_each_entry2_safe - iterate over list of given type.
- * @pos: the type * to use as a loop counter.
+ * @p: the type * to use as a loop counter.
  * @n: another type * to use as temporary storage
- * @head: the head for your list.
+ * @hd: the head for your list.
  * @offset: offset into type * of list entry.
  */
-#define psclist_for_each_entry2_safe(pos, n, head, offset)			\
-	for ((pos) = (void *)(((char *)(head)->znext) - (offset)),		\
-	    (n) = (void *)(((char *)(((struct psclist_head *)(((char *)pos) +	\
-	      (offset)))->znext)) - (offset));					\
-	    (((char *)pos) + (offset) != (void *)(head)) ||			\
-	      ((pos) = (n) = NULL); (pos) = (n),				\
-	    (n) = (void *)(((char *)(((struct psclist_head *)(((char *)n) +	\
-	      (offset)))->znext)) - (offset)))
-
-static __inline void
-psclist_add_sorted(struct psclist_head *hd, struct psclist_head *elem,
-    int (*cmpf)(const void *, const void *), ptrdiff_t offset)
-{
-	struct psclist_head *e;
-
-	psc_assert(elem);
-	psclist_for_each(e, hd)
-		if (cmpf((char *)elem - offset, (char *)e - offset) > 0) {
-			psclist_add(elem, e);
-			return;
-		}
-	psclist_add_tail(elem, hd);
-}
+#define psclist_for_each_entry2_safe(p, n, hd, offset)				\
+	for ((p) = psc_listhd_first_obj2((hd), typeof(*(p)), (offset)),		\
+	     (n) = psclist_next_obj2((hd), (p), (offset));			\
+	     (p) || ((n) = NULL);						\
+	     (p) = (n), (n) = psclist_next_obj2((hd), (n), (offset)))
 
 void psclist_sort(void **, struct psclist_head *, int, ptrdiff_t,
 	void (*)(void *, size_t, size_t, int (*)(const void *, const void *)),
 	int (*)(const void *, const void *));
+
+static __inline void
+psclist_add_sorted(struct psclist_head *hd, struct psc_listentry *e,
+    int (*cmpf)(const void *, const void *), ptrdiff_t offset)
+{
+	struct psclist_head *t;
+
+	psc_assert(e);
+	psclist_for_each(t, hd)
+		if (cmpf((char *)e - offset, (char *)t - offset) > 0) {
+			psclist_add_after(e, t);
+			return;
+		}
+	psclist_add(e, hd);
+}
 
 #endif /* _PFL_LIST_H_ */
