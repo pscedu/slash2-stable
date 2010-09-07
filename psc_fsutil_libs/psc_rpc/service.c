@@ -1035,6 +1035,8 @@ pscrpcsvh_addthr(struct pscrpc_svc_handle *svh)
 		prt = thr->pscthr_private;
 		prt->prt_alive = 1;
 		prt->prt_svh = svh;
+		INIT_PSC_LISTENTRY(&prt->prt_lentry);
+
 		psclist_add(&prt->prt_lentry,
 		    &svh->svh_service->srv_threads);
 		svh->svh_nthreads++;
@@ -1087,6 +1089,7 @@ _pscrpc_svh_spawn(struct pscrpc_svc_handle *svh)
 	psc_assert(svh->svh_service);
 
 	/* Track the service handle */
+	INIT_PSC_LISTENTRY(&svh->svh_lentry);
 	psclist_add(&svh->svh_lentry, &pscrpc_svh_list);
 
 	n = svh->svh_nthreads;

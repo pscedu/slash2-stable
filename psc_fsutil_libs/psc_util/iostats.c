@@ -47,6 +47,7 @@ psc_iostats_init(struct psc_iostats *ist, const char *fmt, ...)
 	int i, rc;
 
 	memset(ist, 0, sizeof(*ist));
+	INIT_PSC_LISTENTRY(&ist->ist_lentry);
 
 	va_start(ap, fmt);
 	rc = vsnprintf(ist->ist_name, sizeof(ist->ist_name), fmt, ap);

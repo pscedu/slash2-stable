@@ -313,6 +313,8 @@ odtable_load(struct odtable **t, const char *fn, const char *fmt, ...)
 		   odt, odt->odt_base, psc_vbitmap_nfree(odt->odt_bitmap),
 		   odth->odth_nelems, odth->odth_elemsz, odth->odth_magic);
 
+	INIT_PSC_LISTENTRY(&odt->odt_lentry);
+
 	va_start(ap, fmt);
 	vsnprintf(odt->odt_name, sizeof(odt->odt_name), fmt, ap);
 	va_end(ap);

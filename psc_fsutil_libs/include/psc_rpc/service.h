@@ -45,7 +45,7 @@ struct pscrpc_thread {
 #define pscrpc_thread_spawn(svh, type)				\
 	do {							\
 		(svh)->svh_thrsiz = sizeof(type);		\
-		_pscrpc_svh_spawn((svh));			\
+		_pscrpc_svh_spawn(svh);				\
 	} while (0)
 
 void _pscrpc_svh_spawn(struct pscrpc_svc_handle *);
