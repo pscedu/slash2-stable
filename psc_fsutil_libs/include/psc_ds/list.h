@@ -340,9 +340,8 @@ _psclist_next_obj(struct psclist_head *hd, void *p,
  */
 #define psclist_for_each_entry_safe(p, n, hd, memb)				\
 	for ((p) = psc_listhd_first_obj((hd), typeof(*(p)), memb),		\
-	     (n) = psclist_next_obj((hd), (p), memb);				\
-	     (p) || ((n) = NULL);						\
-	     (p) = (n), (n) = psclist_next_obj((hd), (n), memb))
+	     (n) = (p) ? psclist_next_obj((hd), (p), memb) : NULL;		\
+	     (p); (p) = (n), (n) = (n) ? psclist_next_obj((hd), (n), memb) : NULL)
 
 /**
  * psclist_for_each_entry_safe_backwards - Iterate backwards over a list safe
@@ -354,9 +353,8 @@ _psclist_next_obj(struct psclist_head *hd, void *p,
  */
 #define psclist_for_each_entry_safe_backwards(p, n, hd, memb)			\
 	for ((p) = psc_listhd_first_obj((hd), typeof(*(p)), memb),		\
-	     (n) = psclist_prev_obj((hd), (p), memb);				\
-	     (p) || ((n) = NULL);						\
-	     (p) = (n), (n) = psclist_prev_obj((hd), (n), memb))
+	     (n) = (p) ? psclist_prev_obj((hd), (p), memb) : NULL;		\
+	     (p); (p) = (n), (n) = (n) ? psclist_prev_obj((hd), (n), memb) : NULL)
 
 /**
  * psclist_for_each_entry - Iterate over list of given type.
@@ -407,9 +405,8 @@ _psclist_next_obj(struct psclist_head *hd, void *p,
  */
 #define psclist_for_each_entry2_safe(p, n, hd, offset)				\
 	for ((p) = psc_listhd_first_obj2((hd), typeof(*(p)), (offset)),		\
-	     (n) = psclist_next_obj2((hd), (p), (offset));			\
-	     (p) || ((n) = NULL);						\
-	     (p) = (n), (n) = psclist_next_obj2((hd), (n), (offset)))
+	     (n) = (p) ? psclist_next_obj2((hd), (p), (offset)) : NULL;		\
+	     (p); (p) = (n), (n) = (n) ? psclist_next_obj2((hd), (n), (offset)) : NULL)
 
 void psclist_sort(void **, struct psclist_head *, int, ptrdiff_t,
 	void (*)(void *, size_t, size_t, int (*)(const void *, const void *)),
