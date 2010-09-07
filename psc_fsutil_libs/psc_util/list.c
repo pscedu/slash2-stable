@@ -20,15 +20,12 @@
 #include "psc_ds/listcache.h"
 #include "psc_ds/lockedlist.h"
 
-struct psc_lockedlist psc_listcaches =
-    PLL_INIT(&psc_listcaches, struct psc_listcache, plc_index_lentry);
-
 void
 psclist_sort(void **p, struct psclist_head *hd, int n, ptrdiff_t off,
     void (*sortf)(void *, size_t, size_t, int (*)(const void *, const void *)),
     int (*cmpf)(const void *, const void *))
 {
-	struct psclist_head *e;
+	struct psc_listentry *e;
 	void *next, *prev;
 	int j = 0;
 
@@ -46,9 +43,9 @@ psclist_sort(void **p, struct psclist_head *hd, int n, ptrdiff_t off,
 			next = hd;
 		else
 			next = (char *)p[j + 1] + off;
-		e->zprev = prev;
-		e->znext = next;
+		psc_lentry_prev(e) = prev;
+		psc_lentry_next(e) = next;
 	}
-	hd->znext = (void *)((char *)p[0] + off);
-	hd->zprev = prev;
+	psc_listhd_first(hd) = (void *)((char *)p[0] + off);
+	psc_listhd_last(hd) = prev;
 }
