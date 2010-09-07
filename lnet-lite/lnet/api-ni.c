@@ -143,7 +143,7 @@ lnet_fini_locks(void)
 int
 lnet_get_usesdp(void)
 {
-	static psc_spinlock_t lock = LOCK_INITIALIZER;
+	static psc_spinlock_t lock = SPINLOCK_INIT;
 	static int usesdp;
 	static int init;
 

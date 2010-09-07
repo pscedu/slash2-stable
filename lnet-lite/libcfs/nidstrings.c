@@ -71,7 +71,7 @@
 
 static char      libcfs_nidstrings[LNET_NIDSTR_COUNT][LNET_NIDSTR_SIZE];
 static int       libcfs_nidstring_idx = 0;
-static psc_spinlock_t libcfs_nidstring_lock = LOCK_INITIALIZER;
+static psc_spinlock_t libcfs_nidstring_lock = SPINLOCK_INIT;
 
 #ifdef __KERNEL__
 static spinlock_t libcfs_nidstring_lock;
