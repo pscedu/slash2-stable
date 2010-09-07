@@ -8,7 +8,15 @@ general reminders
 - investigate pthread_rwlocks for things like trees and large lists
 - watch out for "a - b" in cmp functions overflowing, use CMP() instead
 - investigate if our sched_yield() calls are correct
-- watch out for lock reinitialization (i.e. LOCK_INIT twice)
+- watch out for structure reinitialization (e.g. LOCK_INIT twice)
+   maybe do:
+	#define INIT(s)							\
+		do {							\
+			if (s->magic == MAGIC)				\
+				assert(s->field == VALUE);		\
+			s->magic = MAGIC;				\
+			s->field = VALUE;				\
+		while (0)
 - remove XXX comments
 - keep "make build > /dev/null" clean
 - check memset() for bad sizes sizeof(pg) vs. sizeof(*pg)
