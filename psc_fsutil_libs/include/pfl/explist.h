@@ -16,7 +16,7 @@
 
 struct psc_explist {
 	struct psc_lockedlist	 pexl_pll;
-	struct psclist_entry	 pexl_lentry;			/* link adjoining lists */
+	struct psc_listentry	 pexl_lentry;			/* link adjoining lists */
 	char			 pexl_name[PEXL_NAME_MAX];	/* for list mgt */
 	size_t			 pexl_nseen;			/* stat: total #times add() */
 #define pexl_flags	pexl_pll.pll_flags

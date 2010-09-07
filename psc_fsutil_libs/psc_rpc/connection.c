@@ -30,7 +30,7 @@ pscrpc_lookup_conn_locked(lnet_process_id_t peer, lnet_nid_t self)
 	struct psclist_head          *tmp;
 
 	psclist_for_each(tmp, &conn_list) {
-		c = psclist_entry(tmp, struct pscrpc_connection, c_link);
+		c = psc_lentry_obj(tmp, struct pscrpc_connection, c_link);
 
 		if (peer.nid == c->c_peer.nid &&
 		    peer.pid == c->c_peer.pid &&
@@ -39,7 +39,7 @@ pscrpc_lookup_conn_locked(lnet_process_id_t peer, lnet_nid_t self)
 	}
 
 	psclist_for_each(tmp, &conn_unused_list) {
-		c = psclist_entry(tmp, struct pscrpc_connection, c_link);
+		c = psc_lentry_obj(tmp, struct pscrpc_connection, c_link);
 		psc_dbg("unused conn %p@%s looking for %s",
 			c, libcfs_id2str(c->c_peer), libcfs_id2str(peer));
 

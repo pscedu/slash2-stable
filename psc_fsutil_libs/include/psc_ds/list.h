@@ -34,7 +34,7 @@ struct psclist_head {
 	struct psclist_head *zprev;
 };
 
-#define psclist_lentry psclist_head
+#define psc_listentry psclist_head
 
 #define PSCLIST_HEAD_INIT(name)		{ &(name), &(name) }
 #define PSCLIST_ENTRY_INIT		{ NULL, NULL }
@@ -152,13 +152,13 @@ psc_listhd_empty(const struct psclist_head *hd)
 #define psclist_conjoint(ent, hd)	((ent)->znext != NULL && (ent)->zprev != NULL)
 
 /**
- * psclist_entry - get the struct for this entry
+ * psc_lentry_obj - get the struct for this entry
  * @ptr: the &struct psclist_head pointer.
  * @type: the type of the struct this is embedded in.
  * @member: the name of the struct psclist_head within the struct.
  * XXX rewrite using offsetof().
  */
-#define psclist_entry(ptr, type, member) \
+#define psc_lentry_obj(ptr, type, member) \
 	((type *)((char *)(ptr)-(unsigned long)(&((type *)0)->member)))
 
 /**
@@ -203,7 +203,7 @@ psc_listhd_empty(const struct psclist_head *hd)
  */
 #define psc_listhd_first_obj(hd, type, memb)					\
 	(psc_listhd_empty(hd) ? NULL :						\
-	 psclist_entry((hd)->znext, type, memb))
+	 psc_lentry_obj((hd)->znext, type, memb))
 
 /**
  * psc_listhd_last - Grab last entry from a list.
@@ -219,7 +219,7 @@ psc_listhd_empty(const struct psclist_head *hd)
  */
 #define psc_listhd_last_obj(hd, type, memb)					\
 	(psc_listhd_empty(hd) ? NULL :						\
-	 psclist_entry((hd)->zprev, type, memb))
+	 psc_lentry_obj((hd)->zprev, type, memb))
 
 /**
  * psclist_next - grab the entry following the specified entry.
@@ -283,10 +283,10 @@ _psclist_next_entry(struct psclist_head *hd, void *p,
  * @member: list entry member of structure.
  */
 #define psclist_for_each_entry_safe(pos, n, hd, member)				\
-	for ((pos) = psclist_entry((hd)->znext, typeof(*(pos)), member),	\
-	    (n) = psclist_entry((pos)->member.znext, typeof(*(n)), member);	\
+	for ((pos) = psc_lentry_obj((hd)->znext, typeof(*(pos)), member),	\
+	    (n) = psc_lentry_obj((pos)->member.znext, typeof(*(n)), member);	\
 	    (&(pos)->member != (hd)) || ((pos) = (n) = NULL);			\
-	    (pos) = (n), (n) = psclist_entry((n)->member.znext, typeof(*(n)), member))
+	    (pos) = (n), (n) = psc_lentry_obj((n)->member.znext, typeof(*(n)), member))
 
 /**
  * psclist_for_each_entry_safe_backwards - iterate backwards over a list safe
@@ -297,10 +297,10 @@ _psclist_next_entry(struct psclist_head *hd, void *p,
  * @member: list entry member of structure.
  */
 #define psclist_for_each_entry_safe_backwards(pos, n, hd, member)		\
-	for ((pos) = psclist_entry((hd)->zprev, typeof(*(pos)), member),	\
-	    (n) = psclist_entry((pos)->member.zprev, typeof(*(n)), member);	\
+	for ((pos) = psc_lentry_obj((hd)->zprev, typeof(*(pos)), member),	\
+	    (n) = psc_lentry_obj((pos)->member.zprev, typeof(*(n)), member);	\
 	    (&(pos)->member != (hd)) || ((pos) = (n) = NULL);			\
-	    (pos) = (n), (n) = psclist_entry((pos)->member.zprev, typeof(*(n)), member))
+	    (pos) = (n), (n) = psc_lentry_obj((pos)->member.zprev, typeof(*(n)), member))
 
 /**
  * psclist_for_each_entry - iterate over list of given type.
@@ -309,9 +309,9 @@ _psclist_next_entry(struct psclist_head *hd, void *p,
  * @member: list entry member of structure.
  */
 #define psclist_for_each_entry(pos, hd, member)					\
-	for ((pos) = psclist_entry((hd)->znext, typeof(*(pos)), member);	\
+	for ((pos) = psc_lentry_obj((hd)->znext, typeof(*(pos)), member);	\
 	    (&(pos)->member != (hd)) || ((pos) = NULL);				\
-	    (pos) = psclist_entry((pos)->member.znext, typeof(*(pos)), member))
+	    (pos) = psc_lentry_obj((pos)->member.znext, typeof(*(pos)), member))
 
 /**
  * psclist_for_each_entry_backwards - iterate backwards over a list.
@@ -320,9 +320,9 @@ _psclist_next_entry(struct psclist_head *hd, void *p,
  * @member: list entry member of structure.
  */
 #define psclist_for_each_entry_backwards(pos, hd, member)			\
-	for ((pos) = psclist_entry((hd)->zprev, typeof(*(pos)), member);	\
+	for ((pos) = psc_lentry_obj((hd)->zprev, typeof(*(pos)), member);	\
 	    (&(pos)->member != (hd)) || ((pos) = NULL);				\
-	    (pos) = psclist_entry((pos)->member.zprev, typeof(*(pos)), member))
+	    (pos) = psc_lentry_obj((pos)->member.zprev, typeof(*(pos)), member))
 
 /**
  * psclist_for_each_entry2 - iterate over list of given type.

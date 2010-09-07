@@ -115,7 +115,7 @@ pscrpc_server_post_idle_rqbds(struct pscrpc_service *svc)
 			return (posted);
 		}
 
-		rqbd = psclist_entry(psclist_next(&svc->srv_idle_rqbds),
+		rqbd = psc_lentry_obj(psclist_next(&svc->srv_idle_rqbds),
 			struct pscrpc_request_buffer_desc, rqbd_lentry);
 		psclist_del(&rqbd->rqbd_lentry, &svc->srv_idle_rqbds);
 
@@ -198,7 +198,7 @@ pscrpc_server_free_request(struct pscrpc_request *req)
 		/* cull some history?
 		 * I expect only about 1 or 2 rqbds need to be recycled here */
 		while (svc->srv_n_history_rqbds > svc->srv_max_history_rqbds) {
-			rqbd = psclist_entry(psclist_next(&svc->srv_history_rqbds),
+			rqbd = psc_lentry_obj(psclist_next(&svc->srv_history_rqbds),
 				struct pscrpc_request_buffer_desc,
 				rqbd_lentry);
 
@@ -208,7 +208,7 @@ pscrpc_server_free_request(struct pscrpc_request *req)
 			/* remove rqbd's reqs from svc's req history while
 			 * I've got the service lock */
 			psclist_for_each(tmp, &rqbd->rqbd_reqs) {
-				req = psclist_entry(tmp, struct pscrpc_request,
+				req = psc_lentry_obj(tmp, struct pscrpc_request,
 						    rq_list_entry);
 				/* Track the highest culled req seq */
 				if (req->rq_history_seq >
@@ -222,7 +222,7 @@ pscrpc_server_free_request(struct pscrpc_request *req)
 
 
 			psclist_for_each_safe(tmp, nxt, &rqbd->rqbd_reqs) {
-				req = psclist_entry(psclist_next(&rqbd->rqbd_reqs),
+				req = psc_lentry_obj(psclist_next(&rqbd->rqbd_reqs),
 				    struct pscrpc_request, rq_list_entry);
 				_pscrpc_server_free_request(req);
 			}
@@ -271,7 +271,7 @@ pscrpc_server_handle_request(struct pscrpc_service *svc,
 		return (0);
 	}
 
-	request = psclist_entry(psclist_next(&svc->srv_request_queue),
+	request = psc_lentry_obj(psclist_next(&svc->srv_request_queue),
 			      struct pscrpc_request, rq_list_entry);
 
 	psclist_del(&request->rq_list_entry, &svc->srv_request_queue);
@@ -475,7 +475,7 @@ pscrpc_server_handle_reply(struct pscrpc_service *svc)
 		return (0);
 	}
 
-	rs = psclist_entry(svc->srv_reply_queue.next,
+	rs = psc_lentry_obj(svc->srv_reply_queue.next,
 			 struct pscrpc_reply_state, rs_list_entry);
 
 	exp = rs->rs_export;
@@ -792,7 +792,7 @@ void pscrpc_stop_all_threads(struct pscrpc_service *svc)
 
 	spinlock(&svc->srv_lock);
 	while (!psc_listhd_empty(&svc->srv_threads)) {
-		thread = psclist_entry(svc->srv_threads.next,
+		thread = psc_lentry_obj(svc->srv_threads.next,
 			struct pscrpc_thread, t_link);
 
 		freelock(&svc->srv_lock);
@@ -831,7 +831,7 @@ pscrpc_unregister_service(struct pscrpc_service *service)
 	/* Unlink all the request buffers.  This forces a 'final' event with
 	 * its 'unlink' flag set for each posted rqbd */
 	psclist_for_each(tmp, &service->srv_active_rqbds) {
-		struct pscrpc_request_buffer_desc *rqbd = psclist_entry(tmp,
+		struct pscrpc_request_buffer_desc *rqbd = psc_lentry_obj(tmp,
 		    struct pscrpc_request_buffer_desc, rqbd_lentry);
 
 		rc = LNetMDUnlink(rqbd->rqbd_md_h);
@@ -862,7 +862,7 @@ pscrpc_unregister_service(struct pscrpc_service *service)
 	/* schedule all outstanding replies to terminate them */
 	spinlock(&service->srv_lock);
 	while (!psc_listhd_empty(&service->srv_active_replies)) {
-		rs = psclist_entry(psclist_next(&service->srv_active_replies),
+		rs = psc_lentry_obj(psclist_next(&service->srv_active_replies),
 			struct pscrpc_reply_state, rs_list_entry);
 		CWARN("Active reply found?? %p", rs);
 		//pscrpc_schedule_difficult_reply(rs);
@@ -874,7 +874,7 @@ pscrpc_unregister_service(struct pscrpc_service *service)
 	 * request queue now */
 	while (!psc_listhd_empty(&service->srv_request_queue)) {
 		struct pscrpc_request *req =
-			psclist_entry(psclist_next(&service->srv_request_queue),
+			psc_lentry_obj(psclist_next(&service->srv_request_queue),
 			struct pscrpc_request, rq_list_entry);
 
 		psclist_del(&req->rq_list_entry, &service->srv_request_queue);
@@ -892,7 +892,7 @@ pscrpc_unregister_service(struct pscrpc_service *service)
 	 * any more... */
 	while (!psc_listhd_empty(&service->srv_idle_rqbds)) {
 		struct pscrpc_request_buffer_desc *rqbd =
-			psclist_entry(psclist_next(&service->srv_idle_rqbds),
+			psc_lentry_obj(psclist_next(&service->srv_idle_rqbds),
 			struct pscrpc_request_buffer_desc, rqbd_lentry);
 
 		pscrpc_free_rqbd(rqbd);

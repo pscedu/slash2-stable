@@ -160,7 +160,7 @@ pscrpc_prep_req_from_pool(struct pscrpc_request_pool *pool)
 		return NULL;
 	}
 
-	request = psclist_entry(pool->prp_req_list.next, struct pscrpc_request,
+	request = psc_lentry_obj(pool->prp_req_list.next, struct pscrpc_request,
 			     rq_list);
 	psclist_del(&request->rq_list);
 	freelock(&pool->prp_lock);
@@ -920,7 +920,7 @@ pscrpc_check_set(struct pscrpc_request_set *set, int check_allsent)
 
 	psclist_for_each(tmp, &set->set_requests) {
 		struct pscrpc_request *req =
-			psclist_entry(tmp, struct pscrpc_request,
+			psc_lentry_obj(tmp, struct pscrpc_request,
 				      rq_set_chain_lentry);
 		struct pscrpc_import *imp = req->rq_import;
 		int rc = 0;
@@ -1159,7 +1159,7 @@ pscrpc_set_destroy(struct pscrpc_request_set *set)
 		PSCRPC_RQ_PHASE_COMPLETE : PSCRPC_RQ_PHASE_NEW;
 	psclist_for_each(tmp, &set->set_requests) {
 		struct pscrpc_request *req =
-			psclist_entry(tmp, struct pscrpc_request, rq_set_chain_lentry);
+			psc_lentry_obj(tmp, struct pscrpc_request, rq_set_chain_lentry);
 
 		psc_assert(req->rq_phase == expected_phase);
 		n++;
@@ -1169,7 +1169,7 @@ pscrpc_set_destroy(struct pscrpc_request_set *set)
 
 	psclist_for_each_safe(tmp, next, &set->set_requests) {
 		struct pscrpc_request *req =
-			psclist_entry(tmp, struct pscrpc_request, rq_set_chain_lentry);
+			psc_lentry_obj(tmp, struct pscrpc_request, rq_set_chain_lentry);
 		psclist_del(&req->rq_set_chain_lentry, &set->set_requests);
 
 		psc_assert(req->rq_phase == expected_phase);
@@ -1257,7 +1257,7 @@ pscrpc_expired_set(void *data)
 	/* A timeout expired; see which reqs it applies to... */
 	psclist_for_each(tmp, &set->set_requests) {
 		struct pscrpc_request *req =
-			psclist_entry(tmp, struct pscrpc_request, rq_set_chain_lentry);
+			psc_lentry_obj(tmp, struct pscrpc_request, rq_set_chain_lentry);
 
 		/* request in-flight? */
 		if (!((req->rq_phase == PSCRPC_RQ_PHASE_RPC && !req->rq_waiting &&
@@ -1292,7 +1292,7 @@ pscrpc_set_next_timeout(struct pscrpc_request_set *set)
 	//SIGNAL_MASK_ASSERT(); /* XXX BUG 1511 */
 
 	psclist_for_each(tmp, &set->set_requests) {
-		req = psclist_entry(tmp, struct pscrpc_request, rq_set_chain_lentry);
+		req = psc_lentry_obj(tmp, struct pscrpc_request, rq_set_chain_lentry);
 
 		/* request in-flight? */
 		if (!((req->rq_phase == PSCRPC_RQ_PHASE_RPC && !req->rq_waiting) ||
@@ -1330,7 +1330,7 @@ pscrpc_interrupted_set(void *data)
 
 	psclist_for_each(tmp, &set->set_requests) {
 		struct pscrpc_request *req =
-			psclist_entry(tmp, struct pscrpc_request, rq_set_chain_lentry);
+			psc_lentry_obj(tmp, struct pscrpc_request, rq_set_chain_lentry);
 
 		if (req->rq_phase != PSCRPC_RQ_PHASE_RPC)
 			continue;
@@ -1391,7 +1391,7 @@ int pscrpc_set_wait(struct pscrpc_request_set *set)
 		return (0);
 
 	psclist_for_each(tmp, &set->set_requests) {
-		req = psclist_entry(tmp, struct pscrpc_request,
+		req = psc_lentry_obj(tmp, struct pscrpc_request,
 				    rq_set_chain_lentry);
 
 		if (req->rq_phase == PSCRPC_RQ_PHASE_NEW)
@@ -1432,7 +1432,7 @@ int pscrpc_set_wait(struct pscrpc_request_set *set)
 
 	rc = 0;
 	psclist_for_each(tmp, &set->set_requests) {
-		req = psclist_entry(tmp, struct pscrpc_request, rq_set_chain_lentry);
+		req = psc_lentry_obj(tmp, struct pscrpc_request, rq_set_chain_lentry);
 		if (req->rq_import->imp_failed){
 			psc_errorx("failed import detected!");
 			rc = -ECONNABORTED;
@@ -1539,7 +1539,7 @@ pscrpc_free_committed(struct pscrpc_import *imp)
 	imp->imp_last_generation_checked = imp->imp_generation;
 
 	psclist_for_each_safe(tmp, saved, &imp->imp_replay_list) {
-		req = psclist_entry(tmp, struct pscrpc_request, rq_replay_list);
+		req = psc_lentry_obj(tmp, struct pscrpc_request, rq_replay_list);
 
 		/* XXX ok to remove when 1357 resolved - rread 05/29/03  */
 		psc_assert(req != last_req);
@@ -1589,7 +1589,7 @@ void pscrpc_abort_inflight(struct pscrpc_import *imp)
 	  */
 	 psclist_for_each_safe(tmp, n, &imp->imp_sending_list) {
 		struct pscrpc_request *req =
-			psclist_entry(tmp, struct pscrpc_request, rq_list_entry);
+			psc_lentry_obj(tmp, struct pscrpc_request, rq_list_entry);
 
 		DEBUG_REQ(PLL_WARN, req, "inflight");
 
@@ -1605,7 +1605,7 @@ void pscrpc_abort_inflight(struct pscrpc_import *imp)
 #if 0
 	 psclist_for_each_safe(tmp, n, &imp->imp_delayed_list) {
 		struct pscrpc_request *req =
-			psclist_entry(tmp, struct pscrpc_request, rq_list_entry);
+			psc_lentry_obj(tmp, struct pscrpc_request, rq_list_entry);
 
 		DEBUG_REQ(PLL_WARN, req, "aborting waiting req");
 
