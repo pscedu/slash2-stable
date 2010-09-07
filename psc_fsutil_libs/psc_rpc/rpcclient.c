@@ -162,7 +162,7 @@ pscrpc_prep_req_from_pool(struct pscrpc_request_pool *pool)
 
 	request = psc_lentry_obj(pool->prp_req_list.next, struct pscrpc_request,
 			     rq_list);
-	psclist_del(&request->rq_list);
+	psclist_del(&request->rq_list, );
 	freelock(&pool->prp_lock);
 
 	psc_assert(request->rq_reqmsg);
@@ -178,10 +178,9 @@ pscrpc_prep_req_from_pool(struct pscrpc_request_pool *pool)
 #endif
 
 struct pscrpc_request *
-pscrpc_prep_req_pool(struct pscrpc_import *imp,
-		     uint32_t version, int opcode, int count,
-		     int *lengths, char **bufs,
-		     struct pscrpc_request_pool *pool)
+pscrpc_prep_req_pool(struct pscrpc_import *imp, uint32_t version,
+    int opcode, int count, int *lengths, char **bufs,
+    struct pscrpc_request_pool *pool)
 {
 	struct pscrpc_request *request = NULL;
 	int rc;
@@ -1168,9 +1167,10 @@ pscrpc_set_destroy(struct pscrpc_request_set *set)
 	psc_assert(set->set_remaining == 0 || set->set_remaining == n);
 
 	psclist_for_each_safe(tmp, next, &set->set_requests) {
-		struct pscrpc_request *req =
-			psc_lentry_obj(tmp, struct pscrpc_request, rq_set_chain_lentry);
-		psclist_del(&req->rq_set_chain_lentry, &set->set_requests);
+		struct pscrpc_request *req = psc_lentry_obj(tmp,
+		    struct pscrpc_request, rq_set_chain_lentry);
+		psclist_del(&req->rq_set_chain_lentry,
+		    &set->set_requests);
 
 		psc_assert(req->rq_phase == expected_phase);
 
