@@ -188,20 +188,18 @@ _psc_realloc(void *p, size_t size, int flags)
 		psc_hashtbl_add_item(&psc_memallocs, pma);
 		/* XXX mprotect PROT_NONE the pma itself */
 
+		if ((flags & PAF_NOLOG) == 0)
+			psclog_debug("alloc [guard] %p len %zd : "
+			    "user %p len %zd : guard %p len %zd\n",
+			    pma->pma_allocbase, size,
+			    pma->pma_userbase, pma->pma_userlen,
+			    pma->pma_guardbase, psc_pagesize -
+			    pma->pma_userlen % psc_pagesize);
+
 		newp = pma->pma_userbase;
-
-		psclog_debug("alloc [guard] %p len %zd : "
-		    "user %p len %zd : guard %p len %zd\n",
-		    pma->pma_allocbase, size,
-		    pma->pma_userbase, pma->pma_userlen,
-		    pma->pma_guardbase, psc_pagesize -
-		    pma->pma_userlen % psc_pagesize);
-
 		size = specsize;
-
-	} else
+	}
 #endif
-	psclog_debug("alloc [noguard] %p len %zd\n", newp, size);
 
 	if (flags & PAF_LOCK) {
 		/* Disallow realloc(p, sz, PAF_LOCK) for now. */
