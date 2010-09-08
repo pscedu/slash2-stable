@@ -171,20 +171,16 @@ psclist_del(struct psclist_head *e, __unusedx const void *hd)
 static __inline int
 psc_listhd_empty(const struct psclist_head *hd)
 {
-	struct psc_listentry *fe, *le;
-
-	fe = psc_listhd_first(hd);
-	le = psc_listhd_last(hd);
 #ifdef PFL_DEBUG
 	psc_assert(hd->plh_magic == PLENT_MAGIC);
 	psc_assert(hd->plh_owner == hd);
-	psc_assert(fe && le);
-	if (fe == hd)
-		psc_assert(le == hd);
-	if (le == hd)
-		psc_assert(fe == hd);
+	psc_assert(psc_listhd_first(hd) && psc_listhd_last(hd));
+	if (psc_listhd_first(hd) == hd)
+		psc_assert(psc_listhd_last(hd) == hd);
+	if (psc_listhd_last(hd) == hd)
+		psc_assert(psc_listhd_first(hd) == hd);
 #endif
-	return (fe == hd);
+	return (psc_listhd_first(hd) == hd);
 }
 
 /**
