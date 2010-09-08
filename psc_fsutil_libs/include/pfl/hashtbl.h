@@ -59,6 +59,7 @@ struct psc_hashent {
 #define PHTF_STR	(1 << 0)	/* IDs are strings */
 #define PHTF_RESORT	(1 << 1)	/* reorder queues on lookup */
 #define PHTF_NOMEMGUARD	(1 << 2)	/* disable memalloc guard */
+#define PHTF_NOLOG	(1 << 3)	/* do not psclog */
 
 /* Lookup flags. */
 #define PHLF_NONE	0		/* no lookup flags specified */

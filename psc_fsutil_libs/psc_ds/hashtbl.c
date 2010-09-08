@@ -71,6 +71,8 @@ _psc_hashtbl_init(struct psc_hashtbl *t, int flags,
 	pafl = 0;
 	if (flags & PHTF_NOMEMGUARD)
 	    pafl |= PAF_NOGUARD;
+	if (flags & PHTF_NOLOG)
+	    pafl |= PAF_NOLOG;
 
 	memset(t, 0, sizeof(*t));
 	INIT_PSC_LISTENTRY(&t->pht_lentry);
