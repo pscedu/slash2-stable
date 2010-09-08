@@ -20,6 +20,7 @@
 #include <sys/types.h>
 #include <sys/mman.h>
 
+#include <err.h>
 #include <errno.h>
 #include <stdint.h>
 #include <stdlib.h>
@@ -30,6 +31,10 @@
 #include "pfl/str.h"
 #include "psc_util/alloc.h"
 #include "psc_util/log.h"
+
+#ifdef PFL_DEBUG
+#  define GUARD_AFTER (PFL_DEBUG > 1)
+#endif
 
 long			psc_pagesize;
 
@@ -59,10 +64,26 @@ _psc_realloc(void *p, size_t size, int flags)
 	void *newp;
 
 #ifdef PFL_DEBUG
+	int guard_after = GUARD_AFTER;
 	struct psc_memalloc *pma;
 	size_t specsize;
 
+	if (flags & PAF_PAGEALIGN)
+		guard_after = 0;
+
 	if ((flags & PAF_NOGUARD) == 0) {
+		if (p) {
+			pma = psc_hashtbl_searchdel(&psc_memallocs,
+			    NULL, &p);
+			psc_assert(pma);
+			p = pma->pma_allocbase;
+
+			if (mprotect(pma->pma_allocbase, psc_pagesize +
+			    PSC_ALIGN(pma->pma_userlen, psc_pagesize),
+			    PROT_READ | PROT_WRITE) == -1)
+				psc_fatal("mprotect");
+		}
+
 		specsize = size;
 
 		if (size == 0)
@@ -77,20 +98,29 @@ _psc_realloc(void *p, size_t size, int flags)
 
  retry:
 	if ((flags & PAF_PAGEALIGN) && p == NULL) {
-		/* XXX can posix_memalign(sz=0) return NULL like realloc(0, 0) can? */
+		/*
+		 * XXX can posix_memalign(sz=0) return NULL like
+		 * realloc(0, 0) can?
+		 */
 		rc = posix_memalign(&newp, psc_pagesize, size);
 		if (rc) {
 			errno = rc;
 			newp = NULL;
 		}
 	} else {
-		newp = realloc(p, size);
-		if (newp == NULL && size == 0) {
-			psc_assert(p);
+		if (p && size == 0) {
+			/*
+			 * realloc(3) to zero on glibc returns NULL
+			 * unconditionally, so specifically catch this
+			 * and do a manual free and zero-length
+			 * malloc(3).
+			 */
+			free(p);
+			p = NULL;
 			newp = malloc(0);
 			psc_assert(newp);
-			goto out;
-		}
+		} else
+			newp = realloc(p, size);
 	}
 	if (newp == NULL) {
 		/*
@@ -103,10 +133,10 @@ _psc_realloc(void *p, size_t size, int flags)
 			goto retry;
 		}
 		if (flags & PAF_CANFAIL) {
-			psc_error("malloc");
+			psc_error("malloc/realloc");
 			return (NULL);
 		}
-		psc_fatal("malloc");
+		err(1, "malloc/realloc");
 	}
 	if (flags & PAF_LOCK) {
 		/* Disallow realloc(p, sz, PAF_LOCK) for now. */
@@ -125,30 +155,62 @@ _psc_realloc(void *p, size_t size, int flags)
 	}
 	if (p == NULL && (flags & PAF_NOZERO) == 0)
 		memset(newp, 0, size);
- out:
+
 #ifdef PFL_DEBUG
 	if ((flags & PAF_NOGUARD) == 0) {
-		if (p == NULL)
+		/* Zero out any newly realloc()'d region */
+		if (p && specsize > pma->pma_userlen &&
+		    (flags & PAF_NOZERO) == 0)
+			memset((char *)newp + pma->pma_userlen, 0,
+			    specsize - pma->pma_userlen);
 
-		pma = malloc(sizeof(*pma));
-		psc_assert(pma);
-		psc_hashent_init(&psc_memallocs, pma);
+		if (p == NULL) {
+			/*
+			 * XXX consider using guard region for this to
+			 * save on malloc overhead.
+			 */
+			pma = calloc(1, sizeof(*pma));
+			psc_assert(pma);
+			psc_hashent_init(&psc_memallocs, pma);
+		}
 
-		pma->pma_start_base = newp;
-		pma->pma_end_base = newp + size - psc_pagesize;
-		pma->pma_total_size = size;
-		pma->pma_offset = size -
-		    psc_pagesize - specsize;
-		newp = pma->pma_base = newp + pma->pma_offset;
+		pma->pma_userlen = specsize;
+		pma->pma_allocbase = newp;
 
-		if (mmap(pma->pma_start_base, pma->pma_offset,
-		    PROT_NONE, MAP_FIXED, -1, 0))
-			psc_fatal("mmap");
-		if (mmap(pma->pma_end_base, psc_pagesize,
-		    PROT_NONE, MAP_FIXED, -1, 0))
-			psc_fatal("mmap");
+		if (guard_after) {
+			pma->pma_userbase = (char *)newp + specsize;
+			pma->pma_guardbase = (char *)newp;
+
+			if (mprotect(newp, PSC_ALIGN(specsize,
+			    psc_pagesize), PROT_READ | PROT_WRITE))
+				err(1, "mprotect");
+			if (mprotect((char *)newp +
+			    PSC_ALIGN(specsize, psc_pagesize),
+			    psc_pagesize, PROT_NONE))
+				err(1, "mprotect");
+
+			newp = (char *)newp + pma->pma_guardlen;
+		} else {
+			pma->pma_userbase = (char *)newp + psc_pagesize;
+			pma->pma_guardbase = (char *)pma->pma_userbase +
+			    specsize;
+
+			if (mprotect(pma->pma_userbase,
+			    PSC_ALIGN(specsize, psc_pagesize),
+			    PROT_READ | PROT_WRITE))
+				err(1, "mprotect");
+			if (mprotect(newp, psc_pagesize, PROT_NONE))
+				err(1, "mprotect");
+
+			newp = (char *)newp + psc_pagesize;
+		}
+		pma->pma_guardlen = psc_pagesize - specsize %
+		    psc_pagesize;
+		memset(pma->pma_guardbase, PFL_MEMGUARD_MAGIC,
+		    pma->pma_guardlen);
 
 		psc_hashtbl_add_item(&psc_memallocs, pma);
+		/* XXX mprotect PROT_NONE the pma itself */
 	}
 #endif
 	return (newp);
@@ -190,22 +252,28 @@ psc_strdup(const char *str)
 }
 
 void
-_psc_free_guards(void *p)
+_psc_free(void *p)
 {
 #ifdef PFL_DEBUG
-	struct psc_memalloc *pma, q;
+	struct psc_memalloc *pma;
+	size_t len;
 
-	q.pma_base = p;
-
-	pma = psc_hashtbl_searchdel(&psc_memallocs, NULL, &q);
+	pma = psc_hashtbl_searchdel(&psc_memallocs, NULL, &p);
 	psc_assert(pma);
 
-	if (munmap(pma->pma_start_base, pma->pma_offset) == -1)
-		psc_fatal("munmap");
-	if (munmap(pma->pma_end_base, psc_pagesize) == -1)
-		psc_fatal("munmap");
+	psc_assert(pfl_memchk(pma->pma_guardbase,
+	    PFL_MEMGUARD_MAGIC, pma->pma_guardlen));
 
-	p = pma->pma_start_base;
+	len = pma->pma_userlen;
+	if (len == 0)
+		len = 1;
+
+	/* disable access to region */
+	if (mprotect(pma->pma_allocbase, psc_pagesize +
+	    PSC_ALIGN(len, psc_pagesize), PROT_NONE) == -1)
+		psc_fatal("mprotect");
+
+	p = pma->pma_allocbase;
 	free(pma);
 #endif
 	free(p);
@@ -215,7 +283,8 @@ void
 psc_memallocs_init(void)
 {
 #ifdef PFL_DEBUG
-	psc_hashtbl_init(&psc_memallocs, 0, struct psc_memalloc,
-	    pma_base, pma_hentry, 2048 - 1, NULL, "memallocs");
+	psc_hashtbl_init(&psc_memallocs, PHTF_NOMEMGUARD | PHTF_NOLOG,
+	    struct psc_memalloc, pma_userbase, pma_hentry, 2047, NULL,
+	    "memallocs");
 #endif
 }

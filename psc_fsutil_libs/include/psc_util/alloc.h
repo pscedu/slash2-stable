@@ -44,19 +44,54 @@
 #define PSC_TRY_REALLOC(p, sz)	psc_realloc((p), (sz), PAF_CANFAIL)
 
 #ifdef PFL_DEBUG
+
+/*
+ * Memory guard legend:
+ *	X - no access (PROT_NONE)
+ *	U - user region
+ *	G - guard byte, value checked in free()
+ *	< - left fill
+ *	> - right fill
+ *
+ * If PFL_DEBUG==1, the layout looks like this ("guard after"):
+ *
+ *	 <----- PAGE -----> <----- PAGE ----->
+ *	+-----------+------+------------------+
+ *	| GGGGGGGG> | UUUU | XXXXXXXXXXXXXXXX |
+ *	+-----------+------+------------------+
+ *
+ * Otherwise, the layout looks like this ("guard before"):
+ *
+ *	 <----- PAGE -----> <----- PAGE ----->
+ *	+------------------+------+-----------+
+ *	| XXXXXXXXXXXXXXXX | UUUU | <GGGGGGGG |
+ *	+------------------+------+-----------+
+ *
+ * If PAF_ALIGN was specified, case #2 must always be used.  The guard
+ * checks should hopefully be enough to catch out-of-range memory
+ * access.
+ *
+ * When a region of memory is freed, the page(s) constituting the area
+ * are mapped PROT_NONE.
+ */
+
 struct psc_memalloc {
-	void			*pma_start_base;
-	void			*pma_end_base;
-	void			*pma_base;
-	int			 pma_total_size;
-	int			 pma_offset;
+	void			*pma_allocbase;		/* guarded alloc region */
+	void			*pma_userbase;		/* user alloc region */
+	void			*pma_guardbase;		/* user alloc region */
+	int			 pma_guardlen;
+	size_t			 pma_userlen;
 	struct psc_hashent	 pma_hentry;
 };
+
+#define PMAF_GUARD_AFTER	(1 << 0)		/* force guard after (PAF_ALIGN) */
+
+#define PFL_MEMGUARD_MAGIC	0x7a
 #endif
 
 #define psc_free_nolog(p)						\
 	do {								\
-		_psc_free_guards(p);					\
+		_psc_free(p);						\
 		(p) = NULL;						\
 	} while (0)
 
@@ -110,10 +145,10 @@ struct psc_memalloc {
 #define PAF_LOCK	(1 << 3)	/* lock mem regions as unswappable */
 #define PAF_NOZERO	(1 << 4)	/* don't force memory zeroing */
 #define PAF_NOLOG	(1 << 5)	/* don't psclog this allocation */
-#define PAF_NOGUARD	(1 << 6)	/* do not allow mlock(2) guards (internal) */
+#define PAF_NOGUARD	(1 << 6)	/* do not use memory guards */
 
 void	 *psc_calloc(size_t, size_t, int);
-void	 _psc_free_guards(void *);
+void	 _psc_free(void *);
 void	*_psc_realloc(void *, size_t, int);
 char	 *psc_strdup(const char *);
 
