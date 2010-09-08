@@ -41,7 +41,7 @@ atomic_t		psc_fault_count;
 struct psc_hashtbl	psc_fault_table;
 
 void
-psc_fault_init(void)
+psc_faults_init(void)
 {
 	atomic_set(&psc_fault_count, 0);
 

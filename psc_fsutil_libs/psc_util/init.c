@@ -32,7 +32,6 @@
 #include "psc_util/log.h"
 
 psc_spinlock_t	  psc_umask_lock = SPINLOCK_INIT;
-extern long	  psc_pagesize;
 
 __weak void
 pscthrs_init(void)
@@ -45,7 +44,7 @@ psc_memnode_init(void)
 }
 
 __weak void
-psc_fault_init(void)
+psc_faults_init(void)
 {
 }
 
@@ -110,7 +109,8 @@ pfl_init(void)
 	psc_subsys_register(PSS_GEN, "gen");
 	psc_subsys_register(PSS_TMP, "tmp");
 
-	psc_fault_init();
+	psc_faults_init();
+	psc_memallocs_init();
 
 	psc_pagesize = sysconf(_SC_PAGESIZE);
 	if (psc_pagesize == -1)

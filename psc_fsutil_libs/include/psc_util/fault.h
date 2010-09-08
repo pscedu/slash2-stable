@@ -45,15 +45,16 @@ struct psc_fault {
 #define	psc_fault_lock(pflt)	spinlock(&(pflt)->pflt_lock)
 #define	psc_fault_unlock(pflt)	freelock(&(pflt)->pflt_lock)
 
+void	psc_faults_init(void);
+
 struct psc_fault *
 	psc_fault_lookup(const char *);
 int	psc_fault_add(const char *);
 void	psc_fault_here(const char *, int *);
-void	psc_fault_init(void);
 int	psc_fault_register(const char *, int, int, int, int, int);
 int	psc_fault_remove(const char *);
 
-extern struct psc_hashtbl psc_fault_table;
-extern const char *psc_fault_names[];
+extern struct psc_hashtbl	 psc_fault_table;
+extern const char		*psc_fault_names[];
 
 #endif /* _PFL_FAULT_H_ */
