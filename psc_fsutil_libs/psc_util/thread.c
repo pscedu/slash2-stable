@@ -212,6 +212,8 @@ _pscthr_finish_init(struct psc_thread *thr)
 		psc_fatal("sigaction");
 
 	pll_addtail(&psc_threads, thr);
+
+	psclog_debug("%s %lx alive", thr->pscthr_name, thr->pscthr_pthread);
 }
 
 /**
