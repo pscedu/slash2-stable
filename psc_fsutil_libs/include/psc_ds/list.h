@@ -174,11 +174,11 @@ psc_listhd_empty(const struct psclist_head *hd)
 #ifdef PFL_DEBUG
 	psc_assert(hd->plh_magic == PLENT_MAGIC);
 	psc_assert(hd->plh_owner == hd);
-	psc_assert(psc_lentry_prev(hd) && psc_lentry_next(hd));
-	if (psc_lentry_prev(hd) == hd)
-		psc_assert(psc_lentry_next(hd) == hd);
-	if (psc_lentry_next(hd) == hd)
-		psc_assert(psc_lentry_prev(hd) == hd);
+	psc_assert(psc_listhd_first(hd) && psc_listhd_last(hd));
+	if (psc_listhd_first(hd) == hd)
+		psc_assert(psc_listhd_last(hd) == hd);
+	if (psc_listhd_last(hd) == hd)
+		psc_assert(psc_listhd_first(hd) == hd);
 #endif
 	return (psc_listhd_first(hd) == hd);
 }
