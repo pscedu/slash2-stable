@@ -18,10 +18,11 @@
  */
 
 /*
- * mlists are psclist_caches that can interface with multiwaits.
+ * mlists are psc_listcaches that can interface with multiwaits.
  */
 
 #include <stdarg.h>
+#include <string.h>
 
 #include "psc_ds/list.h"
 #include "psc_ds/lockedlist.h"
