@@ -120,8 +120,8 @@ struct psc_memalloc {
 
 #define psc_free_mlocked(p, size)					\
 	do {								\
-		if ((p) && munlock((p), (size)) == -1)			\
-			psc_fatal("munlock %p", (p));			\
+		if (p)							\
+			_psc_munlock((p), (size));			\
 		PSCFREE(p);						\
 	} while (0)
 
@@ -129,8 +129,8 @@ struct psc_memalloc {
 
 #define psc_free_mlocked_aligned(p, size)				\
 	do {								\
-		if ((p) && munlock((p), (size)) == -1)			\
-			psc_fatal("munlock %p", (p));			\
+		if (p)							\
+			_psc_munlock((p), (size));			\
 		PSCFREE(p);						\
 	} while (0)
 
@@ -150,6 +150,7 @@ void	 *psc_calloc(size_t, size_t, int);
 void	 _psc_free(void *);
 void	*_psc_realloc(void *, size_t, int);
 char	 *psc_strdup(const char *);
+void	 _psc_munlock(void *, size_t);
 
 void	  psc_memallocs_init(void);
 

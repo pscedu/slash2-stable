@@ -66,7 +66,7 @@ _psc_realloc(void *p, size_t size, int flags)
 #ifdef PFL_DEBUG
 	int guard_after = GUARD_AFTER;
 	struct psc_memalloc *pma;
-	size_t specsize;
+	size_t specsize, oldlen;
 
 	if (flags & PAF_PAGEALIGN)
 		guard_after = 0;
@@ -77,7 +77,9 @@ _psc_realloc(void *p, size_t size, int flags)
 			    NULL, &p);
 			psc_assert(pma);
 			p = pma->pma_allocbase;
+			oldlen = pma->pma_userlen;
 
+			/* remove protections since the region may move */
 			if (mprotect(pma->pma_allocbase, psc_pagesize +
 			    PSC_ALIGN(pma->pma_userlen, psc_pagesize),
 			    PROT_READ | PROT_WRITE) == -1)
@@ -140,16 +142,10 @@ _psc_realloc(void *p, size_t size, int flags)
 
 #ifdef PFL_DEBUG
 	if ((flags & PAF_NOGUARD) == 0) {
-		/* Zero out any newly realloc()'d region */
-		if (p && specsize > pma->pma_userlen &&
-		    (flags & PAF_NOZERO) == 0)
-			memset((char *)newp + pma->pma_userlen, 0,
-			    specsize - pma->pma_userlen);
-
 		if (p == NULL) {
 			/*
 			 * XXX consider using guard region for this to
-			 * save on malloc overhead.
+			 * save on two malloc overhead.
 			 */
 			pma = calloc(1, sizeof(*pma));
 			psc_assert(pma);
@@ -198,6 +194,10 @@ _psc_realloc(void *p, size_t size, int flags)
 
 		newp = pma->pma_userbase;
 		size = specsize;
+
+		/* Zero out any newly realloc()'d region */
+		if (p && size > oldlen && (flags & PAF_NOZERO) == 0)
+			memset((char *)newp + oldlen, 0, size - oldlen);
 	}
 #endif
 
@@ -282,6 +282,13 @@ _psc_free(void *p)
 	free(pma);
 #endif
 	free(p);
+}
+
+void
+_psc_munlock(void *p, size_t len)
+{
+	if (munlock(p, len) == -1)
+		psc_fatal("munlock %p", p);
 }
 
 void

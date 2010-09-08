@@ -58,14 +58,16 @@ main(int argc, char *argv[])
 	if (argc)
 		usage();
 
+	psclog_max("begin");
+
 	for (i = 0; i < 79; i++)
 		if (psc_vbitmap_next(&vba, &j) != 1)
-			errx(1, "psc_vbitmap_next failed with auto");
+			psc_fatalx("psc_vbitmap_next failed with auto");
 		else if (j != (size_t)i)
-			errx(1, "elem %d is not supposed to be %zu", i, j);
+			psc_fatalx("elem %d is not supposed to be %zu", i, j);
 
 	if ((vb = psc_vbitmap_new(213)) == NULL)
-		err(1, "psc_vbitmap_new");
+		psc_fatal("psc_vbitmap_new");
 
 	psc_vbitmap_setrange(vb, 13, 9);
 	for (i = 0; i < 13; i++)
@@ -93,14 +95,14 @@ main(int argc, char *argv[])
 
 	for (i = 0; i < 213; i++)
 		if (!psc_vbitmap_next(vb, &elem))
-			errx(1, "out of elements at pos %d", i);
+			psc_fatalx("out of elements at pos %d", i);
 
 	if (psc_vbitmap_next(vb, &elem))
-		errx(1, "an unexpected extra unused elem was found; pos=%zu", elem);
+		psc_fatalx("an unexpected extra unused elem was found; pos=%zu", elem);
 
 	psc_vbitmap_getstats(vb, &u, &t);
 	if (u != 213 || t != 213)
-		errx(1, "wrong size, got %d,%d want %d", u, t, 213);
+		psc_fatalx("wrong size, got %d,%d want %d", u, t, 213);
 
 	psc_vbitmap_unsetrange(vb, 13, 2);
 	for (i = 0; i < 13; i++)
@@ -111,18 +113,18 @@ main(int argc, char *argv[])
 	    psc_assert(psc_vbitmap_get(vb, i) == 1);
 
 	if (psc_vbitmap_resize(vb, NELEM) == -1)
-		err(1, "psc_vbitmap_new");
+		psc_fatal("psc_vbitmap_new");
 
 	psc_assert(psc_vbitmap_getsize(vb) == NELEM);
 
 	/* fill up bitmap */
 	for (i = 0; i < NELEM - 211; i++)
 		if (!psc_vbitmap_next(vb, &elem))
-			errx(1, "out of elements at iter %d", i);
+			psc_fatalx("out of elements at iter %d", i);
 
 	/* try one past end of filled bitmap */
 	if (psc_vbitmap_next(vb, &elem))
-		errx(1, "an unexpected extra unused elem was found; pos=%zu", elem);
+		psc_fatalx("an unexpected extra unused elem was found; pos=%zu", elem);
 
 	/* free some slots */
 	for (i = 0, elem = 0; elem < NELEM; i++, elem += NELEM / 10)
@@ -130,25 +132,25 @@ main(int argc, char *argv[])
 
 	t = psc_vbitmap_nfree(vb);
 	if (t != i)
-		errx(1, "wrong number of free elements, has=%d, want=%d", t, i);
+		psc_fatalx("wrong number of free elements; has=%d want=%d", t, i);
 	psc_vbitmap_invert(vb);
 	t = psc_vbitmap_nfree(vb);
 	if (t != NELEM - i)
-		errx(1, "wrong number of inverted elements, has=%d, want=%d",
+		psc_fatalx("wrong number of inverted elements; has=%d want=%d",
 		    t, NELEM - i);
 	psc_vbitmap_invert(vb);
 	t = psc_vbitmap_nfree(vb);
 	if (t != i)
-		errx(1, "wrong number of original elements, has=%d, want=%d", t, i);
+		psc_fatalx("wrong number of original elements; has=%d want=%d", t, i);
 
 	/* try to re-grab the freed slots */
 	for (i = 0; i <= 10; i++)
 		if (!psc_vbitmap_next(vb, &elem))
-			errx(1, "out of elements, request %d/%d", i, 10);
+			psc_fatalx("out of elements, request %d/%d", i, 10);
 
 	/* try one past end of filled bitmap */
 	if (psc_vbitmap_next(vb, &elem))
-		errx(1, "an unexpected extra unused elem was found; pos=%zu", elem);
+		psc_fatalx("an unexpected extra unused elem was found; pos=%zu", elem);
 
 	psc_vbitmap_free(vb);
 	exit(0);
