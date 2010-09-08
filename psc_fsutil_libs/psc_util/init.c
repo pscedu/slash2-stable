@@ -74,14 +74,6 @@ psc_enter_debugger(const char *str)
 {
 	psc_log(PLL_MAX, "enter debugger (%s)", str);
 	kill(0, SIGINT);
-	/*
-	 * Another way to drop into debugger is to use
-	 *
-	 *	kill(0, SIGINT);
-	 *
-	 * However, it does not seem to work well with backtrace (bt) command.
-	 */
-//	__asm__ __volatile__ ("int3");
 }
 
 void
@@ -92,9 +84,15 @@ pfl_init(void)
 	if (atomic_xchg(&init, 1))
 		errx(1, "pfl_init: already initialized");
 
+	psc_log_init();
 	pscthrs_init();
 	psc_memnode_init();
-	psc_log_init();
+
+	psc_pagesize = sysconf(_SC_PAGESIZE);
+	if (psc_pagesize == -1)
+		psc_fatal("sysconf");
+
+	psc_memallocs_init();
 
 	if (getenv("PSC_DUMPSTACK")) {
 		if (signal(SIGSEGV, psc_dumpstack) == SIG_ERR)
@@ -110,9 +108,4 @@ pfl_init(void)
 	psc_subsys_register(PSS_TMP, "tmp");
 
 	psc_faults_init();
-	psc_memallocs_init();
-
-	psc_pagesize = sysconf(_SC_PAGESIZE);
-	if (psc_pagesize == -1)
-		psc_fatal("sysconf");
 }
