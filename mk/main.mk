@@ -218,6 +218,7 @@ ifneq ($(filter ${PFL_BASE}/psc_util/pthrutil.c,${SRCS}),)
 endif
 
 ifneq ($(filter ${PFL_BASE}/psc_util/thread.c,${SRCS}),)
+  SRCS+=	${PFL_BASE}/psc_ds/lockedlist.c
   SRCS+=	${PFL_BASE}/psc_util/subsys.c
   SRCS+=	${PFL_BASE}/psc_util/waitq.c
 endif
@@ -228,6 +229,20 @@ endif
 
 ifneq ($(filter ${PFL_BASE}/psc_util/log.c,${SRCS}),)
   SRCS+=	${PFL_BASE}/psc_util/alloc.c
+endif
+
+ifneq ($(filter ${PFL_BASE}/psc_util/alloc.c,${SRCS}),)
+  ifneq (${DEBUG},0)
+    SRCS+=	${PFL_BASE}/psc_ds/hashtbl.c
+  endif
+endif
+
+ifneq ($(filter ${PFL_BASE}/psc_ds/hashtbl.c,${SRCS}),)
+  SRCS+=	${PFL_BASE}/psc_ds/lockedlist.c
+endif
+
+ifneq ($(filter ${PFL_BASE}/psc_ds/lockedlist.c,${SRCS}),)
+  SRCS+=	${PFL_BASE}/psc_util/list.c
 endif
 
 # OBJDIR is added to .c below since lex/yacc intermediate files get generated there.

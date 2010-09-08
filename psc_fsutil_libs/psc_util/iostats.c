@@ -19,6 +19,7 @@
 
 #include <stdarg.h>
 #include <stdio.h>
+#include <string.h>
 
 #include "psc_ds/lockedlist.h"
 #include "psc_util/iostats.h"

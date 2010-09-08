@@ -26,19 +26,15 @@
 
 #include <sys/types.h>
 
-#include <stddef.h>
-#include <string.h>
-
 #include "psc_ds/list.h"
-#include "psc_util/alloc.h"
 #include "psc_util/lock.h"
 #include "psc_util/log.h"
 
 struct psc_lockedlist {
-	struct psclist_head	 pll_listhd;			/* this must be first */
-	int			 pll_nitems;			/* # items on list */
-	int			 pll_flags;			/* see PLLF_* below */
-	ptrdiff_t		 pll_offset;			/* offset of the sub-structure linkage */
+	struct psclist_head	 pll_listhd;		/* this must be first */
+	int			 pll_nitems;		/* # items on list */
+	int			 pll_flags;		/* see PLLF_* below */
+	ptrdiff_t		 pll_offset;		/* offset of the sub-structure linkage */
 	union {
 		psc_spinlock_t	 pllu_lock;
 		psc_spinlock_t	*pllu_lockp;
@@ -47,7 +43,7 @@ struct psc_lockedlist {
 #define pll_lock	pll_u.pllu_lock
 };
 
-#define PLLF_EXTLOCK		(1 << 0)			/* lock is external */
+#define PLLF_EXTLOCK		(1 << 0)		/* lock is external */
 #define _PLLF_FLSHFT		(1 << 1)
 
 #define PLL_GETLOCK(pll)	((pll)->pll_flags & PLLF_EXTLOCK ?	\
@@ -89,19 +85,6 @@ _pll_entry2obj(struct psc_lockedlist *pll, struct psc_listentry *e)
 	return ((char *)e - pll->pll_offset);
 }
 
-static __inline void
-_pll_init(struct psc_lockedlist *pll, int offset, psc_spinlock_t *lkp)
-{
-	memset(pll, 0, sizeof(*pll));
-	INIT_PSCLIST_HEAD(&pll->pll_listhd);
-	if (lkp) {
-		pll->pll_flags |= PLLF_EXTLOCK;
-		pll->pll_lockp = lkp;
-	} else
-		INIT_SPINLOCK(&pll->pll_lock);
-	pll->pll_offset = offset;
-}
-
 #define pll_init(pll, type, member, lock)				\
 	_pll_init((pll), offsetof(type, member), (lock))
 
@@ -116,68 +99,17 @@ pll_nitems(struct psc_lockedlist *pll)
 	return (n);
 }
 
-#define pll_empty(pll)			(pll_nitems(pll) == 0)
+#define pll_empty(pll)		(pll_nitems(pll) == 0)
 
-static __inline void
-pll_remove(struct psc_lockedlist *pll, void *p)
-{
-	struct psc_listentry *e;
-	int locked;
-
-	e = _pll_obj2entry(pll, p);
-	locked = PLL_RLOCK(pll);
-	psclist_del(e, &pll->pll_listhd);
-	psc_assert(pll->pll_nitems > 0);
-	pll->pll_nitems--;
-	PLL_URLOCK(pll, locked);
-}
-
-#define PLLBF_HEAD	0
-#define PLLBF_TAIL	(1 << 1)
-#define PLLBF_PEEK	(1 << 2)
-
-static __inline void
-_pll_add(struct psc_lockedlist *pll, void *p, int flags)
-{
-	struct psc_listentry *e;
-	int locked;
-
-	e = _pll_obj2entry(pll, p);
-	locked = PLL_RLOCK(pll);
-	if (flags & PLLBF_TAIL)
-		psclist_add_tail(e, &pll->pll_listhd);
-	else
-		psclist_add_head(e, &pll->pll_listhd);
-	pll->pll_nitems++;
-	PLL_URLOCK(pll, locked);
-}
+#define PLLBF_HEAD		0
+#define PLLBF_TAIL		(1 << 1)
+#define PLLBF_PEEK		(1 << 2)
 
 #define pll_addstack(pll, p)	_pll_add((pll), (p), PLLBF_HEAD)
 #define pll_addqueue(pll, p)	_pll_add((pll), (p), PLLBF_TAIL)
 #define pll_addhead(pll, p)	_pll_add((pll), (p), PLLBF_HEAD)
 #define pll_addtail(pll, p)	_pll_add((pll), (p), PLLBF_TAIL)
 #define pll_add(pll, p)		_pll_add((pll), (p), PLLBF_TAIL)
-
-static __inline void *
-_pll_get(struct psc_lockedlist *pll, int flags)
-{
-	int locked;
-	void *p;
-
-	locked = PLL_RLOCK(pll);
-	if (pll_empty(pll)) {
-		PLL_URLOCK(pll, locked);
-		return (NULL);
-	}
-	if (flags & PLLBF_TAIL)
-		p = psc_listhd_last_obj2(&pll->pll_listhd, void *, pll->pll_offset);
-	else
-		p = psc_listhd_first_obj2(&pll->pll_listhd, void *, pll->pll_offset);
-	if ((flags & PLLBF_PEEK) == 0)
-		pll_remove(pll, p);
-	PLL_URLOCK(pll, locked);
-	return (p);
-}
 
 #define pll_gethead(pll)	_pll_get((pll), PLLBF_HEAD)
 #define pll_gettail(pll)	_pll_get((pll), PLLBF_TAIL)
@@ -187,66 +119,15 @@ _pll_get(struct psc_lockedlist *pll, int flags)
 #define pll_peekhead(pll)	_pll_get((pll), PLLBF_HEAD | PLLBF_PEEK)
 #define pll_peektail(pll)	_pll_get((pll), PLLBF_TAIL | PLLBF_PEEK)
 
-static __inline int
-pll_conjoint(struct psc_lockedlist *pll, void *p)
-{
-	struct psclist_head *e;
-	int locked, conjoint;
-
-	e = _pll_obj2entry(pll, p);
-	locked = PLL_RLOCK(pll);
-	conjoint = psclist_conjoint(e, &pll->pll_listhd);
-	PLL_URLOCK(pll, locked);
-	return (conjoint);
-}
-
-/**
- * pll_add_sorted - Add an item to a list in its sorted position.
- * @pll: list to add to.
- * @p: item to add.
- * @cmpf: item comparison routine.
- */
-static __inline void
-pll_add_sorted(struct psc_lockedlist *pll, void *p,
-    int (*cmpf)(const void *, const void *))
-{
-	struct psc_listentry *e;
-	int locked;
-
-	e = _pll_obj2entry(pll, p);
-	locked = PLL_RLOCK(pll);
-	if (pll_empty(pll))
-		psclist_add_head(e, &pll->pll_listhd);
-	else
-		psclist_add_sorted(&pll->pll_listhd, e, cmpf,
-		    pll->pll_offset);
-	pll->pll_nitems++;
-	PLL_URLOCK(pll, locked);
-}
-
-/**
- * pll_sort - Sort items in a list.
- * @pll: list to sort.
- * @sortf: sort routine, such as qsort(3) or mergesort(3).
- * @cmpf: comparison routine passed as argument to sortf() which
- *	operates on two pointer-to-a-pointer of type.
- */
-static __inline void
-pll_sort(struct psc_lockedlist *pll, void (*sortf)(void *, size_t,
-    size_t, int (*)(const void *, const void *)),
-    int (*cmpf)(const void *, const void *))
-{
-	int locked;
-	void *p;
-
-	locked = PLL_RLOCK(pll);
-	if (pll->pll_nitems > 1) {
-		p = PSCALLOC(pll->pll_nitems * sizeof(p));
-		psclist_sort(p, &pll->pll_listhd, pll->pll_nitems,
-		    pll->pll_offset, sortf, cmpf);
-		PSCFREE(p);
-	}
-	PLL_URLOCK(pll, locked);
-}
+void  _pll_add(struct psc_lockedlist *, void *, int);
+void   pll_add_sorted(struct psc_lockedlist *, void *, int (*)(const
+	    void *, const void *));
+int    pll_conjoint(struct psc_lockedlist *, void *);
+void *_pll_get(struct psc_lockedlist *, int);
+void  _pll_init(struct psc_lockedlist *, int, psc_spinlock_t *);
+void   pll_remove(struct psc_lockedlist *, void *);
+void   pll_sort(struct psc_lockedlist *, void (*)(void *, size_t,
+	    size_t, int (*)(const void *, const void *)), int (*)(const void *,
+	    const void *));
 
 #endif /* _PFL_LOCKEDLIST_H_ */

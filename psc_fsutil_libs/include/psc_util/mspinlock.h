@@ -28,6 +28,7 @@
 
 #include <pthread.h>
 #include <sched.h>
+#include <string.h>
 #include <unistd.h>
 
 #include "psc_ds/vbitmap.h"
