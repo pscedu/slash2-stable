@@ -99,6 +99,7 @@ pfl
 - eliminate flags arg to pscthr_init()
 - things in pscpool should be mmap()'d PROT_NONE
 - eliminate prt_alive
+- ensure any void * used as hash table idmemb are uint64_t for 32-bit
 
 mem pool|flg|#free|#use|total| %use|  min|   max|th|#grows|#shrnx|#em|#wa
 --------+---+-----+----+-----+-----+-----+------+--+------+------+---+---
