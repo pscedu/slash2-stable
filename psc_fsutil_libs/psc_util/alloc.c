@@ -89,8 +89,7 @@ _psc_realloc(void *p, size_t size, int flags)
 		if (size == 0)
 			size = 1;
 
-		size = psc_pagesize + PSC_ALIGN(size,
-		    psc_pagesize);
+		size = psc_pagesize + PSC_ALIGN(size, psc_pagesize);
 
 		flags |= PAF_PAGEALIGN;
 	}
@@ -138,23 +137,6 @@ _psc_realloc(void *p, size_t size, int flags)
 		}
 		err(1, "malloc/realloc");
 	}
-	if (flags & PAF_LOCK) {
-		/* Disallow realloc(p, sz, PAF_LOCK) for now. */
-		if (p)
-			psc_fatalx("psc_realloc: unable to lock realloc'd mem");
-		if (mlock(newp, size) == -1) {
-			if (flags & PAF_CANFAIL) {
-				save_errno = errno;
-				PSCFREE(p);
-				psc_error("mlock");
-				errno = save_errno;
-				return (NULL);
-			}
-			psc_fatal("mlock");
-		}
-	}
-	if (p == NULL && (flags & PAF_NOZERO) == 0)
-		memset(newp, 0, size);
 
 #ifdef PFL_DEBUG
 	if ((flags & PAF_NOGUARD) == 0) {
@@ -188,8 +170,6 @@ _psc_realloc(void *p, size_t size, int flags)
 			    PSC_ALIGN(specsize, psc_pagesize),
 			    psc_pagesize, PROT_NONE))
 				err(1, "mprotect");
-
-			newp = (char *)newp + pma->pma_guardlen;
 		} else {
 			pma->pma_userbase = (char *)newp + psc_pagesize;
 			pma->pma_guardbase = (char *)pma->pma_userbase +
@@ -201,18 +181,45 @@ _psc_realloc(void *p, size_t size, int flags)
 				err(1, "mprotect");
 			if (mprotect(newp, psc_pagesize, PROT_NONE))
 				err(1, "mprotect");
-
-			newp = (char *)newp + psc_pagesize;
 		}
-		pma->pma_guardlen = psc_pagesize - specsize %
-		    psc_pagesize;
 		memset(pma->pma_guardbase, PFL_MEMGUARD_MAGIC,
-		    pma->pma_guardlen);
+		    psc_pagesize - pma->pma_userlen % psc_pagesize);
 
 		psc_hashtbl_add_item(&psc_memallocs, pma);
 		/* XXX mprotect PROT_NONE the pma itself */
-	}
+
+		newp = pma->pma_userbase;
+
+		psclog_debug("alloc [guard] %p len %zd : "
+		    "user %p len %zd : guard %p len %zd\n",
+		    pma->pma_allocbase, size,
+		    pma->pma_userbase, pma->pma_userlen,
+		    pma->pma_guardbase, psc_pagesize -
+		    pma->pma_userlen % psc_pagesize);
+
+		size = specsize;
+
+	} else
 #endif
+	psclog_debug("alloc [noguard] %p len %zd\n", newp, size);
+
+	if (flags & PAF_LOCK) {
+		/* Disallow realloc(p, sz, PAF_LOCK) for now. */
+		if (p)
+			psc_fatalx("unable to lock realloc'd mem");
+		if (mlock(newp, size) == -1) {
+			if (flags & PAF_CANFAIL) {
+				save_errno = errno;
+				PSCFREE(p);
+				psc_error("mlock");
+				errno = save_errno;
+				return (NULL);
+			}
+			psc_fatal("mlock");
+		}
+	}
+	if (p == NULL && (flags & PAF_NOZERO) == 0)
+		memset(newp, 0, size);
 	return (newp);
 }
 
@@ -261,8 +268,8 @@ _psc_free(void *p)
 	pma = psc_hashtbl_searchdel(&psc_memallocs, NULL, &p);
 	psc_assert(pma);
 
-	psc_assert(pfl_memchk(pma->pma_guardbase,
-	    PFL_MEMGUARD_MAGIC, pma->pma_guardlen));
+	psc_assert(pfl_memchk(pma->pma_guardbase, PFL_MEMGUARD_MAGIC,
+	    psc_pagesize - pma->pma_userlen % psc_pagesize));
 
 	len = pma->pma_userlen;
 	if (len == 0)

@@ -79,7 +79,6 @@ struct psc_memalloc {
 	void			*pma_allocbase;		/* guarded alloc region */
 	void			*pma_userbase;		/* user alloc region */
 	void			*pma_guardbase;		/* user alloc region */
-	int			 pma_guardlen;
 	size_t			 pma_userlen;
 	struct psc_hashent	 pma_hentry;
 };
