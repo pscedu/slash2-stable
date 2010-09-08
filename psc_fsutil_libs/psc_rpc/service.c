@@ -632,6 +632,25 @@ pscrpc_retry_rqbds(void *arg)
 	return (-ETIMEDOUT);
 }
 
+int
+pscrpcthr_waitevent(struct psc_thread *thr, struct pscrpc_service *svc)
+{
+	int rc;
+
+	spinlock(&svc->srv_lock);
+	rc = (!pscthr_run() &&
+	     svc->srv_n_difficult_replies == 0) ||
+	    (!psc_listhd_empty(&svc->srv_idle_rqbds) &&
+	     svc->srv_rqbd_timeout == 0) ||
+	    !psc_listhd_empty(&svc->srv_reply_queue) ||
+	    (!psc_listhd_empty(&svc->srv_request_queue) &&
+	     (svc->srv_n_difficult_replies == 0 ||
+	      svc->srv_n_active_reqs <
+	      (svc->srv_nthreads - 1)));
+	freelock(&svc->srv_lock);
+	return (rc);
+}
+
 __static void
 pscrpcthr_main(struct psc_thread *thr)
 {
@@ -664,8 +683,8 @@ pscrpcthr_main(struct psc_thread *thr)
 	spinlock(&svc->srv_lock);
 	svc->srv_nthreads++;
 	psclist_add(&rs->rs_list_entry, &svc->srv_free_rs_list);
-	freelock(&svc->srv_lock);
 	psc_waitq_wakeall(&svc->srv_free_rs_waitq);
+	freelock(&svc->srv_lock);
 
 	CDEBUG(D_NET, "service thread started");
 
@@ -677,9 +696,9 @@ pscrpcthr_main(struct psc_thread *thr)
 		struct l_wait_info lwi = LWI_TIMEOUT(svc->srv_rqbd_timeout,
 						     pscrpc_retry_rqbds, svc);
 
-		//lc_watchdog_disable(watchdog);
-		//l_wait_event_exclusive(svc->srv_waitq,
-		/*
+#if 0
+		lc_watchdog_disable(watchdog);
+		l_wait_event_exclusive(svc->srv_waitq,
 		psc_dbg("run %d, svc->srv_n_difficult_replies %d, "
 		       "psc_listhd_empty(&svc->srv_idle_rqbds) %d,  svc->srv_rqbd_timeout %d "
 		       "psc_listhd_empty(&svc->srv_reply_queue) %d, psc_listhd_empty(&svc->srv_request_queue) %d "
@@ -696,24 +715,14 @@ pscrpcthr_main(struct psc_thread *thr)
 			(svc->srv_n_difficult_replies == 0 ||
 			 svc->srv_n_active_reqs < (svc->srv_nthreads - 1)))
 		       );
-		*/
+#endif
 		pscrpc_svr_wait_event(&svc->srv_waitq,
-				   (!(thr->pscthr_flags & PTF_RUN) &&
-				    svc->srv_n_difficult_replies == 0) ||
-				   (!psc_listhd_empty(&svc->srv_idle_rqbds) &&
-				    svc->srv_rqbd_timeout == 0) ||
-				   !psc_listhd_empty(&svc->srv_reply_queue) ||
-				   (!psc_listhd_empty(&svc->srv_request_queue) &&
-				    (svc->srv_n_difficult_replies == 0 ||
-				     svc->srv_n_active_reqs <
-				     (svc->srv_nthreads - 1))),
-				   &lwi, NULL);
-		//		&lwi, &svc->srv_lock);
+		    pscrpcthr_waitevent(thr, svc), &lwi, NULL);
 
 		pscrpc_check_rqbd_pool(svc);
 		/*
-		 * this has to be mod'ed to support the io threads
-		 *  put'ing replies onto this list after they've sync'ed
+		 * this has to be mod'ed to support I/O threads
+		 *  PUT'ing replies onto this list after they've sync'ed
 		 *  the blocks to disk.. paul
 		 */
 		//if (!psc_listhd_empty(&svc->srv_reply_queue))
