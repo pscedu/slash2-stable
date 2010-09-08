@@ -80,7 +80,7 @@ _pscthr_destroy(void *arg)
 		free(thr->pscthr_private);
 	}
 	PSCFREE(thr->pscthr_loglevels);
-	free(thr);
+	PSCFREE(thr);
 }
 
 /**
