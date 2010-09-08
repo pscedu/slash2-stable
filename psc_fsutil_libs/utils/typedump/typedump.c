@@ -239,6 +239,7 @@ main(int argc, char *argv[])
 	PRTYPE(struct psc_journal_xidhndl);
 	PRTYPE(struct psc_listcache);
 	PRTYPE(struct psc_lockedlist);
+	PRTYPE(struct psc_memalloc);
 	PRTYPE(struct psc_memnode);
 	PRTYPE(struct psc_meter);
 	PRTYPE(struct psc_mlist);
