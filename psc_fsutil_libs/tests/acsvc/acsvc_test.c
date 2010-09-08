@@ -46,6 +46,7 @@ main(int argc, char *argv[])
 	char *dir, fn[PATH_MAX];
 	int fd;
 
+	pfl_init();
 	progname = argv[0];
 	while (getopt(argc, argv, "") != -1)
 		usage();
@@ -53,7 +54,6 @@ main(int argc, char *argv[])
 	if (argc)
 		usage();
 
-	pfl_init();
 	acsvc_init(0, "test", argv);
 
 	dir = strdup(progname);
