@@ -143,6 +143,7 @@ spawn(void *(*f)(void *), const char *namefmt, ...)
 	int rc;
 
 	thr = PSCALLOC(sizeof(*thr));
+	INIT_PSC_LISTENTRY(&thr->lentry);
 
 	psclist_add_tail(&thr->lentry, &thrs);
 
