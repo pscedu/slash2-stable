@@ -97,6 +97,8 @@ pfl
   int init+pthread_key
 - dont access nseen on lc/mlist without a lock
 - eliminate flags arg to pscthr_init()
+- things in pscpool should be mmap()'d PROT_NONE
+- eliminate prt_alive
 
 mem pool|flg|#free|#use|total| %use|  min|   max|th|#grows|#shrnx|#em|#wa
 --------+---+-----+----+-----+-----+-----+------+--+------+------+---+---
