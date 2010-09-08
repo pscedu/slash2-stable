@@ -40,7 +40,7 @@ struct psc_hashbkt {
 
 struct psc_hashtbl {
 	char			  pht_name[PSC_HTNAME_MAX];
-	struct psclist_head	  pht_lentry;
+	struct psc_listentry	  pht_lentry;
 	psc_spinlock_t		  pht_lock;
 	ptrdiff_t		  pht_idoff;	/* offset into item to its ID field */
 	ptrdiff_t		  pht_hentoff;	/* offset to the hash table linkage */
@@ -51,13 +51,14 @@ struct psc_hashtbl {
 };
 
 struct psc_hashent {
-	struct psclist_head	  phe_lentry;
+	struct psc_listentry	  phe_lentry;
 };
 
 /* Table flags. */
 #define PHTF_NONE	0		/* no table flags specified */
 #define PHTF_STR	(1 << 0)	/* IDs are strings */
 #define PHTF_RESORT	(1 << 1)	/* reorder queues on lookup */
+#define PHTF_NOMEMGUARD	(1 << 2)	/* disable memalloc guard */
 
 /* Lookup flags. */
 #define PHLF_NONE	0		/* no lookup flags specified */
@@ -124,7 +125,6 @@ void	 psc_hashtbl_add_item(const struct psc_hashtbl *, void *);
 void	 psc_hashtbl_prstats(const struct psc_hashtbl *);
 void	 psc_hashtbl_getstats(const struct psc_hashtbl *, int *, int *, int *, int *);
 void	 psc_hashtbl_destroy(struct psc_hashtbl *);
-void	 psc_hashtbl_remove(const struct psc_hashtbl *, void *);
 void	*_psc_hashtbl_search(const struct psc_hashtbl *, int, const void *,
 	    void (*)(void *), const void *);
 void	_psc_hashtbl_init(struct psc_hashtbl *, int, ptrdiff_t, ptrdiff_t, int,

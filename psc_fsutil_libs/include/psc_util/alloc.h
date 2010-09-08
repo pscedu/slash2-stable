@@ -28,6 +28,10 @@
 
 #include "psc_util/log.h"
 
+#ifdef PFL_DEBUG
+#include "pfl/hashtbl.h"
+#endif
+
 #ifndef HAVE_POSIX_MEMALIGN
 # include "pfl/compat/posix_memalign.h"
 #endif
@@ -40,139 +44,19 @@
 #define PSC_TRY_REALLOC(p, sz)	psc_realloc((p), (sz), PAF_CANFAIL)
 
 #ifdef PFL_DEBUG
-
-#define PSC_ALLOC_MAGIC		UINT64_C(0xb4fa95df87b8a7fd)
-
-#define psc_free_nolog(p)						\
-	do {								\
-		uint64_t *_tp;						\
-									\
-		_tp = (void *)(p);					\
-		if (_tp) {						\
-			_tp--;						\
-			psc_assert(*_tp == PSC_ALLOC_MAGIC);		\
-		}							\
-		free(_tp);						\
-		(p) = NULL;						\
-	} while (0)
-
-#define PSCFREE(p)							\
-	do {								\
-		psc_debugs(PSS_MEM, "free(%p) [guard]", (p));		\
-		psc_free_nolog(p);					\
-	} while (0)
-
-#define _psc_free_noguard(p)						\
-	do {								\
-		psc_debugs(PSS_MEM, "free(%p) [noguard]", (p));		\
-		free(p);						\
-		(p) = NULL;						\
-	} while (0)
-
-#define _PSC_REALLOC(oldp, sz, fl)					\
-	{								\
-		uint64_t *_kp, *_op;					\
-		size_t _tsz = (sz);					\
-		void *_p;						\
-									\
-		/* if user is realloc()'ing, adjust for guard value */	\
-		_op = (void *)oldp;					\
-		if (_op)						\
-			_op--;						\
-									\
-		/* new mem chunk should have space for 1 or 2 guards */	\
-		_tsz += sizeof(*_kp);					\
-		if (((fl) & (PAF_PAGEALIGN | PAF_LOCK)) == PAF_LOCK)	\
-			_tsz += sizeof(*_kp);				\
-									\
-		_p = _psc_realloc(_op, _tsz, (fl));			\
-									\
-		if (_p && ((fl) & PAF_PAGEALIGN) == 0) {		\
-			_kp = _p;					\
-			*_kp++ = PSC_ALLOC_MAGIC;			\
-			_p = _kp;					\
-		}							\
-									\
-		if (((fl) & PAF_NOLOG) == 0) {				\
-			if (oldp)					\
-				psc_debugs(PSS_MEM, "realloc(%p)=%p "	\
-				    "sz=%zu fl=%d", (oldp), _p, _tsz,	\
-				    (fl));				\
-			else						\
-				psc_debugs(PSS_MEM, "alloc()=%p "	\
-				    "sz=%zu fl=%d", _p, _tsz, (fl));	\
-		}							\
-									\
-		if (_p && ((fl) & PAF_LOCK)) {				\
-			_kp = (void *)((char *)_p + (sz));		\
-			*_kp = PSC_ALLOC_MAGIC;				\
-		}							\
-									\
-		_p;							\
-	}
-
-/**
- * psc_free_mlocked - Free mlock(2)'d memory.
- * @p: mlock(2)'d memory chunk to free.
- * @size: size of chunk.
- *
- * If PFL_DEBUG is enabled, this will check guards before and after the
- * memory region.
- */
-#define psc_free_mlocked(p, size)					\
-	do {								\
-		void *_p = (p);						\
-		uint64_t *_kp;						\
-									\
-		if (_p && munlock((uint64_t *)_p - 1,			\
-		    (size) + sizeof(uint64_t) * 2) == -1)		\
-			psc_fatal("munlock %p", _p);			\
-		if (_p) {						\
-			_kp = (uint64_t *)((char *)_p + (size));	\
-			psc_assert(*_kp == PSC_ALLOC_MAGIC);		\
-		}							\
-		PSCFREE(p);						\
-	} while (0)
-
-/**
- * psc_free_aligned - Free page-aligned memory.
- * @p: memory chunk to free.
- *
- * posix_memalign(3) states that free(3) may be used to release memory.
- *
- * No guards are provided since the region must start at a page-aligned
- * boundary and we don't have the length.
- */
-#define psc_free_aligned(p)	_psc_free_noguard(p)
-
-/**
- * psc_free_mlocked_aligned - Free mlock(2)'d, page-aligned memory.
- * @p: memory chunk to free.
- * @size: size of chunk.
- *
- * If PFL_DEBUG is enabled, this will check guards only after the memory
- * region.
- */
-#define psc_free_mlocked_aligned(p, size)				\
-	do {								\
-		void *_p = (p);						\
-									\
-		if (_p && munlock(_p, (size) + sizeof(uint64_t)) == -1)	\
-			psc_fatal("munlock %p", _p);			\
-		if (_p) {						\
-			uint64_t *_kp;					\
-									\
-			_kp = (uint64_t *)((char *)_p + (size));	\
-			psc_assert(*_kp == PSC_ALLOC_MAGIC);		\
-		}							\
-		_psc_free_noguard(p);					\
-	} while (0)
-
-#else
+struct psc_memalloc {
+	void			*pma_start_base;
+	void			*pma_end_base;
+	void			*pma_base;
+	int			 pma_total_size;
+	int			 pma_offset;
+	struct psc_hashent	 pma_hentry;
+};
+#endif
 
 #define psc_free_nolog(p)						\
 	do {								\
-		free(p);						\
+		_psc_free_guards(p);					\
 		(p) = NULL;						\
 	} while (0)
 
@@ -216,8 +100,6 @@
 		PSCFREE(p);						\
 	} while (0)
 
-#endif
-
 #define psc_alloc(sz, fl)	(_PSC_REALLOC(NULL, (sz), (fl)))
 #define psc_realloc(p, sz, fl)	(_PSC_REALLOC((p),  (sz), (fl)))
 
@@ -228,11 +110,19 @@
 #define PAF_LOCK	(1 << 3)	/* lock mem regions as unswappable */
 #define PAF_NOZERO	(1 << 4)	/* don't force memory zeroing */
 #define PAF_NOLOG	(1 << 5)	/* don't psclog this allocation */
+#define PAF_NOGUARD	(1 << 6)	/* do not allow mlock(2) guards (internal) */
 
+void	 *psc_calloc(size_t, size_t, int);
+void	 _psc_free_guards(void *);
 void	*_psc_realloc(void *, size_t, int);
-void	*psc_calloc(size_t, size_t, int);
-char	*psc_strdup(const char *);
+char	 *psc_strdup(const char *);
 
-extern long psc_pagesize;
+void	  psc_memallocs_init(void);
+
+extern long			psc_pagesize;
+
+#ifdef DEBUG
+extern struct psc_hashtbl	psc_memallocs;
+#endif
 
 #endif /* _PFL_ALLOC_H_ */

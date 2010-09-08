@@ -63,16 +63,20 @@ _psc_hashtbl_init(struct psc_hashtbl *t, int flags,
     int (*cmpf)(const void *, const void *), const char *fmt, ...)
 {
 	struct psc_hashbkt *b;
+	int i, pafl;
 	va_list ap;
-	int i;
 
 	psc_assert(nbuckets > 0);
+
+	pafl = 0;
+	if (flags & PHTF_NOMEMGUARD)
+	    pafl |= PAF_NOGUARD;
 
 	memset(t, 0, sizeof(*t));
 	INIT_PSC_LISTENTRY(&t->pht_lentry);
 	INIT_SPINLOCK(&t->pht_lock);
 	t->pht_nbuckets = nbuckets;
-	t->pht_buckets = PSCALLOC(nbuckets * sizeof(*t->pht_buckets));
+	t->pht_buckets = psc_alloc(nbuckets * sizeof(*t->pht_buckets), pafl);
 	t->pht_flags = flags;
 	t->pht_idoff = idoff;
 	t->pht_hentoff = hentoff;

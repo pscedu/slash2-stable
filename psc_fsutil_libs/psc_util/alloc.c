@@ -2,7 +2,7 @@
 /*
  * %PSC_START_COPYRIGHT%
  * -----------------------------------------------------------------------------
- * Copyright (c) 2008-2010, Pittsburgh Supercomputing Center (PSC).
+ * Copyright (c) 2007-2010, Pittsburgh Supercomputing Center (PSC).
  *
  * Permission to use, copy, and modify this software and its documentation
  * without fee for personal use or non-commercial use within your organization
@@ -31,7 +31,11 @@
 #include "psc_util/alloc.h"
 #include "psc_util/log.h"
 
-long psc_pagesize;
+long			psc_pagesize;
+
+#ifdef PFL_DEBUG
+struct psc_hashtbl	psc_memallocs;
+#endif
 
 /**
  * _psc_pool_reapsome - Provide an overrideable reclaimer for when pools
@@ -54,8 +58,26 @@ _psc_realloc(void *p, size_t size, int flags)
 	int rc, save_errno;
 	void *newp;
 
+#ifdef PFL_DEBUG
+	struct psc_memalloc *pma;
+	size_t specsize;
+
+	if ((flags & PAF_NOGUARD) == 0) {
+		specsize = size;
+
+		if (size == 0)
+			size = 1;
+
+		size = psc_pagesize + PSC_ALIGN(size,
+		    psc_pagesize);
+
+		flags |= PAF_PAGEALIGN;
+	}
+#endif
+
  retry:
 	if ((flags & PAF_PAGEALIGN) && p == NULL) {
+		/* XXX can posix_memalign(sz=0) return NULL like realloc(0, 0) can? */
 		rc = posix_memalign(&newp, psc_pagesize, size);
 		if (rc) {
 			errno = rc;
@@ -67,7 +89,7 @@ _psc_realloc(void *p, size_t size, int flags)
 			psc_assert(p);
 			newp = malloc(0);
 			psc_assert(newp);
-			return (newp);
+			goto out;
 		}
 	}
 	if (newp == NULL) {
@@ -101,9 +123,34 @@ _psc_realloc(void *p, size_t size, int flags)
 			psc_fatal("mlock");
 		}
 	}
-	/* XXX provide a way to zero out new regions of realloc'd mem */
 	if (p == NULL && (flags & PAF_NOZERO) == 0)
 		memset(newp, 0, size);
+ out:
+#ifdef PFL_DEBUG
+	if ((flags & PAF_NOGUARD) == 0) {
+		if (p == NULL)
+
+		pma = malloc(sizeof(*pma));
+		psc_assert(pma);
+		psc_hashent_init(&psc_memallocs, pma);
+
+		pma->pma_start_base = newp;
+		pma->pma_end_base = newp + size - psc_pagesize;
+		pma->pma_total_size = size;
+		pma->pma_offset = size -
+		    psc_pagesize - specsize;
+		newp = pma->pma_base = newp + pma->pma_offset;
+
+		if (mmap(pma->pma_start_base, pma->pma_offset,
+		    PROT_NONE, MAP_FIXED, -1, 0))
+			psc_fatal("mmap");
+		if (mmap(pma->pma_end_base, psc_pagesize,
+		    PROT_NONE, MAP_FIXED, -1, 0))
+			psc_fatal("mmap");
+
+		psc_hashtbl_add_item(&psc_memallocs, pma);
+	}
+#endif
 	return (newp);
 }
 
@@ -140,4 +187,35 @@ psc_strdup(const char *str)
 	p = PSCALLOC(len);
 	strlcpy(p, str, len);
 	return (p);
+}
+
+void
+_psc_free_guards(void *p)
+{
+#ifdef PFL_DEBUG
+	struct psc_memalloc *pma, q;
+
+	q.pma_base = p;
+
+	pma = psc_hashtbl_searchdel(&psc_memallocs, NULL, &q);
+	psc_assert(pma);
+
+	if (munmap(pma->pma_start_base, pma->pma_offset) == -1)
+		psc_fatal("munmap");
+	if (munmap(pma->pma_end_base, psc_pagesize) == -1)
+		psc_fatal("munmap");
+
+	p = pma->pma_start_base;
+	free(pma);
+#endif
+	free(p);
+}
+
+void
+psc_memallocs_init(void)
+{
+#ifdef PFL_DEBUG
+	psc_hashtbl_init(&psc_memallocs, 0, struct psc_memalloc,
+	    pma_base, pma_hentry, 2048 - 1, NULL, "memallocs");
+#endif
 }
