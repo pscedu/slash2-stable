@@ -96,7 +96,7 @@ main(int argc, char *argv[])
 			errx(1, "out of elements at pos %d", i);
 
 	if (psc_vbitmap_next(vb, &elem))
-		errx(1, "got another expected unused elem! %zu", elem);
+		errx(1, "an unexpected extra unused elem was found; pos=%zu", elem);
 
 	psc_vbitmap_getstats(vb, &u, &t);
 	if (u != 213 || t != 213)
@@ -122,7 +122,7 @@ main(int argc, char *argv[])
 
 	/* try one past end of filled bitmap */
 	if (psc_vbitmap_next(vb, &elem))
-		errx(1, "got an expected unused elem: %zu", elem);
+		errx(1, "an unexpected extra unused elem was found; pos=%zu", elem);
 
 	/* free some slots */
 	for (i = 0, elem = 0; elem < NELEM; i++, elem += NELEM / 10)
@@ -148,7 +148,7 @@ main(int argc, char *argv[])
 
 	/* try one past end of filled bitmap */
 	if (psc_vbitmap_next(vb, &elem))
-		errx(1, "got another expected unused elem! %zu", elem);
+		errx(1, "an unexpected extra unused elem was found; pos=%zu", elem);
 
 	psc_vbitmap_free(vb);
 	exit(0);
