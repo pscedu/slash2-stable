@@ -154,7 +154,7 @@ void	 _psc_munlock(void *, size_t);
 
 void	  psc_memallocs_init(void);
 
-extern long			psc_pagesize;
+extern int			psc_pagesize;
 
 #ifdef DEBUG
 extern struct psc_hashtbl	psc_memallocs;

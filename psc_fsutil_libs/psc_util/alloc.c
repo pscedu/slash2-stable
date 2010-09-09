@@ -36,7 +36,7 @@
 #  define GUARD_AFTER (PFL_DEBUG > 1)
 #endif
 
-long			psc_pagesize;
+int			psc_pagesize;
 
 #ifdef PFL_DEBUG
 struct psc_hashtbl	psc_memallocs;
@@ -79,7 +79,14 @@ _psc_realloc(void *p, size_t size, int flags)
 			p = pma->pma_allocbase;
 			oldlen = pma->pma_userlen;
 
-			/* remove protections since the region may move */
+			/*
+			 * Remove protection restrictions since the
+			 * region may move, although maybe we should
+			 * keep it around in case someone tries to
+			 * access the old pointer...
+			 *
+			 * XXX if CANFAIL occurs, restore protections.
+			 */
 			if (mprotect(pma->pma_allocbase, psc_pagesize +
 			    PSC_ALIGN(pma->pma_userlen, psc_pagesize),
 			    PROT_READ | PROT_WRITE) == -1)
@@ -98,7 +105,11 @@ _psc_realloc(void *p, size_t size, int flags)
 #endif
 
  retry:
-	if ((flags & PAF_PAGEALIGN) && p == NULL) {
+	if (flags & PAF_PAGEALIGN) {
+#ifndef PFL_DEBUG
+		if (p)
+			errx(1, "realloc of page-aligned is not implemented");
+#endif
 		/*
 		 * XXX can posix_memalign(sz=0) return NULL like
 		 * realloc(0, 0) can?
@@ -107,6 +118,11 @@ _psc_realloc(void *p, size_t size, int flags)
 		if (rc) {
 			errno = rc;
 			newp = NULL;
+#ifdef PFL_DEBUG
+		} else if (p) {
+			memcpy(newp, p, pma->pma_userlen);
+			free(p);
+#endif
 		}
 	} else {
 		if (p && size == 0) {
@@ -126,7 +142,7 @@ _psc_realloc(void *p, size_t size, int flags)
 	if (newp == NULL) {
 		/*
 		 * We didn't get our memory.  Try reaping some pools
-		 * if enabled and retry, otherwise, handle failure.
+		 * if enabled and retry; otherwise, handle failure.
 		 */
 		if ((flags & PAF_NOREAP) == 0) {
 			_psc_pool_reapsome(size);
@@ -142,6 +158,8 @@ _psc_realloc(void *p, size_t size, int flags)
 
 #ifdef PFL_DEBUG
 	if ((flags & PAF_NOGUARD) == 0) {
+		int rem = psc_pagesize - specsize % psc_pagesize;
+
 		if (p == NULL) {
 			/*
 			 * XXX consider using guard region for this to
@@ -156,41 +174,39 @@ _psc_realloc(void *p, size_t size, int flags)
 		pma->pma_allocbase = newp;
 
 		if (guard_after) {
-			pma->pma_userbase = (char *)newp + specsize;
+			pma->pma_userbase = (char *)newp + rem;
 			pma->pma_guardbase = (char *)newp;
 
-			if (mprotect(newp, PSC_ALIGN(specsize,
-			    psc_pagesize), PROT_READ | PROT_WRITE))
+			if (mprotect(newp, PSC_ALIGN(specsize, psc_pagesize),
+			    PROT_READ | PROT_WRITE) == -1)
 				err(1, "mprotect");
-			if (mprotect((char *)newp +
-			    PSC_ALIGN(specsize, psc_pagesize),
-			    psc_pagesize, PROT_NONE))
+			if (mprotect((char *)newp + size - psc_pagesize,
+			    psc_pagesize, PROT_NONE) == -1)
 				err(1, "mprotect");
 		} else {
 			pma->pma_userbase = (char *)newp + psc_pagesize;
 			pma->pma_guardbase = (char *)pma->pma_userbase +
 			    specsize;
 
-			if (mprotect(pma->pma_userbase,
+			if (mprotect(newp + psc_pagesize,
 			    PSC_ALIGN(specsize, psc_pagesize),
-			    PROT_READ | PROT_WRITE))
+			    PROT_READ | PROT_WRITE) == -1)
 				err(1, "mprotect");
-			if (mprotect(newp, psc_pagesize, PROT_NONE))
+			if (mprotect(newp, psc_pagesize, PROT_NONE) == -1)
 				err(1, "mprotect");
 		}
-		memset(pma->pma_guardbase, PFL_MEMGUARD_MAGIC,
-		    psc_pagesize - pma->pma_userlen % psc_pagesize);
+		if (rem != psc_pagesize)
+			memset(pma->pma_guardbase, PFL_MEMGUARD_MAGIC, rem);
 
 		psc_hashtbl_add_item(&psc_memallocs, pma);
 		/* XXX mprotect PROT_NONE the pma itself */
 
 		if ((flags & PAF_NOLOG) == 0)
 			psclog_debug("alloc [guard] %p len %zd : "
-			    "user %p len %zd : guard %p len %zd\n",
+			    "user %p len %zd : guard %p len %d\n",
 			    pma->pma_allocbase, size,
 			    pma->pma_userbase, pma->pma_userlen,
-			    pma->pma_guardbase, psc_pagesize -
-			    pma->pma_userlen % psc_pagesize);
+			    pma->pma_guardbase, rem);
 
 		newp = pma->pma_userbase;
 		size = specsize;
@@ -202,7 +218,10 @@ _psc_realloc(void *p, size_t size, int flags)
 #endif
 
 	if (flags & PAF_LOCK) {
-		/* Disallow realloc(p, sz, PAF_LOCK) for now. */
+		/*
+		 * Disallow realloc(p, sz, PAF_LOCK) because we can't
+		 * munlock the old region as we don't have the size.
+		 */
 		if (p)
 			psc_fatalx("unable to lock realloc'd mem");
 		if (mlock(newp, size) == -1) {
@@ -266,8 +285,9 @@ _psc_free(void *p)
 	pma = psc_hashtbl_searchdel(&psc_memallocs, NULL, &p);
 	psc_assert(pma);
 
-	psc_assert(pfl_memchk(pma->pma_guardbase, PFL_MEMGUARD_MAGIC,
-	    psc_pagesize - pma->pma_userlen % psc_pagesize));
+	if (pma->pma_userlen % psc_pagesize)
+		psc_assert(pfl_memchk(pma->pma_guardbase, PFL_MEMGUARD_MAGIC,
+		    psc_pagesize - pma->pma_userlen % psc_pagesize));
 
 	len = pma->pma_userlen;
 	if (len == 0)
@@ -275,7 +295,7 @@ _psc_free(void *p)
 
 	/* disable access to region */
 	if (mprotect(pma->pma_allocbase, psc_pagesize +
-	    PSC_ALIGN(len, psc_pagesize), PROT_NONE) == -1)
+	    PSC_ALIGN(len, psc_pagesize), PROT_READ | PROT_WRITE) == -1)
 		psc_fatal("mprotect");
 
 	p = pma->pma_allocbase;
