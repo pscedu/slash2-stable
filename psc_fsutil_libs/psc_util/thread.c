@@ -77,10 +77,10 @@ _pscthr_destroy(void *arg)
 
 	if (thr->pscthr_dtor) {
 		thr->pscthr_dtor(thr->pscthr_private);
-		free(thr->pscthr_private);
+		psc_free(thr->pscthr_private, PAF_NOLOG);
 	}
-	PSCFREE(thr->pscthr_loglevels);
-	PSCFREE(thr);
+	psc_free(thr->pscthr_loglevels, PAF_NOLOG);
+	psc_free(thr, PAF_NOLOG);
 }
 
 /**
@@ -123,6 +123,12 @@ _pscthr_sigusr2(__unusedx int sig)
 	ureqlock(&thr->pscthr_lock, locked);
 }
 
+void
+_pscthr_destroy_logdata(void *p)
+{
+	psc_free(p, PAF_NOLOG);
+}
+
 /**
  * pscthrs_init - Initialize threading subsystem.
  */
@@ -134,7 +140,7 @@ pscthrs_init(void)
 	rc = pthread_key_create(&psc_thrkey, _pscthr_destroy);
 	if (rc)
 		psc_fatalx("pthread_key_create: %s", strerror(rc));
-	rc = pthread_key_create(&psc_logkey, free);
+	rc = pthread_key_create(&psc_logkey, _pscthr_destroy_logdata);
 	if (rc)
 		psc_fatalx("pthread_key_create: %s", strerror(rc));
 }
@@ -261,7 +267,7 @@ _pscthr_begin(void *arg)
 
 	_pscthr_bind_memnode(oldthr);
 
-	/* Setup a localised copy of the thread. */
+	/* Setup a localized copy of the thread. */
 	thr = psc_alloc(sizeof(*thr), PAF_NOLOG);
 	INIT_PSC_LISTENTRY(&thr->pscthr_lentry);
 	psc_waitq_init(&thr->pscthr_waitq);
@@ -318,6 +324,14 @@ _pscthr_init(int type, int flags, void (*startf)(struct psc_thread *),
 	if (flags & PTF_PAUSED)
 		psc_fatalx("PTF_PAUSED specified");
 
+	/*
+	 * If there is a start routine, we are already in the pthread, *
+	 * so the memory should be local.   Otherwise, we'd like to
+	 * allocate it within the thread context for local storage.
+	 *
+	 * Either way, the storage will be released via psc_free() upon
+	 * thread exit.
+	 */
 	thr = startf ? &mythr : psc_alloc(sizeof(*thr), PAF_NOLOG);
 	memset(thr, 0, sizeof(*thr));
 	INIT_PSC_LISTENTRY(&thr->pscthr_lentry);
