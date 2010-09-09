@@ -187,12 +187,14 @@ _psc_poolmaster_getmgr(struct psc_poolmaster *p, int memnid)
 void
 _psc_pool_destroy_obj(struct psc_poolmgr *m, void *p)
 {
+	int flags;
+
 	if (p && m->ppm_destroyf)
 		m->ppm_destroyf(p);
+	flags = PAF_NOGUARD;
 	if (m->ppm_flags & PPMF_NOLOCK)
-		PSCFREE(p);
-	else
-		psc_free(p, PAF_LOCK, m->ppm_entsize);
+		flags |= PAF_LOCK;
+	psc_free(p, flags, m->ppm_entsize);
 }
 
 /**
@@ -220,7 +222,7 @@ psc_pool_grow(struct psc_poolmgr *m, int n)
 		POOL_URLOCK(m, locked);
 	}
 
-	flags = PAF_CANFAIL;
+	flags = PAF_CANFAIL | PAF_NOGUARD;
 	if ((m->ppm_flags & PPMF_NOLOCK) == 0)
 		flags |= PAF_LOCK;
 	for (i = 0; i < n; i++) {
