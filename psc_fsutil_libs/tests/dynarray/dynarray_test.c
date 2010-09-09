@@ -125,5 +125,7 @@ main(int argc, char *argv[])
 	psc_assert(psc_dynarray_bsearch(&da, PTR_b, cmp) == 4);
 	psc_assert(psc_dynarray_bsearch(&da, PTR_c, cmp) == 5);
 
+	psc_dynarray_free(&da);
+
 	exit(0);
 }
