@@ -70,7 +70,7 @@ main(int argc, char *argv[])
 
 	p = psc_alloc(8, PAF_LOCK);
 	*(uint64_t *)p = 0;
-	psc_free(p, PAF_LOCK, 8);
+	psc_free(p, PAF_LOCK, (size_t)8);
 
 	sz = 1024;
 	p = psc_alloc(sz, PAF_LOCK | PAF_PAGEALIGN);
