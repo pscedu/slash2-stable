@@ -26,11 +26,8 @@
 #include <stdint.h>
 #include <stdlib.h>
 
-#include "psc_util/log.h"
-
-#ifdef PFL_DEBUG
 #include "pfl/hashtbl.h"
-#endif
+#include "psc_util/log.h"
 
 #ifndef HAVE_POSIX_MEMALIGN
 # include "pfl/compat/posix_memalign.h"
@@ -42,6 +39,14 @@
 
 #define PSC_REALLOC(p, sz)	psc_realloc((p), (sz), 0)
 #define PSC_TRY_REALLOC(p, sz)	psc_realloc((p), (sz), PAF_CANFAIL)
+
+struct psc_memalloc {
+	void			*pma_allocbase;		/* guarded alloc region */
+	void			*pma_userbase;		/* user alloc region */
+	void			*pma_guardbase;		/* user alloc region */
+	size_t			 pma_userlen;
+	struct psc_hashent	 pma_hentry;
+};
 
 #ifdef PFL_DEBUG
 
@@ -74,14 +79,6 @@
  * When a region of memory is freed, the page(s) constituting the area
  * are mapped PROT_NONE.
  */
-
-struct psc_memalloc {
-	void			*pma_allocbase;		/* guarded alloc region */
-	void			*pma_userbase;		/* user alloc region */
-	void			*pma_guardbase;		/* user alloc region */
-	size_t			 pma_userlen;
-	struct psc_hashent	 pma_hentry;
-};
 
 #define PMAF_GUARD_AFTER	(1 << 0)		/* force guard after (PAF_ALIGN) */
 
