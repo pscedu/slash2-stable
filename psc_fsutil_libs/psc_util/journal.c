@@ -517,7 +517,6 @@ pjournal_scan_slots(struct psc_journal *pj)
 	 * We scan the log from the first physical entry to the last physical
 	 * one regardless where the log really starts and ends.
 	 */
-	psc_dynarray_init(&pj->pj_bufs);
 	jbuf = pjournal_alloc_buf(pj);
 	count = pj->pj_hdr->pjh_readahead;
 	psc_assert((pj->pj_total % count) == 0);
