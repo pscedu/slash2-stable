@@ -284,6 +284,17 @@ _psc_free(void *p, int flags, ...)
 {
 	va_list ap;
 
+	if ((flags & PAF_LOCK) && p) {
+		size_t len;
+
+		va_start(ap, flags);
+		len = va_arg(ap, size_t);
+		va_end(ap);
+
+		if (munlock(p, len) == -1)
+			psc_fatal("munlock %p", p);
+	}
+
 #ifdef PFL_DEBUG
 	struct psc_memalloc *pma;
 	size_t len;
@@ -310,16 +321,6 @@ _psc_free(void *p, int flags, ...)
 	}
 #endif
 
-	if ((flags & PAF_LOCK) && p) {
-		size_t len;
-
-		va_start(ap, flags);
-		len = va_arg(ap, size_t);
-		va_end(ap);
-
-		if (munlock(p, len) == -1)
-			psc_fatal("munlock %p", p);
-	}
 	free(p);
 }
 
