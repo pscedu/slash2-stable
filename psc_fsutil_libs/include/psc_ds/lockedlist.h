@@ -71,33 +71,8 @@ struct psc_lockedlist {
 	{ PSCLIST_HEAD_INIT((pll)->pll_listhd), 0, 0,			\
 	  offsetof(type, member), { SPINLOCK_INIT } }
 
-static __inline struct psc_listentry *
-_pll_obj2entry(struct psc_lockedlist *pll, void *p)
-{
-	psc_assert(p);
-	return ((void *)((char *)p + pll->pll_offset));
-}
-
-static __inline void *
-_pll_entry2obj(struct psc_lockedlist *pll, struct psc_listentry *e)
-{
-	psc_assert(e);
-	return ((char *)e - pll->pll_offset);
-}
-
 #define pll_init(pll, type, member, lock)				\
 	_pll_init((pll), offsetof(type, member), (lock))
-
-static __inline int
-pll_nitems(struct psc_lockedlist *pll)
-{
-	int n, locked;
-
-	locked = PLL_RLOCK(pll);
-	n = pll->pll_nitems;
-	PLL_URLOCK(pll, locked);
-	return (n);
-}
 
 #define pll_empty(pll)		(pll_nitems(pll) == 0)
 
@@ -129,5 +104,41 @@ void   pll_remove(struct psc_lockedlist *, void *);
 void   pll_sort(struct psc_lockedlist *, void (*)(void *, size_t,
 	    size_t, int (*)(const void *, const void *)), int (*)(const void *,
 	    const void *));
+
+static __inline struct psc_listentry *
+_pll_obj2entry(struct psc_lockedlist *pll, void *p)
+{
+	psc_assert(p);
+	return ((void *)((char *)p + pll->pll_offset));
+}
+
+static __inline void *
+_pll_entry2obj(struct psc_lockedlist *pll, struct psc_listentry *e)
+{
+	psc_assert(e);
+	return ((char *)e - pll->pll_offset);
+}
+
+static __inline int
+pll_nitems(struct psc_lockedlist *pll)
+{
+	int n, locked;
+
+	locked = PLL_RLOCK(pll);
+	n = pll->pll_nitems;
+	PLL_URLOCK(pll, locked);
+	return (n);
+}
+
+static __inline int
+psc_listhd_empty_locked(psc_spinlock_t *lk, struct psclist_head *hd)
+{
+	int locked, empty;
+
+	locked = reqlock(lk);
+	empty = psc_listhd_empty(hd);
+	ureqlock(lk, locked);
+	return (empty);
+}
 
 #endif /* _PFL_LOCKEDLIST_H_ */
