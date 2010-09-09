@@ -213,7 +213,13 @@ _pscthr_finish_init(struct psc_thread *thr)
 
 	pll_addtail(&psc_threads, thr);
 
-	psclog_debug("%s %lx alive", thr->pscthr_name, thr->pscthr_pthread);
+	/*
+	 * Do this allocation now instead during fatal() if malloc is
+	 * corrupted.
+	 */
+	psclog_getdata();
+	psclog_debug("%s <pthr %#lx thrid %ld> alive", thr->pscthr_name,
+	    thr->pscthr_pthread, (unsigned long)thr->pscthr_thrid);
 }
 
 /**
