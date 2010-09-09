@@ -88,17 +88,15 @@ struct psc_memalloc {
 #define PFL_MEMGUARD_MAGIC	0x7a
 #endif
 
-#define psc_free_nolog(p)						\
+#define psc_free(p, flags, ...)						\
 	do {								\
-		_psc_free(p);						\
+		if (((flags) & PAF_NOLOG) == 0)				\
+			psc_debugs(PSS_MEM, "free(%p)", (p));		\
+		_psc_free((p), (flags));				\
 		(p) = NULL;						\
 	} while (0)
 
-#define PSCFREE(p)							\
-	do {								\
-		psc_debugs(PSS_MEM, "free(%p)", (p));			\
-		psc_free_nolog(p);					\
-	} while (0)
+#define PSCFREE(p)		psc_free((p), 0)
 
 #define _PSC_REALLOC(oldp, sz, fl)					\
 	{								\
@@ -118,22 +116,6 @@ struct psc_memalloc {
 		_p;							\
 	}
 
-#define psc_free_mlocked(p, size)					\
-	do {								\
-		if (p)							\
-			_psc_munlock((p), (size));			\
-		PSCFREE(p);						\
-	} while (0)
-
-#define psc_free_aligned(p)	PSCFREE(p)
-
-#define psc_free_mlocked_aligned(p, size)				\
-	do {								\
-		if (p)							\
-			_psc_munlock((p), (size));			\
-		PSCFREE(p);						\
-	} while (0)
-
 #define psc_alloc(sz, fl)	(_PSC_REALLOC(NULL, (sz), (fl)))
 #define psc_realloc(p, sz, fl)	(_PSC_REALLOC((p),  (sz), (fl)))
 
@@ -147,10 +129,9 @@ struct psc_memalloc {
 #define PAF_NOGUARD	(1 << 6)	/* do not use memory guards */
 
 void	 *psc_calloc(size_t, size_t, int);
-void	 _psc_free(void *);
+void	 _psc_free(void *, int, ...);
 void	*_psc_realloc(void *, size_t, int);
 char	 *psc_strdup(const char *);
-void	 _psc_munlock(void *, size_t);
 
 void	  psc_memallocs_init(void);
 

@@ -280,39 +280,47 @@ psc_strdup(const char *str)
 }
 
 void
-_psc_free(void *p)
+_psc_free(void *p, int flags, ...)
 {
+	va_list ap;
+
 #ifdef PFL_DEBUG
 	struct psc_memalloc *pma;
 	size_t len;
 
-	pma = psc_hashtbl_searchdel(&psc_memallocs, NULL, &p);
-	psc_assert(pma);
+	if ((flags & PAF_NOGUARD) == 0) {
+		pma = psc_hashtbl_searchdel(&psc_memallocs, NULL, &p);
+		psc_assert(pma);
 
-	if (pma->pma_userlen % psc_pagesize)
-		psc_assert(pfl_memchk(pma->pma_guardbase, PFL_MEMGUARD_MAGIC,
-		    psc_pagesize - pma->pma_userlen % psc_pagesize));
+		if (pma->pma_userlen % psc_pagesize)
+			psc_assert(pfl_memchk(pma->pma_guardbase, PFL_MEMGUARD_MAGIC,
+			    psc_pagesize - pma->pma_userlen % psc_pagesize));
 
-	len = pma->pma_userlen;
-	if (len == 0)
-		len = 1;
+		len = pma->pma_userlen;
+		if (len == 0)
+			len = 1;
 
-	/* disable access to region */
-	if (mprotect(pma->pma_allocbase, psc_pagesize +
-	    PSC_ALIGN(len, psc_pagesize), PROT_READ | PROT_WRITE) == -1)
-		psc_fatal("mprotect");
+		/* disable access to region */
+		if (mprotect(pma->pma_allocbase, psc_pagesize +
+		    PSC_ALIGN(len, psc_pagesize), PROT_READ | PROT_WRITE) == -1)
+			psc_fatal("mprotect");
 
-	p = pma->pma_allocbase;
-	free(pma);
+		p = pma->pma_allocbase;
+		free(pma);
+	}
 #endif
-	free(p);
-}
 
-void
-_psc_munlock(void *p, size_t len)
-{
-	if (munlock(p, len) == -1)
-		psc_fatal("munlock %p", p);
+	if ((flags & PAF_LOCK) && p) {
+		size_t len;
+
+		va_start(ap, flags);
+		len = va_arg(ap, size_t);
+		va_end(ap);
+
+		if (munlock(p, len) == -1)
+			psc_fatal("munlock %p", p);
+	}
+	free(p);
 }
 
 void
