@@ -284,7 +284,10 @@ _psc_free(void *p, int flags, ...)
 {
 	va_list ap;
 
-	if ((flags & PAF_LOCK) && p) {
+	if (p == NULL)
+		return;
+
+	if (flags & PAF_LOCK) {
 		size_t len;
 
 		va_start(ap, flags);
