@@ -120,7 +120,10 @@ _psc_realloc(void *p, size_t size, int flags)
 			newp = NULL;
 #ifdef PFL_DEBUG
 		} else if (p) {
-			memcpy(newp, p, pma->pma_userlen);
+			memcpy(newp + (pma->pma_userbase -
+			    pma->pma_allocbase), pma->pma_userbase,
+			    pma->pma_userlen);
+			/* XXX _psc_free(p) */
 			free(p);
 #endif
 		}
