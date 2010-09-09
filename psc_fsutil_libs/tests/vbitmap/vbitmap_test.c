@@ -58,8 +58,6 @@ main(int argc, char *argv[])
 	if (argc)
 		usage();
 
-	psclog_max("begin");
-
 	for (i = 0; i < 79; i++)
 		if (psc_vbitmap_next(&vba, &j) != 1)
 			psc_fatalx("psc_vbitmap_next failed with auto");
