@@ -20,6 +20,7 @@
 #ifndef _PFL_STAT_H_
 #define _PFL_STAT_H_
 
+#include <sys/types.h>
 #include <sys/stat.h>
 
 #include "pfl/types.h"
@@ -57,17 +58,31 @@ struct stat;
 #endif
 
 #define DEBUG_STATBUF(level, stb, fmt, ...)					\
-	psc_log((level),							\
-	    "stb@%p dev:%"PRIu64" inode:%"PSCPRIuINOT" mode:0%o "		\
-	    "nlink:%"PRIu64" uid:%u gid:%u "					\
-	    "rdev:%"PRIu64" sz:%"PSCPRIdOFFT" blksz:%"PSCPRI_BLKSIZE_T" "	\
-	    "blkcnt:%"PRId64" atime:%"PSCPRI_TIMET" mtime:%"PSCPRI_TIMET" "	\
-	    "ctime:%"PSCPRI_TIMET" " fmt,					\
-	    (stb), (uint64_t)(stb)->st_dev, (stb)->st_ino, (stb)->st_mode,	\
-	    (uint64_t)(stb)->st_nlink, (stb)->st_uid, (stb)->st_gid,		\
-	    (uint64_t)(stb)->st_rdev, (stb)->st_size, (stb)->st_blksize,	\
-	    (stb)->st_blocks, (stb)->st_atime, (stb)->st_mtime,			\
-	    (stb)->st_ctime, ## __VA_ARGS__)
+	do {									\
+		struct timespec _atime, _ctime, _mtime;				\
+										\
+		PFL_STB_ATIME_GET((stb), &_atime.tv_sec, &_atime.tv_nsec);	\
+		PFL_STB_CTIME_GET((stb), &_ctime.tv_sec, &_ctime.tv_nsec);	\
+		PFL_STB_MTIME_GET((stb), &_mtime.tv_sec, &_mtime.tv_nsec);	\
+										\
+		psc_log((level),						\
+		    "stb@%p dev:%"PRIu64" inode:%"PSCPRIuINOT" "		\
+		    "mode:0%o nlink:%"PRIu64" "					\
+		    "uid:%u gid:%u "						\
+		    "rdev:%"PRIu64" sz:%"PSCPRIdOFFT" "				\
+		    "blksz:%"PSCPRI_BLKSIZE_T" blkcnt:%"PRId64" "		\
+		    "atime:"PSCPRI_TIMESPEC" "					\
+		    "mtime:"PSCPRI_TIMESPEC" "					\
+		    "ctime:"PSCPRI_TIMESPEC" " fmt,				\
+		    (stb), (uint64_t)(stb)->st_dev, (stb)->st_ino,		\
+		    (stb)->st_mode, (uint64_t)(stb)->st_nlink,			\
+		    (stb)->st_uid, (stb)->st_gid,				\
+		    (uint64_t)(stb)->st_rdev, (stb)->st_size,			\
+		    (stb)->st_blksize, (stb)->st_blocks,			\
+		    PSCPRI_TIMESPEC_ARGS(&_atime),				\
+		    PSCPRI_TIMESPEC_ARGS(&_mtime),				\
+		    PSCPRI_TIMESPEC_ARGS(&_ctime), ## __VA_ARGS__);		\
+	} while (0)
 
 void pfl_dump_statbuf(const struct stat *);
 void pfl_dump_mode(mode_t);
