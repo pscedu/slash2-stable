@@ -162,7 +162,7 @@ psc_dynarray_getpos(const struct psc_dynarray *da, int pos)
 void
 psc_dynarray_free(struct psc_dynarray *da)
 {
-	psc_free_nolog(da->da_items);
+	psc_free(da->da_items, PAF_NOLOG);
 	psc_dynarray_init(da);
 }
 

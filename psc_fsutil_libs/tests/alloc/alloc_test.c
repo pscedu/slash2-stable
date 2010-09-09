@@ -60,7 +60,7 @@ main(int argc, char *argv[])
 	PSCFREE(p);
 
 	p = psc_alloc(24, PAF_PAGEALIGN);
-	psc_free_aligned(p);
+	psc_free(p, PAF_PAGEALIGN);
 
 	p = PSCALLOC(24);
 	psc_assert(p);
@@ -70,12 +70,12 @@ main(int argc, char *argv[])
 
 	p = psc_alloc(8, PAF_LOCK);
 	*(uint64_t *)p = 0;
-	psc_free_mlocked(p, 8);
+	psc_free(p, PAF_LOCK, 8);
 
 	sz = 1024;
 	p = psc_alloc(sz, PAF_LOCK | PAF_PAGEALIGN);
 	memset(p, 0, sz);
-	psc_free_mlocked_aligned(p, sz);
+	psc_free(p, PAF_LOCK | PAF_PAGEALIGN, sz);
 
 	exit(0);
 }

@@ -192,7 +192,7 @@ _psc_pool_destroy_obj(struct psc_poolmgr *m, void *p)
 	if (m->ppm_flags & PPMF_NOLOCK)
 		PSCFREE(p);
 	else
-		psc_free_mlocked(p, m->ppm_entsize);
+		psc_free(p, PAF_LOCK, m->ppm_entsize);
 }
 
 /**
@@ -233,7 +233,7 @@ psc_pool_grow(struct psc_poolmgr *m, int n)
 		    m->ppm_explist.pexl_offset));
 		if (m->ppm_initf && m->ppm_initf(m, p)) {
 			if (flags & PAF_LOCK)
-				psc_free_mlocked(p, m->ppm_entsize);
+				psc_free(p, PAF_LOCK, m->ppm_entsize);
 			else
 				PSCFREE(p);
 			return (i);

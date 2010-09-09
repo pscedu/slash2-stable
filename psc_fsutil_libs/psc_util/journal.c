@@ -17,8 +17,6 @@
  * %PSC_END_COPYRIGHT%
  */
 
-#include "psc_util/subsys.h"
-
 #include <sys/types.h>
 #include <sys/stat.h>
 
@@ -30,6 +28,7 @@
 #include <unistd.h>
 
 #include "pfl/fcntl.h"
+#include "pfl/time.h"
 #include "pfl/types.h"
 #include "psc_ds/dynarray.h"
 #include "psc_util/alloc.h"
@@ -38,8 +37,8 @@
 #include "psc_util/iostats.h"
 #include "psc_util/journal.h"
 #include "psc_util/lock.h"
+#include "psc_util/subsys.h"
 #include "psc_util/thread.h"
-#include "pfl/time.h"
 #include "psc_util/waitq.h"
 
 #include "zfs-fuse/zfs_slashlib.h"
@@ -605,7 +604,8 @@ pjournal_scan_slots(struct psc_journal *pj)
 
 	pj->pj_lastxid = last_xid;
 	psc_dynarray_sort(&pj->pj_bufs, qsort, pjournal_xid_cmp);
-	psc_free_mlocked_aligned(jbuf, PJ_PJESZ(pj) * pj->pj_hdr->pjh_readahead);
+	psc_free(jbuf, PAF_LOCK | PAF_PAGEALIGN, PJ_PJESZ(pj) *
+	    pj->pj_hdr->pjh_readahead);
 
 	nopen = psc_dynarray_len(&pj->pj_bufs);
 	psc_info("Journal statistics: %d close, %d open, %d magic, "
@@ -699,7 +699,7 @@ pjournal_open(const char *fn)
 	psc_dynarray_init(&pj->pj_bufs);
 	return (pj);
  err:
-	psc_free_mlocked_aligned(pjh, pjhlen);
+	psc_free(pjh, PAF_LOCK | PAF_PAGEALIGN, pjhlen);
 	PSCFREE(pj);
 	return (NULL);
 }
@@ -716,9 +716,9 @@ pjournal_release(struct psc_journal *pj)
 	int n;
 
 	DYNARRAY_FOREACH(pje, n, &pj->pj_bufs)
-		psc_free_mlocked_aligned(pje, PJ_PJESZ(pj));
+		psc_free(pje, PAF_LOCK | PAF_PAGEALIGN, PJ_PJESZ(pj));
 	psc_dynarray_free(&pj->pj_bufs);
-	psc_free_mlocked_aligned(pj->pj_hdr, pj->pj_hdr->pjh_iolen);
+	psc_free(pj->pj_hdr, PAF_LOCK | PAF_PAGEALIGN, pj->pj_hdr->pjh_iolen);
 	PSCFREE(pj);
 }
 
@@ -799,7 +799,7 @@ pjournal_format(const char *fn, uint32_t nents, uint32_t entsz, uint32_t ra)
 	}
 	if (close(fd) == -1)
 		psc_fatal("failed to close journal");
-	psc_free_mlocked_aligned(jbuf, PJ_PJESZ(&pj) * ra);
+	psc_free(jbuf, PAF_LOCK | PAF_PAGEALIGN, PJ_PJESZ(&pj) * ra);
 	psc_info("journal %s formatted: %d slots, %d readahead, error = %d",
 	    fn, nents, ra, rc);
 	return (rc);
@@ -888,7 +888,7 @@ pjournal_dump(const char *fn, int verbose)
 	if (close(pj->pj_fd) == -1)
 		psc_fatal("failed closing journal %s", fn);
 
-	psc_free_mlocked_aligned(jbuf, PJ_PJESZ(pj));
+	psc_free(jbuf, PAF_LOCK | PAF_PAGEALIGN, PJ_PJESZ(pj));
 	pjournal_release(pj);
 
 	printf("%d slot(s) total, %d formatted, %d bad magic, %d bad checksum(s)\n",
@@ -1016,7 +1016,7 @@ pjournal_replay(
 				nerrs++;
 		}
 #endif
-		psc_free_mlocked_aligned(pje, PJ_PJESZ(pj));
+		psc_free(pje, PAF_LOCK | PAF_PAGEALIGN, PJ_PJESZ(pj));
 	}
 	psc_dynarray_free(&pj->pj_bufs);
 
