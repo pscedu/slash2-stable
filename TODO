@@ -33,6 +33,7 @@ general reminders
 - nbreqset req callbacks run in conjunction with any req interpret reply callbacks.
   this is confusing because the async_args is identical in both callbacks.
 - is it safe to pscrpc_request_finished() in an interpret callback??
+- ensure psc_free(p, PAF_LOCK, sz) has sz always as size_t
 
 make
 - rename ROOTDIR -> PROJ_BASE
