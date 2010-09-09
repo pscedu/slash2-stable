@@ -197,7 +197,7 @@ pjournal_xnew(struct psc_journal *pj)
 {
 	struct psc_journal_xidhndl *xh;
 
-	xh = PSCALLOC(sizeof(*xh));
+	xh = psc_alloc(sizeof(*xh), PAF_NOGUARD);
 
 	xh->pjx_pj = pj;
 	INIT_SPINLOCK(&xh->pjx_lock);
@@ -217,7 +217,7 @@ pjournal_xdestroy(struct psc_journal_xidhndl *xh)
 {
 	psc_assert(psclist_disjoint(&xh->pjx_lentry1));
 	psc_assert(psclist_disjoint(&xh->pjx_lentry2));
-	PSCFREE(xh);
+	psc_free(xh, PAF_NOGUARD);
 }
 
 void
@@ -581,8 +581,9 @@ pjournal_scan_slots(struct psc_journal *pj)
 			    (pje->pje_xid <= pj->pj_distill_xid))
 				continue;
 
-			/* Okay, we need to keep this log entry for now.  */
-			tmppje = psc_alloc(PJ_PJESZ(pj), PAF_PAGEALIGN | PAF_LOCK);
+			/* Okay, we need to keep this log entry for now. */
+			tmppje = psc_alloc(PJ_PJESZ(pj), PAF_PAGEALIGN |
+			    PAF_LOCK | PAF_NOGUARD);
 			memcpy(tmppje, pje, pje->pje_len +
 			    offsetof(struct psc_journal_enthdr, pje_data));
 			psc_dynarray_add(&pj->pj_bufs, tmppje);
@@ -715,7 +716,7 @@ pjournal_release(struct psc_journal *pj)
 	int n;
 
 	DYNARRAY_FOREACH(pje, n, &pj->pj_bufs)
-		psc_free(pje, PAF_LOCK | PAF_PAGEALIGN, PJ_PJESZ(pj));
+		psc_free(pje, PAF_NOGUARD | PAF_LOCK | PAF_PAGEALIGN, PJ_PJESZ(pj));
 	psc_dynarray_free(&pj->pj_bufs);
 	psc_free(pj->pj_hdr, PAF_LOCK | PAF_PAGEALIGN, pj->pj_hdr->pjh_iolen);
 	PSCFREE(pj);
@@ -1015,7 +1016,8 @@ pjournal_replay(
 				nerrs++;
 		}
 #endif
-		psc_free(pje, PAF_LOCK | PAF_PAGEALIGN, PJ_PJESZ(pj));
+		psc_free(pje, PAF_NOGUARD | PAF_LOCK | PAF_PAGEALIGN,
+		    PJ_PJESZ(pj));
 	}
 	psc_dynarray_free(&pj->pj_bufs);
 
