@@ -92,7 +92,7 @@ struct psc_memalloc {
 	do {								\
 		if (((flags) & PAF_NOLOG) == 0)				\
 			psc_debugs(PSS_MEM, "free(%p)", (p));		\
-		_psc_free((p), (flags));				\
+		_psc_free((p), (flags), ##__VA_ARGS__);			\
 		(p) = NULL;						\
 	} while (0)
 
