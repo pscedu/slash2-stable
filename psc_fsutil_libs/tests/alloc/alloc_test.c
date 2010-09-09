@@ -50,6 +50,12 @@ main(int argc, char *argv[])
 	if (argc)
 		usage();
 
+	p = PSCALLOC(213);
+	psc_assert(p);
+	p = psc_realloc(p, 65536, 0);
+	psc_assert(p);
+	PSCFREE(p);
+
 	p = PSCALLOC(128);
 	PSCFREE(p);
 
