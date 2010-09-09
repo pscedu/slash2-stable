@@ -239,7 +239,6 @@ pscrpc_server_free_request(struct pscrpc_request *req)
 	}
 
 	freelock(&svc->srv_lock);
-
 }
 
 static int
@@ -736,7 +735,7 @@ pscrpcthr_main(struct psc_thread *thr)
 		     svc->srv_n_active_reqs < (svc->srv_nthreads - 1)))
 			pscrpc_server_handle_request(svc, thr);
 
-		if (!psc_listhd_empty(&svc->srv_idle_rqbds) &&
+		if (!psc_listhd_empty_locked(&svc->srv_lock, &svc->srv_idle_rqbds) &&
 		    pscrpc_server_post_idle_rqbds(svc) < 0) {
 			/* I just failed to repost request buffers.  Wait
 			 * for a timeout (unless something else happens)
