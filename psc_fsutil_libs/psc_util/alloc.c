@@ -68,6 +68,7 @@ _psc_realloc(void *p, size_t size, int flags)
 	struct psc_memalloc *pma;
 	size_t specsize, oldlen;
 
+//	if (flags & PAF_PAGEALIGN | PAF_LOCK)
 	if (flags & PAF_PAGEALIGN)
 		guard_after = 0;
 
@@ -120,8 +121,8 @@ _psc_realloc(void *p, size_t size, int flags)
 			newp = NULL;
 #ifdef PFL_DEBUG
 		} else if (p) {
-			memcpy(newp + (pma->pma_userbase -
-			    pma->pma_allocbase), pma->pma_userbase,
+			memcpy(newp + ((void *)pma->pma_userbase -
+			    pma->pma_allocbase), (void *)pma->pma_userbase,
 			    pma->pma_userlen);
 			/* XXX _psc_free(p) */
 			free(p);
@@ -177,7 +178,7 @@ _psc_realloc(void *p, size_t size, int flags)
 		pma->pma_allocbase = newp;
 
 		if (guard_after) {
-			pma->pma_userbase = (char *)newp + rem;
+			pma->pma_userbase = (uint64_t)newp + rem;
 			pma->pma_guardbase = (char *)newp;
 
 			if (mprotect(newp, PSC_ALIGN(specsize, psc_pagesize),
@@ -187,7 +188,7 @@ _psc_realloc(void *p, size_t size, int flags)
 			    psc_pagesize, PROT_NONE) == -1)
 				err(1, "mprotect");
 		} else {
-			pma->pma_userbase = (char *)newp + psc_pagesize;
+			pma->pma_userbase = (uint64_t)newp + psc_pagesize;
 			pma->pma_guardbase = (char *)pma->pma_userbase +
 			    specsize;
 
@@ -206,12 +207,12 @@ _psc_realloc(void *p, size_t size, int flags)
 
 		if ((flags & PAF_NOLOG) == 0)
 			psclog_debug("alloc [guard] %p len %zd : "
-			    "user %p len %zd : guard %p len %d\n",
+			    "user %#"PRIx64" len %zd : guard %p len %d\n",
 			    pma->pma_allocbase, size,
 			    pma->pma_userbase, pma->pma_userlen,
 			    pma->pma_guardbase, rem);
 
-		newp = pma->pma_userbase;
+		newp = (void *)pma->pma_userbase;
 		size = specsize;
 
 		/* Zero out any newly realloc()'d region */
