@@ -137,8 +137,4 @@ void	  psc_memallocs_init(void);
 
 extern int			psc_pagesize;
 
-#ifdef DEBUG
-extern struct psc_hashtbl	psc_memallocs;
-#endif
-
 #endif /* _PFL_ALLOC_H_ */
