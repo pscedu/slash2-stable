@@ -187,7 +187,20 @@ psc_listhd_empty(const struct psclist_head *hd)
  * psclist_disjoint - Test whether a psc_listentry is not on a list.
  * @entry: the psc_listentry to test.
  */
-#define psclist_disjoint(e)	(psc_lentry_prev(e) == NULL && psc_lentry_next(e) == NULL)
+static __inline int
+psclist_disjoint(const struct psc_listentry *e)
+{
+#ifdef PFL_DEBUG
+	psc_assert(e->plh_magic == PLENT_MAGIC);
+	if (psc_lentry_prev(e))
+		psc_assert(psc_lentry_next(e) && e->plh_owner);
+	if (psc_lentry_next(e))
+		psc_assert(psc_lentry_prev(e) && e->plh_owner);
+	if (e->plh_owner)
+		psc_assert(psc_lentry_prev(e) && psc_lentry_next(e));
+#endif
+	return (psc_lentry_prev(e) == NULL);
+}
 
 /**
  * psclist_conjoint - Test whether a psc_listentry is on a list.
@@ -202,13 +215,18 @@ psclist_conjoint(const struct psc_listentry *e, const struct psclist_head *hd)
 		psc_warnx("conjoint passed NULL");
 		hd = e->plh_owner;
 	}
-	psc_assert(psc_lentry_prev(e) && psc_lentry_next(e));
-	if (psc_lentry_prev(e) == psc_lentry_next(e))
+	if (psc_lentry_prev(e))
+		psc_assert(psc_lentry_next(e) && hd == e->plh_owner);
+	if (psc_lentry_next(e))
+		psc_assert(psc_lentry_prev(e) && hd == e->plh_owner);
+	if (psc_lentry_prev(e) == psc_lentry_next(e) && psc_lentry_prev(e))
 		psc_assert(psc_lentry_prev(e) == (hd));
+	if (e->plh_owner)
+		psc_assert(psc_lentry_prev(e) && psc_lentry_next(e));
 #else
 	(void)hd;
 #endif
-	return (psc_lentry_prev(e) && psc_lentry_next(e));
+	return (psc_lentry_prev(e));
 }
 
 #define psclist_entry2(p, offset)						\
