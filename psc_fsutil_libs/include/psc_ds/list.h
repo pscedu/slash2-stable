@@ -226,7 +226,7 @@ psclist_conjoint(const struct psc_listentry *e, const struct psclist_head *hd)
 #else
 	(void)hd;
 #endif
-	return (psc_lentry_prev(e));
+	return (psc_lentry_prev(e) && 1);
 }
 
 #define psclist_entry2(p, offset)						\
