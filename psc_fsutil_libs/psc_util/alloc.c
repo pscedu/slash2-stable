@@ -36,6 +36,13 @@
 #  define GUARD_AFTER (PFL_DEBUG > 1)
 #endif
 
+struct psc_memalloc_key {
+	void *p;
+#ifndef __LP64__
+	long l;
+#endif
+};
+
 int			psc_pagesize;
 
 #ifdef PFL_DEBUG
@@ -74,8 +81,13 @@ _psc_realloc(void *p, size_t size, int flags)
 
 	if ((flags & PAF_NOGUARD) == 0) {
 		if (p) {
+			struct psc_memalloc_key key;
+
+			memset(&key, 0, sizeof(key));
+			key.p = p;
+
 			pma = psc_hashtbl_searchdel(&psc_memallocs,
-			    NULL, &p);
+			    NULL, &key);
 			psc_assert(pma);
 			p = pma->pma_allocbase;
 			oldlen = pma->pma_userlen;
@@ -303,7 +315,12 @@ _psc_free(void *p, int flags, ...)
 	size_t len;
 
 	if ((flags & PAF_NOGUARD) == 0) {
-		pma = psc_hashtbl_searchdel(&psc_memallocs, NULL, &p);
+		struct psc_memalloc_key key;
+
+		memset(&key, 0, sizeof(key));
+		key.p = p;
+
+		pma = psc_hashtbl_searchdel(&psc_memallocs, NULL, &key);
 		psc_assert(pma);
 
 		if (pma->pma_userlen % psc_pagesize)
