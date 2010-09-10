@@ -1,5 +1,5 @@
 /* $Id$ */
-/* %PSC_START_COPYRIGHT% */
+/* %PSC_COPYRIGHT% */
 
 /*
  * Exportable lists are thread-safe doubly linked list structures that
