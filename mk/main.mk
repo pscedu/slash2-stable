@@ -134,6 +134,7 @@ endif
 
 ifneq ($(filter lnet-hdrs,${MODULES}),)
   INCLUDES+=	-I${LNET_BASE}/include
+  INCLUDES+=	-I${LNET_BASE}
   SRC_PATH+=	${LNET_BASE}
 endif
 
