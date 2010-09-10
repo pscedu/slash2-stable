@@ -273,12 +273,13 @@ _psclogv(const char *fn, const char *func, int line, int subsys,
 		fprintf(stderr, ": %s", APP_STRERROR(save_errno));
 	fprintf(stderr, "%s", psclog_eol);
 	fflush(stderr);
-	PSCLOG_UNLOCK();
 
 	if (level == PLL_FATAL) {
 		abort();
 		_exit(1);
 	}
+
+	PSCLOG_UNLOCK();
 
 	/* Restore in case app needs it after our fprintf()'s may have modified it. */
 	errno = save_errno;
