@@ -119,6 +119,8 @@ struct psc_memalloc {
 #define psc_alloc(sz, fl)	(_PSC_REALLOC(NULL, (sz), (fl)))
 #define psc_realloc(p, sz, fl)	(_PSC_REALLOC((p),  (sz), (fl)))
 
+#define PFL_ALLOC_OBJ(p)	((p) = PSCALLOC(sizeof(*(p)))
+
 /* allocation flags */
 #define PAF_CANFAIL	(1 << 0)	/* return NULL instead of fatal */
 #define PAF_PAGEALIGN	(1 << 1)	/* align to physmem page size */
@@ -135,6 +137,6 @@ char	 *psc_strdup(const char *);
 
 void	  psc_memallocs_init(void);
 
-extern int			psc_pagesize;
+extern int	psc_pagesize;
 
 #endif /* _PFL_ALLOC_H_ */
