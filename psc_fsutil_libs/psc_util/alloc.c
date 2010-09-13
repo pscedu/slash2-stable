@@ -108,11 +108,7 @@ _psc_realloc(void *oldp, size_t size, int flags)
 
 		specsize = size;
 
-		if (size == 0)
-			size = 1;
-
 		size = psc_pagesize + PSC_ALIGN(size, psc_pagesize);
-
 		flags |= PAF_PAGEALIGN;
 
 		if (oldp && size == psc_pagesize +
@@ -160,9 +156,15 @@ _psc_realloc(void *oldp, size_t size, int flags)
 			}
 			if (size != psc_pagesize +
 			    PSC_ALIGN(pma->pma_userlen, psc_pagesize)) {
-				psc_assert(pfl_memchk(pma->pma_guardbase, PFL_MEMGUARD_MAGIC,
-				    psc_pagesize - pma->pma_userlen % psc_pagesize));
-				free(pma->pma_userbase);
+				psc_assert(pfl_memchk(pma->pma_guardbase,
+				    PFL_MEMGUARD_MAGIC, psc_pagesize -
+				    pma->pma_userlen % psc_pagesize));
+				if (mprotect(pma->pma_allocbase, psc_pagesize +
+				    PSC_ALIGN(pma->pma_userlen, psc_pagesize),
+				    PROT_READ | PROT_WRITE) == -1)
+					psc_fatal("mprotect");
+				free(pma->pma_allocbase);
+				goto setupguard;
 			}
 #endif
 		}
@@ -200,7 +202,7 @@ _psc_realloc(void *oldp, size_t size, int flags)
 
 #ifdef PFL_DEBUG
 	if ((flags & PAF_NOGUARD) == 0) {
-		int rem = psc_pagesize - specsize % psc_pagesize;
+		int rem;
 
 		if (oldp == NULL) {
 			/*
@@ -211,6 +213,10 @@ _psc_realloc(void *oldp, size_t size, int flags)
 			psc_assert(pma);
 			psc_hashent_init(&psc_memallocs, pma);
 		}
+ setupguard:
+		rem = psc_pagesize - specsize % psc_pagesize;
+		if (rem == psc_pagesize)
+			rem = 0;
 
 		pma->pma_userlen = specsize;
 		pma->pma_allocbase = newp;
@@ -237,8 +243,7 @@ _psc_realloc(void *oldp, size_t size, int flags)
 			if (mprotect(newp, psc_pagesize, PROT_NONE) == -1)
 				err(1, "mprotect");
 		}
-		if (rem != psc_pagesize)
-			memset(pma->pma_guardbase, PFL_MEMGUARD_MAGIC, rem);
+		memset(pma->pma_guardbase, PFL_MEMGUARD_MAGIC, rem);
 
 		psc_hashtbl_add_item(&psc_memallocs, pma);
 		/* XXX mprotect PROT_NONE the pma itself */
@@ -331,7 +336,6 @@ _psc_free(void *p, int flags, ...)
 
 #ifdef PFL_DEBUG
 	struct psc_memalloc *pma;
-	size_t len;
 
 	if ((flags & PAF_NOGUARD) == 0) {
 		struct psc_memalloc_key key;
@@ -346,13 +350,10 @@ _psc_free(void *p, int flags, ...)
 			psc_assert(pfl_memchk(pma->pma_guardbase, PFL_MEMGUARD_MAGIC,
 			    psc_pagesize - pma->pma_userlen % psc_pagesize));
 
-		len = pma->pma_userlen;
-		if (len == 0)
-			len = 1;
-
 		/* disable access to region */
 		if (mprotect(pma->pma_allocbase, psc_pagesize +
-		    PSC_ALIGN(len, psc_pagesize), PROT_READ | PROT_WRITE) == -1)
+		    PSC_ALIGN(pma->pma_userlen, psc_pagesize),
+		    PROT_READ | PROT_WRITE) == -1)
 			psc_fatal("mprotect");
 
 		p = pma->pma_allocbase;
