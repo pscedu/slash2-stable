@@ -116,10 +116,9 @@ _psc_realloc(void *oldp, size_t size, int flags)
 		flags |= PAF_PAGEALIGN;
 
 		if (oldp && size == psc_pagesize +
-		    PSC_ALIGN(pma->pma_usersize, psc_pagesize)) {
+		    PSC_ALIGN(pma->pma_userlen, psc_pagesize)) {
 			/* alloc rounds to identical size */
 			newp = oldp;
-			oldp = NULL;
 			goto movepage;
 		}
 	}
@@ -143,17 +142,20 @@ _psc_realloc(void *oldp, size_t size, int flags)
 		} else if (oldp) {
  movepage:
 			if (guard_after) {
-				memmove(newp + (pma->pma_userbase -
+				memmove((char *)newp + (pma->pma_userbase -
 				    pma->pma_allocbase) -
-				    (specsize - pma->pma_usersize),
+				    (specsize - pma->pma_userlen),
 				    pma->pma_userbase, pma->pma_userlen);
 			} else {
-				memmove(newp + (pma->pma_userbase -
+				memmove((char *)newp + (pma->pma_userbase -
 				    pma->pma_allocbase), pma->pma_userbase,
 				    pma->pma_userlen);
 			}
-			/* XXX _psc_free(oldp) */
-			free(oldp);
+			if (size != psc_pagesize +
+			    PSC_ALIGN(pma->pma_userlen, psc_pagesize)) {
+				_psc_free(pma->pma_userbase, 0);
+				free(pma);
+			}
 #endif
 		}
 	} else {
