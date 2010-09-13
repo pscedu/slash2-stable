@@ -185,7 +185,7 @@ odtable_create(const char *fn, size_t nelems, size_t elemsz, int overwrite)
 	struct odtable odt;
 	struct odtable_entftr odtf = {0, ODTBL_FREE, 0, ODTBL_MAGIC};
 	struct odtable_hdr odth = {nelems, elemsz, ODTBL_MAGIC, ODTBL_VERS,
-				   ODTBL_OPT_CRC, ODTBL_ALIGN};
+				   ODTBL_OPT_CRC, ODTBL_START};
 
 	if (overwrite)
 		flags = O_CREAT | O_TRUNC | O_WRONLY;
@@ -207,6 +207,7 @@ odtable_create(const char *fn, size_t nelems, size_t elemsz, int overwrite)
 
 	psc_trace("odt.odt_hdr.odth_start=%"PRIx64, odt.odt_hdr->odth_start);
 
+	/* initialize the table by writing the footers of all entries */
 	for (z = 0; z < nelems; z++) {
 		odtf.odtf_slotno = z;
 
