@@ -104,6 +104,9 @@ _psc_realloc(void *oldp, size_t size, int flags)
 			    PSC_ALIGN(pma->pma_userlen, psc_pagesize),
 			    PROT_READ | PROT_WRITE) == -1)
 				psc_fatal("mprotect");
+
+			if (flags & PAF_PAGEALIGN)
+				errx(1, "realloc of page-aligned is not implemented");
 		}
 
 		specsize = size;
@@ -145,14 +148,13 @@ _psc_realloc(void *oldp, size_t size, int flags)
 		} else if (oldp) {
  movepage:
 			if (guard_after) {
-				memmove((char *)newp + (pma->pma_userbase -
-				    pma->pma_allocbase) -
-				    (specsize - pma->pma_userlen),
+				memmove((char *)newp + (psc_pagesize -
+				    specsize % psc_pagesize) % psc_pagesize,
 				    pma->pma_userbase, pma->pma_userlen);
 			} else {
-				memmove((char *)newp + (pma->pma_userbase -
-				    pma->pma_allocbase), pma->pma_userbase,
-				    pma->pma_userlen);
+				memmove((char *)newp +
+				    (pma->pma_userbase - pma->pma_allocbase),
+				    pma->pma_userbase, pma->pma_userlen);
 			}
 			if (size != psc_pagesize +
 			    PSC_ALIGN(pma->pma_userlen, psc_pagesize)) {
@@ -215,9 +217,7 @@ _psc_realloc(void *oldp, size_t size, int flags)
 			psc_hashent_init(&psc_memallocs, pma);
 		}
  setupguard:
-		rem = psc_pagesize - specsize % psc_pagesize;
-		if (rem == psc_pagesize)
-			rem = 0;
+		rem = (psc_pagesize - specsize % psc_pagesize) % psc_pagesize;
 
 		pma->pma_userlen = specsize;
 		pma->pma_allocbase = newp;
