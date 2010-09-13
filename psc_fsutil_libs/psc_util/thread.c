@@ -224,8 +224,9 @@ _pscthr_finish_init(struct psc_thread *thr)
 	 * corrupted.
 	 */
 	psclog_getdata();
-	psclog_debug("%s <pthr %#lx thrid %ld> alive", thr->pscthr_name,
-	    thr->pscthr_pthread, (unsigned long)thr->pscthr_thrid);
+	psclog_debug("%s <pthr %"PSCPRI_PTHRT" thrid %d> alive",
+	    thr->pscthr_name, thr->pscthr_pthread,
+	    thr->pscthr_thrid);
 }
 
 /**
