@@ -60,12 +60,12 @@ _psc_pool_reapsome(__unusedx size_t size)
 
 /**
  * psc_realloc - Allocate or resize a chunk of memory.
- * @p: current chunk of memory to resize or NULL for new chunk.
+ * @oldp: current chunk of memory to resize or NULL for new chunk.
  * @size: desired size of memory chunk.
  * @flags: operational flags.
  */
 void *
-_psc_realloc(void *p, size_t size, int flags)
+_psc_realloc(void *oldp, size_t size, int flags)
 {
 	int rc, save_errno;
 	void *newp;
@@ -80,16 +80,16 @@ _psc_realloc(void *p, size_t size, int flags)
 		guard_after = 0;
 
 	if ((flags & PAF_NOGUARD) == 0) {
-		if (p) {
+		if (oldp) {
 			struct psc_memalloc_key key;
 
 			memset(&key, 0, sizeof(key));
-			key.p = p;
+			key.p = oldp;
 
 			pma = psc_hashtbl_searchdel(&psc_memallocs,
 			    NULL, &key);
 			psc_assert(pma);
-			p = pma->pma_allocbase;
+			oldp = pma->pma_allocbase;
 			oldlen = pma->pma_userlen;
 
 			/*
@@ -114,13 +114,21 @@ _psc_realloc(void *p, size_t size, int flags)
 		size = psc_pagesize + PSC_ALIGN(size, psc_pagesize);
 
 		flags |= PAF_PAGEALIGN;
+
+		if (oldp && size == psc_pagesize +
+		    PSC_ALIGN(pma->pma_usersize, psc_pagesize)) {
+			/* alloc rounds to identical size */
+			newp = oldp;
+			oldp = NULL;
+			goto movepage;
+		}
 	}
 #endif
 
  retry:
 	if (flags & PAF_PAGEALIGN) {
 #ifndef PFL_DEBUG
-		if (p)
+		if (oldp)
 			errx(1, "realloc of page-aligned is not implemented");
 #endif
 		/*
@@ -132,28 +140,36 @@ _psc_realloc(void *p, size_t size, int flags)
 			errno = rc;
 			newp = NULL;
 #ifdef PFL_DEBUG
-		} else if (p) {
-			memcpy(newp + (pma->pma_userbase -
-			    pma->pma_allocbase), pma->pma_userbase,
-			    pma->pma_userlen);
-			/* XXX _psc_free(p) */
-			free(p);
+		} else if (oldp) {
+ movepage:
+			if (guard_after) {
+				memmove(newp + (pma->pma_userbase -
+				    pma->pma_allocbase) -
+				    (specsize - pma->pma_usersize),
+				    pma->pma_userbase, pma->pma_userlen);
+			} else {
+				memmove(newp + (pma->pma_userbase -
+				    pma->pma_allocbase), pma->pma_userbase,
+				    pma->pma_userlen);
+			}
+			/* XXX _psc_free(oldp) */
+			free(oldp);
 #endif
 		}
 	} else {
-		if (p && size == 0) {
+		if (oldp && size == 0) {
 			/*
 			 * realloc(3) to zero on glibc returns NULL
 			 * unconditionally, so specifically catch this
 			 * and do a manual free and zero-length
 			 * malloc(3).
 			 */
-			free(p);
-			p = NULL;
+			free(oldp);
+			oldp = NULL;
 			newp = malloc(0);
 			psc_assert(newp);
 		} else
-			newp = realloc(p, size);
+			newp = realloc(oldp, size);
 	}
 	if (newp == NULL) {
 		/*
@@ -176,7 +192,7 @@ _psc_realloc(void *p, size_t size, int flags)
 	if ((flags & PAF_NOGUARD) == 0) {
 		int rem = psc_pagesize - specsize % psc_pagesize;
 
-		if (p == NULL) {
+		if (oldp == NULL) {
 			/*
 			 * XXX consider using guard region for this to
 			 * save on two malloc overhead.
@@ -228,7 +244,7 @@ _psc_realloc(void *p, size_t size, int flags)
 		size = specsize;
 
 		/* Zero out any newly realloc()'d region */
-		if (p && size > oldlen && (flags & PAF_NOZERO) == 0)
+		if (oldp && size > oldlen && (flags & PAF_NOZERO) == 0)
 			memset((char *)newp + oldlen, 0, size - oldlen);
 	}
 #endif
@@ -238,12 +254,12 @@ _psc_realloc(void *p, size_t size, int flags)
 		 * Disallow realloc(p, sz, PAF_LOCK) because we can't
 		 * munlock the old region as we don't have the size.
 		 */
-		if (p)
+		if (oldp)
 			psc_fatalx("unable to lock realloc'd mem");
 		if (mlock(newp, size) == -1) {
 			if (flags & PAF_CANFAIL) {
 				save_errno = errno;
-				PSCFREE(p);
+				PSCFREE(newp);
 				psc_error("mlock");
 				errno = save_errno;
 				return (NULL);
@@ -251,7 +267,7 @@ _psc_realloc(void *p, size_t size, int flags)
 			psc_fatal("mlock");
 		}
 	}
-	if (p == NULL && (flags & PAF_NOZERO) == 0)
+	if (oldp == NULL && (flags & PAF_NOZERO) == 0)
 		memset(newp, 0, size);
 	return (newp);
 }
