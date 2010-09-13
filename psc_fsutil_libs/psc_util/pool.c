@@ -543,12 +543,12 @@ psc_pool_get(struct psc_poolmgr *m)
 }
 
 /**
- * psc_pool_return - Return an item to a pool.
+ * _psc_pool_return - Return an item to a pool.
  * @m: the pool manager.
  * @p: item to return.
  */
 void
-psc_pool_return(struct psc_poolmgr *m, void *p)
+_psc_pool_return(struct psc_poolmgr *m, void *p)
 {
 	int locked;
 

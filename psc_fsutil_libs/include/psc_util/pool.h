@@ -182,6 +182,12 @@ struct psc_poolmgr {
 #define psc_pool_shrink(m, i)		_psc_pool_shrink((m), (i), 0)
 #define psc_pool_tryshrink(m, i)	_psc_pool_shrink((m), (i), 1)
 
+#define psc_pool_return(m, p)						\
+	do {								\
+		_psc_pool_return((m), (p));				\
+		(p) = NULL;						\
+	} while (0)
+
 struct psc_poolmgr *
 	_psc_poolmaster_getmgr(struct psc_poolmaster *, int);
 void	_psc_poolmaster_init(struct psc_poolmaster *, size_t, ptrdiff_t,
@@ -201,7 +207,7 @@ int	 psc_pool_grow(struct psc_poolmgr *, int);
 int	 psc_pool_nfree(struct psc_poolmgr *);
 void	 psc_pool_reapmem(size_t);
 void	 psc_pool_resize(struct psc_poolmgr *);
-void	 psc_pool_return(struct psc_poolmgr *, void *);
+void	_psc_pool_return(struct psc_poolmgr *, void *);
 int	 psc_pool_settotal(struct psc_poolmgr *, int);
 void	 psc_pool_share(struct psc_poolmaster *);
 int	_psc_pool_shrink(struct psc_poolmgr *, int, int);
