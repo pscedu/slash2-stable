@@ -58,7 +58,6 @@ typedef struct {
 #define MAX_SPIN_CNT		256
 #define SPIN_SLEEP_DURATION     5001
 
-/* XXX provide some way to detect reinitializing already-initialized locks. */
 #define INIT_SPINLOCK(l)	((l)->sl_lock = SL_UNLOCKED)
 #define SPINLOCK_INIT		{ SL_UNLOCKED, 0 }
 
@@ -71,10 +70,15 @@ validlock(const psc_spinlock_t *sl)
 	return (v == SL_LOCKED || v == SL_UNLOCKED);
 }
 
-#define _LOCK_ENSURE(name, sl) {					\
+#define _CHECKLOCK(name, sl)						\
+	do {								\
 		if (!validlock(sl))					\
 			psc_fatalx("%s: %#x: invalid value (lock %p)",	\
 			    (name), (sl)->sl_lock, (sl));		\
+	} while (0)
+
+#define _LOCK_ENSURE(name, sl) {					\
+		_CHECKLOCK((name), (sl));				\
 		if ((sl)->sl_lock == SL_UNLOCKED)			\
 			psc_fatalx("%s: not locked (lock %p)", (name),	\
 			    (sl));					\
@@ -113,10 +117,9 @@ validlock(const psc_spinlock_t *sl)
 		} else if ((_v) == SL_UNLOCKED) {			\
 			(sl)->sl_who = pthread_self();			\
 			(_v) = 1;					\
-		} else {						\
+		} else							\
 			psc_fatalx("%s: %#x: invalid value (lock %p)",	\
 			    (name), (_v), (sl));			\
-		}							\
 		(_v);							\
 	}
 
@@ -155,39 +158,37 @@ spinlock(psc_spinlock_t *sl)
 #define PSC_SPIN_RLV_LOCKED	42
 #define PSC_SPIN_RLV_NOTLOCKED	43
 
-/*
- * reqlock - require a lock for a critical section.
- *	locks if unlocked, doesn't if already locked
- *	(to avoid deadlock).
+static __inline int
+havelock(psc_spinlock_t *sl)
+{
+	/*
+	 * This code is thread safe because even if sl_who changes, it
+	 * won't be set to us and we will still wait for the lock when
+	 * we need to.
+	 */
+	_CHECKLOCK("havelock", sl);
+	return (sl->sl_lock == SL_LOCKED && sl->sl_who == pthread_self());
+}
+
+/**
+ * reqlock - Require a lock for a critical section.  Locks if unlocked,
+ *	doesn't if already locked (to avoid deadlock).
  * @sl: the lock.
  * Returns true if the lock is already locked.
  */
 static __inline int
 reqlock(psc_spinlock_t *sl)
 {
-	if (sl->sl_lock == SL_LOCKED) {
-		/*
-		 * This code is thread safe because
-		 * even if sl_who changes, it won't
-		 * be set to us and we will still wait
-		 * for the lock when we need to.
-		 */
-		if (sl->sl_who == pthread_self())
-			return (PSC_SPIN_RLV_LOCKED);
-		else
-			/* someone else has it, wait */
-			spinlock(sl);
-	} else
-		/* not locked, grab it */
-		spinlock(sl);
+	if (havelock(sl))
+		return (PSC_SPIN_RLV_LOCKED);
+	spinlock(sl);
 	return (PSC_SPIN_RLV_NOTLOCKED);
 }
 
 static __inline int
 tryreqlock(psc_spinlock_t *sl, int *locked)
 {
-	if (sl->sl_lock == SL_LOCKED &&
-	    sl->sl_who == pthread_self()) {
+	if (havelock(sl)) {
 		*locked = PSC_SPIN_RLV_LOCKED;
 		return (1);
 	}
@@ -195,11 +196,10 @@ tryreqlock(psc_spinlock_t *sl, int *locked)
 	return (trylock(sl));
 }
 
-/*
- * ureqlock - "unrequire" a lock -- unlocks the lock if
- *	it was locked for the nearest "reqlock ... ureqlock"
- *	section and doesn't if the lock was already locked
- *	before the critical section began.
+/**
+ * ureqlock - "Unrequire" a lock -- unlocks the lock if it was locked
+ *	for the nearest "reqlock ... ureqlock" section and doesn't if
+ *	the lock was already locked before the critical section began.
  * @sl: the lock.
  * @waslocked: return value from reqlock().
  */
