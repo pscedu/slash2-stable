@@ -41,6 +41,8 @@
 #ifndef __LIBCFS_DARWIN_TCPIP_H__
 #define __LIBCFS_DARWIN_TCPIP_H__
 
+#define CFS_LOOPBACK_IFNAME "lo0"
+
 #ifdef __KERNEL__
 #include <sys/socket.h>
 

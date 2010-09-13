@@ -496,8 +496,7 @@ usocklnd_assign_ni_nid(lnet_ni_t *ni)
 
                 for (i = 0; i < n; i++) {
 
-                        if (!strcmp(names[i], "lo") || /* skip the loopback IF */
-                            !strcmp(names[i], "lo0"))
+                        if (!strcmp(names[i], CFS_LOOPBACK_IFNAME))
                                 continue;
 
                         rc = libcfs_ipif_query(names[i], &up, &ipaddr);
