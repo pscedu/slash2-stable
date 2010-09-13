@@ -33,7 +33,7 @@ struct psc_dynarray {
 
 #define PDAF_NOLOG	(1 << 0)	/* do not log allocations */
 
-#define DYNARRAY_INIT	{ 0, 0, NULL }
+#define DYNARRAY_INIT	{ 0, 0, 0, NULL }
 
 /**
  * DYNARRAY_FOREACH - Iterate across items of a dynarray.
@@ -92,7 +92,7 @@ int	 psc_dynarray_exists(const struct psc_dynarray *, const void *);
 void	 psc_dynarray_free(struct psc_dynarray *);
 int	 psc_dynarray_freeslack(struct psc_dynarray *);
 void	*psc_dynarray_getpos(const struct psc_dynarray *, int);
-void	 psc_dynarray_initf(struct psc_dynarray *);
+void	 psc_dynarray_initf(struct psc_dynarray *, int);
 int	_psc_dynarray_remove(struct psc_dynarray *, const void *, int);
 void	 psc_dynarray_reset(struct psc_dynarray *);
 int	 psc_dynarray_splice(struct psc_dynarray *, int, int, const void *, int);
