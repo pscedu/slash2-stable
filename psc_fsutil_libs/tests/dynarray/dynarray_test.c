@@ -59,6 +59,7 @@ check(struct psc_dynarray *da, ...)
 		psc_assert(p == checkp);
 	}
 	va_end(ap);
+	psc_assert(va_arg(ap, void *) == NULL);
 }
 
 void
@@ -124,6 +125,10 @@ main(int argc, char *argv[])
 	psc_assert(psc_dynarray_bsearch(&da, PTR_a, cmp) == 3);
 	psc_assert(psc_dynarray_bsearch(&da, PTR_b, cmp) == 4);
 	psc_assert(psc_dynarray_bsearch(&da, PTR_c, cmp) == 5);
+
+	psc_dynarray_reset(&da); check(&da, NULL);
+
+	p = PTR_3; psc_dynarray_add(&da, p); check(&da, PTR_3, NULL);
 
 	psc_dynarray_free(&da);
 
