@@ -124,6 +124,13 @@ _psc_realloc(void *oldp, size_t size, int flags)
 	}
 #endif
 
+	/*
+	 * Disallow realloc(p, sz, PAF_LOCK) because we can't
+	 * munlock the old region as we don't have the size.
+	 */
+	if ((flags & PAF_LOCK) && oldp)
+		psc_fatalx("unable to lock realloc'd mem");
+
  retry:
 	if (flags & PAF_PAGEALIGN) {
 #ifndef PFL_DEBUG
@@ -153,8 +160,9 @@ _psc_realloc(void *oldp, size_t size, int flags)
 			}
 			if (size != psc_pagesize +
 			    PSC_ALIGN(pma->pma_userlen, psc_pagesize)) {
-				_psc_free(pma->pma_userbase, 0);
-				free(pma);
+				psc_assert(pfl_memchk(pma->pma_guardbase, PFL_MEMGUARD_MAGIC,
+				    psc_pagesize - pma->pma_userlen % psc_pagesize));
+				free(pma->pma_userbase);
 			}
 #endif
 		}
@@ -251,23 +259,16 @@ _psc_realloc(void *oldp, size_t size, int flags)
 	}
 #endif
 
-	if (flags & PAF_LOCK) {
-		/*
-		 * Disallow realloc(p, sz, PAF_LOCK) because we can't
-		 * munlock the old region as we don't have the size.
-		 */
-		if (oldp)
-			psc_fatalx("unable to lock realloc'd mem");
-		if (mlock(newp, size) == -1) {
-			if (flags & PAF_CANFAIL) {
-				save_errno = errno;
-				PSCFREE(newp);
-				psc_error("mlock");
-				errno = save_errno;
-				return (NULL);
-			}
-			psc_fatal("mlock");
+	if ((flags & PAF_LOCK) && mlock(newp, size) == -1) {
+		if (flags & PAF_CANFAIL) {
+psc_fatalx("not ready");
+			save_errno = errno;
+			PSCFREE(newp);
+			psc_error("mlock");
+			errno = save_errno;
+			return (NULL);
 		}
+		psc_fatal("mlock");
 	}
 	if (oldp == NULL && (flags & PAF_NOZERO) == 0)
 		memset(newp, 0, size);
