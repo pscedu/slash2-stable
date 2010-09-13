@@ -156,9 +156,10 @@ _psc_realloc(void *oldp, size_t size, int flags)
 			}
 			if (size != psc_pagesize +
 			    PSC_ALIGN(pma->pma_userlen, psc_pagesize)) {
-				psc_assert(pfl_memchk(pma->pma_guardbase,
-				    PFL_MEMGUARD_MAGIC, psc_pagesize -
-				    pma->pma_userlen % psc_pagesize));
+				if (pma->pma_userlen % psc_pagesize)
+					psc_assert(pfl_memchk(pma->pma_guardbase,
+					    PFL_MEMGUARD_MAGIC, psc_pagesize -
+					    pma->pma_userlen % psc_pagesize));
 				if (mprotect(pma->pma_allocbase, psc_pagesize +
 				    PSC_ALIGN(pma->pma_userlen, psc_pagesize),
 				    PROT_READ | PROT_WRITE) == -1)
