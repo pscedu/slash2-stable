@@ -183,13 +183,13 @@ void
 psc_dynarray_reset(struct psc_dynarray *pda)
 {
 	pda->pda_pos = 0;
-	psc_dynarray_freeslack(pda);
 }
 
 /**
  * psc_dynarray_remove - Remove an item from a dynamic array.
  * @pda: dynamic array to remove from.
  * @item: item to remove.
+ * @fs: whether to resize the array to save space.
  * Returns the position index the item had.
  * Notes: this routine swaps the last element in the dynarray array
  *	into the slot opened up by the removal.
@@ -207,26 +207,10 @@ _psc_dynarray_remove(struct psc_dynarray *pda, const void *item, int fs)
 			p[j] = p[len - 1];
 			pda->pda_pos--;
 			if (fs)
-				psc_dynarray_freeslack(pda);
+				_psc_dynarray_resize(pda, pda->pda_pos);
 			return (j);
 		}
 	psc_fatalx("element not found");
-}
-
-/**
- * psc_dynarray_freeslack - Release free space from a dynamic array.
- * @pda: dynamic array to trim.
- * Returns the size (# of item slots) the array has decreased by/freed.
- */
-int
-psc_dynarray_freeslack(struct psc_dynarray *pda)
-{
-	int rc;
-
-	rc = 0;
-	if (pda->pda_pos < pda->pda_nalloc)
-		rc = _psc_dynarray_resize(pda, pda->pda_pos);
-	return (rc);
 }
 
 /**
