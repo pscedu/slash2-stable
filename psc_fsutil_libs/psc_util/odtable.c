@@ -56,6 +56,9 @@ odtable_sync(struct odtable *odt, __unusedx size_t elem)
 		psc_error("msync error on table %p", odt);
 }
 
+/**
+ * odtable_putitem - Save a bmap I/O node assignment into the odtable.
+ */
 struct odtable_receipt *
 odtable_putitem(struct odtable *odt, void *data)
 {
@@ -75,7 +78,7 @@ odtable_putitem(struct odtable *odt, void *data)
 		odtf = odtable_getfooter(odt, todtr.odtr_elem);
 	} while (odtable_footercheck(odtf, &todtr, 0));
 
-	p = odtable_getitem_addr(odt, todtr.odtr_elem);
+	/* psc_vbitmap_next() already flips the bit under odt_lock */
 	odtf->odtf_inuse = ODTBL_INUSE;
 
 	psc_crc64_calc(&crc, data, odt->odt_hdr->odth_elemsz);
@@ -88,7 +91,8 @@ odtable_putitem(struct odtable *odt, void *data)
 	 *  CRC are the same.
 	 */
 	odtf->odtf_crc = crc;
-	odtf->odtf_inuse = ODTBL_INUSE;
+
+	p = odtable_getitem_addr(odt, todtr.odtr_elem);
 	memcpy(p, data, odt->odt_hdr->odth_elemsz);
 
 	psc_info("slot=%zd elemcrc=%"PSCPRIxCRC64, todtr.odtr_elem, crc);
