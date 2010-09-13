@@ -374,6 +374,8 @@ odtable_scan(struct odtable *odt,
 	struct odtable_receipt *odtr, todtr = {0, 0};
 	struct odtable_entftr *odtf;
 
+	psc_assert(odt_handler != NULL);
+
 	for (todtr.odtr_elem=0; todtr.odtr_elem < odt->odt_hdr->odth_nelems;
 	     todtr.odtr_elem++) {
 		if (!psc_vbitmap_get(odt->odt_bitmap, todtr.odtr_elem))
@@ -389,15 +391,13 @@ odtable_scan(struct odtable *odt,
 			continue;
 		}
 
-		odtr = PSCALLOC(sizeof(odtr));
+		odtr = PSCALLOC(sizeof(*odtr));
 		odtr->odtr_key  = odtf->odtf_key;
 		odtr->odtr_elem = todtr.odtr_elem;
 
 		psc_warnx("handing back key=%"PRIx64" slot=%zd odtr=%p",
 		    odtr->odtr_key, odtr->odtr_elem, odtr);
 
-		if (odt_handler)
-			(odt_handler)(odtable_getitem_addr(odt,
-					   todtr.odtr_elem), odtr);
+		(odt_handler)(odtable_getitem_addr(odt, todtr.odtr_elem), odtr);
 	}
 }
