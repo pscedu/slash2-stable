@@ -37,7 +37,6 @@
 #include "psc_util/iostats.h"
 #include "psc_util/journal.h"
 #include "psc_util/lock.h"
-#include "psc_util/subsys.h"
 #include "psc_util/thread.h"
 #include "psc_util/waitq.h"
 
