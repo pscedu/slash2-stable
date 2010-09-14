@@ -16,7 +16,7 @@
 
 #define EXPORT_LOCK(e)		spinlock(&(e)->exp_lock)
 #define EXPORT_RLOCK(e)		reqlock(&(e)->exp_lock)
-#define EXPORT_UNLOCK(e)	freelock(&(e)->exp_lock)
+#define EXPORT_ULOCK(e)	freelock(&(e)->exp_lock)
 #define EXPORT_URLOCK(e, lk)	ureqlock(&(e)->exp_lock, (lk))
 
 void _pscrpc_export_put(struct pscrpc_export *);
