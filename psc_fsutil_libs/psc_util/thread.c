@@ -22,8 +22,6 @@
  * other useful utilities.
  */
 
-#include "psc_util/subsys.h"
-
 #include <sys/syscall.h>
 
 #include <err.h>
@@ -45,6 +43,7 @@
 #include "psc_util/alloc.h"
 #include "psc_util/lock.h"
 #include "psc_util/mem.h"
+#include "psc_util/subsys.h"
 #include "psc_util/thread.h"
 
 __static pthread_key_t		 psc_thrkey;
