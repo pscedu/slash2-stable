@@ -91,8 +91,8 @@ pcmp(const void *a, const void *b)
 int
 main(int argc, char *argv[])
 {
+	extern int _psc_dynarray_resize(struct psc_dynarray *, int);
 	struct psc_dynarray da = DYNARRAY_INIT;
-	extern int _psc_dynnarray_resize(struct psc_dynarray *, int);
 	void *p;
 
 	pfl_init();

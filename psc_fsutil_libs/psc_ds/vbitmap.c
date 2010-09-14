@@ -46,7 +46,7 @@
 	} while (0)
 
 /**
- * psc_vbitmap_newf - create a new variable-sized bitmap.
+ * psc_vbitmap_newf - Create a new variable-sized bitmap.
  * @nelems: number of entries in bitmap.
  * @flags: operational flags.
  */
@@ -103,7 +103,7 @@ _psc_vbitmap_free(struct psc_vbitmap *vb)
 }
 
 /**
- * psc_vbitmap_setval - set the value of a bit in a vbitmap.
+ * psc_vbitmap_setval - Set the value of a bit in a vbitmap.
  * @vb: variable bitmap.
  * @pos: position to set.
  * @set: value bit should take on.
@@ -179,7 +179,7 @@ psc_vbitmap_setval_range(struct psc_vbitmap *vb,
 }
 
 /**
- * psc_vbitmap_get - get bit for an element of a vbitmap.
+ * psc_vbitmap_get - Get bit value for an element of a vbitmap.
  * @vb: variable bitmap.
  * @pos: element # to get.
  */
@@ -216,7 +216,7 @@ psc_vbitmap_nfree(const struct psc_vbitmap *vb)
 }
 
 /**
- * psc_vbitmap_invert - invert the state of all bits in a vbitmap.
+ * psc_vbitmap_invert - Invert the state of all bits in a vbitmap.
  * @vb: variable bitmap.
  */
 void
@@ -230,7 +230,7 @@ psc_vbitmap_invert(struct psc_vbitmap *vb)
 }
 
 /**
- * psc_vbitmap_setall - toggle on all bits in a vbitmap.
+ * psc_vbitmap_setall - Toggle on all bits in a vbitmap.
  * @vb: variable bitmap.
  */
 void
@@ -244,7 +244,7 @@ psc_vbitmap_setall(struct psc_vbitmap *vb)
 }
 
 /**
- * psc_vbitmap_clearall - toggle off all bits in a vbitmap.
+ * psc_vbitmap_clearall - Toggle off all bits in a vbitmap.
  * @vb: variable bitmap.
  */
 void
@@ -276,7 +276,7 @@ psc_vbitmap_isfull(struct psc_vbitmap *vb)
 }
 
 /**
- * psc_vbitmap_lcr - report the largest contiguous region in the bitmap.
+ * psc_vbitmap_lcr - Report the largest contiguous region in the bitmap.
  * @vb: variable bitmap.
  * Returns: size of the region.
  */
@@ -313,7 +313,7 @@ psc_vbitmap_lcr(struct psc_vbitmap *vb)
 }
 
 /**
- * psc_vbitmap_getncontig - try to get 'N' contiguous slots (or bits)
+ * psc_vbitmap_getncontig - Try to get 'N' contiguous slots (or bits)
  * @vb: variable bitmap.
  * @nslots:  as an input parameter, requests 'N' number of slots.
  *	On output, informs the caller of the starting slot.
@@ -357,7 +357,7 @@ psc_vbitmap_getncontig(struct psc_vbitmap *vb, int *nslots)
 }
 
 /**
- * psc_vbitmap_next - return next unused slot from a vbitmap.
+ * psc_vbitmap_next - Return next unused slot from a vbitmap.
  * @vb: variable bitmap.
  * @elem: pointer to element#.
  * Returns: Boolean true on success, false on failure.
@@ -422,7 +422,7 @@ psc_vbitmap_setnextpos(struct psc_vbitmap *vb, size_t pos)
 }
 
 /**
- * psc_vbitmap_resize - resize a bitmap.
+ * psc_vbitmap_resize - Resize a bitmap.
  * @vb: variable bitmap.
  * @newsize: new size the bitmap should take on.
  */
@@ -443,8 +443,6 @@ psc_vbitmap_resize(struct psc_vbitmap *vb, size_t newsize)
 		void *start;
 
 		start = psc_realloc(vb->vb_start, nsiz, 0);
-		if (start == NULL)
-			return (-1);
 
 		/* special case for resizing NULL vbitmaps */
 		if (vb->vb_start == NULL)
@@ -469,7 +467,7 @@ psc_vbitmap_resize(struct psc_vbitmap *vb, size_t newsize)
 }
 
 /**
- * psc_vbitmap_getsize - get the number of elements a bitmap represents.
+ * psc_vbitmap_getsize - Get the number of elements a bitmap represents.
  * @vb: variable bitmap.
  */
 size_t
@@ -479,7 +477,7 @@ psc_vbitmap_getsize(const struct psc_vbitmap *vb)
 }
 
 /**
- * psc_vbitmap_printbin - print the contents of a bitmap in binary.
+ * psc_vbitmap_printbin - Print the contents of a bitmap in binary.
  * @vb: variable bitmap.
  */
 void
@@ -505,7 +503,7 @@ psc_vbitmap_printbin(const struct psc_vbitmap *vb)
 }
 
 /**
- * psc_vbitmap_printhex - print the contents of a bitmap in hexadecimal.
+ * psc_vbitmap_printhex - Print the contents of a bitmap in hexadecimal.
  * @vb: variable bitmap.
  */
 void
@@ -525,20 +523,21 @@ psc_vbitmap_printhex(const struct psc_vbitmap *vb)
 }
 
 /**
- * psc_vbitmap_getstats - gather the statistics of a bitmap.
+ * psc_vbitmap_getstats - Gather the statistics of a bitmap.
  * @vb: variable bitmap.
  */
 void
 psc_vbitmap_getstats(struct psc_vbitmap *vb, int *used, int *total)
 {
 	VB_CLEAR_UNALLOC(vb);
-	*used = pfl_bitstr_nset(vb->vb_start, (vb->vb_lastsize ? 1 : 0) +
+	*used = pfl_bitstr_nset(vb->vb_start,
+	    (vb->vb_lastsize ? 1 : 0) +
 	    vb->vb_end - vb->vb_start);
 	*total = psc_vbitmap_getsize(vb);
 }
 
 /**
- * psc_vbitmap_printstats - print the statistics of a bitmap.
+ * psc_vbitmap_printstats - Print the statistics of a bitmap.
  * @vb: variable bitmap.
  */
 void
@@ -547,6 +546,6 @@ psc_vbitmap_printstats(struct psc_vbitmap *vb)
 	int used, total;
 
 	psc_vbitmap_getstats(vb, &used, &total);
-	printf("vbitmap statistics: %d/%d (%.4f%%) in use\n", used, total,
-	    100.0 * used / total);
+	printf("vbitmap statistics: %d/%d (%.4f%%) in use\n", used,
+	    total, 100.0 * used / total);
 }

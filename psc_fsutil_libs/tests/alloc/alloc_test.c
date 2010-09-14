@@ -51,15 +51,10 @@ main(int argc, char *argv[])
 		usage();
 
 	p = PSCALLOC(213);
-	psc_assert(p);
 	p = psc_realloc(p, 65536, 0);
-	psc_assert(p);
 	p = psc_realloc(p, 0, 0);
-	psc_assert(p);
 	p = psc_realloc(p, 128, 0);
-	psc_assert(p);
 	p = psc_realloc(p, 0, 0);
-	psc_assert(p);
 	PSCFREE(p);
 
 	p = PSCALLOC(128);
@@ -69,9 +64,7 @@ main(int argc, char *argv[])
 	psc_free(p, PAF_PAGEALIGN);
 
 	p = PSCALLOC(24);
-	psc_assert(p);
 	p = psc_realloc(p, 128, 0);
-	psc_assert(p);
 	PSCFREE(p);
 
 	p = psc_alloc(8, PAF_LOCK);

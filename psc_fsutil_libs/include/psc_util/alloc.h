@@ -83,8 +83,6 @@ struct psc_memalloc {
  * are mapped PROT_NONE.
  */
 
-#define PMAF_GUARD_AFTER	(1 << 0)		/* force guard after (PAF_ALIGN) */
-
 #define PFL_MEMGUARD_MAGIC	0x7a
 #endif
 
@@ -122,13 +120,13 @@ struct psc_memalloc {
 #define PFL_ALLOC_OBJ(p)	((p) = PSCALLOC(sizeof(*(p)))
 
 /* allocation flags */
-#define PAF_CANFAIL	(1 << 0)	/* return NULL instead of fatal */
-#define PAF_PAGEALIGN	(1 << 1)	/* align to physmem page size */
-#define PAF_NOREAP	(1 << 2)	/* don't reap pools if mem unavail */
-#define PAF_LOCK	(1 << 3)	/* lock mem regions as unswappable */
-#define PAF_NOZERO	(1 << 4)	/* don't force memory zeroing */
-#define PAF_NOLOG	(1 << 5)	/* don't psclog this allocation */
-#define PAF_NOGUARD	(1 << 6)	/* do not use memory guards */
+#define PAF_CANFAIL		(1 << 0)	/* return NULL instead of fatal */
+#define PAF_PAGEALIGN		(1 << 1)	/* align to physmem page size */
+#define PAF_NOREAP		(1 << 2)	/* don't reap pools if mem unavail */
+#define PAF_LOCK		(1 << 3)	/* lock mem regions as unswappable */
+#define PAF_NOZERO		(1 << 4)	/* don't force memory zeroing */
+#define PAF_NOLOG		(1 << 5)	/* don't psclog this allocation */
+#define PAF_NOGUARD		(1 << 6)	/* do not use memory guards */
 
 void	 *psc_calloc(size_t, size_t, int);
 void	 _psc_free(void *, int, ...);
