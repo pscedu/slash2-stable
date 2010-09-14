@@ -58,15 +58,13 @@ _psc_dynarray_resize(struct psc_dynarray *pda, int n)
 	int i, flags;
 	void *p;
 
-	flags = PAF_CANFAIL | PAF_NOREAP;
+	flags = 0;
 	if (pda->pda_flags & PDAF_NOLOG)
 		flags |= PAF_NOLOG;
 	p = psc_realloc(pda->pda_items,
 	    n * sizeof(*pda->pda_items), flags);
-	if (p == NULL && n)
-		return (-1);
 	pda->pda_items = p;
-	/* Initialize new slots to zero. */
+	/* Initialize any new slots to zero. */
 	for (i = pda->pda_nalloc; i < n; i++)
 		pda->pda_items[i] = NULL;
 	pda->pda_nalloc = n;
