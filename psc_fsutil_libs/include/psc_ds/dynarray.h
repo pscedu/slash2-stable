@@ -25,15 +25,16 @@
 #define _PFL_DYNARRAY_H_
 
 struct psc_dynarray {
-	int		  pda_flags;
-	int		  pda_pos;
-	int		  pda_nalloc;
-	void		**pda_items;
+	int			  pda_flags;
+	int			  pda_pos;
+	int			  pda_nalloc;
+	void			**pda_items;
 };
 
-#define PDAF_NOLOG	(1 << 0)	/* do not log allocations */
+#define PDAF_NOLOG		(1 << 0)	/* do not log allocations */
 
-#define DYNARRAY_INIT	{ 0, 0, 0, NULL }
+#define DYNARRAY_INIT		{ 0, 0, 0, NULL }
+#define DYNARRAY_INIT_NOLOG	{ PDAF_NOLOG, 0, 0, NULL }
 
 /**
  * DYNARRAY_FOREACH - Iterate across items of a dynarray.
