@@ -48,7 +48,7 @@ main(int argc, char *argv[])
 	struct timeval tm0, tm1, tmd, tm_total, tm_last;
 	struct stat stb;
 	char buf[BUFSIZ];
-	psc_crc64_t crc;
+	uint64_t crc;
 	const char *fn;
 	int fd, pad;
 	size_t acsz;

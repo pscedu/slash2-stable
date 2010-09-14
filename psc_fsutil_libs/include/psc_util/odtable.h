@@ -72,7 +72,7 @@ struct odtable_hdr {
 
 /* entry footer */
 struct odtable_entftr {
-	psc_crc64_t		 odtf_crc;
+	uint64_t		 odtf_crc;
 	uint64_t		 odtf_inuse;
 	uint64_t		 odtf_slotno;
 	uint64_t		 odtf_magic;

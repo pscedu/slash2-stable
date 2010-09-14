@@ -146,7 +146,7 @@ const uint64_t psc_crc64_table[] = {
  * @len: amount of data.
  */
 void
-psc_crc64_add(psc_crc64_t *cp, const void *datap, int len)
+psc_crc64_add(uint64_t *cp, const void *datap, int len)
 {
 	const uint8_t *data = datap;
 	uint64_t crc0 = *cp;
@@ -160,9 +160,9 @@ psc_crc64_add(psc_crc64_t *cp, const void *datap, int len)
 }
 
 __inline int
-psc_crc64_verify(psc_crc64_t c, const void *datap, int len)
+psc_crc64_verify(uint64_t c, const void *datap, int len)
 {
-	psc_crc64_t tc;
+	uint64_t tc;
 
 	psc_crc64_calc(&tc, datap, len);
 	return (tc == c);
@@ -175,7 +175,7 @@ psc_crc64_verify(psc_crc64_t c, const void *datap, int len)
  * @len: amount of data.
  */
 void
-psc_crc32_add(psc_crc32_t *cp, const void *datap, int len)
+psc_crc32_add(uint32_t *cp, const void *datap, int len)
 {
 	const uint8_t *data = datap;
 	uint32_t crc0 = *cp;
@@ -189,9 +189,9 @@ psc_crc32_add(psc_crc32_t *cp, const void *datap, int len)
 }
 
 __inline int
-psc_crc32_verify(psc_crc32_t c, const void *datap, int len)
+psc_crc32_verify(uint32_t c, const void *datap, int len)
 {
-	psc_crc32_t tc;
+	uint32_t tc;
 
 	psc_crc32_calc(&tc, datap, len);
 	return (tc == c);

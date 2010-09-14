@@ -22,9 +22,6 @@
 
 #include <stdint.h>
 
-typedef	uint64_t		psc_crc64_t;
-typedef	uint32_t		psc_crc32_t;
-
 /* Initialize a CRC accumulator */
 #define PSC_CRC32_INIT(crcp)	(*(crcp) = 0xffffffff)
 #define PSC_CRC64_INIT(crcp)	(*(crcp) = UINT64_C(0xffffffffffffffff))
@@ -59,10 +56,10 @@ typedef	uint32_t		psc_crc32_t;
 		PSC_CRC32_FIN(cp);					\
 	} while (0)
 
-void	psc_crc32_add(psc_crc32_t *, const void *, int);
-void	psc_crc64_add(psc_crc64_t *, const void *, int);
+void	psc_crc32_add(uint32_t *, const void *, int);
+void	psc_crc64_add(uint64_t *, const void *, int);
 
-int	psc_crc32_verify(psc_crc32_t, const void *, int);
-int	psc_crc64_verify(psc_crc64_t, const void *, int);
+int	psc_crc32_verify(uint32_t, const void *, int);
+int	psc_crc64_verify(uint64_t, const void *, int);
 
 #endif /* _PFL_CRC_H_ */

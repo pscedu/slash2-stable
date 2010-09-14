@@ -64,7 +64,7 @@ odtable_putitem(struct odtable *odt, void *data)
 {
 	struct odtable_entftr *odtf;
 	struct odtable_receipt *odtr, todtr = { 0, 0 };
-	psc_crc64_t crc;
+	uint64_t crc;
 	void *p;
 
 	do {
@@ -112,7 +112,7 @@ odtable_getitem(struct odtable *odt, const struct odtable_receipt *odtr)
 		return (NULL);
 
 	if (odt->odt_hdr->odth_options & ODTBL_OPT_CRC) {
-		psc_crc64_t crc;
+		uint64_t crc;
 
 		psc_crc64_calc(&crc, data, odt->odt_hdr->odth_elemsz);
 		if (crc != odtf->odtf_crc) {
@@ -131,7 +131,7 @@ odtable_replaceitem(struct odtable *odt, struct odtable_receipt *odtr,
 	    void *data)
 {
 	struct odtable_entftr *odtf;
-	psc_crc64_t crc;
+	uint64_t crc;
 	void *p;
 
 	odtf = odtable_getfooter(odt, odtr->odtr_elem);
@@ -295,7 +295,7 @@ odtable_load(struct odtable **t, const char *fn, const char *fmt, ...)
 			psc_vbitmap_set(odt->odt_bitmap, z);
 
 			if (odth->odth_options & ODTBL_OPT_CRC) {
-				psc_crc64_t crc;
+				uint64_t crc;
 
 				psc_crc64_calc(&crc, p, odt->odt_hdr->odth_elemsz);
 				if (crc != odtf->odtf_crc) {

@@ -188,8 +188,6 @@ main(int argc, char *argv[])
 	printf("structures:\n");
 	PRTYPE(atomic_t);
 	PRTYPE(psc_atomic_t);
-	PRTYPE(psc_crc32_t);
-	PRTYPE(psc_crc64_t);
 	PRTYPE(psc_spinlock_t);
 	PRTYPE(pscrpc_svc_handle_t);
 	PRTYPE(struct ifaddrs);
