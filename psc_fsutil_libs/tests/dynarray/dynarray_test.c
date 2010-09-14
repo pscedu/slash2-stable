@@ -102,6 +102,9 @@ main(int argc, char *argv[])
 	if (argc)
 		usage();
 
+	psc_dynarray_ensurelen(&da, 1);
+	_psc_dynarray_resize(&da, 0);
+
 	p = PTR_4; psc_dynarray_splice(&da, 0, 0, &p, 1); check(&da, PTR_4, NULL);
 	psc_dynarray_splice(&da, 0, 1, NULL, 0); check(&da, NULL);
 
