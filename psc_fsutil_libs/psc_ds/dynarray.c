@@ -17,6 +17,8 @@
  * %PSC_END_COPYRIGHT%
  */
 
+#define PSC_SUBSYS PSS_MEM
+
 /*
  * Dynamically resizeable arrays.
  * This API is not thread-safe!
