@@ -1199,9 +1199,10 @@ pscrpc_expire_one_request(struct pscrpc_request *req)
 {
 	struct pscrpc_import *imp = req->rq_import;
 
-	DEBUG_REQ(PLL_ERROR, req,
-		  "timeout (sent at %lu, %lus ago)",
-		  (long)req->rq_sent, CURRENT_SECONDS - req->rq_sent);
+	DEBUG_REQ(imp->imp_igntimeout ? PLL_NOTICE : PLL_ERROR, req,
+	    "timeout (sent at %lu, %lus ago)",
+	    (long)req->rq_sent, CURRENT_SECONDS - req->rq_sent);
+
 #if 0
 	/* Leave this out normally: it creates too much console noise and we
 	 * only need it when we're debugging networks */
