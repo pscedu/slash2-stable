@@ -33,6 +33,9 @@
 #include "psc_util/log.h"
 
 #ifdef PFL_DEBUG
+#  include <fcntl.h>
+#  include <unistd.h>
+
 #  define GUARD_AFTER (PFL_DEBUG > 1)
 #endif
 
@@ -373,10 +376,49 @@ _psc_free(void *p, int flags, ...)
 	free(p);
 }
 
+#define PFL_DEF_NMEMMAPS	(1024 * 1024)
+#define _PATH_MAX_MEMMAPS	"/proc/sys/vm/max_map_count"
+
 void
 psc_memallocs_init(void)
 {
 #ifdef PFL_DEBUG
+	char *p, *endp, *fn = _PATH_MAX_MEMMAPS;
+	long val, nmaps;
+	char buf[128];
+	ssize_t rc;
+	int fd;
+
+	fd = open(fn, O_RDWR);
+	if (fd != -1) {
+		nmaps = PFL_DEF_NMEMMAPS;
+		p = getenv("PSC_MAX_NMEMMAPS");
+		if (p) {
+			nmaps = strtol(p, &endp, 10);
+			if (nmaps < 0 || nmaps > INT_MAX ||
+			    endp == p || *endp != '\0')
+				psc_fatalx("invalid env PSC_MAX_NMEMMAPS: %s", p);
+		}
+
+		rc = pread(fd, buf, sizeof(buf), 0);
+		if (rc == -1)
+			psc_fatal("read %s", fn);
+
+		val = strtol(buf, &endp, 10);
+		if (val < 0 || val > INT_MAX ||
+		    endp == p || *endp != '\0')
+			psc_fatalx("error reading: %s", fn);
+
+		if (val < nmaps) {
+			snprintf(buf, sizeof(buf), "%ld", nmaps);
+			rc = pwrite(fd, buf, sizeof(buf), 0);
+			if (rc != sizeof(buf))
+			    psc_fatalx("write %s", fn);
+		}
+
+		close(fd);
+	}
+
 	psc_hashtbl_init(&psc_memallocs, PHTF_NOMEMGUARD | PHTF_NOLOG,
 	    struct psc_memalloc, pma_userbase, pma_hentry, 2047, NULL,
 	    "memallocs");
