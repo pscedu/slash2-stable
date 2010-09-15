@@ -33,6 +33,7 @@
 #include "psc_util/log.h"
 
 #ifdef PFL_DEBUG
+#  include <ctype.h>
 #  include <fcntl.h>
 #  include <unistd.h>
 
@@ -400,26 +401,34 @@ psc_memallocs_init(void)
 		if (p) {
 			nmaps = strtol(p, &endp, 10);
 			if (nmaps < 0 || nmaps > INT_MAX ||
-			    endp == p || *endp != '\0')
-				psc_fatalx("invalid env PSC_MAX_NMEMMAPS: %s", p);
+			    endp == p || *endp != '\0') {
+				warnx("invalid env PSC_MAX_NMEMMAPS: %s", p);
+				goto bail;
+			}
 		}
 
 		rc = pread(fd, buf, sizeof(buf), 0);
-		if (rc == -1)
-			psc_fatal("read %s", fn);
+		if (rc == -1) {
+			warnx("read %s", fn);
+			goto bail;
+		}
 
 		val = strtol(buf, &endp, 10);
+		while (isspace(*endp))
+			endp++;
 		if (val < 0 || val > INT_MAX ||
-		    endp == p || *endp != '\0')
-			psc_fatalx("error reading: %s", fn);
+		    endp == p || *endp != '\0') {
+			warnx("error reading %s", fn);
+			goto bail;
+		}
 
 		if (val < nmaps) {
 			snprintf(buf, sizeof(buf), "%ld", nmaps);
 			rc = pwrite(fd, buf, sizeof(buf), 0);
 			if (rc != sizeof(buf))
-			    psc_fatalx("write %s", fn);
+				warnx("error writing %s", fn);
 		}
-
+ bail:
 		close(fd);
 	}
 #endif
