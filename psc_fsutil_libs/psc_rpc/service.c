@@ -753,7 +753,7 @@ pscrpcthr_main(struct psc_thread *thr)
 		/* only handle requests if there are no difficult replies
 		 * outstanding, or I'm not the last thread handling
 		 * requests */
-		if (!psc_listhd_empty(&svc->srv_request_queue) &&
+		if (!psc_listhd_empty_locked(&svc->srv_lock, &svc->srv_request_queue) &&
 		    (svc->srv_n_difficult_replies == 0 ||
 		     svc->srv_n_active_reqs < (svc->srv_nthreads - 1)))
 			pscrpc_server_handle_request(svc, thr);
