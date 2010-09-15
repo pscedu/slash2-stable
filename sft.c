@@ -40,24 +40,26 @@ MPI_Group world;
 #include "psc_util/crc.h"
 #include "psc_util/log.h"
 
-int pes, mype;
-unsigned long crc=0, debug=0;
-ssize_t bufsz=131072;
+int		 pes;
+int		 mype;
+unsigned long	 crc;
+int		 debug;
+ssize_t		 bufsz = 131072;
 
-psc_crc64_t filecrc;
+uint64_t	 filecrc;
 
-char *file;
-char *buf;
+char		*file;
+char		*buf;
 
-const char *progname;
+const char	*progname;
 
 __dead void
 usage(void)
 {
 	fprintf(stderr, "usage: %s [-cd] [-b bufsz] [-f filename]\n"
-		"\t -d (enable debugging output)\n"
-		"\t -c (enable MD5 checksummming)\n"
-		"\t -f filename (specify the filename to read)\n", progname);
+	    "\t -d (enable debugging output)\n"
+	    "\t -c (enable MD5 checksummming)\n"
+	    "\t -f filename (specify the filename to read)\n", progname);
 	exit(1);
 }
 
