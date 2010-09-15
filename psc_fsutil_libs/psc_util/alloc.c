@@ -114,6 +114,8 @@ _psc_realloc(void *oldp, size_t size, int flags)
 	struct psc_memalloc *pma;
 	size_t specsize, oldlen;
 
+	flags &= ~PAF_NOGUARD;
+
 	/*
 	 * Since PAGEALIGN'd allocations must end on a page-boundary,
 	 * there is no guarentee they can begin on one, so we must force
@@ -363,6 +365,7 @@ _psc_free(void *p, int flags, ...)
 	}
 
 #ifdef PFL_DEBUG
+	flags &= ~PAF_NOGUARD;
 	if ((flags & PAF_NOGUARD) == 0) {
 		struct psc_memalloc *pma;
 
@@ -388,6 +391,10 @@ psc_memallocs_init(void)
 	char buf[128];
 	ssize_t rc;
 	int fd;
+
+	psc_hashtbl_init(&psc_memallocs, PHTF_NOMEMGUARD | PHTF_NOLOG,
+	    struct psc_memalloc, pma_userbase, pma_hentry, 2047, NULL,
+	    "memallocs");
 
 	fd = open(fn, O_RDWR);
 	if (fd != -1) {
@@ -418,9 +425,5 @@ psc_memallocs_init(void)
 
 		close(fd);
 	}
-
-	psc_hashtbl_init(&psc_memallocs, PHTF_NOMEMGUARD | PHTF_NOLOG,
-	    struct psc_memalloc, pma_userbase, pma_hentry, 2047, NULL,
-	    "memallocs");
 #endif
 }
