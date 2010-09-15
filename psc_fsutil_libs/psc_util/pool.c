@@ -191,7 +191,7 @@ _psc_pool_destroy_obj(struct psc_poolmgr *m, void *p)
 
 	if (p && m->ppm_destroyf)
 		m->ppm_destroyf(p);
-	flags = PAF_NOGUARD;
+	flags = 0;
 	if (m->ppm_flags & PPMF_NOLOCK)
 		flags |= PAF_LOCK;
 	psc_free(p, flags, m->ppm_entsize);
@@ -222,7 +222,7 @@ psc_pool_grow(struct psc_poolmgr *m, int n)
 		POOL_URLOCK(m, locked);
 	}
 
-	flags = PAF_CANFAIL | PAF_NOGUARD;
+	flags = PAF_CANFAIL;
 	if ((m->ppm_flags & PPMF_NOLOCK) == 0)
 		flags |= PAF_LOCK;
 	for (i = 0; i < n; i++) {
