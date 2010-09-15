@@ -51,7 +51,7 @@ struct psc_memalloc {
 	struct psc_hashent	 pma_hentry;
 };
 
-#ifdef PFL_DEBUG
+#if PFL_DEBUG > 1
 
 /*
  * Memory guard legend:
@@ -61,7 +61,7 @@ struct psc_memalloc {
  *	< - left fill
  *	> - right fill
  *
- * If PFL_DEBUG==1, the layout looks like this ("guard after"):
+ * If PFL_DEBUG > 2, the layout looks like this ("guard after"):
  *
  *	 <----- PAGE -----> <----- PAGE ----->
  *	+-----------+------+------------------+

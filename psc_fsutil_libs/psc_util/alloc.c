@@ -32,9 +32,7 @@
 #include "psc_util/alloc.h"
 #include "psc_util/log.h"
 
-#ifdef PFL_DEBUG
-#  define GUARD_AFTER (PFL_DEBUG > 1)
-#endif
+#define GUARD_AFTER (PFL_DEBUG > 2)
 
 struct psc_memalloc_key {
 	void *p;
@@ -49,7 +47,7 @@ struct psc_memalloc_key {
 
 int			psc_pagesize;
 
-#ifdef PFL_DEBUG
+#if PFL_DEBUG > 1
 struct psc_hashtbl	psc_memallocs;
 #endif
 
@@ -62,7 +60,7 @@ _psc_pool_reapsome(__unusedx size_t size)
 {
 }
 
-#ifdef PFL_DEBUG
+#if PFL_DEBUG > 1
 struct psc_memalloc *
 _psc_getpma(void *p)
 {
@@ -106,7 +104,7 @@ _psc_realloc(void *oldp, size_t size, int flags)
 	int rc, save_errno;
 	void *newp;
 
-#ifdef PFL_DEBUG
+#if PFL_DEBUG > 1
 	int guard_after = GUARD_AFTER;
 	struct psc_memalloc *pma;
 	size_t specsize, oldlen;
@@ -149,7 +147,7 @@ _psc_realloc(void *oldp, size_t size, int flags)
 	 */
 	if (size == 0) {
 		if (oldp) {
-#ifdef PFL_DEBUG
+#if PFL_DEBUG > 1
 			free(pma);
 #endif
 			free(oldp);
@@ -157,7 +155,7 @@ _psc_realloc(void *oldp, size_t size, int flags)
 		return (NULL);
 	}
 
-#ifdef PFL_DEBUG
+#if PFL_DEBUG > 1
 	if ((flags & PAF_NOGUARD) == 0) {
 		specsize = size;
 		size = psc_pagesize + PSC_ALIGN(size, psc_pagesize);
@@ -174,7 +172,7 @@ _psc_realloc(void *oldp, size_t size, int flags)
 
  retry:
 	if (flags & PAF_PAGEALIGN) {
-#ifndef PFL_DEBUG
+#if PFL_DEBUG <= 1
 		if (oldp)
 			errx(1, "realloc of page-aligned is not implemented");
 #endif
@@ -182,7 +180,7 @@ _psc_realloc(void *oldp, size_t size, int flags)
 		if (rc) {
 			errno = rc;
 			newp = NULL;
-#ifdef PFL_DEBUG
+#if PFL_DEBUG > 1
 		} else if (oldp) {
  movepage:
 			/*
@@ -227,7 +225,7 @@ _psc_realloc(void *oldp, size_t size, int flags)
 		err(1, "malloc/realloc");
 	}
 
-#ifdef PFL_DEBUG
+#if PFL_DEBUG > 1
 	if ((flags & PAF_NOGUARD) == 0) {
 		int rem;
 
@@ -359,7 +357,7 @@ _psc_free(void *p, int flags, ...)
 			psc_fatal("munlock %p", p);
 	}
 
-#ifdef PFL_DEBUG
+#if PFL_DEBUG > 1
 	if ((flags & PAF_NOGUARD) == 0) {
 		struct psc_memalloc *pma;
 
@@ -379,7 +377,7 @@ _psc_free(void *p, int flags, ...)
 void
 psc_memallocs_init(void)
 {
-#ifdef PFL_DEBUG
+#if PFL_DEBUG > 1
 	char *p, *endp, *fn = _PATH_MAX_MEMMAPS;
 	long val, nmaps;
 	FILE *fp;

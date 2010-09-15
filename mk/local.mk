@@ -9,7 +9,7 @@ LIBC_INCLUDES+=	$$(if ${CC} -v 2>&1 | grep -q gcc; then ${CC} -print-search-dirs
 LINT=		splint +posixlib
 NOTEMPTY=	${ROOTDIR}/tools/notempty
 SCONS=		scons
-PKG_CONFIG=	pkg-config
+PKG_CONFIG=	PKG_CONFIG_PATH=${FUSE_BASE} pkg-config
 LIBGCRYPT_CONFIG=libgcrypt-config
 MPICC=		mpicc
 ECHORUN=	${ROOTDIR}/tools/echorun.sh
@@ -35,18 +35,18 @@ ifeq (${DEBUG},0)
 # CFLAGS+=	-Wshadow
 else
   CFLAGS+=	-g
-  DEFINES+=	-DPFL_DEBUG=${DEBUG}
 endif
 
 DEFINES+=	-D_REENTRANT -DYY_NO_UNPUT -DYY_NO_INPUT -DYYERROR_VERBOSE
+DEFINES+=	-DPFL_DEBUG=${DEBUG}
 
 KERNEL_BASE=	/usr/src/kernels/linux
 
-FUSE_CFLAGS=	$$(PKG_CONFIG_PATH=${FUSE_BASE} ${PKG_CONFIG} --cflags fuse | ${EXTRACT_CFLAGS})
-FUSE_DEFINES=	$$(PKG_CONFIG_PATH=${FUSE_BASE} ${PKG_CONFIG} --cflags fuse | ${EXTRACT_DEFINES})
-FUSE_INCLUDES=	$$(PKG_CONFIG_PATH=${FUSE_BASE} ${PKG_CONFIG} --cflags fuse | ${EXTRACT_INCLUDES})
-FUSE_LIBS=	$$(PKG_CONFIG_PATH=${FUSE_BASE} ${PKG_CONFIG} --libs fuse)
-FUSE_VERSION=	$$(PKG_CONFIG_PATH=${FUSE_BASE} ${PKG_CONFIG} --modversion fuse | sed 's/\([0-9]\)*\.\([0-9]*\).*/\1\2/')
+FUSE_CFLAGS=	$$(${PKG_CONFIG} --cflags fuse | ${EXTRACT_CFLAGS})
+FUSE_DEFINES=	$$(${PKG_CONFIG} --cflags fuse | ${EXTRACT_DEFINES})
+FUSE_INCLUDES=	$$(${PKG_CONFIG} --cflags fuse | ${EXTRACT_INCLUDES})
+FUSE_LIBS=	$$(${PKG_CONFIG} --libs fuse)
+FUSE_VERSION=	$$(${PKG_CONFIG} --modversion fuse | sed 's/\([0-9]\)*\.\([0-9]*\).*/\1\2/')
 
 GCRYPT_CFLAGS=	$$(${LIBGCRYPT_CONFIG} --cflags | ${EXTRACT_CFLAGS})
 GCRYPT_DEFINES=	$$(${LIBGCRYPT_CONFIG} --cflags | ${EXTRACT_DEFINES})
