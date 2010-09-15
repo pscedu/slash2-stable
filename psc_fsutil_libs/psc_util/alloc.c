@@ -386,50 +386,43 @@ psc_memallocs_init(void)
 #ifdef PFL_DEBUG
 	char *p, *endp, *fn = _PATH_MAX_MEMMAPS;
 	long val, nmaps;
-	char buf[128];
-	ssize_t rc;
-	int fd;
+	FILE *fp;
 
 	psc_hashtbl_init(&psc_memallocs, PHTF_NOMEMGUARD | PHTF_NOLOG,
 	    struct psc_memalloc, pma_userbase, pma_hentry, 2047, NULL,
 	    "memallocs");
 
-	fd = open(fn, O_RDWR);
-	if (fd != -1) {
+	fp = fopen(fn, "rw");
+	if (fp) {
 		nmaps = PFL_DEF_NMEMMAPS;
 		p = getenv("PSC_MAX_NMEMMAPS");
 		if (p) {
-			nmaps = strtol(p, &endp, 10);
-			if (nmaps < 0 || nmaps > INT_MAX ||
-			    endp == p || *endp != '\0') {
+			val = strtol(p, &endp, 10);
+			if (val < 0 || val > INT_MAX ||
+			    endp == p || *endp != '\0')
 				warnx("invalid env PSC_MAX_NMEMMAPS: %s", p);
-				goto bail;
-			}
+			else
+				nmaps = val;
 		}
 
-		rc = pread(fd, buf, sizeof(buf), 0);
-		if (rc == -1) {
+		if (fscanf(fp, "%ld", &val) != 1) {
 			warnx("read %s", fn);
 			goto bail;
 		}
 
-		val = strtol(buf, &endp, 10);
-		while (isspace(*endp))
-			endp++;
-		if (val < 0 || val > INT_MAX ||
-		    endp == p || *endp != '\0') {
-			warnx("error reading %s", fn);
+		errno = 0;
+		rewind(fp);
+		if (errno) {
+			warnx("rewind %s", fn);
 			goto bail;
 		}
 
 		if (val < nmaps) {
-			snprintf(buf, sizeof(buf), "%ld", nmaps);
-			rc = pwrite(fd, buf, sizeof(buf), 0);
-			if (rc != sizeof(buf))
+			if (fprintf(fp, "%ld", nmaps) != 1)
 				warnx("error writing %s", fn);
 		}
  bail:
-		close(fd);
+		fclose(fp);
 	}
 #endif
 }
