@@ -70,7 +70,7 @@ typedef struct {
 		(s)->sl_flags = 0;					\
 	} while (0)
 
-#define INIT_SPINLOCK_LOG(psl)						\
+#define INIT_SPINLOCK_LOG(s)						\
 	do {								\
 		(s)->sl_lock = SL_UNLOCKED;				\
 		(s)->sl_flags = SPINF_LOG;				\
