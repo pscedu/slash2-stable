@@ -218,7 +218,7 @@ _psclogv(const char *fn, const char *func, int line, int subsys,
 	struct timeval tv;
 	const char *thrname;
 	int rc, save_errno;
-	va_list apd = 0;
+	va_list apd;
 	pid_t thrid;
 	FILE *fp;
 
@@ -266,8 +266,7 @@ _psclogv(const char *fn, const char *func, int line, int subsys,
 	for (p = fmtbuf + rc - 1; p >= fmtbuf && *p == '\n'; p--)
 		*p = '\0';
 
-	if (level == PLL_FATAL)
-		va_copy(apd, ap);
+	va_copy(apd, ap);
 
 	PSCLOG_LOCK();
 	/* consider using fprintf_unlocked() for speed */
