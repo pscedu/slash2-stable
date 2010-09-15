@@ -33,10 +33,6 @@
 #include "psc_util/log.h"
 
 #ifdef PFL_DEBUG
-#  include <ctype.h>
-#  include <fcntl.h>
-#  include <unistd.h>
-
 #  define GUARD_AFTER (PFL_DEBUG > 1)
 #endif
 
