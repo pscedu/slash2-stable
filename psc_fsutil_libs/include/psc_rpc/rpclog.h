@@ -1,4 +1,5 @@
 /* $Id$ */
+/* %PSC_COPYRIGHT% */
 
 #ifndef _PFL_RPCLOG_H_
 #define _PFL_RPCLOG_H_

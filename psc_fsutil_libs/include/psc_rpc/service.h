@@ -1,4 +1,5 @@
 /* $Id$ */
+/* %PSC_COPYRIGHT% */
 
 #ifndef _PSCRPC_SERVICE_H_
 #define _PSCRPC_SERVICE_H_
