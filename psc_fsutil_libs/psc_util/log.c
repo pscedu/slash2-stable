@@ -18,9 +18,7 @@
  */
 
 /*
- * Logging routines.
- * Notes:
- *	(o) We cannot use psc_fatal() for fatal errors here.  Instead use err(3).
+ * Debug/logging routines.
  */
 
 #include <sys/param.h>
@@ -30,6 +28,7 @@
 #include <ctype.h>
 #include <err.h>
 #include <errno.h>
+#include <paths.h>
 #include <pthread.h>
 #include <stdarg.h>
 #include <stdio.h>
@@ -150,7 +149,7 @@ pfl_getsysthrid(void)
 }
 
 /**
- * MPI_Comm_rank - dummy overrideable MPI rank retriever.
+ * MPI_Comm_rank - Dummy overrideable MPI rank retriever.
  */
 __weak int
 MPI_Comm_rank(__unusedx int comm, int *rank)
@@ -160,7 +159,7 @@ MPI_Comm_rank(__unusedx int comm, int *rank)
 }
 
 /**
- * fuse_get_context - dummy overrideable fuse context retriever.
+ * fuse_get_context - Dummy overrideable fuse context retriever.
  */
 __weak struct fuse_context *
 psclog_get_fuse_context(void)
@@ -169,7 +168,7 @@ psclog_get_fuse_context(void)
 }
 
 /**
- * psc_subsys_name - dummy overrideable PFL subsystem ID -> name resolver.
+ * psc_subsys_name - Dummy overrideable PFL subsystem ID -> name resolver.
  */
 __weak const char *
 psc_subsys_name(__unusedx int ssid)
@@ -219,7 +218,9 @@ _psclogv(const char *fn, const char *func, int line, int subsys,
 	struct timeval tv;
 	const char *thrname;
 	int rc, save_errno;
+	va_list apd = 0;
 	pid_t thrid;
+	FILE *fp;
 
 	save_errno = errno;
 
@@ -265,6 +266,9 @@ _psclogv(const char *fn, const char *func, int line, int subsys,
 	for (p = fmtbuf + rc - 1; p >= fmtbuf && *p == '\n'; p--)
 		*p = '\0';
 
+	if (level == PLL_FATAL)
+		va_copy(apd, ap);
+
 	PSCLOG_LOCK();
 	/* consider using fprintf_unlocked() for speed */
 	fprintf(stderr, "%s", prefix);
@@ -275,6 +279,17 @@ _psclogv(const char *fn, const char *func, int line, int subsys,
 	fflush(stderr);
 
 	if (level == PLL_FATAL) {
+		if (!isatty(fileno(stderr))) {
+			fp = fopen(_PATH_TTY, "w");
+			if (fp) {
+				fprintf(fp, "%s", prefix);
+				vfprintf(fp, fmtbuf, apd);
+				if (options & PLO_ERRNO)
+					fprintf(fp, ": %s", APP_STRERROR(save_errno));
+				fprintf(fp, "\n");
+				fclose(fp);
+			}
+		}
 		abort();
 		_exit(1);
 	}
@@ -317,7 +332,7 @@ _psc_fatalv(const char *fn, const char *func, int line, int subsys,
 	psc_fatalx("should not reach here");
 }
 
-/* Keep synced with LL_* constants. */
+/* Keep synced with PLL_* constants. */
 const char *psc_loglevel_names[] = {
 	"fatal",
 	"error",
@@ -345,13 +360,13 @@ psc_loglevel_getid(const char *name)
 		const char		*lvl_name;
 		enum psclog_level	 lvl_value;
 	} altloglevels[] = {
-		{ "none",	PLL_FATAL },
-		{ "fatals",	PLL_FATAL },
-		{ "errors",	PLL_ERROR },
-		{ "warning",	PLL_WARN },
-		{ "warnings",	PLL_WARN },
-		{ "notify",	PLL_NOTICE },
-		{ "all",	PLL_TRACE }
+		{ "none",		PLL_FATAL },
+		{ "fatals",		PLL_FATAL },
+		{ "errors",		PLL_ERROR },
+		{ "warning",		PLL_WARN },
+		{ "warnings",		PLL_WARN },
+		{ "notify",		PLL_NOTICE },
+		{ "all",		PLL_TRACE }
 	};
 	size_t n;
 
