@@ -51,88 +51,92 @@ typedef struct psc_spinlock psc_spinlock_t;
 #include <time.h>
 
 typedef struct {
-	int		sl_lock;
-	pthread_t	sl_who;
+	int			sl_lock;
+	int			sl_flags;
+	pthread_t		sl_who;
 } psc_spinlock_t;
+
+#define SPINF_LOG		(1 << 0)	/* log locks and unlocks */
 
 #define MAX_SPIN_CNT		256
 #define SPIN_SLEEP_DURATION     5001
 
-#define INIT_SPINLOCK(l)	((l)->sl_lock = SL_UNLOCKED)
-#define SPINLOCK_INIT		{ SL_UNLOCKED, 0 }
+#define PSC_SPIN_RLV_LOCKED	42
+#define PSC_SPIN_RLV_NOTLOCKED	43
 
-static __inline int
-validlock(const psc_spinlock_t *sl)
-{
-	int v;
-
-	v = sl->sl_lock;
-	return (v == SL_LOCKED || v == SL_UNLOCKED);
-}
-
-#define _CHECKLOCK(name, sl)						\
+#define INIT_SPINLOCK(s)						\
 	do {								\
-		if (!validlock(sl))					\
-			psc_fatalx("%s: %#x: invalid value (lock %p)",	\
-			    (name), (sl)->sl_lock, (sl));		\
+		(s)->sl_lock = SL_UNLOCKED;				\
+		(s)->sl_flags = 0;					\
 	} while (0)
 
-#define _LOCK_ENSURE(name, sl) {					\
-		_CHECKLOCK((name), (sl));				\
-		if ((sl)->sl_lock == SL_UNLOCKED)			\
+#define INIT_SPINLOCK_LOG(psl)						\
+	do {								\
+		(s)->sl_lock = SL_UNLOCKED;				\
+		(s)->sl_flags = SPINF_LOG;				\
+	} while (0)
+
+#define SPINLOCK_INIT		{ SL_UNLOCKED, 0, 0 }
+
+#define _SPIN_CHECK(name, s)						\
+	do {								\
+		int _val = (s)->sl_lock;				\
+									\
+		if (_val != SL_LOCKED && _val != SL_UNLOCKED)		\
+			psc_fatalx("%s: %#x: invalid value (lock %p)",	\
+			    (name), (s)->sl_lock, (s));			\
+	} while (0)
+
+#define _SPIN_ENSURELOCKED(name, s)					\
+	{								\
+		_SPIN_CHECK((name), (s));				\
+		if ((s)->sl_lock == SL_UNLOCKED)			\
 			psc_fatalx("%s: not locked (lock %p)", (name),	\
-			    (sl));					\
-		if ((sl)->sl_who != pthread_self())			\
+			    (s));					\
+		if ((s)->sl_who != pthread_self())			\
 			psc_fatalx("%s: not owner "			\
 			    "(lock %p, owner %"PSCPRI_PTHRT", "		\
 			    "self %"PSCPRI_PTHRT")", (name),		\
-			    (sl), (sl)->sl_who, pthread_self());	\
+			    (s), (s)->sl_who, pthread_self());		\
 		1;							\
 	}
 
-#define LOCK_ENSURE(sl)		(_LOCK_ENSURE("LOCK_ENSURE", (sl)))
-
-#define freelock(sl)							\
-	do {								\
-		(void)(_LOCK_ENSURE("freelock", (sl)));			\
-		(sl)->sl_who = 0;					\
-		(sl)->sl_lock = SL_UNLOCKED;				\
-	} while (0)
-
-#define _TEST_AND_SET_GUTS(name, sl)					\
+#define _P_SPIN_TEST_AND_SET(name, s)					\
 	{								\
 		int _v;							\
 									\
 		(_v) = SL_LOCKED;					\
 		__asm__(						\
 		    "xchg %0, %1"					\
-		    : "=r" (_v), "=m" ((sl)->sl_lock)			\
-		    : "0"  (_v), "m"  ((sl)->sl_lock)			\
+		    : "=r" (_v), "=m" ((s)->sl_lock)			\
+		    : "0"  (_v), "m"  ((s)->sl_lock)			\
 		);							\
 		if ((_v) == SL_LOCKED) {				\
-			if ((sl)->sl_who == pthread_self())		\
+			if ((s)->sl_who == pthread_self())		\
 				psc_fatalx("%s: already locked",	\
 				    (name));				\
 			(_v) = 0;					\
 		} else if ((_v) == SL_UNLOCKED) {			\
-			(sl)->sl_who = pthread_self();			\
+			(s)->sl_who = pthread_self();			\
+			psc_log((s)->sl_flags & SPINF_LOG ?		\
+			    PLL_NOTICE : PLL_TRACE,			\
+			    "lock %p acquired", (s));			\
 			(_v) = 1;					\
 		} else							\
 			psc_fatalx("%s: %#x: invalid value (lock %p)",	\
-			    (name), (_v), (sl));			\
+			    (name), (_v), (s));				\
 		(_v);							\
 	}
+#define _SPIN_TEST_AND_SET(name, s)	(_P_SPIN_TEST_AND_SET((name), (s)))
 
-#define _TEST_AND_SET(name, sl)	(_TEST_AND_SET_GUTS((name), (sl)))
+#define _TRYLOCK(s)		_SPIN_TEST_AND_SET("trylock", (s))
 
-#define trylock(sl)		_TEST_AND_SET("trylock", (sl))
-
-#define _SPINLOCK(sl)							\
+#define _SPINLOCK(s)							\
 	do {								\
 		struct timespec _tm;					\
 		int _i = 0;						\
 									\
-		while (!_TEST_AND_SET("spinlock", (sl))) {		\
+		while (!_SPIN_TEST_AND_SET("spinlock", (s))) {		\
 			if (_i < MAX_SPIN_CNT) {			\
 				sched_yield();				\
 				_i++;					\
@@ -144,73 +148,106 @@ validlock(const psc_spinlock_t *sl)
 			}						\
 		}							\
 	} while (0)
+#define _P_SPINLOCK(s)		{ _SPINLOCK(s); }
 
-#ifdef LOCK_PROFILING
-static __inline void
-spinlock(psc_spinlock_t *sl)
-{
-	_SPINLOCK(sl);
-}
-#else
-#define spinlock(sl)		_SPINLOCK(sl)
-#endif
-
-#define PSC_SPIN_RLV_LOCKED	42
-#define PSC_SPIN_RLV_NOTLOCKED	43
-
-static __inline int
-havelock(psc_spinlock_t *sl)
-{
-	/*
-	 * This code is thread safe because even if sl_who changes, it
-	 * won't be set to us and we will still wait for the lock when
-	 * we need to.
-	 */
-	_CHECKLOCK("havelock", sl);
-	return (sl->sl_lock == SL_LOCKED && sl->sl_who == pthread_self());
-}
+#define _FREELOCK(s)							\
+	do {								\
+		(void)(_SPIN_ENSURELOCKED("freelock", (s)));		\
+		(s)->sl_who = 0;					\
+		(s)->sl_lock = SL_UNLOCKED;				\
+		psc_log((s)->sl_flags & SPINF_LOG ?			\
+		    PLL_NOTICE : PLL_TRACE,				\
+		    "lock %p released", (s));				\
+	} while (0)
 
 /**
  * reqlock - Require a lock for a critical section.  Locks if unlocked,
  *	doesn't if already locked (to avoid deadlock).
- * @sl: the lock.
- * Returns true if the lock is already locked.
+ * @s: the spinlock.
+ * Returns a value that ureqlock() must use.
  */
-static __inline int
-reqlock(psc_spinlock_t *sl)
-{
-	if (havelock(sl))
-		return (PSC_SPIN_RLV_LOCKED);
-	spinlock(sl);
-	return (PSC_SPIN_RLV_NOTLOCKED);
-}
+#define _REQLOCK(s)							\
+	(havelock(s) ?							\
+	    PSC_SPIN_RLV_LOCKED :					\
+	    ((_P_SPINLOCK(s)), PSC_SPIN_RLV_NOTLOCKED))
 
-static __inline int
-tryreqlock(psc_spinlock_t *sl, int *locked)
-{
-	if (havelock(sl)) {
-		*locked = PSC_SPIN_RLV_LOCKED;
-		return (1);
-	}
-	*locked = PSC_SPIN_RLV_NOTLOCKED;
-	return (trylock(sl));
-}
+#define _TRYREQLOCK(s, waslkdp)						\
+	(havelock(s) ?							\
+	    (*(waslkdp) = PSC_SPIN_RLV_LOCKED, 1) :			\
+	    (*(waslkdp) = PSC_SPIN_RLV_NOTLOCKED, trylock(s)))
 
 /**
  * ureqlock - "Unrequire" a lock -- unlocks the lock if it was locked
  *	for the nearest "reqlock ... ureqlock" section and doesn't if
  *	the lock was already locked before the critical section began.
- * @sl: the lock.
- * @waslocked: return value from reqlock().
+ * @s: the spinlock.
+ * @waslkd: return value from reqlock().
  */
-static __inline void
-ureqlock(psc_spinlock_t *sl, int waslocked)
+#define _UREQLOCK(s, waslkd)						\
+	do {								\
+		if ((waslkd) == PSC_SPIN_RLV_NOTLOCKED)			\
+			freelock(s);					\
+		else							\
+			_SPIN_CHECK("ureqlock", (s));			\
+	} while (0)
+
+static __inline int
+havelock(psc_spinlock_t *s)
 {
-	if (waslocked == PSC_SPIN_RLV_NOTLOCKED)
-		freelock(sl);
-	else if (waslocked != PSC_SPIN_RLV_LOCKED)
-		psc_fatalx("ureqlock: bad value");
+	_SPIN_CHECK("havelock", s);
+	/*
+	 * This code is thread safe because even if sl_who changes, it
+	 * won't be set to us.
+	 */
+	return (s->sl_lock == SL_LOCKED && s->sl_who == pthread_self());
 }
+
+#ifdef LOCK_PROFILING
+static __inline void
+spinlock(psc_spinlock_t *s)
+{
+	_SPINLOCK(s);
+}
+
+static __inline void
+freelock(psc_spinlock_t *s)
+{
+	_FREELOCK(s);
+}
+
+static __inline void
+trylock(psc_spinlock_t *s)
+{
+	_TRYLOCK(s);
+}
+
+static __inline int
+reqlock(psc_spinlock_t *s)
+{
+	return (_REQLOCK(s));
+}
+
+static __inline int
+tryreqlock(psc_spinlock_t *s, int *waslkd)
+{
+	return (_TRYREQLOCK(s, waslkd));
+}
+
+static __inline void
+ureqlock(psc_spinlock_t *s, int waslkd)
+{
+	_UREQLOCK(s, waslkd);
+}
+#else
+#  define spinlock(s)		_SPINLOCK(s)
+#  define trylock(s)		_TRYLOCK(s)
+#  define freelock(s)		_FREELOCK(s)
+#  define reqlock(s)		_REQLOCK(s)
+#  define tryreqlock(s, waslkd)	_TRYREQLOCK((s), (waslkd))
+#  define ureqlock(s, waslkd)	_UREQLOCK((s), (waslkd))
+#endif
+
+#define LOCK_ENSURE(s)		(_SPIN_ENSURELOCKED("LOCK_ENSURE", (s)))
 
 #else /* !HAVE_LIBPTHREAD */
 
@@ -219,80 +256,81 @@ ureqlock(psc_spinlock_t *sl, int waslocked)
 typedef int psc_spinlock_t;
 
 /* XXX provide some way to detect reinitializing already-initialized locks. */
-#define INIT_SPINLOCK(l)	(*(l) = SL_UNLOCKED)
+#define INIT_SPINLOCK(s)	(*(s) = SL_UNLOCKED)
 #define SPINLOCK_INIT		SL_UNLOCKED
 
-#define _LOCK_VALID(l)		(*(l) == SL_LOCKED || *(l) == SL_UNLOCKED)
+#define _LOCK_VALID(s)		(*(s) == SL_LOCKED || *(s) == SL_UNLOCKED)
 
 static __inline int
-LOCK_ENSURE(psc_spinlock_t *sl)
+LOCK_ENSURE(psc_spinlock_t *s)
 {
-	if (!_LOCK_VALID(sl))
-		psc_fatalx("LOCK_ENSURE: %x: invalid value (lock %p)", *sl, sl);
-	if (*sl != SL_LOCKED)
-		psc_fatalx("lock is not locked (%p)!", sl);
+	if (!_LOCK_VALID(s))
+		psc_fatalx("LOCK_ENSURE: %x: invalid value (lock %p)", *s, s);
+	if (*s != SL_LOCKED)
+		psc_fatalx("lock is not locked (%p)!", s);
 	return (1);
 }
-
-#define freelock(l)								\
-	do {									\
-		if (!_LOCK_VALID(l))						\
-			psc_fatalx("freelock: invalid lock value (%p)", (l));	\
-		if (*(l) == SL_UNLOCKED)					\
-			psc_fatalx("freelock: not locked (%p)", (l));		\
-		*(l) = SL_UNLOCKED;						\
-	} while (0)
 
 static __inline void
-spinlock(psc_spinlock_t *l)
+freelock(psc_spinlock_t *s)
 {
-	if (!_LOCK_VALID(l))
-		psc_fatalx("lock %p has invalid value", l);
-	if (*l == SL_LOCKED)
-		psc_fatalx("lock %p already locked", l);
-	*l = SL_LOCKED;
+	if (!_LOCK_VALID(s))
+		psc_fatalx("lock %p has invalid value", s);
+	if (*s == SL_UNLOCKED)
+		psc_fatalx("lock %p not locked", s);
+	*s = SL_UNLOCKED;
+}
+
+static __inline void
+spinlock(psc_spinlock_t *s)
+{
+	if (!_LOCK_VALID(s))
+		psc_fatalx("lock %p has invalid value", s);
+	if (*s == SL_LOCKED)
+		psc_fatalx("lock %p already locked", s);
+	*s = SL_LOCKED;
 }
 
 static __inline int
-trylock(psc_spinlock_t *l)
+trylock(psc_spinlock_t *s)
 {
-	if (*l == SL_LOCKED)
-		psc_fatalx("lock %p already locked", l);
-	else if (*l != SL_UNLOCKED)
-		psc_fatalx("lock %p has invalid value", l);
-	*l = SL_LOCKED;
+	if (*s == SL_LOCKED)
+		psc_fatalx("lock %p already locked", s);
+	else if (*s != SL_UNLOCKED)
+		psc_fatalx("lock %p has invalid value", s);
+	*s = SL_LOCKED;
 	return (1);
 }
 
 static __inline int
-reqlock(psc_spinlock_t *l)
+reqlock(psc_spinlock_t *s)
 {
-	if (*l == SL_LOCKED)
+	if (*s == SL_LOCKED)
 		return (1);
-	else if (*l != SL_UNLOCKED)
-		psc_fatalx("lock %p has invalid value", l);
-	*l = SL_LOCKED;
+	else if (*s != SL_UNLOCKED)
+		psc_fatalx("lock %p has invalid value", s);
+	*s = SL_LOCKED;
 	return (0);
 }
 
 static __inline void
-ureqlock(psc_spinlock_t *l, int waslocked)
+ureqlock(psc_spinlock_t *s, int waslocked)
 {
 	if (!waslocked)
-		freelock(l);
-	else if (!_LOCK_VALID(l))
-		psc_fatalx("lock %p has invalid value", l);
+		freelock(s);
+	else if (!_LOCK_VALID(s))
+		psc_fatalx("lock %p has invalid value", s);
 }
 
 static __inline int
-tryreqlock(psc_spinlock_t *l, int *locked)
+tryreqlock(psc_spinlock_t *s, int *locked)
 {
-	if (*l == SL_LOCKED) {
+	if (*s == SL_LOCKED) {
 		*locked = 1;
 		return (1);
-	} else if (*l != SL_UNLOCKED)
-		psc_fatalx("lock %p has invalid value", l);
-	*l = SL_LOCKED;
+	} else if (*s != SL_UNLOCKED)
+		psc_fatalx("lock %p has invalid value", s);
+	*s = SL_LOCKED;
 	*locked = 0;
 	return (1);
 }
