@@ -92,4 +92,8 @@
 /* if multiple of 2, use bitwise ops to simplify math */
 #define PSC_ALIGN(sz, incr)	((incr) * (((sz) + ((incr) - 1)) / (incr)))
 
+#define _PSC_MAKE_EXPR(expr, v)	{ expr; (v); }
+#define PSC_MAKETRUE(expr)	(_PSC_MAKE_EXPR(expr, 1))
+#define PSC_MAKEFALSE(expr)	(_PSC_MAKE_EXPR(expr, 0))
+
 #endif /* _PFL_CDEFS_H_ */
