@@ -24,10 +24,9 @@
 
 typedef int clockid_t;
 
-long clock_gettime(clockid_t, struct timespec *);
+#define CLOCK_REALTIME		0
 
-enum {
-	CLOCK_REALTIME
-};
+int clock_gettime(clockid_t, struct timespec *);
+
 
 #endif /* _PFL_COMPAT_CLOCK_GETTIME_H_ */
