@@ -188,7 +188,6 @@ main(int argc, char *argv[])
 	printf("structures:\n");
 	PRTYPE(atomic_t);
 	PRTYPE(psc_atomic_t);
-	PRTYPE(psc_spinlock_t);
 	PRTYPE(pscrpc_svc_handle_t);
 	PRTYPE(struct ifaddrs);
 	PRTYPE(struct l_wait_info);
@@ -343,6 +342,8 @@ main(int argc, char *argv[])
 	PRVAL(PSCRPC_RQ_PHASE_INTERPRET);
 	PRVAL(PSCRPC_RQ_PHASE_NEW);
 	PRVAL(PSCRPC_RQ_PHASE_RPC);
+	PRVAL(PSL_LOCKED);
+	PRVAL(PSL_UNLOCKED);
 	/* end enums */
 
 	PRVAL(offsetof(struct psc_listcache, plc_listhd));
