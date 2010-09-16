@@ -16,5 +16,5 @@ while ($s =~ /free\((0x[0-9a-f]+)\)/gc) {
 
 	print $addr, "\n" if
 	    $' =~ /free\($addr\)/ and
-	    $` =~ /alloc\(0x[0-9a-f]+\)=$addr/;
+	    $` !~ /alloc\([0-9a-fx]*\)=$addr/;
 }
