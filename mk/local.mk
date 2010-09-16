@@ -8,7 +8,7 @@ LIBC_INCLUDES+=	$$(if ${CC} -v 2>&1 | grep -q gcc; then ${CC} -print-search-dirs
 		    grep install | awk '{print "-I" $$2 "include"}' | sed 's/:/ -I/'; fi)
 LINT=		splint +posixlib
 NOTEMPTY=	${ROOTDIR}/tools/notempty
-SCONS=		scons
+SCONS=		scons DEFINES="$(filter -DHAVE_%,${DEFINES}) $(filter -DPFL_%,${DEFINES})"
 PKG_CONFIG=	PKG_CONFIG_PATH=${FUSE_BASE} pkg-config
 LIBGCRYPT_CONFIG=libgcrypt-config
 MPICC=		mpicc
