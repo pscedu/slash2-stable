@@ -59,7 +59,7 @@ typedef struct psc_spinlock {
 #endif
 } psc_spinlock_t;
 
-#define PSLF_LOG		(1 << 0)	/* log locks and unlocks */
+#define PSLF_NOLOG		(1 << 0)	/* don't psclog locks/unlocks */
 
 #define PSL_SLEEP_NTRIES	256
 #define PSL_SLEEP_NSEC		5001
@@ -74,13 +74,15 @@ typedef struct psc_spinlock {
 		(psl)->psl_flags = (flg);				\
 	} while (0)
 
-#define INIT_SPINLOCK(psl)	INIT_SPINLOCK_FLAGS((psl), 0)
-#define INIT_SPINLOCK_LOG(psl)	INIT_SPINLOCK_FLAGS((psl), PSLF_LOG)
+#define INIT_SPINLOCK(psl)	 INIT_SPINLOCK_FLAGS((psl), 0)
+#define INIT_SPINLOCK_NOLOG(psl) INIT_SPINLOCK_FLAGS((psl), PSLF_NOLOG)
 
 #ifdef LOCK_TIMING
 #  define SPINLOCK_INIT		{ PSL_UNLOCKED, 0, 0, { 0, 0 } }
+#  define SPINLOCK_INIT_NOLOG	{ PSL_UNLOCKED, PSLF_NOLOG, 0, { 0, 0 } }
 #else
 #  define SPINLOCK_INIT		{ PSL_UNLOCKED, 0, 0 }
+#  define SPINLOCK_INIT_NOLOG	{ PSL_UNLOCKED, PSLF_NOLOG, 0 }
 #endif
 
 #define _SPIN_GETVAL(psl)	psc_atomic32_read(_SPIN_GETATOM(psl))
@@ -121,9 +123,9 @@ typedef struct psc_spinlock {
 			(_val) = 0;					\
 		} else if ((_val) == PSL_UNLOCKED) {			\
 			(psl)->psl_who = pthread_self();		\
-			psc_log((psl)->psl_flags & PSLF_LOG ?		\
-			    PLL_NOTICE : PLL_TRACE,			\
-			    "lock %p acquired", (psl));			\
+			if (((psl)->psl_flags & PSLF_NOLOG) == 0)	\
+				psclog_debug("lock %p acquired",	\
+				    (psl));				\
 			(_val) = 1;					\
 		} else							\
 			psc_fatalx("%s: lock %p has invalid value %#x",	\
@@ -154,8 +156,8 @@ typedef struct psc_spinlock {
 		_spin_checktime(psl);					\
 		(psl)->psl_who = 0;					\
 		psc_atomic32_set(_SPIN_GETATOM(psl), PSL_UNLOCKED);	\
-		psc_log((psl)->psl_flags & PSLF_LOG ?			\
-		    PLL_NOTICE : PLL_TRACE, "lock %p released", (psl));	\
+		if (((psl)->psl_flags & PSLF_NOLOG) == 0)		\
+			psclog_debug("lock %p released", (psl));	\
 	} while (0)
 
 /**
