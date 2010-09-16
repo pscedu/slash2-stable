@@ -67,28 +67,17 @@ psc_subsys_name(int ssid)
 void
 psc_subsys_register(int ssid, const char *name)
 {
-	char *p, *endp, buf[BUFSIZ];
 	struct psc_subsys *ss;
-	long l;
+	char *p, buf[BUFSIZ];
 
 	ss = psc_alloc(sizeof(*ss), PAF_NOLOG);
 	ss->pss_name = name;
 
 	snprintf(buf, sizeof(buf), "PSC_LOG_LEVEL_%s", name);
 	p = getenv(buf);
-	if (p && (ss->pss_loglevel = psc_loglevel_getid(p)) !=
-	    PNLOGLEVELS) {
-	} else if (p) {
-		errno = 0;
-		endp = NULL;
-		l = strtol(p, &endp, 10);
-		if (endp == p || *endp != '\0' ||
-		    l < 0 || l >= PNLOGLEVELS) {
-			warnx("invalid log level env: %s", p);
-			ss->pss_loglevel = psc_log_getlevel_global();
-		} else
-			ss->pss_loglevel = (int)l;
-	} else
+	if (p)
+		ss->pss_loglevel = psc_loglevel_parse(buf, p);
+	else
 		ss->pss_loglevel = psc_log_getlevel_global();
 
 	psc_dynarray_add(&psc_subsystems, ss);

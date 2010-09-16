@@ -64,26 +64,35 @@ __static enum psclog_level	 psc_loglevel = PLL_WARN;
 __static struct psclog_data	*psc_logdata;
 char				 psclog_eol[8] = "\n";	/* overrideable with ncurses EOL */
 
+enum psclog_level
+psc_loglevel_parse(const char *src, const char *val)
+{
+	enum psclog_level lvl;
+	char *endp;
+	long l;
+
+	lvl = psc_loglevel_getid(val);
+	if (lvl != PNLOGLEVELS)
+		return (lvl);
+
+	l = strtol(val, &endp, 10);
+	if (endp == val || *endp != '\0' ||
+	    l < 0 || l >= PNLOGLEVELS)
+		errx(1, "invalid %s: %s", src, val);
+	return (l);
+}
+
 void
 psc_log_init(void)
 {
-	char *ep, *p;
-	long l;
+	char *p;
 
 	if ((p = getenv("PSC_LOG_FILE")) != NULL)
 		freopen(p, "w", stderr);
 	if ((p = getenv("PSC_LOG_FORMAT")) != NULL)
 		psc_logfmt = p;
-	if ((p = getenv("PSC_LOG_LEVEL")) != NULL) {
-		ep = NULL;
-		errno = 0;
-		l = strtol(p, &ep, 10);
-		if (p[0] == '\0' || ep == NULL || *ep != '\0')
-			errx(1, "invalid log level env: %s", p);
-		if (errno == ERANGE || l < 0 || l >= PNLOGLEVELS)
-			errx(1, "invalid log level env: %s", p);
-		psc_loglevel = (int)l;
-	}
+	if ((p = getenv("PSC_LOG_LEVEL")) != NULL)
+		psc_loglevel = psc_loglevel_parse("PSC_LOG_LEVEL", p);
 }
 
 __weak struct psclog_data *

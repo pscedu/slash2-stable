@@ -259,22 +259,18 @@ enum psclog_level {
 			psc_fatal("[assert] %s", #cond);	\
 	} while (0)
 
-void	psc_log_init(void);
-void	psc_log_setlevel(int, enum psclog_level);
-enum psclog_level
-	psc_log_getlevel(int);
-enum psclog_level
-	psc_log_getlevel_global(void);
-enum psclog_level
-	psc_log_getlevel_ss(int);
+void			 psc_log_init(void);
+void			 psc_log_setlevel(int, enum psclog_level);
 
-struct psclog_data *
-	psclog_getdata(void);
+enum psclog_level	 psc_log_getlevel(int);
+enum psclog_level	 psc_log_getlevel_global(void);
+enum psclog_level	 psc_log_getlevel_ss(int);
 
-const char *
-	psc_loglevel_getname(enum psclog_level);
-enum psclog_level
-	psc_loglevel_getid(const char *);
+struct psclog_data	*psclog_getdata(void);
+
+const char		*psc_loglevel_getname(enum psclog_level);
+enum psclog_level	 psc_loglevel_getid(const char *);
+enum psclog_level	 psc_loglevel_parse(const char *, const char *);
 
 void _psclogv(const char *, const char *, int, int, enum psclog_level,
     int, const char *, va_list);
