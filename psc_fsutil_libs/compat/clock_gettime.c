@@ -25,7 +25,7 @@
 
 #include "pfl/compat/clock_gettime.h"
 
-long
+int
 clock_gettime(clockid_t cid, struct timespec *ts)
 {
 	struct timeval tv;

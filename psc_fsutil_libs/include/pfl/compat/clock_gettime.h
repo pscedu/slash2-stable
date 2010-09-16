@@ -22,11 +22,10 @@
 
 #include <time.h>
 
-typedef int clockid_t;
-
-#define CLOCK_REALTIME		0
+typedef enum {
+	CLOCK_REALTIME
+} clockid_t;
 
 int clock_gettime(clockid_t, struct timespec *);
-
 
 #endif /* _PFL_COMPAT_CLOCK_GETTIME_H_ */
