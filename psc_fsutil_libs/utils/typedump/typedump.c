@@ -31,7 +31,6 @@
 #include "pfl/hashtbl.h"
 #include "pfl/pfl.h"
 #include "pfl/setresuid.h"
-#include "pfl/spinlock.h"
 #include "pfl/stat.h"
 #include "pfl/str.h"
 #include "pfl/time.h"
