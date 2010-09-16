@@ -103,6 +103,7 @@ pfl
 - ensure any void * used as hash table idmemb are uint64_t for 32-bit
 - in mguard, check the flags in realloc/free match alloc (PAF_LOCK, ALIGN)
 - memguard option: dont free, keep PROT_NONE around
+- rename PFL include/pfl/compat to arch
 
 mem pool|flg|#free|#use|total| %use|  min|   max|th|#grows|#shrnx|#em|#wa
 --------+---+-----+----+-----+-----+-----+------+--+------+------+---+---
