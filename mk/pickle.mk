@@ -129,4 +129,7 @@ PICKLE_NEED_VERSION=					$(word 2,$$Rev$$)
   DEFINES+=						-DHAVE_SYNC_FILE_RANGE
  endif
 
+ ifdef PICKLE_HAVE_FUSE_DEBUGLEVEL
+  DEFINES+=						-DHAVE_FUSE_DEBUGLEVEL
+ endif
 endif
