@@ -60,7 +60,7 @@ struct psc_nodemask {
 #define psc_mprotect(p, siz, prot)					\
 	do {								\
 		if (mprotect((p), (siz), (prot)) == -1)			\
-			psc_fatal("mprotect");				\
+			psc_fatal("mprotect %p", (p));			\
 	} while (0)
 
 #endif /* _PFL_MEM_H_ */
