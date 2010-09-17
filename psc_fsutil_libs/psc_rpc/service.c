@@ -1047,7 +1047,7 @@ pscrpc_init_svc(int nbufs, int bufsize, int max_req_size, int max_reply_size,
  failed:
 	pscrpc_unregister_service(service);
 //	psc_hashtbl_del();
-	PSCRPC_OBD_FREE(service);
+	PSCRPC_OBD_FREE(service, sizeof(*service));
 	return NULL;
 }
 

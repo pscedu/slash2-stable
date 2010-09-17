@@ -117,7 +117,7 @@ struct psc_memalloc {
 #define psc_alloc(sz, fl)	(_PSC_REALLOC(NULL, (sz), (fl)))
 #define psc_realloc(p, sz, fl)	(_PSC_REALLOC((p),  (sz), (fl)))
 
-#define PFL_ALLOC_OBJ(p)	((p) = PSCALLOC(sizeof(*(p)))
+#define PFL_ALLOC_OBJ(p)	((p) = PSCALLOC(sizeof(*(p))))
 
 /* allocation flags */
 #define PAF_CANFAIL		(1 << 0)	/* return NULL instead of fatal */
