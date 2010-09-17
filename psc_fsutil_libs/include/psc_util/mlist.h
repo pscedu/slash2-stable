@@ -68,7 +68,7 @@ struct psc_mlist {
  * psc_mlist_tryget - Get an item from an mlist if one is available.
  * @pml: the mlist to access.
  */
-#define psc_mlist_tryget(pml)		pll_getqueue(&(pml)->pml_pll)
+#define psc_mlist_tryget(pml)		pll_get(&(pml)->pml_pll)
 
 /**
  * psc_mlist_remove - Remove an item's membership from a mlist.

@@ -45,7 +45,7 @@ psc_mlist_add(struct psc_mlist *pml, void *p)
 	int locked;
 
 	locked = MLIST_RLOCK(pml);
-	pll_addtail(&pml->pml_pll, p);
+	pll_add(&pml->pml_pll, p);
 	pml->pml_nseen++;
 	psc_multiwaitcond_wakeup(&pml->pml_mwcond_empty);
 	MLIST_URLOCK(pml, locked);
