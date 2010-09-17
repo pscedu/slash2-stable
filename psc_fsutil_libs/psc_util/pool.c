@@ -35,6 +35,7 @@
 #include "psc_util/alloc.h"
 #include "psc_util/lock.h"
 #include "psc_util/log.h"
+#include "psc_util/mem.h"
 #include "psc_util/pool.h"
 #include "psc_util/pthrutil.h"
 #include "psc_util/waitq.h"
@@ -68,6 +69,7 @@
 
 #  define _POOL_TRYGETOBJ(m)						\
 	{								\
+		int _locked;						\
 		void *_p;						\
 									\
 		_locked = POOL_RLOCK(m);				\
