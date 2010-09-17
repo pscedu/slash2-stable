@@ -94,14 +94,6 @@ struct psc_listcache {
 #define PLCBF_PEEK	(1 << 2)	/* don't remove item */
 #define PLCBF_DYINGOK	(1 << 3)	/* list can die */
 
-#define lc_gettimed(plc, tm)		_lc_get((plc), (tm), PLCBF_HEAD)
-#define lc_getwait(plc)			_lc_get((plc), NULL, PLCBF_HEAD)
-#define lc_getnb(plc)			_lc_get((plc), NULL, PLCBF_HEAD | PLCBF_NOBLOCK)
-#define lc_peekheadtimed(plc, tm)	_lc_get((plc), (tm), PLCBF_HEAD | PLCBF_PEEK)
-#define lc_peekheadwait(plc)		_lc_get((plc), NULL, PLCBF_HEAD | PLCBF_PEEK)
-#define lc_peekhead(plc)		_lc_get((plc), NULL, PLCBF_HEAD | PLCBF_NOBLOCK | PLCBF_PEEK)
-#define lc_peektail(plc)		_lc_get((plc), NULL, PLCBF_TAIL | PLCBF_NOBLOCK | PLCBF_PEEK)
-
 #define lc_addstack(plc, p)		((void)_lc_add((plc), (p), PLCBF_HEAD))
 #define lc_addqueue(plc, p)		((void)_lc_add((plc), (p), PLCBF_TAIL))
 #define lc_addhead(plc, p)		((void)_lc_add((plc), (p), PLCBF_HEAD))
@@ -109,6 +101,14 @@ struct psc_listcache {
 #define lc_add(plc, p)			((void)_lc_add((plc), (p), PLCBF_TAIL))
 
 #define lc_addtail_ifalive(plc, p)	_lc_add((plc), (p), PLCBF_TAIL | PLCBF_DYINGOK)
+
+#define lc_gettimed(plc, tm)		_lc_get((plc), (tm), PLCBF_HEAD)
+#define lc_getwait(plc)			_lc_get((plc), NULL, PLCBF_HEAD)
+#define lc_getnb(plc)			_lc_get((plc), NULL, PLCBF_HEAD | PLCBF_NOBLOCK)
+#define lc_peekheadtimed(plc, tm)	_lc_get((plc), (tm), PLCBF_HEAD | PLCBF_PEEK)
+#define lc_peekheadwait(plc)		_lc_get((plc), NULL, PLCBF_HEAD | PLCBF_PEEK)
+#define lc_peekhead(plc)		_lc_get((plc), NULL, PLCBF_HEAD | PLCBF_NOBLOCK | PLCBF_PEEK)
+#define lc_peektail(plc)		_lc_get((plc), NULL, PLCBF_TAIL | PLCBF_NOBLOCK | PLCBF_PEEK)
 
 /**
  * lc_move2head - Move an item on a list cache to the list head.
