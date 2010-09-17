@@ -46,13 +46,13 @@ sub {
 
 yes {
 	CDEBUG("BOOL %s\n", yytext);
-	yylval.string=strdup(yytext);
+	yylval.string = psc_strdup(yytext);
 	return BOOL;
 }
 
 no {
 	CDEBUG("BOOL %s\n", yytext);
-	yylval.string=strdup(yytext);
+	yylval.string = psc_strdup(yytext);
 	return BOOL;
 }
 
@@ -103,25 +103,25 @@ no {
 
 [0-9]+[BKMGTbkmgt] {
 	CDEBUG("SIZEVAL %s\n", yytext);
-	yylval.string=strdup(yytext);
+	yylval.string = psc_strdup(yytext);
 	return SIZEVAL;
 }
 
 [0-9]+ {
 	CDEBUG("NUM %s\n", yytext);
-	yylval.string=strdup(yytext);
+	yylval.string = psc_strdup(yytext);
 	return NUM;
 }
 
 [0-9]*\.?[0-9]+ {
 	CDEBUG("FLOATVAL %s\n", yytext);
-	yylval.string=strdup(yytext);
+	yylval.string = psc_strdup(yytext);
 	return FLOATVAL;
 }
 
 [0-9A-Za-z_/.-]+ {
 	CDEBUG("STR %s\n", yytext);
-	yylval.string=strdup(yytext);
+	yylval.string = psc_strdup(yytext);
 	return STR;
 }
 
@@ -129,9 +129,9 @@ no {
 	char *p;
 
 	CDEBUG("STR %s\n", yytext);
-	p = strrchr(yytext, '"');
+	yylval.string = psc_strdup(yytext + 1);
+	p = strrchr(yylval.string, '"');
 	*p = '\0';
-	yylval.string=strdup(yytext + 1);
 	return STR;
 }
 

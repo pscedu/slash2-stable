@@ -75,9 +75,9 @@ func_addr_2_name(unsigned long addr)
 void
 store_func(const char *func_name)
 {
-	extern GROUP_t      *currentGroup;
-	struct symtable   *sym =  get_symbol(func_name);
-	int num_iotests          =  currentGroup->num_iotests;
+	extern GROUP_t *currentGroup;
+	struct symtable *sym = get_symbol(func_name);
+	int num_iotests = currentGroup->num_iotests;
 	struct io_routine *ior = &currentGroup->iotests[num_iotests];
 
 	ASSERT(sym != NULL && ior != NULL);
@@ -85,7 +85,7 @@ store_func(const char *func_name)
 	BDEBUG("Test Recipe Comp: %s func_ptr %p\n",
 	    func_name, sym->io_func);
 
-	ior->io_routine[ior->num_routines] = strdup(func_name);
+	ior->io_routine[ior->num_routines] = psc_strdup(func_name);
 	ior->num_routines++;
 }
 

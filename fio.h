@@ -713,10 +713,9 @@ iolog_alloc(IOTESTLOG_t *iolog, size_t size)
 {
 	BDEBUG("size %zu\n", size);
 	ASSERT( (size > 0) && !(size % OPLOGSZ) );
-	void *p = malloc(size);
-	ASSERT(p);
+	void *p = PSCALLOC(size);
 	iolog->iolog_size += size;
-	return p;
+	return (p);
 }
 
 /*
@@ -726,11 +725,14 @@ static inline char *
 trunc_path(int depth, char *p)
 {
 	/* goto the end of the string */
-	while (*p != '\0') p++;
+	while (*p != '\0')
+		p++;
+
 	/* this should skip the last char on the string */
 	while (depth) {
 		//fprintf(stderr, "%c", *p);
-		if (*(--p) == '/') depth--;
+		if (*(--p) == '/')
+			depth--;
 	}
 	/* return with the final "/" intact */
 	return (p+1);
@@ -740,7 +742,8 @@ static inline char *
 str_end(char *p)
 {
 	/* goto the end of the string */
-	while (*p != '\0') p++;
+	while (*p != '\0')
+		p++;
 	/* return with the final "/" intact */
 	return (p);
 }
@@ -777,7 +780,7 @@ clear_fnam(struct io_toolbox *iot)
 
 	iot->path_len -= (int)(ptr - iot->mypath);
 
-	*ptr      = '\0';
+	*ptr = '\0';
 }
 
 static inline void

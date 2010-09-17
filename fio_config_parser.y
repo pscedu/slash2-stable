@@ -81,7 +81,7 @@ group_block		: group_start statements GROUP_END {
 				BDEBUG("Allocating %d Thread Structs\n",
 				    currentGroup->num_pes);
 
-				currentGroup->threads = malloc(sizeof(THREAD_t) *
+				currentGroup->threads = psc_calloc(sizeof(THREAD_t),
 				   currentGroup->num_pes);
 #endif
 

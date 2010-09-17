@@ -341,8 +341,8 @@ init_pe(int mype)
 		int id = (ACTIVETYPE(FIO_SAMEFILE) &&
 			  !ACTIVETYPE(FIO_SEEKOFF)) ? 0 : iot->mype;
 		iot->bdesc.buffer_size = iot->rd_bdesc.buffer_size = mygroup->block_size;
-		iot->bdesc.buffer      = malloc(iot->bdesc.buffer_size);
-		iot->rd_bdesc.buffer   = malloc(iot->bdesc.buffer_size);
+		iot->bdesc.buffer      = PSCALLOC(iot->bdesc.buffer_size);
+		iot->rd_bdesc.buffer   = PSCALLOC(iot->bdesc.buffer_size);
 
 		ASSERT( (iot->bdesc.buffer    != NULL) &&
 			(iot->rd_bdesc.buffer != NULL) );
@@ -385,8 +385,7 @@ init_barriers(int mype)
 	mygroup = find_group(mype, &start_pe);
 	ASSERT(mygroup != NULL);
 
-	iptr = malloc(sizeof(int) * mygroup->num_pes);
-	ASSERT(iptr != NULL);
+	iptr = psc_calloc(sizeof(int), mygroup->num_pes);
 
 	for (i=0; i < mygroup->num_pes; i++)
 		iptr[i] = start_pe + i;
@@ -1016,7 +1015,7 @@ main(int argc, char *argv[])
 			break;
 		case 'o':
 			stderr_redirect     = 1;
-			stderr_fnam_prefix  = strdup(optarg);
+			stderr_fnam_prefix  = psc_strdup(optarg);
 			break;
 		default:
 			usage();
