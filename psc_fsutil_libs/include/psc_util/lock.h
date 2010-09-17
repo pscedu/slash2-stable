@@ -133,9 +133,19 @@ typedef struct psc_spinlock {
 		(_val);							\
 	}
 
-#define _TRYLOCK(psl)		(_SPIN_TEST_AND_SET("trylock", (psl)))
+/**
+ * trylock - Try to acquire a lock; will not block if spinlock is not
+ *	immediately available.
+ * @psl: the spinlock.
+ */
+#define trylock(psl)		(_SPIN_TEST_AND_SET("trylock", (psl)))
 
-#define _SPINLOCK(psl)							\
+/**
+ * freelock - Block until the caller locks a spinlock for a critical
+ *	section.
+ * @psl: the spinlock.
+ */
+#define spinlock(psl)							\
 	do {								\
 		struct timespec _tm;					\
 		int _i;							\
@@ -150,7 +160,11 @@ typedef struct psc_spinlock {
 			}						\
 	} while (0)
 
-#define _FREELOCK(psl)							\
+/**
+ * freelock - Release a spinlock that is locked by the caller.
+ * @psl: the spinlock.
+ */
+#define freelock(psl)							\
 	do {								\
 		_SPIN_ENSURELOCKED("freelock", (psl));			\
 		_spin_checktime(psl);					\
@@ -166,14 +180,20 @@ typedef struct psc_spinlock {
  * @psl: the spinlock.
  * Returns a value that ureqlock() must use.
  */
-#define _REQLOCK(psl)							\
+#define reqlock(psl)							\
 	(spin_ismine(psl) ? PSLRV_WASLOCKED :				\
-	    (PSC_MAKETRUE(_SPINLOCK(psl)), PSLRV_WASNOTLOCKED))
+	    (PSC_MAKETRUE(spinlock(psl)), PSLRV_WASNOTLOCKED))
 
-#define _TRYREQLOCK(psl, waslkdp)					\
+/**
+ * tryreqlock - Try to require a lock.  Will not block if the lock
+ *	cannot be obtained immediately.
+ * @psl: the spinlock.
+ * @waslockedp: value-result to "unrequire" lock.
+ */
+#define tryreqlock(psl, waslockedp)					\
 	(spin_ismine(psl) ?						\
-	    (*(waslkdp) = PSLRV_WASLOCKED, 1) :				\
-	    (*(waslkdp) = PSLRV_WASNOTLOCKED, trylock(psl)))
+	    (*(waslockedp) = PSLRV_WASLOCKED, 1) :			\
+	    (*(waslockedp) = PSLRV_WASNOTLOCKED, trylock(psl)))
 
 /**
  * ureqlock - "Unrequire" a lock -- unlocks the lock if it was locked
@@ -182,27 +202,39 @@ typedef struct psc_spinlock {
  * @psl: the spinlock.
  * @waslkd: return value from reqlock().
  */
-#define _UREQLOCK(psl, waslkd)						\
+#define ureqlock(psl, waslocked)					\
 	do {								\
-		if ((waslkd) == PSLRV_WASNOTLOCKED)			\
+		if ((waslocked) == PSLRV_WASNOTLOCKED)			\
 			freelock(psl);					\
 		else							\
 			_SPIN_CHECK("ureqlock", (psl));			\
 	} while (0)
 
 #define LOCK_ENSURE(psl)	PSC_MAKETRUE(_SPIN_ENSURELOCKED("LOCK_ENSURE", (psl)))
-#define spinlock(psl)		_SPINLOCK(psl)
-#define trylock(psl)		_TRYLOCK(psl)
-#define freelock(psl)		_FREELOCK(psl)
-#define reqlock(psl)		_REQLOCK(psl)
-#define tryreqlock(psl, was)	_TRYREQLOCK((psl), (was))
-#define ureqlock(psl, was)	_UREQLOCK((psl), (was))
 
 static __inline void _spin_checktime(struct psc_spinlock *);
 
 #ifndef _PFL_ATOMIC_H_
 #  include "psc_util/atomic.h"
 #endif
+
+#define SETATTR_LOCKED(lk, field, fl)					\
+	do {								\
+		int _locked;						\
+									\
+		_locked = reqlock(lk);					\
+		*(field) |= (fl);					\
+		ureqlock((lk), _locked);				\
+	} while (0)
+
+#define CLEARATTR_LOCKED(lk, field, fl)					\
+	do {								\
+		int _locked;						\
+									\
+		_locked = reqlock(lk);					\
+		*(field) &= ~(fl);					\
+		ureqlock((lk), _locked);				\
+	} while (0)
 
 static __inline void
 _spin_checktime(struct psc_spinlock *psl)
