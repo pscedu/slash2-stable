@@ -29,12 +29,12 @@ struct psc_nodemask {
 	struct bitmask	*pnm_mask;
 };
 
-#define	psc_numa_get_run_node_mask(m)				\
-	do {							\
-		(m)->pnm_mask = numa_get_run_node_mask();	\
+#define	psc_numa_get_run_node_mask(m)					\
+	do {								\
+		(m)->pnm_mask = numa_get_run_node_mask();		\
 	} while (0)
 
-#define	psc_numa_tonodemask_memory(p, siz, m)			\
+#define	psc_numa_tonodemask_memory(p, siz, m)				\
 	numa_tonodemask_memory((p), (siz), (m)->pnm_mask)
 
 #else
@@ -42,19 +42,25 @@ struct psc_nodemask {
 struct psc_nodemask {
 };
 
-#define	psc_numa_get_run_node_mask(m)			\
-	do {						\
-		/* hack to avoid unused warnings */	\
-		(void)(m);				\
+#define	psc_numa_get_run_node_mask(m)					\
+	do {								\
+		/* hack to avoid unused warnings */			\
+		(void)(m);						\
 	} while (0)
 
-#define	psc_numa_tonodemask_memory(p, siz, m)		\
-	do {						\
-		(void)(p);				\
-		(void)(siz);				\
-		(void)(m);				\
+#define	psc_numa_tonodemask_memory(p, siz, m)				\
+	do {								\
+		(void)(p);						\
+		(void)(siz);						\
+		(void)(m);						\
 	} while (0)
 
 #endif
+
+#define psc_mprotect(p, siz, prot)					\
+	do {								\
+		if (mprotect((p), (siz), (prot)) == -1)			\
+			psc_fatal("mprotect");				\
+	} while (0)
 
 #endif /* _PFL_MEM_H_ */
