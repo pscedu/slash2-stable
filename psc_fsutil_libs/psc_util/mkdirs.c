@@ -67,6 +67,6 @@ mkdirs(const char *s, mode_t mode)
 	}
 	rc = 0;
  done:
-	PSCFREE(path, 0);
+	PSCFREE(path);
 	return (rc);
 }
