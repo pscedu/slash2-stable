@@ -114,6 +114,7 @@ struct psc_poolmgr {
 #define ppm_nfree	ppm_explist.pexl_nitems
 #define ppm_name	ppm_explist.pexl_name
 #define ppm_nseen	ppm_explist.pexl_nseen
+#define ppm_offset	ppm_explist.pexl_offset
 #define ppm_pll		ppm_explist.pexl_pll
 };
 
