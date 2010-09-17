@@ -39,6 +39,65 @@
 #include "psc_util/pthrutil.h"
 #include "psc_util/waitq.h"
 
+#define _POOL_ADD(m, p)							\
+	do {								\
+		if (POOL_IS_MLIST(m))					\
+			psc_mlist_add(&(m)->ppm_ml, (p));		\
+		else							\
+			lc_add(&(m)->ppm_lc, (p));			\
+	} while (0)
+
+#if PFL_DEBUG > 1
+#  define POOL_ADD_ITEM(m, p)						\
+	do {								\
+		int _locked;						\
+		void *_p;						\
+									\
+		_locked = POOL_RLOCK(m);				\
+		_p = pll_peekhead(&(m)->ppm_pll);			\
+		if (_p)							\
+			psc_mprotect(_p, (m)->ppm_entsize,		\
+			    PROT_READ | PROT_WRITE);			\
+		_POOL_ADD((m), (p));					\
+		if (_p)							\
+			psc_mprotect(_p, (m)->ppm_entsize, PROT_NONE);	\
+		psc_mprotect((p), (m)->ppm_entsize, PROT_NONE);		\
+									\
+		POOL_URLOCK((m), _locked);				\
+	} while (0)
+
+#  define _POOL_TRYGETOBJ(m)						\
+	{								\
+		void *_p;						\
+									\
+		_locked = POOL_RLOCK(m);				\
+		_p = pll_peekhead(&(m)->ppm_pll);			\
+		if (_p) {						\
+			psc_mprotect(_p, (m)->ppm_entsize,		\
+			    PROT_READ | PROT_WRITE);			\
+			pll_remove(&(m)->ppm_pll, _p);			\
+		}							\
+		POOL_URLOCK((m), _locked);				\
+		_p;							\
+	}
+
+#  define POOL_TRYGETOBJ(m)	(_POOL_TRYGETOBJ(m))
+
+#else
+#  define POOL_ADD_ITEM(m, p)						\
+	do {								\
+		if (POOL_IS_MLIST(m))					\
+			psc_mlist_add(&(m)->ppm_ml, (p));		\
+		else							\
+			lc_add(&(m)->ppm_lc, (p));			\
+	} while (0)
+
+#  define POOL_TRYGETOBJ(m)						\
+	(POOL_IS_MLIST(m) ? psc_mlist_tryget(&(m)->ppm_ml) :		\
+	    lc_getnb(&(m)->ppm_lc))
+
+#endif
+
 __static struct psc_poolset psc_poolset_main = PSC_POOLSET_INIT;
 struct psc_lockedlist psc_pools =
     PLL_INIT(&psc_pools, struct psc_poolmgr, ppm_lentry);
@@ -245,10 +304,7 @@ psc_pool_grow(struct psc_poolmgr *m, int n)
 		    m->ppm_max == 0) {
 			m->ppm_total++;
 			m->ppm_ngrow++;
-			if (POOL_IS_MLIST(m))
-				psc_mlist_add(&m->ppm_ml, p);
-			else
-				lc_add(&m->ppm_lc, p);
+			POOL_ADD_ITEM(m, p);
 			p = NULL;
 		}
 		POOL_URLOCK(m, locked);
@@ -288,10 +344,7 @@ _psc_pool_shrink(struct psc_poolmgr *m, int n, int failok)
 	for (i = 0; i < n; i++) {
 		locked = POOL_RLOCK(m);
 		if (m->ppm_total > m->ppm_min) {
-			if (POOL_IS_MLIST(m))
-				p = psc_mlist_tryget(&m->ppm_ml);
-			else
-				p = lc_getnb(&m->ppm_lc);
+			p = POOL_TRYGETOBJ(m);
 			if (p == NULL && !failok)
 				psc_fatalx("psc_pool_shrink: no free "
 				    "items available to remove");
@@ -441,9 +494,6 @@ _psc_pool_flagtest(struct psc_poolmgr *m, int flags)
 	return (rc);
 }
 
-#define POOL_GETOBJ(m)							\
-	(POOL_IS_MLIST(m) ? psc_mlist_tryget(&(m)->ppm_ml) : lc_getnb(&(m)->ppm_lc))
-
 /**
  * psc_pool_get - Grab an item from a pool.
  * @m: the pool manager.
@@ -454,7 +504,7 @@ psc_pool_get(struct psc_poolmgr *m)
 	int locked, n;
 	void *p;
 
-	p = POOL_GETOBJ(m);
+	p = POOL_TRYGETOBJ(m);
 	if (p)
 		return (p);
 
@@ -464,7 +514,7 @@ psc_pool_get(struct psc_poolmgr *m)
 	POOL_URLOCK(m, locked);
 	if (n > 0) {
 		psc_pool_grow(m, n);
-		p = POOL_GETOBJ(m);
+		p = POOL_TRYGETOBJ(m);
 		if (p)
 			return (p);
 	}
@@ -472,7 +522,7 @@ psc_pool_get(struct psc_poolmgr *m)
 	/* If autoresizable, try to grow the pool. */
 	while (_psc_pool_flagtest(m, PPMF_AUTO)) {
 		n = psc_pool_grow(m, 2);
-		p = POOL_GETOBJ(m);
+		p = POOL_TRYGETOBJ(m);
 		if (p)
 			return (p);
 
@@ -493,7 +543,7 @@ psc_pool_get(struct psc_poolmgr *m)
 			n = m->ppm_reclaimcb(m);
 			pthread_mutex_unlock(&m->ppm_reclaim_mutex);
 			atomic_dec(&m->ppm_nwaiters);
-			p = POOL_GETOBJ(m);
+			p = POOL_TRYGETOBJ(m);
 			if (p)
 				return (p);
 		} while (n);
@@ -513,15 +563,15 @@ psc_pool_get(struct psc_poolmgr *m)
 	 * multiwait critical section to prevent dropping notifications.
 	 */
 	if (POOL_IS_MLIST(m))
-		return (POOL_GETOBJ(m));
+		return (POOL_TRYGETOBJ(m));
 
 	/*
-	 * If there is a reclaimer routine specified, invoke it
-	 * periodically instead of blocking forever.
+	 * If there is a reclaimer routine, invoke it consecutively
+	 * until no more items are reclaimed.
 	 */
 	if (m->ppm_reclaimcb) {
 		POOL_LOCK(m);
-		p = POOL_GETOBJ(m);
+		p = POOL_TRYGETOBJ(m);
 		if (p) {
 			POOL_ULOCK(m);
 			return (p);
@@ -531,7 +581,7 @@ psc_pool_get(struct psc_poolmgr *m)
 		    &m->ppm_lc.plc_lock, 100);
 		atomic_dec(&m->ppm_nwaiters);
 
-		p = POOL_GETOBJ(m);
+		p = POOL_TRYGETOBJ(m);
 		if (p)
 			return (p);
 
@@ -567,10 +617,7 @@ _psc_pool_return(struct psc_poolmgr *m, void *p)
 		_psc_pool_destroy_obj(m, p);
 	} else {
 		/* Pool should keep this item. */
-		if (POOL_IS_MLIST(m))
-			psc_mlist_add(&m->ppm_ml, p);
-		else
-			lc_addhead(&m->ppm_lc, p);
+		POOL_ADD_ITEM(m, p);
 		POOL_URLOCK(m, locked);
 	}
 }
