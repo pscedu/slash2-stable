@@ -69,14 +69,14 @@ psc_atomic64_read(psc_atomic64_t *v)
 
 #undef psc_atomic16_set
 static __inline void
-psc_atomic16_set(psc_atomic16_t *v, int64_t i)
+psc_atomic16_set(psc_atomic16_t *v, int16_t i)
 {
 	_PFL_GETA16(v) = i;
 }
 
 #undef psc_atomic32_set
 static __inline void
-psc_atomic32_set(psc_atomic32_t *v, int64_t i)
+psc_atomic32_set(psc_atomic32_t *v, int32_t i)
 {
 	_PFL_GETA32(v) = i;
 }
