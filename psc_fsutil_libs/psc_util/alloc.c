@@ -32,6 +32,10 @@
 #include "psc_util/alloc.h"
 #include "psc_util/log.h"
 
+#if PFL_DEBUG > 1
+#  include "psc_util/mem.h"
+#endif
+
 #define GUARD_AFTER (PFL_DEBUG > 2)
 
 struct psc_memalloc_key {
@@ -85,10 +89,9 @@ _psc_checkpma(struct psc_memalloc *pma)
 	 * XXX disable access to region; add a mode where we leak on
 	 * purpose with PROT_NONE to prevent use-after-free.
 	 */
-	if (mprotect(pma->pma_allocbase, psc_pagesize +
+	psc_mprotect(pma->pma_allocbase, psc_pagesize +
 	    PSC_ALIGN(pma->pma_userlen, psc_pagesize),
-	    PROT_READ | PROT_WRITE) == -1)
-		psc_fatal("mprotect");
+	    PROT_READ | PROT_WRITE);
 }
 #endif
 
@@ -248,23 +251,19 @@ _psc_realloc(void *oldp, size_t size, int flags)
 			pma->pma_userbase = (char *)newp + rem;
 			pma->pma_guardbase = (char *)newp;
 
-			if (mprotect(newp, PSC_ALIGN(specsize, psc_pagesize),
-			    PROT_READ | PROT_WRITE) == -1)
-				err(1, "mprotect");
-			if (mprotect((char *)newp + size - psc_pagesize,
-			    psc_pagesize, PROT_NONE) == -1)
-				err(1, "mprotect");
+			psc_mprotect(newp, PSC_ALIGN(specsize, psc_pagesize),
+			    PROT_READ | PROT_WRITE);
+			psc_mprotect((char *)newp + size - psc_pagesize,
+			    psc_pagesize, PROT_NONE);
 		} else {
 			pma->pma_userbase = (char *)newp + psc_pagesize;
 			pma->pma_guardbase = (char *)pma->pma_userbase +
 			    specsize;
 
-			if (mprotect(newp + psc_pagesize,
+			psc_mprotect(newp + psc_pagesize,
 			    PSC_ALIGN(specsize, psc_pagesize),
-			    PROT_READ | PROT_WRITE) == -1)
-				err(1, "mprotect");
-			if (mprotect(newp, psc_pagesize, PROT_NONE) == -1)
-				err(1, "mprotect");
+			    PROT_READ | PROT_WRITE);
+			psc_mprotect(newp, psc_pagesize, PROT_NONE);
 		}
 		memset(pma->pma_guardbase, PFL_MEMGUARD_MAGIC, rem);
 
