@@ -40,19 +40,10 @@
 #include "psc_util/pthrutil.h"
 #include "psc_util/waitq.h"
 
-#define _POOL_ADD(m, p)							\
-	do {								\
-		if (POOL_IS_MLIST(m))					\
-			psc_mlist_add(&(m)->ppm_ml, (p));		\
-		else							\
-			lc_add(&(m)->ppm_lc, (p));			\
-	} while (0)
-
 #if PFL_DEBUG > 1
-
 #  define _POOL_SETPROT(p, m, prot)					\
-	psc_mprotect((void *)(((unsigned long)(p)) & ~psc_pagesize),	\
-	    (m)->ppm_entsize, (prot))
+	psc_mprotect((void *)(((unsigned long)(p)) &			\
+	    ~(psc_pagesize - 1)), (m)->ppm_entsize, (prot))
 
 #  define _POOL_PROTNONE(p, m)	_POOL_SETPROT((p), (m), PROT_NONE)
 #  define _POOL_PROTRDWR(p, m)	_POOL_SETPROT((p), (m), PROT_READ | PROT_WRITE)
@@ -63,14 +54,18 @@
 		void *_p;						\
 									\
 		_locked = POOL_RLOCK(m);				\
-		_p = pll_peekhead(&(m)->ppm_pll);			\
+		_p = pll_peektail(&(m)->ppm_pll);			\
 		if (_p)							\
 			_POOL_PROTRDWR(_p, (m));			\
-		_POOL_ADD((m), (p));					\
+									\
+		if (POOL_IS_MLIST(m))					\
+			psc_mlist_add(&(m)->ppm_ml, (p));		\
+		else							\
+			lc_add(&(m)->ppm_lc, (p));			\
+									\
 		if (_p)							\
 			_POOL_PROTNONE(_p, (m));			\
 		_POOL_PROTNONE((p), (m));				\
-									\
 		POOL_URLOCK((m), _locked);				\
 	} while (0)
 
@@ -95,16 +90,19 @@
 		POOL_URLOCK((m), _locked);				\
 		_p;							\
 	}
-
 #  define POOL_TRYGETOBJ(m)	(_POOL_TRYGETOBJ(m))
-
 #else
-#  define POOL_ADD_ITEM(m, p)	_POOL_ADD((m), (p));
+#  define POOL_ADD_ITEM(m, p)						\
+	do {								\
+		if (POOL_IS_MLIST(m))					\
+			psc_mlist_add(&(m)->ppm_ml, (p));		\
+		else							\
+			lc_add(&(m)->ppm_lc, (p));			\
+	} while (0)
 
 #  define POOL_TRYGETOBJ(m)						\
 	(POOL_IS_MLIST(m) ? psc_mlist_tryget(&(m)->ppm_ml) :		\
 	    lc_getnb(&(m)->ppm_lc))
-
 #endif
 
 __static struct psc_poolset psc_poolset_main = PSC_POOLSET_INIT;
