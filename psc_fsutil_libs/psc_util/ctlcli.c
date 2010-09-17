@@ -892,8 +892,7 @@ psc_ctlcli_rd_main(__unusedx struct psc_thread *thr)
 			psc_fatalx("received invalid message from daemon");
 		if (mh.mh_size >= (size_t)siz) {
 			siz = mh.mh_size;
-			if ((m = realloc(m, siz)) == NULL)
-				psc_fatal("realloc");
+			m = psc_realloc(m, siz, 0);
 		}
 		psc_ctl_read(psc_ctl_sock, m, mh.mh_size);
 		psc_ctlmsg_print(&mh, m);
@@ -901,7 +900,7 @@ psc_ctlcli_rd_main(__unusedx struct psc_thread *thr)
 	}
 	if (n == -1)
 		psc_fatal("read");
-	free(m);
+	psc_free(m, 0);
 	close(psc_ctl_sock);
 }
 

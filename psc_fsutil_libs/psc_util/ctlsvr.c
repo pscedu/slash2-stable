@@ -1090,8 +1090,6 @@ psc_ctlparam_register(const char *oname, int (*cbf)(int, struct psc_ctlmsghdr *,
 	char *subname, *next, *name;
 
 	name = psc_strdup(oname);
-	if (name == NULL)
-		psc_fatal("strdup");
 
 	ptn = &psc_ctlparamtree;
 	for (subname = name; subname != NULL; subname = next) {
@@ -1104,9 +1102,7 @@ psc_ctlparam_register(const char *oname, int (*cbf)(int, struct psc_ctlmsghdr *,
 		}
 		if (c == NULL) {
 			pcn = PSCALLOC(sizeof(*pcn));
-			pcn->pcn_name = strdup(subname);
-			if (pcn->pcn_name == NULL)
-				psc_fatal("strdup");
+			pcn->pcn_name = psc_strdup(subname);
 			if (next == NULL)
 				pcn->pcn_cbf = cbf;
 			c = psc_stree_addchild(ptn, pcn);
@@ -1116,7 +1112,7 @@ psc_ctlparam_register(const char *oname, int (*cbf)(int, struct psc_ctlmsghdr *,
 	PSCFREE(name);
 }
 
-/*
+/**
  * psc_ctlrep_getiostats - Respond to a "GETIOSTATS" inquiry.
  * @fd: client socket descriptor.
  * @mh: already filled-in control message header.
@@ -1195,7 +1191,7 @@ psc_ctlrep_getmeter(int fd, struct psc_ctlmsghdr *mh, void *m)
 	return (rc);
 }
 
-/*
+/**
  * psc_ctlrep_getmlist - Respond to a "GETMLIST" inquiry.
  * @fd: client socket descriptor.
  * @mh: already filled-in control message header.
@@ -1290,7 +1286,7 @@ psc_ctlrep_getodtable(int fd, struct psc_ctlmsghdr *mh, void *m)
 	return (rc);
 }
 
-/*
+/**
  * psc_ctlhnd_cmd - Invoke an action from a command inquiry.
  * @fd: client socket descriptor.
  * @mh: already filled-in control message header.
@@ -1311,7 +1307,7 @@ psc_ctlhnd_cmd(int fd, struct psc_ctlmsghdr *mh, void *m)
 	return (rc);
 }
 
-/*
+/**
  * psc_ctl_applythrop - Invoke an operation on all applicable threads.
  * @fd: client socket descriptor.
  * @mh: already filled-in control message header.
@@ -1359,7 +1355,7 @@ psc_ctl_applythrop(int fd, struct psc_ctlmsghdr *mh, void *m, const char *thrnam
 	return (rc);
 }
 
-/*
+/**
  * psc_ctlthr_service - Satisfy a client connection.
  * @fd: client socket descriptor.
  * @ct: control operation table.
@@ -1409,9 +1405,7 @@ psc_ctlthr_service(int fd, const struct psc_ctlop *ct, int nops,
 	}
 	if (mh.mh_size > *msiz) {
 		*msiz = mh.mh_size;
-		m = *(void **)pm = realloc(m, *msiz);
-		if (m == NULL)
-			psc_fatal("realloc");
+		m = *(void **)pm = psc_realloc(m, *msiz, 0);
 	}
 
  again:

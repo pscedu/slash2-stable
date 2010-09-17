@@ -210,7 +210,7 @@ pscrpc_request_in_callback(lnet_event_t *ev)
 			}
 			psc_hashbkt_unlock(b);
 
-			free(tpq);
+			PSCFREE(tpq);
 		}
 		req->rq_peer_qlen = pq;
 	}

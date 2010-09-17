@@ -28,7 +28,7 @@
 #include "psc_util/alloc.h"
 
 /**
- * mkdirs - simple recursive "mkdir -p" type functionality.
+ * mkdirs - Simple recursive "mkdir -p" type functionality.
  * @dir: path to be created
  * @mode: dir creation mode
  */
@@ -56,13 +56,8 @@ mkdirs(const char *s, mode_t mode)
 	if (strcmp(s, "/") == 0)
 		return (0);
 
-	path = strdup(s);
-	if (path == NULL) {
-		errno = ENOMEM;
-		return (-1);
-	}
-
-	for (p = path; p != NULL; ) {
+	path = psc_strdup(s);
+	for (p = path; p; ) {
 		*p++ = '/';
 		if ((p = strchr(p, '/')) != NULL)
 			*p = '\0';
@@ -72,6 +67,6 @@ mkdirs(const char *s, mode_t mode)
 	}
 	rc = 0;
  done:
-	free(path);
+	PSCFREE(path, 0);
 	return (rc);
 }

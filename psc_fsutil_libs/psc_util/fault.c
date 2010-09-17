@@ -83,7 +83,7 @@ psc_fault_add(const char *name)
 	psc_hashbkt_lock(b);
 	if (psc_hashbkt_search(&psc_fault_table, b, NULL, NULL, name)) {
 		rc = EEXIST;
-		free(pflt);
+		PSCFREE(pflt);
 	} else {
 		fault_enabled = 1;
 		atomic_inc(&psc_fault_count);
@@ -108,7 +108,7 @@ psc_fault_remove(const char *name)
 		rc = 0;
 		atomic_dec(&psc_fault_count);
 		psc_hashent_remove(&psc_fault_table, pflt);
-		free(pflt);
+		PSCFREE(pflt);
 	}
 	psc_hashbkt_unlock(b);
 	return (rc);
@@ -161,7 +161,7 @@ psc_fault_register(const char *name, int delay, int begin, int chance, int count
 	b = psc_hashbkt_get(&psc_fault_table, name);
 	psc_hashbkt_lock(b);
 	if (psc_hashbkt_search(&psc_fault_table, b, NULL, NULL, name)) {
-		free(pflt);
+		PSCFREE(pflt);
 	} else {
 		atomic_inc(&psc_fault_count);
 		psc_hashbkt_add_item(&psc_fault_table, b, pflt);

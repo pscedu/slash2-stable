@@ -21,7 +21,7 @@
  * Implementation of posix_memalign(3).
  *
  * XXX: need to track the original pointer and pass that as
- * the value to psc_freen().
+ * the value to psc_free_aligned().
  */
 
 #include <sys/param.h>
@@ -68,7 +68,7 @@ err(1, "posix_memalign");
 }
 
 /*
- * psc_freen - Free aligned memory.
+ * psc_free_aligned - Free aligned memory.
  * @p: memory chunk to free.
  */
 void

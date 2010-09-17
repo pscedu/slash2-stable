@@ -65,7 +65,7 @@ pscrpc_free_request_buffer(char *ptr, __unusedx int size)
 }
 
 /**
- * pscrpc_alloc_rqbd - create a new request buffer desc and malloc request
+ * pscrpc_alloc_rqbd - create a new request buffer desc and alloc request
  *	buffer memory.  This call sets request_in_callback as the callback handler.
  * @svc: pointer to the service which owns this request buffer ptr.
  */
@@ -432,7 +432,7 @@ pscrpc_server_handle_request(struct pscrpc_service *svc,
 		else
 			pq = NULL;
 		psc_hashbkt_unlock(b);
-		free(pq);
+		PSCFREE(pq);
 	}
 
 	timediff = cfs_timeval_sub(&work_end, &work_start, NULL);
@@ -1047,7 +1047,7 @@ pscrpc_init_svc(int nbufs, int bufsize, int max_req_size, int max_reply_size,
  failed:
 	pscrpc_unregister_service(service);
 //	psc_hashtbl_del();
-	free(service);
+	PSCRPC_OBD_FREE(service);
 	return NULL;
 }
 

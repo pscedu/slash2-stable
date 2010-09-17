@@ -56,14 +56,13 @@ main(int argc, char *argv[])
 
 	acsvc_init(0, "test", argv);
 
-	dir = strdup(progname);
-	if (dir == NULL)
-		psc_fatal("strdup");
+	dir = psc_strdup(progname);
 	if (dirname(dir) == NULL)
 		psc_fatal("dirname");
 	snprintf(fn, sizeof(fn), "%s%s%s",
 	    __FILE__[0] == '/' ? "" : dir,
 	    __FILE__[0] == '/' ? "" : "/", __FILE__);
+	PSCFREE(dir);
 
 	fd = access_fsop(ACSOP_OPEN, geteuid(), getegid(), fn,
 	    O_RDONLY);

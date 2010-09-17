@@ -251,7 +251,7 @@ odtable_load(struct odtable **t, const char *fn, const char *fmt, ...)
 	odt->odt_fd = open(fn, O_RDWR, 0600);
 	if (odt->odt_fd < 0) {
 		psc_warnx("open %s", fn);
-		free(odt);
+		PSCFREE(odt);
 		return (-errno);
 	}
 
@@ -277,7 +277,7 @@ odtable_load(struct odtable **t, const char *fn, const char *fmt, ...)
 		goto out_unmap;
 	}
 
-	for (z=0; z < odt->odt_hdr->odth_nelems; z++) {
+	for (z = 0; z < odt->odt_hdr->odth_nelems; z++) {
 		todtr.odtr_elem = z;
 		p = odtable_getitem_addr(odt, z);
 		odtf = odtable_getfooter(odt, z);
@@ -330,11 +330,12 @@ odtable_load(struct odtable **t, const char *fn, const char *fmt, ...)
 	close(odt->odt_fd);
 	odt->odt_fd = -1;
 	if (rc) {
+		/* XXX odtable_release()? */
 		odtable_freemap(odt);
 		if (odt->odt_bitmap)
 			psc_vbitmap_free(odt->odt_bitmap);
-		free(odt->odt_hdr);
-		free(odt);
+		PSCFREE(odt->odt_hdr);
+		PSCFREE(odt);
 	}
 	return (rc);
 
@@ -346,7 +347,7 @@ odtable_load(struct odtable **t, const char *fn, const char *fmt, ...)
 int
 odtable_release(struct odtable *odt)
 {
-	int rc;
+	int rc = 0;
 
 	psc_vbitmap_free(odt->odt_bitmap);
 	odt->odt_bitmap = NULL;
@@ -355,10 +356,7 @@ odtable_release(struct odtable *odt)
 		psc_fatal("odtable_freemap() failed on %p", odt);
 
 	PSCFREE(odt->odt_hdr);
-	odt->odt_hdr = NULL;
-	if (odt->odt_fd == -1)
-		rc = 0;
-	else {
+	if (odt->odt_fd != -1) {
 		rc = close(odt->odt_fd);
 		odt->odt_fd = -1;
 	}
@@ -376,7 +374,8 @@ odtable_scan(struct odtable *odt,
 
 	psc_assert(odt_handler != NULL);
 
-	for (todtr.odtr_elem=0; todtr.odtr_elem < odt->odt_hdr->odth_nelems;
+	for (todtr.odtr_elem = 0;
+	    todtr.odtr_elem < odt->odt_hdr->odth_nelems;
 	     todtr.odtr_elem++) {
 		if (!psc_vbitmap_get(odt->odt_bitmap, todtr.odtr_elem))
 			continue;
