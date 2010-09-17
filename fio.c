@@ -385,29 +385,29 @@ init_barriers(int mype)
 	mygroup = find_group(mype, &start_pe);
 	ASSERT(mygroup != NULL);
 
-	iptr = psc_calloc(sizeof(int), mygroup->num_pes);
+	iptr = psc_calloc(sizeof(int), mygroup->num_pes, 0);
 
-	for (i=0; i < mygroup->num_pes; i++)
+	for (i = 0; i < mygroup->num_pes; i++)
 		iptr[i] = start_pe + i;
 
-	rc = MPI_Comm_group (MPI_COMM_WORLD, &group_world);
+	rc = MPI_Comm_group(MPI_COMM_WORLD, &group_world);
 
 	ASSERTMSG(rc == MPI_SUCCESS,
-			"MPI_Group_incl() failed rc = %d\n", rc);
+	    "MPI_Group_incl() failed rc = %d\n", rc);
 
 	rc = MPI_Group_incl(group_world, mygroup->num_pes,
-					iptr, &mygroup->group);
+	    iptr, &mygroup->group);
 
 	ASSERTMSG(rc == MPI_SUCCESS,
-			"MPI_Group_incl() failed rc = %d\n", rc);
+	    "MPI_Group_incl() failed rc = %d\n", rc);
 
 	rc = MPI_Comm_create(MPI_COMM_WORLD, mygroup->group,
-					 &mygroup->group_barrier);
+	    &mygroup->group_barrier);
 
 	ASSERTMSG(rc == MPI_SUCCESS,
-			"MPI_Comm_create() failed rc = %d\n", rc);
+	    "MPI_Comm_create() failed rc = %d\n", rc);
 
-	free(iptr);
+	PSCFREE(iptr);
 
 #elif HAVE_LIBPTHREAD
 	GROUP_t          *group;

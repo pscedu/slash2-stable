@@ -82,7 +82,7 @@ group_block		: group_start statements GROUP_END {
 				    currentGroup->num_pes);
 
 				currentGroup->threads = psc_calloc(sizeof(THREAD_t),
-				   currentGroup->num_pes);
+				   currentGroup->num_pes, 0);
 #endif
 
 				BDEBUG("Group '%s' processing complete\n",
