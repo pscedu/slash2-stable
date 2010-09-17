@@ -49,6 +49,14 @@
 	} while (0)
 
 #if PFL_DEBUG > 1
+
+#  define _POOL_SETPROT(p, m, prot)					\
+	psc_mprotect((void *)(((unsigned long)(p)) & ~psc_pagesize),	\
+	    (m)->ppm_entsize, (prot))
+
+#  define _POOL_PROTNONE(p, m)	_POOL_SETPROT((p), (m), PROT_NONE)
+#  define _POOL_PROTRDWR(p, m)	_POOL_SETPROT((p), (m), PROT_READ | PROT_WRITE)
+
 #  define POOL_ADD_ITEM(m, p)						\
 	do {								\
 		int _locked;						\
@@ -57,27 +65,32 @@
 		_locked = POOL_RLOCK(m);				\
 		_p = pll_peekhead(&(m)->ppm_pll);			\
 		if (_p)							\
-			psc_mprotect(_p, (m)->ppm_entsize,		\
-			    PROT_READ | PROT_WRITE);			\
+			_POOL_PROTRDWR(_p, (m));			\
 		_POOL_ADD((m), (p));					\
 		if (_p)							\
-			psc_mprotect(_p, (m)->ppm_entsize, PROT_NONE);	\
-		psc_mprotect((p), (m)->ppm_entsize, PROT_NONE);		\
+			_POOL_PROTNONE(_p, (m));			\
+		_POOL_PROTNONE((p), (m));				\
 									\
 		POOL_URLOCK((m), _locked);				\
 	} while (0)
 
 #  define _POOL_TRYGETOBJ(m)						\
 	{								\
+		void *_p, *_next;					\
 		int _locked;						\
-		void *_p;						\
 									\
 		_locked = POOL_RLOCK(m);				\
 		_p = pll_peekhead(&(m)->ppm_pll);			\
 		if (_p) {						\
-			psc_mprotect(_p, (m)->ppm_entsize,		\
-			    PROT_READ | PROT_WRITE);			\
+			_POOL_PROTRDWR(_p, (m));			\
+			_next = psclist_next_obj2(			\
+			    &(m)->ppm_pll.pll_listhd, _p,		\
+			    (m)->ppm_offset);				\
+			if (_next)					\
+				_POOL_PROTRDWR(_next, (m));		\
 			pll_remove(&(m)->ppm_pll, _p);			\
+			if (_next)					\
+				_POOL_PROTNONE(_next, (m));		\
 		}							\
 		POOL_URLOCK((m), _locked);				\
 		_p;							\
@@ -86,13 +99,7 @@
 #  define POOL_TRYGETOBJ(m)	(_POOL_TRYGETOBJ(m))
 
 #else
-#  define POOL_ADD_ITEM(m, p)						\
-	do {								\
-		if (POOL_IS_MLIST(m))					\
-			psc_mlist_add(&(m)->ppm_ml, (p));		\
-		else							\
-			lc_add(&(m)->ppm_lc, (p));			\
-	} while (0)
+#  define POOL_ADD_ITEM(m, p)	_POOL_ADD((m), (p));
 
 #  define POOL_TRYGETOBJ(m)						\
 	(POOL_IS_MLIST(m) ? psc_mlist_tryget(&(m)->ppm_ml) :		\
