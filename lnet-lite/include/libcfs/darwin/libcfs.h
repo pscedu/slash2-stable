@@ -70,6 +70,7 @@
 typedef unsigned long long cycles_t;
 #endif
 
+#ifdef __APPLE__
 #define __cpu_to_le64(x)                        OSSwapHostToLittleInt64(x)
 #define __cpu_to_le32(x)                        OSSwapHostToLittleInt32(x)
 #define __cpu_to_le16(x)                        OSSwapHostToLittleInt16(x)
@@ -77,6 +78,15 @@ typedef unsigned long long cycles_t;
 #define __le16_to_cpu(x)                        OSSwapLittleToHostInt16(x)
 #define __le32_to_cpu(x)                        OSSwapLittleToHostInt32(x)
 #define __le64_to_cpu(x)                        OSSwapLittleToHostInt64(x)
+#else
+#define __cpu_to_le64(x)			htole64(x)
+#define __cpu_to_le32(x)			htole32(x)
+#define __cpu_to_le16(x)			htole16(x)
+
+#define __le16_to_cpu(x)			letoh16(x)
+#define __le32_to_cpu(x)			letoh32(x)
+#define __le64_to_cpu(x)			letoh64(x)
+#endif
 
 #define cpu_to_le64(x)                          __cpu_to_le64(x)
 #define cpu_to_le32(x)                          __cpu_to_le32(x)
@@ -86,25 +96,32 @@ typedef unsigned long long cycles_t;
 #define le32_to_cpu(x)                          __le32_to_cpu(x)
 #define le16_to_cpu(x)                          __le16_to_cpu(x)
 
+#ifdef __APPLE__
 #define __swab16(x)                             OSSwapInt16(x)
 #define __swab32(x)                             OSSwapInt32(x)
 #define __swab64(x)                             OSSwapInt64(x)
+#else
+#define __swab16(x)				swap16(x)
+#define __swab32(x)				swap32(x)
+#define __swab64(x)				swap64(x)
+#endif
+
 #define __swab16s(x)                            do { *(x) = __swab16(*(x)); } while (0)
 #define __swab32s(x)                            do { *(x) = __swab32(*(x)); } while (0)
 #define __swab64s(x)                            do { *(x) = __swab64(*(x)); } while (0)
 
 struct ptldebug_header {
-        __u32 ph_len;
-        __u32 ph_flags;
-        __u32 ph_subsys;
-        __u32 ph_mask;
-        __u32 ph_cpu_id;
-        __u32 ph_sec;
-        __u64 ph_usec;
-        __u32 ph_stack;
-        __u32 ph_pid;
-        __u32 ph_extern_pid;
-        __u32 ph_line_num;
+	__u32 ph_len;
+	__u32 ph_flags;
+	__u32 ph_subsys;
+	__u32 ph_mask;
+	__u32 ph_cpu_id;
+	__u32 ph_sec;
+	__u64 ph_usec;
+	__u32 ph_stack;
+	__u32 ph_pid;
+	__u32 ph_extern_pid;
+	__u32 ph_line_num;
 } __attribute__((packed));
 
 
@@ -182,8 +199,8 @@ unsigned int __current_nesting_level(void);
 #define ENTRY_NESTING						\
 struct cfs_debug_data __cdd = { .magic1        = CDD_MAGIC1,	\
 				.parent        = NULL,		\
-                                .nesting_level = 0,		\
-                                .magic2        = CDD_MAGIC2 };	\
+				.nesting_level = 0,		\
+				.magic2        = CDD_MAGIC2 };	\
 __entry_nesting(&__cdd);
 
 #define EXIT_NESTING __exit_nesting(&__cdd)
@@ -215,12 +232,12 @@ typedef __u32 cfs_kernel_cap_t;
 
 #ifdef __KERNEL__
 enum {
-        /* if you change this, update darwin-util.c:cfs_stack_trace_fill() */
-        CFS_STACK_TRACE_DEPTH = 16
+	/* if you change this, update darwin-util.c:cfs_stack_trace_fill() */
+	CFS_STACK_TRACE_DEPTH = 16
 };
 
 struct cfs_stack_trace {
-        void *frame[CFS_STACK_TRACE_DEPTH];
+	void *frame[CFS_STACK_TRACE_DEPTH];
 };
 
 #define printk(format, args...)                 printf(format, ## args)
