@@ -46,6 +46,8 @@ if ($opts{H}) {
 }
 
 my $fn = $ARGV[0];
+my $host = `uname`;
+chomp $host;
 
 open F, "<", $fn or die "$fn: $!\n";
 local $/;
@@ -242,6 +244,9 @@ for ($i = 0; $i < length $data; ) {
 			$rv = $1;
 			$tag = "PFL_RETURN_STR";
 		}
+
+		$rv = "((void *)NULL)" if
+		    $rv =~ /^\s*\(NULL\)\s*$/ and $host eq "OpenBSD";
 
 		print "$tag($rv)$end";
 		dec_level() if $end =~ /}/;
