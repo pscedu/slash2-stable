@@ -42,6 +42,10 @@
 #include "pfl/types.h"
 #include "psc_util/log.h"
 
+#ifndef HAVE_LIBPTHREAD
+#  define pthread_self() ((pthread_t)1)
+#endif
+
 #define PSLRV_WASLOCKED		42
 #define PSLRV_WASNOTLOCKED	43
 
