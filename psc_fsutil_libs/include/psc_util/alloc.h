@@ -104,7 +104,7 @@ struct psc_memalloc {
 		if (((fl) & PAF_NOLOG) == 0) {				\
 			if (oldp)					\
 				psc_debugs(PSS_MEM, "realloc(%p)=%p "	\
-				    "sz=%zu fl=%d", (oldp), _p,		\
+				    "sz=%zu fl=%d", (void *)(oldp), _p,	\
 				    (size_t)(sz), (fl));		\
 			else						\
 				psc_debugs(PSS_MEM, "alloc()=%p "	\
