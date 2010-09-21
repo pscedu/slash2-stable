@@ -230,6 +230,7 @@ enum psclog_level {
 #define PFL_RETURN(rv)						\
 	do {							\
 		typeof(rv) _pfl_rv = (rv);			\
+								\
 		psc_trace("exit rc=%ld %p", (long)_pfl_rv,	\
 		    (void *)(unsigned long)_pfl_rv);		\
 		return (_pfl_rv);				\
