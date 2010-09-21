@@ -22,18 +22,6 @@
 
 #include <sys/types.h>
 
-#if 0
-
-#ifdef HAVE_MACHINE_ENDIAN_H
-# include <machine/endian.h>
-#elif defined(HAVE_ENDIAN_H)
-# include <endian.h>
-#elif defined(HAVE_SYS_ENDIAN_H)
-# include <sys/endian.h>
-#endif
-
-#endif
-
 #include <inttypes.h>
 
 /* printf(3) specifier modifiers for custom types. */
@@ -47,7 +35,7 @@
 # define PSCPRI_PTHRT		"lu"
 #endif
 
-#if defined(__APPLE__)
+#if defined(__APPLE__) || defined(__OpenBSD__)
 # define PSCPRI_BLKSIZE_T	"u"
 #else
 # define PSCPRI_BLKSIZE_T	"ld"
@@ -69,11 +57,11 @@
 
 #ifdef __OpenBSD__
 # define PSCPRI_TIMEVAL		"%ld:%"PSCPRI_UTIMET
-# define PSCPRI_TIMESPEC	"%ld:%"PSCPRI_NTIMET
 #else
 # define PSCPRI_TIMEVAL		"%"PSCPRI_TIMET":%"PSCPRI_UTIMET
-# define PSCPRI_TIMESPEC	"%"PSCPRI_TIMET":%"PSCPRI_NTIMET
 #endif
+
+# define PSCPRI_TIMESPEC	"%"PSCPRI_TIMET":%"PSCPRI_NTIMET
 
 #define PSCPRI_TIMEVAL_ARGS(tv)	(tv)->tv_sec, (tv)->tv_usec
 #define PSCPRI_TIMESPEC_ARGS(ts)(ts)->tv_sec, (ts)->tv_nsec
