@@ -69,11 +69,11 @@ int lnet_get_usesdp(void);
  */
 
 int
-libcfs_sock_ioctl(int cmd, unsigned long arg)
+libcfs_sock_ioctl(unsigned long cmd, void *arg)
 {
         int fd, rc;
 
-        fd = socket(AF_INET, SOCK_STREAM, 0);
+        fd = socket(AF_INET, SOCK_DGRAM, 0);
 
         if (fd < 0) {
                 rc = -errno;
@@ -81,7 +81,7 @@ libcfs_sock_ioctl(int cmd, unsigned long arg)
                 return rc;
         }
 
-        rc = ioctl(fd, cmd, arg);
+        rc = ioctl(fd, cmd, (void *)arg);
 
         close(fd);
         return rc;
@@ -104,10 +104,11 @@ libcfs_ipif_query (char *name, int *up, __u32 *ip)
         CLASSERT (sizeof(ifr.ifr_name) >= IFNAMSIZ);
 
         strcpy(ifr.ifr_name, name);
-        rc = libcfs_sock_ioctl(SIOCGIFFLAGS, (unsigned long)&ifr);
+        rc = libcfs_sock_ioctl(SIOCGIFFLAGS, &ifr);
 
         if (rc != 0) {
-                CERROR("Can't get flags for interface %s\n", name);
+                CERROR("Can't get flags for interface %s: %s\n", name,
+		    strerror(errno));
                 return rc;
         }
 
@@ -122,7 +123,7 @@ libcfs_ipif_query (char *name, int *up, __u32 *ip)
 
         strcpy(ifr.ifr_name, name);
         ifr.ifr_addr.sa_family = AF_INET;
-        rc = libcfs_sock_ioctl(SIOCGIFADDR, (unsigned long)&ifr);
+        rc = libcfs_sock_ioctl(SIOCGIFADDR, &ifr);
 
         if (rc != 0) {
                 CERROR("Can't get IP address for interface %s\n", name);
@@ -175,7 +176,7 @@ libcfs_ipif_enumerate (char ***namesp)
                 ifc.ifc_buf = (char *)ifr;
                 ifc.ifc_len = nalloc * sizeof(*ifr);
 
-                rc = libcfs_sock_ioctl(SIOCGIFCONF, (unsigned long)&ifc);
+                rc = libcfs_sock_ioctl(SIOCGIFCONF, &ifc);
 
                 if (rc < 0) {
                         CERROR ("Error %d enumerating interfaces\n", rc);
