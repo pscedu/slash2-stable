@@ -33,12 +33,12 @@
 #include <unistd.h>
 
 #include "pfl/cdefs.h"
+#include "pfl/pfl.h"
 #include "pfl/str.h"
 #include "psc_ds/list.h"
 #include "psc_util/acsvc.h"
 #include "psc_util/alloc.h"
 #include "psc_util/atomic.h"
-#include "psc_util/setprocesstitle.h"
 #include "psc_util/thread.h"
 #include "psc_util/waitq.h"
 
@@ -383,7 +383,7 @@ acsvc_init(int thrtype, const char *name, char **av)
 				p++;
 			else
 				p = av[0];
-			setprocesstitle(av, "%s [acsvc]", p);
+			pfl_setprocesstitle(av, "%s [acsvc]", p);
 		}
 		close(fds[1]);
 		acsvc_svrmain(fds[0]);

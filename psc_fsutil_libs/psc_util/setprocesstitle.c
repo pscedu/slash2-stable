@@ -23,8 +23,8 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "pfl/pfl.h"
 #include "pfl/str.h"
-#include "psc_util/setprocesstitle.h"
 
 void
 pfl_setprocesstitle(char **av, const char *fmt, ...)
@@ -66,6 +66,5 @@ pfl_setprocesstitle(char **av, const char *fmt, ...)
 		memset(av[0] + newlen, '\0', len - newlen);
 	for (j = 1; av[j]; j++)
 		memset(av[j], '\0', strlen(av[j]));
-	return (0);
 #endif
 }
