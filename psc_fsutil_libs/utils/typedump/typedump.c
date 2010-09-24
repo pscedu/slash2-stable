@@ -82,7 +82,6 @@
 #include "psc_util/pthrutil.h"
 #include "psc_util/random.h"
 #include "psc_util/rlimit.h"
-#include "psc_util/setprocesstitle.h"
 #include "psc_util/subsys.h"
 #include "psc_util/thread.h"
 #include "psc_util/timerthr.h"
