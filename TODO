@@ -98,6 +98,7 @@ pfl
 - memguard option: dont free, keep PROT_NONE around
 - rename PFL include/pfl/compat to arch for things which aren't strictly
   for system compatibility
+- is pcpp the problem with function args mid-wrapping?
 
 development tool
 - let wiki changes automatically email zest/slash2-devel@ like svn commits
