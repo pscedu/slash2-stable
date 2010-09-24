@@ -26,13 +26,30 @@
 #include "pfl/str.h"
 #include "psc_util/setprocesstitle.h"
 
-int
-setprocesstitle(char **av, const char *fmt, ...)
+void
+pfl_setprocesstitle(char **av, const char *fmt, ...)
 {
+#ifdef HAVE_SETPROCTITLE
+	va_list ap;
+	char *p;
+	int rc;
+
+	va_start(ap, fmt);
+	rc = vasprintf(&p, fmt, ap);
+	va_end(ap);
+
+	if (rc == -1)
+		psc_fatal("vasprintf");
+
+	setproctitle("%s", p);
+	free(p);
+#else
 	char buf[2048];
 	size_t len, newlen;
 	va_list ap;
 	int j;
+
+	/* XXX handle fmt==NULL which trims args */
 
 	va_start(ap, fmt);
 	vsnprintf(buf, sizeof(buf), fmt, ap);
@@ -50,4 +67,5 @@ setprocesstitle(char **av, const char *fmt, ...)
 	for (j = 1; av[j]; j++)
 		memset(av[j], '\0', strlen(av[j]));
 	return (0);
+#endif
 }

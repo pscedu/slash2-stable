@@ -30,12 +30,11 @@
 		}							\
 	} while (0)
 
-void pfl_init(void);
-
 void psc_enter_debugger(const char *);
 
-void pfl_print_flag(const char *, int *);
-
 void pfl_dump_fflags(int);
+void pfl_init(void);
+void pfl_print_flag(const char *, int *);
+void pfl_setprocesstitle(char **, const char *, ...);
 
 #endif /* _PFL_PFL_H_ */

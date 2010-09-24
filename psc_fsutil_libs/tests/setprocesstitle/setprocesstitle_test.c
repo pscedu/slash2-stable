@@ -29,7 +29,6 @@
 #include "pfl/cdefs.h"
 #include "pfl/pfl.h"
 #include "psc_util/log.h"
-#include "psc_util/setprocesstitle.h"
 
 #define _PATH_CMDLINE "/proc/self/cmdline"
 
@@ -58,7 +57,7 @@ main(__unusedx int argc, char *argv[])
 	if (argc)
 		usage();
 
-	setprocesstitle(argv, "foobar %d", 13);
+	pfl_setprocesstitle(argv, "foobar %d", 13);
 
 	fp = fopen(_PATH_CMDLINE, "r");
 	if (fp == NULL) {
