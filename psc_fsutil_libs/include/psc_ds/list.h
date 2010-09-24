@@ -204,7 +204,8 @@ psclist_disjoint(const struct psc_listentry *e)
 
 /**
  * psclist_conjoint - Test whether a psc_listentry is on a list.
- * @entry: the psc_listentry to test.
+ * @e: the psc_listentry to test.
+ * @hd: the psclist_head the entry must be on.
  */
 static __inline int
 psclist_conjoint(const struct psc_listentry *e, const struct psclist_head *hd)
@@ -226,7 +227,7 @@ psclist_conjoint(const struct psc_listentry *e, const struct psclist_head *hd)
 #else
 	(void)hd;
 #endif
-	return (psc_lentry_prev(e) && 1);
+	return (psc_lentry_prev(e) != NULL);
 }
 
 #define psclist_entry2(p, offset)						\
