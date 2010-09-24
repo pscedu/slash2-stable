@@ -132,4 +132,23 @@ PICKLE_NEED_VERSION=					$(word 2,$$Rev$$)
  ifdef PICKLE_HAVE_FUSE_DEBUGLEVEL
   DEFINES+=						-DHAVE_FUSE_DEBUGLEVEL
  endif
+
+ ifdef PICKLE_HAVE_FUSE
+  DEFINES+=						-DHAVE_FUSE
+  PSCFS_SRCS+=						${PFL_BASE}/psc_fs/fuse.c
+ endif
+
+ ifdef PICKLE_HAVE_NNPFS
+  DEFINES+=						-DHAVE_NNPFS
+  PSCFS_SRCS+=						${PFL_BASE}/psc_fs/nnpfs.c
+ endif
+
+ ifdef PICKLE_HAVE_DOKAN
+  DEFINES+=						-DHAVE_DOKAN
+  PSCFS_SRCS+=						${PFL_BASE}/psc_fs/dokan.c
+ endif
+
+ ifdef PICKLE_HAVE_SETPROCTITLE
+  DEFINES+=						-DHAVE_SETPROCTITLE
+ endif
 endif
