@@ -99,6 +99,9 @@ pfl
 - rename PFL include/pfl/compat to arch for things which aren't strictly
   for system compatibility
 - is pcpp the problem with function args mid-wrapping?
+- count spinlocks and mutexes held before:
+	- waitq (should be holding one)
+	- rpc (should be holding none)
 
 development tool
 - let wiki changes automatically email zest/slash2-devel@ like svn commits
