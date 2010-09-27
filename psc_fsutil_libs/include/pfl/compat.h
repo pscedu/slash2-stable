@@ -25,13 +25,19 @@
 #include <errno.h>
 
 #ifndef ECOMM
-#define ECOMM		EPROTO
+#  define ECOMM		EPROTO
+#endif
+
+#ifndef EBADMSG
+#  ifdef EBADRPC
+#    define EBADMSG	EBADRPC
+#  else
+#    define EBADMSG	(ELAST + 1000)
+#  endif
 #endif
 
 #ifndef HOST_NAME_MAX
-#define HOST_NAME_MAX	MAXHOSTNAMELEN
+#  define HOST_NAME_MAX	MAXHOSTNAMELEN
 #endif
-
-size_t psc_strnlen(const char *, size_t);
 
 #endif /* _PFL_COMPAT_H_ */
