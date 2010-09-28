@@ -79,12 +79,37 @@ m_cmp(const void *a, const void *b)
 	return (CMP(x->v, y->v));
 }
 
+struct i {
+	struct psc_listentry i_lentry;
+	int i_v;
+};
+
+int
+it_cmp(const void *a, const void *b)
+{
+	const struct i *x = a, *y = b;
+
+	return (CMP(x->i_v, y->i_v));
+}
+
+void
+dump(struct psc_lockedlist *pll)
+{
+	struct i *it;
+
+	PLL_FOREACH(it, pll)
+		printf("%d ", it->i_v);
+	printf("\n");
+}
+
 int
 main(int argc, char *argv[])
 {
+	struct psc_lockedlist pll = PLL_INIT(&pll, struct i, i_lentry);
 	struct psc_listcache lc;
 	struct timespec ts;
 	struct m *m, *next;
+	struct i *it;
 	void *p;
 	int i;
 
@@ -148,6 +173,41 @@ main(int argc, char *argv[])
 	m = lc_gettimed(&lc, &ts);
 	psc_assert(m->v == 13);
 	PSCFREE(m);
+
+	PFL_ALLOC_OBJ(it);
+	INIT_PSC_LISTENTRY(&it->i_lentry);
+	it->i_v = 5;
+	pll_add_sorted(&pll, it, it_cmp);
+
+	PFL_ALLOC_OBJ(it);
+	INIT_PSC_LISTENTRY(&it->i_lentry);
+	it->i_v = 3;
+	pll_add_sorted(&pll, it, it_cmp);
+
+	PFL_ALLOC_OBJ(it);
+	INIT_PSC_LISTENTRY(&it->i_lentry);
+	it->i_v = 9;
+	pll_add_sorted(&pll, it, it_cmp);
+
+	PFL_ALLOC_OBJ(it);
+	INIT_PSC_LISTENTRY(&it->i_lentry);
+	it->i_v = 2;
+	pll_add_sorted(&pll, it, it_cmp);
+
+	PFL_ALLOC_OBJ(it);
+	INIT_PSC_LISTENTRY(&it->i_lentry);
+	it->i_v = 27;
+	pll_add_sorted(&pll, it, it_cmp);
+
+	PFL_ALLOC_OBJ(it);
+	INIT_PSC_LISTENTRY(&it->i_lentry);
+	it->i_v = 4;
+	pll_add_sorted(&pll, it, it_cmp);
+
+	it = pll_get(&pll);
+
+	psc_assert(it->i_v == 2);
+	PSCFREE(it);
 
 	exit(0);
 }
