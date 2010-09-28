@@ -445,8 +445,8 @@ psclist_add_sorted(struct psclist_head *hd, struct psc_listentry *e,
 
 	psc_assert(e);
 	psclist_for_each(t, hd)
-		if (cmpf((char *)e - offset, (char *)t - offset) > 0) {
-			psclist_add_after(e, t);
+		if (cmpf((char *)e - offset, (char *)t - offset) < 0) {
+			psclist_add_before(e, t);
 			return;
 		}
 	psclist_add(e, hd);
