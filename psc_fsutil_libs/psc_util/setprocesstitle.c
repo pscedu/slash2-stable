@@ -21,10 +21,12 @@
 
 #include <stdarg.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 #include "pfl/pfl.h"
 #include "pfl/str.h"
+#include "psc_util/log.h"
 
 void
 pfl_setprocesstitle(char **av, const char *fmt, ...)
