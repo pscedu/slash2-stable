@@ -515,6 +515,22 @@ psc_pool_get(struct psc_poolmgr *m)
 	if (p)
 		return (p);
 
+	/*
+	 * If this pool user provided a reclaimer routine e.g.
+	 * for reclaiming buffers on a clean list, try that.
+	 */
+ tryreclaim:
+	if (m->ppm_reclaimcb) {
+		atomic_inc(&m->ppm_nwaiters);
+		pthread_mutex_lock(&m->ppm_reclaim_mutex);
+		n = m->ppm_reclaimcb(m);
+		pthread_mutex_unlock(&m->ppm_reclaim_mutex);
+		atomic_dec(&m->ppm_nwaiters);
+		p = POOL_TRYGETOBJ(m);
+		if (p)
+			return (p);
+	}
+
 	/* If total < min, try to grow the pool. */
 	locked = POOL_RLOCK(m);
 	n = m->ppm_min - m->ppm_total;
@@ -538,22 +554,6 @@ psc_pool_get(struct psc_poolmgr *m)
 			break;
 	}
 
-	/*
-	 * If this pool user provided a reclaimer routine e.g.
-	 * for reclaiming buffers on a clean list, try that.
-	 */
- tryreclaim:
-	if (m->ppm_reclaimcb)
-		do {
-			atomic_inc(&m->ppm_nwaiters);
-			pthread_mutex_lock(&m->ppm_reclaim_mutex);
-			n = m->ppm_reclaimcb(m);
-			pthread_mutex_unlock(&m->ppm_reclaim_mutex);
-			atomic_dec(&m->ppm_nwaiters);
-			p = POOL_TRYGETOBJ(m);
-			if (p)
-				return (p);
-		} while (n);
 
 	/* If communal, try reaping other pools in sets. */
 	locked = reqlock(&m->ppm_master->pms_lock);
