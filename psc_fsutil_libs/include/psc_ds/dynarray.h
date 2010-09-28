@@ -51,7 +51,7 @@ struct psc_dynarray {
 #define DYNARRAY_FOREACH_REVERSE(p, n, pda)				\
 	for ((n) = psc_dynarray_len(pda) - 1;				\
 	    ((n) >= 0 || ((p) = NULL)) &&				\
-	    (((p) = psc_dynarray_getpos((pda), (n))) || 1); (n)++)
+	    (((p) = psc_dynarray_getpos((pda), (n))) || 1); (n)--)
 
 /**
  * psc_dynarray_len - Obtain the number of elements stored in a dynamic array.
