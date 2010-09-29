@@ -19,6 +19,7 @@
 # Better algorithm:
 #	use file mtime as long as mtime != ctime
 #	and svn diff -I\$Id yields isn't empty
+# XXX if file was copied from a revision, switch to that file to continue
 
 use strict;
 use warnings;
