@@ -247,7 +247,7 @@ pscfs_fuse_listener_loop(__unusedx void *arg)
 				continue;
 
 			if (i == 0) {
-				new_fs();
+				pscfs_fuse_newfs();
 			} else {
 				/* Handle request */
 
@@ -329,6 +329,12 @@ int
 pscfs_main(void)
 {
 	int i;
+
+#ifndef __LP64__
+	psc_poolmaster_init();
+	psc_poolmaster_getmgr();
+	psc_hashtbl_init();
+#endif
 
 	for (i = 0; i < NUM_THREADS; i++)
 		psc_assert(pthread_create(&fuse_threads[i], NULL,
@@ -439,10 +445,12 @@ pscfs_getumask(struct pscfs_req *pfr)
 }
 
 #ifdef __LP64__
-#  define INUM_FUSE2PSCFS(inum, del)	(inum)
+#  define INUM_FUSE2PSCFS(inum)		(inum)
+#  define INUM_FUSE2PSCFS_DEL(inum)	(inum)
 #  define INUM_ADD_PSCFS2FUSE(inum)	(inum)
 #else
-#  define INUM_FUSE2PSCFS(inum, del)	pscfs_inum_fuse2pscfs((inum), (del))
+#  define INUM_FUSE2PSCFS(inum)		pscfs_inum_fuse2pscfs((inum), 0)
+#  define INUM_FUSE2PSCFS_DEL(inum)	pscfs_inum_fuse2pscfs((inum), 1)
 #  define INUM_ADD_PSCFS2FUSE(inum)	pscfs_inum_fuse2pscfs(inum)
 
 struct psc_hashtbl pscfs_inumcol_hashtbl;
@@ -451,8 +459,29 @@ struct pscfs_fuse_inumcol {
 	pscfs_inum_t		pfic_pscfs_inum;
 	uint64_t		pfic_key;		/* fuse inum */
 	psc_atomic32_t		pfic_refcnt;
+	time_t			pfic_extime;		/* when fuse expires it */
 	struct psc_hashent	pfic_hentry;
 }
+
+#if 0
+int
+pscfs_inum_reap(struct psc_poolmgr *m)
+{
+	time_t now;
+	int nrel = 0;
+
+	now = time(NULL);
+	PSC_HASHTBL_FOREACH_BUCKET(t, b) {
+		psc_hashbkt_lock(b);
+		PSC_HASHBKT_FOREACH_ENTRY(t, b, pfic) {
+			if (now > pfic->pfic_extime &&
+			    refcnt == 0)
+				evict
+		}
+		psc_hashbkt_unlock(b);
+	}
+}
+#endif
 
 pscfs_inum_t
 pscfs_inum_fuse2pscfs(fuse_ino_t f_inum, int del)
@@ -528,7 +557,29 @@ pscfs_inum_add_pscfs2fuse(pscfs_ino_t p_inum)
 }
 #endif
 
-#define ISSUPPORTED(pfr, call, args)					\
+int
+pscfs_setdebug(int debugval)
+{
+#ifdef HAVE_FUSE_DEBUG
+	fuse_lowlevel_setdebug(fuse_session, val ? 1 : 0);
+	return (0);
+#else
+	return (ENOTSUP);
+#endif
+}
+
+int
+pscfs_getdebug(int *debugval)
+{
+#ifdef HAVE_FUSE_DEBUG
+	*debugval = fuse_lowlevel_getdebug(fuse_session);
+	return (0);
+#else
+	return (ENOTSUP);
+#endif
+}
+
+#define RETIFNOTSUP(pfr, call, args)					\
 	do {								\
 		if (pscfs.pf_handle_ ## call == NULL) {			\
 			pscfs_reply_ ## call((pfr), ## __VA_ARGS__,	\
@@ -542,7 +593,7 @@ pscfs_fuse_handle_access(fuse_req_t req, fuse_ino_t inum, int mask)
 {
 	struct pscfs_req pfr;
 
-	ISSUPPORTED(pfr, access);
+	RETIFNOTSUP(pfr, access);
 
 	pfr.pfr_fuse_req = req;
 	pscfs.pf_handle_access(&pfr, INUM_FUSE2PSCFS(inum), mask);
@@ -554,7 +605,7 @@ pscfs_fuse_handle_close(fuse_req_t req, __unusedx fuse_ino_t inum,
 {
 	struct pscfs_req pfr;
 
-	ISSUPPORTED(pfr, close);
+	RETIFNOTSUP(pfr, close);
 
 	pfr.pfr_fuse_req = req;
 	pfr.pfr_fuse_fi = fi;
@@ -567,7 +618,7 @@ pscfs_fuse_handle_closedir(fuse_req_t req, __unusedx fuse_ino_t inum,
 {
 	struct pscfs_req pfr;
 
-	ISSUPPORTED(pfr, closedir);
+	RETIFNOTSUP(pfr, closedir);
 
 	pfr.pfr_fuse_req = req;
 	pfr.pfr_fuse_fi = fi;
@@ -580,7 +631,7 @@ pscfs_fuse_handle_create(fuse_req_t req, fuse_ino_t pinum,
 {
 	struct pscfs_req pfr;
 
-	ISSUPPORTED(pfr, create);
+	RETIFNOTSUP(pfr, create);
 
 	pfr.pfr_fuse_req = req;
 	pfr.pfr_fuse_fi = fi;
@@ -594,7 +645,7 @@ pscfs_fuse_handle_flush(fuse_req_t req, __unusedx fuse_ino_t inum,
 {
 	struct pscfs_req pfr;
 
-	ISSUPPORTED(pfr, flush);
+	RETIFNOTSUP(pfr, flush);
 
 	pfr.pfr_fuse_req = req;
 	pfr.pfr_fuse_fi = fi;
@@ -607,7 +658,7 @@ pscfs_fuse_handle_fsync(fuse_req_t req, __unusedx fuse_ino_t inum,
 {
 	struct pscfs_req pfr;
 
-	ISSUPPORTED(pfr, fsync);
+	RETIFNOTSUP(pfr, fsync);
 
 	pfr.pfr_fuse_req = req;
 	pfr.pfr_fuse_fi = fi;
@@ -620,7 +671,7 @@ pscfs_fuse_handle_fsyncdir(fuse_req_t req, __unusedx fuse_ino_t inum,
 {
 	struct pscfs_req pfr;
 
-	ISSUPPORTED(pfr, fsyncdir);
+	RETIFNOTSUP(pfr, fsyncdir);
 
 	pfr.pfr_fuse_req = req;
 	pfr.pfr_fuse_fi = fi;
@@ -632,7 +683,7 @@ pscfs_fuse_handle_getattr(fuse_req_t req, fuse_ino_t inum)
 {
 	struct pscfs_req pfr;
 
-	ISSUPPORTED(pfr, getattr);
+	RETIFNOTSUP(pfr, getattr);
 
 	pfr.pfr_fuse_req = req;
 	pscfs.pf_handle_getattr(&pfr, INUM_FUSE2PSCFS(inum));
@@ -644,7 +695,7 @@ pscfs_fuse_handle_link(fuse_req_t req, fuse_ino_t c_inum,
 {
 	struct pscfs_req pfr;
 
-	ISSUPPORTED(pfr, link);
+	RETIFNOTSUP(pfr, link);
 
 	pfr.pfr_fuse_req = req;
 	pscfs.pf_handle_link(&pfr, INUM_FUSE2PSCFS(c_inum),
@@ -657,7 +708,7 @@ pscfs_fuse_handle_lookup(fuse_req_t req, fuse_ino_t pinum,
 {
 	struct pscfs_req pfr;
 
-	ISSUPPORTED(pfr, lookup);
+	RETIFNOTSUP(pfr, lookup);
 
 	pfr.pfr_fuse_req = req;
 	pscfs.pf_handle_lookup(&pfr, INUM_FUSE2PSCFS(pinum), name);
@@ -669,7 +720,7 @@ pscfs_fuse_handle_mkdir(fuse_req_t req, fuse_ino_t pinum,
 {
 	struct pscfs_req pfr;
 
-	ISSUPPORTED(pfr, mkdir);
+	RETIFNOTSUP(pfr, mkdir);
 
 	pfr.pfr_fuse_req = req;
 	pscfs.pf_handle_mkdir(&pfr, INUM_FUSE2PSCFS(pinum), name, mode);
@@ -681,7 +732,7 @@ pscfs_fuse_handle_mknod(fuse_req_t req, fuse_ino_t pinum,
 {
 	struct pscfs_req pfr;
 
-	ISSUPPORTED(pfr, mknod);
+	RETIFNOTSUP(pfr, mknod);
 
 	pfr.pfr_fuse_req = req;
 	pscfs.pf_handle_mknod(&pfr, INUM_FUSE2PSCFS(pinum), name, mode,
@@ -694,7 +745,7 @@ pscfs_fuse_handle_open(fuse_req_t req, fuse_ino_t inum,
 {
 	struct pscfs_req pfr;
 
-	ISSUPPORTED(pfr, open);
+	RETIFNOTSUP(pfr, open);
 
 	pfr.pfr_fuse_req = req;
 	pfr.pfr_fuse_fi = fi;
@@ -707,7 +758,7 @@ pscfs_fuse_handle_opendir(fuse_req_t req, fuse_ino_t inum,
 {
 	struct pscfs_req pfr;
 
-	ISSUPPORTED(pfr, opendir);
+	RETIFNOTSUP(pfr, opendir);
 
 	pfr.pfr_fuse_req = req;
 	pfr.pfr_fuse_fi = fi;
@@ -720,7 +771,7 @@ pscfs_fuse_handle_read(fuse_req_t req, __unusedx fuse_ino_t inum,
 {
 	struct pscfs_req pfr;
 
-	ISSUPPORTED(pfr, read);
+	RETIFNOTSUP(pfr, read);
 
 	pfr.pfr_fuse_req = req;
 	pfr.pfr_fuse_fi = fi;
@@ -733,7 +784,7 @@ pscfs_fuse_handle_readdir(fuse_req_t req, __unusedx fuse_ino_t inum,
 {
 	struct pscfs_req pfr;
 
-	ISSUPPORTED(pfr, readdir);
+	RETIFNOTSUP(pfr, readdir);
 
 	pfr.pfr_fuse_req = req;
 	pfr.pfr_fuse_fi = fi;
@@ -745,7 +796,7 @@ pscfs_fuse_handle_readlink(fuse_req_t req, fuse_ino_t inum)
 {
 	struct pscfs_req pfr;
 
-	ISSUPPORTED(pfr, readlink);
+	RETIFNOTSUP(pfr, readlink);
 
 	pfr.pfr_fuse_req = req;
 	pscfs.pf_handle_readlink(&pfr, INUM_FUSE2PSCFS(inum));
@@ -757,7 +808,7 @@ pscfs_fuse_handle_rename(fuse_req_t req, fuse_ino_t oldpinum,
 {
 	struct pscfs_req pfr;
 
-	ISSUPPORTED(pfr, rename);
+	RETIFNOTSUP(pfr, rename);
 
 	pfr.pfr_fuse_req = req;
 	pscfs.pf_handle_rename(&pfr, INUM_FUSE2PSCFS(oldpinum), oldname,
@@ -770,7 +821,7 @@ pscfs_fuse_handle_rmdir(fuse_req_t req, fuse_ino_t pinum,
 {
 	struct pscfs_req pfr;
 
-	ISSUPPORTED(pfr, rmdir);
+	RETIFNOTSUP(pfr, rmdir);
 
 	pfr.pfr_fuse_req = req;
 	pscfs.pf_handle_rmdir(&pfr, INUM_FUSE2PSCFS(pinum), name);
@@ -783,7 +834,7 @@ pscfs_fuse_handle_setattr(fuse_req_t req, fuse_ino_t inum,
 	struct pscfs_req pfr;
 	int pfl_to_set = 0;
 
-	ISSUPPORTED(pfr, setattr);
+	RETIFNOTSUP(pfr, setattr);
 
 	if (fuse_to_set & FUSE_SET_ATTR_MODE)
 		pfl_to_set |= PSCFS_SETATTRF_MODE;
@@ -809,7 +860,7 @@ pscfs_fuse_handle_statfs(fuse_req_t req, __unusedx fuse_ino_t inum)
 {
 	struct pscfs_req pfr;
 
-	ISSUPPORTED(pfr, statfs);
+	RETIFNOTSUP(pfr, statfs);
 
 	pfr.pfr_fuse_req = req;
 	pscfs.pf_handle_statfs(&pfr);
@@ -821,7 +872,7 @@ pscfs_fuse_handle_symlink(fuse_req_t req, const char *buf,
 {
 	struct pscfs_req pfr;
 
-	ISSUPPORTED(pfr, symlink);
+	RETIFNOTSUP(pfr, symlink);
 
 	pfr.pfr_fuse_req = req;
 	pscfs.pf_handle_symlink(&pfr, buf, INUM_FUSE2PSCFS(pinum),
@@ -841,7 +892,7 @@ pscfs_fuse_handle_unlink(fuse_req_t req, fuse_ino_t pinum,
 {
 	struct pscfs_req pfr;
 
-	ISSUPPORTED(pfr, unlink);
+	RETIFNOTSUP(pfr, unlink);
 
 	pfr.pfr_fuse_req = req;
 	pscfs.pf_handle_unlink(&pfr, INUM_FUSE2PSCFS(pinum), name);
@@ -853,7 +904,7 @@ pscfs_fuse_handle_write(fuse_req_t req, __unusedx fuse_ino_t ino,
 {
 	struct pscfs_req pfr;
 
-	ISSUPPORTED(pfr, write);
+	RETIFNOTSUP(pfr, write);
 
 	pfr.pfr_fuse_req = req;
 	pfr.pfr_fuse_fi = fi;
@@ -893,12 +944,12 @@ pscfs_reply_create(struct pscfs_req *pfr, pscfs_inum_t inum,
 		if (rflags & PSCFS_CREATEF_DIO)
 			pfr->pfr_fuse_fi->direct_io = 1;
 		pfr->pfr_fuse_fi->fh = data;
-		e->entry_timeout = entry_timeout;
-		e->ino = INUM_PSCFS2FUSE(inum);
-		if (e->ino) {
-			e->attr_timeout = attr_timeout;
-			memcpy(&e->attr, stb, sizeof(e->attr));
-			e->generation = gen;
+		e.entry_timeout = entry_timeout;
+		e.ino = INUM_PSCFS2FUSE(inum);
+		if (e.ino) {
+			e.attr_timeout = attr_timeout;
+			memcpy(&e.attr, stb, sizeof(e.attr));
+			e.generation = gen;
 		}
 		fuse_reply_create(pfr->pfr_fuse_req, &e, pfr->pfr_fuse_fi);
 	}
@@ -1062,12 +1113,12 @@ pscfs_replygen_entry(struct pscfs_req *pfr, pscfs_inum_t inum,
 	if (rc)
 		fuse_reply_err(pfr->pfr_fuse_req, rc);
 	else {
-		e->entry_timeout = entry_timeout;
-		e->ino = INUM_PSCFS2FUSE(inum);
-		if (e->ino) {
-			e->attr_timeout = attr_timeout;
-			memcpy(&e->attr, stb, sizeof(e->attr));
-			e->generation = gen;
+		e.entry_timeout = entry_timeout;
+		e.ino = INUM_PSCFS2FUSE(inum);
+		if (e.ino) {
+			e.attr_timeout = attr_timeout;
+			memcpy(&e.attr, stb, sizeof(e.attr));
+			e.generation = gen;
 		}
 		fuse_reply_entry(pfr->pfr_fuse_req, &e);
 	}
@@ -1100,3 +1151,38 @@ struct fuse_lowlevel_ops pscfs_fuse_ops = {
 	.unlink		= pscfs_fuse_handle_unlink,
 	.write		= pscfs_fuse_handle_write
 };
+
+#if 0
+	if (nlevels < 2 || strcmp(levels[1], "fsdebug") == 0) {
+		if (set) {
+			char *endp;
+			long val;
+
+			endp = NULL;
+			val = strtol(pcp->pcp_value, &endp, 10);
+			if (val < 0 || val > 1 ||
+			    endp == pcp->pcp_value || *endp != '\0')
+				return (psc_ctlsenderr(fd, mh,
+				    "invalid fsdebug value: %s",
+				    pcp->pcp_value));
+			pscfs_setdebug(val);
+		} else {
+			levels[1] = "fsdebug";
+			snprintf(nbuf, sizeof(nbuf), "%d",
+			    pscfs_getdebug());
+			if (!psc_ctlmsg_param_send(fd, mh, pcp,
+			    PCTHRNAME_EVERYONE, levels, 2, nbuf))
+				return (0);
+		}
+	}
+	if (nlevels < 2 || strcmp(levels[1], "fuse_version") == 0) {
+		if (set)
+			goto readonly;
+		levels[1] = "fuse_version";
+		snprintf(nbuf, sizeof(nbuf), "%d.%d",
+		    FUSE_MAJOR_VERSION, FUSE_MINOR_VERSION);
+		if (!psc_ctlmsg_param_send(fd, mh, pcp,
+		    PCTHRNAME_EVERYONE, levels, 2, nbuf))
+			return (0);
+	}
+#endif

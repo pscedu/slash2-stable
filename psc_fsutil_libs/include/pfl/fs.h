@@ -47,8 +47,17 @@ struct pscfs {
 	void	(*pf_handle_write)(struct pscfs_req *, const void *, size_t, off_t, void *);
 };
 
+void	pscfs_addarg(struct pscfs_args *, const char *);
+void	pscfs_freeargs(struct pscfs_args *);
+void	pscfs_mount(const char *, struct pscfs_args *);
+
 void	pscfs_getcreds(struct pscfs_req *, struct pscfs_cred *);
 mode_t	pscfs_getumask(struct pscfs_req *);
+
+int	pscfs_setdebug(int);
+int	pscfs_getdebug(int *);
+
+void	pscfs_mount(const char *, struct pscfs_args *);
 
 void	pscfs_reply_access(struct pscfs_req *, int);
 void	pscfs_reply_close(struct pscfs_req *, int);
@@ -61,8 +70,8 @@ void	pscfs_reply_getattr(struct pscfs_req *, struct stat *, int, int);
 void	pscfs_reply_init(struct pscfs_req *);
 void	pscfs_reply_ioctl(struct pscfs_req *);
 void	pscfs_reply_link(struct pscfs_req *, pscfs_inum_t, pscfs_fgen_t, int, struct stat *, int, int);
-void	pscfs_reply_lookup(struct pscfs_req *, struct stat *, int);
-void	pscfs_reply_mkdir(struct pscfs_req *, struct stat *, int);
+void	pscfs_reply_lookup(struct pscfs_req *, pscfs_inum_t, pscfs_fgen_t, int, struct stat *, int, int);
+void	pscfs_reply_mkdir(struct pscfs_req *, pscfs_inum_t, pscfs_fgen_t, int, struct stat *, int, int);
 void	pscfs_reply_mknod(struct pscfs_req *, struct stat *, int);
 void	pscfs_reply_open(struct pscfs_req *, void *, int);
 void	pscfs_reply_opendir(struct pscfs_req *, void *, int);
