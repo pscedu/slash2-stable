@@ -25,20 +25,20 @@ struct pscfs_cred {
 /* user fills these in */
 struct pscfs {
 	void	(*pf_handle_access)(struct pscfs_req *, pscfs_inum_t, int);
-	void	(*pf_handle_close)(struct pscfs_req *, pscfs_inum_t, void *);
-	void	(*pf_handle_closedir)(struct pscfs_req *, pscfs_inum_t, void * *);
+	void	(*pf_handle_close)(struct pscfs_req *, void *);
+	void	(*pf_handle_closedir)(struct pscfs_req *, void * *);
 	void	(*pf_handle_create)(struct pscfs_req *, pscfs_inum_t, const char *, int, mode_t);
 	void	(*pf_handle_flush)(struct pscfs_req *, void *);
 	void	(*pf_handle_fsync)(struct pscfs_req *, int, void *);
 	void	(*pf_handle_fsyncdir)(struct pscfs_req *, int, void *);
-	void	(*pf_handle_getattr)(struct pscfs_req *, pscfs_inum_t, void *);
+	void	(*pf_handle_getattr)(struct pscfs_req *, pscfs_inum_t);
 	void	(*pf_handle_ioctl)(struct pscfs_req *);
 	void	(*pf_handle_link)(struct pscfs_req *, pscfs_inum_t, pscfs_inum_t, const char *);
 	void	(*pf_handle_lookup)(struct pscfs_req *, pscfs_inum_t, const char *);
 	void	(*pf_handle_mkdir)(struct pscfs_req *, pscfs_inum_t, const char *, mode_t);
 	void	(*pf_handle_mknod)(struct pscfs_req *, pscfs_inum_t, const char *, mode_t, dev_t);
-	void	(*pf_handle_open)(struct pscfs_req *, pscfs_inum_t, void *);
-	void	(*pf_handle_opendir)(struct pscfs_req *, pscfs_inum_t, void *);
+	void	(*pf_handle_open)(struct pscfs_req *, pscfs_inum_t, int);
+	void	(*pf_handle_opendir)(struct pscfs_req *, pscfs_inum_t, int);
 	void	(*pf_handle_read)(struct pscfs_req *, size_t, off_t, void *);
 	void	(*pf_handle_readdir)(struct pscfs_req *, size_t, off_t, void *);
 	void	(*pf_handle_readlink)(struct pscfs_req *, pscfs_inum_t);
@@ -78,8 +78,8 @@ void	pscfs_reply_link(struct pscfs_req *, pscfs_inum_t, pscfs_fgen_t, int, struc
 void	pscfs_reply_lookup(struct pscfs_req *, pscfs_inum_t, pscfs_fgen_t, int, struct stat *, int, int);
 void	pscfs_reply_mkdir(struct pscfs_req *, pscfs_inum_t, pscfs_fgen_t, int, struct stat *, int, int);
 void	pscfs_reply_mknod(struct pscfs_req *, pscfs_inum_t, pscfs_fgen_t, int, struct stat *, int, int);
-void	pscfs_reply_open(struct pscfs_req *, void *, int);
-void	pscfs_reply_opendir(struct pscfs_req *, void *, int);
+void	pscfs_reply_open(struct pscfs_req *, void *, int, int);
+void	pscfs_reply_opendir(struct pscfs_req *, void *, int, int);
 void	pscfs_reply_read(struct pscfs_req *, void *, ssize_t, int);
 void	pscfs_reply_readdir(struct pscfs_req *, void *, ssize_t, int);
 void	pscfs_reply_readlink(struct pscfs_req *, void *, int);
@@ -123,7 +123,7 @@ struct pscfs_req {
 
 #define PSCFS_ARGS_INIT(n, av)	{ FUSE_ARGS_INIT((n), (av)) }
 
-void	pscfs_replygen_entry(struct pscfs_req *, pscfs_inum_t,
+void	pscfs_fuse_replygen_entry(struct pscfs_req *, pscfs_inum_t,
 	    pscfs_fgen_t, int, struct stat *, int, int);
 
 #elif defined(HAVE_NNPFS)

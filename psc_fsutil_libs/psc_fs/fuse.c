@@ -42,17 +42,39 @@
 #include "psc_util/alloc.h"
 #include "psc_util/lock.h"
 #include "psc_util/log.h"
+#include "psc_util/pool.h"
+#include "psc_util/random.h"
 #include "psc_util/waitq.h"
 
 #ifdef __LP64__
 #  include "pfl/hashtbl.h"
 #endif
 
-#define NUM_THREADS	32
-#define MAX_FILESYSTEMS	5
-#define MAX_FDS		(MAX_FILESYSTEMS + 1)
+#define NUM_THREADS			32
+#define MAX_FILESYSTEMS			5
+#define MAX_FDS				(MAX_FILESYSTEMS + 1)
 
-#define fi_getdata(fi)	((void *)(fi)->fh)
+#define fi_getdata(fi)			((void *)(unsigned long)(fi)->fh)
+#define fi_setdata(fi, data)		((fi)->fh = (unsigned long)(data))
+
+#ifdef __LP64__
+#  define INUM_FUSE2PSCFS(inum)		(inum)
+#  define INUM_FUSE2PSCFS_DEL(inum)	(inum)
+#  define INUM_PSCFS2FUSE(inum)		(inum)
+#else
+#  define INUM_FUSE2PSCFS(inum)		pscfs_inum_fuse2pscfs((inum), 0)
+#  define INUM_FUSE2PSCFS_DEL(inum)	pscfs_inum_fuse2pscfs((inum), 1)
+#  define INUM_PSCFS2FUSE(inum)		pscfs_inum_pscfs2fuse(inum)
+
+struct pscfs_inumcol {
+	pscfs_inum_t		pfic_pscfs_inum;
+	uint64_t		pfic_key;		/* fuse inum */
+	psc_atomic32_t		pfic_refcnt;
+	time_t			pfic_extime;		/* when fuse expires it */
+	struct psc_listentry	pfic_lentry;		/* pool */
+	struct psc_hashent	pfic_hentry;
+};
+#endif
 
 typedef struct {
 	int			 fd;
@@ -230,7 +252,7 @@ pscfs_fuse_listener_loop(__unusedx void *arg)
 				continue;
 
 			if (i == 0) {
-				pscfs_fuse_newfs();
+				pscfs_fuse_new();
 			} else {
 				/* Handle request */
 
@@ -247,7 +269,7 @@ pscfs_fuse_listener_loop(__unusedx void *arg)
 				int res = fuse_chan_recv(&fsinfo[i].ch,
 				    buf, fsinfo[i].bufsize);
 				if (res == -1 || fuse_session_exited(fsinfo[i].se)) {
-					destroy_fs(i);
+					pscfs_fuse_destroy(i);
 					continue;
 				}
 
@@ -316,11 +338,11 @@ pscfs_main(void)
 #ifndef __LP64__
 #define INUMCOL_SZ (4096 - 1)
 	psc_poolmaster_init(&pscfs_inumcol_poolmaster, struct pscfs_inumcol,
-	    pfic_lentry, PPMF_AUTO, INUMCOL_SZ / 2, INUMCOL_SZ * 2,
+	    pfic_lentry, PPMF_AUTO, INUMCOL_SZ, INUMCOL_SZ / 2, INUMCOL_SZ * 2,
 	    NULL, NULL, NULL, "inumcol");
 	pscfs_inumcol_pool = psc_poolmaster_getmgr(&pscfs_inumcol_poolmaster);
 	psc_hashtbl_init(&pscfs_inumcol_hashtbl, 0, struct pscfs_inumcol,
-	    pfic_key, pfic_hentry, INUMCOL_SZ, "inumcol");
+	    pfic_key, pfic_hentry, INUMCOL_SZ * 4, NULL, "inumcol");
 #endif
 
 	for (i = 0; i < NUM_THREADS; i++)
@@ -355,63 +377,16 @@ pscfs_main(void)
 }
 
 void
-pscfs_addarg(struct pscfs_args *av, const char *arg)
+pscfs_addarg(struct pscfs_args *pfa, const char *arg)
 {
 	if (fuse_opt_add_arg(&pfa->pfa_av, arg) == -1)
 		psc_fatal("fuse_opt_add_arg");
 }
 
 void
-pscfs_freeargs(struct pscfs_args *av)
+pscfs_freeargs(struct pscfs_args *pfa)
 {
-	fuse_free_args(&av->pfa_av);
-}
-
-void
-pscfs_mount(const char *mp, struct pscfs_args *pfa)
-{
-	struct fuse_chan *ch;
-	char nameopt[BUFSIZ];
-	int rc;
-
-	if (pipe(newfs_fd) == -1)
-		psc_fatal("pipe");
-
-	fds[0].fd = newfs_fd[0];
-	fds[0].events = POLLIN;
-	nfds = 1;
-
-	rc = snprintf(nameopt, sizeof(nameopt), "fsname=%s", mp);
-	if (rc == -1)
-		psc_fatal("snprintf: fsname=%s", mp);
-	if (rc >= (int)sizeof(nameopt))
-		psc_fatalx("snprintf: fsname=%s: too long", mp);
-
-	pscfs_addarg(pfa, "-o");
-	pscfs_addarg(pfa, nameopt);
-
-	ch = fuse_mount(mp, &pfa->pfa_av);
-	if (ch == NULL)
-		psc_fatal("fuse_mount");
-
-	fuse_session = fuse_lowlevel_new(&pfa->pfa_av, &zfs_operations,
-	    sizeof(zfs_operations), NULL);
-
-	if (fuse_session == NULL) {
-		fuse_unmount(mp, ch);
-		psc_fatal("fuse_lowlevel_new");
-	}
-
-	fuse_session_add_chan(fuse_session, ch);
-
-	if (pscfs_fuse_newfs(mp, ch) != 0) {
-		fuse_session_destroy(fuse_session);
-		fuse_unmount(mp, ch);
-		psc_fatal("fuse_session_add_chan");
-	}
-
-	psc_info("FUSE version %d.%d", FUSE_MAJOR_VERSION,
-	    FUSE_MINOR_VERSION);
+	fuse_opt_free_args(&pfa->pfa_av);
 }
 
 void
@@ -430,29 +405,10 @@ pscfs_getumask(struct pscfs_req *pfr)
 	const struct fuse_ctx *ctx = fuse_req_ctx(pfr->pfr_fuse_req);
 
 	return (ctx->umask);
-#else
+#endif
 	(void)pfr;
 	/* XXX read from /proc ? */
 	return (0644);
-#endif
-}
-
-#ifdef __LP64__
-#  define INUM_FUSE2PSCFS(inum)		(inum)
-#  define INUM_FUSE2PSCFS_DEL(inum)	(inum)
-#  define INUM_PSCFS2FUSE(inum)	(inum)
-#else
-#  define INUM_FUSE2PSCFS(inum)		pscfs_inum_fuse2pscfs((inum), 0)
-#  define INUM_FUSE2PSCFS_DEL(inum)	pscfs_inum_fuse2pscfs((inum), 1)
-#  define INUM_PSCFS2FUSE(inum)		pscfs_inum_fuse2pscfs(inum)
-
-struct pscfs_inumcol {
-	pscfs_inum_t		pfic_pscfs_inum;
-	uint64_t		pfic_key;		/* fuse inum */
-	psc_atomic32_t		pfic_refcnt;
-	time_t			pfic_extime;		/* when fuse expires it */
-	struct psc_listentry	pfic_lentry;		/* pool */
-	struct psc_hashent	pfic_hentry;
 }
 
 #if 0
@@ -475,40 +431,42 @@ pscfs_inum_reclaim(struct psc_poolmgr *m)
 }
 #endif
 
+#ifndef __LP64__
 pscfs_inum_t
 pscfs_inum_fuse2pscfs(fuse_ino_t f_inum, int del)
 {
-	struct pscfs_fuse_inumcol *pfic;
+	struct pscfs_inumcol *pfic;
+	struct psc_hashbkt *b;
 	pscfs_inum_t p_inum;
 	uint64_t key;
 
 	key = f_inum;
-	b = psc_hashbkt_get(&pscfs_inumcol_hashtbl, &n);
+	b = psc_hashbkt_get(&pscfs_inumcol_hashtbl, &key);
 	psc_hashbkt_lock(b);
 	pfic = psc_hashtbl_search(&pscfs_inumcol_hashtbl, NULL,
 	    NULL, &key);
 	p_inum = pfic->pfic_pscfs_inum;
 	if (del) {
 		psc_atomic32_dec(&pfic->pfic_refcnt);
-		if (pfic->pfic_refcnt == 0)
-			psc_hashbkt_del_item(&pscfs_inum_hashtbl,
-			    b, pfic);
+		if (psc_atomic32_read(&pfic->pfic_refcnt) == 0)
+			psc_hashbkt_del_item(&pscfs_inumcol_hashtbl, b,
+			    pfic);
 		else
 			pfic = NULL;
 	}
 	psc_hashbkt_unlock(b);
 
 	if (del && pfic)
-		psc_pool_return(pscfs_inumcol_pool, p);
+		psc_pool_return(pscfs_inumcol_pool, pfic);
 
 	return (p_inum);
 }
 
 fuse_ino_t
-pscfs_inum_add_pscfs2fuse(pscfs_ino_t p_inum)
+pscfs_inum_pscfs2fuse(pscfs_inum_t p_inum)
 {
-	struct pscfs_fuse_inumcol *pfic, *t;
-	fuse_ino_t f_inum;
+	struct pscfs_inumcol *pfic, *t;
+	struct psc_hashbkt *b;
 	uint64_t key;
 
 	pfic = psc_pool_get(pscfs_inumcol_pool);
@@ -518,7 +476,7 @@ pscfs_inum_add_pscfs2fuse(pscfs_ino_t p_inum)
 		b = psc_hashbkt_get(&pscfs_inumcol_hashtbl, &key);
 		psc_hashbkt_lock(b);
 		t = psc_hashtbl_search(&pscfs_inumcol_hashtbl, NULL,
-		    NULL, &n);
+		    NULL, &key);
 		if (t) {
 			/*
 			 * This faux inum is already in table.  If this
@@ -617,8 +575,9 @@ pscfs_fuse_handle_create(fuse_req_t req, fuse_ino_t pinum,
 	struct pscfs_req pfr;
 
 	pfr.pfr_fuse_req = req;
-	RETIFNOTSUP(&pfr, create);
-	pscfs.pf_handle_create(&pfr, INUM_FUSE2PSCFS(pinum), name, mode, fi->flags);
+	RETIFNOTSUP(&pfr, create, 0, 0, 0, NULL, 0, NULL, 0);
+	pscfs.pf_handle_create(&pfr, INUM_FUSE2PSCFS(pinum), name, mode,
+	    fi->flags);
 }
 
 void
@@ -655,12 +614,13 @@ pscfs_fuse_handle_fsyncdir(fuse_req_t req, __unusedx fuse_ino_t inum,
 }
 
 void
-pscfs_fuse_handle_getattr(fuse_req_t req, fuse_ino_t inum)
+pscfs_fuse_handle_getattr(fuse_req_t req, fuse_ino_t inum,
+    __unusedx struct fuse_file_info *fi)
 {
 	struct pscfs_req pfr;
 
 	pfr.pfr_fuse_req = req;
-	RETIFNOTSUP(&pfr, getattr);
+	RETIFNOTSUP(&pfr, getattr, NULL, 0);
 	pscfs.pf_handle_getattr(&pfr, INUM_FUSE2PSCFS(inum));
 }
 
@@ -671,7 +631,7 @@ pscfs_fuse_handle_link(fuse_req_t req, fuse_ino_t c_inum,
 	struct pscfs_req pfr;
 
 	pfr.pfr_fuse_req = req;
-	RETIFNOTSUP(&pfr, link);
+	RETIFNOTSUP(&pfr, link, 0, 0, 0, NULL, 0);
 	pscfs.pf_handle_link(&pfr, INUM_FUSE2PSCFS(c_inum),
 	    INUM_FUSE2PSCFS(p_inum), newname);
 }
@@ -683,7 +643,7 @@ pscfs_fuse_handle_lookup(fuse_req_t req, fuse_ino_t pinum,
 	struct pscfs_req pfr;
 
 	pfr.pfr_fuse_req = req;
-	RETIFNOTSUP(&pfr, lookup);
+	RETIFNOTSUP(&pfr, lookup, 0, 0, 0, NULL, 0);
 	pscfs.pf_handle_lookup(&pfr, INUM_FUSE2PSCFS(pinum), name);
 }
 
@@ -694,7 +654,7 @@ pscfs_fuse_handle_mkdir(fuse_req_t req, fuse_ino_t pinum,
 	struct pscfs_req pfr;
 
 	pfr.pfr_fuse_req = req;
-	RETIFNOTSUP(&pfr, mkdir);
+	RETIFNOTSUP(&pfr, mkdir, 0, 0, 0, NULL, 0);
 	pscfs.pf_handle_mkdir(&pfr, INUM_FUSE2PSCFS(pinum), name, mode);
 }
 
@@ -705,7 +665,7 @@ pscfs_fuse_handle_mknod(fuse_req_t req, fuse_ino_t pinum,
 	struct pscfs_req pfr;
 
 	pfr.pfr_fuse_req = req;
-	RETIFNOTSUP(&pfr, mknod);
+	RETIFNOTSUP(&pfr, mknod, 0, 0, 0, NULL, 0);
 	pscfs.pf_handle_mknod(&pfr, INUM_FUSE2PSCFS(pinum), name, mode,
 	    rdev);
 }
@@ -717,7 +677,7 @@ pscfs_fuse_handle_open(fuse_req_t req, fuse_ino_t inum,
 	struct pscfs_req pfr;
 
 	pfr.pfr_fuse_req = req;
-	RETIFNOTSUP(&pfr, open);
+	RETIFNOTSUP(&pfr, open, NULL, 0);
 	pscfs.pf_handle_open(&pfr, INUM_FUSE2PSCFS(inum), fi->flags);
 }
 
@@ -728,7 +688,7 @@ pscfs_fuse_handle_opendir(fuse_req_t req, fuse_ino_t inum,
 	struct pscfs_req pfr;
 
 	pfr.pfr_fuse_req = req;
-	RETIFNOTSUP(&pfr, opendir);
+	RETIFNOTSUP(&pfr, opendir, NULL, 0);
 	pscfs.pf_handle_opendir(&pfr, INUM_FUSE2PSCFS(inum), fi->flags);
 }
 
@@ -808,7 +768,7 @@ pscfs_fuse_handle_setattr(fuse_req_t req, fuse_ino_t inum,
 		pfl_to_set |= PSCFS_SETATTRF_MTIME;
 
 	pfr.pfr_fuse_req = req;
-	RETIFNOTSUP(&pfr, setattr);
+	RETIFNOTSUP(&pfr, setattr, NULL, 0);
 	pscfs.pf_handle_setattr(&pfr, INUM_FUSE2PSCFS(inum), stb,
 	    pfl_to_set, fi_getdata(fi));
 }
@@ -830,7 +790,7 @@ pscfs_fuse_handle_symlink(fuse_req_t req, const char *buf,
 	struct pscfs_req pfr;
 
 	pfr.pfr_fuse_req = req;
-	RETIFNOTSUP(&pfr, symlink);
+	RETIFNOTSUP(&pfr, symlink, 0, 0, 0, NULL, 0);
 	pscfs.pf_handle_symlink(&pfr, buf, INUM_FUSE2PSCFS(pinum),
 	    name);
 }
@@ -860,7 +820,7 @@ pscfs_fuse_handle_write(fuse_req_t req, __unusedx fuse_ino_t ino,
 	struct pscfs_req pfr;
 
 	pfr.pfr_fuse_req = req;
-	RETIFNOTSUP(&pfr, write);
+	RETIFNOTSUP(&pfr, write, 0);
 	pscfs.pf_handle_write(&pfr, buf, size, off, fi_getdata(fi));
 }
 
@@ -887,7 +847,7 @@ pscfs_reply_closedir(struct pscfs_req *pfr, int rc)
 void
 pscfs_reply_create(struct pscfs_req *pfr, pscfs_inum_t inum,
     pscfs_fgen_t gen, int entry_timeout, struct stat *stb,
-    int attr_timeout, void *data, int rflags, int rc);
+    int attr_timeout, void *data, int rflags, int rc)
 {
 	struct fuse_entry_param e;
 
@@ -896,7 +856,7 @@ pscfs_reply_create(struct pscfs_req *pfr, pscfs_inum_t inum,
 	else {
 		if (rflags & PSCFS_CREATEF_DIO)
 			pfr->pfr_fuse_fi->direct_io = 1;
-		pfr->pfr_fuse_fi->fh = data;
+		fi_setdata(pfr->pfr_fuse_fi, data);
 		e.entry_timeout = entry_timeout;
 		e.ino = INUM_PSCFS2FUSE(inum);
 		if (e.ino) {
@@ -944,7 +904,7 @@ pscfs_reply_ioctl(struct pscfs_req *pfr)
 void
 pscfs_reply_mknod(struct pscfs_req *pfr, pscfs_inum_t inum,
     pscfs_fgen_t gen, int entry_timeout, struct stat *stb,
-    int attr_timeout, int rc);
+    int attr_timeout, int rc)
 {
 	struct fuse_entry_param e;
 
@@ -958,12 +918,12 @@ pscfs_reply_mknod(struct pscfs_req *pfr, pscfs_inum_t inum,
 			memcpy(&e.attr, stb, sizeof(e.attr));
 			e.generation = gen;
 		}
-		fuse_reply_mknod(pfr->pfr_fuse_req, &e);
+	//	fuse_reply_mknod(pfr->pfr_fuse_req, &e);
 	}
 }
 
 void
-pscfs_reply_open(struct pscfs_req *pfr, void *data, int rc)
+pscfs_reply_open(struct pscfs_req *pfr, void *data, int rflags, int rc)
 {
 	if (rc)
 		fuse_reply_err(pfr->pfr_fuse_req, rc);
@@ -972,13 +932,13 @@ pscfs_reply_open(struct pscfs_req *pfr, void *data, int rc)
 			pfr->pfr_fuse_fi->keep_cache = 1;
 		if (rflags & PSCFS_OPENF_DIO)
 			pfr->pfr_fuse_fi->direct_io = 1;
-		pfr->pfr_fuse_fi->fh = data;
+		fi_setdata(pfr->pfr_fuse_fi, data);
 		fuse_reply_open(pfr->pfr_fuse_req, pfr->pfr_fuse_fi);
 	}
 }
 
 void
-pscfs_reply_opendir(struct pscfs_req *pfr, void *data, int rc)
+pscfs_reply_opendir(struct pscfs_req *pfr, void *data, int rflags, int rc)
 {
 	if (rc)
 		fuse_reply_err(pfr->pfr_fuse_req, rc);
@@ -987,7 +947,7 @@ pscfs_reply_opendir(struct pscfs_req *pfr, void *data, int rc)
 			pfr->pfr_fuse_fi->keep_cache = 1;
 		if (rflags & PSCFS_OPENF_DIO)
 			pfr->pfr_fuse_fi->direct_io = 1;
-		pfr->pfr_fuse_fi->fh = data;
+		fi_setdata(pfr->pfr_fuse_fi, data);
 		fuse_reply_open(pfr->pfr_fuse_req, pfr->pfr_fuse_fi);
 	}
 }
@@ -1072,7 +1032,7 @@ pscfs_reply_write(struct pscfs_req *pfr, ssize_t len, int rc)
 }
 
 void
-pscfs_replygen_entry(struct pscfs_req *pfr, pscfs_inum_t inum,
+pscfs_fuse_replygen_entry(struct pscfs_req *pfr, pscfs_inum_t inum,
     pscfs_fgen_t gen, int entry_timeout, struct stat *stb,
     int attr_timeout, int rc)
 {
@@ -1119,6 +1079,53 @@ struct fuse_lowlevel_ops pscfs_fuse_ops = {
 	.unlink		= pscfs_fuse_handle_unlink,
 	.write		= pscfs_fuse_handle_write
 };
+
+void
+pscfs_mount(const char *mp, struct pscfs_args *pfa)
+{
+	struct fuse_chan *ch;
+	char nameopt[BUFSIZ];
+	int rc;
+
+	if (pipe(newfs_fd) == -1)
+		psc_fatal("pipe");
+
+	fds[0].fd = newfs_fd[0];
+	fds[0].events = POLLIN;
+	nfds = 1;
+
+	rc = snprintf(nameopt, sizeof(nameopt), "fsname=%s", mp);
+	if (rc == -1)
+		psc_fatal("snprintf: fsname=%s", mp);
+	if (rc >= (int)sizeof(nameopt))
+		psc_fatalx("snprintf: fsname=%s: too long", mp);
+
+	pscfs_addarg(pfa, "-o");
+	pscfs_addarg(pfa, nameopt);
+
+	ch = fuse_mount(mp, &pfa->pfa_av);
+	if (ch == NULL)
+		psc_fatal("fuse_mount");
+
+	fuse_session = fuse_lowlevel_new(&pfa->pfa_av, &pscfs_fuse_ops,
+	    sizeof(pscfs_fuse_ops), NULL);
+
+	if (fuse_session == NULL) {
+		fuse_unmount(mp, ch);
+		psc_fatal("fuse_lowlevel_new");
+	}
+
+	fuse_session_add_chan(fuse_session, ch);
+
+	if (pscfs_fuse_newfs(mp, ch) != 0) {
+		fuse_session_destroy(fuse_session);
+		fuse_unmount(mp, ch);
+		psc_fatal("fuse_session_add_chan");
+	}
+
+	psc_info("FUSE version %d.%d", FUSE_MAJOR_VERSION,
+	    FUSE_MINOR_VERSION);
+}
 
 #if 0
 	if (nlevels < 2 || strcmp(levels[1], "fsdebug") == 0) {
