@@ -40,16 +40,18 @@
 #include "psc_util/log.h"
 #include "psc_util/waitq.h"
 
+#ifdef __LP64__
+#  include "pfl/hashtbl.h"
+#endif
+
 #define NUM_THREADS	32
 #define MAX_FILESYSTEMS	5
 #define MAX_FDS		(MAX_FILESYSTEMS + 1)
-
 
 void	slash2fuse_listener_exit(void);
 int	slash2fuse_listener_init(void);
 int	slash2fuse_listener_start(void);
 int	slash2fuse_newfs(const char *, struct fuse_chan *);
-
 
 typedef struct {
 	int			 fd;
@@ -382,9 +384,93 @@ pscfs_fuse_getumask(struct pscfs_req *pfr)
 }
 
 #ifdef __LP64__
-#  define INUM_FUSE2PSCFS(inum)	(inum)
+#  define INUM_FUSE2PSCFS(inum, del)	(inum)
+#  define INUM_ADD_PSCFS2FUSE(inum)	(inum)
 #else
-#  define INUM_FUSE2PSCFS(inum)	pscfs_inum_fuse2pscfs(inum)
+#  define INUM_FUSE2PSCFS(inum, del)	pscfs_inum_fuse2pscfs((inum), (del))
+#  define INUM_ADD_PSCFS2FUSE(inum)	pscfs_inum_fuse2pscfs(inum)
+
+struct psc_hashtbl pscfs_inumcol_hashtbl;
+
+struct pscfs_fuse_inumcol {
+	pscfs_inum_t		pfic_pscfs_inum;
+	uint64_t		pfic_key;		/* fuse inum */
+	psc_atomic32_t		pfic_refcnt;
+	struct psc_hashent	pfic_hentry;
+}
+
+pscfs_inum_t
+pscfs_inum_fuse2pscfs(fuse_ino_t f_inum, int del)
+{
+	struct pscfs_fuse_inumcol *pfic;
+	pscfs_inum_t p_inum;
+	uint64_t key;
+
+	key = f_inum;
+	b = psc_hashbkt_get(&pscfs_inumcol_hashtbl, &n);
+	psc_hashbkt_lock(b);
+	pfic = psc_hashtbl_search(&pscfs_inumcol_hashtbl, NULL,
+	    NULL, &key);
+	p_inum = pfic->pfic_pscfs_inum;
+	if (del) {
+		psc_atomic32_dec(&pfic->pfic_refcnt);
+		if (pfic->pfic_refcnt == 0)
+			psc_hashbkt_del_item(&pscfs_inum_hashtbl,
+			    b, pfic);
+		else
+			pfic = NULL;
+	}
+	psc_hashbkt_unlock(b);
+
+	if (del && pfic)
+		psc_pool_return(pscfs_inumcol_pool, p);
+
+	return (p_inum);
+}
+
+fuse_ino_t
+pscfs_inum_add_pscfs2fuse(pscfs_ino_t p_inum)
+{
+	struct pscfs_fuse_inumcol *pfic, *t;
+	fuse_ino_t f_inum;
+	uint64_t key;
+
+	pfic = psc_pool_get(pscfs_inumcol_pool);
+
+	key = (fuse_ino_t)p_inum;
+	do {
+		b = psc_hashbkt_get(&pscfs_inumcol_hashtbl, &key);
+		psc_hashbkt_lock(b);
+		t = psc_hashtbl_search(&pscfs_inumcol_hashtbl, NULL,
+		    NULL, &n);
+		if (t) {
+			/*
+			 * This faux inum is already in table.  If this
+			 * is for the same real inum, reuse this faux
+			 * inum; otherwise, fallback to a unique
+			 * random value.
+			 */
+			if (t->pfic_pscfs_inum == p_inum) {
+				psc_atomic32_inc(&t->pfic_refcnt);
+				key = t->pfic_key;
+				t = NULL;
+			} else
+				key = psc_random32();
+		} else {
+			psc_hashent_init(&pscfs_inumcol_hashtbl, pfic);
+			pfic->pfic_pscfs_inum = p_inum;
+			pfic->pfic_key = key;
+			psc_atomic32_set(&pfic->pfic_refcnt, 1);
+			psc_hashbkt_add_item(&pscfs_inumcol_hashtbl,
+			    b, pfic);
+			pfic = NULL;
+		}
+		psc_hashbkt_unlock(b);
+	} while (t);
+	if (pfic)
+		psc_pool_return(pscfs_inumcol_pool, pfic);
+	return (key);
+}
 #endif
 
 void
