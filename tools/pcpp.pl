@@ -75,11 +75,15 @@ if ($data !~ m!psc_util/log\.h! or
 my $i;
 my $lvl = 0;
 my $foff;
+my $linenr = 0;
 
 sub advance {
 	my ($len) = @_;
 
-	print substr($data, $i, $len);
+	my $str = substr($data, $i, $len);
+	print $str;
+	my @m = $str =~ /\n/g;
+	$linenr += @m;
 	$i += $len;
 }
 
@@ -144,7 +148,7 @@ sub containing_func_is_dead {
 
 sub dec_level {
 	$lvl--;
-	fatal "$lvl < 0" if $lvl < 0;
+	fatal "brace level $lvl < 0 at $linenr: $ARGV[0]" if $lvl < 0;
 }
 
 for ($i = 0; $i < length $data; ) {
