@@ -104,6 +104,7 @@ pfl
 	- rpc (should be holding none)
 - rename MODULES to COMPONENTS and introduce fcmh module which pulls in pscfs
   until the hashtbl 32-bit ino size shit gets fixed
+- rename PPMF_NOLOCK -> PPMF_NOMLOCK
 
 development tool
 - let wiki changes automatically email zest/slash2-devel@ like svn commits
