@@ -51,7 +51,6 @@
 void	slash2fuse_listener_exit(void);
 int	slash2fuse_listener_init(void);
 int	slash2fuse_listener_start(void);
-int	slash2fuse_newfs(const char *, struct fuse_chan *);
 
 typedef struct {
 	int			 fd;
@@ -61,13 +60,14 @@ typedef struct {
 	int			 mntlen;
 } fuse_fs_info_t;
 
-int		 exit_fuse_listener = 0;
-int		 newfs_fd[2];
-int		 nfds;
-struct pollfd	 fds[MAX_FDS];
-fuse_fs_info_t	 fsinfo[MAX_FDS];
-char		*mountpoints[MAX_FDS];
-pthread_t	 fuse_threads[NUM_THREADS];
+static int			 exit_fuse_listener = 0;
+static int			 newfs_fd[2];
+static int			 nfds;
+static struct pollfd		 fds[MAX_FDS];
+static fuse_fs_info_t		 fsinfo[MAX_FDS];
+static char			*mountpoints[MAX_FDS];
+static pthread_t		 fuse_threads[NUM_THREADS];
+static struct fuse_session	*fuse_session;
 
 int
 pscfs_fuse_listener_init(void)
@@ -326,7 +326,7 @@ pscfs_fuse_listener_loop(__unusedx void *arg)
 }
 
 int
-pscfs_fuse_listener_start(void)
+pscfs_main(void)
 {
 	int i;
 
@@ -357,11 +357,24 @@ pscfs_fuse_listener_start(void)
 		PSCFREE(mountpoints[i]);
 	}
 
-	return (1);
+	return (0);
 }
 
 void
-msl_fuse_mount(const char *mp, struct fuse_args *args)
+pscfs_addarg(struct pscfs_args *av, const char *arg)
+{
+	if (fuse_opt_add_arg(&pfa->pfa_av, arg) == -1)
+		psc_fatal("fuse_opt_add_arg");
+}
+
+void
+pscfs_freeargs(struct pscfs_args *av)
+{
+	fuse_free_args(&av->pfa_av);
+}
+
+void
+pscfs_mount(const char *mp, struct pscfs_args *pfa)
 {
 	struct fuse_chan *ch;
 	char nameopt[BUFSIZ];
@@ -375,16 +388,14 @@ msl_fuse_mount(const char *mp, struct fuse_args *args)
 	if (rc >= (int)sizeof(nameopt))
 		psc_fatalx("snprintf: fsname=%s: too long", mp);
 
-	msl_fuse_addarg(args, "-o");
-	msl_fuse_addarg(args, nameopt);
+	pscfs_addarg(pfa, "-o");
+	pscfs_addarg(pfa, nameopt);
 
-	ch = fuse_mount(mp, args);
+	ch = fuse_mount(mp, &pfa->pfa_av);
 	if (ch == NULL)
 		psc_fatal("fuse_mount");
 
-struct fuse_session		*fuse_session;
-
-	fuse_session = fuse_lowlevel_new(args, &zfs_operations,
+	fuse_session = fuse_lowlevel_new(&pfa->pfa_av, &zfs_operations,
 	    sizeof(zfs_operations), NULL);
 
 	if (fuse_session == NULL) {
@@ -394,7 +405,7 @@ struct fuse_session		*fuse_session;
 
 	fuse_session_add_chan(fuse_session, ch);
 
-	if (mslfsop_newfs(mp, ch) != 0) {
+	if (pscfs_fuse_newfs(mp, ch) != 0) {
 		fuse_session_destroy(fuse_session);
 		fuse_unmount(mp, ch);
 		psc_fatal("fuse_session_add_chan");

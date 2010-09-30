@@ -7,19 +7,10 @@
 struct stat;
 struct statvfs;
 
+struct pscfs_req;
+
 typedef uint64_t pscfs_inum_t;
 typedef uint64_t pscfs_fgen_t;
-
-struct pscfs_req {
-	union {
-		fuse_req_t		 pfru_fuse_req;
-	} pfr_requ;
-	union {
-		struct fuse_file_info	*pfru_fuse_fi;
-	} pfr_infou;
-#define pfr_fuse_req	pfr_requ.pfru_fuse_req
-#define pfr_fuse_fi	pfr_infou.pfru_fuse_fi
-};
 
 struct pscfs_cred {
 	uint32_t	pfc_uid;
@@ -104,6 +95,17 @@ void	pscfs_reply_write(struct pscfs_req *, ssize_t, int);
 #  define pscfs_reply_lookup	pscfs_fuse_replygen_entry
 #  define pscfs_reply_mkdir	pscfs_fuse_replygen_entry
 #  define pscfs_reply_symlink	pscfs_fuse_replygen_entry
+
+struct pscfs_args {
+	struct fuse_args av;
+};
+
+struct pscfs_req {
+	fuse_req_t		 pfr_fuse_req;
+	struct fuse_file_info	*pfr_fuse_fi;
+};
+
+#define PSCFS_ARGS_INIT(n, av)	{ FUSE_ARGS_INIT((n), (av)) }
 
 void	pscfs_replygen_entry(struct pscfs_req *, pscfs_inum_t,
 	    pscfs_fgen_t, int, struct stat *, int, int);
