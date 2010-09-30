@@ -360,8 +360,52 @@ pscfs_fuse_listener_start(void)
 	return (1);
 }
 
+void
+msl_fuse_mount(const char *mp, struct fuse_args *args)
+{
+	struct fuse_chan *ch;
+	char nameopt[BUFSIZ];
+	int rc;
+
+	mslfsop_listener_init();
+
+	rc = snprintf(nameopt, sizeof(nameopt), "fsname=%s", mp);
+	if (rc == -1)
+		psc_fatal("snprintf: fsname=%s", mp);
+	if (rc >= (int)sizeof(nameopt))
+		psc_fatalx("snprintf: fsname=%s: too long", mp);
+
+	msl_fuse_addarg(args, "-o");
+	msl_fuse_addarg(args, nameopt);
+
+	ch = fuse_mount(mp, args);
+	if (ch == NULL)
+		psc_fatal("fuse_mount");
+
+struct fuse_session		*fuse_session;
+
+	fuse_session = fuse_lowlevel_new(args, &zfs_operations,
+	    sizeof(zfs_operations), NULL);
+
+	if (fuse_session == NULL) {
+		fuse_unmount(mp, ch);
+		psc_fatal("fuse_lowlevel_new");
+	}
+
+	fuse_session_add_chan(fuse_session, ch);
+
+	if (mslfsop_newfs(mp, ch) != 0) {
+		fuse_session_destroy(fuse_session);
+		fuse_unmount(mp, ch);
+		psc_fatal("fuse_session_add_chan");
+	}
+
+	psc_info("FUSE version %d.%d", FUSE_MAJOR_VERSION,
+	    FUSE_MINOR_VERSION);
+}
+
 __static void
-pscfs_fuse_getcred(struct pscfs_req *pfr, struct pscfs_cred *pfc)
+pscfs_getcreds(struct pscfs_req *pfr, struct pscfs_cred *pfc)
 {
 	const struct fuse_ctx *ctx = fuse_req_ctx(pfr->pfr_fuse_req);
 
@@ -370,7 +414,7 @@ pscfs_fuse_getcred(struct pscfs_req *pfr, struct pscfs_cred *pfc)
 }
 
 static mode_t
-pscfs_fuse_getumask(struct pscfs_req *pfr)
+pscfs_getumask(struct pscfs_req *pfr)
 {
 #if FUSE_VERSION > FUSE_MAKE_VERSION(2,7)
 	const struct fuse_ctx *ctx = fuse_req_ctx(pfr->pfr_fuse_req);
@@ -473,10 +517,21 @@ pscfs_inum_add_pscfs2fuse(pscfs_ino_t p_inum)
 }
 #endif
 
+#define ISSUPPORTED(pfr, call, args)					\
+	do {								\
+		if (pscfs.pf_handle_ ## call == NULL) {			\
+			pscfs_reply_ ## call((pfr), ## __VA_ARGS__,	\
+			    ENOTSUP);					\
+			return;						\
+		}							\
+	} while (0)
+
 void
 pscfs_fuse_handle_access(fuse_req_t req, fuse_ino_t inum, int mask)
 {
 	struct pscfs_req pfr;
+
+	ISSUPPORTED(pfr, access);
 
 	pfr.pfr_fuse_req = req;
 	pscfs.pf_handle_access(&pfr, INUM_FUSE2PSCFS(inum), mask);
@@ -487,6 +542,8 @@ pscfs_fuse_handle_close(fuse_req_t req, __unusedx fuse_ino_t inum,
     struct fuse_file_info *fi)
 {
 	struct pscfs_req pfr;
+
+	ISSUPPORTED(pfr, close);
 
 	pfr.pfr_fuse_req = req;
 	pfr.pfr_fuse_fi = fi;
@@ -499,6 +556,8 @@ pscfs_fuse_handle_closedir(fuse_req_t req, __unusedx fuse_ino_t inum,
 {
 	struct pscfs_req pfr;
 
+	ISSUPPORTED(pfr, closedir);
+
 	pfr.pfr_fuse_req = req;
 	pfr.pfr_fuse_fi = fi;
 	pscfs.pf_handle_closedir(&pfr, &pfi);
@@ -509,6 +568,8 @@ pscfs_fuse_handle_create(fuse_req_t req, fuse_ino_t pinum,
     const char *name, mode_t mode, struct fuse_file_info *fi)
 {
 	struct pscfs_req pfr;
+
+	ISSUPPORTED(pfr, create);
 
 	pfr.pfr_fuse_req = req;
 	pfr.pfr_fuse_fi = fi;
@@ -522,6 +583,8 @@ pscfs_fuse_handle_flush(fuse_req_t req, __unusedx fuse_ino_t inum,
 {
 	struct pscfs_req pfr;
 
+	ISSUPPORTED(pfr, flush);
+
 	pfr.pfr_fuse_req = req;
 	pfr.pfr_fuse_fi = fi;
 	pscfs.pf_handle_flush(&pfr, &pfi);
@@ -532,6 +595,8 @@ pscfs_fuse_handle_fsync(fuse_req_t req, __unusedx fuse_ino_t inum,
     int datasync, struct fuse_file_info *fi)
 {
 	struct pscfs_req pfr;
+
+	ISSUPPORTED(pfr, fsync);
 
 	pfr.pfr_fuse_req = req;
 	pfr.pfr_fuse_fi = fi;
@@ -544,6 +609,8 @@ pscfs_fuse_handle_fsyncdir(fuse_req_t req, __unusedx fuse_ino_t inum,
 {
 	struct pscfs_req pfr;
 
+	ISSUPPORTED(pfr, fsyncdir);
+
 	pfr.pfr_fuse_req = req;
 	pfr.pfr_fuse_fi = fi;
 	pscfs.pf_handle_fsync(&pfr, datasync, &pfi);
@@ -554,6 +621,8 @@ pscfs_fuse_handle_getattr(fuse_req_t req, fuse_ino_t inum)
 {
 	struct pscfs_req pfr;
 
+	ISSUPPORTED(pfr, getattr);
+
 	pfr.pfr_fuse_req = req;
 	pscfs.pf_handle_getattr(&pfr, INUM_FUSE2PSCFS(inum));
 }
@@ -563,6 +632,8 @@ pscfs_fuse_handle_link(fuse_req_t req, fuse_ino_t c_inum,
     fuse_ino_t p_inum, const char *newname)
 {
 	struct pscfs_req pfr;
+
+	ISSUPPORTED(pfr, link);
 
 	pfr.pfr_fuse_req = req;
 	pscfs.pf_handle_link(&pfr, INUM_FUSE2PSCFS(c_inum),
@@ -575,6 +646,8 @@ pscfs_fuse_handle_lookup(fuse_req_t req, fuse_ino_t pinum,
 {
 	struct pscfs_req pfr;
 
+	ISSUPPORTED(pfr, lookup);
+
 	pfr.pfr_fuse_req = req;
 	pscfs.pf_handle_lookup(&pfr, INUM_FUSE2PSCFS(pinum), name);
 }
@@ -585,6 +658,8 @@ pscfs_fuse_handle_mkdir(fuse_req_t req, fuse_ino_t pinum,
 {
 	struct pscfs_req pfr;
 
+	ISSUPPORTED(pfr, mkdir);
+
 	pfr.pfr_fuse_req = req;
 	pscfs.pf_handle_mkdir(&pfr, INUM_FUSE2PSCFS(pinum), name, mode);
 }
@@ -594,6 +669,8 @@ pscfs_fuse_handle_mknod(fuse_req_t req, fuse_ino_t pinum,
     const char *name, mode_t mode, dev_t rdev)
 {
 	struct pscfs_req pfr;
+
+	ISSUPPORTED(pfr, mknod);
 
 	pfr.pfr_fuse_req = req;
 	pscfs.pf_handle_mknod(&pfr, INUM_FUSE2PSCFS(pinum), name, mode,
@@ -606,6 +683,8 @@ pscfs_fuse_handle_open(fuse_req_t req, fuse_ino_t inum,
 {
 	struct pscfs_req pfr;
 
+	ISSUPPORTED(pfr, open);
+
 	pfr.pfr_fuse_req = req;
 	pfr.pfr_fuse_fi = fi;
 	pscfs.pf_handle_open(&pfr, INUM_FUSE2PSCFS(inum), &pfi);
@@ -616,6 +695,8 @@ pscfs_fuse_handle_opendir(fuse_req_t req, fuse_ino_t inum,
     struct fuse_file_info *fi)
 {
 	struct pscfs_req pfr;
+
+	ISSUPPORTED(pfr, opendir);
 
 	pfr.pfr_fuse_req = req;
 	pfr.pfr_fuse_fi = fi;
@@ -628,6 +709,8 @@ pscfs_fuse_handle_read(fuse_req_t req, __unusedx fuse_ino_t inum,
 {
 	struct pscfs_req pfr;
 
+	ISSUPPORTED(pfr, read);
+
 	pfr.pfr_fuse_req = req;
 	pfr.pfr_fuse_fi = fi;
 	pscfs.pf_handle_read(&pfr, size, off, &pfi);
@@ -639,6 +722,8 @@ pscfs_fuse_handle_readdir(fuse_req_t req, __unusedx fuse_ino_t inum,
 {
 	struct pscfs_req pfr;
 
+	ISSUPPORTED(pfr, readdir);
+
 	pfr.pfr_fuse_req = req;
 	pfr.pfr_fuse_fi = fi;
 	pscfs.pf_handle_readdir(&pfr, size, off, &pfi);
@@ -649,6 +734,8 @@ pscfs_fuse_handle_readlink(fuse_req_t req, fuse_ino_t inum)
 {
 	struct pscfs_req pfr;
 
+	ISSUPPORTED(pfr, readlink);
+
 	pfr.pfr_fuse_req = req;
 	pscfs.pf_handle_readlink(&pfr, INUM_FUSE2PSCFS(inum));
 }
@@ -658,6 +745,8 @@ pscfs_fuse_handle_rename(fuse_req_t req, fuse_ino_t oldpinum,
     const char *oldname, fuse_ino_t newpinum, const char *newname)
 {
 	struct pscfs_req pfr;
+
+	ISSUPPORTED(pfr, rename);
 
 	pfr.pfr_fuse_req = req;
 	pscfs.pf_handle_rename(&pfr, INUM_FUSE2PSCFS(oldpinum), oldname,
@@ -670,6 +759,8 @@ pscfs_fuse_handle_rmdir(fuse_req_t req, fuse_ino_t pinum,
 {
 	struct pscfs_req pfr;
 
+	ISSUPPORTED(pfr, rmdir);
+
 	pfr.pfr_fuse_req = req;
 	pscfs.pf_handle_rmdir(&pfr, INUM_FUSE2PSCFS(pinum), name);
 }
@@ -681,18 +772,20 @@ pscfs_fuse_handle_setattr(fuse_req_t req, fuse_ino_t inum,
 	struct pscfs_req pfr;
 	int pfl_to_set = 0;
 
+	ISSUPPORTED(pfr, setattr);
+
 	if (fuse_to_set & FUSE_SET_ATTR_MODE)
-		pfl_to_set |= SETATTR_MASKF_MODE;
+		pfl_to_set |= PSCFS_SETATTRF_MODE;
 	if (fuse_to_set & FUSE_SET_ATTR_UID)
-		pfl_to_set |= SETATTR_MASKF_UID;
+		pfl_to_set |= PSCFS_SETATTRF_UID;
 	if (fuse_to_set & FUSE_SET_ATTR_GID)
-		pfl_to_set |= SETATTR_MASKF_GID;
+		pfl_to_set |= PSCFS_SETATTRF_GID;
 	if (fuse_to_set & FUSE_SET_ATTR_SIZE)
-		pfl_to_set |= SETATTR_MASKF_DATASIZE;
+		pfl_to_set |= PSCFS_SETATTRF_DATASIZE;
 	if (fuse_to_set & FUSE_SET_ATTR_ATIME)
-		pfl_to_set |= SETATTR_MASKF_ATIME;
+		pfl_to_set |= PSCFS_SETATTRF_ATIME;
 	if (fuse_to_set & FUSE_SET_ATTR_MTIME)
-		pfl_to_set |= SETATTR_MASKF_MTIME;
+		pfl_to_set |= PSCFS_SETATTRF_MTIME;
 
 	pfr.pfr_fuse_req = req;
 	pfr.pfr_fuse_fi = fi;
@@ -705,6 +798,8 @@ pscfs_fuse_handle_statfs(fuse_req_t req, __unusedx fuse_ino_t inum)
 {
 	struct pscfs_req pfr;
 
+	ISSUPPORTED(pfr, statfs);
+
 	pfr.pfr_fuse_req = req;
 	pscfs.pf_handle_statfs(&pfr);
 }
@@ -715,6 +810,8 @@ pscfs_fuse_handle_symlink(fuse_req_t req, const char *buf,
 {
 	struct pscfs_req pfr;
 
+	ISSUPPORTED(pfr, symlink);
+
 	pfr.pfr_fuse_req = req;
 	pscfs.pf_handle_symlink(&pfr, buf, INUM_FUSE2PSCFS(pinum),
 	    name);
@@ -723,7 +820,8 @@ pscfs_fuse_handle_symlink(fuse_req_t req, const char *buf,
 void
 pscfs_fuse_handle_umount(__unusedx void *userdata)
 {
-	pscfs.pf_handle_umount();
+	if (pscfs.pf_handle_umount)
+		pscfs.pf_handle_umount();
 }
 
 void
@@ -731,6 +829,8 @@ pscfs_fuse_handle_unlink(fuse_req_t req, fuse_ino_t pinum,
     const char *name)
 {
 	struct pscfs_req pfr;
+
+	ISSUPPORTED(pfr, unlink);
 
 	pfr.pfr_fuse_req = req;
 	pscfs.pf_handle_unlink(&pfr, INUM_FUSE2PSCFS(pinum), name);
@@ -742,39 +842,45 @@ pscfs_fuse_handle_write(fuse_req_t req, __unusedx fuse_ino_t ino,
 {
 	struct pscfs_req pfr;
 
+	ISSUPPORTED(pfr, write);
+
 	pfr.pfr_fuse_req = req;
 	pfr.pfr_fuse_fi = fi;
 	pscfs.pf_handle_write(&pfr, buf, size, off, &pfi);
 }
 
+/* Begin system call reply routines */
+
 void
-pscfs_fuse_reply_access(struct pscfs_req *pfr, int rc)
+pscfs_reply_access(struct pscfs_req *pfr, int rc)
 {
 	fuse_reply_err(pfr->pfr_fuse_req, rc);
 }
 
 void
-pscfs_fuse_reply_close(struct pscfs_req *pfr, int rc)
+pscfs_reply_close(struct pscfs_req *pfr, int rc)
 {
 	fuse_reply_err(pfr->pfr_fuse_req, rc);
 }
 
 void
-pscfs_fuse_reply_closedir(struct pscfs_req *pfr, int rc)
+pscfs_reply_closedir(struct pscfs_req *pfr, int rc)
 {
 	fuse_reply_err(pfr->pfr_fuse_req, rc);
 }
 
 void
-pscfs_fuse_reply_create(struct pscfs_req *pfr, pscfs_inum_t inum,
+pscfs_reply_create(struct pscfs_req *pfr, pscfs_inum_t inum,
     pscfs_fgen_t gen, int entry_timeout, struct stat *stb,
-    int attr_timeout, void *data, int rc);
+    int attr_timeout, void *data, int rflags, int rc);
 {
 	struct fuse_entry_param e;
 
 	if (rc)
 		fuse_reply_err(pfr->pfr_fuse_req, rc);
 	else {
+		if (rflags & PSCFS_CREATEF_DIO)
+			pfr->pfr_fuse_fi->direct_io = 1;
 		pfr->pfr_fuse_fi->fh = data;
 		e->entry_timeout = entry_timeout;
 		e->ino = INUM_PSCFS2FUSE(inum);
@@ -788,25 +894,25 @@ pscfs_fuse_reply_create(struct pscfs_req *pfr, pscfs_inum_t inum,
 }
 
 void
-pscfs_fuse_reply_flush(struct pscfs_req *pfr, int rc)
+pscfs_reply_flush(struct pscfs_req *pfr, int rc)
 {
 	fuse_reply_err(pfr->pfr_fuse_req, rc);
 }
 
 void
-pscfs_fuse_reply_fsync(struct pscfs_req *pfr, int rc)
+pscfs_reply_fsync(struct pscfs_req *pfr, int rc)
 {
 	fuse_reply_err(pfr->pfr_fuse_req, rc);
 }
 
 void
-pscfs_fuse_reply_fsyncdir(struct pscfs_req *pfr, int rc)
+pscfs_reply_fsyncdir(struct pscfs_req *pfr, int rc)
 {
 	fuse_reply_err(pfr->pfr_fuse_req, rc);
 }
 
 void
-pscfs_fuse_reply_getattr(struct pscfs_req *pfr, struct stat *stb,
+pscfs_reply_getattr(struct pscfs_req *pfr, struct stat *stb,
     int timeout, int rc)
 {
 	if (rc)
@@ -816,12 +922,127 @@ pscfs_fuse_reply_getattr(struct pscfs_req *pfr, struct stat *stb,
 }
 
 void
-pscfs_fuse_reply_ioctl(struct pscfs_req *pfr)
+pscfs_reply_ioctl(struct pscfs_req *pfr)
 {
 }
 
 void
-pscfs_fuse_replygen_entry(struct pscfs_req *pfr, pscfs_inum_t inum,
+pscfs_reply_mknod(struct pscfs_req *pfr)
+{
+	fuse_reply_err(pfr->pfr_fuse_req, ENOTSUP);
+}
+
+void
+pscfs_reply_open(struct pscfs_req *pfr, void *data, int rc)
+{
+	if (rc)
+		fuse_reply_err(pfr->pfr_fuse_req, rc);
+	else {
+		if (rflags & PSCFS_OPENF_KEEPCACHE)
+			pfr->pfr_fuse_fi->keep_cache = 1;
+		if (rflags & PSCFS_OPENF_DIO)
+			pfr->pfr_fuse_fi->direct_io = 1;
+		pfr->pfr_fuse_fi->fh = data;
+		fuse_reply_open(pfr->pfr_fuse_req, pfr->pfr_fuse_fi);
+	}
+}
+
+void
+pscfs_reply_opendir(struct pscfs_req *pfr, void *data, int rc)
+{
+	if (rc)
+		fuse_reply_err(pfr->pfr_fuse_req, rc);
+	else {
+		if (rflags & PSCFS_OPENF_KEEPCACHE)
+			pfr->pfr_fuse_fi->keep_cache = 1;
+		if (rflags & PSCFS_OPENF_DIO)
+			pfr->pfr_fuse_fi->direct_io = 1;
+		pfr->pfr_fuse_fi->fh = data;
+		fuse_reply_open(pfr->pfr_fuse_req, pfr->pfr_fuse_fi);
+	}
+}
+
+void
+pscfs_reply_read(struct pscfs_req *pfr, void *buf, ssize_t len, int rc)
+{
+	if (rc)
+		fuse_reply_err(pfr->pfr_fuse_req, rc);
+	else
+		fuse_reply_buf(pfr->pfr_fuse_req, buf, len);
+}
+
+void
+pscfs_reply_readdir(struct pscfs_req *pfr, void *buf, ssize_t len, int rc)
+{
+	if (rc)
+		fuse_reply_err(pfr->pfr_fuse_req, rc);
+	else
+		fuse_reply_buf(pfr->pfr_fuse_req, buf, len);
+}
+
+void
+pscfs_reply_readlink(struct pscfs_req *pfr, void *buf, int rc)
+{
+	if (rc)
+		fuse_reply_err(pfr->pfr_fuse_req, rc);
+	else
+		fuse_reply_readlink(pfr->pfr_fuse_req, buf);
+}
+
+void
+pscfs_reply_rename(struct pscfs_req *pfr, int rc)
+{
+	fuse_reply_err(pfr->pfr_fuse_req, rc);
+}
+
+void
+pscfs_reply_rmdir(struct pscfs_req *pfr)
+{
+	fuse_reply_err(pfr->pfr_fuse_req, rc);
+}
+
+void
+pscfs_reply_setattr(struct pscfs_req *pfr, struct stat *stb,
+    int timeout, int rc)
+{
+	if (rc)
+		fuse_reply_err(pfr->pfr_fuse_req, rc);
+	else
+		fuse_reply_attr(pfr->pfr_fuse_req, stb, timeout);
+}
+
+void
+pscfs_reply_statfs(struct pscfs_req *pfr, struct statvfs *sfb,
+    int rc)
+{
+	if (rc)
+		fuse_reply_err(pfr->pfr_fuse_req, rc);
+	else
+		fuse_reply_statfs(pfr->pfr_fuse_req, sfb);
+}
+
+void
+pscfs_reply_umount(struct pscfs_req *pfr)
+{
+}
+
+void
+pscfs_reply_unlink(struct pscfs_req *pfr, int rc)
+{
+	fuse_reply_err(pfr->pfr_fuse_req, rc);
+}
+
+void
+pscfs_reply_write(struct pscfs_req *pfr, ssize_t len, int rc)
+{
+	if (rc)
+		fuse_reply_err(pfr->pfr_fuse_req, rc);
+	else
+		fuse_reply_write(pfr->pfr_fuse_req, len);
+}
+
+void
+pscfs_replygen_entry(struct pscfs_req *pfr, pscfs_inum_t inum,
     pscfs_fgen_t gen, int entry_timeout, struct stat *stb,
     int attr_timeout, int rc)
 {
@@ -839,113 +1060,6 @@ pscfs_fuse_replygen_entry(struct pscfs_req *pfr, pscfs_inum_t inum,
 		}
 		fuse_reply_entry(pfr->pfr_fuse_req, &e);
 	}
-}
-
-void
-pscfs_fuse_reply_mknod(struct pscfs_req *pfr)
-{
-	fuse_reply_err(pfr->pfr_fuse_req, ENOTSUP);
-}
-
-void
-pscfs_fuse_reply_open(struct pscfs_req *pfr, void *data, int rc)
-{
-	if (rc)
-		fuse_reply_err(pfr->pfr_fuse_req, rc);
-	else {
-		pfr->pfr_fuse_fi->fh = data;
-		fuse_reply_open(pfr->pfr_fuse_req, pfr->pfr_fuse_fi);
-	}
-}
-
-void
-pscfs_fuse_reply_opendir(struct pscfs_req *pfr, void *data, int rc)
-{
-	if (rc)
-		fuse_reply_err(pfr->pfr_fuse_req, rc);
-	else {
-		pfr->pfr_fuse_fi->fh = data;
-		fuse_reply_open(pfr->pfr_fuse_req, pfr->pfr_fuse_fi);
-	}
-}
-
-void
-pscfs_fuse_reply_read(struct pscfs_req *pfr, void *buf, ssize_t len, int rc)
-{
-	if (rc)
-		fuse_reply_err(pfr->pfr_fuse_req, rc);
-	else
-		fuse_reply_buf(pfr->pfr_fuse_req, buf, len);
-}
-
-void
-pscfs_fuse_reply_readdir(struct pscfs_req *pfr, void *buf, ssize_t len, int rc)
-{
-	if (rc)
-		fuse_reply_err(pfr->pfr_fuse_req, rc);
-	else
-		fuse_reply_buf(pfr->pfr_fuse_req, buf, len);
-}
-
-void
-pscfs_fuse_reply_readlink(struct pscfs_req *pfr, void *buf, int rc)
-{
-	if (rc)
-		fuse_reply_err(pfr->pfr_fuse_req, rc);
-	else
-		fuse_reply_readlink(pfr->pfr_fuse_req, buf);
-}
-
-void
-pscfs_fuse_reply_rename(struct pscfs_req *pfr, int rc)
-{
-	fuse_reply_err(pfr->pfr_fuse_req, rc);
-}
-
-void
-pscfs_fuse_reply_rmdir(struct pscfs_req *pfr)
-{
-	fuse_reply_err(pfr->pfr_fuse_req, rc);
-}
-
-void
-pscfs_fuse_reply_setattr(struct pscfs_req *pfr, struct stat *stb,
-    int timeout, int rc)
-{
-	if (rc)
-		fuse_reply_err(pfr->pfr_fuse_req, rc);
-	else
-		fuse_reply_attr(pfr->pfr_fuse_req, stb, timeout);
-}
-
-void
-pscfs_fuse_reply_statfs(struct pscfs_req *pfr, struct statvfs *sfb,
-    int rc)
-{
-	if (rc)
-		fuse_reply_err(pfr->pfr_fuse_req, rc);
-	else
-		fuse_reply_statfs(pfr->pfr_fuse_req, sfb);
-}
-
-void
-pscfs_fuse_reply_umount(struct pscfs_req *pfr)
-{
-}
-
-void
-pscfs_fuse_reply_unlink(struct pscfs_req *pfr, int rc)
-{
-	fuse_reply_err(pfr->pfr_fuse_req, rc);
-}
-
-void
-pscfs_fuse_reply_write(struct pscfs_req *pfr, ssize_t len, int rc)
-{
-	if (rc)
-		fuse_reply_err(pfr->pfr_fuse_req, rc);
-	else
-		fuse_reply_write(pfr->pfr_fuse_req, len);
 }
 
 struct fuse_lowlevel_ops pscfs_fuse_ops = {
