@@ -104,6 +104,33 @@ endif
 
 # Process modules
 
+ifneq ($(filter pscfs,${MODULES}),)
+  MODULES+=	pscfs-hdrs
+  SRCS+=	${PSCFS_SRCS}
+  ifdef PICKLE_HAVE_FUSE
+    MODULES+=	fuse
+  else ifdef PICKLE_HAVE_NNPFS
+    MODULES+=	nnpfs
+    SRCS+=	${PFL_BASE}/psc_fs/nnpfs.c
+  else ifdef PICKLE_HAVE_DOKAN
+    MODULES+=	dokan
+  else
+    $(error no pscfs support available)
+  endif
+endif
+
+ifneq ($(filter pscfs-hdrs,${MODULES}),)
+  ifdef PICKLE_HAVE_FUSE
+    MODULES+=	fuse-hdrs
+  else ifdef PICKLE_HAVE_NNPFS
+    MODULES+=	nnpfs-hdrs
+  else ifdef PICKLE_HAVE_DOKAN
+    MODULES+=	dokan-hdrs
+  else
+    $(error no pscfs support available)
+  endif
+endif
+
 ifneq ($(filter fuse,${MODULES}),)
   CFLAGS+=	${FUSE_CFLAGS}
   LDFLAGS+=	${FUSE_LIBS}
