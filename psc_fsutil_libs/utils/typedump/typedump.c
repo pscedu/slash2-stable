@@ -28,6 +28,7 @@
 #include "pfl/compat.h"
 #include "pfl/explist.h"
 #include "pfl/fcntl.h"
+#include "pfl/fs.h"
 #include "pfl/hashtbl.h"
 #include "pfl/pfl.h"
 #include "pfl/setresuid.h"
@@ -186,6 +187,8 @@ main(int argc, char *argv[])
 	printf("structures:\n");
 	PRTYPE(atomic_t);
 	PRTYPE(psc_atomic_t);
+	PRTYPE(pscfs_fgen_t);
+	PRTYPE(pscfs_inum_t);
 	PRTYPE(pscrpc_svc_handle_t);
 	PRTYPE(struct ifaddrs);
 	PRTYPE(struct l_wait_info);
@@ -254,6 +257,8 @@ main(int argc, char *argv[])
 	PRTYPE(struct psc_waitq);
 	PRTYPE(struct psc_wndmap);
 	PRTYPE(struct psc_wndmap_block);
+	PRTYPE(struct pscfs);
+	PRTYPE(struct pscfs_cred);
 	PRTYPE(struct psclist_head);
 	PRTYPE(struct psclog_data);
 	PRTYPE(struct pscrpc_async_args);
