@@ -26,7 +26,7 @@ struct pscfs_cred {
 struct pscfs {
 	void	(*pf_handle_access)(struct pscfs_req *, pscfs_inum_t, int);
 	void	(*pf_handle_close)(struct pscfs_req *, void *);
-	void	(*pf_handle_closedir)(struct pscfs_req *, void * *);
+	void	(*pf_handle_closedir)(struct pscfs_req *, void *);
 	void	(*pf_handle_create)(struct pscfs_req *, pscfs_inum_t, const char *, int, mode_t);
 	void	(*pf_handle_flush)(struct pscfs_req *, void *);
 	void	(*pf_handle_fsync)(struct pscfs_req *, int, void *);
@@ -62,6 +62,7 @@ mode_t	pscfs_getumask(struct pscfs_req *);
 int	pscfs_setdebug(int);
 int	pscfs_getdebug(int *);
 
+int	pscfs_main(void);
 void	pscfs_mount(const char *, struct pscfs_args *);
 
 void	pscfs_reply_access(struct pscfs_req *, int);
@@ -97,12 +98,17 @@ void	pscfs_reply_write(struct pscfs_req *, ssize_t, int);
 #define PSCFS_OPENF_DIO		(1 << 0)
 #define PSCFS_OPENF_KEEPCACHE	(1 << 1)
 
-#define PSCFS_SETATTRF_MODE	(1 << 0)
-#define	PSCFS_SETATTRF_UID	(1 << 1)
-#define	PSCFS_SETATTRF_GID	(1 << 2)
-#define	PSCFS_SETATTRF_SIZE	(1 << 3)
-#define	PSCFS_SETATTRF_ATIME	(1 << 4)
-#define	PSCFS_SETATTRF_MTIME	(1 << 5)
+/* setattr() to_set mask flags */
+#define PSCFS_SETATTRF_MODE	(1 << 0)	/* chmod */
+#define	PSCFS_SETATTRF_UID	(1 << 1)	/* chown */
+#define	PSCFS_SETATTRF_GID	(1 << 2)	/* chgrp */
+#define	PSCFS_SETATTRF_DATASIZE	(1 << 3)	/* file data truncate */
+#define	PSCFS_SETATTRF_ATIME	(1 << 4)	/* utimes */
+#define	PSCFS_SETATTRF_MTIME	(1 << 5)	/* utimes */
+#define	PSCFS_SETATTRF_CTIME	(1 << 6)	/* utimes */
+#define	_PSCFS_SETATTRF_LAST	(1 << 7)
+
+#define PSCFS_SETATTRF_ALL	(~0)
 
 #ifdef HAVE_FUSE
 #  include <fuse_lowlevel.h>

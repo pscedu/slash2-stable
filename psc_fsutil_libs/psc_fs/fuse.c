@@ -29,6 +29,8 @@
 #include <sys/statvfs.h>
 #include <sys/stat.h>
 
+#include <linux/fuse.h>
+
 #include <errno.h>
 #include <pthread.h>
 #include <stdio.h>
@@ -60,11 +62,11 @@
 #ifdef __LP64__
 #  define INUM_FUSE2PSCFS(inum)		(inum)
 #  define INUM_FUSE2PSCFS_DEL(inum)	(inum)
-#  define INUM_PSCFS2FUSE(inum)		(inum)
+#  define INUM_PSCFS2FUSE(inum, tmo)	(inum)
 #else
 #  define INUM_FUSE2PSCFS(inum)		pscfs_inum_fuse2pscfs((inum), 0)
 #  define INUM_FUSE2PSCFS_DEL(inum)	pscfs_inum_fuse2pscfs((inum), 1)
-#  define INUM_PSCFS2FUSE(inum)		pscfs_inum_pscfs2fuse(inum)
+#  define INUM_PSCFS2FUSE(inum, tmo)	pscfs_inum_pscfs2fuse((inum), (tmo))
 
 struct pscfs_inumcol {
 	pscfs_inum_t		pfic_pscfs_inum;
@@ -336,6 +338,8 @@ pscfs_main(void)
 	int i;
 
 #ifndef __LP64__
+	struct pscfs_inumcol *pfic;
+
 #define INUMCOL_SZ (4096 - 1)
 	psc_poolmaster_init(&pscfs_inumcol_poolmaster, struct pscfs_inumcol,
 	    pfic_lentry, PPMF_AUTO, INUMCOL_SZ, INUMCOL_SZ / 2, INUMCOL_SZ * 2,
@@ -343,6 +347,14 @@ pscfs_main(void)
 	pscfs_inumcol_pool = psc_poolmaster_getmgr(&pscfs_inumcol_poolmaster);
 	psc_hashtbl_init(&pscfs_inumcol_hashtbl, 0, struct pscfs_inumcol,
 	    pfic_key, pfic_hentry, INUMCOL_SZ * 4, NULL, "inumcol");
+
+	pfic = psc_pool_get(pscfs_inumcol_pool);
+	memset(pfic, 0, sizeof(*pfic));
+	psc_hashent_init(&pscfs_inumcol_hashtbl, pfic);
+	pfic->pfic_pscfs_inum = 1;
+	pfic->pfic_key = 1;
+	psc_atomic32_set(&pfic->pfic_refcnt, 1);
+	psc_hashtbl_add_item(&pscfs_inumcol_hashtbl, pfic);
 #endif
 
 	for (i = 0; i < NUM_THREADS; i++)
@@ -422,7 +434,8 @@ pscfs_inum_reclaim(struct psc_poolmgr *m)
 	PSC_HASHTBL_FOREACH_BUCKET(t, b) {
 		psc_hashbkt_lock(b);
 		PSC_HASHBKT_FOREACH_ENTRY(t, b, pfic) {
-			if (now > pfic->pfic_extime &&
+			if (pfic->pfic_extime &&
+			    now > pfic->pfic_extime &&
 			    refcnt == 0)
 				evict
 		}
@@ -463,7 +476,7 @@ pscfs_inum_fuse2pscfs(fuse_ino_t f_inum, int del)
 }
 
 fuse_ino_t
-pscfs_inum_pscfs2fuse(pscfs_inum_t p_inum)
+pscfs_inum_pscfs2fuse(pscfs_inum_t p_inum, int timeo)
 {
 	struct pscfs_inumcol *pfic, *t;
 	struct psc_hashbkt *b;
@@ -486,14 +499,17 @@ pscfs_inum_pscfs2fuse(pscfs_inum_t p_inum)
 			 */
 			if (t->pfic_pscfs_inum == p_inum) {
 				psc_atomic32_inc(&t->pfic_refcnt);
+				t->pfic_extime = time(NULL) + timeo;
 				key = t->pfic_key;
 				t = NULL;
 			} else
 				key = psc_random32();
 		} else {
+			memset(pfic, 0, sizeof(*pfic));
 			psc_hashent_init(&pscfs_inumcol_hashtbl, pfic);
 			pfic->pfic_pscfs_inum = p_inum;
 			pfic->pfic_key = key;
+			pfic->pfic_extime = time(NULL) + timeo;
 			psc_atomic32_set(&pfic->pfic_refcnt, 1);
 			psc_hashbkt_add_item(&pscfs_inumcol_hashtbl,
 			    b, pfic);
@@ -575,6 +591,7 @@ pscfs_fuse_handle_create(fuse_req_t req, fuse_ino_t pinum,
 	struct pscfs_req pfr;
 
 	pfr.pfr_fuse_req = req;
+	pfr.pfr_fuse_fi = fi;
 	RETIFNOTSUP(&pfr, create, 0, 0, 0, NULL, 0, NULL, 0);
 	pscfs.pf_handle_create(&pfr, INUM_FUSE2PSCFS(pinum), name, mode,
 	    fi->flags);
@@ -677,6 +694,7 @@ pscfs_fuse_handle_open(fuse_req_t req, fuse_ino_t inum,
 	struct pscfs_req pfr;
 
 	pfr.pfr_fuse_req = req;
+	pfr.pfr_fuse_fi = fi;
 	RETIFNOTSUP(&pfr, open, NULL, 0);
 	pscfs.pf_handle_open(&pfr, INUM_FUSE2PSCFS(inum), fi->flags);
 }
@@ -688,6 +706,7 @@ pscfs_fuse_handle_opendir(fuse_req_t req, fuse_ino_t inum,
 	struct pscfs_req pfr;
 
 	pfr.pfr_fuse_req = req;
+	pfr.pfr_fuse_fi = fi;
 	RETIFNOTSUP(&pfr, opendir, NULL, 0);
 	pscfs.pf_handle_opendir(&pfr, INUM_FUSE2PSCFS(inum), fi->flags);
 }
@@ -761,7 +780,7 @@ pscfs_fuse_handle_setattr(fuse_req_t req, fuse_ino_t inum,
 	if (fuse_to_set & FUSE_SET_ATTR_GID)
 		pfl_to_set |= PSCFS_SETATTRF_GID;
 	if (fuse_to_set & FUSE_SET_ATTR_SIZE)
-		pfl_to_set |= PSCFS_SETATTRF_SIZE;
+		pfl_to_set |= PSCFS_SETATTRF_DATASIZE;
 	if (fuse_to_set & FUSE_SET_ATTR_ATIME)
 		pfl_to_set |= PSCFS_SETATTRF_ATIME;
 	if (fuse_to_set & FUSE_SET_ATTR_MTIME)
@@ -858,7 +877,7 @@ pscfs_reply_create(struct pscfs_req *pfr, pscfs_inum_t inum,
 			pfr->pfr_fuse_fi->direct_io = 1;
 		fi_setdata(pfr->pfr_fuse_fi, data);
 		e.entry_timeout = entry_timeout;
-		e.ino = INUM_PSCFS2FUSE(inum);
+		e.ino = INUM_PSCFS2FUSE(inum, entry_timeout);
 		if (e.ino) {
 			e.attr_timeout = attr_timeout;
 			memcpy(&e.attr, stb, sizeof(e.attr));
@@ -912,7 +931,7 @@ pscfs_reply_mknod(struct pscfs_req *pfr, pscfs_inum_t inum,
 		fuse_reply_err(pfr->pfr_fuse_req, rc);
 	else {
 		e.entry_timeout = entry_timeout;
-		e.ino = INUM_PSCFS2FUSE(inum);
+		e.ino = INUM_PSCFS2FUSE(inum, entry_timeout);
 		if (e.ino) {
 			e.attr_timeout = attr_timeout;
 			memcpy(&e.attr, stb, sizeof(e.attr));
@@ -964,10 +983,18 @@ pscfs_reply_read(struct pscfs_req *pfr, void *buf, ssize_t len, int rc)
 void
 pscfs_reply_readdir(struct pscfs_req *pfr, void *buf, ssize_t len, int rc)
 {
+	struct fuse_dirent *dirent;
+	off_t off;
+
 	if (rc)
 		fuse_reply_err(pfr->pfr_fuse_req, rc);
-	else
+	else {
+		for (dirent = buf, off = 0; off < len;
+		    off += FUSE_DIRENT_ALIGN(FUSE_NAME_OFFSET + dirent->namelen),
+		    dirent = (void *)((char *)buf + off))
+			dirent->ino = INUM_PSCFS2FUSE(dirent->ino, 8);
 		fuse_reply_buf(pfr->pfr_fuse_req, buf, len);
+	}
 }
 
 void
@@ -1042,7 +1069,7 @@ pscfs_fuse_replygen_entry(struct pscfs_req *pfr, pscfs_inum_t inum,
 		fuse_reply_err(pfr->pfr_fuse_req, rc);
 	else {
 		e.entry_timeout = entry_timeout;
-		e.ino = INUM_PSCFS2FUSE(inum);
+		e.ino = INUM_PSCFS2FUSE(inum, entry_timeout);
 		if (e.ino) {
 			e.attr_timeout = attr_timeout;
 			memcpy(&e.attr, stb, sizeof(e.attr));
