@@ -793,7 +793,7 @@ pscfs_fuse_handle_setattr(fuse_req_t req, fuse_ino_t inum,
 	RETIFNOTSUP(&pfr, setattr, NULL, 0);
 	stb->st_ino = INUM_FUSE2PSCFS(stb->st_ino);
 	pscfs.pf_handle_setattr(&pfr, INUM_FUSE2PSCFS(inum), stb,
-	    pfl_to_set, fi_getdata(fi));
+	    pfl_to_set, fi ? fi_getdata(fi) : NULL);
 }
 
 void
