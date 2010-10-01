@@ -318,7 +318,7 @@ struct pscrpc_request {
 					 rq_waiting:1,
 					 rq_receiving_reply:1,
 					 rq_no_delay:1,
-					 rq_net_err:1;
+					 rq_net_err:1,
 					 rq_timeoutable:1;
 	atomic_t			 rq_refcount;		/* client-side refcnt for SENT race */
 	atomic_t			 rq_retries;		/* count retries */
