@@ -77,6 +77,10 @@ struct pscfs_inumcol {
 	struct psc_listentry	pfic_lentry;		/* pool */
 	struct psc_hashent	pfic_hentry;
 };
+
+static struct psc_poolmaster	 pscfs_inumcol_poolmaster;
+static struct psc_poolmgr	*pscfs_inumcol_pool;
+static struct psc_hashtbl	 pscfs_inumcol_hashtbl;
 #endif
 
 typedef struct {
@@ -95,9 +99,6 @@ static fuse_fs_info_t		 fsinfo[MAX_FDS];
 static char			*mountpoints[MAX_FDS];
 static pthread_t		 fuse_threads[NUM_THREADS];
 static struct fuse_session	*fuse_session;
-static struct psc_poolmaster	 pscfs_inumcol_poolmaster;
-static struct psc_poolmgr	*pscfs_inumcol_pool;
-static struct psc_hashtbl	 pscfs_inumcol_hashtbl;
 
 int
 pscfs_fuse_newfs(const char *mntpoint, struct fuse_chan *ch)
