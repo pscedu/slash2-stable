@@ -595,8 +595,8 @@ pscfs_fuse_handle_create(fuse_req_t req, fuse_ino_t pinum,
 	pfr.pfr_fuse_req = req;
 	pfr.pfr_fuse_fi = fi;
 	RETIFNOTSUP(&pfr, create, 0, 0, 0, NULL, 0, NULL, 0);
-	pscfs.pf_handle_create(&pfr, INUM_FUSE2PSCFS(pinum), name, mode,
-	    fi->flags);
+	pscfs.pf_handle_create(&pfr, INUM_FUSE2PSCFS(pinum), name,
+	    fi->flags, mode);
 }
 
 void
