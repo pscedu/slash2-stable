@@ -319,6 +319,7 @@ struct pscrpc_request {
 					 rq_receiving_reply:1,
 					 rq_no_delay:1,
 					 rq_net_err:1;
+					 rq_timeoutable:1;
 	atomic_t			 rq_refcount;		/* client-side refcnt for SENT race */
 	atomic_t			 rq_retries;		/* count retries */
 	atomic_t			*rq_compl_cntr;
@@ -353,9 +354,9 @@ struct pscrpc_request {
 	struct psc_waitq		 rq_reply_waitq;
 	/* server-side... */
 	struct timeval			 rq_arrival_time;	/* request arrival time */
-	struct pscrpc_reply_state	 *rq_reply_state;	/* separated reply state */
-	struct pscrpc_request_buffer_desc *rq_rqbd;		/* incoming req  buffer*/
-	struct pscrpc_peer_qlen		 *rq_peer_qlen;
+	struct pscrpc_reply_state	*rq_reply_state;	/* separated reply state */
+	struct pscrpc_request_buffer_desc*rq_rqbd;		/* incoming req  buffer*/
+	struct pscrpc_peer_qlen		*rq_peer_qlen;
 };
 
 /* Each service installs its own request handler */

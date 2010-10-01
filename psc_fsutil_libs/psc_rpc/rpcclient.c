@@ -420,9 +420,8 @@ expired_request(void *data)
 
 	DEBUG_REQ(PLL_INFO, req, "request timeout");
 
-	if (atomic_read(&req->rq_retries) >= imp->imp_max_retries) {
+	if (atomic_read(&req->rq_retries) >= imp->imp_max_retries)
 		return (pscrpc_expire_one_request(req));
-	}
 
 	spinlock(&req->rq_lock);
 	req->rq_resend = 1;
@@ -1267,7 +1266,7 @@ pscrpc_expire_one_request(struct pscrpc_request *req)
 		return (1);
 	}
 
-	return (0);
+	return (req->rq_timeoutable);
 }
 
 int
