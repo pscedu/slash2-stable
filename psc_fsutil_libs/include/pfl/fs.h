@@ -68,17 +68,17 @@ void	pscfs_mount(const char *, struct pscfs_args *);
 void	pscfs_reply_access(struct pscfs_req *, int);
 void	pscfs_reply_close(struct pscfs_req *, int);
 void	pscfs_reply_closedir(struct pscfs_req *, int);
-void	pscfs_reply_create(struct pscfs_req *, pscfs_inum_t, pscfs_fgen_t, int, struct stat *, int, void *, int, int);
+void	pscfs_reply_create(struct pscfs_req *, pscfs_inum_t, pscfs_fgen_t, int, const struct stat *, int, void *, int, int);
 void	pscfs_reply_flush(struct pscfs_req *, int);
 void	pscfs_reply_fsync(struct pscfs_req *, int);
 void	pscfs_reply_fsyncdir(struct pscfs_req *, int);
 void	pscfs_reply_getattr(struct pscfs_req *, struct stat *, int, int);
 void	pscfs_reply_init(struct pscfs_req *);
 void	pscfs_reply_ioctl(struct pscfs_req *);
-void	pscfs_reply_link(struct pscfs_req *, pscfs_inum_t, pscfs_fgen_t, int, struct stat *, int, int);
-void	pscfs_reply_lookup(struct pscfs_req *, pscfs_inum_t, pscfs_fgen_t, int, struct stat *, int, int);
-void	pscfs_reply_mkdir(struct pscfs_req *, pscfs_inum_t, pscfs_fgen_t, int, struct stat *, int, int);
-void	pscfs_reply_mknod(struct pscfs_req *, pscfs_inum_t, pscfs_fgen_t, int, struct stat *, int, int);
+void	pscfs_reply_link(struct pscfs_req *, pscfs_inum_t, pscfs_fgen_t, int, const struct stat *, int, int);
+void	pscfs_reply_lookup(struct pscfs_req *, pscfs_inum_t, pscfs_fgen_t, int, const struct stat *, int, int);
+void	pscfs_reply_mkdir(struct pscfs_req *, pscfs_inum_t, pscfs_fgen_t, int, const struct stat *, int, int);
+void	pscfs_reply_mknod(struct pscfs_req *, pscfs_inum_t, pscfs_fgen_t, int, const struct stat *, int, int);
 void	pscfs_reply_open(struct pscfs_req *, void *, int, int);
 void	pscfs_reply_opendir(struct pscfs_req *, void *, int, int);
 void	pscfs_reply_read(struct pscfs_req *, void *, ssize_t, int);
@@ -88,7 +88,7 @@ void	pscfs_reply_rename(struct pscfs_req *, int);
 void	pscfs_reply_rmdir(struct pscfs_req *, int);
 void	pscfs_reply_setattr(struct pscfs_req *, struct stat *, int, int);
 void	pscfs_reply_statfs(struct pscfs_req *, struct statvfs *, int);
-void	pscfs_reply_symlink(struct pscfs_req *, struct stat *, int);
+void	pscfs_reply_symlink(struct pscfs_req *, pscfs_inum_t, pscfs_fgen_t, int, const struct stat *, int, int);
 void	pscfs_reply_umount(struct pscfs_req *);
 void	pscfs_reply_unlink(struct pscfs_req *, int);
 void	pscfs_reply_write(struct pscfs_req *, ssize_t, int);
@@ -130,7 +130,7 @@ struct pscfs_req {
 #define PSCFS_ARGS_INIT(n, av)	{ FUSE_ARGS_INIT((n), (av)) }
 
 void	pscfs_fuse_replygen_entry(struct pscfs_req *, pscfs_inum_t,
-	    pscfs_fgen_t, int, struct stat *, int, int);
+	    pscfs_fgen_t, int, const struct stat *, int, int);
 
 #elif defined(HAVE_NNPFS)
 #elif defined(HAVE_DOKAN)

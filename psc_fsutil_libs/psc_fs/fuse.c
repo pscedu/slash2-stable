@@ -768,7 +768,8 @@ pscfs_fuse_handle_rmdir(fuse_req_t req, fuse_ino_t pinum,
 
 void
 pscfs_fuse_handle_setattr(fuse_req_t req, fuse_ino_t inum,
-    struct stat *stb, int fuse_to_set, __unusedx struct fuse_file_info *fi)
+    struct stat *stb, int fuse_to_set,
+    __unusedx struct fuse_file_info *fi)
 {
 	struct pscfs_req pfr;
 	int pfl_to_set = 0;
@@ -788,6 +789,7 @@ pscfs_fuse_handle_setattr(fuse_req_t req, fuse_ino_t inum,
 
 	pfr.pfr_fuse_req = req;
 	RETIFNOTSUP(&pfr, setattr, NULL, 0);
+	stb->st_ino = INUM_FUSE2PSCFS(stb->st_ino);
 	pscfs.pf_handle_setattr(&pfr, INUM_FUSE2PSCFS(inum), stb,
 	    pfl_to_set, fi_getdata(fi));
 }
@@ -865,7 +867,7 @@ pscfs_reply_closedir(struct pscfs_req *pfr, int rc)
 
 void
 pscfs_reply_create(struct pscfs_req *pfr, pscfs_inum_t inum,
-    pscfs_fgen_t gen, int entry_timeout, struct stat *stb,
+    pscfs_fgen_t gen, int entry_timeout, const struct stat *stb,
     int attr_timeout, void *data, int rflags, int rc)
 {
 	struct fuse_entry_param e;
@@ -881,6 +883,7 @@ pscfs_reply_create(struct pscfs_req *pfr, pscfs_inum_t inum,
 		if (e.ino) {
 			e.attr_timeout = attr_timeout;
 			memcpy(&e.attr, stb, sizeof(e.attr));
+			e.attr.st_ino = e.ino;
 			e.generation = gen;
 		}
 		fuse_reply_create(pfr->pfr_fuse_req, &e, pfr->pfr_fuse_fi);
@@ -911,8 +914,10 @@ pscfs_reply_getattr(struct pscfs_req *pfr, struct stat *stb,
 {
 	if (rc)
 		fuse_reply_err(pfr->pfr_fuse_req, rc);
-	else
+	else {
+		stb->st_ino = INUM_PSCFS2FUSE(stb->st_ino, timeout);
 		fuse_reply_attr(pfr->pfr_fuse_req, stb, timeout);
+	}
 }
 
 void
@@ -922,7 +927,7 @@ pscfs_reply_ioctl(struct pscfs_req *pfr)
 
 void
 pscfs_reply_mknod(struct pscfs_req *pfr, pscfs_inum_t inum,
-    pscfs_fgen_t gen, int entry_timeout, struct stat *stb,
+    pscfs_fgen_t gen, int entry_timeout, const struct stat *stb,
     int attr_timeout, int rc)
 {
 	struct fuse_entry_param e;
@@ -935,6 +940,7 @@ pscfs_reply_mknod(struct pscfs_req *pfr, pscfs_inum_t inum,
 		if (e.ino) {
 			e.attr_timeout = attr_timeout;
 			memcpy(&e.attr, stb, sizeof(e.attr));
+			e.attr.st_ino = e.ino;
 			e.generation = gen;
 		}
 	//	fuse_reply_mknod(pfr->pfr_fuse_req, &e);
@@ -1024,8 +1030,10 @@ pscfs_reply_setattr(struct pscfs_req *pfr, struct stat *stb,
 {
 	if (rc)
 		fuse_reply_err(pfr->pfr_fuse_req, rc);
-	else
+	else {
+		stb->st_ino = INUM_PSCFS2FUSE(stb->st_ino, timeout);
 		fuse_reply_attr(pfr->pfr_fuse_req, stb, timeout);
+	}
 }
 
 void
@@ -1060,7 +1068,7 @@ pscfs_reply_write(struct pscfs_req *pfr, ssize_t len, int rc)
 
 void
 pscfs_fuse_replygen_entry(struct pscfs_req *pfr, pscfs_inum_t inum,
-    pscfs_fgen_t gen, int entry_timeout, struct stat *stb,
+    pscfs_fgen_t gen, int entry_timeout, const struct stat *stb,
     int attr_timeout, int rc)
 {
 	struct fuse_entry_param e;
@@ -1073,6 +1081,7 @@ pscfs_fuse_replygen_entry(struct pscfs_req *pfr, pscfs_inum_t inum,
 		if (e.ino) {
 			e.attr_timeout = attr_timeout;
 			memcpy(&e.attr, stb, sizeof(e.attr));
+			e.attr.st_ino = e.ino;
 			e.generation = gen;
 		}
 		fuse_reply_entry(pfr->pfr_fuse_req, &e);
