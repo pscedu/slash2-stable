@@ -168,10 +168,10 @@ psc_ctlparse_show(char *showspec)
 	int n;
 
 	if (strcmp(showspec, "?") == 0) {
-		printf("available show specs:\n");
+		warnx("available show specs:");
 
 		for (n = 0; n < psc_ctlshow_ntabents; n++)
-			printf("  %s\n", psc_ctlshow_tab[n].pse_name);
+			warnx("  %s", psc_ctlshow_tab[n].pse_name);
 		exit(1);
 	}
 
