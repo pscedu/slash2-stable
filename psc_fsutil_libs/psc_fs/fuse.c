@@ -41,6 +41,7 @@
 #include <fuse_lowlevel.h>
 
 #include "pfl/fs.h"
+#include "pfl/fsmod.h"
 #include "psc_util/alloc.h"
 #include "psc_util/lock.h"
 #include "psc_util/log.h"
