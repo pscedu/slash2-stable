@@ -17,7 +17,7 @@
 
 ifeq ($(filter $(realpath ${ROOTDIR})/compat/%,${CURDIR}),)
 
-PICKLELOCALMK=${ROOTDIR}/mk/gen-localdefs-pickle.mk
+PICKLELOCALMK=${ROOTDIR}/mk/gen-localdefs-$(word 1,$(subst ., ,$(shell hostname)))-pickle.mk
 
 -include ${PICKLELOCALMK}
 
