@@ -70,12 +70,12 @@
 #  define INUM_PSCFS2FUSE(inum, tmo)	pscfs_inum_pscfs2fuse((inum), (tmo))
 
 struct pscfs_inumcol {
-	pscfs_inum_t		pfic_pscfs_inum;
-	uint64_t		pfic_key;		/* fuse inum */
-	psc_atomic32_t		pfic_refcnt;
-	time_t			pfic_extime;		/* when fuse expires it */
-	struct psc_listentry	pfic_lentry;		/* pool */
-	struct psc_hashent	pfic_hentry;
+	pscfs_inum_t		 pfic_pscfs_inum;
+	uint64_t		 pfic_key;		/* fuse inum */
+	psc_atomic32_t		 pfic_refcnt;
+	time_t			 pfic_extime;		/* when fuse expires it */
+	struct psc_listentry	 pfic_lentry;		/* pool */
+	struct psc_hashent	 pfic_hentry;
 };
 
 static struct psc_poolmaster	 pscfs_inumcol_poolmaster;
@@ -92,7 +92,7 @@ typedef struct {
 } fuse_fs_info_t;
 
 static int			 exit_fuse_listener = 0;
-static int			 newfs_fd[2];
+int				 newfs_fd[2];
 static int			 nfds;
 static struct pollfd		 fds[MAX_FDS];
 static fuse_fs_info_t		 fsinfo[MAX_FDS];
