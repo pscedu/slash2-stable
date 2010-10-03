@@ -48,8 +48,7 @@ EOF
 		cd $i >/dev/null || continue
 
 		name=$(echo ${i##*/} | tr 'a-z' 'A-Z')
-		$make clean >/dev/null
-		$make >/dev/null && echo "PICKLE_HAVE_$name=1"
+		$make build >/dev/null && echo "PICKLE_HAVE_$name=1"
 		cd - >/dev/null
 	done
 
