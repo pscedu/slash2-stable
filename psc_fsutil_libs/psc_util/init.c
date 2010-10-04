@@ -56,7 +56,7 @@ psc_subsys_register(__unusedx int level, __unusedx const char *name)
 void
 psc_dumpstack(__unusedx int sig)
 {
-	static psc_spinlock_t lock = SPINLOCK_INIT;
+	static psc_spinlock_t lock = SPINLOCK_INIT_NOLOG;
 	char buf[BUFSIZ];
 
 	spinlock(&lock);
@@ -80,6 +80,7 @@ void
 pfl_init(void)
 {
 	static atomic_t init = ATOMIC_INIT(0);
+	char *p;
 
 	if (atomic_xchg(&init, 1))
 		errx(1, "pfl_init: already initialized");
@@ -94,7 +95,8 @@ pfl_init(void)
 
 	psc_memallocs_init();
 
-	if (getenv("PSC_DUMPSTACK")) {
+	p = getenv("PSC_DUMPSTACK");
+	if (p && strcmp(p, "0")) {
 		if (signal(SIGSEGV, psc_dumpstack) == SIG_ERR)
 			psc_fatal("signal");
 		if (signal(SIGABRT, psc_dumpstack) == SIG_ERR)
