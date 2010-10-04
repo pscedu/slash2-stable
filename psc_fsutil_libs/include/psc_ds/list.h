@@ -18,7 +18,38 @@
  */
 
 /*
- * Simple doubly linked list implementation loosely based off <linux/list.h>.
+ * Doubly linked list implementation.
+ *
+ * A "list head" here is a handle for the linked list.  For example:
+ *
+ *	struct psclist_head mylisthd;
+ *
+ * Custom structures may be added to this list via containing a
+ * psc_listentry structure in their makeup:
+ *
+ *	struct mystruct {
+ *		int			myvalue;
+ *		struct psc_listentry	lentry;
+ *	};
+ *
+ * And an example on how to add a mystruct item instance to our list:
+ *
+ *	struct mystruct a;
+ *
+ *	INIT_PSC_LISTENTRY(&a->lentry);
+ *	psclist_add(&a->lentry, &mylisthd);
+ *
+ * Now, one may iterate through mylisthd and come across the `a' element
+ * that was added.
+ *
+ * This distinction between list entry and head structures reduces some
+ * flexbility with the API (since you must have a list head) at the
+ * benefit of reducing confusion and avoiding abuse.
+ *
+ * Under PFL_DEBUG mode, the list head here becomes the plh_owner of the
+ * item when it is added.  This provision helps one debugging which list
+ * an item was already on when trying to add the item to a different
+ * list.
  */
 
 #ifndef _PFL_LIST_H_
@@ -35,7 +66,7 @@ struct psclist_head {
 	struct psclist_head		*plh_prev;
 #if PFL_DEBUG
 	uint64_t			 plh_magic;
-	struct psclist_head		*plh_owner;
+	struct psclist_head		*plh_owner;	/* psclist_head this item is on */
 #endif
 };
 
