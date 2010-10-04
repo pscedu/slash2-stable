@@ -114,7 +114,7 @@ pfl
 - rename MODULES to COMPONENTS
 - rename PPMF_NOLOCK -> PPMF_NOMLOCK
 - add zfs SPA version to slashd ctlparam
-- add fuse version to pscfs ctlparam
+- add lnet knob to ctlparam: sdp, lnet_networks
 
 development tool
 - let wiki changes automatically email zest/slash2-devel@ like svn commits
