@@ -394,9 +394,9 @@ odtable_scan(struct odtable *odt,
 		odtr->odtr_key  = odtf->odtf_key;
 		odtr->odtr_elem = todtr.odtr_elem;
 
-		psc_warnx("handing back key=%"PRIx64" slot=%zd odtr=%p",
+		psclog_debug("handing back key=%"PRIx64" slot=%zd odtr=%p",
 		    odtr->odtr_key, odtr->odtr_elem, odtr);
 
-		(odt_handler)(odtable_getitem_addr(odt, todtr.odtr_elem), odtr);
+		odt_handler(odtable_getitem_addr(odt, todtr.odtr_elem), odtr);
 	}
 }
