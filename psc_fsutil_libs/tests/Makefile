@@ -9,6 +9,7 @@ SUBDIRS+=	atomic
 SUBDIRS+=	bitflag
 SUBDIRS+=	crc
 SUBDIRS+=	dynarray
+SUBDIRS+=	fmt
 SUBDIRS+=	fmtstr
 SUBDIRS+=	hash2
 SUBDIRS+=	list
