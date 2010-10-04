@@ -19,11 +19,13 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <unistd.h>
 
 #include "pfl/cdefs.h"
 #include "pfl/pfl.h"
 #include "psc_util/fmt.h"
+#include "psc_util/log.h"
 
 const char *progname;
 
@@ -49,7 +51,9 @@ main(int argc, char *argv[])
 	if (argc)
 		usage();
 
-	psc_fmt_ratio(buf, 1000000000, 1000000001);
-	printf("%s\n", buf);
+	psc_fmt_ratio(buf,  9998, 10001); psc_assert(strcmp(buf, "99.97%") == 0);
+	psc_fmt_ratio(buf,  9999, 10001); psc_assert(strcmp(buf, "99.98%") == 0);
+	psc_fmt_ratio(buf, 10000, 10001); psc_assert(strcmp(buf, "99.99%") == 0);
+	psc_fmt_ratio(buf, 10001, 10001); psc_assert(strcmp(buf, "100%") == 0);
 	exit(0);
 }
