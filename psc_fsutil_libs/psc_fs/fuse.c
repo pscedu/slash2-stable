@@ -336,6 +336,7 @@ pscfs_fuse_listener_loop(__unusedx void *arg)
 	return (NULL);
 }
 
+#ifndef PFL_NO_CTL
 int
 pscfs_ctlparam(int fd, struct psc_ctlmsghdr *mh,
     struct psc_ctlmsg_param *pcp, char **levels, int nlevels)
@@ -398,6 +399,7 @@ pscfs_ctlparam(int fd, struct psc_ctlmsghdr *mh,
 	return (psc_ctlsenderr(fd, mh,
 	    "field %s is read-only", levels[1]));
 }
+#endif
 
 int
 pscfs_main(void)
@@ -424,7 +426,9 @@ pscfs_main(void)
 	psc_hashtbl_add_item(&pscfs_inumcol_hashtbl, pfic);
 #endif
 
+#ifndef PFL_NO_CTL
 	psc_ctlparam_register("fuse", pscfs_ctlparam);
+#endif
 
 	for (i = 0; i < NUM_THREADS; i++)
 		psc_assert(pthread_create(&fuse_threads[i], NULL,

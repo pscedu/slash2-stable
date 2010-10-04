@@ -237,6 +237,10 @@ ifneq ($(filter aio,${MODULES}),)
   LDFLAGS+=	${LIBAIO}
 endif
 
+ifneq ($(filter noctl,${MODULES}),)
+  DEFINES+=	-DPFL_NO_CTL
+endif
+
 # Post-modules processing
 
 ifneq ($(filter ${PFL_BASE}/psc_util/pthrutil.c,${SRCS}),)
