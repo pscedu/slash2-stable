@@ -370,7 +370,7 @@ _psc_free(void *p, int flags, ...)
 	free(p);
 }
 
-#define PFL_DEF_NMEMMAPS	(1024 * 1024 * 10)
+#define PFL_DEF_NMEMMAPS	(1024 * 1024)
 #define _PATH_MAX_MEMMAPS	"/proc/sys/vm/max_map_count"
 
 void
@@ -412,7 +412,7 @@ psc_memallocs_init(void)
 
 		if (val < nmaps) {
 			if (fprintf(fp, "%ld", nmaps) != 1)
-				warnx("error writing %s", fn);
+				warn("error writing %s", fn);
 		}
  bail:
 		fclose(fp);
