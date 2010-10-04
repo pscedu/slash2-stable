@@ -41,13 +41,24 @@ psc_fmt_human(char buf[PSCFMT_HUMAN_BUFSIZ], double num)
 void
 psc_fmt_ratio(char buf[PSCFMT_RATIO_BUFSIZ], int n, int d)
 {
+	double val;
+
 	if (n == d)
 		snprintf(buf, PSCFMT_RATIO_BUFSIZ, "100%%");
 	else if (n == 0)
 		snprintf(buf, PSCFMT_RATIO_BUFSIZ, "0%%");
-	else if (d)
-		snprintf(buf, PSCFMT_RATIO_BUFSIZ, "%5.2f%%",
-		    n * 100.0 / d);
-	else
+	else if (d == 0)
 		snprintf(buf, PSCFMT_RATIO_BUFSIZ, "<und>");
+	else {
+		val = n * 100.0 / d;
+
+		if (val > 99.99)
+			/*
+			 * This rounds to 100.00 but that looks silly
+			 * despite being technically more correct.
+			 */
+			snprintf(buf, PSCFMT_RATIO_BUFSIZ, "99.99%%");
+		else
+			snprintf(buf, PSCFMT_RATIO_BUFSIZ, "%5.2f%%", val);
+	}
 }
