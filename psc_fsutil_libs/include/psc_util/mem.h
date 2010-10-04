@@ -34,8 +34,8 @@ struct psc_nodemask {
 		(m)->pnm_mask = numa_get_run_node_mask();		\
 	} while (0)
 
-#define	psc_numa_tonodemask_memory(p, siz, m)				\
-	numa_tonodemask_memory((p), (siz), (m)->pnm_mask)
+#define	psc_numa_tonodemask_memory(p, len, m)				\
+	numa_tonodemask_memory((p), (len), (m)->pnm_mask)
 
 #else
 
@@ -48,19 +48,25 @@ struct psc_nodemask {
 		(void)(m);						\
 	} while (0)
 
-#define	psc_numa_tonodemask_memory(p, siz, m)				\
+#define	psc_numa_tonodemask_memory(p, len, m)				\
 	do {								\
 		(void)(p);						\
-		(void)(siz);						\
+		(void)(len);						\
 		(void)(m);						\
 	} while (0)
 
 #endif
 
-#define psc_mprotect(p, siz, prot)					\
+#define psc_mprotect(p, len, prot)					\
 	do {								\
-		if (mprotect((p), (siz), (prot)) == -1)			\
+		if (mprotect((p), (len), (prot)) == -1)			\
 			psc_fatal("mprotect %p", (p));			\
+	} while (0)
+
+#define psc_munmap(p, len)						\
+	do {								\
+		if (munmap((p), (len)) == -1)				\
+			psc_fatal("munmap %p", (p));			\
 	} while (0)
 
 #endif /* _PFL_MEM_H_ */
