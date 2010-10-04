@@ -100,22 +100,20 @@ pfl
   don't care about sub-second resolution can use to ease syscalls
 - consolidate naming conventions for initializers:
 	PSC_WAITQ_INIT -> WAITQ_INIT
+  which is OK since it isn't a symbol
 - mspinlock is not going to work on NUMA, use thruniqid instead of
   int init+pthread_key
 - eliminate flags arg to pscthr_init()
 - eliminate prt_alive
 - in mguard, check the flags in realloc/free match alloc (PAF_LOCK, ALIGN)
 - memguard option: dont free, keep PROT_NONE around
-- rename PFL include/pfl/compat to arch for things which aren't strictly
-  for system compatibility
 - is pcpp the problem with function args mid-wrapping?
 - count spinlocks and mutexes held before:
 	- waitq (should be holding one)
 	- rpc (should be holding none)
-- rename MODULES to COMPONENTS and introduce fcmh module which pulls in pscfs
-  until the hashtbl 32-bit ino size shit gets fixed
+- rename MODULES to COMPONENTS
 - rename PPMF_NOLOCK -> PPMF_NOMLOCK
-- add zfs version to slashd
+- add zfs SPA version to slashd ctlparam
 - add fuse version to pscfs ctlparam
 
 development tool
