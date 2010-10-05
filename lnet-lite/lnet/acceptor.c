@@ -305,7 +305,7 @@ lnet_acceptor(void *arg)
 
 	/* unblock lnet_acceptor_stop() */
 	cfs_complete(&lap->lap_compl);
-	free(lap);
+	cfs_free(lap);
 
 	return 0;
 }
@@ -351,7 +351,7 @@ lnet_acceptor_start(void)
 		if (ni->ni_lnd->lnd_accept) {
 			count++;
 
-			lap = malloc(sizeof(*lap));
+			lap = cfs_alloc(sizeof(*lap), 0);
 			if (lap == NULL) {
 				CERROR("malloc");
 				abort();
@@ -369,7 +369,7 @@ lnet_acceptor_start(void)
 			if (rc != 0) {
 				CERROR("Can't start acceptor thread: %d\n", rc);
 				cfs_fini_completion(&la_compl);
-				free(lap);
+				cfs_free(lap);
 				return rc;
 			}
 			/* wait for acceptor to startup */

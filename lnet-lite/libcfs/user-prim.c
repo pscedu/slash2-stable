@@ -178,7 +178,7 @@ static void *cfs_thread_helper(void *data)
         cfs_thread_t f  = targ->f;
         void *arg = targ->arg;
 
-        free(targ);
+        cfs_free(targ);
         
         (void)f(arg);
         return NULL;
@@ -188,7 +188,8 @@ int cfs_create_thread(cfs_thread_t func, void *arg)
         pthread_t tid;
         pthread_attr_t tattr;
         int rc;
-        struct lustre_thread_arg *targ_p = malloc(sizeof(struct lustre_thread_arg));
+        struct lustre_thread_arg *targ_p =
+	    cfs_alloc(sizeof(struct lustre_thread_arg), 0);
 
         if ( targ_p == NULL )
                 return -ENOMEM;
@@ -233,14 +234,14 @@ int cfs_parse_int_tunable(int *value, char *name)
 
 cfs_page_t *cfs_alloc_page(__unusedx unsigned int flags)
 {
-        cfs_page_t *pg = malloc(sizeof(*pg));
+        cfs_page_t *pg = cfs_alloc(sizeof(*pg), 0);
 
         if (!pg)
                 return NULL;
-        pg->addr = malloc(CFS_PAGE_SIZE);
+        pg->addr = cfs_alloc(CFS_PAGE_SIZE, 0);
 
         if (!pg->addr) {
-                free(pg);
+                cfs_free(pg);
                 return NULL;
         }
         return pg;
@@ -248,8 +249,8 @@ cfs_page_t *cfs_alloc_page(__unusedx unsigned int flags)
 
 void cfs_free_page(cfs_page_t *pg)
 {
-        free(pg->addr);
-        free(pg);
+        cfs_free(pg->addr);
+        cfs_free(pg);
 }
 
 void *cfs_page_address(cfs_page_t *pg)
@@ -275,7 +276,7 @@ cfs_mem_cache_create(const char *name, size_t objsize, __unusedx size_t off, __u
 {
         cfs_mem_cache_t *c;
 
-        c = malloc(sizeof(*c));
+        c = cfs_alloc(sizeof(*c), 0);
         if (!c)
                 return NULL;
         c->size = objsize;
@@ -287,7 +288,7 @@ cfs_mem_cache_create(const char *name, size_t objsize, __unusedx size_t off, __u
 int cfs_mem_cache_destroy(cfs_mem_cache_t *c)
 {
         CDEBUG(D_MALLOC, "destroy slab cache %p, objsize %u\n", c, c->size);
-        free(c);
+        cfs_free(c);
         return 0;
 }
 
