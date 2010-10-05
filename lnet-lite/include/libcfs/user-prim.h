@@ -74,19 +74,19 @@
  */
 
 typedef struct cfs_waitlink {
-        struct list_head sleeping;
-        void *process;
+	struct list_head sleeping;
+	void *process;
 } cfs_waitlink_t;
 
 typedef struct cfs_waitq {
-        struct list_head sleepers;
+	struct list_head sleepers;
 } cfs_waitq_t;
 
 void cfs_waitq_init(struct cfs_waitq *waitq);
 void cfs_waitlink_init(struct cfs_waitlink *link);
 void cfs_waitq_add(struct cfs_waitq *waitq, struct cfs_waitlink *link);
-void cfs_waitq_add_exclusive(struct cfs_waitq *waitq, 
-                             struct cfs_waitlink *link);
+void cfs_waitq_add_exclusive(struct cfs_waitq *waitq,
+			     struct cfs_waitlink *link);
 void cfs_waitq_forward(struct cfs_waitlink *link, struct cfs_waitq *waitq);
 void cfs_waitq_del(struct cfs_waitq *waitq, struct cfs_waitlink *link);
 int  cfs_waitq_active(struct cfs_waitq *waitq);
@@ -96,10 +96,10 @@ void cfs_waitq_broadcast(struct cfs_waitq *waitq);
 void cfs_waitq_wait(struct cfs_waitlink *link, int state);
 int64_t cfs_waitq_timedwait(struct cfs_waitlink *link, int state, int64_t timeout);
 #define cfs_schedule_timeout(s, t)              \
-        do {                                    \
-                cfs_waitlink_t    l;            \
-                cfs_waitq_timedwait(&l, s, t);  \
-        } while (0)
+	do {                                    \
+		cfs_waitlink_t    l;            \
+		cfs_waitq_timedwait(&l, s, t);  \
+	} while (0)
 
 #define CFS_TASK_INTERRUPTIBLE  (0)
 #define CFS_TASK_UNINT          (0)
@@ -112,18 +112,18 @@ int64_t cfs_waitq_timedwait(struct cfs_waitlink *link, int state, int64_t timeou
 #define LIBLUSTRE_HANDLE_UNALIGNED_PAGE
 
 struct page {
-        void   *addr;
-        unsigned long index;
-        struct list_head list;
-        unsigned long private;
+	void   *addr;
+	unsigned long index;
+	struct list_head list;
+	unsigned long private;
 
-        /* internally used by liblustre file i/o */
-        int     _offset;
-        int     _count;
+	/* internally used by liblustre file i/o */
+	int     _offset;
+	int     _count;
 #ifdef LIBLUSTRE_HANDLE_UNALIGNED_PAGE
-        int     _managed;
+	int     _managed;
 #endif
-        struct list_head _node;
+	struct list_head _node;
 };
 
 typedef struct page cfs_page_t;
@@ -164,24 +164,24 @@ void cfs_kunmap(cfs_page_t *pg);
 #define __ALLOC_ZERO    (1 << 2)
 static inline void *cfs_alloc(size_t nr_bytes, u_int32_t flags)
 {
-        void *result;
+	void *result;
 
-        result = malloc(nr_bytes);
-        if (result != NULL && (flags & __ALLOC_ZERO))
-                memset(result, 0, nr_bytes);
-        return result;
+	result = psc_alloc(nr_bytes, PAF_NOZERO);
+	if (result != NULL && (flags & __ALLOC_ZERO))
+		memset(result, 0, nr_bytes);
+	return result;
 }
 
-#define cfs_free(addr)  free(addr)
-#define cfs_alloc_large(nr_bytes) cfs_alloc(nr_bytes, 0)
-#define cfs_free_large(addr) cfs_free(addr)
+#define cfs_free(addr)			psc_free((addr), 0)
+#define cfs_alloc_large(nr_bytes)	cfs_alloc(nr_bytes, 0)
+#define cfs_free_large(addr)		cfs_free(addr)
 
 #define CFS_ALLOC_ATOMIC_TRY   (0)
 /*
  * SLAB allocator
  */
 typedef struct {
-         int size;
+	 int size;
 } cfs_mem_cache_t;
 
 #define SLAB_HWCACHE_ALIGN 0
@@ -195,11 +195,11 @@ void *cfs_mem_cache_alloc(cfs_mem_cache_t *c, int gfp);
 void cfs_mem_cache_free(cfs_mem_cache_t *c, void *addr);
 
 typedef int (cfs_read_proc_t)(char *page, char **start, off_t off,
-                          int count, int *eof, void *data);
+			  int count, int *eof, void *data);
 
 struct file; /* forward ref */
 typedef int (cfs_write_proc_t)(struct file *file, const char *buffer,
-                               unsigned long count, void *data);
+			       unsigned long count, void *data);
 
 /*
  * Signal
@@ -212,41 +212,41 @@ typedef sigset_t                        cfs_sigset_t;
 #include <sys/time.h>
 
 typedef struct {
-        struct list_head tl_list;
-        void (*function)(unsigned long unused);
-        unsigned long data;
-        long expires;
+	struct list_head tl_list;
+	void (*function)(unsigned long unused);
+	unsigned long data;
+	long expires;
 } cfs_timer_t;
 
 #define cfs_init_timer(t)       do {} while(0)
 #define cfs_jiffies                             \
 ({                                              \
-        unsigned long _ret = 0;                 \
-        struct timeval tv;                      \
-        if (gettimeofday(&tv, NULL) == 0)       \
-                _ret = tv.tv_sec;               \
-        _ret;                                   \
+	unsigned long _ret = 0;                 \
+	struct timeval tv;                      \
+	if (gettimeofday(&tv, NULL) == 0)       \
+		_ret = tv.tv_sec;               \
+	_ret;                                   \
 })
 
 static inline int cfs_timer_init(cfs_timer_t *l, void (* func)(unsigned long), void *arg)
 {
-        CFS_INIT_LIST_HEAD(&l->tl_list);
-        l->function = func;
-        l->data = (unsigned long)arg;
-        return 0;
+	CFS_INIT_LIST_HEAD(&l->tl_list);
+	l->function = func;
+	l->data = (unsigned long)arg;
+	return 0;
 }
 
 static inline int cfs_timer_is_armed(cfs_timer_t *l)
 {
-        if (cfs_time_before(cfs_jiffies, l->expires))
-                return 1;
-        else
-                return 0;
+	if (cfs_time_before(cfs_jiffies, l->expires))
+		return 1;
+	else
+		return 0;
 }
 
 static inline void cfs_timer_arm(cfs_timer_t *l, int thetime)
 {
-        l->expires = thetime;
+	l->expires = thetime;
 }
 
 static inline void cfs_timer_disarm(__unusedx cfs_timer_t *l)
@@ -255,7 +255,7 @@ static inline void cfs_timer_disarm(__unusedx cfs_timer_t *l)
 
 static inline long cfs_timer_deadline(cfs_timer_t *l)
 {
-        return l->expires;
+	return l->expires;
 }
 
 #if 0
@@ -273,22 +273,22 @@ cfs_time_t cfs_timer_deadline(struct cfs_timer *t);
 
 static inline void cfs_pause(cfs_duration_t d)
 {
-        struct timespec s;
-        
-        cfs_duration_nsec(d, &s);
-        nanosleep(&s, NULL);
+	struct timespec s;
+
+	cfs_duration_nsec(d, &s);
+	nanosleep(&s, NULL);
 }
 
 typedef void cfs_psdev_t;
 
 static inline int cfs_psdev_register(__unusedx cfs_psdev_t *foo)
 {
-        return 0;
+	return 0;
 }
 
 static inline int cfs_psdev_deregister(__unusedx cfs_psdev_t *foo)
 {
-        return 0;
+	return 0;
 }
 
 #define cfs_lock_kernel()               do {} while (0)
@@ -306,7 +306,7 @@ int cfs_create_thread(cfs_thread_t func, void *arg, const char *, ...);
 int cfs_parse_int_tunable(int *value, char *name);
 uid_t cfs_curproc_uid(void);
 
-#define LIBCFS_REALLOC(ptr, size) realloc(ptr, size)
+#define LIBCFS_REALLOC(ptr, size)	psc_realloc((ptr), (size), 0)
 
 #define cfs_online_cpus() sysconf(_SC_NPROCESSORS_ONLN)
 
@@ -314,23 +314,23 @@ uid_t cfs_curproc_uid(void);
 // static inline void local_irq_restore(unsigned long flag) {return;}
 
 enum {
-        CFS_STACK_TRACE_DEPTH = 16
+	CFS_STACK_TRACE_DEPTH = 16
 };
 
 struct cfs_stack_trace {
-        void *frame[CFS_STACK_TRACE_DEPTH];
+	void *frame[CFS_STACK_TRACE_DEPTH];
 };
 
 /*
  * arithmetic
  */
 #define do_div(a,b)                     \
-        ({                              \
-                unsigned long remainder;\
-                remainder = (a) % (b);  \
-                (a) = (a) / (b);        \
-                (remainder);            \
-        })
+	({                              \
+		unsigned long remainder;\
+		remainder = (a) % (b);  \
+		(a) = (a) / (b);        \
+		(remainder);            \
+	})
 
 /* !__KERNEL__ */
 #endif

@@ -254,13 +254,13 @@ do {                                                                           \
 # ifdef CRAY_XT3                                /* buggy calloc! */
 #  define LIBCFS_ALLOC(ptr, size)               \
    do {                                         \
-        (ptr) = malloc(size);                   \
+        (ptr) = psc_alloc(size, PAF_NOZERO);    \
         memset(ptr, 0, size);                   \
    } while (0)
 # else
-#  define LIBCFS_ALLOC(ptr, size) do { (ptr) = calloc(1,size); } while (0)
+#  define LIBCFS_ALLOC(ptr, size) do { (ptr) = psc_calloc(1,size); } while (0)
 # endif
-# define LIBCFS_FREE(a, b) do { free(a); } while (0)
+# define LIBCFS_FREE(a, b) do { psc_free((a), 0); } while (0)
 
 void libcfs_debug_dumplog(void);
 int libcfs_debug_init(unsigned long bufsize);
@@ -535,7 +535,7 @@ static inline int libcfs_ioctl_pack(struct libcfs_ioctl_data *data, char **pbuf,
         if (*pbuf && libcfs_ioctl_packlen(data) > max)
                 return 1;
         if (*pbuf == NULL) {
-                *pbuf = malloc(data->ioc_len);
+                *pbuf = cfs_alloc(data->ioc_len, 0);
         }
         if (!*pbuf)
                 return 1;
