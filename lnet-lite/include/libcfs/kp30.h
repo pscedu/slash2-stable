@@ -251,16 +251,8 @@ do {                                                                           \
 # endif /* LIBCFS_DEBUG */
 # define KLASSERT(e) do { } while (0)
 # define printk(format, args...) printf (format, ## args)
-# ifdef CRAY_XT3                                /* buggy calloc! */
-#  define LIBCFS_ALLOC(ptr, size)               \
-   do {                                         \
-        (ptr) = psc_alloc(size, PAF_NOZERO);    \
-        memset(ptr, 0, size);                   \
-   } while (0)
-# else
-#  define LIBCFS_ALLOC(ptr, size) do { (ptr) = psc_calloc(1,size); } while (0)
-# endif
-# define LIBCFS_FREE(a, b) do { psc_free((a), 0); } while (0)
+# define LIBCFS_ALLOC(ptr, size) do { (ptr) = cfs_alloc((size), __ALLOC_ZERO); } while (0)
+# define LIBCFS_FREE(a, b) do { cfs_free(a); } while (0)
 
 void libcfs_debug_dumplog(void);
 int libcfs_debug_init(unsigned long bufsize);

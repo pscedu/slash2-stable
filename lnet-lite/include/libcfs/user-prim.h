@@ -68,6 +68,7 @@
 #endif
 
 #include "pfl/cdefs.h"
+#include "psc_util/alloc.h"
 
 /*
  * Wait Queue. No-op implementation.
