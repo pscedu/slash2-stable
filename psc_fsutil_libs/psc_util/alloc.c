@@ -388,7 +388,7 @@ psc_strdup(const char *str)
 	return (p);
 }
 
-#if PFL_MEMGUARD_LINGERSZ
+#if PFL_DEBUG > 1 && PFL_MEMGUARD_LINGERSZ
 /**
  * _psc_lru_userfree - The user wants to release a chunk of memory.
  *	Instead of releasing it back into the system, set PROT_NONE
