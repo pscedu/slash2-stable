@@ -34,7 +34,7 @@
 #include "psc_util/odtable.h"
 
 /*
- * Please keep in sync with SL_PATH_DATADIR and SL_FN_IONBMAPS_ODT
+ * Keep in sync with SL_PATH_DATADIR and SL_FN_IONBMAPS_ODT
  */
 #define DEF_FN	"/var/lib/slash/ion_bmaps.odt"
 
@@ -46,7 +46,7 @@ my_odtcb(void *data, struct odtable_receipt *odtr)
 {
 	char *item = data;
 
-	psc_warnx("found %s at slot=%zd odtr=%p",
+	psc_info("found %s at slot=%zd odtr=%p",
 	    item, odtr->odtr_elem, odtr);
 
 	psc_dynarray_add(&myReceipts, odtr);
