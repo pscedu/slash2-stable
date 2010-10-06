@@ -85,20 +85,20 @@ struct psclist_head {
 #define PSCLIST_HEAD(name)							\
 	struct psclist_head name = PSCLIST_HEAD_INIT(name)
 
-#define psc_listhd_first(hd)			(hd)->plh_next
-#define psc_listhd_last(hd)			(hd)->plh_prev
+#define psc_listhd_first(hd)		(hd)->plh_next
+#define psc_listhd_last(hd)		(hd)->plh_prev
 
 /**
  * psc_lentry_next - Access the entry following the specified entry.
  * @e: entry
  */
-#define psc_lentry_next(e)			(e)->plh_next
+#define psc_lentry_next(e)		(e)->plh_next
 
 /**
  * psc_lentry_prev - Access the entry before the specified entry.
  * @e: entry
  */
-#define psc_lentry_prev(e)			(e)->plh_prev
+#define psc_lentry_prev(e)		(e)->plh_prev
 
 #if PFL_DEBUG
 #  define INIT_PSCLIST_HEAD(hd)							\
@@ -189,9 +189,10 @@ psclist_del(struct psclist_head *e, __unusedx const void *hd)
 	psc_lentry_next(prev) = next;
 	psc_lentry_prev(next) = prev;
 
+	psc_lentry_next(e) = psc_lentry_prev(e) = NULL;
+
 #if PFL_DEBUG
 	e->plh_owner = NULL;
-	psc_lentry_next(e) = psc_lentry_prev(e) = NULL;
 #endif
 }
 
