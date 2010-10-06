@@ -172,7 +172,7 @@ _psc_realloc(void *oldp, size_t size, int flags)
 #  if PFL_MEMGUARD_LINGERSZ
 	if (oldp == NULL) {
 		PLL_LOCK(&psc_memallocs_lru);
-		if (pll_nitems(&psc_memallocs_lru) >= PFL_MEMGUARD_LINGER_SZ) {
+		if (pll_nitems(&psc_memallocs_lru) >= PFL_MEMGUARD_LINGERSZ) {
 			pma = pll_get(&psc_memallocs_lru);
 			_psc_lru_sysfree(pma);
 		}
