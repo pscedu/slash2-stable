@@ -29,8 +29,6 @@
 #include <sys/statvfs.h>
 #include <sys/stat.h>
 
-#include <linux/fuse.h>
-
 #include <errno.h>
 #include <pthread.h>
 #include <stdio.h>
@@ -1062,16 +1060,16 @@ pscfs_reply_read(struct pscfs_req *pfr, void *buf, ssize_t len, int rc)
 void
 pscfs_reply_readdir(struct pscfs_req *pfr, void *buf, ssize_t len, int rc)
 {
-	struct fuse_dirent *dirent;
+	struct pscfs_dirent *dirent;
 	off_t off;
 
 	if (rc)
 		fuse_reply_err(pfr->pfr_fuse_req, rc);
 	else {
 		for (dirent = buf, off = 0; off < len;
-		    off += FUSE_DIRENT_ALIGN(FUSE_NAME_OFFSET + dirent->namelen),
+		    off += PFL_DIRENT_SIZE(dirent->ssd_namelen),
 		    dirent = (void *)((char *)buf + off))
-			dirent->ino = INUM_PSCFS2FUSE(dirent->ino, 8);
+			dirent->ssd_ino = INUM_PSCFS2FUSE(dirent->ssd_ino, 8);
 		fuse_reply_buf(pfr->pfr_fuse_req, buf, len);
 	}
 }
