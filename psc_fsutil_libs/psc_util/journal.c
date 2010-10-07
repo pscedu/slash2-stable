@@ -378,9 +378,8 @@ __static int
 pjournal_logwrite_internal(struct psc_journal *pj,
     struct psc_journal_enthdr *pje, uint32_t slot)
 {
-	int				 rc;
-	int				 ntries;
-	uint64_t			 chksum;
+	uint64_t chksum;
+	int rc, ntries;
 
 	/* calculate the CRC checksum, excluding the checksum field itself */
 	PSC_CRC64_INIT(&chksum);
@@ -737,9 +736,8 @@ pjournal_format(const char *fn, uint32_t nents, uint32_t entsz, uint32_t ra)
 	struct psc_journal pj;
 	struct stat stb;
 	unsigned char *jbuf;
-	uint32_t slot;
+	uint32_t i, slot;
 	int rc, fd;
-	int32_t i;
 
 	if (nents % ra)
 		psc_fatal("number of slots (%u) should be a multiple of "
@@ -774,7 +772,7 @@ pjournal_format(const char *fn, uint32_t nents, uint32_t entsz, uint32_t ra)
 		psc_fatal("failed to write journal header");
 
 	jbuf = pjournal_alloc_buf(&pj);
-	for (i = 0; i < (int)ra; i++) {
+	for (i = 0; i < ra; i++) {
 		pje = (struct psc_journal_enthdr *)
 		    &jbuf[PJ_PJESZ(&pj) * i];
 		pje->pje_magic = PJE_MAGIC;
@@ -970,17 +968,15 @@ pjournal_thr_main(struct psc_thread *thr)
 
 /**
  * pjournal_init - Replay all open transactions in a journal.
+ * @pj: journal.
  * @thrtype: application-specified thread type ID for distill processor.
  * @thrname: application-specified thread name for distill processor.
  * @replay_handler: the journal replay callback.
  * @distill_handler: the distill processor callback.
  */
 void
-pjournal_replay(
-    struct psc_journal *pj,
-    int thrtype,
-    const char *thrname,
-    psc_replay_handler_t replay_handler,
+pjournal_replay(struct psc_journal *pj, int thrtype,
+    const char *thrname, psc_replay_handler_t replay_handler,
     psc_distill_handler_t distill_handler)
 {
 	int i, rc, len;
