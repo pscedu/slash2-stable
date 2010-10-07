@@ -294,11 +294,15 @@ pscrpc_reply_in_callback(lnet_event_t *ev)
 		req->rq_nob_received = ev->mlength;
 	}
 
-	if (req->rq_compl_cntr)
+	if (req->rq_comp) {
 		/* Notify upper layer that an rpc is ready to be
 		 *   finalized.
 		 */
-		atomic_inc(req->rq_compl_cntr);
+		spinlock(&req->rq_comp->rqcomp_lock);
+		atomic_inc(&req->rq_comp->rqcomp_compcnt);
+		psc_waitq_wakeone(&req->rq_comp->rqcomp_waitq);
+		freelock(&req->rq_comp->rqcomp_lock);
+	}
 
 	if (req->rq_waitq)
 		psc_waitq_wakeall(req->rq_waitq);

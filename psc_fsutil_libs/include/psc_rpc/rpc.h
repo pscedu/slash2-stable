@@ -225,7 +225,7 @@ typedef int (*pscrpc_set_interpreterf)(struct pscrpc_request_set *, void *, int)
 struct pscrpc_request_set {
 	struct psclist_head		 set_requests;
 	int				 set_remaining;
-	struct psc_waitq		 set_waitq;		/* I block here          */
+	struct psc_waitq                 set_waitq;             /* I block here          */
 	pscrpc_set_interpreterf		 set_interpret;		/* callback function     */
 	void				*set_arg;		/* callback pointer      */
 	psc_spinlock_t			 set_lock;
@@ -322,7 +322,6 @@ struct pscrpc_request {
 					 rq_timeoutable:1;
 	atomic_t			 rq_refcount;		/* client-side refcnt for SENT race */
 	atomic_t			 rq_retries;		/* count retries */
-	atomic_t			*rq_compl_cntr;
 	lnet_process_id_t		 rq_peer;
 	lnet_nid_t			 rq_self;
 	enum pscrpc_rq_phase		 rq_phase;		/* one of PSCRQ_PHASE_* */
@@ -343,12 +342,13 @@ struct pscrpc_request {
 	/* request and reply callbacks */
 	struct pscrpc_cb_id		 rq_req_cbid;
 	struct pscrpc_cb_id		 rq_reply_cbid;
-	struct psc_waitq		*rq_waitq;		/* completion notification for others */
 	struct pscrpc_bulk_desc		*rq_bulk;		/* attach bulk */
 	int				(*rq_interpret_reply)(struct pscrpc_request *,
 					    struct pscrpc_async_args *);
 	struct pscrpc_async_args	 rq_async_args;		/* Async completion context */
 	lnet_handle_md_t		 rq_req_md_h;
+	struct pscrpc_completion        *rq_comp;
+	struct psc_waitq                *rq_waitq;              /* completion notification for others */
 	/* client-only incoming reply */
 	lnet_handle_md_t		 rq_reply_md_h;
 	struct psc_waitq		 rq_reply_waitq;
@@ -357,6 +357,13 @@ struct pscrpc_request {
 	struct pscrpc_reply_state	*rq_reply_state;	/* separated reply state */
 	struct pscrpc_request_buffer_desc*rq_rqbd;		/* incoming req  buffer*/
 	struct pscrpc_peer_qlen		*rq_peer_qlen;
+};
+
+struct pscrpc_completion {
+	psc_spinlock_t                   rqcomp_lock;
+	atomic_t			 rqcomp_compcnt;
+	atomic_t			 rqcomp_outcnt;
+	struct psc_waitq		 rqcomp_waitq;	
 };
 
 /* Each service installs its own request handler */
@@ -462,7 +469,7 @@ struct pscrpc_nbreqset {
 	atomic_t			nb_outstanding;
 	psc_spinlock_t                  nb_lock;
 	uint32_t                        nb_flags;
-	struct psc_waitq		nb_waitq;	/* notification to reap */
+	struct psc_waitq                nb_waitq;	
 };
 
 #define NBREQSET_WORK_INPROG 1
@@ -563,6 +570,10 @@ int	 pscrpc_set_finalize(struct pscrpc_request_set *, int, int);
 int	 pscrpc_set_wait(struct pscrpc_request_set *);
 void	 pscrpc_set_destroy(struct pscrpc_request_set *);
 void	 pscrpc_set_lock(struct pscrpc_request_set *);
+
+void     pscrpc_completion_init(struct pscrpc_completion *);
+void     pscrpc_completion_wait(struct pscrpc_completion *);
+int      pscrpc_completion_ready(struct pscrpc_completion *, int);
 
 static __inline int
 pscrpc_bulk_active(struct pscrpc_bulk_desc *desc)

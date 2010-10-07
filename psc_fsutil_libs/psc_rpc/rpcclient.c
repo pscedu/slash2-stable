@@ -274,6 +274,44 @@ pscrpc_prep_req_pool(struct pscrpc_import *imp, uint32_t version,
 	return (request);
 }
 
+void
+pscrpc_completion_init(struct pscrpc_completion *c)
+{
+	INIT_SPINLOCK(&c->rqcomp_lock);
+	atomic_set(&c->rqcomp_compcnt, 0);
+	atomic_set(&c->rqcomp_outcnt, 0);
+	psc_waitq_init(&c->rqcomp_waitq);
+}
+
+int
+pscrpc_completion_ready(struct pscrpc_completion *c, int block)
+{
+ retry:
+	if (atomic_read(&c->rqcomp_compcnt))
+		return (1);
+	
+	spinlock(&c->rqcomp_lock);
+	if (!atomic_read(&c->rqcomp_compcnt)) {
+		if (block) {
+			psc_waitq_wait(&c->rqcomp_waitq, &c->rqcomp_lock);
+			goto retry;
+		} else {
+			freelock(&c->rqcomp_lock);
+			return (0);
+		}
+	} else {
+		freelock(&c->rqcomp_lock);
+		return (1);
+	}
+		
+}
+
+void
+pscrpc_completion_wait(struct pscrpc_completion *c)
+{
+	pscrpc_completion_ready(c, 1);
+}
+
 struct pscrpc_request *
 pscrpc_prep_req(struct pscrpc_import *imp, uint32_t version, int opcode,
 		 int count, int *lengths, char **bufs)
