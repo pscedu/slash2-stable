@@ -128,7 +128,7 @@ typedef struct psc_spinlock {
 		} else if ((_val) == PSL_UNLOCKED) {			\
 			(psl)->psl_who = pthread_self();		\
 			if (((psl)->psl_flags & PSLF_NOLOG) == 0)	\
-				psclog_debug("lock %p acquired",	\
+				psclog_trace("lock %p acquired",	\
 				    (psl));				\
 			(_val) = 1;					\
 		} else							\
@@ -175,7 +175,7 @@ typedef struct psc_spinlock {
 		(psl)->psl_who = 0;					\
 		psc_atomic32_set(_SPIN_GETATOM(psl), PSL_UNLOCKED);	\
 		if (((psl)->psl_flags & PSLF_NOLOG) == 0)		\
-			psclog_debug("lock %p released", (psl));	\
+			psclog_trace("lock %p released", (psl));	\
 	} while (0)
 
 /**
