@@ -106,7 +106,6 @@ pfl
 - eliminate flags arg to pscthr_init()
 - eliminate prt_alive
 - in mguard, check the flags in realloc/free match alloc (PAF_LOCK, ALIGN)
-- memguard option: dont free, keep PROT_NONE around
 - is pcpp the problem with function args mid-wrapping?
 - count spinlocks and mutexes held before:
 	- waitq (should be holding one)
