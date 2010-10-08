@@ -23,20 +23,6 @@ struct pscfs_req {
 
 #  define PSCFS_ARGS_INIT(n, av)	{ FUSE_ARGS_INIT((n), (av)) }
 
-struct pscfs_dirent {
-	uint64_t			ssd_ino;
-	uint64_t			ssd_off;
-	uint32_t			ssd_namelen;
-	uint32_t			ssd_type;
-	char				ssd_name[0];
-};
-
-#  define PFL_DIRENT_NAME_OFFSET	offsetof(struct pscfs_dirent, ssd_name)
-#  define PFL_DIRENT_ALIGN(x)		(((x) + sizeof(uint64_t) - 1) &	\
-					    ~(sizeof(uint64_t) - 1))
-#  define PFL_DIRENT_SIZE(namelen)	PFL_DIRENT_ALIGN(		\
-					    PFL_DIRENT_NAME_OFFSET + (namelen))
-
 void	pscfs_fuse_replygen_entry(struct pscfs_req *, pscfs_inum_t,
 	    pscfs_fgen_t, int, const struct stat *, int, int);
 

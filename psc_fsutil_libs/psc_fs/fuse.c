@@ -1067,9 +1067,9 @@ pscfs_reply_readdir(struct pscfs_req *pfr, void *buf, ssize_t len, int rc)
 		fuse_reply_err(pfr->pfr_fuse_req, rc);
 	else {
 		for (dirent = buf, off = 0; off < len;
-		    off += PFL_DIRENT_SIZE(dirent->ssd_namelen),
+		    off += PFL_DIRENT_SIZE(dirent->pfd_namelen),
 		    dirent = (void *)((char *)buf + off))
-			dirent->ssd_ino = INUM_PSCFS2FUSE(dirent->ssd_ino, 8);
+			dirent->pfd_ino = INUM_PSCFS2FUSE(dirent->pfd_ino, 8);
 		fuse_reply_buf(pfr->pfr_fuse_req, buf, len);
 	}
 }

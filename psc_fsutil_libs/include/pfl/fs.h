@@ -22,6 +22,20 @@ struct pscfs_cred {
 	uint32_t	pfc_gid;
 };
 
+struct pscfs_dirent {
+	uint64_t	pfd_ino;
+	uint64_t	pfd_off;
+	uint32_t	pfd_namelen;
+	uint32_t	pfd_type;
+	char		pfd_name[0];
+};
+
+#define PFL_DIRENT_NAME_OFFSET		offsetof(struct pscfs_dirent, pfd_name)
+#define PFL_DIRENT_ALIGN(x)		(((x) + sizeof(uint64_t) - 1) &	\
+					    ~(sizeof(uint64_t) - 1))
+#define PFL_DIRENT_SIZE(namelen)	PFL_DIRENT_ALIGN(		\
+					    PFL_DIRENT_NAME_OFFSET + (namelen))
+
 /* user fills these in */
 struct pscfs {
 	void	(*pf_handle_access)(struct pscfs_req *, pscfs_inum_t, int);
