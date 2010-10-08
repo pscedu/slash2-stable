@@ -348,7 +348,7 @@ pscfs_ctlparam(int fd, struct psc_ctlmsghdr *mh,
 	if (strcmp(pcp->pcp_thrname, PCTHRNAME_EVERYONE) != 0)
 		return (psc_ctlsenderr(fd, mh, "invalid thread field"));
 
-	levels[0] = "general";
+	levels[0] = "fuse";
 
 	set = (mh->mh_type == PCMT_SETPARAM);
 
@@ -597,8 +597,8 @@ pscfs_inum_pscfs2fuse(pscfs_inum_t p_inum, int timeo)
 int
 pscfs_setdebug(int debugval)
 {
-#ifdef HAVE_FUSE_DEBUG
-	fuse_lowlevel_setdebug(fuse_session, val ? 1 : 0);
+#ifdef HAVE_FUSE_DEBUGLEVEL
+	fuse_lowlevel_setdebug(fuse_session, debugval ? 1 : 0);
 	return (0);
 #endif
 	return (ENOTSUP);
@@ -607,7 +607,7 @@ pscfs_setdebug(int debugval)
 int
 pscfs_getdebug(int *debugval)
 {
-#ifdef HAVE_FUSE_DEBUG
+#ifdef HAVE_FUSE_DEBUGLEVEL
 	*debugval = fuse_lowlevel_getdebug(fuse_session);
 	return (0);
 #endif
