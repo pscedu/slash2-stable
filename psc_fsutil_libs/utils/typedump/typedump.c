@@ -258,12 +258,14 @@ main(int argc, char *argv[])
 	PRTYPE(struct psc_wndmap_block);
 	PRTYPE(struct pscfs);
 	PRTYPE(struct pscfs_cred);
+	PRTYPE(struct pscfs_dirent);
 	PRTYPE(struct psclist_head);
 	PRTYPE(struct psclog_data);
 	PRTYPE(struct pscrpc_async_args);
 	PRTYPE(struct pscrpc_bulk_desc);
 	PRTYPE(struct pscrpc_cb_id);
 	PRTYPE(struct pscrpc_client);
+	PRTYPE(struct pscrpc_completion);
 	PRTYPE(struct pscrpc_connection);
 	PRTYPE(struct pscrpc_export);
 	PRTYPE(struct pscrpc_handle);
