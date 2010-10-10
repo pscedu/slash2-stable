@@ -60,12 +60,14 @@ odtable_sync(struct odtable *odt, __unusedx size_t elem)
  * odtable_putitem - Save a bmap I/O node assignment into the odtable.
  */
 struct odtable_receipt *
-odtable_putitem(struct odtable *odt, void *data)
+odtable_putitem(struct odtable *odt, void *data, size_t len)
 {
-	struct odtable_entftr *odtf;
 	struct odtable_receipt *odtr, todtr = { 0, 0 };
+	struct odtable_entftr *odtf;
 	uint64_t crc;
 	void *p;
+
+	psc_assert(len <= odt->odt_hdr->odth_elemsz);
 
 	do {
 		spinlock(&odt->odt_lock);
@@ -81,19 +83,21 @@ odtable_putitem(struct odtable *odt, void *data)
 	/* psc_vbitmap_next() already flips the bit under odt_lock */
 	odtf->odtf_inuse = ODTBL_INUSE;
 
-	psc_crc64_calc(&crc, data, odt->odt_hdr->odth_elemsz);
+	psc_crc64_calc(&crc, data, len);
 	/* Setup the receipt.
 	 */
 	odtr = PSCALLOC(sizeof(*odtr));
 	odtr->odtr_elem = todtr.odtr_elem;
-	odtr->odtr_key = (uint64_t)crc;
+	odtr->odtr_key = crc;
 	/* Write metadata into the mmap'd footer.  For now the key and
 	 *  CRC are the same.
 	 */
 	odtf->odtf_crc = crc;
 
 	p = odtable_getitem_addr(odt, todtr.odtr_elem);
-	memcpy(p, data, odt->odt_hdr->odth_elemsz);
+	memcpy(p, data, len);
+	if (len < odt->odt_hdr->odth_elemsz)
+		memset(p + len, 0, odt->odt_hdr->odth_elemsz - len);
 
 	psc_info("slot=%zd elemcrc=%"PSCPRIxCRC64, todtr.odtr_elem, crc);
 
@@ -103,10 +107,13 @@ odtable_putitem(struct odtable *odt, void *data)
 }
 
 void *
-odtable_getitem(struct odtable *odt, const struct odtable_receipt *odtr)
+odtable_getitem(struct odtable *odt, const struct odtable_receipt *odtr,
+    size_t len)
 {
 	void *data = odtable_getitem_addr(odt, odtr->odtr_elem);
 	struct odtable_entftr *odtf = odtable_getfooter(odt, odtr->odtr_elem);
+
+	psc_assert(len <= odt->odt_hdr->odth_elemsz);
 
 	if (odtable_footercheck(odtf, odtr, 1))
 		return (NULL);
@@ -114,7 +121,7 @@ odtable_getitem(struct odtable *odt, const struct odtable_receipt *odtr)
 	if (odt->odt_hdr->odth_options & ODTBL_OPT_CRC) {
 		uint64_t crc;
 
-		psc_crc64_calc(&crc, data, odt->odt_hdr->odth_elemsz);
+		psc_crc64_calc(&crc, data, len);
 		if (crc != odtf->odtf_crc) {
 			odtf->odtf_inuse = ODTBL_BAD;
 			psc_warnx("slot=%zd crc fail odtfcrc=%"PSCPRIxCRC64
@@ -235,9 +242,9 @@ int
 odtable_load(struct odtable **t, const char *fn, const char *fmt, ...)
 {
 	struct odtable *odt = PSCALLOC(sizeof(struct odtable));
+	struct odtable_receipt todtr = {0, 0};
 	struct odtable_entftr *odtf;
 	struct odtable_hdr *odth;
-	struct odtable_receipt todtr = {0, 0};
 	int rc = 0, frc;
 	va_list ap;
 	size_t z;
