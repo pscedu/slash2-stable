@@ -64,35 +64,25 @@ __static enum psclog_level	 psc_loglevel = PLL_WARN;
 __static struct psclog_data	*psc_logdata;
 char				 psclog_eol[8] = "\n";	/* overrideable with ncurses EOL */
 
-enum psclog_level
-psc_loglevel_parse(const char *src, const char *val)
-{
-	enum psclog_level lvl;
-	char *endp;
-	long l;
-
-	lvl = psc_loglevel_getid(val);
-	if (lvl != PNLOGLEVELS)
-		return (lvl);
-
-	l = strtol(val, &endp, 10);
-	if (endp == val || *endp != '\0' ||
-	    l < 0 || l >= PNLOGLEVELS)
-		errx(1, "invalid %s: %s", src, val);
-	return (l);
-}
-
 void
 psc_log_init(void)
 {
 	char *p;
 
-	if ((p = getenv("PSC_LOG_FILE")) != NULL)
+	p = getenv("PSC_LOG_FILE");
+	if (p)
 		freopen(p, "w", stderr);
-	if ((p = getenv("PSC_LOG_FORMAT")) != NULL)
+
+	p = getenv("PSC_LOG_FORMAT");
+	if (p)
 		psc_logfmt = p;
-	if ((p = getenv("PSC_LOG_LEVEL")) != NULL)
-		psc_loglevel = psc_loglevel_parse("PSC_LOG_LEVEL", p);
+
+	p = getenv("PSC_LOG_LEVEL");
+	if (p) {
+		psc_loglevel = psc_loglevel_fromstr(p);
+		if (psc_loglevel == PNLOGLEVELS)
+			errx(1, "invalid PSC_LOG_LEVEL: %s", p);
+	}
 }
 
 __weak struct psclog_data *
@@ -250,6 +240,7 @@ _psclogv(const char *fn, const char *func, int line, int subsys,
 
 	gettimeofday(&tv, NULL);
 	FMTSTR(prefix, sizeof(prefix), psc_logfmt,
+		FMTSTRCASE('B', "s", pfl_basename(fn))
 		FMTSTRCASE('F', "s", func)
 		FMTSTRCASE('f', "s", fn)
 		FMTSTRCASE('H', "s", d->pld_hostname)
@@ -362,7 +353,7 @@ psc_loglevel_getname(enum psclog_level id)
 }
 
 enum psclog_level
-psc_loglevel_getid(const char *name)
+psc_loglevel_fromstr(const char *name)
 {
 	struct {
 		const char		*lvl_name;
@@ -376,7 +367,9 @@ psc_loglevel_getid(const char *name)
 		{ "notify",		PLL_NOTICE },
 		{ "all",		PLL_TRACE }
 	};
+	char *endp;
 	size_t n;
+	long l;
 
 	for (n = 0; n < PNLOGLEVELS; n++)
 		if (strcasecmp(name, psc_loglevel_names[n]) == 0)
@@ -384,5 +377,9 @@ psc_loglevel_getid(const char *name)
 	for (n = 0; n < nitems(altloglevels); n++)
 		if (strcasecmp(name, altloglevels[n].lvl_name) == 0)
 			return (altloglevels[n].lvl_value);
-	return (PNLOGLEVELS);
+
+	l = strtol(name, &endp, 10);
+	if (endp == name || *endp != '\0' || l < 0 || l >= PNLOGLEVELS)
+		return (PNLOGLEVELS);
+	return (l);
 }

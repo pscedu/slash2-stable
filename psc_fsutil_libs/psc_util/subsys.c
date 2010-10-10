@@ -75,9 +75,11 @@ psc_subsys_register(int ssid, const char *name)
 
 	snprintf(buf, sizeof(buf), "PSC_LOG_LEVEL_%s", name);
 	p = getenv(buf);
-	if (p)
-		ss->pss_loglevel = psc_loglevel_parse(buf, p);
-	else
+	if (p) {
+		ss->pss_loglevel = psc_loglevel_fromstr(p);
+		if (ss->pss_loglevel == PNLOGLEVELS)
+			psc_fatalx("invalid %s value", name);
+	} else
 		ss->pss_loglevel = psc_log_getlevel_global();
 
 	psc_dynarray_add(&psc_subsystems, ss);

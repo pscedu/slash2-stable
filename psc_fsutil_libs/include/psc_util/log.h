@@ -270,8 +270,7 @@ enum psclog_level	 psc_log_getlevel_ss(int);
 struct psclog_data	*psclog_getdata(void);
 
 const char		*psc_loglevel_getname(enum psclog_level);
-enum psclog_level	 psc_loglevel_getid(const char *);
-enum psclog_level	 psc_loglevel_parse(const char *, const char *);
+enum psclog_level	 psc_loglevel_fromstr(const char *);
 
 void _psclogv(const char *, const char *, int, int, enum psclog_level,
     int, const char *, va_list);

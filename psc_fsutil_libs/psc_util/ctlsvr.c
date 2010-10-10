@@ -266,7 +266,7 @@ psc_ctlrep_getsubsys(int fd, struct psc_ctlmsghdr *mh, __unusedx void *m)
 }
 
 /**
- * psc_ctlmsg_getloglevel_send - Send a reply to a "GETLOGLEVEL" inquiry.
+ * psc_ctlmsg_loglevel_send - Send a reply to a "GETLOGLEVEL" inquiry.
  * @fd: client socket descriptor.
  * @mh: already filled-in control message header.
  * @thr: thread begin queried.
@@ -293,7 +293,7 @@ psc_ctlmsg_loglevel_send(int fd, struct psc_ctlmsghdr *mh, void *m,
 }
 
 /**
- * psc_ctlmsg_getloglevel - Respond to a "GETLOGLEVEL" inquiry.
+ * psc_ctlrep_getloglevel - Respond to a "GETLOGLEVEL" inquiry.
  * @fd: client socket descriptor.
  * @mh: already filled-in control message header.
  * @m: control message to examine.
@@ -524,8 +524,8 @@ psc_ctlparam_log_level(int fd, struct psc_ctlmsghdr *mh,
 	set = (mh->mh_type == PCMT_SETPARAM);
 
 	if (set) {
-		loglevel = psc_loglevel_getid(pcp->pcp_value);
-		if (loglevel == -1)
+		loglevel = psc_loglevel_fromstr(pcp->pcp_value);
+		if (loglevel == PNLOGLEVELS)
 			return (psc_ctlsenderr(fd, mh,
 			    "invalid log.level value: %s",
 			    pcp->pcp_value));
