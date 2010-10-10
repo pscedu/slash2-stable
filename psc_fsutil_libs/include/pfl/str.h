@@ -51,4 +51,15 @@ pfl_memchk(const void *buf, int val, size_t len)
 	return (1);
 }
 
+static __inline const char *
+pfl_basename(const char *s)
+{
+	const char *bn, *p;
+
+	for (bn = p = s; *p; p++)
+		if (*p == '/')
+			bn = p + 1;
+	return (bn);
+}
+
 #endif /* _PFL_STR_H_ */
