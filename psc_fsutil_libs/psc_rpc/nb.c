@@ -67,21 +67,25 @@ pscrpc_nbreqset_init(pscrpc_set_interpreterf nb_interpret,
 	nbs->nb_callback = nb_callback;
 	atomic_set(&nbs->nb_outstanding, 0);
 	INIT_SPINLOCK(&nbs->nb_lock);
-	return nbs;
+	return (nbs);
 }
 
 /**
  * pscrpc_nbreqset_add - add a new non-blocking request to the mix
  *
  */
-void
+int
 pscrpc_nbreqset_add(struct pscrpc_nbreqset *nbs, struct pscrpc_request *req)
 {
+	int rc;
+
 	req->rq_waitq = &nbs->nb_waitq;
 	atomic_inc(&nbs->nb_outstanding);
 	pscrpc_set_add_new_req(&nbs->nb_reqset, req);
-	if (pscrpc_nbreqset_push(req))
-		DEBUG_REQ(PLL_FATAL, req, "send failure");
+	rc = pscrpc_nbreqset_push(req);
+	if (rc)
+		DEBUG_REQ(PLL_ERROR, req, "send failure: %s", strerror(rc));
+	return (rc);
 }
 
 /**

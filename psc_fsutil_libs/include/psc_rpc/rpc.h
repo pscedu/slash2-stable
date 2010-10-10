@@ -225,7 +225,7 @@ typedef int (*pscrpc_set_interpreterf)(struct pscrpc_request_set *, void *, int)
 struct pscrpc_request_set {
 	struct psclist_head		 set_requests;
 	int				 set_remaining;
-	struct psc_waitq                 set_waitq;             /* I block here          */
+	struct psc_waitq		 set_waitq;		/* I block here          */
 	pscrpc_set_interpreterf		 set_interpret;		/* callback function     */
 	void				*set_arg;		/* callback pointer      */
 	psc_spinlock_t			 set_lock;
@@ -345,25 +345,25 @@ struct pscrpc_request {
 	struct pscrpc_bulk_desc		*rq_bulk;		/* attach bulk */
 	int				(*rq_interpret_reply)(struct pscrpc_request *,
 					    struct pscrpc_async_args *);
-	struct pscrpc_async_args	 rq_async_args;		/* Async completion context */
+	struct pscrpc_async_args	 rq_async_args;		/* async completion context */
 	lnet_handle_md_t		 rq_req_md_h;
-	struct pscrpc_completion        *rq_comp;
-	struct psc_waitq                *rq_waitq;              /* completion notification for others */
+	struct pscrpc_completion	*rq_comp;
+	struct psc_waitq		*rq_waitq;		/* completion notification for others */
 	/* client-only incoming reply */
 	lnet_handle_md_t		 rq_reply_md_h;
 	struct psc_waitq		 rq_reply_waitq;
 	/* server-side... */
 	struct timeval			 rq_arrival_time;	/* request arrival time */
 	struct pscrpc_reply_state	*rq_reply_state;	/* separated reply state */
-	struct pscrpc_request_buffer_desc*rq_rqbd;		/* incoming req  buffer*/
+	struct pscrpc_request_buffer_desc*rq_rqbd;		/* incoming req buffer*/
 	struct pscrpc_peer_qlen		*rq_peer_qlen;
 };
 
 struct pscrpc_completion {
-	psc_spinlock_t                   rqcomp_lock;
+	psc_spinlock_t			 rqcomp_lock;
 	atomic_t			 rqcomp_compcnt;
 	atomic_t			 rqcomp_outcnt;
-	struct psc_waitq		 rqcomp_waitq;	
+	struct psc_waitq		 rqcomp_waitq;
 };
 
 /* Each service installs its own request handler */
@@ -467,9 +467,9 @@ struct pscrpc_nbreqset {
 	struct pscrpc_request_set	nb_reqset;
 	pscrpc_nbreq_callback		nb_callback;
 	atomic_t			nb_outstanding;
-	psc_spinlock_t                  nb_lock;
-	uint32_t                        nb_flags;
-	struct psc_waitq                nb_waitq;	
+	psc_spinlock_t			nb_lock;
+	uint32_t			nb_flags;
+	struct psc_waitq		nb_waitq;
 };
 
 #define NBREQSET_WORK_INPROG 1
@@ -480,7 +480,7 @@ struct pscrpc_nbreqset {
 
 struct pscrpc_nbreqset *
 	 pscrpc_nbreqset_init(pscrpc_set_interpreterf, pscrpc_nbreq_callback);
-void	 pscrpc_nbreqset_add(struct pscrpc_nbreqset *, struct pscrpc_request *);
+int	 pscrpc_nbreqset_add(struct pscrpc_nbreqset *, struct pscrpc_request *);
 int	 pscrpc_nbreqset_reap(struct pscrpc_nbreqset *);
 int	 pscrpc_nbreqset_flush(struct pscrpc_nbreqset *);
 
@@ -571,9 +571,9 @@ int	 pscrpc_set_wait(struct pscrpc_request_set *);
 void	 pscrpc_set_destroy(struct pscrpc_request_set *);
 void	 pscrpc_set_lock(struct pscrpc_request_set *);
 
-void     pscrpc_completion_init(struct pscrpc_completion *);
-void     pscrpc_completion_wait(struct pscrpc_completion *);
-int      pscrpc_completion_ready(struct pscrpc_completion *, int);
+void	 pscrpc_completion_init(struct pscrpc_completion *);
+void	 pscrpc_completion_wait(struct pscrpc_completion *);
+int	 pscrpc_completion_ready(struct pscrpc_completion *, int);
 
 static __inline int
 pscrpc_bulk_active(struct pscrpc_bulk_desc *desc)
@@ -673,7 +673,7 @@ pscrpc_msg_set_op_flags(struct pscrpc_msg *msg, int flags)
 static __inline int
 pscrpc_client_receiving_reply (struct pscrpc_request *req)
 {
-	int           rc;
+	int rc;
 
 	spinlock(&req->rq_lock);
 	rc = req->rq_receiving_reply;
@@ -684,7 +684,7 @@ pscrpc_client_receiving_reply (struct pscrpc_request *req)
 static __inline int
 pscrpc_client_replied(struct pscrpc_request *req)
 {
-	int           rc;
+	int rc;
 
 	spinlock(&req->rq_lock);
 	rc = req->rq_replied;
