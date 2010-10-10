@@ -111,7 +111,7 @@ pfl
 	- waitq (should be holding one)
 	- rpc (should be holding none)
 - rename MODULES to COMPONENTS
-- rename PPMF_NOLOCK -> PPMF_NOMLOCK
+- rename PPMF_NOLOCK -> PPMF_NOMLOCK, PAF_LOCK -> PAF_MLOCK
 - add zfs SPA version to slashd ctlparam
 - add lnet knob to ctlparam: sdp, lnet_networks
 - use the zfs build- framework for build-standalone and build-slash
