@@ -41,13 +41,25 @@
 struct psc_dynarray myReceipts = DYNARRAY_INIT;
 const char *progname;
 
+char	*fn = DEF_FN;
+
+int	crc_enabled = 1;
+int	create_table;
+int	num_free;
+int	num_puts;
+int	overwrite;
+int	show;
+
+size_t	table_size = 1024 * 128;
+size_t	elem_size  = 128;
+
 void
 my_odtcb(void *data, struct odtable_receipt *odtr)
 {
 	char *item = data;
 
-	psc_info("found %s at slot=%zd odtr=%p",
-	    item, odtr->odtr_elem, odtr);
+	printf("slot=%zd odtr=%p: %s\n",
+	    odtr->odtr_elem, odtr, item);
 
 	psc_dynarray_add(&myReceipts, odtr);
 }
@@ -56,7 +68,7 @@ __dead void
 usage(void)
 {
 	fprintf(stderr,
-	    "usage: %s [-Cclos] [-e elem_size] [-f #frees] [-n #puts]\n"
+	    "usage: %s [-Cco] [-e elem_size] [-f #frees] [-n #puts]\n"
 	    "\t[-z table_size] file\n", progname);
 	exit(1);
 }
@@ -64,27 +76,13 @@ usage(void)
 int
 main(int argc, char *argv[])
 {
-	int c, rc, i;
-
-	char *fn;
-
-	int create_table = 0;
-	int load_table   = 1;
-	int scan_table   = 1;
-	int crc_enabled  = 1;
-	int num_puts     = 0;
-	int num_free     = 0;
-	int overwrite    = 0;
-
-	size_t table_size = 1024 * 128;
-	size_t elem_size  = 128;
-
 	struct odtable *odt;
+	int c, rc, i;
 	char *item;
 
 	pfl_init();
 	progname = argv[0];
-	while ((c = getopt(argc, argv, "Cce:f:ln:osz:")) != -1)
+	while ((c = getopt(argc, argv, "Cce:f:ln:oz:")) != -1)
 		switch (c) {
 		case 'C':
 			create_table = 1;
@@ -99,16 +97,16 @@ main(int argc, char *argv[])
 			num_free = atoi(optarg);
 			break;
 		case 'l':
-			load_table = 1;
+			warnx("-l is deprecated");
 			break;
 		case 'n':
 			num_puts = atoi(optarg);
 			break;
-		case 's':
-			scan_table = 1;
-			break;
 		case 'o':
 			overwrite = 1;
+			break;
+		case 's':
+			show = 1;
 			break;
 		case 'z':
 			table_size = atoi(optarg);
@@ -118,36 +116,30 @@ main(int argc, char *argv[])
 		}
 	argc -= optind;
 	argv += optind;
-	switch (argc) {
-	    case 0:
-		fn = DEF_FN;
-		break;
-	    case 1:
+	if (argc == 1)
 		fn = argv[0];
-		break;
-	    default:
+	else if (argc != 0)
 		usage();
+
+	if (create_table) {
+		rc = odtable_create(fn, table_size, elem_size, overwrite);
+		if (rc)
+			errx(1, "create %s: %s", fn, strerror(-rc));
 	}
 
-	if (create_table &&
-	    (rc = odtable_create(fn, table_size, elem_size, overwrite)))
-		errx(1, "create %s: %s", fn, strerror(-rc));
-
-	if (load_table &&
-	    (rc = odtable_load(&odt, fn, "%s", fn)))
+	rc = odtable_load(&odt, fn, "%s", fn);
+	if (rc)
 		errx(1, "load %s: %s", fn, strerror(-rc));
-
-	if (scan_table)
-		odtable_scan(odt, my_odtcb);
+	odtable_scan(odt, my_odtcb);
 
 	item = PSCALLOC(elem_size);
-
 	for (i = 0; i < num_puts; i++) {
 		snprintf(item, elem_size, "... put_number=%d ...", i);
-		if (!odtable_putitem(odt, item))
-			psc_errorx("odtable_putitem() failed, no slots available");
+		if (odtable_putitem(odt, item, elem_size) == NULL) {
+			psc_error("odtable_putitem() failed: table full");
+			break;
+		}
 	}
-
 	PSCFREE(item);
 
 	if (num_free) {
@@ -155,16 +147,15 @@ main(int argc, char *argv[])
 
 		while (psc_dynarray_len(&myReceipts) && num_free--) {
 			odtr = psc_dynarray_getpos(&myReceipts, 0);
-			psc_warnx("got odtr=%p key=%"PRIx64" slot=%zd",
+			psclog_debug("got odtr=%p key=%"PRIx64" slot=%zd",
 			    odtr, odtr->odtr_key, odtr->odtr_elem);
 
 			if (!odtable_freeitem(odt, odtr))
 				psc_dynarray_remove(&myReceipts, odtr);
 		}
 
-		psc_warnx("# of items left is %d", psc_dynarray_len(&myReceipts));
+		psclog_debug("# of items left is %d", psc_dynarray_len(&myReceipts));
 	}
 
-	rc = odtable_release(odt);
-	return (rc);
+	exit(odtable_release(odt));
 }

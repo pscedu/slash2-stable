@@ -24,7 +24,7 @@
 .Sh SYNOPSIS
 .Nm odtable
 .Bk -words
-.Op Fl Cclos
+.Op Fl Ccos
 .Op Fl e Ar elem_size
 .Op Fl f Ar #frees
 .Op Fl n Ar #puts
@@ -37,6 +37,8 @@
 The
 .Nm
 utility creates and manipulates on-disk data storage tables.
+The default behavior loads, scans, and displays summary information
+about the specified odtable.
 .Pp
 The following options are available:
 .Bl -tag -width Ds
@@ -48,21 +50,27 @@ Enable
 checks on data stored in the table.
 .It Fl e Ar elem_size
 Set the entry size of elements to be stored in the odtable.
+Defaults to 128 bytes.
 .It Fl f Ar #frees
 Clear out the given number of elements
 .Ar #frees
 from the beginning of the odtable.
 .It Fl n Ar #puts
-Store the given number of elements
+Store the given number of test elements
 .Ar #puts
-as fabricated entries in the odtable.
+in the odtable.
 .It Fl o
 By default,
 .Nm
 will refuse overwrite of an existing file.
 This option will force an overwrite.
+.It Fl s
+Show each entry in the odtable.
+Note that this is really only a test mode to be used in conjunction with
+.Fl n .
 .It Fl z Ar table_size
 Specify the number of entries a new table will be created with.
+Defaults to 128 * 1024.
 .El
 .Sh SEE ALSO
 .Xr sh 1
