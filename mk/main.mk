@@ -28,7 +28,8 @@ ADD_FILE_CFLAGS=	$(shell if ! [ -f "$(abspath $1)" ]; then echo "ADD_FILE_CFLAGS
 -include ${ROOTDIR}/mk/local.mk
 include ${ROOTDIR}/mk/pickle.mk
 
-_TSRCS=			$(foreach fn,$(sort ${SRCS}),$(realpath ${fn}))
+_TSRCS=			$(sort $(foreach fn,${SRCS},$(realpath ${fn})))
+_TSRC_PATH=		$(sort $(foreach dir,${SRC_PATH} .,$(realpath ${dir})))
 
 _TOBJS=			$(patsubst %.c,%.o,$(filter %.c,${_TSRCS}))
 _TOBJS+=		$(patsubst %.y,%.o,$(filter %.y,${_TSRCS}))
@@ -36,7 +37,7 @@ _TOBJS+=		$(patsubst %.l,%.o,$(filter %.l,${_TSRCS}))
 OBJS=			$(addprefix ${OBJDIR}/,$(notdir ${_TOBJS}))
 DEPS=			$(patsubst %.o,%.dep,${OBJS})
 
-_TSUBDIRS=		$(foreach dir,${SUBDIRS},$(realpath ${dir}))
+_TSUBDIRS=		$(sort $(foreach dir,${SUBDIRS},$(realpath ${dir})))
 
 _LEXINTM=		$(patsubst %.l,%.c,$(addprefix ${OBJDIR}/,$(notdir $(filter %.l,${_TSRCS}))))
 _YACCINTM=		$(patsubst %.y,%.c,$(addprefix ${OBJDIR}/,$(notdir $(filter %.y,${_TSRCS}))))
@@ -193,7 +194,7 @@ endif
 
 ifneq ($(filter pfl,${MODULES}),)
   INCLUDES+=	-I${PFL_BASE}/include
-  SRC_PATH+=	${PFL_BASE}
+  SRC_PATH+=	$(filter-out %/tests/,$(shell ls -d ${PFL_BASE}/*/))
 
 # XXX only do this if DEBUG is set
   SRCS+=	${PFL_BASE}/psc_util/dbgutil.c
@@ -452,7 +453,7 @@ printvar-%:
 	@echo ${$(patsubst printvar-%,%,$@)}
 
 cscope cs: recurse-cs
-	cscope -Rbq $(addprefix -s,${SRC_PATH})
+	cscope -Rbq $(addprefix -s,$(filter-out ${CURDIR},${_TSRC_PATH}))
 
 etags: recurse-etags
 	find ${SRC_PATH} -name \*.[chly] | xargs etags
