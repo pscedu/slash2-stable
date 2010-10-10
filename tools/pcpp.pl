@@ -62,6 +62,7 @@ if ($data !~ m!psc_util/log\.h! or
     basename($fn) eq "dynarray.c" or
     basename($fn) eq "hashtbl.c" or
     basename($fn) eq "init.c" or
+    basename($fn) eq "lib-move.c" or
     basename($fn) eq "lockedlist.c" or
     basename($fn) eq "log.c" or
     basename($fn) eq "subsys.c" or
