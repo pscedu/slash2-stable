@@ -120,6 +120,7 @@ pfl
 - memguard LRU + realloc should always allocate new regions and
   PROT_NONE the old ones
 - ctl -plog.level=2 makes the system go haywire
+- mmap() mprotect()'d memory in memguard
 
 development tool
 - let wiki changes automatically email zest/slash2-devel@ like svn commits
