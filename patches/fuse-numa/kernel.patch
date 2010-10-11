@@ -1,0 +1,248 @@
+--- dev.c.orig	2010-10-11 17:11:11.133002240 -0400
++++ dev.c	2010-10-11 17:38:44.119002240 -0400
+@@ -16,6 +16,7 @@
+ #include <linux/pagemap.h>
+ #include <linux/file.h>
+ #include <linux/slab.h>
++#include <linux/cpuset.h>
+ 
+ MODULE_ALIAS_MISCDEV(FUSE_MINOR);
+ 
+@@ -235,16 +236,19 @@ static u64 fuse_get_unique(struct fuse_c
+ 
+ static void queue_request(struct fuse_conn *fc, struct fuse_req *req)
+ {
++	int nq;
++
++	nq = fcs_getcur();
+ 	req->in.h.unique = fuse_get_unique(fc);
+ 	req->in.h.len = sizeof(struct fuse_in_header) +
+ 		len_args(req->in.numargs, (struct fuse_arg *) req->in.args);
+-	list_add_tail(&req->list, &fc->pending);
++	list_add_tail(&req->list, &fc->pending[nq]);
+ 	req->state = FUSE_REQ_PENDING;
+ 	if (!req->waiting) {
+ 		req->waiting = 1;
+ 		atomic_inc(&fc->num_waiting);
+ 	}
+-	wake_up(&fc->waitq);
++	wake_up(&fc->waitq[nq]);
+ 	kill_fasync(&fc->fasync, SIGIO, POLL_IN);
+ }
+ 
+@@ -313,10 +317,27 @@ __acquires(&fc->lock)
+ 	spin_lock(&fc->lock);
+ }
+ 
++static int
++fcs_getcur(void)
++{
++	int nq, cpu;
++
++	cpu = task_cpu(current);
++	if (cpu < 0 || cpu >= NR_CPUS) {
++		printk("fuse error: task_cpu returned out of range cpu "
++		    "(%d), fabricating mem nid\n", cpu);
++		cpu = 0;
++	} 
++	nq = cpu_to_node(cpu);
++	if (nq >= MAX_NUMNODES || nq < 0)
++		nq = 0;
++	return (nq);
++} 
++
+ static void queue_interrupt(struct fuse_conn *fc, struct fuse_req *req)
+ {
+ 	list_add_tail(&req->intr_entry, &fc->interrupts);
+-	wake_up(&fc->waitq);
++	wake_up(&fc->waitq[fcs_getcur()]);
+ 	kill_fasync(&fc->fasync, SIGIO, POLL_IN);
+ }
+ 
+@@ -670,20 +691,20 @@ static int fuse_copy_args(struct fuse_co
+ 	return err;
+ }
+ 
+-static int request_pending(struct fuse_conn *fc)
++static int request_pending(struct fuse_conn *fc, int nq)
+ {
+-	return !list_empty(&fc->pending) || !list_empty(&fc->interrupts);
++	return !list_empty(&fc->pending[nq]) || !list_empty(&fc->interrupts);
+ }
+ 
+ /* Wait until a request is available on the pending list */
+-static void request_wait(struct fuse_conn *fc)
++static void request_wait(struct fuse_conn *fc, int nq)
+ __releases(&fc->lock)
+ __acquires(&fc->lock)
+ {
+ 	DECLARE_WAITQUEUE(wait, current);
+ 
+-	add_wait_queue_exclusive(&fc->waitq, &wait);
+-	while (fc->connected && !request_pending(fc)) {
++	add_wait_queue_exclusive(&fc->waitq[nq], &wait);
++	while (fc->connected && !request_pending(fc, nq)) {
+ 		set_current_state(TASK_INTERRUPTIBLE);
+ 		if (signal_pending(current))
+ 			break;
+@@ -693,7 +714,7 @@ __acquires(&fc->lock)
+ 		spin_lock(&fc->lock);
+ 	}
+ 	set_current_state(TASK_RUNNING);
+-	remove_wait_queue(&fc->waitq, &wait);
++	remove_wait_queue(&fc->waitq[nq], &wait);
+ }
+ 
+ /*
+@@ -755,22 +776,25 @@ static ssize_t fuse_dev_read(struct kioc
+ 	unsigned reqsize;
+ 	struct file *file = iocb->ki_filp;
+ 	struct fuse_conn *fc = fuse_get_conn(file);
++	int nq;
++
+ 	if (!fc)
+ 		return -EPERM;
+ 
++	nq = fcs_getcur();
+  restart:
+ 	spin_lock(&fc->lock);
+ 	err = -EAGAIN;
+ 	if ((file->f_flags & O_NONBLOCK) && fc->connected &&
+-	    !request_pending(fc))
++	    !request_pending(fc, nq))
+ 		goto err_unlock;
+ 
+-	request_wait(fc);
++	request_wait(fc, nq);
+ 	err = -ENODEV;
+ 	if (!fc->connected)
+ 		goto err_unlock;
+ 	err = -ERESTARTSYS;
+-	if (!request_pending(fc))
++	if (!request_pending(fc, nq))
+ 		goto err_unlock;
+ 
+ 	if (!list_empty(&fc->interrupts)) {
+@@ -779,7 +803,7 @@ static ssize_t fuse_dev_read(struct kioc
+ 		return fuse_read_interrupt(fc, req, iov, nr_segs);
+ 	}
+ 
+-	req = list_entry(fc->pending.next, struct fuse_req, list);
++	req = list_entry(fc->pending[nq].next, struct fuse_req, list);
+ 	req->state = FUSE_REQ_READING;
+ 	list_move(&req->list, &fc->io);
+ 
+@@ -1088,15 +1112,18 @@ static unsigned fuse_dev_poll(struct fil
+ {
+ 	unsigned mask = POLLOUT | POLLWRNORM;
+ 	struct fuse_conn *fc = fuse_get_conn(file);
++	int nq;
++
+ 	if (!fc)
+ 		return POLLERR;
+ 
+-	poll_wait(file, &fc->waitq, wait);
++	nq = fcs_getcur();
++	poll_wait(file, &fc->waitq[nq], wait);
+ 
+ 	spin_lock(&fc->lock);
+ 	if (!fc->connected)
+ 		mask = POLLERR;
+-	else if (request_pending(fc))
++	else if (request_pending(fc, nq))
+ 		mask |= POLLIN | POLLRDNORM;
+ 	spin_unlock(&fc->lock);
+ 
+@@ -1179,14 +1206,18 @@ __acquires(&fc->lock)
+  */
+ void fuse_abort_conn(struct fuse_conn *fc)
+ {
++	int i;
++
+ 	spin_lock(&fc->lock);
+ 	if (fc->connected) {
+ 		fc->connected = 0;
+ 		fc->blocked = 0;
+ 		end_io_requests(fc);
+-		end_requests(fc, &fc->pending);
++		for (i = 0; i < MAX_NUMNODES; i++)
++			end_requests(fc, &fc->pending[i]);
+ 		end_requests(fc, &fc->processing);
+-		wake_up_all(&fc->waitq);
++		for (i = 0; i < MAX_NUMNODES; i++)
++			wake_up_all(&fc->waitq[i]);
+ 		wake_up_all(&fc->blocked_waitq);
+ 		kill_fasync(&fc->fasync, SIGIO, POLL_IN);
+ 	}
+@@ -1197,10 +1228,13 @@ EXPORT_SYMBOL_GPL(fuse_abort_conn);
+ int fuse_dev_release(struct inode *inode, struct file *file)
+ {
+ 	struct fuse_conn *fc = fuse_get_conn(file);
++	int i;
++
+ 	if (fc) {
+ 		spin_lock(&fc->lock);
+ 		fc->connected = 0;
+-		end_requests(fc, &fc->pending);
++		for (i = 0; i < MAX_NUMNODES; i++)
++			end_requests(fc, &fc->pending[i]);
+ 		end_requests(fc, &fc->processing);
+ 		spin_unlock(&fc->lock);
+ 		fuse_conn_put(fc);
+--- fuse_i.h.orig	2010-10-11 17:11:10.723002240 -0400
++++ fuse_i.h	2010-10-11 17:17:29.705002240 -0400
+@@ -330,10 +330,10 @@ struct fuse_conn {
+ 	unsigned max_write;
+ 
+ 	/** Readers of the connection are waiting on this */
+-	wait_queue_head_t waitq;
++	wait_queue_head_t waitq[MAX_NUMNODES];
+ 
+ 	/** The list of pending requests */
+-	struct list_head pending;
++	struct list_head pending[MAX_NUMNODES];
+ 
+ 	/** The list of requests being processed */
+ 	struct list_head processing;
+--- inode.c.orig	2010-10-11 17:11:10.675002240 -0400
++++ inode.c	2010-10-11 17:26:05.582002240 -0400
+@@ -323,13 +323,16 @@ static void fuse_bdi_destroy(struct fuse
+ 
+ void fuse_conn_kill(struct fuse_conn *fc)
+ {
++	int i;
++
+ 	spin_lock(&fc->lock);
+ 	fc->connected = 0;
+ 	fc->blocked = 0;
+ 	spin_unlock(&fc->lock);
+ 	/* Flush all readers on this fs */
+ 	kill_fasync(&fc->fasync, SIGIO, POLL_IN);
+-	wake_up_all(&fc->waitq);
++	for (i = 0; i < MAX_NUMNODES; i++)
++		wake_up_all(&fc->waitq[i]);
+ 	wake_up_all(&fc->blocked_waitq);
+ 	wake_up_all(&fc->reserved_req_waitq);
+ 	mutex_lock(&fuse_mutex);
+@@ -518,15 +521,19 @@ static int fuse_show_options(struct seq_
+ 
+ void fuse_conn_init(struct fuse_conn *fc)
+ {
++	int i;
++
+ 	memset(fc, 0, sizeof(*fc));
+ 	spin_lock_init(&fc->lock);
+ 	mutex_init(&fc->inst_mutex);
+ 	init_rwsem(&fc->killsb);
+ 	atomic_set(&fc->count, 1);
+-	init_waitqueue_head(&fc->waitq);
++	for (i = 0; i < MAX_NUMNODES; i++)
++		init_waitqueue_head(&fc->waitq[i]);
+ 	init_waitqueue_head(&fc->blocked_waitq);
+ 	init_waitqueue_head(&fc->reserved_req_waitq);
+-	INIT_LIST_HEAD(&fc->pending);
++	for (i = 0; i < MAX_NUMNODES; i++)
++		INIT_LIST_HEAD(&fc->pending[i]);
+ 	INIT_LIST_HEAD(&fc->processing);
+ 	INIT_LIST_HEAD(&fc->io);
+ 	INIT_LIST_HEAD(&fc->interrupts);
