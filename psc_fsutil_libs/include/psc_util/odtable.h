@@ -80,6 +80,7 @@ struct odtable_entftr {
 };
 
 #define ODT_NAME_MAX		16
+#define ODT_DEFAULT_ITEM_SIZE	128
 
 struct odtable {
 	struct psc_vbitmap	*odt_bitmap;

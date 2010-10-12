@@ -52,6 +52,7 @@ int	show;
 
 size_t	table_size = 1024 * 128;
 size_t	elem_size  = 128;
+#define ODT_DEFAULT_ITEM_SIZE	128
 
 void
 my_odtcb(void *data, struct odtable_receipt *odtr)
@@ -82,6 +83,7 @@ main(int argc, char *argv[])
 
 	pfl_init();
 	progname = argv[0];
+	elem_size = ODT_DEFAULT_ITEM_SIZE;
 	while ((c = getopt(argc, argv, "Cce:f:ln:oz:")) != -1)
 		switch (c) {
 		case 'C':
