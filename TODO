@@ -121,6 +121,8 @@ pfl
   PROT_NONE the old ones
 - ctl -plog.level=2 makes the system go haywire
 - mmap() mprotect()'d memory in memguard
+- rename RSX_ALLOCREP to something that doesnt mean 'allocate' and
+  RSX_NEWREQ to ALLOC to make alloc grepping easier
 
 development tool
 - let wiki changes automatically email zest/slash2-devel@ like svn commits
