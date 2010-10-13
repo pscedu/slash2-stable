@@ -144,7 +144,8 @@ ifneq ($(filter fuse-hdrs,${MODULES}),)
 endif
 
 ifneq ($(filter zfs,${MODULES}),)
-  INCLUDES+=	-I${ZFS_BASE}
+  INCLUDES+=	-I${ZFS_BASE}/src
+  SRC_PATH+=	${ZFS_BASE}/src
   LDFLAGS+=	${ZFS_LIBS}
   MODULES+=	z
 endif

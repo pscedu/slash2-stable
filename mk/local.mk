@@ -53,15 +53,15 @@ GCRYPT_DEFINES=	$$(${LIBGCRYPT_CONFIG} --cflags | ${EXTRACT_DEFINES})
 GCRYPT_INCLUDES=$$(${LIBGCRYPT_CONFIG} --cflags | ${EXTRACT_INCLUDES})
 GCRYPT_LIBS=	$$(${LIBGCRYPT_CONFIG} --libs)
 
-ZFS_LIBS=	-L${ZFS_BASE}/zfs-fuse					\
-		-L${ZFS_BASE}/lib/libavl				\
-		-L${ZFS_BASE}/lib/libnvpair				\
-		-L${ZFS_BASE}/lib/libsolkerncompat			\
-		-L${ZFS_BASE}/lib/libumem				\
-		-L${ZFS_BASE}/lib/libzfscommon				\
-		-L${ZFS_BASE}/lib/libzpool				\
-		-lzfs-fuse -lzpool-kernel -lzfscommon-kernel		\
-		-lnvpair-kernel -lavl -lumem -lsolkerncompat -ldl -lcrypto
+ZFS_LIBS=	-L${ZFS_BASE}/src/zfs-fuse				\
+		-L${ZFS_BASE}/src/lib/libavl				\
+		-L${ZFS_BASE}/src/lib/libnvpair				\
+		-L${ZFS_BASE}/src/lib/libsolkerncompat			\
+		-L${ZFS_BASE}/src/lib/libumem				\
+		-L${ZFS_BASE}/src/lib/libzfscommon			\
+		-L${ZFS_BASE}/src/lib/libzpool				\
+		-lzfs-fuse -lslzpool-kernel -lzfscommon-kernel		\
+		-lnvpair-kernel -lavl -lumem -lslsolkerncompat -ldl -lcrypto
 
 LIBL=		-ll
 LIBZ=		-lz
