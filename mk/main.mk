@@ -284,7 +284,7 @@ vpath %.l $(sort $(dir $(filter %.l,${_TSRCS})))
 vpath %.c $(sort $(dir $(filter %.c,${_TSRCS})) ${OBJDIR})
 vpath %.dep ${OBJDIR}
 
-all: recurse-all
+all: recurse-all all-hook
 	@for i in ${SRCS}; do								\
 		[ -n "$$i" ] || continue;						\
 		if ! [ -e "$$i" ]; then							\
@@ -296,6 +296,8 @@ all: recurse-all
 		mkdir -p ${OBJDIR};							\
 		${MAKE} ${TARGET};							\
 	fi
+
+all-hook:
 
 .SUFFIXES:
 
@@ -390,11 +392,13 @@ install: recurse-install install-hook
 		done;									\
 	fi
 
+clean-hook:
+
 clean-core:
 	${RM} -rf ${OBJDIR}
 	${RM} -f ${PROG} ${LIBRARY} core.[0-9]* *.core
 
-clean: recurse-clean clean-core
+clean: recurse-clean clean-core clean-hook
 
 distclean: recurse-distclean clean-core
 	${RM} -f TAGS cscope.*out
