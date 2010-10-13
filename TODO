@@ -114,7 +114,6 @@ pfl
 - rename PPMF_NOLOCK -> PPMF_NOMLOCK, PAF_LOCK -> PAF_MLOCK
 - add zfs SPA version to slashd ctlparam
 - add lnet knob to ctlparam: sdp, lnet_networks
-- use the zfs build- framework for build-standalone and build-slash
 - print stats on odtable default behavior
 - add function call hierarchy to psclog
 - memguard LRU + realloc should always allocate new regions and
