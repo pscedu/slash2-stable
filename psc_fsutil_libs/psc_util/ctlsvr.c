@@ -74,12 +74,6 @@ psc_multiwaitcond_nwaiters(__unusedx struct psc_multiwaitcond *m)
 }
 
 __weak int
-psc_mlist_size(__unusedx struct psc_mlist *pml)
-{
-	psc_fatalx("mlist support not compiled in");
-}
-
-__weak int
 psc_ctlrep_getfault(__unusedx int a, __unusedx struct psc_ctlmsghdr *b,
     __unusedx void *c)
 {

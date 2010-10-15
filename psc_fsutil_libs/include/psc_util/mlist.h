@@ -64,6 +64,8 @@ struct psc_mlist {
  */
 #define psc_mlist_empty(pml)		pll_empty(&(pml)->pml_pll)
 
+#define psc_mlist_size(pml)		pll_nitems(&(pml)->pml_pll)
+
 /**
  * psc_mlist_tryget - Get an item from an mlist if one is available.
  * @pml: the mlist to access.
@@ -93,7 +95,6 @@ void	_psc_mlist_init(struct psc_mlist *, int, void *, ptrdiff_t,
 	    const char *, ...);
 void	_psc_mlist_reginit(struct psc_mlist *, int, void *, ptrdiff_t,
 	    const char *, ...);
-int	 psc_mlist_size(struct psc_mlist *);
 
 extern struct psc_lockedlist psc_mlists;
 
