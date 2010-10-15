@@ -12,5 +12,5 @@ include ${MAINMK}
 prereq-hook:
 	@if ! [ -f ${FUSE_BASE}/config.log ]; then			\
 		cd ${FUSE_BASE};					\
-		./configure;						\
+		./configure >&2;					\
 	fi
