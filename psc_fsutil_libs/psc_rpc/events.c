@@ -189,6 +189,7 @@ pscrpc_request_in_callback(lnet_event_t *ev)
 			struct psc_hashbkt *b;
 
 			tpq = PSCALLOC(sizeof(*tpq));
+			psc_hashent_init(&service->srv_peer_qlentab, tpq);
 			tpq->pql_id = req->rq_peer;
 			atomic_set(&tpq->pql_qlen, 1);
 

@@ -100,6 +100,7 @@ pfl
   don't care about sub-second resolution can use to ease syscalls
 - consolidate naming conventions for initializers:
 	PSC_WAITQ_INIT -> WAITQ_INIT
+	eradicate INIT_PSC_LISTENTRY 
   which is OK since it isn't a symbol
 - mspinlock is not going to work on NUMA, use thruniqid instead of
   int init+pthread_key

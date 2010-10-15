@@ -53,6 +53,7 @@ struct psc_hashtbl {
 struct psc_hashent {
 	struct psc_listentry	  phe_lentry;
 };
+#define psc_hashentry psc_hashent
 
 /* Table flags. */
 #define PHTF_NONE	0		/* no table flags specified */

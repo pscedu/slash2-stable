@@ -36,7 +36,7 @@
  *
  *	struct mystruct a;
  *
- *	INIT_PSC_LISTENTRY(&a->lentry);
+ *	INIT_LISTENTRY(&a->lentry);
  *	psclist_add(&a->lentry, &mylisthd);
  *
  * Now, one may iterate through mylisthd and come across the `a' element
@@ -101,7 +101,7 @@ struct psclist_head {
 #define psc_lentry_prev(e)		(e)->plh_prev
 
 #if PFL_DEBUG
-#  define INIT_PSCLIST_HEAD(hd)							\
+#  define INIT_LISTHEAD(hd)							\
 	do {									\
 		psc_listhd_first(hd) = (hd);					\
 		psc_listhd_last(hd) = (hd);					\
@@ -109,7 +109,7 @@ struct psclist_head {
 		(hd)->plh_magic = PLENT_MAGIC;					\
 	} while (0)
 
-#  define INIT_PSC_LISTENTRY(e)							\
+#  define INIT_LISTENTRY(e)							\
 	do {									\
 		psc_lentry_prev(e) = NULL;					\
 		psc_lentry_next(e) = NULL;					\
@@ -117,18 +117,21 @@ struct psclist_head {
 		(e)->plh_magic = PLENT_MAGIC;					\
 	} while (0)
 #else
-#  define INIT_PSCLIST_HEAD(hd)							\
+#  define INIT_LISTHEAD(hd)							\
 	do {									\
 		psc_listhd_first(hd) = (hd);					\
 		psc_listhd_last(hd) = (hd);					\
 	} while (0)
 
-#  define INIT_PSC_LISTENTRY(e)							\
+#  define INIT_LISTENTRY(e)							\
 	do {									\
 		psc_lentry_prev(e) = NULL;					\
 		psc_lentry_next(e) = NULL;					\
 	} while (0)
 #endif
+
+#define INIT_PSCLIST_HEAD(hd)	INIT_LISTHEAD(hd)
+#define INIT_PSC_LISTENTRY(e)	INIT_LISTENTRY(e)
 
 static __inline void
 _psclist_add(struct psc_listentry *e, struct psc_listentry *prev,
