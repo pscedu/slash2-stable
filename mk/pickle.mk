@@ -155,4 +155,5 @@ PICKLE_NEED_VERSION=					$(word 2,$$Rev$$)
  ifdef PICKLE_HAVE_SGIO
   DEFINES+=						-DHAVE_SGIO
  endif
+
 endif

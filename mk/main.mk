@@ -243,6 +243,13 @@ ifneq ($(filter noctl,${MODULES}),)
   DEFINES+=	-DPFL_NO_CTL
 endif
 
+ifneq ($(filter sgio,${MODULES}),)
+  ifdef PICKLE_HAVE_SGIO
+    SRCS+=	${ZEST_BASE}/sgio/sg.c
+    SRCS+=	${ZEST_BASE}/sgio/sg_async.c
+  endif
+endif
+
 # Post-modules processing
 
 ifneq ($(filter ${PFL_BASE}/psc_util/pthrutil.c,${SRCS}),)
