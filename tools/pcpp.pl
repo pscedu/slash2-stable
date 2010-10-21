@@ -130,8 +130,8 @@ sub get_func_args {
 		# void (*foo)(const char *, int)
 		unless (s/^.*?\(\s*\*(.*?)\).*/$1/s) {
 			# __unusedx const char *foo[BLAH]
-			s/\[.*//;
-			s/^.*?(\w+)$/$1/;
+			s/\[.*//s;
+			s/^.*?(\w+)$/$1/s;
 		}
 	}
 	pop @av if @av > 1 && $av[$#av] eq "...";
