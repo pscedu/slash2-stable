@@ -320,7 +320,7 @@ _psc_fatal(const char *fn, const char *func, int line, int subsys,
 	_psclogv(fn, func, line, subsys, level, options, fmt, ap);
 	va_end(ap);
 
-	psc_fatalx("should not reach here");
+	errx(1, "should not reach here");
 }
 
 __dead void
@@ -328,7 +328,7 @@ _psc_fatalv(const char *fn, const char *func, int line, int subsys,
     enum psclog_level level, int options, const char *fmt, va_list ap)
 {
 	_psclogv(fn, func, line, subsys, level, options, fmt, ap);
-	psc_fatalx("should not reach here");
+	errx(1, "should not reach here");
 }
 
 /* Keep synced with PLL_* constants. */
