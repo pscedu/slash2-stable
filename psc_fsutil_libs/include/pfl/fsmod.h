@@ -40,7 +40,7 @@ struct pscfs_req {
 #  define PSCFS_ARGS_INIT(n, av)	{ FUSE_ARGS_INIT((n), (av)) }
 
 void	pscfs_fuse_replygen_entry(struct pscfs_req *, pscfs_inum_t,
-	    pscfs_fgen_t, int, const struct stat *, int, int);
+	    pscfs_fgen_t, double, const struct stat *, double, int);
 
 #elif defined(HAVE_NNPFS)
 #elif defined(HAVE_DOKAN)

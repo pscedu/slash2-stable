@@ -938,8 +938,8 @@ pscfs_reply_closedir(struct pscfs_req *pfr, int rc)
 
 void
 pscfs_reply_create(struct pscfs_req *pfr, pscfs_inum_t inum,
-    pscfs_fgen_t gen, int entry_timeout, const struct stat *stb,
-    int attr_timeout, void *data, int rflags, int rc)
+    pscfs_fgen_t gen, double entry_timeout, const struct stat *stb,
+    double attr_timeout, void *data, int rflags, int rc)
 {
 	struct fuse_entry_param e;
 
@@ -981,13 +981,13 @@ pscfs_reply_fsyncdir(struct pscfs_req *pfr, int rc)
 
 void
 pscfs_reply_getattr(struct pscfs_req *pfr, struct stat *stb,
-    int timeout, int rc)
+    double attr_timeout, int rc)
 {
 	if (rc)
 		fuse_reply_err(pfr->pfr_fuse_req, rc);
 	else {
-		stb->st_ino = INUM_PSCFS2FUSE(stb->st_ino, timeout);
-		fuse_reply_attr(pfr->pfr_fuse_req, stb, timeout);
+		stb->st_ino = INUM_PSCFS2FUSE(stb->st_ino, attr_timeout);
+		fuse_reply_attr(pfr->pfr_fuse_req, stb, attr_timeout);
 	}
 }
 
@@ -998,8 +998,8 @@ pscfs_reply_ioctl(struct pscfs_req *pfr)
 
 void
 pscfs_reply_mknod(struct pscfs_req *pfr, pscfs_inum_t inum,
-    pscfs_fgen_t gen, int entry_timeout, const struct stat *stb,
-    int attr_timeout, int rc)
+    pscfs_fgen_t gen, double entry_timeout, const struct stat *stb,
+    double attr_timeout, int rc)
 {
 	struct fuse_entry_param e;
 
@@ -1014,7 +1014,7 @@ pscfs_reply_mknod(struct pscfs_req *pfr, pscfs_inum_t inum,
 			e.attr.st_ino = e.ino;
 			e.generation = gen;
 		}
-	//	fuse_reply_mknod(pfr->pfr_fuse_req, &e);
+//		fuse_reply_mknod(pfr->pfr_fuse_req, &e);
 	}
 }
 
@@ -1097,13 +1097,13 @@ pscfs_reply_rmdir(struct pscfs_req *pfr, int rc)
 
 void
 pscfs_reply_setattr(struct pscfs_req *pfr, struct stat *stb,
-    int timeout, int rc)
+    double attr_timeout, int rc)
 {
 	if (rc)
 		fuse_reply_err(pfr->pfr_fuse_req, rc);
 	else {
-		stb->st_ino = INUM_PSCFS2FUSE(stb->st_ino, timeout);
-		fuse_reply_attr(pfr->pfr_fuse_req, stb, timeout);
+		stb->st_ino = INUM_PSCFS2FUSE(stb->st_ino, attr_timeout);
+		fuse_reply_attr(pfr->pfr_fuse_req, stb, attr_timeout);
 	}
 }
 
@@ -1139,8 +1139,8 @@ pscfs_reply_write(struct pscfs_req *pfr, ssize_t len, int rc)
 
 void
 pscfs_fuse_replygen_entry(struct pscfs_req *pfr, pscfs_inum_t inum,
-    pscfs_fgen_t gen, int entry_timeout, const struct stat *stb,
-    int attr_timeout, int rc)
+    pscfs_fgen_t gen, double entry_timeout, const struct stat *stb,
+    double attr_timeout, int rc)
 {
 	struct fuse_entry_param e;
 
