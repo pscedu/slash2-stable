@@ -123,6 +123,11 @@ pfl
 - mmap() mprotect()'d memory in memguard
 - rename RSX_ALLOCREP to something that doesnt mean 'allocate' and
   RSX_NEWREQ to ALLOC to make alloc grepping easier
+- introduce pfl_code_info that is shadowed to provide caller line/func/fn info
+- change pscfs entry/attr timeout from int to double
+
+- pcpp:
+  if an arg is a pointer, dont trace an integer version of it in PFL_ENTER()
 
 development tool
 - let wiki changes automatically email zest/slash2-devel@ like svn commits
