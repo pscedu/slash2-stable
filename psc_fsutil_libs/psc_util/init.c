@@ -31,7 +31,8 @@
 #include "psc_util/lock.h"
 #include "psc_util/log.h"
 
-psc_spinlock_t	  psc_umask_lock = SPINLOCK_INIT;
+psc_spinlock_t		 psc_umask_lock = SPINLOCK_INIT;
+struct pfl_callerinfo	*pfl_callerinfo;
 
 __weak void
 pscthrs_init(void)
@@ -95,6 +96,12 @@ pfl_init(void)
 
 	psc_memallocs_init();
 
+	psc_subsys_register(PSS_RPC, "rpc");
+	psc_subsys_register(PSS_LNET, "lnet");
+	psc_subsys_register(PSS_MEM, "mem");
+	psc_subsys_register(PSS_GEN, "gen");
+	psc_subsys_register(PSS_TMP, "tmp");
+
 	p = getenv("PSC_DUMPSTACK");
 	if (p && strcmp(p, "0")) {
 		if (signal(SIGSEGV, psc_dumpstack) == SIG_ERR)
@@ -102,12 +109,6 @@ pfl_init(void)
 		if (signal(SIGABRT, psc_dumpstack) == SIG_ERR)
 			psc_fatal("signal");
 	}
-
-	psc_subsys_register(PSS_RPC, "rpc");
-	psc_subsys_register(PSS_LNET, "lnet");
-	psc_subsys_register(PSS_MEM, "mem");
-	psc_subsys_register(PSS_GEN, "gen");
-	psc_subsys_register(PSS_TMP, "tmp");
 
 	psc_faults_init();
 }
