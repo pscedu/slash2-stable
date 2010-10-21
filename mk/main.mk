@@ -112,7 +112,6 @@ ifneq ($(filter pscfs,${MODULES}),)
     MODULES+=	fuse
   else ifdef PICKLE_HAVE_NNPFS
     MODULES+=	nnpfs
-    SRCS+=	${PFL_BASE}/psc_fs/nnpfs.c
   else ifdef PICKLE_HAVE_DOKAN
     MODULES+=	dokan
   else
@@ -196,10 +195,14 @@ endif
 ifneq ($(filter pfl,${MODULES}),)
   INCLUDES+=	-I${PFL_BASE}/include
   SRC_PATH+=	$(filter-out %/tests/,$(shell ls -d ${PFL_BASE}/*/))
+  SRCS+=	${PFL_BASE}/psc_util/alloc.c
+  SRCS+=	${PFL_BASE}/psc_util/init.c
+  SRCS+=	${PFL_BASE}/psc_util/log.c
 
-# XXX only do this if DEBUG is set
-  SRCS+=	${PFL_BASE}/psc_util/dbgutil.c
-  SRCS+=	${PFL_BASE}/psc_util/printhex.c
+  ifneq (${DEBUG},0)
+    SRCS+=	${PFL_BASE}/psc_util/dbgutil.c
+    SRCS+=	${PFL_BASE}/psc_util/printhex.c
+  endif
 
  ifneq ($(filter pthread,${MODULES}),)
    MODULES+=	numa
