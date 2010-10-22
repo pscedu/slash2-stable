@@ -1406,7 +1406,7 @@ psc_ctlthr_service(int fd, const struct psc_ctlop *ct, int nops,
 	if (mh.mh_size) {
 		n = recv(fd, m, mh.mh_size, MSG_WAITALL | PFL_MSG_NOSIGNAL);
 		if (n == -1) {
-			if (errno == EPIPE)
+			if (errno == EPIPE || errno == ECONNRESET)
 				return (EOF);
 			if (errno == EINTR)
 				goto again;
