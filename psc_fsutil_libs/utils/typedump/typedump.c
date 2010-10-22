@@ -196,6 +196,7 @@ main(int argc, char *argv[])
 	PRTYPE(struct odtable_entftr);
 	PRTYPE(struct odtable_hdr);
 	PRTYPE(struct odtable_receipt);
+	PRTYPE(struct pfl_callerinfo);
 	PRTYPE(struct psc_atomic16);
 	PRTYPE(struct psc_atomic32);
 	PRTYPE(struct psc_atomic64);
