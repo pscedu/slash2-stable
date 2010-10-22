@@ -38,8 +38,6 @@ size_t	strnlen(const char *, size_t);
 
 int	_psc_str_hashify(const char *, int);
 
-int	pfl_strncmp2(const char *, size_t, const char *, size_t);
-
 static __inline int
 pfl_memchk(const void *buf, int val, size_t len)
 {
