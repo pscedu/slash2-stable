@@ -64,6 +64,7 @@
 #define psc_atomic32_clearmask_getold		_pfl_gen_atomic32_clearmask_getold
 #define psc_atomic32_setmask_getold		_pfl_gen_atomic32_setmask_getold
 #define psc_atomic32_xchg			_pfl_gen_atomic32_xchg
+#define PSC_ATOMIC32_XCHG			psc_atomic32_xchg
 
 #define psc_atomic64_init(v)
 #define psc_atomic64_add			_pfl_gen_atomic64_add
