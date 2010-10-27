@@ -192,6 +192,10 @@ ifneq ($(filter l,${MODULES}),)
   LDFLAGS+=	${LIBL}
 endif
 
+ifneq ($(filter m,${MODULES}),)
+  LDFLAGS+=	-lm
+endif
+
 ifneq ($(filter pfl,${MODULES}),)
   INCLUDES+=	-I${PFL_BASE}/include
   SRC_PATH+=	$(filter-out %/tests/,$(shell ls -d ${PFL_BASE}/*/))
