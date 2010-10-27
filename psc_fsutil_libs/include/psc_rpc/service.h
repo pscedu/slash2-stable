@@ -20,8 +20,9 @@
 #ifndef _PSCRPC_SERVICE_H_
 #define _PSCRPC_SERVICE_H_
 
-#include "psc_rpc/rpc.h"
 #include "psc_ds/list.h"
+#include "psc_rpc/rpc.h"
+#include "psc_util/lock.h"
 
 struct psc_thread;
 
@@ -68,5 +69,8 @@ struct pscrpc_thread {
 void _pscrpc_svh_spawn(struct pscrpc_svc_handle *);
 int pscrpcsvh_addthr(struct pscrpc_svc_handle *);
 int pscrpcsvh_delthr(struct pscrpc_svc_handle *);
+
+extern struct psclist_head pscrpc_all_services;
+extern psc_spinlock_t pscrpc_all_services_lock;
 
 #endif /* _PSCRPC_SERVICE_H_ */

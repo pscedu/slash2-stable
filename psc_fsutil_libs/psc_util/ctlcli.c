@@ -809,6 +809,37 @@ psc_ctlmsg_odtable_prdat(__unusedx const struct psc_ctlmsghdr *mh,
 	    0);
 }
 
+void
+psc_ctlmsg_rpcsvc_prhdr(__unusedx struct psc_ctlmsghdr *mh,
+    __unusedx const void *m)
+{
+	printf("%-9s %3s %4s %4s %4s "
+	    "%3s %5s %5s %4s "
+	    "%4s %4s %3s %4s %5s\n",
+	    "rpcsvc", "flg", "rqsz", "rpsz", "bufsz",
+	    "nb", "rqptl", "rpptl", "nthr",
+	    "nque", "nact", "nwq", "nrep", "nrqbd");
+}
+
+void
+psc_ctlmsg_rpcsvc_prdat(__unusedx const struct psc_ctlmsghdr *mh,
+    const void *m)
+{
+	const struct psc_ctlmsg_rpcsvc *pcrs = m;
+
+	printf("%-9s   %c "
+	    "%4d %4d %4d "
+	    "%3d %5u %5u "
+	    "%4d %4d %4d "
+	    "%3d %4d %5d\n",
+	    pcrs->pcrs_name,
+	    pcrs->pcrs_flags & PSCRPC_SVCF_COUNT_PEER_QLENS ? 'Q' : '-',
+	    pcrs->pcrs_rqsz, pcrs->pcrs_rpsz, pcrs->pcrs_bufsz,
+	    pcrs->pcrs_nbufs, pcrs->pcrs_rqptl, pcrs->pcrs_rpptl,
+	    pcrs->pcrs_nthr, pcrs->pcrs_nque, pcrs->pcrs_nact,
+	    pcrs->pcrs_nwq, pcrs->pcrs_nrep, pcrs->pcrs_nrqbd);
+}
+
 __static void
 psc_ctlmsg_print(struct psc_ctlmsghdr *mh, const void *m)
 {

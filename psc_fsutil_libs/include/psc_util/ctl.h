@@ -30,6 +30,8 @@
 #include "pfl/explist.h"
 #include "pfl/hashtbl.h"
 #include "psc_ds/listcache.h"
+#include "psc_rpc/rpc.h"
+#include "psc_rpc/service.h"
 #include "psc_util/fault.h"
 #include "psc_util/iostats.h"
 #include "psc_util/meter.h"
@@ -178,6 +180,23 @@ struct psc_ctlmsg_odtable {
 
 #define PCODT_NAME_ALL		"all"
 
+struct psc_ctlmsg_rpcsvc {
+	char			pcrs_name[PSCRPC_SVCNAME_MAX];
+	uint32_t		pcrs_flags;
+	uint32_t		pcrs_rqptl;
+	uint32_t		pcrs_rpptl;
+	int32_t			pcrs_rqsz;
+	int32_t			pcrs_rpsz;
+	int32_t			pcrs_bufsz;
+	int32_t			pcrs_nbufs;
+	int32_t			pcrs_nthr;
+	int32_t			pcrs_nque;
+	int32_t			pcrs_nact;
+	int32_t			pcrs_nwq;
+	int32_t			pcrs_nrep;
+	int32_t			pcrs_nrqbd;
+};
+
 /* Control message types. */
 #define PCMT_ERROR		0
 #define PCMT_GETLOGLEVEL	1
@@ -193,8 +212,9 @@ struct psc_ctlmsg_odtable {
 #define PCMT_GETMLIST		11
 #define PCMT_GETFAULTS		12
 #define PCMT_GETODTABLE		13
-#define PCMT_CMD		14
-#define NPCMT			15
+#define PCMT_GETRPCSVC		14
+#define PCMT_CMD		15
+#define NPCMT			16
 
 /*
  * Control message header.

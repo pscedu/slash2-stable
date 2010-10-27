@@ -1281,6 +1281,50 @@ psc_ctlrep_getodtable(int fd, struct psc_ctlmsghdr *mh, void *m)
 }
 
 /**
+ * psc_ctlrep_getrpcsvc - Respond to a "GETRPCSVC" control inquiry.
+ * @fd: client socket descriptor.
+ * @mh: already filled-in control message header.
+ * @m: control message to be filled in and sent out.
+ */
+int
+psc_ctlrep_getrpcsvc(int fd, struct psc_ctlmsghdr *mh, void *m)
+{
+	struct psc_ctlmsg_rpcsvc *pcrs = m;
+	struct pscrpc_service *s;
+	int rc;
+
+	rc = 1;
+
+	spinlock(&pscrpc_all_services_lock);
+	psclist_for_each_entry(s, &pscrpc_all_services, srv_lentry) {
+		spinlock(&s->srv_lock);
+		strlcpy(pcrs->pcrs_name, s->srv_name,
+		    sizeof(pcrs->pcrs_name));
+		pcrs->pcrs_rqptl = s->srv_req_portal;
+		pcrs->pcrs_rpptl = s->srv_rep_portal;
+		pcrs->pcrs_rqsz = s->srv_max_req_size;;
+		pcrs->pcrs_rpsz = s->srv_max_reply_size;
+		pcrs->pcrs_bufsz = s->srv_buf_size;
+		pcrs->pcrs_nbufs = s->srv_nbufs;
+		pcrs->pcrs_nque = s->srv_n_queued_reqs;
+		pcrs->pcrs_nact = s->srv_n_active_reqs;
+		pcrs->pcrs_nthr = s->srv_nthreads;
+		pcrs->pcrs_nrep = atomic_read(&s->srv_outstanding_replies);
+		pcrs->pcrs_nrqbd = s->srv_nrqbd_receiving;
+		pcrs->pcrs_nwq = psc_waitq_nwaiters(&s->srv_waitq);
+		if (s->srv_count_peer_qlens)
+			pcrs->pcrs_flags |= PSCRPC_SVCF_COUNT_PEER_QLENS;
+		freelock(&s->srv_lock);
+
+		rc = psc_ctlmsg_sendv(fd, mh, pcrs);
+		if (!rc)
+			break;
+	}
+	freelock(&pscrpc_all_services_lock);
+	return (rc);
+}
+
+/**
  * psc_ctlhnd_cmd - Invoke an action from a command inquiry.
  * @fd: client socket descriptor.
  * @mh: already filled-in control message header.

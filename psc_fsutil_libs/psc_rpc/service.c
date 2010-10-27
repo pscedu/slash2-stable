@@ -44,8 +44,8 @@ static int test_req_buffer_pressure = 0;
 
 static int pscrpc_server_post_idle_rqbds(struct pscrpc_service *svc);
 
-static PSCLIST_HEAD(pscrpc_all_services);
-static psc_spinlock_t pscrpc_all_services_lock = SPINLOCK_INIT;
+PSCLIST_HEAD(pscrpc_all_services);
+psc_spinlock_t pscrpc_all_services_lock = SPINLOCK_INIT;
 
 PSCLIST_HEAD(pscrpc_svh_list);
 
