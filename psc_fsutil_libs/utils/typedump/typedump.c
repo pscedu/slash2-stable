@@ -217,6 +217,7 @@ main(int argc, char *argv[])
 	PRTYPE(struct psc_ctlmsg_param);
 	PRTYPE(struct psc_ctlmsg_pool);
 	PRTYPE(struct psc_ctlmsg_prfmt);
+	PRTYPE(struct psc_ctlmsg_rpcsvc);
 	PRTYPE(struct psc_ctlmsg_stats);
 	PRTYPE(struct psc_ctlmsg_subsys);
 	PRTYPE(struct psc_ctlmsghdr);
