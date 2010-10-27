@@ -11,7 +11,7 @@ NOTEMPTY=	${ROOTDIR}/tools/notempty
 SCONS=		scons DEFINES="$(filter -DHAVE_%,${DEFINES}) $(filter -DPFL_%,${DEFINES})"
 PKG_CONFIG=	PKG_CONFIG_PATH=${FUSE_BASE} pkg-config
 LIBGCRYPT_CONFIG=libgcrypt-config
-MPICC=		mpicc
+MPICC?=		mpicc
 ECHORUN=	${ROOTDIR}/tools/echorun.sh
 _PERLENV=	PERL5LIB=${PERL5LIB}:${CROOTDIR}/tools/lib
 GENTYPES=	${_PERLENV} ${CROOTDIR}/tools/gentypes.pl
