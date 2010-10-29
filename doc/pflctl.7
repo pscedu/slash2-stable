@@ -1,0 +1,275 @@
+.\" $Id$
+.\" %PSC_START_COPYRIGHT%
+.\" -----------------------------------------------------------------------------
+.\" Copyright (c) 2010, Pittsburgh Supercomputing Center (PSC).
+.\"
+.\" Permission to use, copy, and modify this software and its documentation
+.\" without fee for personal use or non-commercial use within your organization
+.\" is hereby granted, provided that the above copyright notice is preserved in
+.\" all copies and that the copyright and this permission notice appear in
+.\" supporting documentation.  Permission to redistribute this software to other
+.\" organizations or individuals is not permitted without the written permission
+.\" of the Pittsburgh Supercomputing Center.  PSC makes no representations about
+.\" the suitability of this software for any purpose.  It is provided "as is"
+.\" without express or implied warranty.
+.\" -----------------------------------------------------------------------------
+.\" %PSC_END_COPYRIGHT%
+.Dd October 29, 2010
+.Dt PFLCTL 7
+.ds volume Pittsburgh Supercomputing Center
+.Os http://www.psc.edu/
+.Sh NAME
+.Nm pflctl
+.Nd
+.Tn PSC
+daemon runtime control
+.Sh SYNOPSIS
+.Nm ctlprog
+.Op Fl HI
+.Op Fl c Ar cmd
+.Op Fl h Ar hashtable
+.Op Fl i Ar iostatspec
+.Op Fl L Ar listspec
+.Op Fl M Ar mlistspec
+.Op Fl m Ar meterspec
+.Op Fl P Ar poolspec
+.Op Fl p Ar paramspec
+.Op Fl s Ar showspec
+.Sh DESCRIPTION
+The
+.Tn PSC
+file system runtime control interface examines and manipulates daemon
+behavior.
+This document describes options common to all control utilities.
+Consult documentation for each individual utility for additional
+operations specific to each daemon.
+.Pp
+The options are as follows:
+.Bl -tag -width Ds
+.It Fl c Ar cmd
+Instruct daemon to perform one of the following actions:
+.Pp
+.Bl -tag -compact -offset indent -width 10n
+.It Cm exit
+Instruct daemon to completely terminate execution.
+.El
+.It Fl H
+Suppress display of headers.
+.It Fl h Ar hashtable
+Query bucket usage statistics on the given hash table(s).
+.Pp
+The value
+.Cm all
+may be specified to query all hash table statistics.
+.It Fl I
+Do not use human-readable numbers when displaying large numerical
+values, e.g. show one megabyte as
+.Li 1048576
+instead of
+.Li 1MB .
+.It Fl i Ar iostatspec
+Query I/O statistics.
+.Ar iostatspec
+has the following format:
+.Pp
+.Bd -unfilled -offset indent
+.Ar iostat Ns Op , Ns Ar ...
+.Ed
+.Pp
+.Ar iostat
+may be one of the following:
+.Pp
+.Bl -tag -compact -offset indent -width Ds
+.It Cm lni-rcv- Ns Ar if ,
+.It Cm lni-snd- Ns Ar if
+Data sent/received per
+.Tn LNET
+networking interface.
+.Pp
+.It Cm lusklnd- Ns Ar mode Ns Cm -rcv ,
+.It Cm lusklnd- Ns Ar mode Ns Cm -snd
+Data sent/received over userland socket networking device.
+.Ar mode
+may be
+.Cm pasv
+.Pq passive
+or
+.Cm aggr
+.Pq aggregate .
+.El
+.Pp
+The value
+.Cm all
+may be specified to query all I/O statistics.
+.It Fl L Ar listspec
+Query information on the given list cache(s).
+.Ar listspec
+has the following format:
+.Pp
+.Bd -unfilled -offset indent
+.Sm off
+.Ar list
+.Op , Ar ...
+.Sm on
+.Ed
+.Pp
+The value
+.Cm all
+may be specified to retrieve information on all list caches.
+.It Fl M Ar mlistspec
+Query information on the given mlist(s).
+Mlists are lists which interface with multiwait structures.
+Multiwaits are wait queues that allow any of a number of conditions to
+wake up.
+.Ar mlistspec
+has the following format:
+.Pp
+.Bd -unfilled -offset indent
+.Sm off
+.Ar mlist
+.Op , Ar ...
+.Sm on
+.Ed
+.Pp
+The value
+.Cm all
+may be specified to retrieve information about all mlists.
+.It Fl m Ar meterspec
+Report on ongoing operations as progress meters.
+.Ar meterspec
+has the following format:
+.Bd -unfilled -offset indent
+.Ar meter Ns Op , Ns Ar ...
+.Ed
+.Pp
+The value
+.Cm all
+may be specified to display progress meters on all ongoing operations.
+.It Fl P Ar poolspec
+Query information on the given memory pool(s).
+.Ar poolspec
+has the following format:
+.Bd -unfilled -offset indent
+.Ar pool Ns Op , Ns Ar ...
+.Ed
+.Pp
+The value
+.Cm all
+may be specified to retrieve information on all pools.
+.It Fl p Ar paramspec
+Query/manipulate operational parameters.
+.Ar paramspec
+has the following format:
+.Pp
+.Bd -unfilled -offset indent
+.Sm off
+.Oo Ar thread-name Ns . Oc Ar param
+.Op = Ar value
+.Sm on
+.Ed
+.Pp
+Consult documentation on individual daemon control utilities for details
+on specifying
+.Ar thread-name .
+The default behavior is to apply the operation to all applicable threads.
+.Pp
+.Ar param
+may be one of the following:
+.Bl -tag -offset ind -width Ds
+.It Cm log.file
+File path name where log messages will be written.
+This value is write-only.
+.It Cm log.level Ns Op . Ns Ar subsystem
+The logging level of debug message output.
+.Pp
+.Ar subsystem
+may be one of the following:
+.Pp
+.Bl -tag -compact -offset 3n -width 13n
+.It Cm gen
+Default
+.It Cm lnet
+Lustre networking stack
+.It Cm mem
+Memory allocations and releases
+.It Cm rpc
+Network remote procedure calls
+.El
+.Pp
+Additional subsystems may be defined by individual daemons.
+.Pp
+If
+.Ar subsystem
+is left unspecified, all subsystems will be affected.
+.Pp
+The log level value may be one of the following:
+.Pp
+.Bl -tag -compact -offset 3n -width 13n
+.It Cm 0 , none
+No logging
+.It Cm 1 , error
+Recoverable failures
+.It Cm 2 , warn
+Something wrong which requires attention
+.Pq default
+.It Cm 3 , notify
+Something unusual which recommends attention
+.It Cm 4 , info
+Informational messages
+.It Cm 5 , debug
+Debugging messages
+.It Cm 6 , trace , all
+All messages
+.El
+.It Cm pool. Ns Ar name
+Access the memory pool specified by
+.Ar name .
+The following sub-fields are available:
+.Pp
+.Bl -tag -compact -offset 3n -width 13n
+.It Cm max
+Upper bound for number of entries to which auto-sized pools can grow.
+.It Cm min
+Lower bound for number of entries to which auto-sized pools can shrink.
+.It Cm thres
+Threshold for unused items for auto-sized pools before items are freed.
+.It Cm total
+Current number of entries contained in pool.
+.El
+.El
+.It Fl s Ar showspec
+Show values.
+.Ar showspec
+has the following format:
+.Bd -unfilled -offset indent
+.Sm off
+.Ar param
+.Op : Ar thread-name Op , Ar ...
+.Sm on
+.Ed
+.Pp
+.Ar param
+may be specified as any non-ambiguous prefix abbreviation of the
+following:
+.Pp
+.Bl -tag -offset indent -width 13n -compact
+.It Cm loglevels
+Thread logging levels.
+.It Cm rpcsvc
+.Tn RPC
+services.
+.It Cm threads
+Process thread activity and statistics.
+.El
+.Pp
+The special value
+.Sq \&?
+may be specified to display a list of recognized values.
+.Pp
+Consult documentation on individual daemon control utilities for details
+on specifying
+.Ar thread-name .
+The default behavior is to apply the operation to all applicable threads.
+.El
+.Sh SEE ALSO
+.Xr pflenv 7
