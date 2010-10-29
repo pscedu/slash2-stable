@@ -14,7 +14,7 @@
 .\" without express or implied warranty.
 .\" -----------------------------------------------------------------------------
 .\" %PSC_END_COPYRIGHT%
-.Dd October 10, 2010
+.Dd October 29, 2010
 .Dt ODTABLE 1
 .ds volume PSC \- Administrator's Manual
 .Os http://www.psc.edu/
@@ -70,7 +70,9 @@ Note that this is really only a test mode to be used in conjunction with
 .Fl n .
 .It Fl z Ar table_size
 Specify the number of entries a new table will be created with.
-Defaults to 128 * 1024.
+Defaults to
+.Li 128 * 1024
+slots.
 .El
 .Sh SEE ALSO
-.Xr sh 1
+.Xr pflenv 7
