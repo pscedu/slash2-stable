@@ -41,7 +41,7 @@
 
 #define PCTHRNAME_EVERYONE	"everyone"
 
-#define PCE_ERRMSG_MAX		128
+#define PCE_ERRMSG_MAX		256
 
 struct psc_ctlmsg_error {
 	char			pce_errmsg[PCE_ERRMSG_MAX];
@@ -69,7 +69,7 @@ struct psc_ctlmsg_lc {
 
 #define PCLC_NAME_ALL		"all"
 
-struct psc_ctlmsg_stats {
+struct psc_ctlmsg_thread {
 	char			pcst_thrname[PSC_THRNAME_MAX];
 #ifdef HAVE_NUMA
 	int32_t			pcst_memnode;
@@ -201,7 +201,7 @@ struct psc_ctlmsg_rpcsvc {
 #define PCMT_ERROR		0
 #define PCMT_GETLOGLEVEL	1
 #define PCMT_GETLC		2
-#define PCMT_GETSTATS		3
+#define PCMT_GETTHREAD		3
 #define PCMT_GETSUBSYS		4
 #define PCMT_GETHASHTABLE	5
 #define PCMT_GETPARAM		6
@@ -210,7 +210,7 @@ struct psc_ctlmsg_rpcsvc {
 #define PCMT_GETMETER		9
 #define PCMT_GETPOOL		10
 #define PCMT_GETMLIST		11
-#define PCMT_GETFAULTS		12
+#define PCMT_GETFAULT		12
 #define PCMT_GETODTABLE		13
 #define PCMT_GETRPCSVC		14
 #define PCMT_CMD		15

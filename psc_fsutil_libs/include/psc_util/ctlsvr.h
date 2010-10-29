@@ -17,11 +17,18 @@
  * %PSC_END_COPYRIGHT%
  */
 
+/*
+ * Definitions for the daemon live control interface.
+ */
+
+#ifndef _PFL_CTLSVR_H_
+#define _PFL_CTLSVR_H_
+
 #include "psc_util/thread.h"
 
 struct psc_ctlmsghdr;
 struct psc_ctlmsg_param;
-struct psc_ctlmsg_stats;
+struct psc_ctlmsg_thread;
 
 #define PSC_CTL_FOREACH_THREAD(thr, thrname, threads)				\
 	psclist_for_each_entry((thr), (threads), pscthr_lentry)			\
@@ -35,11 +42,11 @@ struct psc_ctlmsg_stats;
 
 /* default control operations shared by all controllable daemons */
 #define PSC_CTLDEFOPS								\
-/*  0 */ { NULL,				0 },				\
+/*  0 */ { NULL,			0 },					\
 /*  1 */ { psc_ctlrep_getloglevel,	sizeof(struct psc_ctlmsg_loglevel) },	\
 /*  2 */ { psc_ctlrep_getlc,		sizeof(struct psc_ctlmsg_lc) },		\
-/*  3 */ { psc_ctlrep_getstats,		sizeof(struct psc_ctlmsg_stats) },	\
-/*  4 */ { psc_ctlrep_getsubsys,		0 },				\
+/*  3 */ { psc_ctlrep_getthread,	sizeof(struct psc_ctlmsg_thread) },	\
+/*  4 */ { psc_ctlrep_getsubsys,	0 },					\
 /*  5 */ { psc_ctlrep_gethashtable,	sizeof(struct psc_ctlmsg_hashtable) },	\
 /*  6 */ { psc_ctlrep_param,		sizeof(struct psc_ctlmsg_param) },	\
 /*  7 */ { psc_ctlrep_param,		sizeof(struct psc_ctlmsg_param) },	\
@@ -48,8 +55,9 @@ struct psc_ctlmsg_stats;
 /* 10 */ { psc_ctlrep_getpool,		sizeof(struct psc_ctlmsg_pool) },	\
 /* 11 */ { psc_ctlrep_getmlist,		sizeof(struct psc_ctlmsg_mlist) },	\
 /* 12 */ { psc_ctlrep_getfault,		sizeof(struct psc_ctlmsg_fault) },	\
-/* 12 */ { psc_ctlrep_getodtable,	sizeof(struct psc_ctlmsg_odtable) },	\
-/* 13 */ { psc_ctlhnd_cmd,		sizeof(struct psc_ctlmsg_cmd) }
+/* 13 */ { psc_ctlrep_getodtable,	sizeof(struct psc_ctlmsg_odtable) },	\
+/* 14 */ { psc_ctlrep_getrpcsvc,	sizeof(struct psc_ctlmsg_rpcsvc) },	\
+/* 15 */ { psc_ctlhnd_cmd,		sizeof(struct psc_ctlmsg_cmd) }
 
 struct psc_ctlacthr {
 	int		pcat_sock;
@@ -85,13 +93,14 @@ int	psc_ctlrep_getmeter(int, struct psc_ctlmsghdr *, void *);
 int	psc_ctlrep_getmlist(int, struct psc_ctlmsghdr *, void *);
 int	psc_ctlrep_getodtable(int, struct psc_ctlmsghdr *, void *);
 int	psc_ctlrep_getpool(int, struct psc_ctlmsghdr *, void *);
-int	psc_ctlrep_getstats(int, struct psc_ctlmsghdr *, void *);
+int	psc_ctlrep_getrpcsvc(int, struct psc_ctlmsghdr *, void *);
 int	psc_ctlrep_getsubsys(int, struct psc_ctlmsghdr *, void *);
+int	psc_ctlrep_getthread(int, struct psc_ctlmsghdr *, void *);
 int	psc_ctlrep_param(int, struct psc_ctlmsghdr *, void *);
 int	psc_ctlhnd_cmd(int, struct psc_ctlmsghdr *, void *);
 
-void	psc_ctlthr_stat(struct psc_thread *, struct psc_ctlmsg_stats *);
-void	psc_ctlacthr_stat(struct psc_thread *, struct psc_ctlmsg_stats *);
+void	psc_ctlthr_get(struct psc_thread *, struct psc_ctlmsg_thread *);
+void	psc_ctlacthr_get(struct psc_thread *, struct psc_ctlmsg_thread *);
 
 int	psc_ctlparam_log_file(int, struct psc_ctlmsghdr *,
 		struct psc_ctlmsg_param *, char **, int);
@@ -121,8 +130,16 @@ __dead void
 int	psc_ctl_applythrop(int, struct psc_ctlmsghdr *, void *, const char *,
 		int (*)(int, struct psc_ctlmsghdr *, void *, struct psc_thread *));
 
-extern void (*psc_ctl_getstats[])(struct psc_thread *, struct psc_ctlmsg_stats *);
-extern int psc_ctl_ngetstats;
+typedef void (*psc_ctl_thrget_t)(struct psc_thread *, struct psc_ctlmsg_thread *);
+extern psc_ctl_thrget_t psc_ctl_thrgets[];
+extern int psc_ctl_nthrgets;
 
-extern int (*psc_ctl_cmds[])(int, struct psc_ctlmsghdr *, void *);
+typedef int (*psc_ctl_cmd_t)(int, struct psc_ctlmsghdr *, void *);
+extern psc_ctl_cmd_t psc_ctl_cmds[];
 extern int psc_ctl_ncmds;
+
+#define PFLCTL_SVR_DEFS							\
+int psc_ctl_nthrgets = nitems(psc_ctl_thrgets);				\
+int psc_ctl_ncmds = nitems(psc_ctl_cmds)
+
+#endif /* _PFL_CTLSVR_H_ */

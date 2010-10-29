@@ -107,7 +107,7 @@ psc_ctlparse_hashtable(const char *tblname)
 }
 
 void
-psc_ctl_packshow_loglevel(const char *thr)
+psc_ctl_packshow_loglevels(const char *thr)
 {
 	struct psc_ctlmsg_loglevel *pcl;
 	int n;
@@ -122,12 +122,12 @@ psc_ctl_packshow_loglevel(const char *thr)
 }
 
 void
-psc_ctl_packshow_stats(const char *thr)
+psc_ctl_packshow_threads(const char *thr)
 {
-	struct psc_ctlmsg_stats *pcst;
+	struct psc_ctlmsg_thread *pcst;
 	int n;
 
-	pcst = psc_ctlmsg_push(PCMT_GETSTATS, sizeof(*pcst));
+	pcst = psc_ctlmsg_push(PCMT_GETTHREAD, sizeof(*pcst));
 	n = strlcpy(pcst->pcst_thrname, thr, sizeof(pcst->pcst_thrname));
 	if (n == 0 || n >= (int)sizeof(pcst->pcst_thrname))
 		errx(1, "invalid thread name: %s", thr);
@@ -139,7 +139,7 @@ psc_ctl_packshow_faults(const char *thr)
 	struct psc_ctlmsg_fault *pcflt;
 	int n;
 
-	pcflt = psc_ctlmsg_push(PCMT_GETFAULTS, sizeof(*pcflt));
+	pcflt = psc_ctlmsg_push(PCMT_GETFAULT, sizeof(*pcflt));
 	n = strlcpy(pcflt->pcflt_thrname, thr, sizeof(pcflt->pcflt_thrname));
 	if (n == 0 || n >= (int)sizeof(pcflt->pcflt_thrname))
 		errx(1, "invalid thread name: %s", thr);
@@ -158,6 +158,14 @@ psc_ctl_packshow_odtables(const char *thr)
 	n = strlcpy(pco->pco_name, PCODT_NAME_ALL, sizeof(pco->pco_name));
 	if (n == 0 || n >= (int)sizeof(pco->pco_name))
 		errx(1, "invalid odtable name: %s", thr);
+}
+
+void
+psc_ctl_packshow_rpcsvcs(const char *thr)
+{
+	struct psc_ctlmsg_rpcsvc *pcrs;
+
+	psc_ctlmsg_push(PCMT_GETRPCSVC, sizeof(*pcrs));
 }
 
 void
@@ -394,10 +402,17 @@ psc_ctl_loglevel_namelen(int n)
 }
 
 void
-psc_ctlthr_prdat(const struct psc_ctlmsg_stats *pcst)
+psc_ctlthr_pr(const struct psc_ctlmsg_thread *pcst)
 {
-	printf(" #conn %8u #sent %9u #recv %9u",
-	    pcst->pcst_nclients, pcst->pcst_nsent, pcst->pcst_nrecv);
+	printf(" #sent %9u #recv %9u #drop %9u",
+	    pcst->pcst_nsent, pcst->pcst_nrecv,
+	    pcst->pcst_ndrop);
+}
+
+void
+psc_ctlacthr_pr(const struct psc_ctlmsg_thread *pcst)
+{
+	printf(" #conn %8u", pcst->pcst_nclients);
 }
 
 void
@@ -438,7 +453,8 @@ psc_ctlmsg_error_prdat(__unusedx const struct psc_ctlmsghdr *mh,
 {
 	const struct psc_ctlmsg_error *pce = m;
 
-	if (psc_ctl_lastmsgtype != mh->mh_type)
+	if (psc_ctl_lastmsgtype != mh->mh_type &&
+	    psc_ctl_lastmsgtype != -1)
 		fprintf(stderr, "\n");
 	warnx("%s", pce->pce_errmsg);
 }
@@ -645,7 +661,7 @@ psc_ctlmsg_param_prdat(__unusedx const struct psc_ctlmsghdr *mh,
 }
 
 void
-psc_ctlmsg_stats_prhdr(__unusedx struct psc_ctlmsghdr *mh,
+psc_ctlmsg_thread_prhdr(__unusedx struct psc_ctlmsghdr *mh,
     __unusedx const void *m)
 {
 	const char *msg = "thread-specific-stats";
@@ -666,11 +682,10 @@ psc_ctlmsg_stats_prhdr(__unusedx struct psc_ctlmsghdr *mh,
 }
 
 void
-psc_ctlmsg_stats_prdat(__unusedx const struct psc_ctlmsghdr *mh,
+psc_ctlmsg_thread_prdat(__unusedx const struct psc_ctlmsghdr *mh,
     const void *m)
 {
-	const struct psc_ctlmsg_stats *pcst = m;
-	struct psc_ctl_thrstatfmt *ptf;
+	const struct psc_ctlmsg_thread *pcst = m;
 
 	printf("%-16s %5d"
 #ifdef HAVE_NUMA
@@ -684,11 +699,9 @@ psc_ctlmsg_stats_prdat(__unusedx const struct psc_ctlmsghdr *mh,
 	    pcst->pcst_flags & PTF_PAUSED	? 'P' : '-',
 	    pcst->pcst_flags & PTF_RUN		? 'R' : '-',
 	    pcst->pcst_flags & PTF_READY	? 'I' : '-');
-	if (pcst->pcst_thrtype < psc_ctl_nthrstatfmts) {
-		ptf = &psc_ctl_thrstatfmts[pcst->pcst_thrtype];
-		if (ptf->ptf_prdat)
-			ptf->ptf_prdat(pcst);
-	}
+	if (pcst->pcst_thrtype < psc_ctl_nprthrs &&
+	    psc_ctl_prthrs[pcst->pcst_thrtype])
+		psc_ctl_prthrs[pcst->pcst_thrtype](pcst);
 	printf("\n");
 }
 
@@ -813,12 +826,16 @@ void
 psc_ctlmsg_rpcsvc_prhdr(__unusedx struct psc_ctlmsghdr *mh,
     __unusedx const void *m)
 {
-	printf("%-9s %3s %4s %4s %4s "
-	    "%3s %5s %5s %4s "
-	    "%4s %4s %3s %4s %5s\n",
-	    "rpcsvc", "flg", "rqsz", "rpsz", "bufsz",
-	    "nb", "rqptl", "rpptl", "nthr",
-	    "nque", "nact", "nwq", "nrep", "nrqbd");
+	printf("%-9s %3s "
+	    "%4s %4s %5s "
+	    "%4s %5s %5s "
+	    "%4s %4s %4s "
+	    "%5s %6s %5s\n",
+	    "rpcsvc", "flg",
+	    "rqsz", "rpsz", "bufsz",
+	    "#buf", "rqptl", "rpptl",
+	    "#thr", "#que", "#act",
+	    "#wait", "#outrp", "nrqbd");
 }
 
 void
@@ -828,10 +845,10 @@ psc_ctlmsg_rpcsvc_prdat(__unusedx const struct psc_ctlmsghdr *mh,
 	const struct psc_ctlmsg_rpcsvc *pcrs = m;
 
 	printf("%-9s   %c "
+	    "%4d %4d %5d "
+	    "%4d %5u %5u "
 	    "%4d %4d %4d "
-	    "%3d %5u %5u "
-	    "%4d %4d %4d "
-	    "%3d %4d %5d\n",
+	    "%5d %6d %5d\n",
 	    pcrs->pcrs_name,
 	    pcrs->pcrs_flags & PSCRPC_SVCF_COUNT_PEER_QLENS ? 'Q' : '-',
 	    pcrs->pcrs_rqsz, pcrs->pcrs_rpsz, pcrs->pcrs_bufsz,

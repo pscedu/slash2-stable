@@ -166,12 +166,12 @@ psc_ctlsenderr(int fd, const struct psc_ctlmsghdr *mhp, const char *fmt, ...)
 }
 
 /**
- * psc_ctlthr_stat - Export control thread stats.
+ * psc_ctlthr_get - Export control thread stats.
  * @thr: thread begin queried.
  * @pcst: thread stats control message to be filled in.
  */
 void
-psc_ctlthr_stat(struct psc_thread *thr, struct psc_ctlmsg_stats *pcst)
+psc_ctlthr_get(struct psc_thread *thr, struct psc_ctlmsg_thread *pcst)
 {
 	pcst->pcst_nsent	= psc_ctlthr(thr)->pct_stat.nsent;
 	pcst->pcst_nrecv	= psc_ctlthr(thr)->pct_stat.nrecv;
@@ -179,53 +179,54 @@ psc_ctlthr_stat(struct psc_thread *thr, struct psc_ctlmsg_stats *pcst)
 }
 
 /**
- * psc_ctlacthr_stat - Export control thread stats.
+ * psc_ctlacthr_get - Export control thread stats.
  * @thr: thread begin queried.
  * @pcst: thread stats control message to be filled in.
  */
 void
-psc_ctlacthr_stat(struct psc_thread *thr, struct psc_ctlmsg_stats *pcst)
+psc_ctlacthr_get(struct psc_thread *thr, struct psc_ctlmsg_thread *pcst)
 {
 	pcst->pcst_nclients	= psc_ctlacthr(thr)->pcat_stat.nclients;
 }
 
 /**
- * psc_ctlmsg_stats_send - Send a reply to a "GETSTATS" inquiry.
+ * psc_ctlmsg_thread_send - Send a reply to a "GETTHREAD" inquiry.
  * @fd: client socket descriptor.
  * @mh: already filled-in control message header.
  * @m: control message to be filled in and sent out.
  * @thr: thread begin queried.
  */
 __static int
-psc_ctlmsg_stats_send(int fd, struct psc_ctlmsghdr *mh, void *m,
+psc_ctlmsg_thread_send(int fd, struct psc_ctlmsghdr *mh, void *m,
     struct psc_thread *thr)
 {
-	struct psc_ctlmsg_stats *pcst = m;
+	struct psc_ctlmsg_thread *pcst = m;
 
 	snprintf(pcst->pcst_thrname, sizeof(pcst->pcst_thrname),
 	    "%s", thr->pscthr_name);
 	pcst->pcst_thrid = thr->pscthr_thrid;
 	pcst->pcst_thrtype = thr->pscthr_type;
 	pcst->pcst_flags = thr->pscthr_flags;
-	if (thr->pscthr_type < psc_ctl_ngetstats &&
-	    psc_ctl_getstats[thr->pscthr_type])
-		psc_ctl_getstats[thr->pscthr_type](thr, pcst);
+	if (thr->pscthr_type >= 0 &&
+	    thr->pscthr_type < psc_ctl_nthrgets &&
+	    psc_ctl_thrgets[thr->pscthr_type])
+		psc_ctl_thrgets[thr->pscthr_type](thr, pcst);
 	return (psc_ctlmsg_sendv(fd, mh, pcst));
 }
 
 /**
- * psc_ctlrep_getstats - Respond to a "GETSTATS" inquiry.
+ * psc_ctlrep_getthread - Respond to a "GETTHREAD" inquiry.
  * @fd: client socket descriptor.
  * @mh: already filled-in control message header.
  * @m: control message to examine and reuse.
  */
 int
-psc_ctlrep_getstats(int fd, struct psc_ctlmsghdr *mh, void *m)
+psc_ctlrep_getthread(int fd, struct psc_ctlmsghdr *mh, void *m)
 {
-	struct psc_ctlmsg_stats *pcst = m;
+	struct psc_ctlmsg_thread *pcst = m;
 
 	return (psc_ctl_applythrop(fd, mh, m, pcst->pcst_thrname,
-	    psc_ctlmsg_stats_send));
+	    psc_ctlmsg_thread_send));
 }
 
 /**
