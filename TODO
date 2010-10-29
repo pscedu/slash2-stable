@@ -100,7 +100,7 @@ pfl
   don't care about sub-second resolution can use to ease syscalls
 - consolidate naming conventions for initializers:
 	PSC_WAITQ_INIT -> WAITQ_INIT
-	eradicate INIT_PSC_LISTENTRY 
+	INIT_PSC_LISTENTRY -> INIT_LISTENTRY
   which is OK since it isn't a symbol
 - mspinlock is not going to work on NUMA, use thruniqid instead of
   int init+pthread_key
@@ -115,7 +115,7 @@ pfl
 - rename PPMF_NOLOCK -> PPMF_NOMLOCK, PAF_LOCK -> PAF_MLOCK
 - add zfs SPA version to slashd ctlparam
 - add lnet knob to ctlparam: sdp, lnet_networks
-- print stats on odtable default behavior
+- for odtable(1), print stats as default behavior
 - add function call hierarchy to psclog
 - memguard LRU + realloc should always allocate new regions and
   PROT_NONE the old ones
@@ -123,8 +123,22 @@ pfl
 - mmap() mprotect()'d memory in memguard
 - rename RSX_ALLOCREP to something that doesnt mean 'allocate' and
   RSX_NEWREQ to ALLOC to make alloc grepping easier
-- introduce pfl_code_info that is shadowed to provide caller line/func/fn info
-- change pscfs entry/attr timeout from int to double
+- introduce ? at any level in ctlparam to show nodes under that
+  immediate level
+- change all query pscctl options under -s:
+
+	-s connections
+	-s hash[:foo]
+	-s iostats[:foo]
+	-s listcache[:foo]
+	-s loglevels
+	-s thrstats
+	-s pool[:foo]
+	-s [thread.]log.format
+	etc.
+
+- parse thr(-.*)? as a thread name in the first level of ctl parsing
+- rename general log subsystem to default
 
 - pcpp:
   if an arg is a pointer, dont trace an integer version of it in PFL_ENTER()
