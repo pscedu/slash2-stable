@@ -54,6 +54,7 @@ make
   propagates all additive assignments in subdirs
 
 - fix cscope: remove the curdir when the parent includes it
+- work on `install' target for the SLASH2 release
 
 pfl
 - ctlapi GETTREE?
