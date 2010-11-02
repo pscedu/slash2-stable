@@ -3,10 +3,10 @@
 ROOTDIR=..
 include ${ROOTDIR}/Makefile.path
 
-# this is a workaround to SRC_PATH better
-MODULES+=	pfl lnet-hdrs
-
 SUBDIRS+=	tests
 SUBDIRS+=	utils
+
+MAN+=		${ROOTDIR}/doc/pflctl.7
+MAN+=		${ROOTDIR}/doc/pflenv.7
 
 include ${PFLMK}
