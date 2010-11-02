@@ -4,14 +4,17 @@ MKDEP=		env CC="${CC}" ${ROOTDIR}/tools/unwrapcc ${ROOTDIR}/tools/mkdep
 
 # Disappointingly, recent versions of gcc hide
 # standard headers in places other than /usr/include.
-LIBC_INCLUDES+=	$$(if ${CC} -v 2>&1 | grep -q gcc; then ${CC} -print-search-dirs | \
+LIBC_INCLUDES=	$$(if ${CC} -v 2>&1 | grep -q gcc; then ${CC} -print-search-dirs | \
 		    grep install | awk '{print "-I" $$2 "include"}' | sed 's/:/ -I/'; fi)
-LINT=		splint +posixlib
-NOTEMPTY=	${ROOTDIR}/tools/notempty
+
+LINT?=		splint +posixlib
 SCONS=		scons DEFINES="$(filter -DHAVE_%,${DEFINES}) $(filter -DPFL_%,${DEFINES})"
-PKG_CONFIG=	PKG_CONFIG_PATH=${FUSE_BASE} pkg-config
-LIBGCRYPT_CONFIG=libgcrypt-config
+PKG_CONFIG?=	PKG_CONFIG_PATH=${FUSE_BASE} pkg-config
+LIBGCRYPT_CONFIG?=libgcrypt-config
 MPICC?=		mpicc
+ROFF?=		nroff
+
+NOTEMPTY=	${ROOTDIR}/tools/notempty
 ECHORUN=	${ROOTDIR}/tools/echorun.sh
 _PERLENV=	PERL5LIB=${PERL5LIB}:${CROOTDIR}/tools/lib
 GENTYPES=	${_PERLENV} ${CROOTDIR}/tools/gentypes.pl
@@ -21,6 +24,13 @@ MDPROC=		${ROOTDIR}/tools/mdproc.pl
 MINVER=		${ROOTDIR}/tools/minver.pl
 PCPP=		${_PERLENV} ${CROOTDIR}/tools/pcpp.pl
 PICKLEGEN=	${ROOTDIR}/tools/pickle-gen.sh
+
+INST_BASE?=	/usr/psc
+INST_BINDIR?=	/usr/psc/bin
+INST_SBINDIR?=	/usr/psc/sbin
+INST_LIBDIR?=	/usr/psc/lib
+INST_LIBDIR?=	/usr/psc/include
+INST_MANDIR?=	/usr/psc/man
 
 MAKEFLAGS+=	--no-print-directory
 

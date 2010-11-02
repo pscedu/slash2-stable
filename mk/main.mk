@@ -387,23 +387,29 @@ install-hook:
 # XXX use install(1)
 install: recurse-install install-hook
 	@if [ -n "${LIBRARY}" ]; then							\
-		${ECHORUN} mkdir -p ${INSTALLDIR}/lib;					\
-		${ECHORUN} cp -pf ${LIBRARY} ${INSTALLDIR}/lib;				\
+		mkdir -p ${INST_LIBDIR};						\
+		${ECHORUN} cp -pf ${LIBRARY} ${INST_LIBDIR};				\
 	fi
-	# skip programs part of test suites
-	@if [ -n "${PROG}" -a x"${PROG}" -ne x"${TEST}" ]; then				\
-		${ECHORUN} mkdir -p ${INSTALLDIR}/bin;					\
-		${ECHORUN} cp -pf ${PROG} ${INSTALLDIR}/bin;				\
+	@# skip programs part of test suites
+	@if [ -n "${PROG}" -a x"${PROG}" != x"${TEST}" ]; then				\
+		mkdir -p ${INST_SBINDIR};						\
+		${ECHORUN} cp -pf ${PROG} ${INST_SBINDIR};				\
+	fi
+	@if ${NOTEMPTY} "${MAN}"; then							\
+		mkdir -p ${INST_MANDIR}/man8;						\
+		for i in ${MAN}; do							\
+			${ECHORUN} cp -fp $$i ${INST_MANDIR}/man8;			\
+		done;									\
 	fi
 	@if ${NOTEMPTY} "${HEADERS}"; then						\
 		for i in ${HEADERS}; do							\
 			if [ x"$${i%/*}" = x"$$i" ]; then				\
-				_dir=${INSTALLDIR}/include/$${i%/*};			\
+				_dir=${INST_INCDIR}/$${i%/*};				\
 			else								\
-				_dir=${INSTALLDIR}/include;				\
+				_dir=${INST_INCDIR};					\
 			fi;								\
-			${ECHORUN} mkdir -p $$_dir;					\
-			${ECHORUN} cp -rfp $$i $$_dir;					\
+			mkdir -p $$_dir;						\
+			${ECHORUN} cp -fp $$i $$_dir;					\
 		done;									\
 	fi
 
