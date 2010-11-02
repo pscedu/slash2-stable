@@ -140,6 +140,7 @@ pfl
 
 - parse thr(-.*)? as a thread name in the first level of ctl parsing
 - rename general log subsystem to default
+- create a mechanism to include pflctl(7) directly into each *ctl.8 page
 
 - pcpp:
   if an arg is a pointer, dont trace an integer version of it in PFL_ENTER()
