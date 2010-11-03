@@ -97,7 +97,7 @@
 #ifndef HAVE_FUTIMENS
 struct timespec;
 
-int futimes(int, const struct timespec *);
+int futimens(int, const struct timespec *);
 #endif
 
 #endif /* _PFL_TIME_H_ */
