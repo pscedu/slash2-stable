@@ -4,6 +4,7 @@ ROOTDIR=../../..
 include ${ROOTDIR}/Makefile.path
 
 PROG=		odtable
+FORCE_INST=	1
 MAN+=		odtable.1
 SRCS=		odtable_main.c
 SRCS+=		${PFL_BASE}/psc_ds/dynarray.c

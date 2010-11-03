@@ -24,6 +24,7 @@ FILE_CFLAGS=		${$(call PATH_NAMIFY,$(call STRIPROOTDIR,$(realpath $1)))_CFLAGS}
 FILE_PCPP_FLAGS=	${$(call PATH_NAMIFY,$(call STRIPROOTDIR,$(realpath $1)))_PCPP_FLAGS}
 ADD_FILE_CFLAGS=	$(shell if ! [ -f "$(abspath $1)" ]; then echo "ADD_FILE_CFLAGS: no such file: $(abspath $1)" >&2; fi )\
 			$(eval $(call FILE_CFLAGS_VARNAME,$1)+=$2)
+FORCE_INST?=		0
 
 -include ${ROOTDIR}/mk/local.mk
 include ${ROOTDIR}/mk/pickle.mk
@@ -391,14 +392,17 @@ install: recurse-install install-hook
 		${ECHORUN} cp -pf ${LIBRARY} ${INST_LIBDIR};				\
 	fi
 	@# skip programs part of test suites
-	@if [ -n "${PROG}" -a x"${PROG}" != x"${TEST}" ]; then				\
+	@if [ -z "$(findstring /tests/,${CURDIR})" ] &&					\
+	    [ -z "$(findstring /utils/,${CURDIR})" ] ||					\
+	    [ "${FORCE_INST}" -eq 1 ]; then						\
 		mkdir -p ${INST_SBINDIR};						\
 		${ECHORUN} cp -pf ${PROG} ${INST_SBINDIR};				\
 	fi
 	@if ${NOTEMPTY} "${MAN}"; then							\
-		mkdir -p ${INST_MANDIR}/man8;						\
 		for i in ${MAN}; do							\
-			${ECHORUN} cp -fp $$i ${INST_MANDIR}/man8;			\
+			dir=${INST_MANDIR}/man$${i##*.};				\
+			mkdir -p $$dir;							\
+			${ECHORUN} cp -fp $$i $$dir;					\
 		done;									\
 	fi
 	@if ${NOTEMPTY} "${HEADERS}"; then						\
