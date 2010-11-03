@@ -94,4 +94,10 @@
 			psc_fatal("clock_gettime");			\
 	} while (0)
 
+#ifndef HAVE_FUTIMENS
+struct timespec;
+
+int futimes(int, const struct timespec *);
+#endif
+
 #endif /* _PFL_TIME_H_ */

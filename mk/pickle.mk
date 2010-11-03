@@ -156,4 +156,9 @@ PICKLE_NEED_VERSION=					$(word 2,$$Rev$$)
   DEFINES+=						-DHAVE_SGIO
  endif
 
+ ifdef PICKLE_HAVE_FUTIMENS
+  DEFINES+=						-DHAVE_FUTIMENS
+  SRCS+=						${PFL_BASE}/compat/futimens.c
+ endif
+
 endif
