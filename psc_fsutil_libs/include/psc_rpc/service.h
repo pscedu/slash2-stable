@@ -21,9 +21,10 @@
 #define _PSCRPC_SERVICE_H_
 
 #include "psc_ds/list.h"
-#include "psc_rpc/rpc.h"
 #include "psc_util/lock.h"
 
+struct pscrpc_request;
+struct pscrpc_service;
 struct psc_thread;
 
 typedef int (*pscrpc_service_func_t)(struct pscrpc_request *);

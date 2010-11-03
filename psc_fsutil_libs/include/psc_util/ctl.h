@@ -30,7 +30,6 @@
 #include "pfl/explist.h"
 #include "pfl/hashtbl.h"
 #include "psc_ds/listcache.h"
-#include "psc_rpc/rpc.h"
 #include "psc_rpc/service.h"
 #include "psc_util/fault.h"
 #include "psc_util/iostats.h"
