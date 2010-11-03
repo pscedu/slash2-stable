@@ -997,28 +997,6 @@ pscfs_reply_ioctl(struct pscfs_req *pfr)
 }
 
 void
-pscfs_reply_mknod(struct pscfs_req *pfr, pscfs_inum_t inum,
-    pscfs_fgen_t gen, double entry_timeout, const struct stat *stb,
-    double attr_timeout, int rc)
-{
-	struct fuse_entry_param e;
-
-	if (rc)
-		fuse_reply_err(pfr->pfr_fuse_req, rc);
-	else {
-		e.entry_timeout = entry_timeout;
-		e.ino = INUM_PSCFS2FUSE(inum, entry_timeout);
-		if (e.ino) {
-			e.attr_timeout = attr_timeout;
-			memcpy(&e.attr, stb, sizeof(e.attr));
-			e.attr.st_ino = e.ino;
-			e.generation = gen;
-		}
-//		fuse_reply_mknod(pfr->pfr_fuse_req, &e);
-	}
-}
-
-void
 pscfs_reply_open(struct pscfs_req *pfr, void *data, int rflags, int rc)
 {
 	if (rc)

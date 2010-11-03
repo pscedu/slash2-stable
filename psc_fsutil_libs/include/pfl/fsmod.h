@@ -26,6 +26,7 @@
 #  define pscfs_reply_link		pscfs_fuse_replygen_entry
 #  define pscfs_reply_lookup		pscfs_fuse_replygen_entry
 #  define pscfs_reply_mkdir		pscfs_fuse_replygen_entry
+#  define pscfs_reply_mknod		pscfs_fuse_replygen_entry
 #  define pscfs_reply_symlink		pscfs_fuse_replygen_entry
 
 struct pscfs_args {
