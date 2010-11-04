@@ -3,10 +3,11 @@
 ROOTDIR=.
 include ${ROOTDIR}/Makefile.path
 
+SUBDIRS+=	${PFL_BASE}
 SUBDIRS+=	apps/sft
 SUBDIRS+=	fio
-SUBDIRS+=	${PFL_BASE}
 SUBDIRS+=	${SLASH_BASE}
+SUBDIRS+=	${VESUVIFS_BASE}
 SUBDIRS+=	${ZEST_BASE}
 
 include ${MAINMK}
