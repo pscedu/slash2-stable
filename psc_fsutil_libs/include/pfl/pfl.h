@@ -24,9 +24,9 @@
 
 #define PFL_PRFLAG(fl, val, seq)					\
 	do {								\
-		if ((val) & (fl)) {					\
+		if (*(val) & (fl)) {					\
 			pfl_print_flag(#fl, (seq));			\
-			(val) &= ~(fl);					\
+			*(val) &= ~(fl);				\
 		}							\
 	} while (0)
 

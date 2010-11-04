@@ -24,32 +24,32 @@ pfl_dump_fflags(int fflags)
 {
 	int seq = 0;
 
-	PFL_PRFLAG(O_WRONLY, fflags, &seq);
-	PFL_PRFLAG(O_RDWR, fflags, &seq);
+	PFL_PRFLAG(O_WRONLY, &fflags, &seq);
+	PFL_PRFLAG(O_RDWR, &fflags, &seq);
 	if ((fflags & O_ACCMODE) == O_RDONLY)
 		pfl_print_flag("O_RDONLY", &seq);
 
-	PFL_PRFLAG(O_CREAT, fflags, &seq);
-	PFL_PRFLAG(O_EXCL, fflags, &seq);
-	PFL_PRFLAG(O_TRUNC, fflags, &seq);
-	PFL_PRFLAG(O_APPEND, fflags, &seq);
-	PFL_PRFLAG(O_NONBLOCK, fflags, &seq);
-	PFL_PRFLAG(O_SYNC, fflags, &seq);
-	PFL_PRFLAG(O_NOCTTY, fflags, &seq);
-	PFL_PRFLAG(O_NOFOLLOW, fflags, &seq);
+	PFL_PRFLAG(O_CREAT, &fflags, &seq);
+	PFL_PRFLAG(O_EXCL, &fflags, &seq);
+	PFL_PRFLAG(O_TRUNC, &fflags, &seq);
+	PFL_PRFLAG(O_APPEND, &fflags, &seq);
+	PFL_PRFLAG(O_NONBLOCK, &fflags, &seq);
+	PFL_PRFLAG(O_SYNC, &fflags, &seq);
+	PFL_PRFLAG(O_NOCTTY, &fflags, &seq);
+	PFL_PRFLAG(O_NOFOLLOW, &fflags, &seq);
 
-	PFL_PRFLAG(O_DSYNC, fflags, &seq);
-	PFL_PRFLAG(O_RSYNC, fflags, &seq);
-	PFL_PRFLAG(O_ASYNC, fflags, &seq);
-	PFL_PRFLAG(O_DIRECTORY, fflags, &seq);
-	PFL_PRFLAG(O_EXLOCK, fflags, &seq);
-	PFL_PRFLAG(O_SHLOCK, fflags, &seq);
+	PFL_PRFLAG(O_DSYNC, &fflags, &seq);
+	PFL_PRFLAG(O_RSYNC, &fflags, &seq);
+	PFL_PRFLAG(O_ASYNC, &fflags, &seq);
+	PFL_PRFLAG(O_DIRECTORY, &fflags, &seq);
+	PFL_PRFLAG(O_EXLOCK, &fflags, &seq);
+	PFL_PRFLAG(O_SHLOCK, &fflags, &seq);
 
-	PFL_PRFLAG(O_DIRECT, fflags, &seq);
-	PFL_PRFLAG(O_CLOEXEC, fflags, &seq);
-	PFL_PRFLAG(O_SYMLINK, fflags, &seq);
-	PFL_PRFLAG(O_NOATIME, fflags, &seq);
-	PFL_PRFLAG(O_LARGEFILE, fflags, &seq);
+	PFL_PRFLAG(O_DIRECT, &fflags, &seq);
+	PFL_PRFLAG(O_CLOEXEC, &fflags, &seq);
+	PFL_PRFLAG(O_SYMLINK, &fflags, &seq);
+	PFL_PRFLAG(O_NOATIME, &fflags, &seq);
+	PFL_PRFLAG(O_LARGEFILE, &fflags, &seq);
 
 	if (fflags) {
 		pfl_print_flag("", &seq);
