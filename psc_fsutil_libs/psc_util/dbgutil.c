@@ -112,9 +112,8 @@ pfl_dump_mode(mode_t modes)
 	printf("\n");
 }
 
-#define psc_log_getlevel(ss)	PLL_MAX
-
-#define _psclog(fn, func, ln, ss, lvl, flg, fmt, ...)			\
+#undef _psclogk
+#define _psclogk(ss, lvl, flg, fmt, ...)				\
 	do {								\
 		fprintf(stderr, fmt, ## __VA_ARGS__);			\
 		fprintf(stderr, "\n");					\

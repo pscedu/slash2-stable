@@ -50,7 +50,7 @@ char *APP_STRERROR(int);
 #endif
 
 #ifndef PSC_LOG_FMT
-#define PSC_LOG_FMT "[%s:%06u %n:%i:%T:%F:%l] "
+#define PSC_LOG_FMT "[%s:%06u %n:%i:%T %F %l] "
 #endif
 
 struct fuse_context {
@@ -207,8 +207,8 @@ psclog_getdata(void)
 }
 
 void
-_psclogv(const char *fn, const char *func, int line, int subsys,
-    enum psclog_level level, int options, const char *fmt, va_list ap)
+_psclogv(const struct pfl_callerinfo *pci, enum psclog_level level,
+    int options, const char *fmt, va_list ap)
 {
 	char *p, prefix[LINE_MAX], fmtbuf[LINE_MAX];
 	struct fuse_context *ctx;
@@ -240,20 +240,20 @@ _psclogv(const char *fn, const char *func, int line, int subsys,
 
 	gettimeofday(&tv, NULL);
 	FMTSTR(prefix, sizeof(prefix), psc_logfmt,
-		FMTSTRCASE('B', "s", pfl_basename(fn))
-		FMTSTRCASE('F', "s", func)
-		FMTSTRCASE('f', "s", fn)
+		FMTSTRCASE('B', "s", pfl_basename(pci->pci_filename))
+		FMTSTRCASE('F', "s", pci->pci_func)
+		FMTSTRCASE('f', "s", pci->pci_filename)
 		FMTSTRCASE('H', "s", d->pld_hostname)
 		FMTSTRCASE('h', "s", d->pld_hostshort)
 		FMTSTRCASE('i', "d", thrid)
 		FMTSTRCASE('L', "d", level)
-		FMTSTRCASE('l', "d", line)
+		FMTSTRCASE('l', "d", pci->pci_lineno)
 		FMTSTRCASE('n', "s", thrname)
 		FMTSTRCASE('P', "d", ctx ? (int)ctx->pid : -1)
 		FMTSTRCASE('r', "d", d->pld_rank)
 		FMTSTRCASE('s', "lu", tv.tv_sec)
-		FMTSTRCASE('T', "s", psc_subsys_name(subsys))
-		FMTSTRCASE('t', "d", subsys)
+		FMTSTRCASE('T', "s", psc_subsys_name(pci->pci_subsys))
+		FMTSTRCASE('t', "d", pci->pci_subsys)
 		FMTSTRCASE('U', "d", ctx ? (int)ctx->uid : -1)
 		FMTSTRCASE('u', "lu", tv.tv_usec)
 	);
@@ -300,34 +300,34 @@ _psclogv(const char *fn, const char *func, int line, int subsys,
 }
 
 void
-_psclog(const char *fn, const char *func, int line, int subsys,
+_psclog(const struct pfl_callerinfo *pci,
     enum psclog_level level, int options, const char *fmt, ...)
 {
 	va_list ap;
 
 	va_start(ap, fmt);
-	_psclogv(fn, func, line, subsys, level, options, fmt, ap);
+	_psclogv(pci, level, options, fmt, ap);
 	va_end(ap);
 }
 
 __dead void
-_psc_fatal(const char *fn, const char *func, int line, int subsys,
+_psc_fatal(const struct pfl_callerinfo *pci,
     enum psclog_level level, int options, const char *fmt, ...)
 {
 	va_list ap;
 
 	va_start(ap, fmt);
-	_psclogv(fn, func, line, subsys, level, options, fmt, ap);
+	_psclogv(pci, level, options, fmt, ap);
 	va_end(ap);
 
 	errx(1, "should not reach here");
 }
 
 __dead void
-_psc_fatalv(const char *fn, const char *func, int line, int subsys,
+_psc_fatalv(const struct pfl_callerinfo *pci,
     enum psclog_level level, int options, const char *fmt, va_list ap)
 {
-	_psclogv(fn, func, line, subsys, level, options, fmt, ap);
+	_psclogv(pci, level, options, fmt, ap);
 	errx(1, "should not reach here");
 }
 

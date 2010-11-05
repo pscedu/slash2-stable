@@ -231,7 +231,6 @@ do {                                                                    \
             ((libcfs_debug & (mask)) != 0 &&                            \
              (libcfs_subsystem_debug & DEBUG_SUBSYSTEM) != 0))          \
                 libcfs_debug_msg(cdls, DEBUG_SUBSYSTEM, mask,           \
-                                 __FILE__, __FUNCTION__, __LINE__,      \
                                  format, ## a);                         \
 } while (0)
 
@@ -253,8 +252,7 @@ do {                                            \
 #else
 
 #define CDEBUG(mask, fmt, ...)						\
-	libcfs_debug_vmsg2(NULL, 0, (mask), __FILE__, __func__,		\
-	    __LINE__, NULL, NULL, fmt, ## __VA_ARGS__)
+	libcfs_debug_vmsg2(NULL, 0, (mask), NULL, NULL, fmt, ## __VA_ARGS__)
 
 #define CDEBUG_LIMIT CDEBUG
 
@@ -527,14 +525,14 @@ struct libcfs_debug_msg_data {
         .msg_line           = (ln)          \
     }
 
-#define libcfs_debug_vmsg2(cdls, ss, mask, file,		\
-	    func, line, fmt1, args, fmt2, ...)			\
+#define libcfs_debug_vmsg2(cdls, ss, mask, fmt1, args, fmt2, ...) \
 	do {							\
 		int ___lvl;					\
 								\
 		switch (mask) {					\
 		case D_ERROR:					\
 		case D_NETERROR:				\
+		case D_CONSOLE | D_ERROR:			\
 			___lvl = PLL_ERROR;			\
 			break;					\
 		case D_WARNING:					\
@@ -544,11 +542,10 @@ struct libcfs_debug_msg_data {
 		case D_INFO:					\
 		case D_CONFIG:					\
 		case D_OTHER:					\
-			___lvl = PLL_INFO;			\
+			___lvl = PLL_DEBUG;			\
 			break;					\
 		case D_RPCTRACE:				\
 		case D_TRACE:					\
-		case D_CONSOLE | D_ERROR:			\
 		case D_CONSOLE:					\
 			___lvl = PLL_TRACE;			\
 			break;					\
@@ -559,40 +556,36 @@ struct libcfs_debug_msg_data {
 		}						\
 								\
 		if (fmt1)					\
-			psclogv((file), (func), (line),		\
-			    PSS_LNET, ___lvl, 0, (fmt1),	\
+			psclogsv(___lvl, PSS_LNET, (fmt1),	\
 			    (args));				\
 		if (fmt2)					\
-			psclog((file), (func), (line),		\
-			     PSS_LNET, ___lvl, 0, (fmt2),	\
+			psclogs(___lvl, PSS_LNET, (fmt2),	\
 			     ## __VA_ARGS__);			\
 	} while (0)
 
-#define libcfs_debug_vmsg(cdls, subsys, mask, file, func, line, format, args)   \
-    libcfs_debug_vmsg2(cdls, subsys, mask, file, func, line, format, args, NULL, NULL)
+#define libcfs_debug_vmsg(cdls, subsys, mask, format, args)	\
+    libcfs_debug_vmsg2(cdls, subsys, mask, format, args, NULL, NULL)
 
-#define libcfs_debug_msg(cdls, subsys, mask, file, func, line, format, a...)    \
-    libcfs_debug_vmsg2(cdls, subsys, mask, file, func, line, NULL, NULL, format, ##a)
+#define libcfs_debug_msg(cdls, subsys, mask, format, a...)	\
+    libcfs_debug_vmsg2(cdls, subsys, mask, NULL, NULL, format, ##a)
 
-#define cdebug_va(cdls, mask, file, func, line, fmt, args)      do {          \
+#define cdebug_va(cdls, mask, fmt, args)      do {				\
         CHECK_STACK();                                                        \
                                                                               \
         if (((mask) & D_CANTMASK) != 0 ||                                     \
             ((libcfs_debug & (mask)) != 0 &&                                  \
              (libcfs_subsystem_debug & DEBUG_SUBSYSTEM) != 0))                \
-                libcfs_debug_vmsg(cdls, DEBUG_SUBSYSTEM, (mask),              \
-                                  (file), (func), (line), fmt, args);         \
-} while(0);
+		libcfs_debug_vmsg(cdls, DEBUG_SUBSYSTEM, (mask), fmt, args);	\
+} while(0)
 
-#define cdebug(cdls, mask, file, func, line, fmt, a...) do {                  \
+#define cdebug(cdls, mask, fmt, a...) do {					\
         CHECK_STACK();                                                        \
                                                                               \
         if (((mask) & D_CANTMASK) != 0 ||                                     \
             ((libcfs_debug & (mask)) != 0 &&                                  \
              (libcfs_subsystem_debug & DEBUG_SUBSYSTEM) != 0))                \
-                libcfs_debug_msg(cdls, DEBUG_SUBSYSTEM, (mask),               \
-                                 (file), (func), (line), fmt, ## a);          \
-} while(0);
+		libcfs_debug_msg(cdls, DEBUG_SUBSYSTEM, (mask), fmt, ## a);	\
+} while(0)
 
 extern void libcfs_assertion_failed(const char *expr, const char *file,
                                     const char *fn, const int line);
