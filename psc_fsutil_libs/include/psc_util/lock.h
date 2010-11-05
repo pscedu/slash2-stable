@@ -113,7 +113,7 @@ typedef struct psc_spinlock {
 			    (psl), (psl)->psl_who, pthread_self());	\
 	} while (0)
 
-#define _SPIN_TEST_AND_SET(name, psl)					\
+#define _SPIN_TEST_AND_SET(pci, name, psl)				\
 	{								\
 		enum psc_spinlock_val _val;				\
 									\
@@ -128,8 +128,8 @@ typedef struct psc_spinlock {
 		} else if ((_val) == PSL_UNLOCKED) {			\
 			(psl)->psl_who = pthread_self();		\
 			if (((psl)->psl_flags & PSLF_NOLOG) == 0)	\
-				psclog_trace("lock %p acquired",	\
-				    (psl));				\
+				_psclog_pci((pci), PLL_TRACE, 0,	\
+				    "lock %p acquired",	(psl));		\
 			(_val) = 1;					\
 		} else							\
 			psc_fatalx("%s: lock %p has invalid value %#x",	\
@@ -142,19 +142,20 @@ typedef struct psc_spinlock {
  *	immediately available.
  * @psl: the spinlock.
  */
-#define trylock(psl)		(_SPIN_TEST_AND_SET("trylock", (psl)))
+#define trylock_pci(pci, psl)	(_SPIN_TEST_AND_SET((pci), "trylock", (psl)))
 
 /**
  * freelock - Block until the caller locks a spinlock for a critical
  *	section.
  * @psl: the spinlock.
  */
-#define spinlock(psl)							\
+#define spinlock_pci(pci, psl)						\
 	do {								\
 		struct timespec _tm;					\
 		int _i;							\
 									\
-		for (_i = 0; !(_SPIN_TEST_AND_SET("spinlock", (psl)));	\
+		for (_i = 0;						\
+		    !(_SPIN_TEST_AND_SET((pci), "spinlock", (psl)));	\
 		    sched_yield(), _i++)				\
 			if (_i >= PSL_SLEEP_NTRIES) {			\
 				_tm.tv_sec  = 0;			\
@@ -168,14 +169,15 @@ typedef struct psc_spinlock {
  * freelock - Release a spinlock that is locked by the caller.
  * @psl: the spinlock.
  */
-#define freelock(psl)							\
+#define freelock_pci(pci, psl)						\
 	do {								\
 		_SPIN_ENSURELOCKED("freelock", (psl));			\
 		_spin_checktime(psl);					\
 		(psl)->psl_who = 0;					\
 		psc_atomic32_set(_SPIN_GETATOM(psl), PSL_UNLOCKED);	\
 		if (((psl)->psl_flags & PSLF_NOLOG) == 0)		\
-			psclog_trace("lock %p released", (psl));	\
+			_psclog_pci((pci), PLL_TRACE, 0,		\
+			    "lock %p released", (psl));			\
 	} while (0)
 
 /**
@@ -184,9 +186,9 @@ typedef struct psc_spinlock {
  * @psl: the spinlock.
  * Returns a value that ureqlock() must use.
  */
-#define reqlock(psl)							\
+#define reqlock_pci(pci, psl)						\
 	(spin_ismine(psl) ? PSLRV_WASLOCKED :				\
-	    (PSC_MAKETRUE(spinlock(psl)), PSLRV_WASNOTLOCKED))
+	    (PSC_MAKETRUE(spinlock_pci(pci, psl)), PSLRV_WASNOTLOCKED))
 
 /**
  * tryreqlock - Try to require a lock.  Will not block if the lock
@@ -194,10 +196,10 @@ typedef struct psc_spinlock {
  * @psl: the spinlock.
  * @waslockedp: value-result to "unrequire" lock.
  */
-#define tryreqlock(psl, waslockedp)					\
+#define tryreqlock_pci(pci, psl, waslockedp)				\
 	(spin_ismine(psl) ?						\
 	    (*(waslockedp) = PSLRV_WASLOCKED, 1) :			\
-	    (*(waslockedp) = PSLRV_WASNOTLOCKED, trylock(psl)))
+	    (*(waslockedp) = PSLRV_WASNOTLOCKED, trylock_pci((pci), (psl))))
 
 /**
  * ureqlock - "Unrequire" a lock -- unlocks the lock if it was locked
@@ -206,15 +208,22 @@ typedef struct psc_spinlock {
  * @psl: the spinlock.
  * @waslkd: return value from reqlock().
  */
-#define ureqlock(psl, waslocked)					\
+#define ureqlock_pci(pci, psl, waslocked)				\
 	do {								\
 		if ((waslocked) == PSLRV_WASNOTLOCKED)			\
-			freelock(psl);					\
+			freelock_pci((pci), (psl));			\
 		else							\
 			_SPIN_CHECK("ureqlock", (psl));			\
 	} while (0)
 
 #define LOCK_ENSURE(psl)	PSC_MAKETRUE(_SPIN_ENSURELOCKED("LOCK_ENSURE", (psl)))
+
+#define ureqlock(psl, lkd)	ureqlock_pci(PFL_CALLERINFO(), (psl), (lkd))
+#define tryreqlock(psl, lkd)	tryreqlock_pci(PFL_CALLERINFO(), (psl), (lkd))
+#define reqlock(psl)		reqlock_pci(PFL_CALLERINFO(), (psl))
+#define freelock(psl)		freelock_pci(PFL_CALLERINFO(), (psl))
+#define trylock(psl)		trylock_pci(PFL_CALLERINFO(), (psl))
+#define spinlock(psl)		spinlock_pci(PFL_CALLERINFO(), (psl))
 
 static __inline void _spin_checktime(struct psc_spinlock *);
 
