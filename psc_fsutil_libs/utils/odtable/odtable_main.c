@@ -69,7 +69,7 @@ __dead void
 usage(void)
 {
 	fprintf(stderr,
-	    "usage: %s [-Cco] [-e elem_size] [-f #frees] [-n #puts]\n"
+	    "usage: %s [-Ccov] [-e elem_size] [-f #frees] [-n #puts]\n"
 	    "\t[-z table_size] file\n", progname);
 	exit(1);
 }
@@ -78,13 +78,13 @@ int
 main(int argc, char *argv[])
 {
 	struct odtable *odt;
-	int c, rc, i;
+	int c, rc, i, verbose = 0;
 	char *item;
 
 	pfl_init();
 	progname = argv[0];
 	elem_size = ODT_DEFAULT_ITEM_SIZE;
-	while ((c = getopt(argc, argv, "Cce:f:ln:oz:")) != -1)
+	while ((c = getopt(argc, argv, "Cce:f:ln:oz:v")) != -1)
 		switch (c) {
 		case 'C':
 			create_table = 1;
@@ -110,6 +110,9 @@ main(int argc, char *argv[])
 		case 's':
 			show = 1;
 			break;
+		case 'v':
+			verbose = 1;
+			break;
 		case 'z':
 			table_size = atoi(optarg);
 			break;
@@ -127,6 +130,9 @@ main(int argc, char *argv[])
 		rc = odtable_create(fn, table_size, elem_size, overwrite);
 		if (rc)
 			errx(1, "create %s: %s", fn, strerror(-rc));
+		if (verbose)
+			warnx("created od-table %s (elem size = %ld, table size = %ld)",
+				fn, elem_size, table_size);
 	}
 
 	rc = odtable_load(&odt, fn, "%s", fn);
