@@ -857,6 +857,10 @@ pscfs_fuse_handle_setattr(fuse_req_t req, fuse_ino_t inum,
 		pfl_to_set |= PSCFS_SETATTRF_ATIME;
 	if (fuse_to_set & FUSE_SET_ATTR_MTIME)
 		pfl_to_set |= PSCFS_SETATTRF_MTIME;
+	if (fuse_to_set & FUSE_SET_ATTR_ATIME_NOW)
+		pfl_to_set |= PSCFS_SETATTRF_MTIME_NOW;
+	if (fuse_to_set & FUSE_SET_ATTR_MTIME_NOW)
+		pfl_to_set |= PSCFS_SETATTRF_MTIME_NOW;
 
 	pfr.pfr_fuse_req = req;
 	RETIFNOTSUP(&pfr, setattr, NULL, 0);

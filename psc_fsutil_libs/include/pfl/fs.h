@@ -136,7 +136,9 @@ void	pscfs_reply_write(struct pscfs_req *, ssize_t, int);
 #define	PSCFS_SETATTRF_ATIME	(1 << 4)	/* utimes */
 #define	PSCFS_SETATTRF_MTIME	(1 << 5)	/* utimes */
 #define	PSCFS_SETATTRF_CTIME	(1 << 6)	/* utimes */
-#define	_PSCFS_SETATTRF_LAST	(1 << 7)
+#define	PSCFS_SETATTRF_ATIME_NOW (1 << 7)
+#define	PSCFS_SETATTRF_MTIME_NOW (1 << 8)
+#define	_PSCFS_SETATTRF_LAST	(1 << 9)
 
 #define PSCFS_SETATTRF_ALL	(~0)
 
