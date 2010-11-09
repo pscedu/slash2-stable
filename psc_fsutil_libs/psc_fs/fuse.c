@@ -858,7 +858,7 @@ pscfs_fuse_handle_setattr(fuse_req_t req, fuse_ino_t inum,
 	if (fuse_to_set & FUSE_SET_ATTR_MTIME)
 		pfl_to_set |= PSCFS_SETATTRF_MTIME;
 	if (fuse_to_set & FUSE_SET_ATTR_ATIME_NOW)
-		pfl_to_set |= PSCFS_SETATTRF_MTIME_NOW;
+		pfl_to_set |= PSCFS_SETATTRF_ATIME_NOW;
 	if (fuse_to_set & FUSE_SET_ATTR_MTIME_NOW)
 		pfl_to_set |= PSCFS_SETATTRF_MTIME_NOW;
 
