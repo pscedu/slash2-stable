@@ -123,24 +123,24 @@ void	pscfs_reply_umount(struct pscfs_req *);
 void	pscfs_reply_unlink(struct pscfs_req *, int);
 void	pscfs_reply_write(struct pscfs_req *, ssize_t, int);
 
-#define PSCFS_CREATEF_DIO	(1 << 0)
+#define PSCFS_CREATEF_DIO		(1 << 0)
 
-#define PSCFS_OPENF_DIO		(1 << 0)
-#define PSCFS_OPENF_KEEPCACHE	(1 << 1)
+#define PSCFS_OPENF_DIO			(1 << 0)
+#define PSCFS_OPENF_KEEPCACHE		(1 << 1)
 
 /* setattr() to_set mask flags */
-#define PSCFS_SETATTRF_MODE	(1 << 0)	/* chmod */
-#define	PSCFS_SETATTRF_UID	(1 << 1)	/* chown */
-#define	PSCFS_SETATTRF_GID	(1 << 2)	/* chgrp */
-#define	PSCFS_SETATTRF_DATASIZE	(1 << 3)	/* file data truncate */
-#define	PSCFS_SETATTRF_ATIME	(1 << 4)	/* utimes */
-#define	PSCFS_SETATTRF_MTIME	(1 << 5)	/* utimes */
-#define	PSCFS_SETATTRF_CTIME	(1 << 6)	/* utimes */
-#define	PSCFS_SETATTRF_ATIME_NOW (1 << 7)
-#define	PSCFS_SETATTRF_MTIME_NOW (1 << 8)
-#define	_PSCFS_SETATTRF_LAST	(1 << 9)
+#define PSCFS_SETATTRF_MODE		(1 << 0)	/* chmod */
+#define	PSCFS_SETATTRF_UID		(1 << 1)	/* chown */
+#define	PSCFS_SETATTRF_GID		(1 << 2)	/* chgrp */
+#define	PSCFS_SETATTRF_DATASIZE		(1 << 3)	/* file data truncate */
+#define	PSCFS_SETATTRF_ATIME		(1 << 4)	/* utimes */
+#define	PSCFS_SETATTRF_MTIME		(1 << 5)	/* utimes */
+#define	PSCFS_SETATTRF_CTIME		(1 << 6)	/* utimes */
+#define	PSCFS_SETATTRF_ATIME_NOW	(1 << 7)	/* utimes */
+#define	PSCFS_SETATTRF_MTIME_NOW	(1 << 8)	/* utimes */
+#define	_PSCFS_SETATTRF_LAST		(1 << 9)
 
-#define PSCFS_SETATTRF_ALL	(~0)
+#define PSCFS_SETATTRF_ALL		(~0)
 
 extern struct pscfs pscfs;
 
