@@ -46,6 +46,7 @@
 #include "psc_util/subsys.h"
 #include "psc_util/thread.h"
 
+__static pthread_key_t		_pfl_callerinfo_key;
 __static pthread_key_t		 psc_thrkey;
 __static pthread_key_t		 psc_logkey;
 __static struct psc_vbitmap	 psc_uniqthridmap = VBITMAP_INIT_AUTO;
@@ -128,6 +129,27 @@ _pscthr_destroy_logdata(void *p)
 	psc_free(p, PAF_NOLOG);
 }
 
+struct pfl_callerinfo *
+_pfl_callerinfo_getbuf(void)
+{
+	struct pfl_callerinfo *pci;
+
+	pci = pthread_getspecific(_pfl_callerinfo_key);
+	if (pci == NULL) {
+		pci = psc_alloc(sizeof(*pci), PAF_NOGUARD | PAF_NOLOG);
+		pthread_setspecific(_pfl_callerinfo_key, pci);
+	}
+	return (pci);
+}
+
+void
+_pfl_callerinfo_release(void *arg)
+{
+	struct pfl_callerinfo *pci = arg;
+
+	psc_free(pci, PAF_NOGUARD | PAF_NOLOG);
+}
+
 /**
  * pscthrs_init - Initialize threading subsystem.
  */
@@ -136,6 +158,10 @@ pscthrs_init(void)
 {
 	int rc;
 
+	rc = pthread_key_create(&_pfl_callerinfo_key,
+	    _pfl_callerinfo_release);
+	if (rc)
+		psc_fatalx("pthread_key_create: %s", strerror(rc));
 	rc = pthread_key_create(&psc_thrkey, _pscthr_destroy);
 	if (rc)
 		psc_fatalx("pthread_key_create: %s", strerror(rc));

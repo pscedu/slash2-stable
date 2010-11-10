@@ -49,6 +49,14 @@ psc_faults_init(void)
 {
 }
 
+__weak struct pfl_callerinfo *
+_pfl_callerinfo_getbuf(void)
+{
+	static struct pfl_callerinfo pci;
+
+	return (&pci);
+}
+
 __weak void
 psc_subsys_register(__unusedx int level, __unusedx const char *name)
 {

@@ -31,7 +31,7 @@
 	} while (0)
 
 #define PFL_CALLERINFOSS(ss)	(pfl_callerinfo ? pfl_callerinfo :	\
-				    _pfl_callerinfo(__FILE__,		\
+				    _pfl_callerinfo_get(__FILE__,	\
 				    __func__, __LINE__, (ss)))
 #define PFL_CALLERINFO()	PFL_CALLERINFOSS(PSC_SUBSYS)
 
@@ -49,18 +49,23 @@ void pfl_init(void);
 void pfl_print_flag(const char *, int *);
 void pfl_setprocesstitle(char **, const char *, ...);
 
-static __inline struct pfl_callerinfo *
-_pfl_callerinfo(const char *fn, const char *func, int lineno, int subsys)
-{
-	static __thread struct pfl_callerinfo pci;
+struct pfl_callerinfo *
+	_pfl_callerinfo_getbuf(void);
 
-	pci.pci_filename = fn;
-	pci.pci_func = func;
-	pci.pci_lineno = lineno;
-	pci.pci_subsys = subsys;
-	return (&pci);
+static __inline struct pfl_callerinfo *
+_pfl_callerinfo_get(const char *fn, const char *func, int lineno,
+    int subsys)
+{
+	struct pfl_callerinfo *pci;
+
+	pci = _pfl_callerinfo_getbuf();
+	pci->pci_filename = fn;
+	pci->pci_func = func;
+	pci->pci_lineno = lineno;
+	pci->pci_subsys = subsys;
+	return (pci);
 }
 
-extern struct pfl_callerinfo *pfl_callerinfo;
+extern struct pfl_callerinfo	*pfl_callerinfo;
 
 #endif /* _PFL_PFL_H_ */
