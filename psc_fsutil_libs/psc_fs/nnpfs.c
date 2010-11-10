@@ -14,11 +14,6 @@ pscfs_nnpfs_opendev(const char *fn)
 	pscfs_nnpfs_kernelfd = open(fd, O_RDWR);
 }
 
-pscfs_nnpfs_opendev(const char *fn)
-
-
-
-
 int
 pscfs_reply_open()
 {
