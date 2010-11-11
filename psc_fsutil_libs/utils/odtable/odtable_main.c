@@ -127,12 +127,14 @@ main(int argc, char *argv[])
 		usage();
 
 	if (create_table) {
-		rc = odtable_create(fn, table_size, elem_size, overwrite);
+		rc = odtable_create(fn, table_size, elem_size,
+		    overwrite);
 		if (rc)
 			errx(1, "create %s: %s", fn, strerror(-rc));
 		if (verbose)
-			warnx("created od-table %s (elem size = %ld, table size = %ld)",
-				fn, elem_size, table_size);
+			warnx("created od-table %s "
+			    "(elemsize=%zu, tablesize=%zu)",
+			    fn, elem_size, table_size);
 	}
 
 	rc = odtable_load(&odt, fn, "%s", fn);
