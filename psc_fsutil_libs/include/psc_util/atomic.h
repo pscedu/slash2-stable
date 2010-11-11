@@ -87,11 +87,11 @@
 #define psc_atomic64_xchg			_pfl_gen_atomic64_xchg
 
 struct psc_atomic16 { volatile int16_t value16; } __packed;
-struct psc_atomic32 { volatile int32_t value32; } __packed;
 struct psc_atomic64 { volatile int64_t value64; } __packed;
 
+#include "pfl/_atomic32.h"
+
 #define psc_atomic16_t struct psc_atomic16
-#define psc_atomic32_t struct psc_atomic32
 #define psc_atomic64_t struct psc_atomic64
 
 #ifdef __ia64
