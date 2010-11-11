@@ -40,6 +40,7 @@
 
 #include "pfl/time.h"
 #include "pfl/types.h"
+#include "psc_util/atomic.h"
 #include "psc_util/log.h"
 
 #ifndef HAVE_LIBPTHREAD
@@ -55,7 +56,7 @@ enum psc_spinlock_val {
 };
 
 typedef struct psc_spinlock {
-	enum psc_spinlock_val	psl_value;
+	psc_atomic32_t		psl_value;
 	int			psl_flags;
 	pthread_t		psl_who;
 #ifdef LOCK_TIMING
@@ -82,11 +83,11 @@ typedef struct psc_spinlock {
 #define INIT_SPINLOCK_NOLOG(psl) INIT_SPINLOCK_FLAGS((psl), PSLF_NOLOG)
 
 #ifdef LOCK_TIMING
-#  define SPINLOCK_INIT		{ PSL_UNLOCKED, 0, 0, { 0, 0 } }
-#  define SPINLOCK_INIT_NOLOG	{ PSL_UNLOCKED, PSLF_NOLOG, 0, { 0, 0 } }
+#  define SPINLOCK_INIT		{ PSC_ATOMIC32_INIT(PSL_UNLOCKED), 0, 0, { 0, 0 } }
+#  define SPINLOCK_INIT_NOLOG	{ PSC_ATOMIC32_INIT(PSL_UNLOCKED), PSLF_NOLOG, 0, { 0, 0 } }
 #else
-#  define SPINLOCK_INIT		{ PSL_UNLOCKED, 0, 0 }
-#  define SPINLOCK_INIT_NOLOG	{ PSL_UNLOCKED, PSLF_NOLOG, 0 }
+#  define SPINLOCK_INIT		{ PSC_ATOMIC32_INIT(PSL_UNLOCKED), 0, 0 }
+#  define SPINLOCK_INIT_NOLOG	{ PSC_ATOMIC32_INIT(PSL_UNLOCKED), PSLF_NOLOG, 0 }
 #endif
 
 #define _SPIN_GETVAL(psl)	psc_atomic32_read(_SPIN_GETATOM(psl))
