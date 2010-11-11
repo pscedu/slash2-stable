@@ -543,10 +543,10 @@ psc_atomic32_xchg(psc_atomic32_t *v, int32_t i)
 
 #define _PSC_ATOMIC32_XCHG(v, i)					\
 	{								\
-		int32_t _aval;						\
+		int32_t _aval = (i);					\
 									\
-		_PFL_NL_ASM("xchgl %0, %1" : "=r" (i)			\
-		    : "m" _PFL_GETA32(v), "0" (i) : "memory");		\
+		_PFL_NL_ASM("xchgl %0, %1" : "=r" (_aval)		\
+		    : "m" _PFL_GETA32(v), "0" (_aval) : "memory");	\
 		(_aval);						\
 	}
 
