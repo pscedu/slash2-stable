@@ -24,6 +24,7 @@
 #include <unistd.h>
 
 /* start includes */
+#include "pfl/_atomic32.h"
 #include "pfl/cdefs.h"
 #include "pfl/compat.h"
 #include "pfl/explist.h"
