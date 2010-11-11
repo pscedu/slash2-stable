@@ -198,8 +198,7 @@ ifneq ($(filter m,${MODULES}),)
 endif
 
 ifneq ($(filter pfl,${MODULES}),)
-  INCLUDES+=	-I${PFL_BASE}/include
-  SRC_PATH+=	$(filter-out %/tests/,$(shell ls -d ${PFL_BASE}/*/))
+  MODULES+=	pfl-hdrs
   SRCS+=	${PFL_BASE}/psc_util/alloc.c
   SRCS+=	${PFL_BASE}/psc_util/init.c
   SRCS+=	${PFL_BASE}/psc_util/log.c
@@ -212,6 +211,11 @@ ifneq ($(filter pfl,${MODULES}),)
  ifneq ($(filter pthread,${MODULES}),)
    MODULES+=	numa
  endif
+endif
+
+ifneq ($(filter pfl-hdrs,${MODULES}),)
+  INCLUDES+=	-I${PFL_BASE}/include
+  SRC_PATH+=	$(filter-out %/tests/,$(shell ls -d ${PFL_BASE}/*/))
 endif
 
 ifneq ($(filter mpi,${MODULES}),)
