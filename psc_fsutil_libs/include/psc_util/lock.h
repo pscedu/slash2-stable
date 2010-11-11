@@ -38,9 +38,9 @@
 #include <time.h>
 #include <unistd.h>
 
+#include "pfl/_atomic32.h"
 #include "pfl/time.h"
 #include "pfl/types.h"
-#include "psc_util/atomic.h"
 #include "psc_util/log.h"
 
 #ifndef HAVE_LIBPTHREAD
@@ -118,7 +118,7 @@ typedef struct psc_spinlock {
 	{								\
 		enum psc_spinlock_val _val;				\
 									\
-		_val = psc_atomic32_xchg(_SPIN_GETATOM(psl),		\
+		_val = PSC_ATOMIC32_XCHG(_SPIN_GETATOM(psl),		\
 		    PSL_LOCKED);					\
 		if ((_val) == PSL_LOCKED) {				\
 			if ((psl)->psl_who == pthread_self())		\
