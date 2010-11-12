@@ -66,10 +66,6 @@ struct psc_mspinlock {
 # define PMSL_INIT		{ PSC_ATOMIC16_INIT(0) }
 #endif
 
-extern struct psc_vbitmap	 _psc_mspin_unthridmap;
-extern psc_spinlock_t		 _psc_mspin_unthridmap_lock;
-extern pthread_key_t		 _psc_mspin_thrkey;
-
 #define psc_mspin_init(pmsl)						\
 	do {								\
 		PMSL_MAGIC_INIT(pmsl);					\
@@ -85,11 +81,11 @@ extern pthread_key_t		 _psc_mspin_thrkey;
 		if ((_v & PMSL_LOCKMASK) == 0)				\
 			psc_fatalx("psc_mspin_ensure: not locked; "	\
 			    "pmsl=%p", (pmsl));				\
-		if ((_v & PMSL_OWNERMASK) != _psc_mspin_getunthrid())	\
+		if ((_v & PMSL_OWNERMASK) != pscthr_getuniqid())	\
 			psc_fatalx("psc_mspin_ensure: not owner "	\
 			    "(%p, owner=%d, self=%d)!",	(pmsl),		\
 			    _v & PMSL_OWNERMASK,			\
-			    _psc_mspin_getunthrid());			\
+			    pscthr_getuniqid());			\
 	} while (0)
 
 #define psc_mspin_unlock(pmsl)						\
@@ -97,59 +93,6 @@ extern pthread_key_t		 _psc_mspin_thrkey;
 		psc_mspin_ensure(pmsl);					\
 		psc_atomic16_set(&(pmsl)->pmsl_value, 0);		\
 	} while (0)
-
-static __inline void
-_psc_mspin_thrteardown(void *arg)
-{
-	uint16_t thrid = (unsigned long)arg;
-
-	spinlock(&_psc_mspin_unthridmap_lock);
-	psc_vbitmap_unset(&_psc_mspin_unthridmap, thrid - 1);
-	psc_vbitmap_setnextpos(&_psc_mspin_unthridmap, 0);
-	freelock(&_psc_mspin_unthridmap_lock);
-}
-
-/*
- * Thread IDs are not guaranteed to be 16-bits on some systems, and since we
- * never have 2^16 threads, it is wasted space when you use lots of spinlocks,
- * so use our own unique thread ID scheme.
- */
-static __inline int16_t
-_psc_mspin_getunthrid(void)
-{
-	static int init;
-	uint16_t thrid;
-	int rc;
-
-	if (!init) {
-		spinlock(&_psc_mspin_unthridmap_lock);
-		if (!init) {
-			rc = pthread_key_create(&_psc_mspin_thrkey,
-			    _psc_mspin_thrteardown);
-			if (rc)
-				psc_fatalx("pthread_key_create: %s",
-				    strerror(rc));
-			init = 1;
-		}
-		freelock(&_psc_mspin_unthridmap_lock);
-	}
-
-	thrid = (unsigned long)pthread_getspecific(_psc_mspin_thrkey);
-	if (thrid == 0) {
-		size_t arg;
-
-		spinlock(&_psc_mspin_unthridmap_lock);
-		if (psc_vbitmap_next(&_psc_mspin_unthridmap, &arg) == -1)
-			psc_fatal("psc_vbitmap_next");
-		thrid = arg + 1;
-		freelock(&_psc_mspin_unthridmap_lock);
-
-		rc = pthread_setspecific(_psc_mspin_thrkey, (void *)(unsigned long)thrid);
-		if (rc)
-			psc_fatalx("pthread_setspecific: %s", strerror(rc));
-	}
-	return (thrid);
-}
 
 static __inline int
 psc_mspin_trylock(struct psc_mspinlock *pmsl)
@@ -160,11 +103,11 @@ psc_mspin_trylock(struct psc_mspinlock *pmsl)
 	oldval = psc_atomic16_setmask_getold(&pmsl->pmsl_value,
 	    PMSL_LOCKMASK);
 	if (oldval & PMSL_LOCKMASK) {
-		if ((oldval & PMSL_OWNERMASK) == _psc_mspin_getunthrid())
+		if ((oldval & PMSL_OWNERMASK) == pscthr_getuniqid())
 			psc_fatalx("already holding the lock");
 		return (0);				/* someone else has it */
 	}
-	oldval = _psc_mspin_getunthrid() | PMSL_LOCKMASK;
+	oldval = pscthr_getuniqid() | PMSL_LOCKMASK;
 	psc_atomic16_set(&pmsl->pmsl_value, oldval);	/* we got it */
 	return (1);
 }
@@ -191,7 +134,7 @@ psc_mspin_reqlock(struct psc_mspinlock *pmsl)
 
 	v = psc_atomic16_read(&pmsl->pmsl_value);
 	if ((v & PMSL_LOCKMASK) &&
-	    (v & PMSL_OWNERMASK) == _psc_mspin_getunthrid())
+	    (v & PMSL_OWNERMASK) == pscthr_getuniqid())
 		return (1);
 	psc_mspin_lock(pmsl);
 	return (0);
@@ -204,7 +147,7 @@ psc_mspin_tryreqlock(struct psc_mspinlock *pmsl, int *locked)
 
 	v = psc_atomic16_read(&pmsl->pmsl_value);
 	if ((v & PMSL_LOCKMASK) &&
-	    (v & PMSL_OWNERMASK) == _psc_mspin_getunthrid()) {
+	    (v & PMSL_OWNERMASK) == pscthr_getuniqid()) {
 		*locked = 1;
 		return (1);
 	}

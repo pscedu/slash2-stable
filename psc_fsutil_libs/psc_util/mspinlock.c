@@ -2,7 +2,7 @@
 /*
  * %PSC_START_COPYRIGHT%
  * -----------------------------------------------------------------------------
- * Copyright (c) 2006-2010, Pittsburgh Supercomputing Center (PSC).
+ * Copyright (c) 2008-2010, Pittsburgh Supercomputing Center (PSC).
  *
  * Permission to use, copy, and modify this software and its documentation
  * without fee for personal use or non-commercial use within your organization
@@ -27,4 +27,3 @@
 
 struct psc_vbitmap	 _psc_mspin_unthridmap = VBITMAP_INIT_AUTO;
 psc_spinlock_t		 _psc_mspin_unthridmap_lock = SPINLOCK_INIT;
-pthread_key_t		 _psc_mspin_thrkey;
