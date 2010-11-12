@@ -46,9 +46,8 @@
 #include "psc_util/subsys.h"
 #include "psc_util/thread.h"
 
-__static pthread_key_t		_pfl_callerinfo_key;
+__static pthread_key_t		 pfl_tlskey;
 __static pthread_key_t		 psc_thrkey;
-__static pthread_key_t		 psc_logkey;
 __static struct psc_vbitmap	 psc_uniqthridmap = VBITMAP_INIT_AUTO;
 struct psc_lockedlist		 psc_threads =
     PLL_INIT(&psc_threads, struct psc_thread, pscthr_lentry);
@@ -81,6 +80,40 @@ _pscthr_destroy(void *arg)
 	}
 	psc_free(thr->pscthr_loglevels, PAF_NOLOG);
 	psc_free(thr, PAF_NOLOG);
+}
+
+void
+_pfl_tls_release(void *arg)
+{
+	void **tbl = arg;
+	int i;
+
+	for (i = 0; i < PFL_TLSIDX_MAX; i++)
+		psc_free(tbl[i], PAF_NOGUARD | PAF_NOLOG);
+	psc_free(tbl, PAF_NOGUARD | PAF_NOLOG);
+}
+
+int
+pfl_tls_get(int idx, size_t len, void *p)
+{
+	void **tbl;
+	int rc = 0;
+
+	tbl = pthread_getspecific(pfl_tlskey);
+	if (tbl == NULL) {
+		tbl = psc_calloc(sizeof(*tbl), PFL_TLSIDX_MAX,
+		    PAF_NOLOG | PAF_NOGUARD);
+		rc = pthread_setspecific(pfl_tlskey, tbl);
+		if (rc)
+			psc_fatalx("pthread_setspecific: %s", strerror(rc));
+	}
+	if (tbl[idx] == NULL) {
+		rc = 1;
+
+		tbl[idx] = psc_alloc(len, PAF_NOLOG | PAF_NOGUARD);
+	}
+	*(void **)p = tbl[idx];
+	return (rc);
 }
 
 /**
@@ -123,33 +156,6 @@ _pscthr_sigusr2(__unusedx int sig)
 	ureqlock(&thr->pscthr_lock, locked);
 }
 
-void
-_pscthr_destroy_logdata(void *p)
-{
-	psc_free(p, PAF_NOLOG);
-}
-
-struct pfl_callerinfo *
-_pfl_callerinfo_getbuf(void)
-{
-	struct pfl_callerinfo *pci;
-
-	pci = pthread_getspecific(_pfl_callerinfo_key);
-	if (pci == NULL) {
-		pci = psc_alloc(sizeof(*pci), PAF_NOGUARD | PAF_NOLOG);
-		pthread_setspecific(_pfl_callerinfo_key, pci);
-	}
-	return (pci);
-}
-
-void
-_pfl_callerinfo_release(void *arg)
-{
-	struct pfl_callerinfo *pci = arg;
-
-	psc_free(pci, PAF_NOGUARD | PAF_NOLOG);
-}
-
 /**
  * pscthrs_init - Initialize threading subsystem.
  */
@@ -158,16 +164,13 @@ pscthrs_init(void)
 {
 	int rc;
 
-	rc = pthread_key_create(&_pfl_callerinfo_key,
-	    _pfl_callerinfo_release);
-	if (rc)
-		psc_fatalx("pthread_key_create: %s", strerror(rc));
 	rc = pthread_key_create(&psc_thrkey, _pscthr_destroy);
 	if (rc)
-		psc_fatalx("pthread_key_create: %s", strerror(rc));
-	rc = pthread_key_create(&psc_logkey, _pscthr_destroy_logdata);
+		errx(1, "pthread_key_create: %s", strerror(rc));
+
+	rc = pthread_key_create(&pfl_tlskey, _pfl_tls_release);
 	if (rc)
-		psc_fatalx("pthread_key_create: %s", strerror(rc));
+		errx(1, "pthread_key_create: %s", strerror(rc));
 }
 
 /**
@@ -487,31 +490,6 @@ pscthr_setpause(struct psc_thread *thr, int pauseval)
 }
 
 /**
- * psclog_getdatamem - Obtain logging info from thread-local storage.
- * @d: data pointer.
- */
-struct psclog_data *
-psclog_getdatamem(void)
-{
-	return (pthread_getspecific(psc_logkey));
-}
-
-/**
- * psclog_setdatamem - Store logging info into thread-local storage.
- * @d: data pointer.
- */
-void
-psclog_setdatamem(struct psclog_data *d)
-{
-	int rc;
-
-	rc = pthread_setspecific(psc_logkey, d);
-	if (rc)
-		errx(1, "pthread_setspecific: %s",
-		    strerror(rc));
-}
-
-/**
  * psc_get_hostname - Override hostname retrieval to access thread-local
  *	storage for hostname.  Local memory improves the speediness of
  *	logging.
@@ -585,7 +563,7 @@ pscthr_run(void)
 	return (run);
 }
 
-void
+int
 pscthr_getuniqid(void)
 {
 	struct psc_thread *thr;
@@ -599,6 +577,7 @@ pscthr_getuniqid(void)
 		PLL_ULOCK(&psc_threads);
 		thr->pscthr_uniqid = pos + 1;
 	}
+	return (thr->pscthr_uniqid);
 }
 
 struct psc_thread *

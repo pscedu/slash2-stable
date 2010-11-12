@@ -85,18 +85,6 @@ psc_log_init(void)
 	}
 }
 
-__weak struct psclog_data *
-psclog_getdatamem(void)
-{
-	return (psc_logdata);
-}
-
-__weak void
-psclog_setdatamem(struct psclog_data *d)
-{
-	psc_logdata = d;
-}
-
 enum psclog_level
 psc_log_getlevel_global(void)
 {
@@ -181,9 +169,7 @@ psclog_getdata(void)
 	struct psclog_data *d;
 	char *p;
 
-	d = psclog_getdatamem();
-	if (d == NULL) {
-		d = psc_alloc(sizeof(*d), PAF_NOLOG);
+	if (pfl_tls_get(PFL_TLSIDX_LOGDATA, sizeof(*d), &d)) {
 		/* XXX use psc_get_hostname() */
 		if (gethostname(d->pld_hostname,
 		    sizeof(d->pld_hostname)) == -1)
@@ -201,7 +187,6 @@ psclog_getdata(void)
 #else
 		MPI_Comm_rank(1, &d->pld_rank); /* 1=MPI_COMM_WORLD */
 #endif
-		psclog_setdatamem(d);
 	}
 	return (d);
 }

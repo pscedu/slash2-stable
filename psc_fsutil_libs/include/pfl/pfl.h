@@ -44,13 +44,19 @@ struct pfl_callerinfo {
 
 void psc_enter_debugger(const char *);
 
-void pfl_dump_fflags(int);
-void pfl_init(void);
-void pfl_print_flag(const char *, int *);
-void pfl_setprocesstitle(char **, const char *, ...);
+void  pfl_dump_fflags(int);
+void  pfl_init(void);
+void  pfl_print_flag(const char *, int *);
+void  pfl_setprocesstitle(char **, const char *, ...);
+int   pfl_tls_get(int, size_t, void *);
 
-struct pfl_callerinfo *
-	_pfl_callerinfo_getbuf(void);
+#define PFL_TLSIDX_LOGDATA	0
+#define PFL_TLSIDX_CALLERINFO	1
+#define PFL_TLSIDX_MEMNODE	2
+#define PFL_TLSIDX_LASTRESERVED	3
+#define PFL_TLSIDX_MAX		8
+
+extern struct pfl_callerinfo	*pfl_callerinfo;
 
 static __inline struct pfl_callerinfo *
 _pfl_callerinfo_get(const char *fn, const char *func, int lineno,
@@ -58,14 +64,12 @@ _pfl_callerinfo_get(const char *fn, const char *func, int lineno,
 {
 	struct pfl_callerinfo *pci;
 
-	pci = _pfl_callerinfo_getbuf();
+	pfl_tls_get(PFL_TLSIDX_CALLERINFO, sizeof(*pci), &pci);
 	pci->pci_filename = fn;
 	pci->pci_func = func;
 	pci->pci_lineno = lineno;
 	pci->pci_subsys = subsys;
 	return (pci);
 }
-
-extern struct pfl_callerinfo	*pfl_callerinfo;
 
 #endif /* _PFL_PFL_H_ */

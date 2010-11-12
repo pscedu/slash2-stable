@@ -2,7 +2,7 @@
 /*
  * %PSC_START_COPYRIGHT%
  * -----------------------------------------------------------------------------
- * Copyright (c) 2006-2010, Pittsburgh Supercomputing Center (PSC).
+ * Copyright (c) 2007-2010, Pittsburgh Supercomputing Center (PSC).
  *
  * Permission to use, copy, and modify this software and its documentation
  * without fee for personal use or non-commercial use within your organization
@@ -33,6 +33,7 @@
 
 psc_spinlock_t		 psc_umask_lock = SPINLOCK_INIT;
 struct pfl_callerinfo	*pfl_callerinfo;
+__static void		*_pfl_tls[PFL_TLSIDX_MAX];
 
 __weak void
 pscthrs_init(void)
@@ -49,12 +50,17 @@ psc_faults_init(void)
 {
 }
 
-__weak struct pfl_callerinfo *
-_pfl_callerinfo_getbuf(void)
+__weak int
+pfl_tls_get(int idx, size_t len, void *p)
 {
-	static struct pfl_callerinfo pci;
+	int rc = 0;
 
-	return (&pci);
+	if (_pfl_tls[idx] == NULL) {
+		rc = 1;
+		_pfl_tls[idx] = psc_alloc(len, PAF_NOLOG | PAF_NOGUARD);
+	}
+	*(void **)p = _pfl_tls[idx];
+	return (rc);
 }
 
 __weak void
