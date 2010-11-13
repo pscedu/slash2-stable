@@ -103,8 +103,6 @@ pfl
 	PSC_WAITQ_INIT -> WAITQ_INIT
 	INIT_PSC_LISTENTRY -> INIT_LISTENTRY
   which is OK since it isn't a symbol
-- mspinlock is not going to work on NUMA, use thruniqid instead of
-  int init+pthread_key
 - eliminate flags arg to pscthr_init()
 - eliminate prt_alive
 - in mguard, check the flags in realloc/free match alloc (PAF_LOCK, ALIGN)
@@ -112,15 +110,12 @@ pfl
 - count spinlocks and mutexes held before:
 	- waitq (should be holding one)
 	- rpc (should be holding none)
-- rename MODULES to COMPONENTS
+- rename SLASH/ZEST_MODULES to COMPONENTS to disassociate from PFL MODULES
 - rename PPMF_NOLOCK -> PPMF_NOMLOCK, PAF_LOCK -> PAF_MLOCK
 - add zfs SPA version to slashd ctlparam
 - add lnet knob to ctlparam: sdp, lnet_networks
 - for odtable(1), print stats as default behavior
 - add function call hierarchy to psclog
-- memguard LRU + realloc should always allocate new regions and
-  PROT_NONE the old ones
-- ctl -plog.level=2 makes the system go haywire
 - mmap() mprotect()'d memory in memguard
 - rename RSX_ALLOCREP to something that doesnt mean 'allocate' and
   RSX_NEWREQ to ALLOC to make alloc grepping easier
