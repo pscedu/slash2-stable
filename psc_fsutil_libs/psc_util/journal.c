@@ -127,6 +127,18 @@ pjournal_next_distill(struct psc_journal *pj)
 	return (xid);
 }
 
+uint64_t
+pjournal_next_reclaim(struct psc_journal *pj)
+{
+	uint64_t seqno;
+
+	PJ_LOCK(pj);
+	seqno = ++pj->pj_reclaim_seqno;
+	PJ_ULOCK(pj);
+
+	return (seqno);
+}
+
 __static uint64_t
 pjournal_next_xid(struct psc_journal *pj)
 {
