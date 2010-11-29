@@ -47,7 +47,7 @@ typedef int (*psc_replay_handler_t)(struct psc_journal_enthdr *);
  * log entries carry information that we might need to preserve a longer
  * time, and outside the journal.
  */
-typedef int (*psc_distill_handler_t)(struct psc_journal_enthdr *);
+typedef int (*psc_distill_handler_t)(struct psc_journal_enthdr *, int);
 
 #define PJRNL_TXG_GET			0
 #define PJRNL_TXG_PUT			1
@@ -92,6 +92,7 @@ struct psc_journal_hdr {
 struct psc_journal {
 	psc_spinlock_t			 pj_lock;
 	int				 pj_flags;
+	int				 pj_npeers;		/* the number of MDS peers */
 
 	uint32_t			 pj_inuse;
 	uint32_t			 pj_total;
