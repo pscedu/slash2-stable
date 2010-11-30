@@ -96,4 +96,7 @@
 #define PSC_MAKETRUE(expr)	(_PSC_MAKE_EXPR(expr, 1))
 #define PSC_MAKEFALSE(expr)	(_PSC_MAKE_EXPR(expr, 0))
 
+/* arthimetic on a generic pointer */
+#define PSC_AGP(p, off)		((void *)((char *)(p) + (off)))
+
 #endif /* _PFL_CDEFS_H_ */
