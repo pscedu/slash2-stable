@@ -322,7 +322,7 @@ pjournal_add_entry(struct psc_journal *pj, uint64_t txg, int type,
  * pjournal_add_entry_distill - Add a log entry into the journal.  The
  *	log entry needs to be distilled.
  */
-int
+void
 pjournal_add_entry_distill(struct psc_journal *pj, uint64_t txg,
     int type, void *buf, int size)
 {

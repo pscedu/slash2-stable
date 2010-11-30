@@ -223,7 +223,7 @@ void	*pjournal_get_buf(struct psc_journal *, size_t);
 void	 pjournal_put_buf(struct psc_journal *, void *);
 
 void	 pjournal_add_entry(struct psc_journal *, uint64_t, int, void *, int);
-int	 pjournal_add_entry_distill(struct psc_journal *, uint64_t, int, void *, int);
+void	 pjournal_add_entry_distill(struct psc_journal *, uint64_t, int, void *, int);
 
 
 #define PJ_GETENTOFF(pj, i)	((off_t)(pj)->pj_hdr->pjh_start_off + (i) * PJ_PJESZ(pj))
