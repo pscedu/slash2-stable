@@ -192,8 +192,8 @@ struct psc_journal_xidhndl {
 	uint64_t			 pjx_xid;		/* debugging only */
 	uint32_t			 pjx_slot;
 	uint32_t			 pjx_flags;
-	struct psclist_head		 pjx_lentry1;		/* pending transaction list */
-	struct psclist_head		 pjx_lentry2;		/* distill transaction list */
+	struct psclist_head		 pjx_lentry1;		/* pending transaction list - ordered by slot number assigned */
+	struct psclist_head		 pjx_lentry2;		/* distill transaction list - ordered by transaction ID */
 	psc_spinlock_t			 pjx_lock;
 	struct psc_journal		*pjx_pj;
 	void				*pjx_data;
@@ -201,6 +201,7 @@ struct psc_journal_xidhndl {
 
 #define	PJX_NONE			      0
 #define	PJX_DISTILL			(1 << 0)
+#define	PJX_WRITTEN			(1 << 1)
 
 /* Actions to be take after the journal log is open */
 #define	PJOURNAL_LOG_DUMP		1

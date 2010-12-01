@@ -139,10 +139,9 @@ pjournal_next_reclaim(struct psc_journal *pj)
 	return (seqno);
 }
 
-__static uint64_t
-pjournal_next_xid(struct psc_journal *pj)
+__static void
+pjournal_next_xid(struct psc_journal *pj, struct psc_journal_xidhndl *xh, int distill)
 {
-	uint64_t xid;
 	/*
 	 * Note that even though we issue xids in increasing order here,
 	 * it does not necessarily mean transactions will end up in the
@@ -150,12 +149,21 @@ pjournal_next_xid(struct psc_journal *pj)
 	 */
 	PJ_LOCK(pj);
 	do {
-		xid = ++pj->pj_lastxid;
-	} while (xid == PJE_XID_NONE);
+		xh->pjx_xid = ++pj->pj_lastxid;
+	} while (xh->pjx_xid == PJE_XID_NONE);
+	/*
+ 	 * Make sure that transactions appear on the distill list in strict
+ 	 * order.  That way we can get accurate information about the lowest
+ 	 * xid that has been distilled.
+ 	 *
+ 	 * If we add to the list after the transaction is written, the order
+ 	 * may not be guaranteed, as I said above.
+ 	 */
+	if (distill) 
+		pll_addtail(&pj->pj_distillxids, xh);
 	PJ_ULOCK(pj);
-
-	return (xid);
 }
+
 
 /**
  * pjournal_next_slot - Determine where to write the transaction's log.
@@ -204,7 +212,7 @@ pjournal_next_slot(struct psc_journal_xidhndl *xh)
  * @pj: the owning journal.
  */
 __static struct psc_journal_xidhndl *
-pjournal_xnew(struct psc_journal *pj)
+pjournal_xnew(struct psc_journal *pj, int distill)
 {
 	struct psc_journal_xidhndl *xh;
 
@@ -216,7 +224,7 @@ pjournal_xnew(struct psc_journal *pj)
 	xh->pjx_slot = PJX_SLOT_ANY;
 	INIT_PSC_LISTENTRY(&xh->pjx_lentry1);
 	INIT_PSC_LISTENTRY(&xh->pjx_lentry2);
-	xh->pjx_xid = pjournal_next_xid(pj);
+	pjournal_next_xid(pj, xh, distill);
 
 	psc_info("starting a new transaction %p (xid = %"PRIx64") in "
 	    "journal %p", xh, xh->pjx_xid, pj);
@@ -309,7 +317,7 @@ pjournal_add_entry(struct psc_journal *pj, uint64_t txg, int type,
 	struct psc_journal_xidhndl *xh;
 	struct psc_journal_enthdr *pje;
 
-	xh = pjournal_xnew(pj);
+	xh = pjournal_xnew(pj, 0);
 	xh->pjx_txg = txg;
 	xh->pjx_flags = PJX_NONE;
 	pje = DATA_2_PJE(buf);
@@ -329,7 +337,7 @@ pjournal_add_entry_distill(struct psc_journal *pj, uint64_t txg,
 	struct psc_journal_xidhndl *xh;
 	struct psc_journal_enthdr *pje;
 
-	xh = pjournal_xnew(pj);
+	xh = pjournal_xnew(pj, 1);
 	xh->pjx_txg = txg;
 	xh->pjx_flags = PJX_DISTILL;
 	pje = DATA_2_PJE(buf);
@@ -437,6 +445,7 @@ pjournal_logwrite(struct psc_journal_xidhndl *xh, int type,
     struct psc_journal_enthdr *pje, int size)
 {
 	struct psc_journal *pj;
+	static psc_spinlock_t	writelock = SPINLOCK_INIT;
 
 	pj = xh->pjx_pj;
 
@@ -452,22 +461,27 @@ pjournal_logwrite(struct psc_journal_xidhndl *xh, int type,
 	pje->pje_xid = xh->pjx_xid;
 	pje->pje_txg = xh->pjx_txg;
 
+ 	/* paranoid: make sure that an earlier slot is written first. */
+	spinlock(&writelock);
 	pjournal_next_slot(xh);
-
 	pjournal_logwrite_internal(pj, pje, xh->pjx_slot);
+	freelock(&writelock);
 
 	/*
 	 * If this log entry needs further processing, hand it
 	 * off to the distill thread.
 	 */
+	spinlock(&xh->pjx_lock);
 	if (xh->pjx_flags & PJX_DISTILL) {
 		xh->pjx_data = pje;
-		pll_addtail(&pj->pj_distillxids, xh);
+		xh->pjx_flags |= PJX_WRITTEN;
+		freelock(&xh->pjx_lock);
 
 		spinlock(&pjournal_waitqlock);
 		psc_waitq_wakeall(&pjournal_waitq);
 		freelock(&pjournal_waitqlock);
-	}
+	} else
+		freelock(&xh->pjx_lock);
 }
 
 __static void *
@@ -557,6 +571,9 @@ pjournal_scan_slots(struct psc_journal *pj)
 			 * We start from the first log entry.  If we see
 			 * a formatted log entry, there should be no
 			 * more real log entries after that.
+			 *
+			 * Well, this is only true if we write slots
+			 * sequentially.
 			 *
 			 * If the log has wrapped around, then we will
 			 * never see such an entry.
@@ -911,12 +928,19 @@ pjournal_thr_main(struct psc_thread *thr)
 	while (pscthr_run()) {
 		/*
 		 * Walk the list until we find a log entry that needs processing.
+		 * We also make sure that we distill in order of transaction IDs.
 		 */
 		while ((xh = pll_get(&pj->pj_distillxids))) {
 
+			spinlock(&xh->pjx_lock);
 			psc_assert(xh->pjx_flags & PJX_DISTILL);
-			pje = xh->pjx_data;
+			if (!(xh->pjx_flags & PJX_WRITTEN)) {
+				freelock(&xh->pjx_lock);
+				break;
+			}
+			freelock(&xh->pjx_lock);
 
+			pje = xh->pjx_data;
 			pj->pj_distill_handler(pje, pj->pj_npeers);
 
 			spinlock(&xh->pjx_lock);
