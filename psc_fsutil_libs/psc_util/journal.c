@@ -133,7 +133,7 @@ pjournal_next_reclaim(struct psc_journal *pj)
 	uint64_t seqno;
 
 	PJ_LOCK(pj);
-	seqno = ++pj->pj_reclaim_seqno;
+	seqno = pj->pj_reclaim_seqno++;
 	PJ_ULOCK(pj);
 
 	return (seqno);
