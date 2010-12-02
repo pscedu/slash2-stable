@@ -48,7 +48,7 @@ _psc_str_hashify(const char *s, int len)
 	if (s == NULL)
 		return (-1);
 	for (p = s; *p != '\0' && len; p++, len--) {
-		h = (h << 4) + (*p);
+		h = (h << 4) + *p;
 		if ((g = h & 0xf0000000)) {
 			h = h ^ (g >> 24);
 			h = h ^ g;
