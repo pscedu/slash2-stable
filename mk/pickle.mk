@@ -161,4 +161,8 @@ PICKLE_NEED_VERSION=					$(word 2,$$Rev$$)
   SRCS+=						${PFL_BASE}/compat/futimens.c
  endif
 
+ ifdef PICKLE_HAVE_ST_INO_64BIT
+  DEFINES+=						-DHAVE_ST_INO_64BIT
+ endif
+
 endif
