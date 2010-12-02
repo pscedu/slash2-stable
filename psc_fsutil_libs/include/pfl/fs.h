@@ -30,6 +30,9 @@ struct statvfs;
 struct pscfs_args;
 struct pscfs_req;
 
+struct psc_ctlmsghdr;
+struct psc_ctlmsg_param;
+
 typedef uint64_t pscfs_inum_t;
 typedef uint64_t pscfs_fgen_t;
 
@@ -141,6 +144,8 @@ void	pscfs_reply_write(struct pscfs_req *, ssize_t, int);
 #define	_PSCFS_SETATTRF_LAST		(1 << 9)
 
 #define PSCFS_SETATTRF_ALL		(~0)
+
+int pscfs_ctlparam(int, struct psc_ctlmsghdr *, struct psc_ctlmsg_param *, char **, int);
 
 extern struct pscfs pscfs;
 
