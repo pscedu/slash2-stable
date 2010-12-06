@@ -304,7 +304,7 @@ psc_pool_grow(struct psc_poolmgr *m, int n)
 			if (flags & PAF_LOCK)
 				psc_free(p, PAF_LOCK, m->ppm_entsize);
 			else
-				PSCFREE(p); /* XXX align flags */
+				PSCFREE(p);
 			return (i);
 		}
 		locked = POOL_RLOCK(m);
