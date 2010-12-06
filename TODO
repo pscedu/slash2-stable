@@ -137,6 +137,7 @@ pfl
 - rename general log subsystem to default
 - create a mechanism to include pflctl(7) directly into each *ctl.8 page
 - pool auto threshold is broken
+- psclog pool get/return
 
 - pcpp:
   if an arg is a pointer, dont trace an integer version of it in PFL_ENTER()
