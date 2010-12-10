@@ -529,14 +529,14 @@ libcfs_sock_create(int *fdp)
 }
 
 int
-libcfs_sock_bind_to_port(int fd, __u16 port)
+libcfs_sock_bind_to_port(int fd, __u32 ip, __u16 port)
 {
         int                rc;
         struct sockaddr_in locaddr;
 
         memset(&locaddr, 0, sizeof(locaddr)); 
         locaddr.sin_family = lnet_get_usesdp() ? AF_INET_SDP : AF_INET; 
-        locaddr.sin_addr.s_addr = INADDR_ANY;
+        locaddr.sin_addr.s_addr = htonl(ip);
         locaddr.sin_port = htons(port);
 
         rc = bind(fd, (struct sockaddr *)&locaddr, sizeof(locaddr));
