@@ -87,8 +87,6 @@ PSCRPC_SRCS+=		${PFL_BASE}/psc_rpc/rsx.c
 PSCRPC_SRCS+=		${PFL_BASE}/psc_rpc/service.c
 PSCRPC_SRCS+=		${PFL_BASE}/psc_rpc/util.c
 
-PSCFS_SRCS+=		${PFL_BASE}/psc_fs/fs_common.c
-
 _TINCLUDES=		$(filter-out -I%,${INCLUDES}) $(patsubst %,-I%,$(foreach \
 			dir,$(patsubst -I%,%,$(filter -I%,${INCLUDES})), $(realpath ${dir})))
 
@@ -154,6 +152,7 @@ endif
 
 ifneq ($(filter rpc,${MODULES}),)
   SRCS+=	${PSCRPC_SRCS}
+  SRCS+=	${LNET_SOCKLND_SRCS}
   MODULES+=	lnet
 endif
 
@@ -253,8 +252,9 @@ ifneq ($(filter aio,${MODULES}),)
   LDFLAGS+=	${LIBAIO}
 endif
 
-ifneq ($(filter noctl,${MODULES}),)
-  DEFINES+=	-DPFL_NO_CTL
+ifneq ($(filter ctl,${MODULES}),)
+  SRCS+=	${PFL_BASE}/psc_util/ctlsvr.c
+  DEFINES+=	-DPFL_CTL
 endif
 
 ifneq ($(filter sgio,${MODULES}),)
@@ -354,14 +354,14 @@ ${OBJDIR}/$(notdir %.c) : %.y
 ifdef HASDEPS
   ifdef PROG
     ${PROG}: ${OBJS}
-	${CC} -o $@ ${OBJS} ${LDFLAGS}
+	${CC} -o $@ $(sort ${OBJS}) ${LDFLAGS}
 	@printf "%s" "${PROG}:" > ${DEPEND_FILE}
 	@${LIBDEP} ${LDFLAGS} ${LIBDEP_ADD} >> ${DEPEND_FILE}
   endif
 
   ifdef LIBRARY
     ${LIBRARY}: ${OBJS}
-	${AR} ${ARFLAGS} $@ ${OBJS}
+	${AR} ${ARFLAGS} $@ $(sort ${OBJS})
   endif
 else
   ifdef PROG

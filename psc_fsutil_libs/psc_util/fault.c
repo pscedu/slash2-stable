@@ -425,7 +425,8 @@ psc_ctlparam_faults_handle(int fd, struct psc_ctlmsghdr *mh,
 
 int
 psc_ctlparam_faults(int fd, struct psc_ctlmsghdr *mh,
-    struct psc_ctlmsg_param *pcp, char **levels, int nlevels)
+    struct psc_ctlmsg_param *pcp, char **levels, int nlevels,
+    __unusedx struct psc_ctlparam_node *pcn)
 {
 	struct psc_fault *pflt;
 	struct psc_hashbkt *b;

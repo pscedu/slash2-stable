@@ -29,6 +29,7 @@
 struct psc_ctlmsghdr;
 struct psc_ctlmsg_param;
 struct psc_ctlmsg_thread;
+struct psc_ctlparam_node;
 
 #define PSC_CTL_FOREACH_THREAD(thr, thrname, threads)				\
 	psclist_for_each_entry((thr), (threads), pscthr_lentry)			\
@@ -103,24 +104,26 @@ void	psc_ctlthr_get(struct psc_thread *, struct psc_ctlmsg_thread *);
 void	psc_ctlacthr_get(struct psc_thread *, struct psc_ctlmsg_thread *);
 
 int	psc_ctlparam_log_file(int, struct psc_ctlmsghdr *,
-		struct psc_ctlmsg_param *, char **, int);
+		struct psc_ctlmsg_param *, char **, int, struct psc_ctlparam_node *);
 int	psc_ctlparam_log_format(int, struct psc_ctlmsghdr *,
-		struct psc_ctlmsg_param *, char **, int);
+		struct psc_ctlmsg_param *, char **, int, struct psc_ctlparam_node *);
 int	psc_ctlparam_log_level(int, struct psc_ctlmsghdr *,
-		struct psc_ctlmsg_param *, char **, int);
+		struct psc_ctlmsg_param *, char **, int, struct psc_ctlparam_node *);
 int	psc_ctlparam_pool(int, struct psc_ctlmsghdr *,
-		struct psc_ctlmsg_param *, char **, int);
+		struct psc_ctlmsg_param *, char **, int, struct psc_ctlparam_node *);
 int	psc_ctlparam_rlim_nofile(int, struct psc_ctlmsghdr *,
-		struct psc_ctlmsg_param *, char **, int);
+		struct psc_ctlmsg_param *, char **, int, struct psc_ctlparam_node *);
 int	psc_ctlparam_run(int, struct psc_ctlmsghdr *,
-		struct psc_ctlmsg_param *, char **, int);
+		struct psc_ctlmsg_param *, char **, int, struct psc_ctlparam_node *);
 int	psc_ctlparam_pause(int, struct psc_ctlmsghdr *,
-		struct psc_ctlmsg_param *, char **, int);
+		struct psc_ctlmsg_param *, char **, int, struct psc_ctlparam_node *);
 int	psc_ctlparam_faults(int, struct psc_ctlmsghdr *,
-		struct psc_ctlmsg_param *, char **, int);
+		struct psc_ctlmsg_param *, char **, int, struct psc_ctlparam_node *);
 
-void	psc_ctlparam_register(const char *, int (*)(int, struct psc_ctlmsghdr *,
-		struct psc_ctlmsg_param *, char **, int));
+struct psc_ctlparam_node *
+	psc_ctlparam_register(const char *, int (*)(int, struct psc_ctlmsghdr *,
+		struct psc_ctlmsg_param *, char **, int, struct psc_ctlparam_node *));
+void	psc_ctlparam_register_simple(const char *, void (*)(char *), int (*)(const char *));
 
 int	psc_ctlmsg_param_send(int, const struct psc_ctlmsghdr *,
 		struct psc_ctlmsg_param *, const char *, char **, int, const char *);

@@ -143,6 +143,20 @@ psc_ctlmsg_send(int fd, int id, int type, size_t siz, const void *m)
 	return (psc_ctlmsg_sendv(fd, &mh, m));
 }
 
+int
+psc_ctlsenderrv(int fd, const struct psc_ctlmsghdr *mhp, const char *fmt, va_list ap)
+{
+	struct psc_ctlmsg_error pce;
+	struct psc_ctlmsghdr mh;
+
+	vsnprintf(pce.pce_errmsg, sizeof(pce.pce_errmsg), fmt, ap); /* XXX */
+
+	mh.mh_id = mhp->mh_id;
+	mh.mh_type = PCMT_ERROR;
+	mh.mh_size = sizeof(pce);
+	return (psc_ctlmsg_sendv(fd, &mh, &pce));
+}
+
 /**
  * psc_ctlsenderr - Send an error to client over control interface.
  * @fd: client socket descriptor.
@@ -152,18 +166,13 @@ psc_ctlmsg_send(int fd, int id, int type, size_t siz, const void *m)
 int
 psc_ctlsenderr(int fd, const struct psc_ctlmsghdr *mhp, const char *fmt, ...)
 {
-	struct psc_ctlmsg_error pce;
-	struct psc_ctlmsghdr mh;
 	va_list ap;
+	int rc;
 
 	va_start(ap, fmt);
-	vsnprintf(pce.pce_errmsg, sizeof(pce.pce_errmsg), fmt, ap); /* XXX */
+	rc = psc_ctlsenderrv(fd, mhp, fmt, ap);
 	va_end(ap);
-
-	mh.mh_id = mhp->mh_id;
-	mh.mh_type = PCMT_ERROR;
-	mh.mh_size = sizeof(pce);
-	return (psc_ctlmsg_sendv(fd, &mh, &pce));
+	return (rc);
 }
 
 /**
@@ -504,7 +513,8 @@ psc_ctlmsg_param_send(int fd, const struct psc_ctlmsghdr *mh,
 
 int
 psc_ctlparam_log_level(int fd, struct psc_ctlmsghdr *mh,
-    struct psc_ctlmsg_param *pcp, char **levels, int nlevels)
+    struct psc_ctlmsg_param *pcp, char **levels, int nlevels,
+    __unusedx struct psc_ctlparam_node *pcn)
 {
 	int rc, set, loglevel, subsys, start_ss, end_ss;
 	struct psc_thread *thr;
@@ -568,7 +578,8 @@ psc_ctlparam_log_level(int fd, struct psc_ctlmsghdr *mh,
 
 int
 psc_ctlparam_log_file(int fd, struct psc_ctlmsghdr *mh,
-    struct psc_ctlmsg_param *pcp, char **levels, int nlevels)
+    struct psc_ctlmsg_param *pcp, char **levels, int nlevels,
+    __unusedx struct psc_ctlparam_node *pcn)
 {
 	int rc, set;
 
@@ -598,7 +609,8 @@ psc_ctlparam_log_file(int fd, struct psc_ctlmsghdr *mh,
 
 int
 psc_ctlparam_log_format(int fd, struct psc_ctlmsghdr *mh,
-    struct psc_ctlmsg_param *pcp, char **levels, int nlevels)
+    struct psc_ctlmsg_param *pcp, char **levels, int nlevels,
+    __unusedx struct psc_ctlparam_node *pcn)
 {
 	int rc, set;
 
@@ -634,7 +646,8 @@ psc_ctlparam_log_format(int fd, struct psc_ctlmsghdr *mh,
 
 int
 psc_ctlparam_rlim_nofile(int fd, struct psc_ctlmsghdr *mh,
-    struct psc_ctlmsg_param *pcp, char **levels, int nlevels)
+    struct psc_ctlmsg_param *pcp, char **levels, int nlevels,
+    __unusedx struct psc_ctlparam_node *pcn)
 {
 	int rc, set;
 	char *endp;
@@ -684,7 +697,8 @@ psc_ctlparam_rlim_nofile(int fd, struct psc_ctlmsghdr *mh,
 
 int
 psc_ctlparam_run(int fd, struct psc_ctlmsghdr *mh,
-    struct psc_ctlmsg_param *pcp, char **levels, int nlevels)
+    struct psc_ctlmsg_param *pcp, char **levels, int nlevels,
+    __unusedx struct psc_ctlparam_node *pcn)
 {
 	struct psc_thread *thr;
 	int rc, set, run;
@@ -737,7 +751,8 @@ psc_ctlparam_run(int fd, struct psc_ctlmsghdr *mh,
  */
 int
 psc_ctlparam_pause(int fd, struct psc_ctlmsghdr *mh,
-    struct psc_ctlmsg_param *pcp, char **levels, int nlevels)
+    struct psc_ctlmsg_param *pcp, char **levels, int nlevels,
+    __unusedx struct psc_ctlparam_node *pcn)
 {
 	struct psc_thread *thr;
 	int rc, set, pauseval;
@@ -847,7 +862,6 @@ psc_ctlparam_pool_handle(int fd, struct psc_ctlmsghdr *mh,
 	}
 	if (nlevels < 3 || strcmp(levels[2], "thres") == 0) {
 		if (nlevels == 3 && set) {
-			POOL_LOCK(m);
 			if (pcp->pcp_flags & PCPF_ADD)
 				m->ppm_thres += val;
 			else if (pcp->pcp_flags & PCPF_SUB)
@@ -858,7 +872,6 @@ psc_ctlparam_pool_handle(int fd, struct psc_ctlmsghdr *mh,
 				m->ppm_thres = 1;
 			else if (m->ppm_thres > 99)
 				m->ppm_thres = 99;
-			POOL_ULOCK(m);
 		} else {
 			levels[2] = "thres";
 			snprintf(nbuf, sizeof(nbuf), "%d", m->ppm_thres);
@@ -872,7 +885,8 @@ psc_ctlparam_pool_handle(int fd, struct psc_ctlmsghdr *mh,
 
 int
 psc_ctlparam_pool(int fd, struct psc_ctlmsghdr *mh,
-    struct psc_ctlmsg_param *pcp, char **levels, int nlevels)
+    struct psc_ctlmsg_param *pcp, char **levels, int nlevels,
+    __unusedx struct psc_ctlparam_node *pcn)
 {
 	struct psc_poolmgr *m;
 	int rc, set;
@@ -939,23 +953,65 @@ psc_ctlparam_pool(int fd, struct psc_ctlmsghdr *mh,
 
 /* Node in the control parameter tree. */
 struct psc_ctlparam_node {
-	char	 *pcn_name;
-	int	(*pcn_cbf)(int, struct psc_ctlmsghdr *,
-			struct psc_ctlmsg_param *, char **, int);
+	char			 *pcn_name;
+	int			(*pcn_cbf)(int, struct psc_ctlmsghdr *,
+				    struct psc_ctlmsg_param *, char **,
+				    int, struct psc_ctlparam_node *);
+
+	/* only used for SIMPLE ctlparam nodes */
+	void			(*pcn_getf)(char [PCP_VALUE_MAX]);
+	int			(*pcn_setf)(const char *);
 };
 
 /* Stack processing frame. */
 struct psc_ctlparam_procframe {
-	struct psclist_head	 pcf_lentry;
+	struct psc_listentry	 pcf_lentry;
 	struct psc_streenode	*pcf_ptn;
 	int			 pcf_level;
 	int			 pcf_flags;
 	int			 pcf_pos;
 };
 
-#define PCFF_USEPOS	(1<<0)
+/* pcf_flags */
+#define PCFF_USEPOS		(1 << 0)
 
 struct psc_streenode psc_ctlparamtree = PSC_STREE_INIT(psc_ctlparamtree);
+
+const char *
+psc_ctlparam_fieldname(char *fieldname, int nlevels)
+{
+	while (nlevels-- > 1)
+		fieldname[strlen(fieldname)] = '.';
+	return (fieldname);
+}
+
+int
+psc_ctlrep_param_simple(int fd, struct psc_ctlmsghdr *mh,
+    struct psc_ctlmsg_param *pcp, char **levels, int nlevels,
+    struct psc_ctlparam_node *pcn)
+{
+	char val[PCP_VALUE_MAX];
+
+	if (strcmp(pcp->pcp_thrname, PCTHRNAME_EVERYONE) != 0)
+		return (psc_ctlsenderr(fd, mh, "invalid thread field"));
+
+	if (mh->mh_type == PCMT_SETPARAM) {
+		if (pcn->pcn_setf) {
+			if (pcn->pcn_setf(pcp->pcp_value))
+				return (psc_ctlsenderr(fd, mh,
+				    "%s: invalid value: %s",
+				    psc_ctlparam_fieldname(
+				      pcp->pcp_field, nlevels),
+				    pcp->pcp_value));
+			return (1);
+		}
+		return (psc_ctlsenderr(fd, mh, "%s: field is read-only",
+		    psc_ctlparam_fieldname(pcp->pcp_field, nlevels)));
+	}
+	pcn->pcn_getf(val);
+	return (psc_ctlmsg_param_send(fd, mh, pcp,
+	    PCTHRNAME_EVERYONE, levels, nlevels, val));
+}
 
 int
 psc_ctlrep_param(int fd, struct psc_ctlmsghdr *mh, void *m)
@@ -966,7 +1022,7 @@ psc_ctlrep_param(int fd, struct psc_ctlmsghdr *mh, void *m)
 	struct psc_ctlparam_node *pcn;
 	struct psclist_head stack;
 	char *t, *levels[MAX_LEVELS];
-	int n, k, nlevels, set;
+	int n, k, nlevels, set, rc = 1;
 
 	pcf = NULL;
 	INIT_PSCLIST_HEAD(&stack);
@@ -981,21 +1037,20 @@ psc_ctlrep_param(int fd, struct psc_ctlmsghdr *mh, void *m)
 		if ((t = strchr(levels[nlevels], '.')) != NULL)
 			*t++ = '\0';
 		if (*levels[nlevels++] == '\0')
-			goto invalid;
+			return (psc_ctlsenderr(fd, mh,
+			    "%s: empty node name",
+			    psc_ctlparam_fieldname(pcp->pcp_field,
+			    nlevels)));
 	}
 
-	if (nlevels == 0 || nlevels >= MAX_LEVELS)
-		goto invalid;
-
-	if (nlevels == 1 && strcmp(levels[0], "?") == 0) {
-		PSC_STREE_FOREACH_CHILD(c, &psc_ctlparamtree) {
-			pcn = c->ptn_data;
-			if (!psc_ctlsenderr(fd, mh, "parameter node: %s",
-			    pcn->pcn_name))
-				return (0);
-		}
-		return (1);
-	}
+	if (nlevels == 0)
+		return (psc_ctlsenderr(fd, mh,
+		    "no parameter field specified"));
+	if (nlevels >= MAX_LEVELS)
+		return (psc_ctlsenderr(fd, mh,
+		    "%s: parameter field exceeds maximum depth",
+		    psc_ctlparam_fieldname(pcp->pcp_field,
+		    MAX_LEVELS)));
 
 	pcf = PSCALLOC(sizeof(*pcf));
 	INIT_PSC_LISTENTRY(&pcf->pcf_lentry);
@@ -1010,22 +1065,47 @@ psc_ctlrep_param(int fd, struct psc_ctlmsghdr *mh, void *m)
 		n = pcf->pcf_level;
 		ptn = pcf->pcf_ptn;
 		do {
+			if (n == nlevels - 1 && strcmp(levels[n], "?") == 0) {
+				if (n)
+					psc_ctlparam_fieldname(pcp->pcp_value,
+					    nlevels - 1);
+				PSC_STREE_FOREACH_CHILD(c, ptn) {
+					pcn = c->ptn_data;
+					if (n)
+						rc = psc_ctlsenderr(fd, mh,
+						    "%s: available subnode: %s",
+						    pcp->pcp_field, pcn->pcn_name);
+					else
+						rc = psc_ctlsenderr(fd, mh,
+						    "available top-level node: %s",
+						    pcn->pcn_name);
+					if (rc == 0)
+						break;
+				}
+				goto shortcircuit;
+			}
+
 			k = 0;
 			PSC_STREE_FOREACH_CHILD(c, ptn) {
 				pcn = c->ptn_data;
 				if (pcf->pcf_flags & PCFF_USEPOS) {
 					if (pcf->pcf_pos == k)
 						break;
-				} else if (strcmp(pcn->pcn_name,
+				} else if (n < nlevels &&
+				    strcmp(pcn->pcn_name,
 				    levels[n]) == 0)
 					break;
 				k++;
 			}
 			if (c == NULL)
 				goto invalid;
+
+			levels[n] = pcn->pcn_name;
+
 			if (psc_listhd_empty(&c->ptn_children)) {
-				if (!pcn->pcn_cbf(fd, mh,
-				    pcp, levels, nlevels))
+				rc = pcn->pcn_cbf(fd, mh, pcp, levels,
+				    nlevels, pcn);
+				if (rc == 0)
 					goto shortcircuit;
 				break;
 			} else if (pcf->pcf_level + 1 >= nlevels) {
@@ -1036,9 +1116,13 @@ psc_ctlrep_param(int fd, struct psc_ctlmsghdr *mh, void *m)
 				k = 0;
 				PSC_STREE_FOREACH_CHILD(d, c) {
 					pcn = d->ptn_data;
+					/* avoid stack frame by processing directly */
 					if (psc_listhd_empty(&d->ptn_children)) {
-						if (!pcn->pcn_cbf(fd, mh,
-						    pcp, levels, nlevels))
+						levels[n + 1] = pcn->pcn_name;
+						rc = pcn->pcn_cbf(fd,
+						    mh, pcp, levels,
+						    n + 2, pcn);
+						if (rc == 0)
 							goto shortcircuit;
 					} else {
 						npcf = PSCALLOC(sizeof(*npcf));
@@ -1060,7 +1144,7 @@ psc_ctlrep_param(int fd, struct psc_ctlmsghdr *mh, void *m)
 	PSCFREE(pcf);
 	psclist_for_each_entry_safe(pcf, npcf, &stack, pcf_lentry)
 		PSCFREE(pcf);
-	return (0);
+	return (rc);
 
  invalid:
 	PSCFREE(pcf);
@@ -1071,15 +1155,17 @@ psc_ctlrep_param(int fd, struct psc_ctlmsghdr *mh, void *m)
 	 */
 	psclist_for_each_entry_safe(pcf, npcf, &stack, pcf_lentry)
 		PSCFREE(pcf);
-	while (nlevels-- > 1)
-		pcp->pcp_field[strlen(pcp->pcp_field)] = '.';
-	return (psc_ctlsenderr(fd, mh, "invalid field%s: %s",
-	    set ? "/value" : "", pcp->pcp_field));
+	psc_ctlparam_fieldname(pcp->pcp_field, nlevels);
+	if (set)
+		return (psc_ctlsenderr(fd, mh,
+		    "%s: not a leaf node", pcp->pcp_field));
+	return (psc_ctlsenderr(fd, mh, "%s: invalid field", pcp->pcp_field));
 }
 
-void
-psc_ctlparam_register(const char *oname, int (*cbf)(int, struct psc_ctlmsghdr *,
-    struct psc_ctlmsg_param *, char **, int))
+struct psc_ctlparam_node *
+psc_ctlparam_register(const char *oname, int (*cbf)(int,
+    struct psc_ctlmsghdr *, struct psc_ctlmsg_param *, char **, int,
+    struct psc_ctlparam_node *))
 {
 	struct psc_streenode *ptn, *c;
 	struct psc_ctlparam_node *pcn;
@@ -1106,6 +1192,18 @@ psc_ctlparam_register(const char *oname, int (*cbf)(int, struct psc_ctlmsghdr *,
 		ptn = c;
 	}
 	PSCFREE(name);
+	return (pcn);
+}
+
+void
+psc_ctlparam_register_simple(const char *name, void (*getf)(char *),
+    int (*setf)(const char *))
+{
+	struct psc_ctlparam_node *pcn;
+
+	pcn = psc_ctlparam_register(name, psc_ctlrep_param_simple);
+	pcn->pcn_getf = getf;
+	pcn->pcn_setf = setf;
 }
 
 /**

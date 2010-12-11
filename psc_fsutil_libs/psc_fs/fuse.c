@@ -334,6 +334,37 @@ pscfs_fuse_listener_loop(__unusedx void *arg)
 	return (NULL);
 }
 
+#ifdef PFL_CTL
+void
+pscfs_ctlparam_fuse_debug_get(char buf[PCP_VALUE_MAX])
+{
+	snprintf(buf, PCP_VALUE_MAX, "%d",
+	    fuse_lowlevel_getdebug(fuse_session));
+}
+
+int
+pscfs_ctlparam_fuse_debug_set(const char *value)
+{
+	char *endp;
+	long val;
+
+	endp = NULL;
+	val = strtol(value, &endp, 10);
+	if (val < 0 || val > 1 ||
+	    endp == value || *endp != '\0')
+		return (-1);
+	fuse_lowlevel_setdebug(fuse_session, val);
+	return (0);
+}
+
+void
+pscfs_ctlparam_fuse_version_get(char buf[PCP_VALUE_MAX])
+{
+	snprintf(buf, PCP_VALUE_MAX, "%d.%d",
+	    FUSE_MAJOR_VERSION, FUSE_MINOR_VERSION);
+}
+#endif
+
 int
 pscfs_main(void)
 {
@@ -359,8 +390,13 @@ pscfs_main(void)
 	psc_hashtbl_add_item(&pscfs_inumcol_hashtbl, pfic);
 #endif
 
-#ifndef PFL_NO_CTL
-	psc_ctlparam_register("fuse", pscfs_ctlparam);
+#ifdef PFL_CTL
+	/* XXX: add max_fuse_iosz */
+	psc_ctlparam_register_simple("fuse.debug",
+	    pscfs_ctlparam_fuse_debug_get,
+	    pscfs_ctlparam_fuse_debug_set);
+	psc_ctlparam_register_simple("fuse.version",
+	    pscfs_ctlparam_fuse_version_get, NULL);
 #endif
 
 	for (i = 0; i < NUM_THREADS; i++)
@@ -528,26 +564,6 @@ pscfs_inum_pscfs2fuse(pscfs_inum_t p_inum, int timeo)
 	return (key);
 }
 #endif
-
-int
-pscfs_setdebug(int debugval)
-{
-#ifdef HAVE_FUSE_DEBUGLEVEL
-	fuse_lowlevel_setdebug(fuse_session, debugval ? 1 : 0);
-	return (0);
-#endif
-	return (ENOTSUP);
-}
-
-int
-pscfs_getdebug(int *debugval)
-{
-#ifdef HAVE_FUSE_DEBUGLEVEL
-	*debugval = fuse_lowlevel_getdebug(fuse_session);
-	return (0);
-#endif
-	return (ENOTSUP);
-}
 
 #define RETIFNOTSUP(pfr, call, ...)					\
 	do {								\

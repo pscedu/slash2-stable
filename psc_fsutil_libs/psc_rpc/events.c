@@ -27,14 +27,19 @@
 
 #include <inttypes.h>
 
+#include "pfl/str.h"
 #include "pfl/types.h"
 #include "psc_rpc/export.h"
 #include "psc_rpc/rpc.h"
 #include "psc_rpc/rpclog.h"
 #include "psc_util/alloc.h"
 #include "psc_util/atomic.h"
+#include "psc_util/ctl.h"
+#include "psc_util/ctlsvr.h"
 #include "psc_util/log.h"
 #include "psc_util/waitq.h"
+
+#include "../ulnds/socklnd/usocklnd.h"
 
 lnet_handle_eq_t	pscrpc_eq_h;
 struct psclist_head	pscrpc_wait_callbacks;
@@ -646,6 +651,28 @@ pscrpc_ni_fini(void)
 }
 
 void
+pscrpc_ctlparam_lnet_networks_get(char buf[PCP_VALUE_MAX])
+{
+	char *lnet_get_networks(void);
+
+	strlcpy(buf, lnet_get_networks(), PCP_VALUE_MAX);
+}
+
+void
+pscrpc_ctlparam_lnet_port_get(char buf[PCP_VALUE_MAX])
+{
+	snprintf(buf, PCP_VALUE_MAX, "%d", usocklnd_get_cport());
+}
+
+void
+pscrpc_ctlparam_lnet_sdp_get(char buf[PCP_VALUE_MAX])
+{
+	int lnet_get_usesdp(void);
+
+	snprintf(buf, PCP_VALUE_MAX, "%d", lnet_get_usesdp());
+}
+
+void
 pscrpc_init_portals(int type)
 {
 	int rc;
@@ -656,6 +683,15 @@ pscrpc_init_portals(int type)
 	rc = pscrpc_ni_init(type);
 	if (rc)
 		psc_fatal("network initialization: %s", strerror(-rc));
+
+#ifdef PFL_CTL
+	psc_ctlparam_register_simple("lnet.networks",
+	    pscrpc_ctlparam_lnet_networks_get, NULL);
+	psc_ctlparam_register_simple("lnet.port",
+	    pscrpc_ctlparam_lnet_port_get, NULL);
+	psc_ctlparam_register_simple("lnet.sdp",
+	    pscrpc_ctlparam_lnet_sdp_get, NULL);
+#endif
 }
 
 void
