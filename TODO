@@ -111,16 +111,13 @@ pfl
 	- waitq (should be holding one)
 	- rpc (should be holding none)
 - rename SLASH/ZEST_MODULES to COMPONENTS to disassociate from PFL MODULES
-- rename PPMF_NOLOCK -> PPMF_NOMLOCK, PAF_LOCK -> PAF_MLOCK
+- rename PPMF_NOLOCK -> PPMF_NOPIN, PAF_LOCK -> PAF_PIN
 - add zfs SPA version to slashd ctlparam
-- add lnet knob to ctlparam: sdp, lnet_networks
 - for odtable(1), print stats as default behavior
 - add function call hierarchy to psclog
 - mmap() mprotect()'d memory in memguard
 - rename RSX_ALLOCREP to something that doesnt mean 'allocate' and
   RSX_NEWREQ to ALLOC to make alloc grepping easier
-- introduce ? at any level in ctlparam to show nodes under that
-  immediate level
 - change all query pscctl options under -s:
 
 	-s connections
@@ -133,12 +130,12 @@ pfl
 	-s [thread.]log.format
 	etc.
 
-- parse thr(-.*)? as a thread name in the first level of ctl parsing
+- parse thr(-.*)? for connthr-foo not matching 'thr$' for thread names in ctl parsing
 - rename general log subsystem to default
+- rename tmp subsystem to debug subsystem
 - create a mechanism to include pflctl(7) directly into each *ctl.8 page
 - pool auto threshold is broken
 - psclog pool get/return
-- rename tmp subsystem to debug subsystem
 
 - pcpp:
   if an arg is a pointer, dont trace an integer version of it in PFL_ENTER()
