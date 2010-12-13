@@ -140,7 +140,7 @@ pjournal_next_reclaim(struct psc_journal *pj)
 }
 
 __static void
-pjournal_next_xid(struct psc_journal *pj, struct psc_journal_xidhndl *xh, int distill)
+pjournal_next_xid(struct psc_journal *pj, struct psc_journal_xidhndl *xh)
 {
 	/*
 	 * Note that even though we issue xids in increasing order here,
@@ -159,7 +159,7 @@ pjournal_next_xid(struct psc_journal *pj, struct psc_journal_xidhndl *xh, int di
  	 * If we add to the list after the transaction is written, the order
  	 * may not be guaranteed, as I said above.
  	 */
-	if (distill) 
+	if (xh->pjx_flags & PJX_DISTILL) 
 		pll_addtail(&pj->pj_distillxids, xh);
 	PJ_ULOCK(pj);
 }
@@ -220,11 +220,11 @@ pjournal_xnew(struct psc_journal *pj, int distill)
 
 	xh->pjx_pj = pj;
 	INIT_SPINLOCK(&xh->pjx_lock);
-	xh->pjx_flags = PJX_NONE;
+	xh->pjx_flags = distill ? PJX_DISTILL : PJX_NONE;
 	xh->pjx_slot = PJX_SLOT_ANY;
 	INIT_PSC_LISTENTRY(&xh->pjx_lentry1);
 	INIT_PSC_LISTENTRY(&xh->pjx_lentry2);
-	pjournal_next_xid(pj, xh, distill);
+	pjournal_next_xid(pj, xh);
 
 	psc_info("starting a new transaction %p (xid = %"PRIx64") in "
 	    "journal %p", xh, xh->pjx_xid, pj);
@@ -339,7 +339,6 @@ pjournal_add_entry_distill(struct psc_journal *pj, uint64_t txg,
 
 	xh = pjournal_xnew(pj, 1);
 	xh->pjx_txg = txg;
-	xh->pjx_flags = PJX_DISTILL;
 	pje = DATA_2_PJE(buf);
 	psc_assert(pje->pje_magic == PJE_MAGIC);
 
