@@ -335,6 +335,7 @@ pscfs_fuse_listener_loop(__unusedx void *arg)
 }
 
 #ifdef PFL_CTL
+#ifdef HAVE_FUSE_DEBUGLEVEL
 void
 pscfs_ctlparam_fuse_debug_get(char buf[PCP_VALUE_MAX])
 {
@@ -356,6 +357,7 @@ pscfs_ctlparam_fuse_debug_set(const char *value)
 	fuse_lowlevel_setdebug(fuse_session, val);
 	return (0);
 }
+#endif
 
 void
 pscfs_ctlparam_fuse_version_get(char buf[PCP_VALUE_MAX])
@@ -392,9 +394,11 @@ pscfs_main(void)
 
 #ifdef PFL_CTL
 	/* XXX: add max_fuse_iosz */
+#ifdef HAVE_FUSE_DEBUGLEVEL
 	psc_ctlparam_register_simple("fuse.debug",
 	    pscfs_ctlparam_fuse_debug_get,
 	    pscfs_ctlparam_fuse_debug_set);
+#endif
 	psc_ctlparam_register_simple("fuse.version",
 	    pscfs_ctlparam_fuse_version_get, NULL);
 #endif
