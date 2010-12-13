@@ -503,11 +503,11 @@ _psc_pool_flagtest(struct psc_poolmgr *m, int flags)
 }
 
 /**
- * psc_pool_get - Grab an item from a pool.
+ * _psc_pool_get - Grab an item from a pool.
  * @m: the pool manager.
  */
 void *
-psc_pool_get(struct psc_poolmgr *m)
+_psc_pool_get(struct psc_poolmgr *m)
 {
 	int locked, n;
 	void *p;

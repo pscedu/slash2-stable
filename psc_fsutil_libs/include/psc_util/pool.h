@@ -183,9 +183,23 @@ struct psc_poolmgr {
 #define psc_pool_shrink(m, i)		_psc_pool_shrink((m), (i), 0)
 #define psc_pool_tryshrink(m, i)	_psc_pool_shrink((m), (i), 1)
 
+#define _PSC_POOL_GET(m)						\
+	{								\
+		void *_ptr;						\
+									\
+		(_ptr) = _psc_pool_get(m);				\
+		psclog_debug("got item %p from pool %s", _ptr,		\
+		    (m)->ppm_name);					\
+		_ptr;							\
+	}
+
+#define psc_pool_get(m)			(_PSC_POOL_GET(m))
+
 #define psc_pool_return(m, p)						\
 	do {								\
 		_psc_pool_return((m), (p));				\
+		psclog_debug("returned item %p to pool %s", (p),	\
+		    (m)->ppm_name);					\
 		(p) = NULL;						\
 	} while (0)
 
@@ -201,22 +215,22 @@ void	_psc_poolmaster_initv(struct psc_poolmaster *, size_t, ptrdiff_t,
 		void *, const char *, va_list);
 
 struct psc_poolmgr *
-	 psc_pool_lookup(const char *);
-void	*psc_pool_get(struct psc_poolmgr *);
-int	 psc_pool_gettotal(struct psc_poolmgr *);
-int	 psc_pool_grow(struct psc_poolmgr *, int);
-int	 psc_pool_nfree(struct psc_poolmgr *);
-void	 psc_pool_reapmem(size_t);
-void	 psc_pool_resize(struct psc_poolmgr *);
-void	_psc_pool_return(struct psc_poolmgr *, void *);
-int	 psc_pool_settotal(struct psc_poolmgr *, int);
-void	 psc_pool_share(struct psc_poolmaster *);
-int	_psc_pool_shrink(struct psc_poolmgr *, int, int);
-void	 psc_pool_unshare(struct psc_poolmaster *);
+	  psc_pool_lookup(const char *);
+void	*_psc_pool_get(struct psc_poolmgr *);
+int	  psc_pool_gettotal(struct psc_poolmgr *);
+int	  psc_pool_grow(struct psc_poolmgr *, int);
+int	  psc_pool_nfree(struct psc_poolmgr *);
+void	  psc_pool_reapmem(size_t);
+void	  psc_pool_resize(struct psc_poolmgr *);
+void	 _psc_pool_return(struct psc_poolmgr *, void *);
+int	  psc_pool_settotal(struct psc_poolmgr *, int);
+void	  psc_pool_share(struct psc_poolmaster *);
+int	 _psc_pool_shrink(struct psc_poolmgr *, int, int);
+void	  psc_pool_unshare(struct psc_poolmaster *);
 
-void	 psc_poolset_disbar(struct psc_poolset *, struct psc_poolmaster *);
-void	 psc_poolset_enlist(struct psc_poolset *, struct psc_poolmaster *);
-void	 psc_poolset_init(struct psc_poolset *);
+void	  psc_poolset_disbar(struct psc_poolset *, struct psc_poolmaster *);
+void	  psc_poolset_enlist(struct psc_poolset *, struct psc_poolmaster *);
+void	  psc_poolset_init(struct psc_poolset *);
 
 extern struct psc_lockedlist	psc_pools;
 
