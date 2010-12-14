@@ -37,5 +37,5 @@ psc_get_hostname(void)
 	if (psc_hostname[0] == '\0')
 		if (gethostname(psc_hostname, sizeof(psc_hostname)) == -1)
 			psc_fatal("gethostname");
-	return (PCPP_STR(psc_hostname));
+	return (psc_hostname);
 }
