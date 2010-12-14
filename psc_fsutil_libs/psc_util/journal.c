@@ -940,7 +940,7 @@ pjournal_thr_main(struct psc_thread *thr)
 			freelock(&xh->pjx_lock);
 
 			pje = xh->pjx_data;
-			pj->pj_distill_handler(pje, pj->pj_npeers);
+			pj->pj_distill_handler(pje, pj->pj_npeers, 0);
 
 			spinlock(&xh->pjx_lock);
 			xh->pjx_flags &= ~PJX_DISTILL;
@@ -1025,14 +1025,12 @@ pjournal_replay(struct psc_journal *pj, int thrtype,
 			if (rc)
 				nerrs++;
 		}
-#if 0
 		/* turn off for now until distill function is re-written */
 		if (pje->pje_xid > pj->pj_distill_xid) {
-			rc = distill_handler(pje);
+			rc = distill_handler(pje, pj->pj_npeers, 1);
 			if (rc)
 				nerrs++;
 		}
-#endif
 		psc_free(pje, PAF_LOCK | PAF_PAGEALIGN, PJ_PJESZ(pj));
 	}
 	psc_dynarray_free(&pj->pj_bufs);

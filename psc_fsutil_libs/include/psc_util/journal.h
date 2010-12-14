@@ -47,7 +47,7 @@ typedef int (*psc_replay_handler_t)(struct psc_journal_enthdr *);
  * log entries carry information that we might need to preserve a longer
  * time, and outside the journal.
  */
-typedef int (*psc_distill_handler_t)(struct psc_journal_enthdr *, int);
+typedef int (*psc_distill_handler_t)(struct psc_journal_enthdr *, int, int);
 
 #define PJRNL_TXG_GET			0
 #define PJRNL_TXG_PUT			1
@@ -63,6 +63,8 @@ typedef int (*psc_distill_handler_t)(struct psc_journal_enthdr *, int);
 struct psc_journal_cursor {
 	uint64_t			 pjc_magic;
 	uint64_t			 pjc_version;
+	uint64_t			 pjc_timestamp;	/* creation time */
+	unsigned char			 pjc_uuid[16];
 	/*
 	 * pjc_txg is the only trustworthy information recorded in the file
 	 * after a crash.  Other information can be stale and need to be
