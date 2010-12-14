@@ -25,7 +25,7 @@
 #include <stdarg.h>
 
 #ifndef PSC_SUBSYS
-# define PSC_SUBSYS PSS_GEN
+# define PSC_SUBSYS PSS_DEF
 #endif
 
 #include "pfl/cdefs.h"

@@ -110,11 +110,11 @@ pfl_init(void)
 
 	psc_memallocs_init();
 
-	psc_subsys_register(PSS_RPC, "rpc");
-	psc_subsys_register(PSS_LNET, "lnet");
-	psc_subsys_register(PSS_MEM, "mem");
-	psc_subsys_register(PSS_GEN, "gen");
+	psc_subsys_register(PSS_DEF, "def");
 	psc_subsys_register(PSS_TMP, "tmp");
+	psc_subsys_register(PSS_MEM, "mem");
+	psc_subsys_register(PSS_LNET, "lnet");
+	psc_subsys_register(PSS_RPC, "rpc");
 
 	p = getenv("PSC_DUMPSTACK");
 	if (p && strcmp(p, "0")) {

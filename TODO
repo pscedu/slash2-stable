@@ -131,8 +131,6 @@ pfl
 	etc.
 
 - parse thr(-.*)? for connthr-foo not matching 'thr$' for thread names in ctl parsing
-- rename general log subsystem to default
-- rename tmp subsystem to debug subsystem
 - create a mechanism to include pflctl(7) directly into each *ctl.8 page
 - pool auto threshold is broken
 - psclog pool get/return

@@ -186,7 +186,7 @@ The logging level of debug message output.
 may be one of the following:
 .Pp
 .Bl -tag -compact -offset 3n -width 13n
-.It Cm gen
+.It Cm def
 Default
 .It Cm lnet
 Lustre networking stack
@@ -196,7 +196,7 @@ Memory allocations and releases
 Network remote procedure calls
 .El
 .Pp
-Additional subsystems may be defined by individual daemons.
+Additional subsystems may be defined by daemons.
 .Pp
 If
 .Ar subsystem
@@ -257,7 +257,7 @@ following:
 Thread logging levels.
 .It Cm rpcsvc
 .Tn RPC
-services.
+services, if applicable.
 .It Cm threads
 Process thread activity and statistics.
 .El
