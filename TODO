@@ -128,12 +128,12 @@ pfl
 	-s thrstats
 	-s pool[:foo]
 	-s [thread.]log.format
-	etc.
 
 - parse thr(-.*)? for connthr-foo not matching 'thr$' for thread names in ctl parsing
 - create a mechanism to include pflctl(7) directly into each *ctl.8 page
 - pool auto threshold is broken
-- psclog pool get/return
+- add provisions to dynarray to detect multiple adds without an
+  ensurelen and notify user to possible optimization
 - pfl_callerinfo is a NUMA bottleneck
 - tie 'make doc' to 'make regen'
 
