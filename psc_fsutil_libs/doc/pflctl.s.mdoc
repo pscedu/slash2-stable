@@ -18,8 +18,10 @@ following:
 .\" %PFL_LIST {
 .\"	%{ $DATA->{show} },
 .\"	loglevels	=> "Thread logging levels",
-.\"	rpcsvc		=> ".Tn RPC\nservices",
-.\"	threads		=> "Daemon thread activity and statistics"
+.\"	threads		=> "Daemon thread activity and statistics",
+.\"	exists $mods{rpc} ? (
+.\"	    rpcsvc	=> ".Tn RPC\nservices"
+.\"	) : ()
 .\" }%
 .El
 .Pp
