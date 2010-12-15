@@ -115,6 +115,8 @@ foreach my $fn (@ARGV) {
 		my ($str) = @_;
 		my @c = grep { /$T/ } split /(?<=\n)/, $str;
 		my @t = eval join '', map { /$T/; $' } @c;
+		warn "error in eval: $@\n@c\n-----------------------\n"
+		    if $@;
 		return (\@c, @t);
 	}
 
@@ -137,21 +139,31 @@ foreach my $fn (@ARGV) {
 	$data =~ s/($T%PFL_INCLUDE\s+(.*?)\s*{\n)(.*?)($T}%)/
 	    $1 . expand_include($2, $3) . $4/gems;
 
-	sub expand_list {
-		my ($code, %k) = eval_data($_[0]);
+	sub build_list {
+		my %k = @_;
 		my $str = "";
 
 		foreach my $k (sort keys %k) {
-			$str .= ".It Cm $k\n$k{$k}\n";
+			$str .= ".It ";
+			$str .= "Xo\n.Sm off\n." if $k =~ /\n/;
+			$str .= "Cm $k\n";
+			$str .= ".Sm on\n.Xc\n" if $k =~ /\n/;
+			$str .= $k{$k};
+			$str .= "\n" if $k{$k} && $str !~ /\n$/;
 		}
 		return $str;
+	}
+
+	sub expand_list {
+		my (undef, %k) = eval_data($_[0]);
+		return build_list(%k);
 	}
 
 	# process lists
 	$data =~ s/$T%PFL_LIST\s*{\n(.*?)$T}%\n/expand_list($1)/gems;
 
 	sub expand_expr {
-		my ($code, @t) = eval_data($_[0]);
+		my (undef, @t) = eval_data($_[0]);
 		return join('', @t) . "\n";
 	}
 

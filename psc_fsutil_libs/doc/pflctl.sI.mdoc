@@ -1,6 +1,8 @@
 .\" $Id$
 .It Fl i Ar iostatspec
-Query I/O statistics.
+Query
+.Tn I/O
+statistics.
 .Ar iostatspec
 has the following format:
 .Pp
@@ -14,9 +16,11 @@ may be one of the following:
 .Bl -tag -compact -offset indent -width Ds
 .\" %PFL_LIST {
 .\"	exists $mods{rpc} ? (
-.\"		qq{lni-rcv- Ns Ar if ,\n.It Cm lni-snd- Ns Ar if} =>
+.\"		qq{lni-rcv- Ns Ar if ,} => "",
+.\"		qq{lni-snd- Ns Ar if} =>
 .\"		    qq{Data sent/received per\n.Tn LNET\nnetworking interface.\n.Pp},
-.\"		qq{lusklnd- Ns Ar mode Ns Cm -rcv ,\n.It Cm lusklnd- Ns Ar mode Ns Cm -snd} =>
+.\"		qq{lusklnd- Ns Ar mode Ns Cm -rcv ,} => "",
+.\"		qq{lusklnd- Ns Ar mode Ns Cm -snd} =>
 .\"		    qq{Data sent/received over userland socket networking device.\n} .
 .\"		    qq{.Ar mode\nmay be\n.Cm pasv\n.Pq passive\nor\n.Cm aggr\n.Pq aggregate .}
 .\"	) : (),
