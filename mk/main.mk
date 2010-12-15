@@ -108,6 +108,13 @@ endif
 
 ifneq ($(filter pscfs,${MODULES}),)
   MODULES+=	pscfs-hdrs
+
+  ifndef PICKLE_HAVE_LP64
+    PSCFS_SRCS+=${PFL_BASE}/psc_ds/listcache.c
+    PSCFS_SRCS+=${PFL_BASE}/psc_util/pool.c
+    PSCFS_SRCS+=${PFL_BASE}/psc_util/random.c
+  endif
+
   SRCS+=	${PSCFS_SRCS}
   ifdef PICKLE_HAVE_FUSE
     MODULES+=	fuse
