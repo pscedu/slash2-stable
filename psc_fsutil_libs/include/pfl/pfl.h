@@ -56,7 +56,11 @@ int   pfl_tls_get(int, size_t, void *);
 #define PFL_TLSIDX_LASTRESERVED	3
 #define PFL_TLSIDX_MAX		8
 
-extern struct pfl_callerinfo	*pfl_callerinfo;
+extern
+#ifdef HAVE_TLS
+__thread
+#endif
+struct pfl_callerinfo	*pfl_callerinfo;
 
 static __inline struct pfl_callerinfo *
 _pfl_callerinfo_get(const char *fn, const char *func, int lineno,

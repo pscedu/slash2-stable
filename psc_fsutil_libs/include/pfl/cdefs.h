@@ -62,6 +62,12 @@
 #undef __weak
 #define __weak		__attribute__((__weak__))
 
+#ifdef HAVE_TLS
+#  define __threadx	__thread
+#else
+#  define __threadx
+#endif
+
 /* For marking something as file-scoped without side effects of `static'. */
 #define __static
 
