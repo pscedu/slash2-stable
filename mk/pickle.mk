@@ -165,4 +165,8 @@ PICKLE_NEED_VERSION=					$(word 2,$$Rev$$)
   DEFINES+=						-DHAVE_ST_INO_64BIT
  endif
 
+ ifdef PICKLE_HAVE_TLS
+  DEFINES+=						-DHAVE_TLS
+ endif
+
 endif
