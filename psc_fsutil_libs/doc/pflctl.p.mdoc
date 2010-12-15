@@ -84,4 +84,15 @@ Threshold for unused items for auto-sized pools before items are freed.
 .It Cm total
 Current number of entries contained in pool.
 .El
+.It Cm rlim
+Process resource limits.
+See
+.Xr getrlimit 2
+for more information.
+.Pp
+.Bl -tag -compact -offset 3n -width 13n
+.It Cm nofiles
+Corresponds to
+.Dv RLIMIT_NOFILE .
+.El
 .El
