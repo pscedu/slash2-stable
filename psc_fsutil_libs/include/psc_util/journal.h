@@ -43,7 +43,7 @@ struct psc_journal_enthdr;
 
 typedef int (*psc_replay_handler_t)(struct psc_journal_enthdr *);
 /*
- * Distill handler is used to further process certain log entries. These
+ * Distill handler is used to further process certain log entries.  These
  * log entries carry information that we might need to preserve a longer
  * time, and outside the journal.
  */
@@ -77,8 +77,9 @@ struct psc_journal_cursor {
 	uint64_t			 pjc_seqno_hwm;		/* high water mark of last bmap sequence number */
 	uint64_t			 pjc_tail;		/* tail slot of our system journal */
 	/*
- 	 * We need the following if the system log does not have any entries to be distilled.
- 	 */
+	 * We need the following if the system log does not have any
+	 * entries to be distilled.
+	 */
 	uint64_t			 pjc_update_seqno;
 	uint64_t			 pjc_reclaim_seqno;
 };
@@ -92,7 +93,7 @@ struct psc_journal_hdr {
 	uint32_t			 pjh_options;
 	int32_t				 pjh_readahead;
 	uint32_t			 pjh__pad;
-	uint64_t			 pjh_chksum;	/* keep it last and aligned at a 8 byte boundary */
+	uint64_t			 pjh_chksum;		/* keep it last and aligned at a 8 byte boundary */
 #define pjh_iolen pjh_start_off
 };
 
@@ -133,8 +134,8 @@ struct psc_journal {
 #define PJE_MAGIC			UINT64_C(0x4567abcd)
 
 /*
- * Journal entry types - lower bits are used internally, higher bits after _PJE_FLSHFT are used for
- * application-specific codes.
+ * Journal entry types - lower bits are used internally, higher bits
+ * after _PJE_FLSHFT are used for application-specific codes.
  */
 #define PJE_NONE			      0			/* no flag */
 #define PJE_FORMAT			(1 << 0)		/* newly-formatted */
@@ -151,7 +152,7 @@ struct psc_journal {
  * @pje_chksum: simple XOR checksum
  * @pje_data: application data.
  * Notes: at some point we may want to make this into a footer which has
- *    a crc field.
+ *    a CRC field.
  *
  * Note that the fields in this structure are arranged in a way so that
  * the payload, if any, starts at a 64-bit boundary.
@@ -160,16 +161,17 @@ struct psc_journal_enthdr {
 	uint32_t			pje_magic;
 	uint16_t			pje_type;	/* see above */
 	/*
-	 * This field is used to calculate the CRC checksum of the payload starting
-	 * from pje_data[0]. It should always be greater than zero and it does NOT
-	 * include the header.
+	 * This field is used to calculate the CRC checksum of the
+	 * payload starting from pje_data[0].  It should always be
+	 * greater than zero and it does NOT include the header.
 	 */
 	uint16_t			pje_len;
 	uint64_t			pje_xid;
 	/*
-	 * Even if our journal lives outside of the ZFS pools, this field tells us
-	 * exactly if we should apply a log entry.  And we can expect success if
-	 * we do.  No need to poke inside ZFS for clues.
+	 * Even if our journal lives outside of the ZFS pools, this
+	 * field tells us exactly if we should apply a log entry.  And
+	 * we can expect success if we do.  No need to poke inside ZFS
+	 * for clues.
 	 */
 	uint64_t			pje_txg;
 	uint64_t			pje_chksum;	/* must be the last field before data */
@@ -181,6 +183,8 @@ struct psc_journal_enthdr {
 					    offsetof(struct psc_journal_enthdr, pje_data)))
 
 #define	PJ_PJESZ(p)			((p)->pj_hdr->pjh_entsz)
+
+#define PJ_GETENTOFF(pj, i)		((off_t)(pj)->pj_hdr->pjh_start_off + (i) * PJ_PJESZ(pj))
 
 /**
  * psc_journal_xidhndl - Journal transaction ID handle.
@@ -215,14 +219,15 @@ struct psc_journal_xidhndl {
 #define	PJOURNAL_LOG_REPLAY		2
 
 /* definitions of journal handling functions */
-struct psc_journal	*pjournal_open(const char *);
-int			 pjournal_dump(const char *, int);
-int			 pjournal_format(const char *, uint32_t, uint32_t, uint32_t);
-void			 pjournal_replay(struct psc_journal *, int, const char *,
-				psc_replay_handler_t, psc_distill_handler_t);
+struct psc_journal
+	*pjournal_open(const char *);
+int	 pjournal_dump(const char *, int);
+int	 pjournal_format(const char *, uint32_t, uint32_t, uint32_t);
+void	 pjournal_replay(struct psc_journal *, int, const char *,
+	    psc_replay_handler_t, psc_distill_handler_t);
 
-uint64_t		 pjournal_next_distill(struct psc_journal *);
-uint64_t		 pjournal_next_reclaim(struct psc_journal *);
+uint64_t pjournal_next_distill(struct psc_journal *);
+uint64_t pjournal_next_reclaim(struct psc_journal *);
 
 void	 pjournal_reserve_slot(struct psc_journal *);
 void	 pjournal_unreserve_slot(struct psc_journal *);
@@ -232,8 +237,5 @@ void	 pjournal_put_buf(struct psc_journal *, void *);
 
 void	 pjournal_add_entry(struct psc_journal *, uint64_t, int, void *, int);
 void	 pjournal_add_entry_distill(struct psc_journal *, uint64_t, int, void *, int);
-
-
-#define PJ_GETENTOFF(pj, i)	((off_t)(pj)->pj_hdr->pjh_start_off + (i) * PJ_PJESZ(pj))
 
 #endif /* _PFL_JOURNAL_H_ */
