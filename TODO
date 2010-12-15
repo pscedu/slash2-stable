@@ -135,6 +135,7 @@ pfl
 - pool auto threshold is broken
 - psclog pool get/return
 - pfl_callerinfo is a NUMA bottleneck
+- tie 'make doc' to 'make regen'
 
 - pcpp:
   if an arg is a pointer, dont trace an integer version of it in PFL_ENTER()
