@@ -16,11 +16,11 @@ ROFF?=		nroff
 
 NOTEMPTY=	${ROOTDIR}/tools/notempty
 ECHORUN=	${ROOTDIR}/tools/echorun.sh
-_PERLENV=	PERL5LIB=${PERL5LIB}:${CROOTDIR}/tools/lib
+_PERLENV=	env PERL5LIB=${PERL5LIB}:${CROOTDIR}/tools/lib
 GENTYPES=	${_PERLENV} ${CROOTDIR}/tools/gentypes.pl
 HDRCLEAN=	${ROOTDIR}/tools/hdrclean.pl
 LIBDEP=		${ROOTDIR}/tools/libdep.pl
-MDPROC=		${ROOTDIR}/tools/mdproc.pl
+MDPROC=		${_PERLENV} ${CROOTDIR}/tools/mdproc.pl -D PFL_BASE=${PFL_BASE}
 MINVER=		${ROOTDIR}/tools/minver.pl
 PCPP=		${_PERLENV} ${CROOTDIR}/tools/pcpp.pl
 PICKLEGEN=	${ROOTDIR}/tools/pickle-gen.sh

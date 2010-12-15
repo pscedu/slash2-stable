@@ -1,0 +1,87 @@
+.\" $Id$
+.It Fl p Ar paramspec
+Query/manipulate operational parameters.
+.Ar paramspec
+has the following format:
+.Pp
+.Bd -unfilled -offset indent
+.Sm off
+.Oo Ar thread-name Ns . Oc Ar param
+.Op = Ar value
+.Sm on
+.Ed
+.Pp
+See
+.Sx Thread Specification
+for details on specifying
+.Ar thread-name .
+The default behavior is to apply the operation to all applicable threads.
+.Pp
+.Ar param
+may be one of the following:
+.Bl -tag -offset ind -width Ds
+.It Cm log.format
+The header prepended to server log messages.
+See
+.Xr pflenv 7
+for details on this format.
+.It Cm log.file
+File path name where log messages will be written.
+This value is write-only.
+.It Cm log.level Ns Op . Ns Ar subsystem
+The logging level of debug message output.
+.Pp
+.Ar subsystem
+may be one of the following:
+.Pp
+.Bl -tag -compact -offset 3n -width 13n
+.\" %PFL_LIST {
+.\"	%{ $DATA->{subsys} },
+.\"	def	=> "Default",
+.\"	mem	=> "Memory allocations and releases",
+.\"	exists $mods{rpc} ? (
+.\"	  lnet	=> "Lustre networking stack",
+.\"	  rpc	=> "Network remote procedure calls"
+.\"	) : ()
+.\" }%
+.El
+.Pp
+If
+.Ar subsystem
+is left unspecified, all subsystems will be affected.
+.Pp
+The log level value may be one of the following:
+.Pp
+.Bl -tag -compact -offset 3n -width 13n
+.It Cm 0 , none
+No logging
+.It Cm 1 , error
+Recoverable failures
+.It Cm 2 , warn
+Something wrong which requires attention
+.Pq default
+.It Cm 3 , notice
+Something unusual which recommends attention
+.It Cm 4 , info
+Informational messages
+.It Cm 5 , debug
+Debugging messages
+.It Cm 6 , trace , all
+All messages
+.El
+.It Cm pool. Ns Ar name
+Access the memory pool specified by
+.Ar name .
+The following sub-fields are available:
+.Pp
+.Bl -tag -compact -offset 3n -width 13n
+.It Cm max
+Upper bound for number of entries to which auto-sized pools can grow.
+.It Cm min
+Lower bound for number of entries to which auto-sized pools can shrink.
+.It Cm thres
+Threshold for unused items for auto-sized pools before items are freed.
+.It Cm total
+Current number of entries contained in pool.
+.El
+.El

@@ -1,0 +1,19 @@
+.\" $Id$
+.It Fl M Ar mlistspec
+Query information on the given mlist(s).
+Mlists are lists which interface with multiwait structures.
+Multiwaits are wait queues that allow any of a number of conditions to
+wake up.
+.Ar mlistspec
+has the following format:
+.Pp
+.Bd -unfilled -offset indent
+.Sm off
+.Ar mlist
+.Op , Ar ...
+.Sm on
+.Ed
+.Pp
+The value
+.Cm all
+may be specified to retrieve information about all mlists.

@@ -1,0 +1,34 @@
+.\" $Id$
+.It Fl s Ar showspec
+Show values.
+.Ar showspec
+has the following format:
+.Bd -unfilled -offset indent
+.Sm off
+.Ar param
+.Op : Ar thread-name Op , Ar ...
+.Sm on
+.Ed
+.Pp
+.Ar param
+may be specified as any non-ambiguous prefix abbreviation of the
+following:
+.Pp
+.Bl -tag -offset indent -width 13n -compact
+.\" %PFL_LIST {
+.\"	%{ $DATA->{show} },
+.\"	loglevels	=> "Thread logging levels",
+.\"	rpcsvc		=> ".Tn RPC\nservices, if applicable",
+.\"	threads		=> "Daemon thread activity and statistics"
+.\" }%
+.El
+.Pp
+The special value
+.Sq \&?
+may be specified to display a list of recognized values.
+.Pp
+See
+.Sx Thread Specification
+for details on specifying
+.Ar thread-name .
+The default behavior is to apply the operation to all applicable threads.

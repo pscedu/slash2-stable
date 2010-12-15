@@ -23,15 +23,16 @@
 
 use strict;
 use warnings;
-use Getopt::Std;
+use PFL::Getoptv;
 
 sub usage {
-	warn "usage: $0 file ...\n";
+	warn "usage: $0 [-D var=value] file ...\n";
 	exit 1;
 }
 
 my %opts;
-getopts("", \%opts) or usage;
+getoptv("D:", \%opts) or usage;
+my %incvars = map { die "bad variable format: $_" unless /=/; ($`, $') } @{ $opts{D} };
 
 my @m = qw(0 January February March April May June July
     August September October November December);
@@ -99,6 +100,65 @@ foreach my $fn (@ARGV) {
 	# update the Dd date
 	$data =~ s/^\.Dd .*/.Dd $m[$m] $d, $y/m;
 
+	my $T = qr[^\.\\"\s*]m;
+
+	# parse MODULES
+	my %mods;
+	if ($data =~ /$T%PFL_MODULES\s*(.*)\s*%/m) {
+		my @mods = split /\s+/, $1;
+		@mods{@mods} = (1) x @mods;
+	}
+
+	my $DATA = { };
+
+	sub eval_data {
+		my ($str) = @_;
+		my @c = grep { /$T/ } split /(?<=\n)/, $str;
+		my @t = eval join '', map { /$T/; $' } @c;
+		return (\@c, @t);
+	}
+
+	sub expand_include {
+		my ($fn, $p) = @_;
+		$fn =~ s/\$(\w+)/$incvars{$1}/ge;
+
+		open INC, "<", $fn or die "$fn: $!\n";
+		my @lines = <INC>;
+		close INC;
+
+		shift @lines if $lines[0] =~ /$T\$Id/;
+
+		my ($code, %av) = eval_data($p);
+		@{$DATA}{keys %av} = values %av;
+		return join '', @$code, @lines;
+	}
+
+	# process includes
+	$data =~ s/($T%PFL_INCLUDE\s+(.*?)\s*{\n)(.*?)($T}%)/
+	    $1 . expand_include($2, $3) . $4/gems;
+
+	sub expand_list {
+		my ($code, %k) = eval_data($_[0]);
+		my $str = "";
+
+		foreach my $k (sort keys %k) {
+			$str .= ".It Cm $k\n$k{$k}\n";
+		}
+		return $str;
+	}
+
+	# process lists
+	$data =~ s/$T%PFL_LIST\s*{\n(.*?)$T}%\n/expand_list($1)/gems;
+
+	sub expand_expr {
+		my ($code, @t) = eval_data($_[0]);
+		return join('', @t) . "\n";
+	}
+
+	# process expressions
+	$data =~ s/$T%PFL_EXPR\s*{\n(.*?)$T}%\n/expand_expr($1)/gems;
+
+	# overwrite
 	open F, ">", $fn or die "$fn: $!\n";
 	print F $data;
 	close F;
