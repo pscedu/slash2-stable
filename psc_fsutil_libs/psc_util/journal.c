@@ -1025,6 +1025,7 @@ pjournal_replay(struct psc_journal *pj, int thrtype,
 			if (rc)
 				nerrs++;
 		}
+		/* distill now if need be */
 		if (pje->pje_xid > pj->pj_distill_xid) {
 			rc = distill_handler(pje, pj->pj_npeers, 1);
 			if (rc)
