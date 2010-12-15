@@ -28,17 +28,23 @@ may be one of the following:
 .Bl -tag -offset ind -width Ds
 .\" %PFL_LIST {
 .\"	exists $mods{fuse} ? (
-.\"	    "fuse.debug"	=> ".Tn FUSE\ndebug messages",
-.\"	    "fuse.version"	=> ".Tn FUSE\ninterface version"
+.\"	    "fuse.debug"	=> ".Tn FUSE\ndebug messages.",
+.\"	    "fuse.version"	=> ".Tn FUSE\ninterface version."
 .\"	) : (),
 .\"	exists $mods{rpc} ? (
-.\"	    "lnet.networks"	=> ".Tn LNET\nnetwork configuration",
-.\"	    "lnet.port"		=> "If applicable,\n.Xr tcp 7\nport to use to connect to remote\n.Tn LNET\npeers",
-.\"	    "lnet.sdp"		=> "Whether\n.Tn LNET\nis using the sockets direct protocol",
+.\"	    "lnet.networks"	=> ".Tn LNET\nnetwork configuration.",
+.\"	    "lnet.port"		=> "If applicable,\n.Xr tcp 7\nport to use to connect to remote\n.Tn LNET\npeers.",
+.\"	    "lnet.sdp"		=> "Whether\n.Tn LNET\nis using the sockets direct protocol.",
 .\"	) : (),
 .\"	exists $DATA->{params} ? %{ $DATA->{params} } : (),
 .\"	"log.format"		=> "The header prepended to server log messages.\nSee\n.Xr pflenv 7\nfor details on this format.",
-.\"	"log.file"		=> "File path name where log messages will be written.\nThis value is write-only.",
+.\"	"log.file"		=> <<'EOF',
+.\"		File path name where log messages will be written.
+.\"		This value is write-only.
+.\"		If the
+.\"		.Li +=
+.\"		assignment operator is used, this file will not be truncated.
+.\"		EOF
 .\"	"pool. Ns Ar name"	=> <<'EOF',
 .\"		Access the memory pool specified by
 .\"		.Ar name .
@@ -59,12 +65,15 @@ may be one of the following:
 .\"		Process resource limits.
 .\"		See
 .\"		.Xr getrlimit 2
+.\"		or
+.\"		.Xr ulimit 1
 .\"		for more information.
 .\"		.Pp
 .\"		.Bl -tag -compact -offset 3n -width 13n
 .\"		.It Cm nofiles
 .\"		Corresponds to
-.\"		.Dv RLIMIT_NOFILE .
+.\"		.Dv RLIMIT_NOFILE ,
+.\"		the maximum number of open files.
 .\"		.El
 .\"		EOF
 .\"	"log.level Ns Op . Ns Ar subsystem" => <<'EOF'
@@ -88,7 +97,7 @@ may be one of the following:
 .\"		.Pp
 .\"		If
 .\"		.Ar subsystem
-.\"		is left unspecified, all subsystems will be affected.
+.\"		is left unspecified, all subsystems will be accessed.
 .\"		.Pp
 .\"		The log level value may be one of the following:
 .\"		.Pp

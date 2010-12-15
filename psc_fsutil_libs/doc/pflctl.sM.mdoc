@@ -3,7 +3,7 @@
 Query information on the given mlist(s).
 Mlists are lists which interface with multiwait structures.
 Multiwaits are wait queues that allow any of a number of conditions to
-wake up.
+wake threads waiting on the resource list.
 .Ar mlistspec
 has the following format:
 .Pp
@@ -13,6 +13,15 @@ has the following format:
 .Op , Ar ...
 .Sm on
 .Ed
+.Pp
+.Ar mlist
+may be one of the following:
+.Pp
+.Bl -tag -compact -offset indent -width 12n
+.\" %PFL_LIST {
+.\"	%{ $DATA->{mlists} }
+.\" }%
+.El
 .Pp
 The value
 .Cm all
