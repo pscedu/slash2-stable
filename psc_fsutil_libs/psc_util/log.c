@@ -70,8 +70,8 @@ psc_log_init(void)
 	char *p;
 
 	p = getenv("PSC_LOG_FILE");
-	if (p)
-		freopen(p, "w", stderr);
+	if (p && freopen(p, "w", stderr) == NULL)
+		warn("%s", p);
 
 	p = getenv("PSC_LOG_FORMAT");
 	if (p)

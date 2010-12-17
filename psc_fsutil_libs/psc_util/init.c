@@ -79,7 +79,8 @@ psc_dumpstack(__unusedx int sig)
 	printf("\n\nAttempting to generating stack trace...\n");
 	snprintf(buf, sizeof(buf), "pstack %d || gstack %d",
 	    getpid(), getpid());
-	system(buf);
+	if (system(buf) == -1)
+		warn("%s", buf);
 	kill(0, SIGQUIT);
 	_exit(1);
 }
