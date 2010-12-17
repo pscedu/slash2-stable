@@ -271,6 +271,10 @@ for ($i = 0; $i < length $data; ) {
 		# skip no return conditions
 		advance($+[0]);
 		dec_level();
+	} elsif ($hacks{yyerrlab} && $lvl == 1 && substr($data, $i) =~ /^\n\s*yyerrlab:\s*$/m) {
+		advance($+[0]);
+		print "if (0) goto yyerrlab;";
+		$hacks{yyerrlab} = 0;
 	} elsif (substr($data, $i) =~ /^\w+/) {
 		advance($+[0]);
 	} elsif (substr($data, $i, 1) eq "{") {
@@ -286,10 +290,6 @@ for ($i = 0; $i < length $data; ) {
 			$foff = undef;
 		}
 		advance(1);
-	} elsif ($hacks{yyerrlab} && substr($data, $i) =~ /^yyerrlab:$/) {
-		advance($+[0]);
-		print "if (0) goto yyerrlab;";
-		$hacks{yyerrlab} = 0;
 	} else {
 		advance(1);
 	}
