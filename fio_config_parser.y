@@ -23,6 +23,7 @@
 
 #include "pfl/str.h"
 #include "psc_util/alloc.h"
+#include "psc_util/log.h"
 
 #include "fio.h"
 #include "fio_sym.h"
