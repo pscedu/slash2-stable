@@ -34,6 +34,10 @@ INST_MANDIR?=	/usr/psc/man
 
 MAKEFLAGS+=	--no-print-directory
 
+ifdef CFLAGS
+  MAKE:=	env CFLAGS="${CFLAGS}" ${MAKE}
+endif
+
 LFLAGS+=	-t $$(if ${MINVER} $$(lex -V | sed 's![a-z /]*!!g') 2.5.5; then echo --nounput; fi)
 YFLAGS+=	-d
 
@@ -111,45 +115,24 @@ $(call ADD_FILE_CFLAGS,${LNET_BASE}/lnet/peer.c,			-DPSC_SUBSYS=PSS_LNET -Wno-sh
 $(call ADD_FILE_CFLAGS,${LNET_BASE}/lnet/router.c,			-DPSC_SUBSYS=PSS_LNET -Wno-shadow)
 $(call ADD_FILE_CFLAGS,${LNET_BASE}/lnet/router_proc.c,			-DPSC_SUBSYS=PSS_LNET -Wno-shadow)
 
-# system-specific settings/overrides
+# system-specific settings
 ifneq ($(wildcard /opt/sgi),)
-  # on altix
-  NUMA_DEFINES=					-DHAVE_NUMA
-  NUMA_LIBS=					-lcpuset -lbitmask -lnuma
-  LIBL=						-lfl
-
-  slash_nara_mount_slash_obj_lconf_c_PCPP_FLAGS=	-H yytext
-  slash_nara_slashd_obj_lconf_c_PCPP_FLAGS=		-H yytext
-  slash_nara_sliod_obj_lconf_c_PCPP_FLAGS=		-H yytext
-  slash_nara_tests_config_obj_lconf_c_PCPP_FLAGS=	-H yytext
-
-  slash_nara_mount_slash_obj_yconf_c_PCPP_FLAGS=	-H yytext
-  slash_nara_slashd_obj_yconf_c_PCPP_FLAGS=		-H yytext
-  slash_nara_sliod_obj_yconf_c_PCPP_FLAGS=		-H yytext
-  slash_nara_tests_config_obj_yconf_c_PCPP_FLAGS=	-H yytext
-
-  zest_zestFormat_obj_zestLexConfig_c_PCPP_FLAGS=	-H yytext
-  zest_zestiond_obj_zestLexConfig_c_PCPP_FLAGS=		-H yytext
-  zest_tests_config_obj_zestLexConfig_c_PCPP_FLAGS=	-H yytext
-endif
-
-ifneq ($(wildcard /opt/xt-os),)
-  # on XT3
-  QKCC=						qk-gcc
-  LIBL=						-lfl
-  DEFINES+=					-DHAVE_CNOS
+  NUMA_DEFINES=	-DHAVE_NUMA
+  NUMA_LIBS=	-lcpuset -lbitmask -lnuma
+  LIBL=		-lfl
+  PCPP_FLAGS+=	-H yytext
 endif
 
 ifeq (${OSTYPE},Linux)
-  LIBRT=					-lrt
-  DEFINES+=					-D_FILE_OFFSET_BITS=64 -D_GNU_SOURCE
-  DEFINES+=					-D_LARGEFILE_SOURCE -D_LARGEFILE64_SOURCE
+  LIBRT=	-lrt
+  DEFINES+=	-D_FILE_OFFSET_BITS=64 -D_GNU_SOURCE
+  DEFINES+=	-D_LARGEFILE_SOURCE -D_LARGEFILE64_SOURCE
 endif
 
 ifeq (${OSTYPE},Darwin)
-  DEFINES+=					-D_DARWIN_C_SOURCE -D_DARWIN_FEATURE_64_BIT_INODE
+  DEFINES+=	-D_DARWIN_C_SOURCE -D_DARWIN_FEATURE_64_BIT_INODE
 endif
 
 ifeq (${OSTYPE},OpenBSD)
-  DEFINES+=					-D_BSD_SOURCE
+  DEFINES+=	-D_BSD_SOURCE
 endif
