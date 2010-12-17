@@ -32,7 +32,8 @@ sub fatal {
 }
 
 my %hacks = (
-	yytext => 0,
+	yytext		=> 0,
+	yyerrlab	=> 0,
 );
 my %opts;
 getoptv("xH:", \%opts) or usage;
@@ -285,6 +286,10 @@ for ($i = 0; $i < length $data; ) {
 			$foff = undef;
 		}
 		advance(1);
+	} elsif ($hacks{yyerrlab} && substr($data, $i) =~ /^yyerrlab:$/) {
+		advance($+[0]);
+		print "if (0) goto yyerrlab;";
+		$hacks{yyerrlab} = 0;
 	} else {
 		advance(1);
 	}
