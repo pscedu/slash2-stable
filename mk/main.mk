@@ -342,7 +342,7 @@ ${OBJDIR}/$(notdir %.dep) : %.c
 	    ) $$(echo $(call FILE_CFLAGS,$<) | ${EXTRACT_INCLUDES}) -I$(dir $<) -I. $(realpath $<)
 
 ${OBJDIR}/$(notdir %.o) : %.c
-	${PCPP} $(call FILE_PCPP_FLAGS,$<) $(realpath $<) | $(				\
+	${PCPP} ${PCPP_FLAGS} $(call FILE_PCPP_FLAGS,$<) $(realpath $<) | $(		\
 	) ${CC} -x c ${CFLAGS} $(call FILE_CFLAGS,$<) -I$(dir $<) -I. - -c -o $@
 
 ${OBJDIR}/$(notdir %.E) : %.c
