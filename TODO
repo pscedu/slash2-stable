@@ -136,6 +136,7 @@ pfl
   ensurelen and notify user to possible optimization
 - pfl_callerinfo is a NUMA bottleneck
 - tie 'make doc' to 'make regen'
+- access() is broken for root and X_OK ?
 
 - pcpp:
   if an arg is a pointer, dont trace an integer version of it in PFL_ENTER()
