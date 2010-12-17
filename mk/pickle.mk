@@ -169,4 +169,12 @@ PICKLE_NEED_VERSION=					$(word 2,$$Rev$$)
   DEFINES+=						-DHAVE_TLS
  endif
 
+ ifdef PICKLE_HAVE_YYERRLAB
+   ifndef PICKLE_HAVE_YYERRLAB_ERROR
+     ifdef PICKLE_HAVE_CFLAGS_WERROR
+       PCPP_FLAGS+=					-H yyerrlab
+     endif
+   endif
+ endif
+
 endif
