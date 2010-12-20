@@ -35,7 +35,9 @@ general reminders
 - is it safe to pscrpc_request_finished() in an interpret callback??
 - ensure psc_free(p, PAF_LOCK, sz) has sz always as size_t
 - ensure any void * used as hash table idmemb are uint64_t for 32-bit
+   - add check: assert(sizeof() == 8)
 - dont access nseen on lc/mlist without a lock
+- avoid globals for NUMA performance
 
 - use psc mem wrappers for:
 	malloc
@@ -134,9 +136,7 @@ pfl
 - pool auto threshold is broken
 - add provisions to dynarray to detect multiple adds without an
   ensurelen and notify user to possible optimization
-- pfl_callerinfo is a NUMA bottleneck
 - tie 'make doc' to 'make regen'
-- access() is broken for root and X_OK ?
 
 - pcpp:
   if an arg is a pointer, dont trace an integer version of it in PFL_ENTER()
