@@ -2,7 +2,7 @@
 /*
  * %PSC_START_COPYRIGHT%
  * -----------------------------------------------------------------------------
- * Copyright (c) 2006-2010, Pittsburgh Supercomputing Center (PSC).
+ * Copyright (c) 2007-2010, Pittsburgh Supercomputing Center (PSC).
  *
  * Permission to use, copy, and modify this software and its documentation
  * without fee for personal use or non-commercial use within your organization
@@ -152,14 +152,14 @@ pjournal_next_xid(struct psc_journal *pj, struct psc_journal_xidhndl *xh)
 		xh->pjx_xid = ++pj->pj_lastxid;
 	} while (xh->pjx_xid == PJE_XID_NONE);
 	/*
- 	 * Make sure that transactions appear on the distill list in strict
- 	 * order.  That way we can get accurate information about the lowest
- 	 * xid that has been distilled.
- 	 *
- 	 * If we add to the list after the transaction is written, the order
- 	 * may not be guaranteed, as I said above.
- 	 */
-	if (xh->pjx_flags & PJX_DISTILL) 
+	 * Make sure that transactions appear on the distill list in strict
+	 * order.  That way we can get accurate information about the lowest
+	 * xid that has been distilled.
+	 *
+	 * If we add to the list after the transaction is written, the order
+	 * may not be guaranteed, as I said above.
+	 */
+	if (xh->pjx_flags & PJX_DISTILL)
 		pll_addtail(&pj->pj_distillxids, xh);
 	PJ_ULOCK(pj);
 }
@@ -167,7 +167,7 @@ pjournal_next_xid(struct psc_journal *pj, struct psc_journal_xidhndl *xh)
 
 /**
  * pjournal_next_slot - Determine where to write the transaction's log.
- *	Because we have already reserved a slot for it, we can simple
+ *	Because we have already reserved a slot for it, we can simply
  *	write at the next slot.
  */
 __static void
@@ -452,7 +452,7 @@ pjournal_logwrite(struct psc_journal_xidhndl *xh, int type,
 		type |= PJE_DISTILL;
 
 	/*
-	 * Fill in the header of the log entry, its
+	 * Fill in the header of the log entry; its
 	 * payload is already filled by our caller.
 	 */
 	pje->pje_type = type;
@@ -460,7 +460,7 @@ pjournal_logwrite(struct psc_journal_xidhndl *xh, int type,
 	pje->pje_xid = xh->pjx_xid;
 	pje->pje_txg = xh->pjx_txg;
 
- 	/* paranoid: make sure that an earlier slot is written first. */
+	/* paranoid: make sure that an earlier slot is written first. */
 	spinlock(&writelock);
 	pjournal_next_slot(xh);
 	pjournal_logwrite_internal(pj, pje, xh->pjx_slot);
@@ -506,10 +506,10 @@ pjournal_xid_cmp(const void *x, const void *y)
 	return (CMP(a->pje_txg, b->pje_txg));
 }
 
-/*
+/**
  * pjournal_scan_slots - Accumulate all journal entries that need to be
- *	replayed in memory.  To reduce memory usage, we remove those
- *	entries of closed transactions as soon as we find them.
+ *	replayed in memory.  To reduce memory usage, we remove entries
+ *	of closed transactions as soon as we find them.
  */
 __static int
 pjournal_scan_slots(struct psc_journal *pj)
@@ -527,8 +527,8 @@ pjournal_scan_slots(struct psc_journal *pj)
 	slot = nopen = nscan = nmagic = nclose = nchksum = 0;
 
 	/*
-	 * We scan the log from the first physical entry to the last physical
-	 * one regardless where the log really starts and ends.
+	 * We scan the log from the first physical entry to the last
+	 * physical one regardless where the log really starts and ends.
 	 */
 	jbuf = pjournal_alloc_buf(pj);
 	count = pj->pj_hdr->pjh_readahead;
@@ -540,8 +540,7 @@ pjournal_scan_slots(struct psc_journal *pj)
 			break;
 		for (i = 0; i < count; i++) {
 			nscan++;
-			pje = (struct psc_journal_enthdr *)
-			    &jbuf[PJ_PJESZ(pj) * i];
+			pje = PSC_AGP(jbuf, PJ_PJESZ(pj) * i);
 			if (pje->pje_magic != PJE_MAGIC) {
 				nmagic++;
 				psc_warnx("Journal %p: slot %d has "
@@ -610,8 +609,8 @@ pjournal_scan_slots(struct psc_journal *pj)
 	}
  done:
 	/*
-	 * Our cursor file lives within ZFS, while system journal lives ourside
-	 * ZFS. This is a hack for debugging convenience.
+	 * Our cursor file lives within ZFS while the system journal
+	 * lives outside ZFS.  This is a hack for debugging convenience.
 	 */
 	if (last_xid < pj->pj_distill_xid) {
 		psc_warnx("System journal and cursor file mismatch!");
@@ -791,8 +790,7 @@ pjournal_format(const char *fn, uint32_t nents, uint32_t entsz, uint32_t ra)
 
 	jbuf = pjournal_alloc_buf(&pj);
 	for (i = 0; i < ra; i++) {
-		pje = (struct psc_journal_enthdr *)
-		    &jbuf[PJ_PJESZ(&pj) * i];
+		pje = PSC_AGP(jbuf, PJ_PJESZ(&pj) * i);
 		pje->pje_magic = PJE_MAGIC;
 		pje->pje_type = PJE_FORMAT;
 		pje->pje_xid = PJE_XID_NONE;
@@ -828,11 +826,10 @@ pjournal_format(const char *fn, uint32_t nents, uint32_t entsz, uint32_t ra)
 int
 pjournal_dump(const char *fn, int verbose)
 {
-	uint32_t			 ra;
+	uint32_t			 ra, slot;
 	struct psc_journal		*pj;
 	struct psc_journal_hdr		*pjh;
 	struct psc_journal_enthdr	*pje;
-	uint32_t			 slot;
 	unsigned char			*jbuf;
 	uint64_t			 chksum;
 	int				 i, count, ntotal, nmagic, nchksum, nformat;
@@ -1001,10 +998,8 @@ pjournal_replay(struct psc_journal *pj, int thrtype,
     const char *thrname, psc_replay_handler_t replay_handler,
     psc_distill_handler_t distill_handler)
 {
-	int i, rc, len;
+	int i, rc, len, nerrs = 0, nentries;
 	struct psc_journal_enthdr *pje;
-	int nerrs=0;
-	int nentries;
 	struct psc_journalthr *pjt;
 	struct psc_thread *thr;
 
@@ -1058,7 +1053,7 @@ pjournal_replay(struct psc_journal *pj, int thrtype,
 	pj->pj_distill_handler = distill_handler;
 
 	thr = pscthr_init(thrtype, 0, pjournal_thr_main,
-		  NULL, sizeof(*pjt), thrname);
+	    NULL, sizeof(*pjt), thrname);
 
 	pjt = thr->pscthr_private;
 	pjt->pjt_pj = pj;
