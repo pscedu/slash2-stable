@@ -220,27 +220,14 @@ psc_multiwaitcond_wakeup(struct psc_multiwaitcond *mwc)
 }
 
 /**
- * psc_multiwaitcond_wait - Wait for one condition to occur.
+ * psc_multiwaitcond_waitrel_ts - Wait for one condition to occur.
  * @mwc: the multiwait condition to wait for.
  * @mutex: an optional mutex that will be unlocked in the critical section,
  *	for avoiding missed wakeups from races.
+ * @reltime: amount of time to wait (relative to "now") or NULL for forever.
  */
-void
-psc_multiwaitcond_wait(struct psc_multiwaitcond *mwc, pthread_mutex_t *mutex)
-{
-	int rc;
-
-	psc_pthread_mutex_lock(&mwc->mwc_mutex);
-	if (mutex)
-		psc_pthread_mutex_unlock(mutex);
-	rc = pthread_cond_wait(&mwc->mwc_cond, &mwc->mwc_mutex);
-	if (rc)
-		psc_fatalx("pthread_cond_wait: %s", strerror(rc));
-	psc_pthread_mutex_unlock(&mwc->mwc_mutex);
-}
-
 int
-psc_multiwaitcond_waitrel(struct psc_multiwaitcond *mwc,
+psc_multiwaitcond_waitrel_ts(struct psc_multiwaitcond *mwc,
     pthread_mutex_t *mutex, const struct timespec *reltime)
 {
 	struct timespec abstime;
@@ -250,13 +237,19 @@ psc_multiwaitcond_waitrel(struct psc_multiwaitcond *mwc,
 	if (mutex)
 		psc_pthread_mutex_unlock(mutex);
 
-	PFL_GETTIMESPEC(&abstime);
-	timespecadd(&abstime, reltime, &abstime);
+	if (reltime) {
+		PFL_GETTIMESPEC(&abstime);
+		timespecadd(&abstime, reltime, &abstime);
 
-	rc = pthread_cond_timedwait(&mwc->mwc_cond,
-	    &mwc->mwc_mutex, &abstime);
-	if (rc && rc != ETIMEDOUT)
-		psc_fatalx("pthread_cond_timedwait: %s", strerror(rc));
+		rc = pthread_cond_timedwait(&mwc->mwc_cond,
+		    &mwc->mwc_mutex, &abstime);
+		if (rc && rc != ETIMEDOUT)
+			psc_fatalx("pthread_cond_timedwait: %s", strerror(rc));
+	} else {
+		rc = pthread_cond_wait(&mwc->mwc_cond, &mwc->mwc_mutex);
+		if (rc)
+			psc_fatalx("pthread_cond_wait: %s", strerror(rc));
+	}
 	psc_pthread_mutex_unlock(&mwc->mwc_mutex);
 	return (rc);
 }
