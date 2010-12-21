@@ -26,22 +26,26 @@
 void
 parity_calc(const void *data, void *parity, uint32_t len)
 {
-        uint64_t *d64, *p64;
-        uint8_t *d8, *p8;
-        size_t i, n;
+	const uint64_t *d64;
+	const uint8_t *d8;
+	uint64_t *p64;
+	uint8_t *p8;
+	size_t i, n;
 
-        /* take 'em 8 bytes at a time first, for speed */
-        d64 = (uint64_t *)data;
-        p64 = (uint64_t *)parity;
-        n = len / 8;
-        for (i = 0; i < n; i++)
-                *p64++ ^= *d64++;
+	/* take 'em 8 bytes at a time first for speed */
+	d64 = data;
+	p64 = parity;
+	n = len / 8;
+	for (i = 0; i < n; i++)
+		*p64++ ^= *d64++;
 
-        /* now finish it off one byte at a time,
-         * for those not divisible by 8 */
-        d8 = (uint8_t *)d64;
-        p8 = (uint8_t *)p64;
-        n = len - 8 * n;
-        for (i = 0; i < n; i++)
-                *p8++ ^= *d8++;
+	/*
+	 * Now finish it off one byte at a time,
+	 * for those not divisible by 8.
+	 */
+	d8 = (const uint8_t *)d64;
+	p8 = (uint8_t *)p64;
+	n = len - 8 * n;
+	for (i = 0; i < n; i++)
+		*p8++ ^= *d8++;
 }
