@@ -38,6 +38,7 @@
  * Author: Maxim Patlasov <maxim@clusterfs.com>
  */
 
+#include <sys/types.h>
 #include <netinet/in.h>
 
 #include "psc_util/pthrutil.h"
