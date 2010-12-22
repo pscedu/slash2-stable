@@ -84,7 +84,7 @@
 			if (((fl) & PAF_NOLOG) == 0)			\
 				psclogs_debug(PSS_MEM,			\
 				    "realloc(%p) to zero (free)",	\
-				    (oldp));				\
+				    (void *)(oldp));			\
 			_PFL_FREE((oldp), (fl));			\
 			_p = NULL;					\
 		} else {						\
