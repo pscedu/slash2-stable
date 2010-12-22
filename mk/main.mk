@@ -479,8 +479,7 @@ build:
 	${MAKE} clean && ${MAKE} prereq && ${MAKE} regen && ${MAKE} all
 
 copyright:
-	@find . -type f \( -name '*.[chyl]' -o -name '*.[0-9]' -o -name '*.pl' -o $(	\
-	    ) -name '*.sh' -o -name '*.mk' -o -name Makefile \) $(			\
+	find . -type f \( $(foreach ign,${COPYRIGHT_PATS},-name ${ign} -o) -false \) $(\
 	    ) -exec ${ECHORUN} ${ROOTDIR}/tools/gencopyright.sh {} \;
 
 doc: recurse-doc

@@ -56,6 +56,13 @@ DEFINES+=	-DPFL_DEBUG=${DEBUG}
 
 KERNEL_BASE=	/usr/src/kernels/linux
 
+COPYRIGHT_PATS+='*.[chyl]'							\
+		'*.[0-9]'							\
+		'*.mk'								\
+		'*.pl'								\
+		'*.sh'								\
+		Makefile
+
 FUSE_CFLAGS=	$$(${PKG_CONFIG} --cflags fuse | ${EXTRACT_CFLAGS})
 FUSE_DEFINES=	$$(${PKG_CONFIG} --cflags fuse | ${EXTRACT_DEFINES})
 FUSE_INCLUDES=	$$(${PKG_CONFIG} --cflags fuse | ${EXTRACT_INCLUDES})
