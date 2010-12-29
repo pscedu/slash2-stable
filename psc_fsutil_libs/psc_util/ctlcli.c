@@ -315,19 +315,23 @@ psc_ctlparse_show(char *showspec)
 		exit(1);
 	}
 
-	if ((items = strchr(showspec, ':')) == NULL)
+	items = strchr(showspec, ':');
+	if (items)
 		*items++ = '\0';
 
-	if ((pse = psc_ctlshow_lookup(showspec)) == NULL)
+	pse = psc_ctlshow_lookup(showspec);
+	if (pse == NULL)
 		errx(1, "invalid show parameter: %s", showspec);
 
 	if (items == NULL)
 		pse->pse_cb(NULL);
-	for (item = items; item; item = next) {
-		next = strchr(item, ',');
-		if (next)
-			*next++ = '\0';
-		pse->pse_cb(item);
+	else {
+		for (item = items; item; item = next) {
+			next = strchr(item, ',');
+			if (next)
+				*next++ = '\0';
+			pse->pse_cb(item);
+		}
 	}
 }
 
