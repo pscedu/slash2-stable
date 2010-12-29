@@ -196,6 +196,8 @@ struct psc_ctlmsg_rpcsvc {
 	int32_t			pcrs_nrqbd;
 };
 
+#define PCRPCSVC_NAME_ALL	"all"
+
 /* Control message types. */
 #define PCMT_ERROR		0
 #define PCMT_GETLOGLEVEL	1

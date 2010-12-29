@@ -2,7 +2,7 @@
 /*
  * %PSC_START_COPYRIGHT%
  * -----------------------------------------------------------------------------
- * Copyright (c) 2006-2010, Pittsburgh Supercomputing Center (PSC).
+ * Copyright (c) 2008-2010, Pittsburgh Supercomputing Center (PSC).
  *
  * Permission to use, copy, and modify this software and its documentation
  * without fee for personal use or non-commercial use within your organization
@@ -98,16 +98,21 @@ psc_ctlmsg_push(int type, size_t msiz)
 }
 
 void
-psc_ctlparse_hashtable(const char *tblname)
+psc_ctlparse_hashtable(char *table)
 {
 	struct psc_ctlmsg_hashtable *pcht;
+	int n;
 
 	pcht = psc_ctlmsg_push(PCMT_GETHASHTABLE, sizeof(*pcht));
-	strlcpy(pcht->pcht_name, tblname, sizeof(pcht->pcht_name));
+	if (table) {
+		strlcpy(pcht->pcht_name, table, sizeof(pcht->pcht_name));
+		if (n == 0 || n >= (int)sizeof(pcht->pcht_name))
+			errx(1, "invalid thread name: %s", table);
+	}
 }
 
 void
-psc_ctl_packshow_loglevels(const char *thr)
+psc_ctl_packshow_loglevels(char *thr)
 {
 	struct psc_ctlmsg_loglevel *pcl;
 	int n;
@@ -116,62 +121,189 @@ psc_ctl_packshow_loglevels(const char *thr)
 	    sizeof(struct psc_ctlmsg_subsys));
 
 	pcl = psc_ctlmsg_push(PCMT_GETLOGLEVEL, sizeof(*pcl));
-	n = strlcpy(pcl->pcl_thrname, thr, sizeof(pcl->pcl_thrname));
-	if (n == 0 || n >= (int)sizeof(pcl->pcl_thrname))
-		errx(1, "invalid thread name: %s", thr);
+	if (thr) {
+		n = strlcpy(pcl->pcl_thrname, thr, sizeof(pcl->pcl_thrname));
+		if (n == 0 || n >= (int)sizeof(pcl->pcl_thrname))
+			errx(1, "invalid thread name: %s", thr);
+	}
 }
 
 void
-psc_ctl_packshow_threads(const char *thr)
+psc_ctl_packshow_thread(char *thr)
 {
 	struct psc_ctlmsg_thread *pcst;
 	int n;
 
 	pcst = psc_ctlmsg_push(PCMT_GETTHREAD, sizeof(*pcst));
-	n = strlcpy(pcst->pcst_thrname, thr, sizeof(pcst->pcst_thrname));
-	if (n == 0 || n >= (int)sizeof(pcst->pcst_thrname))
-		errx(1, "invalid thread name: %s", thr);
+	if (thr) {
+		n = strlcpy(pcst->pcst_thrname, thr, sizeof(pcst->pcst_thrname));
+		if (n == 0 || n >= (int)sizeof(pcst->pcst_thrname))
+			errx(1, "invalid thread name: %s", thr);
+	}
 }
 
 void
-psc_ctl_packshow_faults(const char *thr)
+psc_ctl_packshow_fault(char *thrs)
 {
 	struct psc_ctlmsg_fault *pcflt;
+	char *thr, *fault, *next;
 	int n;
 
 	pcflt = psc_ctlmsg_push(PCMT_GETFAULT, sizeof(*pcflt));
-	n = strlcpy(pcflt->pcflt_thrname, thr, sizeof(pcflt->pcflt_thrname));
-	if (n == 0 || n >= (int)sizeof(pcflt->pcflt_thrname))
-		errx(1, "invalid thread name: %s", thr);
-	n = strlcpy(pcflt->pcflt_name, PCFLT_NAME_ALL, sizeof(pcflt->pcflt_name));
-	if (n == 0 || n >= (int)sizeof(pcflt->pcflt_name))
-		errx(1, "invalid fault point name: %s", thr);
+	if (thrs) {
+		fault = strchr(thrs, ':');
+		if (fault)
+			*fault++ = '\0';
+		else
+			thrs = PCTHRNAME_EVERYONE;
+
+		n = strlcpy(pcflt->pcflt_name, fault,
+		    sizeof(pcflt->pcflt_name));
+		if (n == 0 || n >= (int)sizeof(pcflt->pcflt_name))
+			errx(1, "invalid fault point name: %s", fault);
+
+		for (thr = thrs; thr; thr = next, pcflt = NULL) {
+			next = strchr(thr, ';');
+			if (next)
+				*next++ = '\0';
+
+			if (pcflt == NULL) {
+				pcflt = psc_ctlmsg_push(PCMT_GETFAULT,
+				    sizeof(*pcflt));
+				strlcpy(pcflt->pcflt_name, fault,
+				    sizeof(pcflt->pcflt_name));
+			}
+
+			n = strlcpy(pcflt->pcflt_thrname, PCTHRNAME_EVERYONE,
+			    sizeof(pcflt->pcflt_thrname));
+			if (n == 0 || n >= (int)sizeof(pcflt->pcflt_thrname))
+				errx(1, "invalid thread name: %s", thr);
+		}
+	}
 }
 
 void
-psc_ctl_packshow_odtables(const char *thr)
+psc_ctl_packshow_odtable(char *table)
 {
 	struct psc_ctlmsg_odtable *pco;
 	int n;
 
 	pco = psc_ctlmsg_push(PCMT_GETODTABLE, sizeof(*pco));
-	n = strlcpy(pco->pco_name, PCODT_NAME_ALL, sizeof(pco->pco_name));
-	if (n == 0 || n >= (int)sizeof(pco->pco_name))
-		errx(1, "invalid odtable name: %s", thr);
+	if (table) {
+		n = strlcpy(pco->pco_name, table, sizeof(pco->pco_name));
+		if (n == 0 || n >= (int)sizeof(pco->pco_name))
+			errx(1, "invalid odtable name: %s", table);
+	}
 }
 
 void
-psc_ctl_packshow_rpcsvcs(const char *thr)
+psc_ctl_packshow_pool(char *pool)
+{
+	struct psc_ctlmsg_pool *pcpl;
+	int n;
+
+	pcpl = psc_ctlmsg_push(PCMT_GETPOOL, sizeof(*pcpl));
+	if (pool) {
+		n = strlcpy(pcpl->pcpl_name, pool,
+		    sizeof(pcpl->pcpl_name));
+		if (n == 0 || n >= (int)sizeof(pcpl->pcpl_name))
+			errx(1, "invalid pool name: %s", pool);
+	}
+}
+
+void
+psc_ctl_packshow_listcache(char *lc)
+{
+	struct psc_ctlmsg_lc *pclc;
+	int n;
+
+	pclc = psc_ctlmsg_push(PCMT_GETLC, sizeof(*pclc));
+	if (lc) {
+		n = strlcpy(pclc->pclc_name, lc,
+		    sizeof(pclc->pclc_name));
+		if (n == 0 || n >= (int)sizeof(pclc->pclc_name))
+			errx(1, "invalid list cache name: %s", lc);
+	}
+}
+
+void
+psc_ctl_packshow_hashtable(char *table)
+{
+	struct psc_ctlmsg_hashtable *pcht;
+	int n;
+
+	pcht = psc_ctlmsg_push(PCMT_GETHASHTABLE, sizeof(*pcht));
+	if (table) {
+		n = strlcpy(pcht->pcht_name, table,
+		    sizeof(pcht->pcht_name));
+		if (n == 0 || n >= (int)sizeof(pcht->pcht_name))
+			errx(1, "invalid hash table name: %s", table);
+	}
+}
+
+void
+psc_ctl_packshow_iostats(char *iostats)
+{
+	struct psc_ctlmsg_iostats *pci;
+	int n;
+
+	pci = psc_ctlmsg_push(PCMT_GETIOSTATS, sizeof(*pci));
+	if (iostats) {
+		n = strlcpy(pci->pci_ist.ist_name, iostats,
+		    sizeof(pci->pci_ist.ist_name));
+		if (n == 0 || n >= (int)sizeof(pci->pci_ist.ist_name))
+			errx(1, "invalid iostats name: %s", iostats);
+	}
+}
+
+void
+psc_ctl_packshow_meter(char *meter)
+{
+	struct psc_ctlmsg_meter *pcm;
+	int n;
+
+	pcm = psc_ctlmsg_push(PCMT_GETMETER, sizeof(*pcm));
+	if (meter) {
+		n = strlcpy(pcm->pcm_mtr.pm_name, meter,
+		    sizeof(pcm->pcm_mtr.pm_name));
+		if (n == 0 || n >= (int)sizeof(pcm->pcm_mtr.pm_name))
+			errx(1, "invalid meter name: %s", meter);
+	}
+}
+
+void
+psc_ctl_packshow_mlist(char *mlist)
+{
+	struct psc_ctlmsg_mlist *pcml;
+	int n;
+
+	pcml = psc_ctlmsg_push(PCMT_GETMLIST, sizeof(*pcml));
+	if (mlist) {
+		n = strlcpy(pcml->pcml_name, mlist,
+		    sizeof(pcml->pcml_name));
+		if (n == 0 || n >= (int)sizeof(pcml->pcml_name))
+			errx(1, "invalid mlist name: %s", mlist);
+	}
+}
+
+void
+psc_ctl_packshow_rpcsvc(char *rpcsvc)
 {
 	struct psc_ctlmsg_rpcsvc *pcrs;
+	int n;
 
-	psc_ctlmsg_push(PCMT_GETRPCSVC, sizeof(*pcrs));
+	pcrs = psc_ctlmsg_push(PCMT_GETRPCSVC, sizeof(*pcrs));
+	if (rpcsvc) {
+		n = strlcpy(pcrs->pcrs_name, rpcsvc, sizeof(pcrs->pcrs_name));
+		if (n == 0 || n >= (int)sizeof(pcrs->pcrs_name))
+			errx(1, "invalid rpcsvc name: %s", rpcsvc);
+	}
 }
 
 void
 psc_ctlparse_show(char *showspec)
 {
-	char *thrlist, *thr, *thrnext;
+	char *items, *item, *next;
 	struct psc_ctlshow_ent *pse;
 	int n;
 
@@ -183,18 +315,19 @@ psc_ctlparse_show(char *showspec)
 		exit(1);
 	}
 
-	if ((thrlist = strchr(showspec, ':')) == NULL)
-		thrlist = PCTHRNAME_EVERYONE;
-	else
-		*thrlist++ = '\0';
+	if ((items = strchr(showspec, ':')) == NULL)
+		*items++ = '\0';
 
 	if ((pse = psc_ctlshow_lookup(showspec)) == NULL)
 		errx(1, "invalid show parameter: %s", showspec);
 
-	for (thr = thrlist; thr != NULL; thr = thrnext) {
-		if ((thrnext = strchr(thr, ',')) != NULL)
-			*thrnext++ = '\0';
-		pse->pse_cb(thr);
+	if (items == NULL)
+		pse->pse_cb(NULL);
+	for (item = items; item; item = next) {
+		next = strchr(item, ',');
+		if (next)
+			*next++ = '\0';
+		pse->pse_cb(item);
 	}
 }
 
@@ -323,7 +456,6 @@ psc_ctlparse_iostats(char *iostats)
 
 		pci = psc_ctlmsg_push(PCMT_GETIOSTATS, sizeof(*pci));
 
-		/* Set iostat name. */
 		n = snprintf(pci->pci_ist.ist_name,
 		    sizeof(pci->pci_ist.ist_name), "%s", iostat);
 		if (n == -1)

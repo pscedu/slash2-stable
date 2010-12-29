@@ -48,9 +48,26 @@ struct psc_ctlmsghdr;
 /* 14 */ { psc_ctlmsg_rpcsvc_prhdr,	psc_ctlmsg_rpcsvc_prdat,	sizeof(struct psc_ctlmsg_rpcsvc),	NULL },				\
 /* 15 */ { NULL,			NULL,				0,					NULL }
 
+#define PSC_CTLSHOW_DEFS						\
+	{ "faults",		psc_ctl_packshow_fault },		\
+	{ "hashtables",		psc_ctl_packshow_hashtable },		\
+	{ "iostats",		psc_ctl_packshow_iostats },		\
+	{ "listcaches",		psc_ctl_packshow_listcache },		\
+	{ "loglevels",		psc_ctl_packshow_loglevels },		\
+	{ "meters",		psc_ctl_packshow_meter },		\
+	{ "mlists",		psc_ctl_packshow_mlist },		\
+	{ "odtables",		psc_ctl_packshow_odtable },		\
+	{ "pools",		psc_ctl_packshow_pool },		\
+	{ "rpcsvcs",		psc_ctl_packshow_rpcsvc },		\
+	{ "threads",		psc_ctl_packshow_thread },		\
+									\
+	/* aliases */							\
+	{ "lc",			psc_ctl_packshow_listcache },		\
+	{ "ll",			psc_ctl_packshow_loglevels }
+
 struct psc_ctlshow_ent {
 	const char		 *pse_name;
-	void			(*pse_cb)(const char *);
+	void			(*pse_cb)(char *);
 };
 
 struct psc_ctlcmd_req {
@@ -77,7 +94,7 @@ struct psc_ctlopt {
 };
 
 void  psc_ctlparse_cmd(char *);
-void  psc_ctlparse_hashtable(const char *);
+void  psc_ctlparse_hashtable(char *);
 void  psc_ctlparse_iostats(char *);
 void  psc_ctlparse_lc(char *);
 void  psc_ctlparse_meter(char *);
@@ -86,11 +103,17 @@ void  psc_ctlparse_param(char *);
 void  psc_ctlparse_pool(char *);
 void  psc_ctlparse_show(char *);
 
-void  psc_ctl_packshow_faults(const char *);
-void  psc_ctl_packshow_loglevels(const char *);
-void  psc_ctl_packshow_odtables(const char *);
-void  psc_ctl_packshow_rpcsvcs(const char *);
-void  psc_ctl_packshow_threads(const char *);
+void  psc_ctl_packshow_fault(char *);
+void  psc_ctl_packshow_hashtable(char *);
+void  psc_ctl_packshow_iostats(char *);
+void  psc_ctl_packshow_listcache(char *);
+void  psc_ctl_packshow_loglevels(char *);
+void  psc_ctl_packshow_meter(char *);
+void  psc_ctl_packshow_mlist(char *);
+void  psc_ctl_packshow_odtable(char *);
+void  psc_ctl_packshow_pool(char *);
+void  psc_ctl_packshow_rpcsvc(char *);
+void  psc_ctl_packshow_thread(char *);
 
 void *psc_ctlmsg_push(int, size_t);
 void  psc_ctlcli_main(const char *, int, char **, const struct psc_ctlopt *, int);
