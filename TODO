@@ -58,6 +58,10 @@ make
 - fix cscope: remove the curdir when the parent includes it
 - work on `install' target for the SLASH2 release
 
+rename
+- rename RSX_ALLOCREP to something that doesnt mean 'allocate' and
+  RSX_NEWREQ to ALLOC to make alloc grepping easier
+
 pfl
 - ctlapi GETTREE?
 - pfl: use "psc_/pfl_" prefix and "_mt" (multithread-safe) postfix
@@ -118,25 +122,12 @@ pfl
 - for odtable(1), print stats as default behavior
 - add function call hierarchy to psclog
 - mmap() mprotect()'d memory in memguard
-- rename RSX_ALLOCREP to something that doesnt mean 'allocate' and
-  RSX_NEWREQ to ALLOC to make alloc grepping easier
-- change all query pscctl options under -s:
-
-	-s connections
-	-s hash[:foo]
-	-s iostats[:foo]
-	-s listcache[:foo]
-	-s loglevels
-	-s thrstats
-	-s pool[:foo]
-	-s [thread.]log.format
-
 - parse thr(-.*)? for connthr-foo not matching 'thr$' for thread names in ctl parsing
-- create a mechanism to include pflctl(7) directly into each *ctl.8 page
 - pool auto threshold is broken
 - add provisions to dynarray to detect multiple adds without an
   ensurelen and notify user to possible optimization
 - tie 'make doc' to 'make regen'
+  - the slow stuff is the svn log, maybe find a way of extracting that part out...
 
 - pcpp:
   if an arg is a pointer, dont trace an integer version of it in PFL_ENTER()
