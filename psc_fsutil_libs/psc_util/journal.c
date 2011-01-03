@@ -952,7 +952,11 @@ pjournal_thr_main(struct psc_thread *thr)
 		 * Free committed pending transactions to avoid hogging memory.
 		 */
 		PJ_LOCK(pj);
-		pj->pj_distill_xid = xid;
+
+		if (pj->pj_distill_xid < xid) {
+			pj->pj_distill_xid = xid;
+			txg_slash2_should_commit(1);
+		}
 
 		txg = zfsslash2_return_synced();
 		psc_assert(pj->pj_commit_txg <= txg);
@@ -1029,6 +1033,7 @@ pjournal_replay(struct psc_journal *pj, int thrtype,
 		psc_free(pje, PAF_LOCK | PAF_PAGEALIGN, PJ_PJESZ(pj));
 	}
 	psc_dynarray_free(&pj->pj_bufs);
+	txg_slash2_should_commit(1);
 
 	/*
 	 * Make the current replay in effect. Otherwise, a crash may
