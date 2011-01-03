@@ -117,6 +117,32 @@ following:
 .\"			is left unspecified, all ongoing operations will be reported.
 .\"			EOF
 .\"	) : (),
+.\"	exists $DATA->{mlists} ? (
+.\"		"mlists" => <<'EOF'
+.\"			Mlist statistics.
+.\"			Mlists are lists which interface with multiwait structures.
+.\"			Multiwaits are wait queues that allow any of a number of conditions to
+.\"			wake threads waiting on the resource list.
+.\"			.Ar subspec
+.\"			has the following format:
+.\"			.Pp
+.\"			.Bd -unfilled -offset indent
+.\"			.Ar mlist Ns Op , Ns Ar ...
+.\"			.Ed
+.\"			.Pp
+.\"			.Ar mlist
+.\"			may be one of the following:
+.\"			.Pp
+.\"			.Bl -tag -compact -offset indent -width 12n
+.\"			EOF
+.\"		  . build_list(%{ $DATA->{mlists} }) . <<'EOF'
+.\"			.El
+.\"			.Pp
+.\"			If
+.\"			.Ar subspec
+.\"			is left unspecified, all mlists will be accessed.
+.\"			EOF
+.\"	) : ()
 .\" }%
 .El
 .Pp
