@@ -165,6 +165,43 @@ following:
 .\"			.Ar subspec
 .\"			is left unspecified, all list caches will be accessed.
 .\"			EOF
+.\"	) : (),
+.\"	(exists $DATA->{iostats} or exists $mods{rpc}) ? (
+.\"		iostats => <<'EOF'
+.\"			.Tn I/O
+.\"			statistics.
+.\"			.Ar iostatspec
+.\"			has the following format:
+.\"			.Pp
+.\"			.Bd -unfilled -offset indent
+.\"			.Ar iostats Ns Op , Ns Ar ...
+.\"			.Ed
+.\"			.Pp
+.\"			.Ar iostats
+.\"			may be one of the following:
+.\"			.Pp
+.\"			.Bl -tag -compact -offset indent -width Ds
+.\"			EOF
+.\"		  . build_list(
+.\"			%{ $DATA->{listcaches} },
+.\"			exists $mods{rpc} ? (
+.\"				qq{lni-rcv- Ns Ar if ,} => "",
+.\"				qq{lni-snd- Ns Ar if} =>
+.\"				    qq{Data sent/received per\n.Tn LNET\nnetworking interface.\n.Pp},
+.\"				qq{lusklnd- Ns Ar mode Ns Cm -rcv ,} => "",
+.\"				qq{lusklnd- Ns Ar mode Ns Cm -snd} =>
+.\"				    qq{Data sent/received over userland socket networking device.\n} .
+.\"				    qq{.Ar mode\nmay be\n.Cm pasv\n.Pq passive\nor\n.Cm aggr\n.Pq aggregate .\n.Pp}
+.\"			) : ()
+.\"		  ) . <<'EOF'
+.\"			.El
+.\"			.Pp
+.\"			If
+.\"			.Ar subspec
+.\"			is left unspecified, all
+.\"			.Tn I/O
+.\"			statistics will be accessed.
+.\"			EOF
 .\"	) : ()
 .\" }%
 .El
