@@ -22,13 +22,13 @@ following:
 .\"			.Ar subspec
 .\"			has the following format:
 .\"			.Bd -unfilled -offset indent
-.\"			.Ar thread-name Ns Op , Ns Ar ...
+.\"			.Ar thread Ns Op , Ns Ar ...
 .\"			.Ed
 .\"			.Pp
 .\"			See
 .\"			.Sx Thread Specification
 .\"			for details on specifying
-.\"			.Ar thread-name .
+.\"			.Ar thread .
 .\"			If
 .\"			.Ar subspec
 .\"			is left unspecified, all threads will be accessed.
@@ -38,19 +38,19 @@ following:
 .\"			.Ar subspec
 .\"			has the following format:
 .\"			.Bd -unfilled -offset indent
-.\"			.Ar thread-name Ns Op , Ns Ar ...
+.\"			.Ar thread Ns Op , Ns Ar ...
 .\"			.Ed
 .\"			.Pp
 .\"			See
 .\"			.Sx Thread Specification
 .\"			for details on specifying
-.\"			.Ar thread-name .
+.\"			.Ar thread .
 .\"			If
 .\"			.Ar subspec
 .\"			is left unspecified, all threads will be accessed.
 .\"			EOF
 .\"	exists $mods{rpc} ? (
-.\"		rpcsvc	=> ".Tn RPC\nservices"
+.\"		rpcsvcs	=> ".Tn RPC\nservices."
 .\"	) : (),
 .\"	exists $DATA->{pools} ? (
 .\"		"pools" => <<'EOF'
@@ -58,10 +58,10 @@ following:
 .\"			.Ar subspec
 .\"			has the following format:
 .\"			.Bd -unfilled -offset indent
-.\"			.Ar pool-name Ns Op , Ns Ar ...
+.\"			.Ar pool Ns Op , Ns Ar ...
 .\"			.Ed
 .\"			.Pp
-.\"			.Ar pool-name
+.\"			.Ar pool
 .\"			may be one of the following:
 .\"			.Pp
 .\"			.Bl -tag -compact -offset indent -width 12n
@@ -80,10 +80,10 @@ following:
 .\"			.Ar subspec
 .\"			has the following format:
 .\"			.Bd -unfilled -offset indent
-.\"			.Ar hash-table-name Ns Op , Ns Ar ...
+.\"			.Ar hash-table Ns Op , Ns Ar ...
 .\"			.Ed
 .\"			.Pp
-.\"			.Ar hash-table-name
+.\"			.Ar hash-table
 .\"			may be one of the following:
 .\"			.Pp
 .\"			.Bl -tag -compact -offset indent -width 12n
@@ -95,7 +95,28 @@ following:
 .\"			.Ar subspec
 .\"			is left unspecified, all hash tables will be accessed.
 .\"			EOF
-.\"	) : ()
+.\"	) : (),
+.\"	exists $DATA->{meters} ? (
+.\"		"meters" => <<'EOF'
+.\"			Report on ongoing operations in progress meters.
+.\"			.Ar subspec
+.\"			has the following format:
+.\"			.Bd -unfilled -offset indent
+.\"			.Ar meter Ns Op , Ns Ar ...
+.\"			.Ed
+.\"			.Pp
+.\"			.Ar meter
+.\"			may be one of the following:
+.\"			.Pp
+.\"			.Bl -tag -compact -offset indent -width 12n
+.\"		  . build_list(%{ $DATA->{meters} }) . <<'EOF'
+.\"			.El
+.\"			.Pp
+.\"			If
+.\"			.Ar subspec
+.\"			is left unspecified, all ongoing operations will be reported.
+.\"			EOF
+.\"	) : (),
 .\" }%
 .El
 .Pp
