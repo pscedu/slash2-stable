@@ -56,9 +56,9 @@ typedef int (*psc_distill_handler_t)(struct psc_journal_enthdr *, int, int);
 #define PJRNL_CURSOR_VERSION		1
 
 /*
- * The cursor, stored on disk, is used to remember where we are in terms
- * processing the log entries.  This file lives in ZFS, so we don't need
- * do any checksum.
+ * The cursor, stored on disk, is used to remember where we are in terms of 
+ * processing the log entries.  In addition, this file lives in ZFS, so we 
+ * don't need do any checksum.
  */
 struct psc_journal_cursor {
 	uint64_t			 pjc_magic;
@@ -66,7 +66,7 @@ struct psc_journal_cursor {
 	uint64_t			 pjc_timestamp;		/* format time */
 	unsigned char			 pjc_uuid[16];
 	/*
-	 * pjc_txg is the only trustworthy information recorded in the file
+	 * pjc_commit_txg is the only trustworthy information recorded in the file
 	 * after a crash.  Other information can be stale and need to be
 	 * adjusted before use.
 	 */
