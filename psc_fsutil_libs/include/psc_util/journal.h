@@ -70,8 +70,8 @@ struct psc_journal_cursor {
 	 * after a crash.  Other information can be stale and need to be
 	 * adjusted before use.
 	 */
-	uint64_t			 pjc_txg;		/* last synced ZFS transaction group number */
-	uint64_t			 pjc_xid;		/* last XID whose entry has been distilled */
+	uint64_t			 pjc_commit_txg;	/* last synced ZFS transaction group number */
+	uint64_t			 pjc_distill_xid;	/* last XID whose entry has been distilled */
 	uint64_t			 pjc_fid;		/* last SLASH2 FID */
 	uint64_t			 pjc_seqno_lwm;		/* low water mark of last bmap sequence number */
 	uint64_t			 pjc_seqno_hwm;		/* high water mark of last bmap sequence number */
