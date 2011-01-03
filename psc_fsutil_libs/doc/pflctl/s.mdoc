@@ -53,7 +53,7 @@ following:
 .\"		rpcsvcs	=> ".Tn RPC\nservices."
 .\"	) : (),
 .\"	exists $DATA->{pools} ? (
-.\"		"pools" => <<'EOF'
+.\"		pools => <<'EOF'
 .\"			Memory pool statistics.
 .\"			.Ar subspec
 .\"			has the following format:
@@ -75,7 +75,7 @@ following:
 .\"			EOF
 .\"	) : (),
 .\"	exists $DATA->{hashtables} ? (
-.\"		"hashtables" => <<'EOF'
+.\"		hashtables => <<'EOF'
 .\"			Hash table statistics.
 .\"			.Ar subspec
 .\"			has the following format:
@@ -97,7 +97,7 @@ following:
 .\"			EOF
 .\"	) : (),
 .\"	exists $DATA->{meters} ? (
-.\"		"meters" => <<'EOF'
+.\"		meters => <<'EOF'
 .\"			Report on ongoing operations in progress meters.
 .\"			.Ar subspec
 .\"			has the following format:
@@ -118,7 +118,7 @@ following:
 .\"			EOF
 .\"	) : (),
 .\"	exists $DATA->{mlists} ? (
-.\"		"mlists" => <<'EOF'
+.\"		mlists => <<'EOF'
 .\"			Mlist statistics.
 .\"			Mlists are lists which interface with multiwait structures.
 .\"			Multiwaits are wait queues that allow any of a number of conditions to
@@ -141,6 +141,29 @@ following:
 .\"			If
 .\"			.Ar subspec
 .\"			is left unspecified, all mlists will be accessed.
+.\"			EOF
+.\"	) : (),
+.\"	exists $DATA->{listcaches} ? (
+.\"		listcaches => <<'EOF'
+.\"			List cache statistics.
+.\"			.Ar subspec
+.\"			has the following format:
+.\"			.Pp
+.\"			.Bd -unfilled -offset indent
+.\"			.Ar list Ns Op , Ns Ar ...
+.\"			.Ed
+.\"			.Pp
+.\"			.Ar list
+.\"			may be one of the following:
+.\"			.Pp
+.\"			.Bl -tag -compact -offset indent -width 18n
+.\"			EOF
+.\"		  . build_list(%{ $DATA->{listcaches} }) . <<'EOF'
+.\"			.El
+.\"			.Pp
+.\"			If
+.\"			.Ar subspec
+.\"			is left unspecified, all list caches will be accessed.
 .\"			EOF
 .\"	) : ()
 .\" }%
