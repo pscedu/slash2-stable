@@ -6,7 +6,7 @@ has the following format:
 .Bd -unfilled -offset indent
 .Sm off
 .Ar param
-.Op : Ar thread-name Op , Ar ...
+.Op : Ar subspec
 .Sm on
 .Ed
 .Pp
@@ -14,23 +14,91 @@ has the following format:
 may be specified as any non-ambiguous prefix abbreviation of the
 following:
 .Pp
-.Bl -tag -offset indent -width 13n -compact
+.Bl -tag -width 3n -offset 3n
 .\" %PFL_LIST {
 .\"	%{ $DATA->{show} },
-.\"	loglevels	=> "Thread logging levels",
-.\"	threads		=> "Daemon thread activity and statistics",
+.\"	loglevels	=> <<'EOF',
+.\"			Thread logging levels.
+.\"			.Ar subspec
+.\"			has the following format:
+.\"			.Bd -unfilled -offset indent
+.\"			.Ar thread-name Ns Op , Ns Ar ...
+.\"			.Ed
+.\"			.Pp
+.\"			See
+.\"			.Sx Thread Specification
+.\"			for details on specifying
+.\"			.Ar thread-name .
+.\"			If
+.\"			.Ar subspec
+.\"			is left unspecified, all threads will be accessed.
+.\"			EOF
+.\"	threads		=> <<'EOF',
+.\"			Daemon thread activity and statistics.
+.\"			.Ar subspec
+.\"			has the following format:
+.\"			.Bd -unfilled -offset indent
+.\"			.Ar thread-name Ns Op , Ns Ar ...
+.\"			.Ed
+.\"			.Pp
+.\"			See
+.\"			.Sx Thread Specification
+.\"			for details on specifying
+.\"			.Ar thread-name .
+.\"			If
+.\"			.Ar subspec
+.\"			is left unspecified, all threads will be accessed.
+.\"			EOF
 .\"	exists $mods{rpc} ? (
-.\"	    rpcsvc	=> ".Tn RPC\nservices"
+.\"		rpcsvc	=> ".Tn RPC\nservices"
+.\"	) : (),
+.\"	exists $DATA->{pools} ? (
+.\"		"pools" => <<'EOF'
+.\"			Memory pool statistics.
+.\"			.Ar subspec
+.\"			has the following format:
+.\"			.Bd -unfilled -offset indent
+.\"			.Ar pool-name Ns Op , Ns Ar ...
+.\"			.Ed
+.\"			.Pp
+.\"			.Ar pool-name
+.\"			may be one of the following:
+.\"			.Pp
+.\"			.Bl -tag -compact -offset indent -width 12n
+.\"			EOF
+.\"		  . build_list(%{ $DATA->{pools} }) . <<'EOF'
+.\"			.El
+.\"			.Pp
+.\"			If
+.\"			.Ar subspec
+.\"			is left unspecified, all pools will be accessed.
+.\"			EOF
+.\"	) : (),
+.\"	exists $DATA->{hashtables} ? (
+.\"		"hashtables" => <<'EOF'
+.\"			Hash table statistics.
+.\"			.Ar subspec
+.\"			has the following format:
+.\"			.Bd -unfilled -offset indent
+.\"			.Ar hash-table-name Ns Op , Ns Ar ...
+.\"			.Ed
+.\"			.Pp
+.\"			.Ar hash-table-name
+.\"			may be one of the following:
+.\"			.Pp
+.\"			.Bl -tag -compact -offset indent -width 12n
+.\"			EOF
+.\"		  . build_list(%{ $DATA->{hashtables} }) . <<'EOF'
+.\"			.El
+.\"			.Pp
+.\"			If
+.\"			.Ar subspec
+.\"			is left unspecified, all hash tables will be accessed.
+.\"			EOF
 .\"	) : ()
 .\" }%
 .El
 .Pp
 The special value
 .Sq \&?
-may be specified to display a list of recognized values.
-.Pp
-See
-.Sx Thread Specification
-for details on specifying
-.Ar thread-name .
-The default behavior is to apply the operation to all applicable threads.
+may also be specified to display a list of recognized values.
