@@ -227,7 +227,7 @@ pjournal_xnew(struct psc_journal *pj, int distill)
 	pjournal_next_xid(pj, xh);
 
 	psc_info("starting a new transaction %p (xid = %"PRIx64") in "
-	    "journal %p", xh, xh->pjx_xid, pj);
+	    "journal %p distill %d", xh, xh->pjx_xid, pj, distill);
 	return (xh);
 }
 
@@ -927,14 +927,17 @@ pjournal_thr_main(struct psc_thread *thr)
 		 * Walk the list until we find a log entry that needs processing.
 		 * We also make sure that we distill in order of transaction IDs.
 		 */
-		while ((xh = pll_get(&pj->pj_distillxids))) {
-
+		while ((xh = pll_peekhead(&pj->pj_distillxids))) {
+			psclog_notify("xh=%p xh->pjx_flags=%d", xh, xh->pjx_flags);
 			spinlock(&xh->pjx_lock);
 			psc_assert(xh->pjx_flags & PJX_DISTILL);
+			
 			if (!(xh->pjx_flags & PJX_WRITTEN)) {
 				freelock(&xh->pjx_lock);
 				break;
 			}
+
+			pll_remove(&pj->pj_distillxids, xh);
 			freelock(&xh->pjx_lock);
 
 			pje = xh->pjx_data;
