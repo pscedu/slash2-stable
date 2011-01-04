@@ -38,6 +38,7 @@ general reminders
    - add check: assert(sizeof() == 8)
 - dont access nseen on lc/mlist without a lock
 - avoid globals for NUMA performance
+- is gettimeofday() a source of system call overhead?
 
 - use psc mem wrappers for:
 	malloc
@@ -103,8 +104,6 @@ pfl
 - when ppm_total is set less than lc_size for !PPMF_AUTO, set
   ppm_max and check this value in other places to eventually
   decrease pool size
-- make the timer thread track a global timeval which other threads that
-  don't care about sub-second resolution can use to ease syscalls
 - consolidate naming conventions for initializers:
 	PSC_WAITQ_INIT -> WAITQ_INIT
 	INIT_PSC_LISTENTRY -> INIT_LISTENTRY
@@ -128,6 +127,9 @@ pfl
   ensurelen and notify user to possible optimization
 - tie 'make doc' to 'make regen'
   - the slow stuff is the svn log, maybe find a way of extracting that part out...
+
+lnet
+- use TLS buffers for libcfs_nid2str() to avoid NUMA contention
 
 - pcpp:
   if an arg is a pointer, dont trace an integer version of it in PFL_ENTER()
