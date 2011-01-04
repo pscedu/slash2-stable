@@ -105,7 +105,7 @@ psc_ctlparse_hashtable(char *table)
 
 	pcht = psc_ctlmsg_push(PCMT_GETHASHTABLE, sizeof(*pcht));
 	if (table) {
-		strlcpy(pcht->pcht_name, table, sizeof(pcht->pcht_name));
+		n = strlcpy(pcht->pcht_name, table, sizeof(pcht->pcht_name));
 		if (n == 0 || n >= (int)sizeof(pcht->pcht_name))
 			errx(1, "invalid thread name: %s", table);
 	}
