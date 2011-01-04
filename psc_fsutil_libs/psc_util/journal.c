@@ -626,6 +626,7 @@ pjournal_scan_slots(struct psc_journal *pj)
 	psc_info("Journal statistics: %d close, %d open, %d magic, "
 	    "%d chksum, %d scan, %d total",
 	    nclose, nopen, nmagic, nchksum, nscan, pj->pj_total);
+	psc_notify("The last transaction ID used is %"PRIx64, pj->pj_lastxid); 
 	return (rc);
 }
 
@@ -955,7 +956,7 @@ pjournal_thr_main(struct psc_thread *thr)
 
 		if (pj->pj_distill_xid < xid) {
 			pj->pj_distill_xid = xid;
-			txg_slash2_should_commit(1);
+			zfsslash2_should_commit();
 		}
 
 		txg = zfsslash2_return_synced();
@@ -1033,7 +1034,7 @@ pjournal_replay(struct psc_journal *pj, int thrtype,
 		psc_free(pje, PAF_LOCK | PAF_PAGEALIGN, PJ_PJESZ(pj));
 	}
 	psc_dynarray_free(&pj->pj_bufs);
-	txg_slash2_should_commit(1);
+	zfsslash2_should_commit();
 
 	/*
 	 * Make the current replay in effect. Otherwise, a crash may
