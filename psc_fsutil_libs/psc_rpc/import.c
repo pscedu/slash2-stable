@@ -183,7 +183,7 @@ void
 pscrpc_fail_import(struct pscrpc_import *imp, uint32_t conn_cnt)
 {
 	if (imp->imp_state == PSCRPC_IMP_NEW) {
-		psc_info("Failing new import %p", imp);
+		psclog_notice("Failing new import %p", imp);
 		pscrpc_deactivate_import(imp);
 		return;
 	}
@@ -191,15 +191,15 @@ pscrpc_fail_import(struct pscrpc_import *imp, uint32_t conn_cnt)
 	if (pscrpc_set_import_discon(imp, conn_cnt)) {
 		if (!imp->imp_replayable) {
 			psc_warnx("import for %s not replayable, "
-			       "auto-deactivating",
-			       libcfs_id2str(imp->imp_connection->c_peer));
+			    "auto-deactivating",
+			    libcfs_id2str(imp->imp_connection->c_peer));
 
 			pscrpc_deactivate_import(imp);
 		}
 		//CDEBUG(D_HA, "%s: waking up pinger\n",
 		//       obd2cli_tgt(imp->imp_obd));
 
-		psc_notify("failing import %p", imp);
+		psclog_notice("failing import %p", imp);
 		spinlock(&imp->imp_lock);
 		imp->imp_force_verify = 1;
 		imp->imp_failed = 1;
