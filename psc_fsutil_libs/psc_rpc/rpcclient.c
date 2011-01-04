@@ -289,7 +289,7 @@ pscrpc_completion_ready(struct pscrpc_completion *c, int block)
  retry:
 	if (atomic_read(&c->rqcomp_compcnt))
 		return (1);
-	
+
 	spinlock(&c->rqcomp_lock);
 	if (!atomic_read(&c->rqcomp_compcnt)) {
 		if (block) {
@@ -303,7 +303,7 @@ pscrpc_completion_ready(struct pscrpc_completion *c, int block)
 		freelock(&c->rqcomp_lock);
 		return (1);
 	}
-		
+
 }
 
 void
@@ -1404,7 +1404,7 @@ pscrpc_interrupted_set(void *data)
 #if WEDONTNEEDTHISRIGTHNOW
 static int
 pscrpc_import_delay_req(struct pscrpc_import *imp,
-				   struct pscrpc_request *req, int *status)
+    struct pscrpc_request *req, int *status)
 {
 	int delay = 0;
 
@@ -1442,9 +1442,9 @@ pscrpc_import_delay_req(struct pscrpc_import *imp,
 }
 #endif
 
-int pscrpc_set_wait(struct pscrpc_request_set *set)
+int
+pscrpc_set_wait(struct pscrpc_request_set *set)
 {
-	struct psclist_head   *tmp;
 	struct pscrpc_request *req;
 	struct l_wait_info     lwi;
 	int                    rc=0, timeout;
@@ -1452,13 +1452,9 @@ int pscrpc_set_wait(struct pscrpc_request_set *set)
 	if (psc_listhd_empty(&set->set_requests))
 		return (0);
 
-	psclist_for_each(tmp, &set->set_requests) {
-		req = psc_lentry_obj(tmp, struct pscrpc_request,
-				    rq_set_chain_lentry);
-
+	psclist_for_each_entry(req, &set->set_requests, rq_set_chain_lentry)
 		if (req->rq_phase == PSCRPC_RQ_PHASE_NEW)
 			(void)pscrpc_push_req(req);
-	}
 
 	do {
 		timeout = pscrpc_set_next_timeout(set);
@@ -1493,9 +1489,8 @@ int pscrpc_set_wait(struct pscrpc_request_set *set)
 	psc_assert(set->set_remaining == 0);
 
 	rc = 0;
-	psclist_for_each(tmp, &set->set_requests) {
-		req = psc_lentry_obj(tmp, struct pscrpc_request, rq_set_chain_lentry);
-		if (req->rq_import->imp_failed){
+	psclist_for_each_entry(req, &set->set_requests, rq_set_chain_lentry) {
+		if (req->rq_import->imp_failed) {
 			psc_errorx("failed import detected!");
 			rc = -ECONNABORTED;
 			continue;
