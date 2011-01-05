@@ -107,15 +107,15 @@ psc_pthread_mutex_trylock(pthread_mutex_t *mut)
 	psc_fatalx("pthread_mutex_timedlock: %s", strerror(rc));
 }
 
-void
-psc_pthread_mutex_ensure_locked(pthread_mutex_t *mut)
+int
+psc_pthread_mutex_haslock(pthread_mutex_t *mut)
 {
 	struct timespec ts;
 	int rc;
 
 	memset(&ts, 0, sizeof(ts));
 	rc = pthread_mutex_timedlock(mut, &ts);
-	psc_assert(rc == EDEADLK);
+	return (rc == EDEADLK);
 }
 
 #else
@@ -134,16 +134,33 @@ psc_pthread_mutex_trylock(pthread_mutex_t *mut)
 	psc_fatalx("pthread_mutex_trylock: %s", strerror(rc));
 }
 
-void
-psc_pthread_mutex_ensure_locked(pthread_mutex_t *mut)
+int
+psc_pthread_mutex_haslock(pthread_mutex_t *mut)
 {
 	int rc;
 
 	rc = pthread_mutex_trylock(mut);
-	psc_assert(rc == EBUSY); /* XXX XXX EDEADLK XXX XXX */
+	return (rc == EBUSY); /* XXX XXX EDEADLK XXX XXX */
 }
 
 #endif
+
+int
+psc_pthread_mutex_tryreqlock(pthread_mutex_t *mut, int *waslocked)
+{
+	if (psc_pthread_mutex_haslock(mut)) {
+		*waslocked = 1;
+		return (1);
+	}
+	*waslocked = 0;
+	return (psc_pthread_mutex_trylock(mut));
+}
+
+void
+psc_pthread_mutex_ensure_locked(pthread_mutex_t *m)
+{
+	psc_assert(psc_pthread_mutex_haslock(m));
+}
 
 void
 psc_pthread_rwlock_destroy(struct psc_pthread_rwlock *ppr)
