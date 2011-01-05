@@ -188,7 +188,7 @@ typedef struct psc_spinlock {
  * Returns a value that ureqlock() must use.
  */
 #define reqlock_pci(pci, psl)						\
-	(spin_ismine(psl) ? PSLRV_WASLOCKED :				\
+	(psc_spin_haslock(psl) ? PSLRV_WASLOCKED :			\
 	    (PSC_MAKETRUE(spinlock_pci(pci, psl)), PSLRV_WASNOTLOCKED))
 
 /**
@@ -198,7 +198,7 @@ typedef struct psc_spinlock {
  * @waslockedp: value-result to "unrequire" lock.
  */
 #define tryreqlock_pci(pci, psl, waslockedp)				\
-	(spin_ismine(psl) ?						\
+	(psc_spin_haslock(psl) ?					\
 	    (*(waslockedp) = PSLRV_WASLOCKED, 1) :			\
 	    (*(waslockedp) = PSLRV_WASNOTLOCKED, trylock_pci((pci), (psl))))
 
@@ -269,9 +269,9 @@ _spin_checktime(struct psc_spinlock *psl)
 }
 
 static __inline int
-spin_ismine(psc_spinlock_t *psl)
+psc_spin_haslock(psc_spinlock_t *psl)
 {
-	_SPIN_CHECK("spin_ismine", psl);
+	_SPIN_CHECK("psc_spin_haslock", psl);
 	/*
 	 * This code is thread safe because even if psl_who changes, it
 	 * won't be set to us.
