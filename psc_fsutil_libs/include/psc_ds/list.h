@@ -468,6 +468,15 @@ _psclist_next_obj(struct psclist_head *hd, void *p,
 	     (n) = (p) ? psclist_next_obj2((hd), (p), (offset)) : NULL;		\
 	     (p); (p) = (n), (n) = (n) ? psclist_next_obj2((hd), (n), (offset)) : NULL)
 
+/**
+ * psclist_for_each_entry2_cont - Continue iterating over list of given type.
+ * @p: the type * to use as a loop counter.
+ * @hd: the head for your list.
+ * @memb: list entry member of structure.
+ */
+#define psclist_for_each_entry2_cont(p, hd, offset)				\
+	for (; (p); (p) = psclist_next_obj2((hd), (p), (offset)))
+
 void psclist_sort(void **, struct psclist_head *, int, ptrdiff_t,
 	void (*)(void *, size_t, size_t, int (*)(const void *, const void *)),
 	int (*)(const void *, const void *));

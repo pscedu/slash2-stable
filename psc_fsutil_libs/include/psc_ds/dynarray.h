@@ -36,6 +36,16 @@ struct psc_dynarray {
 #define DYNARRAY_INIT		{ 0, 0, 0, NULL }
 #define DYNARRAY_INIT_NOLOG	{ PDAF_NOLOG, 0, 0, NULL }
 
+#define _DYNARRAY_FOREACH(initcode, p, n, pda)				\
+	for (initcode; ((n) < psc_dynarray_len(pda) || ((p) = NULL)) &&	\
+	    (((p) = psc_dynarray_getpos((pda), (n))) || 1); (n)++)
+
+#define DYNARRAY_FOREACH(p, n, pda)					\
+	_DYNARRAY_FOREACH((n) = 0, (p), (n), (pda))
+
+#define DYNARRAY_FOREACH_CONT(p, n, pda)				\
+	_DYNARRAY_FOREACH(, (p), (n), (pda))
+
 /**
  * DYNARRAY_FOREACH - Iterate across items of a dynarray.
  * @p: item iterator.
@@ -44,10 +54,6 @@ struct psc_dynarray {
  * Notes: do not invoke psc_dynarray_add/remove/splice/etc in the body
  *	of this loop.
  */
-#define DYNARRAY_FOREACH(p, n, pda)					\
-	for ((n) = 0; ((n) < psc_dynarray_len(pda) || ((p) = NULL)) &&	\
-	    (((p) = psc_dynarray_getpos((pda), (n))) || 1); (n)++)
-
 #define DYNARRAY_FOREACH_REVERSE(p, n, pda)				\
 	for ((n) = psc_dynarray_len(pda) - 1;				\
 	    ((n) >= 0 || ((p) = NULL)) &&				\

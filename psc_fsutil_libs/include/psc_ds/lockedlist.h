@@ -70,6 +70,9 @@ struct psc_lockedlist {
 	psclist_for_each_entry2_backwards((p), &(pll)->pll_listhd,	\
 	    (pll)->pll_offset)
 
+#define PLL_FOREACH_CONT(p, pll)					\
+	psclist_for_each_entry2_cont((p), &(pll)->pll_listhd, (pll)->pll_offset)
+
 #define PLL_INIT(pll, type, member)					\
 	{ PSCLIST_HEAD_INIT((pll)->pll_listhd), 0, 0,			\
 	  offsetof(type, member), { SPINLOCK_INIT } }
@@ -77,6 +80,9 @@ struct psc_lockedlist {
 #define PLL_INIT_NOLOG(pll, type, member)				\
 	{ PSCLIST_HEAD_INIT((pll)->pll_listhd), 0, PLLF_NOLOG,		\
 	  offsetof(type, member), { SPINLOCK_INIT_NOLOG } }
+
+#define pll_next_item(pll, p)						\
+	psclist_next_obj2(&(pll)->pll_listhd, (p), (pll)->pll_offset)
 
 #define pll_init(pll, type, member, lock)				\
 	_pll_init((pll), offsetof(type, member), (lock))
