@@ -1171,8 +1171,8 @@ psc_ctlparam_register(const char *oname, int (*cbf)(int,
 	struct psc_ctlparam_node *pcn;
 	char *subname, *next, *name;
 
+	pcn = NULL; /* gcc */
 	name = psc_strdup(oname);
-
 	ptn = &psc_ctlparamtree;
 	for (subname = name; subname != NULL; subname = next) {
 		if ((next = strchr(subname, '.')) != NULL)
