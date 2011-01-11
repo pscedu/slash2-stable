@@ -86,6 +86,8 @@ main(int argc, char *argv[])
 	psc_assert(psc_pthread_mutex_tryreqlock(&m, &lk));
 	psc_pthread_mutex_ureqlock(&m, lk);
 
+	psc_assert(psc_pthread_mutex_haslock(&m));
+
 	psc_pthread_mutex_unlock(&m);
 
 	psc_assert(psc_pthread_mutex_haslock(&m) == 0);
