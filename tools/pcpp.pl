@@ -22,7 +22,7 @@ use PFL::Getoptv;
 use File::Basename;
 
 sub usage {
-	warn "usage: $0 [-x] file\n";
+	warn "usage: $0 [-fx] [-H hack] file\n";
 	exit 1;
 }
 
@@ -34,9 +34,10 @@ sub fatal {
 my %hacks = (
 	yytext		=> 0,
 	yyerrlab	=> 0,
+	yylex_return	=> 0,
 );
 my %opts;
-getoptv("xH:", \%opts) or usage;
+getoptv("fH:x", \%opts) or usage;
 usage unless @ARGV == 1;
 
 if ($opts{H}) {
@@ -58,7 +59,7 @@ close F;
 # debug file ID
 print qq{# 1 "$fn"\n};
 
-if ($data !~ m!psc_util/log\.h! or
+if (!$opts{f} and ($data !~ m!psc_util/log\.h! or
     basename($fn) eq "alloc.c" or
     basename($fn) eq "dynarray.c" or
     basename($fn) eq "hashtbl.c" or
@@ -69,7 +70,7 @@ if ($data !~ m!psc_util/log\.h! or
     basename($fn) eq "subsys.c" or
     basename($fn) eq "thread.c" or
     basename($fn) eq "typedump.c" or
-    $opts{x}) {
+    $opts{x})) {
 	print $data;
 	exit 0;
 }
