@@ -70,19 +70,20 @@ struct psc_vbitmap {
 
 #define psc_vbitmap_printbin1(vb)						\
 	do {									\
-		unsigned char *PPp;						\
-		char *Bbufp, *Bbuf =						\
-			PSCALLOC(psc_vbitmap_getsize((vb)) * NBBY + 256);	\
+		const unsigned char *_p;					\
+		char *_s, _buf[LINE_MAX];					\
+		int _i;								\
 										\
-		for (PPp = (vb)->vb_start, Bbufp=Bbuf; PPp <= (vb)->vb_end;	\
-		     PPp++, Bbufp += NBBY+1)					\
-			sprintf(Bbufp, "%d%d%d%d%d%d%d%d ",			\
-				 (*PPp >> 0) & 1, (*PPp >> 1) & 1,		\
-				 (*PPp >> 2) & 1, (*PPp >> 3) & 1,		\
-				 (*PPp >> 4) & 1, (*PPp >> 5) & 1,		\
-				 (*PPp >> 6) & 1, (*PPp >> 7) & 1);		\
-		psc_dbg("vbitmap=%p contents=%s", (vb), Bbuf);			\
-		PSCFREE(Bbuf);							\
+		for (_p = (vb)->vb_start, _s = _buf;				\
+		    _p <= (vb)->vb_end && _s + 10 < _buf + sizeof(_buf);	\
+		    _p++, *_s++ = ' ')						\
+			for (_i = 0; _i < 8; _i++, _s++)			\
+				if ((*_p >> _i) & 1)				\
+					*_s = '1';				\
+				else						\
+					*_s = '0';				\
+		*_s = '\0';							\
+		psclog_dbg("vbitmap=%p contents=%s", (vb), _buf);		\
 	} while (0)
 
 struct psc_vbitmap *
