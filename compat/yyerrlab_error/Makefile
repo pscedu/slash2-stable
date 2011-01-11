@@ -3,8 +3,8 @@
 ROOTDIR=../..
 include ${ROOTDIR}/Makefile.path
 
-PROG=		yyerrlab_compat
-SRCS+=		yyerrlab_compat.y
+PROG=		yyerrlab_error_compat
+SRCS+=		../yyerrlab/yyerrlab_compat.y
 CFLAGS+=	-Werror
 
 include ${MAINMK}
