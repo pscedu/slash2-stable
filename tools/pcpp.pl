@@ -140,6 +140,38 @@ sub get_func_args {
 	return @av;
 }
 
+sub get_containing_tag {
+	my $blevel = 1;
+	my ($j);
+	for ($j = $i - 1; $j > 0; $j--) {
+		if (substr($data, $j, 1) eq '"') {
+			for ($j--; $j > 0; $j--) {
+				last if substr($data, $j, 1) eq '"' and
+				    substr($data, $j - 1, 1) ne "\\";
+			}
+		} elsif (substr($data, $j, 1) eq "'") {
+			for ($j--; $j > 0; $j--) {
+				last if substr($data, $j, 1) eq "'" and
+				    substr($data, $j - 1, 1) ne "\\";
+			}
+		} elsif (substr($data, $j, 1) eq "}") {
+			$blevel++;
+		} elsif (substr($data, $j, 1) eq "{") {
+			if (--$blevel == 0) {
+				my $k;
+				for ($j--; $j > 0; $j--) {
+					last if substr($data, $j, 1) !~ /\s/;
+				}
+				for ($k = $j; $k > 0; $k--) {
+					last if substr($data, $k-1, 1) !~ /[a-z0-9_]/i;
+				}
+				return substr($data, $k, $j - $k + 1);
+			}
+		}
+	}
+	return "";
+}
+
 sub containing_func_is_dead {
 	return 0 unless defined $foff;
 	my $j = $foff;
@@ -287,7 +319,13 @@ for ($i = 0; $i < length $data; ) {
 		if ($lvl == 0) {
 			if (substr($data, $i + 1) =~ /^\s*\n/s) {
 				# catch implicit 'return'
-				print "PFL_RETURNX();" unless containing_func_is_dead();
+				for (;;) {
+					last if containing_func_is_dead;
+					last if $hacks{yylex_return} and
+					    get_containing_tag eq "YY_DECL";
+					print "PFL_RETURNX();";
+					last;
+				}
 			}
 			$foff = undef;
 		}
