@@ -153,7 +153,13 @@ sub dec_level {
 	fatal "brace level $lvl < 0 at $linenr: $ARGV[0]" if $lvl < 0;
 }
 
-$data =~ s{/\*(.*?)\*/}{ join '', $1 =~ /\n/g }egs;
+sub count_newlines {
+	my ($s) = @_;
+	return "/*$s*/" if $s =~ /\b(?:NOTREACHED|FALLTHROUGH)\b/;
+	return join '', $s =~ /\n/g;
+}
+
+$data =~ s{/\*(.*?)\*/}{ count_newlines($1) }egs;
 
 for ($i = 0; $i < length $data; ) {
 	if (substr($data, $i, 1) eq "#") {
