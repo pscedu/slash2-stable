@@ -65,6 +65,7 @@ typedef struct psc_spinlock {
 } psc_spinlock_t;
 
 #define PSLF_NOLOG		(1 << 0)	/* don't psclog locks/unlocks */
+#define PSLF_LOGMAX		(1 << 1)	/* log locks/unlocks at PLL_MAX */
 
 #define PSL_SLEEP_NTRIES	256
 #define PSL_SLEEP_NSEC		5001
@@ -81,6 +82,7 @@ typedef struct psc_spinlock {
 
 #define INIT_SPINLOCK(psl)	 INIT_SPINLOCK_FLAGS((psl), 0)
 #define INIT_SPINLOCK_NOLOG(psl) INIT_SPINLOCK_FLAGS((psl), PSLF_NOLOG)
+#define INIT_SPINLOCK_LOGMAX(psl)INIT_SPINLOCK_FLAGS((psl), PSLF_LOGMAX)
 
 #ifdef LOCK_TIMING
 #  define SPINLOCK_INIT		{ PSC_ATOMIC32_INIT(PSL_UNLOCKED), 0, 0, { 0, 0 } }
@@ -129,7 +131,9 @@ typedef struct psc_spinlock {
 		} else if ((_val) == PSL_UNLOCKED) {			\
 			(psl)->psl_who = pthread_self();		\
 			if (((psl)->psl_flags & PSLF_NOLOG) == 0)	\
-				_psclog_pci((pci), PLL_TRACE, 0,	\
+				_psclog_pci((pci),			\
+				    (psl)->psl_flags & PSLF_LOGMAX ?	\
+				    PLL_MAX : PLL_TRACE, 0,		\
 				    "lock %p acquired",	(psl));		\
 			(_val) = 1;					\
 		} else							\
@@ -177,7 +181,9 @@ typedef struct psc_spinlock {
 		(psl)->psl_who = 0;					\
 		psc_atomic32_set(_SPIN_GETATOM(psl), PSL_UNLOCKED);	\
 		if (((psl)->psl_flags & PSLF_NOLOG) == 0)		\
-			_psclog_pci((pci), PLL_TRACE, 0,		\
+			_psclog_pci((pci),				\
+			    (psl)->psl_flags & PSLF_LOGMAX ?		\
+			    PLL_MAX : PLL_TRACE, 0,			\
 			    "lock %p released", (psl));			\
 	} while (0)
 
