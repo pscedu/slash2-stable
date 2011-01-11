@@ -153,6 +153,8 @@ sub dec_level {
 	fatal "brace level $lvl < 0 at $linenr: $ARGV[0]" if $lvl < 0;
 }
 
+$data =~ s{/\*(.*?)\*/}{ join '', $1 =~ /\n/g }egs;
+
 for ($i = 0; $i < length $data; ) {
 	if (substr($data, $i, 1) eq "#") {
 		# skip preprocessor
@@ -168,13 +170,6 @@ for ($i = 0; $i < length $data; ) {
 			}
 		}
 		advance(1);
-	} elsif (substr($data, $i, 2) eq "/*") {
-		# skip multi-line comments
-		if (substr($data, $i + 2) =~ m[\*/]) {
-			advance($+[0] + 2);
-		} else {
-			advance(length($data) - $i);
-		}
 	} elsif (substr($data, $i, 2) eq q{//}) {
 		# skip single-line comments
 		if (substr($data, $i + 2) =~ m[\n]) {
