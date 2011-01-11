@@ -26,8 +26,8 @@
 
 #include "pfl/cdefs.h"
 #include "pfl/pfl.h"
-#include "psc_util/pthrutil.h"
 #include "psc_util/completion.h"
+#include "psc_util/pthrutil.h"
 
 const char		*progname;
 pthread_mutex_t		 m;
@@ -70,8 +70,7 @@ main(int argc, char *argv[])
 	rc = pthread_create(&pt, NULL, spawn, NULL);
 	psc_completion_wait(&compl);
 
-	rc = psc_pthread_mutex_trylock(&m);
-	psc_assert(rc == EBUSY);
+	psc_assert(!psc_pthread_mutex_trylock(&m));
 
 	psc_waitq_wakeall(&wq);
 
@@ -83,6 +82,15 @@ main(int argc, char *argv[])
 
 	psc_pthread_mutex_ensure_locked(&m);
 	psc_pthread_mutex_ureqlock(&m, lk);
+
+	psc_assert(psc_pthread_mutex_tryreqlock(&m, &lk));
+	psc_pthread_mutex_ureqlock(&m, lk);
+
 	psc_pthread_mutex_unlock(&m);
+
+	//psc_assert(psc_pthread_mutex_haslock(&m) == 0);
+
+	psc_assert(psc_pthread_mutex_tryreqlock(&m, &lk));
+	psc_pthread_mutex_ureqlock(&m, lk);
 	exit(0);
 }
