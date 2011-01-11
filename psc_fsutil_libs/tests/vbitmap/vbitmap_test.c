@@ -68,6 +68,7 @@ main(int argc, char *argv[])
 		psc_fatal("psc_vbitmap_new");
 
 	psc_vbitmap_setrange(vb, 13, 9);
+	psc_vbitmap_printbin1(vb);
 	for (i = 0; i < 13; i++)
 		psc_assert(psc_vbitmap_get(vb, i) == 0);
 	for (j = 0; j < 9; j++, i++)
