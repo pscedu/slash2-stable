@@ -177,4 +177,12 @@ PICKLE_NEED_VERSION=					$(word 2,$$Rev$$)
    endif
  endif
 
+ ifdef PICKLE_HAVE_YYLEX_RETURN
+   ifndef PICKLE_HAVE_YYLEX_RETURN_ERROR
+     ifdef PICKLE_HAVE_CFLAGS_WERROR
+       PCPP_FLAGS+=					-H yylex_return
+     endif
+   endif
+ endif
+
 endif
