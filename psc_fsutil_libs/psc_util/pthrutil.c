@@ -21,11 +21,11 @@
 #include <pthread.h>
 #include <string.h>
 
+#include "pfl/time.h"
 #include "psc_ds/vbitmap.h"
 #include "psc_util/log.h"
 #include "psc_util/pthrutil.h"
 #include "psc_util/thread.h"
-#include "pfl/time.h"
 
 void
 psc_pthread_mutex_init(pthread_mutex_t *mut)
@@ -101,9 +101,9 @@ psc_pthread_mutex_trylock(pthread_mutex_t *mut)
 	memset(&ts, 0, sizeof(ts));
 	rc = pthread_mutex_timedlock(mut, &ts);
 	if (rc == 0)
-		return (0);
+		return (1);
 	if (rc == ETIMEDOUT)
-		return (EBUSY);
+		return (0);
 	psc_fatalx("pthread_mutex_timedlock: %s", strerror(rc));
 }
 
@@ -115,6 +115,8 @@ psc_pthread_mutex_haslock(pthread_mutex_t *mut)
 
 	memset(&ts, 0, sizeof(ts));
 	rc = pthread_mutex_timedlock(mut, &ts);
+	if (rc == 0)
+		pthread_mutex_unlock(mut);
 	return (rc == EDEADLK);
 }
 
@@ -140,6 +142,8 @@ psc_pthread_mutex_haslock(pthread_mutex_t *mut)
 	int rc;
 
 	rc = pthread_mutex_trylock(mut);
+	if (rc == 0)
+		pthread_mutex_unlock(mut);
 	return (rc == EBUSY); /* XXX XXX EDEADLK XXX XXX */
 }
 
