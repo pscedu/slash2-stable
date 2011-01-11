@@ -75,7 +75,7 @@ __static int
 psc_multiwaitcond_trylockallmw(struct psc_multiwaitcond *mwc)
 {
 	struct psc_multiwait *mw;
-	int rc, j, k;
+	int j, k;
 
 	DYNARRAY_FOREACH(mw, j, &mwc->mwc_multiwaits)
 		if (!psc_pthread_mutex_trylock(&mw->mw_mutex)) {
@@ -262,12 +262,12 @@ _psc_multiwait_addcond(struct psc_multiwait *mw,
 {
 	struct psc_multiwaitcond *c;
 	struct psc_multiwait *m;
-	int rc, k, j;
+	int rc = 0, k, j;
 
 	/* Acquire locks. */
 	for (;;) {
 		psc_pthread_mutex_lock(&mwc->mwc_mutex);
-		if (!psc_pthread_mutex_trylock(&mw->mw_mutex))
+		if (psc_pthread_mutex_trylock(&mw->mw_mutex))
 			break;
 		psc_pthread_mutex_unlock(&mwc->mwc_mutex);
 		sched_yield();
