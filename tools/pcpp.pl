@@ -202,7 +202,7 @@ for ($i = 0; $i < length $data; ) {
 		# catch routine entrance
 		advance($+[0] - 1);
 		unless (get_containing_func() eq "main") {
-			print qq{psc_trace("enter};
+			print qq{psclog_trace("enter};
 			my @args = get_func_args();
 			my $endstr = "";
 			foreach my $arg (@args) {
