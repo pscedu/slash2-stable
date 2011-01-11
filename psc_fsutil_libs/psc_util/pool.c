@@ -503,17 +503,28 @@ _psc_pool_flagtest(struct psc_poolmgr *m, int flags)
 }
 
 /**
+ * _psc_pool_tryget - Try to grab an item from a pool, failing if none
+ *	are immediately available.
+ * @m: the pool manager.
+ */
+void *
+_psc_pool_tryget(struct psc_poolmgr *m)
+{
+	return (POOL_TRYGETOBJ(m));
+}
+
+/**
  * _psc_pool_get - Grab an item from a pool.
  * @m: the pool manager.
  */
 void *
-_psc_pool_get(struct psc_poolmgr *m)
+_psc_pool_get(struct psc_poolmgr *m, int flags)
 {
 	int locked, n;
 	void *p;
 
 	p = POOL_TRYGETOBJ(m);
-	if (p)
+	if (p || (flags & PPGF_NONBLOCK))
 		return (p);
 
 	/*

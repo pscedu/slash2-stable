@@ -173,8 +173,6 @@ struct psc_poolmgr {
 
 #define psc_poolmaster_getmgr(p)	_psc_poolmaster_getmgr((p), psc_memnode_getid())
 
-#define psc_pool_tryget(p)		lc_getnb(&(p)->ppm_lc)
-
 /*
  * psc_pool_shrink - decrease #items in a pool.
  * @m: the pool manager.
@@ -183,17 +181,20 @@ struct psc_poolmgr {
 #define psc_pool_shrink(m, i)		_psc_pool_shrink((m), (i), 0)
 #define psc_pool_tryshrink(m, i)	_psc_pool_shrink((m), (i), 1)
 
-#define _PSC_POOL_GET(m)						\
+#define PPGF_NONBLOCK			(1 << 0)
+
+#define _PSC_POOL_GET(m, fl)						\
 	{								\
 		void *_ptr;						\
 									\
-		(_ptr) = _psc_pool_get(m);				\
+		(_ptr) = _psc_pool_get(m, fl);				\
 		psclog_debug("got item %p from pool %s", _ptr,		\
 		    (m)->ppm_name);					\
 		_ptr;							\
 	}
 
-#define psc_pool_get(m)			(_PSC_POOL_GET(m))
+#define psc_pool_get(m)			(_PSC_POOL_GET(m, 0))
+#define psc_pool_tryget(m)		(_PSC_POOL_GET(m, PPGF_NONBLOCK))
 
 #define psc_pool_return(m, p)						\
 	do {								\
