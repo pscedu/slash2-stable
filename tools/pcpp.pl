@@ -316,7 +316,7 @@ for ($i = 0; $i < length $data; ) {
 		advance(1);
 	} elsif (substr($data, $i, 1) eq "}") {
 		dec_level();
-		if ($lvl == 0) {
+		if ($lvl == 0 && defined $foff) {
 			if (substr($data, $i + 1) =~ /^\s*\n/s) {
 				# catch implicit 'return'
 				for (;;) {
