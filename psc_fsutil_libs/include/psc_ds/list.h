@@ -58,6 +58,7 @@
 #include <stdint.h>
 #include <stdio.h>
 
+#include "pfl/pfl.h"
 #include "psc_util/log.h"
 
 /* note: this structure is used for both a head and an entry */
@@ -237,13 +238,16 @@ psclist_disjoint(const struct psc_listentry *e)
 	return (psc_lentry_prev(e) == NULL);
 }
 
+#define psclist_conjoint(e, hd)	_psclist_conjoint(PFL_CALLERINFO(), (e), (hd))
+
 /**
  * psclist_conjoint - Test whether a psc_listentry is on a list.
  * @e: the psc_listentry to test.
  * @hd: the psclist_head the entry must be on.
  */
 static __inline int
-psclist_conjoint(const struct psc_listentry *e, const struct psclist_head *hd)
+_psclist_conjoint(struct pfl_callerinfo *pfl_callerinfo,
+    const struct psc_listentry *e, const struct psclist_head *hd)
 {
 #if PFL_DEBUG
 	psc_assert(e->plh_magic == PLENT_MAGIC);
