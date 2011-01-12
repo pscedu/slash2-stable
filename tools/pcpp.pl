@@ -35,6 +35,7 @@ my %hacks = (
 	yytext		=> 0,
 	yyerrlab	=> 0,
 	yylex_return	=> 0,
+	yysyntax_error	=> 0,
 );
 my %opts;
 getoptv("fH:x", \%opts) or usage;
@@ -321,6 +322,8 @@ for ($i = 0; $i < length $data; ) {
 				# catch implicit 'return'
 				for (;;) {
 					last if containing_func_is_dead;
+					last if $hacks{yysyntax_error} and
+					    get_containing_func eq "yysyntax_error";
 					last if $hacks{yylex_return} and
 					    get_containing_tag eq "YY_DECL";
 					print "PFL_RETURNX();";

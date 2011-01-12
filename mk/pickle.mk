@@ -185,4 +185,12 @@ PICKLE_NEED_VERSION=					$(word 2,$$Rev$$)
    endif
  endif
 
+ ifdef PICKLE_HAVE_YYSYNTAX_ERROR
+   ifndef PICKLE_HAVE_YYSYNTAX_ERROR_ERROR
+     ifdef PICKLE_HAVE_CFLAGS_WERROR
+       PCPP_FLAGS+=					-H yysyntax_error
+     endif
+   endif
+ endif
+
 endif
