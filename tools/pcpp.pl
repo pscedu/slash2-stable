@@ -94,7 +94,7 @@ sub advance {
 sub get_containing_func {
 	my $plevel = 0;
 	my $j;
-	for ($j = $i; $j > 0; $j--) {
+	for ($j = $foff; $j > 0; $j--) {
 		if (substr($data, $j, 1) eq ")") {
 			$plevel++;
 		} elsif (substr($data, $j, 1) eq "(") {
@@ -183,7 +183,7 @@ sub containing_func_is_dead {
 }
 
 sub dec_level {
-	$lvl--;
+	$foff = undef unless --$lvl;
 	fatal "brace level $lvl < 0 at $linenr: $ARGV[0]" if $lvl < 0;
 }
 
@@ -235,6 +235,8 @@ for ($i = 0; $i < length $data; ) {
 	} elsif ($lvl == 0 && substr($data, $i) =~ /^[^=]\s*\n{\s*\n/s) {
 		# catch routine entrance
 		advance($+[0] - 1);
+		warn "nested function?\n" if defined $foff;
+		$foff = $i;
 		unless (get_containing_func() eq "main") {
 			print qq{psclog_trace("enter};
 			my @args = get_func_args();
@@ -247,7 +249,6 @@ for ($i = 0; $i < length $data; ) {
 		}
 		advance(1);
 		$lvl++;
-		$foff = $i;
 	} elsif (substr($data, $i) =~ /^return(\s*;\s*}?\s*)/s) {
 		# catch 'return' without an arg
 		my $end = $1;
@@ -316,7 +317,6 @@ for ($i = 0; $i < length $data; ) {
 		$lvl++;
 		advance(1);
 	} elsif (substr($data, $i, 1) eq "}") {
-		dec_level();
 		if ($lvl == 0 && defined $foff) {
 			if (substr($data, $i + 1) =~ /^\s*\n/s) {
 				# catch implicit 'return'
@@ -330,8 +330,8 @@ for ($i = 0; $i < length $data; ) {
 					last;
 				}
 			}
-			$foff = undef;
 		}
+		dec_level();
 		advance(1);
 	} else {
 		advance(1);
