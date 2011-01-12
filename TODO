@@ -109,7 +109,7 @@ pfl
 - consolidate naming conventions for initializers:
 	PSC_WAITQ_INIT -> WAITQ_INIT
 	INIT_PSC_LISTENTRY -> INIT_LISTENTRY
-  which is OK since it isn't a symbol
+  which is OK since they aren't translation unit symbols
 - eliminate flags arg to pscthr_init()
 - eliminate prt_alive
 - in mguard, check the flags in realloc/free match alloc (PAF_LOCK, ALIGN)
@@ -128,7 +128,8 @@ pfl
 - add provisions to dynarray to detect multiple adds without an
   ensurelen and notify user to possible optimization
 - tie 'make doc' to 'make regen'
-  - the slow stuff is the svn log, maybe find a way of extracting that part out...
+  - the slow part is the svn log to find the last date revision; maybe
+    find a way of extracting this part out...
 
 lnet
 - use TLS buffers for libcfs_nid2str() to avoid NUMA contention
