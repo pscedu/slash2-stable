@@ -187,14 +187,14 @@ struct psc_poolmgr {
 	{								\
 		void *_ptr;						\
 									\
-		(_ptr) = _psc_pool_get(m, fl);				\
+		(_ptr) = _psc_pool_get((m), (fl));			\
 		psclog_debug("got item %p from pool %s", _ptr,		\
 		    (m)->ppm_name);					\
 		_ptr;							\
 	}
 
-#define psc_pool_get(m)			(_PSC_POOL_GET(m, 0))
-#define psc_pool_tryget(m)		(_PSC_POOL_GET(m, PPGF_NONBLOCK))
+#define psc_pool_get(m)			(_PSC_POOL_GET((m), 0))
+#define psc_pool_tryget(m)		(_PSC_POOL_GET((m), PPGF_NONBLOCK))
 
 #define psc_pool_return(m, p)						\
 	do {								\
@@ -217,7 +217,7 @@ void	_psc_poolmaster_initv(struct psc_poolmaster *, size_t, ptrdiff_t,
 
 struct psc_poolmgr *
 	  psc_pool_lookup(const char *);
-void	*_psc_pool_get(struct psc_poolmgr *);
+void	*_psc_pool_get(struct psc_poolmgr *, int);
 int	  psc_pool_gettotal(struct psc_poolmgr *);
 int	  psc_pool_grow(struct psc_poolmgr *, int);
 int	  psc_pool_nfree(struct psc_poolmgr *);
