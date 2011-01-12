@@ -265,6 +265,7 @@ _psclist_conjoint(struct pfl_callerinfo *pfl_callerinfo,
 		psc_assert(psc_lentry_prev(e) && psc_lentry_next(e));
 #else
 	(void)hd;
+	(void)pfl_callerinfo;
 #endif
 	return (psc_lentry_prev(e) != NULL);
 }
