@@ -599,9 +599,11 @@ psc_ctlparam_log_file(int fd, struct psc_ctlmsghdr *mh,
 		if (pcp->pcp_flags & PCPF_SUB)
 			return (psc_ctlsenderr(fd,
 			    mh, "invalid operation"));
-		freopen(pcp->pcp_value,
+		if (freopen(pcp->pcp_value,
 		    pcp->pcp_flags & PCPF_ADD ?
-		    "a" : "w", stderr);
+		    "a" : "w", stderr) == NULL)
+			rc = psc_ctlsenderr(fd, mh, "log.file: %s",
+			    strerror(errno));
 	} else
 		rc = psc_ctlsenderr(fd, mh, "log.file: write-only");
 	return (rc);
