@@ -25,15 +25,23 @@
 #include <stddef.h>
 
 #ifndef nitems
-#define nitems(t)	((int)(sizeof(t) / sizeof(t[0])))
+#  define nitems(t)		((int)(sizeof(t) / sizeof(t[0])))
 #endif
 
 #ifndef offsetof
-#define offsetof(s, e)	((size_t)&((s *)NULL)->e)
+#  define offsetof(type, memb)	((size_t)&((type *)NULL)->memb)
 #endif
 
 #ifndef CMP
-#define CMP(a, b)	((a) < (b) ? -1 : ((a) > (b) ? 1 : 0))
+#  define CMP(a, b)		((a) < (b) ? -1 : ((a) > (b) ? 1 : 0))
+#endif
+
+#ifndef SWAP(a, b, t)							\
+	do {								\
+		(t) = (a);						\
+		(a) = (b);						\
+		(b) = (t);						\
+	} while (0)
 #endif
 
 #ifndef __GNUC_PREREQ__
@@ -51,19 +59,19 @@
 #endif
 
 #undef __dead
-#define __dead		__attribute__((__noreturn__))
+#define __dead			__attribute__((__noreturn__))
 
 #undef __packed
-#define __packed	__attribute__((__packed__))
+#define __packed		__attribute__((__packed__))
 
 #undef __unusedx
-#define __unusedx	__attribute__((__unused__))
+#define __unusedx		__attribute__((__unused__))
 
 #undef __weak
-#define __weak		__attribute__((__weak__))
+#define __weak			__attribute__((__weak__))
 
 #ifdef HAVE_TLS
-#  define __threadx	__thread
+#  define __threadx		__thread
 #else
 #  define __threadx
 #endif
