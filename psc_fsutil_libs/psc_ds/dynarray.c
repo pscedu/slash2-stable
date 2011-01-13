@@ -191,8 +191,8 @@ psc_dynarray_reset(struct psc_dynarray *pda)
  * @item: item to remove.
  * @fs: whether to resize the array to save space.
  * Returns the position index the item had.
- * Notes: this routine swaps the last element in the dynarray array
- *	into the slot opened up by the removal.
+ * Notes: this routine swaps the last element in the dynarray into the
+ *	slot opened up by the removal.
  */
 int
 _psc_dynarray_remove(struct psc_dynarray *pda, const void *item, int fs)

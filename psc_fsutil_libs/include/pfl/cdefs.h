@@ -36,7 +36,8 @@
 #  define CMP(a, b)		((a) < (b) ? -1 : ((a) > (b) ? 1 : 0))
 #endif
 
-#ifndef SWAP(a, b, t)							\
+#ifndef SWAP
+#define SWAP(a, b, t)							\
 	do {								\
 		(t) = (a);						\
 		(a) = (b);						\
