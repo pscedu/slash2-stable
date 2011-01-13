@@ -26,7 +26,7 @@ ADD_FILE_CFLAGS=	$(shell if ! [ -f "$(abspath $1)" ]; then echo "ADD_FILE_CFLAGS
 			$(eval $(call FILE_CFLAGS_VARNAME,$1)+=$2)
 FORCE_INST?=		0
 
--include ${ROOTDIR}/mk/local.mk
+include ${ROOTDIR}/mk/defs.mk
 include ${ROOTDIR}/mk/pickle.mk
 
 _TSRCS=			$(sort $(foreach fn,${SRCS},$(realpath ${fn})))
