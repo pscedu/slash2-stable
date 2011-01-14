@@ -13,3 +13,4 @@ PFLMK=		${PFL_BASE}/mk/main.mk
 SLASHMK=	${SLASH_BASE}/mk/main.mk
 VESUVIFSMK=	${VESUVIFS_BASE}/mk/main.mk
 ZESTMK=		${ZEST_BASE}/mk/main.mk
+OBSD_REGRESS_MK=${ROOTDIR}/distrib/obsd.regress/main.mk
