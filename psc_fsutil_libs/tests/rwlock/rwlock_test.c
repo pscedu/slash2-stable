@@ -95,6 +95,7 @@ void *
 wr_main(void *arg)
 {
 	struct thr *thr = arg;
+	struct timespec ts;
 	int rc;
 
 	for (; thr->st < nlocks; thr->st++) {
@@ -121,6 +122,11 @@ wr_main(void *arg)
 			errx(1, "rdlock: %s", strerror(rc));
 
 		rc = pthread_rwlock_wrlock(&lk);
+		if (rc != EDEADLK)
+			errx(1, "wrlock: %s", strerror(rc));
+
+		memset(&ts, 0, sizeof(ts));
+		rc = pthread_rwlock_timedwrlock(&lk, &ts);
 		if (rc != EDEADLK)
 			errx(1, "wrlock: %s", strerror(rc));
 
