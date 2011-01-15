@@ -249,7 +249,6 @@ main(int argc, char *argv[])
 	PRTYPE(struct psc_poolmaster);
 	PRTYPE(struct psc_poolmgr);
 	PRTYPE(struct psc_poolset);
-	PRTYPE(struct psc_pthread_rwlock);
 	PRTYPE(struct psc_spinlock);
 	PRTYPE(struct psc_streenode);
 	PRTYPE(struct psc_thread);
