@@ -40,7 +40,7 @@
 
 #define NTHRS_MAX	32
 #define NLOCKS_MAX	8192
-#define SLEEP_US	8
+#define SLEEP_US	10
 
 struct thr {
 	struct psclist_head lentry;
@@ -67,7 +67,6 @@ void *
 rd_main(void *arg)
 {
 	struct thr *thr = arg;
-	int rc;
 
 	for (; thr->st < nlocks; thr->st++) {
 //		do {
@@ -75,17 +74,13 @@ rd_main(void *arg)
 //			if (rc)
 //				usleep(1);
 //		} while (rc);
-		rc = pthread_rwlock_rdlock(&lk);
-		if (rc)
-			errx(1, "rdlock: %s", strerror(rc));
+		psc_pthread_rwlock_rdlock(&lk);
 //		rc = pthread_rwlock_rdlock(&lk);
 //		if (rc != EBUSY)
 //			errx(1, "rdlock: %s", strerror(rc));
 
 		usleep(SLEEP_US);
-		rc = pthread_rwlock_unlock(&lk);
-		if (rc)
-			errx(1, "unlock: %s", strerror(rc));
+		psc_pthread_rwlock_unlock(&lk);
 		sched_yield();
 	}
 	return (NULL);
@@ -99,19 +94,12 @@ wr_main(void *arg)
 	int rc;
 
 	for (; thr->st < nlocks; thr->st++) {
-		if (psc_random32u(10) == 2) {
-			rc = pthread_rwlock_rdlock(&lk);
-			if (rc)
-				errx(1, "rdlock: %s", strerror(rc));
+		if (psc_random32u(10) == 3) {
+			psc_pthread_rwlock_rdlock(&lk);
 			usleep(SLEEP_US);
-
-			rc = pthread_rwlock_unlock(&lk);
-			if (rc)
-				errx(1, "unlock: %s", strerror(rc));
+			psc_pthread_rwlock_unlock(&lk);
 		}
-		rc = pthread_rwlock_wrlock(&lk);
-		if (rc)
-			errx(1, "wrlock: %s", strerror(rc));
+		psc_pthread_rwlock_wrlock(&lk);
 
 		rc = pthread_rwlock_tryrdlock(&lk);
 		if (rc != EBUSY)
@@ -131,11 +119,9 @@ wr_main(void *arg)
 			errx(1, "wrlock: %s", strerror(rc));
 
 		usleep(SLEEP_US);
-		rc = pthread_rwlock_unlock(&lk);
-		if (rc)
-			errx(1, "unlock: %s", strerror(rc));
+		psc_pthread_rwlock_unlock(&lk);
 		sched_yield();
-		usleep(5000);
+		usleep(20 * SLEEP_US);
 	}
 	return (NULL);
 }
