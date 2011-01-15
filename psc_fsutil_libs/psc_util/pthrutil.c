@@ -253,14 +253,7 @@ psc_pthread_rwlock_reqwrlock(pthread_rwlock_t *rw)
 }
 
 void
-psc_pthread_rwlock_ureqrdlock(pthread_rwlock_t *rw, int waslocked)
-{
-	if (!waslocked)
-		psc_pthread_rwlock_unlock(rw);
-}
-
-void
-psc_pthread_rwlock_ureqwrlock(pthread_rwlock_t *rw, int waslocked)
+psc_pthread_rwlock_ureqlock(pthread_rwlock_t *rw, int waslocked)
 {
 	if (!waslocked)
 		psc_pthread_rwlock_unlock(rw);

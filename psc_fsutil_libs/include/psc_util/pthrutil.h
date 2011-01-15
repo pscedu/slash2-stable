@@ -57,8 +57,7 @@ void	psc_pthread_rwlock_rdlock(pthread_rwlock_t *);
 int	psc_pthread_rwlock_reqrdlock(pthread_rwlock_t *);
 int	psc_pthread_rwlock_reqwrlock(pthread_rwlock_t *);
 void	psc_pthread_rwlock_unlock(pthread_rwlock_t *);
-void	psc_pthread_rwlock_ureqrdlock(pthread_rwlock_t *, int);
-void	psc_pthread_rwlock_ureqwrlock(pthread_rwlock_t *, int);
+void	psc_pthread_rwlock_ureqlock(pthread_rwlock_t *, int);
 void	psc_pthread_rwlock_wrlock(pthread_rwlock_t *);
 
 #endif /* _PFL_PTHRUTIL_H_ */
