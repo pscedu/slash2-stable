@@ -22,8 +22,6 @@
 
 #include <pthread.h>
 
-#include "psc_util/lock.h"
-
 #ifndef HAVE_PTHREAD_BARRIER
 # include "pfl/compat/pthread_barrier.h"
 #endif
@@ -54,19 +52,13 @@ int	psc_pthread_mutex_tryreqlock(pthread_mutex_t *, int *);
 void	psc_pthread_mutex_unlock(pthread_mutex_t *);
 void	psc_pthread_mutex_ureqlock(pthread_mutex_t *, int);
 
-struct psc_pthread_rwlock {
-	struct psc_vbitmap	*ppr_readers;
-	pthread_rwlock_t	 ppr_rwlock;
-	psc_spinlock_t		 ppr_lock;
-};
-
-void	psc_pthread_rwlock_destroy(struct psc_pthread_rwlock *);
-void	psc_pthread_rwlock_init(struct psc_pthread_rwlock *);
-void	psc_pthread_rwlock_rdlock(struct psc_pthread_rwlock *);
-int	psc_pthread_rwlock_rdreqlock(struct psc_pthread_rwlock *);
-void	psc_pthread_rwlock_rdunlock(struct psc_pthread_rwlock *);
-void	psc_pthread_rwlock_rdureqlock(struct psc_pthread_rwlock *, int);
-void	psc_pthread_rwlock_unlock(struct psc_pthread_rwlock *);
-void	psc_pthread_rwlock_wrlock(struct psc_pthread_rwlock *);
+void	psc_pthread_rwlock_init(pthread_rwlock_t *);
+void	psc_pthread_rwlock_rdlock(pthread_rwlock_t *);
+int	psc_pthread_rwlock_reqrdlock(pthread_rwlock_t *);
+int	psc_pthread_rwlock_reqwrlock(pthread_rwlock_t *);
+void	psc_pthread_rwlock_unlock(pthread_rwlock_t *);
+void	psc_pthread_rwlock_ureqrdlock(pthread_rwlock_t *, int);
+void	psc_pthread_rwlock_ureqwrlock(pthread_rwlock_t *, int);
+void	psc_pthread_rwlock_wrlock(pthread_rwlock_t *);
 
 #endif /* _PFL_PTHRUTIL_H_ */
