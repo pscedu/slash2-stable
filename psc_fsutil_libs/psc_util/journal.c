@@ -957,10 +957,8 @@ pjournal_thr_main(struct psc_thread *thr)
 		 */
 		PJ_LOCK(pj);
 
-		if (pj->pj_distill_xid < xid) {
+		if (pj->pj_distill_xid < xid)
 			pj->pj_distill_xid = xid;
-			zfsslash2_should_commit();
-		}
 
 		txg = zfsslash2_return_synced();
 		psc_assert(pj->pj_commit_txg <= txg);
@@ -1037,7 +1035,6 @@ pjournal_replay(struct psc_journal *pj, int thrtype,
 		psc_free(pje, PAF_LOCK | PAF_PAGEALIGN, PJ_PJESZ(pj));
 	}
 	psc_dynarray_free(&pj->pj_bufs);
-	zfsslash2_should_commit();
 
 	/*
 	 * Make the current replay in effect. Otherwise, a crash may
