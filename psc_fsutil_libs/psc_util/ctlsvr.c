@@ -1465,7 +1465,8 @@ psc_ctl_applythrop(int fd, struct psc_ctlmsghdr *mh, void *m, const char *thrnam
 	rc = 1;
 	found = 0;
 	PLL_LOCK(&psc_threads);
-	if (strcasecmp(thrname, PCTHRNAME_EVERYONE) == 0) {
+	if (strcasecmp(thrname, PCTHRNAME_EVERYONE) == 0 ||
+	    thrname[0] == '\0') {
 		psclist_for_each_entry(thr,
 		    &psc_threads.pll_listhd, pscthr_lentry) {
 			rc = cbf(fd, mh, m, thr);
