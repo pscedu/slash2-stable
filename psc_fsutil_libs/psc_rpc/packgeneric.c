@@ -284,15 +284,15 @@ pscrpc_msg_buf(struct pscrpc_msg *m, int n, int min_size)
 
 	bufcount = m->bufcount;
 	if (n >= bufcount) {
-		CDEBUG(D_INFO, "msg %p buffer[%d] not present (count %d)\n",
-		       m, n, bufcount);
+		CDEBUG(D_INFO, "msg %p op %d buffer[%d] not present (count %d)\n",
+		       m, m->opc, n, bufcount);
 		return NULL;
 	}
 
 	buflen = m->buflens[n];
 	if (buflen < min_size) {
-		CERROR("msg %p buffer[%d] size %d too small (required %d)\n",
-		       m, n, buflen, min_size);
+		CERROR("msg %p op %d buffer[%d] size %d too small (required %d)\n",
+		       m, m->opc, n, buflen, min_size);
 		return NULL;
 	}
 
