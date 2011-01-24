@@ -49,8 +49,6 @@ struct pscrpc_svc_handle {
 	void			(*svh_initf)(void);
 };
 
-typedef struct pscrpc_svc_handle pscrpc_svc_handle_t;
-
 #define PSCRPC_SVCF_COUNT_PEER_QLENS	(1 << 0)
 
 struct pscrpc_thread {
