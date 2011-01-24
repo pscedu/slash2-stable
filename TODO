@@ -130,8 +130,10 @@ pfl
 - tie 'make doc' to 'make regen'
   - the slow part is the svn log to find the last date revision; maybe
     find a way of extracting this part out...
+- anything log level >= 2 should also log to console
 - when processing .l and .y rules, pass CFLAGS from the orig vars into
   the obj/*.c file var
+- translate %n in PSC_LOG_FILE to daemon progname
 
 lnet
 - use TLS buffers for libcfs_nid2str() to avoid NUMA contention
