@@ -49,7 +49,8 @@ pscrpc_msg_swabbed(struct pscrpc_msg *msg)
 }
 
 static void
-pscrpc_init_msg(struct pscrpc_msg *msg, int count, int *lens, char **bufs)
+pscrpc_init_msg(struct pscrpc_msg *msg, int count, const int *lens,
+    char **bufs)
 {
 	char *ptr;
 	int   i;
@@ -107,8 +108,8 @@ pscrpc_pack_request(struct pscrpc_request *req, int count, int *lens,
 }
 
 int
-pscrpc_pack_reply(struct pscrpc_request *req, int count, int *lens,
-    char **bufs)
+pscrpc_pack_reply(struct pscrpc_request *req, int count,
+    const int *lens, char **bufs)
 {
 	struct pscrpc_reply_state *rs;
 	int                         msg_len;
@@ -150,7 +151,7 @@ pscrpc_pack_reply(struct pscrpc_request *req, int count, int *lens,
  *	to hold a pscrpc_msg with the given sub-buffer lengths.
  */
 int
-pscrpc_msg_size(int count, int *lengths)
+pscrpc_msg_size(int count, const int *lengths)
 {
 	int size;
 	int i;

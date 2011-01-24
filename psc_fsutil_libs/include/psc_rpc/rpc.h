@@ -491,7 +491,7 @@ struct pscrpc_bulk_desc *
 void	 pscrpc_free_reply_state(struct pscrpc_reply_state *);
 void	 pscrpc_req_finished(struct pscrpc_request *);
 void	 pscrpc_free_bulk(struct pscrpc_bulk_desc *);
-int	 pscrpc_pack_reply(struct pscrpc_request *, int, int *, char **);
+int	 pscrpc_pack_reply(struct pscrpc_request *, int, const int *, char **);
 int	 pscrpc_put_connection(struct pscrpc_connection *);
 void	 pscrpc_fill_bulk_md(lnet_md_t *, struct pscrpc_bulk_desc *);
 
@@ -510,10 +510,10 @@ int	 pscrpc_ni_init(int);
 void	 pscrpc_init_portals(int);
 
 /* packgeneric.c */
-int	 pscrpc_msg_size(int, int *);
+int	 pscrpc_msg_size(int, const int *);
 int	 pscrpc_msg_swabbed(struct pscrpc_msg *);
 int	 pscrpc_pack_request(struct pscrpc_request *, int, int *, char **);
-int	 pscrpc_pack_reply(struct pscrpc_request *, int, int *, char **);
+int	 pscrpc_pack_reply(struct pscrpc_request *, int, const int *, char **);
 int	 pscrpc_unpack_msg(struct pscrpc_msg *, int);
 void	*pscrpc_msg_buf(struct pscrpc_msg *, int, int);
 int	 pscrpc_msg_buflen(struct pscrpc_msg *, int);
