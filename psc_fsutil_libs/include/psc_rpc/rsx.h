@@ -89,18 +89,15 @@ struct rsx_msg_portablizer {
 	_pfl_rsx_newreq((imp), (version), (op), &(rq), (nq), (qlens),	\
 	    (np), (plens), &(mq0))
 
-#define _RSX_NEWREQ(imp, version, op, rq, mq, mp)			\
-	{								\
+#define RSX_NEWREQ(imp, version, op, rq, mq, mp)			\
+	_PFL_RVSTART {							\
 		int _qlen, _plen;					\
 									\
 		_qlen = sizeof(*(mq));					\
 		_plen = sizeof(*(mp));					\
 		RSX_NEWREQN((imp), (version), (op), (rq), 1, &_qlen,	\
 		    1, &_plen, (mq));					\
-	}
-
-#define RSX_NEWREQ(imp, version, op, rq, mq, mp)			\
-	(_RSX_NEWREQ((imp), (version), (op), (rq), (mq), (mp)))
+	} _PFL_RVEND
 
 #define RSX_WAITREP(rq, mp)						\
 	pfl_rsx_waitrep((rq), sizeof(*(mp)), &(mp))

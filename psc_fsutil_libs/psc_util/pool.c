@@ -69,8 +69,8 @@
 		POOL_URLOCK((m), _locked);				\
 	} while (0)
 
-#  define _POOL_TRYGETOBJ(m)						\
-	{								\
+#  define POOL_TRYGETOBJ(m)						\
+	_PFL_RVSTART {							\
 		void *_p, *_next;					\
 		int _locked;						\
 									\
@@ -89,8 +89,7 @@
 		}							\
 		POOL_URLOCK((m), _locked);				\
 		_p;							\
-	}
-#  define POOL_TRYGETOBJ(m)	(_POOL_TRYGETOBJ(m))
+	} _PFL_RVEND
 #else
 #  define POOL_ADD_ITEM(m, p)						\
 	do {								\

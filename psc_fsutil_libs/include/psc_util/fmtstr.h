@@ -41,8 +41,8 @@
 		    ## __VA_ARGS__);					\
 		break;
 
-#define _FMTSTR(buf, siz, fmt, cases)					\
-	{								\
+#define FMTSTR(buf, siz, fmt, cases)					\
+	_PFL_RVSTART {							\
 		char _convbuf[16], *_s, *_tfmt_new, *_endt;		\
 		int _want, _twant, _sawch;				\
 		const char *_p, *_t;					\
@@ -100,9 +100,6 @@
 		if ((siz) > 0)						\
 			*_s = '\0';					\
 		_want;							\
-	}
-
-#define FMTSTR(buf, siz, fmt, cases)					\
-	(_FMTSTR((buf), (siz), (fmt), cases))				\
+	} _PFL_RVEND
 
 #endif /* _PFL_FMTSTR_H_ */

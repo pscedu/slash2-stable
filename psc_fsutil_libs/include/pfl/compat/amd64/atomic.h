@@ -541,17 +541,15 @@ psc_atomic32_xchg(psc_atomic32_t *v, int32_t i)
 	return (i);
 }
 
-#define _PSC_ATOMIC32_XCHG(v, i)					\
-	{								\
+#undef PSC_ATOMIC32_XCHG
+#define PSC_ATOMIC32_XCHG(v, i)						\
+	_PFL_RVSTART {							\
 		int32_t _aval = (i);					\
 									\
 		_PFL_NL_ASM("xchgl %0, %1" : "=r" (_aval)		\
 		    : "m" _PFL_GETA32(v), "0" (_aval) : "memory");	\
-		(_aval);						\
-	}
-
-#undef PSC_ATOMIC32_XCHG
-#define PSC_ATOMIC32_XCHG(v, i)		(_PSC_ATOMIC32_XCHG((v), (i)))
+		_aval;							\
+	} _PFL_RVEND
 
 #undef psc_atomic64_xchg
 static __inline int64_t

@@ -107,15 +107,14 @@
 /* if multiple of 2, use bitwise ops to simplify math */
 #define PSC_ALIGN(sz, incr)	((incr) * (((sz) + ((incr) - 1)) / (incr)))
 
-#define _PSC_MAKE_EXPR(expr, v)	{ expr; (v); }
-#define PSC_MAKETRUE(expr)	(_PSC_MAKE_EXPR(expr, 1))
-#define PSC_MAKEFALSE(expr)	(_PSC_MAKE_EXPR(expr, 0))
-
 /* arthimetic on a generic pointer */
 #define PSC_AGP(p, off)		((void *)((char *)(p) + (off)))
 
 /* forced rvalue designators */
 #define _PFL_RVSTART		(
 #define _PFL_RVEND		)
+
+#define PSC_MAKETRUE(expr)	_PFL_RVSTART { expr; 1; } _PFL_RVEND
+#define PSC_MAKEFALSE(expr)	_PFL_RVSTART { expr; 0; } _PFL_RVEND
 
 #endif /* _PFL_CDEFS_H_ */
