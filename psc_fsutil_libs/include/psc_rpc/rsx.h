@@ -38,61 +38,65 @@ struct rsx_msg_portablizer {
 	struct rpcmsg_conv	*rmp_conv;
 };
 
-#define RSX_ALLOCREPN(rq, mq0, mp0, nreplens, replens)			\
+#define RSX_ALLOCREPNRC(rq, mq0, q0len, mp0, np, plens, rcoff)		\
 	do {								\
-		int _rc;						\
+		int _rc, *_rcp;						\
 									\
-		if (pscrpc_msg_size((nreplens), (replens)) >		\
+		if (pscrpc_msg_size((np), (plens)) >			\
 		    (rq)->rq_rqbd->rqbd_service->srv_max_reply_size)	\
 			psc_fatalx("reply size (%d) greater than "	\
 			    "max (%d)",					\
-			    pscrpc_msg_size((nreplens),	(replens)),	\
+			    pscrpc_msg_size((np), (plens)),		\
 			    (rq)->rq_rqbd->rqbd_service->		\
 			     srv_max_reply_size);			\
-		_rc = pscrpc_pack_reply((rq), (nreplens), (replens),	\
-		    NULL);						\
+		_rc = pscrpc_pack_reply((rq), (np), (plens), NULL);	\
 		if (_rc) {						\
 			psc_assert(_rc == -ENOMEM);			\
 			psc_errorx("pscrpc_pack_reply failed: %s",	\
 			    strerror(_rc));				\
 			return (_rc);					\
 		}							\
-		if (((mp0) = pscrpc_msg_buf((rq)->rq_repmsg,		\
-		    0, (replens)[0])) == NULL) {			\
+		if (((mp0) = pscrpc_msg_buf((rq)->rq_repmsg, 0,		\
+		    (plens)[0])) == NULL) {				\
 			psc_errorx("reply is NULL");			\
 			return (-ENOMEM);				\
 		}							\
-		(mp0)->rc = 0;						\
-		if (((mq0) = pscrpc_msg_buf((rq)->rq_reqmsg,		\
-		    0, sizeof(*(mq0)))) == NULL) {			\
-			/* XXX psc_fatalx */				\
+		_rcp = PSC_AGP((mp0), (rcoff));				\
+		*_rcp = 0;						\
+		if (((mq0) = pscrpc_msg_buf((rq)->rq_reqmsg, 0,		\
+		    (q0len))) == NULL) {				\
+			/* XXX tie into pscmem reap */			\
 			psc_errorx("request is NULL");			\
-			(mp0)->rc = -ENOMEM;				\
+			*_rcp = -ENOMEM;				\
 			return (-ENOMEM);				\
 		}							\
 	} while (0)
 
+#define RSX_ALLOCREPN(rq, mq0, q0len, mp0, np, plens)			\
+	RSX_ALLOCREPNRC(rq, mq0, q0len, mp0, np, plens,			\
+	    offsetof(typeof(*(mp0)), rc))
+
 #define RSX_ALLOCREP(rq, mq, mp)					\
 	do {								\
-		int _replen;						\
+		int _plen;						\
 									\
-		_replen = sizeof(*(mp));				\
-		RSX_ALLOCREPN((rq), (mq), (mp), 1, &_replen);		\
+		_plen = sizeof(*(mp));					\
+		RSX_ALLOCREPN((rq), (mq), sizeof(*(mq)), (mp), 1,	\
+		    &_plen);						\
 	} while (0)
 
-#define RSX_NEWREQN(imp, version, op, rq, nqlens, qlens,		\
-	    nplens, plens, mq0)						\
-	_pfl_rsx_newreq((imp), (version), (op), &(rq),			\
-	    (nqlens), (qlens), (nplens), (plens), &(mq0))
+#define RSX_NEWREQN(imp, version, op, rq, nq, qlens, np, plens, mq0)	\
+	_pfl_rsx_newreq((imp), (version), (op), &(rq), (nq), (qlens),	\
+	    (np), (plens), &(mq0))
 
 #define _RSX_NEWREQ(imp, version, op, rq, mq, mp)			\
 	{								\
-		int _reqlen, _replen;					\
+		int _qlen, _plen;					\
 									\
-		_reqlen = sizeof(*(mq));				\
-		_replen = sizeof(*(mp));				\
-		RSX_NEWREQN((imp), (version), (op), (rq),		\
-		    1, &_reqlen, 1, &_replen, (mq));			\
+		_qlen = sizeof(*(mq));					\
+		_plen = sizeof(*(mp));					\
+		RSX_NEWREQN((imp), (version), (op), (rq), 1, &_qlen,	\
+		    1, &_plen, (mq));					\
 	}
 
 #define RSX_NEWREQ(imp, version, op, rq, mq, mp)			\
