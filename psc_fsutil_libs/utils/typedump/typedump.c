@@ -190,7 +190,6 @@ main(int argc, char *argv[])
 	PRTYPE(psc_atomic_t);
 	PRTYPE(pscfs_fgen_t);
 	PRTYPE(pscfs_inum_t);
-	PRTYPE(pscrpc_svc_handle_t);
 	PRTYPE(struct ifaddrs);
 	PRTYPE(struct l_wait_info);
 	PRTYPE(struct odtable);
