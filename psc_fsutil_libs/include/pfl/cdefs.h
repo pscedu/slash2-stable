@@ -114,4 +114,8 @@
 /* arthimetic on a generic pointer */
 #define PSC_AGP(p, off)		((void *)((char *)(p) + (off)))
 
+/* forced rvalue designators */
+#define _PFL_RVSTART		(
+#define _PFL_RVEND		)
+
 #endif /* _PFL_CDEFS_H_ */
