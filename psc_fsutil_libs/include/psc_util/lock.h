@@ -127,7 +127,7 @@ typedef struct psc_spinlock {
 				psc_fatalx("%s: already locked",	\
 				    (name));				\
 			/* PFL_GETTIMEVAL(&(psl)->psl_time); */		\
-			(_val) = 0;					\
+			_val = 0;					\
 		} else if ((_val) == PSL_UNLOCKED) {			\
 			(psl)->psl_who = pthread_self();		\
 			if (((psl)->psl_flags & PSLF_NOLOG) == 0)	\
@@ -135,11 +135,11 @@ typedef struct psc_spinlock {
 				    (psl)->psl_flags & PSLF_LOGMAX ?	\
 				    PLL_MAX : PLL_TRACE, 0,		\
 				    "lock %p acquired",	(psl));		\
-			(_val) = 1;					\
+			_val = 1;					\
 		} else							\
 			psc_fatalx("%s: lock %p has invalid value %#x",	\
 			    (name), (psl), (_val));			\
-		(_val);							\
+		_val;							\
 	}
 
 /**

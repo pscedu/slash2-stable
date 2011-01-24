@@ -187,7 +187,7 @@ struct psc_poolmgr {
 	{								\
 		void *_ptr;						\
 									\
-		(_ptr) = _psc_pool_get((m), (fl));			\
+		_ptr = _psc_pool_get((m), (fl));			\
 		psclog_debug("got item %p from pool %s", _ptr,		\
 		    (m)->ppm_name);					\
 		_ptr;							\
