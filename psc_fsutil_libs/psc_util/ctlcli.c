@@ -1141,6 +1141,7 @@ psc_ctlcli_main(const char *osockfn, int ac, char *av[],
 
 	FMTSTR(sun.sun_path, sizeof(sun.sun_path), psc_ctl_sockfn,
 		FMTSTRCASE('h', "s", psclog_getdata()->pld_hostshort)
+		FMTSTRCASE('n', "s", progname)
 	);
 
 	if (connect(psc_ctl_sock, (struct sockaddr *)&sun, sizeof(sun)) == -1)

@@ -1623,6 +1623,7 @@ __dead void
 psc_ctlthr_main(const char *ofn, const struct psc_ctlop *ct, int nops,
     int acthrtype)
 {
+	extern const char *progname;
 	struct psc_thread *thr, *me;
 	struct sockaddr_un sun;
 	mode_t old_umask;
@@ -1650,6 +1651,7 @@ psc_ctlthr_main(const char *ofn, const struct psc_ctlop *ct, int nops,
 	/* replace literal `%h' in filename with hostname */
 	FMTSTR(sun.sun_path, sizeof(sun.sun_path), ofn,
 		FMTSTRCASE('h', "s", psclog_getdata()->pld_hostshort)
+		FMTSTRCASE('n', "s", progname)
 	);
 
 	if (unlink(sun.sun_path) == -1 && errno != ENOENT)
