@@ -24,7 +24,7 @@ ifeq ($(filter $(realpath ${ROOTDIR})/compat/%,${CURDIR}),)
 PICKLE_NEED_VERSION=					$(word 2,$$Rev$$)
 
  ifneq (${PICKLE_NEED_VERSION},${PICKLE_HAS_VERSION})
-  $(shell ${PICKLEGEN} \"${ROOTDIR}\" \"${PICKLE_NEED_VERSION}\" \"${MAKE}\" \"${PICKLELOCALMK}\" >&2)
+  $(shell ${PICKLEGEN} "${ROOTDIR}" "${PICKLE_NEED_VERSION}" "${MAKE}" "${PICKLELOCALMK}" >&2)
   include ${PICKLELOCALMK}
  endif
 
