@@ -262,7 +262,7 @@ _psclogv(const struct pfl_callerinfo *pci, enum psclog_level level,
 	fprintf(stderr, "%s", psclog_eol);
 	fflush(stderr);
 
-	if (level == PLL_FATAL) {
+	if (level <= PLL_WARN) {
 		if (!isatty(fileno(stderr))) {
 			fp = fopen(_PATH_TTY, "w");
 			if (fp) {
@@ -274,8 +274,10 @@ _psclogv(const struct pfl_callerinfo *pci, enum psclog_level level,
 				fclose(fp);
 			}
 		}
-		abort();
-		_exit(1);
+		if (level == PLL_FATAL) {
+			abort();
+			_exit(1);
+		}
 	}
 
 	PSCLOG_UNLOCK();
