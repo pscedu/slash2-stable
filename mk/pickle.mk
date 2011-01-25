@@ -17,14 +17,14 @@
 
 ifeq ($(filter $(realpath ${ROOTDIR})/compat/%,${CURDIR}),)
 
-PICKLELOCALMK=${ROOTDIR}/mk/gen-localdefs-$(word 1,$(subst ., ,$(shell hostname)))-pickle.mk
+ PICKLELOCALMK=${ROOTDIR}/mk/gen-localdefs-$(word 1,$(subst ., ,$(shell hostname)))-pickle.mk
 
--include ${PICKLELOCALMK}
+ -include ${PICKLELOCALMK}
 
 PICKLE_NEED_VERSION=					$(word 2,$$Rev$$)
 
  ifneq (${PICKLE_NEED_VERSION},${PICKLE_HAS_VERSION})
-  $(shell ${PICKLEGEN} "${ROOTDIR}" "${PICKLE_NEED_VERSION}" "${MAKE}" "${PICKLELOCALMK}" >&2)
+  $(shell ${PICKLEGEN} \"${ROOTDIR}\" \"${PICKLE_NEED_VERSION}\" \"${MAKE}\" \"${PICKLELOCALMK}\" >&2)
   include ${PICKLELOCALMK}
  endif
 
