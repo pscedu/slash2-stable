@@ -191,11 +191,40 @@ psclog_getdata(void)
 	return (d);
 }
 
+const char *
+pfl_fmtlogdate(const struct timeval *tv, const char **s)
+{
+	char fmtbuf[LINE_MAX], *bufp;
+	const char *end, *start;
+	struct tm tm;
+
+	start = *s + 1;
+	if (*start != '<')
+		errx(1, "invalid log prefix format: %s", start);
+	for (end = start++;
+	    *end && *end != '>' && end - start < LINE_MAX; end++)
+		;
+	if (*end != '>')
+		errx(1, "invalid log prefix format: %s", end);
+
+	memcpy(fmtbuf, start, end - start - 1);
+	fmtbuf[end - start - 1] = '\0';
+
+	pfl_tls_get(PFL_TLSIDX_LOGDATEBUF, LINE_MAX, &bufp);
+
+	localtime_r(&tv->tv_sec, &tm);
+	strftime(bufp, LINE_MAX, fmtbuf, &tm);
+
+	*s = end;
+	return (bufp);
+}
+
 void
 _psclogv(const struct pfl_callerinfo *pci, enum psclog_level level,
     int options, const char *fmt, va_list ap)
 {
 	char *p, prefix[LINE_MAX], fmtbuf[LINE_MAX];
+	extern const char *progname;
 	struct fuse_context *ctx;
 	struct psc_thread *thr;
 	struct psclog_data *d;
@@ -226,6 +255,7 @@ _psclogv(const struct pfl_callerinfo *pci, enum psclog_level level,
 	gettimeofday(&tv, NULL);
 	FMTSTR(prefix, sizeof(prefix), psc_logfmt,
 		FMTSTRCASE('B', "s", pfl_basename(pci->pci_filename))
+		FMTSTRCASE('D', "s", pfl_fmtlogdate(&tv, &_p))
 		FMTSTRCASE('F', "s", pci->pci_func)
 		FMTSTRCASE('f', "s", pci->pci_filename)
 		FMTSTRCASE('H', "s", d->pld_hostname)
@@ -233,6 +263,7 @@ _psclogv(const struct pfl_callerinfo *pci, enum psclog_level level,
 		FMTSTRCASE('i', "d", thrid)
 		FMTSTRCASE('L', "d", level)
 		FMTSTRCASE('l', "d", pci->pci_lineno)
+		FMTSTRCASE('N', "s", progname)
 		FMTSTRCASE('n', "s", thrname)
 		FMTSTRCASE('P', "d", ctx ? (int)ctx->pid : -1)
 		FMTSTRCASE('r', "d", d->pld_rank)

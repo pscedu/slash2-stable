@@ -83,39 +83,46 @@ This
 value is prepended to each log message reported.
 The following specifiers are recognized:
 .Pp
-.Bl -tag -offset indent -compact -width 4n
+.Bl -tag -offset 5n -compact -width 6n
 .It Ic B
-base file name from where log message originated
+source code file base name
+.It Ic D Ns Aq Ar fmt
+.Xr strftime 3 Ns -like
+format of time
 .It Ic F
-function name from where log message originated
+source code function name
 .It Ic f
-file name from where log message originated
+source code file full path name
 .It Ic H
-full host name from where log message originated
+full system host name
 .It Ic h
-short host name from where log message originated
+short system host name
 .It Ic i
-ID of thread which generated log message
+.Tn ID
+of daemon thread which generated log message
 .It Ic L
-numeric value of log message importance level
+numeric level of log message importance
 .It Ic l
-file line number from where log message originated
+source code file line number
 .It Ic P
 userland file system's originating process'
 .Tn PID
+.It Ic N
+daemon base name
 .It Ic n
 symbolic name of thread which generated log message
 .It Ic r
 .Tn MPI
-rank of process which generated log message
+rank of process
 .It Ic s
-seconds since epoch when message was generated
+seconds since Epoch
+.Pq same as Ic %D<%s>
 .It Ic t
 subsystem
 .Tn ID
-from where log message originated
+which generated log message
 .It Ic T
-subsystem name from where log message originated
+subsystem name which generated log message
 .It Ic U
 userland file system's originating process' user
 .Tn ID
@@ -125,7 +132,7 @@ microseconds into current second when generated
 .Pp
 Examples:
 .Bd -literal -offset indent
-[%s:%06u %n:%F:%l]
+[%D<%s>:%06u %n %F %l]
 .Ed
 .It Ev PSC_LOG_LEVEL
 Each log message has an associated
