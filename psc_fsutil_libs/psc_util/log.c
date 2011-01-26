@@ -207,8 +207,8 @@ pfl_fmtlogdate(const struct timeval *tv, const char **s)
 	if (*end != '>')
 		errx(1, "invalid log prefix format: %s", end);
 
-	memcpy(fmtbuf, start, end - start - 1);
-	fmtbuf[end - start - 1] = '\0';
+	memcpy(fmtbuf, start, end - start);
+	fmtbuf[end - start] = '\0';
 
 	pfl_tls_get(PFL_TLSIDX_LOGDATEBUF, LINE_MAX, &bufp);
 
@@ -255,7 +255,7 @@ _psclogv(const struct pfl_callerinfo *pci, enum psclog_level level,
 	gettimeofday(&tv, NULL);
 	FMTSTR(prefix, sizeof(prefix), psc_logfmt,
 		FMTSTRCASE('B', "s", pfl_basename(pci->pci_filename))
-		FMTSTRCASE('D', "s", pfl_fmtlogdate(&tv, &_p))
+		FMTSTRCASE('D', "s", pfl_fmtlogdate(&tv, &_t))
 		FMTSTRCASE('F', "s", pci->pci_func)
 		FMTSTRCASE('f', "s", pci->pci_filename)
 		FMTSTRCASE('H', "s", d->pld_hostname)
