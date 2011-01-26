@@ -1094,7 +1094,7 @@ void
 psc_ctlcli_main(const char *osockfn, int ac, char *av[],
     const struct psc_ctlopt *otab, int notab)
 {
-	extern const char *progname;
+	extern const char *daemon_name;
 	char optstr[LINE_MAX], chbuf[3];
 	struct psc_thread *thr;
 	struct sockaddr_un sun;
@@ -1141,7 +1141,7 @@ psc_ctlcli_main(const char *osockfn, int ac, char *av[],
 
 	FMTSTR(sun.sun_path, sizeof(sun.sun_path), psc_ctl_sockfn,
 		FMTSTRCASE('h', "s", psclog_getdata()->pld_hostshort)
-		FMTSTRCASE('n', "s", progname)
+		FMTSTRCASE('n', "s", daemon_name)
 	);
 
 	if (connect(psc_ctl_sock, (struct sockaddr *)&sun, sizeof(sun)) == -1)
