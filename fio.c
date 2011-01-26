@@ -973,6 +973,8 @@ usage(void)
 	exit(1);
 }
 
+const char *progname;
+
 int
 main(int argc, char *argv[])
 {
@@ -988,6 +990,7 @@ main(int argc, char *argv[])
 
 	TOTAL_PES = 0;
 
+	progname = argv[0];
 	pfl_init();
 	if (argc == 1) {
 		/* make sure that a configuration file is provided via redirection */
