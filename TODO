@@ -133,6 +133,7 @@ pfl
 - when processing .l and .y rules, pass CFLAGS from the orig vars into
   the obj/*.c file var
 - %n in PSC_LOG_FILE should become "mount_slash" not msctl
+- merge -S doc from daemons into the same place
 
 lnet
 - use TLS buffers for libcfs_nid2str() to avoid NUMA contention
