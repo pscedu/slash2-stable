@@ -1094,7 +1094,7 @@ void
 psc_ctlcli_main(const char *osockfn, int ac, char *av[],
     const struct psc_ctlopt *otab, int notab)
 {
-	extern const char *daemon_name;
+	extern const char *daemon_name, *progname;
 	char optstr[LINE_MAX], chbuf[3];
 	struct psc_thread *thr;
 	struct sockaddr_un sun;
