@@ -85,9 +85,6 @@ struct psc_dynarray {
 			    sizeof(*(pda)->pda_items), (cmpf));		\
 	} while (0)
 
-#define psc_dynarray_remove(da, i)	_psc_dynarray_remove((da), (i), 0)
-#define psc_dynarray_removefs(da, i)	_psc_dynarray_remove((da), (i), 1)
-
 #define psc_dynarray_init(da)		psc_dynarray_initf((da), 0)
 
 int	 psc_dynarray_add(struct psc_dynarray *, void *);
@@ -99,7 +96,7 @@ int	 psc_dynarray_exists(const struct psc_dynarray *, const void *);
 void	 psc_dynarray_free(struct psc_dynarray *);
 void	*psc_dynarray_getpos(const struct psc_dynarray *, int);
 void	 psc_dynarray_initf(struct psc_dynarray *, int);
-int	_psc_dynarray_remove(struct psc_dynarray *, const void *, int);
+int	 psc_dynarray_remove(struct psc_dynarray *, const void *);
 void	 psc_dynarray_reset(struct psc_dynarray *);
 int	 psc_dynarray_splice(struct psc_dynarray *, int, int, const void *, int);
 
