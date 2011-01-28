@@ -76,9 +76,13 @@ psc_waitq_waitabs(struct psc_waitq *q, psc_spinlock_t *k,
 	rc = pthread_cond_timedwait(&q->wq_cond, &q->wq_mut, abstime);
 	if (rc && rc != ETIMEDOUT)
 		psc_fatalx("pthread_cond_timedwait: %s", strerror(rc));
-	atomic_dec(&q->wq_nwaiters);
 
 	psc_pthread_mutex_unlock(&q->wq_mut);
+	/* Bug 91: Decrease waiters after releasing the lock to guarantee
+	 *    wq_mut remains intact.
+	 */
+	atomic_dec(&q->wq_nwaiters);
+
 	return (rc);
 }
 
@@ -115,8 +119,9 @@ psc_waitq_waitrel(struct psc_waitq *q, psc_spinlock_t *k,
 		if (rc)
 			psc_fatalx("pthread_cond_wait: %s", strerror(rc));
 	}
-	atomic_dec(&q->wq_nwaiters);
 	psc_pthread_mutex_unlock(&q->wq_mut);
+	atomic_dec(&q->wq_nwaiters);
+
 	return (rc);
 }
 
