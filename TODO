@@ -130,10 +130,8 @@ pfl
 - tie 'make doc' to 'make regen'
   - the slow part is the svn log to find the last date revision; maybe
     find a way of extracting this part out...
-- when processing .l and .y rules, pass CFLAGS from the orig vars into
-  the obj/*.c file var
-- %n in PSC_LOG_FILE should become "mount_slash" not msctl
-- merge -S doc from daemons into the same place
+- when processing .l and .y rules, propagate CFLAGS from the .l FILE var
+  into the obj/*.c file var
 
 lnet
 - use TLS buffers for libcfs_nid2str() to avoid NUMA contention
