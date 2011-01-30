@@ -196,6 +196,7 @@ psc_pthread_rwlock_wrlock(pthread_rwlock_t *rw)
 		psc_fatalx("pthread_rwlock_wrlock: %s", strerror(rc));
 }
 
+#ifdef HAVE_PTHREAD_RWLOCK_TIMEDRDLOCK
 int
 psc_pthread_rwlock_hasrdlock(pthread_rwlock_t *rw)
 {
@@ -233,6 +234,45 @@ psc_pthread_rwlock_haswrlock(pthread_rwlock_t *rw)
 		return (0);
 	psc_fatalx("pthread_rwlock_timedwrlock: %s", strerror(rc));
 }
+#else
+int
+psc_pthread_rwlock_hasrdlock(pthread_rwlock_t *rw)
+{
+	int rc;
+
+errno = ENOTSUP;
+psc_fatalx("error");
+	rc = pthread_rwlock_tryrdlock(rw);
+	if (rc == EDEADLK)
+		return (1);
+	if (rc == 0) {
+		psc_pthread_rwlock_unlock(rw);
+		return (0);
+	}
+	if (rc == EBUSY)
+		return (0);
+	psc_fatalx("pthread_rwlock_tryrdlock: %s", strerror(rc));
+}
+
+int
+psc_pthread_rwlock_haswrlock(pthread_rwlock_t *rw)
+{
+	int rc;
+
+errno = ENOTSUP;
+psc_fatalx("error");
+	rc = pthread_rwlock_trywrlock(rw);
+	if (rc == EDEADLK)
+		return (1);
+	if (rc == 0) {
+		psc_pthread_rwlock_unlock(rw);
+		return (0);
+	}
+	if (rc == EBUSY)
+		return (0);
+	psc_fatalx("pthread_rwlock_trywrlock: %s", strerror(rc));
+}
+#endif
 
 int
 psc_pthread_rwlock_reqrdlock(pthread_rwlock_t *rw)
