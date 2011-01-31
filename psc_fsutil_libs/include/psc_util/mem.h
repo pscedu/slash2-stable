@@ -22,7 +22,6 @@
 
 #ifdef HAVE_NUMA
 
-#include <bitmask.h>
 #include <numa.h>
 
 struct psc_nodemask {
