@@ -87,6 +87,9 @@ struct psc_lockedlist {
 #define pll_next_item(pll, p)						\
 	psclist_next_obj2(&(pll)->pll_listhd, (p), (pll)->pll_offset)
 
+#define pll_last_item(pll, type)					\
+	psc_listhd_last_obj2(&(pll)->pll_listhd, type, (pll)->pll_offset)
+
 #define pll_init(pll, type, member, lock)				\
 	_pll_init((pll), offsetof(type, member), (lock))
 
