@@ -67,7 +67,8 @@ struct psc_journal_cursor {
 	unsigned char			 pjc_uuid[16];
 	/*
 	 * pjc_commit_txg is the only trustworthy information recorded in the file
-	 * after a crash.  Other information can be stale and need to be
+	 * after a crash.  By making this information accurate, we can be sure that
+	 * a replay should succeed.  Other information can be stale and need to be
 	 * adjusted before use.
 	 */
 	uint64_t			 pjc_commit_txg;	/* last synced ZFS transaction group number */
