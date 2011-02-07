@@ -93,12 +93,12 @@ typedef struct {
 
 static int			 exit_fuse_listener = 0;
 int				 newfs_fd[2];
-static int			 nfds;
-static struct pollfd		 fds[MAX_FDS];
+int				 pscfs_nfds;
+struct pollfd			 pscfs_fds[MAX_FDS];
 static fuse_fs_info_t		 fsinfo[MAX_FDS];
 static char			*mountpoints[MAX_FDS];
 static pthread_t		 fuse_threads[NUM_THREADS];
-static struct fuse_session	*fuse_session;
+struct fuse_session		*fuse_session;
 
 int
 pscfs_fuse_newfs(const char *mntpoint, struct fuse_chan *ch)
@@ -161,7 +161,7 @@ pscfs_fuse_new(void)
 	 * This should never fail (famous last words) since the fd
 	 * is only closed in fuse_listener_exit()
 	 */
-	psc_assert(fd_read_loop(fds[0].fd, &fs, sizeof(fuse_fs_info_t)) == 0);
+	psc_assert(fd_read_loop(pscfs_fds[0].fd, &fs, sizeof(fuse_fs_info_t)) == 0);
 
 	char *mntpoint = PSCALLOC(fs.mntlen + 1);
 	if (mntpoint == NULL) {
@@ -169,11 +169,11 @@ pscfs_fuse_new(void)
 		return;
 	}
 
-	psc_assert(fd_read_loop(fds[0].fd, mntpoint, fs.mntlen) == 0);
+	psc_assert(fd_read_loop(pscfs_fds[0].fd, mntpoint, fs.mntlen) == 0);
 
 	mntpoint[fs.mntlen] = '\0';
 
-	if (nfds == MAX_FDS) {
+	if (pscfs_nfds == MAX_FDS) {
 		fprintf(stderr, "Warning: filesystem limit (%i) "
 		    "reached, unmounting..\n", MAX_FILESYSTEMS);
 		fuse_unmount(mntpoint, fs.ch);
@@ -181,15 +181,15 @@ pscfs_fuse_new(void)
 		return;
 	}
 
-	psc_info("adding filesystem %i at mntpoint %s", nfds, mntpoint);
+	psc_info("adding filesystem %i at mntpoint %s", pscfs_nfds, mntpoint);
 
-	fsinfo[nfds] = fs;
-	mountpoints[nfds] = mntpoint;
+	fsinfo[pscfs_nfds] = fs;
+	mountpoints[pscfs_nfds] = mntpoint;
 
-	fds[nfds].fd = fs.fd;
-	fds[nfds].events = POLLIN;
-	fds[nfds].revents = 0;
-	nfds++;
+	pscfs_fds[pscfs_nfds].fd = fs.fd;
+	pscfs_fds[pscfs_nfds].events = POLLIN;
+	pscfs_fds[pscfs_nfds].revents = 0;
+	pscfs_nfds++;
 }
 
 /*
@@ -205,8 +205,8 @@ pscfs_fuse_destroy(int i)
 #endif
 	fuse_session_reset(fsinfo[i].se);
 	fuse_session_destroy(fsinfo[i].se);
-	close(fds[i].fd);
-	fds[i].fd = -1;
+	close(pscfs_fds[i].fd);
+	pscfs_fds[i].fd = -1;
 	PSCFREE(mountpoints[i]);
 }
 
@@ -230,7 +230,7 @@ pscfs_fuse_listener_loop(__unusedx void *arg)
 
 	while (!exit_fuse_listener) {
 		int i;
-		int ret = poll(fds, nfds, 1000);
+		int ret = poll(pscfs_fds, pscfs_nfds, 1000);
 		if (ret == 0 || (ret == -1 && errno == EINTR))
 			continue;
 
@@ -239,15 +239,15 @@ pscfs_fuse_listener_loop(__unusedx void *arg)
 			continue;
 		}
 
-		int oldfds = nfds;
+		int oldfds = pscfs_nfds;
 
 		for (i = 0; i < oldfds; i++) {
-			short rev = fds[i].revents;
+			short rev = pscfs_fds[i].revents;
 
 			if (rev == 0)
 				continue;
 
-			fds[i].revents = 0;
+			pscfs_fds[i].revents = 0;
 
 			psc_assert((rev & POLLNVAL) == 0);
 
@@ -313,17 +313,17 @@ pscfs_fuse_listener_loop(__unusedx void *arg)
 
 		/* Free the closed file descriptors entries */
 		int read_ptr, write_ptr = 0;
-		for (read_ptr = 0; read_ptr < nfds; read_ptr++) {
-			if (fds[read_ptr].fd == -1)
+		for (read_ptr = 0; read_ptr < pscfs_nfds; read_ptr++) {
+			if (pscfs_fds[read_ptr].fd == -1)
 				continue;
 			if (read_ptr != write_ptr) {
-				fds[write_ptr] = fds[read_ptr];
+				pscfs_fds[write_ptr] = pscfs_fds[read_ptr];
 				fsinfo[write_ptr] = fsinfo[read_ptr];
 				mountpoints[write_ptr] = mountpoints[read_ptr];
 			}
 			write_ptr++;
 		}
-		nfds = write_ptr;
+		pscfs_nfds = write_ptr;
 	}
 
 	spinlock(&lock);
@@ -418,8 +418,8 @@ pscfs_main(void)
 	fprintf(stderr, "Exiting...\n");
 #endif
 
-	for (i = 1; i < nfds; i++) {
-		if (fds[i].fd == -1)
+	for (i = 1; i < pscfs_nfds; i++) {
+		if (pscfs_fds[i].fd == -1)
 			continue;
 
 		fuse_session_exit(fsinfo[i].se);
@@ -1136,9 +1136,9 @@ pscfs_mount(const char *mp, struct pscfs_args *pfa)
 	if (pipe(newfs_fd) == -1)
 		psc_fatal("pipe");
 
-	fds[0].fd = newfs_fd[0];
-	fds[0].events = POLLIN;
-	nfds = 1;
+	pscfs_fds[0].fd = newfs_fd[0];
+	pscfs_fds[0].events = POLLIN;
+	pscfs_nfds = 1;
 
 	rc = snprintf(nameopt, sizeof(nameopt), "fsname=%s", mp);
 	if (rc == -1)
