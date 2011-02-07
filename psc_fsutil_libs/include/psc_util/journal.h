@@ -227,6 +227,7 @@ int	 pjournal_format(const char *, uint32_t, uint32_t, uint32_t);
 void	 pjournal_replay(struct psc_journal *, int, const char *,
 	    psc_replay_handler_t, psc_distill_handler_t);
 
+int	 pjournal_has_peers(struct psc_journal *);
 uint64_t pjournal_next_distill(struct psc_journal *);
 uint64_t pjournal_next_reclaim(struct psc_journal *);
 
@@ -236,7 +237,6 @@ void	 pjournal_unreserve_slot(struct psc_journal *);
 void	*pjournal_get_buf(struct psc_journal *, size_t);
 void	 pjournal_put_buf(struct psc_journal *, void *);
 
-void	 pjournal_add_entry(struct psc_journal *, uint64_t, int, void *, int);
-void	 pjournal_add_entry_distill(struct psc_journal *, uint64_t, int, void *, int);
+void	 pjournal_add_entry(struct psc_journal *, uint64_t, int, int, void *, int);
 
 #endif /* _PFL_JOURNAL_H_ */

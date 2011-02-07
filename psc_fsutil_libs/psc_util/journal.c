@@ -115,6 +115,12 @@ psc_journal_io(struct psc_journal *pj, void *p, size_t len, off_t off,
 	return (rc);
 }
 
+int
+pjournal_has_peers(struct psc_journal *pj)
+{
+	return(pj->pj_npeers);
+}
+
 uint64_t
 pjournal_next_distill(struct psc_journal *pj)
 {
@@ -311,33 +317,13 @@ pjournal_unreserve_slot(struct psc_journal *pj)
  * pjournal_add_entry - Add a log entry into the journal.
  */
 void
-pjournal_add_entry(struct psc_journal *pj, uint64_t txg, int type,
-    void *buf, int size)
+pjournal_add_entry(struct psc_journal *pj, uint64_t txg,
+    int type, int distill, void *buf, int size)
 {
 	struct psc_journal_xidhndl *xh;
 	struct psc_journal_enthdr *pje;
 
-	xh = pjournal_xnew(pj, 0);
-	xh->pjx_txg = txg;
-	xh->pjx_flags = PJX_NONE;
-	pje = DATA_2_PJE(buf);
-	psc_assert(pje->pje_magic == PJE_MAGIC);
-
-	pjournal_logwrite(xh, type | PJE_NORMAL, pje, size);
-}
-
-/**
- * pjournal_add_entry_distill - Add a log entry into the journal.  The
- *	log entry needs to be distilled.
- */
-void
-pjournal_add_entry_distill(struct psc_journal *pj, uint64_t txg,
-    int type, void *buf, int size)
-{
-	struct psc_journal_xidhndl *xh;
-	struct psc_journal_enthdr *pje;
-
-	xh = pjournal_xnew(pj, 1);
+	xh = pjournal_xnew(pj, distill);
 	xh->pjx_txg = txg;
 	pje = DATA_2_PJE(buf);
 	psc_assert(pje->pje_magic == PJE_MAGIC);
