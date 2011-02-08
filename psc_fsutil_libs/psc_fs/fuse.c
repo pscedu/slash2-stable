@@ -1176,6 +1176,15 @@ pscfs_mount(const char *mp, struct pscfs_args *pfa)
 	    FUSE_MINOR_VERSION);
 }
 
+#ifndef HAVE_FUSE_REQ_GETGROUPS
+int
+fuse_req_getgroups(__unusedx fuse_req_t *req, __unusedx int *ng,
+    __unusedx gid_t *gv)
+{
+	return (-ENOSYS);
+}
+#endif
+
 int
 pscfs_getgroups(struct pscfs_req *pfr, gid_t **gvp, int *ng)
 {
@@ -1187,7 +1196,6 @@ pscfs_getgroups(struct pscfs_req *pfr, gid_t **gvp, int *ng)
 	uid = fuse_req_ctx(pfr->pfr_fuse_req)->uid;
 	gid = fuse_req_ctx(pfr->pfr_fuse_req)->gid;
 
-#ifdef HAVE_FUSE_REQ_GETGROUPS
 	*ng = fuse_req_getgroups(pfr->pfr_fuse_req, 0, NULL);
  retry:
 	if (*ng == 0)
@@ -1212,9 +1220,6 @@ pscfs_getgroups(struct pscfs_req *pfr, gid_t **gvp, int *ng)
 		rc = abs(*ng);
 		goto out;
 	}
-#else
-	(void)gv;
-#endif
 
 	/* not supported; revert to /etc/groups */
 	pflsys_getusergroups(uid, gid, gvp, ng);
