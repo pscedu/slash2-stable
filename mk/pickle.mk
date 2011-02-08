@@ -137,6 +137,10 @@ PICKLE_NEED_VERSION=					$(word 2,$$Rev$$)
   DEFINES+=						-DHAVE_FUSE_DEBUGLEVEL
  endif
 
+ ifdef PICKLE_HAVE_FUSE_REQ_GETGROUPS
+  DEFINES+=						-DHAVE_FUSE_REQ_GETGROUPS
+ endif
+
  ifdef PICKLE_HAVE_FUSE
   DEFINES+=						-DHAVE_FUSE
   PSCFS_SRCS+=						${PFL_BASE}/psc_fs/fuse.c
