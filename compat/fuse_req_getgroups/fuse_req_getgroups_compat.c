@@ -2,7 +2,7 @@
 
 #include <stdlib.h>
 
-#include "fuse.h"
+#include <fuse_lowlevel.h>
 
 int
 main(int argc, char *argv[])
