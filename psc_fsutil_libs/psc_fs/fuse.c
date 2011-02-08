@@ -1239,10 +1239,10 @@ pscfs_inprocgrouplist(struct pscfs_req *pfr, gid_t gid)
 	rc = pscfs_getgroups(pfr, &gv, &ng);
 	if (rc)
 		return (rc);
-	rc = EPERM;
+	rc = 0;
 	for (j = 0; j < ng; j++)
 		if (gid == gv[j]) {
-			rc = 0;
+			rc = 1;
 			break;
 		}
 	PSCFREE(gv);
