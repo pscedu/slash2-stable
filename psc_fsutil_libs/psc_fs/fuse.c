@@ -1178,7 +1178,7 @@ pscfs_mount(const char *mp, struct pscfs_args *pfa)
 
 #ifndef HAVE_FUSE_REQ_GETGROUPS
 int
-fuse_req_getgroups(__unusedx fuse_req_t *req, __unusedx int *ng,
+fuse_req_getgroups(__unusedx fuse_req_t req, __unusedx int ng,
     __unusedx gid_t *gv)
 {
 	return (-ENOSYS);
