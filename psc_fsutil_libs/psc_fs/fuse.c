@@ -1187,6 +1187,7 @@ pscfs_getgroups(struct pscfs_req *pfr, gid_t **gvp, int *ng)
 	uid = fuse_req_ctx(pfr->pfr_fuse_req)->uid;
 	gid = fuse_req_ctx(pfr->pfr_fuse_req)->gid;
 
+#ifdef HAVE_FUSE_REQ_GETGROUPS
 	*ng = fuse_req_getgroups(pfr->pfr_fuse_req, 0, NULL);
  retry:
 	if (*ng == 0)
@@ -1211,9 +1212,10 @@ pscfs_getgroups(struct pscfs_req *pfr, gid_t **gvp, int *ng)
 		rc = abs(*ng);
 		goto out;
 	}
+#endif
 
 	/* not supported; revert to /etc/groups */
-	pflsys_getusergroups(uid, gid, &gv, ng);
+	pflsys_getusergroups(uid, gid, gvp, ng);
 
  out:
 	if (rc)
