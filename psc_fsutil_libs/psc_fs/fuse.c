@@ -30,7 +30,9 @@
 #include <sys/stat.h>
 
 #include <errno.h>
+#include <grp.h>
 #include <pthread.h>
+#include <pwd.h>
 #include <stdio.h>
 #include <string.h>
 #include <time.h>
@@ -40,6 +42,7 @@
 
 #include "pfl/fs.h"
 #include "pfl/fsmod.h"
+#include "pfl/sys.h"
 #include "psc_util/alloc.h"
 #include "psc_util/ctl.h"
 #include "psc_util/ctlsvr.h"
@@ -1171,4 +1174,68 @@ pscfs_mount(const char *mp, struct pscfs_args *pfa)
 
 	psc_info("FUSE version %d.%d", FUSE_MAJOR_VERSION,
 	    FUSE_MINOR_VERSION);
+}
+
+int
+pscfs_getgroups(struct pscfs_req *pfr, gid_t **gvp, int *ng)
+{
+	gid_t gid, *gv;
+	uid_t uid;
+	int rc = 0;
+
+	*gvp = NULL;
+	uid = fuse_req_ctx(pfr->pfr_fuse_req)->uid;
+	gid = fuse_req_ctx(pfr->pfr_fuse_req)->gid;
+
+	*ng = fuse_req_getgroups(pfr->pfr_fuse_req, 0, NULL);
+ retry:
+	if (*ng == 0)
+		goto out;
+	if (*ng > 0) {
+		gv = psc_realloc(*gvp, *ng * sizeof(*gv), 0);
+		if (gv == NULL) {
+			rc = ENOMEM;
+			goto out;
+		}
+		*gvp = gv;
+		rc = fuse_req_getgroups(pfr->pfr_fuse_req, *ng, gv);
+		if (rc > *ng) {
+			*ng = rc;
+			goto retry;
+		}
+		rc = 0;
+		goto out;
+	}
+
+	if (*ng != -ENOSYS) {
+		rc = abs(*ng);
+		goto out;
+	}
+
+	/* not supported; revert to /etc/groups */
+	pflsys_getusergroups(uid, gid, &gv, ng);
+
+ out:
+	if (rc)
+		PSCFREE(*gvp);
+	return (rc);
+}
+
+int
+pscfs_inprocgrouplist(struct pscfs_req *pfr, gid_t gid)
+{
+	int j, ng, rc;
+	gid_t *gv;
+
+	rc = pscfs_getgroups(pfr, &gv, &ng);
+	if (rc)
+		return (rc);
+	rc = EPERM;
+	for (j = 0; j < ng; j++)
+		if (gid == gv[j]) {
+			rc = 0;
+			break;
+		}
+	PSCFREE(gv);
+	return (rc);
 }

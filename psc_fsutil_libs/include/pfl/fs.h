@@ -90,7 +90,10 @@ void	pscfs_freeargs(struct pscfs_args *);
 void	pscfs_mount(const char *, struct pscfs_args *);
 
 void	pscfs_getcreds(struct pscfs_req *, struct pscfs_cred *);
+int	pscfs_getgroups(struct pscfs_req *, gid_t **, int *);
 mode_t	pscfs_getumask(struct pscfs_req *);
+
+int	pscfs_inprocgrouplist(struct pscfs_req *, gid_t);
 
 int	pscfs_setdebug(int);
 int	pscfs_getdebug(int *);
