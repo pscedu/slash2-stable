@@ -1212,6 +1212,8 @@ pscfs_getgroups(struct pscfs_req *pfr, gid_t **gvp, int *ng)
 		rc = abs(*ng);
 		goto out;
 	}
+#else
+	(void)gv;
 #endif
 
 	/* not supported; revert to /etc/groups */
