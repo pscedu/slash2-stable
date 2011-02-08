@@ -35,6 +35,7 @@
 #include "pfl/setresuid.h"
 #include "pfl/stat.h"
 #include "pfl/str.h"
+#include "pfl/sys.h"
 #include "pfl/time.h"
 #include "pfl/types.h"
 #include "psc_ds/dynarray.h"
