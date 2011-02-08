@@ -140,6 +140,7 @@ PICKLE_NEED_VERSION=					$(word 2,$$Rev$$)
  ifdef PICKLE_HAVE_FUSE
   DEFINES+=						-DHAVE_FUSE
   PSCFS_SRCS+=						${PFL_BASE}/psc_fs/fuse.c
+  PSCFS_SRCS+=						${PFL_BASE}/psc_util/sys.c
  endif
 
  ifdef PICKLE_HAVE_NNPFS
