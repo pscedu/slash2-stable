@@ -132,7 +132,7 @@ struct psc_journal {
 #define PJF_ISBLKDEV			(1 << 2)
 
 #define PJE_XID_NONE			0			/* invalid transaction ID */
-#define PJE_MAGIC			UINT64_C(0x4567abcd)
+#define PJE_MAGIC			UINT32_C(0x4567abcd)
 
 /*
  * Journal entry types - lower bits are used internally, higher bits
