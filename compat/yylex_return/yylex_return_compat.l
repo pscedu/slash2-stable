@@ -8,6 +8,7 @@
 #define PFL_RETURNX()		return
 #define PFL_RETURN(rc)		return (rc)
 #define PFL_RETURN_LIT(s)	return (s)
+#define PFL_RETURN_STR(s)	return (s)
 %}
 
 %%
