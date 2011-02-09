@@ -1533,7 +1533,7 @@ psc_ctlthr_service(int fd, const struct psc_ctlop *ct, int nops,
 	if (n == 0)
 		return (EOF);
 	if (n == -1) {
-		if (errno == EPIPE)
+		if (errno == EPIPE || errno == ECONNRESET)
 			return (EOF);
 		if (errno == EINTR)
 			return (0);
