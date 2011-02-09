@@ -347,9 +347,8 @@ pjournal_get_buf(struct psc_journal *pj, size_t size)
 	}
 	pje = psc_dynarray_getpos(&pj->pj_bufs, 0);
 	psc_dynarray_remove(&pj->pj_bufs, pje);
-	psc_assert(pje);
+	psc_assert(pje->pje_magic == PJE_MAGIC);
 	PJ_ULOCK(pj);
-	pje->pje_magic = PJE_MAGIC;
 	return (PJE_DATA(pje));
 }
 
@@ -465,8 +464,10 @@ pjournal_logwrite(struct psc_journal_xidhndl *xh, int type,
 		spinlock(&pjournal_waitqlock);
 		psc_waitq_wakeall(&pjournal_waitq);
 		freelock(&pjournal_waitqlock);
-	} else
+	} else {
+		psc_assert(!xh->pjx_data);
 		freelock(&xh->pjx_lock);
+	}
 }
 
 __static void *
@@ -922,11 +923,12 @@ pjournal_thr_main(struct psc_thread *thr)
 				freelock(&xh->pjx_lock);
 				break;
 			}
-
+			pje = xh->pjx_data;
+			xh->pjx_data = NULL;
+			xh->pjx_flags &= ~PJX_WRITTEN;
 			pll_remove(&pj->pj_distillxids, xh);
 			freelock(&xh->pjx_lock);
 
-			pje = xh->pjx_data;
 			pj->pj_distill_handler(pje, pj->pj_npeers, 0);
 
 			spinlock(&xh->pjx_lock);
@@ -1039,6 +1041,7 @@ pjournal_replay(struct psc_journal *pj, int thrtype,
 
 	for (i = 0; i < PJ_MAX_BUF; i++) {
 		pje = psc_alloc(PJ_PJESZ(pj), PAF_PAGEALIGN | PAF_LOCK);
+		pje->pje_magic = PJE_MAGIC;
 		psc_dynarray_add(&pj->pj_bufs, pje);
 	}
 
