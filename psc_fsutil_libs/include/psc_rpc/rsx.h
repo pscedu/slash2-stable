@@ -22,7 +22,6 @@
 
 struct pscrpc_request;
 struct pscrpc_import;
-struct pscrpc_bulk_desc;
 struct iovec;
 
 struct rsx_msg_conversion {
@@ -106,10 +105,8 @@ int _pfl_rsx_newreq(struct pscrpc_import *, int, int,
 	struct pscrpc_request **, int, int *, int, int *, void *);
 int pfl_rsx_waitrep(struct pscrpc_request *, int, void *);
 
-int rsx_bulkserver(struct pscrpc_request *, struct pscrpc_bulk_desc **,
-	int, int, struct iovec *, int);
-int rsx_bulkclient(struct pscrpc_request *, struct pscrpc_bulk_desc **,
-	int, int, struct iovec *, int);
+int rsx_bulkserver(struct pscrpc_request *, int, int, struct iovec *, int);
+int rsx_bulkclient(struct pscrpc_request *, int, int, struct iovec *, int);
 
 int pfl_rsx_conv2net(int, void *);
 int pfl_rsx_conv2host(int, void *);

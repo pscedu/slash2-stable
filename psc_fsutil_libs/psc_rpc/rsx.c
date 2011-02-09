@@ -99,7 +99,6 @@ pfl_rsx_timeout(__unusedx void *arg)
 /**
  * rsx_bulkserver - setup a source or sink for a server.
  * @rq: RPC request associated with GET.
- * @descp: pointer to bulk xfer descriptor.
  * @type: GET_SINK receive from client or PUT_SOURCE to push to a client.
  * @ptl: portal to issue bulk xfer across.
  * @iov: iovec array of receive buffer.
@@ -107,18 +106,18 @@ pfl_rsx_timeout(__unusedx void *arg)
  * Returns: 0 or negative errno on error.
  */
 int
-rsx_bulkserver(struct pscrpc_request *rq, struct pscrpc_bulk_desc **descp,
-    int type, int ptl, struct iovec *iov, int n)
+rsx_bulkserver(struct pscrpc_request *rq, int type, int ptl,
+    struct iovec *iov, int n)
 {
 	int sum, i, rc, comms_error;
 	struct pscrpc_bulk_desc *desc;
 	struct l_wait_info lwi;
-	uint8_t *v1;
 	uint64_t *v8;
+	uint8_t *v1;
 
 	psc_assert(type == BULK_GET_SINK || type == BULK_PUT_SOURCE);
 
-	*descp = desc = pscrpc_prep_bulk_exp(rq, n, type, ptl);
+	desc = pscrpc_prep_bulk_exp(rq, n, type, ptl);
 	if (desc == NULL) {
 		psc_warnx("pscrpc_prep_bulk_exp returned a null desc");
 		return (-ENOMEM); // XXX errno
@@ -188,7 +187,6 @@ rsx_bulkserver(struct pscrpc_request *rq, struct pscrpc_bulk_desc **descp,
 
  out:
 	if (rc == 0) {
-		return (0);
 	} else if (!comms_error) {
 		/* Only reply if there were no comm problems with bulk. */
 		rq->rq_status = rc;
@@ -207,10 +205,7 @@ rsx_bulkserver(struct pscrpc_request *rq, struct pscrpc_bulk_desc **descp,
 		    "id %s - client will retry",
 		    libcfs_id2str(rq->rq_peer));
 	}
-	if (rc) {
-		pscrpc_free_bulk(desc);
-		*descp = NULL;
-	}
+	pscrpc_free_bulk(desc);
 	return (rc);
 }
 
@@ -226,15 +221,15 @@ rsx_bulkserver(struct pscrpc_request *rq, struct pscrpc_bulk_desc **descp,
  * Returns: 0 or negative errno on error.
  */
 int
-rsx_bulkclient(struct pscrpc_request *rq, struct pscrpc_bulk_desc **descp,
-    int type, int ptl, struct iovec *iov, int n)
+rsx_bulkclient(struct pscrpc_request *rq, int type, int ptl,
+    struct iovec *iov, int n)
 {
 	struct pscrpc_bulk_desc *desc;
 	int i;
 
 	psc_assert(type == BULK_GET_SOURCE || type == BULK_PUT_SINK);
 
-	*descp = desc = pscrpc_prep_bulk_imp(rq, n, type, ptl);
+	desc = pscrpc_prep_bulk_imp(rq, n, type, ptl);
 	if (desc == NULL)
 		psc_fatal("NULL bulk descriptor");
 	desc->bd_nob = 0;

@@ -343,8 +343,8 @@ pscrpc_new_bulk(int npages, int type, int portal)
 }
 
 struct pscrpc_bulk_desc *
-pscrpc_prep_bulk_imp(struct pscrpc_request *req, int npages,
-		      int type, int portal)
+pscrpc_prep_bulk_imp(struct pscrpc_request *req, int npages, int type,
+    int portal)
 {
 	struct pscrpc_import    *imp = req->rq_import;
 	struct pscrpc_bulk_desc *desc;
@@ -363,14 +363,15 @@ pscrpc_prep_bulk_imp(struct pscrpc_request *req, int npages,
 	desc->bd_cbid.cbid_arg = desc;
 
 	/* This makes req own desc, and free it when she frees herself */
+	psc_assert(req->rq_bulk == NULL);
 	req->rq_bulk = desc;
 
 	return desc;
 }
 
 struct pscrpc_bulk_desc *
-pscrpc_prep_bulk_exp(struct pscrpc_request *req,
-		      int npages, int type, int portal)
+pscrpc_prep_bulk_exp(struct pscrpc_request *req, int npages, int type,
+    int portal)
 {
 	struct pscrpc_export   *exp = req->rq_export;
 	struct pscrpc_bulk_desc *desc;
