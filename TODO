@@ -133,7 +133,7 @@ pfl
 - when processing .l and .y rules, propagate CFLAGS from the .l FILE var
   into the obj/*.c file var
 - ensure psc_fatal() runs atexit() such as umount
-- multiwait is broken on bsd
+- rwlock is broken on bsd
 
 lnet
 - use TLS buffers for libcfs_nid2str() to avoid NUMA contention
