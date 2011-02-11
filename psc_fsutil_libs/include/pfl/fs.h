@@ -129,6 +129,8 @@ void	pscfs_reply_umount(struct pscfs_req *);
 void	pscfs_reply_unlink(struct pscfs_req *, int);
 void	pscfs_reply_write(struct pscfs_req *, ssize_t, int);
 
+int	pscfs_notify_inval_inode(struct pscfs_req *, pscfs_inum_t, off_t, off_t);
+
 #define PSCFS_CREATEF_DIO		(1 << 0)
 
 #define PSCFS_OPENF_DIO			(1 << 0)

@@ -1248,3 +1248,19 @@ pscfs_inprocgrouplist(struct pscfs_req *pfr, gid_t gid)
 	PSCFREE(gv);
 	return (rc);
 }
+
+int
+pscfs_notify_inval_inode(struct pscfs_req *pfr, pscfs_inum_t inum,
+    off_t off, off_t len)
+{
+#ifdef HAVE_FUSE_REQ_GETCHANNEL
+	return (fuse_lowlevel_notify_inval_inode(fuse_req_getchannel(
+	    pfr->pfr_fuse_req), inum, off, len));
+#else
+	(void)pfr;
+	(void)inum;
+	(void)off;
+	(void)len;
+	return (-ENOTSUP);
+#endif
+}
