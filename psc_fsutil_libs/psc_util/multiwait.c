@@ -198,7 +198,7 @@ psc_multiwaitcond_wakeup(struct psc_multiwaitcond *mwc)
 	if (psc_multiwaitcond_trylockallmw(mwc)) {
 		if (count++ == 300000)
 			psc_errorx("mwcond %s failed to lock his "
-			    "multiwaits after attempting many times,"
+			    "multiwaits after attempting many times, "
 			    "possible deadlock", mwc->mwc_name);
 		psc_pthread_mutex_unlock(&mwc->mwc_mutex);
 		sched_yield();
