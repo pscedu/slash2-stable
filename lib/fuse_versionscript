@@ -182,6 +182,7 @@ FUSE_2.8 {
 		fuse_reply_poll;
 		fuse_req_ctx;
 		fuse_req_getgroups;
+		fuse_req_getchannel;
 		fuse_session_data;
 
 	local:

@@ -1734,6 +1734,12 @@ int fuse_req_getgroups(fuse_req_t req, int size, gid_t list[])
 }
 #endif
 
+struct fuse_chan *
+fuse_req_getchannel(fuse_req_t req)
+{
+	return (req->ch);
+} 
+
 #ifndef __FreeBSD__
 
 static void fill_open_compat(struct fuse_open_out *arg,
