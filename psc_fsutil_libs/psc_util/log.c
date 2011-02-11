@@ -197,6 +197,7 @@ pfl_fmtlogdate(const struct timeval *tv, const char **s)
 	char fmtbuf[LINE_MAX], *bufp;
 	const char *end, *start;
 	struct tm tm;
+	time_t sec;
 
 	start = *s + 1;
 	if (*start != '<')
@@ -212,7 +213,8 @@ pfl_fmtlogdate(const struct timeval *tv, const char **s)
 
 	pfl_tls_get(PFL_TLSIDX_LOGDATEBUF, LINE_MAX, &bufp);
 
-	localtime_r(&tv->tv_sec, &tm);
+	sec = tv->tv_sec;
+	localtime_r(&sec, &tm);
 	strftime(bufp, LINE_MAX, fmtbuf, &tm);
 
 	*s = end;
