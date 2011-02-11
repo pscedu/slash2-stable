@@ -327,7 +327,7 @@ pscrpc_new_bulk(int npages, int type, int portal)
 	struct pscrpc_bulk_desc *desc;
 
 	PSCRPC_OBD_ALLOC(desc, offsetof(struct pscrpc_bulk_desc, bd_iov[npages]));
-	psc_trace("new desc=%p", desc);
+	psclog_trace("new desc=%p", desc);
 	if (!desc)
 		return NULL;
 
@@ -1562,7 +1562,7 @@ pscrpc_set_finalize(struct pscrpc_request_set *set, int block, int destroy)
 		}
 	} else {
 		rc = pscrpc_check_set(set, 1);
-		psc_trace("pscrpc_check_set() returned %d set=%p", rc, set);
+		psclog_trace("pscrpc_check_set() returned %d set=%p", rc, set);
 		if (rc == 1)
 			goto set_wait;
 		else

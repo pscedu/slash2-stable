@@ -180,7 +180,7 @@ pscrpc_nbreqset_reap(struct pscrpc_nbreqset *nbs)
 	nbs->nb_flags &= ~NBREQSET_WORK_INPROG;
 	freelock(&nbs->nb_lock);
 
-	psc_trace("checked %d requests", nchecked);
+	psclog_trace("checked %d requests", nchecked);
 
 	return (saved_rc);
 }

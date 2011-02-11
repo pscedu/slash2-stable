@@ -101,10 +101,10 @@ pscrpc_request_in_callback(lnet_event_t *ev)
 		 rqbd->rqbd_buffer + service->srv_buf_size);
 
 	if (!ev->status)
-		psc_trace("event type %d, status %d, service %s",
+		psclog_trace("event type %d, status %d, service %s",
 		       ev->type, ev->status, service->srv_name);
 	else
-		psc_errorx("event type %d, status %d, service %s",
+		psclog_errorx("event type %d, status %d, service %s",
 			ev->type, ev->status, service->srv_name);
 
 	if (ev->unlinked) {
@@ -491,7 +491,7 @@ pscrpc_check_events(int timeout)
 	int         rc;
 	int         i;
 
-	psc_trace("timeo_ms %d", timeout * 1000);
+	psclog_trace("timeo_ms %d", timeout * 1000);
 	rc = LNetEQPoll(&pscrpc_eq_h, 1, timeout * 1000, &ev, &i);
 	if (rc == 0)
 		return (0);

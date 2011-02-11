@@ -786,7 +786,7 @@ pscrpc_req_finished(struct pscrpc_request *request)
 void
 pscrpc_free_bulk(struct pscrpc_bulk_desc *desc)
 {
-	psc_trace("free desc=%p", desc);
+	psclog_trace("free desc=%p", desc);
 
 	psc_assert(desc != NULL);
 	psc_assert(desc->bd_iov_count != LI_POISON); /* not freed already */
