@@ -129,10 +129,10 @@ psc_pthread_mutex_trylock(pthread_mutex_t *mut)
 
 	rc = pthread_mutex_trylock(mut);
 	if (rc == 0)
-		return (0);
+		return (1);
 	/* XXX XXX there is no way to distinguish this from EDEADLK XXX XXX */
 	if (rc == EBUSY)
-		return (EBUSY);
+		return (0);
 	psc_fatalx("pthread_mutex_trylock: %s", strerror(rc));
 }
 
