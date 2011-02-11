@@ -132,6 +132,7 @@ pfl
     find a way of extracting this part out...
 - when processing .l and .y rules, propagate CFLAGS from the .l FILE var
   into the obj/*.c file var
+- ensure psc_fatal() runs atexit() such as umount
 
 lnet
 - use TLS buffers for libcfs_nid2str() to avoid NUMA contention
