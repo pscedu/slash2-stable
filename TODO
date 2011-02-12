@@ -134,6 +134,7 @@ pfl
   into the obj/*.c file var
 - ensure psc_fatal() runs atexit() such as umount
 - rwlock is broken on bsd
+- hash table walker
 
 lnet
 - use TLS buffers for libcfs_nid2str() to avoid NUMA contention
