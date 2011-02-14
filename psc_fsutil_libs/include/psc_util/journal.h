@@ -83,6 +83,8 @@ struct psc_journal_cursor {
 	 */
 	uint64_t			 pjc_update_seqno;
 	uint64_t			 pjc_reclaim_seqno;
+
+	uint64_t			 pjc_replay_xid;	/* replay progress in case we crash again */
 };
 
 struct psc_journal_hdr {
@@ -102,6 +104,7 @@ struct psc_journal {
 	psc_spinlock_t			 pj_lock;
 	int				 pj_flags;
 	int				 pj_npeers;		/* the number of MDS peers */
+	int				 pj_replay;		/* replay in progress */
 
 	uint32_t			 pj_inuse;
 	uint32_t			 pj_total;
@@ -109,6 +112,7 @@ struct psc_journal {
 
 	uint64_t			 pj_lastxid;		/* last transaction ID used */
 	uint64_t			 pj_commit_txg;		/* committed ZFS transaction group number  */
+	uint64_t			 pj_replay_xid;		/* last transaction ID replay */
 	uint64_t			 pj_distill_xid;	/* last transaction ID distilled */
 	uint64_t			 pj_reclaim_seqno;
 	struct psc_journal_hdr		*pj_hdr;
@@ -228,6 +232,7 @@ void	 pjournal_replay(struct psc_journal *, int, const char *,
 	    psc_replay_handler_t, psc_distill_handler_t);
 
 int	 pjournal_has_peers(struct psc_journal *);
+uint64_t pjournal_next_replay(struct psc_journal *);
 uint64_t pjournal_next_distill(struct psc_journal *);
 uint64_t pjournal_next_reclaim(struct psc_journal *);
 

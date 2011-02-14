@@ -122,6 +122,18 @@ pjournal_has_peers(struct psc_journal *pj)
 }
 
 uint64_t
+pjournal_next_replay(struct psc_journal *pj)
+{
+	uint64_t xid;
+
+	PJ_LOCK(pj);
+	xid = pj->pj_replay_xid;
+	PJ_ULOCK(pj);
+
+	return (xid);
+}
+
+uint64_t
 pjournal_next_distill(struct psc_journal *pj)
 {
 	uint64_t xid;
@@ -574,6 +586,9 @@ pjournal_scan_slots(struct psc_journal *pj)
 				last_xid = pje->pje_xid;
 				last_slot = slot + i;
 			}
+			if (pje->pje_xid <= pj->pj_replay_xid)
+				continue;
+
 			if (((pje->pje_type & PJE_DISTILL) == 0) &&
 			    (pje->pje_txg <= pj->pj_commit_txg))
 				continue;
@@ -1008,18 +1023,28 @@ pjournal_replay(struct psc_journal *pj, int thrtype,
 
 	for (i=0; i < len; i++) {
 		pje = psc_dynarray_getpos(&pj->pj_bufs, i);
+
 		nentries++;
-		if (pje->pje_txg > pj->pj_commit_txg) {
-			rc = replay_handler(pje);
-			if (rc)
-				nerrs++;
-		}
-		/* distill now if need be */
+		/* 
+ 		 * Distill first because it is outside of ZFS and can
+ 		 * be done repeatedly without any issue.
+ 		 */
 		if (pje->pje_xid > pj->pj_distill_xid) {
 			rc = distill_handler(pje, pj->pj_npeers, 1);
 			if (rc)
 				nerrs++;
 		}
+
+		if (pje->pje_txg > pj->pj_commit_txg) {
+			rc = replay_handler(pje);
+			if (rc)
+				nerrs++;
+		}
+
+		PJ_LOCK(pj);
+		pj->pj_replay_xid = pje->pje_xid;
+		PJ_ULOCK(pj);
+
 		psc_free(pje, PAF_LOCK | PAF_PAGEALIGN, PJ_PJESZ(pj));
 	}
 	psc_dynarray_free(&pj->pj_bufs);
