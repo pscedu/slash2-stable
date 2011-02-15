@@ -47,7 +47,7 @@ typedef int (*psc_replay_handler_t)(struct psc_journal_enthdr *);
  * log entries carry information that we might need to preserve a longer
  * time, and outside the journal.
  */
-typedef int (*psc_distill_handler_t)(struct psc_journal_enthdr *, int, int);
+typedef int (*psc_distill_handler_t)(struct psc_journal_enthdr *, uint64_t, int, int);
 
 #define PJRNL_TXG_GET			0
 #define PJRNL_TXG_PUT			1
@@ -218,6 +218,7 @@ struct psc_journal_xidhndl {
 #define	PJX_NONE			      0
 #define	PJX_DISTILL			(1 << 0)
 #define	PJX_WRITTEN			(1 << 1)
+#define	PJX_DISTILL_SYNC		(1 << 2)
 
 /* Actions to be take after the journal log is open */
 #define	PJOURNAL_LOG_DUMP		1

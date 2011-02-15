@@ -303,6 +303,9 @@ pjournal_reserve_slot(struct psc_journal *pj)
 			usleep(100);
 			continue;
 		}
+		if (t->pjx_flags & PJX_DISTILL_SYNC)
+			pj->pj_distill_handler(NULL, t->pjx_xid, pj->pj_npeers, 2);
+
 		pll_remove(&pj->pj_pendingxids, t);
 		freelock(&t->pjx_lock);
 		pjournal_xdestroy(t);
@@ -944,10 +947,11 @@ pjournal_thr_main(struct psc_thread *thr)
 			pll_remove(&pj->pj_distillxids, xh);
 			freelock(&xh->pjx_lock);
 
-			pj->pj_distill_handler(pje, pj->pj_npeers, 0);
+			pj->pj_distill_handler(pje, 0, pj->pj_npeers, 0);
 
 			spinlock(&xh->pjx_lock);
 			xh->pjx_flags &= ~PJX_DISTILL;
+			xh->pjx_flags |= PJX_DISTILL_SYNC;
 			freelock(&xh->pjx_lock);
 
 			psc_assert(xid < xh->pjx_xid);
@@ -1030,7 +1034,7 @@ pjournal_replay(struct psc_journal *pj, int thrtype,
  		 * be done repeatedly without any issue.
  		 */
 		if (pje->pje_xid > pj->pj_distill_xid) {
-			rc = distill_handler(pje, pj->pj_npeers, 1);
+			rc = distill_handler(pje, 0, pj->pj_npeers, 1);
 			if (rc)
 				nerrs++;
 		}
