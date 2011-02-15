@@ -970,6 +970,21 @@ pscfs_reply_open(struct pscfs_req *pfr, void *data, int rflags, int rc)
 			pfr->pfr_fuse_fi->keep_cache = 1;
 		if (rflags & PSCFS_OPENF_DIO)
 			pfr->pfr_fuse_fi->direct_io = 1;
+
+#ifdef HAVE_NO_FUSE_PRIVATE_MMAP
+		/*
+		 * FUSE direct_io does not work with mmap(), which is
+		 * what the kernel uses under the hood when running
+		 * executables, so disable it for this case.
+		 *
+		 * XXX provide some kind of knob to allow direct_io to
+		 * be turned off, exposed to userland (mz/per-process).
+		 */
+		if ((c->fcmh_sstb.sst_mode &
+		    (S_IXUSR | S_IXGRP | S_IXOTH)) == 0)
+			pfr->pfr_fuse_fi->direct_io = 0;
+#endif
+
 		fi_setdata(pfr->pfr_fuse_fi, data);
 		fuse_reply_open(pfr->pfr_fuse_req, pfr->pfr_fuse_fi);
 	}
