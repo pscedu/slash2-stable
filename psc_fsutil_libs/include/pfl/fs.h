@@ -129,7 +129,7 @@ void	pscfs_reply_umount(struct pscfs_req *);
 void	pscfs_reply_unlink(struct pscfs_req *, int);
 void	pscfs_reply_write(struct pscfs_req *, ssize_t, int);
 
-int	pscfs_notify_inval_inode(struct pscfs_req *, pscfs_inum_t, off_t, off_t);
+int	pscfs_notify_inval_entry(struct pscfs_req *, pscfs_inum_t, const char *, size_t);
 
 #define PSCFS_CREATEF_DIO		(1 << 0)
 

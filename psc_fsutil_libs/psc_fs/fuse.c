@@ -76,7 +76,7 @@ struct pscfs_inumcol {
 	pscfs_inum_t		 pfic_pscfs_inum;
 	uint64_t		 pfic_key;		/* fuse inum */
 	psc_atomic32_t		 pfic_refcnt;
-	time_t			 pfic_extime;		/* when fuse expires it */
+	struct timeval		 pfic_extime;		/* when fuse expires it */
 	struct psc_listentry	 pfic_lentry;		/* pool */
 	struct psc_hashent	 pfic_hentry;
 };
@@ -474,17 +474,18 @@ pscfs_getumask(struct pscfs_req *pfr)
 
 #if 0
 int
-pscfs_inum_reclaim(struct psc_poolmgr *m)
+pscfs_inum_reclaim(struct psc_poolmgr *m, int n)
 {
 	time_t now;
 	int nrel = 0;
 
-	now = time(NULL);
+	PFL_GETTIMEVAL(&now);
+	/* XXX start at random position */
 	PSC_HASHTBL_FOREACH_BUCKET(t, b) {
 		psc_hashbkt_lock(b);
 		PSC_HASHBKT_FOREACH_ENTRY(t, b, pfic) {
 			if (pfic->pfic_extime &&
-			    now > pfic->pfic_extime &&
+			    timercmp(&now, &pfic->pfic_extime, >) &&
 			    refcnt == 0)
 				evict
 		}
@@ -524,8 +525,18 @@ pscfs_inum_fuse2pscfs(fuse_ino_t f_inum, int del)
 	return (p_inum);
 }
 
+#define COMPUTE_EXPIRE(tv, timeo)					\
+	do {								\
+		struct timeval _tv;					\
+									\
+		PFL_GETTIMEVAL(tv);					\
+		_tv.tv_sec = (int)(timeo);				\
+		_tv.tv_usec = 1000 * ((timeo) - _tv.tv_sec);		\
+		timeradd((tv), &_tv, (tv));				\
+	} while (0)
+
 fuse_ino_t
-pscfs_inum_pscfs2fuse(pscfs_inum_t p_inum, int timeo)
+pscfs_inum_pscfs2fuse(pscfs_inum_t p_inum, double timeo)
 {
 	struct pscfs_inumcol *pfic, *t;
 	struct psc_hashbkt *b;
@@ -543,12 +554,12 @@ pscfs_inum_pscfs2fuse(pscfs_inum_t p_inum, int timeo)
 			/*
 			 * This faux inum is already in table.  If this
 			 * is for the same real inum, reuse this faux
-			 * inum; otherwise, fallback to a unique
-			 * random value.
+			 * inum; otherwise, fallback to a unique random
+			 * value.
 			 */
 			if (t->pfic_pscfs_inum == p_inum) {
 				psc_atomic32_inc(&t->pfic_refcnt);
-				t->pfic_extime = time(NULL) + timeo;
+				COMPUTE_EXPIRE(&t->pfic_extime, timeo);
 				key = t->pfic_key;
 				t = NULL;
 			} else
@@ -558,7 +569,7 @@ pscfs_inum_pscfs2fuse(pscfs_inum_t p_inum, int timeo)
 			psc_hashent_init(&pscfs_inumcol_hashtbl, pfic);
 			pfic->pfic_pscfs_inum = p_inum;
 			pfic->pfic_key = key;
-			pfic->pfic_extime = time(NULL) + timeo;
+			COMPUTE_EXPIRE(&t->pfic_extime, timeo);
 			psc_atomic32_set(&pfic->pfic_refcnt, 1);
 			psc_hashbkt_add_item(&pscfs_inumcol_hashtbl,
 			    b, pfic);
@@ -1265,12 +1276,13 @@ pscfs_inprocgrouplist(struct pscfs_req *pfr, gid_t gid)
 }
 
 int
-pscfs_notify_inval_inode(struct pscfs_req *pfr, pscfs_inum_t inum,
-    off_t off, off_t len)
+pscfs_notify_inval_entry(struct pscfs_req *pfr, pscfs_inum_t pinum,
+    const char *name, size_t namelen)
 {
 #ifdef HAVE_FUSE_REQ_GETCHANNEL
-	return (fuse_lowlevel_notify_inval_inode(fuse_req_getchannel(
-	    pfr->pfr_fuse_req), inum, off, len));
+	return (fuse_lowlevel_notify_inval_entry(fuse_req_getchannel(
+	    pfr->pfr_fuse_req), INUM_PSCFS2FUSE(pinum, 0.0), name,
+	    namelen));
 #else
 	(void)pfr;
 	(void)inum;
