@@ -109,7 +109,6 @@ struct psc_journal {
 	psc_spinlock_t			 pj_lock;
 	int				 pj_flags;
 	int				 pj_npeers;		/* the number of MDS peers */
-	int				 pj_replay;		/* replay in progress */
 
 	uint32_t			 pj_inuse;
 	uint32_t			 pj_total;
@@ -138,6 +137,7 @@ struct psc_journal {
 #define PJF_WANTBUF			(1 << 0)
 #define PJF_WANTSLOT			(1 << 1)
 #define PJF_ISBLKDEV			(1 << 2)
+#define PJF_REPLAYINPROG		(1 << 3)		/* journal replay in progress */
 
 #define PJE_XID_NONE			0			/* invalid transaction ID */
 #define PJE_MAGIC			UINT32_C(0x4567abcd)

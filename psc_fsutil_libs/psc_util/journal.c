@@ -1005,6 +1005,8 @@ pjournal_replay(struct psc_journal *pj, int thrtype,
 	struct psc_journalthr *pjt;
 	struct psc_thread *thr;
 
+	pj->pj_flags |= PJF_REPLAYINPROG;
+
 	rc = pjournal_scan_slots(pj);
 	if (rc) {
 		rc = 0;
@@ -1071,6 +1073,8 @@ pjournal_replay(struct psc_journal *pj, int thrtype,
 	pjt = thr->pscthr_private;
 	pjt->pjt_pj = pj;
 	pscthr_setready(thr);
+
+	pj->pj_flags &= ~PJF_REPLAYINPROG;
 }
 
 struct psc_lockedlist *
