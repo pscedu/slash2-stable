@@ -33,9 +33,6 @@ struct psc_journal_enthdr;
 #define	PJ_MAX_TRY			3		/* number of retry before giving up */
 #define	PJ_MAX_BUF			1024		/* number of journal buffers to keep around */
 
-#define PJ_LOCK(pj)			spinlock(&(pj)->pj_lock)
-#define PJ_ULOCK(pj)			freelock(&(pj)->pj_lock)
-
 #define PJH_MAGIC			UINT64_C(0x45678912aabbccff)
 #define PJH_VERSION			0x02
 
@@ -92,7 +89,7 @@ struct psc_journal_hdr {
 	uint32_t			 pjh_nents;
 	uint32_t			 pjh_version;
 	int32_t				 pjh_readahead;
-	uint64_t			 pjh_chksum;		/* keep it last and aligned at a 8 byte boundary */
+	uint64_t			 pjh_chksum;		/* keep it last and aligned at a 8-byte boundary */
 #define pjh_iolen pjh_start_off
 };
 
@@ -103,12 +100,12 @@ struct psc_journal {
 	struct psc_listentry		 pj_lentry;
 
 	psc_spinlock_t			 pj_lock;
-	int				 pj_flags;
-	int				 pj_npeers;		/* the number of MDS peers */
+	uint32_t			 pj_flags;
+	uint32_t			 pj_npeers;		/* the number of MDS peers XXX move into slash */
 
-	uint32_t			 pj_inuse;
-	uint32_t			 pj_total;
-	uint32_t			 pj_resrv;
+	uint32_t			 pj_inuse;		/* slots in use */
+	uint32_t			 pj_total;		/* total # slots avail */
+	uint32_t			 pj_resrv;		/* # slots in reserve */
 
 	uint64_t			 pj_lastxid;		/* last transaction ID used */
 	uint64_t			 pj_commit_txg;		/* committed ZFS transaction group number  */
@@ -134,6 +131,14 @@ struct psc_journal {
 #define PJF_WANTSLOT			(1 << 1)
 #define PJF_ISBLKDEV			(1 << 2)
 #define PJF_REPLAYINPROG		(1 << 3)		/* journal replay in progress */
+
+#define PJ_LOCK(pj)			spinlock(&(pj)->pj_lock)
+#define PJ_ULOCK(pj)			freelock(&(pj)->pj_lock)
+
+#define pjournal_has_peers(pj)		(pj)->pj_npeers
+
+#define DEBUG_JOURNAL(lvl, jrnl, fmt, ...)				\
+	psclog((lvl), "journal@%p " fmt, (jrnl), ## __VA_ARGS__)
 
 #define PJE_XID_NONE			0			/* invalid transaction ID */
 #define PJE_MAGIC			UINT32_C(0x4567abcd)
@@ -232,7 +237,6 @@ int	 pjournal_format(const char *, uint32_t, uint32_t, uint32_t);
 void	 pjournal_replay(struct psc_journal *, int, const char *,
 	    psc_replay_handler_t, psc_distill_handler_t);
 
-int	 pjournal_has_peers(struct psc_journal *);
 uint64_t pjournal_next_replay(struct psc_journal *);
 uint64_t pjournal_next_distill(struct psc_journal *);
 uint64_t pjournal_next_reclaim(struct psc_journal *);
@@ -244,5 +248,8 @@ void	*pjournal_get_buf(struct psc_journal *, size_t);
 void	 pjournal_put_buf(struct psc_journal *, void *);
 
 void	 pjournal_add_entry(struct psc_journal *, uint64_t, int, int, void *, int);
+
+struct psc_lockedlist *
+	pfl_journals_get(void);
 
 #endif /* _PFL_JOURNAL_H_ */

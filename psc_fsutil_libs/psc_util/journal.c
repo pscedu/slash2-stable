@@ -222,7 +222,7 @@ pjournal_xnew(struct psc_journal *pj, int distill)
 	INIT_PSC_LISTENTRY(&xh->pjx_dstl_lentry);
 	pjournal_next_xid(pj, xh);
 
-	psc_info("starting a new transaction %p (xid = %"PRIx64") in "
+	psclog_info("starting a new transaction %p (xid=%#"PRIx64") in "
 	    "journal %p distill %d", xh, xh->pjx_xid, pj, distill);
 	return (xh);
 }
@@ -232,6 +232,7 @@ pjournal_xdestroy(struct psc_journal_xidhndl *xh)
 {
 	psc_assert(psclist_disjoint(&xh->pjx_pndg_lentry));
 	psc_assert(psclist_disjoint(&xh->pjx_dstl_lentry));
+	psc_assert(xh->pjx_data == NULL);
 	psc_free(xh, 0);
 }
 
@@ -707,6 +708,9 @@ pjournal_open(const char *fn)
 
 	psc_waitq_init(&pj->pj_waitq);
 	psc_dynarray_init(&pj->pj_bufs);
+
+	pll_add(&pfl_journals, pj);
+
 	return (pj);
  err:
 	psc_free(pjh, PAF_LOCK | PAF_PAGEALIGN, pjhlen);
