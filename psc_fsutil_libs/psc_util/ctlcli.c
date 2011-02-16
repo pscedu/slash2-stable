@@ -257,6 +257,21 @@ psc_ctl_packshow_iostats(char *iostats)
 }
 
 void
+psc_ctl_packshow_journal(char *journal)
+{
+	struct psc_ctlmsg_journal *pcj;
+	int n;
+
+	pcj = psc_ctlmsg_push(PCMT_GETJOURNAL, sizeof(*pcj));
+	if (journal) {
+		n = strlcpy(pcj->pcj_name, journal,
+		    sizeof(pcj->pcj_name));
+		if (n == 0 || n >= (int)sizeof(pcj->pcj_name))
+			errx(1, "invalid journal name: %s", journal);
+	}
+}
+
+void
 psc_ctl_packshow_meter(char *meter)
 {
 	struct psc_ctlmsg_meter *pcm;
@@ -662,12 +677,29 @@ psc_ctlmsg_iostats_prdat(__unusedx const struct psc_ctlmsghdr *mh,
 }
 
 void
+psc_ctlmsg_journal_prhdr(__unusedx struct psc_ctlmsghdr *mh,
+    __unusedx const void *m)
+{
+	printf("%-47s %10s %10s %10s\n",
+	    "journal", "", "", "");
+}
+
+void
+psc_ctlmsg_journal_prdat(__unusedx const struct psc_ctlmsghdr *mh,
+    const void *m)
+{
+	const struct psc_ctlmsg_journal *pcj = m;
+
+	printf("%-47s ", pcj->pcj_name);
+	printf("\n");
+}
+
+void
 psc_ctlmsg_meter_prhdr(__unusedx struct psc_ctlmsghdr *mh,
     __unusedx const void *m)
 {
-	printf("progress-meter\n"
-	    "%30s %13s %8s\n",
-	    "name", "position", "progress");
+	printf("%30s %13s %8s\n",
+	    "progress-meter", "position", "progress");
 }
 
 void

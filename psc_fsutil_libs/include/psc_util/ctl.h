@@ -18,8 +18,8 @@
  */
 
 /*
- * Control interface for querying and modifying
- * parameters of a running daemon instance.
+ * Control interface for querying and modifying parameters of a
+ * running daemon instance.
  */
 
 #ifndef _PFL_CTL_H_
@@ -33,6 +33,7 @@
 #include "psc_rpc/service.h"
 #include "psc_util/fault.h"
 #include "psc_util/iostats.h"
+#include "psc_util/journal.h"
 #include "psc_util/meter.h"
 #include "psc_util/mlist.h"
 #include "psc_util/odtable.h"
@@ -198,6 +199,10 @@ struct psc_ctlmsg_rpcsvc {
 
 #define PCRPCSVC_NAME_ALL	"all"
 
+struct psc_ctlmsg_journal {
+	char			pcj_name[PSCRPC_SVCNAME_MAX];
+};
+
 /* Control message types. */
 #define PCMT_ERROR		0
 #define PCMT_GETLOGLEVEL	1
@@ -215,7 +220,8 @@ struct psc_ctlmsg_rpcsvc {
 #define PCMT_GETODTABLE		13
 #define PCMT_GETRPCSVC		14
 #define PCMT_CMD		15
-#define NPCMT			16
+#define PCMT_GETJOURNAL		16
+#define NPCMT			17
 
 /*
  * Control message header.

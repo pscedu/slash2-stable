@@ -46,12 +46,14 @@ struct psc_ctlmsghdr;
 /* 12 */ { psc_ctlmsg_fault_prhdr,	psc_ctlmsg_fault_prdat,		sizeof(struct psc_ctlmsg_fault),	NULL },				\
 /* 13 */ { psc_ctlmsg_odtable_prhdr,	psc_ctlmsg_odtable_prdat,	sizeof(struct psc_ctlmsg_odtable),	NULL },				\
 /* 14 */ { psc_ctlmsg_rpcsvc_prhdr,	psc_ctlmsg_rpcsvc_prdat,	sizeof(struct psc_ctlmsg_rpcsvc),	NULL },				\
-/* 15 */ { NULL,			NULL,				0,					NULL }
+/* 15 */ { NULL,			NULL,				0,					NULL },				\
+/* 16 */ { psc_ctlmsg_journal_prhdr,	psc_ctlmsg_journal_prdat,	sizeof(struct psc_ctlmsg_journal),	NULL }
 
 #define PSC_CTLSHOW_DEFS						\
 	{ "faults",		psc_ctl_packshow_fault },		\
 	{ "hashtables",		psc_ctl_packshow_hashtable },		\
 	{ "iostats",		psc_ctl_packshow_iostats },		\
+	{ "journals",		psc_ctl_packshow_journal },		\
 	{ "listcaches",		psc_ctl_packshow_listcache },		\
 	{ "loglevels",		psc_ctl_packshow_loglevels },		\
 	{ "meters",		psc_ctl_packshow_meter },		\
@@ -106,6 +108,7 @@ void  psc_ctlparse_show(char *);
 void  psc_ctl_packshow_fault(char *);
 void  psc_ctl_packshow_hashtable(char *);
 void  psc_ctl_packshow_iostats(char *);
+void  psc_ctl_packshow_journal(char *);
 void  psc_ctl_packshow_listcache(char *);
 void  psc_ctl_packshow_loglevels(char *);
 void  psc_ctl_packshow_meter(char *);
@@ -128,6 +131,8 @@ void  psc_ctlmsg_hashtable_prdat(const struct psc_ctlmsghdr *, const void *);
 void  psc_ctlmsg_hashtable_prhdr(struct psc_ctlmsghdr *, const void *);
 void  psc_ctlmsg_iostats_prdat(const struct psc_ctlmsghdr *, const void *);
 void  psc_ctlmsg_iostats_prhdr(struct psc_ctlmsghdr *, const void *);
+void  psc_ctlmsg_journal_prdat(const struct psc_ctlmsghdr *, const void *);
+void  psc_ctlmsg_journal_prhdr(struct psc_ctlmsghdr *, const void *);
 void  psc_ctlmsg_lc_prdat(const struct psc_ctlmsghdr *, const void *);
 void  psc_ctlmsg_lc_prhdr(struct psc_ctlmsghdr *, const void *);
 int   psc_ctlmsg_loglevel_check(struct psc_ctlmsghdr *, const void *);

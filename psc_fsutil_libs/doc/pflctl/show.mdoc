@@ -171,7 +171,7 @@ following:
 .\"		iostats => <<'EOF'
 .\"			.Tn I/O
 .\"			statistics.
-.\"			.Ar iostatspec
+.\"			.Ar subspec
 .\"			has the following format:
 .\"			.Pp
 .\"			.Bd -unfilled -offset indent
@@ -202,6 +202,29 @@ following:
 .\"			is left unspecified, all
 .\"			.Tn I/O
 .\"			statistics will be accessed.
+.\"			EOF
+.\"	) : (),
+.\"	(exists $DATA->{journals}) ? (
+.\"		journals => <<'EOF'
+.\"			Journal statistics.
+.\"			.Ar subspec
+.\"			has the following format:
+.\"			.Pp
+.\"			.Bd -unfilled -offset indent
+.\"			.Ar journal Ns Op , Ns Ar ...
+.\"			.Ed
+.\"			.Pp
+.\"			.Ar journal
+.\"			may be one of the following:
+.\"			.Pp
+.\"			.Bl -tag -compact -offset indent -width Ds
+.\"			EOF
+.\"		  . build_list(%{ $DATA->{journals} }) . <<'EOF'
+.\"			.El
+.\"			.Pp
+.\"			If
+.\"			.Ar subspec
+.\"			is left unspecified, all journals will be accessed.
 .\"			EOF
 .\"	) : ()
 .\" }%
