@@ -614,7 +614,7 @@ pjournal_scan_slots(struct psc_journal *pj)
 	psc_info("Journal statistics: %d close, %d open, %d magic, "
 	    "%d chksum, %d scan, %d total",
 	    nclose, nopen, nmagic, nchksum, nscan, pj->pj_total);
-	psc_notify("The last transaction ID used is %"PRIx64, pj->pj_lastxid); 
+	psc_notify("The last transaction ID used is %"PRIx64, pj->pj_lastxid);
 	return (rc);
 }
 
@@ -922,7 +922,7 @@ pjournal_thr_main(struct psc_thread *thr)
 			psclog_notify("xh=%p xh->pjx_flags=%d", xh, xh->pjx_flags);
 			spinlock(&xh->pjx_lock);
 			psc_assert(xh->pjx_flags & PJX_DISTILL);
-			
+
 			if (!(xh->pjx_flags & PJX_WRITTEN)) {
 				freelock(&xh->pjx_lock);
 				break;
@@ -1015,10 +1015,10 @@ pjournal_replay(struct psc_journal *pj, int thrtype,
 		pje = psc_dynarray_getpos(&pj->pj_bufs, i);
 
 		nentries++;
-		/* 
- 		 * Distill first because it is outside of ZFS and can
- 		 * be done repeatedly without any issue.
- 		 */
+		/*
+		 * Distill first because it is outside of ZFS and can
+		 * be done repeatedly without any issue.
+		 */
 		if (pje->pje_xid > pj->pj_distill_xid) {
 			rc = distill_handler(pje, 0, pj->pj_npeers, 1);
 			if (rc)
