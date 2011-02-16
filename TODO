@@ -133,7 +133,7 @@ pfl
 - when processing .l and .y rules, propagate CFLAGS from the .l FILE var
   into the obj/*.c file var
 - ensure psc_fatal() runs atexit() such as umount
-- rwlock is broken on bsd
+- libpthread rwlock is broken on openbsd!
 - hash table walker
 
 lnet
