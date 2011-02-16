@@ -451,11 +451,13 @@ listsrcs: recurse-listsrcs
 		echo "${_TSRCS}";							\
 	fi
 
-runtest: recurse-runtest
+test-hook:
 	@if [ -n "${TEST}" ]; then							\
 		echo "./${TEST}";							\
 		./${TEST} ${TESTOPTS} || exit 1;					\
 	fi
+
+runtest: recurse-runtest test-hook
 
 maketest: recurse-maketest ${TEST}
 
