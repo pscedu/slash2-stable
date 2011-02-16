@@ -210,6 +210,7 @@ main(int argc, char *argv[])
 	PRTYPE(struct psc_ctlmsg_fault);
 	PRTYPE(struct psc_ctlmsg_hashtable);
 	PRTYPE(struct psc_ctlmsg_iostats);
+	PRTYPE(struct psc_ctlmsg_journal);
 	PRTYPE(struct psc_ctlmsg_lc);
 	PRTYPE(struct psc_ctlmsg_loglevel);
 	PRTYPE(struct psc_ctlmsg_meter);
