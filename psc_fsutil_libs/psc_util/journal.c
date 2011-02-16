@@ -840,10 +840,9 @@ pjournal_dump(const char *fn, int verbose)
 	    "  entsize %u\n"
 	    "  nents %u\n"
 	    "  version %u\n"
-	    "  options %u\n"
 	    "  readahead %u\n"
 	    "  start_offset %#"PRIx64"\n",
-	    fn, PJ_PJESZ(pj), pjh->pjh_nents, pjh->pjh_version, pjh->pjh_options,
+	    fn, PJ_PJESZ(pj), pjh->pjh_nents, pjh->pjh_version,
 	    pjh->pjh_readahead, pjh->pjh_start_off);
 
 	jbuf = pjournal_alloc_buf(pj);

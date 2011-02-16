@@ -39,8 +39,6 @@ struct psc_journal_enthdr;
 #define PJH_MAGIC			UINT64_C(0x45678912aabbccff)
 #define PJH_VERSION			0x02
 
-#define PJH_OPT_NONE			0x00
-
 typedef int (*psc_replay_handler_t)(struct psc_journal_enthdr *);
 /*
  * Distill handler is used to further process certain log entries.  These
@@ -93,9 +91,7 @@ struct psc_journal_hdr {
 	int32_t				 pjh_entsz;
 	uint32_t			 pjh_nents;
 	uint32_t			 pjh_version;
-	uint32_t			 pjh_options;
 	int32_t				 pjh_readahead;
-	uint32_t			 pjh__pad;
 	uint64_t			 pjh_chksum;		/* keep it last and aligned at a 8 byte boundary */
 #define pjh_iolen pjh_start_off
 };
