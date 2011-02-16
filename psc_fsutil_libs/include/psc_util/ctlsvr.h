@@ -89,6 +89,7 @@ int	psc_ctlmsg_send(int, int, int, size_t, const void *);
 int	psc_ctlrep_getfault(int, struct psc_ctlmsghdr *, void *);
 int	psc_ctlrep_gethashtable(int, struct psc_ctlmsghdr *, void *);
 int	psc_ctlrep_getiostats(int, struct psc_ctlmsghdr *, void *);
+int	psc_ctlrep_getjournal(int, struct psc_ctlmsghdr *, void *);
 int	psc_ctlrep_getlc(int, struct psc_ctlmsghdr *, void *);
 int	psc_ctlrep_getloglevel(int, struct psc_ctlmsghdr *, void *);
 int	psc_ctlrep_getmeter(int, struct psc_ctlmsghdr *, void *);
