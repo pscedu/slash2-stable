@@ -218,8 +218,8 @@ pjournal_xnew(struct psc_journal *pj, int distill)
 	INIT_SPINLOCK(&xh->pjx_lock);
 	xh->pjx_flags = distill ? PJX_DISTILL : PJX_NONE;
 	xh->pjx_slot = PJX_SLOT_ANY;
-	INIT_PSC_LISTENTRY(&xh->pjx_lentry1);
-	INIT_PSC_LISTENTRY(&xh->pjx_lentry2);
+	INIT_PSC_LISTENTRY(&xh->pjx_pndg_lentry);
+	INIT_PSC_LISTENTRY(&xh->pjx_dstl_lentry);
 	pjournal_next_xid(pj, xh);
 
 	psc_info("starting a new transaction %p (xid = %"PRIx64") in "
@@ -230,8 +230,8 @@ pjournal_xnew(struct psc_journal *pj, int distill)
 void
 pjournal_xdestroy(struct psc_journal_xidhndl *xh)
 {
-	psc_assert(psclist_disjoint(&xh->pjx_lentry1));
-	psc_assert(psclist_disjoint(&xh->pjx_lentry2));
+	psc_assert(psclist_disjoint(&xh->pjx_pndg_lentry));
+	psc_assert(psclist_disjoint(&xh->pjx_dstl_lentry));
 	psc_free(xh, 0);
 }
 
@@ -701,9 +701,9 @@ pjournal_open(const char *fn)
 	pj->pj_total = pj->pj_hdr->pjh_nents;
 
 	pll_init(&pj->pj_pendingxids, struct psc_journal_xidhndl,
-	    pjx_lentry1, &pj->pj_lock);
+	    pjx_pndg_lentry, &pj->pj_lock);
 	pll_init(&pj->pj_distillxids, struct psc_journal_xidhndl,
-	    pjx_lentry2, NULL);
+	    pjx_dstl_lentry, NULL);
 
 	psc_waitq_init(&pj->pj_waitq);
 	psc_dynarray_init(&pj->pj_bufs);

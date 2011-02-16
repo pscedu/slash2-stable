@@ -153,7 +153,7 @@ struct psc_journal {
 #define _PJE_FLSHFT			(1 << 3)		/* denote the last used bit */
 
 /*
- * psc_journal_enthdr - journal entry header.
+ * psc_journal_enthdr - Journal entry header.
  * @pje_magic: validity check.
  * @pje_type: app-specific log entry type.
  * @pje_xid: journal transaction id.
@@ -205,19 +205,19 @@ struct psc_journal_enthdr {
  * @pjx_lock: serialize.
  * @pjx_pj: backpointer to our journal.
  */
-#define	PJX_SLOT_ANY			(~0U)
-
 struct psc_journal_xidhndl {
 	uint64_t			 pjx_txg;		/* associated ZFS transaction group number */
 	uint64_t			 pjx_xid;		/* debugging only */
 	uint32_t			 pjx_slot;
 	uint32_t			 pjx_flags;
-	struct psclist_head		 pjx_lentry1;		/* pending transaction list - ordered by slot number assigned */
-	struct psclist_head		 pjx_lentry2;		/* distill transaction list - ordered by transaction ID */
+	struct psclist_head		 pjx_pndg_lentry;	/* pending transaction list - ordered by slot number assigned */
+	struct psclist_head		 pjx_dstl_lentry;	/* distill transaction list - ordered by transaction ID */
 	psc_spinlock_t			 pjx_lock;
 	struct psc_journal		*pjx_pj;
 	void				*pjx_data;
 };
+
+#define	PJX_SLOT_ANY			(~0U)
 
 #define	PJX_NONE			      0
 #define	PJX_DISTILL			(1 << 0)
