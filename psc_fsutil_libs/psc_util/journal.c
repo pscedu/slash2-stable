@@ -696,6 +696,7 @@ pjournal_open(const char *fn)
 	 * filled after log replay.
 	 */
 	INIT_SPINLOCK(&pj->pj_lock);
+	INIT_LISTENTRY(&pj->pj_lentry);
 
 	pj->pj_inuse = 0;
 	pj->pj_resrv = 0;
