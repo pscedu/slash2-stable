@@ -43,22 +43,23 @@ struct psc_ctlparam_node;
 
 /* default control operations shared by all controllable daemons */
 #define PSC_CTLDEFOPS								\
-/*  0 */ { NULL,			0 },					\
-/*  1 */ { psc_ctlrep_getloglevel,	sizeof(struct psc_ctlmsg_loglevel) },	\
-/*  2 */ { psc_ctlrep_getlc,		sizeof(struct psc_ctlmsg_lc) },		\
-/*  3 */ { psc_ctlrep_getthread,	sizeof(struct psc_ctlmsg_thread) },	\
-/*  4 */ { psc_ctlrep_getsubsys,	0 },					\
-/*  5 */ { psc_ctlrep_gethashtable,	sizeof(struct psc_ctlmsg_hashtable) },	\
-/*  6 */ { psc_ctlrep_param,		sizeof(struct psc_ctlmsg_param) },	\
-/*  7 */ { psc_ctlrep_param,		sizeof(struct psc_ctlmsg_param) },	\
-/*  8 */ { psc_ctlrep_getiostats,	sizeof(struct psc_ctlmsg_iostats) },	\
-/*  9 */ { psc_ctlrep_getmeter,		sizeof(struct psc_ctlmsg_meter) },	\
-/* 10 */ { psc_ctlrep_getpool,		sizeof(struct psc_ctlmsg_pool) },	\
-/* 11 */ { psc_ctlrep_getmlist,		sizeof(struct psc_ctlmsg_mlist) },	\
-/* 12 */ { psc_ctlrep_getfault,		sizeof(struct psc_ctlmsg_fault) },	\
-/* 13 */ { psc_ctlrep_getodtable,	sizeof(struct psc_ctlmsg_odtable) },	\
-/* 14 */ { psc_ctlrep_getrpcsvc,	sizeof(struct psc_ctlmsg_rpcsvc) },	\
-/* 15 */ { psc_ctlhnd_cmd,		sizeof(struct psc_ctlmsg_cmd) }
+	{ NULL,				0 },					\
+	{ psc_ctlhnd_cmd,		sizeof(struct psc_ctlmsg_cmd) },	\
+	{ psc_ctlrep_getfault,		sizeof(struct psc_ctlmsg_fault) },	\
+	{ psc_ctlrep_gethashtable,	sizeof(struct psc_ctlmsg_hashtable) },	\
+	{ psc_ctlrep_getiostats,	sizeof(struct psc_ctlmsg_iostats) },	\
+	{ psc_ctlrep_getjournal,	sizeof(struct psc_ctlmsg_journal) },	\
+	{ psc_ctlrep_getlc,		sizeof(struct psc_ctlmsg_lc) },		\
+	{ psc_ctlrep_getloglevel,	sizeof(struct psc_ctlmsg_loglevel) },	\
+	{ psc_ctlrep_getmeter,		sizeof(struct psc_ctlmsg_meter) },	\
+	{ psc_ctlrep_getmlist,		sizeof(struct psc_ctlmsg_mlist) },	\
+	{ psc_ctlrep_getodtable,	sizeof(struct psc_ctlmsg_odtable) },	\
+	{ psc_ctlrep_param,		sizeof(struct psc_ctlmsg_param) },	\
+	{ psc_ctlrep_getpool,		sizeof(struct psc_ctlmsg_pool) },	\
+	{ psc_ctlrep_getrpcsvc,		sizeof(struct psc_ctlmsg_rpcsvc) },	\
+	{ psc_ctlrep_getsubsys,		0 },					\
+	{ psc_ctlrep_getthread,		sizeof(struct psc_ctlmsg_thread) },	\
+	{ psc_ctlrep_param,		sizeof(struct psc_ctlmsg_param) }
 
 struct psc_ctlacthr {
 	int		pcat_sock;

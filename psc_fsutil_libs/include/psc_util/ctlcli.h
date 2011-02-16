@@ -31,23 +31,23 @@ struct psc_ctlmsghdr;
 #define PSC_CTL_DISPLAY_WIDTH	80
 
 #define PSC_CTLMSG_PRFMT_DEFS															\
-/*  0 */ { NULL,			psc_ctlmsg_error_prdat,		sizeof(struct psc_ctlmsg_error),	NULL },				\
-/*  1 */ { psc_ctlmsg_loglevel_prhdr,	psc_ctlmsg_loglevel_prdat,	0,					psc_ctlmsg_loglevel_check },	\
-/*  2 */ { psc_ctlmsg_lc_prhdr,		psc_ctlmsg_lc_prdat,		sizeof(struct psc_ctlmsg_lc),		NULL },				\
-/*  3 */ { psc_ctlmsg_thread_prhdr,	psc_ctlmsg_thread_prdat,	sizeof(struct psc_ctlmsg_thread),	NULL },				\
-/*  4 */ { NULL,			NULL,				0,					psc_ctlmsg_subsys_check },	\
-/*  5 */ { psc_ctlmsg_hashtable_prhdr,	psc_ctlmsg_hashtable_prdat,	sizeof(struct psc_ctlmsg_hashtable),	NULL },				\
-/*  6 */ { psc_ctlmsg_param_prhdr,	psc_ctlmsg_param_prdat,		sizeof(struct psc_ctlmsg_param),	NULL },				\
-/*  7 */ { NULL,			NULL,				0,					NULL },				\
-/*  8 */ { psc_ctlmsg_iostats_prhdr,	psc_ctlmsg_iostats_prdat,	sizeof(struct psc_ctlmsg_iostats),	NULL },				\
-/*  9 */ { psc_ctlmsg_meter_prhdr,	psc_ctlmsg_meter_prdat,		sizeof(struct psc_ctlmsg_meter),	NULL },				\
-/* 10 */ { psc_ctlmsg_pool_prhdr,	psc_ctlmsg_pool_prdat,		sizeof(struct psc_ctlmsg_pool),		NULL },				\
-/* 11 */ { psc_ctlmsg_mlist_prhdr,	psc_ctlmsg_mlist_prdat,		sizeof(struct psc_ctlmsg_mlist),	NULL },				\
-/* 12 */ { psc_ctlmsg_fault_prhdr,	psc_ctlmsg_fault_prdat,		sizeof(struct psc_ctlmsg_fault),	NULL },				\
-/* 13 */ { psc_ctlmsg_odtable_prhdr,	psc_ctlmsg_odtable_prdat,	sizeof(struct psc_ctlmsg_odtable),	NULL },				\
-/* 14 */ { psc_ctlmsg_rpcsvc_prhdr,	psc_ctlmsg_rpcsvc_prdat,	sizeof(struct psc_ctlmsg_rpcsvc),	NULL },				\
-/* 15 */ { NULL,			NULL,				0,					NULL },				\
-/* 16 */ { psc_ctlmsg_journal_prhdr,	psc_ctlmsg_journal_prdat,	sizeof(struct psc_ctlmsg_journal),	NULL }
+	{ NULL,				psc_ctlmsg_error_prdat,		sizeof(struct psc_ctlmsg_error),	NULL },				\
+	{ NULL,				NULL,				0,					NULL },				\
+	{ psc_ctlmsg_fault_prhdr,	psc_ctlmsg_fault_prdat,		sizeof(struct psc_ctlmsg_fault),	NULL },				\
+	{ psc_ctlmsg_hashtable_prhdr,	psc_ctlmsg_hashtable_prdat,	sizeof(struct psc_ctlmsg_hashtable),	NULL },				\
+	{ psc_ctlmsg_iostats_prhdr,	psc_ctlmsg_iostats_prdat,	sizeof(struct psc_ctlmsg_iostats),	NULL },				\
+	{ psc_ctlmsg_journal_prhdr,	psc_ctlmsg_journal_prdat,	sizeof(struct psc_ctlmsg_journal),	NULL },				\
+	{ psc_ctlmsg_lc_prhdr,		psc_ctlmsg_lc_prdat,		sizeof(struct psc_ctlmsg_lc),		NULL },				\
+	{ psc_ctlmsg_loglevel_prhdr,	psc_ctlmsg_loglevel_prdat,	0,					psc_ctlmsg_loglevel_check },	\
+	{ psc_ctlmsg_meter_prhdr,	psc_ctlmsg_meter_prdat,		sizeof(struct psc_ctlmsg_meter),	NULL },				\
+	{ psc_ctlmsg_mlist_prhdr,	psc_ctlmsg_mlist_prdat,		sizeof(struct psc_ctlmsg_mlist),	NULL },				\
+	{ psc_ctlmsg_odtable_prhdr,	psc_ctlmsg_odtable_prdat,	sizeof(struct psc_ctlmsg_odtable),	NULL },				\
+	{ psc_ctlmsg_param_prhdr,	psc_ctlmsg_param_prdat,		sizeof(struct psc_ctlmsg_param),	NULL },				\
+	{ psc_ctlmsg_pool_prhdr,	psc_ctlmsg_pool_prdat,		sizeof(struct psc_ctlmsg_pool),		NULL },				\
+	{ psc_ctlmsg_rpcsvc_prhdr,	psc_ctlmsg_rpcsvc_prdat,	sizeof(struct psc_ctlmsg_rpcsvc),	NULL },				\
+	{ NULL,				NULL,				0,					psc_ctlmsg_subsys_check },	\
+	{ psc_ctlmsg_thread_prhdr,	psc_ctlmsg_thread_prdat,	sizeof(struct psc_ctlmsg_thread),	NULL },				\
+	{ NULL,				NULL,				0,					NULL }
 
 #define PSC_CTLSHOW_DEFS						\
 	{ "faults",		psc_ctl_packshow_fault },		\
