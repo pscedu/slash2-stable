@@ -2,7 +2,7 @@
 /*
  * %PSC_START_COPYRIGHT%
  * -----------------------------------------------------------------------------
- * Copyright (c) 2006-2011, Pittsburgh Supercomputing Center (PSC).
+ * Copyright (c) 2007-2011, Pittsburgh Supercomputing Center (PSC).
  *
  * Permission to use, copy, and modify this software and its documentation
  * without fee for personal use or non-commercial use within your organization
@@ -56,8 +56,8 @@ typedef int (*psc_distill_handler_t)(struct psc_journal_enthdr *, uint64_t, int,
 #define PJRNL_CURSOR_VERSION		1
 
 /*
- * The cursor, stored on disk, is used to remember where we are in terms of 
- * processing the log entries.  In addition, this file lives in ZFS, so we 
+ * The cursor, stored on disk, is used to remember where we are in terms of
+ * processing the log entries.  In addition, this file lives in ZFS, so we
  * don't need do any checksum.
  */
 struct psc_journal_cursor {
@@ -100,7 +100,12 @@ struct psc_journal_hdr {
 #define pjh_iolen pjh_start_off
 };
 
+#define PJ_NAME_MAX			32
+
 struct psc_journal {
+	char				 pj_name[PJ_NAME_MAX];
+	struct psc_listentry		 pj_lentry;
+
 	psc_spinlock_t			 pj_lock;
 	int				 pj_flags;
 	int				 pj_npeers;		/* the number of MDS peers */
