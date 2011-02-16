@@ -119,7 +119,6 @@ struct psc_journal {
 	uint64_t			 pj_commit_txg;		/* committed ZFS transaction group number  */
 	uint64_t			 pj_replay_xid;		/* last transaction ID replay */
 	uint64_t			 pj_distill_xid;	/* last transaction ID distilled */
-	uint64_t			 pj_reclaim_seqno;
 	struct psc_journal_hdr		*pj_hdr;
 
 	struct psc_lockedlist		 pj_pendingxids;
@@ -130,7 +129,7 @@ struct psc_journal {
 	uint32_t			 pj_nextwrite;		/* next entry slot to write to */
 	psc_distill_handler_t		 pj_distill_handler;
 	int				 pj_fd;			/* file descriptor to backing disk file */
-	void				*pj_txg_state;
+
 	struct psc_iostats		 pj_rdist;		/* read I/O stats */
 	struct psc_iostats		 pj_wrist;		/* write I/O stats */
 };
