@@ -200,7 +200,20 @@ struct psc_ctlmsg_rpcsvc {
 #define PCRPCSVC_NAME_ALL	"all"
 
 struct psc_ctlmsg_journal {
-	char			pcj_name[PSCRPC_SVCNAME_MAX];
+	char			pcj_name[PJ_NAME_MAX];
+	uint32_t		pcj_flags;
+	uint32_t		pcj_inuse;
+	uint32_t		pcj_total;
+	uint32_t		pcj_resrv;
+	uint64_t		pcj_lastxid;
+	uint64_t		pcj_commit_txg;
+	uint64_t		pcj_replay_xid;
+	uint64_t		pcj_dstl_xid;
+	uint32_t		pcj_pndg_xids_cnt;
+	uint32_t		pcj_dstl_xids_cnt;
+	uint32_t		pcj_bufs_cnt;
+	uint32_t		pcj_nwaiters;
+	uint32_t		pcj_nextwrite;
 };
 
 /* Control message types. */

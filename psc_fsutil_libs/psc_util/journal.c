@@ -28,6 +28,7 @@
 #include <unistd.h>
 
 #include "pfl/fcntl.h"
+#include "pfl/str.h"
 #include "pfl/time.h"
 #include "pfl/types.h"
 #include "psc_ds/dynarray.h"
@@ -54,6 +55,8 @@ __static int		pjournal_logwrite_internal(struct psc_journal *,
 
 struct psc_waitq	pjournal_waitq = PSC_WAITQ_INIT;
 psc_spinlock_t		pjournal_waitqlock = SPINLOCK_INIT;
+struct psc_lockedlist	pfl_journals = PLL_INIT(&pfl_journals,
+				struct psc_journal, pj_lentry);
 
 #define JIO_READ	0
 #define JIO_WRITE	1
@@ -63,7 +66,11 @@ psc_spinlock_t		pjournal_waitqlock = SPINLOCK_INIT;
 
 /**
  * psc_journal_io - Perform a low-level I/O operation on the journal store.
- * @pj: the owning journal.
+ * @pj: the journal.
+ * @p: data.
+ * @p: length of I/O.
+ * @p: offset into backing store.
+ * @rw: read or write.
  */
 __static int
 psc_journal_io(struct psc_journal *pj, void *p, size_t len, off_t off,
@@ -626,6 +633,9 @@ pjournal_open(const char *fn)
 	ssize_t pjhlen;
 
 	pj = PSCALLOC(sizeof(*pj));
+
+	strlcpy(pj->pj_name, pfl_basename(fn), sizeof(pj->pj_name));
+
 	pj->pj_fd = open(fn, O_RDWR | O_DIRECT);
 	if (pj->pj_fd == -1)
 		psc_fatal("failed to open journal %s", fn);
@@ -1058,4 +1068,10 @@ pjournal_replay(struct psc_journal *pj, int thrtype,
 	pjt = thr->pscthr_private;
 	pjt->pjt_pj = pj;
 	pscthr_setready(thr);
+}
+
+struct psc_lockedlist *
+pfl_journals_get(void)
+{
+	return (&pfl_journals);
 }

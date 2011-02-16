@@ -680,8 +680,12 @@ void
 psc_ctlmsg_journal_prhdr(__unusedx struct psc_ctlmsghdr *mh,
     __unusedx const void *m)
 {
-	printf("%-47s %10s %10s %10s\n",
-	    "journal", "", "", "");
+	printf("%-10s %4s %6s %6s %6s "
+	    "%16s %16s %16s %16s"
+	    "%4s %4s %4s %4s %6s\n",
+	    "journal", "flag", "inuse", "total", "reserv",
+	    "last-xid", "commit-txg", "replay-xid", "distill-xid",
+	    "pndg", "dstl", "#buf", "#wtq", "nxtslt");
 }
 
 void
@@ -690,8 +694,21 @@ psc_ctlmsg_journal_prdat(__unusedx const struct psc_ctlmsghdr *mh,
 {
 	const struct psc_ctlmsg_journal *pcj = m;
 
-	printf("%-47s ", pcj->pcj_name);
-	printf("\n");
+	printf("%-10s %c%c%c%c %6u %6u %6u "
+	    "%"PRIx64" %"PRIx64" "
+	    "%"PRIx64" %"PRIx64" "
+	    "%4u %4u %4u %4u %6d\n",
+	    pcj->pcj_name,
+	    pcj->pcj_flags & PJF_WANTBUF	? 'B' : '-',
+	    pcj->pcj_flags & PJF_WANTSLOT	? 'S' : '-',
+	    pcj->pcj_flags & PJF_ISBLKDEV	? 'B' : '-',
+	    pcj->pcj_flags & PJF_REPLAY_INPROG	? 'R' : '-',
+	    pcj->pcj_inuse, pcj->pcj_total, pcj->pcj_resrv,
+	    pcj->pcj_lastxid, pcj->pcj_commit_txg,
+	    pcj->pcj_replay_xid, pcj->pcj_dstl_xid,
+	    pcj->pcj_pndg_xids_cnt, pcj->pcj_dstl_xids_cnt,
+	    pcj->pcj_bufs_cnt, pcj->pcj_nwaiters,
+	    pcj->pcj_nextwrite);
 }
 
 void
