@@ -680,12 +680,11 @@ void
 psc_ctlmsg_journal_prhdr(__unusedx struct psc_ctlmsghdr *mh,
     __unusedx const void *m)
 {
-	printf("%-10s %4s %6s %6s %6s "
-	    "%16s %16s %16s %16s"
-	    "%4s %4s %4s %4s %6s\n",
-	    "journal", "flag", "inuse", "total", "reserv",
-	    "last-xid", "commit-txg", "replay-xid", "distill-xid",
-	    "pndg", "dstl", "#buf", "#wtq", "nxtslt");
+	printf("%-10s %4s %4s %6s %3s "
+	    "%13s %13s %13s %6s\n",
+	    "journal", "flag", "used", "total", "rsv",
+	    "last-xid", "commit-txg", "distill-xid",
+	    "nxtslt");
 }
 
 void
@@ -694,20 +693,16 @@ psc_ctlmsg_journal_prdat(__unusedx const struct psc_ctlmsghdr *mh,
 {
 	const struct psc_ctlmsg_journal *pcj = m;
 
-	printf("%-10s %c%c%c%c %6u %6u %6u "
-	    "%"PRIx64" %"PRIx64" "
-	    "%"PRIx64" %"PRIx64" "
-	    "%4u %4u %4u %4u %6d\n",
+	printf("%-10s %c%c%c%c %4u %6u %3u "
+	    "%13"PRIx64" %13"PRIx64" %13"PRIx64" "
+	    "%6d\n",
 	    pcj->pcj_name,
 	    pcj->pcj_flags & PJF_WANTBUF	? 'B' : '-',
 	    pcj->pcj_flags & PJF_WANTSLOT	? 'S' : '-',
 	    pcj->pcj_flags & PJF_ISBLKDEV	? 'B' : '-',
 	    pcj->pcj_flags & PJF_REPLAYINPROG	? 'R' : '-',
 	    pcj->pcj_inuse, pcj->pcj_total, pcj->pcj_resrv,
-	    pcj->pcj_lastxid, pcj->pcj_commit_txg,
-	    pcj->pcj_replay_xid, pcj->pcj_dstl_xid,
-	    pcj->pcj_pndg_xids_cnt, pcj->pcj_dstl_xids_cnt,
-	    pcj->pcj_bufs_cnt, pcj->pcj_nwaiters,
+	    pcj->pcj_lastxid, pcj->pcj_commit_txg, pcj->pcj_dstl_xid,
 	    pcj->pcj_nextwrite);
 }
 
