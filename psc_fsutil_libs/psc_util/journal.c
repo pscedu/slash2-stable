@@ -152,19 +152,19 @@ pjournal_next_xid(struct psc_journal *pj, struct psc_journal_xidhndl *xh)
 	do {
 		xh->pjx_xid = ++pj->pj_lastxid;
 	} while (xh->pjx_xid == PJE_XID_NONE);
+
 	/*
 	 * Make sure that transactions appear on the distill list in strict
 	 * order.  That way we can get accurate information about the lowest
 	 * xid that has been distilled.
 	 *
 	 * If we add to the list after the transaction is written, the order
-	 * may not be guaranteed, as I said above.
+	 * may not be guaranteed, as mentioned above.
 	 */
 	if (xh->pjx_flags & PJX_DISTILL)
 		pll_addtail(&pj->pj_distillxids, xh);
 	PJ_ULOCK(pj);
 }
-
 
 /**
  * pjournal_next_slot - Determine where to write the transaction's log.
@@ -414,9 +414,8 @@ pjournal_logwrite_internal(struct psc_journal *pj,
 	return (0);
 }
 
-
 /**
- * pjournal_logwrite - store a new entry in a journal transaction.
+ * pjournal_logwrite - Store a new entry in a journal transaction.
  * @xh: the transaction to receive the log entry.
  * @type: the application-specific log entry type.
  * @data: the journal entry contents to store.
@@ -734,7 +733,6 @@ pjournal_release(struct psc_journal *pj)
  * @fn: file path to store journal.
  * @nents: number of entries journal may contain.
  * @entsz: size of a journal entry.
- * @ra: number of entries to operate on in one disk I/O operation.
  * Returns 0 on success, errno on error.
  */
 int
@@ -945,8 +943,10 @@ pjournal_thr_main(struct psc_thread *thr)
 
 			pjournal_put_buf(pj, PJE_DATA(pje));
 		}
+
 		/*
-		 * Free committed pending transactions to avoid hogging memory.
+		 * Free committed pending transactions to avoid hogging
+		 * memory.
 		 */
 		PJ_LOCK(pj);
 
@@ -1040,7 +1040,7 @@ pjournal_replay(struct psc_journal *pj, int thrtype,
 	psc_dynarray_free(&pj->pj_bufs);
 
 	/*
-	 * Make the current replay in effect. Otherwise, a crash may
+	 * Make the current replay in effect.  Otherwise, a crash may
 	 * lose previous work.
 	 */
 	zfsslash2_wait_synced(0);

@@ -18,8 +18,8 @@
  */
 
 /*
- * Control interface for querying and modifying parameters of a
- * running daemon instance.
+ * Control interface for querying and modifying parameters of a running
+ * daemon instance.
  */
 
 #include <sys/types.h>
@@ -1648,7 +1648,6 @@ psc_ctlacthr_main(struct psc_thread *thr)
 {
 	int s, fd;
 
-	/* Create control socket. */
 	s = psc_ctlacthr(thr)->pcat_sock;
 	for (;;) {
 		fd = accept(s, NULL, NULL);
@@ -1721,11 +1720,13 @@ psc_ctlthr_main(const char *ofn, const struct psc_ctlop *ct, int nops,
 	    S_IROTH | S_IWOTH) == -1)
 		psc_fatal("chmod %s", sun.sun_path); /* XXX errno */
 
-	/* Serve client connections. */
 	if (listen(s, QLEN) == -1)
 		psc_fatal("listen");
 
-	/* Spawn a thread to separate processing from acceptor. */
+	/*
+	 * Spawn a servicing thread to separate processing from acceptor
+	 * and to multiplex between clients for fairness.
+	 */
 	thr = pscthr_init(acthrtype, 0, psc_ctlacthr_main,
 	    NULL, sizeof(struct psc_ctlacthr), "%.*sctlacthr",
 	    p - me->pscthr_name, me->pscthr_name);
