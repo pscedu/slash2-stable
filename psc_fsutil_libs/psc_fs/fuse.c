@@ -1285,9 +1285,9 @@ pscfs_notify_inval_entry(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	    namelen));
 #else
 	(void)pfr;
-	(void)inum;
-	(void)off;
-	(void)len;
+	(void)pinum;
+	(void)name;
+	(void)namelen;
 	return (-ENOTSUP);
 #endif
 }
