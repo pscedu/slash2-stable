@@ -3,7 +3,7 @@
 Show values.
 .Ar showspec
 has the following format:
-.Bd -unfilled -offset indent
+.Bd -unfilled -offset 3n
 .Sm off
 .Ar param
 .Op : Ar subspec
@@ -21,7 +21,7 @@ following:
 .\"			Thread logging levels.
 .\"			.Ar subspec
 .\"			has the following format:
-.\"			.Bd -unfilled -offset indent
+.\"			.Bd -unfilled -offset 3n
 .\"			.Ar thread Ns Op , Ns Ar ...
 .\"			.Ed
 .\"			.Pp
@@ -37,7 +37,7 @@ following:
 .\"			Daemon thread activity and statistics.
 .\"			.Ar subspec
 .\"			has the following format:
-.\"			.Bd -unfilled -offset indent
+.\"			.Bd -unfilled -offset 3n
 .\"			.Ar thread Ns Op , Ns Ar ...
 .\"			.Ed
 .\"			.Pp
@@ -57,14 +57,14 @@ following:
 .\"			Memory pool statistics.
 .\"			.Ar subspec
 .\"			has the following format:
-.\"			.Bd -unfilled -offset indent
+.\"			.Bd -unfilled -offset 3n
 .\"			.Ar pool Ns Op , Ns Ar ...
 .\"			.Ed
 .\"			.Pp
 .\"			.Ar pool
 .\"			may be one of the following:
 .\"			.Pp
-.\"			.Bl -tag -compact -offset indent -width 12n
+.\"			.Bl -tag -compact -offset 3n -width 13n
 .\"			EOF
 .\"		  . build_list(%{ $DATA->{pools} }) . <<'EOF'
 .\"			.El
@@ -79,14 +79,14 @@ following:
 .\"			Hash table statistics.
 .\"			.Ar subspec
 .\"			has the following format:
-.\"			.Bd -unfilled -offset indent
+.\"			.Bd -unfilled -offset 3n
 .\"			.Ar hash-table Ns Op , Ns Ar ...
 .\"			.Ed
 .\"			.Pp
 .\"			.Ar hash-table
 .\"			may be one of the following:
 .\"			.Pp
-.\"			.Bl -tag -compact -offset indent -width 12n
+.\"			.Bl -tag -compact -offset 3n -width 13n
 .\"			EOF
 .\"		  . build_list(%{ $DATA->{hashtables} }) . <<'EOF'
 .\"			.El
@@ -101,14 +101,14 @@ following:
 .\"			Report on ongoing operations in progress meters.
 .\"			.Ar subspec
 .\"			has the following format:
-.\"			.Bd -unfilled -offset indent
+.\"			.Bd -unfilled -offset 3n
 .\"			.Ar meter Ns Op , Ns Ar ...
 .\"			.Ed
 .\"			.Pp
 .\"			.Ar meter
 .\"			may be one of the following:
 .\"			.Pp
-.\"			.Bl -tag -compact -offset indent -width 12n
+.\"			.Bl -tag -compact -offset 3n -width 13n
 .\"			EOF
 .\"		  . build_list(%{ $DATA->{meters} }) . <<'EOF'
 .\"			.El
@@ -127,14 +127,14 @@ following:
 .\"			.Ar subspec
 .\"			has the following format:
 .\"			.Pp
-.\"			.Bd -unfilled -offset indent
+.\"			.Bd -unfilled -offset 3n
 .\"			.Ar mlist Ns Op , Ns Ar ...
 .\"			.Ed
 .\"			.Pp
 .\"			.Ar mlist
 .\"			may be one of the following:
 .\"			.Pp
-.\"			.Bl -tag -compact -offset indent -width 12n
+.\"			.Bl -tag -compact -offset 3n -width 13n
 .\"			EOF
 .\"		  . build_list(%{ $DATA->{mlists} }) . <<'EOF'
 .\"			.El
@@ -150,14 +150,14 @@ following:
 .\"			.Ar subspec
 .\"			has the following format:
 .\"			.Pp
-.\"			.Bd -unfilled -offset indent
+.\"			.Bd -unfilled -offset 3n
 .\"			.Ar list Ns Op , Ns Ar ...
 .\"			.Ed
 .\"			.Pp
 .\"			.Ar list
 .\"			may be one of the following:
 .\"			.Pp
-.\"			.Bl -tag -compact -offset indent -width 13n
+.\"			.Bl -tag -compact -offset 3n -width 13n
 .\"			EOF
 .\"		  . build_list(%{ $DATA->{listcaches} }) . <<'EOF'
 .\"			.El
@@ -174,14 +174,14 @@ following:
 .\"			.Ar subspec
 .\"			has the following format:
 .\"			.Pp
-.\"			.Bd -unfilled -offset indent
+.\"			.Bd -unfilled -offset 3n
 .\"			.Ar iostats Ns Op , Ns Ar ...
 .\"			.Ed
 .\"			.Pp
 .\"			.Ar iostats
 .\"			may be one of the following:
 .\"			.Pp
-.\"			.Bl -tag -compact -offset indent -width Ds
+.\"			.Bl -tag -compact -offset 3n -width 3n
 .\"			EOF
 .\"		  . build_list(
 .\"			%{ $DATA->{iostats} },
@@ -210,14 +210,14 @@ following:
 .\"			.Ar subspec
 .\"			has the following format:
 .\"			.Pp
-.\"			.Bd -unfilled -offset indent
+.\"			.Bd -unfilled -offset 3n
 .\"			.Ar journal Ns Op , Ns Ar ...
 .\"			.Ed
 .\"			.Pp
 .\"			.Ar journal
 .\"			may be one of the following:
 .\"			.Pp
-.\"			.Bl -tag -compact -offset indent -width 13n
+.\"			.Bl -tag -compact -offset 3n -width 13n
 .\"			EOF
 .\"		  . build_list(%{ $DATA->{journals} }) . <<'EOF'
 .\"			.El
