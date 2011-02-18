@@ -135,6 +135,7 @@ pfl
 - ensure psc_fatal() runs atexit() such as umount
 - libpthread rwlock is broken on openbsd!
 - hash table walker
+- add per-connection iostats
 
 lnet
 - use TLS buffers for libcfs_nid2str() to avoid NUMA contention
