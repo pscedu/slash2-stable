@@ -37,6 +37,7 @@
 #include "pfl/cdefs.h"
 #include "pfl/pfl.h"
 #include "pfl/str.h"
+#include "pfl/time.h"
 #include "psc_util/alloc.h"
 #include "psc_util/atomic.h"
 #include "psc_util/fmt.h"
@@ -44,7 +45,6 @@
 #include "psc_util/log.h"
 #include "psc_util/net.h"
 #include "psc_util/thread.h"
-#include "pfl/time.h"
 #include "psc_util/timerthr.h"
 
 #include "sdp_inet.h"
@@ -55,9 +55,8 @@
 #define Q		15			/* listen(2) queue length */
 #define PORT		15420			/* IPv4 port */
 
-#define THRT_TINTV	0			/* intv timer thread type */
-#define THRT_TIOS	1			/* iostats timer thread type */
-#define THRT_DISPLAY	2			/* stats displayer */
+#define THRT_TIOS	0			/* iostats timer thread type */
+#define THRT_DISPLAY	1			/* stats displayer */
 
 struct sockarg {
 	int s;					/* socket */
@@ -372,7 +371,7 @@ main(int argc, char *argv[])
 	psc_iostats_init(&rdst, "read");
 	psc_iostats_init(&wrst, "write");
 
-	psc_tiosthr_spawn(THRT_TINTV, "tiosthr");
+	psc_tiosthr_spawn(THRT_TIOS, "tiosthr");
 
 	if (listenif)
 		dolisten(listenif);
