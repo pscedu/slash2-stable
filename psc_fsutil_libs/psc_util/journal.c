@@ -686,7 +686,7 @@ pjournal_open(const char *fn)
 
 	else if (statbuf.st_size !=
 	    (off_t)(pjhlen + pjh->pjh_nents * PJ_PJESZ(pj))) {
-		psclog_errorx("size of the journal log %zd does not match "
+		psclog_errorx("size of the journal log %"PSCPRIdOFFT"d does not match "
 		    "specs in its header", statbuf.st_size);
 		goto err;
 	}
