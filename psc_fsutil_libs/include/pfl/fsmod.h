@@ -43,6 +43,9 @@ struct pscfs_req {
 void	pscfs_fuse_replygen_entry(struct pscfs_req *, pscfs_inum_t,
 	    pscfs_fgen_t, double, const struct stat *, double, int);
 
+extern double pscfs_entry_timeout;
+extern double pscfs_attr_timeout;
+
 #elif defined(HAVE_NNPFS)
 #elif defined(HAVE_DOKAN)
 #else
