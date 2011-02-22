@@ -286,6 +286,7 @@ main(int argc, char *argv[])
 	PRTYPE(struct pscrpc_thread);
 	PRTYPE(struct pscrpc_uuid);
 	PRTYPE(struct pscrpc_wait_callback);
+	PRTYPE(struct rnd_iterator);
 	PRTYPE(struct rsx_msg_conversion);
 	PRTYPE(struct rsx_msg_portablizer);
 	/* end structs */
