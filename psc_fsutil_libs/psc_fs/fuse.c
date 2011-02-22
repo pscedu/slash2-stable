@@ -102,6 +102,8 @@ static fuse_fs_info_t		 fsinfo[MAX_FDS];
 static char			*mountpoints[MAX_FDS];
 static pthread_t		 fuse_threads[NUM_THREADS];
 struct fuse_session		*fuse_session;
+double				 pscfs_entry_timeout;
+double				 pscfs_attr_timeout;
 
 int
 pscfs_fuse_newfs(const char *mntpoint, struct fuse_chan *ch)
@@ -368,6 +370,48 @@ pscfs_ctlparam_fuse_version_get(char buf[PCP_VALUE_MAX])
 	snprintf(buf, PCP_VALUE_MAX, "%d.%d",
 	    FUSE_MAJOR_VERSION, FUSE_MINOR_VERSION);
 }
+
+void
+pscfs_ctlparam_entry_timeout_get(char buf[PCP_VALUE_MAX])
+{
+	snprintf(buf, PCP_VALUE_MAX, "%g", pscfs_entry_timeout);
+}
+
+int
+pscfs_ctlparam_entry_timeout_set(const char *s)
+{
+	double val;
+	char *endp;
+
+	endp = NULL;
+	val = strtod(s, &endp);
+	if (val < 0. || val > 60. ||
+	    endp == s || *endp != '\0')
+		return (-1);
+	pscfs_entry_timeout = val;
+	return (0);
+}
+
+void
+pscfs_ctlparam_attr_timeout_get(char buf[PCP_VALUE_MAX])
+{
+	snprintf(buf, PCP_VALUE_MAX, "%g", pscfs_attr_timeout);
+}
+
+int
+pscfs_ctlparam_attr_timeout_set(const char *s)
+{
+	char *endp;
+	long val;
+
+	endp = NULL;
+	val = strtod(s, &endp);
+	if (val < 0. || val > 60. ||
+	    endp == s || *endp != '\0')
+		return (-1);
+	pscfs_attr_timeout = val;
+	return (0);
+}
 #endif
 
 int
@@ -404,6 +448,12 @@ pscfs_main(void)
 #endif
 	psc_ctlparam_register_simple("fuse.version",
 	    pscfs_ctlparam_fuse_version_get, NULL);
+	psc_ctlparam_register_simple("pscfs.entry_timeout",
+	    pscfs_ctlparam_entry_timeout_get,
+	    pscfs_ctlparam_entry_timeout_set);
+	psc_ctlparam_register_simple("pscfs.attr_timeout",
+	    pscfs_ctlparam_attr_timeout_get,
+	    pscfs_ctlparam_attr_timeout_set);
 #endif
 
 	for (i = 0; i < NUM_THREADS; i++)
