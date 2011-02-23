@@ -502,7 +502,7 @@ doc: recurse-doc
 		${ECHORUN} ${MDPROC} $$(echo ${MAN} $(				\
 		    ) $$([ -e ${PROG}.[0-9] ] && echo ${PROG}.[0-9]) $(		\
 		    ) $$([ -e ${LIBRARY}.[0-9] ] && echo ${LIBRARY}.[0-9]) |	\
-		    sed 's/ /\n/' | sort -u);					\
+		    tr ' ' '\n' | sort -u);					\
 	fi
 
 printvar-%:
