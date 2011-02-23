@@ -1248,7 +1248,7 @@ pscfs_mount(const char *mp, struct pscfs_args *pfa)
 		psc_fatal("fuse_session_add_chan");
 	}
 
-	psc_info("FUSE version %d.%d", FUSE_MAJOR_VERSION,
+	psclog_info("FUSE version %d.%d", FUSE_MAJOR_VERSION,
 	    FUSE_MINOR_VERSION);
 }
 
