@@ -307,23 +307,24 @@ ifneq ($(filter ${PFL_BASE}/psc_ds/lockedlist.c,${SRCS}),)
   SRCS+=	${PFL_BASE}/psc_util/list.c
 endif
 
-# OBJDIR is added to .c below since lex/yacc intermediate files get generated there.
+# OBJDIR is added to .c below since lex/yacc intermediate files get
+# generated there.
 vpath %.y $(sort $(dir $(filter %.y,${_TSRCS})))
 vpath %.l $(sort $(dir $(filter %.l,${_TSRCS})))
 vpath %.c $(sort $(dir $(filter %.c,${_TSRCS})) ${OBJDIR})
 vpath %.dep ${OBJDIR}
 
 all: recurse-all all-hook
-	@for i in ${SRCS}; do								\
-		[ -n "$$i" ] || continue;						\
-		if ! [ -e "$$i" ]; then							\
-			echo "$$i does not exist" >&2;					\
-			exit 1;								\
-		fi;									\
+	@for i in ${SRCS}; do						\
+		[ -n "$$i" ] || continue;				\
+		if ! [ -e "$$i" ]; then					\
+			echo "$$i does not exist" >&2;			\
+			exit 1;						\
+		fi;							\
 	done
-	@if ${NOTEMPTY} "${TARGET}"; then						\
-		mkdir -p ${OBJDIR};							\
-		${MAKE} ${TARGET};							\
+	@if ${NOTEMPTY} "${TARGET}"; then				\
+		mkdir -p ${OBJDIR};					\
+		${MAKE} ${TARGET};					\
 	fi
 
 all-hook:
@@ -336,14 +337,16 @@ all-hook:
 .SILENT: ${OBJDIR}/$(notdir %.dep)
 
 ${OBJDIR}/$(notdir %.dep) : %.c
-	${ECHORUN} ${MKDEP} -D ${OBJDIR} -f $@ ${DEFINES} $(				\
-	    ) $$(echo $(call FILE_CFLAGS,$<) | ${EXTRACT_DEFINES}) $(			\
-	    ) ${LIBC_INCLUDES} ${_TINCLUDES} $(						\
-	    ) $$(echo $(call FILE_CFLAGS,$<) | ${EXTRACT_INCLUDES}) -I$(dir $<) -I. $(realpath $<)
+	${ECHORUN} ${MKDEP} -D ${OBJDIR} -f $@ ${DEFINES} $(		\
+	    ) $$(echo $(call FILE_CFLAGS,$<) | ${EXTRACT_DEFINES}) $(	\
+	    ) ${LIBC_INCLUDES} ${_TINCLUDES} $(				\
+	    ) $$(echo $(call FILE_CFLAGS,$<) | ${EXTRACT_INCLUDES}) $(	\
+	    ) -I$(dir $<) -I. $(realpath $<)
 
 ${OBJDIR}/$(notdir %.o) : %.c
-	${PCPP} ${PCPP_FLAGS} $(call FILE_PCPP_FLAGS,$<) $(realpath $<) | $(		\
-	) ${CC} -x c ${CFLAGS} $(call FILE_CFLAGS,$<) -I$(dir $<) -I. - -c -o $@
+	${PCPP} ${PCPP_FLAGS} $(call FILE_PCPP_FLAGS,$<) $(realpath $<	\
+	    ) | ${CC} -x c ${CFLAGS} $(call FILE_CFLAGS,$<) $(		\
+	    ) -I$(dir $<) -I. - -c -o $@
 
 ${OBJDIR}/$(notdir %.E) : %.c
 	${CC} ${CFLAGS} $(call FILE_CFLAGS,$<) -I$(dir $<) -I. $(realpath $<) -E -o $@
@@ -387,12 +390,19 @@ else
 endif
 
 recurse-%:
-	@for i in ${_TSUBDIRS}; do							\
-		echo "===> $$i $(patsubst recurse-%,%,$@)";				\
-		(cd $$i && SUBDIRS= ${MAKE} $(patsubst recurse-%,%,$@)) || exit 1;	\
+	@for i in ${_TSUBDIRS}; do					\
+		echo "===> $$i $(patsubst recurse-%,%,$@)";		\
+		if [ "${PSC_MAKE_STATUS}" ]; then			\
+			printf "\r%s" "$${i#${CROOTDIR}/}" >&2;		\
+		fi;							\
+		(cd $$i && SUBDIRS= ${MAKE}				\
+		    $(patsubst recurse-%,%,$@)) || exit 1;		\
 	done
-	@if ${NOTEMPTY} "${_TSUBDIRS}"; then						\
-		echo "<=== ${CURDIR}";							\
+	@if ${NOTEMPTY} "${_TSUBDIRS}"; then				\
+		echo "<=== ${CURDIR}";					\
+		if [ "${PSC_MAKE_STATUS}" ]; then			\
+			echo >&2;					\
+		fi;							\
 	fi
 
 # empty but overrideable
@@ -400,34 +410,34 @@ install-hook:
 
 # XXX use install(1)
 install: recurse-install install-hook
-	@if [ -n "${LIBRARY}" ]; then							\
-		mkdir -p ${INST_LIBDIR};						\
-		${ECHORUN} cp -pf ${LIBRARY} ${INST_LIBDIR};				\
+	@if [ -n "${LIBRARY}" ]; then					\
+		mkdir -p ${INST_LIBDIR};				\
+		${ECHORUN} cp -pf ${LIBRARY} ${INST_LIBDIR};		\
 	fi
 	@# skip programs part of test suites
-	@if [ -z "$(findstring /tests/,${CURDIR})" ] &&					\
-	    [ -z "$(findstring /utils/,${CURDIR})" ] ||					\
-	    [ "${FORCE_INST}" -eq 1 ]; then						\
-		mkdir -p ${INST_SBINDIR};						\
-		${ECHORUN} cp -pf ${PROG} ${INST_SBINDIR};				\
+	@if [ -z "$(findstring /tests/,${CURDIR})" ] &&			\
+	    [ -z "$(findstring /utils/,${CURDIR})" ] ||			\
+	    [ "${FORCE_INST}" -eq 1 ]; then				\
+		mkdir -p ${INST_SBINDIR};				\
+		${ECHORUN} cp -pf ${PROG} ${INST_SBINDIR};		\
 	fi
-	@if ${NOTEMPTY} "${MAN}"; then							\
-		for i in ${MAN}; do							\
-			dir=${INST_MANDIR}/man$${i##*.};				\
-			mkdir -p $$dir;							\
-			${ECHORUN} cp -fp $$i $$dir;					\
-		done;									\
+	@if ${NOTEMPTY} "${MAN}"; then					\
+		for i in ${MAN}; do					\
+			dir=${INST_MANDIR}/man$${i##*.};		\
+			mkdir -p $$dir;					\
+			${ECHORUN} cp -fp $$i $$dir;			\
+		done;							\
 	fi
-	@if ${NOTEMPTY} "${HEADERS}"; then						\
-		for i in ${HEADERS}; do							\
-			if [ x"$${i%/*}" = x"$$i" ]; then				\
-				_dir=${INST_INCDIR}/$${i%/*};				\
-			else								\
-				_dir=${INST_INCDIR};					\
-			fi;								\
-			mkdir -p $$_dir;						\
-			${ECHORUN} cp -fp $$i $$_dir;					\
-		done;									\
+	@if ${NOTEMPTY} "${HEADERS}"; then				\
+		for i in ${HEADERS}; do					\
+			if [ x"$${i%/*}" = x"$$i" ]; then		\
+				_dir=${INST_INCDIR}/$${i%/*};		\
+			else						\
+				_dir=${INST_INCDIR};			\
+			fi;						\
+			mkdir -p $$_dir;				\
+			${ECHORUN} cp -fp $$i $$_dir;			\
+		done;							\
 	fi
 
 clean-hook:
@@ -442,19 +452,19 @@ distclean: recurse-distclean clean-core
 	${RM} -f TAGS cscope.*out
 
 lint: recurse-lint ${_C_SRCS}
-	@if ${NOTEMPTY} "${_TSRCS}"; then						\
-		${ECHORUN} ${LINT} ${_TINCLUDES} ${DEFINES} ${_C_SRCS};			\
+	@if ${NOTEMPTY} "${_TSRCS}"; then				\
+		${ECHORUN} ${LINT} ${_TINCLUDES} ${DEFINES} ${_C_SRCS};	\
 	fi
 
 listsrcs: recurse-listsrcs
-	@if ${NOTEMPTY} "${_TSRCS}"; then						\
-		echo "${_TSRCS}";							\
+	@if ${NOTEMPTY} "${_TSRCS}"; then				\
+		echo "${_TSRCS}";					\
 	fi
 
 test-hook:
-	@if [ -n "${TEST}" ]; then							\
-		echo "./${TEST}";							\
-		./${TEST} ${TESTOPTS} || exit 1;					\
+	@if [ -n "${TEST}" ]; then					\
+		echo "./${TEST}";					\
+		./${TEST} ${TESTOPTS} || exit 1;			\
 	fi
 
 runtest: recurse-runtest test-hook
@@ -481,15 +491,15 @@ build:
 	${MAKE} clean && ${MAKE} prereq && ${MAKE} regen && ${MAKE} all
 
 copyright:
-	find . -type f \( $(foreach ign,${COPYRIGHT_PATS},-name ${ign} -o) -false \) $(\
+	find . -type f \( $(foreach ign,${COPYRIGHT_PATS},-name ${ign} -o) -false \) $(	\
 	    ) -exec ${ECHORUN} ${ROOTDIR}/tools/gencopyright.sh {} \;
 
 doc: recurse-doc
-	@if ${NOTEMPTY} "${MAN}"; then							\
-		${ECHORUN} ${MDPROC} $$(echo ${MAN} $(					\
-		    ) $$([ -e ${PROG}.[0-9] ] && echo ${PROG}.[0-9]) $(			\
-		    ) $$([ -e ${LIBRARY}.[0-9] ] && echo ${LIBRARY}.[0-9]) |		\
-		    sed 's/ /\n/' | sort -u);						\
+	@if ${NOTEMPTY} "${MAN}"; then						\
+		${ECHORUN} ${MDPROC} $$(echo ${MAN} $(				\
+		    ) $$([ -e ${PROG}.[0-9] ] && echo ${PROG}.[0-9]) $(		\
+		    ) $$([ -e ${LIBRARY}.[0-9] ] && echo ${LIBRARY}.[0-9]) |	\
+		    sed 's/ /\n/' | sort -u);					\
 	fi
 
 printvar-%:
