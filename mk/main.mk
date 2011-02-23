@@ -393,9 +393,10 @@ recurse-%:
 	@for i in ${_TSUBDIRS}; do					\
 		echo "===> $$i $(patsubst recurse-%,%,$@)";		\
 		if [ "${PSC_MAKE_STATUS}" ]; then			\
-			printf "\r%s" "$${i#${CROOTDIR}/} $(		\
+			printf " %s" "$${i#${CROOTDIR}/} $(		\
 			    )$(patsubst recurse-%,%,$@)" >&2;		\
 			tput el >&2 || true;				\
+			printf "\r" >&2;				\
 		fi;							\
 		(cd $$i && SUBDIRS= ${MAKE}				\
 		    $(patsubst recurse-%,%,$@)) || exit 1;		\
@@ -403,7 +404,6 @@ recurse-%:
 	@if ${NOTEMPTY} "${_TSUBDIRS}"; then				\
 		echo "<=== ${CURDIR}";					\
 		if [ "${PSC_MAKE_STATUS}" ]; then			\
-			printf "\r" >&2;				\
 			tput el >&2 || true;				\
 		fi;							\
 	fi
