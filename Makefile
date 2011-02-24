@@ -9,6 +9,4 @@ SUBDIRS+=	fio
 SUBDIRS+=	${SLASH_BASE}
 SUBDIRS+=	${ZEST_BASE}
 
-COPYRIGHT_PATS+=distrib zfs
-
 include ${MAINMK}
