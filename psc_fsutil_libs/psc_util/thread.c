@@ -500,7 +500,7 @@ psc_get_hostname(void)
 	return (psclog_getdata()->pld_hostname);
 }
 
-/*
+/**
  * pscthr_setrun - Set the PTF_RUN flag of a thread, enabling it to
  *	begin its life.
  * @thr: thread to modify.
