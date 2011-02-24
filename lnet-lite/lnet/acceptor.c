@@ -195,7 +195,7 @@ lnet_accept(int sock, __u32 magic, __u32 peer_ip, __unusedx int peer_port)
 	if (ni->ni_lnd->lnd_accept == NULL) {
 		lnet_ni_decref(ni);
 		LCONSOLE_ERROR("Refusing connection from %u.%u.%u.%u for %s: "
-			       " NI doesn not accept IP connections\n",
+			       " NI does not accept IP connections\n",
 			       HIPQUAD(peer_ip), libcfs_nid2str(cr.acr_nid));
 		return -EPERM;
 	}
