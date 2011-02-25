@@ -320,7 +320,6 @@ pscrpc_prep_req(struct pscrpc_import *imp, uint32_t version, int opcode,
 				     bufs, NULL);
 }
 
-
 static __inline struct pscrpc_bulk_desc *
 pscrpc_new_bulk(int npages, int type, int portal)
 {
@@ -438,6 +437,21 @@ pscrpc_set_add_new_req(struct pscrpc_request_set *set,
 	req->rq_set = set;
 	set->set_remaining++;
 	atomic_inc(&req->rq_import->imp_inflight);
+	freelock(&set->set_lock);
+}
+
+void
+pscrpc_set_remove_req(struct pscrpc_request_set *set,
+    struct pscrpc_request *req)
+{
+	pscrpc_set_lock(set);
+	psclist_del(&req->rq_set_chain_lentry, &set->set_requests);
+	req->rq_set = NULL;
+	psc_assert(set->set_remaining > 0);
+	set->set_remaining--;
+	psc_assert(atomic_read(&req->rq_import->imp_inflight) > 0);
+	atomic_dec(&req->rq_import->imp_inflight);
+	psc_waitq_wakeall(&set->set_waitq);
 	freelock(&set->set_lock);
 }
 
@@ -1210,27 +1224,22 @@ pscrpc_check_set(struct pscrpc_request_set *set, int check_allsent)
 void
 pscrpc_set_destroy(struct pscrpc_request_set *set)
 {
-	struct psclist_head *tmp;
-	struct psclist_head *next;
+	struct pscrpc_request *req, *next;
 	unsigned expected_phase;
 	int               n = 0;
 
 	/* Requests on the set should either all be completed, or all be new */
 	expected_phase = (set->set_remaining == 0) ?
 		PSCRPC_RQ_PHASE_COMPLETE : PSCRPC_RQ_PHASE_NEW;
-	psclist_for_each(tmp, &set->set_requests) {
-		struct pscrpc_request *req =
-			psc_lentry_obj(tmp, struct pscrpc_request, rq_set_chain_lentry);
-
+	psclist_for_each_entry(req, &set->set_requests, rq_set_chain_lentry) {
 		psc_assert(req->rq_phase == expected_phase);
 		n++;
 	}
 
 	psc_assert(set->set_remaining == 0 || set->set_remaining == n);
 
-	psclist_for_each_safe(tmp, next, &set->set_requests) {
-		struct pscrpc_request *req = psc_lentry_obj(tmp,
-		    struct pscrpc_request, rq_set_chain_lentry);
+	psclist_for_each_entry_safe(req, next, &set->set_requests,
+	    rq_set_chain_lentry) {
 		psclist_del(&req->rq_set_chain_lentry,
 		    &set->set_requests);
 
@@ -1629,7 +1638,6 @@ pscrpc_free_committed(struct pscrpc_import *imp)
 	}
 }
 #endif
-
 
 void pscrpc_abort_inflight(struct pscrpc_import *imp)
 {

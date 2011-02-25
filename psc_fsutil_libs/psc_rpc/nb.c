@@ -40,7 +40,7 @@ struct pscrpc_nbreapthr {
 };
 
 /**
- * pscrpc_nbreqset_push - send out new requests
+ * pscrpc_nbreqset_push - Send out new requests.
  *
  */
 static int
@@ -50,9 +50,9 @@ pscrpc_nbreqset_push(struct pscrpc_request *req)
 }
 
 /**
- * pscrpc_nbreqset_init - make a non-blocking set
- * @nb_interpret:  this must only take into account completed rpcs
- * @nb_callback:   application callback
+ * pscrpc_nbreqset_init - Make a non-blocking set.
+ * @nb_interpret: this must only take into account completed RPCs.
+ * @nb_callback: application callback.
  */
 struct pscrpc_nbreqset *
 pscrpc_nbreqset_init(pscrpc_set_interpreterf nb_interpret,
@@ -71,25 +71,31 @@ pscrpc_nbreqset_init(pscrpc_set_interpreterf nb_interpret,
 }
 
 /**
- * pscrpc_nbreqset_add - add a new non-blocking request to the mix
- *
+ * pscrpc_nbreqset_add - Add a new non-blocking request to a
+ *	non-blocking set.
  */
 int
 pscrpc_nbreqset_add(struct pscrpc_nbreqset *nbs, struct pscrpc_request *req)
 {
 	int rc;
 
+	psc_assert(req->rq_waitq == NULL);
 	req->rq_waitq = &nbs->nb_waitq;
 	atomic_inc(&nbs->nb_outstanding);
 	pscrpc_set_add_new_req(&nbs->nb_reqset, req);
 	rc = pscrpc_nbreqset_push(req);
-	if (rc)
+	if (rc) {
+		req->rq_waitq = NULL;
+		atomic_dec(&nbs->nb_outstanding);
+		pscrpc_set_remove_req(&nbs->nb_reqset, req);
 		DEBUG_REQ(PLL_ERROR, req, "send failure: %s", strerror(rc));
+	}
 	return (rc);
 }
 
 /**
- * pscrpc_nbrequest_flush - sync all outstanding requests
+ * pscrpc_nbrequest_flush - Wait for all outstanding requests sent out
+ *	in a non-blocking set.
  */
 int
 pscrpc_nbreqset_flush(struct pscrpc_nbreqset *nbs)
@@ -98,15 +104,14 @@ pscrpc_nbreqset_flush(struct pscrpc_nbreqset *nbs)
 }
 
 /**
- * pscrpc_nbrequest_reap - remove completed requests from the
- *                  request set and place them into the
- *                  'completed' list.
+ * pscrpc_nbrequest_reap - Remove completed requests from the request
+ *	set and place them into the 'completed' list.
  * @nbs: the non-blocking set
- * Notes:  Call before pscrpc_check_set(), pscrpc_check_set() manages
- *        'set_remaining'..  If there are problems look at pscrpc_set_wait(),
- *        there you'll find a more sophisticated and proper use of sets.
- *        pscrpc_set_wait() deals with blocking set nevertheless much applies
- *        here as well.
+ * Notes: Call before pscrpc_check_set(), pscrpc_check_set() manages
+ *	'set_remaining'.  If there are problems look at
+ *	pscrpc_set_wait(), there you'll find a more sophisticated and
+ *	proper use of sets.  pscrpc_set_wait() deals with blocking set
+ *	nevertheless much applies here as well.
  */
 int
 pscrpc_nbreqset_reap(struct pscrpc_nbreqset *nbs)
@@ -128,7 +133,7 @@ pscrpc_nbreqset_reap(struct pscrpc_nbreqset *nbs)
 
 	lwi = LWI_TIMEOUT(timeout, NULL, NULL);
 	pscrpc_cli_wait_event(&set->set_waitq,
-		       (nreaped=pscrpc_check_set(set, 0)), &lwi);
+	    (nreaped = pscrpc_check_set(set, 0)), &lwi);
 
 	if (!nreaped) {
 		spinlock(&nbs->nb_lock);
@@ -142,9 +147,10 @@ pscrpc_nbreqset_reap(struct pscrpc_nbreqset *nbs)
 	psclist_for_each_entry_safe(req, next,
 	    &set->set_requests, rq_set_chain_lentry) {
 		nchecked++;
-		DEBUG_REQ(PLL_INFO, req, "reap if Completed");
+		DEBUG_REQ(PLL_INFO, req, "reap if completed");
+
 		/*
-		 * Move sent rpcs to the set_requests list
+		 * Move sent RPCs to the set_requests list
 		 */
 		if (req->rq_phase == PSCRPC_RQ_PHASE_COMPLETE) {
 			psclist_del(&req->rq_set_chain_lentry, &set->set_requests);

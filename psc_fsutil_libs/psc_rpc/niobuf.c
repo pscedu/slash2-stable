@@ -751,7 +751,7 @@ pscrpc_free_req(struct pscrpc_request *request)
 	_pscrpc_free_req(request, 0);
 }
 
-static int
+int
 _pscrpc_req_finished(struct pscrpc_request *request, int locked)
 {
 	if (request == NULL)
@@ -775,12 +775,6 @@ _pscrpc_req_finished(struct pscrpc_request *request, int locked)
 	}
 
 	return (0);
-}
-
-void
-pscrpc_req_finished(struct pscrpc_request *request)
-{
-	_pscrpc_req_finished(request, 0);
 }
 
 void

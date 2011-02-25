@@ -486,14 +486,7 @@ int	 pscrpc_nbreqset_flush(struct pscrpc_nbreqset *);
 
 void	 pscrpc_nbreapthr_spawn(struct pscrpc_nbreqset *, int, const char *);
 
-struct pscrpc_bulk_desc *
-	 pscrpc_prep_bulk_exp(struct pscrpc_request *, int, int, int);
-void	 pscrpc_free_reply_state(struct pscrpc_reply_state *);
-void	 pscrpc_req_finished(struct pscrpc_request *);
-void	 pscrpc_free_bulk(struct pscrpc_bulk_desc *);
-int	 pscrpc_pack_reply(struct pscrpc_request *, int, const int *, char **);
 int	 pscrpc_put_connection(struct pscrpc_connection *);
-void	 pscrpc_fill_bulk_md(lnet_md_t *, struct pscrpc_bulk_desc *);
 
 /*  events.c */
 lnet_pid_t pscrpc_get_pid(void);
@@ -530,12 +523,15 @@ void	 pscrpc_free_req(struct pscrpc_request *request);
 int	 pscrpc_register_bulk(struct pscrpc_request *req);
 int	 pscrpc_register_rqbd(struct pscrpc_request_buffer_desc *rqbd);
 int	 pscrpc_reply(struct pscrpc_request *req);
-void	 pscrpc_req_finished(struct pscrpc_request *request);
+int	_pscrpc_req_finished(struct pscrpc_request *, int);
 int	 pscrpc_send_reply(struct pscrpc_request *req, int may_be_difficult);
 int	 pscrpc_start_bulk_transfer(struct pscrpc_bulk_desc *desc);
 void	 pscrpc_unregister_bulk(struct pscrpc_request *req);
 void	 pscrpc_abort_inflight(struct pscrpc_import *imp);
 void	 pscrpc_drop_conns(lnet_process_id_t *);
+
+#define pscrpc_req_finished(rq)		_pscrpc_req_finished((rq), 0)
+#define pscrpc_req_finished_locked(rq)	_pscrpc_req_finished((rq), 1)
 
 #define pscrpc_nid2str(addr, buf)	libcfs_nid2str2((addr), (buf))
 #define pscrpc_id2str(addr, buf)	libcfs_id2str2((addr), (buf))
@@ -565,11 +561,15 @@ struct pscrpc_request_set *
 void	 pscrpc_set_init(struct pscrpc_request_set *);
 int	 pscrpc_push_req(struct pscrpc_request *);
 void	 pscrpc_set_add_new_req(struct pscrpc_request_set *, struct pscrpc_request *);
+void	 pscrpc_set_remove_req(struct pscrpc_request_set *, struct pscrpc_request *);
 int	 pscrpc_check_set(struct pscrpc_request_set *, int);
 int	 pscrpc_set_finalize(struct pscrpc_request_set *, int, int);
 int	 pscrpc_set_wait(struct pscrpc_request_set *);
 void	 pscrpc_set_destroy(struct pscrpc_request_set *);
 void	 pscrpc_set_lock(struct pscrpc_request_set *);
+
+struct pscrpc_bulk_desc *
+	 pscrpc_prep_bulk_exp(struct pscrpc_request *, int, int, int);
 
 void	 pscrpc_completion_init(struct pscrpc_completion *);
 void	 pscrpc_completion_wait(struct pscrpc_completion *);
