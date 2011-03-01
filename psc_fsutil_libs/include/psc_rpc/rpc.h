@@ -230,10 +230,6 @@ struct pscrpc_request_set {
 	void				*set_arg;		/* callback pointer      */
 	psc_spinlock_t			 set_lock;
 	int				 set_flags;
-#if 0
-	psc_spinlock_t			 rqset_lock;
-	psclist_cache_t			 rqset_reqs;		/* the request list      */
-#endif
 };
 
 /* set flags */
