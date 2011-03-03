@@ -35,6 +35,9 @@
 #include "psc_util/lock.h"
 #include "psc_util/log.h"
 
+#define ODT_DEFAULT_ITEM_SIZE	128
+#define	ODT_DEFAULT_TABLE_SIZE	1024*128
+
 #define ODTBL_VERS	UINT64_C(0x0000000000000002)
 #define ODTBL_MAGIC	UINT64_C(0x001122335577bbdd)
 #define ODTBL_INUSE	UINT64_C(0xf0f0f0f0f0f0f0f0)
@@ -60,6 +63,7 @@ enum od_table_errors {
 struct odtable_hdr {
 	size_t			 odth_nelems;
 	size_t			 odth_elemsz;	/* does not include odtable_entftr */
+	size_t			 odth_slotsz;	/* does include odtable_entftr */
 	uint64_t		 odth_magic;
 	uint32_t		 odth_version;
 	uint32_t		 odth_options;	/* see ODTBL_OPT_* below */
@@ -88,6 +92,7 @@ struct odtable {
 	struct odtable_hdr	*odt_hdr;
 	psc_spinlock_t		 odt_lock;
 	int			 odt_fd;
+	void			*odt_handle;		/* need this for odtable in ZFS */
 	char			 odt_name[ODT_NAME_MAX];
 	struct psclist_head	 odt_lentry;
 };
@@ -109,6 +114,16 @@ int	 odtable_release(struct odtable *);
 void	 odtable_scan(struct odtable *, void (*)(void *, struct odtable_receipt *));
 struct odtable_receipt *
 	 odtable_replaceitem(struct odtable *, struct odtable_receipt *, void *, size_t);
+
+void	 mds_odtable_load(struct odtable **, const char *, const char *, ...);
+struct odtable_receipt *
+	 mds_odtable_putitem(struct odtable *, void *, size_t);
+int	 mds_odtable_getitem(struct odtable *, const struct odtable_receipt *, void *, size_t);
+int	 mds_odtable_freeitem(struct odtable *, struct odtable_receipt *);
+struct odtable_receipt *
+	 mds_odtable_replaceitem(struct odtable *, struct odtable_receipt *, void *, size_t);
+void	 mds_odtable_release(struct odtable *);
+void	 mds_odtable_scan(struct odtable *, void (*)(void *, struct odtable_receipt *));
 
 extern struct psc_lockedlist psc_odtables;
 

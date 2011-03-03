@@ -321,6 +321,14 @@ pjournal_add_entry(struct psc_journal *pj, uint64_t txg,
 	struct psc_journal_enthdr *pje;
 
 	xh = pjournal_xnew(pj, distill);
+	if (!txg)  {
+		/*
+ 		 * Log entries written outside ZFS must be 
+ 		 * idempotent because the txg obtained this
+ 		 * way is not accurate.
+ 		 */
+		txg = zfsslash2_return_synced();
+	}
 	xh->pjx_txg = txg;
 	pje = DATA_2_PJE(buf);
 	psc_assert(pje->pje_magic == PJE_MAGIC);

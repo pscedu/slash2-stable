@@ -196,9 +196,21 @@ odtable_create(const char *fn, size_t nelems, size_t elemsz, int overwrite)
 	size_t z;
 	int flags = O_CREAT | O_EXCL | O_WRONLY;
 	struct odtable odt;
-	struct odtable_entftr odtf = {0, ODTBL_FREE, 0, ODTBL_MAGIC};
-	struct odtable_hdr odth = {nelems, elemsz, ODTBL_MAGIC, ODTBL_VERS,
-				   ODTBL_OPT_CRC, ODTBL_START};
+	struct odtable_entftr odtf;
+	struct odtable_hdr odth;
+
+	odth.odth_nelems = nelems;
+	odth.odth_elemsz = elemsz;
+	odth.odth_slotsz = elemsz + sizeof(struct odtable_entftr);
+	odth.odth_magic = ODTBL_MAGIC;
+	odth.odth_version = ODTBL_VERS;
+	odth.odth_options = ODTBL_OPT_CRC;
+	odth.odth_start = ODTBL_START;
+
+	odtf.odtf_crc = 0;
+	odtf.odtf_inuse = ODTBL_FREE;
+	odtf.odtf_slotno = 0;
+	odtf.odtf_magic = ODTBL_MAGIC;
 
 	if (overwrite)
 		flags = O_CREAT | O_TRUNC | O_WRONLY;
