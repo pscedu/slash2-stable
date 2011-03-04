@@ -28,7 +28,7 @@
 #include "psc_ds/lockedlist.h"
 #include "psc_util/atomic.h"
 
-#define IST_NAME_MAX	24
+#define IST_NAME_MAX	32
 #define IST_NINTV	2
 
 struct psc_iostats {
