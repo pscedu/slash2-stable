@@ -739,7 +739,7 @@ after_reply(struct pscrpc_request *req)
 	}
 #endif
 
-	psc_iostats_intv_add(&req->rq_conn->c_iostats_rcv,
+	psc_iostats_intv_add(&req->rq_import->imp_connection->c_iostats_rcv,
 	    req->rq_replen);
 	return (rc);
 }
