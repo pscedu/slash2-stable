@@ -36,19 +36,18 @@
 #include "psc_rpc/rpclog.h"
 
 /**
- * pscrpc_send_buf - rudimentary send function which uses LNetPut.  This is called
- *	by pscrpc_send_reply & pscrpc_send_rpc which use pscrpc_send_buf to PUT RPC
- *	replies and requests.
- * @mdh:  md handle to
+ * pscrpc_send_buf - Rudimentary send function which uses LNetPut().
+ *	This is called by pscrpc_send_reply() & pscrpc_send_rpc() which
+ *	use pscrpc_send_buf() to PUT RPC replies and requests.
+ * @mdh:  md handle to peer.
  */
 static int
 pscrpc_send_buf(lnet_handle_md_t *mdh, void *base, int len,
     lnet_ack_req_t ack, struct pscrpc_cb_id *cbid,
-    struct pscrpc_connection *conn,
-    int portal, uint64_t xid)
+    struct pscrpc_connection *conn, int portal, uint64_t xid)
 {
-	int              rc;
-	lnet_md_t         md;
+	lnet_md_t md;
+	int rc;
 
 	psc_assert(portal != 0);
 	psc_assert(conn != NULL);
@@ -70,33 +69,35 @@ pscrpc_send_buf(lnet_handle_md_t *mdh, void *base, int len,
 #endif
 
 	rc = LNetMDBind(md, LNET_UNLINK, mdh);
-	if (rc != 0) {
+	if (rc) {
 		psc_errorx("LNetMDBind failed: %d", rc);
 		psc_assert(rc == -ENOMEM);
 		return (-ENOMEM);
 	}
 
-	psc_info("Sending %d bytes to portal %d, xid %"PRIx64,
-		 len, portal, xid);
+	psclog_info("Sending %d bytes to portal %d, xid %#"PRIx64,
+	    len, portal, xid);
 
-	rc = LNetPut(conn->c_self, *mdh, ack,
-		      conn->c_peer, portal, xid, 0, 0);
-	if (rc != 0) {
+	rc = LNetPut(conn->c_self, *mdh, ack, conn->c_peer, portal, xid,
+	    0, 0);
+	if (rc) {
 		int rc2;
+
 		/* We're going to get an UNLINK event when I unlink below,
 		 * which will complete just like any other failed send, so
 		 * I fall through and return success here! */
 		psc_errorx("LNetPut(%s, %d, %"PRIu64") failed: %d",
-			libcfs_id2str(conn->c_peer), portal, xid, rc);
+		    libcfs_id2str(conn->c_peer), portal, xid, rc);
 		rc2 = LNetMDUnlink(*mdh);
 		psc_assert(rc2 == 0);
-	}
+	} else
+		psc_iostats_intv_add(&conn->c_iostats_snd, len);
 
 	return (0);
 }
 
 /**
- * pscrpc_start_bulk_transfer - server initiated bulk data xfer
+ * pscrpc_start_bulk_transfer - Server initiated bulk data transfer.
  * @desc: the bulk data desc
  */
 int
@@ -135,7 +136,7 @@ pscrpc_start_bulk_transfer(struct pscrpc_bulk_desc *desc)
 	 * length bulk, since the client expects a bulk event. */
 
 	rc = LNetMDBind(md, LNET_UNLINK, &desc->bd_md_h);
-	if (rc != 0) {
+	if (rc) {
 		CERROR("LNetMDBind failed: %d\n", rc);
 		psc_assert(rc == -ENOMEM);
 		return (-ENOMEM);
@@ -158,7 +159,7 @@ pscrpc_start_bulk_transfer(struct pscrpc_bulk_desc *desc)
 		rc = LNetGet(conn->c_self, desc->bd_md_h,
 			     conn->c_peer, desc->bd_portal, xid, 0);
 
-	if (rc != 0) {
+	if (rc) {
 		/* Can't send, so we unlink the MD bound above.  The UNLINK
 		 * event this creates will signal completion with failure,
 		 * so we return SUCCESS here! */
@@ -174,15 +175,15 @@ pscrpc_start_bulk_transfer(struct pscrpc_bulk_desc *desc)
 void
 pscrpc_abort_bulk(struct pscrpc_bulk_desc *desc)
 {
-	/* Server side bulk abort. Idempotent. Not thread-safe (i.e. only
+	/* Server side bulk abort.  Idempotent.  Not thread-safe (i.e. only
 	 * serialises with completion callback) */
 	struct l_wait_info  lwi;
 	int    rc;
 
-	//psc_assert(!in_interrupt ());             /* might sleep */
+	//psc_assert(!in_interrupt ());		/* might sleep */
 
-	if (!pscrpc_bulk_active(desc))          /* completed or */
-		return;                         /* never started */
+	if (!pscrpc_bulk_active(desc))		/* completed or */
+		return;				/* never started */
 
 	/* Do not send any meaningful data over the wire for evicted clients */
 #if 0
@@ -202,8 +203,7 @@ pscrpc_abort_bulk(struct pscrpc_bulk_desc *desc)
 		 * timeout lets us CWARN for visibility of sluggish NALs */
 		lwi = LWI_TIMEOUT(300, NULL, NULL);
 		rc = pscrpc_svr_wait_event(&desc->bd_waitq,
-					!pscrpc_bulk_active(desc),
-					&lwi, NULL);
+		    !pscrpc_bulk_active(desc), &lwi, NULL);
 
 		if (rc == 0)
 			return;
@@ -222,10 +222,9 @@ pscrpc_register_bulk(struct pscrpc_request *req)
 {
 	struct pscrpc_bulk_desc *desc = req->rq_bulk;
 	lnet_process_id_t peer;
-	int rc;
-	int rc2;
 	lnet_handle_me_t  me_h;
 	lnet_md_t         md;
+	int rc, rc2;
 
 	//if (OBD_FAIL_CHECK_ONCE(OBD_FAIL_PSCRPC_BULK_GET_NET))
 	//        return (0);
@@ -244,7 +243,7 @@ pscrpc_register_bulk(struct pscrpc_request *req)
 
 	md.user_ptr = &desc->bd_cbid;
 	md.eq_handle = pscrpc_eq_h;
-	md.threshold = 1;                       /* PUT or GET */
+	md.threshold = 1;			/* PUT or GET */
 	md.options = PSCRPC_MD_OPTIONS |
 		     ((desc->bd_type == BULK_GET_SOURCE) ?
 		      LNET_MD_OP_GET : LNET_MD_OP_PUT);
@@ -262,9 +261,9 @@ pscrpc_register_bulk(struct pscrpc_request *req)
 	desc->bd_registered = 1;
 	desc->bd_last_xid = req->rq_xid;
 
-	rc = LNetMEAttach(desc->bd_portal, peer,
-			 req->rq_xid, 0, LNET_UNLINK, LNET_INS_AFTER, &me_h);
-	if (rc != 0) {
+	rc = LNetMEAttach(desc->bd_portal, peer, req->rq_xid, 0,
+	    LNET_UNLINK, LNET_INS_AFTER, &me_h);
+	if (rc) {
 		psc_errorx("LNetMEAttach failed: %d", rc);
 		psc_assert(rc == -ENOMEM);
 		return (-ENOMEM);
@@ -273,7 +272,7 @@ pscrpc_register_bulk(struct pscrpc_request *req)
 	/* About to let the network at it... */
 	desc->bd_network_rw = 1;
 	rc = LNetMDAttach(me_h, md, LNET_UNLINK, &desc->bd_md_h);
-	if (rc != 0) {
+	if (rc) {
 		psc_errorx("LNetMDAttach failed: %d", rc);
 		psc_assert(rc == -ENOMEM);
 		desc->bd_network_rw = 0;
@@ -282,22 +281,22 @@ pscrpc_register_bulk(struct pscrpc_request *req)
 		return (-ENOMEM);
 	}
 
-	psc_info("Setup bulk %s buffers: %u pages %u bytes, xid %"PRIx64", "
-		 "portal %u",
-		 desc->bd_type == BULK_GET_SOURCE ? "get-source" : "put-sink",
-		 desc->bd_iov_count, desc->bd_nob,
-		 req->rq_xid, desc->bd_portal);
+	psclog_info("Setup bulk %s buffers: %u pages %u bytes, xid %#"PRIx64", "
+	    "portal %u",
+	    desc->bd_type == BULK_GET_SOURCE ? "get-source" : "put-sink",
+	    desc->bd_iov_count, desc->bd_nob, req->rq_xid,
+	    desc->bd_portal);
 	return (0);
 }
 
 /**
- * pscrpc_unregister_bulk - client-side deregistration of bulk data buffer
+ * pscrpc_unregister_bulk - Client-side deregistration of bulk data buffer.
  * @req: the request associated with the bulk
  */
 void
 pscrpc_unregister_bulk(struct pscrpc_request *req)
 {
-	/* Disconnect a bulk desc from the network. Idempotent. Not
+	/* Disconnect a bulk desc from the network.  Idempotent.  Not
 	 * thread-safe (i.e. only interlocks with completion callback). */
 	struct pscrpc_bulk_desc *desc = req->rq_bulk;
 	struct psc_waitq        *wq;
@@ -306,11 +305,11 @@ pscrpc_unregister_bulk(struct pscrpc_request *req)
 
 	l = reqlock(&desc->bd_lock);
 
-	psc_info("desc->bd_registered=(%d) pscrpc_bulk_active(desc)=(%d)",
+	psclog_info("desc->bd_registered=(%d) pscrpc_bulk_active(desc)=(%d)",
 		 desc->bd_registered, pscrpc_bulk_active(desc));
 
 	if (!desc->bd_registered && !pscrpc_bulk_active(desc)) {  /* completed or */
-		ureqlock(&desc->bd_lock, l);                      /* never registered */
+		ureqlock(&desc->bd_lock, l);			  /* never registered */
 		return;
 	}
 	/* bd_req NULL until registered
@@ -343,8 +342,8 @@ pscrpc_unregister_bulk(struct pscrpc_request *req)
 		/* Network access will complete in finite time but the HUGE
 		 * timeout lets us CWARN for visibility of sluggish NALs */
 		lwi = LWI_TIMEOUT(300, NULL, NULL);
-		rc = pscrpc_cli_wait_event(wq, !pscrpc_bulk_active(desc),
-				    &lwi);
+		rc = pscrpc_cli_wait_event(wq,
+		    !pscrpc_bulk_active(desc), &lwi);
 		if (rc == 0)
 			return;
 
@@ -355,7 +354,7 @@ pscrpc_unregister_bulk(struct pscrpc_request *req)
 }
 
 /**
- * psc_send_reply - server-side reply function
+ * psc_send_reply - Server-side reply function.
  * @req: the request in question
  * @may_be_difficult:   not sure if we're going to use this.
  */
@@ -404,7 +403,7 @@ pscrpc_send_reply(struct pscrpc_request *req, int may_be_difficult)
 	req->rq_repmsg->opc    = req->rq_reqmsg->opc;
 	if (req->rq_conn == NULL)
 		req->rq_conn = pscrpc_get_connection(req->rq_peer,
-						      req->rq_self, NULL);
+		    req->rq_self, NULL);
 	else
 		(struct pscrpc_connection *)pscrpc_connection_addref(req->rq_conn);
 
@@ -413,13 +412,13 @@ pscrpc_send_reply(struct pscrpc_request *req, int may_be_difficult)
 		return -ENOTCONN;
 	}
 	atomic_inc(&svc->srv_outstanding_replies);
-	pscrpc_rs_addref(rs);                   /* +1 ref for the network */
+	pscrpc_rs_addref(rs);			/* +1 ref for the network */
 
 	rc = pscrpc_send_buf(&rs->rs_md_h, req->rq_repmsg, req->rq_replen,
 	    rs->rs_difficult ? LNET_ACK_REQ : LNET_NOACK_REQ,
 	    &rs->rs_cb_id, req->rq_conn,
 	    svc->srv_rep_portal, req->rq_xid);
-	if (rc != 0) {
+	if (rc) {
 		atomic_dec(&svc->srv_outstanding_replies);
 		pscrpc_rs_decref(rs);
 	}
@@ -451,18 +450,17 @@ pscrpc_error(struct pscrpc_request *req)
 }
 
 /**
- * pscrpc_send_rpc - client-side push of rpc request to a server
+ * pscrpc_send_rpc - Client-side push of RPC request to a server.
  * @request: the request in question
  * @reply:   not sure if we're going to use this.
  */
 int
 pscrpc_send_rpc(struct pscrpc_request *request, int noreply)
 {
-	int rc;
-	int rc2;
 	struct pscrpc_connection *connection;
 	lnet_handle_me_t  reply_me_h;
 	lnet_md_t         reply_md;
+	int rc, rc2;
 
 	//OBD_FAIL_RETURN(OBD_FAIL_PSCRPC_DROP_RPC, 0);
 	DEBUG_REQ(PLL_DEBUG, request, "sending rpc");
@@ -487,7 +485,7 @@ pscrpc_send_rpc(struct pscrpc_request *request, int noreply)
 
 	if (request->rq_bulk != NULL) {
 		rc = pscrpc_register_bulk(request);
-		if (rc != 0)
+		if (rc)
 			return (rc);
 	}
 
@@ -506,12 +504,12 @@ pscrpc_send_rpc(struct pscrpc_request *request, int noreply)
 		rc = LNetMEAttach(request->rq_reply_portal,/*XXX FIXME bug 249*/
 				  connection->c_peer, request->rq_xid, 0,
 				  LNET_UNLINK, LNET_INS_AFTER, &reply_me_h);
-		if (rc != 0) {
+		if (rc) {
 			CERROR("LNetMEAttach failed: %d\n", rc);
 			psc_assert(rc == -ENOMEM);
 			GOTO(cleanup_repmsg, rc = -ENOMEM);
 		}
-		psc_info("LNetMEAttach() gave handle %"PRIx64, (uint64_t)reply_me_h.cookie);
+		psclog_info("LNetMEAttach() gave handle %"PRIx64, (uint64_t)reply_me_h.cookie);
 	}
 
 	spinlock(&request->rq_lock);
@@ -534,12 +532,12 @@ pscrpc_send_rpc(struct pscrpc_request *request, int noreply)
 		reply_md.user_ptr  = &request->rq_reply_cbid;
 		reply_md.eq_handle = pscrpc_eq_h;
 
-		psc_info("LNetMDAttach() try w/ handle %"PRIx64,
+		psclog_info("LNetMDAttach() try w/ handle %"PRIx64,
 		      (uint64_t)reply_me_h.cookie);
 
 		rc = LNetMDAttach(reply_me_h, reply_md, LNET_UNLINK,
 				 &request->rq_reply_md_h);
-		if (rc != 0) {
+		if (rc) {
 			psc_errorx("LNetMDAttach failed: %d", rc);
 			psc_assert(rc == -ENOMEM);
 			spinlock(&request->rq_lock);
@@ -578,6 +576,9 @@ pscrpc_send_rpc(struct pscrpc_request *request, int noreply)
 		return (rc);
 	}
 
+	psc_iostats_intv_add(&request->rq_conn->c_iostats_snd,
+	    request->rq_reqlen);
+
 	/* drop pscrpc_request_out_callback refs, we couldn't start the send */
 	atomic_dec(&request->rq_import->imp_inflight);
 	pscrpc_req_finished(request);
@@ -607,7 +608,7 @@ pscrpc_send_rpc(struct pscrpc_request *request, int noreply)
 }
 
 /**
- * pscrpc_register_rqbd - server-side registration of rpc request buffers
+ * pscrpc_register_rqbd - Server-side registration of RPC request buffers.
  * @rqbd: the request buffer pointer
  */
 int
@@ -620,14 +621,14 @@ pscrpc_register_rqbd(struct pscrpc_request_buffer_desc *rqbd)
 	lnet_handle_me_t          me_h;
 
 	CDEBUG(D_RPCTRACE, "LNetMEAttach: portal %d\n",
-	       service->srv_req_portal);
+	    service->srv_req_portal);
 
 	//        if (OBD_FAIL_CHECK_ONCE(OBD_FAIL_PSCRPC_RQBD))
 	//        return (-ENOMEM);
 
-	rc = LNetMEAttach(service->srv_req_portal,
-			  match_id, 0, ~0, LNET_UNLINK, LNET_INS_AFTER, &me_h);
-	if (rc != 0) {
+	rc = LNetMEAttach(service->srv_req_portal, match_id, 0, ~0,
+	    LNET_UNLINK, LNET_INS_AFTER, &me_h);
+	if (rc) {
 		CERROR("LNetMEAttach failed: %d\n", rc);
 		return (-ENOMEM);
 	}
@@ -780,11 +781,9 @@ _pscrpc_req_finished(struct pscrpc_request *request, int locked)
 void
 pscrpc_free_bulk(struct pscrpc_bulk_desc *desc)
 {
-	psclog_trace("free desc=%p", desc);
-
 	psc_assert(desc != NULL);
-	psc_assert(desc->bd_iov_count != LI_POISON); /* not freed already */
-	psc_assert(!desc->bd_network_rw);            /* network hands off or */
+	psc_assert(desc->bd_iov_count != LI_POISON);	/* not freed already */
+	psc_assert(!desc->bd_network_rw);		/* network hands off or */
 	psc_assert(!desc->bd_registered);
 
 	psc_assert((desc->bd_export != NULL) ^ (desc->bd_import != NULL));
@@ -794,7 +793,7 @@ pscrpc_free_bulk(struct pscrpc_bulk_desc *desc)
 		pscrpc_import_put(desc->bd_import);
 
 	PSCRPC_OBD_FREE(desc, offsetof(struct pscrpc_bulk_desc,
-				bd_iov[desc->bd_max_iov]));
+	    bd_iov[desc->bd_max_iov]));
 }
 
 void

@@ -202,8 +202,7 @@ pscrpc_server_free_request(struct pscrpc_request *req)
 	struct pscrpc_request_buffer_desc *rqbd = req->rq_rqbd;
 	struct pscrpc_service             *svc  = rqbd->rqbd_service;
 	struct pscrpc_request *nxt;
-	int                                refcount;
-	struct psclist_head		  *tmp;
+	int refcount;
 
 	spinlock(&svc->srv_lock);
 
@@ -228,9 +227,8 @@ pscrpc_server_free_request(struct pscrpc_request *req)
 
 			/* remove rqbd's reqs from svc's req history while
 			 * I've got the service lock */
-			psclist_for_each(tmp, &rqbd->rqbd_reqs) {
-				req = psc_lentry_obj(tmp, struct pscrpc_request,
-						    rq_lentry);
+			psclist_for_each_entry(req, &rqbd->rqbd_reqs,
+			    rq_lentry) {
 				/* Track the highest culled req seq */
 				if (req->rq_history_seq >
 				    svc->srv_request_max_cull_seq)
@@ -341,6 +339,10 @@ pscrpc_server_handle_request(struct pscrpc_service *svc,
 		CERROR("null connection struct :(\n");
 		return -ENOTCONN;
 	}
+
+	psc_iostats_intv_add(&request->rq_conn->c_iostats_rcv,
+	    request->rq_reqlen);
+
 	/*
 	 * Here's a hack to trick lustre rpc into thinking there's a real export
 	 */
@@ -494,7 +496,7 @@ pscrpc_server_handle_reply(struct pscrpc_service *svc)
 	}
 
 	rs = psc_lentry_obj(svc->srv_reply_queue.next,
-			 struct pscrpc_reply_state, rs_list_entry);
+	    struct pscrpc_reply_state, rs_list_entry);
 
 	exp = rs->rs_export;
 	obd = exp->exp_obd;
@@ -834,10 +836,10 @@ void pscrpc_stop_all_threads(struct pscrpc_service *svc)
 int
 pscrpc_unregister_service(struct pscrpc_service *service)
 {
-	int                   rc;
-	struct l_wait_info    lwi;
-	struct psclist_head     *tmp;
+	struct pscrpc_request_buffer_desc *rqbd;
 	struct pscrpc_reply_state *rs, *t;
+	struct l_wait_info lwi;
+	int rc;
 
 	//pscrpc_stop_all_threads(service);
 	LASSERT(psc_listhd_empty(&service->srv_threads));
@@ -857,10 +859,7 @@ pscrpc_unregister_service(struct pscrpc_service *service)
 
 	/* Unlink all the request buffers.  This forces a 'final' event with
 	 * its 'unlink' flag set for each posted rqbd */
-	psclist_for_each(tmp, &service->srv_active_rqbds) {
-		struct pscrpc_request_buffer_desc *rqbd = psc_lentry_obj(tmp,
-		    struct pscrpc_request_buffer_desc, rqbd_lentry);
-
+	psclist_for_each_entry(rqbd, &service->srv_active_rqbds, rqbd_lentry) {
 		rc = LNetMDUnlink(rqbd->rqbd_md_h);
 		LASSERT(rc == 0 || rc == -ENOENT);
 	}
@@ -879,8 +878,8 @@ pscrpc_unregister_service(struct pscrpc_service *service)
 		 * timeout lets us CWARN for visibility of sluggish NALs */
 		lwi = LWI_TIMEOUT(300 * 100, NULL, NULL);
 		rc = pscrpc_svr_wait_event(&service->srv_waitq,
-					service->srv_nrqbd_receiving == 0,
-					&lwi, &service->srv_lock);
+		    service->srv_nrqbd_receiving == 0,
+		    &lwi, &service->srv_lock);
 		if (rc == -ETIMEDOUT)
 			CWARN("Service %s waiting for request buffers\n",
 			      service->srv_name);
@@ -931,8 +930,8 @@ pscrpc_unregister_service(struct pscrpc_service *service)
 		lwi = LWI_TIMEOUT(10 * 100, NULL, NULL);
 
 		rc = pscrpc_svr_wait_event(&service->srv_waitq,
-					!psc_listhd_empty(&service->srv_reply_queue),
-					&lwi, &service->srv_lock);
+		    !psc_listhd_empty(&service->srv_reply_queue),
+		    &lwi, &service->srv_lock);
 
 		LASSERT(rc == 0 || rc == -ETIMEDOUT);
 
@@ -963,13 +962,14 @@ pscrpc_peer_qlen_cmp(const void *a, const void *b)
 }
 
 struct pscrpc_service *
-pscrpc_init_svc(int nbufs, int bufsize, int max_req_size, int max_reply_size,
-    int req_portal, int rep_portal, char *name, svc_handler_t handler, int flags)
+pscrpc_init_svc(int nbufs, int bufsize, int max_req_size,
+    int max_reply_size, int req_portal, int rep_portal, char *name,
+    svc_handler_t handler, int flags)
 {
-	int                    rc;
 	struct pscrpc_service *service;
+	int rc;
 
-	psc_info("bufsize %d  max_req_size %d", bufsize, max_req_size);
+	psclog_info("bufsize %d  max_req_size %d", bufsize, max_req_size);
 
 	LASSERT(nbufs > 0);
 	LASSERT(bufsize >= max_req_size);

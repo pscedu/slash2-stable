@@ -109,7 +109,7 @@ pscrpc_import_get(struct pscrpc_import *import)
 	psc_assert(atomic_read(&import->imp_refcount) >= 0);
 	psc_assert(atomic_read(&import->imp_refcount) < 0x5a5a5a);
 	atomic_inc(&import->imp_refcount);
-	psc_info("import %p refcount=%d", import,
+	psclog_info("import %p refcount=%d", import,
 	      atomic_read(&import->imp_refcount));
 	return import;
 }
@@ -117,14 +117,13 @@ pscrpc_import_get(struct pscrpc_import *import)
 void
 pscrpc_import_put(struct pscrpc_import *import)
 {
-	psc_info("import %p refcount=%d", import,
-	      atomic_read(&import->imp_refcount) - 1);
+	psclog_info("import %p refcount=%d", import,
+	    atomic_read(&import->imp_refcount) - 1);
 
 	psc_assert(atomic_read(&import->imp_refcount) > 0);
 	psc_assert(atomic_read(&import->imp_refcount) < 0x5a5a5a);
-	if (!atomic_dec_and_test(&import->imp_refcount)) {
+	if (!atomic_dec_and_test(&import->imp_refcount))
 		return;
-	}
 	psc_dbg("destroying import %p", import);
 
 	/* XXX what if we fail to establish a connect for a new import */
@@ -232,7 +231,7 @@ pscrpc_prep_req_pool(struct pscrpc_import *imp, uint32_t version,
 		return (NULL);
 	}
 
-	psc_info("request %p request->rq_reqmsg %p",
+	psclog_info("request %p request->rq_reqmsg %p",
 	      request, request->rq_reqmsg);
 
 	request->rq_reqmsg->version |= version;
@@ -739,6 +738,9 @@ after_reply(struct pscrpc_request *req)
 		freelock(&imp->imp_lock);
 	}
 #endif
+
+	psc_iostats_intv_add(&req->rq_conn->c_iostats_rcv,
+	    req->rq_replen);
 	return (rc);
 }
 
@@ -756,8 +758,8 @@ pscrpc_queue_wait(struct pscrpc_request *req)
 	atomic_inc(&imp->imp_inflight);
 
 	psc_assert(imp != NULL);
-	psc_info("Sending RPC cookie:pid:xid:nid:opc "
-	      "%"PRIx64":%d:%"PRIu64":%s:%d",
+	psclog_info("Sending RPC cookie:pid:xid:nid:opc "
+	      "%#"PRIx64":%d:%"PRIu64":%s:%d",
 	      req->rq_reqmsg->handle.cookie,
 	      imp->imp_connection->c_peer.pid, req->rq_xid,
 	      libcfs_nid2str(imp->imp_connection->c_peer.nid),
@@ -838,7 +840,7 @@ pscrpc_queue_wait(struct pscrpc_request *req)
 	psclist_add_tail(&req->rq_lentry, &imp->imp_sending_list);
 	freelock(&imp->imp_lock);
 
-	psc_info("request %p request->rq_reqmsg %p",
+	psclog_info("request %p request->rq_reqmsg %p",
 	      req, req->rq_reqmsg);
 
 	rc = pscrpc_send_rpc(req, 0);
@@ -855,7 +857,7 @@ pscrpc_queue_wait(struct pscrpc_request *req)
 			       interrupted_request, req);
 
 	rc = pscrpc_cli_wait_event(&req->rq_reply_waitq,
-			pscrpc_check_reply(req), &lwi);
+	    pscrpc_check_reply(req), &lwi);
 	/* !!! might have timed out !!! */
 	if (rc)
 		DEBUG_REQ(PLL_INFO, req,
@@ -863,7 +865,7 @@ pscrpc_queue_wait(struct pscrpc_request *req)
 
 	DEBUG_REQ(PLL_INFO, req, "-- done sleeping");
 
-	psc_info("Completed RPC status:err:xid:nid:opc %d:%d:%"PRIx64":%s:%d",
+	psclog_info("Completed RPC status:err:xid:nid:opc %d:%d:%"PRIx64":%s:%d",
 	      req->rq_reqmsg->status, req->rq_err, req->rq_xid,
 	      libcfs_nid2str(imp->imp_connection->c_peer.nid),
 	      req->rq_reqmsg->opc);

@@ -97,7 +97,7 @@ pfl_rsx_timeout(__unusedx void *arg)
 }
 
 /**
- * rsx_bulkserver - setup a source or sink for a server.
+ * rsx_bulkserver - Setup a source or sink for a server.
  * @rq: RPC request associated with GET.
  * @type: GET_SINK receive from client or PUT_SOURCE to push to a client.
  * @ptl: portal to issue bulk xfer across.
@@ -210,7 +210,7 @@ rsx_bulkserver(struct pscrpc_request *rq, int type, int ptl,
 }
 
 /**
- * rsx_bulkclient - setup a source or sink for a client.
+ * rsx_bulkclient - Setup a source or sink for a client.
  * @type: GET_SOURCE lets server to pull our buffer,
  *	PUT_SINK sets up a buffer filled in by the server
  * @rq: RPC request.
