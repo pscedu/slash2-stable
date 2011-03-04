@@ -124,8 +124,10 @@ pscrpc_get_connection(lnet_process_id_t peer, lnet_nid_t self,
 	freelock(&conn_lock);
 
 	if (c2 == NULL) {
-		psc_iostats_init(&c->c_iostats_snd, "");
-		psc_iostats_init(&c->c_iostats_rcv, "");
+		psc_iostats_init(&c->c_iostats_snd, "rpc-%s-snd",
+		    libcfs_id2str(c->c_peer));
+		psc_iostats_init(&c->c_iostats_rcv, "rpc-%s-rcv",
+		    libcfs_id2str(c->c_peer));
 		return (c);
 	}
 
