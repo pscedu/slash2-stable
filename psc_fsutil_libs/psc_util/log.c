@@ -308,6 +308,7 @@ _psclogv(const struct pfl_callerinfo *pci, enum psclog_level level,
 			}
 		}
 		if (level == PLL_FATAL) {
+//			exit(1);
 			abort();
 			_exit(1);
 		}
