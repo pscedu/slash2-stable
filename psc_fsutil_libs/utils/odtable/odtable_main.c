@@ -50,9 +50,6 @@ int	num_puts;
 int	overwrite;
 int	show;
 
-#define ODT_DEFAULT_ITEM_SIZE	128
-#define ODT_DEFAULT_TABLE_SIZE	1024*128
-
 size_t	elem_size  = ODT_DEFAULT_ITEM_SIZE;
 size_t	table_size = ODT_DEFAULT_TABLE_SIZE;
 
