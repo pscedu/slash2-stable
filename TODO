@@ -120,7 +120,6 @@ pfl
 	- rpc (should be holding none)
 - rename SLASH/ZEST_MODULES to COMPONENTS to disassociate from PFL MODULES
 - rename PPMF_NOLOCK -> PPMF_NOPIN, PAF_LOCK -> PAF_PIN
-- add zfs SPA version to slashd ctlparam
 - for odtable(1), print stats as default behavior
 - add function call hierarchy to psclog
 - mmap() mprotect()'d memory in memguard
@@ -135,7 +134,6 @@ pfl
   into the obj/*.c file var
 - ensure psc_fatal() runs atexit() such as umount
 - libpthread rwlock is broken on openbsd!
-- hash table walker
 - add per-connection iostats
 
 lnet
@@ -144,5 +142,5 @@ lnet
 - pcpp:
   if an arg is a pointer, dont trace an integer version of it in PFL_ENTER()
 
-development tool
+development tools
 - let wiki changes automatically email zest/slash2-devel@ like svn commits
