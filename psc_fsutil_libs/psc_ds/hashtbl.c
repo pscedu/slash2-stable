@@ -213,7 +213,8 @@ psc_hashent_remove(const struct psc_hashtbl *t, void *p)
 }
 
 /**
- * psc_hashbkt_del_item - Remove an item from the hash bucket it's in.
+ * psc_hashbkt_del_item - Remove an item from the hash table bucket it's
+ *	in.
  * @t: the hash table.
  * @b: bucket to remove from.
  * @p: item to add.
@@ -232,7 +233,7 @@ psc_hashbkt_del_item(const struct psc_hashtbl *t, struct psc_hashbkt *b,
 }
 
 /**
- * psc_hashbkt_add_item - add an item to a hash bucket.
+ * psc_hashbkt_add_item - Add an item to a hash table bucket.
  * @t: the hash table.
  * @p: item to add.
  */
@@ -249,7 +250,7 @@ psc_hashbkt_add_item(const struct psc_hashtbl *t, struct psc_hashbkt *b,
 }
 
 /**
- * psc_hashtbl_add_item - add an item to a hash table.
+ * psc_hashtbl_add_item - Add an item to a hash table.
  * @t: the hash table.
  * @p: item to add.
  */
@@ -283,7 +284,7 @@ psc_hashent_conjoint(const struct psc_hashtbl *t, void *p)
 }
 
 /**
- * psc_hashtbl_getstats - query a hash table for its bucket usage stats.
+ * psc_hashtbl_getstats - Query a hash table for its bucket usage stats.
  * @t: the hash table.
  * @totalbucks: value-result pointer to # of buckets available.
  * @usedbucks: value-result pointer to # of buckets in use.
@@ -312,7 +313,7 @@ psc_hashtbl_getstats(const struct psc_hashtbl *t, int *totalbucks,
 }
 
 /**
- * psc_hashtbl_prstats - print hash table bucket usage stats.
+ * psc_hashtbl_prstats - Print hash table bucket usage stats.
  * @t: the hash table.
  */
 void
@@ -324,4 +325,20 @@ psc_hashtbl_prstats(const struct psc_hashtbl *t)
 	    &maxbucklen);
 	printf("used %d/total %d, nents=%d, maxlen=%d\n",
 	    usedbucks, totalbucks, nents, maxbucklen);
+}
+
+void
+psc_hashtbl_walk(const struct psc_hashtbl *t, void (*f)(void *))
+{
+	struct psc_hashbkt *b;
+	int rc, locked;
+	void *p;
+
+	PSC_HASHTBL_FOREACH_BUCKET(b, t) {
+		rc = tryreqlock(&b->phb_lock, &locked);
+		PSC_HASHBKT_FOREACH_ENTRY(t, p, b)
+			f(p);
+		if (rc)
+			ureqlock(&b->phb_lock, locked);
+	}
 }
