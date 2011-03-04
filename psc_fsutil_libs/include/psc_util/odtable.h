@@ -36,7 +36,7 @@
 #include "psc_util/log.h"
 
 #define ODT_DEFAULT_ITEM_SIZE	128
-#define	ODT_DEFAULT_TABLE_SIZE	1024*128
+#define	ODT_DEFAULT_TABLE_SIZE	(1024 * 128)
 
 #define ODTBL_VERS	UINT64_C(0x0000000000000002)
 #define ODTBL_MAGIC	UINT64_C(0x001122335577bbdd)
@@ -155,12 +155,8 @@ odtable_getitem_foff(const struct odtable *odt, size_t elem)
 /**
  * odtable_getitem_addr - Get address of memory-mapped table entry.
  */
-static __inline void *
-odtable_getitem_addr(const struct odtable *odt, size_t elem)
-{
-	return ((void *)((char *)odt->odt_base +
-	    odtable_getitemoff(odt, elem)));
-}
+#define odtable_getitem_addr(odt, elem)						\
+	PSC_AGP((odt)->odt_base, odtable_getitemoff((odt), (elem)))
 
 /**
  * odtable_getfooter - Get address of memory-mapped table entry's footer.
@@ -176,7 +172,8 @@ static __inline int
 odtable_createmmap(struct odtable *odt)
 {
 	odt->odt_base = mmap(NULL, ODTABLE_MAPSZ(odt), PROT_WRITE |
-	    PROT_READ, MAP_SHARED, odt->odt_fd, odt->odt_hdr->odth_start);
+	    PROT_READ, MAP_SHARED, odt->odt_fd,
+	    odt->odt_hdr->odth_start);
 	if (odt->odt_base == MAP_FAILED)
 		return (-errno);
 	return (0);
@@ -201,35 +198,35 @@ odtable_freemap(struct odtable *odt)
  * inuse == 2  --> test the slot assuming it's being used but ignoring key.
  */
 #define odtable_footercheck(odtf, odtr, inuse)				\
-	({								\
-		int __ret = 0;						\
+	_PFL_RVSTART {							\
+		int _rc = 0;						\
 									\
 		if ((odtf)->odtf_magic != ODTBL_MAGIC)			\
-			__ret = ODTBL_MAGIC_ERR;			\
+			_rc = ODTBL_MAGIC_ERR;				\
 									\
 		else if ((odtf)->odtf_slotno != (odtr)->odtr_elem)	\
-			__ret = ODTBL_SLOT_ERR;				\
+			_rc = ODTBL_SLOT_ERR;				\
 									\
 		else if ((odtf)->odtf_inuse == ODTBL_BAD)		\
-			__ret = ODTBL_BADSL_ERR;			\
+			_rc = ODTBL_BADSL_ERR;				\
 									\
 		else if (!(inuse) &&					\
 			 (odtf)->odtf_inuse != ODTBL_FREE)		\
-			__ret = ODTBL_FREE_ERR;				\
+			_rc = ODTBL_FREE_ERR;				\
 									\
 		else if ((inuse) == 1 &&				\
 			 ((odtf)->odtf_inuse == ODTBL_INUSE) &&		\
 			 ((odtf)->odtf_key != (odtr)->odtr_key))	\
-			__ret = ODTBL_KEY_ERR;				\
+			_rc = ODTBL_KEY_ERR;				\
 									\
 		else if ((inuse) > 0 &&					\
 			 (odtf)->odtf_inuse != ODTBL_INUSE)		\
-			__ret = ODTBL_INUSE_ERR;			\
+			_rc = ODTBL_INUSE_ERR;				\
 									\
-		if (__ret)						\
-			psc_errorx("slot=%zd has error %d",		\
-			    (odtr)->odtr_elem, __ret);			\
-		__ret;							\
-	})
+		if (_rc)						\
+			psclog_errorx("slot=%zd has error %d",		\
+			    (odtr)->odtr_elem, _rc);			\
+		_rc;							\
+	} _PFL_RVEND
 
 #endif
