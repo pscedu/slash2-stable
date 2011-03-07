@@ -322,10 +322,6 @@ pscrpc_unregister_bulk(struct pscrpc_request *req)
 
 	if (!desc->bd_registered && !pscrpc_bulk_active(desc)) {  /* completed or */
 		ureqlock(&desc->bd_lock, l);			  /* never registered */
-
-		if (success)
-			psc_iostats_intv_add(&pscrpc_req_getconn(req)->
-			    c_iostats_rcv, desc->bd_nob_transferred);
 		return;
 	}
 	/* bd_req NULL until registered
@@ -346,6 +342,9 @@ pscrpc_unregister_bulk(struct pscrpc_request *req)
 	 * a chance to run client_bulk_callback() */
 	if (registered)
 		LNetMDUnlink(desc->bd_md_h);
+
+	psc_iostats_intv_add(&pscrpc_req_getconn(req)->
+	    c_iostats_rcv, desc->bd_nob_transferred);
 
 	if (req->rq_set)
 		wq = &req->rq_set->set_waitq;

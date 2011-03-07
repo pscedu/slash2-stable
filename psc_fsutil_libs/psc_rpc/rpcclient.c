@@ -1642,7 +1642,8 @@ pscrpc_abort_inflight(struct pscrpc_import *imp)
 	  * locked?  Also, how do we know if the requests on the list are
 	  * being freed at this time?
 	  */
-	 psclist_for_each__entry_safe(req, next, &imp->imp_sending_list, rq_lentry) {
+	 psclist_for_each_entry_safe(req, next, &imp->imp_sending_list,
+	     rq_lentry) {
 		DEBUG_REQ(PLL_WARN, req, "inflight");
 
 		spinlock(&req->rq_lock);
