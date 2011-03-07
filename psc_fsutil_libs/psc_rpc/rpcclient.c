@@ -325,7 +325,6 @@ pscrpc_new_bulk(int npages, int type, int portal)
 	struct pscrpc_bulk_desc *desc;
 
 	PSCRPC_OBD_ALLOC(desc, offsetof(struct pscrpc_bulk_desc, bd_iov[npages]));
-	psclog_trace("new desc=%p", desc);
 	if (!desc)
 		return NULL;
 
@@ -977,7 +976,7 @@ pscrpc_queue_wait(struct pscrpc_request *req)
 int
 pscrpc_check_set(struct pscrpc_request_set *set, int check_allsent)
 {
-	struct psclist_head *tmp;
+	struct pscrpc_request *req;
 	int force_timer_recalc = 0;
 	int ncompleted         = 0;
 
@@ -995,10 +994,7 @@ pscrpc_check_set(struct pscrpc_request_set *set, int check_allsent)
 		return (1);
 	}
 
-	psclist_for_each(tmp, &set->set_requests) {
-		struct pscrpc_request *req =
-			psc_lentry_obj(tmp, struct pscrpc_request,
-				      rq_set_chain_lentry);
+	psclist_for_each_entry(req, &set->set_requests, rq_set_chain_lentry) {
 		struct pscrpc_import *imp = req->rq_import;
 		int rc = 0;
 
@@ -1323,16 +1319,13 @@ int
 pscrpc_expired_set(void *data)
 {
 	struct pscrpc_request_set *set = data;
-	struct psclist_head *tmp;
+	struct pscrpc_request *req;
 	time_t now = CURRENT_SECONDS;
 
 	psc_assert(set);
 
 	/* A timeout expired; see which reqs it applies to... */
-	psclist_for_each(tmp, &set->set_requests) {
-		struct pscrpc_request *req =
-			psc_lentry_obj(tmp, struct pscrpc_request, rq_set_chain_lentry);
-
+	psclist_for_each_entry(req, &set->set_requests, rq_set_chain_lentry) {
 		/* request in-flight? */
 		if (!((req->rq_phase == PSCRPC_RQ_PHASE_RPC && !req->rq_waiting &&
 		       !req->rq_resend) ||
@@ -1357,17 +1350,13 @@ pscrpc_expired_set(void *data)
 int
 pscrpc_set_next_timeout(struct pscrpc_request_set *set)
 {
-	struct psclist_head      *tmp;
-	time_t                 now = CURRENT_SECONDS;
-	time_t                 deadline;
-	int                    timeout = 0;
+	time_t now = CURRENT_SECONDS, deadline;
 	struct pscrpc_request *req;
+	int timeout = 0;
 
 	//SIGNAL_MASK_ASSERT(); /* XXX BUG 1511 */
 
-	psclist_for_each(tmp, &set->set_requests) {
-		req = psc_lentry_obj(tmp, struct pscrpc_request, rq_set_chain_lentry);
-
+	psclist_for_each_entry(req, &set->set_requests, rq_set_chain_lentry) {
 		/* request in-flight? */
 		if (!((req->rq_phase == PSCRPC_RQ_PHASE_RPC && !req->rq_waiting) ||
 		      (req->rq_phase == PSCRPC_RQ_PHASE_BULK)))
@@ -1397,15 +1386,12 @@ void
 pscrpc_interrupted_set(void *data)
 {
 	struct pscrpc_request_set *set = data;
-	struct psclist_head *tmp;
+	struct pscrpc_request *req;
 
 	psc_assert(set);
 	CERROR("INTERRUPTED SET %p\n", set);
 
-	psclist_for_each(tmp, &set->set_requests) {
-		struct pscrpc_request *req =
-			psc_lentry_obj(tmp, struct pscrpc_request, rq_set_chain_lentry);
-
+	psclist_for_each_entry(req, &set->set_requests, rq_set_chain_lentry) {
 		if (req->rq_phase != PSCRPC_RQ_PHASE_RPC)
 			continue;
 
@@ -1641,9 +1627,10 @@ pscrpc_free_committed(struct pscrpc_import *imp)
 }
 #endif
 
-void pscrpc_abort_inflight(struct pscrpc_import *imp)
+void
+pscrpc_abort_inflight(struct pscrpc_import *imp)
 {
-	 struct psclist_head *tmp, *n;
+	struct pscrpc_request *req, *next;
 
 	 /* Make sure that no new requests get processed for this import.
 	  * pscrpc_{queue,set}_wait must (and does) hold imp_lock while testing
@@ -1655,10 +1642,7 @@ void pscrpc_abort_inflight(struct pscrpc_import *imp)
 	  * locked?  Also, how do we know if the requests on the list are
 	  * being freed at this time?
 	  */
-	 psclist_for_each_safe(tmp, n, &imp->imp_sending_list) {
-		struct pscrpc_request *req =
-			psc_lentry_obj(tmp, struct pscrpc_request, rq_lentry);
-
+	 psclist_for_each__entry_safe(req, next, &imp->imp_sending_list, rq_lentry) {
 		DEBUG_REQ(PLL_WARN, req, "inflight");
 
 		spinlock(&req->rq_lock);
@@ -1671,10 +1655,7 @@ void pscrpc_abort_inflight(struct pscrpc_import *imp)
 	 }
 
 #if 0
-	 psclist_for_each_safe(tmp, n, &imp->imp_delayed_list) {
-		struct pscrpc_request *req =
-			psc_lentry_obj(tmp, struct pscrpc_request, rq_lentry);
-
+	 psclist_for_each_entry_safe(req, next, &imp->imp_delayed_list, rq_lentry) {
 		DEBUG_REQ(PLL_WARN, req, "aborting waiting req");
 
 		spinlock(&req->rq_lock);
