@@ -49,8 +49,8 @@ pscrpc_send_buf(lnet_handle_md_t *mdh, void *base, int len,
 	lnet_md_t md;
 	int rc;
 
-	psc_assert(portal != 0);
-	psc_assert(conn != NULL);
+	psc_assert(portal);
+	psc_assert(conn);
 	CDEBUG(D_INFO, "conn=%p id %s\n", conn, libcfs_id2str(conn->c_peer));
 	md.start     = base;
 	md.length    = len;
@@ -118,7 +118,7 @@ pscrpc_start_bulk_transfer(struct pscrpc_bulk_desc *desc)
 	psc_assert(!desc->bd_network_rw);
 	psc_assert(desc->bd_type == BULK_PUT_SOURCE ||
 		 desc->bd_type == BULK_GET_SINK);
-	psc_assert(conn != NULL);
+	psc_assert(conn);
 
 	desc->bd_success = 0;
 
@@ -233,10 +233,10 @@ pscrpc_register_bulk(struct pscrpc_request *req)
 	psc_assert(desc->bd_nob > 0);
 	psc_assert(!desc->bd_network_rw);
 	psc_assert(desc->bd_iov_count <= (int)PSCRPC_MAX_BRW_PAGES);
-	psc_assert(desc->bd_req != NULL);
+	psc_assert(desc->bd_req);
 	psc_assert(desc->bd_type == BULK_PUT_SINK ||
 		 desc->bd_type == BULK_GET_SOURCE);
-	psc_assert(desc->bd_connection != NULL);
+	psc_assert(desc->bd_connection);
 
 	desc->bd_success = 0;
 	peer = desc->bd_import->imp_connection->c_peer;
@@ -289,6 +289,18 @@ pscrpc_register_bulk(struct pscrpc_request *req)
 	return (0);
 }
 
+struct pscrpc_connection *
+pscrpc_req_getconn(struct pscrpc_request *rq)
+{
+	if (rq->rq_import && rq->rq_import->imp_connection)
+		return (rq->rq_import->imp_connection);
+	if (rq->rq_export && rq->rq_export->exp_connection)
+		return (rq->rq_export->exp_connection);
+	if (rq->rq_conn)
+		return (rq->rq_conn);
+	return (NULL);
+}
+
 /**
  * pscrpc_unregister_bulk - Client-side deregistration of bulk data buffer.
  * @req: the request associated with the bulk
@@ -310,6 +322,10 @@ pscrpc_unregister_bulk(struct pscrpc_request *req)
 
 	if (!desc->bd_registered && !pscrpc_bulk_active(desc)) {  /* completed or */
 		ureqlock(&desc->bd_lock, l);			  /* never registered */
+
+		if (success)
+			psc_iostats_intv_add(&pscrpc_req_getconn(req)->
+			    c_iostats_rcv, desc->bd_nob_transferred);
 		return;
 	}
 	/* bd_req NULL until registered
@@ -331,7 +347,7 @@ pscrpc_unregister_bulk(struct pscrpc_request *req)
 	if (registered)
 		LNetMDUnlink(desc->bd_md_h);
 
-	if (req->rq_set != NULL)
+	if (req->rq_set)
 		wq = &req->rq_set->set_waitq;
 	else
 		wq = &req->rq_reply_waitq;
@@ -369,14 +385,14 @@ pscrpc_send_reply(struct pscrpc_request *req, int may_be_difficult)
 	 * called without one).  We must also have a request buffer which
 	 * is either the actual (swabbed) incoming request, or a saved copy
 	 * if this is a req saved in target_queue_final_reply(). */
-	psc_assert(req->rq_reqmsg != NULL);
-	psc_assert(rs != NULL);
-	psc_assert(req->rq_repmsg != NULL);
+	psc_assert(req->rq_reqmsg);
+	psc_assert(rs);
+	psc_assert(req->rq_repmsg);
 	psc_assert(may_be_difficult || !rs->rs_difficult);
 	psc_assert(req->rq_repmsg == &rs->rs_msg);
 	psc_assert(rs->rs_cb_id.cbid_fn == pscrpc_reply_out_callback);
 	psc_assert(rs->rs_cb_id.cbid_arg == rs);
-	psc_assert(req->rq_repmsg != NULL);
+	psc_assert(req->rq_repmsg);
 
 #if PAULS_TODO
 	/*
@@ -483,7 +499,7 @@ pscrpc_send_rpc(struct pscrpc_request *request, int noreply)
 #endif
 	connection = request->rq_import->imp_connection;
 
-	if (request->rq_bulk != NULL) {
+	if (request->rq_bulk) {
 		rc = pscrpc_register_bulk(request);
 		if (rc)
 			return (rc);
@@ -494,7 +510,7 @@ pscrpc_send_rpc(struct pscrpc_request *request, int noreply)
 	request->rq_reqmsg->conn_cnt = request->rq_import->imp_conn_cnt;
 
 	if (!noreply) {
-		psc_assert(request->rq_replen != 0);
+		psc_assert(request->rq_replen);
 		if (request->rq_repmsg == NULL)
 			PSCRPC_OBD_ALLOC(request->rq_repmsg, request->rq_replen);
 
@@ -601,7 +617,7 @@ pscrpc_send_rpc(struct pscrpc_request *request, int noreply)
 	request->rq_repmsg = NULL;
 
  cleanup_bulk:
-	if (request->rq_bulk != NULL)
+	if (request->rq_bulk)
 		pscrpc_unregister_bulk(request);
 
 	return rc;
@@ -701,14 +717,14 @@ _pscrpc_free_req(struct pscrpc_request *request, int locked)
 
 	/* We must take it off the imp_replay_list first.  Otherwise, we'll set
 	 * request->rq_reqmsg to NULL while osc_close is dereferencing it. */
-	if (request->rq_import != NULL) {
+	if (request->rq_import) {
 		if (!locked)
 			spinlock(&request->rq_import->imp_lock);
 		//psclist_del_init(&request->rq_replay_list);
 		if (!locked)
 			freelock(&request->rq_import->imp_lock);
 	}
-	//psc_assertF(psc_listhd_empty(&request->rq_replay_list), "req %p\n", request);
+	//psc_assert_msg(psc_listhd_empty(&request->rq_replay_list), "req %p", request);
 
 	if (atomic_read(&request->rq_refcount) != 0) {
 		DEBUG_REQ(PLL_ERROR, request,
@@ -716,17 +732,17 @@ _pscrpc_free_req(struct pscrpc_request *request, int locked)
 		LBUG();
 	}
 
-	if (request->rq_repmsg != NULL) {
+	if (request->rq_repmsg) {
 		PSCRPC_OBD_FREE(request->rq_repmsg, request->rq_replen);
 		request->rq_repmsg = NULL;
 	}
 
-	if (request->rq_import != NULL) {
+	if (request->rq_import) {
 		pscrpc_import_put(request->rq_import);
 		request->rq_import = NULL;
 	}
 
-	if (request->rq_bulk != NULL)
+	if (request->rq_bulk)
 		pscrpc_free_bulk(request->rq_bulk);
 
 	if (request->rq_comp)
@@ -738,7 +754,7 @@ _pscrpc_free_req(struct pscrpc_request *request, int locked)
 		//_ptlrpc_free_req_to_pool(request);
 
 	} else {
-		if (request->rq_reqmsg != NULL) {
+		if (request->rq_reqmsg) {
 			PSCRPC_OBD_FREE(request->rq_reqmsg, request->rq_reqlen);
 			request->rq_reqmsg = NULL;
 		}
@@ -781,7 +797,7 @@ _pscrpc_req_finished(struct pscrpc_request *request, int locked)
 void
 pscrpc_free_bulk(struct pscrpc_bulk_desc *desc)
 {
-	psc_assert(desc != NULL);
+	psc_assert(desc);
 	psc_assert(desc->bd_iov_count != LI_POISON);	/* not freed already */
 	psc_assert(!desc->bd_network_rw);		/* network hands off or */
 	psc_assert(!desc->bd_registered);
