@@ -570,10 +570,10 @@ void
 psc_ctlmsg_hashtable_prhdr(__unusedx struct psc_ctlmsghdr *mh,
     __unusedx const void *m)
 {
-	printf("%-32s %5s %6s %6s "
+	printf("%-30s %5s %7s %7s "
 	    "%6s %6s %6s %6s\n",
-	    "hash-table", "flags", "used", "total",
-	    "%use", "#ents", "avglen", "maxlen");
+	    "hash-table", "flags", "#fill", "#bkts",
+	    "%fill", "#ents", "avglen", "maxlen");
 }
 
 void
@@ -584,8 +584,8 @@ psc_ctlmsg_hashtable_prdat(__unusedx const struct psc_ctlmsghdr *mh,
 	char rbuf[PSCFMT_RATIO_BUFSIZ];
 
 	psc_fmt_ratio(rbuf, pcht->pcht_usedbucks, pcht->pcht_totalbucks);
-	printf("%-32s    %c%c "
-	    "%6d %6d "
+	printf("%-30s    %c%c "
+	    "%7d %7d "
 	    "%6s %6d "
 	    "%6.1f "
 	    "%6d\n",
