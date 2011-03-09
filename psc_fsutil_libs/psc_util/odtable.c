@@ -123,9 +123,10 @@ odtable_getitem(struct odtable *odt, const struct odtable_receipt *odtr)
 		psc_crc64_calc(&crc, data, odt->odt_hdr->odth_elemsz);
 		if (crc != odtf->odtf_crc) {
 			odtf->odtf_inuse = ODTBL_BAD;
-			psc_warnx("slot=%zd crc fail odtfcrc=%"PSCPRIxCRC64
-				  " elemcrc=%"PSCPRIxCRC64,
-				  odtr->odtr_elem, odtf->odtf_crc, crc);
+			psclog_warnx("slot=%zd crc fail "
+			    "odtfcrc=%"PSCPRIxCRC64" "
+			    "elemcrc=%"PSCPRIxCRC64,
+			    odtr->odtr_elem, odtf->odtf_crc, crc);
 			return (NULL);
 		}
 	}
@@ -271,7 +272,7 @@ odtable_load(struct odtable **t, const char *fn, const char *fmt, ...)
 
 	odt->odt_fd = open(fn, O_RDWR, 0600);
 	if (odt->odt_fd < 0) {
-		psc_warnx("open %s", fn);
+		psclog_warnx("open %s", fn);
 		PSCFREE(odt);
 		return (-errno);
 	}
@@ -321,14 +322,15 @@ odtable_load(struct odtable **t, const char *fn, const char *fmt, ...)
 				psc_crc64_calc(&crc, p, odt->odt_hdr->odth_elemsz);
 				if (crc != odtf->odtf_crc) {
 					odtf->odtf_inuse = ODTBL_BAD;
-					psc_warnx("slot=%zd crc fail "
-					    "odtfcrc=%"PSCPRIxCRC64" elemcrc=%"PSCPRIxCRC64,
+					psclog_warnx("slot=%zd crc fail "
+					    "odtfcrc=%"PSCPRIxCRC64" "
+					    "elemcrc=%"PSCPRIxCRC64,
 					    z, odtf->odtf_crc, crc);
 				}
 			}
 		} else {
 			psc_vbitmap_set(odt->odt_bitmap, z);
-			psc_warnx("slot=%zd ignoring, bad inuse value"
+			psclog_warnx("slot=%zd ignoring, bad inuse value"
 			    "inuse=0x%"PRIx64,
 			    z, odtf->odtf_inuse);
 		}
@@ -406,7 +408,7 @@ odtable_scan(struct odtable *odt,
 		rc = odtable_footercheck(odtf, &todtr, 2);
 		psc_assert(rc != ODTBL_FREE_ERR);
 		if (rc) {
-			psc_warnx("slot=%zd marked bad, skipping",
+			psclog_warnx("slot=%zd marked bad, skipping",
 			    todtr.odtr_elem);
 			continue;
 		}
