@@ -978,10 +978,8 @@ void
 psc_ctlmsg_odtable_prhdr(__unusedx struct psc_ctlmsghdr *mh,
     __unusedx const void *m)
 {
-	printf("%-25s %3s %7s %7s %5s "
-	    "%10s %5s %5s %5s\n",
-	    "on-disk-table", "opt", "#hit", "#uhit", "delay",
-	    "count", "begin", "code", "prob");
+	printf("%-47s %3s %6s %7s %7s %5s\n",
+	    "on-disk-table", "flg", "elemsz", "inuse", "total", "%use");
 }
 
 void
@@ -989,17 +987,15 @@ psc_ctlmsg_odtable_prdat(__unusedx const struct psc_ctlmsghdr *mh,
     const void *m)
 {
 	const struct psc_ctlmsg_odtable *pco = m;
+	char buf[PSCFMT_RATIO_BUFSIZ];
 
-	printf("%-25s  %c%c "
-	    "%7d %7d %5d "
-	    "%10d %5d %5d "
-	    "%5d\n",
+	psc_fmt_ratio(buf, pco->pco_inuse, pco->pco_total);
+	printf("%-47s  %c%c "
+	    "%6d %7d %7d %5s\n",
 	    pco->pco_name,
 	    pco->pco_opts & ODTBL_OPT_CRC	? 'c' : '-',
 	    pco->pco_opts & ODTBL_OPT_SYNC	? 's' : '-',
-	    0, 0, 0,
-	    0, 0, 0,
-	    0);
+	    pco->pco_elemsz, pco->pco_inuse, pco->pco_total, buf);
 }
 
 void
