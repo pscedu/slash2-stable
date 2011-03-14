@@ -1032,10 +1032,7 @@ pjournal_replay(struct psc_journal *pj, int thrtype,
 		pje = psc_dynarray_getpos(&pj->pj_bufs, i);
 
 		nentries++;
-		/*
-		 * Distill first because it is outside of ZFS and can
-		 * be done repeatedly without any issue.
-		 */
+
 		if (pje->pje_xid > pj->pj_distill_xid) {
 			rc = distill_handler(pje, 0, pj->pj_npeers, 1);
 			if (rc)
