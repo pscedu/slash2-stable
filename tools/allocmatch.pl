@@ -4,17 +4,19 @@
 use strict;
 use warnings;
 
-my $s;
-{
-	local $/;
-	$s = <>;
+my %m;
+
+while (<>) {
+	if (/alloc\([0-9]+\)=([0-9a-fx]+)/i) {
+		$m{$1} = $.;
+	} elsif (/free\(([0-9a-fx]+)\)/i) {
+		my $r = $1;
+		warn "line $.: invalid free $r" unless exists $m{$r};
+		delete $m{$r};
+	}
 }
 
-while ($s =~ /free\((0x[0-9a-f]+)\)/gc) {
-	my $pos = $+[0];
-	my $addr = $1;
-
-	print $addr, "\n" if
-	    $' =~ /free\($addr\)/ and
-	    $` !~ /alloc\([0-9a-fx]*\)=$addr/;
+my ($k, $v);
+while (($k, $v) = each %m) {
+	print "unfreed mem $k at line $v\n";
 }
