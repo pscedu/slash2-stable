@@ -47,22 +47,6 @@ usage(void)
 #define PTR_c	((void *)0x0c)
 
 void
-check(struct psc_dynarray *da, ...)
-{
-	void *p, *checkp;
-	va_list ap;
-	int j;
-
-	va_start(ap, da);
-	DYNARRAY_FOREACH(p, j, da) {
-		checkp = va_arg(ap, void *);
-		psc_assert(p == checkp);
-	}
-	va_end(ap);
-	psc_assert(va_arg(ap, void *) == NULL);
-}
-
-void
 display(struct psc_dynarray *da)
 {
 	void *p;
@@ -71,6 +55,37 @@ display(struct psc_dynarray *da)
 	DYNARRAY_FOREACH(p, j, da)
 		printf("%p ", p);
 	printf("\n");
+}
+
+#define CHECK(d, ...)	_check(PFL_CALLERINFO(), (d), ##__VA_ARGS__)
+
+void
+_check(struct pfl_callerinfo *pfl_callerinfo, struct psc_dynarray *da, ...)
+{
+	void *p, *t, *checkp;
+	va_list ap, c;
+	int j;
+
+	va_start(ap, da);
+	va_copy(c, ap);
+	DYNARRAY_FOREACH(p, j, da) {
+		checkp = va_arg(ap, void *);
+		if (p != checkp) {
+			psclog_max("error");
+			printf("is:\t");
+			display(da);
+			printf("want:\t");
+			do {
+				t = va_arg(c, void *);
+				printf("%p ", t);
+			} while (t);
+			printf("\n");
+			psc_fatalx("%p != %p", p, checkp);
+		}
+	}
+	va_end(c);
+	va_end(ap);
+	psc_assert(va_arg(ap, void *) == NULL);
 }
 
 int
@@ -106,20 +121,20 @@ main(int argc, char *argv[])
 	psc_dynarray_ensurelen(&da, 1);
 	_psc_dynarray_resize(&da, 0);
 
-	p = PTR_4; psc_dynarray_splice(&da, 0, 0, &p, 1); check(&da, PTR_4, NULL);
-	psc_dynarray_splice(&da, 0, 1, NULL, 0); check(&da, NULL);
+	p = PTR_4; psc_dynarray_splice(&da, 0, 0, &p, 1); CHECK(&da, PTR_4, NULL);
+	psc_dynarray_splice(&da, 0, 1, NULL, 0); CHECK(&da, NULL);
 
-	p = PTR_4; psc_dynarray_splice(&da, 0, 0, &p, 1); check(&da, PTR_4, NULL);
-	p = PTR_3; psc_dynarray_splice(&da, 0, 0, &p, 1); check(&da, PTR_3, PTR_4, NULL);
-	p = PTR_2; psc_dynarray_splice(&da, 0, 0, &p, 1); check(&da, PTR_2, PTR_3, PTR_4, NULL);
-	p = PTR_1; psc_dynarray_splice(&da, 0, 0, &p, 1); check(&da, PTR_1, PTR_2, PTR_3, PTR_4, NULL);
+	p = PTR_4; psc_dynarray_splice(&da, 0, 0, &p, 1); CHECK(&da, PTR_4, NULL);
+	p = PTR_3; psc_dynarray_splice(&da, 0, 0, &p, 1); CHECK(&da, PTR_3, PTR_4, NULL);
+	p = PTR_2; psc_dynarray_splice(&da, 0, 0, &p, 1); CHECK(&da, PTR_2, PTR_3, PTR_4, NULL);
+	p = PTR_1; psc_dynarray_splice(&da, 0, 0, &p, 1); CHECK(&da, PTR_1, PTR_2, PTR_3, PTR_4, NULL);
 
-	psc_dynarray_splice(&da, 0, 0, NULL, 0); check(&da, PTR_1, PTR_2, PTR_3, PTR_4, NULL);
+	psc_dynarray_splice(&da, 0, 0, NULL, 0); CHECK(&da, PTR_1, PTR_2, PTR_3, PTR_4, NULL);
 
-	p = PTR_a; psc_dynarray_splice(&da, 2, 1, &p, 1); check(&da, PTR_1, PTR_2, PTR_a, PTR_4, NULL);
-	p = PTR_b; psc_dynarray_splice(&da, 3, 0, &p, 1); check(&da, PTR_1, PTR_2, PTR_a, PTR_b, PTR_4, NULL);
+	p = PTR_a; psc_dynarray_splice(&da, 2, 1, &p, 1); CHECK(&da, PTR_1, PTR_2, PTR_a, PTR_4, NULL);
+	p = PTR_b; psc_dynarray_splice(&da, 3, 0, &p, 1); CHECK(&da, PTR_1, PTR_2, PTR_a, PTR_b, PTR_4, NULL);
 
-	psc_dynarray_sort(&da, qsort, pcmp); check(&da, PTR_1, PTR_2, PTR_4, PTR_a, PTR_b, NULL);
+	psc_dynarray_sort(&da, qsort, pcmp); CHECK(&da, PTR_1, PTR_2, PTR_4, PTR_a, PTR_b, NULL);
 
 	psc_assert(psc_dynarray_bsearch(&da, PTR_0, cmp) == 0);
 	psc_assert(psc_dynarray_bsearch(&da, PTR_1, cmp) == 0);
@@ -130,9 +145,12 @@ main(int argc, char *argv[])
 	psc_assert(psc_dynarray_bsearch(&da, PTR_b, cmp) == 4);
 	psc_assert(psc_dynarray_bsearch(&da, PTR_c, cmp) == 5);
 
-	psc_dynarray_reset(&da); check(&da, NULL);
+	psc_dynarray_splice(&da, 2, 1, NULL, 0); display(&da); CHECK(&da, PTR_1, PTR_2, PTR_a, PTR_b, NULL);
+	psc_dynarray_splice(&da, 0, 1, NULL, 0); display(&da); CHECK(&da, PTR_2, PTR_a, PTR_b, NULL);
 
-	p = PTR_3; psc_dynarray_add(&da, p); check(&da, PTR_3, NULL);
+	psc_dynarray_reset(&da); CHECK(&da, NULL);
+
+	p = PTR_3; psc_dynarray_add(&da, p); CHECK(&da, PTR_3, NULL);
 
 	psc_dynarray_free(&da);
 
