@@ -145,8 +145,8 @@ main(int argc, char *argv[])
 	psc_assert(psc_dynarray_bsearch(&da, PTR_b, cmp) == 4);
 	psc_assert(psc_dynarray_bsearch(&da, PTR_c, cmp) == 5);
 
-	psc_dynarray_splice(&da, 2, 1, NULL, 0); display(&da); CHECK(&da, PTR_1, PTR_2, PTR_a, PTR_b, NULL);
-	psc_dynarray_splice(&da, 0, 1, NULL, 0); display(&da); CHECK(&da, PTR_2, PTR_a, PTR_b, NULL);
+	psc_dynarray_splice(&da, 2, 1, NULL, 0); CHECK(&da, PTR_1, PTR_2, PTR_a, PTR_b, NULL);
+	psc_dynarray_splice(&da, 0, 1, NULL, 0); CHECK(&da, PTR_2, PTR_a, PTR_b, NULL);
 
 	psc_dynarray_reset(&da); CHECK(&da, NULL);
 
