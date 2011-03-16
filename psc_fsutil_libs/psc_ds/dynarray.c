@@ -213,30 +213,34 @@ psc_dynarray_remove(struct psc_dynarray *pda, const void *item)
 /**
  * psc_dynarray_splice - Cut and replace a section of a dynarray.
  * @pda: dynamic array to splice.
- * @startpos: offset into array to begin splice.
- * @len: length from offset to remove.
+ * @off: offset into array to begin splice.
+ * @nrmv: number of items to remove.
  * @base: start array to splice into
- * @nitems: number of new items to splice into the array.
+ * @nadd: number of new items to splice into the array.
  */
 int
-psc_dynarray_splice(struct psc_dynarray *pda, int startpos, int len,
-    const void *base, int nitems)
+psc_dynarray_splice(struct psc_dynarray *pda, int off, int nrmv,
+    const void *base, int nadd)
 {
-	int rc, rem;
+	int oldlen, rc, rem;
+	void **p;
 
-	rem = psc_dynarray_len(pda) - startpos - len;
-	psc_assert(nitems >= 0);
-	psc_assert(len >= 0);
-	psc_assert(len <= psc_dynarray_len(pda));
-	rc = psc_dynarray_ensurelen(pda, psc_dynarray_len(pda) - len + nitems);
+	oldlen = psc_dynarray_len(pda);
+	psc_assert(nadd >= 0);
+	psc_assert(nrmv >= 0);
+	psc_assert(off + nrmv <= oldlen);
+	rc = psc_dynarray_ensurelen(pda, oldlen + nadd - nrmv);
 	if (rc)
 		return (rc);
 
-	if (nitems != len)
-		memmove(pda->pda_items + startpos + nitems - len,
-		    pda->pda_items + startpos, rem * sizeof(void *));
-	memcpy(pda->pda_items + startpos, base, nitems * sizeof(void *));
-	pda->pda_pos += nitems - len;
+	p = pda->pda_items + off;
+	if (nadd != nrmv) {
+		rem = oldlen - off - nrmv;
+		memmove(nadd > nrmv ? p + nadd - nrmv : p + nadd,
+		    p + nrmv, rem * sizeof(void *));
+		pda->pda_pos += nadd - nrmv;
+	}
+	memcpy(p, base, nadd * sizeof(void *));
 	return (0);
 }
 
