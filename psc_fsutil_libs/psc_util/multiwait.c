@@ -32,13 +32,13 @@
 #include <string.h>
 
 #include "pfl/cdefs.h"
+#include "pfl/time.h"
 #include "psc_ds/vbitmap.h"
 #include "psc_util/alloc.h"
 #include "psc_util/bitflag.h"
 #include "psc_util/log.h"
 #include "psc_util/multiwait.h"
 #include "psc_util/pthrutil.h"
-#include "pfl/time.h"
 
 /**
  * psc_multiwaitcond_init - Initialize a multiwait condition.
@@ -458,7 +458,7 @@ psc_multiwaitus(struct psc_multiwait *mw, void *datap, int usec)
 }
 
 /**
- * psc_multiwait_reset - Release all conditions and release all*
+ * psc_multiwait_reset - Release all conditions and release all
  *	associated memory rom a multiwait.
  * @mw: the multiwait to reset.
  */
