@@ -525,21 +525,6 @@ psc_ctlparse_mlist(char *mlists)
 	}
 }
 
-void
-psc_ctlparse_cmd(char *cmd)
-{
-	struct psc_ctlmsg_cmd *pcc;
-	int i;
-
-	for (i = 0; i < psc_ctlcmd_nreqs; i++)
-		if (strcasecmp(cmd, psc_ctlcmd_reqs[i].pccr_name) == 0) {
-			pcc = psc_ctlmsg_push(PCMT_CMD, sizeof(*pcc));
-			pcc->pcc_opcode = psc_ctlcmd_reqs[i].pccr_opcode;
-			return;
-		}
-	errx(1, "unrecognized command: %s", cmd);
-}
-
 int
 psc_ctl_loglevel_namelen(int n)
 {
@@ -1136,6 +1121,7 @@ psc_ctlcli_main(const char *osockfn, int ac, char *av[],
 {
 	extern const char *daemon_name, *progname;
 	char optstr[LINE_MAX], chbuf[3];
+	struct psc_ctlmsg_cmd *pcc;
 	struct psc_thread *thr;
 	struct sockaddr_un sun;
 	const char *prg;
@@ -1208,8 +1194,17 @@ psc_ctlcli_main(const char *osockfn, int ac, char *av[],
 		}
 	}
 	ac -= optind;
-	if (ac)
-	    usage();
+	av += optind;
+
+	if (ac) {
+		for (i = 0; i < psc_ctlcmd_nreqs; i++)
+			if (strcasecmp(av[0], psc_ctlcmd_reqs[i].pccr_name) == 0) {
+				psc_ctlcmd_reqs[i].pccr_cbf(ac, av);
+				break;
+			}
+		if (i == psc_ctlcmd_nreqs)
+			errx(1, "unrecognized command: %s", av[0]);
+	}
 
 	if (psc_ctl_msghdr == NULL)
 		errx(1, "no actions specified");

@@ -44,7 +44,6 @@ struct psc_ctlparam_node;
 /* default control operations shared by all controllable daemons */
 #define PSC_CTLDEFOPS								\
 	{ NULL,				0 },					\
-	{ psc_ctlhnd_cmd,		sizeof(struct psc_ctlmsg_cmd) },	\
 	{ psc_ctlrep_getfault,		sizeof(struct psc_ctlmsg_fault) },	\
 	{ psc_ctlrep_gethashtable,	sizeof(struct psc_ctlmsg_hashtable) },	\
 	{ psc_ctlrep_getiostats,	sizeof(struct psc_ctlmsg_iostats) },	\
@@ -100,7 +99,6 @@ int	psc_ctlrep_getrpcsvc(int, struct psc_ctlmsghdr *, void *);
 int	psc_ctlrep_getsubsys(int, struct psc_ctlmsghdr *, void *);
 int	psc_ctlrep_getthread(int, struct psc_ctlmsghdr *, void *);
 int	psc_ctlrep_param(int, struct psc_ctlmsghdr *, void *);
-int	psc_ctlhnd_cmd(int, struct psc_ctlmsghdr *, void *);
 
 void	psc_ctlthr_get(struct psc_thread *, struct psc_ctlmsg_thread *);
 void	psc_ctlacthr_get(struct psc_thread *, struct psc_ctlmsg_thread *);
@@ -139,12 +137,7 @@ typedef void (*psc_ctl_thrget_t)(struct psc_thread *, struct psc_ctlmsg_thread *
 extern psc_ctl_thrget_t psc_ctl_thrgets[];
 extern int psc_ctl_nthrgets;
 
-typedef int (*psc_ctl_cmd_t)(int, struct psc_ctlmsghdr *, void *);
-extern psc_ctl_cmd_t psc_ctl_cmds[];
-extern int psc_ctl_ncmds;
-
 #define PFLCTL_SVR_DEFS							\
-int psc_ctl_nthrgets = nitems(psc_ctl_thrgets);				\
-int psc_ctl_ncmds = nitems(psc_ctl_cmds)
+int psc_ctl_nthrgets = nitems(psc_ctl_thrgets)
 
 #endif /* _PFL_CTLSVR_H_ */

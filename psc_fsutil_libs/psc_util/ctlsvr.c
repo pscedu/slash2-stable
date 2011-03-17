@@ -1479,27 +1479,6 @@ psc_ctlrep_getjournal(int fd, struct psc_ctlmsghdr *mh, void *m)
 }
 
 /**
- * psc_ctlhnd_cmd - Invoke an action from a command inquiry.
- * @fd: client socket descriptor.
- * @mh: already filled-in control message header.
- * @m: control message to examine.
- */
-int
-psc_ctlhnd_cmd(int fd, struct psc_ctlmsghdr *mh, void *m)
-{
-	struct psc_ctlmsg_cmd *pcc = m;
-	int rc;
-
-	rc = 1;
-	if (pcc->pcc_opcode >= 0 && pcc->pcc_opcode < psc_ctl_ncmds)
-		rc = (*psc_ctl_cmds[pcc->pcc_opcode])(fd, mh, m);
-	else
-		rc = psc_ctlsenderr(fd, mh,
-		    "unknown command: %d", pcc->pcc_opcode);
-	return (rc);
-}
-
-/**
  * psc_ctl_applythrop - Invoke an operation on all applicable threads.
  * @fd: client socket descriptor.
  * @mh: already filled-in control message header.

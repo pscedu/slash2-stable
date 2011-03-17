@@ -74,7 +74,7 @@ struct psc_ctlshow_ent {
 
 struct psc_ctlcmd_req {
 	const char		 *pccr_name;
-	int			  pccr_opcode;
+	void			(*pccr_cbf)(int, char **);
 };
 
 struct psc_ctlmsg_prfmt {
@@ -95,7 +95,6 @@ struct psc_ctlopt {
 	void			*pco_data;
 };
 
-void  psc_ctlparse_cmd(char *);
 void  psc_ctlparse_hashtable(char *);
 void  psc_ctlparse_iostats(char *);
 void  psc_ctlparse_lc(char *);

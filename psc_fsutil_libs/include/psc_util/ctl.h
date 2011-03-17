@@ -151,10 +151,6 @@ struct psc_ctlmsg_mlist {
 
 #define PCML_NAME_ALL		"all"
 
-struct psc_ctlmsg_cmd {
-	int32_t			 pcc_opcode;
-};
-
 struct psc_ctlmsg_fault {
 	char			pcflt_thrname[PSC_THRNAME_MAX];
 	char			pcflt_name[PSC_FAULT_NAME_MAX];
@@ -219,7 +215,6 @@ struct psc_ctlmsg_journal {
 /* Control message types. */
 enum {
 	PCMT_ERROR = 0,
-	PCMT_CMD,
 	PCMT_GETFAULT,
 	PCMT_GETHASHTABLE,
 	PCMT_GETIOSTATS,
