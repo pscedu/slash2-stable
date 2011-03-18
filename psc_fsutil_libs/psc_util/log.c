@@ -154,6 +154,24 @@ psclog_get_fuse_context(void)
 	return (NULL);
 }
 
+pid_t
+psclog_get_fuse_ctx_pid(void)
+{
+	struct fuse_context *ctx;
+
+	ctx = psclog_get_fuse_context();
+	return (ctx ? ctx->pid : -1);
+}
+
+uid_t
+psclog_get_fuse_ctx_uid(void)
+{
+	struct fuse_context *ctx;
+
+	ctx = psclog_get_fuse_context();
+	return (ctx ? ctx->uid : (uid_t)-1);
+}
+
 /**
  * psc_subsys_name - Dummy overrideable PFL subsystem ID -> name resolver.
  */
@@ -180,6 +198,9 @@ psclog_getdata(void)
 			*p = '\0';
 		/* XXX try to read this if the pscthr is available */
 		d->pld_thrid = pfl_getsysthrid();
+		snprintf(d->pld_nothrname, sizeof(d->pld_nothrname),
+		    "<%d>", d->pld_thrid);
+
 #ifdef HAVE_CNOS
 		int cnos_get_rank(void);
 
@@ -227,7 +248,6 @@ _psclogv(const struct pfl_callerinfo *pci, enum psclog_level level,
 {
 	char *p, prefix[LINE_MAX], fmtbuf[LINE_MAX];
 	extern const char *progname;
-	struct fuse_context *ctx;
 	struct psc_thread *thr;
 	struct psclog_data *d;
 	struct timeval tv;
@@ -240,19 +260,21 @@ _psclogv(const struct pfl_callerinfo *pci, enum psclog_level level,
 	save_errno = errno;
 
 	d = psclog_getdata();
+	if (d->pld_flags & PLDF_INLOG) {
+		if (level == PLL_FATAL)
+			goto log;
+		return;
+	}
+	d->pld_flags |= PLDF_INLOG;
+
 	thr = pscthr_get_canfail();
 	if (thr) {
 		thrid = thr->pscthr_thrid;
 		thrname = thr->pscthr_name;
 	} else {
 		thrid = d->pld_thrid;
-		if (d->pld_nothrname[0] == '\0')
-			snprintf(d->pld_nothrname,
-			    sizeof(d->pld_nothrname), "<%d>", thrid);
 		thrname = d->pld_nothrname;
 	}
-
-	ctx = psclog_get_fuse_context();
 
 	gettimeofday(&tv, NULL);
 	FMTSTR(prefix, sizeof(prefix), psc_logfmt,
@@ -267,12 +289,12 @@ _psclogv(const struct pfl_callerinfo *pci, enum psclog_level level,
 		FMTSTRCASE('l', "d", pci->pci_lineno)
 		FMTSTRCASE('N', "s", progname)
 		FMTSTRCASE('n', "s", thrname)
-		FMTSTRCASE('P', "d", ctx ? (int)ctx->pid : -1)
+		FMTSTRCASE('P', "d", psclog_get_fuse_ctx_pid())
 		FMTSTRCASE('r', "d", d->pld_rank)
 		FMTSTRCASE('s', "lu", tv.tv_sec)
 		FMTSTRCASE('T', "s", psc_subsys_name(pci->pci_subsys))
 		FMTSTRCASE('t', "d", pci->pci_subsys)
-		FMTSTRCASE('U', "d", ctx ? (int)ctx->uid : -1)
+		FMTSTRCASE('U', "d", psclog_get_fuse_ctx_uid())
 		FMTSTRCASE('u', "lu", tv.tv_usec)
 	);
 
@@ -284,6 +306,7 @@ _psclogv(const struct pfl_callerinfo *pci, enum psclog_level level,
 	for (p = fmtbuf + rc - 1; p >= fmtbuf && *p == '\n'; p--)
 		*p = '\0';
 
+ log:
 	va_copy(apd, ap);
 
 	PSCLOG_LOCK();
@@ -314,7 +337,11 @@ _psclogv(const struct pfl_callerinfo *pci, enum psclog_level level,
 		}
 	}
 
+	va_end(apd, ap);
+
 	PSCLOG_UNLOCK();
+
+	d->pld_flags &= ~PLDF_INLOG;
 
 	/* Restore in case app needs it after our fprintf()'s may have modified it. */
 	errno = save_errno;

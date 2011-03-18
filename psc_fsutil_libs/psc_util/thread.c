@@ -365,7 +365,7 @@ _pscthr_init(int type, int flags, void (*startf)(struct psc_thread *),
 	memset(thr, 0, sizeof(*thr));
 	INIT_PSC_LISTENTRY(&thr->pscthr_lentry);
 	psc_waitq_init(&thr->pscthr_waitq);
-	INIT_SPINLOCK(&thr->pscthr_lock);
+	INIT_SPINLOCK_NOLOG(&thr->pscthr_lock);
 	thr->pscthr_type = type;
 	thr->pscthr_startf = startf;
 	thr->pscthr_privsiz = privsiz;

@@ -38,7 +38,10 @@ struct psclog_data {
 	char		pld_nothrname[24];
 	int		pld_rank;
 	pid_t		pld_thrid;
+	int		pld_flags;
 };
+
+#define PLDF_INLOG	(1 << 0)
 
 /* Log levels. */
 enum psclog_level {
