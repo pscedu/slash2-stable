@@ -337,7 +337,7 @@ _psclogv(const struct pfl_callerinfo *pci, enum psclog_level level,
 		}
 	}
 
-	va_end(apd, ap);
+	va_end(apd);
 
 	PSCLOG_UNLOCK();
 
