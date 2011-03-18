@@ -76,8 +76,8 @@ psc_dumpstack(__unusedx int sig)
 
 	spinlock(&lock);
 	fflush(stderr);
-	printf("\n\nAttempting to generating stack trace...\n");
-	snprintf(buf, sizeof(buf), "pstack %d || gstack %d",
+	printf("\n\nAttempting to generate stack trace...\n");
+	snprintf(buf, sizeof(buf), "pstack %d 2>/dev/null || gstack %d",
 	    getpid(), getpid());
 	if (system(buf) == -1)
 		warn("%s", buf);
@@ -85,10 +85,16 @@ psc_dumpstack(__unusedx int sig)
 	_exit(1);
 }
 
+void
+psc_dumpstack0(void)
+{
+	psc_dumpstack(0);
+}
+
 __weak void
 psc_enter_debugger(const char *str)
 {
-	psc_log(PLL_MAX, "enter debugger (%s)", str);
+	psclog(PLL_MAX, "enter debugger (%s)", str);
 	kill(0, SIGINT);
 }
 
@@ -124,6 +130,9 @@ pfl_init(void)
 		if (signal(SIGABRT, psc_dumpstack) == SIG_ERR)
 			psc_fatal("signal");
 	}
+	p = getenv("PSC_FORCE_DUMPSTACK");
+	if (p && strcmp(p, "0"))
+		atexit(psc_dumpstack0);
 
 	psc_faults_init();
 }
