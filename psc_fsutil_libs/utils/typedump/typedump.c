@@ -205,7 +205,6 @@ main(int argc, char *argv[])
 	PRTYPE(struct psc_completion);
 	PRTYPE(struct psc_ctlacthr);
 	PRTYPE(struct psc_ctlcmd_req);
-	PRTYPE(struct psc_ctlmsg_cmd);
 	PRTYPE(struct psc_ctlmsg_error);
 	PRTYPE(struct psc_ctlmsg_fault);
 	PRTYPE(struct psc_ctlmsg_hashtable);
@@ -325,7 +324,6 @@ main(int argc, char *argv[])
 	PRVAL(ODTBL_MAGIC_ERR);
 	PRVAL(ODTBL_NO_ERR);
 	PRVAL(ODTBL_SLOT_ERR);
-	PRVAL(PCMT_CMD);
 	PRVAL(PCMT_ERROR);
 	PRVAL(PCMT_GETFAULT);
 	PRVAL(PCMT_GETHASHTABLE);

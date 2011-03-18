@@ -1121,7 +1121,6 @@ psc_ctlcli_main(const char *osockfn, int ac, char *av[],
 {
 	extern const char *daemon_name, *progname;
 	char optstr[LINE_MAX], chbuf[3];
-	struct psc_ctlmsg_cmd *pcc;
 	struct psc_thread *thr;
 	struct sockaddr_un sun;
 	const char *prg;
