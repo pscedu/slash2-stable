@@ -91,6 +91,7 @@ psc_ctlmsg_push(int type, size_t msiz)
 
 	tsiz = msiz + sizeof(*psc_ctl_msghdr);
 	psc_ctl_msghdr = psc_realloc(psc_ctl_msghdr, tsiz, PAF_NOLOG);
+	memset(psc_ctl_msghdr, 0, tsiz);
 	psc_ctl_msghdr->mh_type = type;
 	psc_ctl_msghdr->mh_size = msiz;
 	psc_ctl_msghdr->mh_id = id++;
@@ -1113,6 +1114,20 @@ psc_ctlcli_rd_main(__unusedx struct psc_thread *thr)
 	close(psc_ctl_sock);
 }
 
+int
+matches_cmd(const char *cmd, const char *ucmd)
+{
+	size_t n;
+
+	if (strchr(cmd, ':')) {
+		n = strcspn(cmd, ":");
+		if (n != strcspn(ucmd, ":="))
+			return (0);
+		return (strncasecmp(cmd, ucmd, n) == 0);
+	}
+	return (strcasecmp(cmd, ucmd) == 0);
+}
+
 extern void usage(void);
 
 void
@@ -1194,10 +1209,10 @@ psc_ctlcli_main(const char *osockfn, int ac, char *av[],
 	}
 	ac -= optind;
 	av += optind;
-
 	if (ac) {
 		for (i = 0; i < psc_ctlcmd_nreqs; i++)
-			if (strcasecmp(av[0], psc_ctlcmd_reqs[i].pccr_name) == 0) {
+			if (matches_cmd(psc_ctlcmd_reqs[i].pccr_name,
+			    av[0])) {
 				psc_ctlcmd_reqs[i].pccr_cbf(ac, av);
 				break;
 			}
