@@ -134,7 +134,6 @@ pfl
   into the obj/*.c file var
 - ensure psc_fatal() runs atexit() such as umount
 - libpthread rwlock is broken on openbsd!
-- add per-connection iostats
 - differentiate pll log level vs. locked list
 - stop reinpretation of args in macros with stack vars
 - remove prereq and regen from make and just use the .h files as deps on
