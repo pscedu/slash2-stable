@@ -371,6 +371,7 @@ ifdef HASDEPS
 
   ifdef LIBRARY
     ${LIBRARY}: ${OBJS}
+	tput el >&2 || true
 	${AR} ${ARFLAGS} $@ $(sort ${OBJS})
   endif
 else
