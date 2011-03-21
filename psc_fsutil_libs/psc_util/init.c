@@ -69,14 +69,20 @@ psc_subsys_register(__unusedx int level, __unusedx const char *name)
 }
 
 void
-psc_dumpstack(__unusedx int sig)
+psc_dumpstack(int sig)
 {
 	static psc_spinlock_t lock = SPINLOCK_INIT_NOLOG;
 	char buf[BUFSIZ];
 
+//	if (!trylock(&lock)) {
+//		write(STDERR_FILENO, );
+//		_exit(1);
+//	}
+
 	spinlock(&lock);
 	fflush(stderr);
-	printf("\n\nAttempting to generate stack trace...\n");
+	printf("\n\nSignal %d received, attempting to "
+	    "generate stack trace...\n", sig);
 	snprintf(buf, sizeof(buf), "pstack %d 2>/dev/null || gstack %d",
 	    getpid(), getpid());
 	if (system(buf) == -1)
