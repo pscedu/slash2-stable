@@ -28,9 +28,9 @@ void
 _pscrpc_export_put(struct pscrpc_export *exp)
 {
 	if (atomic_dec_and_test(&exp->exp_refcount)) {
-		psc_info("destroying export %p/%s",
-			 exp, (exp->exp_connection) ?
-			 libcfs_id2str(exp->exp_connection->c_peer) : "<?>");
+		psclog_debug("destroying export %p/%s",
+		    exp, (exp->exp_connection) ?
+		    libcfs_id2str(exp->exp_connection->c_peer) : "<?>");
 
 		if (exp->exp_connection)
 			pscrpc_put_connection(exp->exp_connection);

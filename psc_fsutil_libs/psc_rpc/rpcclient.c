@@ -117,14 +117,14 @@ pscrpc_import_get(struct pscrpc_import *import)
 void
 pscrpc_import_put(struct pscrpc_import *import)
 {
-	psclog_info("import %p refcount=%d", import,
+	psclog_dbg("import %p refcount=%d", import,
 	    atomic_read(&import->imp_refcount) - 1);
 
 	psc_assert(atomic_read(&import->imp_refcount) > 0);
 	psc_assert(atomic_read(&import->imp_refcount) < 0x5a5a5a);
 	if (!atomic_dec_and_test(&import->imp_refcount))
 		return;
-	psc_dbg("destroying import %p", import);
+	psclog_dbg("destroying import %p", import);
 
 	/* XXX what if we fail to establish a connect for a new import */
 	psc_assert(import->imp_connection);
@@ -214,7 +214,7 @@ pscrpc_prep_req_pool(struct pscrpc_import *imp, uint32_t version,
 
 	if (pool)
 		//request = pscrpc_prep_req_from_pool(pool);
-		psc_fatalx("Pools are not yet supported by PscRpc");
+		psc_fatalx("pools are not yet supported");
 
 	if (!request)
 		PSCRPC_OBD_ALLOC(request, sizeof(*request));
@@ -612,9 +612,9 @@ pscrpc_check_reply(struct pscrpc_request *req)
 void
 pscrpc_unregister_reply(struct pscrpc_request *request)
 {
-	int                rc;
-	struct psc_waitq *wq;
 	struct l_wait_info lwi;
+	struct psc_waitq *wq;
+	int rc;
 
 	psc_assert(!in_interrupt());             /* might sleep */
 
@@ -699,11 +699,13 @@ after_reply(struct pscrpc_request *req)
 
 	rc = pscrpc_check_status(req);
 
-	/* Either we've been evicted, or the server has failed for
+	/*
+	 * Either we've been evicted, or the server has failed for
 	 * some reason. Try to reconnect, and if that fails, punt to the
-	 * upcall. */
+	 * upcall.
+	 */
 	if ((rc == -ENOTCONN) || (rc == -ENODEV)) {
-		psc_errorx("ENOTCONN or ENODEV");
+		psclog_errorx("ENOTCONN or ENODEV");
 #if 0
 		if (req->rq_send_state != PSCRPC_IMP_FULL ||
 		    imp->imp_obd->obd_no_recov || imp->imp_dlm_fake) {
@@ -1452,7 +1454,7 @@ pscrpc_set_wait(struct pscrpc_request_set *set)
 
 	psclist_for_each_entry(req, &set->set_requests, rq_set_chain_lentry)
 		if (req->rq_phase == PSCRPC_RQ_PHASE_NEW)
-			(void)pscrpc_push_req(req);
+			pscrpc_push_req(req);
 
 	do {
 		timeout = pscrpc_set_next_timeout(set);
@@ -1470,7 +1472,8 @@ pscrpc_set_wait(struct pscrpc_request_set *set)
 
 		psc_assert(rc == 0 || rc == -EINTR || rc == -ETIMEDOUT);
 
-		/* -EINTR => all requests have been flagged rq_intr so next
+		/*
+		 * -EINTR => all requests have been flagged rq_intr so next
 		 * check completes.
 		 * -ETIMEDOUT => someone timed out.  When all reqs have
 		 * timed out, signals are enabled allowing completion with
@@ -1487,9 +1490,10 @@ pscrpc_set_wait(struct pscrpc_request_set *set)
 	psc_assert(set->set_remaining == 0);
 
 	rc = 0;
-	psclist_for_each_entry(req, &set->set_requests, rq_set_chain_lentry) {
+	psclist_for_each_entry(req, &set->set_requests,
+	    rq_set_chain_lentry) {
 		if (req->rq_import->imp_failed) {
-			psc_errorx("failed import detected!");
+			psclog_errorx("failed import detected!");
 			rc = -ECONNABORTED;
 			continue;
 		}
@@ -1503,24 +1507,25 @@ pscrpc_set_wait(struct pscrpc_request_set *set)
 		/* so if all messages didn't complete
 		 * then just make a note of it */
 		if (!(req->rq_phase == PSCRPC_RQ_PHASE_COMPLETE)) {
-			psc_errorx("error in rq_phase: rq_phase = 0x%x",
-				   req->rq_phase);
+			psclog_errorx("error in rq_phase: rq_phase=%#x",
+			    req->rq_phase);
 			rc = -EIO;
 		}
 #endif
 		if (req->rq_status) {
-			psc_errorx("error status detected in rq_status (%d)", req->rq_status);
+			psclog_errorx("error status detected in "
+			    "rq_status (%d)", req->rq_status);
 			rc = -(abs(req->rq_status));
 		}
 	}
 
 	if (rc)
-		psc_errorx("set %p failed, rc=%d", set, rc);
+		psclog_errorx("set %p failed, rc=%d", set, rc);
 	else
 		if (set->set_interpret) {
 			rc = set->set_interpret(set, set->set_arg, rc);
 			if (rc)
-				psc_errorx("set interpreter failed (%d)", rc);
+				psclog_errorx("set interpreter failed (%d)", rc);
 		}
 
 	return (rc);
@@ -1549,7 +1554,7 @@ pscrpc_set_finalize(struct pscrpc_request_set *set, int block, int destroy)
 			 * AND... even if it is, this mighth be a good place
 			 *        for a fall-back (timeout-based?) */
 			errno = -rc;
-			psc_errorx("pscrpc_set_wait() failed for set %p: %s",
+			psclog_errorx("pscrpc_set_wait() failed for set %p: %s",
 			    set, strerror(-rc));
 			return (rc);
 		} else {
@@ -1692,7 +1697,7 @@ pscrpc_resend_req(struct pscrpc_request *req)
 
 		/* ensure previous bulk fails */
 		req->rq_xid = pscrpc_next_xid();
-		psc_warnx("resend bulk old x%"PRIu64" new x%"PRIu64,
+		psclog_warnx("resend bulk old x%"PRIu64" new x%"PRIu64,
 		       old_xid, req->rq_xid);
 	}
 	pscrpc_wake_client_req(req);

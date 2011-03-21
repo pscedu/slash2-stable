@@ -119,7 +119,7 @@ rsx_bulkserver(struct pscrpc_request *rq, int type, int ptl,
 
 	desc = pscrpc_prep_bulk_exp(rq, n, type, ptl);
 	if (desc == NULL) {
-		psc_warnx("pscrpc_prep_bulk_exp returned a null desc");
+		psclog_warnx("pscrpc_prep_bulk_exp returned a null desc");
 		return (-ENOMEM); // XXX errno
 	}
 	desc->bd_nob = 0;
@@ -143,22 +143,22 @@ rsx_bulkserver(struct pscrpc_request *rq, int type, int ptl,
 
 		LASSERT(rc == 0 || rc == -ETIMEDOUT);
 		if (rc == -ETIMEDOUT) {
-			psc_errorx("timeout on bulk GET");
+			psclog_errorx("timeout on bulk GET");
 			pscrpc_abort_bulk(desc);
 		} else if (desc->bd_export->exp_failed) {
-			psc_warnx("eviction on bulk GET");
+			psclog_warnx("eviction on bulk GET");
 			rc = -ENOTCONN;
 			pscrpc_abort_bulk(desc);
 		} else if (!desc->bd_success ||
 		    desc->bd_nob_transferred != desc->bd_nob) {
-			psc_errorx("%s bulk GET %d(%d)",
+			psclog_errorx("%s bulk GET %d(%d)",
 			    desc->bd_success ? "truncated" : "network error on",
 			    desc->bd_nob_transferred, desc->bd_nob);
 			/* XXX should this be a different errno? */
 			rc = -ETIMEDOUT;
 		}
 	} else {
-		psc_errorx("pscrpc I/O bulk get failed: rc %d", rc);
+		psclog_errorx("pscrpc I/O bulk get failed: rc %d", rc);
 	}
 	comms_error = (rc != 0);
 
@@ -167,20 +167,20 @@ rsx_bulkserver(struct pscrpc_request *rq, int type, int ptl,
 		v1 = desc->bd_iov[0].iov_base;
 		v8 = desc->bd_iov[0].iov_base;
 		if (v1 == NULL) {
-			psc_errorx("desc->bd_iov[0].iov_base is NULL");
+			psclog_errorx("desc->bd_iov[0].iov_base is NULL");
 			rc = -ENXIO;
 			goto out;
 		}
 
-		psc_info("got %u bytes of bulk data across %d IOVs: "
-		      "first byte is 0x%x (%"PRIx64")",
-			 desc->bd_nob, desc->bd_iov_count, *v1, *v8);
+		psclog_info("got %u bytes of bulk data across %d IOVs: "
+		    "first byte is 0x%x (%"PRIx64")",
+		    desc->bd_nob, desc->bd_iov_count, *v1, *v8);
 
 		sum = 0;
 		for (i = 0; i < desc->bd_iov_count; i++)
 			sum += desc->bd_iov[i].iov_len;
 		if (sum != desc->bd_nob)
-			psc_warnx("sum (%d) does not match bd_nob (%d)",
+			psclog_warnx("sum (%d) does not match bd_nob (%d)",
 			    sum, desc->bd_nob);
 		//rc = pscrpc_reply(rq);
 	}

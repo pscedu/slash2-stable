@@ -43,12 +43,13 @@ pscrpc_import_state_name(enum pscrpc_imp_state state)
 /* A CLOSED import should remain so. */
 #define PSCIMPORT_SET_STATE_NOLOCK(imp, state)					\
 	do {									\
-		if (imp->imp_state != PSCRPC_IMP_CLOSED) {			\
-			psc_warnx("%p %s: changing import state from %s to %s",	\
-			       imp, libcfs_id2str(imp->imp_connection->c_peer),	\
-			       pscrpc_import_state_name(imp->imp_state),	\
-			       pscrpc_import_state_name(state));		\
-			imp->imp_state = state;					\
+		if ((imp)->imp_state != PSCRPC_IMP_CLOSED) {			\
+			psclog_warnx("%p %s: changing import state %s to %s",	\
+			    (imp),						\
+			    libcfs_id2str((imp)->imp_connection->c_peer),	\
+			    pscrpc_import_state_name((imp)->imp_state),		\
+			    pscrpc_import_state_name(state));			\
+			(imp)->imp_state = state;				\
 		}								\
 	} while (0)
 
@@ -83,18 +84,18 @@ pscrpc_set_import_discon(struct pscrpc_import *imp, uint32_t conn_cnt)
 
 	spinlock(&imp->imp_lock);
 
-	psc_warnx("inhere conn_cnt %u imp_conn_cnt %u, imp->imp_state = %d",
-		  conn_cnt, imp->imp_conn_cnt, imp->imp_state);
+	psclog_warnx("inhere conn_cnt=%u imp_conn_cnt=%u imp_state=%d",
+	    conn_cnt, imp->imp_conn_cnt, imp->imp_state);
 
 	if (imp->imp_state == PSCRPC_IMP_FULL &&
 	    (conn_cnt == 0 || conn_cnt == (uint32_t)imp->imp_conn_cnt)) {
 
-		psc_errorx("Connection to service via nid %s was "
-			   "lost; in progress operations using this "
-			   "service will %s.",
-			   libcfs_nid2str(imp->imp_connection->c_peer.nid),
-			   imp->imp_replayable ?
-			   "wait for recovery to complete" : "fail");
+		psclog_errorx("connection to service via nid %s was "
+		    "lost; in progress operations using this "
+		    "service will %s",
+		    libcfs_nid2str(imp->imp_connection->c_peer.nid),
+		    imp->imp_replayable ?
+		    "wait for recovery to complete" : "fail");
 
 		PSCIMPORT_SET_STATE_NOLOCK(imp, PSCRPC_IMP_DISCON);
 		freelock(&imp->imp_lock);
@@ -109,12 +110,12 @@ pscrpc_set_import_discon(struct pscrpc_import *imp, uint32_t conn_cnt)
 		rc = 1;
 	} else {
 		freelock(&imp->imp_lock);
-		psc_warnx("%s: import %p already %s (conn %u, was %u): %s",
-			imp->imp_client->cli_name, imp,
-			(imp->imp_state == PSCRPC_IMP_FULL &&
-			 (uint32_t)imp->imp_conn_cnt > conn_cnt) ?
-			"reconnected" : "not connected", imp->imp_conn_cnt,
-			conn_cnt, pscrpc_import_state_name(imp->imp_state));
+		psclog_warnx("%s: import %p already %s (conn %u, was %u): %s",
+		    imp->imp_client->cli_name, imp,
+		    (imp->imp_state == PSCRPC_IMP_FULL &&
+		     (uint32_t)imp->imp_conn_cnt > conn_cnt) ?
+		    "reconnected" : "not connected", imp->imp_conn_cnt,
+		    conn_cnt, pscrpc_import_state_name(imp->imp_state));
 	}
 
 	return rc;
@@ -128,7 +129,7 @@ void
 pscrpc_deactivate_import(struct pscrpc_import *imp)
 {
 	spinlock(&imp->imp_lock);
-	psc_warnx("setting import %p INVALID", imp);
+	psclog_info("setting import %p INVALID", imp);
 	imp->imp_invalid = 1;
 	imp->imp_generation++;
 	freelock(&imp->imp_lock);
@@ -190,7 +191,7 @@ pscrpc_fail_import(struct pscrpc_import *imp, uint32_t conn_cnt)
 
 	if (pscrpc_set_import_discon(imp, conn_cnt)) {
 		if (!imp->imp_replayable) {
-			psc_warnx("import for %s not replayable, "
+			psclog_warnx("import for %s not replayable, "
 			    "auto-deactivating",
 			    libcfs_id2str(imp->imp_connection->c_peer));
 

@@ -172,7 +172,6 @@ pscrpc_server_post_idle_rqbds(struct pscrpc_service *svc)
 	return (-1);
 }
 
-
 static void
 _pscrpc_server_free_request(struct pscrpc_request *req)
 {
@@ -194,7 +193,6 @@ _pscrpc_server_free_request(struct pscrpc_request *req)
 		PSCRPC_OBD_FREE(req, sizeof(*req));
 	}
 }
-
 
 static void
 pscrpc_server_free_request(struct pscrpc_request *req)
@@ -330,7 +328,7 @@ pscrpc_server_handle_request(struct pscrpc_service *svc,
 		goto out;
 	}
 
-	psc_info("got req xid=%"PRId64, request->rq_xid);
+	psclog_info("got req xid=%"PRId64, request->rq_xid);
 
 	request->rq_svc_thread = thread;
 	request->rq_conn = pscrpc_get_connection(request->rq_peer,
@@ -352,6 +350,7 @@ pscrpc_server_handle_request(struct pscrpc_service *svc,
 		PSCRPC_OBD_ALLOC(exp, sizeof(*exp));
 		if (exp == NULL)
 			psc_fatal("Couldn't allocate export");
+
 		/*
 		 * init and associate the connection and export structs
 		 *  see pscrpc_new_export() for more detail
@@ -380,13 +379,13 @@ pscrpc_server_handle_request(struct pscrpc_service *svc,
 
 	DEBUG_REQ(PLL_TRACE, request, "Handling RPC");
 #if 0
-	psc_info("Handling RPC peer+ref:pid:xid:nid:opc "
-		 "%s+%d:%d:%"PRIu64":%d",
-		 libcfs_id2str(request->rq_conn->c_peer),
-		 atomic_read(&request->rq_export->exp_refcount),
-		 request->rq_reqmsg->status,
-		 request->rq_xid,
-		 request->rq_reqmsg->opc);
+	psclog_info("Handling RPC peer+ref:pid:xid:nid:opc "
+	    "%s+%d:%d:%"PRIu64":%d",
+	    libcfs_id2str(request->rq_conn->c_peer),
+	    atomic_read(&request->rq_export->exp_refcount),
+	    request->rq_reqmsg->status,
+	    request->rq_xid,
+	    request->rq_reqmsg->opc);
 #endif
 
 	rc = svc->srv_handler(request);
@@ -396,13 +395,13 @@ pscrpc_server_handle_request(struct pscrpc_service *svc,
 	DEBUG_REQ(PLL_TRACE, request, "Handled RPC");
 
 #if 0
-	psc_info("Handled RPC peer+ref:pid:xid:nid:opc "
-		 "%s+%d:%d:%"PRIu64":%d",
-		 libcfs_id2str(request->rq_conn->c_peer),
-		 atomic_read(&request->rq_export->exp_refcount),
-		 request->rq_reqmsg->status,
-		 request->rq_xid,
-		 request->rq_reqmsg->opc);
+	psclog_info("Handled RPC peer+ref:pid:xid:nid:opc "
+	    "%s+%d:%d:%"PRIu64":%d",
+	    libcfs_id2str(request->rq_conn->c_peer),
+	    atomic_read(&request->rq_export->exp_refcount),
+	    request->rq_reqmsg->status,
+	    request->rq_xid,
+	    request->rq_reqmsg->opc);
 #endif
  put_rpc_export:
 	pscrpc_export_rpc_put(request->rq_export);
@@ -723,22 +722,22 @@ pscrpcthr_main(struct psc_thread *thr)
 #if 0
 		lc_watchdog_disable(watchdog);
 		l_wait_event_exclusive(svc->srv_waitq,
-		psc_dbg("run %d, svc->srv_n_difficult_replies %d, "
-		       "psc_listhd_empty(&svc->srv_idle_rqbds) %d,  svc->srv_rqbd_timeout %d "
-		       "psc_listhd_empty(&svc->srv_reply_queue) %d, psc_listhd_empty(&svc->srv_request_queue) %d "
-		       "svc->srv_n_active_reqs %d svc->srv_nthreads %d"
-		       "COND 1=%d, COND 2=%d, COND 3=%d",
+		psclog_dbg("run %d, svc->srv_n_difficult_replies %d, "
+		    "psc_listhd_empty(&svc->srv_idle_rqbds) %d,  svc->srv_rqbd_timeout %d "
+		    "psc_listhd_empty(&svc->srv_reply_queue) %d, psc_listhd_empty(&svc->srv_request_queue) %d "
+		    "svc->srv_n_active_reqs %d svc->srv_nthreads %d"
+		    "COND 1=%d, COND 2=%d, COND 3=%d",
 
-		       thr->pscthr_run, svc->srv_n_difficult_replies,
-		       psc_listhd_empty(&svc->srv_idle_rqbds), svc->srv_rqbd_timeout,
-		       psc_listhd_empty(&svc->srv_reply_queue), psc_listhd_empty(&svc->srv_request_queue),
-		       svc->srv_n_active_reqs, svc->srv_nthreads,
-		       (thr->pscthr_run != 0 && svc->srv_n_difficult_replies == 0),
-		       (!psc_listhd_empty(&svc->srv_idle_rqbds) && svc->srv_rqbd_timeout == 0),
-		       (!psc_listhd_empty(&svc->srv_request_queue) &&
+		    thr->pscthr_run, svc->srv_n_difficult_replies,
+		    psc_listhd_empty(&svc->srv_idle_rqbds), svc->srv_rqbd_timeout,
+		    psc_listhd_empty(&svc->srv_reply_queue), psc_listhd_empty(&svc->srv_request_queue),
+		    svc->srv_n_active_reqs, svc->srv_nthreads,
+		    (thr->pscthr_run != 0 && svc->srv_n_difficult_replies == 0),
+		    (!psc_listhd_empty(&svc->srv_idle_rqbds) && svc->srv_rqbd_timeout == 0),
+		    (!psc_listhd_empty(&svc->srv_request_queue) &&
 			(svc->srv_n_difficult_replies == 0 ||
 			 svc->srv_n_active_reqs < (svc->srv_nthreads - 1)))
-		       );
+		);
 #endif
 		pscrpc_svr_wait_event(&svc->srv_waitq,
 		    pscrpcthr_waitevent(thr, svc), &lwi, NULL);

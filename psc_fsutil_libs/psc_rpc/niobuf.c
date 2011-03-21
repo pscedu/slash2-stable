@@ -70,7 +70,7 @@ pscrpc_send_buf(lnet_handle_md_t *mdh, void *base, int len,
 
 	rc = LNetMDBind(md, LNET_UNLINK, mdh);
 	if (rc) {
-		psc_errorx("LNetMDBind failed: %d", rc);
+		psclog_errorx("LNetMDBind failed: %d", rc);
 		psc_assert(rc == -ENOMEM);
 		return (-ENOMEM);
 	}
@@ -86,7 +86,7 @@ pscrpc_send_buf(lnet_handle_md_t *mdh, void *base, int len,
 		/* We're going to get an UNLINK event when I unlink below,
 		 * which will complete just like any other failed send, so
 		 * I fall through and return success here! */
-		psc_errorx("LNetPut(%s, %d, %"PRIu64") failed: %d",
+		psclog_errorx("LNetPut(%s, %d, %"PRIu64") failed: %d",
 		    libcfs_id2str(conn->c_peer), portal, xid, rc);
 		rc2 = LNetMDUnlink(*mdh);
 		psc_assert(rc2 == 0);
@@ -256,7 +256,7 @@ pscrpc_register_bulk(struct pscrpc_request *req)
 	 * explode trying to understand how the original request's bulk
 	 * might interfere with the retried request -eeb */
 	if (desc->bd_registered && req->rq_xid == desc->bd_last_xid)
-		psc_fatalx("registered: %d  rq_xid: %"PRIx64" bd_last_xid: %"PRIx64"\n",
+		psc_fatalx("registered: %d rq_xid=%"PRIx64" bd_last_xid=%"PRIx64,
 		  desc->bd_registered, req->rq_xid, desc->bd_last_xid);
 	desc->bd_registered = 1;
 	desc->bd_last_xid = req->rq_xid;
@@ -264,7 +264,7 @@ pscrpc_register_bulk(struct pscrpc_request *req)
 	rc = LNetMEAttach(desc->bd_portal, peer, req->rq_xid, 0,
 	    LNET_UNLINK, LNET_INS_AFTER, &me_h);
 	if (rc) {
-		psc_errorx("LNetMEAttach failed: %d", rc);
+		psclog_errorx("LNetMEAttach failed: %d", rc);
 		psc_assert(rc == -ENOMEM);
 		return (-ENOMEM);
 	}
@@ -273,7 +273,7 @@ pscrpc_register_bulk(struct pscrpc_request *req)
 	desc->bd_network_rw = 1;
 	rc = LNetMDAttach(me_h, md, LNET_UNLINK, &desc->bd_md_h);
 	if (rc) {
-		psc_errorx("LNetMDAttach failed: %d", rc);
+		psclog_errorx("LNetMDAttach failed: %d", rc);
 		psc_assert(rc == -ENOMEM);
 		desc->bd_network_rw = 0;
 		rc2 = LNetMEUnlink(me_h);
@@ -369,9 +369,9 @@ pscrpc_unregister_bulk(struct pscrpc_request *req)
 }
 
 /**
- * psc_send_reply - Server-side reply function.
+ * pscrpc_send_reply - Server-side reply function.
  * @req: the request in question
- * @may_be_difficult:   not sure if we're going to use this.
+ * @may_be_difficult: not sure if we're going to use this.
  */
 int
 pscrpc_send_reply(struct pscrpc_request *req, int may_be_difficult)
@@ -420,10 +420,10 @@ pscrpc_send_reply(struct pscrpc_request *req, int may_be_difficult)
 		req->rq_conn = pscrpc_get_connection(req->rq_peer,
 		    req->rq_self, NULL);
 	else
-		(struct pscrpc_connection *)pscrpc_connection_addref(req->rq_conn);
+		pscrpc_connection_addref(req->rq_conn);
 
 	if (req->rq_conn == NULL) {
-		psc_errorx("not replying on NULL connection"); /* bug 9635 */
+		psclog_errorx("not replying on NULL connection"); /* bug 9635 */
 		return -ENOTCONN;
 	}
 	atomic_inc(&svc->srv_outstanding_replies);
@@ -548,12 +548,12 @@ pscrpc_send_rpc(struct pscrpc_request *request, int noreply)
 		reply_md.eq_handle = pscrpc_eq_h;
 
 		psclog_info("LNetMDAttach() try w/ handle %"PRIx64,
-		      (uint64_t)reply_me_h.cookie);
+		      reply_me_h.cookie);
 
 		rc = LNetMDAttach(reply_me_h, reply_md, LNET_UNLINK,
 				 &request->rq_reply_md_h);
 		if (rc) {
-			psc_errorx("LNetMDAttach failed: %d", rc);
+			psclog_errorx("LNetMDAttach failed: %d", rc);
 			psc_assert(rc == -ENOMEM);
 			spinlock(&request->rq_lock);
 			/* ...but the MD attach didn't succeed... */
@@ -562,7 +562,7 @@ pscrpc_send_rpc(struct pscrpc_request *request, int noreply)
 			GOTO(cleanup_me, rc = -ENOMEM);
 		}
 
-		psc_dbg("Setup reply buffer: %u bytes, xid %"PRIx64
+		psclog_dbg("Setup reply buffer: %u bytes, xid %"PRIx64
 			 ", portal %u",
 			 request->rq_replen, request->rq_xid,
 			 request->rq_reply_portal);
