@@ -67,5 +67,5 @@ pscrpc_getpridforpeer(lnet_process_id_t *pridp, struct psc_dynarray *da,
 			*pridp = *pp;
 			return;
 		}
-	pp->nid = LNET_NID_ANY;
+	pridp->nid = LNET_NID_ANY;
 }
