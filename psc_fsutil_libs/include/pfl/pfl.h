@@ -45,6 +45,8 @@ struct pfl_callerinfo {
 void psc_enter_debugger(const char *);
 
 void  pfl_dump_fflags(int);
+void  pfl_dump_stack(void);
+pid_t pfl_getsysthrid(void);
 void  pfl_init(void);
 void  pfl_print_flag(const char *, int *);
 void  pfl_setprocesstitle(char **, const char *, ...);

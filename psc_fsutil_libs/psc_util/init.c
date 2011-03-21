@@ -17,6 +17,9 @@
  * %PSC_END_COPYRIGHT%
  */
 
+#include <sys/types.h>
+#include <sys/syscall.h>
+
 #include <err.h>
 #include <signal.h>
 #include <stdio.h>
@@ -30,6 +33,7 @@
 #include "psc_util/atomic.h"
 #include "psc_util/lock.h"
 #include "psc_util/log.h"
+#include "psc_util/thread.h"
 
 psc_spinlock_t			 psc_umask_lock = SPINLOCK_INIT;
 __threadx struct pfl_callerinfo	*pfl_callerinfo;
@@ -68,11 +72,38 @@ psc_subsys_register(__unusedx int level, __unusedx const char *name)
 {
 }
 
+__inline pid_t
+pfl_getsysthrid(void)
+{
+#if defined(SYS_thread_selfid)
+	return (syscall(SYS_thread_selfid));
+#elif defined(SYS_gettid)
+	return (syscall(SYS_gettid));
+#elif defined(SYS_getthrid)
+	return (syscall(SYS_getthrid));
+#else
+	return (pthread_self());
+#endif
+}
+
 void
-psc_dumpstack(int sig)
+pfl_dump_stack(void)
+{
+	char buf[BUFSIZ];
+
+	snprintf(buf, sizeof(buf),
+	    "{ pstack %d 2>/dev/null || gstack %d 2>/dev/null; "
+	    "  pstack %d 2>/dev/null || gstack %d 2>/dev/null; } | "
+	    "{ tools/filter-pstack - 2>/dev/null; cat -; }",
+	    pfl_getsysthrid(), pfl_getsysthrid(), getpid(), getpid());
+	if (system(buf) == -1)
+		warn("%s", buf);
+}
+
+void
+pfl_dump_stack1(int sig)
 {
 	static psc_spinlock_t lock = SPINLOCK_INIT_NOLOG;
-	char buf[BUFSIZ];
 
 //	if (!trylock(&lock)) {
 //		write(STDERR_FILENO, );
@@ -81,20 +112,13 @@ psc_dumpstack(int sig)
 
 	spinlock(&lock);
 	fflush(stderr);
-	printf("\n\nSignal %d received, attempting to "
-	    "generate stack trace...\n", sig);
-	snprintf(buf, sizeof(buf), "pstack %d 2>/dev/null || gstack %d",
-	    getpid(), getpid());
-	if (system(buf) == -1)
-		warn("%s", buf);
+	printf("\n\n");
+	if (sig)
+		printf("signal %d received, ", sig);
+	printf("attempting to generate stack trace...\n");
+	pfl_dump_stack();
 	kill(0, SIGQUIT);
 	_exit(1);
-}
-
-void
-psc_dumpstack0(void)
-{
-	psc_dumpstack(0);
 }
 
 __weak void
@@ -130,15 +154,12 @@ pfl_init(void)
 	psc_subsys_register(PSS_RPC, "rpc");
 
 	p = getenv("PSC_DUMPSTACK");
-	if (p && strcmp(p, "0")) {
-		if (signal(SIGSEGV, psc_dumpstack) == SIG_ERR)
-			psc_fatal("signal");
-		if (signal(SIGABRT, psc_dumpstack) == SIG_ERR)
-			psc_fatal("signal");
-	}
+	if (p && strcmp(p, "0") &&
+	    signal(SIGSEGV, pfl_dump_stack1) == SIG_ERR)
+		psc_fatal("signal");
 	p = getenv("PSC_FORCE_DUMPSTACK");
 	if (p && strcmp(p, "0"))
-		atexit(psc_dumpstack0);
+		atexit(pfl_dump_stack);
 
 	psc_faults_init();
 }

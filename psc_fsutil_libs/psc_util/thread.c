@@ -22,8 +22,6 @@
  * other useful utilities.
  */
 
-#include <sys/syscall.h>
-
 #include <err.h>
 #include <signal.h>
 #include <stdarg.h>
@@ -196,20 +194,6 @@ pscthr_get(void)
 	return (thr);
 }
 
-__inline pid_t
-pfl_getsysthrid(void)
-{
-#ifdef SYS_thread_selfid
-	return (syscall(SYS_thread_selfid));
-#elif defined(SYS_gettid)
-	return (syscall(SYS_gettid));
-#elif defined(SYS_getthrid)
-	return (syscall(SYS_getthrid));
-#else
-	return (pthread_self());
-#endif
-}
-
 /**
  * _pscthr_finish_init: Final initilization code common among all
  *	instantiation methods.
@@ -271,7 +255,7 @@ _pscthr_bind_memnode(struct psc_thread *thr)
 		bm = numa_allocate_nodemask();
 		numa_bitmask_clearall(bm);
 		numa_bitmask_setbit(bm,
-		    cpuset_p_rel_to_sys_mem(syscall(SYS_gettid),
+		    cpuset_p_rel_to_sys_mem(pfl_getsysthrid(),
 		    thr->pscthr_memnid));
 		if (numa_run_on_node_mask(bm) == -1)
 			psc_fatal("numa");

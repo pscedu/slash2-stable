@@ -30,6 +30,7 @@
 #include <errno.h>
 #include <paths.h>
 #include <pthread.h>
+#include <signal.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -37,6 +38,7 @@
 #include <unistd.h>
 
 #include "pfl/cdefs.h"
+#include "pfl/pfl.h"
 #include "pfl/str.h"
 #include "psc_util/alloc.h"
 #include "psc_util/fmtstr.h"
@@ -331,9 +333,11 @@ _psclogv(const struct pfl_callerinfo *pci, enum psclog_level level,
 			}
 		}
 		if (level == PLL_FATAL) {
-//			exit(1);
+			p = getenv("PSC_DUMPSTACK");
+			if (p && strcmp(p, "0"))
+				pfl_dump_stack();
+			/* XXX run atexit handlers */
 			abort();
-			_exit(1);
 		}
 	}
 
