@@ -1,0 +1,41 @@
+#!/usr/bin/env perl
+# $Id$
+
+use strict;
+use warnings;
+
+my @thr;
+
+my @ign = (
+	qw(poll usocklnd_poll_thread psc_usklndthr_begin _pscthr_begin),
+	qw(psc_waitq_waitrel pscfs_fuse_listener_loop),
+	qw(cv_wait taskq_thread_wait taskq_thread),
+	qw(psc_waitq_waitabs pscrpcthr_main _pscthr_begin)
+);
+
+sub ign_thr {
+	for (my $i = 1; $i < @thr; $i++) {
+		foreach my $ign (@ign) {
+			foreach my $frame (@$ign) {
+				last unless $thr[$i] =~ /^#\d+\s+0x[a-zA-Z0-9]+\s+in\s+$frame\s/;
+			}
+			return (1);
+		}
+	}
+	return (0);
+}
+
+sub print_thr {
+	print @thr unless ign_thr;
+	@thr = ();
+}
+
+while (<>) {
+	if (/^Thread /) {
+		print_thr;
+	} else {
+		push @thr, $_;
+	}
+}
+
+print_thr;
