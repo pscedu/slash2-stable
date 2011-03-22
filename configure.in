@@ -77,6 +77,9 @@ AC_SUBST(libfuse_libs)
 
 AC_SEARCH_LIBS(numa_available, [numa])
 AC_SEARCH_LIBS(cpuset_version, [cpuset])
+if test -n "$LIBS"; then
+	AC_DEFINE(HAVE_NUMA, 1, [Define if libnuma is available])
+fi
 numa_libs="$LIBS"
 LIBS=
 AC_SUBST(numa_libs)
