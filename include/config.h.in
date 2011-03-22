@@ -12,6 +12,9 @@
 /* Define if you have the iconv() function and it works. */
 #undef HAVE_ICONV
 
+/* Define if you have libnuma. */
+#undef HAVE_NUMA
+
 /* Define to 1 if you have the <inttypes.h> header file. */
 #undef HAVE_INTTYPES_H
 
