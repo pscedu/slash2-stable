@@ -10,6 +10,12 @@
 #include "fuse_misc.h"
 #include "fuse_kernel.h"
 
+#ifdef HAVE_NUMA
+#include <cpuset.h>
+#include <err.h>
+#include <numa.h>
+#endif
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -29,6 +35,7 @@ struct fuse_worker {
 	size_t bufsize;
 	char *buf;
 	struct fuse_mt *mt;
+	int bindnode;
 };
 
 struct fuse_mt {
@@ -60,12 +67,45 @@ static void list_del_worker(struct fuse_worker *w)
 	next->prev = prev;
 }
 
-static int fuse_start_thread(struct fuse_mt *mt);
+static int fuse_start_thread(struct fuse_mt *mt, int bindnode);
 
 static void *fuse_do_work(void *data)
 {
 	struct fuse_worker *w = (struct fuse_worker *) data;
 	struct fuse_mt *mt = w->mt;
+
+#ifdef HAVE_NUMA
+	struct fuse_worker *wc;
+	nodemask_t nm;
+
+	/* bind to memnode */
+	nodemask_zero(&nm);
+	nodemask_set(&nm, w->bindnode);
+	if (numa_run_on_node_mask(&nm) == -1)
+		err(1, NULL);
+	numa_set_membind(&nm);
+
+	/* copy to local mem */
+	wc = malloc(sizeof(*wc));
+	if (wc == NULL)
+		err(1, NULL);
+	memset(wc, 0, sizeof(*wc));
+	wc->mt = mt;
+	wc->thread_id = w->thread_id;
+	wc->bufsize = w->bufsize;
+	wc->buf = malloc(wc->bufsize);
+	if (wc->buf == NULL)
+		err(1, NULL);
+
+	pthread_mutex_lock(&mt->lock);
+	list_del_worker(w);
+	list_add_worker(wc, &mt->main);
+	pthread_mutex_unlock(&mt->lock);
+
+	free(w->buf);
+	free(w);
+	w = wc;
+#endif
 
 	while (!fuse_session_exited(mt->se)) {
 		int isforget = 0;
@@ -98,14 +138,17 @@ static void *fuse_do_work(void *data)
 		if (((struct fuse_in_header *) w->buf)->opcode == FUSE_FORGET)
 			isforget = 1;
 
+#ifndef HAVE_NUMA
 		if (!isforget)
 			mt->numavail--;
 		if (mt->numavail == 0)
-			fuse_start_thread(mt);
+			fuse_start_thread(mt, 0);
+#endif
 		pthread_mutex_unlock(&mt->lock);
 
 		fuse_session_process(mt->se, w->buf, res, ch);
 
+#ifndef HAVE_NUMA
 		pthread_mutex_lock(&mt->lock);
 		if (!isforget)
 			mt->numavail++;
@@ -125,6 +168,7 @@ static void *fuse_do_work(void *data)
 			return NULL;
 		}
 		pthread_mutex_unlock(&mt->lock);
+#endif
 	}
 
 	sem_post(&mt->finish);
@@ -134,7 +178,7 @@ static void *fuse_do_work(void *data)
 	return NULL;
 }
 
-static int fuse_start_thread(struct fuse_mt *mt)
+static int fuse_start_thread(struct fuse_mt *mt, int bindnode)
 {
 	sigset_t oldset;
 	sigset_t newset;
@@ -149,6 +193,7 @@ static int fuse_start_thread(struct fuse_mt *mt)
 	memset(w, 0, sizeof(struct fuse_worker));
 	w->bufsize = fuse_chan_bufsize(mt->prevch);
 	w->buf = malloc(w->bufsize);
+	w->bindnode = bindnode;
 	w->mt = mt;
 	if (!w->buf) {
 		fprintf(stderr, "fuse: failed to allocate read buffer\n");
@@ -202,20 +247,54 @@ int fuse_session_loop_mt(struct fuse_session *se)
 	struct fuse_mt mt;
 	struct fuse_worker *w;
 
+#ifdef HAVE_NUMA
+	int i, j, nnodes;
+	struct bitmask *bm;
+	struct cpuset *cs;
+#endif
+
 	memset(&mt, 0, sizeof(struct fuse_mt));
 	mt.se = se;
 	mt.prevch = fuse_session_next_chan(se, NULL);
 	mt.error = 0;
+#ifndef HAVE_NUMA
 	mt.numworker = 0;
 	mt.numavail = 0;
+#endif
 	mt.main.thread_id = pthread_self();
 	mt.main.prev = mt.main.next = &mt.main;
 	sem_init(&mt.finish, 0, 0);
 	fuse_mutex_init(&mt.lock);
 
+#ifdef HAVE_NUMA
+# define PATH_CS_ROOT "/"
+
+	nnodes = cpuset_mems_nbits();
+	cs = cpuset_alloc();
+	bm = bitmask_alloc(nnodes);
+	if (cpuset_query(cs, PATH_CS_ROOT) == -1)
+		errx(1, "unable to query root cpuset");
+	if (cpuset_getmems(cs, bm) == -1)
+		errx(1, "unable to query memnodes on root cpuset");
 	pthread_mutex_lock(&mt.lock);
-	err = fuse_start_thread(&mt);
+	for (i = err = 0; !err && i < nnodes; i++) {
+		if (bitmask_isbitset(bm, i)) {
+			bitmask_clearbit(bm, i);
+# define THR_PER_NODE 1
+			for (j = 0; j < THR_PER_NODE; j++)
+				err = fuse_start_thread(&mt, i);
+		}
+	}
 	pthread_mutex_unlock(&mt.lock);
+ pass:
+	bitmask_free(bm);
+	cpuset_free(cs);
+#else
+	pthread_mutex_lock(&mt.lock);
+	err = fuse_start_thread(&mt, 0);
+	pthread_mutex_unlock(&mt.lock);
+#endif
+
 	if (!err) {
 		/* sem_wait() is interruptible */
 		while (!fuse_session_exited(se))
