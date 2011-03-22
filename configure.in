@@ -75,10 +75,10 @@ libfuse_libs="$libfuse_libs $LIBICONV"
 AM_CONDITIONAL(ICONV, test "$am_cv_func_iconv" = yes)
 AC_SUBST(libfuse_libs)
 
-LIBS=
 AC_SEARCH_LIBS(numa_available, [numa])
 AC_SEARCH_LIBS(cpuset_version, [cpuset])
 numa_libs="$LIBS"
+LIBS=
 AC_SUBST(numa_libs)
 
 if test -z "$MOUNT_FUSE_PATH"; then
