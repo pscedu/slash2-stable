@@ -148,6 +148,8 @@ main(int argc, char *argv[])
 	psc_dynarray_splice(&da, 2, 1, NULL, 0); CHECK(&da, PTR_1, PTR_2, PTR_a, PTR_b, NULL);
 	psc_dynarray_splice(&da, 0, 1, NULL, 0); CHECK(&da, PTR_2, PTR_a, PTR_b, NULL);
 
+	psc_dynarray_reverse(&da); CHECK(&da, PTR_b, PTR_a, PTR_2, NULL);
+
 	psc_dynarray_reset(&da); CHECK(&da, NULL);
 
 	p = PTR_3; psc_dynarray_add(&da, p); CHECK(&da, PTR_3, NULL);
