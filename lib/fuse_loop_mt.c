@@ -76,14 +76,13 @@ static void *fuse_do_work(void *data)
 
 #ifdef HAVE_NUMA
 	struct fuse_worker *wc;
-	nodemask_t nm;
+	struct bitmask *nm;
 
 	/* bind to memnode */
-	nodemask_zero(&nm);
-	nodemask_set(&nm, w->bindnode);
-	if (numa_run_on_node_mask(&nm) == -1)
-		err(1, NULL);
-	numa_set_membind(&nm);
+	nm = numa_allocate_nodemask();
+	numa_bitmask_setbit(nm, w->bindnode);
+	numa_bind(nm);
+	numa_free_nodemask(nm);
 
 	/* copy to local mem */
 	wc = malloc(sizeof(*wc));
@@ -249,7 +248,7 @@ int fuse_session_loop_mt(struct fuse_session *se)
 
 #ifdef HAVE_NUMA
 	int i, j, nnodes;
-	struct bitmask *bm;
+	struct bitmask *nm;
 	struct cpuset *cs;
 #endif
 
@@ -271,23 +270,22 @@ int fuse_session_loop_mt(struct fuse_session *se)
 
 	nnodes = cpuset_mems_nbits();
 	cs = cpuset_alloc();
-	bm = bitmask_alloc(nnodes);
+	nm = numa_allocate_nodemask();
 	if (cpuset_query(cs, PATH_CS_ROOT) == -1)
 		errx(1, "unable to query root cpuset");
-	if (cpuset_getmems(cs, bm) == -1)
+	if (cpuset_getmems(cs, nm) == -1)
 		errx(1, "unable to query memnodes on root cpuset");
 	pthread_mutex_lock(&mt.lock);
 	for (i = err = 0; !err && i < nnodes; i++) {
-		if (bitmask_isbitset(bm, i)) {
-			bitmask_clearbit(bm, i);
+		if (numa_bitmask_isbitset(nm, i)) {
+			numa_bitmask_clearbit(nm, i);
 # define THR_PER_NODE 1
 			for (j = 0; j < THR_PER_NODE; j++)
 				err = fuse_start_thread(&mt, i);
 		}
 	}
 	pthread_mutex_unlock(&mt.lock);
- pass:
-	bitmask_free(bm);
+	numa_free_nodemask(nm);
 	cpuset_free(cs);
 #else
 	pthread_mutex_lock(&mt.lock);
