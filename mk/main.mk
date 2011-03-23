@@ -487,13 +487,8 @@ regen-hook:
 
 regen: recurse-regen regen-hook
 
-# empty but overrideable
-prereq-hook:
-
-prereq: recurse-prereq prereq-hook
-
 build:
-	${MAKE} clean && ${MAKE} prereq && ${MAKE} regen && ${MAKE} all
+	${MAKE} clean && ${MAKE} regen && ${MAKE} all
 
 copyright:
 	find . -type f \( $(foreach ign,${COPYRIGHT_PATS},-name ${ign} -o) -false \) $(	\
