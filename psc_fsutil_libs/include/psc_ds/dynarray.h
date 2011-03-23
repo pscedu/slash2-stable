@@ -98,6 +98,7 @@ void	*psc_dynarray_getpos(const struct psc_dynarray *, int);
 void	 psc_dynarray_initf(struct psc_dynarray *, int);
 int	 psc_dynarray_remove(struct psc_dynarray *, const void *);
 void	 psc_dynarray_reset(struct psc_dynarray *);
+void	 psc_dynarray_reverse(struct psc_dynarray *);
 int	 psc_dynarray_splice(struct psc_dynarray *, int, int, const void *, int);
 
 #endif /* _PFL_DYNARRAY_H_ */
