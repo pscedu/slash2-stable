@@ -13917,8 +13917,14 @@ if test "$ac_res" != no; then
 
 fi
 
+if test -n "$LIBS"; then
+
+cat >>confdefs.h <<\_ACEOF
+#define HAVE_NUMA 1
+_ACEOF
+
+fi
 numa_libs="$LIBS"
-LIBS=
 
 
 if test -z "$MOUNT_FUSE_PATH"; then

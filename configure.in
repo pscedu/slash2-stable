@@ -81,7 +81,6 @@ if test -n "$LIBS"; then
 	AC_DEFINE(HAVE_NUMA, 1, [Define if libnuma is available])
 fi
 numa_libs="$LIBS"
-LIBS=
 AC_SUBST(numa_libs)
 
 if test -z "$MOUNT_FUSE_PATH"; then
