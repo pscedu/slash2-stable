@@ -68,4 +68,6 @@ struct psc_nodemask {
 			psc_fatal("munmap %p", (p));			\
 	} while (0)
 
+void migrate_numa(void);
+
 #endif /* _PFL_MEM_H_ */
