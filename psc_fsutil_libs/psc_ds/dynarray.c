@@ -92,6 +92,24 @@ psc_dynarray_ensurelen(struct psc_dynarray *pda, int n)
 }
 
 /**
+ * psc_dynarray_reverse - reverse the array entries.
+ * @pda: the dynamic array to reverse.
+ */
+void
+psc_dynarray_reverse(struct psc_dynarray *pda) 
+{
+	int i;
+	void *tmp;
+
+	for (i=0; i < psc_dynarray_len(pda) / 2; i++) {
+		tmp = pda->pda_items[i]; 
+		pda->pda_items[i] = 
+			pda->pda_items[psc_dynarray_len(pda) - 1 - i];
+		pda->pda_items[psc_dynarray_len(pda) - 1 - i] = tmp;
+	}
+}
+
+/**
  * psc_dynarray_exists - Check for membership existence of an item in a
  *	dynamic array.
  * @pda: dynamic array to inspect.
