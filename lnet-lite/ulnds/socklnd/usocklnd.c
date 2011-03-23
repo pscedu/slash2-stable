@@ -48,10 +48,6 @@
 #include <fcntl.h>
 #endif
 
-#ifdef HAVE_NUMA
-#include <numa.h>
-#endif
-
 #include "psc_util/iostats.h"
 #include "psc_util/pthrutil.h"
 
@@ -261,11 +257,8 @@ usocklnd_update_tunables()
         if (usock_tuns.ut_npollthreads == 0) {
 		struct rlimit rlim;
 
-#ifdef HAVE_NUMA
-                usock_tuns.ut_npollthreads = numa_num_thread_cpus();
-#else
-                usock_tuns.ut_npollthreads = cfs_online_cpus();
-#endif
+		if (usock_tuns.ut_npollthreads == 0)
+			usock_tuns.ut_npollthreads = cfs_online_cpus();
 
 		rc = getrlimit(RLIMIT_NOFILE, &rlim);
 		if (rc) {
