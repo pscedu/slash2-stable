@@ -229,6 +229,7 @@ endif
 ifneq ($(filter mpi,${MODULES}),)
   CC=		${MPICC}
   DEFINES+=	-DMPI
+  LDFLAGS+=	${MPILIBS}
 endif
 
 ifneq ($(filter qk,${MODULES}),)
