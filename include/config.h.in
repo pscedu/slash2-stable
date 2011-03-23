@@ -12,14 +12,14 @@
 /* Define if you have the iconv() function and it works. */
 #undef HAVE_ICONV
 
-/* Define if you have libnuma. */
-#undef HAVE_NUMA
-
 /* Define to 1 if you have the <inttypes.h> header file. */
 #undef HAVE_INTTYPES_H
 
 /* Define to 1 if you have the <memory.h> header file. */
 #undef HAVE_MEMORY_H
+
+/* Define if libnuma is available */
+#undef HAVE_NUMA
 
 /* Define to 1 if you have the `setxattr' function. */
 #undef HAVE_SETXATTR
