@@ -268,7 +268,7 @@ int fuse_session_loop_mt(struct fuse_session *se)
 #ifdef HAVE_NUMA
 # define PATH_CS_ROOT "/"
 
-	nnodes = cpuset_mems_nbits();
+	nnodes = numa_max_node();
 	cs = cpuset_alloc();
 	nm = numa_allocate_nodemask();
 	if (cpuset_query(cs, PATH_CS_ROOT) == -1)
@@ -276,17 +276,19 @@ int fuse_session_loop_mt(struct fuse_session *se)
 	if (cpuset_getmems(cs, nm) == -1)
 		errx(1, "unable to query memnodes on root cpuset");
 	pthread_mutex_lock(&mt.lock);
-	for (i = err = 0; !err && i < nnodes; i++) {
+	for (i = err = 0; i < nnodes; i++) {
 		if (numa_bitmask_isbitset(nm, i)) {
-			numa_bitmask_clearbit(nm, i);
 # define THR_PER_NODE 1
-			for (j = 0; j < THR_PER_NODE; j++)
+			for (j = 0; j < THR_PER_NODE; j++) {
 				err = fuse_start_thread(&mt, i);
+				if (err)
+					errx(1, NULL);
+			}
 		}
 	}
 	pthread_mutex_unlock(&mt.lock);
-	numa_free_nodemask(nm);
 	cpuset_free(cs);
+	numa_free_nodemask(nm);
 #else
 	pthread_mutex_lock(&mt.lock);
 	err = fuse_start_thread(&mt, 0);
