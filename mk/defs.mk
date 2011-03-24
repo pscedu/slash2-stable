@@ -4,8 +4,8 @@ MKDEP=		env CC="${CC}" ${ROOTDIR}/tools/unwrapcc ${ROOTDIR}/tools/mkdep
 
 # Disappointingly, recent versions of gcc hide
 # standard headers in places other than /usr/include.
-LIBC_INCLUDES=	$$(if ${CC} -v 2>&1 | grep -q gcc; then ${CC} -print-search-dirs | \
-		    grep install | awk '{print "-I" $$2 "include"}' | sed 's/:/ -I/'; fi)
+LIBC_INCLUDES=	$$(${CC} -print-search-dirs 2>/dev/null | grep ^install: |	\
+		      awk '{print "-I" $$2 "include"; print "-I" $$2 "include-fixed"}')
 
 LINT?=		splint +posixlib
 MD5?=		md5sum
