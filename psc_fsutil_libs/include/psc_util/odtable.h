@@ -145,7 +145,7 @@ odtable_getitem_foff(const struct odtable *odt, size_t elem)
 /**
  * odtable_getitem_addr - Get address of memory-mapped table entry.
  */
-#define odtable_getitem_addr(odt, elem)						\
+#define odtable_getitem_addr(odt, elem)					\
 	PSC_AGP((odt)->odt_base, odtable_getitemoff((odt), (elem)))
 
 /**
@@ -200,17 +200,16 @@ odtable_freemap(struct odtable *odt)
 		else if ((odtf)->odtf_inuse == ODTBL_BAD)		\
 			_rc = ODTBL_BADSL_ERR;				\
 									\
-		else if (!(inuse) &&					\
-			 (odtf)->odtf_inuse != ODTBL_FREE)		\
+		else if (!(inuse) && (odtf)->odtf_inuse != ODTBL_FREE)	\
 			_rc = ODTBL_FREE_ERR;				\
 									\
 		else if ((inuse) == 1 &&				\
-			 ((odtf)->odtf_inuse == ODTBL_INUSE) &&		\
-			 ((odtf)->odtf_key != (odtr)->odtr_key))	\
+		    ((odtf)->odtf_inuse == ODTBL_INUSE) &&		\
+		    ((odtf)->odtf_key != (odtr)->odtr_key))		\
 			_rc = ODTBL_KEY_ERR;				\
 									\
 		else if ((inuse) > 0 &&					\
-			 (odtf)->odtf_inuse != ODTBL_INUSE)		\
+		    (odtf)->odtf_inuse != ODTBL_INUSE)			\
 			_rc = ODTBL_INUSE_ERR;				\
 									\
 		if (_rc)						\
