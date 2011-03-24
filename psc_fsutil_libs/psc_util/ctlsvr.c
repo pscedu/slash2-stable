@@ -554,7 +554,11 @@ psc_ctlparam_log_level(int fd, struct psc_ctlmsghdr *mh,
 		/* No subsys specified, use all. */
 		start_ss = 0;
 		end_ss = psc_nsubsys;
+		subsys = PSS_ALL;
 	}
+
+	if (set && strcmp(thr, PCTHRNAME_EVERYONE) == 0)
+		psc_log_setlevel_ss(subsys, loglevel);
 
 	rc = 1;
 	PLL_LOCK(&psc_threads);
@@ -572,6 +576,7 @@ psc_ctlparam_log_level(int fd, struct psc_ctlmsghdr *mh,
 					goto done;
 			}
 		}
+
  done:
 	PLL_ULOCK(&psc_threads);
 	return (rc);
