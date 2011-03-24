@@ -136,10 +136,8 @@ pfl
 - libpthread rwlock is broken on openbsd!
 - differentiate pll log level vs. locked list
 - stop reinpretation of args in macros with stack vars
-- remove prereq and regen from make and just use the .h files as deps on
-  typedump.c and fix zest client test
-- threads spawned after setting log level for a subsys do not go into effect
-- lnet spawns a ton of threads on blacklight
+- remove regen from make and just use the .h files as deps on
+  typedump.c
 
 lnet
 - use TLS buffers for libcfs_nid2str() to avoid NUMA contention
