@@ -557,8 +557,8 @@ psc_ctlparam_log_level(int fd, struct psc_ctlmsghdr *mh,
 		subsys = PSS_ALL;
 	}
 
-	if (set && strcmp(thr, PCTHRNAME_EVERYONE) == 0)
-		psc_log_setlevel_ss(subsys, loglevel);
+	if (set && strcmp(pcp->pcp_thrname, PCTHRNAME_EVERYONE) == 0)
+		psc_log_setlevel(subsys, loglevel);
 
 	rc = 1;
 	PLL_LOCK(&psc_threads);
