@@ -130,6 +130,7 @@ pfl
 - tie 'make doc' to 'make regen'
   - the slow part is the svn log to find the last date revision; maybe
     find a way of extracting this part out...
+  - the regular part should be built into the 'all' target
 - when processing .l and .y rules, propagate CFLAGS from the .l FILE var
   into the obj/*.c file var
 - ensure psc_fatal() runs atexit() such as umount
