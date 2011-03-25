@@ -54,6 +54,9 @@ typedef int (*psc_distill_handler_t)(struct psc_journal_enthdr *, uint64_t, int,
  * The cursor, stored on disk, is used to remember where we are in terms of
  * processing the log entries.  In addition, this file lives in ZFS, so we
  * don't need do any checksum.
+ *
+ * We can store more information (e.g. stats) into this file. In fact, we may
+ * be able to treat this file as the superblock of slash2.
  */
 struct psc_journal_cursor {
 	uint64_t			 pjc_magic;
@@ -80,6 +83,13 @@ struct psc_journal_cursor {
 	uint64_t			 pjc_reclaim_seqno;
 
 	uint64_t			 pjc_replay_xid;	/* replay progress in case we crash again */
+
+#if 0
+	uint64_t			 pjc_total_dirs;
+	uint64_t			 pjc_total_files;
+	uint64_t			 pjc_total_bytes;
+#endif
+
 };
 
 struct psc_journal_hdr {
