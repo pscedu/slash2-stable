@@ -6,12 +6,10 @@ include ${ROOTDIR}/Makefile.path
 PROG=		fuse_compat
 SRCS+=		fuse_compat.c
 MODULES+=	fuse
-TARGET=		build-fuse ${PROG}
 
 include ${MAINMK}
 
-build-fuse:
-	@if ! [ -f ${FUSE_BASE}/config.log ]; then			\
-		cd ${FUSE_BASE};					\
-		./configure >&2;					\
-	fi
+fuse_compat.c: ${FUSE_BASE}/config.log
+
+${FUSE_BASE}/config.log:
+	cd ${FUSE_BASE} && ./configure >&2
