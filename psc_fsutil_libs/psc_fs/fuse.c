@@ -581,7 +581,7 @@ pscfs_inum_fuse2pscfs(fuse_ino_t f_inum, int del)
 									\
 		PFL_GETTIMEVAL(tv);					\
 		_tv.tv_sec = (int)(timeo);				\
-		_tv.tv_usec = 1000 * ((timeo) - _tv.tv_sec);		\
+		_tv.tv_usec = 1000 * ((timeo) - (int)(timeo));		\
 		timeradd((tv), &_tv, (tv));				\
 	} while (0)
 
@@ -619,10 +619,10 @@ pscfs_inum_pscfs2fuse(pscfs_inum_t p_inum, double timeo)
 			psc_hashent_init(&pscfs_inumcol_hashtbl, pfic);
 			pfic->pfic_pscfs_inum = p_inum;
 			pfic->pfic_key = key;
-			COMPUTE_EXPIRE(&t->pfic_extime, timeo);
+			COMPUTE_EXPIRE(&pfic->pfic_extime, timeo);
 			psc_atomic32_set(&pfic->pfic_refcnt, 1);
-			psc_hashbkt_add_item(&pscfs_inumcol_hashtbl,
-			    b, pfic);
+			psc_hashbkt_add_item(&pscfs_inumcol_hashtbl, b,
+			    pfic);
 			pfic = NULL;
 		}
 		psc_hashbkt_unlock(b);
