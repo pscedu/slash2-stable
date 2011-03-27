@@ -377,7 +377,7 @@ psc_multiwait_setcondwakeable(struct psc_multiwait *mw,
 }
 
 int
-psc_multiwaitus(struct psc_multiwait *mw, void *datap, int usec)
+psc_multiwait_usecs(struct psc_multiwait *mw, void *datap, int usec)
 {
 	struct psc_multiwaitcond *mwc;
 	int rc, won, j;

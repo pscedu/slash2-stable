@@ -76,15 +76,15 @@ struct psc_multiwait {
 #define psc_multiwait_addcond_masked(mw, c, m)		_psc_multiwait_addcond((mw), (c), (m))
 
 /**
- * psc_multiwait_* - wait for any of a number of conditions in a multiwait
+ * psc_multiwait_* - Wait for any of a number of conditions in a multiwait
  *	to become available.
  * @mw: the multiwait whose registered conditions will be waited upon.
  * @data: pointer to user data filled in from the multiwaitcond.
  * @usec: # microseconds till timeout.
  */
-#define psc_multiwaitms(mw, p, ms)			psc_multiwaitus((mw), (p), (ms) * 1000)
-#define psc_multiwaits(mw, p, s)			psc_multiwaitus((mw), (p), (s) * 1000 * 1000)
-#define psc_multiwait(mw, p)				psc_multiwaitus((mw), (p), 0)
+#define psc_multiwait_msecs(mw, p, ms)			psc_multiwait_usecs((mw), (p), (ms) * 1000)
+#define psc_multiwait_secs(mw, p, s)			psc_multiwait_usecs((mw), (p), (s) * 1000 * 1000)
+#define psc_multiwait(mw, p)				psc_multiwait_usecs((mw), (p), 0)
 
 int	_psc_multiwait_addcond(struct psc_multiwait *, struct psc_multiwaitcond *, int);
 void	 psc_multiwait_entercritsect(struct psc_multiwait *);
@@ -95,7 +95,7 @@ void	 psc_multiwait_leavecritsect(struct psc_multiwait *);
 void	 psc_multiwait_setcondwakeable(struct psc_multiwait *, const struct psc_multiwaitcond *, int);
 void	 psc_multiwait_reset(struct psc_multiwait *);
 void	 psc_multiwait_prconds(struct psc_multiwait *);
-int	 psc_multiwaitus(struct psc_multiwait *, void *, int);
+int	 psc_multiwait_usecs(struct psc_multiwait *, void *, int);
 
 #define	psc_multiwaitcond_wait(mwc, mx)			psc_multiwaitcond_waitrel_ts((mwc), (mx), NULL)
 #define	psc_multiwaitcond_waitrel(mwc, mx, ts)		psc_multiwaitcond_waitrel_ts((mwc), (mx), (ts))
