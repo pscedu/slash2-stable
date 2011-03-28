@@ -145,6 +145,8 @@ struct psc_listcache {
  */
 #define lc_sort(plc, sortf, cmpf)	pll_sort(&(plc)->plc_pll, (sortf), (cmpf))
 
+#define lc_conjoint(plc, p)		pll_conjoint(&(plc)->plc_pll, (p))
+
 struct psc_listcache *
 	  lc_lookup(const char *);
 int	 _lc_add(struct psc_listcache *, void *, int);
