@@ -7,17 +7,20 @@ use warnings;
 my @thr;
 
 my @ign = (
-	qw(poll usocklnd_poll_thread psc_usklndthr_begin _pscthr_begin),
-	qw(psc_waitq_waitrel pscfs_fuse_listener_loop),
-	qw(cv_wait taskq_thread_wait taskq_thread),
-	qw(psc_waitq_waitabs pscrpcthr_main _pscthr_begin)
+	[ qw(poll usocklnd_poll_thread psc_usklndthr_begin _pscthr_begin) ],
+	[ qw(psc_waitq_waitrel pscfs_fuse_listener_loop) ],
+	[ qw(cv_wait taskq_thread_wait taskq_thread) ],
+	[ qw(psc_waitq_waitabs pscrpcthr_main _pscthr_begin) ]
 );
 
 sub ign_thr {
 	for (my $i = 1; $i < @thr; $i++) {
-		foreach my $ign (@ign) {
+		IGN: foreach my $ign (@ign) {
+			my $j = 0;
 			foreach my $frame (@$ign) {
-				last unless $thr[$i] =~ /^#\d+\s+0x[a-zA-Z0-9]+\s+in\s+$frame\s/;
+				next IGN unless $i + $j < @thr && $thr[$i + $j] =~
+				    /^#\d+\s+0x[a-zA-Z0-9]+\s+in\s+$frame\s/;
+				$j++;
 			}
 			return (1);
 		}
@@ -31,11 +34,8 @@ sub print_thr {
 }
 
 while (<>) {
-	if (/^Thread /) {
-		print_thr;
-	} else {
-		push @thr, $_;
-	}
+	print_thr if /^Thread /;
+	push @thr, $_;
 }
 
 print_thr;
