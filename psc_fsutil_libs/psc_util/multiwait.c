@@ -450,7 +450,8 @@ psc_multiwait_usecs(struct psc_multiwait *mw, void *datap, int usec)
 	psc_pthread_mutex_unlock(&mwc->mwc_mutex);
 
 	if (!won) {
-		sched_yield();
+		//sched_yield();
+		/* XXX decrement usecs */
 		goto restart;
 	}
 	psc_multiwait_leavecritsect(mw);
