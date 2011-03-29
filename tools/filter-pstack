@@ -19,6 +19,7 @@ my @ign = (
 	[ qw(usleep psc_tiosthr_main _pscthr_begin) ],
 
 	[ qw(psc_multiwaitcond_waitrel_ts _sl_csvc_waitrel slconnthr_main) ],
+	[ qw(sleep sl_nbrqthr_main _pscthr_begin) ],
 );
 
 sub ign_thr {
