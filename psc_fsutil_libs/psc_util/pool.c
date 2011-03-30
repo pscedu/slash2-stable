@@ -171,7 +171,7 @@ _psc_poolmaster_initmgr(struct psc_poolmaster *p, struct psc_poolmgr *m)
 	memset(m, 0, sizeof(*m));
 	psc_pthread_mutex_init(&m->ppm_reclaim_mutex);
 
-	if (POOL_IS_MLIST(m)) {
+	if (p->pms_flags & PPMF_MLIST) {
 #ifdef HAVE_NUMA
 		_psc_mlist_init(&m->ppm_ml, PMWCF_WAKEALL,
 		    p->pms_mwcarg, p->pms_offset, "%s:%d", p->pms_name,
