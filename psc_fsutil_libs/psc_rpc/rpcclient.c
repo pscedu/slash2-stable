@@ -302,7 +302,6 @@ pscrpc_completion_ready(struct pscrpc_completion *c, int block)
 		freelock(&c->rqcomp_lock);
 		return (1);
 	}
-
 }
 
 void
@@ -311,12 +310,21 @@ pscrpc_completion_wait(struct pscrpc_completion *c)
 	pscrpc_completion_ready(c, 1);
 }
 
+void
+pscrpc_completion_one(struct pscrpc_completion *c)
+{
+	spinlock(&c->rqcomp_lock);
+	atomic_inc(&c->rqcomp_compcnt);
+	psc_waitq_wakeone(&c->rqcomp_waitq);
+	freelock(&c->rqcomp_lock);
+}
+
 struct pscrpc_request *
 pscrpc_prep_req(struct pscrpc_import *imp, uint32_t version, int opcode,
-		 int count, int *lengths, char **bufs)
+    int count, int *lengths, char **bufs)
 {
-	return pscrpc_prep_req_pool(imp, version, opcode, count, lengths,
-				     bufs, NULL);
+	return (pscrpc_prep_req_pool(imp, version, opcode, count,
+	    lengths, bufs, NULL));
 }
 
 static __inline struct pscrpc_bulk_desc *
