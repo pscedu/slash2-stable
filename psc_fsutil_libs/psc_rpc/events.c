@@ -301,13 +301,10 @@ pscrpc_reply_in_callback(lnet_event_t *ev)
 	}
 
 	if (req->rq_comp) {
-		/* Notify upper layer that an rpc is ready to be
+		/* Notify upper layer that an RPC is ready to be
 		 *   finalized.
 		 */
-		spinlock(&req->rq_comp->rqcomp_lock);
-		atomic_inc(&req->rq_comp->rqcomp_compcnt);
-		psc_waitq_wakeone(&req->rq_comp->rqcomp_waitq);
-		freelock(&req->rq_comp->rqcomp_lock);
+		pscrpc_completion_one(req->rq_comp);
 	}
 
 	if (req->rq_waitq)
