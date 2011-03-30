@@ -139,6 +139,7 @@ pfl
 - stop reinpretation of args in macros with stack vars
 - remove regen from make and just use the .h files as deps on
   typedump.c
+- fold pscrpc_completion and psc_completion into a single structure
 
 lnet
 - use TLS buffers for libcfs_nid2str() to avoid NUMA contention
