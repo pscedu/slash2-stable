@@ -524,27 +524,28 @@ int
 pscthr_run(void)
 {
 	struct psc_thread *thr;
-	int yield, run;
+	int yield = 1, live = 1;
 
-	run = 0;
+	live = 1;
 	yield = 1;
 	thr = pscthr_get();
 	do {
 		spinlock(&thr->pscthr_lock);
-		if (thr->pscthr_flags & PTF_DEAD)
+		if (thr->pscthr_flags & PTF_DEAD) {
+			live = 0;
 			break;
+		}
 		if ((thr->pscthr_flags & PTF_RUN) == 0) {
 			psc_waitq_wait(&thr->pscthr_waitq,
 			    &thr->pscthr_lock);
 			yield = 0;
 			continue;
 		}
-		run = 1;
 		freelock(&thr->pscthr_lock);
 	} while (0);
 	if (yield)
 		sched_yield();
-	return (run);
+	return (live);
 }
 
 int
