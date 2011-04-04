@@ -30,6 +30,7 @@
 #include <sys/resource.h>
 
 #include <errno.h>
+#include <fnmatch.h>
 #include <inttypes.h>
 #include <stdarg.h>
 #include <stdio.h>
@@ -1236,7 +1237,7 @@ psc_ctlrep_getiostats(int fd, struct psc_ctlmsghdr *mh, void *m)
 	psclist_for_each_entry(ist,
 	    &psc_iostats.pll_listhd, ist_lentry)
 		if (all ||
-		    strncmp(ist->ist_name, name, strlen(name)) == 0) {
+		    fnmatch(name, ist->ist_name, 0) == 0) {
 			found = 1;
 
 			pci->pci_ist = *ist; /* XXX lock? */
