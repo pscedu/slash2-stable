@@ -8,6 +8,7 @@ my @thr;
 
 my @ign = (
 	[ qw(LNetEQPoll pscrpc_check_events psc_eqpollthr_main _pscthr_begin) ],
+	[ qw(accept libcfs_sock_accept lnet_acceptor psc_usklndthr_begin _pscthr_begin) ],
 	[ qw(accept psc_ctlacthr_main _pscthr_begin) ],
 	[ qw(cv_wait taskq_thread_wait taskq_thread) ],
 	[ qw(poll pscfs_fuse_listener_loop) ],
@@ -18,8 +19,12 @@ my @ign = (
 	[ qw(pthread_join pscfs_main main) ],
 	[ qw(usleep psc_tiosthr_main _pscthr_begin) ],
 
+	# slash
 	[ qw(psc_multiwaitcond_waitrel_ts _sl_csvc_waitrel slconnthr_main) ],
 	[ qw(sleep sl_nbrqthr_main _pscthr_begin) ],
+
+	# zest
+	[ qw(psc_multiwait_usecs ziothr_workq_proc_one ziothr_main _pscthr_begin) ],
 );
 
 sub ign_thr {
