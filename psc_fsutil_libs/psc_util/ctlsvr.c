@@ -1232,7 +1232,7 @@ psc_ctlrep_getiostats(int fd, struct psc_ctlmsghdr *mh, void *m)
 	rc = 1;
 	found = 0;
 	snprintf(name, sizeof(name), "%s", pci->pci_ist.ist_name);
-	all = (strcmp(name, PCI_NAME_ALL) == 0);
+	all = (strcmp(name, PCI_NAME_ALL) == 0 || strcmp(name, "") == 0);
 	PLL_LOCK(&psc_iostats);
 	psclist_for_each_entry(ist,
 	    &psc_iostats.pll_listhd, ist_lentry)
