@@ -319,6 +319,7 @@ pjournal_add_entry(struct psc_journal *pj, uint64_t txg,
 {
 	struct psc_journal_xidhndl *xh;
 	struct psc_journal_enthdr *pje;
+	static uint64_t last_txg = 0;
 
 	xh = pjournal_xnew(pj, distill);
 	if (!txg)  {
@@ -327,8 +328,12 @@ pjournal_add_entry(struct psc_journal *pj, uint64_t txg,
  		 * idempotent because the txg obtained this
  		 * way is not accurate, but good enough.
  		 */
-		txg = zfsslash2_return_synced() + 1;
-	}
+		if (last_txg)
+			txg = last_txg + 1;
+		else
+			txg = zfsslash2_return_synced() + 1;
+	} else
+		last_txg = txg;
 	xh->pjx_txg = txg;
 	pje = DATA_2_PJE(buf);
 	psc_assert(pje->pje_magic == PJE_MAGIC);
