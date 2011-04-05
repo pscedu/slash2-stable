@@ -460,7 +460,7 @@ psc_multiwait_usecs(struct psc_multiwait *mw, void *datap, int usec)
 
 /**
  * psc_multiwait_reset - Release all conditions and release all
- *	associated memory rom a multiwait.
+ *	associated memory from a multiwait.
  * @mw: the multiwait to reset.
  */
 void
