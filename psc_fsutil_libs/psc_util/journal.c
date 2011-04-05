@@ -136,7 +136,7 @@ pjournal_next_replay(struct psc_journal *pj)
 }
 
 __static void
-pjournal_next_xid(struct psc_journal *pj, struct psc_journal_xidhndl *xh)
+pjournal_next_xid(struct psc_journal *pj, struct psc_journal_xidhndl *xh, uint64_t txg)
 {
 	/*
 	 * Note that even though we issue xids in increasing order here,
@@ -158,6 +158,18 @@ pjournal_next_xid(struct psc_journal *pj, struct psc_journal_xidhndl *xh)
 	 */
 	if (xh->pjx_flags & PJX_DISTILL)
 		pll_addtail(&pj->pj_distillxids, xh);
+
+	/*
+ 	 * Log entries written outside ZFS must be 
+ 	 * idempotent because the txg obtained this
+ 	 * way is not accurate, but good enough.
+ 	 */
+	if (!txg) 
+		txg = pj->pj_lasttxg + 1;
+	else
+		pj->pj_lasttxg = txg;
+	xh->pjx_txg = txg;
+
 	PJ_ULOCK(pj);
 }
 
@@ -208,7 +220,7 @@ pjournal_next_slot(struct psc_journal_xidhndl *xh)
  * @pj: the owning journal.
  */
 __static struct psc_journal_xidhndl *
-pjournal_xnew(struct psc_journal *pj, int distill)
+pjournal_xnew(struct psc_journal *pj, int distill, uint64_t txg)
 {
 	struct psc_journal_xidhndl *xh;
 
@@ -220,7 +232,7 @@ pjournal_xnew(struct psc_journal *pj, int distill)
 	xh->pjx_slot = PJX_SLOT_ANY;
 	INIT_PSC_LISTENTRY(&xh->pjx_pndg_lentry);
 	INIT_PSC_LISTENTRY(&xh->pjx_dstl_lentry);
-	pjournal_next_xid(pj, xh);
+	pjournal_next_xid(pj, xh, txg);
 
 	psclog_info("starting a new transaction %p (xid=%#"PRIx64") in "
 	    "journal %p distill %d", xh, xh->pjx_xid, pj, distill);
@@ -321,7 +333,7 @@ pjournal_add_entry(struct psc_journal *pj, uint64_t txg,
 	struct psc_journal_enthdr *pje;
 	static uint64_t last_txg = 0;
 
-	xh = pjournal_xnew(pj, distill);
+	xh = pjournal_xnew(pj, distill, txg);
 	if (!txg)  {
 		/*
  		 * Log entries written outside ZFS must be 
@@ -1023,6 +1035,7 @@ pjournal_replay(struct psc_journal *pj, int thrtype,
 	struct psc_thread *thr;
 
 	pj->pj_flags |= PJF_REPLAYINPROG;
+	pj->pj_lasttxg = zfsslash2_return_synced();
 
 	rc = pjournal_scan_slots(pj);
 	if (rc) {
