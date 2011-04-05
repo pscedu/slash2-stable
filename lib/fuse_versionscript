@@ -184,7 +184,6 @@ FUSE_2.8 {
 		fuse_req_getchannel;
 		fuse_req_getgroups;
 		fuse_session_data;
-		fuse_thread_init;
 
 	local:
 		*;
