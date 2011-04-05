@@ -181,9 +181,10 @@ FUSE_2.8 {
 		fuse_reply_ioctl_retry;
 		fuse_reply_poll;
 		fuse_req_ctx;
-		fuse_req_getgroups;
 		fuse_req_getchannel;
+		fuse_req_getgroups;
 		fuse_session_data;
+		fuse_thread_init
 
 	local:
 		*;
