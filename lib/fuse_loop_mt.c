@@ -106,6 +106,9 @@ static void *fuse_do_work(void *data)
 	free(w->buf);
 	free(w);
 	w = wc;
+
+	if (fuse_thread_init)
+		fuse_thread_init(w->bindnode);
 #endif
 
 	while (!fuse_session_exited(mt->se)) {
