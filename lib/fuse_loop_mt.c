@@ -28,7 +28,7 @@
 /* Environment var controlling the thread stack size */
 #define ENVNAME_THREAD_STACK "FUSE_THREAD_STACK"
 
-void (*fuse_thread_init)(void);
+void (*fuse_thread_init)(int);
 
 struct fuse_worker {
 	struct fuse_worker *prev;
@@ -108,7 +108,7 @@ static void *fuse_do_work(void *data)
 	w = wc;
 
 	if (fuse_thread_init)
-		fuse_thread_init();
+		fuse_thread_init(w->bindnode);
 #endif
 
 	while (!fuse_session_exited(mt->se)) {
