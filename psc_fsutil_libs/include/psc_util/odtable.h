@@ -68,7 +68,7 @@ struct odtable_hdr {
 	uint32_t		 odth_version;
 	uint32_t		 odth_options;	/* see ODTBL_OPT_* below */
 	off_t			 odth_start;
-};
+} __packed;
 
 /* odtable options */
 #define ODTBL_OPT_CRC		(1 << 0)

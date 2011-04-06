@@ -234,8 +234,8 @@ pjournal_xnew(struct psc_journal *pj, int distill, uint64_t txg)
 	INIT_PSC_LISTENTRY(&xh->pjx_dstl_lentry);
 	pjournal_next_xid(pj, xh, txg);
 
-	psclog_info("starting a new transaction %p (xid=%#"PRIx64") in "
-	    "journal %p distill %d", xh, xh->pjx_xid, pj, distill);
+	psclog_info("New trans: xid=%#"PRIx64", txg=%#"PRIx64", distill=%d", 
+		xh->pjx_xid, xh->pjx_txg, distill);
 	return (xh);
 }
 
