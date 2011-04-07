@@ -72,7 +72,7 @@ label(struct psc_thread *pt)						\
 }
 
 /*
- * pscthr_init - initialization a application thread.
+ * pscthr_init - Initialization a application thread.
  */
 #define pscthr_init(thrtype, flags, startf, dtor, privsiz, namefmt,	\
 	    ...)							\

@@ -75,7 +75,7 @@ struct psc_dynarray;
 #define PSCNET_SERVER			0xff	/* differentiate client and server for ni init */
 #define PSCNET_CLIENT			0x0f
 #define PSCRPC_SVR_PID			54321
-#define PSCRPC_NIDSTR_SIZE		32
+#define PSCRPC_NIDSTR_SIZE		64
 
 #ifdef NAMESPACE_EXPERIMENTAL
 #define PSCRPC_OBD_TIMEOUT		3600
