@@ -302,7 +302,7 @@ _psclogv(const struct pfl_callerinfo *pci, enum psclog_level level,
 
 	rc = strlcpy(fmtbuf, fmt, sizeof(fmtbuf));
 	if (rc >= (int)sizeof(fmtbuf)) {
-		warnx("psclog error: string too long");
+		warnx("psclog error: prefix too long");
 		rc = sizeof(fmtbuf) - 1;
 	}
 	for (p = fmtbuf + rc - 1; p >= fmtbuf && *p == '\n'; p--)
@@ -336,6 +336,7 @@ _psclogv(const struct pfl_callerinfo *pci, enum psclog_level level,
 			p = getenv("PSC_DUMPSTACK");
 			if (p && strcmp(p, "0"))
 				pfl_dump_stack();
+			d->pld_flags &= ~PLDF_INLOG;
 			/* XXX run atexit handlers */
 			abort();
 		}
