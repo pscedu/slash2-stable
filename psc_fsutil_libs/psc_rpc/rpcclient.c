@@ -403,6 +403,7 @@ void
 pscrpc_set_init(struct pscrpc_request_set *set)
 {
 	INIT_PSCLIST_HEAD(&set->set_requests);
+	INIT_PSC_LISTENTRY(&set->set_lentry);
 	psc_waitq_init(&set->set_waitq);
 	set->set_remaining = 0;
 	INIT_SPINLOCK(&set->set_lock);

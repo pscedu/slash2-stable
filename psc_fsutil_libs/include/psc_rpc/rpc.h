@@ -227,6 +227,7 @@ typedef int (*pscrpc_set_interpreterf)(struct pscrpc_request_set *, void *, int)
 
 struct pscrpc_request_set {
 	struct psclist_head		 set_requests;
+	struct psclist_head		 set_lentry;            /* chain for sets        */
 	int				 set_remaining;
 	struct psc_waitq		 set_waitq;		/* I block here          */
 	pscrpc_set_interpreterf		 set_interpret;		/* callback function     */
