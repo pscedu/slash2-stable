@@ -236,12 +236,12 @@ struct pscrpc_request_set {
 	int				 set_flags;
 };
 
-/* set flags */
-#define PSCRPC_SETF_CHECKING	(1 << 0)
+/* set_flags */
+#define PSCRPC_SETF_CHECKING		(1 << 0)
 
-#define PSCPRC_SET_INIT(v, cb, cbarg)					\
-	{ PSCLIST_HEAD_INIT((v).set_requests), 0, PSC_WAITQ_INIT,	\
-	    (cb), (cbarg), SPINLOCK_INIT, 0 }
+#define PSCRPC_SET_INIT(v, cb, cbarg)					\
+	{ PSCLIST_HEAD_INIT((v).set_requests), PSC_LISTENTRY_INIT,	\
+	    0, PSC_WAITQ_INIT, (cb), (cbarg), SPINLOCK_INIT, 0 }
 
 struct pscrpc_bulk_desc {
 	unsigned int			 bd_success:1;		/* completed successfully */
@@ -475,7 +475,7 @@ struct pscrpc_nbreqset {
 #define NBREQSET_WORK_INPROG 1
 
 #define PSCRPC_NBREQSET_INIT(v, setcb, rqcb)				\
-	{ PSCPRC_SET_INIT((v).nb_reqset, (setcb), NULL), (rqcb),	\
+	{ PSCRPC_SET_INIT((v).nb_reqset, (setcb), NULL), (rqcb),	\
 	    ATOMIC_INIT(0), SPINLOCK_INIT, 0, PSC_WAITQ_INIT }
 
 struct pscrpc_nbreqset *
