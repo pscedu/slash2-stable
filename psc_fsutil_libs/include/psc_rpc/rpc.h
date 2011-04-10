@@ -430,31 +430,31 @@ struct pscrpc_service {
 };
 
 struct pscrpc_request_buffer_desc {
-	int			 rqbd_refcount;
-	char			*rqbd_buffer;
-	lnet_handle_md_t	 rqbd_md_h;
-	struct psclist_head	 rqbd_lentry;
-	struct psclist_head	 rqbd_reqs;
-	struct pscrpc_service	*rqbd_service;
-	struct pscrpc_cb_id	 rqbd_cbid;
-	struct pscrpc_request	 rqbd_req;
+	int				 rqbd_refcount;
+	char				*rqbd_buffer;
+	lnet_handle_md_t		 rqbd_md_h;
+	struct psclist_head		 rqbd_lentry;
+	struct psclist_head		 rqbd_reqs;
+	struct pscrpc_service		*rqbd_service;
+	struct pscrpc_cb_id		 rqbd_cbid;
+	struct pscrpc_request		 rqbd_req;
 };
 
 struct pscrpc_reply_state {
-	struct pscrpc_cb_id	 rs_cb_id;		/* reply callback */
-	struct psclist_head	 rs_list_entry;
-	int			 rs_size;
-	uint64_t		 rs_xid;
-	unsigned int		 rs_difficult:1;	/* ACK/commit stuff */
-	unsigned int		 rs_scheduled:1;	/* being handled? */
-	unsigned int		 rs_scheduled_ever:1;	/* any schedule attempts? */
-	unsigned int		 rs_handled:1;		/* been handled yet? */
-	unsigned int		 rs_on_net:1;		/* reply_out_callback pending?*/
-	unsigned int		 rs_prealloc:1;		/* rs from prealloc list */
-	atomic_t		 rs_refcount;
-	lnet_handle_md_t	 rs_md_h;
-	struct pscrpc_service	*rs_service;		/* backpointer to my service */
-	struct pscrpc_msg	 rs_msg;		/* msg struct -- MUST BE LAST MEMBER */
+	struct pscrpc_cb_id		 rs_cb_id;		/* reply callback */
+	struct psclist_head		 rs_list_entry;
+	int				 rs_size;
+	uint64_t			 rs_xid;
+	unsigned int			 rs_difficult:1;	/* ACK/commit stuff */
+	unsigned int			 rs_scheduled:1;	/* being handled? */
+	unsigned int			 rs_scheduled_ever:1;	/* any schedule attempts? */
+	unsigned int			 rs_handled:1;		/* been handled yet? */
+	unsigned int			 rs_on_net:1;		/* reply_out_callback pending?*/
+	unsigned int			 rs_prealloc:1;		/* rs from prealloc list */
+	atomic_t			 rs_refcount;
+	lnet_handle_md_t		 rs_md_h;
+	struct pscrpc_service		*rs_service;		/* backpointer to my service */
+	struct pscrpc_msg		 rs_msg;		/* msg struct -- MUST BE LAST MEMBER */
 };
 
 /*
