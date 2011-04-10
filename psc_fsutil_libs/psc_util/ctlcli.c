@@ -40,7 +40,7 @@
 #include "psc_util/log.h"
 #include "psc_util/meter.h"
 #include "psc_util/pool.h"
-#include "psc_util/subsys.h"
+#include "pfl/subsys.h"
 #include "psc_util/thread.h"
 
 #define PCTHRT_RD 0

@@ -118,6 +118,6 @@
 # error cannot determine machine endianess
 #endif
 
-#include "psc_util/subsys.h"
+#include "pfl/subsys.h"
 
 #endif /* _PFL_TYPES_H_ */

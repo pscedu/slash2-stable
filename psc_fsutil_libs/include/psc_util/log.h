@@ -30,7 +30,7 @@
 
 #include "pfl/cdefs.h"
 #include "pfl/pfl.h"
-#include "psc_util/subsys.h"
+#include "pfl/subsys.h"
 
 struct psclog_data {
 	char		pld_hostshort[HOST_NAME_MAX];

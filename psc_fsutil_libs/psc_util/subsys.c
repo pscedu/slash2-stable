@@ -29,7 +29,7 @@
 #include "psc_ds/dynarray.h"
 #include "psc_util/alloc.h"
 #include "psc_util/log.h"
-#include "psc_util/subsys.h"
+#include "pfl/subsys.h"
 
 struct psc_subsys {
 	const char	*pss_name;
