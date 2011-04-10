@@ -1329,15 +1329,18 @@ int
 pscfs_notify_inval_entry(struct pscfs_req *pfr, pscfs_inum_t pinum,
     const char *name, size_t namelen)
 {
+	int rc;
+
 #ifdef HAVE_FUSE_REQ_GETCHANNEL
-	return (fuse_lowlevel_notify_inval_entry(fuse_req_getchannel(
+	rc = fuse_lowlevel_notify_inval_entry(fuse_req_getchannel(
 	    pfr->pfr_fuse_req), INUM_PSCFS2FUSE(pinum, 0.0), name,
-	    namelen));
+	    namelen);
 #else
 	(void)pfr;
 	(void)pinum;
 	(void)name;
 	(void)namelen;
-	return (-ENOTSUP);
+	rc = -ENOTSUP;
 #endif
+	return (rc);
 }
