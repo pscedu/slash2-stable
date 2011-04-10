@@ -317,7 +317,7 @@ for ($i = 0; $i < length $data; ) {
 		$lvl++;
 		advance(1);
 	} elsif (substr($data, $i, 1) eq "}") {
-		if ($lvl == 0 && defined $foff) {
+		if ($lvl == 1 && defined $foff) {
 			if (substr($data, $i + 1) =~ /^\s*\n/s) {
 				# catch implicit 'return'
 				for (;;) {
