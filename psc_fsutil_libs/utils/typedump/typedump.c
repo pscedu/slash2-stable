@@ -35,6 +35,7 @@
 #include "pfl/setresuid.h"
 #include "pfl/stat.h"
 #include "pfl/str.h"
+#include "pfl/subsys.h"
 #include "pfl/sys.h"
 #include "pfl/time.h"
 #include "pfl/types.h"
@@ -85,7 +86,6 @@
 #include "psc_util/pthrutil.h"
 #include "psc_util/random.h"
 #include "psc_util/rlimit.h"
-#include "psc_util/subsys.h"
 #include "psc_util/thread.h"
 #include "psc_util/timerthr.h"
 #include "psc_util/umask.h"
@@ -250,6 +250,7 @@ main(int argc, char *argv[])
 	PRTYPE(struct psc_poolmaster);
 	PRTYPE(struct psc_poolmgr);
 	PRTYPE(struct psc_poolset);
+	PRTYPE(struct psc_rwlock);
 	PRTYPE(struct psc_spinlock);
 	PRTYPE(struct psc_streenode);
 	PRTYPE(struct psc_thread);
