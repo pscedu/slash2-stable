@@ -254,9 +254,9 @@ void lnet_fini_locks(void)
 void lnet_init_locks(void)
 {
         pthread_cond_init(&the_lnet.ln_cond, NULL);
-        psc_pthread_mutex_init(&the_lnet.ln_lock);
-        psc_pthread_mutex_init(&the_lnet.ln_lnd_mutex);
-        psc_pthread_mutex_init(&the_lnet.ln_api_mutex);
+        psc_mutex_init(&the_lnet.ln_lock);
+        psc_mutex_init(&the_lnet.ln_lnd_mutex);
+        psc_mutex_init(&the_lnet.ln_api_mutex);
 }
 
 void lnet_fini_locks(void)

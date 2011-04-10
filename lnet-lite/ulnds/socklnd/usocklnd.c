@@ -383,7 +383,7 @@ usocklnd_base_startup(void)
                 pt->upt_errno = 0;
                 CFS_INIT_LIST_HEAD (&pt->upt_pollrequests);
                 CFS_INIT_LIST_HEAD (&pt->upt_stale_list);
-                psc_pthread_mutex_init(&pt->upt_pollrequests_lock);
+                psc_mutex_init(&pt->upt_pollrequests_lock);
                 cfs_init_completion(&pt->upt_completion);
         }
 
@@ -573,7 +573,7 @@ usocklnd_startup(lnet_ni_t *ni)
 
         memset(net, 0, sizeof(*net));
         net->un_incarnation = usocklnd_new_incarnation();
-        psc_pthread_mutex_init(&net->un_lock);
+        psc_mutex_init(&net->un_lock);
         pthread_cond_init(&net->un_cond, NULL);
 
         ni->ni_data = net;

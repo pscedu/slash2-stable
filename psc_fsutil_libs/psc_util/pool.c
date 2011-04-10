@@ -169,7 +169,7 @@ _psc_poolmaster_initmgr(struct psc_poolmaster *p, struct psc_poolmgr *m)
 	int n, locked;
 
 	memset(m, 0, sizeof(*m));
-	psc_pthread_mutex_init(&m->ppm_reclaim_mutex);
+	psc_mutex_init(&m->ppm_reclaim_mutex);
 
 	if (p->pms_flags & PPMF_MLIST) {
 #ifdef HAVE_NUMA

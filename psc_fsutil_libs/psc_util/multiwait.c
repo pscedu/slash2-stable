@@ -55,7 +55,7 @@ psc_multiwaitcond_init(struct psc_multiwaitcond *mwc, const void *data,
 
 	memset(mwc, 0, sizeof(*mwc));
 	psc_dynarray_init(&mwc->mwc_multiwaits);
-	psc_pthread_mutex_init(&mwc->mwc_mutex);
+	psc_mutex_init(&mwc->mwc_mutex);
 	pthread_cond_init(&mwc->mwc_cond, NULL);
 	mwc->mwc_data = data;
 	mwc->mwc_flags = flags;
@@ -78,14 +78,14 @@ psc_multiwaitcond_trylockallmw(struct psc_multiwaitcond *mwc)
 	int j, k;
 
 	DYNARRAY_FOREACH(mw, j, &mwc->mwc_multiwaits)
-		if (!psc_pthread_mutex_trylock(&mw->mw_mutex)) {
+		if (!psc_mutex_trylock(&mw->mw_mutex)) {
 			/*
 			 * Unable to lock them all; release what we did
 			 * lock and give up.
 			 */
 			for (k = 0; k < j; k++) {
 				mw = psc_dynarray_getpos(&mwc->mwc_multiwaits, k);
-				psc_pthread_mutex_unlock(&mw->mw_mutex);
+				psc_mutex_unlock(&mw->mw_mutex);
 			}
 			return (-1);
 		}
@@ -104,7 +104,7 @@ psc_multiwaitcond_unlockallmw(struct psc_multiwaitcond *mwc)
 	int j;
 
 	DYNARRAY_FOREACH(mw, j, &mwc->mwc_multiwaits)
-		psc_pthread_mutex_unlock(&mw->mw_mutex);
+		psc_mutex_unlock(&mw->mw_mutex);
 }
 
 __static int
@@ -125,14 +125,14 @@ psc_multiwaitcond_destroy(struct psc_multiwaitcond *mwc)
 
 	count = 0;
  restart:
-	psc_pthread_mutex_lock(&mwc->mwc_mutex);
+	psc_mutex_lock(&mwc->mwc_mutex);
 	DYNARRAY_FOREACH_REVERSE(mw, j, &mwc->mwc_multiwaits) {
-		if (!psc_pthread_mutex_trylock(&mw->mw_mutex)) {
+		if (!psc_mutex_trylock(&mw->mw_mutex)) {
 			if (count++ == 300000)
 				psc_errorx("mwcond %s failed to lock his "
 				    "multiwaits after many attempts, "
 				    "possible deadlock", mwc->mwc_name);
-			psc_pthread_mutex_unlock(&mwc->mwc_mutex);
+			psc_mutex_unlock(&mwc->mwc_mutex);
 			sched_yield();
 			goto restart;
 		}
@@ -154,7 +154,7 @@ psc_multiwaitcond_destroy(struct psc_multiwaitcond *mwc)
 		psc_vbitmap_resize(mw->mw_condmask,
 		    psc_dynarray_len(&mw->mw_conds));
 
-		psc_pthread_mutex_unlock(&mw->mw_mutex);
+		psc_mutex_unlock(&mw->mw_mutex);
 	}
 	/* XXX: ensure no one is waiting on this mutex? */
 	psc_dynarray_free(&mwc->mwc_multiwaits);
@@ -173,7 +173,7 @@ psc_multiwait_iscondwakeable(struct psc_multiwait *mw,
 	struct psc_multiwaitcond *c;
 	int j;
 
-	psc_pthread_mutex_ensure_locked(&mw->mw_mutex);
+	psc_mutex_ensure_locked(&mw->mw_mutex);
 	DYNARRAY_FOREACH(c, j, &mw->mw_conds)
 		if (c == mwc)
 			return (psc_vbitmap_get(mw->mw_condmask, j));
@@ -193,14 +193,15 @@ psc_multiwaitcond_wakeup(struct psc_multiwaitcond *mwc)
 	int j, count;
 
 	count = 0;
+
  restart:
-	psc_pthread_mutex_lock(&mwc->mwc_mutex);
+	psc_mutex_lock(&mwc->mwc_mutex);
 	if (psc_multiwaitcond_trylockallmw(mwc)) {
 		if (count++ == 300000)
 			psc_errorx("mwcond %s failed to lock his "
 			    "multiwaits after attempting many times, "
 			    "possible deadlock", mwc->mwc_name);
-		psc_pthread_mutex_unlock(&mwc->mwc_mutex);
+		psc_mutex_unlock(&mwc->mwc_mutex);
 		sched_yield();
 		goto restart;
 	}
@@ -212,7 +213,7 @@ psc_multiwaitcond_wakeup(struct psc_multiwaitcond *mwc)
 	psc_multiwaitcond_unlockallmw(mwc);
 	pthread_cond_signal(&mwc->mwc_cond);
 	mwc->mwc_winner = NULL;
-	psc_pthread_mutex_unlock(&mwc->mwc_mutex);
+	psc_mutex_unlock(&mwc->mwc_mutex);
 }
 
 /**
@@ -229,9 +230,9 @@ psc_multiwaitcond_waitrel_ts(struct psc_multiwaitcond *mwc,
 	struct timespec abstime;
 	int rc;
 
-	psc_pthread_mutex_lock(&mwc->mwc_mutex);
+	psc_mutex_lock(&mwc->mwc_mutex);
 	if (mutex)
-		psc_pthread_mutex_unlock(mutex);
+		psc_mutex_unlock(mutex);
 
 	if (reltime) {
 		PFL_GETTIMESPEC(&abstime);
@@ -246,7 +247,7 @@ psc_multiwaitcond_waitrel_ts(struct psc_multiwaitcond *mwc,
 		if (rc)
 			psc_fatalx("pthread_cond_wait: %s", strerror(rc));
 	}
-	psc_pthread_mutex_unlock(&mwc->mwc_mutex);
+	psc_mutex_unlock(&mwc->mwc_mutex);
 	return (rc);
 }
 
@@ -266,10 +267,10 @@ _psc_multiwait_addcond(struct psc_multiwait *mw,
 
 	/* Acquire locks. */
 	for (;;) {
-		psc_pthread_mutex_lock(&mwc->mwc_mutex);
-		if (psc_pthread_mutex_trylock(&mw->mw_mutex))
+		psc_mutex_lock(&mwc->mwc_mutex);
+		if (psc_mutex_trylock(&mw->mw_mutex))
 			break;
-		psc_pthread_mutex_unlock(&mwc->mwc_mutex);
+		psc_mutex_unlock(&mwc->mwc_mutex);
 		sched_yield();
 	}
 
@@ -312,8 +313,8 @@ _psc_multiwait_addcond(struct psc_multiwait *mw,
 	psc_vbitmap_setval(mw->mw_condmask, j - 1, active);
 
  done:
-	psc_pthread_mutex_unlock(&mw->mw_mutex);
-	psc_pthread_mutex_unlock(&mwc->mwc_mutex);
+	psc_mutex_unlock(&mw->mw_mutex);
+	psc_mutex_unlock(&mwc->mwc_mutex);
 	return (rc);
 }
 
@@ -328,7 +329,7 @@ psc_multiwait_init(struct psc_multiwait *mw, const char *name, ...)
 
 	memset(mw, 0, sizeof(*mw));
 	psc_dynarray_init(&mw->mw_conds);
-	psc_pthread_mutex_init(&mw->mw_mutex);
+	psc_mutex_init(&mw->mw_mutex);
 	pthread_cond_init(&mw->mw_cond, NULL);
 	mw->mw_condmask = psc_vbitmap_new(0);
 	if (mw->mw_condmask == NULL)
@@ -365,11 +366,11 @@ psc_multiwait_setcondwakeable(struct psc_multiwait *mw,
 	struct psc_multiwaitcond *c;
 	int j;
 
-	psc_pthread_mutex_lock(&mw->mw_mutex);
+	psc_mutex_lock(&mw->mw_mutex);
 	DYNARRAY_FOREACH(c, j, &mw->mw_conds)
 		if (c == mwc) {
 			psc_vbitmap_setval(mw->mw_condmask, j, active);
-			psc_pthread_mutex_unlock(&mw->mw_mutex);
+			psc_mutex_unlock(&mw->mw_mutex);
 			return;
 		}
 	psc_fatalx("couldn't find mwcond %s in multiwait %s",
@@ -383,8 +384,9 @@ psc_multiwait_usecs(struct psc_multiwait *mw, void *datap, int usec)
 	int rc, won, j;
 
 	won = 0;
+
  restart:
-	psc_pthread_mutex_lock(&mw->mw_mutex);
+	psc_mutex_lock(&mw->mw_mutex);
 
 	/* Check for missed wakeups during a critical section. */
 	if (mw->mw_flags & PMWF_CRITSECT) {
@@ -419,7 +421,7 @@ psc_multiwait_usecs(struct psc_multiwait *mw, void *datap, int usec)
 		rc = pthread_cond_timedwait(&mw->mw_cond,
 		    &mw->mw_mutex, &ntv);
 		if (rc == ETIMEDOUT) {
-			psc_pthread_mutex_unlock(&mw->mw_mutex);
+			psc_mutex_unlock(&mw->mw_mutex);
 			return (-ETIMEDOUT);
 		}
 		if (rc)
@@ -435,9 +437,9 @@ psc_multiwait_usecs(struct psc_multiwait *mw, void *datap, int usec)
 	mwc = mw->mw_waker;
 	mw->mw_waker = NULL;
 	mw->mw_flags |= PMWF_CRITSECT;
-	psc_pthread_mutex_unlock(&mw->mw_mutex);
+	psc_mutex_unlock(&mw->mw_mutex);
 
-	psc_pthread_mutex_lock(&mwc->mwc_mutex);
+	psc_mutex_lock(&mwc->mwc_mutex);
 	if (mwc->mwc_flags & PMWCF_WAKEALL) {
 		*(void **)datap = (void *)mwc->mwc_data;
 		won = 1;
@@ -447,7 +449,7 @@ psc_multiwait_usecs(struct psc_multiwait *mw, void *datap, int usec)
 		won = 1;
 	}
 
-	psc_pthread_mutex_unlock(&mwc->mwc_mutex);
+	psc_mutex_unlock(&mwc->mwc_mutex);
 
 	if (!won) {
 		//sched_yield();
@@ -470,13 +472,13 @@ psc_multiwait_reset(struct psc_multiwait *mw)
 	int k;
 
  restart:
-	psc_pthread_mutex_lock(&mw->mw_mutex);
+	psc_mutex_lock(&mw->mw_mutex);
 	while (psc_dynarray_len(&mw->mw_conds) > 0) {
 		mwc = psc_dynarray_getpos(&mw->mw_conds, 0);
 
 		/* XXX we violate the locking order of "mwc then mw" */
-		if (!psc_pthread_mutex_trylock(&mwc->mwc_mutex)) {
-			psc_pthread_mutex_unlock(&mw->mw_mutex);
+		if (!psc_mutex_trylock(&mwc->mwc_mutex)) {
+			psc_mutex_unlock(&mw->mw_mutex);
 			sched_yield();
 			goto restart;
 		}
@@ -485,7 +487,7 @@ psc_multiwait_reset(struct psc_multiwait *mw)
 		    psc_multiwaitcond_cmp);
 		psc_dynarray_splice(&mwc->mwc_multiwaits, k, 1, NULL, 0);
 
-		psc_pthread_mutex_unlock(&mwc->mwc_mutex);
+		psc_mutex_unlock(&mwc->mwc_mutex);
 		/* Remove it so we don't process it twice. */
 		psc_dynarray_remove(&mw->mw_conds, mwc);
 	}
@@ -493,7 +495,7 @@ psc_multiwait_reset(struct psc_multiwait *mw)
 	psc_vbitmap_resize(mw->mw_condmask, 0);
 	mw->mw_flags = 0;
 	mw->mw_waker = NULL;
-	psc_pthread_mutex_unlock(&mw->mw_mutex);
+	psc_mutex_unlock(&mw->mw_mutex);
 }
 
 /**
@@ -506,9 +508,9 @@ psc_multiwaitcond_nwaiters(struct psc_multiwaitcond *mwc)
 {
 	int n;
 
-	psc_pthread_mutex_lock(&mwc->mwc_mutex);
+	psc_mutex_lock(&mwc->mwc_mutex);
 	n = psc_dynarray_len(&mwc->mwc_multiwaits);
-	psc_pthread_mutex_unlock(&mwc->mwc_mutex);
+	psc_mutex_unlock(&mwc->mwc_mutex);
 	return (n);
 }
 
@@ -519,10 +521,10 @@ psc_multiwaitcond_nwaiters(struct psc_multiwaitcond *mwc)
 void
 psc_multiwait_entercritsect(struct psc_multiwait *mw)
 {
-	psc_pthread_mutex_lock(&mw->mw_mutex);
+	psc_mutex_lock(&mw->mw_mutex);
 	mw->mw_flags |= PMWF_CRITSECT;
 	mw->mw_waker = NULL;
-	psc_pthread_mutex_unlock(&mw->mw_mutex);
+	psc_mutex_unlock(&mw->mw_mutex);
 }
 
 /**
@@ -532,10 +534,10 @@ psc_multiwait_entercritsect(struct psc_multiwait *mw)
 void
 psc_multiwait_leavecritsect(struct psc_multiwait *mw)
 {
-	psc_pthread_mutex_lock(&mw->mw_mutex);
+	psc_mutex_lock(&mw->mw_mutex);
 	mw->mw_flags &= ~PMWF_CRITSECT;
 	mw->mw_waker = NULL;
-	psc_pthread_mutex_unlock(&mw->mw_mutex);
+	psc_mutex_unlock(&mw->mw_mutex);
 }
 
 /**
@@ -551,13 +553,13 @@ psc_multiwait_hascond(struct psc_multiwait *mw, struct psc_multiwaitcond *mwc)
 	int j, rc;
 
 	rc = 0;
-	psc_pthread_mutex_lock(&mw->mw_mutex);
+	psc_mutex_lock(&mw->mw_mutex);
 	DYNARRAY_FOREACH(c, j, &mw->mw_conds)
 		if (c == mwc) {
 			rc = 1;
 			break;
 		}
-	psc_pthread_mutex_unlock(&mw->mw_mutex);
+	psc_mutex_unlock(&mw->mw_mutex);
 	return (rc);
 }
 
@@ -571,13 +573,13 @@ psc_multiwait_prconds(struct psc_multiwait *mw)
 	struct psc_multiwaitcond *mwc;
 	int locked, j;
 
-	locked = psc_pthread_mutex_reqlock(&mw->mw_mutex);
+	locked = psc_mutex_reqlock(&mw->mw_mutex);
 	DYNARRAY_FOREACH(mwc, j, &mw->mw_conds)
 		printf(" multiwait %s@%p has condition %s@%p (%s)\n",
 		    mw->mw_name, mw, mwc->mwc_name, mwc,
 		    psc_multiwait_iscondwakeable(mw, mwc) ?
 		    "enabled" : "disabled");
-	psc_pthread_mutex_ureqlock(&mw->mw_mutex, locked);
+	psc_mutex_ureqlock(&mw->mw_mutex, locked);
 }
 
 /**
@@ -591,9 +593,9 @@ psc_multiwaitcond_prmwaits(struct psc_multiwaitcond *mwc)
 	struct psc_multiwait *mw;
 	int locked, j;
 
-	locked = psc_pthread_mutex_reqlock(&mwc->mwc_mutex);
+	locked = psc_mutex_reqlock(&mwc->mwc_mutex);
 	DYNARRAY_FOREACH(mw, j, &mwc->mwc_multiwaits)
 		printf(" multiwaitcond %s@%p on multiwait %s@%p\n",
 		    mwc->mwc_name, mwc, mw->mw_name, mw);
-	psc_pthread_mutex_ureqlock(&mwc->mwc_mutex, locked);
+	psc_mutex_ureqlock(&mwc->mwc_mutex, locked);
 }

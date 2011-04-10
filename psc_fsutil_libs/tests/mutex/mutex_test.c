@@ -37,10 +37,10 @@ struct psc_waitq	 wq = PSC_WAITQ_INIT;
 void *
 spawn(__unusedx void *arg)
 {
-	psc_pthread_mutex_lock(&m);
+	psc_mutex_lock(&m);
 	psc_completion_done(&compl, 0);
 	psc_waitq_wait(&wq, NULL);
-	psc_pthread_mutex_unlock(&m);
+	psc_mutex_unlock(&m);
 	return (NULL);
 }
 
@@ -65,34 +65,34 @@ main(int argc, char *argv[])
 	if (argc)
 		usage();
 
-	psc_pthread_mutex_init(&m);
+	psc_mutex_init(&m);
 
 	rc = pthread_create(&pt, NULL, spawn, NULL);
 	psc_completion_wait(&compl);
 
-	psc_assert(!psc_pthread_mutex_trylock(&m));
+	psc_assert(!psc_mutex_trylock(&m));
 
 	psc_waitq_wakeall(&wq);
 
-	psc_pthread_mutex_lock(&m);
+	psc_mutex_lock(&m);
 	rc = pthread_mutex_lock(&m);
 	psc_assert(rc == EDEADLK);
 
-	lk = psc_pthread_mutex_reqlock(&m);
+	lk = psc_mutex_reqlock(&m);
 
-	psc_pthread_mutex_ensure_locked(&m);
-	psc_pthread_mutex_ureqlock(&m, lk);
+	psc_mutex_ensure_locked(&m);
+	psc_mutex_ureqlock(&m, lk);
 
-	psc_assert(psc_pthread_mutex_tryreqlock(&m, &lk));
-	psc_pthread_mutex_ureqlock(&m, lk);
+	psc_assert(psc_mutex_tryreqlock(&m, &lk));
+	psc_mutex_ureqlock(&m, lk);
 
-	psc_assert(psc_pthread_mutex_haslock(&m));
+	psc_assert(psc_mutex_haslock(&m));
 
-	psc_pthread_mutex_unlock(&m);
+	psc_mutex_unlock(&m);
 
-	psc_assert(psc_pthread_mutex_haslock(&m) == 0);
+	psc_assert(psc_mutex_haslock(&m) == 0);
 
-	psc_assert(psc_pthread_mutex_tryreqlock(&m, &lk));
-	psc_pthread_mutex_ureqlock(&m, lk);
+	psc_assert(psc_mutex_tryreqlock(&m, &lk));
+	psc_mutex_ureqlock(&m, lk);
 	exit(0);
 }

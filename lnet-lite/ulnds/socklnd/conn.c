@@ -254,7 +254,7 @@ usocklnd_create_passive_conn(lnet_ni_t *ni, int fd, usock_conn_t **connp)
         conn->uc_ni = ni;
         CFS_INIT_LIST_HEAD (&conn->uc_tx_list);
         CFS_INIT_LIST_HEAD (&conn->uc_zcack_list);
-        psc_pthread_mutex_init(&conn->uc_lock);
+        psc_mutex_init(&conn->uc_lock);
         cfs_atomic_set(&conn->uc_refcount, 1); /* 1 ref for me */
 
         *connp = conn;
@@ -311,7 +311,7 @@ usocklnd_create_active_conn(usock_peer_t *peer, int type,
         usocklnd_peer_addref(peer);
         CFS_INIT_LIST_HEAD (&conn->uc_tx_list);
         CFS_INIT_LIST_HEAD (&conn->uc_zcack_list);
-        psc_pthread_mutex_init(&conn->uc_lock);
+        psc_mutex_init(&conn->uc_lock);
         cfs_atomic_set(&conn->uc_refcount, 1); /* 1 ref for me */
 
         *connp = conn;
@@ -746,7 +746,7 @@ usocklnd_create_peer(lnet_ni_t *ni, lnet_process_id_t id,
         peer->up_errored      = 0;
         peer->up_last_alive   = 0;
         cfs_atomic_set (&peer->up_refcount, 1); /* 1 ref for caller */
-        psc_pthread_mutex_init(&peer->up_lock);        
+        psc_mutex_init(&peer->up_lock);        
 
         pthread_mutex_lock(&net->un_lock);
         net->un_peercount++;        

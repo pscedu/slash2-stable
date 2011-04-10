@@ -52,7 +52,7 @@ int nlocks = 2000;
 int nrd = 8;
 int nwr = 3;
 
-pthread_rwlock_t rw = PSC_PTHREAD_RWLOCK_INITIALIZER;
+struct psc_rwlock rw = PSC_RWLOCK_INITIALIZER;
 struct psclist_head thrs = PSCLIST_HEAD_INIT(thrs);
 const char *progname;
 
@@ -74,13 +74,13 @@ rd_main(void *arg)
 //			if (rc)
 //				usleep(1);
 //		} while (rc);
-		psc_pthread_rwlock_rdlock(&rw);
+		psc_rwlock_rdlock(&rw);
 //		rc = pthread_rwlock_rdlock(&rw);
 //		if (rc != EBUSY)
 //			errx(1, "rdlock: %s", strerror(rc));
 
 		usleep(SLEEP_US);
-		psc_pthread_rwlock_unlock(&rw);
+		psc_rwlock_unlock(&rw);
 		sched_yield();
 	}
 	return (NULL);
@@ -95,38 +95,38 @@ wr_main(void *arg)
 
 	for (; thr->st < nlocks; thr->st++) {
 		if (psc_random32u(10) == 3) {
-			psc_pthread_rwlock_rdlock(&rw);
+			psc_rwlock_rdlock(&rw);
 			usleep(SLEEP_US);
-			psc_pthread_rwlock_unlock(&rw);
+			psc_rwlock_unlock(&rw);
 		}
-		psc_pthread_rwlock_wrlock(&rw);
+		psc_rwlock_wrlock(&rw);
 
-		rc = pthread_rwlock_tryrdlock(&rw);
+		rc = pthread_rwlock_tryrdlock(&rw.pr_rwlock);
 		if (rc != EBUSY)
 			errx(1, "rdlock: %s", strerror(rc));
 
-		rc = pthread_rwlock_rdlock(&rw);
+		rc = pthread_rwlock_rdlock(&rw.pr_rwlock);
 		if (rc != EDEADLK)
 			errx(1, "rdlock: %s", strerror(rc));
 
-		rc = pthread_rwlock_wrlock(&rw);
+		rc = pthread_rwlock_wrlock(&rw.pr_rwlock);
 		if (rc != EDEADLK)
 			errx(1, "wrlock: %s", strerror(rc));
 
 #ifdef HAVE_PTHREAD_RWLOCK_TIMEDRDLOCK
 		memset(&ts, 0, sizeof(ts));
-		rc = pthread_rwlock_timedwrlock(&rw, &ts);
+		rc = pthread_rwlock_timedwrlock(&rw.pr_rwlock, &ts);
 		if (rc != EDEADLK)
 			errx(1, "wrlock: %s", strerror(rc));
 #else
 		(void)ts;
-		rc = pthread_rwlock_trywrlock(&rw);
+		rc = pthread_rwlock_trywrlock(&rw.pr_rwlock);
 		if (rc != EBUSY)
 			errx(1, "wrlock: %s", strerror(rc));
 #endif
 
 		usleep(SLEEP_US);
-		psc_pthread_rwlock_unlock(&rw);
+		psc_rwlock_unlock(&rw);
 		sched_yield();
 		usleep(20 * SLEEP_US);
 	}

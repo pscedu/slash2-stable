@@ -45,7 +45,7 @@ psc_waitq_init(struct psc_waitq *q)
 	memset(q, 0, sizeof(*q));
 	atomic_set(&q->wq_nwaiters, 0);
 
-	psc_pthread_mutex_init(&q->wq_mut);
+	psc_mutex_init(&q->wq_mut);
 	rc = pthread_cond_init(&q->wq_cond, NULL);
 	if (rc)
 		psc_fatalx("pthread_cond_init: %s", strerror(rc));
@@ -67,7 +67,7 @@ psc_waitq_waitabs(struct psc_waitq *q, psc_spinlock_t *k,
 {
 	int rc;
 
-	psc_pthread_mutex_lock(&q->wq_mut);
+	psc_mutex_lock(&q->wq_mut);
 
 	if (k != NULL)
 		freelock(k);
@@ -77,7 +77,7 @@ psc_waitq_waitabs(struct psc_waitq *q, psc_spinlock_t *k,
 	if (rc && rc != ETIMEDOUT)
 		psc_fatalx("pthread_cond_timedwait: %s", strerror(rc));
 
-	psc_pthread_mutex_unlock(&q->wq_mut);
+	psc_mutex_unlock(&q->wq_mut);
 	/* Bug 91: Decrease waiters after releasing the lock to guarantee
 	 *    wq_mut remains intact.
 	 */
@@ -102,7 +102,7 @@ psc_waitq_waitrel(struct psc_waitq *q, psc_spinlock_t *k,
 	struct timespec abstime;
 	int rc;
 
-	psc_pthread_mutex_lock(&q->wq_mut);
+	psc_mutex_lock(&q->wq_mut);
 
 	if (k != NULL)
 		freelock(k);
@@ -119,7 +119,7 @@ psc_waitq_waitrel(struct psc_waitq *q, psc_spinlock_t *k,
 		if (rc)
 			psc_fatalx("pthread_cond_wait: %s", strerror(rc));
 	}
-	psc_pthread_mutex_unlock(&q->wq_mut);
+	psc_mutex_unlock(&q->wq_mut);
 	atomic_dec(&q->wq_nwaiters);
 
 	return (rc);
@@ -143,7 +143,7 @@ void
 psc_waitq_wakeone(struct psc_waitq *q)
 {
 
-	psc_pthread_mutex_lock(&q->wq_mut);
+	psc_mutex_lock(&q->wq_mut);
 	if (atomic_read(&q->wq_nwaiters)) {
 		int rc;
 
@@ -151,7 +151,7 @@ psc_waitq_wakeone(struct psc_waitq *q)
 		if (rc)
 			psc_fatalx("pthread_cond_signal: %s", strerror(rc));
 	}
-	psc_pthread_mutex_unlock(&q->wq_mut);
+	psc_mutex_unlock(&q->wq_mut);
 }
 
 /**
@@ -161,7 +161,7 @@ psc_waitq_wakeone(struct psc_waitq *q)
 void
 psc_waitq_wakeall(struct psc_waitq *q)
 {
-	psc_pthread_mutex_lock(&q->wq_mut);
+	psc_mutex_lock(&q->wq_mut);
 
 	if (atomic_read(&q->wq_nwaiters)) {
 		int rc;
@@ -170,7 +170,7 @@ psc_waitq_wakeall(struct psc_waitq *q)
 		if (rc)
 			psc_fatalx("pthread_cond_broadcast: %s", strerror(rc));
 	}
-	psc_pthread_mutex_unlock(&q->wq_mut);
+	psc_mutex_unlock(&q->wq_mut);
 }
 
 #else /* HAVE_LIBPTHREAD */

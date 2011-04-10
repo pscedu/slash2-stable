@@ -28,7 +28,8 @@
 #include "psc_util/thread.h"
 
 void
-psc_pthread_mutex_init(pthread_mutex_t *mut)
+psc_mutex_init_pci(struct pfl_callerinfo *pfl_callerinfo,
+    pthread_mutex_t *mut)
 {
 	pthread_mutexattr_t attr;
 	int rc;
@@ -47,27 +48,32 @@ psc_pthread_mutex_init(pthread_mutex_t *mut)
 }
 
 void
-psc_pthread_mutex_lock(pthread_mutex_t *mut)
+psc_mutex_lock_pci(struct pfl_callerinfo *pfl_callerinfo,
+    pthread_mutex_t *mut)
 {
 	int rc;
 
 	rc = pthread_mutex_lock(mut);
 	if (rc)
 		psc_fatalx("pthread_mutex_lock: %s", strerror(rc));
+	psclog_dbg("mutex=%p acquired", mut);
 }
 
 void
-psc_pthread_mutex_unlock(pthread_mutex_t *mut)
+psc_mutex_unlock_pci(struct pfl_callerinfo *pfl_callerinfo,
+    pthread_mutex_t *mut)
 {
 	int rc;
 
 	rc = pthread_mutex_unlock(mut);
 	if (rc)
 		psc_fatalx("pthread_mutex_unlock: %s", strerror(rc));
+	psclog_dbg("mutex=%p released", mut);
 }
 
 int
-psc_pthread_mutex_reqlock(pthread_mutex_t *mut)
+psc_mutex_reqlock_pci(struct pfl_callerinfo *pfl_callerinfo,
+    pthread_mutex_t *mut)
 {
 	int rc;
 
@@ -76,20 +82,24 @@ psc_pthread_mutex_reqlock(pthread_mutex_t *mut)
 		rc = 1;
 	else if (rc)
 		psc_fatalx("pthread_mutex_unlock: %s", strerror(rc));
+	else
+		psclog_dbg("mutex=%p acquired", mut);
 	return (rc);
 }
 
 void
-psc_pthread_mutex_ureqlock(pthread_mutex_t *mut, int waslocked)
+psc_mutex_ureqlock_pci(struct pfl_callerinfo *pfl_callerinfo,
+    pthread_mutex_t *mut, int waslocked)
 {
 	if (!waslocked)
-		psc_pthread_mutex_unlock(mut);
+		psc_mutex_unlock(mut);
 }
 
 #ifdef HAVE_PTHREAD_MUTEX_TIMEDLOCK
 
 int
-psc_pthread_mutex_trylock(pthread_mutex_t *mut)
+psc_mutex_trylock_pci(struct pfl_callerinfo *pfl_callerinfo,
+    pthread_mutex_t *mut)
 {
 	struct timespec ts;
 	int rc;
@@ -100,15 +110,18 @@ psc_pthread_mutex_trylock(pthread_mutex_t *mut)
 	 */
 	memset(&ts, 0, sizeof(ts));
 	rc = pthread_mutex_timedlock(mut, &ts);
-	if (rc == 0)
+	if (rc == 0) {
+		psclog_dbg("mutex=%p acquired", mut);
 		return (1);
+	}
 	if (rc == ETIMEDOUT)
 		return (0);
 	psc_fatalx("pthread_mutex_timedlock: %s", strerror(rc));
 }
 
 int
-psc_pthread_mutex_haslock(pthread_mutex_t *mut)
+psc_mutex_haslock_pci(struct pfl_callerinfo *pfl_callerinfo,
+    pthread_mutex_t *mut)
 {
 	struct timespec ts;
 	int rc;
@@ -123,13 +136,16 @@ psc_pthread_mutex_haslock(pthread_mutex_t *mut)
 #else
 
 int
-psc_pthread_mutex_trylock(pthread_mutex_t *mut)
+psc_mutex_trylock_pci(struct pfl_callerinfo *pfl_callerinfo,
+    pthread_mutex_t *mut)
 {
 	int rc;
 
 	rc = pthread_mutex_trylock(mut);
-	if (rc == 0)
+	if (rc == 0) {
+		psclog_dbg("mutex=%p acquired", mut);
 		return (1);
+	}
 	/* XXX XXX there is no way to distinguish this from EDEADLK XXX XXX */
 	if (rc == EBUSY)
 		return (0);
@@ -137,7 +153,8 @@ psc_pthread_mutex_trylock(pthread_mutex_t *mut)
 }
 
 int
-psc_pthread_mutex_haslock(pthread_mutex_t *mut)
+psc_mutex_haslock_pci(struct pfl_callerinfo *pfl_callerinfo,
+    pthread_mutex_t *mut)
 {
 	int rc;
 
@@ -150,65 +167,75 @@ psc_pthread_mutex_haslock(pthread_mutex_t *mut)
 #endif
 
 int
-psc_pthread_mutex_tryreqlock(pthread_mutex_t *mut, int *waslocked)
+psc_mutex_tryreqlock_pci(struct pfl_callerinfo *pfl_callerinfo,
+    pthread_mutex_t *mut, int *waslocked)
 {
-	if (psc_pthread_mutex_haslock(mut)) {
+	if (psc_mutex_haslock(mut)) {
 		*waslocked = 1;
 		return (1);
 	}
 	*waslocked = 0;
-	return (psc_pthread_mutex_trylock(mut));
+	return (psc_mutex_trylock(mut));
 }
 
 void
-psc_pthread_mutex_ensure_locked(pthread_mutex_t *m)
+psc_mutex_ensure_locked_pci(struct pfl_callerinfo *pfl_callerinfo,
+    pthread_mutex_t *m)
 {
-	psc_assert(psc_pthread_mutex_haslock(m));
+	psc_assert(psc_mutex_haslock(m));
 }
 
 void
-psc_pthread_rwlock_init(pthread_rwlock_t *rw)
+psc_rwlock_init_pci(struct pfl_callerinfo *pfl_callerinfo,
+    struct psc_rwlock *rw)
 {
 	int rc;
 
-	rc = pthread_rwlock_init(rw, NULL);
+	memset(rw, 0, sizeof(rw));
+	rc = pthread_rwlock_init(&rw->pr_rwlock, NULL);
 	if (rc)
 		psc_fatalx("pthread_rwlock_init: %s", strerror(rc));
 }
 
 void
-psc_pthread_rwlock_rdlock(pthread_rwlock_t *rw)
+psc_rwlock_rdlock_pci(struct pfl_callerinfo *pfl_callerinfo,
+    struct psc_rwlock *rw)
 {
 	int rc;
 
-	rc = pthread_rwlock_rdlock(rw);
+	rc = pthread_rwlock_rdlock(&rw->pr_rwlock);
 	if (rc)
 		psc_fatalx("pthread_rwlock_rdlock: %s", strerror(rc));
+	psclog_dbg("rwlock=%p reader lock acquired", rw);
 }
 
 void
-psc_pthread_rwlock_wrlock(pthread_rwlock_t *rw)
+psc_rwlock_wrlock_pci(struct pfl_callerinfo *pfl_callerinfo,
+    struct psc_rwlock *rw)
 {
 	int rc;
 
-	rc = pthread_rwlock_wrlock(rw);
+	rc = pthread_rwlock_wrlock(&rw->pr_rwlock);
 	if (rc)
 		psc_fatalx("pthread_rwlock_wrlock: %s", strerror(rc));
+	rw->pr_writer = pthread_self();
+	psclog_dbg("rwlock=%p writer lock acquired", rw);
 }
 
 #ifdef HAVE_PTHREAD_RWLOCK_TIMEDRDLOCK
 int
-psc_pthread_rwlock_hasrdlock(pthread_rwlock_t *rw)
+psc_rwlock_hasrdlock_pci(struct pfl_callerinfo *pfl_callerinfo,
+    struct psc_rwlock *rw)
 {
 	struct timespec ts;
 	int rc;
 
 	memset(&ts, 0, sizeof(ts));
-	rc = pthread_rwlock_timedrdlock(rw, &ts);
+	rc = pthread_rwlock_timedrdlock(&rw->pr_rwlock, &ts);
 	if (rc == EDEADLK)
-		return (1);
+		return (rw->pr_writer != pthread_self());
 	if (rc == 0) {
-		psc_pthread_rwlock_unlock(rw);
+		psc_rwlock_unlock(rw);
 		return (0);
 	}
 	if (rc == EBUSY)
@@ -216,95 +243,76 @@ psc_pthread_rwlock_hasrdlock(pthread_rwlock_t *rw)
 	psc_fatalx("pthread_rwlock_timedrdlock: %s", strerror(rc));
 }
 
-int
-psc_pthread_rwlock_haswrlock(pthread_rwlock_t *rw)
-{
-	struct timespec ts;
-	int rc;
-
-	memset(&ts, 0, sizeof(ts));
-	rc = pthread_rwlock_timedwrlock(rw, &ts);
-	if (rc == EDEADLK)
-		return (1);
-	if (rc == 0) {
-		psc_pthread_rwlock_unlock(rw);
-		return (0);
-	}
-	if (rc == EBUSY)
-		return (0);
-	psc_fatalx("pthread_rwlock_timedwrlock: %s", strerror(rc));
-}
 #else
 int
-psc_pthread_rwlock_hasrdlock(pthread_rwlock_t *rw)
+psc_rwlock_hasrdlock_pci(struct pfl_callerinfo *pfl_callerinfo,
+    struct psc_rwlock *rw)
 {
 	int rc;
 
 errno = ENOTSUP;
 psc_fatalx("error");
-	rc = pthread_rwlock_tryrdlock(rw);
+	rc = pthread_rwlock_tryrdlock(&rw->pr_rwlock);
 	if (rc == EDEADLK)
-		return (1);
+		return (rw->pr_writer != pthread_self());
 	if (rc == 0) {
-		psc_pthread_rwlock_unlock(rw);
+		psc_rwlock_unlock(rw);
 		return (0);
 	}
 	if (rc == EBUSY)
 		return (0);
 	psc_fatalx("pthread_rwlock_tryrdlock: %s", strerror(rc));
 }
-
-int
-psc_pthread_rwlock_haswrlock(pthread_rwlock_t *rw)
-{
-	int rc;
-
-errno = ENOTSUP;
-psc_fatalx("error");
-	rc = pthread_rwlock_trywrlock(rw);
-	if (rc == EDEADLK)
-		return (1);
-	if (rc == 0) {
-		psc_pthread_rwlock_unlock(rw);
-		return (0);
-	}
-	if (rc == EBUSY)
-		return (0);
-	psc_fatalx("pthread_rwlock_trywrlock: %s", strerror(rc));
-}
 #endif
 
 int
-psc_pthread_rwlock_reqrdlock(pthread_rwlock_t *rw)
+psc_rwlock_haswrlock_pci(struct pfl_callerinfo *pfl_callerinfo,
+    struct psc_rwlock *rw)
 {
-	if (psc_pthread_rwlock_hasrdlock(rw))
+	return (rw->pr_writer == pthread_self());
+}
+
+int
+psc_rwlock_reqrdlock_pci(struct pfl_callerinfo *pfl_callerinfo,
+    struct psc_rwlock *rw)
+{
+	if (psc_rwlock_hasrdlock(rw))
 		return (1);
-	psc_pthread_rwlock_rdlock(rw);
+	psc_rwlock_rdlock(rw);
 	return (0);
 }
 
 int
-psc_pthread_rwlock_reqwrlock(pthread_rwlock_t *rw)
+psc_rwlock_reqwrlock_pci(struct pfl_callerinfo *pfl_callerinfo,
+    struct psc_rwlock *rw)
 {
-	if (psc_pthread_rwlock_haswrlock(rw))
+	if (psc_rwlock_haswrlock(rw))
 		return (1);
-	psc_pthread_rwlock_wrlock(rw);
-	return (1);
+	psc_rwlock_wrlock(rw);
+	return (0);
 }
 
 void
-psc_pthread_rwlock_ureqlock(pthread_rwlock_t *rw, int waslocked)
+psc_rwlock_ureqlock_pci(struct pfl_callerinfo *pfl_callerinfo,
+    struct psc_rwlock *rw, int waslocked)
 {
 	if (!waslocked)
-		psc_pthread_rwlock_unlock(rw);
+		psc_rwlock_unlock(rw);
 }
 
 void
-psc_pthread_rwlock_unlock(pthread_rwlock_t *rw)
+psc_rwlock_unlock_pci(struct pfl_callerinfo *pfl_callerinfo,
+    struct psc_rwlock *rw)
 {
-	int rc;
+	int rc, wr = 0;
 
-	rc = pthread_rwlock_unlock(rw);
+	if (rw->pr_writer == pthread_self()) {
+		rw->pr_writer = 0;
+		wr = 1;
+	}
+	rc = pthread_rwlock_unlock(&rw->pr_rwlock);
 	if (rc)
 		psc_fatalx("pthread_rwlock_unlock: %s", strerror(rc));
+	psclog_dbg("rwlock=%p %s lock released", rw,
+	    wr ? "writer" : "reader");
 }

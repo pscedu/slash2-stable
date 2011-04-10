@@ -260,7 +260,7 @@ void cfs_init_completion(struct cfs_completion *c)
 {
         LASSERT(c != NULL);
         c->c_done = 0;
-        psc_pthread_mutex_init(&c->c_mut);
+        psc_mutex_init(&c->c_mut);
         pthread_cond_init(&c->c_cond, NULL);
 }
 
@@ -294,7 +294,7 @@ void cfs_wait_for_completion(struct cfs_completion *c)
  * atomic primitives
  */
 
-static pthread_mutex_t atomic_guard_lock = PSC_PTHREAD_MUTEX_INITIALIZER;
+static pthread_mutex_t atomic_guard_lock = PSC_MUTEX_INITIALIZER;
 
 int cfs_atomic_read(cfs_atomic_t *a)
 {

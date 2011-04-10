@@ -36,7 +36,7 @@ struct psc_waitq {
 	atomic_t		wq_nwaiters;
 };
 
-# define PSC_WAITQ_INIT	{ PSC_PTHREAD_MUTEX_INITIALIZER,		\
+# define PSC_WAITQ_INIT	{ PSC_MUTEX_INITIALIZER,			\
 			  PTHREAD_COND_INITIALIZER, ATOMIC_INIT(0) }
 
 #else /* HAVE_LIBPTHREAD */
