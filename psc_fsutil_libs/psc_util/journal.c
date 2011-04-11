@@ -420,7 +420,7 @@ pjournal_logwrite_internal(struct psc_journal *pj,
 	 */
 	if (rc)
 		psc_fatalx("failed writing journal log entry at "
-		    "slot %d: %s", slot, slstrerror(rc));
+		    "slot %d: %s", slot, strerror(rc));
 	return (0);
 }
 
