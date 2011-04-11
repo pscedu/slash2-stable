@@ -160,11 +160,11 @@ pjournal_next_xid(struct psc_journal *pj, struct psc_journal_xidhndl *xh, uint64
 		pll_addtail(&pj->pj_distillxids, xh);
 
 	/*
- 	 * Log entries written outside ZFS must be 
- 	 * idempotent because the txg obtained this
- 	 * way is not accurate, but good enough.
- 	 */
-	if (!txg) 
+	 * Log entries written outside ZFS must be
+	 * idempotent because the txg obtained this
+	 * way is not accurate, but good enough.
+	 */
+	if (!txg)
 		txg = pj->pj_lasttxg + 1;
 	else
 		pj->pj_lasttxg = txg;
@@ -234,7 +234,7 @@ pjournal_xnew(struct psc_journal *pj, int distill, uint64_t txg)
 	INIT_PSC_LISTENTRY(&xh->pjx_dstl_lentry);
 	pjournal_next_xid(pj, xh, txg);
 
-	psclog_info("New trans: xid=%#"PRIx64", txg=%#"PRIx64", distill=%d", 
+	psclog_info("New trans: xid=%#"PRIx64", txg=%#"PRIx64", distill=%d",
 		xh->pjx_xid, xh->pjx_txg, distill);
 	return (xh);
 }
@@ -418,10 +418,9 @@ pjournal_logwrite_internal(struct psc_journal *pj,
 	 * We may want to turn off logging at this point and force
 	 * write-through instead.
 	 */
-	if (rc) {
-		rc = -1;
-		psc_fatal("failed writing journal log entry at slot %d", slot);
-	}
+	if (rc)
+		psc_fatalx("failed writing journal log entry at "
+		    "slot %d: %s", slot, slstrerror(rc));
 	return (0);
 }
 
