@@ -22,6 +22,7 @@ my @ign = (
 	# slash
 	[ qw(psc_multiwaitcond_waitrel_ts _sl_csvc_waitrel slconnthr_main) ],
 	[ qw(sleep sl_nbrqthr_main _pscthr_begin) ],
+	[ qw(psc_waitq_waitabs _lc_get slvr_worker_int slvr_worker _pscthr_begin) ],
 
 	# zest
 	[ qw(psc_multiwait_usecs ziothr_workq_proc_one ziothr_main _pscthr_begin) ],
