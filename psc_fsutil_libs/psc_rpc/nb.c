@@ -171,8 +171,7 @@ pscrpc_nbreqset_reap(struct pscrpc_nbreqset *nbs)
 				rc = nbs->nb_callback(req, &req->rq_async_args);
 
 			/* Be done with it. */
-			if (rc == 0)
-				pscrpc_req_finished(req);
+			pscrpc_req_finished(req);
 
 			/* Record the first error. */
 			if (saved_rc == 0 && rc)
