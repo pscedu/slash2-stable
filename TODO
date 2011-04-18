@@ -140,6 +140,7 @@ pfl
 - remove regen from make and just use the .h files as deps on
   typedump.c
 - fold pscrpc_completion and psc_completion into a single structure
+- list head vs list entry - magic numbers should differ
 
 lnet
 - use TLS buffers for libcfs_nid2str() to avoid NUMA contention
