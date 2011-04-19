@@ -500,6 +500,16 @@ pscfs_freeargs(struct pscfs_args *pfa)
 	fuse_opt_free_args(&pfa->pfa_av);
 }
 
+struct pscfs_clientctx *
+pscfs_getclientctx(struct pscfs_req *pfr)
+{
+	const struct fuse_ctx *ctx = fuse_req_ctx(pfr->pfr_fuse_req);
+	struct pscfs_clientctx *pfcc = &pfr->pfr_clientctx;
+
+	pfcc->pfcc_pid = ctx->pid;
+	return (pfcc);
+}
+
 void
 pscfs_getcreds(struct pscfs_req *pfr, struct pscfs_cred *pfc)
 {
@@ -519,6 +529,7 @@ pscfs_getumask(struct pscfs_req *pfr)
 #endif
 	(void)pfr;
 	/* XXX read from /proc ? */
+//	psclog_warn("fabricating umask")
 	return (0644);
 }
 

@@ -85,10 +85,16 @@ struct pscfs {
 	void	(*pf_handle_write)(struct pscfs_req *, const void *, size_t, off_t, void *);
 };
 
+struct pscfs_clientctx {
+	pid_t	pfcc_pid;
+};
+
 void	pscfs_addarg(struct pscfs_args *, const char *);
 void	pscfs_freeargs(struct pscfs_args *);
 void	pscfs_mount(const char *, struct pscfs_args *);
 
+struct pscfs_clientctx *
+	pscfs_getclientctx(struct pscfs_req *);
 void	pscfs_getcreds(struct pscfs_req *, struct pscfs_cred *);
 int	pscfs_getgroups(struct pscfs_req *, gid_t **, int *);
 mode_t	pscfs_getumask(struct pscfs_req *);

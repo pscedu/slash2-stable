@@ -36,6 +36,7 @@ struct pscfs_args {
 struct pscfs_req {
 	fuse_req_t			 pfr_fuse_req;
 	struct fuse_file_info		*pfr_fuse_fi;
+	struct pscfs_clientctx		 pfr_clientctx;
 };
 
 #  define PSCFS_ARGS_INIT(n, av)	{ FUSE_ARGS_INIT((n), (av)) }
