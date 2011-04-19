@@ -29,6 +29,7 @@
 
 #include "pfl/cdefs.h"
 #include "pfl/compat/pthread_barrier.h"
+#include "psc_util/log.h"
 #include "psc_util/pthrutil.h"
 
 /*
@@ -42,7 +43,7 @@ pthread_barrier_init(pthread_barrier_t *barrier, __unusedx
 
 	barrier->threshold = barrier->counter = count;
 	barrier->cycle = 0;
-	psc_pthread_mutex_init(&barrier->mutex);
+	psc_mutex_init(&barrier->mutex);
 	status = pthread_cond_init(&barrier->cv, NULL);
 	if (status != 0) {
 		pthread_mutex_destroy(&barrier->mutex);
