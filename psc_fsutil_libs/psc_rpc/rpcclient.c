@@ -1665,8 +1665,11 @@ pscrpc_abort_inflight(struct pscrpc_import *imp)
 			req->rq_err = 1;
 			pscrpc_wake_client_req(req);
 		}
-		//__pscrpc_req_finished(req, 1);
 		freelock(&req->rq_lock);
+		//if (req->rq_interpret_reply)
+		//	req->rq_interpret_reply(req, &req->rq_async_args);
+		//XXX deal with me!!!
+		//_pscrpc_req_finished(req, 0);
 	 }
 
 #if 0
