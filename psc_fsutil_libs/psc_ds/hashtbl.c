@@ -258,16 +258,12 @@ void
 psc_hashtbl_add_item(const struct psc_hashtbl *t, void *p)
 {
 	struct psc_hashbkt *b;
-	int locked;
 	void *pk;
 
 	psc_assert(p);
 	pk = (char *)p + t->pht_idoff;
 	b = psc_hashbkt_get(t, pk);
-	locked = reqlock(&b->phb_lock);
-	psclist_add(psc_hashent_getlentry(t, p), &b->phb_listhd);
-	psc_atomic32_inc(&b->phb_nitems);
-	ureqlock(&b->phb_lock, locked);
+	psc_hashbkt_add_item(t, b, p);
 }
 
 int
