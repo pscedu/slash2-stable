@@ -475,9 +475,9 @@ calc_run_time(struct timeval *tv1, struct timeval *tv2)
 }
 
 static inline char *
-clock_2_str(int clock)
+clock_2_str(int clck)
 {
-	switch (clock) {
+	switch (clck) {
 	case WRITE_clk:   return "WRITE";
 	case READ_clk:    return "READ";
 	case CREAT_clk:   return "CREAT";
@@ -626,12 +626,9 @@ _BARRIER(GROUP_t *mygroup, struct io_toolbox *iot)
 } while (0)
 
 #define MKDIR() do {							\
-	int rc = 0;							\
-									\
 	APP_BARRIER();							\
 	STARTWATCH(MKDIR_clk);						\
-	rc = mkdir(iot->mypath, 0755);					\
-	if (rc == -1 && (errno != EEXIST)) {				\
+	if (mkdir(iot->mypath, 0755) == -1 && errno != EEXIST) {	\
 		WARN("mkdir %s failed: %s", iot->mypath,		\
 		    strerror(errno));					\
 		ASSERTPE(0);						\
