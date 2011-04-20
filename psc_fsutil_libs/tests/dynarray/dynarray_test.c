@@ -156,5 +156,16 @@ main(int argc, char *argv[])
 
 	psc_dynarray_free(&da);
 
+	psc_dynarray_init(&da);
+	p = PTR_3; psc_dynarray_add(&da, p); CHECK(&da, PTR_3, NULL);
+	p = PTR_2; psc_dynarray_add(&da, p); CHECK(&da, PTR_3, PTR_2, NULL);
+	p = PTR_3; psc_dynarray_add(&da, p); CHECK(&da, PTR_3, PTR_2, PTR_3, NULL);
+	p = PTR_2; psc_dynarray_add(&da, p); CHECK(&da, PTR_3, PTR_2, PTR_3, PTR_2, NULL);
+
+	while (psc_dynarray_len(&da))
+		psc_dynarray_removepos(&da, 0);
+
+	CHECK(&da, NULL);
+
 	exit(0);
 }
