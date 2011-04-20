@@ -45,7 +45,7 @@ int
 main(__unusedx int argc, char *argv[])
 {
 	char buf[BUFSIZ];
-	int pipe = 0;
+	int dopipe = 0;
 	ssize_t rc;
 	FILE *fp;
 
@@ -61,7 +61,7 @@ main(__unusedx int argc, char *argv[])
 
 	fp = fopen(_PATH_CMDLINE, "r");
 	if (fp == NULL) {
-		pipe = 1;
+		dopipe = 1;
 		snprintf(buf, sizeof(buf),
 		    "ps -o command -p %d | tail -1", getpid());
 		fp = popen(buf, "r");
@@ -73,7 +73,7 @@ main(__unusedx int argc, char *argv[])
 		err(1, _PATH_CMDLINE);
 	if (ferror(fp))
 		err(1, _PATH_CMDLINE);
-	if (pipe)
+	if (dopipe)
 		pclose(fp);
 	else
 		fclose(fp);

@@ -916,8 +916,7 @@ pscrpc_unregister_service(struct pscrpc_service *service)
 	/* Now free all the request buffers since nothing references them
 	 * any more... */
 	while (!psc_listhd_empty(&service->srv_idle_rqbds)) {
-		struct pscrpc_request_buffer_desc *rqbd =
-		    psc_listhd_first_obj(&service->srv_idle_rqbds,
+		rqbd = psc_listhd_first_obj(&service->srv_idle_rqbds,
 		    struct pscrpc_request_buffer_desc, rqbd_lentry);
 
 		pscrpc_free_rqbd(rqbd);
