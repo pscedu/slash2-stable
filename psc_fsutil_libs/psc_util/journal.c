@@ -253,6 +253,7 @@ pjournal_reserve_slot(struct psc_journal *pj)
 {
 	struct psc_journal_xidhndl *t;
 
+	psc_assert(!(pj->pj_flags & PJF_REPLAYINPROG));
 	for (;;) {
 		PJ_LOCK(pj);
 		if (pj->pj_resrv + pj->pj_inuse <  pj->pj_total)
