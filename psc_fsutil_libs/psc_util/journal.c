@@ -123,6 +123,14 @@ psc_journal_io(struct psc_journal *pj, void *p, size_t len, off_t off,
 	return (rc);
 }
 
+void
+pjournal_update_txg(struct psc_journal *pj, uint64_t txg)
+{
+	PJ_LOCK(pj);
+	pj->pj_current_txg = txg;
+	PJ_ULOCK(pj);
+}
+
 uint64_t
 pjournal_next_replay(struct psc_journal *pj)
 {
@@ -160,15 +168,13 @@ pjournal_next_xid(struct psc_journal *pj, struct psc_journal_xidhndl *xh, uint64
 		pll_addtail(&pj->pj_distillxids, xh);
 
 	/*
-	 * Log entries written outside ZFS must be
-	 * idempotent because the txg obtained this
-	 * way is not accurate, but good enough.
+	 * Log entries written outside ZFS must be idempotent because the 
+	 * txg obtained this way may be one larger than the actual txg.
 	 */
 	if (!txg)
-		txg = pj->pj_lasttxg + 1;
-	else
-		pj->pj_lasttxg = txg;
-	xh->pjx_txg = txg;
+		xh->pjx_txg = pj->pj_current_txg;
+	else 
+		xh->pjx_txg = txg;
 
 	PJ_ULOCK(pj);
 }
@@ -1022,7 +1028,6 @@ pjournal_replay(struct psc_journal *pj, int thrtype,
 	struct psc_thread *thr;
 
 	pj->pj_flags |= PJF_REPLAYINPROG;
-	pj->pj_lasttxg = zfsslash2_return_synced();
 
 	rc = pjournal_scan_slots(pj);
 	if (rc) {

@@ -121,7 +121,7 @@ struct psc_journal {
 	uint32_t			 pj_resrv;		/* # slots in reserve */
 
 	uint64_t			 pj_lastxid;		/* last transaction ID used */
-	uint64_t			 pj_lasttxg;
+	uint64_t			 pj_current_txg;
 	uint64_t			 pj_commit_txg;		/* committed ZFS transaction group number  */
 	uint64_t			 pj_replay_xid;		/* last transaction ID replay */
 	uint64_t			 pj_distill_xid;	/* last transaction ID distilled */
@@ -251,6 +251,7 @@ int	 pjournal_format(const char *, uint32_t, uint32_t, uint32_t);
 void	 pjournal_replay(struct psc_journal *, int, const char *,
 	    psc_replay_handler_t, psc_distill_handler_t);
 
+void     pjournal_update_txg(struct psc_journal *, uint64_t);
 uint64_t pjournal_next_replay(struct psc_journal *);
 uint64_t pjournal_next_distill(struct psc_journal *);
 uint64_t pjournal_next_reclaim(struct psc_journal *);
