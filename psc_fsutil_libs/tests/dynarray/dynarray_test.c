@@ -152,15 +152,17 @@ main(int argc, char *argv[])
 
 	psc_dynarray_reset(&da); CHECK(&da, NULL);
 
-	p = PTR_3; psc_dynarray_add(&da, p); CHECK(&da, PTR_3, NULL);
+	psc_dynarray_add(&da, PTR_3); CHECK(&da, PTR_3, NULL);
 
 	psc_dynarray_free(&da);
 
 	psc_dynarray_init(&da);
-	p = PTR_3; psc_dynarray_add(&da, p); CHECK(&da, PTR_3, NULL);
-	p = PTR_2; psc_dynarray_add(&da, p); CHECK(&da, PTR_3, PTR_2, NULL);
-	p = PTR_3; psc_dynarray_add(&da, p); CHECK(&da, PTR_3, PTR_2, PTR_3, NULL);
-	p = PTR_2; psc_dynarray_add(&da, p); CHECK(&da, PTR_3, PTR_2, PTR_3, PTR_2, NULL);
+	psc_dynarray_add(&da, PTR_3); CHECK(&da, PTR_3, NULL);
+	psc_dynarray_add(&da, PTR_2); CHECK(&da, PTR_3, PTR_2, NULL);
+	psc_dynarray_add(&da, PTR_3); CHECK(&da, PTR_3, PTR_2, PTR_3, NULL);
+	psc_dynarray_add(&da, PTR_2); CHECK(&da, PTR_3, PTR_2, PTR_3, PTR_2, NULL);
+
+	psc_dynarray_removeitem(&da, PTR_3); CHECK(&da, PTR_2, PTR_2, PTR_3, NULL);
 
 	while (psc_dynarray_len(&da))
 		psc_dynarray_removepos(&da, 0);
