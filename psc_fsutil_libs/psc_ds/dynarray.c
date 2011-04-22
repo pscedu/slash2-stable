@@ -201,16 +201,8 @@ psc_dynarray_reset(struct psc_dynarray *pda)
 	pda->pda_pos = 0;
 }
 
-/**
- * psc_dynarray_remove - Remove an item from a dynamic array.
- * @pda: dynamic array to remove from.
- * @item: item to remove.
- * Returns the position index the item had.
- * Notes: this routine swaps the last element in the dynarray into the
- *	slot opened up by the removal.
- */
 int
-psc_dynarray_remove(struct psc_dynarray *pda, const void *item)
+psc_dynarray_finditem(struct psc_dynarray *pda, const void *item)
 {
 	int j, len;
 	void **p;
@@ -218,12 +210,42 @@ psc_dynarray_remove(struct psc_dynarray *pda, const void *item)
 	p = psc_dynarray_get(pda);
 	len = psc_dynarray_len(pda);
 	for (j = 0; j < len; j++)
-		if (p[j] == item) {
-			p[j] = p[len - 1];
-			pda->pda_pos--;
+		if (p[j] == item)
 			return (j);
-		}
-	psc_fatalx("element not found");
+	return (-1);
+}
+
+void
+psc_dynarray_removepos(struct psc_dynarray *pda, int pos)
+{
+	int len;
+	void **p;
+
+	p = psc_dynarray_get(pda);
+	len = psc_dynarray_len(pda);
+	psc_assert(pos >= 0 && pos < len);
+	p[pos] = p[len - 1];
+	pda->pda_pos--;
+}
+
+/**
+ * psc_dynarray_removeitem - Remove an item from a dynamic array.
+ * @pda: dynamic array to remove from.
+ * @item: item to remove.
+ * Returns the position index the item had.
+ * Notes: this routine swaps the last element in the dynarray into the
+ *	slot opened up by the removal.
+ */
+int
+psc_dynarray_removeitem(struct psc_dynarray *pda, const void *item)
+{
+	int idx;
+
+	idx = psc_dynarray_finditem(pda, item);
+	if (idx == -1)
+		psc_fatalx("element not found");
+	psc_dynarray_removepos(pda, idx);
+	return (idx);
 }
 
 /**
