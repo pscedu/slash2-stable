@@ -87,6 +87,8 @@ struct psc_dynarray {
 
 #define psc_dynarray_init(da)		psc_dynarray_initf((da), 0)
 
+#define psc_dynarray_remove(da, p)	psc_dynarray_removeitem((da), (p))
+
 int	 psc_dynarray_add(struct psc_dynarray *, void *);
 int	 psc_dynarray_add_ifdne(struct psc_dynarray *, void *);
 int	 psc_dynarray_bsearch(const struct psc_dynarray *, const void *,

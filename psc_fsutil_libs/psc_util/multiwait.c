@@ -148,7 +148,7 @@ psc_multiwaitcond_destroy(struct psc_multiwaitcond *mwc)
 		    psc_multiwaitcond_cmp);
 		psc_dynarray_splice(&mwc->mwc_multiwaits, k, 1, NULL, 0);
 
-		k = psc_dynarray_remove(&mw->mw_conds, mw);
+		k = psc_dynarray_removeitem(&mw->mw_conds, mw);
 		pfl_bitstr_copy(&mw->mw_condmask, k, &mw->mw_condmask,
 		    k + 1, psc_vbitmap_getsize(mw->mw_condmask) - k);
 		psc_vbitmap_resize(mw->mw_condmask,
@@ -296,7 +296,7 @@ _psc_multiwait_addcond(struct psc_multiwait *mw,
 	j = psc_dynarray_len(&mw->mw_conds);
 	if (psc_vbitmap_resize(mw->mw_condmask, j) == -1) {
 		rc = -1;
-		psc_dynarray_remove(&mw->mw_conds, mwc);
+		psc_dynarray_removeitem(&mw->mw_conds, mwc);
 		goto done;
 	}
 
@@ -306,7 +306,7 @@ _psc_multiwait_addcond(struct psc_multiwait *mw,
 		rc = -1;
 		if (psc_vbitmap_resize(mw->mw_condmask, j - 1) == -1)
 			psc_fatalx("unable to undo bitmask changes");
-		psc_dynarray_remove(&mw->mw_conds, mwc);
+		psc_dynarray_removeitem(&mw->mw_conds, mwc);
 		goto done;
 	}
 
@@ -489,7 +489,7 @@ psc_multiwait_reset(struct psc_multiwait *mw)
 
 		psc_mutex_unlock(&mwc->mwc_mutex);
 		/* Remove it so we don't process it twice. */
-		psc_dynarray_remove(&mw->mw_conds, mwc);
+		psc_dynarray_removeitem(&mw->mw_conds, mwc);
 	}
 	psc_dynarray_reset(&mw->mw_conds);
 	psc_vbitmap_resize(mw->mw_condmask, 0);
