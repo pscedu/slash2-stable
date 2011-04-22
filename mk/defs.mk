@@ -45,11 +45,11 @@ LFLAGS+=	-t $$(if ${MINVER} $$(lex -V | sed 's![a-z /]*!!g') 2.5.5; then echo --
 YFLAGS+=	-d
 
 CFLAGS+=	-Wall -W
+# CFLAGS+=	-Wshadow
 
 DEBUG?=		1
 ifeq (${DEBUG},0)
   CFLAGS+=	-Wunused -Wuninitialized -O2
-# CFLAGS+=	-Wshadow
 else
   CFLAGS+=	-g
 endif
