@@ -1207,6 +1207,7 @@ pscrpc_check_set(struct pscrpc_request_set *set, int check_allsent)
 		if (req->rq_interpret_reply)
 			req->rq_status = req->rq_interpret_reply(req,
 				&req->rq_async_args);
+		req->rq_interpret_reply = NULL;
 		set->set_remaining--;
 
 		DEBUG_REQ(PLL_NOTICE, req, "set(%p) rem=(%d) ",
@@ -1261,6 +1262,7 @@ pscrpc_set_destroy(struct pscrpc_request_set *set)
 			if (req->rq_interpret_reply)
 				req->rq_interpret_reply(req,
 				 &req->rq_async_args);
+			req->rq_interpret_reply = NULL;
 			set->set_remaining--;
 		}
 
@@ -1530,7 +1532,7 @@ pscrpc_set_wait(struct pscrpc_request_set *set)
 
 	if (rc)
 		psclog_errorx("set %p failed, rc=%d", set, rc);
-	else
+	//else
 		if (set->set_interpret) {
 			rc = set->set_interpret(set, set->set_arg, rc);
 			if (rc)
@@ -1666,8 +1668,16 @@ pscrpc_abort_inflight(struct pscrpc_import *imp)
 			pscrpc_wake_client_req(req);
 		}
 		freelock(&req->rq_lock);
-		//if (req->rq_interpret_reply)
-		//	req->rq_interpret_reply(req, &req->rq_async_args);
+
+		if (req->rq_interpret_reply) {
+			//psc_enter_debugger("abort inflight");
+			req->rq_interpret_reply(req, &req->rq_async_args);
+			req->rq_interpret_reply = NULL;
+		}
+
+		if (req->rq_comp)
+			pscrpc_completion_one(req->rq_comp);
+
 		//XXX deal with me!!!
 		//_pscrpc_req_finished(req, 0);
 	 }
