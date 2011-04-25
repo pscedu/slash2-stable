@@ -26,8 +26,13 @@ ADD_FILE_CFLAGS=	$(shell if ! [ -f "$(abspath $1)" ]; then echo "ADD_FILE_CFLAGS
 			$(eval $(call FILE_CFLAGS_VARNAME,$1)+=$2)
 FORCE_INST?=		0
 
+OBJDIR=			${CURDIR}/obj
+DEPEND_FILE=		${OBJDIR}/.depend
+
 include ${ROOTDIR}/mk/defs.mk
 include ${ROOTDIR}/mk/pickle.mk
+-include ${DEPEND_FILE}
+-include ${OBJDIR}/*.d
 
 _TSRCS=			$(sort $(foreach fn,${SRCS},$(realpath ${fn})))
 _TSRC_PATH=		$(sort $(foreach dir,${SRC_PATH} .,$(realpath ${dir})))
@@ -36,16 +41,12 @@ _TOBJS=			$(patsubst %.c,%.o,$(filter %.c,${_TSRCS}))
 _TOBJS+=		$(patsubst %.y,%.o,$(filter %.y,${_TSRCS}))
 _TOBJS+=		$(patsubst %.l,%.o,$(filter %.l,${_TSRCS}))
 OBJS=			$(addprefix ${OBJDIR}/,$(notdir ${_TOBJS}))
-DEPS=			$(patsubst %.o,%.dep,${OBJS})
 
 _TSUBDIRS=		$(sort $(foreach dir,${SUBDIRS},$(realpath ${dir})))
 
 _LEXINTM=		$(patsubst %.l,%.c,$(addprefix ${OBJDIR}/,$(notdir $(filter %.l,${_TSRCS}))))
 _YACCINTM=		$(patsubst %.y,%.c,$(addprefix ${OBJDIR}/,$(notdir $(filter %.y,${_TSRCS}))))
 _C_SRCS=		$(filter %.c,${_TSRCS}) ${_YACCINTM} ${_LEXINTM}
-
-OBJDIR=			${CURDIR}/obj
-DEPEND_FILE=		${OBJDIR}/.depend
 
 LNET_SOCKLND_SRCS+=	${LNET_BASE}/ulnds/socklnd/conn.c
 LNET_SOCKLND_SRCS+=	${LNET_BASE}/ulnds/socklnd/handlers.c
@@ -313,7 +314,6 @@ endif
 vpath %.y $(sort $(dir $(filter %.y,${_TSRCS})))
 vpath %.l $(sort $(dir $(filter %.l,${_TSRCS})))
 vpath %.c $(sort $(dir $(filter %.c,${_TSRCS})) ${OBJDIR})
-vpath %.dep ${OBJDIR}
 
 all: recurse-all all-hook
 	@for i in ${SRCS}; do						\
@@ -332,22 +332,15 @@ all-hook:
 
 .SUFFIXES:
 
-.PRECIOUS: ${OBJDIR}/$(notdir %.dep)
+.PRECIOUS: ${OBJDIR}/$(notdir %.d)
 
 # XXX this doesn't seem to work as advertised
-.SILENT: ${OBJDIR}/$(notdir %.dep)
-
-${OBJDIR}/$(notdir %.dep) : %.c
-	${ECHORUN} ${MKDEP} -D ${OBJDIR} -f $@ ${DEFINES} $(		\
-	    ) $$(echo $(call FILE_CFLAGS,$<) | ${EXTRACT_DEFINES}) $(	\
-	    ) ${LIBC_INCLUDES} ${_TINCLUDES} $(				\
-	    ) $$(echo $(call FILE_CFLAGS,$<) | ${EXTRACT_INCLUDES}) $(	\
-	    ) -I$(dir $<) -I. $(realpath $<)
+.SILENT: ${OBJDIR}/$(notdir %.d)
 
 ${OBJDIR}/$(notdir %.o) : %.c
 	${PCPP} ${PCPP_FLAGS} $(call FILE_PCPP_FLAGS,$<) $(realpath $<	\
 	    ) | ${CC} -x c ${CFLAGS} $(call FILE_CFLAGS,$<) $(		\
-	    ) -I$(dir $<) -I. - -c -o $@
+	    ) -I$(dir $<) -I. - -c -o $@ -MD -MP
 
 ${OBJDIR}/$(notdir %.E) : %.c
 	${CC} ${CFLAGS} $(call FILE_CFLAGS,$<) -I$(dir $<) -I. $(realpath $<) -E -o $@
@@ -362,33 +355,19 @@ ${OBJDIR}/$(notdir %.c) : %.l
 ${OBJDIR}/$(notdir %.c) : %.y
 	${ECHORUN} ${YACC} ${YFLAGS} -o $@ $(realpath $<)
 
-ifdef HASDEPS
-  ifdef PROG
-    ${PROG}: ${OBJS}
+ifdef PROG
+${PROG}: ${OBJS}
 	${CC} -o $@ $(sort ${OBJS}) ${LDFLAGS}
 	@printf "%s" "${PROG}:" > ${DEPEND_FILE}
 	@${LIBDEP} ${LDFLAGS} ${LIBDEP_ADD} >> ${DEPEND_FILE}
-  endif
+endif
 
-  ifdef LIBRARY
-    ${LIBRARY}: ${OBJS}
-	tput el >&2 || true
+ifdef LIBRARY
+${LIBRARY}: ${OBJS}
+	@if [ "${PSC_MAKE_STATUS}" ]; then				\
+		tput el >&2 || true;					\
+	fi
 	${AR} ${ARFLAGS} $@ $(sort ${OBJS})
-  endif
-else
-  ifdef PROG
-    .PHONY: ${PROG}
-    ${PROG}:
-	@${MAKE} -s ${DEPS}
-	@MAKEFILES="${DEPS} ${DEPEND_FILE}" ${MAKE} HASDEPS=1 $@
-  endif
-
-  ifdef LIBRARY
-    .PHONY: ${LIBRARY}
-    ${LIBRARY}:
-	@${MAKE} -s ${DEPS}
-	@MAKEFILES="${DEPS}" ${MAKE} HASDEPS=1 $@
-  endif
 endif
 
 recurse-%:
