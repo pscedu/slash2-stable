@@ -176,39 +176,41 @@ struct pscrpc_request_pool {
 };
 
 struct pscrpc_import {
-	struct pscrpc_connection	*imp_connection;
-	struct pscrpc_client		*imp_client;
-	struct psclist_head		 imp_sending_list;	/* in-flight? */
-	struct psclist_head		 imp_uncomitted;	/* post send  */
-	struct psclist_head		 imp_rpcsets;		/* list of sets */
-	size_t				 imp_nsets;
-	psc_spinlock_t			 imp_lock;
-	atomic_t			 imp_inflight;
-	atomic_t			 imp_refcount;
-	int				 imp_generation;
-	int				 imp_conn_cnt;
-	int				 imp_max_retries;
-	enum pscrpc_imp_state		 imp_state;
-	struct pscrpc_handle		 imp_remote_handle;
-	uint64_t			 imp_last_replay_transno;
-	uint64_t			 imp_last_transno_checked; /* optimize */
-	uint64_t			 imp_peer_committed_transno;
-	struct psc_waitq		 imp_recovery_waitq;
-	struct psclist_head		 imp_delayed_list;
-	unsigned int			 imp_invalid:1,
-					 imp_server_timeout:1,
-					 imp_deactive:1,
-					 imp_replayable:1,
-					 imp_force_verify:1,
-					 imp_igntimeout:1,
-					 imp_failed:1;
+	struct pscrpc_connection	 *imp_connection;
+	struct pscrpc_client		 *imp_client;
+	struct psclist_head		  imp_sending_list;	/* in-flight? */
+	struct psclist_head		  imp_uncomitted;	/* post send  */
+	struct psclist_head		  imp_rpcsets;		/* list of sets */
+	size_t				  imp_nsets;
+	psc_spinlock_t			  imp_lock;
+	atomic_t			  imp_inflight;
+	atomic_t			  imp_refcount;
+	int				  imp_generation;
+	int				  imp_conn_cnt;
+	int				  imp_max_retries;
+	enum pscrpc_imp_state		  imp_state;
+	struct pscrpc_handle		  imp_remote_handle;
+	uint64_t			  imp_last_replay_transno;
+	uint64_t			  imp_last_transno_checked; /* optimize */
+	uint64_t			  imp_peer_committed_transno;
+	struct psc_waitq		  imp_recovery_waitq;
+	struct psclist_head		  imp_delayed_list;
+	void				(*imp_hldropf)(void *);
+	void				 *imp_hldrop_arg;
+	unsigned int			  imp_invalid:1,
+					  imp_server_timeout:1,
+					  imp_deactive:1,
+					  imp_replayable:1,
+					  imp_force_verify:1,
+					  imp_igntimeout:1,
+					  imp_failed:1;
 #if 0
 	unsigned int
-					 imp_dlm_fake:1,
-					 imp_initial_recov:1,
-					 imp_initial_recov_bk:1,
-					 imp_pingable:1,
-					 imp_resend_replay:1
+					  imp_dlm_fake:1,
+					  imp_initial_recov:1,
+					  imp_initial_recov_bk:1,
+					  imp_pingable:1,
+					  imp_resend_replay:1
 #endif
 };
 

@@ -205,5 +205,8 @@ pscrpc_fail_import(struct pscrpc_import *imp, uint32_t conn_cnt)
 		imp->imp_force_verify = 1;
 		imp->imp_failed = 1;
 		freelock(&imp->imp_lock);
+
+		if (imp->imp_hldropf)
+			imp->imp_hldropf(imp->imp_hldrop_arg);
 	}
 }
