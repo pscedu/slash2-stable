@@ -112,7 +112,7 @@ pfl
 	INIT_PSC_LISTENTRY -> INIT_LISTENTRY
   which is OK since they aren't translation unit symbols
 - eliminate flags arg to pscthr_init()
-- eliminate prt_alive
+- eliminate prt_alive; use flags
 - in mguard, check the flags in realloc/free match alloc (PAF_LOCK, ALIGN)
 - is pcpp the problem with function args mid-wrapping?
 - count spinlocks and mutexes held before:
@@ -121,9 +121,8 @@ pfl
 - rename SLASH/ZEST_MODULES to COMPONENTS to disassociate from PFL MODULES
 - rename PPMF_NOLOCK -> PPMF_NOPIN, PAF_LOCK -> PAF_PIN
 - for odtable(1), print stats as default behavior
-- add function call hierarchy to psclog
+- add function call hierarchy specifier to psclog
 - mmap() mprotect()'d memory in memguard
-- parse thr(-.*)? for connthr-foo not matching 'thr$' for thread names in ctl parsing
 - pool auto threshold is broken
 - add provisions to dynarray to detect multiple adds without an
   ensurelen and notify user to possible optimization
@@ -140,7 +139,9 @@ pfl
 - remove regen from make and just use the .h files as deps on
   typedump.c
 - fold pscrpc_completion and psc_completion into a single structure
+- parse thr(-.*)? for connthr-foo not matching 'thr$' for thread names in ctl parsing
 - list head vs list entry - magic numbers should differ
+- add *ctl -n to suppress name resolution
 
 lnet
 - use TLS buffers for libcfs_nid2str() to avoid NUMA contention
