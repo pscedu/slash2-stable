@@ -98,7 +98,7 @@ struct psc_journal_hdr {
 	int32_t				 pjh_entsz;
 	uint32_t			 pjh_nents;
 	uint32_t			 pjh_version;
-	int32_t				 pjh_readahead;
+	int32_t				 pjh_readsize;
 #if 0
 	uint64_t			 pjh_timestamp;		/* format time */
 #endif

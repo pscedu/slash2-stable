@@ -487,7 +487,7 @@ pjournal_logwrite(struct psc_journal_xidhndl *xh, int type,
 __static void *
 pjournal_alloc_buf(struct psc_journal *pj)
 {
-	return (psc_alloc(PJ_PJESZ(pj) * pj->pj_hdr->pjh_readahead,
+	return (psc_alloc(PJ_PJESZ(pj) * pj->pj_hdr->pjh_readsize,
 	    PAF_PAGEALIGN | PAF_LOCK));
 }
 
@@ -532,7 +532,7 @@ pjournal_scan_slots(struct psc_journal *pj)
 	 * physical one regardless where the log really starts and ends.
 	 */
 	jbuf = pjournal_alloc_buf(pj);
-	count = pj->pj_hdr->pjh_readahead;
+	count = pj->pj_hdr->pjh_readsize;
 	psc_assert((pj->pj_total % count) == 0);
 	while (slot < pj->pj_total) {
 		rc = psc_journal_read(pj, jbuf, PJ_PJESZ(pj) * count,
@@ -626,7 +626,7 @@ pjournal_scan_slots(struct psc_journal *pj)
 	pj->pj_lastxid = last_xid;
 	psc_dynarray_sort(&pj->pj_bufs, qsort, pjournal_xid_cmp);
 	psc_free(jbuf, PAF_LOCK | PAF_PAGEALIGN, PJ_PJESZ(pj) *
-	    pj->pj_hdr->pjh_readahead);
+	    pj->pj_hdr->pjh_readsize);
 
 	nopen = psc_dynarray_len(&pj->pj_bufs);
 	psclog_info("journal statistics: %d closed, %d open, %d magic, "
