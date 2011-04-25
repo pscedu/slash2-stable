@@ -563,7 +563,7 @@ pscrpc_push_req(struct pscrpc_request *req)
 {
 	spinlock(&req->rq_lock);
 	if (req->rq_phase == PSCRPC_RQ_PHASE_NEW)
-		/* pscrpc_send_new_req_locked() free's the lock.
+		/* pscrpc_send_new_req_locked() frees the lock.
 		 */
 		return (pscrpc_send_new_req_locked(req));
 	else {
