@@ -104,6 +104,7 @@ sub get_containing_func {
 			}
 		}
 	}
+	$j-- while substr($data, $j, 1) =~ /\s/;
 	my $len = 1;
 	$j--, $len++ while substr($data, $j - 1, 1) =~ /[a-zA-Z0-9_]/;
 	return substr($data, $j, $len);
