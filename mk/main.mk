@@ -31,8 +31,6 @@ DEPEND_FILE=		${OBJDIR}/.depend
 
 include ${ROOTDIR}/mk/defs.mk
 include ${ROOTDIR}/mk/pickle.mk
--include ${DEPEND_FILE}
--include ${OBJDIR}/*.d
 
 _TSRCS=			$(sort $(foreach fn,${SRCS},$(realpath ${fn})))
 _TSRC_PATH=		$(sort $(foreach dir,${SRC_PATH} .,$(realpath ${dir})))
@@ -492,3 +490,6 @@ etags: recurse-etags
 
 printenv:
 	@env | sort
+
+-include ${DEPEND_FILE}
+-include ${OBJDIR}/*.d
