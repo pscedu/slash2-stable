@@ -242,7 +242,6 @@ psc_rwlock_hasrdlock_pci(struct pfl_callerinfo *pfl_callerinfo,
 		return (0);
 	psc_fatalx("pthread_rwlock_timedrdlock: %s", strerror(rc));
 }
-
 #else
 int
 psc_rwlock_hasrdlock_pci(struct pfl_callerinfo *pfl_callerinfo,
@@ -276,20 +275,30 @@ int
 psc_rwlock_reqrdlock_pci(struct pfl_callerinfo *pfl_callerinfo,
     struct psc_rwlock *rw)
 {
-	if (psc_rwlock_hasrdlock(rw))
+	int rc = 0;
+
+	if (psc_rwlock_haswrlock(rw)) {
+		psc_rwlock_unlock(rw);
+		rc = 1;
+	} else if (psc_rwlock_hasrdlock(rw))
 		return (1);
 	psc_rwlock_rdlock(rw);
-	return (0);
+	return (rc);
 }
 
 int
 psc_rwlock_reqwrlock_pci(struct pfl_callerinfo *pfl_callerinfo,
     struct psc_rwlock *rw)
 {
-	if (psc_rwlock_haswrlock(rw))
+	int rc = 0;
+
+	if (psc_rwlock_hasrdlock(rw)) {
+		psc_rwlock_unlock(rw);
+		rc = 1;
+	} else if (psc_rwlock_haswrlock(rw))
 		return (1);
 	psc_rwlock_wrlock(rw);
-	return (0);
+	return (rc);
 }
 
 void
