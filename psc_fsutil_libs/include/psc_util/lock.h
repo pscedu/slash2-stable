@@ -65,6 +65,7 @@ typedef struct psc_spinlock {
 } psc_spinlock_t;
 
 #define PSLF_NOLOG		(1 << 0)	/* don't psclog locks/unlocks */
+#define PSLF_LOGTMP		(1 << 1)	/* psclog to tmp subsystem */
 
 #define PSL_SLEEP_NTRIES	256
 #define PSL_SLEEP_NSEC		5001
@@ -81,13 +82,16 @@ typedef struct psc_spinlock {
 
 #define INIT_SPINLOCK(psl)	 INIT_SPINLOCK_FLAGS((psl), 0)
 #define INIT_SPINLOCK_NOLOG(psl) INIT_SPINLOCK_FLAGS((psl), PSLF_NOLOG)
+#define INIT_SPINLOCK_LOGTMP(psl)INIT_SPINLOCK_FLAGS((psl), PSLF_LOGTMP)
 
 #ifdef LOCK_TIMING
 #  define SPINLOCK_INIT		{ PSC_ATOMIC32_INIT(PSL_UNLOCKED), 0, 0, { 0, 0 } }
 #  define SPINLOCK_INIT_NOLOG	{ PSC_ATOMIC32_INIT(PSL_UNLOCKED), PSLF_NOLOG, 0, { 0, 0 } }
+#  define SPINLOCK_INIT_LOGTMP	{ PSC_ATOMIC32_INIT(PSL_UNLOCKED), PSLF_LOGTMP, 0, { 0, 0 } }
 #else
 #  define SPINLOCK_INIT		{ PSC_ATOMIC32_INIT(PSL_UNLOCKED), 0, 0 }
 #  define SPINLOCK_INIT_NOLOG	{ PSC_ATOMIC32_INIT(PSL_UNLOCKED), PSLF_NOLOG, 0 }
+#  define SPINLOCK_INIT_LOGTMP	{ PSC_ATOMIC32_INIT(PSL_UNLOCKED), PSLF_LOGTMP, 0 }
 #endif
 
 #define _SPIN_GETVAL(psl)	psc_atomic32_read(_SPIN_GETATOM(psl))
@@ -220,12 +224,15 @@ typedef struct psc_spinlock {
 
 #define LOCK_ENSURE(psl)	PSC_MAKETRUE(_SPIN_ENSURELOCKED("LOCK_ENSURE", (psl)))
 
-#define ureqlock(psl, lkd)	ureqlock_pci(PFL_CALLERINFO(), (psl), (lkd))
-#define tryreqlock(psl, lkd)	tryreqlock_pci(PFL_CALLERINFO(), (psl), (lkd))
-#define reqlock(psl)		reqlock_pci(PFL_CALLERINFO(), (psl))
-#define freelock(psl)		freelock_pci(PFL_CALLERINFO(), (psl))
-#define trylock(psl)		trylock_pci(PFL_CALLERINFO(), (psl))
-#define spinlock(psl)		spinlock_pci(PFL_CALLERINFO(), (psl))
+#define _SPIN_CALLERINFO(psl)	((psl)->psl_flags & PSLF_LOGTMP ?	\
+				 PFL_CALLERINFOSS(PSS_TMP) : PFL_CALLERINFO())
+
+#define ureqlock(psl, lkd)	ureqlock_pci(_SPIN_CALLERINFO(psl), (psl), (lkd))
+#define tryreqlock(psl, lkd)	tryreqlock_pci(_SPIN_CALLERINFO(psl), (psl), (lkd))
+#define reqlock(psl)		reqlock_pci(_SPIN_CALLERINFO(psl), (psl))
+#define freelock(psl)		freelock_pci(_SPIN_CALLERINFO(psl), (psl))
+#define trylock(psl)		trylock_pci(_SPIN_CALLERINFO(psl), (psl))
+#define spinlock(psl)		spinlock_pci(_SPIN_CALLERINFO(psl), (psl))
 
 static __inline void _psc_spin_checktime(struct psc_spinlock *);
 
