@@ -80,10 +80,6 @@ struct psc_lockedlist {
 	{ PSCLIST_HEAD_INIT((pll)->pll_listhd), 0, 0,			\
 	  offsetof(type, member), { SPINLOCK_INIT_NOLOG } }
 
-#define PLL_INIT_LOGMAX(pll, type, member)				\
-	{ PSCLIST_HEAD_INIT((pll)->pll_listhd), 0, 0,			\
-	  offsetof(type, member), { SPINLOCK_INIT_LOGMAX } }
-
 #define pll_next_item(pll, p)						\
 	psclist_next_obj2(&(pll)->pll_listhd, (p), (pll)->pll_offset)
 
