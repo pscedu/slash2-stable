@@ -89,12 +89,14 @@ struct psc_dynarray {
 
 #define psc_dynarray_remove(da, p)	psc_dynarray_removeitem((da), (p))
 
+#define	psc_dynarray_exists(da, p)	(psc_dynarray_finditem((da), (p)) != -1)
+
 int	 psc_dynarray_add(struct psc_dynarray *, void *);
 int	 psc_dynarray_add_ifdne(struct psc_dynarray *, void *);
 int	 psc_dynarray_bsearch(const struct psc_dynarray *, const void *,
 	    int (*)(const void *, const void *));
 int	 psc_dynarray_ensurelen(struct psc_dynarray *, int);
-int	 psc_dynarray_exists(const struct psc_dynarray *, const void *);
+int	 psc_dynarray_finditem(struct psc_dynarray *, const void *);
 void	 psc_dynarray_free(struct psc_dynarray *);
 void	*psc_dynarray_getpos(const struct psc_dynarray *, int);
 void	 psc_dynarray_initf(struct psc_dynarray *, int);

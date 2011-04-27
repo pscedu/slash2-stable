@@ -108,27 +108,6 @@ psc_dynarray_reverse(struct psc_dynarray *pda)
 }
 
 /**
- * psc_dynarray_exists - Check for membership existence of an item in a
- *	dynamic array.
- * @pda: dynamic array to inspect.
- * @item: element to check existence of.
- * Returns Boolean true on existence and false on nonexistence.
- */
-int
-psc_dynarray_exists(const struct psc_dynarray *pda, const void *item)
-{
-	int j, len;
-	void **p;
-
-	p = psc_dynarray_get(pda);
-	len = psc_dynarray_len(pda);
-	for (j = 0; j < len; j++)
-		if (p[j] == item)
-			return (1);
-	return (0);
-}
-
-/**
  * psc_dynarray_add - Add a new item to a dynamic array, resizing if necessary.
  * @pda: dynamic array to add to.
  * @item: element to add.
@@ -153,11 +132,8 @@ psc_dynarray_add(struct psc_dynarray *pda, void *item)
 int
 psc_dynarray_add_ifdne(struct psc_dynarray *pda, void *item)
 {
-	int j;
-
-	for (j = 0; j < psc_dynarray_len(pda); j++)
-		if (item == psc_dynarray_getpos(pda, j))
-			return (1);
+	if (psc_dynarray_exists(pda, item))
+		return (1);
 	return (psc_dynarray_add(pda, item));
 }
 
