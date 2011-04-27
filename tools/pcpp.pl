@@ -239,14 +239,14 @@ for ($i = 0; $i < length $data; ) {
 		warn "nested function?\n" if defined $foff;
 		$foff = $i;
 		unless (get_containing_func() eq "main") {
-			print qq{psclog_trace("enter};
+			print qq{psclog_trace("enter %s};
 			my @args = get_func_args();
 			my $endstr = "";
 			foreach my $arg (@args) {
 				print " $arg=%p:%ld";
 				$endstr .= ", (void *)(unsigned long)$arg, (long)$arg";
 			}
-			print qq{"$endstr);};
+			print qq{", __func__$endstr);};
 		}
 		advance(1);
 		$lvl++;
