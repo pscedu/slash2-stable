@@ -58,14 +58,13 @@ enum psc_spinlock_val {
 typedef struct psc_spinlock {
 	psc_atomic32_t		psl_value;
 	int			psl_flags;
-	pthread_t		psl_who;
+	pthread_t		psl_owner;
 #ifdef LOCK_TIMING
 	struct timeval		psl_time;
 #endif
 } psc_spinlock_t;
 
 #define PSLF_NOLOG		(1 << 0)	/* don't psclog locks/unlocks */
-#define PSLF_LOGMAX		(1 << 1)	/* log locks/unlocks at PLL_MAX */
 
 #define PSL_SLEEP_NTRIES	256
 #define PSL_SLEEP_NSEC		5001
@@ -82,7 +81,6 @@ typedef struct psc_spinlock {
 
 #define INIT_SPINLOCK(psl)	 INIT_SPINLOCK_FLAGS((psl), 0)
 #define INIT_SPINLOCK_NOLOG(psl) INIT_SPINLOCK_FLAGS((psl), PSLF_NOLOG)
-#define INIT_SPINLOCK_LOGMAX(psl)INIT_SPINLOCK_FLAGS((psl), PSLF_LOGMAX)
 
 #ifdef LOCK_TIMING
 #  define SPINLOCK_INIT		{ PSC_ATOMIC32_INIT(PSL_UNLOCKED), 0, 0, { 0, 0 } }
@@ -109,11 +107,11 @@ typedef struct psc_spinlock {
 		if (_SPIN_GETVAL(psl) == PSL_UNLOCKED)			\
 			psc_fatalx("%s: not locked (lock %p)", (name),	\
 			    (psl));					\
-		if ((psl)->psl_who != pthread_self())			\
+		if ((psl)->psl_owner != pthread_self())			\
 			psc_fatalx("%s: not owner "			\
 			    "(lock %p, owner %"PSCPRI_PTHRT", "		\
 			    "self %"PSCPRI_PTHRT")", (name),		\
-			    (psl), (psl)->psl_who, pthread_self());	\
+			    (psl), (psl)->psl_owner, pthread_self());	\
 	} while (0)
 
 #define _SPIN_TEST_AND_SET(pci, name, psl)				\
@@ -123,21 +121,20 @@ typedef struct psc_spinlock {
 		_val = PSC_ATOMIC32_XCHG(_SPIN_GETATOM(psl),		\
 		    PSL_LOCKED);					\
 		if ((_val) == PSL_LOCKED) {				\
-			if ((psl)->psl_who == pthread_self())		\
-				psc_fatalx("%s: already locked",	\
-				    (name));				\
+			if ((psl)->psl_owner == pthread_self())		\
+				_psclog_pci((pci), PLL_FATAL, 0,	\
+				    "%s: already locked", (name));	\
 			/* PFL_GETTIMEVAL(&(psl)->psl_time); */		\
 			_val = 0;					\
 		} else if ((_val) == PSL_UNLOCKED) {			\
-			(psl)->psl_who = pthread_self();		\
+			(psl)->psl_owner = pthread_self();		\
 			if (((psl)->psl_flags & PSLF_NOLOG) == 0)	\
-				_psclog_pci((pci),			\
-				    (psl)->psl_flags & PSLF_LOGMAX ?	\
-				    PLL_MAX : PLL_TRACE, 0,		\
+				_psclog_pci((pci), PLL_DEBUG, 0,	\
 				    "lock %p acquired",	(psl));		\
 			_val = 1;					\
 		} else							\
-			psc_fatalx("%s: lock %p has invalid value %#x",	\
+			_psclog_pci((pci), PLL_FATAL, 0,		\
+			    "%s: lock %p has invalid value %#x",	\
 			    (name), (psl), (_val));			\
 		_val;							\
 	}
@@ -177,13 +174,11 @@ typedef struct psc_spinlock {
 #define freelock_pci(pci, psl)						\
 	do {								\
 		_SPIN_ENSURELOCKED("freelock", (psl));			\
-		_spin_checktime(psl);					\
-		(psl)->psl_who = 0;					\
+		_psc_spin_checktime(psl);				\
+		(psl)->psl_owner = 0;					\
 		psc_atomic32_set(_SPIN_GETATOM(psl), PSL_UNLOCKED);	\
 		if (((psl)->psl_flags & PSLF_NOLOG) == 0)		\
-			_psclog_pci((pci),				\
-			    (psl)->psl_flags & PSLF_LOGMAX ?		\
-			    PLL_MAX : PLL_TRACE, 0,			\
+			_psclog_pci((pci), PLL_DEBUG, 0,		\
 			    "lock %p released", (psl));			\
 	} while (0)
 
@@ -195,7 +190,7 @@ typedef struct psc_spinlock {
  */
 #define reqlock_pci(pci, psl)						\
 	(psc_spin_haslock(psl) ? PSLRV_WASLOCKED :			\
-	    (PSC_MAKETRUE(spinlock_pci(pci, psl)), PSLRV_WASNOTLOCKED))
+	    (PSC_MAKETRUE(spinlock_pci((pci), (psl))), PSLRV_WASNOTLOCKED))
 
 /**
  * tryreqlock - Try to require a lock.  Will not block if the lock
@@ -232,7 +227,7 @@ typedef struct psc_spinlock {
 #define trylock(psl)		trylock_pci(PFL_CALLERINFO(), (psl))
 #define spinlock(psl)		spinlock_pci(PFL_CALLERINFO(), (psl))
 
-static __inline void _spin_checktime(struct psc_spinlock *);
+static __inline void _psc_spin_checktime(struct psc_spinlock *);
 
 #ifndef _PFL_ATOMIC_H_
 #  include "psc_util/atomic.h"
@@ -257,7 +252,7 @@ static __inline void _spin_checktime(struct psc_spinlock *);
 	} while (0)
 
 static __inline void
-_spin_checktime(struct psc_spinlock *psl)
+_psc_spin_checktime(struct psc_spinlock *psl)
 {
 #ifdef LOCK_TIMING
 	struct timeval now, diff;
@@ -267,7 +262,7 @@ _spin_checktime(struct psc_spinlock *psl)
 	max.tv_usec = 500;
 	timersub(&now, &psl->psl_time, &diff);
 	if (timercmp(&diff, &max, >))
-		psc_errorx("lock %p held long (%luus)",
+		psclog_errorx("lock %p held long (%luus)",
 		    psl, diff.tv_sec * 1000 * 1000 + diff.tv_usec);
 #else
 	(void)psl;
@@ -279,10 +274,11 @@ psc_spin_haslock(psc_spinlock_t *psl)
 {
 	_SPIN_CHECK("psc_spin_haslock", psl);
 	/*
-	 * This code is thread safe because even if psl_who changes, it
+	 * This code is thread safe because even if psl_owner changes, it
 	 * won't be set to us.
 	 */
-	return (_SPIN_GETVAL(psl) == PSL_LOCKED && psl->psl_who == pthread_self());
+	return (_SPIN_GETVAL(psl) == PSL_LOCKED &&
+	    psl->psl_owner == pthread_self());
 }
 
 #endif /* _PFL_SPINLOCK_H_ */
