@@ -23,17 +23,19 @@
 #include <pthread.h>
 
 #include "pfl/pfl.h"
+#include "psc_ds/dynarray.h"
+#include "psc_util/lock.h"
 
 #ifndef HAVE_PTHREAD_BARRIER
 # include "pfl/compat/pthread_barrier.h"
 #endif
 
 #ifdef PTHREAD_MUTEX_ERRORCHECK_INITIALIZER
-# define PSC_MUTEX_INITIALIZER PTHREAD_MUTEX_ERRORCHECK_INITIALIZER
+# define PSC_MUTEX_INITIALIZER		PTHREAD_MUTEX_ERRORCHECK_INITIALIZER
 #elif defined(PTHREAD_MUTEX_ERRORCHECK_INITIALIZER_NP)
-# define PSC_MUTEX_INITIALIZER PTHREAD_MUTEX_ERRORCHECK_INITIALIZER_NP
+# define PSC_MUTEX_INITIALIZER		PTHREAD_MUTEX_ERRORCHECK_INITIALIZER_NP
 #else
-# define PSC_MUTEX_INITIALIZER PTHREAD_MUTEX_INITIALIZER
+# define PSC_MUTEX_INITIALIZER		PTHREAD_MUTEX_INITIALIZER
 #endif
 
 #define psc_mutex_ensure_locked(m)	psc_mutex_ensure_locked_pci(PFL_CALLERINFO(), (m))
@@ -59,14 +61,18 @@ void	psc_mutex_ureqlock_pci(struct pfl_callerinfo *, pthread_mutex_t *, int);
 struct psc_rwlock {
 	pthread_rwlock_t	pr_rwlock;
 	pthread_t		pr_writer;
+	struct psc_dynarray	pr_readers;
+	psc_spinlock_t		pr_lock;
 };
 
 #ifdef PTHREAD_RWLOCK_WRITER_NONRECURSIVE_INITIALIZER_NP
-# define PSC_RWLOCK_INITIALIZER { PTHREAD_RWLOCK_WRITER_NONRECURSIVE_INITIALIZER_NP, 0 }
+# define PSC_RWLOCK_INITIALIZER		{ PTHREAD_RWLOCK_WRITER_NONRECURSIVE_INITIALIZER_NP, \
+					  0, DYNARRAY_INIT, SPINLOCK_INIT }
 #else
-# define PSC_RWLOCK_INITIALIZER { PTHREAD_RWLOCK_INITIALIZER, 0 }
+# define PSC_RWLOCK_INITIALIZER		{ PTHREAD_RWLOCK_INITIALIZER, 0, DYNARRAY_INIT, SPINLOCK_INIT }
 #endif
 
+#define psc_rwlock_destroy(rw)		psc_rwlock_destroy_pci(PFL_CALLERINFO(), (rw))
 #define psc_rwlock_hasrdlock(rw)	psc_rwlock_hasrdlock_pci(PFL_CALLERINFO(), (rw))
 #define psc_rwlock_haswrlock(rw)	psc_rwlock_haswrlock_pci(PFL_CALLERINFO(), (rw))
 #define psc_rwlock_init(rw)		psc_rwlock_init_pci(PFL_CALLERINFO(), (rw))
@@ -77,6 +83,7 @@ struct psc_rwlock {
 #define psc_rwlock_ureqlock(rw, lk)	psc_rwlock_ureqlock_pci(PFL_CALLERINFO(), (rw), (lk))
 #define psc_rwlock_wrlock(rw)		psc_rwlock_wrlock_pci(PFL_CALLERINFO(), (rw))
 
+void	psc_rwlock_destroy_pci(struct pfl_callerinfo *, struct psc_rwlock *);
 int	psc_rwlock_hasrdlock_pci(struct pfl_callerinfo *, struct psc_rwlock *);
 int	psc_rwlock_haswrlock_pci(struct pfl_callerinfo *, struct psc_rwlock *);
 void	psc_rwlock_init_pci(struct pfl_callerinfo *, struct psc_rwlock *);
