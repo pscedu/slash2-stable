@@ -103,26 +103,26 @@ wr_main(void *arg)
 
 		rc = pthread_rwlock_tryrdlock(&rw.pr_rwlock);
 		if (rc != EBUSY)
-			errx(1, "rdlock: %s", strerror(rc));
+			psc_fatalx("rdlock: %s", strerror(rc));
 
 		rc = pthread_rwlock_rdlock(&rw.pr_rwlock);
 		if (rc != EDEADLK)
-			errx(1, "rdlock: %s", strerror(rc));
+			psc_fatalx("rdlock: %s", strerror(rc));
 
 		rc = pthread_rwlock_wrlock(&rw.pr_rwlock);
 		if (rc != EDEADLK)
-			errx(1, "wrlock: %s", strerror(rc));
+			psc_fatalx("wrlock: %s", strerror(rc));
 
 #ifdef HAVE_PTHREAD_RWLOCK_TIMEDRDLOCK
 		memset(&ts, 0, sizeof(ts));
 		rc = pthread_rwlock_timedwrlock(&rw.pr_rwlock, &ts);
 		if (rc != EDEADLK)
-			errx(1, "wrlock: %s", strerror(rc));
+			psc_fatalx("wrlock: %s", strerror(rc));
 #else
 		(void)ts;
 		rc = pthread_rwlock_trywrlock(&rw.pr_rwlock);
 		if (rc != EBUSY)
-			errx(1, "wrlock: %s", strerror(rc));
+			psc_fatalx("wrlock: %s", strerror(rc));
 #endif
 
 		usleep(SLEEP_US);
