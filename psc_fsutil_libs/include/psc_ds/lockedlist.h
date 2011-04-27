@@ -34,7 +34,7 @@ struct psc_lockedlist {
 	struct psclist_head	 pll_listhd;		/* this must be first */
 	int			 pll_nitems;		/* # items on list */
 	int			 pll_flags;		/* see PLLF_* below */
-	ptrdiff_t		 pll_offset;		/* offset of the sub-structure linkage */
+	ptrdiff_t		 pll_offset;		/* offset into structure for linkage */
 	union {
 		psc_spinlock_t	 pllu_lock;
 		psc_spinlock_t	*pllu_lockp;
@@ -44,19 +44,19 @@ struct psc_lockedlist {
 };
 
 #define PLLF_EXTLOCK		(1 << 0)		/* lock is external */
-#define _PLLF_FLSHFT		(1 << 1)
+#define _PLLF_FLSHFT		(1 << 2)		/* last flag; for extending */
 
-#define PLL_GETLOCK(pll)	((pll)->pll_flags & PLLF_EXTLOCK ?	\
+#define _PLL_GETLOCK(pll)	((pll)->pll_flags & PLLF_EXTLOCK ?	\
 				 (pll)->pll_lockp : &(pll)->pll_lock)
 
-#define PLL_LOCK(pll)		spinlock(PLL_GETLOCK(pll))
-#define PLL_ULOCK(pll)		freelock(PLL_GETLOCK(pll))
-#define PLL_TRYLOCK(pll)	trylock(PLL_GETLOCK(pll))
-#define PLL_RLOCK(pll)		reqlock(PLL_GETLOCK(pll))
-#define PLL_TRYRLOCK(pll, lk)	tryreqlock(PLL_GETLOCK(pll), (lk))
-#define PLL_URLOCK(pll, lk)	ureqlock(PLL_GETLOCK(pll), (lk))
-#define PLL_ENSURE_LOCKED(pll)	LOCK_ENSURE(PLL_GETLOCK(pll))
-#define PLL_HASLOCK(pll)	psc_spin_haslock(PLL_GETLOCK(pll))
+#define PLL_LOCK(pll)		spinlock(_PLL_GETLOCK(pll))
+#define PLL_ULOCK(pll)		freelock(_PLL_GETLOCK(pll))
+#define PLL_TRYLOCK(pll)	trylock(_PLL_GETLOCK(pll))
+#define PLL_RLOCK(pll)		reqlock(_PLL_GETLOCK(pll))
+#define PLL_TRYRLOCK(pll, lkd)	tryreqlock(_PLL_GETLOCK(pll), (lkd))
+#define PLL_URLOCK(pll, lkd)	ureqlock(_PLL_GETLOCK(pll), (lkd))
+#define PLL_ENSURE_LOCKED(pll)	LOCK_ENSURE(_PLL_GETLOCK(pll))
+#define PLL_HASLOCK(pll)	psc_spin_haslock(_PLL_GETLOCK(pll))
 
 #define PLL_FOREACH(p, pll)						\
 	psclist_for_each_entry2((p), &(pll)->pll_listhd, (pll)->pll_offset)
@@ -79,6 +79,10 @@ struct psc_lockedlist {
 #define PLL_INIT_NOLOG(pll, type, member)				\
 	{ PSCLIST_HEAD_INIT((pll)->pll_listhd), 0, 0,			\
 	  offsetof(type, member), { SPINLOCK_INIT_NOLOG } }
+
+#define PLL_INIT_LOGTMP(pll, type, member)				\
+	{ PSCLIST_HEAD_INIT((pll)->pll_listhd), 0, 0,			\
+	  offsetof(type, member), { SPINLOCK_INIT_LOGTMP } }
 
 #define pll_next_item(pll, p)						\
 	psclist_next_obj2(&(pll)->pll_listhd, (p), (pll)->pll_offset)
