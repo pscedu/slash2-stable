@@ -246,7 +246,7 @@ psclist_disjoint(const struct psc_listentry *e)
  * @hd: the psclist_head the entry must be on.
  */
 static __inline int
-_psclist_conjoint(struct pfl_callerinfo *pfl_callerinfo,
+_psclist_conjoint(const struct pfl_callerinfo *pfl_callerinfo,
     const struct psc_listentry *e, const struct psclist_head *hd)
 {
 #if PFL_DEBUG

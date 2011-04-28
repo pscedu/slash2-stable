@@ -35,9 +35,9 @@
 #include "psc_util/log.h"
 #include "psc_util/thread.h"
 
-psc_spinlock_t			 psc_umask_lock = SPINLOCK_INIT;
-__threadx struct pfl_callerinfo	*pfl_callerinfo;
-__static void			*_pfl_tls[PFL_TLSIDX_MAX];
+psc_spinlock_t				 psc_umask_lock = SPINLOCK_INIT;
+__threadx const struct pfl_callerinfo	*pfl_callerinfo;
+__static void				*_pfl_tls[PFL_TLSIDX_MAX];
 
 __weak void
 pscthrs_init(void)

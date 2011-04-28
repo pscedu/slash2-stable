@@ -28,8 +28,7 @@
 #include "psc_util/thread.h"
 
 void
-psc_mutex_init_pci(struct pfl_callerinfo *pfl_callerinfo,
-    pthread_mutex_t *mut)
+psc_mutex_init(pthread_mutex_t *mut)
 {
 	pthread_mutexattr_t attr;
 	int rc;
@@ -48,7 +47,7 @@ psc_mutex_init_pci(struct pfl_callerinfo *pfl_callerinfo,
 }
 
 void
-psc_mutex_lock_pci(struct pfl_callerinfo *pfl_callerinfo,
+psc_mutex_lock_pci(const struct pfl_callerinfo *pfl_callerinfo,
     pthread_mutex_t *mut)
 {
 	int rc;
@@ -60,7 +59,7 @@ psc_mutex_lock_pci(struct pfl_callerinfo *pfl_callerinfo,
 }
 
 void
-psc_mutex_unlock_pci(struct pfl_callerinfo *pfl_callerinfo,
+psc_mutex_unlock_pci(const struct pfl_callerinfo *pfl_callerinfo,
     pthread_mutex_t *mut)
 {
 	int rc;
@@ -72,7 +71,7 @@ psc_mutex_unlock_pci(struct pfl_callerinfo *pfl_callerinfo,
 }
 
 int
-psc_mutex_reqlock_pci(struct pfl_callerinfo *pfl_callerinfo,
+psc_mutex_reqlock_pci(const struct pfl_callerinfo *pfl_callerinfo,
     pthread_mutex_t *mut)
 {
 	int rc;
@@ -88,7 +87,7 @@ psc_mutex_reqlock_pci(struct pfl_callerinfo *pfl_callerinfo,
 }
 
 void
-psc_mutex_ureqlock_pci(struct pfl_callerinfo *pfl_callerinfo,
+psc_mutex_ureqlock_pci(const struct pfl_callerinfo *pfl_callerinfo,
     pthread_mutex_t *mut, int waslocked)
 {
 	if (!waslocked)
@@ -98,7 +97,7 @@ psc_mutex_ureqlock_pci(struct pfl_callerinfo *pfl_callerinfo,
 #ifdef HAVE_PTHREAD_MUTEX_TIMEDLOCK
 
 int
-psc_mutex_trylock_pci(struct pfl_callerinfo *pfl_callerinfo,
+psc_mutex_trylock_pci(const struct pfl_callerinfo *pfl_callerinfo,
     pthread_mutex_t *mut)
 {
 	struct timespec ts;
@@ -120,7 +119,7 @@ psc_mutex_trylock_pci(struct pfl_callerinfo *pfl_callerinfo,
 }
 
 int
-psc_mutex_haslock_pci(struct pfl_callerinfo *pfl_callerinfo,
+psc_mutex_haslock_pci(const struct pfl_callerinfo *pfl_callerinfo,
     pthread_mutex_t *mut)
 {
 	struct timespec ts;
@@ -138,7 +137,7 @@ psc_mutex_haslock_pci(struct pfl_callerinfo *pfl_callerinfo,
 #else
 
 int
-psc_mutex_trylock_pci(struct pfl_callerinfo *pfl_callerinfo,
+psc_mutex_trylock_pci(const struct pfl_callerinfo *pfl_callerinfo,
     pthread_mutex_t *mut)
 {
 	int rc;
@@ -155,7 +154,7 @@ psc_mutex_trylock_pci(struct pfl_callerinfo *pfl_callerinfo,
 }
 
 int
-psc_mutex_haslock_pci(struct pfl_callerinfo *pfl_callerinfo,
+psc_mutex_haslock_pci(const struct pfl_callerinfo *pfl_callerinfo,
     pthread_mutex_t *mut)
 {
 	int rc;
@@ -172,7 +171,7 @@ psc_mutex_haslock_pci(struct pfl_callerinfo *pfl_callerinfo,
 #endif
 
 int
-psc_mutex_tryreqlock_pci(struct pfl_callerinfo *pfl_callerinfo,
+psc_mutex_tryreqlock_pci(const struct pfl_callerinfo *pfl_callerinfo,
     pthread_mutex_t *mut, int *waslocked)
 {
 	if (psc_mutex_haslock(mut)) {
@@ -184,15 +183,14 @@ psc_mutex_tryreqlock_pci(struct pfl_callerinfo *pfl_callerinfo,
 }
 
 void
-psc_mutex_ensure_locked_pci(struct pfl_callerinfo *pfl_callerinfo,
+psc_mutex_ensure_locked_pci(const struct pfl_callerinfo *pfl_callerinfo,
     pthread_mutex_t *m)
 {
 	psc_assert(psc_mutex_haslock(m));
 }
 
 void
-psc_rwlock_init_pci(struct pfl_callerinfo *pfl_callerinfo,
-    struct psc_rwlock *rw)
+psc_rwlock_init(struct psc_rwlock *rw)
 {
 	int rc;
 
@@ -205,8 +203,7 @@ psc_rwlock_init_pci(struct pfl_callerinfo *pfl_callerinfo,
 }
 
 void
-psc_rwlock_destroy_pci(struct pfl_callerinfo *pfl_callerinfo,
-    struct psc_rwlock *rw)
+psc_rwlock_destroy(struct psc_rwlock *rw)
 {
 	int rc;
 
@@ -217,7 +214,7 @@ psc_rwlock_destroy_pci(struct pfl_callerinfo *pfl_callerinfo,
 }
 
 void
-psc_rwlock_rdlock_pci(struct pfl_callerinfo *pfl_callerinfo,
+psc_rwlock_rdlock_pci(const struct pfl_callerinfo *pfl_callerinfo,
     struct psc_rwlock *rw)
 {
 	pthread_t p;
@@ -238,7 +235,7 @@ psc_rwlock_rdlock_pci(struct pfl_callerinfo *pfl_callerinfo,
 }
 
 void
-psc_rwlock_wrlock_pci(struct pfl_callerinfo *pfl_callerinfo,
+psc_rwlock_wrlock_pci(const struct pfl_callerinfo *pfl_callerinfo,
     struct psc_rwlock *rw)
 {
 	pthread_t p;
@@ -260,8 +257,7 @@ psc_rwlock_wrlock_pci(struct pfl_callerinfo *pfl_callerinfo,
 }
 
 int
-psc_rwlock_hasrdlock_pci(struct pfl_callerinfo *pfl_callerinfo,
-    struct psc_rwlock *rw)
+psc_rwlock_hasrdlock(struct psc_rwlock *rw)
 {
 	pthread_t p;
 	int rc;
@@ -278,14 +274,13 @@ psc_rwlock_hasrdlock_pci(struct pfl_callerinfo *pfl_callerinfo,
 }
 
 int
-psc_rwlock_haswrlock_pci(struct pfl_callerinfo *pfl_callerinfo,
-    struct psc_rwlock *rw)
+psc_rwlock_haswrlock(struct psc_rwlock *rw)
 {
 	return (rw->pr_writer == pthread_self());
 }
 
 int
-psc_rwlock_reqrdlock_pci(struct pfl_callerinfo *pfl_callerinfo,
+psc_rwlock_reqrdlock_pci(const struct pfl_callerinfo *pfl_callerinfo,
     struct psc_rwlock *rw)
 {
 	if (psc_rwlock_hasrdlock(rw))
@@ -295,7 +290,7 @@ psc_rwlock_reqrdlock_pci(struct pfl_callerinfo *pfl_callerinfo,
 }
 
 int
-psc_rwlock_reqwrlock_pci(struct pfl_callerinfo *pfl_callerinfo,
+psc_rwlock_reqwrlock_pci(const struct pfl_callerinfo *pfl_callerinfo,
     struct psc_rwlock *rw)
 {
 	int rc = 0;
@@ -311,7 +306,7 @@ psc_rwlock_reqwrlock_pci(struct pfl_callerinfo *pfl_callerinfo,
 }
 
 void
-psc_rwlock_ureqlock_pci(struct pfl_callerinfo *pfl_callerinfo,
+psc_rwlock_ureqlock_pci(const struct pfl_callerinfo *pfl_callerinfo,
     struct psc_rwlock *rw, int waslocked)
 {
 	if (!waslocked)
@@ -319,7 +314,7 @@ psc_rwlock_ureqlock_pci(struct pfl_callerinfo *pfl_callerinfo,
 }
 
 void
-psc_rwlock_unlock_pci(struct pfl_callerinfo *pfl_callerinfo,
+psc_rwlock_unlock_pci(const struct pfl_callerinfo *pfl_callerinfo,
     struct psc_rwlock *rw)
 {
 	int rc, wr = 0;

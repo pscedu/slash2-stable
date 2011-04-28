@@ -63,9 +63,9 @@ extern
 #ifdef HAVE_TLS
 __thread
 #endif
-struct pfl_callerinfo	*pfl_callerinfo;
+const struct pfl_callerinfo	*pfl_callerinfo;
 
-static __inline struct pfl_callerinfo *
+static __inline const struct pfl_callerinfo *
 _pfl_callerinfo_get(const char *fn, const char *func, int lineno,
     int subsys)
 {
