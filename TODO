@@ -42,6 +42,22 @@ general reminders
 - check -s hashtables for bucket overfilling
 - prefer enum to #define for values since they are available within gdb
 - callerinfo should be const everywhere
+- if callerinfo is getting overwritten in thread-local storage, the
+  idiom is to change:
+
+	void
+	myfunc(const struct pfl_callerinfo *pfl_callerinfo, ...)
+	{
+
+  to:
+
+	void
+	myfunc(const struct pfl_callerinfo *pci, ...)
+	{
+#ifdef HAVE_TLS
+		pfl_callerinfo = pci
+#endif
+
 
 - use psc mem wrappers for:
 	malloc
