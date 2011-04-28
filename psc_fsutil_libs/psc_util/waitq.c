@@ -142,7 +142,6 @@ _psc_waitq_waitrelv(struct psc_waitq *wq, psc_spinlock_t *lk, long s, long ns)
 void
 psc_waitq_wakeone(struct psc_waitq *q)
 {
-
 	psc_mutex_lock(&q->wq_mut);
 	if (atomic_read(&q->wq_nwaiters)) {
 		int rc;
