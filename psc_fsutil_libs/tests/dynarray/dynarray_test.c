@@ -60,7 +60,7 @@ display(struct psc_dynarray *da)
 #define CHECK(d, ...)	_check(PFL_CALLERINFO(), (d), ##__VA_ARGS__)
 
 void
-_check(struct pfl_callerinfo *pfl_callerinfo, struct psc_dynarray *da, ...)
+_check(const struct pfl_callerinfo *pfl_callerinfo, struct psc_dynarray *da, ...)
 {
 	void *p, *t, *checkp;
 	va_list ap, c;
