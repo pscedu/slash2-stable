@@ -41,6 +41,7 @@ general reminders
 - is gettimeofday() a source of system call overhead?
 - check -s hashtables for bucket overfilling
 - prefer enum to #define for values since they are available within gdb
+- callerinfo should be const everywhere
 
 - use psc mem wrappers for:
 	malloc
