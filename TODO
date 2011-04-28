@@ -48,6 +48,8 @@ general reminders
 	void
 	myfunc(const struct pfl_callerinfo *pfl_callerinfo, ...)
 	{
+		...
+	}
 
   to:
 
@@ -57,6 +59,11 @@ general reminders
 #ifdef HAVE_TLS
 		pfl_callerinfo = pci
 #endif
+		...
+#ifdef HAVE_TLS
+		pfl_callerinfo = NULL
+#endif
+	}
 
 
 - use psc mem wrappers for:
