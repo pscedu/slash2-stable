@@ -162,7 +162,7 @@ psc_mutex_haslock_pci(const struct pfl_callerinfo *pfl_callerinfo,
 	rc = pthread_mutex_trylock(mut);
 	if (rc == 0) {
 		psclog_dbg("mutex@%p temporarily acquired",
-		    rw);
+		    mut);
 		psc_mutex_unlock(mut);
 	}
 	return (rc == EBUSY); /* XXX XXX EDEADLK XXX XXX */
