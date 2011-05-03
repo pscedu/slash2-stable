@@ -244,7 +244,6 @@ ifneq ($(filter zcc,${MODULES}),)
 endif
 
 ifneq ($(filter numa,${MODULES}),)
-  DEFINES+=	${NUMA_DEFINES}
   LDFLAGS+=	${NUMA_LIBS}
 endif
 

@@ -120,8 +120,6 @@ $(call ADD_FILE_CFLAGS,${LNET_BASE}/lnet/router_proc.c,			-DPSC_SUBSYS=PSS_LNET 
 
 # system-specific settings
 ifneq ($(wildcard /opt/sgi),)
-  NUMA_DEFINES=	-DHAVE_NUMA
-  NUMA_LIBS=	-lcpuset -lnuma
   LIBL=		-lfl
   PCPP_FLAGS+=	-H yytext
 endif
