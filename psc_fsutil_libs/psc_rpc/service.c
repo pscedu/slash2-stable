@@ -967,7 +967,7 @@ pscrpc_init_svc(int nbufs, int bufsize, int max_req_size,
 	struct pscrpc_service *service;
 	int rc;
 
-	psclog_info("bufsize %d  max_req_size %d", bufsize, max_req_size);
+	psclog_info("bufsize %d max_req_size %d", bufsize, max_req_size);
 
 	LASSERT(nbufs > 0);
 	LASSERT(bufsize >= max_req_size);
