@@ -29,6 +29,8 @@
 
 #include <sys/types.h>
 
+#include <limits.h>
+
 struct psc_vbitmap {
 	unsigned char	*vb_start;
 	unsigned char	*vb_end;

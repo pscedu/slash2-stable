@@ -28,6 +28,7 @@
 #include <ctype.h>
 #include <err.h>
 #include <errno.h>
+#include <limits.h>
 #include <paths.h>
 #include <pthread.h>
 #include <signal.h>

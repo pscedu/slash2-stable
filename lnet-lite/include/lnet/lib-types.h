@@ -44,7 +44,7 @@
 
 #if defined(__linux__)
 #include <lnet/linux/lib-types.h>
-#elif defined(__APPLE__) || defined(__OpenBSD__)
+#elif defined(__APPLE__) || defined(__OpenBSD__) || defined(__FreeBSD__)
 #include <lnet/darwin/lib-types.h>
 #elif defined(__WINNT__)
 #include <lnet/winnt/lib-types.h>

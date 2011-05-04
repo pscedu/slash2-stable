@@ -32,6 +32,7 @@
 #include <errno.h>
 #include <fnmatch.h>
 #include <inttypes.h>
+#include <limits.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>

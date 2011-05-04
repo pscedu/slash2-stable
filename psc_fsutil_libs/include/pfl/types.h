@@ -29,7 +29,7 @@
 #define PSCPRIxCRC32		"#08x"
 #define PSCPRIxCRC64		"#016"PRIx64
 
-#if defined(__APPLE__) || defined(__OpenBSD__)
+#if defined(__APPLE__) || defined(__OpenBSD__) || defined(__FreeBSD__)
 # define PSCPRI_PTHRT		"p"
 #else
 # define PSCPRI_PTHRT		"lu"
