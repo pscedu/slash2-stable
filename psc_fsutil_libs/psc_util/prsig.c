@@ -20,6 +20,7 @@
 #include <sys/param.h>
 
 #include <inttypes.h>
+#include <limits.h>
 #include <signal.h>
 #include <stdio.h>
 
