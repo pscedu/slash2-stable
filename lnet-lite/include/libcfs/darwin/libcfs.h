@@ -104,11 +104,20 @@ typedef unsigned long long cycles_t;
 #define __swab16(x)                             OSSwapInt16(x)
 #define __swab32(x)                             OSSwapInt32(x)
 #define __swab64(x)                             OSSwapInt64(x)
+#elif defined(bswap32)
+#define __swab16(x)				bswap16(x)
+#define __swab32(x)				bswap32(x)
+#define __swab64(x)				bswap64(x)
 #else
 #define __swab16(x)				swap16(x)
 #define __swab32(x)				swap32(x)
 #define __swab64(x)				swap64(x)
 #endif
+
+#if defined(le64toh) && !defined(letoh64)
+#define letoh64(x)				le64toh(x)
+#define letoh32(x)				le32toh(x)
+#endif 
 
 #define __swab16s(x)                            do { *(x) = __swab16(*(x)); } while (0)
 #define __swab32s(x)                            do { *(x) = __swab32(*(x)); } while (0)
