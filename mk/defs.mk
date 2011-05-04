@@ -44,7 +44,7 @@ DEBUG?=		1
 ifeq (${DEBUG},0)
   CFLAGS+=	-Wunused -Wuninitialized -O2
 else
-  CFLAGS+=	-ggdb3
+  CFLAGS+=	-g
 endif
 
 DEFINES+=	-D_REENTRANT -DYY_NO_UNPUT -DYY_NO_INPUT -DYYERROR_VERBOSE
