@@ -123,11 +123,12 @@ typedef struct {
 
 #define IOCTL_LIBCFS_TYPE struct libcfs_ioctl_data
 
-#define LPU64 "%llu"
-#define LPD64 "%lld"
-#define LPX64 "%#llx"
+#define LPU64 "%"PRIu64
+#define LPD64 "%"PRId64
+#define LPX64 "%"PRIx64
 #define LPSZ  "%lu"
 #define LPSSZ "%ld"
+
 # define LI_POISON ((int)0x5a5a5a5a)
 # define LL_POISON ((long)0x5a5a5a5a)
 # define LP_POISON ((void *)(long)0x5a5a5a5a)

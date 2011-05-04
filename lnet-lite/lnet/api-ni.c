@@ -34,10 +34,6 @@
  * Lustre is a trademark of Sun Microsystems, Inc.
  */
 
-#ifndef _XOPEN_SOURCE
-#define _XOPEN_SOURCE 500
-#endif
-
 #define DEBUG_SUBSYSTEM S_LNET
 #include <lnet/lib-lnet.h>
 
