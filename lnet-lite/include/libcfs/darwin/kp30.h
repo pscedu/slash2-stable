@@ -96,7 +96,6 @@
 # include <stdint.h>
 # include <unistd.h>
 # include <time.h>
-# include <machine/limits.h>
 # include <sys/types.h>
 
 #define CFS_MODULE_PARM(name, t, type, perm, desc)

@@ -55,6 +55,10 @@
 #include <libcfs/darwin/darwin-fs.h>
 #include <libcfs/darwin/darwin-tcpip.h>
 
+#ifdef __FreeBSD__
+#include <sys/endian.h>
+#endif
+
 #ifdef HAVE_LIBKERN_OSBYTEORDER_H
 #include <libkern/OSByteOrder.h>
 #endif
