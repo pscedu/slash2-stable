@@ -470,6 +470,7 @@ lnet_extract_kiov (__unusedx int dst_niov, __unusedx lnet_kiov_t *dst,
                    __unusedx unsigned int offset, __unusedx unsigned int len)
 {
         LASSERT (0);
+        return (0);
 }
 
 #else /* __KERNEL__ */

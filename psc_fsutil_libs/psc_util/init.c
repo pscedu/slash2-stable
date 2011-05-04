@@ -81,6 +81,8 @@ pfl_getsysthrid(void)
 	return (syscall(SYS_gettid));
 #elif defined(SYS_getthrid)
 	return (syscall(SYS_getthrid));
+#elif defined(SYS_thr_self)
+	return (syscall(SYS_thr_self));
 #else
 	return (pthread_self());
 #endif

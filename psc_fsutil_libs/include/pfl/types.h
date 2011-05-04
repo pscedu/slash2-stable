@@ -35,7 +35,7 @@
 # define PSCPRI_PTHRT		"lu"
 #endif
 
-#if defined(__APPLE__) || defined(__OpenBSD__)
+#if defined(__APPLE__) || defined(__OpenBSD__) || defined(__FreeBSD__)
 # define PSCPRI_BLKSIZE_T	"u"
 #else
 # define PSCPRI_BLKSIZE_T	"ld"
