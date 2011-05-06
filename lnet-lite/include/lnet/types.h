@@ -200,4 +200,6 @@ typedef enum {
 typedef void (*lnet_eq_handler_t)(lnet_event_t *event);
 #define LNET_EQ_HANDLER_NONE NULL
 
+#define LNETS_MAX	256
+
 #endif
