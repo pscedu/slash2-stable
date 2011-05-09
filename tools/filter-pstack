@@ -35,7 +35,7 @@ sub ign_thr {
 			my $j = 0;
 			foreach my $frame (@$ign) {
 				next IGN unless $i + $j < @thr && $thr[$i + $j] =~
-				    /^#\d+\s+0x[a-zA-Z0-9]+\s+in\s+$frame\s/;
+				    /^#\d+\s+0x[a-fA-F0-9]+\s+in\s+$frame\s/;
 				$j++;
 			}
 			return (1);
@@ -50,8 +50,13 @@ sub print_thr {
 }
 
 while (<>) {
-	print_thr if /^Thread /;
-	push @thr, $_;
+	print_thr if /^Thread\s+\d+/;
+	if (/^Thread\s+\d+/ or /^#\d+\s+0x[a-fA-F0-9]+\s+in\s+/) {
+		push @thr, $_;
+	} else {
+		chomp $thr[$#thr];
+		$thr[$#thr] .= " $_";
+	}
 }
 
 print_thr;
