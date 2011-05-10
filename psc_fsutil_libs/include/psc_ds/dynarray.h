@@ -104,7 +104,7 @@ int	 psc_dynarray_removeitem(struct psc_dynarray *, const void *);
 void	 psc_dynarray_removepos(struct psc_dynarray *, int);
 void	 psc_dynarray_reset(struct psc_dynarray *);
 void	 psc_dynarray_reverse(struct psc_dynarray *);
-void	 psc_dynarray_setpos(struct psc_dynarray *, void *);
+void	 psc_dynarray_setpos(struct psc_dynarray *, int, void *);
 int	 psc_dynarray_splice(struct psc_dynarray *, int, int, const void *, int);
 int	 psc_dynarray_concat(struct psc_dynarray *, const struct psc_dynarray *);
 

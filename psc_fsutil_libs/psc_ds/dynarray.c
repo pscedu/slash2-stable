@@ -102,8 +102,8 @@ psc_dynarray_reverse(struct psc_dynarray *pda)
 	int i;
 
 	for (i = 0; i < psc_dynarray_len(pda) / 2; i++)
-		SWAP(pda->pda_items[i], pda->pda_items[len - 1 - i],
-		    tmp);
+		SWAP(pda->pda_items[i], pda->pda_items[
+		    psc_dynarray_len(pda) - 1 - i], tmp);
 }
 
 /**
@@ -157,7 +157,7 @@ psc_dynarray_getpos(const struct psc_dynarray *pda, int pos)
  * @p: item.
  */
 void
-psc_dynarray_setpos(const struct psc_dynarray *pda, int pos, void *p)
+psc_dynarray_setpos(struct psc_dynarray *pda, int pos, void *p)
 {
 	psc_assert(pos >= 0);
 	if (pos >= psc_dynarray_len(pda))
@@ -194,8 +194,8 @@ psc_dynarray_reset(struct psc_dynarray *pda)
 int
 psc_dynarray_finditem(struct psc_dynarray *pda, const void *item)
 {
-	int j, len;
 	void **p;
+	int j;
 
 	p = psc_dynarray_get(pda);
 	for (j = 0; j < psc_dynarray_len(pda); j++)
@@ -318,7 +318,7 @@ int
 psc_dynarray_concat(struct psc_dynarray *pda,
     const struct psc_dynarray *src)
 {
-	int i;
+	int rc, i;
 
 	for (i = 0; i < psc_dynarray_len(src); i++) {
 		rc = psc_dynarray_add(pda, psc_dynarray_getpos(src, i));
