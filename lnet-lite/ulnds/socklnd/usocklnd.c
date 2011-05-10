@@ -65,6 +65,15 @@ lnd_t the_tcplnd = {
         .lnd_accept    = usocklnd_accept,
 };
 
+lnd_t the_sdplnd = {
+        .lnd_type      = SDPLND,
+        .lnd_startup   = usocklnd_startup,
+        .lnd_shutdown  = usocklnd_shutdown,
+        .lnd_send      = usocklnd_send,
+        .lnd_recv      = usocklnd_recv,
+        .lnd_accept    = usocklnd_accept,
+};
+
 usock_data_t usock_data;
 usock_tunables_t usock_tuns = {
         .ut_timeout         = 50,
@@ -582,7 +591,7 @@ usocklnd_startup(lnet_ni_t *ni)
 	if (rc != 0)
 		goto startup_failed_1;
 
-        LASSERT (ni->ni_lnd == &the_tcplnd);
+        LASSERT (ni->ni_lnd == &the_tcplnd || ni->ni_lnd == &the_sdplnd);
 
         ni->ni_maxtxcredits = usock_tuns.ut_txcredits;
         ni->ni_peertxcredits = usock_tuns.ut_peertxcredits;

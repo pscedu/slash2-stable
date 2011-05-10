@@ -136,28 +136,6 @@ lnet_fini_locks(void)
 
 #else
 
-int
-lnet_get_usesdp(void)
-{
-	static psc_spinlock_t lock = SPINLOCK_INIT;
-	static int usesdp;
-	static int init;
-
-	if (init)
-		return (usesdp);
-	spinlock(&lock);
-	if (init == 0) {
-		char *val;
-
-		val = getenv("LNET_USESDP");
-		if (val && *val != '0')
-			usesdp = 1;
-		init = 1;
-	}
-	freelock(&lock);
-	return (usesdp);
-}
-
 char *
 lnet_get_routes(void)
 {
@@ -1230,6 +1208,7 @@ LNetInit(void)
 # endif
 # ifdef HAVE_LIBPTHREAD
         LNET_REGISTER_ULND(the_tcplnd);
+        LNET_REGISTER_ULND(the_sdplnd);
 # endif
 #endif
         lnet_register_lnd(&the_lolnd);

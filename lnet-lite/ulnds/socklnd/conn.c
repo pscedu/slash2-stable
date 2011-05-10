@@ -284,10 +284,12 @@ usocklnd_create_active_conn(usock_peer_t *peer, int type,
         }                
         
         if (the_lnet.ln_pid & LNET_PID_USERFLAG)
-                rc = usocklnd_connect_cli_mode(&fd, dst_ip, dst_port,
+                rc = usocklnd_connect_cli_mode(&fd,
+		    peer->up_peerid.nid, dst_ip, dst_port,
 		    LNET_NIDADDR(peer->up_ni->ni_nid));
         else
-		rc = usocklnd_connect_srv_mode(&fd, dst_ip, dst_port);
+		rc = usocklnd_connect_srv_mode(&fd,
+		    peer->up_peerid.nid, dst_ip, dst_port);
         
         if (rc) {
                 usocklnd_destroy_tx(NULL, conn->uc_tx_hello);
@@ -320,7 +322,8 @@ usocklnd_create_active_conn(usock_peer_t *peer, int type,
 
 /* Returns 0 on success, <0 else */
 int
-usocklnd_connect_srv_mode(int *fdp, __u32 dst_ip, __u16 dst_port)
+usocklnd_connect_srv_mode(int *fdp, lnet_nid_t nid, __u32 dst_ip,
+    __u16 dst_port)
 {
         __u16 port;
         int   fd;
@@ -331,11 +334,11 @@ usocklnd_connect_srv_mode(int *fdp, __u32 dst_ip, __u16 dst_port)
              port--) {
                 /* Iterate through reserved ports. */
 
-                rc = libcfs_sock_create(&fd);
+                rc = libcfs_sock_create(&fd, nid);
                 if (rc)
                         return rc;                        
                                 
-                rc = libcfs_sock_bind_to_port(fd, INADDR_ANY, port);
+                rc = libcfs_sock_bind_to_port(fd, nid, INADDR_ANY, port);
                 if (rc) {
                         close(fd);
                         continue;
@@ -367,17 +370,18 @@ usocklnd_connect_srv_mode(int *fdp, __u32 dst_ip, __u16 dst_port)
 
 /* Returns 0 on success, <0 else */
 int
-usocklnd_connect_cli_mode(int *fdp, __u32 dst_ip, __u16 dst_port, __u32 src_ip)
+usocklnd_connect_cli_mode(int *fdp, lnet_nid_t nid, __u32 dst_ip,
+    __u16 dst_port, __u32 src_ip)
 {
         int fd;
         int rc;
 
-        rc = libcfs_sock_create(&fd);
+        rc = libcfs_sock_create(&fd, nid);
         if (rc)
                 return rc;
 
 	if (src_ip != INADDR_ANY)
-		libcfs_sock_bind_to_port(fd, src_ip, 0);
+		libcfs_sock_bind_to_port(fd, nid, src_ip, 0);
         
         rc = usocklnd_set_sock_options(fd);
         if (rc) {

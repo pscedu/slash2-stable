@@ -62,7 +62,7 @@
 
 #include "sdp_inet.h"
 
-int lnet_get_usesdp(void);
+#define LNET_GETAF(nid)		(LNET_NETTYP(nid) == SDPLND ? AF_INET_SDP : AF_INET)
 
 /*
  * Functions to get network interfaces info
@@ -244,13 +244,15 @@ libcfs_ipif_enumerate (char ***namesp)
  */
 
 int
-libcfs_sock_listen (int *sockp, __u32 local_ip, int local_port, int backlog)
+libcfs_sock_listen(int *sockp, lnet_nid_t nid, __u32 local_ip,
+    int local_port, int backlog)
 {
-        int                rc;
+        int                rc, af;
         int                option;
         struct sockaddr_in locaddr;
         
-        *sockp = socket(lnet_get_usesdp() ? AF_INET_SDP : AF_INET, SOCK_STREAM, 0);
+	af = LNET_GETAF(nid);
+        *sockp = socket(af, SOCK_STREAM, 0);
         if (*sockp < 0) {
                 rc = -errno;
                 CERROR("socket() failed: errno==%d\n", errno);
@@ -267,7 +269,7 @@ libcfs_sock_listen (int *sockp, __u32 local_ip, int local_port, int backlog)
 
         if (local_ip != 0 || local_port != 0) {
                 memset(&locaddr, 0, sizeof(locaddr));
-                locaddr.sin_family = lnet_get_usesdp() ? AF_INET_SDP : AF_INET;
+                locaddr.sin_family = af;
                 locaddr.sin_port = htons(local_port);
                 locaddr.sin_addr.s_addr = (local_ip == 0) ?
                                           INADDR_ANY : htonl(local_ip);
@@ -276,9 +278,9 @@ libcfs_sock_listen (int *sockp, __u32 local_ip, int local_port, int backlog)
 			char buf[16]; /* xxx.xxx.xxx.xxx + NUL */
 
                         rc = -errno;
-                        CERROR("bind(%s:%d%s): %s\n", inet_ntop(AF_INET,
+                        CERROR("bind(%s:%d af %d): %s\n", inet_ntop(AF_INET,
 			    &locaddr.sin_addr, buf, sizeof(buf)), local_port,
-			    lnet_get_usesdp() ? " (SDP)" : "", strerror(errno));
+			    af, strerror(errno));
                         goto failed;
                 }
         }
@@ -364,17 +366,18 @@ libcfs_sock_read (int sock, void *buffer, int nob, int timeout)
 /* Just try to connect to localhost to wake up entity that are
  * sleeping in accept() */
 void
-libcfs_sock_abort_accept(__u16 port)
+libcfs_sock_abort_accept(lnet_nid_t nid, __u16 port)
 {
-        int                fd, rc;
+        int                fd, rc, af;
         struct sockaddr_in locaddr;
 
+	af = LNET_GETAF(nid);
         memset(&locaddr, 0, sizeof(locaddr));
-        locaddr.sin_family = lnet_get_usesdp() ? AF_INET_SDP : AF_INET;
+        locaddr.sin_family = af;
         locaddr.sin_port = htons(port);
         locaddr.sin_addr.s_addr = inet_addr("127.0.0.1");
 
-        fd = socket(lnet_get_usesdp() ? AF_INET_SDP : AF_INET, SOCK_STREAM, 0);
+        fd = socket(af, SOCK_STREAM, 0);
         if ( fd < 0 ) {
                 CERROR("socket() failed: errno==%d\n", errno);
                 return;
@@ -503,11 +506,11 @@ libcfs_sock_set_bufsiz(int fd, int bufsiz)
 }
 
 int
-libcfs_sock_create(int *fdp)
+libcfs_sock_create(int *fdp, lnet_nid_t nid)
 {
         int rc, fd, option;
 
-        fd = socket(lnet_get_usesdp() ? AF_INET_SDP : AF_INET, SOCK_STREAM, 0);
+        fd = socket(LNET_GETAF(nid), SOCK_STREAM, 0);
         if (fd < 0) {
                 rc = -errno;
                 CERROR ("Cannot create socket\n");
@@ -529,13 +532,13 @@ libcfs_sock_create(int *fdp)
 }
 
 int
-libcfs_sock_bind_to_port(int fd, __u32 ip, __u16 port)
+libcfs_sock_bind_to_port(int fd, lnet_nid_t nid, __u32 ip, __u16 port)
 {
         int                rc;
         struct sockaddr_in locaddr;
 
         memset(&locaddr, 0, sizeof(locaddr)); 
-        locaddr.sin_family = lnet_get_usesdp() ? AF_INET_SDP : AF_INET; 
+        locaddr.sin_family = LNET_GETAF(nid); 
         locaddr.sin_addr.s_addr = htonl(ip);
         locaddr.sin_port = htons(port);
 

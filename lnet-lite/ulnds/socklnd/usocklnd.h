@@ -334,8 +334,8 @@ void usocklnd_check_peer_stale(lnet_ni_t *ni, lnet_process_id_t id);
 int usocklnd_create_passive_conn(lnet_ni_t *ni, int fd, usock_conn_t **connp);
 int usocklnd_create_active_conn(usock_peer_t *peer, int type,
                                 usock_conn_t **connp);
-int usocklnd_connect_srv_mode(int *fdp, __u32 dst_ip, __u16 dst_port);
-int usocklnd_connect_cli_mode(int *fdp, __u32 dst_ip, __u16 dst_port, __u32);
+int usocklnd_connect_srv_mode(int *fdp, lnet_nid_t, __u32 dst_ip, __u16 dst_port);
+int usocklnd_connect_cli_mode(int *fdp, lnet_nid_t, __u32 dst_ip, __u16 dst_port, __u32);
 int usocklnd_set_sock_options(int fd);
 void usocklnd_init_msg(ksock_msg_t *msg, int type);
 usock_tx_t *usocklnd_create_noop_tx(__u64 cookie);

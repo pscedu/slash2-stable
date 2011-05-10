@@ -662,14 +662,6 @@ pscrpc_ctlparam_lnet_port_get(char buf[PCP_VALUE_MAX])
 }
 
 void
-pscrpc_ctlparam_lnet_sdp_get(char buf[PCP_VALUE_MAX])
-{
-	int lnet_get_usesdp(void);
-
-	snprintf(buf, PCP_VALUE_MAX, "%d", lnet_get_usesdp());
-}
-
-void
 pscrpc_init_portals(int type)
 {
 	int rc;
@@ -686,8 +678,6 @@ pscrpc_init_portals(int type)
 	    pscrpc_ctlparam_lnet_networks_get, NULL);
 	psc_ctlparam_register_simple("lnet.port",
 	    pscrpc_ctlparam_lnet_port_get, NULL);
-	psc_ctlparam_register_simple("lnet.sdp",
-	    pscrpc_ctlparam_lnet_sdp_get, NULL);
 #endif
 }
 

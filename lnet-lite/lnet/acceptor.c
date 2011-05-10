@@ -210,6 +210,7 @@ lnet_accept(int sock, __u32 magic, __u32 peer_ip, __unusedx int peer_port)
 }
 
 struct lnet_acceptor_param {
+	lnet_nid_t		lap_nid;
 	int			lap_faux_secure;
 	in_port_t		lap_port;
 	struct in_addr		lap_addr;
@@ -233,7 +234,7 @@ lnet_acceptor(void *arg)
 	cfs_daemonize(name);
 	cfs_block_allsigs();
 
-	rc = libcfs_sock_listen(&sock, lap->lap_addr.s_addr,
+	rc = libcfs_sock_listen(&sock, lap->lap_nid, lap->lap_addr.s_addr,
 	    lap->lap_port, accept_backlog);
 	if (rc != 0) {
 		if (rc == -EADDRINUSE)
@@ -359,6 +360,7 @@ lnet_acceptor_start(void)
 			lap->lap_faux_secure = secure;
 			lap->lap_port = accept_port;
 			lap->lap_addr.s_addr = LNET_NIDADDR(ni->ni_nid);
+			lap->lap_nid = ni->ni_nid;
 			cfs_init_completion(&lap->lap_compl);
 
 			ina.s_addr = htonl(lap->lap_addr.s_addr);
@@ -400,11 +402,12 @@ lnet_acceptor_stop(void)
 
 	if (!skip_waiting_for_completion) {
 		la_shutdown = 1;
-		libcfs_sock_abort_accept(accept_port);
 
 		/* block until acceptor signals exit */
-		list_for_each_entry_safe(lap, lapn, &laps, lap_lentry)
+		list_for_each_entry_safe(lap, lapn, &laps, lap_lentry) {
+			libcfs_sock_abort_accept(lap->lap_nid, accept_port);
 			cfs_wait_for_completion(&lap->lap_compl);
+		}
 	}
 
 	cfs_fini_completion(&la_compl);
