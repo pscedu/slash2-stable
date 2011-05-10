@@ -36,6 +36,8 @@ size_t	strnlen(const char *, size_t);
 #define psc_str_hashify(c)	_psc_str_hashify((c), -1)
 #define psc_strn_hashify(c, n)	_psc_str_hashify((c), (n))
 
+int	pfl_asprintf(char **, const char *, ...);
+
 int	_psc_str_hashify(const char *, int);
 
 static __inline int

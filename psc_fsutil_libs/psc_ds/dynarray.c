@@ -98,11 +98,10 @@ psc_dynarray_ensurelen(struct psc_dynarray *pda, int n)
 void
 psc_dynarray_reverse(struct psc_dynarray *pda)
 {
-	int i, len;
 	void *tmp;
+	int i;
 
-	len = psc_dynarray_len(pda);
-	for (i = 0; i < len / 2; i++)
+	for (i = 0; i < psc_dynarray_len(pda) / 2; i++)
 		SWAP(pda->pda_items[i], pda->pda_items[len - 1 - i],
 		    tmp);
 }
@@ -138,7 +137,7 @@ psc_dynarray_add_ifdne(struct psc_dynarray *pda, void *item)
 }
 
 /**
- * psc_dynarray_getpos - Access an item in dynamic array.
+ * psc_dynarray_getpos - Access an item in a dynamic array.
  * @pda: dynamic array to access.
  * @pos: item index.
  */
@@ -149,6 +148,21 @@ psc_dynarray_getpos(const struct psc_dynarray *pda, int pos)
 	if (pos >= psc_dynarray_len(pda))
 		psc_fatalx("out of bounds array access");
 	return (pda->pda_items[pos]);
+}
+
+/**
+ * psc_dynarray_setpos - Set the item for a position in a dynamic array.
+ * @pda: dynamic array to access.
+ * @pos: item index.
+ * @p: item.
+ */
+void
+psc_dynarray_setpos(const struct psc_dynarray *pda, int pos, void *p)
+{
+	psc_assert(pos >= 0);
+	if (pos >= psc_dynarray_len(pda))
+		psc_fatalx("out of bounds array access");
+	pda->pda_items[pos] = p;
 }
 
 /**
@@ -184,8 +198,7 @@ psc_dynarray_finditem(struct psc_dynarray *pda, const void *item)
 	void **p;
 
 	p = psc_dynarray_get(pda);
-	len = psc_dynarray_len(pda);
-	for (j = 0; j < len; j++)
+	for (j = 0; j < psc_dynarray_len(pda); j++)
 		if (p[j] == item)
 			return (j);
 	return (-1);
@@ -194,13 +207,11 @@ psc_dynarray_finditem(struct psc_dynarray *pda, const void *item)
 void
 psc_dynarray_removepos(struct psc_dynarray *pda, int pos)
 {
-	int len;
 	void **p;
 
 	p = psc_dynarray_get(pda);
-	len = psc_dynarray_len(pda);
-	psc_assert(pos >= 0 && pos < len);
-	p[pos] = p[len - 1];
+	psc_assert(pos >= 0 && pos < psc_dynarray_len(pda));
+	p[pos] = p[psc_dynarray_len(pda) - 1];
 	pda->pda_pos--;
 }
 
@@ -296,4 +307,23 @@ psc_dynarray_bsearch(const struct psc_dynarray *pda, const void *item,
 			break;
 	}
 	return (mid);
+}
+
+/**
+ * psc_dynarray_concat - Duplicate items in one dynarray to another.
+ * @pda: dynamic array to copy to.
+ * @src: dynamic array to copy from.
+ */
+int
+psc_dynarray_concat(struct psc_dynarray *pda,
+    const struct psc_dynarray *src)
+{
+	int i;
+
+	for (i = 0; i < psc_dynarray_len(src); i++) {
+		rc = psc_dynarray_add(pda, psc_dynarray_getpos(src, i));
+		if (rc)
+			return (rc);
+	}
+	return (0);
 }
