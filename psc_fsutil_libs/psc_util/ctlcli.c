@@ -53,6 +53,7 @@ int			  psc_ctl_nsubsys;
 char			**psc_ctl_subsys_names;
 const char		 *psc_ctl_sockfn;
 int			  psc_ctl_lastmsgtype = -1;
+int			  psc_ctl_nodns;
 __static int		  psc_ctl_sock;
 
 __static void

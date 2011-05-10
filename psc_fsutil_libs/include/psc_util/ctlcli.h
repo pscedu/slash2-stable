@@ -152,9 +152,10 @@ int   psc_ctlmsg_subsys_check(struct psc_ctlmsghdr *, const void *);
 void  psc_ctlmsg_thread_prdat(const struct psc_ctlmsghdr *, const void *);
 void  psc_ctlmsg_thread_prhdr(struct psc_ctlmsghdr *, const void *);
 
-extern int psc_ctl_noheader;
 extern int psc_ctl_inhuman;
 extern int psc_ctl_lastmsgtype;
+extern int psc_ctl_nodns;
+extern int psc_ctl_noheader;
 
 typedef void (*psc_ctl_prthr_t)(const struct psc_ctlmsg_thread *);
 extern psc_ctl_prthr_t		 psc_ctl_prthrs[];
