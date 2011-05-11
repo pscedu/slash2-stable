@@ -5,7 +5,7 @@
 /* #undef HAVE_ASM_PAGE_H */
 
 /* Define to 1 if you have the <asm/types.h> header file. */
-/* #undef HAVE_ASM_TYPES_H */
+#define HAVE_ASM_TYPES_H 1
 
 /* panic_notifier_list is atomic_notifier_head */
 /* #undef HAVE_ATOMIC_PANIC_NOTIFIER */
