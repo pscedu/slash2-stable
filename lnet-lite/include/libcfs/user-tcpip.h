@@ -46,8 +46,6 @@
 #include <sys/types.h>
 #include <sys/uio.h>
 
-#include "lnet/types.h"
-
 /*
  * Functions to get network interfaces info
  */
@@ -61,10 +59,10 @@ int libcfs_ipif_enumerate (char ***namesp);
  * Network function used by user-land lnet acceptor
  */
 
-int libcfs_sock_listen (int *sockp, lnet_nid_t, __u32 local_ip, int local_port, int backlog);
+int libcfs_sock_listen (int *sockp, __u64, __u32 local_ip, int local_port, int backlog);
 int libcfs_sock_accept (int *newsockp, int sock, __u32 *peer_ip, int *peer_port);
 int libcfs_sock_read (int sock, void *buffer, int nob, int timeout);
-void libcfs_sock_abort_accept(lnet_nid_t, __u16 port);
+void libcfs_sock_abort_accept(__u64, __u16 port);
 
 /*
  * Network functions of common use
@@ -75,8 +73,8 @@ int libcfs_socketpair(int *fdp);
 int libcfs_fcntl_nonblock(int fd);
 int libcfs_sock_set_nagle(int fd, int nagle);
 int libcfs_sock_set_bufsiz(int fd, int bufsiz);
-int libcfs_sock_create(int *fdp, lnet_nid_t);
-int libcfs_sock_bind_to_port(int fd, lnet_nid_t, __u32, __u16 port);
+int libcfs_sock_create(int *fdp, __u64);
+int libcfs_sock_bind_to_port(int fd, __u64, __u32, __u16 port);
 int libcfs_sock_connect(int fd, __u32 ip, __u16 port);
 int libcfs_sock_writev(int fd, const struct iovec *vector, int count);
 int libcfs_sock_readv(int fd, const struct iovec *vector, int count);

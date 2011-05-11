@@ -37,17 +37,11 @@
 #ifndef __LNET_TYPES_H__
 #define __LNET_TYPES_H__
 
-#ifdef HAVE_ASM_TYPES_H
-#include <asm/types.h>
-#else
-#include <libcfs/types.h>
-#endif
+#include <libcfs/libcfs.h>
+#include <config.h>
 
 typedef __u64 lnet_nid_t;
 typedef __u32 lnet_pid_t;
-
-#include <libcfs/libcfs.h>
-#include <config.h>
 
 #define LNET_RESERVED_PORTAL      0  /* portals reserved for lnet's own use */
 
