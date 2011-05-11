@@ -90,7 +90,7 @@ _TINCLUDES=		$(filter-out -I%,${INCLUDES}) $(patsubst %,-I%,$(foreach \
 			dir,$(patsubst -I%,%,$(filter -I%,${INCLUDES})), $(realpath ${dir})))
 
 CFLAGS+=		${DEFINES} ${_TINCLUDES}
-TARGET?=		${PROG} ${LIBRARY} ${TEST}
+TARGET?=		$(sort ${PROG} ${LIBRARY} ${TEST})
 PROG?=			${TEST}
 
 EXTRACT_INCLUDES=	perl -ne 'print $$& while /-I\S+\s?/gc'
