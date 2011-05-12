@@ -42,6 +42,7 @@ general reminders
 - check -s hashtables for bucket overfilling
 - prefer enum to #define for values since they are available within gdb
 - callerinfo should be const everywhere
+- stop reinpretation of args in macros with stack vars
 - if callerinfo is getting overwritten in thread-local storage, the
   idiom is to change:
 
@@ -158,8 +159,9 @@ pfl
   into the obj/*.c file var
 - ensure psc_fatal() runs atexit() such as umount
 - libpthread rwlock is broken on openbsd!
-- differentiate pll log level vs. locked list
-- stop reinpretation of args in macros with stack vars
+- mutex is broken on freebsd -- psc_mutex_haslock() implemented with
+  pthread_mutex_timedlock() returns ETIMEDOUT instead of EDEADLK
+- differentiate pll abbreviation for log level vs. locked list
 - remove regen from make and just use the .h files as deps on
   typedump.c
 - fold pscrpc_completion and psc_completion into a single structure
