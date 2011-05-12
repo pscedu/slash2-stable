@@ -283,7 +283,7 @@ pscrpc_completion_init(struct pscrpc_completion *c)
 }
 
 int
-pscrpc_completion_ready(struct pscrpc_completion *c, int block)
+pscrpc_completion_ready(struct pscrpc_completion *c, int block, int secs)
 {
  retry:
 	if (atomic_read(&c->rqcomp_compcnt))
@@ -292,8 +292,17 @@ pscrpc_completion_ready(struct pscrpc_completion *c, int block)
 	spinlock(&c->rqcomp_lock);
 	if (!atomic_read(&c->rqcomp_compcnt)) {
 		if (block) {
-			psc_waitq_wait(&c->rqcomp_waitq, &c->rqcomp_lock);
-			goto retry;
+			if (secs) {
+				if (psc_waitq_waitrel_s(&c->rqcomp_waitq, 
+					&c->rqcomp_lock, secs))
+					return (0);
+				else
+					return (1);
+			} else {
+				psc_waitq_wait(&c->rqcomp_waitq,
+				       &c->rqcomp_lock);
+				goto retry;
+			}
 		} else {
 			freelock(&c->rqcomp_lock);
 			return (0);
@@ -307,7 +316,13 @@ pscrpc_completion_ready(struct pscrpc_completion *c, int block)
 void
 pscrpc_completion_wait(struct pscrpc_completion *c)
 {
-	pscrpc_completion_ready(c, 1);
+	pscrpc_completion_ready(c, 1, 0);
+}
+
+int
+pscrpc_completion_waitrel_s(struct pscrpc_completion *c, int secs)
+{
+	return (pscrpc_completion_ready(c, 1, secs));
 }
 
 void

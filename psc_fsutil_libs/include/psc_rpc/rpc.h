@@ -575,7 +575,8 @@ struct pscrpc_bulk_desc *
 
 void	 pscrpc_completion_init(struct pscrpc_completion *);
 void	 pscrpc_completion_wait(struct pscrpc_completion *);
-int	 pscrpc_completion_ready(struct pscrpc_completion *, int);
+int	 pscrpc_completion_waitrel_s(struct pscrpc_completion *, int);
+int	 pscrpc_completion_ready(struct pscrpc_completion *, int, int);
 void	 pscrpc_completion_one(struct pscrpc_completion *);
 
 static __inline int
