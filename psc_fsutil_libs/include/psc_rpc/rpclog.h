@@ -54,9 +54,10 @@ pscrpc_rqphase2str(struct pscrpc_request *req)
 	(rq)->rq_restart	? "T" : "",				\
 	(rq)->rq_replay		? "P" : "",				\
 	(rq)->rq_no_resend	? "N" : "",				\
+	(rq)->rq_abort_reply	? "A" : "",				\
 	(rq)->rq_waiting	? "W" : ""
 
-#define REQ_FLAGS_FMT "%s:%s%s%s%s%s%s%s%s%s%s"
+#define REQ_FLAGS_FMT "%s:%s%s%s%s%s%s%s%s%s%s%s"
 
 #define DEBUG_REQ(level, rq, fmt, ...)					\
     do {								\
@@ -64,13 +65,14 @@ pscrpc_rqphase2str(struct pscrpc_request *req)
 	char __nidstr[PSCRPC_NIDSTR_SIZE], __idstr[PSCRPC_NIDSTR_SIZE];	\
 									\
 	psc_logs((level), PSS_RPC,					\
-	    "req@%p x%"PRId64"/t%"PRId64" "				\
+	    "req@%p x%"PRId64"/t%"PRId64" cb=%p "			\
 	    "c%"PRIx64" "						\
 	    "o%d->@%s:%d "						\
 	    "lens %d/%d ref %d res %d ret %d fl "REQ_FLAGS_FMT		\
-	    "/%x/%x replyc %"PRIx64" rc %d/%d to=%d :: "fmt,		\
+	    "/%x/%x replyc %"PRIx64" rc %d/%d to=%d "			\
+	    "sent=%lu :: "fmt,						\
 	    (rq), (rq)->rq_xid, (rq)->rq_transno,			\
-	    (rq)->rq_reqmsg ?						\
+	    (rq)->rq_interpret_reply, (rq)->rq_reqmsg ?			\
 	      (rq)->rq_reqmsg->handle.cookie : 0xdeadbeef,		\
 	    (rq)->rq_reqmsg ? (int)(rq)->rq_reqmsg->opc : -1,		\
 	    __imp ?							\
@@ -91,7 +93,7 @@ pscrpc_rqphase2str(struct pscrpc_request *req)
 		(rq)->rq_repmsg->handle.cookie : 0xdeadbeef,		\
 	    (rq)->rq_status,						\
 	    (rq)->rq_repmsg ? (rq)->rq_repmsg->status : 0,		\
-	    (rq)->rq_timeout, ## __VA_ARGS__);				\
+	    (rq)->rq_timeout, (rq)->rq_sent, ## __VA_ARGS__);		\
     } while (0)
 
 #define DEBUG_EXP(level, exp, fmt, ...)					\

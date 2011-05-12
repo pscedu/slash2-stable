@@ -123,7 +123,8 @@ enum pscrpc_imp_state {
 	PSCRPC_IMP_REPLAY_WAIT		= 7,
 	PSCRPC_IMP_RECOVER		= 8,
 	PSCRPC_IMP_FULL			= 9,
-	PSCRPC_IMP_EVICTED		= 10
+	PSCRPC_IMP_EVICTED		= 10,
+	PSCRPC_IMP_NOOP                 = 11
 };
 
 struct pscrpc_uuid {
@@ -194,7 +195,6 @@ struct pscrpc_import {
 	uint64_t			  imp_last_transno_checked; /* optimize */
 	uint64_t			  imp_peer_committed_transno;
 	struct psc_waitq		  imp_recovery_waitq;
-	struct psclist_head		  imp_delayed_list;
 	void				(*imp_hldropf)(void *);
 	void				 *imp_hldrop_arg;
 	unsigned int			  imp_invalid:1,
@@ -250,6 +250,7 @@ struct pscrpc_bulk_desc {
 	unsigned int			 bd_network_rw:1;	/* accessible to network  */
 	unsigned int			 bd_type:2;		/* {put,get}{source,sink} */
 	unsigned int			 bd_registered:1;	/* client side            */
+	unsigned int                     bd_abort:1;
 	psc_spinlock_t			 bd_lock;		/* serialise w/ callback  */
 	int				 bd_import_generation;
 	struct pscrpc_import		*bd_import;		/* client only            */
@@ -321,6 +322,7 @@ struct pscrpc_request {
 					 rq_receiving_reply:1,
 					 rq_no_delay:1,
 					 rq_net_err:1,
+					 rq_abort_reply:1,
 					 rq_timeoutable:1;
 	atomic_t			 rq_refcount;		/* client-side refcnt for SENT race */
 	atomic_t			 rq_retries;		/* count retries */
@@ -704,6 +706,9 @@ pscrpc_wake_client_req(struct pscrpc_request *req)
 	else
 		psc_waitq_wakeall(&req->rq_set->set_waitq);
 }
+
+#define pscrpc_is_expired(r)						\
+	((r)->rq_timedout || ((r)->rq_sent + (r)->rq_timeout < CURRENT_SECONDS))
 
 /* NB: LWI_TIMEOUT ignores signals completely */
 #define LWI_TIMEOUT(time, cb, data)					\
