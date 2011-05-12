@@ -195,6 +195,7 @@ struct pscrpc_import {
 	uint64_t			  imp_last_transno_checked; /* optimize */
 	uint64_t			  imp_peer_committed_transno;
 	struct psc_waitq		  imp_recovery_waitq;
+	struct psclist_head               imp_delayed_list;
 	void				(*imp_hldropf)(void *);
 	void				 *imp_hldrop_arg;
 	unsigned int			  imp_invalid:1,
