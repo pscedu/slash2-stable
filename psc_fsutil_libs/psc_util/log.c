@@ -203,7 +203,7 @@ psclog_getdata(void)
 		/* XXX try to read this if the pscthr is available */
 		d->pld_thrid = pfl_getsysthrid();
 		snprintf(d->pld_nothrname, sizeof(d->pld_nothrname),
-		    "<%d>", d->pld_thrid);
+		    "<%"PSCPRI_PTHRT">", pthread_self());
 
 #ifdef HAVE_CNOS
 		int cnos_get_rank(void);
