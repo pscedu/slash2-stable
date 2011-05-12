@@ -40,16 +40,6 @@ struct pscrpc_nbreapthr {
 };
 
 /**
- * pscrpc_nbreqset_push - Send out new requests.
- *
- */
-static int
-pscrpc_nbreqset_push(struct pscrpc_request *req)
-{
-	return (pscrpc_push_req(req));
-}
-
-/**
  * pscrpc_nbreqset_init - Make a non-blocking set.
  * @nb_interpret: this must only take into account completed RPCs.
  * @nb_callback: application callback.
@@ -153,7 +143,7 @@ pscrpc_nbreqset_reap(struct pscrpc_nbreqset *nbs)
 		 * Move sent RPCs to the set_requests list
 		 */
 		if (req->rq_phase == PSCRPC_RQ_PHASE_COMPLETE) {
-			psclist_del(&req->rq_set_chain_lentry, 
+			psclist_del(&req->rq_set_chain_lentry,
 			    &set->set_requests);
 			atomic_dec(&nbs->nb_outstanding);
 			nreaped++;
@@ -169,7 +159,7 @@ pscrpc_nbreqset_reap(struct pscrpc_nbreqset *nbs)
 			 */
 			rc = 0;
 			if (nbs->nb_callback)
-				rc = nbs->nb_callback(req, 
+				rc = nbs->nb_callback(req,
 				    &req->rq_async_args);
 
 			/* Be done with it. */
