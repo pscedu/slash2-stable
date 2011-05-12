@@ -32,17 +32,17 @@
 #include <limits.h>
 
 struct psc_vbitmap {
-	unsigned char	*vb_start;
-	unsigned char	*vb_end;
-	unsigned char	*vb_pos;	/* ptr to current slot for speed */
-	int		 vb_lastsize;	/* #ents in last byte, for sizes not multiple of NBBY */
-	int		 vb_flags;
+	unsigned char		*vb_start;
+	unsigned char		*vb_end;
+	unsigned char		*vb_pos;	/* ptr to current slot for speed */
+	int			 vb_lastsize;	/* #ents in last byte, for sizes not multiple of NBBY */
+	int			 vb_flags;
 };
 
 /* vbitmap flags */
-#define PVBF_AUTO	(1 << 0)	/* auto grow bitmap as necessary */
-#define PVBF_STATIC	(1 << 1)	/* vbitmap is statically allocated */
-#define PVBF_EXTALLOC	(1 << 2)	/* bitmap mem is externally alloc'd */
+#define PVBF_AUTO		(1 << 0)	/* auto grow bitmap as necessary */
+#define PVBF_STATIC		(1 << 1)	/* vbitmap is statically allocated */
+#define PVBF_EXTALLOC		(1 << 2)	/* bitmap mem is externally alloc'd */
 
 #define VBITMAP_INIT_AUTO	{ NULL, NULL, NULL, 0, PVBF_AUTO | PVBF_STATIC }
 
