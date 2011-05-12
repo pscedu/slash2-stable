@@ -51,10 +51,11 @@ sub print_thr {
 
 while (<>) {
 	print_thr if /^Thread\s+\d+/;
-	if (/^Thread\s+\d+/ or /^#\d+\s+0x[a-fA-F0-9]+\s+in\s+/) {
+	if (/^Thread\s+\d+/ or /^#\d+\s+0x[a-fA-F0-9]+\s+in\s+/ or
+	    $#thr == -1) {
 		push @thr, $_;
 	} else {
-		chomp $thr[$#thr];
+		chomp $thr[$#thr] if $#thr >= 0;
 		$thr[$#thr] .= " $_";
 	}
 }
