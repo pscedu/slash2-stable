@@ -10,7 +10,6 @@ my @ign = (
 	[ qw(LNetEQPoll pscrpc_check_events psc_eqpollthr_main _pscthr_begin) ],
 	[ qw(accept libcfs_sock_accept lnet_acceptor psc_usklndthr_begin _pscthr_begin) ],
 	[ qw(accept psc_ctlacthr_main _pscthr_begin) ],
-	[ qw(cv_wait taskq_thread_wait taskq_thread) ],
 	[ qw(poll pscfs_fuse_listener_loop) ],
 	[ qw(poll usocklnd_poll_thread psc_usklndthr_begin _pscthr_begin) ],
 	[ qw(psc_waitq_waitabs pscrpcthr_main _pscthr_begin) ],
@@ -20,10 +19,17 @@ my @ign = (
 	[ qw(usleep psc_tiosthr_main _pscthr_begin) ],
 
 	# slash
+	[ qw(cv_timedwait l2arc_feed_thread) ],
+	[ qw(cv_timedwait taskq_thread_wait taskq_d_thread) ],
+	[ qw(cv_wait taskq_thread_wait taskq_thread) ],
+	[ qw(listener_loop) ],
 	[ qw(psc_multiwaitcond_waitrel_ts _sl_csvc_waitrel slconnthr_main) ],
 	[ qw(psc_waitq_waitabs _lc_get slvr_worker_int slvr_worker _pscthr_begin) ],
 	[ qw(psc_waitq_waitrel _lc_get msbmaprathr_main _pscthr_begin) ],
+	[ qw(psc_waitq_waitrel _lc_get slm_worker_main _pscthr_begin) ],
+	[ qw(pscfs_main slmzfskstatmthr_main _pscthr_begin) ],
 	[ qw(sleep sl_nbrqthr_main _pscthr_begin) ],
+	[ qw(zfsfuse_ioctl_queue_worker_thread) ],
 
 	# zest
 	[ qw(psc_multiwait_usecs ziothr_workq_proc_one ziothr_main _pscthr_begin) ],
