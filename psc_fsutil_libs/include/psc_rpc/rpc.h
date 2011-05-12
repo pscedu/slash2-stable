@@ -538,9 +538,15 @@ void	 pscrpc_drop_conns(lnet_process_id_t *);
 #define pscrpc_req_finished(rq)		_pscrpc_req_finished((rq), 0)
 #define pscrpc_req_finished_locked(rq)	_pscrpc_req_finished((rq), 1)
 
-#define pscrpc_nid2str(addr, buf)	libcfs_nid2str2((addr), (buf))
-#define pscrpc_id2str(addr, buf)	libcfs_id2str2((addr), (buf))
+#define pscrpc_nid2str(nid, buf)	libcfs_nid2str2((nid), (buf))
+#define pscrpc_id2str(prid, buf)	libcfs_id2str2((prid), (buf))
 #define pscrpc_net2str(net, buf)	libcfs_net2str2((net), (buf))
+
+#define pscrpc_id2str2(prid)						\
+	libcfs_id2str2((prid), pfl_tls_get(PFL_TLSIDX_IDBUF, PSCRPC_NIDSTR_SIZE))
+
+#define pscrpc_nid2str2(nid)						\
+	libcfs_nid2str2((nid), pfl_tls_get(PFL_TLSIDX_NIDBUF, PSCRPC_NIDSTR_SIZE))
 
 struct pscrpc_connection *
 	 pscrpc_get_connection(lnet_process_id_t, lnet_nid_t, struct pscrpc_uuid *);

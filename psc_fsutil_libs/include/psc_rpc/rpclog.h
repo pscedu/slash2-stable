@@ -20,6 +20,7 @@
 #ifndef _PFL_RPCLOG_H_
 #define _PFL_RPCLOG_H_
 
+#include "pfl/pfl.h"
 #include "psc_rpc/rpc.h"
 #include "psc_util/log.h"
 
@@ -60,11 +61,7 @@ pscrpc_rqphase2str(struct pscrpc_request *req)
 #define REQ_FLAGS_FMT "%s:%s%s%s%s%s%s%s%s%s%s%s"
 
 #define DEBUG_REQ(level, rq, fmt, ...)					\
-    do {								\
-	struct pscrpc_import *__imp = (rq)->rq_import;			\
-	char __nidstr[PSCRPC_NIDSTR_SIZE], __idstr[PSCRPC_NIDSTR_SIZE];	\
-									\
-	psc_logs((level), PSS_RPC,					\
+	psclogs((level), PSS_RPC,					\
 	    "req@%p x%"PRId64"/t%"PRId64" cb=%p "			\
 	    "c%"PRIx64" "						\
 	    "o%d->@%s:%d "						\
@@ -75,13 +72,12 @@ pscrpc_rqphase2str(struct pscrpc_request *req)
 	    (rq)->rq_interpret_reply, (rq)->rq_reqmsg ?			\
 	      (rq)->rq_reqmsg->handle.cookie : 0xdeadbeef,		\
 	    (rq)->rq_reqmsg ? (int)(rq)->rq_reqmsg->opc : -1,		\
-	    __imp ?							\
-	      pscrpc_id2str(__imp->imp_connection->c_peer, __idstr) :	\
-	      (rq)->rq_conn ?						\
-	      pscrpc_nid2str((rq)->rq_conn->c_peer.nid, __nidstr) :	\
-	      "<?>",							\
-	    __imp && __imp->imp_client ?				\
-	      (int)__imp->imp_client->cli_request_portal : -1,		\
+	    (rq)->rq_import ?						\
+	      pscrpc_id2str2((rq)->rq_import->imp_connection->c_peer) :	\
+		  (rq)->rq_conn ? pscrpc_nid2str2((rq)->rq_conn->	\
+		    c_peer.nid) : "<?>",				\
+	    (rq)->rq_import && (rq)->rq_import->imp_client ?		\
+	      (int)(rq)->rq_import->imp_client->cli_request_portal : -1,\
 	    (rq)->rq_reqlen, (rq)->rq_replen,				\
 	    atomic_read(&(rq)->rq_refcount), (rq)->rq_resend,		\
 	    atomic_read(&(rq)->rq_retries), DEBUG_REQ_FLAGS(rq),	\
@@ -93,8 +89,7 @@ pscrpc_rqphase2str(struct pscrpc_request *req)
 		(rq)->rq_repmsg->handle.cookie : 0xdeadbeef,		\
 	    (rq)->rq_status,						\
 	    (rq)->rq_repmsg ? (rq)->rq_repmsg->status : 0,		\
-	    (rq)->rq_timeout, (rq)->rq_sent, ## __VA_ARGS__);		\
-    } while (0)
+	    (rq)->rq_timeout, (rq)->rq_sent, ## __VA_ARGS__)
 
 #define DEBUG_EXP(level, exp, fmt, ...)					\
 	psc_logs((level), PSS_RPC,					\

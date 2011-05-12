@@ -190,7 +190,7 @@ psclog_getdata(void)
 	struct psclog_data *d;
 	char *p;
 
-	d = pfl_tls_get(PFL_TLSIDX_LOGDATA, sizeof(*d), &d);
+	d = pfl_tls_get(PFL_TLSIDX_LOGDATA, sizeof(*d));
 	if (d->pld_thrid == 0) {
 		/* XXX use psc_get_hostname() */
 		if (gethostname(d->pld_hostname,
