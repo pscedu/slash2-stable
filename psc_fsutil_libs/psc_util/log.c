@@ -190,7 +190,8 @@ psclog_getdata(void)
 	struct psclog_data *d;
 	char *p;
 
-	if (pfl_tls_get(PFL_TLSIDX_LOGDATA, sizeof(*d), &d)) {
+	d = pfl_tls_get(PFL_TLSIDX_LOGDATA, sizeof(*d), &d);
+	if (d->pld_thrid == 0) {
 		/* XXX use psc_get_hostname() */
 		if (gethostname(d->pld_hostname,
 		    sizeof(d->pld_hostname)) == -1)
@@ -235,7 +236,7 @@ pfl_fmtlogdate(const struct timeval *tv, const char **s)
 	memcpy(fmtbuf, start, end - start);
 	fmtbuf[end - start] = '\0';
 
-	pfl_tls_get(PFL_TLSIDX_LOGDATEBUF, LINE_MAX, &bufp);
+	bufp = pfl_tls_get(PFL_TLSIDX_LOGDATEBUF, LINE_MAX);
 
 	sec = tv->tv_sec;
 	localtime_r(&sec, &tm);

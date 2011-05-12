@@ -54,17 +54,12 @@ psc_faults_init(void)
 {
 }
 
-__weak int
-pfl_tls_get(int idx, size_t len, void *p)
+__weak void *
+pfl_tls_get(int idx, size_t len)
 {
-	int rc = 0;
-
-	if (_pfl_tls[idx] == NULL) {
-		rc = 1;
+	if (_pfl_tls[idx] == NULL)
 		_pfl_tls[idx] = psc_alloc(len, PAF_NOLOG | PAF_NOGUARD);
-	}
-	*(void **)p = _pfl_tls[idx];
-	return (rc);
+	return (_pfl_tls[idx]);
 }
 
 __weak void

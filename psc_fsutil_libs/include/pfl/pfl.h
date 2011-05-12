@@ -42,21 +42,23 @@ struct pfl_callerinfo {
 	int		 pci_subsys;
 };
 
-void	psc_enter_debugger(const char *);
+void	 psc_enter_debugger(const char *);
 
-void	pfl_dump_fflags(int);
-void	pfl_dump_stack(void);
-pid_t	pfl_getsysthrid(void);
-void	pfl_init(void);
-void	pfl_print_flag(const char *, int *);
-void	pfl_setprocesstitle(char **, const char *, ...);
-int	pfl_tls_get(int, size_t, void *);
+void	 pfl_dump_fflags(int);
+void	 pfl_dump_stack(void);
+pid_t	 pfl_getsysthrid(void);
+void	 pfl_init(void);
+void	 pfl_print_flag(const char *, int *);
+void	 pfl_setprocesstitle(char **, const char *, ...);
+void	*pfl_tls_get(int, size_t);
 
 #define PFL_TLSIDX_LOGDATA	0
 #define PFL_TLSIDX_CALLERINFO	1
 #define PFL_TLSIDX_MEMNODE	2
 #define PFL_TLSIDX_LOGDATEBUF	3
-#define PFL_TLSIDX_LASTRESERVED	4
+#define PFL_TLSIDX_NIDBUF	4
+#define PFL_TLSIDX_IDBUF	5
+#define PFL_TLSIDX_LASTRESERVED	6
 #define PFL_TLSIDX_MAX		8
 
 extern
@@ -71,7 +73,7 @@ _pfl_callerinfo_get(const char *fn, const char *func, int lineno,
 {
 	struct pfl_callerinfo *pci;
 
-	pfl_tls_get(PFL_TLSIDX_CALLERINFO, sizeof(*pci), &pci);
+	pci = pfl_tls_get(PFL_TLSIDX_CALLERINFO, sizeof(*pci));
 	pci->pci_filename = fn;
 	pci->pci_func = func;
 	pci->pci_lineno = lineno;

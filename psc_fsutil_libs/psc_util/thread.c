@@ -91,11 +91,11 @@ _pfl_tls_release(void *arg)
 	psc_free(tbl, PAF_NOGUARD | PAF_NOLOG);
 }
 
-int
-pfl_tls_get(int idx, size_t len, void *p)
+void *
+pfl_tls_get(int idx, size_t len)
 {
 	void **tbl;
-	int rc = 0;
+	int rc;
 
 	tbl = pthread_getspecific(pfl_tlskey);
 	if (tbl == NULL) {
@@ -105,13 +105,9 @@ pfl_tls_get(int idx, size_t len, void *p)
 		if (rc)
 			psc_fatalx("pthread_setspecific: %s", strerror(rc));
 	}
-	if (tbl[idx] == NULL) {
-		rc = 1;
-
+	if (tbl[idx] == NULL)
 		tbl[idx] = psc_alloc(len, PAF_NOLOG | PAF_NOGUARD);
-	}
-	*(void **)p = tbl[idx];
-	return (rc);
+	return (tbl[idx]);
 }
 
 /**
