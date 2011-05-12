@@ -36,6 +36,10 @@
 #  endif
 #endif
 
+#ifndef EKEYEXPIRED
+#  define EKEYEXPIRED	127
+#endif
+
 #ifndef HOST_NAME_MAX
 #  define HOST_NAME_MAX	MAXHOSTNAMELEN
 #endif
