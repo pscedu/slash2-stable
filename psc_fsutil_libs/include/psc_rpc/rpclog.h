@@ -67,7 +67,7 @@ pscrpc_rqphase2str(struct pscrpc_request *req)
 	    "o%d->@%s:%d "						\
 	    "lens %d/%d ref %d res %d ret %d fl "REQ_FLAGS_FMT		\
 	    "/%x/%x replyc %"PRIx64" rc %d/%d to=%d "			\
-	    "sent=%lu :: "fmt,						\
+	    "sent=%"PSCPRI_TIMET" :: "fmt,				\
 	    (rq), (rq)->rq_xid, (rq)->rq_transno,			\
 	    (rq)->rq_interpret_reply, (rq)->rq_reqmsg ?			\
 	      (rq)->rq_reqmsg->handle.cookie : 0xdeadbeef,		\
