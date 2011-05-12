@@ -82,14 +82,14 @@ pscrpc_nbreqset_add(struct pscrpc_nbreqset *nbs, struct pscrpc_request *req)
 	psc_assert(req->rq_waitq == NULL);
 	req->rq_waitq = &nbs->nb_waitq;
 	atomic_inc(&nbs->nb_outstanding);
-	pscrpc_set_add_new_req(&nbs->nb_reqset, req);
-	rc = pscrpc_nbreqset_push(req);
+	rc = pscrpc_push_req(req);
 	if (rc) {
 		req->rq_waitq = NULL;
 		atomic_dec(&nbs->nb_outstanding);
-		pscrpc_set_remove_req(&nbs->nb_reqset, req);
 		DEBUG_REQ(PLL_ERROR, req, "send failure: %s", strerror(rc));
-	}
+	} else
+		pscrpc_set_add_new_req(&nbs->nb_reqset, req);
+
 	return (rc);
 }
 
@@ -153,7 +153,8 @@ pscrpc_nbreqset_reap(struct pscrpc_nbreqset *nbs)
 		 * Move sent RPCs to the set_requests list
 		 */
 		if (req->rq_phase == PSCRPC_RQ_PHASE_COMPLETE) {
-			psclist_del(&req->rq_set_chain_lentry, &set->set_requests);
+			psclist_del(&req->rq_set_chain_lentry, 
+			    &set->set_requests);
 			atomic_dec(&nbs->nb_outstanding);
 			nreaped++;
 
@@ -168,7 +169,8 @@ pscrpc_nbreqset_reap(struct pscrpc_nbreqset *nbs)
 			 */
 			rc = 0;
 			if (nbs->nb_callback)
-				rc = nbs->nb_callback(req, &req->rq_async_args);
+				rc = nbs->nb_callback(req, 
+				    &req->rq_async_args);
 
 			/* Be done with it. */
 			pscrpc_req_finished(req);
