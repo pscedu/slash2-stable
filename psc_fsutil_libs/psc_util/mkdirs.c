@@ -25,6 +25,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "pfl/str.h"
 #include "psc_util/alloc.h"
 
 /**
@@ -56,7 +57,7 @@ mkdirs(const char *s, mode_t mode)
 	if (strcmp(s, "/") == 0)
 		return (0);
 
-	path = psc_strdup(s);
+	path = pfl_strdup(s);
 	for (p = path; p; ) {
 		*p++ = '/';
 		if ((p = strchr(p, '/')) != NULL)

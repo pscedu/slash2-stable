@@ -38,6 +38,8 @@ size_t	strnlen(const char *, size_t);
 
 int	pfl_asprintf(char **, const char *, ...);
 
+char	*pfl_strdup(const char *);
+
 int	_psc_str_hashify(const char *, int);
 
 static __inline int

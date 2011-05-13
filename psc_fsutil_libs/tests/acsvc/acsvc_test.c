@@ -28,6 +28,7 @@
 
 #include "pfl/cdefs.h"
 #include "pfl/pfl.h"
+#include "pfl/str.h"
 #include "psc_util/acsvc.h"
 #include "psc_util/alloc.h"
 #include "psc_util/log.h"
@@ -57,7 +58,7 @@ main(int argc, char *argv[])
 
 	acsvc_init(0, "test", argv);
 
-	dir = psc_strdup(progname);
+	dir = pfl_strdup(progname);
 	if (dirname(dir) == NULL)
 		psc_fatal("dirname");
 	snprintf(fn, sizeof(fn), "%s%s%s",

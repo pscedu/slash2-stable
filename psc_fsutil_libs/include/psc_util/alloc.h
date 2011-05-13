@@ -122,7 +122,6 @@ void	 *psc_calloc(size_t, size_t, int);
 void	 _psc_free(void *, int, ...);
 void	 _psc_lru_userfree(void *, int, ...);
 void	*_psc_realloc(void *, size_t, int);
-char	 *psc_strdup(const char *);
 
 void	  psc_memallocs_init(void);
 

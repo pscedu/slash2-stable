@@ -1182,7 +1182,7 @@ psc_ctlparam_register(const char *oname, int (*cbf)(int,
 	char *subname, *next, *name;
 
 	pcn = NULL; /* gcc */
-	name = psc_strdup(oname);
+	name = pfl_strdup(oname);
 	ptn = &psc_ctlparamtree;
 	for (subname = name; subname != NULL; subname = next) {
 		if ((next = strchr(subname, '.')) != NULL)
@@ -1194,7 +1194,7 @@ psc_ctlparam_register(const char *oname, int (*cbf)(int,
 		}
 		if (c == NULL) {
 			pcn = PSCALLOC(sizeof(*pcn));
-			pcn->pcn_name = psc_strdup(subname);
+			pcn->pcn_name = pfl_strdup(subname);
 			if (next == NULL)
 				pcn->pcn_cbf = cbf;
 			c = psc_stree_addchild(ptn, pcn);

@@ -369,7 +369,7 @@ psc_calloc(size_t num, size_t size, int flags)
 }
 
 /**
- * psc_strdup - Duplicate a string, allocating memory as necessary for
+ * pfl_strdup - Duplicate a string, allocating memory as necessary for
  *	duplicate.
  * @str: original string to duplicate.
  *
@@ -377,7 +377,7 @@ psc_calloc(size_t num, size_t size, int flags)
  * hogs and logging.
  */
 char *
-psc_strdup(const char *str)
+pfl_strdup(const char *str)
 {
 	size_t len;
 	char *p;
