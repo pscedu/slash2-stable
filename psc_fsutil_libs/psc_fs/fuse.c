@@ -902,13 +902,13 @@ pscfs_fuse_handle_setattr(fuse_req_t req, fuse_ino_t inum,
 }
 
 void
-pscfs_fuse_handle_statfs(fuse_req_t req, __unusedx fuse_ino_t inum)
+pscfs_fuse_handle_statfs(fuse_req_t req, fuse_ino_t inum)
 {
 	struct pscfs_req pfr;
 
 	pfr.pfr_fuse_req = req;
 	RETIFNOTSUP(&pfr, statfs, NULL);
-	pscfs.pf_handle_statfs(&pfr);
+	pscfs.pf_handle_statfs(&pfr, INUM_FUSE2PSCFS(inum));
 }
 
 void
@@ -1137,7 +1137,7 @@ pscfs_reply_setattr(struct pscfs_req *pfr, struct stat *stb,
 }
 
 void
-pscfs_reply_statfs(struct pscfs_req *pfr, struct statvfs *sfb,
+pscfs_reply_statfs(struct pscfs_req *pfr, const struct statvfs *sfb,
     int rc)
 {
 	if (rc)

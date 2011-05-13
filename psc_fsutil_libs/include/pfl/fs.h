@@ -78,7 +78,7 @@ struct pscfs {
 	void	(*pf_handle_rename)(struct pscfs_req *, pscfs_inum_t, const char *, pscfs_inum_t, const char *);
 	void	(*pf_handle_rmdir)(struct pscfs_req *, pscfs_inum_t, const char *);
 	void	(*pf_handle_setattr)(struct pscfs_req *, pscfs_inum_t, struct stat *, int, void *);
-	void	(*pf_handle_statfs)(struct pscfs_req *);
+	void	(*pf_handle_statfs)(struct pscfs_req *, pscfs_inum_t);
 	void	(*pf_handle_symlink)(struct pscfs_req *, const char *, pscfs_inum_t, const char *);
 	void	(*pf_handle_unlink)(struct pscfs_req *, pscfs_inum_t, const char *);
 	void	(*pf_handle_umount)();
@@ -129,7 +129,7 @@ void	pscfs_reply_readlink(struct pscfs_req *, void *, int);
 void	pscfs_reply_rename(struct pscfs_req *, int);
 void	pscfs_reply_rmdir(struct pscfs_req *, int);
 void	pscfs_reply_setattr(struct pscfs_req *, struct stat *, double, int);
-void	pscfs_reply_statfs(struct pscfs_req *, struct statvfs *, int);
+void	pscfs_reply_statfs(struct pscfs_req *, const struct statvfs *, int);
 void	pscfs_reply_symlink(struct pscfs_req *, pscfs_inum_t, pscfs_fgen_t, int, const struct stat *, int, int);
 void	pscfs_reply_umount(struct pscfs_req *);
 void	pscfs_reply_unlink(struct pscfs_req *, int);
