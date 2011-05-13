@@ -20,8 +20,12 @@
 #include <ctype.h>
 #include <inttypes.h>
 
+#include "pfl/str.h"
+
 #include "fio.h"
 #include "fio_sym.h"
+
+extern GROUP_t *currentGroup;
 
 struct symtable *
 get_symbol(const char *name)
@@ -75,7 +79,6 @@ func_addr_2_name(unsigned long addr)
 void
 store_func(const char *func_name)
 {
-	extern GROUP_t *currentGroup;
 	struct symtable *sym = get_symbol(func_name);
 	int num_iotests = currentGroup->num_iotests;
 	struct io_routine *ior = &currentGroup->iotests[num_iotests];
@@ -85,24 +88,19 @@ store_func(const char *func_name)
 	BDEBUG("Test Recipe Comp: %s func_ptr %p\n",
 	    func_name, sym->io_func);
 
-	ior->io_routine[ior->num_routines] = psc_strdup(func_name);
+	ior->io_routine[ior->num_routines] = pfl_strdup(func_name);
 	ior->num_routines++;
 }
 
 void
 store_tok_val(const char *tok, char *val)
 {
-	extern GROUP_t    *currentGroup;
 	struct symtable *e = get_symbol(tok);
-	char    floatbuf[17];
-	void   *ptr = ((char *)currentGroup) + e->offset;
-	uint64_t    *z   = ptr;
-	int    *t   = ptr;
-	char   *s   = ptr;
-	uint64_t     i   = 0;
-	char   *c;
-	float   f;
-	int     j;
+	void *ptr = ((char *)currentGroup) + e->offset;
+	char floatbuf[17], *s = ptr, *c;
+	uint64_t *z = ptr, i = 0;
+	int *t = ptr, j;
+	float f;
 
 	ASSERT(e != NULL);
 
@@ -113,7 +111,7 @@ store_tok_val(const char *tok, char *val)
 	BDEBUG("sym entry %p, name %s, param_type %d\n",
 	    e, e->name, e->sym_param_type);
 
-	switch(e->sym_param_type) {
+	switch (e->sym_param_type) {
 
 	case FIO_STRING:
 		strncpy(s, val, e->param);

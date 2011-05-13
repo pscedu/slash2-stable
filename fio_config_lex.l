@@ -18,13 +18,17 @@
  */
 
 %{
+
 #include <stdio.h>
 #include <string.h>
+
+#include "pfl/str.h"
 
 #include "fio.h"
 #include "fio_config_parser.h"
 
 int yyerror(const char *, ...);
+
 %}
 
 %%
@@ -46,13 +50,13 @@ sub {
 
 yes {
 	CDEBUG("BOOL %s\n", yytext);
-	yylval.string = psc_strdup(yytext);
+	yylval.string = pfl_strdup(yytext);
 	return BOOL;
 }
 
 no {
 	CDEBUG("BOOL %s\n", yytext);
-	yylval.string = psc_strdup(yytext);
+	yylval.string = pfl_strdup(yytext);
 	return BOOL;
 }
 
@@ -103,25 +107,25 @@ no {
 
 [0-9]+[BKMGTbkmgt] {
 	CDEBUG("SIZEVAL %s\n", yytext);
-	yylval.string = psc_strdup(yytext);
+	yylval.string = pfl_strdup(yytext);
 	return SIZEVAL;
 }
 
 [0-9]+ {
 	CDEBUG("NUM %s\n", yytext);
-	yylval.string = psc_strdup(yytext);
+	yylval.string = pfl_strdup(yytext);
 	return NUM;
 }
 
 [0-9]*\.?[0-9]+ {
 	CDEBUG("FLOATVAL %s\n", yytext);
-	yylval.string = psc_strdup(yytext);
+	yylval.string = pfl_strdup(yytext);
 	return FLOATVAL;
 }
 
 [0-9A-Za-z_/.-]+ {
 	CDEBUG("STR %s\n", yytext);
-	yylval.string = psc_strdup(yytext);
+	yylval.string = pfl_strdup(yytext);
 	return STR;
 }
 
@@ -129,7 +133,7 @@ no {
 	char *p;
 
 	CDEBUG("STR %s\n", yytext);
-	yylval.string = psc_strdup(yytext + 1);
+	yylval.string = pfl_strdup(yytext + 1);
 	p = strrchr(yylval.string, '"');
 	*p = '\0';
 	return STR;

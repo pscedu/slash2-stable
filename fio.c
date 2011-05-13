@@ -22,6 +22,7 @@
 
 #include "pfl/cdefs.h"
 #include "pfl/pfl.h"
+#include "pfl/str.h"
 #include "psc_util/alloc.h"
 
 #include "fio_sym.h"
@@ -1018,7 +1019,7 @@ main(int argc, char *argv[])
 			break;
 		case 'o':
 			stderr_redirect     = 1;
-			stderr_fnam_prefix  = psc_strdup(optarg);
+			stderr_fnam_prefix  = pfl_strdup(optarg);
 			break;
 		default:
 			usage();
