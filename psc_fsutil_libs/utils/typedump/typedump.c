@@ -32,6 +32,7 @@
 #include "pfl/fs.h"
 #include "pfl/hashtbl.h"
 #include "pfl/pfl.h"
+#include "pfl/procenv.h"
 #include "pfl/setresuid.h"
 #include "pfl/stat.h"
 #include "pfl/str.h"
