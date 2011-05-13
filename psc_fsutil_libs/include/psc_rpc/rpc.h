@@ -327,7 +327,7 @@ struct pscrpc_request {
 					 rq_timeoutable:1;
 	atomic_t			 rq_refcount;		/* client-side refcnt for SENT race */
 	atomic_t			 rq_retries;		/* count retries */
-	lnet_process_id_t		 rq_peer;
+	lnet_process_id_t		 rq_peer;		/* filled in by svh */
 	lnet_nid_t			 rq_self;
 	enum pscrpc_rq_phase		 rq_phase;		/* one of PSCRQ_PHASE_* */
 	enum pscrpc_imp_state		 rq_send_state;
