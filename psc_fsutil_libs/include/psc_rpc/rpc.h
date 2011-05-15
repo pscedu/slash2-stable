@@ -535,6 +535,9 @@ void	 pscrpc_unregister_bulk(struct pscrpc_request *);
 void	 pscrpc_abort_inflight(struct pscrpc_import *);
 void	 pscrpc_drop_conns(lnet_process_id_t *);
 
+struct pscrpc_connection *
+	pscrpc_req_getconn(struct pscrpc_request *);
+
 #define pscrpc_req_finished(rq)		_pscrpc_req_finished((rq), 0)
 #define pscrpc_req_finished_locked(rq)	_pscrpc_req_finished((rq), 1)
 
