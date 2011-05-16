@@ -293,7 +293,7 @@ pscrpc_completion_ready(struct pscrpc_completion *c, int block, int secs)
 	if (!atomic_read(&c->rqcomp_compcnt)) {
 		if (block) {
 			if (secs) {
-				if (psc_waitq_waitrel_s(&c->rqcomp_waitq, 
+				if (psc_waitq_waitrel_s(&c->rqcomp_waitq,
 					&c->rqcomp_lock, secs))
 					return (0);
 				else
@@ -956,7 +956,14 @@ pscrpc_queue_wait(struct pscrpc_request *req)
 
  out:
 	if (req->rq_bulk) {
+		struct pscrpc_msg *m;
+
+		m = req->rq_repmsg;
 		if (rc >= 0) {
+			if (m && (m->flags & MSG_ABORT_BULK) &&
+			    req->rq_bulk_abortable)
+				goto skipbulk;
+
 			/* success so far.  Note that anything going wrong
 			 * with bulk now, is EXTREMELY strange, since the
 			 * server must have believed that the bulk
@@ -977,6 +984,7 @@ pscrpc_queue_wait(struct pscrpc_request *req)
 				rc = -EIO;
 			}
 		}
+ skipbulk:
 		//if (rc < 0)
 			pscrpc_unregister_bulk(req);
 	}
@@ -990,7 +998,7 @@ pscrpc_queue_wait(struct pscrpc_request *req)
 }
 
 /**
- * pscrpc_check_set - send unsent RPCs in @set.  If check_allsent,
+ * pscrpc_check_set - Send unsent RPCs in @set.  If check_allsent,
  *     returns TRUE if all are sent otherwise return true if at least one
  *     has completed.
  * @set:  the set in question

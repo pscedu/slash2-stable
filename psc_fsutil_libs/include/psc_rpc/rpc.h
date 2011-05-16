@@ -324,7 +324,8 @@ struct pscrpc_request {
 					 rq_no_delay:1,
 					 rq_net_err:1,
 					 rq_abort_reply:1,
-					 rq_timeoutable:1;
+					 rq_timeoutable:1,
+					 rq_bulk_abortable:1;
 	atomic_t			 rq_refcount;		/* client-side refcnt for SENT race */
 	atomic_t			 rq_retries;		/* count retries */
 	lnet_process_id_t		 rq_peer;		/* filled in by svh */
@@ -638,9 +639,8 @@ pscrpc_str2uuid(struct pscrpc_uuid *uuid, char *tmp)
 
 /* Flags that apply to all requests are in the bottom 16 bits */
 #define MSG_GEN_FLAG_MASK	0x0000ffff
-#define MSG_LAST_REPLAY		1
-#define MSG_RESENT		2
-#define MSG_REPLAY		4
+#define MSG_RESENT		0x01
+#define MSG_ABORT_BULK		0x02
 
 static __inline int
 pscrpc_msg_get_flags(struct pscrpc_msg *msg)
