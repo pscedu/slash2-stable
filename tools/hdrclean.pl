@@ -137,6 +137,10 @@ foreach my $hdr (@hdrs) {
 		push @{ $syms{typedefs} }, $name =~ /(\w+)/;;
 	}
 
+	while ($line =~ s/^\s*enum\s+(\w+)\s*;//m) {
+		#push @{ $syms{enums} }, $1;
+	}
+
 	while ($line =~ s/^.*?(\w+)\s*\(\s*[^*].*//m) {
 		push @{ $syms{funcs} }, $1;
 	}
