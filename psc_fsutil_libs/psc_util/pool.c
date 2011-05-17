@@ -533,9 +533,9 @@ _psc_pool_get(struct psc_poolmgr *m, int flags)
  tryreclaim:
 	if (m->ppm_reclaimcb) {
 		atomic_inc(&m->ppm_nwaiters);
-		pthread_mutex_lock(&m->ppm_reclaim_mutex);
+		psc_mutex_lock(&m->ppm_reclaim_mutex);
 		n = m->ppm_reclaimcb(m);
-		pthread_mutex_unlock(&m->ppm_reclaim_mutex);
+		psc_mutex_unlock(&m->ppm_reclaim_mutex);
 		atomic_dec(&m->ppm_nwaiters);
 		p = POOL_TRYGETOBJ(m);
 		if (p)

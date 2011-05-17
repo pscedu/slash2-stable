@@ -225,7 +225,7 @@ psc_multiwaitcond_wakeup(struct psc_multiwaitcond *mwc)
  */
 int
 psc_multiwaitcond_waitrel_ts(struct psc_multiwaitcond *mwc,
-    pthread_mutex_t *mutex, const struct timespec *reltime)
+    struct pfl_mutex *mutex, const struct timespec *reltime)
 {
 	struct timespec abstime;
 	int rc;
@@ -239,11 +239,12 @@ psc_multiwaitcond_waitrel_ts(struct psc_multiwaitcond *mwc,
 		timespecadd(&abstime, reltime, &abstime);
 
 		rc = pthread_cond_timedwait(&mwc->mwc_cond,
-		    &mwc->mwc_mutex, &abstime);
+		    &mwc->mwc_mutex.pm_mutex, &abstime);
 		if (rc && rc != ETIMEDOUT)
 			psc_fatalx("pthread_cond_timedwait: %s", strerror(rc));
 	} else {
-		rc = pthread_cond_wait(&mwc->mwc_cond, &mwc->mwc_mutex);
+		rc = pthread_cond_wait(&mwc->mwc_cond,
+		    &mwc->mwc_mutex.pm_mutex);
 		if (rc)
 			psc_fatalx("pthread_cond_wait: %s", strerror(rc));
 	}
@@ -419,7 +420,7 @@ psc_multiwait_usecs(struct psc_multiwait *mw, void *datap, int usec)
 		ntv.tv_nsec = res.tv_usec * 1000;
 
 		rc = pthread_cond_timedwait(&mw->mw_cond,
-		    &mw->mw_mutex, &ntv);
+		    &mw->mw_mutex.pm_mutex, &ntv);
 		if (rc == ETIMEDOUT) {
 			psc_mutex_unlock(&mw->mw_mutex);
 			return (-ETIMEDOUT);
@@ -428,7 +429,8 @@ psc_multiwait_usecs(struct psc_multiwait *mw, void *datap, int usec)
 			psc_fatalx("pthread_cond_timedwait: %s",
 			    strerror(rc));
 	} else {
-		rc = pthread_cond_wait(&mw->mw_cond, &mw->mw_mutex);
+		rc = pthread_cond_wait(&mw->mw_cond,
+		    &mw->mw_mutex.pm_mutex);
 		if (rc)
 			psc_fatalx("pthread_cond_wait: %s", strerror(rc));
 	}
