@@ -294,6 +294,6 @@ psc_cond_timedwait(pthread_cond_t *c, struct pfl_mutex *m,
 
 	rc = pthread_cond_timedwait(c, &m->pm_mutex, tm);
 	if (rc && rc != ETIMEDOUT)
-		psc_fatal("pthread_cond_timedwait: %s", strerror(rc));
+		psc_fatalx("pthread_cond_timedwait: %s", strerror(rc));
 	return (rc);
 }
