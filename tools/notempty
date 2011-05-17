@@ -1,5 +1,8 @@
-#!/usr/bin/perl
+#!/usr/bin/env perl
 # $Id$
+
+use warnings;
+use strict;
 
 my $arg = shift || "";
 $arg =~ s/^\s+|\s$//g;
