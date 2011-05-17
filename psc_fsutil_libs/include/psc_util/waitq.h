@@ -31,7 +31,7 @@
 # include <pthread.h>
 
 struct psc_waitq {
-	pthread_mutex_t		wq_mut;
+	struct pfl_mutex	wq_mut;
 	pthread_cond_t		wq_cond;
 	atomic_t		wq_nwaiters;
 };

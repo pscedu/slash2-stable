@@ -41,7 +41,6 @@
 #include <stdio.h>
 
 #include "psc_util/lock.h"
-#include "psc_util/pthrutil.h"
 
 #ifdef __KERNEL__
 #define D_LNI D_CONSOLE
@@ -228,9 +227,9 @@ void lnet_fini_locks(void)
 void lnet_init_locks(void)
 {
         pthread_cond_init(&the_lnet.ln_cond, NULL);
-        psc_mutex_init(&the_lnet.ln_lock);
-        psc_mutex_init(&the_lnet.ln_lnd_mutex);
-        psc_mutex_init(&the_lnet.ln_api_mutex);
+        pthread_mutex_init(&the_lnet.ln_lock, NULL);
+        pthread_mutex_init(&the_lnet.ln_lnd_mutex, NULL);
+        pthread_mutex_init(&the_lnet.ln_api_mutex, NULL);
 }
 
 void lnet_fini_locks(void)

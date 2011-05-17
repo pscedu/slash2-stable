@@ -100,7 +100,7 @@ struct psc_poolmgr {
 	uint64_t		  ppm_ngrow;		/* #allocs */
 	uint64_t		  ppm_nshrink;		/* #deallocs */
 	atomic_t		  ppm_nwaiters;		/* #thrs waiting for item */
-	pthread_mutex_t		  ppm_reclaim_mutex;	/* exclusive reclamation */
+	struct pfl_mutex	  ppm_reclaim_mutex;	/* exclusive reclamation */
 
 	/* routines to initialize, teardown, & reclaim pool entries */
 	int			(*ppm_initf)(struct psc_poolmgr *, void *);

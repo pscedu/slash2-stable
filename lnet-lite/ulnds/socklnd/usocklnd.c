@@ -49,7 +49,6 @@
 #endif
 
 #include "psc_util/iostats.h"
-#include "psc_util/pthrutil.h"
 
 struct psc_iostats usock_pasv_send_ist;	/* passive interface */
 struct psc_iostats usock_pasv_recv_ist;
@@ -392,7 +391,7 @@ usocklnd_base_startup(void)
                 pt->upt_errno = 0;
                 CFS_INIT_LIST_HEAD (&pt->upt_pollrequests);
                 CFS_INIT_LIST_HEAD (&pt->upt_stale_list);
-                psc_mutex_init(&pt->upt_pollrequests_lock);
+                pthread_mutex_init(&pt->upt_pollrequests_lock, NULL);
                 cfs_init_completion(&pt->upt_completion);
         }
 
@@ -582,7 +581,7 @@ usocklnd_startup(lnet_ni_t *ni)
 
         memset(net, 0, sizeof(*net));
         net->un_incarnation = usocklnd_new_incarnation();
-        psc_mutex_init(&net->un_lock);
+        pthread_mutex_init(&net->un_lock, NULL);
         pthread_cond_init(&net->un_cond, NULL);
 
         ni->ni_data = net;

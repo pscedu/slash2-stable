@@ -30,12 +30,13 @@
 #include <pthread.h>
 
 #include "psc_ds/dynarray.h"
+#include "psc_util/pthrutil.h"
 
 struct psc_multiwait;
 struct psc_vbitmap;
 
 struct psc_multiwaitcond {
-	pthread_mutex_t			 mwc_mutex;
+	struct pfl_mutex		 mwc_mutex;
 	pthread_cond_t			 mwc_cond;	/* for single waiters */
 	struct psc_dynarray		 mwc_multiwaits;/* where cond is registered */
 	struct psc_multiwait		*mwc_winner;	/* which multiwait awoke first */
@@ -56,7 +57,7 @@ struct psc_multiwait {
 	 * explicitly, but because threads may modify some fields
 	 * implicitly (e.g. on wakeups and condition removals).
 	 */
-	pthread_mutex_t			 mw_mutex;
+	struct pfl_mutex		 mw_mutex;
 	pthread_cond_t			 mw_cond;	/* master condition */
 	struct psc_multiwaitcond	*mw_waker;	/* which mwcond woke us */
 	struct psc_dynarray		 mw_conds;	/* registered conditions */
@@ -104,7 +105,7 @@ void	 psc_multiwaitcond_destroy(struct psc_multiwaitcond *);
 void	 psc_multiwaitcond_init(struct psc_multiwaitcond *, const void *, int, const char *, ...);
 size_t	 psc_multiwaitcond_nwaiters(struct psc_multiwaitcond *);
 void	 psc_multiwaitcond_prmwaits(struct psc_multiwaitcond *);
-int	 psc_multiwaitcond_waitrel_ts(struct psc_multiwaitcond *, pthread_mutex_t *, const struct timespec *);
+int	 psc_multiwaitcond_waitrel_ts(struct psc_multiwaitcond *, struct pfl_mutex *, const struct timespec *);
 void	 psc_multiwaitcond_wakeup(struct psc_multiwaitcond *);
 
 #endif /* _PFL_MULTIWAIT_H_ */

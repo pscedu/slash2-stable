@@ -62,8 +62,6 @@
 #include <libcfs/libcfs.h>
 #include <libcfs/kp30.h>
 
-#include "psc_util/pthrutil.h"
-
 /*
  * Optional debugging (magic stamping and checking ownership) can be added.
  */
@@ -260,7 +258,7 @@ void cfs_init_completion(struct cfs_completion *c)
 {
         LASSERT(c != NULL);
         c->c_done = 0;
-        psc_mutex_init(&c->c_mut);
+        pthread_mutex_init(&c->c_mut, NULL);
         pthread_cond_init(&c->c_cond, NULL);
 }
 
@@ -294,7 +292,7 @@ void cfs_wait_for_completion(struct cfs_completion *c)
  * atomic primitives
  */
 
-static pthread_mutex_t atomic_guard_lock = PSC_MUTEX_INITIALIZER;
+static pthread_mutex_t atomic_guard_lock = PTHREAD_MUTEX_INITIALIZER;
 
 int cfs_atomic_read(cfs_atomic_t *a)
 {

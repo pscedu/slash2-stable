@@ -30,7 +30,7 @@
 #include "psc_util/pthrutil.h"
 
 const char		*progname;
-pthread_mutex_t		 m;
+struct pfl_mutex	 m;
 struct psc_completion	 compl = PSC_COMPLETION_INIT;
 struct psc_waitq	 wq = PSC_WAITQ_INIT;
 
@@ -75,7 +75,7 @@ main(int argc, char *argv[])
 	psc_waitq_wakeall(&wq);
 
 	psc_mutex_lock(&m);
-	rc = pthread_mutex_lock(&m);
+	rc = pthread_mutex_lock(&m.pm_mutex);
 	psc_assert(rc == EDEADLK);
 
 	lk = psc_mutex_reqlock(&m);
