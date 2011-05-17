@@ -21,6 +21,8 @@ MINVER=		${ROOTDIR}/tools/minver.pl
 PCPP=		${_PERLENV} ${CROOTDIR}/tools/pcpp.pl
 PICKLEGEN=	${ROOTDIR}/tools/pickle-gen.sh
 
+LEX:=		$(shell if ${NOTEMPTY} "${LEX}"; then echo "${LEX}"; elif type flex; then echo flex; else echo lex; fi)
+
 INST_BASE?=	/usr/psc
 INST_BINDIR?=	/usr/psc/bin
 INST_SBINDIR?=	/usr/psc/sbin
@@ -38,6 +40,7 @@ LFLAGS+=	-t $$(if ${MINVER} $$(lex -V | sed 's![a-z /]*!!g') 2.5.5; then echo --
 YFLAGS+=	-d
 
 CFLAGS+=	-Wall -W
+# -Wredundant-decls
 # CFLAGS+=	-Wshadow
 
 DEBUG?=		1
