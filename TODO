@@ -169,6 +169,9 @@ pfl
 - list head vs list entry - magic numbers should differ
 - add *ctl -n to suppress name resolution
 
+- lnet ctlapi: add lnet.listen
+- merge LNET_ACCEPT_PORT and USOCK_CPORT
+
 lnet
 - use TLS buffers for libcfs_nid2str() to avoid NUMA contention
 
