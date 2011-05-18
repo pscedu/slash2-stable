@@ -29,6 +29,10 @@
 #include <sys/statvfs.h>
 #include <sys/stat.h>
 
+#ifdef HAVE_NO_POLL_DEV
+#include <sys/select.h>
+#endif
+
 #include <errno.h>
 #include <grp.h>
 #include <pthread.h>
@@ -105,6 +109,12 @@ struct fuse_session		*fuse_session;
 double				 pscfs_entry_timeout;
 double				 pscfs_attr_timeout;
 
+#ifdef HAVE_NO_POLL_DEV
+fd_set				*pscfs_fdset;
+fd_set				*pscfs_fdset_rd;
+size_t				 pscfs_fdset_size;
+#endif
+
 int
 pscfs_fuse_newfs(const char *mntpoint, struct fuse_chan *ch)
 {
@@ -153,6 +163,26 @@ fd_read_loop(int fd, void *buf, int bytes)
 	return (0);
 }
 
+void
+pscfs_fuse_addfd(int fd)
+{
+#ifdef HAVE_NO_POLL_DEV
+	size_t sz;
+
+	sz = howmany(fd + 1, NFDBITS) * sizeof(fd_mask);
+	if (sz > pscfs_fdset_size) {
+		pscfs_fdset = psc_realloc(pscfs_fdset, sz, 0);
+		pscfs_fdset_rd = psc_realloc(pscfs_fdset_rd, sz, 0);
+		pscfs_fdset_size = sz;
+	}
+	FD_SET(fd, pscfs_fdset);
+	FD_SET(fd, pscfs_fdset_rd);
+#endif
+	pscfs_fds[pscfs_nfds].fd = fd;
+	pscfs_fds[pscfs_nfds].events = POLLIN;
+	pscfs_nfds++;
+}
+
 /*
  * Add a new filesystem/file descriptor to the poll set
  * Must be called with mtx locked
@@ -186,15 +216,11 @@ pscfs_fuse_new(void)
 		return;
 	}
 
-	psc_info("adding filesystem %i at mntpoint %s", pscfs_nfds, mntpoint);
+	psclog_info("adding filesystem %i at mntpoint %s", pscfs_nfds, mntpoint);
 
 	fsinfo[pscfs_nfds] = fs;
 	mountpoints[pscfs_nfds] = mntpoint;
-
-	pscfs_fds[pscfs_nfds].fd = fs.fd;
-	pscfs_fds[pscfs_nfds].events = POLLIN;
-	pscfs_fds[pscfs_nfds].revents = 0;
-	pscfs_nfds++;
+	pscfs_fuse_addfd(fs.fd);
 }
 
 /*
@@ -212,6 +238,11 @@ pscfs_fuse_destroy(int i)
 	fuse_session_destroy(fsinfo[i].se);
 	close(pscfs_fds[i].fd);
 	pscfs_fds[i].fd = -1;
+
+#ifdef HAVE_NO_POLL_DEV
+	FD_CLR(pscfs_fds[i].fd, pscfs_fdset);
+#endif
+
 	PSCFREE(mountpoints[i]);
 }
 
@@ -235,6 +266,21 @@ pscfs_fuse_listener_loop(__unusedx void *arg)
 
 	while (!exit_fuse_listener) {
 		int i;
+
+#ifdef HAVE_NO_POLL_DEV
+		struct timeval tv = { 1, 0 };
+
+		FD_COPY(pscfs_fdset, pscfs_fdset_rd);
+		int ret = select(MAX_FDS, pscfs_fdset_rd, NULL,
+		    NULL, &tv);
+		if (ret == 0 || (ret == -1 && errno == EINTR))
+			continue;
+
+		if (ret == -1) {
+			perror("select");
+			continue;
+		}
+#else
 		int ret = poll(pscfs_fds, pscfs_nfds, 1000);
 		if (ret == 0 || (ret == -1 && errno == EINTR))
 			continue;
@@ -243,10 +289,15 @@ pscfs_fuse_listener_loop(__unusedx void *arg)
 			perror("poll");
 			continue;
 		}
+#endif
 
 		int oldfds = pscfs_nfds;
 
 		for (i = 0; i < oldfds; i++) {
+#ifdef HAVE_NO_POLL_DEV
+			if (!FD_ISSET(pscfs_fds[i].fd, pscfs_fdset_rd))
+				continue;
+#else
 			short rev = pscfs_fds[i].revents;
 
 			if (rev == 0)
@@ -259,6 +310,7 @@ pscfs_fuse_listener_loop(__unusedx void *arg)
 			if (!(rev & POLLIN) &&
 			    !(rev & POLLERR) && !(rev & POLLHUP))
 				continue;
+#endif
 
 			if (i == 0) {
 				pscfs_fuse_new();
@@ -1226,9 +1278,7 @@ pscfs_mount(const char *mp, struct pscfs_args *pfa)
 	if (pipe(newfs_fd) == -1)
 		psc_fatal("pipe");
 
-	pscfs_fds[0].fd = newfs_fd[0];
-	pscfs_fds[0].events = POLLIN;
-	pscfs_nfds = 1;
+	pscfs_fuse_addfd(newfs_fd[0]);
 
 	rc = snprintf(nameopt, sizeof(nameopt), "fsname=%s", mp);
 	if (rc == -1)
