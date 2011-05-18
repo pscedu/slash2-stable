@@ -26,10 +26,6 @@
 #include "psc_ds/dynarray.h"
 #include "psc_util/lock.h"
 
-#ifndef HAVE_PTHREAD_BARRIER
-# include "pfl/compat/pthread_barrier.h"
-#endif
-
 #ifdef PTHREAD_MUTEX_ERRORCHECK_INITIALIZER
 # define PSC_MUTEX_INITIALIZER		{ PTHREAD_MUTEX_ERRORCHECK_INITIALIZER, 0 }
 #elif defined(PTHREAD_MUTEX_ERRORCHECK_INITIALIZER_NP)
@@ -92,5 +88,9 @@ int	psc_rwlock_reqwrlock_pci(const struct pfl_callerinfo *, struct psc_rwlock *)
 void	psc_rwlock_unlock_pci(const struct pfl_callerinfo *, struct psc_rwlock *);
 void	psc_rwlock_ureqlock_pci(const struct pfl_callerinfo *, struct psc_rwlock *, int);
 void	psc_rwlock_wrlock_pci(const struct pfl_callerinfo *, struct psc_rwlock *);
+
+#ifndef HAVE_PTHREAD_BARRIER
+# include "pfl/compat/pthread_barrier.h"
+#endif
 
 #endif /* _PFL_PTHRUTIL_H_ */
