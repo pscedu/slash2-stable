@@ -58,7 +58,7 @@ KERNEL_BASE=	/usr/src/kernels/linux
 COPYRIGHT_PATS+='*.[chyl]'							\
 		'*.[0-9]'							\
 		'*.mk'								\
-		'*.pl'								\
+		'*.p[ml]'							\
 		'*.sh'								\
 		Makefile
 
