@@ -19,8 +19,10 @@
 
 #include <pthread.h>
 
+#include "psc_util/pthrutil.h"
+
 typedef struct {
-	pthread_mutex_t		 mutex;			/* Control access to barrier */
+	struct pfl_mutex	 mutex;			/* Control access to barrier */
 	pthread_cond_t		 cv;			/* wait for barrier */
 	int			 valid;			/* set when valid */
 	int			 threshold;		/* number of threads required */

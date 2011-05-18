@@ -46,7 +46,7 @@ pthread_barrier_init(pthread_barrier_t *barrier, __unusedx
 	psc_mutex_init(&barrier->mutex);
 	status = pthread_cond_init(&barrier->cv, NULL);
 	if (status != 0) {
-		pthread_mutex_destroy(&barrier->mutex);
+		pthread_mutex_destroy(&barrier->mutex.pm_mutex);
 		return status;
 	}
 	barrier->valid = BARRIER_VALID;
@@ -64,29 +64,25 @@ pthread_barrier_destroy(pthread_barrier_t *barrier)
 	if (barrier->valid != BARRIER_VALID)
 		return EINVAL;
 
-	status = pthread_mutex_lock(&barrier->mutex);
-	if (status != 0)
-		return status;
+	psc_mutex_lock(&barrier->mutex);
 
 	/*
 	 * Check whether any threads are known to be waiting; report
 	 * "BUSY" if so.
 	 */
 	if (barrier->counter != barrier->threshold) {
-		pthread_mutex_unlock(&barrier->mutex);
+		psc_mutex_unlock(&barrier->mutex);
 		return EBUSY;
 	}
 
 	barrier->valid = 0;
-	status = pthread_mutex_unlock(&barrier->mutex);
-	if (status != 0)
-		return status;
+	psc_mutex_unlock(&barrier->mutex);
 
 	/*
 	 * If unable to destroy either 1003.1c synchronization
 	 * object, return the error status.
 	 */
-	status = pthread_mutex_destroy(&barrier->mutex);
+	status = pthread_mutex_destroy(&barrier->mutex.pm_mutex);
 	status2 = pthread_cond_destroy(&barrier->cv);
 	return (status != 0 ? status : status2);
 }
@@ -105,9 +101,7 @@ pthread_barrier_wait(pthread_barrier_t *barrier)
 	if (barrier->valid != BARRIER_VALID)
 		return EINVAL;
 
-	status = pthread_mutex_lock(&barrier->mutex);
-	if (status != 0)
-		return status;
+	psc_mutex_lock(&barrier->mutex);
 
 	cycle = barrier->cycle;   /* Remember which cycle we're on */
 
@@ -137,7 +131,7 @@ pthread_barrier_wait(pthread_barrier_t *barrier)
 		 */
 		while (cycle == barrier->cycle) {
 			status = pthread_cond_wait(&barrier->cv,
-			    &barrier->mutex);
+			    &barrier->mutex.pm_mutex);
 			if (status != 0)
 				break;
 		}
@@ -153,6 +147,6 @@ pthread_barrier_wait(pthread_barrier_t *barrier)
 	 * to use the barrier *will* return an error, or hang, due
 	 * to whatever happened to the mutex.
 	 */
-	pthread_mutex_unlock(&barrier->mutex);
+	psc_mutex_unlock(&barrier->mutex);
 	return status;          /* error, -1 for waker, or 0 */
 }
