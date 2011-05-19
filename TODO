@@ -158,7 +158,8 @@ pfl
 - when processing .l and .y rules, propagate CFLAGS from the .l FILE var
   into the obj/*.c file var
 - ensure psc_fatal() runs atexit() such as umount
-- libpthread rwlock is broken on openbsd!
+- libpthread rwlock is broken on free/openbsd!  writers vs readers
+  priority problems, the entire implementation needs rewritten
 - mutex is broken on freebsd -- psc_mutex_haslock() implemented with
   pthread_mutex_timedlock() returns ETIMEDOUT instead of EDEADLK
 - differentiate pll abbreviation for log level vs. locked list
@@ -167,13 +168,10 @@ pfl
 - fold pscrpc_completion and psc_completion into a single structure
 - parse thr(-.*)? for connthr-foo not matching 'thr$' for thread names in ctl parsing
 - list head vs list entry - magic numbers should differ
-- add *ctl -n to suppress name resolution
-
-- lnet ctlapi: add lnet.listen
-- merge LNET_ACCEPT_PORT and USOCK_CPORT
 
 lnet
 - use TLS buffers for libcfs_nid2str() to avoid NUMA contention
+- merge LNET_ACCEPT_PORT and USOCK_CPORT
 
 - pcpp:
   if an arg is a pointer, dont trace an integer version of it in PFL_ENTER()
