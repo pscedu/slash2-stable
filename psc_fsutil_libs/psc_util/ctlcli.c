@@ -1185,14 +1185,16 @@ psc_ctlcli_main(const char *osockfn, int ac, char *av[],
 		FMTSTRCASE('n', "s", daemon_name)
 	);
 
-	if (connect(psc_ctl_sock, (struct sockaddr *)&sun, sizeof(sun)) == -1)
+	if (connect(psc_ctl_sock, (struct sockaddr *)&sun,
+	    sizeof(sun)) == -1)
 		err(1, "connect: %s", sun.sun_path);
 
-	thr = pscthr_init(PCTHRT_RD, 0, psc_ctlcli_rd_main,
-	    NULL, 0, "%srdthr", prg);
+	thr = pscthr_init(PCTHRT_RD, 0, psc_ctlcli_rd_main, NULL, 0,
+	    "%srdthr", prg);
 
 	/* Parse options for real this time. */
-	optind = 0;
+	optind = 1;
+	optreset = 1;
 	while ((c = getopt(ac, av, optstr)) != -1) {
 		for (i = 0; i < notab; i++) {
 			if (c != otab[i].pco_ch)
