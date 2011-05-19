@@ -32,8 +32,8 @@ struct rnd_iterator {
 	for ((ri)->ri_n = (n), (ri)->ri_iter = 0,			\
 	    (ri)->ri_rnd_idx = psc_random32u((ri)->ri_n);		\
 	    (ri)->ri_iter < (ri)->ri_n;					\
-	    (ri)->ri_iter++,						\
-	    (ri)->ri_rnd_idx = ((ri)->ri_rnd_idx + 1) % (ri)->ri_n)
+	    (ri)->ri_iter++, (ri)->ri_rnd_idx + 1 >= (ri)->ri_n ?	\
+	      ((ri)->ri_rnd_idx = 0) : (ri)->ri_rnd_idx++)
 
 #define RESET_RND_ITER(ri)						\
 	do {								\
