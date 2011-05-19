@@ -211,4 +211,8 @@ PICKLE_NEED_VERSION=					$(word 2,$$Rev$$)
   NUMA_LIBS=						-lcpuset -lnuma
  endif
 
+ ifdef PICKLE_HAVE_OPTRESET
+  DEFINES+=						-DHAVE_OPTRESET
+ endif
+
 endif

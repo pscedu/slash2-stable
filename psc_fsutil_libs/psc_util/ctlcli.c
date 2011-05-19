@@ -1194,7 +1194,9 @@ psc_ctlcli_main(const char *osockfn, int ac, char *av[],
 
 	/* Parse options for real this time. */
 	optind = 1;
+#ifdef HAVE_OPTRESET
 	optreset = 1;
+#endif
 	while ((c = getopt(ac, av, optstr)) != -1) {
 		for (i = 0; i < notab; i++) {
 			if (c != otab[i].pco_ch)
