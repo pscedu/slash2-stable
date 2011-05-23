@@ -145,7 +145,7 @@ pscrpc_put_connection(struct pscrpc_connection *c)
 		return (0);
 	}
 
-	psclog_info("connection=%p refcount %d to %s",
+	psclog_dbg("connection=%p refcount %d to %s",
 	    c, atomic_read(&c->c_refcount) - 1,
 	    libcfs_nid2str(c->c_peer.nid));
 
