@@ -328,7 +328,7 @@ pscrpc_server_handle_request(struct pscrpc_service *svc,
 		goto out;
 	}
 
-	psclog_info("got req xid=%"PRId64, request->rq_xid);
+	psclog_dbg("got req xid=%"PRId64, request->rq_xid);
 
 	request->rq_svc_thread = thread;
 	request->rq_conn = pscrpc_get_connection(request->rq_peer,
