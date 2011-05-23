@@ -75,7 +75,7 @@ pscrpc_send_buf(lnet_handle_md_t *mdh, void *base, int len,
 		return (-ENOMEM);
 	}
 
-	psclog_info("Sending %d bytes to portal %d, xid %#"PRIx64,
+	psclog_dbg("Sending %d bytes to portal %d, xid %#"PRIx64,
 	    len, portal, xid);
 
 	rc = LNetPut(conn->c_self, *mdh, ack, conn->c_peer, portal, xid,
