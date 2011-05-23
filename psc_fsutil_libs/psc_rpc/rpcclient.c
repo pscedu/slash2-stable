@@ -629,7 +629,7 @@ pscrpc_check_reply(struct pscrpc_request *req)
 	}
  out:
 	freelock(&req->rq_lock);
-	DEBUG_REQ(PLL_INFO, req, "rc = %d", rc);
+	DEBUG_REQ(rc ? PLL_INFO : PLL_DEBUG, req, "rc=%d", rc);
 	return rc;
 }
 
