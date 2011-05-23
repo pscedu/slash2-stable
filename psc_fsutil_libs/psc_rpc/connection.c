@@ -83,7 +83,7 @@ pscrpc_get_connection(lnet_process_id_t peer, lnet_nid_t self,
 
 	//psc_assert(uuid != NULL);
 
-	psclog_info("self %s peer %s",
+	psclog_dbg("self %s peer %s",
 	    libcfs_nid2str(self), libcfs_id2str(peer));
 
 	spinlock(&conn_lock);
@@ -93,7 +93,7 @@ pscrpc_get_connection(lnet_process_id_t peer, lnet_nid_t self,
 	freelock(&conn_lock);
 
 	if (c) {
-		psclog_info("got self %s peer %s",
+		psclog_dbg("got self %s peer %s",
 		    libcfs_nid2str(c->c_self), libcfs_nid2str(c->c_peer.nid));
 		return (c);
 	}
