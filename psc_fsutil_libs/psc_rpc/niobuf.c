@@ -511,20 +511,22 @@ pscrpc_send_rpc(struct pscrpc_request *request, int noreply)
 	if (!noreply) {
 		psc_assert(request->rq_replen);
 		if (request->rq_repmsg == NULL)
-			PSCRPC_OBD_ALLOC(request->rq_repmsg, request->rq_replen);
+			PSCRPC_OBD_ALLOC(request->rq_repmsg,
+			    request->rq_replen);
 
 		if (request->rq_repmsg == NULL)
 			GOTO(cleanup_bulk, rc = -ENOMEM);
 
 		rc = LNetMEAttach(request->rq_reply_portal,/*XXX FIXME bug 249*/
-				  connection->c_peer, request->rq_xid, 0,
-				  LNET_UNLINK, LNET_INS_AFTER, &reply_me_h);
+		    connection->c_peer, request->rq_xid, 0, LNET_UNLINK,
+		    LNET_INS_AFTER, &reply_me_h);
 		if (rc) {
 			CERROR("LNetMEAttach failed: %d\n", rc);
 			psc_assert(rc == -ENOMEM);
 			GOTO(cleanup_repmsg, rc = -ENOMEM);
 		}
-		psclog_info("LNetMEAttach() gave handle %"PRIx64, (uint64_t)reply_me_h.cookie);
+		psclog_dbg("LNetMEAttach() gave handle %"PRIx64,
+		    reply_me_h.cookie);
 	}
 
 	spinlock(&request->rq_lock);
@@ -547,11 +549,11 @@ pscrpc_send_rpc(struct pscrpc_request *request, int noreply)
 		reply_md.user_ptr  = &request->rq_reply_cbid;
 		reply_md.eq_handle = pscrpc_eq_h;
 
-		psclog_info("LNetMDAttach() try w/ handle %"PRIx64,
+		psclog_dbg("LNetMDAttach() try w/ handle %"PRIx64,
 		      reply_me_h.cookie);
 
 		rc = LNetMDAttach(reply_me_h, reply_md, LNET_UNLINK,
-				 &request->rq_reply_md_h);
+		    &request->rq_reply_md_h);
 		if (rc) {
 			psclog_errorx("LNetMDAttach failed: %d", rc);
 			psc_assert(rc == -ENOMEM);
@@ -562,10 +564,10 @@ pscrpc_send_rpc(struct pscrpc_request *request, int noreply)
 			GOTO(cleanup_me, rc = -ENOMEM);
 		}
 
-		psclog_dbg("Setup reply buffer: %u bytes, xid %"PRIx64
-			 ", portal %u",
-			 request->rq_replen, request->rq_xid,
-			 request->rq_reply_portal);
+		psclog_dbg("Setup reply buffer: "
+		    "%u bytes xid=%"PRIx64" portal=%u",
+		    request->rq_replen, request->rq_xid,
+		    request->rq_reply_portal);
 	}
 
 	/* add references on request and import for pscrpc_request_out_callback */
