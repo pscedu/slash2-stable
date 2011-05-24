@@ -62,6 +62,9 @@ struct psc_dynarray;
 #define PSCRPC_MSG_MAGIC		0x0BD00BD0
 #define PSCRPC_MSG_VERSION		0x00000003
 
+/* sizeof(rq msg buf) + overhead = ptl msgsz */
+#define PSCRPC_MSG_OVERHEAD		160
+
 #define PSCRPC_OBD_FREE(ptr, size)	PSCFREE(ptr)
 #define PSCRPC_OBD_ALLOC(ptr, size)	((ptr) = PSCALLOC(size))
 
