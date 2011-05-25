@@ -158,7 +158,7 @@ int64_t cfs_waitq_timedwait(struct cfs_waitlink *link, __unusedx int state, __un
         return 0;
 }
 
-#ifdef HAVE_LIBPTHREAD
+#ifndef HAVE_LIBPTHREAD
 
 /*
  * Threads
