@@ -158,49 +158,6 @@ int64_t cfs_waitq_timedwait(struct cfs_waitlink *link, __unusedx int state, __un
         return 0;
 }
 
-#ifndef HAVE_LIBPTHREAD
-
-/*
- * Threads
- */
-
-struct lustre_thread_arg {
-        cfs_thread_t f; 
-        void *arg;
-};
-static void *cfs_thread_helper(void *data)
-{
-        struct lustre_thread_arg *targ = data;
-        cfs_thread_t f  = targ->f;
-        void *arg = targ->arg;
-
-        cfs_free(targ);
-        
-        (void)f(arg);
-        return NULL;
-}
-int cfs_create_thread(cfs_thread_t func, void *arg)
-{
-        pthread_t tid;
-        pthread_attr_t tattr;
-        int rc;
-        struct lustre_thread_arg *targ_p =
-	    cfs_alloc(sizeof(struct lustre_thread_arg), 0);
-
-        if ( targ_p == NULL )
-                return -ENOMEM;
-        
-        targ_p->f = func;
-        targ_p->arg = arg;
-
-        pthread_attr_init(&tattr); 
-        pthread_attr_setdetachstate(&tattr, PTHREAD_CREATE_DETACHED);
-        rc = pthread_create(&tid, &tattr, cfs_thread_helper, targ_p);
-        pthread_attr_destroy(&tattr);
-        return -rc;
-}
-#endif
-
 uid_t cfs_curproc_uid(void)
 {
         return getuid();
