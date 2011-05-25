@@ -201,8 +201,6 @@ int cfs_create_thread(cfs_thread_t func, void *arg)
 }
 #endif
 
-#endif
-
 uid_t cfs_curproc_uid(void)
 {
         return getuid();
