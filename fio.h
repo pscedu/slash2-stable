@@ -962,20 +962,20 @@ compare_buffer(const struct buffer *bdesc_a, const struct buffer *bdesc_b)
 			compare_buffer((a), (b));				\
 	} while (0)
 
-int do_unlink(struct io_toolbox *);
-int do_rdopen(struct io_toolbox *);
-int do_rename(struct io_toolbox *);
-int do_trunc(struct io_toolbox *);
-int do_fstat(struct io_toolbox *);
-int do_write(struct io_toolbox *);
-int do_creat(struct io_toolbox *);
-int do_trunc(struct io_toolbox *);
 int do_close(struct io_toolbox *);
-int do_stat(struct io_toolbox *);
-int do_open(struct io_toolbox *);
-int do_read(struct io_toolbox *);
+int do_creat(struct io_toolbox *);
+int do_fstat(struct io_toolbox *);
 int do_link(struct io_toolbox *);
 int do_null(struct io_toolbox *);
+int do_open(struct io_toolbox *);
+int do_rdopen(struct io_toolbox *);
+int do_read(struct io_toolbox *);
+int do_rename(struct io_toolbox *);
+int do_stat(struct io_toolbox *);
+int do_trunc(struct io_toolbox *);
+int do_unlink(struct io_toolbox *);
+int do_write(struct io_toolbox *);
+
 void init_buffer(struct buffer *, int);
 
 int run_yacc(void);

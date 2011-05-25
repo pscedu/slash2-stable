@@ -25,8 +25,6 @@
 #include "fio.h"
 #include "fio_sym.h"
 
-extern GROUP_t *currentGroup;
-
 struct symtable *
 get_symbol(const char *name)
 {
