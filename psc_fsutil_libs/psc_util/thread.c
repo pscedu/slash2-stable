@@ -103,7 +103,7 @@ pfl_tls_get(int idx, size_t len)
 		    PAF_NOLOG | PAF_NOGUARD);
 		rc = pthread_setspecific(pfl_tlskey, tbl);
 		if (rc)
-			psc_fatalx("pthread_setspecific: %s", strerror(rc));
+			errx(1, "pthread_setspecific: %s", strerror(rc));
 	}
 	if (tbl[idx] == NULL)
 		tbl[idx] = psc_alloc(len, PAF_NOLOG | PAF_NOGUARD);
