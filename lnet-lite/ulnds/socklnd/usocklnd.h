@@ -349,7 +349,6 @@ usock_tx_t *usocklnd_create_cr_hello_tx(lnet_ni_t *ni,
 void usocklnd_destroy_tx(lnet_ni_t *ni, usock_tx_t *tx);
 void usocklnd_destroy_txlist(lnet_ni_t *ni, struct list_head *txlist);
 void usocklnd_destroy_zcack_list(struct list_head *zcack_list);
-void usocklnd_destroy_peer (usock_peer_t *peer);
 int usocklnd_get_conn_type(lnet_msg_t *lntmsg);
 int usocklnd_get_cport(void);
 int usocklnd_type2idx(int type);
