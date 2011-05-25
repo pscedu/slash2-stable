@@ -131,6 +131,7 @@ typedef struct psc_spinlock {
 			/* PFL_GETTIMEVAL(&(psl)->psl_time); */		\
 			_val = 0;					\
 		} else if ((_val) == PSL_UNLOCKED) {			\
+			psc_assert((psl)->psl_owner == 0);		\
 			(psl)->psl_owner = pthread_self();		\
 			if (((psl)->psl_flags & PSLF_NOLOG) == 0)	\
 				_psclog_pci((pci), PLL_DEBUG, 0,	\
