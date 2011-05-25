@@ -91,7 +91,6 @@ struct pscfs_clientctx {
 
 void	pscfs_addarg(struct pscfs_args *, const char *);
 void	pscfs_freeargs(struct pscfs_args *);
-void	pscfs_mount(const char *, struct pscfs_args *);
 
 struct pscfs_clientctx *
 	pscfs_getclientctx(struct pscfs_req *);

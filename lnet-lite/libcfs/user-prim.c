@@ -160,10 +160,6 @@ int64_t cfs_waitq_timedwait(struct cfs_waitlink *link, __unusedx int state, __un
 
 #ifdef HAVE_LIBPTHREAD
 
-#if 1
-int cfs_create_thread(cfs_thread_t, void *, const char *, ...);
-#else
-
 /*
  * Threads
  */
