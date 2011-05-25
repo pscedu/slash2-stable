@@ -190,46 +190,53 @@ enum psclog_level {
 #define PSCLOG_LOCK()			flockfile(stderr)
 #define PSCLOG_UNLOCK()			funlockfile(stderr)
 
-#define PFL_RETURNX()						\
-	do {							\
-		psclog_trace("exit %s", __func__);		\
-		return;						\
+#define PFL_RETURNX()							\
+	do {								\
+		psclog_trace("exit %s", __func__);			\
+		return;							\
 	} while (0)
 
-#define PFL_RETURN(rv)						\
-	do {							\
-		typeof(rv) _pfl_rv = (rv);			\
-								\
-		psclog_trace("exit %s rc=%ld %p", __func__,	\
-		    (long)_pfl_rv,				\
-		    (void *)(unsigned long)_pfl_rv);		\
-		return (_pfl_rv);				\
+#define PFL_RETURN(rv)							\
+	do {								\
+		typeof(rv) _pfl_rv = (rv);				\
+									\
+		psclog_trace("exit %s rc=%ld %p", __func__,		\
+		    (long)_pfl_rv,					\
+		    (void *)(unsigned long)_pfl_rv);			\
+		return (_pfl_rv);					\
 	} while (0)
 
-#define PFL_RETURN_LIT(rv)					\
-	do {							\
-		psclog_trace("exit %s rc=%ld", __func__,	\
-		    (long)(rv));				\
-		return (rv);					\
+#define PFL_RETURN_LIT(rv)						\
+	do {								\
+		psclog_trace("exit %s rc=%ld", __func__,		\
+		    (long)(rv));					\
+		return (rv);						\
 	} while (0)
 
-#define PFL_RETURN_STR(str)					\
-	do {							\
-		psclog_trace("exit %s rc='%s'", __func__,	\
-		    (str));					\
-		return (str);					\
+#define PFL_RETURN_STR(str)						\
+	do {								\
+		psclog_trace("exit %s rc='%s'", __func__,		\
+		    (str));						\
+		return (str);						\
 	} while (0)
 
-#define psc_assert(cond)					\
-	do {							\
-		if (!(cond))					\
-			psc_fatalx("[assert] %s", #cond);	\
+#define PFL_GOTOERR(label, code)					\
+	do {								\
+		if (code)						\
+			psclog_dbg("error: "#code ": %d", (code));	\
+		goto label;						\
 	} while (0)
 
-#define psc_assert_perror(cond)					\
-	do {							\
-		if (!(cond))					\
-			psc_fatal("[assert] %s", #cond);	\
+#define psc_assert(cond)						\
+	do {								\
+		if (!(cond))						\
+			psc_fatalx("[assert] %s", #cond);		\
+	} while (0)
+
+#define psc_assert_perror(cond)						\
+	do {								\
+		if (!(cond))						\
+			psc_fatal("[assert] %s", #cond);		\
 	} while (0)
 
 void			 psc_log_init(void);
