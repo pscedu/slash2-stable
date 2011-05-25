@@ -168,6 +168,7 @@ pfl
 - fold pscrpc_completion and psc_completion into a single structure
 - parse thr(-.*)? for connthr-foo not matching 'thr$' for thread names in ctl parsing
 - list head vs list entry - magic numbers should differ
+- tests/rwlock is broken on mymichelle with DEBUG=0
 
 lnet
 - use TLS buffers for libcfs_nid2str() to avoid NUMA contention
