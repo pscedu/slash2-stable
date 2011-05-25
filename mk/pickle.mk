@@ -29,6 +29,7 @@ PICKLE_NEED_VERSION=					$(word 2,$$Rev$$)
  endif
 
  ifndef PICKLE_HAVE_POSIX_MEMALIGN
+  DEFINES+=						-DHAVE_POSIX_MEMALIGN
   SRCS+=						${PFL_BASE}/compat/posix_memalign.c
  endif
 

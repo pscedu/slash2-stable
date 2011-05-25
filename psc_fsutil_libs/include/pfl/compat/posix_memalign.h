@@ -22,7 +22,10 @@
 
 #include <sys/types.h>
 
+#ifndef HAVE_POSIX_MEMALIGN
 int	posix_memalign(void **, size_t, size_t);
+#endif
+
 void	psc_freen(void *);
 
 #endif /* _PFL_COMPAT_POSIX_MEMALIGN_H_ */
