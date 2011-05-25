@@ -17,14 +17,6 @@
  * %PSC_END_COPYRIGHT%
  */
 
-static __inline int16_t psc_atomic16_read(psc_atomic16_t *);
-static __inline int32_t psc_atomic32_read(psc_atomic32_t *);
-static __inline int64_t psc_atomic64_read(psc_atomic64_t *);
-
-static __inline int16_t psc_atomic16_cmpxchg(psc_atomic16_t *, int16_t, int16_t);
-static __inline int32_t psc_atomic32_cmpxchg(psc_atomic32_t *, int32_t, int32_t);
-static __inline int64_t psc_atomic64_cmpxchg(psc_atomic64_t *, int64_t, int64_t);
-
 #define _PFL_ATOMIC_OPLOOPRC(prefix, type, v, oldv, newv, op, retcode)		\
 	do {									\
 		type oldv, newv;						\
