@@ -61,6 +61,14 @@ void	*pfl_tls_get(int, size_t);
 #define PFL_TLSIDX_LASTRESERVED	6
 #define PFL_TLSIDX_MAX		8
 
+#ifdef HAVE_TLS
+# define PFL_START_TRACE(pci)	(pfl_callerinfo = (pci))
+# define PFL_END_TRACE()	(pfl_callerinfo = NULL)
+#else
+# define PFL_START_TRACE(pci)
+# define PFL_END_TRACE()
+#endif
+
 extern
 #ifdef HAVE_TLS
 __thread

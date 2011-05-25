@@ -57,13 +57,9 @@ general reminders
 	void
 	myfunc(const struct pfl_callerinfo *pci, ...)
 	{
-#ifdef HAVE_TLS
-		pfl_callerinfo = pci
-#endif
+		PFL_START_TRACE(pci);
 		...
-#ifdef HAVE_TLS
-		pfl_callerinfo = NULL
-#endif
+		PFL_END_TRACE();
 	}
 
 
