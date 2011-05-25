@@ -1,0 +1,85 @@
+.\" $Id$
+.\" %PSC_START_COPYRIGHT%
+.\" -----------------------------------------------------------------------------
+.\" Copyright (c) 2011, Pittsburgh Supercomputing Center (PSC).
+.\"
+.\" Permission to use, copy, and modify this software and its documentation
+.\" without fee for personal use or non-commercial use within your organization
+.\" is hereby granted, provided that the above copyright notice is preserved in
+.\" all copies and that the copyright and this permission notice appear in
+.\" supporting documentation.  Permission to redistribute this software to other
+.\" organizations or individuals is not permitted without the written permission
+.\" of the Pittsburgh Supercomputing Center.  PSC makes no representations about
+.\" the suitability of this software for any purpose.  It is provided "as is"
+.\" without express or implied warranty.
+.\" -----------------------------------------------------------------------------
+.\" %PSC_END_COPYRIGHT%
+.Dd May 25, 2011
+.Dt MOUNT_GLAZE 8
+.ds volume Pittsburgh Supercomputing Center
+.Os http://www.psc.edu/
+.Sh NAME
+.Nm mount_vesuvifs
+.Nd mount a local memory temporary file system
+.Sh SYNOPSIS
+.Nm mount_vesuvifs
+.Op Fl dU
+.Op Fl o Ar mountopt
+.Op Fl S Ar socket
+.Ar backfs
+.Ar mountpoint
+.Sh DESCRIPTION
+The
+.Nm
+utility attachs a
+.Tn NUMA
+aware temporary memory file system called
+.Em VesuviFS
+.Pq Vast Ephermal Storage Tn UV Ns -Integrated File System
+under the specified
+.Ar mountpoint .
+.Pp
+The options are as follows:
+.Bl -tag -width Ds
+.It Fl d
+Enable low-level userland file system daemon debug messages.
+.It Fl o Ar mountopt
+Pass additional options to the low-level file system mounter.
+.It Fl S Ar socket
+Specify an alternative path for the named socket through which
+.Nm
+operation can be controlled via
+.Xr vesuctl 8 .
+The following tokens are replaced in the file name specified:
+.Pp
+.Bl -tag -offset indent -width Ds -compact
+.It Ic %h
+the machine hostname
+.It Ic %%
+a literal
+.Sq %
+character
+.El
+.Pp
+The default is
+.Pa /var/run/mount_vesuvifs. Ns Ic %h Ns Pa .sock .
+.It Fl U
+Perform a
+.Xr umount 8
+at the location specified by
+.Ar mountpoint
+before attempting to bring up the file system.
+.El
+.Sh FILES
+.Bl -tag -width Pa -compact
+.It Xo
+.Pa /var/run/mount_vesuvifs. Ns Ic %h Ns Pa .sock
+.Xc
+default
+.Nm
+control socket
+.El
+.Sh SEE ALSO
+.Xr pflenv 7 ,
+.Xr vesuctl 8 ,
+.Xr umount 8
