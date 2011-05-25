@@ -49,6 +49,7 @@ ifeq (${DEBUG},0)
   CFLAGS+=	-Wunused -Wuninitialized -O2
 else
   CFLAGS+=	-g
+  LDFLAGS+=	-fstack-protector-all
 endif
 
 DEFINES+=	-D_REENTRANT -DYY_NO_UNPUT -DYY_NO_INPUT -DYYERROR_VERBOSE
