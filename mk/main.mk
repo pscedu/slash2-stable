@@ -393,20 +393,21 @@ install-hook:
 install: recurse-install install-hook
 	@if [ -n "${LIBRARY}" ]; then					\
 		mkdir -p ${INST_LIBDIR};				\
-		${ECHORUN} cp -pf ${LIBRARY} ${INST_LIBDIR};		\
+		${ECHORUN} ${INSTALL} ${LIBRARY} ${INST_LIBDIR};	\
 	fi
 	@# skip programs part of test suites
-	@if [ -z "$(findstring /tests/,${CURDIR})" ] &&			\
-	    [ -z "$(findstring /utils/,${CURDIR})" ] ||			\
-	    [ "${FORCE_INST}" -eq 1 ]; then				\
+	@if ${NOTEMPTY} "${PROG}" &&					\
+	    [ -z "$(findstring /tests/,${CURDIR})" -a			\
+	      -z "$(findstring /utils/,${CURDIR})" -o			\
+	      "${FORCE_INST}" -eq 1 ]; then				\
 		mkdir -p ${INST_SBINDIR};				\
-		${ECHORUN} cp -pf ${PROG} ${INST_SBINDIR};		\
+		${ECHORUN} ${INSTALL} -m 555 ${PROG} ${INST_SBINDIR};	\
 	fi
 	@if ${NOTEMPTY} "${MAN}"; then					\
 		for i in ${MAN}; do					\
 			dir=${INST_MANDIR}/man$${i##*.};		\
 			mkdir -p $$dir;					\
-			${ECHORUN} cp -fp $$i $$dir;			\
+			${ECHORUN} ${INSTALL} -m 444 $$i $$dir;		\
 		done;							\
 	fi
 	@if ${NOTEMPTY} "${HEADERS}"; then				\
@@ -417,7 +418,7 @@ install: recurse-install install-hook
 				_dir=${INST_INCDIR};			\
 			fi;						\
 			mkdir -p $$_dir;				\
-			${ECHORUN} cp -fp $$i $$_dir;			\
+			${ECHORUN} ${INSTALL} -m 444 $$i $$_dir;	\
 		done;							\
 	fi
 

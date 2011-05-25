@@ -9,6 +9,7 @@ PKG_CONFIG?=	PKG_CONFIG_PATH=${FUSE_BASE} pkg-config
 LIBGCRYPT_CONFIG?=libgcrypt-config
 MPICC?=		mpicc
 ROFF?=		nroff
+INSTALL?=	install
 
 NOTEMPTY=	${ROOTDIR}/tools/notempty
 ECHORUN=	${ROOTDIR}/tools/echorun.sh
