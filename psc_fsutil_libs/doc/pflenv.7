@@ -25,20 +25,32 @@
 file system environment variables
 .Sh SYNOPSIS
 .Bl -tag -compact
+.It Ev LNET_ACCEPT
+.It Ev LNET_ACCEPT_BACKLOG
 .It Ev LNET_ACCEPT_PORT
+.It Ev LNET_ACCEPT_TIMEOUT
+.It Ev LNET_IP2NETS
 .It Ev LNET_NETWORKS
 .It Ev LNET_ROUTES
-.It Ev LNET_USESDP
 .It Ev PSC_DUMPSTACK
 .It Ev PSC_LOG_FILE
 .It Ev PSC_LOG_FORMAT
 .It Ev PSC_LOG_LEVEL
 .It Ev PSC_LOG_LEVEL_ Ns Ar subsys
 .It Ev USOCK_CPORT
+.It Ev USOCK_FAIR_LIMIT
+.It Ev USOCK_MIN_BULK
+.It Ev USOCK_NPOLLTHREADS
+.It Ev USOCK_PEERTXCREDITS
+.It Ev USOCK_POLL_TIMEOUT
+.It Ev USOCK_PORTPID
 .It Ev USOCK_SOCKBUFSIZ
+.It Ev USOCK_SOCKNAGLE
+.It Ev USOCK_TIMEOUT
+.It Ev USOCK_TXCREDITS
 .El
 .Sh DESCRIPTION
-The following environmental variables are recognized by most PSC file
+The following environment variables are recognized by most PSC file
 system utilities to refine program behavior:
 .Bl -tag -width Ds
 .It Ev LNET_ACCEPT_PORT
@@ -54,24 +66,17 @@ stack.
 .Pp
 Examples:
 .Bd -literal -offset indent
-tcp4(ib0), tcp5(ib1)
-tcp0(eth0)
+tcp0(eth0),tcp1(eth1)
+sdp4(ib0)
 .Ed
 .It Ev LNET_ROUTES
 The list of Lustre routes for interconnecting networks.
 .Pp
 Examples:
 .Bd -literal -offset indent
-fill me in
+tcp1 3@ptl1
+tcp1 [2560,2563,2568,2571,2572,2575]@ptl0
 .Ed
-.It Ev LNET_USESDP
-Specify a boolean
-.Li 0
-or
-.Li 1
-designating whether sockets direct should be used for
-.Xr tcp 7
-sockets used by the networking stack.
 .It Ev PSC_DUMPSTACK Pq debugging
 When segmentation violations or fatal error conditions occur, try to
 print a stack trace if this variable is defined.
@@ -105,7 +110,7 @@ numeric level of log message importance
 .It Ic l
 source code file line number
 .It Ic P
-userland file system's originating process'
+file system request's originating process'
 .Tn PID
 .It Ic N
 daemon base name
@@ -116,7 +121,7 @@ symbolic name of thread which generated log message
 rank of process
 .It Ic s
 seconds since Epoch
-.Pq same as Ic %D\*(Lt%s\*(Gt
+.Pq same as Li %D\*(Lt%s\*(Gt
 .It Ic t
 subsystem
 .Tn ID
@@ -124,7 +129,7 @@ which generated log message
 .It Ic T
 subsystem name which generated log message
 .It Ic U
-userland file system's originating process' user
+file system request's originating process' user
 .Tn ID
 .It Ic u
 microseconds into current second when generated
@@ -138,7 +143,7 @@ Examples:
 Each log message has an associated
 .Dq level
 numeric value which can be used to filter granularity of importance.
-This environmental variable specifies the minimum level of importance
+This environment variable specifies the minimum level of importance
 necessary for messages to be reported.
 .Pp
 Ranges from
@@ -173,4 +178,5 @@ value initialized by the operating system.
 .Xr env 1 ,
 .Xr login 1 ,
 .Xr sh 1 ,
-.Xr getenv 3
+.Xr getenv 3 ,
+.Xr environ 7
