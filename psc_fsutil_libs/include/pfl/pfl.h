@@ -65,7 +65,7 @@ void	*pfl_tls_get(int, size_t);
 # define PFL_START_TRACE(pci)	(pfl_callerinfo = (pci))
 # define PFL_END_TRACE()	(pfl_callerinfo = NULL)
 #else
-# define PFL_START_TRACE(pci)
+# define PFL_START_TRACE(pci)	((void)(pci))
 # define PFL_END_TRACE()
 #endif
 
