@@ -241,7 +241,7 @@ write_output(IOT_t *iot)
 }
 
 void
-print_pe_map(__unusedx struct io_toolbox *iot)
+print_pe_map(struct io_toolbox *iot)
 {
 	// if i'm the first process then print the map
 #ifdef CATAMOUNT
@@ -260,6 +260,8 @@ print_pe_map(__unusedx struct io_toolbox *iot)
 			DEBUG("PE %d = NID 0x%x\n", i, map[i].nid);
 		}
 	}
+#else
+	(void)iot;
 #endif
 }
 
