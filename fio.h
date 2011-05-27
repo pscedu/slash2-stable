@@ -325,7 +325,7 @@ extern GROUP_t		*currentGroup;
 	    __func__, __FILE__, __LINE__, ##__VA_ARGS__)
 
 #define TPRINT(tv, format, ...)						\
-	fprintf(stderr, PSCPRI_TIMEVAL " PE_%05d %s() :: " format,	\
+	fprintf(stderr, PSCPRI_TIMEVAL " PE_%05d %12s() :: " format,	\
 	    PSCPRI_TIMEVAL_ARGS(tv), iot->mype, __func__, ##__VA_ARGS__)
 
 #define TPRINTPE TPRINT
