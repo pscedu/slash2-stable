@@ -40,7 +40,7 @@ endif
 LFLAGS+=	-t $$(if ${MINVER} $$(lex -V | sed 's![a-z /]*!!g') 2.5.5; then echo --nounput; fi)
 YFLAGS+=	-d
 
-CFLAGS+=	-Wall -W
+CFLAGS+=	-Wall -W -pipe
 # -Wredundant-decls
 # CFLAGS+=	-Wshadow
 
