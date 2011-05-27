@@ -647,6 +647,7 @@ pscrpc_ni_fini(void)
 	/* NOTREACHED */
 }
 
+#ifdef PFL_CTL
 void
 pscrpc_ctlparam_lnet_networks_get(char buf[PCP_VALUE_MAX])
 {
@@ -660,6 +661,31 @@ pscrpc_ctlparam_lnet_port_get(char buf[PCP_VALUE_MAX])
 {
 	snprintf(buf, PCP_VALUE_MAX, "%d", usocklnd_get_cport());
 }
+
+int
+psc_ctlrep_getlni(int fd, struct psc_ctlmsghdr *mh, void *m)
+{
+	struct psc_ctlmsg_lni *pclni = m;
+	lnet_ni_t *ni;
+	int rc;
+
+	rc = 1;
+	LNET_LOCK();
+	list_for_each_entry(ni, &the_lnet.ln_nis, ni_list) {
+		pclni->pclni_nid = ni->ni_nid;
+		pclni->pclni_maxtxcredits = ni->ni_maxtxcredits;
+		pclni->pclni_txcredits = ni->ni_txcredits;
+		pclni->pclni_mintxcredits = ni->ni_mintxcredits;
+		pclni->pclni_peertxcredits = ni->ni_peertxcredits;
+		pclni->pclni_refcount = ni->ni_refcount;
+		rc = psc_ctlmsg_sendv(fd, mh, pclni);
+		if (!rc)
+			break;
+	}
+	LNET_UNLOCK();
+	return (rc);
+}
+#endif
 
 void
 pscrpc_init_portals(int type)

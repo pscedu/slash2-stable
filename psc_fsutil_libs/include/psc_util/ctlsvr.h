@@ -49,6 +49,7 @@ struct psc_ctlparam_node;
 	{ psc_ctlrep_getiostats,	sizeof(struct psc_ctlmsg_iostats) },	\
 	{ psc_ctlrep_getjournal,	sizeof(struct psc_ctlmsg_journal) },	\
 	{ psc_ctlrep_getlc,		sizeof(struct psc_ctlmsg_lc) },		\
+	{ psc_ctlrep_getlni,		sizeof(struct psc_ctlmsg_lni) },	\
 	{ psc_ctlrep_getloglevel,	sizeof(struct psc_ctlmsg_loglevel) },	\
 	{ psc_ctlrep_getmeter,		sizeof(struct psc_ctlmsg_meter) },	\
 	{ psc_ctlrep_getmlist,		sizeof(struct psc_ctlmsg_mlist) },	\
@@ -90,6 +91,7 @@ int	psc_ctlrep_gethashtable(int, struct psc_ctlmsghdr *, void *);
 int	psc_ctlrep_getiostats(int, struct psc_ctlmsghdr *, void *);
 int	psc_ctlrep_getjournal(int, struct psc_ctlmsghdr *, void *);
 int	psc_ctlrep_getlc(int, struct psc_ctlmsghdr *, void *);
+int	psc_ctlrep_getlni(int, struct psc_ctlmsghdr *, void *);
 int	psc_ctlrep_getloglevel(int, struct psc_ctlmsghdr *, void *);
 int	psc_ctlrep_getmeter(int, struct psc_ctlmsghdr *, void *);
 int	psc_ctlrep_getmlist(int, struct psc_ctlmsghdr *, void *);

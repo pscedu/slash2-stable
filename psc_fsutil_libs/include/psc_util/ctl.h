@@ -53,6 +53,15 @@ struct psc_ctlmsg_subsys {
 	char			pcss_names[0];
 };
 
+struct psc_ctlmsg_lni {
+	uint64_t		pclni_nid;
+	int32_t			pclni_maxtxcredits;
+	int32_t			pclni_txcredits;
+	int32_t			pclni_mintxcredits;
+	int32_t			pclni_peertxcredits;
+	int32_t			pclni_refcount;
+};
+
 struct psc_ctlmsg_loglevel {
 	char			pcl_thrname[PSC_THRNAME_MAX];
 	int32_t			pcl_levels[0];
@@ -123,8 +132,6 @@ struct psc_ctlmsg_meter {
 	struct psc_meter	pcm_mtr;
 };
 
-#define PCM_NAME_ALL		"all"
-
 struct psc_ctlmsg_pool {
 	int32_t			pcpl_min;
 	int32_t			pcpl_max;
@@ -149,8 +156,6 @@ struct psc_ctlmsg_mlist {
 	char			 pcml_name[PEXL_NAME_MAX];
 };
 
-#define PCML_NAME_ALL		"all"
-
 struct psc_ctlmsg_fault {
 	char			pcflt_thrname[PSC_THRNAME_MAX];
 	char			pcflt_name[PSC_FAULT_NAME_MAX];
@@ -164,8 +169,6 @@ struct psc_ctlmsg_fault {
 	int8_t			pcflt_chance;
 };
 
-#define PCFLT_NAME_ALL		"all"
-
 struct psc_ctlmsg_odtable {
 	char			pco_name[ODT_NAME_MAX];
 	int32_t			pco_inuse;
@@ -173,8 +176,6 @@ struct psc_ctlmsg_odtable {
 	int32_t			pco_elemsz;
 	int32_t			pco_opts;
 };
-
-#define PCODT_NAME_ALL		"all"
 
 struct psc_ctlmsg_rpcsvc {
 	char			pcrs_name[PSCRPC_SVCNAME_MAX];
@@ -192,8 +193,6 @@ struct psc_ctlmsg_rpcsvc {
 	int32_t			pcrs_nrep;
 	int32_t			pcrs_nrqbd;
 };
-
-#define PCRPCSVC_NAME_ALL	"all"
 
 struct psc_ctlmsg_journal {
 	char			pcj_name[PJ_NAME_MAX];
@@ -220,6 +219,7 @@ enum {
 	PCMT_GETIOSTATS,
 	PCMT_GETJOURNAL,
 	PCMT_GETLC,
+	PCMT_GETLNI,
 	PCMT_GETLOGLEVEL,
 	PCMT_GETMETER,
 	PCMT_GETMLIST,

@@ -37,6 +37,7 @@ struct psc_ctlmsghdr;
 	{ psc_ctlmsg_iostats_prhdr,	psc_ctlmsg_iostats_prdat,	sizeof(struct psc_ctlmsg_iostats),	NULL },				\
 	{ psc_ctlmsg_journal_prhdr,	psc_ctlmsg_journal_prdat,	sizeof(struct psc_ctlmsg_journal),	NULL },				\
 	{ psc_ctlmsg_lc_prhdr,		psc_ctlmsg_lc_prdat,		sizeof(struct psc_ctlmsg_lc),		NULL },				\
+	{ psc_ctlmsg_lni_prhdr,		psc_ctlmsg_lni_prdat,		sizeof(struct psc_ctlmsg_lni),		NULL },				\
 	{ psc_ctlmsg_loglevel_prhdr,	psc_ctlmsg_loglevel_prdat,	0,					psc_ctlmsg_loglevel_check },	\
 	{ psc_ctlmsg_meter_prhdr,	psc_ctlmsg_meter_prdat,		sizeof(struct psc_ctlmsg_meter),	NULL },				\
 	{ psc_ctlmsg_mlist_prhdr,	psc_ctlmsg_mlist_prdat,		sizeof(struct psc_ctlmsg_mlist),	NULL },				\
@@ -54,6 +55,7 @@ struct psc_ctlmsghdr;
 	{ "iostats",		psc_ctl_packshow_iostats },		\
 	{ "journals",		psc_ctl_packshow_journal },		\
 	{ "listcaches",		psc_ctl_packshow_listcache },		\
+	{ "lni",		psc_ctl_packshow_thread },		\
 	{ "loglevels",		psc_ctl_packshow_loglevels },		\
 	{ "meters",		psc_ctl_packshow_meter },		\
 	{ "mlists",		psc_ctl_packshow_mlist },		\
@@ -94,11 +96,8 @@ struct psc_ctlopt {
 	void			*pco_data;
 };
 
-void  psc_ctlparse_hashtable(char *);
 void  psc_ctlparse_iostats(char *);
 void  psc_ctlparse_lc(char *);
-void  psc_ctlparse_meter(char *);
-void  psc_ctlparse_mlist(char *);
 void  psc_ctlparse_param(char *);
 void  psc_ctlparse_pool(char *);
 void  psc_ctlparse_show(char *);
@@ -108,6 +107,7 @@ void  psc_ctl_packshow_hashtable(char *);
 void  psc_ctl_packshow_iostats(char *);
 void  psc_ctl_packshow_journal(char *);
 void  psc_ctl_packshow_listcache(char *);
+void  psc_ctl_packshow_lni(char *);
 void  psc_ctl_packshow_loglevels(char *);
 void  psc_ctl_packshow_meter(char *);
 void  psc_ctl_packshow_mlist(char *);
@@ -131,6 +131,8 @@ void  psc_ctlmsg_iostats_prdat(const struct psc_ctlmsghdr *, const void *);
 void  psc_ctlmsg_iostats_prhdr(struct psc_ctlmsghdr *, const void *);
 void  psc_ctlmsg_journal_prdat(const struct psc_ctlmsghdr *, const void *);
 void  psc_ctlmsg_journal_prhdr(struct psc_ctlmsghdr *, const void *);
+void  psc_ctlmsg_lni_prdat(const struct psc_ctlmsghdr *, const void *);
+void  psc_ctlmsg_lni_prhdr(struct psc_ctlmsghdr *, const void *);
 void  psc_ctlmsg_lc_prdat(const struct psc_ctlmsghdr *, const void *);
 void  psc_ctlmsg_lc_prhdr(struct psc_ctlmsghdr *, const void *);
 int   psc_ctlmsg_loglevel_check(struct psc_ctlmsghdr *, const void *);
