@@ -213,6 +213,7 @@ main(int argc, char *argv[])
 	PRTYPE(struct psc_ctlmsg_iostats);
 	PRTYPE(struct psc_ctlmsg_journal);
 	PRTYPE(struct psc_ctlmsg_lc);
+	PRTYPE(struct psc_ctlmsg_lni);
 	PRTYPE(struct psc_ctlmsg_loglevel);
 	PRTYPE(struct psc_ctlmsg_meter);
 	PRTYPE(struct psc_ctlmsg_mlist);
@@ -334,6 +335,7 @@ main(int argc, char *argv[])
 	PRVAL(PCMT_GETIOSTATS);
 	PRVAL(PCMT_GETJOURNAL);
 	PRVAL(PCMT_GETLC);
+	PRVAL(PCMT_GETLNI);
 	PRVAL(PCMT_GETLOGLEVEL);
 	PRVAL(PCMT_GETMETER);
 	PRVAL(PCMT_GETMLIST);
