@@ -261,7 +261,7 @@ psc_ctlrep_getsubsys(int fd, struct psc_ctlmsghdr *mh, __unusedx void *m)
 		if (snprintf(&pcss->pcss_names[n * PCSS_NAME_MAX],
 		    PCSS_NAME_MAX, "%s", psc_subsys_name(n)) == -1) {
 			psc_warn("snprintf");
-			psc_ctlsenderr(fd, mh,
+			rc = psc_ctlsenderr(fd, mh,
 			    "unable to retrieve subsystems");
 			goto done;
 		}
@@ -271,6 +271,13 @@ psc_ctlrep_getsubsys(int fd, struct psc_ctlmsghdr *mh, __unusedx void *m)
 	mh->mh_size = 0;	/* reset because we used our own buffer */
 	PSCFREE(pcss);
 	return (rc);
+}
+
+__weak int
+psc_ctlrep_getlni(int fd, struct psc_ctlmsghdr *mh, void *m)
+{
+	return (psc_ctlsenderr(fd, mh, "get lnet interface: %s",
+	    strerror(ENOTSUP)));
 }
 
 /**
@@ -334,7 +341,7 @@ psc_ctlrep_gethashtable(int fd, struct psc_ctlmsghdr *mh, void *m)
 	rc = 1;
 	found = 0;
 	strlcpy(name, pcht->pcht_name, sizeof(name));
-	all = (strcmp(name, PCHT_NAME_ALL) == 0);
+	all = (name[0] == '\0');
 
 	PLL_LOCK(&psc_hashtbls);
 	PLL_FOREACH(pht, &psc_hashtbls) {
@@ -380,7 +387,7 @@ psc_ctlrep_getlc(int fd, struct psc_ctlmsghdr *mh, void *m)
 	rc = 1;
 	found = 0;
 	strlcpy(name, pclc->pclc_name, sizeof(name));
-	all = (strcmp(name, PCLC_NAME_ALL) == 0);
+	all = (strcmp(name, PCLC_NAME_ALL) == 0 || name[0] == '\0');
 	PLL_LOCK(&psc_listcaches);
 	PLL_FOREACH(lc, &psc_listcaches) {
 		if (all || strncmp(lc->plc_name,
@@ -430,7 +437,7 @@ psc_ctlrep_getpool(int fd, struct psc_ctlmsghdr *mh, void *msg)
 	rc = 1;
 	found = 0;
 	strlcpy(name, pcpl->pcpl_name, sizeof(name));
-	all = (strcmp(name, PCPL_NAME_ALL) == 0);
+	all = (strcmp(name, PCPL_NAME_ALL) == 0 || name[0] == '\0');
 	PLL_LOCK(&psc_pools);
 	PLL_FOREACH(m, &psc_pools) {
 		if (all || strncmp(m->ppm_name, name,
@@ -1273,7 +1280,7 @@ psc_ctlrep_getmeter(int fd, struct psc_ctlmsghdr *mh, void *m)
 	rc = 1;
 	found = 0;
 	snprintf(name, sizeof(name), "%s", pcm->pcm_mtr.pm_name);
-	all = (strcmp(name, PCM_NAME_ALL) == 0);
+	all = (name[0] == '\0');
 	PLL_LOCK(&psc_meters);
 	PLL_FOREACH(pm, &psc_meters)
 		if (all || strncmp(pm->pm_name, name,
@@ -1312,7 +1319,7 @@ psc_ctlrep_getmlist(int fd, struct psc_ctlmsghdr *mh, void *m)
 	rc = 1;
 	found = 0;
 	snprintf(name, sizeof(name), "%s", pcml->pcml_name);
-	all = (strcmp(name, PCML_NAME_ALL) == 0);
+	all = (name[0] == '\0');
 	PLL_LOCK(&psc_mlists);
 	PLL_FOREACH(pml, &psc_mlists)
 		if (all || strncmp(pml->pml_name, name,
@@ -1360,7 +1367,7 @@ psc_ctlrep_getodtable(int fd, struct psc_ctlmsghdr *mh, void *m)
 	rc = 1;
 	found = 0;
 	strlcpy(name, pco->pco_name, sizeof(name));
-	all = (strcmp(name, PCODT_NAME_ALL) == 0);
+	all = (name[0] == '0');
 
 	PLL_LOCK(&psc_odtables);
 	PLL_FOREACH(odt, &psc_odtables) {

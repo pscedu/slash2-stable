@@ -237,7 +237,7 @@ psc_ctlrep_getfault(int fd, struct psc_ctlmsghdr *mh, void *msg)
 	rc = 1;
 	found = 0;
 	strlcpy(name, pcflt->pcflt_name, sizeof(name));
-	all = (strcmp(name, PCFLT_NAME_ALL) == 0);
+	all = (name[0] == '\0');
 	PSC_HASHTBL_LOCK(&psc_fault_table);
 	PSC_HASHTBL_FOREACH_BUCKET(b, &psc_fault_table) {
 		psc_hashbkt_lock(b);
