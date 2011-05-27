@@ -379,7 +379,7 @@ extern GROUP_t		*currentGroup;
 } while (0)
 
 #define WARN(format, ...)						\
-	fprintf(stderr, "WARNING %s() %s, %d :: :: "format,		\
+	fprintf(stderr, "WARNING %s() %s, %d :: "format,		\
 	    __func__, __FILE__, __LINE__, ##__VA_ARGS__)
 
 static inline char *
@@ -929,19 +929,14 @@ compare_buffer(const struct buffer *bdesc_a, const struct buffer *bdesc_b)
 {
 	size_t t = 0;
 	size_t i = bdesc_a->buffer_size / LONGSZ;
-
-	unsigned long *a, *b;
-
-	a = (unsigned long*)bdesc_a->buffer;
-	b = (unsigned long*)bdesc_b->buffer;
+	const unsigned long *a = bdesc_a->buffer, *b = bdesc_b->buffer;
 
 	ASSERT(bdesc_a->buffer_size <= bdesc_b->buffer_size);
 
-	for(t=0; t < i; t++) {
-
-		if( a[t] != b[t] ){
-			WARN("checksum failed at t=%zd a 0x%lx addr %p b 0x%lx addr %p\n",
-			    t, a[t], (void *)&a[t], b[t], (void *)&b[t]);
+	for (t = 0; t < i; t++) {
+		if (a[t] != b[t]) {
+			WARN("checksum failed at t=%zd a %#lx addr %p b %#lx addr %p\n",
+			    t, a[t], &a[t], b[t], &b[t]);
 			return -1;
 		}
 	}

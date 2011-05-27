@@ -276,7 +276,7 @@ init_pe(int mype)
 	mygroup = find_group(mype, NULL);
 	ASSERT(mygroup != NULL);
 
-	iot->mygroup = (GROUP_t *)mygroup;
+	iot->mygroup = mygroup;
 
 	/* absolute pe # */
 	iot->mype        = mype;
@@ -285,7 +285,7 @@ init_pe(int mype)
 	/* relative pe # within the group */
 	iot->mytest_pe  = iot->mype % mygroup->num_pes;
 
-	iot->num_blocks = (mygroup->file_size) / (mygroup->block_size);
+	iot->num_blocks = mygroup->file_size / mygroup->block_size;
 
 	if ( ACTIVETYPE(FIO_SAMEFILE) &&
 	    (ACTIVETYPE(FIO_SEEKOFF) || ACTIVETYPE(FIO_INTERSPERSE)) )
@@ -513,9 +513,8 @@ do_open(struct io_toolbox *iot)
 	DEBUG(D_DTREE, "opened ;%s;\n",
 	iot->mypath);
 
-	if ( ACTIVETYPE(FIO_SEEKOFF) ) {
+	if (ACTIVETYPE(FIO_SEEKOFF))
 		SEEKOFF;
-	}
 
 	TPRINT(&iot->times[clk + 1],
 	 "op_op %011.6f '%s'\n",
@@ -611,12 +610,11 @@ do_io(IOT_t *iot, int op)
 
 		DEBUG(D_BLOCK, "Block #%d\n", iot->bdesc.block_number);
 
-		if ( ACTIVETYPE(FIO_INTERSPERSE) )
+		if (ACTIVETYPE(FIO_INTERSPERSE))
 			INTERSPERSE_SEEK;
 
-		if ( ACTIVETYPE(FIO_TIME_BLOCK) ) {
+		if (ACTIVETYPE(FIO_TIME_BLOCK))
 			STARTWATCH(BLOCK_clk);
-		}
 
 		if (clk_type == WRITE_clk)
 			SWABBUFFER(&iot->bdesc);
@@ -635,14 +633,13 @@ do_io(IOT_t *iot, int op)
 		} while (rc == -1 && errno == EINTR);
 
 		DEBUG(D_BLOCK, "IO to fd %d rc == %d\n",
-		iot->myfd, rc);
+		    iot->myfd, rc);
 
 		ASSERTPE(rc >= 0);
 
 		if ( (clk_type == WRITE_clk) &&
-		    ACTIVETYPE(FIO_FSYNC_BLOCK) ) {
+		    ACTIVETYPE(FIO_FSYNC_BLOCK) )
 			ASSERT( !fsync(iot->myfd) );
-		}
 
 		if ( ACTIVETYPE(FIO_VERIFY) ) {
 			CLEANBUFFER(&iot->bdesc);
@@ -997,7 +994,7 @@ main(int argc, char *argv[])
 		/* make sure that a configuration file is provided via redirection */
 		fstat(STDIN_FILENO, &sbuf);
 		if (S_ISCHR(sbuf.st_mode)) {
-			fprintf(stderr, "Please use either -i or redirection to specify a config file.\n");
+			fprintf(stderr, "Use either -i or stdin redirection to specify configuration.\n");
 			usage();
 		}
 	}
@@ -1055,7 +1052,7 @@ main(int argc, char *argv[])
 		 *  is going to have to handle this a bit differently
 		 *  since pe assignment is implicit
 		 */
-		for (i=0; i < group->num_pes; i++) {
+		for (i = 0; i < group->num_pes; i++) {
 			group->threads[i].mype = i + TOTAL_PES;
 
 			BDEBUG("about to create %d\n", group->threads[i].mype);
@@ -1066,10 +1063,9 @@ main(int argc, char *argv[])
 		}
 
 		TOTAL_PES += group->num_pes;
-	}
 
-	for (i=0; i < TOTAL_PES; i++) {
-		rc = pthread_join(group->threads[i].thread_id, NULL);
+		for (i = 0; i < group->num_pes; i++)
+			rc = pthread_join(group->threads[i].thread_id, NULL);
 	}
 #endif
 
