@@ -935,8 +935,8 @@ compare_buffer(const struct buffer *bdesc_a, const struct buffer *bdesc_b)
 
 	for (t = 0; t < i; t++) {
 		if (a[t] != b[t]) {
-			WARN("checksum failed at t=%zd a %#lx addr %p b %#lx addr %p\n",
-			    t, a[t], &a[t], b[t], &b[t]);
+			WARN("checksum failed at t=%zd/%zd a %#lx addr %p b %#lx addr %p\n",
+			    t, i, a[t], &a[t], b[t], &b[t]);
 			return -1;
 		}
 	}
