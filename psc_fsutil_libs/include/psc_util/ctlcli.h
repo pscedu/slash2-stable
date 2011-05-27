@@ -55,7 +55,7 @@ struct psc_ctlmsghdr;
 	{ "iostats",		psc_ctl_packshow_iostats },		\
 	{ "journals",		psc_ctl_packshow_journal },		\
 	{ "listcaches",		psc_ctl_packshow_listcache },		\
-	{ "lni",		psc_ctl_packshow_thread },		\
+	{ "lni",		psc_ctl_packshow_lni },			\
 	{ "loglevels",		psc_ctl_packshow_loglevels },		\
 	{ "meters",		psc_ctl_packshow_meter },		\
 	{ "mlists",		psc_ctl_packshow_mlist },		\
