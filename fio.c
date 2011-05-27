@@ -28,6 +28,9 @@
 #include "fio_sym.h"
 #include "fio.h"
 
+#define PRI_RATE "%7.2f MB/s"
+#define PRI_DURR "%11.6f"
+
 int   TOTAL_PES;
 int   fio_global_debug, fio_lexyacc_debug;
 int   stderr_redirect;
@@ -469,7 +472,7 @@ do_creat(struct io_toolbox *iot)
 			CREAT;
 
 			TPRINT(&iot->times[CREAT_clk + 1],
-			 "cr_op %11.6f '%s'\n",
+			 "cr_op "PRI_DURR" '%s'\n",
 			 op_tmp->oplog_time, iot->mypath);
 		} else
 			BARRIER();
@@ -479,7 +482,7 @@ do_creat(struct io_toolbox *iot)
 		CREAT;
 
 		TPRINT(&iot->times[CREAT_clk + 1],
-		 "cr_op %11.6f '%s'\n",
+		 "cr_op "PRI_DURR" '%s'\n",
 		 op_tmp->oplog_time, iot->mypath);
 	}
 
@@ -519,7 +522,7 @@ do_open(struct io_toolbox *iot)
 		SEEKOFF;
 
 	TPRINT(&iot->times[clk + 1],
-	 "op_op %11.6f '%s'\n",
+	 "op_op "PRI_DURR" '%s'\n",
 	 op_tmp->oplog_time, iot->mypath);
 
 	BARRIER();
@@ -545,7 +548,7 @@ do_unlink(struct io_toolbox *iot)
 	ASSERT(!unlink(iot->mypath));
 	STOPWATCH(UNLINK_clk);
 	TPRINT(&iot->times[UNLINK_clk + 1],
-	 "ul_op %11.6f '%s'\n",
+	 "ul_op "PRI_DURR" '%s'\n",
 	 op_tmp->oplog_time, iot->mypath);
 	return 0;
 }
@@ -666,7 +669,7 @@ do_io(IOT_t *iot, int op)
 				op_type = "bl_wr";
 
 			TPRINT(&iot->times[BLOCK_clk + 1],
-			 "%s %11.6f MB/s %11.6f block# %d bwait %09.6f\n",
+			 "%s "PRI_DURR" "PRI_RATE" block# %d bwait %09.6f\n",
 			 op_type, op_tmp->oplog_time,
 			 (float)(((mygroup->block_size)/op_tmp->oplog_time)/1048576),
 			 iot->bdesc.block_number,
@@ -707,9 +710,10 @@ do_io(IOT_t *iot, int op)
 
 	if (clk_type == READ_clk) {
 		TPRINT(&iot->times[READ_clk + 1],
-		 "rd_op %11.6f MB/s %11.6f '%s' chksum_ok %d\n",
+		 "rd_op "PRI_DURR" "PRI_RATE" '%s' chksum_ok %d\n",
 		 op_tmp->oplog_time,
-		 (float)(((mygroup->block_size*iot->bdesc.block_number)/op_tmp->oplog_time)/1048576),
+		 (float)(((mygroup->block_size*iot->bdesc.block_number)/
+		 op_tmp->oplog_time)/1048576),
 		 iot->mypath, checksum_ok);
 
 		op_tmp->oplog_checksum_ok = checksum_ok;
@@ -723,9 +727,10 @@ do_io(IOT_t *iot, int op)
 
 	} else
 		TPRINT(&iot->times[WRITE_clk + 1],
-		 "wr_op %11.6f MB/s %11.6f '%s'\n",
+		 "wr_op "PRI_DURR" "PRI_RATE" '%s'\n",
 		 op_tmp->oplog_time,
-		 (float)(((mygroup->block_size*iot->bdesc.block_number)/op_tmp->oplog_time)/1048576),
+		 (float)(((mygroup->block_size*iot->bdesc.block_number)/
+		 op_tmp->oplog_time)/1048576),
 		 iot->mypath);
 
 	return 0;
@@ -763,7 +768,7 @@ do_close(IOT_t *iot)
 	CLOSE;
 
 	TPRINT(&iot->times[CLOSE_clk + 1],
-	 "cl_op %11.6f '%s'\n",
+	 "cl_op "PRI_DURR" '%s'\n",
 	 op_tmp->oplog_time, iot->mypath);
 
 	return 0;
@@ -792,7 +797,7 @@ do_stat(IOT_t *iot)
 	STAT;
 
 	TPRINT(&iot->times[STAT_clk + 1],
-	 "st_op %11.6f '%s'\n",
+	 "st_op "PRI_DURR" '%s'\n",
 	 op_tmp->oplog_time, iot->mypath);
 
 	return 0;
@@ -807,7 +812,7 @@ do_fstat(IOT_t *iot)
 	FSTAT;
 
 	TPRINT(&iot->times[FSTAT_clk + 1],
-	 "fs_op %11.6f '%s'\n",
+	 "fs_op "PRI_DURR" '%s'\n",
 	 op_tmp->oplog_time, iot->mypath);
 
 	return 0;
