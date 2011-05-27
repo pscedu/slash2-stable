@@ -202,6 +202,7 @@ struct buffer {
 	size_t		 data_size;
 	off_t		 current_offset;
 	int		 block_number;
+	struct drand48_data rand_data;
 };
 typedef struct buffer BUF_t;
 

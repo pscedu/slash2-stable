@@ -447,10 +447,10 @@ init_buffer(struct buffer *bdesc, int id)
 
 	bzero(bdesc->buffer, bdesc->buffer_size);
 
-	srandom(id);
+	srand48_r(id, &bdesc->rand_data);
 
 	for (t=0; t < i; t++)
-		buf_long_ints[t] = random();
+		lrand48_r(&bdesc->rand_data, &buf_long_ints[t]);
 }
 
 int
@@ -875,7 +875,7 @@ worker(void *arg)
 
 			do {
 				psclist_for_each_entry(current_dir,
-				    &mygroup->dirStack, dir_stack_lentry);
+				    &mygroup->dirStack, dir_stack_lentry)
 					break;
 
 				if (current_dir == NULL) {
