@@ -142,11 +142,16 @@ foreach my $fn (@ARGV) {
 	sub build_list {
 		my %k = @_;
 		my $str = "";
+		my $mac = "Cm";
+		if (exists $k{MACRO}) {
+			$mac = $k{MACRO} if $k{MACRO};
+			delete $k{MACRO};
+		}
 
 		foreach my $k (sort keys %k) {
 			$str .= ".It ";
 			$str .= "Xo\n.Sm off\n." if $k =~ /\n/;
-			$str .= "Cm $k\n";
+			$str .= "$mac $k\n";
 			$str .= ".Sm on\n.Xc\n" if $k =~ /\n/;
 			$str .= $k{$k};
 			$str .= "\n" if $k{$k} && $str !~ /\n$/;
@@ -155,12 +160,13 @@ foreach my $fn (@ARGV) {
 	}
 
 	sub expand_list {
+		my $mac = shift;
 		my (undef, %k) = eval_data($_[0]);
-		return build_list(%k);
+		return build_list(MACRO => $mac, %k);
 	}
 
 	# process lists
-	$data =~ s/$T%PFL_LIST\s*{\n(.*?)$T}%\n/expand_list($1)/gems;
+	$data =~ s/$T%PFL_LIST\s*(\w*)\s*{\n(.*?)$T}%\n/expand_list($1, $2)/gems;
 
 	sub expand_expr {
 		my (undef, @t) = eval_data($_[0]);
