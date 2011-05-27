@@ -38,15 +38,23 @@ may be one of the following:
 .\"	    "lnet.port"			=> "If applicable,\n.Xr tcp 7\nport to use to connect to remote\n.Tn LNET\npeers.",
 .\"	) : (),
 .\"	exists $DATA->{params} ? %{ $DATA->{params} } : (),
-.\"	"log.format"			=> "The header prepended to server log messages.\nSee\n.Xr pflenv 7\nfor details on this format.",
-.\"	"log.file"			=> <<'EOF',
+.\"	"log.format" => <<'EOF' .
+.\"		The header prepended to server log messages.
+.\"		See the description of
+.\"		.Ev PSC_LOG_FORMAT
+.\"		EOF
+.\"	    (exists $DATA->{log_xr} ? $DATA->{log_xr} : "") .
+.\"	    <<'EOF',
+.\"		for details on this format.
+.\"		EOF
+.\"	"log.file" => <<'EOF',
 .\"		File path name where log messages will be written.
 .\"		This value is write-only.
 .\"		If the
 .\"		.Li +=
 .\"		assignment operator is used, this file will not be truncated.
 .\"		EOF
-.\"	"pool. Ns Ar name"		=> <<'EOF',
+.\"	"pool. Ns Ar name" => <<'EOF',
 .\"		Access the memory pool specified by
 .\"		.Ar name .
 .\"		The following sub-fields are available:
@@ -62,7 +70,7 @@ may be one of the following:
 .\"		Current number of entries contained in pool.
 .\"		.El
 .\"		EOF
-.\"	"rlim"				=> <<'EOF',
+.\"	"rlim" => <<'EOF',
 .\"		Process resource limits.
 .\"		See
 .\"		.Xr getrlimit 2
@@ -77,41 +85,25 @@ may be one of the following:
 .\"		the maximum number of open files.
 .\"		.El
 .\"		EOF
-.\"	"log.level Ns Op . Ns Ar subsystem" => <<'EOF'
+.\"	"log.level Ns Op . Ns Ar subsystem" => <<'EOF' .
 .\"		The logging level of debug message output.
 .\"		.Pp
-.\"		.Ar subsystem
-.\"		may be one of the following:
-.\"		.Pp
-.\"		.Bl -tag -compact -offset 3n -width 13n
+.\"		See the description of
+.\"		.Ev PSC_LOG_LEVEL_ Ns Ar subsys
 .\"		EOF
-.\"		. build_list(
-.\"			exists $DATA->{subsys} ? %{ $DATA->{subsys} } : (),
-.\"			def	=> "Default",
-.\"			mem	=> "Memory allocations and releases",
-.\"			exists $mods{rpc} ? (
-.\"			  lnet	=> "Lustre networking stack",
-.\"			  rpc	=> "Network remote procedure calls"
-.\"			) : ()
-.\"		) . <<'EOF'
-.\"		.El
-.\"		.Pp
+.\"	    (exists $DATA->{log_xr} ? $DATA->{log_xr} : "") .
+.\"	    <<'EOF' .
+.\"		for a list of available subsystems.
 .\"		If
 .\"		.Ar subsystem
-.\"		is left unspecified, all subsystems will be accessed.
+.\"		is not specified, all subsystems will be accessed.
 .\"		.Pp
-.\"		The log level value may be one of the following:
-.\"		.Pp
-.\"		.Bl -tag -compact -offset 3n -width 13n
+.\"		See the description of
+.\"		.Ev PSC_LOG_LEVEL
 .\"		EOF
-.\"		. build_list(
-.\"			"0 , none"		=> "No logging",
-.\"			"1 , error"		=> "Recoverable failures",
-.\"			"2 , warn"		=> "Something wrong which requires attention\n.Pq default",
-.\"			"3 , notice"		=> "Something unusual which recommends attention",
-.\"			"4 , info"		=> "Informational messages",
-.\"			"5 , debug"		=> "Debugging messages",
-.\"			"6 , trace , all"	=> "All messages"
-.\"		) . ".El"
+.\"	    (exists $DATA->{log_xr} ? $DATA->{log_xr} : "") .
+.\"	    <<'EOF',
+.\"		for recognized log level values.
+.\"		EOF
 .\" }%
 .El
