@@ -100,51 +100,6 @@ psc_ctlmsg_push(int type, size_t msiz)
 }
 
 void
-psc_ctlparse_hashtable(char *table)
-{
-	struct psc_ctlmsg_hashtable *pcht;
-	int n;
-
-	pcht = psc_ctlmsg_push(PCMT_GETHASHTABLE, sizeof(*pcht));
-	if (table) {
-		n = strlcpy(pcht->pcht_name, table, sizeof(pcht->pcht_name));
-		if (n == 0 || n >= (int)sizeof(pcht->pcht_name))
-			errx(1, "invalid thread name: %s", table);
-	}
-}
-
-void
-psc_ctl_packshow_loglevels(char *thr)
-{
-	struct psc_ctlmsg_loglevel *pcl;
-	int n;
-
-	psc_ctlmsg_push(PCMT_GETSUBSYS,
-	    sizeof(struct psc_ctlmsg_subsys));
-
-	pcl = psc_ctlmsg_push(PCMT_GETLOGLEVEL, sizeof(*pcl));
-	if (thr) {
-		n = strlcpy(pcl->pcl_thrname, thr, sizeof(pcl->pcl_thrname));
-		if (n == 0 || n >= (int)sizeof(pcl->pcl_thrname))
-			errx(1, "invalid thread name: %s", thr);
-	}
-}
-
-void
-psc_ctl_packshow_thread(char *thr)
-{
-	struct psc_ctlmsg_thread *pcst;
-	int n;
-
-	pcst = psc_ctlmsg_push(PCMT_GETTHREAD, sizeof(*pcst));
-	if (thr) {
-		n = strlcpy(pcst->pcst_thrname, thr, sizeof(pcst->pcst_thrname));
-		if (n == 0 || n >= (int)sizeof(pcst->pcst_thrname))
-			errx(1, "invalid thread name: %s", thr);
-	}
-}
-
-void
 psc_ctl_packshow_fault(char *thrs)
 {
 	struct psc_ctlmsg_fault *pcflt;
@@ -181,50 +136,6 @@ psc_ctl_packshow_fault(char *thrs)
 			if (n == 0 || n >= (int)sizeof(pcflt->pcflt_thrname))
 				errx(1, "invalid thread name: %s", thr);
 		}
-	}
-}
-
-void
-psc_ctl_packshow_odtable(char *table)
-{
-	struct psc_ctlmsg_odtable *pco;
-	int n;
-
-	pco = psc_ctlmsg_push(PCMT_GETODTABLE, sizeof(*pco));
-	if (table) {
-		n = strlcpy(pco->pco_name, table, sizeof(pco->pco_name));
-		if (n == 0 || n >= (int)sizeof(pco->pco_name))
-			errx(1, "invalid odtable name: %s", table);
-	}
-}
-
-void
-psc_ctl_packshow_pool(char *pool)
-{
-	struct psc_ctlmsg_pool *pcpl;
-	int n;
-
-	pcpl = psc_ctlmsg_push(PCMT_GETPOOL, sizeof(*pcpl));
-	if (pool) {
-		n = strlcpy(pcpl->pcpl_name, pool,
-		    sizeof(pcpl->pcpl_name));
-		if (n == 0 || n >= (int)sizeof(pcpl->pcpl_name))
-			errx(1, "invalid pool name: %s", pool);
-	}
-}
-
-void
-psc_ctl_packshow_listcache(char *lc)
-{
-	struct psc_ctlmsg_lc *pclc;
-	int n;
-
-	pclc = psc_ctlmsg_push(PCMT_GETLC, sizeof(*pclc));
-	if (lc) {
-		n = strlcpy(pclc->pclc_name, lc,
-		    sizeof(pclc->pclc_name));
-		if (n == 0 || n >= (int)sizeof(pclc->pclc_name))
-			errx(1, "invalid list cache name: %s", lc);
 	}
 }
 
@@ -274,6 +185,52 @@ psc_ctl_packshow_journal(char *journal)
 }
 
 void
+psc_ctl_packshow_listcache(char *lc)
+{
+	struct psc_ctlmsg_lc *pclc;
+	int n;
+
+	pclc = psc_ctlmsg_push(PCMT_GETLC, sizeof(*pclc));
+	if (lc) {
+		n = strlcpy(pclc->pclc_name, lc,
+		    sizeof(pclc->pclc_name));
+		if (n == 0 || n >= (int)sizeof(pclc->pclc_name))
+			errx(1, "invalid list cache name: %s", lc);
+	}
+}
+
+void
+psc_ctl_packshow_lni(char *lni)
+{
+	struct psc_ctlmsg_lni *pclni;
+
+	pclni = psc_ctlmsg_push(PCMT_GETLNI, sizeof(*pclni));
+	if (lni) {
+//		n = strlcpy(pclni->pclni_name, lni,
+//		    sizeof(pclni->pclni_name));
+//		if (n == 0 || n >= (int)sizeof(pclni->pclni_name))
+//			errx(1, "invalid lnet if name: %s", lc);
+	}
+}
+
+void
+psc_ctl_packshow_loglevels(char *thr)
+{
+	struct psc_ctlmsg_loglevel *pcl;
+	int n;
+
+	psc_ctlmsg_push(PCMT_GETSUBSYS,
+	    sizeof(struct psc_ctlmsg_subsys));
+
+	pcl = psc_ctlmsg_push(PCMT_GETLOGLEVEL, sizeof(*pcl));
+	if (thr) {
+		n = strlcpy(pcl->pcl_thrname, thr, sizeof(pcl->pcl_thrname));
+		if (n == 0 || n >= (int)sizeof(pcl->pcl_thrname))
+			errx(1, "invalid thread name: %s", thr);
+	}
+}
+
+void
 psc_ctl_packshow_meter(char *meter)
 {
 	struct psc_ctlmsg_meter *pcm;
@@ -284,7 +241,7 @@ psc_ctl_packshow_meter(char *meter)
 		n = strlcpy(pcm->pcm_mtr.pm_name, meter,
 		    sizeof(pcm->pcm_mtr.pm_name));
 		if (n == 0 || n >= (int)sizeof(pcm->pcm_mtr.pm_name))
-			errx(1, "invalid meter name: %s", meter);
+			errx(1, "invalid progress meter name: %s", meter);
 	}
 }
 
@@ -304,6 +261,35 @@ psc_ctl_packshow_mlist(char *mlist)
 }
 
 void
+psc_ctl_packshow_odtable(char *table)
+{
+	struct psc_ctlmsg_odtable *pco;
+	int n;
+
+	pco = psc_ctlmsg_push(PCMT_GETODTABLE, sizeof(*pco));
+	if (table) {
+		n = strlcpy(pco->pco_name, table, sizeof(pco->pco_name));
+		if (n == 0 || n >= (int)sizeof(pco->pco_name))
+			errx(1, "invalid odtable name: %s", table);
+	}
+}
+
+void
+psc_ctl_packshow_pool(char *pool)
+{
+	struct psc_ctlmsg_pool *pcpl;
+	int n;
+
+	pcpl = psc_ctlmsg_push(PCMT_GETPOOL, sizeof(*pcpl));
+	if (pool) {
+		n = strlcpy(pcpl->pcpl_name, pool,
+		    sizeof(pcpl->pcpl_name));
+		if (n == 0 || n >= (int)sizeof(pcpl->pcpl_name))
+			errx(1, "invalid pool name: %s", pool);
+	}
+}
+
+void
 psc_ctl_packshow_rpcsvc(char *rpcsvc)
 {
 	struct psc_ctlmsg_rpcsvc *pcrs;
@@ -314,6 +300,20 @@ psc_ctl_packshow_rpcsvc(char *rpcsvc)
 		n = strlcpy(pcrs->pcrs_name, rpcsvc, sizeof(pcrs->pcrs_name));
 		if (n == 0 || n >= (int)sizeof(pcrs->pcrs_name))
 			errx(1, "invalid rpcsvc name: %s", rpcsvc);
+	}
+}
+
+void
+psc_ctl_packshow_thread(char *thr)
+{
+	struct psc_ctlmsg_thread *pcst;
+	int n;
+
+	pcst = psc_ctlmsg_push(PCMT_GETTHREAD, sizeof(*pcst));
+	if (thr) {
+		n = strlcpy(pcst->pcst_thrname, thr, sizeof(pcst->pcst_thrname));
+		if (n == 0 || n >= (int)sizeof(pcst->pcst_thrname))
+			errx(1, "invalid thread name: %s", thr);
 	}
 }
 
@@ -483,47 +483,6 @@ psc_ctlparse_iostats(char *iostats)
 			psc_fatal("snprintf");
 		else if (n == 0 || n > (int)sizeof(pci->pci_ist.ist_name))
 			errx(1, "invalid iostat name: %s", iostat);
-	}
-}
-
-void
-psc_ctlparse_meter(char *meters)
-{
-	struct psc_ctlmsg_meter *pcm;
-	char *meter, *next;
-	size_t n;
-
-	for (meter = meters; meter != NULL; meter = next) {
-		if ((next = strchr(meter, ',')) != NULL)
-			*next++ = '\0';
-
-		pcm = psc_ctlmsg_push(PCMT_GETMETER, sizeof(*pcm));
-		n = strlcpy(pcm->pcm_mtr.pm_name, meter,
-		    sizeof(pcm->pcm_mtr.pm_name));
-		if (n == 0 || n >= sizeof(pcm->pcm_mtr.pm_name))
-			errx(1, "invalid meter: %s", meter);
-	}
-}
-
-void
-psc_ctlparse_mlist(char *mlists)
-{
-	struct psc_ctlmsg_mlist *pcml;
-	char *mlist, *mlistnext;
-	int n;
-
-	for (mlist = mlists; mlist != NULL; mlist = mlistnext) {
-		if ((mlistnext = strchr(mlist, ',')) != NULL)
-			*mlistnext++ = '\0';
-
-		pcml = psc_ctlmsg_push(PCMT_GETMLIST, sizeof(*pcml));
-
-		n = snprintf(pcml->pcml_name, sizeof(pcml->pcml_name),
-		    "%s", mlist);
-		if (n == -1)
-			psc_fatal("snprintf");
-		else if (n == 0 || n > (int)sizeof(pcml->pcml_name))
-			errx(1, "invalid mlist: %s", mlist);
 	}
 }
 
@@ -870,6 +829,26 @@ psc_ctlmsg_thread_prdat(__unusedx const struct psc_ctlmsghdr *mh,
 	    psc_ctl_prthrs[pcst->pcst_thrtype])
 		psc_ctl_prthrs[pcst->pcst_thrtype](pcst);
 	printf("\n");
+}
+
+void
+psc_ctlmsg_lni_prhdr(__unusedx struct psc_ctlmsghdr *mh,
+    __unusedx const void *m)
+{
+	printf("%-39s %8s %8s %8s %8s %4s\n",
+	    "lnetif", "maxcr", "txcr", "mincr", "peercr", "refs");
+}
+
+void
+psc_ctlmsg_lni_prdat(__unusedx const struct psc_ctlmsghdr *mh,
+    const void *m)
+{
+	const struct psc_ctlmsg_lni *pclni = m;
+
+	printf("%-39lx %8d %8d %8d %8d %4d\n",
+	    pclni->pclni_nid, pclni->pclni_maxtxcredits,
+	    pclni->pclni_txcredits, pclni->pclni_mintxcredits,
+	    pclni->pclni_peertxcredits, pclni->pclni_refcount);
 }
 
 int
