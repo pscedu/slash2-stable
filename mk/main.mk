@@ -89,7 +89,7 @@ PSCRPC_SRCS+=		${PFL_BASE}/psc_rpc/util.c
 _TINCLUDES=		$(filter-out -I%,${INCLUDES}) $(patsubst %,-I%,$(foreach \
 			dir,$(patsubst -I%,%,$(filter -I%,${INCLUDES})), $(realpath ${dir})))
 
-CFLAGS+=		${DEFINES} ${_TINCLUDES}
+CFLAGS+=		$(sort ${DEFINES}) ${_TINCLUDES}
 TARGET?=		$(sort ${PROG} ${LIBRARY} ${TEST})
 PROG?=			${TEST}
 
