@@ -36,6 +36,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <syslog.h>
 #include <unistd.h>
 
 #include "pfl/cdefs.h"
@@ -66,6 +67,16 @@ const char			*psc_logfmt = PSC_LOG_FMT;
 __static enum psclog_level	 psc_loglevel = PLL_WARN;
 __static struct psclog_data	*psc_logdata;
 char				 psclog_eol[8] = "\n";	/* overrideable with ncurses EOL */
+int				 pfl_syslog;
+
+int pfl_syslog_map[] = {
+	LOG_CRIT,
+	LOG_ERR,
+	LOG_WARNING,
+	LOG_NOTICE,
+	LOG_INFO,
+	LOG_DEBUG
+};
 
 void
 psc_log_init(void)
@@ -85,6 +96,15 @@ psc_log_init(void)
 		psc_loglevel = psc_loglevel_fromstr(p);
 		if (psc_loglevel == PNLOGLEVELS)
 			errx(1, "invalid PSC_LOG_LEVEL: %s", p);
+	}
+
+	p = getenv("PSC_SYSLOG");
+	if (p && strcmp(p, "0")) {
+		extern const char *progname;
+
+		openlog(progname, LOG_CONS | LOG_NDELAY | LOG_PERROR,
+		    LOG_DAEMON);
+		pfl_syslog = 1;
 	}
 }
 
@@ -257,17 +277,25 @@ _psclogv(const struct pfl_callerinfo *pci, enum psclog_level level,
 	struct timeval tv;
 	const char *thrname;
 	int rc, save_errno;
-	va_list apd;
+	va_list ap0;
 	pid_t thrid;
 	FILE *fp;
+
+	va_copy(ap0, ap);
 
 	save_errno = errno;
 
 	d = psclog_getdata();
 	if (d->pld_flags & PLDF_INLOG) {
-		if (level == PLL_FATAL)
-			goto log;
-		return;
+		if (level == PLL_FATAL) {
+//			write();
+			fprintf(stderr, fmt, ap);
+			abort(); /* this should go to syslog */
+		} else {
+//			fprintf(stderr, "log in critical path");
+//			abort();
+		}
+		goto out;
 	}
 	d->pld_flags |= PLDF_INLOG;
 
@@ -295,6 +323,7 @@ _psclogv(const struct pfl_callerinfo *pci, enum psclog_level level,
 		FMTSTRCASE('n', "s", thrname)
 		FMTSTRCASE('P', "d", psclog_get_fuse_ctx_pid())
 		FMTSTRCASE('r', "d", d->pld_rank)
+//		FMTSTRCASE('S', "s", call stack)
 		FMTSTRCASE('s', "lu", tv.tv_sec)
 		FMTSTRCASE('T', "s", psc_subsys_name(pci->pci_subsys))
 		FMTSTRCASE('t', "d", pci->pci_subsys)
@@ -307,51 +336,56 @@ _psclogv(const struct pfl_callerinfo *pci, enum psclog_level level,
 		warnx("psclog error: prefix too long");
 		rc = sizeof(fmtbuf) - 1;
 	}
+	/* trim newline if present, since we add our own */
 	for (p = fmtbuf + rc - 1; p >= fmtbuf && *p == '\n'; p--)
 		*p = '\0';
 
- log:
-	va_copy(apd, ap);
-
 	PSCLOG_LOCK();
-	/* consider using fprintf_unlocked() for speed */
-	fprintf(stderr, "%s", prefix);
-	vfprintf(stderr, fmtbuf, ap);
-	if (options & PLO_ERRNO)
-		fprintf(stderr, ": %s", APP_STRERROR(save_errno));
-	fprintf(stderr, "%s", psclog_eol);
-	fflush(stderr);
 
-	if (level <= PLL_WARN) {
-		if (!isatty(fileno(stderr))) {
+	if (pfl_syslog && level >= 0 && level < nitems(pfl_syslog_map)) {
+//		if (options & PLO_ERRNO)
+//			vsyslog(PRI, fmtbuf, ap0);
+		vsyslog(pfl_syslog_map[level], fmtbuf, ap0);
+	} else {
+		/* consider using fprintf_unlocked() for speed */
+		fprintf(stderr, "%s", prefix);
+		vfprintf(stderr, fmtbuf, ap);
+		if (options & PLO_ERRNO)
+			fprintf(stderr, ": %s", APP_STRERROR(save_errno));
+		fprintf(stderr, "%s", psclog_eol);
+		fflush(stderr);
+
+		if (level <= PLL_NOTICE && !isatty(fileno(stderr))) {
 			fp = fopen(_PATH_TTY, "w");
 			if (fp) {
 				fprintf(fp, "%s", prefix);
-				vfprintf(fp, fmtbuf, apd);
+				vfprintf(fp, fmtbuf, ap0);
 				if (options & PLO_ERRNO)
 					fprintf(fp, ": %s", APP_STRERROR(save_errno));
 				fprintf(fp, "\n");
 				fclose(fp);
 			}
 		}
-		if (level == PLL_FATAL) {
-			p = getenv("PSC_DUMPSTACK");
-			if (p && strcmp(p, "0"))
-				pfl_dump_stack();
-			d->pld_flags &= ~PLDF_INLOG;
-			/* XXX run atexit handlers */
-			abort();
-		}
 	}
 
-	va_end(apd);
+	if (level == PLL_FATAL) {
+		p = getenv("PSC_DUMPSTACK");
+		if (p && strcmp(p, "0"))
+			pfl_dump_stack();
+		d->pld_flags &= ~PLDF_INLOG;
+		/* XXX run atexit handlers */
+		abort();
+	}
 
 	PSCLOG_UNLOCK();
 
 	d->pld_flags &= ~PLDF_INLOG;
 
-	/* Restore in case app needs it after our fprintf()'s may have modified it. */
+ out:
+	/* Restore in case app needs it after our printf()'s may have modified it. */
 	errno = save_errno;
+
+	va_end(ap0);
 }
 
 void
