@@ -245,9 +245,9 @@ pscrpc_client_bulk_callback(lnet_event_t *ev)
 	LASSERT(ev->unlinked);
 
 	CDEBUG((ev->status == 0) ? D_NET : D_ERROR,
-	       "event type %d, status %d, desc %p\n",
-	       ev->type, ev->status, desc);
-
+	       "event type %d, status %d, desc %p x%"PRId64"\n",
+	       ev->type, ev->status, desc, desc->bd_req->rq_xid);
+ 
 	spinlock(&desc->bd_lock);
 
 	LASSERT(desc->bd_network_rw);
