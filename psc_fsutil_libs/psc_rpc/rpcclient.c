@@ -69,7 +69,6 @@ pscrpc_request_addref(struct pscrpc_request *req)
 	return (req);
 }
 
-//struct pscrpc_import *class_new_import(struct obd_device *obd)
 struct pscrpc_import *
 pscrpc_new_import(void)
 {
@@ -134,32 +133,6 @@ pscrpc_import_put(struct pscrpc_import *import)
 	PSCRPC_OBD_FREE(import, sizeof(*import));
 }
 
-#if 0 //try to get away without uuid's
-struct pscrpc_connection *
-pscrpc_uuid_to_connection(struct obd_uuid *uuid)
-{
-	struct pscrpc_connection *c;
-	lnet_nid_t                self;
-	lnet_process_id_t         peer;
-	int                       err;
-
-	err = pscrpc_uuid_to_peer(uuid, &peer, &self);
-	if (err) {
-		CERROR("cannot find peer %s!\n", uuid->uuid);
-		return NULL;
-	}
-
-	c = pscrpc_get_connection(peer, self, uuid);
-	if (c) {
-		memcpy(c->c_remote_uuid.uuid,
-		       uuid->uuid, sizeof(c->c_remote_uuid.uuid));
-	}
-
-	CDEBUG(D_INFO, "%s -> %p\n", uuid->uuid, c);
-
-	return c;
-}
-#endif
 
 #if 0
 static struct pscrpc_request *
@@ -241,7 +214,7 @@ pscrpc_prep_req_pool(struct pscrpc_import *imp, uint32_t version,
 	else
 		request->rq_timeout = PSCRPC_OBD_TIMEOUT;
 
-	request->rq_send_state = PSCRPC_IMP_FULL;
+	request->rq_send_state = PSCRPC_IMP_NOOP;
 	request->rq_type = PSCRPC_MSG_REQUEST;
 	request->rq_import = pscrpc_import_get(imp);
 	request->rq_export = NULL;
@@ -532,37 +505,10 @@ pscrpc_send_new_req_locked(struct pscrpc_request *req)
 	spinlock(&imp->imp_lock);
 
 	req->rq_import_generation = imp->imp_generation;
-#if 0
-	if (pscrpc_import_delay_req(imp, req, &rc)) {
-		spinlock(&req->rq_lock);
-		req->rq_waiting = 1;
-		freelock(&req->rq_lock);
 
-		DEBUG_REQ(D_HA, req, "req from PID %d waiting for recovery: "
-			  "(%s != %s)",
-			  req->rq_reqmsg->status,
-			pscrpc_import_state_name(req->rq_send_state),
-			  pscrpc_import_state_name(imp->imp_state));
-
-		psclist_add_tail(&req->rq_lentry, &imp->imp_delayed_list);
-		freelock(&imp->imp_lock);
-		return (0);
-	}
-
-	if (rc) {
-		freelock(&imp->imp_lock);
-		req->rq_status = rc;
-		req->rq_phase = PSCRPC_RQ_PHASE_INTERPRET;
-		return (rc);
-	}
-#endif
-
-	/* XXX this is the same as pscrpc_queue_wait */
 	psclist_add_tail(&req->rq_lentry, &imp->imp_sending_list);
 	freelock(&imp->imp_lock);
 
-	// we don't have a 'current' struct - paul
-	//req->rq_reqmsg->status = current->pid;
 	rc = pscrpc_send_rpc(req, 0);
 	if (rc) {
 		DEBUG_REQ(PLL_WARN, req,
@@ -642,6 +588,9 @@ pscrpc_unregister_reply(struct pscrpc_request *request)
 
 	psc_assert(!in_interrupt());             /* might sleep */
 
+	DEBUG_REQ(PLL_INFO, request, "receving_reply=%d",
+		  pscrpc_client_receiving_reply(request));
+
 	if (!pscrpc_client_receiving_reply(request))
 		return;
 
@@ -655,18 +604,24 @@ pscrpc_unregister_reply(struct pscrpc_request *request)
 	else
 		wq = &request->rq_reply_waitq;
 
+
+	if (request->rq_abort_reply) {
+		//request->rq_receiving_reply = 0;
+		//return;
+	}
+
 	for (;;) {
 		/* Network access will complete in finite time but the HUGE
 		 * timeout lets us CWARN for visibility of sluggish NALs */
-		lwi = LWI_TIMEOUT(300, NULL, NULL);
+		lwi = LWI_TIMEOUT(10, NULL, NULL);
 		rc = pscrpc_cli_wait_event(wq,
-				    !pscrpc_client_receiving_reply(request),
-				    &lwi);
+		    !pscrpc_client_receiving_reply(request), &lwi);
 		if (rc == 0)
 			return;
 
 		psc_assert(rc == -ETIMEDOUT);
-		DEBUG_REQ(PLL_WARN, request, "Unexpectedly long timeout");
+		DEBUG_REQ(PLL_ERROR, request, "Unexpectedly long timeout");
+		//abort();
 	}
 }
 
@@ -684,6 +639,7 @@ pscrpc_check_status(struct pscrpc_request *req)
 
 	if (err < 0) {
 		DEBUG_REQ(PLL_INFO, req, "status is %d", err);
+
 	} else if (err > 0) {
 		/* XXX: translate this error from net to host */
 		DEBUG_REQ(PLL_INFO, req, "status is %d", err);
@@ -730,39 +686,11 @@ after_reply(struct pscrpc_request *req)
 	 */
 	if ((rc == -ENOTCONN) || (rc == -ENODEV)) {
 		psclog_errorx("ENOTCONN or ENODEV");
-#if 0
-		if (req->rq_send_state != PSCRPC_IMP_FULL ||
-		    imp->imp_obd->obd_no_recov || imp->imp_dlm_fake) {
-			return (-ENOTCONN);
-		}
-
-		pscrpc_request_handle_notconn(req);
-#endif
 		return (rc);
 	}
 
 	/* Store transno in reqmsg for replay. */
 	req->rq_reqmsg->transno = req->rq_transno = req->rq_repmsg->transno;
-
-#if 0
-	if (req->rq_import->imp_replayable) {
-		spinlock(&imp->imp_lock);
-		if (req->rq_transno)
-			pscrpc_retain_replayable_request(req, imp);
-		else if (req->rq_commit_cb) {
-			freelock(&imp->imp_lock);
-			req->rq_commit_cb(req);
-			spinlock(&imp->imp_lock);
-		}
-
-		/* Replay-enabled imports return commit-status information. */
-		if (req->rq_repmsg->last_committed)
-			imp->imp_peer_committed_transno =
-				req->rq_repmsg->last_committed;
-		pscrpc_free_committed(imp);
-		freelock(&imp->imp_lock);
-	}
-#endif
 
 	psc_iostats_intv_add(&req->rq_import->imp_connection->c_iostats_rcv,
 	    req->rq_replen);
@@ -783,67 +711,20 @@ pscrpc_queue_wait(struct pscrpc_request *req)
 	atomic_inc(&imp->imp_inflight);
 
 	psc_assert(imp);
-	psclog_info("Sending RPC cookie:pid:xid:nid:opc "
-	      "%#"PRIx64":%d:%"PRIu64":%s:%d",
-	      req->rq_reqmsg->handle.cookie,
-	      imp->imp_connection->c_peer.pid, req->rq_xid,
-	      libcfs_nid2str(imp->imp_connection->c_peer.nid),
-	      req->rq_reqmsg->opc);
+	DEBUG_REQ(PLL_INFO, req, "sending.."); 
 
 	/* Mark phase here for a little debug help */
 	req->rq_phase = PSCRPC_RQ_PHASE_RPC;
 
 	spinlock(&imp->imp_lock);
 	req->rq_import_generation = imp->imp_generation;
+
  restart:
-	/*
-#if 0
-	if (pscrpc_import_delay_req(imp, req, &rc)) {
-		psclist_del(&req->rq_lentry);
-
-		psclist_add_tail(&req->rq_lentry, &imp->imp_delayed_list);
-		freelock(&imp->imp_lock);
-
-		DEBUG_REQ(PLL_WARN, req, "\"%s\" waiting for recovery: (%s != %s)",
-			  current->comm,
-			  pscrpc_import_state_name(req->rq_send_state),
-			  pscrpc_import_state_name(imp->imp_state));
-		lwi = LWI_INTR(interrupted_request, req);
-		rc = l_wait_event(req->rq_reply_waitq,
-				  (req->rq_send_state == imp->imp_state ||
-				   req->rq_err || req->rq_intr),
-				  &lwi);
-		DEBUG_REQ(PLL_WARN, req, "\"%s\" awake: (%s == %s or %d/%d == 1)",
-			  current->comm,
-			  pscrpc_import_state_name(imp->imp_state),
-			  pscrpc_import_state_name(req->rq_send_state),
-			  req->rq_err, req->rq_intr);
-
-		spinlock(&imp->imp_lock);
-		psclist_del(&req->rq_lentry);
-
-		if (req->rq_err) {
-			rc = -EIO;
-		} else if (req->rq_intr) {
-			rc = -EINTR;
-		} else if (req->rq_no_resend) {
-			freelock(&imp->imp_lock);
-			GOTO(out, rc = -ETIMEDOUT);
-		} else {
-			GOTO(restart, rc);
-		}
-	}
-#endif
-	*/
-	if (rc) {
-		psclist_del(&req->rq_lentry,
-		    psc_lentry_hd(&req->rq_lentry));
-		freelock(&imp->imp_lock);
-		req->rq_status = rc; // XXX this ok?
-		GOTO(out, rc);
-	}
-
 	if (req->rq_resend) {
+		DEBUG_REQ(PLL_WARN, req, "resending (receiving_reply=%d)", 
+			  req->rq_receiving_reply);
+		psc_assert(!req->rq_no_resend);
+		pscrpc_unregister_reply(req);
 		pscrpc_msg_add_flags(req->rq_reqmsg, MSG_RESENT);
 
 		if (req->rq_bulk) {
@@ -858,10 +739,7 @@ pscrpc_queue_wait(struct pscrpc_request *req)
 			DEBUG_REQ(PLL_INFO, req, "bumping xid for bulk: ");
 			req->rq_xid = pscrpc_next_xid();
 		}
-
-		DEBUG_REQ(PLL_WARN, req, "resending: ");
 	}
-	/* XXX this is the same as pscrpc_set_wait */
 	psclist_add_tail(&req->rq_lentry, &imp->imp_sending_list);
 	freelock(&imp->imp_lock);
 
@@ -875,38 +753,20 @@ pscrpc_queue_wait(struct pscrpc_request *req)
 	} else {
 		//timeout = MAX(req->rq_timeout * 100, 1);
 		timeout = MAX(req->rq_timeout, 1);
-		DEBUG_REQ(PLL_INFO, req,
-			  "-- sleeping for %d jiffies", timeout);
+		DEBUG_REQ(PLL_INFO, req,"sleeping for %d sec", timeout);
 	}
-	lwi = LWI_TIMEOUT_INTR(timeout, expired_request,
-			       interrupted_request, req);
+	lwi = LWI_TIMEOUT_INTR(timeout, expired_request, interrupted_request, 
+	       req);
 
 	rc = pscrpc_cli_wait_event(&req->rq_reply_waitq,
 	    pscrpc_check_reply(req), &lwi);
-	/* !!! might have timed out !!! */
-	if (rc)
-		DEBUG_REQ(PLL_INFO, req,
-		  "pscrpc_cli_wait_event(pscrpc_check_reply) returned %d", rc);
 
-	DEBUG_REQ(PLL_INFO, req, "-- done sleeping");
-
-	psclog_info("Completed RPC status:err:xid:nid:opc %d:%d:%"PRIx64":%s:%d",
-	      req->rq_reqmsg->status, req->rq_err, req->rq_xid,
-	      libcfs_nid2str(imp->imp_connection->c_peer.nid),
-	      req->rq_reqmsg->opc);
-
-	if (req->rq_replied)
-		DEBUG_REQ(PLL_INFO, req, "REPLIED:");
+	DEBUG_REQ(rc ? PLL_ERROR : PLL_INFO, req,
+		  "completed (rc=%d), replied=%d", rc, req->rq_replied); 
 
 	spinlock(&imp->imp_lock);
-	psclist_del(&req->rq_lentry,
-	    psc_lentry_hd(&req->rq_lentry));
+	psclist_del(&req->rq_lentry, psc_lentry_hd(&req->rq_lentry));
 	freelock(&imp->imp_lock);
-
-	/* If the reply was received normally, this just grabs the spinlock
-	 * (ensuring the reply callback has returned), sees that
-	 * req->rq_receiving_reply is clear and returns. */
-	pscrpc_unregister_reply(req);
 
 	if (rc)
 		GOTO(out, 0);
@@ -948,13 +808,12 @@ pscrpc_queue_wait(struct pscrpc_request *req)
 	}
 
 	rc = after_reply(req);
-	/* NB may return +ve success rc */
-	if (req->rq_resend) {
-		spinlock(&imp->imp_lock);
-		goto restart;
-	}
-
  out:
+	/* If the reply was received normally, this just grabs the spinlock 
+	 * (ensuring the reply callback has returned), sees that
+	 * req->rq_receiving_reply is clear and returns. */
+	pscrpc_unregister_reply(req);
+          
 	if (req->rq_bulk) {
 		struct pscrpc_msg *m;
 
@@ -993,7 +852,6 @@ pscrpc_queue_wait(struct pscrpc_request *req)
 	req->rq_phase = PSCRPC_RQ_PHASE_INTERPRET;
 
 	atomic_dec(&imp->imp_inflight);
-	psc_waitq_wakeall(&imp->imp_recovery_waitq);
 	return (rc);
 }
 
@@ -1032,7 +890,7 @@ pscrpc_check_set(struct pscrpc_request_set *set, int check_allsent)
 		struct pscrpc_import *imp = req->rq_import;
 		int rc = 0;
 
-		DEBUG_REQ(PLL_TRACE, req, "reqset=%p", set);
+		DEBUG_REQ(PLL_NOTIFY, req, "reqset=%p", set);
 
 		if (req->rq_phase == PSCRPC_RQ_PHASE_NEW &&
 		    pscrpc_push_req(req)) {
@@ -1058,17 +916,18 @@ pscrpc_check_set(struct pscrpc_request_set *set, int check_allsent)
 			GOTO(interpret, req->rq_status);
 
 		if (req->rq_net_err && !req->rq_timedout) {
-			/* expire this request,
-			 * which will eventually pscrpc_fail_import() too... */
 			pscrpc_expire_one_request(req);
-
-			/* NTBS: make sure net errors get flagged as error cases */
 			if (!req->rq_err)
 				req->rq_err = 1;
 		}
-
+	handle_error:
 		if (req->rq_err) {
+			/* Catch errored out RPC's here.
+			 */
 			pscrpc_unregister_reply(req);
+			if (req->rq_bulk)
+				pscrpc_abort_bulk(req->rq_bulk);
+			
 			if (req->rq_status == 0)
 				req->rq_status = -EIO;
 			req->rq_phase = PSCRPC_RQ_PHASE_INTERPRET;
@@ -1086,7 +945,7 @@ pscrpc_check_set(struct pscrpc_request_set *set, int check_allsent)
 		 * path sets rq_intr irrespective of whether pscrpcd has
 		 * seen a timeout.  our policy is to only interpret
 		 * interrupted rpcs after they have timed out */
-		if (req->rq_intr && (req->rq_timedout || req->rq_waiting)) {
+		if (req->rq_intr && req->rq_timedout) {
 			/* NB could be on delayed list */
 			pscrpc_unregister_reply(req);
 			req->rq_status = -EINTR;
@@ -1101,93 +960,80 @@ pscrpc_check_set(struct pscrpc_request_set *set, int check_allsent)
 		}
 
 		if (req->rq_phase == PSCRPC_RQ_PHASE_RPC) {
-			if (req->rq_timedout ||
-			    req->rq_waiting  ||
-			    req->rq_resend) {
-				int status=0;
-				pscrpc_unregister_reply(req);
-
-				spinlock(&imp->imp_lock);
-
-#if 0
-				if (pscrpc_import_delay_req(imp, req, &status)) {
-					freelock(&imp->imp_lock);
-					continue;
-				}
-#endif
-				psclist_del(&req->rq_lentry,
-				    psc_lentry_hd(&req->rq_lentry));
+			int status = 0;
+			/* If using a non-blocking set, then check for expired
+			 *   requests here.
+			 */
+			if (!check_allsent && pscrpc_is_expired(req)) {
+				/* rc == 0 means we're resending the request!
+				 *   otherwise, this request is getting nuked.
+				 */
+				status = expired_request(req);
+				DEBUG_REQ(PLL_WARN, req, "expired (resend=%d)",                                     !status);
+				
 				if (status) {
-					req->rq_status = status;
-					req->rq_phase = PSCRPC_RQ_PHASE_INTERPRET;
-					freelock(&imp->imp_lock);
-					GOTO(interpret, req->rq_status);
+					psc_assert(req->rq_status);
+					psc_assert(req->rq_err);
+					psc_assert(req->rq_timedout);
+					goto handle_error;
 				}
+			}
+			if (req->rq_resend) {
 				if (req->rq_no_resend) {
+					if (!req->rq_err)
+						req->rq_err = 1;
 					req->rq_status = -ENOTCONN;
-					req->rq_phase = PSCRPC_RQ_PHASE_INTERPRET;
-					freelock(&imp->imp_lock);
-					GOTO(interpret, req->rq_status);
+					goto handle_error;
 				}
-				psclist_add_tail(&req->rq_lentry,
-					      &imp->imp_sending_list);
-
-				freelock(&imp->imp_lock);
-
-				req->rq_waiting = 0;
-				if (req->rq_resend) {
-					pscrpc_msg_add_flags(req->rq_reqmsg,
-							     MSG_RESENT);
-					if (req->rq_bulk) {
-						uint64_t old_xid = req->rq_xid;
-
-						pscrpc_unregister_bulk(req);
-
-						/* ensure previous bulk fails */
-						req->rq_xid = pscrpc_next_xid();
-						CDEBUG(D_HA, "resend bulk "
-						       "old x%"PRIu64" "
-						       "new x%"PRIu64"\n",
-						       old_xid, req->rq_xid);
-					}
-				}
-
+				
+                                pscrpc_unregister_reply(req);
+                                /* Move to the tail of the list.
+                                 */
+                                spinlock(&imp->imp_lock);
+                                psclist_del(&req->rq_lentry,
+					    psc_lentry_hd(&req->rq_lentry));
+                                psclist_add_tail(&req->rq_lentry,
+						 &imp->imp_sending_list);
+                                freelock(&imp->imp_lock);
+				
+				pscrpc_msg_add_flags(req->rq_reqmsg,
+				     MSG_RESENT);
+                                if (req->rq_bulk) {
+                                        uint64_t old_xid = req->rq_xid;
+					
+                                        pscrpc_unregister_bulk(req);
+					
+                                        /* ensure previous bulk fails */
+					req->rq_xid = pscrpc_next_xid();
+                                        DEBUG_REQ(PLL_NOTIFY, req,
+						  "resend bulk: old x%"PRIu64
+						  " new x%"PRIu64,
+						  old_xid, req->rq_xid);
+                                }
+				
 				rc = pscrpc_send_rpc(req, 0);
 				if (rc) {
 					DEBUG_REQ(PLL_ERROR, req,
 						  "send failed (%d)", rc);
-					force_timer_recalc = 1;
 					req->rq_net_err = 1;
 				}
 				/* need to reset the timeout */
 				force_timer_recalc = 1;
 			}
 
-			/* Still waiting for a reply? */
-			if (pscrpc_client_receiving_reply(req))
-				continue;
-
-			/* Did we actually receive a reply? */
-			if (!pscrpc_client_replied(req))
-				continue;
-
+                        if (pscrpc_client_receiving_reply(req) ||
+                            !pscrpc_client_replied(req))
+				/* Req is not finished.
+				 */				
+                                continue;
+			
 			spinlock(&imp->imp_lock);
 			psclist_del(&req->rq_lentry,
-			    psc_lentry_hd(&req->rq_lentry));
+				    psc_lentry_hd(&req->rq_lentry));
 			freelock(&imp->imp_lock);
-
+			
 			req->rq_status = after_reply(req);
-			if (req->rq_resend) {
-				/* Add this req to the delayed list so
-				   it can be errored if the import is
-				   evicted after recovery. */
-				spinlock(&req->rq_lock);
-				psclist_add_tail(&req->rq_lentry,
-					      &imp->imp_delayed_list);
-				freelock(&req->rq_lock);
-				continue;
-			}
-
+			
 			/* If there is no bulk associated with this request,
 			 * then we're done and should let the interpreter
 			 * process the reply.  Similarly if the RPC returned
@@ -1197,14 +1043,14 @@ pscrpc_check_set(struct pscrpc_request_set *set, int check_allsent)
 				req->rq_phase = PSCRPC_RQ_PHASE_INTERPRET;
 				GOTO(interpret, req->rq_status);
 			}
-
+			
 			req->rq_phase = PSCRPC_RQ_PHASE_BULK;
 		}
-
+		
 		psc_assert(req->rq_phase == PSCRPC_RQ_PHASE_BULK);
 		if (pscrpc_bulk_active(req->rq_bulk))
 			continue;
-
+		
 		if (!req->rq_bulk->bd_success) {
 			/* The RPC reply arrived OK, but the bulk screwed
 			 * up!  Dead weird since the server told us the RPC
@@ -1213,23 +1059,23 @@ pscrpc_check_set(struct pscrpc_request_set *set, int check_allsent)
 			DEBUG_REQ(PLL_ERROR, req, "bulk transfer failed");
 			LBUG();
 		}
-
+		
 		req->rq_phase = PSCRPC_RQ_PHASE_INTERPRET;
-
- interpret:
+		
+	interpret:
 		psc_assert(req->rq_phase == PSCRPC_RQ_PHASE_INTERPRET);
 		psc_assert(!req->rq_receiving_reply);
-
+		
 		pscrpc_unregister_reply(req);
 		if (req->rq_bulk)
 			pscrpc_unregister_bulk(req);
-
+		
 		req->rq_phase = PSCRPC_RQ_PHASE_COMPLETE;
 		ncompleted++;
-
+		
 		if (req->rq_interpret_reply)
 			req->rq_status = req->rq_interpret_reply(req,
-				&req->rq_async_args);
+				 &req->rq_async_args);
 		req->rq_interpret_reply = NULL;
 		set->set_remaining--;
 
@@ -1307,48 +1153,28 @@ pscrpc_expire_one_request(struct pscrpc_request *req)
 	    "timeout (sent at %"PSCPRI_TIMET", %"PSCPRI_TIMET"s ago)",
 	    req->rq_sent, CURRENT_SECONDS - req->rq_sent);
 
-#if 0
-	/* Leave this out normally: it creates too much console noise and we
-	 * only need it when we're debugging networks */
-	if (imp)
-		LNetCtl(IOC_LIBCFS_DEBUG_PEER, &imp->imp_connection->c_peer);
-#endif
+	psc_assert(req->rq_send_state == PSCRPC_IMP_NOOP);
+
 	spinlock(&req->rq_lock);
-	req->rq_timedout = 1;
-	freelock(&req->rq_lock);
+	/* Error out the request here so that the upper layers may 
+	 *    retry.
+	 */
+        req->rq_err = req->rq_timedout = 1;
+        req->rq_status = -ETIMEDOUT;
+        freelock(&req->rq_lock);
 
 	pscrpc_unregister_reply(req);
-
-	//if (obd_dump_on_timeout)
-	//        libcfs_debug_dumplog();
 
 	if (req->rq_bulk)
 		pscrpc_unregister_bulk(req);
 
-	if (imp == NULL) {
+	if (imp == NULL)
 		DEBUG_REQ(PLL_WARN, req, "NULL import: already cleaned up?");
-		return (1);
-	}
-
-	/* If this request is for recovery or other primordial tasks,
-	 * then error it out here. */
-	//if (req->rq_send_state != PSCRPC_IMP_FULL ||
-	//    imp->imp_obd->obd_no_recov) {
-
-	if (req->rq_send_state != PSCRPC_IMP_FULL) {
-		spinlock(&req->rq_lock);
-		req->rq_status = -ETIMEDOUT;
-		req->rq_err = 1;
-		freelock(&req->rq_lock);
-		return (1);
-	}
-
-	if (!imp->imp_igntimeout) {
+	
+	else if (!imp->imp_igntimeout)
 		pscrpc_fail_import(imp, req->rq_reqmsg->conn_cnt);
-		return (1);
-	}
-
-	return (req->rq_timeoutable);
+	
+	return (1);
 }
 
 int
@@ -1435,7 +1261,7 @@ pscrpc_interrupted_set(void *data)
 	}
 }
 
-#if WEDONTNEEDTHISRIGTHNOW
+#ifdef PSCRPC_IMPORT_DELAY
 static int
 pscrpc_import_delay_req(struct pscrpc_import *imp,
     struct pscrpc_request *req, int *status)
@@ -1497,9 +1323,8 @@ pscrpc_set_wait(struct pscrpc_request_set *set)
 		 */
 		CDEBUG(D_NET, "set %p going to sleep for %d seconds\n",
 		       set, timeout);
-		lwi = LWI_TIMEOUT_INTR((timeout ? timeout : 1) * 100,
-				       pscrpc_expired_set,
-				       pscrpc_interrupted_set, set);
+		lwi = LWI_TIMEOUT_INTR(timeout ? timeout : 1,
+		       pscrpc_expired_set, pscrpc_interrupted_set, set);
 
 		rc = pscrpc_cli_wait_event(&set->set_waitq,
 		    pscrpc_check_set(set, 1), &lwi);
@@ -1515,23 +1340,20 @@ pscrpc_set_wait(struct pscrpc_request_set *set)
 		 * I don't really care if we go once more round the loop in
 		 * the error cases -eeb.
 		 */
-		/* let the real timeouts bubble back up to the caller
-		 */
-		if (rc == -ETIMEDOUT)
-			return (rc);
 	} while (rc || set->set_remaining);
 
 	psc_assert(set->set_remaining == 0);
 
 	rc = 0;
-	psclist_for_each_entry(req, &set->set_requests,
-	    rq_set_chain_lentry) {
+	psclist_for_each_entry(req, &set->set_requests, rq_set_chain_lentry) {
+		DEBUG_REQ(PLL_INFO, req, "set wait..");
+
 		if (req->rq_import->imp_failed) {
 			psclog_errorx("failed import detected!");
 			rc = -ECONNABORTED;
 			continue;
 		}
-#if 0
+#if 1
 		/*
 		 * This assumes 100% reliable delivery
 		 * which simply doesn't exist.
@@ -1555,12 +1377,12 @@ pscrpc_set_wait(struct pscrpc_request_set *set)
 
 	if (rc)
 		psclog_errorx("set %p failed, rc=%d", set, rc);
-	//else
-		if (set->set_interpret) {
-			rc = set->set_interpret(set, set->set_arg, rc);
-			if (rc)
-				psclog_errorx("set interpreter failed (%d)", rc);
-		}
+
+	if (set->set_interpret) {
+		rc = set->set_interpret(set, set->set_arg, rc);
+		if (rc)
+			psclog_errorx("set interpreter failed (%d)", rc);
+	}
 
 	return (rc);
 }
@@ -1583,12 +1405,8 @@ pscrpc_set_finalize(struct pscrpc_request_set *set, int block, int destroy)
  set_wait:
 		rc = pscrpc_set_wait(set);
 		if (rc) {
-			/* ??? set imp_failed here ???
-			 * IFF it's not being set by the lower layers
-			 * AND... even if it is, this mighth be a good place
-			 *        for a fall-back (timeout-based?) */
 			errno = -rc;
-			psclog_errorx("pscrpc_set_wait() failed for set %p: %s",
+			psclog_errorx("pscrpc_set_wait() failed (set=%p): %s",
 			    set, strerror(-rc));
 			return (rc);
 		} else {
@@ -1673,7 +1491,8 @@ pscrpc_abort_inflight(struct pscrpc_import *imp)
 
 	 /* Make sure that no new requests get processed for this import.
 	  * pscrpc_{queue,set}_wait must (and does) hold imp_lock while testing
-	  * this flag and then putting requests on sending_list or delayed_list.
+	  * this flag and then putting requests on sending_list or 
+	  * delayed_list.
 	  */
 	 spinlock(&imp->imp_lock);
 
@@ -1683,45 +1502,20 @@ pscrpc_abort_inflight(struct pscrpc_import *imp)
 	  */
 	 psclist_for_each_entry_safe(req, next, &imp->imp_sending_list,
 	     rq_lentry) {
-		DEBUG_REQ(PLL_WARN, req, "inflight");
+		 DEBUG_REQ(PLL_WARN, req,
+			   "aborted -- am I freed later (bulk, cb's, reply)");
 
 		spinlock(&req->rq_lock);
 		if (req->rq_import_generation < imp->imp_generation) {
 			req->rq_err = 1;
 			pscrpc_wake_client_req(req);
 		}
-		freelock(&req->rq_lock);
-
-		if (req->rq_interpret_reply) {
-			//psc_enter_debugger("abort inflight");
-			req->rq_interpret_reply(req, &req->rq_async_args);
-			req->rq_interpret_reply = NULL;
-		}
-
-		if (req->rq_comp)
-			pscrpc_completion_one(req->rq_comp);
-
-		//XXX deal with me!!!
-		//_pscrpc_req_finished(req, 0);
-	 }
-
-#if 0
-	 psclist_for_each_entry_safe(req, next, &imp->imp_delayed_list, rq_lentry) {
-		DEBUG_REQ(PLL_WARN, req, "aborting waiting req");
-
-		spinlock(&req->rq_lock);
-		if (req->rq_import_generation < imp->imp_generation) {
-			req->rq_err = 1;
-			pscrpc_wake_client_req(req);
-		}
+		req->rq_abort_reply = 1;
+		if (req->rq_bulk)
+                        req->rq_bulk->bd_abort = 1;
+		
 		freelock(&req->rq_lock);
 	 }
-
-	 /* Last chance to free reqs left on the replay list, but we
-	  * will still leak reqs that haven't committed.  */
-	 if (imp->imp_replayable)
-		 pscrpc_free_committed(imp);
-#endif
 
 	 freelock(&imp->imp_lock);
 }
