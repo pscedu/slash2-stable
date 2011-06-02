@@ -180,16 +180,11 @@ pscrpc_abort_bulk(struct pscrpc_bulk_desc *desc)
 	struct l_wait_info  lwi;
 	int    rc;
 
-	//psc_assert(!in_interrupt ());		/* might sleep */
+	DEBUG_REQ(PLL_INFO, desc->bd_req, "bulk active = %d", 
+	    pscrpc_bulk_active(desc)); 
 
 	if (!pscrpc_bulk_active(desc))		/* completed or */
 		return;				/* never started */
-
-	/* Do not send any meaningful data over the wire for evicted clients */
-#if 0
-	if (desc->bd_export && desc->bd_export->exp_failed)
-		ptl_rpc_wipe_bulk_pages(desc);
-#endif
 
 	/* The unlink ensures the callback happens ASAP and is the last
 	 * one.  If it fails, it must be because completion just happened,
@@ -198,10 +193,16 @@ pscrpc_abort_bulk(struct pscrpc_bulk_desc *desc)
 
 	LNetMDUnlink(desc->bd_md_h);
 
+	if (desc->bd_abort) {
+		//desc->bd_registered = 0;
+		//desc->bd_network_rw = 0;
+		//return;
+	}
+
 	for (;;) {
 		/* Network access will complete in finite time but the HUGE
 		 * timeout lets us CWARN for visibility of sluggish NALs */
-		lwi = LWI_TIMEOUT(300, NULL, NULL);
+		lwi = LWI_TIMEOUT(10, NULL, NULL);
 		rc = pscrpc_svr_wait_event(&desc->bd_waitq,
 		    !pscrpc_bulk_active(desc), &lwi, NULL);
 
@@ -209,7 +210,9 @@ pscrpc_abort_bulk(struct pscrpc_bulk_desc *desc)
 			return;
 
 		psc_assert(rc == -ETIMEDOUT);
-		CWARN("Unexpectedly long timeout: desc %p\n", desc);
+		DEBUG_REQ(PLL_ERROR, desc->bd_req,
+			  "Unexpectedly long timeout: desc %p", desc);  
+		//abort();
 	}
 }
 
@@ -317,11 +320,14 @@ pscrpc_unregister_bulk(struct pscrpc_request *req)
 
 	l = reqlock(&desc->bd_lock);
 
-	psclog_info("desc->bd_registered=(%d) pscrpc_bulk_active(desc)=(%d)",
-		 desc->bd_registered, pscrpc_bulk_active(desc));
+	DEBUG_REQ(PLL_INFO, req,
+	  "desc->bd_registered=(%d) pscrpc_bulk_active(desc)=(%d)",
+	  desc->bd_registered, pscrpc_bulk_active(desc));
 
-	if (!desc->bd_registered && !pscrpc_bulk_active(desc)) {  /* completed or */
-		ureqlock(&desc->bd_lock, l);			  /* never registered */
+	if (!desc->bd_registered && !pscrpc_bulk_active(desc)) {
+		/* Completed or never registered.
+		 */
+		ureqlock(&desc->bd_lock, l);
 		return;
 	}
 	/* bd_req NULL until registered
@@ -343,8 +349,8 @@ pscrpc_unregister_bulk(struct pscrpc_request *req)
 	if (registered)
 		LNetMDUnlink(desc->bd_md_h);
 
-	psc_iostats_intv_add(&pscrpc_req_getconn(req)->
-	    c_iostats_rcv, desc->bd_nob_transferred);
+	psc_iostats_intv_add(&pscrpc_req_getconn(req)->c_iostats_rcv, 
+	     desc->bd_nob_transferred);
 
 	if (req->rq_set)
 		wq = &req->rq_set->set_waitq;
@@ -356,15 +362,16 @@ pscrpc_unregister_bulk(struct pscrpc_request *req)
 	for (;;) {
 		/* Network access will complete in finite time but the HUGE
 		 * timeout lets us CWARN for visibility of sluggish NALs */
-		lwi = LWI_TIMEOUT(300, NULL, NULL);
+		lwi = LWI_TIMEOUT(10, NULL, NULL);
 		rc = pscrpc_cli_wait_event(wq,
 		    !pscrpc_bulk_active(desc), &lwi);
 		if (rc == 0)
 			return;
 
 		psc_assert(rc == -ETIMEDOUT);
-		DEBUG_REQ(PLL_WARN, req,
+		DEBUG_REQ(PLL_ERROR, req,
 			  "Unexpectedly long timeout: desc %p", desc);
+		//abort();
 	}
 }
 
@@ -486,16 +493,6 @@ pscrpc_send_rpc(struct pscrpc_request *request, int noreply)
 	 * cleanly from the previous attempt */
 	psc_assert(!request->rq_receiving_reply);
 
-#if PAULS_TODO
-	if (request->rq_import->imp_obd &&
-	    request->rq_import->imp_obd->obd_fail) {
-		CDEBUG(D_HA, "muting rpc for failed imp obd %s\n",
-		       request->rq_import->imp_obd->obd_name);
-		/* this prevents us from waiting in pscrpc_queue_wait */
-		request->rq_err = 1;
-		return (-ENODEV);
-	}
-#endif
 	connection = request->rq_import->imp_connection;
 
 	if (request->rq_bulk) {
@@ -517,15 +514,18 @@ pscrpc_send_rpc(struct pscrpc_request *request, int noreply)
 		if (request->rq_repmsg == NULL)
 			GOTO(cleanup_bulk, rc = -ENOMEM);
 
-		rc = LNetMEAttach(request->rq_reply_portal,/*XXX FIXME bug 249*/
+		/*XXX FIXME bug 249*/
+		rc = LNetMEAttach(request->rq_reply_portal,
 		    connection->c_peer, request->rq_xid, 0, LNET_UNLINK,
 		    LNET_INS_AFTER, &reply_me_h);
+
 		if (rc) {
 			CERROR("LNetMEAttach failed: %d\n", rc);
 			psc_assert(rc == -ENOMEM);
 			GOTO(cleanup_repmsg, rc = -ENOMEM);
 		}
-		psclog_dbg("LNetMEAttach() gave handle %"PRIx64,
+
+		psclog_info("LNetMEAttach() gave handle %"PRIx64,
 		    reply_me_h.cookie);
 	}
 
@@ -564,34 +564,24 @@ pscrpc_send_rpc(struct pscrpc_request *request, int noreply)
 			GOTO(cleanup_me, rc = -ENOMEM);
 		}
 
-		psclog_dbg("Setup reply buffer: "
-		    "%u bytes xid=%"PRIx64" portal=%u",
-		    request->rq_replen, request->rq_xid,
+		psclog_dbg("Setup reply buffer: %u bytes, xid %"PRIx64
+		    ", portal %u", request->rq_replen, request->rq_xid,
 		    request->rq_reply_portal);
 	}
 
-	/* add references on request and import for pscrpc_request_out_callback */
+	/* add references on request and import for 
+	 *  pscrpc_request_out_callback 
+	 */
 	pscrpc_request_addref(request);
 	atomic_inc(&request->rq_import->imp_inflight);
 
-#if PAULS_TODO
-	OBD_FAIL_TIMEOUT(OBD_FAIL_PSCRPC_DELAY_SEND, request->rq_timeout + 5);
-#endif
-
 	request->rq_sent = CURRENT_SECONDS;
-#if 0
-	pscrpc_pinger_sending_on_import(request->rq_import);
-#endif
-	rc = pscrpc_send_buf(&request->rq_req_md_h,
-	    request->rq_reqmsg, request->rq_reqlen,
-	    LNET_NOACK_REQ, &request->rq_req_cbid,
-	    connection,
-	    request->rq_request_portal,
-	    request->rq_xid);
-	if (rc == 0) {
-		//pscrpc_lprocfs_rpc_sent(request);
+
+	rc = pscrpc_send_buf(&request->rq_req_md_h, request->rq_reqmsg, 
+	    request->rq_reqlen, LNET_NOACK_REQ, &request->rq_req_cbid,
+	    connection, request->rq_request_portal, request->rq_xid);
+	if (rc == 0)
 		return (rc);
-	}
 
 	psc_iostats_intv_add(&request->rq_conn->c_iostats_snd,
 	    request->rq_reqlen);
@@ -711,21 +701,12 @@ _pscrpc_free_req(struct pscrpc_request *request, int locked)
 	if (request == NULL)
 		return;
 
+	DEBUG_REQ(PLL_INFO, request, "freeing");
+
 	psc_assert(!request->rq_receiving_reply);
 	psc_assert(request->rq_rqbd == NULL);/* client-side */
 	psc_assert(psclist_disjoint(&request->rq_lentry));
 	psc_assert(psclist_disjoint(&request->rq_set_chain_lentry));
-
-	/* We must take it off the imp_replay_list first.  Otherwise, we'll set
-	 * request->rq_reqmsg to NULL while osc_close is dereferencing it. */
-	if (request->rq_import) {
-		if (!locked)
-			spinlock(&request->rq_import->imp_lock);
-		//psclist_del_init(&request->rq_replay_list);
-		if (!locked)
-			freelock(&request->rq_import->imp_lock);
-	}
-	//psc_assert_msg(psc_listhd_empty(&request->rq_replay_list), "req %p", request);
 
 	if (atomic_read(&request->rq_refcount) != 0) {
 		DEBUG_REQ(PLL_ERROR, request,
@@ -752,11 +733,12 @@ _pscrpc_free_req(struct pscrpc_request *request, int locked)
 	psc_assert(request->rq_reply_state == NULL);
 
 	if (request->rq_pool) {
-		//_ptlrpc_free_req_to_pool(request);
+		abort();
 
 	} else {
 		if (request->rq_reqmsg) {
-			PSCRPC_OBD_FREE(request->rq_reqmsg, request->rq_reqlen);
+			PSCRPC_OBD_FREE(request->rq_reqmsg, 
+				request->rq_reqlen);
 			request->rq_reqmsg = NULL;
 		}
 		PSCRPC_OBD_FREE(request, sizeof(*request));
