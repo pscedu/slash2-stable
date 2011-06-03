@@ -28,18 +28,17 @@ struct rnd_iterator {
 	int	ri_iter;
 };
 
+#define _RESET_RND_ITER(ri)						\
+	(ri)->ri_iter = 0,						\
+	(ri)->ri_rnd_idx = psc_random32u((ri)->ri_n)
+
 #define FOREACH_RND(ri, n)						\
-	for ((ri)->ri_n = (n), (ri)->ri_iter = 0,			\
-	    (ri)->ri_rnd_idx = psc_random32u((ri)->ri_n);		\
+	for ((ri)->ri_n = (n), _RESET_RND_ITER(ri);			\
 	    (ri)->ri_iter < (ri)->ri_n;					\
 	    (ri)->ri_iter++, (ri)->ri_rnd_idx + 1 >= (ri)->ri_n ?	\
 	      ((ri)->ri_rnd_idx = 0) : (ri)->ri_rnd_idx++)
 
-#define RESET_RND_ITER(ri)						\
-	do {								\
-		(ri)->ri_iter = 0;					\
-		(ri)->ri_rnd_idx = psc_random32u((ri)->ri_n);		\
-	} while (0)
+#define RESET_RND_ITER(ri)	_RESET_RND_ITER(ri)
 
 uint32_t psc_random32(void);
 uint32_t psc_random32u(uint32_t);
