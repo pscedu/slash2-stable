@@ -867,7 +867,7 @@ pjournal_replay(struct psc_journal *pj, int thrtype,
 	}
 	nentries = 0;
 	len = psc_dynarray_len(&pj->pj_bufs);
-	psclog_info("number of entries to be replayed is %d", len);
+	psclog_info("The total number of entries to be replayed is %d", len);
 
 	for (i=0; i < len; i++) {
 		pje = psc_dynarray_getpos(&pj->pj_bufs, i);
