@@ -88,12 +88,12 @@ displaythr_main(__unusedx struct psc_thread *thr)
 	struct timeval tv;
 	int n = 0;
 
-	for (;;) {
+	for (;; n++) {
 		PFL_GETTIMEVAL(&tv);
 		usleep(1000000 - tv.tv_usec);
 		PFL_GETTIMEVAL(&tv);
 
-		if ((++n % 30) == 0) {
+		if (n == 0) {
 			center("-- read --", 8 * 3);
 			printf("\t|\t");
 			center("-- write --", 8 * 3);
@@ -104,7 +104,6 @@ displaythr_main(__unusedx struct psc_thread *thr)
 			    "time", "intvamt", "total");
 			printf("================================="
 			    "==============================\n");
-			n = 0;
 		}
 
 		memcpy(&myist, &rdst, sizeof(myist));
@@ -122,6 +121,9 @@ displaythr_main(__unusedx struct psc_thread *thr)
 		    psc_iostats_getintvdur(&myist, 0), ratebuf);
 		psc_fmt_human(ratebuf, myist.ist_len_total);
 		printf("%7s\n", ratebuf);
+
+		if (n > 30)
+			n = 0;
 	}
 }
 
@@ -194,10 +196,10 @@ sock_setoptions(int s)
 		psc_fatal("setsockopt");
 	opt = bufsiz;
 	if (setsockopt(s, SOL_SOCKET, SO_SNDBUF, &opt, sz) == -1)
-		psc_fatal("setsockopt");
+		psclog_error("setsockopt");
 	opt = bufsiz;
 	if (setsockopt(s, SOL_SOCKET, SO_RCVBUF, &opt, sz) == -1)
-		psc_fatal("setsockopt");
+		psclog_error("setsockopt");
 
 	pfl_socket_setnosig(s);
 }
