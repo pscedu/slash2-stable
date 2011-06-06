@@ -158,8 +158,8 @@ lnet_new_ni(__u32 net, struct list_head *nilist)
         memset(ni, 0, sizeof(*ni));
 
 	libcfs_net2str2(net, buf);
-	psc_iostats_init(&ni->ni_send_ist, "lni-rcv-%s", buf);
-	psc_iostats_init(&ni->ni_recv_ist, "lni-snd-%s", buf);
+	psc_iostats_init(&ni->ni_send_ist, "lni-snd-%s", buf);
+	psc_iostats_init(&ni->ni_recv_ist, "lni-rcv-%s", buf);
 
         /* LND will fill in the address part of the NID */
         ni->ni_nid = LNET_MKNID(net, 0);
