@@ -20,10 +20,13 @@
 #include <sys/param.h>
 #include <sys/socket.h>
 #include <sys/un.h>
+#include <sys/ioctl.h>
 
 #include <err.h>
 #include <inttypes.h>
+#include <paths.h>
 #include <pthread.h>
+#include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -46,15 +49,16 @@
 #define PCTHRT_RD 0
 #define PCTHRT_WR 1
 
-struct psc_ctlmsghdr	 *psc_ctl_msghdr;
-int			  psc_ctl_noheader;
 int			  psc_ctl_inhuman;
-int			  psc_ctl_nsubsys;
-char			**psc_ctl_subsys_names;
-const char		 *psc_ctl_sockfn;
 int			  psc_ctl_lastmsgtype = -1;
+struct psc_ctlmsghdr	 *psc_ctl_msghdr;
 int			  psc_ctl_nodns;
+int			  psc_ctl_noheader;
+int			  psc_ctl_nsubsys;
+volatile sig_atomic_t	  psc_ctl_saw_winch = 1;
 __static int		  psc_ctl_sock;
+const char		 *psc_ctl_sockfn;
+char			**psc_ctl_subsys_names;
 
 __static void
 psc_ctlmsg_sendlast(void)
@@ -1214,4 +1218,25 @@ psc_ctlcli_main(const char *osockfn, int ac, char *av[],
 	rc = pthread_join(thr->pscthr_pthread, NULL);
 	if (rc)
 		psc_fatalx("pthread_join: %s", strerror(rc));
+}
+
+int
+psc_ctl_get_display_maxwidth(void)
+{
+	static int width = PSC_CTL_DISPLAY_WIDTH;
+	struct winsize ws;
+	FILE *ttyfp;
+
+	if (psc_ctl_saw_winch) {
+		psc_ctl_saw_winch = 0;
+
+		ttyfp = fopen(_PATH_TTY, "r");
+		if (ttyfp) {
+			if (ioctl(fileno(ttyfp), TIOCGWINSZ, &ws) == 0 &&
+			    ws.ws_col >= PSC_CTL_DISPLAY_WIDTH)
+				width = ws.ws_col;
+			fclose(ttyfp);
+		}
+	}
+	return (width);
 }

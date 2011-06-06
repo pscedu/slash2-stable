@@ -154,6 +154,8 @@ int   psc_ctlmsg_subsys_check(struct psc_ctlmsghdr *, const void *);
 void  psc_ctlmsg_thread_prdat(const struct psc_ctlmsghdr *, const void *);
 void  psc_ctlmsg_thread_prhdr(struct psc_ctlmsghdr *, const void *);
 
+int   psc_ctl_get_display_maxwidth(void);
+
 extern int psc_ctl_inhuman;
 extern int psc_ctl_lastmsgtype;
 extern int psc_ctl_nodns;
