@@ -78,10 +78,10 @@ psc_multiwaitcond_nwaiters(__unusedx struct psc_multiwaitcond *m)
 }
 
 __weak int
-psc_ctlrep_getfault(__unusedx int a, __unusedx struct psc_ctlmsghdr *b,
+psc_ctlrep_getfault(int fd, struct psc_ctlmsghdr *mh,
     __unusedx void *c)
 {
-	psc_fatalx("fault support not compiled in");
+	return (psc_ctlsenderr(fd, mh, "fault support not compiled in"));
 }
 
 /**
