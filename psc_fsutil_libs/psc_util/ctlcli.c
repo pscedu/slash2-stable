@@ -34,8 +34,10 @@
 
 #include "pfl/cdefs.h"
 #include "pfl/str.h"
+#include "pfl/subsys.h"
 #include "psc_ds/list.h"
 #include "psc_ds/vbitmap.h"
+#include "psc_rpc/rpc.h"
 #include "psc_util/ctl.h"
 #include "psc_util/ctlcli.h"
 #include "psc_util/fmt.h"
@@ -43,7 +45,6 @@
 #include "psc_util/log.h"
 #include "psc_util/meter.h"
 #include "psc_util/pool.h"
-#include "pfl/subsys.h"
 #include "psc_util/thread.h"
 
 #define PCTHRT_RD 0
@@ -849,7 +850,7 @@ psc_ctlmsg_lni_prdat(__unusedx const struct psc_ctlmsghdr *mh,
 {
 	const struct psc_ctlmsg_lni *pclni = m;
 
-	printf("%-39lx %8d %8d %8d %8d %4d\n",
+	printf("%-39s %8d %8d %8d %8d %4d\n",
 	    pclni->pclni_nid, pclni->pclni_maxtxcredits,
 	    pclni->pclni_txcredits, pclni->pclni_mintxcredits,
 	    pclni->pclni_peertxcredits, pclni->pclni_refcount);

@@ -247,7 +247,7 @@ pscrpc_client_bulk_callback(lnet_event_t *ev)
 	CDEBUG((ev->status == 0) ? D_NET : D_ERROR,
 	       "event type %d, status %d, desc %p x%"PRId64"\n",
 	       ev->type, ev->status, desc, desc->bd_req->rq_xid);
- 
+
 	spinlock(&desc->bd_lock);
 
 	LASSERT(desc->bd_network_rw);
@@ -672,7 +672,8 @@ psc_ctlrep_getlni(int fd, struct psc_ctlmsghdr *mh, void *m)
 	rc = 1;
 	LNET_LOCK();
 	list_for_each_entry(ni, &the_lnet.ln_nis, ni_list) {
-		pclni->pclni_nid = ni->ni_nid;
+		memset(pclni, 0, sizeof(*pclni));
+		pscrpc_nid2str(ni->ni_nid, pclni->pclni_nid);
 		pclni->pclni_maxtxcredits = ni->ni_maxtxcredits;
 		pclni->pclni_txcredits = ni->ni_txcredits;
 		pclni->pclni_mintxcredits = ni->ni_mintxcredits;
