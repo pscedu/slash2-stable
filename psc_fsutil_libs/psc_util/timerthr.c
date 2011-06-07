@@ -50,6 +50,8 @@ psc_tiosthr_main(__unusedx struct psc_thread *thr)
 		usleep(1000000 - tv.tv_usec);
 		PFL_GETTIMEVAL(&tv);
 
+		tv.tv_usec = 0;
+
 		/* find largest interval to update */
 		for (stoff = 0; stoff < IST_NINTV; stoff++) {
 			if (psc_timercmp_addsec(&psc_tiosthr_lastv[stoff],
@@ -63,8 +65,7 @@ psc_tiosthr_main(__unusedx struct psc_thread *thr)
 			continue;
 
 		PLL_LOCK(&psc_iostats);
-		psclist_for_each_entry(ist,
-		    &psc_iostats.pll_listhd, ist_lentry)
+		PLL_FOREACH(ist, &psc_iostats)
 			for (i = 0; i < stoff; i++) {
 				istv = &ist->ist_intv[i];
 
