@@ -264,7 +264,7 @@ pscfs_fuse_listener_loop(__unusedx void *arg)
 	busy = 1;
 	freelock(&lock);
 
-	while (!exit_fuse_listener) {
+	while (!pscfs_exit_fuse_listener) {
 		int i;
 
 #ifdef HAVE_NO_POLL_DEV
