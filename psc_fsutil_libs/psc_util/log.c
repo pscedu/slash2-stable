@@ -54,7 +54,7 @@ char *APP_STRERROR(int);
 #endif
 
 #ifndef PSC_LOG_FMT
-#define PSC_LOG_FMT "[%s:%06u %n:%i:%T %F %l] "
+#define PSC_LOG_FMT "[%s:%06u %n:%i:%T %B %F %l] "
 #endif
 
 struct fuse_context {
