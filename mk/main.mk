@@ -400,8 +400,12 @@ install: recurse-install install-hook
 	    [ -z "$(findstring /tests/,${CURDIR})" -a			\
 	      -z "$(findstring /utils/,${CURDIR})" -o			\
 	      "${FORCE_INST}" -eq 1 ]; then				\
-		mkdir -p ${INST_SBINDIR};				\
-		${ECHORUN} ${INSTALL} -m 555 ${PROG} ${INST_SBINDIR};	\
+		_dir="${INST_BINDIR}";					\
+		if [ -n "${MAN}" ] && [ -e "${PROG}.8" ]; then		\
+			_dir="${INST_SBINDIR}";				\
+		fi;							\
+		mkdir -p "$$_dir";					\
+		${ECHORUN} ${INSTALL} -m 555 ${PROG} "$$_dir";		\
 	fi
 	@if ${NOTEMPTY} "${MAN}"; then					\
 		for i in ${MAN}; do					\
