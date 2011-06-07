@@ -59,6 +59,10 @@ _pscthr_destroy(void *arg)
 {
 	struct psc_thread *thr = arg;
 
+	psclog_info("%s <pthr %"PSCPRI_PTHRT" thrid %d> dying",
+	    thr->pscthr_name, thr->pscthr_pthread,
+	    thr->pscthr_thrid);
+
 	PLL_LOCK(&psc_threads);
 	reqlock(&thr->pscthr_lock);
 	pll_remove(&psc_threads, thr);
@@ -232,7 +236,7 @@ _pscthr_finish_init(struct psc_thread *thr)
 	 * corrupted.
 	 */
 	psclog_getdata();
-	psclog_debug("%s <pthr %"PSCPRI_PTHRT" thrid %d> alive",
+	psclog_info("%s <pthr %"PSCPRI_PTHRT" thrid %d> alive",
 	    thr->pscthr_name, thr->pscthr_pthread,
 	    thr->pscthr_thrid);
 }
@@ -591,6 +595,6 @@ pscthr_getbyid(pthread_t id)
 void
 psc_enter_debugger(const char *str)
 {
-	psc_log(PLL_MAX, "enter debugger (%s)", str);
+	psclog(PLL_MAX, "enter debugger (%s)", str);
 	pthread_kill(pthread_self(), SIGINT);
 }
