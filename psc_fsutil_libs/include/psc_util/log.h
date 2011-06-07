@@ -70,7 +70,7 @@ enum psclog_level {
 		if ((lvl) == PLL_FATAL)					\
 			_psc_fatal((pci), (lvl), (flg), (fmt),		\
 			    ## __VA_ARGS__ );				\
-		else if (psc_log_getlevel(pci->pci_subsys) >= (lvl))	\
+		else if (psc_log_getlevel((pci)->pci_subsys) >= (lvl))	\
 			_psclog((pci), (lvl), (flg), (fmt),		\
 			    ## __VA_ARGS__);				\
 	} while (0)
@@ -79,7 +79,7 @@ enum psclog_level {
 	do {								\
 		if ((lvl) == PLL_FATAL)					\
 			_psc_fatalv((pci), (lvl), (flg), (fmt), (ap));	\
-		else if (psc_log_getlevel(pci->pci_subsys) >= (lvl))	\
+		else if (psc_log_getlevel((pci)->pci_subsys) >= (lvl))	\
 			_psclogv((pci), (lvl), (flg), (fmt), (ap));	\
 	} while (0)
 
