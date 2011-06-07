@@ -25,11 +25,12 @@ PICKLEGEN=	${ROOTDIR}/tools/pickle-gen.sh
 LEX:=		$(shell if ${NOTEMPTY} "${LEX}"; then echo "${LEX}"; elif type flex; then echo flex; else echo lex; fi)
 
 INST_BASE?=	/usr/psc
-INST_BINDIR?=	/usr/psc/bin
-INST_SBINDIR?=	/usr/psc/sbin
-INST_LIBDIR?=	/usr/psc/lib
-INST_LIBDIR?=	/usr/psc/include
-INST_MANDIR?=	/usr/psc/man
+INST_BINDIR?=	${INST_BASE}/bin
+INST_SBINDIR?=	${INST_BASE}/sbin
+INST_LIBDIR?=	${INST_BASE}/lib
+INST_LIBDIR?=	${INST_BASE}/include
+INST_MANDIR?=	${INST_BASE}/man
+INST_ETCDIR?=	${INST_BASE}/etc
 
 MAKEFLAGS+=	--no-print-directory
 
