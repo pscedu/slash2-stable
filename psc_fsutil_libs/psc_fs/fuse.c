@@ -98,7 +98,7 @@ typedef struct {
 	int			 mntlen;
 } fuse_fs_info_t;
 
-static int			 exit_fuse_listener = 0;
+int				 pscfs_exit_fuse_listener;
 int				 newfs_fd[2];
 int				 pscfs_nfds;
 struct pollfd			 pscfs_fds[MAX_FDS];
