@@ -629,7 +629,7 @@ pjournal_scan_slots(struct psc_journal *pj)
 	    pj->pj_hdr->pjh_readsize);
 
 	nopen = psc_dynarray_len(&pj->pj_bufs);
-	psclog_info("journal statistics: %d closed, %d open, %d magic, "
+	psclog_info("Journal scan statistics: %d closed, %d open, %d magic, "
 	    "%d chksum, %d scan, %d total",
 	    nclose, nopen, nmagic, nchksum, nscan, pj->pj_total);
 	psclog_info("last transaction ID used is %#"PRIx64, pj->pj_lastxid);
