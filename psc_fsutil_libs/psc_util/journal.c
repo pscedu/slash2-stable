@@ -900,7 +900,7 @@ pjournal_replay(struct psc_journal *pj, int thrtype,
 	 */
 	zfsslash2_wait_synced(0);
 
-	psclog_info("journal replayed: %d log entries have been "
+	psclog_notice("Journal replay statistics: %d log entries have been "
 	    "replayed, #errors=%d", nentries, nerrs);
 
 	/* always start at the first slot of the journal */
