@@ -173,6 +173,28 @@ main(int argc, char *argv[])
 	pfl_bitstr_copy(&out, 22, &in, 0, 6);
 	check(out, 0xfffffffff4c03fff);
 
+	in = 0x15;
+	pfl_bitstr_copy(&out, 34, &in, 0, 6);
+	check(out, 0xffffff57f4c03fff);
+
+	in = 0x2a;
+	pfl_bitstr_copy(&out, 34, &in, 0, 6);
+	check(out, 0xffffffabf4c03fff);
+
+	in = 0;
+	pfl_bitstr_copy(&out, 34, &in, 0, 6);
+	check(out, 0xffffff03f4c03fff);
+
+	out = UINT64_C(0xffffffffffffffff);
+	in = 0x12;
+	pfl_bitstr_copy(&out, 8, &in, 0, 6);
+	check(out, 0xffffffffffffd2ff);
+	pfl_bitstr_copy(&out, 8+6+8, &in, 0, 6);
+	check(out, 0xffffffffffffffff);
+	pfl_bitstr_copy(&out, 8+6+8+6+8, &in, 0, 6);
+	check(out, 0xffffffffffffffff);
+	pfl_bitstr_copy(&out, 8+6+8+6+8+6+8, &in, 0, 6);
+
 	out = 0x1300;
 	in = 0x13;
 	pfl_bitstr_copy(&out, 22, &in, 0, 6);
