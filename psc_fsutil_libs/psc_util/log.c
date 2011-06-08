@@ -355,7 +355,7 @@ _psclogv(const struct pfl_callerinfo *pci, enum psclog_level level,
 		fprintf(stderr, "%s", psclog_eol);
 		fflush(stderr);
 
-		if (level <= PLL_NOTICE && !isatty(fileno(stderr))) {
+		if (level <= PLL_WARN && !isatty(fileno(stderr))) {
 			fp = fopen(_PATH_TTY, "w");
 			if (fp) {
 				fprintf(fp, "%s", prefix);
