@@ -73,10 +73,10 @@ usage(void)
 #define check(a, b)						\
 	do {							\
 		if ((a) != UINT64_C(b)) {			\
-			printf("shouldbe %016"PRIx64": ",	\
+			printf("want %016"PRIx64": ",	\
 			    UINT64_C(b));			\
 			printbin(UINT64_C(b));			\
-			printf("     was %016"PRIx64": ", (a));	\
+			printf("got  %016"PRIx64": ", (a));	\
 			printbin(a);				\
 			psc_fatalx("values don't match");	\
 		}						\
@@ -190,9 +190,9 @@ main(int argc, char *argv[])
 	pfl_bitstr_copy(&out, 8, &in, 0, 6);
 	check(out, 0xffffffffffffd2ff);
 	pfl_bitstr_copy(&out, 8+6+8, &in, 0, 6);
-	check(out, 0xffffffffffffffff);
+	check(out, 0xfffffffff4bfd2ff);
 	pfl_bitstr_copy(&out, 8+6+8+6+8, &in, 0, 6);
-	check(out, 0xffffffffffffffff);
+	check(out, 0xfffffd2ff4bfd2ff);
 	pfl_bitstr_copy(&out, 8+6+8+6+8+6+8, &in, 0, 6);
 
 	out = 0x1300;
