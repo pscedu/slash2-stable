@@ -41,8 +41,8 @@
  * Notes: returns -1 on failure, 0 on success.
  */
 static __inline int
-pfl_bitstr_setchk(int *f, psc_spinlock_t *lck, int checkon, int checkoff,
-    int turnon, int turnoff, int flags)
+pfl_bitstr_setchk(int *f, psc_spinlock_t *lck, int checkon,
+    int checkoff, int turnon, int turnoff, int flags)
 {
 	int strict, locked;
 
@@ -132,8 +132,8 @@ static __inline void
 pfl_bitstr_copy(void *dst, int doff, const void *src, int soff, int nbits)
 {
 	const unsigned char *in8;
+	unsigned char *out8, b;
 	const uint64_t *in64;
-	unsigned char *out8;
 	uint64_t *out64;
 
 	psc_assert(doff >= 0 && soff >= 0);
@@ -169,19 +169,21 @@ pfl_bitstr_copy(void *dst, int doff, const void *src, int soff, int nbits)
 	doff %= NBBY;
 
 	for (; nbits >= NBBY; in8++, out8++, nbits -= NBBY) {
-		*out8 = (*out8 & (UINT8_MAX >> (NBBY - doff))) |
+		*out8 = (*out8 & (0xff >> (NBBY - doff))) |
 		    ((*in8 >> soff) << doff);
 
 		if (soff > doff)
 			*out8 |= in8[1] << (NBBY - soff + doff);
 		else if (soff < doff)
-			out8[1] = (out8[1] & (UINT8_MAX << doff)) |
+			out8[1] = (out8[1] & (0xff << doff)) |
 			    (*in8 >> (NBBY - doff - soff));
 	}
-
 	if (nbits) {
-		*out8 = (*out8 & (UINT8_MAX >> (NBBY - doff))) |
-		    (((*in8 >> soff) & ~(0xff << nbits)) << doff);
+		b = ((*in8 >> soff) & ~(0xff << nbits)) << doff;
+		b |= *out8 & (0xff >> (NBBY - doff));
+		if (nbits < NBBY - doff)
+			b |= *out8 & ~(0xff >> (NBBY - nbits));
+		*out8 = b;
 		nbits -= NBBY - doff;
 	}
 	if (nbits > 0) {
@@ -189,7 +191,7 @@ pfl_bitstr_copy(void *dst, int doff, const void *src, int soff, int nbits)
 			*out8 |= (in8[1] & ~(0xff << nbits)) <<
 			    (NBBY - soff + doff);
 		else if (soff < doff)
-			out8[1] = (out8[1] & (UINT8_MAX << (doff - (NBBY - doff)))) |
+			out8[1] = (out8[1] & (0xff << (nbits))) |
 			    ((*in8 >> (NBBY - doff - soff)) & ~(0xff << nbits));
 	}
 }
