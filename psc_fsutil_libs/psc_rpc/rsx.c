@@ -186,8 +186,11 @@ rsx_bulkserver(struct pscrpc_request *rq, int type, int ptl,
 	}
 
  out:
-	if (rc == 0) {
-	} else if (!comms_error) {
+	if (rc == 0)
+		psc_iostats_intv_add(&request->rq_conn->c_iostats_rcv,
+			     desc->bd_nob);
+
+	else if (!comms_error) {
 		/* Only reply if there were no comm problems with bulk. */
 		rq->rq_status = rc;
 		pscrpc_error(rq);
