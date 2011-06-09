@@ -187,7 +187,7 @@ rsx_bulkserver(struct pscrpc_request *rq, int type, int ptl,
 
  out:
 	if (rc == 0)
-		psc_iostats_intv_add(&request->rq_conn->c_iostats_rcv,
+		psc_iostats_intv_add(&rq->rq_conn->c_iostats_rcv,
 			     desc->bd_nob);
 
 	else if (!comms_error) {
