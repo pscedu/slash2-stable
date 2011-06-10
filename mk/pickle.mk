@@ -217,4 +217,8 @@ PICKLE_NEED_VERSION=					$(word 2,$$Rev$$)
   DEFINES+=						-DHAVE_OPTRESET
  endif
 
+ ifdef PICKLE_HAVE_DKIOC
+  DEFINES+=						-DHAVE_DKIOC
+ endif
+
 endif
