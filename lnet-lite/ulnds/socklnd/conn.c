@@ -634,7 +634,7 @@ usocklnd_destroy_peer(usock_peer_t *peer)
 	LNET_UNLOCK(); 
 
 	psc_iostats_remove(&peer->up_rx_iostats);
-	psc_iostats_remove(&peer->up_rx_iostats); 
+	psc_iostats_remove(&peer->up_tx_iostats); 
 
         LIBCFS_FREE (peer, sizeof (*peer));
 
