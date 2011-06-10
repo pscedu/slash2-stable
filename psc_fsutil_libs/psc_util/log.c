@@ -342,7 +342,7 @@ _psclogv(const struct pfl_callerinfo *pci, enum psclog_level level,
 
 	PSCLOG_LOCK();
 
-	if (pfl_syslog && level >= 0 && level < nitems(pfl_syslog_map)) {
+	if (pfl_syslog && level >= 0 && level < (int)nitems(pfl_syslog_map)) {
 //		if (options & PLO_ERRNO)
 //			vsyslog(PRI, fmtbuf, ap0);
 		vsyslog(pfl_syslog_map[level], fmtbuf, ap0);
