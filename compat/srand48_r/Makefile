@@ -3,7 +3,7 @@
 ROOTDIR=../..
 include ${ROOTDIR}/Makefile.path
 
-PROG=		strnlen_compat
-SRCS+=		strnlen_compat.c
+PROG=		srand48_r_compat
+SRCS+=		srand48_r_compat.c
 
 include ${MAINMK}
