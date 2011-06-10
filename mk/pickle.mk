@@ -221,4 +221,10 @@ PICKLE_NEED_VERSION=					$(word 2,$$Rev$$)
   DEFINES+=						-DHAVE_DKIOC
  endif
 
+ ifdef PICKLE_HAVE_SRAND48_R
+  DEFINES+=						-DHAVE_SRAND48_R
+ else
+  SRCS+=						${PFL_BASE}/compat/srand48_r.c
+ endif
+
 endif
