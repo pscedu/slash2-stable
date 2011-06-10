@@ -90,9 +90,7 @@ pscrpc_send_buf(lnet_handle_md_t *mdh, void *base, int len,
 		    libcfs_id2str(conn->c_peer), portal, xid, rc);
 		rc2 = LNetMDUnlink(*mdh);
 		psc_assert(rc2 == 0);
-	} else
-		psc_iostats_intv_add(&conn->c_iostats_snd, len);
-
+	}
 	return (0);
 }
 
@@ -349,9 +347,6 @@ pscrpc_unregister_bulk(struct pscrpc_request *req)
 	if (registered)
 		LNetMDUnlink(desc->bd_md_h);
 
-	psc_iostats_intv_add(&pscrpc_req_getconn(req)->c_iostats_rcv, 
-	     desc->bd_nob_transferred);
-
 	if (req->rq_set)
 		wq = &req->rq_set->set_waitq;
 	else
@@ -582,9 +577,6 @@ pscrpc_send_rpc(struct pscrpc_request *request, int noreply)
 	    connection, request->rq_request_portal, request->rq_xid);
 	if (rc == 0)
 		return (rc);
-
-	psc_iostats_intv_add(&request->rq_conn->c_iostats_snd,
-	    request->rq_reqlen);
 
 	/* drop pscrpc_request_out_callback refs, we couldn't start the send */
 	atomic_dec(&request->rq_import->imp_inflight);

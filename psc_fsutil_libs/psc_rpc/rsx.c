@@ -173,7 +173,7 @@ rsx_bulkserver(struct pscrpc_request *rq, int type, int ptl,
 		}
 
 		psclog_info("got %u bytes of bulk data across %d IOVs: "
-		    "first byte is 0x%x (%"PRIx64")",
+		    "first byte is %#x (%"PRIx64")",
 		    desc->bd_nob, desc->bd_iov_count, *v1, *v8);
 
 		sum = 0;
@@ -187,9 +187,7 @@ rsx_bulkserver(struct pscrpc_request *rq, int type, int ptl,
 
  out:
 	if (rc == 0)
-		psc_iostats_intv_add(&rq->rq_conn->c_iostats_rcv,
-			     desc->bd_nob);
-
+		;
 	else if (!comms_error) {
 		/* Only reply if there were no comm problems with bulk. */
 		rq->rq_status = rc;

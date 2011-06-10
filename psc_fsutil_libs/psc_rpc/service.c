@@ -338,9 +338,6 @@ pscrpc_server_handle_request(struct pscrpc_service *svc,
 		return -ENOTCONN;
 	}
 
-	psc_iostats_intv_add(&request->rq_conn->c_iostats_rcv,
-	    request->rq_reqlen);
-
 	/*
 	 * Here's a hack to trick lustre rpc into thinking there's a real export
 	 */

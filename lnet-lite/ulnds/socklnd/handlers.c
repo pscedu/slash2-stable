@@ -957,7 +957,10 @@ usocklnd_send_tx(usock_conn_t *conn, usock_tx_t *tx)
 		    peer && peer->up_ni ? &peer->up_ni->ni_send_ist :
 		    (conn->uc_ni ? &conn->uc_ni->ni_send_ist :
 		     &usock_pasv_send_ist), nob);
+		if (peer)
+			psc_iostats_intv_add(&peer->up_tx_iostats, nob);
 		psc_iostats_intv_add(&usock_aggr_send_ist, nob);
+
                 LASSERT (nob <= tx->tx_resid);
                 tx->tx_resid -= nob;
                 t = cfs_time_current();
@@ -1015,7 +1018,10 @@ usocklnd_read_data(usock_conn_t *conn)
 		    peer && peer->up_ni ? &peer->up_ni->ni_recv_ist :
 		    (conn->uc_ni ? &conn->uc_ni->ni_recv_ist :
 		     &usock_pasv_recv_ist), nob);
+		if (peer)
+			psc_iostats_intv_add(&peer->up_rx_iostats, nob);
 		psc_iostats_intv_add(&usock_aggr_recv_ist, nob);
+
                 LASSERT (nob <= conn->uc_rx_nob_wanted);
                 conn->uc_rx_nob_wanted -= nob;
                 conn->uc_rx_nob_left -= nob;

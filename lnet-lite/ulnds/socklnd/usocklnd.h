@@ -37,11 +37,10 @@
  *
  * Author: Maxim Patlasov <maxim@clusterfs.com>
  */
-#ifndef _GNU_SOURCE
-#define _GNU_SOURCE
-#endif
-#include <pthread.h>
+
 #include <poll.h>
+#include <pthread.h>
+
 #include <lnet/lib-lnet.h>
 #include <lnet/socklnd.h>
 
@@ -137,6 +136,9 @@ typedef struct usock_peer_s {
         pthread_mutex_t   up_lock;         /* serialize */
         int               up_errored;      /* a flag for lnet_notify() */
         cfs_time_t        up_last_alive;   /* when the peer was last alive */
+
+	struct psc_iostats up_rx_iostats;
+	struct psc_iostats up_tx_iostats;
 } usock_peer_t;
 
 typedef struct {

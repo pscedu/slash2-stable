@@ -42,7 +42,6 @@
 #include "psc_ds/list.h"
 #include "psc_ds/listcache.h"
 #include "psc_util/atomic.h"
-#include "psc_util/iostats.h"
 #include "psc_util/lock.h"
 #include "psc_util/thread.h"
 #include "psc_util/waitq.h"
@@ -162,8 +161,6 @@ struct pscrpc_connection {
 	atomic_t			 c_refcount;
 	struct pscrpc_export		*c_exp;
 	struct pscrpc_import		*c_imp;
-	struct psc_iostats		 c_iostats_rcv;
-	struct psc_iostats		 c_iostats_snd;
 };
 
 struct pscrpc_client {

@@ -633,6 +633,9 @@ usocklnd_destroy_peer(usock_peer_t *peer)
 	}
 	LNET_UNLOCK(); 
 
+	psc_iostats_remove(&peer->up_rx_iostats);
+	psc_iostats_remove(&peer->up_rx_iostats); 
+
         LIBCFS_FREE (peer, sizeof (*peer));
 
         pthread_mutex_lock(&net->un_lock);
@@ -753,6 +756,11 @@ usocklnd_create_peer(lnet_ni_t *ni, lnet_process_id_t id,
         pthread_mutex_lock(&net->un_lock);
         net->un_peercount++;        
         pthread_mutex_unlock(&net->un_lock);
+
+	psc_iostats_init(&peer->up_rx_iostats, "peer-%s-rcv",
+	    libcfs_id2str(id));
+	psc_iostats_init(&peer->up_tx_iostats, "peer-%s-snd",
+	    libcfs_id2str(id));
 
         *peerp = peer;
         return 0;

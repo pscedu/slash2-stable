@@ -692,8 +692,6 @@ after_reply(struct pscrpc_request *req)
 	/* Store transno in reqmsg for replay. */
 	req->rq_reqmsg->transno = req->rq_transno = req->rq_repmsg->transno;
 
-	psc_iostats_intv_add(&req->rq_import->imp_connection->c_iostats_rcv,
-	    req->rq_replen);
 	return (rc);
 }
 
