@@ -92,7 +92,7 @@ pscrpc_rqphase2str(struct pscrpc_request *req)
 	    (rq)->rq_timeout, (rq)->rq_sent, ## __VA_ARGS__)
 
 #define DEBUG_EXP(level, exp, fmt, ...)					\
-	psc_logs((level), PSS_RPC,					\
+	psclogs((level), PSS_RPC,					\
 	    "exp@%p h%"PRIx64" conn@%p p:%s ref %d cnt %d f%d :: "fmt,	\
 	    (exp), (exp)->exp_handle.cookie, (exp)->exp_connection,	\
 	    (exp)->exp_connection ?					\
