@@ -4,6 +4,7 @@ ROOTDIR=../..
 include ${ROOTDIR}/Makefile.path
 
 SUBDIRS+=	base64
+SUBDIRS+=	lnrtd
 SUBDIRS+=	odtable
 SUBDIRS+=	random
 SUBDIRS+=	rtgetif
