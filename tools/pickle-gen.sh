@@ -37,7 +37,7 @@ localdefsmk=$4
 
 cat <<EOF >&2
 ================================================================================
-System compatibility probes started
+System compatibility probes started on `hostname`
 ================================================================================
 EOF
 
@@ -57,6 +57,6 @@ EOF
 
 cat <<EOF >&2
 ================================================================================
-System compatibility probes finished
+System compatibility probes finished on `hostname`
 ================================================================================
 EOF
