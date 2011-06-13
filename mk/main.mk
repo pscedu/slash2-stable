@@ -158,11 +158,12 @@ endif
 
 ifneq ($(filter rpc,${MODULES}),)
   SRCS+=	${PSCRPC_SRCS}
-  SRCS+=	${LNET_SOCKLND_SRCS}
   MODULES+=	lnet
 endif
 
 ifneq ($(filter lnet,${MODULES}),)
+  SRCS+=	${PFL_BASE}/psc_util/iostats.c
+  SRCS+=	${LNET_SOCKLND_SRCS}
   SRCS+=	${LNET_CFS_SRCS}
   SRCS+=	${LNET_LIB_SRCS}
   MODULES+=	lnet-hdrs lnet-nid
