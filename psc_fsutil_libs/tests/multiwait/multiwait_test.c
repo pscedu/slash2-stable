@@ -17,6 +17,10 @@
  * %PSC_END_COPYRIGHT%
  */
 
+/*
+ * TODO: test reset().
+ */
+
 #include <err.h>
 #include <limits.h>
 #include <pthread.h>
