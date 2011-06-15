@@ -1120,7 +1120,7 @@ psc_ctlcli_main(const char *osockfn, int ac, char *av[],
     const struct psc_ctlopt *otab, int notab)
 {
 	extern const char *daemon_name, *progname;
-	char optstr[LINE_MAX], chbuf[3];
+	char optstr[LINE_MAX], chbuf[3], *p;
 	struct psc_thread *thr;
 	struct sockaddr_un sun;
 	const char *prg;
@@ -1135,6 +1135,11 @@ psc_ctlcli_main(const char *osockfn, int ac, char *av[],
 	pscthr_init(PCTHRT_WR, 0, NULL, NULL, 0, "%swrthr", prg);
 
 	psc_ctl_sockfn = osockfn;
+
+	p = getenv("CTL_SOCK_FILE");
+	if (p)
+		psc_ctl_sockfn = p;
+
 	optstr[0] = '\0';
 	chbuf[2] = '\0';
 	strlcat(optstr, "S:", sizeof(optstr));
