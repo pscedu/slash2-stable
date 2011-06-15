@@ -5,6 +5,7 @@ include ${ROOTDIR}/Makefile.path
 
 PROG=		lnrtd
 SRCS=		lnrtd.c
+MAN=		lnrtd.8
 SRCS+=		${PFL_BASE}/psc_ds/vbitmap.c
 SRCS+=		${PFL_BASE}/psc_util/pthrutil.c
 SRCS+=		${PFL_BASE}/psc_util/thread.c
