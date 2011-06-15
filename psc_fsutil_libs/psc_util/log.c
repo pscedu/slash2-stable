@@ -331,6 +331,7 @@ _psclogv(const struct pfl_callerinfo *pci, enum psclog_level level,
 		FMTSTRCASE('u', "lu", tv.tv_usec)
 	);
 
+	/* XXX get rid of this copy */
 	rc = strlcpy(fmtbuf, fmt, sizeof(fmtbuf));
 	if (rc >= (int)sizeof(fmtbuf)) {
 		warnx("psclog error: prefix too long");
