@@ -603,7 +603,7 @@ psc_ctlmsg_iostats_prdat(__unusedx const struct psc_ctlmsghdr *mh,
 {
 	const struct psc_ctlmsg_iostats *pci = m;
 	const struct psc_iostats *ist = &pci->pci_ist;
-	char *p, buf[PSCFMT_HUMAN_BUFSIZ];
+	char buf[PSCFMT_HUMAN_BUFSIZ];
 	double d;
 	int i;
 
@@ -615,9 +615,6 @@ psc_ctlmsg_iostats_prdat(__unusedx const struct psc_ctlmsghdr *mh,
 			printf("%10.2f ", d);
 		else {
 			psc_fmt_human(buf, d);
-			p = strstr(buf, ".0B");
-			if (p)
-				strlcpy(p, "B", 2);
 			printf("%8s/s ", buf);
 		}
 	}
@@ -625,9 +622,6 @@ psc_ctlmsg_iostats_prdat(__unusedx const struct psc_ctlmsghdr *mh,
 		printf("%10"PRIu64, ist->ist_len_total);
 	else {
 		psc_fmt_human(buf, ist->ist_len_total);
-		p = strstr(buf, ".0B");
-		if (p)
-			strlcpy(p, "B", 2);
 		printf("%10s", buf);
 	}
 	printf("\n");

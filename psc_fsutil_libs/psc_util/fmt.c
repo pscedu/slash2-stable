@@ -34,6 +34,8 @@ psc_fmt_human(char buf[PSCFMT_HUMAN_BUFSIZ], double num)
 		num /= 1024.0;
 	if (mag > 6)
 		snprintf(buf, PSCFMT_HUMAN_BUFSIZ, "%.1e", num);
+	else if (mag == 0)
+		snprintf(buf, PSCFMT_HUMAN_BUFSIZ, "%6dB", (int)(num + .5));
 	else
 		snprintf(buf, PSCFMT_HUMAN_BUFSIZ, "%6.1f%c", num, "BKMGTPE"[mag]);
 }
