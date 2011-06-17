@@ -222,7 +222,7 @@ enum psclog_level {
 
 #define PFL_GOTOERR(label, code)					\
 	do {								\
-		if (code)						\
+		if ((code))						\
 			psclog_dbg("error: "#code ": %d", (code));	\
 		goto label;						\
 	} while (0)
