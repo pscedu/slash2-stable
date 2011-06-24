@@ -211,7 +211,7 @@ psc_multiwaitcond_wakeup(struct psc_multiwaitcond *mwc)
 			pthread_cond_signal(&mw->mw_cond);
 		}
 	psc_multiwaitcond_unlockallmw(mwc);
-	pthread_cond_signal(&mwc->mwc_cond);
+	pthread_cond_broadcast(&mwc->mwc_cond);
 	mwc->mwc_winner = NULL;
 	psc_mutex_unlock(&mwc->mwc_mutex);
 }
