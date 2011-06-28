@@ -32,10 +32,11 @@ sub fatal {
 }
 
 my %hacks = (
-	yytext		=> 0,
+	voidptr		=> 0,
 	yyerrlab	=> 0,
 	yylex_return	=> 0,
 	yysyntax_error	=> 0,
+	yytext		=> 0,
 );
 my %opts;
 getoptv("fH:x", \%opts) or usage;
@@ -49,8 +50,6 @@ if ($opts{H}) {
 }
 
 my $fn = $ARGV[0];
-my $host = `uname`;
-chomp $host;
 
 open F, "<", $fn or die "$fn: $!\n";
 local $/;
@@ -60,7 +59,7 @@ close F;
 # debug file ID
 print qq{# 1 "$fn"\n};
 
-if (!$opts{f} and ($data !~ m!psc_util/log\.h! or
+if (!$opts{f} and (
     basename($fn) eq "alloc.c" or
     basename($fn) eq "dynarray.c" or
     basename($fn) eq "hashtbl.c" or
@@ -76,10 +75,13 @@ if (!$opts{f} and ($data !~ m!psc_util/log\.h! or
 	exit 0;
 }
 
+my $pfl = $data =~ m!psc_util/log\.h!;
+
 my $i;
 my $lvl = 0;
 my $foff;
 my $linenr = 0;
+my $pci_trace;
 
 sub advance {
 	my ($len) = @_;
@@ -130,6 +132,8 @@ sub get_func_args {
 	local $_;
 	s/^\s+|\s+$//g for @av;
 	@av = () if @av == 1 && $av[0] eq "void";
+	$pci_trace = @av > 0 && $av[0] eq "const struct pfl_callerinfo *pci";
+	shift @av if $pci_trace;
 	for (@av) {
 		# void (*foo)(const char *, int)
 		unless (s/^.*?\(\s*\*(.*?)\).*/$1/s) {
@@ -184,6 +188,7 @@ sub containing_func_is_dead {
 }
 
 sub dec_level {
+	print "\n#undef _pfl_callerinfo\n" if $pci_trace && $lvl == 1;
 	$foff = undef unless --$lvl;
 	fatal "brace level $lvl < 0 at $linenr: $ARGV[0]" if $lvl < 0;
 }
@@ -191,7 +196,7 @@ sub dec_level {
 sub count_newlines {
 	my ($s) = @_;
 	return "/*$s*/" if $s =~ /\b(?:NOTREACHED|FALLTHROUGH)\b/;
-	return join '', $s =~ /\n/g;
+	return join '', $s =~ /\\?\n/g;
 }
 
 $data =~ s{/\*(.*?)\*/}{ count_newlines($1) }egs;
@@ -235,12 +240,13 @@ for ($i = 0; $i < length $data; ) {
 		advance(1);
 	} elsif ($lvl == 0 && substr($data, $i) =~ /^[^=]\s*\n{\s*\n/s) {
 		# catch routine entrance
-		advance($+[0] - 1);
 		warn "nested function?\n" if defined $foff;
 		$foff = $i;
-		unless (get_containing_func() eq "main") {
+		my @args = get_func_args();
+		print "\n#define _pfl_callerinfo pci\n" if $pci_trace;
+		advance($+[0] - 1);
+		unless (get_containing_func() eq "main" or !$pfl) {
 			print qq{psclog_trace("enter %s};
-			my @args = get_func_args();
 			my $endstr = "";
 			foreach my $arg (@args) {
 				print " $arg=%p:%ld";
@@ -255,7 +261,12 @@ for ($i = 0; $i < length $data; ) {
 		my $end = $1;
 		my $len = $+[0];
 		$i += $len;
-		print "PFL_RETURNX()$end";
+		if ($pfl) {
+			print "PFL_RETURNX()";
+		} else {
+			print "return";
+		}
+		print $end;
 		dec_level() if $end =~ /}/;
 	} elsif (substr($data, $i) =~ /^return(\s*(?:\(\s*".*?"\s*\)|".*?"))(\s*;\s*}?\s*)/s) {
 		# catch 'return' with string literal arg
@@ -263,7 +274,12 @@ for ($i = 0; $i < length $data; ) {
 		my $end = $2;
 		my $len = $+[0];
 		$i += $len;
-		print "PFL_RETURN_STR($rv)$end";
+		if ($pfl) {
+			print "PFL_RETURN_STR($rv)";
+		} else {
+			print "return ($rv)";
+		}
+		print $end;
 		dec_level() if $end =~ /}/;
 	} elsif (substr($data, $i) =~ /^return(\s*(?:\(\s*\d+\s*\)|\d+))(\s*;\s*}?\s*)/s) {
 		# catch 'return' with numeric literal arg
@@ -271,7 +287,12 @@ for ($i = 0; $i < length $data; ) {
 		my $end = $2;
 		my $len = $+[0];
 		$i += $len;
-		print "PFL_RETURN_LIT($rv)$end";
+		if ($pfl) {
+			print "PFL_RETURN_LIT($rv)";
+		} else {
+			print "return ($rv)";
+		}
+		print $end;
 		dec_level() if $end =~ /}/;
 	} elsif (substr($data, $i) =~ /^return\b(\s*.*?)(\s*;\s*}?\s*)/s) {
 		# catch 'return' with an arg
@@ -289,9 +310,14 @@ for ($i = 0; $i < length $data; ) {
 		}
 
 		$rv = "((void *)NULL)" if
-		    $rv =~ /^\s*\(NULL\)\s*$/ and $host eq "OpenBSD";
+		    $rv =~ /^\s*\(NULL\)\s*$/ and $hacks{voidptr};
 
-		print "$tag($rv)$end";
+		if ($pfl) {
+			print "$tag($rv)";
+		} else {
+			print "return ($rv)";
+		}
+		print $end;
 		dec_level() if $end =~ /}/;
 	} elsif ($lvl == 1 && substr($data, $i) =~ /^(?:psc_fatalx?|exit|errx?)\s*\([^;]*?\)\s*;\s*}\s*/s) {
 		# XXX this pattern skips psc_fatal("foo; bar")
@@ -327,7 +353,7 @@ for ($i = 0; $i < length $data; ) {
 					    get_containing_func eq "yysyntax_error";
 					last if $hacks{yylex_return} and
 					    get_containing_tag eq "YY_DECL";
-					print "PFL_RETURNX();";
+					print "PFL_RETURNX();" if $pfl;
 					last;
 				}
 			}

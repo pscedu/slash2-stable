@@ -245,14 +245,15 @@ psclist_disjoint(const struct psc_listentry *e)
  * @e: the psc_listentry to test.
  * @hd: the psclist_head the entry must be on.
  */
+#define _pfl_callerinfo pci
 static __inline int
-_psclist_conjoint(const struct pfl_callerinfo *pfl_callerinfo,
+_psclist_conjoint(const struct pfl_callerinfo *pci,
     const struct psc_listentry *e, const struct psclist_head *hd)
 {
 #if PFL_DEBUG
 	psc_assert(e->plh_magic == PLENT_MAGIC);
 	if (hd == NULL) {
-		psc_warnx("conjoint passed NULL");
+		psclog_warnx("conjoint passed NULL");
 		hd = e->plh_owner;
 	}
 	if (psc_lentry_prev(e))
@@ -265,10 +266,11 @@ _psclist_conjoint(const struct pfl_callerinfo *pfl_callerinfo,
 		psc_assert(psc_lentry_prev(e) && psc_lentry_next(e));
 #else
 	(void)hd;
-	(void)pfl_callerinfo;
+	(void)pci;
 #endif
 	return (psc_lentry_prev(e) != NULL);
 }
+#undef _pfl_callerinfo
 
 #define psclist_entry2(p, offset)						\
 	((struct psc_listentry *)((char *)(p) + (offset)))

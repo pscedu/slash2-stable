@@ -43,25 +43,15 @@ general reminders
 - prefer enum to #define for values since they are available within gdb
 - callerinfo should be const everywhere
 - stop reinpretation of args in macros with stack vars
-- if callerinfo is getting overwritten in thread-local storage, the
-  idiom is to change:
-
-	void
-	myfunc(const struct pfl_callerinfo *pfl_callerinfo, ...)
-	{
-		...
-	}
-
-  to:
+- the proper way to do callerinfo:
 
 	void
 	myfunc(const struct pfl_callerinfo *pci, ...)
 	{
-		PFL_START_TRACE(pci);
 		...
-		PFL_END_TRACE();
 	}
 
+  everything is handled under the hood by pcpp
 
 - use psc mem wrappers for:
 	malloc

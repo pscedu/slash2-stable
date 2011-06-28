@@ -30,7 +30,7 @@
 		}							\
 	} while (0)
 
-#define PFL_CALLERINFOSS(ss)	(pfl_callerinfo ? pfl_callerinfo :	\
+#define PFL_CALLERINFOSS(ss)	(_pfl_callerinfo ? _pfl_callerinfo :	\
 				    _pfl_callerinfo_get(__FILE__,	\
 				    __func__, __LINE__, (ss)))
 #define PFL_CALLERINFO()	PFL_CALLERINFOSS(PSC_SUBSYS)
@@ -61,19 +61,11 @@ void	*pfl_tls_get(int, size_t);
 #define PFL_TLSIDX_LASTRESERVED	6
 #define PFL_TLSIDX_MAX		8
 
-#ifdef HAVE_TLS
-# define PFL_START_TRACE(pci)	(pfl_callerinfo = (pci))
-# define PFL_END_TRACE()	(pfl_callerinfo = NULL)
-#else
-# define PFL_START_TRACE(pci)	((void)(pci))
-# define PFL_END_TRACE()
-#endif
-
 extern
 #ifdef HAVE_TLS
 __thread
 #endif
-const struct pfl_callerinfo	*pfl_callerinfo;
+const struct pfl_callerinfo	*_pfl_callerinfo;
 
 static __inline const struct pfl_callerinfo *
 _pfl_callerinfo_get(const char *fn, const char *func, int lineno,
