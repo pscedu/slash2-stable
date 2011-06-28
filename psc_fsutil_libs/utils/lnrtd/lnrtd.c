@@ -1,20 +1,32 @@
 /* $Id$ */
+/* %PSC_COPYRIGHT% */
 
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
 
 #include "pfl/str.h"
+#include "psc_ds/list.h"
 #include "psc_rpc/rpc.h"
+#include "psc_util/lock.h"
+#include "psc_util/log.h"
 
 #include "lnet/lnet.h"
 
-const char *progname;
+#include "lnrtd.h"
 
-enum {
-	LRTHRT_LNETAC,
-	LRTHRT_USKLNDPL,
-};
+#define PATH_CTLSOCK "../../lnrtd.sock"
+
+const char		*ctlsockfn = PATH_CTLSOCK;
+const char		*progname;
+
+struct psc_lockedlist	psc_odtables;
+struct psc_lockedlist	psc_mlists;
+struct psc_lockedlist	psc_meters;
+struct psc_lockedlist	psc_pools;
+
+PSCLIST_HEAD(pscrpc_all_services);
+psc_spinlock_t pscrpc_all_services_lock;
 
 int
 psc_usklndthr_get_type(const char *namefmt)
@@ -63,4 +75,5 @@ main(int argc, char *argv[])
 		psc_fatalx("LNetNIInit failed rc=%d", rc);
 	for (;;)
 		sleep(60);
+	/* NOTREACHED */
 }
