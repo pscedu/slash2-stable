@@ -81,6 +81,7 @@ my $lvl = 0;
 my $foff;
 my $linenr = 0;
 my $pci_trace;
+my $traced = "";
 
 sub advance {
 	my ($len) = @_;
@@ -132,7 +133,12 @@ sub get_func_args {
 	s/^\s+|\s+$//g for @av;
 	@av = () if @av == 1 && $av[0] eq "void";
 	$pci_trace = @av > 0 && $av[0] eq "const struct pfl_callerinfo *pci";
-	shift @av if $pci_trace;
+	if ($pci_trace) {
+		shift @av if $pci_trace;
+		$traced = "_TRACED";
+	} else {
+		$traced = "";
+	}
 	for (@av) {
 		# void (*foo)(const char *, int)
 		unless (s/^.*?\(\s*\*(.*?)\).*/$1/s) {
@@ -187,8 +193,6 @@ sub containing_func_is_dead {
 }
 
 sub dec_level {
-	print qq{\n#undef _pfl_callerinfo\n# }, $linenr + 2,
-	    qq{ "$fn"} if $pci_trace && $lvl == 1;
 	$foff = undef unless --$lvl;
 	fatal "brace level $lvl < 0 at $linenr: $ARGV[0]" if $lvl < 0;
 }
@@ -247,9 +251,8 @@ for ($i = 0; $i < length $data; ) {
 		$foff = $i;
 		my @args = get_func_args();
 		advance($plen);
-		print qq{#define _pfl_callerinfo pci\n# },
-		    $linenr + 1, qq{ "$fn"\n} if $pci_trace;
 		advance($slen - 1);
+		print qq{PFL_START_TRACE(pci); } if $pci_trace;
 		unless (get_containing_func() eq "main" or !$pfl) {
 			print qq{psclog_trace("enter %s};
 			my $endstr = "";
@@ -267,8 +270,9 @@ for ($i = 0; $i < length $data; ) {
 		$i += $-[1];
 		my $elen = $+[1] - $-[1];
 		if ($pfl) {
-			print "PFL_RETURNX()";
+			print "PFL_RETURNX$traced()";
 		} else {
+			print "PFL_END_TRACE(); " if $pci_trace;
 			print "return";
 		}
 		advance($elen);
@@ -281,8 +285,9 @@ for ($i = 0; $i < length $data; ) {
 		my $rvlen = $+[1] - $-[1];
 		my $elen = $+[2] - $-[2];
 		if ($pfl) {
-			print "PFL_RETURN_STR("
+			print "PFL_RETURN_STR$traced("
 		} else {
+			print "PFL_END_TRACE(); " if $pci_trace;
 			print "return (";
 		}
 		advance($rvlen);
@@ -297,8 +302,9 @@ for ($i = 0; $i < length $data; ) {
 		my $rvlen = $+[1] - $-[1];
 		my $elen = $+[2] - $-[2];
 		if ($pfl) {
-			print "PFL_RETURN_LIT(";
+			print "PFL_RETURN_LIT$traced(";
 		} else {
+			print "PFL_END_TRACE(); " if $pci_trace;
 			print "return (";
 		}
 		advance($rvlen);
@@ -326,8 +332,9 @@ for ($i = 0; $i < length $data; ) {
 		}
 
 		if ($pfl) {
-			print "$tag(";
+			print "$tag$traced(";
 		} else {
+			print "PFL_END_TRACE(); " if $pci_trace;
 			print "return (";
 		}
 		advance($rvlen);
@@ -369,7 +376,11 @@ for ($i = 0; $i < length $data; ) {
 					    get_containing_func eq "yysyntax_error";
 					last if $hacks{yylex_return} and
 					    get_containing_tag eq "YY_DECL";
-					print "PFL_RETURNX();" if $pfl;
+					if ($pfl) {
+						print "PFL_RETURNX$traced();" if $pfl;
+					} elsif ($pci_trace) {
+						print "PFL_END_TRACE();";
+					}
 					last;
 				}
 			}
