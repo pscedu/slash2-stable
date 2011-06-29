@@ -35,13 +35,13 @@
 
 #include "pfl/cdefs.h"
 #include "pfl/str.h"
+#include "pfl/subsys.h"
 #include "psc_ds/dynarray.h"
 #include "psc_ds/lockedlist.h"
 #include "psc_ds/vbitmap.h"
 #include "psc_util/alloc.h"
 #include "psc_util/lock.h"
 #include "psc_util/mem.h"
-#include "pfl/subsys.h"
 #include "psc_util/thread.h"
 
 __static pthread_key_t		 pfl_tlskey;
@@ -59,9 +59,7 @@ _pscthr_destroy(void *arg)
 {
 	struct psc_thread *thr = arg;
 
-	psclog_info("%s <pthr %"PSCPRI_PTHRT" thrid %d> dying",
-	    thr->pscthr_name, thr->pscthr_pthread,
-	    thr->pscthr_thrid);
+	psclog_info("thread dying");
 
 	PLL_LOCK(&psc_threads);
 	reqlock(&thr->pscthr_lock);
@@ -595,6 +593,5 @@ pscthr_getbyid(pthread_t id)
 void
 psc_enter_debugger(const char *str)
 {
-	psclog(PLL_MAX, "enter debugger (%s)", str);
 	pthread_kill(pthread_self(), SIGINT);
 }
