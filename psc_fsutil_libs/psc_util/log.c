@@ -24,6 +24,7 @@
 #include <sys/param.h>
 #include <sys/time.h>
 #include <sys/syscall.h>
+#include <sys/stat.h>
 
 #include <ctype.h>
 #include <err.h>
@@ -78,14 +79,39 @@ int pfl_syslog_map[] = {
 	LOG_DEBUG
 };
 
+int
+psc_log_getfncntr(char *fn, char *endp)
+{
+	char buf[PATH_MAX];
+	struct stat stb;
+	int i;
+
+	for (i = 0; i < INT_MAX; i++) {
+		snprintf(buf, sizeof(buf), "%*s%d", endp - fn, fn, i);
+		if (stat(buf, &stb) == -1) {
+			if (errno == ENOENT)
+				return (i);
+			warn("%s", buf);
+		}
+	}
+	return (0);
+}
+
 void
 psc_log_init(void)
 {
 	char *p;
 
 	p = getenv("PSC_LOG_FILE");
-	if (p && freopen(p, "w", stderr) == NULL)
-		warn("%s", p);
+	if (p) {
+		char fn[PATH_MAX];
+
+		FMTSTR(fn, sizeof(fn), p,
+			FMTSTRCASE('c', "d", psc_log_getfncntr(fn, _s))
+		);
+		if (freopen(fn, "w", stderr) == NULL)
+			warn("%s", fn);
+	}
 
 	p = getenv("PSC_LOG_FORMAT");
 	if (p)
