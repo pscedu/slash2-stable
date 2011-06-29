@@ -59,9 +59,7 @@ struct psc_ctlopt opts[] = {
 	{ 'n', PCOF_FLAG, &psc_ctl_nodns },
 	{ 'P', PCOF_FUNC, psc_ctlparse_pool },
 	{ 'p', PCOF_FUNC, psc_ctlparse_param },
-	{ 'R', PCOF_FUNC, &recursive },
 	{ 's', PCOF_FUNC, psc_ctlparse_show },
-	{ 'v', PCOF_FUNC, &verbose }
 };
 
 int
