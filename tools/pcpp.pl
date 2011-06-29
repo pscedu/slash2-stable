@@ -32,7 +32,6 @@ sub fatal {
 }
 
 my %hacks = (
-	voidptr		=> 0,
 	yyerrlab	=> 0,
 	yylex_return	=> 0,
 	yysyntax_error	=> 0,
@@ -188,7 +187,8 @@ sub containing_func_is_dead {
 }
 
 sub dec_level {
-	print "\n#undef _pfl_callerinfo\n" if $pci_trace && $lvl == 1;
+	print qq{\n#undef _pfl_callerinfo\n# }, $linenr + 2,
+	    qq{ "$fn"} if $pci_trace && $lvl == 1;
 	$foff = undef unless --$lvl;
 	fatal "brace level $lvl < 0 at $linenr: $ARGV[0]" if $lvl < 0;
 }
@@ -238,13 +238,18 @@ for ($i = 0; $i < length $data; ) {
 			}
 		}
 		advance(1);
-	} elsif ($lvl == 0 && substr($data, $i) =~ /^[^=]\s*\n{\s*\n/s) {
+	} elsif ($lvl == 0 && substr($data, $i) =~ /^([^=]\s*\n)({\s*\n)/s) {
+		my $plen = $+[1];
+		my $slen = $+[2] - $-[2];
+
 		# catch routine entrance
 		warn "nested function?\n" if defined $foff;
 		$foff = $i;
 		my @args = get_func_args();
-		print "\n#define _pfl_callerinfo pci\n" if $pci_trace;
-		advance($+[0] - 1);
+		advance($plen);
+		print qq{#define _pfl_callerinfo pci\n# },
+		    $linenr + 1, qq{ "$fn"\n} if $pci_trace;
+		advance($slen - 1);
 		unless (get_containing_func() eq "main" or !$pfl) {
 			print qq{psclog_trace("enter %s};
 			my $endstr = "";
@@ -256,68 +261,77 @@ for ($i = 0; $i < length $data; ) {
 		}
 		advance(1);
 		$lvl++;
-	} elsif (substr($data, $i) =~ /^return(\s*;\s*}?\s*)/s) {
+	} elsif (substr($data, $i) =~ /^return(\s*;\s*}?)/s) {
 		# catch 'return' without an arg
 		my $end = $1;
-		my $len = $+[0];
-		$i += $len;
+		$i += $-[1];
+		my $elen = $+[1] - $-[1];
 		if ($pfl) {
 			print "PFL_RETURNX()";
 		} else {
 			print "return";
 		}
-		print $end;
+		advance($elen);
 		dec_level() if $end =~ /}/;
-	} elsif (substr($data, $i) =~ /^return(\s*(?:\(\s*".*?"\s*\)|".*?"))(\s*;\s*}?\s*)/s) {
+	} elsif (substr($data, $i) =~ /^return(\s*(?:\(\s*".*?"\s*\)|".*?"))(\s*;\s*}?)/s) {
 		# catch 'return' with string literal arg
 		my $rv = $1;
 		my $end = $2;
-		my $len = $+[0];
-		$i += $len;
+		$i += $-[1];
+		my $rvlen = $+[1] - $-[1];
+		my $elen = $+[2] - $-[2];
 		if ($pfl) {
-			print "PFL_RETURN_STR($rv)";
+			print "PFL_RETURN_STR("
 		} else {
-			print "return ($rv)";
+			print "return (";
 		}
-		print $end;
+		advance($rvlen);
+		print ")";
+		advance($elen);
 		dec_level() if $end =~ /}/;
-	} elsif (substr($data, $i) =~ /^return(\s*(?:\(\s*\d+\s*\)|\d+))(\s*;\s*}?\s*)/s) {
+	} elsif (substr($data, $i) =~ /^return\b(\s*(?:\(\s*\d+\s*\)|\d+))(\s*;\s*}?)/s) {
 		# catch 'return' with numeric literal arg
 		my $rv = $1;
 		my $end = $2;
-		my $len = $+[0];
-		$i += $len;
+		$i += $-[1];
+		my $rvlen = $+[1] - $-[1];
+		my $elen = $+[2] - $-[2];
 		if ($pfl) {
-			print "PFL_RETURN_LIT($rv)";
+			print "PFL_RETURN_LIT(";
 		} else {
-			print "return ($rv)";
+			print "return (";
 		}
-		print $end;
+		advance($rvlen);
+		print ")";
+		advance($elen);
 		dec_level() if $end =~ /}/;
-	} elsif (substr($data, $i) =~ /^return\b(\s*.*?)(\s*;\s*}?\s*)/s) {
+	} elsif (substr($data, $i) =~ /^return\b(\s*.*?)(\s*;\s*}?)/s) {
 		# catch 'return' with an arg
 		my $rv = $1;
 		my $end = $2;
-		my $len = $+[0];
-		$i += $len;
-
-		$rv = "(PCPP_STR($rv))" if $rv =~ /^\s*\(?\s*yytext\s*\)?\s*$/ && $hacks{yytext};
+		$i += $-[1];
+		my $rvlen = $+[1] - $-[1];
+		my $elen = $+[2] - $-[2];
+		my $skiplen = 0;
 
 		my $tag = "PFL_RETURN";
 		if ($rv =~ /^\s*\(\s*PCPP_STR\s*\((.*)\)\s*\)$/) {
-			$rv = $1;
+			$rvlen += $-[1];
+			$skiplen++;
+			$tag = "PFL_RETURN_STR";
+		} elsif ($rv =~ /^\s*\(?\s*yytext\s*\)?\s*$/ && $hacks{yytext}) {
 			$tag = "PFL_RETURN_STR";
 		}
 
-		$rv = "((void *)NULL)" if
-		    $rv =~ /^\s*\(NULL\)\s*$/ and $hacks{voidptr};
-
 		if ($pfl) {
-			print "$tag($rv)";
+			print "$tag(";
 		} else {
-			print "return ($rv)";
+			print "return (";
 		}
-		print $end;
+		advance($rvlen);
+		print ")";
+		$i += $skiplen;
+		advance($elen);
 		dec_level() if $end =~ /}/;
 	} elsif ($lvl == 1 && substr($data, $i) =~ /^(?:psc_fatalx?|exit|errx?)\s*\([^;]*?\)\s*;\s*}\s*/s) {
 		# XXX this pattern skips psc_fatal("foo; bar")
@@ -358,8 +372,8 @@ for ($i = 0; $i < length $data; ) {
 				}
 			}
 		}
-		dec_level();
 		advance(1);
+		dec_level();
 	} else {
 		advance(1);
 	}
