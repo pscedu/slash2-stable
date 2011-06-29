@@ -65,7 +65,8 @@ pscrpc_nbreqset_init(pscrpc_set_interpreterf nb_interpret,
  *	non-blocking set.
  */
 int
-pscrpc_nbreqset_add(struct pscrpc_nbreqset *nbs, struct pscrpc_request *req)
+pscrpc_nbreqset_add(struct pscrpc_nbreqset *nbs,
+    struct pscrpc_request *req)
 {
 	int rc;
 
