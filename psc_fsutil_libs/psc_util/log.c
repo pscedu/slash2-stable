@@ -87,7 +87,8 @@ psc_log_getfncntr(char *fn, char *endp)
 	int i;
 
 	for (i = 0; i < INT_MAX; i++) {
-		snprintf(buf, sizeof(buf), "%*s%d", endp - fn, fn, i);
+		snprintf(buf, sizeof(buf), "%*s%d",
+		    (int)(endp - fn), fn, i);
 		if (stat(buf, &stb) == -1) {
 			if (errno == ENOENT)
 				return (i);

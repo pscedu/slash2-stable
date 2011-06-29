@@ -192,7 +192,6 @@ psc_rwlock_wrlock_pci(const struct pfl_callerinfo *pci,
 	int rc;
 
 	p = pthread_self();
-
 	psc_assert(rw->pr_writer != p);
 
 	spinlock(&rw->pr_lock);
