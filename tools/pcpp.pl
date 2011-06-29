@@ -316,8 +316,10 @@ for ($i = 0; $i < length $data; ) {
 
 		my $tag = "PFL_RETURN";
 		if ($rv =~ /^\s*\(\s*PCPP_STR\s*\((.*)\)\s*\)$/) {
-			$rvlen += $-[1];
-			$skiplen++;
+			$i += $-[1];
+			$rvlen -= $-[1];
+			$skiplen = $+[0] - $+[1];
+			$rvlen -= $skiplen;
 			$tag = "PFL_RETURN_STR";
 		} elsif ($rv =~ /^\s*\(?\s*yytext\s*\)?\s*$/ && $hacks{yytext}) {
 			$tag = "PFL_RETURN_STR";
@@ -333,18 +335,18 @@ for ($i = 0; $i < length $data; ) {
 		$i += $skiplen;
 		advance($elen);
 		dec_level() if $end =~ /}/;
-	} elsif ($lvl == 1 && substr($data, $i) =~ /^(?:psc_fatalx?|exit|errx?)\s*\([^;]*?\)\s*;\s*}\s*/s) {
+	} elsif ($lvl == 1 && substr($data, $i) =~ /^(?:psc_fatalx?|exit|errx?)\s*\([^;]*?\)\s*;\s*}/s) {
 		# XXX this pattern skips psc_fatal("foo; bar")
 		# because of the embedded semi-colon
 
 		# skip no return conditions
 		advance($+[0]);
 		dec_level();
-	} elsif ($lvl == 1 && substr($data, $i) =~ /^goto\s*\w+\s*;\s*}\s*/s) {
+	} elsif ($lvl == 1 && substr($data, $i) =~ /^goto\s*\w+\s*;\s*}/s) {
 		# skip no return conditions
 		advance($+[0]);
 		dec_level();
-	} elsif ($lvl == 1 && substr($data, $i) =~ m[^\s*/\*\s*NOTREACHED\s*\*/\s*}\s*]s) {
+	} elsif ($lvl == 1 && substr($data, $i) =~ m[^\s*/\*\s*NOTREACHED\s*\*/\s*}]s) {
 		# skip no return conditions
 		advance($+[0]);
 		dec_level();
