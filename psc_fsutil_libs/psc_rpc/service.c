@@ -65,8 +65,9 @@ pscrpc_free_request_buffer(char *ptr, __unusedx int size)
 }
 
 /**
- * pscrpc_alloc_rqbd - create a new request buffer desc and alloc request
- *	buffer memory.  This call sets request_in_callback as the callback handler.
+ * pscrpc_alloc_rqbd - Create a new request buffer desc and alloc
+ *	request buffer memory.  This call sets request_in_callback as
+ *	the callback handler.
  * @svc: pointer to the service which owns this request buffer ptr.
  */
 struct pscrpc_request_buffer_desc *
@@ -118,17 +119,16 @@ pscrpc_free_rqbd(struct pscrpc_request_buffer_desc *rqbd)
 }
 
 /**
- * pscrpc_server_post_idle_rqbds - iterate over the srv_idle_rqbds list
- *	and repost buffer desc's found there.  Calls pscrpc_register_rqbd()
- *	which does LNetMEAttach and LNetMDAttach.
+ * pscrpc_server_post_idle_rqbds - Iterate over the srv_idle_rqbds list
+ *	and repost buffer desc's found there.  Calls
+ *	pscrpc_register_rqbd() which does LNetMEAttach and LNetMDAttach.
  * @svc: pointer to the service
  */
 int
 pscrpc_server_post_idle_rqbds(struct pscrpc_service *svc)
 {
 	struct pscrpc_request_buffer_desc *rqbd;
-	int                                rc;
-	int                                posted = 0;
+	int rc, posted = 0;
 
 	for (;;) {
 		spinlock(&svc->srv_lock);
@@ -163,8 +163,8 @@ pscrpc_server_post_idle_rqbds(struct pscrpc_service *svc)
 	psclist_add_tail(&rqbd->rqbd_lentry, &svc->srv_idle_rqbds);
 
 	/*
-	 * Don't complain if no request buffers are posted right now; LNET
-	 * won't drop requests because we set the portal lazy!
+	 * Don't complain if no request buffers are posted right now;
+	 * LNET won't drop requests because we set the portal lazy!
 	 */
 
 	freelock(&svc->srv_lock);
@@ -1098,7 +1098,7 @@ pscrpcsvh_delthr(struct pscrpc_svc_handle *svh)
 }
 
 /**
- * pscrpc_svh_spawn - create an RPC service.
+ * pscrpc_svh_spawn - Create an RPC service.
  * @svh:  an initialized service handle structure which holds the
  *	service's relevant information.
  */
