@@ -596,11 +596,3 @@ psc_enter_debugger(__unusedx const char *str)
 {
 	pthread_kill(pthread_self(), SIGINT);
 }
-
-void
-pfl_thrclass_add(const char *name, )
-{
-	struct pfl_thread_class *ptc;
-
-	psc_dynarray_add(pfl_thread_classes);
-}
