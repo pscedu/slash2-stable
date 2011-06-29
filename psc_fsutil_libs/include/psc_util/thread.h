@@ -30,28 +30,28 @@
 #include "psc_util/log.h"
 #include "psc_util/waitq.h"
 
-#define PSC_THRNAME_MAX			32	/* must be 8-byte aligned */
+#define PSC_THRNAME_MAX		32				/* must be 8-byte aligned */
 
 struct psc_thread {
-	struct psclist_head	   pscthr_lentry;		/* list management */
-	psc_spinlock_t		   pscthr_lock;			/* for mutex */
-	pthread_t		   pscthr_pthread;		/* pthread_self() */
-	pid_t			   pscthr_thrid;		/* gettid(2) */
-	int			   pscthr_uniqid;		/* transiency bookkeeping */
+	struct psclist_head	  pscthr_lentry;		/* list management */
+	psc_spinlock_t		  pscthr_lock;			/* for mutex */
+	pthread_t		  pscthr_pthread;		/* pthread_self() */
+	pid_t			  pscthr_thrid;			/* gettid(2) */
+	int			  pscthr_uniqid;		/* transiency bookkeeping */
 
-	void			 (*pscthr_startf)(struct psc_thread *);	/* thread main */
-	void			 (*pscthr_dtor)(void *);	/* custom destructor */
+	void			(*pscthr_startf)(struct psc_thread *);	/* thread main */
+	void			(*pscthr_dtor)(void *);		/* custom destructor */
 
-	int			   pscthr_flags;		/* operational flags */
-	int			   pscthr_type;			/* app-specific type */
-	char			   pscthr_name[PSC_THRNAME_MAX];/* human readable name */
-	int			  *pscthr_loglevels;		/* logging granularity */
-	void			  *pscthr_private;		/* app-specific data */
-	struct psc_waitq	   pscthr_waitq;		/* for init, at least */
+	int			  pscthr_flags;			/* operational flags */
+	int			  pscthr_type;			/* app-specific type */
+	char			  pscthr_name[PSC_THRNAME_MAX];/* human readable name */
+	int			 *pscthr_loglevels;		/* logging granularity */
+	void			 *pscthr_private;		/* app-specific data */
+	struct psc_waitq	  pscthr_waitq;			/* for init, at least */
 
 	/* only used for thread initialization */
-	int			   pscthr_memnid;		/* ID of memnode */
-	size_t			   pscthr_privsiz;		/* size of app data */
+	int			  pscthr_memnid;		/* ID of memnode */
+	size_t			  pscthr_privsiz;		/* size of app data */
 };
 
 /* internal operation flags */
@@ -72,7 +72,7 @@ label(struct psc_thread *pt)						\
 }
 
 /*
- * pscthr_init - Initialization a application thread.
+ * pscthr_init - Initialize an application thread.
  */
 #define pscthr_init(thrtype, flags, startf, dtor, privsiz, namefmt,	\
 	    ...)							\
