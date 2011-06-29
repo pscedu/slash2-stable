@@ -97,21 +97,27 @@ psc_log_getfncntr(char *fn, char *endp)
 	return (0);
 }
 
+int
+psc_log_setfn(const char *p, const char *mode)
+{
+	char fn[PATH_MAX];
+
+	FMTSTR(fn, sizeof(fn), p,
+		FMTSTRCASE('c', "d", psc_log_getfncntr(fn, _s))
+	);
+	if (freopen(fn, mode, stderr) == NULL)
+		return (errno);
+	return (0);
+}
+
 void
 psc_log_init(void)
 {
 	char *p;
 
 	p = getenv("PSC_LOG_FILE");
-	if (p) {
-		char fn[PATH_MAX];
-
-		FMTSTR(fn, sizeof(fn), p,
-			FMTSTRCASE('c', "d", psc_log_getfncntr(fn, _s))
-		);
-		if (freopen(fn, "w", stderr) == NULL)
-			warn("%s", fn);
-	}
+	if (p && psc_log_setfn(p, "w"))
+		warn("%s", p);
 
 	p = getenv("PSC_LOG_FORMAT");
 	if (p)

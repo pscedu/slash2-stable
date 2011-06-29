@@ -240,6 +240,7 @@ enum psclog_level {
 	} while (0)
 
 void			 psc_log_init(void);
+int			 psc_log_setfn(const char *, const char *);
 void			 psc_log_setlevel(int, enum psclog_level);
 
 enum psclog_level	 psc_log_getlevel(int);
