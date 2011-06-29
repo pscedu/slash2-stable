@@ -526,7 +526,7 @@ psc_ctlparam_log_level(int fd, struct psc_ctlmsghdr *mh,
     struct psc_ctlmsg_param *pcp, char **levels, int nlevels,
     __unusedx struct psc_ctlparam_node *pcn)
 {
-	int rc, set, loglevel, subsys, start_ss, end_ss;
+	int found, rc, set, loglevel, subsys, start_ss, end_ss;
 	struct psc_thread *thr;
 
 	if (nlevels > 3)
@@ -570,8 +570,11 @@ psc_ctlparam_log_level(int fd, struct psc_ctlmsghdr *mh,
 		psc_log_setlevel(subsys, loglevel);
 
 	rc = 1;
+	found = 0;
 	PLL_LOCK(&psc_threads);
-	PSC_CTL_FOREACH_THREAD(thr, pcp->pcp_thrname, &psc_threads.pll_listhd)
+	PSC_CTL_FOREACH_THREAD(thr, pcp->pcp_thrname, &psc_threads.pll_listhd) {
+		found = 1;
+
 		for (subsys = start_ss; subsys < end_ss; subsys++) {
 			if (set)
 				thr->pscthr_loglevels[subsys] = loglevel;
@@ -585,9 +588,13 @@ psc_ctlparam_log_level(int fd, struct psc_ctlmsghdr *mh,
 					goto done;
 			}
 		}
+	}
 
  done:
 	PLL_ULOCK(&psc_threads);
+	if (!found)
+		return (psc_ctlsenderr(fd, mh, "invalid thread: %s",
+		    pcp->pcp_thrname));
 	return (rc);
 }
 
@@ -717,8 +724,8 @@ psc_ctlparam_run(int fd, struct psc_ctlmsghdr *mh,
     struct psc_ctlmsg_param *pcp, char **levels, int nlevels,
     __unusedx struct psc_ctlparam_node *pcn)
 {
+	int found, rc, set, run;
 	struct psc_thread *thr;
-	int rc, set, run;
 
 	if (nlevels > 1)
 		return (psc_ctlsenderr(fd, mh, "invalid field"));
@@ -744,9 +751,12 @@ psc_ctlparam_run(int fd, struct psc_ctlmsghdr *mh,
 	}
 
 	rc = 1;
+	found = 0;
 	PLL_LOCK(&psc_threads);
 	PSC_CTL_FOREACH_THREAD(thr, pcp->pcp_thrname,
 	    &psc_threads.pll_listhd) {
+		found = 1;
+
 		if (set)
 			pscthr_setrun(thr, run);
 		else if (!(rc = psc_ctlmsg_param_send(fd, mh, pcp,
@@ -755,6 +765,9 @@ psc_ctlparam_run(int fd, struct psc_ctlmsghdr *mh,
 			break;
 	}
 	PLL_ULOCK(&psc_threads);
+	if (!found)
+		return (psc_ctlsenderr(fd, mh, "invalid thread: %s",
+		    pcp->pcp_thrname));
 	return (rc);
 }
 
@@ -771,8 +784,8 @@ psc_ctlparam_pause(int fd, struct psc_ctlmsghdr *mh,
     struct psc_ctlmsg_param *pcp, char **levels, int nlevels,
     __unusedx struct psc_ctlparam_node *pcn)
 {
+	int found, rc, set, pauseval;
 	struct psc_thread *thr;
-	int rc, set, pauseval;
 	char *s;
 	long l;
 
@@ -801,8 +814,11 @@ psc_ctlparam_pause(int fd, struct psc_ctlmsghdr *mh,
 	}
 
 	rc = 1;
+	found = 0;
 	PLL_LOCK(&psc_threads);
 	PSC_CTL_FOREACH_THREAD(thr, pcp->pcp_thrname, &psc_threads.pll_listhd) {
+		found = 1;
+
 		if (set)
 			pscthr_setpause(thr, pauseval);
 		else if (!(rc = psc_ctlmsg_param_send(fd, mh, pcp,
@@ -811,6 +827,9 @@ psc_ctlparam_pause(int fd, struct psc_ctlmsghdr *mh,
 			break;
 	}
 	PLL_ULOCK(&psc_threads);
+	if (!found)
+		return (psc_ctlsenderr(fd, mh, "invalid thread: %s",
+		    pcp->pcp_thrname));
 	return (rc);
 }
 
@@ -1044,7 +1063,9 @@ psc_ctlrep_param(int fd, struct psc_ctlmsghdr *mh, void *m)
 	pcf = NULL;
 	INIT_PSCLIST_HEAD(&stack);
 
+	pcp->pcp_thrname[sizeof(pcp->pcp_thrname) - 1] = '\0';
 	pcp->pcp_field[sizeof(pcp->pcp_field) - 1] = '\0';
+	pcp->pcp_value[sizeof(pcp->pcp_value) - 1] = '\0';
 
 	set = (mh->mh_type == PCMT_SETPARAM);
 
