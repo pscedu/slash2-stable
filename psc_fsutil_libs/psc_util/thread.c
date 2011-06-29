@@ -44,6 +44,7 @@
 #include "psc_util/mem.h"
 #include "psc_util/thread.h"
 
+struct psc_dynarray		 pfl_thread_classes = DYNARRAY_INIT;
 __static pthread_key_t		 pfl_tlskey;
 __static pthread_key_t		 psc_thrkey;
 __static struct psc_vbitmap	 psc_uniqthridmap = VBITMAP_INIT_AUTO;
@@ -591,7 +592,15 @@ pscthr_getbyid(pthread_t id)
 }
 
 void
-psc_enter_debugger(const char *str)
+psc_enter_debugger(__unusedx const char *str)
 {
 	pthread_kill(pthread_self(), SIGINT);
+}
+
+void
+pfl_thrclass_add(const char *name, )
+{
+	struct pfl_thread_class *ptc;
+
+	psc_dynarray_add(pfl_thread_classes);
 }
