@@ -66,13 +66,11 @@ void	*pfl_tls_get(int, size_t);
 	do {								\
 		_pfl_callerinfo = (pci);				\
 		_pfl_callerinfo_lvl++;					\
-		printf("%lx %s %d incr\n", pthread_self(), __func__, _pfl_callerinfo_lvl);	\
 	} while (0)
 # define PFL_END_TRACE()						\
 	do {								\
 		if (--_pfl_callerinfo_lvl == 0)				\
 			_pfl_callerinfo = NULL;				\
-		printf("%lx %s %d decr\n", pthread_self(), __func__, _pfl_callerinfo_lvl);	\
 	} while (0)
 #else
 # define PFL_START_TRACE(pci)
