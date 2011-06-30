@@ -606,8 +606,8 @@ pscrpc_unregister_reply(struct pscrpc_request *request)
 
 
 	if (request->rq_abort_reply) {
-		//request->rq_receiving_reply = 0;
-		//return;
+		request->rq_receiving_reply = 0;
+		return;
 	}
 
 	for (;;) {
@@ -1508,7 +1508,7 @@ pscrpc_abort_inflight(struct pscrpc_import *imp)
 			req->rq_err = 1;
 			pscrpc_wake_client_req(req);
 		}
-		req->rq_abort_reply = 1;
+		//req->rq_abort_reply = 1;
 		if (req->rq_bulk)
                         req->rq_bulk->bd_abort = 1;
 		

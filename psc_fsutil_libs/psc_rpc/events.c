@@ -65,6 +65,7 @@ pscrpc_request_out_callback(lnet_event_t *ev)
 		 * like failing sends in client.c does currently...  */
 		spinlock(&req->rq_lock);
 		req->rq_net_err = 1;
+		req->rq_abort_reply = 1;
 		freelock(&req->rq_lock);
 
 		pscrpc_wake_client_req(req);
