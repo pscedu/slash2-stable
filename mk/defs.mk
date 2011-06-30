@@ -46,6 +46,7 @@ CFLAGS+=	-Wall -W -pipe
 # CFLAGS+=	-Wshadow
 
 DEBUG?=		1
+DEVELPATHS?=	1
 ifeq (${DEBUG},0)
   CFLAGS+=	-Wunused -Wuninitialized -O2
 else
@@ -54,7 +55,7 @@ else
 endif
 
 DEFINES+=	-D_REENTRANT -DYY_NO_UNPUT -DYY_NO_INPUT -DYYERROR_VERBOSE
-DEFINES+=	-DPFL_DEBUG=${DEBUG}
+DEFINES+=	-DPFL_DEBUG=${DEBUG} -DDEVELPATHS=${DEVELPATHS}
 
 KERNEL_BASE=	/usr/src/kernels/linux
 
