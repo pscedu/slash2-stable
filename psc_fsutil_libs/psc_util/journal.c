@@ -206,8 +206,10 @@ pjournal_next_slot(struct psc_journal_xidhndl *xh)
 
 	/* Update the next slot to be written by a next log entry */
 	psc_assert(pj->pj_nextwrite < pj->pj_total);
-	if ((++pj->pj_nextwrite) == pj->pj_total)
+	if ((++pj->pj_nextwrite) == pj->pj_total) {
 		pj->pj_nextwrite = 0;
+		pj->pj_wraparound = 0;
+	}
 
 	pj->pj_inuse++;
 	xh->pjx_slot = slot;
@@ -904,6 +906,7 @@ pjournal_replay(struct psc_journal *pj, int thrtype,
 
 	/* always start at the first slot of the journal */
 	pj->pj_nextwrite = 0;
+	pj->pj_wraparound = 0;
 
 	/* pre-allocate some buffers for log writes/distill */
 	psc_dynarray_ensurelen(&pj->pj_bufs, PJ_MAX_BUF);
