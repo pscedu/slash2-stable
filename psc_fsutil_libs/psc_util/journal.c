@@ -629,9 +629,9 @@ pjournal_scan_slots(struct psc_journal *pj)
 	    pj->pj_hdr->pjh_readsize);
 
 	nopen = psc_dynarray_len(&pj->pj_bufs);
-	psclog_info("Journal scan statistics: %d closed, %d open, %d magic, "
-	    "%d chksum, %d scan, %d total",
-	    nclose, nopen, nmagic, nchksum, nscan, pj->pj_total);
+	psclog_info("Journal scan statistics: closed = %d, open = %d, magic = %d, "
+	    "chksum = %d, scan = %d, last = %d, total = %d",
+	    nclose, nopen, nmagic, nchksum, nscan, last_slot, pj->pj_total);
 	return (rc);
 }
 
