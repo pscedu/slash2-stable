@@ -91,6 +91,7 @@ struct psc_ctlmsg_journal {
 	uint32_t		pcj_bufs_cnt;
 	uint32_t		pcj_nwaiters;
 	uint32_t		pcj_nextwrite;
+	uint64_t		pcj_wraparound;
 };
 
 struct psc_ctlmsg_lc {

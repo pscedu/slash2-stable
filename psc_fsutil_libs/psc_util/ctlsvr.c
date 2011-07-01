@@ -1503,6 +1503,7 @@ psc_ctlrep_getjournal(int fd, struct psc_ctlmsghdr *mh, void *m)
 		pcj->pcj_bufs_cnt	= psc_dynarray_len(&j->pj_bufs);
 		pcj->pcj_nwaiters	= psc_waitq_nwaiters(&j->pj_waitq);
 		pcj->pcj_nextwrite	= j->pj_nextwrite;
+		pcj->pcj_wraparound	= j->pj_wraparound;
 		PJ_ULOCK(j);
 
 		rc = psc_ctlmsg_sendv(fd, mh, pcj);

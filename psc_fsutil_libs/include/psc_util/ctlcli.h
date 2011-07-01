@@ -28,7 +28,7 @@
 struct psc_ctlmsg_thread;
 struct psc_ctlmsghdr;
 
-#define PSC_CTL_DISPLAY_WIDTH	80
+#define PSC_CTL_DISPLAY_WIDTH	86
 
 #define PSC_CTLMSG_PRFMT_DEFS															\
 	{ NULL,				psc_ctlmsg_error_prdat,		sizeof(struct psc_ctlmsg_error),	NULL },				\
