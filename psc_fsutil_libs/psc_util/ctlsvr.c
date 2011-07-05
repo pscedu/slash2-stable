@@ -933,7 +933,8 @@ psc_ctlparam_pool(int fd, struct psc_ctlmsghdr *mh,
 		return (psc_ctlsenderr(fd, mh, "invalid field"));
 
 	if (strcmp(pcp->pcp_thrname, PCTHRNAME_EVERYONE) != 0)
-		return (psc_ctlsenderr(fd, mh, "invalid thread field"));
+		return (psc_ctlsenderr(fd, mh, "invalid field for %s",
+		    pcp->pcp_thrname));
 
 	rc = 1;
 	levels[0] = "pool";
@@ -980,8 +981,8 @@ psc_ctlparam_pool(int fd, struct psc_ctlmsghdr *mh,
 		if (m == NULL)
 			return (psc_ctlsenderr(fd, mh,
 			    "invalid pool: %s", levels[1]));
-		rc = psc_ctlparam_pool_handle(fd, mh,
-		    pcp, levels, nlevels, m, val);
+		rc = psc_ctlparam_pool_handle(fd, mh, pcp, levels,
+		    nlevels, m, val);
 		POOL_ULOCK(m);
 	}
 	return (rc);
