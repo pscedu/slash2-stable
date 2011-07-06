@@ -598,17 +598,10 @@ pscrpc_unregister_reply(struct pscrpc_request *request)
 
 	/* We have to l_wait_event() whatever the result, to give liblustre
 	 * a chance to run reply_in_callback() */
-
 	if (request->rq_set)
 		wq = &request->rq_set->set_waitq;
 	else
 		wq = &request->rq_reply_waitq;
-
-
-	if (request->rq_abort_reply) {
-		request->rq_receiving_reply = 0;
-		return;
-	}
 
 	for (;;) {
 		/* Network access will complete in finite time but the HUGE
@@ -1172,6 +1165,7 @@ pscrpc_expire_one_request(struct pscrpc_request *req)
 	else if (!imp->imp_igntimeout)
 		pscrpc_fail_import(imp, req->rq_reqmsg->conn_cnt);
 	
+
 	return (1);
 }
 
