@@ -32,7 +32,7 @@
 #include "psc_util/log.h"
 
 int
-pfl_fwalk(const char *fn, int flags,
+pfl_filewalk(const char *fn, int flags,
     int (*cbf)(const char *, const struct stat *, void *), void *arg)
 {
 	char * const pathv[] = { (char *)fn, NULL };
@@ -42,7 +42,7 @@ pfl_fwalk(const char *fn, int flags,
 	FTSENT *f;
 	FTS *fp;
 
-	if (flags & PFL_FWALKF_RECURSIVE) {
+	if (flags & PFL_FILEWALKF_RECURSIVE) {
 		/* XXX security implications of FTS_NOCHDIR? */
 		fp = fts_open(pathv, FTS_COMFOLLOW | FTS_NOCHDIR |
 		    FTS_PHYSICAL, NULL);
@@ -59,7 +59,7 @@ pfl_fwalk(const char *fn, int flags,
 				if (realpath(f->fts_path, buf) == NULL)
 					warn("%s", f->fts_path);
 				else {
-					if (flags & PFL_FWALKF_VERBOSE)
+					if (flags & PFL_FILEWALKF_VERBOSE)
 						warnx("processing %s%s",
 						    buf, f->fts_info ==
 						    FTS_D ? "/" : "");

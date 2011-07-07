@@ -27,7 +27,7 @@
 
 struct stat;
 
-void pfl_filewalk(const char *, int, void (*)(const char *,
+int pfl_filewalk(const char *, int, int (*)(const char *,
 	const struct stat *, void *), void *);
 
 #define PFL_FILEWALKF_VERBOSE	(1 << 0)
