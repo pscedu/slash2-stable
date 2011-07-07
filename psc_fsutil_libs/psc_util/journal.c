@@ -208,7 +208,7 @@ pjournal_next_slot(struct psc_journal_xidhndl *xh)
 	psc_assert(pj->pj_nextwrite < pj->pj_total);
 	if ((++pj->pj_nextwrite) == pj->pj_total) {
 		pj->pj_nextwrite = 0;
-		pj->pj_wraparound = 0;
+		pj->pj_wraparound++;
 	}
 
 	pj->pj_inuse++;
@@ -313,6 +313,7 @@ pjournal_reserve_slot(struct psc_journal *pj)
 		freelock(&t->pjx_lock);
 		pjournal_xdestroy(t);
 		pj->pj_inuse--;
+		psc_assert(pj->pj_resrv + pj->pj_inuse <  pj->pj_total);
 		break;
 	}
 	pj->pj_resrv++;
