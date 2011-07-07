@@ -264,7 +264,7 @@ pjournal_reserve_slot(struct psc_journal *pj)
 	psc_assert(!(pj->pj_flags & PJF_REPLAYINPROG));
 	for (;;) {
 		PJ_LOCK(pj);
-		if (pj->pj_resrv + pj->pj_inuse <  pj->pj_total)
+		if (pj->pj_resrv + pj->pj_inuse < pj->pj_total)
 			break;
 
 		pj->pj_commit_txg = zfsslash2_return_synced();
@@ -297,9 +297,9 @@ pjournal_reserve_slot(struct psc_journal *pj)
 		}
 		if (t->pjx_flags & PJX_DISTILL) {
 			psclog_warnx("Journal %p reservation is blocked "
-			    "on slot %d owned by transaction %p "
-			    "(xid=%#"PRIx64" flags=%#x)",
-			    pj, pj->pj_nextwrite, t, t->pjx_xid, t->pjx_flags);
+			    "by transaction %p "
+			    "(xid=%#"PRIx64", slot=%d, flags=%#x)",
+			    pj, t, t->pjx_xid, t->pjx_slot, t->pjx_flags);
 
 			freelock(&t->pjx_lock);
 			PJ_ULOCK(pj);
@@ -312,9 +312,12 @@ pjournal_reserve_slot(struct psc_journal *pj)
 		pll_remove(&pj->pj_pendingxids, t);
 		freelock(&t->pjx_lock);
 		pjournal_xdestroy(t);
+		/*
+		 * Theoretically, I can break here to use the one I just freed.
+		 * However, it is safer to let the pending transactoins drain.
+		 */
 		pj->pj_inuse--;
-		psc_assert(pj->pj_resrv + pj->pj_inuse <=  pj->pj_total);
-		break;
+		PJ_ULOCK(pj);
 	}
 	pj->pj_resrv++;
 	PJ_ULOCK(pj);
