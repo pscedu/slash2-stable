@@ -215,11 +215,11 @@ pjournal_next_slot(struct psc_journal_xidhndl *xh)
 	xh->pjx_slot = slot;
 	pll_addtail(&pj->pj_pendingxids, xh);
 
-	PJ_ULOCK(pj);
-
 	psclog_info("writing a log entry xid=%#"PRIx64
-	    ": slot=%d tail_slot=%d",
-	    xh->pjx_xid, xh->pjx_slot, tail_slot);
+	    ": slot=%d, next=%d, tail=%d",
+	    xh->pjx_xid, xh->pjx_slot, pj->pj_nextwrite, tail_slot);
+
+	PJ_ULOCK(pj);
 }
 
 /**
@@ -285,9 +285,9 @@ pjournal_reserve_slot(struct psc_journal *pj)
 			uint64_t txg;
 
 			psclog_warnx("journal %p reservation is blocked "
-			    "on slot %d owned by transaction %p "
-			    "(xid=%#"PRIx64" txg=%"PRId64")",
-			    pj, pj->pj_nextwrite, t, t->pjx_xid, t->pjx_txg);
+			    "by transaction %p "
+			    "(xid=%#"PRIx64", txg=%"PRId64", slot=%d)",
+			    pj, t, t->pjx_xid, t->pjx_txg, t->pjx_slot);
 
 			txg = t->pjx_txg;
 			freelock(&t->pjx_lock);
@@ -313,7 +313,7 @@ pjournal_reserve_slot(struct psc_journal *pj)
 		freelock(&t->pjx_lock);
 		pjournal_xdestroy(t);
 		pj->pj_inuse--;
-		psc_assert(pj->pj_resrv + pj->pj_inuse <  pj->pj_total);
+		psc_assert(pj->pj_resrv + pj->pj_inuse <=  pj->pj_total);
 		break;
 	}
 	pj->pj_resrv++;
