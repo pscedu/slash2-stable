@@ -43,6 +43,10 @@
 
 #include "zfs-fuse/zfs_slashlib.h"
 
+
+static long	total_trans = 0;
+static long	total_reserve = 0;
+
 struct psc_journalthr {
 	struct psc_journal *pjt_pj;
 };
@@ -52,6 +56,8 @@ __static void		pjournal_logwrite(struct psc_journal_xidhndl *, int,
 
 __static int		pjournal_logwrite_internal(struct psc_journal *,
 				struct psc_journal_enthdr *, uint32_t);
+
+psc_spinlock_t		pjournal_reserve = SPINLOCK_INIT;
 
 struct psc_waitq	pjournal_waitq = PSC_WAITQ_INIT;
 psc_spinlock_t		pjournal_waitqlock = SPINLOCK_INIT;
@@ -210,6 +216,7 @@ pjournal_next_slot(struct psc_journal_xidhndl *xh)
 		pj->pj_nextwrite = 0;
 		pj->pj_wraparound++;
 	}
+	psc_assert(pj->pj_resrv > 0);
 
 	pj->pj_inuse++;
 	xh->pjx_slot = slot;
@@ -231,6 +238,9 @@ __static struct psc_journal_xidhndl *
 pjournal_xnew(struct psc_journal *pj, int distill, uint64_t txg)
 {
 	struct psc_journal_xidhndl *xh;
+
+	total_trans++;
+	psc_assert(total_trans <= total_reserve);
 
 	xh = psc_alloc(sizeof(*xh), 0);
 
@@ -257,24 +267,31 @@ pjournal_xdestroy(struct psc_journal_xidhndl *xh)
 }
 
 void
-pjournal_reserve_slot(struct psc_journal *pj)
+pjournal_reserve_slot(struct psc_journal *pj, int count)
 {
 	struct psc_journal_xidhndl *t;
 
+	total_reserve += count;
+	spinlock(&pjournal_reserve);
+
 	psc_assert(!(pj->pj_flags & PJF_REPLAYINPROG));
-	for (;;) {
+	while (count) {
 		PJ_LOCK(pj);
-		if (pj->pj_resrv + pj->pj_inuse < pj->pj_total)
-			break;
+		if (pj->pj_resrv + pj->pj_inuse < pj->pj_total) {
+			count--;
+			pj->pj_resrv++;
+			PJ_ULOCK(pj);
+			continue;
+		}
 
 		pj->pj_commit_txg = zfsslash2_return_synced();
 
 		t = pll_peekhead(&pj->pj_pendingxids);
 		if (!t) {
 			/* this should never happen in practice */
-			psclog_warnx("journal %p reservation is blocked "
+			psclog_warnx("journal reservation blocked "
 			    "on over-reservation: resrv=%d inuse=%d",
-			    pj, pj->pj_resrv, pj->pj_inuse);
+			    pj->pj_resrv, pj->pj_inuse);
 
 			pj->pj_flags |= PJF_WANTSLOT;
 			psc_waitq_wait(&pj->pj_waitq, &pj->pj_lock);
@@ -284,10 +301,10 @@ pjournal_reserve_slot(struct psc_journal *pj)
 		if (t->pjx_txg > pj->pj_commit_txg) {
 			uint64_t txg;
 
-			psclog_warnx("journal %p reservation is blocked "
+			psclog_warnx("journal reservation blocked "
 			    "by transaction %p "
 			    "(xid=%#"PRIx64", txg=%"PRId64", slot=%d)",
-			    pj, t, t->pjx_xid, t->pjx_txg, t->pjx_slot);
+			    t, t->pjx_xid, t->pjx_txg, t->pjx_slot);
 
 			txg = t->pjx_txg;
 			freelock(&t->pjx_lock);
@@ -296,10 +313,10 @@ pjournal_reserve_slot(struct psc_journal *pj)
 			continue;
 		}
 		if (t->pjx_flags & PJX_DISTILL) {
-			psclog_warnx("Journal %p reservation is blocked "
+			psclog_warnx("Journal reservation blocked "
 			    "by transaction %p "
 			    "(xid=%#"PRIx64", slot=%d, flags=%#x)",
-			    pj, t, t->pjx_xid, t->pjx_slot, t->pjx_flags);
+			    t, t->pjx_xid, t->pjx_slot, t->pjx_flags);
 
 			freelock(&t->pjx_lock);
 			PJ_ULOCK(pj);
@@ -312,22 +329,18 @@ pjournal_reserve_slot(struct psc_journal *pj)
 		pll_remove(&pj->pj_pendingxids, t);
 		freelock(&t->pjx_lock);
 		pjournal_xdestroy(t);
-		/*
-		 * Theoretically, I can break here to use the one I just freed.
-		 * However, it is safer to let the pending transactoins drain.
-		 */
 		pj->pj_inuse--;
 		PJ_ULOCK(pj);
 	}
-	pj->pj_resrv++;
-	PJ_ULOCK(pj);
+	freelock(&pjournal_reserve);
 }
 
 void
-pjournal_unreserve_slot(struct psc_journal *pj)
+pjournal_unreserve_slot(struct psc_journal *pj, int count)
 {
 	PJ_LOCK(pj);
-	pj->pj_resrv--;
+	psc_assert(pj->pj_resrv >= (uint32_t) count);
+	pj->pj_resrv -= count;
 	if (pj->pj_flags & PJF_WANTSLOT) {
 		pj->pj_flags &= ~PJF_WANTSLOT;
 		psc_waitq_wakeone(&pj->pj_waitq);
