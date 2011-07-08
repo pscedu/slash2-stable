@@ -40,6 +40,7 @@
 #include "pfl/sys.h"
 #include "pfl/time.h"
 #include "pfl/types.h"
+#include "pfl/walk.h"
 #include "psc_ds/dynarray.h"
 #include "psc_ds/list.h"
 #include "psc_ds/listcache.h"
