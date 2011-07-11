@@ -20,6 +20,8 @@
 #ifndef _PFL_FSMOD_H_
 #define _PFL_FSMOD_H_
 
+#include "psc_ds/list.h"
+
 #ifdef HAVE_FUSE
 #  include <fuse_lowlevel.h>
 
@@ -37,6 +39,7 @@ struct pscfs_req {
 	fuse_req_t			 pfr_fuse_req;
 	struct fuse_file_info		*pfr_fuse_fi;
 	struct pscfs_clientctx		 pfr_clientctx;
+	struct psc_listentry		 pfr_lentry;
 };
 
 #  define PSCFS_ARGS_INIT(n, av)	{ FUSE_ARGS_INIT((n), (av)) }
