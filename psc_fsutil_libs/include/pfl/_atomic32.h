@@ -24,7 +24,7 @@
 
 #include "pfl/cdefs.h"
 
-struct psc_atomic32 { volatile int32_t value32; } __packed;
+struct psc_atomic32 { volatile int32_t value32 __aligned(4); } __packed;
 
 #define psc_atomic32_t struct psc_atomic32
 

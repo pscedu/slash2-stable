@@ -71,6 +71,9 @@
 #undef __weak
 #define __weak			__attribute__((__weak__))
 
+#undef __aligned
+#define __aligned(n)		__attribute__((__aligned__(n)))
+
 #ifdef HAVE_TLS
 #  define __threadx		__thread
 #else
