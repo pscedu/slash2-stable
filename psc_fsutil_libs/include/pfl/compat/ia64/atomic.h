@@ -138,7 +138,7 @@ psc_atomic64_sub(psc_atomic64_t *v, int64_t i)
 #define psc_atomic16_add_return(v, i) psc_atomic16_add((v), (i))
 
 #define psc_atomic32_add_return(v, i)					\
-({									\
+_PFL_RVSTART {								\
 	int __ia64_aar_i = (i);						\
 									\
 	(__builtin_constant_p(i)					\
@@ -148,10 +148,10 @@ psc_atomic64_sub(psc_atomic64_t *v, int64_t i)
 	     || (__ia64_aar_i == -8) || (__ia64_aar_i == -16)))		\
 		? ia64_fetch_and_add(__ia64_aar_i, &(v)->value)		\
 		: psc_atomic32_add((v), __ia64_aar_i);			\
-})
+} _PFL_RVEND
 
 #define psc_atomic64_add_return(v, i)					\
-({									\
+_PFL_RVSTART {								\
 	long __ia64_aar_i = (i);					\
 									\
 	(__builtin_constant_p(i)					\
@@ -161,12 +161,12 @@ psc_atomic64_sub(psc_atomic64_t *v, int64_t i)
 	     || (__ia64_aar_i == -8) || (__ia64_aar_i == -16)))		\
 		? ia64_fetch_and_add(__ia64_aar_i, &(v)->value)		\
 		: ia64_atomic64_add(__ia64_aar_i, (v));			\
-})
+} _PFL_RVEND
 
 #define psc_atomic16_sub_return(v, i)	psc_atomic16_sub((v), (i))
 
 #define psc_atomic32_sub_return(v, i)					\
-({									\
+_PFL_RVSTART {								\
 	int __ia64_asr_i = (i);						\
 									\
 	(__builtin_constant_p(i)					\
@@ -176,10 +176,10 @@ psc_atomic64_sub(psc_atomic64_t *v, int64_t i)
 	     || (__ia64_asr_i ==  -8) || (__ia64_asr_i == -16)))	\
 		? ia64_fetch_and_add(-__ia64_asr_i, &(v)->value)	\
 		: ia64_atomic32_sub(__ia64_asr_i, (v));			\
-})
+} _PFL_RVEND
 
 #define psc_atomic64_sub_return(v, i)					\
-({									\
+_PFL_RVSTART {								\
 	long __ia64_asr_i = (i);					\
 									\
 	(__builtin_constant_p(i)					\
@@ -189,7 +189,7 @@ psc_atomic64_sub(psc_atomic64_t *v, int64_t i)
 	     || (__ia64_asr_i ==  -8) || (__ia64_asr_i == -16)))	\
 		? ia64_fetch_and_add(-__ia64_asr_i, &(v)->value)	\
 		: ia64_atomic64_sub(__ia64_asr_i, (v));			\
-})
+} _PFL_RVEND
 
 #define psc_atomic16_dec_test_zero(v)		(psc_atomic16_sub_return((v), 1) == 0)
 #define psc_atomic32_dec_test_zero(v)		(psc_atomic32_sub_return((v), 1) == 0)
