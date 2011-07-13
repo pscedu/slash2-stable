@@ -129,10 +129,10 @@ psc_enter_debugger(const char *str)
 void
 pfl_init(void)
 {
-	static atomic_t init = ATOMIC_INIT(0);
+	static psc_atomic32_t init = PSC_ATOMIC32_INIT(0);
 	char *p;
 
-	if (atomic_xchg(&init, 1))
+	if (psc_atomic32_xchg(&init, 1))
 		errx(1, "pfl_init: already initialized");
 
 	psc_log_init();
