@@ -38,9 +38,9 @@ struct psc_journal_enthdr;
 
 typedef int (*psc_replay_handler_t)(struct psc_journal_enthdr *);
 /*
- * Distill handler is used to further process certain log entries.  These
- * log entries carry information that we might need to preserve a longer
- * time, and outside the journal.
+ * Distill handler is used to further process certain log entries.
+ * These log entries carry information that we might need to preserve a
+ * longer time, and outside the journal.
  */
 typedef int (*psc_distill_handler_t)(struct psc_journal_enthdr *, uint64_t, int, int);
 
@@ -51,12 +51,12 @@ typedef int (*psc_distill_handler_t)(struct psc_journal_enthdr *, uint64_t, int,
 #define PJRNL_CURSOR_VERSION		1
 
 /*
- * The cursor, stored on disk, is used to remember where we are in terms of
- * processing the log entries.  In addition, this file lives in ZFS, so we
- * don't need do any checksum.
+ * The cursor, stored on disk, is used to remember where we are in terms
+ * of processing the log entries.  In addition, this file lives in ZFS,
+ * so we don't need do any checksum.
  *
- * We can store more information (e.g. stats) into this file. In fact, we may
- * be able to treat this file as the superblock of slash2.
+ * We can store more information (e.g. stats) into this file. In fact,
+ * we may be able to treat this file as the superblock of slash2.
  */
 struct psc_journal_cursor {
 	uint64_t			 pjc_magic;
@@ -64,10 +64,10 @@ struct psc_journal_cursor {
 	uint64_t			 pjc_timestamp;		/* format time */
 	unsigned char			 pjc_uuid[16];
 	/*
-	 * pjc_commit_txg is the only trustworthy information recorded in the file
-	 * after a crash.  By making this information accurate, we can be sure that
-	 * a replay should succeed.  Other information can be stale and need to be
-	 * adjusted before use.
+	 * pjc_commit_txg is the only trustworthy information recorded
+	 * in the file after a crash.  By making this information
+	 * accurate, we can be sure that a replay should succeed.  Other
+	 * information can be stale and need to be adjusted before use.
 	 */
 	uint64_t			 pjc_commit_txg;	/* last synced ZFS transaction group number */
 	uint64_t			 pjc_distill_xid;	/* last XID whose entry has been distilled */

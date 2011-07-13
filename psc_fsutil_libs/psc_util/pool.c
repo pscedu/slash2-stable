@@ -565,7 +565,6 @@ _psc_pool_get(struct psc_poolmgr *m, int flags)
 			break;
 	}
 
-
 	/* If communal, try reaping other pools in sets. */
 	locked = reqlock(&m->ppm_master->pms_lock);
 	for (n = 0; n < psc_dynarray_len(&m->ppm_master->pms_sets); n++)

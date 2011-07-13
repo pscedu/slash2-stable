@@ -43,7 +43,6 @@
 
 #include "zfs-fuse/zfs_slashlib.h"
 
-
 static long	total_trans = 0;
 static long	total_reserve = 0;
 
@@ -112,8 +111,8 @@ psc_journal_io(struct psc_journal *pj, void *p, size_t len, off_t off,
 			if (pj->pj_flags & PJF_ISBLKDEV) {
 #ifdef HAVE_SYNC_FILE_RANGE
 				rc = sync_file_range(pj->pj_fd, off, len,
-					     SYNC_FILE_RANGE_WRITE |
-					     SYNC_FILE_RANGE_WAIT_AFTER);
+				    SYNC_FILE_RANGE_WRITE |
+				    SYNC_FILE_RANGE_WAIT_AFTER);
 #else
 				rc = fdatasync(pj->pj_fd);
 #endif
@@ -150,7 +149,8 @@ pjournal_next_replay(struct psc_journal *pj)
 }
 
 __static void
-pjournal_next_xid(struct psc_journal *pj, struct psc_journal_xidhndl *xh, uint64_t txg)
+pjournal_next_xid(struct psc_journal *pj,
+    struct psc_journal_xidhndl *xh, uint64_t txg)
 {
 	/*
 	 * Note that even though we issue xids in increasing order here,
@@ -163,23 +163,24 @@ pjournal_next_xid(struct psc_journal *pj, struct psc_journal_xidhndl *xh, uint64
 	} while (xh->pjx_xid == PJE_XID_NONE);
 
 	/*
-	 * Make sure that transactions appear on the distill list in strict
-	 * order.  That way we can get accurate information about the lowest
-	 * xid that has been distilled.
+	 * Make sure that transactions appear on the distill list in
+	 * strict order.  That way we can get accurate information about
+	 * the lowest xid that has been distilled.
 	 *
-	 * If we add to the list after the transaction is written, the order
-	 * may not be guaranteed, as mentioned above.
+	 * If we add to the list after the transaction is written, the
+	 * order may not be guaranteed, as mentioned above.
 	 */
 	if (xh->pjx_flags & PJX_DISTILL)
 		pll_addtail(&pj->pj_distillxids, xh);
 
 	/*
-	 * Log entries written outside ZFS must be idempotent because the 
-	 * txg obtained this way may be one larger than the actual txg.
+	 * Log entries written outside ZFS must be idempotent because
+	 * the txg obtained this way may be one larger than the actual
+	 * txg.
 	 */
 	if (!txg)
 		xh->pjx_txg = pj->pj_current_txg;
-	else 
+	else
 		xh->pjx_txg = txg;
 
 	PJ_ULOCK(pj);
@@ -686,8 +687,9 @@ pjournal_open(const char *fn)
 	psc_iostats_init(&pj->pj_wrist, "jrnlwr-%s", basefn);
 
 	/*
-	 * O_DIRECT may impose alignment restrictions so align the buffer
-	 * and perform I/O in multiples of file system block size.
+	 * O_DIRECT may impose alignment restrictions so align the
+	 * buffer and perform I/O in multiples of file system block
+	 * size.
 	 */
 	pjhlen = PSC_ALIGN(sizeof(*pjh), statbuf.st_blksize);
 	pjh = psc_alloc(pjhlen, PAF_PAGEALIGN | PAF_LOCK);
@@ -722,7 +724,7 @@ pjournal_open(const char *fn)
 
 	else if (statbuf.st_size !=
 	    (off_t)(pjhlen + pjh->pjh_nents * PJ_PJESZ(pj))) {
-		psclog_errorx("size of the journal log %"PSCPRIdOFFT"d does not match "
+		psclog_errorx("size of the journal log %"PSCPRIdOFFT" does not match "
 		    "specs in its header", statbuf.st_size);
 		goto err;
 	}
@@ -769,7 +771,8 @@ pjournal_release(struct psc_journal *pj)
 	DYNARRAY_FOREACH(pje, n, &pj->pj_bufs)
 		psc_free(pje, PAF_LOCK | PAF_PAGEALIGN, PJ_PJESZ(pj));
 	psc_dynarray_free(&pj->pj_bufs);
-	psc_free(pj->pj_hdr, PAF_LOCK | PAF_PAGEALIGN, pj->pj_hdr->pjh_iolen);
+	psc_free(pj->pj_hdr, PAF_LOCK | PAF_PAGEALIGN,
+	    pj->pj_hdr->pjh_iolen);
 	PSCFREE(pj);
 }
 
@@ -787,11 +790,13 @@ pjournal_thr_main(struct psc_thread *thr)
 	xid = pj->pj_distill_xid;
 	while (pscthr_run()) {
 		/*
-		 * Walk the list until we find a log entry that needs processing.
-		 * We also make sure that we distill in order of transaction IDs.
+		 * Walk the list until we find a log entry that needs
+		 * processing.  We also make sure that we distill in
+		 * order of transaction IDs.
 		 */
 		while ((xh = pll_peekhead(&pj->pj_distillxids))) {
-			psclog_dbg("xh=%p xh->pjx_flags=%d", xh, xh->pjx_flags);
+			psclog_dbg("xh=%p xh->pjx_flags=%d", xh,
+			    xh->pjx_flags);
 			spinlock(&xh->pjx_lock);
 			psc_assert(xh->pjx_flags & PJX_DISTILL);
 
@@ -852,7 +857,8 @@ pjournal_thr_main(struct psc_thread *thr)
 		spinlock(&pjournal_waitqlock);
 		if (pll_empty(&pj->pj_distillxids))
 			/* 30 seconds is the ZFS txg sync interval */
-			psc_waitq_waitrel_s(&pjournal_waitq, &pjournal_waitqlock, 30);
+			psc_waitq_waitrel_s(&pjournal_waitq,
+			    &pjournal_waitqlock, 30);
 		else
 			freelock(&pjournal_waitqlock);
 	}
