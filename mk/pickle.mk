@@ -227,4 +227,8 @@ PICKLE_NEED_VERSION=					$(word 2,$$Rev$$)
   SRCS+=						${PFL_BASE}/compat/srand48_r.c
  endif
 
+ ifdef PICKLE_HAVE_AIO
+  DEFINES+=						-DHAVE_AIO
+ endif
+
 endif
