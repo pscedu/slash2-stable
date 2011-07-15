@@ -68,12 +68,12 @@ psc_rlim_adj(int field, int adjv)
 	spinlock(&psc_rlimit_lock);
 	rc = psc_getrlimit(field, NULL, &v);
 	if (rc == -1)
-		psc_warn("getrlimit %d", field);
+		psclog_warn("getrlimit %d", field);
 	else {
 		v += adjv;
 		rc = psc_setrlimit(field, v, v);
 		if (rc == -1)
-			psc_warn("setrlimit %d %"PRId64, field, v);
+			psclog_warn("setrlimit %d %"PRId64, field, v);
 	}
 	freelock(&psc_rlimit_lock);
 	return (rc == 0);
