@@ -18,6 +18,6 @@ SRCS+=		${PFL_BASE}/psc_util/random.c
 SRCS+=		${PFL_BASE}/psc_util/rlimit.c
 SRCS+=		${PFL_BASE}/psc_util/thread.c
 SRCS+=		${PFL_BASE}/psc_util/usklndthr.c
-MODULES+=	pthread pfl lnet
+MODULES+=	pthread pfl lnet ctl
 
 include ${PFLMK}
