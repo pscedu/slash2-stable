@@ -82,6 +82,8 @@ main(int argc, char *argv[])
 	if (argc)
 		usage();
 
+	pfl_init();
+
 	rc = LNetInit();
 	if (rc)
 		psc_fatalx("failed to initialize lnet rc=%d", rc);
