@@ -364,6 +364,7 @@ psc_ctlparse_lc(char *lists)
 	char *list, *listnext;
 	int n;
 
+	psclog_warnx("-L is deprecated, use -sL");
 	for (list = lists; list != NULL; list = listnext) {
 		if ((listnext = strchr(list, ',')) != NULL)
 			*listnext++ = '\0';
@@ -458,6 +459,7 @@ psc_ctlparse_pool(char *pools)
 	struct psc_ctlmsg_pool *pcpl;
 	char *pool, *poolnext;
 
+	psclog_warnx("-P is deprecated, use -sP");
 	for (pool = pools; pool; pool = poolnext) {
 		if ((poolnext = strchr(pool, ',')) != NULL)
 			*poolnext++ = '\0';
@@ -476,6 +478,7 @@ psc_ctlparse_iostats(char *iostats)
 	char *iostat, *next;
 	int n;
 
+	psclog_warnx("-I is deprecated, use -sI");
 	for (iostat = iostats; iostat != NULL; iostat = next) {
 		if ((next = strchr(iostat, ',')) != NULL)
 			*next++ = '\0';
@@ -646,7 +649,7 @@ psc_ctlmsg_journal_prdat(__unusedx const struct psc_ctlmsghdr *mh,
 
 	printf("%-10s %c%c%c%c %4u %6u %3u "
 	    "%13"PRIx64" %13"PRIx64" %13"PRIx64" "
-	    "%6d %5ld\n",
+	    "%6d %5"PRId64"\n",
 	    pcj->pcj_name,
 	    pcj->pcj_flags & PJF_WANTBUF	? 'B' : '-',
 	    pcj->pcj_flags & PJF_WANTSLOT	? 'S' : '-',
