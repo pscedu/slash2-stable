@@ -47,7 +47,7 @@ psc_spinlock_t pscrpc_all_services_lock;
 int
 psc_usklndthr_get_type(const char *namefmt)
 {
-	if (strstr(namefmt, "lnacthr"))
+	if (strstr(namefmt, "lracthr"))
 		return (LRTHRT_LNETAC);
 	return (LRTHRT_USKLNDPL);
 }
@@ -58,7 +58,7 @@ psc_usklndthr_get_namev(char buf[PSC_THRNAME_MAX], const char *namefmt,
 {
 	size_t n;
 
-	n = strlcpy(buf, "ln", PSC_THRNAME_MAX);
+	n = strlcpy(buf, "lr", PSC_THRNAME_MAX);
 	if (n < PSC_THRNAME_MAX)
 		vsnprintf(buf + n, PSC_THRNAME_MAX - n, namefmt, ap);
 }
