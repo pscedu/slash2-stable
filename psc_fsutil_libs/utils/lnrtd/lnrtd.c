@@ -75,14 +75,13 @@ main(int argc, char *argv[])
 {
 	int rc;
 
+	pfl_init();
 	progname = argv[0];
 	if (getopt(argc, argv, "") != -1)
 		usage();
 	argc -= optind;
 	if (argc)
 		usage();
-
-	pfl_init();
 
 	rc = LNetInit();
 	if (rc)
