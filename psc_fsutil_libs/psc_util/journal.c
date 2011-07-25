@@ -240,8 +240,9 @@ pjournal_xnew(struct psc_journal *pj, int distill, uint64_t txg)
 {
 	struct psc_journal_xidhndl *xh;
 
-	total_trans++;
-	psc_assert(total_trans <= total_reserve);
+	spinlock(&pjournal_reserve);
+	psc_assert(++total_trans <= total_reserve);
+	freelock(&pjournal_reserve);
 
 	xh = psc_alloc(sizeof(*xh), 0);
 
@@ -272,8 +273,8 @@ pjournal_reserve_slot(struct psc_journal *pj, int count)
 {
 	struct psc_journal_xidhndl *t;
 
-	total_reserve += count;
 	spinlock(&pjournal_reserve);
+	total_reserve ++;
 
 	psc_assert(!(pj->pj_flags & PJF_REPLAYINPROG));
 	while (count) {
