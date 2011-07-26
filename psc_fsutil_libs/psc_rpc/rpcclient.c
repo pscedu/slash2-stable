@@ -715,6 +715,12 @@ pscrpc_queue_wait(struct pscrpc_request *req)
 		DEBUG_REQ(PLL_WARN, req, "resending (receiving_reply=%d)", 
 			  req->rq_receiving_reply);
 		psc_assert(!req->rq_no_resend);
+
+		if (req->rq_comp)
+			/* Make sure reply_in_callback doesn't bump rq_comp.
+			 */
+			req->rq_abort_reply = 1;
+
 		pscrpc_unregister_reply(req);
 		pscrpc_msg_add_flags(req->rq_reqmsg, MSG_RESENT);
 
@@ -976,6 +982,12 @@ pscrpc_check_set(struct pscrpc_request_set *set, int check_allsent)
 					req->rq_status = -ENOTCONN;
 					goto handle_error;
 				}
+				
+				if (req->rq_comp)
+					/* Make sure reply_in_callback doesn't 
+					 *   bump rq_comp.
+					 */
+					req->rq_abort_reply = 1;
 				
                                 pscrpc_unregister_reply(req);
                                 /* Move to the tail of the list.
@@ -1512,7 +1524,7 @@ pscrpc_abort_inflight(struct pscrpc_import *imp)
 	 freelock(&imp->imp_lock);
 }
 
-void
+static void
 pscrpc_resend_req(struct pscrpc_request *req)
 {
 	DEBUG_REQ(PLL_WARN, req, "going to resend");

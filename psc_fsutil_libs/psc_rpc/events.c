@@ -305,7 +305,10 @@ pscrpc_reply_in_callback(lnet_event_t *ev)
 		/* Notify upper layer that an RPC is ready to be
 		 *   finalized.
 		 */
-		pscrpc_completion_one(req->rq_comp);
+		if (req->rq_abort_reply)
+			req->rq_abort_reply = 0;
+		else
+			pscrpc_completion_one(req->rq_comp);
 	}
 
 	if (req->rq_waitq)
