@@ -274,7 +274,7 @@ pjournal_reserve_slot(struct psc_journal *pj, int count)
 	struct psc_journal_xidhndl *t;
 
 	spinlock(&pjournal_reserve);
-	total_reserve ++;
+	total_reserve += count;
 
 	psc_assert(!(pj->pj_flags & PJF_REPLAYINPROG));
 	while (count) {
