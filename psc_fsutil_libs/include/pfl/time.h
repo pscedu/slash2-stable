@@ -100,4 +100,6 @@ struct timespec;
 int futimens(int, const struct timespec *);
 #endif
 
+#define PFL_CTIME_BUFSIZ	26
+
 #endif /* _PFL_TIME_H_ */
