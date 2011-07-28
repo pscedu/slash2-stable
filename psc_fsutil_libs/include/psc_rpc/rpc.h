@@ -222,7 +222,7 @@ struct pscrpc_async_args {
 	 * a pointer to it here.  The pointer_arg ensures this struct is at
 	 * least big enough for that. */
 	uint64_t space[2];
-	void    *pointer_arg[8];
+	void    *pointer_arg[9];
 };
 
 struct pscrpc_request_set;
