@@ -56,6 +56,7 @@ __static void		pjournal_logwrite(struct psc_journal_xidhndl *, int,
 __static int		pjournal_logwrite_internal(struct psc_journal *,
 				struct psc_journal_enthdr *, uint32_t);
 
+psc_spinlock_t		pjournal_count = SPINLOCK_INIT;
 psc_spinlock_t		pjournal_reserve = SPINLOCK_INIT;
 
 struct psc_waitq	pjournal_waitq = PSC_WAITQ_INIT;
@@ -240,9 +241,9 @@ pjournal_xnew(struct psc_journal *pj, int distill, uint64_t txg)
 {
 	struct psc_journal_xidhndl *xh;
 
-	spinlock(&pjournal_reserve);
+	spinlock(&pjournal_count);
 	psc_assert(++total_trans <= total_reserve);
-	freelock(&pjournal_reserve);
+	freelock(&pjournal_count);
 
 	xh = psc_alloc(sizeof(*xh), 0);
 
@@ -273,8 +274,11 @@ pjournal_reserve_slot(struct psc_journal *pj, int count)
 {
 	struct psc_journal_xidhndl *t;
 
-	spinlock(&pjournal_reserve);
+	spinlock(&pjournal_count);
 	total_reserve += count;
+	freelock(&pjournal_count);
+
+	spinlock(&pjournal_reserve);
 
 	psc_assert(!(pj->pj_flags & PJF_REPLAYINPROG));
 	while (count) {
