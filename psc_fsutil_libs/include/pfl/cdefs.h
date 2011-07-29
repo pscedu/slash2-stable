@@ -120,4 +120,6 @@
 #define PSC_MAKETRUE(expr)	_PFL_RVSTART { expr; 1; } _PFL_RVEND
 #define PSC_MAKEFALSE(expr)	_PFL_RVSTART { expr; 0; } _PFL_RVEND
 
+#define MAXVALMASK(nb)		((UINT64_C(1) << (nb)) - 1)
+
 #endif /* _PFL_CDEFS_H_ */
