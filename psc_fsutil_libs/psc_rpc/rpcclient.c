@@ -702,7 +702,7 @@ pscrpc_queue_wait(struct pscrpc_request *req)
 	atomic_inc(&imp->imp_inflight);
 
 	psc_assert(imp);
-	DEBUG_REQ(PLL_INFO, req, "sending.."); 
+	DEBUG_REQ(PLL_INFO, req, "sending..");
 
 	/* Mark phase here for a little debug help */
 	req->rq_phase = PSCRPC_RQ_PHASE_RPC;
@@ -712,7 +712,7 @@ pscrpc_queue_wait(struct pscrpc_request *req)
 
  restart:
 	if (req->rq_resend) {
-		DEBUG_REQ(PLL_WARN, req, "resending (receiving_reply=%d)", 
+		DEBUG_REQ(PLL_WARN, req, "resending (receiving_reply=%d)",
 			  req->rq_receiving_reply);
 		psc_assert(!req->rq_no_resend);
 
@@ -752,14 +752,14 @@ pscrpc_queue_wait(struct pscrpc_request *req)
 		timeout = MAX(req->rq_timeout, 1);
 		DEBUG_REQ(PLL_INFO, req,"sleeping for %d sec", timeout);
 	}
-	lwi = LWI_TIMEOUT_INTR(timeout, expired_request, interrupted_request, 
+	lwi = LWI_TIMEOUT_INTR(timeout, expired_request, interrupted_request,
 	       req);
 
 	rc = pscrpc_cli_wait_event(&req->rq_reply_waitq,
 	    pscrpc_check_reply(req), &lwi);
 
 	DEBUG_REQ(rc ? PLL_ERROR : PLL_INFO, req,
-		  "completed (rc=%d), replied=%d", rc, req->rq_replied); 
+		  "completed (rc=%d), replied=%d", rc, req->rq_replied);
 
 	spinlock(&imp->imp_lock);
 	psclist_del(&req->rq_lentry, psc_lentry_hd(&req->rq_lentry));
@@ -806,11 +806,11 @@ pscrpc_queue_wait(struct pscrpc_request *req)
 
 	rc = after_reply(req);
  out:
-	/* If the reply was received normally, this just grabs the spinlock 
+	/* If the reply was received normally, this just grabs the spinlock
 	 * (ensuring the reply callback has returned), sees that
 	 * req->rq_receiving_reply is clear and returns. */
 	pscrpc_unregister_reply(req);
-          
+
 	if (req->rq_bulk) {
 		struct pscrpc_msg *m;
 
@@ -924,7 +924,7 @@ pscrpc_check_set(struct pscrpc_request_set *set, int check_allsent)
 			pscrpc_unregister_reply(req);
 			if (req->rq_bulk)
 				pscrpc_abort_bulk(req->rq_bulk);
-			
+
 			if (req->rq_status == 0)
 				req->rq_status = -EIO;
 			req->rq_phase = PSCRPC_RQ_PHASE_INTERPRET;
@@ -967,7 +967,7 @@ pscrpc_check_set(struct pscrpc_request_set *set, int check_allsent)
 				 */
 				status = expired_request(req);
 				DEBUG_REQ(PLL_WARN, req, "expired (resend=%d)",                                     !status);
-				
+
 				if (status) {
 					psc_assert(req->rq_status);
 					psc_assert(req->rq_err);
@@ -982,38 +982,38 @@ pscrpc_check_set(struct pscrpc_request_set *set, int check_allsent)
 					req->rq_status = -ENOTCONN;
 					goto handle_error;
 				}
-				
+
 				if (req->rq_comp)
-					/* Make sure reply_in_callback doesn't 
+					/* Make sure reply_in_callback doesn't
 					 *   bump rq_comp.
 					 */
 					req->rq_abort_reply = 1;
-				
-                                pscrpc_unregister_reply(req);
-                                /* Move to the tail of the list.
-                                 */
-                                spinlock(&imp->imp_lock);
-                                psclist_del(&req->rq_lentry,
+
+				pscrpc_unregister_reply(req);
+				/* Move to the tail of the list.
+				 */
+				spinlock(&imp->imp_lock);
+				psclist_del(&req->rq_lentry,
 					    psc_lentry_hd(&req->rq_lentry));
-                                psclist_add_tail(&req->rq_lentry,
+				psclist_add_tail(&req->rq_lentry,
 						 &imp->imp_sending_list);
-                                freelock(&imp->imp_lock);
-				
+				freelock(&imp->imp_lock);
+
 				pscrpc_msg_add_flags(req->rq_reqmsg,
 				     MSG_RESENT);
-                                if (req->rq_bulk) {
-                                        uint64_t old_xid = req->rq_xid;
-					
-                                        pscrpc_unregister_bulk(req);
-					
-                                        /* ensure previous bulk fails */
+				if (req->rq_bulk) {
+					uint64_t old_xid = req->rq_xid;
+
+					pscrpc_unregister_bulk(req);
+
+					/* ensure previous bulk fails */
 					req->rq_xid = pscrpc_next_xid();
-                                        DEBUG_REQ(PLL_NOTIFY, req,
+					DEBUG_REQ(PLL_NOTIFY, req,
 						  "resend bulk: old x%"PRIu64
 						  " new x%"PRIu64,
 						  old_xid, req->rq_xid);
-                                }
-				
+				}
+
 				rc = pscrpc_send_rpc(req, 0);
 				if (rc) {
 					DEBUG_REQ(PLL_ERROR, req,
@@ -1024,19 +1024,19 @@ pscrpc_check_set(struct pscrpc_request_set *set, int check_allsent)
 				force_timer_recalc = 1;
 			}
 
-                        if (pscrpc_client_receiving_reply(req) ||
-                            !pscrpc_client_replied(req))
+			if (pscrpc_client_receiving_reply(req) ||
+			    !pscrpc_client_replied(req))
 				/* Req is not finished.
-				 */				
-                                continue;
-			
+				 */
+				continue;
+
 			spinlock(&imp->imp_lock);
 			psclist_del(&req->rq_lentry,
 				    psc_lentry_hd(&req->rq_lentry));
 			freelock(&imp->imp_lock);
-			
+
 			req->rq_status = after_reply(req);
-			
+
 			/* If there is no bulk associated with this request,
 			 * then we're done and should let the interpreter
 			 * process the reply.  Similarly if the RPC returned
@@ -1046,14 +1046,14 @@ pscrpc_check_set(struct pscrpc_request_set *set, int check_allsent)
 				req->rq_phase = PSCRPC_RQ_PHASE_INTERPRET;
 				GOTO(interpret, req->rq_status);
 			}
-			
+
 			req->rq_phase = PSCRPC_RQ_PHASE_BULK;
 		}
-		
+
 		psc_assert(req->rq_phase == PSCRPC_RQ_PHASE_BULK);
 		if (pscrpc_bulk_active(req->rq_bulk))
 			continue;
-		
+
 		if (!req->rq_bulk->bd_success) {
 			/* The RPC reply arrived OK, but the bulk screwed
 			 * up!  Dead weird since the server told us the RPC
@@ -1062,20 +1062,20 @@ pscrpc_check_set(struct pscrpc_request_set *set, int check_allsent)
 			DEBUG_REQ(PLL_ERROR, req, "bulk transfer failed");
 			LBUG();
 		}
-		
+
 		req->rq_phase = PSCRPC_RQ_PHASE_INTERPRET;
-		
+
 	interpret:
 		psc_assert(req->rq_phase == PSCRPC_RQ_PHASE_INTERPRET);
 		psc_assert(!req->rq_receiving_reply);
-		
+
 		pscrpc_unregister_reply(req);
 		if (req->rq_bulk)
 			pscrpc_unregister_bulk(req);
-		
+
 		req->rq_phase = PSCRPC_RQ_PHASE_COMPLETE;
 		ncompleted++;
-		
+
 		if (req->rq_interpret_reply)
 			req->rq_status = req->rq_interpret_reply(req,
 				 &req->rq_async_args);
@@ -1159,12 +1159,12 @@ pscrpc_expire_one_request(struct pscrpc_request *req)
 	psc_assert(req->rq_send_state == PSCRPC_IMP_NOOP);
 
 	spinlock(&req->rq_lock);
-	/* Error out the request here so that the upper layers may 
+	/* Error out the request here so that the upper layers may
 	 *    retry.
 	 */
-        req->rq_err = req->rq_timedout = 1;
-        req->rq_status = -ETIMEDOUT;
-        freelock(&req->rq_lock);
+	req->rq_err = req->rq_timedout = 1;
+	req->rq_status = -ETIMEDOUT;
+	freelock(&req->rq_lock);
 
 	pscrpc_unregister_reply(req);
 
@@ -1173,10 +1173,10 @@ pscrpc_expire_one_request(struct pscrpc_request *req)
 
 	if (imp == NULL)
 		DEBUG_REQ(PLL_WARN, req, "NULL import: already cleaned up?");
-	
+
 	else if (!imp->imp_igntimeout)
 		pscrpc_fail_import(imp, req->rq_reqmsg->conn_cnt);
-	
+
 
 	return (1);
 }
@@ -1495,7 +1495,7 @@ pscrpc_abort_inflight(struct pscrpc_import *imp)
 
 	 /* Make sure that no new requests get processed for this import.
 	  * pscrpc_{queue,set}_wait must (and does) hold imp_lock while testing
-	  * this flag and then putting requests on sending_list or 
+	  * this flag and then putting requests on sending_list or
 	  * delayed_list.
 	  */
 	 spinlock(&imp->imp_lock);
@@ -1516,8 +1516,8 @@ pscrpc_abort_inflight(struct pscrpc_import *imp)
 		}
 		//req->rq_abort_reply = 1;
 		if (req->rq_bulk)
-                        req->rq_bulk->bd_abort = 1;
-		
+			req->rq_bulk->bd_abort = 1;
+
 		freelock(&req->rq_lock);
 	 }
 
