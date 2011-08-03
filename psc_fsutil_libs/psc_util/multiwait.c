@@ -208,9 +208,11 @@ psc_multiwaitcond_wakeup(struct psc_multiwaitcond *mwc)
 	DYNARRAY_FOREACH(mw, j, &mwc->mwc_multiwaits)
 		if (psc_multiwait_iscondwakeable(mw, mwc)) {
 			mw->mw_waker = mwc;
+			psclog_info("wake mw %p %s", mw, mw->mw_name);
 			pthread_cond_signal(&mw->mw_cond);
 		}
 	psc_multiwaitcond_unlockallmw(mwc);
+	psclog_info("wake cond %p %s", mwc, mwc->mwc_name);
 	pthread_cond_broadcast(&mwc->mwc_cond);
 	mwc->mwc_winner = NULL;
 	psc_mutex_unlock(&mwc->mwc_mutex);
@@ -234,6 +236,7 @@ psc_multiwaitcond_waitrel_ts(struct psc_multiwaitcond *mwc,
 	if (mutex)
 		psc_mutex_unlock(mutex);
 
+	psclog_info("wait cond %p %s", mwc, mwc->mwc_name);
 	if (reltime) {
 		PFL_GETTIMESPEC(&abstime);
 		timespecadd(&abstime, reltime, &abstime);
@@ -408,6 +411,7 @@ psc_multiwait_usecs(struct psc_multiwait *mw, void *datap, int usec)
 	    "will never wake up", mw->mw_name);
 
  wait:
+	psclog_info("wait mw %p %s", mw, mw->mw_name);
 	if (usec) {
 		struct timeval tv, res, adj;
 		struct timespec ntv;
