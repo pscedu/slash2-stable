@@ -127,7 +127,8 @@ typedef struct psc_spinlock {
 		if ((_val) == PSL_LOCKED) {				\
 			if ((psl)->psl_owner == pthread_self())		\
 				_psclog_pci((pci), PLL_FATAL, 0,	\
-				    "%s: already locked", (name));	\
+				    "%s %p: already locked", (name),	\
+				    (psl));				\
 			/* PFL_GETTIMEVAL(&(psl)->psl_time); */		\
 			_val = 0;					\
 		} else if ((_val) == PSL_UNLOCKED) {			\
