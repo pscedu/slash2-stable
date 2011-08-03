@@ -267,7 +267,7 @@ pscrpc_completion_ready(struct pscrpc_completion *c, int block, int secs)
 		if (block) {
 			if (secs) {
 				if (psc_waitq_waitrel_s(&c->rqcomp_waitq,
-					&c->rqcomp_lock, secs))
+				    &c->rqcomp_lock, secs))
 					return (0);
 				else
 					return (1);

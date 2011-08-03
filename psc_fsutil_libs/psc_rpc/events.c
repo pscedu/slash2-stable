@@ -335,6 +335,9 @@ pscrpc_reply_out_callback(lnet_event_t *ev)
 		ev->type == LNET_EVENT_ACK ||
 		ev->type == LNET_EVENT_UNLINK);
 
+	if (rs->rs_compl)
+		pscrpc_completion_one(rs->rs_compl);
+
 	if (!rs->rs_difficult) {
 		/* 'Easy' replies have no further processing so I drop the
 		 * net's ref on 'rs' */

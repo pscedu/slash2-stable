@@ -460,6 +460,7 @@ struct pscrpc_reply_state {
 	atomic_t			 rs_refcount;
 	lnet_handle_md_t		 rs_md_h;
 	struct pscrpc_service		*rs_service;		/* backpointer to my service */
+	struct pscrpc_completion	*rs_compl;
 	struct pscrpc_msg		 rs_msg;		/* msg struct -- MUST BE LAST MEMBER */
 };
 
