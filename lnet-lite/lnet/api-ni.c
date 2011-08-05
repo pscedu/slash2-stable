@@ -664,8 +664,8 @@ lnet_prepare(lnet_pid_t requested_pid)
         if (the_lnet.ln_server_mode_flag) {/* server case (uOSS) */
                 LASSERT ((requested_pid & LNET_PID_USERFLAG) == 0);
 
-//                if (cfs_curproc_uid())/* Only root can run user-space server */
-//                       return -EPERM;
+                if (cfs_curproc_uid())/* Only root can run user-space server */
+                        return -EPERM;
                 the_lnet.ln_pid = requested_pid;
 
         } else {/* client case (liblustre) */
