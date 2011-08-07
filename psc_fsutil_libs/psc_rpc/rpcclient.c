@@ -691,11 +691,9 @@ after_reply(struct pscrpc_request *req)
 int
 pscrpc_queue_wait(struct pscrpc_request *req)
 {
-	int rc = 0;
-	int brc;
-	struct l_wait_info lwi;
+	int rc = 0, brc, timeout = 0;
 	struct pscrpc_import *imp = req->rq_import;
-	int timeout = 0;
+	struct l_wait_info lwi;
 
 	psc_assert(req->rq_set == NULL);
 	psc_assert(!req->rq_receiving_reply);
@@ -857,8 +855,8 @@ pscrpc_queue_wait(struct pscrpc_request *req)
  *     returns TRUE if all are sent otherwise return true if at least one
  *     has completed.
  * @set:  the set in question
- * @check_allsent: return true only if all requests are finished, set to '1'
- *                 for original lustre behavior.
+ * @check_allsent: return true only if all requests are finished; set to '1'
+ *                 for original Lustre behavior.
  * NOTES: check_allsent was added to support single, non-blocking sends
  *        implemented within the context of an rpcset.
  */
@@ -917,7 +915,8 @@ pscrpc_check_set(struct pscrpc_request_set *set, int check_allsent)
 			if (!req->rq_err)
 				req->rq_err = 1;
 		}
-	handle_error:
+
+ handle_error:
 		if (req->rq_err) {
 			/* Catch errored out RPC's here.
 			 */
@@ -1050,6 +1049,13 @@ pscrpc_check_set(struct pscrpc_request_set *set, int check_allsent)
 			req->rq_phase = PSCRPC_RQ_PHASE_BULK;
 		}
 
+		if (req->rq_repmsg &&
+		    (req->rq_repmsg->flags & MSG_ABORT_BULK) &&
+		    req->rq_bulk_abortable) {
+			req->rq_phase = PSCRPC_RQ_PHASE_INTERPRET;
+			GOTO(interpret, req->rq_status);
+		}
+
 		psc_assert(req->rq_phase == PSCRPC_RQ_PHASE_BULK);
 		if (pscrpc_bulk_active(req->rq_bulk))
 			continue;
@@ -1065,7 +1071,7 @@ pscrpc_check_set(struct pscrpc_request_set *set, int check_allsent)
 
 		req->rq_phase = PSCRPC_RQ_PHASE_INTERPRET;
 
-	interpret:
+ interpret:
 		psc_assert(req->rq_phase == PSCRPC_RQ_PHASE_INTERPRET);
 		psc_assert(!req->rq_receiving_reply);
 
