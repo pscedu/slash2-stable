@@ -1524,7 +1524,7 @@ pscrpc_abort_inflight(struct pscrpc_import *imp)
 	 freelock(&imp->imp_lock);
 }
 
-static void
+void
 pscrpc_resend_req(struct pscrpc_request *req)
 {
 	DEBUG_REQ(PLL_WARN, req, "going to resend");
