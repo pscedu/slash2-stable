@@ -70,6 +70,12 @@ pfl_filewalk(const char *fn, int flags,
 					}
 				}
 				break;
+			case FTS_DP:
+				break;
+			default:
+				warnx("%s: %s", f->fts_path,
+				    strerror(f->fts_errno));
+				break;
 			}
 		}
 		fts_close(fp);
