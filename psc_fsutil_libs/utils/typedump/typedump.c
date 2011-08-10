@@ -31,6 +31,7 @@
 #include "pfl/explist.h"
 #include "pfl/fcntl.h"
 #include "pfl/fs.h"
+#include "pfl/getopt.h"
 #include "pfl/hashtbl.h"
 #include "pfl/pfl.h"
 #include "pfl/procenv.h"
