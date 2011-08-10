@@ -723,29 +723,29 @@ pscrpc_wake_client_req(struct pscrpc_request *req)
 
 /* NB: LWI_TIMEOUT ignores signals completely */
 #define LWI_TIMEOUT(time, cb, data)					\
-((struct l_wait_info) {							\
-	.lwi_timeout	= time,						\
-	.lwi_on_timeout	= cb,						\
-	.lwi_cb_data	= data,						\
-	.lwi_interval	= 0						\
-})
+	_PFL_RVSTART (struct l_wait_info) {				\
+		.lwi_timeout	= time,					\
+		.lwi_on_timeout	= cb,					\
+		.lwi_cb_data	= data,					\
+		.lwi_interval	= 0					\
+	} _PFL_RVEND
 
 #define LWI_TIMEOUT_INTERVAL(time, interval, cb, data)			\
-((struct l_wait_info) {							\
-	.lwi_timeout	= time,						\
-	.lwi_on_timeout	= cb,						\
-	.lwi_cb_data	= data,						\
-	.lwi_interval	= interval					\
-})
+	_PFL_RVSTART (struct l_wait_info) {				\
+		.lwi_timeout	= time,					\
+		.lwi_on_timeout	= cb,					\
+		.lwi_cb_data	= data,					\
+		.lwi_interval	= interval				\
+	} _PFL_RVEND
 
 #define LWI_TIMEOUT_INTR(time, time_cb, sig_cb, data)			\
-((struct l_wait_info) {							\
-	.lwi_timeout	= time,						\
-	.lwi_on_timeout	= time_cb,					\
-	.lwi_on_signal	= sig_cb,					\
-	.lwi_cb_data	= data,						\
-	.lwi_interval	= 0						\
-})
+	_PFL_RVSTART (struct l_wait_info) {				\
+		.lwi_timeout	= time,					\
+		.lwi_on_timeout	= time_cb,				\
+		.lwi_on_signal	= sig_cb,				\
+		.lwi_cb_data	= data,					\
+		.lwi_interval	= 0					\
+	} _PFL_RVEND
 
 #define LWI_INTR(cb, data)  LWI_TIMEOUT_INTR(0, NULL, (cb), (data))
 
@@ -754,18 +754,19 @@ pscrpc_wake_client_req(struct pscrpc_request *req)
 			sigmask(SIGALRM))
 
 /**
- * _pscrpc_server_wait_event - implement a timed wait using waitqs and pthread_cond_timedwait
+ * _pscrpc_server_wait_event - Implement a timed wait using waitqs and
+ *	pthread_cond_timedwait
  * @wq: the waitq to block on
- * @condition: condition to check on
- * @info: the timeout info strict (l_wait_info)
+ * @cond: condition to check on
+ * @info: the timeout info struct (l_wait_info)
  * @ret: the return val
  * @excl: unused
  * @lck: optional spinlock used for waitq - see psc_util/waitq.h
  */
 
-#define PSCRPC_SVR_TIMEOUT 60
-#define PSCRPC_SVR_SHORT_TIMEO 1
-#define _pscrpc_server_wait_event(wq, condition, info, ret, excl, lck)	\
+#define PSCRPC_SVR_TIMEOUT	60
+#define PSCRPC_SVR_SHORT_TIMEO	1
+#define _pscrpc_server_wait_event(wq, cond, info, ret, excl, lck)	\
 	do {								\
 		time_t _now       = time(NULL);				\
 		time_t _then      = _now;				\
@@ -775,7 +776,7 @@ pscrpc_wake_client_req(struct pscrpc_request *req)
 									\
 		(ret) = 0;						\
 									\
-		while (!(condition)) {					\
+		while (!(cond)) {					\
 			_abstime.tv_sec = _now +			\
 				PSCRPC_SVR_SHORT_TIMEO;			\
 			_abstime.tv_nsec = 0;				\
@@ -787,7 +788,7 @@ pscrpc_wake_client_req(struct pscrpc_request *req)
 			} else						\
 				(ret) = 0;				\
 									\
-			if (condition)					\
+			if (cond)					\
 				break;					\
 									\
 			_now = time(NULL);				\
@@ -809,25 +810,23 @@ pscrpc_wake_client_req(struct pscrpc_request *req)
 		}							\
 	} while (0)
 
-
 /**
- * _psc_client_wait_event - the below call is for clients.  Clients are
- *	single threaded due to catamount/panther.  This means that clients must
- *	block in LNetEQPoll - this occurs in liblustre_wait_event().  A similar
- *	model can be used for server threads so long as liblustre_wait_event()
- *	is replaced with something that uses timed waitq's.
+ * _psc_client_wait_event - The below call is for clients.  Clients are
+ *	single threaded due to catamount/panther.  This means that
+ *	clients must block in LNetEQPoll - this occurs in
+ *	liblustre_wait_event().  A similar model can be used for server
+ *	threads so long as liblustre_wait_event() is replaced with
+ *	something that uses timed waitq's.
  */
 #define pscrpc_timeout 1
-#define _psc_client_wait_event(wq, condition, info, ret, excl)		\
+#define _psc_client_wait_event(wq, cond, info, ret, excl)		\
 	do {								\
 		time_t _timeout = (info)->lwi_timeout;			\
-		long _now;						\
-		long _then = 0;						\
-		int  _timed_out = 0;					\
-		int  _interval = pscrpc_timeout;			\
+		long _now, _then = 0;					\
+		int _timed_out = 0, _interval = pscrpc_timeout;		\
 									\
 		(ret) = 0;						\
-		if (condition)						\
+		if (cond)						\
 			break;						\
 									\
 		if (_timeout != 0)					\
@@ -838,11 +837,11 @@ pscrpc_wake_client_req(struct pscrpc_request *req)
 		    (info)->lwi_interval < _interval)			\
 			_interval = (info)->lwi_interval;		\
 									\
-		for (; !(condition); (ret) = 0) {			\
+		for (; !(cond); (ret) = 0) {				\
 			(ret) = pscrpc_wait_event(_interval);		\
 			if ((ret) > 0)					\
 				(ret) = 0; /* reset previous value */	\
-			if (condition) {				\
+			if (cond) {					\
 				/* don't claim timeout if true now */	\
 				if (ret)				\
 					(ret) = 0;			\
@@ -871,28 +870,27 @@ pscrpc_wake_client_req(struct pscrpc_request *req)
 	} while (0)
 
 #ifdef HAVE_LIBPTHREAD
-# define pscrpc_cli_wait_event(wq, condition, info)			\
-	pscrpc_svr_wait_event((wq), (condition), (info), NULL)
+# define pscrpc_cli_wait_event(wq, cond, info)				\
+	pscrpc_svr_wait_event((wq), (cond), (info), NULL)
 #else
-# define pscrpc_cli_wait_event(wq, condition, info)			\
-	({								\
+# define pscrpc_cli_wait_event(wq, cond, info)				\
+	_PFL_RVSTART {							\
 		int                 _ret;				\
 		struct l_wait_info *_info = (info);			\
 									\
-		_pscrpc_client_wait_event((wq), (condition), _info,	\
-		    _ret, 0);						\
+		_pscrpc_client_wait_event((wq), (cond), _info, _ret, 0);\
 		_ret;							\
-	})
+	} _PFL_RVEND
 #endif
 
-#define pscrpc_svr_wait_event(wq, condition, info, lck)			\
-	({								\
+#define pscrpc_svr_wait_event(wq, cond, info, lck)			\
+	_PFL_RVSTART {							\
 		int                 _ret;				\
 		struct l_wait_info *_info = (info);			\
 									\
-		_pscrpc_server_wait_event((wq), (condition), _info,	\
-		    _ret, 0, (lck));					\
+		_pscrpc_server_wait_event((wq), (cond), _info, _ret, 0,	\
+		    (lck));						\
 		_ret;							\
-	})
+	} _PFL_RVEND
 
 #endif /* _PFL_RPC_H_ */
