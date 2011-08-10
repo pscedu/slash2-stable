@@ -333,8 +333,6 @@ libcfs_sock_read (int sock, void *buffer, int nob, int timeout)
         timeout *= 1000;
         
         while (nob != 0 && timeout > 0) {
-                cfs_time_t current_time;
-
                 rc = poll(&pfd, 1, timeout);
                 if (rc < 0)
                         return -errno;
@@ -352,7 +350,6 @@ libcfs_sock_read (int sock, void *buffer, int nob, int timeout)
                 buffer = ((char *)buffer) + rc;
                 nob -= rc;
 
-                current_time = cfs_time_current();
                 timeout -= cfs_duration_sec(cfs_time_sub(cfs_time_current(),
                                                         start_time));
         }

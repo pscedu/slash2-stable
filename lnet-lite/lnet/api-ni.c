@@ -168,8 +168,8 @@ lnet_get_networks (void)
                 return (rc == 0) ? networks : NULL;
         }
 #else
-        ip2nets = NULL;
-        rc = 0;
+        (void)ip2nets;
+        (void)rc;
 #endif
         if (networks != NULL)
                 return networks;
