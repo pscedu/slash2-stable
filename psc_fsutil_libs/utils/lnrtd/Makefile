@@ -8,6 +8,7 @@ SRCS+=		ctl.c
 SRCS+=		lnrtd.c
 MAN=		lnrtd.8
 SRCS+=		${PFL_BASE}/psc_ds/listcache.c
+SRCS+=		${PFL_BASE}/psc_ds/hashtbl.c
 SRCS+=		${PFL_BASE}/psc_ds/stree.c
 SRCS+=		${PFL_BASE}/psc_ds/vbitmap.c
 SRCS+=		${PFL_BASE}/psc_util/ctlsvr.c
