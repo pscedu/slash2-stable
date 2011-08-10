@@ -24,6 +24,7 @@
 #include "pfl/pfl.h"
 #include "pfl/str.h"
 #include "psc_util/alloc.h"
+#include "psc_util/random.h"
 
 #include "fio_sym.h"
 #include "fio.h"
@@ -821,7 +822,7 @@ do_fstat(IOT_t *iot)
 void *
 worker(void *arg)
 {
-	int f, i, j, k, l, m, num_files, rc = 0;
+	int f, i, l, m, num_files, rc = 0;
 	struct symtable   *e;
 	int                 *mype        = arg;
 	struct io_toolbox   *iot         = init_pe(*mype);
@@ -832,7 +833,7 @@ worker(void *arg)
 	ASSERT(iot != NULL);
 	ASSERT(io_routines != NULL);
 
-	for (i=0, j=0, k=0; i < mygroup->iterations; i++) {
+	for (i=0; i < mygroup->iterations; i++) {
 
 		iot->macro_iterations = i;
 
