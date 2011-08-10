@@ -739,7 +739,7 @@ pscrpc_queue_wait(struct pscrpc_request *req)
 	freelock(&imp->imp_lock);
 
 	psclog_info("request %p request->rq_reqmsg %p",
-	      req, req->rq_reqmsg);
+	    req, req->rq_reqmsg);
 
 	rc = pscrpc_send_rpc(req, 0);
 	if (rc) {
@@ -750,8 +750,8 @@ pscrpc_queue_wait(struct pscrpc_request *req)
 		timeout = MAX(req->rq_timeout, 1);
 		DEBUG_REQ(PLL_INFO, req,"sleeping for %d sec", timeout);
 	}
-	lwi = LWI_TIMEOUT_INTR(timeout, expired_request, interrupted_request,
-	       req);
+	lwi = LWI_TIMEOUT_INTR(timeout, expired_request,
+	    interrupted_request, req);
 
 	rc = pscrpc_cli_wait_event(&req->rq_reply_waitq,
 	    pscrpc_check_reply(req), &lwi);
