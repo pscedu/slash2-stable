@@ -43,14 +43,13 @@
 
 #define FMTSTR(buf, siz, fmt, cases)					\
 	_PFL_RVSTART {							\
-		char _convbuf[16], *_s, *_tfmt_new, *_endt;		\
+		char _convbuf[16], *_s, *_endt;				\
 		int _want, _twant, _sawch;				\
 		const char *_p, *_t;					\
 		size_t _tlen;						\
 									\
 		_s = (buf);						\
 		_endt = _s + (siz);					\
-		_tfmt_new = NULL;					\
 		for (_p = (fmt); *_p != '\0'; _p++) {			\
 			_sawch = 0;					\
 			if (*_p == '%') {				\
