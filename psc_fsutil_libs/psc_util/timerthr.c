@@ -72,7 +72,7 @@ psc_tiosthr_main(__unusedx struct psc_thread *thr)
 				/* reset counter to zero for this interval */
 				intv_len = 0;
 				intv_len = psc_atomic64_xchg(
-				    &ist->ist_intv[i].istv_cur_len, intv_len);
+				    &istv->istv_cur_len, intv_len);
 
 				PFL_GETTIMEVAL(&tv);
 
@@ -80,12 +80,12 @@ psc_tiosthr_main(__unusedx struct psc_thread *thr)
 					psc_atomic64_add(&ist->ist_intv[i +
 					    1].istv_cur_len, intv_len);
 
-				ist->ist_intv[i].istv_intv_len = intv_len;
+				istv->istv_intv_len = intv_len;
 
 				/* calculate acculumation duration */
-				timersub(&tv, &ist->ist_intv[i].istv_lastv,
-				    &ist->ist_intv[i].istv_intv_dur);
-				ist->ist_intv[i].istv_lastv = tv;
+				timersub(&tv, &istv->istv_lastv,
+				    &istv->istv_intv_dur);
+				istv->istv_lastv = tv;
 
 				if (i == 0)
 					ist->ist_len_total += intv_len;
