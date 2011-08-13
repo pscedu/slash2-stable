@@ -1513,7 +1513,7 @@ pscrpc_abort_inflight(struct pscrpc_import *imp)
 	 psclist_for_each_entry_safe(req, next, &imp->imp_sending_list,
 	     rq_lentry) {
 		 DEBUG_REQ(PLL_WARN, req,
-			   "aborted -- am I freed later (bulk, cb's, reply)");
+		     "aborted -- am I freed later (bulk, cb's, reply)");
 
 		spinlock(&req->rq_lock);
 		if (req->rq_import_generation < imp->imp_generation) {
