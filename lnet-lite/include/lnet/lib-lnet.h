@@ -580,6 +580,7 @@ void lnet_init_rtrpools(void);
 int  lnet_alloc_rtrpools(int im_a_router);
 void lnet_free_rtrpools(void);
 lnet_remotenet_t *lnet_find_net_locked (__u32 net);
+lnet_remotenet_t *lnet_find_net (__u32 net);
 
 int lnet_islocalnid(lnet_nid_t nid);
 int lnet_islocalnet(__u32 net);

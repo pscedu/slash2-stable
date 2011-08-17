@@ -428,6 +428,7 @@ typedef struct {
         struct list_head        lrn_list;       /* chain on ln_remote_nets */
         struct list_head        lrn_routes;     /* routes to me */
         __u32                   lrn_net;        /* my net number */
+        __u32                   lrn_netif;      /* local network interface */
         unsigned int            lrn_hops;       /* how far I am */
 } lnet_remotenet_t;
 
