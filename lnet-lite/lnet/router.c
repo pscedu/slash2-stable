@@ -24,15 +24,15 @@
 #define DEBUG_SUBSYSTEM S_LNET
 #include <lnet/lib-lnet.h>
 
-static char *forwarding = "";
+//static char *forwarding = "";
 static int tiny_router_buffers = 1024;
 static int small_router_buffers = 8192;
 static int large_router_buffers = 512;
-static int auto_down = 1;
-static int check_routers_before_use = 0;
-static int dead_router_check_interval = 0;
-static int live_router_check_interval = 0;
-static int router_ping_timeout = 50;
+//static int auto_down = 1;
+//static int check_routers_before_use = 0;
+//static int dead_router_check_interval = 0;
+//static int live_router_check_interval = 0;
+//static int router_ping_timeout = 50;
 
 #if defined(__KERNEL__) && defined(LNET_ROUTER)
 
@@ -1084,7 +1084,7 @@ lnet_router_checker_start(void)
 void
 lnet_destroy_rtrbuf(lnet_rtrbuf_t *rb, int npages)
 {
-        int sz = offsetof(lnet_rtrbuf_t, rb_kiov[npages]);
+        __unusedx int sz = offsetof(lnet_rtrbuf_t, rb_kiov[npages]);
 
         while (--npages >= 0)
                 cfs_free_page(rb->rb_kiov[npages].kiov_page);
@@ -1217,7 +1217,7 @@ lnet_init_rtrpools(void)
 
 
 int
-lnet_alloc_rtrpools(int im_a_router)
+lnet_alloc_rtrpools(__unusedx int im_a_router)
 {
         int       rc;
 
