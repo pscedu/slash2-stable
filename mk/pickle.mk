@@ -45,7 +45,9 @@ PICKLE_NEED_VERSION=					$(word 2,$$Rev$$)
  ifdef PICKLE_HAVE_CLOCK_GETTIME
   DEFINES+=						-DHAVE_CLOCK_GETTIME
  else
-  SRCS+=						${PFL_BASE}/compat/clock_gettime.c
+  ifneq ($(filter clock,${MODULES}),)
+    SRCS+=						${PFL_BASE}/compat/clock_gettime.c
+  endif
  endif
 
  ifdef PICKLE_HAVE_PTHREAD_BARRIER
@@ -224,7 +226,9 @@ PICKLE_NEED_VERSION=					$(word 2,$$Rev$$)
  ifdef PICKLE_HAVE_SRAND48_R
   DEFINES+=						-DHAVE_SRAND48_R
  else
-  SRCS+=						${PFL_BASE}/compat/srand48_r.c
+  ifneq ($(filter random,${MODULES}),)
+    SRCS+=						${PFL_BASE}/compat/srand48_r.c
+  endif
  endif
 
  ifdef PICKLE_HAVE_AIO
