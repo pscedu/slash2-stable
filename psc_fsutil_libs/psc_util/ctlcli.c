@@ -698,12 +698,12 @@ void
 psc_ctlmsg_pool_prhdr(__unusedx struct psc_ctlmsghdr *mh,
     __unusedx const void *m)
 {
-	printf("%-9s %3s %6s %6s %6s "
+	printf("%-12s %3s %6s %6s %6s "
 	    "%6s %6s %6s %2s "
-	    "%6s %6s %3s %3s\n",
+	    "%10s %3s %3s\n",
 	    "mem-pool", "flg", "#free", "#use", "total",
 	    "%use", "min", "max", "th",
-	    "#grows", "#shrnx", "#em", "#wa");
+	    "#shrnx", "#em", "#wa");
 	/* XXX add ngets and waiting/sleep time */
 }
 
@@ -716,7 +716,7 @@ psc_ctlmsg_pool_prdat(__unusedx const struct psc_ctlmsghdr *mh,
 
 	psc_fmt_ratio(rbuf, pcpl->pcpl_total - pcpl->pcpl_free,
 	    pcpl->pcpl_total);
-	printf("%-9s %c%c%c "
+	printf("%-12s %c%c%c "
 	    "%6d %6d "
 	    "%6d %6s",
 	    pcpl->pcpl_name,
@@ -736,10 +736,9 @@ psc_ctlmsg_pool_prdat(__unusedx const struct psc_ctlmsghdr *mh,
 		printf(" %6s %6s %2s", "-", "-", "-");
 
 	if (pcpl->pcpl_flags & PPMF_AUTO)
-		printf(" %6"PRIu64" %6"PRIu64, pcpl->pcpl_ngrow,
-		    pcpl->pcpl_nshrink);
+		printf(" %10"PRIu64, pcpl->pcpl_nshrink);
 	else
-		printf(" %6s %6s", "-", "-");
+		printf(" %10s", "-");
 
 	printf(" %3d", pcpl->pcpl_nw_empty);
 	if (pcpl->pcpl_flags & PPMF_MLIST)
