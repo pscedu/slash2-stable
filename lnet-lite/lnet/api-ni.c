@@ -40,6 +40,7 @@
 #include <errno.h>
 #include <stdio.h>
 
+#include "pfl/cdefs.h"
 #include "psc_util/lock.h"
 
 #ifdef __KERNEL__
@@ -1247,43 +1248,43 @@ LNetNIInit(lnet_pid_t requested_pid)
         if (requested_pid == LNET_PID_ANY) {
                 /* Don't instantiate LNET just for me */
                 rc = -ENETDOWN;
-                goto failed0;
+		PFL_GOTOERR(failed0, rc);
         }
 
         rc = lnet_prepare(requested_pid);
         if (rc != 0)
-                goto failed0;
+		PFL_GOTOERR(failed0, rc);
 
         rc = lnet_startup_lndnis();
         if (rc != 0)
-                goto failed1;
+		PFL_GOTOERR(failed1, rc);
 
         rc = lnet_parse_routes(lnet_get_routes(), &im_a_router);
         if (rc != 0)
-                goto failed2;
+		PFL_GOTOERR(failed2, rc);
 
         rc = lnet_check_routes();
         if (rc != 0)
-                goto failed2;
+		PFL_GOTOERR(failed2, rc);
 
         rc = lnet_alloc_rtrpools(im_a_router);
         if (rc != 0)
-                goto failed2;
+		PFL_GOTOERR(failed2, rc);
 
         rc = lnet_acceptor_start();
         if (rc != 0)
-                goto failed2;
+		PFL_GOTOERR(failed2, rc);
 
         the_lnet.ln_refcount = 1;
         /* Now I may use my own API functions... */
 
         rc = lnet_router_checker_start();
         if (rc != 0)
-                goto failed3;
+		PFL_GOTOERR(failed3, rc);
 
         rc = lnet_ping_target_init();
         if (rc != 0)
-                goto failed4;
+		PFL_GOTOERR(failed4, rc);
 
         lnet_proc_init();
         goto out;
