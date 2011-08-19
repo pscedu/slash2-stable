@@ -183,6 +183,14 @@ struct psc_poolmgr {
 
 #define PPGF_NONBLOCK			(1 << 0)
 
+#if PFL_DEBUG >= 2
+# define _PSC_POOL_CHECK_OBJ(m, p)	psc_assert(pfl_memchk((p), 0xa5, (m)->ppm_entsize));
+# define _PSC_POOL_CLEAR_OBJ(m, p)	memset((p), 0xa5, (m)->ppm_entsize)
+#else
+# define _PSC_POOL_CHECK_OBJ(m, p)	do { } while (0)
+# define _PSC_POOL_CLEAR_OBJ(m, p)	do { } while (0)
+#endif
+
 #define _PSC_POOL_GET(m, fl)						\
 	{								\
 		void *_ptr;						\
@@ -190,6 +198,7 @@ struct psc_poolmgr {
 		_ptr = _psc_pool_get((m), (fl));			\
 		psclog_debug("got item %p from pool %s", _ptr,		\
 		    (m)->ppm_name);					\
+		_PSC_POOL_CHECK_OBJ((m), _ptr);				\
 		_ptr;							\
 	}
 
@@ -198,6 +207,7 @@ struct psc_poolmgr {
 
 #define psc_pool_return(m, p)						\
 	do {								\
+		_PSC_POOL_CLEAR_OBJ((m), (p));				\
 		_psc_pool_return((m), (p));				\
 		psclog_debug("returned item %p to pool %s", (p),	\
 		    (m)->ppm_name);					\

@@ -259,6 +259,7 @@ _psc_pool_destroy_obj(struct psc_poolmgr *m, void *p)
 	flags = 0;
 	if (m->ppm_flags & PPMF_NOLOCK)
 		flags |= PAF_LOCK;
+	_PSC_POOL_CLEAR_OBJ(m, p);
 	psc_free(p, flags, m->ppm_entsize);
 }
 
@@ -628,6 +629,7 @@ _psc_pool_return(struct psc_poolmgr *m, void *p)
 	if ((m->ppm_flags & PPMF_AUTO) && m->ppm_total > m->ppm_min &&
 	    ((m->ppm_max && m->ppm_max < m->ppm_total) ||
 	     m->ppm_nfree * 100 > m->ppm_thres * m->ppm_total)) {
+		/* Reached free threshold; completely deallocate obj. */
 		m->ppm_total--;
 		m->ppm_nshrink++;
 		POOL_URLOCK(m, locked);
