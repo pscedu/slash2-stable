@@ -416,7 +416,8 @@ install: recurse-install install-hook
 	      -z "$(findstring /utils/,${CURDIR})" -o			\
 	      "${FORCE_INST}" -eq 1 ]; then				\
 		_dir="${INST_BINDIR}";					\
-		if [ -n "${MAN}" ] && [ -e "${PROG}.8" ]; then		\
+		man="${MAN}";						\
+		if [ -n "${MAN}" -a x"$${man%.8}" != x"${MAN}" ]; then	\
 			_dir="${INST_SBINDIR}";				\
 		fi;							\
 		mkdir -p "$$_dir";					\
