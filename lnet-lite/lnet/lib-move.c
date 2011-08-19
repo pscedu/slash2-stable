@@ -955,7 +955,6 @@ lnet_post_send_locked (lnet_msg_t *msg, int do_send)
         return 0;
 }
 
-#ifdef __KERNEL__
 static void
 lnet_commit_routedmsg (lnet_msg_t *msg)
 {
@@ -1059,7 +1058,6 @@ lnet_post_routed_recv_locked (lnet_msg_t *msg, int do_recv)
         }
         return 0;
 }
-#endif
 
 void
 lnet_return_credits_locked (lnet_msg_t *msg)
@@ -2107,9 +2105,6 @@ lnet_parse(lnet_ni_t *ni, lnet_hdr_t *hdr, lnet_nid_t from_nid,
         }
         LNET_UNLOCK();
 
-#ifndef __KERNEL__
-        LASSERT (for_me);
-#else
         if (!for_me) {
                 msg->msg_target.pid = le32_to_cpu(hdr->dest_pid);
                 msg->msg_target.nid = dest_nid;
@@ -2135,7 +2130,7 @@ lnet_parse(lnet_ni_t *ni, lnet_hdr_t *hdr, lnet_nid_t from_nid,
                                      0, payload_length, payload_length);
                 return 0;
         }
-#endif
+
         /* convert common msg->hdr fields to host byteorder */
         msg->msg_hdr.type = type;
         msg->msg_hdr.src_nid = src_nid;
