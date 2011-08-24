@@ -1217,9 +1217,12 @@ lnet_init_rtrpools(void)
 
 
 int
-lnet_alloc_rtrpools(__unusedx int im_a_router)
+lnet_alloc_rtrpools(int im_a_router)
 {
         int       rc;
+
+        if (!im_a_router)
+                return (0);
 
         rc = lnet_rtrpool_alloc_bufs(&the_lnet.ln_rtrpools[0],
                                      tiny_router_buffers);
