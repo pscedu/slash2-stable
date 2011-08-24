@@ -1379,14 +1379,14 @@ pscrpc_set_wait(struct pscrpc_request_set *set)
 		}
 #endif
 		if (req->rq_status) {
-			psclog_errorx("error status detected in "
-			    "rq_status (%d)", req->rq_status);
+			//			psclog_errorx("error status detected in "
+			//   "rq_status (%d)", req->rq_status);
 			rc = -(abs(req->rq_status));
 		}
 	}
 
-	if (rc)
-		psclog_errorx("set %p failed, rc=%d", set, rc);
+	//	if (rc)
+	//	psclog_errorx("set %p failed, rc=%d", set, rc);
 
 	if (set->set_interpret) {
 		rc = set->set_interpret(set, set->set_arg, rc);
