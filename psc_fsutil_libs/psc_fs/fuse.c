@@ -893,6 +893,8 @@ pscfs_fuse_handle_read(fuse_req_t req, __unusedx fuse_ino_t inum,
 
 	pfr = psc_pool_get(pscfs_req_pool);
 	pfr->pfr_fuse_req = req;
+	pfr->pfr_fuse_fi = fi;
+	pfr->pfr_buf = PSCALLOC(size);
 	RETIFNOTSUP(pfr, read, NULL, 0);
 	pscfs.pf_handle_read(pfr, size, off, fi_getdata(fi));
 }
@@ -1031,6 +1033,8 @@ pscfs_fuse_handle_write(fuse_req_t req, __unusedx fuse_ino_t ino,
 
 	pfr = psc_pool_get(pscfs_req_pool);
 	pfr->pfr_fuse_req = req;
+	pfr->pfr_fuse_fi = fi;
+	
 	RETIFNOTSUP(pfr, write, 0);
 	pscfs.pf_handle_write(pfr, buf, size, off, fi_getdata(fi));
 }
@@ -1178,7 +1182,10 @@ pscfs_reply_read(struct pscfs_req *pfr, void *buf, ssize_t len, int rc)
 	if (rc)
 		fuse_reply_err(pfr->pfr_fuse_req, rc);
 	else
-		fuse_reply_buf(pfr->pfr_fuse_req, buf, len);
+		fuse_reply_buf(pfr->pfr_fuse_req, buf, len);       
+
+	PSCFREE(pfr->pfr_info);       
+	PSCFREE(pfr->pfr_buf);
 	psc_pool_return(pscfs_req_pool, pfr);
 }
 
@@ -1264,10 +1271,13 @@ pscfs_reply_unlink(struct pscfs_req *pfr, int rc)
 void
 pscfs_reply_write(struct pscfs_req *pfr, ssize_t len, int rc)
 {
+	PSCFREE(pfr->pfr_info);
+
 	if (rc)
 		fuse_reply_err(pfr->pfr_fuse_req, rc);
 	else
 		fuse_reply_write(pfr->pfr_fuse_req, len);
+
 	psc_pool_return(pscfs_req_pool, pfr);
 }
 
