@@ -41,8 +41,8 @@ struct pscfs_req {
 	struct fuse_file_info		*pfr_fuse_fi;
 	struct pscfs_clientctx		 pfr_clientctx;
 	struct psc_listentry		 pfr_lentry;
-	char                            *pfr_buf;
-	void                            *pfr_info;
+	char				*pfr_buf;
+	void				*pfr_info;
 };
 
 #  define PSCFS_ARGS_INIT(n, av)	{ FUSE_ARGS_INIT((n), (av)) }
