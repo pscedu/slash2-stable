@@ -196,7 +196,7 @@ struct psc_poolmgr {
 		void *_ptr;						\
 									\
 		_ptr = _psc_pool_get((m), (fl));			\
-		psclog_debug("got item %p from pool %s", _ptr,		\
+		psclog_info("got item %p from pool %s", _ptr,		\
 		    (m)->ppm_name);					\
 		_PSC_POOL_CHECK_OBJ((m), _ptr);				\
 		_ptr;							\
@@ -209,7 +209,7 @@ struct psc_poolmgr {
 	do {								\
 		_PSC_POOL_CLEAR_OBJ((m), (p));				\
 		_psc_pool_return((m), (p));				\
-		psclog_debug("returned item %p to pool %s", (p),	\
+		psclog_info("returned item %p to pool %s", (p),	\
 		    (m)->ppm_name);					\
 		(p) = NULL;						\
 	} while (0)
