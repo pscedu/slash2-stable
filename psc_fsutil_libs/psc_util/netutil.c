@@ -244,6 +244,13 @@ pflnet_rtexists_rtnetlink(const struct sockaddr *sa)
 			for (; RTA_OK(rta, rca);
 			    rta = RTA_NEXT(rta, rca)) {
 				switch (rta->rta_type) {
+				case RTA_GATEWAY:
+					cmpaddr = sin->sin_addr.s_addr;
+					if (zero == cmpaddr) {
+						close(s);
+						return (1);
+					}
+					break;
 				case RTA_DST:
 					cmpaddr = sin->sin_addr.s_addr;
 
