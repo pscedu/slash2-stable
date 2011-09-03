@@ -366,8 +366,8 @@ lnet_acceptor_start(void)
 			ina.s_addr = htonl(lap->lap_addr.s_addr);
 
 			rc = cfs_create_thread(lnet_acceptor, lap,
-			    "lnacthr-%s:%d", inet_ntop(AF_INET, &ina,
-			    addrbuf, sizeof(addrbuf)), lap->lap_port);
+			    "lnacthr-%s", inet_ntop(AF_INET, &ina,
+			    addrbuf, sizeof(addrbuf)));
 			if (rc != 0) {
 				CERROR("Can't start acceptor thread: %d\n", rc);
 				cfs_fini_completion(&la_compl);
