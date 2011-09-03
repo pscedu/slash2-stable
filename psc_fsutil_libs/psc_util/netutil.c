@@ -42,6 +42,7 @@
 #include "pfl/cdefs.h"
 #include "pfl/str.h"
 #include "psc_util/alloc.h"
+#include "psc_util/bitflag.h"
 #include "psc_util/log.h"
 #include "psc_util/net.h"
 
@@ -170,8 +171,105 @@ pflnet_getifname(int ifidx, char ifn[IFNAMSIZ])
 	strlcpy(ifn, ifr.ifr_name, IFNAMSIZ);
 }
 
+__static int
+pflnet_rtexists_rtnetlink(const struct sockaddr *sa)
+{
+	struct {
+		struct nlmsghdr	nmh;
+		struct rtmsg	rtm;
+#define RT_SPACE 8192
+		unsigned char	buf[RT_SPACE];
+	} rq;
+	in_addr_t cmpaddr, zero = 0;
+	struct sockaddr_in *sin;
+	struct nlmsghdr *nmh;
+	struct rtattr *rta;
+	struct rtmsg *rtm;
+	ssize_t rc, rca;
+	int s;
+
+	sin = (void *)sa;
+
+	s = socket(PF_NETLINK, SOCK_RAW, NETLINK_ROUTE);
+	if (s == -1)
+		psc_fatal("socket");
+
+	memset(&rq, 0, sizeof(rq));
+	rq.nmh.nlmsg_len = NLMSG_SPACE(sizeof(rq.rtm));
+	rq.nmh.nlmsg_flags = NLM_F_REQUEST | NLM_F_DUMP;
+	rq.nmh.nlmsg_type = RTM_GETROUTE;
+
+	rq.rtm.rtm_family = sa->sa_family;
+	rq.rtm.rtm_protocol = RTPROT_UNSPEC;
+	rq.rtm.rtm_table = RT_TABLE_MAIN;
+	rq.rtm.rtm_scope = RT_SCOPE_LINK;
+
+	rta = (void *)((char *)&rq + NLMSG_SPACE(sizeof(rq.rtm)));
+	rta->rta_type = RTA_DST;
+	rta->rta_len = RTA_LENGTH(sizeof(sin->sin_addr));
+	memcpy(RTA_DATA(rta), &sin->sin_addr,
+	    sizeof(sin->sin_addr));
+
+	errno = 0;
+	rc = write(s, &rq, rq.nmh.nlmsg_len);
+	if (rc != (ssize_t)rq.nmh.nlmsg_len)
+		psc_fatal("routing socket length mismatch");
+
+	for (;;) {
+		rc = read(s, &rq, sizeof(rq));
+		if (rc == -1)
+			psc_fatal("routing socket read");
+
+		switch (rq.nmh.nlmsg_type) {
+		case NLMSG_ERROR: {
+			struct nlmsgerr *nlerr;
+
+			nlerr = NLMSG_DATA(&rq.nmh);
+			psc_fatalx("netlink: %s", strerror(nlerr->error));
+		    }
+		case NLMSG_DONE:
+			goto out;
+		}
+
+		nmh = &rq.nmh;
+		for (; NLMSG_OK(nmh, rc); nmh = NLMSG_NEXT(nmh, rc)) {
+			rtm = NLMSG_DATA(nmh);
+
+			if (rtm->rtm_table != RT_TABLE_MAIN)
+				continue;
+
+			rta = RTM_RTA(rtm);
+			rca = RTM_PAYLOAD(nmh);
+
+			for (; RTA_OK(rta, rca);
+			    rta = RTA_NEXT(rta, rca)) {
+				switch (rta->rta_type) {
+				case RTA_DST:
+					cmpaddr = sin->sin_addr.s_addr;
+
+					pfl_bitstr_copy(&cmpaddr,
+					    rtm->rtm_dst_len, &zero, 0,
+					    sizeof(zero) * NBBY -
+					    rtm->rtm_dst_len);
+
+					if (cmpaddr == *(in_addr_t *)
+					    RTA_DATA(rta)) {
+						close(s);
+						return (1);
+					}
+					break;
+				}
+			}
+		}
+	}
+ out:
+	close(s);
+	return (0);
+}
+
 __static void
-pflnet_getifnfordst_rtnetlink(const struct sockaddr *sa, char ifn[IFNAMSIZ])
+pflnet_getifnfordst_rtnetlink(const struct sockaddr *sa,
+    char ifn[IFNAMSIZ])
 {
 	struct {
 		struct nlmsghdr	nmh;
@@ -180,9 +278,11 @@ pflnet_getifnfordst_rtnetlink(const struct sockaddr *sa, char ifn[IFNAMSIZ])
 		unsigned char	buf[RT_SPACE];
 	} rq;
 	const struct sockaddr_in *sin;
+	struct nlmsghdr *nmh;
 	struct rtattr *rta;
+	struct rtmsg *rtm;
+	ssize_t rc, rca;
 	int s, ifidx;
-	ssize_t rc;
 
 	sin = (void *)sa;
 
@@ -219,23 +319,36 @@ pflnet_getifnfordst_rtnetlink(const struct sockaddr *sa, char ifn[IFNAMSIZ])
 		psc_fatal("routing socket read");
 	close(s);
 
-	if (rq.nmh.nlmsg_type == NLMSG_ERROR) {
+	switch (rq.nmh.nlmsg_type) {
+	case NLMSG_ERROR: {
 		struct nlmsgerr *nlerr;
 
 		nlerr = NLMSG_DATA(&rq.nmh);
 		psc_fatalx("netlink: %s", strerror(nlerr->error));
+	    }
+	case NLMSG_DONE:
+		psc_fatalx("netlink: unexpected EOF");
 	}
 
-	rc -= NLMSG_SPACE(sizeof(rq.rtm));
-	while (rc > 0) {
-		if (rta->rta_type == RTA_OIF &&
-		    RTA_PAYLOAD(rta) == sizeof(ifidx)) {
-			memcpy(&ifidx, RTA_DATA(rta),
-			    sizeof(ifidx));
-			pflnet_getifname(ifidx, ifn);
-			return;
+	nmh = &rq.nmh;
+	for (; NLMSG_OK(nmh, rc); nmh = NLMSG_NEXT(nmh, rc)) {
+		rtm = NLMSG_DATA(nmh);
+
+		if (rtm->rtm_table != RT_TABLE_MAIN)
+			continue;
+
+		rta = RTM_RTA(rtm);
+		rca = RTM_PAYLOAD(nmh);
+
+		for (; RTA_OK(rta, rca); rta = RTA_NEXT(rta, rca)) {
+			switch (rta->rta_type) {
+			case RTA_OIF:
+				memcpy(&ifidx, RTA_DATA(rta),
+				    sizeof(ifidx));
+				pflnet_getifname(ifidx, ifn);
+				return;
+			}
 		}
-		rta = RTA_NEXT(rta, rc);
 	}
 	psc_fatalx("no route for addr");
 }
@@ -328,6 +441,20 @@ pflnet_getifnfordst_rtsock(const struct sockaddr *sa, char ifn[IFNAMSIZ])
 }
 #endif
 
+int
+pflnet_rtexists(const struct sockaddr *sa)
+{
+	int rc;
+
+#ifdef HAVE_RTNETLINK
+	rc = pflnet_rtexists_rtnetlink(sa);
+#else
+	psc_fatal("not implemented");
+//	rc = pflnet_rtexists_rtsock(sa);
+#endif
+	return (rc);
+}
+
 /**
  * pflnet_getifnfordst - Obtain an interface name (e.g. eth0) for the
  *	given destination address.
@@ -373,7 +500,7 @@ pflnet_getifaddr(const struct ifaddrs *ifa0, const char *ifname,
 	const struct ifaddrs *ifa;
 	struct ifreq ifr;
 	int rc, s;
-psc_fatal("broke");
+psc_fatalx("broke");
 
 	if (ifa0) {
 		for (ifa = ifa0; ifa; ifa = ifa->ifa_next)
