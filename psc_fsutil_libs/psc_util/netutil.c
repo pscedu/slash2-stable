@@ -188,7 +188,7 @@ pflnet_rtexists_rtnetlink(const struct sockaddr *sa)
 	struct rtattr *rta;
 	struct rtmsg *rtm;
 	ssize_t rc, rca;
-	int rc = 0, s;
+	int rv = 0, s;
 
 	sin = (void *)sa;
 
@@ -249,7 +249,7 @@ pflnet_rtexists_rtnetlink(const struct sockaddr *sa)
 				case RTA_GATEWAY:
 					cmpaddr = sin->sin_addr.s_addr;
 					if (zero == cmpaddr) {
-						rc = 1;
+						rv = 1;
 						goto out;
 					}
 					break;
@@ -263,7 +263,7 @@ pflnet_rtexists_rtnetlink(const struct sockaddr *sa)
 
 					if (cmpaddr == *(in_addr_t *)
 					    RTA_DATA(rta)) {
-						rc = 1;
+						rv = 1;
 						goto out;
 					}
 					break;
@@ -273,7 +273,7 @@ pflnet_rtexists_rtnetlink(const struct sockaddr *sa)
 	}
  out:
 	close(s);
-	return (rc);
+	return (rv);
 }
 
 __static void
