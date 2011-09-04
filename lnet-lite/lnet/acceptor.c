@@ -349,7 +349,8 @@ lnet_acceptor_start(void)
 
 	LNET_LOCK();
 	list_for_each_entry(ni, &the_lnet.ln_nis, ni_list)
-		if (ni->ni_lnd->lnd_accept) {
+		if (ni->ni_lnd->lnd_accept &&
+		    (ni->ni_flags & LNIF_ACCEPTOR)) {
 			count++;
 
 			lap = cfs_alloc(sizeof(*lap), 0);

@@ -389,10 +389,13 @@ typedef struct lnet_ni {
         void             *ni_data;              /* instance-specific data */
         lnd_t            *ni_lnd;               /* procedural interface */
         int               ni_refcount;          /* reference count */
+	int		  ni_flags;		
         char             *ni_interfaces[LNET_MAX_INTERFACES]; /* equivalent interfaces to use */
 	struct psc_iostats ni_recv_ist;
 	struct psc_iostats ni_send_ist;
 } lnet_ni_t;
+
+#define LNIF_ACCEPTOR	(1 << 0)
 
 typedef struct lnet_peer {
         struct list_head  lp_hashlist;          /* chain on peer hash */

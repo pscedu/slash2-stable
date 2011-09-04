@@ -206,8 +206,12 @@ lnet_parse_networks(struct list_head *nilist, char *networks)
         while (str != NULL && *str != 0) {
                 char      *comma = strchr(str, ',');
                 char      *bracket = strchr(str, '(');
+                char      *flags = strchr(str, '-');
                 int        niface;
 		char      *iface;
+
+		if (flags)
+			*flags++ = '\0';
 
                 /* NB we don't check interface conflicts here; it's the LNDs
                  * responsibility (if it cares at all) */
@@ -256,6 +260,14 @@ lnet_parse_networks(struct list_head *nilist, char *networks)
                 ni = lnet_new_ni(net, nilist);
                 if (ni == NULL)
                         goto failed;
+
+		ni->ni_flags |= LNIF_ACCEPTOR;
+		for (; flags && *flags; flags++)
+			switch (*flags) {
+			case 'a':
+				ni->ni_flags &= ~LNIF_ACCEPTOR;
+				break;
+			}
 
                 niface = 0;
 		iface = bracket + 1;
