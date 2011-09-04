@@ -27,6 +27,8 @@
 #ifdef HAVE_RTNETLINK
 # include <linux/netlink.h>
 # include <linux/rtnetlink.h>
+#else
+# include <sys/sysctl.h>
 #endif
 
 #ifdef HAVE_GETIFADDRS
@@ -186,7 +188,7 @@ pflnet_rtexists_rtnetlink(const struct sockaddr *sa)
 	struct rtattr *rta;
 	struct rtmsg *rtm;
 	ssize_t rc, rca;
-	int s;
+	int rc = 0, s;
 
 	sin = (void *)sa;
 
@@ -247,8 +249,8 @@ pflnet_rtexists_rtnetlink(const struct sockaddr *sa)
 				case RTA_GATEWAY:
 					cmpaddr = sin->sin_addr.s_addr;
 					if (zero == cmpaddr) {
-						close(s);
-						return (1);
+						rc = 1;
+						goto out;
 					}
 					break;
 				case RTA_DST:
@@ -261,8 +263,8 @@ pflnet_rtexists_rtnetlink(const struct sockaddr *sa)
 
 					if (cmpaddr == *(in_addr_t *)
 					    RTA_DATA(rta)) {
-						close(s);
-						return (1);
+						rc = 1;
+						goto out;
 					}
 					break;
 				}
@@ -271,7 +273,7 @@ pflnet_rtexists_rtnetlink(const struct sockaddr *sa)
 	}
  out:
 	close(s);
-	return (0);
+	return (rc);
 }
 
 __static void
@@ -360,6 +362,53 @@ pflnet_getifnfordst_rtnetlink(const struct sockaddr *sa,
 	psc_fatalx("no route for addr");
 }
 #else
+__static int
+pflnet_rtexists_sysctl(const struct sockaddr *sa)
+{
+	union {
+		struct rt_msghdr *rtm;
+		char *ch;
+		void *p;
+	} u;
+	union pfl_sockaddr_ptr s, os;
+	int rc = 0, mib[6];
+	char *buf = NULL;
+	size_t len;
+
+	os.cp = sa;
+
+	mib[0] = CTL_NET;
+	mib[1] = PF_ROUTE;
+	mib[2] = 0;		/* protocol */
+	mib[3] = AF_INET;
+	mib[4] = NET_RT_DUMP;
+	mib[5] = 0;		/* no flags */
+	if (sysctl(mib, nitems(mib), NULL, &len, NULL, 0) == -1)
+		psc_fatal("route-sysctl-estimate");
+	if (len) {
+		buf = PSCALLOC(len);
+		if (sysctl(mib, nitems(mib), buf, &len, NULL, 0) == -1)
+			psc_fatal("actual retrieval of routing table");
+	}
+
+	for (u.p = buf; u.ch && u.ch < buf + len;
+	    u.ch += u.rtm->rtm_msglen) {
+		if (u.rtm->rtm_version != RTM_VERSION)
+			continue;
+		s.p = u.rtm + 1;
+
+		if (s.s->sin.sin_addr.s_addr ==
+		    os.s->sin.sin_addr.s_addr) {
+			rc = 1;
+			break;
+		}
+	}
+
+	PSCFREE(buf);
+
+	return (rc);
+}
+
 __static void
 pflnet_getifnfordst_rtsock(const struct sockaddr *sa, char ifn[IFNAMSIZ])
 {
@@ -456,8 +505,7 @@ pflnet_rtexists(const struct sockaddr *sa)
 #ifdef HAVE_RTNETLINK
 	rc = pflnet_rtexists_rtnetlink(sa);
 #else
-	psc_fatal("not implemented");
-//	rc = pflnet_rtexists_rtsock(sa);
+	rc = pflnet_rtexists_sysctl(sa);
 #endif
 	return (rc);
 }
