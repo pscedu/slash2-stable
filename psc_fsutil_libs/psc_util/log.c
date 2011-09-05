@@ -71,12 +71,12 @@ char				 psclog_eol[8] = "\n";	/* overrideable with ncurses EOL */
 int				 pfl_syslog;
 
 int pfl_syslog_map[] = {
-	LOG_CRIT,
-	LOG_ERR,
-	LOG_WARNING,
-	LOG_NOTICE,
-	LOG_INFO,
-	LOG_DEBUG
+/* fatal */	LOG_EMERG,
+/* error */	LOG_ERR,
+/* warn */	LOG_WARNING,
+/* notice */	LOG_NOTICE,
+/* info */	LOG_INFO,
+/* debug */	LOG_DEBUG
 };
 
 int
@@ -376,12 +376,13 @@ _psclogv(const struct pfl_callerinfo *pci, enum psclog_level level,
 
 	PSCLOG_LOCK();
 
-	if (pfl_syslog && level >= 0 && level < (int)nitems(pfl_syslog_map)) {
+	if (pfl_syslog && level >= 0 && level <
+	    (int)nitems(pfl_syslog_map)) {
 //		if (options & PLO_ERRNO)
 //			vsyslog(PRI, fmtbuf, ap0);
 		vsyslog(pfl_syslog_map[level], fmtbuf, ap0);
 	} else {
-		/* consider using fprintf_unlocked() for speed */
+		/* XXX consider using fprintf_unlocked() for speed */
 		fprintf(stderr, "%s", prefix);
 		vfprintf(stderr, fmtbuf, ap);
 		if (options & PLO_ERRNO)
@@ -395,7 +396,8 @@ _psclogv(const struct pfl_callerinfo *pci, enum psclog_level level,
 				fprintf(fp, "%s", prefix);
 				vfprintf(fp, fmtbuf, ap0);
 				if (options & PLO_ERRNO)
-					fprintf(fp, ": %s", APP_STRERROR(save_errno));
+					fprintf(fp, ": %s",
+					    APP_STRERROR(save_errno));
 				fprintf(fp, "\n");
 				fclose(fp);
 			}
