@@ -160,4 +160,17 @@ pfl_init(void)
 		atexit(pfl_dump_stack);
 
 	psc_faults_init();
+
+	p = getenv("PSC_TIMEOUT");
+	if (p) {
+		struct itimerval it;
+		long l;
+
+		memset(&it, 0, sizeof(it));
+		l = strtol(p, NULL, 10);
+		PFL_GETTIMEVAL(&it.it_value);
+		it.it_value.tv_sec += l;
+		if (setitimer(ITIMER_REAL, &it, NULL) == -1)
+			psc_error("setitimer");
+	}
 }
