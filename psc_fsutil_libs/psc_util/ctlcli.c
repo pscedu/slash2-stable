@@ -33,6 +33,7 @@
 #include <unistd.h>
 
 #include "pfl/cdefs.h"
+#include "pfl/getopt.h"
 #include "pfl/str.h"
 #include "pfl/subsys.h"
 #include "psc_ds/list.h"
@@ -1144,7 +1145,7 @@ psc_ctlcli_main(const char *osockfn, int ac, char *av[],
 
 	optstr[0] = '\0';
 	chbuf[2] = '\0';
-	strlcat(optstr, "S:", sizeof(optstr));
+	strlcat(optstr, "+S:", sizeof(optstr));
 	for (i = 0; i < notab; i++) {
 		chbuf[0] = otab[i].pco_ch;
 		chbuf[1] = otab[i].pco_type == PCOF_FLAG ? '\0' : ':';
@@ -1184,10 +1185,7 @@ psc_ctlcli_main(const char *osockfn, int ac, char *av[],
 	    "%srdthr", prg);
 
 	/* Parse options for real this time. */
-	optind = 1;
-#ifdef HAVE_OPTRESET
-	optreset = 1;
-#endif
+	PFL_OPT_RESET();
 	while ((c = getopt(ac, av, optstr)) != -1) {
 		for (i = 0; i < notab; i++) {
 			if (c != otab[i].pco_ch)
