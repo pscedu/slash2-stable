@@ -168,7 +168,6 @@ pfl_init(void)
 
 		memset(&it, 0, sizeof(it));
 		l = strtol(p, NULL, 10);
-		PFL_GETTIMEVAL(&it.it_value);
 		it.it_value.tv_sec += l;
 		if (setitimer(ITIMER_REAL, &it, NULL) == -1)
 			psc_error("setitimer");
