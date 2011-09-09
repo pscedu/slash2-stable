@@ -36,7 +36,7 @@ else
   endif
 endif
 
-OBJDIR=			${OBJSTORE}/psc.obj${CURDIR}
+OBJDIR?=		${OBJSTORE}/psc.obj${CURDIR}
 DEPEND_FILE=		${OBJDIR}/.depend
 
 include ${ROOTDIR}/mk/defs.mk
