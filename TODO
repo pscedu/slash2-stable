@@ -156,6 +156,7 @@ pfl
 - list head vs list entry - magic numbers should differ
 - tests/rwlock is broken on mymichelle with DEBUG=0
 - slmctl -p <nonexistent thread>.log.level doesn't report error
+- document CTL_SOCK_FILE
 
 lnet
 - use TLS buffers for libcfs_nid2str() to avoid NUMA contention
