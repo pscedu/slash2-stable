@@ -68,7 +68,7 @@ const char			*psc_logfmt = PSC_LOG_FMT;
 __static enum psclog_level	 psc_loglevel = PLL_WARN;
 __static struct psclog_data	*psc_logdata;
 char				 psclog_eol[8] = "\n";	/* overrideable with ncurses EOL */
-int				 pfl_syslog;
+int				*pfl_syslog;
 
 int pfl_syslog_map[] = {
 /* fatal */	LOG_EMERG,
@@ -131,13 +131,11 @@ psc_log_init(void)
 			errx(1, "invalid PSC_LOG_LEVEL: %s", p);
 	}
 
-	p = getenv("PSC_SYSLOG");
-	if (p && strcmp(p, "0")) {
+	if (pfl_syslog) {
 		extern const char *progname;
 
 		openlog(progname, LOG_CONS | LOG_NDELAY | LOG_PERROR,
 		    LOG_DAEMON);
-		pfl_syslog = 1;
 	}
 }
 
@@ -376,8 +374,8 @@ _psclogv(const struct pfl_callerinfo *pci, enum psclog_level level,
 
 	PSCLOG_LOCK();
 
-	if (pfl_syslog && level >= 0 && level <
-	    (int)nitems(pfl_syslog_map)) {
+	if (pfl_syslog && pfl_syslog[pci->pci_subsys] &&
+	    level >= 0 && level < (int)nitems(pfl_syslog_map)) {
 //		if (options & PLO_ERRNO)
 //			vsyslog(PRI, fmtbuf, ap0);
 		vsyslog(pfl_syslog_map[level], fmtbuf, ap0);
@@ -409,8 +407,7 @@ _psclogv(const struct pfl_callerinfo *pci, enum psclog_level level,
 		if (p && strcmp(p, "0"))
 			pfl_dump_stack();
 		d->pld_flags &= ~PLDF_INLOG;
-		/* XXX run atexit handlers */
-		abort();
+		abort(); // exit(1);
 	}
 
 	PSCLOG_UNLOCK();

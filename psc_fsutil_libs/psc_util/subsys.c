@@ -36,8 +36,10 @@ struct psc_subsys {
 	int		 pss_loglevel;
 };
 
-struct psc_dynarray	psc_subsystems = DYNARRAY_INIT_NOLOG;
-int			psc_nsubsys;
+extern int		*pfl_syslog;
+
+struct psc_dynarray	 psc_subsystems = DYNARRAY_INIT_NOLOG;
+int			 psc_nsubsys;
 
 int
 psc_subsys_id(const char *name)
@@ -83,6 +85,14 @@ psc_subsys_register(int ssid, const char *name)
 		ss->pss_loglevel = psc_log_getlevel_global();
 		if (ssid == PSS_TMP)
 			ss->pss_loglevel = PLL_DEBUG;
+	}
+
+	snprintf(buf, sizeof(buf), "PSC_SYSLOG_%s", name);
+	p = getenv(buf);
+	if (p) {
+		pfl_syslog = PSC_REALLOC(pfl_syslog,
+		    sizeof(*pfl_syslog) * (psc_nsubsys + 1));
+		pfl_syslog[psc_nsubsys] = 1;
 	}
 
 	psc_dynarray_add(&psc_subsystems, ss);
