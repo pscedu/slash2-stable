@@ -155,8 +155,7 @@ pfl
 - parse thr(-.*)? for connthr-foo not matching 'thr$' for thread names in ctl parsing
 - list head vs list entry - magic numbers should differ
 - tests/rwlock is broken on mymichelle with DEBUG=0
-- slmctl -p <nonexistent thread>.log.level doesn't report error
-- document CTL_SOCK_FILE
+- document CTL_SOCK_FILE for daemons and *ctl utils
 
 lnet
 - use TLS buffers for libcfs_nid2str() to avoid NUMA contention
