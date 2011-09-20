@@ -134,6 +134,29 @@ pscrpc_import_put(struct pscrpc_import *import)
 }
 
 
+
+__static int
+pscrpc_interpret(struct pscrpc_request *rq)
+{
+	//psc_assert(rq->rq_phase == PSCRPC_RQ_PHASE_COMPLETE);
+	if (rq->rq_interpret_reply)
+		rq->rq_status = rq->rq_interpret_reply(rq, &rq->rq_async_args);
+
+	rq->rq_interpret_reply = NULL;	
+	
+	/* If request CB has been run then decrement the completion
+	 *   so that set ops don't spin.
+	 */
+	if (rq->rq_comp) {
+		psc_assert(atomic_read(&rq->rq_comp->rqcomp_compcnt) > 0);
+		atomic_dec(&rq->rq_comp->rqcomp_compcnt);
+		rq->rq_comp = NULL;
+	}
+	
+	return (rq->rq_status);
+}
+
+
 #if 0
 static struct pscrpc_request *
 pscrpc_prep_req_from_pool(struct pscrpc_request_pool *pool)
@@ -259,6 +282,8 @@ int
 pscrpc_completion_ready(struct pscrpc_completion *c, int block, int secs)
 {
  retry:
+	psc_assert(atomic_read(&c->rqcomp_compcnt) >= 0);
+
 	if (atomic_read(&c->rqcomp_compcnt))
 		return (1);
 
@@ -301,6 +326,8 @@ pscrpc_completion_waitrel_s(struct pscrpc_completion *c, int secs)
 void
 pscrpc_completion_one(struct pscrpc_completion *c)
 {
+	psc_assert(atomic_read(&c->rqcomp_compcnt) >= 0);
+
 	spinlock(&c->rqcomp_lock);
 	atomic_inc(&c->rqcomp_compcnt);
 	psc_waitq_wakeone(&c->rqcomp_waitq);
@@ -1081,11 +1108,9 @@ pscrpc_check_set(struct pscrpc_request_set *set, int check_allsent)
 
 		req->rq_phase = PSCRPC_RQ_PHASE_COMPLETE;
 		ncompleted++;
+		
+		pscrpc_interpret(req);
 
-		if (req->rq_interpret_reply)
-			req->rq_status = req->rq_interpret_reply(req,
-				 &req->rq_async_args);
-		req->rq_interpret_reply = NULL;
 		set->set_remaining--;
 
 		DEBUG_REQ(PLL_NOTICE, req, "set(%p) rem=(%d) ",
@@ -1137,10 +1162,7 @@ pscrpc_set_destroy(struct pscrpc_request_set *set)
 			req->rq_status = -EBADR;
 			/* higher level (i.e. LOV) failed;
 			 * let the sub reqs clean up */
-			if (req->rq_interpret_reply)
-				req->rq_interpret_reply(req,
-				 &req->rq_async_args);
-			req->rq_interpret_reply = NULL;
+			pscrpc_interpret(req);
 			set->set_remaining--;
 		}
 
@@ -1512,21 +1534,20 @@ pscrpc_abort_inflight(struct pscrpc_import *imp)
 	  */
 	 psclist_for_each_entry_safe(req, next, &imp->imp_sending_list,
 	     rq_lentry) {
-		 DEBUG_REQ(PLL_WARN, req,
-		     "aborted -- am I freed later (bulk, cb's, reply)");
-
-		spinlock(&req->rq_lock);
-		if (req->rq_import_generation < imp->imp_generation) {
-			req->rq_err = 1;
-			pscrpc_wake_client_req(req);
-		}
-		//req->rq_abort_reply = 1;
-		if (req->rq_bulk)
-			req->rq_bulk->bd_abort = 1;
-
-		freelock(&req->rq_lock);
+		 DEBUG_REQ(PLL_WARN, req, "aborted");
+		 
+		 spinlock(&req->rq_lock);
+		 if (req->rq_import_generation < imp->imp_generation) {
+			 req->rq_err = 1;
+			 pscrpc_wake_client_req(req);
+		 }
+		 //req->rq_abort_reply = 1;
+		 if (req->rq_bulk)
+			 req->rq_bulk->bd_abort = 1;
+		 
+		 freelock(&req->rq_lock);
 	 }
-
+	 
 	 freelock(&imp->imp_lock);
 }
 
