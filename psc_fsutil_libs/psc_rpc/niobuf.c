@@ -718,9 +718,11 @@ _pscrpc_free_req(struct pscrpc_request *request, int locked)
 
 	if (request->rq_bulk)
 		pscrpc_free_bulk(request->rq_bulk);
-
-	if (request->rq_comp)
+	
+	if (request->rq_comp) {
+		psc_assert(atomic_read(&request->rq_comp->rqcomp_compcnt) > 0);
 		atomic_dec(&request->rq_comp->rqcomp_compcnt);
+	}
 
 	psc_assert(request->rq_reply_state == NULL);
 
