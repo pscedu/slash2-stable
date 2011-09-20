@@ -301,15 +301,11 @@ pscrpc_reply_in_callback(lnet_event_t *ev)
 		req->rq_nob_received = ev->mlength;
 	}
 
-	if (req->rq_comp) {
+	if (req->rq_comp)
 		/* Notify upper layer that an RPC is ready to be
 		 *   finalized.
 		 */
-		if (req->rq_abort_reply)
-			req->rq_abort_reply = 0;
-		else
-			pscrpc_completion_one(req->rq_comp);
-	}
+		pscrpc_completion_one(req->rq_comp);
 
 	if (req->rq_waitq)
 		psc_waitq_wakeall(req->rq_waitq);
