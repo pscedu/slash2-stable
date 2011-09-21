@@ -220,37 +220,37 @@ enum psclog_level {
 		return (str);						\
 	} while (0)
 
-#define PFL_RETURNX_TRACED()						\
+#define PFL_RETURNX_PCI()						\
 	do {								\
 		psclog_trace("exit %s", __func__);			\
-		PFL_END_TRACE();					\
+		_PFL_END_PCI();						\
 		return;							\
 	} while (0)
 
-#define PFL_RETURN_TRACED(rv)						\
+#define PFL_RETURN_PCI(rv)						\
 	do {								\
 		typeof(rv) _pfl_rv = (rv);				\
 									\
 		psclog_trace("exit %s rc=%ld %p", __func__,		\
 		    (long)_pfl_rv,					\
 		    (void *)(unsigned long)_pfl_rv);			\
-		PFL_END_TRACE();					\
+		_PFL_END_PCI();						\
 		return (_pfl_rv);					\
 	} while (0)
 
-#define PFL_RETURN_LIT_TRACED(rv)					\
+#define PFL_RETURN_LIT_PCI(rv)						\
 	do {								\
 		psclog_trace("exit %s rc=%ld", __func__,		\
 		    (long)(rv));					\
-		PFL_END_TRACE();					\
+		_PFL_END_PCI();						\
 		return (rv);						\
 	} while (0)
 
-#define PFL_RETURN_STR_TRACED(str)					\
+#define PFL_RETURN_STR_PCI(str)						\
 	do {								\
 		psclog_trace("exit %s rc='%s'", __func__,		\
 		    (str));						\
-		PFL_END_TRACE();					\
+		_PFL_END_PCI();						\
 		return (str);						\
 	} while (0)
 

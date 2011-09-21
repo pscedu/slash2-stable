@@ -62,19 +62,25 @@ void	*pfl_tls_get(int, size_t);
 #define PFL_TLSIDX_MAX		8
 
 #ifdef HAVE_TLS
-# define PFL_START_TRACE(pci)						\
+# define _PFL_START_PCI(pci)						\
 	do {								\
 		_pfl_callerinfo = (pci);				\
 		_pfl_callerinfo_lvl++;					\
 	} while (0)
-# define PFL_END_TRACE()						\
+# define _PFL_END_PCI()							\
 	do {								\
 		if (--_pfl_callerinfo_lvl == 0)				\
 			_pfl_callerinfo = NULL;				\
 	} while (0)
+# define _PFL_RETURN_PCI(rv)						\
+	do {								\
+		_PFL_END_PCI();						\
+		return rv;						\
+	} while (0)
 #else
-# define PFL_START_TRACE(pci)
-# define PFL_END_TRACE()
+# define _PFL_START_PCI(pci)
+# define _PFL_END_PCI()
+# define _PFL_RETURN_PCI()	return rv
 #endif
 
 extern
