@@ -184,14 +184,15 @@ pscrpc_nbreqset_reap(struct pscrpc_nbreqset *nbs)
 }
 
 void
-_pscrpc_nbreapthr_main(struct psc_thread *thr)
+pscrpc_nbreapthr_main(struct psc_thread *thr)
 {
 	struct pscrpc_nbreapthr *pnbt;
 
 	pnbt = thr->pscthr_private;
 	while (pscthr_run()) {
 		pscrpc_nbreqset_reap(pnbt->pnbt_nbset);
-		psc_waitq_waitrel_s(&pnbt->pnbt_nbset->nb_waitq, NULL, 1);
+		psc_waitq_waitrel_s(&pnbt->pnbt_nbset->nb_waitq, NULL,
+		    1);
 	}
 }
 
@@ -202,7 +203,7 @@ pscrpc_nbreapthr_spawn(struct pscrpc_nbreqset *nbset, int thrtype,
 	struct pscrpc_nbreapthr *pnbt;
 	struct psc_thread *thr;
 
-	thr = pscthr_init(thrtype, 0, _pscrpc_nbreapthr_main,
+	thr = pscthr_init(thrtype, 0, pscrpc_nbreapthr_main,
 	    NULL, sizeof(*pnbt), "%s", thrname);
 	pnbt = thr->pscthr_private;
 	pnbt->pnbt_nbset = nbset;
