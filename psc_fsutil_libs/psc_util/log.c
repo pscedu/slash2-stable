@@ -43,6 +43,7 @@
 #include "pfl/cdefs.h"
 #include "pfl/pfl.h"
 #include "pfl/str.h"
+#include "pfl/time.h"
 #include "psc_util/alloc.h"
 #include "psc_util/fmtstr.h"
 #include "psc_util/log.h"
@@ -80,31 +81,14 @@ int pfl_syslog_map[] = {
 };
 
 int
-psc_log_getfncntr(char *fn, char *endp)
-{
-	char buf[PATH_MAX];
-	struct stat stb;
-	int i;
-
-	for (i = 0; i < INT_MAX; i++) {
-		snprintf(buf, sizeof(buf), "%*s%d",
-		    (int)(endp - fn), fn, i);
-		if (stat(buf, &stb) == -1) {
-			if (errno == ENOENT)
-				return (i);
-			warn("%s", buf);
-		}
-	}
-	return (0);
-}
-
-int
 psc_log_setfn(const char *p, const char *mode)
 {
 	char fn[PATH_MAX];
+	struct timeval tv;
 
+	PFL_GETTIMEVAL(&tv);
 	FMTSTR(fn, sizeof(fn), p,
-		FMTSTRCASE('c', "d", psc_log_getfncntr(fn, _s))
+		FMTSTRCASE('t', "d", tv.tv_sec)
 	);
 	if (freopen(fn, mode, stderr) == NULL)
 		return (errno);
