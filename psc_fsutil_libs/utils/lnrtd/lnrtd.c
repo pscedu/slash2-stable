@@ -24,6 +24,7 @@
 #include "pfl/str.h"
 #include "psc_ds/list.h"
 #include "psc_rpc/rpc.h"
+#include "psc_util/ctlsvr.h"
 #include "psc_util/lock.h"
 #include "psc_util/log.h"
 
@@ -83,14 +84,15 @@ main(int argc, char *argv[])
 	if (argc)
 		usage();
 
+	pscthr_init(LRTHRT_CTL, 0, NULL, NULL,
+	    sizeof(struct psc_ctlthr), "lrctlthr");
+
 	rc = LNetInit();
 	if (rc)
-		psc_fatalx("failed to initialize lnet rc=%d", rc);
+		psc_fatalx("failed to initialize LNET rc=%d", rc);
 	lnet_server_mode();
 	rc = LNetNIInit(PSCRPC_SVR_PID);
 	if (rc)
 		psc_fatalx("LNetNIInit failed rc=%d", rc);
-	for (;;)
-		sleep(60);
-	/* NOTREACHED */
+	exit(lrctlthr_main());
 }

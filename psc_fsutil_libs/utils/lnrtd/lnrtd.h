@@ -20,6 +20,8 @@
 #ifndef _LNRTD_H_
 #define _LNRTD_H_
 
+#include "pfl/cdefs.h"
+
 enum {
 	LRTHRT_CTL,
 	LRTHRT_CTLAC,
@@ -28,6 +30,8 @@ enum {
 	LRTHRT_TIOS,
 	LRTHRT_USKLNDPL
 };
+
+int lrctlthr_main(void);
 
 const char *ctlsockfn;
 
