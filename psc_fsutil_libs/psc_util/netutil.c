@@ -550,21 +550,22 @@ pflnet_getifnfordst(const struct ifaddrs *ifa0,
 
 int
 pflnet_getifaddr(const struct ifaddrs *ifa0, const char *ifname,
-    __unusedx void *sap)
+    union pfl_sockaddr_ptr *psa)
 {
 	const struct ifaddrs *ifa;
 	struct ifreq ifr;
 	int rc, s;
-psc_fatalx("broke");
 
 	if (ifa0) {
 		for (ifa = ifa0; ifa; ifa = ifa->ifa_next)
 			if (strcmp(ifa->ifa_name, ifname) == 0 &&
 			    ifa->ifa_addr->sa_family == AF_INET) {
-//				memcpy(sap, ifa->ifa_addr, );
+				memcpy(psa->s, ifa->ifa_addr,
+				    sizeof(psa->s->sin));
 				return (1);
 			}
 	} else {
+psc_fatalx("broke");
 		strlcpy(ifr.ifr_name, ifname, sizeof(ifr.ifr_name));
 		s = socket(AF_INET, SOCK_DGRAM, 0);
 		if (s == -1)

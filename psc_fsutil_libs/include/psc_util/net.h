@@ -75,7 +75,7 @@ int  pfl_socket_getpeercred(int, uid_t *, gid_t *);
 void pfl_socket_setnosig(int);
 
 void pflnet_freeifaddrs(struct ifaddrs *);
-int  pflnet_getifaddr(const struct ifaddrs *, const char *, void *);
+int  pflnet_getifaddr(const struct ifaddrs *, const char *, union pfl_sockaddr_ptr *);
 int  pflnet_getifaddrs(struct ifaddrs **);
 void pflnet_getifnfordst(const struct ifaddrs *, const struct sockaddr *, char []);
 int  pflnet_rtexists(const struct sockaddr *);
