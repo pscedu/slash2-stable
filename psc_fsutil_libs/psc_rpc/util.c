@@ -38,6 +38,8 @@ void
 pscrpc_getlocalprids(struct psc_dynarray *da)
 {
 	lnet_process_id_t prid, *pp;
+	lnet_remotenet_t *lrn;
+	lnet_route_t *lrt;
 	int rc, n;
 
 	for (n = 0; ; n++) {
@@ -53,6 +55,14 @@ pscrpc_getlocalprids(struct psc_dynarray *da)
 	}
 	if (psc_dynarray_len(da) == 0)
 		psc_fatalx("no LNET_NETWORKS specified");
+	list_for_each_entry(lrn, &the_lnet.ln_remote_nets, lrn_list) {
+		list_for_each_entry(lrt, &lrn->lrn_routes, lr_list) {
+			pp = PSCALLOC(sizeof(*pp));
+			pp->pid = the_lnet.ln_pid;
+			pp->nid = lrt->lr_gateway->lp_nid;
+			psc_dynarray_add(da, pp);
+		}
+	}
 }
 
 void
@@ -60,12 +70,27 @@ pscrpc_getpridforpeer(lnet_process_id_t *pridp, struct psc_dynarray *da,
     lnet_nid_t peer)
 {
 	lnet_process_id_t *pp;
-	int i;
+	lnet_remotenet_t *lrn;
+	lnet_route_t *lrt;
+	int i, route = 1;
 
+ rescan:
 	DYNARRAY_FOREACH(pp, i, da)
 		if (LNET_NIDNET(peer) == LNET_NIDNET(pp->nid)) {
 			*pridp = *pp;
 			return;
 		}
+	if (route) {
+		route = 0;
+		list_for_each_entry(lrn, &the_lnet.ln_remote_nets,
+		    lrn_list) {
+			if (LNET_NIDNET(peer) == lrn->lrn_net)
+				list_for_each_entry(lrt,
+				    &lrn->lrn_routes, lr_list) {
+					peer = lrt->lr_gateway->lp_nid;
+					goto rescan;
+				}
+		}
+	}
 	pridp->nid = LNET_NID_ANY;
 }
