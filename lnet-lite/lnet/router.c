@@ -304,9 +304,6 @@ lnet_add_route (__u32 net, unsigned int hops, lnet_nid_t gateway)
         CDEBUG(D_NET, "Add route: net %s hops %u gw %s\n",
                libcfs_net2str(net), hops, libcfs_nid2str(gateway));
 
-        CWARN("Add route: net %s hops %u gw %s\n",
-               libcfs_net2str(net), hops, libcfs_nid2str(gateway));
-
         if (gateway == LNET_NID_ANY ||
             LNET_NETTYP(LNET_NIDNET(gateway)) == LOLND ||
             net == LNET_NIDNET(LNET_NID_ANY) ||
@@ -1264,21 +1261,4 @@ lnet_alloc_rtrpools(int im_a_router)
         return rc;
 }
 
-/*
-void
-lnet_free_rtrpools (void)
-{
-}
-
-void
-lnet_init_rtrpools (void)
-{
-}
-
-int
-lnet_alloc_rtrpools (__unusedx int im_a_router)
-{
-        return 0;
-}
-*/
 #endif
