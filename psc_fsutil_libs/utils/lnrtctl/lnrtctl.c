@@ -29,10 +29,9 @@
 #include "psc_util/fmt.h"
 #include "psc_util/log.h"
 
-#include "sliod/ctl_iod.h"
+#include "../lnrtd/lnrtd.h"
 #include "ctl.h"
 #include "ctlcli.h"
-#include "pathnames.h"
 
 struct psc_ctlshow_ent psc_ctlshow_tab[] = {
 	PSC_CTLSHOW_DEFS
@@ -70,10 +69,7 @@ usage(void)
 struct psc_ctlopt opts[] = {
 	{ 'H', PCOF_FLAG, &psc_ctl_noheader },
 	{ 'I', PCOF_FLAG, &psc_ctl_inhuman },
-	{ 'i', PCOF_FUNC, psc_ctlparse_iostats },
-	{ 'L', PCOF_FUNC, psc_ctlparse_lc },
 	{ 'n', PCOF_FLAG, &psc_ctl_nodns },
-	{ 'P', PCOF_FUNC, psc_ctlparse_pool },
 	{ 'p', PCOF_FUNC, psc_ctlparse_param },
 	{ 's', PCOF_FUNC, psc_ctlparse_show },
 };
@@ -83,7 +79,7 @@ main(int argc, char *argv[])
 {
 	pfl_init();
 	progname = argv[0];
-	psc_ctlcli_main(SL_PATH_SLICTLSOCK, argc, argv, opts,
+	psc_ctlcli_main(PATH_CTLSOCK, argc, argv, opts,
 	    nitems(opts));
 	exit(0);
 }

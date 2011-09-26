@@ -31,6 +31,8 @@ enum {
 	LRTHRT_USKLNDPL
 };
 
+#define PATH_CTLSOCK "../lnrtd.%h.sock"
+
 int lrctlthr_main(void);
 
 const char *ctlsockfn;

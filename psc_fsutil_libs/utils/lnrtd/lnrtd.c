@@ -32,8 +32,6 @@
 
 #include "lnrtd.h"
 
-#define PATH_CTLSOCK "../../lnrtd.sock"
-
 const char		*ctlsockfn = PATH_CTLSOCK;
 const char		*progname;
 
