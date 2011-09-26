@@ -38,8 +38,6 @@ void
 pscrpc_getlocalprids(struct psc_dynarray *da)
 {
 	lnet_process_id_t prid, *pp;
-	lnet_remotenet_t *lrn;
-	lnet_route_t *lrt;
 	int rc, n;
 
 	for (n = 0; ; n++) {
@@ -55,14 +53,6 @@ pscrpc_getlocalprids(struct psc_dynarray *da)
 	}
 	if (psc_dynarray_len(da) == 0)
 		psc_fatalx("no LNET_NETWORKS specified");
-	list_for_each_entry(lrn, &the_lnet.ln_remote_nets, lrn_list) {
-		list_for_each_entry(lrt, &lrn->lrn_routes, lr_list) {
-			pp = PSCALLOC(sizeof(*pp));
-			pp->pid = the_lnet.ln_pid;
-			pp->nid = lrt->lr_gateway->lp_nid;
-			psc_dynarray_add(da, pp);
-		}
-	}
 }
 
 void
