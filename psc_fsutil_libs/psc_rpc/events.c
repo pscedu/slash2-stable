@@ -696,8 +696,9 @@ pscrpc_init_portals(int type)
 {
 	int rc;
 
-	if (getenv("LNET_NETWORKS") == NULL)
-		psc_fatalx("please export LNET_NETWORKS");
+	if (getenv("LNET_NETWORKS") == NULL &&
+	    getenv("LNET_IP2NETS") == NULL)
+		psc_fatalx("please export LNET_NETWORKS or LNET_IP2NETS");
 
 	rc = pscrpc_ni_init(type);
 	if (rc)
