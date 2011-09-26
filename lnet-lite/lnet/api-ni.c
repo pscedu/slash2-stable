@@ -157,7 +157,7 @@ lnet_get_networks (void)
         int               rc;
         struct list_head *tmp;
 
-#ifdef NOT_YET
+
         if (networks != NULL && ip2nets != NULL) {
                 LCONSOLE_ERROR_MSG(0x103, "Please set EITHER 'LNET_NETWORKS' or"
                                    " 'LNET_IP2NETS' but not both at once\n");
@@ -168,10 +168,7 @@ lnet_get_networks (void)
                 rc = lnet_parse_ip2nets(&networks, ip2nets);
                 return (rc == 0) ? networks : NULL;
         }
-#else
-        (void)ip2nets;
-        (void)rc;
-#endif
+
         if (networks != NULL)
                 return networks;
 

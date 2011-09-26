@@ -37,6 +37,8 @@
 #define DEBUG_SUBSYSTEM S_LNET
 #include <lnet/lib-lnet.h>
 
+#include "pfl/str.h"
+
 typedef struct {                                /* tmp struct for parsing routes */
 	struct list_head   ltb_list;		/* stash on lists */
 	int                ltb_size;		/* allocated size */
@@ -897,7 +899,8 @@ lnet_parse_range_expr(struct list_head *exprs, char *str)
 }
 
 int
-lnet_match_network_token(char *token, __u32 *ipaddrs, int nip)
+lnet_match_network_token(lnet_text_buf_t **tb, const char *netname, 
+    char *token, __u32 *ipaddrs, char **ifs, int nip)
 {
         struct list_head   exprs[4];
         struct list_head  *e;
@@ -949,6 +952,32 @@ lnet_match_network_token(char *token, __u32 *ipaddrs, int nip)
                                 }
                         }
                 }
+
+		if (match) {
+			size_t len;
+			void *p;
+
+			len = snprintf(NULL, 0, "%s%s%s(%s)", netname,
+			    ifs[i]);
+			len++;
+			if (len > (*tb)->ltb_size - sizeof(**tb)) {
+				p = realloc(*tb, sizeof(**tb) + len);
+				if (p == NULL) {
+					rc = -errno;
+					CERROR("realloc\n");
+					goto out;
+				}
+				*tb = p;
+				lnet_tbnob -= (*tb)->ltb_size;
+				(*tb)->ltb_size = sizeof(**tb) + len;
+				lnet_tbnob += (*tb)->ltb_size;
+			}
+			/* replace with matched nets */
+			strlcat((*tb)->ltb_text, netname, len);
+			strlcat((*tb)->ltb_text, "(", len);
+			strlcat((*tb)->ltb_text, ifs[i], len);
+			strlcat((*tb)->ltb_text, ")", len);
+		}
         }
 
         rc = match ? 1 : 0;
@@ -962,7 +991,7 @@ lnet_match_network_token(char *token, __u32 *ipaddrs, int nip)
 }
 
 int
-lnet_match_network_tokens(char *net_entry, __u32 *ipaddrs, int nip)
+lnet_match_network_tokens(lnet_text_buf_t **tb, __u32 *ipaddrs, char **ifs, int nip)
 {
         static char tokens[LNET_SINGLE_TEXTBUF_NOB];
 
@@ -972,12 +1001,14 @@ lnet_match_network_tokens(char *net_entry, __u32 *ipaddrs, int nip)
         char *net = NULL;
         char *sep;
         char *token;
+	char *net_entry = (*tb)->ltb_text;
         int   rc;
 
         LASSERT (strlen(net_entry) < sizeof(tokens));
 
         /* work on a copy of the string */
         strcpy(tokens, net_entry);
+	net_entry[0] = 0;
         sep = tokens;
         for (;;) {
                 /* scan for token start */
@@ -1001,8 +1032,11 @@ lnet_match_network_tokens(char *net_entry, __u32 *ipaddrs, int nip)
 
                 len = strlen(token);
 
-                rc = lnet_match_network_token(token, ipaddrs, nip);
+		rc = lnet_match_network_token(tb, net, token, ipaddrs,
+		    ifs, nip);
+
                 if (rc < 0) {
+			net_entry = (*tb)->ltb_text;
                         lnet_syntax("ip2nets", net_entry,
                                     token - tokens, len);
                         return rc;
@@ -1014,7 +1048,6 @@ lnet_match_network_tokens(char *net_entry, __u32 *ipaddrs, int nip)
         if (!matched)
                 return 0;
 
-        strcpy(net_entry, net);                 /* replace with matched net */
         return 1;
 }
 
@@ -1116,7 +1149,7 @@ lnet_splitnets(char *source, struct list_head *nets)
 }
 
 int
-lnet_match_networks (char **networksp, char *ip2nets, __u32 *ipaddrs, int nip)
+lnet_match_networks (char **networksp, char *ip2nets, __u32 *ipaddrs, char **ifs, int nip)
 {
         static char  networks[LNET_SINGLE_TEXTBUF_NOB];
         static char  source[LNET_SINGLE_TEXTBUF_NOB];
@@ -1156,7 +1189,7 @@ lnet_match_networks (char **networksp, char *ip2nets, __u32 *ipaddrs, int nip)
                 source[sizeof(source)-1] = 0;
 
                 /* replace ltb_text with the network(s) add on match */
-                rc = lnet_match_network_tokens(tb->ltb_text, ipaddrs, nip);
+                rc = lnet_match_network_tokens(&tb, ipaddrs, ifs, nip);
                 if (rc < 0)
                         break;
 
@@ -1233,18 +1266,16 @@ lnet_match_networks (char **networksp, char *ip2nets, __u32 *ipaddrs, int nip)
         return count;
 }
 
-#ifdef __KERNEL__
 void
-lnet_ipaddr_free_enumeration(__u32 *ipaddrs, int nip)
+lnet_ipaddr_free_enumeration(__u32 *ipaddrs, __unusedx int nip)
 {
         LIBCFS_FREE(ipaddrs, nip * sizeof(*ipaddrs));
 }
 
 int
-lnet_ipaddr_enumerate (__u32 **ipaddrsp)
+lnet_ipaddr_enumerate (__u32 **ipaddrsp, char ***ifs)
 {
         int        up;
-        __u32      netmask;
         __u32     *ipaddrs;
         __u32     *ipaddrs2;
         int        nip;
@@ -1252,6 +1283,7 @@ lnet_ipaddr_enumerate (__u32 **ipaddrsp)
         int        nif = libcfs_ipif_enumerate(&ifnames);
         int        i;
         int        rc;
+	int	   j;
 
         if (nif <= 0)
                 return nif;
@@ -1265,42 +1297,59 @@ lnet_ipaddr_enumerate (__u32 **ipaddrsp)
 
         for (i = nip = 0; i < nif; i++) {
                 if (!strcmp(ifnames[i], CFS_LOOPBACK_IFNAME))
-                        continue;
+			goto skip;
 
                 rc = libcfs_ipif_query(ifnames[i], &up,
-                                       &ipaddrs[nip], &netmask);
+                                       &ipaddrs[nip]);
                 if (rc != 0) {
                         CWARN("Can't query interface %s: %d\n",
                               ifnames[i], rc);
-                        continue;
+			goto skip;
                 }
 
                 if (!up) {
                         CWARN("Ignoring interface %s: it's down\n",
                               ifnames[i]);
-                        continue;
+			goto skip;
                 }
 
                 nip++;
-        }
+		continue;
 
-        libcfs_ipif_free_enumeration(ifnames, nif);
+ skip:
+		free(ifnames[i]);
+		for (j = i; j < nif; j++)
+			ifnames[j] = ifnames[j + 1];
+		nif--;
+		i--;
+
+        }
 
         if (nip == nif) {
                 *ipaddrsp = ipaddrs;
+		if (ifs)
+			*ifs = ifnames;
+		else
+			libcfs_ipif_free_enumeration(ifnames, nif);
         } else {
                 if (nip > 0) {
                         LIBCFS_ALLOC(ipaddrs2, nip * sizeof(*ipaddrs2));
                         if (ipaddrs2 == NULL) {
                                 CERROR("Can't allocate ipaddrs[%d]\n", nip);
                                 nip = -ENOMEM;
+				libcfs_ipif_free_enumeration(ifnames, nif);
                         } else {
                                 memcpy(ipaddrs2, ipaddrs,
                                        nip * sizeof(*ipaddrs));
                                 *ipaddrsp = ipaddrs2;
                                 rc = nip;
+				if (ifs)
+					*ifs = ifnames;
+				else
+					libcfs_ipif_free_enumeration(ifnames, nif);
                         }
-                }
+                } else
+			libcfs_ipif_free_enumeration(ifnames, nif);
                 lnet_ipaddr_free_enumeration(ipaddrs, nif);
         }
         return nip;
@@ -1310,7 +1359,8 @@ int
 lnet_parse_ip2nets (char **networksp, char *ip2nets)
 {
         __u32     *ipaddrs;
-        int        nip = lnet_ipaddr_enumerate(&ipaddrs);
+	char	 **ifs;
+        int        nip = lnet_ipaddr_enumerate(&ipaddrs, &ifs);
         int        rc;
 
         if (nip < 0) {
@@ -1325,8 +1375,9 @@ lnet_parse_ip2nets (char **networksp, char *ip2nets)
                 return -ENOENT;
         }
 
-        rc = lnet_match_networks(networksp, ip2nets, ipaddrs, nip);
+        rc = lnet_match_networks(networksp, ip2nets, ipaddrs, ifs, nip);
         lnet_ipaddr_free_enumeration(ipaddrs, nip);
+	libcfs_ipif_free_enumeration(ifs, nip);
 
         if (rc < 0) {
                 LCONSOLE_ERROR_MSG(0x119, "Error %d parsing ip2nets\n", rc);
@@ -1349,7 +1400,6 @@ lnet_set_ip_niaddr (lnet_ni_t *ni)
         char **names;
         int    n;
         __u32  ip;
-        __u32  netmask;
         int    up;
         int    i;
         int    rc;
@@ -1368,7 +1418,7 @@ lnet_set_ip_niaddr (lnet_ni_t *ni)
                 }
 
                 rc = libcfs_ipif_query(ni->ni_interfaces[0],
-                                       &up, &ip, &netmask);
+                                       &up, &ip);
                 if (rc != 0) {
                         CERROR("Net %s can't query interface %s: %d\n",
                                libcfs_net2str(net), ni->ni_interfaces[0], rc);
@@ -1396,7 +1446,7 @@ lnet_set_ip_niaddr (lnet_ni_t *ni)
                 if (!strcmp(names[i], CFS_LOOPBACK_IFNAME)) /* skip the loopback IF */
                         continue;
 
-                rc = libcfs_ipif_query(names[i], &up, &ip, &netmask);
+                rc = libcfs_ipif_query(names[i], &up, &ip);
 
                 if (rc != 0) {
                         CWARN("Net %s can't query interface %s: %d\n",
@@ -1419,6 +1469,4 @@ lnet_set_ip_niaddr (lnet_ni_t *ni)
         libcfs_ipif_free_enumeration(names, n);
         return -ENOENT;
 }
-EXPORT_SYMBOL(lnet_set_ip_niaddr);
-
-#endif
+//EXPORT_SYMBOL(lnet_set_ip_niaddr);
