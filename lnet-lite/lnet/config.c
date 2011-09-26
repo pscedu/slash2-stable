@@ -957,7 +957,7 @@ lnet_match_network_token(lnet_text_buf_t **tb, const char *netname,
 			size_t len;
 			void *p;
 
-			len = snprintf(NULL, 0, "%s%s%s(%s)", netname,
+			len = snprintf(NULL, 0, "%s(%s)", netname,
 			    ifs[i]);
 			len++;
 			if (len > (*tb)->ltb_size - sizeof(**tb)) {
