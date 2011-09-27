@@ -27,15 +27,12 @@
 
 #include <inttypes.h>
 
-#include "pfl/str.h"
 #include "pfl/types.h"
 #include "psc_rpc/export.h"
 #include "psc_rpc/rpc.h"
 #include "psc_rpc/rpclog.h"
 #include "psc_util/alloc.h"
 #include "psc_util/atomic.h"
-#include "psc_util/ctl.h"
-#include "psc_util/ctlsvr.h"
 #include "psc_util/log.h"
 #include "psc_util/waitq.h"
 
@@ -650,47 +647,6 @@ pscrpc_ni_fini(void)
 	/* NOTREACHED */
 }
 
-#ifdef PFL_CTL
-void
-pscrpc_ctlparam_lnet_networks_get(char buf[PCP_VALUE_MAX])
-{
-	char *lnet_get_networks(void);
-
-	strlcpy(buf, lnet_get_networks(), PCP_VALUE_MAX);
-}
-
-void
-pscrpc_ctlparam_lnet_port_get(char buf[PCP_VALUE_MAX])
-{
-	snprintf(buf, PCP_VALUE_MAX, "%d", usocklnd_get_cport());
-}
-
-int
-psc_ctlrep_getlni(int fd, struct psc_ctlmsghdr *mh, void *m)
-{
-	struct psc_ctlmsg_lni *pclni = m;
-	lnet_ni_t *ni;
-	int rc;
-
-	rc = 1;
-	LNET_LOCK();
-	list_for_each_entry(ni, &the_lnet.ln_nis, ni_list) {
-		memset(pclni, 0, sizeof(*pclni));
-		pscrpc_nid2str(ni->ni_nid, pclni->pclni_nid);
-		pclni->pclni_maxtxcredits = ni->ni_maxtxcredits;
-		pclni->pclni_txcredits = ni->ni_txcredits;
-		pclni->pclni_mintxcredits = ni->ni_mintxcredits;
-		pclni->pclni_peertxcredits = ni->ni_peertxcredits;
-		pclni->pclni_refcount = ni->ni_refcount;
-		rc = psc_ctlmsg_sendv(fd, mh, pclni);
-		if (!rc)
-			break;
-	}
-	LNET_UNLOCK();
-	return (rc);
-}
-#endif
-
 void
 pscrpc_init_portals(int type)
 {
@@ -703,13 +659,6 @@ pscrpc_init_portals(int type)
 	rc = pscrpc_ni_init(type);
 	if (rc)
 		psc_fatal("network initialization: %s", strerror(-rc));
-
-#ifdef PFL_CTL
-	psc_ctlparam_register_simple("lnet.networks",
-	    pscrpc_ctlparam_lnet_networks_get, NULL);
-	psc_ctlparam_register_simple("lnet.port",
-	    pscrpc_ctlparam_lnet_port_get, NULL);
-#endif
 }
 
 void
