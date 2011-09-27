@@ -31,7 +31,13 @@ enum {
 	LRTHRT_USKLNDPL
 };
 
-#define PATH_CTLSOCK "../lnrtd.%h.sock"
+#if DEVELPATHS
+# define PATH_RUNTIME_DIR	".."
+#else
+# define PATH_RUNTIME_DIR	"/var/run"
+#endif
+
+#define PATH_CTLSOCK PATH_RUNTIME_DIR"/lnrtd.%h.sock"
 
 int lrctlthr_main(void);
 
