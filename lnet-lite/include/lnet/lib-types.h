@@ -447,7 +447,13 @@ typedef struct {
 typedef struct {
         struct list_head   rb_list;             /* chain on rbp_bufs */
         lnet_rtrbufpool_t *rb_pool;             /* owning pool */
+#ifdef __KERNEL__
         lnet_kiov_t        rb_kiov[0];          /* the buffer space */
+#define rb_ku_iov rb_kiov
+#else
+	struct iovec	   rb_iov[0];
+#define rb_ku_iov rb_iov
+#endif
 } lnet_rtrbuf_t;
 
 typedef struct {

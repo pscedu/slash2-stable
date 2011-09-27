@@ -859,10 +859,15 @@ lnet_router_checker_start(void)
 void
 lnet_destroy_rtrbuf(lnet_rtrbuf_t *rb, int npages)
 {
-        int sz = offsetof(lnet_rtrbuf_t, rb_kiov[npages]);
+        int sz = offsetof(lnet_rtrbuf_t, rb_ku_iov[npages]);
 
+#ifdef __KERNEL__
         while (--npages >= 0)
                 cfs_free_page(rb->rb_kiov[npages].kiov_page);
+#else
+        while (--npages >= 0)
+                cfs_free_page(rb->rb_iov[npages].iov_base);
+#endif
 
         LIBCFS_FREE(rb, sz);
 }
@@ -990,7 +995,6 @@ lnet_init_rtrpools(void)
         lnet_rtrpool_init(&the_lnet.ln_rtrpools[2], large_pages);
 }
 
-
 int
 lnet_alloc_rtrpools(int im_a_router)
 {
@@ -1081,10 +1085,15 @@ lnet_router_checker_start(void)
 void
 lnet_destroy_rtrbuf(lnet_rtrbuf_t *rb, int npages)
 {
-        __unusedx int sz = offsetof(lnet_rtrbuf_t, rb_kiov[npages]);
+        __unusedx int sz = offsetof(lnet_rtrbuf_t, rb_ku_iov[npages]);
 
+#ifdef __KERNEL__
         while (--npages >= 0)
                 cfs_free_page(rb->rb_kiov[npages].kiov_page);
+#else
+        while (--npages >= 0)
+                cfs_free_page(rb->rb_iov[npages].iov_base);
+#endif
 
         LIBCFS_FREE(rb, sz);
 }
@@ -1093,7 +1102,7 @@ lnet_rtrbuf_t *
 lnet_new_rtrbuf(lnet_rtrbufpool_t *rbp)
 {
         int            npages = rbp->rbp_npages;
-        int            sz = offsetof(lnet_rtrbuf_t, rb_kiov[npages]);
+        int            sz = offsetof(lnet_rtrbuf_t, rb_ku_iov[npages]);
         struct page   *page;
         lnet_rtrbuf_t *rb;
         int            i;
@@ -1107,16 +1116,26 @@ lnet_new_rtrbuf(lnet_rtrbufpool_t *rbp)
         for (i = 0; i < npages; i++) {
                 page = cfs_alloc_page(CFS_ALLOC_ZERO | CFS_ALLOC_STD);
                 if (page == NULL) {
+#ifdef __KERNEL__
                         while (--i >= 0)
                                 cfs_free_page(rb->rb_kiov[i].kiov_page);
+#else
+                        while (--i >= 0)
+                                cfs_free_page(rb->rb_iov[i].iov_base);
+#endif
 
                         LIBCFS_FREE(rb, sz);
                         return NULL;
                 }
 
+#ifdef __KERNEL__
                 rb->rb_kiov[i].kiov_len = CFS_PAGE_SIZE;
                 rb->rb_kiov[i].kiov_offset = 0;
                 rb->rb_kiov[i].kiov_page = page;
+#else
+                rb->rb_iov[i].iov_base = page;
+                rb->rb_iov[i].iov_len = CFS_PAGE_SIZE;
+#endif
         }
 
         return rb;

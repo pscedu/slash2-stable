@@ -1048,7 +1048,11 @@ lnet_post_routed_recv_locked (lnet_msg_t *msg, int do_recv)
         list_del(&rb->rb_list);
 
         msg->msg_niov = rbp->rbp_npages;
+#ifdef __KERNEL__
         msg->msg_kiov = &rb->rb_kiov[0];
+#else
+        msg->msg_iov = &rb->rb_iov[0];
+#endif
 
         if (do_recv) {
                 LNET_UNLOCK();
