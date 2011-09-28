@@ -76,7 +76,7 @@ printvbinr(const void *ptr, size_t len)
 }
 
 /**
- * printvbin - Display the bit representation of some data in.
+ * printvbin - Display the bit representation of some data.
  * @ptr: data to display.
  * @len: number of bytes to display.
  */
