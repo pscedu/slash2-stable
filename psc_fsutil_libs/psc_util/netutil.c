@@ -550,7 +550,7 @@ pflnet_getifnfordst(const struct ifaddrs *ifa0,
 
 int
 pflnet_getifaddr(const struct ifaddrs *ifa0, const char *ifname,
-    union pfl_sockaddr_ptr *psa)
+    union pfl_sockaddr *sa)
 {
 	const struct ifaddrs *ifa;
 	struct ifreq ifr;
@@ -560,8 +560,8 @@ pflnet_getifaddr(const struct ifaddrs *ifa0, const char *ifname,
 		for (ifa = ifa0; ifa; ifa = ifa->ifa_next)
 			if (strcmp(ifa->ifa_name, ifname) == 0 &&
 			    ifa->ifa_addr->sa_family == AF_INET) {
-				memcpy(psa->s, ifa->ifa_addr,
-				    sizeof(psa->s->sin));
+				memcpy(&sa->sa, ifa->ifa_addr,
+				    sizeof(sa->sin));
 				return (1);
 			}
 	} else {
