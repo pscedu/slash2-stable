@@ -75,7 +75,8 @@ pscrpc_rqphase2str(struct pscrpc_request *req)
 	    (rq)->rq_import ?						\
 	      pscrpc_id2str2((rq)->rq_import->imp_connection->c_peer) :	\
 		  (rq)->rq_conn ? pscrpc_nid2str2((rq)->rq_conn->	\
-		    c_peer.nid) : "<?>",				\
+		    c_peer.nid) : (rq)->rq_peer.nid != LNET_NID_ANY ?	\
+			pscrpc_nid2str2((rq)->rq_peer.nid) : "<?>",	\
 	    (rq)->rq_import && (rq)->rq_import->imp_client ?		\
 	      (int)(rq)->rq_import->imp_client->cli_request_portal : -1,\
 	    (rq)->rq_reqlen, (rq)->rq_replen,				\

@@ -186,7 +186,7 @@ pscrpc_fail_import(struct pscrpc_import *imp, uint32_t conn_cnt)
 	if (imp->imp_state == PSCRPC_IMP_NEW) {
 		char *addr = NULL;
 
-		if (imp && imp->connection)
+		if (imp && imp->imp_connection)
 			addr = libcfs_nid2str(
 			    imp->imp_connection->c_peer.nid);
 		psclog_notice("failing new import %p peer %s", imp,
