@@ -43,6 +43,7 @@ general reminders
 - prefer enum to #define for values since they are available within gdb
 - callerinfo should be const everywhere
 - stop reinpretation of args in macros with stack vars
+- check for mp->rc against ENOENT, etc. (all errnos) without negative signs
 - the proper way to do callerinfo:
 
 	void
