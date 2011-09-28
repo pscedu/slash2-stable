@@ -8,12 +8,12 @@ my @thr;
 
 my @ign = (
 	# pfl
+	[ qw(.*_accept libcfs_sock_accept lnet_acceptor psc_usklndthr_begin _pscthr_begin) ],
+	[ qw(.*_accept psc_ctlacthr_main _pscthr_begin) ],
+	[ qw(.*_poll pscfs_fuse_listener_loop) ],
+	[ qw(.*_poll usocklnd_poll_thread psc_usklndthr_begin _pscthr_begin) ],
 	[ qw(LNetEQPoll pscrpc_check_events psc_eqpollthr_main _pscthr_begin) ],
-	[ qw(_*G?I?_*poll pscfs_fuse_listener_loop) ],
-	[ qw(_*G*I*_*poll usocklnd_poll_thread psc_usklndthr_begin _pscthr_begin) ],
 	[ qw(_*psc_waitq_waitrelv _*pscrpc_nbreapthr_main _pscthr_begin) ],
-	[ qw(accept libcfs_sock_accept lnet_acceptor psc_usklndthr_begin _pscthr_begin) ],
-	[ qw(accept psc_ctlacthr_main _pscthr_begin) ],
 	[ qw(psc_waitq_waitabs pscrpcthr_main _pscthr_begin) ],
 	[ qw(psc_waitq_waitrel psc_ctlthr_main) ],
 	[ qw(psc_waitq_waitrel pscfs_fuse_listener_loop) ],
@@ -38,7 +38,7 @@ my @ign = (
 	[ qw(psc_waitq_waitabs msbmaprlsthr_main _pscthr_begin) ],
 	[ qw(pscfs_main slmzfskstatmthr_main _pscthr_begin) ],
 	[ qw(psc_waitq_waitabs msbmapflushthr_main _pscthr_begin) ],
-	[ qw(psc_completion_waitrel_s msbmapflushrpcthr_main _pscthr_begin) ],
+	[ qw(pscrpc_completion_waitrel_s msbmapflushrpcthr_main _pscthr_begin) ],
 	[ qw(slmbmaptimeothr_begin _pscthr_begin) ],
 	[ qw(slmcohthr_begin _pscthr_begin) ],
 
