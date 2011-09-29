@@ -6,14 +6,16 @@ use warnings;
 
 my @thr;
 
+my $sc = qr/(_.*_)?/;
+
 my @ign = (
 	# pfl
-	[ qw(.*_accept libcfs_sock_accept lnet_acceptor psc_usklndthr_begin _pscthr_begin) ],
-	[ qw(.*_accept psc_ctlacthr_main _pscthr_begin) ],
-	[ qw(.*_poll pscfs_fuse_listener_loop) ],
-	[ qw(.*_poll usocklnd_poll_thread psc_usklndthr_begin _pscthr_begin) ],
+	[ "${sc}accept", qw(libcfs_sock_accept lnet_acceptor psc_usklndthr_begin _pscthr_begin) ],
+	[ "${sc}accept", qw(psc_ctlacthr_main _pscthr_begin) ],
+	[ "${sc}poll", qw(pscfs_fuse_listener_loop) ],
+	[ "${sc}poll", qw(usocklnd_poll_thread psc_usklndthr_begin _pscthr_begin) ],
 	[ qw(LNetEQPoll pscrpc_check_events psc_eqpollthr_main _pscthr_begin) ],
-	[ qw(_*psc_waitq_waitrelv _*pscrpc_nbreapthr_main _pscthr_begin) ],
+	[ qw(_psc_waitq_waitrelv _pscrpc_nbreapthr_main _pscthr_begin) ],
 	[ qw(psc_waitq_waitabs pscrpcthr_main _pscthr_begin) ],
 	[ qw(psc_waitq_waitrel psc_ctlthr_main) ],
 	[ qw(psc_waitq_waitrel pscfs_fuse_listener_loop) ],
@@ -23,8 +25,8 @@ my @ign = (
 	[ qw(usleep psc_tiosthr_main _pscthr_begin) ],
 
 	# slash
-	[ qw(_*sleep sl_nbrqthr_main _pscthr_begin) ],
-	[ qw(_*sleep slistatfsthr_main _pscthr_begin) ],
+	[ "${sc}sleep", qw(sl_nbrqthr_main _pscthr_begin) ],
+	[ "${sc}sleep", qw(slistatfsthr_main _pscthr_begin) ],
 	[ qw(_psc_waitq_waitrelv pjournal_thr_main _pscthr_begin) ],
 	[ qw(_psc_waitq_waitrelv slmjreclaimthr_main _pscthr_begin) ],
 	[ qw(_sl_csvc_waitrelv slconnthr_main) ],
@@ -58,7 +60,6 @@ my @ign = (
 	[ qw(umem_update_thread) ],
 	[ qw(zfsfuse_ioctl_queue_worker_thread) ],
 	[ qw(zio_aio_thread) ],
-
 );
 
 sub ign_thr {
