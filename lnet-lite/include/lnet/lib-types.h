@@ -214,6 +214,11 @@ typedef struct lnet_msg {
         unsigned int        msg_niov;
         struct iovec       *msg_iov;
         lnet_kiov_t        *msg_kiov;
+#ifdef __KERNEL__
+# define msg_ku_iov msg_kiov
+#else
+# define msg_ku_iov msg_iov
+#endif
 
         lnet_event_t        msg_ev;
         lnet_hdr_t          msg_hdr;

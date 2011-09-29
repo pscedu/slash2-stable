@@ -1117,7 +1117,6 @@ lnet_return_credits_locked (lnet_msg_t *msg)
                 lnet_peer_decref_locked(txpeer);
         }
 
-#ifdef __KERNEL__
         if (msg->msg_rtrcredit) {
                 /* give back global router credits */
                 lnet_rtrbuf_t     *rb;
@@ -1126,13 +1125,13 @@ lnet_return_credits_locked (lnet_msg_t *msg)
                 /* NB If a msg ever blocks for a buffer in rbp_msgs, it stays
                  * there until it gets one allocated, or aborts the wait
                  * itself */
-                LASSERT (msg->msg_kiov != NULL);
+                LASSERT (msg->msg_ku_iov != NULL);
 
-                rb = list_entry(msg->msg_kiov, lnet_rtrbuf_t, rb_kiov[0]);
+                rb = list_entry(msg->msg_ku_iov, lnet_rtrbuf_t, rb_ku_iov[0]);
                 rbp = rb->rb_pool;
                 LASSERT (rbp == lnet_msg2bufpool(msg));
 
-                msg->msg_kiov = NULL;
+                msg->msg_ku_iov = NULL;
                 msg->msg_rtrcredit = 0;
 
                 LASSERT((rbp->rbp_credits < 0) == !list_empty(&rbp->rbp_msgs));
@@ -1164,10 +1163,10 @@ lnet_return_credits_locked (lnet_msg_t *msg)
                         (void) lnet_post_routed_recv_locked(msg2, 1);
                 }
         }
-#else
+
         LASSERT (!msg->msg_rtrcredit);
         LASSERT (!msg->msg_peerrtrcredit);
-#endif
+
         if (rxpeer != NULL) {
                 msg->msg_rxpeer = NULL;
                 lnet_peer_decref_locked(rxpeer);
