@@ -80,7 +80,7 @@ void	*pfl_tls_get(int, size_t);
 #else
 # define _PFL_START_PCI(pci)
 # define _PFL_END_PCI()
-# define _PFL_RETURN_PCI()	return rv
+# define _PFL_RETURN_PCI(tv)	return rv
 #endif
 
 extern
