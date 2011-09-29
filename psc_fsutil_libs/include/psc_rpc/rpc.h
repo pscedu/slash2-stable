@@ -610,7 +610,11 @@ void	 pscrpc_fail_import(struct pscrpc_import *, uint32_t);
 
 /* util.c */
 void	pscrpc_getlocalprids(struct psc_dynarray *);
-void	pscrpc_getpridforpeer(lnet_process_id_t *, struct psc_dynarray *, lnet_nid_t);
+void	pscrpc_getpridforpeer(lnet_process_id_t *,
+	    const struct psc_dynarray *, lnet_nid_t);
+void	pscrpc_req_getprids(const struct psc_dynarray *,
+	    struct pscrpc_request *, lnet_process_id_t *,
+	    lnet_process_id_t *);
 
 static __inline void
 pscrpc_rs_addref(struct pscrpc_reply_state *rs)

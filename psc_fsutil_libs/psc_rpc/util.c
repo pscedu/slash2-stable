@@ -56,8 +56,8 @@ pscrpc_getlocalprids(struct psc_dynarray *da)
 }
 
 void
-pscrpc_getpridforpeer(lnet_process_id_t *pridp, struct psc_dynarray *da,
-    lnet_nid_t peer)
+pscrpc_getpridforpeer(lnet_process_id_t *pridp,
+    const struct psc_dynarray *da, lnet_nid_t peer)
 {
 	lnet_process_id_t *pp;
 	lnet_remotenet_t *lrn;
@@ -83,4 +83,24 @@ pscrpc_getpridforpeer(lnet_process_id_t *pridp, struct psc_dynarray *da,
 		}
 	}
 	pridp->nid = LNET_NID_ANY;
+}
+
+void
+pscrpc_req_getprids(const struct psc_dynarray *prids,
+    struct pscrpc_request *rq, lnet_process_id_t *self,
+    lnet_process_id_t *peer)
+{
+	if (rq->rq_import) {
+		*peer = rq->rq_import->imp_connection->c_peer;
+		pscrpc_getpridforpeer(self, prids, peer->nid);
+		if (self->nid == LNET_NID_ANY) {
+			errno = ENETUNREACH;
+			psc_fatal("nid %"PSCPRIxLNID, peer->nid);
+		}
+	} else {
+		/* there is no import, we must be a server padawan! */
+		*peer = rq->rq_peer;
+		self->nid = rq->rq_self;
+		self->pid = the_lnet.ln_pid;
+	}
 }
