@@ -34,6 +34,7 @@ INST_ETCDIR?=	${INST_BASE}/etc
 
 MAKEFLAGS+=	--no-print-directory
 
+# XXX hack, figure out why
 ifdef CFLAGS
   MAKE:=	env CFLAGS="${CFLAGS}" ${MAKE}
 endif
@@ -146,4 +147,5 @@ ifeq (${OSTYPE},OpenBSD)
   DEFINES+=	-D_BSD_SOURCE
 endif
 
+-include ${ROOTDIR}/mk/local.$(shell hostname).mk
 -include ${ROOTDIR}/mk/local.mk
