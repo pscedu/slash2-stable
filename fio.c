@@ -19,6 +19,7 @@
 
 #include <err.h>
 #include <inttypes.h>
+#include <stdlib.h>
 
 #include "pfl/cdefs.h"
 #include "pfl/pfl.h"
@@ -441,8 +442,7 @@ destroy_barriers(void)
 }
 
 /*
- * Create a buffer which is 'seeded' for
- *   this PE
+ * Create a buffer which is 'seeded' for this PE
  */
 void
 init_buffer(struct buffer *bdesc, int id)
@@ -452,11 +452,9 @@ init_buffer(struct buffer *bdesc, int id)
 	size_t t;
 
 	bzero(bdesc->buffer, bdesc->buffer_size);
-
-	srand48_r(id, &bdesc->rand_data);
-
-	for (t=0; t < i; t++)
-		lrand48_r(&bdesc->rand_data, &buf_long_ints[t]);
+	srandom(id);
+	for (t = 0; t < i; t++)
+		buf_long_ints[t] = random();
 }
 
 int

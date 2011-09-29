@@ -202,10 +202,8 @@ struct buffer {
 	size_t		 data_size;
 	off_t		 current_offset;
 	int		 block_number;
-	struct drand48_data rand_data;
 };
 typedef struct buffer BUF_t;
-
 
 struct io_toolbox {
 	void		*mygroup;				/* pointer back to my group */
@@ -252,7 +250,7 @@ struct io_thread {
 #ifdef HAVE_LIBPTHREAD
 	pthread_t	 thread_id;
 #endif
-	int		 mype;                    /* mype is the absolute pe */
+	int		 mype;				/* mype is the absolute pe */
 	int		 rc;
 };
 typedef struct io_thread THREAD_t;
@@ -273,18 +271,18 @@ struct test_group {
 
 	int		 num_iotests;
 
-	struct timeval	 test_freq;			/* how often io occurs */
+	struct timeval	 test_freq;			/* how often io occurs	*/
 	struct timeval	 block_freq;			/* sleep in between block */
-	char		 test_name[PATH_MAX];		/* name of the group   */
-	char		 test_path[PATH_MAX];		/* starting path       */
-	char		 output_path[PATH_MAX];		/* starting path       */
+	char		 test_name[PATH_MAX];		/* name of the group	*/
+	char		 test_path[PATH_MAX];		/* starting path	*/
+	char		 output_path[PATH_MAX];		/* starting path	*/
 	char		 test_filename[PATH_MAX];
-	uint64_t	 block_size;			/* chunk size          */
-	uint64_t	 file_size;			/* file size           */
-	int		 num_pes;			/* num of processes    */
-	int		 work_pe;			/* pe next up for work */
+	uint64_t	 block_size;			/* chunk size		*/
+	uint64_t	 file_size;			/* file size		*/
+	int		 num_pes;			/* num of processes	*/
+	int		 work_pe;			/* pe next up for work	*/
 	int		 iterations;
-	int		 test_opts;			/* what this test does */
+	int		 test_opts;			/* what this test does	*/
 	int		 files_per_pe;
 	int		 files_per_dir;
 	int		 thrash_lock;
