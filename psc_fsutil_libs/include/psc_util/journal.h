@@ -100,6 +100,7 @@ struct psc_journal_hdr {
 	uint32_t			 pjh_version;
 	int32_t				 pjh_readsize;
 	uint64_t			 pjh_timestamp;		/* format time */
+	uint64_t                         pjh_fsuuid;
 	uint64_t			 pjh_chksum;		/* keep it last and aligned at a 8-byte boundary */
 #define pjh_iolen pjh_start_off
 };
