@@ -53,7 +53,7 @@
 # define PSCPRI_UTIMET		"06ld"
 #endif
 
-#define PSCPRI_NTIMET		"06ld"
+#define PSCPRI_NTIMET		"09ld"
 
 #ifdef __OpenBSD__
 # define PSCPRI_TIMEVAL		"%ld:%"PSCPRI_UTIMET
