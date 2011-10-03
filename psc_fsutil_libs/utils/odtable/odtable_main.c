@@ -145,7 +145,7 @@ main(int argc, char *argv[])
 	for (i = 0; i < num_puts; i++) {
 		snprintf(item, elem_size, "... put_number=%d ...", i);
 		if (odtable_putitem(odt, item, elem_size) == NULL) {
-			psc_error("odtable_putitem() failed: table full");
+			psclog_error("odtable_putitem() failed: table full");
 			break;
 		}
 	}

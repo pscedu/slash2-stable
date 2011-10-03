@@ -170,6 +170,6 @@ pfl_init(void)
 		l = strtol(p, NULL, 10);
 		it.it_value.tv_sec += l;
 		if (setitimer(ITIMER_REAL, &it, NULL) == -1)
-			psc_error("setitimer");
+			psclog_error("setitimer");
 	}
 }

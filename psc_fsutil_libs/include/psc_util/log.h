@@ -57,6 +57,8 @@ enum psclog_level {
 	PLL_MAX = -1			/* force log (temporary debug) */
 };
 
+#define PLL_NOTIFY PLL_NOTICE
+
 /* Logging options. */
 #define PLO_ERRNO	(1 << 0)	/* strerror(errno) */
 

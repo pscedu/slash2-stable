@@ -279,7 +279,7 @@ _psc_realloc(void *oldp, size_t size, int flags)
 			goto retry;
 		}
 		if (flags & PAF_CANFAIL) {
-			psc_error("malloc/realloc");
+			psclog_error("malloc/realloc");
 			return (NULL);
 		}
 		err(1, "malloc/realloc");
@@ -342,7 +342,7 @@ _psc_realloc(void *oldp, size_t size, int flags)
 psc_fatalx("not ready");
 			save_errno = errno;
 			PSCFREE(newp);
-			psc_error("mlock");
+			psclog_error("mlock");
 			errno = save_errno;
 			return (NULL);
 		}

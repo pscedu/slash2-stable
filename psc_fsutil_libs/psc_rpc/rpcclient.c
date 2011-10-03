@@ -142,8 +142,8 @@ pscrpc_interpret(struct pscrpc_request *rq)
 	if (rq->rq_interpret_reply)
 		rq->rq_status = rq->rq_interpret_reply(rq, &rq->rq_async_args);
 
-	rq->rq_interpret_reply = NULL;	
-	
+	rq->rq_interpret_reply = NULL;
+
 	/* If request CB has been run then decrement the completion
 	 *   so that set ops don't spin.
 	 */
@@ -152,7 +152,7 @@ pscrpc_interpret(struct pscrpc_request *rq)
 		atomic_dec(&rq->rq_comp->rqcomp_compcnt);
 		rq->rq_comp = NULL;
 	}
-	
+
 	return (rq->rq_status);
 }
 
@@ -912,7 +912,7 @@ pscrpc_check_set(struct pscrpc_request_set *set, int check_allsent)
 		struct pscrpc_import *imp = req->rq_import;
 		int rc = 0;
 
-		DEBUG_REQ(PLL_NOTIFY, req, "reqset=%p", set);
+		DEBUG_REQ(PLL_NOTICE, req, "reqset=%p", set);
 
 		if (req->rq_phase == PSCRPC_RQ_PHASE_NEW &&
 		    pscrpc_push_req(req)) {
@@ -1034,7 +1034,7 @@ pscrpc_check_set(struct pscrpc_request_set *set, int check_allsent)
 
 					/* ensure previous bulk fails */
 					req->rq_xid = pscrpc_next_xid();
-					DEBUG_REQ(PLL_NOTIFY, req,
+					DEBUG_REQ(PLL_NOTICE, req,
 						  "resend bulk: old x%"PRIu64
 						  " new x%"PRIu64,
 						  old_xid, req->rq_xid);
@@ -1108,7 +1108,7 @@ pscrpc_check_set(struct pscrpc_request_set *set, int check_allsent)
 
 		req->rq_phase = PSCRPC_RQ_PHASE_COMPLETE;
 		ncompleted++;
-		
+
 		pscrpc_interpret(req);
 
 		set->set_remaining--;
@@ -1535,7 +1535,7 @@ pscrpc_abort_inflight(struct pscrpc_import *imp)
 	 psclist_for_each_entry_safe(req, next, &imp->imp_sending_list,
 	     rq_lentry) {
 		 DEBUG_REQ(PLL_WARN, req, "aborted");
-		 
+
 		 spinlock(&req->rq_lock);
 		 if (req->rq_import_generation < imp->imp_generation) {
 			 req->rq_err = 1;
@@ -1544,10 +1544,10 @@ pscrpc_abort_inflight(struct pscrpc_import *imp)
 		 //req->rq_abort_reply = 1;
 		 if (req->rq_bulk)
 			 req->rq_bulk->bd_abort = 1;
-		 
+
 		 freelock(&req->rq_lock);
 	 }
-	 
+
 	 freelock(&imp->imp_lock);
 }
 

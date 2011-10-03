@@ -129,7 +129,7 @@ psc_multiwaitcond_destroy(struct psc_multiwaitcond *mwc)
 	DYNARRAY_FOREACH_REVERSE(mw, j, &mwc->mwc_multiwaits) {
 		if (!psc_mutex_trylock(&mw->mw_mutex)) {
 			if (count++ == 300000)
-				psc_errorx("mwcond %s failed to lock his "
+				psclog_errorx("mwcond %s failed to lock his "
 				    "multiwaits after many attempts, "
 				    "possible deadlock", mwc->mwc_name);
 			psc_mutex_unlock(&mwc->mwc_mutex);
@@ -198,7 +198,7 @@ psc_multiwaitcond_wakeup(struct psc_multiwaitcond *mwc)
 	psc_mutex_lock(&mwc->mwc_mutex);
 	if (psc_multiwaitcond_trylockallmw(mwc)) {
 		if (count++ == 300000)
-			psc_errorx("mwcond %s failed to lock his "
+			psclog_errorx("mwcond %s failed to lock his "
 			    "multiwaits after attempting many times, "
 			    "possible deadlock", mwc->mwc_name);
 		psc_mutex_unlock(&mwc->mwc_mutex);

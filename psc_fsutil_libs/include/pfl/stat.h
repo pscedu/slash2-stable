@@ -65,7 +65,7 @@ struct stat;
 		PFL_STB_CTIME_GET((stb), &_ctime.tv_sec, &_ctime.tv_nsec);	\
 		PFL_STB_MTIME_GET((stb), &_mtime.tv_sec, &_mtime.tv_nsec);	\
 										\
-		psc_log((level),						\
+		psclog((level),							\
 		    "stb@%p dev:%"PRIu64" inode:%"PSCPRIuINOT" "		\
 		    "mode:0%o nlink:%"PRIu64" "					\
 		    "uid:%u gid:%u "						\

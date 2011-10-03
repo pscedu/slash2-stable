@@ -1083,7 +1083,7 @@ psc_ctlcli_rd_main(__unusedx struct psc_thread *thr)
 	siz = 0;
 	while ((n = read(psc_ctl_sock, &mh, sizeof(mh))) != -1 && n != 0) {
 		if (n != sizeof(mh)) {
-			psc_warnx("short read");
+			psclog_warnx("short read");
 			continue;
 		}
 		if (mh.mh_size == 0)

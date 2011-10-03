@@ -118,7 +118,7 @@ psc_ctlmsg_sendv(int fd, const struct psc_ctlmsghdr *mh, const void *m)
 	}
 	tsiz = sizeof(*mh) + mh->mh_size;
 	if ((size_t)n != tsiz)
-		psc_warn("short sendmsg");
+		psclog_warn("short sendmsg");
 	psc_ctlthr(pscthr_get())->pct_stat.nsent++;
 	sched_yield();
 	return (1);
@@ -260,7 +260,7 @@ psc_ctlrep_getsubsys(int fd, struct psc_ctlmsghdr *mh, __unusedx void *m)
 	for (n = 0; n < psc_nsubsys; n++)
 		if (snprintf(&pcss->pcss_names[n * PCSS_NAME_MAX],
 		    PCSS_NAME_MAX, "%s", psc_subsys_name(n)) == -1) {
-			psc_warn("snprintf");
+			psclog_warn("snprintf");
 			rc = psc_ctlsenderr(fd, mh,
 			    "unable to retrieve subsystems");
 			goto done;
@@ -708,7 +708,7 @@ psc_ctlparam_rlim_nofile(int fd, struct psc_ctlmsghdr *mh,
 		char buf[20];
 
 		if (psc_getrlimit(RLIMIT_NOFILE, &nfd, NULL) == -1) {
-			psc_error("getrlimit");
+			psclog_error("getrlimit");
 			return (psc_ctlsenderr(fd, mh,
 			    "getrlimit", strerror(errno)));
 		}
@@ -1609,7 +1609,7 @@ psc_ctlthr_service(int fd, const struct psc_ctlop *ct, int nops,
 	}
 
 	if (n != sizeof(mh)) {
-		psc_notice("short recvmsg on psc_ctlmsghdr; nbytes=%zd", n);
+		psclog_notice("short recvmsg on psc_ctlmsghdr; nbytes=%zd", n);
 		return (0);
 	}
 	if (mh.mh_size > *msiz) {
@@ -1629,7 +1629,7 @@ psc_ctlthr_service(int fd, const struct psc_ctlop *ct, int nops,
 			psc_fatal("recv");
 		}
 		if ((size_t)n != mh.mh_size) {
-			psc_warn("short recv on psc_ctlmsg contents; "
+			psclog_warn("short recv on psc_ctlmsg contents; "
 			    "got=%zu; expected=%zu",
 			    n, mh.mh_size);
 			return (EOF);
@@ -1723,7 +1723,7 @@ psc_ctlthr_main(const char *ofn, const struct psc_ctlop *ct, int nops,
 	);
 
 	if (unlink(sun.sun_path) == -1 && errno != ENOENT)
-		psc_error("unlink %s", sun.sun_path);
+		psclog_error("unlink %s", sun.sun_path);
 
 	spinlock(&psc_umask_lock);
 	old_umask = umask(S_IXUSR | S_IXGRP | S_IWOTH | S_IROTH | S_IXOTH);

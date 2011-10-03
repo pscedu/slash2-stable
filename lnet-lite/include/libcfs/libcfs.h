@@ -551,7 +551,8 @@ struct libcfs_debug_msg_data {
 			break;					\
 		default:					\
 			___lvl = PLL_ERROR;			\
-			psc_errorx("unknown mask: %d", (mask));	\
+			psclog_errorx("unknown mask: %d",	\
+			    (mask));				\
 			break;					\
 		}						\
 								\

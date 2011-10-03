@@ -53,7 +53,7 @@ odtable_sync(struct odtable *odt, __unusedx size_t elem)
 	 */
 	rc = msync(odt->odt_base, ODTABLE_MAPSZ(odt), flags);
 	if (rc)
-		psc_error("msync error on table %p", odt);
+		psclog_error("msync error on table %p", odt);
 }
 
 /**
@@ -101,7 +101,7 @@ odtable_putitem(struct odtable *odt, void *data, size_t len)
 	odtr->odtr_key = crc;
 	odtf->odtf_crc = crc;
 
-	psc_info("slot=%zd elemcrc=%"PSCPRIxCRC64, todtr.odtr_elem, crc);
+	psclog_info("slot=%zd elemcrc=%"PSCPRIxCRC64, todtr.odtr_elem, crc);
 
 	odtable_sync(odt, todtr.odtr_elem);
 
@@ -155,7 +155,7 @@ odtable_replaceitem(struct odtable *odt, struct odtable_receipt *odtr,
 	odtr->odtr_key = crc;
 	odtf->odtf_crc = crc;
 
-	psc_info("slot=%zd elemcrc=%"PSCPRIxCRC64, odtr->odtr_elem, crc);
+	psclog_info("slot=%zd elemcrc=%"PSCPRIxCRC64, odtr->odtr_elem, crc);
 
 	odtable_sync(odt, odtr->odtr_elem);
 
@@ -178,7 +178,7 @@ odtable_freeitem(struct odtable *odt, struct odtable_receipt *odtr)
 
 	odtf->odtf_inuse = ODTBL_FREE;
 
-	psc_info("slot=%zd", odtr->odtr_elem);
+	psclog_info("slot=%zd", odtr->odtr_elem);
 
 	odtable_sync(odt, odtr->odtr_elem);
 	spinlock(&odt->odt_lock);
@@ -336,10 +336,10 @@ odtable_load(struct odtable **t, const char *fn, const char *fmt, ...)
 		}
 	}
 
-	psc_notify("odtable=%p base=%p has %d/%zd slots available"
-		   " elemsz=%zd magic=%"PRIx64,
-		   odt, odt->odt_base, psc_vbitmap_nfree(odt->odt_bitmap),
-		   odth->odth_nelems, odth->odth_elemsz, odth->odth_magic);
+	psclog_notice("odtable=%p base=%p has %d/%zd slots available "
+	    "elemsz=%zd magic=%"PRIx64,
+	    odt, odt->odt_base, psc_vbitmap_nfree(odt->odt_bitmap),
+	    odth->odth_nelems, odth->odth_elemsz, odth->odth_magic);
 
 	INIT_PSC_LISTENTRY(&odt->odt_lentry);
 
