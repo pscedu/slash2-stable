@@ -51,13 +51,13 @@ struct rsx_msg_portablizer {
 		_rc = pscrpc_pack_reply((rq), (np), (plens), NULL);	\
 		if (_rc) {						\
 			psc_assert(_rc == -ENOMEM);			\
-			psc_errorx("pscrpc_pack_reply failed: %s",	\
+			psclog_errorx("pscrpc_pack_reply failed: %s",	\
 			    strerror(_rc));				\
 			return (_rc);					\
 		}							\
 		if (((mp0) = pscrpc_msg_buf((rq)->rq_repmsg, 0,		\
 		    (plens)[0])) == NULL) {				\
-			psc_errorx("reply is NULL");			\
+			psclog_errorx("reply is NULL");			\
 			return (-ENOMEM);				\
 		}							\
 		_rcp = PSC_AGP((mp0), (rcoff));				\
@@ -65,7 +65,7 @@ struct rsx_msg_portablizer {
 		if (((mq0) = pscrpc_msg_buf((rq)->rq_reqmsg, 0,		\
 		    (q0len))) == NULL) {				\
 			/* XXX tie into pscmem reap */			\
-			psc_errorx("request is NULL");			\
+			psclog_errorx("request is NULL");		\
 			*_rcp = -ENOMEM;				\
 			return (-ENOMEM);				\
 		}							\
