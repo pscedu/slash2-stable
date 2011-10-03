@@ -447,7 +447,7 @@ pscrpc_server_handle_request(struct pscrpc_service *svc,
 		       request->rq_repmsg ?
 			  (int)request->rq_repmsg->status : -999);
 	else
-		CDEBUG(D_NET, "request %"PRIu64" opc %u from %s processed in "
+		psclogs_notify(PSS_RPC, "request %"PRIu64" opc %u from %s processed in "
 		       "%ldus (%ldus total) trans %"PRIu64" rc %d/%d\n",
 		       request->rq_xid, request->rq_reqmsg->opc,
 		       libcfs_id2str(request->rq_peer), timediff,
