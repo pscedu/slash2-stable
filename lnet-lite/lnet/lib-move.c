@@ -1229,7 +1229,7 @@ lnet_send(lnet_nid_t src_nid, lnet_msg_t *msg)
                         lnet_ni_decref_locked(local_ni);
                         lnet_ni_decref_locked(src_ni);
                         LNET_UNLOCK();
-                        CERROR("no route to %s via from %s\n",
+                        CERROR("no route to %s from %s\n",
                                libcfs_nid2str(dst_nid), libcfs_nid2str(src_nid));
                         return -EINVAL;
                 }
