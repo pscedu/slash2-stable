@@ -22,7 +22,7 @@
 #include <string.h>
 
 #include "pfl/str.h"
-#include "psc_util/alloc.h" 
+#include "psc_util/alloc.h"
 
 int
 pfl_asprintf(char **p, const char *fmt, ...)
@@ -41,4 +41,24 @@ pfl_asprintf(char **p, const char *fmt, ...)
 	va_end(apd);
 
 	return (sz);
+}
+
+int
+xsnprintf(char *s, size_t len, const char *fmt, ...)
+{
+	va_list ap;
+	int rc;
+
+	va_start(ap, fmt);
+	rc = vsnprintf(s, len, fmt, ap);
+	va_end(ap);
+
+//	if (rc >= (int)len) {
+//		rc = -1
+//		errno = ENAMETOOLONG;
+//	}
+//	if (rc == -1)
+//		psc_fatal();
+
+	return (rc);
 }

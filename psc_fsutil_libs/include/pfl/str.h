@@ -64,4 +64,6 @@ pfl_basename(const char *s)
 	return (bn);
 }
 
+int xsnprintf(char *, size_t, const char *, ...);
+
 #endif /* _PFL_STR_H_ */
