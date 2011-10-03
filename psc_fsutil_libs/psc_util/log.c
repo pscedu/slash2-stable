@@ -445,6 +445,7 @@ const char *psc_loglevel_names[] = {
 	"notice",
 	"info",
 	"debug",
+	"vdebug",
 	"trace"
 };
 

@@ -51,12 +51,11 @@ enum psclog_level {
 /* 3 */	PLL_NOTICE,			/* something unusual, recommend attention */
 /* 4 */	PLL_INFO,			/* general information */
 /* 5 */	PLL_DEBUG,			/* debug messages */
-/* 6 */	PLL_TRACE,			/* flow */
-/* 7 */	PNLOGLEVELS,
+/* 6 */	PLL_VDEBUG,			/* verbose debug messages */
+/* 7 */	PLL_TRACE,			/* flow */
+/* 8 */	PNLOGLEVELS,
 	PLL_MAX = -1			/* force log (temporary debug) */
 };
-
-#define PLL_NOTIFY	PLL_NOTICE
 
 /* Logging options. */
 #define PLO_ERRNO	(1 << 0)	/* strerror(errno) */
@@ -92,98 +91,61 @@ enum psclog_level {
 /* Current/default/active subsystem. */
 #define psc_fatal(fmt, ...)		_psclogk(0, PLL_FATAL, PLO_ERRNO, (fmt), ## __VA_ARGS__)
 #define psc_fatalx(fmt, ...)		_psclogk(0, PLL_FATAL, 0, (fmt), ## __VA_ARGS__)
-#define psc_error(fmt, ...)		_psclogk(PSC_SUBSYS, PLL_ERROR, PLO_ERRNO, (fmt), ## __VA_ARGS__)
-#define psc_errorx(fmt, ...)		_psclogk(PSC_SUBSYS, PLL_ERROR, 0, (fmt), ## __VA_ARGS__)
-#define psc_warn(fmt, ...)		_psclogk(PSC_SUBSYS, PLL_WARN, PLO_ERRNO, (fmt), ## __VA_ARGS__)
-#define psc_warnx(fmt, ...)		_psclogk(PSC_SUBSYS, PLL_WARN, 0, (fmt), ## __VA_ARGS__)
-#define psc_notice(fmt, ...)		_psclogk(PSC_SUBSYS, PLL_NOTICE, 0, (fmt), ## __VA_ARGS__)
-#define psc_notify(fmt, ...)		_psclogk(PSC_SUBSYS, PLL_NOTICE, 0, (fmt), ## __VA_ARGS__)
-#define psc_dbg(fmt, ...)		_psclogk(PSC_SUBSYS, PLL_DEBUG, 0, (fmt), ## __VA_ARGS__)
-#define psc_debug(fmt, ...)		_psclogk(PSC_SUBSYS, PLL_DEBUG, 0, (fmt), ## __VA_ARGS__)
-#define psc_info(fmt, ...)		_psclogk(PSC_SUBSYS, PLL_INFO, 0, (fmt), ## __VA_ARGS__)
-#define psc_trace(fmt, ...)		_psclogk(PSC_SUBSYS, PLL_TRACE, 0, (fmt), ## __VA_ARGS__)
-
 #define psclog_error(fmt, ...)		_psclogk(PSC_SUBSYS, PLL_ERROR, PLO_ERRNO, (fmt), ## __VA_ARGS__)
 #define psclog_errorx(fmt, ...)		_psclogk(PSC_SUBSYS, PLL_ERROR, 0, (fmt), ## __VA_ARGS__)
 #define psclog_warn(fmt, ...)		_psclogk(PSC_SUBSYS, PLL_WARN, PLO_ERRNO, (fmt), ## __VA_ARGS__)
 #define psclog_warnx(fmt, ...)		_psclogk(PSC_SUBSYS, PLL_WARN, 0, (fmt), ## __VA_ARGS__)
 #define psclog_notice(fmt, ...)		_psclogk(PSC_SUBSYS, PLL_NOTICE, 0, (fmt), ## __VA_ARGS__)
-#define psclog_notify(fmt, ...)		_psclogk(PSC_SUBSYS, PLL_NOTICE, 0, (fmt), ## __VA_ARGS__)
+#define psclog_info(fmt, ...)		_psclogk(PSC_SUBSYS, PLL_INFO, 0, (fmt), ## __VA_ARGS__)
 #define psclog_dbg(fmt, ...)		_psclogk(PSC_SUBSYS, PLL_DEBUG, 0, (fmt), ## __VA_ARGS__)
 #define psclog_debug(fmt, ...)		_psclogk(PSC_SUBSYS, PLL_DEBUG, 0, (fmt), ## __VA_ARGS__)
-#define psclog_info(fmt, ...)		_psclogk(PSC_SUBSYS, PLL_INFO, 0, (fmt), ## __VA_ARGS__)
+#define psclog_vdbg(fmt, ...)		_psclogk(PSC_SUBSYS, PLL_VDEBUG, 0, (fmt), ## __VA_ARGS__)
+#define psclog_vdebug(fmt, ...)		_psclogk(PSC_SUBSYS, PLL_VDEBUG, 0, (fmt), ## __VA_ARGS__)
 #define psclog_trace(fmt, ...)		_psclogk(PSC_SUBSYS, PLL_TRACE, 0, (fmt), ## __VA_ARGS__)
 #define psclog_max(fmt, ...)		_psclogk(PSC_SUBSYS, PLL_MAX, 0, (fmt), ## __VA_ARGS__)
 #define psclog(lvl, fmt, ...)		_psclogk(PSC_SUBSYS, (lvl), 0, (fmt), ## __VA_ARGS__)
-#define psc_log psclog
 
-/* Override/specify subsystem. */
-#define psc_errors(ss, fmt, ...)	_psclogk((ss), PLL_ERROR, PLO_ERRNO, (fmt), ## __VA_ARGS__)
-#define psc_errorxs(ss, fmt, ...)	_psclogk((ss), PLL_ERROR, 0, (fmt), ## __VA_ARGS__)
-#define psc_warns(ss, fmt, ...)		_psclogk((ss), PLL_WARN, PLO_ERRNO, (fmt), ## __VA_ARGS__)
-#define psc_warnxs(ss, fmt, ...)	_psclogk((ss), PLL_WARN, 0, (fmt), ## __VA_ARGS__)
-#define psc_notices(ss, fmt, ...)	_psclogk((ss), PLL_NOTICE, 0, (fmt), ## __VA_ARGS__)
-#define psc_notifys(ss, fmt, ...)	_psclogk((ss), PLL_NOTICE, 0, (fmt), ## __VA_ARGS__)
-#define psc_dbgs(ss, fmt, ...)		_psclogk((ss), PLL_DEBUG, 0, (fmt), ## __VA_ARGS__)
-#define psc_debugs(ss, fmt, ...)	_psclogk((ss), PLL_DEBUG, 0, (fmt), ## __VA_ARGS__)
-#define psc_infos(ss, fmt, ...)		_psclogk((ss), PLL_INFO, 0, (fmt), ## __VA_ARGS__)
-
+/* Specify subsystem. */
 #define psclogs_error(ss, fmt, ...)	_psclogk((ss), PLL_ERROR, PLO_ERRNO, (fmt), ## __VA_ARGS__)
 #define psclogs_errorx(ss, fmt, ...)	_psclogk((ss), PLL_ERROR, 0, (fmt), ## __VA_ARGS__)
 #define psclogs_warn(ss, fmt, ...)	_psclogk((ss), PLL_WARN, PLO_ERRNO, (fmt), ## __VA_ARGS__)
 #define psclogs_warnx(ss, fmt, ...)	_psclogk((ss), PLL_WARN, 0, (fmt), ## __VA_ARGS__)
 #define psclogs_notice(ss, fmt, ...)	_psclogk((ss), PLL_NOTICE, 0, (fmt), ## __VA_ARGS__)
-#define psclogs_notify(ss, fmt, ...)	_psclogk((ss), PLL_NOTICE, 0, (fmt), ## __VA_ARGS__)
+#define psclogs_info(ss, fmt, ...)	_psclogk((ss), PLL_INFO, 0, (fmt), ## __VA_ARGS__)
 #define psclogs_dbg(ss, fmt, ...)	_psclogk((ss), PLL_DEBUG, 0, (fmt), ## __VA_ARGS__)
 #define psclogs_debug(ss, fmt, ...)	_psclogk((ss), PLL_DEBUG, 0, (fmt), ## __VA_ARGS__)
-#define psclogs_info(ss, fmt, ...)	_psclogk((ss), PLL_INFO, 0, (fmt), ## __VA_ARGS__)
+#define psclogs_vdbg(ss, fmt, ...)	_psclogk((ss), PLL_VDEBUG, 0, (fmt), ## __VA_ARGS__)
+#define psclogs_vdebug(ss, fmt, ...)	_psclogk((ss), PLL_VDEBUG, 0, (fmt), ## __VA_ARGS__)
 #define psclogs_trace(ss, fmt, ...)	_psclogk((ss), PLL_TRACE, 0, (fmt), ## __VA_ARGS__)
 #define psclogs(lvl, ss, fmt, ...)	_psclogk((ss), (lvl), 0, (fmt), ## __VA_ARGS__)
-#define psc_logs psclogs
 
 /* Variable-argument list versions. */
 #define psc_fatalv(fmt, ap)		_psclogvk(0, PLL_FATAL, PLO_ERRNO, (fmt), (ap))
 #define psc_fatalxv(fmt, ap)		_psclogvk(0, PLL_FATAL, 0, (fmt), (ap))
-#define psc_errorv(fmt, ap)		_psclogvk(PSC_SUBSYS, PLL_ERROR, PLO_ERRNO, (fmt), (ap))
-#define psc_errorxv(fmt, ap)		_psclogvk(PSC_SUBSYS, PLL_ERROR, 0, (fmt), (ap))
-#define psc_warnv(fmt, ap)		_psclogvk(PSC_SUBSYS, PLL_WARN, PLO_ERRNO, (fmt), (ap))
-#define psc_warnxv(fmt, ap)		_psclogvk(PSC_SUBSYS, PLL_WARN, 0, (fmt), (ap))
-#define psc_noticev(fmt, ap)		_psclogvk(PSC_SUBSYS, PLL_NOTICE, 0, (fmt), (ap))
-#define psc_notifyv(fmt, ap)		_psclogvk(PSC_SUBSYS, PLL_NOTICE, 0, (fmt), (ap))
-#define psc_dbgv(fmt, ap)		_psclogvk(PSC_SUBSYS, PLL_DEBUG, 0, (fmt), (ap))
-#define psc_debugv(fmt, ap)		_psclogvk(PSC_SUBSYS, PLL_DEBUG, 0, (fmt), (ap))
-#define psc_infov(fmt, ap)		_psclogvk(PSC_SUBSYS, PLL_INFO, 0, (fmt), (ap))
-
 #define psclogv_error(fmt, ap)		_psclogvk(PSC_SUBSYS, PLL_ERROR, PLO_ERRNO, (fmt), (ap))
 #define psclogv_errorx(fmt, ap)		_psclogvk(PSC_SUBSYS, PLL_ERROR, 0, (fmt), (ap))
 #define psclogv_warn(fmt, ap)		_psclogvk(PSC_SUBSYS, PLL_WARN, PLO_ERRNO, (fmt), (ap))
 #define psclogv_warnx(fmt, ap)		_psclogvk(PSC_SUBSYS, PLL_WARN, 0, (fmt), (ap))
 #define psclogv_notice(fmt, ap)		_psclogvk(PSC_SUBSYS, PLL_NOTICE, 0, (fmt), (ap))
-#define psclogv_notify(fmt, ap)		_psclogvk(PSC_SUBSYS, PLL_NOTICE, 0, (fmt), (ap))
+#define psclogv_info(fmt, ap)		_psclogvk(PSC_SUBSYS, PLL_INFO, 0, (fmt), (ap))
 #define psclogv_dbg(fmt, ap)		_psclogvk(PSC_SUBSYS, PLL_DEBUG, 0, (fmt), (ap))
 #define psclogv_debug(fmt, ap)		_psclogvk(PSC_SUBSYS, PLL_DEBUG, 0, (fmt), (ap))
-#define psclogv_info(fmt, ap)		_psclogvk(PSC_SUBSYS, PLL_INFO, 0, (fmt), (ap))
+#define psclogv_vdbg(fmt, ap)		_psclogvk(PSC_SUBSYS, PLL_VDEBUG, 0, (fmt), (ap))
+#define psclogv_vdebug(fmt, ap)		_psclogvk(PSC_SUBSYS, PLL_VDEBUG, 0, (fmt), (ap))
 #define psclogv_trace(fmt, ap)		_psclogvk(PSC_SUBSYS, PLL_TRACE, 0, (fmt), (ap))
 #define psclogv(lvl, fmt, ap)		_psclogvk(PSC_SUBSYS, (lvl), 0, (fmt), (ap))
 
 /* Variable-argument list versions with subsystem overriding. */
-#define psc_errorsv(fmt, ap)		_psclogvk((ss), PLL_ERROR, PLO_ERRNO, (fmt), (ap))
-#define psc_errorxsv(fmt, ap)		_psclogvk((ss), PLL_ERROR, 0, (fmt), (ap))
-#define psc_warnsv(fmt, ap)		_psclogvk((ss), PLL_WARN, PLO_ERRNO, (fmt), (ap))
-#define psc_warnxsv(fmt, ap)		_psclogvk((ss), PLL_WARN, 0, (fmt), (ap))
-#define psc_noticesv(fmt, ap)		_psclogvk((ss), PLL_NOTICE, 0, (fmt), (ap))
-#define psc_notifysv(fmt, ap)		_psclogvk((ss), PLL_NOTICE, 0, (fmt), (ap))
-#define psc_debugsv(fmt, ap)		_psclogvk((ss), PLL_DEBUG, 0, (fmt), (ap))
-#define psc_infosv(fmt, ap)		_psclogvk((ss), PLL_INFO, 0, (fmt), (ap))
-
 #define psclogsv_error(fmt, ap)		_psclogvk((ss), PLL_ERROR, PLO_ERRNO, (fmt), (ap))
 #define psclogsv_errorx(fmt, ap)	_psclogvk((ss), PLL_ERROR, 0, (fmt), (ap))
 #define psclogsv_warn(fmt, ap)		_psclogvk((ss), PLL_WARN, PLO_ERRNO, (fmt), (ap))
 #define psclogsv_warnx(fmt, ap)		_psclogvk((ss), PLL_WARN, 0, (fmt), (ap))
 #define psclogsv_notice(fmt, ap)	_psclogvk((ss), PLL_NOTICE, 0, (fmt), (ap))
-#define psclogsv_notify(fmt, ap)	_psclogvk((ss), PLL_NOTICE, 0, (fmt), (ap))
-#define psclogsv_debug(fmt, ap)		_psclogvk((ss), PLL_DEBUG, 0, (fmt), (ap))
 #define psclogsv_info(fmt, ap)		_psclogvk((ss), PLL_INFO, 0, (fmt), (ap))
+#define psclogsv_dbg(fmt, ap)		_psclogvk((ss), PLL_DEBUG, 0, (fmt), (ap))
+#define psclogsv_debug(fmt, ap)		_psclogvk((ss), PLL_DEBUG, 0, (fmt), (ap))
+#define psclogsv_vdbg(fmt, ap)		_psclogvk((ss), PLL_VDEBUG, 0, (fmt), (ap))
+#define psclogsv_vdebug(fmt, ap)	_psclogvk((ss), PLL_VDEBUG, 0, (fmt), (ap))
 #define psclogsv_trace(fmt, ap)		_psclogvk((ss), PLL_TRACE, 0, (fmt), (ap))
 #define psclogsv(lvl, ss, fmt, ap)	_psclogvk((ss), (lvl), 0, (fmt), (ap))
 
