@@ -63,7 +63,7 @@ pfl_socket_setnosig(int sock)
 	optsiz = sizeof(optval);
 	if (setsockopt(sock, SOL_SOCKET, SO_NOSIGPIPE,
 	    &optval, optsiz) == -1)
-		psc_error("setsockopt");
+		psclog_error("setsockopt");
 #else
 	(void)sock;
 #endif
