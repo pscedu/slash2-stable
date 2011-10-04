@@ -134,7 +134,7 @@ typedef struct psc_spinlock {
 			psc_assert((psl)->psl_owner == 0);		\
 			(psl)->psl_owner = pthread_self();		\
 			if (((psl)->psl_flags & PSLF_NOLOG) == 0)	\
-				_psclog_pci((pci), PLL_DEBUG, 0,	\
+				_psclog_pci((pci), PLL_VDEBUG, 0,	\
 				    "lock %p acquired",	(psl));		\
 			_val = 1;					\
 		} else							\
@@ -183,7 +183,7 @@ typedef struct psc_spinlock {
 		(psl)->psl_owner = 0;					\
 		psc_atomic32_set(_SPIN_GETATOM(psl), PSL_UNLOCKED);	\
 		if (((psl)->psl_flags & PSLF_NOLOG) == 0)		\
-			_psclog_pci((pci), PLL_DEBUG, 0,		\
+			_psclog_pci((pci), PLL_VDEBUG, 0,		\
 			    "lock %p released", (psl));			\
 	} while (0)
 
