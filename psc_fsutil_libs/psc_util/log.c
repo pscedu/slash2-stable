@@ -56,7 +56,7 @@ char *APP_STRERROR(int);
 #endif
 
 #ifndef PSC_LOG_FMT
-#define PSC_LOG_FMT "[%s:%06u %n:%i:%T %B %F %l] "
+#define PSC_LOG_FMT "[%s:%06u %n:%I:%T %B %F %l] "
 #endif
 
 struct fuse_context {
@@ -331,6 +331,7 @@ _psclogv(const struct pfl_callerinfo *pci, enum psclog_level level,
 		FMTSTRCASE('f', "s", pci->pci_filename)
 		FMTSTRCASE('H', "s", d->pld_hostname)
 		FMTSTRCASE('h', "s", d->pld_hostshort)
+		FMTSTRCASE('I', PSCPRI_PTHRT, pthread_self())
 		FMTSTRCASE('i', "d", thrid)
 		FMTSTRCASE('L', "d", level)
 		FMTSTRCASE('l', "d", pci->pci_lineno)
