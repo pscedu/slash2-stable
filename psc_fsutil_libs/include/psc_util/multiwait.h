@@ -69,7 +69,7 @@ struct psc_multiwait {
 #define PMWF_CRITSECT			(1 << 0)	/* inside critical section */
 
 /**
- * psc_multiwait_addcond - add a condition to a multiwait.
+ * psc_multiwait_addcond - Add a condition to a multiwait.
  * @mw: a multiwait.
  * @mwc: the condition to add.
  */
