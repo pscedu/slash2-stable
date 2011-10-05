@@ -56,7 +56,7 @@ psc_mutex_lock_pci(const struct pfl_callerinfo *pci,
 	if (rc)
 		psc_fatalx("pthread_mutex_lock: %s", strerror(rc));
 	mut->pm_owner = pthread_self();
-	psclog_dbg("mutex@%p acquired", mut);
+	psclog_vdbg("mutex@%p acquired", mut);
 }
 
 void
@@ -69,7 +69,7 @@ psc_mutex_unlock_pci(const struct pfl_callerinfo *pci,
 	rc = pthread_mutex_unlock(&mut->pm_mutex);
 	if (rc)
 		psc_fatalx("pthread_mutex_unlock: %s", strerror(rc));
-	psclog_dbg("mutex@%p released", mut);
+	psclog_vdbg("mutex@%p released", mut);
 }
 
 int
@@ -84,7 +84,7 @@ psc_mutex_reqlock_pci(const struct pfl_callerinfo *pci,
 	else if (rc)
 		psc_fatalx("pthread_mutex_unlock: %s", strerror(rc));
 	mut->pm_owner = pthread_self();
-	psclog_dbg("mutex@%p acquired", mut);
+	psclog_vdbg("mutex@%p acquired", mut);
 	return (rc);
 }
 
@@ -106,7 +106,7 @@ psc_mutex_trylock_pci(const struct pfl_callerinfo *pci,
 	rc = pthread_mutex_trylock(&mut->pm_mutex);
 	if (rc == 0) {
 		mut->pm_owner = pthread_self();
-		psclog_dbg("mutex=%p acquired", mut);
+		psclog_vdbg("mutex=%p acquired", mut);
 		return (1);
 	}
 	if (rc == EBUSY)
@@ -181,7 +181,7 @@ psc_rwlock_rdlock_pci(const struct pfl_callerinfo *pci,
 	rc = pthread_rwlock_rdlock(&rw->pr_rwlock);
 	if (rc)
 		psc_fatalx("pthread_rwlock_rdlock: %s", strerror(rc));
-	psclog_dbg("rwlock@%p reader lock acquired", rw);
+	psclog_vdbg("rwlock@%p reader lock acquired", rw);
 }
 
 void
@@ -202,7 +202,7 @@ psc_rwlock_wrlock_pci(const struct pfl_callerinfo *pci,
 	if (rc)
 		psc_fatalx("pthread_rwlock_wrlock: %s", strerror(rc));
 	rw->pr_writer = p;
-	psclog_dbg("rwlock@%p writer lock acquired", rw);
+	psclog_vdbg("rwlock@%p writer lock acquired", rw);
 }
 
 int
@@ -281,7 +281,7 @@ psc_rwlock_unlock_pci(const struct pfl_callerinfo *pci,
 	rc = pthread_rwlock_unlock(&rw->pr_rwlock);
 	if (rc)
 		psc_fatalx("pthread_rwlock_unlock: %s", strerror(rc));
-	psclog_dbg("rwlock@%p %s lock released", rw,
+	psclog_vdbg("rwlock@%p %s lock released", rw,
 	    wr ? "writer" : "reader");
 }
 
