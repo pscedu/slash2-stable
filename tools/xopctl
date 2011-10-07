@@ -1,0 +1,114 @@
+#!/bin/sh
+# $Id$
+
+term=${XTERM_PROG:-xterm}
+
+warn()
+{
+	echo "$@" >&2
+}
+
+xscreen_usage()
+{
+	warn "usage: $0 [-S] [-c cmd] [-d dir] [-x args] host name"
+}
+
+xscreen()
+{
+	sudo=
+	setcwd=
+	xtargs=
+	cmd="\$SHELL"
+
+	if [ x$term -ne x${term%xterm} ]; then
+		xtargs="-xrm 'XTerm*allowTitleOps:false'"
+	fi
+
+	while getopts "c:d:Sx:" c; do
+		case $c in
+		c) cmd=$OPTARG;;
+		d) setcwd="export P=$OPTARG && cd \$P &&";;
+		S) sudo=sudo;;
+		x) xtargs="$xtargs $OPTARG";;
+		*) xscreen_usage; exit 1;;
+		esac
+	done
+	shift $(($OPTIND - 1))
+
+	if [ $# -ne 2 ]; then
+		xscreen_usage
+		exit 1
+	fi
+
+	host=$1
+	name=$2
+
+	screen="$sudo screen -A -x -R"
+
+	$term $xtargs -title "${host%%.*}: $name" -e			\
+	    ssh -t $host "$setcwd $screen -S $name $cmd"
+}
+
+usage()
+{
+	warn "usage: $0 mode [term]"
+	exit 1
+}
+
+[ $# -lt 1 ] && usage
+
+mode=$1
+shift
+
+p= ; [ x"$(dnsdomainname -d 2>/dev/null)" != x"psc.edu" ] && p=.pb
+t= ; [ x"$(dnsdomainname -d 2>/dev/null)" != x"psc.teragrid.org" ] && t=.tb
+
+launch()
+{
+	app=$1
+	host=$2
+	dir=p
+	[ $# -eq 3 ] && dir=$3
+
+	xscreen.sh -S -d code/advsys/$dir/slash_nara/$app $host $mode.$app
+
+	case $app in
+	mount_slash)	ctlapp=msctl;;
+	slashd)		ctlapp=slmctl;;
+	sliod)		ctlapp=slictl;;
+	lnrtd)		ctlapp=lnrtctl;;
+	esac
+
+	xscreen.sh -S -d code/advsys/$dir/slash_nara/$ctlapp $host $mode.$ctlapp
+}
+
+[ $# -eq 0 ] && case "$mode" in
+arc)	set --	slashd:illusion1$p:p6					\
+		sliod:tahini-100e$p					\
+		sliod:tahini-100o$p					\
+		sliod:zs6$t:p6						\
+		sliod:sense0$p						\
+		sliod:sense1$p						\
+		ex:sleep:2						\
+		mount_slash:lime$p:pc					\
+		mount_slash:onager$p					\
+		mount_slash:tg-login1.blacklight$t:p.bl			\
+		mount_slash:tg-login2.blacklight$t:p.bl			\
+		mount_slash:tahini$p
+#		lnrtd
+	;;
+*)	usage;;
+esac
+
+hosts="$@"
+
+for i in $hosts
+do
+	set -- $(echo "$i" | sed 's/:/ /g')
+	if [ x"$1" = x"ex" ]; then
+		shift
+		"$@"
+	else
+		launch "$@"
+	fi
+done
