@@ -1,7 +1,7 @@
 #!/bin/sh
 # $Id$
 
-term=${XTERM_PROG:-xterm}
+term=${TERM_PROG:-xterm}
 
 warn()
 {
@@ -10,24 +10,18 @@ warn()
 
 xscreen_usage()
 {
-	warn "usage: $0 [-S] [-c cmd] [-d dir] [-x args] host name"
+	warn "usage: xscreen [-S] [-c cmd] [-X cmds] [-x args] host name"
 }
 
 xscreen()
 {
 	sudo=
-	setcwd=
 	xtargs=
 	cmd="\$SHELL"
 
-	if [ x$term -ne x${term%xterm} ]; then
-		xtargs="-xrm 'XTerm*allowTitleOps:false'"
-	fi
-
-	while getopts "c:d:Sx:" c; do
+	while getopts "c:Sx:" c; do
 		case $c in
 		c) cmd=$OPTARG;;
-		d) setcwd="export P=$OPTARG && cd \$P &&";;
 		S) sudo=sudo;;
 		x) xtargs="$xtargs $OPTARG";;
 		*) xscreen_usage; exit 1;;
@@ -35,18 +29,31 @@ xscreen()
 	done
 	shift $(($OPTIND - 1))
 
-	if [ $# -ne 2 ]; then
+	if [ $# -lt 2 ]; then
+		echo "$@"
 		xscreen_usage
 		exit 1
 	fi
 
 	host=$1
-	name=$2
-
+	shift
+	name=$1
+	shift
 	screen="$sudo screen -A -x -R"
 
-	$term $xtargs -title "${host%%.*}: $name" -e			\
-	    ssh -t $host "$setcwd $screen -S $name $cmd"
+	sshinit='
+export PSC_SYSLOG_info=1;
+export PSC_LOG_LEVEL=info;
+export PSC_LOG_FILE=/local/'$mode'.s2/log/'$name'/%t;
+export SHELL=/bin/bash;
+ulimit -n 100000;
+'
+
+	if [ x"$term" != x"${term%xterm}" ]; then
+		xtargs="-xrm XTerm*allowTitleOps:false -title ${host%%.*}:$name "
+	fi
+
+	$term $xtargs -e ssh -t $host "'$sshinit' '"$@"' $screen -S $name $cmd"
 }
 
 usage()
@@ -60,55 +67,45 @@ usage()
 mode=$1
 shift
 
-p= ; [ x"$(dnsdomainname -d 2>/dev/null)" != x"psc.edu" ] && p=.pb
-t= ; [ x"$(dnsdomainname -d 2>/dev/null)" != x"psc.teragrid.org" ] && t=.tb
-
-launch()
-{
-	app=$1
-	host=$2
-	dir=p
-	[ $# -eq 3 ] && dir=$3
-
-	xscreen.sh -S -d code/advsys/$dir/slash_nara/$app $host $mode.$app
-
-	case $app in
-	mount_slash)	ctlapp=msctl;;
-	slashd)		ctlapp=slmctl;;
-	sliod)		ctlapp=slictl;;
-	lnrtd)		ctlapp=lnrtctl;;
-	esac
-
-	xscreen.sh -S -d code/advsys/$dir/slash_nara/$ctlapp $host $mode.$ctlapp
-}
+p=.psc.edu
+t=.psc.teragrid.org
 
 [ $# -eq 0 ] && case "$mode" in
-arc)	set --	slashd:illusion1$p:p6					\
-		sliod:tahini-100e$p					\
-		sliod:tahini-100o$p					\
-		sliod:zs6$t:p6						\
+arc)	set --	slashd:illusion1$p					\
+		sliod:tahini-100e$p:'export CTL_SOCK_FILE=/var/run/sliod.ue.sock LNET_NETWORKS=tcp12(eth2);'	\
+		sliod:tahini-100o$p:'export CTL_SOCK_FILE=/var/run/sliod.uo.sock LNET_NETWORKS=tcp12(eth2:1);'	\
+		sliod:zs6$t						\
 		sliod:sense0$p						\
 		sliod:sense1$p						\
 		ex:sleep:2						\
-		mount_slash:lime$p:pc					\
+		mount_slash:lime$p					\
 		mount_slash:onager$p					\
-		mount_slash:tg-login1.blacklight$t:p.bl			\
-		mount_slash:tg-login2.blacklight$t:p.bl			\
+		mount_slash:tg-login1.blacklight$t			\
+		mount_slash:tg-login2.blacklight$t			\
 		mount_slash:tahini$p
 #		lnrtd
 	;;
 *)	usage;;
 esac
 
-hosts="$@"
-
-for i in $hosts
-do
-	set -- $(echo "$i" | sed 's/:/ /g')
+launch()
+{
+	set -- $(echo "$i" | sed 's/:/ /1;s/:/ /1')
 	if [ x"$1" = x"ex" ]; then
 		shift
 		"$@"
 	else
-		launch "$@"
+		name=$1
+		shift
+		host=$1
+		shift
+		xscreen -S $host $mode.$name "$@"
 	fi
+}
+
+hosts="$@"
+
+for i
+do
+	launch $i
 done
