@@ -10,11 +10,12 @@ warn()
 
 xscreen_usage()
 {
-	warn "usage: xscreen [-S] [-c cmd] [-X cmds] [-x args] host name"
+	warn "usage: xscreen [-S] [-c cmd] [-x args] host name"
 }
 
 xscreen()
 {
+	local OPTIND OPTARG
 	sudo=
 	xtargs=
 	cmd="\$SHELL"
