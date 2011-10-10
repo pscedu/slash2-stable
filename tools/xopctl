@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 # $Id$
 
 term=${TERM_PROG:-xterm}
@@ -41,19 +41,19 @@ xscreen()
 	shift
 	screen="$sudo screen -A -x -R"
 
-	sshinit='
-export PSC_SYSLOG_info=1;
-export PSC_LOG_LEVEL=info;
-export PSC_LOG_FILE=/local/'$mode'.s2/log/'$name'/%t;
-export SHELL=/bin/bash;
-ulimit -n 100000;
+	scrinit='
+export PSC_SYSLOG_info=1
+export PSC_LOG_LEVEL=info
+export PSC_LOG_FILE=/local/'$mode'.s2/log/'$name'/%t
+export SHELL=/bin/bash
+ulimit -n 100000
 '
 
 	if [ x"$term" != x"${term%xterm}" ]; then
-		xtargs="-xrm XTerm*allowTitleOps:false -title ${host%%.*}:$name "
+		xtargs=(-xrm XTerm*allowTitleOps:false -title "${host%%.*}: $name")
 	fi
 
-	$term $xtargs -e ssh -t $host "'$sshinit' '"$@"' $screen -S $name $cmd"
+	$term -hold "${xtargs[@]}" -e ssh -t $host $screen -S $name "sh -c '$scrinit $cmd'"
 }
 
 usage()
