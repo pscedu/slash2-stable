@@ -73,18 +73,21 @@ t=.psc.teragrid.org
 
 [ $# -eq 0 ] && case "$mode" in
 arc)	set --	slashd:illusion1$p					\
+		lnrtd:firehose3.$p					\
+		ex:sleep:2						\
+		mount_slash:firehose3.$p				\
+		mount_slash:lime$p					\
+		mount_slash:onager$p					\
+		mount_slash:tahini$p					\
+		mount_slash:tg-login1.blacklight$t			\
+		mount_slash:tg-login2.blacklight$t			\
+		ex:sleep:2						\
 		sliod:tahini-100e$p:'export CTL_SOCK_FILE=/var/run/sliod.ue.sock LNET_NETWORKS=tcp12(eth2);'	\
 		sliod:tahini-100o$p:'export CTL_SOCK_FILE=/var/run/sliod.uo.sock LNET_NETWORKS=tcp12(eth2:1);'	\
 		sliod:zs6$t						\
 		sliod:sense0$p						\
 		sliod:sense1$p						\
-		ex:sleep:2						\
-		mount_slash:lime$p					\
-		mount_slash:onager$p					\
-		mount_slash:tg-login1.blacklight$t			\
-		mount_slash:tg-login2.blacklight$t			\
-		mount_slash:tahini$p
-#		lnrtd
+		ex:sleep:1
 	;;
 *)	usage;;
 esac
