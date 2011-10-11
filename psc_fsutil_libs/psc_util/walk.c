@@ -80,7 +80,7 @@ pfl_filewalk(const char *fn, int flags,
 		}
 		fts_close(fp);
 	} else {
-		if (stat(fn, &stb) == -1)
+		if (lstat(fn, &stb) == -1)
 			err(1, "%s", fn);
 		else if (!S_ISREG(stb.st_mode) && !S_ISDIR(stb.st_mode))
 			errx(1, "%s: not a file or directory", fn);
