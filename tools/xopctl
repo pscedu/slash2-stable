@@ -73,6 +73,8 @@ t=.psc.teragrid.org
 
 [ $# -eq 0 ] && case "$mode" in
 arc)	set --	slashd:illusion1$p					\
+		lnrtd:firehose1.$p					\
+		lnrtd:firehose2.$p					\
 		lnrtd:firehose3.$p					\
 		ex:sleep:2						\
 		mount_slash:firehose3.$p				\
