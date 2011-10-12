@@ -85,7 +85,7 @@ main(int argc, char *argv[])
 	pscthr_init(LRTHRT_CTL, 0, NULL, NULL,
 	    sizeof(struct psc_ctlthr), "lrctlthr");
 
-	rc = LNetInit();
+	rc = LNetInit(2048);
 	if (rc)
 		psc_fatalx("failed to initialize LNET rc=%d", rc);
 	lnet_server_mode();
