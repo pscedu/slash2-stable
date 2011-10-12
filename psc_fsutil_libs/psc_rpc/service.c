@@ -587,8 +587,9 @@ pscrpc_target_send_reply_msg(struct pscrpc_request *req, int rc,
 		return (-ECOMM);
 	}
 
-	if (rc) {
-		DEBUG_REQ(PLL_ERROR, req, "processing error (%d)", rc);
+	if (rc) {			
+		DEBUG_REQ(PLL_ERROR, req, "processing error (%d)", 
+			  rc);
 		req->rq_status = rc;
 		return (pscrpc_error(req));
 	} else {

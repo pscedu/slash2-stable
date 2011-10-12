@@ -562,12 +562,12 @@ pscrpc_get_pid(void)
 }
 
 int
-pscrpc_ni_init(int type)
+pscrpc_ni_init(int type, int nmsgs)
 {
 	int               rc;
 	lnet_process_id_t my_id;
 
-	if ((rc = LNetInit()))
+	if ((rc = LNetInit(nmsgs)))
 		psc_fatalx("failed to initialize LNET (%d)", rc);
 
 	/* CAVEAT EMPTOR: how we process portals events is _radically_
@@ -576,21 +576,29 @@ pscrpc_ni_init(int type)
 		/* kernel portals calls our master callback when events are added to
 		 * the event queue.  In fact lustre never pulls events off this queue,
 		 * so it's only sized for some debug history. */
-		psclog_info("Requesting PID %u", PSCRPC_SVR_PID);
 		lnet_server_mode();
+		psclog_info("Requesting PID %u", PSCRPC_SVR_PID);
 		if ((rc = LNetNIInit(PSCRPC_SVR_PID)))
 			psc_fatalx("failed LNetNIInit() (%d)", rc);
 
 		rc = LNetEQAlloc(1024, pscrpc_master_callback, &pscrpc_eq_h);
 		psclog_info("%#"PRIx64" pscrpc_eq_h cookie value",
 		    pscrpc_eq_h.cookie);
+
+	} else if (type == PSCNET_MTCLIENT) {
+		lnet_server_mode();
+		if ((rc = LNetNIInit(pscrpc_get_pid())))
+			psc_fatalx("failed LNetNIInit() (%d)", rc);
+		
+		rc = LNetEQAlloc(1024, pscrpc_master_callback, &pscrpc_eq_h);
+                psclog_info("%#"PRIx64" pscrpc_eq_h cookie value",
+			    pscrpc_eq_h.cookie);		
 	} else {
 		/* liblustre calls the master callback when it removes events from the
 		 * event queue.  The event queue has to be big enough not to drop
 		 * anything */
 		if ((rc = LNetNIInit(pscrpc_get_pid())))
 			psc_fatalx("failed LNetNIInit() (%d)", rc);
-
 		rc = LNetEQAlloc(10240, 0, &pscrpc_eq_h);
 	}
 
@@ -648,7 +656,7 @@ pscrpc_ni_fini(void)
 }
 
 void
-pscrpc_init_portals(int type)
+pscrpc_init_portals(int type, int nmsgs)
 {
 	int rc;
 
@@ -656,7 +664,7 @@ pscrpc_init_portals(int type)
 	    getenv("LNET_IP2NETS") == NULL)
 		psc_fatalx("please export LNET_NETWORKS or LNET_IP2NETS");
 
-	rc = pscrpc_ni_init(type);
+	rc = pscrpc_ni_init(type, nmsgs);
 	if (rc)
 		psc_fatal("network initialization: %s", strerror(-rc));
 }

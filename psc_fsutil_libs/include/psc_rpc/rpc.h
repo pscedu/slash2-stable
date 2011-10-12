@@ -75,6 +75,7 @@ struct psc_dynarray;
 #define PSCRPC_MAX_BRW_PAGES		(PSCRPC_MAX_BRW_SIZE / PAGE_SIZE)
 #define CURRENT_SECONDS			time(NULL)
 #define PSCNET_SERVER			0xff	/* differentiate client and server for ni init */
+#define PSCNET_MTCLIENT			0xf0
 #define PSCNET_CLIENT			0x0f
 #define PSCRPC_SVR_PID			54321
 #define PSCRPC_NIDSTR_SIZE		64
@@ -506,8 +507,8 @@ void	 pscrpc_reply_out_callback(lnet_event_t *);
 void	 pscrpc_deregister_wait_callback(void *);
 int	 pscrpc_check_events(int);
 int	 pscrpc_wait_event(int);
-int	 pscrpc_ni_init(int);
-void	 pscrpc_init_portals(int);
+int	 pscrpc_ni_init(int, int);
+void	 pscrpc_init_portals(int, int);
 
 /* packgeneric.c */
 int	 pscrpc_msg_size(int, const int *);
