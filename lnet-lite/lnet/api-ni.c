@@ -461,17 +461,17 @@ lnet_descriptor_setup (void)
         memset (&the_lnet.ln_free_eqs,  0, sizeof (the_lnet.ln_free_eqs));
 
         rc = lnet_freelist_init(&the_lnet.ln_free_mes,
-                                MAX_MES, sizeof (lnet_me_t));
+                                the_lnet.ln_nmsgs, sizeof (lnet_me_t));
         if (rc != 0)
                 return (rc);
 
         rc = lnet_freelist_init(&the_lnet.ln_free_msgs,
-                                MAX_MSGS, sizeof (lnet_msg_t));
+                                the_lnet.ln_nmsgs, sizeof (lnet_msg_t));
         if (rc != 0)
                 return (rc);
 
         rc = lnet_freelist_init(&the_lnet.ln_free_mds,
-                                MAX_MDS, sizeof (lnet_libmd_t));
+                                the_lnet.ln_nmsgs, sizeof (lnet_libmd_t));
         if (rc != 0)
                 return (rc);
 
@@ -642,7 +642,7 @@ lnet_fini_finalizers(void)
  * lnet/lib-types.h */
 
 void
-lnet_server_mode() {
+lnet_server_mode(void) {
         the_lnet.ln_server_mode_flag = 1;
 }
 #endif
@@ -1218,7 +1218,7 @@ psc_ctlrep_getlni(int fd, struct psc_ctlmsghdr *mh, void *m)
 #endif
 
 int
-LNetInit(void)
+LNetInit(int nmsgs)
 {
         int    rc;
 
@@ -1236,6 +1236,7 @@ LNetInit(void)
         the_lnet.ln_ptlcompat = rc;
         the_lnet.ln_refcount = 0;
         the_lnet.ln_init = 1;
+        the_lnet.ln_nmsgs = nmsgs + 4;
 
 #ifdef __KERNEL__
         /* All LNDs apart from the LOLND are in separate modules.  They

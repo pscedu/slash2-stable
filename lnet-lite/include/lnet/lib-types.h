@@ -514,7 +514,7 @@ typedef struct
         int                ln_niinit_self;      /* Have I called LNetNIInit myself? */
 
         int                ln_ptlcompat;        /* do I support talking to portals? */
-
+        int                ln_nmsgs;
         struct list_head   ln_lnds;             /* registered LNDs */
 
 #ifdef __KERNEL__
@@ -602,7 +602,7 @@ typedef struct
         struct list_head   ln_active_eqs;
 
         lnet_counters_t    ln_counters;
-
+        
 #ifndef __KERNEL__
         /* Temporary workaround to allow uOSS and test programs force
          * server mode in userspace. The only place where we use it is

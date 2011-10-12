@@ -39,7 +39,7 @@
 
 #include <lnet/types.h>
 
-int LNetInit(void);
+int LNetInit(int);
 void LNetFini(void);
 
 int LNetNIInit(lnet_pid_t requested_pid);
