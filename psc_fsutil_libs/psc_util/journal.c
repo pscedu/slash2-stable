@@ -817,13 +817,13 @@ pjournal_thr_main(struct psc_thread *thr)
 
 			pj->pj_distill_handler(pje, 0, pj->pj_npeers, 0);
 
+			/* once we clear the distill flag, xh can be freed */
 			spinlock(&xh->pjx_lock);
 			xh->pjx_flags &= ~PJX_DISTILL;
 			xh->pjx_flags |= PJX_DISTILL_SYNC;
-			freelock(&xh->pjx_lock);
-
 			psc_assert(xid < xh->pjx_xid);
 			xid = xh->pjx_xid;
+			freelock(&xh->pjx_lock);
 
 			pjournal_put_buf(pj, PJE_DATA(pje));
 		}
