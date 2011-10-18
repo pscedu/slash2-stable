@@ -206,6 +206,7 @@ pjournal_next_slot(struct psc_journal_xidhndl *xh)
 
 	slot = pj->pj_nextwrite;
 
+	/* just a courtesy check, we rely on reservation */
 	t = pll_peekhead(&pj->pj_pendingxids);
 	if (t) {
 		tail_slot = t->pjx_slot;
