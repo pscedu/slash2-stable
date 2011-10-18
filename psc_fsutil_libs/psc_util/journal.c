@@ -308,7 +308,7 @@ pjournal_reserve_slot(struct psc_journal *pj, int count)
 			uint64_t txg;
 
 			psclog_warnx("journal reservation blocked "
-			    "by transaction %p "
+			    "by transaction %p to be committed"
 			    "(xid=%#"PRIx64", txg=%"PRId64", slot=%d)",
 			    t, t->pjx_xid, t->pjx_txg, t->pjx_slot);
 
@@ -320,7 +320,7 @@ pjournal_reserve_slot(struct psc_journal *pj, int count)
 		}
 		if (t->pjx_flags & PJX_DISTILL) {
 			psclog_warnx("Journal reservation blocked "
-			    "by transaction %p "
+			    "by transaction %p to be distilled"
 			    "(xid=%#"PRIx64", slot=%d, flags=%#x)",
 			    t, t->pjx_xid, t->pjx_slot, t->pjx_flags);
 
