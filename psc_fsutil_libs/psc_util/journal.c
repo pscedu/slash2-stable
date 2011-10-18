@@ -212,7 +212,7 @@ pjournal_next_slot(struct psc_journal_xidhndl *xh)
 		psc_assert(tail_slot != slot);
 	}
 
-	/* Update the next slot to be written by a next log entry */
+	/* Update the slot to be written by the next log entry */
 	psc_assert(pj->pj_nextwrite < pj->pj_total);
 	if ((++pj->pj_nextwrite) == pj->pj_total) {
 		pj->pj_nextwrite = 0;
@@ -304,6 +304,7 @@ pjournal_reserve_slot(struct psc_journal *pj, int count)
 			continue;
 		}
 		spinlock(&t->pjx_lock);
+		psc_assert(t->pjx_slot < pj->pj_total);
 		if (t->pjx_txg > pj->pj_commit_txg) {
 			uint64_t txg;
 
