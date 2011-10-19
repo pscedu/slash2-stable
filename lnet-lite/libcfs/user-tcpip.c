@@ -60,6 +60,10 @@
 #include <sys/syscall.h>
 #endif
 
+#ifdef __FreeBSD__
+#include <ifaddrs.h>
+#endif
+
 #include "sdp_inet.h"
 
 #define LNET_GETAF(nid)		(LNET_NETTYP(nid) == SDPLND ? AF_INET_SDP : AF_INET)
@@ -101,6 +105,16 @@ libcfs_ipif_query (char *name, int *up, __u32 *ip)
                 return -EINVAL;
         }
 
+#ifdef __FreeBSD__
+	{
+		char *idx;
+
+		idx = strchr(name, ':');
+		if (idx) 
+			*idx++ = '\0';
+	}
+#endif
+
         CLASSERT (sizeof(ifr.ifr_name) >= IFNAMSIZ);
 
         strcpy(ifr.ifr_name, name);
@@ -121,9 +135,41 @@ libcfs_ipif_query (char *name, int *up, __u32 *ip)
 
         *up = 1;
 
-        strcpy(ifr.ifr_name, name);
-        ifr.ifr_addr.sa_family = AF_INET;
-        rc = libcfs_sock_ioctl(SIOCGIFADDR, &ifr);
+#ifdef __FreeBSD__
+	if (idx) {
+		struct ifaddrs *ifa0, *ifa;
+		char *endp;
+		int nidx;
+
+		nidx = strtol(idx, endp, 10);
+		if (nidx < 0 || nidx >= INT_MAX ||
+		    endp == idx || *endp)
+			abort();
+
+		rc = -1;
+		errno = EADDRNOTAVAIL;
+
+		getifaddrs(&ifa0);
+		for (ifa = ifa0; ifa; ifa = ifa->ifa_next) {
+			if (strcmp(ifa->ifa_name, name) == 0 &&
+			    !nidx--) {
+				rc = 0;
+				memcpy(&ifr.ifr_addr, ifa->ifa_addr,
+				    sizeof(ifa->ifa_addr->sa_len));
+				break;
+			}
+		}
+		freeifaddrs(ifa);
+	} else {
+#endif
+
+        	strcpy(ifr.ifr_name, name);
+        	ifr.ifr_addr.sa_family = AF_INET;
+        	rc = libcfs_sock_ioctl(SIOCGIFADDR, &ifr);
+
+#ifdef __FreeBSD__
+	}
+#endif
 
         if (rc != 0) {
                 CERROR("Can't get IP address for interface %s\n", name);
