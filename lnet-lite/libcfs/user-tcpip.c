@@ -98,6 +98,9 @@ libcfs_ipif_query (char *name, int *up, __u32 *ip)
         int            nob;
         int            rc;
         __u32          val;
+#ifdef __FreeBSD__
+	char *idx;
+#endif 
 
         nob = strlen(name);
         if (nob >= IFNAMSIZ) {
@@ -106,13 +109,9 @@ libcfs_ipif_query (char *name, int *up, __u32 *ip)
         }
 
 #ifdef __FreeBSD__
-	{
-		char *idx;
-
-		idx = strchr(name, ':');
-		if (idx) 
-			*idx++ = '\0';
-	}
+	idx = strchr(name, ':');
+	if (idx) 
+		*idx++ = '\0';
 #endif
 
         CLASSERT (sizeof(ifr.ifr_name) >= IFNAMSIZ);
@@ -141,7 +140,7 @@ libcfs_ipif_query (char *name, int *up, __u32 *ip)
 		char *endp;
 		int nidx;
 
-		nidx = strtol(idx, endp, 10);
+		nidx = strtol(idx, &endp, 10);
 		if (nidx < 0 || nidx >= INT_MAX ||
 		    endp == idx || *endp)
 			abort();
