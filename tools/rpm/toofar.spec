@@ -1,13 +1,13 @@
 # $Id$
 
-Name:		slash2-client
+Name:		toofar
 Version:	18207
 Release:	1%{?dist}
-Summary:	PSC's SLASH2 file system's client utilities
+Summary:	PSC's archiver user interface
 
 Group:		File systems
 License:
-URL:		http://www.psc.edu/slash2
+URL:		http://www.psc.edu/advsys
 Source0:
 BuildRoot:	%{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 
@@ -15,19 +15,19 @@ BuildRequires:
 Requires:
 
 %description
-PSC's SLASH2 file system's client utilities
 
 %prep
 %setup -q
 svn co svn+ssh://frodo/cluster/svn/projects .
 
 %build
-cd slash_nara
-DEVELPATHS=0 SLASH_MODULES=cli make %{?_smp_mflags}
+%configure
+cd apps/arc/far
+DEVELPATHS=0 make %{?_smp_mflags}
 
 %install
 rm -rf $RPM_BUILD_ROOT
-cd slash_nara
+cd apps/arc/far
 INST_BASE=$RPM_BUILD_ROOT make install
 
 %clean
@@ -36,9 +36,7 @@ rm -rf $RPM_BUILD_ROOT
 %files
 %defattr(-,root,root,-)
 %doc
-/usr/local/sbin/mount_slash
-/usr/local/sbin/msctl
-/usr/local/sbin/slkeymgt
+/usr/local/bin/far
 %_mandir/man*/*
 
 %changelog
