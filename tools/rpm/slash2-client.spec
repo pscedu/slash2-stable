@@ -30,6 +30,8 @@ rm -rf $RPM_BUILD_ROOT
 cd slash_nara
 INST_BASE=$RPM_BUILD_ROOT make install
 
+mkdir -p $RPM_BUILD_ROOT/var/lib/slash
+
 %clean
 rm -rf $RPM_BUILD_ROOT
 
@@ -39,6 +41,7 @@ rm -rf $RPM_BUILD_ROOT
 /usr/local/sbin/mount_slash
 /usr/local/sbin/msctl
 /usr/local/sbin/slkeymgt
+/var/lib/slash
 %_mandir/man*/*
 
 %changelog

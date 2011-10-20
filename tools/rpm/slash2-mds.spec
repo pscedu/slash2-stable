@@ -30,11 +30,26 @@ make %{?_smp_mflags}
 rm -rf $RPM_BUILD_ROOT
 make install DESTDIR=$RPM_BUILD_ROOT
 
+mkdir -p $RPM_BUILD_ROOT/var/lib/slash
+
 %clean
 rm -rf $RPM_BUILD_ROOT
 
 %files
 %defattr(-,root,root,-)
 %doc
+/usr/local/sbin/slashd
+/usr/local/sbin/slimmns_format
+/usr/local/sbin/slkeymgt
+/usr/local/sbin/slmctl
+/usr/local/sbin/slmkjrnl
+/usr/local/sbin/zdb
+/usr/local/sbin/zfs
+/usr/local/sbin/zfs-fuse
+/usr/local/sbin/zpool
+/usr/local/sbin/zstreamdump
+/usr/local/sbin/ztest
+/var/lib/slash
+%_mandir/man*/*
 
 %changelog
