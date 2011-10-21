@@ -1,7 +1,7 @@
 # $Id$
 
 Name:		toofar
-Version:	18207
+Version:	18221
 Release:	1%{?dist}
 Summary:	PSC's archiver user interface
 

@@ -1,18 +1,15 @@
 # $Id$
 
 Name:		pfl
-Version:	18207
+Version:	18221
 Release:	1%{?dist}
 Summary:	Pittsburgh Supercomputing's file system libraries and toolset
 
 Group:		File systems
-License:
+License:	Propietary
 URL:		http://www.psc.edu/advsys
-Source0:
+Source0:	dummy.tgz
 BuildRoot:	%{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
-
-BuildRequires:
-Requires:
 
 %description
 Pittsburgh Supercomputing's file system libraries and toolset

@@ -1,14 +1,14 @@
 # $Id$
 
 Name:		slash2-mds
-Version:	18207
+Version:	18221
 Release:	1%{?dist}
 Summary:	PSC's SLASH2 file system's metadata utilities
 
 Group:		File systems
 License:	Propietary
 URL:		http://www.psc.edu/slash2
-Source0:
+Source0:	dummy.tgz
 BuildRoot:	%{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 
 Requires:	libaio
@@ -23,13 +23,13 @@ PSC's SLASH2 file system's metadata utilities
 svn co -r %{version} svn+ssh://frodo/cluster/svn/projects .
 
 %build
-cd slash_nara
-DEVELPATHS=0 SLASH_MODULES=mds make %{?_smp_mflags}
+(cd zfs		&& DEVELPATHS=0 SLASH_MODULES=mds make %{?_smp_mflags})
+(cd slash_nara	&& DEVELPATHS=0 SLASH_MODULES=mds make %{?_smp_mflags})
 
 %install
 rm -rf $RPM_BUILD_ROOT
-cd slash_nara
-INST_BASE=$RPM_BUILD_ROOT/usr/local/psc make install
+(cd zfs		&& INST_BASE=$RPM_BUILD_ROOT/usr/local/psc SLASH_MODULES=mds make install)
+(cd slash_nara	&& INST_BASE=$RPM_BUILD_ROOT/usr/local/psc SLASH_MODULES=mds make install)
 
 %clean
 rm -rf $RPM_BUILD_ROOT
@@ -37,6 +37,8 @@ rm -rf $RPM_BUILD_ROOT
 %files
 %defattr(-,root,root,-)
 %doc
+/usr/local/psc/bin/cursor_mgr
+/usr/local/psc/etc/zfs_pool_alert
 /usr/local/psc/sbin/slashd
 /usr/local/psc/sbin/slimmns_format
 /usr/local/psc/sbin/slkeymgt

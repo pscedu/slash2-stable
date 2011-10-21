@@ -1,18 +1,15 @@
 # $Id$
 
 Name:		slash2-client
-Version:	18207
+Version:	18221
 Release:	1%{?dist}
 Summary:	PSC's SLASH2 file system's client utilities
 
 Group:		File systems
 License:	Propietary
 URL:		http://www.psc.edu/slash2
-Source0:
+Source0:	dummy.tgz
 BuildRoot:	%{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
-
-BuildRequires:
-Requires:
 
 %description
 PSC's SLASH2 file system's client utilities
@@ -28,7 +25,7 @@ DEVELPATHS=0 SLASH_MODULES=cli make %{?_smp_mflags}
 %install
 rm -rf $RPM_BUILD_ROOT
 cd slash_nara
-INST_BASE=$RPM_BUILD_ROOT/usr/local/psc make install
+INST_BASE=$RPM_BUILD_ROOT/usr/local/psc SLASH_MODULES=cli make install
 
 %clean
 rm -rf $RPM_BUILD_ROOT
