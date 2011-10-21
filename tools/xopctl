@@ -113,7 +113,7 @@ esac
 
 launch()
 {
-	set -- $(echo "$i" | sed 's/:/ /1;s/:/ /1')
+	set -- $(echo "$i" | sed 's/:/ /1;s/:/ /1;s/:/ /1')
 	if [ x"$1" = x"ex" ]; then
 		shift
 		"$@"
