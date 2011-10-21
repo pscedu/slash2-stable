@@ -54,7 +54,7 @@ ulimit -n 100000
 		xtargs=(-xrm XTerm*allowTitleOps:false -title "${host%%.*}: $name")
 	fi
 
-	$term "${xtargs[@]}" -e ssh -t $host $screen -S $name "sh -c '$scrinit $cmd'"
+	$term "${xtargs[@]}" -e ssh -t $host $screen -S $name "sh -c '$scrinit $cmd'" &
 }
 
 usage()
@@ -72,38 +72,40 @@ p=.psc.edu
 t=.psc.teragrid.org
 
 [ $# -eq 0 ] && case "$mode" in
-arc)	set --								\
-	slashd:illusion1$p						\
-	lnrtd:firehose1.$p						\
-	lnrtd:firehose2.$p						\
-	lnrtd:firehose3.$p						\
+arc)	d=/usr/local/src/p
+
+	set --								\
+	slashd:illusion1$p:$d						\
+	lnrtd:firehose1.$p:$d						\
+	lnrtd:firehose2.$p:$d						\
+	lnrtd:firehose3.$p:$d						\
 	ex:sleep:2							\
-	mount_slash:firehose1.$p					\
-	mount_slash:firehose2.$p					\
-	mount_slash:firehose3.$p					\
-	mount_slash:lime$p						\
-	mount_slash:onager$p						\
-	mount_slash:tahini$p						\
-	mount_slash:tg-login1.blacklight$t				\
-	mount_slash:tg-login2.blacklight$t				\
+	mount_slash:firehose1.$p:$d					\
+	mount_slash:firehose2.$p:$d					\
+	mount_slash:firehose3.$p:$d					\
+	mount_slash:lime$p:$d						\
+	mount_slash:onager$p:$d						\
+	mount_slash:tahini$p:$d						\
+	mount_slash:tg-login1.blacklight$t:$d				\
+	mount_slash:tg-login2.blacklight$t:$d				\
 	ex:sleep:2							\
-	sliod:tahini-100e$p:'export	CTL_SOCK_FILE=/var/run/sliod.ue.sock		LNET_NETWORKS=tcp12(eth2);'		\
-	sliod:tahini-100o$p:'export	CTL_SOCK_FILE=/var/run/sliod.uo.sock		LNET_NETWORKS=tcp12(eth2:1);'		\
-																\
-	sliod:sense0-sliod0$p:'export	CTL_SOCK_FILE=/var/run/sense0-sliod0.sock	LNET_NETWORKS=tcp12(vlan100:1);'	\
-	sliod:sense0-sliod1$p:'export	CTL_SOCK_FILE=/var/run/sense0-sliod1.sock	LNET_NETWORKS=tcp12(vlan100:2);'	\
-	sliod:sense0-sliod2$p:'export	CTL_SOCK_FILE=/var/run/sense0-sliod2.sock	LNET_NETWORKS=tcp12(vlan100:3);'	\
-	sliod:sense0-sliod3$p:'export	CTL_SOCK_FILE=/var/run/sense0-sliod3.sock	LNET_NETWORKS=tcp12(vlan100:4);'	\
-	sliod:sense0-sliod4$p:'export	CTL_SOCK_FILE=/var/run/sense0-sliod4.sock	LNET_NETWORKS=tcp12(vlan100:5);'	\
-	sliod:sense0-sliod5$p:'export	CTL_SOCK_FILE=/var/run/sense0-sliod5.sock	LNET_NETWORKS=tcp12(vlan100:6);'	\
-	sliod:sense0-sliod6$p:'export	CTL_SOCK_FILE=/var/run/sense0-sliod6.sock	LNET_NETWORKS=tcp12(vlan100:7);'	\
-																\
-	sliod:sense1-sliod0$p:'export	CTL_SOCK_FILE=/var/run/sense1-sliod0.sock	LNET_NETWORKS=tcp12(vlan100:1);'	\
-	sliod:sense1-sliod1$p:'export	CTL_SOCK_FILE=/var/run/sense1-sliod1.sock	LNET_NETWORKS=tcp12(vlan100:2);'	\
-	sliod:sense1-sliod2$p:'export	CTL_SOCK_FILE=/var/run/sense1-sliod2.sock	LNET_NETWORKS=tcp12(vlan100:3);'	\
-	sliod:sense1-sliod3$p:'export	CTL_SOCK_FILE=/var/run/sense1-sliod3.sock	LNET_NETWORKS=tcp12(vlan100:4);'	\
-	sliod:sense1-sliod4$p:'export	CTL_SOCK_FILE=/var/run/sense1-sliod4.sock	LNET_NETWORKS=tcp12(vlan100:5);'	\
-	sliod:sense1-sliod5$p:'export	CTL_SOCK_FILE=/var/run/sense1-sliod5.sock	LNET_NETWORKS=tcp12(vlan100:6);'	\
+	sliod:tahini-100e$p:$d:'export		CTL_SOCK_FILE=/var/run/sliod.ue.sock		LNET_NETWORKS=tcp12(eth2);'		\
+	sliod:tahini-100o$p:$d:'export		CTL_SOCK_FILE=/var/run/sliod.uo.sock		LNET_NETWORKS=tcp12(eth2:1);'		\
+																	\
+	sliod:sense0-sliod0$p:$d:'export	CTL_SOCK_FILE=/var/run/sense0-sliod0.sock	LNET_NETWORKS=tcp12(vlan100:1);'	\
+	sliod:sense0-sliod1$p:$d:'export	CTL_SOCK_FILE=/var/run/sense0-sliod1.sock	LNET_NETWORKS=tcp12(vlan100:2);'	\
+	sliod:sense0-sliod2$p:$d:'export	CTL_SOCK_FILE=/var/run/sense0-sliod2.sock	LNET_NETWORKS=tcp12(vlan100:3);'	\
+	sliod:sense0-sliod3$p:$d:'export	CTL_SOCK_FILE=/var/run/sense0-sliod3.sock	LNET_NETWORKS=tcp12(vlan100:4);'	\
+	sliod:sense0-sliod4$p:$d:'export	CTL_SOCK_FILE=/var/run/sense0-sliod4.sock	LNET_NETWORKS=tcp12(vlan100:5);'	\
+	sliod:sense0-sliod5$p:$d:'export	CTL_SOCK_FILE=/var/run/sense0-sliod5.sock	LNET_NETWORKS=tcp12(vlan100:6);'	\
+	sliod:sense0-sliod6$p:$d:'export	CTL_SOCK_FILE=/var/run/sense0-sliod6.sock	LNET_NETWORKS=tcp12(vlan100:7);'	\
+																	\
+	sliod:sense1-sliod0$p:$d:'export	CTL_SOCK_FILE=/var/run/sense1-sliod0.sock	LNET_NETWORKS=tcp12(vlan100:1);'	\
+	sliod:sense1-sliod1$p:$d:'export	CTL_SOCK_FILE=/var/run/sense1-sliod1.sock	LNET_NETWORKS=tcp12(vlan100:2);'	\
+	sliod:sense1-sliod2$p:$d:'export	CTL_SOCK_FILE=/var/run/sense1-sliod2.sock	LNET_NETWORKS=tcp12(vlan100:3);'	\
+	sliod:sense1-sliod3$p:$d:'export	CTL_SOCK_FILE=/var/run/sense1-sliod3.sock	LNET_NETWORKS=tcp12(vlan100:4);'	\
+	sliod:sense1-sliod4$p:$d:'export	CTL_SOCK_FILE=/var/run/sense1-sliod4.sock	LNET_NETWORKS=tcp12(vlan100:5);'	\
+	sliod:sense1-sliod5$p:$d:'export	CTL_SOCK_FILE=/var/run/sense1-sliod5.sock	LNET_NETWORKS=tcp12(vlan100:6);'	\
 	ex:sleep:1
 	;;
 *)	usage;;
@@ -116,11 +118,11 @@ launch()
 		shift
 		"$@"
 	else
-		name=$1
-		shift
-		host=$1
-		shift
-		xscreen -S $host $mode.$name "$@"
+		name=$1 ; shift
+		host=$1 ; shift
+		dir=$1  ; shift
+
+		xscreen -S $host -d "$dir" $mode.$name "$@"
 	fi
 }
 
