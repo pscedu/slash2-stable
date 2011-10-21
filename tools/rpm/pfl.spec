@@ -18,16 +18,17 @@ Requires:
 Pittsburgh Supercomputing's file system libraries and toolset
 
 %prep
-%setup -q
-svn co svn+ssh://frodo/cluster/svn/projects .
-perl -i -pe 's/.*(?:SLASH|ZEST)/#$&/' Makefile
+%setup -c
+svn co -r %{version} svn+ssh://frodo/cluster/svn/projects .
 
 %build
+cd psc_fsutil_libs
 DEVELPATHS=0 make %{?_smp_mflags}
 
 %install
 rm -rf $RPM_BUILD_ROOT
-INST_BASE=$RPM_BUILD_ROOT make install
+cd psc_fsutil_libs
+INST_BASE=$RPM_BUILD_ROOT/usr/local/psc make install
 
 %clean
 rm -rf $RPM_BUILD_ROOT
@@ -35,11 +36,9 @@ rm -rf $RPM_BUILD_ROOT
 %files
 %defattr(-,root,root,-)
 %doc
-/usr/local/bin/fio
-/usr/local/bin/odtable
-/usr/local/bin/sft
-/usr/local/sbin/lnrtctl
-/usr/local/sbin/lnrtd
-%_mandir/man*/*
+/usr/local/psc/bin/odtable
+/usr/local/psc/sbin/lnrtctl
+/usr/local/psc/sbin/lnrtd
+/usr/local/psc/man/*/*
 
 %changelog

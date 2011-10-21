@@ -6,12 +6,11 @@ Release:	1%{?dist}
 Summary:	PSC's SLASH2 file system's metadata utilities
 
 Group:		File systems
-License:
+License:	Propietary
 URL:		http://www.psc.edu/slash2
 Source0:
 BuildRoot:	%{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 
-BuildRequires:
 Requires:	libaio
 Requires:	z
 Requires:	gcrypt
@@ -20,17 +19,17 @@ Requires:	gcrypt
 PSC's SLASH2 file system's metadata utilities
 
 %prep
-%setup -q
+%setup -c
+svn co -r %{version} svn+ssh://frodo/cluster/svn/projects .
 
 %build
-%configure
-make %{?_smp_mflags}
+cd slash_nara
+DEVELPATHS=0 SLASH_MODULES=mds make %{?_smp_mflags}
 
 %install
 rm -rf $RPM_BUILD_ROOT
-make install DESTDIR=$RPM_BUILD_ROOT
-
-mkdir -p $RPM_BUILD_ROOT/var/lib/slash
+cd slash_nara
+INST_BASE=$RPM_BUILD_ROOT/usr/local/psc make install
 
 %clean
 rm -rf $RPM_BUILD_ROOT
@@ -38,18 +37,17 @@ rm -rf $RPM_BUILD_ROOT
 %files
 %defattr(-,root,root,-)
 %doc
-/usr/local/sbin/slashd
-/usr/local/sbin/slimmns_format
-/usr/local/sbin/slkeymgt
-/usr/local/sbin/slmctl
-/usr/local/sbin/slmkjrnl
-/usr/local/sbin/zdb
-/usr/local/sbin/zfs
-/usr/local/sbin/zfs-fuse
-/usr/local/sbin/zpool
-/usr/local/sbin/zstreamdump
-/usr/local/sbin/ztest
-/var/lib/slash
-%_mandir/man*/*
+/usr/local/psc/sbin/slashd
+/usr/local/psc/sbin/slimmns_format
+/usr/local/psc/sbin/slkeymgt
+/usr/local/psc/sbin/slmctl
+/usr/local/psc/sbin/slmkjrnl
+/usr/local/psc/sbin/zdb
+/usr/local/psc/sbin/zfs
+/usr/local/psc/sbin/zfs-fuse
+/usr/local/psc/sbin/zpool
+/usr/local/psc/sbin/zstreamdump
+/usr/local/psc/sbin/ztest
+/usr/local/psc/man/*/*
 
 %changelog
