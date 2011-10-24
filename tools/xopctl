@@ -16,15 +16,19 @@ xscreen_usage()
 xscreen()
 {
 	local OPTIND OPTARG
-	local sudo xtargs setcwd
+	local sudo xtargs=() setcwd
 	local cmd="\$SHELL"
+
+	if [ x"$term" != x"${term%xterm}" ]; then
+		xtargs=(-xrm XTerm*allowTitleOps:false -title "${host%%.*}: $name")
+	fi
 
 	while getopts "c:d:Sx:" c; do
 		case $c in
 		c) cmd=$OPTARG;;
 		d) setcwd="cd $OPTARG && ";;
 		S) sudo=sudo;;
-		x) xtargs="$xtargs $OPTARG";;
+		x) xtargs+=($OPTARG);;
 		*) xscreen_usage; exit 1;;
 		esac
 	done
@@ -35,10 +39,8 @@ xscreen()
 		exit 1
 	fi
 
-	local host=$1
-	shift
-	local name=$1
-	shift
+	local host=$1 ; shift
+	local name=$1 ; shift
 	local screen="$sudo screen -A -x -R"
 
 	local scrinit='
@@ -48,10 +50,6 @@ export PSC_LOG_FILE=/local/'$mode'.s2/log/'$name'/%t
 export SHELL=/bin/bash
 ulimit -n 100000
 '
-
-	if [ x"$term" != x"${term%xterm}" ]; then
-		xtargs=(-xrm XTerm*allowTitleOps:false -title "${host%%.*}: $name")
-	fi
 
 	$term "${xtargs[@]}" -e ssh -t $host $setcwd $screen -S $name "sh -c '$scrinit $cmd'" &
 }
@@ -151,7 +149,7 @@ launch()
 			[ $found -eq 1 ] || return
 		fi
 
-		echo xscreen -S $host -d "$dir" $mode.$name "$@"
+		xscreen -S -d "$dir" $host $mode.$name "$@"
 	fi
 }
 
