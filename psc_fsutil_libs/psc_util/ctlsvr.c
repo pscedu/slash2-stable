@@ -1669,7 +1669,7 @@ psc_ctlacthr_main(struct psc_thread *thr)
 	for (;;) {
 		fd = accept(s, NULL, NULL);
 		if (fd == -1) {
-			if (fd == EINTR) {
+			if (errno == EINTR) {
 				usleep(100);
 				continue;
 			}
