@@ -1668,8 +1668,13 @@ psc_ctlacthr_main(struct psc_thread *thr)
 	s = psc_ctlacthr(thr)->pcat_sock;
 	for (;;) {
 		fd = accept(s, NULL, NULL);
-		if (fd == -1)
+		if (fd == -1) {
+			if (fd == EINTR) {
+				usleep(100);
+				continue;
+			}
 			psc_fatal("accept");
+		}
 		psc_ctlacthr(pscthr_get())->pcat_stat.nclients++;
 
 		spinlock(&psc_ctl_clifds_lock);
