@@ -10,19 +10,19 @@ warn()
 
 xscreen_usage()
 {
-	warn "usage: xscreen [-S] [-c cmd] [-x args] host name"
+	warn "usage: xscreen [-S] [-c cmd] [-d dir] [-x args] host name"
 }
 
 xscreen()
 {
 	local OPTIND OPTARG
-	sudo=
-	xtargs=
-	cmd="\$SHELL"
+	local sudo xtargs setcwd
+	local cmd="\$SHELL"
 
-	while getopts "c:Sx:" c; do
+	while getopts "c:d:Sx:" c; do
 		case $c in
 		c) cmd=$OPTARG;;
+		d) setcwd="cd $OPTARG && ";;
 		S) sudo=sudo;;
 		x) xtargs="$xtargs $OPTARG";;
 		*) xscreen_usage; exit 1;;
@@ -31,18 +31,17 @@ xscreen()
 	shift $(($OPTIND - 1))
 
 	if [ $# -lt 2 ]; then
-		echo "$@"
 		xscreen_usage
 		exit 1
 	fi
 
-	host=$1
+	local host=$1
 	shift
-	name=$1
+	local name=$1
 	shift
-	screen="$sudo screen -A -x -R"
+	local screen="$sudo screen -A -x -R"
 
-	scrinit='
+	local scrinit='
 export PSC_SYSLOG_info=1
 export PSC_LOG_LEVEL=info
 export PSC_LOG_FILE=/local/'$mode'.s2/log/'$name'/%t
@@ -54,35 +53,41 @@ ulimit -n 100000
 		xtargs=(-xrm XTerm*allowTitleOps:false -title "${host%%.*}: $name")
 	fi
 
-	$term "${xtargs[@]}" -e ssh -t $host $screen -S $name "sh -c '$scrinit $cmd'" &
+	$term "${xtargs[@]}" -e ssh -t $host $setcwd $screen -S $name "sh -c '$scrinit $cmd'" &
 }
 
 usage()
 {
-	warn "usage: $0 mode [term]"
+	warn "usage: $0 mode [host ...]"
 	exit 1
 }
+
+if getopts "" c; then
+	usage
+fi
+shift $(($OPTIND - 1))
 
 [ $# -lt 1 ] && usage
 
 mode=$1
 shift
+hosts="$@"
 
 p=.psc.edu
 t=.psc.teragrid.org
 
-[ $# -eq 0 ] && case "$mode" in
+case "$mode" in
 arc)	d=/usr/local/src/p
 
 	set --								\
 	slashd:illusion1$p:$d						\
-	lnrtd:firehose1.$p:$d						\
-	lnrtd:firehose2.$p:$d						\
-	lnrtd:firehose3.$p:$d						\
+	lnrtd:firehose1$p:$d						\
+	lnrtd:firehose2$p:$d						\
+	lnrtd:firehose3$p:$d						\
 	ex:sleep:2							\
-	mount_slash:firehose1.$p:$d					\
-	mount_slash:firehose2.$p:$d					\
-	mount_slash:firehose3.$p:$d					\
+	mount_slash:firehose1$p:$d					\
+	mount_slash:firehose2$p:$d					\
+	mount_slash:firehose3$p:$d					\
 	mount_slash:lime$p:$d						\
 	mount_slash:onager$p:$d						\
 	mount_slash:tahini$p:$d						\
@@ -106,29 +111,50 @@ arc)	d=/usr/local/src/p
 	sliod:sense1-sliod3$p:$d:'export	CTL_SOCK_FILE=/var/run/sense1-sliod3.sock	LNET_NETWORKS=tcp12(vlan100:4);'	\
 	sliod:sense1-sliod4$p:$d:'export	CTL_SOCK_FILE=/var/run/sense1-sliod4.sock	LNET_NETWORKS=tcp12(vlan100:5);'	\
 	sliod:sense1-sliod5$p:$d:'export	CTL_SOCK_FILE=/var/run/sense1-sliod5.sock	LNET_NETWORKS=tcp12(vlan100:6);'	\
-	ex:sleep:1
+	ex:sleep:0
 	;;
-*)	usage;;
+*)	warn "unknown mode $mode"
+	exit 1;;
 esac
+
+echorun()
+{
+	echo "$@"
+	"$@"
+}
 
 launch()
 {
-	set -- $(echo "$i" | sed 's/:/ /1;s/:/ /1;s/:/ /1')
-	if [ x"$1" = x"ex" ]; then
-		shift
-		"$@"
-	else
-		name=$1 ; shift
-		host=$1 ; shift
-		dir=$1  ; shift
+	local j
 
-		xscreen -S $host -d "$dir" $mode.$name "$@"
+	set -- $(echo "$1" | sed 's/:/ /1;s/:/ /1;s/:/ /1')
+	if [ x"$1" = x"ex" ]; then
+		if [ -n "$hosts" -a x"$2" = x"sleep" ]; then
+			continue
+		fi
+
+		shift
+		echorun "$@"
+	else
+		local name=$1 ; shift
+		local host=$1 ; shift
+		local dir=$1  ; shift
+
+		if [ -n "$hosts" ]; then
+			local found=0
+			for j in $hosts; do
+				if [ x"$j" = x"$host" ]; then
+					found=1
+					break
+				fi
+			done
+			[ $found -eq 1 ] || return
+		fi
+
+		echo xscreen -S $host -d "$dir" $mode.$name "$@"
 	fi
 }
 
-hosts="$@"
-
-for i
-do
-	launch $i
+for i; do
+	launch "$i"
 done
