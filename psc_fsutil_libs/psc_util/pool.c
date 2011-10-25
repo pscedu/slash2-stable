@@ -257,7 +257,7 @@ _psc_pool_destroy_obj(struct psc_poolmgr *m, void *p)
 	if (p && m->ppm_destroyf)
 		m->ppm_destroyf(p);
 	flags = 0;
-	if (m->ppm_flags & PPMF_NOLOCK)
+	if ((m->ppm_flags & PPMF_NOLOCK) == 0)
 		flags |= PAF_LOCK;
 	_PSC_POOL_CLEAR_OBJ(m, p);
 	psc_free(p, flags, m->ppm_entsize);
