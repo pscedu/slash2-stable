@@ -154,7 +154,7 @@ libcfs_ipif_query (char *name, int *up, __u32 *ip)
 			    !nidx--) {
 				rc = 0;
 				memcpy(&ifr.ifr_addr, ifa->ifa_addr,
-				    sizeof(ifa->ifa_addr->sa_len));
+				    ifa->ifa_addr->sa_len);
 				break;
 			}
 		}
