@@ -89,23 +89,23 @@ arc)	d=/local
 	mount_slash:tg-login1.blacklight$t:$d				\
 	mount_slash:tg-login2.blacklight$t:$d				\
 	ex:sleep:2							\
-	sliod:tahini-100e$p:$ud:'export		CTL_SOCK_FILE=/var/run/sliod.ue.sock		LNET_NETWORKS="tcp12(eth2)";'		\
-	sliod:tahini-100o$p:$ud:'export		CTL_SOCK_FILE=/var/run/sliod.uo.sock		LNET_NETWORKS="tcp12(eth2:1)";'		\
-																	\
-	sliod0:sense0-sliod0$p:$ud:'export	CTL_SOCK_FILE=/var/run/sense0-sliod0.sock	LNET_NETWORKS="tcp12(vlan100:1)";'	\
-	sliod1:sense0-sliod1$p:$ud:'export	CTL_SOCK_FILE=/var/run/sense0-sliod1.sock	LNET_NETWORKS="tcp12(vlan100:2)";'	\
-	sliod2:sense0-sliod2$p:$ud:'export	CTL_SOCK_FILE=/var/run/sense0-sliod2.sock	LNET_NETWORKS="tcp12(vlan100:3)";'	\
-	sliod3:sense0-sliod3$p:$ud:'export	CTL_SOCK_FILE=/var/run/sense0-sliod3.sock	LNET_NETWORKS="tcp12(vlan100:4)";'	\
-	sliod4:sense0-sliod4$p:$ud:'export	CTL_SOCK_FILE=/var/run/sense0-sliod4.sock	LNET_NETWORKS="tcp12(vlan100:5)";'	\
-	sliod5:sense0-sliod5$p:$ud:'export	CTL_SOCK_FILE=/var/run/sense0-sliod5.sock	LNET_NETWORKS="tcp12(vlan100:6)";'	\
-	sliod6:sense0-sliod6$p:$ud:'export	CTL_SOCK_FILE=/var/run/sense0-sliod6.sock	LNET_NETWORKS="tcp12(vlan100:7)";'	\
-																	\
-	sliod0:sense1-sliod0$p:$ud:'export	CTL_SOCK_FILE=/var/run/sense1-sliod0.sock	LNET_NETWORKS="tcp12(vlan100:1)";'	\
-	sliod1:sense1-sliod1$p:$ud:'export	CTL_SOCK_FILE=/var/run/sense1-sliod1.sock	LNET_NETWORKS="tcp12(vlan100:2)";'	\
-	sliod2:sense1-sliod2$p:$ud:'export	CTL_SOCK_FILE=/var/run/sense1-sliod2.sock	LNET_NETWORKS="tcp12(vlan100:3)";'	\
-	sliod3:sense1-sliod3$p:$ud:'export	CTL_SOCK_FILE=/var/run/sense1-sliod3.sock	LNET_NETWORKS="tcp12(vlan100:4)";'	\
-	sliod4:sense1-sliod4$p:$ud:'export	CTL_SOCK_FILE=/var/run/sense1-sliod4.sock	LNET_NETWORKS="tcp12(vlan100:5)";'	\
-	sliod5:sense1-sliod5$p:$ud:'export	CTL_SOCK_FILE=/var/run/sense1-sliod5.sock	LNET_NETWORKS="tcp12(vlan100:6)";'	\
+	sliod:tahini-100e$p:$ud:'export	CTL_SOCK_FILE=/var/run/sliod.ue.sock		LNET_NETWORKS="tcp12(eth2)";'		\
+	sliod:tahini-100o$p:$ud:'export	CTL_SOCK_FILE=/var/run/sliod.uo.sock		LNET_NETWORKS="tcp12(eth2:1)";'		\
+																\
+	sliod0:sense0$p:$ud:'export	CTL_SOCK_FILE=/var/run/sense0-sliod0.sock	LNET_NETWORKS="tcp12(vlan100:1)";'	\
+	sliod1:sense0$p:$ud:'export	CTL_SOCK_FILE=/var/run/sense0-sliod1.sock	LNET_NETWORKS="tcp12(vlan100:2)";'	\
+	sliod2:sense0$p:$ud:'export	CTL_SOCK_FILE=/var/run/sense0-sliod2.sock	LNET_NETWORKS="tcp12(vlan100:3)";'	\
+	sliod3:sense0$p:$ud:'export	CTL_SOCK_FILE=/var/run/sense0-sliod3.sock	LNET_NETWORKS="tcp12(vlan100:4)";'	\
+	sliod4:sense0$p:$ud:'export	CTL_SOCK_FILE=/var/run/sense0-sliod4.sock	LNET_NETWORKS="tcp12(vlan100:5)";'	\
+	sliod5:sense0$p:$ud:'export	CTL_SOCK_FILE=/var/run/sense0-sliod5.sock	LNET_NETWORKS="tcp12(vlan100:6)";'	\
+	sliod6:sense0$p:$ud:'export	CTL_SOCK_FILE=/var/run/sense0-sliod6.sock	LNET_NETWORKS="tcp12(vlan100:7)";'	\
+																\
+	sliod0:sense1$p:$ud:'export	CTL_SOCK_FILE=/var/run/sense1-sliod0.sock	LNET_NETWORKS="tcp12(vlan100:1)";'	\
+	sliod1:sense1$p:$ud:'export	CTL_SOCK_FILE=/var/run/sense1-sliod1.sock	LNET_NETWORKS="tcp12(vlan100:2)";'	\
+	sliod2:sense1$p:$ud:'export	CTL_SOCK_FILE=/var/run/sense1-sliod2.sock	LNET_NETWORKS="tcp12(vlan100:3)";'	\
+	sliod3:sense1$p:$ud:'export	CTL_SOCK_FILE=/var/run/sense1-sliod3.sock	LNET_NETWORKS="tcp12(vlan100:4)";'	\
+	sliod4:sense1$p:$ud:'export	CTL_SOCK_FILE=/var/run/sense1-sliod4.sock	LNET_NETWORKS="tcp12(vlan100:5)";'	\
+	sliod5:sense1$p:$ud:'export	CTL_SOCK_FILE=/var/run/sense1-sliod5.sock	LNET_NETWORKS="tcp12(vlan100:6)";'	\
 	ex:sleep:0
 	;;
 *)	warn "unknown mode $mode"
