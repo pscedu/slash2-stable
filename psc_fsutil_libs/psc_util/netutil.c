@@ -182,15 +182,14 @@ pflnet_rtexists_rtnetlink(const struct sockaddr *sa)
 #define RT_SPACE 8192
 		unsigned char	buf[RT_SPACE];
 	} rq;
+	struct sockaddr_in *sin = (void *)sa;
 	in_addr_t cmpaddr, zero = 0;
-	struct sockaddr_in *sin;
 	struct nlmsghdr *nmh;
 	struct rtattr *rta;
 	struct rtmsg *rtm;
-	ssize_t rc, rca;
 	int rv = 0, s;
-
-	sin = (void *)sa;
+	ssize_t rc, rca;
+	size_t nb;
 
 	s = socket(PF_NETLINK, SOCK_RAW, NETLINK_ROUTE);
 	if (s == -1)
@@ -234,7 +233,7 @@ pflnet_rtexists_rtnetlink(const struct sockaddr *sa)
 		}
 
 		nmh = &rq.nmh;
-		for (; NLMSG_OK(nmh, rc); nmh = NLMSG_NEXT(nmh, rc)) {
+		for (; NLMSG_OK(nmh, nb); nmh = NLMSG_NEXT(nmh, nb)) {
 			rtm = NLMSG_DATA(nmh);
 
 			if (rtm->rtm_table != RT_TABLE_MAIN)
@@ -290,8 +289,9 @@ pflnet_getifnfordst_rtnetlink(const struct sockaddr *sa,
 	struct nlmsghdr *nmh;
 	struct rtattr *rta;
 	struct rtmsg *rtm;
-	ssize_t rc, rca;
 	int s, ifidx;
+	ssize_t rc, rca;
+	size_t nb;
 
 	sin = (void *)sa;
 
@@ -340,7 +340,7 @@ pflnet_getifnfordst_rtnetlink(const struct sockaddr *sa,
 	}
 
 	nmh = &rq.nmh;
-	for (; NLMSG_OK(nmh, rc); nmh = NLMSG_NEXT(nmh, rc)) {
+	for (; NLMSG_OK(nmh, nb); nmh = NLMSG_NEXT(nmh, nb)) {
 		rtm = NLMSG_DATA(nmh);
 
 		if (rtm->rtm_table != RT_TABLE_MAIN)
