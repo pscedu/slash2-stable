@@ -252,7 +252,7 @@ do {                                                                           \
 # define KLASSERT(e) do { } while (0)
 # define printk(format, args...) printf (format, ## args)
 # define LIBCFS_ALLOC(ptr, size) do { (ptr) = cfs_alloc((size), __ALLOC_ZERO); } while (0)
-# define LIBCFS_FREE(a, b) do { cfs_free(a); } while (0)
+# define LIBCFS_FREE(a, b) do { cfs_free(a); (void)(b); } while (0)
 
 void libcfs_debug_dumplog(void);
 int libcfs_debug_init(unsigned long bufsize);
