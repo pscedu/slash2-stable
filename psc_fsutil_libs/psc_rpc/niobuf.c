@@ -647,7 +647,7 @@ pscrpc_register_rqbd(struct pscrpc_request_buffer_desc *rqbd)
 	if (rc == 0)
 		return (0);
 
-	CERROR("LNetMDAttach failed: %d; \n", rc);
+	CERROR("LNetMDAttach failed: %d", rc);
 	psc_assert(rc == -ENOMEM);
 	rc = LNetMEUnlink(me_h);
 	psc_assert(rc == 0);
