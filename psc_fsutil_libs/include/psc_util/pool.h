@@ -79,7 +79,7 @@ struct psc_poolmaster {
 };
 
 /*
- * Pools managers are like free lists containing items which can be
+ * Pool managers are like free lists containing items which can be
  * retrieved from the pool and put into circulation across other list
  * caches or in any way seen fit.
  */
@@ -118,10 +118,10 @@ struct psc_poolmgr {
 #define ppm_pll		ppm_explist.pexl_pll
 };
 
-/* Pool manager flags. */
+/* Pool manager flags */
 #define PPMF_NONE		0		/* no pool manager flag specified */
 #define PPMF_AUTO		(1 << 0)	/* pool automatically resizes */
-#define PPMF_NOLOCK		(1 << 1)	/* pool ents shouldn't be mlock'd */
+#define PPMF_PIN		(1 << 1)	/* mlock(2) items */
 #define PPMF_MLIST		(1 << 2)	/* backend storage is mgt'd via mlist */
 
 #define POOL_LOCK(m)		PLL_LOCK(&(m)->ppm_pll)
@@ -145,8 +145,8 @@ struct psc_poolmgr {
 /* default value of pool fill before freeing items directly on pool_return */
 #define POOL_AUTOSIZE_THRESH 80
 
-/*
- * psc_poolmaster_init - initialize a pool resource.
+/**
+ * psc_poolmaster_init - Initialize a pool resource.
  * @p: pool master.
  * @type: managed structure type.
  * @member: name of psclist_head structure used to interlink managed structs.
@@ -173,8 +173,8 @@ struct psc_poolmgr {
 
 #define psc_poolmaster_getmgr(p)	_psc_poolmaster_getmgr((p), psc_memnode_getid())
 
-/*
- * psc_pool_shrink - decrease #items in a pool.
+/**
+ * psc_pool_shrink - Decrease #items in a pool.
  * @m: the pool manager.
  * @i: #items to remove from pool.
  */

@@ -167,8 +167,8 @@ psc_refmgr_init(struct psc_refmgr *prm, int flags, int privsiz, int nobjs,
 	flags = 0;
 	if (prm->prm_flags & PRMF_AUTOSIZE)
 		flags |= PPMF_AUTO;
-	if (prm->prm_flags & PRMF_NOMEMPIN)
-		flags |= PPMF_NOLOCK;
+	if (prm->prm_flags & PRMF_PIN)
+		flags |= PPMF_PIN;
 	if (prm->prm_flags & PRMF_MLIST)
 		flags |= PPMF_MLIST;
 

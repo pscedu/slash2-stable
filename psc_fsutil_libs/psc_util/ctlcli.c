@@ -721,9 +721,9 @@ psc_ctlmsg_pool_prdat(__unusedx const struct psc_ctlmsghdr *mh,
 	    "%6d %6d "
 	    "%6d %6s",
 	    pcpl->pcpl_name,
-	    pcpl->pcpl_flags & PPMF_AUTO ? 'A' : '-',
-	    pcpl->pcpl_flags & PPMF_NOLOCK ? 'N' : '-',
-	    pcpl->pcpl_flags & PPMF_MLIST ? 'M' : '-',
+	    pcpl->pcpl_flags & PPMF_AUTO	? 'A' : '-',
+	    pcpl->pcpl_flags & PPMF_PIN		? 'P' : '-',
+	    pcpl->pcpl_flags & PPMF_MLIST	? 'M' : '-',
 	    pcpl->pcpl_free, pcpl->pcpl_total - pcpl->pcpl_free,
 	    pcpl->pcpl_total, rbuf);
 	if (pcpl->pcpl_flags & PPMF_AUTO) {

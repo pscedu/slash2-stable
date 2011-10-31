@@ -59,7 +59,7 @@ struct psc_refmgr {
 #define PRMF_TREE			(1 << 3)
 #define PRMF_MULTIWAIT			(1 << 4)
 #define PRMF_AUTOSIZE			(1 << 5)	/* pool is dynamically sized */
-#define PRMF_NOMEMPIN			(1 << 6)	/* do not pin in mem with mlock */
+#define PRMF_PIN			(1 << 6)	/* mlock(2) items */
 #define PRMF_HASHSTR			(1 << 7)	/* use strings as hash table keys */
 #define PRMF_LINGER			(1 << 8)	/* don't destroy unref'd objs until out of space */
 #define PRMF_MLIST			(1 << 9)	/* use mlist for pool backend */

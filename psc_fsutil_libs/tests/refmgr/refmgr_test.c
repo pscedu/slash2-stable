@@ -70,7 +70,7 @@ main(int argc, char *argv[])
 	if (argc)
 		usage();
 
-	psc_refmgr_init(&refmgr, PRMF_LIST | PRMF_NOMEMPIN, sizeof(*o),
+	psc_refmgr_init(&refmgr, PRMF_LIST, sizeof(*o),
 	    128, 64, 256, init_obj, destroy_obj, "test");
 	exit(0);
 }

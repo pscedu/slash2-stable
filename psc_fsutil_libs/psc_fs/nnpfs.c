@@ -40,9 +40,10 @@ pscfs_main(void)
 	struct pscfs_inumcol *pfic;
 
 #define INUMCOL_SZ (4096 - 1)
-	psc_poolmaster_init(&pscfs_inumcol_poolmaster, struct pscfs_inumcol,
-	    pfic_lentry, PPMF_AUTO, INUMCOL_SZ, INUMCOL_SZ / 2, INUMCOL_SZ * 2,
-	    NULL, NULL, NULL, "inumcol");
+	psc_poolmaster_init(&pscfs_inumcol_poolmaster,
+	    struct pscfs_inumcol, pfic_lentry, PPMF_AUTO, INUMCOL_SZ,
+	    INUMCOL_SZ / 2, INUMCOL_SZ * 2, NULL, NULL, NULL,
+	    "inumcol");
 	pscfs_inumcol_pool = psc_poolmaster_getmgr(&pscfs_inumcol_poolmaster);
 	psc_hashtbl_init(&pscfs_inumcol_hashtbl, 0, struct pscfs_inumcol,
 	    pfic_key, pfic_hentry, INUMCOL_SZ * 4, NULL, "inumcol");
