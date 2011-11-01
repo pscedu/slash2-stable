@@ -1,6 +1,8 @@
 #!/bin/bash
 # $Id$
 
+useX=0
+verbose=0
 xarg=()
 term=${TERM_PROG:-xterm}
 
@@ -11,12 +13,12 @@ warn()
 
 xscreen_usage()
 {
-	warn "usage: xscreen [-S] [-c cmd] [-d dir] [-I init] [-x args] host name"
+	warn "usage: xscreen [-SX] [-c cmd] [-d dir] [-I init] [-x args] host name"
 }
 
 xscreen()
 {
-	local OPTIND OPTARG
+	local OPTIND OPTARG launch=1
 	local sudo setcwd scrinit
 	local xtargs=(${xarg[@]})
 	local cmd="\$SHELL"
@@ -46,17 +48,23 @@ xscreen()
 		xtargs+=(-xrm XTerm*allowTitleOps:false -title "${host%%.*}: $name")
 	fi
 
-	$term "${xtargs[@]}" -e ssh -t $host $setcwd $screen -S $name "sh -c '$scrinit $cmd'" &
+	if [ $launch -eq 1 ]; then
+		$term "${xtargs[@]}" -e ssh -t $host $setcwd $screen -S $name "sh -c '$scrinit $cmd'" &
+	else
+		$screen -S $name "sh -c '$scrinit $cmd'"
+	fi
 }
 
 usage()
 {
-	warn "usage: $0 mode [host ...]"
+	warn "usage: $0 mode [host[:daemon] ...]"
 	exit 1
 }
 
-while getopts "x:" c; do
+while getopts "vXx:" c; do
 	case $c in
+	v) verbose=1;;
+	X) useX=1;;
 	x) xarg+=("$OPTARG");;
 	*) usage;;
 	esac
@@ -114,7 +122,7 @@ esac
 
 echorun()
 {
-	echo "$@"
+	[ $verbose -eq 1 ] && echo "$@"
 	"$@"
 }
 
@@ -138,7 +146,11 @@ launch()
 		if [ -n "$hosts" ]; then
 			local found=0
 			for j in $hosts; do
-				if [[ x"$host" == x$j* ]]; then
+				h=${j%:*}
+				d=${j#*:}
+				[ -z "$d" ] && d=$name
+				if [[ x"$d" == x"$name" -a \
+				    x"$host" == x$h* ]]; then
 					found=1
 					break
 				fi
@@ -146,7 +158,7 @@ launch()
 			[ $found -eq 1 ] || return
 		fi
 
-		xscreen -S -d "$dir/src/p" -I '
+		echorun xscreen -S -d "$dir/src/p" -I '
 		    export PSC_SYSLOG_info=1
 		    export PSC_LOG_LEVEL=info
 		    export PSC_LOG_FILE='$dir'/'$mode'.s2/log/'$name'/%t
@@ -159,5 +171,5 @@ launch()
 }
 
 for i; do
-	launch "$i"
+	launch $args "$i"
 done
