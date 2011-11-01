@@ -4,7 +4,7 @@ ROOTDIR=.
 include ${ROOTDIR}/Makefile.path
 
 SUBDIRS+=	${PFL_BASE}
-SUBDIRS+=	apps/sft
+SUBDIRS+=	apps
 SUBDIRS+=	fio
 SUBDIRS+=	${SLASH_BASE}
 SUBDIRS+=	${ZEST_BASE}
