@@ -62,18 +62,21 @@ struct psc_ctlparam_node;
 	{ psc_ctlrep_param,		sizeof(struct psc_ctlmsg_param) }
 
 struct psc_ctlacthr {
-	int		pcat_sock;
+	int			 pcat_sock;
 	struct {
 		int nclients;
-	}		pcat_stat;
+	}			 pcat_stat;
 };
 
 struct psc_ctlthr {
+	int			 pct_sockfd;
+	const struct psc_ctlop	*pct_ct;
+	int			 pct_nops;
 	struct {
 		int nsent;
 		int nrecv;
 		int ndrop;
-	}		pct_stat;
+	}			 pct_stat;
 };
 
 struct psc_ctlop {
