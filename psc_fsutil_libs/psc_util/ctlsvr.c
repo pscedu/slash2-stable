@@ -1691,7 +1691,7 @@ psc_ctlacthr_main(struct psc_thread *thr)
 	/* NOTREACHED */
 }
 
-void
+__dead void
 psc_ctlthr_mainloop(struct psc_thread *thr)
 {
 	const struct psc_ctlop *ct;
@@ -1700,10 +1700,8 @@ psc_ctlthr_mainloop(struct psc_thread *thr)
 	uint32_t rnd;
 	int s, nops;
 
-	s = psc_ctlthr(thr)->pct_sockfd;
 	ct = psc_ctlthr(thr)->pct_ct;
 	nops = psc_ctlthr(thr)->pct_nops;
-
 	for (;;) {
 		spinlock(&psc_ctl_clifds_lock);
 		if (psc_dynarray_len(&psc_ctl_clifds) == 0) {
@@ -1713,14 +1711,16 @@ psc_ctlthr_mainloop(struct psc_thread *thr)
 		}
 		rnd = psc_random32u(psc_dynarray_len(&psc_ctl_clifds));
 		s = (int)(long)psc_dynarray_getpos(&psc_ctl_clifds, rnd);
+		psc_dynarray_remove(&psc_ctl_clifds, (void *)(long)s);
 		freelock(&psc_ctl_clifds_lock);
 
-		if (psc_ctlthr_service(s, ct, nops, &bufsiz, &buf)) {
+		if (!psc_ctlthr_service(s, ct, nops, &bufsiz, &buf)) {
 			spinlock(&psc_ctl_clifds_lock);
-			psc_dynarray_remove(&psc_ctl_clifds, (void *)(long)s);
+			psc_dynarray_add(&psc_ctl_clifds, (void *)(long)s);
+			psc_waitq_wakeall(&psc_ctl_clifds_waitq);
 			freelock(&psc_ctl_clifds_lock);
+		} else
 			close(s);
-		}
 	}
 	PSCFREE(buf);
 }
@@ -1790,18 +1790,16 @@ psc_ctlthr_main(const char *ofn, const struct psc_ctlop *ct, int nops,
 	pscthr_setready(thr);
 
 #define PFL_CTL_NTHRS 4
-	for (i = 0; i < PFL_CTL_NTHRS; i++) {
+	for (i = 1; i < PFL_CTL_NTHRS; i++) {
 		thr = pscthr_init(me->pscthr_type, 0,
 		    psc_ctlthr_mainloop, NULL,
 		    sizeof(struct psc_ctlthr), "%.*sctlthr%d",
 		    p - me->pscthr_name, me->pscthr_name, i);
-		psc_ctlthr(thr)->pct_sockfd = s;
 		psc_ctlthr(thr)->pct_ct = ct;
 		psc_ctlthr(thr)->pct_nops = nops;
 		pscthr_setready(thr);
 	}
 
-	psc_ctlthr(me)->pct_sockfd = s;
 	psc_ctlthr(me)->pct_ct = ct;
 	psc_ctlthr(me)->pct_nops = nops;
 	psc_ctlthr_mainloop(me);
