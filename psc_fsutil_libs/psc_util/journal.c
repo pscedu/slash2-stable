@@ -39,6 +39,7 @@
 #include "psc_util/journal.h"
 #include "psc_util/lock.h"
 #include "psc_util/thread.h"
+#include "psc_util/pool.h"
 #include "psc_util/waitq.h"
 
 #include "zfs-fuse/zfs_slashlib.h"
@@ -69,6 +70,9 @@ struct psc_lockedlist	pfl_journals = PLL_INIT(&pfl_journals,
 
 #define psc_journal_read(pj, p, len, off)	psc_journal_io((pj), (p), (len), (off), JIO_READ)
 #define psc_journal_write(pj, p, len, off)	psc_journal_io((pj), (p), (len), (off), JIO_WRITE)
+
+struct psc_poolmaster	 xidhndlPoolMaster;
+struct psc_poolmgr	*xidhndlPool;
 
 /**
  * psc_journal_io - Perform a low-level I/O operation on the journal store.
@@ -246,7 +250,7 @@ pjournal_xnew(struct psc_journal *pj, int distill, uint64_t txg)
 	psc_assert(++total_trans <= total_reserve);
 	freelock(&pjournal_count);
 
-	xh = psc_alloc(sizeof(*xh), 0);
+	xh = psc_pool_get(xidhndlPool);
 
 	xh->pjx_pj = pj;
 	INIT_SPINLOCK(&xh->pjx_lock);
@@ -267,7 +271,7 @@ pjournal_xdestroy(struct psc_journal_xidhndl *xh)
 	psc_assert(psclist_disjoint(&xh->pjx_pndg_lentry));
 	psc_assert(psclist_disjoint(&xh->pjx_dstl_lentry));
 	psc_assert(xh->pjx_data == NULL);
-	psc_free(xh, 0);
+	psc_pool_return(xidhndlPool, xh);
 }
 
 void
@@ -756,6 +760,11 @@ pjournal_open(const char *fn)
 	psc_dynarray_init(&pj->pj_bufs);
 
 	pll_add(&pfl_journals, pj);
+
+	psc_poolmaster_init(&xidhndlPoolMaster,
+	    struct psc_journal_xidhndl, pjx_lentry, PPMF_AUTO, 1024,
+            1024, 0, NULL, NULL, NULL, "xidhndl");
+	xidhndlPool = psc_poolmaster_getmgr(&xidhndlPoolMaster);
 
 	return (pj);
  err:

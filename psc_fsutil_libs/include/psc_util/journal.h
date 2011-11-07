@@ -225,6 +225,7 @@ struct psc_journal_xidhndl {
 	uint64_t			 pjx_xid;		/* debugging only */
 	uint32_t			 pjx_slot;
 	uint32_t			 pjx_flags;
+	struct psclist_head		 pjx_lentry;
 	struct psclist_head		 pjx_pndg_lentry;	/* pending transaction list - ordered by slot number assigned */
 	struct psclist_head		 pjx_dstl_lentry;	/* distill transaction list - ordered by transaction ID */
 	psc_spinlock_t			 pjx_lock;
