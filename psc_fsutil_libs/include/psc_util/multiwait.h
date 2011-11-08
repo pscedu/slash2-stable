@@ -48,7 +48,7 @@ struct psc_multiwaitcond {
 #define PMWCF_WAKEALL			(1 << 0)	/* wake all multiwaits, not just one */
 
 #define MWCOND_INIT(data, name, flags)					\
-	{ PSC_MUTEX_INITIALIZER, PTHREAD_COND_INITIALIZER,		\
+	{ PSC_MUTEX_INIT, PTHREAD_COND_INITIALIZER,			\
 	    DYNARRAY_INIT, NULL, (data), (flags), (name) }
 
 struct psc_multiwait {
