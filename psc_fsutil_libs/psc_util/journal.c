@@ -38,8 +38,8 @@
 #include "psc_util/iostats.h"
 #include "psc_util/journal.h"
 #include "psc_util/lock.h"
-#include "psc_util/thread.h"
 #include "psc_util/pool.h"
+#include "psc_util/thread.h"
 #include "psc_util/waitq.h"
 
 #include "zfs-fuse/zfs_slashlib.h"
@@ -763,7 +763,7 @@ pjournal_open(const char *fn)
 
 	psc_poolmaster_init(&xidhndlPoolMaster,
 	    struct psc_journal_xidhndl, pjx_lentry, PPMF_AUTO, 1024,
-            1024, 0, NULL, NULL, NULL, "xidhndl");
+	    1024, 0, NULL, NULL, NULL, "xidhndl");
 	xidhndlPool = psc_poolmaster_getmgr(&xidhndlPoolMaster);
 
 	return (pj);
