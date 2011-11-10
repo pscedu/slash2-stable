@@ -57,7 +57,7 @@ xscreen()
 
 usage()
 {
-	warn "usage: $0 mode [host[:daemon] ...]"
+	warn "usage: $0 [-vX] [-x termarg] mode [host[:daemon] ...]"
 	exit 1
 }
 
