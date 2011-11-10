@@ -100,7 +100,7 @@ struct psc_journal_hdr {
 	uint32_t			 pjh_version;
 	int32_t				 pjh_readsize;
 	uint64_t			 pjh_timestamp;		/* format time */
-	uint64_t                         pjh_fsuuid;
+	uint64_t			 pjh_fsuuid;
 	uint64_t			 pjh_chksum;		/* keep it last and aligned at a 8-byte boundary */
 #define pjh_iolen pjh_start_off
 };
@@ -161,7 +161,7 @@ struct psc_journal {
  * Journal entry types - lower bits are used internally, higher bits
  * after _PJE_FLSHFT are used for application-specific codes.
  */
-#define PJE_NONE			      0			/* no flag */
+#define PJE_NONE			0			/* no flag */
 #define PJE_FORMAT			(1 << 0)		/* newly-formatted */
 #define PJE_NORMAL			(1 << 1)		/* has data */
 #define PJE_DISTILL			(1 << 2)		/* needs distill */
@@ -235,7 +235,7 @@ struct psc_journal_xidhndl {
 
 #define	PJX_SLOT_ANY			(~0U)
 
-#define	PJX_NONE			      0
+#define	PJX_NONE			0
 #define	PJX_DISTILL			(1 << 0)
 #define	PJX_WRITTEN			(1 << 1)
 #define	PJX_DISTILL_SYNC		(1 << 2)
@@ -250,7 +250,7 @@ struct psc_journal
 void	 pjournal_replay(struct psc_journal *, int, const char *,
 	    psc_replay_handler_t, psc_distill_handler_t);
 
-void     pjournal_update_txg(struct psc_journal *, uint64_t);
+void	 pjournal_update_txg(struct psc_journal *, uint64_t);
 uint64_t pjournal_next_replay(struct psc_journal *);
 uint64_t pjournal_next_distill(struct psc_journal *);
 uint64_t pjournal_next_reclaim(struct psc_journal *);
