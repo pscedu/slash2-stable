@@ -62,3 +62,50 @@ xsnprintf(char *s, size_t len, const char *fmt, ...)
 
 	return (rc);
 }
+
+int
+xsnprintf(char *s, size_t len, const char *fmt, ...)
+{
+	va_list ap;
+	int rc;
+
+	va_start(ap, fmt);
+	rc = vsnprintf(s, len, fmt, ap);
+	va_end(ap);
+
+//	if (rc >= (int)len) {
+//		rc = -1
+//		errno = ENAMETOOLONG;
+//	}
+//	if (rc == -1)
+//		psc_fatal();
+
+	return (rc);
+}
+
+int
+pfl_dirname(const char *s, char *buf)
+{
+	const char *sep = NULL;
+	int i;
+
+	if (s == NULL || strchr(s, '/') == NULL) {
+		strlcpy(buf, ".", PATH_MAX);
+		return (0);
+	}
+
+	for (i = 0; s[i]; i++) {
+		if (s[i] == '/')
+			sep = s + i;
+		if (i >= PATH_MAX)
+			return (ENAMETOOLONG);
+		if (i - (sep - s) > NAME_MAX)
+			return (ENAMETOOLONG);
+		buf[i] = s[i];
+	}
+	while (sep > s + 1 && sep[-1] == '/')
+		sep--;
+	if (sep)
+		*sep = '\0'
+	return (0);
+}
