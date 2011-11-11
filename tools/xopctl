@@ -4,8 +4,9 @@
 useX=0
 verbose=0
 xarg=()
+args=()
 term=${TERM_PROG:-xterm}
-host=$(hostname -s)
+hostname=$(hostname)
 
 warn()
 {
@@ -19,7 +20,7 @@ xscreen_usage()
 
 xscreen()
 {
-	local OPTIND OPTARG launch=1
+	local OPTIND OPTARG launch=0
 	local sudo setcwd scrinit
 	local xtargs=(${xarg[@]})
 	local cmd="\$SHELL"
@@ -30,6 +31,7 @@ xscreen()
 		d) setcwd="cd $OPTARG && ";;
 		I) scrinit=$OPTARG;;
 		S) sudo=sudo;;
+		X) launch=1;;
 		x) xtargs+=($OPTARG);;
 		*) xscreen_usage; exit 1;;
 		esac
@@ -52,7 +54,7 @@ xscreen()
 	if [ $launch -eq 1 ]; then
 		$term "${xtargs[@]}" -e ssh -t $host $setcwd $screen -S $name "sh -c '$scrinit $cmd'" &
 	else
-		$screen -S $name "sh -c '$scrinit $cmd'"
+		exec $screen -S $name "sh -c '$scrinit $cmd'"
 	fi
 }
 
@@ -65,7 +67,7 @@ usage()
 while getopts "vXx:" c; do
 	case $c in
 	v) verbose=1;;
-	X) useX=1;;
+	X) useX=1 args+=(-X);;
 	x) xarg+=("$OPTARG");;
 	*) usage;;
 	esac
@@ -159,6 +161,10 @@ launch()
 			[ $found -eq 1 ] || return
 		fi
 
+		if [ $useX -eq 0 -a x"$host" != x"$hostname" ]; then
+			return
+		fi
+
 		echorun xscreen -S -d "$dir" -I '
 		    export PSC_SYSLOG_info=1
 		    export PSC_LOG_LEVEL=info
@@ -172,5 +178,5 @@ launch()
 }
 
 for i; do
-	launch $args "$i"
+	launch "${args[@]}" "$i"
 done
