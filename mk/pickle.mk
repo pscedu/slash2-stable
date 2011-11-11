@@ -175,6 +175,7 @@ PICKLE_NEED_VERSION=					$(word 2,$$Rev$$)
 
  ifdef PICKLE_HAVE_FUTIMENS
   DEFINES+=						-DHAVE_FUTIMENS
+ else
   SRCS+=						${PFL_BASE}/compat/futimens.c
  endif
 
