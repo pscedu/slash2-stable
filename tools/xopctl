@@ -23,7 +23,7 @@ xscreen()
 	local OPTIND OPTARG launch=0
 	local sudo setcwd scrinit
 	local xtargs=(${xarg[@]})
-	local cmd="\$SHELL"
+	local cmd="exec \$SHELL"
 
 	while getopts "c:d:I:Sx:" c; do
 		case $c in
@@ -54,7 +54,7 @@ xscreen()
 	if [ $launch -eq 1 ]; then
 		$term "${xtargs[@]}" -e ssh -t $host $setcwd $screen -S $name "sh -c '$scrinit $cmd'" &
 	else
-		exec $screen -S $name "sh -c '$scrinit $cmd'"
+		exec $screen -S $name sh -c "$scrinit $cmd"
 	fi
 }
 
@@ -84,8 +84,8 @@ p=.psc.edu
 t=.psc.teragrid.org
 
 case "$mode" in
-arc)	d=/local/src/p
-	ud=/usr/local/src/p
+arc)	d=/local
+	ud=/usr/local
 
 	set --								\
 	slashd:illusion1$p:$d						\
@@ -165,12 +165,24 @@ launch()
 			return
 		fi
 
-		echorun xscreen -S -d "$dir" -I '
+		echorun xscreen -S -d "$dir/src/p" -I '
 		    export PSC_SYSLOG_info=1
 		    export PSC_LOG_LEVEL=info
 		    export PSC_LOG_FILE='$dir'/'$mode'.s2/log/'$name'/%t
 		    export CONFIG_FILE='$dir'/'$mode'.s2/slcfg
 		    export SHELL=/bin/bash
+		    export GDBHISTFILE=`which '$name'`.gdbhist
+		    gdb()
+		    {
+			tmpfile=/tmp/.gdbcmd.$RANDOM
+			(echo set history save on
+			 echo set history size 10000
+			 echo set confirm off
+			 echo set height 0
+			) > $tmpfile
+			    command gdb -x $tmpfile -q "$@"
+		    }
+		    export -f gdb
 		    mkdir -p $(dirname $PSC_LOG_FILE)
 		    ulimit -n 100000
 		    '"$*" $host $mode.$name
