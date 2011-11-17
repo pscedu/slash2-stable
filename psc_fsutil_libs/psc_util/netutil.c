@@ -233,6 +233,7 @@ pflnet_rtexists_rtnetlink(const struct sockaddr *sa)
 		}
 
 		nmh = &rq.nmh;
+		nb = rc;
 		for (; NLMSG_OK(nmh, nb); nmh = NLMSG_NEXT(nmh, nb)) {
 			rtm = NLMSG_DATA(nmh);
 
@@ -340,6 +341,7 @@ pflnet_getifnfordst_rtnetlink(const struct sockaddr *sa,
 	}
 
 	nmh = &rq.nmh;
+	nb = rc;
 	for (; NLMSG_OK(nmh, nb); nmh = NLMSG_NEXT(nmh, nb)) {
 		rtm = NLMSG_DATA(nmh);
 
