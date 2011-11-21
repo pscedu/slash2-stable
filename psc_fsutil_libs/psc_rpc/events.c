@@ -303,7 +303,7 @@ pscrpc_reply_in_callback(lnet_event_t *ev)
 		/* Notify upper layer that an RPC is ready to be
 		 *   finalized.
 		 */
-		pscrpc_completion_one(req->rq_comp);
+		pscrpc_completion_one(req, req->rq_comp);
 
 	if (req->rq_waitq)
 		psc_waitq_wakeall(req->rq_waitq);
@@ -330,7 +330,7 @@ pscrpc_reply_out_callback(lnet_event_t *ev)
 		ev->type == LNET_EVENT_UNLINK);
 
 	if (rs->rs_compl)
-		pscrpc_completion_one(rs->rs_compl);
+		pscrpc_completion_one(NULL, rs->rs_compl);
 
 	if (!rs->rs_difficult) {
 		/* 'Easy' replies have no further processing so I drop the

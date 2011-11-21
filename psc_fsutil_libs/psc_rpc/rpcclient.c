@@ -321,7 +321,16 @@ pscrpc_completion_waitrel_s(struct pscrpc_completion *c, int secs)
 }
 
 void
-pscrpc_completion_one(struct pscrpc_completion *c)
+pscrpc_completion_set(struct pscrpc_request *rq, struct pscrpc_completion *c)
+{
+	rq->rq_comp = c;
+
+	DEBUG_REQ(PLL_INFO, rq, "rpc_comp %p (compcnt=%d) (outcnt=%d)", c, 
+	  atomic_read(&c->rqcomp_compcnt), atomic_read(&c->rqcomp_outcnt));
+}
+
+void
+pscrpc_completion_one(struct pscrpc_request *rq, struct pscrpc_completion *c)
 {
 	psc_assert(atomic_read(&c->rqcomp_compcnt) >= 0);
 
@@ -329,6 +338,10 @@ pscrpc_completion_one(struct pscrpc_completion *c)
 	atomic_inc(&c->rqcomp_compcnt);
 	psc_waitq_wakeone(&c->rqcomp_waitq);
 	freelock(&c->rqcomp_lock);
+
+	if (rq) 
+		DEBUG_REQ(PLL_INFO, rq, "rpc_comp %p (compcnt=%d) (outcnt=%d)", c, 
+			  atomic_read(&c->rqcomp_compcnt), atomic_read(&c->rqcomp_outcnt));
 }
 
 struct pscrpc_request *
@@ -538,6 +551,10 @@ pscrpc_send_new_req_locked(struct pscrpc_request *req)
 		DEBUG_REQ(PLL_WARN, req,
 			  "send failed (%d); expect timeout", rc);
 		req->rq_net_err = 1;
+		spinlock(&imp->imp_lock);
+		psclist_del(&req->rq_lentry, &imp->imp_sending_list);
+		freelock(&imp->imp_lock);
+
 		return (rc);
 	}
 	return (0);
@@ -984,12 +1001,15 @@ pscrpc_check_set(struct pscrpc_request_set *set, int check_allsent)
 			/* If using a non-blocking set, then check for expired
 			 *   requests here.
 			 */
-			if (!check_allsent && pscrpc_is_expired(req)) {
+			if (!check_allsent && 
+			    !pscrpc_client_replied(req) && 
+			    pscrpc_is_expired(req)) {
 				/* rc == 0 means we're resending the request!
 				 *   otherwise, this request is getting nuked.
 				 */
 				status = expired_request(req);
-				DEBUG_REQ(PLL_WARN, req, "expired (resend=%d)",                                     !status);
+				DEBUG_REQ(PLL_WARN, req, "expired (resend=%d)",
+					  !status);
 
 				if (status) {
 					psc_assert(req->rq_status);

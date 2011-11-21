@@ -693,7 +693,9 @@ _pscrpc_free_req(struct pscrpc_request *request, int locked)
 	if (request == NULL)
 		return;
 
-	DEBUG_REQ(PLL_INFO, request, "freeing");
+	DEBUG_REQ(PLL_INFO, request, "freeing (rqcomp_compcnt=%d)", 
+		  request->rq_comp ? 
+		  atomic_read(&request->rq_comp->rqcomp_compcnt) : -999);
 
 	psc_assert(!request->rq_receiving_reply);
 	psc_assert(request->rq_rqbd == NULL);/* client-side */
