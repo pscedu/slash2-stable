@@ -1186,6 +1186,7 @@ pscfs_reply_read(struct pscfs_req *pfr, void *buf, ssize_t len, int rc)
 	else
 		fuse_reply_buf(pfr->pfr_fuse_req, buf, len);
 
+	psc_assert(buf == pfr->pfr_buf);
 	PSCFREE(pfr->pfr_info);
 	PSCFREE(pfr->pfr_buf);
 	psc_pool_return(pscfs_req_pool, pfr);
