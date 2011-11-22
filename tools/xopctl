@@ -167,7 +167,8 @@ launch()
 
 		echorun xscreen -S -d "$dir/src/p" -I '
 		    export PSC_SYSLOG_info=1
-		    export PSC_LOG_LEVEL=info
+		    export PSC_LOG_LEVEL=warn
+		    export PSC_LOG_LEVEL_info=info
 		    export PSC_LOG_FILE='$dir'/'$mode'.s2/log/'$name'/%t
 		    export CONFIG_FILE='$dir'/'$mode'.s2/slcfg
 		    export SHELL=/bin/bash
