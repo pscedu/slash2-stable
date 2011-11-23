@@ -119,7 +119,7 @@ my $enums = join '', map { "\tPRVAL($_);\n" } uniq sort @enums;
 $enums = "\tprintf(\"\\nenums:\\n\");\n" . $enums if $enums;
 $lines =~ s!(?<=/\* start enums \*/\n).*?(?=/\* end enums \*/)!$enums\t!s;
 
-open OUT, ">", $outfn;
+open OUT, ">", $outfn or die "$outfn: $!\n";
 print OUT $lines;
 close OUT;
 
