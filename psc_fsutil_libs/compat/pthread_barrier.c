@@ -95,7 +95,7 @@ pthread_barrier_destroy(pthread_barrier_t *barrier)
 int
 pthread_barrier_wait(pthread_barrier_t *barrier)
 {
-	int status, cancel, tmp;
+	int status = 0, cancel, tmp;
 	unsigned long cycle;
 
 	if (barrier->valid != BARRIER_VALID)
