@@ -62,7 +62,7 @@ PICKLE_NEED_VERSION=					$(word 2,$$Rev$$)
  ifdef PICKLE_HAVE_STRLCPY
   DEFINES+=						-DHAVE_STRLCPY
  else
-  SRCS+=						${PFL_BASE}/compat/strlcpy.c
+  STR_SRCS+=						${PFL_BASE}/compat/strlcpy.c
  endif
 
  ifdef PICKLE_HAVE_STRNLEN
