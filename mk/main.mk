@@ -285,6 +285,10 @@ ifneq ($(filter readline,${MODULES}),)
   LDFLAGS+=	-lreadline
 endif
 
+ifneq ($(filter str,${MODULES}),)
+  SRCS+=	${STR_SRCS}
+endif
+
 # Post-modules processing
 
 ifneq ($(filter ${PFL_BASE}/psc_util/pthrutil.c,${SRCS}),)
