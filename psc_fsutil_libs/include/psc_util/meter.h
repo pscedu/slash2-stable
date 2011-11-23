@@ -17,6 +17,11 @@
  * %PSC_END_COPYRIGHT%
  */
 
+/*
+ * This interface provides a basic rudiment for progress tracking for
+ * reporting purposes.
+ */
+
 #ifndef _PFL_METER_H_
 #define _PFL_METER_H_
 
@@ -30,16 +35,17 @@
 #define PSC_METER_NAME_MAX	32
 
 struct psc_meter {
-	struct psclist_head	pm_lentry;
-	char			pm_name[PSC_METER_NAME_MAX];
-	size_t			pm_cur;
-	size_t			pm_max;
+	struct psclist_head	 pm_lentry;
+	char			 pm_name[PSC_METER_NAME_MAX];
+	uint64_t		 pm_cur;
+	uint64_t		 pm_max;
+	uint64_t		*pm_maxp;
 };
 
 #define psc_meter_free(pm)	pll_remove(&psc_meters, (m))
 
-void psc_meter_init(struct psc_meter *, size_t, const char *, ...);
+void psc_meter_init(struct psc_meter *, uint64_t, const char *, ...);
 
-extern struct psc_lockedlist	psc_meters;
+extern struct psc_lockedlist	 psc_meters;
 
 #endif /* _PFL_METER_H_ */

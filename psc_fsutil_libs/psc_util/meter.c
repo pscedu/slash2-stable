@@ -38,6 +38,7 @@ psc_meter_init(struct psc_meter *pm, size_t max, const char *fmt, ...)
 	memset(pm, 0, sizeof(*pm));
 	INIT_PSC_LISTENTRY(&pm->pm_lentry);
 	pm->pm_max = max;
+	pm->pm_maxp = &pm->pm_max;
 
 	va_start(ap, fmt);
 	rc = vsnprintf(pm->pm_name, sizeof(pm->pm_name), fmt, ap);

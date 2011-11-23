@@ -679,17 +679,17 @@ psc_ctlmsg_meter_prdat(__unusedx const struct psc_ctlmsghdr *mh,
 	len = printf("%30s %5zu/%8zu ",
 	    pcm->pcm_mtr.pm_name,
 	    pcm->pcm_mtr.pm_cur,
-	    pcm->pcm_mtr.pm_max);
+	    *pcm->pcm_mtr.pm_maxp);
 	psc_assert(len != -1);
 	len = PSC_CTL_DISPLAY_WIDTH - len - 3;
 	if (len < 0)
 		len = 0;
 	putchar('|');
 	for (n = 0; n < (int)(len * pcm->pcm_mtr.pm_cur /
-	    pcm->pcm_mtr.pm_max); n++)
+	    *pcm->pcm_mtr.pm_maxp); n++)
 		putchar('=');
 	putchar(pcm->pcm_mtr.pm_cur ==
-	    pcm->pcm_mtr.pm_max ? '=' : '>');
+	    *pcm->pcm_mtr.pm_maxp ? '=' : '>');
 	for (; n < len; n++)
 		putchar(' ');
 	printf("|\n");
