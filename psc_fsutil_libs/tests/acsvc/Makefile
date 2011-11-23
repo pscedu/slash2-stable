@@ -18,6 +18,6 @@ SRCS+=		${PFL_BASE}/psc_util/subsys.c
 SRCS+=		${PFL_BASE}/psc_util/thread.c
 SRCS+=		${PFL_BASE}/psc_util/waitq.c
 
-MODULES+=	pthread pfl
+MODULES+=	pthread pfl str
 
 include ${PFLMK}

@@ -216,7 +216,7 @@ ifneq ($(filter m,${MODULES}),)
 endif
 
 ifneq ($(filter pfl,${MODULES}),)
-  MODULES+=	pfl-hdrs
+  MODULES+=	pfl-hdrs str
   SRCS+=	${PFL_BASE}/psc_util/alloc.c
   SRCS+=	${PFL_BASE}/psc_util/init.c
   SRCS+=	${PFL_BASE}/psc_util/log.c
