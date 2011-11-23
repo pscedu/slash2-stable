@@ -187,8 +187,8 @@ pflnet_rtexists_rtnetlink(const struct sockaddr *sa)
 	struct nlmsghdr *nmh;
 	struct rtattr *rta;
 	struct rtmsg *rtm;
-	int rv = 0, s;
 	ssize_t rc, rca;
+	int rv = 0, s;
 	size_t nb;
 
 	s = socket(PF_NETLINK, SOCK_RAW, NETLINK_ROUTE);
@@ -290,8 +290,8 @@ pflnet_getifnfordst_rtnetlink(const struct sockaddr *sa,
 	struct nlmsghdr *nmh;
 	struct rtattr *rta;
 	struct rtmsg *rtm;
-	int s, ifidx;
 	ssize_t rc, rca;
+	int s, ifidx;
 	size_t nb;
 
 	sin = (void *)sa;
