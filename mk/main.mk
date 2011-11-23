@@ -289,6 +289,10 @@ ifneq ($(filter str,${MODULES}),)
   SRCS+=	${STR_SRCS}
 endif
 
+ifneq ($(filter futimens,${MODULES}),)
+  SRCS+=	${FUTIMENS_SRCS}
+endif
+
 # Post-modules processing
 
 ifneq ($(filter ${PFL_BASE}/psc_util/pthrutil.c,${SRCS}),)
