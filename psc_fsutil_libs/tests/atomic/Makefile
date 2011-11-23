@@ -10,6 +10,6 @@ SRCS+=		${PFL_BASE}/psc_util/init.c
 SRCS+=		${PFL_BASE}/psc_util/log.c
 SRCS+=		${PFL_BASE}/psc_util/pthrutil.c
 
-MODULES+=	pthread pfl
+MODULES+=	pthread pfl barrier
 
 include ${PFLMK}

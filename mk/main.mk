@@ -293,6 +293,14 @@ ifneq ($(filter futimens,${MODULES}),)
   SRCS+=	${FUTIMENS_SRCS}
 endif
 
+ifneq ($(filter random,${MODULES}),)
+  SRCS+=	${RND_SRCS}
+endif
+
+ifneq ($(filter barrier,${MODULES}),)
+  SRCS+=	${BARRIER_SRCS}
+endif
+
 # Post-modules processing
 
 ifneq ($(filter ${PFL_BASE}/psc_util/pthrutil.c,${SRCS}),)
@@ -305,6 +313,7 @@ ifneq ($(filter ${PFL_BASE}/psc_util/thread.c,${SRCS}),)
   SRCS+=	${PFL_BASE}/psc_ds/lockedlist.c
   SRCS+=	${PFL_BASE}/psc_util/subsys.c
   SRCS+=	${PFL_BASE}/psc_util/waitq.c
+  SRCS+=	${CLOCK_SRCS}
 endif
 
 ifneq ($(filter ${PFL_BASE}/psc_util/subsys.c,${SRCS}),)
