@@ -11,7 +11,7 @@ SRCS+=		fio_sym.c
 SRCS+=		fio_symtable.c
 
 DEBUG?=		0
-MODULES+=	m pfl
+MODULES+=	m pfl str
 
 ifdef QK
   MODULES+=	qk
