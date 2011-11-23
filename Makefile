@@ -20,6 +20,6 @@ ifdef QK
 MODULES+=	mpi qk
 endif
 
-MODULES+=	pfl
+MODULES+=	pfl str
 
 include ${MAINMK}
