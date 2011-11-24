@@ -1316,6 +1316,7 @@ psc_ctlrep_getmeter(int fd, struct psc_ctlmsghdr *mh, void *m)
 			found = 1;
 
 			pcm->pcm_mtr = *pm; /* XXX atomic */
+			pcm->pcm_mtr.pm_max = *pm->pm_maxp; /* XXX atomic */
 			rc = psc_ctlmsg_sendv(fd, mh, pcm);
 			if (!rc)
 				break;

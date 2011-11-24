@@ -665,7 +665,7 @@ void
 psc_ctlmsg_meter_prhdr(__unusedx struct psc_ctlmsghdr *mh,
     __unusedx const void *m)
 {
-	printf("%30s %13s %8s\n",
+	printf("%-20s %20s %s\n",
 	    "progress-meter", "position", "progress");
 }
 
@@ -674,22 +674,29 @@ psc_ctlmsg_meter_prdat(__unusedx const struct psc_ctlmsghdr *mh,
     const void *m)
 {
 	const struct psc_ctlmsg_meter *pcm = m;
-	int n, len;
+	uint64_t max;
+	int n = 0, len;
+	char buf[50];
 
-	len = printf("%30s %5zu/%8zu ",
-	    pcm->pcm_mtr.pm_name,
-	    pcm->pcm_mtr.pm_cur,
-	    *pcm->pcm_mtr.pm_maxp);
+	max = pcm->pcm_mtr.pm_max;
+	if (pcm->pcm_mtr.pm_cur > max)
+		max = pcm->pcm_mtr.pm_cur;
+
+	n = snprintf(buf, sizeof(buf), "%zu/%zu", pcm->pcm_mtr.pm_cur, max);
+	len = printf("%-20s %*s%s ", pcm->pcm_mtr.pm_name, 20 - n, "", buf);
 	psc_assert(len != -1);
+	n = 0;
+
+	putchar('|');
 	len = PSC_CTL_DISPLAY_WIDTH - len - 3;
 	if (len < 0)
 		len = 0;
-	putchar('|');
-	for (n = 0; n < (int)(len * pcm->pcm_mtr.pm_cur /
-	    *pcm->pcm_mtr.pm_maxp); n++)
-		putchar('=');
-	putchar(pcm->pcm_mtr.pm_cur ==
-	    *pcm->pcm_mtr.pm_maxp ? '=' : '>');
+	if (max) {
+		for (; n < (int)(len * pcm->pcm_mtr.pm_cur / max); n++)
+			putchar('=');
+		putchar(pcm->pcm_mtr.pm_cur == max ? '=' : '>');
+	} else
+		putchar(' ');
 	for (; n < len; n++)
 		putchar(' ');
 	printf("|\n");
