@@ -682,8 +682,10 @@ psc_ctlmsg_meter_prdat(__unusedx const struct psc_ctlmsghdr *mh,
 	if (pcm->pcm_mtr.pm_cur > max)
 		max = pcm->pcm_mtr.pm_cur;
 
-	n = snprintf(buf, sizeof(buf), "%zu/%zu", pcm->pcm_mtr.pm_cur, max);
-	len = printf("%-20s %*s%s ", pcm->pcm_mtr.pm_name, 20 - n, "", buf);
+	n = snprintf(buf, sizeof(buf), "%"PRIu64"/%"PRIu64,
+	    pcm->pcm_mtr.pm_cur, max);
+	len = printf("%-20s %*s%s ", pcm->pcm_mtr.pm_name, 20 - n, "",
+	    buf);
 	psc_assert(len != -1);
 	n = 0;
 
