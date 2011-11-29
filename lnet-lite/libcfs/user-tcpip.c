@@ -150,7 +150,8 @@ libcfs_ipif_query (char *name, int *up, __u32 *ip)
 
 		getifaddrs(&ifa0);
 		for (ifa = ifa0; ifa; ifa = ifa->ifa_next) {
-			if (strcmp(ifa->ifa_name, name) == 0 &&
+			if (ifa->ifa_addr->sa_family == AF_INET &&
+			    strcmp(ifa->ifa_name, name) == 0 &&
 			    !nidx--) {
 				rc = 0;
 				memcpy(&ifr.ifr_addr, ifa->ifa_addr,
