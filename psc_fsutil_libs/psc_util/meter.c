@@ -30,7 +30,7 @@ struct psc_lockedlist	psc_meters =
     PLL_INIT(&psc_meters, struct psc_meter, pm_lentry);
 
 void
-psc_meter_init(struct psc_meter *pm, size_t max, const char *fmt, ...)
+psc_meter_init(struct psc_meter *pm, uint64_t max, const char *fmt, ...)
 {
 	va_list ap;
 	int rc;
