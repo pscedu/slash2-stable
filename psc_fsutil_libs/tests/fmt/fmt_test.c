@@ -24,6 +24,7 @@
 
 #include "pfl/cdefs.h"
 #include "pfl/pfl.h"
+#include "pfl/str.h"
 #include "psc_util/fmt.h"
 #include "psc_util/log.h"
 
@@ -39,8 +40,7 @@ usage(void)
 int
 main(int argc, char *argv[])
 {
-	char buf[PSCFMT_RATIO_BUFSIZ];
-	char hbuf[PSCFMT_HUMAN_BUFSIZ];
+	char buf[PSCFMT_RATIO_BUFSIZ], hbuf[PSCFMT_HUMAN_BUFSIZ], fn[PATH_MAX];
 	int c;
 
 	while ((c = getopt(argc, argv, "")) != -1)
@@ -58,5 +58,15 @@ main(int argc, char *argv[])
 	psc_fmt_ratio(buf, 10001, 10001); psc_assert(strcmp(buf, "100%") == 0);
 
 	psc_fmt_human(hbuf, 12); psc_assert(strcmp(hbuf, "    12B") == 0);
+
+	pfl_dirname("", fn); psc_assert(strcmp(fn, ".") == 0);
+	pfl_dirname(NULL, fn); psc_assert(strcmp(fn, ".") == 0);
+	pfl_dirname("sdfdf", fn); psc_assert(strcmp(fn, ".") == 0);
+	pfl_dirname("/", fn); psc_assert(strcmp(fn, "/") == 0);
+	pfl_dirname("/foo", fn); psc_assert(strcmp(fn, "/") == 0);
+	pfl_dirname("//", fn); psc_assert(strcmp(fn, "/") == 0);
+	pfl_dirname("////", fn); psc_assert(strcmp(fn, "/") == 0);
+	pfl_dirname("/foo/bar", fn); psc_assert(strcmp(fn, "/foo") == 0);
+	pfl_dirname("/foo/bar/glar", fn); psc_assert(strcmp(fn, "/foo/bar") == 0);
 	exit(0);
 }
