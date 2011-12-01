@@ -79,8 +79,6 @@ pfl_dirname(const char *s, char *buf)
 			sep = buf + i;
 		if (i >= PATH_MAX)
 			return (ENAMETOOLONG);
-		if (i - (sep - s) > NAME_MAX)
-			return (ENAMETOOLONG);
 		buf[i] = s[i];
 	}
 	while (sep > s + 1 && sep[-1] == '/')
