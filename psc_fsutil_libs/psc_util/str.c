@@ -73,7 +73,6 @@ pfl_dirname(const char *s, char *buf)
 		strlcpy(buf, ".", PATH_MAX);
 		return (0);
 	}
-
 	for (i = 0; s[i]; i++, cpnlen++) {
 		if (s[i] == '/') {
 			sep = i;
@@ -85,9 +84,11 @@ pfl_dirname(const char *s, char *buf)
 			return (ENAMETOOLONG);
 		buf[i] = s[i];
 	}
-	if (sep > 0) {
+	if (sep >= 0) {
 		while (sep > 1 && buf[sep - 1] == '/')
 			sep--;
+		if (sep == 0)
+			sep++;
 		buf[sep] = '\0';
 	}
 	return (0);
