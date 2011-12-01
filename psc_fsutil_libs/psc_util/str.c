@@ -66,24 +66,29 @@ xsnprintf(char *s, size_t len, const char *fmt, ...)
 int
 pfl_dirname(const char *s, char *buf)
 {
-	char *sep = NULL;
-	int i;
+	ssize_t sep = -1;
+	size_t i, cpnlen;
 
 	if (s == NULL || strchr(s, '/') == NULL) {
 		strlcpy(buf, ".", PATH_MAX);
 		return (0);
 	}
 
-	for (i = 0; s[i]; i++) {
-		if (s[i] == '/')
-			sep = buf + i;
+	for (i = 0; s[i]; i++, cpnlen++) {
+		if (s[i] == '/') {
+			sep = i;
+			cpnlen = 0;
+		}
 		if (i >= PATH_MAX)
+			return (ENAMETOOLONG);
+		if (cpnlen > NAME_MAX)
 			return (ENAMETOOLONG);
 		buf[i] = s[i];
 	}
-	while (sep > s + 1 && sep[-1] == '/')
-		sep--;
-	if (sep)
-		*sep = '\0';
+	if (sep > 0) {
+		while (sep > 1 && buf[sep - 1] == '/')
+			sep--;
+		buf[sep] = '\0';
+	}
 	return (0);
 }
