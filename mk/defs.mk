@@ -31,6 +31,7 @@ INST_LIBDIR?=	${INST_BASE}/lib
 INST_LIBDIR?=	${INST_BASE}/include
 INST_MANDIR?=	${INST_BASE}/man
 INST_ETCDIR?=	${INST_BASE}/etc
+INST_PLMODDIR?=	${INST_BASE}/lib/perl5
 
 MAKEFLAGS+=	--no-print-directory
 

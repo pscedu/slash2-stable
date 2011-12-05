@@ -432,30 +432,41 @@ install: recurse-install install-hook
 	    [ -z "$(findstring /tests/,${CURDIR})" -a			\
 	      -z "$(findstring /utils/,${CURDIR})" -o			\
 	      "${FORCE_INST}" -eq 1 ]; then				\
-		_dir="${INST_BINDIR}";					\
+		dir="${INST_BINDIR}";					\
 		man="${MAN}";						\
 		if [ -n "${MAN}" -a x"$${man%.8}" != x"${MAN}" ]; then	\
-			_dir="${INST_SBINDIR}";				\
+			dir="${INST_SBINDIR}";				\
 		fi;							\
-		mkdir -p "$$_dir";					\
-		${ECHORUN} ${INSTALL} -m 555 ${PROG} "$$_dir";		\
+		mkdir -p "$$dir";					\
+		${ECHORUN} ${INSTALL} -m 555 ${PROG} "$$dir";		\
+		if head -1 ${PROG} | grep -aq perl; then		\
+			${ECHORUN} perl -i -Wpe				\
+			    's{^# use lib qw\(%INST_PLMODDIR%\);$$}$(	\
+			     ){use lib qw(${INST_PLMODDIR});}'		\
+			     $$dir/${PROG};				\
+		fi;							\
 	fi
 	@if ${NOTEMPTY} "${MAN}"; then					\
 		for i in ${MAN}; do					\
 			dir=${INST_MANDIR}/man$${i##*.};		\
-			mkdir -p $$dir;					\
-			${ECHORUN} ${INSTALL} -m 444 $$i $$dir;		\
+			mkdir -p "$$dir";				\
+			${ECHORUN} ${INSTALL} -m 444 $$i "$$dir";	\
 		done;							\
 	fi
 	@if ${NOTEMPTY} "${HEADERS}"; then				\
 		for i in ${HEADERS}; do					\
-			if [ x"$${i%/*}" = x"$$i" ]; then		\
-				_dir=${INST_INCDIR}/$${i%/*};		\
-			else						\
-				_dir=${INST_INCDIR};			\
-			fi;						\
-			mkdir -p $$_dir;				\
-			${ECHORUN} ${INSTALL} -m 444 $$i $$_dir;	\
+			base=$$(basename "$$i");			\
+			dir=${INST_INCDIR}/$$(dirname "$$i");		\
+			mkdir -p "$$dir";				\
+			${ECHORUN} ${INSTALL} -m 444 $$i "$$dir";	\
+		done;							\
+	fi
+	@if ${NOTEMPTY} "${PLMODS}"; then				\
+		for i in ${PLMODS}; do					\
+			base=$$(basename "$$i");			\
+			dir=${INST_PLMODDIR}/$$(dirname "$$i");		\
+			mkdir -p $$dir;					\
+			${ECHORUN} ${INSTALL} -m 444 $$i $$dir;		\
 		done;							\
 	fi
 
