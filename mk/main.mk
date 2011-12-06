@@ -237,7 +237,7 @@ endif
 
 ifneq ($(filter pfl-hdrs,${MODULES}),)
   INCLUDES+=	-I${PFL_BASE}/include
-  SRC_PATH+=	${PFL_BASE}/{include,psc_*}
+  SRC_PATH+=	${PFL_BASE}/include $(wildcard ${PFL_BASE}/psc_*)
 endif
 
 ifneq ($(filter mpi,${MODULES}),)
