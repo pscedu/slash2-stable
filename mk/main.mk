@@ -16,6 +16,7 @@
 # %PSC_END_COPYRIGHT%
 
 CROOTDIR=		$(realpath ${ROOTDIR})
+
 STRIPROOTDIR=		$(subst ${CROOTDIR}/,,$1)
 PATH_NAMIFY=		$(subst .,_,$(subst -,_,$(subst /,_,$1)))
 FILE_CFLAGS_VARNAME=	$(call PATH_NAMIFY,$(call STRIPROOTDIR,$(abspath $1)))_CFLAGS
@@ -24,6 +25,7 @@ FILE_CFLAGS=		${$(call PATH_NAMIFY,$(call STRIPROOTDIR,$(realpath $1)))_CFLAGS}
 FILE_PCPP_FLAGS=	${$(call PATH_NAMIFY,$(call STRIPROOTDIR,$(realpath $1)))_PCPP_FLAGS}
 ADD_FILE_CFLAGS=	$(shell if ! [ -f "$(abspath $1)" ]; then echo "ADD_FILE_CFLAGS: no such file: $(abspath $1)" >&2; fi )\
 			$(eval $(call FILE_CFLAGS_VARNAME,$1)+=$2)
+
 FORCE_INST?=		0
 
 ifneq ($(wildcard /local/tmp),)
@@ -43,7 +45,9 @@ include ${ROOTDIR}/mk/defs.mk
 include ${ROOTDIR}/mk/pickle.mk
 
 _TSRCS=			$(sort $(foreach fn,${SRCS},$(realpath ${fn})))
-_TSRC_PATH=		$(sort $(foreach dir,${SRC_PATH} .,$(realpath ${dir})))
+_TSRC_PATH=		$(shell perl -Wle 'my @a; push @a, shift; for my $$t (sort @ARGV) {	\
+			  next if grep { $$t =~ /^\Q$$_\E/ } @a; print $$t; push @a, $$t } '	\
+			  $(foreach dir,. ${SRC_PATH},$(realpath ${dir})))
 
 _TOBJS=			$(patsubst %.c,%.o,$(filter %.c,${_TSRCS}))
 _TOBJS+=		$(patsubst %.y,%.o,$(filter %.y,${_TSRCS}))
@@ -233,7 +237,7 @@ endif
 
 ifneq ($(filter pfl-hdrs,${MODULES}),)
   INCLUDES+=	-I${PFL_BASE}/include
-  SRC_PATH+=	$(filter-out %/tests/,$(shell ls -d ${PFL_BASE}/*/))
+  SRC_PATH+=	${PFL_BASE}/{include,psc_*}
 endif
 
 ifneq ($(filter mpi,${MODULES}),)
@@ -533,8 +537,8 @@ printvar-%:
 cscope cs: recurse-cs
 	cscope -Rbq $(addprefix -s,$(filter-out ${CURDIR},${_TSRC_PATH}))
 
-etags: recurse-etags
-	find ${SRC_PATH} -name \*.[chly] | xargs etags
+etags et: recurse-etags
+	find . ${_TSRC_PATH} -name \*.[chly] | xargs etags
 
 printenv:
 	@env | sort
