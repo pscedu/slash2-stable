@@ -29,15 +29,15 @@
 #include "psc_util/random.h"
 
 #define _PATH_URANDOM "/dev/urandom"
-#define SMALL_BUF 128
+#define SMALL_BUFSIZ 128
 
 psc_spinlock_t	 psc_random_lock = SPINLOCK_INIT;
-unsigned char	 psc_random_buf[SMALL_BUF];
+unsigned char	 psc_random_buf[SMALL_BUFSIZ];
 ssize_t		 psc_random_siz;
 unsigned char	*psc_random_pos;
 
 /**
- * psc_random_getbyte: get a byte from our random data buffer and refill
+ * psc_random_getbyte: Get a byte from our random data buffer and refill
  *	our buffer if needed.
  * Notes: not thread-safe!
  */
@@ -66,7 +66,7 @@ psc_random_getbyte(void)
 }
 
 /**
- * psc_random32: get a random 32-bit number from /dev/urandom.
+ * psc_random32: Get a random 32-bit number from /dev/urandom.
  */
 uint32_t
 psc_random32(void)
@@ -83,7 +83,7 @@ psc_random32(void)
 }
 
 /**
- * psc_random64: get a random 64-bit number from /dev/urandom.
+ * psc_random64: Get a random 64-bit number from /dev/urandom.
  */
 uint64_t
 psc_random64(void)
@@ -104,7 +104,7 @@ psc_random64(void)
 }
 
 /**
- * psc_random32u: get a uniformly distributed random 32-bit number
+ * psc_random32u: Get a uniformly distributed random 32-bit number
  *	from /dev/urandom.
  * @max: bound.
  */
