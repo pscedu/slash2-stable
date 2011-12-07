@@ -56,23 +56,9 @@ pfl_filewalk(const char *fn, int flags,
 				break;
 			case FTS_F:
 			case FTS_D:
-				if (realpath(f->fts_path, buf) == NULL)
-					warn("%s", f->fts_path);
-				else {
-					if (flags & PFL_FILEWALKF_VERBOSE)
-						warnx("processing %s%s",
-						    buf, f->fts_info ==
-						    FTS_D ? "/" : "");
-					rc = cbf(buf, f->fts_statp, arg);
-					if (rc) {
-						fts_close(fp);
-						return (rc);
-					}
-				}
-				break;
 			case FTS_SL:
-				if (flags & PFL_FILEWALKF_VERBOSE)
-					warnx("processing %s", buf);
+				warnx("processing %s%s", f->fts_path, 
+				    f->fts_info == FTS_D ? "/" : "");
 				rc = cbf(f->fts_path, f->fts_statp, arg);
 				if (rc) {
 					fts_close(fp);
