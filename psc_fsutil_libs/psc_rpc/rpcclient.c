@@ -905,7 +905,6 @@ int
 pscrpc_check_set(struct pscrpc_request_set *set, int check_allsent)
 {
 	struct pscrpc_request *req;
-	int force_timer_recalc = 0;
 	int ncompleted         = 0;
 
 	pscrpc_set_lock(set);
@@ -931,7 +930,6 @@ pscrpc_check_set(struct pscrpc_request_set *set, int check_allsent)
 		if (req->rq_phase == PSCRPC_RQ_PHASE_NEW &&
 		    pscrpc_push_req(req)) {
 			DEBUG_REQ(PLL_WARN, req, "PSCRPC_RQ_PHASE_NEW");
-			force_timer_recalc = 1;
 		}
 
 		if (!(req->rq_phase == PSCRPC_RQ_PHASE_RPC ||
@@ -1063,8 +1061,6 @@ pscrpc_check_set(struct pscrpc_request_set *set, int check_allsent)
 						  "send failed (%d)", rc);
 					req->rq_net_err = 1;
 				}
-				/* need to reset the timeout */
-				force_timer_recalc = 1;
 			}
 
 			if (pscrpc_client_receiving_reply(req) ||
@@ -1146,9 +1142,9 @@ pscrpc_check_set(struct pscrpc_request_set *set, int check_allsent)
 	/* If we hit an error, we want to recover promptly. */
 	if (check_allsent)
 		/* old behavior */
-		return (set->set_remaining == 0 || force_timer_recalc);
+		return (set->set_remaining == 0);
 	/* new (single non-blocking req) behavior */
-	return (ncompleted || force_timer_recalc);
+	return (ncompleted);
 }
 
 void
@@ -1197,7 +1193,7 @@ pscrpc_expire_one_request(struct pscrpc_request *req)
 {
 	struct pscrpc_import *imp = req->rq_import;
 
-	DEBUG_REQ(imp->imp_igntimeout ? PLL_NOTICE : PLL_ERROR, req,
+	DEBUG_REQ(imp->imp_igntimeout ? PLL_WARN : PLL_ERROR, req,
 	    "timeout (sent at %"PSCPRI_TIMET", %"PSCPRI_TIMET"s ago)",
 	    req->rq_sent, CURRENT_SECONDS - req->rq_sent);
 
@@ -1402,35 +1398,23 @@ pscrpc_set_wait(struct pscrpc_request_set *set)
 			rc = -ECONNABORTED;
 			continue;
 		}
-#if 1
-		/*
-		 * This assumes 100% reliable delivery
-		 * which simply doesn't exist.
-		 */
+
 		psc_assert(req->rq_phase == PSCRPC_RQ_PHASE_COMPLETE);
-#else
-		/* so if all messages didn't complete
-		 * then just make a note of it */
-		if (!(req->rq_phase == PSCRPC_RQ_PHASE_COMPLETE)) {
-			psclog_errorx("error in rq_phase: rq_phase=%#x",
-			    req->rq_phase);
-			rc = -EIO;
-		}
-#endif
+
 		if (req->rq_status) {
-			//			psclog_errorx("error status detected in "
-			//   "rq_status (%d)", req->rq_status);
 			rc = -(abs(req->rq_status));
+			DEBUG_REQ(PLL_ERROR, req, "error rq_status=%d set=%p", 
+				  rc, set);
 		}
 	}
 
-	//	if (rc)
-	//	psclog_errorx("set %p failed, rc=%d", set, rc);
+	if (rc)
+		psclog_errorx("set %p failed, rc=%d", set, rc);
 
 	if (set->set_interpret) {
 		rc = set->set_interpret(set, set->set_arg, rc);
 		if (rc)
-			psclog_errorx("set interpreter failed (%d)", rc);
+			psclog_errorx("set interpreter failed rc=%d", rc);
 	}
 
 	return (rc);
@@ -1457,15 +1441,12 @@ pscrpc_set_finalize(struct pscrpc_request_set *set, int block, int destroy)
 			errno = -rc;
 			psclog_errorx("pscrpc_set_wait() failed (set=%p): %s",
 			    set, strerror(-rc));
-			return (rc);
-		} else {
-			if (destroy)
-				pscrpc_set_destroy(set);
-			return (0);
 		}
+		if (destroy)
+			pscrpc_set_destroy(set);
 	} else {
 		rc = pscrpc_check_set(set, 1);
-		psclog_trace("pscrpc_check_set() returned %d set=%p", rc, set);
+		psclog_debug("pscrpc_check_set() returned %d set=%p", rc, set);
 		if (rc == 1)
 			goto set_wait;
 		else
