@@ -72,7 +72,7 @@ pfl_filewalk(const char *fn, int flags,
 				break;
 			case FTS_SL:
 				if (flags & PFL_FILEWALKF_VERBOSE)
-					warnx("processing %s%s", buf);
+					warnx("processing %s", buf);
 				rc = cbf(f->fts_path, f->fts_statp, arg);
 				if (rc) {
 					fts_close(fp);
