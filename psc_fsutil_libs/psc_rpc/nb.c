@@ -108,10 +108,9 @@ int
 pscrpc_nbreqset_reap(struct pscrpc_nbreqset *nbs)
 {
 	int saved_rc = 0;
-	int rc, nreaped = 0, nchecked = 0, timeout = 1;
+	int rc, nreaped = 0, nchecked = 0;
 	struct pscrpc_request_set *set = &nbs->nb_reqset;
 	struct pscrpc_request *req, *next;
-	struct l_wait_info lwi;
 
 	spinlock(&nbs->nb_lock);
 	if (nbs->nb_flags & NBREQSET_WORK_INPROG) {
@@ -122,11 +121,7 @@ pscrpc_nbreqset_reap(struct pscrpc_nbreqset *nbs)
 		freelock(&nbs->nb_lock);
 	}
 
-	lwi = LWI_TIMEOUT(timeout, NULL, NULL);
-	pscrpc_cli_wait_event(&set->set_waitq,
-	    (nreaped = pscrpc_check_set(set, 0)), &lwi);
-
-	if (!nreaped) {
+	if (!(nreaped = pscrpc_check_set(set, 0))) {
 		spinlock(&nbs->nb_lock);
 		nbs->nb_flags &= ~NBREQSET_WORK_INPROG;
 		freelock(&nbs->nb_lock);
