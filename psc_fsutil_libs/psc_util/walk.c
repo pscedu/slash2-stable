@@ -56,9 +56,28 @@ pfl_filewalk(const char *fn, int flags,
 				break;
 			case FTS_F:
 			case FTS_D:
+				/* Call realpath() because msctl needs an absolute path */
+				if (realpath(f->fts_path, buf) == NULL)
+					warn("%s", f->fts_path);
+				else {
+					if (flags & PFL_FILEWALKF_VERBOSE)
+						warnx("processing %s%s",
+						    buf, f->fts_info ==
+						    FTS_D ? "/" : "");
+					rc = cbf(buf, f->fts_statp, arg);
+					if (rc) {
+						fts_close(fp);
+						return (rc);
+					}
+				}
+				break;
 			case FTS_SL:
-				warnx("processing %s%s", f->fts_path, 
-				    f->fts_info == FTS_D ? "/" : "");
+				/* 
+				 * Don't call realpath() because msctl does not use symbolic
+				 * links, and we want to recreate symlink as it for import.
+				 */
+				if (flags & PFL_FILEWALKF_VERBOSE)
+					warnx("processing %s", buf);
 				rc = cbf(f->fts_path, f->fts_statp, arg);
 				if (rc) {
 					fts_close(fp);
