@@ -77,7 +77,7 @@ pfl_filewalk(const char *fn, int flags,
 				 * links, and we want to recreate symlink as it for import.
 				 */
 				if (flags & PFL_FILEWALKF_VERBOSE)
-					warnx("processing %s", buf);
+					warnx("processing %s", f->fts_path);
 				rc = cbf(f->fts_path, f->fts_statp, arg);
 				if (rc) {
 					fts_close(fp);
