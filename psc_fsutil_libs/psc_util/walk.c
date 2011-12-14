@@ -31,6 +31,15 @@
 #include "pfl/walk.h"
 #include "psc_util/log.h"
 
+/**
+ * pfl_filewalk - Traverse a file hierarchy with a given operation.
+ * @fn: file root
+ * @flags: behavorial flags.
+ * @cbf: callback to invoke on each file.
+ * @arg: optional argument to supply to callback.
+ * Notes: the callback will be invoked with a fully resolved absolute
+ * 	path name unless the file in question is a symbolic link.
+ */
 int
 pfl_filewalk(const char *fn, int flags,
     int (*cbf)(const char *, const struct stat *, void *), void *arg)
@@ -56,7 +65,6 @@ pfl_filewalk(const char *fn, int flags,
 				break;
 			case FTS_F:
 			case FTS_D:
-				/* Call realpath() because msctl needs an absolute path */
 				if (realpath(f->fts_path, buf) == NULL)
 					warn("%s", f->fts_path);
 				else {
@@ -72,10 +80,6 @@ pfl_filewalk(const char *fn, int flags,
 				}
 				break;
 			case FTS_SL:
-				/* 
-				 * Don't call realpath() because msctl does not use symbolic
-				 * links, and we want to recreate symlink as it for import.
-				 */
 				if (flags & PFL_FILEWALKF_VERBOSE)
 					warnx("processing %s", f->fts_path);
 				rc = cbf(f->fts_path, f->fts_statp, arg);
