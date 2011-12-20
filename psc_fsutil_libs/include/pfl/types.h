@@ -32,7 +32,7 @@
 #if defined(__APPLE__) || defined(__OpenBSD__) || defined(__FreeBSD__)
 # define PSCPRI_PTHRT		"p"
 #else
-# define PSCPRI_PTHRT		"lu"
+# define PSCPRI_PTHRT		"lx"
 #endif
 
 #if defined(__APPLE__) || defined(__OpenBSD__) || defined(__FreeBSD__)
