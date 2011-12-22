@@ -230,4 +230,8 @@ PICKLE_NEED_VERSION=					$(word 2,$$Rev$$)
   DEFINES+=						-DHAVE_AIO
  endif
 
+ ifdef PICKLE_HAVE_GETMNTINFO
+  DEFINES+=						-DHAVE_GETMNTINFO
+ endif
+
 endif
