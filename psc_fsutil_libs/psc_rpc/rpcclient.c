@@ -540,9 +540,7 @@ pscrpc_send_new_req_locked(struct pscrpc_request *req)
 
 	imp = req->rq_import;
 	spinlock(&imp->imp_lock);
-
 	req->rq_import_generation = imp->imp_generation;
-
 	psclist_add_tail(&req->rq_lentry, &imp->imp_sending_list);
 	freelock(&imp->imp_lock);
 
@@ -746,9 +744,6 @@ pscrpc_queue_wait(struct pscrpc_request *req)
 	/* Mark phase here for a little debug help */
 	req->rq_phase = PSCRPC_RQ_PHASE_RPC;
 
-	spinlock(&imp->imp_lock);
-	req->rq_import_generation = imp->imp_generation;
-
  restart:
 	if (req->rq_resend) {
 		DEBUG_REQ(PLL_WARN, req, "resending (receiving_reply=%d)",
@@ -776,6 +771,9 @@ pscrpc_queue_wait(struct pscrpc_request *req)
 			req->rq_xid = pscrpc_next_xid();
 		}
 	}
+
+	spinlock(&imp->imp_lock);
+	req->rq_import_generation = imp->imp_generation;
 	psclist_add_tail(&req->rq_lentry, &imp->imp_sending_list);
 	freelock(&imp->imp_lock);
 
@@ -815,7 +813,6 @@ pscrpc_queue_wait(struct pscrpc_request *req)
 		/* ...unless we were specifically told otherwise. */
 		if (req->rq_no_resend)
 			GOTO(out, rc = -ETIMEDOUT);
-		spinlock(&imp->imp_lock);
 		goto restart;
 	}
 
