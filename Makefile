@@ -3,6 +3,8 @@
 ROOTDIR=.
 include ${ROOTDIR}/Makefile.path
 
+-include local.mk
+
 SUBDIRS+=	${PFL_BASE}
 SUBDIRS+=	tools
 SUBDIRS+=	apps
@@ -17,4 +19,3 @@ _ZEST_BASE=	${ZEST_BASE}
 endif
 
 include ${MAINMK}
--include local.mk
