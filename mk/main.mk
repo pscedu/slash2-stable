@@ -106,6 +106,7 @@ _TINCLUDES=		$(filter-out -I%,${INCLUDES}) $(patsubst %,-I%,$(foreach \
 CFLAGS+=		${DEFINES} ${_TINCLUDES}
 TARGET?=		$(sort ${PROG} ${LIBRARY} ${TEST})
 PROG?=			${TEST}
+INSTPROG?=		${PROG}
 
 EXTRACT_INCLUDES=	perl -ne 'print $$& while /-I\S+\s?/gc'
 EXTRACT_DEFINES=	perl -ne 'print $$& while /-D\S+\s?/gc'
@@ -442,7 +443,8 @@ install: recurse-install install-hook
 			dir="${INST_SBINDIR}";				\
 		fi;							\
 		mkdir -p "$$dir";					\
-		${ECHORUN} ${INSTALL} -m 555 ${PROG} "$$dir";		\
+		${ECHORUN} ${INSTALL} -m 555 ${PROG}			\
+		    "$$dir/${INSTPROG}";				\
 		if head -1 ${PROG} | grep -aq perl; then		\
 			${ECHORUN} perl -i -Wpe				\
 			    's{^# use lib qw\(%INST_PLMODDIR%\);$$}$(	\
