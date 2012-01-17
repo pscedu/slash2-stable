@@ -18,4 +18,3 @@ endif
 
 include ${MAINMK}
 -include local.mk
-
