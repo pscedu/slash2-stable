@@ -66,8 +66,8 @@ xsnprintf(char *s, size_t len, const char *fmt, ...)
 int
 pfl_dirname(const char *s, char *buf)
 {
+	size_t i, cpnlen = 0;
 	ssize_t sep = -1;
-	size_t i, cpnlen;
 
 	if (s == NULL || strchr(s, '/') == NULL) {
 		strlcpy(buf, ".", PATH_MAX);
