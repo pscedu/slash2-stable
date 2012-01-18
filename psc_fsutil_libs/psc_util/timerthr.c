@@ -46,6 +46,7 @@ psc_tiosthr_main(__unusedx struct psc_thread *thr)
 	int i, stoff;
 
 	while (pscthr_run()) {
+		/* XXX use monotonic clock */
 		PFL_GETTIMEVAL(&tv);
 		usleep(1000000 - tv.tv_usec);
 		PFL_GETTIMEVAL(&tv);
