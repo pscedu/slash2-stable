@@ -41,7 +41,7 @@ psc_fmt_human(char buf[PSCFMT_HUMAN_BUFSIZ], double num)
 }
 
 void
-psc_fmt_ratio(char buf[PSCFMT_RATIO_BUFSIZ], int n, int d)
+psc_fmt_ratio(char buf[PSCFMT_RATIO_BUFSIZ], int64_t n, int64_t d)
 {
 	double val;
 
