@@ -238,7 +238,6 @@ struct psc_journal_xidhndl {
 #define	PJX_NONE			0
 #define	PJX_DISTILL			(1 << 0)
 #define	PJX_WRITTEN			(1 << 1)
-#define	PJX_DISTILL_SYNC		(1 << 2)
 
 /* Actions to be take after the journal log is open */
 #define	PJOURNAL_LOG_DUMP		1
