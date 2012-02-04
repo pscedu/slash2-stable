@@ -88,11 +88,16 @@ psc_journal_io(struct psc_journal *pj, void *p, size_t len, off_t off,
 {
 	ssize_t nb;
 	int rc;
+	struct timespec ts[2], wtime, synctime;
 
 	if (rw == JIO_READ)
 		nb = pread(pj->pj_fd, p, len, off);
-	else
+	else {
+		PFL_GETTIMESPEC(&ts[0]);
 		nb = pwrite(pj->pj_fd, p, len, off);
+		PFL_GETTIMESPEC(&ts[1]);
+		timespecsub(&ts[1], &ts[0], &wtime);
+	}
 
 	if (nb == -1) {
 		rc = errno;
@@ -113,6 +118,7 @@ psc_journal_io(struct psc_journal *pj, void *p, size_t len, off_t off,
 		    &pj->pj_rdist : &pj->pj_wrist, nb);
 
 		if (rw == JIO_WRITE) {
+			PFL_GETTIMESPEC(&ts[0]);
 			if (pj->pj_flags & PJF_ISBLKDEV) {
 #ifdef HAVE_SYNC_FILE_RANGE
 				rc = sync_file_range(pj->pj_fd, off, len,
@@ -123,6 +129,13 @@ psc_journal_io(struct psc_journal *pj, void *p, size_t len, off_t off,
 #endif
 			} else
 				rc = fsync(pj->pj_fd);
+
+			PFL_GETTIMESPEC(&ts[1]);
+			timespecsub(&ts[1], &ts[0], &synctime);
+
+			psclog_notify("wtime="PSCPRI_TIMESPEC" synctime="PSCPRI_TIMESPEC, 
+			   SLPRI_TIMESPEC_ARGS(&wtime), 
+			   SLPRI_TIMESPEC_ARGS(&synctime));
 
 			if (rc)
 				psclog_error("sync_file_range failed "
@@ -251,11 +264,13 @@ pjournal_xnew(struct psc_journal *pj, int distill, uint64_t txg)
 	freelock(&pjournal_count);
 
 	xh = psc_pool_get(xidhndlPool);
+	memset(xh, 0, sizeof(*xh));
 
 	xh->pjx_pj = pj;
 	INIT_SPINLOCK(&xh->pjx_lock);
 	xh->pjx_flags = distill ? PJX_DISTILL : PJX_NONE;
 	xh->pjx_slot = PJX_SLOT_ANY;
+	INIT_PSC_LISTENTRY(&xh->pjx_lentry)
 	INIT_PSC_LISTENTRY(&xh->pjx_pndg_lentry);
 	INIT_PSC_LISTENTRY(&xh->pjx_dstl_lentry);
 	pjournal_next_xid(pj, xh, txg);
