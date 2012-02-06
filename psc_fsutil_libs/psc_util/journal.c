@@ -270,7 +270,7 @@ pjournal_xnew(struct psc_journal *pj, int distill, uint64_t txg)
 	INIT_SPINLOCK(&xh->pjx_lock);
 	xh->pjx_flags = distill ? PJX_DISTILL : PJX_NONE;
 	xh->pjx_slot = PJX_SLOT_ANY;
-	INIT_PSC_LISTENTRY(&xh->pjx_lentry)
+	INIT_PSC_LISTENTRY(&xh->pjx_lentry);
 	INIT_PSC_LISTENTRY(&xh->pjx_pndg_lentry);
 	INIT_PSC_LISTENTRY(&xh->pjx_dstl_lentry);
 	pjournal_next_xid(pj, xh, txg);
