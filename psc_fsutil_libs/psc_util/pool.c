@@ -350,16 +350,17 @@ _psc_pool_shrink(struct psc_poolmgr *m, int n, int failok)
 	}
 
 	for (i = 0; i < n; i++) {
+		p = NULL;
 		locked = POOL_RLOCK(m);
 		if (m->ppm_total > m->ppm_min) {
 			p = POOL_TRYGETOBJ(m);
-			if (p == NULL && !failok)
+			if (p) {
+				m->ppm_total--;
+				m->ppm_nshrink++;
+			} else if (!failok)
 				psc_fatalx("psc_pool_shrink: no free "
 				    "items available to remove");
-			m->ppm_total--;
-			m->ppm_nshrink++;
-		} else
-			p = NULL;
+		}
 		POOL_URLOCK(m, locked);
 		if (p == NULL)
 			break;
