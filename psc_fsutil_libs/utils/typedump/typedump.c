@@ -26,6 +26,7 @@
 /* start includes */
 #include "pfl/_atomic32.h"
 #include "pfl/aio.h"
+#include "pfl/buf.h"
 #include "pfl/cdefs.h"
 #include "pfl/compat.h"
 #include "pfl/explist.h"
@@ -197,6 +198,7 @@ main(int argc, char *argv[])
 	PRTYPE(pscfs_fgen_t);
 	PRTYPE(pscfs_inum_t);
 	PRTYPE(struct aiocb);
+	PRTYPE(struct buf);
 	PRTYPE(struct ifaddrs);
 	PRTYPE(struct l_wait_info);
 	PRTYPE(struct odtable);
