@@ -86,9 +86,9 @@ __static int
 psc_journal_io(struct psc_journal *pj, void *p, size_t len, off_t off,
     int rw)
 {
+	struct timespec ts[2], wtime = { 0, 0 }, synctime;
 	ssize_t nb;
 	int rc;
-	struct timespec ts[2], wtime, synctime;
 
 	if (rw == JIO_READ)
 		nb = pread(pj->pj_fd, p, len, off);
@@ -133,8 +133,8 @@ psc_journal_io(struct psc_journal *pj, void *p, size_t len, off_t off,
 			PFL_GETTIMESPEC(&ts[1]);
 			timespecsub(&ts[1], &ts[0], &synctime);
 
-			psclog_notify("wtime="PSCPRI_TIMESPEC" synctime="PSCPRI_TIMESPEC, 
-			   SLPRI_TIMESPEC_ARGS(&wtime), 
+			psclog_notify("wtime="PSCPRI_TIMESPEC" synctime="PSCPRI_TIMESPEC,
+			   SLPRI_TIMESPEC_ARGS(&wtime),
 			   SLPRI_TIMESPEC_ARGS(&synctime));
 
 			if (rc)
