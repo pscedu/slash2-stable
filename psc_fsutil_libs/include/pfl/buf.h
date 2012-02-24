@@ -29,23 +29,5 @@
 #ifndef _PFL_BUF_H_
 #define _PFL_BUF_H_
 
-struct buf {
-	int	 buf_pos;
-	int	 buf_max;
-	char	*buf_buf;
-};
-
-#define buf_nul(buf) buf_append((buf), '\0')
-
-void	 buf_append(struct buf *, int);
-void	 buf_appendfv(struct buf *, const char *, ...);
-void	 buf_appendv(struct buf *, const char *);
-void	 buf_chop(struct buf *);
-void	 buf_free(struct buf *);
-char	*buf_get(const struct buf *);
-void	 buf_init(struct buf *);
-int	 buf_len(const struct buf *);
-void	 buf_realloc(struct buf *);
-void	 buf_reset(struct buf *);
 
 #endif /* _PFL_BUF_H_ */

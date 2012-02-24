@@ -24,6 +24,12 @@
 
 #include <string.h>
 
+struct pfl_strbuf {
+	int	 psb_pos;
+	int	 psb_max;
+	char	*psb_buf;
+};
+
 #ifndef HAVE_STRLCPY
 size_t	strlcpy(char *, const char *, size_t);
 size_t	strlcat(char *, const char *, size_t);
@@ -43,6 +49,19 @@ char	*pfl_strdup(const char *);
 int	_psc_str_hashify(const char *, int);
 
 int	xsnprintf(char *, size_t, const char *, ...);
+
+#define pfl_strbuf_nul(buf) pfl_strbuf_append((buf), '\0')
+
+void	 pfl_strbuf_append(struct pfl_strbuf *, int);
+void	 pfl_strbuf_appendfv(struct pfl_strbuf *, const char *, ...);
+void	 pfl_strbuf_appendv(struct pfl_strbuf *, const char *);
+void	 pfl_strbuf_chop(struct pfl_strbuf *);
+void	 pfl_strbuf_free(struct pfl_strbuf *);
+char	*pfl_strbuf_get(const struct pfl_strbuf *);
+void	 pfl_strbuf_init(struct pfl_strbuf *);
+int	 pfl_strbuf_len(const struct pfl_strbuf *);
+void	 pfl_strbuf_realloc(struct pfl_strbuf *);
+void	 pfl_strbuf_reset(struct pfl_strbuf *);
 
 static __inline int
 pfl_memchk(const void *buf, int val, size_t len)
