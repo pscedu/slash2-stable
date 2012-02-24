@@ -198,7 +198,6 @@ main(int argc, char *argv[])
 	PRTYPE(pscfs_fgen_t);
 	PRTYPE(pscfs_inum_t);
 	PRTYPE(struct aiocb);
-	PRTYPE(struct buf);
 	PRTYPE(struct ifaddrs);
 	PRTYPE(struct l_wait_info);
 	PRTYPE(struct odtable);
@@ -207,6 +206,7 @@ main(int argc, char *argv[])
 	PRTYPE(struct odtable_receipt);
 	PRTYPE(struct pfl_callerinfo);
 	PRTYPE(struct pfl_mutex);
+	PRTYPE(struct pfl_strbuf);
 	PRTYPE(struct psc_atomic16);
 	PRTYPE(struct psc_atomic32);
 	PRTYPE(struct psc_atomic64);
