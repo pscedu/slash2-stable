@@ -1180,7 +1180,10 @@ pscrpc_set_destroy(struct pscrpc_request_set *set)
 		pscrpc_req_finished(req);
 	}
 
-	psc_assert(set->set_remaining == 0);
+	psc_assert(set->set_remaining == 0 && 
+		   psc_waitq_nwaiters(&set->set_waitq) == 0);
+
+	psc_waitq_destroy(&set->set_waitq);
 
 	PSCRPC_OBD_FREE(set, sizeof(*set));
 }
