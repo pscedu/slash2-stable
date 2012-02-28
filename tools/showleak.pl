@@ -1,4 +1,9 @@
-#!/usr/local/bin/perl
+#!/usr/bin/env perl
+# $Id$
+# %PSC_COPYRIGHT%
+
+# use warnings;
+# use strict;
 
 #[1330381035:740627 sliricthr19:0x801c15400:mem dynarray.c _psc_dynarray_resize 67] alloc()=0x80a952060 sz=8 fl=0
 #[1330381035:740843 sliricthr19:0x801c15400:mem dynarray.c _psc_dynarray_resize 67] realloc(0x80a952060)=0x822125d60 sz=16 fl=0
@@ -22,7 +27,7 @@ while (<>) {
 	if (!defined $h{$1}) {
 	    $h{$1} = $1;
 	}
-	    
+
 	$h{$1}{freed} = 1;
 
     } elsif ($a[5] =~ /free\((0x[a-f0-9]+)\)/) {
