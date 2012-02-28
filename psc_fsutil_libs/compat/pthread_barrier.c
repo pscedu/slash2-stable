@@ -5,26 +5,24 @@
  *
  * This file implements the "barrier" synchronization construct.
  *
- * A barrier causes threads to wait until a set of threads has
- * all "reached" the barrier. The number of threads required is
- * set when the barrier is initialized, and cannot be changed
- * except by reinitializing.
+ * A barrier causes threads to wait until a set of threads has all
+ * "reached" the barrier.  The number of threads required is set when the
+ * barrier is initialized, and cannot be changed except by
+ * reinitializing.
  *
- * The barrier_init() and barrier_destroy() functions,
- * respectively, allow you to initialize and destroy the
- * barrier.
+ * The barrier_init() and barrier_destroy() functions, respectively,
+ * allow you to initialize and destroy the barrier.
  *
- * The barrier_wait() function allows a thread to wait for a
- * barrier to be completed. One thread (the one that happens to
- * arrive last) will return from barrier_wait() with the status
- * -1 on success -- others will return with 0. The special
- * status makes it easy for the calling code to cause one thread
- * to do something in a serial region before entering another
- * parallel section of code.
+ * The barrier_wait() function allows a thread to wait for a barrier to
+ * be completed.  One thread (the one that happens to arrive last) will
+ * return from barrier_wait() with the status -1 on success -- others
+ * will return with 0.  The special status makes it easy for the calling
+ * code to cause one thread to do something in a serial region before
+ * entering another parallel section of code.
  */
 
-#include <pthread.h>
 #include <errno.h>
+#include <pthread.h>
 #include <stdio.h>
 
 #include "pfl/cdefs.h"
@@ -32,8 +30,8 @@
 #include "psc_util/log.h"
 #include "psc_util/pthrutil.h"
 
-/*
- * Initialize a barrier for use.
+/**
+ * pthread_barrier_init - Initialize a barrier for use.
  */
 int
 pthread_barrier_init(pthread_barrier_t *barrier, __unusedx
@@ -46,15 +44,15 @@ pthread_barrier_init(pthread_barrier_t *barrier, __unusedx
 	psc_mutex_init(&barrier->mutex);
 	status = pthread_cond_init(&barrier->cv, NULL);
 	if (status != 0) {
-		pthread_mutex_destroy(&barrier->mutex.pm_mutex);
-		return status;
+		psc_mutex_destroy(&barrier->mutex);
+		return (status);
 	}
 	barrier->valid = BARRIER_VALID;
-	return 0;
+	return (0);
 }
 
-/*
- * Destroy a barrier when done using it.
+/**
+ * pthread_barrier_destroy - Destroy a barrier when done using it.
  */
 int
 pthread_barrier_destroy(pthread_barrier_t *barrier)
@@ -62,7 +60,7 @@ pthread_barrier_destroy(pthread_barrier_t *barrier)
 	int status, status2;
 
 	if (barrier->valid != BARRIER_VALID)
-		return EINVAL;
+		return (EINVAL);
 
 	psc_mutex_lock(&barrier->mutex);
 
@@ -72,7 +70,7 @@ pthread_barrier_destroy(pthread_barrier_t *barrier)
 	 */
 	if (barrier->counter != barrier->threshold) {
 		psc_mutex_unlock(&barrier->mutex);
-		return EBUSY;
+		return (EBUSY);
 	}
 
 	barrier->valid = 0;
@@ -82,15 +80,15 @@ pthread_barrier_destroy(pthread_barrier_t *barrier)
 	 * If unable to destroy either 1003.1c synchronization
 	 * object, return the error status.
 	 */
-	status = pthread_mutex_destroy(&barrier->mutex.pm_mutex);
+	status = psc_mutex_destroy(&barrier->mutex);
 	status2 = pthread_cond_destroy(&barrier->cv);
 	return (status != 0 ? status : status2);
 }
 
-/*
- * Wait for all members of a barrier to reach the barrier. When
- * the count (of remaining members) reaches 0, broadcast to wake
- * all threads waiting.
+/**
+ * pthread_barrier_wait - Wait for all members of a barrier to reach the
+ *	barrier.  When the count (of remaining members) reaches 0,
+ *	broadcast to wake all threads waiting.
  */
 int
 pthread_barrier_wait(pthread_barrier_t *barrier)
@@ -99,7 +97,7 @@ pthread_barrier_wait(pthread_barrier_t *barrier)
 	unsigned long cycle;
 
 	if (barrier->valid != BARRIER_VALID)
-		return EINVAL;
+		return (EINVAL);
 
 	psc_mutex_lock(&barrier->mutex);
 
