@@ -34,7 +34,6 @@
 #include "pfl/cdefs.h"
 #include "pfl/time.h"
 #include "psc_ds/vbitmap.h"
-#include "psc_util/alloc.h"
 #include "psc_util/bitflag.h"
 #include "psc_util/log.h"
 #include "psc_util/multiwait.h"
@@ -156,8 +155,10 @@ psc_multiwaitcond_destroy(struct psc_multiwaitcond *mwc)
 
 		psc_mutex_unlock(&mw->mw_mutex);
 	}
-	/* XXX: ensure no one is waiting on this mutex? */
 	psc_dynarray_free(&mwc->mwc_multiwaits);
+	/* XXX: ensure no one is waiting on this mutex? */
+	psc_mutex_destroy(&mwc->mwc_mutex);
+	memset(mwc, 0, sizeof(*mwc));
 }
 
 /**
@@ -352,8 +353,10 @@ void
 psc_multiwait_free(struct psc_multiwait *mw)
 {
 	psc_multiwait_reset(mw);
+	psc_mutex_destroy(&mw->mw_mutex);
 	psc_dynarray_free(&mw->mw_conds);
 	psc_vbitmap_free(mw->mw_condmask);
+	memset(mw, 0, sizeof(*mw));
 }
 
 /**
