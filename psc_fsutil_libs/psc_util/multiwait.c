@@ -158,7 +158,10 @@ psc_multiwaitcond_destroy(struct psc_multiwaitcond *mwc)
 	psc_dynarray_free(&mwc->mwc_multiwaits);
 	/* XXX: ensure no one is waiting on this mutex? */
 	psc_mutex_destroy(&mwc->mwc_mutex);
+
+#if PFL_DEBUG > 0
 	memset(mwc, 0, sizeof(*mwc));
+#endif
 }
 
 /**
@@ -356,7 +359,10 @@ psc_multiwait_free(struct psc_multiwait *mw)
 	psc_mutex_destroy(&mw->mw_mutex);
 	psc_dynarray_free(&mw->mw_conds);
 	psc_vbitmap_free(mw->mw_condmask);
+
+#if PFL_DEBUG > 0
 	memset(mw, 0, sizeof(*mw));
+#endif
 }
 
 /**
