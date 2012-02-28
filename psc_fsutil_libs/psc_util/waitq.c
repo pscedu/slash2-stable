@@ -51,6 +51,16 @@ psc_waitq_init(struct psc_waitq *q)
 		psc_fatalx("pthread_cond_init: %s", strerror(rc));
 }
 
+void
+psc_waitq_destroy(struct psc_waitq *q)
+{
+	int rc;
+
+	psc_mutex_destroy(&q->wq_mut);
+	rc = pthread_cond_destroy(&q->wq_cond);
+	if (rc)
+		psc_fatalx("pthread_cond_destroy: %s", strerror(rc));
+}
 /**
  * psc_waitq_waitabs - Wait until the time specified for the
  *	resource managed by wq_cond to become available.

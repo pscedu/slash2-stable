@@ -702,6 +702,9 @@ _pscrpc_free_req(struct pscrpc_request *request, int locked)
 	psc_assert(psclist_disjoint(&request->rq_lentry));
 	psc_assert(psclist_disjoint(&request->rq_set_chain_lentry));
 
+	psc_assert(!atomic_read(&request->rq_reply_waitq.wq_nwaiters));
+	psc_waitq_destroy(&request->rq_reply_waitq);
+
 	if (atomic_read(&request->rq_refcount) != 0) {
 		DEBUG_REQ(PLL_ERROR, request,
 			  "freeing request with nonzero refcount");

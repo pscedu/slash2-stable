@@ -30,8 +30,8 @@
 void
 psc_mutex_init(struct pfl_mutex *mut)
 {
-	pthread_mutexattr_t attr;
 	int rc;
+	pthread_mutexattr_t attr;
 
 	memset(mut, 0, sizeof(*mut));
 	rc = pthread_mutexattr_init(&attr);
@@ -44,6 +44,20 @@ psc_mutex_init(struct pfl_mutex *mut)
 	rc = pthread_mutex_init(&mut->pm_mutex, &attr);
 	if (rc)
 		psc_fatalx("pthread_mutex_init: %s", strerror(rc));
+
+	rc = pthread_mutexattr_destroy(&attr);
+	if (rc)
+		psc_fatalx("pthread_mutexattr_destroy: %s", strerror(rc));
+}
+
+void
+psc_mutex_destroy(struct pfl_mutex *mut)
+{
+	int rc;
+
+	rc = pthread_mutex_destroy(&mut->pm_mutex);
+	if (rc)
+                psc_fatalx("pthread_mutex_destroy: %s", strerror(rc));
 }
 
 void

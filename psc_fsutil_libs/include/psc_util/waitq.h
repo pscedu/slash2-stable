@@ -70,6 +70,7 @@ struct psc_waitq {
 #define psc_waitq_timedwait(wq, lk, ts)	psc_waitq_waitabs((wq), (lk), (ts))
 
 void	psc_waitq_init(struct psc_waitq *);
+void    psc_waitq_destroy(struct psc_waitq *);
 void	psc_waitq_wakeone(struct psc_waitq *);
 void	psc_waitq_wakeall(struct psc_waitq *);
 int	psc_waitq_waitrel(struct psc_waitq *, psc_spinlock_t *,
