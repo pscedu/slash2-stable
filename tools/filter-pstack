@@ -17,7 +17,7 @@ my @ign = (
 	[ qw(LNetEQPoll pscrpc_check_events psc_eqpollthr_main _pscthr_begin) ],
 	[ qw(_psc_waitq_waitrelv _pscrpc_nbreapthr_main _pscthr_begin) ],
 	[ qw(psc_waitq_waitabs pscrpcthr_main _pscthr_begin) ],
-	[ qw(psc_waitq_waitrel psc_ctlthr_mainloop _pscthr_begin) ],
+	[ qw(psc_waitq_waitrel psc_ctlthr_mainloop psc_ctlthr_main _pscthr_begin) ],
 	[ qw(psc_waitq_waitrel pscfs_fuse_listener_loop) ],
 	[ qw(pscrpcthr_waitevent pscrpcthr_main _pscthr_begin) ],
 	[ qw(pthread_join pscfs_main main) ],
