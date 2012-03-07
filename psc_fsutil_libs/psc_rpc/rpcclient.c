@@ -1186,8 +1186,6 @@ pscrpc_set_destroy(struct pscrpc_request_set *set)
 	psc_assert(!psc_waitq_nwaiters(&set->set_waitq));
 	psc_waitq_destroy(&set->set_waitq);
 
-	psc_waitq_destroy(&set->set_waitq);
-
 	PSCRPC_OBD_FREE(set, sizeof(*set));
 }
 
