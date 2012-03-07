@@ -128,7 +128,7 @@ pscrpc_import_put(struct pscrpc_import *import)
 	/* XXX what if we fail to establish a connect for a new import */
 	psc_assert(import->imp_connection);
 	pscrpc_put_connection(import->imp_connection);
-
+	psc_waitq_destroy(&import->imp_recovery_waitq);
 	PSCRPC_OBD_FREE(import->imp_client, sizeof(*import->imp_client));
 	PSCRPC_OBD_FREE(import, sizeof(*import));
 }
@@ -1182,6 +1182,9 @@ pscrpc_set_destroy(struct pscrpc_request_set *set)
 
 	psc_assert(set->set_remaining == 0 && 
 		   psc_waitq_nwaiters(&set->set_waitq) == 0);
+	
+	psc_assert(!psc_waitq_nwaiters(&set->set_waitq));
+	psc_waitq_destroy(&set->set_waitq);
 
 	psc_waitq_destroy(&set->set_waitq);
 

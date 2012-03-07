@@ -783,12 +783,15 @@ pscrpc_free_bulk(struct pscrpc_bulk_desc *desc)
 	psc_assert(desc->bd_iov_count != LI_POISON);	/* not freed already */
 	psc_assert(!desc->bd_network_rw);		/* network hands off or */
 	psc_assert(!desc->bd_registered);
+	psc_assert(!psc_waitq_nwaiters(&desc->bd_waitq));
 
 	psc_assert((desc->bd_export != NULL) ^ (desc->bd_import != NULL));
 	if (desc->bd_export)
 		pscrpc_export_put(desc->bd_export);
 	else
 		pscrpc_import_put(desc->bd_import);
+
+	psc_waitq_destroy(&desc->bd_waitq);
 
 	PSCRPC_OBD_FREE(desc, offsetof(struct pscrpc_bulk_desc,
 	    bd_iov[desc->bd_max_iov]));
