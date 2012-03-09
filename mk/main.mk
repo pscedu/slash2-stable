@@ -442,6 +442,9 @@ install: recurse-install install-hook
 		if [ -n "${MAN}" -a x"$${man%.8}" != x"${MAN}" ]; then	\
 			dir="${INST_SBINDIR}";				\
 		fi;							\
+		if ${NOTEMPTY} "${INSTDIR}"; then			\
+			dir="${INSTDIR}";				\
+		fi;							\
 		mkdir -p "$$dir";					\
 		${ECHORUN} ${INSTALL} -m 555 ${PROG}			\
 		    "$$dir/${INSTPROG}";				\
