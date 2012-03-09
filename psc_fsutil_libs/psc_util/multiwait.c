@@ -83,7 +83,8 @@ psc_multiwaitcond_trylockallmw(struct psc_multiwaitcond *mwc)
 			 * lock and give up.
 			 */
 			for (k = 0; k < j; k++) {
-				mw = psc_dynarray_getpos(&mwc->mwc_multiwaits, k);
+				mw = psc_dynarray_getpos(
+				    &mwc->mwc_multiwaits, k);
 				psc_mutex_unlock(&mw->mw_mutex);
 			}
 			return (-1);
@@ -225,9 +226,10 @@ psc_multiwaitcond_wakeup(struct psc_multiwaitcond *mwc)
 /**
  * psc_multiwaitcond_waitrel_ts - Wait for one condition to occur.
  * @mwc: the multiwait condition to wait for.
- * @mutex: an optional mutex that will be unlocked in the critical section,
- *	for avoiding missed wakeups from races.
- * @reltime: amount of time to wait (relative to "now") or NULL for forever.
+ * @mutex: an optional mutex that will be unlocked in the critical
+ *	section, for avoiding missed wakeups from races.
+ * @reltime: amount of time to wait (relative to "now") or NULL for
+ *	forever.
  */
 int
 psc_multiwaitcond_waitrel_ts(struct psc_multiwaitcond *mwc,
@@ -248,12 +250,14 @@ psc_multiwaitcond_waitrel_ts(struct psc_multiwaitcond *mwc,
 		rc = pthread_cond_timedwait(&mwc->mwc_cond,
 		    &mwc->mwc_mutex.pm_mutex, &abstime);
 		if (rc && rc != ETIMEDOUT)
-			psc_fatalx("pthread_cond_timedwait: %s", strerror(rc));
+			psc_fatalx("pthread_cond_timedwait: %s",
+			    strerror(rc));
 	} else {
 		rc = pthread_cond_wait(&mwc->mwc_cond,
 		    &mwc->mwc_mutex.pm_mutex);
 		if (rc)
-			psc_fatalx("pthread_cond_wait: %s", strerror(rc));
+			psc_fatalx("pthread_cond_wait: %s",
+			    strerror(rc));
 	}
 	psc_mutex_unlock(&mwc->mwc_mutex);
 	return (rc);
@@ -310,7 +314,8 @@ _psc_multiwait_addcond(struct psc_multiwait *mw,
 
 	k = psc_dynarray_bsearch(&mwc->mwc_multiwaits, mw,
 	    psc_multiwaitcond_cmp);
-	if (psc_dynarray_splice(&mwc->mwc_multiwaits, k, 0, &mw, 1) == -1) {
+	if (psc_dynarray_splice(&mwc->mwc_multiwaits,
+	    k, 0, &mw, 1) == -1) {
 		rc = -1;
 		if (psc_vbitmap_resize(mw->mw_condmask, j - 1) == -1)
 			psc_fatalx("unable to undo bitmask changes");
@@ -445,7 +450,8 @@ psc_multiwait_usecs(struct psc_multiwait *mw, void *datap, int usec)
 		rc = pthread_cond_wait(&mw->mw_cond,
 		    &mw->mw_mutex.pm_mutex);
 		if (rc)
-			psc_fatalx("pthread_cond_wait: %s", strerror(rc));
+			psc_fatalx("pthread_cond_wait: %s",
+			    strerror(rc));
 	}
 
  checkwaker:
@@ -556,13 +562,14 @@ psc_multiwait_leavecritsect(struct psc_multiwait *mw)
 }
 
 /**
- * psc_multiwait_hascond - Determine if a condition has been registered in a
- *	multiwait.
+ * psc_multiwait_hascond - Determine if a condition has been registered
+ *	in a multiwait.
  * @mw: the multiwait.
  * @mwc: the multiwait condition to check the existence of.
  */
 int
-psc_multiwait_hascond(struct psc_multiwait *mw, struct psc_multiwaitcond *mwc)
+psc_multiwait_hascond(struct psc_multiwait *mw,
+    struct psc_multiwaitcond *mwc)
 {
 	struct psc_multiwaitcond *c;
 	int j, rc;
@@ -579,7 +586,8 @@ psc_multiwait_hascond(struct psc_multiwait *mw, struct psc_multiwaitcond *mwc)
 }
 
 /**
- * psc_multiwait_prconds - Print list of conditions registered in a multiwait.
+ * psc_multiwait_prconds - Print list of conditions registered in a
+ *	multiwait.
  * @mw: the multiwait to dump.
  */
 void
