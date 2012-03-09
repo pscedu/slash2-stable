@@ -61,7 +61,8 @@ struct psc_thread {
 #define PTF_DEAD		(1 << 3)			/* thread will terminate now */
 
 #define PSCTHR_LOCK(thr)	spinlock(&(thr)->pscthr_lock)
-#define PSCTHR_UNLOCK(thr)	freelock(&(thr)->pscthr_lock)
+#define PSCTHR_ULOCK(thr)	freelock(&(thr)->pscthr_lock)
+#define PSCTHR_RLOCK(thr)	reqlock(&(thr)->pscthr_lock)
 
 #define PSCTHR_MKCAST(label, name, type)				\
 static inline struct name *						\
