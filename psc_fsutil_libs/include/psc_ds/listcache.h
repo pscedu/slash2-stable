@@ -68,6 +68,9 @@ struct psc_listcache {
 #define LIST_CACHE_FOREACH_SAFE(p, t, plc)				\
 	PLL_FOREACH_SAFE((p), (t), &(plc)->plc_pll)
 
+#define LIST_CACHE_FOREACH_BACKWARDS_SAFE(p, t, plc)		\
+	PLL_FOREACH_BACKWARDS_SAFE((p), (t), &(plc)->plc_pll)
+
 #define LIST_CACHE_LOCK(plc)		PLL_LOCK(&(plc)->plc_pll)
 #define LIST_CACHE_ULOCK(plc)		PLL_ULOCK(&(plc)->plc_pll)
 #define LIST_CACHE_RLOCK(plc)		PLL_RLOCK(&(plc)->plc_pll)

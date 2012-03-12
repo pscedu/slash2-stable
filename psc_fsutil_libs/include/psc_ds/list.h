@@ -475,6 +475,19 @@ _psclist_next_obj(struct psclist_head *hd, void *p,
 	     (n) = (p) ? psclist_next_obj2((hd), (p), (offset)) : NULL;		\
 	     (p); (p) = (n), (n) = (n) ? psclist_next_obj2((hd), (n), (offset)) : NULL)
 
+
+/**
+ * psclist_for_each_entry2_backwards_safe - iterate over list of given type.
+ * @p: the type * to use as a loop counter.
+ * @n: another type * to use as temporary storage
+ * @hd: the head for your list.
+ * @offset: offset into type * of list entry.
+ */
+#define psclist_for_each_entry2_backwards_safe(p, n, hd, offset)				\
+	for ((p) = psc_listhd_last_obj2((hd), typeof(*(p)), (offset)),		\
+	     (n) = (p) ? psclist_prev_obj2((hd), (p), (offset)) : NULL;		\
+	     (p); (p) = (n), (n) = (n) ? psclist_prev_obj2((hd), (n), (offset)) : NULL)
+
 /**
  * psclist_for_each_entry2_cont - Continue iterating over list of given type.
  * @p: the type * to use as a loop counter.

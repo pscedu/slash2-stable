@@ -69,6 +69,10 @@ struct psc_lockedlist {
 	psclist_for_each_entry2_backwards((p), &(pll)->pll_listhd,	\
 	    (pll)->pll_offset)
 
+#define PLL_FOREACH_BACKWARDS_SAFE(p, t, pll)				\
+	psclist_for_each_entry2_backwards_safe((p), (t), &(pll)->pll_listhd, \
+	    (pll)->pll_offset)
+
 #define PLL_FOREACH_CONT(p, pll)					\
 	psclist_for_each_entry2_cont((p), &(pll)->pll_listhd, (pll)->pll_offset)
 
