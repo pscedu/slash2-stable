@@ -813,6 +813,7 @@ pjournal_thr_main(struct psc_thread *thr)
 	struct psc_journalthr *pjt;
 	struct psc_journal *pj;
 	uint64_t xid, txg;
+	int last_reclaimed = 1, reclaimed = 0;
 
 	pjt = thr->pscthr_private;
 	pj = pjt->pjt_pj;
@@ -857,6 +858,9 @@ pjournal_thr_main(struct psc_thread *thr)
 			freelock(&xh->pjx_lock);
 
 			pjournal_put_buf(pj, PJE_DATA(pje));
+
+			/* the logic only works when the system is otherwise quiet */
+			last_reclaimed = 1;
 		}
 
 		/*
@@ -872,16 +876,19 @@ pjournal_thr_main(struct psc_thread *thr)
 		psc_assert(pj->pj_commit_txg <= txg);
 		pj->pj_commit_txg = txg;
 
+		txg = 0;
 		while ((xh = pll_peekhead(&pj->pj_pendingxids)) != NULL) {
 			spinlock(&xh->pjx_lock);
 			if (xh->pjx_txg > pj->pj_commit_txg) {
 				freelock(&xh->pjx_lock);
+				txg = xh->pjx_txg;
 				break;
 			}
 			if (xh->pjx_flags & PJX_DISTILL) {
 				freelock(&xh->pjx_lock);
 				break;
 			}
+			reclaimed++;
 			pll_remove(&pj->pj_pendingxids, xh);
 			freelock(&xh->pjx_lock);
 			pjournal_xdestroy(xh);
@@ -889,13 +896,23 @@ pjournal_thr_main(struct psc_thread *thr)
 			pj->pj_inuse--;
 		}
 		PJ_ULOCK(pj);
+		/*
+		 * Some of the log entries are written after
+		 * the data they protect has been written to
+		 * ZFS.  So their txg can be off by plus one.
+		 * This code makes sure inuse drops to zero.
+		 */
+		if (txg && !last_reclaimed && !reclaimed)
+			zfsslash2_wait_synced(txg);
 
 		spinlock(&pjournal_waitqlock);
-		if (pll_empty(&pj->pj_distillxids))
+		if (pll_empty(&pj->pj_distillxids)) {
+			last_reclaimed = reclaimed;
+			reclaimed = 0;
 			/* 30 seconds is the ZFS txg sync interval */
 			psc_waitq_waitrel_s(&pjournal_waitq,
 			    &pjournal_waitqlock, 30);
-		else
+		} else
 			freelock(&pjournal_waitqlock);
 	}
 }
