@@ -61,16 +61,24 @@ volatile sig_atomic_t	  psc_ctl_saw_winch = 1;
 __static int		  psc_ctl_sock;
 const char		 *psc_ctl_sockfn;
 char			**psc_ctl_subsys_names;
+psc_spinlock_t		  psc_ctl_lock = SPINLOCK_INIT;
 
 __static void
 psc_ctlmsg_sendlast(void)
 {
 	ssize_t siz;
 
+	spinlock(&psc_ctl_lock);
+	if (psc_ctl_sock == -1) {
+		freelock(&psc_ctl_lock);
+		return;
+	}
+	
 	/* Send last queued control messages. */
 	siz = psc_ctl_msghdr->mh_size + sizeof(*psc_ctl_msghdr);
 	if (write(psc_ctl_sock, psc_ctl_msghdr, siz) != siz)
 		psc_fatal("write");
+	freelock(&psc_ctl_lock);
 }
 
 __static struct psc_ctlshow_ent *
@@ -1136,7 +1144,7 @@ psc_ctlcli_main(const char *osockfn, int ac, char *av[],
 	struct psc_thread *thr;
 	struct sockaddr_un sun;
 	const char *prg;
-	int rc, c, i;
+	int s, rc, c, i;
 
 	prg = strrchr(progname, '/');
 	if (prg)
@@ -1227,7 +1235,13 @@ psc_ctlcli_main(const char *osockfn, int ac, char *av[],
 		errx(1, "no actions specified");
 
 	psc_ctlmsg_sendlast();
-	if (shutdown(psc_ctl_sock, SHUT_WR) == -1)
+
+	spinlock(&psc_ctl_lock);
+	s = psc_ctl_sock;
+	psc_ctl_sock = -1;
+	freelock(&psc_ctl_lock);
+
+	if (shutdown(s, SHUT_WR) == -1)
 		psc_fatal("shutdown");
 
 	rc = pthread_join(thr->pscthr_pthread, NULL);
