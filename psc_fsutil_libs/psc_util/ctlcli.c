@@ -73,7 +73,7 @@ psc_ctlmsg_sendlast(void)
 		freelock(&psc_ctl_lock);
 		return;
 	}
-	
+
 	/* Send last queued control messages. */
 	siz = psc_ctl_msghdr->mh_size + sizeof(*psc_ctl_msghdr);
 	if (write(psc_ctl_sock, psc_ctl_msghdr, siz) != siz)
@@ -1094,6 +1094,7 @@ psc_ctlcli_rd_main(__unusedx struct psc_thread *thr)
 	struct psc_ctlmsghdr mh;
 	ssize_t n, siz;
 	void *m;
+	int s;
 
 	/* Read and print response messages. */
 	m = NULL;
@@ -1116,6 +1117,12 @@ psc_ctlcli_rd_main(__unusedx struct psc_thread *thr)
 	if (n == -1)
 		psc_fatal("read");
 	psc_free(m, 0);
+
+	spinlock(&psc_ctl_lock);
+	s = psc_ctl_sock;
+	psc_ctl_sock = -1;
+	freelock(&psc_ctl_lock);
+
 	close(psc_ctl_sock);
 }
 
@@ -1144,7 +1151,7 @@ psc_ctlcli_main(const char *osockfn, int ac, char *av[],
 	struct psc_thread *thr;
 	struct sockaddr_un sun;
 	const char *prg;
-	int s, rc, c, i;
+	int rc, c, i;
 
 	prg = strrchr(progname, '/');
 	if (prg)
@@ -1237,12 +1244,10 @@ psc_ctlcli_main(const char *osockfn, int ac, char *av[],
 	psc_ctlmsg_sendlast();
 
 	spinlock(&psc_ctl_lock);
-	s = psc_ctl_sock;
-	psc_ctl_sock = -1;
-	freelock(&psc_ctl_lock);
-
-	if (shutdown(s, SHUT_WR) == -1)
+	if (psc_ctl_sock != -1 &&
+	    shutdown(psc_ctl_sock, SHUT_WR) == -1)
 		psc_fatal("shutdown");
+	freelock(&psc_ctl_lock);
 
 	rc = pthread_join(thr->pscthr_pthread, NULL);
 	if (rc)
