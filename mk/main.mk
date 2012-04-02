@@ -286,6 +286,10 @@ ifneq ($(filter sgio,${MODULES}),)
   endif
 endif
 
+ifneq ($(filter sqlite,${MODULES}),)
+  LDFLAGS+=	-lsqlite3
+endif
+
 ifneq ($(filter readline,${MODULES}),)
   LDFLAGS+=	-lreadline
 endif
