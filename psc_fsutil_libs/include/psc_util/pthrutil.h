@@ -50,7 +50,7 @@ struct pfl_mutex {
 void	psc_mutex_ensure_locked_pci(const struct pfl_callerinfo *, struct pfl_mutex *);
 int	psc_mutex_haslock(struct pfl_mutex *);
 void	psc_mutex_init(struct pfl_mutex *);
-void    psc_mutex_destroy(struct pfl_mutex *);
+void	psc_mutex_destroy(struct pfl_mutex *);
 void	psc_mutex_lock_pci(const struct pfl_callerinfo *, struct pfl_mutex *);
 int	psc_mutex_reqlock_pci(const struct pfl_callerinfo *, struct pfl_mutex *);
 int	psc_mutex_trylock_pci(const struct pfl_callerinfo *, struct pfl_mutex *);
