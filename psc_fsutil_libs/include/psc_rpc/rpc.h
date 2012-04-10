@@ -117,17 +117,17 @@ enum pscrpc_rq_phase {
 };
 
 enum pscrpc_imp_state {
-	PSCRPC_IMP_CLOSED		= 1,
-	PSCRPC_IMP_NEW			= 2,
-	PSCRPC_IMP_DISCON		= 3,
-	PSCRPC_IMP_CONNECTING		= 4,
-	PSCRPC_IMP_REPLAY		= 5,
-	PSCRPC_IMP_REPLAY_LOCKS		= 6,
-	PSCRPC_IMP_REPLAY_WAIT		= 7,
-	PSCRPC_IMP_RECOVER		= 8,
-	PSCRPC_IMP_FULL			= 9,
+	PSCRPC_IMP_CLOSED		=  1,
+	PSCRPC_IMP_NEW			=  2,
+	PSCRPC_IMP_DISCON		=  3,
+	PSCRPC_IMP_CONNECTING		=  4,
+	PSCRPC_IMP_REPLAY		=  5,
+	PSCRPC_IMP_REPLAY_LOCKS		=  6,
+	PSCRPC_IMP_REPLAY_WAIT		=  7,
+	PSCRPC_IMP_RECOVER		=  8,
+	PSCRPC_IMP_FULL			=  9,
 	PSCRPC_IMP_EVICTED		= 10,
-	PSCRPC_IMP_NOOP                 = 11
+	PSCRPC_IMP_NOOP			= 11
 };
 
 struct pscrpc_uuid {
@@ -196,7 +196,7 @@ struct pscrpc_import {
 	uint64_t			  imp_last_transno_checked; /* optimize */
 	uint64_t			  imp_peer_committed_transno;
 	struct psc_waitq		  imp_recovery_waitq;
-	struct psclist_head               imp_delayed_list;
+	struct psclist_head		  imp_delayed_list;
 	void				(*imp_hldropf)(void *);
 	void				 *imp_hldrop_arg;
 	unsigned int			  imp_invalid:1,
@@ -217,12 +217,14 @@ struct pscrpc_import {
 };
 
 struct pscrpc_async_args {
-	/* Scratchpad for passing args to completion interpreter. Users
+	/*
+	 * Scratchpad for passing args to completion interpreter. Users
 	 * cast to the struct of their choosing, and LASSERT that this is
 	 * big enough.  For _tons_ of context, PSCRPC_OBD_ALLOC a struct and store
 	 * a pointer to it here.  The pointer_arg ensures this struct is at
-	 * least big enough for that. */
-	uint64_t space[2];
+	 * least big enough for that.
+	 */
+	uint64_t space[4];
 	void    *pointer_arg[9];
 };
 
@@ -231,11 +233,11 @@ typedef int (*pscrpc_set_interpreterf)(struct pscrpc_request_set *, void *, int)
 
 struct pscrpc_request_set {
 	struct psclist_head		 set_requests;
-	struct psclist_head		 set_lentry;            /* chain for sets        */
+	struct psclist_head		 set_lentry;		/* chain for sets	 */
 	int				 set_remaining;
-	struct psc_waitq		 set_waitq;		/* I block here          */
-	pscrpc_set_interpreterf		 set_interpret;		/* callback function     */
-	void				*set_arg;		/* callback pointer      */
+	struct psc_waitq		 set_waitq;		/* I block here		 */
+	pscrpc_set_interpreterf		 set_interpret;		/* callback function	 */
+	void				*set_arg;		/* callback pointer	 */
 	psc_spinlock_t			 set_lock;
 	int				 set_flags;
 };
@@ -251,24 +253,24 @@ struct pscrpc_bulk_desc {
 	unsigned int			 bd_success:1;		/* completed successfully */
 	unsigned int			 bd_network_rw:1;	/* accessible to network  */
 	unsigned int			 bd_type:2;		/* {put,get}{source,sink} */
-	unsigned int			 bd_registered:1;	/* client side            */
-	unsigned int                     bd_abort:1;
+	unsigned int			 bd_registered:1;	/* client side		  */
+	unsigned int			 bd_abort:1;
 	psc_spinlock_t			 bd_lock;		/* serialise w/ callback  */
 	int				 bd_import_generation;
-	struct pscrpc_import		*bd_import;		/* client only            */
-	struct pscrpc_connection	*bd_connection;		/* server only            */
-	struct pscrpc_export		*bd_export;		/* server only            */
-	struct pscrpc_request		*bd_req;		/* associated request     */
-	struct psc_waitq		 bd_waitq;		/* server side only WQ    */
-	int				 bd_iov_count;		/* # entries in bd_iov    */
+	struct pscrpc_import		*bd_import;		/* client only		  */
+	struct pscrpc_connection	*bd_connection;		/* server only		  */
+	struct pscrpc_export		*bd_export;		/* server only		  */
+	struct pscrpc_request		*bd_req;		/* associated request	  */
+	struct psc_waitq		 bd_waitq;		/* server side only WQ	  */
+	int				 bd_iov_count;		/* # entries in bd_iov	  */
 	int				 bd_max_iov;		/* alloc'd size of bd_iov */
-	int				 bd_nob;		/* # bytes covered        */
-	int				 bd_nob_transferred;	/* # bytes GOT/PUT     */
-	uint64_t			 bd_last_xid;		/* track xid for retry    */
-	uint32_t			 bd_portal;		/* which portal           */
+	int				 bd_nob;		/* # bytes covered	  */
+	int				 bd_nob_transferred;	/* # bytes GOT/PUT	  */
+	uint64_t			 bd_last_xid;		/* track xid for retry	  */
+	uint32_t			 bd_portal;		/* which portal		  */
 	struct pscrpc_cb_id		 bd_cbid;		/* network callback info  */
-	lnet_handle_md_t		 bd_md_h;		/* associated MD          */
-	lnet_md_iovec_t			 bd_iov[0];		/* must be last           */
+	lnet_handle_md_t		 bd_md_h;		/* associated MD	  */
+	lnet_md_iovec_t			 bd_iov[0];		/* must be last		  */
 };
 
 struct pscrpc_msg {
@@ -590,12 +592,12 @@ struct pscrpc_bulk_desc *
 
 void	 pscrpc_completion_init(struct pscrpc_completion *);
 void	 pscrpc_completion_wait(struct pscrpc_completion *);
-void     pscrpc_completion_set(struct pscrpc_request *,
-               struct pscrpc_completion *);
+void	 pscrpc_completion_set(struct pscrpc_request *,
+		struct pscrpc_completion *);
 int	 pscrpc_completion_waitrel_s(struct pscrpc_completion *, int);
 int	 pscrpc_completion_ready(struct pscrpc_completion *, int, int);
-void	 pscrpc_completion_one(struct pscrpc_request *, 
-	       struct pscrpc_completion *);
+void	 pscrpc_completion_one(struct pscrpc_request *,
+		struct pscrpc_completion *);
 
 static __inline int
 pscrpc_bulk_active(struct pscrpc_bulk_desc *desc)
@@ -776,9 +778,9 @@ pscrpc_wake_client_req(struct pscrpc_request *req)
 #define PSCRPC_SVR_SHORT_TIMEO	1
 #define _pscrpc_server_wait_event(wq, cond, info, ret, excl, lck)	\
 	do {								\
-		time_t _now       = time(NULL);				\
-		time_t _then      = _now;				\
-		time_t _timeout   = (info)->lwi_timeout ?		\
+		time_t _now	  = time(NULL);				\
+		time_t _then	  = _now;				\
+		time_t _timeout	  = (info)->lwi_timeout ?		\
 			(info)->lwi_timeout : PSCRPC_SVR_TIMEOUT;	\
 		struct timespec _abstime = { 0, 0 };			\
 									\
@@ -883,7 +885,7 @@ pscrpc_wake_client_req(struct pscrpc_request *req)
 #else
 # define pscrpc_cli_wait_event(wq, cond, info)				\
 	_PFL_RVSTART {							\
-		int                 _ret;				\
+		int		    _ret;				\
 		struct l_wait_info *_info = (info);			\
 									\
 		_pscrpc_client_wait_event((wq), (cond), _info, _ret, 0);\
@@ -893,7 +895,7 @@ pscrpc_wake_client_req(struct pscrpc_request *req)
 
 #define pscrpc_svr_wait_event(wq, cond, info, lck)			\
 	_PFL_RVSTART {							\
-		int                 _ret;				\
+		int		    _ret;				\
 		struct l_wait_info *_info = (info);			\
 									\
 		_pscrpc_server_wait_event((wq), (cond), _info, _ret, 0,	\
