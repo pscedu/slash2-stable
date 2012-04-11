@@ -676,6 +676,7 @@ pjournal_scan_slots(struct psc_journal *pj)
 	psclog_info("Journal scan statistics: closed = %d, open = %d, magic = %d, "
 	    "chksum = %d, scan = %d, last = %d, total = %d",
 	    nclose, nopen, nmagic, nchksum, nscan, last_slot, pj->pj_total);
+	psclog_warnx("Last xid found from the journal is %"PRId64, pj->pj_lastxid);
 	return (rc);
 }
 
