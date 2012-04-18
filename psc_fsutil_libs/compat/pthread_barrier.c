@@ -80,9 +80,9 @@ pthread_barrier_destroy(pthread_barrier_t *barrier)
 	 * If unable to destroy either 1003.1c synchronization
 	 * object, return the error status.
 	 */
-	status = psc_mutex_destroy(&barrier->mutex);
+	psc_mutex_destroy(&barrier->mutex);
 	status2 = pthread_cond_destroy(&barrier->cv);
-	return (status != 0 ? status : status2);
+	return (status2);
 }
 
 /**
