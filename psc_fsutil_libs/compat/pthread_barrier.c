@@ -57,7 +57,7 @@ pthread_barrier_init(pthread_barrier_t *barrier, __unusedx
 int
 pthread_barrier_destroy(pthread_barrier_t *barrier)
 {
-	int status, status2;
+	int rc;
 
 	if (barrier->valid != BARRIER_VALID)
 		return (EINVAL);
@@ -81,8 +81,8 @@ pthread_barrier_destroy(pthread_barrier_t *barrier)
 	 * object, return the error status.
 	 */
 	psc_mutex_destroy(&barrier->mutex);
-	status2 = pthread_cond_destroy(&barrier->cv);
-	return (status2);
+	rc = pthread_cond_destroy(&barrier->cv);
+	return (rc);
 }
 
 /**
