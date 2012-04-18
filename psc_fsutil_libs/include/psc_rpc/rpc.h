@@ -598,6 +598,7 @@ int	 pscrpc_completion_waitrel_s(struct pscrpc_completion *, int);
 int	 pscrpc_completion_ready(struct pscrpc_completion *, int, int);
 void	 pscrpc_completion_one(struct pscrpc_request *,
 		struct pscrpc_completion *);
+void	 pscrpc_completion_destroy(struct pscrpc_completion *);
 
 static __inline int
 pscrpc_bulk_active(struct pscrpc_bulk_desc *desc)

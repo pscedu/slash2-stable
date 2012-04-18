@@ -267,6 +267,12 @@ pscrpc_prep_req_pool(struct pscrpc_import *imp, uint32_t version,
 }
 
 void
+pscrpc_completion_destroy(struct pscrpc_completion *c)
+{
+	psc_waitq_destroy(&c->rqcomp_waitq);
+}
+
+void
 pscrpc_completion_init(struct pscrpc_completion *c)
 {
 	INIT_SPINLOCK(&c->rqcomp_lock);
