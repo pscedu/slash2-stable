@@ -79,6 +79,7 @@ _pscthr_destroy(void *arg)
 		thr->pscthr_dtor(thr->pscthr_private);
 		psc_free(thr->pscthr_private, PAF_NOLOG);
 	}
+	psc_waitq_destroy(&thr->pscthr_waitq);
 	psc_free(thr->pscthr_loglevels, PAF_NOLOG);
 	psc_free(thr, PAF_NOLOG);
 }
