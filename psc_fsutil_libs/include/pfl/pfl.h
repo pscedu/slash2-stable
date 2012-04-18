@@ -95,6 +95,12 @@ __thread
 #endif
 int				 _pfl_callerinfo_lvl;
 
+#ifdef HAVE_TLS
+# define __callerinfo const struct pfl_callerinfo *pci
+#else
+# define __callerinfo __unusedx const struct pfl_callerinfo *pci
+#endif
+
 static __inline const struct pfl_callerinfo *
 _pfl_callerinfo_get(const char *fn, const char *func, int lineno,
     int subsys)
