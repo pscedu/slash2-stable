@@ -449,7 +449,7 @@ install: recurse-install install-hook
 			dir="${INSTDIR}";				\
 		fi;							\
 		mkdir -p "$$dir";					\
-		${ECHORUN} ${INSTALL} -m 555 ${PROG} "$$dir";		\
+		${ECHORUN} ${INSTALL} -b -m 555 ${PROG} "$$dir";	\
 		if head -1 ${PROG} | grep -aq perl; then		\
 			${ECHORUN} perl -i -Wpe				\
 			    's{^# use lib qw\(%INST_PLMODDIR%\);$$}$(	\
