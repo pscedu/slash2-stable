@@ -31,7 +31,7 @@ my @ign = (
 	[ qw(_psc_waitq_waitrelv pjournal_thr_main _pscthr_begin) ],
 	[ qw(_psc_waitq_waitrelv slmjreclaimthr_main _pscthr_begin) ],
 	[ qw(_sl_csvc_waitrelv slconnthr_main _pscthr_begin) ],
-	[ qw(msbmflwthr _pscthr_begin) ],
+	[ qw(msbmflwthr_main _pscthr_begin) ],
 	[ qw(psc_multiwait_usecs slconnthr_main _pscthr_begin) ],
 	[ qw(psc_multiwait_usecs slmupschedthr_main _pscthr_begin) ],
 	[ qw(psc_waitq_waitabs _lc_get slvr_worker_int slvr_worker _pscthr_begin) ],
