@@ -84,17 +84,17 @@ int libcfs_sock_readv(int fd, const struct iovec *vector, int count);
  */
 
 #define NIPQUAD(addr) \
-        ((unsigned char *)&addr)[0], \
-        ((unsigned char *)&addr)[1], \
-        ((unsigned char *)&addr)[2], \
-        ((unsigned char *)&addr)[3]
+	((unsigned char *)&addr)[0], \
+	((unsigned char *)&addr)[1], \
+	((unsigned char *)&addr)[2], \
+	((unsigned char *)&addr)[3]
 
 #if defined(__LITTLE_ENDIAN) || defined(_LITTLE_ENDIAN)
 #define HIPQUAD(addr)                \
-        ((unsigned char *)&addr)[3], \
-        ((unsigned char *)&addr)[2], \
-        ((unsigned char *)&addr)[1], \
-        ((unsigned char *)&addr)[0]
+	((unsigned char *)&addr)[3], \
+	((unsigned char *)&addr)[2], \
+	((unsigned char *)&addr)[1], \
+	((unsigned char *)&addr)[0]
 #elif defined(__BIG_ENDIAN) || defined(_BIG_ENDIAN)
 #define HIPQUAD NIPQUAD
 #else
