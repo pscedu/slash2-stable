@@ -57,6 +57,11 @@ struct psc_mlist {
 #define MLIST_ULOCK(pml)		PLL_ULOCK(&(pml)->pml_pll)
 #define MLIST_RLOCK(pml)		PLL_RLOCK(&(pml)->pml_pll)
 #define MLIST_URLOCK(pml, lk)		PLL_URLOCK(&(pml)->pml_pll, (lk))
+#define MLIST_HASLOCK(pml)		PLL_HASLOCK(&(pml)->pml_pll)
+
+#define psc_mlist_addtail(pml, p)	_psc_mlist_add((pml), (p), 1)
+#define psc_mlist_addhead(pml, p)	_psc_mlist_add((pml), (p), 0)
+#define psc_mlist_add(pml, p)		 psc_mlist_addtail((pml), (p))
 
 /**
  * psc_mlist_empty - Check if an mlist is empty.
@@ -79,6 +84,8 @@ struct psc_mlist {
  */
 #define psc_mlist_remove(pml, p)	pll_remove(&(pml)->pml_pll, (p))
 
+#define psc_mlist_conjoint(pml, p)	pll_conjoint(&(pml)->pml_pll, (p))
+
 /**
  * psc_mlist_reginit - Initialize and register an mlist.
  * @pml: mlist to initialize.
@@ -90,7 +97,7 @@ struct psc_mlist {
 	_psc_mlist_reginit((pml), 0, (mwcarg), offsetof(type, member),	\
 	    (namefmt), ## __VA_ARGS__)
 
-void	 psc_mlist_add(struct psc_mlist *, void *);
+void	_psc_mlist_add(struct psc_mlist *, void *, int);
 void	_psc_mlist_init(struct psc_mlist *, int, void *, ptrdiff_t,
 	    const char *, ...);
 void	_psc_mlist_reginit(struct psc_mlist *, int, void *, ptrdiff_t,

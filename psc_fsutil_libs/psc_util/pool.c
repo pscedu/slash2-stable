@@ -117,7 +117,8 @@ _psc_mlist_init(__unusedx struct psc_mlist *m, __unusedx int flags,
 }
 
 __weak void
-psc_mlist_add(__unusedx struct psc_mlist *pml, __unusedx void *p)
+_psc_mlist_add(__unusedx struct psc_mlist *pml, __unusedx void *p,
+    __unusedx int tail)
 {
 	psc_fatalx("mlist support not compiled in");
 }

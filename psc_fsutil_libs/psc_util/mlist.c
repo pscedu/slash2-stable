@@ -40,12 +40,15 @@ struct psc_lockedlist psc_mlists =
  * @p: item to return.
  */
 void
-psc_mlist_add(struct psc_mlist *pml, void *p)
+_psc_mlist_add(struct psc_mlist *pml, void *p, int tail)
 {
 	int locked;
 
 	locked = MLIST_RLOCK(pml);
-	pll_add(&pml->pml_pll, p);
+	if (tail)
+		pll_addtail(&pml->pml_pll, p);
+	else
+		pll_addhead(&pml->pml_pll, p);
 	pml->pml_nseen++;
 	psc_multiwaitcond_wakeup(&pml->pml_mwcond_empty);
 	MLIST_URLOCK(pml, locked);
