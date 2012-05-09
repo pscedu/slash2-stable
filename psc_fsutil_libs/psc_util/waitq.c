@@ -107,16 +107,18 @@ psc_waitq_waitabs(struct psc_waitq *q, psc_spinlock_t *k,
  * Notes: returns ETIMEDOUT if the resource has not become available.
  */
 int
-psc_waitq_waitrel(struct psc_waitq *q, psc_spinlock_t *k,
-    const struct timespec *reltime)
+_psc_waitq_waitrel(struct psc_waitq *q, psc_spinlock_t *k,
+    struct pfl_mutex *mut, const struct timespec *reltime)
 {
 	struct timespec abstime;
 	int rc;
 
 	psc_mutex_lock(&q->wq_mut);
 
-	if (k != NULL)
+	if (k)
 		freelock(k);
+	if (mut)
+		psc_mutex_unlock(mut);
 
 	atomic_inc(&q->wq_nwaiters);
 	if (reltime) {
@@ -125,12 +127,14 @@ psc_waitq_waitrel(struct psc_waitq *q, psc_spinlock_t *k,
 		rc = pthread_cond_timedwait(&q->wq_cond,
 		    &q->wq_mut.pm_mutex, &abstime);
 		if (rc && rc != ETIMEDOUT)
-			psc_fatalx("pthread_cond_timedwait: %s", strerror(rc));
+			psc_fatalx("pthread_cond_timedwait: %s",
+			    strerror(rc));
 	} else {
 		rc = pthread_cond_wait(&q->wq_cond,
 		    &q->wq_mut.pm_mutex);
 		if (rc)
-			psc_fatalx("pthread_cond_wait: %s", strerror(rc));
+			psc_fatalx("pthread_cond_wait: %s",
+			    strerror(rc));
 	}
 	psc_mutex_unlock(&q->wq_mut);
 	atomic_dec(&q->wq_nwaiters);
@@ -139,13 +143,14 @@ psc_waitq_waitrel(struct psc_waitq *q, psc_spinlock_t *k,
 }
 
 __inline int
-_psc_waitq_waitrelv(struct psc_waitq *wq, psc_spinlock_t *lk, long s, long ns)
+_psc_waitq_waitrelv(struct psc_waitq *wq, psc_spinlock_t *lk, long s,
+    long ns)
 {
 	struct timespec ts;
 
 	ts.tv_sec = s;
 	ts.tv_nsec = ns;
-	return (psc_waitq_waitrel(wq, lk, &ts));
+	return (_psc_waitq_waitrel(wq, lk, NULL, &ts));
 }
 
 /**
@@ -161,7 +166,8 @@ psc_waitq_wakeone(struct psc_waitq *q)
 
 		rc = pthread_cond_signal(&q->wq_cond);
 		if (rc)
-			psc_fatalx("pthread_cond_signal: %s", strerror(rc));
+			psc_fatalx("pthread_cond_signal: %s",
+			    strerror(rc));
 	}
 	psc_mutex_unlock(&q->wq_mut);
 }
@@ -179,7 +185,8 @@ psc_waitq_wakeall(struct psc_waitq *q)
 
 		rc = pthread_cond_broadcast(&q->wq_cond);
 		if (rc)
-			psc_fatalx("pthread_cond_broadcast: %s", strerror(rc));
+			psc_fatalx("pthread_cond_broadcast: %s",
+			    strerror(rc));
 	}
 	psc_mutex_unlock(&q->wq_mut);
 }
@@ -193,8 +200,8 @@ psc_waitq_init(struct psc_waitq *q)
 }
 
 int
-psc_waitq_waitrel(__unusedx struct psc_waitq *q,
-    __unusedx psc_spinlock_t *k,
+_psc_waitq_waitrel(__unusedx struct psc_waitq *q,
+    __unusedx psc_spinlock_t *k, __unusedx struct pfl_mutex *mut,
     __unusedx const struct timespec *reltime)
 {
 	psc_fatalx("wait will sleep forever, single threaded");
