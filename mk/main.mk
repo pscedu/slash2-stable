@@ -70,6 +70,7 @@ LNET_CFS_SRCS+=		${LNET_BASE}/libcfs/debug.c
 LNET_CFS_SRCS+=		${LNET_BASE}/libcfs/user-lock.c
 LNET_CFS_SRCS+=		${LNET_BASE}/libcfs/user-prim.c
 LNET_CFS_SRCS+=		${LNET_BASE}/libcfs/user-tcpip.c
+LNET_CFS_SRCS+=		${LNET_BASE}/libcfs/user-tcpip-ssl.c
 
 LNET_LIB_SRCS+=		${LNET_BASE}/lnet/acceptor.c
 LNET_LIB_SRCS+=		${LNET_BASE}/lnet/api-errno.c
@@ -180,7 +181,7 @@ ifneq ($(filter lnet,${MODULES}),)
   SRCS+=	${LNET_SOCKLND_SRCS}
   SRCS+=	${LNET_CFS_SRCS}
   SRCS+=	${LNET_LIB_SRCS}
-  MODULES+=	lnet-hdrs lnet-nid
+  MODULES+=	lnet-hdrs lnet-nid ssl
 endif
 
 ifneq ($(filter lnet-hdrs,${MODULES}),)
@@ -197,6 +198,10 @@ ifneq ($(filter pthread,${MODULES}),)
   LDFLAGS+=	${THREAD_LIBS}
   DEFINES+=	-DHAVE_LIBPTHREAD
   MODULES+=	rt
+endif
+
+ifneq ($(filter ssl,${MODULES}),)
+  LDFLAGS+=	-lssl -lcrypto
 endif
 
 ifneq ($(filter rt,${MODULES}),)

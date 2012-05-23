@@ -376,7 +376,7 @@ typedef struct lnet_lnd
         int (*lnd_setasync)(struct lnet_ni *ni, lnet_process_id_t id, int nasync);
 
 #ifdef HAVE_LIBPTHREAD
-        int (*lnd_accept)(struct lnet_ni *ni, int sock);
+        int (*lnd_accept)(struct lnet_ni *ni, struct lnet_xport *);
 #endif
 #endif
 } lnd_t;

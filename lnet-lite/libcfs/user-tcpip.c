@@ -364,14 +364,15 @@ libcfs_sock_accept (int *newsockp, int sock, __u32 *peer_ip, int *peer_port)
 	return 0;
 }
 
-int
-libcfs_sock_read (int sock, void *buffer, int nob, int timeout)
+ssize_t
+libcfs_sock_read(struct lnet_xport *lx, void *buffer, size_t nob,
+    int timeout)
 {
-	int rc;
+	ssize_t rc;
 	struct pollfd pfd;
 	cfs_time_t start_time = cfs_time_current();
 
-	pfd.fd = sock;
+	pfd.fd = lx->lx_fd;
 	pfd.events = POLLIN;
 	pfd.revents = 0;
 
@@ -387,7 +388,7 @@ libcfs_sock_read (int sock, void *buffer, int nob, int timeout)
 		if ((pfd.revents & POLLIN) == 0)
 			return -EIO;
 
-		rc = read(sock, buffer, nob);
+		rc = read(lx->lx_fd, buffer, nob);
 		if (rc < 0)
 			return -errno;
 		if (rc == 0)
@@ -625,11 +626,13 @@ libcfs_sock_connect(int fd, __u32 ip, __u16 port)
  * because:
  * 1) it still makes sense to continue reading &&
  * 2) anyway, poll() will set up POLLHUP|POLLERR flags */
-int libcfs_sock_writev(int fd, const struct iovec *vector, int count)
+ssize_t
+libcfs_sock_writev(struct lnet_xport *lx, const struct iovec *vector,
+    int count)
 {
-	int rc;
+	ssize_t rc;
 
-	rc = syscall(SYS_writev, fd, vector, count);
+	rc = syscall(SYS_writev, lx->lx_fd, vector, count);
 
 	if (rc == 0) /* write nothing */
 		return 0;
@@ -646,11 +649,13 @@ int libcfs_sock_writev(int fd, const struct iovec *vector, int count)
 	return rc;
 }
 
-int libcfs_sock_readv(int fd, const struct iovec *vector, int count)
+ssize_t
+libcfs_sock_readv(struct lnet_xport *lx, const struct iovec *vector,
+    int count)
 {
-	int rc;
+	ssize_t rc;
 
-	rc = syscall(SYS_readv, fd, vector, count);
+	rc = syscall(SYS_readv, lx->lx_fd, vector, count);
 
 	if (rc == 0) /* EOF */
 		return -EIO;
@@ -664,5 +669,32 @@ int libcfs_sock_readv(int fd, const struct iovec *vector, int count)
 
 	return rc;
 }
+
+struct lnet_xport *
+lx_new(struct lnet_xport_int *lxi)
+{
+	struct lnet_xport *lx;
+
+	LIBCFS_ALLOC(lx, sizeof(*lx));
+	if (lx)
+		lx->lx_tab = lxi;
+	return (lx);
+}
+
+void
+lx_destroy(struct lnet_xport *lx)
+{
+	LIBCFS_FREE(lx, sizeof(*lx));
+}
+
+struct lnet_xport_int libcfs_sock_lxi = {
+	NULL,
+	NULL,
+	NULL,
+	NULL,
+	libcfs_sock_read,
+	libcfs_sock_readv,
+	libcfs_sock_writev
+};
 
 #endif /* !__KERNEL__ || !defined(REDSTORM) */

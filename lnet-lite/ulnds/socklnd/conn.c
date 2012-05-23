@@ -223,18 +223,19 @@ usocklnd_check_peer_stale(lnet_ni_t *ni, lnet_process_id_t id)
 
 /* Returns 0 on success, <0 else */
 int
-usocklnd_create_passive_conn(lnet_ni_t *ni, int fd, usock_conn_t **connp)
+usocklnd_create_passive_conn(lnet_ni_t *ni, struct lnet_xport *lx,
+    usock_conn_t **connp)
 {
         int           rc;
         __u32         peer_ip;
         __u16         peer_port;
         usock_conn_t *conn;
 
-        rc = libcfs_getpeername(fd, &peer_ip, &peer_port);
+        rc = libcfs_getpeername(lx->lx_fd, &peer_ip, &peer_port);
         if (rc)
                 return rc;
 
-        rc = usocklnd_set_sock_options(fd);
+        rc = usocklnd_set_sock_options(lx->lx_fd);
         if (rc)
                 return rc;
 
@@ -243,8 +244,8 @@ usocklnd_create_passive_conn(lnet_ni_t *ni, int fd, usock_conn_t **connp)
                 return -ENOMEM;
 
         usocklnd_rx_hellomagic_state_transition(conn);
-        
-        conn->uc_fd = fd;
+
+        conn->uc_lx = lx;
         conn->uc_peer_ip = peer_ip;
         conn->uc_peer_port = peer_port;
         conn->uc_state = UC_RECEIVING_HELLO;
@@ -298,7 +299,9 @@ usocklnd_create_active_conn(usock_peer_t *peer, int type,
         conn->uc_tx_deadline = cfs_time_shift(usock_tuns.ut_timeout);
         conn->uc_tx_flag = 1;
         
-        conn->uc_fd = fd;
+        conn->uc_lx = lx_new(LNET_NETTYP(peer->up_peerid.nid) == SSLLND ?
+	    &libcfs_ssl_lxi : &libcfs_sock_lxi);
+	lx_connect(conn->uc_lx, fd);
         conn->uc_peer_ip = dst_ip;
         conn->uc_peer_port = dst_port;
         conn->uc_type = type;

@@ -1251,6 +1251,7 @@ LNetInit(int nmsgs)
 # ifdef HAVE_LIBPTHREAD
         LNET_REGISTER_ULND(the_tcplnd);
         LNET_REGISTER_ULND(the_sdplnd);
+        LNET_REGISTER_ULND(the_ssllnd);
 # endif
 #endif
         lnet_register_lnd(&the_lolnd);

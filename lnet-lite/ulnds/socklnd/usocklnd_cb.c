@@ -181,12 +181,12 @@ usocklnd_recv(__unusedx lnet_ni_t *ni, void *private, lnet_msg_t *msg,
 }
 
 int
-usocklnd_accept(lnet_ni_t *ni, int sock_fd)
+usocklnd_accept(lnet_ni_t *ni, struct lnet_xport *lx)
 {
         int           rc;
         usock_conn_t *conn;
-        
-        rc = usocklnd_create_passive_conn(ni, sock_fd, &conn);
+
+        rc = usocklnd_create_passive_conn(ni, lx, &conn);
         if (rc)
                 return rc;
         LASSERT(conn != NULL);

@@ -612,6 +612,7 @@ enum {
         VIBLND    = 11,
         MXLND     = 12,
         SDPLND    = 13,
+        SSLLND    = 14,
 };
 
 enum {

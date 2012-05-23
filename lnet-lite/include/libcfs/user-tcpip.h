@@ -46,6 +46,8 @@
 #include <sys/types.h>
 #include <sys/uio.h>
 
+#include "openssl/ssl.h"
+
 /*
  * Functions to get network interfaces info
  */
@@ -61,7 +63,7 @@ int libcfs_ipif_enumerate (char ***namesp);
 
 int libcfs_sock_listen (int *sockp, __u64, __u32 local_ip, int local_port, int backlog);
 int libcfs_sock_accept (int *newsockp, int sock, __u32 *peer_ip, int *peer_port);
-int libcfs_sock_read (int sock, void *buffer, int nob, int timeout);
+int libcfs_sock_connect(int fd, __u32 ip, __u16 port);
 void libcfs_sock_abort_accept(__u64, __u16 port);
 
 /*
@@ -75,9 +77,61 @@ int libcfs_sock_set_nagle(int fd, int nagle);
 int libcfs_sock_set_bufsiz(int fd, int bufsiz);
 int libcfs_sock_create(int *fdp, __u64);
 int libcfs_sock_bind_to_port(int fd, __u64, __u32, __u16 port);
-int libcfs_sock_connect(int fd, __u32 ip, __u16 port);
-int libcfs_sock_writev(int fd, const struct iovec *vector, int count);
-int libcfs_sock_readv(int fd, const struct iovec *vector, int count);
+
+struct lnet_xport;
+
+struct lnet_xport_int {
+	int		(*lxi_accept)(struct lnet_xport *, int);
+	int		(*lxi_close)(struct lnet_xport *);
+	int		(*lxi_connect)(struct lnet_xport *, int);
+	int		(*lxi_init)(struct lnet_xport *);
+	ssize_t		(*lxi_read)(struct lnet_xport *, void *, size_t, int);
+	ssize_t		(*lxi_readv)(struct lnet_xport *, const struct iovec *, int);
+	ssize_t		(*lxi_writev)(struct lnet_xport *, const struct iovec *, int);
+};
+
+struct lnet_xport {
+	int			 lx_fd;
+	SSL			*lx_ssl;
+	struct lnet_xport_int	*lx_tab;
+};
+
+struct lnet_xport *
+	lx_new(struct lnet_xport_int *);
+void	lx_destroy(struct lnet_xport *);
+
+#define lx_init(lx)							\
+	do {								\
+		if ((lx)->lx_tab->lxi_init)				\
+			(lx)->lx_tab->lxi_init(lx);			\
+	} while (0)
+
+#define lx_close(lx)							\
+	do {								\
+		if ((lx)->lx_tab->lxi_close)				\
+			(lx)->lx_tab->lxi_close(lx);			\
+	} while (0)
+
+#define lx_accept(lx, s)						\
+	do {								\
+		if ((lx)->lx_tab->lxi_accept)				\
+			(lx)->lx_tab->lxi_accept((lx), (s));		\
+		(lx)->lx_fd = (s);					\
+	} while (0)
+
+#define lx_connect(lx, s)						\
+	do {								\
+		if ((lx)->lx_tab->lxi_connect)				\
+			(lx)->lx_tab->lxi_connect((lx), (s));		\
+		(lx)->lx_fd = (s);					\
+	} while (0)
+
+#define lx_read(lx, buf, sz, t)	(lx)->lx_tab->lxi_read((lx), (buf), (sz), (t))
+#define lx_readv(lx, iov, n)	(lx)->lx_tab->lxi_readv((lx), (iov), (n))
+#define lx_writev(lx, iov, n)	(lx)->lx_tab->lxi_writev((lx), (iov), (n))
+
+extern struct lnet_xport_int libcfs_ssl_lxi;
+extern struct lnet_xport_int libcfs_sock_lxi;
 
 /*
  * Macros for easy printing IP-adresses

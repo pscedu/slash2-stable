@@ -937,7 +937,7 @@ usocklnd_send_tx(usock_conn_t *conn, usock_tx_t *tx)
 {
         struct iovec *iov;
         int           nob;
-        int           fd = conn->uc_fd;
+	struct lnet_xport *lx = conn->uc_lx;
         cfs_time_t    t;
 
         LASSERT (tx->tx_resid != 0);
@@ -947,7 +947,7 @@ usocklnd_send_tx(usock_conn_t *conn, usock_tx_t *tx)
 
                 LASSERT (tx->tx_niov > 0);
 
-                nob = libcfs_sock_writev(fd, tx->tx_iov, tx->tx_niov);
+                nob = lx_writev(lx, tx->tx_iov, tx->tx_niov);
                 if (nob < 0)
                         conn->uc_errored = 1;
                 if (nob <= 0) /* write queue is flow-controlled or error */
@@ -1007,7 +1007,7 @@ usocklnd_read_data(usock_conn_t *conn)
 
                 LASSERT (conn->uc_rx_niov > 0);
 
-                nob = libcfs_sock_readv(conn->uc_fd, conn->uc_rx_iov, conn->uc_rx_niov);
+                nob = lx_readv(conn->uc_lx, conn->uc_rx_iov, conn->uc_rx_niov);
                 if (nob <= 0) {/* read nothing or error */
                         if (nob < 0)
                                 conn->uc_errored = 1;

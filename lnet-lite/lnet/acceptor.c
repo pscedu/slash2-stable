@@ -137,7 +137,8 @@ lnet_accept_magic(__u32 magic, __u32 constant)
  * do it visible outside acceptor.c and we can change its prototype
  * freely */
 static int
-lnet_accept(int sock, __u32 magic, __u32 peer_ip, __unusedx int peer_port)
+lnet_accept(struct lnet_xport *lx, __u32 magic, __u32 peer_ip,
+    __unusedx int peer_port)
 {
 	int rc, flip;
 	lnet_acceptor_connreq_t cr;
@@ -152,9 +153,8 @@ lnet_accept(int sock, __u32 magic, __u32 peer_ip, __unusedx int peer_port)
 
 	flip = (magic != LNET_PROTO_ACCEPTOR_MAGIC);
 
-	rc = libcfs_sock_read(sock, &cr.acr_version,
-			      sizeof(cr.acr_version),
-			      accept_timeout);
+	rc = lx_read(lx, &cr.acr_version, sizeof(cr.acr_version),
+	    accept_timeout);
 	if (rc != 0) {
 		CERROR("Error %d reading connection request version from "
 		       "%u.%u.%u.%u\n", rc, HIPQUAD(peer_ip));
@@ -167,10 +167,8 @@ lnet_accept(int sock, __u32 magic, __u32 peer_ip, __unusedx int peer_port)
 	if (cr.acr_version != LNET_PROTO_ACCEPTOR_VERSION)
 		return -EPROTO;
 
-	rc = libcfs_sock_read(sock, &cr.acr_nid,
-			      sizeof(cr) -
-			      offsetof(lnet_acceptor_connreq_t, acr_nid),
-			      accept_timeout);
+	rc = lx_read(lx, &cr.acr_nid, sizeof(cr) -
+	    offsetof(lnet_acceptor_connreq_t, acr_nid), accept_timeout);
 	if (rc != 0) {
 		CERROR("Error %d reading connection request from "
 		       "%u.%u.%u.%u\n", rc, HIPQUAD(peer_ip));
@@ -203,7 +201,7 @@ lnet_accept(int sock, __u32 magic, __u32 peer_ip, __unusedx int peer_port)
 	CDEBUG(D_NET, "Accept %s from %u.%u.%u.%u\n",
 	       libcfs_nid2str(cr.acr_nid), HIPQUAD(peer_ip));
 
-	rc = ni->ni_lnd->lnd_accept(ni, sock);
+	rc = ni->ni_lnd->lnd_accept(ni, lx);
 
 	lnet_ni_decref(ni);
 	return rc;
@@ -228,6 +226,7 @@ lnet_acceptor(void *arg)
 	__u32          peer_ip;
 	int            peer_port;
 	__u32          magic;
+	struct lnet_xport *lx;
 	int sock;
 
 	snprintf(name, sizeof(name), "acceptor_%03d", lap->lap_port);
@@ -273,6 +272,10 @@ lnet_acceptor(void *arg)
 			break;
 		}
 
+		lx = lx_new(LNET_NETTYP(lap->lap_nid) == SSLLND ?
+		    &libcfs_ssl_lxi : &libcfs_sock_lxi);
+		lx_accept(lx, newsock);
+
 		if (lap->lap_faux_secure &&
 		    peer_port > LNET_ACCEPTOR_MAX_RESERVED_PORT) {
 			CERROR("Refusing connection from %u.%u.%u.%u: "
@@ -281,22 +284,23 @@ lnet_acceptor(void *arg)
 			goto failed;
 		}
 
-		rc = libcfs_sock_read(newsock, &magic, sizeof(magic),
-				      accept_timeout);
+		rc = lx_read(lx, &magic, sizeof(magic), accept_timeout);
 		if (rc != 0) {
 			CERROR("Error %d reading connection request from "
 			       "%u.%u.%u.%u\n", rc, HIPQUAD(peer_ip));
 			goto failed;
 		}
 
-		rc = lnet_accept(newsock, magic, peer_ip, peer_port);
+		rc = lnet_accept(lx, magic, peer_ip, peer_port);
 		if (rc != 0)
 			goto failed;
 
 		continue;
 
 	  failed:
-		close(newsock);
+	  	lx_close(lx);
+		close(lx->lx_fd);
+		lx_destroy(lx);
 	}
 
 	close(sock);

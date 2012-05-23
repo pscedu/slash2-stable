@@ -128,6 +128,7 @@ usocklnd_poll_thread(void *arg)
         int                 saved_nfds;
         int                 extra;
         int                 times;
+	struct lnet_xport  *lx;
 #if defined(__sun__) || defined(__sun)
         struct dvpoll       dvp;
 #endif
@@ -256,7 +257,12 @@ usocklnd_poll_thread(void *arg)
                         list_del(&pr->upr_list);
 
                         if (pr->upr_type == POLL_ADD_REQUEST) {
-                                close(pr->upr_conn->uc_fd);
+                                lx = pr->upr_conn->uc_lx;
+                                pr->upr_conn->uc_lx = NULL;
+                                lx_close(lx);
+                                close(lx->lx_fd);
+                                lx_destroy(lx);
+
                                 list_add_tail(&pr->upr_conn->uc_stale_list,
                                               &pt_data->upt_stale_list);
                         } else {
@@ -272,7 +278,13 @@ usocklnd_poll_thread(void *arg)
                 for (idx = 1; idx < pt_data->upt_nfds; idx++) {
                         usock_conn_t *conn = pt_data->upt_idx2conn[idx];
                         LASSERT(conn != NULL);
-                        close(conn->uc_fd);
+
+                        lx = conn->uc_lx;
+                        conn->uc_lx = NULL;
+                        lx_close(lx);
+                        close(lx->lx_fd);
+                        lx_destroy(lx);
+
                         usocklnd_tear_peer_conn(conn);
                         usocklnd_conn_decref(conn);
                 }
@@ -358,14 +370,14 @@ do {                                                                  \
                  * of /dev/poll will do bitwise 'OR' */               \
                 if ((old_value | new_value) != new_value) {           \
                         rc = usocklnd_add_devpollrequest(pt_data,     \
-                                                         conn->uc_fd, \
+                                                         conn->uc_lx->lx_fd, \
                                                          POLLREMOVE); \
                         if ( rc != 0 )                                \
                                 goto process_pollrequest_error;       \
                 }                                                     \
                                                                       \
                 rc = usocklnd_add_devpollrequest(pt_data,             \
-                                                 conn->uc_fd,         \
+                                                 conn->uc_lx->lx_fd,  \
                                                  new_value);          \
                 if ( rc != 0 )                                        \
                         goto process_pollrequest_error;               \
@@ -374,7 +386,7 @@ do {                                                                  \
 
 #define USOCK_DP_REM_REQ                                              \
 do {                                                                  \
-        rc = usocklnd_add_devpollrequest(pt_data, conn->uc_fd,        \
+        rc = usocklnd_add_devpollrequest(pt_data, conn->uc_lx->lx_fd, \
                                          POLLREMOVE);                 \
         if ( rc != 0 )                                                \
                 goto process_pollrequest_error;                       \
@@ -393,6 +405,7 @@ usocklnd_process_pollrequest(usock_pollrequest_t *pr,
         int            type  = pr->upr_type;
         short          value = pr->upr_value;
         usock_conn_t  *conn  = pr->upr_conn;
+        struct lnet_xport *lx;
 
         int            idx = 0;
 
@@ -407,14 +420,14 @@ usocklnd_process_pollrequest(usock_pollrequest_t *pr,
 #endif
         
         LASSERT(conn != NULL);
-        LASSERT(conn->uc_fd >=0);
+        LASSERT(conn->uc_lx->lx_fd >=0);
         LASSERT(type == POLL_ADD_REQUEST ||
-                conn->uc_fd < pt_data->upt_nfd2idx);
+                conn->uc_lx->lx_fd < pt_data->upt_nfd2idx);
 
         if (type != POLL_ADD_REQUEST) {
-                idx = fd2idx[conn->uc_fd];
+                idx = fd2idx[conn->uc_lx->lx_fd];
                 if (idx > 0 && idx < pt_data->upt_nfds) { /* hot path */
-                        LASSERT(pollfd[idx].fd == conn->uc_fd);
+                        LASSERT(pollfd[idx].fd == conn->uc_lx->lx_fd);
                 } else { /* unlikely */
                         CWARN("Very unlikely event happend: trying to"
                               " handle poll request of type %d but idx=%d"
@@ -479,12 +492,12 @@ usocklnd_process_pollrequest(usock_pollrequest_t *pr,
                         pt_data->upt_npollfd = new_npollfd;
                 }
 
-                if (conn->uc_fd >= pt_data->upt_nfd2idx) {
+                if (conn->uc_lx->lx_fd >= pt_data->upt_nfd2idx) {
                         /* resize fd2idx[] */
                         int *new_fd2idx;
                         int  new_nfd2idx = pt_data->upt_nfd2idx * 2;
 
-                        while (new_nfd2idx <= conn->uc_fd)
+                        while (new_nfd2idx <= conn->uc_lx->lx_fd)
                                 new_nfd2idx *= 2;
 
                         new_fd2idx = LIBCFS_REALLOC(fd2idx, new_nfd2idx *
@@ -499,20 +512,20 @@ usocklnd_process_pollrequest(usock_pollrequest_t *pr,
                         pt_data->upt_nfd2idx = new_nfd2idx;
                 }
 
-                LASSERT(fd2idx[conn->uc_fd] == 0);
+                LASSERT(fd2idx[conn->uc_lx->lx_fd] == 0);
 
                 idx = pt_data->upt_nfds++;
                 idx2conn[idx] = conn;
-                fd2idx[conn->uc_fd] = idx;
+                fd2idx[conn->uc_lx->lx_fd] = idx;
 
-                pollfd[idx].fd = conn->uc_fd;
+                pollfd[idx].fd = conn->uc_lx->lx_fd;
                 pollfd[idx].events = value;
                 pollfd[idx].revents = 0;
                 
                 USOCK_DP_ADD_REQ(0, value);
                 break;
         case POLL_DEL_REQUEST:
-                fd2idx[conn->uc_fd] = 0; /* invalidate this entry */
+                fd2idx[conn->uc_lx->lx_fd] = 0; /* invalidate this entry */
                 
                 --pt_data->upt_nfds;
                 if (idx != pt_data->upt_nfds) {
@@ -523,7 +536,12 @@ usocklnd_process_pollrequest(usock_pollrequest_t *pr,
                         fd2idx[pollfd[idx].fd] = idx;                        
                 }
 
-                close(conn->uc_fd);
+                lx = conn->uc_lx;
+                conn->uc_lx = NULL;
+                lx_close(lx);
+                close(lx->lx_fd);
+                lx_destroy(lx); 
+
                 list_add_tail(&conn->uc_stale_list, &pt_data->upt_stale_list);
                 USOCK_DP_REM_REQ;
                 break;
@@ -613,7 +631,7 @@ usocklnd_execute_handlers(usock_pollthread_t *pt_data)
 
                         conn = idx2conn[idx];
                         LASSERT(idx == 0 || conn != NULL);
-                        LASSERT(idx == 0 || conn->uc_fd == fd);
+                        LASSERT(idx == 0 || conn->uc_lx->lx_fd == fd);
                                                                 
                         if (idx == 0) { /* fd is notifier */
                                 LASSERT(fd == notifier_fd);

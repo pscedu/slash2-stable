@@ -61,7 +61,7 @@ typedef struct {
 struct usock_peer_s;
 
 typedef struct {
-        int                  uc_fd;          /* socket */
+	struct lnet_xport   *uc_lx;	     /* transport */
         int                  uc_type;        /* conn type */
         int                  uc_activeflag;  /* active side of connection? */
         int                  uc_flip;        /* is peer other endian? */
@@ -291,7 +291,7 @@ int usocklnd_send(lnet_ni_t *ni, void *private, lnet_msg_t *lntmsg);
 int usocklnd_recv(lnet_ni_t *ni, void *private, lnet_msg_t *msg, int delayed,
                   unsigned int niov, struct iovec *iov, lnet_kiov_t *kiov,
                   unsigned int offset, unsigned int mlen, unsigned int rlen);
-int usocklnd_accept(lnet_ni_t *ni, int sock_fd);
+int usocklnd_accept(lnet_ni_t *ni, struct lnet_xport *);
 
 int usocklnd_poll_thread(void *arg);
 int usocklnd_add_pollrequest(usock_conn_t *conn, int type, short value);
@@ -333,7 +333,7 @@ usock_conn_t *usocklnd_conn_allocate();
 void usocklnd_conn_free(usock_conn_t *conn);
 void usocklnd_tear_peer_conn(usock_conn_t *conn);
 void usocklnd_check_peer_stale(lnet_ni_t *ni, lnet_process_id_t id);
-int usocklnd_create_passive_conn(lnet_ni_t *ni, int fd, usock_conn_t **connp);
+int usocklnd_create_passive_conn(lnet_ni_t *ni, struct lnet_xport *, usock_conn_t **connp);
 int usocklnd_create_active_conn(usock_peer_t *peer, int type,
                                 usock_conn_t **connp);
 int usocklnd_connect_srv_mode(int *fdp, lnet_nid_t, __u32 dst_ip, __u16 dst_port);
