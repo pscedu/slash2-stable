@@ -731,8 +731,8 @@ psc_ctlparam_rlim(int fd, struct psc_ctlmsghdr *mh,
 		if (val <= 0 || val > 10 * 1024 ||
 		    endp == pcp->pcp_value || *endp != '\0')
 			return (psc_ctlsenderr(fd, mh,
-			    "invalid rlim.nofile value: %s",
-			    pcp->pcp_value));
+			    "invalid rlim.%s value: %s",
+			    pcr->pcr_name, pcp->pcp_value));
 
 		if (pcp->pcp_flags & (PCPF_ADD | PCPF_SUB)) {
 			if (psc_getrlimit(pcr->pcr_id, &n, NULL) == -1) {
@@ -743,7 +743,7 @@ psc_ctlparam_rlim(int fd, struct psc_ctlmsghdr *mh,
 			if (pcp->pcp_flags & PCPF_ADD)
 				val += n;
 			else if (pcp->pcp_flags & PCPF_SUB)
-				val -= n;
+				val = n - val;
 		}
 	}
 
