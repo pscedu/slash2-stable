@@ -682,11 +682,11 @@ struct psc_ctl_rlim {
 	{ "csize",	RLIMIT_CORE },
 	{ "dsize",	RLIMIT_DATA },
 	{ "fsize",	RLIMIT_FSIZE },
-	{ "maxproc",	RLIMIT_NPROC }
+	{ "maxproc",	RLIMIT_NPROC },
 	{ "mem",	RLIMIT_AS },
 	{ "mlock",	RLIMIT_MEMLOCK },
 	{ "nofile",	RLIMIT_NOFILE },
-	{ "stksize",	RLIMIT_STACK },
+	{ "stksize",	RLIMIT_STACK }
 };
 
 int
@@ -694,9 +694,9 @@ psc_ctlparam_rlim(int fd, struct psc_ctlmsghdr *mh,
     struct psc_ctlmsg_param *pcp, char **levels, int nlevels,
     __unusedx struct psc_ctlparam_node *pcn)
 {
-	struct psc_ctl_rlim *pcr;
+	struct psc_ctl_rlim *pcr = NULL;
+	int rc, set, i;
 	char buf[32];
-	int rc, set;
 	char *endp;
 	rlim_t n;
 	long val;
@@ -710,15 +710,17 @@ psc_ctlparam_rlim(int fd, struct psc_ctlmsghdr *mh,
 	rc = 1;
 	levels[0] = "rlim";
 
-	set = (mh->mh_type == PCMT_SETPARAM);
-
 	if (nlevels == 2) {
-		for (pcr = NULL)
+		for (pcr = psc_ctl_rlimtab, i = 0;
+		    i < nitems(psc_ctl_rlimtab); i++, pcr++)
 			if (strcmp(levels[1], pcr->pcr_name) == 0)
 				break;
-		return (psc_ctlsenderr(fd, mh,
-		    "invalid rlim field: %s", levels[1]));
+		if (i == nitems(psc_ctl_rlimtab))
+			return (psc_ctlsenderr(fd, mh,
+			    "invalid rlim field: %s", levels[1]));
 	}
+
+	set = (mh->mh_type == PCMT_SETPARAM);
 
 	if (set) {
 		if (nlevels != 2)
@@ -731,85 +733,43 @@ psc_ctlparam_rlim(int fd, struct psc_ctlmsghdr *mh,
 			return (psc_ctlsenderr(fd, mh,
 			    "invalid rlim.nofile value: %s",
 			    pcp->pcp_value));
-		if (pcp->pcp_flags & (PCPF_ADD | PCPF_SUB))
-	}
 
-
-	if (nlevels < 2 || strcmp(levels[1], "nofile") == 0) {
-		if (set) {
-			if (psc_setrlimit(RLIMIT_NOFILE, val, val) == -1)
-				return (psc_ctlsenderr(fd, mh,
-				    "setrlimit", strerror(errno)));
-		} else {
-			levels[1] = "nofile";
-			if (psc_getrlimit(RLIMIT_NOFILE, &nfd, NULL) == -1) {
+		if (pcp->pcp_flags & (PCPF_ADD | PCPF_SUB)) {
+			if (psc_getrlimit(pcr->pcr_id, &n, NULL) == -1) {
 				psclog_error("getrlimit");
 				return (psc_ctlsenderr(fd, mh,
 				    "getrlimit", strerror(errno)));
 			}
-			snprintf(buf, sizeof(buf), "%"PRId64, nfd);
-			rc = psc_ctlmsg_param_send(fd, mh, pcp,
-			    PCTHRNAME_EVERYONE, levels, 2, buf);
+			if (pcp->pcp_flags & PCPF_ADD)
+				val += n;
+			else if (pcp->pcp_flags & PCPF_SUB)
+				val -= n;
 		}
 	}
-	if (nlevels < 2 || strcmp(levels[1], "csize") == 0) {
-		if (set) {
-		} else {
-			levels[1] = "csize";
-		}
-	}
-	if (nlevels < 2 || strcmp(levels[1], "dsize") == 0) {
-		if (set) {
-		} else {
-			levels[1] = "dsize";
-		}
-	}
-	if (nlevels < 2 || strcmp(levels[1], "fsize") == 0) {
-		if (set) {
-		} else {
-			levels[1] = "fsize";
-		}
-	}
-	if (nlevels < 2 || strcmp(levels[1], "mlock") == 0) {
-		if (set) {
-		} else {
-			levels[1] = "mlock";
-		}
-	}
-	if (nlevels < 2 || strcmp(levels[1], "mem") == 0) {
-		if (set) {
-		} else {
-			levels[1] = "mem";
-		}
-	}
-	if (nlevels < 2 || strcmp(levels[1], "psize") == 0) {
-		if (set) {
-		} else {
-			levels[1] = "psize";
-		}
-	}
-	if (nlevels < 2 || strcmp(levels[1], "stksize") == 0) {
-		if (set) {
-		} else {
-			levels[1] = "stksize";
-		}
-	}
-	if (nlevels < 2 || strcmp(levels[1], "cpu") == 0) {
-		if (set) {
-		} else {
-			levels[1] = "cpu";
-		}
-	}
-	if (nlevels < 2 || strcmp(levels[1], "maxproc") == 0) {
-		if (set) {
-		} else {
-			levels[1] = "maxproc";
-		}
-	}
-	if (nlevels < 2 || strcmp(levels[1], "vmem") == 0) {
-		if (set) {
-		} else {
-			levels[1] = "vmem";
+
+	for (pcr = psc_ctl_rlimtab, i = 0;
+	    i < nitems(psc_ctl_rlimtab); i++, pcr++) {
+		if (nlevels < 2 ||
+		    strcmp(levels[1], pcr->pcr_name) == 0) {
+			if (set) {
+				if (psc_setrlimit(pcr->pcr_id, val,
+				    val) == -1)
+					return (psc_ctlsenderr(fd, mh,
+					    "setrlimit", strerror(errno)));
+			} else {
+				levels[1] = pcr->pcr_name;
+				if (psc_getrlimit(pcr->pcr_id, &n,
+				    NULL) == -1) {
+					psclog_error("getrlimit");
+					return (psc_ctlsenderr(fd, mh,
+					    "getrlimit", strerror(errno)));
+				}
+				snprintf(buf, sizeof(buf), "%"PRId64, n);
+				rc = psc_ctlmsg_param_send(fd, mh, pcp,
+				    PCTHRNAME_EVERYONE, levels, 2, buf);
+			}
+			if (nlevels == 2)
+				break;
 		}
 	}
 	return (rc);
