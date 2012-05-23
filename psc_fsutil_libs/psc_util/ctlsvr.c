@@ -674,14 +674,31 @@ psc_ctlparam_log_format(int fd, struct psc_ctlmsghdr *mh,
 	return (rc);
 }
 
+struct psc_ctl_rlim {
+	char	*pcr_name;
+	int	 pcr_id;
+} psc_ctl_rlimtab [] = {
+	{ "cpu",	RLIMIT_CPU },
+	{ "csize",	RLIMIT_CORE },
+	{ "dsize",	RLIMIT_DATA },
+	{ "fsize",	RLIMIT_FSIZE },
+	{ "maxproc",	RLIMIT_NPROC }
+	{ "mem",	RLIMIT_AS },
+	{ "mlock",	RLIMIT_MEMLOCK },
+	{ "nofile",	RLIMIT_NOFILE },
+	{ "stksize",	RLIMIT_STACK },
+};
+
 int
-psc_ctlparam_rlim_nofile(int fd, struct psc_ctlmsghdr *mh,
+psc_ctlparam_rlim(int fd, struct psc_ctlmsghdr *mh,
     struct psc_ctlmsg_param *pcp, char **levels, int nlevels,
     __unusedx struct psc_ctlparam_node *pcn)
 {
+	struct psc_ctl_rlim *pcr;
+	char buf[32];
 	int rc, set;
 	char *endp;
-	rlim_t nfd;
+	rlim_t n;
 	long val;
 
 	if (nlevels > 2)
@@ -692,14 +709,21 @@ psc_ctlparam_rlim_nofile(int fd, struct psc_ctlmsghdr *mh,
 
 	rc = 1;
 	levels[0] = "rlim";
-	levels[1] = "nofile";
 
 	set = (mh->mh_type == PCMT_SETPARAM);
 
-	if (set) {
-		if (pcp->pcp_flags & (PCPF_ADD | PCPF_SUB))
-			psc_fatalx("not yet supported");
+	if (nlevels == 2) {
+		for (pcr = NULL)
+			if (strcmp(levels[1], pcr->pcr_name) == 0)
+				break;
+		return (psc_ctlsenderr(fd, mh,
+		    "invalid rlim field: %s", levels[1]));
+	}
 
+	if (set) {
+		if (nlevels != 2)
+			return (psc_ctlsenderr(fd, mh,
+			    "invalid operation"));
 		endp = NULL;
 		val = strtol(pcp->pcp_value, &endp, 10);
 		if (val <= 0 || val > 10 * 1024 ||
@@ -707,20 +731,86 @@ psc_ctlparam_rlim_nofile(int fd, struct psc_ctlmsghdr *mh,
 			return (psc_ctlsenderr(fd, mh,
 			    "invalid rlim.nofile value: %s",
 			    pcp->pcp_value));
-		if (psc_setrlimit(RLIMIT_NOFILE, val, val) == -1)
-			return (psc_ctlsenderr(fd, mh,
-			    "setrlimit", strerror(errno)));
-	} else {
-		char buf[20];
+		if (pcp->pcp_flags & (PCPF_ADD | PCPF_SUB))
+	}
 
-		if (psc_getrlimit(RLIMIT_NOFILE, &nfd, NULL) == -1) {
-			psclog_error("getrlimit");
-			return (psc_ctlsenderr(fd, mh,
-			    "getrlimit", strerror(errno)));
+
+	if (nlevels < 2 || strcmp(levels[1], "nofile") == 0) {
+		if (set) {
+			if (psc_setrlimit(RLIMIT_NOFILE, val, val) == -1)
+				return (psc_ctlsenderr(fd, mh,
+				    "setrlimit", strerror(errno)));
+		} else {
+			levels[1] = "nofile";
+			if (psc_getrlimit(RLIMIT_NOFILE, &nfd, NULL) == -1) {
+				psclog_error("getrlimit");
+				return (psc_ctlsenderr(fd, mh,
+				    "getrlimit", strerror(errno)));
+			}
+			snprintf(buf, sizeof(buf), "%"PRId64, nfd);
+			rc = psc_ctlmsg_param_send(fd, mh, pcp,
+			    PCTHRNAME_EVERYONE, levels, 2, buf);
 		}
-		snprintf(buf, sizeof(buf), "%"PRId64, nfd);
-		rc = psc_ctlmsg_param_send(fd, mh, pcp,
-		    PCTHRNAME_EVERYONE, levels, 2, buf);
+	}
+	if (nlevels < 2 || strcmp(levels[1], "csize") == 0) {
+		if (set) {
+		} else {
+			levels[1] = "csize";
+		}
+	}
+	if (nlevels < 2 || strcmp(levels[1], "dsize") == 0) {
+		if (set) {
+		} else {
+			levels[1] = "dsize";
+		}
+	}
+	if (nlevels < 2 || strcmp(levels[1], "fsize") == 0) {
+		if (set) {
+		} else {
+			levels[1] = "fsize";
+		}
+	}
+	if (nlevels < 2 || strcmp(levels[1], "mlock") == 0) {
+		if (set) {
+		} else {
+			levels[1] = "mlock";
+		}
+	}
+	if (nlevels < 2 || strcmp(levels[1], "mem") == 0) {
+		if (set) {
+		} else {
+			levels[1] = "mem";
+		}
+	}
+	if (nlevels < 2 || strcmp(levels[1], "psize") == 0) {
+		if (set) {
+		} else {
+			levels[1] = "psize";
+		}
+	}
+	if (nlevels < 2 || strcmp(levels[1], "stksize") == 0) {
+		if (set) {
+		} else {
+			levels[1] = "stksize";
+		}
+	}
+	if (nlevels < 2 || strcmp(levels[1], "cpu") == 0) {
+		if (set) {
+		} else {
+			levels[1] = "cpu";
+		}
+	}
+	if (nlevels < 2 || strcmp(levels[1], "maxproc") == 0) {
+		if (set) {
+		} else {
+			levels[1] = "maxproc";
+		}
+	}
+	if (nlevels < 2 || strcmp(levels[1], "vmem") == 0) {
+		if (set) {
+		} else {
+			levels[1] = "vmem";
+		}
 	}
 	return (rc);
 }
@@ -854,6 +944,7 @@ psc_ctlparam_pool_handle(int fd, struct psc_ctlmsghdr *mh,
 
 	if (nlevels < 3 || strcmp(levels[2], "min") == 0) {
 		if (nlevels == 3 && set) {
+			/* XXX logic is bogus */
 			if (pcp->pcp_flags & PCPF_ADD)
 				m->ppm_min += val;
 			else if (pcp->pcp_flags & PCPF_SUB)
