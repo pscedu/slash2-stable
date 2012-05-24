@@ -695,11 +695,10 @@ psc_ctlparam_rlim(int fd, struct psc_ctlmsghdr *mh,
     __unusedx struct psc_ctlparam_node *pcn)
 {
 	struct psc_ctl_rlim *pcr = NULL;
+	char buf[32], *endp;
 	int rc, set, i;
-	char buf[32];
-	char *endp;
+	long val = 0;
 	rlim_t n;
-	long val;
 
 	if (nlevels > 2)
 		return (psc_ctlsenderr(fd, mh, "invalid field"));
