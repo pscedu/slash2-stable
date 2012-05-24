@@ -1123,7 +1123,7 @@ psc_ctlcli_rd_main(__unusedx struct psc_thread *thr)
 	psc_ctl_sock = -1;
 	freelock(&psc_ctl_lock);
 
-	close(psc_ctl_sock);
+	close(s);
 }
 
 int
