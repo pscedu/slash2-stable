@@ -271,33 +271,25 @@ odtable_load(struct odtable **t, const char *fn, const char *fmt, ...)
 	INIT_SPINLOCK(&odt->odt_lock);
 
 	odt->odt_fd = open(fn, O_RDWR, 0600);
-	if (odt->odt_fd < 0) {
-		psclog_warnx("open %s", fn);
-		PSCFREE(odt);
-		return (-errno);
-	}
+	if (odt->odt_fd == -1)
+		PFL_GOTOERR(out, rc = errno);
 
 	odth = odt->odt_hdr = PSCALLOC(sizeof(*odth));
 
-	if (pread(odt->odt_fd, odth, sizeof(*odth), 0) != sizeof(*odth)) {
-		rc = -errno;
-		goto out;
-	}
+	if (pread(odt->odt_fd, odth, sizeof(*odth), 0) != sizeof(*odth))
+		PFL_GOTOERR(out, rc = errno);
 
-	if ((odth->odth_magic != ODTBL_MAGIC) ||
-	    (odth->odth_version != ODTBL_VERS)) {
-		rc = -EINVAL;
-		goto out;
-	}
+	if (odth->odth_magic != ODTBL_MAGIC ||
+	    odth->odth_version != ODTBL_VERS)
+		PFL_GOTOERR(out, rc = EINVAL);
 
-	if ((rc = odtable_createmmap(odt)))
-		goto out;
+	rc = odtable_createmmap(odt);
+	if (rc)
+		PFL_GOTOERR(out, rc);
 
 	odt->odt_bitmap = psc_vbitmap_new(odt->odt_hdr->odth_nelems);
-	if (!odt->odt_bitmap) {
-		rc = -ENOMEM;
-		goto out_unmap;
-	}
+	if (!odt->odt_bitmap)
+		PFL_GOTOERR(out, rc = ENOMEM);
 
 	for (z = 0; z < odt->odt_hdr->odth_nelems; z++) {
 		todtr.odtr_elem = z;
@@ -305,8 +297,7 @@ odtable_load(struct odtable **t, const char *fn, const char *fmt, ...)
 		odtf = odtable_getfooter(odt, z);
 
 		frc = odtable_footercheck(odtf, &todtr, -1);
-		/* Sanity checks for debugging.
-		 */
+		/* Sanity checks for debugging. */
 		psc_assert(frc != ODTBL_MAGIC_ERR);
 		psc_assert(frc != ODTBL_SLOT_ERR);
 
@@ -319,7 +310,8 @@ odtable_load(struct odtable **t, const char *fn, const char *fmt, ...)
 			if (odth->odth_options & ODTBL_OPT_CRC) {
 				uint64_t crc;
 
-				psc_crc64_calc(&crc, p, odt->odt_hdr->odth_elemsz);
+				psc_crc64_calc(&crc, p,
+				    odt->odt_hdr->odth_elemsz);
 				if (crc != odtf->odtf_crc) {
 					odtf->odtf_inuse = ODTBL_BAD;
 					psclog_warnx("slot=%zd crc fail "
@@ -349,22 +341,23 @@ odtable_load(struct odtable **t, const char *fn, const char *fmt, ...)
 
 	*t = odt;
 	pll_add(&psc_odtables, odt);
+
  out:
-	close(odt->odt_fd);
-	odt->odt_fd = -1;
+	if (odt->odt_fd != -1) {
+		close(odt->odt_fd);
+		odt->odt_fd = -1;
+	}
 	if (rc) {
 		/* XXX odtable_release()? */
-		odtable_freemap(odt);
+		if (odt->odt_base &&
+		    odt->odt_base != MAP_FAILED)
+			odtable_freemap(odt);
 		if (odt->odt_bitmap)
 			psc_vbitmap_free(odt->odt_bitmap);
 		PSCFREE(odt->odt_hdr);
 		PSCFREE(odt);
 	}
 	return (rc);
-
- out_unmap:
-	odtable_freemap(odt);
-	goto out;
 }
 
 int

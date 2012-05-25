@@ -165,7 +165,7 @@ odtable_createmmap(struct odtable *odt)
 	    PROT_READ, MAP_SHARED, odt->odt_fd,
 	    odt->odt_hdr->odth_start);
 	if (odt->odt_base == MAP_FAILED)
-		return (-errno);
+		return (errno);
 	return (0);
 }
 

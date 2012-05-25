@@ -33,15 +33,8 @@
 #include "psc_util/log.h"
 #include "psc_util/odtable.h"
 
-/*
- * Keep in sync with SL_PATH_DATADIR and SL_FN_IONBMAPS_ODT
- */
-#define DEF_FN	"/var/lib/slash/ion_bmaps.odt"
-
 struct psc_dynarray myReceipts = DYNARRAY_INIT;
 const char *progname;
-
-char	*fn = DEF_FN;
 
 int	crc_enabled = 1;
 int	create_table;
@@ -78,7 +71,7 @@ main(int argc, char *argv[])
 {
 	struct odtable *odt;
 	int c, rc, i, verbose = 0;
-	char *item;
+	char *item, *fn;
 
 	pfl_init();
 	progname = argv[0];
@@ -120,10 +113,9 @@ main(int argc, char *argv[])
 		}
 	argc -= optind;
 	argv += optind;
-	if (argc == 1)
-		fn = argv[0];
-	else if (argc != 0)
+	if (argc != 1)
 		usage();
+	fn = argv[0];
 
 	if (create_table) {
 		rc = odtable_create(fn, table_size, elem_size,
@@ -137,8 +129,15 @@ main(int argc, char *argv[])
 	}
 
 	rc = odtable_load(&odt, fn, "%s", fn);
-	if (rc)
-		errx(1, "load %s: %s", fn, strerror(-rc));
+	if (rc) {
+		char *errstr;
+
+		errstr = strerror(rc);
+		if (rc == ENODEV)
+			errstr = "Underlying file system does not "
+			    "support mmap(2)";
+		errx(1, "load %s: %s", fn, errstr);
+	}
 	odtable_scan(odt, my_odtcb);
 
 	item = PSCALLOC(elem_size);
