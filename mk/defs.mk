@@ -59,6 +59,16 @@ endif
 DEFINES+=	-D_REENTRANT -DYY_NO_UNPUT -DYY_NO_INPUT -DYYERROR_VERBOSE
 DEFINES+=	-DPFL_DEBUG=${DEBUG} -DDEVELPATHS=${DEVELPATHS}
 
+ifneq ($(wildcard /local/tmp),)
+  OBJBASE?=		/local/tmp
+else
+  ifneq ($(wildcard /log/tmp),)
+    OBJBASE?=		/log/tmp
+  else
+    OBJBASE?=		/tmp
+  endif
+endif
+
 KERNEL_BASE=	/usr/src/kernels/linux
 
 COPYRIGHT_PATS+='*.[chyl]'							\

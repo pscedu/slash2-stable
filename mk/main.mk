@@ -28,16 +28,6 @@ ADD_FILE_CFLAGS=	$(shell if ! [ -f "$(abspath $1)" ]; then echo "ADD_FILE_CFLAGS
 
 FORCE_INST?=		0
 
-ifneq ($(wildcard /local/tmp),)
-  OBJBASE?=		/local/tmp
-else
-  ifneq ($(wildcard /log/tmp),)
-    OBJBASE?=		/log/tmp
-  else
-    OBJBASE?=		/tmp
-  endif
-endif
-
 OBJDIR=			${OBJBASE}/psc.obj${CURDIR}
 DEPEND_FILE=		${OBJDIR}/.depend
 
