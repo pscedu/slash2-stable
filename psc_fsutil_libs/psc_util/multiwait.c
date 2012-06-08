@@ -158,6 +158,7 @@ psc_multiwaitcond_destroy(struct psc_multiwaitcond *mwc)
 	}
 	psc_dynarray_free(&mwc->mwc_multiwaits);
 	/* XXX: ensure no one is waiting on this mutex? */
+	psc_mutex_unlock(&mwc->mwc_mutex);
 	psc_mutex_destroy(&mwc->mwc_mutex);
 	pthread_cond_destroy(&mwc->mwc_cond);
 
