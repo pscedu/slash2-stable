@@ -25,8 +25,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "psc_util/alloc.h"
-
 #define FMTSTRCASE(ch, convfmt, ...)					\
 	case ch:							\
 		_tlen = _t - _p + strlen(convfmt) + 1;			\
