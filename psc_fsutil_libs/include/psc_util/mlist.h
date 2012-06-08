@@ -59,8 +59,9 @@ struct psc_mlist {
 #define MLIST_URLOCK(pml, lk)		PLL_URLOCK(&(pml)->pml_pll, (lk))
 #define MLIST_HASLOCK(pml)		PLL_HASLOCK(&(pml)->pml_pll)
 
-#define psc_mlist_addtail(pml, p)	_psc_mlist_add((pml), (p), 1)
-#define psc_mlist_addhead(pml, p)	_psc_mlist_add((pml), (p), 0)
+#define psc_mlist_addtail(pml, p)	_psc_mlist_add(PFL_CALLERINFO(), (pml), (p), 1)
+#define psc_mlist_addhead(pml, p)	_psc_mlist_add(PFL_CALLERINFO(), (pml), (p), 0)
+
 #define psc_mlist_add(pml, p)		 psc_mlist_addtail((pml), (p))
 
 /**
@@ -97,7 +98,7 @@ struct psc_mlist {
 	_psc_mlist_reginit((pml), 0, (mwcarg), offsetof(type, member),	\
 	    (namefmt), ## __VA_ARGS__)
 
-void	_psc_mlist_add(struct psc_mlist *, void *, int);
+void	_psc_mlist_add(const struct pfl_callerinfo *, struct psc_mlist *, void *, int);
 void	_psc_mlist_init(struct psc_mlist *, int, void *, ptrdiff_t,
 	    const char *, ...);
 void	_psc_mlist_reginit(struct psc_mlist *, int, void *, ptrdiff_t,
