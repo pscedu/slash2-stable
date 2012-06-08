@@ -17,6 +17,11 @@
  * %PSC_END_COPYRIGHT%
  */
 
+/*
+ * odtable: on-disk table for persistent storage of otherwise memory
+ * resident data structures.
+ */
+
 #ifndef _PFL_ODTABLE_H_
 #define _PFL_ODTABLE_H_
 
