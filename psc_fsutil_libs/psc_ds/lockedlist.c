@@ -53,7 +53,8 @@ pll_remove(struct psc_lockedlist *pll, void *p)
 }
 
 void
-_pll_add(struct psc_lockedlist *pll, void *p, int flags)
+_pll_add(const struct pfl_callerinfo *pci,
+    struct psc_lockedlist *pll, void *p, int flags)
 {
 	struct psc_listentry *e;
 	int locked;
@@ -65,6 +66,8 @@ _pll_add(struct psc_lockedlist *pll, void *p, int flags)
 	else
 		psclist_add_head(e, &pll->pll_listhd);
 	pll->pll_nitems++;
+	_psclog_pci(pci, PLL_VDEBUG, 0, "lockedlist %p add item %p",
+	    pll, p);
 	PLL_URLOCK(pll, locked);
 }
 

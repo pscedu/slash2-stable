@@ -103,11 +103,11 @@ struct psc_lockedlist {
 #define PLLBF_TAIL		(1 << 1)
 #define PLLBF_PEEK		(1 << 2)
 
-#define pll_addstack(pll, p)	_pll_add((pll), (p), PLLBF_HEAD)
-#define pll_addqueue(pll, p)	_pll_add((pll), (p), PLLBF_TAIL)
-#define pll_addhead(pll, p)	_pll_add((pll), (p), PLLBF_HEAD)
-#define pll_addtail(pll, p)	_pll_add((pll), (p), PLLBF_TAIL)
-#define pll_add(pll, p)		_pll_add((pll), (p), PLLBF_TAIL)
+#define pll_addstack(pll, p)	_pll_add(PFL_CALLERINFO(), (pll), (p), PLLBF_HEAD)
+#define pll_addqueue(pll, p)	_pll_add(PFL_CALLERINFO(), (pll), (p), PLLBF_TAIL)
+#define pll_addhead(pll, p)	_pll_add(PFL_CALLERINFO(), (pll), (p), PLLBF_HEAD)
+#define pll_addtail(pll, p)	_pll_add(PFL_CALLERINFO(), (pll), (p), PLLBF_TAIL)
+#define pll_add(pll, p)		_pll_add(PFL_CALLERINFO(), (pll), (p), PLLBF_TAIL)
 
 #define pll_gethead(pll)	_pll_get((pll), PLLBF_HEAD)
 #define pll_gettail(pll)	_pll_get((pll), PLLBF_TAIL)
@@ -117,7 +117,7 @@ struct psc_lockedlist {
 #define pll_peekhead(pll)	_pll_get((pll), PLLBF_HEAD | PLLBF_PEEK)
 #define pll_peektail(pll)	_pll_get((pll), PLLBF_TAIL | PLLBF_PEEK)
 
-void  _pll_add(struct psc_lockedlist *, void *, int);
+void  _pll_add(const struct pfl_callerinfo *, struct psc_lockedlist *, void *, int);
 void   pll_add_sorted(struct psc_lockedlist *, void *, int (*)(const
 	    void *, const void *));
 int    pll_conjoint(struct psc_lockedlist *, void *);
