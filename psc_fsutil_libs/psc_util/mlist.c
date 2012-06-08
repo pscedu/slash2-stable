@@ -40,7 +40,8 @@ struct psc_lockedlist psc_mlists =
  * @p: item to return.
  */
 void
-_psc_mlist_add(struct psc_mlist *pml, void *p, int tail)
+_psc_mlist_add(const struct pfl_callerinfo *pci, struct psc_mlist *pml,
+    void *p, int tail)
 {
 	int locked;
 
