@@ -1806,7 +1806,7 @@ psc_ctlthr_main(const char *ofn, const struct psc_ctlop *ct, int nops,
 	bzero(&sun, sizeof(sun));
 	sun.sun_family = AF_LOCAL;
 
-	/* replace literal `%h' in filename with hostname */
+	/* preform transliteration for "variables" in file path */
 	FMTSTR(sun.sun_path, sizeof(sun.sun_path), ofn,
 		FMTSTRCASE('h', "s", psclog_getdata()->pld_hostshort)
 		FMTSTRCASE('n', "s", progname)
@@ -1816,7 +1816,8 @@ psc_ctlthr_main(const char *ofn, const struct psc_ctlop *ct, int nops,
 		psclog_error("unlink %s", sun.sun_path);
 
 	spinlock(&psc_umask_lock);
-	old_umask = umask(S_IXUSR | S_IXGRP | S_IWOTH | S_IROTH | S_IXOTH);
+	old_umask = umask(S_IXUSR | S_IXGRP | S_IWOTH | S_IROTH |
+	    S_IXOTH);
 	if (bind(s, (struct sockaddr *)&sun, sizeof(sun)) == -1)
 		psc_fatal("bind %s", sun.sun_path);
 	umask(old_umask);
