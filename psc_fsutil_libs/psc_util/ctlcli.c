@@ -1151,6 +1151,7 @@ psc_ctlcli_main(const char *osockfn, int ac, char *av[],
 	struct psc_thread *thr;
 	struct sockaddr_un sun;
 	const char *prg;
+	pthread_t pthr;
 	int rc, c, i;
 
 	prg = strrchr(progname, '/');
@@ -1205,8 +1206,10 @@ psc_ctlcli_main(const char *osockfn, int ac, char *av[],
 	    sizeof(sun)) == -1)
 		err(1, "connect: %s", sun.sun_path);
 
-	thr = pscthr_init(PCTHRT_RD, 0, psc_ctlcli_rd_main, NULL, 0,
+	thr = pscthr_init(PCTHRT_RD, 0, psc_ctlcli_rd_main, NULL, 1,
 	    "%srdthr", prg);
+	pthr = thr->pscthr_pthread;
+	pscthr_setready(thr);
 
 	/* Parse options for real this time. */
 	PFL_OPT_RESET();
@@ -1249,7 +1252,7 @@ psc_ctlcli_main(const char *osockfn, int ac, char *av[],
 		psc_fatal("shutdown");
 	freelock(&psc_ctl_lock);
 
-	rc = pthread_join(thr->pscthr_pthread, NULL);
+	rc = pthread_join(pthr, NULL);
 	if (rc)
 		psc_fatalx("pthread_join: %s", strerror(rc));
 }
