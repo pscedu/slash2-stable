@@ -25,6 +25,7 @@
 #include <sys/time.h>
 #include <sys/syscall.h>
 #include <sys/stat.h>
+#include <sys/statvfs.h>
 
 #include <ctype.h>
 #include <err.h>
@@ -92,6 +93,18 @@ psc_log_setfn(const char *p, const char *mode)
 	);
 	if (freopen(fn, mode, stderr) == NULL)
 		return (errno);
+
+#if 0
+	struct statvfs sfb;
+
+	if (fstatvfs(fileno(stderr), &sfb) == -1)
+		warn("statvfs stderr");
+	else {
+		if (nfs)
+			warn("warning: error log file over NFS");
+	}
+#endif
+
 	return (0);
 }
 
