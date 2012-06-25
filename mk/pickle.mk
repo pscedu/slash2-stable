@@ -234,4 +234,8 @@ PICKLE_NEED_VERSION=					$(word 2,$$Rev$$)
   DEFINES+=						-DHAVE_GETMNTINFO
  endif
 
+ ifdef PICKLE_HAVE_GETXATTR
+  DEFINES+=						-DHAVE_GETXATTR
+ endif
+
 endif
