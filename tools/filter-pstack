@@ -94,8 +94,12 @@ while (<>) {
 	    $#thr == -1) {
 		push @thr, $_;
 	} else {
-		chomp $thr[$#thr] if $#thr >= 0;
-		$thr[$#thr] .= " $_";
+		if (/^ /) {
+			chomp $thr[$#thr] if $#thr >= 0;
+			$thr[$#thr] .= " $_";
+		} else {
+			$thr[$#thr] .= $_;
+		}
 	}
 }
 
