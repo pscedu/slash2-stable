@@ -84,7 +84,7 @@ int pfl_syslog_map[] = {
 int
 psc_log_setfn(const char *p, const char *mode)
 {
-	char fn[PATH_MAX];
+	char *lp, fn[PATH_MAX];
 	struct timeval tv;
 
 	PFL_GETTIMEVAL(&tv);
@@ -93,6 +93,14 @@ psc_log_setfn(const char *p, const char *mode)
 	);
 	if (freopen(fn, mode, stderr) == NULL)
 		return (errno);
+
+	lp = getenv("PSC_LOG_FILE_LINK");
+	if (lp) {
+		if (unlink(lp) == -1 && errno != ENOENT)
+			warn("unlink %s", lp);
+		if (link(fn, lp) == -1)
+			warn("link %s", lp);
+	}
 
 #if 0
 	struct statvfs sfb;
