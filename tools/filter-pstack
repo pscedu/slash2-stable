@@ -84,15 +84,16 @@ sub ign_thr {
 }
 
 sub print_thr {
-	print @thr unless ign_thr;
+	chomp $thr[$#thr];
+	print @thr, "\n\n" unless ign_thr;
 	@thr = ();
 }
 
 while (<>) {
-	print_thr if /^Thread\s+\d+/;
 	if (/^Thread\s+\d+/) {
+		print_thr if @thr;
 		push @thr, $_;
-	} elsif (@thr) {
+	} elsif (@thr && /./) {
 		if (s/^\s+//) {
 			chomp $thr[$#thr];
 			$thr[$#thr] .= " " . $_;
