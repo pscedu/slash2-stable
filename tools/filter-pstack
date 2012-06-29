@@ -93,7 +93,7 @@ while (<>) {
 	if (/^Thread\s+\d+/ or /^#\d+\s+0x[a-fA-F0-9]+\s+in\s+/ or
 	    $#thr == -1) {
 		push @thr, $_;
-	} else {
+	} elsif (@thr) {
 		if (/^ /) {
 			chomp $thr[$#thr] if $#thr >= 0;
 			$thr[$#thr] .= " $_";
