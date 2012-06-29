@@ -90,15 +90,14 @@ sub print_thr {
 
 while (<>) {
 	print_thr if /^Thread\s+\d+/;
-	if (/^Thread\s+\d+/ or /^#\d+\s+0x[a-fA-F0-9]+\s+in\s+/ or
-	    $#thr == -1) {
+	if (/^Thread\s+\d+/) {
 		push @thr, $_;
 	} elsif (@thr) {
-		if (/^ /) {
-			chomp $thr[$#thr] if $#thr >= 0;
-			$thr[$#thr] .= " $_";
+		if (s/^\s+//) {
+			chomp $thr[$#thr];
+			$thr[$#thr] .= " " . $_;
 		} else {
-			$thr[$#thr] .= $_;
+			push @thr, $_;
 		}
 	}
 }
