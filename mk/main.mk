@@ -44,7 +44,7 @@ _TOBJS+=		$(patsubst %.y,%.o,$(filter %.y,${_TSRCS}))
 _TOBJS+=		$(patsubst %.l,%.o,$(filter %.l,${_TSRCS}))
 OBJS=			$(addprefix ${OBJDIR}/,$(notdir ${_TOBJS}))
 
-_TSUBDIRS=		$(sort $(foreach dir,${SUBDIRS},$(realpath ${dir})))
+_TSUBDIRS=		$(foreach dir,${SUBDIRS},$(realpath ${dir}))
 
 _LEXINTM=		$(patsubst %.l,%.c,$(addprefix ${OBJDIR}/,$(notdir $(filter %.l,${_TSRCS}))))
 _YACCINTM=		$(patsubst %.y,%.c,$(addprefix ${OBJDIR}/,$(notdir $(filter %.y,${_TSRCS}))))
@@ -403,6 +403,11 @@ ${LIBRARY}: ${OBJS}
 endif
 
 recurse-%:
+	@if [ $(words ${SUBDIRS}) -ne					\
+	      $(words $(sort ${SUBDIRS})) ]; then			\
+		echo "duplicate in SUBDIRS" >&2;			\
+		false;							\
+	fi
 	@for i in ${_TSUBDIRS}; do					\
 		echo "===> $$i $(patsubst recurse-%,%,$@)";		\
 		if [ "${PSC_MAKE_STATUS}" ]; then			\
