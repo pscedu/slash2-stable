@@ -1,7 +1,6 @@
 # $Id$
 
 FUSE_BASE=	${ROOTDIR}/distrib/fuse
-GLAZE_BASE=	${ROOTDIR}/glaze
 LNET_BASE=	${ROOTDIR}/lnet-lite
 PFL_BASE=	${ROOTDIR}/psc_fsutil_libs
 SLASH_BASE=	${ROOTDIR}/slash_nara
@@ -12,4 +11,4 @@ MAINMK=		${ROOTDIR}/mk/main.mk
 PFLMK=		${PFL_BASE}/mk/main.mk
 SLASHMK=	${SLASH_BASE}/mk/main.mk
 ZESTMK=		${ZEST_BASE}/mk/main.mk
-OBSD_REGRESS_MK=${ROOTDIR}/distrib/obsd.regress/main.mk
+OBSD_REGRESS_MK=${ROOTDIR}/../distrib/obsd.regress/main.mk
