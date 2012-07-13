@@ -209,7 +209,7 @@ struct psc_poolmgr {
 	do {								\
 		_PSC_POOL_CLEAR_OBJ((m), (p));				\
 		_psc_pool_return((m), (p));				\
-		psclog_info("returned item %p to pool %s", (p),	\
+		psclog_info("returned item %p to pool %s", (p),		\
 		    (m)->ppm_name);					\
 		(p) = NULL;						\
 	} while (0)
