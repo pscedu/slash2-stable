@@ -56,6 +56,8 @@ psc_waitq_destroy(struct psc_waitq *q)
 {
 	int rc;
 
+	psc_assert(atomic_read(&q->wq_nwaiters) == 0);
+
 	psc_mutex_destroy(&q->wq_mut);
 	rc = pthread_cond_destroy(&q->wq_cond);
 	if (rc)
@@ -79,7 +81,7 @@ psc_waitq_waitabs(struct psc_waitq *q, psc_spinlock_t *k,
 
 	psc_mutex_lock(&q->wq_mut);
 
-	if (k != NULL)
+	if (k)
 		freelock(k);
 
 	atomic_inc(&q->wq_nwaiters);
@@ -196,6 +198,7 @@ psc_waitq_wakeall(struct psc_waitq *q)
 void
 psc_waitq_init(struct psc_waitq *q)
 {
+	memset(q, 0, sizeof(*q));
 	atomic_set(&q->wq_nwaiters, 0);
 }
 
