@@ -34,6 +34,7 @@
 struct psc_iostats {
 	char			ist_name[IST_NAME_MAX];
 	struct psclist_head	ist_lentry;
+	int			ist_flags;
 
 	uint64_t		ist_len_total;			/* lifetime acculumator */
 
@@ -46,6 +47,8 @@ struct psc_iostats {
 
 	}			ist_intv[IST_NINTV];
 };
+
+#define PISTF_BASE10		(1 << 0)
 
 #define psc_iostats_calcrate(len, tv)					\
 	((len) / (((tv)->tv_sec * UINT64_C(1000000) + (tv)->tv_usec) * 1e-6))
@@ -63,7 +66,10 @@ struct psc_iostats {
 
 #define psc_iostats_remove(ist)		pll_remove(&psc_iostats, (ist))
 
-void psc_iostats_init(struct psc_iostats *, const char *, ...);
+#define psc_iostats_init(ist, name, ...)				\
+	psc_iostats_initf((ist), 0, (name), ## __VA_ARGS__)
+
+void psc_iostats_initf(struct psc_iostats *, int, const char *, ...);
 void psc_iostats_rename(struct psc_iostats *, const char *, ...);
 
 extern struct psc_lockedlist	psc_iostats;

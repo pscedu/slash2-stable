@@ -41,7 +41,8 @@ int psc_iostat_intvs[] = {
 };
 
 void
-psc_iostats_init(struct psc_iostats *ist, const char *fmt, ...)
+psc_iostats_initf(struct psc_iostats *ist, int flags, const char *fmt,
+    ...)
 {
 	struct timeval tv;
 	va_list ap;
@@ -49,6 +50,7 @@ psc_iostats_init(struct psc_iostats *ist, const char *fmt, ...)
 
 	memset(ist, 0, sizeof(*ist));
 	INIT_PSC_LISTENTRY(&ist->ist_lentry);
+	ist->ist_flags = flags;
 
 	va_start(ap, fmt);
 	rc = vsnprintf(ist->ist_name, sizeof(ist->ist_name), fmt, ap);

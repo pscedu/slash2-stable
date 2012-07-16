@@ -616,21 +616,27 @@ psc_ctlmsg_iostats_prdat(__unusedx const struct psc_ctlmsghdr *mh,
 	const struct psc_ctlmsg_iostats *pci = m;
 	const struct psc_iostats *ist = &pci->pci_ist;
 	char buf[PSCFMT_HUMAN_BUFSIZ];
+	int i, base10 = 0;
 	double d;
-	int i;
+
+	if (ist->ist_flags & PISTF_BASE10 || psc_ctl_inhuman)
+		base10 = 1;
 
 	printf("%-47s ", ist->ist_name);
 	for (i = IST_NINTV - 1; i >= 0; i--) {
 		d = psc_iostats_getintvrate(ist, i);
 
-		if (psc_ctl_inhuman)
-			printf("%10.2f ", d);
-		else {
+		if (base10) {
+			if (i)
+				printf("%8.2f/s ", d);
+			else
+				printf("%8.0f/s ", d);
+		} else {
 			psc_fmt_human(buf, d);
 			printf("%8s/s ", buf);
 		}
 	}
-	if (psc_ctl_inhuman)
+	if (base10)
 		printf("%10"PRIu64, ist->ist_len_total);
 	else {
 		psc_fmt_human(buf, ist->ist_len_total);
