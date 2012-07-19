@@ -649,11 +649,12 @@ void
 psc_ctlmsg_journal_prhdr(__unusedx struct psc_ctlmsghdr *mh,
     __unusedx const void *m)
 {
-	printf("%-16s %4s %4s %6s %3s "
-	    "%9s %9s %9s %6s %5s\n",
-	    "journal", "flag", "used", "total", "rsv",
-	    "lastxid", "committxg", "distilxid",
-	    "nxtslt", "wraps");
+	printf("%-22s %4s %4s %6s %2s "
+	    "%9s %7s %8s "
+	    "%5s %4s\n",
+	    "journal", "flag", "used", "total", "rs",
+	    "lastxid", "comitxg", "distlxid",
+	    "nxslt", "#wrp");
 }
 
 void
@@ -662,9 +663,9 @@ psc_ctlmsg_journal_prdat(__unusedx const struct psc_ctlmsghdr *mh,
 {
 	const struct psc_ctlmsg_journal *pcj = m;
 
-	printf("%-16s %c%c%c%c %4u %6u %3u "
-	    "%9"PRIx64" %9"PRIx64" %9"PRIx64" "
-	    "%6d %5"PRId64"\n",
+	printf("%-22s %c%c%c%c %4u %6u %2u "
+	    "%9"PRIx64" %7"PRIx64" %8"PRIx64" "
+	    "%5d %4"PRId64"\n",
 	    pcj->pcj_name,
 	    pcj->pcj_flags & PJF_WANTBUF	? 'B' : '-',
 	    pcj->pcj_flags & PJF_WANTSLOT	? 'S' : '-',
