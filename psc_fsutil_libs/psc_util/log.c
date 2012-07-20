@@ -421,7 +421,10 @@ _psclogv(const struct pfl_callerinfo *pci, enum psclog_level level,
 	d->pld_flags &= ~PLDF_INLOG;
 
  out:
-	/* Restore in case app needs it after our printf()'s may have modified it. */
+	/*
+	 * Restore in case app needs it after our printf()'s may have
+	 * modified it.
+	 */
 	errno = save_errno;
 
 	va_end(ap0);
