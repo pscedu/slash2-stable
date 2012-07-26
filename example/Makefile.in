@@ -59,6 +59,9 @@ cusexmp_SOURCES = cusexmp.c
 cusexmp_OBJECTS = cusexmp.$(OBJEXT)
 cusexmp_LDADD = $(LDADD)
 cusexmp_DEPENDENCIES = ../lib/libfuse.la
+AM_V_lt = $(am__v_lt_$(V))
+am__v_lt_ = $(am__v_lt_$(AM_DEFAULT_VERBOSITY))
+am__v_lt_0 = --silent
 fioc_SOURCES = fioc.c
 fioc_OBJECTS = fioc.$(OBJEXT)
 fioc_LDADD = $(LDADD)
@@ -66,7 +69,7 @@ fioc_DEPENDENCIES = ../lib/libfuse.la
 fioclient_SOURCES = fioclient.c
 fioclient_OBJECTS = fioclient-fioclient.$(OBJEXT)
 fioclient_DEPENDENCIES =
-fioclient_LINK = $(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) \
+fioclient_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) \
 	$(LIBTOOLFLAGS) --mode=link $(CCLD) $(AM_CFLAGS) $(CFLAGS) \
 	$(fioclient_LDFLAGS) $(LDFLAGS) -o $@
 fsel_SOURCES = fsel.c
@@ -76,7 +79,7 @@ fsel_DEPENDENCIES = ../lib/libfuse.la
 fselclient_SOURCES = fselclient.c
 fselclient_OBJECTS = fselclient-fselclient.$(OBJEXT)
 fselclient_DEPENDENCIES =
-fselclient_LINK = $(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) \
+fselclient_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) \
 	$(LIBTOOLFLAGS) --mode=link $(CCLD) $(AM_CFLAGS) $(CFLAGS) \
 	$(fselclient_LDFLAGS) $(LDFLAGS) -o $@
 fusexmp_SOURCES = fusexmp.c
@@ -104,13 +107,26 @@ am__depfiles_maybe = depfiles
 am__mv = mv -f
 COMPILE = $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) \
 	$(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS)
-LTCOMPILE = $(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) \
-	--mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) \
-	$(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS)
+LTCOMPILE = $(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) \
+	$(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) \
+	$(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) \
+	$(AM_CFLAGS) $(CFLAGS)
+AM_V_CC = $(am__v_CC_$(V))
+am__v_CC_ = $(am__v_CC_$(AM_DEFAULT_VERBOSITY))
+am__v_CC_0 = @echo "  CC    " $@;
+AM_V_at = $(am__v_at_$(V))
+am__v_at_ = $(am__v_at_$(AM_DEFAULT_VERBOSITY))
+am__v_at_0 = @
 CCLD = $(CC)
-LINK = $(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) \
-	--mode=link $(CCLD) $(AM_CFLAGS) $(CFLAGS) $(AM_LDFLAGS) \
-	$(LDFLAGS) -o $@
+LINK = $(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) \
+	$(LIBTOOLFLAGS) --mode=link $(CCLD) $(AM_CFLAGS) $(CFLAGS) \
+	$(AM_LDFLAGS) $(LDFLAGS) -o $@
+AM_V_CCLD = $(am__v_CCLD_$(V))
+am__v_CCLD_ = $(am__v_CCLD_$(AM_DEFAULT_VERBOSITY))
+am__v_CCLD_0 = @echo "  CCLD  " $@;
+AM_V_GEN = $(am__v_GEN_$(V))
+am__v_GEN_ = $(am__v_GEN_$(AM_DEFAULT_VERBOSITY))
+am__v_GEN_0 = @echo "  GEN   " $@;
 SOURCES = cusexmp.c fioc.c fioclient.c fsel.c fselclient.c fusexmp.c \
 	fusexmp_fh.c hello.c hello_ll.c null.c
 DIST_SOURCES = cusexmp.c fioc.c fioclient.c fsel.c fselclient.c \
@@ -121,6 +137,7 @@ CTAGS = ctags
 DISTFILES = $(DIST_COMMON) $(DIST_SOURCES) $(TEXINFOS) $(EXTRA_DIST)
 ACLOCAL = @ACLOCAL@
 AMTAR = @AMTAR@
+AM_DEFAULT_VERBOSITY = @AM_DEFAULT_VERBOSITY@
 AR = @AR@
 AUTOCONF = @AUTOCONF@
 AUTOHEADER = @AUTOHEADER@
@@ -134,6 +151,7 @@ CPPFLAGS = @CPPFLAGS@
 CYGPATH_W = @CYGPATH_W@
 DEFS = @DEFS@
 DEPDIR = @DEPDIR@
+DLLTOOL = @DLLTOOL@
 DSYMUTIL = @DSYMUTIL@
 DUMPBIN = @DUMPBIN@
 ECHO_C = @ECHO_C@
@@ -160,6 +178,7 @@ LN_S = @LN_S@
 LTLIBICONV = @LTLIBICONV@
 LTLIBOBJS = @LTLIBOBJS@
 MAKEINFO = @MAKEINFO@
+MANIFEST_TOOL = @MANIFEST_TOOL@
 MKDIR_P = @MKDIR_P@
 MOUNT_FUSE_PATH = @MOUNT_FUSE_PATH@
 NM = @NM@
@@ -187,6 +206,7 @@ abs_builddir = @abs_builddir@
 abs_srcdir = @abs_srcdir@
 abs_top_builddir = @abs_top_builddir@
 abs_top_srcdir = @abs_top_srcdir@
+ac_ct_AR = @ac_ct_AR@
 ac_ct_CC = @ac_ct_CC@
 ac_ct_DUMPBIN = @ac_ct_DUMPBIN@
 am__include = @am__include@
@@ -220,7 +240,6 @@ libexecdir = @libexecdir@
 libfuse_libs = @libfuse_libs@
 localedir = @localedir@
 localstatedir = @localstatedir@
-lt_ECHO = @lt_ECHO@
 mandir = @mandir@
 mkdir_p = @mkdir_p@
 numa_libs = @numa_libs@
@@ -245,8 +264,8 @@ top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
 AM_CPPFLAGS = -I$(top_srcdir)/include -D_FILE_OFFSET_BITS=64 -D_REENTRANT
 noinst_HEADERS = fioc.h
-LDADD = ../lib/libfuse.la @libfuse_libs@
-fusexmp_fh_LDADD = ../lib/libfuse.la ../lib/libulockmgr.la @libfuse_libs@
+LDADD = ../lib/libfuse.la
+fusexmp_fh_LDADD = ../lib/libfuse.la ../lib/libulockmgr.la
 fioclient_CPPFLAGS = 
 fioclient_LDFLAGS = 
 fioclient_LDADD = 
@@ -298,34 +317,34 @@ clean-noinstPROGRAMS:
 	rm -f $$list
 cusexmp$(EXEEXT): $(cusexmp_OBJECTS) $(cusexmp_DEPENDENCIES) 
 	@rm -f cusexmp$(EXEEXT)
-	$(LINK) $(cusexmp_OBJECTS) $(cusexmp_LDADD) $(LIBS)
+	$(AM_V_CCLD)$(LINK) $(cusexmp_OBJECTS) $(cusexmp_LDADD) $(LIBS)
 fioc$(EXEEXT): $(fioc_OBJECTS) $(fioc_DEPENDENCIES) 
 	@rm -f fioc$(EXEEXT)
-	$(LINK) $(fioc_OBJECTS) $(fioc_LDADD) $(LIBS)
+	$(AM_V_CCLD)$(LINK) $(fioc_OBJECTS) $(fioc_LDADD) $(LIBS)
 fioclient$(EXEEXT): $(fioclient_OBJECTS) $(fioclient_DEPENDENCIES) 
 	@rm -f fioclient$(EXEEXT)
-	$(fioclient_LINK) $(fioclient_OBJECTS) $(fioclient_LDADD) $(LIBS)
+	$(AM_V_CCLD)$(fioclient_LINK) $(fioclient_OBJECTS) $(fioclient_LDADD) $(LIBS)
 fsel$(EXEEXT): $(fsel_OBJECTS) $(fsel_DEPENDENCIES) 
 	@rm -f fsel$(EXEEXT)
-	$(LINK) $(fsel_OBJECTS) $(fsel_LDADD) $(LIBS)
+	$(AM_V_CCLD)$(LINK) $(fsel_OBJECTS) $(fsel_LDADD) $(LIBS)
 fselclient$(EXEEXT): $(fselclient_OBJECTS) $(fselclient_DEPENDENCIES) 
 	@rm -f fselclient$(EXEEXT)
-	$(fselclient_LINK) $(fselclient_OBJECTS) $(fselclient_LDADD) $(LIBS)
+	$(AM_V_CCLD)$(fselclient_LINK) $(fselclient_OBJECTS) $(fselclient_LDADD) $(LIBS)
 fusexmp$(EXEEXT): $(fusexmp_OBJECTS) $(fusexmp_DEPENDENCIES) 
 	@rm -f fusexmp$(EXEEXT)
-	$(LINK) $(fusexmp_OBJECTS) $(fusexmp_LDADD) $(LIBS)
+	$(AM_V_CCLD)$(LINK) $(fusexmp_OBJECTS) $(fusexmp_LDADD) $(LIBS)
 fusexmp_fh$(EXEEXT): $(fusexmp_fh_OBJECTS) $(fusexmp_fh_DEPENDENCIES) 
 	@rm -f fusexmp_fh$(EXEEXT)
-	$(LINK) $(fusexmp_fh_OBJECTS) $(fusexmp_fh_LDADD) $(LIBS)
+	$(AM_V_CCLD)$(LINK) $(fusexmp_fh_OBJECTS) $(fusexmp_fh_LDADD) $(LIBS)
 hello$(EXEEXT): $(hello_OBJECTS) $(hello_DEPENDENCIES) 
 	@rm -f hello$(EXEEXT)
-	$(LINK) $(hello_OBJECTS) $(hello_LDADD) $(LIBS)
+	$(AM_V_CCLD)$(LINK) $(hello_OBJECTS) $(hello_LDADD) $(LIBS)
 hello_ll$(EXEEXT): $(hello_ll_OBJECTS) $(hello_ll_DEPENDENCIES) 
 	@rm -f hello_ll$(EXEEXT)
-	$(LINK) $(hello_ll_OBJECTS) $(hello_ll_LDADD) $(LIBS)
+	$(AM_V_CCLD)$(LINK) $(hello_ll_OBJECTS) $(hello_ll_LDADD) $(LIBS)
 null$(EXEEXT): $(null_OBJECTS) $(null_DEPENDENCIES) 
 	@rm -f null$(EXEEXT)
-	$(LINK) $(null_OBJECTS) $(null_LDADD) $(LIBS)
+	$(AM_V_CCLD)$(LINK) $(null_OBJECTS) $(null_LDADD) $(LIBS)
 
 mostlyclean-compile:
 	-rm -f *.$(OBJEXT)
@@ -345,50 +364,57 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/null.Po@am__quote@
 
 .c.o:
-@am__fastdepCC_TRUE@	$(COMPILE) -MT $@ -MD -MP -MF $(DEPDIR)/$*.Tpo -c -o $@ $<
-@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/$*.Tpo $(DEPDIR)/$*.Po
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(COMPILE) -MT $@ -MD -MP -MF $(DEPDIR)/$*.Tpo -c -o $@ $<
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/$*.Tpo $(DEPDIR)/$*.Po
+@am__fastdepCC_FALSE@	$(AM_V_CC) @AM_BACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	source='$<' object='$@' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(COMPILE) -c $<
 
 .c.obj:
-@am__fastdepCC_TRUE@	$(COMPILE) -MT $@ -MD -MP -MF $(DEPDIR)/$*.Tpo -c -o $@ `$(CYGPATH_W) '$<'`
-@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/$*.Tpo $(DEPDIR)/$*.Po
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(COMPILE) -MT $@ -MD -MP -MF $(DEPDIR)/$*.Tpo -c -o $@ `$(CYGPATH_W) '$<'`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/$*.Tpo $(DEPDIR)/$*.Po
+@am__fastdepCC_FALSE@	$(AM_V_CC) @AM_BACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	source='$<' object='$@' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(COMPILE) -c `$(CYGPATH_W) '$<'`
 
 .c.lo:
-@am__fastdepCC_TRUE@	$(LTCOMPILE) -MT $@ -MD -MP -MF $(DEPDIR)/$*.Tpo -c -o $@ $<
-@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/$*.Tpo $(DEPDIR)/$*.Plo
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(LTCOMPILE) -MT $@ -MD -MP -MF $(DEPDIR)/$*.Tpo -c -o $@ $<
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/$*.Tpo $(DEPDIR)/$*.Plo
+@am__fastdepCC_FALSE@	$(AM_V_CC) @AM_BACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	source='$<' object='$@' libtool=yes @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(LTCOMPILE) -c -o $@ $<
 
 fioclient-fioclient.o: fioclient.c
-@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(fioclient_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT fioclient-fioclient.o -MD -MP -MF $(DEPDIR)/fioclient-fioclient.Tpo -c -o fioclient-fioclient.o `test -f 'fioclient.c' || echo '$(srcdir)/'`fioclient.c
-@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/fioclient-fioclient.Tpo $(DEPDIR)/fioclient-fioclient.Po
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(fioclient_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT fioclient-fioclient.o -MD -MP -MF $(DEPDIR)/fioclient-fioclient.Tpo -c -o fioclient-fioclient.o `test -f 'fioclient.c' || echo '$(srcdir)/'`fioclient.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/fioclient-fioclient.Tpo $(DEPDIR)/fioclient-fioclient.Po
+@am__fastdepCC_FALSE@	$(AM_V_CC) @AM_BACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	source='fioclient.c' object='fioclient-fioclient.o' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(fioclient_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o fioclient-fioclient.o `test -f 'fioclient.c' || echo '$(srcdir)/'`fioclient.c
 
 fioclient-fioclient.obj: fioclient.c
-@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(fioclient_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT fioclient-fioclient.obj -MD -MP -MF $(DEPDIR)/fioclient-fioclient.Tpo -c -o fioclient-fioclient.obj `if test -f 'fioclient.c'; then $(CYGPATH_W) 'fioclient.c'; else $(CYGPATH_W) '$(srcdir)/fioclient.c'; fi`
-@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/fioclient-fioclient.Tpo $(DEPDIR)/fioclient-fioclient.Po
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(fioclient_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT fioclient-fioclient.obj -MD -MP -MF $(DEPDIR)/fioclient-fioclient.Tpo -c -o fioclient-fioclient.obj `if test -f 'fioclient.c'; then $(CYGPATH_W) 'fioclient.c'; else $(CYGPATH_W) '$(srcdir)/fioclient.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/fioclient-fioclient.Tpo $(DEPDIR)/fioclient-fioclient.Po
+@am__fastdepCC_FALSE@	$(AM_V_CC) @AM_BACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	source='fioclient.c' object='fioclient-fioclient.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(fioclient_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o fioclient-fioclient.obj `if test -f 'fioclient.c'; then $(CYGPATH_W) 'fioclient.c'; else $(CYGPATH_W) '$(srcdir)/fioclient.c'; fi`
 
 fselclient-fselclient.o: fselclient.c
-@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(fselclient_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT fselclient-fselclient.o -MD -MP -MF $(DEPDIR)/fselclient-fselclient.Tpo -c -o fselclient-fselclient.o `test -f 'fselclient.c' || echo '$(srcdir)/'`fselclient.c
-@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/fselclient-fselclient.Tpo $(DEPDIR)/fselclient-fselclient.Po
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(fselclient_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT fselclient-fselclient.o -MD -MP -MF $(DEPDIR)/fselclient-fselclient.Tpo -c -o fselclient-fselclient.o `test -f 'fselclient.c' || echo '$(srcdir)/'`fselclient.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/fselclient-fselclient.Tpo $(DEPDIR)/fselclient-fselclient.Po
+@am__fastdepCC_FALSE@	$(AM_V_CC) @AM_BACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	source='fselclient.c' object='fselclient-fselclient.o' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(fselclient_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o fselclient-fselclient.o `test -f 'fselclient.c' || echo '$(srcdir)/'`fselclient.c
 
 fselclient-fselclient.obj: fselclient.c
-@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(fselclient_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT fselclient-fselclient.obj -MD -MP -MF $(DEPDIR)/fselclient-fselclient.Tpo -c -o fselclient-fselclient.obj `if test -f 'fselclient.c'; then $(CYGPATH_W) 'fselclient.c'; else $(CYGPATH_W) '$(srcdir)/fselclient.c'; fi`
-@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/fselclient-fselclient.Tpo $(DEPDIR)/fselclient-fselclient.Po
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(fselclient_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT fselclient-fselclient.obj -MD -MP -MF $(DEPDIR)/fselclient-fselclient.Tpo -c -o fselclient-fselclient.obj `if test -f 'fselclient.c'; then $(CYGPATH_W) 'fselclient.c'; else $(CYGPATH_W) '$(srcdir)/fselclient.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/fselclient-fselclient.Tpo $(DEPDIR)/fselclient-fselclient.Po
+@am__fastdepCC_FALSE@	$(AM_V_CC) @AM_BACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	source='fselclient.c' object='fselclient-fselclient.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(fselclient_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o fselclient-fselclient.obj `if test -f 'fselclient.c'; then $(CYGPATH_W) 'fselclient.c'; else $(CYGPATH_W) '$(srcdir)/fselclient.c'; fi`

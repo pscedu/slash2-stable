@@ -9,6 +9,7 @@
 #include "fuse_lowlevel.h"
 #include "fuse_misc.h"
 #include "fuse_kernel.h"
+#include "fuse_i.h"
 
 #ifdef HAVE_NUMA
 #include <cpuset.h>
@@ -69,7 +70,7 @@ static void list_del_worker(struct fuse_worker *w)
 	next->prev = prev;
 }
 
-static int fuse_start_thread(struct fuse_mt *mt, int bindnode);
+static int fuse_loop_start_thread(struct fuse_mt *mt, int bind_node);
 
 static void *fuse_do_work(void *data)
 {
@@ -109,15 +110,19 @@ static void *fuse_do_work(void *data)
 
 	if (fuse_thread_init)
 		fuse_thread_init(w->bindnode);
-#endif
+#endif 
 
 	while (!fuse_session_exited(mt->se)) {
 		int isforget = 0;
 		struct fuse_chan *ch = mt->prevch;
+		struct fuse_buf fbuf = {
+			.mem = w->buf,
+			.size = w->bufsize,
+		};
 		int res;
 
 		pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, NULL);
-		res = fuse_chan_recv(&ch, w->buf, w->bufsize);
+		res = fuse_session_receive_buf(mt->se, &fbuf, &ch);
 		pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, NULL);
 		if (res == -EINTR)
 			continue;
@@ -139,18 +144,23 @@ static void *fuse_do_work(void *data)
 		 * This disgusting hack is needed so that zillions of threads
 		 * are not created on a burst of FORGET messages
 		 */
-		if (((struct fuse_in_header *) w->buf)->opcode == FUSE_FORGET)
-			isforget = 1;
+		if (!(fbuf.flags & FUSE_BUF_IS_FD)) {
+			struct fuse_in_header *in = fbuf.mem;
+
+			if (in->opcode == FUSE_FORGET ||
+			    in->opcode == FUSE_BATCH_FORGET)
+				isforget = 1;
+		}
 
 #ifndef HAVE_NUMA
 		if (!isforget)
 			mt->numavail--;
 		if (mt->numavail == 0)
-			fuse_start_thread(mt, 0);
+			fuse_loop_start_thread(mt, 0);
 #endif
 		pthread_mutex_unlock(&mt->lock);
 
-		fuse_session_process(mt->se, w->buf, res, ch);
+		fuse_session_process_buf(mt->se, &fbuf, ch);
 
 #ifndef HAVE_NUMA
 		pthread_mutex_lock(&mt->lock);
@@ -176,19 +186,46 @@ static void *fuse_do_work(void *data)
 	}
 
 	sem_post(&mt->finish);
-	pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, NULL);
-	pause();
 
 	return NULL;
 }
 
-static int fuse_start_thread(struct fuse_mt *mt, int bindnode)
+int fuse_start_thread(pthread_t *thread_id, void *(*func)(void *), void *arg)
 {
 	sigset_t oldset;
 	sigset_t newset;
 	int res;
 	pthread_attr_t attr;
 	char *stack_size;
+
+	/* Override default stack size */
+	pthread_attr_init(&attr);
+	stack_size = getenv(ENVNAME_THREAD_STACK);
+	if (stack_size && pthread_attr_setstacksize(&attr, atoi(stack_size)))
+		fprintf(stderr, "fuse: invalid stack size: %s\n", stack_size);
+
+	/* Disallow signal reception in worker threads */
+	sigemptyset(&newset);
+	sigaddset(&newset, SIGTERM);
+	sigaddset(&newset, SIGINT);
+	sigaddset(&newset, SIGHUP);
+	sigaddset(&newset, SIGQUIT);
+	pthread_sigmask(SIG_BLOCK, &newset, &oldset);
+	res = pthread_create(thread_id, &attr, func, arg);
+	pthread_sigmask(SIG_SETMASK, &oldset, NULL);
+	pthread_attr_destroy(&attr);
+	if (res != 0) {
+		fprintf(stderr, "fuse: error creating thread: %s\n",
+			strerror(res));
+		return -1;
+	}
+
+	return 0;
+}
+
+static int fuse_loop_start_thread(struct fuse_mt *mt, int bindnode)
+{
+	int res;
 	struct fuse_worker *w = malloc(sizeof(struct fuse_worker));
 	if (!w) {
 		fprintf(stderr, "fuse: failed to allocate worker structure\n");
@@ -205,25 +242,8 @@ static int fuse_start_thread(struct fuse_mt *mt, int bindnode)
 		return -1;
 	}
 
-	/* Override default stack size */
-	pthread_attr_init(&attr);
-	stack_size = getenv(ENVNAME_THREAD_STACK);
-	if (stack_size && pthread_attr_setstacksize(&attr, atoi(stack_size)))
-		fprintf(stderr, "fuse: invalid stack size: %s\n", stack_size);
-
-	/* Disallow signal reception in worker threads */
-	sigemptyset(&newset);
-	sigaddset(&newset, SIGTERM);
-	sigaddset(&newset, SIGINT);
-	sigaddset(&newset, SIGHUP);
-	sigaddset(&newset, SIGQUIT);
-	pthread_sigmask(SIG_BLOCK, &newset, &oldset);
-	res = pthread_create(&w->thread_id, &attr, fuse_do_work, w);
-	pthread_sigmask(SIG_SETMASK, &oldset, NULL);
-	pthread_attr_destroy(&attr);
-	if (res != 0) {
-		fprintf(stderr, "fuse: error creating thread: %s\n",
-			strerror(res));
+	res = fuse_start_thread(&w->thread_id, fuse_do_work, w);
+	if (res == -1) {
 		free(w->buf);
 		free(w);
 		return -1;
@@ -265,6 +285,8 @@ int fuse_session_loop_mt(struct fuse_session *se)
 	mt.numworker = 0;
 	mt.numavail = 0;
 #endif
+	mt.numworker = 0;
+	mt.numavail = 0;
 	mt.main.thread_id = pthread_self();
 	mt.main.prev = mt.main.next = &mt.main;
 	sem_init(&mt.finish, 0, 0);
@@ -285,7 +307,7 @@ int fuse_session_loop_mt(struct fuse_session *se)
 		if (numa_bitmask_isbitset(nm, i)) {
 # define THR_PER_NODE 1
 			for (j = 0; j < THR_PER_NODE; j++) {
-				err = fuse_start_thread(&mt, i);
+				err = fuse_loop_start_thread(&mt, i);
 				if (err)
 					errx(1, NULL);
 			}
@@ -296,9 +318,9 @@ int fuse_session_loop_mt(struct fuse_session *se)
 	numa_free_nodemask(nm);
 #else
 	pthread_mutex_lock(&mt.lock);
-	err = fuse_start_thread(&mt, 0);
+	err = fuse_loop_start_thread(&mt, 0);
 	pthread_mutex_unlock(&mt.lock);
-#endif
+#endif 
 
 	if (!err) {
 		/* sem_wait() is interruptible */
@@ -308,7 +330,6 @@ int fuse_session_loop_mt(struct fuse_session *se)
 		for (w = mt.main.next; w != &mt.main; w = w->next)
 			pthread_cancel(w->thread_id);
 		mt.exit = 1;
-		pthread_mutex_unlock(&mt.lock);
 
 		while (mt.main.next != &mt.main)
 			fuse_join_worker(&mt, mt.main.next);

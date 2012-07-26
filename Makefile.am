@@ -2,16 +2,13 @@
 
 ACLOCAL_AMFLAGS = -I m4
 
-SUBDIRS = @subdirs2@
+SUBDIRS = @subdirs2@ doc
 
 EXTRA_DIST =			\
 	fuse.pc.in		\
 	README*			\
 	Filesystems		\
-	FAQ			\
-	doc/how-fuse-works	\
-	doc/kernel.txt		\
-	doc/Doxyfile
+	FAQ
 
 pkgconfigdir = @pkgconfigdir@
 pkgconfig_DATA = fuse.pc

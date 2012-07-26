@@ -1,6 +1,7 @@
 /*
   FUSE: Filesystem in Userspace
   Copyright (C) 2001-2007  Miklos Szeredi <miklos@szeredi.hu>
+  Copyright (C) 2011       Sebastian Pipping <sebastian@pipping.org>
 
   This program can be distributed under the terms of the GNU GPL.
   See the file COPYING.
@@ -23,12 +24,14 @@
 #include <string.h>
 #include <unistd.h>
 #include <fcntl.h>
+#include <sys/stat.h>
 #include <dirent.h>
 #include <errno.h>
 #include <sys/time.h>
 #ifdef HAVE_SETXATTR
 #include <sys/xattr.h>
 #endif
+#include <sys/file.h> /* flock(2) */
 
 static int xmp_getattr(const char *path, struct stat *stbuf)
 {
@@ -280,22 +283,19 @@ static int xmp_ftruncate(const char *path, off_t size,
 	return 0;
 }
 
+#ifdef HAVE_UTIMENSAT
 static int xmp_utimens(const char *path, const struct timespec ts[2])
 {
 	int res;
-	struct timeval tv[2];
 
-	tv[0].tv_sec = ts[0].tv_sec;
-	tv[0].tv_usec = ts[0].tv_nsec / 1000;
-	tv[1].tv_sec = ts[1].tv_sec;
-	tv[1].tv_usec = ts[1].tv_nsec / 1000;
-
-	res = utimes(path, tv);
+	/* don't use utime/utimes since they follow symlinks */
+	res = utimensat(0, path, ts, AT_SYMLINK_NOFOLLOW);
 	if (res == -1)
 		return -errno;
 
 	return 0;
 }
+#endif
 
 static int xmp_create(const char *path, mode_t mode, struct fuse_file_info *fi)
 {
@@ -334,6 +334,28 @@ static int xmp_read(const char *path, char *buf, size_t size, off_t offset,
 	return res;
 }
 
+static int xmp_read_buf(const char *path, struct fuse_bufvec **bufp,
+			size_t size, off_t offset, struct fuse_file_info *fi)
+{
+	struct fuse_bufvec *src;
+
+	(void) path;
+
+	src = malloc(sizeof(struct fuse_bufvec));
+	if (src == NULL)
+		return -ENOMEM;
+
+	*src = FUSE_BUFVEC_INIT(size);
+
+	src->buf[0].flags = FUSE_BUF_IS_FD | FUSE_BUF_FD_SEEK;
+	src->buf[0].fd = fi->fh;
+	src->buf[0].pos = offset;
+
+	*bufp = src;
+
+	return 0;
+}
+
 static int xmp_write(const char *path, const char *buf, size_t size,
 		     off_t offset, struct fuse_file_info *fi)
 {
@@ -345,6 +367,20 @@ static int xmp_write(const char *path, const char *buf, size_t size,
 		res = -errno;
 
 	return res;
+}
+
+static int xmp_write_buf(const char *path, struct fuse_bufvec *buf,
+		     off_t offset, struct fuse_file_info *fi)
+{
+	struct fuse_bufvec dst = FUSE_BUFVEC_INIT(fuse_buf_size(buf));
+
+	(void) path;
+
+	dst.buf[0].flags = FUSE_BUF_IS_FD | FUSE_BUF_FD_SEEK;
+	dst.buf[0].fd = fi->fh;
+	dst.buf[0].pos = offset;
+
+	return fuse_buf_copy(&dst, buf, FUSE_BUF_SPLICE_NONBLOCK);
 }
 
 static int xmp_statfs(const char *path, struct statvfs *stbuf)
@@ -449,6 +485,18 @@ static int xmp_lock(const char *path, struct fuse_file_info *fi, int cmd,
 			   sizeof(fi->lock_owner));
 }
 
+static int xmp_flock(const char *path, struct fuse_file_info *fi, int op)
+{
+	int res;
+	(void) path;
+
+	res = flock(fi->fh, op);
+	if (res == -1)
+		return -errno;
+
+	return 0;
+}
+
 static struct fuse_operations xmp_oper = {
 	.getattr	= xmp_getattr,
 	.fgetattr	= xmp_fgetattr,
@@ -468,11 +516,15 @@ static struct fuse_operations xmp_oper = {
 	.chown		= xmp_chown,
 	.truncate	= xmp_truncate,
 	.ftruncate	= xmp_ftruncate,
+#ifdef HAVE_UTIMENSAT
 	.utimens	= xmp_utimens,
+#endif
 	.create		= xmp_create,
 	.open		= xmp_open,
 	.read		= xmp_read,
+	.read_buf	= xmp_read_buf,
 	.write		= xmp_write,
+	.write_buf	= xmp_write_buf,
 	.statfs		= xmp_statfs,
 	.flush		= xmp_flush,
 	.release	= xmp_release,
@@ -484,8 +536,12 @@ static struct fuse_operations xmp_oper = {
 	.removexattr	= xmp_removexattr,
 #endif
 	.lock		= xmp_lock,
+	.flock		= xmp_flock,
 
 	.flag_nullpath_ok = 1,
+#if HAVE_UTIMENSAT
+	.flag_utime_omit_ok = 1,
+#endif
 };
 
 int main(int argc, char *argv[])
