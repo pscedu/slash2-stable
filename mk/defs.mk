@@ -5,7 +5,8 @@ MD5?=		md5sum
 SHA1?=		sha1sum
 SHA256?=	sha256sum
 SCONS=		scons DEFINES="$(filter -DHAVE_%,${DEFINES}) $(filter -DPFL_%,${DEFINES})"
-PKG_CONFIG?=	PKG_CONFIG_PATH=${FUSE_BASE} pkg-config
+PKG_CONFIG_PATH?=/usr/lib/pkgconfig:/usr/share/pkgconfig:/usr/local/lib/pkgconfig
+PKG_CONFIG?=	PKG_CONFIG_PATH=${PKG_CONFIG_PATH} pkg-config
 LIBGCRYPT_CONFIG?=libgcrypt-config
 MPICC?=		mpicc
 ROFF?=		nroff
