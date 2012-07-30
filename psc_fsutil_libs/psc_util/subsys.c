@@ -88,8 +88,7 @@ psc_subsys_register(int ssid, const char *name)
 	}
 
 	snprintf(buf, sizeof(buf), "PSC_SYSLOG_%s", name);
-	p = getenv(buf);
-	if (p) {
+	if (getenv(buf) || getenv("PSC_SYSLOG")) {
 		pfl_syslog = PSC_REALLOC(pfl_syslog,
 		    sizeof(*pfl_syslog) * (psc_nsubsys + 1));
 		pfl_syslog[psc_nsubsys] = 1;
