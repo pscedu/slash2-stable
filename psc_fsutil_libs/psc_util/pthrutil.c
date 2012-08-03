@@ -47,7 +47,8 @@ psc_mutex_init(struct pfl_mutex *mut)
 
 	rc = pthread_mutexattr_destroy(&attr);
 	if (rc)
-		psc_fatalx("pthread_mutexattr_destroy: %s", strerror(rc));
+		psc_fatalx("pthread_mutexattr_destroy: %s",
+		    strerror(rc));
 }
 
 void
@@ -57,7 +58,7 @@ psc_mutex_destroy(struct pfl_mutex *mut)
 
 	rc = pthread_mutex_destroy(&mut->pm_mutex);
 	if (rc)
-                psc_fatalx("pthread_mutex_destroy: %s", strerror(rc));
+		psc_fatalx("pthread_mutex_destroy: %s", strerror(rc));
 }
 
 void
