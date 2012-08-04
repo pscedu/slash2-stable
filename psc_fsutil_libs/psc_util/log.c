@@ -76,9 +76,7 @@ int pfl_syslog_map[] = {
 /* fatal */	LOG_EMERG,
 /* error */	LOG_ERR,
 /* warn */	LOG_WARNING,
-/* notice */	LOG_NOTICE,
-/* info */	LOG_INFO,
-/* debug */	LOG_DEBUG
+/* notice */	LOG_NOTICE
 };
 
 int
@@ -469,6 +467,7 @@ const char *psc_loglevel_names[] = {
 	"warn",
 	"notice",
 	"info",
+	"diag",
 	"debug",
 	"vdebug",
 	"trace"
