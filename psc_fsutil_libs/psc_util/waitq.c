@@ -63,12 +63,13 @@ psc_waitq_destroy(struct psc_waitq *q)
 	if (rc)
 		psc_fatalx("pthread_cond_destroy: %s", strerror(rc));
 }
+
 /**
  * psc_waitq_waitabs - Wait until the time specified for the
  *	resource managed by wq_cond to become available.
  * @q: the wait queue to wait on.
  * @k: optional lock needed to protect the list.
- * @reltime: amount of time to wait for.
+ * @abstime: time to wait till.
  * Note: returns ETIMEDOUT if the resource has not become available.
  * Note: this code could be merged with waitrel() but we try to make
  *	the timing calculations accurate.
