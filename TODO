@@ -159,6 +159,7 @@ pfl
 - tests/rwlock is broken on mymichelle with DEBUG=0
 - document CTL_SOCK_FILE for daemons and *ctl utils
 - add the ability to compile-out TRACE psclog
+- use CLOCK_MONTONIC in pscrpc_waitevent() to waitq_timedwait()
 - add log level DIAG between DEBUG and INFO
 
 lnet
