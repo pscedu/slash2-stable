@@ -356,7 +356,7 @@ all: recurse-all all-hook
 		fi;							\
 	done
 	@if ${NOTEMPTY} "${TARGET}"; then				\
-		mkdir -p ${OBJDIR};					\
+		mkdir -m 1777 -p ${OBJDIR};				\
 		${MAKE} ${TARGET};					\
 	fi
 
