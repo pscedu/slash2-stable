@@ -926,7 +926,7 @@ pjournal_thr_main(struct psc_thread *thr)
  * @replay_handler: the journal replay callback.
  * @distill_handler: the distill processor callback.
  */
-void
+struct psc_thread *
 pjournal_replay(struct psc_journal *pj, int thrtype,
     const char *thrname, psc_replay_handler_t replay_handler,
     psc_distill_handler_t distill_handler)
@@ -1004,6 +1004,7 @@ pjournal_replay(struct psc_journal *pj, int thrtype,
 	pscthr_setready(thr);
 
 	pj->pj_flags &= ~PJF_REPLAYINPROG;
+	return (thr);
 }
 
 struct psc_lockedlist *

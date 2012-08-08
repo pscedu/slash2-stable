@@ -246,7 +246,8 @@ struct psc_journal_xidhndl {
 /* definitions of journal handling functions */
 struct psc_journal
 	*pjournal_open(const char *);
-void	 pjournal_replay(struct psc_journal *, int, const char *,
+struct psc_thread
+	*pjournal_replay(struct psc_journal *, int, const char *,
 	    psc_replay_handler_t, psc_distill_handler_t);
 
 void	 pjournal_update_txg(struct psc_journal *, uint64_t);
