@@ -187,10 +187,10 @@ odtable_freemap(struct odtable *odt)
 
 /**
  * odtable_footercheck - Test an item footer for status control.
- * inuse == 1  --> test the slot assuming it's being used.
- * inuse == 0  --> test the slot assuming it's NOT being used.
+ * inuse ==  1 --> test the slot assuming it's being used.
+ * inuse ==  0 --> test the slot assuming it's NOT being used.
  * inuse == -1 --> test the slot ignoring whether or not it's being used.
- * inuse == 2  --> test the slot assuming it's being used but ignoring key.
+ * inuse ==  2 --> test the slot assuming it's being used but ignoring key.
  */
 #define odtable_footercheck(odtf, odtr, inuse)				\
 	_PFL_RVSTART {							\
