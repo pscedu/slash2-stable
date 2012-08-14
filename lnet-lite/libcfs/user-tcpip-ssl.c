@@ -146,7 +146,7 @@ libcfs_ssl_sock_init(struct lnet_xport *lx)
 }
 
 int
-libcfs_ssl_sock_accept(struct lnet_xport *lx, int s)
+libcfs_ssl_sock_accept(struct lnet_xport *lx, __unusedx int s)
 {
 	int rc;
 
