@@ -161,6 +161,7 @@ pfl
 - add the ability to compile-out TRACE psclog
 - use CLOCK_MONTONIC in pscrpc_waitevent() to waitq_timedwait()
 - add log level DIAG between DEBUG and INFO
+- deploy socket_getpeercred all through ctlapi
 
 lnet
 - use TLS buffers for libcfs_nid2str() to avoid NUMA contention
