@@ -36,7 +36,7 @@ rm -rf $RPM_BUILD_ROOT
 /usr/local/psc/sbin/sliod
 /usr/local/psc/sbin/slictl
 /usr/local/psc/sbin/slkeymgt
-/usr/local/psc/sbin/slimmns_format
+/usr/local/psc/sbin/slmkfs
 /usr/local/psc/man/*/*
 
 %changelog

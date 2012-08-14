@@ -40,7 +40,7 @@ rm -rf $RPM_BUILD_ROOT
 /usr/local/psc/bin/cursor_mgr
 /usr/local/psc/etc/zfs_pool_alert
 /usr/local/psc/sbin/slashd
-/usr/local/psc/sbin/slimmns_format
+/usr/local/psc/sbin/slmkfs
 /usr/local/psc/sbin/slkeymgt
 /usr/local/psc/sbin/slmctl
 /usr/local/psc/sbin/slmkjrnl
