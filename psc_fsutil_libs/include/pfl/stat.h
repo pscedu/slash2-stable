@@ -67,7 +67,7 @@ struct stat;
 										\
 		psclog((level),							\
 		    "stb@%p dev:%"PRIu64" inode:%"PSCPRIuINOT" "		\
-		    "mode:0%o nlink:%"PRIu64" "					\
+		    "mode:%#o nlink:%"PRIu64" "					\
 		    "uid:%u gid:%u "						\
 		    "rdev:%"PRIu64" sz:%"PSCPRIdOFFT" "				\
 		    "blksz:%"PSCPRI_BLKSIZE_T" blkcnt:%"PRId64" "		\
