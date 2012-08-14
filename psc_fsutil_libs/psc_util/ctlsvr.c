@@ -280,7 +280,8 @@ psc_ctlrep_getsubsys(int fd, struct psc_ctlmsghdr *mh, __unusedx void *m)
 }
 
 __weak int
-psc_ctlrep_getlni(int fd, struct psc_ctlmsghdr *mh, void *m)
+psc_ctlrep_getlni(int fd, struct psc_ctlmsghdr *mh,
+    __unusedx void *m)
 {
 	return (psc_ctlsenderr(fd, mh, "get lnet interface: %s",
 	    strerror(ENOTSUP)));
