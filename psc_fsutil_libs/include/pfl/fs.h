@@ -142,16 +142,16 @@ int	pscfs_notify_inval_entry(struct pscfs_req *, pscfs_inum_t, const char *, siz
 #define PSCFS_OPENF_KEEPCACHE		(1 << 1)
 
 /* setattr() to_set mask flags */
-#define PSCFS_SETATTRF_MODE		(1 << 0)	/* chmod */
-#define	PSCFS_SETATTRF_UID		(1 << 1)	/* chown */
-#define	PSCFS_SETATTRF_GID		(1 << 2)	/* chgrp */
-#define	PSCFS_SETATTRF_DATASIZE		(1 << 3)	/* file data truncate */
-#define	PSCFS_SETATTRF_ATIME		(1 << 4)	/* utimes */
-#define	PSCFS_SETATTRF_MTIME		(1 << 5)	/* utimes */
-#define	PSCFS_SETATTRF_CTIME		(1 << 6)	/* utimes */
-#define	PSCFS_SETATTRF_ATIME_NOW	(1 << 7)	/* utimes */
-#define	PSCFS_SETATTRF_MTIME_NOW	(1 << 8)	/* utimes */
-#define	PSCFS_SETATTRF_FLUSH		(1 << 9)	/* flush dirty attributes */
+#define PSCFS_SETATTRF_MODE		(1 <<  0)	/* chmod */
+#define	PSCFS_SETATTRF_UID		(1 <<  1)	/* chown */
+#define	PSCFS_SETATTRF_GID		(1 <<  2)	/* chgrp */
+#define	PSCFS_SETATTRF_DATASIZE		(1 <<  3)	/* file data truncate */
+#define	PSCFS_SETATTRF_ATIME		(1 <<  4)	/* utimes */
+#define	PSCFS_SETATTRF_MTIME		(1 <<  5)	/* utimes */
+#define	PSCFS_SETATTRF_CTIME		(1 <<  6)	/* utimes */
+#define	PSCFS_SETATTRF_ATIME_NOW	(1 <<  7)	/* utimes */
+#define	PSCFS_SETATTRF_MTIME_NOW	(1 <<  8)	/* utimes */
+#define	PSCFS_SETATTRF_FLUSH		(1 <<  9)	/* flush dirty attributes */
 #define	PSCFS_SETATTRF_TRUNCATE		(1 << 10)	/* truncate setattr */
 #define	_PSCFS_SETATTRF_LAST		(1 << 11)
 
