@@ -158,6 +158,22 @@ enum psclog_level {
 #define psclogsv_trace(fmt, ap)		_psclogvk((ss), PLL_TRACE, 0, (fmt), (ap))
 #define psclogsv(lvl, ss, fmt, ap)	_psclogvk((ss), (lvl), 0, (fmt), (ap))
 
+#ifndef PSCLOG_LEVEL
+#define PSCLOG_LEVEL			PNLOGLEVELS
+#endif
+
+#if PSCLOG_LEVEL <= PLL_TRACE
+#  undef psclog_trace
+#  undef psclogs_trace
+#  undef psclogv_trace
+#  undef psclogsv_trace
+
+#  define psclog_trace(fmt, ...)
+#  define psclogs_trace(ss, fmt, ...)
+#  define psclogv_trace(fmt, ap)
+#  define psclogsv_trace(fmt, ap)
+#endif
+
 #define PSCLOG_LOCK()			flockfile(stderr)
 #define PSCLOG_UNLOCK()			funlockfile(stderr)
 
