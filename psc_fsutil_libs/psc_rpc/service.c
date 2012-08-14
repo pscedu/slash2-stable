@@ -654,7 +654,8 @@ pscrpc_retry_rqbds(void *arg)
 }
 
 int
-pscrpcthr_waitevent(struct psc_thread *thr, struct pscrpc_service *svc)
+pscrpcthr_waitevent(__unusedx struct psc_thread *thr,
+    struct pscrpc_service *svc)
 {
 	int rc;
 

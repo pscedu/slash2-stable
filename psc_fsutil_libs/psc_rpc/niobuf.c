@@ -688,7 +688,7 @@ pscrpc_free_reply_state(struct pscrpc_reply_state *rs)
 }
 
 static void
-_pscrpc_free_req(struct pscrpc_request *request, int locked)
+_pscrpc_free_req(struct pscrpc_request *request, __unusedx int locked)
 {
 	if (request == NULL)
 		return;
