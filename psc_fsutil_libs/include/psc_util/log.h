@@ -159,7 +159,7 @@ enum psclog_level {
 #define psclogsv(lvl, ss, fmt, ap)	_psclogvk((ss), (lvl), 0, (fmt), (ap))
 
 #ifndef PSCLOG_LEVEL
-#define PSCLOG_LEVEL			PNLOGLEVELS
+#  define PSCLOG_LEVEL			PNLOGLEVELS
 #endif
 
 #if PSCLOG_LEVEL <= PLL_TRACE
