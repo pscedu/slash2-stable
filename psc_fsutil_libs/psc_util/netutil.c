@@ -88,7 +88,7 @@ pfl_socket_getpeercred(int s, uid_t *uid, gid_t *gid)
 
 	len = sizeof(ucr);
 	if (getsockopt(s, SOL_SOCKET, SO_PEERCRED, &ucr, &len))
-		return (-errno);
+		return (errno);
 	*uid = ucr.uid;
 	*gid = ucr.gid;
 #endif
