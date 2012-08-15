@@ -1085,12 +1085,24 @@ psc_ctlrep_param_simple(int fd, struct psc_ctlmsghdr *mh,
     struct psc_ctlparam_node *pcn)
 {
 	char val[PCP_VALUE_MAX];
+	uid_t uid;
+	gid_t gid;
+	int rc;
 
 	if (strcmp(pcp->pcp_thrname, PCTHRNAME_EVERYONE) != 0)
 		return (psc_ctlsenderr(fd, mh, "invalid thread field"));
 
 	if (mh->mh_type == PCMT_SETPARAM) {
 		if (pcn->pcn_setf) {
+			rc = pfl_socket_getpeercred(fd, &uid, &gid);
+			if (rc == 0 && uid)
+				rc = EPERM;
+			if (rc)
+				return (psc_ctlsenderr(fd, mh,
+				    "%s: %s",
+				    psc_ctlparam_fieldname(
+				      pcp->pcp_field, nlevels),
+				    strerror(rc)));
 			if (pcn->pcn_setf(pcp->pcp_value))
 				return (psc_ctlsenderr(fd, mh,
 				    "%s: invalid value: %s",
