@@ -1151,13 +1151,15 @@ psc_ctlrep_param(int fd, struct psc_ctlmsghdr *mh, void *m)
 		    psc_ctlparam_fieldname(pcp->pcp_field,
 		    MAX_LEVELS)));
 
-	rc = pfl_socket_getpeercred(fd, &uid, &gid);
-	if (rc == 0 && uid)
-		rc = EPERM;
-	if (rc)
-		return (psc_ctlsenderr(fd, mh, "%s: %s",
-		    psc_ctlparam_fieldname(pcp->pcp_field, nlevels),
-		    strerror(rc)));
+	if (set) {
+		rc = pfl_socket_getpeercred(fd, &uid, &gid);
+		if (rc == 0 && uid)
+			rc = EPERM;
+		if (rc)
+			return (psc_ctlsenderr(fd, mh, "%s: %s",
+			    psc_ctlparam_fieldname(pcp->pcp_field,
+			      nlevels), strerror(rc)));
+	}
 
 	pcf = PSCALLOC(sizeof(*pcf));
 	INIT_PSC_LISTENTRY(&pcf->pcf_lentry);
