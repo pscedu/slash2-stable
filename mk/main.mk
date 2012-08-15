@@ -270,7 +270,12 @@ endif
 
 ifneq ($(filter ctl,${MODULES}),)
   SRCS+=	${PFL_BASE}/psc_util/ctlsvr.c
+  SRCS+=	${PFL_BASE}/psc_util/netutil.c
   DEFINES+=	-DPFL_CTL
+endif
+
+ifneq ($(filter ctlcli,${MODULES}),)
+  SRCS+=	${PFL_BASE}/psc_util/ctlcli.c
 endif
 
 ifneq ($(filter sgio,${MODULES}),)
