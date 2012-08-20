@@ -605,7 +605,7 @@ void
 psc_ctlmsg_iostats_prhdr(__unusedx struct psc_ctlmsghdr *mh,
     __unusedx const void *m)
 {
-	printf("%-47s %10s %10s %10s\n",
+	printf("%-38s %13s %13s %13s\n",
 	    "I/O-stat", "rate10s", "ratecur", "total");
 }
 
@@ -622,25 +622,25 @@ psc_ctlmsg_iostats_prdat(__unusedx const struct psc_ctlmsghdr *mh,
 	if (ist->ist_flags & PISTF_BASE10 || psc_ctl_inhuman)
 		base10 = 1;
 
-	printf("%-47s ", ist->ist_name);
+	printf("%-38s ", ist->ist_name);
 	for (i = IST_NINTV - 1; i >= 0; i--) {
 		d = psc_iostats_getintvrate(ist, i);
 
 		if (base10) {
 			if (i)
-				printf("%8.2f/s ", d);
+				printf("%11.2f/s ", d);
 			else
-				printf("%8.0f/s ", d);
+				printf("%11.0f/s ", d);
 		} else {
 			psc_fmt_human(buf, d);
-			printf("%8s/s ", buf);
+			printf("%11s/s ", buf);
 		}
 	}
 	if (base10)
-		printf("%10"PRIu64, ist->ist_len_total);
+		printf("%13"PRIu64, ist->ist_len_total);
 	else {
 		psc_fmt_human(buf, ist->ist_len_total);
-		printf("%10s", buf);
+		printf("%13s", buf);
 	}
 	printf("\n");
 }
