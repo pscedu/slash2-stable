@@ -1,0 +1,30 @@
+#!/bin/sh
+# $Id$
+
+m=755
+usage()
+{
+	echo "usage: $0 [-m mode] target" >&2
+	exit 2
+}
+
+while getopts "m:" c; do
+	case $c in
+	m) m=$OPTARG ;;
+	*) usage ;;
+	esac
+done
+shift $(($OPTIND - 1))
+t=$1
+
+set -e
+
+p=${t%%/*}
+ch=${t#*/}
+while :; do
+	echo mkdir -m $m -- "$p"
+	mkdir -p -m $m -- "$p"
+	[ x"$p" == x"$t" ] && break
+	p=$p/${ch%%/*}
+	ch=${ch#*/}
+done

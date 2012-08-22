@@ -22,6 +22,7 @@ MDPROC=		${_PERLENV} ${CROOTDIR}/tools/mdproc.pl -D PFL_BASE=${PFL_BASE}
 MINVER=		${ROOTDIR}/tools/minver.pl
 PCPP=		${_PERLENV} ${CROOTDIR}/tools/pcpp.pl
 PICKLEGEN=	${ROOTDIR}/tools/pickle-gen.sh
+MKDIRS=		${ROOTDIR}/tools/mkdirs
 
 LEX:=		$(shell if ${NOTEMPTY} "${LEX}"; then echo "${LEX}"; elif type flex; then echo flex; else echo lex; fi)
 
