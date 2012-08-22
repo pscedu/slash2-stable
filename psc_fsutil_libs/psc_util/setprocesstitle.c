@@ -46,6 +46,7 @@ pfl_setprocesstitle(char **av, const char *fmt, ...)
 
 	setproctitle("%s", p);
 	free(p);
+	(void)av;
 #else
 	char buf[2048];
 	size_t len, newlen;
