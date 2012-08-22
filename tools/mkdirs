@@ -22,9 +22,10 @@ set -e
 p=${t%%/*}
 ch=${t#*/}
 while :; do
-	echo mkdir -m $m -- "$p"
-	mkdir -p -m $m -- "$p"
-	[ x"$p" == x"$t" ] && break
+	if [ -n "$p" ]; then
+		mkdir -p -m $m -- "$p"
+		[ x"$p" == x"$t" ] && break
+	fi
 	p=$p/${ch%%/*}
 	ch=${ch#*/}
 done
