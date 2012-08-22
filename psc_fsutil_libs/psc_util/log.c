@@ -76,7 +76,8 @@ int pfl_syslog_map[] = {
 /* fatal */	LOG_EMERG,
 /* error */	LOG_ERR,
 /* warn */	LOG_WARNING,
-/* notice */	LOG_NOTICE
+/* notice */	LOG_NOTICE,
+/* info */	LOG_INFO
 };
 
 int
