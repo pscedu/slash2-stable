@@ -89,8 +89,8 @@ psc_subsys_register(int ssid, const char *name)
 
 	snprintf(buf, sizeof(buf), "PSC_SYSLOG_%s", name);
 	if (getenv(buf) || getenv("PSC_SYSLOG")) {
-		pfl_syslog = PSC_REALLOC(pfl_syslog,
-		    sizeof(*pfl_syslog) * (psc_nsubsys + 1));
+		pfl_syslog = psc_realloc(pfl_syslog,
+		    sizeof(*pfl_syslog) * (psc_nsubsys + 1), PAF_NOLOG);
 		pfl_syslog[psc_nsubsys] = 1;
 	}
 
@@ -106,8 +106,8 @@ psc_log_getlevel_ss(int ssid)
 	const struct psc_subsys *ss;
 
 	if (ssid >= psc_nsubsys || ssid < 0) {
-		/* must use errx(3) here to avoid loops with psclog */
-		warn("subsystem out of bounds (%d, max %d)", ssid,
+		/* don't use psclog to avoid loops */
+		warnx("subsystem out of bounds (%d, max %d)", ssid,
 		    psc_nsubsys);
 		abort();
 	}
