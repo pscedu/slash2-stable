@@ -160,6 +160,7 @@ pfl
 - document CTL_SOCK_FILE for daemons and *ctl utils
 - use CLOCK_MONTONIC in pscrpc_waitevent() to waitq_timedwait()
 - deploy socket_getpeercred all through ctlapi
+	- command interface
 
 lnet
 - use TLS buffers for libcfs_nid2str() to avoid NUMA contention
@@ -168,8 +169,10 @@ lnet
 - pcpp:
   if an arg is a pointer, dont trace an integer version of it in PFL_ENTER()
 
-this page does not display 'browse directory' link:
-  http://localhost:24242/svnweb/main/log/projects/zfs/src/zfs-fuse
-
-development tools
+wiki
 - let wiki changes automatically email zest/slash2-devel@ like svn commits
+
+svnweb
+- this page does not display 'browse directory' link:
+    http://localhost:24242/svnweb/main/log/projects/zfs/src/zfs-fuse
+
