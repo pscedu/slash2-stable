@@ -151,11 +151,6 @@ PICKLE_NEED_VERSION=					$(word 2,$$Rev$$)
   PSCFS_SRCS+=						${PFL_BASE}/psc_util/sys.c
  endif
 
- ifdef PICKLE_HAVE_NNPFS
-  DEFINES+=						-DHAVE_NNPFS
-  PSCFS_SRCS+=						${PFL_BASE}/psc_fs/nnpfs.c
- endif
-
  ifdef PICKLE_HAVE_DOKAN
   DEFINES+=						-DHAVE_DOKAN
   PSCFS_SRCS+=						${PFL_BASE}/psc_fs/dokan.c

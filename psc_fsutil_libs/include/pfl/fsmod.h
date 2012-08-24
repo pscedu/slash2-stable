@@ -53,7 +53,6 @@ void	pscfs_fuse_replygen_entry(struct pscfs_req *, pscfs_inum_t,
 extern double pscfs_entry_timeout;
 extern double pscfs_attr_timeout;
 
-#elif defined(HAVE_NNPFS)
 #elif defined(HAVE_DOKAN)
 #else
 #  error no filesystem in userspace API available
