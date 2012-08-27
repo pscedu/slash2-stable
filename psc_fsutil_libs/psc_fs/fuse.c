@@ -1041,6 +1041,58 @@ pscfs_fuse_handle_write(fuse_req_t req, __unusedx fuse_ino_t ino,
 	pscfs.pf_handle_write(pfr, buf, size, off, fi_getdata(fi));
 }
 
+void
+pscfs_fuse_handle_listxattr(fuse_req_t req, fuse_ino_t ino,
+    size_t size)
+{
+	struct pscfs_req *pfr;
+
+	pfr = psc_pool_get(pscfs_req_pool);
+	pfr->pfr_fuse_req = req;
+
+	RETIFNOTSUP(pfr, listxattr, NULL, 0);
+	pscfs.pf_handle_listxattr(pfr, size, INUM_FUSE2PSCFS(ino));
+}
+
+void
+pscfs_fuse_handle_setxattr(fuse_req_t req, fuse_ino_t ino,
+    const char *name, const char *value, size_t size, __unusedx int flags)
+{
+	struct pscfs_req *pfr;
+
+	pfr = psc_pool_get(pscfs_req_pool);
+	pfr->pfr_fuse_req = req;
+
+	RETIFNOTSUP(pfr, setxattr);
+	pscfs.pf_handle_setxattr(pfr, name, value, size, INUM_FUSE2PSCFS(ino));
+}
+
+void
+pscfs_fuse_handle_getxattr(fuse_req_t req, fuse_ino_t ino,
+    const char *name, size_t size)
+{
+	struct pscfs_req *pfr;
+
+	pfr = psc_pool_get(pscfs_req_pool);
+	pfr->pfr_fuse_req = req;
+
+	RETIFNOTSUP(pfr, getxattr, NULL, 0);
+	pscfs.pf_handle_getxattr(pfr, name, size, INUM_FUSE2PSCFS(ino));
+}
+
+void
+pscfs_fuse_handle_removexattr(fuse_req_t req, fuse_ino_t ino,
+    const char *name)
+{
+	struct pscfs_req *pfr;
+
+	pfr = psc_pool_get(pscfs_req_pool);
+	pfr->pfr_fuse_req = req;
+
+	RETIFNOTSUP(pfr, removexattr);
+	pscfs.pf_handle_removexattr(pfr, name, INUM_FUSE2PSCFS(ino));
+}
+
 /* Begin system call reply routines */
 
 void
@@ -1285,6 +1337,46 @@ pscfs_reply_write(struct pscfs_req *pfr, ssize_t len, int rc)
 }
 
 void
+pscfs_reply_listxattr(struct pscfs_req *pfr, void *buf, size_t len, int rc)
+{
+	if (rc)
+		fuse_reply_err(pfr->pfr_fuse_req, rc);
+	else if (buf)
+		fuse_reply_buf(pfr->pfr_fuse_req, buf, len);
+	else
+		fuse_reply_xattr(pfr->pfr_fuse_req, len);
+
+	psc_pool_return(pscfs_req_pool, pfr);
+}
+
+void
+pscfs_reply_setxattr(struct pscfs_req *pfr, int rc)
+{
+	fuse_reply_err(pfr->pfr_fuse_req, rc);
+	psc_pool_return(pscfs_req_pool, pfr);
+}
+
+void
+pscfs_reply_getxattr(struct pscfs_req *pfr, void *buf, size_t len, int rc)
+{
+	if (rc)
+		fuse_reply_err(pfr->pfr_fuse_req, rc);
+	else if (buf)
+		fuse_reply_buf(pfr->pfr_fuse_req, buf, len);
+	else
+		fuse_reply_xattr(pfr->pfr_fuse_req, len);
+
+	psc_pool_return(pscfs_req_pool, pfr);
+}
+
+void
+pscfs_reply_removexattr(struct pscfs_req *pfr, int rc)
+{
+	fuse_reply_err(pfr->pfr_fuse_req, rc);
+	psc_pool_return(pscfs_req_pool, pfr);
+}
+
+void
 pscfs_fuse_replygen_entry(struct pscfs_req *pfr, pscfs_inum_t inum,
     pscfs_fgen_t gen, double entry_timeout, const struct stat *stb,
     double attr_timeout, int rc)
@@ -1332,7 +1424,11 @@ struct fuse_lowlevel_ops pscfs_fuse_ops = {
 	.statfs		= pscfs_fuse_handle_statfs,
 	.symlink	= pscfs_fuse_handle_symlink,
 	.unlink		= pscfs_fuse_handle_unlink,
-	.write		= pscfs_fuse_handle_write
+	.write		= pscfs_fuse_handle_write,
+	.listxattr	= pscfs_fuse_handle_listxattr,
+	.setxattr	= pscfs_fuse_handle_setxattr,
+	.getxattr	= pscfs_fuse_handle_getxattr,
+	.removexattr	= pscfs_fuse_handle_removexattr
 };
 
 void

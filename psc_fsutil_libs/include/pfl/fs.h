@@ -83,6 +83,10 @@ struct pscfs {
 	void	(*pf_handle_unlink)(struct pscfs_req *, pscfs_inum_t, const char *);
 	void	(*pf_handle_umount)();
 	void	(*pf_handle_write)(struct pscfs_req *, const void *, size_t, off_t, void *);
+	void	(*pf_handle_listxattr)(struct pscfs_req *, size_t, pscfs_inum_t);
+	void	(*pf_handle_getxattr)(struct pscfs_req *, const char *, size_t, pscfs_inum_t);
+	void	(*pf_handle_setxattr)(struct pscfs_req *, const char *, const void *, size_t, pscfs_inum_t);
+	void	(*pf_handle_removexattr)(struct pscfs_req *, const char *, pscfs_inum_t);
 };
 
 struct pscfs_clientctx {
@@ -133,6 +137,11 @@ void	pscfs_reply_symlink(struct pscfs_req *, pscfs_inum_t, pscfs_fgen_t, int, co
 void	pscfs_reply_umount(struct pscfs_req *);
 void	pscfs_reply_unlink(struct pscfs_req *, int);
 void	pscfs_reply_write(struct pscfs_req *, ssize_t, int);
+
+void	pscfs_reply_listxattr(struct pscfs_req *, void *, size_t, int);
+void	pscfs_reply_setxattr(struct pscfs_req *, int);
+void	pscfs_reply_getxattr(struct pscfs_req *, void *, size_t, int);
+void	pscfs_reply_removexattr(struct pscfs_req *, int);
 
 int	pscfs_notify_inval_entry(struct pscfs_req *, pscfs_inum_t, const char *, size_t);
 
