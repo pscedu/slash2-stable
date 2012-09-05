@@ -384,26 +384,26 @@ _psclogv(const struct pfl_callerinfo *pci, enum psclog_level level,
 //		if (options & PLO_ERRNO)
 //			vsyslog(PRI, fmtbuf, ap0);
 		vsyslog(pfl_syslog_map[level], fmtbuf, ap0);
-	} else {
-		/* XXX consider using fprintf_unlocked() for speed */
-		fprintf(stderr, "%s", prefix);
-		vfprintf(stderr, fmtbuf, ap);
-		if (options & PLO_ERRNO)
-			fprintf(stderr, ": %s", APP_STRERROR(save_errno));
-		fprintf(stderr, "%s", psclog_eol);
-		fflush(stderr);
+	}
 
-		if (level <= PLL_WARN && !isatty(fileno(stderr))) {
-			fp = fopen(_PATH_TTY, "w");
-			if (fp) {
-				fprintf(fp, "%s", prefix);
-				vfprintf(fp, fmtbuf, ap0);
-				if (options & PLO_ERRNO)
-					fprintf(fp, ": %s",
-					    APP_STRERROR(save_errno));
-				fprintf(fp, "\n");
-				fclose(fp);
-			}
+	/* XXX consider using fprintf_unlocked() for speed */
+	fprintf(stderr, "%s", prefix);
+	vfprintf(stderr, fmtbuf, ap);
+	if (options & PLO_ERRNO)
+		fprintf(stderr, ": %s", APP_STRERROR(save_errno));
+	fprintf(stderr, "%s", psclog_eol);
+	fflush(stderr);
+
+	if (level <= PLL_WARN && !isatty(fileno(stderr))) {
+		fp = fopen(_PATH_TTY, "w");
+		if (fp) {
+			fprintf(fp, "%s", prefix);
+			vfprintf(fp, fmtbuf, ap0);
+			if (options & PLO_ERRNO)
+				fprintf(fp, ": %s",
+				    APP_STRERROR(save_errno));
+			fprintf(fp, "\n");
+			fclose(fp);
 		}
 	}
 
