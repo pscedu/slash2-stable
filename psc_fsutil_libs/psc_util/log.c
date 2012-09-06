@@ -138,8 +138,8 @@ psc_log_init(void)
 	if (pfl_syslog) {
 		extern const char *progname;
 
-		openlog(progname, LOG_CONS | LOG_NDELAY | LOG_PERROR,
-		    LOG_DAEMON);
+		openlog(progname, LOG_CONS | LOG_NDELAY | LOG_PERROR |
+		    LOG_PID, LOG_DAEMON);
 	}
 }
 
@@ -305,31 +305,27 @@ void
 _psclogv(const struct pfl_callerinfo *pci, enum psclog_level level,
     int options, const char *fmt, va_list ap)
 {
-	char *p, prefix[LINE_MAX], fmtbuf[LINE_MAX];
+	char *p, buf[LINE_MAX];
 	extern const char *progname;
 	struct psc_thread *thr;
 	struct psclog_data *d;
 	struct timeval tv;
 	const char *thrname;
 	int rc, save_errno;
-	va_list ap0;
 	pid_t thrid;
+	size_t len;
 	FILE *fp;
-
-	va_copy(ap0, ap);
 
 	save_errno = errno;
 
 	d = psclog_getdata();
 	if (d->pld_flags & PLDF_INLOG) {
-		if (level == PLL_FATAL) {
-//			write();
-			fprintf(stderr, fmt, ap);
-			abort(); /* this should go to syslog */
-		} else {
-//			fprintf(stderr, "log in critical path");
-//			abort();
-		}
+//		write(); ?
+		// also place line, file, etc
+		fprintf(stderr, fmt, ap); /* XXX syslog, etc */
+
+		if (level == PLL_FATAL)
+			abort();
 		goto out;
 	}
 	d->pld_flags |= PLDF_INLOG;
@@ -344,7 +340,7 @@ _psclogv(const struct pfl_callerinfo *pci, enum psclog_level level,
 	}
 
 	gettimeofday(&tv, NULL);
-	FMTSTR(prefix, sizeof(prefix), psc_logfmt,
+	FMTSTR(buf, sizeof(buf), psc_logfmt,
 		FMTSTRCASE('B', "s", pfl_basename(pci->pci_filename))
 		FMTSTRCASE('D', "s", pfl_fmtlogdate(&tv, &_t))
 		FMTSTRCASE('F', "s", pci->pci_func)
@@ -367,42 +363,31 @@ _psclogv(const struct pfl_callerinfo *pci, enum psclog_level level,
 		FMTSTRCASE('u', "lu", tv.tv_usec)
 	);
 
-	/* XXX get rid of this copy */
-	rc = strlcpy(fmtbuf, fmt, sizeof(fmtbuf));
-	if (rc >= (int)sizeof(fmtbuf)) {
-		warnx("psclog error: prefix too long");
-		rc = sizeof(fmtbuf) - 1;
-	}
+	len = strlen(buf);
+	rc = vsprintf(buf + len, sizeof(buf) - len, fmt, ap);
+	if (rc != -1)
+		len += rc;
 	/* trim newline if present, since we add our own */
-	for (p = fmtbuf + rc - 1; p >= fmtbuf && *p == '\n'; p--)
-		*p = '\0';
+	if (len && buf[len - 1] == '\n')
+		buf[--len] = '\0';
+	if (options & PLO_ERRNO)
+		vsnprintf(buf + len, sizeof(buf) - len,
+		    ": %s", APP_STRERROR(save_errno));
 
 	PSCLOG_LOCK();
 
-	if (pfl_syslog && pfl_syslog[pci->pci_subsys] &&
-	    level >= 0 && level < (int)nitems(pfl_syslog_map)) {
-//		if (options & PLO_ERRNO)
-//			vsyslog(PRI, fmtbuf, ap0);
-		vsyslog(pfl_syslog_map[level], fmtbuf, ap0);
-	}
-
 	/* XXX consider using fprintf_unlocked() for speed */
-	fprintf(stderr, "%s", prefix);
-	vfprintf(stderr, fmtbuf, ap);
-	if (options & PLO_ERRNO)
-		fprintf(stderr, ": %s", APP_STRERROR(save_errno));
-	fprintf(stderr, "%s", psclog_eol);
+	fprintf(stderr, "%s%s", buf, psclog_eol);
 	fflush(stderr);
+
+	if (pfl_syslog && pfl_syslog[pci->pci_subsys] &&
+	    level >= 0 && level < (int)nitems(pfl_syslog_map))
+		syslog(pfl_syslog_map[level], "%s", buf);
 
 	if (level <= PLL_WARN && !isatty(fileno(stderr))) {
 		fp = fopen(_PATH_TTY, "w");
 		if (fp) {
-			fprintf(fp, "%s", prefix);
-			vfprintf(fp, fmtbuf, ap0);
-			if (options & PLO_ERRNO)
-				fprintf(fp, ": %s",
-				    APP_STRERROR(save_errno));
-			fprintf(fp, "\n");
+			fprintf(fp, "%s\n", buf);
 			fclose(fp);
 		}
 	}
@@ -425,8 +410,6 @@ _psclogv(const struct pfl_callerinfo *pci, enum psclog_level level,
 	 * modified it.
 	 */
 	errno = save_errno;
-
-	va_end(ap0);
 }
 
 void
