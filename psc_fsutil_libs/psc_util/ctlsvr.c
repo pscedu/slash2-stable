@@ -1046,6 +1046,93 @@ psc_ctlparam_pool(int fd, struct psc_ctlmsghdr *mh,
 	return (rc);
 }
 
+int
+psc_ctlparam_opstat(int fd, struct psc_ctlmsghdr *mh,
+    struct psc_ctlmsg_param *pcp, char **levels, int nlevels,
+    __unusedx struct psc_ctlparam_node *pcn)
+{
+	int rc, set, found = 0;
+	char *endp;
+	long val;
+	struct opstat *op;
+	char nbuf[20];
+
+	if (nlevels >= 3)
+		return (psc_ctlsenderr(fd, mh, "invalid field"));
+
+	if (strcmp(pcp->pcp_thrname, PCTHRNAME_EVERYONE) != 0)
+		return (psc_ctlsenderr(fd, mh, "invalid field for %s",
+		    pcp->pcp_thrname));
+
+	rc = 1;
+	levels[0] = "opstat";
+	val = 0; /* gcc */
+
+	set = (mh->mh_type == PCMT_SETPARAM);
+
+	if (set) {
+		if (nlevels != 2)
+			return (psc_ctlsenderr(fd, mh,
+			    "invalid operation"));
+
+		endp = NULL;
+		val = strtol(pcp->pcp_value, &endp, 10);
+		if (val == LONG_MIN || val == LONG_MAX ||
+		    val > INT_MAX || val < 0 ||
+		    endp == pcp->pcp_value || *endp != '\0')
+			return (psc_ctlsenderr(fd, mh,
+			    "invalid opstat %s value: %s",
+			    levels[2], pcp->pcp_value));
+
+		op = (struct opstat *)&msl_opstats;
+		while (op->name) {
+			if (!strcmp(op->name, levels[1])) {
+				found = 1;
+				op->value = val;
+				break;
+			}
+			op++;
+		}
+		if (!found)
+			return (psc_ctlsenderr(fd, mh,
+			    "invalid opstat name: %s",
+			     levels[1]));
+		return (0);
+	}
+	if (nlevels == 1) {
+		op = (struct opstat *)&msl_opstats;
+		while (op->name) {
+			snprintf(nbuf, sizeof(nbuf), "%ld", op->value);
+			levels[1] = op->name;
+			if (!psc_ctlmsg_param_send(fd, mh, pcp,
+			    PCTHRNAME_EVERYONE, levels, 2, nbuf))
+				return (0);
+			op++;
+			if (!op->name)
+				break;
+		}
+	} else {
+		op = (struct opstat *)&msl_opstats;
+		while (op->name) {
+			if (!strcmp(op->name, levels[1])) {
+				found = 1;
+				break;
+			}
+			op++;
+		}
+		if (!found)
+			return (psc_ctlsenderr(fd, mh,
+			    "invalid opstat name: %s",
+			     levels[1]));
+
+		snprintf(nbuf, sizeof(nbuf), "%ld", op->value);
+		if (!psc_ctlmsg_param_send(fd, mh, pcp,
+		    PCTHRNAME_EVERYONE, levels, 2, nbuf))
+			return (0);
+	}
+	return (rc);
+}
+
 /* Node in the control parameter tree. */
 struct psc_ctlparam_node {
 	char			 *pcn_name;

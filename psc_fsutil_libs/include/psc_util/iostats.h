@@ -75,4 +75,23 @@ void psc_iostats_rename(struct psc_iostats *, const char *, ...);
 extern struct psc_lockedlist	psc_iostats;
 extern int			psc_iostat_intvs[];
 
+struct opstat {
+	char			*name;
+	int64_t			 value;
+};
+
+struct slash2_client_opstats {
+	struct opstat read;
+	struct opstat read_ahead;
+	struct opstat read_retry;
+	struct opstat write;
+	struct opstat write_retry;
+	struct opstat eof_of_opstat;
+};
+
+#define	OPSTATS_INC(op)		msl_opstats.op.value++;
+#define	OPSTATS_SET(op, val)	msl_opstats.op.value = val;
+
+extern struct slash2_client_opstats msl_opstats;
+
 #endif /* _PFL_IOSTATS_H_ */

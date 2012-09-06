@@ -304,6 +304,21 @@ psc_ctl_packshow_pool(char *pool)
 }
 
 void
+psc_ctl_packshow_opstat(char *opstat)
+{
+	struct psc_ctlmsg_opstat *pcpl;
+	int n;
+
+	pcpl = psc_ctlmsg_push(PCMT_GETPOOL, sizeof(*pcpl));
+	if (opstat) {
+		n = strlcpy(pcpl->pcpl_name, opstat, 
+		    sizeof(pcpl->pcpl_name));
+		if (n == 0 || n >= (int)sizeof(pcpl->pcpl_name))
+			errx(1, "invalid pool name: %s", opstat);
+	}
+}
+
+void
 psc_ctl_packshow_rpcsvc(char *rpcsvc)
 {
 	struct psc_ctlmsg_rpcsvc *pcrs;
@@ -770,6 +785,29 @@ psc_ctlmsg_pool_prdat(__unusedx const struct psc_ctlmsghdr *mh,
 		printf("   -");
 	else
 		printf(" %3d", pcpl->pcpl_nw_want);
+	printf("\n");
+}
+
+void
+psc_ctlmsg_opstat_prhdr(__unusedx struct psc_ctlmsghdr *mh,
+    __unusedx const void *m)
+{
+	printf("%-12s %3s %6s %6s %6s "
+	    "%6s %6s %6s %2s "
+	    "%10s %3s %3s\n",
+	    "mem-pool", "flg", "#free", "#use", "total",
+	    "%use", "min", "max", "th",
+	    "#shrnx", "#em", "#wa");
+	/* XXX add ngets and waiting/sleep time */
+}
+
+void
+psc_ctlmsg_opstat_prdat(__unusedx const struct psc_ctlmsghdr *mh,
+    const void *m)
+{
+	const struct psc_ctlmsg_opstat *pcpl = m;
+
+	printf("%-32s %ld", pcpl->pcpl_name, pcpl->pcpl_value);
 	printf("\n");
 }
 

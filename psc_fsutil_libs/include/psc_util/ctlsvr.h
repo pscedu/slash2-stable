@@ -116,6 +116,8 @@ int	psc_ctlparam_log_level(int, struct psc_ctlmsghdr *,
 		struct psc_ctlmsg_param *, char **, int, struct psc_ctlparam_node *);
 int	psc_ctlparam_pool(int, struct psc_ctlmsghdr *,
 		struct psc_ctlmsg_param *, char **, int, struct psc_ctlparam_node *);
+int	psc_ctlparam_opstat(int, struct psc_ctlmsghdr *,
+		struct psc_ctlmsg_param *, char **, int, struct psc_ctlparam_node *);
 int	psc_ctlparam_rlim(int, struct psc_ctlmsghdr *,
 		struct psc_ctlmsg_param *, char **, int, struct psc_ctlparam_node *);
 int	psc_ctlparam_run(int, struct psc_ctlmsghdr *,

@@ -696,6 +696,18 @@ psc_pool_lookup(const char *name)
 }
 
 /**
+ * psc_opstat_lookup - Find an opstat by name.
+ * @name: name of opstat to find.
+ */
+int
+psc_opstat_lookup(const char *name)
+{
+	int rc = 0;
+
+	return rc;
+}
+
+/**
  * psc_pool_share - Allow a pool to share its resources with everyone.
  * @p: pool master to share.
  */
