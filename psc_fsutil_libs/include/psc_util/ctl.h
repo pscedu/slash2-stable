@@ -166,11 +166,6 @@ struct psc_ctlmsg_pool {
 	char			pcpl_name[PEXL_NAME_MAX];
 };
 
-struct psc_ctlmsg_opstat {
-	int64_t			pcpl_value;
-	char			pcpl_name[PEXL_NAME_MAX];
-};
-
 #define PCPL_NAME_ALL		"all"
 
 struct psc_ctlmsg_rpcsvc {

@@ -26,37 +26,6 @@
 #include "psc_util/log.h"
 #include "pfl/time.h"
 
-/* names must match the field definitions in struct slash2_client_opstats */
-struct slash2_client_opstats msl_opstats = {
-
-	{ "bmap_retrieve",	0 },
-	{ "bmap_lease_ext",	0 },
-
-	{ "flush_attr",		0 },
-	{ "fsync",		0 },
-
-	{ "getxattr",		0 },
-
-	{ "listxattr",		0 },
-
-	{ "offline_retry",	0 },
-
-	{ "read", 		0 },
-	{ "read_ahead",		0 },
-	{ "read_rpc_launch",	0 },
-	{ "readdir",		0 },
-	{ "readdir_retry",	0 },
-	{ "removexattr",	0 },
-	{ "rename",		0 },
-
-	{ "setattr",		0 },
-	{ "setxattr",		0 },
-
-	{ "write",		0 },
-
-	{ NULL,			0 }
-};
-
 struct psc_lockedlist	psc_iostats =
     PLL_INIT(&psc_iostats, struct psc_iostats, ist_lentry);
 

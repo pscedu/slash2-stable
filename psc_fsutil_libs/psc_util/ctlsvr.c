@@ -1046,91 +1046,6 @@ psc_ctlparam_pool(int fd, struct psc_ctlmsghdr *mh,
 	return (rc);
 }
 
-int
-psc_ctlparam_opstat(int fd, struct psc_ctlmsghdr *mh,
-    struct psc_ctlmsg_param *pcp, char **levels, int nlevels,
-    __unusedx struct psc_ctlparam_node *pcn)
-{
-	int rc, set, found = 0;
-	char *endp;
-	long val;
-	struct opstat *op;
-	char nbuf[20];
-
-	if (nlevels >= 3)
-		return (psc_ctlsenderr(fd, mh, "invalid field"));
-
-	if (strcmp(pcp->pcp_thrname, PCTHRNAME_EVERYONE) != 0)
-		return (psc_ctlsenderr(fd, mh, "invalid field for %s",
-		    pcp->pcp_thrname));
-
-	rc = 1;
-	levels[0] = "opstat";
-	val = 0; /* gcc */
-
-	set = (mh->mh_type == PCMT_SETPARAM);
-
-	if (set) {
-		if (nlevels != 2)
-			return (psc_ctlsenderr(fd, mh,
-			    "invalid operation"));
-
-		endp = NULL;
-		val = strtol(pcp->pcp_value, &endp, 10);
-		if (val == LONG_MIN || val == LONG_MAX ||
-		    val > INT_MAX || val < 0 ||
-		    endp == pcp->pcp_value || *endp != '\0')
-			return (psc_ctlsenderr(fd, mh,
-			    "invalid opstat %s value: %s",
-			    levels[2], pcp->pcp_value));
-
-		op = (struct opstat *)&msl_opstats;
-		while (op->name) {
-			if (!strcmp(op->name, levels[1])) {
-				found = 1;
-				op->value = val;
-				break;
-			}
-			op++;
-		}
-		if (!found)
-			return (psc_ctlsenderr(fd, mh,
-			    "invalid opstat name: %s",
-			     levels[1]));
-		return (0);
-	}
-	if (nlevels == 1) {
-		op = (struct opstat *)&msl_opstats;
-		while (op->name) {
-			snprintf(nbuf, sizeof(nbuf), "%ld", op->value);
-			levels[1] = op->name;
-			if (!psc_ctlmsg_param_send(fd, mh, pcp,
-			    PCTHRNAME_EVERYONE, levels, 2, nbuf))
-				return (0);
-			op++;
-		}
-	} else {
-		op = (struct opstat *)&msl_opstats;
-		while (op->name) {
-			if (!strcmp(op->name, levels[1])) {
-				found = 1;
-				break;
-			}
-			op++;
-		}
-		if (!found)
-			return (psc_ctlsenderr(fd, mh,
-			    "invalid opstat name: %s",
-			     levels[1]));
-
-		snprintf(nbuf, sizeof(nbuf), "%ld", op->value);
-		if (!psc_ctlmsg_param_send(fd, mh, pcp,
-		    PCTHRNAME_EVERYONE, levels, 2, nbuf))
-			return (0);
-	}
-	return (rc);
-}
-
 /* Node in the control parameter tree. */
 struct psc_ctlparam_node {
 	char			 *pcn_name;
@@ -1398,6 +1313,52 @@ psc_ctlparam_register_simple(const char *name, void (*getf)(char *),
 	pcn = psc_ctlparam_register(name, psc_ctlrep_param_simple);
 	pcn->pcn_getf = getf;
 	pcn->pcn_setf = setf;
+}
+
+/**
+ * psc_ctlparam_opstats - Handle opstats parameter.
+ * @fd: control connection file descriptor.
+ * @mh: already filled-in control message header.
+ * @pcp: parameter control message.
+ * @levels: parameter fields.
+ * @nlevels: number of fields.
+ */
+int
+psc_ctlparam_opstats(int fd, struct psc_ctlmsghdr *mh,
+    struct psc_ctlmsg_param *pcp, char **levels, int nlevels,
+    __unusedx struct psc_ctlparam_node *pcn)
+{
+	struct pfl_opstat *pos;
+	int found, rc = 1, i;
+	char buf[32];
+
+	if (nlevels > 2)
+		return (psc_ctlsenderr(fd, mh, "invalid field"));
+
+	levels[0] = "opstats";
+
+	if (mh->mh_type == PCMT_SETPARAM)
+		return (psc_ctlsenderr(fd, mh, "%s: field is read-only",
+		    psc_ctlparam_fieldname(pcp->pcp_field, nlevels)));
+
+	for (i = 0; i < pflctl_nopstats; i++) {
+		pos = &pflctl_opstats[i];
+		if (nlevels < 2 ||
+		    strcmp(levels[1], pos->pos_name) == 0) {
+			levels[1] = (char *)pos->pos_name;
+			snprintf(buf, sizeof(buf), "%"PRId64,
+			    psc_atomic64_read(&pos->pos_value));
+			rc = psc_ctlmsg_param_send(fd, mh, pcp,
+			    PCTHRNAME_EVERYONE, levels, 2, buf);
+
+			if (nlevels == 2)
+				break;
+		}
+	}
+	if (!found && nlevels > 1)
+		return (psc_ctlsenderr(fd, mh, "%s: invalid opstat",
+		    psc_ctlparam_fieldname(pcp->pcp_field, nlevels)));
+	return (rc);
 }
 
 /**

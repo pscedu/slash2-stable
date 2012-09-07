@@ -24,6 +24,7 @@
 #ifndef _PFL_CTLSVR_H_
 #define _PFL_CTLSVR_H_
 
+#include "psc_util/atomic.h"
 #include "psc_util/thread.h"
 
 struct psc_ctlmsghdr;
@@ -84,6 +85,19 @@ struct psc_ctlop {
 	size_t	  pc_siz;
 };
 
+struct pfl_opstat {
+	const char		*pos_name;
+	psc_atomic64_t		 pos_value;
+};
+
+#define	OPSTAT_INCR(op)							\
+	do {								\
+		psc_assert((op) < pflctl_nopstats);			\
+		psc_atomic64_inc(&pflctl_opstats[op].pos_value);	\
+	} while (0)
+
+#define	PFL_OPSTAT_INIT(name)	{ name, PSC_ATOMIC64_INIT(0) }
+
 int	psc_ctlsenderr(int, const struct psc_ctlmsghdr *, const char *, ...);
 
 int	psc_ctlmsg_sendv(int, const struct psc_ctlmsghdr *, const void *);
@@ -116,11 +130,11 @@ int	psc_ctlparam_log_level(int, struct psc_ctlmsghdr *,
 		struct psc_ctlmsg_param *, char **, int, struct psc_ctlparam_node *);
 int	psc_ctlparam_pool(int, struct psc_ctlmsghdr *,
 		struct psc_ctlmsg_param *, char **, int, struct psc_ctlparam_node *);
-int	psc_ctlparam_opstat(int, struct psc_ctlmsghdr *,
-		struct psc_ctlmsg_param *, char **, int, struct psc_ctlparam_node *);
 int	psc_ctlparam_rlim(int, struct psc_ctlmsghdr *,
 		struct psc_ctlmsg_param *, char **, int, struct psc_ctlparam_node *);
 int	psc_ctlparam_run(int, struct psc_ctlmsghdr *,
+		struct psc_ctlmsg_param *, char **, int, struct psc_ctlparam_node *);
+int	psc_ctlparam_opstats(int, struct psc_ctlmsghdr *,
 		struct psc_ctlmsg_param *, char **, int, struct psc_ctlparam_node *);
 int	psc_ctlparam_pause(int, struct psc_ctlmsghdr *,
 		struct psc_ctlmsg_param *, char **, int, struct psc_ctlparam_node *);
@@ -141,10 +155,15 @@ int	psc_ctl_applythrop(int, struct psc_ctlmsghdr *, void *, const char *,
 		int (*)(int, struct psc_ctlmsghdr *, void *, struct psc_thread *));
 
 typedef void (*psc_ctl_thrget_t)(struct psc_thread *, struct psc_ctlmsg_thread *);
+
 extern psc_ctl_thrget_t psc_ctl_thrgets[];
 extern int psc_ctl_nthrgets;
 
+extern struct pfl_opstat pflctl_opstats[];
+extern int pflctl_nopstats;
+
 #define PFLCTL_SVR_DEFS							\
-int psc_ctl_nthrgets = nitems(psc_ctl_thrgets)
+int psc_ctl_nthrgets = nitems(psc_ctl_thrgets);				\
+int pflctl_nopstats = nitems(pflctl_opstats)
 
 #endif /* _PFL_CTLSVR_H_ */
