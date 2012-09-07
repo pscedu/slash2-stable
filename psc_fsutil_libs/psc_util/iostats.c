@@ -26,6 +26,17 @@
 #include "psc_util/log.h"
 #include "pfl/time.h"
 
+/* names must match the field definitions in struct slash2_client_opstats */
+struct slash2_client_opstats msl_opstats = {
+
+	{ "read", 		0 },
+	{ "read_ahead",		0 },
+	{ "read_retry",		0 },
+	{ "write",		0 },
+	{ "write_retry",	0 },
+	{ NULL,			0 }
+};
+
 struct psc_lockedlist	psc_iostats =
     PLL_INIT(&psc_iostats, struct psc_iostats, ist_lentry);
 
