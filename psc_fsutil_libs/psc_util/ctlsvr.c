@@ -1108,8 +1108,6 @@ psc_ctlparam_opstat(int fd, struct psc_ctlmsghdr *mh,
 			    PCTHRNAME_EVERYONE, levels, 2, nbuf))
 				return (0);
 			op++;
-			if (!op->name)
-				break;
 		}
 	} else {
 		op = (struct opstat *)&msl_opstats;

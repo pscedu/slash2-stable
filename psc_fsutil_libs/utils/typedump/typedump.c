@@ -204,6 +204,7 @@ main(int argc, char *argv[])
 	PRTYPE(struct odtable_entftr);
 	PRTYPE(struct odtable_hdr);
 	PRTYPE(struct odtable_receipt);
+	PRTYPE(struct opstat);
 	PRTYPE(struct pfl_callerinfo);
 	PRTYPE(struct pfl_mutex);
 	PRTYPE(struct pfl_strbuf);
@@ -224,6 +225,7 @@ main(int argc, char *argv[])
 	PRTYPE(struct psc_ctlmsg_meter);
 	PRTYPE(struct psc_ctlmsg_mlist);
 	PRTYPE(struct psc_ctlmsg_odtable);
+	PRTYPE(struct psc_ctlmsg_opstat);
 	PRTYPE(struct psc_ctlmsg_param);
 	PRTYPE(struct psc_ctlmsg_pool);
 	PRTYPE(struct psc_ctlmsg_prfmt);
@@ -299,6 +301,7 @@ main(int argc, char *argv[])
 	PRTYPE(struct rnd_iterator);
 	PRTYPE(struct rsx_msg_conversion);
 	PRTYPE(struct rsx_msg_portablizer);
+	PRTYPE(struct slash2_client_opstats);
 	/* end structs */
 
 	/* start typedefs */
