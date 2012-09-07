@@ -81,16 +81,29 @@ struct opstat {
 };
 
 struct slash2_client_opstats {
+
+	struct opstat bmap_retrieve;
+	struct opstat bmap_lease_ext;
+
+	struct opstat flush_attr;
+	struct opstat fsync;
+
+	struct opstat offline_retry;
+
 	struct opstat read;
 	struct opstat read_ahead;
-	struct opstat read_retry;
+	struct opstat read_rpc_launch;
+	struct opstat readdir;
+	struct opstat readdir_retry;
+	struct opstat rename;
+
 	struct opstat write;
-	struct opstat write_retry;
+
 	struct opstat eof_of_opstat;
 };
 
-#define	OPSTATS_INC(op)		msl_opstats.op.value++;
-#define	OPSTATS_SET(op, val)	msl_opstats.op.value = val;
+#define	OPSTATS_INC(op)		msl_opstats.op.value++
+#define	OPSTATS_SET(op, val)	msl_opstats.op.value = val
 
 extern struct slash2_client_opstats msl_opstats;
 

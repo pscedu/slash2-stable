@@ -29,11 +29,23 @@
 /* names must match the field definitions in struct slash2_client_opstats */
 struct slash2_client_opstats msl_opstats = {
 
+	{ "bmap_retrieve",	0 },
+	{ "bmap_lease_ext",	0 },
+
+	{ "flush_attr",		0 },
+	{ "fsync",		0 },
+
+	{ "offline_retry",	0 },
+
 	{ "read", 		0 },
 	{ "read_ahead",		0 },
-	{ "read_retry",		0 },
+	{ "read_rpc_launch",	0 },
+	{ "readdir",		0 },
+	{ "readdir_retry",	0 },
+	{ "rename",		0 },
+
 	{ "write",		0 },
-	{ "write_retry",	0 },
+
 	{ NULL,			0 }
 };
 
