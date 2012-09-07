@@ -1329,7 +1329,7 @@ psc_ctlparam_opstats(int fd, struct psc_ctlmsghdr *mh,
     __unusedx struct psc_ctlparam_node *pcn)
 {
 	struct pfl_opstat *pos;
-	int found, rc = 1, i;
+	int found = 0, rc = 1, i;
 	char buf[32];
 
 	if (nlevels > 2)
@@ -1350,6 +1350,7 @@ psc_ctlparam_opstats(int fd, struct psc_ctlmsghdr *mh,
 			    psc_atomic64_read(&pos->pos_value));
 			rc = psc_ctlmsg_param_send(fd, mh, pcp,
 			    PCTHRNAME_EVERYONE, levels, 2, buf);
+			found = 1;
 
 			if (nlevels == 2)
 				break;
