@@ -88,6 +88,10 @@ struct slash2_client_opstats {
 	struct opstat flush_attr;
 	struct opstat fsync;
 
+	struct opstat getxattr;
+
+	struct opstat listxattr;
+
 	struct opstat offline_retry;
 
 	struct opstat read;
@@ -95,7 +99,11 @@ struct slash2_client_opstats {
 	struct opstat read_rpc_launch;
 	struct opstat readdir;
 	struct opstat readdir_retry;
+	struct opstat removexattr;
 	struct opstat rename;
+
+	struct opstat setattr;
+	struct opstat setxattr;
 
 	struct opstat write;
 

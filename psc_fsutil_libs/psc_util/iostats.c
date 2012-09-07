@@ -35,6 +35,10 @@ struct slash2_client_opstats msl_opstats = {
 	{ "flush_attr",		0 },
 	{ "fsync",		0 },
 
+	{ "getxattr",		0 },
+
+	{ "listxattr",		0 },
+
 	{ "offline_retry",	0 },
 
 	{ "read", 		0 },
@@ -42,7 +46,11 @@ struct slash2_client_opstats msl_opstats = {
 	{ "read_rpc_launch",	0 },
 	{ "readdir",		0 },
 	{ "readdir_retry",	0 },
+	{ "removexattr",	0 },
 	{ "rename",		0 },
+
+	{ "setattr",		0 },
+	{ "setxattr",		0 },
 
 	{ "write",		0 },
 
