@@ -1328,8 +1328,8 @@ psc_ctlparam_opstats(int fd, struct psc_ctlmsghdr *mh,
     struct psc_ctlmsg_param *pcp, char **levels, int nlevels,
     __unusedx struct psc_ctlparam_node *pcn)
 {
+	int reset = 0, found = 0, rc = 1, i;
 	struct pfl_opstat *pos;
-	int found = 0, rc = 1, i;
 	char buf[32];
 
 	if (nlevels > 2)
@@ -1337,20 +1337,23 @@ psc_ctlparam_opstats(int fd, struct psc_ctlmsghdr *mh,
 
 	levels[0] = "opstats";
 
-	if (mh->mh_type == PCMT_SETPARAM)
-		return (psc_ctlsenderr(fd, mh, "%s: field is read-only",
-		    psc_ctlparam_fieldname(pcp->pcp_field, nlevels)));
+	reset = (mh->mh_type == PCMT_SETPARAM);
 
 	for (i = 0; i < pflctl_nopstats; i++) {
 		pos = &pflctl_opstats[i];
 		if (nlevels < 2 ||
 		    strcmp(levels[1], pos->pos_name) == 0) {
-			levels[1] = (char *)pos->pos_name;
-			snprintf(buf, sizeof(buf), "%"PRId64,
-			    psc_atomic64_read(&pos->pos_value));
-			rc = psc_ctlmsg_param_send(fd, mh, pcp,
-			    PCTHRNAME_EVERYONE, levels, 2, buf);
 			found = 1;
+
+			if (reset)
+				psc_atomic64_set(&pos->pos_value, 0);
+			else {
+				levels[1] = (char *)pos->pos_name;
+				snprintf(buf, sizeof(buf), "%"PRId64,
+				    psc_atomic64_read(&pos->pos_value));
+				rc = psc_ctlmsg_param_send(fd, mh, pcp,
+				    PCTHRNAME_EVERYONE, levels, 2, buf);
+			}
 
 			if (nlevels == 2)
 				break;
