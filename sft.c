@@ -42,24 +42,20 @@ MPI_Group world;
 
 int		 pes;
 int		 mype;
-unsigned long	 crc;
-int		 debug;
+int		 docrc;
+int		 chunk;
 ssize_t		 bufsz = 131072;
 
 uint64_t	 filecrc;
-
-char		*file;
 char		*buf;
-
 const char	*progname;
 
 __dead void
 usage(void)
 {
-	fprintf(stderr, "usage: %s [-cd] [-b bufsz] [-f filename]\n"
-	    "\t -d (enable debugging output)\n"
-	    "\t -c (enable MD5 checksummming)\n"
-	    "\t -f filename (specify the filename to read)\n", progname);
+	fprintf(stderr,
+	    "usage: %s [-cK] [-b bufsz] file ...\n",
+	    progname);
 	exit(1);
 }
 
@@ -109,71 +105,71 @@ main(int argc, char *argv[])
 	struct stat stb;
 	size_t tmp;
 	int c, fd;
+	size_t n;
 
 	pfl_init();
 	progname = argv[0];
-	while ((c = getopt(argc, argv, "b:cdf:")) != -1)
+	while ((c = getopt(argc, argv, "b:cK")) != -1)
 		switch (c) {
 		case 'b':
 			bufsz = strtol(optarg, NULL, 10);
 			break;
 		case 'c':
-			crc = 1;
+			docrc = 1;
 			PSC_CRC64_INIT(&filecrc);
 			break;
-		case 'd':
-			debug = strtol(optarg, NULL, 10);
-			break;
-		case 'f':
-			file = optarg;
+		case 'K':
+			chunk = 1;
 			break;
 		default:
 			usage();
 		}
 	argc -= optind;
-	if (argc)
+	argv += optind;
+	if (argc == 0)
 		usage();
-
-	if (!file) {
-		warnx("No input file specified");
-		usage();
-	}
 
 	buf = PSCALLOC(bufsz);
 
 	sft_parallel_init(argc, argv);
 	sft_barrier();
 
-	fd = open(file, O_RDONLY);
-	if (fd < 0)
-		abort();
+	for (; *argv; argv++) {
+		fd = open(argv[0], O_RDONLY);
+		if (fd == -1)
+			err(1, "open %s", argv[0]);
 
-	if (fstat(fd, &stb))
-		abort();
+		if (fstat(fd, &stb) == -1)
+			err(1, "stat %s", argv[0]);
 
-	if (debug)
-		fprintf(stdout, "filesize=%"PSCPRIdOFFT, stb.st_size);
+		rem = stb.st_size;
 
-	rem = stb.st_size;
+		for (n = 0; rem; n++, rem -= tmp) {
+			tmp = MIN(rem, bufsz);
+			szrc = read(fd, buf, tmp);
+			if (szrc != (ssize_t)tmp)
+				err(1, "read");
 
-	while (rem) {
-		tmp = MIN(rem, bufsz);
-		szrc = read(fd, buf, tmp);
-		if (szrc != (ssize_t)tmp) {
-			perror("failed to read");
-			abort();
-		} else {
-			rem -= tmp;
-			if (crc)
-				psc_crc64_add(&filecrc, buf, tmp);
+			if (docrc) {
+				if (chunk) {
+					psc_crc64_calc(&filecrc, buf,
+					    tmp);
+					fprintf(stdout,
+					    "F '%s' CRC=%"PSCPRIxCRC64" %5d\n",
+					    argv[0], filecrc, n);
+				} else
+					psc_crc64_add(&filecrc, buf,
+					    tmp);
+			}
 		}
-	}
 
-	if (crc) {
-		PSC_CRC64_FIN(&filecrc);
-		fprintf(stdout, "F '%s' CRC=%"PSCPRIxCRC64"\n", file, filecrc);
+		if (docrc && !chunk) {
+			PSC_CRC64_FIN(&filecrc);
+			fprintf(stdout, "F '%s' CRC=%"PSCPRIxCRC64"\n",
+			    argv[0], filecrc);
+		}
+		close(fd);
 	}
-	close(fd);
 
 	sft_parallel_finalize();
 	return (0);
