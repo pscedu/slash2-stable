@@ -155,7 +155,7 @@ main(int argc, char *argv[])
 					psc_crc64_calc(&filecrc, buf,
 					    tmp);
 					fprintf(stdout,
-					    "F '%s' CRC=%"PSCPRIxCRC64" %5d\n",
+					    "F '%s' CRC=%"PSCPRIxCRC64" %5zd\n",
 					    argv[0], filecrc, n);
 				} else
 					psc_crc64_add(&filecrc, buf,
