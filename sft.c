@@ -154,8 +154,8 @@ main(int argc, char *argv[])
 				if (chunk) {
 					psc_crc64_calc(&filecrc, buf,
 					    tmp);
-					fprintf(stdout,
-					    "F '%s' CRC=%"PSCPRIxCRC64" %5zd\n",
+					fprintf(stdout, "F '%s' "
+					    "CRC=%016"PSCPRIxCRC64" %5zd\n",
 					    argv[0], filecrc, n);
 				} else
 					psc_crc64_add(&filecrc, buf,
@@ -165,7 +165,7 @@ main(int argc, char *argv[])
 
 		if (docrc && !chunk) {
 			PSC_CRC64_FIN(&filecrc);
-			fprintf(stdout, "F '%s' CRC=%"PSCPRIxCRC64"\n",
+			fprintf(stdout, "F '%s' CRC=%016"PSCPRIxCRC64"\n",
 			    argv[0], filecrc);
 		}
 		close(fd);
