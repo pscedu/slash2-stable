@@ -35,6 +35,7 @@ MPI_Group world;
 
 #include "pfl/cdefs.h"
 #include "pfl/pfl.h"
+#include "pfl/str.h"
 #include "pfl/types.h"
 #include "psc_util/alloc.h"
 #include "psc_util/crc.h"
@@ -44,6 +45,7 @@ int		 pes;
 int		 mype;
 int		 docrc;
 int		 chunk;
+int		 checkzero;
 ssize_t		 bufsz = 131072;
 
 uint64_t	 filecrc;
@@ -54,7 +56,7 @@ __dead void
 usage(void)
 {
 	fprintf(stderr,
-	    "usage: %s [-cK] [-b bufsz] file ...\n",
+	    "usage: %s [-cKZ] [-b bufsz] file ...\n",
 	    progname);
 	exit(1);
 }
@@ -109,7 +111,7 @@ main(int argc, char *argv[])
 
 	pfl_init();
 	progname = argv[0];
-	while ((c = getopt(argc, argv, "b:cK")) != -1)
+	while ((c = getopt(argc, argv, "b:cKZ")) != -1)
 		switch (c) {
 		case 'b':
 			bufsz = strtol(optarg, NULL, 10);
@@ -120,6 +122,9 @@ main(int argc, char *argv[])
 			break;
 		case 'K':
 			chunk = 1;
+			break;
+		case 'Z':
+			checkzero = 1;
 			break;
 		default:
 			usage();
@@ -154,9 +159,11 @@ main(int argc, char *argv[])
 				if (chunk) {
 					psc_crc64_calc(&filecrc, buf,
 					    tmp);
-					fprintf(stdout, "F '%s' "
-					    "CRC=%016"PSCPRIxCRC64" %5zd\n",
-					    argv[0], filecrc, n);
+					fprintf(stdout, "F '%s' %5zd %c "
+					    "CRC=%"PSCPRIxCRC64"\n",
+					    argv[0], n, checkzero &&
+					    pfl_memchk(buf, 0, tmp) ?
+					    'Z' : ' ', filecrc);
 				} else
 					psc_crc64_add(&filecrc, buf,
 					    tmp);
@@ -165,7 +172,8 @@ main(int argc, char *argv[])
 
 		if (docrc && !chunk) {
 			PSC_CRC64_FIN(&filecrc);
-			fprintf(stdout, "F '%s' CRC=%016"PSCPRIxCRC64"\n",
+			fprintf(stdout,
+			    "F '%s' CRC=%"PSCPRIxCRC64"\n",
 			    argv[0], filecrc);
 		}
 		close(fd);
