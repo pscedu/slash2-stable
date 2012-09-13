@@ -26,8 +26,8 @@
 
 /* printf(3) specifier modifiers for custom types. */
 #define PSCPRIxLNID		"#"PRIx64
-#define PSCPRIxCRC32		"#08x"
-#define PSCPRIxCRC64		"#016"PRIx64
+#define PSCPRIxCRC32		"#010x"
+#define PSCPRIxCRC64		"#018"PRIx64
 
 #if defined(__APPLE__) || defined(__OpenBSD__) || defined(__FreeBSD__)
 # define PSCPRI_PTHRT		"p"
