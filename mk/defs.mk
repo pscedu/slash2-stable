@@ -52,7 +52,7 @@ CFLAGS+=	-Wall -W -pipe
 DEBUG?=		1
 DEVELPATHS?=	1
 ifeq (${DEBUG},0)
-  CFLAGS+=	-Wunused -Wuninitialized -O2
+  CFLAGS+=	-Wunused -Wuninitialized -O2 -fno-strict-aliasing
 else
   CFLAGS+=	-g
   LDFLAGS+=	-fstack-protector-all
