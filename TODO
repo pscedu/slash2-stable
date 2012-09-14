@@ -125,7 +125,6 @@ pfl
 	INIT_PSC_LISTENTRY -> INIT_LISTENTRY
   which is OK since they aren't translation unit symbols
 - eliminate flags arg to pscthr_init()
-- eliminate prt_alive; use flags
 - in mguard, check the flags in realloc/free match alloc (PAF_LOCK, ALIGN)
 - is pcpp the problem with function args mid-wrapping?
 - count spinlocks and mutexes held before:
