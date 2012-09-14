@@ -181,6 +181,8 @@ pflnet_rtexists_rtnetlink(const struct sockaddr *sa)
 		struct rtmsg	rtm;
 #define RT_SPACE 8192
 		unsigned char	buf[RT_SPACE];
+		struct rtattr	rta;
+		struct nlmsgerr	nlerr;
 	} rq;
 	struct sockaddr_in *sin = (void *)sa;
 	in_addr_t cmpaddr, zero = 0;
@@ -205,7 +207,7 @@ pflnet_rtexists_rtnetlink(const struct sockaddr *sa)
 	rq.rtm.rtm_table = RT_TABLE_MAIN;
 	rq.rtm.rtm_scope = RT_SCOPE_LINK;
 
-	rta = (void *)((char *)&rq + NLMSG_SPACE(sizeof(rq.rtm)));
+	rta = (void *)((char *)&rq.rta + NLMSG_SPACE(sizeof(rq.rtm)));
 	rta->rta_type = RTA_DST;
 	rta->rta_len = RTA_LENGTH(sizeof(sin->sin_addr));
 	memcpy(RTA_DATA(rta), &sin->sin_addr,
@@ -225,7 +227,7 @@ pflnet_rtexists_rtnetlink(const struct sockaddr *sa)
 		case NLMSG_ERROR: {
 			struct nlmsgerr *nlerr;
 
-			nlerr = NLMSG_DATA(&rq.nmh);
+			nlerr = NLMSG_DATA(&rq.nlerr);
 			psc_fatalx("netlink: %s", strerror(nlerr->error));
 		    }
 		case NLMSG_DONE:
