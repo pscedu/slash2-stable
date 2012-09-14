@@ -79,7 +79,7 @@ int x,excel;
 int verbose = 0;
 int sz = 1;
 char *mbuffer;
-int incr;
+int incr = 1;
 #define _STAT_CREATE 0
 #define _STAT_WRITE 1
 #define _STAT_CLOSE 2
@@ -128,7 +128,7 @@ void bzero();
 void clear_stats();
 int validate(char *, int , char );
 
-#define THISVERSION "        $Revision: 1.59 $"
+#define THISVERSION "        $Revision: 1.60 $"
 /*#define NULL 0*/
 
 char version[]=THISVERSION;

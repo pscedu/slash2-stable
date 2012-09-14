@@ -79,7 +79,7 @@ foreach $report (@Reports)
     {
         next unless ( /^[\s\d]+$/ );
         @split = split();
-        next unless ( @split == 15 );
+        next unless ( @split >= 8 );
         print O;
         print O2 if $split[1] == 16384 or $split[0] == $split[1];
     }
@@ -103,11 +103,11 @@ set ytics
 set logscale x 2
 set logscale y 2
 set autoscale z
-set xrange [2.**5:2.**24]
+#set xrange [2.**5:2.**24]
 set xlabel "File size in KBytes"
 set ylabel "Record size in Kbytes"
 set zlabel "Kbytes/sec"
-set data style lines
+set style data lines
 set dgrid3d 80,80,3
 #set terminal png small picsize 900 700
 set terminal png small size 900 700

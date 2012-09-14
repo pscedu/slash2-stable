@@ -1,5 +1,5 @@
 #
-# Version $Revision: 1.138 $
+# Version $Revision: 1.142 $
 #
 # The makefile for building all versions of iozone for all supported
 # platforms
@@ -28,6 +28,8 @@ all:
 	@echo "You must specify the target.        "
 	@echo "        ->   AIX                  (32bit)   <-"
 	@echo "        ->   AIX-LF               (32bit)   <-"
+	@echo "        ->   AIX64                (32bit)   <-"
+	@echo "        ->   AIX64-LF             (32bit)   <-"
 	@echo "        ->   bsdi                 (32bit)   <-" 
 	@echo "        ->   convex               (32bit)   <-" 
 	@echo "        ->   CrayX1               (32bit)   <-"
@@ -266,6 +268,27 @@ AIX-LF:	iozone_AIX-LF.o  libbif.o   fileop_AIX-LF.o pit_server.o
 	$(CC)  -O fileop_AIX-LF.o -o fileop
 	$(CC)  -O pit_server.o -o pit_server
 
+# AIX64
+# This version uses the 64 bit interfaces and is compiled as 64 bit code.
+# Has threads, async I/O but no largefile support.
+#
+AIX64:        iozone_AIX64.o libbif.o fileop_AIX64.o libasync.o pit_server.o
+	$(GCC) -maix64 -O3 $(LDFLAGS) iozone_AIX64.o libasync.o \
+              libbif.o -lpthreads -o iozone
+	$(GCC) -maix64 -O3 $(LDFLAGS) -Dlinux fileop_AIX64.o -o fileop
+	$(GCC) -maix32 -O3 $(LDFLAGS) pit_server.o -o pit_server
+
+#
+# AIX64-LF
+# This version uses the 64 bit interfaces and is compiled as 64 bit code.
+# Has threads, async I/O and largefile support.
+#
+AIX64-LF:     iozone_AIX64-LF.o libbif.o fileop_AIX64-LF.o libasync.o pit_server.o
+	$(GCC) -maix64 -O3 $(LDFLAGS) iozone_AIX64-LF.o libasync.o \
+              libbif.o -lpthreads -o iozone
+	$(GCC) -maix64 -O3 $(LDFLAGS) -Dlinux fileop_AIX64-LF.o -o fileop
+	$(GCC) -maix32 -O3 $(LDFLAGS) pit_server.o -o pit_server
+
 #
 # IRIX 32 bit build with threads, largefiles, async I/O 
 # This would like to be in 64 bit mode but it hangs whenever in 64 bit mode.
@@ -379,12 +402,12 @@ Solaris10gcc:	iozone_solaris10gcc.o libasync10.o libbif10.o fileop_Solaris10gcc.
 #
 # Solaris 64 bit build with threads, largefiles, and async I/O
 #
-Solaris10gcc-64:	iozone_solaris10gcc-64.o libasync10-64.o libbif10-64.o fileop_Solaris10gcc-64.o pit_server.o
+Solaris10gcc-64:	iozone_solaris10gcc-64.o libasync10-64.o libbif10-64.o fileop_Solaris10gcc-64.o pit_server_solaris10gcc-64.o
 	$(GCC)  -O $(LDFLAGS) $(S10GCCFLAGS) iozone_solaris10gcc-64.o libasync10-64.o libbif10-64.o \
 		-lthread -lpthread -lposix4 -lnsl -laio \
 		-lsocket -o iozone
 	$(GCC)  -O $(S10GCCFLAGS) fileop_Solaris10gcc-64.o -o fileop
-	$(GCC)  -O $(S10GCCFLAGS) pit_server.o -lthread -lpthread -lposix4 \
+	$(GCC)  -O $(S10GCCFLAGS) pit_server_solaris10gcc-64.o -lthread -lpthread -lposix4 \
 		-lnsl -laio -lsocket -o pit_server
 
 
@@ -628,6 +651,12 @@ fileop_hpuxs-11.0.o:	fileop.c
 	@echo ""
 	$(CC) -c  $(CFLAGS) fileop.c  -o fileop_hpuxs-11.0.o 
 
+pit_server_solaris10gcc-64.o:	pit_server.c
+	@echo ""
+	@echo "Building the pit_server"
+	@echo ""
+	$(CC) -c  $(CFLAGS) $(S10GCCFLAGS) pit_server.c  -o pit_server_solaris10gcc-64.o 
+
 pit_server.o:	pit_server.c
 	@echo ""
 	@echo "Building the pit_server"
@@ -786,6 +815,18 @@ fileop_AIX-LF.o:	fileop.c
 	@echo ""
 	$(CC) -c -O $(CFLAGS) fileop.c -o fileop_AIX-LF.o
 
+fileop_AIX64.o:       fileop.c
+	@echo ""
+	@echo "Building fileop for AIX64"
+	@echo ""
+	$(GCC) -maix64 -c -O3 $(CFLAGS) fileop.c -o fileop_AIX64.o
+
+fileop_AIX64-LF.o:    fileop.c
+	@echo ""
+	@echo "Building fileop for AIX64-LF"
+	@echo ""
+	$(GCC) -maix64 -c -O3 $(CFLAGS) fileop.c -o fileop_AIX64-LF.o
+
 fileop_bsdi.o:	fileop.c
 	@echo ""
 	@echo "Building fileop for BSDi"
@@ -797,6 +838,12 @@ fileop_freebsd.o:	fileop.c
 	@echo "Building fileop for FreeBSD"
 	@echo ""
 	$(CC) -c -O $(CFLAGS) fileop.c -o fileop_freebsd.o
+
+fileop_dragonfly.o:	fileop.c
+	@echo ""
+	@echo "Building fileop for DragonFly"
+	@echo ""
+	$(CC) -c -O $(CFLAGS) fileop.c -o fileop_dragonfly.o
 
 fileop_netbsd.o:	fileop.c
 	@echo ""
@@ -995,6 +1042,33 @@ iozone_AIX-LF.o:	iozone.c libbif.c
 	$(CC) -c -O -D__AIX__ -D_NO_PROTO -Dunix -DHAVE_ANSIC_C  \
 		-DSHARED_MEM -D_LARGEFILE64_SOURCE -D_LARGE_FILES \
 		$(CFLAGS) libbif.c -o libbif.o
+
+iozone_AIX64.o:       iozone.c libbif.c libasync.c
+	@echo ""
+	@echo "Building iozone for AIX64"
+	@echo ""
+	$(GCC) -maix64 -c -O3 -D__AIX__ -D_NO_PROTO -Dunix -DHAVE_ANSIC_C \
+              -DASYNC_IO -DNAME='"AIX64"' -DSHARED_MEM \
+              $(CFLAGS) iozone.c -o iozone_AIX64.o
+	$(GCC) -maix64 -c -O3 -D__AIX__ -D_NO_PROTO -Dunix -DHAVE_ANSIC_C \
+              -DASYNC_IO -DSHARED_MEM $(CFLAGS) libbif.c -o libbif.o
+	$(GCC) -maix64 -c -O3 -Dunix -Dlinux -DHAVE_ANSIC_C -DASYNC_IO \
+              $(CFLAGS) libasync.c -o libasync.o
+
+iozone_AIX64-LF.o:    iozone.c libbif.c libasync.c
+	@echo ""
+	@echo "Building iozone for AIX64 with Large files"
+	@echo ""
+	$(GCC) -maix64 -c -O3 -D__AIX__ -D_NO_PROTO -Dunix -DHAVE_ANSIC_C \
+              -DASYNC_IO -DNAME='"AIX64-LF"' -DSHARED_MEM \
+              -D_LARGEFILE64_SOURCE -D_LARGE_FILES \
+              $(CFLAGS) iozone.c -o iozone_AIX64-LF.o
+	$(GCC) -maix64 -c -O3 -D__AIX__ -D_NO_PROTO -Dunix -DHAVE_ANSIC_C \
+              -DASYNC_IO -DSHARED_MEM -D_LARGEFILE64_SOURCE -D_LARGE_FILES \
+              $(CFLAGS) libbif.c -o libbif.o
+	$(GCC) -maix64 -c -O3 -Dunix -Dlinux -DHAVE_ANSIC_C -DASYNC_IO \
+              -D_LARGEFILE64_SOURCE -D_LARGE_FILES \
+              $(CFLAGS) libasync.c -o libasync.o
 
 iozone_solaris.o:	iozone.c libasync.c libbif.c
 	@echo ""

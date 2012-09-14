@@ -2404,3 +2404,35 @@ Fix warnings from RedHat patches
 Revision 3.397
 Bug fix for getopt default case, with bad parameter handed in.
 =============================================================================
+Revision 3.398
+Adding thread_read_test and thread_write_test.
+=============================================================================
+Revision 3.401
+bug fix for re-write rec.
+=============================================================================
+Revision 3.402
+Mods for DragonFly support.
+=============================================================================
+Revision 3.403
+Add -+W to permit chid_skew. This permits adding files, and continuing
+the proper sharing/dedup within each quadrant, within same seed group 
+and with previously existing files that were created with a different
+number of threads.
+=============================================================================
+Revision 3.404
+Fix type-oh in usage message.
+=============================================================================
+Revision 3.405
+Reduce CPU consumption in the op_rate control mechanism.
+=============================================================================
+Revision 3.406
+Increase buffer size for configuration lines. They might be 700 chars long.
+=============================================================================
+Revision 3.407
+Work around for cache_line_size suddenly becoming zero and breaking fetchit()
+=============================================================================
+Revision 3.408
+Bug fix for clobbering of buffer. "tfile" needed to be bigger, as its 
+address was loaded into filearray[] and then that was overwritten 
+by the mfflag causing parsed names to get loaded.
+=============================================================================
