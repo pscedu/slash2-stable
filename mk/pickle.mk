@@ -17,16 +17,19 @@
 
 ifeq ($(filter $(realpath ${ROOTDIR})/compat/%,${CURDIR}),)
 
- PICKLELOCALMK=${ROOTDIR}/mk/gen-localdefs-$(word 1,$(subst ., ,$(shell hostname)))-pickle.mk
+ PICKLEHOSTMK=${ROOTDIR}/mk/gen-localdefs-$(word 1,$(subst ., ,$(shell hostname)))-pickle.mk
+ PICKLELOCALMK=${ROOTDIR}/mk/local.mk.pckl-$(word 1,$(subst ., ,$(shell hostname)))
 
- -include ${PICKLELOCALMK}
+ -include ${PICKLEHOSTMK}
 
-PICKLE_NEED_VERSION=					$(word 2,$$Rev$$)
+ PICKLE_NEED_VERSION=					$(word 2,$$Rev$$)
 
  ifneq (${PICKLE_NEED_VERSION},${PICKLE_HAS_VERSION})
-  $(shell ${PICKLEGEN} "${ROOTDIR}" "${PICKLE_NEED_VERSION}" "${MAKE}" "${PICKLELOCALMK}" >&2)
-  include ${PICKLELOCALMK}
+  $(shell ${PICKLEGEN} "${ROOTDIR}" "${PICKLE_NEED_VERSION}" "${MAKE}" "${PICKLEHOSTMK}" >&2)
+  include ${PICKLEHOSTMK}
  endif
+
+ -include ${PICKLELOCALMK}
 
  ifdef PICKLE_HAVE_POSIX_MEMALIGN
   DEFINES+=						-DHAVE_POSIX_MEMALIGN
