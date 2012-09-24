@@ -23,7 +23,7 @@ p=${t%%/*}
 ch=${t#*/}
 while :; do
 	if [ -n "$p" ]; then
-		mkdir -p -m $m -- "$p"
+		[ -d "$p" ] || mkdir -p -m $m -- "$p"
 		[ x"$p" == x"$t" ] && break
 	fi
 	p=$p/${ch%%/*}
