@@ -738,7 +738,7 @@ pscrpcthr_main(struct psc_thread *thr)
 			 svc->srv_n_active_reqs < (svc->srv_nthreads - 1)))
 		);
 #endif
-		pscrpc_svr_wait_event(&svc->srv_waitq,
+		(void)pscrpc_svr_wait_event(&svc->srv_waitq,
 		    pscrpcthr_waitevent(thr, svc), &lwi, NULL);
 
 		pscrpc_check_rqbd_pool(svc);

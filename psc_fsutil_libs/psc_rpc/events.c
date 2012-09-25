@@ -649,7 +649,7 @@ pscrpc_ni_fini(void)
 			/* Wait for a bit */
 			psc_waitq_init(&waitq);
 			lwi = LWI_TIMEOUT(2, NULL, NULL);
-			pscrpc_svr_wait_event(&waitq, 0, &lwi, NULL);
+			(void)pscrpc_svr_wait_event(&waitq, 0, &lwi, NULL);
 			break;
 		}
 	}
