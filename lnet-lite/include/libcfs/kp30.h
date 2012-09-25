@@ -284,7 +284,7 @@ int libcfs_debug_cleanup(void);
  *       value  after  conversion...
  *
  */
-#define CLASSERT(cond) ({ switch(42) { case (cond): case 0: break; } })
+#define CLASSERT(cond) ({ switch(42) { case (cond): default: break; } })
 
 /* support decl needed both by kernel and liblustre */
 int         libcfs_isknown_lnd(int type);
