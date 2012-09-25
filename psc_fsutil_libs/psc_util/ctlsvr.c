@@ -1871,7 +1871,7 @@ psc_ctlthr_main(const char *ofn, const struct psc_ctlop *ct, int nops,
 	sun.sun_family = AF_LOCAL;
 
 	/* preform transliteration for "variables" in file path */
-	FMTSTR(sun.sun_path, sizeof(sun.sun_path), ofn,
+	(void)FMTSTR(sun.sun_path, sizeof(sun.sun_path), ofn,
 		FMTSTRCASE('h', "s", psclog_getdata()->pld_hostshort)
 		FMTSTRCASE('n', "s", progname)
 	);

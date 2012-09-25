@@ -87,7 +87,7 @@ psc_log_setfn(const char *p, const char *mode)
 	struct timeval tv;
 
 	PFL_GETTIMEVAL(&tv);
-	FMTSTR(fn, sizeof(fn), p,
+	(void)FMTSTR(fn, sizeof(fn), p,
 		FMTSTRCASE('t', "d", tv.tv_sec)
 	);
 	if (freopen(fn, mode, stderr) == NULL)
@@ -340,7 +340,7 @@ _psclogv(const struct pfl_callerinfo *pci, enum psclog_level level,
 	}
 
 	gettimeofday(&tv, NULL);
-	FMTSTR(buf, sizeof(buf), psc_logfmt,
+	(void)FMTSTR(buf, sizeof(buf), psc_logfmt,
 		FMTSTRCASE('B', "s", pfl_basename(pci->pci_filename))
 		FMTSTRCASE('D', "s", pfl_fmtlogdate(&tv, &_t))
 		FMTSTRCASE('F', "s", pci->pci_func)

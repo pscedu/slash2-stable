@@ -63,7 +63,7 @@ _pscthr_destroy(void *arg)
 	psclog_info("thread dying");
 
 	PLL_LOCK(&psc_threads);
-	reqlock(&thr->pscthr_lock);
+	(void)reqlock(&thr->pscthr_lock);
 	pll_remove(&psc_threads, thr);
 	if (thr->pscthr_uniqid) {
 		psc_vbitmap_unset(&psc_uniqthridmap,
@@ -397,7 +397,7 @@ _pscthr_init(int type, int flags, void (*startf)(struct psc_thread *),
 void
 pscthr_setready(struct psc_thread *thr)
 {
-	reqlock(&thr->pscthr_lock);
+	(void)reqlock(&thr->pscthr_lock);
 	thr->pscthr_flags |= PTF_READY;
 	psc_waitq_wakeall(&thr->pscthr_waitq);
 	freelock(&thr->pscthr_lock);
