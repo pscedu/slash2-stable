@@ -42,7 +42,10 @@ ifdef CFLAGS
   MAKE:=	env CFLAGS="${CFLAGS}" ${MAKE}
 endif
 
-LFLAGS+=	-t $$(if ${MINVER} $$(lex -V | sed 's![a-z /]*!!g') 2.5.5; then echo --nounput; fi)
+LFLAGS+=	-t $$(if ${MINVER} $$(${LEX} -V | \
+		  sed 's!^[^0-9]*!!; s/ .*//') 2.5.5; then \
+		  echo --nounput; fi)
+
 YFLAGS+=	-d
 
 CFLAGS+=	-Wall -W -pipe
