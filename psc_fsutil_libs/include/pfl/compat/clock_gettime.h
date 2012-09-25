@@ -23,6 +23,7 @@
 #include <time.h>
 
 typedef enum {
+	CLOCK_MONOTONIC,
 	CLOCK_REALTIME
 } clockid_t;
 
