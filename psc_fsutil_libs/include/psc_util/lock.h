@@ -195,7 +195,7 @@ typedef struct psc_spinlock {
  */
 #define reqlock_pci(pci, psl)						\
 	(psc_spin_haslock(psl) ? PSLRV_WASLOCKED :			\
-	    (PSC_MAKETRUE(spinlock_pci((pci), (psl))), PSLRV_WASNOTLOCKED))
+	    ((void)PSC_MAKETRUE(spinlock_pci((pci), (psl))), PSLRV_WASNOTLOCKED))
 
 /**
  * tryreqlock - Try to require a lock.  Will not block if the lock
@@ -223,7 +223,8 @@ typedef struct psc_spinlock {
 			_SPIN_CHECK("ureqlock", (psl));			\
 	} while (0)
 
-#define LOCK_ENSURE(psl)	PSC_MAKETRUE(_SPIN_ENSURELOCKED("LOCK_ENSURE", (psl)))
+#define LOCK_ENSURE_RC(psl)	PSC_MAKETRUE(_SPIN_ENSURELOCKED("LOCK_ENSURE", (psl)))
+#define LOCK_ENSURE(psl)	_SPIN_ENSURELOCKED("LOCK_ENSURE", (psl))
 
 #define _SPIN_CALLERINFO(psl)	((psl)->psl_flags & PSLF_LOGTMP ?	\
 				 PFL_CALLERINFOSS(PSS_TMP) : PFL_CALLERINFO())
