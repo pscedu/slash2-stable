@@ -30,8 +30,8 @@
 void
 psc_mutex_init(struct pfl_mutex *mut)
 {
-	int rc;
 	pthread_mutexattr_t attr;
+	int rc;
 
 	memset(mut, 0, sizeof(*mut));
 	rc = pthread_mutexattr_init(&attr);
@@ -159,7 +159,7 @@ psc_rwlock_init(struct psc_rwlock *rw)
 {
 	int rc;
 
-	memset(rw, 0, sizeof(rw));
+	memset(rw, 0, sizeof(*rw));
 	rc = pthread_rwlock_init(&rw->pr_rwlock, NULL);
 	if (rc)
 		psc_fatalx("pthread_rwlock_init: %s", strerror(rc));
