@@ -1328,6 +1328,7 @@ psc_ctlparam_opstats(int fd, struct psc_ctlmsghdr *mh,
     struct psc_ctlmsg_param *pcp, char **levels, int nlevels,
     __unusedx struct psc_ctlparam_node *pcn)
 {
+	long val;
 	int reset = 0, found = 0, rc = 1, i;
 	struct pfl_opstat *pos;
 	char buf[32];
@@ -1345,9 +1346,15 @@ psc_ctlparam_opstats(int fd, struct psc_ctlmsghdr *mh,
 		    strcmp(levels[1], pos->pos_name) == 0) {
 			found = 1;
 
-			if (reset)
-				psc_atomic64_set(&pos->pos_value, 0);
-			else {
+			if (reset) {
+				errno = 0;
+				val = strtol(pcp->pcp_value, NULL, 10);
+				if (errno == ERANGE)
+					return (psc_ctlsenderr(fd, mh,
+						"invalid opstat %s value: %s", 
+						levels[1], pcp->pcp_value));
+				psc_atomic64_set(&pos->pos_value, val);
+			} else {
 				levels[1] = (char *)pos->pos_name;
 				snprintf(buf, sizeof(buf), "%"PRId64,
 				    psc_atomic64_read(&pos->pos_value));

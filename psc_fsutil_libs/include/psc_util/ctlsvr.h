@@ -96,6 +96,9 @@ struct pfl_opstat {
 		psc_atomic64_inc(&pflctl_opstats[op].pos_value);	\
 	} while (0)
 
+#define	OPSTAT_CURR(op)							\
+		psc_atomic64_read(&pflctl_opstats[op].pos_value)
+
 #define	PFL_OPSTAT_INIT(name)	{ name, PSC_ATOMIC64_INIT(0) }
 
 int	psc_ctlsenderr(int, const struct psc_ctlmsghdr *, const char *, ...);
