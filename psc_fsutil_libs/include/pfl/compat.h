@@ -24,6 +24,12 @@
 
 #include <errno.h>
 
+#define _PFLERR_START	500
+
+#if ELAST >= _PFLERR_START
+#  error system error codes into application space, need to adjust and recompile
+#endif
+
 #ifndef ECOMM
 #  define ECOMM		EPROTO
 #endif
@@ -32,12 +38,16 @@
 #  ifdef EBADRPC
 #    define EBADMSG	EBADRPC
 #  else
-#    define EBADMSG	(ELAST + 1000)
+#    define EBADMSG	(_PFLERR_START + 100)
 #  endif
 #endif
 
 #ifndef EKEYEXPIRED
-#  define EKEYEXPIRED	127
+#  define EKEYEXPIRED	(_PFLERR_START + 101)
+#endif
+
+#ifndef ENONET
+#  define ENONET	(_PFLERR_START + 102)
 #endif
 
 #ifndef HOST_NAME_MAX
