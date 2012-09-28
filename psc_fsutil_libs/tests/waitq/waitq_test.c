@@ -62,7 +62,7 @@ child_main(struct psc_thread *thr)
 	psclog_dbg("after pseudo barrier");
 
 	/* Connect to control socket. */
-	FMTSTR(buf, sizeof(buf), "foobar%h",
+	(void)FMTSTR(buf, sizeof(buf), "foobar%h",
 		FMTSTRCASE('h', buf, sizeof(buf), "s", "test")
 	);
 

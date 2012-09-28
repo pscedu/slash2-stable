@@ -58,7 +58,7 @@ main(int argc, char *argv[])
 	if (argc)
 		usage();
 
-	FMTSTR(b, sizeof(b), "[<%a>:<%b>:<%c>]",
+	(void)FMTSTR(b, sizeof(b), "[<%a>:<%b>:<%c>]",
 		FMTSTRCASE('a', "d", 1)
 		FMTSTRCASE('b', "s", "foobar")
 		FMTSTRCASE('c', "lu", 0UL)

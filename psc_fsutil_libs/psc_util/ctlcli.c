@@ -1204,7 +1204,7 @@ psc_ctlcli_main(const char *osockfn, int ac, char *av[],
 	bzero(&sun, sizeof(sun));
 	sun.sun_family = AF_UNIX;
 
-	FMTSTR(sun.sun_path, sizeof(sun.sun_path), psc_ctl_sockfn,
+	(void)FMTSTR(sun.sun_path, sizeof(sun.sun_path), psc_ctl_sockfn,
 		FMTSTRCASE('h', "s", psclog_getdata()->pld_hostshort)
 		FMTSTRCASE('n', "s", daemon_name)
 	);
