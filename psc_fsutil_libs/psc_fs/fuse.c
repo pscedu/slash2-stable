@@ -1054,9 +1054,17 @@ pscfs_fuse_handle_listxattr(fuse_req_t req, fuse_ino_t ino,
 	pscfs.pf_handle_listxattr(pfr, size, INUM_FUSE2PSCFS(ino));
 }
 
+#ifdef __APPLE__
 void
 pscfs_fuse_handle_setxattr(fuse_req_t req, fuse_ino_t ino,
-    const char *name, const char *value, size_t size, __unusedx int flags)
+    const char *name, const char *value, size_t size,
+    __unusedx int flags, __unusedx uint32_t position)
+#else
+void
+pscfs_fuse_handle_setxattr(fuse_req_t req, fuse_ino_t ino,
+    const char *name, const char *value, size_t size,
+    __unusedx int flags)
+#endif
 {
 	struct pscfs_req *pfr;
 
@@ -1064,12 +1072,19 @@ pscfs_fuse_handle_setxattr(fuse_req_t req, fuse_ino_t ino,
 	pfr->pfr_fuse_req = req;
 
 	RETIFNOTSUP(pfr, setxattr);
-	pscfs.pf_handle_setxattr(pfr, name, value, size, INUM_FUSE2PSCFS(ino));
+	pscfs.pf_handle_setxattr(pfr, name, value, size,
+	    INUM_FUSE2PSCFS(ino));
 }
 
+#ifdef __APPLE__
+void
+pscfs_fuse_handle_getxattr(fuse_req_t req, fuse_ino_t ino,
+    const char *name, size_t size, __unusedx uint32_t position)
+#else
 void
 pscfs_fuse_handle_getxattr(fuse_req_t req, fuse_ino_t ino,
     const char *name, size_t size)
+#endif
 {
 	struct pscfs_req *pfr;
 
