@@ -48,7 +48,7 @@ static __inline int
 psc_completion_wait(struct psc_completion *pc)
 {
 	if (pc->pc_done != PCV_DONE) {
-		reqlock(&pc->pc_lock);
+		(void)reqlock(&pc->pc_lock);
 		if (pc->pc_done == PCV_NOTDONE) {
 			psc_waitq_wait(&pc->pc_wq, &pc->pc_lock);
 			spinlock(&pc->pc_lock);
@@ -62,7 +62,7 @@ psc_completion_wait(struct psc_completion *pc)
 static __inline void
 psc_completion_done(struct psc_completion *pc, int rc)
 {
-	reqlock(&pc->pc_lock);
+	(void)reqlock(&pc->pc_lock);
 	pc->pc_rc = rc;
 	psc_assert(pc->pc_done == PCV_NOTDONE);
 	pc->pc_done = PCV_DONE;
