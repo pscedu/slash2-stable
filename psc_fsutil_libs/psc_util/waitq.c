@@ -51,6 +51,10 @@ psc_waitq_init(struct psc_waitq *q)
 		psc_fatalx("pthread_cond_init: %s", strerror(rc));
 }
 
+/**
+ * psc_waitq_destroy - Release resources associated with a waitq.
+ * @q: waitq to destroy.
+ */
 void
 psc_waitq_destroy(struct psc_waitq *q)
 {
@@ -62,6 +66,9 @@ psc_waitq_destroy(struct psc_waitq *q)
 	rc = pthread_cond_destroy(&q->wq_cond);
 	if (rc)
 		psc_fatalx("pthread_cond_destroy: %s", strerror(rc));
+#if PFL_DEBUG > 0
+	memset(q, 0, sizeof(*q));
+#endif
 }
 
 /**
