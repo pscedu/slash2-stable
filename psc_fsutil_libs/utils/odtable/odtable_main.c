@@ -61,7 +61,7 @@ __dead void
 usage(void)
 {
 	fprintf(stderr,
-	    "usage: %s [-Ccov] [-e elem_size] [-f #frees] [-n #puts]\n"
+	    "usage: %s [-Ccosv] [-e elem_size] [-f #frees] [-n #puts]\n"
 	    "\t[-z table_size] file\n", progname);
 	exit(1);
 }
@@ -76,7 +76,7 @@ main(int argc, char *argv[])
 	pfl_init();
 	progname = argv[0];
 	elem_size = ODT_DEFAULT_ITEM_SIZE;
-	while ((c = getopt(argc, argv, "Cce:f:ln:oz:v")) != -1)
+	while ((c = getopt(argc, argv, "Cce:f:ln:osvz:")) != -1)
 		switch (c) {
 		case 'C':
 			create_table = 1;
@@ -140,6 +140,13 @@ main(int argc, char *argv[])
 	}
 	odtable_scan(odt, my_odtcb);
 
+	if (show) {
+		struct odtable_hdr *h;
+
+		h = odt->odt_hdr;
+		printf("%s\n\tnelems\t%zu", fn, h->odth_nelems);
+	}
+
 	item = PSCALLOC(elem_size);
 	for (i = 0; i < num_puts; i++) {
 		snprintf(item, elem_size, "... put_number=%d ...", i);
@@ -162,7 +169,8 @@ main(int argc, char *argv[])
 				psc_dynarray_remove(&myReceipts, odtr);
 		}
 
-		psclog_debug("# of items left is %d", psc_dynarray_len(&myReceipts));
+		psclog_debug("# of items left is %d",
+		    psc_dynarray_len(&myReceipts));
 	}
 
 	exit(odtable_release(odt));
