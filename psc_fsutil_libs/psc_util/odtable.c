@@ -71,7 +71,8 @@ odtable_putitem(struct odtable *odt, void *data, size_t len)
 
 	do {
 		spinlock(&odt->odt_lock);
-		if (psc_vbitmap_next(odt->odt_bitmap, &todtr.odtr_elem) <= 0) {
+		if (psc_vbitmap_next(odt->odt_bitmap,
+		    &todtr.odtr_elem) <= 0) {
 			freelock(&odt->odt_lock);
 			return (NULL);
 		}
@@ -101,7 +102,8 @@ odtable_putitem(struct odtable *odt, void *data, size_t len)
 	odtr->odtr_key = crc;
 	odtf->odtf_crc = crc;
 
-	psclog_info("slot=%zd elemcrc=%"PSCPRIxCRC64, todtr.odtr_elem, crc);
+	psclog_info("slot=%zd elemcrc=%"PSCPRIxCRC64, todtr.odtr_elem,
+	    crc);
 
 	odtable_sync(odt, todtr.odtr_elem);
 
@@ -155,7 +157,8 @@ odtable_replaceitem(struct odtable *odt, struct odtable_receipt *odtr,
 	odtr->odtr_key = crc;
 	odtf->odtf_crc = crc;
 
-	psclog_info("slot=%zd elemcrc=%"PSCPRIxCRC64, odtr->odtr_elem, crc);
+	psclog_info("slot=%zd elemcrc=%"PSCPRIxCRC64, odtr->odtr_elem,
+	    crc);
 
 	odtable_sync(odt, odtr->odtr_elem);
 
@@ -163,15 +166,17 @@ odtable_replaceitem(struct odtable *odt, struct odtable_receipt *odtr,
 }
 
 /**
- * odtable_freeitem - free the odtable slot which corresponds to the provided
- *   receipt.
+ * odtable_freeitem - free the odtable slot which corresponds to the
+ *	provided receipt.
  * Note: odtr is freed here.
  */
 int
 odtable_freeitem(struct odtable *odt, struct odtable_receipt *odtr)
 {
+	struct odtable_entftr *odtf;
 	int rc;
-	struct odtable_entftr *odtf = odtable_getfooter(odt, odtr->odtr_elem);
+
+	odtf = odtable_getfooter(odt, odtr->odtr_elem);
 
 	if ((rc = odtable_footercheck(odtf, odtr, 1)))
 		return (rc);
@@ -193,12 +198,11 @@ odtable_freeitem(struct odtable *odt, struct odtable_receipt *odtr)
 int
 odtable_create(const char *fn, size_t nelems, size_t elemsz, int overwrite)
 {
-	int rc = 0;
-	size_t z;
-	int flags = O_CREAT | O_EXCL | O_WRONLY;
-	struct odtable odt;
+	int rc = 0, flags = O_CREAT | O_EXCL | O_WRONLY;
 	struct odtable_entftr odtf;
 	struct odtable_hdr odth;
+	struct odtable odt;
+	size_t z;
 
 	odth.odth_nelems = nelems;
 	odth.odth_elemsz = elemsz;
@@ -231,7 +235,8 @@ odtable_create(const char *fn, size_t nelems, size_t elemsz, int overwrite)
 		goto out;
 	}
 
-	psclog_trace("odt.odt_hdr.odth_start=%"PRIx64, odt.odt_hdr->odth_start);
+	psclog_vdbg("odt.odt_hdr.odth_start=%"PRIx64,
+	    odt.odt_hdr->odth_start);
 
 	/* initialize the table by writing the footers of all entries */
 	for (z = 0; z < nelems; z++) {
@@ -413,6 +418,7 @@ odtable_scan(struct odtable *odt,
 		psclog_debug("handing back key=%"PRIx64" slot=%zd odtr=%p",
 		    odtr->odtr_key, odtr->odtr_elem, odtr);
 
-		odt_handler(odtable_getitem_addr(odt, todtr.odtr_elem), odtr);
+		odt_handler(odtable_getitem_addr(odt, todtr.odtr_elem),
+		    odtr);
 	}
 }
