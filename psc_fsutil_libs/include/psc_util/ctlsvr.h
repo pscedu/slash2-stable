@@ -97,10 +97,10 @@ struct pfl_opstat {
 	} while (0)
 
 #define	OPSTAT_CURR(op)							\
-		psc_atomic64_read(&pflctl_opstats[op].pos_value)
+	psc_atomic64_read(&pflctl_opstats[op].pos_value)
 
 #define	OPSTAT_ASSIGN(op, value)					\
-		psc_atomic64_set(&pflctl_opstats[op].pos_value, value)
+	psc_atomic64_set(&pflctl_opstats[op].pos_value, (value))
 
 #define	PFL_OPSTAT_INIT(name)	{ name, PSC_ATOMIC64_INIT(0) }
 
