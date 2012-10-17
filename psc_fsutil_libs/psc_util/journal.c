@@ -661,6 +661,8 @@ pjournal_scan_slots(struct psc_journal *pj)
 	/*
 	 * Our cursor file lives within ZFS while the system journal
 	 * lives outside ZFS.  This is a hack for debugging convenience.
+	 * 
+	 * 10/17/2012: Hit this after we create a new journal.
 	 */
 	if (last_xid < pj->pj_distill_xid) {
 		psclog_warnx("system journal and cursor file mismatch!");
