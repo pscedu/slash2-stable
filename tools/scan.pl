@@ -11,6 +11,10 @@ use strict;
 use Digest::MD5;
 use Cwd;
 use File::Basename;
+use Sys::Hostname;
+
+my $myhost = hostname;
+my @hostlist = split(/\./, $myhost);
 
 sub md5sum {
     my $file = shift;
@@ -135,7 +139,7 @@ open($loghandle, ">$logname") or die "\nCan't open file $logname: $!\n";
 
 $start_time = time;
 $start = localtime;
-print $loghandle "Script started on $start. ";
+print $loghandle "Script started on $hostlist[0] on $start. ";
 print $loghandle "Filename: $logname\n\n";
 
 &ScanDirectory($startdir, $loghandle);
