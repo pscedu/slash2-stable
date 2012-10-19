@@ -589,7 +589,7 @@ libcfs_sock_bind_to_port(int fd, lnet_nid_t nid, __u32 ip, __u16 port)
 	rc = bind(fd, (struct sockaddr *)&locaddr, sizeof(locaddr));
 	if (rc != 0) {
 		rc = -errno;
-		CERROR("Cannot bind to port %d: %s\n", port,
+		CERROR("Cannot bind to port %d: %s\n", (int)port,
 		    strerror(errno));
 		return rc;
 	}
