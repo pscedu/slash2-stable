@@ -727,12 +727,12 @@ pjournal_open(const char *fn)
 	if (pjh->pjh_magic != PJH_MAGIC) {
 		psclog_errorx("journal header has a bad magic number "
 		    "%#"PRIx64, pjh->pjh_magic);
-		goto err;
+		goto error;
 	}
 	if (pjh->pjh_version != PJH_VERSION) {
 		psclog_errorx("journal header has an invalid version "
 		    "number %d", pjh->pjh_version);
-		goto err;
+		goto error;
 	}
 
 	PSC_CRC64_INIT(&chksum);
@@ -743,7 +743,7 @@ pjournal_open(const char *fn)
 		psclog_errorx("journal header has an invalid checksum "
 		    "value %"PSCPRIxCRC64" vs %"PSCPRIxCRC64,
 		    pjh->pjh_chksum, chksum);
-		goto err;
+		goto error;
 	}
 
 	if (S_ISBLK(statbuf.st_mode))
@@ -753,7 +753,7 @@ pjournal_open(const char *fn)
 	    (off_t)(pjhlen + pjh->pjh_nents * PJ_PJESZ(pj))) {
 		psclog_errorx("size of the journal log %"PSCPRIdOFFT" does not match "
 		    "specs in its header", statbuf.st_size);
-		goto err;
+		goto error;
 	}
 
 	/*
@@ -783,7 +783,7 @@ pjournal_open(const char *fn)
 	xidhndlPool = psc_poolmaster_getmgr(&xidhndlPoolMaster);
 
 	return (pj);
- err:
+ error:
 	psc_free(pjh, PAF_LOCK | PAF_PAGEALIGN, pjhlen);
 	PSCFREE(pj);
 	return (NULL);
