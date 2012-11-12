@@ -17,8 +17,9 @@
  * %PSC_END_COPYRIGHT%
  */
 
-#include <pwd.h>
 #include <grp.h>
+#include <limits.h> 
+#include <pwd.h>
 
 #include "pfl/sys.h"
 #include "psc_util/alloc.h"
