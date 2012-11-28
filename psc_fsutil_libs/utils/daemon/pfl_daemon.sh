@@ -12,8 +12,8 @@ mystrace=
 
 apply_host_prefs()
 {
-	for i in
-	    /local/pfl_daemon.cfg
+	for i in							\
+	    /local/pfl_daemon.cfg					\
 	    /usr/local/pfl_daemon.cfg
 	 do
 		if [ -f $i ]; then
