@@ -8,4 +8,6 @@ include ${PFLMK}
 
 install-hook:
 	cp -f pfl_daemon.sh ${INST_SBINDIR}
-	[ -n "${CFG_DST}" ] && cp -f pfl_daemon.cfg ${CFG_DST}
+	@if [ -n "${CFG_DST}" ]; then					\
+		cp -f pfl_daemon.cfg ${CFG_DST};			\
+	fi
