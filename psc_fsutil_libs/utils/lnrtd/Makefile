@@ -3,7 +3,7 @@
 ROOTDIR=../../..
 include ${ROOTDIR}/Makefile.path
 
-PROG=		lnrtd
+PROG=		lnrtd lnrtd.sh
 FORCE_INST=	1
 SRCS+=		ctl.c
 SRCS+=		lnrtd.c
