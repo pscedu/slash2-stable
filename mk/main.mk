@@ -441,7 +441,7 @@ install: recurse-install install-hook
 		${ECHORUN} ${INSTALL} ${LIBRARY} ${INST_LIBDIR};	\
 	fi
 	@# skip programs part of test suites
-	@if ${NOTEMPTY} "${PROG}" &&					\
+	@if ${NOTEMPTY} "${PROG}${BIN}" &&				\
 	    [ -z "$(findstring /tests/,${CURDIR})" -a			\
 	      -z "$(findstring /utils/,${CURDIR})" -o			\
 	      "${FORCE_INST}" -eq 1 ]; then				\
@@ -454,13 +454,15 @@ install: recurse-install install-hook
 			dir="${INSTDIR}";				\
 		fi;							\
 		mkdir -p "$$dir";					\
-		${ECHORUN} ${INSTALL} -b -m 555 ${PROG} "$$dir";	\
-		if head -1 ${PROG} | grep -aq perl; then		\
-			${ECHORUN} perl -i -Wpe				\
-			    's{^# use lib qw\(%INST_PLMODDIR%\);$$}$(	\
-			     ){use lib qw(${INST_PLMODDIR});}'		\
-			     $$dir/${PROG};				\
-		fi;							\
+		${ECHORUN} ${INSTALL} -b -m 555 ${PROG} ${BIN} "$$dir";	\
+		for bin in ${BIN}; do					\
+			if head -1 $$bin | grep -aq perl; then		\
+				${ECHORUN} perl -i -Wpe			\
+				    's{^# use lib qw\(%INST_PLMODDIR%\);$$}$(	\
+				     ){use lib qw(${INST_PLMODDIR});}'	\
+				     $$dir/$$bin;			\
+			fi;						\
+		done;							\
 	fi
 	@if ${NOTEMPTY} "${MAN}"; then					\
 		for i in ${MAN}; do					\
