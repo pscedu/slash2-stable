@@ -9,13 +9,14 @@ ud=/usr/local
 dir=/local
 mygdb=
 mystrace=
+prof=
 
 apply_host_prefs()
 {
 	for i in							\
 	    /local/pfl_daemon.cfg					\
 	    /usr/local/pfl_daemon.cfg
-	 do
+	do
 		if [ -f $i ]; then
 			. $i
 			[ -f $i.local ] && . $i.local
@@ -23,6 +24,11 @@ apply_host_prefs()
 		fi
 	done
 	die "cannot find pfl_daemon.cfg"
+}
+
+warn()
+{
+	echo "$@" >&2
 }
 
 die()
@@ -41,7 +47,7 @@ mygdb()
 postproc()
 {
 	cf=c/$prog.$id.core
-	mv -f *core* c/
+	mv -f *core* c/ 2>/dev/null
 
 	if [ -e "$cf" -a -n "$mail_to" ]; then
 		chmod og+r $cf
