@@ -13,13 +13,14 @@ prof=
 
 apply_host_prefs()
 {
+	found=0
 	for i in							\
 	    /local/pfl_daemon.cfg					\
 	    /usr/local/pfl_daemon.cfg
 	do
 		if [ -f $i ]; then
-			. $i
 			[ -f $i.local ] && . $i.local
+			. $i
 			return
 		fi
 	done
