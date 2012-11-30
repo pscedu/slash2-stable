@@ -1,6 +1,5 @@
 # $Id$
 
-FUSE_BASE?=	${ROOTDIR}/distrib/fuse
 LNET_BASE=	${ROOTDIR}/lnet-lite
 PFL_BASE=	${ROOTDIR}/psc_fsutil_libs
 SLASH_BASE=	${ROOTDIR}/slash_nara
