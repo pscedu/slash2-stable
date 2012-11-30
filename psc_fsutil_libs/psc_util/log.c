@@ -67,7 +67,7 @@ struct fuse_context {
 };
 
 const char			*psc_logfmt = PSC_LOG_FMT;
-__static enum psclog_level	 psc_loglevel = PLL_WARN;
+__static enum psclog_level	 psc_loglevel = PLL_NOTICE;
 __static struct psclog_data	*psc_logdata;
 char				 psclog_eol[8] = "\n";	/* overrideable with ncurses EOL */
 int				*pfl_syslog;
