@@ -95,9 +95,10 @@ do_exec()
 	find c/ -size 0 -exec rm {} \;
 
 	# delete core files with no accompanying executable
-	# for i in c/*.[0-9][0-9][0-9] c/*.[0-9][0-9][0-9][0-9] c/*.[0-9][0-9][0-9][0-9][0-9]; do
-	#  if ! [ -e $i.core ]; then rm $i; fi; done
-	#
+#	n=[0-9]
+#	for i in c/*.$n$n$n c/*.$n$n$n$n c/*.$n$n$n$n$n; do
+#		[ -e $i.core ] || rm $i
+#	done
 
 	while :; do
 		id=$RANDOM
