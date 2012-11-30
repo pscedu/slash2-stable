@@ -10,6 +10,7 @@
 /* For pthread_rwlock_t */
 #define _GNU_SOURCE
 
+#include "config.h"
 #include "fuse_i.h"
 #include "fuse_lowlevel.h"
 #include "fuse_opt.h"
@@ -22,6 +23,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stddef.h>
+#include <stdbool.h>
 #include <unistd.h>
 #include <time.h>
 #include <fcntl.h>
@@ -90,8 +92,20 @@ struct fusemod_so {
 };
 
 struct lock_queue_element {
-       struct lock_queue_element *next;
-       pthread_cond_t cond;
+	struct lock_queue_element *next;
+	pthread_cond_t cond;
+	fuse_ino_t nodeid1;
+	const char *name1;
+	char **path1;
+	struct node **wnode1;
+	fuse_ino_t nodeid2;
+	const char *name2;
+	char **path2;
+	struct node **wnode2;
+	int err;
+	bool first_locked : 1;
+	bool second_locked : 1;
+	bool done : 1;
 };
 
 struct node_table {
@@ -133,7 +147,6 @@ struct fuse {
 	struct fuse_fs *fs;
 	int nullpath_ok;
 	int utime_omit_ok;
-	int curr_ticket;
 	struct lock_queue_element *lockq;
 	int pagesize;
 	struct list_head partial_slabs;
@@ -167,9 +180,11 @@ struct node {
 	unsigned int is_hidden : 1;
 	unsigned int cache_valid : 1;
 	int treelock;
-	int ticket;
 	char inline_name[32];
 };
+
+#define TREELOCK_WRITE -1
+#define TREELOCK_WAIT_OFFSET INT_MIN
 
 struct node_lru {
 	struct node node;
@@ -325,12 +340,12 @@ static void list_add(struct list_head *new, struct list_head *prev,
 	prev->next = new;
 }
 
-static void list_add_head(struct list_head *new, struct list_head *head)
+static inline void list_add_head(struct list_head *new, struct list_head *head)
 {
 	list_add(new, head, head->next);
 }
 
-static void list_add_tail(struct list_head *new, struct list_head *head)
+static inline void list_add_tail(struct list_head *new, struct list_head *head)
 {
 	list_add(new, head->prev, head);
 }
@@ -423,6 +438,7 @@ static struct node *alloc_node(struct fuse *f)
 		list_del(&slab->list);
 		list_add_tail(&slab->list, &f->full_slabs);
 	}
+	memset(node, 0, sizeof(struct node));
 
 	return (struct node *) node;
 }
@@ -816,6 +832,13 @@ static struct node *lookup_node(struct fuse *f, fuse_ino_t parent,
 	return NULL;
 }
 
+static void inc_nlookup(struct node *node)
+{
+	if (!node->nlookup)
+		node->refctr++;
+	node->nlookup++;
+}
+
 static struct node *find_node(struct fuse *f, fuse_ino_t parent,
 			      const char *name)
 {
@@ -831,15 +854,11 @@ static struct node *find_node(struct fuse *f, fuse_ino_t parent,
 		if (node == NULL)
 			goto out_err;
 
-		if (f->conf.remember)
-			node->nlookup = 1;
-		node->refctr = 1;
 		node->nodeid = next_id(f);
 		node->generation = f->generation;
-		node->open_count = 0;
-		node->is_hidden = 0;
-		node->treelock = 0;
-		node->ticket = 0;
+		if (f->conf.remember)
+			inc_nlookup(node);
+
 		if (hash_name(f, node, parent, name) == -1) {
 			free_node(f, node);
 			node = NULL;
@@ -853,7 +872,7 @@ static struct node *find_node(struct fuse *f, fuse_ino_t parent,
 	} else if (lru_enabled(f) && node->nlookup == 1) {
 		remove_node_lru(node);
 	}
-	node->nlookup ++;
+	inc_nlookup(node);
 out_err:
 	pthread_mutex_unlock(&f->lock);
 	return node;
@@ -893,48 +912,28 @@ static char *add_name(char **buf, unsigned *bufsize, char *s, const char *name)
 }
 
 static void unlock_path(struct fuse *f, fuse_ino_t nodeid, struct node *wnode,
-			struct node *end, int ticket)
+			struct node *end)
 {
 	struct node *node;
 
 	if (wnode) {
-		assert(wnode->treelock == -1);
+		assert(wnode->treelock == TREELOCK_WRITE);
 		wnode->treelock = 0;
-		if (!wnode->ticket)
-			wnode->ticket = ticket;
 	}
 
 	for (node = get_node(f, nodeid);
 	     node != end && node->nodeid != FUSE_ROOT_ID; node = node->parent) {
-		assert(node->treelock > 0);
+		assert(node->treelock != 0);
+		assert(node->treelock != TREELOCK_WAIT_OFFSET);
+		assert(node->treelock != TREELOCK_WRITE);
 		node->treelock--;
-		if (!node->ticket)
-			node->ticket = ticket;
-	}
-}
-
-static void release_tickets(struct fuse *f, fuse_ino_t nodeid,
-			    struct node *wnode, int ticket)
-{
-	struct node *node;
-
-	if (wnode) {
-		if (wnode->ticket != ticket)
-			return;
-
-		wnode->ticket = 0;
-	}
-
-	for (node = get_node(f, nodeid);
-	     node->nodeid != FUSE_ROOT_ID; node = node->parent) {
-		if (node->ticket != ticket)
-			return;
-		node->ticket = 0;
+		if (node->treelock == TREELOCK_WAIT_OFFSET)
+			node->treelock = 0;
 	}
 }
 
 static int try_get_path(struct fuse *f, fuse_ino_t nodeid, const char *name,
-			char **path, struct node **wnodep, int ticket)
+			char **path, struct node **wnodep, bool need_lock)
 {
 	unsigned bufsize = 256;
 	char *buf;
@@ -961,18 +960,16 @@ static int try_get_path(struct fuse *f, fuse_ino_t nodeid, const char *name,
 	}
 
 	if (wnodep) {
-		assert(ticket);
+		assert(need_lock);
 		wnode = lookup_node(f, nodeid, name);
 		if (wnode) {
-			if (wnode->treelock != 0 ||
-			    (wnode->ticket && wnode->ticket != ticket)) {
-				if (!wnode->ticket)
-					wnode->ticket = ticket;
+			if (wnode->treelock != 0) {
+				if (wnode->treelock > 0)
+					wnode->treelock += TREELOCK_WAIT_OFFSET;
 				err = -EAGAIN;
 				goto out_free;
 			}
-			wnode->treelock = -1;
-			wnode->ticket = 0;
+			wnode->treelock = TREELOCK_WRITE;
 		}
 	}
 
@@ -987,14 +984,12 @@ static int try_get_path(struct fuse *f, fuse_ino_t nodeid, const char *name,
 		if (s == NULL)
 			goto out_unlock;
 
-		if (ticket) {
+		if (need_lock) {
 			err = -EAGAIN;
-			if (node->treelock == -1 ||
-			    (node->ticket && node->ticket != ticket))
+			if (node->treelock < 0)
 				goto out_unlock;
 
 			node->treelock++;
-			node->ticket = 0;
 		}
 	}
 
@@ -1010,40 +1005,95 @@ static int try_get_path(struct fuse *f, fuse_ino_t nodeid, const char *name,
 	return 0;
 
  out_unlock:
-	if (ticket)
-		unlock_path(f, nodeid, wnode, node, ticket);
+	if (need_lock)
+		unlock_path(f, nodeid, wnode, node);
  out_free:
 	free(buf);
 
  out_err:
-	if (ticket && err != -EAGAIN)
-		release_tickets(f, nodeid, wnode, ticket);
-
 	return err;
 }
 
-static void wake_up_first(struct fuse *f)
+static void queue_element_unlock(struct fuse *f, struct lock_queue_element *qe)
 {
-	if (f->lockq)
-		pthread_cond_signal(&f->lockq->cond);
+	struct node *wnode;
+
+	if (qe->first_locked) {
+		wnode = qe->wnode1 ? *qe->wnode1 : NULL;
+		unlock_path(f, qe->nodeid1, wnode, NULL);
+	}
+	if (qe->second_locked) {
+		wnode = qe->wnode2 ? *qe->wnode2 : NULL;
+		unlock_path(f, qe->nodeid2, wnode, NULL);
+	}
 }
 
-static void wake_up_next(struct lock_queue_element *qe)
+static void queue_element_wakeup(struct fuse *f, struct lock_queue_element *qe)
 {
-	if (qe->next)
-		pthread_cond_signal(&qe->next->cond);
+	int err;
+	bool first = (qe == f->lockq);
+
+	if (!qe->path1) {
+		/* Just waiting for it to be unlocked */
+		if (get_node(f, qe->nodeid1)->treelock == 0)
+			pthread_cond_signal(&qe->cond);
+
+		return;
+	}
+
+	if (!qe->first_locked) {
+		err = try_get_path(f, qe->nodeid1, qe->name1, qe->path1,
+				   qe->wnode1, true);
+		if (!err)
+			qe->first_locked = true;
+		else if (err != -EAGAIN)
+			goto err_unlock;
+	}
+	if (!qe->second_locked && qe->path2) {
+		err = try_get_path(f, qe->nodeid2, qe->name2, qe->path2,
+				   qe->wnode2, true);
+		if (!err)
+			qe->second_locked = true;
+		else if (err != -EAGAIN)
+			goto err_unlock;
+	}
+
+	if (qe->first_locked && (qe->second_locked || !qe->path2)) {
+		err = 0;
+		goto done;
+	}
+
+	/*
+	 * Only let the first element be partially locked otherwise there could
+	 * be a deadlock.
+	 *
+	 * But do allow the first element to be partially locked to prevent
+	 * starvation.
+	 */
+	if (!first)
+		queue_element_unlock(f, qe);
+
+	/* keep trying */
+	return;
+
+err_unlock:
+	queue_element_unlock(f, qe);
+done:
+	qe->err = err;
+	qe->done = true;
+	pthread_cond_signal(&qe->cond);
 }
 
-static int get_ticket(struct fuse *f)
+static void wake_up_queued(struct fuse *f)
 {
-	do f->curr_ticket++;
-	while (f->curr_ticket == 0);
+	struct lock_queue_element *qe;
 
-	return f->curr_ticket;
+	for (qe = f->lockq; qe != NULL; qe = qe->next)
+		queue_element_wakeup(f, qe);
 }
 
 static void debug_path(struct fuse *f, const char *msg, fuse_ino_t nodeid,
-		       const char *name, int wr)
+		       const char *name, bool wr)
 {
 	if (f->conf.debug) {
 		struct node *wnode = NULL;
@@ -1058,56 +1108,58 @@ static void debug_path(struct fuse *f, const char *msg, fuse_ino_t nodeid,
 	}
 }
 
-static void queue_path(struct fuse *f, struct lock_queue_element *qe,
-		       fuse_ino_t nodeid, const char *name, int wr)
+static void queue_path(struct fuse *f, struct lock_queue_element *qe)
 {
 	struct lock_queue_element **qp;
 
-	debug_path(f, "QUEUE PATH", nodeid, name, wr);
+	qe->done = false;
+	qe->first_locked = false;
+	qe->second_locked = false;
 	pthread_cond_init(&qe->cond, NULL);
 	qe->next = NULL;
 	for (qp = &f->lockq; *qp != NULL; qp = &(*qp)->next);
 	*qp = qe;
 }
 
-static void dequeue_path(struct fuse *f, struct lock_queue_element *qe,
-			 fuse_ino_t nodeid, const char *name, int wr)
+static void dequeue_path(struct fuse *f, struct lock_queue_element *qe)
 {
 	struct lock_queue_element **qp;
 
-	debug_path(f, "DEQUEUE PATH", nodeid, name, wr);
 	pthread_cond_destroy(&qe->cond);
 	for (qp = &f->lockq; *qp != qe; qp = &(*qp)->next);
 	*qp = qe->next;
 }
 
-static void wait_on_path(struct fuse *f, struct lock_queue_element *qe,
-			 fuse_ino_t nodeid, const char *name, int wr)
+static int wait_path(struct fuse *f, struct lock_queue_element *qe)
 {
-	debug_path(f, "WAIT ON PATH", nodeid, name, wr);
-	pthread_cond_wait(&qe->cond, &f->lock);
+	queue_path(f, qe);
+
+	do {
+		pthread_cond_wait(&qe->cond, &f->lock);
+	} while (!qe->done);
+
+	dequeue_path(f, qe);
+
+	return qe->err;
 }
 
 static int get_path_common(struct fuse *f, fuse_ino_t nodeid, const char *name,
 			   char **path, struct node **wnode)
 {
 	int err;
-	int ticket;
 
 	pthread_mutex_lock(&f->lock);
-	ticket = get_ticket(f);
-	err = try_get_path(f, nodeid, name, path, wnode, ticket);
+	err = try_get_path(f, nodeid, name, path, wnode, true);
 	if (err == -EAGAIN) {
-		struct lock_queue_element qe;
-
-		queue_path(f, &qe, nodeid, name, !!wnode);
-		do {
-			wait_on_path(f, &qe, nodeid, name, !!wnode);
-			err = try_get_path(f, nodeid, name, path, wnode,
-					   ticket);
-			wake_up_next(&qe);
-		} while (err == -EAGAIN);
-		dequeue_path(f, &qe, nodeid, name, !!wnode);
+		struct lock_queue_element qe = {
+			.nodeid1 = nodeid,
+			.name1 = name,
+			.path1 = path,
+			.wnode1 = wnode,
+		};
+		debug_path(f, "QUEUE PATH", nodeid, name, !!wnode);
+		err = wait_path(f, &qe);
+		debug_path(f, "DEQUEUE PATH", nodeid, name, !!wnode);
 	}
 	pthread_mutex_unlock(&f->lock);
 
@@ -1149,22 +1201,19 @@ static int get_path_wrlock(struct fuse *f, fuse_ino_t nodeid, const char *name,
 static int try_get_path2(struct fuse *f, fuse_ino_t nodeid1, const char *name1,
 			 fuse_ino_t nodeid2, const char *name2,
 			 char **path1, char **path2,
-			 struct node **wnode1, struct node **wnode2,
-			 int ticket)
+			 struct node **wnode1, struct node **wnode2)
 {
 	int err;
 
 	/* FIXME: locking two paths needs deadlock checking */
-	err = try_get_path(f, nodeid1, name1, path1, wnode1, ticket);
+	err = try_get_path(f, nodeid1, name1, path1, wnode1, true);
 	if (!err) {
-		err = try_get_path(f, nodeid2, name2, path2, wnode2, ticket);
+		err = try_get_path(f, nodeid2, name2, path2, wnode2, true);
 		if (err) {
 			struct node *wn1 = wnode1 ? *wnode1 : NULL;
 
-			unlock_path(f, nodeid1, wn1, NULL, ticket);
-			free(path1);
-			if (ticket && err != -EAGAIN)
-				release_tickets(f, nodeid1, wn1, ticket);
+			unlock_path(f, nodeid1, wn1, NULL);
+			free(*path1);
 		}
 	}
 	return err;
@@ -1176,27 +1225,27 @@ static int get_path2(struct fuse *f, fuse_ino_t nodeid1, const char *name1,
 		     struct node **wnode1, struct node **wnode2)
 {
 	int err;
-	int ticket;
 
 	pthread_mutex_lock(&f->lock);
-	ticket = get_ticket(f);
 	err = try_get_path2(f, nodeid1, name1, nodeid2, name2,
-			    path1, path2, wnode1, wnode2, ticket);
+			    path1, path2, wnode1, wnode2);
 	if (err == -EAGAIN) {
-		struct lock_queue_element qe;
+		struct lock_queue_element qe = {
+			.nodeid1 = nodeid1,
+			.name1 = name1,
+			.path1 = path1,
+			.wnode1 = wnode1,
+			.nodeid2 = nodeid2,
+			.name2 = name2,
+			.path2 = path2,
+			.wnode2 = wnode2,
+		};
 
-		queue_path(f, &qe, nodeid1, name1, !!wnode1);
-		debug_path(f, "      path2", nodeid2, name2, !!wnode2);
-		do {
-			wait_on_path(f, &qe, nodeid1, name1, !!wnode1);
-			debug_path(f, "        path2", nodeid2, name2, !!wnode2);
-			err = try_get_path2(f, nodeid1, name1, nodeid2, name2,
-					    path1, path2, wnode1, wnode2,
-					    ticket);
-			wake_up_next(&qe);
-		} while (err == -EAGAIN);
-		dequeue_path(f, &qe, nodeid1, name1, !!wnode1);
-		debug_path(f, "        path2", nodeid2, name2, !!wnode2);
+		debug_path(f, "QUEUE PATH1", nodeid1, name1, !!wnode1);
+		debug_path(f, "      PATH2", nodeid2, name2, !!wnode2);
+		err = wait_path(f, &qe);
+		debug_path(f, "DEQUEUE PATH1", nodeid1, name1, !!wnode1);
+		debug_path(f, "        PATH2", nodeid2, name2, !!wnode2);
 	}
 	pthread_mutex_unlock(&f->lock);
 
@@ -1207,8 +1256,9 @@ static void free_path_wrlock(struct fuse *f, fuse_ino_t nodeid,
 			     struct node *wnode, char *path)
 {
 	pthread_mutex_lock(&f->lock);
-	unlock_path(f, nodeid, wnode, NULL, 0);
-	wake_up_first(f);
+	unlock_path(f, nodeid, wnode, NULL);
+	if (f->lockq)
+		wake_up_queued(f);
 	pthread_mutex_unlock(&f->lock);
 	free(path);
 }
@@ -1224,9 +1274,9 @@ static void free_path2(struct fuse *f, fuse_ino_t nodeid1, fuse_ino_t nodeid2,
 		       char *path1, char *path2)
 {
 	pthread_mutex_lock(&f->lock);
-	unlock_path(f, nodeid1, wnode1, NULL, 0);
-	unlock_path(f, nodeid2, wnode2, NULL, 0);
-	wake_up_first(f);
+	unlock_path(f, nodeid1, wnode1, NULL);
+	unlock_path(f, nodeid2, wnode2, NULL);
+	wake_up_queued(f);
 	pthread_mutex_unlock(&f->lock);
 	free(path1);
 	free(path2);
@@ -1245,15 +1295,19 @@ static void forget_node(struct fuse *f, fuse_ino_t nodeid, uint64_t nlookup)
 	 * create and opendir
 	 */
 	while (node->nlookup == nlookup && node->treelock) {
-		struct lock_queue_element qe;
+		struct lock_queue_element qe = {
+			.nodeid1 = nodeid,
+		};
 
-		queue_path(f, &qe, node->nodeid, NULL, 0);
+		debug_path(f, "QUEUE PATH (forget)", nodeid, NULL, false);
+		queue_path(f, &qe);
+
 		do {
-			wait_on_path(f, &qe, node->nodeid, NULL, 0);
-			wake_up_next(&qe);
-
+			pthread_cond_wait(&qe.cond, &f->lock);
 		} while (node->nlookup == nlookup && node->treelock);
-		dequeue_path(f, &qe, node->nodeid, NULL, 0);
+
+		dequeue_path(f, &qe);
+		debug_path(f, "DEQUEUE_PATH (forget)", nodeid, NULL, false);
 	}
 
 	assert(node->nlookup >= nlookup);
@@ -2281,6 +2335,23 @@ int fuse_fs_poll(struct fuse_fs *fs, const char *path,
 		return -ENOSYS;
 }
 
+int fuse_fs_fallocate(struct fuse_fs *fs, const char *path, int mode,
+		off_t offset, off_t length, struct fuse_file_info *fi)
+{
+	fuse_get_context()->private_data = fs->user_data;
+	if (fs->op.fallocate) {
+		if (fs->debug)
+			fprintf(stderr, "fallocate %s mode %x, offset: %llu, length: %llu\n",
+				path,
+				mode,
+				(unsigned long long) offset,
+				(unsigned long long) length);
+
+		return fs->op.fallocate(path, mode, offset, length, fi);
+	} else
+		return -ENOSYS;
+}
+
 static int is_open(struct fuse *f, fuse_ino_t dir, const char *name)
 {
 	struct node *node;
@@ -2317,7 +2388,7 @@ static char *hidden_name(struct fuse *f, fuse_ino_t dir, const char *oldname,
 			newnode = lookup_node(f, dir, newname);
 		} while(newnode);
 
-		res = try_get_path(f, dir, newname, &newpath, NULL, 0);
+		res = try_get_path(f, dir, newname, &newpath, NULL, false);
 		pthread_mutex_unlock(&f->lock);
 		if (res)
 			break;
@@ -3990,6 +4061,24 @@ static void fuse_lib_poll(fuse_req_t req, fuse_ino_t ino,
 		reply_err(req, err);
 }
 
+static void fuse_lib_fallocate(fuse_req_t req, fuse_ino_t ino, int mode,
+		off_t offset, off_t length, struct fuse_file_info *fi)
+{
+	struct fuse *f = req_fuse_prepare(req);
+	struct fuse_intr_data d;
+	char *path;
+	int err;
+
+	err = get_path_nullok(f, ino, &path);
+	if (!err) {
+		fuse_prepare_interrupt(f, req, &d);
+		err = fuse_fs_fallocate(f->fs, path, mode, offset, length, fi);
+		fuse_finish_interrupt(f, req, &d);
+		free_path(f, ino, path);
+	}
+	reply_err(req, err);
+}
+
 static int clean_delay(struct fuse *f)
 {
 	/*
@@ -4084,6 +4173,7 @@ static struct fuse_lowlevel_ops fuse_path_ops = {
 	.bmap = fuse_lib_bmap,
 	.ioctl = fuse_lib_ioctl,
 	.poll = fuse_lib_poll,
+	.fallocate = fuse_lib_fallocate,
 };
 
 int fuse_notify_poll(struct fuse_pollhandle *ph)
@@ -4617,9 +4707,7 @@ struct fuse *fuse_new_common(struct fuse_chan *ch, struct fuse_args *args,
 
 	root->parent = NULL;
 	root->nodeid = FUSE_ROOT_ID;
-	root->generation = 0;
-	root->refctr = 1;
-	root->nlookup = 1;
+	inc_nlookup(root);
 	hash_id(f, root);
 
 	return f;
@@ -4673,7 +4761,7 @@ void fuse_destroy(struct fuse *f)
 			     node = node->id_next) {
 				if (node->is_hidden) {
 					char *path;
-					if (try_get_path(f, node->nodeid, NULL, &path, NULL, 0) == 0) {
+					if (try_get_path(f, node->nodeid, NULL, &path, NULL, false) == 0) {
 						fuse_fs_unlink(f->fs, path);
 						free(path);
 					}

@@ -21,6 +21,9 @@
 /* Define if libnuma is available */
 #undef HAVE_NUMA
 
+/* Define to 1 if you have the `posix_fallocate' function. */
+#undef HAVE_POSIX_FALLOCATE
+
 /* Define to 1 if you have the `setxattr' function. */
 #undef HAVE_SETXATTR
 
