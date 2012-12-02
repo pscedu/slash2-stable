@@ -8,26 +8,26 @@ ctl=lnrtctl
 
 usage()
 {
-	echo "usage: $0 [-gs]" >&2
+	echo "usage: $0 [-P profile] [-gs]" >&2
 	exit 1
 }
 
-while getopts "gs" c; do
+while getopts "gP:s" c; do
 	case $c in
 	g) mygdb='mygdb'	;;
+	P) prof=$OPTARG		;;
 	s) mystrace='strace'	;;
 	*) usage		;;
 	esac
 done
 shift $(($OPTIND - 1))
 
-apply_host_prefs "$@"
-[ -n $notfound ] && cat <<EOF
-no profile for this host, assuming defaults.
-create a profile and send to archproj@psc.edu
-EOF
+narg=0
 
-[ $# -gt 0 ] && usage
+apply_host_prefs "$@"
+[ $found -eq 0 ] && warn "no profile for this host ($prof); assuming defaults"
+
+[ $# -gt $narg ] && usage
 
 base=$dir/$prof.s2
 # Initialization/configuration
