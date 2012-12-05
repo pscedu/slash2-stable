@@ -928,7 +928,7 @@ pscrpc_check_set(struct pscrpc_request_set *set, int check_allsent)
 		struct pscrpc_import *imp = req->rq_import;
 		int rc = 0;
 
-		DEBUG_REQ(PLL_NOTICE, req, "reqset=%p", set);
+		DEBUG_REQ(PLL_DEBUG, req, "reqset=%p", set);
 
 		if (req->rq_phase == PSCRPC_RQ_PHASE_NEW &&
 		    pscrpc_push_req(req)) {
@@ -1129,7 +1129,7 @@ pscrpc_check_set(struct pscrpc_request_set *set, int check_allsent)
 
 		set->set_remaining--;
 
-		DEBUG_REQ(PLL_NOTICE, req, "set(%p) rem=(%d) ",
+		DEBUG_REQ(PLL_DEBUG, req, "set(%p) rem=(%d) ",
 			  set, set->set_remaining);
 
 		atomic_dec(&imp->imp_inflight);
@@ -1398,7 +1398,7 @@ pscrpc_set_wait(struct pscrpc_request_set *set)
 
 	rc = 0;
 	psclist_for_each_entry(req, &set->set_requests, rq_set_chain_lentry) {
-		DEBUG_REQ(PLL_INFO, req, "set wait..");
+		DEBUG_REQ(PLL_DEBUG, req, "set wait loop");
 
 		if (req->rq_import->imp_failed) {
 			psclog_errorx("failed import detected!");
