@@ -679,7 +679,6 @@ pscrpcthr_main(struct psc_thread *thr)
 	struct pscrpc_reply_state *rs;
 	struct pscrpc_service *svc;
 	struct pscrpc_thread *prt;
-	struct sigaction sa;
 	int rc = 0;
 
 	prt = pscrpcthr(thr);
@@ -687,11 +686,6 @@ pscrpcthr_main(struct psc_thread *thr)
 		prt->prt_svh->svh_initf();
 	svc = prt->prt_svh->svh_service;
 	psc_assert(svc);
-
-	memset(&sa, 0, sizeof(sa));
-	sa.sa_handler = SIG_IGN;
-	if (sigaction(SIGPIPE, &sa, NULL) == -1)
-		psc_fatal("sigaction");
 
 	if (svc->srv_init != NULL) {
 		rc = svc->srv_init(thr);

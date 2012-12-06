@@ -130,6 +130,7 @@ void
 pfl_init(void)
 {
 	static psc_atomic32_t init = PSC_ATOMIC32_INIT(0);
+	struct sigaction sa;
 	char *p;
 
 	if (psc_atomic32_xchg(&init, 1))
@@ -172,4 +173,10 @@ pfl_init(void)
 		if (setitimer(ITIMER_REAL, &it, NULL) == -1)
 			psclog_error("setitimer");
 	}
+
+
+	memset(&sa, 0, sizeof(sa));
+	sa.sa_handler = SIG_IGN;
+	if (sigaction(SIGPIPE, &sa, NULL) == -1)
+		psc_fatal("sigaction");
 }
