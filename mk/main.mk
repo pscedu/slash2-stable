@@ -401,9 +401,6 @@ endif
 
 ifdef LIBRARY
 ${LIBRARY}: ${OBJS}
-	@if [ "${PSC_MAKE_STATUS}" ]; then				\
-		tput el >&2 || true;					\
-	fi
 	${AR} ${ARFLAGS} $@ $(sort ${OBJS})
 endif
 
@@ -418,7 +415,7 @@ recurse-%:
 		if [ "${PSC_MAKE_STATUS}" ]; then			\
 			printf " %s" "$${i#${CROOTDIR}/} $(		\
 			    )$(patsubst recurse-%,%,$@)" >&2;		\
-			tput el >&2 || true;				\
+			tput ce >&2 || true;				\
 			printf "\r" >&2;				\
 		fi;							\
 		(cd $$i && SUBDIRS= ${MAKE}				\
@@ -427,7 +424,7 @@ recurse-%:
 	@if ${NOTEMPTY} "${_TSUBDIRS}"; then				\
 		echo "<=== ${CURDIR}";					\
 		if [ "${PSC_MAKE_STATUS}" ]; then			\
-			tput el >&2 || true;				\
+			tput ce >&2 || true;				\
 		fi;							\
 	fi
 
