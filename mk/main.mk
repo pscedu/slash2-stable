@@ -415,7 +415,7 @@ recurse-%:
 		if [ "${PSC_MAKE_STATUS}" ]; then			\
 			printf " %s" "$${i#${CROOTDIR}/} $(		\
 			    )$(patsubst recurse-%,%,$@)" >&2;		\
-			tput ce >&2 || true;				\
+			${CLEAR_EOL} >&2;				\
 			printf "\r" >&2;				\
 		fi;							\
 		(cd $$i && SUBDIRS= ${MAKE}				\
@@ -424,7 +424,7 @@ recurse-%:
 	@if ${NOTEMPTY} "${_TSUBDIRS}"; then				\
 		echo "<=== ${CURDIR}";					\
 		if [ "${PSC_MAKE_STATUS}" ]; then			\
-			tput ce >&2 || true;				\
+			${CLEAR_EOL} >&2;				\
 		fi;							\
 	fi
 
