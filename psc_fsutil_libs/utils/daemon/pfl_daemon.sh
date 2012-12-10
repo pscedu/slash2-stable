@@ -11,16 +11,62 @@ mygdb=
 mystrace=
 prof=
 
+verbose()
+{
+	[ $verbose -eq 1 ] && echo "$@"
+}
+
+loadprof()
+{
+	local _h=${1%%:*}
+	local t0=${1#*:}
+	local _p=${t0%%:*}
+	local t1=${t0#*:}
+	local _fl=${t1%%:*}
+	shift
+
+	[ x"$_h" = x"$host" ] || return 1
+	[ -n "$_fl" ] || return 0
+
+	while :; do
+		fl=${_fl%%:*}
+		_fl=${_fl#*:}
+		case in
+		bounce)	;;
+		ctl=*)	ctl=${fl#ctl=};;
+		dir=*)	dir=${fl#dir=};;
+		name=*)	name=${fl#name=};;
+		narg=*)	narg=${fl#narg=};;
+		share)	;;
+		tag=*)	[ x"$1" = x"${fl#tag=}"] || return 0;;
+		*)	export $fl;;
+		esac
+		[ x"$fl" = x"$_fl" ] && break
+	done
+
+	return 0
+}
+
 apply_host_prefs()
 {
-	found=0
-	for i in							\
+	local narg=0
+	for fn in							\
 	    /local/pfl_daemon.cfg					\
 	    /usr/local/pfl_daemon.cfg
 	do
-		if [ -f $i ]; then
-			[ -f $i.local ] && . $i.local
-			. $i
+		if [ -f $fn ]; then
+			av="$@"
+			[ -f $fn.local ] && . $fn.local
+			. $fn
+			[ $# -eq 0 ] && die "unknown deployment: ${av[0]}"
+			for ln; do
+				loadprof $ln "${av[@]}" || continue
+				verbose "deployment $prof, host $host"
+				[ ${#av[@]} -gt $narg ] && usage
+				return
+			done
+			warn "no profile for this host; assuming defaults"
+			[ ${#av[@]} -gt $narg ] && usage
 			return
 		fi
 	done
