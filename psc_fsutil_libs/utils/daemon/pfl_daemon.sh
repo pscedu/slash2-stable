@@ -9,6 +9,7 @@ ud=/usr/local
 dir=/local
 mygdb=
 mystrace=
+verbose=0
 prof=
 
 verbose()
@@ -26,12 +27,13 @@ loadprof()
 	shift
 
 	[ x"$_h" = x"$host" ] || return 1
+	[ x"$_p" = x"$prog" ] || return 1
 	[ -n "$_fl" ] || return 0
 
 	while :; do
 		fl=${_fl%%:*}
 		_fl=${_fl#*:}
-		case in
+		case $fl in
 		bounce)	;;
 		ctl=*)	ctl=${fl#ctl=};;
 		dir=*)	dir=${fl#dir=};;
@@ -43,6 +45,8 @@ loadprof()
 		esac
 		[ x"$fl" = x"$_fl" ] && break
 	done
+
+	[ $# -gt $narg ] && usage
 
 	return 0
 }
@@ -60,9 +64,8 @@ apply_host_prefs()
 			. $fn
 			[ $# -eq 0 ] && die "unknown deployment: ${av[0]}"
 			for ln; do
-				loadprof $ln "${av[@]}" || continue
+				loadprof $ln ${av[@]} || continue
 				verbose "deployment $prof, host $host"
-				[ ${#av[@]} -gt $narg ] && usage
 				return
 			done
 			warn "no profile for this host; assuming defaults"
@@ -93,6 +96,8 @@ mygdb()
 
 postproc()
 {
+	ex=$1
+
 	cf=c/$prog.$id.core
 	mv -f *core* c/ 2>/dev/null
 
@@ -119,19 +124,21 @@ postproc()
 	else
 		rm c/$prog.$id
 	fi
+
+	trap '' EXIT
+	[ $ex -eq 0 ] && exit
 }
 
 cleanup()
 {
 	$ctl stop
-	postproc
+	postproc 1
 	sleep 10
 	exit 0
 }
 
-do_exec()
+preproc()
 {
-	# Execute
 	src=$dir/src/p
 	mkdir -p $(dirname $PSC_LOG_FILE)
 	cd $base
