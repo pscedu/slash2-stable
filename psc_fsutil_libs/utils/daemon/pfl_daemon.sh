@@ -26,7 +26,7 @@ loadprof()
 	local _fl=${t1%%:*}
 	shift
 
-	[ x"$_h" = x"$host" ] || return 1
+	[ x"${_h%%.*}" = x"$host" ] || return 1
 	[ x"$_p" = x"$prog" ] || return 1
 	[ -n "$_fl" ] || return 0
 
@@ -99,7 +99,7 @@ postproc()
 	ex=$1
 
 	cf=c/$prog.$id.core
-	mv -f *core* c/ 2>/dev/null
+	mv -f *core* $cf 2>/dev/null
 
 	if [ -e "$cf" -a -n "$mail_to" ]; then
 		chmod og+r $cf
