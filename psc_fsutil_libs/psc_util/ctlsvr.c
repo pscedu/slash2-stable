@@ -1614,6 +1614,8 @@ psc_ctlrep_getjournal(int fd, struct psc_ctlmsghdr *mh, void *m)
 	rc = 1;
 
 	pll = pfl_journals_get();
+	if (pll == NULL)
+		return (rc);
 	PLL_LOCK(pll);
 	PLL_FOREACH(j, pll) {
 		PJ_LOCK(j);
