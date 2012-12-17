@@ -101,7 +101,8 @@ psc_journal_io(struct psc_journal *pj, void *p, size_t len, off_t off,
 
 	if (nb == -1) {
 		rc = errno;
-		psclog_error("journal %s (pj=%p, len=%zd, off=%"PSCPRIdOFFT")",
+		psclog_error("journal %s (pj=%p, len=%zd, "
+		    "off=%"PSCPRIdOFFT")",
 		    rw == JIO_READ ? "read" : "write", pj, len, off);
 	} else if ((size_t)nb != len) {
 		/*
@@ -109,9 +110,10 @@ psc_journal_io(struct psc_journal *pj, void *p, size_t len, off_t off,
 		 * returns "success" on a RAM-backed file system.
 		 */
 		rc = ENOSPC;
-		psclog_errorx("journal %s (pj=%p, len=%zd, off=%"PSCPRIdOFFT", "
-		    "nb=%zd): short I/O", rw == JIO_READ ? "read" : "write",
-		    pj, len, off, nb);
+		psclog_errorx("journal %s (pj=%p, len=%zd, "
+		    "off=%"PSCPRIdOFFT", nb=%zd): short I/O",
+		    rw == JIO_READ ? "read" : "write", pj, len,
+		    off, nb);
 	} else {
 		rc = 0;
 		psc_iostats_intv_add(rw == JIO_READ ?
@@ -121,8 +123,8 @@ psc_journal_io(struct psc_journal *pj, void *p, size_t len, off_t off,
 			PFL_GETTIMESPEC(&ts[0]);
 			if (pj->pj_flags & PJF_ISBLKDEV) {
 #ifdef HAVE_SYNC_FILE_RANGE
-				rc = sync_file_range(pj->pj_fd, off, len,
-				    SYNC_FILE_RANGE_WRITE |
+				rc = sync_file_range(pj->pj_fd, off,
+				    len, SYNC_FILE_RANGE_WRITE |
 				    SYNC_FILE_RANGE_WAIT_AFTER);
 #else
 				rc = fdatasync(pj->pj_fd);
@@ -133,9 +135,10 @@ psc_journal_io(struct psc_journal *pj, void *p, size_t len, off_t off,
 			PFL_GETTIMESPEC(&ts[1]);
 			timespecsub(&ts[1], &ts[0], &synctime);
 
-			psclog_notify("wtime="PSCPRI_TIMESPEC" synctime="PSCPRI_TIMESPEC,
-			   SLPRI_TIMESPEC_ARGS(&wtime),
-			   SLPRI_TIMESPEC_ARGS(&synctime));
+			psclog_diag("wtime="PSCPRI_TIMESPEC" "
+			    "synctime="PSCPRI_TIMESPEC,
+			    SLPRI_TIMESPEC_ARGS(&wtime),
+			    SLPRI_TIMESPEC_ARGS(&synctime));
 
 			if (rc)
 				psclog_error("sync_file_range failed "
@@ -661,7 +664,7 @@ pjournal_scan_slots(struct psc_journal *pj)
 	/*
 	 * Our cursor file lives within ZFS while the system journal
 	 * lives outside ZFS.  This is a hack for debugging convenience.
-	 * 
+	 *
 	 * 10/17/2012: Hit this after we create a new journal.
 	 */
 	if (last_xid < pj->pj_distill_xid) {
