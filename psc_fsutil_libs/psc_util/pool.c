@@ -360,8 +360,8 @@ _psc_pool_shrink(struct psc_poolmgr *m, int n, int failok)
 				m->ppm_total--;
 				m->ppm_nshrink++;
 			} else if (!failok)
-				psc_fatalx("psc_pool_shrink: no free "
-				    "items available to remove");
+				psc_fatalx("no free items available to "
+				    "remove");
 		}
 		POOL_URLOCK(m, locked);
 		if (p == NULL)
@@ -391,7 +391,7 @@ psc_pool_settotal(struct psc_poolmgr *m, int total)
 	POOL_URLOCK(m, locked);
 
 	if (adj < 0)
-		adj = psc_pool_shrink(m, -adj);
+		adj = psc_pool_tryshrink(m, -adj);
 	else if (adj)
 		adj = psc_pool_grow(m, adj);
 	return (adj);
@@ -417,7 +417,7 @@ psc_pool_resize(struct psc_poolmgr *m)
 	POOL_URLOCK(m, locked);
 
 	if (adj < 0)
-		psc_pool_shrink(m, -adj);
+		psc_pool_tryshrink(m, -adj);
 	else if (adj)
 		psc_pool_grow(m, adj);
 }
