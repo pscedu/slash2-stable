@@ -912,6 +912,10 @@ psc_ctlparam_pool_handle(int fd, struct psc_ctlmsghdr *mh,
 				m->ppm_min -= val;
 			else
 				m->ppm_min = val;
+			if (m->ppm_min < 1)
+				m->ppm_min = 1;
+			if (m->ppm_min > m->ppm_max)
+				m->ppm_min = m->ppm_max;
 			psc_pool_resize(m);
 		} else {
 			levels[2] = "min";
@@ -929,6 +933,10 @@ psc_ctlparam_pool_handle(int fd, struct psc_ctlmsghdr *mh,
 				m->ppm_max -= val;
 			else
 				m->ppm_max = val;
+			if (m->ppm_max < 1)
+				m->ppm_max = 1;
+			if (m->ppm_max < m->ppm_min)
+				m->ppm_max = m->ppm_min;
 			psc_pool_resize(m);
 		} else {
 			levels[2] = "max";
@@ -943,7 +951,7 @@ psc_ctlparam_pool_handle(int fd, struct psc_ctlmsghdr *mh,
 			if (pcp->pcp_flags & PCPF_ADD)
 				psc_pool_grow(m, val);
 			else if (pcp->pcp_flags & PCPF_SUB)
-				psc_pool_shrink(m, val);
+				psc_pool_tryshrink(m, val);
 			else
 				psc_pool_settotal(m, val);
 		} else {
@@ -1351,8 +1359,8 @@ psc_ctlparam_opstats(int fd, struct psc_ctlmsghdr *mh,
 				val = strtol(pcp->pcp_value, NULL, 10);
 				if (errno == ERANGE)
 					return (psc_ctlsenderr(fd, mh,
-						"invalid opstat %s value: %s", 
-						levels[1], pcp->pcp_value));
+					    "invalid opstat %s value: %s",
+					    levels[1], pcp->pcp_value));
 				psc_atomic64_set(&pos->pos_value, val);
 			} else {
 				levels[1] = (char *)pos->pos_name;
