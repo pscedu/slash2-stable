@@ -33,6 +33,7 @@ loadprof()
 		fl=${_fl%%%*}
 		_fl=${_fl#*%}
 		case $fl in
+		args=*)	xargs=${fl#args=};;
 		bounce)	;;
 		ctl=*)	ctl=${fl#ctl=};;
 		dir=*)	dir=${fl#dir=};;
