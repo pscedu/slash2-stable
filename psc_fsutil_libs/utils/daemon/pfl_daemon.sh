@@ -103,9 +103,11 @@ postproc()
 	if [ -e "$cf" -a -n "$mail_to" ]; then
 		chmod og+r $cf
 
+		frompre=
+		frompost=
 		case $(uname) in
-		FreeBSD)	frompre= frompost="-- -f $mail_from"	;;
-		*)		frompre="-r $mail_from" frompost=	;;
+		FreeBSD)	frompost="-f $mail_from"	;;
+		*)		frompre="-r $mail_from"		;;
 		esac
 
 		cmdfile=/tmp/gdbcmd.$id
