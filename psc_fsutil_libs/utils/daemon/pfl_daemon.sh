@@ -19,11 +19,10 @@ verbose()
 
 loadprof()
 {
-	local _h=${1%%:*}
-	local t0=${1#*:}
-	local _p=${t0%%:*}
-	local t1=${t0#*:}
-	local _fl=${t1%%:*}
+	local _h=${1%%%*}
+	local t0=${1#*%}
+	local _p=${t0%%%*}
+	local _fl=${t0#*%}
 	shift
 
 	[ x"${_h%%.*}" = x"$host" ] || return 1
@@ -31,8 +30,8 @@ loadprof()
 	[ -n "$_fl" ] || return 0
 
 	while :; do
-		fl=${_fl%%:*}
-		_fl=${_fl#*:}
+		fl=${_fl%%%*}
+		_fl=${_fl#*%}
 		case $fl in
 		bounce)	;;
 		ctl=*)	ctl=${fl#ctl=};;
@@ -40,8 +39,8 @@ loadprof()
 		name=*)	name=${fl#name=};;
 		narg=*)	narg=${fl#narg=};;
 		share)	;;
-		tag=*)	[ x"$1" = x"${fl#tag=}" ] || return 0;;
-		*)	export $fl;;
+		tag=*)	[ x"$1" = x"${fl#tag=}" ] || return 1 ;;
+		*)	echo $fl; export $fl;;
 		esac
 		[ x"$fl" = x"$_fl" ] && break
 	done
