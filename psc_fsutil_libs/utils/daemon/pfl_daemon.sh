@@ -40,7 +40,7 @@ loadprof()
 		name=*)	name=${fl#name=};;
 		narg=*)	narg=${fl#narg=};;
 		share)	;;
-		tag=*)	[ x"$1" = x"${fl#tag=}"] || return 0;;
+		tag=*)	[ x"$1" = x"${fl#tag=}" ] || return 0;;
 		*)	export $fl;;
 		esac
 		[ x"$fl" = x"$_fl" ] && break
