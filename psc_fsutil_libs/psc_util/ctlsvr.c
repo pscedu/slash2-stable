@@ -713,7 +713,7 @@ psc_ctlparam_rlim(int fd, struct psc_ctlmsghdr *mh,
 
 	if (nlevels == 2) {
 		for (pcr = psc_ctl_rlimtab, i = 0;
-		    i < nitems(psc_ctl_rlimtab); i++, pcr++)
+		    i < (int)nitems(psc_ctl_rlimtab); i++, pcr++)
 			if (strcmp(levels[1], pcr->pcr_name) == 0)
 				break;
 		if (i == nitems(psc_ctl_rlimtab))
@@ -749,7 +749,7 @@ psc_ctlparam_rlim(int fd, struct psc_ctlmsghdr *mh,
 	}
 
 	for (pcr = psc_ctl_rlimtab, i = 0;
-	    i < nitems(psc_ctl_rlimtab); i++, pcr++) {
+	    i < (int)nitems(psc_ctl_rlimtab); i++, pcr++) {
 		if (nlevels < 2 ||
 		    strcmp(levels[1], pcr->pcr_name) == 0) {
 			if (set) {
