@@ -24,8 +24,20 @@ PCPP=		${_PERLENV} ${CROOTDIR}/tools/pcpp.pl
 PICKLEGEN=	${ROOTDIR}/tools/pickle-gen.sh
 MKDIRS=		${ROOTDIR}/tools/mkdirs
 CLEAR_EOL=	(tput el || tput ce)
+INST=		inst() {						\
+			(while [ $$\# -gt 1 ]; do			\
+				shift;					\
+			 done ; mkdir -p $$1);				\
+			 ${ECHORUN} ${INSTALL} -C -b "$$@";		\
+		} ; inst
 
-LEX:=		$(shell if ${NOTEMPTY} "${LEX}"; then echo "${LEX}"; elif type flex; then echo flex; else echo lex; fi)
+LEX:=		$(shell if ${NOTEMPTY} "${LEX}"; then			\
+			echo "${LEX}";					\
+		elif type flex; then					\
+			echo flex;					\
+		else							\
+			echo lex;					\
+		fi)
 
 INST_BASE?=	/usr/psc
 INST_BINDIR?=	${INST_BASE}/bin
