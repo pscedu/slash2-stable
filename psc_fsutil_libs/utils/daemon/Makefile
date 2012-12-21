@@ -4,6 +4,7 @@ ROOTDIR=../../..
 include ${ROOTDIR}/Makefile.path
 
 BIN+=		pfl_daemon.sh
+INSTDIR=	${INST_SBINDIR}
 FORCE_INST=	1
 
 include ${PFLMK}
