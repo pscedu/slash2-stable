@@ -174,7 +174,6 @@ pfl_init(void)
 			psclog_error("setitimer");
 	}
 
-
 	memset(&sa, 0, sizeof(sa));
 	sa.sa_handler = SIG_IGN;
 	if (sigaction(SIGPIPE, &sa, NULL) == -1)
