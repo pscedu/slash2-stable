@@ -981,7 +981,7 @@ lnet_msg2bufpool(lnet_msg_t *msg)
         lnet_rtrbufpool_t *rbp = &the_lnet.ln_rtrpools[0];
 
         LASSERT (msg->msg_len <= LNET_MTU);
-        while (msg->msg_len > rbp->rbp_npages * CFS_PAGE_SIZE) {
+        while (msg->msg_len > (unsigned)rbp->rbp_npages * CFS_PAGE_SIZE) {
                 rbp++;
                 LASSERT (rbp < &the_lnet.ln_rtrpools[LNET_NRBPOOLS]);
         }
