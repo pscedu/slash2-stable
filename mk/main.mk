@@ -431,11 +431,9 @@ recurse-%:
 # empty but overrideable
 install-hook:
 
-# XXX use install(1)
 install: recurse-install install-hook
 	@if [ -n "${LIBRARY}" ]; then					\
-		mkdir -p ${INST_LIBDIR};				\
-		${ECHORUN} ${INSTALL} ${LIBRARY} ${INST_LIBDIR};	\
+		${INST} ${LIBRARY} ${INST_LIBDIR}/;			\
 	fi
 	@# skip programs part of test suites
 	@if ${NOTEMPTY} "${PROG}${BIN}" &&				\
@@ -450,8 +448,7 @@ install: recurse-install install-hook
 		if ${NOTEMPTY} "${INSTDIR}"; then			\
 			dir="${INSTDIR}";				\
 		fi;							\
-		mkdir -p "$$dir";					\
-		${ECHORUN} ${INSTALL} -b -m 555 ${PROG} ${BIN} "$$dir";	\
+		${INST} -m 555 ${PROG} ${BIN} "$$dir"/;			\
 		for bin in ${BIN}; do					\
 			if head -1 $$bin | grep -aq perl; then		\
 				${ECHORUN} perl -i -Wpe			\
@@ -464,24 +461,21 @@ install: recurse-install install-hook
 	@if ${NOTEMPTY} "${MAN}"; then					\
 		for i in ${MAN}; do					\
 			dir=${INST_MANDIR}/man$${i##*.};		\
-			mkdir -p "$$dir";				\
-			${ECHORUN} ${INSTALL} -m 444 $$i "$$dir";	\
+			${INST} -m 444 $$i "$$dir"/;			\
 		done;							\
 	fi
 	@if ${NOTEMPTY} "${HEADERS}"; then				\
 		for i in ${HEADERS}; do					\
 			base=$$(basename "$$i");			\
 			dir=${INST_INCDIR}/$$(dirname "$$i");		\
-			mkdir -p "$$dir";				\
-			${ECHORUN} ${INSTALL} -m 444 $$i "$$dir";	\
+			${INST} -m 444 $$i "$$dir"/;			\
 		done;							\
 	fi
 	@if ${NOTEMPTY} "${PLMODS}"; then				\
 		for i in ${PLMODS}; do					\
 			base=$$(basename "$$i");			\
 			dir=${INST_PLMODDIR}/$$(dirname "$$i");		\
-			mkdir -p $$dir;					\
-			${ECHORUN} ${INSTALL} -m 444 $$i $$dir;		\
+			${INST} -m 444 $$i $$dir/;			\
 		done;							\
 	fi
 
