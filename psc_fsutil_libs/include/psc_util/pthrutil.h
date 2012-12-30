@@ -34,29 +34,29 @@
 # define PSC_MUTEX_INIT			{ PTHREAD_MUTEX_INITIALIZER, 0 }
 #endif
 
-#define psc_mutex_ensure_locked(m)	psc_mutex_ensure_locked_pci(PFL_CALLERINFO(), (m))
-#define psc_mutex_lock(m)		psc_mutex_lock_pci(PFL_CALLERINFO(), (m))
-#define psc_mutex_reqlock(m)		psc_mutex_reqlock_pci(PFL_CALLERINFO(), (m))
-#define psc_mutex_trylock(m)		psc_mutex_trylock_pci(PFL_CALLERINFO(), (m))
-#define psc_mutex_tryreqlock(m, lk)	psc_mutex_tryreqlock_pci(PFL_CALLERINFO(), (m), (lk))
-#define psc_mutex_unlock(m)		psc_mutex_unlock_pci(PFL_CALLERINFO(), (m))
-#define psc_mutex_ureqlock(m, lk)	psc_mutex_ureqlock_pci(PFL_CALLERINFO(), (m), (lk))
+#define psc_mutex_ensure_locked(m)	_psc_mutex_ensure_locked(PFL_CALLERINFO(), (m))
+#define psc_mutex_lock(m)		_psc_mutex_lock(PFL_CALLERINFO(), (m))
+#define psc_mutex_reqlock(m)		_psc_mutex_reqlock(PFL_CALLERINFO(), (m))
+#define psc_mutex_trylock(m)		_psc_mutex_trylock(PFL_CALLERINFO(), (m))
+#define psc_mutex_tryreqlock(m, lk)	_psc_mutex_tryreqlock(PFL_CALLERINFO(), (m), (lk))
+#define psc_mutex_unlock(m)		_psc_mutex_unlock(PFL_CALLERINFO(), (m))
+#define psc_mutex_ureqlock(m, lk)	_psc_mutex_ureqlock(PFL_CALLERINFO(), (m), (lk))
 
 struct pfl_mutex {
 	pthread_mutex_t		pm_mutex;
 	pthread_t		pm_owner;
 };
 
-void	psc_mutex_ensure_locked_pci(const struct pfl_callerinfo *, struct pfl_mutex *);
-int	psc_mutex_haslock(struct pfl_mutex *);
-void	psc_mutex_init(struct pfl_mutex *);
-void	psc_mutex_destroy(struct pfl_mutex *);
-void	psc_mutex_lock_pci(const struct pfl_callerinfo *, struct pfl_mutex *);
-int	psc_mutex_reqlock_pci(const struct pfl_callerinfo *, struct pfl_mutex *);
-int	psc_mutex_trylock_pci(const struct pfl_callerinfo *, struct pfl_mutex *);
-int	psc_mutex_tryreqlock_pci(const const struct pfl_callerinfo *, struct pfl_mutex *, int *);
-void	psc_mutex_unlock_pci(const struct pfl_callerinfo *, struct pfl_mutex *);
-void	psc_mutex_ureqlock_pci(const struct pfl_callerinfo *, struct pfl_mutex *, int);
+void	_psc_mutex_ensure_locked(const struct pfl_callerinfo *, struct pfl_mutex *);
+int	 psc_mutex_haslock(struct pfl_mutex *);
+void	 psc_mutex_init(struct pfl_mutex *);
+void	 psc_mutex_destroy(struct pfl_mutex *);
+void	_psc_mutex_lock(const struct pfl_callerinfo *, struct pfl_mutex *);
+int	_psc_mutex_reqlock(const struct pfl_callerinfo *, struct pfl_mutex *);
+int	_psc_mutex_trylock(const struct pfl_callerinfo *, struct pfl_mutex *);
+int	_psc_mutex_tryreqlock(const const struct pfl_callerinfo *, struct pfl_mutex *, int *);
+void	_psc_mutex_unlock(const struct pfl_callerinfo *, struct pfl_mutex *);
+void	_psc_mutex_ureqlock(const struct pfl_callerinfo *, struct pfl_mutex *, int);
 
 struct psc_rwlock {
 	pthread_rwlock_t	pr_rwlock;
@@ -72,23 +72,23 @@ struct psc_rwlock {
 # define PSC_RWLOCK_INIT		{ PTHREAD_RWLOCK_INITIALIZER, 0, DYNARRAY_INIT, SPINLOCK_INIT }
 #endif
 
-#define psc_rwlock_rdlock(rw)		psc_rwlock_rdlock_pci(PFL_CALLERINFO(), (rw))
-#define psc_rwlock_reqrdlock(rw)	psc_rwlock_reqrdlock_pci(PFL_CALLERINFO(), (rw))
-#define psc_rwlock_reqwrlock(rw)	psc_rwlock_reqwrlock_pci(PFL_CALLERINFO(), (rw))
-#define psc_rwlock_unlock(rw)		psc_rwlock_unlock_pci(PFL_CALLERINFO(), (rw))
-#define psc_rwlock_ureqlock(rw, lk)	psc_rwlock_ureqlock_pci(PFL_CALLERINFO(), (rw), (lk))
-#define psc_rwlock_wrlock(rw)		psc_rwlock_wrlock_pci(PFL_CALLERINFO(), (rw))
+#define psc_rwlock_rdlock(rw)		_psc_rwlock_rdlock(PFL_CALLERINFO(), (rw))
+#define psc_rwlock_reqrdlock(rw)	_psc_rwlock_reqrdlock(PFL_CALLERINFO(), (rw))
+#define psc_rwlock_reqwrlock(rw)	_psc_rwlock_reqwrlock(PFL_CALLERINFO(), (rw))
+#define psc_rwlock_unlock(rw)		_psc_rwlock_unlock(PFL_CALLERINFO(), (rw))
+#define psc_rwlock_ureqlock(rw, lk)	_psc_rwlock_ureqlock(PFL_CALLERINFO(), (rw), (lk))
+#define psc_rwlock_wrlock(rw)		_psc_rwlock_wrlock(PFL_CALLERINFO(), (rw))
 
-void	psc_rwlock_destroy(struct psc_rwlock *);
-int	psc_rwlock_hasrdlock(struct psc_rwlock *);
-int	psc_rwlock_haswrlock(struct psc_rwlock *);
-void	psc_rwlock_init(struct psc_rwlock *);
-void	psc_rwlock_rdlock_pci(const struct pfl_callerinfo *, struct psc_rwlock *);
-int	psc_rwlock_reqrdlock_pci(const struct pfl_callerinfo *, struct psc_rwlock *);
-int	psc_rwlock_reqwrlock_pci(const struct pfl_callerinfo *, struct psc_rwlock *);
-void	psc_rwlock_unlock_pci(const struct pfl_callerinfo *, struct psc_rwlock *);
-void	psc_rwlock_ureqlock_pci(const struct pfl_callerinfo *, struct psc_rwlock *, int);
-void	psc_rwlock_wrlock_pci(const struct pfl_callerinfo *, struct psc_rwlock *);
+void	 psc_rwlock_destroy(struct psc_rwlock *);
+int	 psc_rwlock_hasrdlock(struct psc_rwlock *);
+int	 psc_rwlock_haswrlock(struct psc_rwlock *);
+void	 psc_rwlock_init(struct psc_rwlock *);
+void	_psc_rwlock_rdlock(const struct pfl_callerinfo *, struct psc_rwlock *);
+int	_psc_rwlock_reqrdlock(const struct pfl_callerinfo *, struct psc_rwlock *);
+int	_psc_rwlock_reqwrlock(const struct pfl_callerinfo *, struct psc_rwlock *);
+void	_psc_rwlock_unlock(const struct pfl_callerinfo *, struct psc_rwlock *);
+void	_psc_rwlock_ureqlock(const struct pfl_callerinfo *, struct psc_rwlock *, int);
+void	_psc_rwlock_wrlock(const struct pfl_callerinfo *, struct psc_rwlock *);
 
 #ifndef HAVE_PTHREAD_BARRIER
 # include "pfl/compat/pthread_barrier.h"
