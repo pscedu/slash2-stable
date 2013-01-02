@@ -178,8 +178,8 @@ pscrpc_abort_bulk(struct pscrpc_bulk_desc *desc)
 	struct l_wait_info  lwi;
 	int    rc;
 
-	DEBUG_REQ(PLL_INFO, desc->bd_req, "bulk active = %d", 
-	    pscrpc_bulk_active(desc)); 
+	DEBUG_REQ(PLL_INFO, desc->bd_req, "bulk active = %d",
+	    pscrpc_bulk_active(desc));
 
 	if (!pscrpc_bulk_active(desc))		/* completed or */
 		return;				/* never started */
@@ -209,7 +209,7 @@ pscrpc_abort_bulk(struct pscrpc_bulk_desc *desc)
 
 		psc_assert(rc == -ETIMEDOUT);
 		DEBUG_REQ(PLL_ERROR, desc->bd_req,
-			  "Unexpectedly long timeout: desc %p", desc);  
+			  "Unexpectedly long timeout: desc %p", desc);
 		//abort();
 	}
 }
@@ -520,7 +520,7 @@ pscrpc_send_rpc(struct pscrpc_request *request, int noreply)
 			GOTO(cleanup_repmsg, rc = -ENOMEM);
 		}
 
-		psclog_info("LNetMEAttach() gave handle %"PRIx64,
+		psclog_debug("LNetMEAttach() gave handle %"PRIx64,
 		    reply_me_h.cookie);
 	}
 
@@ -564,15 +564,15 @@ pscrpc_send_rpc(struct pscrpc_request *request, int noreply)
 		    request->rq_reply_portal);
 	}
 
-	/* add references on request and import for 
-	 *  pscrpc_request_out_callback 
+	/* add references on request and import for
+	 *  pscrpc_request_out_callback
 	 */
 	pscrpc_request_addref(request);
 	atomic_inc(&request->rq_import->imp_inflight);
 
 	request->rq_sent = CURRENT_SECONDS;
 
-	rc = pscrpc_send_buf(&request->rq_req_md_h, request->rq_reqmsg, 
+	rc = pscrpc_send_buf(&request->rq_req_md_h, request->rq_reqmsg,
 	    request->rq_reqlen, LNET_NOACK_REQ, &request->rq_req_cbid,
 	    connection, request->rq_request_portal, request->rq_xid);
 	if (rc == 0)
@@ -693,8 +693,8 @@ _pscrpc_free_req(struct pscrpc_request *request, __unusedx int locked)
 	if (request == NULL)
 		return;
 
-	DEBUG_REQ(PLL_INFO, request, "freeing (rqcomp_compcnt=%d)", 
-		  request->rq_comp ? 
+	DEBUG_REQ(PLL_INFO, request, "freeing (rqcomp_compcnt=%d)",
+		  request->rq_comp ?
 		  atomic_read(&request->rq_comp->rqcomp_compcnt) : -999);
 
 	psc_assert(!request->rq_receiving_reply);
@@ -723,7 +723,7 @@ _pscrpc_free_req(struct pscrpc_request *request, __unusedx int locked)
 
 	if (request->rq_bulk)
 		pscrpc_free_bulk(request->rq_bulk);
-	
+
 	if (request->rq_comp) {
 		psc_assert(atomic_read(&request->rq_comp->rqcomp_compcnt) > 0);
 		atomic_dec(&request->rq_comp->rqcomp_compcnt);
@@ -732,12 +732,12 @@ _pscrpc_free_req(struct pscrpc_request *request, __unusedx int locked)
 	psc_assert(request->rq_reply_state == NULL);
 
 	if (request->rq_pool) {
-		abort();
+		psc_fatal("no pool support");
 
 	} else {
 		if (request->rq_reqmsg) {
-			PSCRPC_OBD_FREE(request->rq_reqmsg, 
-				request->rq_reqlen);
+			PSCRPC_OBD_FREE(request->rq_reqmsg,
+			    request->rq_reqlen);
 			request->rq_reqmsg = NULL;
 		}
 		PSCRPC_OBD_FREE(request, sizeof(*request));
