@@ -467,7 +467,7 @@ psc_ctlrep_getpool(int fd, struct psc_ctlmsghdr *mh, void *msg)
 				pcpl->pcpl_nw_empty = psc_multiwaitcond_nwaiters(
 				    &m->ppm_ml.pml_mwcond_empty);
 			} else {
-				pcpl->pcpl_free = lc_sz(&m->ppm_lc);
+				pcpl->pcpl_free = lc_nitems(&m->ppm_lc);
 				pcpl->pcpl_nw_want = psc_waitq_nwaiters(
 				    &m->ppm_lc.plc_wq_want);
 				pcpl->pcpl_nw_empty = psc_waitq_nwaiters(

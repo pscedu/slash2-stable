@@ -81,7 +81,7 @@ struct psc_listcache {
  * lc_empty - Determine if a list cache has no elements.
  * @plc: list cache to check.
  */
-#define lc_empty(plc)			(lc_sz(plc) == 0)
+#define lc_empty(plc)			(lc_nitems(plc) == 0)
 
 /**
  * lc_remove - Remove an item from a list cache.
@@ -134,7 +134,7 @@ struct psc_listcache {
  * lc_reginit - Initialize and register a list cache.
  * @plc: the list cache.
  * @type: type of variable the list will contain.
- * @member: member name in type linking entries together.
+ * @member: structure member name in type linking entries together.
  * @fmt: printf(3) format of name for list.
  */
 #define lc_reginit(plc, type, member, fmt, ...)				\
@@ -157,9 +157,9 @@ void	*_lc_get(struct psc_listcache *, const struct timespec *, int);
 void	 _lc_init(struct psc_listcache *, ptrdiff_t);
 void	  lc_kill(struct psc_listcache *);
 void	 _lc_move(struct psc_listcache *, void *, int);
+int	  lc_nitems(struct psc_listcache *);
 void	 _lc_reginit(struct psc_listcache *, ptrdiff_t, const char *, ...);
 void	  lc_register(struct psc_listcache *, const char *, ...);
-ssize_t	  lc_sz(struct psc_listcache *);
 void	  lc_unregister(struct psc_listcache *);
 void	  lc_vregister(struct psc_listcache *, const char *, va_list);
 

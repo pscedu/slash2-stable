@@ -29,11 +29,11 @@ struct psc_lockedlist	psc_listcaches =
     PLL_INIT(&psc_listcaches, struct psc_listcache, plc_lentry);
 
 /**
- * lc_sz - Grab the number of items present in a list cache.
+ * lc_nitems - Grab the number of items present in a list cache.
  * @plc: list cache to inspect.
  */
-ssize_t
-lc_sz(struct psc_listcache *plc)
+int
+lc_nitems(struct psc_listcache *plc)
 {
 	int locked;
 	ssize_t sz;
