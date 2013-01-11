@@ -79,17 +79,17 @@ LNET_LIB_SRCS+=		${LNET_BASE}/lnet/router_proc.c
 LNET_PTLLND_SRCS+=	${LNET_BASE}/ulnds/ptllnd/ptllnd.c
 LNET_PTLLND_SRCS+=	${LNET_BASE}/ulnds/ptllnd/ptllnd_cb.c
 
-PSCRPC_SRCS+=		${PFL_BASE}/psc_rpc/connection.c
-PSCRPC_SRCS+=		${PFL_BASE}/psc_rpc/events.c
-PSCRPC_SRCS+=		${PFL_BASE}/psc_rpc/export.c
-PSCRPC_SRCS+=		${PFL_BASE}/psc_rpc/import.c
-PSCRPC_SRCS+=		${PFL_BASE}/psc_rpc/nb.c
-PSCRPC_SRCS+=		${PFL_BASE}/psc_rpc/niobuf.c
-PSCRPC_SRCS+=		${PFL_BASE}/psc_rpc/packgeneric.c
-PSCRPC_SRCS+=		${PFL_BASE}/psc_rpc/rpcclient.c
-PSCRPC_SRCS+=		${PFL_BASE}/psc_rpc/rsx.c
-PSCRPC_SRCS+=		${PFL_BASE}/psc_rpc/service.c
-PSCRPC_SRCS+=		${PFL_BASE}/psc_rpc/util.c
+PSCRPC_SRCS+=		${PFL_BASE}/connection.c
+PSCRPC_SRCS+=		${PFL_BASE}/events.c
+PSCRPC_SRCS+=		${PFL_BASE}/export.c
+PSCRPC_SRCS+=		${PFL_BASE}/import.c
+PSCRPC_SRCS+=		${PFL_BASE}/nb.c
+PSCRPC_SRCS+=		${PFL_BASE}/niobuf.c
+PSCRPC_SRCS+=		${PFL_BASE}/packgeneric.c
+PSCRPC_SRCS+=		${PFL_BASE}/rpcclient.c
+PSCRPC_SRCS+=		${PFL_BASE}/rsx.c
+PSCRPC_SRCS+=		${PFL_BASE}/service.c
+PSCRPC_SRCS+=		${PFL_BASE}/util.c
 
 _TINCLUDES=		$(filter-out -I%,${INCLUDES}) $(patsubst %,-I%,$(foreach \
 			dir,$(patsubst -I%,%,$(filter -I%,${INCLUDES})), $(realpath ${dir})))
@@ -104,7 +104,7 @@ EXTRACT_CFLAGS=		perl -ne 'print $$& while /-[^ID]\S+\s?/gc'
 
 # Pre-modules processing
 
-ifneq ($(filter ${PFL_BASE}/psc_%.c,${SRCS}),)
+ifneq ($(filter ${PFL_BASE}/%.c,${SRCS}),)
   MODULES+=	pfl
 endif
 
@@ -114,9 +114,9 @@ ifneq ($(filter pscfs,${MODULES}),)
   MODULES+=	pscfs-hdrs
 
   ifndef PICKLE_HAVE_LP64
-    PSCFS_SRCS+=${PFL_BASE}/psc_ds/listcache.c
-    PSCFS_SRCS+=${PFL_BASE}/psc_util/pool.c
-    PSCFS_SRCS+=${PFL_BASE}/psc_util/random.c
+    PSCFS_SRCS+=${PFL_BASE}/listcache.c
+    PSCFS_SRCS+=${PFL_BASE}/pool.c
+    PSCFS_SRCS+=${PFL_BASE}/random.c
   endif
 
   SRCS+=	${PSCFS_SRCS}
@@ -167,7 +167,7 @@ ifneq ($(filter rpc,${MODULES}),)
 endif
 
 ifneq ($(filter lnet,${MODULES}),)
-  SRCS+=	${PFL_BASE}/psc_util/iostats.c
+  SRCS+=	${PFL_BASE}/iostats.c
   SRCS+=	${LNET_SOCKLND_SRCS}
   SRCS+=	${LNET_CFS_SRCS}
   SRCS+=	${LNET_LIB_SRCS}
@@ -216,13 +216,13 @@ endif
 
 ifneq ($(filter pfl,${MODULES}),)
   MODULES+=	pfl-hdrs str
-  SRCS+=	${PFL_BASE}/psc_util/alloc.c
-  SRCS+=	${PFL_BASE}/psc_util/init.c
-  SRCS+=	${PFL_BASE}/psc_util/log.c
+  SRCS+=	${PFL_BASE}/alloc.c
+  SRCS+=	${PFL_BASE}/init.c
+  SRCS+=	${PFL_BASE}/log.c
 
   ifneq (${DEBUG},0)
-    SRCS+=	${PFL_BASE}/psc_util/dbgutil.c
-    SRCS+=	${PFL_BASE}/psc_util/printhex.c
+    SRCS+=	${PFL_BASE}/dbgutil.c
+    SRCS+=	${PFL_BASE}/printhex.c
   endif
 
  ifneq ($(filter pthread,${MODULES}),)
@@ -232,7 +232,7 @@ endif
 
 ifneq ($(filter pfl-hdrs,${MODULES}),)
   INCLUDES+=	-I${PFL_BASE}/include
-  SRC_PATH+=	${PFL_BASE}/include $(wildcard ${PFL_BASE}/psc_*)
+  SRC_PATH+=	${PFL_BASE}
 endif
 
 ifneq ($(filter mpi,${MODULES}),)
@@ -269,13 +269,13 @@ ifneq ($(filter aio,${MODULES}),)
 endif
 
 ifneq ($(filter ctl,${MODULES}),)
-  SRCS+=	${PFL_BASE}/psc_util/ctlsvr.c
-  SRCS+=	${PFL_BASE}/psc_util/netutil.c
+  SRCS+=	${PFL_BASE}/ctlsvr.c
+  SRCS+=	${PFL_BASE}/netutil.c
   DEFINES+=	-DPFL_CTL
 endif
 
 ifneq ($(filter ctlcli,${MODULES}),)
-  SRCS+=	${PFL_BASE}/psc_util/ctlcli.c
+  SRCS+=	${PFL_BASE}/ctlcli.c
 endif
 
 ifneq ($(filter sgio,${MODULES}),)
@@ -311,39 +311,39 @@ endif
 
 # Post-modules processing
 
-ifneq ($(filter ${PFL_BASE}/psc_util/pthrutil.c,${SRCS}),)
-  SRCS+=	${PFL_BASE}/psc_ds/vbitmap.c
-  SRCS+=	${PFL_BASE}/psc_util/log.c
-  SRCS+=	${PFL_BASE}/psc_util/thread.c
+ifneq ($(filter ${PFL_BASE}/pthrutil.c,${SRCS}),)
+  SRCS+=	${PFL_BASE}/vbitmap.c
+  SRCS+=	${PFL_BASE}/log.c
+  SRCS+=	${PFL_BASE}/thread.c
 endif
 
-ifneq ($(filter ${PFL_BASE}/psc_util/thread.c,${SRCS}),)
-  SRCS+=	${PFL_BASE}/psc_ds/lockedlist.c
-  SRCS+=	${PFL_BASE}/psc_util/subsys.c
-  SRCS+=	${PFL_BASE}/psc_util/waitq.c
+ifneq ($(filter ${PFL_BASE}/thread.c,${SRCS}),)
+  SRCS+=	${PFL_BASE}/lockedlist.c
+  SRCS+=	${PFL_BASE}/subsys.c
+  SRCS+=	${PFL_BASE}/waitq.c
   SRCS+=	${CLOCK_SRCS}
 endif
 
-ifneq ($(filter ${PFL_BASE}/psc_util/subsys.c,${SRCS}),)
-  SRCS+=	${PFL_BASE}/psc_ds/dynarray.c
+ifneq ($(filter ${PFL_BASE}/subsys.c,${SRCS}),)
+  SRCS+=	${PFL_BASE}/dynarray.c
 endif
 
-ifneq ($(filter ${PFL_BASE}/psc_util/log.c,${SRCS}),)
-  SRCS+=	${PFL_BASE}/psc_util/alloc.c
+ifneq ($(filter ${PFL_BASE}/log.c,${SRCS}),)
+  SRCS+=	${PFL_BASE}/alloc.c
 endif
 
-ifneq ($(filter ${PFL_BASE}/psc_util/alloc.c,${SRCS}),)
+ifneq ($(filter ${PFL_BASE}/alloc.c,${SRCS}),)
   ifneq (${DEBUG},0)
-    SRCS+=	${PFL_BASE}/psc_ds/hashtbl.c
+    SRCS+=	${PFL_BASE}/hashtbl.c
   endif
 endif
 
-ifneq ($(filter ${PFL_BASE}/psc_ds/hashtbl.c,${SRCS}),)
-  SRCS+=	${PFL_BASE}/psc_ds/lockedlist.c
+ifneq ($(filter ${PFL_BASE}/hashtbl.c,${SRCS}),)
+  SRCS+=	${PFL_BASE}/lockedlist.c
 endif
 
-ifneq ($(filter ${PFL_BASE}/psc_ds/lockedlist.c,${SRCS}),)
-  SRCS+=	${PFL_BASE}/psc_util/list.c
+ifneq ($(filter ${PFL_BASE}/lockedlist.c,${SRCS}),)
+  SRCS+=	${PFL_BASE}/list.c
 endif
 
 # OBJDIR is added to .c below since lex/yacc intermediate files get

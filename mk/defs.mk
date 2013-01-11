@@ -126,8 +126,8 @@ LIBAIO=		-laio
 OSTYPE:=	$(shell uname)
 
 # global file-specific settings
-$(call ADD_FILE_CFLAGS,${PFL_BASE}/psc_util/crc.c,			-O2 -g0)
-$(call ADD_FILE_CFLAGS,${PFL_BASE}/psc_util/parity.c,			-O2 -g0)
+$(call ADD_FILE_CFLAGS,${PFL_BASE}/crc.c,				-O2 -g0)
+$(call ADD_FILE_CFLAGS,${PFL_BASE}/parity.c,				-O2 -g0)
 
 $(call ADD_FILE_CFLAGS,${LNET_BASE}/ulnds/socklnd/conn.c,		-DPSC_SUBSYS=PSS_LNET -Wno-shadow)
 $(call ADD_FILE_CFLAGS,${LNET_BASE}/ulnds/socklnd/handlers.c,		-DPSC_SUBSYS=PSS_LNET -Wno-shadow)

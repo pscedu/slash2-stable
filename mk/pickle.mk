@@ -55,7 +55,7 @@ ifeq ($(filter $(realpath ${ROOTDIR})/compat/%,${CURDIR}),)
   DEFINES+=						-DHAVE_PTHREAD_BARRIER
  else
   BARRIER_SRCS+=					${PFL_BASE}/compat/pthread_barrier.c
-  BARRIER_SRCS+=					${PFL_BASE}/psc_util/pthrutil.c
+  BARRIER_SRCS+=					${PFL_BASE}/pthrutil.c
  endif
 
  ifdef PICKLE_HAVE_STRLCPY
@@ -150,13 +150,13 @@ ifeq ($(filter $(realpath ${ROOTDIR})/compat/%,${CURDIR}),)
 
  ifdef PICKLE_HAVE_FUSE
   DEFINES+=						-DHAVE_FUSE
-  PSCFS_SRCS+=						${PFL_BASE}/psc_fs/fuse.c
-  PSCFS_SRCS+=						${PFL_BASE}/psc_util/sys.c
+  PSCFS_SRCS+=						${PFL_BASE}/fuse.c
+  PSCFS_SRCS+=						${PFL_BASE}/sys.c
  endif
 
  ifdef PICKLE_HAVE_DOKAN
   DEFINES+=						-DHAVE_DOKAN
-  PSCFS_SRCS+=						${PFL_BASE}/psc_fs/dokan.c
+  PSCFS_SRCS+=						${PFL_BASE}/dokan.c
  endif
 
  ifdef PICKLE_HAVE_SETPROCTITLE
