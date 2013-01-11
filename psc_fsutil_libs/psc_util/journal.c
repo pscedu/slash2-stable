@@ -678,10 +678,12 @@ pjournal_scan_slots(struct psc_journal *pj)
 	    pj->pj_hdr->pjh_readsize);
 
 	nopen = psc_dynarray_len(&pj->pj_bufs);
-	psclog_info("Journal scan statistics: closed = %d, open = %d, magic = %d, "
-	    "chksum = %d, scan = %d, last = %d, total = %d",
-	    nclose, nopen, nmagic, nchksum, nscan, last_slot, pj->pj_total);
-	psclog_warnx("Last transaction ID found from the journal is %"PRId64, pj->pj_lastxid);
+	psclog_info("journal scan statistics: closed=%d open=%d magic=%d "
+	    "chksum=%d scan=%d last=%d total=%d",
+	    nclose, nopen, nmagic, nchksum, nscan, last_slot,
+	    pj->pj_total);
+	psclog_info("last journal transaction ID found is %"PRId64,
+	    pj->pj_lastxid);
 	return (rc);
 }
 
@@ -983,8 +985,8 @@ pjournal_replay(struct psc_journal *pj, int thrtype,
 	 */
 	zfsslash2_wait_synced(0);
 
-	psclog_warnx("Journal replay statistics: replayed = %d "
-	    "errors = %d", nentries, nerrs);
+	psclog_info("journal replay statistics: replayed=%d errors=%d",
+	    nentries, nerrs);
 
 	/* always start at the first slot of the journal */
 	pj->pj_nextwrite = 0;

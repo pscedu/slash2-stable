@@ -333,7 +333,7 @@ odtable_load(struct odtable **t, const char *fn, const char *fmt, ...)
 		}
 	}
 
-	psclog_notice("odtable=%p base=%p has %d/%zd slots available "
+	psclog_info("odtable=%p base=%p has %d/%zd slots available "
 	    "elemsz=%zd magic=%"PRIx64,
 	    odt, odt->odt_base, psc_vbitmap_nfree(odt->odt_bitmap),
 	    odth->odth_nelems, odth->odth_elemsz, odth->odth_magic);
