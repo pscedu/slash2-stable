@@ -5,16 +5,16 @@ include ${ROOTDIR}/Makefile.path
 
 TEST=		mlock_test
 SRCS+=		mlock_test.c
-SRCS+=		${PFL_BASE}/psc_ds/dynarray.c
-SRCS+=		${PFL_BASE}/psc_ds/vbitmap.c
-SRCS+=		${PFL_BASE}/psc_util/alloc.c
-SRCS+=		${PFL_BASE}/psc_util/init.c
-SRCS+=		${PFL_BASE}/psc_util/log.c
-SRCS+=		${PFL_BASE}/psc_util/mspinlock.c
-SRCS+=		${PFL_BASE}/psc_util/pthrutil.c
-SRCS+=		${PFL_BASE}/psc_util/subsys.c
-SRCS+=		${PFL_BASE}/psc_util/thread.c
-SRCS+=		${PFL_BASE}/psc_util/waitq.c
+SRCS+=		${PFL_BASE}/dynarray.c
+SRCS+=		${PFL_BASE}/vbitmap.c
+SRCS+=		${PFL_BASE}/alloc.c
+SRCS+=		${PFL_BASE}/init.c
+SRCS+=		${PFL_BASE}/log.c
+SRCS+=		${PFL_BASE}/mspinlock.c
+SRCS+=		${PFL_BASE}/pthrutil.c
+SRCS+=		${PFL_BASE}/subsys.c
+SRCS+=		${PFL_BASE}/thread.c
+SRCS+=		${PFL_BASE}/waitq.c
 
 MODULES+=	pthread
 

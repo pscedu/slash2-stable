@@ -7,16 +7,16 @@ PROG=		lnrtctl
 FORCE_INST=	1
 MAN+=		lnrtctl.8
 SRCS+=		lnrtctl.c
-SRCS+=		${PFL_BASE}/psc_ds/dynarray.c
-SRCS+=		${PFL_BASE}/psc_util/alloc.c
-SRCS+=		${PFL_BASE}/psc_util/ctlcli.c
-SRCS+=		${PFL_BASE}/psc_util/fmt.c
-SRCS+=		${PFL_BASE}/psc_util/init.c
-SRCS+=		${PFL_BASE}/psc_util/log.c
-SRCS+=		${PFL_BASE}/psc_util/pthrutil.c
-SRCS+=		${PFL_BASE}/psc_util/subsys.c
-SRCS+=		${PFL_BASE}/psc_util/thread.c
-SRCS+=		${PFL_BASE}/psc_util/waitq.c
+SRCS+=		${PFL_BASE}/dynarray.c
+SRCS+=		${PFL_BASE}/alloc.c
+SRCS+=		${PFL_BASE}/ctlcli.c
+SRCS+=		${PFL_BASE}/fmt.c
+SRCS+=		${PFL_BASE}/init.c
+SRCS+=		${PFL_BASE}/log.c
+SRCS+=		${PFL_BASE}/pthrutil.c
+SRCS+=		${PFL_BASE}/subsys.c
+SRCS+=		${PFL_BASE}/thread.c
+SRCS+=		${PFL_BASE}/waitq.c
 
 MODULES+=	lnet-hdrs pthread
 

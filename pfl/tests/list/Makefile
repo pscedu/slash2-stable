@@ -5,12 +5,12 @@ include ${ROOTDIR}/Makefile.path
 
 TEST=		list_test
 SRCS+=		list_test.c
-SRCS+=		${PFL_BASE}/psc_ds/listcache.c
-SRCS+=		${PFL_BASE}/psc_ds/lockedlist.c
-SRCS+=		${PFL_BASE}/psc_util/alloc.c
-SRCS+=		${PFL_BASE}/psc_util/init.c
-SRCS+=		${PFL_BASE}/psc_util/list.c
-SRCS+=		${PFL_BASE}/psc_util/log.c
-SRCS+=		${PFL_BASE}/psc_util/waitq.c
+SRCS+=		${PFL_BASE}/listcache.c
+SRCS+=		${PFL_BASE}/lockedlist.c
+SRCS+=		${PFL_BASE}/alloc.c
+SRCS+=		${PFL_BASE}/init.c
+SRCS+=		${PFL_BASE}/list.c
+SRCS+=		${PFL_BASE}/log.c
+SRCS+=		${PFL_BASE}/waitq.c
 
 include ${PFLMK}

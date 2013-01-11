@@ -5,8 +5,8 @@ include ${ROOTDIR}/Makefile.path
 
 TEST=		rpcwait-sa
 SRCS+=		rpcwait-sa.c
-SRCS+=		${PFL_BASE}/psc_util/waitq.c
-SRCS+=		${PFL_BASE}/psc_util/log.c
+SRCS+=		${PFL_BASE}/waitq.c
+SRCS+=		${PFL_BASE}/log.c
 
 MODULES+=	lnet-hdrs
 
