@@ -139,7 +139,7 @@ pscrpc_server_post_idle_rqbds(struct pscrpc_service *svc)
 		}
 
 		rqbd = psc_listhd_first_obj(&svc->srv_idle_rqbds,
-			struct pscrpc_request_buffer_desc, rqbd_lentry);
+		    struct pscrpc_request_buffer_desc, rqbd_lentry);
 		psclist_del(&rqbd->rqbd_lentry, &svc->srv_idle_rqbds);
 
 		/* assume we will post successfully */
