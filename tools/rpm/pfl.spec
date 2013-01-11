@@ -19,12 +19,12 @@ Pittsburgh Supercomputing's file system libraries and toolset
 svn co -r %{version} svn+ssh://frodo/cluster/svn/projects .
 
 %build
-cd psc_fsutil_libs
+cd pfl
 DEVELPATHS=0 make %{?_smp_mflags}
 
 %install
 rm -rf $RPM_BUILD_ROOT
-cd psc_fsutil_libs
+cd pfl
 INST_BASE=$RPM_BUILD_ROOT/usr/local/psc make install
 
 %clean

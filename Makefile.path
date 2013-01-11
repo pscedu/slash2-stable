@@ -1,7 +1,7 @@
 # $Id$
 
 LNET_BASE=	${ROOTDIR}/lnet-lite
-PFL_BASE=	${ROOTDIR}/psc_fsutil_libs
+PFL_BASE=	${ROOTDIR}/pfl
 SLASH_BASE=	${ROOTDIR}/slash_nara
 ZEST_BASE=	${ROOTDIR}/zest
 ZFS_BASE=	${ROOTDIR}/zfs
