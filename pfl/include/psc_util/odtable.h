@@ -61,8 +61,7 @@ enum od_table_errors {
 	ODTBL_KEY_ERR	= 7
 };
 
-/* Table entries start on a 4k boundary
- */
+/* Table entries start on a 4k boundary */
 #define ODTBL_START		0x1000
 
 struct odtable_hdr {
