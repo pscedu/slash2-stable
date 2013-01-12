@@ -129,7 +129,7 @@ void   pll_add_sorted(struct psc_lockedlist *, void *, int (*)(const
 	    void *, const void *));
 int    pll_conjoint(struct psc_lockedlist *, void *);
 void *_pll_get(struct psc_lockedlist *, int);
-void  _pll_initf(struct psc_lockedlist *, int, psc_spinlock_t *);
+void  _pll_initf(struct psc_lockedlist *, int, psc_spinlock_t *, int);
 void   pll_remove(struct psc_lockedlist *, void *);
 void   pll_sort(struct psc_lockedlist *, void (*)(void *, size_t,
 	    size_t, int (*)(const void *, const void *)), int (*)(const void *,

@@ -162,7 +162,7 @@ _lc_init(struct psc_listcache *plc, ptrdiff_t offset)
 {
 	memset(plc, 0, sizeof(*plc));
 	INIT_PSC_LISTENTRY(&plc->plc_lentry);
-	_pll_init(&plc->plc_pll, offset, NULL);
+	_pll_initf(&plc->plc_pll, offset, NULL, 0);
 	psc_waitq_init(&plc->plc_wq_empty);
 	psc_waitq_init(&plc->plc_wq_want);
 }

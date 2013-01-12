@@ -72,7 +72,7 @@ _psc_mlist_initv(struct psc_mlist *pml, int flags, void *mwcarg,
 
 	memset(pml, 0, sizeof(*pml));
 	INIT_PSC_LISTENTRY(&pml->pml_lentry);
-	_pll_init(&pml->pml_pll, offset, NULL);
+	_pll_initf(&pml->pml_pll, offset, NULL, 0);
 
 	rc = vsnprintf(pml->pml_name, sizeof(pml->pml_name), fmt, ap);
 	if (rc == -1)
