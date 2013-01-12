@@ -95,10 +95,17 @@ struct psc_lockedlist {
 	psc_listhd_last_obj2(&(pll)->pll_listhd, type, (pll)->pll_offset)
 
 #define pll_init(pll, type, member, lock)				\
-	_pll_init((pll), offsetof(type, member), (lock))
+	_pll_initf((pll), offsetof(type, member), (lock), 0)
+
+#define pll_initf(pll, type, member, lock, flags)			\
+	_pll_initf((pll), offsetof(type, member), (lock), (flags))
+
+/* list initialization flags */
+#define PLLIF_LOGTMP		(1 << 0)
 
 #define pll_empty(pll)		(pll_nitems(pll) == 0)
 
+/* list  flags */
 #define PLLBF_HEAD		0
 #define PLLBF_TAIL		(1 << 1)
 #define PLLBF_PEEK		(1 << 2)
@@ -122,7 +129,7 @@ void   pll_add_sorted(struct psc_lockedlist *, void *, int (*)(const
 	    void *, const void *));
 int    pll_conjoint(struct psc_lockedlist *, void *);
 void *_pll_get(struct psc_lockedlist *, int);
-void  _pll_init(struct psc_lockedlist *, int, psc_spinlock_t *);
+void  _pll_initf(struct psc_lockedlist *, int, psc_spinlock_t *);
 void   pll_remove(struct psc_lockedlist *, void *);
 void   pll_sort(struct psc_lockedlist *, void (*)(void *, size_t,
 	    size_t, int (*)(const void *, const void *)), int (*)(const void *,

@@ -26,15 +26,20 @@
 #include "psc_util/log.h"
 
 void
-_pll_init(struct psc_lockedlist *pll, int offset, psc_spinlock_t *lkp)
+_pll_initf(struct psc_lockedlist *pll, int offset, psc_spinlock_t *lkp,
+    int flags)
 {
 	memset(pll, 0, sizeof(*pll));
 	INIT_PSCLIST_HEAD(&pll->pll_listhd);
 	if (lkp) {
 		pll->pll_flags |= PLLF_EXTLOCK;
 		pll->pll_lockp = lkp;
-	} else
-		INIT_SPINLOCK(&pll->pll_lock);
+	} else {
+		if (flags & PLLIF_LOGTMP)
+			INIT_SPINLOCK_LOGTMP(&pll->pll_lock);
+		else
+			INIT_SPINLOCK(&pll->pll_lock);
+	}
 	pll->pll_offset = offset;
 }
 
