@@ -374,7 +374,7 @@ pscrpc_server_handle_request(struct pscrpc_service *svc,
 
 	request->rq_phase = PSCRPC_RQ_PHASE_INTERPRET;
 
-	DEBUG_REQ(PLL_TRACE, request, "Handling RPC");
+	DEBUG_REQ(PLL_DEBUG, request, "Handling RPC");
 #if 0
 	psclog_info("Handling RPC peer+ref:pid:xid:nid:opc "
 	    "%s+%d:%d:%"PRIu64":%d",
