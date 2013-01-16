@@ -196,7 +196,8 @@ odtable_freeitem(struct odtable *odt, struct odtable_receipt *odtr)
 }
 
 int
-odtable_create(const char *fn, size_t nelems, size_t elemsz, int overwrite)
+odtable_create(const char *fn, size_t nelems, size_t elemsz,
+    int overwrite, int hflg)
 {
 	int rc = 0, flags = O_CREAT | O_EXCL | O_WRONLY;
 	struct odtable_entftr odtf;
@@ -209,7 +210,7 @@ odtable_create(const char *fn, size_t nelems, size_t elemsz, int overwrite)
 	odth.odth_slotsz = elemsz + sizeof(struct odtable_entftr);
 	odth.odth_magic = ODTBL_MAGIC;
 	odth.odth_version = ODTBL_VERS;
-	odth.odth_options = ODTBL_OPT_CRC;
+	odth.odth_options = hflg;
 	odth.odth_start = ODTBL_START;
 
 	odtf.odtf_crc = 0;
