@@ -49,6 +49,7 @@ struct psc_listcache {
 #define plc_lentry	plc_explist.pexl_lentry
 #define plc_listhd	plc_explist.pexl_listhd
 #define plc_lock	plc_explist.pexl_lock
+#define plc_lockp	plc_explist.pexl_lockp
 #define plc_name	plc_explist.pexl_name
 #define plc_nitems	plc_explist.pexl_nitems
 #define plc_nseen	plc_explist.pexl_nseen

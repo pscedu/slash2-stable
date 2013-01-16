@@ -38,6 +38,7 @@ struct psc_explist {
 #define pexl_flags	pexl_pll.pll_flags
 #define pexl_listhd	pexl_pll.pll_listhd
 #define pexl_lock	pexl_pll.pll_lock
+#define pexl_lockp	pexl_pll.pll_lockp
 #define pexl_nitems	pexl_pll.pll_nitems
 #define pexl_offset	pexl_pll.pll_offset
 };
