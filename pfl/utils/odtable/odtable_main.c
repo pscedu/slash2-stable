@@ -36,7 +36,6 @@
 struct psc_dynarray myReceipts = DYNARRAY_INIT;
 const char *progname;
 
-int	crc_enabled = 1;
 int	create_table;
 int	num_free;
 int	num_puts;
@@ -61,7 +60,7 @@ __dead void
 usage(void)
 {
 	fprintf(stderr,
-	    "usage: %s [-Ccosv] [-e elem_size] [-f #frees] [-n #puts]\n"
+	    "usage: %s [-CcosvZ] [-e elem_size] [-f #frees] [-n #puts]\n"
 	    "\t[-z table_size] file\n", progname);
 	exit(1);
 }
@@ -69,20 +68,20 @@ usage(void)
 int
 main(int argc, char *argv[])
 {
+	int c, rc, i, verbose = 0, hflg = ODTBL_OPT_CRC;
 	struct odtable *odt;
-	int c, rc, i, verbose = 0;
 	char *item, *fn;
 
 	pfl_init();
 	progname = argv[0];
 	elem_size = ODT_DEFAULT_ITEM_SIZE;
-	while ((c = getopt(argc, argv, "Cce:f:ln:osvz:")) != -1)
+	while ((c = getopt(argc, argv, "Cce:f:ln:osvZz:")) != -1)
 		switch (c) {
 		case 'C':
 			create_table = 1;
 			break;
 		case 'c':
-			crc_enabled = 1;
+			hflg |= ODTBL_OPT_CRC;
 			break;
 		case 'e':
 			elem_size = atoi(optarg);
@@ -105,6 +104,9 @@ main(int argc, char *argv[])
 		case 'v':
 			verbose = 1;
 			break;
+		case 'Z':
+			hflg |= ODTBL_OPT_SYNC;
+			break;
 		case 'z':
 			table_size = atoi(optarg);
 			break;
@@ -119,7 +121,7 @@ main(int argc, char *argv[])
 
 	if (create_table) {
 		rc = odtable_create(fn, table_size, elem_size,
-		    overwrite);
+		    overwrite, hflg);
 		if (rc)
 			errx(1, "create %s: %s", fn, strerror(-rc));
 		if (verbose)
