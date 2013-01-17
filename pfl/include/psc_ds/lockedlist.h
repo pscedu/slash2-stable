@@ -44,7 +44,7 @@ struct psc_lockedlist {
 };
 
 #define PLLF_EXTLOCK		(1 << 0)		/* lock is external */
-#define _PLLF_FLSHFT		(1 << 2)		/* last flag; for extending */
+#define _PLLF_FLSHFT		(1 << 1)		/* last flag; for extending */
 
 #define _PLL_GETLOCK(pll)	((pll)->pll_flags & PLLF_EXTLOCK ?	\
 				 (pll)->pll_lockp : &(pll)->pll_lock)
