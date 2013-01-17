@@ -184,6 +184,10 @@ _pscrpc_server_free_request(struct pscrpc_request *req)
 		req->rq_reply_state = NULL;
 	}
 
+	if (req->rq_conn)
+		pscrpc_put_connection(req->rq_conn);
+	req->rq_conn = NULL;
+
 	if (req != &rqbd->rqbd_req) {
 		/*
 		 * NB request buffers use an embedded
