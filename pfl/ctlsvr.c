@@ -153,7 +153,8 @@ psc_ctlmsg_send(int fd, int id, int type, size_t siz, const void *m)
 }
 
 int
-psc_ctlsenderrv(int fd, const struct psc_ctlmsghdr *mhp, const char *fmt, va_list ap)
+psc_ctlsenderrv(int fd, const struct psc_ctlmsghdr *mhp, const char *fmt,
+    va_list ap)
 {
 	struct psc_ctlmsg_error pce;
 	struct psc_ctlmsghdr mh;
@@ -173,7 +174,8 @@ psc_ctlsenderrv(int fd, const struct psc_ctlmsghdr *mhp, const char *fmt, va_lis
  * @fmt: printf(3) format of error message.
  */
 int
-psc_ctlsenderr(int fd, const struct psc_ctlmsghdr *mhp, const char *fmt, ...)
+psc_ctlsenderr(int fd, const struct psc_ctlmsghdr *mhp, const char *fmt,
+    ...)
 {
 	va_list ap;
 	int rc;
@@ -373,7 +375,8 @@ psc_ctlrep_gethashtable(int fd, struct psc_ctlmsghdr *mh, void *m)
 	PLL_ULOCK(&psc_hashtbls);
 
 	if (rc && !found && !all)
-		rc = psc_ctlsenderr(fd, mh, "unknown hash table: %s", name);
+		rc = psc_ctlsenderr(fd, mh, "unknown hash table: %s",
+		    name);
 	return (rc);
 }
 
@@ -423,7 +426,8 @@ psc_ctlrep_getlc(int fd, struct psc_ctlmsghdr *mh, void *m)
 	}
 	PLL_ULOCK(&psc_listcaches);
 	if (rc && !found && !all)
-		rc = psc_ctlsenderr(fd, mh, "unknown listcache: %s", name);
+		rc = psc_ctlsenderr(fd, mh, "unknown listcache: %s",
+		    name);
 	return (rc);
 }
 
@@ -507,7 +511,8 @@ psc_ctlmsg_param_send(int fd, const struct psc_ctlmsghdr *mh,
 	 * "all" or "mythr" against "mythr9".
 	 */
 	snprintf(othrname, sizeof(othrname), "%s", pcp->pcp_thrname);
-	snprintf(pcp->pcp_thrname, sizeof(pcp->pcp_thrname), "%s", thrname);
+	snprintf(pcp->pcp_thrname, sizeof(pcp->pcp_thrname), "%s",
+	    thrname);
 
 	/* Concatenate each levels[] element together with dots (`.'). */
 	s = pcp->pcp_field;
@@ -524,7 +529,8 @@ psc_ctlmsg_param_send(int fd, const struct psc_ctlmsghdr *mh,
 	rc = psc_ctlmsg_sendv(fd, mh, pcp);
 
 	/* Restore original threadname value for additional processing. */
-	snprintf(pcp->pcp_thrname, sizeof(pcp->pcp_thrname), "%s", othrname);
+	snprintf(pcp->pcp_thrname, sizeof(pcp->pcp_thrname), "%s",
+	    othrname);
 	return (rc);
 }
 
@@ -580,7 +586,8 @@ psc_ctlparam_log_level(int fd, struct psc_ctlmsghdr *mh,
 	rc = 1;
 	found = 0;
 	PLL_LOCK(&psc_threads);
-	PSC_CTL_FOREACH_THREAD(thr, pcp->pcp_thrname, &psc_threads.pll_listhd) {
+	PSC_CTL_FOREACH_THREAD(thr, pcp->pcp_thrname,
+	    &psc_threads.pll_listhd) {
 		found = 1;
 
 		for (subsys = start_ss; subsys < end_ss; subsys++) {
@@ -662,7 +669,8 @@ psc_ctlparam_log_format(int fd, struct psc_ctlmsghdr *mh,
 		static char logbuf[LINE_MAX];
 
 		if (nlevels != 2)
-			return (psc_ctlsenderr(fd, mh, "invalid thread field"));
+			return (psc_ctlsenderr(fd, mh,
+			    "invalid thread field"));
 
 		if (pcp->pcp_flags & (PCPF_ADD | PCPF_SUB))
 			return (psc_ctlsenderr(fd, mh,
@@ -873,7 +881,8 @@ psc_ctlparam_pause(int fd, struct psc_ctlmsghdr *mh,
 	rc = 1;
 	found = 0;
 	PLL_LOCK(&psc_threads);
-	PSC_CTL_FOREACH_THREAD(thr, pcp->pcp_thrname, &psc_threads.pll_listhd) {
+	PSC_CTL_FOREACH_THREAD(thr, pcp->pcp_thrname,
+	    &psc_threads.pll_listhd) {
 		found = 1;
 
 		if (set)
@@ -1247,7 +1256,8 @@ psc_ctlrep_param(int fd, struct psc_ctlmsghdr *mh, void *m)
 						npcf->pcf_level = n + 1;
 						npcf->pcf_pos = k++;
 						npcf->pcf_flags = PCFF_USEPOS;
-						psclist_add(&npcf->pcf_lentry, &stack);
+						psclist_add(&npcf->pcf_lentry,
+						    &stack);
 					}
 				}
 			}
@@ -1416,7 +1426,8 @@ psc_ctlrep_getiostats(int fd, struct psc_ctlmsghdr *mh, void *m)
 		}
 	PLL_ULOCK(&psc_iostats);
 	if (rc && !found && !all)
-		rc = psc_ctlsenderr(fd, mh, "unknown iostats: %s", name);
+		rc = psc_ctlsenderr(fd, mh, "unknown iostats: %s",
+		    name);
 	return (rc);
 }
 
@@ -1551,7 +1562,8 @@ psc_ctlrep_getodtable(int fd, struct psc_ctlmsghdr *mh, void *m)
 	PLL_ULOCK(&psc_odtables);
 
 	if (rc && !found && !all)
-		rc = psc_ctlsenderr(fd, mh, "unknown odtable: %s", name);
+		rc = psc_ctlsenderr(fd, mh, "unknown odtable: %s",
+		    name);
 	return (rc);
 }
 
@@ -1662,8 +1674,9 @@ psc_ctlrep_getjournal(int fd, struct psc_ctlmsghdr *mh, void *m)
  * @cbf: callback to run for matching threads.
  */
 int
-psc_ctl_applythrop(int fd, struct psc_ctlmsghdr *mh, void *m, const char *thrname,
-    int (*cbf)(int, struct psc_ctlmsghdr *, void *, struct psc_thread *))
+psc_ctl_applythrop(int fd, struct psc_ctlmsghdr *mh, void *m,
+    const char *thrname, int (*cbf)(int, struct psc_ctlmsghdr *, void *,
+      struct psc_thread *))
 {
 	struct psc_thread *thr;
 	int rc, len, nsz, found;
@@ -1747,7 +1760,8 @@ psc_ctlthr_service(int fd, const struct psc_ctlop *ct, int nops,
 	}
 
 	if (n != sizeof(mh)) {
-		psclog_notice("short recvmsg on psc_ctlmsghdr; nbytes=%zd", n);
+		psclog_notice("short recvmsg on psc_ctlmsghdr; "
+		    "nbytes=%zd", n);
 		return (0);
 	}
 	if (mh.mh_size > *msiz) {
