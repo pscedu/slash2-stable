@@ -271,7 +271,7 @@ main(int argc, char *argv[])
 	PRTYPE(struct psc_wndmap_block);
 	PRTYPE(struct pscfs);
 	PRTYPE(struct pscfs_clientctx);
-	PRTYPE(struct pscfs_cred);
+	PRTYPE(struct pscfs_creds);
 	PRTYPE(struct pscfs_dirent);
 	PRTYPE(struct psclist_head);
 	PRTYPE(struct psclog_data);
