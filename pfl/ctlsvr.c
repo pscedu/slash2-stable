@@ -73,6 +73,8 @@ struct psc_waitq	psc_ctl_clifds_waitq = PSC_WAITQ_INIT;
 
 struct pfl_mutex	pfl_ctl_mutex = PSC_MUTEX_INIT;
 
+struct pfl_opstat	pflctl_opstats[OPSTATS_MAX];
+
 __weak size_t
 psc_multiwaitcond_nwaiters(__unusedx struct psc_multiwaitcond *m)
 {
@@ -1346,10 +1348,10 @@ psc_ctlparam_opstats(int fd, struct psc_ctlmsghdr *mh,
     struct psc_ctlmsg_param *pcp, char **levels, int nlevels,
     __unusedx struct psc_ctlparam_node *pcn)
 {
-	long val;
 	int reset = 0, found = 0, rc = 1, i;
 	struct pfl_opstat *pos;
 	char buf[32];
+	long val;
 
 	if (nlevels > 2)
 		return (psc_ctlsenderr(fd, mh, "invalid field"));
@@ -1358,8 +1360,10 @@ psc_ctlparam_opstats(int fd, struct psc_ctlmsghdr *mh,
 
 	reset = (mh->mh_type == PCMT_SETPARAM);
 
-	for (i = 0; i < pflctl_nopstats; i++) {
+	for (i = 0; i < nitems(pflctl_opstats); i++) {
 		pos = &pflctl_opstats[i];
+		if (pos->pos_name == NULL)
+			continue;
 		if (nlevels < 2 ||
 		    strcmp(levels[1], pos->pos_name) == 0) {
 			found = 1;

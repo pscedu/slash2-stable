@@ -24,6 +24,10 @@
 #ifndef _PFL_CTLSVR_H_
 #define _PFL_CTLSVR_H_
 
+#include <ctype.h>
+#include <string.h>
+
+#include "pfl/str.h"
 #include "psc_util/atomic.h"
 #include "psc_util/thread.h"
 
@@ -90,10 +94,23 @@ struct pfl_opstat {
 	psc_atomic64_t		 pos_value;
 };
 
+#define OPSTATS_MAX		128
+
 #define	OPSTAT_INCR(op)							\
 	do {								\
-		psc_assert((op) < pflctl_nopstats);			\
-		psc_atomic64_inc(&pflctl_opstats[op].pos_value);	\
+		struct pfl_opstat *pos;					\
+		char *_p;						\
+									\
+		psc_assert((op) < OPSTATS_MAX);				\
+		pos = &pflctl_opstats[op];				\
+		psc_atomic64_inc(&pos->pos_value);			\
+		if (pos->pos_name == NULL) {				\
+			_p = strstr(#op, "_OPST_");			\
+			psc_assert(_p);					\
+			for (pos->pos_name = _p = pfl_strdup(_p + 6);	\
+			    *_p; _p++)					\
+				*_p = tolower(*_p);			\
+		}							\
 	} while (0)
 
 #define	OPSTAT_CURR(op)							\
@@ -166,10 +183,8 @@ extern psc_ctl_thrget_t psc_ctl_thrgets[];
 extern int psc_ctl_nthrgets;
 
 extern struct pfl_opstat pflctl_opstats[];
-extern int pflctl_nopstats;
 
 #define PFLCTL_SVR_DEFS							\
 int psc_ctl_nthrgets = nitems(psc_ctl_thrgets);				\
-int pflctl_nopstats = nitems(pflctl_opstats)
 
 #endif /* _PFL_CTLSVR_H_ */
