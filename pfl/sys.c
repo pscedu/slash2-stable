@@ -18,45 +18,37 @@
  */
 
 #include <grp.h>
-#include <limits.h> 
+#include <limits.h>
 #include <pwd.h>
 
 #include "pfl/sys.h"
 #include "psc_util/alloc.h"
 
 int
-pflsys_getusergroups(uid_t uid, gid_t defgid, gid_t **gvp, int *ng)
+pflsys_getusergroups(uid_t uid, gid_t defgid, gid_t *gv, int *ng)
 {
 	struct passwd pw, *pwp;
 	char buf[LINE_MAX];
 	int rc;
 
 	*ng = 0;
-
 	rc = getpwuid_r(uid, &pw, buf, sizeof(buf), &pwp);
 	if (rc)
 		return (rc);
-
-	rc = getgrouplist(pw.pw_name, defgid, NULL, ng);
-	if (rc) {
-		*gvp = psc_calloc(*ng, sizeof(**gvp), 0);
-		getgrouplist(pw.pw_name, defgid, *gvp, ng);
-	}
-	return (rc);
+	*ng = NGROUPS_MAX;
+	getgrouplist(pw.pw_name, defgid, gv, ng);
+	return (0);
 }
 
 int
 pflsys_userisgroupmember(uid_t uid, gid_t defgid, gid_t gid)
 {
-	int j, ng, rc = 0;
-	gid_t *gv;
+	gid_t gv[NGROUPS_MAX];
+	int j, ng;
 
-	pflsys_getusergroups(uid, defgid, &gv, &ng);
+	pflsys_getusergroups(uid, defgid, gv, &ng);
 	for (j = 0; j < ng; j++)
-		if (gid == gv[j]) {
-			rc = 1;
-			break;
-		}
-	PSCFREE(gv);
-	return (rc);
+		if (gid == gv[j])
+			return (1);
+	return (0);
 }
