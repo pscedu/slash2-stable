@@ -20,7 +20,7 @@
 #ifndef _PFL_FS_H_
 #define _PFL_FS_H_
 
-#include <sys/types.h>
+#include <sys/param.h>
 
 #include <stdint.h>
 
@@ -36,9 +36,11 @@ struct psc_ctlmsg_param;
 typedef uint64_t pscfs_inum_t;
 typedef uint64_t pscfs_fgen_t;
 
-struct pscfs_cred {
-	uint32_t	pfc_uid;
-	uint32_t	pfc_gid;
+struct pscfs_creds {
+	uid_t		pcr_uid;
+	gid_t		pcr_gidv[NGROUPS_MAX];
+#define pcr_gid pcr_gidv[0]
+	int		pcr_ngid;
 };
 
 struct pscfs_dirent {
@@ -98,11 +100,9 @@ void	pscfs_freeargs(struct pscfs_args *);
 
 struct pscfs_clientctx *
 	pscfs_getclientctx(struct pscfs_req *);
-void	pscfs_getcreds(struct pscfs_req *, struct pscfs_cred *);
-int	pscfs_getgroups(struct pscfs_req *, gid_t **, int *);
+void	pscfs_getcreds(struct pscfs_req *, struct pscfs_creds *);
+int	pscfs_getgroups(struct pscfs_req *, gid_t *, int *);
 mode_t	pscfs_getumask(struct pscfs_req *);
-
-int	pscfs_inprocgrouplist(struct pscfs_req *, gid_t);
 
 int	pscfs_setdebug(int);
 int	pscfs_getdebug(int *);

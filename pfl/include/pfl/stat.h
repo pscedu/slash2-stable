@@ -84,6 +84,10 @@ struct stat;
 		    PSCPRI_TIMESPEC_ARGS(&_ctime), ## __VA_ARGS__);		\
 	} while (0)
 
+#define _S_IRUGO (S_IRUSR | S_IRGRP | S_IROTH)
+#define _S_IWUGO (S_IWUSR | S_IWGRP | S_IWOTH)
+#define _S_IXUGO (S_IXUSR | S_IXGRP | S_IXOTH)
+
 void pfl_dump_statbuf(const struct stat *);
 void pfl_dump_mode(mode_t);
 

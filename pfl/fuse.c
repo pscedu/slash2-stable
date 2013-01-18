@@ -572,12 +572,15 @@ pscfs_getclientctx(struct pscfs_req *pfr)
 }
 
 void
-pscfs_getcreds(struct pscfs_req *pfr, struct pscfs_cred *pfc)
+pscfs_getcreds(struct pscfs_req *pfr, struct pscfs_creds *pcr)
 {
 	const struct fuse_ctx *ctx = fuse_req_ctx(pfr->pfr_fuse_req);
 
-	pfc->pfc_uid = ctx->uid;
-	pfc->pfc_gid = ctx->gid;
+	pcr->pcr_uid = ctx->uid;
+	if (pscfs_getgroups(pfr, pcr->pcr_gidv, &pcr->pcr_ngid)) {
+		pcr->pcr_gid = ctx->gid;
+		pcr->pcr_ngid = 1;
+	}
 }
 
 mode_t
@@ -1501,66 +1504,26 @@ fuse_req_getgroups(__unusedx fuse_req_t req, __unusedx int ng,
 #endif
 
 int
-pscfs_getgroups(struct pscfs_req *pfr, gid_t **gvp, int *ng)
+pscfs_getgroups(struct pscfs_req *pfr, gid_t *gv, int *ng)
 {
-	gid_t gid, *gv;
-	uid_t uid;
 	int rc = 0;
 
-	*gvp = NULL;
-	uid = fuse_req_ctx(pfr->pfr_fuse_req)->uid;
-	gid = fuse_req_ctx(pfr->pfr_fuse_req)->gid;
-
-	*ng = fuse_req_getgroups(pfr->pfr_fuse_req, 0, NULL);
- retry:
-	if (*ng == 0)
-		goto out;
-	if (*ng > 0) {
-		gv = psc_realloc(*gvp, *ng * sizeof(*gv), 0);
-		if (gv == NULL) {
-			rc = ENOMEM;
-			goto out;
-		}
-		*gvp = gv;
-		rc = fuse_req_getgroups(pfr->pfr_fuse_req, *ng, gv);
-		if (rc > *ng) {
-			*ng = rc;
-			goto retry;
-		}
-		rc = 0;
-		goto out;
+	*ng = fuse_req_getgroups(pfr->pfr_fuse_req, NGROUPS_MAX, gv);
+	if (*ng > NGROUPS_MAX) {
+		psclog_error("fuse_req_getgroups returned "
+		    "%d > NGROUPS_MAX (%d)", *ng, NGROUPS_MAX);
+		*ng = NGROUPS_MAX;
 	}
-
-	if (*ng != -ENOSYS) {
+	if (*ng >= 0)
+		return (0);
+	if (*ng == -ENOSYS) {
+		/* not supported; revert to getgrent(3) */
+		*ng = NGROUPS_MAX;
+		rc = pflsys_getusergroups(
+		    fuse_req_ctx(pfr->pfr_fuse_req)->uid,
+		    fuse_req_ctx(pfr->pfr_fuse_req)->gid, gv, ng);
+	} else
 		rc = abs(*ng);
-		goto out;
-	}
-
-	/* not supported; revert to /etc/groups */
-	pflsys_getusergroups(uid, gid, gvp, ng);
-
- out:
-	if (rc)
-		PSCFREE(*gvp);
-	return (rc);
-}
-
-int
-pscfs_inprocgrouplist(struct pscfs_req *pfr, gid_t gid)
-{
-	int j, ng, rc;
-	gid_t *gv;
-
-	rc = pscfs_getgroups(pfr, &gv, &ng);
-	if (rc)
-		return (rc);
-	rc = 0;
-	for (j = 0; j < ng; j++)
-		if (gid == gv[j]) {
-			rc = 1;
-			break;
-		}
-	PSCFREE(gv);
 	return (rc);
 }
 
