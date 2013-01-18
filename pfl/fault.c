@@ -39,11 +39,6 @@
 struct psc_fault	psc_faults[FAULTS_MAX];
 int			psc_nfaults;
 
-void
-psc_faults_init(void)
-{
-}
-
 struct psc_fault *
 psc_fault_lookup(const char *name)
 {
