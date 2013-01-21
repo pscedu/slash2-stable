@@ -23,6 +23,7 @@
 #include <sys/param.h>
 
 #include <stdint.h>
+#include <unistd.h>
 
 struct stat;
 struct statvfs;
