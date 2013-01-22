@@ -1360,7 +1360,7 @@ psc_ctlparam_opstats(int fd, struct psc_ctlmsghdr *mh,
 
 	reset = (mh->mh_type == PCMT_SETPARAM);
 
-	for (i = 0; i < nitems(pflctl_opstats); i++) {
+	for (i = 0; i < (int)nitems(pflctl_opstats); i++) {
 		pos = &pflctl_opstats[i];
 		if (pos->pos_name == NULL)
 			continue;
