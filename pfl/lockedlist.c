@@ -35,7 +35,7 @@ _pll_initf(struct psc_lockedlist *pll, int offset, psc_spinlock_t *lkp,
 		pll->pll_flags |= PLLF_EXTLOCK;
 		pll->pll_lockp = lkp;
 	} else {
-		if (flags & PLLIF_LOGTMP)
+		if (flags & PLLF_LOGTMP)
 			INIT_SPINLOCK_LOGTMP(&pll->pll_lock);
 		else
 			INIT_SPINLOCK(&pll->pll_lock);
@@ -44,7 +44,8 @@ _pll_initf(struct psc_lockedlist *pll, int offset, psc_spinlock_t *lkp,
 }
 
 void
-pll_remove(struct psc_lockedlist *pll, void *p)
+_pll_remove(const struct pfl_callerinfo *pci,
+    struct psc_lockedlist *pll, void *p)
 {
 	struct psc_listentry *e;
 	int locked;
@@ -55,6 +56,8 @@ pll_remove(struct psc_lockedlist *pll, void *p)
 	psc_assert(pll->pll_nitems > 0);
 	pll->pll_nitems--;
 	PLL_URLOCK(pll, locked);
+	_psclog_pci(pci, PLL_DEBUG, 0, "lockedlist %p get item %p",
+	    pll, p);
 }
 
 void
@@ -71,13 +74,14 @@ _pll_add(const struct pfl_callerinfo *pci,
 	else
 		psclist_add_head(e, &pll->pll_listhd);
 	pll->pll_nitems++;
-	_psclog_pci(pci, PLL_VDEBUG, 0, "lockedlist %p add item %p",
+	_psclog_pci(pci, PLL_DEBUG, 0, "lockedlist %p add item %p",
 	    pll, p);
 	PLL_URLOCK(pll, locked);
 }
 
 void *
-_pll_get(struct psc_lockedlist *pll, int flags)
+_pll_get(const struct pfl_callerinfo *_pfl_callerinfo,
+    struct psc_lockedlist *pll, int flags)
 {
 	int locked;
 	void *p;
