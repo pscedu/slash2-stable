@@ -43,8 +43,10 @@ struct psc_lockedlist {
 #define pll_lock	pll_u.pllu_lock
 };
 
+/* list flags */
 #define PLLF_EXTLOCK		(1 << 0)		/* lock is external */
-#define _PLLF_FLSHFT		(1 << 1)		/* last flag; for extending */
+#define PLLF_LOGTMP		(1 << 1)		/* tmp debugging */
+#define _PLLF_FLSHFT		(1 << 2)		/* last flag; for extending */
 
 #define _PLL_GETLOCK(pll)	((pll)->pll_flags & PLLF_EXTLOCK ?	\
 				 (pll)->pll_lockp : &(pll)->pll_lock)
@@ -100,37 +102,39 @@ struct psc_lockedlist {
 #define pll_initf(pll, type, member, lock, flags)			\
 	_pll_initf((pll), offsetof(type, member), (lock), (flags))
 
-/* list initialization flags */
-#define PLLIF_LOGTMP		(1 << 0)
-
 #define pll_empty(pll)		(pll_nitems(pll) == 0)
 
-/* list  flags */
+/* list position flags */
 #define PLLBF_HEAD		0
 #define PLLBF_TAIL		(1 << 1)
 #define PLLBF_PEEK		(1 << 2)
 
-#define pll_addstack(pll, p)	_pll_add(PFL_CALLERINFO(), (pll), (p), PLLBF_HEAD)
-#define pll_addqueue(pll, p)	_pll_add(PFL_CALLERINFO(), (pll), (p), PLLBF_TAIL)
-#define pll_addhead(pll, p)	_pll_add(PFL_CALLERINFO(), (pll), (p), PLLBF_HEAD)
-#define pll_addtail(pll, p)	_pll_add(PFL_CALLERINFO(), (pll), (p), PLLBF_TAIL)
-#define pll_add(pll, p)		_pll_add(PFL_CALLERINFO(), (pll), (p), PLLBF_TAIL)
+#define _PLL_GETPCI(pll)	((pll)->pll_flags & PLLF_LOGTMP ?	\
+				 PFL_CALLERINFO() : PFL_CALLERINFOSS(PSS_TMP))
 
-#define pll_gethead(pll)	_pll_get((pll), PLLBF_HEAD)
-#define pll_gettail(pll)	_pll_get((pll), PLLBF_TAIL)
-#define pll_getstack(pll)	_pll_get((pll), PLLBF_HEAD)
-#define pll_getqueue(pll)	_pll_get((pll), PLLBF_HEAD)
-#define pll_get(pll)		_pll_get((pll), PLLBF_HEAD)
-#define pll_peekhead(pll)	_pll_get((pll), PLLBF_HEAD | PLLBF_PEEK)
-#define pll_peektail(pll)	_pll_get((pll), PLLBF_TAIL | PLLBF_PEEK)
+#define pll_addstack(pll, p)	_pll_add(_PLL_GETPCI(pll), (pll), (p), PLLBF_HEAD)
+#define pll_addqueue(pll, p)	_pll_add(_PLL_GETPCI(pll), (pll), (p), PLLBF_TAIL)
+#define pll_addhead(pll, p)	_pll_add(_PLL_GETPCI(pll), (pll), (p), PLLBF_HEAD)
+#define pll_addtail(pll, p)	_pll_add(_PLL_GETPCI(pll), (pll), (p), PLLBF_TAIL)
+#define pll_add(pll, p)		_pll_add(_PLL_GETPCI(pll), (pll), (p), PLLBF_TAIL)
+
+#define pll_gethead(pll)	_pll_get(_PLL_GETPCI(pll), (pll), PLLBF_HEAD)
+#define pll_gettail(pll)	_pll_get(_PLL_GETPCI(pll), (pll), PLLBF_TAIL)
+#define pll_getstack(pll)	_pll_get(_PLL_GETPCI(pll), (pll), PLLBF_HEAD)
+#define pll_getqueue(pll)	_pll_get(_PLL_GETPCI(pll), (pll), PLLBF_HEAD)
+#define pll_get(pll)		_pll_get(_PLL_GETPCI(pll), (pll), PLLBF_HEAD)
+#define pll_peekhead(pll)	_pll_get(_PLL_GETPCI(pll), (pll), PLLBF_HEAD | PLLBF_PEEK)
+#define pll_peektail(pll)	_pll_get(_PLL_GETPCI(pll), (pll), PLLBF_TAIL | PLLBF_PEEK)
+
+#define pll_remove(pll, p)	_pll_remove(_PLL_GETPCI(pll), (pll), (p))
 
 void  _pll_add(const struct pfl_callerinfo *, struct psc_lockedlist *, void *, int);
 void   pll_add_sorted(struct psc_lockedlist *, void *, int (*)(const
 	    void *, const void *));
 int    pll_conjoint(struct psc_lockedlist *, void *);
-void *_pll_get(struct psc_lockedlist *, int);
+void *_pll_get(const struct pfl_callerinfo *, struct psc_lockedlist *, int);
 void  _pll_initf(struct psc_lockedlist *, int, psc_spinlock_t *, int);
-void   pll_remove(struct psc_lockedlist *, void *);
+void  _pll_remove(const struct pfl_callerinfo *, struct psc_lockedlist *, void *);
 void   pll_sort(struct psc_lockedlist *, void (*)(void *, size_t,
 	    size_t, int (*)(const void *, const void *)), int (*)(const void *,
 	    const void *));
