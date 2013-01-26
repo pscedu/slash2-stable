@@ -110,7 +110,7 @@ struct psc_lockedlist {
 #define PLLBF_PEEK		(1 << 2)
 
 #define _PLL_GETPCI(pll)	((pll)->pll_flags & PLLF_LOGTMP ?	\
-				 PFL_CALLERINFOSS(PSS_TMP) : PFL_CALLERINFOSS())
+				 PFL_CALLERINFOSS(PSS_TMP) : PFL_CALLERINFO())
 
 #define pll_addstack(pll, p)	_pll_add(_PLL_GETPCI(pll), (pll), (p), PLLBF_HEAD)
 #define pll_addqueue(pll, p)	_pll_add(_PLL_GETPCI(pll), (pll), (p), PLLBF_TAIL)
