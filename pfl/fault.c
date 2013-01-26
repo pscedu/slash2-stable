@@ -78,11 +78,12 @@ _psc_fault_register(const char *name)
 	return (pflt);
 }
 
-void
+int
 _psc_fault_here(struct psc_fault *pflt, int *rcp, int rc)
 {
-	long delay = 0;
+	long delay = 0, faulted = 0;
 
+	psc_fault_lock(pflt);
 	if (pflt->pflt_unhits < pflt->pflt_begin)
 		goto out;
 	if (pflt->pflt_count >= 0 &&
@@ -96,6 +97,7 @@ _psc_fault_here(struct psc_fault *pflt, int *rcp, int rc)
 		*rcp = pflt->pflt_retval;
 	pflt->pflt_hits++;
 	delay = pflt->pflt_delay;
+	faulted = 1;
 	if (0)
  out:
 		pflt->pflt_unhits++;
@@ -103,6 +105,7 @@ _psc_fault_here(struct psc_fault *pflt, int *rcp, int rc)
 
 	if (delay)
 		usleep(delay);
+	return (faulted);
 }
 
 /**

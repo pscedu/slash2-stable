@@ -44,15 +44,19 @@ struct psc_fault {
 #define	psc_fault_lock(pflt)	spinlock(&(pflt)->pflt_lock)
 #define	psc_fault_unlock(pflt)	freelock(&(pflt)->pflt_lock)
 
-void	_psc_fault_here(struct psc_fault *, int *, int);
+int	_psc_fault_here(struct psc_fault *, int *, int);
 struct psc_fault *
 	_psc_fault_register(const char *);
 
 #define psc_fault_here_rc(f, rcp, rc)					\
-	do {								\
+	_PFL_RVSTART {							\
+		int _rc = 0;						\
+									\
 		if (psc_faults[f].pflt_flags & PFLTF_ACTIVE)		\
-			_psc_fault_here(&psc_faults[f], (rcp), (rc));	\
-	} while (0)
+			_rc = _psc_fault_here(&psc_faults[f], (rcp),	\
+			    (rc));					\
+		_rc;							\
+	} _PFL_RVEND
 
 #define psc_fault_here(f, rcp)	psc_fault_here_rc((f), (rcp), 0)
 
