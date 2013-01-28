@@ -248,6 +248,8 @@ static __inline void _psc_spin_checktime(struct psc_spinlock *);
 									\
 		_locked = reqlock(lk);					\
 		*(field) |= (fl);					\
+		psclog_diag("lock %p setflags %s:%d now %#x",		\
+		    (lk), #fl, (fl), *(field));				\
 		ureqlock((lk), _locked);				\
 	} while (0)
 
@@ -257,6 +259,8 @@ static __inline void _psc_spin_checktime(struct psc_spinlock *);
 									\
 		_locked = reqlock(lk);					\
 		*(field) &= ~(fl);					\
+		psclog_diag("lock %p clearflags %s:%d now %#x",		\
+		    (lk), #fl, (fl), *(field));				\
 		ureqlock((lk), _locked);				\
 	} while (0)
 
