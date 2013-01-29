@@ -31,11 +31,13 @@
 #include "pfl/pfl.h"
 #include "psc_ds/dynarray.h"
 #include "psc_util/alloc.h"
+#include "psc_util/fmtstr.h"
 #include "psc_util/log.h"
 #include "psc_util/odtable.h"
 
 struct psc_dynarray myReceipts = DYNARRAY_INIT;
 const char *progname;
+const char *fmt;
 
 int	create_table;
 int	num_free;
@@ -50,10 +52,28 @@ size_t	table_size = ODT_DEFAULT_TABLE_SIZE;
 void
 odtcb_show(void *data, struct odtable_receipt *odtr)
 {
-	char *p = data;
+	char buf[LINE_MAX], *p = data;
+	union {
+		int	*d;
+		int64_t	*q;
+		void	*p;
+	} u;
 	size_t i;
 
 	printf("%7zd %16"PRIx64" ", odtr->odtr_elem, odtr->odtr_key);
+
+	if (fmt) {
+		FMTSTR(buf, sizeof(buf), fmt,
+		    FMTSTRCASE('d', "d",	(u.p = p, p += sizeof(int),	*u.d))
+		    FMTSTRCASE('u', "u",	(u.p = p, p += sizeof(int),	*u.d))
+		    FMTSTRCASE('x', "x",	(u.p = p, p += sizeof(int),	*u.d))
+		    FMTSTRCASE('q', PRId64,	(u.p = p, p += sizeof(int64_t),	*u.q))
+		    FMTSTRCASE('Q', PRIu64,	(u.p = p, p += sizeof(int64_t),	*u.q))
+		    FMTSTRCASE('X', PRIx64,	(u.p = p, p += sizeof(int64_t),	*u.q))
+		);
+		printf("%s\n", buf);
+		return;
+	}
 
 	/*
 	 * If the first 10 characters aren't ASCII, don't display as
@@ -85,7 +105,7 @@ usage(void)
 {
 	fprintf(stderr,
 	    "usage: %s [-CcDosvZ] [-e elem_size] [-F #frees] [-n #puts]\n"
-	    "\t[-z table_size] file\n", progname);
+	    "\t[-X fmt] [-z table_size] file\n", progname);
 	exit(1);
 }
 
@@ -99,7 +119,7 @@ main(int argc, char *argv[])
 	pfl_init();
 	progname = argv[0];
 	elem_size = ODT_DEFAULT_ITEM_SIZE;
-	while ((c = getopt(argc, argv, "CcDe:F:n:osvZz:")) != -1)
+	while ((c = getopt(argc, argv, "CcDe:F:n:osvX:Zz:")) != -1)
 		switch (c) {
 		case 'C':
 			create_table = 1;
@@ -127,6 +147,9 @@ main(int argc, char *argv[])
 			break;
 		case 'v':
 			verbose = 1;
+			break;
+		case 'X':
+			fmt = optarg;
 			break;
 		case 'Z':
 			hflg |= ODTBL_OPT_SYNC;
