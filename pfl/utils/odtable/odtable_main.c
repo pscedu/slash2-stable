@@ -19,6 +19,7 @@
 
 #include <sys/param.h>
 
+#include <ctype.h>
 #include <err.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -41,18 +42,42 @@ int	num_free;
 int	num_puts;
 int	overwrite;
 int	show;
+int	dump;
 
 size_t	elem_size  = ODT_DEFAULT_ITEM_SIZE;
 size_t	table_size = ODT_DEFAULT_TABLE_SIZE;
 
 void
-my_odtcb(void *data, struct odtable_receipt *odtr)
+odtcb_show(void *data, struct odtable_receipt *odtr)
 {
-	char *item = data;
+	char *p = data;
+	size_t i;
 
-	printf("slot=%zd odtr=%p: %s\n",
-	    odtr->odtr_elem, odtr, item);
+	printf("slot=%zd odtr=%p: ", odtr->odtr_elem, odtr);
 
+	/*
+	 * If the first 10 characters aren't ASCII, don't display as
+	 * such.
+	 */
+	for (i = 0, p = data; i < 10 && p; i++, p++) {
+		if (!isspace(*p) && !isgraph(*p))
+			goto skip;
+	}
+	if (i != 10)
+		goto skip;
+	printf("%s\n", p);
+	return;
+
+ skip:
+	if (dump)
+		for (i = 0, p = data; i < elem_size; p++, i++);
+			printf("%02x", *p);
+	printf("\n");
+}
+
+void
+odtcb_free(__unusedx void *data, struct odtable_receipt *odtr)
+{
 	psc_dynarray_add(&myReceipts, odtr);
 }
 
@@ -60,7 +85,7 @@ __dead void
 usage(void)
 {
 	fprintf(stderr,
-	    "usage: %s [-CcosvZ] [-e elem_size] [-f #frees] [-n #puts]\n"
+	    "usage: %s [-CcDosvZ] [-e elem_size] [-F #frees] [-n #puts]\n"
 	    "\t[-z table_size] file\n", progname);
 	exit(1);
 }
@@ -75,7 +100,7 @@ main(int argc, char *argv[])
 	pfl_init();
 	progname = argv[0];
 	elem_size = ODT_DEFAULT_ITEM_SIZE;
-	while ((c = getopt(argc, argv, "Cce:f:ln:osvZz:")) != -1)
+	while ((c = getopt(argc, argv, "Cce:F:n:osvZz:")) != -1)
 		switch (c) {
 		case 'C':
 			create_table = 1;
@@ -83,14 +108,14 @@ main(int argc, char *argv[])
 		case 'c':
 			hflg |= ODTBL_OPT_CRC;
 			break;
+		case 'D':
+			dump = 1;
+			break;
 		case 'e':
 			elem_size = atoi(optarg);
 			break;
-		case 'f':
+		case 'F':
 			num_free = atoi(optarg);
-			break;
-		case 'l':
-			warnx("-l is deprecated");
 			break;
 		case 'n':
 			num_puts = atoi(optarg);
@@ -128,6 +153,7 @@ main(int argc, char *argv[])
 			warnx("created od-table %s "
 			    "(elemsize=%zu, tablesize=%zu)",
 			    fn, elem_size, table_size);
+		exit(0);
 	}
 
 	rc = odtable_load(&odt, fn, "%s", fn);
@@ -139,14 +165,6 @@ main(int argc, char *argv[])
 			errstr = "Underlying file system does not "
 			    "support mmap(2)";
 		errx(1, "load %s: %s", fn, errstr);
-	}
-	odtable_scan(odt, my_odtcb);
-
-	if (show) {
-		struct odtable_hdr *h;
-
-		h = odt->odt_hdr;
-		printf("%s\n\tnelems\t%zu", fn, h->odth_nelems);
 	}
 
 	item = PSCALLOC(elem_size);
@@ -162,6 +180,8 @@ main(int argc, char *argv[])
 	if (num_free) {
 		struct odtable_receipt *odtr = NULL;
 
+		odtable_scan(odt, odtcb_free);
+
 		while (psc_dynarray_len(&myReceipts) && num_free--) {
 			odtr = psc_dynarray_getpos(&myReceipts, 0);
 			psclog_debug("got odtr=%p key=%"PRIx64" slot=%zd",
@@ -173,6 +193,14 @@ main(int argc, char *argv[])
 
 		psclog_debug("# of items left is %d",
 		    psc_dynarray_len(&myReceipts));
+	}
+
+	if (show) {
+		struct odtable_hdr *h;
+
+		h = odt->odt_hdr;
+		printf("%s\n\tnelems\t%zu", fn, h->odth_nelems);
+		odtable_scan(odt, odtcb_show);
 	}
 
 	exit(odtable_release(odt));
