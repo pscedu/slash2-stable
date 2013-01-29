@@ -53,7 +53,7 @@ odtcb_show(void *data, struct odtable_receipt *odtr)
 	char *p = data;
 	size_t i;
 
-	printf("slot=%zd odtr=%p: ", odtr->odtr_elem, odtr);
+	printf("%7zd %16"PRIx64" ", odtr->odtr_elem, odtr->odtr_key);
 
 	/*
 	 * If the first 10 characters aren't ASCII, don't display as
@@ -65,13 +65,12 @@ odtcb_show(void *data, struct odtable_receipt *odtr)
 	}
 	if (i != 10)
 		goto skip;
-	printf("%s\n", p);
+	printf("%s\n", (char *)data);
 	return;
 
  skip:
-	if (dump)
-		for (i = 0, p = data; i < elem_size; p++, i++);
-			printf("%02x", *p);
+	for (i = 0, p = data; i < elem_size; p++, i++)
+		printf("%02x", *p);
 	printf("\n");
 }
 
@@ -100,7 +99,7 @@ main(int argc, char *argv[])
 	pfl_init();
 	progname = argv[0];
 	elem_size = ODT_DEFAULT_ITEM_SIZE;
-	while ((c = getopt(argc, argv, "Cce:F:n:osvZz:")) != -1)
+	while ((c = getopt(argc, argv, "CcDe:F:n:osvZz:")) != -1)
 		switch (c) {
 		case 'C':
 			create_table = 1;
@@ -199,8 +198,13 @@ main(int argc, char *argv[])
 		struct odtable_hdr *h;
 
 		h = odt->odt_hdr;
-		printf("%s\n\tnelems\t%zu", fn, h->odth_nelems);
-		odtable_scan(odt, odtcb_show);
+		printf("nelems\t%zu\n", h->odth_nelems);
+		printf("elemsz\t%zu\n", h->odth_elemsz);
+		if (dump) {
+			printf("%7s %16s data\n",
+			    "slot", "crc");
+			odtable_scan(odt, odtcb_show);
+		}
 	}
 
 	exit(odtable_release(odt));
