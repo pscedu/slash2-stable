@@ -89,9 +89,15 @@ die()
 
 mygdb()
 {
-	echo program arguments are: $@
-	echo ----------------------------------------------------------
-	exec gdb $prog
+	shift
+	local tmpfn=/tmp/gdbinv.$RANDOM
+	{
+		echo set args $@
+		echo set confirm off
+		echo set height 0
+		echo set print pretty
+	} > $tmpfn
+	exec gdb -f -q -x $tmpfn $prog
 }
 
 postproc()
