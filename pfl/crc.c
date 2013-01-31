@@ -145,7 +145,7 @@ const uint64_t psc_crc64_table[] = {
  * @data: data region to add to CRC over.
  * @len: amount of data.
  */
-void
+__inline void
 psc_crc64_add(uint64_t *cp, const void *datap, int len)
 {
 	const uint8_t *data = datap;
@@ -174,7 +174,7 @@ psc_crc64_verify(uint64_t c, const void *datap, int len)
  * @data: data region to add to CRC over.
  * @len: amount of data.
  */
-void
+__inline void
 psc_crc32_add(uint32_t *cp, const void *datap, int len)
 {
 	const uint8_t *data = datap;
