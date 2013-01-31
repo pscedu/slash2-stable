@@ -115,8 +115,7 @@ pfl_dump_stack1(int sig)
 		printf("signal %d received, ", sig);
 	printf("attempting to generate stack trace...\n");
 	pfl_dump_stack();
-	kill(0, SIGQUIT);
-	_exit(1);
+	abort();
 }
 
 __weak void
