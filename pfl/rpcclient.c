@@ -331,7 +331,7 @@ pscrpc_completion_set(struct pscrpc_request *rq, struct pscrpc_completion *c)
 {
 	rq->rq_comp = c;
 
-	DEBUG_REQ(PLL_INFO, rq, "rpc_comp %p (compcnt=%d) (outcnt=%d)", c, 
+	DEBUG_REQ(PLL_INFO, rq, "rpc_comp %p (compcnt=%d) (outcnt=%d)", c,
 	  atomic_read(&c->rqcomp_compcnt), atomic_read(&c->rqcomp_outcnt));
 }
 
@@ -345,8 +345,8 @@ pscrpc_completion_one(struct pscrpc_request *rq, struct pscrpc_completion *c)
 	psc_waitq_wakeone(&c->rqcomp_waitq);
 	freelock(&c->rqcomp_lock);
 
-	if (rq) 
-		DEBUG_REQ(PLL_INFO, rq, "rpc_comp %p (compcnt=%d) (outcnt=%d)", c, 
+	if (rq)
+		DEBUG_REQ(PLL_INFO, rq, "rpc_comp %p (compcnt=%d) (outcnt=%d)", c,
 			  atomic_read(&c->rqcomp_compcnt), atomic_read(&c->rqcomp_outcnt));
 }
 
@@ -463,8 +463,10 @@ pscrpc_set_lock(struct pscrpc_request_set *set)
 	}
 }
 
-/* lock so many callers can add things, the context that owns the set
- * is supposed to notice these and move them into the set proper. */
+/*
+ * lock so many callers can add things, the context that owns the set
+ * is supposed to notice these and move them into the set proper.
+ */
 void
 pscrpc_set_add_new_req(struct pscrpc_request_set *set,
 		       struct pscrpc_request    *req)
@@ -1002,8 +1004,8 @@ pscrpc_check_set(struct pscrpc_request_set *set, int check_allsent)
 			/* If using a non-blocking set, then check for expired
 			 *   requests here.
 			 */
-			if (!check_allsent && 
-			    !pscrpc_client_replied(req) && 
+			if (!check_allsent &&
+			    !pscrpc_client_replied(req) &&
 			    pscrpc_is_expired(req)) {
 				/* rc == 0 means we're resending the request!
 				 *   otherwise, this request is getting nuked.
@@ -1186,9 +1188,9 @@ pscrpc_set_destroy(struct pscrpc_request_set *set)
 		pscrpc_req_finished(req);
 	}
 
-	psc_assert(set->set_remaining == 0 && 
+	psc_assert(set->set_remaining == 0 &&
 		   psc_waitq_nwaiters(&set->set_waitq) == 0);
-	
+
 	psc_assert(!psc_waitq_nwaiters(&set->set_waitq));
 	psc_waitq_destroy(&set->set_waitq);
 
@@ -1410,7 +1412,7 @@ pscrpc_set_wait(struct pscrpc_request_set *set)
 
 		if (req->rq_status) {
 			rc = -(abs(req->rq_status));
-			DEBUG_REQ(PLL_ERROR, req, "error rq_status=%d set=%p", 
+			DEBUG_REQ(PLL_ERROR, req, "error rq_status=%d set=%p",
 				  rc, set);
 		}
 	}
