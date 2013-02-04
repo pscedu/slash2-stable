@@ -217,8 +217,10 @@ odtable_freemap(struct odtable *odt)
 			_rc = ODTBL_INUSE_ERR;				\
 									\
 		if (_rc)						\
-			psclog_errorx("slot=%zd has error %d",		\
-			    (odtr)->odtr_elem, _rc);			\
+			psclog_errorx("slot=%zd has error %d; "		\
+			    "fkey %lx rkey %lx",			\
+			    (odtr)->odtr_elem, _rc,			\
+			    (odtf)->odtf_key, (odtr)->odtr_key);	\
 		_rc;							\
 	} _PFL_RVEND
 
