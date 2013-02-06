@@ -49,8 +49,7 @@ odtable_sync(struct odtable *odt, __unusedx size_t elem)
 	flags = (odt->odt_hdr->odth_options & ODTBL_OPT_SYNC) ?
 		 MS_SYNC : MS_ASYNC;
 
-	/* For now just sync the whole thing.
-	 */
+	/* For now just sync the whole thing. */
 	rc = msync(odt->odt_base, ODTABLE_MAPSZ(odt), flags);
 	if (rc)
 		psclog_error("msync error on table %p", odt);
@@ -84,8 +83,7 @@ odtable_putitem(struct odtable *odt, void *data, size_t len)
 	/* psc_vbitmap_next() already flips the bit under odt_lock */
 	odtf->odtf_inuse = ODTBL_INUSE;
 
-	/* Setup the receipt.
-	 */
+	/* Setup the receipt. */
 	odtr = PSCALLOC(sizeof(*odtr));
 	odtr->odtr_elem = todtr.odtr_elem;
 
@@ -390,11 +388,11 @@ void
 odtable_scan(struct odtable *odt,
     void (*odt_handler)(void *, struct odtable_receipt *))
 {
-	int rc;
-	struct odtable_receipt *odtr, todtr = {0, 0};
+	struct odtable_receipt *odtr, todtr = { 0, 0 };
 	struct odtable_entftr *odtf;
+	int rc;
 
-	psc_assert(odt_handler != NULL);
+	psc_assert(odt_handler);
 
 	for (todtr.odtr_elem = 0;
 	    todtr.odtr_elem < odt->odt_hdr->odth_nelems;
@@ -413,7 +411,7 @@ odtable_scan(struct odtable *odt,
 		}
 
 		odtr = PSCALLOC(sizeof(*odtr));
-		odtr->odtr_key  = odtf->odtf_key;
+		odtr->odtr_key = odtf->odtf_key;
 		odtr->odtr_elem = todtr.odtr_elem;
 
 		psclog_debug("handing back key=%"PRIx64" slot=%zd odtr=%p",
