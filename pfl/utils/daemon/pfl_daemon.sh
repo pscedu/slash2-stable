@@ -95,8 +95,14 @@ mygdb()
 		echo set args $@
 		echo set confirm off
 		echo set height 0
+		echo set history save on
+		echo set history size 10000
 		echo set print pretty
+		echo r
 	} > $tmpfn
+	export GDBHISTFILE=c/$prog.$id.gdbhist
+	# gdb hack
+	export SHELL=/bin/bash
 	exec gdb -f -q -x $tmpfn $prog
 }
 
