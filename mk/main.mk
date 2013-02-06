@@ -94,6 +94,9 @@ PSCRPC_SRCS+=		${PFL_BASE}/util.c
 _TINCLUDES=		$(filter-out -I%,${INCLUDES}) $(patsubst %,-I%,$(foreach \
 			dir,$(patsubst -I%,%,$(filter -I%,${INCLUDES})), $(realpath ${dir})))
 
+_EXCLUDES=		$(filter-out -I%,${EXCLUDES}) $(patsubst %,-I%/,$(foreach \
+			dir,$(patsubst -I%,%,$(filter -I%,${EXCLUDES})), $(realpath ${dir})))
+
 CFLAGS+=		${DEFINES} ${_TINCLUDES}
 TARGET?=		$(sort ${PROG} ${LIBRARY} ${TEST})
 PROG?=			${TEST}
@@ -377,10 +380,11 @@ all-hook:
 ${OBJDIR}/$(notdir %.o) : %.c
 	${PCPP} ${PCPP_FLAGS} $(call FILE_PCPP_FLAGS,$<) $(realpath $<	\
 	    ) | ${CC} -x c ${CFLAGS} $(call FILE_CFLAGS,$<) $(		\
-	    ) -I$(dir $<) -I. - -c -o $@ -MD -MP
+	    ) $(filter-out ${_EXCLUDES},-I$(dir $<)) - -c -o $@ -MD -MP
 
 ${OBJDIR}/$(notdir %.E) : %.c
-	${CC} ${CFLAGS} $(call FILE_CFLAGS,$<) -I$(dir $<) -I. $(realpath $<) -E -o $@
+	${CC} ${CFLAGS} $(call FILE_CFLAGS,$<) $(realpath $<) $(	\
+	    ) $(filter-out ${_EXCLUDES},-I$(dir $<)) -E -o $@
 
 ${OBJDIR}/$(notdir %.c) : %.l
 	echo "${LEX} ${LFLAGS} $(realpath $<) > $@"
