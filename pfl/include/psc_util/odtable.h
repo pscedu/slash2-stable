@@ -218,7 +218,7 @@ odtable_freemap(struct odtable *odt)
 									\
 		if (_rc)						\
 			psclog_errorx("slot=%zd has error %d; "		\
-			    "fkey %lx rkey %lx",			\
+			    "fkey %"PRIx64" rkey %"PRIx64,		\
 			    (odtr)->odtr_elem, _rc,			\
 			    (odtf)->odtf_key, (odtr)->odtr_key);	\
 		_rc;							\
