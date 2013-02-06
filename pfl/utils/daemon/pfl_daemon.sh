@@ -112,10 +112,13 @@ postproc()
 
 		frompre=
 		frompost=
-		case $(uname) in
-		FreeBSD)	frompost="-f $mail_from"	;;
-		*)		frompre="-r $mail_from"		;;
-		esac
+		if mail -V </dev/null 2>&1; then
+			# GNU mailx -- use native flag
+			frompre="-r $mail_from"
+		else
+			# BSD mailx -- use sendmail flag
+			frompost="-f $mail_from"
+		fi
 
 		cmdfile=/tmp/gdbcmd.$id
 		echo thr ap all bt > $cmdfile
