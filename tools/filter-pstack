@@ -97,11 +97,11 @@ while (<>) {
 		print_thr if @thr;
 		push @thr, $_;
 	} elsif (@thr && /./) {
-		if (s/^\s+//) {
+		if (/^#\d+/) {
+			push @thr, $_;
+		} else {
 			chomp $thr[$#thr];
 			$thr[$#thr] .= " " . $_;
-		} else {
-			push @thr, $_;
 		}
 	}
 }
