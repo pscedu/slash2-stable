@@ -174,6 +174,7 @@ pscrpc_prep_req_pool(struct pscrpc_import *imp, uint32_t version,
 		CERROR("request allocation out of memory\n");
 		return (NULL);
 	}
+	memset(request, 0, sizeof(*request));
 
 	rc = pscrpc_pack_request(request, count, lengths, bufs);
 	if (rc) {
