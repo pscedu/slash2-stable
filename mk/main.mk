@@ -86,6 +86,7 @@ PSCRPC_SRCS+=		${PFL_BASE}/import.c
 PSCRPC_SRCS+=		${PFL_BASE}/nb.c
 PSCRPC_SRCS+=		${PFL_BASE}/niobuf.c
 PSCRPC_SRCS+=		${PFL_BASE}/packgeneric.c
+PSCRPC_SRCS+=		${PFL_BASE}/pool.c
 PSCRPC_SRCS+=		${PFL_BASE}/rpcclient.c
 PSCRPC_SRCS+=		${PFL_BASE}/rsx.c
 PSCRPC_SRCS+=		${PFL_BASE}/service.c
@@ -347,6 +348,10 @@ endif
 
 ifneq ($(filter ${PFL_BASE}/lockedlist.c,${SRCS}),)
   SRCS+=	${PFL_BASE}/list.c
+endif
+
+ifneq ($(filter ${PFL_BASE}/pool.c,${SRCS}),)
+  SRCS+=	${PFL_BASE}/listcache.c
 endif
 
 # OBJDIR is added to .c below since lex/yacc intermediate files get
