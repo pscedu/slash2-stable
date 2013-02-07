@@ -80,7 +80,7 @@ _pll_add(const struct pfl_callerinfo *pci,
 }
 
 void *
-_pll_get(const struct pfl_callerinfo *_pfl_callerinfo,
+_pll_get(const struct pfl_callerinfo *pci,
     struct psc_lockedlist *pll, int flags)
 {
 	int locked;
@@ -98,7 +98,7 @@ _pll_get(const struct pfl_callerinfo *_pfl_callerinfo,
 		p = psc_listhd_first_obj2(&pll->pll_listhd, void *,
 		    pll->pll_offset);
 	if ((flags & PLLBF_PEEK) == 0)
-		pll_remove(pll, p);
+		_pll_remove(pci, pll, p);
 	PLL_URLOCK(pll, locked);
 	return (p);
 }
