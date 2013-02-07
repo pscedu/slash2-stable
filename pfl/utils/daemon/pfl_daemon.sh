@@ -118,7 +118,7 @@ postproc()
 
 		frompre=
 		frompost=
-		if mail -V </dev/null 2>&1; then
+		if mail -V >/dev/null 2>&1; then
 			# GNU mailx -- use native flag
 			frompre="-r $mail_from"
 		else
@@ -137,7 +137,7 @@ postproc()
 			echo --------------------------------------------------
 			gdb -batch -c $cf -x $cmdfile c/$prog.$id 2>&1 | $src/tools/filter-pstack
 		} | mail -s "$host $name down" $frompre $mail_to $frompost
-		echo core dumped to $base/c/$prog.$id
+		echo binary was $base/c/$prog.$id
 		rm $cmdfile
 	else
 		rm c/$prog.$id
