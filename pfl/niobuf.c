@@ -27,13 +27,14 @@
 
 #include <inttypes.h>
 
-#include "psc_util/alloc.h"
-#include "psc_util/atomic.h"
-#include "psc_util/log.h"
-#include "psc_util/waitq.h"
 #include "psc_rpc/export.h"
 #include "psc_rpc/rpc.h"
 #include "psc_rpc/rpclog.h"
+#include "psc_util/alloc.h"
+#include "psc_util/atomic.h"
+#include "psc_util/log.h"
+#include "psc_util/pool.h"
+#include "psc_util/waitq.h"
 
 /**
  * pscrpc_send_buf - Rudimentary send function which uses LNetPut().
@@ -740,7 +741,7 @@ _pscrpc_free_req(struct pscrpc_request *request, __unusedx int locked)
 			    request->rq_reqlen);
 			request->rq_reqmsg = NULL;
 		}
-		PSCRPC_OBD_FREE(request, sizeof(*request));
+		psc_pool_return(pscrpc_rq_pool, request);
 	}
 }
 

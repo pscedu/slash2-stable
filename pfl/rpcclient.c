@@ -35,6 +35,7 @@
 #include "psc_util/alloc.h"
 #include "psc_util/atomic.h"
 #include "psc_util/lock.h"
+#include "psc_util/pool.h"
 #include "psc_util/waitq.h"
 
 static uint64_t		pscrpc_last_xid = 0;
@@ -154,48 +155,10 @@ pscrpc_interpret(struct pscrpc_request *rq)
 	return (rq->rq_status);
 }
 
-#if 0
-static struct pscrpc_request *
-pscrpc_prep_req_from_pool(struct pscrpc_request_pool *pool)
-{
-	struct pscrpc_request *request;
-	struct pscrpc_msg *reqmsg;
-
-	if (!pool)
-		return NULL;
-
-	spinlock(&pool->prp_lock);
-
-	/* See if we have anything in a pool, and bail out if nothing,
-	 * in writeout path, where this matters, this is safe to do, because
-	 * nothing is lost in this case, and when some in-flight requests
-	 * complete, this code will be called again. */
-	if (unlikely(psc_listhd_empty(&pool->prp_req_list))) {
-		freelock(&pool->prp_lock);
-		return NULL;
-	}
-
-	request = psc_lentry_obj(pool->prp_req_list.next, struct pscrpc_request,
-			     rq_list);
-	psclist_del(&request->rq_list, );
-	freelock(&pool->prp_lock);
-
-	psc_assert(request->rq_reqmsg);
-	psc_assert(request->rq_pool);
-
-	reqmsg = request->rq_reqmsg;
-	memset(request, 0, sizeof(*request));
-	request->rq_reqmsg = reqmsg;
-	request->rq_pool = pool;
-	request->rq_reqlen = pool->prp_rq_size;
-	return request;
-}
-#endif
-
 struct pscrpc_request *
 pscrpc_prep_req_pool(struct pscrpc_import *imp, uint32_t version,
     int opcode, int count, int *lengths, char **bufs,
-    struct pscrpc_request_pool *pool)
+    __unusedx struct pscrpc_request_pool *pool)
 {
 	struct pscrpc_request *request = NULL;
 	int rc;
@@ -205,12 +168,7 @@ pscrpc_prep_req_pool(struct pscrpc_import *imp, uint32_t version,
 	psc_assert((unsigned long)imp->imp_client > 0x1000);
 	psc_assert(imp->imp_client != LP_POISON);
 
-	if (pool)
-		//request = pscrpc_prep_req_from_pool(pool);
-		psc_fatalx("pools are not yet supported");
-
-	if (!request)
-		PSCRPC_OBD_ALLOC(request, sizeof(*request));
+	request = psc_pool_get(pscrpc_rq_pool);
 
 	if (!request) {
 		CERROR("request allocation out of memory\n");
@@ -220,12 +178,12 @@ pscrpc_prep_req_pool(struct pscrpc_import *imp, uint32_t version,
 	rc = pscrpc_pack_request(request, count, lengths, bufs);
 	if (rc) {
 		psc_assert(!request->rq_pool);
-		PSCRPC_OBD_FREE(request, sizeof(*request));
+		psc_pool_return(pscrpc_rq_pool, request);
 		return (NULL);
 	}
 
 	psclog_info("request %p request->rq_reqmsg %p",
-	      request, request->rq_reqmsg);
+	    request, request->rq_reqmsg);
 
 	request->rq_reqmsg->version |= version;
 
@@ -327,16 +285,19 @@ pscrpc_completion_waitrel_s(struct pscrpc_completion *c, int secs)
 }
 
 void
-pscrpc_completion_set(struct pscrpc_request *rq, struct pscrpc_completion *c)
+pscrpc_completion_set(struct pscrpc_request *rq,
+    struct pscrpc_completion *c)
 {
 	rq->rq_comp = c;
 
-	DEBUG_REQ(PLL_INFO, rq, "rpc_comp %p (compcnt=%d) (outcnt=%d)", c,
-	  atomic_read(&c->rqcomp_compcnt), atomic_read(&c->rqcomp_outcnt));
+	DEBUG_REQ(PLL_INFO, rq, "rpc_comp %p (compcnt=%d) (outcnt=%d)",
+	    c, atomic_read(&c->rqcomp_compcnt),
+	    atomic_read(&c->rqcomp_outcnt));
 }
 
 void
-pscrpc_completion_one(struct pscrpc_request *rq, struct pscrpc_completion *c)
+pscrpc_completion_one(struct pscrpc_request *rq,
+    struct pscrpc_completion *c)
 {
 	psc_assert(atomic_read(&c->rqcomp_compcnt) >= 0);
 
@@ -346,8 +307,10 @@ pscrpc_completion_one(struct pscrpc_request *rq, struct pscrpc_completion *c)
 	freelock(&c->rqcomp_lock);
 
 	if (rq)
-		DEBUG_REQ(PLL_INFO, rq, "rpc_comp %p (compcnt=%d) (outcnt=%d)", c,
-			  atomic_read(&c->rqcomp_compcnt), atomic_read(&c->rqcomp_outcnt));
+		DEBUG_REQ(PLL_DIAG, rq,
+		    "rpc_comp %p (compcnt=%d) (outcnt=%d)", c,
+		    atomic_read(&c->rqcomp_compcnt),
+		    atomic_read(&c->rqcomp_outcnt));
 }
 
 struct pscrpc_request *
@@ -363,7 +326,8 @@ pscrpc_new_bulk(int npages, int type, int portal)
 {
 	struct pscrpc_bulk_desc *desc;
 
-	PSCRPC_OBD_ALLOC(desc, offsetof(struct pscrpc_bulk_desc, bd_iov[npages]));
+	PSCRPC_OBD_ALLOC(desc, offsetof(struct pscrpc_bulk_desc,
+	    bd_iov[npages]));
 	if (!desc)
 		return NULL;
 

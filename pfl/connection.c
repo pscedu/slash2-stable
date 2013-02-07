@@ -87,9 +87,7 @@ pscrpc_get_connection(lnet_process_id_t peer, lnet_nid_t self,
 	    libcfs_nid2str(self), libcfs_id2str(peer));
 
 	spinlock(&conn_lock);
-
 	c = pscrpc_lookup_conn_locked(peer, self);
-
 	freelock(&conn_lock);
 
 	if (c) {
@@ -101,6 +99,7 @@ pscrpc_get_connection(lnet_process_id_t peer, lnet_nid_t self,
 	psclog_debug("Malloc'ing a new rpc_conn for %s",
 	    libcfs_id2str(peer));
 
+//	psc_pool_get();
 	c = TRY_PSCALLOC(sizeof(*c));
 	if (c == NULL)
 		return (NULL);
@@ -113,19 +112,18 @@ pscrpc_get_connection(lnet_process_id_t peer, lnet_nid_t self,
 		pscrpc_str2uuid(&c->c_remote_uuid, (char *)uuid->uuid);
 
 	spinlock(&conn_lock);
-
 	c2 = pscrpc_lookup_conn_locked(peer, self);
 	if (c2 == NULL) {
 		psclog_info("adding connection %p for %s",
 			   c, libcfs_id2str(peer));
 		psclist_add(&c->c_lentry, &conn_list);
 	}
-
 	freelock(&conn_lock);
 
-	if (c2 == NULL) 
+	if (c2 == NULL)
 		return (c);
 
+//	psc_pool_return();
 	PSCRPC_OBD_FREE(c, sizeof(*c));
 	return (c2);
 }
@@ -157,7 +155,7 @@ pscrpc_put_connection(struct pscrpc_connection *c)
 	}
 	if (atomic_read(&c->c_refcount) < 0)
 		psc_fatalx("connection %p refcount %d!",
-			c, atomic_read(&c->c_refcount));
+		    c, atomic_read(&c->c_refcount));
 
 	return (rc);
 }

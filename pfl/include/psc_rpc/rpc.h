@@ -89,6 +89,9 @@ struct psc_dynarray;
 extern lnet_handle_eq_t			pscrpc_eq_h;
 extern struct psclist_head		pscrpc_wait_callbacks;
 
+extern struct psc_poolmaster		 pscrpc_rq_poolmaster;
+extern struct psc_poolmgr		*pscrpc_rq_pool;
+
 struct pscrpc_handle {
 	uint64_t			cookie;
 };

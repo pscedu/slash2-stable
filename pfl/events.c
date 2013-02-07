@@ -34,12 +34,16 @@
 #include "psc_util/alloc.h"
 #include "psc_util/atomic.h"
 #include "psc_util/log.h"
+#include "psc_util/pool.h"
 #include "psc_util/waitq.h"
 
 #include "../ulnds/socklnd/usocklnd.h"
 
 lnet_handle_eq_t	pscrpc_eq_h;
 struct psclist_head	pscrpc_wait_callbacks;
+
+struct psc_poolmaster	 pscrpc_rq_poolmaster;
+struct psc_poolmgr	*pscrpc_rq_pool;
 
 /*
  *  Client's outgoing request callback
@@ -122,6 +126,7 @@ pscrpc_request_in_callback(lnet_event_t *ev)
 #if 0
 		PSCRPC_OBD_ALLOC_GFP(req, sizeof(*req), GFP_ATOMIC);
 #endif
+		// pool
 		req = TRY_PSCALLOC(sizeof(*req));
 		if (req == NULL) {
 			CERROR("Can't allocate incoming request descriptor: "
@@ -297,7 +302,7 @@ pscrpc_reply_in_callback(lnet_event_t *ev)
 		req->rq_replied = 1;
 		req->rq_nob_received = ev->mlength;
 	}
-	/* Do not bump the completion counter if this is a 'resend'. 
+	/* Do not bump the completion counter if this is a 'resend'.
 	 */
 	if (req->rq_comp && !(req->rq_resend && !req->rq_timedout))
 		/* Notify upper layer that an RPC is ready to be
@@ -590,10 +595,10 @@ pscrpc_ni_init(int type, int nmsgs)
 		lnet_server_mode();
 		if ((rc = LNetNIInit(pscrpc_get_pid())))
 			psc_fatalx("failed LNetNIInit() (%d)", rc);
-		
+
 		rc = LNetEQAlloc(1024, pscrpc_master_callback, &pscrpc_eq_h);
-                psclog_info("%#"PRIx64" pscrpc_eq_h cookie value",
-			    pscrpc_eq_h.cookie);		
+		psclog_info("%#"PRIx64" pscrpc_eq_h cookie value",
+			    pscrpc_eq_h.cookie);
 	} else {
 		/* liblustre calls the master callback when it removes events from the
 		 * event queue.  The event queue has to be big enough not to drop
@@ -609,6 +614,11 @@ pscrpc_ni_init(int type, int nmsgs)
 		psc_fatalx("LNetGetId() failed");
 
 	psclog_dbg("nidpid is (%"PSCPRIxLNID",0x%x)", my_id.nid, my_id.pid);
+
+	psc_poolmaster_init(&pscrpc_rq_poolmaster,
+	    struct pscrpc_request, rq_lentry, PPMF_AUTO, 64, 64, 0,
+	    NULL, NULL, NULL, "rq");
+	pscrpc_rq_pool = psc_poolmaster_getmgr(&pscrpc_rq_poolmaster);
 
 	if (rc == 0)
 		return 0;
