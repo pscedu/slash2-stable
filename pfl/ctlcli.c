@@ -1290,9 +1290,10 @@ psc_ctl_prhuman(uint64_t n)
 {
 	char buf[PSCFMT_HUMAN_BUFSIZ];
 
-	if (psc_ctl_inhuman) {
+	if (psc_ctl_inhuman)
+		printf("%7"PRIu64, n);
+	else {
 		psc_fmt_human(buf, n);
 		printf("%s", buf);
-	} else
-		printf("%7"PRIu64, n);
+	}
 }
