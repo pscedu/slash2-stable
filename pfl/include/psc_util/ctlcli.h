@@ -155,6 +155,7 @@ void  psc_ctlmsg_thread_prdat(const struct psc_ctlmsghdr *, const void *);
 void  psc_ctlmsg_thread_prhdr(struct psc_ctlmsghdr *, const void *);
 
 int   psc_ctl_get_display_maxwidth(void);
+void  psc_ctl_prhuman(uint64_t);
 
 extern int psc_ctl_inhuman;
 extern int psc_ctl_lastmsgtype;

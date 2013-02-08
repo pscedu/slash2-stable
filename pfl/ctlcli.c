@@ -1284,3 +1284,15 @@ psc_ctl_get_display_maxwidth(void)
 	}
 	return (width);
 }
+
+void
+psc_ctl_prhuman(uint64_t n)
+{
+	char buf[PSCFMT_HUMAN_BUFSIZ];
+
+	if (psc_ctl_inhuman) {
+		psc_fmt_human(buf, n);
+		printf("%s", buf);
+	} else
+		printf("%7"PRIu64, n);
+}
