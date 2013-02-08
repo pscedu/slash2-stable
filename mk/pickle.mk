@@ -236,4 +236,8 @@ ifeq ($(filter $(realpath ${ROOTDIR})/compat/%,${CURDIR}),)
   DEFINES+=						-DHAVE_GETXATTR
  endif
 
+ ifdef PICKLE_HAVE_STATFS_FSTYPE
+  DEFINES+=						-DHAVE_STATFS_FSTYPE
+ endif
+
 endif
