@@ -52,7 +52,7 @@
 
 enum psc_spinlock_val {
 	PSL_UNLOCKED = 2,
-	PSL_LOCKED = 3,
+	PSL_LOCKED = 3
 };
 
 typedef struct psc_spinlock {
@@ -120,6 +120,7 @@ typedef struct psc_spinlock {
 #define _SPIN_TEST_AND_SET(pci, name, psl)				\
 	{								\
 		enum psc_spinlock_val _val;				\
+		int _lrc;						\
 									\
 		_val = PSC_ATOMIC32_XCHG(_SPIN_GETATOM(psl),		\
 		    PSL_LOCKED);					\
@@ -129,19 +130,19 @@ typedef struct psc_spinlock {
 				    "%s %p: already locked", (name),	\
 				    (psl));				\
 			/* PFL_GETTIMEVAL(&(psl)->psl_time); */		\
-			_val = 0;					\
+			_lrc = 0;					\
 		} else if ((_val) == PSL_UNLOCKED) {			\
 			psc_assert((psl)->psl_owner == 0);		\
 			(psl)->psl_owner = pthread_self();		\
 			if (((psl)->psl_flags & PSLF_NOLOG) == 0)	\
 				_psclog_pci((pci), PLL_VDEBUG, 0,	\
 				    "lock %p acquired",	(psl));		\
-			_val = 1;					\
+			_lrc = 1;					\
 		} else							\
 			_psclog_pci((pci), PLL_FATAL, 0,		\
 			    "%s: lock %p has invalid value %#x",	\
 			    (name), (psl), (_val));			\
-		_val;							\
+		_lrc;							\
 	}
 
 /**
