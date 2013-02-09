@@ -54,7 +54,7 @@ void	 psc_mutex_destroy(struct pfl_mutex *);
 void	_psc_mutex_lock(const struct pfl_callerinfo *, struct pfl_mutex *);
 int	_psc_mutex_reqlock(const struct pfl_callerinfo *, struct pfl_mutex *);
 int	_psc_mutex_trylock(const struct pfl_callerinfo *, struct pfl_mutex *);
-int	_psc_mutex_tryreqlock(const const struct pfl_callerinfo *, struct pfl_mutex *, int *);
+int	_psc_mutex_tryreqlock(const struct pfl_callerinfo *, struct pfl_mutex *, int *);
 void	_psc_mutex_unlock(const struct pfl_callerinfo *, struct pfl_mutex *);
 void	_psc_mutex_ureqlock(const struct pfl_callerinfo *, struct pfl_mutex *, int);
 
