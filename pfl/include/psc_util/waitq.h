@@ -28,7 +28,7 @@
 
 struct pfl_mutex;
 
-#if HAVE_LIBPTHREAD
+#ifdef HAVE_LIBPTHREAD
 
 # include <pthread.h>
 

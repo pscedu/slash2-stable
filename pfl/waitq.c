@@ -26,7 +26,7 @@
 #include "psc_util/log.h"
 #include "psc_util/waitq.h"
 
-#if HAVE_LIBPTHREAD
+#ifdef HAVE_LIBPTHREAD
 
 #include "pfl/time.h"
 #include "psc_util/pthrutil.h"
