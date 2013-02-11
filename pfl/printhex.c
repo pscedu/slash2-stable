@@ -63,7 +63,8 @@ printvbinr(const void *ptr, size_t len)
 	int i;
 
 	flockfile(stdout);
-	for (n = 0, p = ptr + len - 1; n < len; p--, n++) {
+	for (n = 0, p = (const unsigned char *)ptr + len - 1; n < len;
+	    p--, n++) {
 		if (n && n % 8 == 0)
 			printf("\n");
 		for (i = NBBY - 1; i >= 0; i--)
