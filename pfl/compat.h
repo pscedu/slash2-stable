@@ -26,7 +26,7 @@
 
 #define _PFLERR_START	500
 
-#if ELAST >= _PFLERR_START
+#if defined(ELAST) && ELAST >= _PFLERR_START
 #  error system error codes into application space, need to adjust and recompile
 #endif
 
