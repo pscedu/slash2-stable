@@ -488,7 +488,7 @@ psc_loglevel_fromstr(const char *name)
 
 	for (n = 0; n < PNLOGLEVELS; n++)
 		if (strcasecmp(name, psc_loglevel_names[n]) == 0)
-			return (n);
+			return ((enum psclog_level)n);
 	for (n = 0; n < nitems(altloglevels); n++)
 		if (strcasecmp(name, altloglevels[n].lvl_name) == 0)
 			return (altloglevels[n].lvl_value);
@@ -496,5 +496,5 @@ psc_loglevel_fromstr(const char *name)
 	l = strtol(name, &endp, 10);
 	if (endp == name || *endp != '\0' || l < 0 || l >= PNLOGLEVELS)
 		return (PNLOGLEVELS);
-	return (l);
+	return ((enum psclog_level)l);
 }
