@@ -44,7 +44,7 @@
 #ifdef __OpenBSD__
 # define PSCPRI_TIMET		"d"
 #else
-# define PSCPRI_TIMET		"lu"
+# define PSCPRI_TIMET		"ld"
 #endif
 
 #ifdef __APPLE__
