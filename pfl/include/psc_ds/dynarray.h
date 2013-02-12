@@ -95,6 +95,7 @@ int	 psc_dynarray_add(struct psc_dynarray *, void *);
 int	 psc_dynarray_add_ifdne(struct psc_dynarray *, void *);
 int	 psc_dynarray_bsearch(const struct psc_dynarray *, const void *,
 	    int (*)(const void *, const void *));
+int	 psc_dynarray_concat(struct psc_dynarray *, const struct psc_dynarray *);
 int	 psc_dynarray_ensurelen(struct psc_dynarray *, int);
 int	 psc_dynarray_finditem(struct psc_dynarray *, const void *);
 void	 psc_dynarray_free(struct psc_dynarray *);
@@ -106,6 +107,5 @@ void	 psc_dynarray_reset(struct psc_dynarray *);
 void	 psc_dynarray_reverse(struct psc_dynarray *);
 void	 psc_dynarray_setpos(struct psc_dynarray *, int, void *);
 int	 psc_dynarray_splice(struct psc_dynarray *, int, int, const void *, int);
-int	 psc_dynarray_concat(struct psc_dynarray *, const struct psc_dynarray *);
 
 #endif /* _PFL_DYNARRAY_H_ */
