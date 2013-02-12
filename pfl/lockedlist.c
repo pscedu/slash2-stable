@@ -56,7 +56,7 @@ _pll_remove(const struct pfl_callerinfo *pci,
 	psc_assert(pll->pll_nitems > 0);
 	pll->pll_nitems--;
 	PLL_URLOCK(pll, locked);
-	_psclog_pci(pci, PLL_DEBUG, 0, "lockedlist %p get item %p",
+	_psclog_pci(pci, PLL_DEBUG, 0, "lockedlist %p remove item %p",
 	    pll, p);
 }
 
@@ -136,6 +136,8 @@ pll_add_sorted(struct psc_lockedlist *pll, void *p,
 	else
 		psclist_add_sorted(&pll->pll_listhd, e, cmpf,
 		    pll->pll_offset);
+	psclog(PLL_DEBUG, "lockedlist %p add item %p",
+	    pll, p);
 	pll->pll_nitems++;
 	PLL_URLOCK(pll, locked);
 }
