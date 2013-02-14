@@ -42,10 +42,6 @@
 #  endif
 #endif
 
-#ifndef EKEYEXPIRED
-#  define EKEYEXPIRED	(_PFLERR_START + 101)
-#endif
-
 #ifndef ENONET
 #  define ENONET	(_PFLERR_START + 102)
 #endif
