@@ -42,10 +42,6 @@
 #  endif
 #endif
 
-#ifndef ENONET
-#  define ENONET	(_PFLERR_START + 102)
-#endif
-
 #ifndef HOST_NAME_MAX
 #  define HOST_NAME_MAX	MAXHOSTNAMELEN
 #endif
