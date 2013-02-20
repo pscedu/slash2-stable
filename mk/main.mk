@@ -290,7 +290,10 @@ ifneq ($(filter sgio,${MODULES}),)
 endif
 
 ifneq ($(filter sqlite,${MODULES}),)
-  LDFLAGS+=	-lsqlite3
+  CFLAGS+=	${SQLITE3_CFLAGS}
+  LDFLAGS+=	${SQLITE3_LIBS}
+  DEFINES+=	${SQLITE3_DEFINES}
+  INCLUDES+=	${SQLITE3_INCLUDES}
 endif
 
 ifneq ($(filter readline,${MODULES}),)

@@ -105,6 +105,11 @@ FUSE_INCLUDES=	$$(${PKG_CONFIG} --cflags fuse | ${EXTRACT_INCLUDES})
 FUSE_LIBS=	$$(${PKG_CONFIG} --libs fuse)
 FUSE_VERSION=	$$(${PKG_CONFIG} --modversion fuse | sed 's/\([0-9]\)*\.\([0-9]*\).*/\1\2/')
 
+SQLITE3_CFLAGS=	$$(${PKG_CONFIG} --cflags sqlite3 | ${EXTRACT_CFLAGS})
+SQLITE3_DEFINES=$$(${PKG_CONFIG} --cflags sqlite3 | ${EXTRACT_DEFINES})
+SQLITE3_INCLUDES=$$(${PKG_CONFIG} --cflags sqlite3 | ${EXTRACT_INCLUDES})
+SQLITE3_LIBS=	$$(${PKG_CONFIG} --libs sqlite3)
+
 GCRYPT_CFLAGS=	$$(${LIBGCRYPT_CONFIG} --cflags | ${EXTRACT_CFLAGS})
 GCRYPT_DEFINES=	$$(${LIBGCRYPT_CONFIG} --cflags | ${EXTRACT_DEFINES})
 GCRYPT_INCLUDES=$$(${LIBGCRYPT_CONFIG} --cflags | ${EXTRACT_INCLUDES})
