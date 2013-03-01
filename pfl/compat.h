@@ -34,14 +34,6 @@
 #  define ECOMM		EPROTO
 #endif
 
-#ifndef EBADMSG
-#  ifdef EBADRPC
-#    define EBADMSG	EBADRPC
-#  else
-#    define EBADMSG	(_PFLERR_START + 100)
-#  endif
-#endif
-
 #ifndef HOST_NAME_MAX
 #  define HOST_NAME_MAX	MAXHOSTNAMELEN
 #endif
