@@ -25,12 +25,6 @@ do
         exit 0
     fi
 
-    svn co -r $1 svn+ssh://frodo/cluster/svn/projects $dir
-    if [ $? -ne 0 ]
-    then
-        exit 0
-    fi
-
     cd $dir
     cd zfs
 
