@@ -9,6 +9,7 @@ then
     exit 0
 fi
 
+mydir=`pwd`
 for ((i=0; i < $3; i++))
 do
     dir=$2.$i
@@ -41,5 +42,7 @@ do
     then
         exit 0
     fi
+
+    cd $mydir
 
 done
