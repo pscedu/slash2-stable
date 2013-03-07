@@ -28,6 +28,7 @@ my @ign = (
 	# slash
 	[ "${sc}sleep", qw(sl_nbrqthr_main _pscthr_begin) ],
 	[ "${sc}sleep", qw(slistatfsthr_main _pscthr_begin) ],
+	[ qw(_?psc_waitq_waitrel _lc_get msbmapflushthr_main _pscthr_begin) ],
 	[ qw(_?psc_waitq_waitrel _lc_get msbmaprathr_main _pscthr_begin) ],
 	[ qw(_?psc_waitq_waitrel _lc_get pfl_wkthr_main _pscthr_begin) ],
 	[ qw(_?psc_waitq_waitrel _lc_get slibmaprlsthr_main _pscthr_begin) ],
