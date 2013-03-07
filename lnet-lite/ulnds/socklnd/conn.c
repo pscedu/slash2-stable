@@ -111,6 +111,8 @@ usocklnd_conn_free(usock_conn_t *conn)
 {
         usock_pollrequest_t *pr = conn->uc_preq;
 
+        LASSERT(conn->uc_lx == NULL);
+
         if (pr != NULL)
                 LIBCFS_FREE (pr, sizeof(*pr));
 
