@@ -1122,7 +1122,7 @@ psc_ctlcli_rd_main(__unusedx struct psc_thread *thr)
 		sched_yield();
 	}
 	if (n == -1)
-		psc_fatal("read");
+		err(1, "read");
 	psc_free(m, 0);
 
 	spinlock(&psc_ctl_lock);
