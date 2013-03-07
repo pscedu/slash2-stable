@@ -420,6 +420,19 @@ usocklnd_process_pollrequest(usock_pollrequest_t *pr,
 #endif
         
         LASSERT(conn != NULL);
+
+	/*
+	 * If two events get queued, and the first one is a DEL, our
+	 * transport structure can disappear.  In this situation, simply
+	 * release our connection ref.
+	 */
+	if (conn->uc_lx == NULL) {
+		if (type == POLL_ADD_REQUEST ||
+		    type == POLL_DEL_REQUEST)
+			goto out;
+		goto skip;
+	}
+
         LASSERT(conn->uc_lx->lx_fd >=0);
         LASSERT(type == POLL_ADD_REQUEST ||
                 conn->uc_lx->lx_fd < pt_data->upt_nfd2idx);
@@ -435,13 +448,14 @@ usocklnd_process_pollrequest(usock_pollrequest_t *pr,
                               " in progress (%d)?\n",
                               type, idx, pt_data->upt_nfds - 1,
                               usock_data.ud_shutdown);
-
+ out:
                         LIBCFS_FREE (pr, sizeof(*pr));
                         usocklnd_conn_decref(conn);
                         return 0;
                 }
         }
 
+ skip:
         LIBCFS_FREE (pr, sizeof(*pr));
         
         switch (type) {
