@@ -63,7 +63,7 @@ child_main(struct psc_thread *thr)
 
 	/* Connect to control socket. */
 	(void)FMTSTR(buf, sizeof(buf), "foobar%h",
-		FMTSTRCASE('h', buf, sizeof(buf), "s", "test")
+		FMTSTRCASE('h', "s", "test")
 	);
 
 
