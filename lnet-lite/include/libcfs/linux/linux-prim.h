@@ -26,7 +26,7 @@
  * GPL HEADER END
  */
 /*
- * Copyright  2008 Sun Microsystems, Inc. All rights reserved
+ * Copyright (c) 2005, 2010, Oracle and/or its affiliates. All rights reserved.
  * Use is subject to license terms.
  */
 /*
@@ -57,6 +57,7 @@
 #include <linux/timer.h>
 #include <linux/signal.h>
 #include <linux/sched.h>
+#include <linux/kthread.h>
 
 #include <linux/miscdevice.h>
 #include <libcfs/linux/portals_compat25.h>
@@ -150,8 +151,26 @@ typedef long                            cfs_task_state_t;
 #define cfs_waitq_broadcast(w)          wake_up_all(w)
 #define cfs_waitq_wait(l, s)            schedule()
 #define cfs_waitq_timedwait(l, s, t)    schedule_timeout(t)
-#define cfs_schedule_timeout(s, t)      schedule_timeout(t)
+#define cfs_schedule_timeout(s, t)             \
+({                                             \
+        set_current_state(s);                  \
+        schedule_timeout(t);                   \
+})
 #define cfs_schedule()                  schedule()
+#define cfs_kthread_run(fn, data, fmt, arg...) kthread_run(fn, data, fmt, ##arg)
+
+#define cfs_cond_resched()              cond_resched()
+
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(2,6,12))
+/* cond_resched_lock() is bogus for kernels prior to 2.6.12,
+ * see bug 23039 */
+static inline int cfs_cond_resched_lock(cfs_spinlock_t *lock)
+{
+        return 0;
+}
+#else
+#define cfs_cond_resched_lock(lock)     cond_resched_lock(lock)
+#endif
 
 /* Kernel thread */
 typedef int (*cfs_thread_t)(void *);
@@ -168,6 +187,7 @@ static inline int cfs_kernel_thread(int (*fn)(void *),
         return rc;
 }
 
+#define CFS_MAX_SCHEDULE_TIMEOUT MAX_SCHEDULE_TIMEOUT
 
 /*
  * Task struct
@@ -235,6 +255,7 @@ static inline cfs_time_t cfs_timer_deadline(cfs_timer_t *t)
         return t->expires;
 }
 
+#define CFS_MAX_SCHEDULE_TIMEOUT MAX_SCHEDULE_TIMEOUT
 
 /* deschedule for a bit... */
 static inline void cfs_pause(cfs_duration_t ticks)
@@ -283,53 +304,7 @@ do {                                                             \
 #define cfs_waitq_wait_event_timeout  wait_event_timeout
 #endif
 
-#ifndef wait_event_interruptible_timeout /* Only for RHEL3 2.4.21 kernel */
-#define __wait_event_interruptible_timeout(wq, condition, timeout, ret)   \
-do {                                                           \
-	int __ret = 0;                                         \
-	if (!(condition)) {                                    \
-		wait_queue_t __wait;                           \
-		unsigned long expire;                          \
-                                                               \
-		init_waitqueue_entry(&__wait, current);        \
-		expire = timeout + jiffies;                    \
-		add_wait_queue(&wq, &__wait);                  \
-		for (;;) {                                     \
-			set_current_state(TASK_INTERRUPTIBLE); \
-			if (condition)                         \
-				break;                         \
-			if (jiffies > expire) {                \
-				ret = jiffies - expire;        \
-				break;                         \
-			}                                      \
-			if (!signal_pending(current)) {        \
-				schedule_timeout(timeout);     \
-				continue;                      \
-			}                                      \
-			ret = -ERESTARTSYS;                    \
-			break;                                 \
-		}                                              \
-		current->state = TASK_RUNNING;                 \
-		remove_wait_queue(&wq, &__wait);               \
-	}                                                      \
-} while (0)
-
-/*
-   retval == 0; condition met; we're good.
-   retval < 0; interrupted by signal.
-   retval > 0; timed out.
-*/
-#define cfs_waitq_wait_event_interruptible_timeout(wq, condition, timeout) \
-({                                                                \
-	int __ret = 0;                                            \
-	if (!(condition))                                         \
-		__wait_event_interruptible_timeout(wq, condition, \
-						timeout, __ret);  \
-	__ret;                                                    \
-})
-#else
 #define cfs_waitq_wait_event_interruptible_timeout wait_event_interruptible_timeout
-#endif
 
 #define cfs_wait_event_interruptible_exclusive(wq, condition, rc)       \
 ({                                                                      \

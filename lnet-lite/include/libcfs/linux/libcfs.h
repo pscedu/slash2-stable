@@ -26,7 +26,7 @@
  * GPL HEADER END
  */
 /*
- * Copyright  2008 Sun Microsystems, Inc. All rights reserved
+ * Copyright (c) 2005, 2010, Oracle and/or its affiliates. All rights reserved.
  * Use is subject to license terms.
  */
 /*
@@ -50,8 +50,8 @@
 #include <stdarg.h>
 #include <libcfs/linux/linux-time.h>
 #include <libcfs/linux/linux-mem.h>
-#include <libcfs/linux/linux-prim.h>
 #include <libcfs/linux/linux-lock.h>
+#include <libcfs/linux/linux-prim.h>
 #include <libcfs/linux/linux-fs.h>
 #include <libcfs/linux/linux-tcpip.h>
 
@@ -203,6 +203,41 @@ struct cfs_stack_trace {
 #ifndef WITH_WATCHDOG
 #define WITH_WATCHDOG
 #endif
+
+
+#ifndef HAVE_STRUCT_CRED
+
+#define current_cred() (current)
+
+#define current_cred_xxx(xxx)                   \
+({                                              \
+        current->xxx;                     \
+})
+
+#ifndef HAVE_LINUX_CRED_H
+
+#define current_uid()           (current_cred_xxx(uid))
+#define current_gid()           (current_cred_xxx(gid))
+#define current_euid()          (current_cred_xxx(euid))
+#define current_egid()          (current_cred_xxx(egid))
+#define current_suid()          (current_cred_xxx(suid))
+#define current_sgid()          (current_cred_xxx(sgid))
+#define current_fsuid()         (current_cred_xxx(fsuid))
+#define current_fsgid()         (current_cred_xxx(fsgid))
+#define current_cap()           (current_cred_xxx(cap_effective))
+
+#endif /* HAVE_LINUX_CRED_H */
+
+#define current_user()          (current_cred_xxx(user))
+#define current_user_ns()       (current_cred_xxx(user)->user_ns)
+#define current_security()      (current_cred_xxx(security))
+
+#define cred task_struct
+
+#define prepare_creds() (current)
+#define commit_creds(a)
+
+#endif /* HAVE_STRUCT_CRED */
 
 #endif
 

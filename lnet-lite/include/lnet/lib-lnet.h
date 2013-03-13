@@ -26,7 +26,7 @@
  * GPL HEADER END
  */
 /*
- * Copyright  2008 Sun Microsystems, Inc. All rights reserved
+ * Copyright (c) 2003, 2010, Oracle and/or its affiliates. All rights reserved.
  * Use is subject to license terms.
  */
 /*
@@ -88,9 +88,27 @@ static inline int lnet_md_unlinkable (lnet_libmd_t *md)
                 lnet_md_exhausted(md));
 }
 
+static inline unsigned int
+lnet_match_hash_value(lnet_process_id_t id, __u64 mbits)
+{
+        unsigned int   val;
+
+        val  = (unsigned int)(mbits + (mbits >> 32));
+        val += (unsigned int)(id.nid + (id.nid >> 32));
+        val += (unsigned int)(id.pid);
+
+        return val;
+}
+
+static inline unsigned int
+lnet_match_to_hash(lnet_process_id_t id, __u64 mbits)
+{
+        return lnet_match_hash_value(id, mbits) % LNET_PORTAL_HASH_SIZE;
+}
+
 #ifdef __KERNEL__
-#define LNET_LOCK()        spin_lock(&the_lnet.ln_lock)                 
-#define LNET_UNLOCK()      spin_unlock(&the_lnet.ln_lock)               
+#define LNET_LOCK()        spin_lock(&the_lnet.ln_lock)
+#define LNET_UNLOCK()      spin_unlock(&the_lnet.ln_lock)
 #define LNET_MUTEX_DOWN(m) mutex_down(m)
 #define LNET_MUTEX_UP(m)   mutex_up(m)
 #else
@@ -429,6 +447,62 @@ lnet_handle2me (lnet_handle_me_t *handle)
         return (lh_entry (lh, lnet_me_t, me_lh));
 }
 
+static inline int
+lnet_portal_is_lazy(lnet_portal_t *ptl)
+{
+        return !!(ptl->ptl_options & LNET_PTL_LAZY);
+}
+
+static inline int
+lnet_portal_is_unique(lnet_portal_t *ptl)
+{
+        return !!(ptl->ptl_options & LNET_PTL_MATCH_UNIQUE); 
+}
+
+static inline int
+lnet_portal_is_wildcard(lnet_portal_t *ptl)
+{
+        return !!(ptl->ptl_options & LNET_PTL_MATCH_WILDCARD);
+}
+
+static inline void
+lnet_portal_setopt(lnet_portal_t *ptl, int opt)
+{
+        ptl->ptl_options |= opt;
+}
+
+static inline void
+lnet_portal_unsetopt(lnet_portal_t *ptl, int opt)
+{
+        ptl->ptl_options &= ~opt;
+}
+
+static inline int
+lnet_match_is_unique(lnet_process_id_t match_id,
+                     __unusedx __u64 match_bits, __u64 ignore_bits)
+{
+        return ignore_bits == 0 &&
+               match_id.nid != LNET_NID_ANY &&
+               match_id.pid != LNET_PID_ANY;
+}
+
+static inline struct list_head *
+lnet_portal_me_head(int index, lnet_process_id_t id, __u64 mbits)
+{
+        lnet_portal_t *ptl = &the_lnet.ln_portals[index];
+
+        if (lnet_portal_is_wildcard(ptl)) {
+                return &ptl->ptl_mlist;
+        } else if (lnet_portal_is_unique(ptl)) {
+                LASSERT (ptl->ptl_mhash != NULL);
+                return &ptl->ptl_mhash[lnet_match_to_hash(id, mbits)];
+        }
+        return NULL;
+}
+
+struct list_head *lnet_portal_mhash_alloc(void);
+void lnet_portal_mhash_free(struct list_head *mhash);
+
 static inline void
 lnet_peer_addref_locked(lnet_peer_t *lp)
 {
@@ -567,7 +641,8 @@ lnet_net2ni (__u32 net)
         return ni;
 }
 
-int lnet_notify(lnet_ni_t *ni, lnet_nid_t peer, int alive, time_t when);
+int lnet_notify(lnet_ni_t *ni, lnet_nid_t peer, int alive, cfs_time_t when);
+void lnet_notify_locked(lnet_peer_t *lp, int notifylnd, int alive, cfs_time_t when);
 int lnet_add_route(__u32 net, unsigned int hops, lnet_nid_t gateway_nid);
 int lnet_check_routes(void);
 int lnet_del_route(__u32 net, lnet_nid_t gw_nid);
@@ -689,6 +764,8 @@ int lnet_count_acceptor_nis(lnet_ni_t **first_ni);
 int lnet_accept(lnet_ni_t *blind_ni, cfs_socket_t *sock, __u32 magic);
 int lnet_acceptor_timeout(void);
 int lnet_acceptor_port(void);
+#else
+void lnet_router_checker(void);
 #endif
 
 #ifdef HAVE_LIBPTHREAD
@@ -699,9 +776,14 @@ int lnet_acceptor_port(void);
 int lnet_acceptor_start(void);
 void lnet_acceptor_stop(void);
 
+void lnet_get_tunables(void);
 int lnet_peers_start_down(void);
+int lnet_peer_buffer_credits(lnet_ni_t *ni);
+
 int lnet_router_checker_start(void);
 void lnet_router_checker_stop(void);
+int lnet_router_down_ni(lnet_peer_t *rtr, __u32 net);
+int lnet_parse_pinginfo(lnet_ping_info_t *info, int len, int expected_nids);
 
 int lnet_ping_target_init(void);
 void lnet_ping_target_fini(void);

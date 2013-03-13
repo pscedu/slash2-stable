@@ -26,7 +26,7 @@
  * GPL HEADER END
  */
 /*
- * Copyright  2008 Sun Microsystems, Inc. All rights reserved
+ * Copyright (c) 2003, 2010, Oracle and/or its affiliates. All rights reserved.
  * Use is subject to license terms.
  */
 /*
@@ -145,6 +145,18 @@ typedef unsigned long cpumask_t;
              void __user *buffer, size_t *lenp)
 #define DECLARE_LL_PROC_PPOS_DECL  loff_t *ppos = &filp->f_pos
 #else
+#ifdef HAVE_5ARGS_SYSCTL_PROC_HANDLER
+#define ll_proc_dointvec(table, write, filp, buffer, lenp, ppos)        \
+        proc_dointvec(table, write, buffer, lenp, ppos);
+
+#define ll_proc_dolongvec(table, write, filp, buffer, lenp, ppos)        \
+        proc_doulongvec_minmax(table, write, buffer, lenp, ppos);
+#define ll_proc_dostring(table, write, filp, buffer, lenp, ppos)        \
+        proc_dostring(table, write, buffer, lenp, ppos);
+#define LL_PROC_PROTO(name)                                             \
+        name(cfs_sysctl_table_t *table, int write,                      \
+             void __user *buffer, size_t *lenp, loff_t *ppos)
+#else
 #define ll_proc_dointvec(table, write, filp, buffer, lenp, ppos)        \
         proc_dointvec(table, write, filp, buffer, lenp, ppos);
 #define ll_proc_dostring(table, write, filp, buffer, lenp, ppos)        \
@@ -152,7 +164,15 @@ typedef unsigned long cpumask_t;
 #define LL_PROC_PROTO(name)                                             \
         name(cfs_sysctl_table_t *table, int write, struct file *filp,   \
              void __user *buffer, size_t *lenp, loff_t *ppos)
+#endif
 #define DECLARE_LL_PROC_PPOS_DECL
 #endif
+
+/* helper for sysctl handlers */
+int proc_call_handler(void *data, int write,
+                      loff_t *ppos, void *buffer, size_t *lenp,
+                      int (*handler)(void *data, int write,
+                                     loff_t pos, void *buffer, int len));
+
 
 #endif /* _PORTALS_COMPAT_H */

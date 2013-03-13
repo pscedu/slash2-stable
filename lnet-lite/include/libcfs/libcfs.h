@@ -115,11 +115,15 @@ extern unsigned int libcfs_stack;
 extern unsigned int libcfs_debug;
 extern unsigned int libcfs_printk;
 extern unsigned int libcfs_console_ratelimit;
+extern unsigned int libcfs_watchdog_ratelimit;
 extern cfs_duration_t libcfs_console_max_delay;
 extern cfs_duration_t libcfs_console_min_delay;
 extern unsigned int libcfs_console_backoff;
 extern unsigned int libcfs_debug_binary;
 extern char debug_file_path_arr[1024];
+#ifdef __KERNEL__
+extern char *debug_file_path;
+#endif
 
 int libcfs_debug_mask2str(char *str, int size, int mask, int is_subsys);
 int libcfs_debug_str2mask(int *mask, const char *str, int is_subsys);
@@ -267,6 +271,7 @@ do {                                            \
 
 #define CWARN(format, a...)          CDEBUG_LIMIT(D_WARNING, format, ## a)
 #define CERROR(format, a...)         CDEBUG_LIMIT(D_ERROR, format, ## a)
+#define CNETERR(format, a...)        CDEBUG_LIMIT(D_NETERROR, format, ## a)
 #define CEMERG(format, a...)         CDEBUG_LIMIT(D_EMERG, format, ## a)
 
 #define LCONSOLE(mask, format, a...) CDEBUG(D_CONSOLE | (mask), format, ## a)
@@ -404,8 +409,10 @@ struct lc_watchdog *lc_watchdog_add(int time,
                                     void *data);
 
 /* Enables a watchdog and resets its timer. */
-void lc_watchdog_touch_ms(struct lc_watchdog *lcw, int timeout_ms);
-void lc_watchdog_touch(struct lc_watchdog *lcw);
+void lc_watchdog_touch(struct lc_watchdog *lcw, int timeout);
+#define GET_TIMEOUT(svc) (max_t(int, obd_timeout,                       \
+                          AT_OFF ? 0 : at_get(&svc->srv_at_estimate)) * \
+                          svc->srv_watchdog_factor)
 
 /* Disable a watchdog; touch it to restart it. */
 void lc_watchdog_disable(struct lc_watchdog *lcw);
@@ -591,6 +598,10 @@ struct libcfs_debug_msg_data {
 extern void libcfs_assertion_failed(const char *expr, const char *file,
                                     const char *fn, const int line);
 
+/* one more external symbol that tracefile provides: */
+extern int trace_copyout_string(char *usr_buffer, int usr_buffer_nob,
+                                const char *knl_buffer, char *append);
+
 static inline void cfs_slow_warning(cfs_time_t now, __unusedx int seconds, char *msg)
 {
         if (cfs_time_after(cfs_time_current(),
@@ -620,6 +631,21 @@ static inline cfs_duration_t cfs_timeout_cap(cfs_duration_t tmout)
                 tmout = CFS_TICK;
         return tmout;
 }
+
+#define LTD_MAGIC       0x0BD0BD0B
+#define JOURNAL_ENTER()  ({                     \
+        int *info = current->journal_info;      \
+        if (info && *info == LTD_MAGIC)         \
+                current->journal_info = NULL;   \
+        else                                    \
+                info = NULL;                    \
+        info;                                   \
+})
+
+#define JOURNAL_EXIT(info) do {                 \
+        if (info != NULL)                       \
+                current->journal_info = info;   \
+} while(0)
 
 /*
  * Universal memory allocator API

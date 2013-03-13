@@ -26,7 +26,7 @@
  * GPL HEADER END
  */
 /*
- * Copyright  2008 Sun Microsystems, Inc. All rights reserved
+ * Copyright (c) 2003, 2010, Oracle and/or its affiliates. All rights reserved.
  * Use is subject to license terms.
  */
 /*
@@ -59,6 +59,12 @@
 #include "psc_util/iostats.h"
 
 #define WIRE_ATTR	__attribute__((packed))
+
+/* Packed version of lnet_process_id_t to transfer via network */
+typedef struct {
+        lnet_nid_t nid;
+        lnet_pid_t pid;   /* node id / process id */
+} WIRE_ATTR lnet_process_id_packed_t;
 
 /* The wire handle's interface cookie only matches one network interface in
  * one epoch (i.e. new cookie when the interface restarts or the node
@@ -155,6 +161,7 @@ typedef struct {
 #define LNET_PROTO_VIB_MAGIC                LNET_PROTO_IB_MAGIC
 #define LNET_PROTO_RA_MAGIC                 0x0be91b92
 #define LNET_PROTO_QSW_MAGIC                0x0be91b93
+#define LNET_PROTO_GNI_MAGIC                0xb00fbabe /* ask Kim */
 #define LNET_PROTO_TCP_MAGIC                0xeebc0ded
 #define LNET_PROTO_PTL_MAGIC                0x50746C4E /* 'PtlN' unique magic */
 #define LNET_PROTO_GM_MAGIC                 0x6d797269 /* 'myri'! */
@@ -190,6 +197,7 @@ typedef struct lnet_msg {
         lnet_process_id_t   msg_target;
         __u32               msg_type;
 
+        unsigned int        msg_vmflush:1;      /* VM trying to free memory */
         unsigned int        msg_target_is_router:1; /* sending to a router */
         unsigned int        msg_routing:1;      /* being forwarded */
         unsigned int        msg_ack:1;          /* ack on finalize (PUT) */
@@ -269,7 +277,6 @@ typedef struct lnet_libmd {
         unsigned int      md_flags;
         void             *md_user_ptr;
         lnet_eq_t        *md_eq;
-        void             *md_addrkey;
         unsigned int      md_niov;                /* # frags */
         union {
                 struct iovec  iov[LNET_MAX_IOV];
@@ -306,7 +313,8 @@ typedef struct {
 #define LNET_COOKIE_TYPE_MD    1
 #define LNET_COOKIE_TYPE_ME    2
 #define LNET_COOKIE_TYPE_EQ    3
-#define LNET_COOKIE_TYPES      4
+#define LNET_COOKIE_TYPE_BITS  2
+#define LNET_COOKIE_TYPES      (1 << LNET_COOKIE_TYPE_BITS)
 /* LNET_COOKIE_TYPES must be a power of 2, so the cookie type can be
  * extracted by masking with (LNET_COOKIE_TYPES - 1) */
 
@@ -365,21 +373,63 @@ typedef struct lnet_lnd
         /* notification of peer health */
         void (*lnd_notify)(struct lnet_ni *ni, lnet_nid_t peer, int alive);
 
-#ifdef __KERNEL__
+        /* query of peer aliveness */
+        void (*lnd_query)(struct lnet_ni *ni, lnet_nid_t peer, cfs_time_t *when);
+
+#if defined(__KERNEL__) || defined(HAVE_LIBPTHREAD)
         /* accept a new connection */
-        int (*lnd_accept)(struct lnet_ni *ni, cfs_socket_t *sock);
-#else
+        int (*lnd_accept)(struct lnet_ni *ni, struct lnet_xport *);
+#endif
+
         /* wait for something to happen */
         void (*lnd_wait)(struct lnet_ni *ni, int milliseconds);
 
         /* ensure non-RDMA messages can be received outside liblustre */
         int (*lnd_setasync)(struct lnet_ni *ni, lnet_process_id_t id, int nasync);
-
-#ifdef HAVE_LIBPTHREAD
-        int (*lnd_accept)(struct lnet_ni *ni, struct lnet_xport *);
-#endif
-#endif
 } lnd_t;
+
+#define LNET_PROTO_PING_MATCHBITS     0x8000000000000000LL
+#define LNET_PROTO_PING_VERSION       2
+#define LNET_PROTO_PING_VERSION1      1
+
+#define LNET_NI_STATUS_UP      0x15aac0de
+#define LNET_NI_STATUS_DOWN    0xdeadface
+#define LNET_NI_STATUS_INVALID 0x00000000
+
+typedef struct {
+        lnet_nid_t ns_nid;
+        __u32      ns_status;
+        __u32      ns_unused;
+} WIRE_ATTR lnet_ni_status_t;
+
+typedef struct {
+        __u32      pi_magic;
+        __u32      pi_version;
+        lnet_pid_t pi_pid;
+        __u32      pi_nnis;
+#define pi_ni      pi_body.pb_ni
+#define pi_nid     pi_body.pb_nid
+
+        union {
+                lnet_nid_t       pb_nid[0]; /* LNET_PROTO_PING_VERSION1 */
+                lnet_ni_status_t pb_ni[0];  /* LNET_PROTO_PING_VERSION */
+        } pi_body;
+} WIRE_ATTR lnet_ping_info_t;
+
+static inline size_t
+lnet_pinginfo_size_v(int n_ids, int version)
+{
+        LASSERT (n_ids >= 0);
+        LASSERT (version == LNET_PROTO_PING_VERSION ||
+                 version == LNET_PROTO_PING_VERSION1);
+
+        if (version == LNET_PROTO_PING_VERSION)
+                return offsetof(lnet_ping_info_t, pi_ni[n_ids]);
+
+        return offsetof(lnet_ping_info_t, pi_nid[n_ids]);
+}
+
+#define lnet_pinginfo_size(n) lnet_pinginfo_size_v((n), LNET_PROTO_PING_VERSION)
 
 #define LNET_MAX_INTERFACES   16
 
@@ -390,17 +440,31 @@ typedef struct lnet_ni {
         int               ni_txcredits;         /* # tx credits free */
         int               ni_mintxcredits;      /* lowest it's been */
         int               ni_peertxcredits;     /* # per-peer send credits */
+        int               ni_peerrtrcredits;    /* # per-peer router buffer credits */
+        int               ni_peertimeout;       /* seconds to consider peer dead */
         lnet_nid_t        ni_nid;               /* interface's NID */
         void             *ni_data;              /* instance-specific data */
         lnd_t            *ni_lnd;               /* procedural interface */
         int               ni_refcount;          /* reference count */
 	int		  ni_flags;		
+        cfs_time_t        ni_last_alive;        /* when I was last alive */
+        lnet_ni_status_t *ni_status;            /* my health status */
         char             *ni_interfaces[LNET_MAX_INTERFACES]; /* equivalent interfaces to use */
 	struct psc_iostats ni_recv_ist;
 	struct psc_iostats ni_send_ist;
 } lnet_ni_t;
 
 #define LNIF_ACCEPTOR	(1 << 0)
+
+/* router checker data, per router */
+#define LNET_MAX_RTR_NIS       16
+#define LNET_MAX_PINGINFO_SIZE lnet_pinginfo_size(LNET_MAX_RTR_NIS)
+
+typedef struct {
+        struct list_head  rcd_list;             /* chain on the_lnet.ln_zombie_rcd */
+        lnet_handle_md_t  rcd_mdh;              /* ping buffer MD */
+        lnet_ping_info_t *rcd_pinginfo;         /* ping buffer */
+} lnet_rc_data_t;
 
 typedef struct lnet_peer {
         struct list_head  lp_hashlist;          /* chain on peer hash */
@@ -418,18 +482,24 @@ typedef struct lnet_peer {
         unsigned int      lp_ping_notsent;      /* SEND event outstanding from ping */
         int               lp_alive_count;       /* # times router went dead<->alive */
         long              lp_txqnob;            /* bytes queued for sending */
-        time_t            lp_timestamp;         /* time of last aliveness news */
-        time_t            lp_ping_timestamp;    /* time of last ping attempt */
-        time_t            lp_ping_deadline;     /* != 0 if ping reply expected */
+        cfs_time_t        lp_timestamp;         /* time of last aliveness news */
+        cfs_time_t        lp_ping_timestamp;    /* time of last ping attempt */
+        cfs_time_t        lp_ping_deadline;     /* != 0 if ping reply expected */
+        cfs_time_t        lp_last_alive;        /* when I was last alive */
+        cfs_time_t        lp_last_query;        /* when lp_ni was queried last time */
         lnet_ni_t        *lp_ni;                /* interface peer is on */
         lnet_nid_t        lp_nid;               /* peer's NID */
         int               lp_refcount;          /* # refs */
         int               lp_rtr_refcount;      /* # refs from lnet_route_t::lr_gateway */
+        lnet_rc_data_t   *lp_rcd;               /* router checker state */
 } lnet_peer_t;
+
+#define lnet_peer_aliveness_enabled(lp) ((lp)->lp_ni->ni_peertimeout > 0)
 
 typedef struct {
 	struct list_head  lr_list;              /* chain on net */
         lnet_peer_t      *lr_gateway;           /* router node */
+        unsigned int      lr_hops;              /* how far I am */
 } lnet_route_t;
 
 typedef struct {
@@ -437,7 +507,6 @@ typedef struct {
         struct list_head        lrn_routes;     /* routes to me */
         __u32                   lrn_net;        /* my net number */
         __u32                   lrn_netif;      /* local network interface */
-        unsigned int            lrn_hops;       /* how far I am */
 } lnet_remotenet_t;
 
 typedef struct {
@@ -473,33 +542,29 @@ typedef struct {
         __u64        recv_length;
         __u64        route_length;
         __u64        drop_length;
-} lnet_counters_t;
+} WIRE_ATTR lnet_counters_t;
 
 #define LNET_PEER_HASHSIZE   503                /* prime! */
 
 #define LNET_NRBPOOLS         3                 /* # different router buffer pools */
 
-#define LNET_PROTO_PING_MATCHBITS     0x8000000000000000LL
-#define LNET_PROTO_PING_VERSION       1
-typedef struct {
-        __u32          pi_magic;
-        __u32          pi_version;
-        lnet_pid_t     pi_pid;
-        __u32          pi_nnids;
-        lnet_nid_t     pi_nid[0];
-} WIRE_ATTR lnet_ping_info_t;
-
 /* Options for lnet_portal_t::ptl_options */
 #define LNET_PTL_LAZY               (1 << 0)
+#define LNET_PTL_MATCH_UNIQUE       (1 << 1)    /* unique match, for RDMA */
+#define LNET_PTL_MATCH_WILDCARD     (1 << 2)    /* wildcard match, request portal */
+
+#define LNET_PORTAL_HASH_SIZE        113        /* ME hash size of RDMA portal (prime) */
+
 typedef struct {
-        struct list_head ptl_ml;  /* match list */
-        struct list_head ptl_msgq; /* messages blocking for MD */
-        __u64            ptl_msgq_version;  /* validity stamp */
-        unsigned int     ptl_options;
+        struct list_head *ptl_mhash;            /* match hash */
+        struct list_head  ptl_mlist;            /* match list */
+        struct list_head  ptl_msgq;             /* messages blocking for MD */
+        __u64             ptl_ml_version;       /* validity stamp, only changed for new attached MD */
+        __u64             ptl_msgq_version;     /* validity stamp */
+        unsigned int      ptl_options;
 } lnet_portal_t;
 
-/* Router Checker */
-/*                               < 0 == startup error */
+/* Router Checker states */
 #define LNET_RC_STATE_SHUTDOWN     0            /* not started */
 #define LNET_RC_STATE_RUNNING      1            /* started up OK */
 #define LNET_RC_STATE_STOPTHREAD   2            /* telling thread to stop */
@@ -586,10 +651,12 @@ typedef struct
         lnet_ping_info_t  *ln_ping_info;
 
 #ifdef __KERNEL__
-	int                ln_rc_state;         /* router checker startup/shutdown state */
 	struct semaphore   ln_rc_signal;        /* serialise startup/shutdown */
-        lnet_handle_eq_t   ln_rc_eqh;           /* router checker's event queue */
 #endif
+        int                ln_rc_state;         /* router checker startup/shutdown state */
+        lnet_handle_eq_t   ln_rc_eqh;           /* router checker's event queue */
+        lnet_handle_md_t   ln_rc_mdh;
+        struct list_head   ln_zombie_rcd;
 
 #ifdef LNET_USE_LIB_FREELIST
         lnet_freelist_t    ln_free_mes;

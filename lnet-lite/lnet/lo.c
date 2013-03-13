@@ -118,13 +118,10 @@ lnd_t the_lolnd = {
         /* .lnd_recv       = */ lolnd_recv,
         /* .lnd_eager_recv = */ NULL,
         /* .lnd_notify     = */ NULL,
-#ifdef __KERNEL__
+        /* .lnd_query      = */ NULL,
+#if defined(__KERNEL__) || defined(HAVE_LIBPTHREAD)
         /* .lnd_accept     = */ NULL,
-#else
+#endif
         /* .lnd_wait       = */ NULL,
         /* .lnd_setasync   = */ NULL,
-#ifdef HAVE_LIBPTHREAD
-        /* .lnd_accept     = */ NULL,
-#endif
-#endif
 };

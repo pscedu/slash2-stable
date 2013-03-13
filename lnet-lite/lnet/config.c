@@ -166,6 +166,7 @@ lnet_new_ni(__u32 net, struct list_head *nilist)
         /* LND will fill in the address part of the NID */
         ni->ni_nid = LNET_MKNID(net, 0);
         CFS_INIT_LIST_HEAD(&ni->ni_txq);
+        ni->ni_last_alive = cfs_time_current();
 
         list_add_tail(&ni->ni_list, nilist);
         return ni;

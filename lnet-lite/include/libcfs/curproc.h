@@ -26,7 +26,7 @@
  * GPL HEADER END
  */
 /*
- * Copyright  2008 Sun Microsystems, Inc. All rights reserved
+ * Copyright (c) 2005, 2010, Oracle and/or its affiliates. All rights reserved.
  * Use is subject to license terms.
  */
 /*
@@ -51,6 +51,8 @@
  */
 uid_t  cfs_curproc_uid(void);
 gid_t  cfs_curproc_gid(void);
+uid_t  cfs_curproc_euid(void);
+gid_t  cfs_curproc_egid(void);
 uid_t  cfs_curproc_fsuid(void);
 gid_t  cfs_curproc_fsgid(void);
 pid_t  cfs_curproc_pid(void);
@@ -73,6 +75,9 @@ char  *cfs_curproc_comm(void);
 #endif
 
 typedef __u32 cfs_cap_t;
+
+/* check if task is running in compat mode.*/
+int cfs_curproc_is_32bit(void);
 
 #define CFS_CAP_CHOWN                   0
 #define CFS_CAP_DAC_OVERRIDE            1

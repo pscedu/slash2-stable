@@ -26,7 +26,7 @@
  * GPL HEADER END
  */
 /*
- * Copyright  2008 Sun Microsystems, Inc. All rights reserved
+ * Copyright (c) 2005, 2010, Oracle and/or its affiliates. All rights reserved.
  * Use is subject to license terms.
  */
 /*
@@ -101,6 +101,8 @@ int64_t cfs_waitq_timedwait(struct cfs_waitlink *link, int state, int64_t timeou
 		cfs_waitlink_t    l;            \
 		cfs_waitq_timedwait(&l, s, t);  \
 	} while (0)
+#define cfs_cond_resched()       do {} while(0)
+#define cfs_cond_resched_lock(l) (0)
 
 #define CFS_TASK_INTERRUPTIBLE  (0)
 #define CFS_TASK_UNINT          (0)
@@ -194,6 +196,8 @@ cfs_mem_cache_create(const char *, size_t, size_t, unsigned long);
 int cfs_mem_cache_destroy(cfs_mem_cache_t *c);
 void *cfs_mem_cache_alloc(cfs_mem_cache_t *c, int gfp);
 void cfs_mem_cache_free(cfs_mem_cache_t *c, void *addr);
+
+#define libcfs_memory_pressure_get() (0)
 
 typedef int (cfs_read_proc_t)(char *page, char **start, off_t off,
 			  int count, int *eof, void *data);
@@ -296,6 +300,7 @@ static inline int cfs_psdev_deregister(__unusedx cfs_psdev_t *foo)
 #define cfs_sigfillset(l) do {}         while (0)
 #define cfs_recalc_sigpending(l)        do {} while (0)
 #define cfs_kernel_thread(l,m,n)        LBUG()
+#define cfs_kthread_run(fn,d,fmt,...)   LBUG()
 
 #ifdef HAVE_LIBPTHREAD
 typedef int (*cfs_thread_t)(void *);

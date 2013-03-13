@@ -69,9 +69,6 @@
  * between getting its string and using it.
  */
 
-#define LNET_NIDSTR_COUNT  128     /* # of nidstrings */
-#define LNET_NIDSTR_SIZE   32      /* size of each one (see below for usage) */
-
 static char      libcfs_nidstrings[LNET_NIDSTR_COUNT][LNET_NIDSTR_SIZE];
 static int       libcfs_nidstring_idx = 0;
 static psc_spinlock_t libcfs_nidstring_lock = SPINLOCK_INIT;
@@ -184,6 +181,11 @@ static struct netstrfns  libcfs_netstrfns[] = {
 	{/* .nf_type      */  PTLLND,
 	 /* .nf_name      */  "ptl",
 	 /* .nf_modname   */  "kptllnd",
+	 /* .nf_addr2str  */  libcfs_decnum_addr2str,
+	 /* .nf_str2addr  */  libcfs_num_str2addr},
+	{/* .nf_type      */  GNILND,
+	 /* .nf_name      */  "gni",
+	 /* .nf_modname   */  "kgnilnd",
 	 /* .nf_addr2str  */  libcfs_decnum_addr2str,
 	 /* .nf_str2addr  */  libcfs_num_str2addr},
 	{/* .nf_type      */  SDPLND,
@@ -460,7 +462,7 @@ libcfs_nid2str(lnet_nid_t nid)
 static struct netstrfns *
 libcfs_str2net_internal(const char *str, __u32 *net)
 {
-	struct netstrfns *nf;
+	struct netstrfns *nf = NULL;
 	int               nob;
 	int               netnum;
 	int               i;
