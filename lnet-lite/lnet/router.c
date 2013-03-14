@@ -723,6 +723,7 @@ lnet_router_checker_event (lnet_event_t *event)
         }
 
         LASSERT (event->type == LNET_EVENT_SEND ||
+                 event->type == LNET_EVENT_DROP ||
                  event->type == LNET_EVENT_REPLY);
 
         nid = (event->type == LNET_EVENT_SEND) ?
@@ -1564,7 +1565,7 @@ lnet_router_checker (void)
         if (last != 0 && interval < 2)
                 return;
 
-        if (last != 0 &&
+        if (last != 0 && live_router_check_interval &&
             interval > MAX(live_router_check_interval,
                            dead_router_check_interval))
                 CNETERR("Checker(%d/%d) not called for %d seconds\n",
