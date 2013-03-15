@@ -159,7 +159,7 @@ pfl
 - document CTL_SOCK_FILE for daemons and *ctl utils
 - use CLOCK_MONTONIC in pscrpc_waitevent() to waitq_timedwait()
 - deploy socket_getpeercred all through ctlapi
-	- command interface
+	- especially in ctl command interface (e.g. 'msctl stop')
 - in RPC layer, add a syserrno -> PFLERR_* checker/portability
   translation layer
 
