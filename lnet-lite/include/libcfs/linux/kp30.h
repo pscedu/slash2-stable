@@ -373,18 +373,10 @@ extern int  lwt_snapshot (cycles_t *now, int *ncpu, int *total_size,
  #define _LWORDSIZE __WORDSIZE
 #endif
 
-#if (defined(__KERNEL__) && defined(HAVE_KERN__U64_LONG_LONG)) || \
-    (!defined(__KERNEL__) && defined(HAVE_USER__U64_LONG_LONG))
-# define LPU64 "%llu"
-# define LPD64 "%lld"
-# define LPX64 "%#llx"
-# define LPF64 "ll"
-#else
-# define LPU64 "%lu"
-# define LPD64 "%ld"
-# define LPX64 "%#lx"
-# define LPF64 "l"
-#endif
+# define LPU64 "%"PRIu64
+# define LPD64 "%"PRId64
+# define LPX64 "%#"PRIx64
+# define LPF64 __PRI64_PREFIX
 
 #ifndef LPU64
 # error "No word size defined"
