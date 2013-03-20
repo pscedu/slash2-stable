@@ -31,14 +31,14 @@
 
 const char		*progname;
 struct pfl_mutex	 m;
-struct psc_completion	 compl = PSC_COMPLETION_INIT;
+struct psc_compl	 compl = PSC_COMPL_INIT;
 struct psc_waitq	 wq = PSC_WAITQ_INIT;
 
 void *
 spawn(__unusedx void *arg)
 {
 	psc_mutex_lock(&m);
-	psc_completion_done(&compl, 0);
+	psc_compl_done(&compl, 0);
 	psc_waitq_wait(&wq, NULL);
 	psc_mutex_unlock(&m);
 	return (NULL);
@@ -68,7 +68,7 @@ main(int argc, char *argv[])
 	psc_mutex_init(&m);
 
 	rc = pthread_create(&pt, NULL, spawn, NULL);
-	psc_completion_wait(&compl);
+	psc_compl_wait(&compl);
 
 	psc_assert(!psc_mutex_trylock(&m));
 
