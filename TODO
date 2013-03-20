@@ -161,6 +161,8 @@ pfl
 	- especially in ctl command interface (e.g. 'msctl stop')
 - in RPC layer, add a syserrno -> PFLERR_* checker/portability
   translation layer
+- pfl/compat.h must have universal values for constants, so avoid this
+  approach altogether and use portable constants instead
 
 lnet
 - use TLS buffers for libcfs_nid2str() to avoid NUMA contention
