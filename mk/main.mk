@@ -79,6 +79,7 @@ LNET_LIB_SRCS+=		${LNET_BASE}/lnet/router_proc.c
 LNET_PTLLND_SRCS+=	${LNET_BASE}/ulnds/ptllnd/ptllnd.c
 LNET_PTLLND_SRCS+=	${LNET_BASE}/ulnds/ptllnd/ptllnd_cb.c
 
+PSCRPC_SRCS+=		${PFL_BASE}/completion.c
 PSCRPC_SRCS+=		${PFL_BASE}/connection.c
 PSCRPC_SRCS+=		${PFL_BASE}/events.c
 PSCRPC_SRCS+=		${PFL_BASE}/export.c
