@@ -38,7 +38,7 @@ void *
 spawn(__unusedx void *arg)
 {
 	psc_mutex_lock(&m);
-	psc_compl_done(&compl, 0);
+	psc_compl_ready(&compl, 1);
 	psc_waitq_wait(&wq, NULL);
 	psc_mutex_unlock(&m);
 	return (NULL);
