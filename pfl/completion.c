@@ -17,29 +17,54 @@
  * %PSC_END_COPYRIGHT%
  */
 
-#ifndef _PFL_COMPLETION_H_
-#define _PFL_COMPLETION_H_
+/*
+ * Completion - Barrier-like API for thread(s) to wait on an arbitrary event.
+ */
 
-#include "psc_util/lock.h"
-#include "psc_util/waitq.h"
+#include "psc_util/completion.h"
 
-struct psc_compl {
-	struct psc_waitq	pc_wq;
-	psc_spinlock_t		pc_lock;
-	int			pc_done;
-	int			pc_rc;		/* optional "barrier" value */
-};
+void
+psc_compl_init(struct psc_compl *pc)
+{
+	memset(pc, 0, sizeof(*pc));
+	INIT_SPINLOCK(&pc->pc_lock);
+	psc_waitq_init(&pc->pc_wq);
+	pc->pc_rc = 1;
+}
 
-#define PSC_COMPL_INIT		{ PSC_WAITQ_INIT, SPINLOCK_INIT, 0, 1 }
+void
+psc_compl_destroy(struct psc_compl *pc)
+{
+	psc_waitq_destroy(&pc->pc_wq);
+}
 
-#define psc_compl_ready(pc, rc)	_psc_compl_ready((pc), (rc), 0)
-#define psc_compl_one(pc, rc)	_psc_compl_ready((pc), (rc), 1)
+void
+_psc_compl_ready(struct psc_compl *pc, int rc, int one)
+{
+	spinlock(&pc->pc_lock);
+	if (rc)
+		pc->pc_rc = rc;
+	if (one)
+		psc_waitq_wakeone(&pc->pc_wq);
+	else {
+		pc->pc_done = 1;
+		psc_waitq_wakeall(&pc->pc_wq);
+	}
+	freelock(&pc->pc_lock);
+}
 
-#define psc_compl_wait(pc)	 psc_compl_waitrel_s((pc), 0)
-
-void	 psc_compl_destroy(struct psc_compl *);
-void	 psc_compl_init(struct psc_compl *);
-void	_psc_compl_ready(struct psc_compl *, int, int);
-int	 psc_compl_waitrel_s(struct psc_compl *, int);
-
-#endif /* _PFL_COMPLETION_H_ */
+int
+psc_compl_waitrel_s(struct psc_compl *pc, int secs)
+{
+	spinlock(&pc->pc_lock);
+	if (!pc->pc_done) {
+		if (secs) {
+			if (psc_waitq_waitrel_s(&pc->pc_wq,
+			    &pc->pc_lock, secs))
+				return (0);
+		} else
+			psc_waitq_wait(&pc->pc_wq, &pc->pc_lock);
+	} else
+		freelock(&pc->pc_lock);
+	return (pc->pc_rc);
+}

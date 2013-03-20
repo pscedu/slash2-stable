@@ -47,6 +47,7 @@
 #include "psc_util/waitq.h"
 
 struct psc_dynarray;
+struct psc_compl;
 
 #define PSCRPC_MD_OPTIONS		0
 #define BULK_GET_SOURCE			0
@@ -221,7 +222,7 @@ struct pscrpc_import {
 
 struct pscrpc_async_args {
 	/*
-	 * Scratchpad for passing args to completion interpreter. Users
+	 * Scratchpad for passing args to completion interpreter.  Users
 	 * cast to the struct of their choosing, and LASSERT that this is
 	 * big enough.  For _tons_ of context, PSCRPC_OBD_ALLOC a struct and store
 	 * a pointer to it here.  The pointer_arg ensures this struct is at
@@ -359,7 +360,7 @@ struct pscrpc_request {
 					    struct pscrpc_async_args *);
 	struct pscrpc_async_args	 rq_async_args;		/* async completion context */
 	lnet_handle_md_t		 rq_req_md_h;
-	struct pscrpc_completion	*rq_comp;
+	struct psc_compl		*rq_compl;
 	struct psc_waitq		*rq_waitq;		/* completion notification for others */
 	/* client-only incoming reply */
 	lnet_handle_md_t		 rq_reply_md_h;
@@ -369,13 +370,6 @@ struct pscrpc_request {
 	struct pscrpc_reply_state	*rq_reply_state;	/* separated reply state */
 	struct pscrpc_request_buffer_desc*rq_rqbd;		/* incoming req buffer*/
 	struct pscrpc_peer_qlen		*rq_peer_qlen;
-};
-
-struct pscrpc_completion {
-	psc_spinlock_t			 rqcomp_lock;
-	atomic_t			 rqcomp_compcnt;
-	atomic_t			 rqcomp_outcnt;
-	struct psc_waitq		 rqcomp_waitq;
 };
 
 /* Each service installs its own request handler */
@@ -465,7 +459,7 @@ struct pscrpc_reply_state {
 	unsigned int			 rs_prealloc:1;		/* rs from prealloc list */
 	atomic_t			 rs_refcount;
 	lnet_handle_md_t		 rs_md_h;
-	struct pscrpc_completion	*rs_compl;
+	struct psc_compl		*rs_compl;
 	struct pscrpc_service		*rs_service;		/* backpointer to my service */
 	struct pscrpc_msg		 rs_msg;		/* msg struct -- MUST BE LAST MEMBER */
 };
@@ -593,15 +587,7 @@ void	 pscrpc_set_lock(struct pscrpc_request_set *);
 struct pscrpc_bulk_desc *
 	 pscrpc_prep_bulk_exp(struct pscrpc_request *, int, int, int);
 
-void	 pscrpc_completion_init(struct pscrpc_completion *);
-void	 pscrpc_completion_wait(struct pscrpc_completion *);
-void	 pscrpc_completion_set(struct pscrpc_request *,
-		struct pscrpc_completion *);
-int	 pscrpc_completion_waitrel_s(struct pscrpc_completion *, int);
-int	 pscrpc_completion_ready(struct pscrpc_completion *, int, int);
-void	 pscrpc_completion_one(struct pscrpc_request *,
-		struct pscrpc_completion *);
-void	 pscrpc_completion_destroy(struct pscrpc_completion *);
+void	 pscrpc_req_setcompl(struct pscrpc_request *, struct psc_compl *);
 
 static __inline int
 pscrpc_bulk_active(struct pscrpc_bulk_desc *desc)

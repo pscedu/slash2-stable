@@ -146,11 +146,8 @@ pscrpc_interpret(struct pscrpc_request *rq)
 	/* If request CB has been run then decrement the completion
 	 *   so that set ops don't spin.
 	 */
-	if (rq->rq_comp) {
-		psc_assert(atomic_read(&rq->rq_comp->rqcomp_compcnt) > 0);
-		atomic_dec(&rq->rq_comp->rqcomp_compcnt);
-		rq->rq_comp = NULL;
-	}
+	if (rq->rq_compl)
+		rq->rq_compl = NULL;
 
 	return (rq->rq_status);
 }
@@ -226,92 +223,10 @@ pscrpc_prep_req_pool(struct pscrpc_import *imp, uint32_t version,
 }
 
 void
-pscrpc_completion_destroy(struct pscrpc_completion *c)
+pscrpc_req_setcompl(struct pscrpc_request *rq, struct psc_compl *pc)
 {
-	psc_waitq_destroy(&c->rqcomp_waitq);
-}
-
-void
-pscrpc_completion_init(struct pscrpc_completion *c)
-{
-	INIT_SPINLOCK(&c->rqcomp_lock);
-	atomic_set(&c->rqcomp_compcnt, 0);
-	atomic_set(&c->rqcomp_outcnt, 0);
-	psc_waitq_init(&c->rqcomp_waitq);
-}
-
-int
-pscrpc_completion_ready(struct pscrpc_completion *c, int block, int secs)
-{
- retry:
-	psc_assert(atomic_read(&c->rqcomp_compcnt) >= 0);
-
-	if (atomic_read(&c->rqcomp_compcnt))
-		return (1);
-
-	spinlock(&c->rqcomp_lock);
-	if (!atomic_read(&c->rqcomp_compcnt)) {
-		if (block) {
-			if (secs) {
-				if (psc_waitq_waitrel_s(&c->rqcomp_waitq,
-				    &c->rqcomp_lock, secs))
-					return (0);
-				else
-					return (1);
-			} else {
-				psc_waitq_wait(&c->rqcomp_waitq,
-				       &c->rqcomp_lock);
-				goto retry;
-			}
-		} else {
-			freelock(&c->rqcomp_lock);
-			return (0);
-		}
-	} else {
-		freelock(&c->rqcomp_lock);
-		return (1);
-	}
-}
-
-void
-pscrpc_completion_wait(struct pscrpc_completion *c)
-{
-	pscrpc_completion_ready(c, 1, 0);
-}
-
-int
-pscrpc_completion_waitrel_s(struct pscrpc_completion *c, int secs)
-{
-	return (pscrpc_completion_ready(c, 1, secs));
-}
-
-void
-pscrpc_completion_set(struct pscrpc_request *rq,
-    struct pscrpc_completion *c)
-{
-	rq->rq_comp = c;
-
-	DEBUG_REQ(PLL_INFO, rq, "rpc_comp %p (compcnt=%d) (outcnt=%d)",
-	    c, atomic_read(&c->rqcomp_compcnt),
-	    atomic_read(&c->rqcomp_outcnt));
-}
-
-void
-pscrpc_completion_one(struct pscrpc_request *rq,
-    struct pscrpc_completion *c)
-{
-	psc_assert(atomic_read(&c->rqcomp_compcnt) >= 0);
-
-	spinlock(&c->rqcomp_lock);
-	atomic_inc(&c->rqcomp_compcnt);
-	psc_waitq_wakeone(&c->rqcomp_waitq);
-	freelock(&c->rqcomp_lock);
-
-	if (rq)
-		DEBUG_REQ(PLL_DIAG, rq,
-		    "rpc_comp %p (compcnt=%d) (outcnt=%d)", c,
-		    atomic_read(&c->rqcomp_compcnt),
-		    atomic_read(&c->rqcomp_outcnt));
+	rq->rq_compl = pc;
+	DEBUG_REQ(PLL_DIAG, rq, "rq_compl %p", pc);
 }
 
 struct pscrpc_request *
@@ -723,8 +638,8 @@ pscrpc_queue_wait(struct pscrpc_request *req)
 			  req->rq_receiving_reply);
 		psc_assert(!req->rq_no_resend);
 
-		if (req->rq_comp)
-			/* Make sure reply_in_callback doesn't bump rq_comp.
+		if (req->rq_compl)
+			/* Make sure reply_in_callback doesn't bump rq_compl.
 			 */
 			req->rq_abort_reply = 1;
 
@@ -994,9 +909,9 @@ pscrpc_check_set(struct pscrpc_request_set *set, int check_allsent)
 					goto handle_error;
 				}
 
-				if (req->rq_comp)
+				if (req->rq_compl)
 					/* Make sure reply_in_callback doesn't
-					 *   bump rq_comp.
+					 *   bump rq_compl.
 					 */
 					req->rq_abort_reply = 1;
 
