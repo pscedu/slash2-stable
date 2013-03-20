@@ -211,7 +211,7 @@ main(int argc, char *argv[])
 	PRTYPE(struct psc_atomic16);
 	PRTYPE(struct psc_atomic32);
 	PRTYPE(struct psc_atomic64);
-	PRTYPE(struct psc_completion);
+	PRTYPE(struct psc_compl);
 	PRTYPE(struct psc_ctlacthr);
 	PRTYPE(struct psc_ctlcmd_req);
 	PRTYPE(struct psc_ctlmsg_error);
@@ -279,7 +279,6 @@ main(int argc, char *argv[])
 	PRTYPE(struct pscrpc_bulk_desc);
 	PRTYPE(struct pscrpc_cb_id);
 	PRTYPE(struct pscrpc_client);
-	PRTYPE(struct pscrpc_completion);
 	PRTYPE(struct pscrpc_connection);
 	PRTYPE(struct pscrpc_export);
 	PRTYPE(struct pscrpc_handle);
