@@ -152,7 +152,6 @@ pfl
 - differentiate pll abbreviation for log level vs. locked list
 - remove regen from make and just use the .h files as deps on
   typedump.c
-- fold pscrpc_completion and psc_completion into a single structure
 - parse thr(-.*)? for connthr-foo not matching 'thr$' for thread names in ctl parsing
 - list head vs list entry - magic numbers should differ
 - tests/rwlock is broken on mymichelle with DEBUG=0
