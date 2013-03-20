@@ -33,6 +33,7 @@
 #include "psc_rpc/rpclog.h"
 #include "psc_util/alloc.h"
 #include "psc_util/atomic.h"
+#include "psc_util/completion.h"
 #include "psc_util/log.h"
 #include "psc_util/pool.h"
 #include "psc_util/waitq.h"
@@ -302,13 +303,14 @@ pscrpc_reply_in_callback(lnet_event_t *ev)
 		req->rq_replied = 1;
 		req->rq_nob_received = ev->mlength;
 	}
+
 	/* Do not bump the completion counter if this is a 'resend'.
 	 */
-	if (req->rq_comp && !(req->rq_resend && !req->rq_timedout))
+	if (req->rq_compl && !(req->rq_resend && !req->rq_timedout))
 		/* Notify upper layer that an RPC is ready to be
 		 *   finalized.
 		 */
-		pscrpc_completion_one(req, req->rq_comp);
+		psc_compl_one(req->rq_compl, 1);
 
 	if (req->rq_waitq)
 		psc_waitq_wakeall(req->rq_waitq);
@@ -335,7 +337,7 @@ pscrpc_reply_out_callback(lnet_event_t *ev)
 		ev->type == LNET_EVENT_UNLINK);
 
 	if (rs->rs_compl)
-		pscrpc_completion_one(NULL, rs->rs_compl);
+		psc_compl_one(rs->rs_compl, 1);
 
 	if (!rs->rs_difficult) {
 		/* 'Easy' replies have no further processing so I drop the
