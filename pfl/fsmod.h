@@ -42,7 +42,6 @@ struct pscfs_req {
 	struct pscfs_clientctx		 pfr_clientctx;
 	struct psc_listentry		 pfr_lentry;
 	char				*pfr_buf;
-	void				*pfr_info;		/* points to struct msl_fsrqinfo */
 };
 
 #  define PSCFS_ARGS_INIT(n, av)	{ FUSE_ARGS_INIT((n), (av)) }

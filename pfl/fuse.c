@@ -469,7 +469,7 @@ pscfs_ctlparam_attr_timeout_set(const char *s)
 #endif
 
 int
-pscfs_main(void)
+pscfs_main(int privsiz)
 {
 	int i;
 
@@ -495,9 +495,12 @@ pscfs_main(void)
 	psc_hashtbl_add_item(&pscfs_inumcol_hashtbl, pfic);
 #endif
 
-	psc_poolmaster_init(&pscfs_req_poolmaster, struct pscfs_req,
-	    pfr_lentry, PPMF_AUTO, 64, 64, 1024, NULL, NULL, NULL,
-	    "fsrq");
+	_psc_poolmaster_init(&pscfs_req_poolmaster,
+	    sizeof(struct pscfs_req) + privsiz,
+	    offsetof(struct pscfs_req, pfr_lentry),
+	    PPMF_AUTO, 64, 64, 1024, NULL,
+	    NULL, NULL, NULL, "fsrq");
+
 	pscfs_req_pool = psc_poolmaster_getmgr(&pscfs_req_poolmaster);
 
 #ifdef PFL_CTL
@@ -1257,7 +1260,6 @@ pscfs_reply_read(struct pscfs_req *pfr, void *buf, ssize_t len, int rc)
 		fuse_reply_buf(pfr->pfr_fuse_req, buf, len);
 
 	psc_assert(buf == pfr->pfr_buf);
-	PSCFREE(pfr->pfr_info);
 	PSCFREE(pfr->pfr_buf);
 	psc_pool_return(pscfs_req_pool, pfr);
 }
@@ -1344,8 +1346,6 @@ pscfs_reply_unlink(struct pscfs_req *pfr, int rc)
 void
 pscfs_reply_write(struct pscfs_req *pfr, ssize_t len, int rc)
 {
-	PSCFREE(pfr->pfr_info);
-
 	if (rc)
 		fuse_reply_err(pfr->pfr_fuse_req, rc);
 	else
