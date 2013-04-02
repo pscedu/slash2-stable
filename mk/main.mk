@@ -538,22 +538,26 @@ build:
 	${MAKE} clean && ${MAKE} regen && ${MAKE} all
 
 copyright:
-	find . -type f \( $(foreach ign,${COPYRIGHT_PATS},-name ${ign} -o) -false \) $(	\
-	    ) -exec ${ECHORUN} ${ROOTDIR}/tools/gencopyright.sh {} \;
+	find . -type f \( $(						\
+	    ) $(foreach ign,${COPYRIGHT_PATS},-name ${ign} -o) $(	\
+	    ) -false \) -exec ${ECHORUN} ${ROOTDIR}/tools/gencopyright.sh {} \;
 
 doc: recurse-doc
-	@if ${NOTEMPTY} "${MAN}"; then						\
-		${ECHORUN} ${MDPROC} $$(echo ${MAN} $(				\
-		    ) $$([ -e ${PROG}.[0-9] ] && echo ${PROG}.[0-9]) $(		\
-		    ) $$([ -e ${LIBRARY}.[0-9] ] && echo ${LIBRARY}.[0-9]) |	\
-		    tr ' ' '\n' | sort -u);					\
+	@if ${NOTEMPTY} "${MAN}"; then					\
+		${ECHORUN} ${MDPROC} $$(echo ${MAN} $(			\
+		    ) $$([ -e ${PROG}.[0-9] ] && echo ${PROG}.[0-9]) $(	\
+		    ) $$([ -e ${LIBRARY}.[0-9] ] && $(			\
+		    ) echo ${LIBRARY}.[0-9]) | tr ' ' '\n' | sort -u);	\
 	fi
 
 printvar-%:
 	@echo ${$(patsubst printvar-%,%,$@)}
 
 cscope cs: recurse-cs
-	cscope -Rbq $(addprefix -s,$(filter-out ${CURDIR},${_TSRC_PATH}))
+	@if ${NOTEMPTY} "${_TSRCS}"; then				\
+		${ECHORUN} cscope -Rbq $(addprefix -s,$(filter-out	\
+		    ${CURDIR},${_TSRC_PATH}));				\
+	fi
 
 etags et: recurse-etags
 	find . ${_TSRC_PATH} -name \*.[chly] | xargs etags
