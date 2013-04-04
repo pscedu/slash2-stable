@@ -20,9 +20,12 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <sys/select.h>
-#include <sys/sockio.h>
 #include <sys/ioctl.h>
 #include <net/if.h>
+
+#ifdef HAVE_SYS_SOCKIO_H
+#include <sys/sockio.h>
+#endif
 
 #include <netinet/in.h>
 #include <netinet/tcp.h>

@@ -19,11 +19,14 @@
 
 #include <sys/types.h>
 #include <sys/socket.h>
-#include <sys/sockio.h>
 #include <sys/ioctl.h>
 #include <netinet/in.h>
 #include <net/route.h>
 #include <arpa/inet.h>
+
+#ifdef HAVE_SYS_SOCKIO_H
+#include <sys/sockio.h>
+#endif
 
 #ifdef HAVE_RTNETLINK
 # include <linux/netlink.h>
