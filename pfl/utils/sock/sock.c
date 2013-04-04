@@ -20,6 +20,7 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <sys/select.h>
+#include <sys/sockio.h>
 #include <sys/ioctl.h>
 #include <net/if.h>
 

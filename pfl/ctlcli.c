@@ -21,10 +21,10 @@
 #include <sys/socket.h>
 #include <sys/un.h>
 #include <sys/ioctl.h>
+#include <sys/termios.h>
 
 #include <err.h>
 #include <inttypes.h>
-#include <paths.h>
 #include <pthread.h>
 #include <signal.h>
 #include <stdio.h>
@@ -36,6 +36,7 @@
 #include "pfl/getopt.h"
 #include "pfl/str.h"
 #include "pfl/subsys.h"
+#include "pfl/syspaths.h"
 #include "psc_ds/list.h"
 #include "psc_ds/vbitmap.h"
 #include "psc_rpc/rpc.h"
@@ -1155,8 +1156,8 @@ psc_ctlcli_main(const char *osockfn, int ac, char *av[],
 {
 	extern const char *daemon_name, *progname;
 	char optstr[LINE_MAX], chbuf[3], *p;
+	struct sockaddr_un saun;
 	struct psc_thread *thr;
-	struct sockaddr_un sun;
 	const char *prg;
 	pthread_t pthr;
 	int rc, c, i;
@@ -1201,17 +1202,17 @@ psc_ctlcli_main(const char *osockfn, int ac, char *av[],
 	if ((psc_ctl_sock = socket(AF_UNIX, SOCK_STREAM, 0)) == -1)
 		psc_fatal("socket");
 
-	bzero(&sun, sizeof(sun));
-	sun.sun_family = AF_UNIX;
+	memset(&saun, 0, sizeof(saun));
+	saun.sun_family = AF_UNIX;
 
-	(void)FMTSTR(sun.sun_path, sizeof(sun.sun_path), psc_ctl_sockfn,
+	(void)FMTSTR(saun.sun_path, sizeof(saun.sun_path), psc_ctl_sockfn,
 		FMTSTRCASE('h', "s", psclog_getdata()->pld_hostshort)
 		FMTSTRCASE('n', "s", daemon_name)
 	);
 
-	if (connect(psc_ctl_sock, (struct sockaddr *)&sun,
-	    sizeof(sun)) == -1)
-		err(1, "connect: %s", sun.sun_path);
+	if (connect(psc_ctl_sock, (struct sockaddr *)&saun,
+	    sizeof(saun)) == -1)
+		err(1, "connect: %s", saun.sun_path);
 
 	thr = pscthr_init(PCTHRT_RD, 0, psc_ctlcli_rd_main, NULL, 1,
 	    "%srdthr", prg);

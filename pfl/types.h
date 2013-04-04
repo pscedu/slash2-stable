@@ -31,11 +31,13 @@
 
 #if defined(__APPLE__) || defined(__OpenBSD__) || defined(__FreeBSD__)
 # define PSCPRI_PTHRT		"p"
+#elif defined(sun)
+# define PSCPRI_PTHRT		"x"
 #else
 # define PSCPRI_PTHRT		"lx"
 #endif
 
-#if defined(__APPLE__) || defined(__OpenBSD__) || defined(__FreeBSD__)
+#if defined(__APPLE__) || defined(__OpenBSD__) || defined(__FreeBSD__) || defined(sun)
 # define PSCPRI_BLKSIZE_T	"u"
 #else
 # define PSCPRI_BLKSIZE_T	"ld"
@@ -78,7 +80,7 @@
 
 #if !defined(HAVE_FILE_OFFSET32) && (defined(__USE_FILE_OFFSET64) || defined(__APPLE__))
 # define PSCPRIuINOT		PRIu64
-#elif defined(__linux)
+#elif defined(__linux) || defined(sun)
 # define PSCPRIuINOT		"lu"
 #else
 # define PSCPRIuINOT		"u"

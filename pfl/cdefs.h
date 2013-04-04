@@ -20,7 +20,11 @@
 #ifndef _PFL_CDEFS_H_
 #define _PFL_CDEFS_H_
 
-#include <sys/cdefs.h>
+#ifdef HAVE_SYS_CDEFS_H
+#  include <sys/cdefs.h>
+#else
+#  include <sys/sysmacros.h>
+#endif
 
 #include <stddef.h>
 

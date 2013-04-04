@@ -22,6 +22,8 @@
 
 #include <sys/param.h>
 
+#include <limits.h>
+#include <netdb.h>
 #include <stdarg.h>
 
 #ifndef PSC_SUBSYS
