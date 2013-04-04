@@ -694,9 +694,13 @@ struct psc_ctl_rlim {
 	{ "csize",	RLIMIT_CORE },
 	{ "dsize",	RLIMIT_DATA },
 	{ "fsize",	RLIMIT_FSIZE },
+#ifdef RLIMIT_NPROC
 	{ "maxproc",	RLIMIT_NPROC },
+#endif
 	{ "mem",	RLIMIT_AS },
+#ifdef RLIMIT_MEMLOCK
 	{ "mlock",	RLIMIT_MEMLOCK },
+#endif
 	{ "nofile",	RLIMIT_NOFILE },
 	{ "stksize",	RLIMIT_STACK }
 };
@@ -1888,7 +1892,7 @@ psc_ctlthr_main(const char *ofn, const struct psc_ctlop *ct, int nops,
 {
 	extern const char *progname;
 	struct psc_thread *thr, *me;
-	struct sockaddr_un sun;
+	struct sockaddr_un saun;
 	mode_t old_umask;
 	const char *p;
 	int i, s;
@@ -1902,30 +1906,30 @@ psc_ctlthr_main(const char *ofn, const struct psc_ctlop *ct, int nops,
 	if ((s = socket(AF_LOCAL, SOCK_STREAM, 0)) == -1)
 		psc_fatal("socket");
 
-	bzero(&sun, sizeof(sun));
-	sun.sun_family = AF_LOCAL;
+	memset(&saun, 0, sizeof(saun));
+	saun.sun_family = AF_LOCAL;
 
 	/* preform transliteration for "variables" in file path */
-	(void)FMTSTR(sun.sun_path, sizeof(sun.sun_path), ofn,
+	(void)FMTSTR(saun.sun_path, sizeof(saun.sun_path), ofn,
 		FMTSTRCASE('h', "s", psclog_getdata()->pld_hostshort)
 		FMTSTRCASE('n', "s", progname)
 	);
 
-	if (unlink(sun.sun_path) == -1 && errno != ENOENT)
-		psclog_error("unlink %s", sun.sun_path);
+	if (unlink(saun.sun_path) == -1 && errno != ENOENT)
+		psclog_error("unlink %s", saun.sun_path);
 
 	spinlock(&psc_umask_lock);
 	old_umask = umask(S_IXUSR | S_IXGRP | S_IWOTH | S_IROTH |
 	    S_IXOTH);
-	if (bind(s, (struct sockaddr *)&sun, sizeof(sun)) == -1)
-		psc_fatal("bind %s", sun.sun_path);
+	if (bind(s, (struct sockaddr *)&saun, sizeof(saun)) == -1)
+		psc_fatal("bind %s", saun.sun_path);
 	umask(old_umask);
 	freelock(&psc_umask_lock);
 
 	/* XXX fchmod */
-	if (chmod(sun.sun_path, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP |
+	if (chmod(saun.sun_path, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP |
 	    S_IROTH | S_IWOTH) == -1)
-		psc_fatal("chmod %s", sun.sun_path); /* XXX errno */
+		psc_fatal("chmod %s", saun.sun_path); /* XXX errno */
 
 	if (listen(s, QLEN) == -1)
 		psc_fatal("listen");
