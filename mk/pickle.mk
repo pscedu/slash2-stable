@@ -252,4 +252,8 @@ ifeq ($(filter $(realpath ${ROOTDIR})/compat/%,${CURDIR}),)
   DEFINES+=						-DHAVE_RT_SYSCTL
  endif
 
+ ifdef PICKLE_HAVE_SA_LEN
+  DEFINES+=						-DHAVE_SA_LEN
+ endif
+
 endif
