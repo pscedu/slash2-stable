@@ -240,4 +240,8 @@ ifeq ($(filter $(realpath ${ROOTDIR})/compat/%,${CURDIR}),)
   DEFINES+=						-DHAVE_STATFS_FSTYPE
  endif
 
+ ifdef PICKLE_HAVE_GETPEERUCRED
+  DEFINES+=						-DHAVE_GETPEERUCRED
+ endif
+
 endif

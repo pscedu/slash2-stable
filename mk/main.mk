@@ -182,6 +182,7 @@ endif
 ifneq ($(filter lnet-hdrs,${MODULES}),)
   INCLUDES+=	-I${LNET_BASE}/include
   INCLUDES+=	-I${LNET_BASE}
+  INCLUDES+=	${SSL_INCLUDES}
   SRC_PATH+=	${LNET_BASE}
 endif
 
@@ -196,7 +197,8 @@ ifneq ($(filter pthread,${MODULES}),)
 endif
 
 ifneq ($(filter ssl,${MODULES}),)
-  LDFLAGS+=	-lssl -lcrypto
+  LDFLAGS+=	${SSL_LIBS}
+  INCLUDES+=	${SSL_INCLUDES}
 endif
 
 ifneq ($(filter rt,${MODULES}),)

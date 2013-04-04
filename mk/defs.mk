@@ -125,6 +125,8 @@ ZFS_LIBS=	-L${ZFS_BASE}/src/zfs-fuse				\
 		-lzfs-fuse -lslzpool-kernel -lzfscommon-kernel		\
 		-lnvpair-kernel -lavl -lumem -lslsolkerncompat -ldl -lcrypto
 
+SSL_LIBS=	-lssl -lcrypto
+
 LIBL=		-ll
 LIBZ=		-lz
 THREAD_LIBS=	-pthread
@@ -182,6 +184,15 @@ endif
 
 ifeq (${OSTYPE},OpenBSD)
   DEFINES+=	-D_BSD_SOURCE
+endif
+
+ifeq (${OSTYPE},SunOS)
+  DEFINES+=	-D_XOPEN_SOURCE -D_XOPEN_SOURCE_EXTENDED=1 -D__EXTENSIONS__
+  DEFINES+=	-D_POSIX_PTHREAD_SEMANTICS -DNAME_MAX=255
+  LDFLAGS+=	-lxnet -lsocket
+  SSL_LIBS+=	-L/opt/local/lib
+  SSL_INCLUDES=	-I/opt/local/include
+  LEX=		flex
 endif
 
 -include ${ROOTDIR}/mk/local.$(shell hostname).mk
