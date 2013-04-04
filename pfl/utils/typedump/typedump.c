@@ -42,6 +42,7 @@
 #include "pfl/str.h"
 #include "pfl/subsys.h"
 #include "pfl/sys.h"
+#include "pfl/syspaths.h"
 #include "pfl/time.h"
 #include "pfl/types.h"
 #include "pfl/walk.h"
