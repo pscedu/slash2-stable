@@ -28,9 +28,23 @@
 struct stat;
 
 int pfl_filewalk(const char *, int, int (*)(const char *,
-	const struct stat *, void *), void *);
+	const struct stat *, int, int, void *), void *);
 
 #define PFL_FILEWALKF_VERBOSE	(1 << 0)
 #define PFL_FILEWALKF_RECURSIVE	(1 << 1)
+
+#define PFL_FILEWALK_RC_OK	0
+#define PFL_FILEWALK_RC_BAIL	1
+#define PFL_FILEWALK_RC_SKIP	2
+
+#ifdef HAVE_FTS
+# include "fts.h"
+#else
+# include "ftw.h"
+# define FTS_DP			FTW_DP
+# define FTS_D			FTW_D
+# define FTS_F			FTW_F
+# define FTS_SL			FTW_SL
+#endif
 
 #endif /* _PFL_FILEWALK_H_ */
