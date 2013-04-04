@@ -21,7 +21,6 @@
 #include <sys/socket.h>
 #include <sys/un.h>
 #include <sys/ioctl.h>
-#include <sys/termios.h>
 
 #include <err.h>
 #include <inttypes.h>
@@ -30,6 +29,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <termios.h>
 #include <unistd.h>
 
 #include "pfl/cdefs.h"
