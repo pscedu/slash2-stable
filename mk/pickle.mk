@@ -244,4 +244,8 @@ ifeq ($(filter $(realpath ${ROOTDIR})/compat/%,${CURDIR}),)
   DEFINES+=						-DHAVE_GETPEERUCRED
  endif
 
+ ifdef PICKLE_HAVE_FTS
+  DEFINES+=						-DHAVE_FTS
+ endif
+
 endif
