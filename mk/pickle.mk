@@ -264,4 +264,8 @@ ifeq ($(filter $(realpath ${ROOTDIR})/compat/%,${CURDIR}),)
   DEFINES+=						-DHAVE_ASM_TYPES_H
  endif
 
+ ifdef PICKLE_HAVE_SYS_SOCKIO_H
+  DEFINES+=						-DHAVE_SYS_SOCKIO_H
+ endif
+
 endif
