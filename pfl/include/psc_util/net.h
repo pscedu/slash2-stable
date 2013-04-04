@@ -66,9 +66,15 @@ union pfl_sockaddr_ptr {
 #  define SOCKADDR_ALIGN	long
 # endif
 
-# define SA_SIZE(sa)							\
+# ifdef sa_len
+#  define SA_SIZE(sa)							\
     ((sa)->sa_len ? PSC_ALIGN((sa)->sa_len,				\
 	sizeof(SOCKADDR_ALIGN)) : sizeof(SOCKADDR_ALIGN))
+# else
+#  define SA_SIZE(sa)							\
+    (PSC_ALIGN(sizeof(*(sa)), sizeof(SOCKADDR_ALIGN)))
+# endif
+
 #endif
 
 int  pfl_socket_getpeercred(int, uid_t *, gid_t *);
