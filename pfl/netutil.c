@@ -19,6 +19,7 @@
 
 #include <sys/types.h>
 #include <sys/socket.h>
+#include <sys/sockio.h>
 #include <sys/ioctl.h>
 #include <netinet/in.h>
 #include <net/route.h>
@@ -27,6 +28,7 @@
 #ifdef HAVE_RTNETLINK
 # include <linux/netlink.h>
 # include <linux/rtnetlink.h>
+#elif defined(sun)
 #else
 # include <sys/sysctl.h>
 #endif
@@ -35,6 +37,10 @@
 # include <net/if.h>
 
 # include <ifaddrs.h>
+#endif
+
+#ifdef HAVE_GETPEERUCRED
+#include <ucred.h>
 #endif
 
 #include <stdio.h>
@@ -82,6 +88,14 @@ pfl_socket_getpeercred(int s, uid_t *uid, gid_t *gid)
 #ifdef HAVE_GETPEEREID
 	if (getpeereid(s, uid, gid) == -1)
 		return (errno);
+#elif defined(HAVE_GETPEERUCRED)
+	ucred_t *ucr;
+
+	if (getpeerucred(s, &ucr) == -1)
+		return (errno);
+	*uid = ucred_geteuid(ucr);
+	*gid = ucred_getegid(ucr);
+	ucred_free(ucr);
 #else
 	struct ucred ucr;
 	socklen_t len;
@@ -365,7 +379,9 @@ pflnet_getifnfordst_rtnetlink(const struct sockaddr *sa,
 	}
 	psc_fatalx("no route for addr");
 }
-#else
+#endif
+
+#ifdef HAVE_RT_SYSCTL
 __static int
 pflnet_rtexists_sysctl(const struct sockaddr *sa)
 {
@@ -412,7 +428,9 @@ pflnet_rtexists_sysctl(const struct sockaddr *sa)
 
 	return (rc);
 }
+#endif
 
+#ifdef RTM_GET
 __static void
 pflnet_getifnfordst_rtsock(const struct sockaddr *sa, char ifn[IFNAMSIZ])
 {
@@ -430,16 +448,27 @@ pflnet_getifnfordst_rtsock(const struct sockaddr *sa, char ifn[IFNAMSIZ])
 
 	memset(&m, 0, sizeof(m));
 
+#ifdef sa_len
 #define ADDSOCKADDR(p, sa)						\
 	do {								\
 		memcpy((p), (sa), (sa)->sa_len);			\
 		(p) += SA_SIZE(sa);					\
 	} while (0)
+#else
+#define ADDSOCKADDR(p, sa)						\
+	do {								\
+		memcpy((p), (sa), sizeof(*(sa)));			\
+		(p) += SA_SIZE(sa);					\
+	} while (0)
+#endif
+
 	ADDSOCKADDR(p, sa);
 
 	memset(&psa, 0, sizeof(psa));
 	psa.sdl.sdl_family = AF_LINK;
+#ifdef sa_len
 	psa.sdl.sdl_len = sizeof(psa.sdl);
+#endif
 	ADDSOCKADDR(p, &psa.sa);
 
 	rtm->rtm_type = RTM_GET;
@@ -508,8 +537,12 @@ pflnet_rtexists(const struct sockaddr *sa)
 
 #ifdef HAVE_RTNETLINK
 	rc = pflnet_rtexists_rtnetlink(sa);
-#else
+#elif HAVE_RT_SYSCTL
 	rc = pflnet_rtexists_sysctl(sa);
+#else
+	(void)sa;
+	errno = ENOTSUP;
+	psc_fatal("rtexists");
 #endif
 	return (rc);
 }
@@ -547,8 +580,12 @@ pflnet_getifnfordst(const struct ifaddrs *ifa0,
 
 #ifdef HAVE_RTNETLINK
 	pflnet_getifnfordst_rtnetlink(sa, ifn);
-#else
+#elif HAVE_RT_SYSCTL
 	pflnet_getifnfordst_rtsock(sa, ifn);
+#elif HAVE_
+#else
+	errno = ENOTSUP;
+	psc_fatal("getifnfordst");
 #endif
 }
 
