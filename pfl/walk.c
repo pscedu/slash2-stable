@@ -104,7 +104,8 @@ pfl_filewalk(const char *fn, int flags, int (*cbf)(const char *,
 			case FTS_SL:
 				if (flags & PFL_FILEWALKF_VERBOSE)
 					warnx("processing %s", f->fts_path);
-				rc = cbf(f->fts_path, f->fts_statp, arg);
+				rc = cbf(f->fts_path, f->fts_statp,
+				    f->fts_info, f->fts_level, arg);
 				if (rc == PFL_FILEWALK_RC_SKIP)
 					fts_set(fp, f, FTS_SKIP);
 				else if (rc) {
@@ -128,8 +129,12 @@ pfl_filewalk(const char *fn, int flags, int (*cbf)(const char *,
 			errx(1, "%s: not a file or directory", fn);
 		else if (realpath(fn, buf) == NULL)
 			err(1, "%s", fn);
-		else
-			rc = cbf(buf, &stb, arg);
+		else {
+			int info;
+
+			info = pfl_filewalk_stm2info(stb.st_mode);
+			rc = cbf(buf, &stb, info, 0, arg);
+		}
 	}
 	return (rc);
 }
