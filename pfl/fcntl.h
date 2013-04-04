@@ -62,4 +62,12 @@
 #define O_DIRECTORY	0
 #endif
 
+#ifndef O_ASYNC
+#define O_ASYNC		0
+#endif
+
+#ifndef ALLPERMS
+#define ALLPERMS	(S_ISUID|S_ISGID|S_ISVTX|S_IRWXU|S_IRWXG|S_IRWXO)
+#endif
+
 #endif /* _PFL_FCNTL_H_ */
