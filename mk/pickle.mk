@@ -260,4 +260,8 @@ ifeq ($(filter $(realpath ${ROOTDIR})/compat/%,${CURDIR}),)
   DEFINES+=						-DHAVE_SYS_CDEFS_H
  endif
 
+ ifdef PICKLE_HAVE_ASM_TYPES_H
+  DEFINES+=						-DHAVE_ASM_TYPES_H
+ endif
+
 endif
