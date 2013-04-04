@@ -43,8 +43,6 @@
 
 #ifdef HAVE_ASM_TYPES_H
 #include <asm/types.h>
-#else
-#include <libcfs/types.h>
 #endif
 
 #include <stdarg.h>
@@ -54,7 +52,6 @@
 #include <libcfs/linux/linux-prim.h>
 #include <libcfs/linux/linux-fs.h>
 #include <libcfs/linux/linux-tcpip.h>
-
 
 #ifdef __KERNEL__
 # include <linux/types.h>
@@ -69,14 +66,21 @@ typedef unsigned long long cycles_t;
 
 #ifndef __KERNEL__
 /* Userpace byte flipping */
+
+#if defined(sun) 
+# define bswap_16 BSWAP_16
+# define bswap_32 BSWAP_32
+# define bswap_64 BSWAP_64
+#else
 # include <endian.h>
 # include <byteswap.h>
+#endif 
 # define __swab16(x) bswap_16(x)
 # define __swab32(x) bswap_32(x)
 # define __swab64(x) bswap_64(x)
 # define __swab16s(x) do {*(x) = bswap_16(*(x));} while (0)
 # define __swab32s(x) do {*(x) = bswap_32(*(x));} while (0)
-# define __swab64s(x) do {*(x) = bswap_64(*(x));} while (0)
+# define __swab64s(x) do {*(x) = bswap_64(*(x));} while (0) 
 # if __BYTE_ORDER == __LITTLE_ENDIAN
 #  define le16_to_cpu(x) (x)
 #  define cpu_to_le16(x) (x)

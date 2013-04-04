@@ -48,6 +48,8 @@
 #include <lnet/darwin/lib-types.h>
 #elif defined(__WINNT__)
 #include <lnet/winnt/lib-types.h>
+#elif defined(sun)
+#define LNET_USE_LIB_FREELIST
 #else
 #error Unsupported Operating System
 #endif

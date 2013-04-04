@@ -49,6 +49,8 @@
 #include <libcfs/darwin/kp30.h>
 #elif defined(__WINNT__)
 #include <libcfs/winnt/kp30.h>
+#elif defined(sun)
+#include <libcfs/solaris/kp30.h>
 #else
 #error Unsupported operating system
 #endif

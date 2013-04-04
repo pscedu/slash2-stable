@@ -46,6 +46,9 @@
 
 #if defined(__linux__)
 #include <libcfs/linux/libcfs.h>
+#elif defined(sun) 
+#include <libcfs/solaris/solaris-types.h>
+#include <libcfs/linux/libcfs.h> 
 #elif defined(__APPLE__) || defined(__OpenBSD__) || defined(__FreeBSD__)
 #include <libcfs/darwin/libcfs.h>
 #elif defined(__WINNT__)
