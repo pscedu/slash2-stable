@@ -66,7 +66,7 @@ union pfl_sockaddr_ptr {
 #  define SOCKADDR_ALIGN	long
 # endif
 
-# ifdef sa_len
+# ifdef HAVE_SA_LEN
 #  define SA_SIZE(sa)							\
     ((sa)->sa_len ? PSC_ALIGN((sa)->sa_len,				\
 	sizeof(SOCKADDR_ALIGN)) : sizeof(SOCKADDR_ALIGN))

@@ -448,7 +448,7 @@ pflnet_getifnfordst_rtsock(const struct sockaddr *sa, char ifn[IFNAMSIZ])
 
 	memset(&m, 0, sizeof(m));
 
-#ifdef sa_len
+#ifdef HAVE_SA_LEN
 #define ADDSOCKADDR(p, sa)						\
 	do {								\
 		memcpy((p), (sa), (sa)->sa_len);			\
@@ -466,7 +466,7 @@ pflnet_getifnfordst_rtsock(const struct sockaddr *sa, char ifn[IFNAMSIZ])
 
 	memset(&psa, 0, sizeof(psa));
 	psa.sdl.sdl_family = AF_LINK;
-#ifdef sa_len
+#ifdef HAVE_SA_LEN
 	psa.sdl.sdl_len = sizeof(psa.sdl);
 #endif
 	ADDSOCKADDR(p, &psa.sa);
