@@ -183,14 +183,16 @@ _psc_rwlock_rdlock(const struct pfl_callerinfo *pci,
     struct psc_rwlock *rw)
 {
 	pthread_t p;
+	void *pa;
 	int rc;
 
 	p = pthread_self();
 	psc_assert(rw->pr_writer != p);
 
+	pa = (void *)(unsigned long)p;
 	spinlock(&rw->pr_lock);
-	psc_assert(!psc_dynarray_exists(&rw->pr_readers, (void *)p));
-	psc_dynarray_add(&rw->pr_readers, (void *)p);
+	psc_assert(!psc_dynarray_exists(&rw->pr_readers, pa));
+	psc_dynarray_add(&rw->pr_readers, pa);
 	freelock(&rw->pr_lock);
 
 	rc = pthread_rwlock_rdlock(&rw->pr_rwlock);
@@ -204,13 +206,16 @@ _psc_rwlock_wrlock(const struct pfl_callerinfo *pci,
     struct psc_rwlock *rw)
 {
 	pthread_t p;
+	void *pa;
 	int rc;
 
 	p = pthread_self();
 	psc_assert(rw->pr_writer != p);
 
+	pa = (void *)(unsigned long)p;
+
 	spinlock(&rw->pr_lock);
-	psc_assert(!psc_dynarray_exists(&rw->pr_readers, (void *)p));
+	psc_assert(!psc_dynarray_exists(&rw->pr_readers, pa));
 	freelock(&rw->pr_lock);
 
 	rc = pthread_rwlock_wrlock(&rw->pr_rwlock);
@@ -224,6 +229,7 @@ int
 psc_rwlock_hasrdlock(struct psc_rwlock *rw)
 {
 	pthread_t p;
+	void *pa;
 	int rc;
 
 	p = pthread_self();
@@ -231,8 +237,10 @@ psc_rwlock_hasrdlock(struct psc_rwlock *rw)
 	if (rw->pr_writer == p)
 		return (1);
 
+	pa = (void *)(unsigned long)p;
+
 	spinlock(&rw->pr_lock);
-	rc = psc_dynarray_exists(&rw->pr_readers, (void *)p);
+	rc = psc_dynarray_exists(&rw->pr_readers, pa);
 	freelock(&rw->pr_lock);
 	return (rc);
 }
@@ -289,8 +297,12 @@ _psc_rwlock_unlock(const struct pfl_callerinfo *pci,
 		rw->pr_writer = 0;
 		wr = 1;
 	} else {
+		void *pa;
+
+		pa = (void *)(unsigned long)p;
+
 		spinlock(&rw->pr_lock);
-		psc_dynarray_remove(&rw->pr_readers, (void *)p);
+		psc_dynarray_remove(&rw->pr_readers, pa);
 		freelock(&rw->pr_lock);
 	}
 	rc = pthread_rwlock_unlock(&rw->pr_rwlock);
