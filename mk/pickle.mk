@@ -256,4 +256,8 @@ ifeq ($(filter $(realpath ${ROOTDIR})/compat/%,${CURDIR}),)
   DEFINES+=						-DHAVE_SA_LEN
  endif
 
+ ifdef PICKLE_HAVE_SYS_CDEFS_H
+  DEFINES+=						-DHAVE_SYS_CDEFS_H
+ endif
+
 endif
