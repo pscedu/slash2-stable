@@ -43,6 +43,9 @@
 
 #ifdef HAVE_ASM_TYPES_H
 #include <asm/types.h>
+# if __WORDSIZE == 64
+#  define __u64 __uint64_t
+# endif
 #endif
 
 #include <stdarg.h>
