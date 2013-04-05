@@ -17,7 +17,9 @@
  * %PSC_END_COPYRIGHT%
  */
 
-#undef _FILE_OFFSET_BITS	/* FTS is not 64-bit ready */
+#ifdef HAVE_FTS
+#  undef _FILE_OFFSET_BITS	/* FTS is not 64-bit ready */
+#endif
 
 #include <sys/param.h>
 #include <sys/stat.h>
@@ -42,15 +44,15 @@ int
 pfl_filewalk_stm2info(int mode)
 {
 	if (S_ISREG(mode))
-		return (FTS_F);
+		return (PFWT_F);
 	if (S_ISDIR(mode))
-		return (FTS_D);
+		return (PFWT_D);
 	psc_fatalx("invalid mode %#o", mode);
 }
 
 /**
  * pfl_filewalk - Traverse a file hierarchy with a given operation.
- * @fn: file root
+ * @fn: file root.
  * @flags: behavorial flags.
  * @cbf: callback to invoke on each file.
  * @arg: optional argument to supply to callback.
@@ -58,12 +60,14 @@ pfl_filewalk_stm2info(int mode)
  *	path name unless the file in question is a symbolic link.
  */
 #ifdef HAVE_FTS
+
 int
 pfl_filewalk(const char *fn, int flags, int (*cbf)(const char *,
-    const struct stat *, int, int, void *), void *arg)
+    const struct pfl_stat *, int, int, void *), void *arg)
 {
 	char * const pathv[] = { (char *)fn, NULL };
 	char buf[PATH_MAX];
+	struct pfl_stat pst;
 	struct stat stb;
 	int rc = 0;
 	FTSENT *f;
@@ -76,6 +80,7 @@ pfl_filewalk(const char *fn, int flags, int (*cbf)(const char *,
 		if (fp == NULL)
 			psc_fatal("fts_open %s", fn);
 		while ((f = fts_read(fp)) != NULL) {
+			PFL_STAT_EXPORT(f->fts_statp, &pst);
 			switch (f->fts_info) {
 			case FTS_NS:
 				warnx("%s: %s", f->fts_path,
@@ -90,9 +95,9 @@ pfl_filewalk(const char *fn, int flags, int (*cbf)(const char *,
 						warnx("processing %s%s",
 						    buf, f->fts_info ==
 						    FTS_D ? "/" : "");
-					rc = cbf(buf, f->fts_statp,
-					    f->fts_info, f->fts_level,
-					    arg);
+					rc = cbf(buf, &pst, f->fts_info
+					    == FTS_D ? PFWT_D : PFWT_F,
+					    f->fts_level, arg);
 					if (rc == PFL_FILEWALK_RC_SKIP)
 						fts_set(fp, f, FTS_SKIP);
 					else if (rc) {
@@ -104,8 +109,8 @@ pfl_filewalk(const char *fn, int flags, int (*cbf)(const char *,
 			case FTS_SL:
 				if (flags & PFL_FILEWALKF_VERBOSE)
 					warnx("processing %s", f->fts_path);
-				rc = cbf(f->fts_path, f->fts_statp,
-				    f->fts_info, f->fts_level, arg);
+				rc = cbf(f->fts_path, &pst, PFWT_SL,
+				    f->fts_level, arg);
 				if (rc == PFL_FILEWALK_RC_SKIP)
 					fts_set(fp, f, FTS_SKIP);
 				else if (rc) {
@@ -133,7 +138,8 @@ pfl_filewalk(const char *fn, int flags, int (*cbf)(const char *,
 			int info;
 
 			info = pfl_filewalk_stm2info(stb.st_mode);
-			rc = cbf(buf, &stb, info, 0, arg);
+			PFL_STAT_EXPORT(&stb, &pst);
+			rc = cbf(buf, &pst, info, 0, arg);
 		}
 	}
 	return (rc);
@@ -141,7 +147,7 @@ pfl_filewalk(const char *fn, int flags, int (*cbf)(const char *,
 
 #else
 
-int (*pfl_filewalk_cbf)(const char *, const struct stat *, int, int,
+int (*pfl_filewalk_cbf)(const char *, const struct pfl_stat *, int, int,
     void *);
 void *pfl_filewalk_arg;
 

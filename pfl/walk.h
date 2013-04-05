@@ -25,10 +25,12 @@
 #ifndef _PFL_FILEWALK_H_
 #define _PFL_FILEWALK_H_
 
+#include "pfl/stat.h"
+
 struct stat;
 
 int pfl_filewalk(const char *, int, int (*)(const char *,
-	const struct stat *, int, int, void *), void *);
+	const struct pfl_stat *, int, int, void *), void *);
 
 #define PFL_FILEWALKF_VERBOSE	(1 << 0)
 #define PFL_FILEWALKF_RECURSIVE	(1 << 1)
@@ -38,10 +40,10 @@ int pfl_filewalk(const char *, int, int (*)(const char *,
 #define PFL_FILEWALK_RC_SKIP	2
 
 enum {
-	PFWT_DP,
 	PFWT_D,
+	PFWT_DP,
 	PFWT_F,
-	PFWT_SL,
+	PFWT_SL
 };
 
 #endif /* _PFL_FILEWALK_H_ */
