@@ -208,6 +208,7 @@ main(int argc, char *argv[])
 	PRTYPE(struct pfl_callerinfo);
 	PRTYPE(struct pfl_mutex);
 	PRTYPE(struct pfl_opstat);
+	PRTYPE(struct pfl_stat);
 	PRTYPE(struct pfl_strbuf);
 	PRTYPE(struct psc_atomic16);
 	PRTYPE(struct psc_atomic32);
@@ -355,6 +356,10 @@ main(int argc, char *argv[])
 	PRVAL(PCMT_SETPARAM);
 	PRVAL(PCOF_FLAG);
 	PRVAL(PCOF_FUNC);
+	PRVAL(PFWT_D);
+	PRVAL(PFWT_DP);
+	PRVAL(PFWT_F);
+	PRVAL(PFWT_SL);
 	PRVAL(PLL_DEBUG);
 	PRVAL(PLL_DIAG);
 	PRVAL(PLL_ERROR);
