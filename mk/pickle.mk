@@ -268,4 +268,8 @@ ifeq ($(filter $(realpath ${ROOTDIR})/compat/%,${CURDIR}),)
   DEFINES+=						-DHAVE_SYS_SOCKIO_H
  endif
 
+ ifdef PICKLE_HAVE_BLKSIZE_T
+  DEFINES+=						-DHAVE_BLKSIZE_T
+ endif
+
 endif
