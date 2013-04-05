@@ -25,7 +25,7 @@
 #include <arpa/inet.h>
 
 #ifdef HAVE_SYS_SOCKIO_H
-#include <sys/sockio.h>
+# include <sys/sockio.h>
 #endif
 
 #ifdef HAVE_RTNETLINK
