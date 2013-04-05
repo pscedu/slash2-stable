@@ -1,5 +1,7 @@
 /* $Id$ */
 
+#undef _FILE_OFFSET_BITS
+
 #include <sys/types.h>
 #include <sys/stat.h>
 
