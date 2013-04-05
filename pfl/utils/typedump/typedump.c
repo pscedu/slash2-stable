@@ -195,6 +195,8 @@ main(int argc, char *argv[])
 	/* start structs */
 	printf("structures:\n");
 	PRTYPE(atomic_t);
+	PRTYPE(blkcnt_t);
+	PRTYPE(blksize_t);
 	PRTYPE(psc_atomic_t);
 	PRTYPE(pscfs_fgen_t);
 	PRTYPE(pscfs_inum_t);
