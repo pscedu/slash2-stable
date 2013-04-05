@@ -25,13 +25,25 @@
 #else
 #  include <sys/types.h>
 
+#  include <errno.h>
+
 #  include "pfl/cdefs.h"
+#  include "psc_util/log.h"
+
+struct sigevent {
+	union sigval	sigev_value;
+	int		sigev_signo;
+	int		sigev_notify;
+};
+
+#define SIGEV_SIGNAL	0	/* notify via signal */
 
 struct aiocb {
-	int	 aio_fildes;
-	off_t	 aio_offset;
-	void	*aio_buf;
-	size_t	 aio_nbytes;
+	int		 aio_fildes;
+	off_t		 aio_offset;
+	void		*aio_buf;
+	size_t		 aio_nbytes;
+	struct sigevent  aio_sigevent;
 };
 
 static __inline int
