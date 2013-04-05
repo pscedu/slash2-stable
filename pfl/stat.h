@@ -93,6 +93,11 @@ struct stat;
 #define ALLPERMS	(S_ISUID | S_ISGID | S_ISVTX | S_IRWXU | S_IRWXG | S_IRWXO)
 #endif
 
+#ifndef HAVE_BLKSIZE_T
+typedef uint64_t blksize_t;
+typedef uint64_t blkcnt_t;
+#endif
+
 struct pfl_stat {
 	dev_t			st_dev;
 	ino_t			st_ino;
@@ -103,7 +108,7 @@ struct pfl_stat {
 	dev_t			st_rdev;
 	off_t			st_size;
 	blksize_t		st_blksize;
-	blkcnt64_t		st_blocks;
+	blkcnt_t		st_blocks;
 	struct pfl_timespec	st_atim;
 	struct pfl_timespec	st_mtim;
 	struct pfl_timespec	st_ctim;
