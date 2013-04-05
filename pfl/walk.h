@@ -37,14 +37,11 @@ int pfl_filewalk(const char *, int, int (*)(const char *,
 #define PFL_FILEWALK_RC_BAIL	1
 #define PFL_FILEWALK_RC_SKIP	2
 
-#ifdef HAVE_FTS
-# include "fts.h"
-#else
-# include "ftw.h"
-# define FTS_DP			FTW_DP
-# define FTS_D			FTW_D
-# define FTS_F			FTW_F
-# define FTS_SL			FTW_SL
-#endif
+enum {
+	PFWT_DP,
+	PFWT_D,
+	PFWT_F,
+	PFWT_SL,
+};
 
 #endif /* _PFL_FILEWALK_H_ */

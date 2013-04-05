@@ -88,6 +88,26 @@ struct stat;
 #define _S_IWUGO (S_IWUSR | S_IWGRP | S_IWOTH)
 #define _S_IXUGO (S_IXUSR | S_IXGRP | S_IXOTH)
 
+#ifndef ALLPERMS
+#define ALLPERMS	(S_ISUID | S_ISGID | S_ISVTX | S_IRWXU | S_IRWXG | S_IRWXO)
+#endif
+
+struct pfl_stat {
+	dev_t		st_dev;
+	ino_t		st_ino;
+	mode_t		st_mode;
+	nlink_t		st_nlink;
+	uid_t		st_uid;
+	gid_t		st_gid;
+	dev_t		st_rdev;
+	off_t		st_size;
+	blksize_t	st_blksize;
+	blkcnt64_t	st_blocks;
+	struct timespec	st_atim;
+	struct timespec	st_mtim;
+	struct timespec	st_ctim;
+};
+
 void pfl_dump_statbuf(const struct stat *);
 void pfl_dump_mode(mode_t);
 
