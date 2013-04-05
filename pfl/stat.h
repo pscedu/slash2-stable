@@ -23,6 +23,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 
+#include "pfl/time.h"
 #include "pfl/types.h"
 #include "psc_util/log.h"
 
@@ -93,22 +94,72 @@ struct stat;
 #endif
 
 struct pfl_stat {
-	dev_t		st_dev;
-	ino_t		st_ino;
-	mode_t		st_mode;
-	nlink_t		st_nlink;
-	uid_t		st_uid;
-	gid_t		st_gid;
-	dev_t		st_rdev;
-	off_t		st_size;
-	blksize_t	st_blksize;
-	blkcnt64_t	st_blocks;
-	struct timespec	st_atim;
-	struct timespec	st_mtim;
-	struct timespec	st_ctim;
+	dev_t			st_dev;
+	ino_t			st_ino;
+	mode_t			st_mode;
+	nlink_t			st_nlink;
+	uid_t			st_uid;
+	gid_t			st_gid;
+	dev_t			st_rdev;
+	off_t			st_size;
+	blksize_t		st_blksize;
+	blkcnt64_t		st_blocks;
+	struct pfl_timespec	st_atim;
+	struct pfl_timespec	st_mtim;
+	struct pfl_timespec	st_ctim;
 };
 
 void pfl_dump_statbuf(const struct stat *);
 void pfl_dump_mode(mode_t);
+
+#define PFL_STAT_EXPORT(stb, pst)					\
+	do {								\
+		uint64_t _s, _ns;					\
+									\
+		(pst)->st_dev = (stb)->st_dev;				\
+		(pst)->st_ino = (stb)->st_ino;				\
+		(pst)->st_mode = (stb)->st_mode;			\
+		(pst)->st_nlink = (stb)->st_nlink;			\
+		(pst)->st_uid = (stb)->st_uid;				\
+		(pst)->st_gid = (stb)->st_gid;				\
+		(pst)->st_rdev = (stb)->st_rdev;			\
+		(pst)->st_size = (stb)->st_size;			\
+		(pst)->st_blksize = (stb)->st_blksize;			\
+		(pst)->st_blocks = (stb)->st_blocks;			\
+									\
+		PFL_STB_ATIME_GET((stb), &_s, &_ns);			\
+		PFL_STB_ATIME_SET(_s, _ns, (pst));			\
+									\
+		PFL_STB_MTIME_GET((stb), &_s, &_ns);			\
+		PFL_STB_MTIME_SET(_s, _ns, (pst));			\
+									\
+		PFL_STB_CTIME_GET((stb), &_s, &_ns);			\
+		PFL_STB_CTIME_SET(_s, _ns, (pst));			\
+	} while (0)
+
+#define PFL_STAT_IMPORT(pst, stb)					\
+	do {								\
+		uint64_t _s, _ns;					\
+									\
+		(stb)->st_dev = (pst)->st_dev;				\
+		(stb)->st_ino = (pst)->st_ino;				\
+		(stb)->st_mode = (pst)->st_mode;			\
+		(stb)->st_nlink = (pst)->st_nlink;			\
+		(stb)->st_uid = (pst)->st_uid;				\
+		(stb)->st_gid = (pst)->st_gid;				\
+		(stb)->st_rdev = (pst)->st_rdev;			\
+		(stb)->st_size = (pst)->st_size;			\
+		(stb)->st_blksize = (pst)->st_blksize;			\
+		(stb)->st_blocks = (pst)->st_blocks;			\
+									\
+		PFL_STB_ATIME_GET((pst), &_s, &_ns);			\
+		PFL_STB_ATIME_SET(_s, _ns, (stb));			\
+									\
+		PFL_STB_MTIME_GET((pst), &_s, &_ns);			\
+		PFL_STB_MTIME_SET(_s, _ns, (stb));			\
+									\
+		PFL_STB_CTIME_GET((pst), &_s, &_ns);			\
+		PFL_STB_CTIME_SET(_s, _ns, (stb));			\
+	} while (0)
 
 #endif /* _PFL_STAT_H_ */
