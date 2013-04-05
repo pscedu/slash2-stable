@@ -12,7 +12,6 @@ main(int argc, char *argv[])
 {
 	(void)argc;
 	(void)argv;
-	(void)CTL_NET;
-	(void)PF_ROUTE;
+	(void)NET_RT_DUMP;
 	exit(0);
 }
