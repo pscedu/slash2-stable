@@ -210,6 +210,7 @@ main(int argc, char *argv[])
 	PRTYPE(struct pfl_opstat);
 	PRTYPE(struct pfl_stat);
 	PRTYPE(struct pfl_strbuf);
+	PRTYPE(struct pfl_timespec);
 	PRTYPE(struct psc_atomic16);
 	PRTYPE(struct psc_atomic32);
 	PRTYPE(struct psc_atomic64);
