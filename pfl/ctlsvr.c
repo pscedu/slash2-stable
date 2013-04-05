@@ -697,7 +697,9 @@ struct psc_ctl_rlim {
 #ifdef RLIMIT_NPROC
 	{ "maxproc",	RLIMIT_NPROC },
 #endif
+#ifdef RLIMIT_AS
 	{ "mem",	RLIMIT_AS },
+#endif
 #ifdef RLIMIT_MEMLOCK
 	{ "mlock",	RLIMIT_MEMLOCK },
 #endif
