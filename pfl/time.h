@@ -39,12 +39,14 @@
 
 #include <sys/time.h>
 
+#include <stdint.h>
+
 #ifndef HAVE_CLOCK_GETTIME
 # include "pfl/compat/clock_gettime.h"
 #endif
 
 #ifndef timespecclear
-#define timespecclear(tsp)		(tsp)->tv_sec = (tsp)->tv_nsec = 0
+#define timespecclear(tsp)		((tsp)->tv_sec = (tsp)->tv_nsec = 0)
 #endif
 
 #ifndef timespecisset
@@ -100,6 +102,23 @@ struct timespec;
 int futimens(int, const struct timespec *);
 #endif
 
-#define PFL_CTIME_BUFSIZ	26
+#define PFL_CTIME_BUFSIZ		26
+
+struct pfl_timespec {
+	uint64_t			tv_sec;
+	uint64_t			tv_nsec;
+};
+
+#define PFLPRI_PTIMESPEC		"%"PRId64":%09"PRId64
+#define PFLPRI_PTIMESPEC_ARGS(ts)	(ts)->tv_sec, (ts)->tv_nsec
+
+#define PFL_GETPTIMESPEC(ts)						\
+	do {								\
+		struct timespec _ts;					\
+									\
+		PFL_GETTIMESPEC(&_ts);					\
+		(ts)->tv_sec = _ts.tv_sec;				\
+		(ts)->tv_nsec = _ts.tv_nsec;				\
+	} while (0)
 
 #endif /* _PFL_TIME_H_ */

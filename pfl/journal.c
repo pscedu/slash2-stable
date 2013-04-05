@@ -137,8 +137,8 @@ psc_journal_io(struct psc_journal *pj, void *p, size_t len, off_t off,
 
 			psclog_diag("wtime="PSCPRI_TIMESPEC" "
 			    "synctime="PSCPRI_TIMESPEC,
-			    SLPRI_TIMESPEC_ARGS(&wtime),
-			    SLPRI_TIMESPEC_ARGS(&synctime));
+			    PFLPRI_PTIMESPEC_ARGS(&wtime),
+			    PFLPRI_PTIMESPEC_ARGS(&synctime));
 
 			if (rc)
 				psclog_error("sync_file_range failed "
