@@ -133,13 +133,16 @@ void pfl_dump_mode(mode_t);
 		(pst)->st_blocks = (stb)->st_blocks;			\
 									\
 		PFL_STB_ATIME_GET((stb), &_s, &_ns);			\
-		PFL_STB_ATIME_SET(_s, _ns, (pst));			\
+		(pst)->st_atim.tv_sec = _s;				\
+		(pst)->st_atim.tv_nsec = _ns;				\
 									\
 		PFL_STB_MTIME_GET((stb), &_s, &_ns);			\
-		PFL_STB_MTIME_SET(_s, _ns, (pst));			\
+		(pst)->st_mtim.tv_sec = _s;				\
+		(pst)->st_mtim.tv_nsec = _ns;				\
 									\
 		PFL_STB_CTIME_GET((stb), &_s, &_ns);			\
-		PFL_STB_CTIME_SET(_s, _ns, (pst));			\
+		(pst)->st_ctim.tv_sec = _s;				\
+		(pst)->st_ctim.tv_nsec = _ns;				\
 	} while (0)
 
 #define PFL_STAT_IMPORT(pst, stb)					\
@@ -157,13 +160,16 @@ void pfl_dump_mode(mode_t);
 		(stb)->st_blksize = (pst)->st_blksize;			\
 		(stb)->st_blocks = (pst)->st_blocks;			\
 									\
-		PFL_STB_ATIME_GET((pst), &_s, &_ns);			\
+		_s = (pst)->st_atim.tv_sec;				\
+		_ns = (pst)->st_atim.tv_nsec;				\
 		PFL_STB_ATIME_SET(_s, _ns, (stb));			\
 									\
-		PFL_STB_MTIME_GET((pst), &_s, &_ns);			\
+		_s = (pst)->st_mtim.tv_sec;				\
+		_ns = (pst)->st_mtim.tv_nsec;				\
 		PFL_STB_MTIME_SET(_s, _ns, (stb));			\
 									\
-		PFL_STB_CTIME_GET((pst), &_s, &_ns);			\
+		_s = (pst)->st_ctim.tv_sec;				\
+		_ns = (pst)->st_ctim.tv_nsec;				\
 		PFL_STB_CTIME_SET(_s, _ns, (stb));			\
 	} while (0)
 
