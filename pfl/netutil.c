@@ -583,9 +583,8 @@ pflnet_getifnfordst(const struct ifaddrs *ifa0,
 
 #ifdef HAVE_RTNETLINK
 	pflnet_getifnfordst_rtnetlink(sa, ifn);
-#elif HAVE_RT_SYSCTL
+#elif defined(RTM_GET)
 	pflnet_getifnfordst_rtsock(sa, ifn);
-#elif HAVE_
 #else
 	errno = ENOTSUP;
 	psc_fatal("getifnfordst");
