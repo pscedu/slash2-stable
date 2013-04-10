@@ -155,9 +155,11 @@ int
 pfl_filewalk_cb(const char *fn, const struct stat *stb, int flags,
     struct FTW *ftw)
 {
+	struct pfl_stat pst;
 	char buf[PATH_MAX];
 	int rc;
 
+	PFL_STAT_EXPORT(stb, &pst);
 	switch (flags) {
 	case FTW_NS:
 		warn("%s: %s", fn);
@@ -170,7 +172,7 @@ pfl_filewalk_cb(const char *fn, const struct stat *stb, int flags,
 			if (flags & PFL_FILEWALKF_VERBOSE)
 				warnx("processing %s%s",
 				    buf, flags == FTW_D ? "/" : "");
-			rc = pfl_filewalk_cbf(buf, stb, flags,
+			rc = pfl_filewalk_cbf(buf, &pst, flags,
 			    ftw->level, pfl_filewalk_arg);
 			if (rc == PFL_FILEWALK_RC_SKIP)
 				ftw->__quit = FTW_PRUNE;
@@ -181,7 +183,7 @@ pfl_filewalk_cb(const char *fn, const struct stat *stb, int flags,
 	case FTW_SL:
 		if (flags & PFL_FILEWALKF_VERBOSE)
 			warnx("processing %s", fn);
-		rc = pfl_filewalk_cbf(fn, stb, flags, ftw->level,
+		rc = pfl_filewalk_cbf(fn, &pst, flags, ftw->level,
 		    pfl_filewalk_arg);
 		if (rc == PFL_FILEWALK_RC_SKIP)
 			ftw->__quit = FTW_PRUNE;
@@ -199,7 +201,7 @@ pfl_filewalk_cb(const char *fn, const struct stat *stb, int flags,
 
 int
 pfl_filewalk(const char *fn, int flags, int (*cbf)(const char *,
-    const struct stat *, int, int, void *), void *arg)
+    const struct pfl_stat *, int, int, void *), void *arg)
 {
 	char buf[PATH_MAX];
 	struct stat stb;
