@@ -63,7 +63,7 @@ odtcb_show(void *data, struct odtable_receipt *odtr)
 	printf("%7zd %16"PRIx64" ", odtr->odtr_elem, odtr->odtr_key);
 
 	if (fmt) {
-		FMTSTR(buf, sizeof(buf), fmt,
+		(void)FMTSTR(buf, sizeof(buf), fmt,
 		    FMTSTRCASE('d', "d",	(u.p = p, p += sizeof(int),	*u.d))
 		    FMTSTRCASE('u', "u",	(u.p = p, p += sizeof(int),	*u.d))
 		    FMTSTRCASE('x', "x",	(u.p = p, p += sizeof(int),	*u.d))
