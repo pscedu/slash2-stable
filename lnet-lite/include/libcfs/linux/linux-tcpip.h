@@ -45,7 +45,11 @@
 #error Do not #include this file directly. #include <libcfs/libcfs.h> instead
 #endif
 
+#ifdef sun
+#define CFS_LOOPBACK_IFNAME "lo0"
+#else
 #define CFS_LOOPBACK_IFNAME "lo"
+#endif
 
 #ifdef __KERNEL__
 #include <net/sock.h>
