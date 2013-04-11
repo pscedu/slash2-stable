@@ -549,17 +549,17 @@ struct libcfs_debug_msg_data {
 			___lvl = PLL_WARN;			\
 			break;					\
 		case D_INFO:					\
-			___lvl = PLL_INFO;			\
+			___lvl = PLL_NOTICE;			\
 			break;					\
 		case D_NET:					\
 		case D_CONFIG:					\
 		case D_OTHER:					\
 		case D_CONSOLE:					\
-			___lvl = PLL_DEBUG;			\
+			___lvl = PLL_INFO;			\
 			break;					\
 		case D_RPCTRACE:				\
 		case D_TRACE:					\
-			___lvl = PLL_TRACE;			\
+			___lvl = PLL_DEBUG;			\
 			break;					\
 		default:					\
 			___lvl = PLL_ERROR;			\
