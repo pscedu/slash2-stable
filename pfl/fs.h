@@ -47,7 +47,9 @@ struct pscfs_creds {
 
 struct pscfs_dirent {
 	uint64_t	pfd_ino;
+	uint64_t	pfd_off;
 	uint32_t	pfd_namelen;
+	uint32_t	pfd_type;
 	char		pfd_name[0];
 };
 
