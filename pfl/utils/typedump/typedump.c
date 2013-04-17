@@ -304,6 +304,7 @@ main(int argc, char *argv[])
 	PRTYPE(struct rnd_iterator);
 	PRTYPE(struct rsx_msg_conversion);
 	PRTYPE(struct rsx_msg_portablizer);
+	PRTYPE(struct sigevent);
 	/* end structs */
 
 	/* start typedefs */
