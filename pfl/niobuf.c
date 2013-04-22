@@ -179,7 +179,7 @@ pscrpc_abort_bulk(struct pscrpc_bulk_desc *desc)
 	struct l_wait_info  lwi;
 	int    rc;
 
-	DEBUG_REQ(PLL_NET, desc->bd_req, "bulk active = %d",
+	DEBUG_REQ(PLL_INFO, desc->bd_req, "bulk active = %d",
 	    pscrpc_bulk_active(desc));
 
 	if (!pscrpc_bulk_active(desc))		/* completed or */
