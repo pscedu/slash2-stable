@@ -52,7 +52,7 @@ pscrpc_send_buf(lnet_handle_md_t *mdh, void *base, int len,
 
 	psc_assert(portal);
 	psc_assert(conn);
-	CDEBUG(D_INFO, "conn=%p id %s\n", conn, libcfs_id2str(conn->c_peer));
+	CDEBUG(D_OTHER, "conn=%p id %s\n", conn, libcfs_id2str(conn->c_peer));
 	md.start     = base;
 	md.length    = len;
 	md.threshold = (ack == LNET_ACK_REQ) ? 2 : 1;
@@ -179,7 +179,7 @@ pscrpc_abort_bulk(struct pscrpc_bulk_desc *desc)
 	struct l_wait_info  lwi;
 	int    rc;
 
-	DEBUG_REQ(PLL_INFO, desc->bd_req, "bulk active = %d",
+	DEBUG_REQ(PLL_NET, desc->bd_req, "bulk active = %d",
 	    pscrpc_bulk_active(desc));
 
 	if (!pscrpc_bulk_active(desc))		/* completed or */
