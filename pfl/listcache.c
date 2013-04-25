@@ -143,6 +143,22 @@ _lc_add(struct psc_listcache *plc, void *p, int flags)
 	return (1);
 }
 
+int
+_lc_add_sorted(struct psc_listcache *plc, void *p, 
+    int (*cmpf)(const void *, const void *))
+{
+	int locked;
+
+	locked = LIST_CACHE_RLOCK(plc);
+
+	pll_add_sorted(&plc->plc_pll, p, cmpf);
+	plc->plc_nseen++;
+
+	psc_waitq_wakeall(&plc->plc_wq_empty);
+	LIST_CACHE_URLOCK(plc, locked);
+	return (1);
+}
+
 void
 _lc_move(struct psc_listcache *plc, void *p, int flags)
 {

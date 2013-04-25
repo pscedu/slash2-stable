@@ -104,6 +104,8 @@ struct psc_listcache {
 #define lc_addtail(plc, p)		((void)_lc_add((plc), (p), PLCBF_TAIL))
 #define lc_add(plc, p)			((void)_lc_add((plc), (p), PLCBF_TAIL))
 
+#define lc_add_sorted(plc, p, f)	((void)_lc_add_sorted((plc), (p), (f)))
+
 #define lc_addtail_ifalive(plc, p)	_lc_add((plc), (p), PLCBF_TAIL | PLCBF_DYINGOK)
 
 #define lc_gettimed(plc, tm)		_lc_get((plc), (tm), PLCBF_HEAD)
