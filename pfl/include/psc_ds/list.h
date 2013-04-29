@@ -411,6 +411,16 @@ _psclist_next_obj(struct psclist_head *hd, void *p,
 	     (p); (p) = (n), (n) = (n) ? psclist_next_obj((hd), (n), memb) : NULL)
 
 /**
+ * psclist_for_each_backwards - Iterate over a psclist.
+ * @e: the &struct psclist_head to use as a loop counter.
+ * @head: the head for your psclist.
+ */
+#define psclist_for_each_backwards(e, hd)					\
+	for ((e) = psc_listhd_last(hd);						\
+	     (e) != (hd) || ((e) = NULL);					\
+	     (e) = psc_lentry_prev(e))
+
+/**
  * psclist_for_each_entry_safe_backwards - Iterate backwards over a list safe
  *	against removal of entries.
  * @p: the type * to use as a loop counter.
@@ -514,6 +524,21 @@ psclist_add_sorted(struct psclist_head *hd, struct psc_listentry *e,
 			return;
 		}
 	psclist_add(e, hd);
+}
+
+static __inline void
+psclist_add_sorted_backwards(struct psclist_head *hd, struct psc_listentry *e,
+    int (*cmpf)(const void *, const void *), ptrdiff_t offset)
+{
+	struct psclist_head *t;
+
+	psc_assert(e);
+	psclist_for_each_backwards(t, hd)
+		if (cmpf((char *)e - offset, (char *)t - offset) > 0) {
+			psclist_add_after(e, t);
+			return;
+		}
+	psclist_add_head(e, hd);
 }
 
 #endif /* _PFL_LIST_H_ */

@@ -104,7 +104,8 @@ struct psc_listcache {
 #define lc_addtail(plc, p)		((void)_lc_add((plc), (p), PLCBF_TAIL))
 #define lc_add(plc, p)			((void)_lc_add((plc), (p), PLCBF_TAIL))
 
-#define lc_add_sorted(plc, p, f)	((void)_lc_add_sorted((plc), (p), (f)))
+#define lc_add_sorted(plc, p, f)		((void)_lc_add_sorted((plc), (p), (f)))
+#define lc_add_sorted_backwards(plc, p, f)	((void)_lc_add_sorted_backwards((plc), (p), (f)))
 
 #define lc_addtail_ifalive(plc, p)	_lc_add((plc), (p), PLCBF_TAIL | PLCBF_DYINGOK)
 
@@ -165,6 +166,9 @@ void	 _lc_reginit(struct psc_listcache *, ptrdiff_t, const char *, ...);
 void	  lc_register(struct psc_listcache *, const char *, ...);
 void	  lc_unregister(struct psc_listcache *);
 void	  lc_vregister(struct psc_listcache *, const char *, va_list);
+
+void	 _lc_add_sorted(struct psc_listcache *, void *, int (*)(const void *, const void *));
+void	 _lc_add_sorted_backwards(struct psc_listcache *, void *, int (*)(const void *, const void *));
 
 extern struct psc_lockedlist	psc_listcaches;
 

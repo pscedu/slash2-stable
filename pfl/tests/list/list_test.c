@@ -41,8 +41,9 @@ usage(void)
 }
 
 struct m {
-	int v;
+	int garbage;
 	struct psclist_head lentry;
+	int v;
 };
 
 void
@@ -72,9 +73,17 @@ shift(void)
 }
 
 int
-m_cmp(const void *a, const void *b)
+m_cmp1(const void *a, const void *b)
 {
 	struct m * const *ma = a, *x = *ma, * const *mb = b, *y = *mb;
+
+	return (CMP(x->v, y->v));
+}
+
+int
+m_cmp2(const void *a, const void *b)
+{
+	struct m const *x = a, *y = b;
 
 	return (CMP(x->v, y->v));
 }
@@ -102,6 +111,77 @@ dump(struct psc_lockedlist *pll)
 	printf("\n");
 }
 
+void 
+pll_sort_backwards(void)
+{
+	struct i *it;
+	struct psc_lockedlist pll = PLL_INIT(&pll, struct i, i_lentry);
+
+	int i;
+	int sorted[] = {    0,  1,   2, 3, 4, 5, 9, 18, 27, 100, 156 };
+	int unsorted[] = { 156, 5, 100, 3, 9, 2, 0, 27,  4,   1,  18 };
+
+	for (i = 0; i < (int) (sizeof(sorted) / sizeof (int)); i++) {
+		PFL_ALLOC_OBJ(it);
+		INIT_PSC_LISTENTRY(&it->i_lentry);
+		it->i_v = unsorted[i];
+
+		/* cscope: psclist_add_sorted_backwards() */
+		pll_add_sorted_backwards(&pll, it, it_cmp);
+		/* dump(&pll); */
+	}
+
+
+	for (i = 0; i < (int) (sizeof(sorted) / sizeof (int)); i++) {
+		it = pll_get(&pll);
+		psc_assert(it->i_v == sorted[i]);
+		PSCFREE(it);
+	}
+	printf("Locked list sort backwards seems to be working.\n");
+}
+
+void 
+lc_sort_test(void)
+{
+	int i;
+	int sorted[] = {    0,  1,   2, 3, 4, 5, 9, 18,  27, 100, 156, 400 };
+	int unsorted[] = { 156, 5, 100, 3, 9, 2, 0, 400, 27,   4,   1,  18 };
+
+	struct m *m;
+	struct psc_listcache lc;
+
+	lc_init(&lc, struct m, lentry);
+
+	for (i = 0; i < (int) (sizeof(sorted) / sizeof (int)); i++) {
+		m = PSCALLOC(sizeof(*m));
+		INIT_PSC_LISTENTRY(&m->lentry);
+		m->v = unsorted[i];
+		lc_add_sorted_backwards(&lc, m, m_cmp2);
+	}
+	for (i = 0; i < (int) (sizeof(sorted) / sizeof (int)); i++) {
+		m = lc_getwait(&lc);
+		psc_assert(m->v == sorted[i]);
+		PSCFREE(m);
+	}
+
+	lc_init(&lc, struct m, lentry);
+
+	for (i = 0; i < (int) (sizeof(sorted) / sizeof (int)); i++) {
+		m = PSCALLOC(sizeof(*m));
+		INIT_PSC_LISTENTRY(&m->lentry);
+		m->v = unsorted[i];
+		lc_add_sorted(&lc, m, m_cmp2);
+	}
+	for (i = 0; i < (int) (sizeof(sorted) / sizeof (int)); i++) {
+		m = lc_getwait(&lc);
+		psc_assert(m->v == sorted[i]);
+		PSCFREE(m);
+	}
+
+	printf("List cache sort seems to be working.\n");
+}
+
+
 int
 main(int argc, char *argv[])
 {
@@ -121,6 +201,9 @@ main(int argc, char *argv[])
 	if (argc)
 		usage();
 
+	lc_sort_test();
+	pll_sort_backwards();
+
 	addelem(4);
 	addelem(2);
 	addelem(9);
@@ -132,7 +215,7 @@ main(int argc, char *argv[])
 	for (i = 0; i < 100; i++) {
 		p = PSCALLOC(sizeof(void *) * nitems);
 		psclist_sort(p, &hd, nitems, offsetof(struct m, lentry),
-		    qsort, m_cmp);
+		    qsort, m_cmp1);
 		PSCFREE(p);
 	}
 

@@ -131,6 +131,9 @@ struct psc_lockedlist {
 void  _pll_add(const struct pfl_callerinfo *, struct psc_lockedlist *, void *, int);
 void   pll_add_sorted(struct psc_lockedlist *, void *,
 	    int (*)(const void *, const void *));
+void   pll_add_sorted_backwards(struct psc_lockedlist *, void *,
+	    int (*)(const void *, const void *));
+int    pll_conjoint(struct psc_lockedlist *, void *);
 int    pll_conjoint(struct psc_lockedlist *, void *);
 void *_pll_get(const struct pfl_callerinfo *, struct psc_lockedlist *, int);
 void  _pll_initf(struct psc_lockedlist *, int, psc_spinlock_t *, int);

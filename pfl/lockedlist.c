@@ -143,6 +143,32 @@ pll_add_sorted(struct psc_lockedlist *pll, void *p,
 }
 
 /**
+ * pll_add_sorted_backwards - Add an item to a list in its sorted position.
+ * @pll: list to add to.
+ * @p: item to add.
+ * @cmpf: item comparison routine.
+ */
+void
+pll_add_sorted_backwards(struct psc_lockedlist *pll, void *p,
+    int (*cmpf)(const void *, const void *))
+{
+	struct psc_listentry *e;
+	int locked;
+
+	e = _pll_obj2entry(pll, p);
+	locked = PLL_RLOCK(pll);
+	if (pll_empty(pll))
+		psclist_add_head(e, &pll->pll_listhd);
+	else
+		psclist_add_sorted_backwards(&pll->pll_listhd, e, cmpf,
+		    pll->pll_offset);
+	psclog(PLL_DEBUG, "lockedlist %p add item %p",
+	    pll, p);
+	pll->pll_nitems++;
+	PLL_URLOCK(pll, locked);
+}
+
+/**
  * pll_sort - Sort items in a list.
  * @pll: list to sort.
  * @sortf: sort routine, such as qsort(3) or mergesort(3).
