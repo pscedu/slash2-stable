@@ -40,7 +40,7 @@ struct pscrpc_connection *
 pscrpc_connection_addref(struct pscrpc_connection *c)
 {
 	atomic_inc(&c->c_refcount);
-	CDEBUG(D_INFO, "connection=%p refcount %d to %s self=%s\n",
+	CDEBUG(D_OTHER, "connection=%p refcount %d to %s self=%s\n",
 	    c, atomic_read(&c->c_refcount),
 	    libcfs_nid2str(c->c_peer.nid), libcfs_nid2str(c->c_self));
 	return (c);
