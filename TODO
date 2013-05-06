@@ -177,7 +177,3 @@ wiki
 svnweb
 - this page does not display 'browse directory' link:
     http://localhost:24242/svnweb/main/log/projects/zfs/src/zfs-fuse
-
-- Not all items of the flush queue is flushable.  We may want to defer putting
-  an item on the queue until it is flushable.  dd-test.sh can have thousands of
-  pending biorqs.
