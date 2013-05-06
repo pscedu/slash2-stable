@@ -207,7 +207,6 @@ ifeq ($(filter $(realpath ${ROOTDIR})/compat/%,${CURDIR}),)
 
  ifdef PICKLE_HAVE_LIBNUMA
   DEFINES+=						-DHAVE_NUMA
-  NUMA_LIBS=						-lcpuset -lnuma
  endif
 
  ifdef PICKLE_HAVE_OPTRESET

@@ -115,6 +115,8 @@ GCRYPT_DEFINES=	$$(${LIBGCRYPT_CONFIG} --cflags | ${EXTRACT_DEFINES})
 GCRYPT_INCLUDES=$$(${LIBGCRYPT_CONFIG} --cflags | ${EXTRACT_INCLUDES})
 GCRYPT_LIBS=	$$(${LIBGCRYPT_CONFIG} --libs)
 
+NUMA_LIBS=	-lcpuset -lnuma
+
 ZFS_LIBS=	-L${ZFS_BASE}/src/zfs-fuse				\
 		-L${ZFS_BASE}/src/lib/libavl				\
 		-L${ZFS_BASE}/src/lib/libnvpair				\
