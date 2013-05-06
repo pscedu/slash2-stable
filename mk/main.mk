@@ -261,7 +261,9 @@ ifneq ($(filter zcc,${MODULES}),)
 endif
 
 ifneq ($(filter numa,${MODULES}),)
-  LDFLAGS+=	${NUMA_LIBS}
+  ifdef PICKLE_HAVE_NUMA
+    LDFLAGS+=	${NUMA_LIBS}
+  endif
 endif
 
 ifneq ($(filter gcrypt,${MODULES}),)
