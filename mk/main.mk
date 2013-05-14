@@ -411,7 +411,7 @@ ${OBJDIR}/$(notdir %.c) : %.y
 
 ifdef PROG
 ${PROG}: ${OBJS}
-	${CC} -o $@ $(sort ${OBJS}) ${LDFLAGS}
+	${LD} -o $@ $(sort ${OBJS}) ${LDFLAGS}
 	@printf "%s" "${PROG}:" > ${DEPEND_FILE}
 	@${LIBDEP} ${LDFLAGS} ${LIBDEP_ADD} >> ${DEPEND_FILE}
 endif
