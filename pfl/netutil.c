@@ -571,7 +571,6 @@ pflnet_getifnfordst(const struct ifaddrs *ifa0,
 	 * Scan interfaces for addr since netlink
 	 * will always give us the lo interface.
 	 */
-	ifa = ifa0;
 	for (ifa = ifa0; ifa; ifa = ifa->ifa_next)
 		if (ifa->ifa_addr->sa_family == sa->sa_family &&
 		    memcmp(&sin->sin_addr,
