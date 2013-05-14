@@ -31,8 +31,12 @@ FORCE_INST?=		0
 OBJDIR=			${OBJBASE}/psc.obj${CURDIR}
 DEPEND_FILE=		${OBJDIR}/.depend
 
+HOST=			$(word 1,$(subst ., ,$(shell hostname)))
+
+-include ${ROOTDIR}/mk/local.${HOST}.mk
 include ${ROOTDIR}/mk/defs.mk
 include ${ROOTDIR}/mk/pickle.mk
+-include ${ROOTDIR}/mk/local-post.${HOST}.mk
 
 _TSRCS=			$(sort $(foreach fn,${SRCS},$(realpath ${fn})))
 _TSRC_PATH=		$(shell perl -Wle 'my @a; push @a, shift; for my $$t (sort @ARGV) {	\

@@ -197,5 +197,8 @@ ifeq (${OSTYPE},SunOS)
   LEX=		flex
 endif
 
--include ${ROOTDIR}/mk/local.$(shell hostname).mk
+ifeq (${LD},ld)
+  LD=		cc
+endif
+
 -include ${ROOTDIR}/mk/local.mk

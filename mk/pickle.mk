@@ -18,7 +18,6 @@
 ifeq ($(filter $(realpath ${ROOTDIR})/compat/%,${CURDIR}),)
 
  PICKLEHOSTMK=${ROOTDIR}/mk/gen-localdefs-$(word 1,$(subst ., ,$(shell hostname)))-pickle.mk
- PICKLELOCALMK=${ROOTDIR}/mk/local.mk.pckl-$(word 1,$(subst ., ,$(shell hostname)))
 
  -include ${PICKLEHOSTMK}
 
@@ -28,8 +27,6 @@ ifeq ($(filter $(realpath ${ROOTDIR})/compat/%,${CURDIR}),)
   $(shell ${PICKLEGEN} "${ROOTDIR}" "${PICKLE_NEED_VERSION}" "${MAKE}" "${PICKLEHOSTMK}" >&2)
   include ${PICKLEHOSTMK}
  endif
-
- -include ${PICKLELOCALMK}
 
  ifdef PICKLE_HAVE_POSIX_MEMALIGN
   DEFINES+=						-DHAVE_POSIX_MEMALIGN
