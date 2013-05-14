@@ -86,7 +86,7 @@ int
 main(int argc, char *argv[])
 {
 	uint64_t in, out;
-	int st, f, c;
+	int st = 0, f, c;
 	int64_t v;
 
 	pfl_init();

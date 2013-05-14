@@ -42,7 +42,7 @@
 #define FMTSTR(buf, siz, fmt, cases)					\
 	_PFL_RVSTART {							\
 		char _convbuf[16], *_s, *_endt;				\
-		int _want, _twant, _sawch;				\
+		int _want = 0, _twant, _sawch;				\
 		const char *_p, *_t;					\
 		size_t _tlen;						\
 									\
