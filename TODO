@@ -144,7 +144,7 @@ pfl
   - the regular part should be built into the 'all' target
 - when processing .l and .y rules, propagate CFLAGS from the .l FILE var
   into the obj/*.c file var
-- ensure psc_fatal() runs atexit() such as umount
+- ensure psc_fatal() runs some critical atexit() such as umount
 - libpthread rwlock is broken on free/openbsd!  writers vs readers
   priority problems, the entire implementation needs rewritten
 - mutex is broken on freebsd -- psc_mutex_haslock() implemented with
@@ -153,7 +153,7 @@ pfl
 - remove regen from make and just use the .h files as deps on
   typedump.c
 - parse thr(-.*)? for connthr-foo not matching 'thr$' for thread names in ctl parsing
-- list head vs list entry - magic numbers should differ
+- list head vs list entry vs hash entry etc - magic numbers should differ
 - tests/rwlock is broken on mymichelle with DEBUG=0
 - document CTL_SOCK_FILE for daemons and *ctl utils
 - use CLOCK_MONTONIC in pscrpc_waitevent() to waitq_timedwait()
@@ -161,7 +161,7 @@ pfl
 	- especially in ctl command interface (e.g. 'msctl stop')
 - in RPC layer, add a syserrno -> PFLERR_* checker/portability
   translation layer
-- pfl/compat.h must have universal values for constants, so avoid this
+- pfl/compat.h must have universal values for errno constants, so avoid this
   approach altogether and use portable constants instead
 
 lnet
