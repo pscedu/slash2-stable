@@ -381,7 +381,6 @@ psc_pool_settotal(struct psc_poolmgr *m, int total)
 {
 	int adj, locked;
 
-	adj = 0;
 	locked = POOL_RLOCK(m);
 	if (m->ppm_max && total > m->ppm_max)
 		total = m->ppm_max;
@@ -538,7 +537,7 @@ _psc_pool_get(struct psc_poolmgr *m, int flags)
 	if (m->ppm_reclaimcb) {
 		atomic_inc(&m->ppm_nwaiters);
 		psc_mutex_lock(&m->ppm_reclaim_mutex);
-		n = m->ppm_reclaimcb(m);
+		m->ppm_reclaimcb(m);
 		psc_mutex_unlock(&m->ppm_reclaim_mutex);
 		atomic_dec(&m->ppm_nwaiters);
 		p = POOL_TRYGETOBJ(m);
