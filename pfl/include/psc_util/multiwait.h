@@ -29,7 +29,7 @@
 
 #include <pthread.h>
 
-#include "psc_ds/dynarray.h"
+#include "pfl/dynarray.h"
 #include "psc_util/pthrutil.h"
 
 struct psc_multiwait;

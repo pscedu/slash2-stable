@@ -20,7 +20,7 @@
 #ifndef _PFL_JOURNAL_H_
 #define _PFL_JOURNAL_H_
 
-#include "psc_ds/dynarray.h"
+#include "pfl/dynarray.h"
 #include "psc_util/atomic.h"
 #include "psc_util/iostats.h"
 #include "psc_util/lock.h"

@@ -29,8 +29,8 @@
 
 #include <stdarg.h>
 
-#include "psc_ds/list.h"
-#include "psc_ds/lockedlist.h"
+#include "pfl/list.h"
+#include "pfl/lockedlist.h"
 
 #define PSC_METER_NAME_MAX	32
 

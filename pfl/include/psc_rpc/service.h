@@ -20,7 +20,7 @@
 #ifndef _PSCRPC_SERVICE_H_
 #define _PSCRPC_SERVICE_H_
 
-#include "psc_ds/list.h"
+#include "pfl/list.h"
 #include "psc_util/lock.h"
 
 struct pscrpc_request;

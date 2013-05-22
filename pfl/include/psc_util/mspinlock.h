@@ -31,7 +31,7 @@
 #include <string.h>
 #include <unistd.h>
 
-#include "psc_ds/vbitmap.h"
+#include "pfl/vbitmap.h"
 #include "psc_util/atomic.h"
 #include "psc_util/lock.h"
 #include "psc_util/log.h"

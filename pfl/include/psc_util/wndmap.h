@@ -20,8 +20,8 @@
 #ifndef _PFL_WNDMAP_H_
 #define _PFL_WNDMAP_H_
 
-#include "psc_ds/list.h"
-#include "psc_ds/lockedlist.h"
+#include "pfl/list.h"
+#include "pfl/lockedlist.h"
 #include "psc_util/lock.h"
 
 struct psc_wndmap {

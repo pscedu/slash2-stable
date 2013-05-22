@@ -26,8 +26,8 @@
 
 #include "pfl/cdefs.h"
 #include "pfl/pfl.h"
-#include "psc_ds/list.h"
-#include "psc_ds/listcache.h"
+#include "pfl/list.h"
+#include "pfl/listcache.h"
 
 const char *progname;
 struct psclist_head hd = PSCLIST_HEAD_INIT(hd);

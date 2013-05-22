@@ -33,9 +33,9 @@
 #include <fcntl.h>
 #include <inttypes.h>
 
-#include "psc_ds/list.h"
-#include "psc_ds/lockedlist.h"
-#include "psc_ds/vbitmap.h"
+#include "pfl/list.h"
+#include "pfl/lockedlist.h"
+#include "pfl/vbitmap.h"
 #include "psc_util/crc.h"
 #include "psc_util/lock.h"
 #include "psc_util/log.h"

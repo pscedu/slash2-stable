@@ -24,8 +24,8 @@
 
 #include <stdint.h>
 
-#include "psc_ds/list.h"
-#include "psc_ds/lockedlist.h"
+#include "pfl/list.h"
+#include "pfl/lockedlist.h"
 #include "psc_util/atomic.h"
 
 #define IST_NAME_MAX	40

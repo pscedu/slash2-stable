@@ -23,8 +23,8 @@
 #define _PFL_REFMGR_H_
 
 #include "pfl/hashtbl.h"
-#include "psc_ds/lockedlist.h"
-#include "psc_ds/tree.h"
+#include "pfl/lockedlist.h"
+#include "pfl/tree.h"
 #include "psc_util/pool.h"
 #include "psc_util/pthrutil.h"
 

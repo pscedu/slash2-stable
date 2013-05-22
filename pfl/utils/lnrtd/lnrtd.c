@@ -22,7 +22,7 @@
 #include <unistd.h>
 
 #include "pfl/str.h"
-#include "psc_ds/list.h"
+#include "pfl/list.h"
 #include "psc_rpc/rpc.h"
 #include "psc_util/ctlsvr.h"
 #include "psc_util/lock.h"

@@ -39,8 +39,8 @@
 
 #include "pfl/hashtbl.h"
 #include "pfl/types.h"
-#include "psc_ds/list.h"
-#include "psc_ds/listcache.h"
+#include "pfl/list.h"
+#include "pfl/listcache.h"
 #include "psc_util/atomic.h"
 #include "psc_util/lock.h"
 #include "psc_util/thread.h"

@@ -29,7 +29,7 @@
 
 #include "pfl/cdefs.h"
 #include "pfl/pfl.h"
-#include "psc_ds/dynarray.h"
+#include "pfl/dynarray.h"
 #include "psc_util/alloc.h"
 #include "psc_util/fmtstr.h"
 #include "psc_util/log.h"

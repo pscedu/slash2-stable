@@ -34,7 +34,7 @@
 #include <strings.h>
 
 #include "pfl/cdefs.h"
-#include "psc_ds/vbitmap.h"
+#include "pfl/vbitmap.h"
 #include "psc_util/alloc.h"
 #include "psc_util/bitflag.h"
 #include "psc_util/log.h"
