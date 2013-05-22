@@ -41,18 +41,4 @@
 		*SPLAY_GETRIGHT(name, elm) = NULL;			\
 	} while (0)
 
-#define PSC_SPLAY_ENTRY_DISJOINT(name, elm)				\
-	_PSC_SPLAY_ENTRY_DISJOINT(*SPLAY_GETLEFT(name, elm),		\
-	    *SPLAY_GETRIGHT(name, elm))
-
-#define PSC_SPLAY_ENTRY_CONJOINT(name, elm)				\
-	(!PSC_SPLAY_ENTRY_DISJOINT(name, (elm)))
-
-
-static __inline int
-_PSC_SPLAY_ENTRY_DISJOINT(const void *left, const void *right)
-{
-	return (left == NULL && right == NULL);
-}
-
 #endif /* _PFL_TREEUTIL_H_ */
