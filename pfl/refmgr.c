@@ -38,11 +38,11 @@
 #include <stdarg.h>
 #include <string.h>
 
-#include "psc_ds/dynarray.h"
+#include "pfl/dynarray.h"
 #include "pfl/hashtbl.h"
-#include "psc_ds/list.h"
-#include "psc_ds/lockedlist.h"
-#include "psc_ds/tree.h"
+#include "pfl/list.h"
+#include "pfl/lockedlist.h"
+#include "pfl/tree.h"
 #include "psc_util/lock.h"
 #include "psc_util/log.h"
 #include "psc_util/pool.h"

@@ -21,7 +21,7 @@
 #include <stdint.h>
 
 #include "pfl/cdefs.h"
-#include "psc_ds/vbitmap.h"
+#include "pfl/vbitmap.h"
 #include "psc_util/lock.h"
 #include "psc_util/mspinlock.h"
 

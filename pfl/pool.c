@@ -29,9 +29,9 @@
 #include <errno.h>
 
 #include "pfl/cdefs.h"
-#include "psc_ds/dynarray.h"
-#include "psc_ds/listcache.h"
-#include "psc_ds/lockedlist.h"
+#include "pfl/dynarray.h"
+#include "pfl/listcache.h"
+#include "pfl/lockedlist.h"
 #include "psc_util/alloc.h"
 #include "psc_util/lock.h"
 #include "psc_util/log.h"

@@ -32,7 +32,7 @@
 #include "libcfs/kp30.h"
 
 #include "pfl/str.h"
-#include "psc_ds/list.h"
+#include "pfl/list.h"
 #include "psc_rpc/rpc.h"
 #include "psc_util/alloc.h"
 #include "psc_util/atomic.h"

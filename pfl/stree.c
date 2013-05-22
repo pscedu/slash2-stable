@@ -20,8 +20,8 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "psc_ds/list.h"
-#include "psc_ds/stree.h"
+#include "pfl/list.h"
+#include "pfl/stree.h"
 #include "psc_util/alloc.h"
 
 void

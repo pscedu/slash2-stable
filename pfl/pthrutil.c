@@ -22,7 +22,7 @@
 #include <string.h>
 
 #include "pfl/time.h"
-#include "psc_ds/vbitmap.h"
+#include "pfl/vbitmap.h"
 #include "psc_util/log.h"
 #include "psc_util/pthrutil.h"
 #include "psc_util/thread.h"
