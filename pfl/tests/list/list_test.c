@@ -111,7 +111,7 @@ dump(struct psc_lockedlist *pll)
 	printf("\n");
 }
 
-void 
+void
 pll_sort_backwards(void)
 {
 	struct i *it;
@@ -140,7 +140,7 @@ pll_sort_backwards(void)
 	printf("Locked list sort backwards seems to be working.\n");
 }
 
-void 
+void
 lc_sort_test(void)
 {
 	int i;
@@ -288,6 +288,8 @@ main(int argc, char *argv[])
 	pll_add_sorted(&pll, it, it_cmp);
 
 	it = pll_get(&pll);
+	psc_assert(psclist_conjoint(&it->i_lentry,
+	    psc_lentry_hd(&it->i_lentry)));
 
 	psc_assert(it->i_v == 2);
 	PSCFREE(it);
