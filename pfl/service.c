@@ -317,14 +317,13 @@ pscrpc_server_handle_request(struct pscrpc_service *svc,
 	request->rq_req_swab_mask = 0;
 #endif
 	rc = pscrpc_unpack_msg(request->rq_reqmsg, request->rq_reqlen);
-	if (rc != 0) {
+	if (rc) {
 		CERROR("error unpacking request: ptl %d from %s"
 			" xid %"PRIx64"\n", svc->srv_req_portal,
 			libcfs_id2str(request->rq_peer), request->rq_xid);
 		goto out;
 	}
 
-	rc = -EINVAL;
 	if (request->rq_reqmsg->type != PSCRPC_MSG_REQUEST) {
 		CERROR("wrong packet type received (type=%u) from %s\n",
 		       request->rq_reqmsg->type,
