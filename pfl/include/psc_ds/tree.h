@@ -113,6 +113,7 @@ struct {								\
 
 #define SPLAY_PROTOTYPE(name, type, field, cmp)				\
 void name##_SPLAY(struct name *, struct type *);			\
+struct type ** name##_SPLAY_GETFIELD(struct type *, int);		\
 void name##_SPLAY_MINMAX(struct name *, int);				\
 struct type *name##_SPLAY_INSERT(struct name *, struct type *);		\
 struct type *name##_SPLAY_REMOVE(struct name *, struct type *);		\

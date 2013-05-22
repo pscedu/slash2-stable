@@ -45,6 +45,10 @@
 	_PSC_SPLAY_ENTRY_DISJOINT(*SPLAY_GETLEFT(name, elm),		\
 	    *SPLAY_GETRIGHT(name, elm))
 
+#define PSC_SPLAY_ENTRY_CONJOINT(name, elm)				\
+	(!PSC_SPLAY_ENTRY_DISJOINT(name, (elm)))
+
+
 static __inline int
 _PSC_SPLAY_ENTRY_DISJOINT(const void *left, const void *right)
 {
