@@ -21,8 +21,8 @@
 
 #include <stdarg.h>
 
-#include "psc_ds/listcache.h"
-#include "psc_ds/lockedlist.h"
+#include "pfl/listcache.h"
+#include "pfl/lockedlist.h"
 #include "psc_util/log.h"
 
 struct psc_lockedlist	psc_listcaches =

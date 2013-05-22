@@ -34,8 +34,8 @@
 #include <time.h>
 
 #include "pfl/explist.h"
-#include "psc_ds/list.h"
-#include "psc_ds/lockedlist.h"
+#include "pfl/list.h"
+#include "pfl/lockedlist.h"
 #include "psc_util/alloc.h"
 #include "psc_util/lock.h"
 #include "psc_util/log.h"
