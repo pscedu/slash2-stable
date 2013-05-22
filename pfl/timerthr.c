@@ -23,11 +23,11 @@
 #include <unistd.h>
 
 #include "pfl/cdefs.h"
-#include "psc_ds/lockedlist.h"
+#include "pfl/lockedlist.h"
+#include "pfl/time.h"
 #include "psc_util/atomic.h"
 #include "psc_util/iostats.h"
 #include "psc_util/thread.h"
-#include "pfl/time.h"
 
 #define psc_timercmp_addsec(tvp, s, uvp, cmp)				\
 	(((tvp)->tv_sec + (s) == (uvp)->tv_sec) ?			\
