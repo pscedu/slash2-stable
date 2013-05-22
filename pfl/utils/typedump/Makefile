@@ -14,5 +14,5 @@ include ${PFLMK}
 regen-hook:
 	${GENTYPES} -h '../../include/*/*.h' -h '../../../pfl/*.h' $(	\
 	    ) -x '../../../pfl/fsmod.h' $(				\
-	    ) -x '../../include/pfl/{queue,tree}.h' $(		\
+	    ) -x '../../../pfl/{queue,tree}.h' $(		\
 	    ) -x '../../include/psc_util/refmgr.h' typedump.c
