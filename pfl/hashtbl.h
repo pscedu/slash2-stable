@@ -20,8 +20,8 @@
 #ifndef _PFL_HASHTBL_H_
 #define _PFL_HASHTBL_H_
 
-#include "psc_ds/list.h"
-#include "psc_ds/lockedlist.h"
+#include "pfl/list.h"
+#include "pfl/lockedlist.h"
 #include "psc_util/atomic.h"
 #include "psc_util/lock.h"
 #include "psc_util/log.h"

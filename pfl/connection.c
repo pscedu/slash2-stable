@@ -25,7 +25,7 @@
 
 #define PSC_SUBSYS PSS_RPC
 
-#include "psc_ds/list.h"
+#include "pfl/list.h"
 #include "psc_rpc/export.h"
 #include "psc_rpc/rpc.h"
 #include "psc_util/alloc.h"

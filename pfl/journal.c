@@ -31,7 +31,7 @@
 #include "pfl/str.h"
 #include "pfl/time.h"
 #include "pfl/types.h"
-#include "psc_ds/dynarray.h"
+#include "pfl/dynarray.h"
 #include "psc_util/alloc.h"
 #include "psc_util/atomic.h"
 #include "psc_util/crc.h"

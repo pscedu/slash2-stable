@@ -89,7 +89,7 @@ struct psc_memalloc {
 #define GUARD_AFTER	(PFL_DEBUG > 2)
 
 #if PFL_DEBUG > 1
-#  include "psc_ds/list.h"
+#  include "pfl/list.h"
 #  include "psc_util/mem.h"
 #endif
 

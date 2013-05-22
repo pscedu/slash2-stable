@@ -17,8 +17,8 @@
  * %PSC_END_COPYRIGHT%
  */
 
-#include "psc_ds/listcache.h"
-#include "psc_ds/lockedlist.h"
+#include "pfl/listcache.h"
+#include "pfl/lockedlist.h"
 
 void
 psclist_sort(void **p, struct psclist_head *hd, int n, ptrdiff_t off,

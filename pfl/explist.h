@@ -25,8 +25,8 @@
 #ifndef _PFL_EXPLIST_H_
 #define _PFL_EXPLIST_H_
 
-#include "psc_ds/list.h"
-#include "psc_ds/lockedlist.h"
+#include "pfl/list.h"
+#include "pfl/lockedlist.h"
 
 #define PEXL_NAME_MAX		32
 

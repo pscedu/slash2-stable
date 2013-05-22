@@ -21,7 +21,7 @@
 #define _PFL_FSMOD_H_
 
 #include "pfl/fs.h"
-#include "psc_ds/list.h"
+#include "pfl/list.h"
 
 #ifdef HAVE_FUSE
 #  include <fuse_lowlevel.h>

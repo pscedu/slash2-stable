@@ -30,7 +30,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "psc_ds/dynarray.h"
+#include "pfl/dynarray.h"
 #include "psc_util/alloc.h"
 #include "psc_util/log.h"
 

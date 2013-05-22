@@ -21,10 +21,10 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "psc_ds/lockedlist.h"
+#include "pfl/lockedlist.h"
+#include "pfl/time.h"
 #include "psc_util/iostats.h"
 #include "psc_util/log.h"
-#include "pfl/time.h"
 
 struct psc_lockedlist	psc_iostats =
     PLL_INIT(&psc_iostats, struct psc_iostats, ist_lentry);
