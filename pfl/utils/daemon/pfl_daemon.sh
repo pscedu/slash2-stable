@@ -162,8 +162,8 @@ preproc()
 	cd $base
 	mkdir -p c
 
-	find log/$host.$name/ -mtime +30 -exec rm {} \;
-	find c/ -size 0 -exec rm {} \;
+	find log/$host.$name/ -type f -mtime +30 -exec rm {} \;
+	find c/ -type f -size 0 -exec rm {} \;
 
 	# delete core files with no accompanying executable
 #	n=[0-9]
