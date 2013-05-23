@@ -25,7 +25,7 @@
 
 #define PSC_SUBSYS PSS_RPC
 
-#include "psc_rpc/rpc.h"
+#include "pfl/rpc.h"
 
 static inline char *
 pscrpc_import_state_name(enum pscrpc_imp_state state)

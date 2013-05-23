@@ -33,7 +33,7 @@
 
 #include "pfl/str.h"
 #include "pfl/list.h"
-#include "psc_rpc/rpc.h"
+#include "pfl/rpc.h"
 #include "psc_util/alloc.h"
 #include "psc_util/atomic.h"
 #include "psc_util/lock.h"

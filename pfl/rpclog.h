@@ -21,7 +21,7 @@
 #define _PFL_RPCLOG_H_
 
 #include "pfl/pfl.h"
-#include "psc_rpc/rpc.h"
+#include "pfl/rpc.h"
 #include "psc_util/log.h"
 
 static inline const char *

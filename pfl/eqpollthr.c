@@ -20,7 +20,7 @@
 #include <stddef.h>
 
 #include "pfl/cdefs.h"
-#include "psc_rpc/rpc.h"
+#include "pfl/rpc.h"
 #include "psc_util/eqpollthr.h"
 #include "psc_util/thread.h"
 

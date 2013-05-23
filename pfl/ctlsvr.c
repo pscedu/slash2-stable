@@ -47,7 +47,7 @@
 #include "pfl/list.h"
 #include "pfl/listcache.h"
 #include "pfl/stree.h"
-#include "psc_rpc/rpc.h"
+#include "pfl/rpc.h"
 #include "psc_util/atomic.h"
 #include "psc_util/ctl.h"
 #include "psc_util/ctlsvr.h"

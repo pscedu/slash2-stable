@@ -39,7 +39,7 @@
 #include "pfl/syspaths.h"
 #include "pfl/list.h"
 #include "pfl/vbitmap.h"
-#include "psc_rpc/rpc.h"
+#include "pfl/rpc.h"
 #include "psc_util/ctl.h"
 #include "psc_util/ctlcli.h"
 #include "psc_util/fmt.h"

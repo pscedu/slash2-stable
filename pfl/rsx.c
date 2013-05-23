@@ -26,8 +26,8 @@
 #include <errno.h>
 #include <stdio.h>
 
-#include "psc_rpc/rpc.h"
-#include "psc_rpc/rsx.h"
+#include "pfl/rpc.h"
+#include "pfl/rsx.h"
 
 /**
  * pfl_rsx_newreq - Create a new request and associate it with the import.

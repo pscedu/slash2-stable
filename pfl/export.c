@@ -20,8 +20,8 @@
 #define PSC_SUBSYS PSS_RPC
 
 #include "pfl/tree.h"
-#include "psc_rpc/export.h"
-#include "psc_rpc/rpc.h"
+#include "pfl/export.h"
+#include "pfl/rpc.h"
 #include "psc_util/log.h"
 
 void

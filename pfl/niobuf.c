@@ -27,9 +27,9 @@
 
 #include <inttypes.h>
 
-#include "psc_rpc/export.h"
-#include "psc_rpc/rpc.h"
-#include "psc_rpc/rpclog.h"
+#include "pfl/export.h"
+#include "pfl/rpc.h"
+#include "pfl/rpclog.h"
 #include "psc_util/alloc.h"
 #include "psc_util/atomic.h"
 #include "psc_util/log.h"
