@@ -45,6 +45,7 @@ general reminders
 - stop reinpretation of args in macros with stack vars
 - check for mp->rc against ENOENT, etc. (all errnos) without negative signs
 - scan for leaks for pthread_mutex and pthread_cond
+- our tree api does not allow duplicate keys, eradicate INSERT
 - the proper way to do callerinfo:
 
 	void
