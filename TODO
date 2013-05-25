@@ -164,6 +164,8 @@ pfl
   translation layer
 - pfl/compat.h must have universal values for errno constants, so avoid this
   approach altogether and use portable constants instead
+- add counter measurements to spinlock to discern which critical
+  sections to convert to mutex
 
 lnet
 - use TLS buffers for libcfs_nid2str() to avoid NUMA contention
