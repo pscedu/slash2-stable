@@ -203,6 +203,7 @@ int
 pfl_filewalk(const char *fn, int flags, int (*cbf)(const char *,
     const struct pfl_stat *, int, int, void *), void *arg)
 {
+    	struct pfl_stat pst;
 	char buf[PATH_MAX];
 	struct stat stb;
 	int rc = 0;
@@ -228,7 +229,8 @@ pfl_filewalk(const char *fn, int flags, int (*cbf)(const char *,
 			int info;
 
 			info = pfl_filewalk_stm2info(stb.st_mode);
-			rc = cbf(buf, &stb, info, 0, arg);
+			PFL_STAT_EXPORT(&stb, &pst);
+			rc = cbf(buf, &pstb, info, 0, arg);
 //			if (info == FTS_D)
 //				rc = cbf(buf, &stb, FTS_DP, 0, arg);
 		}
