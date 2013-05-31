@@ -23,6 +23,6 @@
 	type		CDATA	#IMPLIED
 >
 
-<!ELEMENT oof:list-item	(#PCDATA)>
+<!ELEMENT oof:list-item	(oof:list|#PCDATA)>
 
 <!ELEMENT oof:p		(#PCDATA)>
