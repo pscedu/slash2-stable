@@ -1,11 +1,12 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <!-- $Id$ -->
 
-<!ENTITY harr		   "&amp;harr;">
-<!ENTITY rarr		   "&amp;rarr;">
+<!ENTITY harr		"&amp;harr;">
+<!ENTITY rarr		"&amp;rarr;">
 
 <!ELEMENT xdc		(title|taglist?|oof:header|oof:p|oof:list)*>
 <!ATTLIST xdc
+	xmlns		CDATA	#IMPLIED
 	xmlns:oof	CDATA	#IMPLIED
 >
 
@@ -23,6 +24,6 @@
 	type		CDATA	#IMPLIED
 >
 
-<!ELEMENT oof:list-item	(oof:list|#PCDATA)>
+<!ELEMENT oof:list-item	(#PCDATA|oof:list)*>
 
 <!ELEMENT oof:p		(#PCDATA)>
