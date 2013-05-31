@@ -230,7 +230,7 @@ pfl_filewalk(const char *fn, int flags, int (*cbf)(const char *,
 
 			info = pfl_filewalk_stm2info(stb.st_mode);
 			PFL_STAT_EXPORT(&stb, &pst);
-			rc = cbf(buf, &pstb, info, 0, arg);
+			rc = cbf(buf, &pst, info, 0, arg);
 //			if (info == FTS_D)
 //				rc = cbf(buf, &stb, FTS_DP, 0, arg);
 		}
