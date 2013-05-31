@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!-- $Id$ -->
+
+<!ENTITY harr		   "&amp;harr;"> <!-- left right arrow, U+2194 ISOamsa -->
+
+<!ELEMENT xdc		(title|taglist?|oof:header|oof:p|oof:list)*>
+<!ATTLIST xdc
+	xmlns:oof	CDATA	#IMPLIED
+>
+
+<!ELEMENT title		(#PCDATA)>
+<!ELEMENT taglist	(tag*)>
+<!ELEMENT tag		(#PCDATA)>
+
+<!ELEMENT oof:header	(#PCDATA)>
+<!ATTLIST oof:header
+	size		CDATA	#IMPLIED
+>
+
+<!ELEMENT oof:list	(oof:list-item*)>
+<!ATTLIST oof:list
+	type		CDATA	#IMPLIED
+>
+
+<!ELEMENT oof:list-item	(#PCDATA)>
+
+<!ELEMENT oof:p		(#PCDATA)>
