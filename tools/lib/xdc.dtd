@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <!-- $Id$ -->
 
-<!ENTITY harr		"&amp;harr;">
-<!ENTITY rarr		"&amp;rarr;">
+<!ENTITY harr		"' chr(38). 'harr;">
+<!ENTITY rarr		"' chr(38). 'rarr;">
 
 <!ELEMENT xdc		(title|taglist?|oof:header|oof:p|oof:list)*>
 <!ATTLIST xdc
