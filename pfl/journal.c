@@ -885,8 +885,14 @@ pjournal_thr_main(struct psc_thread *thr)
 
 		txg = zfsslash2_return_synced();
 
-		/* XXX rethink in multiple file system per pool scenario */
-		psc_assert(pj->pj_commit_txg <= txg);
+		/*
+		 * This is only possible if we receive a snapshot that overwrites
+		 * the existig contents of a file system.  And this should only
+		 * happen once.
+		 */
+		if (pj->pj_commit_txg < txg)
+			psclog_warnx("Journal txg goes backwards: %"PRId64" -> %"PRId64,
+			    txg, pj->pj_commit_txg);
 		pj->pj_commit_txg = txg;
 
 		txg = 0;
