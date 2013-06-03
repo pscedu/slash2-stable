@@ -816,6 +816,7 @@ pjournal_release(struct psc_journal *pj)
 void
 pjournal_thr_main(struct psc_thread *thr)
 {
+	static int once = 0;
 	struct psc_journal_enthdr *pje;
 	struct psc_journal_xidhndl *xh;
 	struct psc_journalthr *pjt;
@@ -890,9 +891,12 @@ pjournal_thr_main(struct psc_thread *thr)
 		 * the existig contents of a file system.  And this should only
 		 * happen once.
 		 */
-		if (pj->pj_commit_txg < txg)
+		if (pj->pj_commit_txg > txg) {
+			once++;
+			psc_assert(once <= 1);
 			psclog_warnx("Journal txg goes backwards: %"PRId64" -> %"PRId64,
-			    txg, pj->pj_commit_txg);
+			    pj->pj_commit_txg, txg);
+		}
 		pj->pj_commit_txg = txg;
 
 		txg = 0;
