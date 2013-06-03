@@ -855,7 +855,7 @@ pjournal_thr_main(struct psc_thread *thr)
 			txg = pj->pj_current_txg + 1;
 			PJ_ULOCK(pj);
 
-			/* 
+			/*
 			 * Once we clear the distill flag, xh can be freed after
 			 * its associated txg has been committed by the ZFS.
 			 */
@@ -887,9 +887,9 @@ pjournal_thr_main(struct psc_thread *thr)
 		txg = zfsslash2_return_synced();
 
 		/*
-		 * This is only possible if we receive a snapshot that overwrites
-		 * the existig contents of a file system.  And this should only
-		 * happen once.
+		 * This is only possible if we receive a snapshot that
+		 * overwrites the existing contents of a file system.
+		 * And this should only happen once.
 		 */
 		if (pj->pj_commit_txg > txg) {
 			once++;
