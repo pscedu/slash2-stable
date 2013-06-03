@@ -881,6 +881,8 @@ pjournal_thr_main(struct psc_thread *thr)
 			pj->pj_distill_xid = xid;
 
 		txg = zfsslash2_return_synced();
+
+		/* XXX rethink in multiple file system per pool scenario */
 		psc_assert(pj->pj_commit_txg <= txg);
 		pj->pj_commit_txg = txg;
 
