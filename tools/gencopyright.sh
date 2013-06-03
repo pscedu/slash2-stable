@@ -77,7 +77,7 @@ my $d_start = "/*\n";
 my $d_cont = " *";
 my $d_end = "\n */";
 
-if ($data =~ m{^(.*) %PSC_(START_)?COPYRIGHT%}m) {
+if ($data =~ m{^(.*) %PSC(?:GPL)?_(START_)?COPYRIGHT%}m) {
 	$d_cont = $1;
 	$d_cont = " *" if $d_cont eq "/*";
 
@@ -87,8 +87,8 @@ if ($data =~ m{^(.*) %PSC_(START_)?COPYRIGHT%}m) {
 	}
 }
 
-$data =~ s{^(.*)\s*%PSC_()COPYRIGHT%.*\n}{<<EOF2}me;
-$d_start$d_cont %PSC_START_COPYRIGHT%
+$data =~ s{^(.*)\s*%(PSC|PSCGPL)_COPYRIGHT%.*\n}{<<EOF2}me;
+$d_start$d_cont %$1_START_COPYRIGHT%
 $d_cont -----------------------------------------------------------------------------
 $d_cont -----------------------------------------------------------------------------
 $d_cont %PSC_END_COPYRIGHT%$d_end
@@ -113,6 +113,34 @@ $d_cont organizations or individuals is not permitted without the written permis
 $d_cont of the Pittsburgh Supercomputing Center.  PSC makes no representations about
 $d_cont the suitability of this software for any purpose.  It is provided "as is"
 $d_cont without express or implied warranty.
+$d_cont -----------------------------------------------------------------------------$1
+$d_cont %PSC_END_COPYRIGHT%$d_end
+}s;
+
+$data =~ s
+{\Q$d_start$d_cont\E %PSCGPL_START_COPYRIGHT%
+\Q$d_cont\E -----------------------------------------------------------------------------.*?
+\Q$d_cont\E -----------------------------------------------------------------------------(.*)
+\Q$d_cont\E %PSC_END_COPYRIGHT%\Q$d_end\E
+}
+{$d_start$d_cont %PSCGPL_START_COPYRIGHT%
+$d_cont -----------------------------------------------------------------------------
+$d_cont Copyright (c) $cpyears, Pittsburgh Supercomputing Center (PSC).
+$d_cont
+$d_cont This program is free software; you can redistribute it and/or modify
+$d_cont it under the terms of the GNU General Public License as published by
+$d_cont the Free Software Foundation; either version 2 of the License, or (at
+$d_cont your option) any later version.
+$d_cont
+$d_cont This program is distributed WITHOUT ANY WARRANTY; without even the
+$d_cont implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
+$d_cont PURPOSE.  See the GNU General Public License contained in the file
+$d_cont `COPYING' at the top of this distribution or at
+$d_cont https://www.gnu.org/licenses/gpl-2.0.html for more details.
+$d_cont
+$d_cont Pittsburgh Supercomputing Center	phone: 412.268.4960  fax: 412.268.5832
+$d_cont 300 S. Craig Street			e-mail: remarks\@psc.edu
+$d_cont Pittsburgh, PA 15213			web: http://www.psc.edu/
 $d_cont -----------------------------------------------------------------------------$1
 $d_cont %PSC_END_COPYRIGHT%$d_end
 }s;
