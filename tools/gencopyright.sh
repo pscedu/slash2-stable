@@ -135,7 +135,7 @@ $d_cont
 $d_cont This program is distributed WITHOUT ANY WARRANTY; without even the
 $d_cont implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
 $d_cont PURPOSE.  See the GNU General Public License contained in the file
-$d_cont `COPYING' at the top of this distribution or at
+$d_cont `COPYING-GPL' at the top of this distribution or at
 $d_cont https://www.gnu.org/licenses/gpl-2.0.html for more details.
 $d_cont
 $d_cont Pittsburgh Supercomputing Center	phone: 412.268.4960  fax: 412.268.5832
