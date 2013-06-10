@@ -135,6 +135,7 @@ pfl
 - rename PPMF_NOLOCK -> PPMF_NOPIN, PAF_LOCK -> PAF_PIN
 - for odtable(1), print stats as default behavior
 - add function call hierarchy specifier to psclog
+    - libunwind
 - mmap() mprotect()'d memory in memguard
 - pool auto threshold is broken
 - add provisions to dynarray to detect multiple adds without an
@@ -165,7 +166,9 @@ pfl
 - pfl/compat.h must have universal values for errno constants, so avoid this
   approach altogether and use portable constants instead
 - add counter measurements to spinlock to discern which critical
-  sections to convert to mutex
+  sections to convert to mutex, or at least have profiling separate into
+  each alias routine (e.g. BMAP_LOCK() to inform that we wait on bmaps
+  too much, and maybe want to convert to mutex)
 
 lnet
 - use TLS buffers for libcfs_nid2str() to avoid NUMA contention
