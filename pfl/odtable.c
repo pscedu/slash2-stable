@@ -176,7 +176,8 @@ odtable_freeitem(struct odtable *odt, struct odtable_receipt *odtr)
 
 	odtf = odtable_getfooter(odt, odtr->odtr_elem);
 
-	if ((rc = odtable_footercheck(odtf, odtr, 1)))
+	rc = odtable_footercheck(odtf, odtr, 1);
+	if (rc)
 		return (rc);
 
 	odtf->odtf_inuse = ODTBL_FREE;
@@ -289,7 +290,7 @@ odtable_load(struct odtable **t, int oflg, const char *fn,
 	    odth->odth_version != ODTBL_VERS)
 		PFL_GOTOERR(out, rc = EINVAL);
 
-	rc = odtable_createmmap(odt);
+	rc = odtable_createmmap(odt, oflg);
 	if (rc)
 		PFL_GOTOERR(out, rc);
 

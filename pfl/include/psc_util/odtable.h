@@ -165,11 +165,14 @@ odtable_getfooter(const struct odtable *odt, size_t elem)
 }
 
 static __inline int
-odtable_createmmap(struct odtable *odt)
+odtable_createmmap(struct odtable *odt, int oflg)
 {
-	odt->odt_base = mmap(NULL, ODTABLE_MAPSZ(odt), PROT_WRITE |
-	    PROT_READ, MAP_SHARED, odt->odt_fd,
-	    odt->odt_hdr->odth_start);
+	int prot = PROT_READ;
+
+	if ((oflg & ODTBL_FLG_RDONLY) == 0)
+		prot |= PROT_WRITE;
+	odt->odt_base = mmap(NULL, ODTABLE_MAPSZ(odt), prot, MAP_SHARED,
+	    odt->odt_fd, odt->odt_hdr->odth_start);
 	if (odt->odt_base == MAP_FAILED)
 		return (errno);
 	return (0);
