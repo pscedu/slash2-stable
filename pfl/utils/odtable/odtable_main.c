@@ -112,7 +112,8 @@ usage(void)
 int
 main(int argc, char *argv[])
 {
-	int c, rc, i, verbose = 0, hflg = ODTBL_OPT_CRC;
+	int c, rc, i, verbose = 0, oflg = ODTBL_FLG_RDONLY,
+	    hflg = ODTBL_OPT_CRC;
 	struct odtable *odt;
 	char *item, *fn;
 
@@ -135,9 +136,11 @@ main(int argc, char *argv[])
 			break;
 		case 'F':
 			num_free = atoi(optarg);
+			oflg &= ~ODTBL_FLG_RDONLY;
 			break;
 		case 'n':
 			num_puts = atoi(optarg);
+			oflg &= ~ODTBL_FLG_RDONLY;
 			break;
 		case 'o':
 			overwrite = 1;
@@ -178,7 +181,7 @@ main(int argc, char *argv[])
 		exit(0);
 	}
 
-	rc = odtable_load(&odt, fn, "%s", fn);
+	rc = odtable_load(&odt, oflg, fn, "%s", fn);
 	if (rc) {
 		char *errstr;
 

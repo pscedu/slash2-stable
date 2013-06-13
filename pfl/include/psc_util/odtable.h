@@ -108,12 +108,14 @@ struct odtable_receipt {
 
 #define ODTABLE_MAPSZ(odt)	_odtable_getitemoff((odt), (odt)->odt_hdr->odth_nelems, 1)
 
+#define ODTBL_FLG_RDONLY	(1 << 0)
+
 struct odtable_receipt *
 	 odtable_putitem(struct odtable *, void *, size_t);
 int	 odtable_create(const char *, size_t, size_t, int, int);
 int	 odtable_freeitem(struct odtable *, struct odtable_receipt *);
 void	*odtable_getitem(struct odtable *, const struct odtable_receipt *);
-int	 odtable_load(struct odtable **, const char *, const char *, ...);
+int	 odtable_load(struct odtable **, int, const char *, const char *, ...);
 int	 odtable_release(struct odtable *);
 void	 odtable_scan(struct odtable *, void (*)(void *, struct odtable_receipt *));
 struct odtable_receipt *

@@ -258,7 +258,8 @@ odtable_create(const char *fn, size_t nelems, size_t elemsz,
 }
 
 int
-odtable_load(struct odtable **t, const char *fn, const char *fmt, ...)
+odtable_load(struct odtable **t, int oflg, const char *fn,
+    const char *fmt, ...)
 {
 	struct odtable *odt = PSCALLOC(sizeof(struct odtable));
 	struct odtable_receipt todtr = {0, 0};
@@ -274,7 +275,8 @@ odtable_load(struct odtable **t, const char *fn, const char *fmt, ...)
 
 	INIT_SPINLOCK(&odt->odt_lock);
 
-	odt->odt_fd = open(fn, O_RDWR, 0600);
+	odt->odt_fd = open(fn, oflg & ODTBL_FLG_RDONLY ?
+	    O_RDONLY : O_RDWR, 0600);
 	if (odt->odt_fd == -1)
 		PFL_GOTOERR(out, rc = errno);
 
@@ -326,8 +328,8 @@ odtable_load(struct odtable **t, const char *fn, const char *fmt, ...)
 			}
 		} else {
 			psc_vbitmap_set(odt->odt_bitmap, z);
-			psclog_warnx("slot=%zd ignoring, bad inuse value"
-			    "inuse=0x%"PRIx64,
+			psclog_warnx("slot=%zd ignoring, "
+			    "bad inuse value inuse=%#"PRIx64,
 			    z, odtf->odtf_inuse);
 		}
 	}
