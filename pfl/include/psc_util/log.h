@@ -60,8 +60,6 @@ enum psclog_level {
 	PLL_MAX = -1			/* force log (temporary debug) */
 };
 
-#define PLL_NOTIFY PLL_NOTICE
-
 /* Logging options. */
 #define PLO_ERRNO	(1 << 0)	/* strerror(errno) */
 
@@ -101,7 +99,6 @@ enum psclog_level {
 #define psclog_warn(fmt, ...)		_psclogk(PSC_SUBSYS, PLL_WARN, PLO_ERRNO, (fmt), ## __VA_ARGS__)
 #define psclog_warnx(fmt, ...)		_psclogk(PSC_SUBSYS, PLL_WARN, 0, (fmt), ## __VA_ARGS__)
 #define psclog_notice(fmt, ...)		_psclogk(PSC_SUBSYS, PLL_NOTICE, 0, (fmt), ## __VA_ARGS__)
-#define psclog_notify(fmt, ...)		_psclogk(PSC_SUBSYS, PLL_NOTICE, 0, (fmt), ## __VA_ARGS__)
 #define psclog_info(fmt, ...)		_psclogk(PSC_SUBSYS, PLL_INFO, 0, (fmt), ## __VA_ARGS__)
 #define psclog_diag(fmt, ...)		_psclogk(PSC_SUBSYS, PLL_DIAG, 0, (fmt), ## __VA_ARGS__)
 #define psclog_dbg(fmt, ...)		_psclogk(PSC_SUBSYS, PLL_DEBUG, 0, (fmt), ## __VA_ARGS__)
@@ -118,7 +115,6 @@ enum psclog_level {
 #define psclogs_warn(ss, fmt, ...)	_psclogk((ss), PLL_WARN, PLO_ERRNO, (fmt), ## __VA_ARGS__)
 #define psclogs_warnx(ss, fmt, ...)	_psclogk((ss), PLL_WARN, 0, (fmt), ## __VA_ARGS__)
 #define psclogs_notice(ss, fmt, ...)	_psclogk((ss), PLL_NOTICE, 0, (fmt), ## __VA_ARGS__)
-#define psclogs_notify(ss, fmt, ...)	_psclogk((ss), PLL_NOTICE, 0, (fmt), ## __VA_ARGS__)
 #define psclogs_info(ss, fmt, ...)	_psclogk((ss), PLL_INFO, 0, (fmt), ## __VA_ARGS__)
 #define psclogs_diag(ss, fmt, ...)	_psclogk((ss), PLL_DIAG, 0, (fmt), ## __VA_ARGS__)
 #define psclogs_dbg(ss, fmt, ...)	_psclogk((ss), PLL_DEBUG, 0, (fmt), ## __VA_ARGS__)
