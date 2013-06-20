@@ -619,7 +619,7 @@ pscrpc_ni_init(int type, int nmsgs)
 
 	psc_poolmaster_init(&pscrpc_rq_poolmaster,
 	    struct pscrpc_request, rq_lentry, PPMF_AUTO, 64, 64, 0,
-	    NULL, NULL, NULL, "rq");
+	    NULL, NULL, NULL, "rpcrq");
 	pscrpc_rq_pool = psc_poolmaster_getmgr(&pscrpc_rq_poolmaster);
 
 	if (rc == 0)
