@@ -52,7 +52,7 @@ enum psclog_level {
 /* 2 */	PLL_WARN,			/* something wrong, require attention */
 /* 3 */	PLL_NOTICE,			/* something unusual, recommend attention */
 /* 4 */	PLL_INFO,			/* general information */
-/* 5 */	PLL_DIAG,			/* diagnosis */
+/* 5 */	PLL_DIAG,			/* diagnostics */
 /* 6 */	PLL_DEBUG,			/* debug messages */
 /* 7 */	PLL_VDEBUG,			/* verbose debug messages */
 /* 8 */	PLL_TRACE,			/* flow */
