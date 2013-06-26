@@ -246,7 +246,7 @@ lnet_acceptor(void *arg)
 				       lap->lap_port, rc);
 
 	} else {
-		LCONSOLE(0, "Accept %s, port %d\n", accept_type, lap->lap_port);
+		CDEBUG(D_NET, "Accept %s, port %d\n", accept_type, lap->lap_port);
 	}
 
 	/* set init status and unblock parent */
