@@ -28,6 +28,7 @@
 
 #include "pfl/rpc.h"
 #include "pfl/rsx.h"
+#include "pfl/rpclog.h"
 
 /**
  * pfl_rsx_newreq - Create a new request and associate it with the import.
