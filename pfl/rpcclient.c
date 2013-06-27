@@ -28,8 +28,8 @@
 #include <inttypes.h>
 #include <stdlib.h>
 
-#include "pfl/list.h"
 #include "pfl/export.h"
+#include "pfl/list.h"
 #include "pfl/rpc.h"
 #include "pfl/rpclog.h"
 #include "psc_util/alloc.h"
@@ -451,13 +451,13 @@ pscrpc_push_req(struct pscrpc_request *req)
 {
 	spinlock(&req->rq_lock);
 	if (req->rq_phase == PSCRPC_RQ_PHASE_NEW)
-		/* pscrpc_send_new_req_locked() frees the lock.
-		 */
+		/* pscrpc_send_new_req_locked() frees the lock. */
 		return (pscrpc_send_new_req_locked(req));
 	else {
-		/* This is ok, it means that another thread has done
-		 *   a pscrpc_check_set() which also pushes req's
-		 *   which are PSCRPC_RQ_PHASE_NEW.
+		/*
+		 * This is OK; it means that another thread has done a
+		 * pscrpc_check_set() which also pushes req's which are
+		 * PSCRPC_RQ_PHASE_NEW.
 		 */
 		freelock(&req->rq_lock);
 		DEBUG_REQ(PLL_INFO, req, "req already inflight");
@@ -1037,11 +1037,11 @@ pscrpc_set_destroy(struct pscrpc_request_set *set)
 {
 	struct pscrpc_request *req, *next;
 	unsigned expected_phase;
-	int               n = 0;
+	int n = 0;
 
 	/* Requests on the set should either all be completed, or all be new */
 	expected_phase = (set->set_remaining == 0) ?
-		PSCRPC_RQ_PHASE_COMPLETE : PSCRPC_RQ_PHASE_NEW;
+	    PSCRPC_RQ_PHASE_COMPLETE : PSCRPC_RQ_PHASE_NEW;
 	psclist_for_each_entry(req, &set->set_requests, rq_set_chain_lentry) {
 		psc_assert(req->rq_phase == expected_phase);
 		n++;
@@ -1068,10 +1068,8 @@ pscrpc_set_destroy(struct pscrpc_request_set *set)
 		pscrpc_req_finished(req);
 	}
 
-	psc_assert(set->set_remaining == 0 &&
-		   psc_waitq_nwaiters(&set->set_waitq) == 0);
-
-	psc_assert(!psc_waitq_nwaiters(&set->set_waitq));
+	psc_assert(set->set_remaining == 0);
+	psc_assert(psc_waitq_nwaiters(&set->set_waitq) == 0);
 	psc_waitq_destroy(&set->set_waitq);
 
 	PSCRPC_OBD_FREE(set, sizeof(*set));
@@ -1256,9 +1254,9 @@ pscrpc_set_wait(struct pscrpc_request_set *set)
 		 * req times out
 		 */
 		CDEBUG(D_NET, "set %p going to sleep for %d seconds\n",
-		       set, timeout);
+		    set, timeout);
 		lwi = LWI_TIMEOUT_INTR(timeout ? timeout : 1,
-		       pscrpc_expired_set, pscrpc_interrupted_set, set);
+		    pscrpc_expired_set, pscrpc_interrupted_set, set);
 
 		rc = pscrpc_cli_wait_event(&set->set_waitq,
 		    pscrpc_check_set(set, 1), &lwi);
@@ -1291,7 +1289,7 @@ pscrpc_set_wait(struct pscrpc_request_set *set)
 		psc_assert(req->rq_phase == PSCRPC_RQ_PHASE_COMPLETE);
 
 		if (req->rq_status) {
-			rc = -(abs(req->rq_status));
+			rc = -abs(req->rq_status);
 			DEBUG_REQ(PLL_ERROR, req, "error rq_status=%d set=%p",
 				  rc, set);
 		}
