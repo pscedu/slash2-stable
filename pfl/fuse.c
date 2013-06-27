@@ -1275,8 +1275,9 @@ pscfs_reply_readdir(struct pscfs_req *pfr, void *buf, ssize_t len, int rc)
 	else {
 		for (dirent = buf, off = 0; off < len;
 		    off += PFL_DIRENT_SIZE(dirent->pfd_namelen),
-		    dirent = (void *)((char *)buf + off))
-			dirent->pfd_ino = INUM_PSCFS2FUSE(dirent->pfd_ino, 8);
+		    dirent = PSC_AGP(buf, off))
+			dirent->pfd_ino = INUM_PSCFS2FUSE(
+			    dirent->pfd_ino, 8);
 		fuse_reply_buf(pfr->pfr_fuse_req, buf, len);
 	}
 	psc_pool_return(pscfs_req_pool, pfr);
