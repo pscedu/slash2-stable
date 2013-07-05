@@ -77,6 +77,7 @@ struct psc_listcache {
 #define LIST_CACHE_RLOCK(plc)		PLL_RLOCK(&(plc)->plc_pll)
 #define LIST_CACHE_URLOCK(plc, lk)	PLL_URLOCK(&(plc)->plc_pll, (lk))
 #define LIST_CACHE_TRYLOCK(plc)		PLL_TRYLOCK(&(plc)->plc_pll)
+#define LIST_CACHE_ENSURE_LOCKED(plc)	PLL_ENSURE_LOCKED(&(plc)->plc_pll)
 
 /**
  * lc_empty - Determine if a list cache has no elements.
