@@ -1819,7 +1819,7 @@ lnet_parse_put(__unusedx lnet_ni_t *ni, lnet_msg_t *msg)
                 /* fall through */
 
         case LNET_MATCHMD_DROP:
-                CNETERR("Dropping PUT from %s portal %d match "LPU64
+                CDEBUG(D_NET, "Dropping PUT from %s portal %d match "LPU64
                         " offset %d length %d: %d\n",
                         libcfs_id2str(src), index,
                         hdr->msg.put.match_bits,
