@@ -541,13 +541,13 @@ typedef struct cfs_proc_dir_entry {
 #define EDEADLOCK	EDEADLK
 #endif
 #ifndef ECOMM
-#define ECOMM		EINVAL
+//#define ECOMM		EINVAL
 #endif
 #ifndef ENODATA
-#define ENODATA		EINVAL
+#define ENODATA		ENOATTR
 #endif
 #ifndef ENOTSUPP
-#define ENOTSUPP	EINVAL
+#define ENOTSUPP	EOPNOTSUPP
 #endif
 
 #if BYTE_ORDER == BIG_ENDIAN
