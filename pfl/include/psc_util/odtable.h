@@ -101,6 +101,10 @@ struct odtable {
 	struct psclist_head	 odt_lentry;
 };
 
+#define DPRINTF_ODT(lvl, odt, fmt, ...)					\
+	psclog((lvl), "odt@%p[%s] " fmt,				\
+	    (odt), (odt)->odt_name, ## __VA_ARGS__)
+
 struct odtable_receipt {
 	size_t			 odtr_elem;
 	uint64_t		 odtr_key;
