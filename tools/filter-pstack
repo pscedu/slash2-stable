@@ -50,6 +50,7 @@ my @ign = (
 	[ qw(psc_waitq_waitabs slvr_worker_int slislvrthr_main _pscthr_begin) ],
 	[ qw(pthread_join pscfs_main slmzfskstatmthr_main _pscthr_begin) ],
 	[ qw(sleep slibreapthr_main _pscthr_begin) ],
+	[ qw(usleep slmbchrqthr_main _pscthr_begin) ],
 	[ qw(slmbmaptimeothr_begin _pscthr_begin) ],
 	[ qw(slmcohthr_begin _pscthr_begin) ],
 	[ qw(usleep pscfs_main slmzfskstatmthr_main _pscthr_begin) ],
