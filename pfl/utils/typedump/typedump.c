@@ -30,6 +30,7 @@
 #include "pfl/cdefs.h"
 #include "pfl/compat.h"
 #include "pfl/dynarray.h"
+#include "pfl/err.h"
 #include "pfl/explist.h"
 #include "pfl/export.h"
 #include "pfl/fcntl.h"
