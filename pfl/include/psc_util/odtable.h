@@ -45,10 +45,11 @@
 
 #define ODTBL_VERS		UINT64_C(0x0000000000000002)
 #define ODTBL_MAGIC		UINT64_C(0x001122335577bbdd)
+
+/* odtf_inuse values */
 #define ODTBL_INUSE		UINT64_C(0xf0f0f0f0f0f0f0f0)
 #define ODTBL_FREE		UINT64_C(0xffffffffffffffff)
 #define ODTBL_BAD		UINT64_C(0x1010101010101010)
-#define ODTBL_ERR		((size_t)-1)
 
 enum od_table_errors {
 	ODTBL_NO_ERR	= 0,
@@ -138,7 +139,8 @@ _odtable_getitemoff(const struct odtable *odt, size_t elem, int allow_max)
 		psc_assert(elem <= odt->odt_hdr->odth_nelems);
 	else
 		psc_assert(elem < odt->odt_hdr->odth_nelems);
-	return (elem * (odt->odt_hdr->odth_elemsz + sizeof(struct odtable_entftr)));
+	return (elem * (odt->odt_hdr->odth_elemsz +
+	    sizeof(struct odtable_entftr)));
 }
 
 #define odtable_getitemoff(odt, elem)	_odtable_getitemoff((odt), (elem), 0)
@@ -164,8 +166,8 @@ odtable_getitem_foff(const struct odtable *odt, size_t elem)
 static __inline struct odtable_entftr *
 odtable_getfooter(const struct odtable *odt, size_t elem)
 {
-	return ((void *)((char *)odt->odt_base +
-	    odtable_getitemoff(odt, elem) + odt->odt_hdr->odth_elemsz));
+	return (PSC_AGP(odt->odt_base, odtable_getitemoff(odt, elem) +
+	    odt->odt_hdr->odth_elemsz));
 }
 
 static __inline int
