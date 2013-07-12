@@ -268,4 +268,8 @@ ifeq ($(filter $(realpath ${ROOTDIR})/compat/%,${CURDIR}),)
   DEFINES+=						-DHAVE_BLKSIZE_T
  endif
 
+ ifdef PICKLE_HAVE_FALLOC_FL_PUNCH_HOLE
+  DEFINES+=						-DHAVE_FALLOC_FL_PUNCH_HOLE
+ endif
+
 endif
