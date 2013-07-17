@@ -122,13 +122,20 @@ psc_log_setfn(const char *p, const char *mode)
 
 		/* launch new */
 		logger_pid = fork();
-		if (logger_pid == -1)
+		switch (logger_pid) {
+		case -1:
 			psclog_error("fork");
-		else {
+			break;
+		case 0:
 			char cmdbuf[512];
-			sprintf(cmdbuf, "tail -f %s | %s", fn, lp);
-			rc = system(cmdbuf);
-			exit(rc);
+
+			rc = snprintf(cmdbuf, sizeof(cmdbuf),
+			    "tail -f %s | %s", fn, lp);
+			psc_assert(rc > 0 && rc <= sizeof(cmdbuf));
+			exit(system(cmdbuf));
+		default:
+			rc = waitpid(logger_pid, NULL, 0);
+			break;
 		}
 	}
 
