@@ -126,7 +126,7 @@ psc_log_setfn(const char *p, const char *mode)
 			psclog_error("fork");
 		else {
 			char cmdbuf[512];
-			snprintf(cmdbuf, "tail -f %s | %s", fn, lp);
+			sprintf(cmdbuf, "tail -f %s | %s", fn, lp);
 			rc = system(cmdbuf);
 			exit(rc);
 		}
