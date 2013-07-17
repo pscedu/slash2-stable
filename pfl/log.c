@@ -26,6 +26,7 @@
 #include <sys/syscall.h>
 #include <sys/stat.h>
 #include <sys/statvfs.h>
+#include <sys/wait.h>
 
 #include <ctype.h>
 #include <err.h>
@@ -126,13 +127,15 @@ psc_log_setfn(const char *p, const char *mode)
 		case -1:
 			psclog_error("fork");
 			break;
-		case 0:
-			char cmdbuf[512];
+		case 0: {
+			char cmdbuf[LINE_MAX];
 
 			rc = snprintf(cmdbuf, sizeof(cmdbuf),
 			    "tail -f %s | %s", fn, lp);
-			psc_assert(rc > 0 && rc <= sizeof(cmdbuf));
+			psc_assert(rc > 0 &&
+			    rc <= (int)sizeof(cmdbuf));
 			exit(system(cmdbuf));
+		    }
 		default:
 			rc = waitpid(logger_pid, NULL, 0);
 			break;
