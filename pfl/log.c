@@ -83,8 +83,10 @@ int pfl_syslog_map[] = {
 int
 psc_log_setfn(const char *p, const char *mode)
 {
+	static int logger_pid = -1;
 	char *lp, fn[PATH_MAX];
 	struct timeval tv;
+	int rc;
 
 	PFL_GETTIMEVAL(&tv);
 	(void)FMTSTR(fn, sizeof(fn), p,
@@ -111,6 +113,22 @@ psc_log_setfn(const char *p, const char *mode)
 			warn("warning: error log file over NFS");
 	}
 #endif
+
+	lp = getenv("PFL_SYSLOG_PIPE");
+	if (lp) {
+		/* cleanup old */
+		if (logger_pid != -1)
+			kill(logger_pid);
+
+		/* launch new */
+		logger_pid = fork();
+		if (logger_pid == -1)
+			psclog_error("fork");
+		else {
+			rc = system("tail -f %s | %s", fn, lp);
+			exit(rc);
+		}
+	}
 
 	return (0);
 }
