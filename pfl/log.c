@@ -125,15 +125,15 @@ psc_log_setfn(const char *p, const char *mode)
 		logger_pid = fork();
 		switch (logger_pid) {
 		case -1:
-			psclog_error("fork");
+			warn("fork");
 			break;
 		case 0: {
 			char cmdbuf[LINE_MAX];
 
 			rc = snprintf(cmdbuf, sizeof(cmdbuf),
 			    "tail -f %s | %s", fn, lp);
-			psc_assert(rc > 0 &&
-			    rc <= (int)sizeof(cmdbuf));
+			if (rc < 0 || rc > (int)sizeof(cmdbuf))
+				errx(1, "snprintf");
 			exit(system(cmdbuf));
 		    }
 		default:
