@@ -118,14 +118,16 @@ psc_log_setfn(const char *p, const char *mode)
 	if (lp) {
 		/* cleanup old */
 		if (logger_pid != -1)
-			kill(logger_pid);
+			kill(logger_pid, SIGINT);
 
 		/* launch new */
 		logger_pid = fork();
 		if (logger_pid == -1)
 			psclog_error("fork");
 		else {
-			rc = system("tail -f %s | %s", fn, lp);
+			char cmdbuf[512];
+			snprintf(cmdbuf, "tail -f %s | %s", fn, lp);
+			rc = system(cmdbuf);
 			exit(rc);
 		}
 	}
