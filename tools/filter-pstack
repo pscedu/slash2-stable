@@ -45,7 +45,7 @@ my @ign = (
 	[ qw(msbmflwthr_main _pscthr_begin) ],
 	[ qw(psc_compl_waitrel_s msbmapflushrpcthr_main _pscthr_begin) ],
 	[ qw(psc_multiwait_usecs slconnthr_main _pscthr_begin) ],
-	[ qw(psc_multiwait_usecs slmupschedthr_main _pscthr_begin) ],
+	[ qw(psc_multiwait_usecs slmupschthr_main _pscthr_begin) ],
 	[ qw(psc_waitq_waitabs _lc_get slvr_worker_int slislvrthr_main _pscthr_begin) ],
 	[ qw(psc_waitq_waitabs msbmapflushthr_main _pscthr_begin) ],
 	[ qw(psc_waitq_waitabs slvr_worker_int slislvrthr_main _pscthr_begin) ],
