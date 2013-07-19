@@ -45,6 +45,7 @@ struct psc_meter {
 #define psc_meter_free(pm)	pll_remove(&psc_meters, (m))
 
 void psc_meter_init(struct psc_meter *, uint64_t, const char *, ...);
+void psc_meter_destroy(struct psc_meter *);
 
 extern struct psc_lockedlist	 psc_meters;
 

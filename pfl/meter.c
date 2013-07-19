@@ -49,3 +49,9 @@ psc_meter_init(struct psc_meter *pm, uint64_t max, const char *fmt, ...)
 
 	pll_addtail(&psc_meters, pm);
 }
+
+void
+psc_meter_destroy(struct psc_meter *pm)
+{
+	pll_remove(&psc_meters, pm);
+}
