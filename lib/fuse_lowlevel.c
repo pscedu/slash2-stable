@@ -269,6 +269,7 @@ char *fuse_add_dirent(char *buf, const char *name, const struct stat *stbuf,
 void
 fuse_dump_dirents(void *buf, size_t len)
 {
+	struct fuse_dirent *e;
 	unsigned sz;
 	off_t off;
 	int n;
