@@ -266,6 +266,22 @@ char *fuse_add_dirent(char *buf, const char *name, const struct stat *stbuf,
 	return buf + entsize;
 }
 
+void
+fuse_dump_dirents(void *buf, size_t len)
+{
+	unsigned sz;
+	off_t off;
+	int n;
+
+	for (n = 0, off = 0; off < len; n++, off += sz) {
+		e = (void *)((char *)buf + off);
+		sz = fuse_dirent_size(e->namelen);
+		printf(" ent %d: ino %lu off %lu nlen %d typ %d %*.*s\n",
+		    n, e->ino, e->off, e->namelen, e->type, e->namelen,
+		    e->namelen, e->name);
+	}
+}
+
 size_t fuse_add_direntry(fuse_req_t req, char *buf, size_t bufsize,
 			 const char *name, const struct stat *stbuf, off_t off)
 {
