@@ -61,6 +61,6 @@ psc_fmt_ratio(char buf[PSCFMT_RATIO_BUFSIZ], int64_t n, int64_t d)
 			 */
 			snprintf(buf, PSCFMT_RATIO_BUFSIZ, "99.99%%");
 		else
-			snprintf(buf, PSCFMT_RATIO_BUFSIZ, "%5.2f%%", val);
+			snprintf(buf, PSCFMT_RATIO_BUFSIZ, "%.2f%%", val);
 	}
 }
