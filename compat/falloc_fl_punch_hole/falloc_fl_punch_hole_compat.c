@@ -1,5 +1,7 @@
 /* $Id$ */
 
+#include <linux/falloc.h>
+
 #include <fcntl.h>
 #include <stdlib.h>
 
