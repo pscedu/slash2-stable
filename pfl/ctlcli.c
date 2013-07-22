@@ -689,17 +689,24 @@ void
 psc_ctlmsg_meter_prdat(__unusedx const struct psc_ctlmsghdr *mh,
     const void *m)
 {
+	char *p, buf[50], rbuf[PSCFMT_RATIO_BUFSIZ];
 	const struct psc_ctlmsg_meter *pcm = m;
-	uint64_t max;
+	uint64_t cur, max;
 	int n = 0, len;
-	char buf[50];
 
+	cur = pcm->pcm_mtr.pm_cur;
 	max = pcm->pcm_mtr.pm_max;
-	if (pcm->pcm_mtr.pm_cur > max)
+	if (cur > max)
 		max = pcm->pcm_mtr.pm_cur;
 
-	n = snprintf(buf, sizeof(buf), "%"PRIu64"/%"PRIu64,
-	    pcm->pcm_mtr.pm_cur, max);
+	psc_fmt_ratio(rbuf, cur, max);
+	p = strchr(rbuf, '.');
+	if (p) {
+		p[0] = '%';
+		p[1] = '\0';
+	}
+
+	n = snprintf(buf, sizeof(buf), "%"PRIu64"/%"PRIu64, cur, max);
 	len = printf("%-24s %*s%s ", pcm->pcm_mtr.pm_name, 18 - n, "",
 	    buf);
 	psc_assert(len != -1);
@@ -710,9 +717,28 @@ psc_ctlmsg_meter_prdat(__unusedx const struct psc_ctlmsghdr *mh,
 	if (len < 0)
 		len = 0;
 	if (max) {
-		for (; n < (int)(len * pcm->pcm_mtr.pm_cur / max); n++)
-			putchar('=');
-		putchar(pcm->pcm_mtr.pm_cur == max ? '=' : '>');
+		int nr = len * cur / max;
+		int slen = strlen(rbuf) + 2;
+
+		if (nr > slen + 1) {
+			len -= slen;
+			nr -= slen;
+			for (; n < nr / 2; n++)
+				putchar('=');
+			printf(" %s ", rbuf);
+			for (; n < nr; n++)
+				putchar('=');
+			putchar(cur == max ? '=' : '>');
+		} else {
+			for (; n < nr; n++)
+				putchar('=');
+			if (cur)
+				putchar('>');
+			printf(" %s ", rbuf);
+			if (!cur)
+				putchar(' ');
+			len -= slen;
+		}
 	} else
 		putchar(' ');
 	for (; n < len; n++)
