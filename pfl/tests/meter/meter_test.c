@@ -69,25 +69,19 @@ main(int argc, char *argv[])
 	pcm.pcm_mtr.pm_max = 1000;
 	psc_ctlmsg_meter_prdat(NULL, &pcm);
 
-	pcm.pcm_mtr.pm_cur = 10;
-	pcm.pcm_mtr.pm_max = 1000;
-	psc_ctlmsg_meter_prdat(NULL, &pcm);
-
-	pcm.pcm_mtr.pm_cur = 100;
-	pcm.pcm_mtr.pm_max = 1000;
-	psc_ctlmsg_meter_prdat(NULL, &pcm);
-
-	pcm.pcm_mtr.pm_cur = 990;
-	pcm.pcm_mtr.pm_max = 1000;
-	psc_ctlmsg_meter_prdat(NULL, &pcm);
-
-	pcm.pcm_mtr.pm_cur = 1000;
-	pcm.pcm_mtr.pm_max = 1000;
-	psc_ctlmsg_meter_prdat(NULL, &pcm);
-
-	pcm.pcm_mtr.pm_cur = 1100;
-	pcm.pcm_mtr.pm_max = 1000;
-	psc_ctlmsg_meter_prdat(NULL, &pcm);
+	pcm.pcm_mtr.pm_cur = 10;   psc_ctlmsg_meter_prdat(NULL, &pcm);
+	pcm.pcm_mtr.pm_cur = 20;   psc_ctlmsg_meter_prdat(NULL, &pcm);
+	pcm.pcm_mtr.pm_cur = 100;  psc_ctlmsg_meter_prdat(NULL, &pcm);
+	pcm.pcm_mtr.pm_cur = 200;  psc_ctlmsg_meter_prdat(NULL, &pcm);
+	pcm.pcm_mtr.pm_cur = 250;  psc_ctlmsg_meter_prdat(NULL, &pcm);
+	pcm.pcm_mtr.pm_cur = 275;  psc_ctlmsg_meter_prdat(NULL, &pcm);
+	pcm.pcm_mtr.pm_cur = 300;  psc_ctlmsg_meter_prdat(NULL, &pcm);
+	pcm.pcm_mtr.pm_cur = 325;  psc_ctlmsg_meter_prdat(NULL, &pcm);
+	pcm.pcm_mtr.pm_cur = 350;  psc_ctlmsg_meter_prdat(NULL, &pcm);
+	pcm.pcm_mtr.pm_cur = 500;  psc_ctlmsg_meter_prdat(NULL, &pcm);
+	pcm.pcm_mtr.pm_cur = 990;  psc_ctlmsg_meter_prdat(NULL, &pcm);
+	pcm.pcm_mtr.pm_cur = 1000; psc_ctlmsg_meter_prdat(NULL, &pcm);
+	pcm.pcm_mtr.pm_cur = 1100; psc_ctlmsg_meter_prdat(NULL, &pcm);
 
 	exit(0);
 }
