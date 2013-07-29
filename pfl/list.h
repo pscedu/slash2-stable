@@ -485,7 +485,6 @@ _psclist_next_obj(struct psclist_head *hd, void *p,
 	     (n) = (p) ? psclist_next_obj2((hd), (p), (offset)) : NULL;		\
 	     (p); (p) = (n), (n) = (n) ? psclist_next_obj2((hd), (n), (offset)) : NULL)
 
-
 /**
  * psclist_for_each_entry2_backwards_safe - iterate over list of given type.
  * @p: the type * to use as a loop counter.
