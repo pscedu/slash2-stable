@@ -1855,13 +1855,14 @@ lnet_parse_get(lnet_ni_t *ni, lnet_msg_t *msg, int rdma_get)
                            hdr->msg.get.match_bits, msg,
                            &mlength, &offset, &md);
         if (rc == LNET_MATCHMD_DROP) {
-                CNETERR("Dropping GET from %s portal %d match "LPU64
-                        " offset %d length %d\n",
-                        libcfs_id2str(src),
-                        hdr->msg.get.ptl_index,
-                        hdr->msg.get.match_bits,
-                        hdr->msg.get.src_offset,
-                        hdr->msg.get.sink_length);
+                CDEBUG(D_NET,
+                    "Dropping GET from %s portal %d match "LPU64
+                    " offset %d length %d\n",
+                    libcfs_id2str(src),
+                    hdr->msg.get.ptl_index,
+                    hdr->msg.get.match_bits,
+                    hdr->msg.get.src_offset,
+                    hdr->msg.get.sink_length);
                 LNET_UNLOCK();
                 return ENOENT;                  /* +ve: OK but no match */
         }
