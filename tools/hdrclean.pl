@@ -76,6 +76,8 @@ usage() unless @ARGV;
 
 my %syms = (
 	defs		=> [],
+	enum_vals	=> [],
+	enum_types	=> [],
 	funcs		=> [],
 	structs		=> [],
 	typedefs	=> [],
@@ -85,6 +87,8 @@ my %syms = (
 );
 my %msyms = (
 	defs		=> [],
+	enum_vals	=> [],
+	enum_types	=> [],
 	funcs		=> [],
 	structs		=> [],
 	typedefs	=> [],
@@ -107,52 +111,54 @@ foreach my $file (@ARGV) {
 foreach my $hdr (@hdrs) {
 	local $/;
 	open HDR, "<", $hdr or err $hdr;
-	my $line = <HDR>;
+	my $c = <HDR>;
 	close HDR;
 
-	1 while $line =~ s/{[^{}]*?}//gs;
-	$line =~ s/\\\n//gs;
-	$line =~ s!/\*.*?\*/!!gs;
-	$line =~ s!//.*!!gm;
-	$line =~ s/^\s*#\s*(?:if|ifdef|ifndef|include|endif|else)\b.*//gm;
-	$line =~ s/\n(?=\w+\s*\()/ /gs;
-	$line =~ s/\n(?=\s+\*?\w+)/ /gs;
+	$c =~ s/\\\n//gs;
+	$c =~ s!/\*.*?\*/!!gs;
+	$c =~ s!//.*!!gm;
 
-	while ($line =~ s/^\s*#\s*define\s+(\w+).*//m) {
+	while ($c =~ s/^\s*enum(\s+\w+|)\s*{\s*(.*?)\s*}\s*;//ms) {
+		push @{ $syms{enum_types} }, $1 if $1;
+		push @{ $syms{enum_vals} }, map { s/\s*=.*//; $_ } split /\s*,\s*/, $2;
+	}
+
+	1 while $c =~ s/{[^{}]*?}//gs;
+	$c =~ s/^\s*#\s*(?:if|ifdef|ifndef|include|endif|else)\b.*//gm;
+	$c =~ s/\n(?=\w+\s*\()/ /gs;
+	$c =~ s/\n(?=\s+\*?\w+)/ /gs;
+
+	while ($c =~ s/^\s*#\s*define\s+(\w+).*//m) {
 		my $def = $1;
 		push @{ $syms{defs} }, $def unless $def =~ /^_/;
 	}
 
-	while ($line =~ s/^\s*#\s*undef\s+(\w+)\s*$//m) {
+	while ($c =~ s/^\s*#\s*undef\s+(\w+)\s*$//m) {
 		my $undef = $1;
 		push @{ $syms{undefs} }, $undef unless $undef =~ /^_/;
 	}
 
-	while ($line =~ s/^\s*struct\s+(\w+)\s*;//m) {
+	while ($c =~ s/^\s*struct\s+(\w+)\s*;//m) {
 		push @{ $syms{structs} }, $1;
 	}
 
-	while ($line =~ s/^\s*typedef\s+(?:(?:struct|union)\s+)?(\w+)\s+(.*)//m) {
+	while ($c =~ s/^\s*typedef\s+(?:(?:struct|union)\s+)?(\w+)\s+(.*)//m) {
 		my $name = $2;
 		push @{ $syms{typedefs} }, $name =~ /(\w+)/;;
 	}
 
-	while ($line =~ s/^\s*enum\s+(\w+)\s*;//m) {
-		#push @{ $syms{enums} }, $1;
-	}
-
-	while ($line =~ s/^.*?(\w+)\s*\(\s*[^*].*//m) {
+	while ($c =~ s/^.*?(\w+)\s*\(\s*[^*].*//m) {
 		push @{ $syms{funcs} }, $1;
 	}
 
-	while ($line =~ s/^.*?([a-zA-Z0-9_\[\]]+)\s*;\s*$//m) {
+	while ($c =~ s/^.*?([a-zA-Z0-9_\[\]]+)\s*;\s*$//m) {
 		my $var = $1;
 		$var =~ s/\[.*//;
 		push @{ $syms{vars} }, $var;
 	}
 
-#	$line =~ s/\n\n+/\n/gs;
-#	print $line;
+#	$c =~ s/\n\n+/\n/gs;
+#	print $c;
 }
 
 foreach my $key (keys %syms) {
@@ -165,18 +171,17 @@ delete $syms{undefs};
 foreach my $src (@srcs) {
 	local $/;
 	open SRC, "<", $src or err $src;
-	my $line = <SRC>;
+	my $c = <SRC>;
 	close SRC;
 
-	$line =~ s!/\*.*?\*/!!gs;
-	$line =~ s!//.*!!gm;
+	$c =~ s!/\*.*?\*/!!gs;
+	$c =~ s!//.*!!gm;
 
 	foreach my $key (keys %syms) {
 		foreach my $tag (@{ $syms{$key} }) {
 			$tag = "struct\\s+$tag" if $key eq "struct";
 			$tag = "union\\s+$tag" if $key eq "union";
-			push @{ $msyms{$key} }, $tag if
-			    $line =~ /$tag/;
+			push @{ $msyms{$key} }, $tag if $c =~ /$tag/;
 		}
 	}
 }
