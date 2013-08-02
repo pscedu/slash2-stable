@@ -144,7 +144,7 @@ _lc_add(struct psc_listcache *plc, void *p, int flags)
 }
 
 void
-_lc_add_sorted(struct psc_listcache *plc, void *p, 
+_lc_add_sorted(struct psc_listcache *plc, void *p,
     int (*cmpf)(const void *, const void *))
 {
 	int locked;
@@ -159,7 +159,7 @@ _lc_add_sorted(struct psc_listcache *plc, void *p,
 }
 
 void
-_lc_add_sorted_backwards(struct psc_listcache *plc, void *p, 
+_lc_add_sorted_backwards(struct psc_listcache *plc, void *p,
     int (*cmpf)(const void *, const void *))
 {
 	int locked;
@@ -197,6 +197,14 @@ _lc_init(struct psc_listcache *plc, ptrdiff_t offset)
 	psc_waitq_init(&plc->plc_wq_want);
 }
 
+int
+lc_cmp(const void *a, const void *b)
+{
+	const struct psc_listcache *ma = a, *mb = b;
+
+	return (strcmp(ma->plc_name, mb->plc_name));
+}
+
 /**
  * lc_vregister - Register a list cache for external access.
  * @plc: the list cache to register.
@@ -217,7 +225,7 @@ lc_vregister(struct psc_listcache *plc, const char *name, va_list ap)
 	if (rc > (int)sizeof(plc->plc_name))
 		psc_fatalx("plc_name is too large (%s)", name);
 
-	pll_addtail(&psc_listcaches, plc);
+	pll_add_sorted(&psc_listcaches, plc, lc_cmp);
 
 	LIST_CACHE_ULOCK(plc);
 	PLL_ULOCK(&psc_listcaches);
