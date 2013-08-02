@@ -166,6 +166,14 @@ _psc_poolmaster_init(struct psc_poolmaster *p, size_t entsize,
 }
 
 int
+psc_pool_cmp(const void *a, const void *b)
+{
+	const struct psc_poolmgr *ma = a, *mb = b;
+
+	return (strcmp(ma->ppm_name, mb->ppm_name));
+}
+
+int
 _psc_poolmaster_initmgr(struct psc_poolmaster *p, struct psc_poolmgr *m)
 {
 	int n, locked;
@@ -215,7 +223,7 @@ _psc_poolmaster_initmgr(struct psc_poolmaster *p, struct psc_poolmgr *m)
 	n = p->pms_total;
 	ureqlock(&p->pms_lock, locked);
 
-	pll_add(&psc_pools, m);
+	pll_add_sorted(&psc_pools, m, psc_pool_cmp);
 
 	if (n)
 		n = psc_pool_grow(m, n);
