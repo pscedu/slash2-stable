@@ -694,6 +694,9 @@ struct psc_ctl_rlim {
 	{ "csize",	RLIMIT_CORE },
 	{ "dsize",	RLIMIT_DATA },
 	{ "fsize",	RLIMIT_FSIZE },
+#ifdef RLIMIT_LOCKS
+	{ "locks",	RLIMIT_LOCKS },
+#endif
 #ifdef RLIMIT_NPROC
 	{ "maxproc",	RLIMIT_NPROC },
 #endif
@@ -703,7 +706,20 @@ struct psc_ctl_rlim {
 #ifdef RLIMIT_MEMLOCK
 	{ "mlock",	RLIMIT_MEMLOCK },
 #endif
+#ifdef RLIMIT_MSGQUEUE
+	{ "msgqueue",	RLIMIT_MSGQUEUE },
+#endif
+#ifdef RLIMIT_NICE
+	{ "nice",	RLIMIT_NICE },
+#endif
 	{ "nofile",	RLIMIT_NOFILE },
+	{ "rss",	RLIMIT_RSS },
+#ifdef RLIMIT_RTPRIO
+	{ "rtprio",	RLIMIT_RTPRIO },
+#endif
+#ifdef RLIMIT_SIGPENDING
+	{ "sigpndg",	RLIMIT_SIGPENDING },
+#endif
 	{ "stksize",	RLIMIT_STACK }
 };
 
