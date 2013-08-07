@@ -439,7 +439,7 @@ pscrpc_server_handle_request(struct pscrpc_service *svc,
 	timediff = cfs_timeval_sub(&work_end, &work_start, NULL);
 
 	if (timediff / 1000000 > PSCRPC_OBD_TIMEOUT)
-		DEBUG_REQ(PLL_ERROR, rq,
+		DEBUG_REQ(PLL_ERROR, request,
 		    "timeout, processed in %lds",
 		    cfs_timeval_sub(&work_end, &request->rq_arrival_time,
 		      NULL) / 1000000);
