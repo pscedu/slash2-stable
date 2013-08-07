@@ -439,20 +439,14 @@ pscrpc_server_handle_request(struct pscrpc_service *svc,
 	timediff = cfs_timeval_sub(&work_end, &work_start, NULL);
 
 	if (timediff / 1000000 > PSCRPC_OBD_TIMEOUT)
-		CERROR("request %"PRIu64" opc %u from %s processed in %lds "
-		       "trans %"PRIu64" rc %d/%d\n",
-		       request->rq_xid, request->rq_reqmsg->opc,
-		       libcfs_id2str(request->rq_peer),
-		       cfs_timeval_sub(&work_end, &request->rq_arrival_time,
-			NULL) / 1000000,
-		       request->rq_repmsg ? request->rq_repmsg->transno :
-		       request->rq_transno, request->rq_status,
-		       request->rq_repmsg ?
-			  (int)request->rq_repmsg->status : -999);
+		DEBUG_REQ(PLL_ERROR, rq,
+		    "timeout, processed in %lds",
+		    cfs_timeval_sub(&work_end, &request->rq_arrival_time,
+		      NULL) / 1000000);
 	else
-		psclogs_diag(PSS_RPC, "request %"PRIu64" opc %u from %s "
+		psclog_diag("request %"PRIu64" opc %u from %s "
 		    "processed in %ldus (%ldus total) trans %"PRIu64" "
-		    "rc %d/%d\n",
+		    "rc %d/%d",
 		    request->rq_xid, request->rq_reqmsg->opc,
 		    libcfs_id2str(request->rq_peer), timediff,
 		    cfs_timeval_sub(&work_end,
