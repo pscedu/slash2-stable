@@ -74,7 +74,7 @@ if (!$opts{f} and (
 	exit 0;
 }
 
-my $pfl = $data =~ m!psc_util/log\.h!;
+my $pfl = $data =~ m!psc_util/log\.h! || $opts{f};
 
 my $i;
 my $lvl = 0;
