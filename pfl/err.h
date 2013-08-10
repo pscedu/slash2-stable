@@ -10,5 +10,6 @@
 #define PFLERR_NOTCONN			(_PFLERR_START +  2)
 #define PFLERR_ALREADY			(_PFLERR_START +  3)
 #define PFLERR_NOTSUP			(_PFLERR_START +  4)
+#define PFLERR_NOSYS			(_PFLERR_START +  5)
 
 #endif /* _PFL_ERR_H_ */
