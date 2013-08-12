@@ -85,7 +85,7 @@ struct psc_vbitmap {
 				else						\
 					*_s = '0';				\
 		*_s = '\0';							\
-		psclog_dbg("vbitmap=%p contents=%s", (vb), _buf);		\
+		psclog_debug("vbitmap=%p contents=%s", (vb), _buf);		\
 	} while (0)
 
 struct psc_vbitmap *

@@ -117,14 +117,14 @@ pscrpc_import_get(struct pscrpc_import *import)
 void
 pscrpc_import_put(struct pscrpc_import *import)
 {
-	psclog_dbg("import put %p refcount=%d", import,
+	psclog_debug("import put %p refcount=%d", import,
 	    atomic_read(&import->imp_refcount) - 1);
 
 	psc_assert(atomic_read(&import->imp_refcount) > 0);
 	psc_assert(atomic_read(&import->imp_refcount) < 0x5a5a5a);
 	if (!atomic_dec_and_test(&import->imp_refcount))
 		return;
-	psclog_dbg("destroying import %p", import);
+	psclog_debug("destroying import %p", import);
 
 	/* XXX what if we fail to establish a connect for a new import */
 	psc_assert(import->imp_connection);

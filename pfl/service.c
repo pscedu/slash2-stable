@@ -712,7 +712,7 @@ pscrpcthr_main(struct psc_thread *thr)
 #if 0
 		lc_watchdog_disable(watchdog);
 		l_wait_event_exclusive(svc->srv_waitq,
-		psclog_dbg("run %d, svc->srv_n_difficult_replies %d, "
+		psclog_debug("run %d, svc->srv_n_difficult_replies %d, "
 		    "psc_listhd_empty(&svc->srv_idle_rqbds) %d,  svc->srv_rqbd_timeout %d "
 		    "psc_listhd_empty(&svc->srv_reply_queue) %d, psc_listhd_empty(&svc->srv_request_queue) %d "
 		    "svc->srv_n_active_reqs %d svc->srv_nthreads %d"
