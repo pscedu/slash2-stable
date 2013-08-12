@@ -235,7 +235,7 @@ odtable_create(const char *fn, size_t nelems, size_t elemsz,
 		goto out;
 	}
 
-	psclog_vdbg("odt.odt_hdr.odth_start=%"PRIx64,
+	psclog_vdebug("odt.odt_hdr.odth_start=%"PRIx64,
 	    odt.odt_hdr->odth_start);
 
 	/* initialize the table by writing the footers of all entries */
