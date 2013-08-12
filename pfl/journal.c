@@ -456,10 +456,10 @@ pjournal_logwrite_internal(struct psc_journal *pj,
 	/* commit the log entry on disk before we can return */
 	ntries = PJ_MAX_TRY;
 	while (ntries > 0) {
-		psclog_dbg("io_start slot=%u", slot);
+		psclog_debug("io_start slot=%u", slot);
 		rc = psc_journal_write(pj, pje, PJ_PJESZ(pj),
 		    PJ_GETENTOFF(pj, slot));
-		psclog_dbg("io_done slot=%u (rc=%d)", slot, rc);
+		psclog_debug("io_done slot=%u (rc=%d)", slot, rc);
 		if (rc == EAGAIN) {
 			ntries--;
 			usleep(100);
@@ -653,7 +653,7 @@ pjournal_scan_slots(struct psc_journal *pj)
 			memcpy(tmppje, pje, pje->pje_len +
 			    offsetof(struct psc_journal_enthdr, pje_data));
 			psc_dynarray_add(&pj->pj_bufs, tmppje);
-			psclog_dbg("tmppje=%p type=%hu xid=%"PRId64" "
+			psclog_debug("tmppje=%p type=%hu xid=%"PRId64" "
 			    "txg=%"PRId64,
 			    tmppje, tmppje->pje_type, tmppje->pje_xid,
 			    tmppje->pje_txg);
@@ -834,7 +834,7 @@ pjournal_thr_main(struct psc_thread *thr)
 		 * order of transaction IDs.
 		 */
 		while ((xh = pll_peekhead(&pj->pj_distillxids))) {
-			psclog_dbg("xh=%p xh->pjx_flags=%d", xh,
+			psclog_debug("xh=%p xh->pjx_flags=%d", xh,
 			    xh->pjx_flags);
 			spinlock(&xh->pjx_lock);
 			psc_assert(xh->pjx_flags & PJX_DISTILL);

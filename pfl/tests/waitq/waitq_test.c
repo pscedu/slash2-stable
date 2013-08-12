@@ -59,7 +59,7 @@ child_main(struct psc_thread *thr)
 	 */
 	psc_waitq_wait(&waitq, NULL);
 
-	psclog_dbg("after pseudo barrier");
+	psclog_debug("after pseudo barrier");
 
 	/* Connect to control socket. */
 	(void)FMTSTR(buf, sizeof(buf), "foobar%h",
@@ -69,7 +69,7 @@ child_main(struct psc_thread *thr)
 
 	for (i = 0; i < iterations; i++) {
 		psc_waitq_wait(&waitq, NULL);
-		psclog_dbg("tid=%d, i=%d awake",
+		psclog_debug("tid=%d, i=%d awake",
 		    thr->pscthr_thrid, i);
 	}
 }
@@ -96,7 +96,7 @@ main(int argc, char *argv[])
 	if (argc)
 		usage();
 
-	psclog_dbg("nthreads = %d", nthreads);
+	psclog_debug("nthreads = %d", nthreads);
 
 	psc_waitq_init(&waitq);
 

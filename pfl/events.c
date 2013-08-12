@@ -286,7 +286,7 @@ pscrpc_reply_in_callback(lnet_event_t *ev)
 		  "type %d, status %d initiator ;%s;",
 		  ev->type, ev->status, libcfs_id2str(ev->initiator));
 
-	psclog_dbg("event: type=%d, status=%d, offset=%d, mlength=%d",
+	psclog_debug("event: type=%d, status=%d, offset=%d, mlength=%d",
 		ev->type, ev->status, ev->offset, ev->mlength);
 
 	if (!req->rq_peer.nid)
@@ -615,7 +615,7 @@ pscrpc_ni_init(int type, int nmsgs)
 	if (LNetGetId(1, &my_id))
 		psc_fatalx("LNetGetId() failed");
 
-	psclog_dbg("nidpid is (%"PSCPRIxLNID",0x%x)", my_id.nid, my_id.pid);
+	psclog_debug("nidpid is (%"PSCPRIxLNID",0x%x)", my_id.nid, my_id.pid);
 
 	psc_poolmaster_init(&pscrpc_rq_poolmaster,
 	    struct pscrpc_request, rq_lentry, PPMF_AUTO, 64, 64, 0,

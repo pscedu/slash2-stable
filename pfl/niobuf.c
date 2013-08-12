@@ -76,7 +76,7 @@ pscrpc_send_buf(lnet_handle_md_t *mdh, void *base, int len,
 		return (-ENOMEM);
 	}
 
-	psclog_dbg("Sending %d bytes to portal %d, xid %#"PRIx64,
+	psclog_debug("Sending %d bytes to portal %d, xid %#"PRIx64,
 	    len, portal, xid);
 
 	rc = LNetPut(conn->c_self, *mdh, ack, conn->c_peer, portal, xid,
@@ -544,7 +544,7 @@ pscrpc_send_rpc(struct pscrpc_request *rq, int noreply)
 		reply_md.user_ptr  = &rq->rq_reply_cbid;
 		reply_md.eq_handle = pscrpc_eq_h;
 
-		psclog_dbg("LNetMDAttach() try w/ handle %"PRIx64,
+		psclog_debug("LNetMDAttach() try w/ handle %"PRIx64,
 		      reply_me_h.cookie);
 
 		rc = LNetMDAttach(reply_me_h, reply_md, LNET_UNLINK,
@@ -559,7 +559,7 @@ pscrpc_send_rpc(struct pscrpc_request *rq, int noreply)
 			GOTO(cleanup_me, rc = -ENOMEM);
 		}
 
-		psclog_dbg("Setup reply buffer: %u bytes, xid %"PRIx64
+		psclog_debug("Setup reply buffer: %u bytes, xid %"PRIx64
 		    ", portal %u", rq->rq_replen, rq->rq_xid,
 		    rq->rq_reply_portal);
 	}
