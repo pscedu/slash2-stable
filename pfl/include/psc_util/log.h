@@ -101,9 +101,7 @@ enum psclog_level {
 #define psclog_notice(fmt, ...)		_psclogk(PSC_SUBSYS, PLL_NOTICE, 0, (fmt), ## __VA_ARGS__)
 #define psclog_info(fmt, ...)		_psclogk(PSC_SUBSYS, PLL_INFO, 0, (fmt), ## __VA_ARGS__)
 #define psclog_diag(fmt, ...)		_psclogk(PSC_SUBSYS, PLL_DIAG, 0, (fmt), ## __VA_ARGS__)
-#define psclog_dbg(fmt, ...)		_psclogk(PSC_SUBSYS, PLL_DEBUG, 0, (fmt), ## __VA_ARGS__)
 #define psclog_debug(fmt, ...)		_psclogk(PSC_SUBSYS, PLL_DEBUG, 0, (fmt), ## __VA_ARGS__)
-#define psclog_vdbg(fmt, ...)		_psclogk(PSC_SUBSYS, PLL_VDEBUG, 0, (fmt), ## __VA_ARGS__)
 #define psclog_vdebug(fmt, ...)		_psclogk(PSC_SUBSYS, PLL_VDEBUG, 0, (fmt), ## __VA_ARGS__)
 #define psclog_trace(fmt, ...)		_psclogk(PSC_SUBSYS, PLL_TRACE, 0, (fmt), ## __VA_ARGS__)
 #define psclog_max(fmt, ...)		_psclogk(PSC_SUBSYS, PLL_MAX, 0, (fmt), ## __VA_ARGS__)
@@ -117,9 +115,7 @@ enum psclog_level {
 #define psclogs_notice(ss, fmt, ...)	_psclogk((ss), PLL_NOTICE, 0, (fmt), ## __VA_ARGS__)
 #define psclogs_info(ss, fmt, ...)	_psclogk((ss), PLL_INFO, 0, (fmt), ## __VA_ARGS__)
 #define psclogs_diag(ss, fmt, ...)	_psclogk((ss), PLL_DIAG, 0, (fmt), ## __VA_ARGS__)
-#define psclogs_dbg(ss, fmt, ...)	_psclogk((ss), PLL_DEBUG, 0, (fmt), ## __VA_ARGS__)
 #define psclogs_debug(ss, fmt, ...)	_psclogk((ss), PLL_DEBUG, 0, (fmt), ## __VA_ARGS__)
-#define psclogs_vdbg(ss, fmt, ...)	_psclogk((ss), PLL_VDEBUG, 0, (fmt), ## __VA_ARGS__)
 #define psclogs_vdebug(ss, fmt, ...)	_psclogk((ss), PLL_VDEBUG, 0, (fmt), ## __VA_ARGS__)
 #define psclogs_trace(ss, fmt, ...)	_psclogk((ss), PLL_TRACE, 0, (fmt), ## __VA_ARGS__)
 #define psclogs(lvl, ss, fmt, ...)	_psclogk((ss), (lvl), 0, (fmt), ## __VA_ARGS__)
@@ -134,9 +130,7 @@ enum psclog_level {
 #define psclogv_notice(fmt, ap)		_psclogvk(PSC_SUBSYS, PLL_NOTICE, 0, (fmt), (ap))
 #define psclogv_info(fmt, ap)		_psclogvk(PSC_SUBSYS, PLL_INFO, 0, (fmt), (ap))
 #define psclogv_diag(fmt, ap)		_psclogvk(PSC_SUBSYS, PLL_DIAG, 0, (fmt), (ap))
-#define psclogv_dbg(fmt, ap)		_psclogvk(PSC_SUBSYS, PLL_DEBUG, 0, (fmt), (ap))
 #define psclogv_debug(fmt, ap)		_psclogvk(PSC_SUBSYS, PLL_DEBUG, 0, (fmt), (ap))
-#define psclogv_vdbg(fmt, ap)		_psclogvk(PSC_SUBSYS, PLL_VDEBUG, 0, (fmt), (ap))
 #define psclogv_vdebug(fmt, ap)		_psclogvk(PSC_SUBSYS, PLL_VDEBUG, 0, (fmt), (ap))
 #define psclogv_trace(fmt, ap)		_psclogvk(PSC_SUBSYS, PLL_TRACE, 0, (fmt), (ap))
 #define psclogv(lvl, fmt, ap)		_psclogvk(PSC_SUBSYS, (lvl), 0, (fmt), (ap))
@@ -149,9 +143,7 @@ enum psclog_level {
 #define psclogsv_notice(fmt, ap)	_psclogvk((ss), PLL_NOTICE, 0, (fmt), (ap))
 #define psclogsv_info(fmt, ap)		_psclogvk((ss), PLL_INFO, 0, (fmt), (ap))
 #define psclogsv_diag(fmt, ap)		_psclogvk((ss), PLL_DIAG, 0, (fmt), (ap))
-#define psclogsv_dbg(fmt, ap)		_psclogvk((ss), PLL_DEBUG, 0, (fmt), (ap))
 #define psclogsv_debug(fmt, ap)		_psclogvk((ss), PLL_DEBUG, 0, (fmt), (ap))
-#define psclogsv_vdbg(fmt, ap)		_psclogvk((ss), PLL_VDEBUG, 0, (fmt), (ap))
 #define psclogsv_vdebug(fmt, ap)	_psclogvk((ss), PLL_VDEBUG, 0, (fmt), (ap))
 #define psclogsv_trace(fmt, ap)		_psclogvk((ss), PLL_TRACE, 0, (fmt), (ap))
 #define psclogsv(lvl, ss, fmt, ap)	_psclogvk((ss), (lvl), 0, (fmt), (ap))
@@ -160,7 +152,7 @@ enum psclog_level {
 #  define PSCLOG_LEVEL			PNLOGLEVELS
 #endif
 
-#if PSCLOG_LEVEL <= PLL_TRACE
+#if PSCLOG_LEVEL < PLL_TRACE
 #  undef psclog_trace
 #  undef psclogs_trace
 #  undef psclogv_trace
@@ -170,6 +162,30 @@ enum psclog_level {
 #  define psclogs_trace(ss, fmt, ...)
 #  define psclogv_trace(fmt, ap)
 #  define psclogsv_trace(fmt, ap)
+#endif
+
+#if PSCLOG_LEVEL < PLL_VDEBUG
+#  undef psclog_vdebug
+#  undef psclogs_vdebug
+#  undef psclogv_vdebug
+#  undef psclogsv_vdebug
+
+#  define psclog_vdebug(fmt, ...)
+#  define psclogs_vdebug(ss, fmt, ...)
+#  define psclogv_vdebug(fmt, ap)
+#  define psclogsv_vdebug(fmt, ap)
+#endif
+
+#if PSCLOG_LEVEL < PLL_DEBUG
+#  undef psclog_debug
+#  undef psclogs_debug
+#  undef psclogv_debug
+#  undef psclogsv_debug
+
+#  define psclog_debug(fmt, ...)
+#  define psclogs_debug(ss, fmt, ...)
+#  define psclogv_debug(fmt, ap)
+#  define psclogsv_debug(fmt, ap)
 #endif
 
 #define PSCLOG_LOCK()			flockfile(stderr)
@@ -242,7 +258,7 @@ enum psclog_level {
 #define PFL_GOTOERR(label, code)					\
 	do {								\
 		if ((code))						\
-			psclog_dbg("error: "#code ": %d", (code));	\
+			psclog_debug("error: "#code ": %d", (code));	\
 		goto label;						\
 	} while (0)
 
