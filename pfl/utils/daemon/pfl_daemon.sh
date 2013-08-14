@@ -123,7 +123,7 @@ postproc()
 			frompre="-r $mail_from"
 		else
 			# BSD mailx -- use sendmail flag
-			frompost="-f $mail_from"
+			frompost="-- -f $mail_from"
 		fi
 
 		cmdfile=/tmp/gdbcmd.$id
