@@ -1,0 +1,53 @@
+.\" $Id$
+.\" %PSC_START_COPYRIGHT%
+.\" -----------------------------------------------------------------------------
+.\" Copyright (c) 2013, Pittsburgh Supercomputing Center (PSC).
+.\"
+.\" Permission to use, copy, and modify this software and its documentation
+.\" without fee for personal use or non-commercial use within your organization
+.\" is hereby granted, provided that the above copyright notice is preserved in
+.\" all copies and that the copyright and this permission notice appear in
+.\" supporting documentation.  Permission to redistribute this software to other
+.\" organizations or individuals is not permitted without the written permission
+.\" of the Pittsburgh Supercomputing Center.  PSC makes no representations about
+.\" the suitability of this software for any purpose.  It is provided "as is"
+.\" without express or implied warranty.
+.\" -----------------------------------------------------------------------------
+.\" %PSC_END_COPYRIGHT%
+.Dd August 17, 2013
+.Dt PFL.MK 5
+.ds volume PSC \- Administrator's Manual
+.Os http://www.psc.edu/
+.Sh NAME
+.Nm pfl.mk
+.Nd P file system library make directives
+.Sh SYNOPSIS
+.Bd -literal
+ROOTDIR=../..
+include ${ROOTDIR}/Makefile.path
+\&...
+include ${PFLMK}
+.Ed
+.Sh DESCRIPTION
+The
+.Nm pfl.mk
+.El
+.El
+.Sh FILES
+.Bl -tag -width Pa -compact
+.It Pa /etc/slash/slcfg
+default
+.Tn SLASH
+resource configuration
+.El
+.Sh EXAMPLES
+The following is an example
+.Nm slcfg :
+.Bd -literal
+		id	= 400;
+		nid	= 67.171.74.150;
+	}
+}
+.Ed
+.Sh SEE ALSO
+.Xr mount_slash 8 ,
