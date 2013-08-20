@@ -75,8 +75,8 @@ struct psc_ctlacthr {
 
 struct psc_ctlthr {
 	int			 pct_sockfd;
-	const struct psc_ctlop	*pct_ct;
 	int			 pct_nops;
+	const struct psc_ctlop	*pct_ct;
 	struct {
 		int nsent;
 		int nrecv;
