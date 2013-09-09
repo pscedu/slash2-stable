@@ -433,14 +433,14 @@ psc_obj_decref(struct psc_refmgr *prm, void *p)
 	psc_objref_lock(prm, pobj);
 	pobj->pobj_flags &= ~POBJF_BUSY;
 	if (prm->prm_flags & PRMF_LINGER ||
-	    psc_atomic32_read(&pobj->pobj_refcnt) != 1)
-		psc_atomic32_dec(&pobj->pobj_refcnt);
+	    pobj->pobj_refcnt != 1)
+		pobj->pobj_refcnt--;
 	else {
 		psc_objref_unlock(prm, pobj);
 
 		psc_refmgr_lock_specific(prm, pobj);
 		psc_objref_lock(prm, pobj);
-		if (psc_atomic32_dec_and_test0(&pobj->pobj_refcnt)) {
+		if (--pobj->pobj_refcnt == 0) {
 			if (prm->prm_flags & PRMF_HASH)
 				psc_hashtbl_del_item(&prm->prm_hashtbl,
 				    prm->prm_objcmpf, key);
