@@ -65,6 +65,12 @@ CFLAGS+=	-Wall -W -pipe
 # -Wredundant-decls
 # CFLAGS+=	-Wshadow
 
+ifeq (${GOPROF},1)
+CFLAGS+=	-fno-builtin-malloc -fno-builtin-calloc $( \
+		) -fno-builtin-realloc -fno-builtin-free
+LDFLAGS+=	-ltcmalloc -lprofiler
+endif
+
 DEBUG?=		1
 DEVELPATHS?=	1
 ifeq (${DEBUG},0)
