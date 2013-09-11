@@ -288,8 +288,7 @@ main(int argc, char *argv[])
 	pll_add_sorted(&pll, it, it_cmp);
 
 	it = pll_get(&pll);
-	psc_assert(psclist_conjoint(&it->i_lentry,
-	    psc_lentry_hd(&it->i_lentry)));
+	psc_assert(psclist_disjoint(&it->i_lentry));
 
 	psc_assert(it->i_v == 2);
 	PSCFREE(it);
