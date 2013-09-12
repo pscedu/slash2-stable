@@ -184,7 +184,7 @@ pscrpc_nbreapthr_main(struct psc_thread *thr)
 	struct pscrpc_nbreapthr *pnbt;
 
 	pnbt = thr->pscthr_private;
-	while (pscthr_run()) {
+	while (pscthr_run(thr)) {
 		pscrpc_nbreqset_reap(pnbt->pnbt_nbset);
 		psc_waitq_waitrel_s(&pnbt->pnbt_nbset->nb_waitq, NULL,
 		    1);

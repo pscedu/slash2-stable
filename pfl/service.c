@@ -651,13 +651,13 @@ pscrpc_retry_rqbds(void *arg)
 }
 
 int
-pscrpcthr_waitevent(__unusedx struct psc_thread *thr,
+pscrpcthr_waitevent(struct psc_thread *thr,
     struct pscrpc_service *svc)
 {
 	int rc;
 
 	spinlock(&svc->srv_lock);
-	rc = (!pscthr_run() &&
+	rc = (!pscthr_run(thr) &&
 	     svc->srv_n_difficult_replies == 0) ||
 	    (!psc_listhd_empty(&svc->srv_idle_rqbds) &&
 	     svc->srv_rqbd_timeout == 0) ||
@@ -702,7 +702,7 @@ pscrpcthr_main(struct psc_thread *thr)
 	CDEBUG(D_NET, "service thread started");
 
 	/* XXX maintain a list of all managed devices: insert here */
-	while ((pscthr_run() && prt->prt_alive) ||
+	while ((pscthr_run(thr) && prt->prt_alive) ||
 	       svc->srv_n_difficult_replies != 0) {
 
 		/* Don't exit while there are replies to be handled */

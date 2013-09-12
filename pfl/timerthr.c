@@ -37,7 +37,7 @@
 struct timeval psc_tiosthr_lastv[IST_NINTV];
 
 void
-psc_tiosthr_main(__unusedx struct psc_thread *thr)
+psc_tiosthr_main(struct psc_thread *thr)
 {
 	struct psc_iostatv *istv;
 	struct psc_iostats *ist;
@@ -45,7 +45,7 @@ psc_tiosthr_main(__unusedx struct psc_thread *thr)
 	uint64_t intv_len;
 	int i, stoff;
 
-	while (pscthr_run()) {
+	while (pscthr_run(thr)) {
 		/* XXX use monotonic clock */
 		PFL_GETTIMEVAL(&tv);
 		usleep(1000000 - tv.tv_usec);

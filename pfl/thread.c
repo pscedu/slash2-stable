@@ -521,14 +521,12 @@ pscthr_setdead(struct psc_thread *thr, int dead)
  * pscthr_run - Control point of thread main loop.
  */
 int
-pscthr_run(void)
+pscthr_run(struct psc_thread *thr)
 {
-	struct psc_thread *thr;
 	int yield = 1, live = 1;
 
 	live = 1;
 	yield = 1;
-	thr = pscthr_get();
 	do {
 		spinlock(&thr->pscthr_lock);
 		if (thr->pscthr_flags & PTF_DEAD) {

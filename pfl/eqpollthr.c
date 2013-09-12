@@ -25,9 +25,9 @@
 #include "psc_util/thread.h"
 
 __static void
-psc_eqpollthr_main(__unusedx struct psc_thread *thr)
+psc_eqpollthr_main(struct psc_thread *thr)
 {
-	while (pscthr_run())
+	while (pscthr_run(thr))
 		pscrpc_check_events(100);
 }
 
