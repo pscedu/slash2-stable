@@ -827,7 +827,7 @@ pjournal_thr_main(struct psc_thread *thr)
 	pjt = thr->pscthr_private;
 	pj = pjt->pjt_pj;
 	xid = pj->pj_distill_xid;
-	while (pscthr_run()) {
+	while (pscthr_run(thr)) {
 		/*
 		 * Walk the list until we find a log entry that needs
 		 * processing.  We also make sure that we distill in
