@@ -28,7 +28,6 @@
 #include <inttypes.h>
 #include <stdlib.h>
 
-#include "slerr.h"
 #include "pfl/export.h"
 #include "pfl/list.h"
 #include "pfl/rpc.h"
@@ -850,7 +849,7 @@ pscrpc_check_set(struct pscrpc_request_set *set, int check_allsent)
 				pscrpc_abort_bulk(req->rq_bulk);
 
 			if (req->rq_status == 0) {
-				psclog_warnx("req=%p, -EIO set, rq_err is %d", 
+				psclog_warnx("req=%p, -EIO set, rq_err is %d",
 				    req, req->rq_err);
 				req->rq_status = -EIO;
 			}
@@ -1294,13 +1293,12 @@ pscrpc_set_wait(struct pscrpc_request_set *set)
 
 		if (req->rq_status) {
 			rc = -abs(req->rq_status);
-			if (rc != -SLERR_AIOWAIT)
-			    DEBUG_REQ(PLL_ERROR, req, "error rq_status=%d set=%p",
-				rc, set);
+			DEBUG_REQ(PLL_ERROR, req, "error rq_status=%d set=%p",
+			    rc, set);
 		}
 	}
 
-	if (rc && rc != -SLERR_AIOWAIT)
+	if (rc)
 		psclog_errorx("set %p failed, rc=%d", set, rc);
 
 	if (set->set_interpret) {
