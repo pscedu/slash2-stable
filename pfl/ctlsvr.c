@@ -1966,7 +1966,7 @@ psc_ctlthr_main(const char *ofn, const struct psc_ctlop *ct, int nops,
 	for (i = 1; i < PFL_CTL_NTHRS; i++) {
 		thr = pscthr_init(me->pscthr_type, 0,
 		    psc_ctlthr_mainloop, NULL,
-		    sizeof(struct psc_ctlthr), "%.*sctlthr%d",
+		    me->pscthr_privsiz, "%.*sctlthr%d",
 		    p - me->pscthr_name, me->pscthr_name, i);
 		psc_ctlthr(thr)->pct_ct = ct;
 		psc_ctlthr(thr)->pct_nops = nops;
