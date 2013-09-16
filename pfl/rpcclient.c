@@ -849,8 +849,8 @@ pscrpc_check_set(struct pscrpc_request_set *set, int check_allsent)
 				pscrpc_abort_bulk(req->rq_bulk);
 
 			if (req->rq_status == 0) {
-				psclog_warnx("req=%p, -EIO set, rq_err is %d",
-				    req, req->rq_err);
+				DEBUG_REQ(PLL_WARN, req, "-EIO set, "
+				    "rq_err is %d", req, req->rq_err);
 				req->rq_status = -EIO;
 			}
 			req->rq_phase = PSCRPC_RQ_PHASE_INTERPRET;
