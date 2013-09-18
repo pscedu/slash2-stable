@@ -20,6 +20,7 @@
 #include <sys/param.h>
 #include <sys/stat.h>
 
+#include <ctype.h>
 #include <err.h>
 #include <fcntl.h>
 #include <limits.h>
@@ -105,16 +106,31 @@ main(int argc, char *argv[])
 {
 	ssize_t rem, szrc;
 	struct stat stb;
-	size_t tmp;
+	size_t tmp, n;
 	int c, fd;
-	size_t n;
+	char *endp;
 
 	pfl_init();
 	progname = argv[0];
 	while ((c = getopt(argc, argv, "b:cKZ")) != -1)
 		switch (c) {
 		case 'b':
-			bufsz = strtol(optarg, NULL, 10);
+			bufsz = strtol(optarg, &endp, 10);
+			switch (tolower(*endp)) {
+			case 'k':
+				bufsz *= 1024;
+				break;
+			case 'm':
+				bufsz *= 1024*1024;
+				break;
+			case 'g':
+				bufsz *= 1024*1024*1024;
+				break;
+			case '\0':
+				break;
+			default:
+				errx(1, "invalid char: %s", endp);
+			}
 			break;
 		case 'c':
 			docrc = 1;
