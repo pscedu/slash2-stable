@@ -272,4 +272,8 @@ ifeq ($(filter $(realpath ${ROOTDIR})/compat/%,${CURDIR}),)
   DEFINES+=						-DHAVE_FALLOC_FL_PUNCH_HOLE
  endif
 
+ ifdef PICKLE_HAVE_S3
+  DEFINES+=						-DHAVE_S3
+ endif
+
 endif
