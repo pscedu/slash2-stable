@@ -226,7 +226,7 @@ ifneq ($(filter m,${MODULES}),)
 endif
 
 ifneq ($(filter pfl,${MODULES}),)
-  MODULES+=	pfl-hdrs str
+  MODULES+=	pfl-hdrs str clock
   SRCS+=	${PFL_BASE}/alloc.c
   SRCS+=	${PFL_BASE}/init.c
   SRCS+=	${PFL_BASE}/log.c
@@ -323,6 +323,10 @@ endif
 
 ifneq ($(filter barrier,${MODULES}),)
   SRCS+=	${BARRIER_SRCS}
+endif
+
+ifneq ($(filter clock,${MODULES}),)
+  SRCS+=	${CLOCK_SRCS}
 endif
 
 # Post-modules processing
