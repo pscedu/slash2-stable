@@ -29,6 +29,7 @@
 
 #include "pfl/cdefs.h"
 #include "pfl/pfl.h"
+#include "pfl/time.h"
 #include "psc_util/alloc.h"
 #include "psc_util/atomic.h"
 #include "psc_util/lock.h"
@@ -39,6 +40,7 @@ psc_spinlock_t				 psc_umask_lock = SPINLOCK_INIT;
 __threadx const struct pfl_callerinfo	*_pfl_callerinfo;
 __threadx int				 _pfl_callerinfo_lvl;
 __static void				*_pfl_tls[PFL_TLSIDX_MAX];
+struct timespec				pfl_uptime;
 
 __weak void
 pscthrs_init(void)
@@ -177,4 +179,6 @@ pfl_init(void)
 	sa.sa_handler = SIG_IGN;
 	if (sigaction(SIGPIPE, &sa, NULL) == -1)
 		psc_fatal("sigaction");
+
+	_PFL_GETTIMESPEC(CLOCK_MONOTONIC, &pfl_uptime);
 }

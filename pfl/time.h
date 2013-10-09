@@ -90,11 +90,13 @@
 			psc_fatal("gettimeofday");			\
 	} while (0)
 
-#define PFL_GETTIMESPEC(ts)						\
+#define _PFL_GETTIMESPEC(wh, ts)					\
 	do {								\
-		if (clock_gettime(CLOCK_REALTIME, (ts)) == -1)		\
+		if (clock_gettime((wh), (ts)) == -1)			\
 			psc_fatal("clock_gettime");			\
 	} while (0)
+
+#define PFL_GETTIMESPEC(ts)	_PFL_GETTIMESPEC(CLOCK_REALTIME, (ts))
 
 #ifndef HAVE_FUTIMENS
 struct timespec;
