@@ -1217,15 +1217,14 @@ pscfs_reply_open(struct pscfs_req *pfr, void *data, int rflags, int rc)
 
 #ifdef HAVE_NO_FUSE_PRIVATE_MMAP
 		/*
-		 * FUSE direct_io does not work with mmap(), which is
-		 * what the kernel uses under the hood when running
-		 * executables, so disable it for this case.
+		 * FUSE direct_io does not work with mmap(MAP_SHARED),
+		 * which is what the kernel uses under the hood when
+		 * running executables, so disable it for this case.
 		 *
 		 * XXX provide some kind of knob to allow direct_io to
-		 * be turned off, exposed to userland (mz/per-process).
+		 * be turned off, exposed to userland (per-process).
 		 */
-		if ((c->fcmh_sstb.sst_mode &
-		    (S_IXUSR | S_IXGRP | S_IXOTH)) == 0)
+		if (c->fcmh_sstb.sst_mode & _S_IXUGO)
 			pfr->pfr_fuse_fi->direct_io = 0;
 #endif
 
