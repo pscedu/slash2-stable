@@ -44,3 +44,18 @@ psc_stree_addchild(struct psc_streenode *ptn, void *data)
 	psclist_add(&child->ptn_sibling, &ptn->ptn_children);
 	return (child);
 }
+
+struct psc_streenode *
+psc_stree_addchild_sorted(struct psc_streenode *ptn, void *data,
+    int (*cmpf)(const void *, const void *), off_t offset)
+{
+	struct psc_streenode *child;
+
+	child = PSCALLOC(sizeof(*child));
+	INIT_PSCLIST_HEAD(&child->ptn_children);
+	INIT_PSC_LISTENTRY(&child->ptn_sibling);
+	child->ptn_data = data;
+	psclist_add_sorted(&child->ptn_sibling, &ptn->ptn_children,
+	    cmpf, offset);
+	return (child);
+}

@@ -21,7 +21,7 @@
 #define _PFL_VTREE_H_
 
 struct psc_streenode {
-	struct psclist_head	 ptn_sibling;
+	struct psc_listentry	 ptn_sibling;	/* link in parent's list */
 	struct psclist_head	 ptn_children;	/* branch */
 	void			*ptn_data;
 };
@@ -34,6 +34,9 @@ struct psc_streenode {
 
 struct psc_streenode *
      psc_stree_addchild(struct psc_streenode *, void *);
+struct psc_streenode *
+     psc_stree_addchild_sorted(struct psc_streenode *, void *,
+	 int (*)(const void *, const void *), off_t);
 void psc_stree_init(struct psc_streenode *);
 
 #endif /* _PFL_VTREE_H_ */

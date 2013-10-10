@@ -1313,6 +1313,15 @@ psc_ctlrep_param(int fd, struct psc_ctlmsghdr *mh, void *m)
 	return (psc_ctlsenderr(fd, mh, "%s: invalid field", pcp->pcp_field));
 }
 
+int
+pfl_ctlparam_node_cmp(const void *a, const void *b)
+{
+	const struct psc_streenode *x = a, *y = b;
+	struct psc_ctlparam_node *c = x->ptn_data, *d = y->ptn_data;
+
+	return (strcmp(c->pcn_name, d->pcn_name));
+}
+
 struct psc_ctlparam_node *
 psc_ctlparam_register(const char *oname, int (*cbf)(int,
     struct psc_ctlmsghdr *, struct psc_ctlmsg_param *, char **, int,
@@ -1325,8 +1334,9 @@ psc_ctlparam_register(const char *oname, int (*cbf)(int,
 	pcn = NULL; /* gcc */
 	name = pfl_strdup(oname);
 	ptn = &psc_ctlparamtree;
-	for (subname = name; subname != NULL; subname = next) {
-		if ((next = strchr(subname, '.')) != NULL)
+	for (subname = name; subname; subname = next) {
+		next = strchr(subname, '.');
+		if (next)
 			*next++ = '\0';
 		PSC_STREE_FOREACH_CHILD(c, ptn) {
 			pcn = c->ptn_data;
@@ -1338,7 +1348,10 @@ psc_ctlparam_register(const char *oname, int (*cbf)(int,
 			pcn->pcn_name = pfl_strdup(subname);
 			if (next == NULL)
 				pcn->pcn_cbf = cbf;
-			c = psc_stree_addchild(ptn, pcn);
+			c = psc_stree_addchild_sorted(ptn, pcn,
+			    pfl_ctlparam_node_cmp,
+			    offsetof(struct psc_streenode,
+			    ptn_sibling));
 		}
 		ptn = c;
 	}
