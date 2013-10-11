@@ -205,10 +205,6 @@ ifneq ($(filter ssl,${MODULES}),)
   INCLUDES+=	${SSL_INCLUDES}
 endif
 
-ifneq ($(filter rt,${MODULES}),)
-  LDFLAGS+=	${LIBRT}
-endif
-
 ifneq ($(filter curses,${MODULES}),)
   LDFLAGS+=	${LIBCURSES}
 endif
@@ -327,6 +323,11 @@ endif
 
 ifneq ($(filter clock,${MODULES}),)
   SRCS+=	${CLOCK_SRCS}
+  MODULES+=	rt
+endif
+
+ifneq ($(filter rt,${MODULES}),)
+  LDFLAGS+=	${LIBRT}
 endif
 
 # Post-modules processing
