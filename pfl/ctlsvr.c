@@ -1876,7 +1876,7 @@ psc_ctlacthr_main(struct psc_thread *thr)
 	/* NOTREACHED */
 }
 
-__dead void
+void
 psc_ctlthr_mainloop(struct psc_thread *thr)
 {
 	const struct psc_ctlop *ct;
@@ -1917,7 +1917,7 @@ psc_ctlthr_mainloop(struct psc_thread *thr)
  * @nops: number of operations in @ct table.
  * @acthrtype: control acceptor thread type.
  */
-__dead void
+void
 psc_ctlthr_main(const char *ofn, const struct psc_ctlop *ct, int nops,
     int acthrtype)
 {
