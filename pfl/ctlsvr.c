@@ -1857,7 +1857,7 @@ psc_ctlacthr_main(struct psc_thread *thr)
 	int s, fd;
 
 	s = psc_ctlacthr(thr)->pcat_sock;
-	for (;;) {
+	while (pscthr_run(thr)) {
 		fd = accept(s, NULL, NULL);
 		if (fd == -1) {
 			if (errno == EINTR) {
@@ -1887,7 +1887,7 @@ psc_ctlthr_mainloop(struct psc_thread *thr)
 
 	ct = psc_ctlthr(thr)->pct_ct;
 	nops = psc_ctlthr(thr)->pct_nops;
-	for (;;) {
+	while (pscthr_run(thr)) {
 		spinlock(&psc_ctl_clifds_lock);
 		if (psc_dynarray_len(&psc_ctl_clifds) == 0) {
 			psc_waitq_wait(&psc_ctl_clifds_waitq,
