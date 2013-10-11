@@ -27,11 +27,11 @@
 #include <string.h>
 #include <unistd.h>
 
+#include "pfl/dynarray.h"
 #include "pfl/fcntl.h"
 #include "pfl/str.h"
 #include "pfl/time.h"
 #include "pfl/types.h"
-#include "pfl/dynarray.h"
 #include "psc_util/alloc.h"
 #include "psc_util/atomic.h"
 #include "psc_util/crc.h"
@@ -44,8 +44,8 @@
 
 #include "zfs-fuse/zfs_slashlib.h"
 
-static long	total_trans = 0;
-static long	total_reserve = 0;
+static long	total_trans;
+static long	total_reserve;
 
 struct psc_journalthr {
 	struct psc_journal *pjt_pj;
@@ -1018,8 +1018,8 @@ pjournal_replay(struct psc_journal *pj, int thrtype,
 
 	pj->pj_distill_handler = distill_handler;
 
-	thr = pscthr_init(thrtype, 0, pjournal_thr_main,
-	    NULL, sizeof(*pjt), thrname);
+	thr = pscthr_init(thrtype, 0, pjournal_thr_main, NULL,
+	    sizeof(*pjt), thrname);
 
 	pjt = thr->pscthr_private;
 	pjt->pjt_pj = pj;
