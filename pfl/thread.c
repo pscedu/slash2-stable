@@ -595,3 +595,17 @@ psc_enter_debugger(__unusedx const char *str)
 {
 	pthread_kill(pthread_self(), SIGINT);
 }
+
+void
+pscthr_killall(void)
+{
+	struct psc_thread *thr;
+
+	PLL_LOCK(&psc_threads);
+	PLL_FOREACH(thr, &psc_threads) {
+		spinlock(&thr->pscthr_lock);
+		thr->pscthr_flags |= PTF_DEAD;
+		freelock(&thr->pscthr_lock);
+	}
+	PLL_ULOCK(&psc_threads);
+}

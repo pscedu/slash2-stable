@@ -85,6 +85,7 @@ label(struct psc_thread *pt)						\
 const char *
 	pscthr_getname(void);
 int	pscthr_getuniqid(void);
+void	pscthr_killall(void);
 int	pscthr_run(struct psc_thread *);
 void	pscthr_setdead(struct psc_thread *, int);
 void	pscthr_setloglevel(int, int);
