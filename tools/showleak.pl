@@ -26,38 +26,32 @@
 my %h;
 
 while (<>) {
-    chomp;
-    (@a) = split ' ', $_;
+	if (/alloc\(\)=(0x[a-f0-9]+)/) {
+		#print "alloc $1\n";
+		$h{$1} = {};
+		$h{$1}{line} = $_;
+		$h{$1}{freed} = 0;
 
-    if ($a[5] =~ /alloc\(\)=(0x[a-f0-9]+)/) {
-	#print "alloc $1\n";
-	$h{$1} = $1;
-	$h{$1}{sz} = $a[6];
-	$h{$1}{func} = "$a[3]-" . $a[4];
-	$h{$1}{freed} = 0;
+	} elsif (/realloc\((0x[a-f0-9]+)\)=(0x[a-f0-9]+)/) {
+		#print "realloc $1 -> $2\n";
+		$h{$1} = {} unless defined $h{$1};
+		$h{$1}{freed} = 1;
 
-    } elsif ($a[5] =~ /realloc\((0x[a-f0-9]+)\)=(0x[a-f0-9]+)/) {
-	#print "realloc $1 -> $2\n";
-	if (!defined $h{$1}) {
-	    $h{$1} = $1;
+		$h{$2} = {} unless defined $h{$2};
+		$h{$2}{freed} = 0;
+		$h{$2}{line} = $_;
+
+	} elsif (/free\((0x[a-f0-9]+)\)/) {
+		#print "free $1\n";
+		$h{$1} = {} unless defined $h{$1};
+		$h{$1}{freed} = 1;
 	}
-
-	$h{$1}{freed} = 1;
-
-    } elsif ($a[5] =~ /free\((0x[a-f0-9]+)\)/) {
-	#print "free $1\n";
-	if (!defined $h{$1}) {
-	    $h{$1} = $1;
-	}
-
-	$h{$1}{freed} = 1;
-    }
 }
 
 foreach $k (keys %h) {
-    if ($h{$k}{freed} eq 0) {
-	print "$h{$k} $h{$k}{sz} func=$h{$k}{func}\n";
-    } else {
-	#print "FREED $h{$k} $h{$k}{sz} func=$h{$k}{func} \n";
-    }
+	if ($h{$k}{freed} eq 0) {
+		print $h{$k}{line};
+	} else {
+		#print "FREED $h{$k} $h{$k}{sz} func=$h{$k}{func} \n";
+	}
 }
