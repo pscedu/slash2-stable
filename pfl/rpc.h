@@ -43,6 +43,7 @@
 #include "pfl/types.h"
 #include "psc_util/atomic.h"
 #include "psc_util/lock.h"
+#include "psc_util/pool.h"
 #include "psc_util/thread.h"
 #include "psc_util/waitq.h"
 
@@ -409,6 +410,9 @@ struct pscrpc_service {
 	struct psclist_head	 srv_reply_queue;	/* replies waiting  */
 	struct psclist_head	 srv_free_rs_list;
 	struct psc_waitq	 srv_free_rs_waitq;
+
+	struct psc_poolmaster	 srv_poolmaster;
+	struct psc_poolmgr	*srv_pool;
 
 	/*
 	 * All threads sleep on this waitq, signalled when new incoming

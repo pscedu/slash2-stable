@@ -75,13 +75,10 @@ pscrpc_alloc_rqbd(struct pscrpc_service *svc)
 {
 	struct pscrpc_request_buffer_desc *rqbd;
 
-	PSCRPC_OBD_ALLOC(rqbd, sizeof(*rqbd));
-	if (rqbd == NULL)
-		return (NULL);
-
-	rqbd->rqbd_service       = svc;
-	rqbd->rqbd_refcount      = 0;
-	rqbd->rqbd_cbid.cbid_fn  = pscrpc_request_in_callback;
+	rqbd = psc_pool_get(svc->srv_pool);
+	rqbd->rqbd_service = svc;
+	rqbd->rqbd_refcount = 0;
+	rqbd->rqbd_cbid.cbid_fn = pscrpc_request_in_callback;
 	rqbd->rqbd_cbid.cbid_arg = rqbd;
 
 	INIT_PSCLIST_HEAD(&rqbd->rqbd_reqs);
@@ -89,7 +86,7 @@ pscrpc_alloc_rqbd(struct pscrpc_service *svc)
 	rqbd->rqbd_buffer = pscrpc_alloc_request_buffer(svc->srv_buf_size);
 
 	if (rqbd->rqbd_buffer == NULL) {
-		PSCRPC_OBD_FREE(rqbd, sizeof(*rqbd));
+		psc_pool_return(svc->srv_pool, rqbd);
 		return (NULL);
 	}
 
@@ -115,7 +112,8 @@ pscrpc_free_rqbd(struct pscrpc_request_buffer_desc *rqbd)
 	freelock(&svc->srv_lock);
 
 	pscrpc_free_request_buffer(rqbd->rqbd_buffer, svc->srv_buf_size);
-	PSCRPC_OBD_FREE(rqbd, sizeof(*rqbd));
+
+	psc_pool_return(svc->srv_pool, rqbd);
 }
 
 /**
@@ -937,6 +935,8 @@ pscrpc_unregister_service(struct pscrpc_service *service)
 		PSCRPC_OBD_FREE(rs, service->srv_max_reply_size);
 	}
 
+//	pool_destroy()
+
 	PSCRPC_OBD_FREE(service, sizeof(*service));
 	return 0;
 }
@@ -1003,14 +1003,6 @@ pscrpc_init_svc(int nbufs, int bufsize, int max_req_size,
 
 	psc_waitq_init(&service->srv_free_rs_waitq);
 
-	if (flags & PSCRPC_SVCF_COUNT_PEER_QLENS) {
-		service->srv_count_peer_qlens = 1;
-#define QLENTABSZ 511
-		psc_hashtbl_init(&service->srv_peer_qlentab, 0,
-		    struct pscrpc_peer_qlen, pql_id, pql_hentry, QLENTABSZ,
-		    pscrpc_peer_qlen_cmp, "qlen-%s", service->srv_name);
-	}
-
 	spinlock(&pscrpc_all_services_lock);
 	psclist_add(&service->srv_lentry, &pscrpc_all_services);
 	freelock(&pscrpc_all_services_lock);
@@ -1028,13 +1020,28 @@ pscrpc_init_svc(int nbufs, int bufsize, int max_req_size,
 	while (service->srv_max_reply_size < max_reply_size)
 		service->srv_max_reply_size <<= 1;
 
+	if (flags & PSCRPC_SVCF_COUNT_PEER_QLENS) {
+		service->srv_count_peer_qlens = 1;
+#define QLENTABSZ 511
+		psc_hashtbl_init(&service->srv_peer_qlentab, 0,
+		    struct pscrpc_peer_qlen, pql_id, pql_hentry,
+		    QLENTABSZ, pscrpc_peer_qlen_cmp, "qlen-%s",
+		    service->srv_name);
+	}
+
+	psc_poolmaster_init(&service->srv_poolmaster,
+	    struct pscrpc_request_buffer_desc, rqbd_lentry, PPMF_AUTO,
+	    64, 64, 0, NULL, NULL, NULL, "rqbd-%s", service->srv_name);
+	service->srv_pool = psc_poolmaster_getmgr(
+	    &service->srv_poolmaster);
+
 	CDEBUG(D_NET, "%s: Started, listening on portal %d\n",
 	       service->srv_name, service->srv_req_portal);
 
 	return (service);
+
  failed:
 	pscrpc_unregister_service(service);
-//	psc_hashtbl_del();
 	PSCRPC_OBD_FREE(service, sizeof(*service));
 	return NULL;
 }
