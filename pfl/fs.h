@@ -40,8 +40,8 @@ typedef uint64_t pscfs_fgen_t;
 
 struct pscfs_creds {
 	uid_t		pcr_uid;
+	gid_t		pcr_gid;
 	gid_t		pcr_gidv[NGROUPS_MAX];
-#define pcr_gid pcr_gidv[0]
 	int		pcr_ngid;
 };
 
