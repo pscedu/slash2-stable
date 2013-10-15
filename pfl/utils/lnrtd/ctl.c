@@ -38,7 +38,7 @@ psc_ctl_thrget_t psc_ctl_thrgets[] = {
 
 PFLCTL_SVR_DEFS;
 
-int
+void
 lrctlthr_main(void)
 {
 //	psc_ctlparam_register("faults", psc_ctlparam_faults);

@@ -92,5 +92,6 @@ main(int argc, char *argv[])
 	rc = LNetNIInit(PSCRPC_SVR_PID);
 	if (rc)
 		psc_fatalx("LNetNIInit failed rc=%d", rc);
-	exit(lrctlthr_main());
+	lrctlthr_main();
+	exit(0);
 }

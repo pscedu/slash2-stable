@@ -39,7 +39,7 @@ enum {
 
 #define PATH_CTLSOCK PATH_RUNTIME_DIR"/lnrtd.%h.sock"
 
-int lrctlthr_main(void);
+void lrctlthr_main(void);
 
 const char *ctlsockfn;
 
