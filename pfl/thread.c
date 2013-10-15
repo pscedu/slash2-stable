@@ -375,8 +375,9 @@ _pscthr_init(int type, int flags, void (*startf)(struct psc_thread *),
 		 * and set pscthr_private to the location of the new
 		 * localized memory.
 		 */
-		if ((rc = pthread_create(&thr->pscthr_pthread,
-		    NULL, _pscthr_begin, thr)) != 0)
+		rc = pthread_create(&thr->pscthr_pthread, NULL,
+		    _pscthr_begin, thr);
+		if (rc)
 			psc_fatalx("pthread_create: %s", strerror(rc));
 		psc_waitq_wait(&thr->pscthr_waitq, &thr->pscthr_lock);
 		thr = thr->pscthr_private;
@@ -386,6 +387,7 @@ _pscthr_init(int type, int flags, void (*startf)(struct psc_thread *),
 		/* Initializing our own thread context. */
 		_pscthr_bind_memnode(thr);
 		_pscthr_finish_init(thr);
+		freelock(&thr->pscthr_lock);
 	}
 	return (thr);
 }
@@ -525,8 +527,6 @@ pscthr_run(struct psc_thread *thr)
 {
 	int yield = 1, live = 1;
 
-	live = 1;
-	yield = 1;
 	do {
 		spinlock(&thr->pscthr_lock);
 		if (thr->pscthr_flags & PTF_DEAD) {
@@ -539,8 +539,8 @@ pscthr_run(struct psc_thread *thr)
 			yield = 0;
 			continue;
 		}
-		freelock(&thr->pscthr_lock);
 	} while (0);
+	freelock(&thr->pscthr_lock);
 	if (yield)
 		sched_yield();
 	return (live);
