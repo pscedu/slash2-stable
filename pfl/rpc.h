@@ -512,7 +512,7 @@ int	 pscrpc_check_events(int);
 int	 pscrpc_wait_event(int);
 int	 pscrpc_ni_init(int, int);
 void	 pscrpc_init_portals(int, int);
-void	 pscrpc_exit_portals(int, int);
+void	 pscrpc_exit_portals(void);
 
 /* packgeneric.c */
 int	 pscrpc_msg_size(int, const int *);
