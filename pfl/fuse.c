@@ -570,7 +570,8 @@ pscfs_getclientctx(struct pscfs_req *pfr)
 	const struct fuse_ctx *ctx = fuse_req_ctx(pfr->pfr_fuse_req);
 	struct pscfs_clientctx *pfcc = &pfr->pfr_clientctx;
 
-	pfcc->pfcc_pid = ctx->pid;
+	if (pfcc->pfcc_pid == 0)
+		pfcc->pfcc_pid = ctx->pid;
 	return (pfcc);
 }
 
