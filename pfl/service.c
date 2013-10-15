@@ -1007,6 +1007,12 @@ pscrpc_init_svc(int nbufs, int bufsize, int max_req_size,
 	psclist_add(&service->srv_lentry, &pscrpc_all_services);
 	freelock(&pscrpc_all_services_lock);
 
+	psc_poolmaster_init(&service->srv_poolmaster,
+	    struct pscrpc_request_buffer_desc, rqbd_lentry, PPMF_AUTO,
+	    64, 64, 0, NULL, NULL, NULL, "rqbd-%s", service->srv_name);
+	service->srv_pool = psc_poolmaster_getmgr(
+	    &service->srv_poolmaster); 
+
 	/* Now allocate the request buffers */
 	rc = pscrpc_grow_req_bufs(service);
 	/* We shouldn't be under memory pressure at startup, so
@@ -1028,12 +1034,6 @@ pscrpc_init_svc(int nbufs, int bufsize, int max_req_size,
 		    QLENTABSZ, pscrpc_peer_qlen_cmp, "qlen-%s",
 		    service->srv_name);
 	}
-
-	psc_poolmaster_init(&service->srv_poolmaster,
-	    struct pscrpc_request_buffer_desc, rqbd_lentry, PPMF_AUTO,
-	    64, 64, 0, NULL, NULL, NULL, "rqbd-%s", service->srv_name);
-	service->srv_pool = psc_poolmaster_getmgr(
-	    &service->srv_poolmaster);
 
 	CDEBUG(D_NET, "%s: Started, listening on portal %d\n",
 	       service->srv_name, service->srv_req_portal);
