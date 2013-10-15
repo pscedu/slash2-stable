@@ -1851,7 +1851,7 @@ psc_ctlthr_service(int fd, const struct psc_ctlop *ct, int nops,
  * psc_ctlacthr_main - Control thread connection acceptor.
  * @thr: thread.
  */
-__dead void
+void
 psc_ctlacthr_main(struct psc_thread *thr)
 {
 	int s, fd;
@@ -1873,7 +1873,6 @@ psc_ctlacthr_main(struct psc_thread *thr)
 		psc_waitq_wakeall(&psc_ctl_clifds_waitq);
 		freelock(&psc_ctl_clifds_lock);
 	}
-	/* NOTREACHED */
 }
 
 void
