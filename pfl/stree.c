@@ -55,7 +55,7 @@ psc_stree_addchild_sorted(struct psc_streenode *ptn, void *data,
 	INIT_PSCLIST_HEAD(&child->ptn_children);
 	INIT_PSC_LISTENTRY(&child->ptn_sibling);
 	child->ptn_data = data;
-	psclist_add_sorted(&child->ptn_sibling, &ptn->ptn_children,
+	psclist_add_sorted(&ptn->ptn_children, &child->ptn_sibling,
 	    cmpf, offset);
 	return (child);
 }
