@@ -580,8 +580,9 @@ pscfs_getcreds(struct pscfs_req *pfr, struct pscfs_creds *pcr)
 	const struct fuse_ctx *ctx = fuse_req_ctx(pfr->pfr_fuse_req);
 
 	pcr->pcr_uid = ctx->uid;
+	pcr->pcr_gid = ctx->gid;
 	if (pscfs_getgroups(pfr, pcr->pcr_gidv, &pcr->pcr_ngid)) {
-		pcr->pcr_gid = ctx->gid;
+		pcr->pcr_gidv[0] = ctx->gid;
 		pcr->pcr_ngid = 1;
 	}
 }
