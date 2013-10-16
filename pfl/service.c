@@ -76,8 +76,9 @@ pscrpc_alloc_rqbd(struct pscrpc_service *svc)
 	struct pscrpc_request_buffer_desc *rqbd;
 
 	rqbd = psc_pool_get(svc->srv_pool);
+	memset(rqbd, 0, sizeof(*rqbd));
+
 	rqbd->rqbd_service = svc;
-	rqbd->rqbd_refcount = 0;
 	rqbd->rqbd_cbid.cbid_fn = pscrpc_request_in_callback;
 	rqbd->rqbd_cbid.cbid_arg = rqbd;
 
