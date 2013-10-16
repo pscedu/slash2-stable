@@ -54,10 +54,12 @@ loadprof()
 apply_host_prefs()
 {
 	local narg=0
-	for fn in							\
-	    /local/pfl_daemon.cfg					\
-	    /usr/local/pfl_daemon.cfg
+	for dir in							\
+	    /local							\
+	    /ufs/local							\
+	    /usr/local							\
 	do
+		fn=$dir/pfl_daemon.cfg
 		if [ -f $fn ]; then
 			av="$@"
 			[ -f $fn.local ] && . $fn.local
