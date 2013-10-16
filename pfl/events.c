@@ -94,21 +94,21 @@ pscrpc_request_in_callback(lnet_event_t *ev)
 {
 	struct pscrpc_cb_id               *cbid = ev->md.user_ptr;
 	struct pscrpc_request_buffer_desc *rqbd = cbid->cbid_arg;
-	struct pscrpc_service             *service = rqbd->rqbd_service;
+	struct pscrpc_service             *svc = rqbd->rqbd_service;
 	struct pscrpc_request             *req;
 
 	LASSERT(ev->type == LNET_EVENT_PUT ||
 		 ev->type == LNET_EVENT_UNLINK);
 	LASSERT((char *)ev->md.start >= rqbd->rqbd_buffer);
 	LASSERT((char *)ev->md.start + ev->offset + ev->mlength <=
-		 rqbd->rqbd_buffer + service->srv_buf_size);
+		 rqbd->rqbd_buffer + svc->srv_buf_size);
 
 	if (!ev->status)
 		psclog_trace("event type %d, status %d, service %s",
-		       ev->type, ev->status, service->srv_name);
+		    ev->type, ev->status, svc->srv_name);
 	else
 		psclog_errorx("event type %d, status %d, service %s",
-			ev->type, ev->status, service->srv_name);
+		    ev->type, ev->status, svc->srv_name);
 
 	if (ev->unlinked) {
 		/* If this is the last request message to fit in the
@@ -132,7 +132,7 @@ pscrpc_request_in_callback(lnet_event_t *ev)
 		if (req == NULL) {
 			CERROR("Can't allocate incoming request descriptor: "
 			       "Dropping %s RPC from %s\n",
-			       service->srv_name,
+			       svc->srv_name,
 			       libcfs_id2str(ev->initiator));
 			return;
 		}
@@ -156,27 +156,27 @@ pscrpc_request_in_callback(lnet_event_t *ev)
 	//req->rq_uid = ev->uid;
 #endif
 
-	spinlock(&service->srv_lock);
+	spinlock(&svc->srv_lock);
 
-	req->rq_history_seq = service->srv_request_seq++;
-	psclist_add_tail(&req->rq_history_lentry, &service->srv_request_history);
+	req->rq_history_seq = svc->srv_request_seq++;
+	psclist_add_tail(&req->rq_history_lentry, &svc->srv_request_history);
 
 	if (ev->unlinked) {
-		service->srv_nrqbd_receiving--;
+		svc->srv_nrqbd_receiving--;
 		CDEBUG(D_RPCTRACE, "Buffer complete: %d buffers still posted (%s)\n",
-		       service->srv_nrqbd_receiving, service->srv_name);
+		    svc->srv_nrqbd_receiving, svc->srv_name);
 
-		if (!service->srv_nrqbd_receiving)
+		if (!svc->srv_nrqbd_receiving)
 			CERROR("Service %s, all request buffer are busy",
-			      service->srv_name);
+			    svc->srv_name);
 #if 0
 		/* Normally, don't complain about 0 buffers posted; LNET won't
 		 * drop incoming reqs since we set the portal lazy */
 		if (test_req_buffer_pressure &&
 		    ev->type != LNET_EVENT_UNLINK &&
-		    service->srv_nrqbd_receiving == 0)
+		    svc->srv_nrqbd_receiving == 0)
 			CWARN("All %s request buffers busy\n",
-			      service->srv_name);
+			    svc->srv_name);
 #endif
 		/* req takes over the network's ref on rqbd */
 	} else {
@@ -184,21 +184,21 @@ pscrpc_request_in_callback(lnet_event_t *ev)
 		rqbd->rqbd_refcount++;
 	}
 
-	psclist_add_tail(&req->rq_lentry, &service->srv_request_queue);
-	service->srv_n_queued_reqs++;
+	psclist_add_tail(&req->rq_lentry, &svc->srv_request_queue);
+	svc->srv_n_queued_reqs++;
 
 	/* count the RPC request queue length for this peer if enabled */
-	if (service->srv_count_peer_qlens) {
+	if (svc->srv_count_peer_qlens) {
 		struct pscrpc_peer_qlen *pq;
 
-		pq = psc_hashtbl_search(&service->srv_peer_qlentab,
+		pq = psc_hashtbl_search(&svc->srv_peer_qlentab,
 		    &req->rq_peer, pscrpc_bump_peer_qlen, &req->rq_peer.nid);
 		if (pq == NULL) {
 			struct pscrpc_peer_qlen *tpq;
 			struct psc_hashbkt *b;
 
 			tpq = PSCALLOC(sizeof(*tpq));
-			psc_hashent_init(&service->srv_peer_qlentab, tpq);
+			psc_hashent_init(&svc->srv_peer_qlentab, tpq);
 			tpq->pql_id = req->rq_peer;
 			atomic_set(&tpq->pql_qlen, 1);
 
@@ -206,15 +206,15 @@ pscrpc_request_in_callback(lnet_event_t *ev)
 			 * Search again in case it was created by
 			 * another thread in the interim.
 			 */
-			b = psc_hashbkt_get(&service->srv_peer_qlentab,
+			b = psc_hashbkt_get(&svc->srv_peer_qlentab,
 			    &req->rq_peer.nid);
 			psc_hashbkt_lock(b);
-			pq = psc_hashbkt_search(&service->srv_peer_qlentab,
+			pq = psc_hashbkt_search(&svc->srv_peer_qlentab,
 			    b, &req->rq_peer, pscrpc_bump_peer_qlen,
 			    &req->rq_peer.nid);
 			if (pq == NULL) {
 				psc_hashbkt_add_item(
-				    &service->srv_peer_qlentab, b, tpq);
+				    &svc->srv_peer_qlentab, b, tpq);
 				pq = tpq;
 				tpq = NULL;
 			}
@@ -227,9 +227,9 @@ pscrpc_request_in_callback(lnet_event_t *ev)
 
 	/* NB everything can disappear under us once the request
 	 * has been queued and we unlock, so do the wake now... */
-	psc_waitq_wakeall(&service->srv_waitq);
+	psc_waitq_wakeall(&svc->srv_waitq);
 
-	freelock(&service->srv_lock);
+	freelock(&svc->srv_lock);
 }
 
 /*
