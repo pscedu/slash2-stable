@@ -71,8 +71,8 @@ struct psc_lockedlist	pfl_journals = PLL_INIT(&pfl_journals,
 #define psc_journal_read(pj, p, len, off)	psc_journal_io((pj), (p), (len), (off), JIO_READ)
 #define psc_journal_write(pj, p, len, off)	psc_journal_io((pj), (p), (len), (off), JIO_WRITE)
 
-struct psc_poolmaster	 xidhndlPoolMaster;
-struct psc_poolmgr	*xidhndlPool;
+struct psc_poolmaster	 pfl_xidhndl_poolmaster;
+struct psc_poolmgr	*pfl_xidhndl_pool;
 
 /**
  * psc_journal_io - Perform a low-level I/O operation on the journal store.
@@ -266,7 +266,7 @@ pjournal_xnew(struct psc_journal *pj, int distill, uint64_t txg)
 	psc_assert(++total_trans <= total_reserve);
 	freelock(&pjournal_count);
 
-	xh = psc_pool_get(xidhndlPool);
+	xh = psc_pool_get(pfl_xidhndl_pool);
 	memset(xh, 0, sizeof(*xh));
 
 	xh->pjx_pj = pj;
@@ -289,7 +289,7 @@ pjournal_xdestroy(struct psc_journal_xidhndl *xh)
 	psc_assert(psclist_disjoint(&xh->pjx_pndg_lentry));
 	psc_assert(psclist_disjoint(&xh->pjx_dstl_lentry));
 	psc_assert(xh->pjx_data == NULL);
-	psc_pool_return(xidhndlPool, xh);
+	psc_pool_return(pfl_xidhndl_pool, xh);
 }
 
 void
@@ -782,12 +782,14 @@ pjournal_open(const char *fn)
 
 	pll_add(&pfl_journals, pj);
 
-	psc_poolmaster_init(&xidhndlPoolMaster,
+	psc_poolmaster_init(&pfl_xidhndl_poolmaster,
 	    struct psc_journal_xidhndl, pjx_lentry, PPMF_AUTO, 1024,
 	    1024, 0, NULL, NULL, NULL, "xidhndl");
-	xidhndlPool = psc_poolmaster_getmgr(&xidhndlPoolMaster);
+	pfl_xidhndl_pool = psc_poolmaster_getmgr(
+	    &pfl_xidhndl_poolmaster);
 
 	return (pj);
+
  error:
 	psc_free(pjh, PAF_LOCK | PAF_PAGEALIGN, pjhlen);
 	PSCFREE(pj);
