@@ -173,11 +173,12 @@ $(call ADD_FILE_CFLAGS,${LNET_BASE}/lnet/peer.c,			-DPSC_SUBSYS=PSS_LNET -Wno-sh
 $(call ADD_FILE_CFLAGS,${LNET_BASE}/lnet/router.c,			-DPSC_SUBSYS=PSS_LNET -Wno-shadow)
 $(call ADD_FILE_CFLAGS,${LNET_BASE}/lnet/router_proc.c,			-DPSC_SUBSYS=PSS_LNET -Wno-shadow)
 
-# system-specific settings
-ifneq ($(wildcard /opt/sgi),)
+ifeq ($(shell ${LEX} -V),flex 2.5.35)
   LIBL=		-lfl
   PCPP_FLAGS+=	-H yytext
 endif
+
+# system-specific settings
 
 ifeq (${OSTYPE},Linux)
   LIBRT=	-lrt
