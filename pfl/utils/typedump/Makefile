@@ -15,4 +15,4 @@ regen-hook:
 	${GENTYPES} -h '../../include/*/*.h' -h '../../../pfl/*.h' $(	\
 	    ) -x '../../../pfl/fsmod.h' $(				\
 	    ) -x '../../../pfl/{queue,tree}.h' $(		\
-	    ) -x '../../include/psc_util/refmgr.h' typedump.c
+	    ) -x '../../include/pfl/refmgr.h' typedump.c
