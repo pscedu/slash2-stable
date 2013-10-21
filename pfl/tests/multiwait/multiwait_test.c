@@ -31,8 +31,8 @@
 
 #include "pfl/cdefs.h"
 #include "pfl/pfl.h"
-#include "psc_util/log.h"
-#include "psc_util/multiwait.h"
+#include "pfl/log.h"
+#include "pfl/multiwait.h"
 
 struct thr {
 	pthread_t			t_pthread;

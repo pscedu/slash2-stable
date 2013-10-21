@@ -27,9 +27,9 @@
 #include "pfl/dynarray.h"
 #include "pfl/list.h"
 #include "pfl/rpc.h"
-#include "psc_util/alloc.h"
-#include "psc_util/log.h"
-#include "psc_util/net.h"
+#include "pfl/alloc.h"
+#include "pfl/log.h"
+#include "pfl/net.h"
 
 #include "lnet/lib-types.h"
 #include "lnet/lib-lnet.h"

@@ -26,9 +26,9 @@
 
 #include "pfl/list.h"
 #include "pfl/lockedlist.h"
-#include "psc_util/lock.h"
-#include "psc_util/log.h"
-#include "psc_util/waitq.h"
+#include "pfl/lock.h"
+#include "pfl/log.h"
+#include "pfl/waitq.h"
 
 #define PSC_THRNAME_MAX		32				/* must be 8-byte aligned */
 

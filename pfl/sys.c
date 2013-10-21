@@ -22,7 +22,7 @@
 #include <pwd.h>
 
 #include "pfl/sys.h"
-#include "psc_util/alloc.h"
+#include "pfl/alloc.h"
 
 int
 pflsys_getusergroups(uid_t uid, gid_t defgid, gid_t *gv, int *ng)

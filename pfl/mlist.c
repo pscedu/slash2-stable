@@ -26,10 +26,10 @@
 
 #include "pfl/list.h"
 #include "pfl/lockedlist.h"
-#include "psc_util/lock.h"
-#include "psc_util/log.h"
-#include "psc_util/mlist.h"
-#include "psc_util/multiwait.h"
+#include "pfl/lock.h"
+#include "pfl/log.h"
+#include "pfl/mlist.h"
+#include "pfl/multiwait.h"
 
 struct psc_lockedlist psc_mlists =
     PLL_INIT(&psc_mlists, struct psc_mlist, pml_lentry);

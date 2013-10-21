@@ -48,7 +48,7 @@
 #include <fcntl.h>
 #endif
 
-#include "psc_util/iostats.h"
+#include "pfl/iostats.h"
 
 struct psc_iostats usock_pasv_send_ist;	/* passive interface */
 struct psc_iostats usock_pasv_recv_ist;

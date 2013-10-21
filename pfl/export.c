@@ -22,7 +22,7 @@
 #include "pfl/tree.h"
 #include "pfl/export.h"
 #include "pfl/rpc.h"
-#include "psc_util/log.h"
+#include "pfl/log.h"
 
 void
 _pscrpc_export_put(struct pscrpc_export *exp)

@@ -18,7 +18,7 @@
  */
 
 /*
- * This is single-threaded, overridden by psc_util/thread.c
+ * This is single-threaded, overridden by pfl/thread.c
  * for multi-threaded environments.
  */
 
@@ -27,7 +27,7 @@
 #include <unistd.h>
 
 #include "pfl/cdefs.h"
-#include "psc_util/log.h"
+#include "pfl/log.h"
 
 char psc_hostname[HOST_NAME_MAX];
 

@@ -31,12 +31,12 @@
 #include "pfl/export.h"
 #include "pfl/rpc.h"
 #include "pfl/rpclog.h"
-#include "psc_util/alloc.h"
-#include "psc_util/atomic.h"
-#include "psc_util/completion.h"
-#include "psc_util/log.h"
-#include "psc_util/pool.h"
-#include "psc_util/waitq.h"
+#include "pfl/alloc.h"
+#include "pfl/atomic.h"
+#include "pfl/completion.h"
+#include "pfl/log.h"
+#include "pfl/pool.h"
+#include "pfl/waitq.h"
 
 #include "../ulnds/socklnd/usocklnd.h"
 

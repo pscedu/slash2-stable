@@ -17,7 +17,7 @@
  * %PSC_END_COPYRIGHT%
  */
 
-#include "psc_util/lock.h"
+#include "pfl/lock.h"
 
 #ifdef HAVE_I386_CMPXCHG8B
 # define PFL_ATOMIC64_LOCK(v)

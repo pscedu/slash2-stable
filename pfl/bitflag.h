@@ -23,8 +23,8 @@
 #include <stdint.h>
 
 #include "pfl/cdefs.h"
-#include "psc_util/lock.h"
-#include "psc_util/log.h"
+#include "pfl/lock.h"
+#include "pfl/log.h"
 
 #define PFL_BITSTR_SETCHK_STRICT	(1 << 0)
 #define PFL_BITSTR_SETCHK_ABORT		(1 << 1)

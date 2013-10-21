@@ -41,11 +41,11 @@
 #include "pfl/list.h"
 #include "pfl/listcache.h"
 #include "pfl/types.h"
-#include "psc_util/atomic.h"
-#include "psc_util/lock.h"
-#include "psc_util/pool.h"
-#include "psc_util/thread.h"
-#include "psc_util/waitq.h"
+#include "pfl/atomic.h"
+#include "pfl/lock.h"
+#include "pfl/pool.h"
+#include "pfl/thread.h"
+#include "pfl/waitq.h"
 
 struct psc_dynarray;
 struct psc_compl;
@@ -766,7 +766,7 @@ pscrpc_wake_client_req(struct pscrpc_request *req)
  * @info: the timeout info struct (l_wait_info)
  * @ret: the return val
  * @excl: unused
- * @lck: optional spinlock used for waitq - see psc_util/waitq.h
+ * @lck: optional spinlock used for waitq - see pfl/waitq.h
  */
 
 #define PSCRPC_SVR_TIMEOUT	60

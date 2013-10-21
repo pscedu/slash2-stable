@@ -28,8 +28,8 @@
 #include <string.h>
 
 #include "pfl/str.h"
-#include "psc_util/atomic.h"
-#include "psc_util/thread.h"
+#include "pfl/atomic.h"
+#include "pfl/thread.h"
 
 struct psc_ctlmsghdr;
 struct psc_ctlmsg_param;

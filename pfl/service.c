@@ -34,11 +34,11 @@
 #include "pfl/rpc.h"
 #include "pfl/rpclog.h"
 #include "pfl/service.h"
-#include "psc_util/alloc.h"
-#include "psc_util/atomic.h"
-#include "psc_util/lock.h"
-#include "psc_util/log.h"
-#include "psc_util/waitq.h"
+#include "pfl/alloc.h"
+#include "pfl/atomic.h"
+#include "pfl/lock.h"
+#include "pfl/log.h"
+#include "pfl/waitq.h"
 
 static int test_req_buffer_pressure;
 

@@ -58,7 +58,7 @@
 #include <libcfs/list.h>
 #include <lnet/types.h>
 
-#include "psc_util/iostats.h"
+#include "pfl/iostats.h"
 
 #define WIRE_ATTR	__attribute__((packed))
 

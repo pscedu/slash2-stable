@@ -25,8 +25,8 @@
 #include "pfl/cdefs.h"
 #include "pfl/pfl.h"
 #include "pfl/vbitmap.h"
-#include "psc_util/alloc.h"
-#include "psc_util/log.h"
+#include "pfl/alloc.h"
+#include "pfl/log.h"
 
 const char *progname;
 

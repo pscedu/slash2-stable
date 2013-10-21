@@ -22,8 +22,8 @@
 
 #include "pfl/cdefs.h"
 #include "pfl/vbitmap.h"
-#include "psc_util/lock.h"
-#include "psc_util/mspinlock.h"
+#include "pfl/lock.h"
+#include "pfl/mspinlock.h"
 
 struct psc_vbitmap	 _psc_mspin_unthridmap = VBITMAP_INIT_AUTO;
 psc_spinlock_t		 _psc_mspin_unthridmap_lock = SPINLOCK_INIT;

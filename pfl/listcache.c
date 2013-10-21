@@ -23,7 +23,7 @@
 
 #include "pfl/listcache.h"
 #include "pfl/lockedlist.h"
-#include "psc_util/log.h"
+#include "pfl/log.h"
 
 struct psc_lockedlist	psc_listcaches =
     PLL_INIT(&psc_listcaches, struct psc_listcache, plc_lentry);

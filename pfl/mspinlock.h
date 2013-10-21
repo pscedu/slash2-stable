@@ -32,10 +32,10 @@
 #include <unistd.h>
 
 #include "pfl/vbitmap.h"
-#include "psc_util/atomic.h"
-#include "psc_util/lock.h"
-#include "psc_util/log.h"
-#include "psc_util/thread.h"
+#include "pfl/atomic.h"
+#include "pfl/lock.h"
+#include "pfl/log.h"
+#include "pfl/thread.h"
 
 struct psc_mspinlock {
 	psc_atomic16_t	pmsl_value;

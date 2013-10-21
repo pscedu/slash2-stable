@@ -27,8 +27,8 @@
 #include <sys/types.h>
 
 #include "pfl/list.h"
-#include "psc_util/lock.h"
-#include "psc_util/log.h"
+#include "pfl/lock.h"
+#include "pfl/log.h"
 
 struct psc_lockedlist {
 	struct psclist_head	 pll_listhd;		/* this must be first */

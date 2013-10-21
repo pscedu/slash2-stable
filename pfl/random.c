@@ -24,9 +24,9 @@
 #include <stdio.h>
 #include <unistd.h>
 
-#include "psc_util/lock.h"
-#include "psc_util/log.h"
-#include "psc_util/random.h"
+#include "pfl/lock.h"
+#include "pfl/log.h"
+#include "pfl/random.h"
 
 #define _PATH_URANDOM "/dev/urandom"
 #define SMALL_BUFSIZ 128

@@ -32,11 +32,11 @@
 #include "pfl/list.h"
 #include "pfl/rpc.h"
 #include "pfl/rpclog.h"
-#include "psc_util/alloc.h"
-#include "psc_util/atomic.h"
-#include "psc_util/lock.h"
-#include "psc_util/pool.h"
-#include "psc_util/waitq.h"
+#include "pfl/alloc.h"
+#include "pfl/atomic.h"
+#include "pfl/lock.h"
+#include "pfl/pool.h"
+#include "pfl/waitq.h"
 
 static uint64_t		pscrpc_last_xid = 0;
 static psc_spinlock_t	pscrpc_last_xid_lock = SPINLOCK_INIT;

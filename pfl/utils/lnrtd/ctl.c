@@ -18,8 +18,8 @@
  */
 
 #include "pfl/cdefs.h"
-#include "psc_util/ctl.h"
-#include "psc_util/ctlsvr.h"
+#include "pfl/ctl.h"
+#include "pfl/ctlsvr.h"
 
 #include "lnrtd.h"
 

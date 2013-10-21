@@ -27,7 +27,7 @@
 
 #include "pfl/pfl.h"
 #include "pfl/str.h"
-#include "psc_util/log.h"
+#include "pfl/log.h"
 
 void
 pfl_setprocesstitle(char **av, const char *fmt, ...)

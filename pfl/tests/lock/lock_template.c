@@ -30,9 +30,9 @@
 
 #include "pfl/cdefs.h"
 #include "pfl/pfl.h"
-#include "psc_util/alloc.h"
-#include "psc_util/atomic.h"
-#include "psc_util/thread.h"
+#include "pfl/alloc.h"
+#include "pfl/atomic.h"
+#include "pfl/thread.h"
 #include "pfl/time.h"
 
 #include TEST_LOCK_INCLUDE

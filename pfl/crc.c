@@ -2,7 +2,7 @@
 
 #include <stdint.h>
 
-#include "psc_util/crc.h"
+#include "pfl/crc.h"
 
 /*
  * Shamelessly heisted from TelegraphCQ-0.2

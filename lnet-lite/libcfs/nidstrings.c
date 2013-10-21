@@ -55,7 +55,7 @@
 #endif
 #endif
 
-#include "psc_util/lock.h"
+#include "pfl/lock.h"
 
 /* CAVEAT VENDITOR! Keep the canonical string representation of nets/nids
  * consistent in all conversion functions.  Some code fragments are copied

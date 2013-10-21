@@ -25,7 +25,7 @@
 #include "pfl/cdefs.h"
 #include "pfl/pfl.h"
 #include "pfl/dynarray.h"
-#include "psc_util/log.h"
+#include "pfl/log.h"
 
 const char *progname;
 

@@ -23,9 +23,9 @@
 
 #include "pfl/time.h"
 #include "pfl/vbitmap.h"
-#include "psc_util/log.h"
-#include "psc_util/pthrutil.h"
-#include "psc_util/thread.h"
+#include "pfl/log.h"
+#include "pfl/pthrutil.h"
+#include "pfl/thread.h"
 
 void
 psc_mutex_init(struct pfl_mutex *mut)

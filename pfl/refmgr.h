@@ -25,8 +25,8 @@
 #include "pfl/hashtbl.h"
 #include "pfl/lockedlist.h"
 #include "pfl/tree.h"
-#include "psc_util/pool.h"
-#include "psc_util/pthrutil.h"
+#include "pfl/pool.h"
+#include "pfl/pthrutil.h"
 
 SPLAY_HEAD(psc_objref_tree, psc_objref);
 

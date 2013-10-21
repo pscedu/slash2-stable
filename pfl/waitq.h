@@ -22,9 +22,9 @@
 
 #include <time.h>
 
-#include "psc_util/atomic.h"
-#include "psc_util/lock.h"
-#include "psc_util/pthrutil.h"
+#include "pfl/atomic.h"
+#include "pfl/lock.h"
+#include "pfl/pthrutil.h"
 
 struct pfl_mutex;
 

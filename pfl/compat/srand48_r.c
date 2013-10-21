@@ -3,7 +3,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "psc_util/lock.h"
+#include "pfl/lock.h"
 
 struct drand48_data;
 

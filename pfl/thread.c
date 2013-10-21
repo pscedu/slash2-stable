@@ -39,10 +39,10 @@
 #include "pfl/dynarray.h"
 #include "pfl/lockedlist.h"
 #include "pfl/vbitmap.h"
-#include "psc_util/alloc.h"
-#include "psc_util/lock.h"
-#include "psc_util/mem.h"
-#include "psc_util/thread.h"
+#include "pfl/alloc.h"
+#include "pfl/lock.h"
+#include "pfl/mem.h"
+#include "pfl/thread.h"
 
 struct psc_dynarray		 pfl_thread_classes = DYNARRAY_INIT;
 __static pthread_key_t		 pfl_tlskey;

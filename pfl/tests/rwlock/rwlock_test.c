@@ -32,11 +32,11 @@
 #include "pfl/cdefs.h"
 #include "pfl/pfl.h"
 #include "pfl/list.h"
-#include "psc_util/alloc.h"
-#include "psc_util/atomic.h"
-#include "psc_util/log.h"
-#include "psc_util/pthrutil.h"
-#include "psc_util/random.h"
+#include "pfl/alloc.h"
+#include "pfl/atomic.h"
+#include "pfl/log.h"
+#include "pfl/pthrutil.h"
+#include "pfl/random.h"
 
 #define NTHRS_MAX	32
 #define NLOCKS_MAX	8192

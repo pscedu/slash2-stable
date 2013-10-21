@@ -40,14 +40,14 @@
 #include "pfl/list.h"
 #include "pfl/vbitmap.h"
 #include "pfl/rpc.h"
-#include "psc_util/ctl.h"
-#include "psc_util/ctlcli.h"
-#include "psc_util/fmt.h"
-#include "psc_util/fmtstr.h"
-#include "psc_util/log.h"
-#include "psc_util/meter.h"
-#include "psc_util/pool.h"
-#include "psc_util/thread.h"
+#include "pfl/ctl.h"
+#include "pfl/ctlcli.h"
+#include "pfl/fmt.h"
+#include "pfl/fmtstr.h"
+#include "pfl/log.h"
+#include "pfl/meter.h"
+#include "pfl/pool.h"
+#include "pfl/thread.h"
 
 #define PCTHRT_RD 0
 #define PCTHRT_WR 1

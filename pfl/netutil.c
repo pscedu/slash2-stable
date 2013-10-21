@@ -52,10 +52,10 @@
 
 #include "pfl/cdefs.h"
 #include "pfl/str.h"
-#include "psc_util/alloc.h"
-#include "psc_util/bitflag.h"
-#include "psc_util/log.h"
-#include "psc_util/net.h"
+#include "pfl/alloc.h"
+#include "pfl/bitflag.h"
+#include "pfl/log.h"
+#include "pfl/net.h"
 
 /**
  * pfl_socket_setnosig - Try to set "no SIGPIPE" on a socket.

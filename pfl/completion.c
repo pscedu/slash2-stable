@@ -21,7 +21,7 @@
  * Completion - Barrier-like API for thread(s) to wait on an arbitrary event.
  */
 
-#include "psc_util/completion.h"
+#include "pfl/completion.h"
 
 void
 psc_compl_init(struct psc_compl *pc)

@@ -34,10 +34,10 @@
 #include "pfl/str.h"
 #include "pfl/list.h"
 #include "pfl/rpc.h"
-#include "psc_util/alloc.h"
-#include "psc_util/atomic.h"
-#include "psc_util/lock.h"
-#include "psc_util/waitq.h"
+#include "pfl/alloc.h"
+#include "pfl/atomic.h"
+#include "pfl/lock.h"
+#include "pfl/waitq.h"
 
 #define HDR_SIZE(count) \
     size_round(offsetof(struct pscrpc_msg, buflens[(count)]))

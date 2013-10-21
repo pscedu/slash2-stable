@@ -21,7 +21,7 @@
 #define _PSCRPC_SERVICE_H_
 
 #include "pfl/list.h"
-#include "psc_util/lock.h"
+#include "pfl/lock.h"
 
 struct pscrpc_request;
 struct pscrpc_service;

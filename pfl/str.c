@@ -23,7 +23,7 @@
 #include <string.h>
 
 #include "pfl/str.h"
-#include "psc_util/alloc.h"
+#include "pfl/alloc.h"
 
 int
 pfl_asprintf(char **p, const char *fmt, ...)

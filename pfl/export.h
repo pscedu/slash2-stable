@@ -21,8 +21,8 @@
 #define _PFL_EXPORT_H_
 
 #include "pfl/rpc.h"
-#include "psc_util/atomic.h"
-#include "psc_util/log.h"
+#include "pfl/atomic.h"
+#include "pfl/log.h"
 
 #define pscrpc_export_hldrop(e)					\
 	do {							\

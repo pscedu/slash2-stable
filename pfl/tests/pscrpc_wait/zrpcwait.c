@@ -23,10 +23,10 @@
 //#include <asm/param.h>
 //#include "libcfs/kp30.h"
 
-//#include "psc_util/alloc.h"
-//#include "psc_util/atomic.h"
+//#include "pfl/alloc.h"
+//#include "pfl/atomic.h"
 #include "zestRpc.h"
-#include "psc_util/waitq.h"
+#include "pfl/waitq.h"
 
 extern unsigned long zobd_timeout;
 

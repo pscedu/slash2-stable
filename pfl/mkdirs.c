@@ -26,7 +26,7 @@
 #include <string.h>
 
 #include "pfl/str.h"
-#include "psc_util/alloc.h"
+#include "pfl/alloc.h"
 
 /**
  * mkdirs - Simple recursive "mkdir -p" type functionality.

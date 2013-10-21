@@ -25,8 +25,8 @@
 #include <stdio.h>
 
 #include "pfl/str.h"
-#include "psc_util/log.h"
-#include "psc_util/prsig.h"
+#include "pfl/log.h"
+#include "pfl/prsig.h"
 
 #ifdef HAVE_SYS_SIGABBREV
 # define pfl_sys_signame sys_sigabbrev

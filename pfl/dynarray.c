@@ -31,8 +31,8 @@
 #include <string.h>
 
 #include "pfl/dynarray.h"
-#include "psc_util/alloc.h"
-#include "psc_util/log.h"
+#include "pfl/alloc.h"
+#include "pfl/log.h"
 
 /**
  * psc_dynarray_initf - Initialize a dynamically resizable array.

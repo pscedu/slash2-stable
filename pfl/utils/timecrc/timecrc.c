@@ -29,8 +29,8 @@
 
 #include "pfl/cdefs.h"
 #include "pfl/types.h"
-#include "psc_util/crc.h"
-#include "psc_util/log.h"
+#include "pfl/crc.h"
+#include "pfl/log.h"
 #include "pfl/time.h"
 
 const char *progname;

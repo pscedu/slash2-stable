@@ -22,7 +22,7 @@
 
 #include "pfl/list.h"
 #include "pfl/lockedlist.h"
-#include "psc_util/lock.h"
+#include "pfl/lock.h"
 
 struct psc_wndmap {
 	size_t			 pwm_min;	/* bottom edge of window */

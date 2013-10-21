@@ -30,7 +30,7 @@
 #include <pthread.h>
 
 #include "pfl/dynarray.h"
-#include "psc_util/pthrutil.h"
+#include "pfl/pthrutil.h"
 
 struct psc_multiwait;
 struct psc_vbitmap;

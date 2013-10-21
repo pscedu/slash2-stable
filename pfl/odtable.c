@@ -31,10 +31,10 @@
 #include "pfl/str.h"
 #include "pfl/types.h"
 #include "pfl/lockedlist.h"
-#include "psc_util/alloc.h"
-#include "psc_util/lock.h"
-#include "psc_util/log.h"
-#include "psc_util/odtable.h"
+#include "pfl/alloc.h"
+#include "pfl/lock.h"
+#include "pfl/log.h"
+#include "pfl/odtable.h"
 
 struct psc_lockedlist psc_odtables =
     PLL_INIT(&psc_odtables, struct odtable, odt_lentry);

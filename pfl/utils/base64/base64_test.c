@@ -29,8 +29,8 @@
 
 #include "pfl/cdefs.h"
 #include "pfl/pfl.h"
-#include "psc_util/base64.h"
-#include "psc_util/log.h"
+#include "pfl/base64.h"
+#include "pfl/log.h"
 
 const char *progname;
 

@@ -20,7 +20,7 @@
 #ifndef _PFL_UMASK_H_
 #define _PFL_UMASK_H_
 
-#include "psc_util/lock.h"
+#include "pfl/lock.h"
 
 extern psc_spinlock_t psc_umask_lock;
 

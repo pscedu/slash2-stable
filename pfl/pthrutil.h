@@ -24,7 +24,7 @@
 
 #include "pfl/pfl.h"
 #include "pfl/dynarray.h"
-#include "psc_util/lock.h"
+#include "pfl/lock.h"
 
 #ifdef PTHREAD_MUTEX_ERRORCHECK_INITIALIZER
 # define PSC_MUTEX_INIT			{ PTHREAD_MUTEX_ERRORCHECK_INITIALIZER, 0 }

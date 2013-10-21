@@ -24,10 +24,10 @@
 
 #include "pfl/cdefs.h"
 #include "pfl/pfl.h"
-#include "psc_util/ctl.h"
-#include "psc_util/ctlcli.h"
-#include "psc_util/fmt.h"
-#include "psc_util/log.h"
+#include "pfl/ctl.h"
+#include "pfl/ctlcli.h"
+#include "pfl/fmt.h"
+#include "pfl/log.h"
 
 #include "../lnrtd/lnrtd.h"
 #include "ctl.h"

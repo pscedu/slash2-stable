@@ -28,7 +28,7 @@
 
 #include "pfl/cdefs.h"
 #include "pfl/pfl.h"
-#include "psc_util/log.h"
+#include "pfl/log.h"
 
 #define _PATH_CMDLINE "/proc/self/cmdline"
 

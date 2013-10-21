@@ -30,11 +30,11 @@
 #include "pfl/cdefs.h"
 #include "pfl/pfl.h"
 #include "pfl/time.h"
-#include "psc_util/alloc.h"
-#include "psc_util/atomic.h"
-#include "psc_util/lock.h"
-#include "psc_util/log.h"
-#include "psc_util/thread.h"
+#include "pfl/alloc.h"
+#include "pfl/atomic.h"
+#include "pfl/lock.h"
+#include "pfl/log.h"
+#include "pfl/thread.h"
 
 psc_spinlock_t				 psc_umask_lock = SPINLOCK_INIT;
 __threadx const struct pfl_callerinfo	*_pfl_callerinfo;

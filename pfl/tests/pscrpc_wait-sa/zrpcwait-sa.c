@@ -21,7 +21,7 @@
 #include <string.h>
 #include <errno.h>
 
-#include "psc_util/waitq.h"
+#include "pfl/waitq.h"
 
 struct l_wait_info {
 	time_t lwi_timeout;

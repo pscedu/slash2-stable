@@ -19,9 +19,9 @@
 
 #ifdef HAVE_LIBPTHREAD
 
-#include "psc_util/alloc.h"
-#include "psc_util/thread.h"
-#include "psc_util/usklndthr.h"
+#include "pfl/alloc.h"
+#include "pfl/thread.h"
+#include "pfl/usklndthr.h"
 
 void
 psc_usklndthr_begin(struct psc_thread *thr)

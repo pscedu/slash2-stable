@@ -42,7 +42,7 @@
 #include <unistd.h>
 #include <sys/syscall.h>
 
-#include "psc_util/iostats.h"
+#include "pfl/iostats.h"
 
 int
 usocklnd_notifier_handler(int fd)

@@ -23,7 +23,7 @@
 
 #include "pfl/cdefs.h"
 #include "pfl/pfl.h"
-#include "psc_util/prsig.h"
+#include "pfl/prsig.h"
 
 const char *progname;
 

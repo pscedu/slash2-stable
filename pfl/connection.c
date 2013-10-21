@@ -28,9 +28,9 @@
 #include "pfl/list.h"
 #include "pfl/export.h"
 #include "pfl/rpc.h"
-#include "psc_util/alloc.h"
-#include "psc_util/atomic.h"
-#include "psc_util/lock.h"
+#include "pfl/alloc.h"
+#include "pfl/atomic.h"
+#include "pfl/lock.h"
 
 static psc_spinlock_t	   conn_lock        = SPINLOCK_INIT;
 static struct psclist_head conn_list        = PSCLIST_HEAD_INIT(conn_list);

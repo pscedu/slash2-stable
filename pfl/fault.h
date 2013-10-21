@@ -21,7 +21,7 @@
 #define _PFL_FAULT_H_
 
 #include "pfl/hashtbl.h"
-#include "psc_util/lock.h"
+#include "pfl/lock.h"
 
 #define PSC_FAULT_NAME_MAX	32
 

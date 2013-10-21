@@ -43,10 +43,10 @@
 #include "pfl/list.h"
 #include "pfl/lockedlist.h"
 #include "pfl/tree.h"
-#include "psc_util/lock.h"
-#include "psc_util/log.h"
-#include "psc_util/pool.h"
-#include "psc_util/refmgr.h"
+#include "pfl/lock.h"
+#include "pfl/log.h"
+#include "pfl/pool.h"
+#include "pfl/refmgr.h"
 
 SPLAY_GENERATE(psc_objref_tree, psc_objref, pobj_tree_entry, psc_objref_cmp);
 

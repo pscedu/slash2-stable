@@ -22,8 +22,8 @@
 
 #include <inttypes.h>
 
-#include "psc_util/lock.h"
-#include "psc_util/log.h"
+#include "pfl/lock.h"
+#include "pfl/log.h"
 
 psc_spinlock_t psc_rlimit_lock = SPINLOCK_INIT;
 

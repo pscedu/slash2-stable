@@ -23,7 +23,7 @@
 #include <stdio.h>
 #include <poll.h>
 
-#include "psc_util/log.h"
+#include "pfl/log.h"
 
 #include "libcfs/kp30.h"
 

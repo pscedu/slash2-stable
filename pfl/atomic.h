@@ -23,7 +23,7 @@
 #include <stdint.h>
 #include <stdarg.h>
 
-#include "psc_util/log.h"
+#include "pfl/log.h"
 
 #define psc_atomic16_init(v)
 #define psc_atomic16_add			_pfl_gen_atomic16_add

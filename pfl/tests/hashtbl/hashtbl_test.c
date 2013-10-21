@@ -25,7 +25,7 @@
 #include "pfl/cdefs.h"
 #include "pfl/hashtbl.h"
 #include "pfl/pfl.h"
-#include "psc_util/alloc.h"
+#include "pfl/alloc.h"
 
 struct item {
 	struct psc_hashent	hentry;

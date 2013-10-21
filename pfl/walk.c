@@ -37,8 +37,8 @@
 
 #include "pfl/str.h"
 #include "pfl/walk.h"
-#include "psc_util/lock.h"
-#include "psc_util/log.h"
+#include "pfl/lock.h"
+#include "pfl/log.h"
 
 int
 pfl_filewalk_stm2info(int mode)

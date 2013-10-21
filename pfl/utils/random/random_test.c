@@ -22,7 +22,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 
-#include "psc_util/random.h"
+#include "pfl/random.h"
 #include "pfl/cdefs.h"
 
 const char *progname;

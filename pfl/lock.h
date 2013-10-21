@@ -41,7 +41,7 @@
 #include "pfl/_atomic32.h"
 #include "pfl/time.h"
 #include "pfl/types.h"
-#include "psc_util/log.h"
+#include "pfl/log.h"
 
 #ifndef HAVE_LIBPTHREAD
 #  define pthread_self() ((pthread_t)1)
@@ -240,7 +240,7 @@ typedef struct psc_spinlock {
 static __inline void _psc_spin_checktime(struct psc_spinlock *);
 
 #ifndef _PFL_ATOMIC_H_
-#  include "psc_util/atomic.h"
+#  include "pfl/atomic.h"
 #endif
 
 #define SETATTR_LOCKED(lk, field, fl)					\

@@ -21,9 +21,9 @@
 
 #include "pfl/list.h"
 #include "pfl/lockedlist.h"
-#include "psc_util/alloc.h"
-#include "psc_util/lock.h"
-#include "psc_util/log.h"
+#include "pfl/alloc.h"
+#include "pfl/lock.h"
+#include "pfl/log.h"
 
 void
 _pll_initf(struct psc_lockedlist *pll, int offset, psc_spinlock_t *lkp,

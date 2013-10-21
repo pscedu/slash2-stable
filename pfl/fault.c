@@ -27,12 +27,12 @@
 
 #include "pfl/str.h"
 #include "pfl/hashtbl.h"
-#include "psc_util/alloc.h"
-#include "psc_util/ctl.h"
-#include "psc_util/ctlsvr.h"
-#include "psc_util/fault.h"
-#include "psc_util/lock.h"
-#include "psc_util/random.h"
+#include "pfl/alloc.h"
+#include "pfl/ctl.h"
+#include "pfl/ctlsvr.h"
+#include "pfl/fault.h"
+#include "pfl/lock.h"
+#include "pfl/random.h"
 
 #define			FAULTS_MAX 128
 

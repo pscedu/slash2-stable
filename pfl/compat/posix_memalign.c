@@ -32,8 +32,8 @@
 #include <stdlib.h>
 
 #include "pfl/compat/posix_memalign.h"
-#include "psc_util/alloc.h"
-#include "psc_util/bitflag.h"
+#include "pfl/alloc.h"
+#include "pfl/bitflag.h"
 
 /**
  * posix_memalign - An overrideable aligned memory allocator for systems

@@ -23,7 +23,7 @@
 
 #include "pfl/cdefs.h"
 #include "pfl/pfl.h"
-#include "psc_util/crc.h"
+#include "pfl/crc.h"
 
 const char *progname;
 

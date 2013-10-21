@@ -23,10 +23,10 @@
 
 #include "pfl/list.h"
 #include "pfl/lockedlist.h"
-#include "psc_util/alloc.h"
-#include "psc_util/atomic.h"
-#include "psc_util/lock.h"
-#include "psc_util/wndmap.h"
+#include "pfl/alloc.h"
+#include "pfl/atomic.h"
+#include "pfl/lock.h"
+#include "pfl/wndmap.h"
 
 #define WMBSZ (sizeof(((struct psc_wndmap_block *)NULL)->pwmb_buf) * NBBY)
 

@@ -20,8 +20,8 @@
 #ifndef _PFL_COMPLETION_H_
 #define _PFL_COMPLETION_H_
 
-#include "psc_util/lock.h"
-#include "psc_util/waitq.h"
+#include "pfl/lock.h"
+#include "pfl/waitq.h"
 
 struct psc_compl {
 	struct psc_waitq	pc_wq;

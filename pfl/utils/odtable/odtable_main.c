@@ -30,10 +30,10 @@
 #include "pfl/cdefs.h"
 #include "pfl/pfl.h"
 #include "pfl/dynarray.h"
-#include "psc_util/alloc.h"
-#include "psc_util/fmtstr.h"
-#include "psc_util/log.h"
-#include "psc_util/odtable.h"
+#include "pfl/alloc.h"
+#include "pfl/fmtstr.h"
+#include "pfl/log.h"
+#include "pfl/odtable.h"
 
 struct psc_dynarray myReceipts = DYNARRAY_INIT;
 const char *progname;

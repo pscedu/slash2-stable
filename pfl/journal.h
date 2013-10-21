@@ -21,11 +21,11 @@
 #define _PFL_JOURNAL_H_
 
 #include "pfl/dynarray.h"
-#include "psc_util/atomic.h"
-#include "psc_util/iostats.h"
-#include "psc_util/lock.h"
-#include "psc_util/thread.h"
-#include "psc_util/waitq.h"
+#include "pfl/atomic.h"
+#include "pfl/iostats.h"
+#include "pfl/lock.h"
+#include "pfl/thread.h"
+#include "pfl/waitq.h"
 
 struct psc_journal;
 struct psc_journal_enthdr;

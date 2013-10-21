@@ -29,8 +29,8 @@
 
 #include "pfl/cdefs.h"
 #include "pfl/str.h"
-#include "psc_util/alloc.h"
-#include "psc_util/log.h"
+#include "pfl/alloc.h"
+#include "pfl/log.h"
 
 #if PFL_DEBUG > 1
 
@@ -90,7 +90,7 @@ struct psc_memalloc {
 
 #if PFL_DEBUG > 1
 #  include "pfl/list.h"
-#  include "psc_util/mem.h"
+#  include "pfl/mem.h"
 #endif
 
 struct psc_memalloc_key {

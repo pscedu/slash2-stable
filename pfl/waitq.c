@@ -21,15 +21,15 @@
 #include <string.h>
 
 #include "pfl/cdefs.h"
-#include "psc_util/atomic.h"
-#include "psc_util/lock.h"
-#include "psc_util/log.h"
-#include "psc_util/waitq.h"
+#include "pfl/atomic.h"
+#include "pfl/lock.h"
+#include "pfl/log.h"
+#include "pfl/waitq.h"
 
 #ifdef HAVE_LIBPTHREAD
 
 #include "pfl/time.h"
-#include "psc_util/pthrutil.h"
+#include "pfl/pthrutil.h"
 
 #include <pthread.h>
 

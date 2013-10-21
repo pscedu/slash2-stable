@@ -19,7 +19,7 @@
 
 #include <stdio.h>
 
-#include "psc_util/fmt.h"
+#include "pfl/fmt.h"
 
 void
 psc_fmt_human(char buf[PSCFMT_HUMAN_BUFSIZ], double num)

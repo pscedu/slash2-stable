@@ -26,8 +26,8 @@
 
 #include "pfl/cdefs.h"
 #include "pfl/pfl.h"
-#include "psc_util/completion.h"
-#include "psc_util/pthrutil.h"
+#include "pfl/completion.h"
+#include "pfl/pthrutil.h"
 
 const char		*progname;
 struct pfl_mutex	 m;

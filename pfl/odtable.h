@@ -36,9 +36,9 @@
 #include "pfl/list.h"
 #include "pfl/lockedlist.h"
 #include "pfl/vbitmap.h"
-#include "psc_util/crc.h"
-#include "psc_util/lock.h"
-#include "psc_util/log.h"
+#include "pfl/crc.h"
+#include "pfl/lock.h"
+#include "pfl/log.h"
 
 #define ODT_DEFAULT_ITEM_SIZE	128
 #define	ODT_DEFAULT_TABLE_SIZE	(1024 * 128)

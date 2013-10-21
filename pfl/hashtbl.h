@@ -22,9 +22,9 @@
 
 #include "pfl/list.h"
 #include "pfl/lockedlist.h"
-#include "psc_util/atomic.h"
-#include "psc_util/lock.h"
-#include "psc_util/log.h"
+#include "pfl/atomic.h"
+#include "pfl/lock.h"
+#include "pfl/log.h"
 
 #define PSC_HASHTBL_LOCK(t)	spinlock(&(t)->pht_lock)
 #define PSC_HASHTBL_ULOCK(t)	freelock(&(t)->pht_lock)

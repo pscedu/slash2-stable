@@ -22,7 +22,7 @@
 
 #include "pfl/list.h"
 #include "pfl/stree.h"
-#include "psc_util/alloc.h"
+#include "pfl/alloc.h"
 
 void
 psc_stree_init(struct psc_streenode *ptn)

@@ -32,10 +32,10 @@
 #include "pfl/dynarray.h"
 #include "pfl/listcache.h"
 #include "pfl/lockedlist.h"
-#include "psc_util/lock.h"
-#include "psc_util/log.h"
-#include "psc_util/memnode.h"
-#include "psc_util/mlist.h"
+#include "pfl/lock.h"
+#include "pfl/log.h"
+#include "pfl/memnode.h"
+#include "pfl/mlist.h"
 
 struct psc_poolmgr;
 

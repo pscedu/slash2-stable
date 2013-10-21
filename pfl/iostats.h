@@ -26,7 +26,7 @@
 
 #include "pfl/list.h"
 #include "pfl/lockedlist.h"
-#include "psc_util/atomic.h"
+#include "pfl/atomic.h"
 
 #define IST_NAME_MAX	40
 #define IST_NINTV	2

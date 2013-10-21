@@ -27,9 +27,9 @@
 #include "pfl/str.h"
 #include "pfl/list.h"
 #include "pfl/lockedlist.h"
-#include "psc_util/alloc.h"
-#include "psc_util/lock.h"
-#include "psc_util/log.h"
+#include "pfl/alloc.h"
+#include "pfl/lock.h"
+#include "pfl/log.h"
 
 struct psc_lockedlist psc_hashtbls =
     PLL_INIT_NOLOG(&psc_hashtbls, struct psc_hashtbl, pht_lentry);

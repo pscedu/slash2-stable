@@ -6,7 +6,7 @@
 #include <asm/types.h>
 #include <asm/intrinsics.h>
 
-#include "psc_util/log.h"
+#include "pfl/log.h"
 
 #define __bad_increment_for_ia64_fetch_and_add_guts	{ psc_fatalx("__bad_increment_for_ia64_fetch_and_add"); 0; }
 #define __bad_increment_for_ia64_fetch_and_add()	(__bad_increment_for_ia64_fetch_and_add_guts)

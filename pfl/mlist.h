@@ -37,8 +37,8 @@
 #include "pfl/explist.h"
 #include "pfl/list.h"
 #include "pfl/lockedlist.h"
-#include "psc_util/lock.h"
-#include "psc_util/multiwait.h"
+#include "pfl/lock.h"
+#include "pfl/multiwait.h"
 
 struct psc_mlist {
 	struct psc_explist		pml_explist;

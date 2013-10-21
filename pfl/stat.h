@@ -25,7 +25,7 @@
 
 #include "pfl/time.h"
 #include "pfl/types.h"
-#include "psc_util/log.h"
+#include "pfl/log.h"
 
 struct stat;
 

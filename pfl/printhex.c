@@ -20,7 +20,7 @@
 #include <stdint.h>
 #include <stdio.h>
 
-#include "psc_util/lock.h"
+#include "pfl/lock.h"
 
 /**
  * printhex - Display the hexadecimal representation of some data.

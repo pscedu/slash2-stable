@@ -21,8 +21,8 @@
 
 #include "pfl/cdefs.h"
 #include "pfl/rpc.h"
-#include "psc_util/eqpollthr.h"
-#include "psc_util/thread.h"
+#include "pfl/eqpollthr.h"
+#include "pfl/thread.h"
 
 __static void
 psc_eqpollthr_main(struct psc_thread *thr)

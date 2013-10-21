@@ -25,8 +25,8 @@
 #include "pfl/cdefs.h"
 #include "pfl/pfl.h"
 #include "pfl/str.h"
-#include "psc_util/fmt.h"
-#include "psc_util/log.h"
+#include "pfl/fmt.h"
+#include "pfl/log.h"
 
 const char *progname;
 

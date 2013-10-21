@@ -21,7 +21,7 @@
 
 #include <stdint.h>
 
-#include "psc_util/parity.h"
+#include "pfl/parity.h"
 
 void
 parity_calc(const void *data, void *parity, uint32_t len)

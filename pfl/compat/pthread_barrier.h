@@ -19,7 +19,7 @@
 
 #include <pthread.h>
 
-#include "psc_util/pthrutil.h"
+#include "pfl/pthrutil.h"
 
 typedef struct {
 	struct pfl_mutex	 mutex;			/* Control access to barrier */

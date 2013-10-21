@@ -22,7 +22,7 @@
 
 #include "pfl/pfl.h"
 #include "pfl/rpc.h"
-#include "psc_util/log.h"
+#include "pfl/log.h"
 
 static inline const char *
 pscrpc_rqphase2str(struct pscrpc_request *req)

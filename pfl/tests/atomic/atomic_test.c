@@ -26,10 +26,10 @@
 
 #include "pfl/pfl.h"
 #include "pfl/cdefs.h"
-#include "psc_util/alloc.h"
-#include "psc_util/atomic.h"
-#include "psc_util/log.h"
-#include "psc_util/pthrutil.h"
+#include "pfl/alloc.h"
+#include "pfl/atomic.h"
+#include "pfl/log.h"
+#include "pfl/pthrutil.h"
 
 struct thr {
 	int pos;

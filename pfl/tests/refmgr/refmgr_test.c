@@ -22,8 +22,8 @@
 #include <unistd.h>
 
 #include "pfl/cdefs.h"
-#include "psc_util/atomic.h"
-#include "psc_util/refmgr.h"
+#include "pfl/atomic.h"
+#include "pfl/refmgr.h"
 
 const char		*progname;
 struct psc_refmgr	 refmgr;

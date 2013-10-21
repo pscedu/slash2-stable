@@ -27,8 +27,8 @@
 #include <unistd.h>
 
 #include "pfl/pfl.h"
-#include "psc_util/bitflag.h"
-#include "psc_util/printhex.h"
+#include "pfl/bitflag.h"
+#include "pfl/printhex.h"
 
 const char *progname;
 

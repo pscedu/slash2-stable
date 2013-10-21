@@ -29,8 +29,8 @@
 #include "pfl/fcntl.h"
 #include "pfl/pfl.h"
 #include "pfl/stat.h"
-#include "psc_util/fmtstr.h"
-#include "psc_util/log.h"
+#include "pfl/fmtstr.h"
+#include "pfl/log.h"
 
 const char *progname;
 

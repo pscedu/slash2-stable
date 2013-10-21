@@ -29,7 +29,7 @@
 
 #include "pfl/cdefs.h"
 #include "pfl/pfl.h"
-#include "psc_util/net.h"
+#include "pfl/net.h"
 
 const char *dst = "0.0.0.0";
 const char *progname;

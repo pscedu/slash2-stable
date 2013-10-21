@@ -22,8 +22,8 @@
 #include <stdint.h>
 
 #include "pfl/str.h"
-#include "psc_util/ctl.h"
-#include "psc_util/ctlcli.h"
+#include "pfl/ctl.h"
+#include "pfl/ctlcli.h"
 
 const char *progname;
 

@@ -19,7 +19,7 @@
 
 #include <stdint.h>
 
-#include "psc_util/base64.h"
+#include "pfl/base64.h"
 
 /*
  * psc_base64_encode - Encode data into standard base 64 encoding.

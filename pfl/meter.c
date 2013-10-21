@@ -22,9 +22,9 @@
 #include <string.h>
 
 #include "pfl/list.h"
-#include "psc_util/lock.h"
-#include "psc_util/log.h"
-#include "psc_util/meter.h"
+#include "pfl/lock.h"
+#include "pfl/log.h"
+#include "pfl/meter.h"
 
 struct psc_lockedlist	psc_meters =
     PLL_INIT(&psc_meters, struct psc_meter, pm_lentry);

@@ -36,10 +36,10 @@
 #include "pfl/explist.h"
 #include "pfl/list.h"
 #include "pfl/lockedlist.h"
-#include "psc_util/alloc.h"
-#include "psc_util/lock.h"
-#include "psc_util/log.h"
-#include "psc_util/waitq.h"
+#include "pfl/alloc.h"
+#include "pfl/lock.h"
+#include "pfl/log.h"
+#include "pfl/waitq.h"
 
 struct psc_listcache {
 	struct psc_explist		plc_explist;

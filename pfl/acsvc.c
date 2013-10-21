@@ -37,11 +37,11 @@
 #include "pfl/pfl.h"
 #include "pfl/str.h"
 #include "pfl/list.h"
-#include "psc_util/acsvc.h"
-#include "psc_util/alloc.h"
-#include "psc_util/atomic.h"
-#include "psc_util/thread.h"
-#include "psc_util/waitq.h"
+#include "pfl/acsvc.h"
+#include "pfl/alloc.h"
+#include "pfl/atomic.h"
+#include "pfl/thread.h"
+#include "pfl/waitq.h"
 
 struct access_request {
 	int			 arq_id;

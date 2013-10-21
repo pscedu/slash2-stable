@@ -25,9 +25,9 @@
 #include "pfl/cdefs.h"
 #include "pfl/lockedlist.h"
 #include "pfl/time.h"
-#include "psc_util/atomic.h"
-#include "psc_util/iostats.h"
-#include "psc_util/thread.h"
+#include "pfl/atomic.h"
+#include "pfl/iostats.h"
+#include "pfl/thread.h"
 
 #define psc_timercmp_addsec(tvp, s, uvp, cmp)				\
 	(((tvp)->tv_sec + (s) == (uvp)->tv_sec) ?			\

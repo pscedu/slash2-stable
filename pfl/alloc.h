@@ -27,7 +27,7 @@
 #include <stdlib.h>
 
 #include "pfl/hashtbl.h"
-#include "psc_util/log.h"
+#include "pfl/log.h"
 
 #ifndef HAVE_POSIX_MEMALIGN
 # include "pfl/compat/posix_memalign.h"

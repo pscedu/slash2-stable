@@ -27,8 +27,8 @@
 
 #include "pfl/cdefs.h"
 #include "pfl/compat/pthread_barrier.h"
-#include "psc_util/log.h"
-#include "psc_util/pthrutil.h"
+#include "pfl/log.h"
+#include "pfl/pthrutil.h"
 
 /**
  * pthread_barrier_init - Initialize a barrier for use.

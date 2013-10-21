@@ -63,7 +63,7 @@
 #include <stddef.h>
 #include <stdio.h>
 
-#include "psc_util/log.h"
+#include "pfl/log.h"
 #endif
 
 #include "pfl/cdefs.h"

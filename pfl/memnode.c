@@ -21,9 +21,9 @@
 #include <string.h>
 
 #include "pfl/dynarray.h"
-#include "psc_util/alloc.h"
-#include "psc_util/lock.h"
-#include "psc_util/memnode.h"
+#include "pfl/alloc.h"
+#include "pfl/lock.h"
+#include "pfl/memnode.h"
 
 __static psc_spinlock_t		psc_memnodes_lock = SPINLOCK_INIT;
 __static struct psc_dynarray	psc_memnodes = DYNARRAY_INIT;

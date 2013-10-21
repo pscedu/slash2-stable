@@ -29,12 +29,12 @@
 
 #include "pfl/cdefs.h"
 #include "pfl/pfl.h"
-#include "psc_util/alloc.h"
-#include "psc_util/fmtstr.h"
-#include "psc_util/lock.h"
-#include "psc_util/log.h"
-#include "psc_util/thread.h"
-#include "psc_util/waitq.h"
+#include "pfl/alloc.h"
+#include "pfl/fmtstr.h"
+#include "pfl/lock.h"
+#include "pfl/log.h"
+#include "pfl/thread.h"
+#include "pfl/waitq.h"
 
 int nthreads = 4;
 int iterations = 4;

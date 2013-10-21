@@ -28,7 +28,7 @@
 #  include <errno.h>
 
 #  include "pfl/cdefs.h"
-#  include "psc_util/log.h"
+#  include "pfl/log.h"
 
 struct sigevent {
 	union sigval	sigev_value;

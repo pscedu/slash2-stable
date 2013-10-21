@@ -42,9 +42,9 @@
 
 #include "pfl/cdefs.h"
 #include "pfl/str.h"
-#include "psc_util/ctl.h"
-#include "psc_util/ctlsvr.h"
-#include "psc_util/lock.h"
+#include "pfl/ctl.h"
+#include "pfl/ctlsvr.h"
+#include "pfl/lock.h"
 
 #ifdef __KERNEL__
 #define D_LNI D_CONSOLE
