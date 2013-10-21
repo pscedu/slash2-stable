@@ -38,9 +38,9 @@ MPI_Group world;
 #include "pfl/pfl.h"
 #include "pfl/str.h"
 #include "pfl/types.h"
-#include "psc_util/alloc.h"
-#include "psc_util/crc.h"
-#include "psc_util/log.h"
+#include "pfl/alloc.h"
+#include "pfl/crc.h"
+#include "pfl/log.h"
 
 int		 pes;
 int		 mype;
