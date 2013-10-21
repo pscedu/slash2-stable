@@ -76,7 +76,6 @@
 #include "pfl/prsig.h"
 #include "pfl/pthrutil.h"
 #include "pfl/random.h"
-#include "pfl/refmgr.h"
 #include "pfl/rlimit.h"
 #include "pfl/rpc.h"
 #include "pfl/rpclog.h"
@@ -264,11 +263,9 @@ main(int argc, char *argv[])
 	PRTYPE(struct psc_multiwait);
 	PRTYPE(struct psc_multiwaitcond);
 	PRTYPE(struct psc_nodemask);
-	PRTYPE(struct psc_objref);
 	PRTYPE(struct psc_poolmaster);
 	PRTYPE(struct psc_poolmgr);
 	PRTYPE(struct psc_poolset);
-	PRTYPE(struct psc_refmgr);
 	PRTYPE(struct psc_rwlock);
 	PRTYPE(struct psc_spinlock);
 	PRTYPE(struct psc_streenode);
