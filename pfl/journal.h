@@ -152,7 +152,8 @@ struct psc_journal {
 #define pjournal_has_peers(pj)		(pj)->pj_npeers
 
 #define DEBUG_JOURNAL(lvl, jrnl, fmt, ...)				\
-	psclog((lvl), "journal@%p " fmt, (jrnl), ## __VA_ARGS__)
+	psclog((lvl), "journal@%p[%s] " fmt,				\
+	    (jrnl), (jrnl)->pj_name, ## __VA_ARGS__)
 
 #define PJE_XID_NONE			0			/* invalid transaction ID */
 #define PJE_MAGIC			UINT32_C(0x4567abcd)
@@ -209,6 +210,12 @@ struct psc_journal_enthdr {
 #define	PJ_PJESZ(p)			((p)->pj_hdr->pjh_entsz)
 
 #define PJ_GETENTOFF(pj, i)		((off_t)(pj)->pj_hdr->pjh_start_off + (i) * PJ_PJESZ(pj))
+
+#define DPRINTF_PJE(lvl, pje, fmt, ...)					\
+	psclog((lvl), "pje@%p type=%#x len=%hd xid=%#"PRIx64" "		\
+	    "txg=%#"PRIx64" " fmt,					\
+	    (pje), (pje)->pje_type, (pje)->pje_len, (pje)->pje_xid,	\
+	    (pje)->pje_txg, ## __VA_ARGS__)
 
 /**
  * psc_journal_xidhndl - Journal transaction ID handle.
