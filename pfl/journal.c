@@ -448,7 +448,8 @@ pjournal_logwrite_internal(struct psc_journal *pj,
 
 	/* calculate the CRC checksum, excluding the checksum field itself */
 	PSC_CRC64_INIT(&chksum);
-	psc_crc64_add(&chksum, pje, offsetof(struct psc_journal_enthdr, pje_chksum));
+	psc_crc64_add(&chksum, pje, offsetof(struct psc_journal_enthdr,
+	    pje_chksum));
 	psc_crc64_add(&chksum, pje->pje_data, pje->pje_len);
 	PSC_CRC64_FIN(&chksum);
 	pje->pje_chksum = chksum;
@@ -456,10 +457,10 @@ pjournal_logwrite_internal(struct psc_journal *pj,
 	/* commit the log entry on disk before we can return */
 	ntries = PJ_MAX_TRY;
 	while (ntries > 0) {
-		psclog_debug("io_start slot=%u", slot);
+		psclog_vdebug("io_start slot=%u", slot);
 		rc = psc_journal_write(pj, pje, PJ_PJESZ(pj),
 		    PJ_GETENTOFF(pj, slot));
-		psclog_debug("io_done slot=%u (rc=%d)", slot, rc);
+		psclog_vdebug("io_done slot=%u (rc=%d)", slot, rc);
 		if (rc == EAGAIN) {
 			ntries--;
 			usleep(100);
@@ -474,7 +475,11 @@ pjournal_logwrite_internal(struct psc_journal *pj,
 	 */
 	if (rc)
 		psc_fatalx("failed writing journal log entry at "
-		    "slot %d, tries = %d: %s", slot, ntries, strerror(rc));
+		    "slot %d, tries=%d: %s", slot, ntries,
+		    strerror(rc));
+	else
+		DPRINTF_PJE(PLL_DEBUG, pje, "written successfully "
+		    "slot=%d", slot);
 	return (0);
 }
 
@@ -969,9 +974,10 @@ pjournal_replay(struct psc_journal *pj, int thrtype,
 	}
 	nentries = 0;
 	len = psc_dynarray_len(&pj->pj_bufs);
-	psclog_info("The total number of entries to be replayed is %d", len);
+	psclog_info("The total number of entries to be replayed is %d",
+	    len);
 
-	for (i=0; i < len; i++) {
+	for (i = 0; i < len; i++) {
 		pje = psc_dynarray_getpos(&pj->pj_bufs, i);
 
 		nentries++;
