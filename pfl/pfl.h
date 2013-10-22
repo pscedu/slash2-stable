@@ -62,6 +62,11 @@ void	*pfl_tls_get(int, size_t);
 #define PFL_TLSIDX_MAX		8
 
 #ifdef HAVE_TLS
+/*
+ * We use a stack so the most immediate caller wins; otherwise when
+ * calls are deeply nested, the shallow callers will get used by
+ * PFL_CALLERINFOSS() and ignore deeper callers.
+ */
 # define _PFL_START_PCI(pci)						\
 	do {								\
 		_pfl_callerinfo = (pci);				\
