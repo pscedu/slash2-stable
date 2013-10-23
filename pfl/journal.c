@@ -901,7 +901,8 @@ pjournal_thr_main(struct psc_thread *thr)
 		if (pj->pj_commit_txg > txg) {
 			once++;
 			psc_assert(once <= 1);
-			psclog_warnx("Journal txg goes backwards: %"PRId64" -> %"PRId64,
+			psclog_warnx("Journal txg goes backwards: "
+			    "%"PRId64" -> %"PRId64,
 			    pj->pj_commit_txg, txg);
 		}
 		pj->pj_commit_txg = txg;
