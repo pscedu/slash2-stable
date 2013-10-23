@@ -57,7 +57,7 @@ apply_host_prefs()
 	for dir in							\
 	    /local							\
 	    /ufs/local							\
-	    /usr/local							\
+	    /usr/local
 	do
 		fn=$dir/pfl_daemon.cfg
 		if [ -f $fn ]; then
