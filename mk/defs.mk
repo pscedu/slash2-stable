@@ -55,9 +55,13 @@ ifdef CFLAGS
   MAKE:=	env CFLAGS="${CFLAGS}" ${MAKE}
 endif
 
-LFLAGS+=	-t $$(if ${MINVER} $$(${LEX} -V | \
-		  sed 's!^[^0-9]*!!; s/ .*//') 2.5.5; then \
-		  echo --nounput; fi)
+LEXVER=		$(shell ${LEX} -V | sed 's/^[^0-9]*//; s/ .*//')
+
+ifeq ($(shell ${MINVER} ${LEXVER} 2.5.5 && echo 1),1)
+  LFLAGS+=	--nounput
+endif
+
+LFLAGS+=	-t
 
 YFLAGS+=	-d
 
@@ -173,7 +177,7 @@ $(call ADD_FILE_CFLAGS,${LNET_BASE}/lnet/peer.c,			-DPSC_SUBSYS=PSS_LNET -Wno-sh
 $(call ADD_FILE_CFLAGS,${LNET_BASE}/lnet/router.c,			-DPSC_SUBSYS=PSS_LNET -Wno-shadow)
 $(call ADD_FILE_CFLAGS,${LNET_BASE}/lnet/router_proc.c,			-DPSC_SUBSYS=PSS_LNET -Wno-shadow)
 
-ifeq ($(shell ${LEX} -V),flex 2.5.35)
+ifeq ($(shell ${MINVER} ${LEXVER} 2.5.35 || echo 1),1)
   LIBL=		-lfl
   PCPP_FLAGS+=	-H yytext
 endif
