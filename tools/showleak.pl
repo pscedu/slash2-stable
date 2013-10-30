@@ -26,32 +26,26 @@
 my %h;
 
 while (<>) {
+	if ($. % 3000 == 0) {
+		print STDERR "\rline $.";
+	}
+
 	if (/alloc\(\)=(0x[a-f0-9]+)/) {
 		#print "alloc $1\n";
-		$h{$1} = {};
-		$h{$1}{line} = $_;
-		$h{$1}{freed} = 0;
+		$h{$1} = $_;
 
 	} elsif (/realloc\((0x[a-f0-9]+)\)=(0x[a-f0-9]+)/) {
 		#print "realloc $1 -> $2\n";
-		$h{$1} = {} unless defined $h{$1};
-		$h{$1}{freed} = 1;
+		delete $h{$1};
 
-		$h{$2} = {} unless defined $h{$2};
-		$h{$2}{freed} = 0;
-		$h{$2}{line} = $_;
+		$h{$2} = $_;
 
 	} elsif (/free\((0x[a-f0-9]+)\)/) {
 		#print "free $1\n";
-		$h{$1} = {} unless defined $h{$1};
-		$h{$1}{freed} = 1;
+		delete $h{$1};
 	}
 }
 
 foreach $k (keys %h) {
-	if ($h{$k}{freed} eq 0) {
-		print $h{$k}{line};
-	} else {
-		#print "FREED $h{$k} $h{$k}{sz} func=$h{$k}{func} \n";
-	}
+	print $h{$k};
 }
