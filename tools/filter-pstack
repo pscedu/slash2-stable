@@ -45,6 +45,7 @@ my @ign = (
 	[ qw(cv_wait txg_wait_synced zfsslash2_wait_synced pjournal_thr_main _pscthr_begin) ],
 	[ qw(msbmflwthr_main _pscthr_begin) ],
 	[ qw(psc_compl_waitrel_s msbmapflushrpcthr_main _pscthr_begin) ],
+	[ qw(psc_compl_waitrel_s slmcohthr_begin _pscthr_begin) ],
 	[ qw(psc_multiwait_usecs slconnthr_main _pscthr_begin) ],
 	[ qw(psc_multiwait_usecs slmupschthr_main _pscthr_begin) ],
 	[ qw(psc_waitq_waitabs _lc_get slvr_worker_int slislvrthr_main _pscthr_begin) ],
@@ -55,7 +56,6 @@ my @ign = (
 	[ qw(sleep slibreapthr_main _pscthr_begin) ],
 	[ qw(sleep slmbkdbthr_main _pscthr_begin) ],
 	[ qw(slmbmaptimeothr_begin _pscthr_begin) ],
-#	[ qw(slmcohthr_begin _pscthr_begin) ],
 	[ qw(usleep pscfs_main slmzfskstatmthr_main _pscthr_begin) ],
 	[ qw(usleep slmbchrqthr_main _pscthr_begin) ],
 
