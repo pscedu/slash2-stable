@@ -33,13 +33,13 @@ void
 pfl_unpack_hex(const void *ptr, size_t len, char buf[])
 {
 	const unsigned char *p = ptr;
-	const char tab[] = "0123456789abcde";
+	const char tab[] = "0123456789abcdef";
 	char *t = buf;
 	size_t n;
 
 	for (n = 0; n < len; p++, n++) {
 		*t++ = tab[*p >> 4];
-		*t++ = tab[*p & 4];
+		*t++ = tab[*p & 0xf];
 	}
 	*t = '\0';
 }
