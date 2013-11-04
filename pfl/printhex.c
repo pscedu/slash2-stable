@@ -23,6 +23,28 @@
 #include "pfl/lock.h"
 
 /**
+ * pfl_unpack_hex - Display the hexadecimal representation of some data.
+ * @ptr: data to display.
+ * @len: number of bytes to display.
+ * @buf: buffer to place representation in; must be at least 2 * @len +
+ *	1 (for NUL);
+ */
+void
+pfl_unpack_hex(const void *ptr, size_t len, char buf[])
+{
+	const unsigned char *p = ptr;
+	const char tab[] = "0123456789abcde";
+	char *t = buf;
+	size_t n;
+
+	for (n = 0; n < len; p++, n++) {
+		*t++ = tab[*p >> 4];
+		*t++ = tab[*p & 4];
+	}
+	*t = '\0';
+}
+
+/**
  * printhex - Display the hexadecimal representation of some data.
  * @ptr: data to display.
  * @len: number of bytes to display.
