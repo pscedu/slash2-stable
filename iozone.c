@@ -60,7 +60,7 @@
 
 
 /* The version number */
-#define THISVERSION "        Version $Revision: 3.408 $"
+#define THISVERSION "        Version $Revision: 3.420 $"
 
 #if defined(linux)
   #define _GNU_SOURCE
@@ -70,7 +70,7 @@
 #include <windows.h>
 #include <errno.h>
 #else
-#if defined(linux) || defined(solaris) || defined(macosx) || defined(__AIX__) || defined(FreeBSD) || defined(_HPUX_SOURCE) || defined(__OpenBSD__) || defined(__DragonFly__)
+#if defined(linux) || defined(solaris) || defined(IOZ_macosx) || defined(__AIX__) || defined(FreeBSD) || defined(_HPUX_SOURCE) || defined(__OpenBSD__) || defined(__DragonFly__)
 #include <errno.h>
 #else
 extern  int errno;   /* imported for errors */
@@ -202,6 +202,8 @@ char *help[] = {
 "           -z  Used in conjunction with -a to test all possible record sizes",
 "           -Z  Enable mixing of mmap I/O and file I/O",
 "           -+E Use existing non-Iozone file for read-only testing",
+"           -+F Truncate file before write in thread_mix_test",
+"           -+J Include think time (-j #) in throughput calculation",
 "           -+K Sony special. Manual control of test 8.",
 "           -+m  Cluster_filename   Enable Cluster testing",
 "           -+d  File I/O diagnostic mode. (To troubleshoot a broken file I/O subsystem)",
@@ -526,6 +528,7 @@ struct client_command {
 	int c_op_rate;
 	int c_op_rate_flag;
 	int c_Q_flag;
+	int c_inc_think;
 	int c_L_flag;
 	int c_OPS_flag;
 	int c_mmapflag;
@@ -547,6 +550,7 @@ struct client_command {
 	int c_direct_flag;
 	int c_cpuutilflag;
 	int c_seq_mix;
+	int c_del_flag;
 	int c_client_number;
 	int c_command;
 	int c_testnum;
@@ -627,6 +631,7 @@ struct client_neutral_command {
 	char c_op_rate[4];
 	char c_op_rate_flag[2];
 	char c_Q_flag[2];
+	char c_inc_think[2];
 	char c_L_flag[2];
 	char c_OPS_flag[2];
 	char c_mmapflag[2];
@@ -648,6 +653,7 @@ struct client_neutral_command {
 	char c_direct_flag[2]; 		/* small int */
 	char c_cpuutilflag[2]; 		/* small int */
 	char c_seq_mix[2]; 		/* small int */
+	char c_del_flag[2];		/* small int */
 	char c_stride[10]; 		/* small long long */
 	char c_rest_val[10]; 		/* small long long */
 	char c_purge[10]; 		/* very small long long */
@@ -1293,6 +1299,7 @@ char *barray[MAXSTREAMS];
 char *haveshm;
 extern int optind;
 long long onetime, auto_mode, sfd, multi_buffer;
+int exit_code = 0;  
 int fd;
 int sp_msfd,sp_mrfd,sp_csfd,sp_crfd;
 int begin_proc,num_processors,ioz_processor_bind;
@@ -1306,7 +1313,7 @@ int chid_skew = 0;
 int hist_summary;
 int op_rate;
 int op_rate_flag;
-char aflag, Eflag, hflag, Rflag, rflag, sflag;
+char aflag, Eflag, hflag, Rflag, rflag, sflag,del_flag,mix_test;
 char diag_v,sent_stop,dedup,dedup_interior,dedup_compress;
 char *dedup_ibuf;
 char *dedup_temp;
@@ -1520,7 +1527,7 @@ char verify = 1;
 int restf;
 char sverify = 1;
 char odsync = 0;
-char Q_flag,OPS_flag;
+char inc_think, Q_flag,OPS_flag;
 char L_flag=0;
 char no_copy_flag,include_close,include_flush;
 char disrupt_flag,compute_flag,xflag,Z_flag, X_flag;
@@ -1684,8 +1691,8 @@ char **argv;
     	sprintf(splash[splash_line++],"\t             Randy Dunlap, Mark Montague, Dan Million, Gavin Brebner,\n");
     	sprintf(splash[splash_line++],"\t             Jean-Marc Zucconi, Jeff Blomberg, Benny Halevy, Dave Boone,\n");
     	sprintf(splash[splash_line++],"\t             Erik Habbinga, Kris Strecker, Walter Wong, Joshua Root,\n");
-    	sprintf(splash[splash_line++],"\t             Fabrice Bacchella, Zhenghua Xue, Qin Li, Darren Sawyer.\n");
-    	sprintf(splash[splash_line++],"\t             Ben England.\n\n");
+    	sprintf(splash[splash_line++],"\t             Fabrice Bacchella, Zhenghua Xue, Qin Li, Darren Sawyer,\n");
+    	sprintf(splash[splash_line++],"\t             Vangel Bojaxhi, Ben England, Vikentsi Lapa.\n\n");
 	sprintf(splash[splash_line++],"\tRun began: %s\n",ctime(&time_run));
 	argcsave=argc;
 	argvsave=argv;
@@ -2390,6 +2397,9 @@ char **argv;
 					break;
 				case 'b':  /* Example: Does not have an argument */
 					break;
+				case 'F':  /* Example: Does not have an argument */
+					del_flag = 1;
+					break;
 				case 'c':  /* Argument is the controlling host name */
 					/* I am a client for distributed Iozone */
 					subarg=argv[optind++];
@@ -2543,6 +2553,10 @@ char **argv;
 					sprintf(splash[splash_line++],"\t>>> Record locking, shared file mode enabled. <<<\n");
 					share_file=1;
 					rlocking=1;
+					break;
+				case 'J':  /* Thinktime is included in thrhoughput */
+					sprintf(splash[splash_line++],"\t>>> Think time is included in throughput cal. <<<\n");
+					inc_think=1;
 					break;
 				case 'V':  /* No Record locking shared files*/
 					sprintf(splash[splash_line++],"\t>>> Shared file mode enabled. <<<\n");
@@ -3406,7 +3420,7 @@ void signal_handler()
 		close(sp_msfd);
 	if(sp_mrfd)
 		close(sp_mrfd);
-    	exit(0);
+    	exit(exit_code);
 }
 
 /****************************************************************/
@@ -7548,6 +7562,7 @@ long long *data2;
 #endif
 				if(wval==-1)
 					perror("write");
+				exit_code = 74; 
 				signal_handler();
 			}
 			I_LSEEK(fd,0,SEEK_SET);
@@ -7618,8 +7633,16 @@ long long *data2;
 				if(Index > (MAXBUFFERSIZE-reclen))
 					Index=0;
 				pbuff = mbuffer + Index;	
-				if(verify || dedup || dedup_interior)
+				if(diag_v)
+				{
+				   if(verify || dedup || dedup_interior)
+					fill_buffer(pbuff,reclen,(long long)pattern,sverify,(long long)i);
+				}
+				else
+				{
+				   if(verify || dedup || dedup_interior)
 					fill_buffer(pbuff,reclen,(long long)pattern,sverify,(long long)0);
+				}
 			}
 			if(async_flag && no_copy_flag)
 			{
@@ -7680,6 +7703,7 @@ long long *data2;
 #endif
 			    	if(wval == -1)
 					perror("write");
+				exit_code = 74;
 				signal_handler();
 			    }
 #if defined(Windows)
@@ -7774,7 +7798,10 @@ long long *data2;
 				signal_handler();
 			   }
 		}
-		writetime[j] = ((time_so_far() - starttime1)-time_res)
+		if(inc_think)
+		   writetime[j] = ((time_so_far() - starttime1)-time_res);
+		else
+		   writetime[j] = ((time_so_far() - starttime1)-time_res)
 			-compute_val;
 		if(writetime[j] < (double).000001) 
 		{
@@ -7986,6 +8013,7 @@ long long *data2;
 					 fd);
 #endif
 				perror("fwrite");
+				exit_code = 74;
 				signal_handler();
 			}
 		}
@@ -8007,7 +8035,10 @@ long long *data2;
 				signal_handler();
 			}
 		}
-		writetime[j] = ((time_so_far() - starttime1)-time_res)
+		if(inc_think)
+		   writetime[j] = ((time_so_far() - starttime1)-time_res);
+		else
+		   writetime[j] = ((time_so_far() - starttime1)-time_res)
 			-compute_val;
 		if(writetime[j] < (double).000001) 
 		{
@@ -8216,7 +8247,10 @@ long long *data1,*data2;
 		{
 			fclose(stream);
 		}
-		readtime[j] = ((time_so_far() - starttime2)-time_res)
+		if(inc_think)
+		   readtime[j] = ((time_so_far() - starttime2)-time_res);
+		else
+		   readtime[j] = ((time_so_far() - starttime2)-time_res)
 			-compute_val;
 		if(readtime[j] < (double).000001) 
 		{
@@ -8713,7 +8747,10 @@ long long *data1,*data2;
 #endif
 			close(fd);
 		}
-		readtime[j] = ((time_so_far() - starttime2)-time_res)-compute_val;
+		if(inc_think)
+		   readtime[j] = ((time_so_far() - starttime2)-time_res);
+		else
+		   readtime[j] = ((time_so_far() - starttime2)-time_res)-compute_val;
 		if(readtime[j] < (double).000001) 
 		{
 			readtime[j]= time_res;
@@ -9206,6 +9243,7 @@ long long *data1, *data2;
 #endif
 						if(wval==-1)
 							perror("write");
+						exit_code = 74;
 						signal_handler();
 			 		  }
 					}
@@ -9249,7 +9287,10 @@ long long *data1, *data2;
 			signal_handler();
 		}
 	     }
-	     randreadtime[j] = ((time_so_far() - starttime2)-time_res)-
+	     if(inc_think)
+	        randreadtime[j] = ((time_so_far() - starttime2)-time_res);
+	     else
+	        randreadtime[j] = ((time_so_far() - starttime2)-time_res)-
 			compute_val;
 	     if(randreadtime[j] < (double).000001) 
 	     {
@@ -9566,7 +9607,10 @@ long long *data1,*data2;
 			}
 			close(fd);
 		}
-		revreadtime[j] = ((time_so_far() - starttime2)-time_res)
+		if(inc_think)
+		   revreadtime[j] = ((time_so_far() - starttime2)-time_res);
+		else
+		   revreadtime[j] = ((time_so_far() - starttime2)-time_res)
 			-compute_val;
 		if(revreadtime[j] < (double).000001) 
 		{
@@ -9760,6 +9804,7 @@ long long *data1,*data2;
 #endif
 		if(wval==-1)
 			perror("write");
+		exit_code = 74;
 		signal_handler();
 	}
 	*/
@@ -9831,6 +9876,7 @@ long long *data1,*data2;
 #endif
 				   if(wval==-1)
 				   	perror("write");
+				   exit_code = 74;
 				   signal_handler();
 			       }
 			  }
@@ -9876,7 +9922,10 @@ long long *data1,*data2;
 			signal_handler();
 		}
 	}
-	writeintime = ((time_so_far() - starttime1)-time_res)-
+	if(inc_think)
+	   writeintime = ((time_so_far() - starttime1)-time_res);
+	else
+	   writeintime = ((time_so_far() - starttime1)-time_res)-
 		compute_val;
 	if(cpuutilflag)
 	{
@@ -10214,7 +10263,10 @@ long long *data1, *data2;
 		}
 		close(fd);
 	}
-	strideintime = ((time_so_far() - starttime1)-time_res)
+	if(inc_think)
+	   strideintime = ((time_so_far() - starttime1)-time_res);
+	else
+	   strideintime = ((time_so_far() - starttime1)-time_res)
 		-compute_val;
 	if(strideintime < (double).000001) 
 	{
@@ -10435,6 +10487,7 @@ long long *data1,*data2;
 					 fd);
 #endif
 				perror("pwrite");
+				exit_code = 74;
 				signal_handler();
 			}
 			if(rlocking)
@@ -10459,7 +10512,10 @@ long long *data1,*data2;
 				signal_handler();
 			}
 		}
-		pwritetime[j] = ((time_so_far() - starttime1)-time_res)
+		if(inc_think)
+		   pwritetime[j] = ((time_so_far() - starttime1)-time_res);
+		else
+		   pwritetime[j] = ((time_so_far() - starttime1)-time_res)
 			-compute_val;
 		if(pwritetime[j] < (double).000001) 
 		{
@@ -10711,7 +10767,10 @@ long long *data1, *data2;
 			fsync(fd);
 		if(include_close)
 			close(fd);
-		preadtime[j] = ((time_so_far() - starttime2)-time_res)
+		if(inc_think)
+		   preadtime[j] = ((time_so_far() - starttime2)-time_res);
+		else
+		   preadtime[j] = ((time_so_far() - starttime2)-time_res)
 			-compute_val;
 		if(preadtime[j] < (double).000001) 
 		{
@@ -10974,7 +11033,10 @@ long long *data1,*data2;
 				signal_handler();
 			}
 		}
-		pwritevtime[j] = ((time_so_far() - starttime1)-time_res)
+		if(inc_think)
+		   pwritevtime[j] = ((time_so_far() - starttime1)-time_res);
+		else
+		   pwritevtime[j] = ((time_so_far() - starttime1)-time_res)
 			-compute_val;
 		if(pwritevtime[j] < (double).000001) 
 		{
@@ -11286,7 +11348,10 @@ long long *data1,*data2;
 			fsync(fd);
 		if(include_close)
 			close(fd);
-		preadvtime[j] = ((time_so_far() - starttime2)-time_res)
+		if(inc_think)
+		   preadvtime[j] = ((time_so_far() - starttime2)-time_res);
+		else
+		   preadvtime[j] = ((time_so_far() - starttime2)-time_res)
 			-compute_val;
 		if(preadvtime[j] < (double).000001) 
 		{
@@ -12114,7 +12179,7 @@ int shared_flag;
 
 	size1=l_max(size,page_size);
 	size1=(size1 +page_size) & ~(page_size-1);
-#if defined(bsd4_2) && !defined(macosx)
+#if defined(bsd4_2) && !defined(IOZ_macosx)
 	if((tfd = creat("mmap.tmp", 0666))<0)
 	{
 		printf("Unable to create tmp file\n");
@@ -12490,6 +12555,8 @@ thread_write_test( x)
 		flags=O_RDWR|O_SYNC|O_CREAT;
 	else
 		flags=O_RDWR|O_CREAT;
+	if(del_flag && mix_test)
+		flags |=  O_TRUNC;
 #if defined(O_DSYNC)
 	if(odsync)
 		flags |= O_DSYNC;
@@ -12924,7 +12991,10 @@ printf("Desired rate %g  Actual rate %g Nap %g microseconds\n",desired_op_rate_t
 	}
 	if(!stopped){
 		temp_time = time_so_far();
-		child_stat->throughput = ((temp_time - starttime1)-time_res)
+		if(inc_think)
+		   child_stat->throughput = ((temp_time - starttime1)-time_res);
+		else
+		   child_stat->throughput = ((temp_time - starttime1)-time_res)
 			-compute_val;
 		if(child_stat->throughput < (double).000001) 
 		{
@@ -13360,8 +13430,12 @@ thread_pwrite_test( x)
 				else
 					fsync(fd);
 			}
-			child_stat->throughput = 
-				(time_so_far() - starttime1)-time_res;
+			temp_time = time_so_far();
+			if(inc_think)
+			   child_stat->throughput = ((temp_time - starttime1)-time_res);
+			else
+			   child_stat->throughput = ((temp_time - starttime1)-time_res)
+			      				-compute_val;
 			if(child_stat->throughput < (double).000001) 
 			{
 				child_stat->throughput = time_res;
@@ -13557,8 +13631,11 @@ printf("Desired rate %g  Actual rate %g Nap %g microseconds\n",desired_op_rate_t
 	}
 	if(!stopped){
 		temp_time = time_so_far();
-		child_stat->throughput = ((temp_time - starttime1)-time_res)
-			-compute_val;
+		if(inc_think)
+			child_stat->throughput = ((temp_time - starttime1)-time_res);
+		else
+			child_stat->throughput = ((temp_time - starttime1)-time_res)
+				-compute_val;
 		if(child_stat->throughput < (double).000001) 
 		{
 			child_stat->throughput= time_res;
@@ -14060,6 +14137,7 @@ fprintf(newstdout,"Chid: %lld Rewriting offset %lld for length of %lld\n",chid, 
 #endif
 				if(wval==-1)
 					perror("write");
+				exit_code = 74;
 				if (!no_unlink)
 				{
 				   if(check_filename(dummyfile[xx]))
@@ -14144,7 +14222,10 @@ printf("Desired rate %g  Actual rate %g Nap %g microseconds\n",desired_op_rate_t
 	}
 	temp_time=time_so_far();
 	child_stat=(struct child_stats *)&shmaddr[xx];
-	child_stat->throughput = ((temp_time - starttime1)-time_res)
+	if(inc_think)
+		child_stat->throughput = ((temp_time - starttime1)-time_res);
+	else
+		child_stat->throughput = ((temp_time - starttime1)-time_res)
 		-compute_val;
 	if(child_stat->throughput < (double).000001) 
 	{
@@ -14731,8 +14812,11 @@ printf("Desired rate %g  Actual rate %g Nap %g microseconds\n",desired_op_rate_t
 	}
 	temp_time = time_so_far();
 	child_stat=(struct child_stats *)&shmaddr[xx];
-	child_stat->throughput = ((temp_time - starttime1)-time_res)
-		-compute_val;
+	if(inc_think)
+		child_stat->throughput = ((temp_time - starttime1)-time_res);
+	else
+		child_stat->throughput = ((temp_time - starttime1)-time_res)
+			-compute_val;
 	if(child_stat->throughput < (double).000001) 
 	{
 		child_stat->throughput= time_res;
@@ -15258,8 +15342,11 @@ printf("Desired rate %g  Actual rate %g Nap %g microseconds\n",desired_op_rate_t
 	}
 	temp_time = time_so_far();
 	child_stat=(struct child_stats *)&shmaddr[xx];
-	child_stat->throughput = ((temp_time - starttime1)-time_res)
-		-compute_val;
+	if(inc_think)
+		child_stat->throughput = ((temp_time - starttime1)-time_res);
+	else
+		child_stat->throughput = ((temp_time - starttime1)-time_res)
+			-compute_val;
 	if(child_stat->throughput < (double).000001) 
 	{
 		child_stat->throughput= time_res;
@@ -15838,8 +15925,11 @@ printf("Desired rate %g  Actual rate %g Nap %g microseconds\n",desired_op_rate_t
 		close(fd);
 	}
 	temp_time = time_so_far();
-	child_stat->throughput = ((temp_time - starttime1)-time_res)
-		-compute_val;
+	if(inc_think)
+		child_stat->throughput = ((temp_time - starttime1)-time_res);
+	else
+		child_stat->throughput = ((temp_time - starttime1)-time_res)
+			-compute_val;
 	if(child_stat->throughput < (double).000001) 
 	{
 		child_stat->throughput= time_res;
@@ -16381,8 +16471,11 @@ printf("Desired rate %g  Actual rate %g Nap %g microseconds\n",desired_op_rate_t
 		close(fd);
 	}
 	temp_time = time_so_far();
-	child_stat->throughput = ((temp_time - starttime2)-time_res)
-		-compute_val;
+	if(inc_think)
+		child_stat->throughput = ((temp_time - starttime2)-time_res);
+	else
+		child_stat->throughput = ((temp_time - starttime2)-time_res)
+			-compute_val;
 	if(child_stat->throughput < (double).000001) 
 	{
 		child_stat->throughput= time_res;
@@ -16923,8 +17016,11 @@ printf("Desired rate %g  Actual rate %g Nap %g microseconds\n",desired_op_rate_t
 		close(fd);
 	}
 	temp_time = time_so_far();
-	child_stat->throughput = ((temp_time - starttime2)-time_res)
-		-compute_val;
+	if(inc_think)
+		child_stat->throughput = ((temp_time - starttime2)-time_res);
+	else
+		child_stat->throughput = ((temp_time - starttime2)-time_res)
+			-compute_val;
 	if(child_stat->throughput < (double).000001) 
 	{
 		child_stat->throughput= time_res;
@@ -17018,6 +17114,7 @@ thread_mix_test(x)
 	int num_readers;
 	long xx;
 
+	mix_test = 1;
 #ifdef NO_THREADS
 	xx=chid;
 #else
@@ -17604,8 +17701,11 @@ printf("Desired rate %g  Actual rate %g Nap %g microseconds\n",desired_op_rate_t
 	}
 	temp_time = time_so_far();
 	child_stat=(struct child_stats *)&shmaddr[xx];
-	child_stat->throughput = ((temp_time - starttime1)-time_res)
-		-compute_val;
+	if(inc_think)
+		child_stat->throughput = ((temp_time - starttime1)-time_res);
+	else
+		child_stat->throughput = ((temp_time - starttime1)-time_res)
+			-compute_val;
 	if(child_stat->throughput < (double).000001) 
 	{
 		child_stat->throughput= time_res;
@@ -18287,8 +18387,11 @@ printf("Desired rate %g  Actual rate %g Nap %g microseconds\n",desired_op_rate_t
 	}
 	if(!stopped){
 		temp_time = time_so_far();
-		child_stat->throughput = ((temp_time - starttime1)-time_res)
-			-compute_val;
+		if(inc_think)
+			child_stat->throughput = ((temp_time - starttime1)-time_res);
+		else
+			child_stat->throughput = ((temp_time - starttime1)-time_res)
+				-compute_val;
 		if(child_stat->throughput < (double).000001) 
 		{
 			child_stat->throughput= time_res;
@@ -18927,7 +19030,7 @@ int flag, prot;
 #endif
 #endif
 
-#if defined(bsd4_2) && !defined(macosx)
+#if defined(bsd4_2) && !defined(IOZ_macosx)
 	 pa = (char *)mmap( 0,&filebytes, (int)prot, 
 	 		(int)mflags, (int)fd, 0);
 #else
@@ -20622,6 +20725,7 @@ int send_size;
 	sprintf(outbuf.c_op_rate,"%d",send_buffer->c_op_rate);
 	sprintf(outbuf.c_op_rate_flag,"%d",send_buffer->c_op_rate_flag);
 	sprintf(outbuf.c_Q_flag,"%d",send_buffer->c_Q_flag);
+	sprintf(outbuf.c_inc_think,"%d",send_buffer->c_inc_think);
 	sprintf(outbuf.c_L_flag,"%d",send_buffer->c_L_flag);
 	sprintf(outbuf.c_include_flush,"%d",send_buffer->c_include_flush);
 	sprintf(outbuf.c_OPS_flag,"%d",send_buffer->c_OPS_flag);
@@ -20641,6 +20745,7 @@ int send_size;
 	sprintf(outbuf.c_direct_flag,"%d",send_buffer->c_direct_flag);
 	sprintf(outbuf.c_cpuutilflag,"%d",send_buffer->c_cpuutilflag);
 	sprintf(outbuf.c_seq_mix,"%d",send_buffer->c_seq_mix);
+	sprintf(outbuf.c_del_flag,"%d",send_buffer->c_del_flag);
 	sprintf(outbuf.c_client_number,"%d",send_buffer->c_client_number);
 	sprintf(outbuf.c_command,"%d",send_buffer->c_command);
 	sprintf(outbuf.c_testnum,"%d",send_buffer->c_testnum);
@@ -21369,6 +21474,7 @@ long long numrecs64, reclen;
           strcat(command,my_port_num);
         }
 	strcat(command," '");
+	usleep(100000); /* Don't spawn rsh too fast... */
 	junk=system(command);
 /*
 	system("remsh rsnperf '/home/capps/niozone/iozone -+s -t 1 -r 4 -s 8 -+c rsnperf'");
@@ -21454,6 +21560,7 @@ long long numrecs64, reclen;
 	cc.c_direct_flag = direct_flag;
 	cc.c_cpuutilflag = cpuutilflag;
 	cc.c_seq_mix = seq_mix;
+	cc.c_del_flag = del_flag;
 	cc.c_async_flag = async_flag;
 	cc.c_k_flag = k_flag;
 	cc.c_h_flag = h_flag;
@@ -21488,6 +21595,7 @@ long long numrecs64, reclen;
 	cc.c_restf = restf;
 	cc.c_mygen = mygen;
 	cc.c_Q_flag = Q_flag;
+	cc.c_inc_think = inc_think;
 	cc.c_L_flag = L_flag;
 	cc.c_xflag = xflag;
 	cc.c_w_traj_flag = w_traj_flag;
@@ -21711,6 +21819,7 @@ become_client()
 	sscanf(cnc->c_direct_flag,"%d",&cc.c_direct_flag);
 	sscanf(cnc->c_cpuutilflag,"%d",&cc.c_cpuutilflag);
 	sscanf(cnc->c_seq_mix,"%d",&cc.c_seq_mix);
+	sscanf(cnc->c_del_flag,"%d",&cc.c_del_flag);
 	sscanf(cnc->c_async_flag,"%d",&cc.c_async_flag);
 	sscanf(cnc->c_k_flag,"%d",&cc.c_k_flag);
 	sscanf(cnc->c_h_flag,"%d",&cc.c_h_flag);
@@ -21747,6 +21856,7 @@ become_client()
 	sscanf(cnc->c_mfflag,"%d",&cc.c_mfflag);
 	sscanf(cnc->c_unbuffered,"%d",&cc.c_unbuffered);
 	sscanf(cnc->c_Q_flag,"%d",&cc.c_Q_flag);
+	sscanf(cnc->c_inc_think,"%d",&cc.c_inc_think);
 	sscanf(cnc->c_L_flag,"%d",&cc.c_L_flag);
 	sscanf(cnc->c_xflag,"%d",&cc.c_xflag);
 	sscanf(cnc->c_include_flush,"%d",&cc.c_include_flush);
@@ -21795,6 +21905,7 @@ become_client()
 	direct_flag = cc.c_direct_flag;
 	cpuutilflag = cc.c_cpuutilflag;
 	seq_mix = cc.c_seq_mix;
+	del_flag = cc.c_del_flag;
 	async_flag = cc.c_async_flag;
 	k_flag = cc.c_k_flag;
 	h_flag = cc.c_h_flag;
@@ -21831,6 +21942,7 @@ become_client()
 	restf=cc.c_restf;
 	mygen=cc.c_mygen;
 	Q_flag = cc.c_Q_flag;
+	inc_think = cc.c_inc_think;
 	L_flag = cc.c_L_flag;
 	xflag = cc.c_xflag;
 	w_traj_flag = cc.c_w_traj_flag;
@@ -24613,7 +24725,10 @@ void * thread_fwrite_test( x)
         else
           setvbuf(stream,stdio_buf,_IOFBF,reclen);
 
-        buffer=mainbuffer;
+	if(use_thread)
+            buffer=nbuff;
+	else
+            buffer=mainbuffer;
         if(fetchon)
                 fetchit(buffer,reclen);
         if(verify || dedup || dedup_interior)
@@ -24719,6 +24834,7 @@ void * thread_fwrite_test( x)
                                  fd);
 #endif
                         perror("fwrite");
+			exit_code = 74;
                         signal_handler();
                 }
 		if(hist_summary)
@@ -24768,8 +24884,11 @@ void * thread_fwrite_test( x)
         /*******************************************************************/
         if(!stopped){
                 temp_time = time_so_far();
-                child_stat->throughput = ((temp_time - starttime1)-time_res)
-                        -compute_val;
+		if(inc_think)
+                	child_stat->throughput = ((temp_time - starttime1)-time_res);
+		else
+                	child_stat->throughput = ((temp_time - starttime1)-time_res)
+                        	-compute_val;
                 if(child_stat->throughput < (double).000001)
                 {
                         child_stat->throughput= time_res;
@@ -25046,7 +25165,10 @@ void * thread_fread_test( x)
         else
           setvbuf(stream,stdio_buf,_IOFBF,reclen);
 
-	buffer=mainbuffer;
+        if(use_thread)
+	    buffer=nbuff;
+	else
+	    buffer=mainbuffer;
 	if(fetchon)
 		fetchit(buffer,reclen);
 	compute_val=(double)0;
@@ -25209,8 +25331,11 @@ void * thread_fread_test( x)
 
         if(!stopped){
                 temp_time = time_so_far();
-                child_stat->throughput = ((temp_time - starttime1)-time_res)
-                        -compute_val;
+		if(inc_think)
+                	child_stat->throughput = ((temp_time - starttime1)-time_res);
+		else
+                	child_stat->throughput = ((temp_time - starttime1)-time_res)
+                        	-compute_val;
                 if(child_stat->throughput < (double).000001)
                 {
                         child_stat->throughput= time_res;

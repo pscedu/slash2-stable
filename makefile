@@ -1,5 +1,5 @@
 #
-# Version $Revision: 1.142 $
+# Version $Revision: 1.143 $
 #
 # The makefile for building all versions of iozone for all supported
 # platforms
@@ -905,7 +905,7 @@ fileop_macosx.o:	fileop.c
 	@echo ""
 	@echo "Building fileop for MAC OS X"
 	@echo ""
-	$(CC) -Wall -c -O -Dmacosx $(CFLAGS) fileop.c -o fileop_macosx.o
+	$(CC) -Wall -c -O -DIOZ_macosx $(CFLAGS) fileop.c -o fileop_macosx.o
 
 fileop_linux-ia64.o:	fileop.c
 	@echo ""
@@ -1364,9 +1364,9 @@ iozone_macosx.o:	iozone.c libbif.c
 	@echo ""
 	@echo "Build iozone for MacOSX"
 	@echo ""
-	$(CC) -c -O -Dunix -Dbsd4_2 -Dmacosx -DHAVE_ANSIC_C -DNO_THREADS \
+	$(CC) -c -O -Dunix -Dbsd4_2 -DIOZ_macosx -DHAVE_ANSIC_C -DNO_THREADS \
 		-DNAME='"macosx"' -DSHARED_MEM $(CFLAGS) iozone.c -o iozone_macosx.o
-	$(CC) -c -O -Dunix -Dbsd4_2 -Dmacosx -DHAVE_ANSIC_C -DNO_THREADS \
+	$(CC) -c -O -Dunix -Dbsd4_2 -DIOZ_macosx -DHAVE_ANSIC_C -DNO_THREADS \
 		-DSHARED_MEM $(CFLAGS) libbif.c -o libbif.o
 
 iozone_openbsd.o:	iozone.c libbif.c

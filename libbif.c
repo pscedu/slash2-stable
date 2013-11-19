@@ -27,7 +27,7 @@
 #include <string.h>
 #endif
 
-#if defined(linux) || defined(__DragonFly__) || defined(macosx)
+#if defined(linux) || defined(__DragonFly__) || defined(IOZ_macosx)
 #include <unistd.h>
 #include <stdlib.h>
 #endif
@@ -91,7 +91,7 @@ void do_label(int,char *,int,int);
 /*	  column							*/
 /************************************************************************/
 
-char libbif_version[] = "Libbif Version $Revision: 3.25 $";
+char libbif_version[] = "Libbif Version $Revision: 3.26 $";
 void do_eof(int );		/* Used internally */
 void do_header(int );		/* Used internally */
 int endian(void);
