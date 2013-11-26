@@ -16,6 +16,9 @@
 # -----------------------------------------------------------------------------
 # %PSC_END_COPYRIGHT%
 
+# TODO
+# - exclude typedump
+
 use Getopt::Std;
 use strict;
 use warnings;
