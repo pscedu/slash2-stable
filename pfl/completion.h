@@ -25,7 +25,7 @@
 
 struct psc_compl {
 	struct psc_waitq	pc_wq;
-	psc_spinlock_t		pc_lock;
+	struct psc_spinlock	pc_lock;
 	int			pc_done;
 	int			pc_rc;		/* optional "barrier" value */
 };
