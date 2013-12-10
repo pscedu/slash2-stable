@@ -96,7 +96,7 @@ struct psc_poolmgr {
 	int			  ppm_max;		/* max bound of #items */
 	int			  ppm_thres;		/* autoresize threshold */
 	int			  ppm_flags;		/* flags */
-	int			  ppm_entsize;		/* flags */
+	int			  ppm_entsize;		/* entry size */
 	uint64_t		  ppm_ngrow;		/* #allocs */
 	uint64_t		  ppm_nshrink;		/* #deallocs */
 	atomic_t		  ppm_nwaiters;		/* #thrs waiting for item */
