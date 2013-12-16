@@ -276,4 +276,8 @@ ifeq ($(filter $(realpath ${ROOTDIR})/compat/%,${CURDIR}),)
   DEFINES+=						-DHAVE_S3
  endif
 
+ ifdef PICKLE_HAVE_ATTR_XATTR_H
+  DEFINES+=						-DHAVE_ATTR_XATTR_H
+ endif
+
 endif
