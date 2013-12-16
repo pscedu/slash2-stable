@@ -567,7 +567,7 @@ printvar-%:
 	@echo ${$(patsubst printvar-%,%,$@)}
 
 cscope cs: recurse-cs
-	@if ${NOTEMPTY} "${_TSRCS}"; then				\
+	@if ${NOTEMPTY} "${_TSRCS}" || [ -n "${FORCE_TAGS}" ] ; then	\
 		${ECHORUN} cscope -Rbq $(addprefix -s,$(filter-out	\
 		    ${CURDIR},${_TSRC_PATH}));				\
 	fi
