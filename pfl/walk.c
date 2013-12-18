@@ -62,8 +62,9 @@ pfl_filewalk_stm2info(int mode)
 #ifdef HAVE_FTS
 
 int
-pfl_filewalk(const char *fn, int flags, int (*cbf)(const char *,
-    const struct pfl_stat *, int, int, void *), void *arg)
+pfl_filewalk(const char *fn, int flags, void *cmpf,
+    int (*cbf)(const char *, const struct pfl_stat *, int, int, void *),
+    void *arg)
 {
 	char * const pathv[] = { (char *)fn, NULL };
 	char buf[PATH_MAX];
@@ -76,7 +77,7 @@ pfl_filewalk(const char *fn, int flags, int (*cbf)(const char *,
 	if (flags & PFL_FILEWALKF_RECURSIVE) {
 		/* XXX security implications of FTS_NOCHDIR? */
 		fp = fts_open(pathv, FTS_COMFOLLOW | FTS_NOCHDIR |
-		    FTS_PHYSICAL, NULL);
+		    FTS_PHYSICAL, cmpf);
 		if (fp == NULL)
 			psc_fatal("fts_open %s", fn);
 		while ((f = fts_read(fp)) != NULL) {
@@ -200,10 +201,12 @@ pfl_filewalk_cb(const char *fn, const struct stat *stb, int flags,
 }
 
 int
-pfl_filewalk(const char *fn, int flags, int (*cbf)(const char *,
-    const struct pfl_stat *, int, int, void *), void *arg)
+pfl_filewalk(const char *fn, int flags,
+    int (*cmpf)(const FTSENT **, const FTSENT **),
+    int (*cbf)(const char *, const struct pfl_stat *, int, int, void *),
+    void *arg)
 {
-    	struct pfl_stat pst;
+	struct pfl_stat pst;
 	char buf[PATH_MAX];
 	struct stat stb;
 	int rc = 0;

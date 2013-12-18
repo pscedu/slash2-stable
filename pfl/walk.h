@@ -29,8 +29,9 @@
 
 struct stat;
 
-int pfl_filewalk(const char *, int, int (*)(const char *,
-	const struct pfl_stat *, int, int, void *), void *);
+int pfl_filewalk(const char *, int, void *cmp,
+	int (*)(const char *, const struct pfl_stat *, int, int, void *),
+	void *);
 
 #define PFL_FILEWALKF_VERBOSE	(1 << 0)
 #define PFL_FILEWALKF_RECURSIVE	(1 << 1)
