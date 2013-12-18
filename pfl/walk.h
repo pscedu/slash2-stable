@@ -29,7 +29,7 @@
 
 struct stat;
 
-int pfl_filewalk(const char *, int, void *cmp,
+int pfl_filewalk(const char *, int, void *,
 	int (*)(const char *, const struct pfl_stat *, int, int, void *),
 	void *);
 
