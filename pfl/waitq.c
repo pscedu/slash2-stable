@@ -243,4 +243,9 @@ psc_waitq_wakeall(__unusedx struct psc_waitq *q)
 {
 }
 
+void
+psc_waitq_destroy(__unusedx struct psc_waitq *q)
+{
+}
+
 #endif /* HAVE_LIBPTHREAD */
