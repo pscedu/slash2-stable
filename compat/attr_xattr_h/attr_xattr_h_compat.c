@@ -1,5 +1,6 @@
 /* $Id$ */
 
+#include <sys/types.h>
 #include <attr/xattr.h>
 
 #include <stdlib.h>
