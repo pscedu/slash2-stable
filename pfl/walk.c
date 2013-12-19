@@ -67,7 +67,7 @@ pfl_filewalk(const char *fn, int flags, void *cmpf,
     void *arg)
 {
 	char * const pathv[] = { (char *)fn, NULL };
-	char buf[PATH_MAX];
+	char buf[PATH_MAX], *path;
 	struct pfl_stat pst;
 	struct stat stb;
 	int rc = 0;
@@ -89,22 +89,24 @@ pfl_filewalk(const char *fn, int flags, void *cmpf,
 				break;
 			case FTS_F:
 			case FTS_D:
-				if (realpath(f->fts_path, buf) == NULL)
+				path = buf;
+				if (flags & PFL_FILEWALKF_RELPATH)
+					path = f->fts_path;
+				else if (realpath(f->fts_path, buf) == NULL) {
 					warn("%s", f->fts_path);
-				else {
-					if (flags & PFL_FILEWALKF_VERBOSE)
-						warnx("processing %s%s",
-						    buf, f->fts_info ==
-						    FTS_D ? "/" : "");
-					rc = cbf(buf, &pst, f->fts_info
-					    == FTS_D ? PFWT_D : PFWT_F,
-					    f->fts_level, arg);
-					if (rc == PFL_FILEWALK_RC_SKIP)
-						fts_set(fp, f, FTS_SKIP);
-					else if (rc) {
-						fts_close(fp);
-						return (rc);
-					}
+					break;
+				}
+				if (flags & PFL_FILEWALKF_VERBOSE)
+					warnx("processing %s%s", path,
+					    f->fts_info == FTS_D ?
+					    "/" : "");
+				rc = cbf(path, &pst, f->fts_info == FTS_D ?
+				    PFWT_D : PFWT_F, f->fts_level, arg);
+				if (rc == PFL_FILEWALK_RC_SKIP)
+					fts_set(fp, f, FTS_SKIP);
+				else if (rc) {
+					fts_close(fp);
+					return (rc);
 				}
 				break;
 			case FTS_SL:
