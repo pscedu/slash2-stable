@@ -45,6 +45,7 @@ size_t	strnlen(const char *, size_t);
 int	 pfl_asprintf(char **, const char *, ...);
 int	 pfl_dirname(const char *, char *);
 char	*pfl_strdup(const char *);
+char	*pfl_strndup(const char *, size_t);
 
 int	_psc_str_hashify(const char *, int);
 

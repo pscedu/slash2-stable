@@ -368,6 +368,16 @@ psc_calloc(size_t num, size_t size, int flags)
 	return (psc_alloc(size * num, flags));
 }
 
+char *
+pfl_strndup(const char *str, size_t len)
+{
+	char *p;
+
+	p = PSCALLOC(len);
+	strlcpy(p, str, len);
+	return (p);
+}
+
 /**
  * pfl_strdup - Duplicate a string, allocating memory as necessary for
  *	duplicate.
@@ -379,13 +389,7 @@ psc_calloc(size_t num, size_t size, int flags)
 char *
 pfl_strdup(const char *str)
 {
-	size_t len;
-	char *p;
-
-	len = strlen(str) + 1;
-	p = PSCALLOC(len);
-	strlcpy(p, str, len);
-	return (p);
+	return (pfl_strndup(str, strlen(str) + 1));
 }
 
 #if PFL_DEBUG > 1 && PFL_MEMGUARD_LINGERSZ
