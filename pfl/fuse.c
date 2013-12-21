@@ -218,7 +218,8 @@ pscfs_fuse_new(void)
 		return;
 	}
 
-	psclog_info("adding filesystem %i at mntpoint %s", pscfs_nfds, mntpoint);
+	psclog_info("adding filesystem %i at mntpoint %s", pscfs_nfds,
+	    mntpoint);
 
 	fsinfo[pscfs_nfds] = fs;
 	mountpoints[pscfs_nfds] = mntpoint;
@@ -1027,7 +1028,7 @@ pscfs_fuse_handle_write(fuse_req_t req, __unusedx fuse_ino_t ino,
 	struct pscfs_req *pfr;
 
 	GETPFR(pfr, req);
-	pfr->pfr_fuse_fi = fi; 
+	pfr->pfr_fuse_fi = fi;
 	RETIFNOTSUP(pfr, write, 0);
 	pscfs.pf_handle_write(pfr, buf, size, off, fi_getdata(fi));
 }
@@ -1038,7 +1039,7 @@ pscfs_fuse_handle_listxattr(fuse_req_t req, fuse_ino_t ino,
 {
 	struct pscfs_req *pfr;
 
-	GETPFR(pfr, req); 
+	GETPFR(pfr, req);
 	RETIFNOTSUP(pfr, listxattr, NULL, 0);
 	pscfs.pf_handle_listxattr(pfr, size, INUM_FUSE2PSCFS(ino));
 }
@@ -1057,7 +1058,7 @@ pscfs_fuse_handle_setxattr(fuse_req_t req, fuse_ino_t ino,
 {
 	struct pscfs_req *pfr;
 
-	GETPFR(pfr, req); 
+	GETPFR(pfr, req);
 	RETIFNOTSUP(pfr, setxattr);
 	pscfs.pf_handle_setxattr(pfr, name, value, size,
 	    INUM_FUSE2PSCFS(ino));
@@ -1075,7 +1076,7 @@ pscfs_fuse_handle_getxattr(fuse_req_t req, fuse_ino_t ino,
 {
 	struct pscfs_req *pfr;
 
-	GETPFR(pfr, req); 
+	GETPFR(pfr, req);
 	RETIFNOTSUP(pfr, getxattr, NULL, 0);
 	pscfs.pf_handle_getxattr(pfr, name, size, INUM_FUSE2PSCFS(ino));
 }
@@ -1086,7 +1087,7 @@ pscfs_fuse_handle_removexattr(fuse_req_t req, fuse_ino_t ino,
 {
 	struct pscfs_req *pfr;
 
-	GETPFR(pfr, req); 
+	GETPFR(pfr, req);
 	RETIFNOTSUP(pfr, removexattr);
 	pscfs.pf_handle_removexattr(pfr, name, INUM_FUSE2PSCFS(ino));
 }
@@ -1135,7 +1136,8 @@ pscfs_reply_create(struct pscfs_req *pfr, pscfs_inum_t inum,
 			e.attr.st_ino = e.ino;
 			e.generation = gen;
 		}
-		fuse_reply_create(pfr->pfr_fuse_req, &e, pfr->pfr_fuse_fi);
+		fuse_reply_create(pfr->pfr_fuse_req, &e,
+		    pfr->pfr_fuse_fi);
 	}
 	psc_pool_return(pscfs_req_pool, pfr);
 }
