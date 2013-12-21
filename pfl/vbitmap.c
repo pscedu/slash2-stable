@@ -445,6 +445,7 @@ psc_vbitmap_resize(struct psc_vbitmap *vb, size_t newsize)
 		start = psc_realloc(vb->vb_start, nsiz, 0);
 
 		/* special case for resizing NULL vbitmaps */
+		// XXX necessary?  we initialize new region just below
 		if (vb->vb_start == NULL)
 			memset(start, 0, nsiz);
 		vb->vb_start = start;
