@@ -82,10 +82,12 @@ usocklnd_conn_allocate()
         usock_conn_t        *conn;
         usock_pollrequest_t *pr;
 
+//	pool
         LIBCFS_ALLOC (pr, sizeof(*pr));
         if (pr == NULL)
                 return NULL;
         
+//	pool
         LIBCFS_ALLOC (conn, sizeof(*conn));
         if (conn == NULL) {
                 LIBCFS_FREE (pr, sizeof(*pr));
@@ -94,6 +96,7 @@ usocklnd_conn_allocate()
         memset(conn, 0, sizeof(*conn));
         conn->uc_preq = pr;
 
+//	pool
         LIBCFS_ALLOC (conn->uc_rx_hello,
                       offsetof(ksock_hello_msg_t,
                                kshm_ips[LNET_MAX_INTERFACES]));
@@ -733,6 +736,7 @@ usocklnd_create_peer(lnet_ni_t *ni, lnet_process_id_t id,
         usock_peer_t *peer;
         int           i;
 
+//	pool
         LIBCFS_ALLOC (peer, sizeof (*peer));
         if (peer == NULL)
                 return -ENOMEM;

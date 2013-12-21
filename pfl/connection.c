@@ -99,7 +99,7 @@ pscrpc_get_connection(lnet_process_id_t peer, lnet_nid_t self,
 	psclog_debug("Malloc'ing a new rpc_conn for %s",
 	    libcfs_id2str(peer));
 
-//	psc_pool_get();
+//	psc_pool_get(pool);
 	c = TRY_PSCALLOC(sizeof(*c));
 	if (c == NULL)
 		return (NULL);

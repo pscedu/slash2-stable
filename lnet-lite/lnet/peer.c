@@ -169,6 +169,7 @@ lnet_nid2peer_locked(lnet_peer_t **lpp, lnet_nid_t nid)
         
         LNET_UNLOCK();
 	
+//	pool
 	LIBCFS_ALLOC(lp, sizeof(*lp));
 	if (lp == NULL) {
                 *lpp = NULL;
