@@ -75,7 +75,6 @@ pscrpc_new_import(void)
 {
 	struct pscrpc_import *imp;
 
-//	pool
 	PSCRPC_OBD_ALLOC(imp, sizeof(*imp));
 	if (imp == NULL)
 		return NULL;
