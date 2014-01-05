@@ -107,7 +107,8 @@ psc_dynarray_reverse(struct psc_dynarray *pda)
 }
 
 /**
- * psc_dynarray_add - Add a new item to a dynamic array, resizing if necessary.
+ * psc_dynarray_add - Add a new item to a dynamic sized array, resizing
+ *	if necessary.
  * @pda: dynamic array to add to.
  * @item: element to add.
  * Returns -1 on failure or zero on success.
@@ -115,8 +116,10 @@ psc_dynarray_reverse(struct psc_dynarray *pda)
 int
 psc_dynarray_add(struct psc_dynarray *pda, void *item)
 {
-	if (psc_dynarray_ensurelen(pda, pda->pda_pos + 1) == -1)
+	if (pda->pda_pos + 1 > pda->pda_nalloc &&
+	    psc_dynarray_ensurelen(pda, 2 * (pda->pda_pos + 1)) == -1)
 		return (-1);
+
 	pda->pda_items[pda->pda_pos++] = item;
 	return (0);
 }
