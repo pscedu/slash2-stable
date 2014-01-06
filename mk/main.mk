@@ -217,10 +217,6 @@ ifneq ($(filter l,${MODULES}),)
   LDFLAGS+=	${LIBL}
 endif
 
-ifneq ($(filter m,${MODULES}),)
-  LDFLAGS+=	-lm
-endif
-
 ifneq ($(filter pfl,${MODULES}),)
   MODULES+=	pfl-hdrs str clock
   SRCS+=	${PFL_BASE}/alloc.c
@@ -230,11 +226,16 @@ ifneq ($(filter pfl,${MODULES}),)
   ifneq (${DEBUG},0)
     SRCS+=	${PFL_BASE}/dbgutil.c
     SRCS+=	${PFL_BASE}/printhex.c
+    MODULES+=	m
   endif
 
  ifneq ($(filter pthread,${MODULES}),)
    MODULES+=	numa
  endif
+endif
+
+ifneq ($(filter m,${MODULES}),)
+  LDFLAGS+=	-lm
 endif
 
 ifneq ($(filter pfl-hdrs,${MODULES}),)
