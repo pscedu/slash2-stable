@@ -78,7 +78,8 @@ _psc_hashtbl_init(struct psc_hashtbl *t, int flags,
 	INIT_PSC_LISTENTRY(&t->pht_lentry);
 	INIT_SPINLOCK(&t->pht_lock);
 	t->pht_nbuckets = nbuckets;
-	t->pht_buckets = psc_alloc(nbuckets * sizeof(*t->pht_buckets), pafl);
+	t->pht_buckets = psc_alloc(nbuckets * sizeof(*t->pht_buckets),
+	    pafl);
 	t->pht_flags = flags;
 	t->pht_idoff = idoff;
 	t->pht_hentoff = hentoff;
@@ -87,6 +88,18 @@ _psc_hashtbl_init(struct psc_hashtbl *t, int flags,
 	va_start(ap, fmt);
 	vsnprintf(t->pht_name, sizeof(t->pht_name), fmt, ap);
 	va_end(ap);
+
+#if DEBUG > 0
+ {
+	double nearest, diff;
+
+	nearest = log2(nbuckets);
+	diff = fabs(nearest - (int)nearest);
+	if (nbuckets % 2 || diff > .75 || diff < .25)
+		psclog_info("%s nbuckets %d should be a large prime not too "
+		    "close to a power of two (2**i-1)", t->pht_name, nbuckets);
+ }
+#endif
 
 	for (i = 0, b = t->pht_buckets; i < nbuckets; i++, b++) {
 		INIT_PSCLIST_HEAD(&b->phb_listhd);
