@@ -57,6 +57,10 @@ _psc_str_hashify(const char *s, int len)
 	return (h);
 }
 
+#if PFL_DEBUG > 0
+# include <math.h>
+#endif
+
 void
 _psc_hashtbl_init(struct psc_hashtbl *t, int flags,
     ptrdiff_t idoff, ptrdiff_t hentoff, int nbuckets,
@@ -89,15 +93,16 @@ _psc_hashtbl_init(struct psc_hashtbl *t, int flags,
 	vsnprintf(t->pht_name, sizeof(t->pht_name), fmt, ap);
 	va_end(ap);
 
-#if DEBUG > 0
+#if PFL_DEBUG > 0
  {
 	double nearest, diff;
 
 	nearest = log2(nbuckets);
 	diff = fabs(nearest - (int)nearest);
-	if (nbuckets % 2 || diff > .75 || diff < .25)
-		psclog_info("%s nbuckets %d should be a large prime not too "
+	if (nbuckets % 2 == 0 || diff > .75 || diff < .25)
+		psclog_warnx("%s nbuckets %d should be a large prime not too "
 		    "close to a power of two (2**i-1)", t->pht_name, nbuckets);
+
  }
 #endif
 
