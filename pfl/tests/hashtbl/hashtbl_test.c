@@ -57,7 +57,7 @@ main(int argc, char *argv[])
 		usage();
 
 	psc_hashtbl_init(&t, 0, struct item,
-	    id, hentry, 127, NULL, "t");
+	    id, hentry, 97, NULL, "t");
 
 	i = PSCALLOC(sizeof(*i));
 	psc_hashent_init(&t, i);
