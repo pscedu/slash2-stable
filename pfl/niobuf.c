@@ -772,6 +772,8 @@ _pscrpc_req_finished(struct pscrpc_request *rq, int locked)
 void
 pscrpc_free_bulk(struct pscrpc_bulk_desc *desc)
 {
+	spinlock(&desc->bd_lock);
+
 	psc_assert(desc);
 	psc_assert(desc->bd_iov_count != LI_POISON);	/* not freed already */
 	psc_assert(!desc->bd_network_rw);		/* network hands off or */
