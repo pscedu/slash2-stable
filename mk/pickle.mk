@@ -280,4 +280,10 @@ ifeq ($(filter $(realpath ${ROOTDIR})/compat/%,${CURDIR}),)
   DEFINES+=						-DHAVE_ATTR_XATTR_H
  endif
 
+ ifdef PICKLE_HAVE_STRVIS
+  DEFINES+=						-DHAVE_STRVIS
+ else
+  STRVIS_SRCS+=						${PFL_BASE}/compat/strvis.c
+ endif
+
 endif

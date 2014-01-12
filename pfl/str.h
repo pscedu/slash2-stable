@@ -24,6 +24,12 @@
 
 #include <string.h>
 
+#ifndef HAVE_STRVIS
+# include "compat/vis.h"
+#else
+# include <vis.h>
+#endif
+
 struct pfl_strbuf {
 	int	 psb_pos;
 	int	 psb_max;
