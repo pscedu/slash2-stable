@@ -396,7 +396,7 @@ _psclogv(const struct pfl_callerinfo *pci, enum psclog_level level,
 	len = strlen(buf);
 	rc = vsnprintf(buf + len, sizeof(buf) - len, fmt, ap);
 	if (rc != -1)
-		len += rc;
+		len = strlen(buf);
 	/* trim newline if present, since we add our own */
 	if (len && buf[len - 1] == '\n')
 		buf[--len] = '\0';
