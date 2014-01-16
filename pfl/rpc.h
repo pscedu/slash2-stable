@@ -439,6 +439,9 @@ struct pscrpc_service {
 	void (*srv_done)(struct psc_thread *);
 };
 
+#define SVC_LOCK(svc)	spinlock(&(svc)->srv_lock)
+#define SVC_ULOCK(svc)	freelock(&(svc)->srv_lock)
+
 struct pscrpc_request_buffer_desc {
 	int				 rqbd_refcount;
 	char				*rqbd_buffer;

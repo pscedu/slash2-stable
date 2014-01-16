@@ -1623,7 +1623,7 @@ psc_ctlrep_getrpcsvc(int fd, struct psc_ctlmsghdr *mh, void *m)
 
 	spinlock(&pscrpc_all_services_lock);
 	psclist_for_each_entry(s, &pscrpc_all_services, srv_lentry) {
-		spinlock(&s->srv_lock);
+		SVC_LOCK(s);
 		strlcpy(pcrs->pcrs_name, s->srv_name,
 		    sizeof(pcrs->pcrs_name));
 		pcrs->pcrs_rqptl = s->srv_req_portal;
@@ -1640,7 +1640,7 @@ psc_ctlrep_getrpcsvc(int fd, struct psc_ctlmsghdr *mh, void *m)
 		pcrs->pcrs_nwq = psc_waitq_nwaiters(&s->srv_waitq);
 		if (s->srv_count_peer_qlens)
 			pcrs->pcrs_flags |= PSCRPC_SVCF_COUNT_PEER_QLENS;
-		freelock(&s->srv_lock);
+		SVC_ULOCK(s);
 
 		rc = psc_ctlmsg_sendv(fd, mh, pcrs);
 		if (!rc)

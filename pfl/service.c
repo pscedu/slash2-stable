@@ -28,16 +28,16 @@
 #include <inttypes.h>
 #include <stdio.h>
 
+#include "pfl/alloc.h"
+#include "pfl/atomic.h"
 #include "pfl/cdefs.h"
 #include "pfl/export.h"
 #include "pfl/list.h"
+#include "pfl/lock.h"
+#include "pfl/log.h"
 #include "pfl/rpc.h"
 #include "pfl/rpclog.h"
 #include "pfl/service.h"
-#include "pfl/alloc.h"
-#include "pfl/atomic.h"
-#include "pfl/lock.h"
-#include "pfl/log.h"
 #include "pfl/waitq.h"
 
 static int test_req_buffer_pressure;
@@ -91,10 +91,10 @@ pscrpc_alloc_rqbd(struct pscrpc_service *svc)
 		return (NULL);
 	}
 
-	spinlock(&svc->srv_lock);
+	SVC_LOCK(svc);
 	psclist_add(&rqbd->rqbd_lentry, &svc->srv_idle_rqbds);
 	svc->srv_nbufs++;
-	freelock(&svc->srv_lock);
+	SVC_ULOCK(svc);
 
 	return (rqbd);
 }
@@ -107,10 +107,10 @@ pscrpc_free_rqbd(struct pscrpc_request_buffer_desc *rqbd)
 	LASSERT(rqbd->rqbd_refcount == 0);
 	LASSERT(psc_listhd_empty(&rqbd->rqbd_reqs));
 
-	spinlock(&svc->srv_lock);
+	SVC_LOCK(svc);
 	psclist_del(&rqbd->rqbd_lentry, psc_lentry_hd(&rqbd->rqbd_lentry));
 	svc->srv_nbufs--;
-	freelock(&svc->srv_lock);
+	SVC_ULOCK(svc);
 
 	pscrpc_free_request_buffer(rqbd->rqbd_buffer, svc->srv_buf_size);
 
@@ -130,10 +130,10 @@ pscrpc_server_post_idle_rqbds(struct pscrpc_service *svc)
 	int rc, posted = 0;
 
 	for (;;) {
-		spinlock(&svc->srv_lock);
+		SVC_LOCK(svc);
 
 		if (psc_listhd_empty(&svc->srv_idle_rqbds)) {
-			freelock(&svc->srv_lock);
+			SVC_ULOCK(svc);
 			return (posted);
 		}
 
@@ -145,7 +145,7 @@ pscrpc_server_post_idle_rqbds(struct pscrpc_service *svc)
 		svc->srv_nrqbd_receiving++;
 		psclist_add(&rqbd->rqbd_lentry, &svc->srv_active_rqbds);
 
-		freelock(&svc->srv_lock);
+		SVC_ULOCK(svc);
 
 		psc_assert(rqbd->rqbd_buffer);
 		rc = pscrpc_register_rqbd(rqbd);
@@ -155,7 +155,7 @@ pscrpc_server_post_idle_rqbds(struct pscrpc_service *svc)
 		posted = 1;
 	}
 
-	spinlock(&svc->srv_lock);
+	SVC_LOCK(svc);
 
 	svc->srv_nrqbd_receiving--;
 	psclist_del(&rqbd->rqbd_lentry, &svc->srv_active_rqbds);
@@ -166,7 +166,7 @@ pscrpc_server_post_idle_rqbds(struct pscrpc_service *svc)
 	 * LNET won't drop requests because we set the portal lazy!
 	 */
 
-	freelock(&svc->srv_lock);
+	SVC_ULOCK(svc);
 
 	return (-1);
 }
@@ -205,7 +205,7 @@ pscrpc_server_free_request(struct pscrpc_request *req)
 	struct pscrpc_request *nxt;
 	int refcount;
 
-	spinlock(&svc->srv_lock);
+	SVC_LOCK(svc);
 
 	svc->srv_n_active_reqs--;
 	psclist_add(&req->rq_lentry, &rqbd->rqbd_reqs);
@@ -239,13 +239,13 @@ pscrpc_server_free_request(struct pscrpc_request *req)
 				    &svc->srv_request_history);
 			}
 
-			freelock(&svc->srv_lock);
+			SVC_ULOCK(svc);
 
 			psclist_for_each_entry_safe(req, nxt,
 			    &rqbd->rqbd_reqs, rq_lentry)
 				_pscrpc_server_free_request(req);
 
-			spinlock(&svc->srv_lock);
+			SVC_LOCK(svc);
 
 			/* schedule request buffer for re-use.
 			 * NB I can only do this after I've disposed of their
@@ -260,7 +260,7 @@ pscrpc_server_free_request(struct pscrpc_request *req)
 		_pscrpc_server_free_request(req);
 	}
 
-	freelock(&svc->srv_lock);
+	SVC_ULOCK(svc);
 }
 
 static int
@@ -275,16 +275,17 @@ pscrpc_server_handle_request(struct pscrpc_service *svc,
 
 	LASSERT(svc);
 
-	spinlock(&svc->srv_lock);
+	SVC_LOCK(svc);
 
 	if (psc_listhd_empty(&svc->srv_request_queue) ||
 	    (svc->srv_n_difficult_replies != 0 &&
 	     svc->srv_n_active_reqs >= (svc->srv_nthreads - 1))) {
-		/* If all the other threads are handling requests, I must
+		/*
+		 * If all the other threads are handling requests, I must
 		 * remain free to handle any 'difficult' reply that might
 		 * block them
 		 */
-		freelock(&svc->srv_lock);
+		SVC_ULOCK(svc);
 		return (0);
 	}
 
@@ -295,7 +296,7 @@ pscrpc_server_handle_request(struct pscrpc_service *svc,
 	svc->srv_n_queued_reqs--;
 	svc->srv_n_active_reqs++;
 
-	freelock(&svc->srv_lock);
+	SVC_ULOCK(svc);
 
 	do_gettimeofday(&work_start);
 	timediff = cfs_timeval_sub(&work_start,
@@ -482,9 +483,9 @@ pscrpc_server_handle_reply(struct pscrpc_service *svc)
 	int                        nlocks;
 	int                        been_handled;
 
-	spinlock(&svc->srv_lock);
+	SVC_LOCK(svc);
 	if (psc_listhd_empty(&svc->srv_reply_queue)) {
-		freelock(&svc->srv_lock);
+		SVC_ULOCK(svc);
 		return (0);
 	}
 
@@ -500,7 +501,7 @@ pscrpc_server_handle_reply(struct pscrpc_service *svc)
 	psclist_del(&rs->rs_list_entry);
 
 	/* Disengage from notifiers carefully (lock order - irqrestore below!)*/
-	freelock(&svc->srv_lock);
+	SVC_ULOCK(svc);
 
 	spinlock(&obd->obd_uncommitted_replies_lock);
 	/* Noop if removed already */
@@ -512,7 +513,7 @@ pscrpc_server_handle_reply(struct pscrpc_service *svc)
 	psclist_del_init(&rs->rs_exp_list);
 	freelock(&exp->exp_lock);
 
-	spinlock(&svc->srv_lock);
+	SVC_LOCK(svc);
 
 	been_handled = rs->rs_handled;
 	rs->rs_handled = 1;
@@ -533,7 +534,7 @@ pscrpc_server_handle_reply(struct pscrpc_service *svc)
 
 	if ((!been_handled && rs->rs_on_net) ||
 	    nlocks > 0) {
-		freelock(&svc->srv_lock);
+		SVC_ULOCK(svc);
 
 		if (!been_handled && rs->rs_on_net) {
 			LNetMDUnlink(rs->rs_md_h);
@@ -545,7 +546,7 @@ pscrpc_server_handle_reply(struct pscrpc_service *svc)
 			ldlm_lock_decref(&rs->rs_locks[nlocks],
 				rs->rs_modes[nlocks]);
 
-		spinlock(&svc->srv_lock);
+		SVC_LOCK(svc);
 	}
 
 	rs->rs_scheduled = 0;
@@ -553,7 +554,7 @@ pscrpc_server_handle_reply(struct pscrpc_service *svc)
 	if (!rs->rs_on_net) {
 		/* Off the net */
 		svc->srv_n_difficult_replies--;
-		freelock(&svc->srv_lock);
+		SVC_ULOCK(svc);
 
 		pscrpc_export_put(exp);
 		rs->rs_export = NULL;
@@ -563,7 +564,7 @@ pscrpc_server_handle_reply(struct pscrpc_service *svc)
 	}
 
 	/* still on the net; callback will schedule */
-	freelock(&svc->srv_lock);
+	SVC_ULOCK(svc);
 #endif
 	return (1);
 }
@@ -655,7 +656,7 @@ pscrpcthr_waitevent(struct psc_thread *thr,
 {
 	int rc;
 
-	spinlock(&svc->srv_lock);
+	SVC_LOCK(svc);
 	rc = (!pscthr_run(thr) &&
 	     svc->srv_n_difficult_replies == 0) ||
 	    (!psc_listhd_empty(&svc->srv_idle_rqbds) &&
@@ -665,7 +666,7 @@ pscrpcthr_waitevent(struct psc_thread *thr,
 	     (svc->srv_n_difficult_replies == 0 ||
 	      svc->srv_n_active_reqs <
 	      (svc->srv_nthreads - 1)));
-	freelock(&svc->srv_lock);
+	SVC_ULOCK(svc);
 	return (rc);
 }
 
@@ -692,11 +693,11 @@ pscrpcthr_main(struct psc_thread *thr)
 	PSCRPC_OBD_ALLOC(rs, svc->srv_max_reply_size);
 	INIT_PSC_LISTENTRY(&rs->rs_list_entry);
 
-	spinlock(&svc->srv_lock);
+	SVC_LOCK(svc);
 	svc->srv_nthreads++;
 	psclist_add(&rs->rs_list_entry, &svc->srv_free_rs_list);
 	psc_waitq_wakeall(&svc->srv_free_rs_waitq);
-	freelock(&svc->srv_lock);
+	SVC_ULOCK(svc);
 
 	CDEBUG(D_NET, "service thread started");
 
@@ -743,18 +744,20 @@ pscrpcthr_main(struct psc_thread *thr)
 		/* only handle requests if there are no difficult replies
 		 * outstanding, or I'm not the last thread handling
 		 * requests */
-		if (!psc_listhd_empty_locked(&svc->srv_lock, &svc->srv_request_queue) &&
+		if (!psc_listhd_empty_locked(&svc->srv_lock,
+		    &svc->srv_request_queue) &&
 		    (svc->srv_n_difficult_replies == 0 ||
 		     svc->srv_n_active_reqs < (svc->srv_nthreads - 1)))
 			pscrpc_server_handle_request(svc, thr);
 
-		if (!psc_listhd_empty_locked(&svc->srv_lock, &svc->srv_idle_rqbds) &&
+		if (!psc_listhd_empty_locked(&svc->srv_lock,
+		    &svc->srv_idle_rqbds) &&
 		    pscrpc_server_post_idle_rqbds(svc) < 0) {
 			/* I just failed to repost request buffers.  Wait
 			 * for a timeout (unless something else happens)
 			 * before I try again */
 			svc->srv_rqbd_timeout = 10;
-			CDEBUG(D_RPCTRACE,"Posted buffers: %d\n",
+			CDEBUG(D_RPCTRACE, "Posted buffers: %d",
 			       svc->srv_nrqbd_receiving);
 		}
 	}
@@ -771,7 +774,7 @@ pscrpcthr_main(struct psc_thread *thr)
  out:
 	CDEBUG(D_NET, "service thread exiting: rc %d", rc);
 
-	spinlock(&svc->srv_lock);
+	SVC_LOCK(svc);
 	svc->srv_nthreads--;			/* must know immediately */
 #if 0 //ptlrpc
 	thr->t_id = rc;
@@ -779,7 +782,7 @@ pscrpcthr_main(struct psc_thread *thr)
 
 	psc_waitq_wakeall(&thr->t_ctl_waitq);
 #endif
-	freelock(&svc->srv_lock);
+	SVC_ULOCK(svc);
 }
 
 #if 0
@@ -788,17 +791,17 @@ pscrpc_stop_thread(struct pscrpc_service *svc, struct pscrpc_thread *thread)
 {
 	struct l_wait_info lwi = { 0 };
 
-	spinlock(&svc->srv_lock);
+	SVC_LOCK(svc);
 	thread->t_flags = SVC_STOPPING;
-	freelock(&svc->srv_lock);
+	SVC_ULOCK(svc);
 
 	wake_up_all(&svc->srv_waitq);
 	l_wait_event(thread->t_ctl_waitq, (thread->t_flags & SVC_STOPPED),
 		     &lwi);
 
-	spinlock(&svc->srv_lock);
+	SVC_LOCK(svc);
 	psclist_del(&thread->t_link);
-	freelock(&svc->srv_lock);
+	SVC_ULOCK(svc);
 
 	PSCRPC_OBD_FREE(thread, sizeof(*thread));
 }
@@ -807,17 +810,16 @@ void pscrpc_stop_all_threads(struct pscrpc_service *svc)
 {
 	struct pscrpc_thread *thread;
 
-	spinlock(&svc->srv_lock);
+	SVC_LOCK(svc);
 	while (!psc_listhd_empty(&svc->srv_threads)) {
 		thread = psc_lentry_obj(svc->srv_threads.next,
-			struct pscrpc_thread, t_link);
+		    struct pscrpc_thread, t_link);
 
-		freelock(&svc->srv_lock);
+		SVC_ULOCK(svc);
 		pscrpc_stop_thread(svc, thread);
-		spinlock(&svc->srv_lock);
+		SVC_LOCK(svc);
 	}
-
-	freelock(&svc->srv_lock);
+	SVC_ULOCK(svc);
 }
 #endif
 
@@ -855,9 +857,9 @@ pscrpc_unregister_service(struct pscrpc_service *svc)
 	/* Wait for the network to release any buffers it's currently
 	 * filling */
 	for (;;) {
-		spinlock(&svc->srv_lock);
+		SVC_LOCK(svc);
 		rc = svc->srv_nrqbd_receiving;
-		freelock(&svc->srv_lock);
+		SVC_ULOCK(svc);
 
 		if (rc == 0)
 			break;
@@ -874,14 +876,14 @@ pscrpc_unregister_service(struct pscrpc_service *svc)
 	}
 
 	/* schedule all outstanding replies to terminate them */
-	spinlock(&svc->srv_lock);
+	SVC_LOCK(svc);
 	while (!psc_listhd_empty(&svc->srv_active_replies)) {
 		rs = psc_listhd_first_obj(&svc->srv_active_replies,
 			struct pscrpc_reply_state, rs_list_entry);
 		CWARN("Active reply found?? %p", rs);
 		//pscrpc_schedule_difficult_reply(rs);
 	}
-	freelock(&svc->srv_lock);
+	SVC_ULOCK(svc);
 
 	/* purge the request queue.  NB No new replies (rqbds all unlinked)
 	 * and no service threads, so I'm the only thread noodling the
@@ -1055,7 +1057,7 @@ pscrpcsvh_addthr(struct pscrpc_svc_handle *svh)
 	struct psc_thread *thr;
 
 	svc = svh->svh_service;
-	spinlock(&svc->srv_lock);
+	SVC_LOCK(svc);
 	thr = pscthr_init(svh->svh_type, 0, pscrpcthr_main, NULL,
 	    svh->svh_thrsiz, "%sthr%02d", svh->svh_svc_name,
 	    svh->svh_nthreads);
@@ -1069,7 +1071,7 @@ pscrpcsvh_addthr(struct pscrpc_svc_handle *svh)
 		    &svh->svh_service->srv_threads);
 		svh->svh_nthreads++;
 	}
-	freelock(&svc->srv_lock);
+	SVC_ULOCK(svc);
 	if (thr == NULL)
 		return (-1);
 	pscthr_setready(thr);
@@ -1085,7 +1087,7 @@ pscrpcsvh_delthr(struct pscrpc_svc_handle *svh)
 
 	rc = 0;
 	svc = svh->svh_service;
-	spinlock(&svc->srv_lock);
+	SVC_LOCK(svc);
 	if (svc->srv_nthreads == 0)
 		rc = -1;
 	else {
@@ -1094,7 +1096,7 @@ pscrpcsvh_delthr(struct pscrpc_svc_handle *svh)
 		    struct pscrpc_thread, prt_lentry);
 		prt->prt_alive = 0;
 	}
-	freelock(&svc->srv_lock);
+	SVC_ULOCK(svc);
 	return (rc);
 }
 

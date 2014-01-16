@@ -677,11 +677,11 @@ pscrpc_free_reply_state(struct pscrpc_reply_state *rs)
 	if (unlikely(rs->rs_prealloc)) {
 		struct ptlrpc_service *svc = rs->rs_service;
 
-		spinlock(&svc->srv_lock);
+		SVC_LOCK(svc);
 		psclist_add(&rs->rs_list_entry,
-			 &svc->srv_free_rs_list);
+		    &svc->srv_free_rs_list);
 		psc_waitq_wakeall(&svc->srv_free_rs_waitq);
-		freelock(&svc->srv_lock);
+		SVC_ULOCK(svc);
 	}
 #endif
 	PSCRPC_OBD_FREE(rs, rs->rs_size);

@@ -156,7 +156,7 @@ pscrpc_request_in_callback(lnet_event_t *ev)
 	//req->rq_uid = ev->uid;
 #endif
 
-	spinlock(&svc->srv_lock);
+	SVC_LOCK(svc);
 
 	req->rq_history_seq = svc->srv_request_seq++;
 	psclist_add_tail(&req->rq_history_lentry, &svc->srv_request_history);
@@ -229,7 +229,7 @@ pscrpc_request_in_callback(lnet_event_t *ev)
 	 * has been queued and we unlock, so do the wake now... */
 	psc_waitq_wakeall(&svc->srv_waitq);
 
-	freelock(&svc->srv_lock);
+	SVC_ULOCK(svc);
 }
 
 /*
@@ -353,14 +353,14 @@ pscrpc_reply_out_callback(lnet_event_t *ev)
 	if (ev->unlinked) {
 		/* Last network callback.  The net's ref on 'rs' stays put
 		 * until pscrpc_server_handle_reply() is done with it */
-		spinlock(&svc->srv_lock);
+		SVC_LOCK(svc);
 		rs->rs_on_net = 0;
 #if 0
 		// not sure if we're going to need these
 		//  pauln - 05082007
 		pscrpc_schedule_difficult_reply(rs);
 #endif
-		freelock(&svc->srv_lock);
+		SVC_ULOCK(svc);
 	}
 }
 
