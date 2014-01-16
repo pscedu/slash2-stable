@@ -8,6 +8,7 @@ name=$prog
 ud=/usr/local
 dir=/local
 mygdb=
+mygprof=
 mystrace=
 verbose=0
 prof=
@@ -104,9 +105,16 @@ mygdb()
 		echo r
 	} > $tmpfn
 	export GDBHISTFILE=c/$prog.$id.gdbhist
-	# gdb hack
-	export SHELL=/bin/bash
+
+	# hack for some systems
+	[ -e /bin/bash ] && export SHELL=/bin/bash
+
 	exec gdb -f -q -x $tmpfn $prog
+}
+
+mygprof()
+{
+	exec gprof "$@"
 }
 
 postproc()
