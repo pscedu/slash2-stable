@@ -40,6 +40,11 @@
 
 #include <lnet/lib-lnet.h>
 
+#include "pfl/pool.h"
+
+struct psc_poolmaster    lnet_peer_poolmaster;
+struct psc_poolmgr      *lnet_peer_pool;
+
 int
 lnet_create_peer_table(void)
 {
