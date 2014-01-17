@@ -99,6 +99,7 @@
 #include "pfl/waitq.h"
 #include "pfl/walk.h"
 #include "pfl/wndmap.h"
+#include "pfl/workthr.h"
 /* end includes */
 
 #include "lnet/socklnd.h"
@@ -214,6 +215,8 @@ main(int argc, char *argv[])
 	PRTYPE(struct pfl_stat);
 	PRTYPE(struct pfl_strbuf);
 	PRTYPE(struct pfl_timespec);
+	PRTYPE(struct pfl_wk_thread);
+	PRTYPE(struct pfl_workrq);
 	PRTYPE(struct psc_atomic16);
 	PRTYPE(struct psc_atomic32);
 	PRTYPE(struct psc_atomic64);
