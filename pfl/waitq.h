@@ -57,7 +57,7 @@ struct psc_waitq {
  * @lk: optional lock to prevent race condition in waiting.
  */
 #define psc_waitq_wait(wq, lk)		 _psc_waitq_waitrel((wq), (lk), NULL, NULL)
-#define psc_waitq_wait_mutex(wq, mx)	 _psc_waitq_waitrel((wq), NULL, (mx), NULL)
+#define psc_waitq_wait_mutex(wq, mtx)	 _psc_waitq_waitrel((wq), NULL, (mtx), NULL)
 
 #define psc_waitq_waitrel_s(wq, lk, n)	 _psc_waitq_waitrelv((wq), (lk), (n), 0L)
 #define psc_waitq_waitrel_us(wq, lk, n)	 _psc_waitq_waitrelv((wq), (lk), 0L, (n) * 1000L)
@@ -65,13 +65,15 @@ struct psc_waitq {
 #define psc_waitq_waitrel_tv(wq, lk, tv) _psc_waitq_waitrelv((wq), (lk), (tv)->tv_sec, (tv)->tv_usec * 1000L)
 #define psc_waitq_waitrel(wq, lk, tv)	 _psc_waitq_waitrel((wq), (lk), NULL, (tv))
 
+#define psc_waitq_waitabs(wq, lk, ts)	 _psc_waitq_waitabs((wq), (lk), NULL, (ts))
+#define psc_waitq_waitabs_mutex(wq, mtx, ts) \
+					 _psc_waitq_waitabs((wq), NULL, (mtx), (ts))
+
 /**
  * psc_waitq_nwaiters - Determine number of threads waiting on a waitq.
  * @wq: wait queue.
  */
 #define psc_waitq_nwaiters(wq)		atomic_read(&(wq)->wq_nwaiters)
-
-#define psc_waitq_timedwait(wq, lk, ts)	psc_waitq_waitabs((wq), (lk), (ts))
 
 void	 psc_waitq_init(struct psc_waitq *);
 void	 psc_waitq_destroy(struct psc_waitq *);
@@ -81,7 +83,7 @@ int	_psc_waitq_waitrel(struct psc_waitq *, psc_spinlock_t *,
 	    struct pfl_mutex *, const struct timespec *);
 int	_psc_waitq_waitrelv(struct psc_waitq *, psc_spinlock_t *,
 	    long, long);
-int	 psc_waitq_waitabs(struct psc_waitq *, psc_spinlock_t *,
-	    const struct timespec *);
+int	_psc_waitq_waitabs(struct psc_waitq *, psc_spinlock_t *,
+	    struct pfl_mutex *, const struct timespec *);
 
 #endif /* _PFL_WAITQ_H_ */

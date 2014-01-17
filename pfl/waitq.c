@@ -82,8 +82,8 @@ psc_waitq_destroy(struct psc_waitq *q)
  *	the timing calculations accurate.
  */
 int
-psc_waitq_waitabs(struct psc_waitq *q, psc_spinlock_t *k,
-    const struct timespec *abstime)
+_psc_waitq_waitabs(struct psc_waitq *q, psc_spinlock_t *k,
+    struct pfl_mutex *mutex, const struct timespec *abstime)
 {
 	int rc;
 
@@ -92,6 +92,8 @@ psc_waitq_waitabs(struct psc_waitq *q, psc_spinlock_t *k,
 
 	if (k)
 		freelock(k);
+	if (mutex)
+		psc_mutex_unlock(mutex);
 
 	rc = pthread_cond_timedwait(&q->wq_cond, &q->wq_mut.pm_mutex,
 	    abstime);
@@ -99,8 +101,9 @@ psc_waitq_waitabs(struct psc_waitq *q, psc_spinlock_t *k,
 		psc_fatalx("pthread_cond_timedwait: %s", strerror(rc));
 
 	psc_mutex_unlock(&q->wq_mut);
-	/* Bug 91: Decrease waiters after releasing the lock to guarantee
-	 *    wq_mut remains intact.
+	/*
+	 * BZ#91: decrease waiters after releasing the lock to guarantee
+	 * wq_mut remains intact.
 	 */
 	atomic_dec(&q->wq_nwaiters);
 
@@ -226,8 +229,8 @@ _psc_waitq_waitrelv(__unusedx struct psc_waitq *wq,
 }
 
 int
-psc_waitq_waitabs(__unusedx struct psc_waitq *q,
-    __unusedx psc_spinlock_t *k,
+_psc_waitq_waitabs(__unusedx struct psc_waitq *q,
+    __unusedx psc_spinlock_t *k, __unusedx struct pfl_mutex *mutex,
     __unusedx const struct timespec *abstime)
 {
 	psc_fatalx("wait will sleep forever, single threaded");
