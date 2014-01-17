@@ -54,6 +54,8 @@ _LEXINTM=		$(patsubst %.l,%.c,$(addprefix ${OBJDIR}/,$(notdir $(filter %.l,${_TS
 _YACCINTM=		$(patsubst %.y,%.c,$(addprefix ${OBJDIR}/,$(notdir $(filter %.y,${_TSRCS}))))
 _C_SRCS=		$(filter %.c,${_TSRCS}) ${_YACCINTM} ${_LEXINTM}
 
+DOCGEN=			$(patsubst %.xdc,%.dvi,${DOC})
+
 LNET_SOCKLND_SRCS+=	${LNET_BASE}/ulnds/socklnd/conn.c
 LNET_SOCKLND_SRCS+=	${LNET_BASE}/ulnds/socklnd/handlers.c
 LNET_SOCKLND_SRCS+=	${LNET_BASE}/ulnds/socklnd/poll.c
@@ -104,7 +106,7 @@ _EXCLUDES=		$(filter-out -I%,${EXCLUDES}) $(patsubst %,-I%/,$(foreach \
 			dir,$(patsubst -I%,%,$(filter -I%,${EXCLUDES})), $(realpath ${dir})))
 
 CFLAGS+=		${DEFINES} ${_TINCLUDES}
-TARGET?=		$(sort ${PROG} ${LIBRARY} ${TEST})
+TARGET?=		$(sort ${PROG} ${LIBRARY} ${TEST} ${DOCGEN})
 PROG?=			${TEST}
 
 EXTRACT_INCLUDES=	perl -ne 'print $$& while /-I\S+\s?/gc'
@@ -430,6 +432,12 @@ ifdef LIBRARY
 ${LIBRARY}: ${OBJS}
 	${AR} ${ARFLAGS} $@ $(sort ${OBJS})
 endif
+
+${OBJDIR}/$(notdir %.tex) : %.xdc
+	${XSLTPROC} -o $@ ${XDC2TEX_XSL} $<
+
+%.dvi : ${OBJDIR}/$(notdir %.tex)
+	${TEX} -output-directory=. $<
 
 recurse-%:
 	@if [ $(words ${SUBDIRS}) -ne					\
