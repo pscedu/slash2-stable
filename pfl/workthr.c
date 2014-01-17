@@ -26,9 +26,9 @@
 #include "pfl/listcache.h"
 #include "pfl/pool.h"
 #include "pfl/thread.h"
+#include "pfl/workthr.h"
 
 #include "slashd.h"
-#include "worker.h"
 
 struct psc_poolmaster	 pfl_workrq_poolmaster;
 struct psc_poolmgr	*pfl_workrq_pool;
