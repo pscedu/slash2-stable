@@ -527,7 +527,7 @@ pscthr_run(struct psc_thread *thr)
 {
 	int yield = 1, live = 1;
 
-	if (thr->pscthr_flags & (PTF_DEAD | PTF_RUN) != PTF_RUN) {
+	if ((thr->pscthr_flags & (PTF_DEAD | PTF_RUN)) != PTF_RUN) {
 		do {
 			spinlock(&thr->pscthr_lock);
 			if (thr->pscthr_flags & PTF_DEAD) {
