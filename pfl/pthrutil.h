@@ -22,9 +22,10 @@
 
 #include <pthread.h>
 
-#include "pfl/pfl.h"
 #include "pfl/dynarray.h"
+#include "pfl/list.h"
 #include "pfl/lock.h"
+#include "pfl/pfl.h"
 
 #ifdef PTHREAD_MUTEX_ERRORCHECK_INITIALIZER
 # define PSC_MUTEX_INIT			{ PTHREAD_MUTEX_ERRORCHECK_INITIALIZER, 0 }
@@ -89,6 +90,17 @@ int	_psc_rwlock_reqwrlock(const struct pfl_callerinfo *, struct psc_rwlock *);
 void	_psc_rwlock_unlock(const struct pfl_callerinfo *, struct psc_rwlock *);
 void	_psc_rwlock_ureqlock(const struct pfl_callerinfo *, struct psc_rwlock *, int);
 void	_psc_rwlock_wrlock(const struct pfl_callerinfo *, struct psc_rwlock *);
+
+static __inline int
+psc_listhd_empty_mutex_locked(struct pfl_mutex *m, struct psclist_head *hd)
+{
+	int locked, empty;
+
+	locked = psc_mutex_reqlock(m);
+	empty = psc_listhd_empty(hd);
+	psc_mutex_ureqlock(m, locked);
+	return (empty);
+}
 
 #ifndef HAVE_PTHREAD_BARRIER
 # include "pfl/compat/pthread_barrier.h"
