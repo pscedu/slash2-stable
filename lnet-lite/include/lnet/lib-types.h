@@ -470,6 +470,7 @@ typedef struct {
 
 typedef struct lnet_peer {
         struct list_head  lp_hashlist;          /* chain on peer hash */
+	struct psc_listentry lp_lentry;
         struct list_head  lp_txq;               /* messages blocking for tx credits */
         struct list_head  lp_rtrq;              /* messages blocking for router credits */
         struct list_head  lp_rtr_list;          /* chain on router list */

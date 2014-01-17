@@ -46,6 +46,10 @@ lnet_create_peer_table(void)
 	struct list_head *hash;
 	int               i;
 
+	psc_poolmaster_init(&lnet_peer_poolmaster, lnet_peer_t,
+	    lp_lentry, PPMF_AUTO, 32, 32, 0, NULL, NULL, NULL, "");
+	lnet_peer_pool = psc_poolmaster_getmgr(&lnet_peer_poolmaster);
+
 	LASSERT (the_lnet.ln_peer_hash == NULL);
 	LIBCFS_ALLOC(hash, LNET_PEER_HASHSIZE * sizeof(struct list_head));
 	
@@ -124,7 +128,7 @@ lnet_destroy_peer_locked (lnet_peer_t *lp)
         LASSERT (lp->lp_txqnob == 0);
         LASSERT (lp->lp_rcd == NULL);
 
-	LIBCFS_FREE(lp, sizeof(*lp));
+	psc_pool_return(lnet_peer_pool, lp);
 
         LNET_LOCK();
 
@@ -169,13 +173,7 @@ lnet_nid2peer_locked(lnet_peer_t **lpp, lnet_nid_t nid)
         
         LNET_UNLOCK();
 	
-	LIBCFS_ALLOC(lp, sizeof(*lp));
-	if (lp == NULL) {
-                *lpp = NULL;
-                LNET_LOCK();
-                return -ENOMEM;
-        }
-
+	lp = psc_pool_get(lnet_peer_pool);
         memset(lp, 0, sizeof(*lp));             /* zero counters etc */
         
 	CFS_INIT_LIST_HEAD(&lp->lp_txq);
@@ -199,7 +197,7 @@ lnet_nid2peer_locked(lnet_peer_t **lpp, lnet_nid_t nid)
         lp2 = lnet_find_peer_locked(nid);
         if (lp2 != NULL) {
                 LNET_UNLOCK();
-                LIBCFS_FREE(lp, sizeof(*lp));
+		psc_pool_return(lnet_peer_pool, lp);
                 LNET_LOCK();
 
                 if (the_lnet.ln_shutdown) {
@@ -215,7 +213,7 @@ lnet_nid2peer_locked(lnet_peer_t **lpp, lnet_nid_t nid)
         lp->lp_ni = lnet_net2ni_locked(LNET_NIDNET(nid));
         if (lp->lp_ni == NULL) {
                 LNET_UNLOCK();
-                LIBCFS_FREE(lp, sizeof(*lp));
+		psc_pool_return(lnet_peer_pool, lp);
                 LNET_LOCK();
 
                 *lpp = NULL;
