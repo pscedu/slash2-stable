@@ -130,11 +130,11 @@ postproc()
 		frompre=
 		frompost=
 		if mail -V >/dev/null 2>&1; then
-			# GNU mailx -- use native flag
+			# GNU mailx; use native flag
 			frompre="-r $mail_from"
 		else
-			# BSD mailx -- use sendmail flag
-			frompost="-- -f $mail_from"
+			# BSD mailx; use sendmail flag
+			frompost="-f $mail_from"
 		fi
 
 		cmdfile=/tmp/gdbcmd.$id
