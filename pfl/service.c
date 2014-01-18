@@ -319,13 +319,13 @@ pscrpc_server_handle_request(struct pscrpc_service *svc,
 	rc = pscrpc_unpack_msg(request->rq_reqmsg, request->rq_reqlen);
 	if (rc) {
 		CERROR("error unpacking request: ptl %d from %s"
-			" xid %"PRIx64"\n", svc->srv_req_portal,
+			" xid %"PRIx64, svc->srv_req_portal,
 			libcfs_id2str(request->rq_peer), request->rq_xid);
 		goto out;
 	}
 
 	if (request->rq_reqmsg->type != PSCRPC_MSG_REQUEST) {
-		CERROR("wrong packet type received (type=%u) from %s\n",
+		CERROR("wrong packet type received (type=%u) from %s",
 		       request->rq_reqmsg->type,
 		       libcfs_id2str(request->rq_peer));
 		goto out;
@@ -337,7 +337,7 @@ pscrpc_server_handle_request(struct pscrpc_service *svc,
 	request->rq_conn = pscrpc_get_connection(request->rq_peer,
 						 request->rq_self, NULL);
 	if (request->rq_conn == NULL) {
-		CERROR("null connection struct :(\n");
+		CERROR("null connection struct");
 		return -ENOTCONN;
 	}
 
@@ -369,7 +369,7 @@ pscrpc_server_handle_request(struct pscrpc_service *svc,
 	 * REQ anyway (bug 1502) */
 	if (timediff / 1000000 > PSCRPC_OBD_TIMEOUT) {
 		CERROR("Dropping timed-out opc %d request from %s"
-		       ": %ld seconds old\n", request->rq_reqmsg->opc,
+		       ": %ld seconds old", request->rq_reqmsg->opc,
 		       libcfs_id2str(request->rq_peer),
 		       timediff / 1000000);
 		goto put_rpc_export;
@@ -525,7 +525,7 @@ pscrpc_server_handle_reply(struct pscrpc_service *svc)
 		/* If we see this, we should already have seen the warning
 		 * in mds_steal_ack_locks()  */
 		CWARN("All locks stolen from rs %p x%"PRId64".t%"PRId64
-		      " o%d NID %s\n",
+		      " o%d NID %s",
 		      rs,
 		      rs->rs_xid, rs->rs_transno,
 		      rs->rs_msg.opc,
@@ -602,14 +602,14 @@ pscrpc_grow_req_bufs(struct pscrpc_service *svc)
 	struct pscrpc_request_buffer_desc *rqbd;
 	int i;
 
-	CDEBUG(D_RPCTRACE, "%s: allocate %d new %d-byte reqbufs (%d/%d left)\n",
+	CDEBUG(D_RPCTRACE, "%s: allocate %d new %d-byte reqbufs (%d/%d left)",
 	       svc->srv_name, svc->srv_nbuf_per_group, svc->srv_buf_size,
 	       svc->srv_nrqbd_receiving, svc->srv_nbufs);
 	for (i = 0; i < svc->srv_nbuf_per_group; i++) {
 		rqbd = pscrpc_alloc_rqbd(svc);
 
 		if (rqbd == NULL) {
-			CERROR("%s: Can't allocate request buffer\n",
+			CERROR("%s: Can't allocate request buffer",
 				svc->srv_name);
 			return (-ENOMEM);
 		}
@@ -842,7 +842,7 @@ pscrpc_unregister_service(struct pscrpc_service *svc)
 	 * freed */
 	svc->srv_max_history_rqbds = 0;
 
-	CDEBUG(D_NET, "%s: tearing down\n", svc->srv_name);
+	CDEBUG(D_NET, "%s: tearing down", svc->srv_name);
 
 	rc = LNetClearLazyPortal(svc->srv_req_portal);
 	LASSERT(rc == 0);
@@ -871,7 +871,7 @@ pscrpc_unregister_service(struct pscrpc_service *svc)
 		    svc->srv_nrqbd_receiving == 0,
 		    &lwi, &svc->srv_lock);
 		if (rc == -ETIMEDOUT)
-			CWARN("Service %s waiting for request buffers\n",
+			CWARN("Service %s waiting for request buffers",
 			      svc->srv_name);
 	}
 
@@ -928,7 +928,7 @@ pscrpc_unregister_service(struct pscrpc_service *svc)
 			pscrpc_server_handle_reply(svc);
 			continue;
 		}
-		CWARN("Unexpectedly long timeout %p\n", svc);
+		CWARN("Unexpectedly long timeout %p", svc);
 	}
 
 	//list_for_each_entry_safe(rs, t, &svc->srv_free_rs_list,
@@ -1038,7 +1038,7 @@ pscrpc_init_svc(int nbufs, int bufsize, int max_req_size,
 		    svc->srv_name);
 	}
 
-	CDEBUG(D_NET, "%s: Started, listening on portal %d\n",
+	CDEBUG(D_NET, "%s: Started, listening on portal %d",
 	       svc->srv_name, svc->srv_req_portal);
 
 	return (svc);
