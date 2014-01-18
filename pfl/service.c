@@ -744,13 +744,13 @@ pscrpcthr_main(struct psc_thread *thr)
 		/* only handle requests if there are no difficult replies
 		 * outstanding, or I'm not the last thread handling
 		 * requests */
-		if (!psc_listhd_empty_locked(&svc->srv_lock,
+		if (!psc_listhd_empty_mutex_locked(&svc->srv_mutex,
 		    &svc->srv_request_queue) &&
 		    (svc->srv_n_difficult_replies == 0 ||
 		     svc->srv_n_active_reqs < (svc->srv_nthreads - 1)))
 			pscrpc_server_handle_request(svc, thr);
 
-		if (!psc_listhd_empty_locked(&svc->srv_lock,
+		if (!psc_listhd_empty_mutex_locked(&svc->srv_mutex,
 		    &svc->srv_idle_rqbds) &&
 		    pscrpc_server_post_idle_rqbds(svc) < 0) {
 			/* I just failed to repost request buffers.  Wait
@@ -838,8 +838,10 @@ pscrpc_unregister_service(struct pscrpc_service *svc)
 	psclist_del(&svc->srv_lentry, &pscrpc_all_services);
 	freelock(&pscrpc_all_services_lock);
 
-	/* All history will be culled when the next request buffer is
-	 * freed */
+	/*
+	 * All history will be culled when the next request buffer is
+	 * freed.
+	 */
 	svc->srv_max_history_rqbds = 0;
 
 	CDEBUG(D_NET, "%s: tearing down", svc->srv_name);
@@ -847,8 +849,10 @@ pscrpc_unregister_service(struct pscrpc_service *svc)
 	rc = LNetClearLazyPortal(svc->srv_req_portal);
 	LASSERT(rc == 0);
 
-	/* Unlink all the request buffers.  This forces a 'final' event with
-	 * its 'unlink' flag set for each posted rqbd */
+	/*
+	 * Unlink all the request buffers.  This forces a 'final' event with
+	 * its 'unlink' flag set for each posted rqbd.
+	 */
 	psclist_for_each_entry(rqbd, &svc->srv_active_rqbds, rqbd_lentry) {
 		rc = LNetMDUnlink(rqbd->rqbd_md_h);
 		LASSERT(rc == 0 || rc == -ENOENT);
@@ -864,12 +868,14 @@ pscrpc_unregister_service(struct pscrpc_service *svc)
 		if (rc == 0)
 			break;
 
-		/* Network access will complete in finite time but the HUGE
-		 * timeout lets us CWARN for visibility of sluggish NALs */
+		/*
+		 * Network access will complete in finite time but the HUGE
+		 * timeout lets us CWARN for visibility of sluggish NALs.
+		 */
 		lwi = LWI_TIMEOUT(300 * 100, NULL, NULL);
-		rc = pscrpc_svr_wait_event(&svc->srv_waitq,
-		    svc->srv_nrqbd_receiving == 0,
-		    &lwi, &svc->srv_lock);
+		rc = pscrpc_svr_wait_event_mutex(&svc->srv_waitq,
+		    svc->srv_nrqbd_receiving == 0, &lwi,
+		    &svc->srv_mutex);
 		if (rc == -ETIMEDOUT)
 			CWARN("Service %s waiting for request buffers",
 			      svc->srv_name);
@@ -885,9 +891,11 @@ pscrpc_unregister_service(struct pscrpc_service *svc)
 	}
 	SVC_ULOCK(svc);
 
-	/* purge the request queue.  NB No new replies (rqbds all unlinked)
+	/*
+	 * Purge the request queue.  NB No new replies (rqbds all unlinked)
 	 * and no service threads, so I'm the only thread noodling the
-	 * request queue now */
+	 * request queue now.
+	 */
 	while (!psc_listhd_empty(&svc->srv_request_queue)) {
 		struct pscrpc_request *req = psc_listhd_first_obj(
 		    &svc->srv_request_queue, struct pscrpc_request,
@@ -918,9 +926,9 @@ pscrpc_unregister_service(struct pscrpc_service *svc)
 	while (atomic_read(&svc->srv_outstanding_replies) != 0) {
 		lwi = LWI_TIMEOUT(10 * 100, NULL, NULL);
 
-		rc = pscrpc_svr_wait_event(&svc->srv_waitq,
+		rc = pscrpc_svr_wait_event_mutex(&svc->srv_waitq,
 		    !psc_listhd_empty(&svc->srv_reply_queue),
-		    &lwi, &svc->srv_lock);
+		    &lwi, &svc->srv_mutex);
 
 		LASSERT(rc == 0 || rc == -ETIMEDOUT);
 
@@ -972,7 +980,7 @@ pscrpc_init_svc(int nbufs, int bufsize, int max_req_size,
 	/* First initialise enough for early teardown */
 
 	svc->srv_name = name;
-	INIT_SPINLOCK(&svc->srv_lock);
+	psc_mutex_init(&svc->srv_mutex);
 	INIT_PSCLIST_HEAD(&svc->srv_threads);
 	psc_waitq_init(&svc->srv_waitq);
 

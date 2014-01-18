@@ -421,7 +421,7 @@ struct pscrpc_service {
 	struct psc_waitq	 srv_waitq;
 	struct psc_hashtbl	 srv_peer_qlentab;
 
-	psc_spinlock_t		 srv_lock;
+	struct pfl_mutex	 srv_mutex;
 	svc_handler_t		 srv_handler;
 	char			*srv_name;  /* only statically allocated strings here,
 					     * we don't clean them */
@@ -439,8 +439,8 @@ struct pscrpc_service {
 	void (*srv_done)(struct psc_thread *);
 };
 
-#define SVC_LOCK(svc)	spinlock(&(svc)->srv_lock)
-#define SVC_ULOCK(svc)	freelock(&(svc)->srv_lock)
+#define SVC_LOCK(svc)	psc_mutex_lock(&(svc)->srv_mutex)
+#define SVC_ULOCK(svc)	psc_mutex_unlock(&(svc)->srv_mutex)
 
 struct pscrpc_request_buffer_desc {
 	int				 rqbd_refcount;
@@ -762,19 +762,19 @@ pscrpc_wake_client_req(struct pscrpc_request *req)
 			sigmask(SIGALRM))
 
 /**
- * _pscrpc_server_wait_event - Implement a timed wait using waitqs and
- *	pthread_cond_timedwait
+ * Wait for service waitq to receive a wakeup event from incoming
+ * activity.
  * @wq: the waitq to block on
  * @cond: condition to check on
  * @info: the timeout info struct (l_wait_info)
  * @ret: the return val
  * @excl: unused
- * @lck: optional spinlock used for waitq - see pfl/waitq.h
+ * @lck: optional spinlock used for @wq.
  */
 
 #define PSCRPC_SVR_TIMEOUT	60
 #define PSCRPC_SVR_SHORT_TIMEO	1
-#define _pscrpc_server_wait_event(wq, cond, info, ret, excl, lck)	\
+#define _pscrpc_server_wait_event(wq, cond, info, ret, excl, lck, mtx)	\
 	do {								\
 		time_t _now	  = time(NULL);				\
 		time_t _then	  = _now;				\
@@ -788,8 +788,12 @@ pscrpc_wake_client_req(struct pscrpc_request *req)
 			_abstime.tv_sec = _now +			\
 				PSCRPC_SVR_SHORT_TIMEO;			\
 			_abstime.tv_nsec = 0;				\
-			ret = psc_waitq_timedwait((wq), (lck),		\
-			    &_abstime);					\
+			if (mtx)					\
+				ret = psc_waitq_waitabs_mutex((wq),	\
+				    (mtx), &_abstime);			\
+			else						\
+				ret = psc_waitq_waitabs((wq), (lck),	\
+				    &_abstime);				\
 			if ((ret) && (ret) != ETIMEDOUT) {		\
 				(ret) = -(ret);				\
 				break;					\
@@ -891,14 +895,20 @@ pscrpc_wake_client_req(struct pscrpc_request *req)
 	} _PFL_RVEND
 #endif
 
-#define pscrpc_svr_wait_event(wq, cond, info, lck)			\
+#define _pscrpc_svr_wait_event(wq, cond, info, lck, mutex)		\
 	_PFL_RVSTART {							\
 		int		    _ret;				\
 		struct l_wait_info *_info = (info);			\
 									\
 		_pscrpc_server_wait_event((wq), (cond), _info, _ret, 0,	\
-		    (lck));						\
+		    (lck), (mutex));					\
 		_ret;							\
 	} _PFL_RVEND
+
+#define pscrpc_svr_wait_event(wq, cond, info, lck)			\
+	_pscrpc_svr_wait_event((wq), (cond), (info), (lck), NULL)
+
+#define pscrpc_svr_wait_event_mutex(wq, cond, info, mutex)		\
+	_pscrpc_svr_wait_event((wq), (cond), (info), NULL, (mutex))
 
 #endif /* _PFL_RPC_H_ */
