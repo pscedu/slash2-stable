@@ -120,7 +120,7 @@ pscrpc_get_connection(lnet_process_id_t peer, lnet_nid_t self,
 	if (c2 == NULL)
 		return (c);
 
-	psc_pool_return(pscrpc_conn_pool);
+	psc_pool_return(pscrpc_conn_pool, c);
 	return (c2);
 }
 
