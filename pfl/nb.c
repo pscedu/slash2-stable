@@ -27,11 +27,11 @@
 
 #include <inttypes.h>
 
-#include "pfl/rpc.h"
-#include "pfl/rpclog.h"
 #include "pfl/alloc.h"
 #include "pfl/atomic.h"
 #include "pfl/log.h"
+#include "pfl/rpc.h"
+#include "pfl/rpclog.h"
 #include "pfl/thread.h"
 #include "pfl/waitq.h"
 
