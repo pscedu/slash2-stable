@@ -168,7 +168,7 @@ pscrpc_prep_req_pool(struct pscrpc_import *imp, uint32_t version,
 	request = psc_pool_get(pscrpc_rq_pool);
 
 	if (!request) {
-		CERROR("request allocation out of memory\n");
+		CERROR("request allocation out of memory");
 		return (NULL);
 	}
 	memset(request, 0, sizeof(*request));
@@ -1186,7 +1186,7 @@ pscrpc_interrupted_set(void *data)
 	struct pscrpc_request *req;
 
 	psc_assert(set);
-	CERROR("INTERRUPTED SET %p\n", set);
+	CERROR("INTERRUPTED SET %p", set);
 
 	psclist_for_each_entry(req, &set->set_requests, rq_set_chain_lentry) {
 		if (req->rq_phase != PSCRPC_RQ_PHASE_RPC)
@@ -1256,7 +1256,7 @@ pscrpc_set_wait(struct pscrpc_request_set *set)
 		/* wait until all complete, interrupted, or an in-flight
 		 * req times out
 		 */
-		CDEBUG(D_NET, "set %p going to sleep for %d seconds\n",
+		CDEBUG(D_NET, "set %p going to sleep for %d seconds",
 		    set, timeout);
 		lwi = LWI_TIMEOUT_INTR(timeout ? timeout : 1,
 		    pscrpc_expired_set, pscrpc_interrupted_set, set);
@@ -1359,12 +1359,12 @@ pscrpc_free_committed(struct pscrpc_import *imp)
 
 	if (imp->imp_peer_committed_transno == imp->imp_last_transno_checked &&
 	    imp->imp_generation == imp->imp_last_generation_checked) {
-		CDEBUG(D_HA, "%s: skip recheck for last_committed %"PRIu64"\n",
+		CDEBUG(D_HA, "%s: skip recheck for last_committed %"PRIu64,
 		       imp->imp_obd->obd_name, imp->imp_peer_committed_transno);
 		return;
 	}
 
-	CDEBUG(D_HA, "%s: committing for last_committed %"PRIu64" gen %d\n",
+	CDEBUG(D_HA, "%s: committing for last_committed %"PRIu64" gen %d",
 	       imp->imp_obd->obd_name, imp->imp_peer_committed_transno,
 	       imp->imp_generation);
 	imp->imp_last_transno_checked = imp->imp_peer_committed_transno;
