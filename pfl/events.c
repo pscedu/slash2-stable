@@ -131,7 +131,7 @@ pscrpc_request_in_callback(lnet_event_t *ev)
 		req = TRY_PSCALLOC(sizeof(*req));
 		if (req == NULL) {
 			CERROR("Can't allocate incoming request descriptor: "
-			       "Dropping %s RPC from %s\n",
+			       "Dropping %s RPC from %s",
 			       svc->srv_name,
 			       libcfs_id2str(ev->initiator));
 			return;
@@ -163,7 +163,7 @@ pscrpc_request_in_callback(lnet_event_t *ev)
 
 	if (ev->unlinked) {
 		svc->srv_nrqbd_receiving--;
-		CDEBUG(D_RPCTRACE, "Buffer complete: %d buffers still posted (%s)\n",
+		CDEBUG(D_RPCTRACE, "Buffer complete: %d buffers still posted (%s)",
 		    svc->srv_nrqbd_receiving, svc->srv_name);
 
 		if (!svc->srv_nrqbd_receiving)
@@ -175,7 +175,7 @@ pscrpc_request_in_callback(lnet_event_t *ev)
 		if (test_req_buffer_pressure &&
 		    ev->type != LNET_EVENT_UNLINK &&
 		    svc->srv_nrqbd_receiving == 0)
-			CWARN("All %s request buffers busy\n",
+			CWARN("All %s request buffers busy",
 			    svc->srv_name);
 #endif
 		/* req takes over the network's ref on rqbd */
@@ -249,7 +249,7 @@ pscrpc_client_bulk_callback(lnet_event_t *ev)
 	LASSERT(ev->unlinked);
 
 	CDEBUG((ev->status == 0) ? D_NET : D_ERROR,
-	       "event type %d, status %d, desc %p x%"PRId64"\n",
+	       "event type %d, status %d, desc %p x%"PRId64,
 	       ev->type, ev->status, desc, desc->bd_req->rq_xid);
 
 	spinlock(&desc->bd_lock);
@@ -381,7 +381,7 @@ pscrpc_server_bulk_callback(lnet_event_t *ev)
 		 ev->type == LNET_EVENT_REPLY));
 
 	CDEBUG((ev->status == 0) ? D_NET : D_ERROR,
-	       "event type %d, status %d, desc %p\n",
+	       "event type %d, status %d, desc %p",
 	       ev->type, ev->status, desc);
 
 	spinlock(&desc->bd_lock);
@@ -506,7 +506,7 @@ pscrpc_check_events(int timeout)
 	/* liblustre: no asynch callback so we can't affort to miss any
 	 * events... */
 	if (rc == -EOVERFLOW) {
-		CERROR("Dropped an event!!!\n");
+		CERROR("Dropped an event!!!");
 		abort();
 	}
 
@@ -625,7 +625,7 @@ pscrpc_ni_init(int type, int nmsgs)
 	if (rc == 0)
 		return 0;
 
-	CERROR("Failed to allocate event queue: %d\n", rc);
+	CERROR("Failed to allocate event queue: %d", rc);
 	LNetNIFini();
 
 	return (-ENOMEM);
@@ -656,7 +656,7 @@ pscrpc_ni_fini(void)
 
 		case -EBUSY:
 			if (retries != 0)
-				CWARN("Event queue still busy\n");
+				CWARN("Event queue still busy");
 
 			/* Wait for a bit */
 			psc_waitq_init(&waitq);
