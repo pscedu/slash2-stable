@@ -356,3 +356,24 @@ psc_hashtbl_walk(const struct psc_hashtbl *t, void (*f)(void *))
 			ureqlock(&b->phb_lock, locked);
 	}
 }
+
+/**
+ * Estimate ideal number of buckets to allocate for a hash table.
+ * Given a number of items N, the hash table should be roughly
+ * twice the size to statistically reduce chance of collision.
+ * Good hashing functions can do a good job creating a fair distribution
+ * but a generic one intended for all use can only do such a great job,
+ * so assist it by using a prime number of buckets not too close to a
+ * power of two.
+ * @n: number of elements intended to place in hash table.
+ */
+int
+psc_hashtbl_estnbuckets(int n)
+{
+	int t;
+
+	t = n * 3;
+	if (t % 2 == 0)
+		t--;
+	return (t);
+}
