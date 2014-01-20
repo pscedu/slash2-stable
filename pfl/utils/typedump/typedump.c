@@ -287,7 +287,6 @@ main(int argc, char *argv[])
 	PRTYPE(struct pscrpc_async_args);
 	PRTYPE(struct pscrpc_bulk_desc);
 	PRTYPE(struct pscrpc_cb_id);
-	PRTYPE(struct pscrpc_client);
 	PRTYPE(struct pscrpc_connection);
 	PRTYPE(struct pscrpc_export);
 	PRTYPE(struct pscrpc_handle);
