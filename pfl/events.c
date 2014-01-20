@@ -644,12 +644,12 @@ pscrpc_ni_init(int type, int nmsgs)
 	psc_poolmaster_init(&pscrpc_set_poolmaster,
 	    struct pscrpc_request_set, set_lentry, PPMF_AUTO, 64, 64, 0,
 	    NULL, NULL, NULL, "rpcset");
-	pscrpc_imp_pool = psc_poolmaster_getmgr(&pscrpc_imp_poolmaster);
+	pscrpc_set_pool = psc_poolmaster_getmgr(&pscrpc_set_poolmaster);
 
 	psc_poolmaster_init(&pscrpc_imp_poolmaster,
-	    struct pscrpc_import, imp_lentry, PPMF_AUTO, 64, 64, 0,
+	    struct pscrpc_import, imp_sending_list, PPMF_AUTO, 64, 64, 0,
 	    NULL, NULL, NULL, "rpcimp");
-	pscrpc_set_pool = psc_poolmaster_getmgr(&pscrpc_set_poolmaster);
+	pscrpc_imp_pool = psc_poolmaster_getmgr(&pscrpc_imp_poolmaster);
 
 	psc_poolmaster_init(&pscrpc_rq_poolmaster,
 	    struct pscrpc_request, rq_lentry, PPMF_AUTO, 64, 64, 0,

@@ -37,14 +37,14 @@
 #include "lnet/api.h"
 #include "lnet/types.h"
 
+#include "pfl/atomic.h"
 #include "pfl/hashtbl.h"
 #include "pfl/list.h"
 #include "pfl/listcache.h"
-#include "pfl/types.h"
-#include "pfl/atomic.h"
 #include "pfl/lock.h"
 #include "pfl/pool.h"
 #include "pfl/thread.h"
+#include "pfl/types.h"
 #include "pfl/waitq.h"
 
 struct psc_dynarray;
@@ -91,9 +91,9 @@ struct psc_compl;
 extern lnet_handle_eq_t			pscrpc_eq_h;
 extern struct psclist_head		pscrpc_wait_callbacks;
 
-static struct psc_poolmgr		*pscrpc_conn_pool;
-static struct psc_poolmgr		*pscrpc_imp_pool;
-static struct psc_poolmgr		*pscrpc_set_pool;
+extern struct psc_poolmgr		*pscrpc_conn_pool;
+extern struct psc_poolmgr		*pscrpc_imp_pool;
+extern struct psc_poolmgr		*pscrpc_set_pool;
 extern struct psc_poolmgr		*pscrpc_rq_pool; 
 
 struct pscrpc_handle {

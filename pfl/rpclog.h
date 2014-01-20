@@ -58,15 +58,14 @@ pscrpc_rqphase2str(struct pscrpc_request *req)
 	(rq)->rq_abort_reply	? "A" : "",				\
 	(rq)->rq_waiting	? "W" : ""
 
-#define REQ_FLAGS_FMT "%s:%s%s%s%s%s%s%s%s%s%s%s"
-
-#define DEBUG_REQ(level, rq, fmt, ...)					\
-	psclogs((level), PSS_RPC,					\
+#define DEBUGS_REQ(level, ss, rq, fmt, ...)				\
+	psclogs((level), (ss),						\
 	    "req@%p x%"PRId64"/t%"PRId64" cb=%p "			\
 	    "c%"PRIx64" "						\
 	    "o%d->@%s:%d "						\
-	    "lens %d/%d ref %d res %d ret %d fl "REQ_FLAGS_FMT		\
-	    "/%x/%x replyc %"PRIx64" rc %d/%d to=%d "			\
+	    "lens %d/%d ref %d res %d ret %d "				\
+	    "fl %s:%s%s%s%s%s%s%s%s%s%s%s/%x/%x "			\
+	    "replyc %"PRIx64" rc %d/%d to=%d "				\
 	    "sent=%"PSCPRI_TIMET" :: "fmt,				\
 	    (rq), (rq)->rq_xid, (rq)->rq_transno,			\
 	    (rq)->rq_interpret_reply, (rq)->rq_reqmsg ?			\
@@ -77,7 +76,7 @@ pscrpc_rqphase2str(struct pscrpc_request *req)
 	       (rq)->rq_conn ? pscrpc_nid2str2((rq)->rq_conn->		\
 		  c_peer.nid) : (rq)->rq_peer.nid != LNET_NID_ANY ?	\
 		     pscrpc_nid2str2((rq)->rq_peer.nid) : "<?>",	\
-	    (rq)->rq_import &&						\
+	    (rq)->rq_import ?						\
 	       (int)(rq)->rq_import->imp_cli_request_portal : -1,	\
 	    (rq)->rq_reqlen, (rq)->rq_replen,				\
 	    atomic_read(&(rq)->rq_refcount), (rq)->rq_resend,		\
@@ -91,6 +90,8 @@ pscrpc_rqphase2str(struct pscrpc_request *req)
 	    (rq)->rq_status,						\
 	    (rq)->rq_repmsg ? (rq)->rq_repmsg->status : 0,		\
 	    (rq)->rq_timeout, (rq)->rq_sent, ## __VA_ARGS__)
+
+#define DEBUG_REQ(level, rq, fmt, ...) DEBUGS_REQ((level), PSS_RPC, (rq), fmt, ## __VA_ARGS__)
 
 #define DEBUG_EXP(level, exp, fmt, ...)					\
 	psclogs((level), PSS_RPC,					\
