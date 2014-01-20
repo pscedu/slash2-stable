@@ -231,6 +231,12 @@ struct pscrpc_async_args {
 	 */
 	uint64_t space[4];
 	void    *pointer_arg[9];
+/*
+	union {
+		uint64_t u64;
+		void	*ptr;
+	} space[6];
+ */
 };
 
 struct pscrpc_request_set;
