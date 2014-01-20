@@ -110,10 +110,9 @@ pscrpc_set_import_discon(struct pscrpc_import *imp, uint32_t conn_cnt)
 		rc = 1;
 	} else {
 		freelock(&imp->imp_lock);
-		psclog_warnx("%s: import %p already %s (conn %u, was %u): %s",
-		    imp->imp_client->cli_name, imp,
-		    (imp->imp_state == PSCRPC_IMP_FULL &&
-		     (uint32_t)imp->imp_conn_cnt > conn_cnt) ?
+		psclog_warnx("import %p already %s (conn %u, was %u): %s",
+		    imp, imp->imp_state == PSCRPC_IMP_FULL &&
+		      (uint32_t)imp->imp_conn_cnt > conn_cnt ?
 		    "reconnected" : "not connected", imp->imp_conn_cnt,
 		    conn_cnt, pscrpc_import_state_name(imp->imp_state));
 	}

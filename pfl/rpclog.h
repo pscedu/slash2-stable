@@ -70,24 +70,24 @@ pscrpc_rqphase2str(struct pscrpc_request *req)
 	    "sent=%"PSCPRI_TIMET" :: "fmt,				\
 	    (rq), (rq)->rq_xid, (rq)->rq_transno,			\
 	    (rq)->rq_interpret_reply, (rq)->rq_reqmsg ?			\
-	      (rq)->rq_reqmsg->handle.cookie : 0xdeadbeef,		\
+	       (rq)->rq_reqmsg->handle.cookie : 0xdeadbeef,		\
 	    (rq)->rq_reqmsg ? (int)(rq)->rq_reqmsg->opc : -1,		\
 	    (rq)->rq_import ?						\
-	      pscrpc_id2str2((rq)->rq_import->imp_connection->c_peer) :	\
-		  (rq)->rq_conn ? pscrpc_nid2str2((rq)->rq_conn->	\
-		    c_peer.nid) : (rq)->rq_peer.nid != LNET_NID_ANY ?	\
-			pscrpc_nid2str2((rq)->rq_peer.nid) : "<?>",	\
-	    (rq)->rq_import && (rq)->rq_import->imp_client ?		\
-	      (int)(rq)->rq_import->imp_client->cli_request_portal : -1,\
+	       pscrpc_id2str2((rq)->rq_import->imp_connection->c_peer) :\
+	       (rq)->rq_conn ? pscrpc_nid2str2((rq)->rq_conn->		\
+		  c_peer.nid) : (rq)->rq_peer.nid != LNET_NID_ANY ?	\
+		     pscrpc_nid2str2((rq)->rq_peer.nid) : "<?>",	\
+	    (rq)->rq_import &&						\
+	       (int)(rq)->rq_import->imp_cli_request_portal : -1,	\
 	    (rq)->rq_reqlen, (rq)->rq_replen,				\
 	    atomic_read(&(rq)->rq_refcount), (rq)->rq_resend,		\
 	    atomic_read(&(rq)->rq_retries), DEBUG_REQ_FLAGS(rq),	\
 	    (rq)->rq_reqmsg ?						\
-		pscrpc_msg_get_flags((rq)->rq_reqmsg) : -1,		\
+	       pscrpc_msg_get_flags((rq)->rq_reqmsg) : -1,		\
 	    (rq)->rq_repmsg ?						\
-		pscrpc_msg_get_flags((rq)->rq_repmsg) : 0,		\
+	       pscrpc_msg_get_flags((rq)->rq_repmsg) : 0,		\
 	    (rq)->rq_repmsg ?						\
-		(rq)->rq_repmsg->handle.cookie : 0xdeadbeef,		\
+	       (rq)->rq_repmsg->handle.cookie : 0xdeadbeef,		\
 	    (rq)->rq_status,						\
 	    (rq)->rq_repmsg ? (rq)->rq_repmsg->status : 0,		\
 	    (rq)->rq_timeout, (rq)->rq_sent, ## __VA_ARGS__)

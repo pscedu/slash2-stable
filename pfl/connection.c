@@ -25,12 +25,12 @@
 
 #define PSC_SUBSYS PSS_RPC
 
-#include "pfl/list.h"
-#include "pfl/export.h"
-#include "pfl/rpc.h"
 #include "pfl/alloc.h"
 #include "pfl/atomic.h"
+#include "pfl/export.h"
+#include "pfl/list.h"
 #include "pfl/lock.h"
+#include "pfl/rpc.h"
 
 static psc_spinlock_t	   conn_lock        = SPINLOCK_INIT;
 static struct psclist_head conn_list        = PSCLIST_HEAD_INIT(conn_list);
@@ -51,6 +51,7 @@ pscrpc_lookup_conn_locked(lnet_process_id_t peer, lnet_nid_t self)
 {
 	struct pscrpc_connection *c;
 
+	/* XXX hash table */
 	psclist_for_each_entry(c, &conn_list, c_lentry) {
 		if (peer.nid == c->c_peer.nid &&
 		    peer.pid == c->c_peer.pid &&
@@ -99,11 +100,7 @@ pscrpc_get_connection(lnet_process_id_t peer, lnet_nid_t self,
 	psclog_debug("Malloc'ing a new rpc_conn for %s",
 	    libcfs_id2str(peer));
 
-//	psc_pool_get();
-	c = TRY_PSCALLOC(sizeof(*c));
-	if (c == NULL)
-		return (NULL);
-
+	c = psc_pool_get(pscrpc_conn_pool);
 	INIT_PSC_LISTENTRY(&c->c_lentry);
 	atomic_set(&c->c_refcount, 1);
 	c->c_peer = peer;
@@ -123,8 +120,7 @@ pscrpc_get_connection(lnet_process_id_t peer, lnet_nid_t self,
 	if (c2 == NULL)
 		return (c);
 
-//	psc_pool_return();
-	PSCRPC_OBD_FREE(c, sizeof(*c));
+	psc_pool_return(pscrpc_conn_pool);
 	return (c2);
 }
 

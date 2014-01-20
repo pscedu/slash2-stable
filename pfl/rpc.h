@@ -91,8 +91,10 @@ struct psc_compl;
 extern lnet_handle_eq_t			pscrpc_eq_h;
 extern struct psclist_head		pscrpc_wait_callbacks;
 
-extern struct psc_poolmaster		 pscrpc_rq_poolmaster;
-extern struct psc_poolmgr		*pscrpc_rq_pool;
+static struct psc_poolmgr		*pscrpc_conn_pool;
+static struct psc_poolmgr		*pscrpc_imp_pool;
+static struct psc_poolmgr		*pscrpc_set_pool;
+extern struct psc_poolmgr		*pscrpc_rq_pool; 
 
 struct pscrpc_handle {
 	uint64_t			cookie;
@@ -169,12 +171,6 @@ struct pscrpc_connection {
 	struct pscrpc_import		*c_imp;
 };
 
-struct pscrpc_client {
-	uint32_t			 cli_request_portal;
-	uint32_t			 cli_reply_portal;
-	char				*cli_name;
-};
-
 struct pscrpc_request_pool {
 	psc_spinlock_t			  prp_lock;
 	struct psclist_head		  prp_req_list;		/* list of request structs */
@@ -184,7 +180,8 @@ struct pscrpc_request_pool {
 
 struct pscrpc_import {
 	struct pscrpc_connection	 *imp_connection;
-	struct pscrpc_client		 *imp_client;
+	uint32_t			  imp_cli_request_portal;
+	uint32_t			  imp_cli_reply_portal;
 	struct psclist_head		  imp_sending_list;	/* in-flight? */
 	struct psclist_head		  imp_uncomitted;	/* post send  */
 	struct psclist_head		  imp_rpcsets;		/* list of sets */

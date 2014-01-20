@@ -28,14 +28,14 @@
 #include <inttypes.h>
 #include <stdlib.h>
 
-#include "pfl/export.h"
-#include "pfl/list.h"
-#include "pfl/rpc.h"
-#include "pfl/rpclog.h"
 #include "pfl/alloc.h"
 #include "pfl/atomic.h"
+#include "pfl/export.h"
+#include "pfl/list.h"
 #include "pfl/lock.h"
 #include "pfl/pool.h"
+#include "pfl/rpc.h"
+#include "pfl/rpclog.h"
 #include "pfl/waitq.h"
 
 static uint64_t		pscrpc_last_xid = 0;
@@ -75,15 +75,8 @@ pscrpc_new_import(void)
 {
 	struct pscrpc_import *imp;
 
-	PSCRPC_OBD_ALLOC(imp, sizeof(*imp));
-	if (imp == NULL)
-		return NULL;
-
-	PSCRPC_OBD_ALLOC(imp->imp_client, sizeof(*imp->imp_client));
-	if (imp->imp_client == NULL) {
-		PSCRPC_OBD_FREE(imp, sizeof(*imp));
-		return (NULL);
-	}
+	imp = psc_pool_get(pscrpc_imp_pool);
+	memset(imp, 0, sizeof(*imp));
 
 	//INIT_PSCLIST_HEAD(&imp->imp_replay_list);
 	INIT_PSCLIST_HEAD(&imp->imp_sending_list);
@@ -130,8 +123,7 @@ pscrpc_import_put(struct pscrpc_import *import)
 	psc_assert(import->imp_connection);
 	pscrpc_put_connection(import->imp_connection);
 	psc_waitq_destroy(&import->imp_recovery_waitq);
-	PSCRPC_OBD_FREE(import->imp_client, sizeof(*import->imp_client));
-	PSCRPC_OBD_FREE(import, sizeof(*import));
+	psc_pool_return(pscrpc_imp_pool, import);
 }
 
 __static int
@@ -162,8 +154,6 @@ pscrpc_prep_req_pool(struct pscrpc_import *imp, uint32_t version,
 
 	psc_assert((unsigned long)imp > 0x1000);
 	psc_assert(imp != LP_POISON);
-	psc_assert((unsigned long)imp->imp_client > 0x1000);
-	psc_assert(imp->imp_client != LP_POISON);
 
 	request = psc_pool_get(pscrpc_rq_pool);
 
@@ -204,8 +194,8 @@ pscrpc_prep_req_pool(struct pscrpc_import *imp, uint32_t version,
 	request->rq_phase = PSCRPC_RQ_PHASE_NEW;
 
 	/* XXX FIXME bug 249 */
-	request->rq_request_portal = imp->imp_client->cli_request_portal;
-	request->rq_reply_portal = imp->imp_client->cli_reply_portal;
+	request->rq_request_portal = imp->imp_cli_request_portal;
+	request->rq_reply_portal = imp->imp_cli_reply_portal;
 
 	INIT_SPINLOCK(&request->rq_lock);
 	INIT_PSC_LISTENTRY(&request->rq_lentry);
@@ -325,9 +315,8 @@ pscrpc_prep_set(void)
 {
 	struct pscrpc_request_set *set;
 
-	PSCRPC_OBD_ALLOC(set, sizeof *set);
-	if (!set)
-		return (NULL);
+	set = psc_pool_get(pscrpc_set_pool);
+	memset(set, 0, sizeof(*set));
 	pscrpc_set_init(set);
 	return (set);
 }
@@ -1075,7 +1064,7 @@ pscrpc_set_destroy(struct pscrpc_request_set *set)
 	psc_assert(psc_waitq_nwaiters(&set->set_waitq) == 0);
 	psc_waitq_destroy(&set->set_waitq);
 
-	PSCRPC_OBD_FREE(set, sizeof(*set));
+	psc_pool_return(pscrpc_set_pool, set);
 }
 
 int
@@ -1360,7 +1349,7 @@ pscrpc_free_committed(struct pscrpc_import *imp)
 	if (imp->imp_peer_committed_transno == imp->imp_last_transno_checked &&
 	    imp->imp_generation == imp->imp_last_generation_checked) {
 		CDEBUG(D_HA, "%s: skip recheck for last_committed %"PRIu64,
-		       imp->imp_obd->obd_name, imp->imp_peer_committed_transno);
+		    imp->imp_obd->obd_name, imp->imp_peer_committed_transno);
 		return;
 	}
 

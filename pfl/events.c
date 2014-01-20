@@ -43,7 +43,14 @@
 lnet_handle_eq_t	pscrpc_eq_h;
 struct psclist_head	pscrpc_wait_callbacks;
 
+struct psc_poolmaster	 pscrpc_conn_poolmaster;
+struct psc_poolmaster	 pscrpc_imp_poolmaster;
+struct psc_poolmaster	 pscrpc_set_poolmaster;
 struct psc_poolmaster	 pscrpc_rq_poolmaster;
+
+struct psc_poolmgr	*pscrpc_conn_pool;
+struct psc_poolmgr	*pscrpc_imp_pool;
+struct psc_poolmgr	*pscrpc_set_pool;
 struct psc_poolmgr	*pscrpc_rq_pool;
 
 /*
@@ -56,15 +63,17 @@ pscrpc_request_out_callback(lnet_event_t *ev)
 	struct pscrpc_request *req = cbid->cbid_arg;
 
 	LASSERT(ev->type == LNET_EVENT_SEND ||
-		 ev->type == LNET_EVENT_UNLINK);
+		ev->type == LNET_EVENT_UNLINK);
 	LASSERT(ev->unlinked);
 
-	DEBUG_REQ((ev->status == 0) ? PLL_INFO : PLL_ERROR, req,
-		  "type %d, status %d", ev->type, ev->status);
+	DEBUG_REQ(ev->status ? PLL_ERROR : PLL_DIAG, req,
+	    "type %d, status %d", ev->type, ev->status);
 
 	if (ev->type == LNET_EVENT_UNLINK || ev->status != 0) {
-		/* Failed send: make it seem like the reply timed out, just
-		 * like failing sends in client.c does currently...  */
+		/*
+		 * Failed send: make it seem like the reply timed out, just
+		 * like failing sends in rpcclient.c does currently...
+		 */
 		spinlock(&req->rq_lock);
 		req->rq_net_err = 1;
 		req->rq_abort_reply = 1;
@@ -575,19 +584,25 @@ pscrpc_ni_init(int type, int nmsgs)
 	int               rc;
 	lnet_process_id_t my_id;
 
-	if ((rc = LNetInit(nmsgs)))
+	rc = LNetInit(nmsgs);
+	if (rc)
 		psc_fatalx("failed to initialize LNET (%d)", rc);
 
-	/* CAVEAT EMPTOR: how we process portals events is _radically_
-	 * different depending on... */
+	/*
+	 * CAVEAT EMPTOR: how we process portals events is _radically_
+	 * different depending on...
+	 */
 	if (type == PSCNET_SERVER) {
-		/* kernel portals calls our master callback when events are added to
+		/*
+		 * Kernel portals calls our master callback when events are added to
 		 * the event queue.  In fact lustre never pulls events off this queue,
-		 * so it's only sized for some debug history. */
+		 * so it's only sized for some debug history.
+		 */
 		lnet_server_mode();
 		psclog_info("Requesting PID %u", PSCRPC_SVR_PID);
-		if ((rc = LNetNIInit(PSCRPC_SVR_PID)))
-			psc_fatalx("failed LNetNIInit() (%d)", rc);
+		rc = LNetNIInit(PSCRPC_SVR_PID);
+		if (rc)
+			psc_fatalx("failed LNetNIInit() (rc=%d)", rc);
 
 		rc = LNetEQAlloc(1024, pscrpc_master_callback, &pscrpc_eq_h);
 		psclog_info("%#"PRIx64" pscrpc_eq_h cookie value",
@@ -595,18 +610,22 @@ pscrpc_ni_init(int type, int nmsgs)
 
 	} else if (type == PSCNET_MTCLIENT) {
 		lnet_server_mode();
-		if ((rc = LNetNIInit(pscrpc_get_pid())))
-			psc_fatalx("failed LNetNIInit() (%d)", rc);
+		rc = LNetNIInit(pscrpc_get_pid());
+		if (rc)
+			psc_fatalx("failed LNetNIInit() (rc=%d)", rc);
 
 		rc = LNetEQAlloc(1024, pscrpc_master_callback, &pscrpc_eq_h);
 		psclog_info("%#"PRIx64" pscrpc_eq_h cookie value",
 			    pscrpc_eq_h.cookie);
 	} else {
-		/* liblustre calls the master callback when it removes events from the
+		/*
+		 * liblustre calls the master callback when it removes events from the
 		 * event queue.  The event queue has to be big enough not to drop
-		 * anything */
-		if ((rc = LNetNIInit(pscrpc_get_pid())))
-			psc_fatalx("failed LNetNIInit() (%d)", rc);
+		 * anything.
+		 */
+		rc = LNetNIInit(pscrpc_get_pid());
+		if (rc)
+			psc_fatalx("failed LNetNIInit() (rc=%d)", rc);
 		rc = LNetEQAlloc(10240, 0, &pscrpc_eq_h);
 	}
 
@@ -616,6 +635,21 @@ pscrpc_ni_init(int type, int nmsgs)
 		psc_fatalx("LNetGetId() failed");
 
 	psclog_debug("nidpid is (%"PSCPRIxLNID",0x%x)", my_id.nid, my_id.pid);
+
+	psc_poolmaster_init(&pscrpc_conn_poolmaster,
+	    struct pscrpc_connection, c_lentry, PPMF_AUTO, 64, 64, 0,
+	    NULL, NULL, NULL, "rpcconn");
+	pscrpc_conn_pool = psc_poolmaster_getmgr(&pscrpc_conn_poolmaster);
+
+	psc_poolmaster_init(&pscrpc_set_poolmaster,
+	    struct pscrpc_request_set, set_lentry, PPMF_AUTO, 64, 64, 0,
+	    NULL, NULL, NULL, "rpcset");
+	pscrpc_imp_pool = psc_poolmaster_getmgr(&pscrpc_imp_poolmaster);
+
+	psc_poolmaster_init(&pscrpc_imp_poolmaster,
+	    struct pscrpc_import, imp_lentry, PPMF_AUTO, 64, 64, 0,
+	    NULL, NULL, NULL, "rpcimp");
+	pscrpc_set_pool = psc_poolmaster_getmgr(&pscrpc_set_poolmaster);
 
 	psc_poolmaster_init(&pscrpc_rq_poolmaster,
 	    struct pscrpc_request, rq_lentry, PPMF_AUTO, 64, 64, 0,
