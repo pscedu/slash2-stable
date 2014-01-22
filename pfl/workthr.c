@@ -28,8 +28,6 @@
 #include "pfl/thread.h"
 #include "pfl/workthr.h"
 
-#include "slashd.h"
-
 struct psc_poolmaster	 pfl_workrq_poolmaster;
 struct psc_poolmgr	*pfl_workrq_pool;
 struct psc_listcache	 pfl_workq;
@@ -105,7 +103,7 @@ pfl_wkthr_spawn(int thrtype, int nthr, const char *thrname)
 
 	for (i = 0; i < nthr; i++) {
 		thr = pscthr_init(thrtype, 0, pfl_wkthr_main, NULL,
-		    sizeof(struct slmwk_thread), thrname, i);
+		    sizeof(struct pfl_wk_thread), thrname, i);
 		pfl_wkthr(thr)->wkt_workq = &pfl_workq;
 		pscthr_setready(thr);
 	}
