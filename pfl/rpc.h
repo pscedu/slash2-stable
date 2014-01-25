@@ -91,11 +91,6 @@ struct psc_compl;
 extern lnet_handle_eq_t			pscrpc_eq_h;
 extern struct psclist_head		pscrpc_wait_callbacks;
 
-extern struct psc_poolmgr		*pscrpc_conn_pool;
-extern struct psc_poolmgr		*pscrpc_imp_pool;
-extern struct psc_poolmgr		*pscrpc_set_pool;
-extern struct psc_poolmgr		*pscrpc_rq_pool;
-
 struct pscrpc_handle {
 	uint64_t			cookie;
 };
@@ -547,10 +542,6 @@ int	 pscrpc_send_reply(struct pscrpc_request *, int);
 int	 pscrpc_start_bulk_transfer(struct pscrpc_bulk_desc *);
 void	 pscrpc_unregister_bulk(struct pscrpc_request *);
 void	 pscrpc_abort_inflight(struct pscrpc_import *);
-void	 pscrpc_drop_conns(lnet_process_id_t *);
-
-struct pscrpc_connection *
-	pscrpc_req_getconn(struct pscrpc_request *);
 
 #define pscrpc_req_finished(rq)		_pscrpc_req_finished((rq), 0)
 #define pscrpc_req_finished_locked(rq)	_pscrpc_req_finished((rq), 1)
@@ -564,6 +555,13 @@ struct pscrpc_connection *
 
 #define pscrpc_nid2str2(nid)						\
 	libcfs_nid2str2((nid), pfl_tls_get(PFL_TLSIDX_NIDBUF, PSCRPC_NIDSTR_SIZE))
+
+/* connection.c */
+void	 pscrpc_drop_conns(lnet_process_id_t *);
+void	 pscrpc_conns_init(void);
+
+struct pscrpc_connection *
+	pscrpc_req_getconn(struct pscrpc_request *);
 
 struct pscrpc_connection *
 	 pscrpc_get_connection(lnet_process_id_t, lnet_nid_t, struct pscrpc_uuid *);
@@ -623,6 +621,11 @@ void	pscrpc_getpridforpeer(lnet_process_id_t *,
 void	pscrpc_req_getprids(const struct psc_dynarray *,
 	    struct pscrpc_request *, lnet_process_id_t *,
 	    lnet_process_id_t *);
+
+extern struct psc_poolmgr		*pscrpc_conn_pool;
+extern struct psc_poolmgr		*pscrpc_imp_pool;
+extern struct psc_poolmgr		*pscrpc_set_pool;
+extern struct psc_poolmgr		*pscrpc_rq_pool;
 
 static __inline void
 pscrpc_rs_addref(struct pscrpc_reply_state *rs)

@@ -584,6 +584,28 @@ pscrpc_ni_init(int type, int nmsgs)
 	int               rc;
 	lnet_process_id_t my_id;
 
+	psc_poolmaster_init(&pscrpc_conn_poolmaster,
+	    struct pscrpc_connection, c_lentry, PPMF_AUTO, 64, 64, 0,
+	    NULL, NULL, NULL, "rpcconn");
+	pscrpc_conn_pool = psc_poolmaster_getmgr(&pscrpc_conn_poolmaster);
+
+	psc_poolmaster_init(&pscrpc_set_poolmaster,
+	    struct pscrpc_request_set, set_lentry, PPMF_AUTO, 64, 64, 0,
+	    NULL, NULL, NULL, "rpcset");
+	pscrpc_set_pool = psc_poolmaster_getmgr(&pscrpc_set_poolmaster);
+
+	psc_poolmaster_init(&pscrpc_imp_poolmaster,
+	    struct pscrpc_import, imp_sending_list, PPMF_AUTO, 64, 64, 0,
+	    NULL, NULL, NULL, "rpcimp");
+	pscrpc_imp_pool = psc_poolmaster_getmgr(&pscrpc_imp_poolmaster);
+
+	psc_poolmaster_init(&pscrpc_rq_poolmaster,
+	    struct pscrpc_request, rq_lentry, PPMF_AUTO, 64, 64, 0,
+	    NULL, NULL, NULL, "rpcrq");
+	pscrpc_rq_pool = psc_poolmaster_getmgr(&pscrpc_rq_poolmaster);
+
+	pscrpc_conns_init();
+
 	rc = LNetInit(nmsgs);
 	if (rc)
 		psc_fatalx("failed to initialize LNET (%d)", rc);
@@ -635,26 +657,6 @@ pscrpc_ni_init(int type, int nmsgs)
 		psc_fatalx("LNetGetId() failed");
 
 	psclog_debug("nidpid is (%"PSCPRIxLNID",0x%x)", my_id.nid, my_id.pid);
-
-	psc_poolmaster_init(&pscrpc_conn_poolmaster,
-	    struct pscrpc_connection, c_lentry, PPMF_AUTO, 64, 64, 0,
-	    NULL, NULL, NULL, "rpcconn");
-	pscrpc_conn_pool = psc_poolmaster_getmgr(&pscrpc_conn_poolmaster);
-
-	psc_poolmaster_init(&pscrpc_set_poolmaster,
-	    struct pscrpc_request_set, set_lentry, PPMF_AUTO, 64, 64, 0,
-	    NULL, NULL, NULL, "rpcset");
-	pscrpc_set_pool = psc_poolmaster_getmgr(&pscrpc_set_poolmaster);
-
-	psc_poolmaster_init(&pscrpc_imp_poolmaster,
-	    struct pscrpc_import, imp_sending_list, PPMF_AUTO, 64, 64, 0,
-	    NULL, NULL, NULL, "rpcimp");
-	pscrpc_imp_pool = psc_poolmaster_getmgr(&pscrpc_imp_poolmaster);
-
-	psc_poolmaster_init(&pscrpc_rq_poolmaster,
-	    struct pscrpc_request, rq_lentry, PPMF_AUTO, 64, 64, 0,
-	    NULL, NULL, NULL, "rpcrq");
-	pscrpc_rq_pool = psc_poolmaster_getmgr(&pscrpc_rq_poolmaster);
 
 	if (rc == 0)
 		return 0;
