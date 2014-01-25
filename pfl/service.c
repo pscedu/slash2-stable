@@ -344,6 +344,7 @@ pscrpc_server_handle_request(struct pscrpc_service *svc,
 	/*
 	 * Here's a hack to trick lustre rpc into thinking there's a real export
 	 */
+	spinlock(&request->rq_conn->c_lock);
 	if (request->rq_conn->c_exp == NULL) {
 		struct pscrpc_export *exp;
 
@@ -361,6 +362,7 @@ pscrpc_server_handle_request(struct pscrpc_service *svc,
 		exp->exp_connection = request->rq_conn;
 		request->rq_conn->c_exp = exp;
 	}
+	freelock(&request->rq_conn->c_lock);
 	pscrpc_export_rpc_get(request->rq_conn->c_exp);
 	request->rq_export = request->rq_conn->c_exp;
 
