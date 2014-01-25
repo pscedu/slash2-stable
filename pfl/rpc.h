@@ -94,7 +94,7 @@ extern struct psclist_head		pscrpc_wait_callbacks;
 extern struct psc_poolmgr		*pscrpc_conn_pool;
 extern struct psc_poolmgr		*pscrpc_imp_pool;
 extern struct psc_poolmgr		*pscrpc_set_pool;
-extern struct psc_poolmgr		*pscrpc_rq_pool; 
+extern struct psc_poolmgr		*pscrpc_rq_pool;
 
 struct pscrpc_handle {
 	uint64_t			cookie;
@@ -162,11 +162,12 @@ struct pscrpc_export {
 struct pscrpc_import;
 
 struct pscrpc_connection {
-	struct psc_listentry		 c_lentry;
+	struct psc_hashent		 c_hentry;
+	psc_spinlock_t			 c_lock;
 	lnet_nid_t			 c_self;
 	lnet_process_id_t		 c_peer;
-	struct pscrpc_uuid		 c_remote_uuid;
 	atomic_t			 c_refcount;
+	struct pscrpc_uuid		 c_remote_uuid;
 	struct pscrpc_export		*c_exp;
 	struct pscrpc_import		*c_imp;
 };

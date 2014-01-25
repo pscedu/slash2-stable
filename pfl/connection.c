@@ -32,90 +32,83 @@
 #include "pfl/lock.h"
 #include "pfl/rpc.h"
 
-static psc_spinlock_t	   conn_lock        = SPINLOCK_INIT;
-static struct psclist_head conn_list        = PSCLIST_HEAD_INIT(conn_list);
-static struct psclist_head conn_unused_list = PSCLIST_HEAD_INIT(conn_unused_list);
+struct psc_hashtbl pscrpc_conn_hashtbl;
 
 struct pscrpc_connection *
 pscrpc_connection_addref(struct pscrpc_connection *c)
 {
 	atomic_inc(&c->c_refcount);
-	CDEBUG(D_OTHER, "connection=%p refcount %d to %s self=%s\n",
+	CDEBUG(D_OTHER, "connection=%p refcount %d to %s self=%s",
 	    c, atomic_read(&c->c_refcount),
 	    libcfs_nid2str(c->c_peer.nid), libcfs_nid2str(c->c_self));
 	return (c);
 }
 
+int
+pscrpc_conn_cmp(const void *a, const void *b)
+{
+	struct pscrpc_connection *ca, *cb;
+
+	return (ca->c_peer.nid == cb->c_peer.nid &&
+	    ca->c_peer.pid == cb->c_peer.pid &&
+	    ca->c_self == cb->c_self);
+}
+
 struct pscrpc_connection *
 pscrpc_lookup_conn_locked(lnet_process_id_t peer, lnet_nid_t self)
 {
-	struct pscrpc_connection *c;
+	struct pscrpc_connection *c, q;
 
-	/* XXX hash table */
-	psclist_for_each_entry(c, &conn_list, c_lentry) {
-		if (peer.nid == c->c_peer.nid &&
-		    peer.pid == c->c_peer.pid &&
-		    self == c->c_self)
-			return pscrpc_connection_addref(c);
-	}
-
-	psclist_for_each_entry(c, &conn_unused_list, c_lentry) {
-		psclog_debug("unused conn %p@%s looking for %s",
-		    c, libcfs_id2str(c->c_peer), libcfs_id2str(peer));
-
-		if (peer.nid == c->c_peer.nid &&
-		    peer.pid == c->c_peer.pid &&
-		    self     == c->c_self) {
-			psclist_del(&c->c_lentry, &conn_unused_list);
-			psclist_add(&c->c_lentry, &conn_list);
-			return pscrpc_connection_addref(c);
-		}
-	}
-
-	return NULL;
+	q.c_peer.nid = peer.nid;
+	q.c_peer.pid = peer.pid;
+	q.c_self = self;
+	c = psc_hashtbl_search(&pscrpc_conn_hashtbl, &q, NULL, &q);
+	if (c)
+		return (pscrpc_connection_addref(c));
+	return (NULL);
 }
 
 struct pscrpc_connection *
 pscrpc_get_connection(lnet_process_id_t peer, lnet_nid_t self,
     struct pscrpc_uuid *uuid)
 {
-	struct pscrpc_connection *c;
-	struct pscrpc_connection *c2;
+	struct pscrpc_connection *c, *c2;
 
-	//psc_assert(uuid != NULL);
+//	psc_assert(uuid);
 
 	psclog_debug("self %s peer %s",
 	    libcfs_nid2str(self), libcfs_id2str(peer));
 
-	spinlock(&conn_lock);
 	c = pscrpc_lookup_conn_locked(peer, self);
-	freelock(&conn_lock);
 
 	if (c) {
 		psclog_debug("got self %s peer %s",
-		    libcfs_nid2str(c->c_self), libcfs_nid2str(c->c_peer.nid));
+		    libcfs_nid2str(c->c_self),
+		    libcfs_nid2str(c->c_peer.nid));
 		return (c);
 	}
 
-	psclog_debug("Malloc'ing a new rpc_conn for %s",
+	psclog_debug("malloc'ing a new rpc_conn for %s",
 	    libcfs_id2str(peer));
 
 	c = psc_pool_get(pscrpc_conn_pool);
-	INIT_PSC_LISTENTRY(&c->c_lentry);
+	INIT_SPINLOCK(&c->c_lock);
+	psc_hashent_init(&pscrpc_conn_hashtbl, c);
 	atomic_set(&c->c_refcount, 1);
 	c->c_peer = peer;
 	c->c_self = self;
-	if (uuid != NULL)
+	if (uuid)
 		pscrpc_str2uuid(&c->c_remote_uuid, (char *)uuid->uuid);
 
-	spinlock(&conn_lock);
+	b = psc_hashbkt_get(&pscrpc_conn_hashtbl, c);
+	psc_hashbkt_lock(b);
 	c2 = pscrpc_lookup_conn_locked(peer, self);
 	if (c2 == NULL) {
 		psclog_info("adding connection %p for %s",
 			   c, libcfs_id2str(peer));
-		psclist_add(&c->c_lentry, &conn_list);
+		psc_hashbkt_add_item(&pscrpc_conn_hashtbl, b, c);
 	}
-	freelock(&conn_lock);
+	psc_hashbkt_unlock(b);
 
 	if (c2 == NULL)
 		return (c);
@@ -127,31 +120,19 @@ pscrpc_get_connection(lnet_process_id_t peer, lnet_nid_t self,
 int
 pscrpc_put_connection(struct pscrpc_connection *c)
 {
-	int rc = 0;
+	int n, rc = 0;
 
-	if (c == NULL) {
-		CERROR("NULL connection\n");
-		return (0);
-	}
+	n = atomic_dec_and_getnew(&c->c_refcount);
+
+	psc_assert(n >= 0);
 
 	psclog_debug("connection=%p refcount %d to %s",
-	    c, atomic_read(&c->c_refcount) - 1,
-	    libcfs_nid2str(c->c_peer.nid));
+	    c, n, libcfs_nid2str(c->c_peer.nid));
 
-	if (atomic_dec_and_test(&c->c_refcount)) {
-		int locked;
-
-		psclog_info("connection=%p to unused_list", c);
-
-		locked = reqlock(&conn_lock);
-		psclist_del(&c->c_lentry, &conn_list);
-		psclist_add(&c->c_lentry, &conn_unused_list);
-		ureqlock(&conn_lock, locked);
+	if (n == 0) {
+//		psc_pool_return(pscrpc_conn_pool, c);
 		rc = 1;
 	}
-	if (atomic_read(&c->c_refcount) < 0)
-		psc_fatalx("connection %p refcount %d!",
-		    c, atomic_read(&c->c_refcount));
 
 	return (rc);
 }
@@ -160,15 +141,26 @@ void
 pscrpc_drop_conns(lnet_process_id_t *peer)
 {
 	struct pscrpc_connection *c;
+	struct psc_hashbkt *b;
 
-	spinlock(&conn_lock);
-	psclist_for_each_entry(c, &conn_list, c_lentry)
-		if (c->c_peer.nid == peer->nid &&
-		    c->c_peer.pid == peer->pid) {
-			if (c->c_exp)
-				pscrpc_export_hldrop(c->c_exp);
-			if (c->c_imp)
-				pscrpc_fail_import(c->c_imp, 0);
-		}
-	freelock(&conn_lock);
+	PSC_HASHTBL_FOREACH_BUCKET(b, &pscrpc_conn_hashtbl) {
+		psc_hashbkt_lock(b);
+		PSC_HASHBKT_FOREACH_ENTRY(&pscrpc_conn_hashtbl, c, b)
+			if (c->c_peer.nid == peer->nid &&
+			    c->c_peer.pid == peer->pid) {
+				if (c->c_exp)
+					pscrpc_export_hldrop(c->c_exp);
+				if (c->c_imp)
+					pscrpc_fail_import(c->c_imp, 0);
+			}
+		psc_hashbkt_lock(b);
+	}
+}
+
+void
+pscrpc_conns_init(void)
+{
+	psc_hashtbl_init(&pscrpc_conn_hashtbl, 0,
+	    struct pscrpc_connection, c_peer.nid, c_hentry, 47,
+	    pscrpc_conn_cmp, "rpcconn");
 }
