@@ -19,17 +19,16 @@
 
 #define PSC_SUBSYS PSS_RPC
 
-#include "pfl/tree.h"
 #include "pfl/export.h"
-#include "pfl/rpc.h"
 #include "pfl/log.h"
+#include "pfl/rpc.h"
 
 void
 _pscrpc_export_put(struct pscrpc_export *exp)
 {
 	if (atomic_dec_and_test(&exp->exp_refcount)) {
 		psclog_debug("destroying export %p/%s",
-		    exp, (exp->exp_connection) ?
+		    exp, exp->exp_connection ?
 		    libcfs_id2str(exp->exp_connection->c_peer) : "<?>");
 
 		if (exp->exp_connection)
@@ -45,9 +44,5 @@ _pscrpc_export_put(struct pscrpc_export *exp)
 		obd_destroy_export(exp);
 #endif
 		PSCRPC_OBD_FREE(exp, sizeof(*exp));
-		/*
-		 * pscrpc is not using obd's and our exports are attached to
-		class_decref(obd);
-		*/
 	}
 }
