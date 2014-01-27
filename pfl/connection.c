@@ -62,7 +62,8 @@ pscrpc_lookup_conn_locked(lnet_process_id_t peer, lnet_nid_t self)
 	q.c_peer.nid = peer.nid;
 	q.c_peer.pid = peer.pid;
 	q.c_self = self;
-	c = psc_hashtbl_search(&pscrpc_conn_hashtbl, &q, NULL, peer.nid);
+	c = psc_hashtbl_search(&pscrpc_conn_hashtbl, &q, NULL,
+	    &peer.nid);
 	if (c)
 		return (pscrpc_connection_addref(c));
 	return (NULL);
@@ -93,6 +94,7 @@ pscrpc_get_connection(lnet_process_id_t peer, lnet_nid_t self,
 	    libcfs_id2str(peer));
 
 	c = psc_pool_get(pscrpc_conn_pool);
+	memset(c, 0, sizeof(*c));
 	INIT_SPINLOCK(&c->c_lock);
 	psc_hashent_init(&pscrpc_conn_hashtbl, c);
 	atomic_set(&c->c_refcount, 1);
@@ -101,12 +103,12 @@ pscrpc_get_connection(lnet_process_id_t peer, lnet_nid_t self,
 	if (uuid)
 		pscrpc_str2uuid(&c->c_remote_uuid, (char *)uuid->uuid);
 
-	b = psc_hashbkt_get(&pscrpc_conn_hashtbl, c);
+	b = psc_hashbkt_get(&pscrpc_conn_hashtbl, &peer.nid);
 	psc_hashbkt_lock(b);
 	c2 = pscrpc_lookup_conn_locked(peer, self);
 	if (c2 == NULL) {
 		psclog_info("adding connection %p for %s",
-			   c, libcfs_id2str(peer));
+		    c, libcfs_id2str(peer));
 		psc_hashbkt_add_item(&pscrpc_conn_hashtbl, b, c);
 	}
 	psc_hashbkt_unlock(b);
