@@ -154,7 +154,7 @@ pscrpc_drop_conns(lnet_process_id_t *peer)
 				if (c->c_imp)
 					pscrpc_fail_import(c->c_imp, 0);
 			}
-		psc_hashbkt_lock(b);
+		psc_hashbkt_unlock(b);
 	}
 }
 
