@@ -585,7 +585,7 @@ pscrpc_ni_init(int type, int nmsgs)
 	lnet_process_id_t my_id;
 
 	psc_poolmaster_init(&pscrpc_conn_poolmaster,
-	    struct pscrpc_connection, c_lentry, PPMF_AUTO, 64, 64, 0,
+	    struct pscrpc_connection, c_hentry.phe_lentry, PPMF_AUTO, 64, 64, 0,
 	    NULL, NULL, NULL, "rpcconn");
 	pscrpc_conn_pool = psc_poolmaster_getmgr(&pscrpc_conn_poolmaster);
 

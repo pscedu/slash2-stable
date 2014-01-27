@@ -47,7 +47,7 @@ pscrpc_connection_addref(struct pscrpc_connection *c)
 int
 pscrpc_conn_cmp(const void *a, const void *b)
 {
-	struct pscrpc_connection *ca, *cb;
+	const struct pscrpc_connection *ca = a, *cb = b;
 
 	return (ca->c_peer.nid == cb->c_peer.nid &&
 	    ca->c_peer.pid == cb->c_peer.pid &&
@@ -73,6 +73,7 @@ pscrpc_get_connection(lnet_process_id_t peer, lnet_nid_t self,
     struct pscrpc_uuid *uuid)
 {
 	struct pscrpc_connection *c, *c2;
+	struct psc_hashbkt *b;
 
 //	psc_assert(uuid);
 
@@ -122,7 +123,7 @@ pscrpc_put_connection(struct pscrpc_connection *c)
 {
 	int n, rc = 0;
 
-	n = atomic_dec_and_getnew(&c->c_refcount);
+	n = psc_atomic32_dec_getnew(&c->c_refcount);
 
 	psc_assert(n >= 0);
 
