@@ -77,6 +77,10 @@ CFLAGS+=	-fno-builtin-malloc -fno-builtin-calloc $( \
 LDFLAGS+=	-ltcmalloc -lprofiler
 endif
 
+ifeq (${EFENCE},1)
+LDFLAGS+=	-lefence
+endif
+
 DEBUG?=		1
 DEVELPATHS?=	1
 ifeq (${DEBUG},0)
