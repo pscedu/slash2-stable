@@ -201,7 +201,8 @@ pscrpc_request_in_callback(lnet_event_t *ev)
 		struct pscrpc_peer_qlen *pq;
 
 		pq = psc_hashtbl_search(&svc->srv_peer_qlentab,
-		    &req->rq_peer, pscrpc_bump_peer_qlen, &req->rq_peer.nid);
+		    &req->rq_peer, pscrpc_bump_peer_qlen,
+		    &req->rq_peer.nid);
 		if (pq == NULL) {
 			struct pscrpc_peer_qlen *tpq;
 			struct psc_hashbkt *b;
