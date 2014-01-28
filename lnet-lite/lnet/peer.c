@@ -183,6 +183,8 @@ lnet_nid2peer_locked(lnet_peer_t **lpp, lnet_nid_t nid)
 	
 	lp = psc_pool_get(lnet_peer_pool);
         memset(lp, 0, sizeof(*lp));             /* zero counters etc */
+
+	INIT_LISTENTRY(&lp->lp_lentry);
         
 	CFS_INIT_LIST_HEAD(&lp->lp_txq);
         CFS_INIT_LIST_HEAD(&lp->lp_rtrq);
