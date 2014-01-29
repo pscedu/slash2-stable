@@ -330,3 +330,16 @@ psc_dynarray_concat(struct psc_dynarray *pda,
 	}
 	return (0);
 }
+
+void
+psc_dynarray_swap(struct psc_dynarray *da, int a, int b)
+{
+	void *tmp;
+
+	psc_assert(a >= 0);
+	psc_assert(b >= 0);
+	psc_assert(a < psc_dynarray_len(da));
+	psc_assert(b < psc_dynarray_len(da));
+	if (a != b)
+		SWAP(da->pda_items[a], da->pda_items[b], tmp);
+}
