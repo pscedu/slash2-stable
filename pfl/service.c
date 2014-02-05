@@ -686,7 +686,7 @@ pscrpcthr_main(struct psc_thread *thr)
 	svc = prt->prt_svh->svh_service;
 	psc_assert(svc);
 
-	if (svc->srv_init != NULL) {
+	if (svc->srv_init) {
 		rc = svc->srv_init(thr);
 		if (rc)
 			goto out;
