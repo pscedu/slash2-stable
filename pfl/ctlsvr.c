@@ -38,29 +38,29 @@
 #include <stdlib.h>
 #include <unistd.h>
 
-#include "pfl/cdefs.h"
-#include "pfl/explist.h"
-#include "pfl/hashtbl.h"
-#include "pfl/pfl.h"
-#include "pfl/rlimit.h"
-#include "pfl/str.h"
-#include "pfl/list.h"
-#include "pfl/listcache.h"
-#include "pfl/stree.h"
-#include "pfl/rpc.h"
 #include "pfl/atomic.h"
+#include "pfl/cdefs.h"
 #include "pfl/ctl.h"
 #include "pfl/ctlsvr.h"
+#include "pfl/explist.h"
 #include "pfl/fault.h"
 #include "pfl/fmtstr.h"
+#include "pfl/hashtbl.h"
 #include "pfl/iostats.h"
 #include "pfl/journal.h"
+#include "pfl/list.h"
+#include "pfl/listcache.h"
 #include "pfl/lock.h"
 #include "pfl/log.h"
 #include "pfl/mlist.h"
 #include "pfl/net.h"
+#include "pfl/pfl.h"
 #include "pfl/pool.h"
 #include "pfl/random.h"
+#include "pfl/rlimit.h"
+#include "pfl/rpc.h"
+#include "pfl/str.h"
+#include "pfl/stree.h"
 #include "pfl/thread.h"
 #include "pfl/umask.h"
 #include "pfl/waitq.h"
@@ -939,6 +939,7 @@ psc_ctlparam_pool_handle(int fd, struct psc_ctlmsghdr *mh,
 	if (nlevels < 3 || strcmp(levels[2], "min") == 0) {
 		if (nlevels == 3 && set) {
 			/* XXX logic is bogus */
+			/* XXX use api/lock  */
 			if (pcp->pcp_flags & PCPF_ADD)
 				m->ppm_min += val;
 			else if (pcp->pcp_flags & PCPF_SUB)
@@ -947,7 +948,7 @@ psc_ctlparam_pool_handle(int fd, struct psc_ctlmsghdr *mh,
 				m->ppm_min = val;
 			if (m->ppm_min < 1)
 				m->ppm_min = 1;
-			if (m->ppm_min > m->ppm_max)
+			if (m->ppm_max && m->ppm_min > m->ppm_max)
 				m->ppm_min = m->ppm_max;
 			psc_pool_resize(m);
 		} else {
@@ -968,7 +969,7 @@ psc_ctlparam_pool_handle(int fd, struct psc_ctlmsghdr *mh,
 				m->ppm_max = val;
 			if (m->ppm_max < 1)
 				m->ppm_max = 1;
-			if (m->ppm_max < m->ppm_min)
+			if (m->ppm_max && m->ppm_max < m->ppm_min)
 				m->ppm_max = m->ppm_min;
 			psc_pool_resize(m);
 		} else {
@@ -995,6 +996,23 @@ psc_ctlparam_pool_handle(int fd, struct psc_ctlmsghdr *mh,
 				return (0);
 		}
 	}
+	if (nlevels < 3 || strcmp(levels[2], "free") == 0) {
+		if (set)
+			return (psc_ctlsenderr(fd, mh,
+			    "pool.%s.free: read-only", levels[1]));
+		else {
+			levels[2] = "free";
+			if (POOL_IS_MLIST(m))
+				snprintf(nbuf, sizeof(nbuf), "%d",
+				    psc_mlist_size(&m->ppm_ml));
+			else
+				snprintf(nbuf, sizeof(nbuf), "%d",
+				    lc_nitems(&m->ppm_lc));
+			if (!psc_ctlmsg_param_send(fd, mh, pcp,
+			    PCTHRNAME_EVERYONE, levels, 3, nbuf))
+				return (0);
+		}
+	}
 	if (nlevels < 3 || strcmp(levels[2], "thres") == 0) {
 		if (nlevels == 3 && set) {
 			if (pcp->pcp_flags & PCPF_ADD)
@@ -1015,6 +1033,22 @@ psc_ctlparam_pool_handle(int fd, struct psc_ctlmsghdr *mh,
 				return (0);
 		}
 	}
+	if (nlevels == 3 && strcmp(levels[2], "reap") == 0) {
+		if (set) {
+			int old;
+
+			psc_mutex_lock(&m->ppm_reclaim_mutex);
+			old = atomic_read(&m->ppm_nwaiters);
+			atomic_set(&m->ppm_nwaiters, val);
+			m->ppm_reclaimcb(m);
+			atomic_set(&m->ppm_nwaiters, old);
+			psc_mutex_unlock(&m->ppm_reclaim_mutex);
+		} else {
+			return (psc_ctlsenderr(fd, mh,
+			    "pool.%s.reap: write-only", levels[1]));
+		}
+	}
+
 	return (1);
 }
 
@@ -1043,6 +1077,8 @@ psc_ctlparam_pool(int fd, struct psc_ctlmsghdr *mh,
 	    strcmp(levels[2], "min")   != 0 &&
 	    strcmp(levels[2], "max")   != 0 &&
 	    strcmp(levels[2], "thres") != 0 &&
+	    strcmp(levels[2], "free")  != 0 &&
+	    strcmp(levels[2], "reap")  != 0 &&
 	    strcmp(levels[2], "total") != 0)
 		return (psc_ctlsenderr(fd, mh,
 		    "invalid pool field: %s", levels[2]));
