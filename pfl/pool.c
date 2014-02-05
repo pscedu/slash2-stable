@@ -160,8 +160,8 @@ _psc_poolmaster_init(struct psc_poolmaster *p, size_t entsize,
 	va_list ap;
 
 	va_start(ap, namefmt);
-	_psc_poolmaster_initv(p, entsize, offset, flags, total, min, max,
-	    initf, destroyf, reclaimcb, mwcarg, namefmt, ap);
+	_psc_poolmaster_initv(p, entsize, offset, flags, total, min,
+	    max, initf, destroyf, reclaimcb, mwcarg, namefmt, ap);
 	va_end(ap);
 }
 
@@ -579,8 +579,9 @@ _psc_pool_get(struct psc_poolmgr *m, int flags)
 	/* If communal, try reaping other pools in sets. */
 	locked = reqlock(&m->ppm_master->pms_lock);
 	for (n = 0; n < psc_dynarray_len(&m->ppm_master->pms_sets); n++)
-		_psc_pool_reap(psc_dynarray_getpos(&m->ppm_master->pms_sets, n),
-		    m->ppm_master, m->ppm_entsize);
+		_psc_pool_reap(psc_dynarray_getpos(
+		    &m->ppm_master->pms_sets, n), m->ppm_master,
+		    m->ppm_entsize);
 	ureqlock(&m->ppm_master->pms_lock, locked);
 	if (n)
 		psc_pool_grow(m, 2);
@@ -669,7 +670,8 @@ psc_pool_gettotal(struct psc_poolmgr *m)
 }
 
 /**
- * psc_pool_nfree - Retrieve the number of free/available items in a pool.
+ * psc_pool_nfree - Retrieve the number of free/available items in a
+ * pool.
  * @m: pool.
  */
 int
@@ -713,7 +715,8 @@ psc_pool_share(struct psc_poolmaster *p)
 }
 
 /**
- * psc_pool_unshare - Disallow a pool from sharing its resources with everyone.
+ * psc_pool_unshare - Disallow a pool from sharing its resources with
+ * everyone.
  * @p: pool master to unshare.
  */
 void
