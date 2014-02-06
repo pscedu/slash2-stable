@@ -22,6 +22,7 @@
 
 #include "pfl/fs.h"
 #include "pfl/list.h"
+#include "pfl/time.h"
 
 #ifdef HAVE_FUSE
 #  include <fuse_lowlevel.h>
@@ -41,6 +42,7 @@ struct pscfs_req {
 	struct fuse_file_info		*pfr_fuse_fi;
 	struct pscfs_clientctx		 pfr_clientctx;
 	struct psc_listentry		 pfr_lentry;
+	struct timespec			 pfr_start;
 	char				*pfr_buf;
 };
 

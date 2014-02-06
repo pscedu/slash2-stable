@@ -727,6 +727,7 @@ pscfs_inum_pscfs2fuse(pscfs_inum_t p_inum, double timeo)
 	do {								\
 		(pfr) = psc_pool_get(pscfs_req_pool);			\
 		memset((pfr), 0, sizeof(*(pfr)));			\
+		PFL_GETTIMESPEC(&(pfr)->pfr_start);			\
 		INIT_LISTENTRY(&(pfr)->pfr_lentry);			\
 		(pfr)->pfr_fuse_req = (fsreq);				\
 	} while (0)
@@ -1094,24 +1095,44 @@ pscfs_fuse_handle_removexattr(fuse_req_t req, fuse_ino_t ino,
 
 /* Begin system call reply routines */
 
+#define PFR_REPLY(fun, pfr, ...)					\
+	do {								\
+		struct timespec t0, d;					\
+		struct {						\
+			void *p;					\
+			uint64_t uniqid;				\
+		} *r0p = (void *)(pfr)->pfr_fuse_req;			\
+		uint64_t u0 = r0p->uniqid;				\
+									\
+		fuse_reply_##fun((pfr)->pfr_fuse_req, ## __VA_ARGS__);	\
+		PFL_GETTIMESPEC(&t0);					\
+		timespecsub(&t0, &(pfr)->pfr_start, &d);		\
+		t0.tv_sec = 0;						\
+		t0.tv_nsec = 600000;					\
+		if (timespeccmp(&d, &t0, >))				\
+			psclog_diag(					\
+			    "in for "PSCPRI_TIMESPEC"s uniqid=%"PRIu64,	\
+			    PSCPRI_TIMESPEC_ARGS(&d), u0);		\
+	} while (0)
+
 void
 pscfs_reply_access(struct pscfs_req *pfr, int rc)
 {
-	fuse_reply_err(pfr->pfr_fuse_req, rc);
+	PFR_REPLY(err, pfr, rc);
 	psc_pool_return(pscfs_req_pool, pfr);
 }
 
 void
 pscfs_reply_close(struct pscfs_req *pfr, int rc)
 {
-	fuse_reply_err(pfr->pfr_fuse_req, rc);
+	PFR_REPLY(err, pfr, rc);
 	psc_pool_return(pscfs_req_pool, pfr);
 }
 
 void
 pscfs_reply_closedir(struct pscfs_req *pfr, int rc)
 {
-	fuse_reply_err(pfr->pfr_fuse_req, rc);
+	PFR_REPLY(err, pfr, rc);
 	psc_pool_return(pscfs_req_pool, pfr);
 }
 
@@ -1123,7 +1144,7 @@ pscfs_reply_create(struct pscfs_req *pfr, pscfs_inum_t inum,
 	struct fuse_entry_param e;
 
 	if (rc)
-		fuse_reply_err(pfr->pfr_fuse_req, rc);
+		PFR_REPLY(err, pfr, rc);
 	else {
 		if (rflags & PSCFS_CREATEF_DIO)
 			pfr->pfr_fuse_fi->direct_io = 1;
@@ -1136,8 +1157,7 @@ pscfs_reply_create(struct pscfs_req *pfr, pscfs_inum_t inum,
 			e.attr.st_ino = e.ino;
 			e.generation = gen;
 		}
-		fuse_reply_create(pfr->pfr_fuse_req, &e,
-		    pfr->pfr_fuse_fi);
+		PFR_REPLY(create, pfr, &e, pfr->pfr_fuse_fi);
 	}
 	psc_pool_return(pscfs_req_pool, pfr);
 }
@@ -1145,21 +1165,21 @@ pscfs_reply_create(struct pscfs_req *pfr, pscfs_inum_t inum,
 void
 pscfs_reply_flush(struct pscfs_req *pfr, int rc)
 {
-	fuse_reply_err(pfr->pfr_fuse_req, rc);
+	PFR_REPLY(err, pfr, rc);
 	psc_pool_return(pscfs_req_pool, pfr);
 }
 
 void
 pscfs_reply_fsync(struct pscfs_req *pfr, int rc)
 {
-	fuse_reply_err(pfr->pfr_fuse_req, rc);
+	PFR_REPLY(err, pfr, rc);
 	psc_pool_return(pscfs_req_pool, pfr);
 }
 
 void
 pscfs_reply_fsyncdir(struct pscfs_req *pfr, int rc)
 {
-	fuse_reply_err(pfr->pfr_fuse_req, rc);
+	PFR_REPLY(err, pfr, rc);
 	psc_pool_return(pscfs_req_pool, pfr);
 }
 
@@ -1168,10 +1188,11 @@ pscfs_reply_getattr(struct pscfs_req *pfr, struct stat *stb,
     double attr_timeout, int rc)
 {
 	if (rc)
-		fuse_reply_err(pfr->pfr_fuse_req, rc);
+		PFR_REPLY(err, pfr, rc);
 	else {
-		stb->st_ino = INUM_PSCFS2FUSE(stb->st_ino, attr_timeout);
-		fuse_reply_attr(pfr->pfr_fuse_req, stb, attr_timeout);
+		stb->st_ino = INUM_PSCFS2FUSE(stb->st_ino,
+		    attr_timeout);
+		PFR_REPLY(attr, pfr, stb, attr_timeout);
 	}
 	psc_pool_return(pscfs_req_pool, pfr);
 }
@@ -1179,7 +1200,7 @@ pscfs_reply_getattr(struct pscfs_req *pfr, struct stat *stb,
 void
 pscfs_reply_ioctl(struct pscfs_req *pfr)
 {
-//	fuse_reply_err(pfr->pfr_fuse_req, rc);
+	//PFR_REPLY(err, pfr, rc);
 	psc_pool_return(pscfs_req_pool, pfr);
 }
 
@@ -1187,7 +1208,7 @@ void
 pscfs_reply_open(struct pscfs_req *pfr, void *data, int rflags, int rc)
 {
 	if (rc)
-		fuse_reply_err(pfr->pfr_fuse_req, rc);
+		PFR_REPLY(err, pfr, rc);
 	else {
 		if (rflags & PSCFS_OPENF_KEEPCACHE)
 			pfr->pfr_fuse_fi->keep_cache = 1;
@@ -1208,7 +1229,7 @@ pscfs_reply_open(struct pscfs_req *pfr, void *data, int rflags, int rc)
 #endif
 
 		fi_setdata(pfr->pfr_fuse_fi, data);
-		fuse_reply_open(pfr->pfr_fuse_req, pfr->pfr_fuse_fi);
+		PFR_REPLY(open, pfr, pfr->pfr_fuse_fi);
 	}
 	psc_pool_return(pscfs_req_pool, pfr);
 }
@@ -1217,14 +1238,14 @@ void
 pscfs_reply_opendir(struct pscfs_req *pfr, void *data, int rflags, int rc)
 {
 	if (rc)
-		fuse_reply_err(pfr->pfr_fuse_req, rc);
+		PFR_REPLY(err, pfr, rc);
 	else {
 		if (rflags & PSCFS_OPENF_KEEPCACHE)
 			pfr->pfr_fuse_fi->keep_cache = 1;
 		if (rflags & PSCFS_OPENF_DIO)
 			pfr->pfr_fuse_fi->direct_io = 1;
 		fi_setdata(pfr->pfr_fuse_fi, data);
-		fuse_reply_open(pfr->pfr_fuse_req, pfr->pfr_fuse_fi);
+		PFR_REPLY(open, pfr, pfr->pfr_fuse_fi);
 	}
 	psc_pool_return(pscfs_req_pool, pfr);
 }
@@ -1233,9 +1254,9 @@ void
 pscfs_reply_read(struct pscfs_req *pfr, void *buf, ssize_t len, int rc)
 {
 	if (rc)
-		fuse_reply_err(pfr->pfr_fuse_req, rc);
+		PFR_REPLY(err, pfr, rc);
 	else
-		fuse_reply_buf(pfr->pfr_fuse_req, buf, len);
+		PFR_REPLY(buf, pfr, buf, len);
 
 	psc_assert(buf == pfr->pfr_buf);
 	PSCFREE(pfr->pfr_buf);
@@ -1249,14 +1270,14 @@ pscfs_reply_readdir(struct pscfs_req *pfr, void *buf, ssize_t len, int rc)
 	off_t off;
 
 	if (rc)
-		fuse_reply_err(pfr->pfr_fuse_req, rc);
+		PFR_REPLY(err, pfr, rc);
 	else {
 		for (dirent = buf, off = 0; off < len;
 		    off += PFL_DIRENT_SIZE(dirent->pfd_namelen),
 		    dirent = PSC_AGP(buf, off))
 			dirent->pfd_ino = INUM_PSCFS2FUSE(
 			    dirent->pfd_ino, 8);
-		fuse_reply_buf(pfr->pfr_fuse_req, buf, len);
+		PFR_REPLY(buf, pfr, buf, len);
 	}
 	psc_pool_return(pscfs_req_pool, pfr);
 }
@@ -1265,23 +1286,23 @@ void
 pscfs_reply_readlink(struct pscfs_req *pfr, void *buf, int rc)
 {
 	if (rc)
-		fuse_reply_err(pfr->pfr_fuse_req, rc);
+		PFR_REPLY(err, pfr, rc);
 	else
-		fuse_reply_readlink(pfr->pfr_fuse_req, buf);
+		PFR_REPLY(readlink, pfr, buf);
 	psc_pool_return(pscfs_req_pool, pfr);
 }
 
 void
 pscfs_reply_rename(struct pscfs_req *pfr, int rc)
 {
-	fuse_reply_err(pfr->pfr_fuse_req, rc);
+	PFR_REPLY(err, pfr, rc);
 	psc_pool_return(pscfs_req_pool, pfr);
 }
 
 void
 pscfs_reply_rmdir(struct pscfs_req *pfr, int rc)
 {
-	fuse_reply_err(pfr->pfr_fuse_req, rc);
+	PFR_REPLY(err, pfr, rc);
 	psc_pool_return(pscfs_req_pool, pfr);
 }
 
@@ -1290,10 +1311,10 @@ pscfs_reply_setattr(struct pscfs_req *pfr, struct stat *stb,
     double attr_timeout, int rc)
 {
 	if (rc)
-		fuse_reply_err(pfr->pfr_fuse_req, rc);
+		PFR_REPLY(err, pfr, rc);
 	else {
 		stb->st_ino = INUM_PSCFS2FUSE(stb->st_ino, attr_timeout);
-		fuse_reply_attr(pfr->pfr_fuse_req, stb, attr_timeout);
+		PFR_REPLY(attr, pfr, stb, attr_timeout);
 	}
 	psc_pool_return(pscfs_req_pool, pfr);
 }
@@ -1303,9 +1324,9 @@ pscfs_reply_statfs(struct pscfs_req *pfr, const struct statvfs *sfb,
     int rc)
 {
 	if (rc)
-		fuse_reply_err(pfr->pfr_fuse_req, rc);
+		PFR_REPLY(err, pfr, rc);
 	else
-		fuse_reply_statfs(pfr->pfr_fuse_req, sfb);
+		PFR_REPLY(statfs, pfr, sfb);
 	psc_pool_return(pscfs_req_pool, pfr);
 }
 
@@ -1318,7 +1339,7 @@ pscfs_reply_umount(struct pscfs_req *pfr)
 void
 pscfs_reply_unlink(struct pscfs_req *pfr, int rc)
 {
-	fuse_reply_err(pfr->pfr_fuse_req, rc);
+	PFR_REPLY(err, pfr, rc);
 	psc_pool_return(pscfs_req_pool, pfr);
 }
 
@@ -1326,9 +1347,9 @@ void
 pscfs_reply_write(struct pscfs_req *pfr, ssize_t len, int rc)
 {
 	if (rc)
-		fuse_reply_err(pfr->pfr_fuse_req, rc);
+		PFR_REPLY(err, pfr, rc);
 	else
-		fuse_reply_write(pfr->pfr_fuse_req, len);
+		PFR_REPLY(write, pfr, len);
 
 	psc_pool_return(pscfs_req_pool, pfr);
 }
@@ -1337,11 +1358,11 @@ void
 pscfs_reply_listxattr(struct pscfs_req *pfr, void *buf, size_t len, int rc)
 {
 	if (rc)
-		fuse_reply_err(pfr->pfr_fuse_req, rc);
+		PFR_REPLY(err, pfr, rc);
 	else if (buf)
-		fuse_reply_buf(pfr->pfr_fuse_req, buf, len);
+		PFR_REPLY(buf, pfr, buf, len);
 	else
-		fuse_reply_xattr(pfr->pfr_fuse_req, len);
+		PFR_REPLY(xattr, pfr, len);
 
 	psc_pool_return(pscfs_req_pool, pfr);
 }
@@ -1349,7 +1370,7 @@ pscfs_reply_listxattr(struct pscfs_req *pfr, void *buf, size_t len, int rc)
 void
 pscfs_reply_setxattr(struct pscfs_req *pfr, int rc)
 {
-	fuse_reply_err(pfr->pfr_fuse_req, rc);
+	PFR_REPLY(err, pfr, rc);
 	psc_pool_return(pscfs_req_pool, pfr);
 }
 
@@ -1357,11 +1378,11 @@ void
 pscfs_reply_getxattr(struct pscfs_req *pfr, void *buf, size_t len, int rc)
 {
 	if (rc)
-		fuse_reply_err(pfr->pfr_fuse_req, rc);
+		PFR_REPLY(err, pfr, rc);
 	else if (buf)
-		fuse_reply_buf(pfr->pfr_fuse_req, buf, len);
+		PFR_REPLY(buf, pfr, buf, len);
 	else
-		fuse_reply_xattr(pfr->pfr_fuse_req, len);
+		PFR_REPLY(xattr, pfr, len);
 
 	psc_pool_return(pscfs_req_pool, pfr);
 }
@@ -1369,7 +1390,7 @@ pscfs_reply_getxattr(struct pscfs_req *pfr, void *buf, size_t len, int rc)
 void
 pscfs_reply_removexattr(struct pscfs_req *pfr, int rc)
 {
-	fuse_reply_err(pfr->pfr_fuse_req, rc);
+	PFR_REPLY(err, pfr, rc);
 	psc_pool_return(pscfs_req_pool, pfr);
 }
 
@@ -1381,7 +1402,7 @@ pscfs_fuse_replygen_entry(struct pscfs_req *pfr, pscfs_inum_t inum,
 	struct fuse_entry_param e;
 
 	if (rc)
-		fuse_reply_err(pfr->pfr_fuse_req, rc);
+		PFR_REPLY(err, pfr, rc);
 	else {
 		e.entry_timeout = entry_timeout;
 		e.ino = INUM_PSCFS2FUSE(inum, entry_timeout);
@@ -1391,7 +1412,7 @@ pscfs_fuse_replygen_entry(struct pscfs_req *pfr, pscfs_inum_t inum,
 			e.attr.st_ino = e.ino;
 			e.generation = gen;
 		}
-		fuse_reply_entry(pfr->pfr_fuse_req, &e);
+		PFR_REPLY(entry, pfr, &e);
 	}
 	psc_pool_return(pscfs_req_pool, pfr);
 }
