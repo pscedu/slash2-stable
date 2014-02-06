@@ -41,9 +41,8 @@
  * Author: Maxim Patlasov <maxim@clusterfs.com>
  */
 
-#include <poll.h>
 #include <pthread.h>
-
+#include <poll.h>
 #include <lnet/lib-lnet.h>
 #include <lnet/socklnd.h>
 
@@ -162,15 +161,6 @@ typedef struct {
         int               upt_errno;             /* non-zero if errored */
         struct cfs_completion upt_completion;    /* wait/signal facility for
                                                   * syncronizing shutdown */
-#if defined(__sun__) || defined(__sun)
-        int               upt_dp_fd;             /* /dev/poll fd */
-        struct pollfd    *upt_requests;          /* arg for write(/dev/poll) */
-        int               upt_nrequests;         /* # of outstanding requests*/
-        struct pollfd    *upt_results;           /* arg for ioctl(DP_POLL) */
-        int               upt_nresults;          /* rc of ioctl(DP_POLL) */
-                                                 /* read 'man -s7d poll' for
-                                                  * details */
-#endif
 } usock_pollthread_t;
 
 /* Number of elements in upt_pollfd[], upt_idx2conn[] and upt_fd2idx[]
@@ -353,6 +343,7 @@ usock_tx_t *usocklnd_create_cr_hello_tx(lnet_ni_t *ni,
 void usocklnd_destroy_tx(lnet_ni_t *ni, usock_tx_t *tx);
 void usocklnd_destroy_txlist(lnet_ni_t *ni, struct list_head *txlist);
 void usocklnd_destroy_zcack_list(struct list_head *zcack_list);
+void usocklnd_destroy_peer (usock_peer_t *peer);
 int usocklnd_get_conn_type(lnet_msg_t *lntmsg);
 int usocklnd_get_cport(void);
 int usocklnd_type2idx(int type);

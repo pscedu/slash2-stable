@@ -45,12 +45,6 @@
 #include <sys/time.h>
 #include <sys/resource.h>
 
-#if defined(__sun__) || defined(__sun)
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <fcntl.h>
-#endif
-
 #include "pfl/iostats.h"
 
 struct psc_iostats usock_pasv_send_ist;	/* passive interface */
@@ -183,15 +177,6 @@ usocklnd_release_poll_states(int n)
 
         for (i = 0; i < n; i++) {
                 usock_pollthread_t *pt = &usock_data.ud_pollthreads[i];
-
-#if defined(__sun__) || defined(__sun)
-                LIBCFS_FREE (pt->upt_results,
-                             sizeof(struct pollfd) * pt->upt_npollfd);
-                LIBCFS_FREE (pt->upt_requests,
-                             sizeof(struct pollfd) * pt->upt_npollfd);
-
-                close(pt->upt_dp_fd);
-#endif
 
                 close(pt->upt_notifier_fd);
                 close(pt->upt_pollfd[0].fd);
@@ -362,41 +347,6 @@ usocklnd_base_startup(void)
                 pt->upt_pollfd[0].events = POLLIN;
                 pt->upt_pollfd[0].revents = 0;
 
-#if defined(__sun__) || defined(__sun)
-                pt->upt_dp_fd = open("/dev/poll", O_RDWR);
-                if (pt->upt_dp_fd < 0) {
-                        rc = -errno;
-                        goto base_startup_failed_5;
-                }
-
-                rc = write(pt->upt_dp_fd,
-                           pt->upt_pollfd,
-                           sizeof(struct pollfd));
-
-                if (rc != sizeof(struct pollfd)) {
-                        if (rc <0)
-                                rc = -errno;
-                        else
-                                rc = -EIO;
-
-                        close(pt->upt_dp_fd);
-                        goto base_startup_failed_5;
-                }
-                rc = 0; /* if we're here, write() was OK */
-
-                LIBCFS_ALLOC (pt->upt_requests,
-                              sizeof(struct pollfd) * UPT_START_SIZ);
-                if (pt->upt_requests == NULL)
-                        goto base_startup_failed_6;
-
-                LIBCFS_ALLOC (pt->upt_results,
-                              sizeof(struct pollfd) * UPT_START_SIZ);
-                if (pt->upt_results == NULL)
-                        goto base_startup_failed_7;
-
-                pt->upt_nrequests = 0;
-#endif
-
                 pt->upt_nfds = 1;
                 pt->upt_idx2conn[0] = NULL;
 
@@ -433,15 +383,6 @@ usocklnd_base_startup(void)
 
         return 0;
 
-#if defined(__sun__) || defined(__sun)
-  base_startup_failed_7:
-        LIBCFS_FREE (pt->upt_requests, sizeof(struct pollfd) * UPT_START_SIZ);
-  base_startup_failed_6:
-        close(pt->upt_dp_fd);
-  base_startup_failed_5:
-        close(pt->upt_notifier_fd);
-        close(pt->upt_pollfd[0].fd);
-#endif
   base_startup_failed_4:
         LIBCFS_FREE (pt->upt_skip, sizeof(int) * UPT_START_SIZ);
   base_startup_failed_3:

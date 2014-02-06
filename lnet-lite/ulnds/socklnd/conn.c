@@ -1016,7 +1016,7 @@ usocklnd_rx_hellomagic_state_transition(usock_conn_t *conn)
 
         conn->uc_rx_niov = 1;
         conn->uc_rx_iov = conn->uc_rx_iova;
-        conn->uc_rx_iov[0].iov_base = (void *)&conn->uc_rx_hello->kshm_magic;
+        conn->uc_rx_iov[0].iov_base = &conn->uc_rx_hello->kshm_magic;
         conn->uc_rx_iov[0].iov_len =
                 conn->uc_rx_nob_wanted =
                 conn->uc_rx_nob_left =
@@ -1038,7 +1038,7 @@ usocklnd_rx_helloversion_state_transition(usock_conn_t *conn)
 
         conn->uc_rx_niov = 1;
         conn->uc_rx_iov = conn->uc_rx_iova;
-        conn->uc_rx_iov[0].iov_base = (void *)&conn->uc_rx_hello->kshm_version;
+        conn->uc_rx_iov[0].iov_base = &conn->uc_rx_hello->kshm_version;
         conn->uc_rx_iov[0].iov_len =
                 conn->uc_rx_nob_wanted =
                 conn->uc_rx_nob_left =
@@ -1057,7 +1057,7 @@ usocklnd_rx_hellobody_state_transition(usock_conn_t *conn)
 
         conn->uc_rx_niov = 1;
         conn->uc_rx_iov = conn->uc_rx_iova;
-        conn->uc_rx_iov[0].iov_base = (void *)&conn->uc_rx_hello->kshm_src_nid;
+        conn->uc_rx_iov[0].iov_base = &conn->uc_rx_hello->kshm_src_nid;
         conn->uc_rx_iov[0].iov_len =
                 conn->uc_rx_nob_wanted =
                 conn->uc_rx_nob_left =
@@ -1077,7 +1077,7 @@ usocklnd_rx_helloIPs_state_transition(usock_conn_t *conn)
 
         conn->uc_rx_niov = 1;
         conn->uc_rx_iov = conn->uc_rx_iova;
-        conn->uc_rx_iov[0].iov_base = (void *)&conn->uc_rx_hello->kshm_ips;
+        conn->uc_rx_iov[0].iov_base = &conn->uc_rx_hello->kshm_ips;
         conn->uc_rx_iov[0].iov_len =
                 conn->uc_rx_nob_wanted =
                 conn->uc_rx_nob_left =
@@ -1095,7 +1095,7 @@ usocklnd_rx_lnethdr_state_transition(usock_conn_t *conn)
 {
         conn->uc_rx_niov = 1;
         conn->uc_rx_iov = conn->uc_rx_iova;
-        conn->uc_rx_iov[0].iov_base = (void *)&conn->uc_rx_msg.ksm_u.lnetmsg;                
+        conn->uc_rx_iov[0].iov_base = &conn->uc_rx_msg.ksm_u.lnetmsg;                
         conn->uc_rx_iov[0].iov_len =
                 conn->uc_rx_nob_wanted =
                 conn->uc_rx_nob_left =
@@ -1113,7 +1113,7 @@ usocklnd_rx_ksmhdr_state_transition(usock_conn_t *conn)
 {
         conn->uc_rx_niov = 1;
         conn->uc_rx_iov = conn->uc_rx_iova;
-        conn->uc_rx_iov[0].iov_base = (void *)&conn->uc_rx_msg;                
+        conn->uc_rx_iov[0].iov_base = &conn->uc_rx_msg;                
         conn->uc_rx_iov[0].iov_len =
                 conn->uc_rx_nob_wanted =
                 conn->uc_rx_nob_left =                        
