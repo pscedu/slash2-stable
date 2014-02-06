@@ -769,9 +769,11 @@ psc_ctlparam_rlim(int fd, struct psc_ctlmsghdr *mh,
 
 		if (pcp->pcp_flags & (PCPF_ADD | PCPF_SUB)) {
 			if (psc_getrlimit(pcr->pcr_id, &n, NULL) == -1) {
+				int error = errno;
+
 				psclog_error("getrlimit");
 				return (psc_ctlsenderr(fd, mh,
-				    "getrlimit", strerror(errno)));
+				    "getrlimit: %s", strerror(error)));
 			}
 			if (pcp->pcp_flags & PCPF_ADD)
 				val += n;
@@ -788,14 +790,16 @@ psc_ctlparam_rlim(int fd, struct psc_ctlmsghdr *mh,
 				if (psc_setrlimit(pcr->pcr_id, val,
 				    val) == -1)
 					return (psc_ctlsenderr(fd, mh,
-					    "setrlimit", strerror(errno)));
+					    "setrlimit: %s",
+					    strerror(errno)));
 			} else {
 				levels[1] = pcr->pcr_name;
 				if (psc_getrlimit(pcr->pcr_id, &n,
 				    NULL) == -1) {
 					psclog_error("getrlimit");
 					return (psc_ctlsenderr(fd, mh,
-					    "getrlimit", strerror(errno)));
+					    "getrlimit: %s",
+					    strerror(errno)));
 				}
 				snprintf(buf, sizeof(buf), "%"PRId64, n);
 				rc = psc_ctlmsg_param_send(fd, mh, pcp,
