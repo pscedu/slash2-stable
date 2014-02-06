@@ -44,7 +44,8 @@ struct psc_waitq waitq;
 __dead void
 usage(void)
 {
-	fprintf(stderr, "usage: %s [-n nthr] [-i iterations]\n", progname);
+	fprintf(stderr, "usage: %s [-n nthr] [-i iterations]\n",
+	    progname);
 	exit(1);
 }
 
@@ -65,7 +66,6 @@ child_main(struct psc_thread *thr)
 	(void)FMTSTR(buf, sizeof(buf), "foobar%h",
 		FMTSTRCASE('h', "s", "test")
 	);
-
 
 	for (i = 0; i < iterations; i++) {
 		psc_waitq_wait(&waitq, NULL);
