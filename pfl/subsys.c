@@ -100,7 +100,7 @@ psc_subsys_register(int ssid, const char *name)
 		    "check order", ssid, name, psc_nsubsys);
 }
 
-enum psclog_level
+int
 psc_log_getlevel_ss(int ssid)
 {
 	const struct psc_subsys *ss;
@@ -116,7 +116,7 @@ psc_log_getlevel_ss(int ssid)
 }
 
 void
-psc_log_setlevel_ss(int ssid, enum psclog_level newlevel)
+psc_log_setlevel_ss(int ssid, int newlevel)
 {
 	struct psc_subsys **ss;
 	int i;

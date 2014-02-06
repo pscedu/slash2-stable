@@ -46,19 +46,17 @@ struct psclog_data {
 #define PLDF_INLOG	(1 << 0)
 
 /* Log levels. */
-enum psclog_level {
-/* 0 */	PLL_FATAL,			/* process termination */
-/* 1 */	PLL_ERROR,			/* recoverable failure */
-/* 2 */	PLL_WARN,			/* something wrong, require attention */
-/* 3 */	PLL_NOTICE,			/* something unusual, recommend attention */
-/* 4 */	PLL_INFO,			/* general information */
-/* 5 */	PLL_DIAG,			/* diagnostics */
-/* 6 */	PLL_DEBUG,			/* debug messages */
-/* 7 */	PLL_VDEBUG,			/* verbose debug messages */
-/* 8 */	PLL_TRACE,			/* flow */
-/* 9 */	PNLOGLEVELS,
-	PLL_MAX = -1			/* force log (temporary debug) */
-};
+#define PLL_FATAL	0		/* process termination */
+#define PLL_ERROR	1		/* recoverable failure */
+#define PLL_WARN	2		/* something wrong, require attention */
+#define PLL_NOTICE	3		/* something unusual, recommend attention */
+#define PLL_INFO	4		/* general information */
+#define PLL_DIAG	5		/* diagnostics */
+#define PLL_DEBUG	6		/* debug messages */
+#define PLL_VDEBUG	7		/* verbose debug messages */
+#define PLL_TRACE	8		/* flow */
+#define PNLOGLEVELS	9
+#define PLL_MAX		(-1)		/* force log (for temporary debugging) */
 
 /* Logging options. */
 #define PLO_ERRNO	(1 << 0)	/* strerror(errno) */
@@ -158,10 +156,10 @@ enum psclog_level {
 #  undef psclogv_trace
 #  undef psclogsv_trace
 
-#  define psclog_trace(fmt, ...)
-#  define psclogs_trace(ss, fmt, ...)
-#  define psclogv_trace(fmt, ap)
-#  define psclogsv_trace(fmt, ap)
+#  define psclog_trace(fmt, ...)	do { } while (0)
+#  define psclogs_trace(ss, fmt, ...)	do { } while (0)
+#  define psclogv_trace(fmt, ap)	do { } while (0)
+#  define psclogsv_trace(fmt, ap)	do { } while (0)
 #endif
 
 #if PSCLOG_LEVEL < PLL_VDEBUG
@@ -170,10 +168,10 @@ enum psclog_level {
 #  undef psclogv_vdebug
 #  undef psclogsv_vdebug
 
-#  define psclog_vdebug(fmt, ...)
-#  define psclogs_vdebug(ss, fmt, ...)
-#  define psclogv_vdebug(fmt, ap)
-#  define psclogsv_vdebug(fmt, ap)
+#  define psclog_vdebug(fmt, ...)	do { } while (0)
+#  define psclogs_vdebug(ss, fmt, ...)	do { } while (0)
+#  define psclogv_vdebug(fmt, ap)	do { } while (0)
+#  define psclogsv_vdebug(fmt, ap)	do { } while (0)
 #endif
 
 #if PSCLOG_LEVEL < PLL_DEBUG
@@ -182,10 +180,10 @@ enum psclog_level {
 #  undef psclogv_debug
 #  undef psclogsv_debug
 
-#  define psclog_debug(fmt, ...)
-#  define psclogs_debug(ss, fmt, ...)
-#  define psclogv_debug(fmt, ap)
-#  define psclogsv_debug(fmt, ap)
+#  define psclog_debug(fmt, ...)	do { } while (0)
+#  define psclogs_debug(ss, fmt, ...)	do { } while (0)
+#  define psclogv_debug(fmt, ap)	do { } while (0)
+#  define psclogsv_debug(fmt, ap)	do { } while (0)
 #endif
 
 #define PSCLOG_LOCK()			flockfile(stderr)
@@ -276,30 +274,29 @@ enum psclog_level {
 
 void			 psc_log_init(void);
 int			 psc_log_setfn(const char *, const char *);
-void			 psc_log_setlevel(int, enum psclog_level);
+void			 psc_log_setlevel(int, int);
 
-enum psclog_level	 psc_log_getlevel(int);
-enum psclog_level	 psc_log_getlevel_global(void);
-enum psclog_level	 psc_log_getlevel_ss(int);
+int			 psc_log_getlevel(int);
+int			 psc_log_getlevel_global(void);
+int			 psc_log_getlevel_ss(int);
 
 struct psclog_data	*psclog_getdata(void);
 
-const char		*psc_loglevel_getname(enum psclog_level);
-enum psclog_level	 psc_loglevel_fromstr(const char *);
+const char		*psc_loglevel_getname(int);
+int			 psc_loglevel_fromstr(const char *);
 
-void _psclogv(const struct pfl_callerinfo *, enum psclog_level,
-    int, const char *, va_list);
+void _psclogv(const struct pfl_callerinfo *, int, int, const char *,
+    va_list);
 
-void _psclog(const struct pfl_callerinfo *, enum psclog_level,
-    int, const char *, ...)
+void _psclog(const struct pfl_callerinfo *, int, int, const char *, ...)
     __attribute__((__format__(__printf__, 4, 5)))
     __attribute__((nonnull(4, 4)));
 
-__dead void _psc_fatalv(const struct pfl_callerinfo *,
-    enum psclog_level, int, const char *, va_list);
+__dead void _psc_fatalv(const struct pfl_callerinfo *, int, int,
+    const char *, va_list);
 
-__dead void _psc_fatal(const struct pfl_callerinfo *,
-    enum psclog_level, int, const char *, ...)
+__dead void _psc_fatal(const struct pfl_callerinfo *, int, int,
+    const char *, ...)
     __attribute__((__format__(__printf__, 4, 5)))
     __attribute__((nonnull(4, 4)));
 
