@@ -81,7 +81,10 @@ pscrpc_get_connection(lnet_process_id_t peer, lnet_nid_t self,
 	psclog_debug("self %s peer %s",
 	    libcfs_nid2str(self), libcfs_id2str(peer));
 
+	b = psc_hashbkt_get(&pscrpc_conn_hashtbl, &peer.nid);
+	psc_hashbkt_lock(b);
 	c = pscrpc_lookup_conn_locked(peer, self);
+	psc_hashbkt_unlock(b);
 
 	if (c) {
 		psclog_debug("got self %s peer %s",
