@@ -44,6 +44,7 @@ _TSRC_PATH=		$(shell perl -Wle 'my @a; push @a, shift; for my $$t (sort @ARGV) {
 			  $(foreach dir,. ${SRC_PATH},$(realpath ${dir})))
 
 _TOBJS=			$(patsubst %.c,%.o,$(filter %.c,${_TSRCS}))
+_TOBJS+=		$(patsubst %.cc,%.o,$(filter %.cc,${_TSRCS}))
 _TOBJS+=		$(patsubst %.y,%.o,$(filter %.y,${_TSRCS}))
 _TOBJS+=		$(patsubst %.l,%.o,$(filter %.l,${_TSRCS}))
 OBJS=			$(addprefix ${OBJDIR}/,$(notdir ${_TOBJS}))
@@ -378,6 +379,7 @@ endif
 # generated there.
 vpath %.y $(sort $(dir $(filter %.y,${_TSRCS})))
 vpath %.l $(sort $(dir $(filter %.l,${_TSRCS})))
+vpath %.cc $(sort $(dir $(filter %.cc,${_TSRCS})))
 vpath %.c $(sort $(dir $(filter %.c,${_TSRCS})) ${OBJDIR})
 
 all: recurse-all all-hook
@@ -401,6 +403,11 @@ all-hook:
 
 # XXX this doesn't seem to work as advertised
 .SILENT: ${OBJDIR}/$(notdir %.d)
+
+${OBJDIR}/$(notdir %.o) : %.cc
+	${PCPP} ${PCPP_FLAGS} $(call FILE_PCPP_FLAGS,$<) $(realpath $<	\
+	    ) | ${CXX} -x c++ ${CFLAGS} $(call FILE_CFLAGS,$<) $(	\
+	    ) $(filter-out ${_EXCLUDES},-I$(dir $<)) - -c -o $@ -MD -MP
 
 ${OBJDIR}/$(notdir %.o) : %.c
 	${PCPP} ${PCPP_FLAGS} $(call FILE_PCPP_FLAGS,$<) $(realpath $<	\
