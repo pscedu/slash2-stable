@@ -1,13 +1,29 @@
 /* $Id$ */
+/*
+ * PostgreSQL Database Management System
+ * (formerly known as Postgres, then as Postgres95)
+ *
+ * Portions Copyright (c) 1996-2013, PostgreSQL Global Development Group
+ *
+ * Portions Copyright (c) 1994, The Regents of the University of California
+ *
+ * Permission to use, copy, modify, and distribute this software and its
+ * documentation for any purpose, without fee, and without a written agreement
+ * LOST PROFITS, ARISING OUT OF THE USE OF THIS SOFTWARE AND ITS
+ * DOCUMENTATION, EVEN IF THE UNIVERSITY OF CALIFORNIA HAS BEEN ADVISED OF THE
+ * POSSIBILITY OF SUCH DAMAGE.
+ *
+ * THE UNIVERSITY OF CALIFORNIA SPECIFICALLY DISCLAIMS ANY WARRANTIES,
+ * INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY
+ * AND FITNESS FOR A PARTICULAR PURPOSE.  THE SOFTWARE PROVIDED HEREUNDER IS
+ * ON AN "AS IS" BASIS, AND THE UNIVERSITY OF CALIFORNIA HAS NO OBLIGATIONS TO
+ * PROVIDE MAINTENANCE, SUPPORT, UPDATES, ENHANCEMENTS, OR MODIFICATIONS.
+ */
 
 #include <stdint.h>
 
 #include "pfl/crc.h"
 
-/*
- * Shamelessly heisted from TelegraphCQ-0.2
- *   pauln 11/08/06
- */
 const uint64_t psc_crc64_table[] = {
 	UINT64_C(0x0000000000000000), UINT64_C(0x42F0E1EBA9EA3693),
 	UINT64_C(0x85E1C3D753D46D26), UINT64_C(0xC711223CFA3E5BB5),
