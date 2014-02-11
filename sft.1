@@ -1,0 +1,62 @@
+.\" $Id$
+.\" %PSC_START_COPYRIGHT%
+.\" -----------------------------------------------------------------------------
+.\" Copyright (c) 2013, Pittsburgh Supercomputing Center (PSC).
+.\"
+.\" Permission to use, copy, and modify this software and its documentation
+.\" without fee for personal use or non-commercial use within your organization
+.\" is hereby granted, provided that the above copyright notice is preserved in
+.\" all copies and that the copyright and this permission notice appear in
+.\" supporting documentation.  Permission to redistribute this software to other
+.\" organizations or individuals is not permitted without the written permission
+.\" of the Pittsburgh Supercomputing Center.  PSC makes no representations about
+.\" the suitability of this software for any purpose.  It is provided "as is"
+.\" without express or implied warranty.
+.\" -----------------------------------------------------------------------------
+.\" %PSC_END_COPYRIGHT%
+.Dd December 17, 2012
+.Dt XOPCTL 1
+.ds volume PSC \- Administrator's Manual
+.Os http://www.psc.edu/
+.Sh NAME
+.Nm sft
+.Nd swissarmy file transfer tool
+.Sh SYNOPSIS
+.Nm xopctl
+.Bk -words
+.Op Fl Kv
+.Op Fl x Ar termarg
+.Ar mode
+.Op Ar host Ns Op : Ns Ar daemon
+.Ek
+.Sh DESCRIPTION
+The
+.Nm
+utility launches and/or connects to daemon sessions.
+If sessions already exist, they are reattached.
+If they do not, they are created anew.
+.Pp
+The following options are available:
+.Bl -tag -width Ds
+.It Fl K
+Instead of connecting or creating a session, kill the target session.
+.It Fl v
+Verbose behavior output.
+.It Fl x Ar termarg
+Provide auxillary arguments to the X terminal emulator.
+.Sh ENVIRONMENT
+.Bl -tag -width Ev
+.It Ev bounce_host
+Override the default bounce host; used for reaching internal hosts.
+.It Ev TERM_PROG
+Override the terminal emulator that is spawned for each host session.
+Defaults to
+.Dq xterm .
+.El
+.Sh FILES
+.Bl -tag -width Pa
+.It Pa pfl_daemon.cfg
+Deployment configuration(s).
+.El
+.Sh SEE ALSO
+.Xr xterm 1
