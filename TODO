@@ -45,7 +45,8 @@ general reminders
 - stop reinpretation of args in macros with stack vars
 - check for mp->rc against ENOENT, etc. (all errnos) without negative signs
 - scan for leaks for pthread_mutex and pthread_cond
-- our tree api does not allow duplicate keys, eradicate INSERT
+- our tree api (BSD sys/tree.h) does not allow duplicate keys, eradicate INSERT
+- ensure reentrancy of 'static' variables in functions
 - the proper way to do callerinfo:
 
 	void
@@ -169,6 +170,7 @@ pfl
   sections to convert to mutex, or at least have profiling separate into
   each alias routine (e.g. BMAP_LOCK() to inform that we wait on bmaps
   too much, and maybe want to convert to mutex)
+- rename '_pci' suffix functions to '_' prefix
 
 lnet
 - use TLS buffers for libcfs_nid2str() to avoid NUMA contention
