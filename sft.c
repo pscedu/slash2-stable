@@ -35,18 +35,22 @@
 #include "pfl/listcache.h"
 #include "pfl/log.h"
 #include "pfl/pfl.h"
+#include "pfl/pool.h"
 #include "pfl/str.h"
+#include "pfl/thread.h"
 #include "pfl/types.h"
 
 struct wk {
-	struct psc_lentry lentry;
+	struct psc_listentry lentry;
 	const char	*fn;
 	int		 fd;
 	int		 eof;
+	int		 chunkid;
 	size_t		 off;
 };
 
 int			 docrc;
+int			 doread = 1;
 int			 progress;
 int			 chunk;
 int			 checkzero;
@@ -66,13 +70,14 @@ struct psc_listcache	 doneq;
 void
 thrmain(struct psc_thread *thr)
 {
-	struct thr *t = thr->pscthr_priv;
+	struct wk *wk;
 	uint64_t crc;
+	ssize_t rc;
 	char *buf;
 
 	buf = PSCALLOC(bufsz);
 
-	while (pscthr_run()) {
+	while (pscthr_run(thr)) {
 		wk = lc_getwait(&wkq);
 		if (wk == NULL)
 			break;
@@ -81,11 +86,13 @@ thrmain(struct psc_thread *thr)
 			rc = pread(wk->fd, buf, bufsz, wk->off);
 		else {
 			rc = pwrite(wk->fd, buf, bufsz, wk->off);
-			if (rc > 0 && rc != bufsz)
-				shortio;
+			if (rc > 0 && rc != bufsz) {
+				rc = -1;
+				errno = EIO;
+			}
 		}
 		if (rc == -1)
-			err(1, "%s", t->fn);
+			err(1, "%s", wk->fn);
 
 		psc_atomic64_add(&resid, rc);
 
@@ -95,12 +102,13 @@ thrmain(struct psc_thread *thr)
 		if (chunk) {
 			psc_crc64_calc(&crc, buf, rc);
 
-			flock(stdout);
+			flockfile(stdout);
 			fprintf(stdout, "F '%s' %5zd %c "
-			    "CRC=%"PSCPRIxCRC64"\n", wk->off, n,
+			    "CRC=%"PSCPRIxCRC64"\n",
+			    wk->fn, wk->chunkid,
 			    checkzero && pfl_memchk(buf, 0, rc) ?
 			    'Z' : ' ', crc);
-			funlock(stdout);
+			funlockfile(stdout);
 		} else
 			psc_crc64_add(&filecrc, buf, rc);
 
@@ -109,7 +117,7 @@ thrmain(struct psc_thread *thr)
 }
 
 void
-addwk(const char *fn, int fd, size_t off)
+addwk(const char *fn, int fd, size_t off, int chunkid)
 {
 	struct wk *wk;
 
@@ -117,6 +125,7 @@ addwk(const char *fn, int fd, size_t off)
 	wk->fn = fn;
 	wk->fd = fd;
 	wk->off = off;
+	wk->chunkid = chunkid;
 	lc_add(&wkq, wk);
 }
 
@@ -132,10 +141,11 @@ usage(void)
 int
 main(int argc, char *argv[])
 {
-	size_t off;
+	int fd, chunkid, c, n;
 	struct stat stb;
-	int c, n;
+	struct wk *wk; 
 	char *endp;
+	off_t off;
 
 	pfl_init();
 	progname = argv[0];
@@ -176,6 +186,9 @@ main(int argc, char *argv[])
 		case 'P': /* chart progress */
 			progress = 1;
 			break;
+		case 'w': /* write */
+			doread = 0;
+			break;
 		case 'Z': /* report if file chunk is all zeroes */
 			checkzero = 1;
 			break;
@@ -190,9 +203,9 @@ main(int argc, char *argv[])
 	if (nthr && docrc && !chunk)
 		errx(1, "cannot parallelize filewide CRC");
 
-	lc_init(&wkq, struct wk, wk_lentry);
-	lc_init(&doneq, struct wk, wk_lentry);
-	psc_poolmaster_init(&wk_poolmaster, struct wk, wk_lentry,
+	lc_init(&wkq, struct wk, lentry);
+	lc_init(&doneq, struct wk, lentry);
+	psc_poolmaster_init(&wk_poolmaster, struct wk, lentry,
 	    0, nthr, nthr, 0, NULL, NULL, NULL, "wk");
 	wk_pool = psc_poolmaster_getmgr(&wk_poolmaster);
 
@@ -208,13 +221,14 @@ main(int argc, char *argv[])
 
 		psc_atomic64_set(&resid, 0);
 
+		chunkid = 0;
 		for (off = 0; off < stb.st_size; off += bufsz)
-			addwk(*argv, fd, off);
+			addwk(*argv, fd, off, chunkid++);
 
 		for (n = 0; n < nthr && (wk = lc_getwait(&doneq)); n++)
 			psc_pool_return(wk_pool, wk);
 
-		if (doread && resid != stb.st_size)
+		if (doread && psc_atomic64_read(&resid) != stb.st_size)
 			warn("premature EOF");
 
 		if (docrc && !chunk) {
