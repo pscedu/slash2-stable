@@ -29,93 +29,122 @@
 #include <string.h>
 #include <unistd.h>
 
-#ifdef MPI
-#include <mpi.h>
-MPI_Group world;
-#endif
-
+#include "pfl/alloc.h"
 #include "pfl/cdefs.h"
+#include "pfl/crc.h"
+#include "pfl/listcache.h"
+#include "pfl/log.h"
 #include "pfl/pfl.h"
 #include "pfl/str.h"
 #include "pfl/types.h"
-#include "pfl/alloc.h"
-#include "pfl/crc.h"
-#include "pfl/log.h"
 
-int		 pes;
-int		 mype;
-int		 docrc;
-int		 chunk;
-int		 checkzero;
-ssize_t		 bufsz = 131072;
+struct wk {
+	struct psc_lentry lentry;
+	const char	*fn;
+	int		 fd;
+	int		 eof;
+	size_t		 off;
+};
 
-uint64_t	 filecrc;
-char		*buf;
-const char	*progname;
+int			 docrc;
+int			 progress;
+int			 chunk;
+int			 checkzero;
+int			 nthr = 1;
+ssize_t			 bufsz = 128 * 1024;
+psc_atomic64_t		 resid;
+uint64_t		 filecrc;
+
+struct psc_poolmaster	 wk_poolmaster;
+struct psc_poolmgr	*wk_pool;
+
+const char		*progname;
+
+struct psc_listcache	 wkq;
+struct psc_listcache	 doneq;
+
+void
+thrmain(struct psc_thread *thr)
+{
+	struct thr *t = thr->pscthr_priv;
+	uint64_t crc;
+	char *buf;
+
+	buf = PSCALLOC(bufsz);
+
+	while (pscthr_run()) {
+		wk = lc_getwait(&wkq);
+		if (wk == NULL)
+			break;
+
+		if (doread)
+			rc = pread(wk->fd, buf, bufsz, wk->off);
+		else {
+			rc = pwrite(wk->fd, buf, bufsz, wk->off);
+			if (rc > 0 && rc != bufsz)
+				shortio;
+		}
+		if (rc == -1)
+			err(1, "%s", t->fn);
+
+		psc_atomic64_add(&resid, rc);
+
+		if (!docrc)
+			return;
+
+		if (chunk) {
+			psc_crc64_calc(&crc, buf, rc);
+
+			flock(stdout);
+			fprintf(stdout, "F '%s' %5zd %c "
+			    "CRC=%"PSCPRIxCRC64"\n", wk->off, n,
+			    checkzero && pfl_memchk(buf, 0, rc) ?
+			    'Z' : ' ', crc);
+			funlock(stdout);
+		} else
+			psc_crc64_add(&filecrc, buf, rc);
+
+		psc_pool_return(wk_pool, wk);
+	}
+}
+
+void
+addwk(const char *fn, int fd, size_t off)
+{
+	struct wk *wk;
+
+	wk = psc_pool_get(wk_pool);
+	wk->fn = fn;
+	wk->fd = fd;
+	wk->off = off;
+	lc_add(&wkq, wk);
+}
 
 __dead void
 usage(void)
 {
 	fprintf(stderr,
-	    "usage: %s [-cKZ] [-b bufsz] file ...\n",
+	    "usage: %s [-cKPZ] [-b bufsz] [-n nthr] file ...\n",
 	    progname);
 	exit(1);
-}
-
-void
-sft_barrier(void)
-{
-#ifdef MPI
-	MPI_Barrier(MPI_COMM_WORLD);
-#endif
-}
-
-#ifdef MPI
-void
-sft_parallel_init(int argc, char *argv[])
-{
-	int rc;
-
-	if (MPI_Init(&argc, &argv) != MPI_SUCCESS)
-		abort();
-
-	MPI_Comm_size(MPI_COMM_WORLD, &pes);
-	MPI_Comm_rank(MPI_COMM_WORLD, &mype);
-
-	rc = MPI_Comm_group(MPI_COMM_WORLD, &world);
-	if (rc != MPI_SUCCESS)
-		abort();
-}
-#else
-void
-sft_parallel_init(__unusedx int argc, __unusedx char *argv[])
-{
-}
-#endif
-
-static void
-sft_parallel_finalize(void)
-{
-#ifdef MPI
-	MPI_Finalize();
-#endif
 }
 
 int
 main(int argc, char *argv[])
 {
-	ssize_t rem, szrc;
+	size_t off;
 	struct stat stb;
-	size_t tmp, n;
-	int c, fd;
+	int c, n;
 	char *endp;
 
 	pfl_init();
 	progname = argv[0];
-	while ((c = getopt(argc, argv, "b:cKZ")) != -1)
+	while ((c = getopt(argc, argv, "b:cKn:PZ")) != -1)
 		switch (c) {
-		case 'b':
+		case 'b': /* I/O block size */
 			bufsz = strtol(optarg, &endp, 10);
+			/* XXX check */
+
 			switch (tolower(*endp)) {
 			case 'k':
 				bufsz *= 1024;
@@ -131,15 +160,23 @@ main(int argc, char *argv[])
 			default:
 				errx(1, "invalid char: %s", endp);
 			}
+			/* XXX check overflow */
 			break;
-		case 'c':
+		case 'c': /* perform CRC of entire file */
 			docrc = 1;
 			PSC_CRC64_INIT(&filecrc);
 			break;
-		case 'K':
+		case 'K': /* report checksum of each file chunk */
 			chunk = 1;
 			break;
-		case 'Z':
+		case 'n': /* #threads */
+			nthr = strtol(optarg, &endp, 10);
+			/* XXX check */
+			break;
+		case 'P': /* chart progress */
+			progress = 1;
+			break;
+		case 'Z': /* report if file chunk is all zeroes */
 			checkzero = 1;
 			break;
 		default:
@@ -150,51 +187,43 @@ main(int argc, char *argv[])
 	if (argc == 0)
 		usage();
 
-	buf = PSCALLOC(bufsz);
+	if (nthr && docrc && !chunk)
+		errx(1, "cannot parallelize filewide CRC");
 
-	sft_parallel_init(argc, argv);
-	sft_barrier();
+	lc_init(&wkq, struct wk, wk_lentry);
+	lc_init(&doneq, struct wk, wk_lentry);
+	psc_poolmaster_init(&wk_poolmaster, struct wk, wk_lentry,
+	    0, nthr, nthr, 0, NULL, NULL, NULL, "wk");
+	wk_pool = psc_poolmaster_getmgr(&wk_poolmaster);
+
+	for (n = 0; n < nthr; n++)
+		pscthr_init(0, 0, thrmain, NULL, 0, "thr%d", n);
 
 	for (; *argv; argv++) {
-		fd = open(argv[0], O_RDONLY);
+		fd = open(*argv, O_RDONLY);
 		if (fd == -1)
-			err(1, "open %s", argv[0]);
-
+			err(1, "open %s", *argv);
 		if (fstat(fd, &stb) == -1)
-			err(1, "stat %s", argv[0]);
+			err(1, "stat %s", *argv);
 
-		rem = stb.st_size;
+		psc_atomic64_set(&resid, 0);
 
-		for (n = 0; rem; n++, rem -= tmp) {
-			tmp = MIN(rem, bufsz);
-			szrc = read(fd, buf, tmp);
-			if (szrc != (ssize_t)tmp)
-				err(1, "read");
+		for (off = 0; off < stb.st_size; off += bufsz)
+			addwk(*argv, fd, off);
 
-			if (docrc) {
-				if (chunk) {
-					psc_crc64_calc(&filecrc, buf,
-					    tmp);
-					fprintf(stdout, "F '%s' %5zd %c "
-					    "CRC=%"PSCPRIxCRC64"\n",
-					    argv[0], n, checkzero &&
-					    pfl_memchk(buf, 0, tmp) ?
-					    'Z' : ' ', filecrc);
-				} else
-					psc_crc64_add(&filecrc, buf,
-					    tmp);
-			}
-		}
+		for (n = 0; n < nthr && (wk = lc_getwait(&doneq)); n++)
+			psc_pool_return(wk_pool, wk);
+
+		if (doread && resid != stb.st_size)
+			warn("premature EOF");
 
 		if (docrc && !chunk) {
 			PSC_CRC64_FIN(&filecrc);
-			fprintf(stdout,
-			    "F '%s' CRC=%"PSCPRIxCRC64"\n",
-			    argv[0], filecrc);
+			fprintf(stdout, "F '%s' CRC=%"PSCPRIxCRC64"\n",
+			    *argv, filecrc);
 		}
 		close(fd);
 	}
 
-	sft_parallel_finalize();
 	return (0);
 }
