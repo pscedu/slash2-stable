@@ -51,6 +51,7 @@
 #include "pfl/fs.h"
 #include "pfl/getopt.h"
 #include "pfl/hashtbl.h"
+#include "pfl/heap.h"
 #include "pfl/hostname.h"
 #include "pfl/iostats.h"
 #include "pfl/journal.h"
@@ -210,6 +211,8 @@ main(int argc, char *argv[])
 	PRTYPE(struct odtable_hdr);
 	PRTYPE(struct odtable_receipt);
 	PRTYPE(struct pfl_callerinfo);
+	PRTYPE(struct pfl_heap);
+	PRTYPE(struct pfl_heap_entry);
 	PRTYPE(struct pfl_mutex);
 	PRTYPE(struct pfl_opstat);
 	PRTYPE(struct pfl_stat);
