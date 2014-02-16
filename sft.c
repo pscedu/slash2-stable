@@ -103,7 +103,7 @@ thrmain(struct psc_thread *thr)
 			psc_crc64_calc(&crc, buf, rc);
 
 			flockfile(stdout);
-			fprintf(stdout, "F '%s' %5zd %c "
+			fprintf(stdout, "F '%s' %5d %c "
 			    "CRC=%"PSCPRIxCRC64"\n",
 			    wk->fn, wk->chunkid,
 			    checkzero && pfl_memchk(buf, 0, rc) ?
