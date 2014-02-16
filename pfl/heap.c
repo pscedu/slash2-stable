@@ -70,9 +70,10 @@ pfl_heap_remove(struct pfl_heap *ph, void *p)
 
 	psc_assert(p);
 	phe = PSC_AGP(p, ph->ph_entoff);
-	p = ph->ph_base[phe->phe_idx] = ph->ph_base[--ph->ph_nitems];
+	p = ph->ph_base[idx = phe->phe_idx] =
+	    ph->ph_base[--ph->ph_nitems];
 	phe = PSC_AGP(p, ph->ph_entoff);
-	phe->phe_idx = 0;
+	phe->phe_idx = idx;
 	/* bubble down */
 	for (;;) {
 		for (minc = p, idx = phe->phe_idx * 2 + 1, i = 0;
@@ -89,18 +90,36 @@ pfl_heap_remove(struct pfl_heap *ph, void *p)
 }
 
 void *
+pfl_heap_peekidx(struct pfl_heap *ph, int idx)
+{
+	struct pfl_heap_entry *phe;
+	void *p;
+
+	if (idx < ph->ph_nitems)
+		return (NULL);
+
+	p = ph->ph_base[idx];
+	phe = PSC_AGP(p, ph->ph_entoff);
+	psc_assert(phe->phe_idx == idx);
+	return (p);
+}
+
+void *
+pfl_heap_peek(struct pfl_heap *ph)
+{
+	if (ph->ph_nitems == 0)
+		return (NULL);
+	return (pfl_heap_peekidx(ph, 0));
+}
+
+void *
 pfl_heap_shift(struct pfl_heap *ph)
 {
 	void *p;
 
-	if (ph->ph_nitems == 0)
-		return (NULL);
-
-	p = ph->ph_base[0];
-struct pfl_heap_entry *phe;
-phe = PSC_AGP(p, ph->ph_entoff);
-psc_assert(phe->phe_idx == 0);
-	pfl_heap_remove(ph, p);
+	p = pfl_heap_peek(ph);
+	if (p)
+		pfl_heap_remove(ph, p);
 	return (p);
 }
 
@@ -109,4 +128,10 @@ pfl_heap_reseat(struct pfl_heap *ph, void *p)
 {
 	pfl_heap_remove(ph, p);
 	pfl_heap_add(ph, p);
+}
+
+int
+pfl_heap_nitems(struct pfl_heap *ph)
+{
+	return (ph->ph_nitems);
 }

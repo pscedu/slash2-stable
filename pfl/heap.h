@@ -40,8 +40,11 @@ struct pfl_heap_entry {
 	{ NULL, (cmpf), offsetof(type, memb), 0, 0 }
 
 void	 pfl_heap_add(struct pfl_heap *, void *);
+int	 pfl_heap_nitems(struct pfl_heap *);
+void	*pfl_heap_peek(struct pfl_heap *);
+void	*pfl_heap_peekidx(struct pfl_heap *, int);
 void	 pfl_heap_remove(struct pfl_heap *, void *);
-void	*pfl_heap_shift(struct pfl_heap *);
 void	 pfl_heap_reseat(struct pfl_heap *, void *);
+void	*pfl_heap_shift(struct pfl_heap *);
 
 #endif /* _PFL_HEAP_H_ */
