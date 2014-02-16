@@ -24,6 +24,7 @@
 #include "pfl/alloc.h"
 #include "pfl/heap.h"
 #include "pfl/pfl.h"
+#include "pfl/random.h"
 
 const char *progname;
 
@@ -82,32 +83,22 @@ int
 main(__unusedx int argc, char *argv[])
 {
 	struct a *p;
-	int i, j;
+	int i, j, last;
 
 	progname = argv[0];
 	pfl_init();
 
 	psc_assert(sizeof(struct a) == 8);
 
-	for (i = 0; i < 10; i++) {
-		add(27);	// 1
-		add(4);         // 2
-		add(97);        // 3
-		add(8);         // 4
-		add(14);        // 5
-		add(3);         // 8
-		add(193);       // 10
-		add(10);        // 14
-		add(1024);      // 27
-		add(1);         // 29
-		add(2);         // 97
-		add(5);         // 193
-		add(29);        // 1024
+	for (i = 0; i < 1000; i++) 
+		add(psc_random32u(100));
 
-		while ((p = pfl_heap_shift(&hp))) {
-			printf("%d\n", p->val);
-			PSCFREE(p);
-		}
+	last = -1;
+	while ((p = pfl_heap_shift(&hp))) {
+		printf("%d\n", p->val);
+		psc_assert(p->val >= last);
+		last = p->val;
+		PSCFREE(p);
 	}
 
 	exit(0);
