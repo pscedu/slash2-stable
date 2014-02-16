@@ -12,6 +12,7 @@ SUBDIRS+=	dynarray
 SUBDIRS+=	fmt
 SUBDIRS+=	fmtstr
 SUBDIRS+=	hashtbl
+SUBDIRS+=	heap
 SUBDIRS+=	list
 SUBDIRS+=	lock
 SUBDIRS+=	mlock
