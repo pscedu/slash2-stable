@@ -52,7 +52,7 @@ pfl_heap_add(struct pfl_heap *ph, void *c)
 	/* bubble up */
 	while (che->phe_idx > 0) {
 		p = ph->ph_base[(che->phe_idx - 1) / 2];
-		if (ph->ph_cmpf(p, c) == -1)
+		if (ph->ph_cmpf(p, c) != 1)
 			break;
 		phe = PSC_AGP(p, ph->ph_entoff);
 		_pfl_heap_swap(ph, phe, che);
