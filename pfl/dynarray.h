@@ -60,7 +60,7 @@ struct psc_dynarray {
 	    (((p) = psc_dynarray_getpos((pda), (n))) || 1); (n)--)
 
 /**
- * psc_dynarray_len - Obtain the number of elements stored in a dynamic array.
+ * Obtain the number of elements stored in a dynamic array.
  * @pda: dynamic array to access.
  */
 #define psc_dynarray_len(pda)	(pda)->pda_pos
