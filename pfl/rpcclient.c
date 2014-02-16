@@ -781,20 +781,21 @@ pscrpc_check_set(struct pscrpc_request_set *set, int check_allsent)
 	struct pscrpc_request *req;
 	int ncompleted         = 0;
 
-	pscrpc_set_lock(set);
-	psc_assert((set->set_flags & PSCRPC_SETF_CHECKING) == 0);
-	set->set_flags |= PSCRPC_SETF_CHECKING;
-	freelock(&set->set_lock);
+//	pscrpc_set_lock(set);
+//	psc_assert((set->set_flags & PSCRPC_SETF_CHECKING) == 0);
+//	set->set_flags |= PSCRPC_SETF_CHECKING;
+//	freelock(&set->set_lock);
 
 	if (set->set_remaining == 0) {
-		spinlock(&set->set_lock);
-		psc_assert(set->set_flags & PSCRPC_SETF_CHECKING);
-		set->set_flags &= ~PSCRPC_SETF_CHECKING;
-		psc_waitq_wakeall(&set->set_waitq);
-		freelock(&set->set_lock);
-		return (1);
+//		spinlock(&set->set_lock);
+//		psc_assert(set->set_flags & PSCRPC_SETF_CHECKING);
+//		set->set_flags &= ~PSCRPC_SETF_CHECKING;
+//		psc_waitq_wakeall(&set->set_waitq);
+//		freelock(&set->set_lock);
+		return (check_allsent ? 1 : 0);
 	}
 
+	spinlock(&set->set_lock);
 	psclist_for_each_entry(req, &set->set_requests, rq_set_chain_lentry) {
 		struct pscrpc_import *imp = req->rq_import;
 		int rc = 0;
@@ -999,7 +1000,9 @@ pscrpc_check_set(struct pscrpc_request_set *set, int check_allsent)
 		req->rq_phase = PSCRPC_RQ_PHASE_COMPLETE;
 		ncompleted++;
 
+		freelock(&set->set_lock);
 		pscrpc_interpret(req);
+		spinlock(&set->set_lock);
 
 		set->set_remaining--;
 
@@ -1010,10 +1013,10 @@ pscrpc_check_set(struct pscrpc_request_set *set, int check_allsent)
 		psc_waitq_wakeall(&imp->imp_recovery_waitq);
 	}
 
-	spinlock(&set->set_lock);
-	psc_assert(set->set_flags & PSCRPC_SETF_CHECKING);
-	set->set_flags &= ~PSCRPC_SETF_CHECKING;
-	psc_waitq_wakeall(&set->set_waitq);
+//	spinlock(&set->set_lock);
+//	psc_assert(set->set_flags & PSCRPC_SETF_CHECKING);
+//	set->set_flags &= ~PSCRPC_SETF_CHECKING;
+//	psc_waitq_wakeall(&set->set_waitq);
 	freelock(&set->set_lock);
 
 	/* If we hit an error, we want to recover promptly. */
