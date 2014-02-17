@@ -83,7 +83,7 @@ int
 main(__unusedx int argc, char *argv[])
 {
 	struct a *p;
-	int i, j, last;
+	int i, last;
 
 	progname = argv[0];
 	pfl_init();
