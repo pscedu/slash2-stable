@@ -48,7 +48,7 @@
 #include "pfl/pool.h"
 #include "pfl/refmgr.h"
 
-SPLAY_GENERATE(psc_objref_tree, psc_objref, pobj_tree_entry, psc_objref_cmp);
+SPLAY_GENERATE(psc_objref_tree, psc_objref, pobj_tree_entry, psc_objref_cmp)
 
 void
 psc_refmgr_tryreclaimobj(struct psc_refmgr *prm, struct psc_objref *pobj,
