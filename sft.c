@@ -40,6 +40,7 @@
 #include "pfl/pool.h"
 #include "pfl/str.h"
 #include "pfl/thread.h"
+#include "pfl/timerthr.h"
 #include "pfl/types.h"
 
 #define THRT_TIOS		0	/* timed I/O stats */
