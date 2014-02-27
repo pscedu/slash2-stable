@@ -27,6 +27,6 @@ ifdef QK
 MODULES+=	mpi qk
 endif
 
-MODULES+=	pfl str
+MODULES+=	pfl str pthread
 
 include ${MAINMK}
