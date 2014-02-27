@@ -32,6 +32,8 @@
 #include "pfl/alloc.h"
 #include "pfl/cdefs.h"
 #include "pfl/crc.h"
+#include "pfl/fmt.h"
+#include "pfl/iostats.h"
 #include "pfl/listcache.h"
 #include "pfl/log.h"
 #include "pfl/pfl.h"
@@ -39,6 +41,8 @@
 #include "pfl/str.h"
 #include "pfl/thread.h"
 #include "pfl/types.h"
+
+#define THRT_TIOS		0	/* timed I/O stats */
 
 struct wk {
 	struct psc_listentry lentry;
@@ -61,6 +65,7 @@ uint64_t		 filecrc;
 
 struct psc_poolmaster	 wk_poolmaster;
 struct psc_poolmgr	*wk_pool;
+struct psc_iostats	 ist;
 
 const char		*progname;
 
@@ -95,6 +100,7 @@ thrmain(struct psc_thread *thr)
 			err(1, "%s", wk->fn);
 
 		psc_atomic64_add(&resid, rc);
+		psc_iostats_intv_add(&ist, rc);
 
 		if (!docrc)
 			return;
@@ -129,11 +135,39 @@ addwk(const char *fn, int fd, size_t off, int chunkid)
 	lc_add(&wkq, wk);
 }
 
+void
+display(__unusedx struct psc_thread *thr)
+{
+	char ratebuf[PSCFMT_HUMAN_BUFSIZ];
+	struct psc_iostats myist;
+	int n, t;
+
+	n = printf("%8s %7s %5s", "time (s)", "rate", "nsets");
+	printf("\n");
+	for (t = 0; t < n; t++)
+		putchar('=');
+	printf("\n");
+
+	n = 0;
+	for (;;) {
+		sleep(1);
+		memcpy(&myist, &ist, sizeof(myist));
+		psc_fmt_human(ratebuf, psc_iostats_getintvrate(&myist, 0));
+		t = printf("\r%7.3fs %7s",
+		    psc_iostats_getintvdur(&myist, 0),
+		    ratebuf);
+		n = MAX(n - t, 0);
+		printf("%*.*s", n, n, "");
+		n = t;
+		fflush(stdout);
+	}
+}
+
 __dead void
 usage(void)
 {
 	fprintf(stderr,
-	    "usage: %s [-cKPZ] [-b bufsz] [-n nthr] file ...\n",
+	    "usage: %s [-BcKPZ] [-b bufsz] [-n nthr] file ...\n",
 	    progname);
 	exit(1);
 }
@@ -143,14 +177,17 @@ main(int argc, char *argv[])
 {
 	int fd, chunkid, c, n;
 	struct stat stb;
-	struct wk *wk; 
+	struct wk *wk;
 	char *endp;
 	off_t off;
 
 	pfl_init();
 	progname = argv[0];
-	while ((c = getopt(argc, argv, "b:cKn:PZ")) != -1)
+	while ((c = getopt(argc, argv, "Bb:cKn:PZ")) != -1)
 		switch (c) {
+		case 'B': /* display bandwidth */
+			pscthr_init(0, 0, display, NULL, 0, "disp");
+			break;
 		case 'b': /* I/O block size */
 			bufsz = strtol(optarg, &endp, 10);
 			/* XXX check */
@@ -208,6 +245,8 @@ main(int argc, char *argv[])
 	psc_poolmaster_init(&wk_poolmaster, struct wk, lentry,
 	    0, nthr, nthr, 0, NULL, NULL, NULL, "wk");
 	wk_pool = psc_poolmaster_getmgr(&wk_poolmaster);
+
+	psc_tiosthr_spawn(THRT_TIOS, "tiosthr");
 
 	for (n = 0; n < nthr; n++)
 		pscthr_init(0, 0, thrmain, NULL, 0, "thr%d", n);
