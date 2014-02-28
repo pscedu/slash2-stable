@@ -639,7 +639,7 @@ _psc_pool_return(struct psc_poolmgr *m, void *p)
 	locked = POOL_RLOCK(m);
 	if ((m->ppm_flags & PPMF_AUTO) && m->ppm_total > m->ppm_min &&
 	    ((m->ppm_max && m->ppm_total > m->ppm_max) ||
-	     m->ppm_nfree * 100 > m->ppm_thres * m->ppm_total)) {
+	     (m->ppm_max && m->ppm_nfree * 100 > m->ppm_thres * m->ppm_max))) {
 		/* Reached free threshold; completely deallocate obj. */
 		m->ppm_total--;
 		m->ppm_nshrink++;
