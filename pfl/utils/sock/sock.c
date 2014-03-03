@@ -38,17 +38,17 @@
 #include <string.h>
 #include <unistd.h>
 
-#include "pfl/cdefs.h"
-#include "pfl/pfl.h"
-#include "pfl/str.h"
-#include "pfl/time.h"
 #include "pfl/alloc.h"
 #include "pfl/atomic.h"
+#include "pfl/cdefs.h"
 #include "pfl/fmt.h"
 #include "pfl/iostats.h"
 #include "pfl/log.h"
 #include "pfl/net.h"
+#include "pfl/pfl.h"
+#include "pfl/str.h"
 #include "pfl/thread.h"
+#include "pfl/time.h"
 #include "pfl/timerthr.h"
 
 #include "sdp_inet.h"
@@ -341,7 +341,8 @@ int
 main(int argc, char *argv[])
 {
 	const char *listenif;
-	char *p;
+	char *endp, *p;
+	long l;
 	int c;
 
 	pfl_init();
@@ -349,6 +350,13 @@ main(int argc, char *argv[])
 	progname = argv[0];
 	while ((c = getopt(argc, argv, "l:p:S")) != -1)
 		switch (c) {
+		case 'b':
+			l = strtol(optarg, &endp, 10);
+			if (l < 1024 || l > 1024*1024 ||
+			    endp == optarg || *endp)
+				errx(1, "invalid number");
+			bufsiz = l;
+			break;
 		case 'l':
 			listenif = optarg;
 			break;
