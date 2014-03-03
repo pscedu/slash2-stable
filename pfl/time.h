@@ -96,7 +96,13 @@
 			psc_fatal("clock_gettime");			\
 	} while (0)
 
-#define PFL_GETTIMESPEC(ts)	_PFL_GETTIMESPEC(CLOCK_REALTIME, (ts))
+#ifdef CLOCK_REALTIME_PRECISE
+#  define PFL_CLOCK_REALTIME CLOCK_REALTIME_PRECISE
+#else
+#  define PFL_CLOCK_REALTIME CLOCK_REALTIME_
+#endif
+
+#define PFL_GETTIMESPEC(ts)	_PFL_GETTIMESPEC(PFL_CLOCK_REALTIME, (ts))
 
 #ifndef HAVE_FUTIMENS
 struct timespec;
