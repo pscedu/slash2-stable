@@ -144,6 +144,8 @@ ioloop(int ioflags)
 
 	ist = wr ? &wrst : &rdst;
 	for (;;) {
+printf("loop %s\n", wr ? "wr" : "rd");
+usleep(100);
 		/* Specifically test that select(2) works. */
 		FD_ZERO(&set);
 		FD_SET(peersock, &set);
