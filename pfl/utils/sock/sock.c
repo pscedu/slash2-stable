@@ -97,6 +97,8 @@ displaythr_main(__unusedx struct psc_thread *thr)
 	for (;; n++) {
 		tv.tv_sec++;
 		psc_waitq_waitabs(&dummy, NULL, &tv);
+	PFL_GETTIMESPEC(&tv);
+	printf("time "PSCPRI_TIMESPEC"\n", PSCPRI_TIMESPEC_ARGS(&tv));
 
 		if (n == 0) {
 			center("-- read --", 8 * 3);
