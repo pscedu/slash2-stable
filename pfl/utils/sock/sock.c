@@ -66,6 +66,7 @@
 
 int			 forcesdp;		/* force sockets direct */
 int			 nthr = 1;
+int			 sel = 0;
 int			 peersock;
 const char		*progname;
 char			*buf;
@@ -144,20 +145,20 @@ ioloop(int ioflags)
 
 	ist = wr ? &wrst : &rdst;
 	for (;;) {
-printf("loop %s\n", wr ? "wr" : "rd");
-usleep(100);
-		/* Specifically test that select(2) works. */
-		FD_ZERO(&set);
-		FD_SET(peersock, &set);
-		if (wr)
-			rv = select(peersock + 1, NULL, &set, NULL, NULL);
-		else
-			rv = select(peersock + 1, &set, NULL, NULL, NULL);
+		if (sel) {
+			/* Specifically test that select(2) works. */
+			FD_ZERO(&set);
+			FD_SET(peersock, &set);
+			if (wr)
+				rv = select(peersock + 1, NULL, &set, NULL, NULL);
+			else
+				rv = select(peersock + 1, &set, NULL, NULL, NULL);
 
-		if (rv == -1)
-			psc_fatal("select");
-		if (rv != 1)
-			psc_fatalx("select: unexpected value (%zd)", rv);
+			if (rv == -1)
+				psc_fatal("select");
+			if (rv != 1)
+				psc_fatalx("select: unexpected value (%zd)", rv);
+		}
 
 		/* transfer a chunk of data */
 		rem = bufsiz;
@@ -342,7 +343,7 @@ main(int argc, char *argv[])
 	pfl_init();
 	listenif = NULL;
 	progname = argv[0];
-	while ((c = getopt(argc, argv, "b:l:p:St:")) != -1)
+	while ((c = getopt(argc, argv, "b:l:p:STt:")) != -1)
 		switch (c) {
 		case 'b':
 			l = strtol(optarg, &endp, 10);
@@ -359,6 +360,9 @@ main(int argc, char *argv[])
 			break;
 		case 'S':
 			forcesdp = 1;
+			break;
+		case 'T':
+			sel = 1;
 			break;
 		case 't':
 			l = strtol(optarg, &endp, 10);
