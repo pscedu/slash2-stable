@@ -348,7 +348,7 @@ main(int argc, char *argv[])
 	pfl_init();
 	listenif = NULL;
 	progname = argv[0];
-	while ((c = getopt(argc, argv, "l:p:S")) != -1)
+	while ((c = getopt(argc, argv, "b:l:p:S")) != -1)
 		switch (c) {
 		case 'b':
 			l = strtol(optarg, &endp, 10);
