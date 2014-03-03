@@ -87,14 +87,16 @@ void
 displaythr_main(__unusedx struct psc_thread *thr)
 {
 	char ratebuf[PSCFMT_HUMAN_BUFSIZ];
+	struct psc_waitq dummy = PSC_WAITQ_INIT;
 	struct psc_iostats myist;
-	struct timeval tv;
+	struct timespec tv;
 	int n = 0;
 
+	PFL_GETTIMESPEC(&tv);
+	tv.tv_nsec = 0;
 	for (;; n++) {
-		PFL_GETTIMEVAL(&tv);
-		usleep(1000000 - tv.tv_usec);
-		PFL_GETTIMEVAL(&tv);
+		tv.tv_sec++;
+		psc_waitq_waitabs(&dummy, NULL, &tv);
 
 		if (n == 0) {
 			center("-- read --", 8 * 3);
@@ -159,9 +161,11 @@ ioloop(int ioflags)
 		rem = bufsiz;
 		do {
 			if (wr)
-				rv = send(peersock, buf, rem, PFL_MSG_NOSIGNAL | MSG_WAITALL);
+				rv = send(peersock, buf, rem,
+				    PFL_MSG_NOSIGNAL | MSG_WAITALL);
 			else
-				rv = recv(peersock, buf, rem, PFL_MSG_NOSIGNAL | MSG_WAITALL);
+				rv = recv(peersock, buf, rem,
+				    PFL_MSG_NOSIGNAL | MSG_WAITALL);
 			if (rv == -1)
 				psc_fatal("%s", wr ? "send" : "recv");
 			else if (rv == 0)
