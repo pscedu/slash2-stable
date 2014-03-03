@@ -392,15 +392,14 @@ main(int argc, char *argv[])
 		peersock = doconnect(argv[0]);
 	}
 
+	pscthr_init(THRT_DISPLAY, 0, displaythr_main, NULL, 0,
+	    "displaythr");
 
 	for (i = 0; i < nthr; i++)
 		pscthr_init(THRT_RD, 0, rd_main, NULL, 0, "rdthr%d", i);
 	for (i = 0; i < nthr - 1; i++)
 		pscthr_init(THRT_WR, 0, wr_main, NULL, 0, "wrthr%d", i);
 	ioloop(IOF_WR);
-
-	pscthr_init(THRT_DISPLAY, 0, displaythr_main, NULL, 0,
-	    "displaythr");
 
 	exit(0);
 }
