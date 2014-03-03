@@ -60,14 +60,15 @@ _psc_fault_register(const char *name)
 	struct psc_fault *pflt;
 	char *p;
 
-	psc_assert(strlen(name) < sizeof(pflt->pflt_name));
-
 	pflt = psc_fault_lookup(name);
 	psc_assert(pflt == NULL);
 
 	p = strstr(name, "_FAULT_");
 	psc_assert(p);
 
+	psc_assert(strlen(p + 7) < sizeof(pflt->pflt_name));
+
+	/* expected format: <daemon>_FAULT_<fault-name> */
 	pflt = &psc_faults[psc_nfaults++];
 	INIT_SPINLOCK(&pflt->pflt_lock);
 	strlcpy(pflt->pflt_name, p + 7, sizeof(pflt->pflt_name));
