@@ -140,10 +140,6 @@ ioloop(int ioflags)
 
 	wr = ioflags & IOF_WR;
 
-	if (wr)
-		pscthr_init(THRT_DISPLAY, 0, displaythr_main,
-		    NULL, 0, "displaythr");
-
 	ist = wr ? &wrst : &rdst;
 	for (;;) {
 		/* Specifically test that select(2) works. */
@@ -402,6 +398,9 @@ main(int argc, char *argv[])
 	for (i = 0; i < nthr - 1; i++)
 		pscthr_init(THRT_WR, 0, wr_main, NULL, 0, "wrthr%d", i);
 	ioloop(IOF_WR);
+
+	pscthr_init(THRT_DISPLAY, 0, displaythr_main, NULL, 0,
+	    "displaythr");
 
 	exit(0);
 }
