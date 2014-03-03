@@ -61,18 +61,17 @@
 
 #define THRT_TIOS	0			/* iostats timer thread type */
 #define THRT_DISPLAY	1			/* stats displayer */
-
-struct sockarg {
-	int s;					/* socket */
-};
+#define THRT_RD		2
+#define THRT_WR		3
 
 int			 forcesdp;		/* force sockets direct */
+int			 nthr = 1;
+int			 peersock;
 const char		*progname;
 char			*buf;
 size_t			 bufsiz = 1024 * 1024;
 struct psc_iostats	 rdst;			/* read stats */
 struct psc_iostats	 wrst;			/* write stats */
-pthread_t		 rdthr;
 in_port_t		 port = PORT;
 
 void
@@ -132,7 +131,7 @@ displaythr_main(__unusedx struct psc_thread *thr)
 }
 
 __dead void
-ioloop(int s, int ioflags)
+ioloop(int ioflags)
 {
 	struct psc_iostats *ist;
 	int wr, rem;
@@ -149,11 +148,11 @@ ioloop(int s, int ioflags)
 	for (;;) {
 		/* Specifically test that select(2) works. */
 		FD_ZERO(&set);
-		FD_SET(s, &set);
+		FD_SET(peersock, &set);
 		if (wr)
-			rv = select(s + 1, NULL, &set, NULL, NULL);
+			rv = select(peersock + 1, NULL, &set, NULL, NULL);
 		else
-			rv = select(s + 1, &set, NULL, NULL, NULL);
+			rv = select(peersock + 1, &set, NULL, NULL, NULL);
 
 		if (rv == -1)
 			psc_fatal("select");
@@ -164,9 +163,9 @@ ioloop(int s, int ioflags)
 		rem = bufsiz;
 		do {
 			if (wr)
-				rv = send(s, buf, rem, PFL_MSG_NOSIGNAL | MSG_WAITALL);
+				rv = send(peersock, buf, rem, PFL_MSG_NOSIGNAL | MSG_WAITALL);
 			else
-				rv = recv(s, buf, rem, PFL_MSG_NOSIGNAL | MSG_WAITALL);
+				rv = recv(peersock, buf, rem, PFL_MSG_NOSIGNAL | MSG_WAITALL);
 			if (rv == -1)
 				psc_fatal("%s", wr ? "send" : "recv");
 			else if (rv == 0)
@@ -176,15 +175,20 @@ ioloop(int s, int ioflags)
 			psc_iostats_intv_add(ist, rv);
 			rem -= rv;
 		} while (rem);
+		sched_yield();
 	}
 }
 
-__dead void *
-worker_main(void *arg)
+void
+rd_main(struct psc_thread *thr)
 {
-	struct sockarg *sarg = arg;
+	ioloop(IOF_RD);
+}
 
-	ioloop(sarg->s, IOF_RD);
+void
+wr_main(struct psc_thread *thr)
+{
+	ioloop(IOF_WR);
 }
 
 void
@@ -214,13 +218,12 @@ get_ifr_addr(struct ifreq *ifr)
 	return (&ifr->ifr_addr);
 }
 
-__dead void
+int
 dolisten(const char *listenif)
 {
-	int opt, rc, s, clisock;
+	int opt, s, clisock;
 	union pfl_sockaddr psa;
 	struct sockaddr_in *sin;
-	struct sockarg sarg;
 	struct ifreq ifr;
 	char addrbuf[50];
 	socklen_t salen;
@@ -269,20 +272,14 @@ dolisten(const char *listenif)
 	    ntohs(sin->sin_port));
 
 	sock_setoptions(clisock);
-
-	memset(&sarg, 0, sizeof(sarg));
-	sarg.s = clisock;
-	if ((rc = pthread_create(&rdthr, NULL, worker_main, &sarg)) != 0)
-		psc_fatalx("pthread_create: %s", strerror(rc));
-	ioloop(clisock, IOF_WR);
+	return (clisock);
 }
 
-__dead void
+int
 doconnect(const char *addr)
 {
 	struct sockaddr_in *sin;
 	union pfl_sockaddr psa;
-	struct sockarg sarg;
 	char addrbuf[50];
 	int rc, s;
 
@@ -306,12 +303,7 @@ doconnect(const char *addr)
 	    ntohs(sin->sin_port));
 
 	sock_setoptions(s);
-
-	memset(&sarg, 0, sizeof(sarg));
-	sarg.s = s;
-	if ((rc = pthread_create(&rdthr, NULL, worker_main, &sarg)) != 0)
-		psc_fatalx("pthread_create: %s", strerror(rc));
-	ioloop(s, IOF_WR);
+	return (s);
 }
 
 void
@@ -331,8 +323,8 @@ __dead void
 usage(void)
 {
 	fprintf(stderr, "usage:"
-	    "\t%s [-S] [-p port] -l if\n"
-	    "\t%s [-S] [-p port] addr\n",
+	    "\t%s [-S] [-b bufsiz] [-p port] [-t nthr] -l if\n"
+	    "\t%s [-S] [-b bufsiz] [-p port] [-t nthr] addr\n",
 	    progname, progname);
 	exit(1);
 }
@@ -342,13 +334,13 @@ main(int argc, char *argv[])
 {
 	const char *listenif;
 	char *endp, *p;
+	int c, i;
 	long l;
-	int c;
 
 	pfl_init();
 	listenif = NULL;
 	progname = argv[0];
-	while ((c = getopt(argc, argv, "b:l:p:S")) != -1)
+	while ((c = getopt(argc, argv, "b:l:p:St:")) != -1)
 		switch (c) {
 		case 'b':
 			l = strtol(optarg, &endp, 10);
@@ -365,6 +357,13 @@ main(int argc, char *argv[])
 			break;
 		case 'S':
 			forcesdp = 1;
+			break;
+		case 't':
+			l = strtol(optarg, &endp, 10);
+			if (l < 1 || l > 32 ||
+			    endp == optarg || *endp)
+				errx(1, "invalid number");
+			nthr = l;
 			break;
 		default:
 			usage();
@@ -388,13 +387,21 @@ main(int argc, char *argv[])
 	psc_tiosthr_spawn(THRT_TIOS, "tiosthr");
 
 	if (listenif)
-		dolisten(listenif);
+		peersock = dolisten(listenif);
 	else {
 		if ((p = strchr(argv[0], ':')) != NULL) {
 			*p++ = '\0';
 			setport(p);
 		}
-		doconnect(argv[0]);
+		peersock = doconnect(argv[0]);
 	}
+
+
+	for (i = 0; i < nthr; i++)
+		pscthr_init(THRT_RD, 0, rd_main, NULL, 0, "rdthr%d", i);
+	for (i = 0; i < nthr - 1; i++)
+		pscthr_init(THRT_WR, 0, wr_main, NULL, 0, "wrthr%d", i);
+	ioloop(IOF_WR);
+
 	exit(0);
 }
