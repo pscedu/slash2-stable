@@ -82,6 +82,12 @@ label(struct psc_thread *pt)						\
 
 #define pscthr_gettid()		pscthr_get()->pscthr_thrid
 
+#if HAVE_PTHREAD_YIELD
+#  define pscthr_yield()	pthread_yield()
+#else
+#  define pscthr_yield()	sched_yield()
+#endif
+
 const char *
 	pscthr_getname(void);
 int	pscthr_getuniqid(void);
