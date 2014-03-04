@@ -175,13 +175,13 @@ ioloop(int ioflags)
 }
 
 void
-rd_main(struct psc_thread *thr)
+rd_main(__unusedx struct psc_thread *thr)
 {
 	ioloop(IOF_RD);
 }
 
 void
-wr_main(struct psc_thread *thr)
+wr_main(__unusedx struct psc_thread *thr)
 {
 	ioloop(IOF_WR);
 }
