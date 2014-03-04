@@ -94,7 +94,7 @@ displaythr_main(__unusedx struct psc_thread *thr)
 	int n = 0;
 
 	PFL_GETTIMESPEC(&tv);
-	tv.tv_nsec = 0;
+	tv.tv_nsec = 500000000;
 	for (;; n++) {
 		tv.tv_sec++;
 		psc_waitq_waitabs(&dummy, NULL, &tv);
@@ -150,14 +150,13 @@ ioloop(int ioflags)
 			FD_ZERO(&set);
 			FD_SET(peersock, &set);
 			if (wr)
-				rv = select(peersock + 1, NULL, &set, NULL, NULL);
+				rv = select(peersock + 1, NULL, &set,
+				    NULL, NULL);
 			else
-				rv = select(peersock + 1, &set, NULL, NULL, NULL);
-
+				rv = select(peersock + 1, &set, NULL,
+				    NULL, NULL);
 			if (rv == -1)
 				psc_fatal("select");
-			if (rv != 1)
-				psc_fatalx("select: unexpected value (%zd)", rv);
 		}
 
 		/* transfer a chunk of data */
@@ -176,7 +175,7 @@ ioloop(int ioflags)
 			psc_iostats_intv_add(ist, rv);
 			rem -= rv;
 		} while (rem);
-		sched_yield();
+		pthread_yield();
 	}
 }
 
@@ -203,6 +202,7 @@ sock_setoptions(int s)
 	opt = 1;
 	if (setsockopt(s, IPPROTO_TCP, TCP_NODELAY, &opt, sz) == -1)
 		psc_fatal("setsockopt");
+
 	opt = bufsiz;
 	if (setsockopt(s, SOL_SOCKET, SO_SNDBUF, &opt, sz) == -1)
 		psclog_error("setsockopt");
@@ -310,8 +310,8 @@ doconnect(const char *addr)
 void
 setport(const char *sp)
 {
-	long l;
 	char *p;
+	long l;
 
 	l = strtol(sp, &p, 10);
 	if (l < 0 || l >= USHRT_MAX ||
