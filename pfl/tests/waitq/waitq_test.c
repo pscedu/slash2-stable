@@ -50,7 +50,7 @@ usage(void)
 }
 
 void
-child_main(struct psc_thread *thr)
+child_main(__unusedx struct psc_thread *thr)
 {
 	char buf[40];
 	int i;
@@ -69,8 +69,7 @@ child_main(struct psc_thread *thr)
 
 	for (i = 0; i < iterations; i++) {
 		psc_waitq_wait(&waitq, NULL);
-		psclog_debug("tid=%d, i=%d awake",
-		    thr->pscthr_thrid, i);
+		psclog_debug("i=%d awake", i);
 	}
 }
 
