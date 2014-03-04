@@ -332,7 +332,7 @@ usage(void)
 int
 main(int argc, char *argv[])
 {
-	int c, i, nrthr = 1, nwthr = 1;
+	int c, i, nrthr = 0, nwthr = 0;
 	const char *listenif;
 	char *endp, *p;
 	long l;
@@ -377,6 +377,9 @@ main(int argc, char *argv[])
 		}
 	argc -= optind;
 	argv += optind;
+
+	if (!nrthr && !nwthr)
+		nrthr = nwthr = 1;
 
 	if (listenif) {
 		if (argc)
