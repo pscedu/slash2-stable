@@ -133,7 +133,7 @@ displaythr_main(__unusedx struct psc_thread *thr)
 	}
 }
 
-__dead void
+void
 ioloop(int ioflags)
 {
 	struct psc_iostats *ist;
@@ -164,11 +164,9 @@ ioloop(int ioflags)
 		rem = bufsiz;
 		do {
 			if (wr)
-				rv = send(peersock, buf, rem,
-				    PFL_MSG_NOSIGNAL | MSG_WAITALL);
+				rv = write(peersock, buf, rem);
 			else
-				rv = recv(peersock, buf, rem,
-				    PFL_MSG_NOSIGNAL | MSG_WAITALL);
+				rv = read(peersock, buf, rem);
 			if (rv == -1)
 				psc_fatal("%s", wr ? "send" : "recv");
 			else if (rv == 0)
