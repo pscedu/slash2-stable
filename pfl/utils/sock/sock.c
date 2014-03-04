@@ -408,9 +408,11 @@ main(int argc, char *argv[])
 
 	for (i = 0; i < nrthr; i++)
 		pscthr_init(THRT_RD, 0, rd_main, NULL, 0, "rdthr%d", i);
-	for (i = 0; i < nwthr - 1; i++)
+	for (i = 0; i < nwthr; i++)
 		pscthr_init(THRT_WR, 0, wr_main, NULL, 0, "wrthr%d", i);
-	ioloop(IOF_WR);
+
+	for (;;)
+		sleep(1);
 
 	exit(0);
 }
