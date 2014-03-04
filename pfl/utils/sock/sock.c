@@ -136,9 +136,9 @@ void
 ioloop(int ioflags)
 {
 	struct psc_iostats *ist;
-	int wr, rem;
 	ssize_t rv;
 	fd_set set;
+	int wr;
 
 	wr = ioflags & IOF_WR;
 
@@ -158,22 +158,18 @@ ioloop(int ioflags)
 				psc_fatal("select");
 		}
 
-		/* transfer a chunk of data */
-		rem = bufsiz;
-		do {
-			if (wr)
-				rv = write(peersock, buf, rem);
-			else
-				rv = read(peersock, buf, rem);
-			if (rv == -1)
-				psc_fatal("%s", wr ? "send" : "recv");
-			else if (rv == 0)
-				psc_fatalx("%s: reached EOF", wr ? "send" : "recv");
+		if (wr)
+			rv = write(peersock, buf, bufsiz);
+		else
+			rv = read(peersock, buf, bufsiz);
+		if (rv == -1)
+			psc_fatal("%s", wr ? "send" : "recv");
+		else if (rv == 0)
+			psc_fatalx("%s: reached EOF", wr ? "send" : "recv");
 
-			/* tally amount transferred */
-			psc_iostats_intv_add(ist, rv);
-			rem -= rv;
-		} while (rem);
+		/* tally amount transferred */
+		psc_iostats_intv_add(ist, rv);
+
 		pthread_yield();
 	}
 }
