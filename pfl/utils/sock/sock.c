@@ -65,7 +65,6 @@
 #define THRT_WR		3
 
 int			 forcesdp;		/* force sockets direct */
-int			 nthr = 1;
 int			 sel = 0;
 int			 peersock;
 const char		*progname;
@@ -324,8 +323,8 @@ __dead void
 usage(void)
 {
 	fprintf(stderr, "usage:"
-	    "\t%s [-S] [-b bufsiz] [-p port] [-t nthr] -l if\n"
-	    "\t%s [-S] [-b bufsiz] [-p port] [-t nthr] addr\n",
+	    "\t%s [-S] [-b bufsiz] [-p port] [-R nthr] [-W nthr] -l if\n"
+	    "\t%s [-S] [-b bufsiz] [-p port] [-R nthr] [-W nthr] addr\n",
 	    progname, progname);
 	exit(1);
 }
@@ -333,15 +332,15 @@ usage(void)
 int
 main(int argc, char *argv[])
 {
+	int c, i, nrthr = 1, nwthr = 1;
 	const char *listenif;
 	char *endp, *p;
-	int c, i;
 	long l;
 
 	pfl_init();
 	listenif = NULL;
 	progname = argv[0];
-	while ((c = getopt(argc, argv, "b:l:p:STt:")) != -1)
+	while ((c = getopt(argc, argv, "b:l:p:STR:W:")) != -1)
 		switch (c) {
 		case 'b':
 			l = strtol(optarg, &endp, 10);
@@ -362,12 +361,16 @@ main(int argc, char *argv[])
 		case 'T':
 			sel = 1;
 			break;
-		case 't':
+		case 'R':
+		case 'W':
 			l = strtol(optarg, &endp, 10);
 			if (l < 1 || l > 32 ||
 			    endp == optarg || *endp)
 				errx(1, "invalid number");
-			nthr = l;
+			if (c == 'R')
+				nrthr = l;
+			else
+				nwthr = l;
 			break;
 		default:
 			usage();
@@ -403,9 +406,9 @@ main(int argc, char *argv[])
 	pscthr_init(THRT_DISPLAY, 0, displaythr_main, NULL, 0,
 	    "displaythr");
 
-	for (i = 0; i < nthr; i++)
+	for (i = 0; i < nrthr; i++)
 		pscthr_init(THRT_RD, 0, rd_main, NULL, 0, "rdthr%d", i);
-	for (i = 0; i < nthr - 1; i++)
+	for (i = 0; i < nwthr - 1; i++)
 		pscthr_init(THRT_WR, 0, wr_main, NULL, 0, "wrthr%d", i);
 	ioloop(IOF_WR);
 
