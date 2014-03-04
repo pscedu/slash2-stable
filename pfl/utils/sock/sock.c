@@ -364,7 +364,7 @@ main(int argc, char *argv[])
 		case 'R':
 		case 'W':
 			l = strtol(optarg, &endp, 10);
-			if (l < 1 || l > 32 ||
+			if (l < 0 || l > 32 ||
 			    endp == optarg || *endp)
 				errx(1, "invalid number");
 			if (c == 'R')
