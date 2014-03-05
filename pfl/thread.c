@@ -126,7 +126,7 @@ _pscthr_sigusr1(__unusedx int sig)
 
 	thr = pscthr_get();
 	while (!tryreqlock(&thr->pscthr_lock, &locked))
-		sched_yield();
+		pscthr_yield();
 	thr->pscthr_flags |= PTF_PAUSED;
 	while (thr->pscthr_flags & PTF_PAUSED) {
 		psc_waitq_wait(&thr->pscthr_waitq,
@@ -148,7 +148,7 @@ _pscthr_sigusr2(__unusedx int sig)
 
 	thr = pscthr_get();
 	while (!tryreqlock(&thr->pscthr_lock, &locked))
-		sched_yield();
+		pscthr_yield();
 	thr->pscthr_flags &= ~PTF_PAUSED;
 	psc_waitq_wakeall(&thr->pscthr_waitq);
 	ureqlock(&thr->pscthr_lock, locked);
@@ -544,7 +544,7 @@ pscthr_run(struct psc_thread *thr)
 		freelock(&thr->pscthr_lock);
 	}
 	if (yield)
-		sched_yield();
+		pscthr_yield();
 	return (live);
 }
 

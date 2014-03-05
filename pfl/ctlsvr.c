@@ -119,7 +119,7 @@ psc_ctlmsg_sendv(int fd, const struct psc_ctlmsghdr *mh, const void *m)
 	if (n == -1) {
 		if (errno == EPIPE || errno == ECONNRESET) {
 			psc_ctlthr(pscthr_get())->pct_stat.ndrop++;
-			sched_yield();
+			pscthr_yield();
 			return (0);
 		}
 		psc_fatal("sendmsg");
@@ -128,7 +128,7 @@ psc_ctlmsg_sendv(int fd, const struct psc_ctlmsghdr *mh, const void *m)
 	if ((size_t)n != tsiz)
 		psclog_warn("short sendmsg");
 	psc_ctlthr(pscthr_get())->pct_stat.nsent++;
-	sched_yield();
+	pscthr_yield();
 	return (1);
 }
 
@@ -1803,7 +1803,7 @@ psc_ctl_applythrop(int fd, struct psc_ctlmsghdr *mh, void *m,
  *	processing.
  * @pm: value-result buffer for subsequent message processing.
  *
- * Notes: sched_yield() is not explicity called throughout this routine,
+ * Notes: pscthr_yield() is not explicity called throughout this routine,
  * which has implications, advantages, and disadvantages.
  *
  * Implications: we run till we finish the client connection and the next

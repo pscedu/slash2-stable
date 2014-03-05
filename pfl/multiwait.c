@@ -133,7 +133,7 @@ psc_multiwaitcond_destroy(struct psc_multiwaitcond *mwc)
 				    "multiwaits after many attempts, "
 				    "possible deadlock", mwc->mwc_name);
 			psc_mutex_unlock(&mwc->mwc_mutex);
-			sched_yield();
+			pscthr_yield();
 			goto restart;
 		}
 		if (mw->mw_flags & PMWF_CRITSECT &&
@@ -209,7 +209,7 @@ psc_multiwaitcond_wakeup(struct psc_multiwaitcond *mwc)
 			    "multiwaits after attempting many times, "
 			    "possible deadlock", mwc->mwc_name);
 		psc_mutex_unlock(&mwc->mwc_mutex);
-		sched_yield();
+		pscthr_yield();
 		goto restart;
 	}
 	DYNARRAY_FOREACH(mw, j, &mwc->mwc_multiwaits)
@@ -285,7 +285,7 @@ _psc_multiwait_addcond(struct psc_multiwait *mw,
 		if (psc_mutex_trylock(&mw->mw_mutex))
 			break;
 		psc_mutex_unlock(&mwc->mwc_mutex);
-		sched_yield();
+		pscthr_yield();
 	}
 
 	/* Ensure no associations already exist. */
@@ -475,7 +475,7 @@ psc_multiwait_usecs(struct psc_multiwait *mw, void *datap, int usec)
 	psc_mutex_unlock(&mwc->mwc_mutex);
 
 	if (!won) {
-		//sched_yield();
+		//pscthr_yield();
 		/* XXX decrement usecs */
 		goto restart;
 	}
@@ -502,7 +502,7 @@ psc_multiwait_reset(struct psc_multiwait *mw)
 		/* XXX we violate the locking order of "mwc then mw" */
 		if (!psc_mutex_trylock(&mwc->mwc_mutex)) {
 			psc_mutex_unlock(&mw->mw_mutex);
-			sched_yield();
+			pscthr_yield();
 			goto restart;
 		}
 

@@ -1146,7 +1146,7 @@ psc_ctlcli_rd_main(__unusedx struct psc_thread *thr)
 		}
 		psc_ctl_read(psc_ctl_sock, m, mh.mh_size);
 		psc_ctlmsg_print(&mh, m);
-		sched_yield();
+		pscthr_yield();
 	}
 	if (n == -1)
 		err(1, "read");
