@@ -39,19 +39,19 @@ struct timeval psc_tiosthr_lastv[IST_NINTV];
 void
 psc_tiosthr_main(struct psc_thread *thr)
 {
+	struct psc_waitq dummy = PSC_WAITQ_INIT;
 	struct psc_iostatv *istv;
 	struct psc_iostats *ist;
-	struct timeval tv;
+	struct timespec tv; //[IST_NINTV];
 	uint64_t intv_len;
 	int i, stoff;
 
-	while (pscthr_run(thr)) {
-		/* XXX use monotonic clock */
-		PFL_GETTIMEVAL(&tv);
-		usleep(1000000 - tv.tv_usec);
-		PFL_GETTIMEVAL(&tv);
+	PFL_GETTIMESPEC_MONO(&tv);
+	tv.tv_nsec = 0;
 
-		tv.tv_usec = 0;
+	while (pscthr_run(thr)) {
+		tv.tv_sec++;
+		psc_waitq_waitabs(&dummy, NULL, &tv);
 
 		/* find largest interval to update */
 		for (stoff = 0; stoff < IST_NINTV; stoff++) {
