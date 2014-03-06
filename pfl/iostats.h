@@ -24,9 +24,9 @@
 
 #include <stdint.h>
 
+#include "pfl/atomic.h"
 #include "pfl/list.h"
 #include "pfl/lockedlist.h"
-#include "pfl/atomic.h"
 
 #define IST_NAME_MAX	40
 #define IST_NINTV	2
