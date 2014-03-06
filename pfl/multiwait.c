@@ -31,13 +31,14 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "pfl/cdefs.h"
-#include "pfl/time.h"
-#include "pfl/vbitmap.h"
 #include "pfl/bitflag.h"
+#include "pfl/cdefs.h"
 #include "pfl/log.h"
 #include "pfl/multiwait.h"
 #include "pfl/pthrutil.h"
+#include "pfl/thread.h"
+#include "pfl/time.h"
+#include "pfl/vbitmap.h"
 
 /**
  * psc_multiwaitcond_init - Initialize a multiwait condition.
