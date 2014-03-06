@@ -42,16 +42,19 @@ psc_tiosthr_main(struct psc_thread *thr)
 	struct psc_waitq dummy = PSC_WAITQ_INIT;
 	struct psc_iostatv *istv;
 	struct psc_iostats *ist;
-	struct timespec tv; //[IST_NINTV];
+	struct timespec ts;
+	struct timeval tv;
 	uint64_t intv_len;
 	int i, stoff;
 
-	PFL_GETTIMESPEC_MONO(&tv);
-	tv.tv_nsec = 0;
+	PFL_GETTIMEVAL(&tv);
+	tv.tv_usec = 0;
+
+	ts.tv_nsec = 0;
 
 	while (pscthr_run(thr)) {
-		tv.tv_sec++;
-		psc_waitq_waitabs(&dummy, NULL, &tv);
+		ts.tv_sec = tv.tv_sec++;
+		psc_waitq_waitabs(&dummy, NULL, &ts);
 
 		/* find largest interval to update */
 		for (stoff = 0; stoff < IST_NINTV; stoff++) {
