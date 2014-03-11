@@ -149,7 +149,7 @@ psc_multiwaitcond_destroy(struct psc_multiwaitcond *mwc)
 		    psc_multiwaitcond_cmp);
 		psc_dynarray_splice(&mwc->mwc_multiwaits, k, 1, NULL, 0);
 
-		k = psc_dynarray_removeitem(&mw->mw_conds, mw);
+		k = psc_dynarray_removeitem(&mw->mw_conds, mwc);
 		pfl_bitstr_copy(&mw->mw_condmask, k, &mw->mw_condmask,
 		    k + 1, psc_vbitmap_getsize(mw->mw_condmask) - k);
 		psc_vbitmap_resize(mw->mw_condmask,
