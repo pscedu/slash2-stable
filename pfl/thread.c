@@ -115,11 +115,11 @@ pfl_tls_get(int idx, size_t len)
 }
 
 /**
- * pscthr_sigusr1 - Catch SIGUSR1: pause the thread.
+ * pscthr_pause - pause thread execution.
  * @sig: signal number.
  */
 void
-_pscthr_sigusr1(__unusedx int sig)
+_pscthr_pause(__unusedx int sig)
 {
 	struct psc_thread *thr;
 	int locked;
@@ -137,11 +137,11 @@ _pscthr_sigusr1(__unusedx int sig)
 }
 
 /**
- * pscthr_sigusr2 - Catch SIGUSR2: unpause the thread.
+ * pscthr_unpause - unpause thread execution.
  * @sig: signal number.
  */
 void
-_pscthr_sigusr2(__unusedx int sig)
+_pscthr_unpause(__unusedx int sig)
 {
 	struct psc_thread *thr;
 	int locked;
@@ -220,12 +220,12 @@ _pscthr_finish_init(struct psc_thread *thr)
 		psc_fatalx("pthread_setspecific: %s", strerror(rc));
 
 	memset(&sa, 0, sizeof(sa));
-	sa.sa_handler = _pscthr_sigusr1;
+	sa.sa_handler = _pscthr_pause;
 	if (sigaction(SIGUSR1, &sa, NULL) == -1)
 		psc_fatal("sigaction");
 
 	memset(&sa, 0, sizeof(sa));
-	sa.sa_handler = _pscthr_sigusr2;
+	sa.sa_handler = _pscthr_unpause;
 	if (sigaction(SIGUSR2, &sa, NULL) == -1)
 		psc_fatal("sigaction");
 
