@@ -53,6 +53,7 @@ int	 pfl_dirname(const char *, char *);
 char	*pfl_strdup(const char *);
 char	*pfl_strndup(const char *, size_t);
 
+unsigned
 int	_psc_str_hashify(const char *, int);
 
 int	xsnprintf(char *, size_t, const char *, ...);

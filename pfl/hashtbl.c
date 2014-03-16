@@ -39,7 +39,7 @@ struct psc_lockedlist psc_hashtbls =
  * C compiler (cf. Compilers: Principles, Techniques, and Tools,
  * by Aho, Sethi & Ullman, Addison-Wesley, 1988, p. 436)."
  */
-int
+unsigned
 _psc_str_hashify(const char *s, int len)
 {
 	unsigned h = 0, g;
@@ -163,7 +163,9 @@ psc_hashtbl_destroy(struct psc_hashtbl *t)
 void
 psc_hashbkt_put(struct psc_hashtbl *t, struct psc_hashbkt *b)
 {
-	psc_hashbkt_rlock(b);
+	int locked;
+
+	psc_hashbkt_reqlock(b);
 
 	if (--b->phb_refcnt)
 		goto out;
@@ -176,13 +178,13 @@ psc_hashbkt_put(struct psc_hashtbl *t, struct psc_hashbkt *b)
 		goto out;
 	b->phb_died = 1;
 
-	PSC_HASHTBL_LOCK(t);
+	locked = PSC_HASHTBL_RLOCK(t);
 	if (--t->pht_ocntr == 0) {
 		psc_free(t->pht_obuckets, _psc_hashtbl_getmemflags(t));
 		t->pht_obuckets = NULL;
 		t->pht_flags &= ~PHTF_RESIZING;
 	}
-	PSC_HASHTBL_ULOCK(t);
+	PSC_HASHTBL_URLOCK(t, locked);
 	b = NULL;
 
  out:
@@ -190,6 +192,10 @@ psc_hashbkt_put(struct psc_hashtbl *t, struct psc_hashbkt *b)
 		psc_hashbkt_unlock(b);
 	psc_waitq_wakeall(&t->pht_waitq);
 }
+
+#define GETBKT(t, bv, nb, key)						\
+	&(bv)[ ( (t)->pht_flags & PHTF_STR ? psc_str_hashify(key) :	\
+	    *(uint64_t *)(key) ) % (nb) ]
 
 /**
  * psc_hashbkt_get - Locate the bucket containing an item with the
@@ -201,26 +207,24 @@ struct psc_hashbkt *
 psc_hashbkt_get(struct psc_hashtbl *t, const void *key)
 {
 	struct psc_hashbkt *b;
-	int gen;
+	int locked, gen;
 
  begin:
 	gen = t->pht_gen;
-	if (t->pht_flags & PHTF_STR)
-		b = &t->pht_buckets[psc_str_hashify(key) %
-		    t->pht_nbuckets];
-	else
-		b = &t->pht_buckets[*(uint64_t *)key % t->pht_nbuckets];
+	b = GETBKT(t, t->pht_buckets, t->pht_nbuckets, key);
 
 	if (gen != t->pht_gen)
 		goto begin;
-	psc_hashbkt_lock(b);
+
+	psc_hashbkt_reqlock(b);
 	b->phb_refcnt++;
 	if (t->pht_gen != b->phb_gen) {
 		psc_hashbkt_put(t, b);
-		PSC_HASHTBL_LOCK(t);
+		locked = PSC_HASHTBL_RLOCK(t);
 		while (t->pht_flags & PHTF_RESIZING)
-			psc_waitq_wait(&t->pht_waitq, &t->pht_lock);
-		PSC_HASHTBL_ULOCK(t);
+			psc_waitq_wait(&t->pht_waitq,
+			    &t->pht_lock);
+		PSC_HASHTBL_URLOCK(t, locked);
 		goto begin;
 	}
 
@@ -351,8 +355,8 @@ int
 psc_hashent_conjoint(struct psc_hashtbl *t, void *p)
 {
 	struct psc_hashbkt *b;
-	void *pk;
 	int conjoint;
+	void *pk;
 
 	psc_assert(p);
 	pk = PSC_AGP(p, t->pht_idoff);
@@ -447,34 +451,40 @@ psc_hashtbl_estnbuckets(int n)
 void
 psc_hashtbl_resize(struct psc_hashtbl *t, int nb)
 {
-	struct psc_hashbkt *bnew, *b;
+	struct psc_hashbkt *bnew, *b, *bn;
+	void *p, *pn, *pk;
 	int i, oldnb;
 
 	bnew = psc_alloc(nb * sizeof(*b), _psc_hashtbl_getmemflags(t));
-
-	for (b = bnew, i = 0; i < t->pht_nbuckets; i++, b++)
-		_psc_hashbkt_init(t, b);
 
 	PSC_HASHTBL_LOCK(t);
 	while (t->pht_flags & PHTF_RESIZING) {
 		psc_waitq_wait(&t->pht_waitq, &t->pht_lock);
 		PSC_HASHTBL_LOCK(t);
 	}
+
 	t->pht_gen++;
+
+	for (b = bnew, i = 0; i < nb; i++, b++)
+		_psc_hashbkt_init(t, b);
+
 	t->pht_flags |= PHTF_RESIZING;
 	t->pht_obuckets = t->pht_buckets;
 	t->pht_ocntr = oldnb = t->pht_nbuckets;
 
 	for (i = 0, b = t->pht_buckets; i < oldnb; i++, b++) {
-		void *p;
-
 		psc_hashbkt_lock(b);
-		while (b->phb_refcnt)
+		while (b->phb_refcnt) {
 			psc_waitq_wait(&t->pht_waitq, &t->pht_lock);
+			psc_hashbkt_lock(b);
+		}
 
-		PSC_HASHBKT_FOREACH_ENTRY(t, p, b) {
+		PSC_HASHBKT_FOREACH_ENTRY_SAFE(t, p, pn, b) {
 			psc_hashbkt_del_item(t, b, p);
-			psc_hashtbl_add_item(t, p);
+
+			pk = PSC_AGP(p, t->pht_idoff);
+			bn = GETBKT(t, bnew, nb, pk);
+			psc_hashbkt_add_item(t, bn, p);
 		}
 		psc_hashbkt_unlock(b);
 	}

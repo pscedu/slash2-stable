@@ -28,7 +28,9 @@
 #include "pfl/waitq.h"
 
 #define PSC_HASHTBL_LOCK(t)	spinlock(&(t)->pht_lock)
+#define PSC_HASHTBL_RLOCK(t)	reqlock(&(t)->pht_lock)
 #define PSC_HASHTBL_ULOCK(t)	freelock(&(t)->pht_lock)
+#define PSC_HASHTBL_URLOCK(t,l)	ureqlock(&(t)->pht_lock, (l))
 
 #define PSC_HTNAME_MAX		32
 
@@ -63,7 +65,7 @@ struct psc_hashtbl {
 #define PHTF_RESORT	(1 << 1)	/* reorder queues on lookup */
 #define PHTF_NOMEMGUARD	(1 << 2)	/* disable memalloc guard */
 #define PHTF_NOLOG	(1 << 3)	/* do not psclog */
-#define PHTF_RESIZING	(1 << 4)	/* do not psclog */
+#define PHTF_RESIZING	(1 << 4)
 
 /* Lookup flags. */
 #define PHLF_NONE	0		/* no lookup flags specified */
@@ -75,7 +77,10 @@ struct psc_hashtbl {
 	    (b)++)
 
 #define PSC_HASHBKT_FOREACH_ENTRY(t, p, b)				\
-	psclist_for_each_entry2(p, &(b)->phb_listhd, (t)->pht_hentoff)
+	psclist_for_each_entry2((p), &(b)->phb_listhd, (t)->pht_hentoff)
+
+#define PSC_HASHBKT_FOREACH_ENTRY_SAFE(t, p, pn, b)			\
+	psclist_for_each_entry2_safe((p), (pn), &(b)->phb_listhd, (t)->pht_hentoff)
 
 /**
  * psc_hashtbl_init - Initialize a hash table.
@@ -125,15 +130,15 @@ struct psc_hashtbl {
 	_psc_hashtbl_search((t), PHLF_DEL, (cmp), NULL, (key))
 
 struct psc_hashtbl *
-	 psc_hashtbl_lookup(const char *);
-void	 psc_hashtbl_add_item(struct psc_hashtbl *, void *);
-void	 psc_hashtbl_prstats(const struct psc_hashtbl *);
-void	 psc_hashtbl_getstats(const struct psc_hashtbl *, int *, int *, int *, int *);
-void	 psc_hashtbl_destroy(struct psc_hashtbl *);
-void	 psc_hashtbl_resize(struct psc_hashtbl *, int);
+	  psc_hashtbl_lookup(const char *);
+void	  psc_hashtbl_add_item(struct psc_hashtbl *, void *);
+void	  psc_hashtbl_prstats(const struct psc_hashtbl *);
+void	  psc_hashtbl_getstats(const struct psc_hashtbl *, int *, int *, int *, int *);
+void	  psc_hashtbl_destroy(struct psc_hashtbl *);
+void	  psc_hashtbl_resize(struct psc_hashtbl *, int);
 void	*_psc_hashtbl_search(struct psc_hashtbl *, int, const void *,
 	    void (*)(void *), const void *);
-void	_psc_hashtbl_init(struct psc_hashtbl *, int, ptrdiff_t, ptrdiff_t, int,
+void	 _psc_hashtbl_init(struct psc_hashtbl *, int, ptrdiff_t, ptrdiff_t, int,
 	    int (*)(const void *, const void *), const char *, ...);
 
 /**
@@ -164,18 +169,17 @@ void	_psc_hashtbl_init(struct psc_hashtbl *, int, ptrdiff_t, ptrdiff_t, int,
 	_psc_hashbkt_search((t), (b), PHLF_DEL, (cmp), NULL, (key))
 
 struct psc_hashbkt *
-	 psc_hashbkt_get(struct psc_hashtbl *, const void *);
-void	 psc_hashbkt_put(struct psc_hashtbl *, struct psc_hashbkt *);
-void	 psc_hashbkt_del_item(struct psc_hashtbl *,
+	  psc_hashbkt_get(struct psc_hashtbl *, const void *);
+void	  psc_hashbkt_put(struct psc_hashtbl *, struct psc_hashbkt *);
+void	  psc_hashbkt_del_item(struct psc_hashtbl *,
 		struct psc_hashbkt *, void *);
-void	 psc_hashbkt_add_item(const struct psc_hashtbl *,
+void	  psc_hashbkt_add_item(const struct psc_hashtbl *,
 		struct psc_hashbkt *, void *);
 void	*_psc_hashbkt_search(struct psc_hashtbl *,
 		struct psc_hashbkt *, int, const void *, void (*)(void *),
 		const void *);
 
 #define psc_hashbkt_lock(b)		spinlock(&(b)->phb_lock)
-#define psc_hashbkt_rlock(b)		reqlock(&(b)->phb_lock)
 #define psc_hashbkt_unlock(b)		freelock(&(b)->phb_lock)
 #define psc_hashbkt_trylock(b)		trylock(&(b)->phb_lock)
 #define psc_hashbkt_reqlock(b)		reqlock(&(b)->phb_lock)
