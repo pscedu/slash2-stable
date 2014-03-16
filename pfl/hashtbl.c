@@ -23,13 +23,13 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "pfl/hashtbl.h"
-#include "pfl/str.h"
-#include "pfl/list.h"
-#include "pfl/lockedlist.h"
 #include "pfl/alloc.h"
+#include "pfl/hashtbl.h"
+#include "pfl/list.h"
 #include "pfl/lock.h"
+#include "pfl/lockedlist.h"
 #include "pfl/log.h"
+#include "pfl/str.h"
 
 struct psc_lockedlist psc_hashtbls =
     PLL_INIT_NOLOG(&psc_hashtbls, struct psc_hashtbl, pht_lentry);
@@ -62,29 +62,45 @@ _psc_str_hashify(const char *s, int len)
 #endif
 
 void
+_psc_hashbkt_init(struct psc_hashtbl *t, struct psc_hashbkt *b)
+{
+	INIT_PSCLIST_HEAD(&b->phb_listhd);
+	INIT_SPINLOCK_NOLOG(&b->phb_lock);
+	psc_atomic32_set(&b->phb_nitems, 0);
+	b->phb_gen = t->pht_gen;
+}
+
+int
+_psc_hashtbl_getmemflags(struct psc_hashtbl *t)
+{
+	int pafl = 0;
+
+	if (t->pht_flags & PHTF_NOMEMGUARD)
+		pafl |= PAF_NOGUARD;
+	if (t->pht_flags & PHTF_NOLOG)
+		pafl |= PAF_NOLOG;
+	return (pafl);
+}
+
+void
 _psc_hashtbl_init(struct psc_hashtbl *t, int flags,
-    ptrdiff_t idoff, ptrdiff_t hentoff, int nbuckets,
+    ptrdiff_t idoff, ptrdiff_t hentoff, int nb,
     int (*cmpf)(const void *, const void *), const char *fmt, ...)
 {
 	struct psc_hashbkt *b;
-	int i, pafl;
 	va_list ap;
+	int i;
 
-	psc_assert(nbuckets > 0);
-
-	pafl = 0;
-	if (flags & PHTF_NOMEMGUARD)
-	    pafl |= PAF_NOGUARD;
-	if (flags & PHTF_NOLOG)
-	    pafl |= PAF_NOLOG;
+	psc_assert(nb > 0);
 
 	memset(t, 0, sizeof(*t));
 	INIT_PSC_LISTENTRY(&t->pht_lentry);
 	INIT_SPINLOCK(&t->pht_lock);
-	t->pht_nbuckets = nbuckets;
-	t->pht_buckets = psc_alloc(nbuckets * sizeof(*t->pht_buckets),
-	    pafl);
+	psc_waitq_init(&t->pht_waitq);
+	t->pht_nbuckets = nb;
 	t->pht_flags = flags;
+	t->pht_buckets = psc_alloc(nb * sizeof(*t->pht_buckets),
+	    _psc_hashtbl_getmemflags(t));
 	t->pht_idoff = idoff;
 	t->pht_hentoff = hentoff;
 	t->pht_cmpf = cmpf;
@@ -97,20 +113,16 @@ _psc_hashtbl_init(struct psc_hashtbl *t, int flags,
  {
 	double nearest, diff;
 
-	nearest = log2(nbuckets);
+	nearest = log2(nb);
 	diff = fabs(nearest - (int)nearest);
-	if (nbuckets % 2 == 0 || diff > .75 || diff < .25)
+	if (nb % 2 == 0 || diff > .75 || diff < .25)
 		psclog_warnx("%s nbuckets %d should be a large prime not too "
-		    "close to a power of two (2**i-1)", t->pht_name, nbuckets);
-
+		    "close to a power of two (2**i-1)", t->pht_name, nb);
  }
 #endif
 
-	for (i = 0, b = t->pht_buckets; i < nbuckets; i++, b++) {
-		INIT_PSCLIST_HEAD(&b->phb_listhd);
-		INIT_SPINLOCK_NOLOG(&b->phb_lock);
-		psc_atomic32_set(&b->phb_nitems, 0);
-	}
+	for (i = 0, b = t->pht_buckets; i < nb; i++, b++)
+		_psc_hashbkt_init(t, b);
 	pll_add(&psc_hashtbls, t);
 }
 
@@ -148,6 +160,37 @@ psc_hashtbl_destroy(struct psc_hashtbl *t)
 	PSCFREE(t->pht_buckets);
 }
 
+void
+psc_hashbkt_put(struct psc_hashtbl *t, struct psc_hashbkt *b)
+{
+	psc_hashbkt_rlock(b);
+
+	if (--b->phb_refcnt)
+		goto out;
+
+	if (b->phb_gen == t->pht_gen ||
+	    (t->pht_flags & PHTF_RESIZING) == 0)
+		goto out;
+
+	if (b->phb_died)
+		goto out;
+	b->phb_died = 1;
+
+	PSC_HASHTBL_LOCK(t);
+	if (--t->pht_ocntr == 0) {
+		psc_free(t->pht_obuckets, _psc_hashtbl_getmemflags(t));
+		t->pht_obuckets = NULL;
+		t->pht_flags &= ~PHTF_RESIZING;
+	}
+	PSC_HASHTBL_ULOCK(t);
+	b = NULL;
+
+ out:
+	if (b)
+		psc_hashbkt_unlock(b);
+	psc_waitq_wakeall(&t->pht_waitq);
+}
+
 /**
  * psc_hashbkt_get - Locate the bucket containing an item with the
  *	given ID.
@@ -155,31 +198,50 @@ psc_hashtbl_destroy(struct psc_hashtbl *t)
  * @key: search key.
  */
 struct psc_hashbkt *
-psc_hashbkt_get(const struct psc_hashtbl *t, const void *key)
+psc_hashbkt_get(struct psc_hashtbl *t, const void *key)
 {
 	struct psc_hashbkt *b;
+	int gen;
 
+ begin:
+	gen = t->pht_gen;
 	if (t->pht_flags & PHTF_STR)
 		b = &t->pht_buckets[psc_str_hashify(key) %
 		    t->pht_nbuckets];
 	else
 		b = &t->pht_buckets[*(uint64_t *)key % t->pht_nbuckets];
 
+	if (gen != t->pht_gen)
+		goto begin;
+	psc_hashbkt_lock(b);
+	b->phb_refcnt++;
+	if (t->pht_gen != b->phb_gen) {
+		psc_hashbkt_put(t, b);
+		PSC_HASHTBL_LOCK(t);
+		while (t->pht_flags & PHTF_RESIZING)
+			psc_waitq_wait(&t->pht_waitq, &t->pht_lock);
+		PSC_HASHTBL_ULOCK(t);
+		goto begin;
+	}
+
 	return (b);
 }
 
 void *
-_psc_hashtbl_search(const struct psc_hashtbl *t, int flags,
+_psc_hashtbl_search(struct psc_hashtbl *t, int flags,
     const void *cmp, void (*cbf)(void *), const void *key)
 {
 	struct psc_hashbkt *b;
+	void *p;
 
 	b = psc_hashbkt_get(t, key);
-	return (_psc_hashbkt_search(t, b, flags, cmp, cbf, key));
+	p = _psc_hashbkt_search(t, b, flags, cmp, cbf, key);
+	psc_hashbkt_put(t, b);
+	return (p);
 }
 
 void *
-_psc_hashbkt_search(const struct psc_hashtbl *t, struct psc_hashbkt *b,
+_psc_hashbkt_search(struct psc_hashtbl *t, struct psc_hashbkt *b,
     int flags, const void *cmp, void (*cbf)(void *), const void *key)
 {
 	void *p, *pk;
@@ -218,16 +280,16 @@ _psc_hashbkt_search(const struct psc_hashtbl *t, struct psc_hashbkt *b,
  * @p: the item to remove from hash table.
  */
 void
-psc_hashent_remove(const struct psc_hashtbl *t, void *p)
+psc_hashent_remove(struct psc_hashtbl *t, void *p)
 {
 	struct psc_hashbkt *b;
 	void *pk;
 
 	psc_assert(p);
-	pk = (char *)p + t->pht_idoff;
+	pk = PSC_AGP(p, t->pht_idoff);
 	b = psc_hashbkt_get(t, pk);
-
 	psc_hashbkt_del_item(t, b, p);
+	psc_hashbkt_put(t, b);
 }
 
 /**
@@ -238,7 +300,7 @@ psc_hashent_remove(const struct psc_hashtbl *t, void *p)
  * @p: item to add.
  */
 void
-psc_hashbkt_del_item(const struct psc_hashtbl *t, struct psc_hashbkt *b,
+psc_hashbkt_del_item(struct psc_hashtbl *t, struct psc_hashbkt *b,
     void *p)
 {
 	int locked;
@@ -273,28 +335,32 @@ psc_hashbkt_add_item(const struct psc_hashtbl *t, struct psc_hashbkt *b,
  * @p: item to add.
  */
 void
-psc_hashtbl_add_item(const struct psc_hashtbl *t, void *p)
+psc_hashtbl_add_item(struct psc_hashtbl *t, void *p)
 {
 	struct psc_hashbkt *b;
 	void *pk;
 
 	psc_assert(p);
-	pk = (char *)p + t->pht_idoff;
+	pk = PSC_AGP(p, t->pht_idoff);
 	b = psc_hashbkt_get(t, pk);
 	psc_hashbkt_add_item(t, b, p);
+	psc_hashbkt_put(t, b);
 }
 
 int
-psc_hashent_conjoint(const struct psc_hashtbl *t, void *p)
+psc_hashent_conjoint(struct psc_hashtbl *t, void *p)
 {
 	struct psc_hashbkt *b;
 	void *pk;
+	int conjoint;
 
 	psc_assert(p);
-	pk = (char *)p + t->pht_idoff;
+	pk = PSC_AGP(p, t->pht_idoff);
 	b = psc_hashbkt_get(t, pk);
-	return (psclist_conjoint(psc_hashent_getlentry(t, p),
-	    &b->phb_listhd));
+	conjoint = psclist_conjoint(psc_hashent_getlentry(t, p),
+	    &b->phb_listhd);
+	psc_hashbkt_put(t, b);
+	return (conjoint);
 }
 
 /**
@@ -359,8 +425,8 @@ psc_hashtbl_walk(const struct psc_hashtbl *t, void (*f)(void *))
 
 /**
  * Estimate ideal number of buckets to allocate for a hash table.
- * Given a number of items N, the hash table should be roughly
- * twice the size to statistically reduce chance of collision.
+ * Given a number of items N, the hash table should be roughly twice the
+ * size to statistically reduce chance of collision.
  * Good hashing functions can do a good job creating a fair distribution
  * but a generic one intended for all use can only do such a great job,
  * so assist it by using a prime number of buckets not too close to a
@@ -376,4 +442,50 @@ psc_hashtbl_estnbuckets(int n)
 	if (t % 2 == 0)
 		t--;
 	return (t);
+}
+
+void
+psc_hashtbl_resize(struct psc_hashtbl *t, int nb)
+{
+	struct psc_hashbkt *bnew, *b;
+	int i, oldnb;
+
+	bnew = psc_alloc(nb * sizeof(*b), _psc_hashtbl_getmemflags(t));
+
+	for (b = bnew, i = 0; i < t->pht_nbuckets; i++, b++)
+		_psc_hashbkt_init(t, b);
+
+	PSC_HASHTBL_LOCK(t);
+	while (t->pht_flags & PHTF_RESIZING) {
+		psc_waitq_wait(&t->pht_waitq, &t->pht_lock);
+		PSC_HASHTBL_LOCK(t);
+	}
+	t->pht_gen++;
+	t->pht_flags |= PHTF_RESIZING;
+	t->pht_obuckets = t->pht_buckets;
+	t->pht_ocntr = oldnb = t->pht_nbuckets;
+
+	for (i = 0, b = t->pht_buckets; i < oldnb; i++, b++) {
+		void *p;
+
+		psc_hashbkt_lock(b);
+		while (b->phb_refcnt)
+			psc_waitq_wait(&t->pht_waitq, &t->pht_lock);
+
+		PSC_HASHBKT_FOREACH_ENTRY(t, p, b) {
+			psc_hashbkt_del_item(t, b, p);
+			psc_hashtbl_add_item(t, p);
+		}
+		psc_hashbkt_unlock(b);
+	}
+
+	t->pht_buckets = bnew;
+	t->pht_nbuckets = nb;
+	PSC_HASHTBL_ULOCK(t);
+
+	for (i = 0, b = t->pht_obuckets; i < oldnb; i++, b++) {
+		psc_hashbkt_lock(b);
+		b->phb_refcnt++;
+		psc_hashbkt_put(t, b);
+	}
 }

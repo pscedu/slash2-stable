@@ -20,22 +20,25 @@
 #ifndef _PFL_HASHTBL_H_
 #define _PFL_HASHTBL_H_
 
-#include "pfl/list.h"
-#include "pfl/lockedlist.h"
 #include "pfl/atomic.h"
+#include "pfl/list.h"
 #include "pfl/lock.h"
+#include "pfl/lockedlist.h"
 #include "pfl/log.h"
+#include "pfl/waitq.h"
 
 #define PSC_HASHTBL_LOCK(t)	spinlock(&(t)->pht_lock)
 #define PSC_HASHTBL_ULOCK(t)	freelock(&(t)->pht_lock)
 
-#define PSC_HTNAME_MAX		30
+#define PSC_HTNAME_MAX		32
 
 struct psc_hashbkt {
 	struct psclist_head	  phb_listhd;
 	psc_spinlock_t		  phb_lock;
 	psc_atomic32_t		  phb_nitems;
-	int			  phb_refcnt;
+	int			  phb_refcnt:16;
+	int			  phb_gen:16;
+	int			  phb_died:1;
 };
 
 struct psc_hashtbl {
@@ -45,15 +48,14 @@ struct psc_hashtbl {
 	ptrdiff_t		  pht_idoff;	/* offset into item to its ID field */
 	ptrdiff_t		  pht_hentoff;	/* offset to the hash table linkage */
 	int			  pht_flags;	/* hash table flags, see below */
+	int			  pht_gen;	/* generation # */
 	int			  pht_nbuckets;
+	int			  pht_ocntr;	/* # free buckets (when resizing) */
+	struct psc_waitq	  pht_waitq;
 	struct psc_hashbkt	 *pht_buckets;
+	struct psc_hashbkt	 *pht_obuckets;	/* old buckets (when resizing */
 	int			(*pht_cmpf)(const void *, const void *);
 };
-
-struct psc_hashent {
-	struct psc_listentry	  phe_lentry;
-};
-#define psc_hashentry psc_hashent
 
 /* Table flags. */
 #define PHTF_NONE	0		/* no table flags specified */
@@ -61,6 +63,7 @@ struct psc_hashent {
 #define PHTF_RESORT	(1 << 1)	/* reorder queues on lookup */
 #define PHTF_NOMEMGUARD	(1 << 2)	/* disable memalloc guard */
 #define PHTF_NOLOG	(1 << 3)	/* do not psclog */
+#define PHTF_RESIZING	(1 << 4)	/* do not psclog */
 
 /* Lookup flags. */
 #define PHLF_NONE	0		/* no lookup flags specified */
@@ -123,11 +126,12 @@ struct psc_hashent {
 
 struct psc_hashtbl *
 	 psc_hashtbl_lookup(const char *);
-void	 psc_hashtbl_add_item(const struct psc_hashtbl *, void *);
+void	 psc_hashtbl_add_item(struct psc_hashtbl *, void *);
 void	 psc_hashtbl_prstats(const struct psc_hashtbl *);
 void	 psc_hashtbl_getstats(const struct psc_hashtbl *, int *, int *, int *, int *);
 void	 psc_hashtbl_destroy(struct psc_hashtbl *);
-void	*_psc_hashtbl_search(const struct psc_hashtbl *, int, const void *,
+void	 psc_hashtbl_resize(struct psc_hashtbl *, int);
+void	*_psc_hashtbl_search(struct psc_hashtbl *, int, const void *,
 	    void (*)(void *), const void *);
 void	_psc_hashtbl_init(struct psc_hashtbl *, int, ptrdiff_t, ptrdiff_t, int,
 	    int (*)(const void *, const void *), const char *, ...);
@@ -160,24 +164,31 @@ void	_psc_hashtbl_init(struct psc_hashtbl *, int, ptrdiff_t, ptrdiff_t, int,
 	_psc_hashbkt_search((t), (b), PHLF_DEL, (cmp), NULL, (key))
 
 struct psc_hashbkt *
-	 psc_hashbkt_get(const struct psc_hashtbl *, const void *);
-void	 psc_hashbkt_del_item(const struct psc_hashtbl *,
+	 psc_hashbkt_get(struct psc_hashtbl *, const void *);
+void	 psc_hashbkt_put(struct psc_hashtbl *, struct psc_hashbkt *);
+void	 psc_hashbkt_del_item(struct psc_hashtbl *,
 		struct psc_hashbkt *, void *);
 void	 psc_hashbkt_add_item(const struct psc_hashtbl *,
 		struct psc_hashbkt *, void *);
-void	*_psc_hashbkt_search(const struct psc_hashtbl *,
+void	*_psc_hashbkt_search(struct psc_hashtbl *,
 		struct psc_hashbkt *, int, const void *, void (*)(void *),
 		const void *);
 
 #define psc_hashbkt_lock(b)		spinlock(&(b)->phb_lock)
+#define psc_hashbkt_rlock(b)		reqlock(&(b)->phb_lock)
 #define psc_hashbkt_unlock(b)		freelock(&(b)->phb_lock)
 #define psc_hashbkt_trylock(b)		trylock(&(b)->phb_lock)
 #define psc_hashbkt_reqlock(b)		reqlock(&(b)->phb_lock)
 #define psc_hashbkt_ureqlock(b, lk)	ureqlock(&(b)->phb_lock, (lk))
 
+struct psc_hashent {
+	struct psc_listentry	  phe_lentry;
+};
+#define psc_hashentry psc_hashent
+
 void	 psc_hashent_init(const struct psc_hashtbl *, void *);
-void	 psc_hashent_remove(const struct psc_hashtbl *, void *);
-int	 psc_hashent_conjoint(const struct psc_hashtbl *, void *);
+void	 psc_hashent_remove(struct psc_hashtbl *, void *);
+int	 psc_hashent_conjoint(struct psc_hashtbl *, void *);
 
 #define psc_hashent_disjoint(t, p)	psclist_disjoint(			\
 					    psc_hashent_getlentry((t), (p)))
