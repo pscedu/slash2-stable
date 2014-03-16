@@ -292,7 +292,7 @@ psc_dynarray_bsearch(const struct psc_dynarray *pda, const void *item,
 	min = mid = 0;
 	max = psc_dynarray_len(pda) - 1;
 	while (min <= max) {
-		mid = min + (max - min) / 2;
+		mid = (max + min) / 2;
 		p = psc_dynarray_getpos(pda, mid);
 		rc = cmpf(item, p);
 		if (rc < 0)
