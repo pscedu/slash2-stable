@@ -22,10 +22,10 @@
 #include <stdlib.h>
 #include <unistd.h>
 
+#include "pfl/alloc.h"
 #include "pfl/cdefs.h"
 #include "pfl/hashtbl.h"
 #include "pfl/pfl.h"
-#include "pfl/alloc.h"
 
 struct item {
 	struct psc_hashent	hentry;

@@ -39,9 +39,9 @@
 #include <unistd.h>
 
 #include "pfl/_atomic32.h"
+#include "pfl/log.h"
 #include "pfl/time.h"
 #include "pfl/types.h"
-#include "pfl/log.h"
 
 #ifndef HAVE_LIBPTHREAD
 #  define pthread_self() ((pthread_t)1)
