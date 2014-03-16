@@ -83,5 +83,11 @@ main(int argc, char *argv[])
 	i = psc_hashtbl_search(&t, NULL, NULL, &key);
 	printf("%"PRId64"\n", i->id);
 
+	psc_hashtbl_resize(&t, 191);
+
+	key = 3;
+	i = psc_hashtbl_search(&t, NULL, NULL, &key);
+	printf("%"PRId64"\n", i->id);
+
 	exit(0);
 }
