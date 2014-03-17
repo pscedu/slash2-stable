@@ -100,13 +100,15 @@ PSCRPC_SRCS+=		${PFL_BASE}/rsx.c
 PSCRPC_SRCS+=		${PFL_BASE}/service.c
 PSCRPC_SRCS+=		${PFL_BASE}/util.c
 
-_TINCLUDES=		$(filter-out -I%,${INCLUDES}) $(patsubst %,-I%,$(foreach \
+_TINCLUDES=		$(filter-out -I%,${INCLUDES}) $(patsubst %,-I%/,$(foreach \
 			dir,$(patsubst -I%,%,$(filter -I%,${INCLUDES})), $(realpath ${dir})))
 
 _EXCLUDES=		$(filter-out -I%,${EXCLUDES}) $(patsubst %,-I%/,$(foreach \
 			dir,$(patsubst -I%,%,$(filter -I%,${EXCLUDES})), $(realpath ${dir})))
 
-CFLAGS+=		${DEFINES} ${_TINCLUDES}
+foofuck=$(filter-out ${_EXCLUDES},${_TINCLUDES})
+
+CFLAGS+=		${DEFINES} $(filter-out ${_EXCLUDES},${_TINCLUDES})
 TARGET?=		$(sort ${PROG} ${LIBRARY} ${TEST} ${DOCGEN})
 PROG?=			${TEST}
 
@@ -114,28 +116,13 @@ EXTRACT_INCLUDES=	perl -ne 'print $$& while /-I\S+\s?/gc'
 EXTRACT_DEFINES=	perl -ne 'print $$& while /-D\S+\s?/gc'
 EXTRACT_CFLAGS=		perl -ne 'print $$& while /-[^ID]\S+\s?/gc'
 
-# Pre-modules processing
-
-ifneq ($(filter ${PFL_BASE}/%.c,${SRCS}),)
-  MODULES+=	pfl
-endif
-
 # Process modules
 
 ifneq ($(filter pscfs,${MODULES}),)
   MODULES+=	pscfs-hdrs
 
-  ifndef PICKLE_HAVE_LP64
-    PSCFS_SRCS+=${PFL_BASE}/listcache.c
-    PSCFS_SRCS+=${PFL_BASE}/pool.c
-    PSCFS_SRCS+=${PFL_BASE}/random.c
-  endif
-
-  SRCS+=	${PSCFS_SRCS}
   ifdef PICKLE_HAVE_FUSE
     MODULES+=	fuse
-  else ifdef PICKLE_HAVE_NNPFS
-    MODULES+=	nnpfs
   else ifdef PICKLE_HAVE_DOKAN
     MODULES+=	dokan
   else
@@ -146,8 +133,6 @@ endif
 ifneq ($(filter pscfs-hdrs,${MODULES}),)
   ifdef PICKLE_HAVE_FUSE
     MODULES+=	fuse-hdrs
-  else ifdef PICKLE_HAVE_NNPFS
-    MODULES+=	nnpfs-hdrs
   else ifdef PICKLE_HAVE_DOKAN
     MODULES+=	dokan-hdrs
   else
@@ -179,7 +164,6 @@ ifneq ($(filter rpc,${MODULES}),)
 endif
 
 ifneq ($(filter lnet,${MODULES}),)
-  SRCS+=	${PFL_BASE}/iostats.c
   SRCS+=	${LNET_SOCKLND_SRCS}
   SRCS+=	${LNET_CFS_SRCS}
   SRCS+=	${LNET_LIB_SRCS}
@@ -222,15 +206,8 @@ endif
 
 ifneq ($(filter pfl,${MODULES}),)
   MODULES+=	pfl-hdrs str clock
-  SRCS+=	${PFL_BASE}/alloc.c
-  SRCS+=	${PFL_BASE}/init.c
-  SRCS+=	${PFL_BASE}/log.c
-
-  ifneq (${DEBUG},0)
-    SRCS+=	${PFL_BASE}/dbgutil.c
-    SRCS+=	${PFL_BASE}/printhex.c
-    MODULES+=	m
-  endif
+  LDFLAGS+=	-L${PFL_BASE} -lpfl -lm
+  DEPLIST=	${PFL_BASE}:libpfl.a
 
  ifneq ($(filter pthread,${MODULES}),)
    MODULES+=	numa
@@ -334,47 +311,6 @@ ifneq ($(filter rt,${MODULES}),)
   LDFLAGS+=	${LIBRT}
 endif
 
-# Post-modules processing
-
-ifneq ($(filter ${PFL_BASE}/pthrutil.c,${SRCS}),)
-  SRCS+=	${PFL_BASE}/vbitmap.c
-  SRCS+=	${PFL_BASE}/log.c
-  SRCS+=	${PFL_BASE}/thread.c
-endif
-
-ifneq ($(filter ${PFL_BASE}/thread.c,${SRCS}),)
-  SRCS+=	${PFL_BASE}/lockedlist.c
-  SRCS+=	${PFL_BASE}/subsys.c
-  SRCS+=	${PFL_BASE}/waitq.c
-  SRCS+=	${CLOCK_SRCS}
-endif
-
-ifneq ($(filter ${PFL_BASE}/subsys.c,${SRCS}),)
-  SRCS+=	${PFL_BASE}/dynarray.c
-endif
-
-ifneq ($(filter ${PFL_BASE}/log.c,${SRCS}),)
-  SRCS+=	${PFL_BASE}/alloc.c
-endif
-
-ifneq ($(filter ${PFL_BASE}/alloc.c,${SRCS}),)
-  ifneq (${DEBUG},0)
-    SRCS+=	${PFL_BASE}/hashtbl.c
-  endif
-endif
-
-ifneq ($(filter ${PFL_BASE}/hashtbl.c,${SRCS}),)
-  SRCS+=	${PFL_BASE}/lockedlist.c
-endif
-
-ifneq ($(filter ${PFL_BASE}/lockedlist.c,${SRCS}),)
-  SRCS+=	${PFL_BASE}/list.c
-endif
-
-ifneq ($(filter ${PFL_BASE}/pool.c,${SRCS}),)
-  SRCS+=	${PFL_BASE}/listcache.c
-endif
-
 # OBJDIR is added to .c below since lex/yacc intermediate files get
 # generated there.
 vpath %.y $(sort $(dir $(filter %.y,${_TSRCS})))
@@ -389,6 +325,9 @@ all: recurse-all all-hook
 			echo "$$i does not exist" >&2;			\
 			exit 1;						\
 		fi;							\
+	done
+	@for i in ${DEPLIST}; do					\
+		cd $${i%:*} && ${MAKE} $${i#*:};			\
 	done
 	@if ${NOTEMPTY} "${TARGET}"; then				\
 		${MKDIRS} -m 775 ${OBJDIR};				\
@@ -405,28 +344,33 @@ all-hook:
 .SILENT: ${OBJDIR}/$(notdir %.d)
 
 ${OBJDIR}/$(notdir %.o) : %.cc
+	@${MKDIRS} -m 775 ${OBJDIR}
 	${PCPP} ${PCPP_FLAGS} $(call FILE_PCPP_FLAGS,$<) $(realpath $<	\
 	    ) | ${CXX} -x c++ ${CFLAGS} $(call FILE_CFLAGS,$<) $(	\
-	    ) $(filter-out ${_EXCLUDES},-I$(dir $<)) - -c -o $@ -MD -MP
+	    ) $(filter-out ${_EXCLUDES},-I$(realpath $(dir $<))/) - -c -o $@ -MD -MP
 
 ${OBJDIR}/$(notdir %.o) : %.c
+	@${MKDIRS} -m 775 ${OBJDIR}
 	${PCPP} ${PCPP_FLAGS} $(call FILE_PCPP_FLAGS,$<) $(realpath $<	\
 	    ) | ${CC} -x c ${CFLAGS} $(call FILE_CFLAGS,$<) $(		\
-	    ) $(filter-out ${_EXCLUDES},-I$(dir $<)) - -c -o $@ -MD -MP
+	    ) $(filter-out ${_EXCLUDES},-I$(realpath $(dir $<))/) - -c -o $@ -MD -MP
 
 ${OBJDIR}/$(notdir %.E) : %.c
+	@${MKDIRS} -m 775 ${OBJDIR}
 	${CC} ${CFLAGS} $(call FILE_CFLAGS,$<) $(realpath $<) $(	\
-	    ) $(filter-out ${_EXCLUDES},-I$(dir $<)) -E -o $@
+	    ) $(filter-out ${_EXCLUDES},-I$(realpath $(dir $<))/) -E -o $@
 
 ${OBJDIR}/$(notdir %.c) : %.l
-	echo "${LEX} ${LFLAGS} $(realpath $<) > $@"
-	${LEX} ${LFLAGS} $(realpath $<) > $@
+	@${MKDIRS} -m 775 ${OBJDIR}
+	@echo "${LEX} ${LFLAGS} $(realpath $<) > $@"
+	@${LEX} ${LFLAGS} $(realpath $<) > $@
 
 #	$(eval $$(call FILE_PCPP_FLAGS_VARNAME,$@)+=$$(call FILE_PCPP_FLAGS,$<))
 #	$(eval $$(call FILE_CFLAGS_VARNAME,$@)+=$$(call FILE_CFLAGS,$<))
 
 ${OBJDIR}/$(notdir %.c) : %.y
-	${ECHORUN} ${YACC} ${YFLAGS} -o $@ $(realpath $<)
+	@${MKDIRS} -m 775 ${OBJDIR}
+	${YACC} ${YFLAGS} -o $@ $(realpath $<)
 
 ifdef PROG
 ${PROG}: ${OBJS}
