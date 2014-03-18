@@ -207,7 +207,7 @@ endif
 ifneq ($(filter pfl,${MODULES}),)
   MODULES+=	pfl-hdrs str clock
   LDFLAGS+=	-L${PFL_BASE} -lpfl -lm
-  DEPLIST=	${PFL_BASE}:libpfl.a
+  DEPLIST+=	${PFL_BASE}:libpfl.a
 
  ifneq ($(filter pthread,${MODULES}),)
    MODULES+=	numa
@@ -327,7 +327,7 @@ all: recurse-all all-hook
 		fi;							\
 	done
 	@for i in ${DEPLIST}; do					\
-		cd $${i%:*} && ${MAKE} $${i#*:};			\
+		(cd $${i%:*} && ${MAKE} -s $${i#*:}) || exit 1;		\
 	done
 	@if ${NOTEMPTY} "${TARGET}"; then				\
 		${MKDIRS} -m 775 ${OBJDIR};				\
