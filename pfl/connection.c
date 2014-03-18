@@ -82,7 +82,6 @@ pscrpc_get_connection(lnet_process_id_t peer, lnet_nid_t self,
 	    libcfs_nid2str(self), libcfs_id2str(peer));
 
 	b = psc_hashbkt_get(&pscrpc_conn_hashtbl, &peer.nid);
-	psc_hashbkt_lock(b);
 	c = pscrpc_lookup_conn_locked(peer, self);
 	psc_hashbkt_put(&pscrpc_conn_hashtbl, b);
 
@@ -107,7 +106,6 @@ pscrpc_get_connection(lnet_process_id_t peer, lnet_nid_t self,
 		pscrpc_str2uuid(&c->c_remote_uuid, (char *)uuid->uuid);
 
 	b = psc_hashbkt_get(&pscrpc_conn_hashtbl, &peer.nid);
-	psc_hashbkt_lock(b);
 	c2 = pscrpc_lookup_conn_locked(peer, self);
 	if (c2 == NULL) {
 		psclog_info("adding connection %p for %s",
