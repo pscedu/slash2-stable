@@ -84,7 +84,7 @@ pscrpc_get_connection(lnet_process_id_t peer, lnet_nid_t self,
 	b = psc_hashbkt_get(&pscrpc_conn_hashtbl, &peer.nid);
 	psc_hashbkt_lock(b);
 	c = pscrpc_lookup_conn_locked(peer, self);
-	psc_hashbkt_put(b);
+	psc_hashbkt_put(&pscrpc_conn_hashtbl, b);
 
 	if (c) {
 		psclog_debug("got self %s peer %s",
@@ -114,7 +114,7 @@ pscrpc_get_connection(lnet_process_id_t peer, lnet_nid_t self,
 		    c, libcfs_id2str(peer));
 		psc_hashbkt_add_item(&pscrpc_conn_hashtbl, b, c);
 	}
-	psc_hashbkt_put(b);
+	psc_hashbkt_put(&pscrpc_conn_hashtbl, b);
 
 	if (c2 == NULL)
 		return (c);

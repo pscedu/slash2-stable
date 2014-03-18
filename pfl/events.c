@@ -228,7 +228,7 @@ pscrpc_request_in_callback(lnet_event_t *ev)
 				pq = tpq;
 				tpq = NULL;
 			}
-			psc_hashbkt_put(b);
+			psc_hashbkt_put(&svc->srv_peer_qlentab, b);
 
 			PSCFREE(tpq);
 		}
