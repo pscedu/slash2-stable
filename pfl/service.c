@@ -434,7 +434,7 @@ pscrpc_server_handle_request(struct pscrpc_service *svc,
 			psc_hashent_remove(&svc->srv_peer_qlentab, pq);
 		else
 			pq = NULL;
-		psc_hashbkt_unlock(b);
+		psc_hashbkt_put(b);
 		PSCFREE(pq);
 	}
 
