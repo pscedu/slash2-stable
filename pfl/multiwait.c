@@ -147,6 +147,8 @@ psc_multiwaitcond_destroy(struct psc_multiwaitcond *mwc)
 
 		k = psc_dynarray_bsearch(&mwc->mwc_multiwaits, mw,
 		    psc_multiwaitcond_cmp);
+		psc_assert(psc_dynarray_getpos(&mwc->mwc_multiwaits,
+		    k) == mw);
 		psc_dynarray_splice(&mwc->mwc_multiwaits, k, 1, NULL, 0);
 
 		k = psc_dynarray_removeitem(&mw->mw_conds, mwc);
@@ -159,6 +161,7 @@ psc_multiwaitcond_destroy(struct psc_multiwaitcond *mwc)
 	}
 	psc_dynarray_free(&mwc->mwc_multiwaits);
 	/* XXX: ensure no one is waiting on this mutex? */
+	// XXX need refcnt and wait until release before we can destroy it
 	psc_mutex_unlock(&mwc->mwc_mutex);
 	psc_mutex_destroy(&mwc->mwc_mutex);
 	pthread_cond_destroy(&mwc->mwc_cond);
@@ -216,7 +219,7 @@ psc_multiwaitcond_wakeup(struct psc_multiwaitcond *mwc)
 	DYNARRAY_FOREACH(mw, j, &mwc->mwc_multiwaits)
 		if (psc_multiwait_iscondwakeable(mw, mwc)) {
 			mw->mw_waker = mwc;
-			psclog_info("wake mw %p %s", mw, mw->mw_name);
+			psclog_diag("wake mw %p %s", mw, mw->mw_name);
 			pthread_cond_signal(&mw->mw_cond);
 		}
 	psc_multiwaitcond_unlockallmw(mwc);
@@ -325,6 +328,7 @@ _psc_multiwait_addcond(struct psc_multiwait *mw,
 		psc_dynarray_removeitem(&mw->mw_conds, mwc);
 		goto done;
 	}
+	// refcnt
 
 	psc_vbitmap_setval(mw->mw_condmask, j - 1, active);
 
@@ -515,6 +519,7 @@ psc_multiwait_reset(struct psc_multiwait *mw)
 		/* Remove it so we don't process it twice. */
 		psc_dynarray_removeitem(&mw->mw_conds, mwc);
 	}
+	// XXX mw_conds should already be reset...
 	psc_dynarray_reset(&mw->mw_conds);
 	psc_vbitmap_resize(mw->mw_condmask, 0);
 	mw->mw_flags = 0;
