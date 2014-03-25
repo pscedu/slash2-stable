@@ -145,6 +145,8 @@ psc_multiwaitcond_destroy(struct psc_multiwaitcond *mwc)
 		psc_assert(psc_dynarray_len(&mw->mw_conds) ==
 		    (int)psc_vbitmap_getsize(mw->mw_condmask));
 
+		psclog_vdebug("disassociating cond %p from "
+		    "multiwait %p", mwc, mw);
 		k = psc_dynarray_bsearch(&mwc->mwc_multiwaits, mw,
 		    psc_multiwaitcond_cmp);
 		psc_assert(psc_dynarray_getpos(&mwc->mwc_multiwaits,
@@ -318,6 +320,8 @@ _psc_multiwait_addcond(struct psc_multiwait *mw,
 		goto done;
 	}
 
+	psclog_vdebug("associating cond %p with " "multiwait %p", mwc,
+	    mw);
 	k = psc_dynarray_bsearch(&mwc->mwc_multiwaits, mw,
 	    psc_multiwaitcond_cmp);
 	if (psc_dynarray_splice(&mwc->mwc_multiwaits,
@@ -511,6 +515,8 @@ psc_multiwait_reset(struct psc_multiwait *mw)
 			goto restart;
 		}
 
+		psclog_vdebug("disassociating cond %p from "
+		    "multiwait %p", mwc, mw);
 		k = psc_dynarray_bsearch(&mwc->mwc_multiwaits, mw,
 		    psc_multiwaitcond_cmp);
 		psc_dynarray_splice(&mwc->mwc_multiwaits, k, 1, NULL, 0);
