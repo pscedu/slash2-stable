@@ -168,7 +168,7 @@ __dead void
 usage(void)
 {
 	fprintf(stderr,
-	    "usage: %s [-BcKPZ] [-b bufsz] [-n nthr] file ...\n",
+	    "usage: %s [-BcKPZ] [-b bufsz] [-n nthr] [-O offset] file ...\n",
 	    progname);
 	exit(1);
 }
@@ -177,14 +177,14 @@ int
 main(int argc, char *argv[])
 {
 	int fd, chunkid, c, n;
+	off_t seekoff = 0, off;
 	struct stat stb;
 	struct wk *wk;
 	char *endp;
-	off_t off;
 
 	pfl_init();
 	progname = argv[0];
-	while ((c = getopt(argc, argv, "Bb:cKn:PZ")) != -1)
+	while ((c = getopt(argc, argv, "Bb:cKn:O:PZ")) != -1)
 		switch (c) {
 		case 'B': /* display bandwidth */
 			pscthr_init(0, 0, display, NULL, 0, "disp");
@@ -219,6 +219,10 @@ main(int argc, char *argv[])
 			break;
 		case 'n': /* #threads */
 			nthr = strtol(optarg, &endp, 10);
+			/* XXX check */
+			break;
+		case 'O': /* offset */
+			seekoff = strtol(optarg, &endp, 10);
 			/* XXX check */
 			break;
 		case 'P': /* chart progress */
@@ -262,7 +266,7 @@ main(int argc, char *argv[])
 		psc_atomic64_set(&resid, 0);
 
 		chunkid = 0;
-		for (off = 0; off < stb.st_size; off += bufsz)
+		for (off = seekoff; off < stb.st_size; off += bufsz)
 			addwk(*argv, fd, off, chunkid++);
 
 		for (n = 0; n < nthr && (wk = lc_getwait(&doneq)); n++)
