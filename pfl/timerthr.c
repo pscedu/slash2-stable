@@ -43,7 +43,7 @@ psc_tiosthr_main(struct psc_thread *thr)
 	struct psc_iostatv *istv;
 	struct psc_iostats *ist;
 	struct timespec ts;
-	struct timeval tv;
+	struct timeval dtv, tv;
 	uint64_t intv_len;
 	int i, stoff;
 
@@ -53,7 +53,7 @@ psc_tiosthr_main(struct psc_thread *thr)
 	ts.tv_nsec = 0;
 
 	while (pscthr_run(thr)) {
-		ts.tv_sec = tv.tv_sec++;
+		ts.tv_sec = ++tv.tv_sec;
 		psc_waitq_waitabs(&dummy, NULL, &ts);
 
 		/* find largest interval to update */
@@ -78,7 +78,7 @@ psc_tiosthr_main(struct psc_thread *thr)
 				intv_len = psc_atomic64_xchg(
 				    &istv->istv_cur_len, intv_len);
 
-				PFL_GETTIMEVAL(&tv);
+				PFL_GETTIMEVAL(&dtv);
 
 				if (i == stoff - 1 && i < IST_NINTV - 1)
 					psc_atomic64_add(&ist->ist_intv[i +
@@ -87,9 +87,9 @@ psc_tiosthr_main(struct psc_thread *thr)
 				istv->istv_intv_len = intv_len;
 
 				/* calculate acculumation duration */
-				timersub(&tv, &istv->istv_lastv,
+				timersub(&dtv, &istv->istv_lastv,
 				    &istv->istv_intv_dur);
-				istv->istv_lastv = tv;
+				istv->istv_lastv = dtv;
 
 				if (i == 0)
 					ist->ist_len_total += intv_len;
