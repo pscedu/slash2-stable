@@ -154,7 +154,7 @@ display(__unusedx struct psc_thread *thr)
 	struct psc_iostats myist;
 	int n, t;
 
-	n = printf("%8s %7s ", "time (s)", "rate");
+	n = printf("%8s %7s", "time (s)", "rate");
 	printf("\n");
 	for (t = 0; t < n; t++)
 		putchar('=');
@@ -164,7 +164,8 @@ display(__unusedx struct psc_thread *thr)
 	for (;;) {
 		sleep(1);
 		memcpy(&myist, &ist, sizeof(myist));
-		psc_fmt_human(ratebuf, psc_iostats_getintvrate(&myist, 0));
+		psc_fmt_human(ratebuf,
+		    psc_iostats_getintvrate(&myist, 0));
 		t = printf("\r%7.3fs %7s",
 		    psc_iostats_getintvdur(&myist, 0),
 		    ratebuf);
@@ -263,6 +264,7 @@ main(int argc, char *argv[])
 	wk_pool = psc_poolmaster_getmgr(&wk_poolmaster);
 
 	psc_tiosthr_spawn(THRT_TIOS, "tiosthr");
+	psc_iostats_init(&ist, "ist");
 
 	for (n = 0; n < nthr; n++)
 		pscthr_init(0, 0, thrmain, NULL, 0, "thr%d", n);
