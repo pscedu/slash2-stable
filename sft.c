@@ -76,6 +76,7 @@ struct psc_listcache	 doneq;
 void
 thrmain(struct psc_thread *thr)
 {
+	int skip, lastfd = -2;
 	struct wk *wk;
 	uint64_t crc;
 	ssize_t rc;
@@ -87,6 +88,17 @@ thrmain(struct psc_thread *thr)
 		wk = lc_getwait(&wkq);
 		if (wk == NULL)
 			break;
+		skip = lastfd == -1;
+		lastfd = wk->fd;
+
+		/* eof signal */
+		if (wk->fd == -1) {
+			if (skip)
+				lc_add(&wkq, wk);
+			else
+				lc_add(&doneq, wk);
+			continue;
+		}
 
 		if (doread)
 			rc = pread(wk->fd, buf, bufsz, wk->off);
@@ -103,23 +115,22 @@ thrmain(struct psc_thread *thr)
 		psc_atomic64_add(&resid, rc);
 		psc_iostats_intv_add(&ist, rc);
 
-		if (!docrc)
-			return;
+		if (docrc) {
+			if (chunk) {
+				psc_crc64_calc(&crc, buf, rc);
 
-		if (chunk) {
-			psc_crc64_calc(&crc, buf, rc);
+				flockfile(stdout);
+				fprintf(stdout, "F '%s' %5d %c "
+				    "CRC=%"PSCPRIxCRC64"\n",
+				    wk->fn, wk->chunkid,
+				    checkzero && pfl_memchk(buf, 0, rc) ?
+				    'Z' : ' ', crc);
+				funlockfile(stdout);
+			} else
+				psc_crc64_add(&filecrc, buf, rc);
+		}
 
-			flockfile(stdout);
-			fprintf(stdout, "F '%s' %5d %c "
-			    "CRC=%"PSCPRIxCRC64"\n",
-			    wk->fn, wk->chunkid,
-			    checkzero && pfl_memchk(buf, 0, rc) ?
-			    'Z' : ' ', crc);
-			funlockfile(stdout);
-		} else
-			psc_crc64_add(&filecrc, buf, rc);
-
-		lc_add(&doneq, wk);
+		psc_pool_return(wk_pool, wk);
 	}
 }
 
@@ -269,10 +280,13 @@ main(int argc, char *argv[])
 		for (off = seekoff; off < stb.st_size; off += bufsz)
 			addwk(*argv, fd, off, chunkid++);
 
+		for (n = 0; n < nthr; n++)
+			addwk(NULL, -1, 0, 0);
+
 		for (n = 0; n < nthr && (wk = lc_getwait(&doneq)); n++)
 			psc_pool_return(wk_pool, wk);
 
-		if (doread && psc_atomic64_read(&resid) != stb.st_size)
+		if (doread && psc_atomic64_read(&resid) < stb.st_size)
 			warn("premature EOF");
 
 		if (docrc && !chunk) {
