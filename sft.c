@@ -154,7 +154,7 @@ display(__unusedx struct psc_thread *thr)
 	struct psc_iostats myist;
 	int n, t;
 
-	n = printf("%8s %7s %5s", "time (s)", "rate", "nsets");
+	n = printf("%8s %7s ", "time (s)", "rate");
 	printf("\n");
 	for (t = 0; t < n; t++)
 		putchar('=');
@@ -169,7 +169,7 @@ display(__unusedx struct psc_thread *thr)
 		    psc_iostats_getintvdur(&myist, 0),
 		    ratebuf);
 		n = MAX(n - t, 0);
-		printf("%*.*s", n, n, "");
+		printf("%*.*s ", n, n, "");
 		n = t;
 		fflush(stdout);
 	}
