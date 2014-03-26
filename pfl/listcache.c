@@ -150,10 +150,8 @@ _lc_add_sorted(struct psc_listcache *plc, void *p,
 	int locked;
 
 	locked = LIST_CACHE_RLOCK(plc);
-
 	pll_add_sorted(&plc->plc_pll, p, cmpf);
 	plc->plc_nseen++;
-
 	psc_waitq_wakeall(&plc->plc_wq_empty);
 	LIST_CACHE_URLOCK(plc, locked);
 }
@@ -165,10 +163,8 @@ _lc_add_sorted_backwards(struct psc_listcache *plc, void *p,
 	int locked;
 
 	locked = LIST_CACHE_RLOCK(plc);
-
 	pll_add_sorted_backwards(&plc->plc_pll, p, cmpf);
 	plc->plc_nseen++;
-
 	psc_waitq_wakeall(&plc->plc_wq_empty);
 	LIST_CACHE_URLOCK(plc, locked);
 }
