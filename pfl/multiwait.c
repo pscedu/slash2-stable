@@ -20,6 +20,10 @@
 /*
  * Multiwait is an API for waiting on any of a number of conditions to
  * become available.
+ *
+ * XXX since we keep the multiwaits/conds sorted on each others' lists,
+ * we shouldnt use a dynarray.  It does make debugging access easier,
+ * though.
  */
 
 #include <sys/time.h>
@@ -295,14 +299,11 @@ _psc_multiwait_addcond(struct psc_multiwait *mw,
 	}
 
 	/* Ensure no associations already exist. */
+	// XXX bsearch
 	DYNARRAY_FOREACH(c, j, &mw->mw_conds)
 		if (c == mwc)
 			psc_fatalx("mwc %s already registered in multiwait %s",
 			    mwc->mwc_name, mw->mw_name);
-	DYNARRAY_FOREACH(m, j, &mwc->mwc_multiwaits)
-		if (m == mw)
-			psc_fatalx("mw %s already registered multiwaitcond %s",
-			    mw->mw_name, mwc->mwc_name);
 
 	psc_assert(psc_dynarray_len(&mw->mw_conds) ==
 	    (int)psc_vbitmap_getsize(mw->mw_condmask));
@@ -324,8 +325,14 @@ _psc_multiwait_addcond(struct psc_multiwait *mw,
 	    mw);
 	k = psc_dynarray_bsearch(&mwc->mwc_multiwaits, mw,
 	    psc_multiwaitcond_cmp);
-	if (psc_dynarray_splice(&mwc->mwc_multiwaits,
-	    k, 0, &mw, 1) == -1) {
+
+	if (k < psc_dynarray_len(&mwc->mwc_multiwaits) &&
+	    psc_dynarray_getpos(&mwc->mwc_multiwaits, k) == mw)
+		psc_fatalx("mw %s already registered multiwaitcond %s",
+		    mw->mw_name, mwc->mwc_name);
+
+	if (psc_dynarray_splice(&mwc->mwc_multiwaits, k, 0, &mw, 1) ==
+	    -1) {
 		rc = -1;
 		if (psc_vbitmap_resize(mw->mw_condmask, j - 1) == -1)
 			psc_fatalx("unable to undo bitmask changes");
