@@ -119,7 +119,7 @@ thrmain(struct psc_thread *thr)
 		} else
 			psc_crc64_add(&filecrc, buf, rc);
 
-		psc_pool_return(wk_pool, wk);
+		lc_add(&doneq, wk);
 	}
 }
 
@@ -263,7 +263,7 @@ main(int argc, char *argv[])
 		if (fstat(fd, &stb) == -1)
 			err(1, "stat %s", *argv);
 
-		psc_atomic64_set(&resid, 0);
+		psc_atomic64_set(&resid, seekoff);
 
 		chunkid = 0;
 		for (off = seekoff; off < stb.st_size; off += bufsz)
