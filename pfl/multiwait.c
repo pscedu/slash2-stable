@@ -286,7 +286,6 @@ _psc_multiwait_addcond(struct psc_multiwait *mw,
     struct psc_multiwaitcond *mwc, int active)
 {
 	struct psc_multiwaitcond *c;
-	struct psc_multiwait *m;
 	int rc = 0, k, j;
 
 	/* Acquire locks. */
