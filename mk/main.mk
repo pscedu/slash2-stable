@@ -471,8 +471,8 @@ clean-core:
 	${RM} -rf ${OBJDIR}
 	${RM} -f ${PROG} ${LIBRARY} core.[0-9]* *.core
 	@for i in ${DEPLIST}; do					\
-		[ -e "$${i#*:}" ] &&					\
-		    (cd $${i%:*} && ${MAKE} clean) || exit 1;		\
+		[ -e "$${i#*:}" ] || continue;				\
+		(cd $${i%:*} && ${MAKE} clean) || exit 1;		\
 	done
 
 clean: recurse-clean clean-core clean-hook
