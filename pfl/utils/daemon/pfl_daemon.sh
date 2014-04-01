@@ -127,19 +127,13 @@ postproc()
 	if [ -e "$cf" -a -n "$mail_to" ]; then
 		chmod og+r $cf
 
-		frompre=
-		frompost=
-		if mail -V >/dev/null 2>&1; then
-			# GNU mailx; use native flag
-			frompre="-r $mail_from"
-		else
-			# BSD mailx; use sendmail flag
-			frompost="-f $mail_from"
-		fi
-
 		cmdfile=/tmp/gdbcmd.$id
 		echo thr ap all bt > $cmdfile
 		{
+			echo To: $mail_to
+			echo From: $mail_from
+			echo Subject: $host $name down
+			echo
 			echo core file is $base/$cf
 			echo binary is $base/c/$prog.$id
 			echo log is $base/log/$host.$name/$tm
@@ -147,7 +141,7 @@ postproc()
 			tail $PSC_LOG_FILE_LINK
 			echo --------------------------------------------------
 			gdb -batch -c $cf -x $cmdfile c/$prog.$id 2>&1 | $src/tools/filter-pstack
-		} | mail -s "$host $name down" $frompre $mail_to $frompost
+		} | sendmail -t
 		echo binary was $base/c/$prog.$id
 		rm $cmdfile
 	else
