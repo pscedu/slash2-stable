@@ -69,7 +69,7 @@ psc_fmt_ratio(char buf[PSCFMT_RATIO_BUFSIZ], int64_t n, int64_t d)
 }
 
 ssize_t
-psc_humantonum(const char *s)
+pfl_humantonum(const char *s)
 {
 	ssize_t sz, m = 1;
 	char *endp;
