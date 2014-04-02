@@ -202,25 +202,10 @@ main(int argc, char *argv[])
 			pscthr_init(0, 0, display, NULL, 0, "disp");
 			break;
 		case 'b': /* I/O block size */
-			bufsz = strtol(optarg, &endp, 10);
-			/* XXX check */
-
-			switch (tolower(*endp)) {
-			case 'k':
-				bufsz *= 1024;
-				break;
-			case 'm':
-				bufsz *= 1024*1024;
-				break;
-			case 'g':
-				bufsz *= 1024*1024*1024;
-				break;
-			case '\0':
-				break;
-			default:
-				errx(1, "invalid char: %s", endp);
-			}
-			/* XXX check overflow */
+			bufsz = psc_humantonum(optarg);
+			if (bufsz <= 0)
+				errx(1, "%s: %s", optarg, strerror(
+				    bufsz ? -bufsz : EINVAL));
 			break;
 		case 'c': /* perform CRC of entire file */
 			docrc = 1;
@@ -234,8 +219,10 @@ main(int argc, char *argv[])
 			/* XXX check */
 			break;
 		case 'O': /* offset */
-			seekoff = strtol(optarg, &endp, 10);
-			/* XXX check */
+			seekoff = psc_humantonum(optarg);
+			if (seekoff < 0)
+				errx(1, "%s: %s", optarg,
+				    strerror(-seekoff));
 			break;
 		case 'P': /* chart progress */
 			progress = 1;
