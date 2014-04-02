@@ -17,7 +17,10 @@
  * %PSC_END_COPYRIGHT%
  */
 
+#include <ctype.h>
+#include <errno.h>
 #include <stdio.h>
+#include <stdlib.h>
 
 #include "pfl/fmt.h"
 
@@ -63,4 +66,41 @@ psc_fmt_ratio(char buf[PSCFMT_RATIO_BUFSIZ], int64_t n, int64_t d)
 		else
 			snprintf(buf, PSCFMT_RATIO_BUFSIZ, "%.2f%%", val);
 	}
+}
+
+ssize_t
+psc_humantonum(const char *s)
+{
+	ssize_t sz, m = 1;
+	char *endp;
+
+	sz = strtol(s, &endp, 10);
+
+	if (s == endp)
+		return (-EINVAL);
+
+	if (sz < 0)
+		return (-ERANGE);
+
+	switch (tolower(*endp)) {
+	case 'k':
+		m = 1024;
+		break;
+	case 'm':
+		m = 1024 * 1024;
+		break;
+	case 'g':
+		m = 1024 * 1024 * 1024;
+		break;
+	case 't':
+		m = 1024 * 1024 * 1024 * INT64_C(1024);
+		break;
+	case '\0':
+		break;
+	default:
+		return (-EINVAL);
+	}
+	if (sz * m < sz)
+		return (-ERANGE);
+	return (sz * m);
 }
