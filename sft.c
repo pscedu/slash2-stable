@@ -202,7 +202,7 @@ main(int argc, char *argv[])
 			pscthr_init(0, 0, display, NULL, 0, "disp");
 			break;
 		case 'b': /* I/O block size */
-			bufsz = psc_humantonum(optarg);
+			bufsz = pfl_humantonum(optarg);
 			if (bufsz <= 0)
 				errx(1, "%s: %s", optarg, strerror(
 				    bufsz ? -bufsz : EINVAL));
@@ -219,7 +219,7 @@ main(int argc, char *argv[])
 			/* XXX check */
 			break;
 		case 'O': /* offset */
-			seekoff = psc_humantonum(optarg);
+			seekoff = pfl_humantonum(optarg);
 			if (seekoff < 0)
 				errx(1, "%s: %s", optarg,
 				    strerror(-seekoff));
