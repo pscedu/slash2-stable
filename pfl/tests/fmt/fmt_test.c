@@ -69,7 +69,7 @@ main(int argc, char *argv[])
 	pfl_dirname("/foo/bar", fn); psc_assert(strcmp(fn, "/foo") == 0);
 	pfl_dirname("/foo/bar/glar", fn); psc_assert(strcmp(fn, "/foo/bar") == 0);
 
-	psc_assert(psc_humantonum("24g") == INT64_C(24) * 1024 * 1024 * 1024);
+	psc_assert(pfl_humantonum("24g") == INT64_C(24) * 1024 * 1024 * 1024);
 
 	exit(0);
 }
