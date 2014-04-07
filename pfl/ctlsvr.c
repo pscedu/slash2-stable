@@ -822,7 +822,7 @@ struct psc_ctl_rusage {
 } psc_ctl_rusagetab [] = {
 	{ "utime",	offsetof(struct rusage, ru_utime),	RUST_TIMEVAL },
 	{ "stime",	offsetof(struct rusage, ru_stime),	RUST_TIMEVAL },
-	{ "maxrss",	offsetof(struct rusage, ru_maxrss),	RUST_TIMEVAL },
+	{ "maxrss",	offsetof(struct rusage, ru_maxrss),	RUST_LONG },
 	{ "ixrss",	offsetof(struct rusage, ru_ixrss),	RUST_LONG },
 	{ "idrss",	offsetof(struct rusage, ru_idrss),	RUST_LONG },
 	{ "isrss",	offsetof(struct rusage, ru_isrss),	RUST_LONG },
