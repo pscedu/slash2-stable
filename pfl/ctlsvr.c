@@ -812,6 +812,98 @@ psc_ctlparam_rlim(int fd, struct psc_ctlmsghdr *mh,
 	return (rc);
 }
 
+#define RUST_TIMEVAL	0
+#define RUST_LONG	1
+
+struct psc_ctl_rusage {
+	char	*pcru_name;
+	int	 pcru_off;
+	int	 pcru_fmt;
+} psc_ctl_rusagetab [] = {
+	{ "utime",	offsetof(struct rusage, ru_utime),	RUST_TIMEVAL },
+	{ "stime",	offsetof(struct rusage, ru_stime),	RUST_TIMEVAL },
+	{ "maxrss",	offsetof(struct rusage, ru_maxrss),	RUST_TIMEVAL },
+	{ "ixrss",	offsetof(struct rusage, ru_ixrss),	RUST_LONG },
+	{ "idrss",	offsetof(struct rusage, ru_idrss),	RUST_LONG },
+	{ "isrss",	offsetof(struct rusage, ru_isrss),	RUST_LONG },
+	{ "minflt",	offsetof(struct rusage, ru_minflt),	RUST_LONG },
+	{ "majflt",	offsetof(struct rusage, ru_majflt),	RUST_LONG },
+	{ "nswap",	offsetof(struct rusage, ru_nswap),	RUST_LONG },
+	{ "inblock",	offsetof(struct rusage, ru_inblock),	RUST_LONG },
+	{ "oublock",	offsetof(struct rusage, ru_oublock),	RUST_LONG },
+	{ "msgsnd",	offsetof(struct rusage, ru_msgsnd),	RUST_LONG },
+	{ "msgrcv",	offsetof(struct rusage, ru_msgrcv),	RUST_LONG },
+	{ "nsignals",	offsetof(struct rusage, ru_nsignals),	RUST_LONG },
+	{ "nvcsw",	offsetof(struct rusage, ru_nvcsw),	RUST_LONG },
+	{ "nivcsw",	offsetof(struct rusage, ru_nivcsw),	RUST_LONG }
+};
+
+int
+psc_ctlparam_rusage(int fd, struct psc_ctlmsghdr *mh,
+    struct psc_ctlmsg_param *pcp, char **levels, int nlevels,
+    __unusedx struct psc_ctlparam_node *pcn)
+{
+	struct psc_ctl_rusage *pcru = NULL;
+	struct rusage rusage;
+	struct timeval *tvp;
+	char buf[32];
+	int rc, i;
+	long *lp;
+
+	if (nlevels > 2)
+		return (psc_ctlsenderr(fd, mh, "invalid field"));
+
+	if (strcmp(pcp->pcp_thrname, PCTHRNAME_EVERYONE) != 0)
+		return (psc_ctlsenderr(fd, mh, "invalid thread field"));
+
+	rc = 1;
+	levels[0] = "rusage";
+
+	if (nlevels == 2) {
+		for (pcru = psc_ctl_rusagetab, i = 0;
+		    i < (int)nitems(psc_ctl_rusagetab); i++, pcru++)
+			if (strcmp(levels[1], pcru->pcru_name) == 0)
+				break;
+		if (i == nitems(psc_ctl_rusagetab))
+			return (psc_ctlsenderr(fd, mh,
+			    "invalid rusage field: %s", levels[1]));
+	}
+
+	if (mh->mh_type == PCMT_SETPARAM)
+		return (psc_ctlsenderr(fd, mh,
+		    "invalid operation"));
+
+	if (getrusage(RUSAGE_SELF, &rusage) == -1)
+		return (psc_ctlsenderr(fd, mh,
+		    "getrusage: %s", strerror(errno)));
+
+	for (pcru = psc_ctl_rusagetab, i = 0;
+	    i < (int)nitems(psc_ctl_rusagetab); i++, pcru++) {
+		if (nlevels < 2 ||
+		    strcmp(levels[1], pcru->pcru_name) == 0) {
+			levels[1] = pcru->pcru_name;
+			switch (pcru->pcru_fmt) {
+			case RUST_TIMEVAL:
+				tvp = PSC_AGP(&rusage, pcru->pcru_off);
+				snprintf(buf, sizeof(buf),
+				    PSCPRI_TIMEVAL,
+				    PSCPRI_TIMEVAL_ARGS(tvp));
+				break;
+			case RUST_LONG:
+				lp = PSC_AGP(&rusage, pcru->pcru_off);
+				snprintf(buf, sizeof(buf), "%ld", *lp);
+				break;
+			}
+			rc = psc_ctlmsg_param_send(fd, mh, pcp,
+			    PCTHRNAME_EVERYONE, levels, 2, buf);
+
+			if (nlevels == 2)
+				break;
+		}
+	}
+	return (rc);
+}
+
 int
 psc_ctlparam_run(int fd, struct psc_ctlmsghdr *mh,
     struct psc_ctlmsg_param *pcp, char **levels, int nlevels,
@@ -1055,6 +1147,69 @@ psc_ctlparam_pool_handle(int fd, struct psc_ctlmsghdr *mh,
 
 	return (1);
 }
+
+#if 0
+int
+psc_ctlparam_instances(int fd, struct psc_ctlmsghdr *mh,
+    struct psc_ctlmsg_param *pcp, char **levels, int nlevels,
+    __unusedx struct psc_ctlparam_node *pcn)
+{
+	struct psc_poolmgr *m;
+	int rc, set;
+	char *endp;
+	long val;
+
+	if (nlevels > 1)
+		return (psc_ctlsenderr(fd, mh, "invalid field"));
+
+	if (strcmp(pcp->pcp_thrname, PCTHRNAME_EVERYONE) == 0)
+		return (psc_ctlsenderr(fd, mh, "thread not specified"));
+
+	rc = 1;
+	levels[0] = "instances";
+	val = 0; /* gcc */
+
+	set = (mh->mh_type == PCMT_SETPARAM);
+	if (set) {
+		endp = NULL;
+		val = strtol(pcp->pcp_value, &endp, 10);
+		if (val == LONG_MIN || val == LONG_MAX ||
+		    val > INT_MAX || val < 0 ||
+		    endp == pcp->pcp_value || *endp != '\0')
+			return (psc_ctlsenderr(fd, mh,
+			    "invalid instances value: %s",
+			    pcp->pcp_value));
+	}
+
+	if (set) {
+		if (pcp->pcp_flags & PCPF_ADD)
+			pscthr_init(thrtype, 0, thr_main, NULL,
+			    sizeof(struct psc_ctlacthr), "thr%d",
+			    p - me->pscthr_name, me->pscthr_name);
+		else if (pcp->pcp_flags & PCPF_SUB)
+			return (psc_ctlsenderr(fd, mh,
+			    "operation not supported"));
+		else
+			return (psc_ctlsenderr(fd, mh,
+			    "operation not supported"));
+	} else {
+		int ninst = 0;
+
+		PLL_LOCK(&psc_threads);
+		PLL_FOREACH(thr, &psc_threads)
+			if (strncmp(pcp->pcp_thrname, thr->pscthr_name,
+			    strlen(pcp->pcp_thrname)) == 0)
+				ninst++;
+		PLL_ULOCK(&psc_threads);
+		snprintf(nbuf, sizeof(nbuf), "%d", ninst);
+		if (!psc_ctlmsg_param_send(fd, mh, pcp,
+		    pcp->pcp_thrname, levels, 1, nbuf))
+			return (0);
+	}
+
+	return (rc);
+}
+#endif
 
 int
 psc_ctlparam_pool(int fd, struct psc_ctlmsghdr *mh,
