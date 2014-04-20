@@ -28,11 +28,11 @@
 
 #include <errno.h>
 
+#include "pfl/alloc.h"
 #include "pfl/cdefs.h"
 #include "pfl/dynarray.h"
 #include "pfl/listcache.h"
 #include "pfl/lockedlist.h"
-#include "pfl/alloc.h"
 #include "pfl/lock.h"
 #include "pfl/log.h"
 #include "pfl/mem.h"
