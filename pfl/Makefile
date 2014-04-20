@@ -6,6 +6,7 @@ include ${ROOTDIR}/Makefile.path
 SUBDIRS+=	tests
 SUBDIRS+=	utils
 LIBRARY=	libpfl.a
+NOINSTALL=	1
 
 SRCS+=		${PFL_BASE}/acsvc.c
 SRCS+=		${PFL_BASE}/alloc.c

@@ -418,7 +418,7 @@ recurse-%:
 install-hook:
 
 install: recurse-install install-hook
-	@if [ -n "${LIBRARY}" ]; then					\
+	@if [ -n "${LIBRARY}" -a x"${NOINSTALL}" != x"1" ]; then	\
 		${INST} ${LIBRARY} ${INST_LIBDIR}/;			\
 	fi
 	@# skip programs part of test suites
