@@ -21,14 +21,18 @@
 #include <pthread.h>
 #include <string.h>
 
-#include "pfl/time.h"
-#include "pfl/vbitmap.h"
 #include "pfl/log.h"
 #include "pfl/pthrutil.h"
 #include "pfl/thread.h"
+#include "pfl/time.h"
+#include "pfl/vbitmap.h"
+
+#define PMUT_LOG(mut, fmt, ...)						\
+	psclog((mut)->pm_debug ? PLL_MAX : PLL_VDEBUG,			\
+	    "mutex@%p: " fmt, (mut), ##__VA_ARGS__)
 
 void
-psc_mutex_init(struct pfl_mutex *mut)
+_psc_mutex_init(struct pfl_mutex *mut, int debug)
 {
 	pthread_mutexattr_t attr;
 	int rc;
@@ -49,6 +53,10 @@ psc_mutex_init(struct pfl_mutex *mut)
 	if (rc)
 		psc_fatalx("pthread_mutexattr_destroy: %s",
 		    strerror(rc));
+
+	if (debug)
+		mut->pm_debug = 1;
+	PMUT_LOG(mut, "initialized");
 }
 
 void
@@ -71,7 +79,7 @@ _psc_mutex_lock(const struct pfl_callerinfo *pci,
 	if (rc)
 		psc_fatalx("pthread_mutex_lock: %s", strerror(rc));
 	mut->pm_owner = pthread_self();
-	psclog_vdebug("mutex@%p acquired", mut);
+	PMUT_LOG(mut, "acquired");
 }
 
 void
@@ -82,9 +90,10 @@ _psc_mutex_unlock(const struct pfl_callerinfo *pci,
 
 	mut->pm_owner = 0;
 	rc = pthread_mutex_unlock(&mut->pm_mutex);
+	PMUT_LOG(mut, "releasing");
 	if (rc)
 		psc_fatalx("pthread_mutex_unlock: %s", strerror(rc));
-	psclog_vdebug("mutex@%p released", mut);
+	PMUT_LOG(mut, "released");
 }
 
 int
@@ -99,7 +108,7 @@ _psc_mutex_reqlock(const struct pfl_callerinfo *pci,
 	else if (rc)
 		psc_fatalx("pthread_mutex_unlock: %s", strerror(rc));
 	mut->pm_owner = pthread_self();
-	psclog_vdebug("mutex@%p acquired req=%d", mut, rc);
+	PMUT_LOG(mut, "acquired, req=%d", rc);
 	return (rc);
 }
 
@@ -121,7 +130,7 @@ _psc_mutex_trylock(const struct pfl_callerinfo *pci,
 	rc = pthread_mutex_trylock(&mut->pm_mutex);
 	if (rc == 0) {
 		mut->pm_owner = pthread_self();
-		psclog_vdebug("mutex=%p acquired", mut);
+		PMUT_LOG(mut, "acquired");
 		return (1);
 	}
 	if (rc == EBUSY)

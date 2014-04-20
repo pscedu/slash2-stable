@@ -28,11 +28,11 @@
 #include "pfl/pfl.h"
 
 #ifdef PTHREAD_MUTEX_ERRORCHECK_INITIALIZER
-# define PSC_MUTEX_INIT			{ PTHREAD_MUTEX_ERRORCHECK_INITIALIZER, 0 }
+# define PSC_MUTEX_INIT			{ PTHREAD_MUTEX_ERRORCHECK_INITIALIZER, 0, 0 }
 #elif defined(PTHREAD_MUTEX_ERRORCHECK_INITIALIZER_NP)
-# define PSC_MUTEX_INIT			{ PTHREAD_MUTEX_ERRORCHECK_INITIALIZER_NP, 0 }
+# define PSC_MUTEX_INIT			{ PTHREAD_MUTEX_ERRORCHECK_INITIALIZER_NP, 0, 0 }
 #else
-# define PSC_MUTEX_INIT			{ PTHREAD_MUTEX_INITIALIZER, 0 }
+# define PSC_MUTEX_INIT			{ PTHREAD_MUTEX_INITIALIZER, 0, 0 }
 #endif
 
 #define psc_mutex_ensure_locked(m)	_psc_mutex_ensure_locked(PFL_CALLERINFO(), (m))
@@ -46,11 +46,15 @@
 struct pfl_mutex {
 	pthread_mutex_t		pm_mutex;
 	pthread_t		pm_owner;
+	int			pm_debug:1;
 };
+
+#define psc_mutex_init(m)		_psc_mutex_init((m), 0)
+#define psc_mutex_init_debug(m)		_psc_mutex_init((m), 1)
 
 void	_psc_mutex_ensure_locked(const struct pfl_callerinfo *, struct pfl_mutex *);
 int	 psc_mutex_haslock(struct pfl_mutex *);
-void	 psc_mutex_init(struct pfl_mutex *);
+void	_psc_mutex_init(struct pfl_mutex *, int);
 void	 psc_mutex_destroy(struct pfl_mutex *);
 void	_psc_mutex_lock(const struct pfl_callerinfo *, struct pfl_mutex *);
 int	_psc_mutex_reqlock(const struct pfl_callerinfo *, struct pfl_mutex *);
