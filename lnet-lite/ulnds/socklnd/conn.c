@@ -46,6 +46,8 @@
 
 #include "usocklnd.h"
 
+#include "pfl/pool.h"
+
 /* Return 1 if the conn is timed out, 0 else */
 int
 usocklnd_conn_timed_out(usock_conn_t *conn, cfs_time_t current_time)
@@ -85,15 +87,10 @@ usocklnd_conn_allocate()
         usock_conn_t        *conn;
         usock_pollrequest_t *pr;
 
-        LIBCFS_ALLOC (pr, sizeof(*pr));
-        if (pr == NULL)
-                return NULL;
+	pr = psc_pool_get(usk_pollreq_pool);
+	memset(pr, 0, sizeof(*pr));
         
-        LIBCFS_ALLOC (conn, sizeof(*conn));
-        if (conn == NULL) {
-                LIBCFS_FREE (pr, sizeof(*pr));
-                return NULL;
-        }
+	conn = psc_pool_get(usk_conn_pool);
         memset(conn, 0, sizeof(*conn));
         conn->uc_preq = pr;
 
@@ -101,10 +98,10 @@ usocklnd_conn_allocate()
                       offsetof(ksock_hello_msg_t,
                                kshm_ips[LNET_MAX_INTERFACES]));
         if (conn->uc_rx_hello == NULL) {
-                LIBCFS_FREE (pr, sizeof(*pr));
-                LIBCFS_FREE (conn, sizeof(*conn));
+		psc_pool_return(usk_pollreq_pool, pr);
+		psc_pool_return(usk_conn_pool, conn);
                 return NULL;
-        }
+        } 
 
         return conn;
 }
@@ -117,14 +114,14 @@ usocklnd_conn_free(usock_conn_t *conn)
         LASSERT(conn->uc_lx == NULL);
 
         if (pr != NULL)
-                LIBCFS_FREE (pr, sizeof(*pr));
+		psc_pool_return(usk_pollreq_pool, pr);
 
         if (conn->uc_rx_hello != NULL)
                 LIBCFS_FREE (conn->uc_rx_hello,
                              offsetof(ksock_hello_msg_t,
                                       kshm_ips[LNET_MAX_INTERFACES]));
         
-        LIBCFS_FREE (conn, sizeof(*conn));
+	psc_pool_return(usk_conn_pool, conn);
 }
 
 void
@@ -634,7 +631,7 @@ usocklnd_destroy_peer(usock_peer_t *peer)
 	psc_iostats_remove(&peer->up_rx_iostats);
 	psc_iostats_remove(&peer->up_tx_iostats); 
 
-        LIBCFS_FREE (peer, sizeof (*peer));
+	psc_pool_return(usk_peer_pool, peer);
 
         pthread_mutex_lock(&net->un_lock);
         if(--net->un_peercount == 0)                
@@ -736,9 +733,8 @@ usocklnd_create_peer(lnet_ni_t *ni, lnet_process_id_t id,
         usock_peer_t *peer;
         int           i;
 
-        LIBCFS_ALLOC (peer, sizeof (*peer));
-        if (peer == NULL)
-                return -ENOMEM;
+	peer = psc_pool_get(usk_peer_pool);
+	memset(peer, 0, sizeof(*peer));
 
         for (i = 0; i < N_CONN_TYPES; i++)
                 peer->up_conns[i] = NULL;

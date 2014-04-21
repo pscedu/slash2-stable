@@ -91,6 +91,7 @@ typedef struct {
         int                uc_rx_flag;       /* deadline valid? */
         ksock_msg_t        uc_rx_msg;        /* message buffer */
 
+	struct psc_listentry uc_lentry;
         /* Send state */
         struct list_head   uc_tx_list;       /* pending txs */
         struct list_head   uc_zcack_list;    /* pending zc_acks */
@@ -127,6 +128,7 @@ typedef struct {
 
 typedef struct usock_peer_s {
         struct list_head  up_list;         /* neccessary to form peer list */
+	struct psc_listentry up_lentry;
         lnet_process_id_t up_peerid;       /* id of remote peer */
         usock_conn_t     *up_conns[N_CONN_TYPES]; /* conns that connect us
                                                    * us with the peer */
@@ -217,6 +219,7 @@ typedef struct usock_preq_s {
         usock_conn_t *   upr_conn;  /* a conn for the sake of which
                                      * action will be performed */
         struct list_head upr_list;  /* neccessary to form list */
+	struct psc_listentry upr_lentry;
 } usock_pollrequest_t;
 
 /* Allowable poll request types are: */
@@ -374,3 +377,7 @@ extern struct psc_iostats usock_pasv_send_ist;
 extern struct psc_iostats usock_pasv_recv_ist;
 extern struct psc_iostats usock_aggr_send_ist;
 extern struct psc_iostats usock_aggr_recv_ist;
+
+extern struct psc_poolmgr *usk_peer_pool;
+extern struct psc_poolmgr *usk_conn_pool;
+extern struct psc_poolmgr *usk_pollreq_pool;

@@ -46,11 +46,20 @@
 #include <sys/resource.h>
 
 #include "pfl/iostats.h"
+#include "pfl/pool.h"
 
 struct psc_iostats usock_pasv_send_ist;	/* passive interface */
 struct psc_iostats usock_pasv_recv_ist;
 struct psc_iostats usock_aggr_send_ist;	/* aggregate across all interfaces */
 struct psc_iostats usock_aggr_recv_ist;
+
+struct psc_poolmaster usk_peer_poolmaster;
+struct psc_poolmaster usk_conn_poolmaster;
+struct psc_poolmaster usk_pollreq_poolmaster;
+
+struct psc_poolmgr *usk_peer_pool;
+struct psc_poolmgr *usk_conn_pool;
+struct psc_poolmgr *usk_pollreq_pool;
 
 lnd_t the_tcplnd = {
         .lnd_type      = SOCKLND,
@@ -367,6 +376,18 @@ usocklnd_base_startup(void)
 	psc_iostats_init(&usock_pasv_recv_ist, "lusklnd-pasv-rcv");
 	psc_iostats_init(&usock_aggr_send_ist, "lusklnd-aggr-snd");
 	psc_iostats_init(&usock_aggr_recv_ist, "lusklnd-aggr-rcv");
+
+	psc_poolmaster_init(&usk_peer_poolmaster, usock_peer_t,
+	    up_lentry, PPMF_AUTO, 32, 32, 0, NULL, NULL, NULL, "usk-peer");
+	usk_peer_pool = psc_poolmaster_getmgr(&usk_peer_poolmaster);
+
+	psc_poolmaster_init(&usk_conn_poolmaster, usock_conn_t,
+	    uc_lentry, PPMF_AUTO, 32, 32, 0, NULL, NULL, NULL, "usk-conn");
+	usk_conn_pool = psc_poolmaster_getmgr(&usk_conn_poolmaster);
+
+	psc_poolmaster_init(&usk_pollreq_poolmaster, usock_pollrequest_t, 
+	    upr_lentry, PPMF_AUTO, 32, 32, 0, NULL, NULL, NULL, "usk-pollrq");
+	usk_pollreq_pool = psc_poolmaster_getmgr(&usk_pollreq_poolmaster);
 
         /* Spawn poll threads */
         for (i = 0; i < usock_data.ud_npollthreads; i++) {
