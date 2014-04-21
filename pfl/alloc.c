@@ -27,10 +27,10 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "pfl/cdefs.h"
-#include "pfl/str.h"
 #include "pfl/alloc.h"
+#include "pfl/cdefs.h"
 #include "pfl/log.h"
+#include "pfl/str.h"
 
 #if PFL_DEBUG > 1
 
@@ -209,6 +209,7 @@ _psc_realloc(void *oldp, size_t size, int flags)
 	 * the old region as we don't have the size.
 	 */
 	if ((flags & PAF_LOCK) && oldp)
+		// errx()
 		psc_fatalx("unable to realloc mlocked mem");
 
 	/*
