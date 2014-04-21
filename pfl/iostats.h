@@ -31,6 +31,11 @@
 #define IST_NAME_MAX	40
 #define IST_NINTV	2
 
+/*
+ * XXX Need an instantaneous (accul over last second ) and an arbitrary
+ * accumulator cleared by an external mechanism periodically.
+ */
+
 struct psc_iostats {
 	char			ist_name[IST_NAME_MAX];
 	struct psclist_head	ist_lentry;
