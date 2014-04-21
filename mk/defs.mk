@@ -70,6 +70,7 @@ YFLAGS+=	-d
 CFLAGS+=	-Wall -W -pipe
 # -Wredundant-decls
 # CFLAGS+=	-Wshadow
+CFLAGS+=	-Wno-address
 
 ifeq (${GOPROF},1)
 CFLAGS+=	-fno-builtin-malloc -fno-builtin-calloc $( \
@@ -129,7 +130,7 @@ SQLITE3_LIBS=	$$(${PKG_CONFIG} --libs sqlite3)
 GCRYPT_CFLAGS=	$$(${LIBGCRYPT_CONFIG} --cflags | ${EXTRACT_CFLAGS})
 GCRYPT_DEFINES=	$$(${LIBGCRYPT_CONFIG} --cflags | ${EXTRACT_DEFINES})
 GCRYPT_INCLUDES=$$(${LIBGCRYPT_CONFIG} --cflags | ${EXTRACT_INCLUDES})
-GCRYPT_LIBS=	$$(${LIBGCRYPT_CONFIG} --libs)
+GCRYPT_LIBS=	$$(${LIBGCRYPT_CONFIG} --libs) -lgpg-error
 
 NUMA_LIBS=	-lcpuset -lnuma
 
