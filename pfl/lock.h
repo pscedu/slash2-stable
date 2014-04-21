@@ -164,7 +164,7 @@ typedef struct psc_spinlock {
 									\
 		for (_i = 0;						\
 		    !(_SPIN_TEST_AND_SET((pci), "spinlock", (psl)));	\
-		    sched_yield(), _i++)				\
+		    pscthr_yield(), _i++)				\
 			if (_i >= PSL_SLEEP_NTRIES) {			\
 				_tm.tv_sec  = 0;			\
 				_tm.tv_nsec = PSL_SLEEP_NSEC;		\
@@ -288,8 +288,8 @@ psc_spin_haslock(psc_spinlock_t *psl)
 {
 	_SPIN_CHECK("psc_spin_haslock", psl);
 	/*
-	 * This code is thread safe because even if psl_owner changes, it
-	 * won't be set to us.
+	 * This code is thread safe because even if psl_owner changes,
+	 * it won't be set to us.
 	 */
 	return (_SPIN_GETVAL(psl) == PSL_LOCKED &&
 	    psl->psl_owner == pthread_self());
