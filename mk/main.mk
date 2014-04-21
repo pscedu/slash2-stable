@@ -181,12 +181,6 @@ ifneq ($(filter lnet-nid,${MODULES}),)
   SRCS+=	${LNET_BASE}/libcfs/nidstrings.c
 endif
 
-ifneq ($(filter pthread,${MODULES}),)
-  LDFLAGS+=	${THREAD_LIBS}
-  DEFINES+=	-DHAVE_LIBPTHREAD
-  MODULES+=	rt
-endif
-
 ifneq ($(filter ssl,${MODULES}),)
   LDFLAGS+=	${SSL_LIBS}
   INCLUDES+=	${SSL_INCLUDES}
@@ -205,13 +199,19 @@ ifneq ($(filter l,${MODULES}),)
 endif
 
 ifneq ($(filter pfl,${MODULES}),)
-  MODULES+=	pfl-hdrs str clock
+  MODULES+=	pfl-hdrs str clock pthread
   LDFLAGS+=	-L${PFL_BASE} -lpfl -lm
   DEPLIST+=	${PFL_BASE}:libpfl.a
 
  ifneq ($(filter pthread,${MODULES}),)
    MODULES+=	numa
  endif
+endif
+
+ifneq ($(filter pthread,${MODULES}),)
+  LDFLAGS+=	${THREAD_LIBS}
+  DEFINES+=	-DHAVE_LIBPTHREAD
+  MODULES+=	rt
 endif
 
 ifneq ($(filter m,${MODULES}),)
