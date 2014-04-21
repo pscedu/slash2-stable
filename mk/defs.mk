@@ -153,6 +153,10 @@ LIBAIO=		-laio
 
 OSTYPE:=	$(shell uname)
 
+ifeq (${NEWCRC},1)
+  LIBS+=	-L${ROOTDIR}/distrib/libcrcutil -lcrcutil
+endif
+
 # global file-specific settings
 $(call ADD_FILE_CFLAGS,${PFL_BASE}/crc.c,				-O2 -g0)
 $(call ADD_FILE_CFLAGS,${PFL_BASE}/parity.c,				-O2 -g0)
