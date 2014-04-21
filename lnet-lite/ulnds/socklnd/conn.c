@@ -89,9 +89,11 @@ usocklnd_conn_allocate()
 
 	pr = psc_pool_get(usk_pollreq_pool);
 	memset(pr, 0, sizeof(*pr));
+	INIT_PSC_LISTENTRY(&pr->upr_lentry);
         
 	conn = psc_pool_get(usk_conn_pool);
         memset(conn, 0, sizeof(*conn));
+	INIT_PSC_LISTENTRY(&conn->uc_lentry);
         conn->uc_preq = pr;
 
         LIBCFS_ALLOC (conn->uc_rx_hello,
@@ -735,6 +737,7 @@ usocklnd_create_peer(lnet_ni_t *ni, lnet_process_id_t id,
 
 	peer = psc_pool_get(usk_peer_pool);
 	memset(peer, 0, sizeof(*peer));
+	INIT_PSC_LISTENTRY(&peer->up_lentry);
 
         for (i = 0; i < N_CONN_TYPES; i++)
                 peer->up_conns[i] = NULL;
