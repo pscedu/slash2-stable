@@ -58,6 +58,7 @@ struct stat;
 # define PFL_STB_CTIME_GET(stb, s, ns)	do { *(s) = (stb)->st_ctime; *(ns) = 0; } while (0)
 #endif
 
+/* XXX this is enough to wipe the cacheline */
 #define DEBUG_STATBUF(level, stb, fmt, ...)					\
 	do {									\
 		struct timespec _atime, _ctime, _mtime;				\
