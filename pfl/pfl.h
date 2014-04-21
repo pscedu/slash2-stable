@@ -22,6 +22,12 @@
 
 #include "pfl/compat.h"
 
+#if HAVE_PTHREAD_YIELD
+#  define pscthr_yield()	pthread_yield()
+#else
+#  define pscthr_yield()	sched_yield()
+#endif
+
 #define PFL_PRFLAG(fl, val, seq)					\
 	do {								\
 		if (*(val) & (fl)) {					\
