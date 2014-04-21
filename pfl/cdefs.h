@@ -115,7 +115,12 @@
 #define PSC_ALIGN(sz, incr)	((incr) * (((sz) + ((incr) - 1)) / (incr)))
 
 /* arthimetic on a generic pointer */
-#define PSC_AGP(p, off)		((void *)((char *)(p) + (off)))
+// XXX assert(p)
+#define PSC_AGP(p, off)							\
+	_PFL_RVSTART {							\
+		psc_assert(p);						\
+		(void *)((char *)(p) + (off));				\
+	} _PFL_RVEND
 
 /* forced rvalue designators */
 #define _PFL_RVSTART		(
