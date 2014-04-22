@@ -19,3 +19,6 @@ endif
 
 include ${MAINMK}
 -include local.mk
+
+update:
+	@tools/update.sh
