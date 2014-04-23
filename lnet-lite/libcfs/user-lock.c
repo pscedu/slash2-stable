@@ -51,14 +51,6 @@
  * in other branches.
  */
 
-#ifndef _XOPEN_SOURCE
-#define _XOPEN_SOURCE 500
-#endif
-
-#ifndef _GNU_SOURCE
-#define _GNU_SOURCE
-#endif
-
 #ifndef __KERNEL__
 
 #include <stdlib.h>
