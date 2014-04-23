@@ -70,7 +70,7 @@ YFLAGS+=	-d
 CFLAGS+=	-Wall -W -pipe
 # -Wredundant-decls
 # CFLAGS+=	-Wshadow
-CFLAGS+=	-Wno-address
+#CFLAGS+=	-Wno-address
 
 ifeq (${GOPROF},1)
 CFLAGS+=	-fno-builtin-malloc -fno-builtin-calloc $( \
