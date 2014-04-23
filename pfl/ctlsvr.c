@@ -844,7 +844,7 @@ psc_ctlparam_rusage(int fd, struct psc_ctlmsghdr *mh,
     __unusedx struct psc_ctlparam_node *pcn)
 {
 	struct psc_ctl_rusage *pcru = NULL;
-	struct rusage rusage;
+	struct rusage rusage, *rp = &rusage;
 	struct timeval *tvp;
 	char buf[32];
 	int rc, i;
@@ -884,13 +884,13 @@ psc_ctlparam_rusage(int fd, struct psc_ctlmsghdr *mh,
 			levels[1] = pcru->pcru_name;
 			switch (pcru->pcru_fmt) {
 			case RUST_TIMEVAL:
-				tvp = PSC_AGP(&rusage, pcru->pcru_off);
+				tvp = PSC_AGP(rp, pcru->pcru_off);
 				snprintf(buf, sizeof(buf),
 				    PSCPRI_TIMEVAL,
 				    PSCPRI_TIMEVAL_ARGS(tvp));
 				break;
 			case RUST_LONG:
-				lp = PSC_AGP(&rusage, pcru->pcru_off);
+				lp = PSC_AGP(rp, pcru->pcru_off);
 				snprintf(buf, sizeof(buf), "%ld", *lp);
 				break;
 			}
