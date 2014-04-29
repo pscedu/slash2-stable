@@ -290,4 +290,8 @@ ifeq ($(filter $(realpath ${ROOTDIR})/compat/%,${CURDIR}),)
   DEFINES+=						-DHAVE_PTHREAD_YIELD
  endif
 
+ ifdef PICKLE_HAVE_QSORT_R
+  DEFINES+=						-DHAVE_QSORT_R
+ endif
+
 endif
