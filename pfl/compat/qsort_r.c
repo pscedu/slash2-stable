@@ -29,6 +29,8 @@
 #define __sysconf sysconf
 # define __set_errno(val) (errno = (val))
 
+typedef int (*__compar_d_fn_t) (const void *, const void *, void *);
+
 struct msort_param
 {
   size_t s;
