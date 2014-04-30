@@ -444,7 +444,7 @@ psc_multiwait_usecs(struct psc_multiwait *mw, void *datap, int usec)
 	    "will never wake up", mw->mw_name);
 
  wait:
-	DLOG_MULTIWAIT(PLL_DEBUG, mw, "entering wait usec=%ld", usec);
+	DLOG_MULTIWAIT(PLL_DEBUG, mw, "entering wait usec=%d", usec);
 	if (usec) {
 		struct timeval tv, res, adj;
 		struct timespec ntv;
