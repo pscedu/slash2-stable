@@ -247,8 +247,7 @@ struct psclog_data {
 
 #define PFL_RETURN_STR_PCI(str)						\
 	do {								\
-		psclog_trace("exit %s rc='%s'", __func__,		\
-		    (str));						\
+		psclog_trace("exit %s rc='%s'", __func__, (str));	\
 		_PFL_END_PCI();						\
 		return (str);						\
 	} while (0)
