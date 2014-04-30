@@ -149,8 +149,8 @@ psc_multiwaitcond_destroy(struct psc_multiwaitcond *mwc)
 		psc_assert(psc_dynarray_len(&mw->mw_conds) ==
 		    (int)psc_vbitmap_getsize(mw->mw_condmask));
 
-		psclog_vdebug("disassociating cond %p from "
-		    "multiwait %p", mwc, mw);
+		DLOG_MULTIWAIT(PLL_DEBUG, mw,
+		    "disassociating cond %s@%p", mwc->mwc_name, mwc);
 		k = psc_dynarray_bsearch(&mwc->mwc_multiwaits, mw,
 		    psc_multiwaitcond_cmp);
 		psc_assert(psc_dynarray_getpos(&mwc->mwc_multiwaits,
@@ -225,11 +225,13 @@ psc_multiwaitcond_wakeup(struct psc_multiwaitcond *mwc)
 	DYNARRAY_FOREACH(mw, j, &mwc->mwc_multiwaits)
 		if (psc_multiwait_iscondwakeable(mw, mwc)) {
 			mw->mw_waker = mwc;
-			psclog_diag("wake mw %p %s", mw, mw->mw_name);
+			DLOG_MULTIWAIT(PLL_DEBUG, mw,
+			    "condition %s@%p tentatively woke us",
+			    mwc->mwc_name, mwc);
 			pthread_cond_signal(&mw->mw_cond);
 		}
 	psc_multiwaitcond_unlockallmw(mwc);
-	psclog_info("wake cond %p %s", mwc, mwc->mwc_name);
+	psclog_debug("wake cond %s@%p", mwc->mwc_name, mwc);
 	pthread_cond_broadcast(&mwc->mwc_cond);
 	mwc->mwc_winner = NULL;
 	psc_mutex_unlock(&mwc->mwc_mutex);
@@ -254,7 +256,7 @@ psc_multiwaitcond_waitrel_ts(struct psc_multiwaitcond *mwc,
 	if (mutex)
 		psc_mutex_unlock(mutex);
 
-	psclog_info("wait cond %p %s", mwc, mwc->mwc_name);
+	psclog_debug("wait cond %s@%p", mwc->mwc_name, mwc);
 	if (reltime) {
 		PFL_GETTIMESPEC(&abstime);
 		timespecadd(&abstime, reltime, &abstime);
@@ -320,8 +322,8 @@ _psc_multiwait_addcond(struct psc_multiwait *mw,
 		goto done;
 	}
 
-	psclog_vdebug("associating cond %p with " "multiwait %p", mwc,
-	    mw);
+	DLOG_MULTIWAIT(PLL_DEBUG, mw, "associating cond %s@%p",
+	    mwc->mwc_name, mwc);
 	k = psc_dynarray_bsearch(&mwc->mwc_multiwaits, mw,
 	    psc_multiwaitcond_cmp);
 
@@ -442,7 +444,7 @@ psc_multiwait_usecs(struct psc_multiwait *mw, void *datap, int usec)
 	    "will never wake up", mw->mw_name);
 
  wait:
-	psclog_vdebug("wait mw %p %s", mw, mw->mw_name);
+	DLOG_MULTIWAIT(PLL_DEBUG, mw, "entering wait usec=%ld", usec);
 	if (usec) {
 		struct timeval tv, res, adj;
 		struct timespec ntv;
@@ -479,9 +481,15 @@ psc_multiwait_usecs(struct psc_multiwait *mw, void *datap, int usec)
 
 	psc_mutex_lock(&mwc->mwc_mutex);
 	if (mwc->mwc_flags & PMWCF_WAKEALL) {
+		DLOG_MULTIWAIT(PLL_DEBUG, mw,
+		    "broadcast condition %s@%p woke us out of multiwait",
+		    mwc->mwc_name, mwc);
 		*(void **)datap = (void *)mwc->mwc_data;
 		won = 1;
 	} else if (mwc->mwc_winner == NULL) {
+		DLOG_MULTIWAIT(PLL_DEBUG, mw,
+		    "won multiwait from condition %s@%p",
+		    mwc->mwc_name, mwc);
 		*(void **)datap = (void *)mwc->mwc_data;
 		mwc->mwc_winner = mw;
 		won = 1;
@@ -490,6 +498,8 @@ psc_multiwait_usecs(struct psc_multiwait *mw, void *datap, int usec)
 	psc_mutex_unlock(&mwc->mwc_mutex);
 
 	if (!won) {
+		DLOG_MULTIWAIT(PLL_DEBUG, mw,
+		    "did not win, restarting");
 		//pscthr_yield();
 		/* XXX decrement usecs */
 		goto restart;
@@ -521,8 +531,8 @@ psc_multiwait_reset(struct psc_multiwait *mw)
 			goto restart;
 		}
 
-		psclog_vdebug("disassociating cond %p from "
-		    "multiwait %p", mwc, mw);
+		DLOG_MULTIWAIT(PLL_DEBUG, mw,
+		    "disassociating cond %s@%p", mwc->mwc_name, mwc);
 		k = psc_dynarray_bsearch(&mwc->mwc_multiwaits, mw,
 		    psc_multiwaitcond_cmp);
 		psc_dynarray_splice(&mwc->mwc_multiwaits, k, 1, NULL, 0);

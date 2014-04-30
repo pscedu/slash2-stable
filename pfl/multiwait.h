@@ -68,6 +68,9 @@ struct psc_multiwait {
 
 #define PMWF_CRITSECT			(1 << 0)	/* inside critical section */
 
+#define	DLOG_MULTIWAIT(level, mw, fmt, ...)				\
+	psclog((level), "%s@%p " fmt, (mw)->mw_name, (mw), ##__VA_ARGS__)
+
 /**
  * psc_multiwait_addcond - Add a condition to a multiwait.
  * @mw: a multiwait.
