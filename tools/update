@@ -33,7 +33,7 @@ pubrepo()
 
 pubrepo()
 {
-	(getrepo git://source.psc.edu "$@")
+	(getrepo ssh://source.psc.edu/g "$@")
 }
 
 base=$(basename $0)
