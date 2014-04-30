@@ -75,7 +75,7 @@ pfl_wkthr_main(__unusedx struct psc_thread *thr)
 			LIST_CACHE_LOCK(lc);
 			lc_addtail(lc, wkrq);
 			if (lc_nitems(lc) == 1)
-				psc_waitq_waitrel_us( &lc->plc_wq_empty,
+				psc_waitq_waitrel_us(&lc->plc_wq_empty,
 				    &lc->plc_lock, 1);
 			else
 				LIST_CACHE_ULOCK(lc);
