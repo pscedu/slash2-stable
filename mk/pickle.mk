@@ -291,7 +291,11 @@ ifeq ($(filter $(realpath ${ROOTDIR})/compat/%,${CURDIR}),)
  endif
 
  ifdef PICKLE_HAVE_QSORT_R
-  DEFINES+=						-DHAVE_QSORT_R
+   DEFINES+=						-DHAVE_QSORT_R
+  ifdef PICKLE_HAVE_QSORT_R_THUNK
+   DEFINES+=						-DHAVE_QSORT_R_THUNK
+  endif
+ else
   QSORT_R_SRCS+=					${PFL_BASE}/compat/qsort_r.c
  endif
 
