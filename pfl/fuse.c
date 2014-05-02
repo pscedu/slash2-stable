@@ -909,7 +909,6 @@ pscfs_fuse_handle_read(fuse_req_t req, __unusedx fuse_ino_t inum,
 	RETIFNOTSUP(pfr, read, NULL, 0);
 
 	fuse_req_interrupt_func(req, pscfs_fuse_interrupt, pfr);
-
 	pscfs.pf_handle_read(pfr, size, off, fi_getdata(fi));
 }
 
@@ -1040,6 +1039,8 @@ pscfs_fuse_handle_write(fuse_req_t req, __unusedx fuse_ino_t ino,
 	GETPFR(pfr, req);
 	pfr->pfr_fuse_fi = fi;
 	RETIFNOTSUP(pfr, write, 0);
+
+	fuse_req_interrupt_func(req, pscfs_fuse_interrupt, pfr);
 	pscfs.pf_handle_write(pfr, buf, size, off, fi_getdata(fi));
 }
 
