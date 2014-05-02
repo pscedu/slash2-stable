@@ -43,6 +43,7 @@ struct pscfs_req {
 	struct pscfs_clientctx		 pfr_clientctx;
 	struct psc_listentry		 pfr_lentry;
 	struct timespec			 pfr_start;
+	int				 pfr_interrupted;
 	char				*pfr_buf;
 };
 

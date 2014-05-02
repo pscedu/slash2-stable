@@ -117,6 +117,12 @@ fd_set				*pscfs_fdset_rd;
 size_t				 pscfs_fdset_size;
 #endif
 
+static void pscfs_fuse_interrupt(fuse_req_t req, void *d_)
+{
+	struct pscfs_req *pfr = (struct pscfs_req *)d_;
+	pfr->pfr_interrupted = 1;
+}
+
 int
 pscfs_fuse_newfs(const char *mntpoint, struct fuse_chan *ch)
 {
@@ -901,6 +907,9 @@ pscfs_fuse_handle_read(fuse_req_t req, __unusedx fuse_ino_t inum,
 	pfr->pfr_fuse_fi = fi;
 	pfr->pfr_buf = PSCALLOC(size);
 	RETIFNOTSUP(pfr, read, NULL, 0);
+
+	fuse_req_interrupt_func(req, pscfs_fuse_interrupt, pfr);
+
 	pscfs.pf_handle_read(pfr, size, off, fi_getdata(fi));
 }
 
