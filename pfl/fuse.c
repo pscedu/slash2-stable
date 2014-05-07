@@ -117,9 +117,11 @@ fd_set				*pscfs_fdset_rd;
 size_t				 pscfs_fdset_size;
 #endif
 
-static void pscfs_fuse_interrupt(fuse_req_t req, void *d_)
+static void
+pscfs_fuse_interrupt(__unusedx fuse_req_t req, void *d)
 {
-	struct pscfs_req *pfr = (struct pscfs_req *)d_;
+	struct pscfs_req *pfr = d;
+
 	pfr->pfr_interrupted = 1;
 }
 
