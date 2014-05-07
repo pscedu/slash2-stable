@@ -42,14 +42,14 @@
 #include <syslog.h>
 #include <unistd.h>
 
-#include "pfl/cdefs.h"
-#include "pfl/pfl.h"
-#include "pfl/str.h"
-#include "pfl/time.h"
 #include "pfl/alloc.h"
+#include "pfl/cdefs.h"
 #include "pfl/fmtstr.h"
 #include "pfl/log.h"
+#include "pfl/pfl.h"
+#include "pfl/str.h"
 #include "pfl/thread.h"
+#include "pfl/time.h"
 
 #ifndef APP_STRERROR
 #define APP_STRERROR strerror
