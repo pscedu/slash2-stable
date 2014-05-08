@@ -8,6 +8,6 @@ FORCE_INST=	1
 MAN+=		lnrtctl.8
 SRCS+=		lnrtctl.c
 
-MODULES+=	lnet-hdrs pthread pfl
+MODULES+=	lnet-hdrs pthread pfl curses
 
 include ${SLASHMK}
