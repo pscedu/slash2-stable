@@ -22,6 +22,7 @@
 #include <sys/un.h>
 #include <sys/ioctl.h>
 
+#include <curses.h>
 #include <err.h>
 #include <inttypes.h>
 #include <pthread.h>
@@ -29,25 +30,26 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <term.h>
 #include <termios.h>
 #include <unistd.h>
 
 #include "pfl/cdefs.h"
-#include "pfl/getopt.h"
-#include "pfl/str.h"
-#include "pfl/subsys.h"
-#include "pfl/syspaths.h"
-#include "pfl/list.h"
-#include "pfl/vbitmap.h"
-#include "pfl/rpc.h"
 #include "pfl/ctl.h"
 #include "pfl/ctlcli.h"
 #include "pfl/fmt.h"
 #include "pfl/fmtstr.h"
+#include "pfl/getopt.h"
+#include "pfl/list.h"
 #include "pfl/log.h"
 #include "pfl/meter.h"
 #include "pfl/pool.h"
+#include "pfl/rpc.h"
+#include "pfl/str.h"
+#include "pfl/subsys.h"
+#include "pfl/syspaths.h"
 #include "pfl/thread.h"
+#include "pfl/vbitmap.h"
 
 #define PCTHRT_RD 0
 #define PCTHRT_WR 1
@@ -63,6 +65,26 @@ __static int		  psc_ctl_sock;
 const char		 *psc_ctl_sockfn;
 char			**psc_ctl_subsys_names;
 psc_spinlock_t		  psc_ctl_lock = SPINLOCK_INIT;
+
+int			 has_col;
+
+void
+setcolor(int col)
+{
+	if (!has_col || col == -1)
+		return;
+	putp(tparm(enter_bold_mode));
+	putp(tparm(set_a_foreground, col));
+}
+
+void
+uncolor(void)
+{
+	if (!has_col)
+		return;
+	putp(tparm(orig_pair));
+	putp(tparm(exit_attribute_mode));
+}
 
 __static void
 psc_ctlmsg_sendlast(void)
@@ -634,7 +656,9 @@ psc_ctlmsg_iostats_prdat(__unusedx const struct psc_ctlmsghdr *mh,
 				printf("%11.0f/s ", d);
 		} else {
 			psc_fmt_human(buf, d);
+			setcolor(pfl_fmtcol_human(buf));
 			printf("%11s/s ", buf);
+			uncolor();
 		}
 	}
 	if (base10)
@@ -1187,6 +1211,10 @@ psc_ctlcli_main(const char *osockfn, int ac, char *av[],
 	const char *prg;
 	pthread_t pthr;
 	int rc, c, i;
+
+	setupterm(NULL, STDOUT_FILENO, &rc);
+	start_color();
+	has_col = isatty(STDOUT_FILENO) && has_colors();
 
 	prg = strrchr(progname, '/');
 	if (prg)

@@ -22,6 +22,8 @@
 #define PSCFMT_HUMAN_BUFSIZ	8	/* 1000.0M */
 #define PSCFMT_RATIO_BUFSIZ	7	/* 99.99% */
 
-void	psc_fmt_human(char buf[], double);
-void	psc_fmt_ratio(char buf[], int64_t, int64_t);
+int	pfl_fmtcol_human(const char *);
+
+void	psc_fmt_human(char [], double);
+void	psc_fmt_ratio(char [], int64_t, int64_t);
 ssize_t	pfl_humantonum(const char *);
