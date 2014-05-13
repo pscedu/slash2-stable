@@ -254,8 +254,10 @@ struct psclog_data {
 
 #define PFL_GOTOERR(label, code)					\
 	do {								\
-		if ((code))						\
-			psclog_debug("error: "#code ": %d", (code));	\
+		int _rcval = (code);					\
+									\
+		if (_rcval)						\
+			psclog_debug("error: "#code ": %d", (_rcval));	\
 		goto label;						\
 	} while (0)
 
