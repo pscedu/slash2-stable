@@ -1,6 +1,52 @@
 #!/usr/bin/env bash
 # $Id$
 
+dir=$(dirname $0)/..
+base=$(basename $dir)
+
+# inf/advsys/update.sh
+prirepo()
+{
+	(getrepo ssh://source/ "$@")
+}
+
+prirepo inf/arc
+prirepo inf/advsys
+prirepo zest
+
+
+# inf/advsys/bootstrap.sh
+# $Id$
+set -e
+dir=$(dirname $0)
+cd $dir
+mkdir -p inf/advsys
+mv * .[a-z]* inf/advsys
+git clone https://github.com/pscedu/proj.git .
+./tools/update.sh
+
+
+# doc
+# internal
+git clone ssh://source/advsys.git p
+cd p
+./bootstrap.sh
+
+# open source
+git clone https://github.com/pscedu/proj.git
+cd proj
+./tools/update.sh
+
+
+
+
+
+
+
+
+
+
+
 set -e
 
 echorun()
@@ -13,8 +59,12 @@ clone()
 {
 	local url=$1
 	local dir=$2
-	echorun mv $dir $dir.oldsvn
+	echorun mkdir .oldsvn
+	echorun mv * *.[a-z] .oldsvn
 	echorun git clone $url $dir
+	for i in $(cd .oldsvn && find . -name local.mk); do
+		cp .oldsvn/$i $i
+	done
 }
 
 getrepo()
@@ -23,7 +73,11 @@ getrepo()
 	local name=${2//\//.}
 	local dir=$2
 	[ $# -eq 3 ] && dir=$3
-	cd $dir && git pull || clone $base/$name $dir
+	if cd $dir && git status; then
+		git pull
+	else
+		clone $base/$name.git $dir
+	fi
 }
 
 pubrepo()
@@ -31,15 +85,8 @@ pubrepo()
 	(getrepo https://github.com/pscedu "$@")
 }
 
-pubrepo()
-{
-	(getrepo ssh://source.psc.edu/g "$@")
-}
-
-base=$(basename $0)
-dir=$(dirname $0)
 cd $dir
-pubrepo proj p
+pubrepo -R proj p
 cd p
 pubrepo distrib/crcutil
 pubrepo distrib/fstest
@@ -58,5 +105,6 @@ pubrepo slash2
 pubrepo src-upd
 pubrepo xopctl
 
-prirepo inf
-prirepo zest
+for i in $dir/inf/*/update.sh; do
+	[ -e $i ] && . $i
+done
