@@ -149,7 +149,7 @@ SSL_LIBS=	-lssl -lcrypto
 LIBL=		-ll
 LIBZ=		-lz
 THREAD_LIBS=	-pthread
-LIBCURSES=	-lncurses
+LIBCURSES=	$$(ncurses5-config --libs 2>/dev/null || echo -lncurses)
 LIBAIO=		-laio
 
 OSTYPE:=	$(shell uname)
