@@ -118,6 +118,17 @@ EXTRACT_CFLAGS=		perl -ne 'print $$& while /-[^ID]\S+\s?/gc'
 
 # Process modules
 
+ifneq ($(filter pfl,${MODULES}),)
+  MODULES+=	pfl-hdrs str clock pthread
+  LDFLAGS+=	-L${PFL_BASE} -lpfl -lm
+  DEPLIST+=	${PFL_BASE}:libpfl.a
+  SRCS+=	${QSORT_R_SRCS} 
+
+ ifneq ($(filter pthread,${MODULES}),)
+   MODULES+=	numa
+ endif
+endif
+
 ifneq ($(filter pscfs,${MODULES}),)
   MODULES+=	pscfs-hdrs
 
@@ -196,17 +207,6 @@ endif
 
 ifneq ($(filter l,${MODULES}),)
   LDFLAGS+=	${LIBL}
-endif
-
-ifneq ($(filter pfl,${MODULES}),)
-  MODULES+=	pfl-hdrs str clock pthread
-  LDFLAGS+=	-L${PFL_BASE} -lpfl -lm
-  DEPLIST+=	${PFL_BASE}:libpfl.a
-  SRCS+=	${QSORT_R_SRCS} 
-
- ifneq ($(filter pthread,${MODULES}),)
-   MODULES+=	numa
- endif
 endif
 
 ifneq ($(filter pthread,${MODULES}),)
