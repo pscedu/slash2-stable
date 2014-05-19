@@ -172,6 +172,7 @@ pfl
   too much, and maybe want to convert to mutex)
 - rename '_pci' suffix functions to '_' prefix
 - src-upd -r doesn't work 
+- does 'make install' install zfs?
 
 lnet
 - use TLS buffers for libcfs_nid2str() to avoid NUMA contention

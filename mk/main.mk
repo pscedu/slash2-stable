@@ -466,6 +466,10 @@ install: recurse-install install-hook
 		done;							\
 	fi
 
+#	@for i in ${DEPLIST}; do					\
+#		(cd $${i%:*} && ${MAKE} -s $${i#*:}) || exit 1;		\
+#	done
+
 clean-hook:
 
 clean-core:
