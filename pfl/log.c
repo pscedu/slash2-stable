@@ -51,7 +51,7 @@
 #include "pfl/thread.h"
 #include "pfl/time.h"
 
-#ifndef APP_STRERROR
+#ifndef APP_STRERROR /* XXX broken in libpfl */
 #define APP_STRERROR strerror
 #else
 char *APP_STRERROR(int);
