@@ -21,4 +21,4 @@ include ${MAINMK}
 -include local.mk
 
 up:
-	@tools/update.sh
+	@tools/update
