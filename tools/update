@@ -1,53 +1,21 @@
 #!/usr/bin/env bash
 # $Id$
-
-dir=$(dirname $0)/..
-base=$(basename $dir)
-
-# inf/advsys/update.sh
-prirepo()
-{
-	(getrepo ssh://source/ "$@")
-}
-
-prirepo inf/arc
-prirepo inf/advsys
-prirepo zest
-
-
-# inf/advsys/bootstrap.sh
-# $Id$
-set -e
-dir=$(dirname $0)
-cd $dir
-mkdir -p inf/advsys
-mv * .[a-z]* inf/advsys
-git clone https://github.com/pscedu/proj.git .
-./tools/update.sh
-
-
+#
 # doc
 # internal
-git clone ssh://source/advsys.git p
-cd p
-./bootstrap.sh
-
+#git clone ssh://source/a p
+#cd p
+#./bootstrap.sh
+#
 # open source
-git clone https://github.com/pscedu/proj.git
-cd proj
-./tools/update.sh
-
-
-
-
-
-
-
-
-
-
+#git clone https://github.com/pscedu/proj.git
+#cd proj
+#./tools/update.sh
 
 set -e
+
+dir=$(readlink -f $(dirname $0))
+base=$(basename $dir)
 
 echorun()
 {
