@@ -43,6 +43,11 @@ getrepo()
 	[ $# -eq 3 ] && dir=$3
 	if cd $dir && git status; then
 		git pull
+
+	# XXX remove me
+	elif svn status; then
+		svn up
+
 	else
 		clone $base/$name.git $dir
 	fi
