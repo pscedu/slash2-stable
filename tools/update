@@ -14,7 +14,7 @@
 
 set -e
 
-dir=$(readlink -f $(dirname $0))
+dir=$(readlink -f $(dirname $0)/..)
 base=$(basename $dir)
 
 echorun()
@@ -23,61 +23,63 @@ echorun()
 	"$@"
 }
 
-clone()
+getrepo()
 {
 	local url=$1
 	local dir=$2
-	echorun mkdir .oldsvn
-	echorun mv * *.[a-z] .oldsvn
-	echorun git clone $url $dir
-	for i in $(cd .oldsvn && find . -name local.mk); do
-		cp .oldsvn/$i $i
-	done
-}
+	local base=$(basename $dir)
 
-getrepo()
-{
-	local base=$1
-	local name=${2//\//.}
-	local dir=$2
-	[ $# -eq 3 ] && dir=$3
-	if cd $dir && git status; then
+	if [ x"$dir" != x"proj" ]; then
+		mkdir -p $dir
+		cd $dir
+	fi
+	if git status >/dev/null 2>&1; then
 		git pull
 
 	# XXX remove me
-	elif svn status; then
+	elif svn info >/dev/null 2>&1; then
 		svn up
 
 	else
-		clone $base/$name.git $dir
+		cd ..
+		mv $base $base.svnold
+
+		echorun git clone $url $base
+
+		for i in $(cd $base.svnold && find .); do
+			[ x"$i" = x"." ] && continue
+			mkdir -p $(dirname $i)
+			cp $base.svnold/$i $i
+		done
+		rmdir $base.svnold
 	fi
 }
 
 pubrepo()
 {
-	(getrepo https://github.com/pscedu "$@")
+	(getrepo https://github.com/pscedu/${1//\//.}.git $1)
 }
 
 cd $dir
-pubrepo -R proj p
-cd p
-pubrepo distrib/crcutil
-pubrepo distrib/fstest
-pubrepo distrib/fuse
-pubrepo distrib/iozone
-pubrepo distrib/libs3
-pubrepo distrib/spiobench
-pubrepo distrib/stumbleupon-tcollector
-pubrepo distrib/zfs-fuse
-pubrepo fio
-pubrepo idxsearch
-pubrepo mkidx
-pubrepo psync
-pubrepo sft
-pubrepo slash2
-pubrepo src-upd
-pubrepo xopctl
+#pubrepo distrib/crcutil
+#pubrepo distrib/fstest
+#pubrepo distrib/fuse
+#pubrepo distrib/iozone
+#pubrepo distrib/libs3
+#pubrepo distrib/spiobench
+#pubrepo distrib/stumbleupon-tcollector
+#pubrepo distrib/zfs-fuse
+#pubrepo fio
+#pubrepo idxsearch
+#pubrepo mkidx
+#pubrepo psync
+#pubrepo sft
+#pubrepo slash2
+#pubrepo src-upd
+#pubrepo xopctl
 
 for i in $dir/inf/*/update.sh; do
 	[ -e $i ] && . $i
 done
+
+pubrepo proj
