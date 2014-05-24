@@ -5,8 +5,8 @@ include ${ROOTDIR}/Makefile.path
 
 PROG=		fio
 SRCS+=		fio.c
-SRCS+=		fio_config_lex.l
 SRCS+=		parse.y
+SRCS+=		scan.l
 SRCS+=		sym.c
 SRCS+=		symtab.c
 
