@@ -89,7 +89,7 @@ get_nfiles(IOT_t *iot, GROUP_t *mygroup)
 		thispe = 0;
 
 	} else if ((iot->mytest_pe - start_pe) < 0) {
-		/* a pe before the the worker_pe */
+		/* a pe before the worker_pe */
 		thispe = mygroup->num_pes - start_pe + iot->mytest_pe;
 
 	} else {
