@@ -6,9 +6,9 @@ include ${ROOTDIR}/Makefile.path
 PROG=		fio
 SRCS+=		fio.c
 SRCS+=		fio_config_lex.l
-SRCS+=		fio_config_parser.y
-SRCS+=		fio_sym.c
-SRCS+=		fio_symtable.c
+SRCS+=		parse.y
+SRCS+=		sym.c
+SRCS+=		symtable.c
 
 DEBUG?=		0
 MODULES+=	m pfl barrier
