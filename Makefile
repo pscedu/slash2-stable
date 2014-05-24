@@ -8,7 +8,7 @@ SRCS+=		fio.c
 SRCS+=		fio_config_lex.l
 SRCS+=		parse.y
 SRCS+=		sym.c
-SRCS+=		symtable.c
+SRCS+=		symtab.c
 
 DEBUG?=		0
 MODULES+=	m pfl barrier
