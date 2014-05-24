@@ -43,7 +43,7 @@
 
 #include "pfl/fcntl.h"
 #include "pfl/types.h"
-#include "psc_ds/list.h"
+#include "pfl/list.h"
 #include "psc_util/alloc.h"
 
 #ifdef HAVE_LIBPTHREAD
