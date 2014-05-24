@@ -24,8 +24,8 @@
 #include "pfl/cdefs.h"
 #include "pfl/pfl.h"
 #include "pfl/str.h"
-#include "psc_util/alloc.h"
-#include "psc_util/random.h"
+#include "pfl/alloc.h"
+#include "pfl/random.h"
 
 #include "fio_sym.h"
 #include "fio.h"

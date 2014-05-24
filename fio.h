@@ -44,12 +44,12 @@
 #include "pfl/fcntl.h"
 #include "pfl/types.h"
 #include "pfl/list.h"
-#include "psc_util/alloc.h"
+#include "pfl/alloc.h"
 
 #ifdef HAVE_LIBPTHREAD
 #include <pthread.h>
 
-#include "psc_util/pthrutil.h"
+#include "pfl/pthrutil.h"
 
 extern pthread_barrier_t barrier;
 
