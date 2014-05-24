@@ -417,7 +417,7 @@ init_barriers(int mype)
 
 	PSCFREE(iptr);
 
-#elif HAVE_LIBPTHREAD
+#elif defined(HAVE_LIBPTHREAD)
 	GROUP_t          *group;
 
 	psclist_for_each_entry(group, &groupList, group_lentry)
@@ -1043,7 +1043,7 @@ main(int argc, char *argv[])
 	worker(&mype);
 	MPI_Finalize();
 
-#elif HAVE_LIBPTHREAD
+#elif defined(HAVE_LIBPTHREAD)
 	init_barriers(0);
 	psclist_for_each_entry(group, &groupList, group_lentry) {
 		if (group->files_per_dir < group->num_pes) {
