@@ -110,16 +110,16 @@ init_log_buffers(IOT_t *iot)
 	GROUP_t     *mygroup = iot->mygroup;
 	IOTESTLOG_t *iolog   = &iot->io_log;
 
-	bzero(iolog, sizeof(IOTESTLOG_t));
+	memset(iolog, 0, sizeof(IOTESTLOG_t));
 
-	for (i=mygroup->tree_depth, tree_size=0; i > -1; i--) {
+	for (i = mygroup->tree_depth, tree_size = 0; i > -1; i--)
 		tree_size += pow(mygroup->tree_width, i);
-	}
-	/* multiply by the number of operations
-	 *  per file, number of routines, and divide
-	 *  by the number of pes.  Lastly add in the
-	 *  entries for directory ops and a 'fudge factor'
-	 *  to handle rounding.
+
+	/*
+	 * Multiply by the number of operations per file, number of
+	 * routines, and divide by the number of pes.  Lastly add in the
+	 * entries for directory ops and a 'fudge factor' to handle
+	 * rounding.
 	 */
 	num_log_ops  = tree_size;
 	num_log_ops *= mygroup->files_per_dir;
@@ -138,7 +138,7 @@ init_log_buffers(IOT_t *iot)
 	DEBUG(D_OUTPUT, "iolog %p sz = %zu num_log_ops = %d size %zu\n",
 	    iolog->iolog_oplog, iolog->iolog_size, num_log_ops, oplog_size);
 
-	bzero(iolog->iolog_oplog, oplog_size);
+	memset(iolog->iolog_oplog, 0, oplog_size);
 
 	iot->op_log = iolog->iolog_oplog;
 }
@@ -451,7 +451,7 @@ init_buffer(struct buffer *bdesc, int id)
 	size_t i = bdesc->buffer_size / LONGSZ;
 	size_t t;
 
-	bzero(bdesc->buffer, bdesc->buffer_size);
+	memset(bdesc->buffer, 0, bdesc->buffer_size);
 	srandom(id);
 	for (t = 0; t < i; t++)
 		buf_long_ints[t] = random();
@@ -587,7 +587,7 @@ do_io(IOT_t *iot, int op)
 
 		sublog = iolog_alloc(iolog, logsz);
 
-		bzero(sublog, logsz);
+		memset(sublog, 0, logsz);
 
 		DEBUG(D_MEMORY, "malloc ok to %p iologsz %zu\n",
 		    sublog, iolog->iolog_size);
