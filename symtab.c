@@ -18,7 +18,7 @@
  */
 
 #include "fio.h"
-#include "fio_sym.h"
+#include "sym.h"
 
 /* declare and initialize the global table */
 struct symtable sym_table[] = {

@@ -27,7 +27,7 @@
 #include "pfl/alloc.h"
 #include "pfl/random.h"
 
-#include "fio_sym.h"
+#include "sym.h"
 #include "fio.h"
 
 #define PRI_RATE "%7.2f MB/s"

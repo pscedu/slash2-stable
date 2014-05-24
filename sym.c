@@ -23,7 +23,7 @@
 #include "pfl/str.h"
 
 #include "fio.h"
-#include "fio_sym.h"
+#include "sym.h"
 
 struct symtable *
 get_symbol(const char *name)

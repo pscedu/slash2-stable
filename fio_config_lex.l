@@ -25,7 +25,7 @@
 #include "pfl/str.h"
 
 #include "fio.h"
-#include "fio_config_parser.h"
+#include "parse.h"
 
 int yyerror(const char *, ...);
 

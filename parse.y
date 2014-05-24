@@ -26,7 +26,7 @@
 #include "pfl/log.h"
 
 #include "fio.h"
-#include "fio_sym.h"
+#include "sym.h"
 
 int yylex(void);
 int yyerror(const char *, ...);
