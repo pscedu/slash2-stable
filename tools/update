@@ -69,7 +69,7 @@ cd $dir
 #pubrepo distrib/spiobench
 #pubrepo distrib/stumbleupon-tcollector
 #pubrepo distrib/zfs-fuse
-#pubrepo fio
+pubrepo fio
 #pubrepo idxsearch
 #pubrepo mkidx
 #pubrepo psync
