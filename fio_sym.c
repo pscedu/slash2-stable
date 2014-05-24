@@ -136,8 +136,8 @@ store_tok_val(const char *tok, char *val)
 		f = atof(val);
 		c = floatbuf;
 		j = 0;
-		bzero(floatbuf, 16);
-		snprintf(floatbuf, 16, "%f", f);
+		memset(floatbuf, 0, sizeof(floatbuf));
+		snprintf(floatbuf, sizeof(floatbuf), "%f", f);
 
 		BDEBUG("float_val %f '%s'\n", f, floatbuf);
 
