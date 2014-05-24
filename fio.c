@@ -295,7 +295,7 @@ init_pe(int mype)
 	iot->num_blocks = mygroup->file_size / mygroup->block_size;
 
 	if ( ACTIVETYPE(FIO_SAMEFILE) &&
-	    (ACTIVETYPE(FIO_SEEKOFF) || ACTIVETYPE(FIO_INTERSPERSE)) )
+	    (ACTIVETYPE(FIO_SEEKOFF) || ACTIVETYPE(FIOT_INTERSPERSE)) )
 		iot->num_blocks /= mygroup->num_pes;
 
 	DEBUG(D_CONF, "rank = %d testpe %d num_blocks %d\n",
@@ -614,7 +614,7 @@ do_io(IOT_t *iot, int op)
 
 		DEBUG(D_BLOCK, "Block #%d\n", iot->bdesc.block_number);
 
-		if (ACTIVETYPE(FIO_INTERSPERSE))
+		if (ACTIVETYPE(FIOT_INTERSPERSE))
 			INTERSPERSE_SEEK;
 
 		if (ACTIVETYPE(FIO_TIME_BLOCK))

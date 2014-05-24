@@ -111,28 +111,28 @@ store_tok_val(const char *tok, char *val)
 
 	switch (e->sym_param_type) {
 
-	case FIO_STRING:
+	case FIOT_STRING:
 		strncpy(s, val, e->param);
-		BDEBUG("FIO_STRING Tok '%s' set to '%s'\n",
+		BDEBUG("FIOT_STRING Tok '%s' set to '%s'\n",
 		    e->name, s);
 		break;
 
-	case FIO_INT:
+	case FIOT_INT:
 		*t = strtol(val, NULL, 10);
-		BDEBUG("FIO_INT Tok '%s' set to '%d'\n",
+		BDEBUG("FIOT_INT Tok '%s' set to '%d'\n",
 		    e->name, *t);
 		break;
 
-	case FIO_BOOL:
+	case FIOT_BOOL:
 		if ( !strncmp("yes", val, 3) ) {
 			*t |= e->param;
-			BDEBUG("FIO_BOOL Option '%s' enabled\n", e->name);
+			BDEBUG("FIOT_BOOL Option '%s' enabled\n", e->name);
 		} else {
-			BDEBUG("FIO_BOOL Option '%s' disabled\n", e->name);
+			BDEBUG("FIOT_BOOL Option '%s' disabled\n", e->name);
 		}
 		break;
 
-	case FIO_FLOAT:
+	case FIOT_FLOAT:
 		f = atof(val);
 		c = floatbuf;
 		j = 0;
@@ -150,11 +150,11 @@ store_tok_val(const char *tok, char *val)
 		if ( *c != '\0' )
 			*(t+1) = strtol(c, NULL, 10);
 
-		BDEBUG("FIO_FLOAT Tok '%s' Secs %d Usecs %d \n",
+		BDEBUG("FIOT_FLOAT Tok '%s' Secs %d Usecs %d \n",
 		    e->name, *t, *(t+1));
 		break;
 
-	case FIO_SIZET:
+	case FIOT_SIZET:
 		j = strlen(val);
 		c = &val[j-1];
 
@@ -184,7 +184,7 @@ store_tok_val(const char *tok, char *val)
 		val[j-1] = '\0';
 		*z = i * strtoull(val, NULL, 10);
 
-		BDEBUG("FIO_SIZET Tok '%s' set to '%"PRIu64"'\n",
+		BDEBUG("FIOT_SIZET Tok '%s' set to '%"PRIu64"'\n",
 		    e->name, *z);
 		break;
 
