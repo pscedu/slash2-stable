@@ -57,7 +57,7 @@ struct symtable sym_table[] = {
  { "output_path",	FIO_VARIABLE,	FIOT_STRING,	NULL,		offsetof(GROUP_t, output_path),		PATH_MAX },
  { "path",		FIO_VARIABLE,	FIOT_STRING,	NULL,		offsetof(GROUP_t, test_path),		PATH_MAX },
  { "pes",		FIO_VARIABLE,	FIOT_INT,	NULL,		offsetof(GROUP_t, num_pes),		4 },
- { "random",		FIO_FLAG,	FIOT_BOOL,	NULL,		0,					0 },
+ { "random",		FIO_FLAG,	FIOT_BOOL,	NULL,		offsetof(GROUP_t, test_opts),		FIO_RANDOM },
  { "read",		FIO_FUNCTION,	FIOT_NONE,	do_read,	0,					0 },
  { "rename",		FIO_FUNCTION,	FIOT_NONE,	do_rename,	0,					0 },
  { "samedir",		FIO_FLAG,	FIOT_BOOL,	NULL,		offsetof(GROUP_t, test_opts),		FIO_SAMEDIR },

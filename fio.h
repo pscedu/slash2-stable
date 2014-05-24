@@ -81,7 +81,7 @@ enum TEST_OPTIONS {
 	FIO_BARRDBG		= 1 << 3,
 	FIO_SAMEFILE		= 1 << 4,  // io goes to same file..
 	FIO_STAGGER		= 1 << 5,  // each process runs independently of other
-//	FIO_PAROPEN		= 1 << 6,  // processes write to the same file
+	FIO_RANDOM		= 1 << 6,
 	FIO_VERIFY		= 1 << 7,  // perform blocklevel checksumming
 	FIO_WRITE		= 1 << 8,
 	FIO_READ		= 1 << 9,
@@ -566,7 +566,7 @@ _BARRIER(GROUP_t *mygroup, struct io_toolbox *iot)
 	DEBUG(D_BLOCK, "PE %d, seeking %"PSCPRIdOFFT" bytes\n",		\
 	    iot->mype, seekv);						\
 	APP_BARRIER();							\
-	ASSERT(lseek(iot->myfd, seekv, SEEK_SET) >= 0);		\
+	ASSERT(lseek(iot->myfd, seekv, SEEK_SET) >= 0);			\
 } while (0)
 
 #define INTERSPERSE_SEEK do {						\
