@@ -22,211 +22,58 @@
 
 /* declare and initialize the global table */
 struct symtable sym_table[] = {
-  {"creat",   FIO_FUNCTION, FIO_NONE, .io_func = do_creat},
-  {"create",  FIO_FUNCTION, FIO_NONE, .io_func = do_creat},
-  {"trunc",   FIO_FUNCTION, FIO_NONE, .io_func = do_trunc},
-  {"ftrunc",  FIO_FUNCTION, FIO_NONE, .io_func = do_trunc},
-
-  {"openrd",  FIO_FUNCTION, FIO_NONE,
-   .param = O_RDONLY, .io_func = do_open},
-
-  {"openwr",  FIO_FUNCTION, FIO_NONE,
-   .param = O_WRONLY, .io_func = do_open},
-
-  {"openap",  FIO_FUNCTION, FIO_NONE,
-   .param = (O_APPEND | O_WRONLY), .io_func = do_open},
-
-  {"openrw",  FIO_FUNCTION, FIO_NONE,
-   .param = O_RDWR,   .io_func = do_open},
-
-  {"close",   FIO_FUNCTION, FIO_NONE, .io_func = do_close},
-  {"stat",    FIO_FUNCTION, FIO_NONE, .io_func = do_stat},
-  {"fstat",   FIO_FUNCTION, FIO_NONE, .io_func = do_fstat},
-  {"link",    FIO_FUNCTION, FIO_NONE, .io_func = do_link},
-  {"unlink",  FIO_FUNCTION, FIO_NONE, .io_func = do_unlink},
-  {"rename",  FIO_FUNCTION, FIO_NONE, .io_func = do_rename},
-  {"write",   FIO_FUNCTION, FIO_NONE, .io_func = do_write},
-  {"read",    FIO_FUNCTION, FIO_NONE, .io_func = do_read},
-
-  {"test_freq",
-   FIO_VARIABLE, FIO_FLOAT,
-   .param = PATH_MAX, .offset = offsetof(GROUP_t, test_freq)
-  },
-
-  {"block_freq",
-   FIO_VARIABLE, FIO_FLOAT,
-   .param = PATH_MAX, .offset = offsetof(GROUP_t, block_freq)
-  },
-
-  {"path",
-   FIO_VARIABLE, FIO_STRING,
-   .param = PATH_MAX, .offset = offsetof(GROUP_t, test_path)
-  },
-
-  {"output_path",
-   FIO_VARIABLE, FIO_STRING,
-   .param = PATH_MAX, .offset = offsetof(GROUP_t, output_path)
-  },
-
-  {"filename",
-   FIO_VARIABLE, FIO_STRING,
-   .param = PATH_MAX, .offset = offsetof(GROUP_t, test_filename)
-  },
-
-  {"file_size",
-   FIO_VARIABLE, FIO_SIZET,
-   .param = 4, .offset = offsetof(GROUP_t, file_size)
-  },
-
-  {"block_size",
-   FIO_VARIABLE, FIO_SIZET,
-   .param = 4, .offset = offsetof(GROUP_t, block_size)
-  },
-
-  {"pes",
-   FIO_VARIABLE, FIO_INT,
-   .param = 4, .offset = offsetof(GROUP_t, num_pes)
-  },
-
-  {"files_per_pe",
-   FIO_VARIABLE, FIO_INT,
-   .param = 1, .offset = offsetof(GROUP_t, files_per_pe)
-  },
-
-  {"files_per_dir",
-   FIO_VARIABLE, FIO_INT,
-   .param = 1, .offset = offsetof(GROUP_t, files_per_dir)
-  },
-
-  {"tree_depth",
-   FIO_VARIABLE, FIO_INT,
-   .param = 1, .offset = offsetof(GROUP_t, tree_depth)
-  },
-
-  {"tree_width",
-   FIO_VARIABLE, FIO_INT,
-   .param = 1, .offset = offsetof(GROUP_t, tree_width)
-  },
-
-  {"iterations",
-   FIO_VARIABLE, FIO_INT,
-   .param = 1, .offset = offsetof(GROUP_t, iterations)
-  },
-
-  {"samedir",
-   FIO_FLAG, FIO_BOOL,
-   .param = FIO_SAMEDIR, .offset = offsetof(GROUP_t, test_opts)
-  },
-
-  {"samefile",
-   FIO_FLAG, FIO_BOOL,
-   .param = FIO_SAMEFILE, .offset = offsetof(GROUP_t, test_opts)
-  },
-
-  {"seekoff",
-   FIO_FLAG, FIO_BOOL,
-   .param = FIO_SEEKOFF, .offset = offsetof(GROUP_t, test_opts)
-  },
-
-  {"intersperse",
-    FIO_FLAG, FIO_BOOL,
-   .param = FIO_INTERSPERSE, .offset = offsetof(GROUP_t, test_opts)
-  },
-
-  {"stagger",
-   FIO_FLAG, FIO_BOOL,
-   .param = FIO_STAGGER, .offset = offsetof(GROUP_t, test_opts)
-  },
-
-  {"verify",
-   FIO_FLAG, FIO_BOOL,
-   .param = FIO_VERIFY, .offset = offsetof(GROUP_t, test_opts)
-  },
-
-  {"time_block",
-   FIO_FLAG, FIO_BOOL,
-   .param = FIO_TIME_BLOCK,
-   .offset = offsetof(GROUP_t, test_opts)
-  },
-
-  {"barrier",
-   FIO_FLAG, FIO_BOOL,
-   .param = FIO_BARRIER, .offset = offsetof(GROUP_t, test_opts)
-  },
-
-  {"app_barrier",
-   FIO_FLAG, FIO_BOOL,
-   .param = FIO_APP_BARRIER, .offset = offsetof(GROUP_t, test_opts)
-  },
-
-  {"block_barrier",
-   FIO_FLAG, FIO_BOOL,
-   .param = FIO_BLOCK_BARRIER,
-   .offset = offsetof(GROUP_t, test_opts)
-  },
-
-  {"time_barrier",
-   FIO_FLAG, FIO_BOOL,
-   .param = FIO_TIME_BARRIER, .offset = offsetof(GROUP_t, test_opts)
-  },
-
-  {"thrash_lock",
-   FIO_FLAG, FIO_BOOL,
-   .param = FIO_THRASH_LOCK, .offset = offsetof(GROUP_t, test_opts)
-  },
-
-  {"fsync_block",
-   FIO_FLAG, FIO_BOOL,
-   .param = FIO_FSYNC_BLOCK, .offset = offsetof(GROUP_t, test_opts)
-  },
-
-  {"debug_block",
-   FIO_FLAG, FIO_BOOL,
-   .param = FIO_DBG_BLOCK, .offset = offsetof(GROUP_t, debug_flags)
-  },
-
-  {"debug_memory",
-   FIO_FLAG, FIO_BOOL,
-   .param = FIO_DBG_MEMORY, .offset = offsetof(GROUP_t, debug_flags)
-  },
-
-  {"debug_dtree",
-   FIO_FLAG, FIO_BOOL,
-   .param = FIO_DBG_DTREE, .offset = offsetof(GROUP_t, debug_flags)
-  },
-
-  {"debug_barrier",
-   FIO_FLAG, FIO_BOOL,
-   .param = FIO_DBG_BARRIER, .offset = offsetof(GROUP_t, debug_flags)
-  },
-
-  {"debug_symtable",
-   FIO_FLAG, FIO_BOOL,
-   .param = FIO_DBG_SYMTBL, .offset = offsetof(GROUP_t, debug_flags)
-  },
-
-  {"debug_conf",
-   FIO_FLAG, FIO_BOOL,
-   .param = FIO_DBG_CONF, .offset = offsetof(GROUP_t, debug_flags)
-  },
-
-  {"debug_output",
-   FIO_FLAG, FIO_BOOL,
-   .param = FIO_DBG_OUTPUT, .offset = offsetof(GROUP_t, debug_flags)
-  },
-
-  {"debug_iofunc",
-   FIO_FLAG, FIO_BOOL,
-   .param = FIO_DBG_IOFUNC, .offset = offsetof(GROUP_t, debug_flags)
-  },
-
-  {"debug_buffer",
-   FIO_FLAG, FIO_BOOL,
-   .param = FIO_DBG_BUFFER, .offset = offsetof(GROUP_t, debug_flags)
-  },
-
-  {"test_recipe",  FIO_TYPE_GROUP, FIO_NONE, NULL, 0, 0},
-  {"group",        FIO_TYPE_GROUP, FIO_NONE, NULL, 0, 0},
-
-  {NULL, 0, 0, NULL, 0, 0}
+ { "app_barrier",	FIO_FLAG,	FIO_BOOL,	NULL,		offsetof(GROUP_t, test_opts),		FIO_APP_BARRIER },
+ { "barrier",		FIO_FLAG,	FIO_BOOL,	NULL,		offsetof(GROUP_t, test_opts),		FIO_BARRIER },
+ { "block_barrier",	FIO_FLAG,	FIO_BOOL,	NULL,		offsetof(GROUP_t, test_opts),		FIO_BLOCK_BARRIER },
+ { "block_freq",	FIO_VARIABLE,	FIO_FLOAT,	NULL,		offsetof(GROUP_t, block_freq),		PATH_MAX },
+ { "block_size",	FIO_VARIABLE,	FIO_SIZET,	NULL,		offsetof(GROUP_t, block_size),		4 },
+ { "close",		FIO_FUNCTION,	FIO_NONE,	do_close,	0,					0 },
+ { "creat",		FIO_FUNCTION,	FIO_NONE,	do_creat,	0,					0 },
+ { "create",		FIO_FUNCTION,	FIO_NONE,	do_creat,	0,					0 },
+ { "debug_barrier",	FIO_FLAG,	FIO_BOOL,	NULL,		offsetof(GROUP_t, debug_flags),		FIO_DBG_BARRIER },
+ { "debug_block",	FIO_FLAG,	FIO_BOOL,	NULL,		offsetof(GROUP_t, debug_flags),		FIO_DBG_BLOCK },
+ { "debug_buffer",	FIO_FLAG,	FIO_BOOL,	NULL,		offsetof(GROUP_t, debug_flags),		FIO_DBG_BUFFER },
+ { "debug_conf",	FIO_FLAG,	FIO_BOOL,	NULL,		offsetof(GROUP_t, debug_flags),		FIO_DBG_CONF },
+ { "debug_dtree",	FIO_FLAG,	FIO_BOOL,	NULL,		offsetof(GROUP_t, debug_flags),		FIO_DBG_DTREE },
+ { "debug_iofunc",	FIO_FLAG,	FIO_BOOL,	NULL,		offsetof(GROUP_t, debug_flags),		FIO_DBG_IOFUNC },
+ { "debug_memory",	FIO_FLAG,	FIO_BOOL,	NULL,		offsetof(GROUP_t, debug_flags),		FIO_DBG_MEMORY },
+ { "debug_output",	FIO_FLAG,	FIO_BOOL,	NULL,		offsetof(GROUP_t, debug_flags),		FIO_DBG_OUTPUT },
+ { "debug_symtable",	FIO_FLAG,	FIO_BOOL,	NULL,		offsetof(GROUP_t, debug_flags),		FIO_DBG_SYMTBL },
+ { "file_size",		FIO_VARIABLE,	FIO_SIZET,	NULL,		offsetof(GROUP_t, file_size),		4 },
+ { "filename",		FIO_VARIABLE,	FIO_STRING,	NULL,		offsetof(GROUP_t, test_filename),	PATH_MAX },
+ { "files_per_dir",	FIO_VARIABLE,	FIO_INT,	NULL,		offsetof(GROUP_t, files_per_dir),	1 },
+ { "files_per_pe",	FIO_VARIABLE,	FIO_INT,	NULL,		offsetof(GROUP_t, files_per_pe),	1 },
+ { "fstat",		FIO_FUNCTION,	FIO_NONE,	do_fstat,	0,					0 },
+ { "fsync_block",	FIO_FLAG,	FIO_BOOL,	NULL,		offsetof(GROUP_t, test_opts),		FIO_FSYNC_BLOCK },
+ { "ftrunc",		FIO_FUNCTION,	FIO_NONE,	do_trunc,	0,					0 },
+ //{ "group",		FIO_,		FIO_TYPE_GROUP,	NULL,		0,					0 },
+ { "intersperse",	FIO_FLAG,	FIO_BOOL,	NULL,		offsetof(GROUP_t, test_opts),		FIO_INTERSPERSE },
+ { "iterations",	FIO_VARIABLE,	FIO_INT,	NULL,		offsetof(GROUP_t, iterations),		1 },
+ { "link",		FIO_FUNCTION,	FIO_NONE,	do_link,	0,					0 },
+ { "openap",		FIO_FUNCTION,	FIO_NONE,	do_open,	0,					O_APPEND | O_WRONLY },
+ { "openrd",		FIO_FUNCTION,	FIO_NONE,	do_open,	0,					O_RDONLY },
+ { "openrw",		FIO_FUNCTION,	FIO_NONE,	do_open,	0,					O_RDWR   },
+ { "openwr",		FIO_FUNCTION,	FIO_NONE,	do_open,	0,					O_WRONLY },
+ { "output_path",	FIO_VARIABLE,	FIO_STRING,	NULL,		offsetof(GROUP_t, output_path),		PATH_MAX },
+ { "path",		FIO_VARIABLE,	FIO_STRING,	NULL,		offsetof(GROUP_t, test_path),		PATH_MAX },
+ { "pes",		FIO_VARIABLE,	FIO_INT,	NULL,		offsetof(GROUP_t, num_pes),		4 },
+ { "read",		FIO_FUNCTION,	FIO_NONE,	do_read,	0,					0 },
+ { "rename",		FIO_FUNCTION,	FIO_NONE,	do_rename,	0,					0 },
+ { "samedir",		FIO_FLAG,	FIO_BOOL,	NULL,		offsetof(GROUP_t, test_opts),		FIO_SAMEDIR },
+ { "samefile",		FIO_FLAG,	FIO_BOOL,	NULL,		offsetof(GROUP_t, test_opts),		FIO_SAMEFILE },
+ { "seekoff",		FIO_FLAG,	FIO_BOOL,	NULL,		offsetof(GROUP_t, test_opts),		FIO_SEEKOFF },
+ { "stagger",		FIO_FLAG,	FIO_BOOL,	NULL,		offsetof(GROUP_t, test_opts),		FIO_STAGGER },
+ { "stat",		FIO_FUNCTION,	FIO_NONE,	do_stat,	0,					0 },
+ { "test_freq",		FIO_VARIABLE,	FIO_FLOAT,	NULL,		offsetof(GROUP_t, test_freq),		PATH_MAX },
+// { "test_recipe",	FIO_,		FIO_TYPE_RECIPE, NULL,		0,					0 },
+ { "thrash_lock",	FIO_FLAG,	FIO_BOOL,	NULL,		offsetof(GROUP_t, test_opts),		FIO_THRASH_LOCK },
+ { "time_barrier",	FIO_FLAG,	FIO_BOOL,	NULL,		offsetof(GROUP_t, test_opts),		FIO_TIME_BARRIER },
+ { "time_block",	FIO_FLAG,	FIO_BOOL,	NULL,		offsetof(GROUP_t, test_opts),		FIO_TIME_BLOCK },
+ { "tree_depth",	FIO_VARIABLE,	FIO_INT,	NULL,		offsetof(GROUP_t, tree_depth),		1 },
+ { "tree_width",	FIO_VARIABLE,	FIO_INT,	NULL,		offsetof(GROUP_t, tree_width),		1 },
+ { "trunc",		FIO_FUNCTION,	FIO_NONE,	do_trunc,	0,					0 },
+ { "unlink",		FIO_FUNCTION,	FIO_NONE,	do_unlink,	0,					0 },
+ { "verify",		FIO_FLAG,	FIO_BOOL,	NULL,		offsetof(GROUP_t, test_opts),		FIO_VERIFY },
+ { "write",		FIO_FUNCTION,	FIO_NONE,	do_write,	0,					0 },
+ { NULL,		0,		0,		NULL,		0,					0 }
 };
