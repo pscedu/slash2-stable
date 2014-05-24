@@ -139,17 +139,17 @@ store_tok_val(const char *tok, char *val)
 		bzero(floatbuf, 16);
 		snprintf(floatbuf, 16, "%f", f);
 
-		BDEBUG("float_val %f '%s'\n",
-		    f, floatbuf);
+		BDEBUG("float_val %f '%s'\n", f, floatbuf);
 
 		while (*(c++) != '\0')
-			if (*c == '.') *c = '\0';
+			if (*c == '.')
+				*c = '\0';
 
 		*t = strtol(floatbuf, NULL, 10);
 
-		if ( *c != '\0' ) {
+		if ( *c != '\0' )
 			*(t+1) = strtol(c, NULL, 10);
-		}
+
 		BDEBUG("FIO_FLOAT Tok '%s' Secs %d Usecs %d \n",
 		    e->name, *t, *(t+1));
 		break;
