@@ -171,9 +171,7 @@ pfl
   each alias routine (e.g. BMAP_LOCK() to inform that we wait on bmaps
   too much, and maybe want to convert to mutex)
 - rename '_pci' suffix functions to '_' prefix
-- src-upd -r doesn't work
 - does 'make install' install zfs?
-- strerror() interception is broken in libpfl
 - pscthr_yield() should only be called when there is no work to do in a
   thread's main loop
 
@@ -184,9 +182,3 @@ lnet
 - pcpp:
   if an arg is a pointer, dont trace an integer version of it in PFL_ENTER()
 
-wiki
-- let wiki changes automatically email zest/slash2-devel@ like svn commits
-
-svnweb
-- this page does not display 'browse directory' link:
-    http://localhost:24242/svnweb/main/log/projects/zfs/src/zfs-fuse
