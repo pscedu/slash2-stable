@@ -7,7 +7,7 @@ SUBDIRS+=	${PFL_BASE}
 SUBDIRS+=	tools
 SUBDIRS+=	apps
 SUBDIRS+=	inf
-SUBDIRS+=	mfio
+SUBDIRS+=	fio
 SUBDIRS+=	${_ZFS_BASE}
 SUBDIRS+=	${_SLASH_BASE}
 
