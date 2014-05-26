@@ -51,12 +51,6 @@
 #include "pfl/thread.h"
 #include "pfl/time.h"
 
-#ifndef APP_STRERROR /* XXX broken in libpfl */
-#define APP_STRERROR strerror
-#else
-char *APP_STRERROR(int);
-#endif
-
 #ifndef PSC_LOG_FMT
 #define PSC_LOG_FMT "[%s:%06u %n:%I:%T %B %F %l] "
 #endif
@@ -331,6 +325,12 @@ pfl_fmtlogdate(const struct timeval *tv, const char **s)
 	return (bufp);
 }
 
+__weak const char *
+pfl_strerror(int rc)
+{
+	return (strerror(rc));
+}
+
 void
 _psclogv(const struct pfl_callerinfo *pci, int level, int options,
     const char *fmt, va_list ap)
@@ -402,7 +402,7 @@ _psclogv(const struct pfl_callerinfo *pci, int level, int options,
 		buf[--len] = '\0';
 	if (options & PLO_ERRNO)
 		snprintf(buf + len, sizeof(buf) - len,
-		    ": %s", APP_STRERROR(save_errno));
+		    ": %s", pfl_strerror(save_errno));
 
 	PSCLOG_LOCK();
 

@@ -12,4 +12,8 @@
 #define PFLERR_NOTSUP			(_PFLERR_START +  4)
 #define PFLERR_NOSYS			(_PFLERR_START +  5)
 
+const char *pfl_strerror(int);
+
+#define strerror(rc)			pfl_strerror(rc)
+
 #endif /* _PFL_ERR_H_ */
