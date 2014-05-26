@@ -75,7 +75,7 @@ pubrepo fio
 #pubrepo psync
 #pubrepo sft
 #pubrepo slash2
-#pubrepo src-upd
+pubrepo src-upd
 #pubrepo xopctl
 
 for i in $dir/inf/*/update.sh; do
