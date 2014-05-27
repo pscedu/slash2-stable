@@ -173,7 +173,8 @@ pfl
 - rename '_pci' suffix functions to '_' prefix
 - does 'make install' install zfs?
 - pscthr_yield() should only be called when there is no work to do in a
-  thread's main loop
+  thread's main loop to cut down on context switches when there is known
+  work to do
 
 lnet
 - use TLS buffers for libcfs_nid2str() to avoid NUMA contention
