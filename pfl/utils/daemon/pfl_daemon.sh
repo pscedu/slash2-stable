@@ -7,9 +7,7 @@ host=$(hostname -s)
 name=$prog
 ud=/usr/local
 dir=/local
-mygdb=
-mygprof=
-mystrace=
+filter=
 verbose=0
 prof=
 
@@ -110,11 +108,6 @@ mygdb()
 	[ -e /bin/bash ] && export SHELL=/bin/bash
 
 	exec gdb -f -q -x $tmpfn $prog
-}
-
-mygprof()
-{
-	exec gprof "$@"
 }
 
 postproc()
