@@ -56,11 +56,13 @@ enum psc_spinlock_val {
 };
 
 typedef struct psc_spinlock {
-	psc_atomic32_t		psl_value;
-	int			psl_flags;
-	pthread_t		psl_owner;
+	psc_atomic32_t		 psl_value;
+	int16_t			 psl_flags;
+	int16_t			 psl_owner_lineno;
+	const char		*psl_owner_file;
+	pthread_t		 psl_owner;
 #ifdef LOCK_TIMING
-	struct timeval		psl_time;
+	struct timeval		 psl_time;
 #endif
 } psc_spinlock_t;
 
@@ -134,6 +136,8 @@ typedef struct psc_spinlock {
 		} else if ((_val) == PSL_UNLOCKED) {			\
 			psc_assert((psl)->psl_owner == 0);		\
 			(psl)->psl_owner = pthread_self();		\
+			(psl)->psl_owner_file = __FILE__;		\
+			(psl)->psl_owner_lineno = __LINE__;		\
 			if (((psl)->psl_flags & PSLF_NOLOG) == 0)	\
 				_psclog_pci((pci), PLL_VDEBUG, 0,	\
 				    "lock %p acquired",	(psl));		\
@@ -182,6 +186,8 @@ typedef struct psc_spinlock {
 		_SPIN_ENSURELOCKED("freelock", (psl));			\
 		_psc_spin_checktime(psl);				\
 		(psl)->psl_owner = 0;					\
+		(psl)->psl_owner_file = NULL;				\
+		(psl)->psl_owner_lineno = 0;				\
 		psc_atomic32_set(_SPIN_GETATOM(psl), PSL_UNLOCKED);	\
 		if (((psl)->psl_flags & PSLF_NOLOG) == 0)		\
 			_psclog_pci((pci), PLL_VDEBUG, 0,		\
