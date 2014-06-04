@@ -60,10 +60,12 @@ typedef struct psc_spinlock {
 	int16_t			 psl_flags;
 	int16_t			 psl_owner_lineno;
 	const char		*psl_owner_file;
-	pthread_t		 psl_owner;
 #ifdef LOCK_TIMING
 	struct timeval		 psl_time;
+#else
+	struct {};
 #endif
+	pthread_t		 psl_owner;
 } psc_spinlock_t;
 
 #define PSLF_NOLOG		(1 << 0)	/* don't psclog locks/unlocks */
@@ -86,14 +88,17 @@ typedef struct psc_spinlock {
 #define INIT_SPINLOCK_LOGTMP(psl)INIT_SPINLOCK_FLAGS((psl), PSLF_LOGTMP)
 
 #ifdef LOCK_TIMING
-#  define SPINLOCK_INIT		{ PSC_ATOMIC32_INIT(PSL_UNLOCKED), 0, 0, { 0, 0 } }
-#  define SPINLOCK_INIT_NOLOG	{ PSC_ATOMIC32_INIT(PSL_UNLOCKED), PSLF_NOLOG, 0, { 0, 0 } }
-#  define SPINLOCK_INIT_LOGTMP	{ PSC_ATOMIC32_INIT(PSL_UNLOCKED), PSLF_LOGTMP, 0, { 0, 0 } }
+#  define _SPINLOCK_TIMING_INIT	{ 0, 0 }
 #else
-#  define SPINLOCK_INIT		{ PSC_ATOMIC32_INIT(PSL_UNLOCKED), 0, 0 }
-#  define SPINLOCK_INIT_NOLOG	{ PSC_ATOMIC32_INIT(PSL_UNLOCKED), PSLF_NOLOG, 0 }
-#  define SPINLOCK_INIT_LOGTMP	{ PSC_ATOMIC32_INIT(PSL_UNLOCKED), PSLF_LOGTMP, 0 }
+#  define _SPINLOCK_TIMING_INIT { }
 #endif
+
+#define SPINLOCK_INITF(f)	{ PSC_ATOMIC32_INIT(PSL_UNLOCKED), (f),	\
+				  0, NULL, _SPINLOCK_TIMING_INIT, 0 }
+
+#define SPINLOCK_INIT		SPINLOCK_INITF(0)
+#define SPINLOCK_INIT_NOLOG	SPINLOCK_INITF(PSLF_NOLOG)
+#define SPINLOCK_INIT_LOGTMP	SPINLOCK_INITF(PSLF_LOGTMP)
 
 #define _SPIN_GETVAL(psl)	psc_atomic32_read(_SPIN_GETATOM(psl))
 
