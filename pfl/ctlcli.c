@@ -1212,9 +1212,11 @@ psc_ctlcli_main(const char *osockfn, int ac, char *av[],
 	pthread_t pthr;
 	int rc, c, i;
 
-	setupterm(NULL, STDOUT_FILENO, &rc);
-	start_color();
-	has_col = isatty(STDOUT_FILENO) && has_colors();
+	rc = setupterm(NULL, STDOUT_FILENO, &rc);
+	if (rc == 0) {
+		start_color();
+		has_col = isatty(STDOUT_FILENO) && has_colors();
+	}
 
 	prg = strrchr(progname, '/');
 	if (prg)
