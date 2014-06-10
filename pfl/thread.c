@@ -405,6 +405,10 @@ pscthr_setready(struct psc_thread *thr)
 	freelock(&thr->pscthr_lock);
 }
 
+#ifdef __APPLE__
+int psc_nsubsys;
+#endif
+
 /**
  * psc_log_getlevel - Get thread logging level for the specified subsystem.
  * @subsys: subsystem ID.
