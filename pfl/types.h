@@ -64,9 +64,10 @@
 #endif
 
 # define PSCPRI_TIMESPEC	"%"PSCPRI_TIMET":%"PSCPRI_NTIMET
+# define PSCPRI_PTIMESPEC	"%"PRIu64":%"PRIu64
 
-#define PSCPRI_TIMEVAL_ARGS(tv)	(tv)->tv_sec, (tv)->tv_usec
-#define PSCPRI_TIMESPEC_ARGS(ts)(ts)->tv_sec, (ts)->tv_nsec
+#define PSCPRI_TIMEVAL_ARGS(tv)	  (tv)->tv_sec, (tv)->tv_usec
+#define PSCPRI_TIMESPEC_ARGS(ts)  (ts)->tv_sec, (ts)->tv_nsec
 
 #ifdef HAVE_FILE_OFFSET32
 # define _PSCPRIxOFFT		"lx"
