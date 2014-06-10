@@ -170,7 +170,7 @@ ioloop(int ioflags)
 		/* tally amount transferred */
 		psc_iostats_intv_add(ist, rv);
 
-		pthread_yield();
+		pscthr_yield();
 	}
 }
 
