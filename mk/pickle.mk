@@ -290,6 +290,10 @@ ifeq ($(filter $(realpath ${ROOTDIR})/compat/%,${CURDIR}),)
   DEFINES+=						-DHAVE_PTHREAD_YIELD
  endif
 
+ ifdef PICKLE_HAVE_PTHREAD_YIELD_NP
+  DEFINES+=						-DHAVE_PTHREAD_YIELD_NP
+ endif
+
  ifdef PICKLE_HAVE_QSORT_R
    DEFINES+=						-DHAVE_QSORT_R
   ifdef PICKLE_HAVE_QSORT_R_THUNK
