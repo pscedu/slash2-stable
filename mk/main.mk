@@ -106,8 +106,6 @@ _TINCLUDES=		$(filter-out -I%,${INCLUDES}) $(patsubst %,-I%/,$(foreach \
 _EXCLUDES=		$(filter-out -I%,${EXCLUDES}) $(patsubst %,-I%/,$(foreach \
 			dir,$(patsubst -I%,%,$(filter -I%,${EXCLUDES})), $(realpath ${dir})))
 
-foofuck=$(filter-out ${_EXCLUDES},${_TINCLUDES})
-
 CFLAGS+=		${DEFINES} $(filter-out ${_EXCLUDES},${_TINCLUDES})
 TARGET?=		$(sort ${PROG} ${LIBRARY} ${TEST} ${DOCGEN})
 PROG?=			${TEST}
@@ -122,7 +120,7 @@ ifneq ($(filter pfl,${MODULES}),)
   MODULES+=	pfl-hdrs str clock pthread
   LDFLAGS+=	-L${PFL_BASE} -lpfl -lm
   DEPLIST+=	${PFL_BASE}:libpfl.a
-  SRCS+=	${QSORT_R_SRCS} 
+  SRCS+=	${QSORT_R_SRCS}
 
  ifneq ($(filter pthread,${MODULES}),)
    MODULES+=	numa
@@ -546,6 +544,9 @@ etags et: recurse-etags
 
 printenv:
 	@env | sort
+
+<stdin>:
+	@touch '<stdin>'
 
 -include ${DEPEND_FILE}
 -include ${OBJDIR}/*.d
