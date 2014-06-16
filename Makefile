@@ -8,14 +8,9 @@ SUBDIRS+=	tools
 SUBDIRS+=	apps
 SUBDIRS+=	inf
 SUBDIRS+=	fio
-SUBDIRS+=	${_ZFS_BASE}
-SUBDIRS+=	${_SLASH_BASE}
-
-_SLASH_BASE=	${SLASH_BASE}
-
-ifneq ($(wildcard ${ZEST_BASE}),)
-_ZEST_BASE=	${ZEST_BASE}
-endif
+SUBDIRS+=	${SLASH_BASE}
+SUBDIRS+=	src-upd
+SUBDIRS+=	${ZEST_BASE}
 
 include ${MAINMK}
 -include local.mk
