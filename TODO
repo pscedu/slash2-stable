@@ -147,7 +147,6 @@ pfl
   - the regular part should be built into the 'all' target
 - when processing .l and .y rules, propagate CFLAGS from the .l FILE var
   into the obj/*.c file var
-- ensure psc_fatal() runs some critical atexit() such as umount
 - libpthread rwlock is broken on free/openbsd!  writers vs readers
   priority problems, the entire implementation needs rewritten
 - mutex is broken on freebsd -- psc_mutex_haslock() implemented with
