@@ -86,6 +86,38 @@ pfl_getsysthrid(void)
 #endif
 }
 
+struct pfl_atexit_func {
+	void			(*aef_func)(void);
+	struct psc_listentry	  aef_lentry;
+};
+struct psc_lockedlist pfl_atexit_funcs = PLL_INIT(&pfl_atexit_funcs,
+    struct pfl_atexit_func, aef_lentry);
+
+void
+pfl_atexit(void (*f)(void))
+{
+	struct pfl_atexit_func *aef;
+
+	aef = PSCALLOC(sizeof(*aef));
+	INIT_PSC_LISTENTRY(&aef->aef_lentry);
+	pll_add(&pfl_atexit_funcs, aef);
+}
+
+__static void
+pfl_run_atexit(void)
+{
+	aef = PSCALLOC(sizeof(*aef));
+	PLL_FOREACH(aef, &pfl_atexit_funcs)
+		aef->aef_func();
+}
+
+void
+pfl_abort(void)
+{
+	pfl_run_atexit();
+	abort();
+}
+
 void
 pfl_dump_stack(void)
 {
@@ -117,12 +149,14 @@ pfl_dump_stack1(int sig)
 		printf("signal %d received, ", sig);
 	printf("attempting to generate stack trace...\n");
 	pfl_dump_stack();
-	abort();
+	pfl_abort();
 }
 
 __weak void
 psc_enter_debugger(const char *str)
 {
+	pfl_run_atexit()
+
 	psclog(PLL_MAX, "enter debugger (%s)", str);
 	kill(0, SIGINT);
 }

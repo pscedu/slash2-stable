@@ -28,6 +28,7 @@
 #include <sys/poll.h>
 #include <sys/statvfs.h>
 #include <sys/stat.h>
+#include <sys/mount.h>
 
 #ifdef HAVE_NO_POLL_DEV
 #include <sys/select.h>
@@ -44,16 +45,16 @@
 
 #include <fuse_lowlevel.h>
 
-#include "pfl/fs.h"
-#include "pfl/fsmod.h"
-#include "pfl/sys.h"
 #include "pfl/alloc.h"
 #include "pfl/ctl.h"
 #include "pfl/ctlsvr.h"
+#include "pfl/fs.h"
+#include "pfl/fsmod.h"
 #include "pfl/lock.h"
 #include "pfl/log.h"
 #include "pfl/pool.h"
 #include "pfl/random.h"
+#include "pfl/sys.h"
 #include "pfl/waitq.h"
 
 #ifdef __LP64__
@@ -477,6 +478,22 @@ pscfs_ctlparam_attr_timeout_set(const char *s)
 }
 #endif
 
+void
+pfl_fuse_atexit(void)
+{
+	int i;
+
+	for (i = 1; i < pscfs_nfds; i++) {
+		if (pscfs_fds[i].fd == -1)
+			continue;
+#if defined(HAVE_UMOUNT2)
+		umount2(mountpoints[i], MNT_DETACH);
+#elif defined(HAVE_UNMOUNT)
+		unmount(mountpoints[i], MNT_FORCE);
+#endif
+	}
+}
+
 int
 pscfs_main(int privsiz)
 {
@@ -532,6 +549,8 @@ pscfs_main(int privsiz)
 	for (i = 0; i < NUM_THREADS; i++)
 		psc_assert(pthread_create(&fuse_threads[i], NULL,
 		    pscfs_fuse_listener_loop, NULL) == 0);
+
+	pfl_atexit(pfl_fuse_atexit);
 
 	for (i = 0; i < NUM_THREADS; i++) {
 		int ret = pthread_join(fuse_threads[i], NULL);

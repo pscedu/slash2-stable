@@ -427,7 +427,7 @@ _psclogv(const struct pfl_callerinfo *pci, int level, int options,
 		if (p && strcmp(p, "0"))
 			pfl_dump_stack();
 		d->pld_flags &= ~PLDF_INLOG;
-		abort(); // exit(1);
+		pfl_abort();
 	}
 
 	PSCLOG_UNLOCK();
