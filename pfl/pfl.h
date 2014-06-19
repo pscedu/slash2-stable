@@ -51,6 +51,8 @@ struct pfl_callerinfo {
 
 void	 psc_enter_debugger(const char *);
 
+void	 pfl_abort(void);
+void	 pfl_atexit(void (*)(void));
 void	 pfl_dump_fflags(int);
 void	 pfl_dump_stack(void);
 pid_t	 pfl_getsysthrid(void);

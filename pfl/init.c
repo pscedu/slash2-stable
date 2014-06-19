@@ -99,6 +99,7 @@ pfl_atexit(void (*f)(void))
 	struct pfl_atexit_func *aef;
 
 	aef = PSCALLOC(sizeof(*aef));
+	aef->aef_func = f;
 	INIT_PSC_LISTENTRY(&aef->aef_lentry);
 	pll_add(&pfl_atexit_funcs, aef);
 }
@@ -106,6 +107,8 @@ pfl_atexit(void (*f)(void))
 __static void
 pfl_run_atexit(void)
 {
+	struct pfl_atexit_func *aef;
+
 	aef = PSCALLOC(sizeof(*aef));
 	PLL_FOREACH(aef, &pfl_atexit_funcs)
 		aef->aef_func();
@@ -155,8 +158,6 @@ pfl_dump_stack1(int sig)
 __weak void
 psc_enter_debugger(const char *str)
 {
-	pfl_run_atexit()
-
 	psclog(PLL_MAX, "enter debugger (%s)", str);
 	kill(0, SIGINT);
 }
