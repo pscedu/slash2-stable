@@ -1994,8 +1994,8 @@ psc_ctlthr_service(int fd, const struct psc_ctlop *ct, int nops,
 	}
 
 	if (n != sizeof(mh)) {
-		psclog_notice("short recvmsg on psc_ctlmsghdr; "
-		    "nbytes=%zd", n);
+		psclog_notice("short recv on psc_ctlmsghdr; "
+		    "expected=%zd got=%zd", sizeof(mh), n);
 		return (0);
 	}
 	if (mh.mh_size > *msiz) {
