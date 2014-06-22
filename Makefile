@@ -9,6 +9,7 @@ SUBDIRS+=	apps
 SUBDIRS+=	inf
 SUBDIRS+=	fio
 SUBDIRS+=	${SLASH_BASE}
+SUBDIRS+=	sft
 SUBDIRS+=	src-upd
 SUBDIRS+=	${ZEST_BASE}
 
