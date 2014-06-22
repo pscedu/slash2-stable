@@ -1,12 +1,16 @@
 #!/usr/bin/env bash
 # $Id$
+
+# PSC Advanced Systems projects self updater
 #
-# doc
+# TODO
+# parallelize git operations
+
 # internal
 #git clone ssh://source/a p
 #cd p
 #./bootstrap.sh
-#
+
 # open source
 #git clone https://github.com/pscedu/proj.git
 #cd proj
