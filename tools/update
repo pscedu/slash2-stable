@@ -73,7 +73,7 @@ pubrepo fio
 #pubrepo idxsearch
 #pubrepo mkidx
 #pubrepo psync
-#pubrepo sft
+pubrepo sft
 #pubrepo slash2
 pubrepo src-upd
 #pubrepo xopctl
