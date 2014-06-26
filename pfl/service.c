@@ -426,7 +426,6 @@ pscrpc_server_handle_request(struct pscrpc_service *svc,
 
 		b = psc_hashbkt_get(&svc->srv_peer_qlentab,
 		    &request->rq_peer.nid);
-		psc_hashbkt_lock(b);
 		/* Look up the struct again in case it disappeared. */
 		pq = psc_hashbkt_search(&svc->srv_peer_qlentab,
 		    b, &request->rq_peer, NULL, &request->rq_peer.nid);
