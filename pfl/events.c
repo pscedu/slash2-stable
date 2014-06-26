@@ -218,7 +218,6 @@ pscrpc_request_in_callback(lnet_event_t *ev)
 			 */
 			b = psc_hashbkt_get(&svc->srv_peer_qlentab,
 			    &req->rq_peer.nid);
-			psc_hashbkt_lock(b);
 			pq = psc_hashbkt_search(&svc->srv_peer_qlentab,
 			    b, &req->rq_peer, pscrpc_bump_peer_qlen,
 			    &req->rq_peer.nid);
