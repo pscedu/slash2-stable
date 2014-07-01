@@ -675,7 +675,7 @@ pscfs_inum_fuse2pscfs(fuse_ino_t f_inum, int del)
 		else
 			pfic = NULL;
 	}
-	psc_hashbkt_put(b);
+	psc_hashbkt_put(&pscfs_inumcol_hashtbl, b);
 
 	if (del && pfic)
 		psc_pool_return(pscfs_inumcol_pool, pfic);
@@ -733,7 +733,7 @@ pscfs_inum_pscfs2fuse(pscfs_inum_t p_inum, double timeo)
 			    pfic);
 			pfic = NULL;
 		}
-		psc_hashbkt_put(b);
+		psc_hashbkt_put(&pscfs_inumcol_hashtbl, b);
 	} while (t);
 	if (pfic)
 		psc_pool_return(pscfs_inumcol_pool, pfic);
