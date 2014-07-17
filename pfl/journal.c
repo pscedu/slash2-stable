@@ -292,9 +292,10 @@ pjournal_xdestroy(struct psc_journal_xidhndl *xh)
 	psc_pool_return(pfl_xidhndl_pool, xh);
 }
 
-void
+int
 pjournal_reserve_slot(struct psc_journal *pj, int count)
 {
+	int nwaits = 0;
 	struct psc_journal_xidhndl *t;
 
 	spinlock(&pjournal_count);
@@ -340,6 +341,7 @@ pjournal_reserve_slot(struct psc_journal *pj, int count)
 			freelock(&t->pjx_lock);
 			PJ_ULOCK(pj);
 			zfsslash2_wait_synced(txg);
+			nwaits++;
 			continue;
 		}
 		if (t->pjx_flags & PJX_DISTILL) {
@@ -351,6 +353,7 @@ pjournal_reserve_slot(struct psc_journal *pj, int count)
 			freelock(&t->pjx_lock);
 			PJ_ULOCK(pj);
 			usleep(100);
+			nwaits++;
 			continue;
 		}
 
@@ -361,6 +364,7 @@ pjournal_reserve_slot(struct psc_journal *pj, int count)
 		PJ_ULOCK(pj);
 	}
 	freelock(&pjournal_reserve);
+	return nwaits;
 }
 
 void

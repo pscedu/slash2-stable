@@ -262,7 +262,7 @@ uint64_t pjournal_next_replay(struct psc_journal *);
 uint64_t pjournal_next_distill(struct psc_journal *);
 uint64_t pjournal_next_reclaim(struct psc_journal *);
 
-void	 pjournal_reserve_slot(struct psc_journal *, int);
+int	 pjournal_reserve_slot(struct psc_journal *, int);
 void	 pjournal_unreserve_slot(struct psc_journal *, int);
 
 void	*pjournal_get_buf(struct psc_journal *, size_t);
