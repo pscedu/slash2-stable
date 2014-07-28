@@ -793,7 +793,7 @@ pscrpc_wake_client_req(struct pscrpc_request *req)
 									\
 		while (!(cond)) {					\
 			_abstime.tv_sec = _now +			\
-				PSCRPC_SVR_SHORT_TIMEO;			\
+			    PSCRPC_SVR_SHORT_TIMEO;			\
 			_abstime.tv_nsec = 0;				\
 			if (mtx)					\
 				ret = psc_waitq_waitabs_mutex((wq),	\
@@ -830,8 +830,8 @@ pscrpc_wake_client_req(struct pscrpc_request *req)
 	} while (0)
 
 /**
- * _psc_client_wait_event - The below call is for clients.  Clients are
- *	single threaded due to catamount/panther.  This means that
+ * _psc_client_wait_event - The below call is for clients.  Clients may
+ *	be single threaded due to catamount/panther.  This means that
  *	clients must block in LNetEQPoll - this occurs in
  *	liblustre_wait_event().  A similar model can be used for server
  *	threads so long as liblustre_wait_event() is replaced with
