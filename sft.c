@@ -24,6 +24,7 @@
 #include <err.h>
 #include <fcntl.h>
 #include <limits.h>
+#include <sched.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -42,6 +43,7 @@
 #include "pfl/thread.h"
 #include "pfl/timerthr.h"
 #include "pfl/types.h"
+#include "pfl/walk.h"
 
 #define THRT_TIOS		0	/* timed I/O stats */
 
@@ -54,6 +56,8 @@ struct wk {
 	size_t		 off;
 };
 
+#define NTHR_AUTO (-1)
+
 int			 docrc;
 int			 doread = 1;
 int			 progress;
@@ -63,6 +67,7 @@ int			 nthr = 1;
 ssize_t			 bufsz = 128 * 1024;
 psc_atomic64_t		 resid;
 uint64_t		 filecrc;
+off_t			 seekoff;
 
 struct psc_poolmaster	 wk_poolmaster;
 struct psc_poolmgr	*wk_pool;
@@ -186,17 +191,86 @@ usage(void)
 }
 
 int
-main(int argc, char *argv[])
+nprocessors(void)
 {
-	int fd, chunkid, c, n;
-	off_t seekoff = 0, off;
+	int n = 0;
+#ifdef HAVE_SCHED_GETAFFINITY
+	cpu_set_t *mask = NULL;
+	int np = 1024, rc, i;
+	size_t size;
+
+	for (;;) {
+		mask = CPU_ALLOC(np);
+		size = CPU_ALLOC_SIZE(np);
+		CPU_ZERO_S(size, mask);
+		rc = sched_getaffinity(0, size, mask);
+		if (rc == 0)
+			break;
+		if (rc != EINVAL)
+			err(1, "sched_getaffinity");
+
+		rc = errno;
+		CPU_FREE(mask);
+		np = np << 2;
+	}
+	for (i = 0; i < np; i++)
+		if (CPU_ISSET_S(i, size, mask))
+			n++;
+	CPU_FREE(mask);
+#endif
+	return (n);
+}
+
+int
+proc(const char *fn,
+    __unusedx const struct pfl_stat *pst, __unusedx int info,
+    __unusedx int level, __unusedx void *arg)
+{
+	int fd, chunkid, n;
 	struct stat stb;
 	struct wk *wk;
+	off_t off;
+
+	fd = open(fn, O_RDONLY);
+	if (fd == -1)
+		err(1, "open %s", fn);
+	if (fstat(fd, &stb) == -1)
+		err(1, "stat %s", fn);
+
+	psc_atomic64_set(&resid, seekoff);
+
+	chunkid = 0;
+	for (off = seekoff; off < stb.st_size; off += bufsz)
+		addwk(fn, fd, off, chunkid++);
+
+	for (n = 0; n < nthr; n++)
+		addwk(NULL, -1, 0, 0);
+
+	for (n = 0; n < nthr && (wk = lc_getwait(&doneq)); n++)
+		psc_pool_return(wk_pool, wk);
+
+	if (doread && psc_atomic64_read(&resid) < stb.st_size)
+		warn("premature EOF");
+
+	if (docrc && !chunk) {
+		PSC_CRC64_FIN(&filecrc);
+		fprintf(stdout, "F '%s' CRC=%"PSCPRIxCRC64"\n",
+		    fn, filecrc);
+	}
+	close(fd);
+
+	return (0);
+}
+
+int
+main(int argc, char *argv[])
+{
+	int c, n, flags = 0;
 	char *endp;
 
 	pfl_init();
 	progname = argv[0];
-	while ((c = getopt(argc, argv, "Bb:cKn:O:PZ")) != -1)
+	while ((c = getopt(argc, argv, "Bb:cKn:O:PRvZ")) != -1)
 		switch (c) {
 		case 'B': /* display bandwidth */
 			pscthr_init(0, 0, display, NULL, 0, "disp");
@@ -215,8 +289,12 @@ main(int argc, char *argv[])
 			chunk = 1;
 			break;
 		case 'n': /* #threads */
-			nthr = strtol(optarg, &endp, 10);
-			/* XXX check */
+			if (strcmp(optarg, "a") == 0)
+				nthr = nprocessors();
+			else {
+				nthr = strtol(optarg, &endp, 10);
+				/* XXX check */
+			}
 			break;
 		case 'O': /* offset */
 			seekoff = pfl_humantonum(optarg);
@@ -224,11 +302,17 @@ main(int argc, char *argv[])
 				errx(1, "%s: %s", optarg,
 				    strerror(-seekoff));
 			break;
+		case 'R': /* recursive */
+			flags |= PFL_FILEWALKF_RECURSIVE;
+			break;
 		case 'P': /* chart progress */
 			progress = 1;
 			break;
 		case 'w': /* write */
 			doread = 0;
+			break;
+		case 'v': /* verbose */
+			flags |= PFL_FILEWALKF_VERBOSE;
 			break;
 		case 'Z': /* report if file chunk is all zeroes */
 			checkzero = 1;
@@ -256,35 +340,8 @@ main(int argc, char *argv[])
 	for (n = 0; n < nthr; n++)
 		pscthr_init(0, 0, thrmain, NULL, 0, "thr%d", n);
 
-	for (; *argv; argv++) {
-		fd = open(*argv, O_RDONLY);
-		if (fd == -1)
-			err(1, "open %s", *argv);
-		if (fstat(fd, &stb) == -1)
-			err(1, "stat %s", *argv);
-
-		psc_atomic64_set(&resid, seekoff);
-
-		chunkid = 0;
-		for (off = seekoff; off < stb.st_size; off += bufsz)
-			addwk(*argv, fd, off, chunkid++);
-
-		for (n = 0; n < nthr; n++)
-			addwk(NULL, -1, 0, 0);
-
-		for (n = 0; n < nthr && (wk = lc_getwait(&doneq)); n++)
-			psc_pool_return(wk_pool, wk);
-
-		if (doread && psc_atomic64_read(&resid) < stb.st_size)
-			warn("premature EOF");
-
-		if (docrc && !chunk) {
-			PSC_CRC64_FIN(&filecrc);
-			fprintf(stdout, "F '%s' CRC=%"PSCPRIxCRC64"\n",
-			    *argv, filecrc);
-		}
-		close(fd);
-	}
+	for (; *argv; argv++)
+		pfl_filewalk(*argv, flags, NULL, proc, NULL);
 
 	return (0);
 }
