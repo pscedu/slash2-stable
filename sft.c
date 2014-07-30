@@ -49,11 +49,18 @@
 
 struct wk {
 	struct psc_listentry lentry;
-	const char	*fn;
-	int		 fd;
-	int		 eof;
-	int		 chunkid;
+	struct f	*f;
+	int64_t		 chunkid;
 	size_t		 off;
+};
+
+struct f {
+	char		*fn;
+	struct stat	 stb;
+	int		 fd;
+	int		 done;
+	int64_t		 nchunks_total;
+	psc_atomic64_t	 nchunks_proc;
 };
 
 #define NTHR_AUTO (-1)
@@ -64,8 +71,7 @@ int			 progress;
 int			 chunk;
 int			 checkzero;
 int			 nthr = 1;
-ssize_t			 bufsz = 128 * 1024;
-psc_atomic64_t		 resid;
+ssize_t			 bufsz = 32 * 1024;
 uint64_t		 filecrc;
 off_t			 seekoff;
 
@@ -76,16 +82,15 @@ struct psc_iostats	 ist;
 const char		*progname;
 
 struct psc_listcache	 wkq;
-struct psc_listcache	 doneq;
 
 void
 thrmain(struct psc_thread *thr)
 {
-	int skip, lastfd = -2;
+	ssize_t rc, bsz;
 	struct wk *wk;
 	uint64_t crc;
-	ssize_t rc;
 	char *buf;
+	int eof;
 
 	buf = PSCALLOC(bufsz);
 
@@ -93,31 +98,29 @@ thrmain(struct psc_thread *thr)
 		wk = lc_getwait(&wkq);
 		if (wk == NULL)
 			break;
-		skip = lastfd == -1;
-		lastfd = wk->fd;
-
-		/* eof signal */
-		if (wk->fd == -1) {
-			if (skip)
-				lc_add(&wkq, wk);
-			else
-				lc_add(&doneq, wk);
-			continue;
-		}
 
 		if (doread)
-			rc = pread(wk->fd, buf, bufsz, wk->off);
-		else {
-			rc = pwrite(wk->fd, buf, bufsz, wk->off);
-			if (rc > 0 && rc != bufsz) {
-				rc = -1;
-				errno = EIO;
-			}
+			rc = pread(wk->f->fd, buf, bufsz, wk->off);
+		else
+			rc = pwrite(wk->f->fd, buf, bufsz, wk->off);
+
+		eof = 0;
+		if (psc_atomic64_inc_getnew(&wk->f->nchunks_proc) ==
+		    wk->f->nchunks_total)
+			eof = 1;
+
+		bsz = bufsz;
+		if (wk->f->done &&
+		    wk->f->nchunks_total - 1 == wk->chunkid)
+			bsz = wk->f->stb.st_size % bufsz;
+
+		if (rc > 0 && rc != bsz) {
+			rc = -1;
+			errno = EIO;
 		}
 		if (rc == -1)
-			err(1, "%s", wk->fn);
+			err(1, "%s", wk->f->fn);
 
-		psc_atomic64_add(&resid, rc);
 		psc_iostats_intv_add(&ist, rc);
 
 		if (docrc) {
@@ -125,31 +128,31 @@ thrmain(struct psc_thread *thr)
 				psc_crc64_calc(&crc, buf, rc);
 
 				flockfile(stdout);
-				fprintf(stdout, "F '%s' %5d %c "
+				fprintf(stdout, "F '%s' %5zd %c "
 				    "CRC=%"PSCPRIxCRC64"\n",
-				    wk->fn, wk->chunkid,
+				    wk->f->fn, wk->chunkid,
 				    checkzero && pfl_memchk(buf, 0, rc) ?
 				    'Z' : ' ', crc);
 				funlockfile(stdout);
-			} else
+			} else {
 				psc_crc64_add(&filecrc, buf, rc);
+				if (eof) {
+					PSC_CRC64_FIN(&filecrc);
+					fprintf(stdout,
+					    "F '%s' CRC=%"PSCPRIxCRC64"\n",
+					    wk->f->fn, filecrc);
+				}
+			}
+		}
+
+		if (eof) {
+			close(wk->f->fd);
+			free(wk->f->fn);
+			PSCFREE(wk->f);
 		}
 
 		psc_pool_return(wk_pool, wk);
 	}
-}
-
-void
-addwk(const char *fn, int fd, size_t off, int chunkid)
-{
-	struct wk *wk;
-
-	wk = psc_pool_get(wk_pool);
-	wk->fn = fn;
-	wk->fd = fd;
-	wk->off = off;
-	wk->chunkid = chunkid;
-	lc_add(&wkq, wk);
 }
 
 void
@@ -185,7 +188,7 @@ __dead void
 usage(void)
 {
 	fprintf(stderr,
-	    "usage: %s [-BcKPZ] [-b bufsz] [-n nthr] [-O offset] file ...\n",
+	    "usage: %s [-BcKPRZv] [-b bufsz] [-t nthr] [-O offset] file ...\n",
 	    progname);
 	exit(1);
 }
@@ -221,46 +224,46 @@ nprocessors(void)
 	return (n);
 }
 
+void
+addwk(struct f *f, off_t off, int chunkid)
+{
+	struct wk *wk;
+
+	if (off + bufsz >= f->stb.st_size) {
+		f->nchunks_total = chunkid + 1;
+		f->done = 1;
+	}
+
+	wk = psc_pool_get(wk_pool);
+	wk->f = f;
+	wk->off = off;
+	wk->chunkid = chunkid;
+	lc_add(&wkq, wk);
+}
+
 int
 proc(const char *fn,
     __unusedx const struct pfl_stat *pst, int info,
     __unusedx int level, __unusedx void *arg)
 {
-	int fd, chunkid, n;
-	struct stat stb;
-	struct wk *wk;
+	int chunkid;
+	struct f *f;
 	off_t off;
 
 	if (info != PFWT_F)
 		return (0);
 
-	fd = open(fn, O_RDONLY);
-	if (fd == -1)
+	f = PSCALLOC(sizeof(*f));
+	f->fn = strdup(fn);
+	f->fd = open(fn, O_RDONLY);
+	if (f->fd == -1)
 		err(1, "open %s", fn);
-	if (fstat(fd, &stb) == -1)
+	if (fstat(f->fd, &f->stb) == -1)
 		err(1, "stat %s", fn);
 
-	psc_atomic64_set(&resid, seekoff);
-
-	chunkid = 0;
-	for (off = seekoff; off < stb.st_size; off += bufsz)
-		addwk(fn, fd, off, chunkid++);
-
-	for (n = 0; n < nthr; n++)
-		addwk(NULL, -1, 0, 0);
-
-	for (n = 0; n < nthr && (wk = lc_getwait(&doneq)); n++)
-		psc_pool_return(wk_pool, wk);
-
-	if (doread && psc_atomic64_read(&resid) < stb.st_size)
-		warn("premature EOF");
-
-	if (docrc && !chunk) {
-		PSC_CRC64_FIN(&filecrc);
-		fprintf(stdout, "F '%s' CRC=%"PSCPRIxCRC64"\n",
-		    fn, filecrc);
-	}
-	close(fd);
+	for (chunkid = 0, off = seekoff;
+	    off < f->stb.st_size; off += bufsz)
+		addwk(f, off, chunkid++);
 
 	return (0);
 }
@@ -268,12 +271,13 @@ proc(const char *fn,
 int
 main(int argc, char *argv[])
 {
+	struct psc_thread **thrv;
 	int c, n, flags = 0;
 	char *endp;
 
 	pfl_init();
 	progname = argv[0];
-	while ((c = getopt(argc, argv, "Bb:cKn:O:PRvZ")) != -1)
+	while ((c = getopt(argc, argv, "Bb:cKO:PRt:vZ")) != -1)
 		switch (c) {
 		case 'B': /* display bandwidth */
 			pscthr_init(0, 0, display, NULL, 0, "disp");
@@ -291,25 +295,25 @@ main(int argc, char *argv[])
 		case 'K': /* report checksum of each file chunk */
 			chunk = 1;
 			break;
-		case 'n': /* #threads */
-			if (strcmp(optarg, "a") == 0)
-				nthr = nprocessors();
-			else {
-				nthr = strtol(optarg, &endp, 10);
-				/* XXX check */
-			}
-			break;
 		case 'O': /* offset */
 			seekoff = pfl_humantonum(optarg);
 			if (seekoff < 0)
 				errx(1, "%s: %s", optarg,
 				    strerror(-seekoff));
 			break;
+		case 'P': /* chart progress */
+			progress = 1;
+			break;
 		case 'R': /* recursive */
 			flags |= PFL_FILEWALKF_RECURSIVE;
 			break;
-		case 'P': /* chart progress */
-			progress = 1;
+		case 't': /* #threads */
+			if (strcmp(optarg, "a") == 0)
+				nthr = nprocessors();
+			else {
+				nthr = strtol(optarg, &endp, 10);
+				/* XXX check */
+			}
 			break;
 		case 'w': /* write */
 			doread = 0;
@@ -332,7 +336,6 @@ main(int argc, char *argv[])
 		errx(1, "cannot parallelize filewide CRC");
 
 	lc_init(&wkq, struct wk, lentry);
-	lc_init(&doneq, struct wk, lentry);
 	psc_poolmaster_init(&wk_poolmaster, struct wk, lentry,
 	    0, nthr, nthr, 0, NULL, NULL, NULL, "wk");
 	wk_pool = psc_poolmaster_getmgr(&wk_poolmaster);
@@ -340,11 +343,17 @@ main(int argc, char *argv[])
 	psc_tiosthr_spawn(THRT_TIOS, "tiosthr");
 	psc_iostats_init(&ist, "ist");
 
+	thrv = PSCALLOC(sizeof(*thrv) * nthr);
+
 	for (n = 0; n < nthr; n++)
-		pscthr_init(0, 0, thrmain, NULL, 0, "thr%d", n);
+		thrv[n] = pscthr_init(0, 0, thrmain, NULL, 0, "thr%d", n);
 
 	for (; *argv; argv++)
 		pfl_filewalk(*argv, flags, NULL, proc, NULL);
+
+	lc_kill(&wkq);
+	for (n = 0; n < nthr; n++)
+		pthread_join(thrv[n]->pscthr_pthread, NULL);
 
 	return (0);
 }
