@@ -276,7 +276,7 @@ main(int argc, char *argv[])
 
 	pfl_init();
 	progname = argv[0];
-	while ((c = getopt(argc, argv, "Bb:cKO:PRt:vZ")) != -1)
+	while ((c = getopt(argc, argv, "Bb:cKO:Rt:vZ")) != -1)
 		switch (c) {
 		case 'B': /* display bandwidth */
 			displaybw = 1;
