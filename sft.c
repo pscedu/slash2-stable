@@ -223,13 +223,16 @@ nprocessors(void)
 
 int
 proc(const char *fn,
-    __unusedx const struct pfl_stat *pst, __unusedx int info,
+    __unusedx const struct pfl_stat *pst, int info,
     __unusedx int level, __unusedx void *arg)
 {
 	int fd, chunkid, n;
 	struct stat stb;
 	struct wk *wk;
 	off_t off;
+
+	if (info != PFWT_F)
+		return (0);
 
 	fd = open(fn, O_RDONLY);
 	if (fd == -1)
