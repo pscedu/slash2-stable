@@ -67,7 +67,6 @@ struct f {
 
 int			 docrc;
 int			 doread = 1;
-int			 progress;
 int			 chunk;
 int			 checkzero;
 int			 nthr = 1;
@@ -271,8 +270,8 @@ proc(const char *fn,
 int
 main(int argc, char *argv[])
 {
+	int displaybw = 0, c, n, flags = 0;
 	struct psc_thread **thrv;
-	int c, n, flags = 0;
 	char *endp;
 
 	pfl_init();
@@ -280,7 +279,7 @@ main(int argc, char *argv[])
 	while ((c = getopt(argc, argv, "Bb:cKO:PRt:vZ")) != -1)
 		switch (c) {
 		case 'B': /* display bandwidth */
-			pscthr_init(0, 0, display, NULL, 0, "disp");
+			displaybw = 1;
 			break;
 		case 'b': /* I/O block size */
 			bufsz = pfl_humantonum(optarg);
@@ -300,9 +299,6 @@ main(int argc, char *argv[])
 			if (seekoff < 0)
 				errx(1, "%s: %s", optarg,
 				    strerror(-seekoff));
-			break;
-		case 'P': /* chart progress */
-			progress = 1;
 			break;
 		case 'R': /* recursive */
 			flags |= PFL_FILEWALKF_RECURSIVE;
@@ -334,6 +330,9 @@ main(int argc, char *argv[])
 
 	if (nthr && docrc && !chunk)
 		errx(1, "cannot parallelize filewide CRC");
+
+	if (displaybw)
+		pscthr_init(0, 0, display, NULL, 0, "disp");
 
 	lc_init(&wkq, struct wk, lentry);
 	psc_poolmaster_init(&wk_poolmaster, struct wk, lentry,
