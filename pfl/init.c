@@ -102,6 +102,7 @@ pfl_atexit(void (*f)(void))
 	aef->aef_func = f;
 	INIT_PSC_LISTENTRY(&aef->aef_lentry);
 	pll_add(&pfl_atexit_funcs, aef);
+	atexit(f);
 }
 
 __static void
