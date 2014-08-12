@@ -8,10 +8,8 @@
 int
 main(int argc, char *argv[])
 {
-	void *p;
-
 	(void)argc;
 	(void)argv;
-	p = setresuid;
+	(void)setresuid;
 	exit(0);
 }
