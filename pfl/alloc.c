@@ -494,7 +494,7 @@ psc_memallocs_init(void)
 	FILE *fp;
 
 	psc_hashtbl_init(&psc_memallocs, PHTF_NOMEMGUARD | PHTF_NOLOG,
-	    struct psc_memalloc, pma_userbase, pma_hentry, 2047, NULL,
+	    struct psc_memalloc, pma_userbase, pma_hentry, 3067, NULL,
 	    "memallocs");
 
 	fp = fopen(fn, "rw");
