@@ -64,31 +64,6 @@ struct psclog_data {
 /* Logging options. */
 #define PLO_ERRNO	(1 << 0)	/* strerror(errno) */
 
-/* Determine whether a debug/logging operation should occur. */
-#define psc_log_shouldlog(pci, lvl)					\
-	_PFL_RVSTART {							\
-		int _rc = 0;						\
-									\
-		/* check thread logging level */			\
-		if (psc_log_getlevel((pci)->pci_subsys) >= (lvl))	\
-			_rc = 1;					\
-									\
-		/* check if logpoint exists */				\
-		else {							\
-			static uint64_t _pfl_logpointid; /* XXX NUMA */	\
-									\
-			if (!_pfl_logpointid)				\
-				_pfl_logpointid = _pfl_get_logpointid(	\
-				    __FILE__, __LINE__);		\
-									\
-			if (psc_dynarray_getpos(&_pfl_logpoints,	\
-			    _pfl_logpointid))				\
-				_rc = 1;				\
-		}							\
-									\
-		(_rc);							\
-	} _PFL_RVEND
-
 /*
  * The macros here avoid a call frame and argument evaluation by only
  * calling the logging routine if the log level is enabled.
@@ -213,6 +188,38 @@ struct psclog_data {
 #  define psclogv_debug(fmt, ap)	do { } while (0)
 #  define psclogsv_debug(fmt, ap)	do { } while (0)
 #endif
+
+/* Determine whether a debug/logging operation should occur. */
+#define psc_log_shouldlog(pci, lvl)					\
+	_PFL_RVSTART {							\
+		int _rc = 0;						\
+									\
+		/* check global logging level */			\
+		if ((lvl) > PSCLOG_LEVEL)				\
+			;						\
+									\
+		/* check thread logging level */			\
+		else if (psc_log_getlevel((pci)->pci_subsys) >= (lvl))	\
+			_rc = 1;					\
+									\
+		/* check if specific logpoint exists */			\
+		else if ((lvl) >= PSCLOG_LEVEL) {			\
+			static uint64_t _pfl_logpointid; /* XXX NUMA */	\
+									\
+			if (!_pfl_logpointid) {				\
+				_pfl_logpointid = _pfl_get_logpointid(	\
+				    __FILE__, __LINE__);		\
+				if (!_pfl_logpointid)			\
+					errx(1, "logpoint ID is zero");	\
+			}						\
+									\
+			if (psc_dynarray_getpos(&_pfl_logpoints,	\
+			    _pfl_logpointid))				\
+				_rc = 1;				\
+		}							\
+									\
+		(_rc);							\
+	} _PFL_RVEND
 
 #define PSCLOG_LOCK()			flockfile(stderr)
 #define PSCLOG_UNLOCK()			funlockfile(stderr)
