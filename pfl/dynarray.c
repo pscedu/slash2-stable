@@ -30,8 +30,8 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "pfl/dynarray.h"
 #include "pfl/alloc.h"
+#include "pfl/dynarray.h"
 #include "pfl/log.h"
 
 /**
