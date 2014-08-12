@@ -55,6 +55,14 @@
 #define PSC_LOG_FMT "[%s:%06u %n:%I:%T %B %F %l] "
 #endif
 
+struct pfl_logpoint {
+	char			*plogpt_key;
+	struct psc_hashent	 plogpt_hentry;
+	int			 plogpt_idx;
+	int			 plogpt_line;
+	const char		*plogpt_filename;
+};
+
 struct fuse_context {
 	uid_t uid;
 	gid_t gid;
@@ -66,6 +74,9 @@ __static int			 psc_loglevel = PLL_NOTICE;
 __static struct psclog_data	*psc_logdata;
 char				 psclog_eol[8] = "\n";	/* overrideable with ncurses EOL */
 int				*pfl_syslog;
+
+struct psc_dynarray		_pfl_logpoints = DYNARRAY_INIT_NOLOG;
+struct psc_hashtbl		_pfl_logpoints_hashtbl;
 
 int pfl_syslog_map[] = {
 /* fatal */	LOG_EMERG,
@@ -165,6 +176,10 @@ psc_log_init(void)
 		openlog(progname, LOG_CONS | LOG_NDELAY | LOG_PERROR |
 		    LOG_PID, LOG_DAEMON);
 	}
+
+	psc_hashtbl_init(&_pfl_logpoints_hashtbl, PHTF_NOMEMGUARD |
+	    PHTF_NOLOG, struct pfl_logpoint, plogpt_key, plogpt_hentry,
+	    3067, NULL, "memallocs");
 }
 
 int
@@ -285,14 +300,18 @@ psclog_getdata(void)
 		    "<%"PSCPRI_PTHRT">", pthread_self());
 
 #ifdef HAVE_CNOS
-		int cnos_get_rank(void);
-
 		d->pld_rank = cnos_get_rank();
 #else
 		MPI_Comm_rank(1, &d->pld_rank); /* 1=MPI_COMM_WORLD */
 #endif
 	}
 	return (d);
+}
+
+__weak const char *
+pscthr_log_get_uprog(__unusedx struct psc_thread *thr)
+{
+	return (NULL);
 }
 
 const char *
@@ -382,6 +401,7 @@ _psclogv(const struct pfl_callerinfo *pci, int level, int options,
 		FMTSTRCASE('L', "d", level)
 		FMTSTRCASE('l', "d", pci->pci_lineno)
 		FMTSTRCASE('N', "s", progname)
+		FMTSTRCASE('X', "s", pscthr_log_get_uprog(thr))
 		FMTSTRCASE('n', "s", thrname)
 		FMTSTRCASE('P', "d", psclog_get_fuse_ctx_pid())
 		FMTSTRCASE('r', "d", d->pld_rank)
@@ -527,4 +547,37 @@ psc_loglevel_fromstr(const char *name)
 	if (endp == name || *endp != '\0' || l < 0 || l >= PNLOGLEVELS)
 		return (PNLOGLEVELS);
 	return (l);
+}
+
+int
+_pfl_get_logpointid(const char *fn, int line)
+{
+	struct psc_hashtbl *t = &_pfl_logpoints_hashtbl;
+	struct pfl_logpoint *pt;
+	struct psc_hashbkt *b;
+	char key[PATH_MAX];
+
+	snprintf(key, sizeof(key), "%s:%d", fn, line);
+	pt = psc_hashtbl_search(t, NULL, NULL, key);
+	if (pt)
+		goto out;
+
+	b = psc_hashbkt_get(t, key);
+	pt = psc_hashbkt_search(t, b, NULL, NULL, key);
+	if (pt == NULL) {
+		pt = PSCALLOC(sizeof(*pt));
+		pt->plogpt_filename = fn;
+		pt->plogpt_line = line;
+		pt->plogpt_idx = psc_dynarray_len(&_pfl_logpoints);
+		pt->plogpt_key = pfl_strdup(key);
+		psc_hashent_init(t, pt);
+
+		psc_hashbkt_add_item(t, b, pt);
+		psc_dynarray_ensurelen(&_pfl_logpoints,
+		    psc_dynarray_len(&_pfl_logpoints) + 1);
+	}
+	psc_hashbkt_put(t, b);
+
+ out:
+	return (pt->plogpt_idx);
 }

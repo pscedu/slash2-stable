@@ -31,6 +31,7 @@
 #endif
 
 #include "pfl/cdefs.h"
+#include "pfl/dynarray.h"
 #include "pfl/pfl.h"
 #include "pfl/subsys.h"
 
@@ -61,6 +62,31 @@ struct psclog_data {
 /* Logging options. */
 #define PLO_ERRNO	(1 << 0)	/* strerror(errno) */
 
+/* Determine whether a debug/logging operation should occur. */
+#define psc_log_shouldlog(pci, lvl)					\
+	_PFL_RVSTART {							\
+		int _rc = 0;						\
+									\
+		/* check thread logging level */			\
+		if (psc_log_getlevel((pci)->pci_subsys) >= (lvl))	\
+			_rc = 1;					\
+									\
+		/* check if logpoint exists */				\
+		else {							\
+			static uint64_t _pfl_logpointid; /* XXX NUMA */	\
+									\
+			if (!_pfl_logpointid)				\
+				_pfl_logpointid = _pfl_get_logpointid(	\
+				    __FILE__, __LINE__);		\
+									\
+			if (psc_dynarray_getpos(&_pfl_logpoints,	\
+			    _pfl_logpointid))				\
+				_rc = 1;				\
+		}							\
+									\
+		(_rc);							\
+	} _PFL_RVEND
+
 /*
  * The macros here avoid a call frame and argument evaluation by only
  * calling the logging routine if the log level is enabled.
@@ -70,7 +96,7 @@ struct psclog_data {
 		if ((lvl) == PLL_FATAL)					\
 			_psc_fatal((pci), (lvl), (flg), (fmt),		\
 			    ## __VA_ARGS__ );				\
-		else if (psc_log_getlevel((pci)->pci_subsys) >= (lvl))	\
+		else if (psc_log_shouldlog((pci), (lvl)))		\
 			_psclog((pci), (lvl), (flg), (fmt),		\
 			    ## __VA_ARGS__);				\
 	} while (0)
@@ -79,7 +105,7 @@ struct psclog_data {
 	do {								\
 		if ((lvl) == PLL_FATAL)					\
 			_psc_fatalv((pci), (lvl), (flg), (fmt), (ap));	\
-		else if (psc_log_getlevel((pci)->pci_subsys) >= (lvl))	\
+		else if (psc_log_shouldlog((pci), (lvl)))		\
 			_psclogv((pci), (lvl), (flg), (fmt), (ap));	\
 	} while (0)
 
@@ -286,6 +312,8 @@ struct psclog_data	*psclog_getdata(void);
 const char		*psc_loglevel_getname(int);
 int			 psc_loglevel_fromstr(const char *);
 
+int			 _pfl_get_logpointid(const char *, int);
+
 void _psclogv(const struct pfl_callerinfo *, int, int, const char *,
     va_list);
 
@@ -301,7 +329,9 @@ __dead void _psc_fatal(const struct pfl_callerinfo *, int, int,
     __attribute__((__format__(__printf__, 4, 5)))
     __attribute__((nonnull(4, 4)));
 
-extern const char	*psc_logfmt;
-extern char		 psclog_eol[8];
+extern const char		*psc_logfmt;
+extern char			 psclog_eol[8];
+
+extern struct psc_dynarray	_pfl_logpoints;
 
 #endif /* _PFL_LOG_H_ */
