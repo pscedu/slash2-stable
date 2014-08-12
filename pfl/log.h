@@ -35,13 +35,15 @@
 #include "pfl/pfl.h"
 #include "pfl/subsys.h"
 
+/* per-thread */
 struct psclog_data {
-	char		pld_hostshort[HOST_NAME_MAX];
-	char		pld_hostname[HOST_NAME_MAX];
-	char		pld_nothrname[24];
-	int		pld_rank;
-	pid_t		pld_thrid;
-	int		pld_flags;
+	char		 pld_hostshort[HOST_NAME_MAX];
+	char		 pld_hostname[HOST_NAME_MAX];
+	char		 pld_nothrname[24];
+	int		 pld_rank;	/* MPI rank */
+	pid_t		 pld_thrid;
+	int		 pld_flags;	/* see PLDF_* */
+	const char	*pld_uprog;	/* userland program via FUSE */
 };
 
 #define PLDF_INLOG	(1 << 0)
