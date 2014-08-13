@@ -58,7 +58,7 @@ struct psc_lockedlist {
 #define PLL_RLOCK(pll)		reqlock(_PLL_GETLOCK(pll))
 #define PLL_TRYRLOCK(pll, lkd)	tryreqlock(_PLL_GETLOCK(pll), (lkd))
 #define PLL_URLOCK(pll, lkd)	ureqlock(_PLL_GETLOCK(pll), (lkd))
-#define PLL_ENSURE_LOCKED(pll)	LOCK_ENSURE(_PLL_GETLOCK(pll))
+#define PLL_LOCK_ENSURE(pll)	LOCK_ENSURE(_PLL_GETLOCK(pll))
 #define PLL_HASLOCK(pll)	psc_spin_haslock(_PLL_GETLOCK(pll))
 
 #define PLL_FOREACH(p, pll)						\
