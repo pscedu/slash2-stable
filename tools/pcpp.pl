@@ -69,6 +69,7 @@ if (!$opts{f} and (
     basename($fn) eq "subsys.c" or
     basename($fn) eq "thread.c" or
     basename($fn) eq "typedump.c" or
+    basename($fn) eq "waitq.c" or
     $opts{x})) {
 	print $data;
 	exit 0;
