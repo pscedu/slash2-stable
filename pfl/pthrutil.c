@@ -19,6 +19,7 @@
 
 #include <errno.h>
 #include <pthread.h>
+#include <stdlib.h>
 #include <string.h>
 
 #include "pfl/log.h"
@@ -28,11 +29,15 @@
 #include "pfl/vbitmap.h"
 
 #define PMUT_LOG(mut, fmt, ...)						\
-	psclog((mut)->pm_debug ? PLL_MAX : PLL_VDEBUG,			\
-	    "mutex@%p: " fmt, (mut), ##__VA_ARGS__)
+	do {								\
+		if (((mut)->pm_flags & PMTXF_NOLOG) == 0)		\
+			psclog((mut)->pm_flags & PMTXF_DEBUG ?		\
+			    PLL_MAX : PLL_VDEBUG, "mutex@%p: " fmt,	\
+			    (mut), ##__VA_ARGS__);			\
+	} while (0)
 
 void
-_psc_mutex_init(struct pfl_mutex *mut, int debug)
+_psc_mutex_init(struct pfl_mutex *mut, int flags)
 {
 	pthread_mutexattr_t attr;
 	int rc;
@@ -54,8 +59,8 @@ _psc_mutex_init(struct pfl_mutex *mut, int debug)
 		psc_fatalx("pthread_mutexattr_destroy: %s",
 		    strerror(rc));
 
-	if (debug)
-		mut->pm_debug = 1;
+	mut->pm_flags = flags;
+
 	PMUT_LOG(mut, "initialized");
 }
 
@@ -301,6 +306,7 @@ _psc_rwlock_unlock(const struct pfl_callerinfo *pci,
 	int rc, wr = 0;
 	pthread_t p;
 
+	(void)wr;
 	p = pthread_self();
 	if (rw->pr_writer == p) {
 		rw->pr_writer = 0;

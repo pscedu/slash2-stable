@@ -20,8 +20,8 @@
 #include <errno.h>
 #include <string.h>
 
-#include "pfl/cdefs.h"
 #include "pfl/atomic.h"
+#include "pfl/cdefs.h"
 #include "pfl/lock.h"
 #include "pfl/log.h"
 #include "pfl/waitq.h"
@@ -38,14 +38,15 @@
  * @q: the struct to be initialized.
  */
 void
-psc_waitq_init(struct psc_waitq *q)
+_psc_waitq_init(struct psc_waitq *q, int flags)
 {
 	int rc;
 
 	memset(q, 0, sizeof(*q));
 	atomic_set(&q->wq_nwaiters, 0);
 
-	psc_mutex_init(&q->wq_mut);
+	_psc_mutex_init(&q->wq_mut, flags & PWQF_NOLOG ?
+	    PMTXF_NOLOG : 0);
 	rc = pthread_cond_init(&q->wq_cond, NULL);
 	if (rc)
 		psc_fatalx("pthread_cond_init: %s", strerror(rc));

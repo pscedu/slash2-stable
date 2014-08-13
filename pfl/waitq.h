@@ -36,10 +36,13 @@ struct psc_waitq {
 	struct pfl_mutex	wq_mut;
 	pthread_cond_t		wq_cond;
 	atomic_t		wq_nwaiters;
+	int			wq_flags;
 };
 
-# define PSC_WAITQ_INIT	{ PSC_MUTEX_INIT,				\
-			  PTHREAD_COND_INITIALIZER, ATOMIC_INIT(0) }
+#define PWQF_NOLOG		(1 << 0)
+
+# define PSC_WAITQ_INIT	{ PSC_MUTEX_INIT, PTHREAD_COND_INITIALIZER,	\
+			  ATOMIC_INIT(0), 0 }
 
 #else /* HAVE_LIBPTHREAD */
 
@@ -75,7 +78,10 @@ struct psc_waitq {
  */
 #define psc_waitq_nwaiters(wq)		atomic_read(&(wq)->wq_nwaiters)
 
-void	 psc_waitq_init(struct psc_waitq *);
+#define psc_waitq_init(wq)		_psc_waitq_init(wq, 0)
+#define psc_waitq_init_nolog(wq)	_psc_waitq_init(wq, PWQF_NOLOG)
+
+void	_psc_waitq_init(struct psc_waitq *, int);
 void	 psc_waitq_destroy(struct psc_waitq *);
 void	 psc_waitq_wakeone(struct psc_waitq *);
 void	 psc_waitq_wakeall(struct psc_waitq *);

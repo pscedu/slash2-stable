@@ -46,11 +46,15 @@
 struct pfl_mutex {
 	pthread_mutex_t		pm_mutex;
 	pthread_t		pm_owner;
-	int			pm_debug:1;
+	int			pm_flags;
 };
 
+#define PMTXF_DEBUG		(1 << 0)
+#define PMTXF_NOLOG		(1 << 1)
+
 #define psc_mutex_init(m)		_psc_mutex_init((m), 0)
-#define psc_mutex_init_debug(m)		_psc_mutex_init((m), 1)
+#define psc_mutex_init_debug(m)		_psc_mutex_init((m), PMTXF_DEBUG)
+#define psc_mutex_init_nolog(m)		_psc_mutex_init((m), PMTXF_NOLOG)
 
 void	_psc_mutex_ensure_locked(const struct pfl_callerinfo *, struct pfl_mutex *);
 int	 psc_mutex_haslock(struct pfl_mutex *);
