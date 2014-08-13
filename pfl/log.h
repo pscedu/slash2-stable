@@ -190,6 +190,13 @@ struct psclog_data {
 #  define psclogsv_debug(fmt, ap)	do { } while (0)
 #endif
 
+struct pfl_logpoint {
+	char			*plogpt_key;
+	int			 plogpt_idx;
+	int			_pad;
+//	struct psc_hashent	 plogpt_hentry;
+};
+
 /* Determine whether a debug/logging operation should occur. */
 #define psc_log_shouldlog(pci, lvl)					\
 	_PFL_RVSTART {							\
@@ -204,13 +211,13 @@ struct psclog_data {
 			_rc = 1;					\
 									\
 		/* check if specific logpoint exists */			\
-		else {							\
+		else if (psc_dynarray_len(&_pfl_logpoints)) {							\
 			/* XXX NUMA */					\
 			static int _pfl_logpointid = -1;		\
 									\
 			if (_pfl_logpointid == -1)			\
 				_pfl_logpointid = _pfl_get_logpointid(	\
-				    __FILE__, __LINE__);		\
+				    __FILE__, __LINE__, 1)->plogpt_idx;	\
 									\
 			if (psc_dynarray_getpos(&_pfl_logpoints,	\
 			    _pfl_logpointid))				\
@@ -320,7 +327,7 @@ struct psclog_data	*psclog_getdata(void);
 const char		*psc_loglevel_getname(int);
 int			 psc_loglevel_fromstr(const char *);
 
-int			 _pfl_get_logpointid(const char *, int);
+struct pfl_logpoint	*_pfl_get_logpointid(const char *, int, int);
 
 void _psclogv(const struct pfl_callerinfo *, int, int, const char *,
     va_list);

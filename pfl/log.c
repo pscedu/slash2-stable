@@ -56,14 +56,6 @@
 #define PSC_LOG_FMT "[%s:%06u %n:%I:%T %B %F %l] "
 #endif
 
-struct pfl_logpoint {
-	char			*plogpt_key;
-	struct psc_hashent	 plogpt_hentry;
-	int			 plogpt_idx;
-	int			 plogpt_line;
-	const char		*plogpt_filename;
-};
-
 struct fuse_context {
 	uid_t uid;
 	gid_t gid;
@@ -178,9 +170,9 @@ psc_log_init(void)
 		    LOG_PID, LOG_DAEMON);
 	}
 
-	psc_hashtbl_init(&_pfl_logpoints_hashtbl, PHTF_STR |
-	    PHTF_NOLOG, struct pfl_logpoint, plogpt_key, plogpt_hentry,
-	    3067, NULL, "logpoints");
+	_psc_hashtbl_init(&_pfl_logpoints_hashtbl, PHTF_STRP |
+	    PHTF_NOLOG, offsetof(struct pfl_logpoint, plogpt_key),
+	    sizeof(struct pfl_logpoint), 3067, NULL, "logpoints");
 }
 
 int
@@ -550,9 +542,10 @@ psc_loglevel_fromstr(const char *name)
 	return (l);
 }
 
-int
-_pfl_get_logpointid(const char *fn, int line)
+struct pfl_logpoint *
+_pfl_get_logpointid(const char *fn, int line, int create)
 {
+	static struct psc_spinlock lock = SPINLOCK_INIT_NOLOG;
 	struct psc_hashtbl *t = &_pfl_logpoints_hashtbl;
 	struct pfl_logpoint *pt;
 	struct psc_hashbkt *b;
@@ -561,26 +554,28 @@ _pfl_get_logpointid(const char *fn, int line)
 	if (asprintf(&key, "%s:%d", pfl_basename(fn), line) == -1)
 		err(1, NULL);
 	pt = psc_hashtbl_search(t, NULL, NULL, key);
-	if (pt)
+	if (pt || create == 0)
 		goto out;
 
 	b = psc_hashbkt_get(t, key);
 	pt = psc_hashbkt_search(t, b, NULL, NULL, key);
 	if (pt == NULL) {
-		pt = psc_alloc(sizeof(*pt), PAF_NOLOG);
-		pt->plogpt_filename = fn;
-		pt->plogpt_line = line;
-		pt->plogpt_idx = psc_dynarray_len(&_pfl_logpoints);
+		pt = psc_alloc(sizeof(*pt) + sizeof(struct psc_hashent),
+		    PAF_NOLOG);
 		pt->plogpt_key = key;
 		key = NULL;
 		psc_hashent_init(t, pt);
 
 		psc_hashbkt_add_item(t, b, pt);
+
+		spinlock(&lock);
+		pt->plogpt_idx = psc_dynarray_len(&_pfl_logpoints);
 		psc_dynarray_add(&_pfl_logpoints, NULL);
+		freelock(&lock);
 	}
 	psc_hashbkt_put(t, b);
 
  out:
 	free(key);
-	return (pt->plogpt_idx);
+	return (pt);
 }
