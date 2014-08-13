@@ -22,7 +22,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "pfl/log.h"
 #include "pfl/pthrutil.h"
 #include "pfl/thread.h"
 #include "pfl/time.h"
