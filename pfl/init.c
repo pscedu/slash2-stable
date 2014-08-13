@@ -173,8 +173,8 @@ pfl_init(void)
 	if (psc_atomic32_xchg(&init, 1))
 		errx(1, "pfl_init: already initialized");
 
-	psc_log_init();
 	pscthrs_init();
+	psc_log_init();
 	psc_memnode_init();
 
 	psc_pagesize = sysconf(_SC_PAGESIZE);

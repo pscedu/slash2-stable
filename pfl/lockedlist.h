@@ -46,7 +46,8 @@ struct psc_lockedlist {
 /* list flags */
 #define PLLF_EXTLOCK		(1 << 0)		/* lock is external */
 #define PLLF_LOGTMP		(1 << 1)		/* tmp debugging */
-#define _PLLF_FLSHFT		(1 << 2)		/* last flag; for extending */
+#define PLLF_NOLOG		(1 << 2)		/* no pfl_log */
+#define _PLLF_FLSHFT		(1 << 3)		/* last flag; for extending */
 
 #define _PLL_GETLOCK(pll)	((pll)->pll_flags & PLLF_EXTLOCK ?	\
 				 (pll)->pll_lockp : &(pll)->pll_lock)
@@ -83,11 +84,11 @@ struct psc_lockedlist {
 	  offsetof(type, member), { SPINLOCK_INIT } }
 
 #define PLL_INIT_NOLOG(pll, type, member)				\
-	{ PSCLIST_HEAD_INIT((pll)->pll_listhd), 0, 0,			\
+	{ PSCLIST_HEAD_INIT((pll)->pll_listhd), 0, PLLF_NOLOG,		\
 	  offsetof(type, member), { SPINLOCK_INIT_NOLOG } }
 
 #define PLL_INIT_LOGTMP(pll, type, member)				\
-	{ PSCLIST_HEAD_INIT((pll)->pll_listhd), 0, 0,			\
+	{ PSCLIST_HEAD_INIT((pll)->pll_listhd), 0, PLLF_LOGTMP,		\
 	  offsetof(type, member), { SPINLOCK_INIT_LOGTMP } }
 
 #define pll_next_item(pll, p)						\

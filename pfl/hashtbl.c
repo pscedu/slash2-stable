@@ -96,7 +96,8 @@ _psc_hashtbl_init(struct psc_hashtbl *t, int flags,
 	memset(t, 0, sizeof(*t));
 	INIT_PSC_LISTENTRY(&t->pht_lentry);
 	INIT_SPINLOCK(&t->pht_lock);
-	psc_waitq_init(&t->pht_waitq);
+	_psc_waitq_init(&t->pht_waitq, flags & PHTF_NOLOG ?
+	    PWQF_NOLOG : 0);
 	t->pht_nbuckets = nb;
 	t->pht_flags = flags;
 	t->pht_buckets = psc_alloc(nb * sizeof(*t->pht_buckets),

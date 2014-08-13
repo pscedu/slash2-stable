@@ -19,10 +19,10 @@
 
 #include <string.h>
 
-#include "pfl/list.h"
-#include "pfl/lockedlist.h"
 #include "pfl/alloc.h"
+#include "pfl/list.h"
 #include "pfl/lock.h"
+#include "pfl/lockedlist.h"
 #include "pfl/log.h"
 
 void
@@ -31,12 +31,15 @@ _pll_initf(struct psc_lockedlist *pll, int offset, psc_spinlock_t *lkp,
 {
 	memset(pll, 0, sizeof(*pll));
 	INIT_PSCLIST_HEAD(&pll->pll_listhd);
+	pll->pll_flags = flags;
 	if (lkp) {
 		pll->pll_flags |= PLLF_EXTLOCK;
 		pll->pll_lockp = lkp;
 	} else {
 		if (flags & PLLF_LOGTMP)
 			INIT_SPINLOCK_LOGTMP(&pll->pll_lock);
+		else if (flags & PLLF_NOLOG)
+			INIT_SPINLOCK_NOLOG(&pll->pll_lock);
 		else
 			INIT_SPINLOCK(&pll->pll_lock);
 	}
@@ -56,8 +59,9 @@ _pll_remove(const struct pfl_callerinfo *pci,
 	psc_assert(pll->pll_nitems > 0);
 	pll->pll_nitems--;
 	PLL_URLOCK(pll, locked);
-	_psclog_pci(pci, PLL_DEBUG, 0, "lockedlist %p remove item %p",
-	    pll, p);
+	if ((pll->pll_flags & PLLF_NOLOG) == 0)
+		_psclog_pci(pci, PLL_DEBUG, 0,
+		    "lockedlist %p remove item %p", pll, p);
 }
 
 void
@@ -74,8 +78,9 @@ _pll_add(const struct pfl_callerinfo *pci,
 	else
 		psclist_add_head(e, &pll->pll_listhd);
 	pll->pll_nitems++;
-	_psclog_pci(pci, PLL_DEBUG, 0, "lockedlist %p add item %p",
-	    pll, p);
+	if ((pll->pll_flags & PLLF_NOLOG) == 0)
+		_psclog_pci(pci, PLL_DEBUG, 0,
+		    "lockedlist %p add item %p", pll, p);
 	PLL_URLOCK(pll, locked);
 }
 
