@@ -178,7 +178,7 @@ psc_log_init(void)
 		    LOG_PID, LOG_DAEMON);
 	}
 
-	psc_hashtbl_init(&_pfl_logpoints_hashtbl, PHTF_NOMEMGUARD |
+	psc_hashtbl_init(&_pfl_logpoints_hashtbl, PHTF_STR |
 	    PHTF_NOLOG, struct pfl_logpoint, plogpt_key, plogpt_hentry,
 	    3067, NULL, "logpoints");
 }
@@ -556,9 +556,10 @@ _pfl_get_logpointid(const char *fn, int line)
 	struct psc_hashtbl *t = &_pfl_logpoints_hashtbl;
 	struct pfl_logpoint *pt;
 	struct psc_hashbkt *b;
-	char key[PATH_MAX];
+	char *key;
 
-	snprintf(key, sizeof(key), "%s:%d", fn, line);
+	if (asprintf(&key, "%s:%d", pfl_basename(fn), line) == -1)
+		err(1, NULL);
 	pt = psc_hashtbl_search(t, NULL, NULL, key);
 	if (pt)
 		goto out;
@@ -566,11 +567,12 @@ _pfl_get_logpointid(const char *fn, int line)
 	b = psc_hashbkt_get(t, key);
 	pt = psc_hashbkt_search(t, b, NULL, NULL, key);
 	if (pt == NULL) {
-		pt = PSCALLOC(sizeof(*pt));
+		pt = psc_alloc(sizeof(*pt), PAF_NOLOG);
 		pt->plogpt_filename = fn;
 		pt->plogpt_line = line;
 		pt->plogpt_idx = psc_dynarray_len(&_pfl_logpoints);
-		pt->plogpt_key = pfl_strdup(key);
+		pt->plogpt_key = key;
+		key = NULL;
 		psc_hashent_init(t, pt);
 
 		psc_hashbkt_add_item(t, b, pt);
@@ -579,5 +581,6 @@ _pfl_get_logpointid(const char *fn, int line)
 	psc_hashbkt_put(t, b);
 
  out:
+	free(key);
 	return (pt->plogpt_idx);
 }
