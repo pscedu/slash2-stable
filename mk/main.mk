@@ -326,7 +326,7 @@ all: recurse-all all-hook
 		fi;							\
 	done
 	@for i in ${DEPLIST}; do					\
-		(cd $${i%:*} && ${MAKE} -s $${i#*:}) || exit 1;		\
+		(cd $${i%:*} && ${MAKE} $${i#*:}) || exit 1;		\
 	done
 	@if ${NOTEMPTY} "${TARGET}"; then				\
 		${MKDIRS} -m 775 ${OBJDIR};				\
