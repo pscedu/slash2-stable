@@ -150,7 +150,9 @@ int	psc_ctlparam_log_file(int, struct psc_ctlmsghdr *,
 int	psc_ctlparam_log_format(int, struct psc_ctlmsghdr *,
 		struct psc_ctlmsg_param *, char **, int, struct psc_ctlparam_node *);
 int	psc_ctlparam_log_level(int, struct psc_ctlmsghdr *,
-		struct psc_ctlmsg_param *, char **, int, struct psc_ctlparam_node *);
+		struct psc_ctlmsg_param *, char **, int, struct psc_ctlparam_node *); 
+int	psc_ctlparam_log_points(int, struct psc_ctlmsghdr *,
+    		struct psc_ctlmsg_param *, char **, int, struct psc_ctlparam_node *); 
 int	psc_ctlparam_pool(int, struct psc_ctlmsghdr *,
 		struct psc_ctlmsg_param *, char **, int, struct psc_ctlparam_node *);
 int	psc_ctlparam_rlim(int, struct psc_ctlmsghdr *,

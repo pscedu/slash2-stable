@@ -668,6 +668,7 @@ psc_ctlparam_log_format(int fd, struct psc_ctlmsghdr *mh,
 	set = (mh->mh_type == PCMT_SETPARAM);
 
 	if (set) {
+		/* XXX race */
 		static char logbuf[LINE_MAX];
 
 		if (nlevels != 2)
@@ -685,6 +686,71 @@ psc_ctlparam_log_format(int fd, struct psc_ctlmsghdr *mh,
 		    PCTHRNAME_EVERYONE, levels, 2, psc_logfmt);
 	return (rc);
 }
+
+int
+psc_ctlparam_log_points(int fd, struct psc_ctlmsghdr *mh,
+    struct psc_ctlmsg_param *pcp, char **levels, int nlevels,
+    __unusedx struct psc_ctlparam_node *pcn)
+{
+	struct pfl_logpoint *pt;
+	int line, n, rc = 1;
+	char *sln, *endp;
+	long l;
+
+	if (nlevels > 2)
+		return (psc_ctlsenderr(fd, mh, "invalid field"));
+
+	if (strcmp(pcp->pcp_thrname, PCTHRNAME_EVERYONE) != 0)
+		return (psc_ctlsenderr(fd, mh, "invalid thread field"));
+
+	levels[0] = "log";
+	levels[1] = "points";
+
+	if (mh->mh_type == PCMT_SETPARAM) {
+		sln = strchr(pcp->pcp_value, ':');
+		if (sln == NULL)
+			return (psc_ctlsenderr(fd, mh,
+			    "invalid point format"));
+
+		*sln++ = '\0';
+		l = strtol(sln, &endp, 10);
+		if (l < 1 || l > INT_MAX ||
+		    *endp || endp == sln)
+			return (psc_ctlsenderr(fd, mh,
+			    "invalid point format"));
+		line = l;
+
+		if (pcp->pcp_flags & PCPF_SUB) {
+			pt = _pfl_get_logpointid(pcp->pcp_value, line,
+			    0);
+			if (pt)
+				psc_dynarray_setpos(&_pfl_logpoints,
+				    pt->plogpt_idx, NULL);
+			else
+				return (psc_ctlsenderr(fd, mh,
+				    "no such log point"));
+		} else if (pcp->pcp_flags & PCPF_ADD) {
+			pt = _pfl_get_logpointid(pcp->pcp_value, line,
+			    1);
+			psc_dynarray_setpos(&_pfl_logpoints,
+			    pt->plogpt_idx, pt);
+		} else
+			return (psc_ctlsenderr(fd, mh,
+			    "invalid operation"));
+	} else {
+		DYNARRAY_FOREACH(pt, n, &_pfl_logpoints) {
+			if (pt) {
+				rc = psc_ctlmsg_param_send(fd, mh, pcp,
+				    PCTHRNAME_EVERYONE, levels, 2,
+				    pt->plogpt_key);
+				if (!rc)
+					break;
+			}
+		}
+	}
+	return (rc);
+}
+
 
 struct psc_ctl_rlim {
 	char	*pcr_name;
