@@ -29,6 +29,7 @@
 
 #include "pfl/alloc.h"
 #include "pfl/cdefs.h"
+#include "pfl/hashtbl.h"
 #include "pfl/log.h"
 #include "pfl/str.h"
 

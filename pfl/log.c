@@ -45,6 +45,7 @@
 #include "pfl/alloc.h"
 #include "pfl/cdefs.h"
 #include "pfl/fmtstr.h"
+#include "pfl/hashtbl.h"
 #include "pfl/log.h"
 #include "pfl/pfl.h"
 #include "pfl/str.h"
@@ -179,7 +180,7 @@ psc_log_init(void)
 
 	psc_hashtbl_init(&_pfl_logpoints_hashtbl, PHTF_NOMEMGUARD |
 	    PHTF_NOLOG, struct pfl_logpoint, plogpt_key, plogpt_hentry,
-	    3067, NULL, "memallocs");
+	    3067, NULL, "logpoints");
 }
 
 int

@@ -26,7 +26,6 @@
 #include <stdint.h>
 #include <stdlib.h>
 
-#include "pfl/hashtbl.h"
 #include "pfl/log.h"
 
 #ifndef HAVE_POSIX_MEMALIGN
