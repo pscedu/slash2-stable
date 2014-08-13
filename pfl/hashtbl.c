@@ -99,6 +99,8 @@ _psc_hashtbl_init(struct psc_hashtbl *t, int flags,
 	_psc_waitq_init(&t->pht_waitq, flags & PHTF_NOLOG ?
 	    PWQF_NOLOG : 0);
 	t->pht_nbuckets = nb;
+	if (flags & PHTF_STRP)
+		flags |= PHTF_STR;
 	t->pht_flags = flags;
 	t->pht_buckets = psc_alloc(nb * sizeof(*t->pht_buckets),
 	    _psc_hashtbl_getmemflags(t));
@@ -261,6 +263,8 @@ _psc_hashbkt_search(struct psc_hashtbl *t, struct psc_hashbkt *b,
 	PSC_HASHBKT_FOREACH_ENTRY(t, p, b) {
 		pk = (char *)p + t->pht_idoff;
 		if (t->pht_flags & PHTF_STR) {
+			if (t->pht_flags & PHTF_STRP)
+				pk = *(char **)pk;
 			if (strcmp(key, pk))
 				continue;
 		} else if (*(uint64_t *)key != *(uint64_t *)pk)

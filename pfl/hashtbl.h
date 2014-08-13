@@ -62,6 +62,7 @@ struct psc_hashtbl {
 /* Table flags. */
 #define PHTF_NONE	0		/* no table flags specified */
 #define PHTF_STR	(1 << 0)	/* IDs are strings */
+#define PHTF_STRP	(1 << 1)	/* IDs are string pointers */
 #define PHTF_RESORT	(1 << 1)	/* reorder queues on lookup */
 #define PHTF_NOMEMGUARD	(1 << 2)	/* disable memalloc guard */
 #define PHTF_NOLOG	(1 << 3)	/* do not psclog */
