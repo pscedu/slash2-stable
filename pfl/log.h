@@ -204,7 +204,7 @@ struct psclog_data {
 			_rc = 1;					\
 									\
 		/* check if specific logpoint exists */			\
-		else if ((lvl) >= PSCLOG_LEVEL) {			\
+		else {							\
 			/* XXX NUMA */					\
 			static int _pfl_logpointid = -1;		\
 									\
