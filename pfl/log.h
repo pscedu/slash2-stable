@@ -22,6 +22,7 @@
 
 #include <sys/param.h>
 
+#include <err.h>
 #include <limits.h>
 #include <netdb.h>
 #include <stdarg.h>
@@ -204,14 +205,12 @@ struct psclog_data {
 									\
 		/* check if specific logpoint exists */			\
 		else if ((lvl) >= PSCLOG_LEVEL) {			\
-			static uint64_t _pfl_logpointid; /* XXX NUMA */	\
+			/* XXX NUMA */					\
+			static int _pfl_logpointid = -1;		\
 									\
-			if (!_pfl_logpointid) {				\
+			if (_pfl_logpointid == -1)			\
 				_pfl_logpointid = _pfl_get_logpointid(	\
 				    __FILE__, __LINE__);		\
-				if (!_pfl_logpointid)			\
-					errx(1, "logpoint ID is zero");	\
-			}						\
 									\
 			if (psc_dynarray_getpos(&_pfl_logpoints,	\
 			    _pfl_logpointid))				\

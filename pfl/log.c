@@ -573,8 +573,7 @@ _pfl_get_logpointid(const char *fn, int line)
 		psc_hashent_init(t, pt);
 
 		psc_hashbkt_add_item(t, b, pt);
-		psc_dynarray_ensurelen(&_pfl_logpoints,
-		    psc_dynarray_len(&_pfl_logpoints) + 1);
+		psc_dynarray_add(&_pfl_logpoints, NULL);
 	}
 	psc_hashbkt_put(t, b);
 
