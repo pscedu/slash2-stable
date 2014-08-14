@@ -213,6 +213,7 @@ main(int argc, char *argv[])
 	PRTYPE(struct pfl_callerinfo);
 	PRTYPE(struct pfl_heap);
 	PRTYPE(struct pfl_heap_entry);
+	PRTYPE(struct pfl_logpoint);
 	PRTYPE(struct pfl_mutex);
 	PRTYPE(struct pfl_opstat);
 	PRTYPE(struct pfl_stat);
