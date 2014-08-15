@@ -176,6 +176,8 @@ pfl
   work to do
 - make sure there aren't warnings that are -Werror in compat/* pickle
   tests
+- make sure in `psclog("%d", errno)' there are no ways errno can be
+  modified by pfl_tls_get()
 
 lnet
 - use TLS buffers for libcfs_nid2str() to avoid NUMA contention
