@@ -867,7 +867,12 @@ psc_ctlparam_rlim(int fd, struct psc_ctlmsghdr *mh,
 					    "getrlimit: %s",
 					    strerror(errno)));
 				}
-				snprintf(buf, sizeof(buf), "%"PRId64, n);
+				if (n == RLIM_INFINITY)
+					snprintf(buf, sizeof(buf),
+					    "-1");
+				else
+					snprintf(buf, sizeof(buf),
+					    "%"PRId64, n);
 				rc = psc_ctlmsg_param_send(fd, mh, pcp,
 				    PCTHRNAME_EVERYONE, levels, 2, buf);
 			}
