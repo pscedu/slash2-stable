@@ -187,7 +187,7 @@ __dead void
 usage(void)
 {
 	fprintf(stderr,
-	    "usage: %s [-BcKPRZv] [-b bufsz] [-t nthr] [-O offset] file ...\n",
+	    "usage: %s [-BcKRvwZ] [-b bufsz] [-t nthr] [-O offset] file ...\n",
 	    progname);
 	exit(1);
 }
@@ -276,7 +276,7 @@ main(int argc, char *argv[])
 
 	pfl_init();
 	progname = argv[0];
-	while ((c = getopt(argc, argv, "Bb:cKO:Rt:vZ")) != -1)
+	while ((c = getopt(argc, argv, "Bb:cKO:Rt:vwZ")) != -1)
 		switch (c) {
 		case 'B': /* display bandwidth */
 			displaybw = 1;
@@ -311,11 +311,11 @@ main(int argc, char *argv[])
 				/* XXX check */
 			}
 			break;
-		case 'w': /* write */
-			doread = 0;
-			break;
 		case 'v': /* verbose */
 			flags |= PFL_FILEWALKF_VERBOSE;
+			break;
+		case 'w': /* write */
+			doread = 0;
 			break;
 		case 'Z': /* report if file chunk is all zeroes */
 			checkzero = 1;
