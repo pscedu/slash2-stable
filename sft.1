@@ -24,39 +24,61 @@
 .Sh SYNOPSIS
 .Nm xopctl
 .Bk -words
-.Op Fl Kv
-.Op Fl x Ar termarg
-.Ar mode
-.Op Ar host Ns Op : Ns Ar daemon
+.Op Fl BcKRvwZ
+.Op Fl b Ar bufsz
+.Op Fl t Ar nthr
+.Op Fl O Ar offset
+.Ar
 .Ek
 .Sh DESCRIPTION
 The
 .Nm
-utility launches and/or connects to daemon sessions.
-If sessions already exist, they are reattached.
-If they do not, they are created anew.
+utility provides a few handy capabilities for file I/O.
+It can read, checksum, and write data and provide basic performance
+metrics about the activity.
 .Pp
 The following options are available:
 .Bl -tag -width Ds
+.It Fl B
+Display a bandwidth meter during progress.
+.It Fl b Ar bufsz
+Change the default file chunk size to
+.Ar bufsz .
+.It Fl c
+Compute and display a checksum over the entire file contents.
 .It Fl K
-Instead of connecting or creating a session, kill the target session.
+When used with
+.Fl K ,
+display checksums of each file chunk
+.Pq to control chunk size, see Fl b .
+.It Fl O Ar offset
+Start processing each specified file at the 
+.Ar offset .
+.It Fl R
+Recursively process all files and subdirectories in any directories
+specified on the command line.
+.It Fl t Ar nthr
+Specify the number of processing threads that should perform I/O on each
+file.
+Defaults to 1.
 .It Fl v
-Verbose behavior output.
-.It Fl x Ar termarg
-Provide auxillary arguments to the X terminal emulator.
-.Sh ENVIRONMENT
-.Bl -tag -width Ev
-.It Ev bounce_host
-Override the default bounce host; used for reaching internal hosts.
-.It Ev TERM_PROG
-Override the terminal emulator that is spawned for each host session.
-Defaults to
-.Dq xterm .
+Verbosely display ongoing .
+.It Fl w
+Perform
+.Xr write 2
+of junk data over any files specified on the command line.
+.It Fl Z
+Check if a file chunk is composed of entirely zeroes and display
+a indicator
+.Pq Sq Z
+for any such chunks
+.Pq see Fl K .
+Defaults to 32768.
 .El
-.Sh FILES
-.Bl -tag -width Pa
-.It Pa pfl_daemon.cfg
-Deployment configuration(s).
-.El
+.\" .El
+.\" .Sh ENVIRONMENT
+.\" pfl env
+.\" .Bl -tag -width Ev
+.\" .El
 .Sh SEE ALSO
-.Xr xterm 1
+.Xr dd 1
