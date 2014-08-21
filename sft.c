@@ -112,6 +112,8 @@ thrmain(struct psc_thread *thr)
 		if (wk->f->done &&
 		    wk->f->nchunks_total - 1 == wk->chunkid)
 			bsz = wk->f->stb.st_size % bufsz;
+		if (bsz == 0)
+			bsz = bufsz;
 
 		if (rc > 0 && rc != bsz) {
 			rc = -1;
@@ -276,7 +278,7 @@ main(int argc, char *argv[])
 
 	pfl_init();
 	progname = argv[0];
-	while ((c = getopt(argc, argv, "Bb:cKO:Rt:vwZ")) != -1)
+	while ((c = getopt(argc, argv, "Bb:cKO:RTt:vwZ")) != -1)
 		switch (c) {
 		case 'B': /* display bandwidth */
 			displaybw = 1;
@@ -302,6 +304,8 @@ main(int argc, char *argv[])
 			break;
 		case 'R': /* recursive */
 			flags |= PFL_FILEWALKF_RECURSIVE;
+			break;
+		case 'T': /* report total */
 			break;
 		case 't': /* #threads */
 			if (strcmp(optarg, "a") == 0)
@@ -353,6 +357,9 @@ main(int argc, char *argv[])
 	lc_kill(&wkq);
 	for (n = 0; n < nthr; n++)
 		pthread_join(thrv[n]->pscthr_pthread, NULL);
+
+	if (displaybw)
+		printf("\n");
 
 	return (0);
 }
