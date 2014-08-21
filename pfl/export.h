@@ -38,6 +38,7 @@
 
 #define PFLOG_EXP(level, exp, fmt, ...)				\
 	psclog((level), "export@%p ref=%d rpccnt=%d:: " fmt,	\
+	    (exp),						\
 	    atomic_read(&(exp)->exp_refcount),			\
 	    atomic_read(&(exp)->exp_rpc_count),			\
 	    ##__VA_ARGS__)
