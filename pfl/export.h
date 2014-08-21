@@ -20,9 +20,9 @@
 #ifndef _PFL_EXPORT_H_
 #define _PFL_EXPORT_H_
 
-#include "pfl/rpc.h"
 #include "pfl/atomic.h"
 #include "pfl/log.h"
+#include "pfl/rpc.h"
 
 #define pscrpc_export_hldrop(e)					\
 	do {							\
@@ -33,28 +33,30 @@
 
 #define EXPORT_LOCK(e)		spinlock(&(e)->exp_lock)
 #define EXPORT_RLOCK(e)		reqlock(&(e)->exp_lock)
-#define EXPORT_ULOCK(e)	freelock(&(e)->exp_lock)
+#define EXPORT_ULOCK(e)		freelock(&(e)->exp_lock)
 #define EXPORT_URLOCK(e, lk)	ureqlock(&(e)->exp_lock, (lk))
+
+#define PFLOG_EXP(level, exp, fmt, ...)				\
+	psclog((level), "export@%p ref=%d rpccnt=%d:: " fmt,	\
+	    atomic_read(&(exp)->exp_refcount),			\
+	    atomic_read(&(exp)->exp_rpc_count),			\
+	    ##__VA_ARGS__)
 
 void _pscrpc_export_put(struct pscrpc_export *);
 
 static __inline struct pscrpc_export *
 pscrpc_export_get(struct pscrpc_export *exp)
 {
-	int rc;
-
-	rc = atomic_inc_return(&exp->exp_refcount);
-	psclog_debug("GETting export %p : new refcount %d", exp, rc);
+	atomic_inc_return(&exp->exp_refcount);
+	PFLOG_EXP(PLL_DEBUG, exp, "incr refcount");
 	return (exp);
 }
 
 static __inline struct pscrpc_export *
 pscrpc_export_rpc_get(struct pscrpc_export *exp)
 {
-	int rc;
-
-	rc = atomic_inc_return(&exp->exp_rpc_count);
-	psclog_debug("RPC GETting export %p : new rpc_count %d", exp, rc);
+	atomic_inc_return(&exp->exp_rpc_count);
+	PFLOG_EXP(PLL_DEBUG, exp, "incr rpc_count");
 	return (pscrpc_export_get(exp));
 }
 
@@ -64,19 +66,17 @@ pscrpc_export_put(struct pscrpc_export *exp)
 	int rc;
 
 	rc = atomic_read(&exp->exp_refcount);
-	psclog_debug("PUTting export %p : new refcount %d", exp, rc - 1);
 	psc_assert(rc > 0);
 	psc_assert(rc < 0x5a5a5a);
+	PFLOG_EXP(PLL_DEBUG, exp, "decr refcount");
 	_pscrpc_export_put(exp);
 }
 
 static __inline void
 pscrpc_export_rpc_put(struct pscrpc_export *exp)
 {
-	int rc;
-
-	rc = atomic_dec_return(&exp->exp_rpc_count);
-	psclog_debug("RPC PUTting export %p : new rpc_count %d", exp, rc);
+	atomic_dec_return(&exp->exp_rpc_count);
+	PFLOG_EXP(PLL_DEBUG, exp, "decr rpc_count");
 	pscrpc_export_put(exp);
 }
 
