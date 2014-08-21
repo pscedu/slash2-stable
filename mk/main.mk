@@ -49,6 +49,7 @@ _TOBJS+=		$(patsubst %.y,%.o,$(filter %.y,${_TSRCS}))
 _TOBJS+=		$(patsubst %.l,%.o,$(filter %.l,${_TSRCS}))
 OBJS=			$(addprefix ${OBJDIR}/,$(notdir ${_TOBJS}))
 
+# XXX flag error if a dir doesn't exist
 _TSUBDIRS=		$(foreach dir,${SUBDIRS},$(realpath ${dir}))
 
 _LEXINTM=		$(patsubst %.l,%.c,$(addprefix ${OBJDIR}/,$(notdir $(filter %.l,${_TSRCS}))))
@@ -463,9 +464,8 @@ install: recurse-install install-hook
 			${INST} -m 444 $$i $$dir/;			\
 		done;							\
 	fi
-
 #	@for i in ${DEPLIST}; do					\
-#		(cd $${i%:*} && ${MAKE} -s $${i#*:}) || exit 1;		\
+#		(cd $${i%:*} && ${MAKE} $${i#*:}) || exit 1;		\
 #	done
 
 clean-hook:
