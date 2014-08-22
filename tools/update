@@ -66,10 +66,10 @@ pubrepo()
 
 cd $dir
 #pubrepo distrib/crcutil
-#pubrepo distrib/posix-fstest
 pubrepo distrib/fuse
 #pubrepo distrib/iozone
 #pubrepo distrib/libs3
+pubrepo distrib/posix-fstest
 #pubrepo distrib/spiobench
 pubrepo distrib/stumbleupon-tcollector
 #pubrepo distrib/zfs-fuse
