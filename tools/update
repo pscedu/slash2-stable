@@ -38,10 +38,12 @@ getrepo()
 		cd $dir
 	fi
 	if git status >/dev/null 2>&1; then
+		pwd
 		git pull
 
 	# XXX remove me
 	elif svn info >/dev/null 2>&1; then
+		pwd
 		svn up
 
 	else
@@ -50,11 +52,7 @@ getrepo()
 
 		echorun git clone $url $base
 
-		for i in $(cd $base.svnold && find .); do
-			[ x"$i" = x"." ] && continue
-			mkdir -p $(dirname $i)
-			cp $base.svnold/$i $i
-		done
+		mv $base.svnold/* $base/ || true
 		rmdir $base.svnold
 	fi
 }
