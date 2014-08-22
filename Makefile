@@ -5,7 +5,6 @@ include ${ROOTDIR}/Makefile.path
 
 SUBDIRS+=	${PFL_BASE}
 SUBDIRS+=	tools
-SUBDIRS+=	apps
 SUBDIRS+=	inf
 SUBDIRS+=	fio
 SUBDIRS+=	${SLASH_BASE}
