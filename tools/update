@@ -66,8 +66,8 @@ pubrepo()
 
 cd $dir
 #pubrepo distrib/crcutil
-#pubrepo distrib/fstest
-#pubrepo distrib/fuse
+#pubrepo distrib/posix-fstest
+pubrepo distrib/fuse
 #pubrepo distrib/iozone
 #pubrepo distrib/libs3
 #pubrepo distrib/spiobench
