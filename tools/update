@@ -59,6 +59,8 @@ getrepo()
 
 pubrepo()
 {
+	base=$1
+	[ $# -eq 2 ] && base=$2
 	(getrepo https://github.com/pscedu/${1//\//.}.git $1)
 }
 
@@ -70,7 +72,6 @@ pubrepo distrib/libs3
 pubrepo distrib/posix-fstest
 pubrepo distrib/spiobench
 pubrepo distrib/stumbleupon-tcollector
-#pubrepo distrib/zfs-fuse
 pubrepo fio
 pubrepo idxutils
 pubrepo psync
@@ -78,6 +79,7 @@ pubrepo sft
 #pubrepo slash2
 pubrepo src-upd
 pubrepo xopctl
+pubrepo zfs-fuse zfs
 
 for i in $dir/inf/*/update.sh; do
 	[ -e $i ] && . $i
