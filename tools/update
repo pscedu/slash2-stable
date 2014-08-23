@@ -56,7 +56,8 @@ getrepo()
 			mkdir -p $base/$(dirname $i)
 			mv -f $base.svnold/$i $base/$i
 		done
-		find $base.svnold -type d -depth -exec rmdir {} \;
+		find $base.svnold -type l -exec rm {} \;
+		find $base.svnold -depth -type d -print -exec rmdir {} \;
 	fi
 }
 
