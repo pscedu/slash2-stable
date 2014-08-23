@@ -52,8 +52,11 @@ getrepo()
 
 		echorun git clone $url $base
 
-		mv $base.svnold/* $base/ || true
-		rmdir $base.svnold
+		for i in $(cd $base.svnold && find . -type f); do
+			mkdir -p $base/$(dirname $i)
+			mv -f $base.svnold/$i $base/$i
+		done
+		find $base.svnold -type d -depth -exec rmdir {} \;
 	fi
 }
 
@@ -61,7 +64,7 @@ pubrepo()
 {
 	base=$1
 	[ $# -eq 2 ] && base=$2
-	(getrepo https://github.com/pscedu/${1//\//.}.git $1)
+	(getrepo https://github.com/pscedu/${1//\//.}.git $base)
 }
 
 cd $dir
