@@ -27,13 +27,13 @@
 #include <strings.h>
 #include <unistd.h>
 
-#include "pfl/cdefs.h"
-#include "pfl/pfl.h"
-#include "pfl/dynarray.h"
 #include "pfl/alloc.h"
+#include "pfl/cdefs.h"
+#include "pfl/dynarray.h"
 #include "pfl/fmtstr.h"
 #include "pfl/log.h"
 #include "pfl/odtable.h"
+#include "pfl/pfl.h"
 
 struct psc_dynarray myReceipts = DYNARRAY_INIT;
 const char *progname;
