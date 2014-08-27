@@ -27,14 +27,14 @@
 #include <string.h>
 #include <unistd.h>
 
-#include "pfl/cdefs.h"
-#include "pfl/str.h"
-#include "pfl/types.h"
-#include "pfl/lockedlist.h"
 #include "pfl/alloc.h"
+#include "pfl/cdefs.h"
 #include "pfl/lock.h"
+#include "pfl/lockedlist.h"
 #include "pfl/log.h"
 #include "pfl/odtable.h"
+#include "pfl/str.h"
+#include "pfl/types.h"
 
 struct psc_lockedlist psc_odtables =
     PLL_INIT(&psc_odtables, struct odtable, odt_lentry);
@@ -198,63 +198,58 @@ int
 odtable_create(const char *fn, size_t nelems, size_t elemsz,
     int overwrite, int hflg)
 {
-	int rc = 0, flags = O_CREAT | O_EXCL | O_WRONLY;
-	struct odtable_entftr odtf;
-	struct odtable_hdr odth;
+	struct odtable_entftr odtf, *f = &odtf;
+	struct odtable_hdr odth, *h = &odth;
 	struct odtable odt;
-	size_t z;
+	int fd, rc = 0;
+	size_t i;
 
-	odth.odth_nelems = nelems;
-	odth.odth_elemsz = elemsz;
-	odth.odth_slotsz = elemsz + sizeof(struct odtable_entftr);
-	odth.odth_magic = ODTBL_MAGIC;
-	odth.odth_version = ODTBL_VERS;
-	odth.odth_options = hflg;
-	odth.odth_start = ODTBL_START;
+	h->odth_nelems = nelems;
+	h->odth_elemsz = elemsz;
+	h->odth_slotsz = elemsz + sizeof(struct odtable_entftr);
+	h->odth_magic = ODTBL_MAGIC;
+	h->odth_version = ODTBL_VERS;
+	h->odth_options = hflg;
+	h->odth_start = ODTBL_START;
+	odt.odt_hdr = h;
 
-	odtf.odtf_crc = 0;
-	odtf.odtf_inuse = ODTBL_FREE;
-	odtf.odtf_slotno = 0;
-	odtf.odtf_magic = ODTBL_MAGIC;
+	f->odtf_crc = 0;
+	f->odtf_inuse = ODTBL_FREE;
+	f->odtf_slotno = 0;
+	f->odtf_magic = ODTBL_MAGIC;
 
-	if (overwrite)
-		flags = O_CREAT | O_TRUNC | O_WRONLY;
-	else
-		flags = O_CREAT | O_EXCL | O_WRONLY;
-
-	odt.odt_hdr = &odth;
-
-	odt.odt_fd = open(fn, flags, 0600);
-	if (odt.odt_fd < 0) {
+	fd = open(fn, O_CREAT | O_WRONLY |
+	    (overwrite ? O_TRUNC : O_EXCL), 0600);
+	if (fd == -1) {
 		rc = -errno;
 		goto out;
 	}
 
-	if (pwrite(odt.odt_fd, &odth, sizeof(odth), 0) != sizeof(odth)) {
+	if (pwrite(fd, h, sizeof(*h), 0) != sizeof(*h)) {
 		rc = -errno;
 		goto out;
 	}
 
-	psclog_vdebug("odt.odt_hdr.odth_start=%"PRIx64,
-	    odt.odt_hdr->odth_start);
+	psclog_debug("start=%"PRIx64, h->odth_start);
 
 	/* initialize the table by writing the footers of all entries */
-	for (z = 0; z < nelems; z++) {
-		odtf.odtf_slotno = z;
+	for (i = 0; i < nelems; i++) {
+		f->odtf_slotno = i;
 
-		psclog_trace("elem=%zd offset=%zu size=%zu",
-		    z, odtable_getitem_foff(&odt, z), sizeof(odtf));
+		psclog_debug("elem=%zd offset=%zu size=%zu",
+		    i, odtable_getitem_foff(&odt, i), sizeof(*f));
 
-		if (pwrite(odt.odt_fd, &odtf, sizeof(odtf),
-		    odtable_getitem_foff(&odt, z) + elemsz) !=
-		    sizeof(odtf)) {
+		if (pwrite(fd, f, sizeof(*f),
+		    odtable_getitem_foff(&odt, i) + elemsz) !=
+		    sizeof(*f)) {
 			rc = -errno;
-			goto out;
+			break;
 		}
 	}
+
  out:
-	close(odt.odt_fd);
-	odt.odt_fd = -1;
+	if (fd != -1)
+		close(fd);
 	return (rc);
 }
 
