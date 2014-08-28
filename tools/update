@@ -68,8 +68,8 @@ pubrepo()
 	(getrepo https://github.com/pscedu/${1//\//.}.git $base)
 }
 
-#pubrepo distrib/crcutil
 pubrepo distrib/fuse
+pubrepo distrib/gcrcutil
 pubrepo distrib/iozone
 pubrepo distrib/libs3
 pubrepo distrib/posix-fstest
