@@ -22,14 +22,6 @@
 
 #include <stdint.h>
 
-/* Initialize a CRC accumulator */
-#define PSC_CRC32_INIT(crcp)	(*(crcp) = 0xffffffff)
-#define PSC_CRC64_INIT(crcp)	(*(crcp) = UINT64_C(0xffffffffffffffff))
-
-/* Finish a CRC calculation */
-#define PSC_CRC32_FIN(crcp)	(*(crcp) ^= 0xffffffff)
-#define PSC_CRC64_FIN(crcp)	(*(crcp) ^= UINT64_C(0xffffffffffffffff))
-
 /**
  * psc_crc64_calc - Compute a 64-bit CRC of some data.
  * @cp: pointer to an uninitialized CRC buffer.
@@ -38,9 +30,9 @@
  */
 #define psc_crc64_calc(cp, data, len)					\
 	do {								\
-		PSC_CRC64_INIT(cp);					\
-		psc_crc64_add(cp, data, len);				\
-		PSC_CRC64_FIN(cp);					\
+		psc_crc64_init(cp);					\
+		psc_crc64_add((cp), (data), (len));			\
+		psc_crc64_fini(cp);					\
 	} while (0)
 
 /**
@@ -51,15 +43,37 @@
  */
 #define psc_crc32_calc(cp, data, len)					\
 	do {								\
-		PSC_CRC32_INIT(cp);					\
-		psc_crc32_add(cp, data, len);				\
-		PSC_CRC32_FIN(cp);					\
+		psc_crc32_init(cp);					\
+		psc_crc32_add((cp), (data), (len));			\
+		psc_crc32_fini(cp);					\
 	} while (0)
 
-void	psc_crc32_add(uint32_t *, const void *, int);
-void	psc_crc64_add(uint64_t *, const void *, int);
+__BEGIN_DECLS
 
+void	psc_crc32_add(uint32_t *, const void *, int);
 int	psc_crc32_verify(uint32_t, const void *, int);
+
+void	psc_crc64_add(uint64_t *, const void *, int);
 int	psc_crc64_verify(uint64_t, const void *, int);
+
+#ifdef USE_GCRCUTIL
+
+void	psc_crc32_init(uint32_t *);
+void	psc_crc64_init(uint64_t *);
+
+void	psc_crc32_fini(uint32_t *);
+void	psc_crc64_fini(uint64_t *);
+
+#else
+
+#define psc_crc32_init(cp)	(*(cp) = 0xffffffff)
+#define psc_crc64_init(cp)	(*(cp) = UINT64_C(0xffffffffffffffff))
+
+#define psc_crc32_fini(cp)	(*(cp) ^= 0xffffffff)
+#define psc_crc64_fini(cp)	(*(cp) ^= UINT64_C(0xffffffffffffffff))
+
+#endif
+
+__END_DECLS
 
 #endif /* _PFL_CRC_H_ */
