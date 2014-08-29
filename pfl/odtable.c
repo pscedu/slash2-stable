@@ -100,7 +100,7 @@ odtable_putitem(struct odtable *odt, void *data, size_t len)
 	odtr->odtr_key = crc;
 	odtf->odtf_crc = crc;
 
-	psclog_info("slot=%zd elemcrc=%"PSCPRIxCRC64, todtr.odtr_elem,
+	psclog_diag("slot=%zd elemcrc=%"PSCPRIxCRC64, todtr.odtr_elem,
 	    crc);
 
 	odtable_sync(odt, todtr.odtr_elem);
@@ -155,7 +155,7 @@ odtable_replaceitem(struct odtable *odt, struct odtable_receipt *odtr,
 	odtr->odtr_key = crc;
 	odtf->odtf_crc = crc;
 
-	psclog_info("slot=%zd elemcrc=%"PSCPRIxCRC64, odtr->odtr_elem,
+	psclog_diag("slot=%zd elemcrc=%"PSCPRIxCRC64, odtr->odtr_elem,
 	    crc);
 
 	odtable_sync(odt, odtr->odtr_elem);
@@ -258,7 +258,7 @@ odtable_load(struct odtable **t, int oflg, const char *fn,
     const char *fmt, ...)
 {
 	struct odtable *odt = PSCALLOC(sizeof(struct odtable));
-	struct odtable_receipt todtr = {0, 0};
+	struct odtable_receipt todtr = { 0, 0 };
 	struct odtable_entftr *odtf;
 	struct odtable_hdr *odth;
 	int rc = 0, frc;
