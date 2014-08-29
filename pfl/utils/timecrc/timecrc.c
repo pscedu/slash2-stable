@@ -28,10 +28,10 @@
 #include <unistd.h>
 
 #include "pfl/cdefs.h"
-#include "pfl/types.h"
 #include "pfl/crc.h"
 #include "pfl/log.h"
 #include "pfl/time.h"
+#include "pfl/types.h"
 
 const char *progname;
 
@@ -72,7 +72,7 @@ main(int argc, char *argv[])
 	pad = snprintf(NULL, 0, "%"PSCPRIdOFFT, stb.st_size);
 
 	acsz = 0;
-	PSC_CRC64_INIT(&crc);
+	psc_crc64_init(&crc);
 	memset(&tm_total, 0, sizeof(tm_total));
 	memset(&tm_last, 0, sizeof(tm_last));
 	for (;;) {
@@ -94,13 +94,14 @@ main(int argc, char *argv[])
 		timersub(&tm1, &tm_last, &tmd);
 		if (tmd.tv_usec > 1000000 / 32) { /* 32 fps */
 			memcpy(&tm_last, &tm1, sizeof(tm_last));
-			printf("\r%*zd/%"PSCPRIdOFFT, pad, acsz, stb.st_size);
+			printf("\r%*zd/%"PSCPRIdOFFT, pad, acsz,
+			    stb.st_size);
 			fflush(stdout);
 		}
 	}
 	close(fd);
 
-	PSC_CRC64_FIN(&crc);
+	psc_crc64_fini(&crc);
 	printf("\rcrc %"PSCPRIxCRC64" size %"PSCPRIdOFFT" time %.3fs\n",
 	    crc, stb.st_size, tm_total.tv_sec + tm_total.tv_usec * 1e-6);
 	exit(0);

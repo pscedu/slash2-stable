@@ -27,19 +27,19 @@
 #include <string.h>
 #include <unistd.h>
 
-#include "pfl/dynarray.h"
-#include "pfl/fcntl.h"
-#include "pfl/str.h"
-#include "pfl/time.h"
-#include "pfl/types.h"
 #include "pfl/alloc.h"
 #include "pfl/atomic.h"
 #include "pfl/crc.h"
+#include "pfl/dynarray.h"
+#include "pfl/fcntl.h"
 #include "pfl/iostats.h"
 #include "pfl/journal.h"
 #include "pfl/lock.h"
 #include "pfl/pool.h"
+#include "pfl/str.h"
 #include "pfl/thread.h"
+#include "pfl/time.h"
+#include "pfl/types.h"
 #include "pfl/waitq.h"
 
 #include "zfs-fuse/zfs_slashlib.h"
@@ -235,7 +235,7 @@ pjournal_next_slot(struct psc_journal_xidhndl *xh)
 
 	/* Update the slot to be written by the next log entry */
 	psc_assert(pj->pj_nextwrite < pj->pj_total);
-	if ((++pj->pj_nextwrite) == pj->pj_total) {
+	if (++pj->pj_nextwrite == pj->pj_total) {
 		pj->pj_nextwrite = 0;
 		pj->pj_wraparound++;
 	}
@@ -451,11 +451,11 @@ pjournal_logwrite_internal(struct psc_journal *pj,
 	int rc, ntries;
 
 	/* calculate the CRC checksum, excluding the checksum field itself */
-	PSC_CRC64_INIT(&chksum);
+	psc_crc64_init(&chksum);
 	psc_crc64_add(&chksum, pje, offsetof(struct psc_journal_enthdr,
 	    pje_chksum));
 	psc_crc64_add(&chksum, pje->pje_data, pje->pje_len);
-	PSC_CRC64_FIN(&chksum);
+	psc_crc64_fini(&chksum);
 	pje->pje_chksum = chksum;
 
 	/* commit the log entry on disk before we can return */
@@ -606,11 +606,11 @@ pjournal_scan_slots(struct psc_journal *pj)
 				continue;
 			}
 
-			PSC_CRC64_INIT(&chksum);
+			psc_crc64_init(&chksum);
 			psc_crc64_add(&chksum, pje, offsetof(
 			    struct psc_journal_enthdr, pje_chksum));
 			psc_crc64_add(&chksum, pje->pje_data, pje->pje_len);
-			PSC_CRC64_FIN(&chksum);
+			psc_crc64_fini(&chksum);
 
 			if (pje->pje_chksum != chksum) {
 				psclog_warnx("journal %p: slot %d has "
@@ -749,9 +749,9 @@ pjournal_open(const char *fn)
 		goto error;
 	}
 
-	PSC_CRC64_INIT(&chksum);
+	psc_crc64_init(&chksum);
 	psc_crc64_add(&chksum, pjh, offsetof(struct psc_journal_hdr, pjh_chksum));
-	PSC_CRC64_FIN(&chksum);
+	psc_crc64_fini(&chksum);
 
 	if (pjh->pjh_chksum != chksum) {
 		psclog_errorx("journal header has an invalid checksum "
