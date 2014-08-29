@@ -128,7 +128,7 @@ void bzero();
 void clear_stats();
 int validate(char *, int , char );
 
-#define THISVERSION "        $Revision: 1.60 $"
+#define THISVERSION "        $Revision: 1.61 $"
 /*#define NULL 0*/
 
 char version[]=THISVERSION;
@@ -1374,11 +1374,9 @@ validate(char *buffer, int size, char value)
 {
 	register int i;
 	register char *cp;
-	register int size1;
 	register char v1;
 	v1=value;
 	cp = buffer;
-	size1=size;
 	for(i=0;i<size;i++)
 	{
 		if(*cp++ != v1)

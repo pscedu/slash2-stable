@@ -1,5 +1,5 @@
 #
-# Version $Revision: 1.143 $
+# Version $Revision: 1.144 $
 #
 # The makefile for building all versions of iozone for all supported
 # platforms
@@ -655,7 +655,7 @@ pit_server_solaris10gcc-64.o:	pit_server.c
 	@echo ""
 	@echo "Building the pit_server"
 	@echo ""
-	$(CC) -c  $(CFLAGS) $(S10GCCFLAGS) pit_server.c  -o pit_server_solaris10gcc-64.o 
+	$(GCC) -c  $(CFLAGS) $(S10GCCFLAGS) pit_server.c  -o pit_server_solaris10gcc-64.o 
 
 pit_server.o:	pit_server.c
 	@echo ""

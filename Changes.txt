@@ -2478,3 +2478,37 @@ Revision 3.420
 =============================================================================
 Add new contributor to list. 
 =============================================================================
+Revision 3.421
+=============================================================================
+Bug fix from Alp Aker:
+Patch for a minor issue in IOzone's signal_handler() function:
+the no_unlink option is respected only for the first member of the dummyfile[]
+array; the rest of the dummy files are unconditionally deleted, whether or not
+the '+w' flag has been passed to the program. 
+=============================================================================
+Revision 3.422
+=============================================================================
+Code cleanup. No functional changes.
+=============================================================================
+Revision 3.423
+=============================================================================
+Improve consistency of Kbytes instead of kbytes, KBytes, kBytes... 
+=============================================================================
+Revision 3.424
+=============================================================================
+Fix for 64 bit and touch_dedup.
+=============================================================================
+Revision 3.425
+=============================================================================
+Fix for 64 bit and gen_new_buf
+=============================================================================
+Revision 3.427
+Adjust formatting so fields don't run together.
+=============================================================================
+Revision 3.428
+Adjust formatting so fields don't run together.
+=============================================================================
+Revision 3.429
+Add two more characters to array my_port_num.
+=============================================================================
+

@@ -60,7 +60,7 @@
 
 
 /* The version number */
-#define THISVERSION "        Version $Revision: 3.420 $"
+#define THISVERSION "        Version $Revision: 3.429 $"
 
 #if defined(linux)
   #define _GNU_SOURCE
@@ -127,15 +127,15 @@ unsigned long long genrand64_int64(void);
 #include <fcntl.h>
 
 char *help[] = {
-"    Usage: iozone [-s filesize_Kb] [-r record_size_Kb] [-f [path]filename] [-h]",
+"    Usage: iozone [-s filesize_kB] [-r record_size_kB] [-f [path]filename] [-h]",
 "                  [-i test] [-E] [-p] [-a] [-A] [-z] [-Z] [-m] [-M] [-t children]",
 "                  [-l min_number_procs] [-u max_number_procs] [-v] [-R] [-x] [-o]",
 "                  [-d microseconds] [-F path1 path2...] [-V pattern] [-j stride]",
 "                  [-T] [-C] [-B] [-D] [-G] [-I] [-H depth] [-k depth] [-U mount_point]",
-"                  [-S cache_size] [-O] [-L cacheline_size] [-K] [-g maxfilesize_Kb]",
-"                  [-n minfilesize_Kb] [-N] [-Q] [-P start_cpu] [-e] [-c] [-b Excel.xls]",
+"                  [-S cache_size] [-O] [-L cacheline_size] [-K] [-g maxfilesize_kB]",
+"                  [-n minfilesize_kB] [-N] [-Q] [-P start_cpu] [-e] [-c] [-b Excel.xls]",
 "                  [-J milliseconds] [-X write_telemetry_filename] [-w] [-W]",
-"                  [-Y read_telemetry_filename] [-y minrecsize_Kb] [-q maxrecsize_Kb]",
+"                  [-Y read_telemetry_filename] [-y minrecsize_kB] [-q maxrecsize_kB]",
 "                  [-+u] [-+m cluster_filename] [-+d] [-+x multiplier] [-+p # ]",
 "                  [-+r] [-+t] [-+X] [-+Z] [-+w percent dedupable] [-+y percent_interior_dedup]",
 "                  [-+C percent_dedup_within]",
@@ -152,7 +152,7 @@ char *help[] = {
 "           -E  Run extension tests",
 "           -f filename  to use",
 "           -F filenames  for each process/thread in throughput test",
-"           -g #  Set maximum file size (in Kbytes) for auto mode (or #m or #g)",
+"           -g #  Set maximum file size (in kBytes) for auto mode (or #m or #g)",
 "           -G  Use msync(MS_SYNC) on mmap files",
 "           -h  help",
 "           -H #  Use POSIX async I/O with # async operations",
@@ -169,24 +169,24 @@ char *help[] = {
 "           -L #  Set processor cache line size to value (in bytes)",
 "           -m  Use multiple buffers",
 "           -M  Report uname -a output",
-"           -n #  Set minimum file size (in Kbytes) for auto mode (or #m or #g)",
+"           -n #  Set minimum file size (in kBytes) for auto mode (or #m or #g)",
 "           -N  Report results in microseconds per operation",
 "           -o  Writes are synch (O_SYNC)",
 "           -O  Give results in ops/sec.",
 "           -p  Purge on",
 "           -P #  Bind processes/threads to processors, starting with this cpu",
-"           -q #  Set maximum record size (in Kbytes) for auto mode (or #m or #g)",
+"           -q #  Set maximum record size (in kBytes) for auto mode (or #m or #g)",
 "           -Q  Create offset/latency files",
 "           -r #  record size in Kb",
-"              or -r #k .. size in Kb",
-"              or -r #m .. size in Mb",
-"              or -r #g .. size in Gb",
+"              or -r #k .. size in kB",
+"              or -r #m .. size in MB",
+"              or -r #g .. size in GB",
 "           -R  Generate Excel report",
 "           -s #  file size in Kb",
-"              or -s #k .. size in Kb",
-"              or -s #m .. size in Mb",
-"              or -s #g .. size in Gb",
-"           -S #  Set processor cache size to value (in Kbytes)",
+"              or -s #k .. size in kB",
+"              or -s #m .. size in MB",
+"              or -s #g .. size in GB",
+"           -S #  Set processor cache size to value (in kBytes)",
 "           -t #  Number of threads or processes to use in throughput test",
 "           -T  Use POSIX pthreads for throughput tests",
 "           -u #  Upper limit on number of processes to run",
@@ -197,7 +197,7 @@ char *help[] = {
 "           -W  Lock file when reading or writing",
 "           -x  Turn off stone-walling",
 "           -X filename  Write telemetry file. Contains lines with (offset reclen compute_time) in ascii",
-"           -y #  Set minimum record size (in Kbytes) for auto mode (or #m or #g)",
+"           -y #  Set minimum record size (in kBytes) for auto mode (or #m or #g)",
 "           -Y filename  Read  telemetry file. Contains lines with (offset reclen compute_time) in ascii",
 "           -z  Used in conjunction with -a to test all possible record sizes",
 "           -Z  Enable mixing of mmap I/O and file I/O",
@@ -851,21 +851,18 @@ struct master_neutral_command {
 #ifdef HAVE_PREAD
 #include <sys/times.h>
 #if defined(HAVE_PREAD) && defined(HAVE_PREADV)
-#define CONTROL_STRING1 "%16ld%8ld%8ld%8ld%8ld%8ld%8ld%8ld%8ld %8ld %8ld%8ld%8ld%9ld%9ld%8ld%10ld%9ld%10ld%9ld%10ld%10ld%9ld\n"
-#define CONTROL_STRING2 "%16s%8s%8s%8s%8s%10s%8s%8s%8s %8s %8s%9s%9s%8s%9s%8s%9s%7s%10s%10s%10s%9s%9s\n"
-#define CONTROL_STRING3 "%16s%8s%8s%8s%8s%10s%8s%8s%8s %8s %8s%9s%9s%8s%9s\n"
-#define CONTROL_STRING4 "%16s%8s%8s%8s%8s%10s\n"
+#define CONTROL_STRING2 "%16s%8s%9s%9s%8s%10s%8s %9s%9s %9s %9s%9s%9s%9s%9s%8s%9s%8s%10s%10s%10s%9s%9s\n"
+#define CONTROL_STRING3 "%16s%8s%9s%9s%8s%10s%8s %9s%9s %9s %9s%9s%9s%9s%9s\n"
+#define CONTROL_STRING4 "%16s%8s%9s%9s%8s%10s\n"
 #else
-#define CONTROL_STRING1 "%16ld%8ld%8ld%8ld%8ld%8ld%8ld%8ld%8ld %8ld %8ld%8ld%8ld%9ld%9ld%8ld%10ld%9ld%10ld\n"
-#define CONTROL_STRING2 "%16s%8s%8s%8s%8s%10s%8s%8s%8s %8s %8s%9s%9s%8s%9s%8s%9s%7s%10s\n"
-#define CONTROL_STRING3 "%16s%8s%8s%8s%8s%10s%8s%8s%8s %8s %8s\n"
-#define CONTROL_STRING4 "%16s%8s%8s%8s%8s%10s\n"
+#define CONTROL_STRING2 "%16s%8s%9s%9s%8s%10s%8s %9s%9s %9s %9s%9s%9s%9s%9s%8s%9s%8s%10s\n"
+#define CONTROL_STRING3 "%16s%8s%9s%9s%8s%10s%8s %9s%9s %9s %9s\n"
+#define CONTROL_STRING4 "%16s%8s%9s%9s%8s%10s\n"
 #endif
 #else
-#define CONTROL_STRING1 "%16ld%8ld%8ld%8ld%8ld%8ld%8ld%8ld%8ld %8ld %8ld%8ld%8ld%9ld%9ld\n"
-#define CONTROL_STRING2 "%16s%8s%8s%8s%8s%10s%8s%8s%8s %8s %8s%9s%9s%8s%9s\n"
-#define CONTROL_STRING3 "%16s%8s%8s%8s%8s%10s%8s%8s%8s %8s %8s%9s%9s%8s%9s\n"
-#define CONTROL_STRING4 "%16s%8s%8s%8s%8s%10s\n"
+#define CONTROL_STRING2 "%16s%8s%9s%9s%8s%10s%8s %9s%9s %9s %9s%9s%9s%9s%9s\n"
+#define CONTROL_STRING3 "%16s%8s%9s%9s%8s%10s%8s %9s%9s %9s %9s%9s%9s%9s%9s\n"
+#define CONTROL_STRING4 "%16s%8s%9s%9s%8s%10s\n"
 #endif
 #endif
 
@@ -873,21 +870,18 @@ struct master_neutral_command {
 #ifdef HAVE_PREAD
 #include <sys/times.h>
 #if defined(HAVE_PREAD) && defined(HAVE_PREADV)
-#define CONTROL_STRING1 "%16lld%8ld%8ld%8ld%8ld%8ld%8ld%8ld%8ld %8ld %8ld%8ld%8ld%9ld%9ld%8ld%10ld%9ld%10ld%9ld%10ld%10ld%9ld\n"
-#define CONTROL_STRING2 "%16s%8s%8s%8s%8s%10s%8s%8s%8s %8s %8s%9s%9s%8s%9s%8s%9s%7s%10s%10s%10s%9s%9s\n"
-#define CONTROL_STRING3 "%16s%8s%8s%8s%8s%10s%8s%8s%8s %8s %8s%9s%9s%8s%9s\n"
-#define CONTROL_STRING4 "%16s%8s%8s%8s%8s%10s\n"
+#define CONTROL_STRING2 "%16s%8s%9s%9s%8s%10s%8s %9s%9s %9s %9s%9s%9s%9s%9s%8s%9s%8s%10s%10s%10s%9s%9s\n"
+#define CONTROL_STRING3 "%16s%8s%9s%9s%8s%10s%8s %9s%9s %9s %9s%9s%9s%9s%9s\n"
+#define CONTROL_STRING4 "%16s%8s%9s%9s%8s%10s\n"
 #else
-#define CONTROL_STRING1 "%16lld%8ld%8ld%8ld%8ld%8ld%8ld%8ld%8ld %8ld %8ld%8ld%8ld%9ld%9ld%8ld%10ld%9ld%10ld\n"
-#define CONTROL_STRING2 "%16s%8s%8s%8s%8s%10s%8s%8s%8s %8s %8s%9s%9s%8s%9s%8s%9s%7s%10s\n"
-#define CONTROL_STRING3 "%16s%8s%8s%8s%8s%10s%8s%8s%8s %8s %8s%9s%9s%8s%9s\n"
-#define CONTROL_STRING4 "%16s%8s%8s%8s%8s%10s\n"
+#define CONTROL_STRING2 "%16s%8s%9s%9s%8s%10s%8s %9s%9s %9s %9s%9s%9s%9s%9s%8s%9s%8s%10s\n"
+#define CONTROL_STRING3 "%16s%8s%9s%9s%8s%10s%8s %9s%9s %9s %9s%9s%9s%9s%9s\n"
+#define CONTROL_STRING4 "%16s%8s%9s%9s%8s%10s\n"
 #endif
 #else
-#define CONTROL_STRING1 "%16lld%8ld%8ld%8ld%8ld%8ld%8ld%8ld %8ld %8ld%8ld%8ld%8ld%9ld%9ld\n"
-#define CONTROL_STRING2 "%16s%8s%8s%8s%8s%10s%8s%8s%8s %8s %8s%9s%9s%8s%9s\n"
-#define CONTROL_STRING3 "%16s%8s%8s%8s%8s%10s%8s%8s%8s %8s %8s%9s%9s%8s%9s\n"
-#define CONTROL_STRING4 "%16s%8s%8s%8s%8s%10s\n"
+#define CONTROL_STRING2 "%16s%8s%9s%9s%8s%10s%8s %9s%9s %9s %9s%9s%9s%8s%9s\n"
+#define CONTROL_STRING3 "%16s%8s%9s%9s%8s%10s%8s %9s%9s %9s %9s%9s%9s%9s%9s\n"
+#define CONTROL_STRING4 "%16s%8s%9s%9s%8s%10s\n"
 #endif
 #endif
 
@@ -898,7 +892,7 @@ struct master_neutral_command {
 
 /* Start with 64 kbyte minimum file size by default */
 #define KILOBYTES_START       64
-/* Default maximum file size. This is 512 Mbytes */
+/* Default maximum file size. This is 512 MBytes */
 #define KILOBYTES_END (1024*512)
 /* Default starting record size */
 #define RECLEN_START  4096
@@ -1783,7 +1777,7 @@ char **argv;
 #ifdef NO_PRINT_LLD
 			sprintf(splash[splash_line++],"\tPOSIX Async I/O (no bcopy). Depth %ld \n",depth);
 #else
-			sprintf(splash[splash_line++],"\tPOSIX Async I/O (no bcopy). Depth %lld \n",depth);
+			sprintf(splash[splash_line++],"\tPOSIX Async I/O (no bcopy). Depth %lld \n",(long long)depth);
 #endif
 			no_copy_flag=1;
 			async_flag++;
@@ -1813,7 +1807,7 @@ char **argv;
 #ifdef NO_PRINT_LLD
 			sprintf(splash[splash_line++],"\tPOSIX async I/O (with bcopy). Depth %ld\n",depth);
 #else
-			sprintf(splash[splash_line++],"\tPOSIX async I/O (with bcopy). Depth %lld\n",depth);
+			sprintf(splash[splash_line++],"\tPOSIX async I/O (with bcopy). Depth %lld\n",(long long)depth);
 #endif
 			async_flag++;
 			break;
@@ -1924,9 +1918,9 @@ char **argv;
 			min_file_size = (off64_t)s_range[0];   /* Make visable globally */
 
 #ifdef NO_PRINT_LLD
-	    		sprintf(splash[splash_line++],"\tFile size set to %ld KB\n",kilobytes64);
+	    		sprintf(splash[splash_line++],"\tFile size set to %ld kB\n",kilobytes64);
 #else
-	    		sprintf(splash[splash_line++],"\tFile size set to %lld KB\n",kilobytes64);
+	    		sprintf(splash[splash_line++],"\tFile size set to %lld kB\n",kilobytes64);
 #endif
 			sflag++;
 			break;
@@ -2046,7 +2040,7 @@ char **argv;
 	    		sprintf(splash[splash_line++],"\tSYNC Mode. \n");
 			oflag++;
 			break;
-		case 'O':	/* Report in Ops/sec instead of KB/sec */
+		case 'O':	/* Report in Ops/sec instead of kB/sec */
 	    		sprintf(splash[splash_line++],"\tOPS Mode. Output is in operations per second.\n");
 			OPS_flag++;
 			break;
@@ -2134,16 +2128,16 @@ char **argv;
 			max_rec_size = (off64_t)r_range[r_count-1];   /* Make visable globally */
 			min_rec_size = (off64_t)r_range[0];   /* Make visable globally */
 #ifdef NO_PRINT_LLD
-	    		sprintf(splash[splash_line++],"\tRecord Size %ld KB\n",reclen/1024);
+	    		sprintf(splash[splash_line++],"\tRecord Size %ld kB\n",reclen/1024);
 #else
-	    		sprintf(splash[splash_line++],"\tRecord Size %lld KB\n",reclen/1024);
+	    		sprintf(splash[splash_line++],"\tRecord Size %lld kB\n",reclen/1024);
 #endif
 			if(max_rec_size > MAXBUFFERSIZE) {
 #ifdef NO_PRINT_LLD
-				printf("Error: maximum record size %ld KB is greater than maximum buffer size %ld KB\n ",
+				printf("Error: maximum record size %ld kB is greater than maximum buffer size %ld kB\n ",
 					max_rec_size/1024, MAXBUFFERSIZE/1024);
 #else
-				printf("Error: maximum record size %lld KB is greater than maximum buffer size %lld KB\n ",
+				printf("Error: maximum record size %lld kB is greater than maximum buffer size %lld kB\n ",
 					(long long)(max_rec_size/1024LL), (long long)MAXBUFFERSIZE/1024LL);
 #endif
 				exit(23);
@@ -2340,9 +2334,9 @@ char **argv;
 			if(min_rec_size <= 0)
 				min_rec_size=(long long)RECLEN_START;
 #ifdef NO_PRINT_LLD
-	    		sprintf(splash[splash_line++],"\tUsing Minimum Record Size %ld KB\n", min_rec_size/1024);
+	    		sprintf(splash[splash_line++],"\tUsing Minimum Record Size %ld kB\n", min_rec_size/1024);
 #else
-	    		sprintf(splash[splash_line++],"\tUsing Minimum Record Size %lld KB\n", min_rec_size/1024);
+	    		sprintf(splash[splash_line++],"\tUsing Minimum Record Size %lld kB\n", min_rec_size/1024);
 #endif
 			break;
 		case 'q':		/* Set max record size for auto mode */
@@ -2364,18 +2358,18 @@ char **argv;
 				min_rec_size=(long long)RECLEN_END;
 			if(max_rec_size > MAXBUFFERSIZE) {
 #ifdef NO_PRINT_LLD
-				printf("Error: maximum record size %ld KB is greater than maximum buffer size %ld KB\n ",
+				printf("Error: maximum record size %ld kB is greater than maximum buffer size %ld kB\n ",
 					max_rec_size/1024, MAXBUFFERSIZE/1024);
 #else
-				printf("Error: maximum record size %lld KB is greater than maximum buffer size %lld KB\n ",
+				printf("Error: maximum record size %lld kB is greater than maximum buffer size %lld kB\n ",
 					(long long)(max_rec_size/1024LL), (long long)MAXBUFFERSIZE/1024LL);
 #endif
 				exit(23);
 			}
 #ifdef NO_PRINT_LLD
-			sprintf(splash[splash_line++],"\tUsing Maximum Record Size %ld KB\n", max_rec_size/1024);
+			sprintf(splash[splash_line++],"\tUsing Maximum Record Size %ld kB\n", max_rec_size/1024);
 #else
-			sprintf(splash[splash_line++],"\tUsing Maximum Record Size %lld KB\n", max_rec_size/1024);
+			sprintf(splash[splash_line++],"\tUsing Maximum Record Size %lld kB\n", max_rec_size/1024);
 #endif
 			break;
 
@@ -2651,7 +2645,7 @@ char **argv;
 						dedup_interior = 0;
 					if(dedup_interior >100)
 						dedup_interior = 100;
-					sprintf(splash[splash_line++],"\tDedupe within & across %d percent.\n",dedup_interior);
+					sprintf(splash[splash_line++],"\tDedup within & across %d percent.\n",dedup_interior);
 					break;
 				case 'C':  /* Argument is the percent of dedupe within & !across */
 					   /* Sets size of dedup region within and !across files */
@@ -2666,7 +2660,7 @@ char **argv;
 						dedup_compress = 0;
 					if(dedup_compress >100)
 						dedup_compress = 100;
-					sprintf(splash[splash_line++],"\tDedupe within %d percent.\n",dedup_compress);
+					sprintf(splash[splash_line++],"\tDedup within %d percent.\n",dedup_compress);
 					break;
 				case 'S':  /* Argument is the seed for dedup */
 					subarg=argv[optind++];
@@ -2783,14 +2777,14 @@ char **argv;
 	
 	if(!OPS_flag && !MS_flag)
 	{
-		if(!silent) printf("\tOutput is in Kbytes/sec\n");
+		if(!silent) printf("\tOutput is in kBytes/sec\n");
 	}
 	if (min_rec_size > max_rec_size) {
 #ifdef NO_PRINT_LLD
-		printf("Error: minimum record size %ld KB is greater than maximum record size %ld KB\n ",
+		printf("Error: minimum record size %ld kB is greater than maximum record size %ld kB\n ",
 			min_rec_size/1024, max_rec_size/1024);
 #else
-		printf("Error: minimum record size %lld KB is greater than maximum record size %lld KB\n ",
+		printf("Error: minimum record size %lld kB is greater than maximum record size %lld kB\n ",
 			min_rec_size/1024, max_rec_size/1024);
 #endif
 		exit(23);
@@ -3025,11 +3019,11 @@ char **argv;
 	init_record_sizes(min_rec_size,max_rec_size);
     	if(!silent) printf("\tTime Resolution = %1.6f seconds.\n",time_res);
 #ifdef NO_PRINT_LLD
-    	if(!silent) printf("\tProcessor cache size set to %ld Kbytes.\n",cache_size/1024);
+    	if(!silent) printf("\tProcessor cache size set to %ld kBytes.\n",cache_size/1024);
     	if(!silent) printf("\tProcessor cache line size set to %ld bytes.\n",cache_line_size);
 	if(!silent) printf("\tFile stride size set to %ld * record size.\n",stride);
 #else
-    	if(!silent) printf("\tProcessor cache size set to %ld Kbytes.\n",cache_size/1024);
+    	if(!silent) printf("\tProcessor cache size set to %ld kBytes.\n",cache_size/1024);
     	if(!silent) printf("\tProcessor cache line size set to %ld bytes.\n",cache_line_size);
 	if(!silent) printf("\tFile stride size set to %lld * record size.\n",stride);
 #endif
@@ -3158,7 +3152,7 @@ out:
 	if(res_prob)
 	{
 		printf("Timer resolution is poor. Some small transfers may have \n");
-		printf("reported inaccurate results. Sizes %ld Kbytes and below.\n",
+		printf("reported inaccurate results. Sizes %ld kBytes and below.\n",
 			(long)(rec_prob/(long long)1024));
 	}
 
@@ -3381,11 +3375,11 @@ void signal_handler()
 		{
 		   if(check_filename(filename))
     			unlink(filename);	/* delete the file */
-		}
-		for(i=1;i<num_child;i++)
-		{
-		   if(check_filename(dummyfile[i]))
+		   for(i=1;i<num_child;i++)
+		   {
+		      if(check_filename(dummyfile[i]))
     			unlink(dummyfile[i]);	/* delete the file */
+		   }
 		}
 		if (!no_unlink)
 		{
@@ -3405,7 +3399,7 @@ void signal_handler()
 		if(res_prob)
 		{
 			printf("Timer resolution is poor. Some small transfers may have \n");
-			printf("reported inaccurate results. Sizes %ld Kbytes and below.\n",
+			printf("reported inaccurate results. Sizes %ld kBytes and below.\n",
 				(long)rec_prob/1024);
 		}
 		if(trflag && !use_thread)
@@ -3462,10 +3456,10 @@ void auto_test()
 
         if (min_rec_size > (long long)(min_file_size*1024)) {
 #ifdef NO_PRINT_LLD
-            printf("Error: record length %ld is greater than filesize %ld KB\n ",
+            printf("Error: record length %ld is greater than filesize %ld kB\n ",
                                 min_rec_size,min_file_size);
 #else
-            printf("Error: record length %lld is greater than filesize %lld KB\n ",
+            printf("Error: record length %lld is greater than filesize %lld kB\n ",
                                 min_rec_size,min_file_size);
 #endif
                 exit(23);
@@ -3588,7 +3582,7 @@ throughput_test()
 	if(OPS_flag)
 		unit="ops";
 	else
-		unit="KB";
+		unit="kB";
 
 	if(!haveshm)
 	{
@@ -3638,20 +3632,20 @@ throughput_test()
 	if(w_traj_flag)
 	{
 #ifdef NO_PRINT_LLD
-	if(!silent) printf("\tEach %s writes a %ld Kbyte file in telemetry controlled records\n",
+	if(!silent) printf("\tEach %s writes a %ld kByte file in telemetry controlled records\n",
 		port,kilobytes64);
 #else
-	if(!silent) printf("\tEach %s writes a %lld Kbyte file in telemetry controlled records\n",
+	if(!silent) printf("\tEach %s writes a %lld kByte file in telemetry controlled records\n",
 		port,kilobytes64);
 #endif
 	}
 	else
 	{
 #ifdef NO_PRINT_LLD
-	if(!silent) printf("\tEach %s writes a %ld Kbyte file in %ld Kbyte records\n",
+	if(!silent) printf("\tEach %s writes a %ld kByte file in %ld kbyte records\n",
 		port,kilobytes64,reclen/1024);
 #else
-	if(!silent) printf("\tEach %s writes a %lld Kbyte file in %lld Kbyte records\n",
+	if(!silent) printf("\tEach %s writes a %lld kByte file in %lld kByte records\n",
 		port,kilobytes64,reclen/1024);
 #endif
 	}
@@ -7076,12 +7070,12 @@ char sverify;
 	printf("Error in file: Found ?%lx? Expecting ?%lx? addr %lx\n",*where, (long long)((pattern_buf<<32)|pattern_buf),where);
 	printf("Error in file: Position %ld \n",file_position);
 	printf("Record # %ld Record size %ld kb \n",recnum,recsize/1024);
-	printf("where %8.8llx loop %ld\n",where,i);
+	printf("where %8.8lx loop %ld\n",where,i);
 #else
 	printf("Error in file: Found ?%llx? Expecting ?%llx? addr %lx\n",*where, (long long)((pattern_buf<<32)|pattern_buf),((long)where));
 	printf("Error in file: Position %lld \n",file_position);
 	printf("Record # %lld Record size %lld kb \n",recnum,recsize/1024);
-	printf("where %8.8lx loop %lld\n",(long)where,(long long)i);
+	printf("where %px loop %lld\n",where,(long long)i);
 #endif
 		   return(1);
 	      }
@@ -7359,14 +7353,14 @@ long long *data2;
 			printf("Unable to open wol.dat\n");
 			exit(40);
 		}
-		fprintf(wqfd,"Offset in Kbytes   Latency in microseconds  Transfer size in bytes\n");
+		fprintf(wqfd,"Offset in kBytes   Latency in microseconds  Transfer size in bytes\n");
 		rwqfd=fopen("rwol.dat","a");
 		if(rwqfd==0)
 		{
 			printf("Unable to open rwol.dat\n");
 			exit(41);
 		}
-		fprintf(rwqfd,"Offset in Kbytes   Latency in microseconds  Transfer size in bytes\n");
+		fprintf(rwqfd,"Offset in kBytes   Latency in microseconds  Transfer size in bytes\n");
 	}
 	fd = 0;
 	if(oflag)
@@ -7888,12 +7882,12 @@ long long *data2;
 		store_times(walltime[1], cputime[1]);
 	store_value((off64_t)writerate[1]);
 #ifdef NO_PRINT_LLD
-	if(!silent) printf("%8ld",writerate[0]);
-	if(!silent) printf("%8ld",writerate[1]);
+	if(!silent) printf("%9ld",writerate[0]);
+	if(!silent) printf("%9ld",writerate[1]);
 	if(!silent) fflush(stdout);
 #else
-	if(!silent) printf("%8lld",writerate[0]);
-	if(!silent) printf("%8lld",writerate[1]);
+	if(!silent) printf("%9lld",writerate[0]);
+	if(!silent) printf("%9lld",writerate[1]);
 	if(!silent) fflush(stdout);
 #endif
 }
@@ -8315,11 +8309,11 @@ long long *data1,*data2;
 		store_times(walltime[1], cputime[1]);
 	store_value((off64_t)readrate[1]);
 #ifdef NO_PRINT_LLD
-	if(!silent) printf("%8ld",readrate[0]);
+	if(!silent) printf("%9ld",readrate[0]);
 	if(!silent) printf("%9ld",readrate[1]);
 	if(!silent) fflush(stdout);
 #else
-	if(!silent) printf("%8lld",readrate[0]);
+	if(!silent) printf("%9lld",readrate[0]);
 	if(!silent) printf("%9lld",readrate[1]);
 	if(!silent) fflush(stdout);
 #endif
@@ -8411,14 +8405,14 @@ long long *data1,*data2;
 			printf("Unable to open rol.dat\n");
 			exit(56);
 		}
-		fprintf(rqfd,"Offset in Kbytes   Latency in microseconds  Transfer size in bytes\n");
+		fprintf(rqfd,"Offset in kBytes   Latency in microseconds  Transfer size in bytes\n");
 		rrqfd=fopen("rrol.dat","a");
 		if(rrqfd==0)
 		{
 			printf("Unable to open rrol.dat\n");
 			exit(57);
 		}
-		fprintf(rrqfd,"Offset in Kbytes   Latency in microseconds  Transfer size in bytes\n");
+		fprintf(rrqfd,"Offset in kBytes   Latency in microseconds  Transfer size in bytes\n");
 	}
 	/* 
 	 * begin real testing
@@ -9364,12 +9358,12 @@ long long *data1, *data2;
 		store_times(walltime[1], cputime[1]);
 	store_value((off64_t)randreadrate[1]);
 #ifdef NO_PRINT_LLD
-	if(!silent) printf("%8ld",randreadrate[0]);
-	if(!silent) printf("%8ld",randreadrate[1]);
+	if(!silent) printf("%9ld",randreadrate[0]);
+	if(!silent) printf("%9ld",randreadrate[1]);
 	if(!silent) fflush(stdout);
 #else
-	if(!silent) printf("%8lld",randreadrate[0]);
-	if(!silent) printf("%8lld",randreadrate[1]);
+	if(!silent) printf("%9lld",randreadrate[0]);
+	if(!silent) printf("%9lld",randreadrate[1]);
 	if(!silent) fflush(stdout);
 #endif
 	if(recnum)
@@ -9665,9 +9659,9 @@ long long *data1,*data2;
 		store_times(walltime[0], cputime[0]);
 	store_value((off64_t)revreadrate[0]);
 #ifdef NO_PRINT_LLD
-	if(!silent) printf("%8ld",revreadrate[0]);
+	if(!silent) printf("%9ld",revreadrate[0]);
 #else
-	if(!silent) printf("%8lld",revreadrate[0]);
+	if(!silent) printf("%9lld",revreadrate[0]);
 #endif
 	if(!silent) fflush(stdout);
 }
@@ -9984,9 +9978,9 @@ long long *data1,*data2;
 		store_times(walltime, cputime);
 	store_value((off64_t)writeinrate);
 #ifdef NO_PRINT_LLD
-	if(!silent) printf(" %8ld",writeinrate);
+	if(!silent) printf(" %9ld",writeinrate);
 #else
-	if(!silent) printf(" %8lld",writeinrate);
+	if(!silent) printf(" %9lld",writeinrate);
 #endif
 	if(!silent) fflush(stdout);
 	if(restf)
@@ -10307,9 +10301,9 @@ long long *data1, *data2;
 		store_times(walltime, cputime);
 	store_value((off64_t)strideinrate);
 #ifdef NO_PRINT_LLD
-	if(!silent) printf(" %8ld",strideinrate);
+	if(!silent) printf(" %9ld",strideinrate);
 #else
-	if(!silent) printf(" %8lld",strideinrate);
+	if(!silent) printf(" %9lld",strideinrate);
 #endif
 	if(!silent) fflush(stdout);
 	if(restf)
@@ -10589,7 +10583,7 @@ long long *data1,*data2;
 	if(!silent) printf("%9ld",pwriterate[1]);
 	if(!silent) fflush(stdout);
 #else
-	if(!silent) printf("%8lld",pwriterate[0]);
+	if(!silent) printf("%9lld",pwriterate[0]);
 	if(!silent) printf("%9lld",pwriterate[1]);
 	if(!silent) fflush(stdout);
 #endif
@@ -11469,7 +11463,7 @@ void print_header()
 #endif
 		);
     	if(!silent) printf(CONTROL_STRING2,
-		"KB", 
+		"kB", 
 		"reclen",
 		"write",
 		"rewrite",
@@ -11508,7 +11502,7 @@ void print_header()
 		" "				/*kcollins 8-21-96*/
 		);				/*kcollins 8-21-96*/
     	if(!silent) printf(CONTROL_STRING4,			/*kcollins 8-21-96*/
-		"KB", 				/*kcollins 8-21-96*/
+		"kB", 				/*kcollins 8-21-96*/
 		"reclen",			/*kcollins 8-21-96*/
 		"write",			/*kcollins 8-21-96*/
 		"rewrite",			/*kcollins 8-21-96*/
@@ -11536,7 +11530,7 @@ void print_header()
 			""
 			);
     		if(!silent) printf(CONTROL_STRING3,
-			"KB", 
+			"kB", 
 			"reclen",
 			"write",
 			"rewrite",
@@ -11572,7 +11566,7 @@ void print_header()
 				""
 				);
     			if(!silent) printf(CONTROL_STRING3,
-				"KB", 
+				"kB", 
 				"reclen",
 				"write",
 				"rewrite",
@@ -12694,7 +12688,7 @@ thread_write_test( x)
 			printf("Unable to open %s\n",tmpname);
 			exit(40);
 		}
-		fprintf(thread_wqfd,"Offset in Kbytes   Latency in microseconds Transfer size in bytes\n");
+		fprintf(thread_wqfd,"Offset in kBytes   Latency in microseconds Transfer size in bytes\n");
 	}
 	if(L_flag)
 	{
@@ -13035,7 +13029,11 @@ printf("Desired rate %g  Actual rate %g Nap %g microseconds\n",desired_op_rate_t
 			(long long)CHILD_STATE_HOLD);
 			
 	if (debug1) {
+#ifdef NO_PRINT_LLD
+		printf(" child/slot: %ld, wall-cpu: %8.3f %8.3fC" " -> %6.2f%%\n",
+#else
 		printf(" child/slot: %lld, wall-cpu: %8.3f %8.3fC" " -> %6.2f%%\n",
+#endif
 			xx, walltime, cputime,
 			cpu_util(cputime, walltime));
 	}
@@ -13380,7 +13378,7 @@ thread_pwrite_test( x)
 			printf("Unable to open %s\n",tmpname);
 			exit(40);
 		}
-		fprintf(thread_wqfd,"Offset in Kbytes   Latency in microseconds  Transfer size in bytes\n");
+		fprintf(thread_wqfd,"Offset in kBytes   Latency in microseconds  Transfer size in bytes\n");
 	}
 	if(L_flag)
 	{
@@ -13675,7 +13673,11 @@ printf("Desired rate %g  Actual rate %g Nap %g microseconds\n",desired_op_rate_t
 			(long long)CHILD_STATE_HOLD);
 			
 	if (debug1) {
+#ifdef NO_PRINT_LLD
+		printf(" child/slot: %ld, wall-cpu: %8.3f %8.3fC" " -> %6.2f%%\n",
+#else
 		printf(" child/slot: %lld, wall-cpu: %8.3f %8.3fC" " -> %6.2f%%\n",
+#endif
 			xx, walltime, cputime,
 			cpu_util(cputime, walltime));
 	}
@@ -13975,7 +13977,7 @@ thread_rwrite_test(x)
 				send_stop();
 			exit(40);
 		}
-		fprintf(thread_rwqfd,"Offset in Kbytes   Latency in microseconds  Transfer size in bytes\n");
+		fprintf(thread_rwqfd,"Offset in kBytes   Latency in microseconds  Transfer size in bytes\n");
 	}
 	if(L_flag)
 	{
@@ -14083,7 +14085,11 @@ thread_rwrite_test(x)
 			wmaddr = &maddr[i*reclen];
 			if(cdebug)
 			{
+#ifdef NO_PRINT_LLD
+fprintf(newstdout,"Chid: %ld Rewriting offset %ld for length of %ld\n",chid, i*reclen,reclen);
+#else
 fprintf(newstdout,"Chid: %lld Rewriting offset %lld for length of %lld\n",chid, i*reclen,reclen);
+#endif
 			  fflush(newstdout);
 			}
 			fill_area((long long*)nbuff,(long long*)wmaddr,(long long)reclen);
@@ -14556,7 +14562,7 @@ thread_read_test(x)
 			printf("Unable to open %s\n",tmpname);
 			exit(40);
 		}
-		fprintf(thread_rqfd,"Offset in Kbytes   Latency in microseconds  Transfer size in bytes\n");
+		fprintf(thread_rqfd,"Offset in kBytes   Latency in microseconds  Transfer size in bytes\n");
 	}
 	if(L_flag)
 	{
@@ -15117,7 +15123,7 @@ thread_pread_test(x)
 			printf("Unable to open %s\n",tmpname);
 			exit(40);
 		}
-		fprintf(thread_rqfd,"Offset in Kbytes   Latency in microseconds  Transfer size in bytes\n");
+		fprintf(thread_rqfd,"Offset in kBytes   Latency in microseconds  Transfer size in bytes\n");
 	}
 	if(L_flag)
 	{
@@ -15671,7 +15677,7 @@ thread_rread_test(x)
                         printf("Unable to open %s\n",tmpname);
                         exit(40);
                 }
-		fprintf(thread_rrqfd,"Offset in Kbytes   Latency in microseconds  Transfer size in bytes\n");
+		fprintf(thread_rrqfd,"Offset in kBytes   Latency in microseconds  Transfer size in bytes\n");
         }
 	if(L_flag)
 	{
@@ -16231,7 +16237,7 @@ thread_reverse_read_test(x)
                         printf("Unable to open %s\n",tmpname);
                         exit(40);
                 }
-		fprintf(thread_revqfd,"Offset in Kbytes   Latency in microseconds  Transfer size in bytes\n");
+		fprintf(thread_revqfd,"Offset in kBytes   Latency in microseconds  Transfer size in bytes\n");
         }
 	if(L_flag)
 	{
@@ -16767,7 +16773,7 @@ thread_stride_read_test(x)
                         printf("Unable to open %s\n",tmpname);
                         exit(40);
                 }
-		fprintf(thread_strqfd,"Offset in Kbytes   Latency in microseconds  Transfer size in bytes\n");
+		fprintf(thread_strqfd,"Offset in kBytes   Latency in microseconds  Transfer size in bytes\n");
         }
 	if(L_flag)
 	{
@@ -17448,7 +17454,7 @@ thread_ranread_test(x)
                         printf("Unable to open %s\n",tmpname);
                         exit(40);
                 }
-		fprintf(thread_randrfd,"Offset in Kbytes   Latency in microseconds  Transfer size in bytes\n");
+		fprintf(thread_randrfd,"Offset in kBytes   Latency in microseconds  Transfer size in bytes\n");
         }
 	if(L_flag)
 	{
@@ -18108,7 +18114,7 @@ thread_ranwrite_test( x)
 			printf("Unable to open %s\n",tmpname);
 			exit(40);
 		}
-		fprintf(thread_randwqfd,"Offset in Kbytes   Latency in microseconds  Transfer size in bytes\n");
+		fprintf(thread_randwqfd,"Offset in kBytes   Latency in microseconds  Transfer size in bytes\n");
 	}
 	if(L_flag)
 	{
@@ -18764,19 +18770,19 @@ dump_throughput_cpu()
 		do_label(bif_fd, print_str, bif_row++, bif_column);
 	}
 	label = OPS_flag ?  "ops/sec" :
-		MS_flag ? "microseconds/op" : "Kbytes/sec";
+		MS_flag ? "microseconds/op" : "kBytes/sec";
 #ifdef NO_PRINT_LLD
-	if(!silent) printf("\"Record size = %ld Kbytes \"\n", reclen/1024);
+	if(!silent) printf("\"Record size = %ld kBytes \"\n", reclen/1024);
 #else
-	if(!silent) printf("\"Record size = %lld Kbytes \"\n", reclen/1024);
+	if(!silent) printf("\"Record size = %lld kBytes \"\n", reclen/1024);
 #endif
 	if(!silent) printf("\"Output is in CPU%%\"\n\n");
 	if (bif_flag)
 	{
 #ifdef NO_PRINT_LLD
-		sprintf(print_str, "Record size = %ld Kbytes", reclen/1024);
+		sprintf(print_str, "Record size = %ld kBytes", reclen/1024);
 #else
-		sprintf(print_str, "Record size = %lld Kbytes", reclen/1024);
+		sprintf(print_str, "Record size = %lld kBytes", reclen/1024);
 #endif
 		do_label(bif_fd, print_str, bif_row++, bif_column);
 		sprintf(print_str, "Output is in CPU%%");
@@ -18843,19 +18849,19 @@ dump_throughput()
 	if(MS_flag)
 		label="microseconds/op";
 	else
-		label="Kbytes/sec";
+		label="kBytes/sec";
 #ifdef NO_PRINT_LLD
-	if(!silent) printf("\"Record size = %ld Kbytes \"\n",reclen/1024);
+	if(!silent) printf("\"Record size = %ld kBytes \"\n",reclen/1024);
 #else
-	if(!silent) printf("\"Record size = %lld Kbytes \"\n",reclen/1024);
+	if(!silent) printf("\"Record size = %lld kBytes \"\n",reclen/1024);
 #endif
 	if(!silent) printf("\"Output is in %s\"\n\n",label);
 	if(bif_flag)
 	{
 #ifdef NO_PRINT_LLD
-		sprintf(print_str,"Record size = %ld Kbytes",reclen/1024);
+		sprintf(print_str,"Record size = %ld kBytes",reclen/1024);
 #else
-		sprintf(print_str,"Record size = %lld Kbytes",reclen/1024);
+		sprintf(print_str,"Record size = %lld kBytes",reclen/1024);
 #endif
 		do_label(bif_fd,print_str,bif_row++,bif_column);
 		sprintf(print_str,"Output is in %s",label);
@@ -19783,7 +19789,7 @@ long which;
 	}
 #ifdef DEBUG
 #ifdef NO_PRINT_LLD
-	if(!silent) printf("\nOffset %lld  Size %ld Compute delay %f\n",traj_offset, *traj_size,*delay);
+	if(!silent) printf("\nOffset %ld  Size %ld Compute delay %f\n",traj_offset, *traj_size,*delay);
 #else
 	if(!silent) printf("\nOffset %lld  Size %lld Compute delay %f\n",traj_offset, *traj_size,*delay);
 #endif
@@ -19923,7 +19929,13 @@ r_traj_size()
 	}	
 	r_traj_fsize=max_offset;
 #ifdef DEBUG
+
+#ifdef NO_PRINT_LLD
+	printf("File size of read %ld Item count %ld\n",r_traj_fsize,r_traj_ops);
+#else
 	printf("File size of read %lld Item count %lld\n",r_traj_fsize,r_traj_ops);
+#endif
+
 #endif
 	fclose(fd);
 }
@@ -20015,7 +20027,11 @@ w_traj_size()
 	}	
 	w_traj_fsize=max_offset;
 #ifdef DEBUG
+#ifdef NO_PRINT_LLD
+	printf("File size of write %ld Item count %ld\n",w_traj_fsize,w_traj_ops);
+#else
 	printf("File size of write %lld Item count %lld\n",w_traj_fsize,w_traj_ops);
+#endif
 #endif
 	fclose(fd);
 	return(max_offset);
@@ -21448,7 +21464,7 @@ long long numrecs64, reclen;
 	struct master_neutral_command *mnc;
 	char command[512];
 	struct in_addr my_s_addr;
-	char my_port_num[10];
+	char my_port_num[12];
 
 
 	bzero(&cc,sizeof(struct client_command));
@@ -23051,10 +23067,10 @@ int port,flag;
 	}
 	sscanf(mybuf,"%d %f",&count,&throughput);
 	if(!flag)
-		printf("%-20s received  %10d Kbytes @ %10.2f Kbytes/sec \n",
+		printf("%-20s received  %10d kBytes @ %10.2f kBytes/sec \n",
 			sp_remote_host,count,throughput);
 	else
-		printf("%-20s  sent     %10d Kbytes @ %10.2f Kbytes/sec \n",
+		printf("%-20s  sent     %10d kBytes @ %10.2f kBytes/sec \n",
 			sp_remote_host,count,throughput);
 	close(tcfd);
 }
@@ -23410,7 +23426,7 @@ sp_do_master_t()
 	close(sp_msfd);
 	sp_msfd=0;
 	sp_get_result(sp_master_results_port,0);
-	printf("%-20s  sent     %10d kbytes @ %10.2f Kbytes/sec \n",
+	printf("%-20s  sent     %10d kbytes @ %10.2f kBytes/sec \n",
 		sp_master_host,sp_tcount/1024, 
 		(float)(sp_tcount/1024)/(sp_finish_time-sp_start_time));
 
@@ -23441,7 +23457,7 @@ sp_do_master_t()
 	}
 	sp_finish_time=time_so_far();
 	sp_get_result(sp_master_results_port,1);
-	printf("%-20s received  %10d kbytes @ %10.2f Kbytes/sec \n",
+	printf("%-20s received  %10d kbytes @ %10.2f kBytes/sec \n",
 		sp_master_host,sp_tcount/1024,
 		(float)(sp_tcount/1024)/(sp_finish_time-sp_start_time));
 	printf("\n");
@@ -23861,10 +23877,10 @@ int
 gen_new_buf(char *ibuf, char *obuf, long seed, int size, int percent,
 	int percent_interior, int percent_compress, int all)
 {
-	register long *ip, *op; /* Register for speed 	*/
-	register long iseed; 	/* Register for speed 	*/
-	register long isize; 	/* Register for speed 	*/
-	register long cseed;	/* seed for dedupable for within & ! across */
+	register int *ip, *op; /* Register for speed 	*/
+	register int iseed; 	/* Register for speed 	*/
+	register int isize; 	/* Register for speed 	*/
+	register int cseed;	/* seed for dedupable for within & ! across */
 	register int x,w; 	/* Register for speed 	*/
 	register int value; 	/* Register for speed 	*/
 	register int interior_size; 	/* size of interior dedup region */
@@ -23880,14 +23896,14 @@ gen_new_buf(char *ibuf, char *obuf, long seed, int size, int percent,
 	srand(seed+1+(((int)numrecs64)*dedup_mseed)); /* set random seed */
 	iseed = rand();		/* generate random value */
 	isize = (size * percent)/100; /* percent that is dedupable */
-	interior_size = ((isize * percent_interior)/100);/* /sizeof(long) */
+	interior_size = ((isize * percent_interior)/100);/* /sizeof(int) */
 	compress_size =((interior_size * percent_compress)/100);
-	ip = (long *)ibuf;	/* pointer to input buf */
-	op = (long *)obuf;	/* pointer to output buf */
+	ip = (int *)ibuf;	/* pointer to input buf */
+	op = (int *)obuf;	/* pointer to output buf */
 	if(all == 0)		/* Special case for verify only */
-		isize = sizeof(long);
+		isize = sizeof(int);
 	/* interior_size = dedup_within + dedup_across */
-	for(w=0;w<interior_size;w+=sizeof(long))	
+	for(w=0;w<interior_size;w+=sizeof(int))	
 	{
 		*op=0xdeadbeef+dedup_mseed;
 		*ip=0xdeadbeef+dedup_mseed;
@@ -23896,18 +23912,18 @@ gen_new_buf(char *ibuf, char *obuf, long seed, int size, int percent,
 	}	
 	/* Prepare for dedup within but not across */
 	w=interior_size - compress_size;
-	op=(long *)&obuf[w];
-	ip=(long *)&ibuf[w];
+	op=(int *)&obuf[w];
+	ip=(int *)&ibuf[w];
 	srand(chid+chid_skew+1+dedup_mseed);            /* set randdom seed 	*/
 	cseed = rand();		/* generate random value */
-	for(w=(interior_size-compress_size);w<interior_size;w+=sizeof(long))	
+	for(w=(interior_size-compress_size);w<interior_size;w+=sizeof(int))	
 	{
 		*op=*ip ^ cseed; /* do the xor op */
 		op++;
 		ip++;
 	}	
  	/* isize = dedup across only */
-	for(x=interior_size;x<isize;x+=sizeof(long))	/* tight loop for transformation */
+	for(x=interior_size;x<isize;x+=sizeof(int))	/* tight loop for transformation */
 	{
 		*op=*ip ^ iseed; /* do the xor op */
 		op++;
@@ -23921,7 +23937,7 @@ gen_new_buf(char *ibuf, char *obuf, long seed, int size, int percent,
 		srand(1+seed+((chid+chid_skew+1)*(int)numrecs64)*dedup_mseed);
 		value=rand();
 /* printf("Non-dedup value %x seed %x\n",value,seed);*/
-		for( ; x<size;x+=sizeof(long))
+		for( ; x<size;x+=sizeof(int))
 			*op++=(*ip++)^value; /* randomize the remainder */
 	}
 	return(0);
@@ -23934,10 +23950,10 @@ void
 touch_dedup(char *i, int size)
 {
 	register int x;
-	register long *ip;
-	ip = (long *)i;
+	register int *ip;
+	ip = (int *)i;
 	srand(DEDUPSEED);
-	for(x=0;x<size/sizeof(long);x++)
+	for(x=0;x<size/sizeof(int);x++)
 	{
 		*ip=rand(); /* fill initial buffer */
 		ip++;
@@ -24782,7 +24798,7 @@ void * thread_fwrite_test( x)
                         printf("Unable to open %s\n",tmpname);
                         exit(40);
                 }
-                fprintf(thread_wqfd,"Offset in Kbytes   Latency in microseconds  Transfer size in bytes\n");
+                fprintf(thread_wqfd,"Offset in kBytes   Latency in microseconds  Transfer size in bytes\n");
         }
         if(L_flag)
         {
@@ -24928,7 +24944,11 @@ void * thread_fwrite_test( x)
                         (long long)CHILD_STATE_HOLD);
 
         if (debug1) {
+#ifdef NO_PRINT_LLD
+                printf(" child/slot: %ld, wall-cpu: %8.3f %8.3fC" " -> %6.2f%%\n",
+#else
                 printf(" child/slot: %lld, wall-cpu: %8.3f %8.3fC" " -> %6.2f%%\n",
+#endif
                         xx, walltime, cputime,
                         cpu_util(cputime, walltime));
         }
@@ -25220,7 +25240,7 @@ void * thread_fread_test( x)
                         printf("Unable to open %s\n",tmpname);
                         exit(40);
                 }
-                fprintf(thread_wqfd,"Offset in Kbytes   Latency in microseconds  Transfer size in bytes\n");
+                fprintf(thread_wqfd,"Offset in kBytes   Latency in microseconds  Transfer size in bytes\n");
         }
         if(L_flag)
         {
@@ -25375,7 +25395,11 @@ void * thread_fread_test( x)
                         (long long)CHILD_STATE_HOLD);
 
         if (debug1) {
+#ifdef NO_PRINT_LLD
+                printf(" child/slot: %ld, wall-cpu: %8.3f %8.3fC" " -> %6.2f%%\n",
+#else
                 printf(" child/slot: %lld, wall-cpu: %8.3f %8.3fC" " -> %6.2f%%\n",
+#endif
                         xx, walltime, cputime,
                         cpu_util(cputime, walltime));
         }
