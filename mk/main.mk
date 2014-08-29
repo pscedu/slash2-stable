@@ -311,12 +311,33 @@ ifneq ($(filter rt,${MODULES}),)
   LDFLAGS+=	${LIBRT}
 endif
 
+ifeq (${LIBRARY},libpfl.a)
+  ifneq ($(filter gcrc,${MODULES}),)
+    INCLUDES+=	-I${GCRC_BASE}
+    SRCS+=	${PFL_BASE}/gcrcutil.cc
+    SRCS+=	${GCRC_BASE}/crc32c_sse4.cc
+    SRCS+=	${GCRC_BASE}/interface.cc
+    SRCS+=	${GCRC_BASE}/multiword_128_64_gcc_amd64_sse2.cc
+    SRCS+=	${GCRC_BASE}/multiword_64_64_cl_i386_mmx.cc
+    SRCS+=	${GCRC_BASE}/multiword_64_64_gcc_amd64_asm.cc
+    SRCS+=	${GCRC_BASE}/multiword_64_64_gcc_i386_mmx.cc
+    SRCS+=	${GCRC_BASE}/multiword_64_64_intrinsic_i386_mmx.cc
+    CFLAGS+=	-mcrc32
+  else
+    SRCS+=	${PFL_BASE}/crc.c
+  endif
+else
+  ifneq ($(filter gcrc,${MODULES}),)
+    LDFLAGS+=	-lstdc++
+  endif
+endif
+
 # OBJDIR is added to .c below since lex/yacc intermediate files get
 # generated there.
-vpath %.y $(sort $(dir $(filter %.y,${_TSRCS})))
-vpath %.l $(sort $(dir $(filter %.l,${_TSRCS})))
+vpath %.y  $(sort $(dir $(filter %.y,${_TSRCS})))
+vpath %.l  $(sort $(dir $(filter %.l,${_TSRCS})))
 vpath %.cc $(sort $(dir $(filter %.cc,${_TSRCS})))
-vpath %.c $(sort $(dir $(filter %.c,${_TSRCS})) ${OBJDIR})
+vpath %.c  $(sort $(dir $(filter %.c,${_TSRCS})) ${OBJDIR})
 
 all: recurse-all all-hook
 	@for i in ${SRCS}; do						\
