@@ -755,7 +755,7 @@ pjournal_open(const char *fn)
 
 	if (pjh->pjh_chksum != chksum) {
 		psclog_errorx("journal header has an invalid checksum "
-		    "value %"PSCPRIxCRC64" vs %"PSCPRIxCRC64,
+		    "disk:%"PSCPRIxCRC64" vs mem:%"PSCPRIxCRC64,
 		    pjh->pjh_chksum, chksum);
 		goto error;
 	}
