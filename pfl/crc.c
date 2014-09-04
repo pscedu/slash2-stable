@@ -158,7 +158,7 @@ const uint64_t psc_crc64_table[] = {
 /*
  * psc_crc64_add - Accumulate bytes into a 64-bit CRC buffer.
  * @cp: pointer to an initialized CRC buffer.
- * @data: data region to add to CRC over.
+ * @datap: data region to add to CRC over.
  * @len: amount of data.
  */
 __inline void
@@ -187,7 +187,7 @@ psc_crc64_verify(uint64_t c, const void *datap, int len)
 /*
  * psc_crc32_add - Accumulate bytes into a 32-bit CRC buffer.
  * @cp: pointer to an initialized CRC buffer.
- * @data: data region to add to CRC over.
+ * @datap: data region to add to CRC over.
  * @len: amount of data.
  */
 __inline void
