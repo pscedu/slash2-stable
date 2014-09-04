@@ -1407,7 +1407,8 @@ pscfs_reply_setxattr(struct pscfs_req *pfr, int rc)
 }
 
 void
-pscfs_reply_getxattr(struct pscfs_req *pfr, void *buf, size_t len, int rc)
+pscfs_reply_getxattr(struct pscfs_req *pfr, void *buf, size_t len,
+    int rc)
 {
 	if (rc)
 		PFR_REPLY(err, pfr, rc);
