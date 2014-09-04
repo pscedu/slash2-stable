@@ -20,8 +20,8 @@
 #ifndef _PFL_JOURNAL_H_
 #define _PFL_JOURNAL_H_
 
-#include "pfl/dynarray.h"
 #include "pfl/atomic.h"
+#include "pfl/dynarray.h"
 #include "pfl/iostats.h"
 #include "pfl/lock.h"
 #include "pfl/thread.h"
