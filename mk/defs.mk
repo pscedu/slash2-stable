@@ -158,7 +158,7 @@ OSTYPE:=	$(shell uname)
 $(call ADD_FILE_CFLAGS,${PFL_BASE}/crc.c,				-O2 -g0)
 $(call ADD_FILE_CFLAGS,${PFL_BASE}/parity.c,				-O2 -g0)
 
-ifneq ($(wildcard ${GCRC_BASE}/crc32c_sse4.cc,)
+ifneq ($(wildcard ${GCRC_BASE}/crc32c_sse4.cc,))
 $(call ADD_FILE_CFLAGS,${GCRC_BASE}/crc32c_sse4.cc,			-O2 -g0)
 $(call ADD_FILE_CFLAGS,${GCRC_BASE}/interface.cc,			-O2 -g0)
 $(call ADD_FILE_CFLAGS,${GCRC_BASE}/multiword_128_64_gcc_amd64_sse2.cc,	-O2 -g0)
