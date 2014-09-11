@@ -211,7 +211,7 @@ struct pfl_logpoint {
 			_rc = 1;					\
 									\
 		/* check if specific logpoint exists */			\
-		else if (psc_dynarray_len(&_pfl_logpoints)) {							\
+		else if (psc_dynarray_len(&_pfl_logpoints)) {		\
 			/* XXX NUMA */					\
 			static int _pfl_logpointid = -1;		\
 									\
