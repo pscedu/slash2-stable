@@ -13,6 +13,9 @@
 #define PFLERR_NOSYS			(_PFLERR_START +  5)
 #define PFLERR_CANCELED			(_PFLERR_START +  6)
 #define PFLERR_STALE			(_PFLERR_START +  7)
+#define PFLERR_BADMAGIC			(_PFLERR_START +  8)
+#define PFLERR_NOKEY			(_PFLERR_START +  9)
+#define PFLERR_BADCRC			(_PFLERR_START + 10)
 
 const char *pfl_strerror(int);
 
