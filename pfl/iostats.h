@@ -55,6 +55,11 @@ struct psc_iostats {
 
 #define PISTF_BASE10		(1 << 0)
 
+struct psc_iostats_rw {
+	struct psc_iostats wr;
+	struct psc_iostats rd;
+};
+
 #define psc_iostats_calcrate(len, tv)					\
 	((len) / (((tv)->tv_sec * UINT64_C(1000000) + (tv)->tv_usec) * 1e-6))
 
