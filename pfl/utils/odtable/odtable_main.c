@@ -35,24 +35,25 @@
 #include "pfl/odtable.h"
 #include "pfl/pfl.h"
 
-struct psc_dynarray myReceipts = DYNARRAY_INIT;
-const char *progname;
-const char *fmt;
+const char		*progname;
 
-int	create_table;
-int	num_free;
-int	num_puts;
-int	overwrite;
-int	show;
-int	dump;
-
-size_t	elem_size  = ODT_DEFAULT_ITEM_SIZE;
-size_t	table_size = ODT_DEFAULT_TABLE_SIZE;
+const char		*fmt;
+int			 create_table;
+int			 num_free;
+int			 num_puts;
+int			 overwrite;
+int			 show;
+struct psc_dynarray	 rcpts = DYNARRAY_INIT;
+size_t			 elem_size = 128;
+size_t			 nelems = 1024 * 128;
 
 void
-odtcb_show(void *data, struct odtable_receipt *odtr)
+visit(__unusedx void *data, struct pfl_odt_receipt *r,
+    void *arg)
 {
 	char buf[LINE_MAX], *p = data;
+	struct pfl_odt **t = arg;
+	static int shown_hdr;
 	union {
 		int	*d;
 		int64_t	*q;
@@ -60,7 +61,29 @@ odtcb_show(void *data, struct odtable_receipt *odtr)
 	} u;
 	size_t i;
 
-	printf("%7zd %16"PRIx64" ", odtr->odtr_elem, odtr->odtr_key);
+	if (num_free) {
+		struct pfl_odt_receipt *rdup;
+
+		rdup = PSCALLOC(sizeof(*rdup));
+		memcpy(rdup, r, sizeof(*r));
+		psc_dynarray_add(&rcpts, rdup);
+		num_free--;
+	}
+
+	if (!show)
+		return;
+
+	if (!shown_hdr) {
+		struct pfl_odt_hdr *h;
+
+		h = (*t)->odt_hdr;
+		printf("nelems\t%u\n", h->odth_nelems);
+		printf("elemsz\t%u\n", h->odth_objsz);
+		printf("%7s %16s data\n", "slot", "crc");
+		shown_hdr = 1;
+	}
+
+	printf("%7zd %16"PRIx64" ", r->odtr_elem, r->odtr_crc);
 
 	if (fmt) {
 		(void)FMTSTR(buf, sizeof(buf), fmt,
@@ -79,10 +102,9 @@ odtcb_show(void *data, struct odtable_receipt *odtr)
 	 * If the first 10 characters aren't ASCII, don't display as
 	 * such.
 	 */
-	for (i = 0, p = data; i < 10 && p; i++, p++) {
+	for (i = 0, p = data; i < 10 && p; i++, p++)
 		if (!isspace(*p) && !isgraph(*p))
 			goto skip;
-	}
 	if (i != 10)
 		goto skip;
 	printf("%s\n", (char *)data);
@@ -92,12 +114,6 @@ odtcb_show(void *data, struct odtable_receipt *odtr)
 	for (i = 0, p = data; i < elem_size; p++, i++)
 		printf("%02x", *p);
 	printf("\n");
-}
-
-void
-odtcb_free(__unusedx void *data, struct odtable_receipt *odtr)
-{
-	psc_dynarray_add(&myReceipts, odtr);
 }
 
 __dead void
@@ -112,24 +128,21 @@ usage(void)
 int
 main(int argc, char *argv[])
 {
-	int c, rc, i, verbose = 0, oflg = ODTBL_FLG_RDONLY,
-	    hflg = ODTBL_OPT_CRC;
-	struct odtable *odt;
-	char *item, *fn;
+	int c, i, verbose = 0, oflg = ODTBL_FLG_RDONLY,
+	    tflg = ODTBL_OPT_CRC;
+	struct pfl_odt_receipt *r;
+	struct pfl_odt *t;
+	char *p, *fn;
 
 	pfl_init();
 	progname = argv[0];
-	elem_size = ODT_DEFAULT_ITEM_SIZE;
 	while ((c = getopt(argc, argv, "CcDe:F:n:osvX:Zz:")) != -1)
 		switch (c) {
 		case 'C':
 			create_table = 1;
 			break;
 		case 'c':
-			hflg |= ODTBL_OPT_CRC;
-			break;
-		case 'D':
-			dump = 1;
+			tflg |= ODTBL_OPT_CRC;
 			break;
 		case 'e':
 			elem_size = atoi(optarg);
@@ -155,10 +168,10 @@ main(int argc, char *argv[])
 			fmt = optarg;
 			break;
 		case 'Z':
-			hflg |= ODTBL_OPT_SYNC;
+			tflg |= ODTBL_OPT_SYNC;
 			break;
 		case 'z':
-			table_size = atoi(optarg);
+			nelems = atoi(optarg);
 			break;
 		default:
 			usage();
@@ -170,68 +183,29 @@ main(int argc, char *argv[])
 	fn = argv[0];
 
 	if (create_table) {
-		rc = odtable_create(fn, table_size, elem_size,
-		    overwrite, hflg);
-		if (rc)
-			errx(1, "create %s: %s", fn, strerror(-rc));
+		pfl_odt_create(fn, nelems, elem_size, overwrite,
+		    0x1000, 0, tflg);
 		if (verbose)
 			warnx("created od-table %s "
-			    "(elemsize=%zu, tablesize=%zu)",
-			    fn, elem_size, table_size);
+			    "(elemsize=%zu, nelems=%zu)",
+			    fn, elem_size, nelems);
 		exit(0);
 	}
 
-	rc = odtable_load(&odt, oflg, fn, "%s", fn);
-	if (rc) {
-		char *errstr;
+	pfl_odt_load(&t, &pfl_odtops_mmap, oflg, visit, &t, fn, "%s",
+	    fn);
 
-		errstr = strerror(rc);
-		if (rc == ENODEV)
-			errstr = "Underlying file system does not "
-			    "support mmap(2)";
-		errx(1, "load %s: %s", fn, errstr);
-	}
-
-	item = PSCALLOC(elem_size);
+	p = PSCALLOC(t->odt_hdr->odth_objsz);
 	for (i = 0; i < num_puts; i++) {
-		snprintf(item, elem_size, "... put_number=%d ...", i);
-		if (odtable_putitem(odt, item, elem_size) == NULL) {
-			psclog_error("odtable_putitem() failed: table full");
-			break;
-		}
+		snprintf(p, elem_size, "... put_number=%d ...", i);
+		pfl_odt_putitem(t, p);
 	}
-	PSCFREE(item);
+	PSCFREE(p);
 
-	if (num_free) {
-		struct odtable_receipt *odtr = NULL;
+	DYNARRAY_FOREACH(r, i, &rcpts)
+		pfl_odt_freeitem(t, r);
 
-		odtable_scan(odt, odtcb_free);
-
-		while (psc_dynarray_len(&myReceipts) && num_free--) {
-			odtr = psc_dynarray_getpos(&myReceipts, 0);
-			psclog_debug("got odtr=%p key=%"PRIx64" slot=%zd",
-			    odtr, odtr->odtr_key, odtr->odtr_elem);
-
-			if (!odtable_freeitem(odt, odtr))
-				psc_dynarray_remove(&myReceipts, odtr);
-		}
-
-		psclog_debug("# of items left is %d",
-		    psc_dynarray_len(&myReceipts));
-	}
-
-	if (show) {
-		struct odtable_hdr *h;
-
-		h = odt->odt_hdr;
-		printf("nelems\t%zu\n", h->odth_nelems);
-		printf("elemsz\t%zu\n", h->odth_elemsz);
-		if (dump) {
-			printf("%7s %16s data\n",
-			    "slot", "crc");
-			odtable_scan(odt, odtcb_show);
-		}
-	}
-
-	exit(odtable_release(odt));
+	pfl_odt_release(t);
+	psc_dynarray_free(&rcpts);
+	exit(0);
 }

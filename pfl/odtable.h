@@ -18,7 +18,7 @@
  */
 
 /*
- * odtable: on-disk table for persistent storage of otherwise memory
+ * odt: on-disk table for persistent storage of otherwise memory
  * resident data structures.
  */
 
@@ -33,206 +33,156 @@
 #include <fcntl.h>
 #include <inttypes.h>
 
-#include "pfl/list.h"
-#include "pfl/lockedlist.h"
-#include "pfl/vbitmap.h"
 #include "pfl/crc.h"
+#include "pfl/err.h"
+#include "pfl/iostats.h"
+#include "pfl/list.h"
 #include "pfl/lock.h"
+#include "pfl/lockedlist.h"
 #include "pfl/log.h"
+#include "pfl/vbitmap.h"
 
-#define ODT_DEFAULT_ITEM_SIZE	128
-#define	ODT_DEFAULT_TABLE_SIZE	(1024 * 128)
+struct pfl_odt;
+struct pfl_odt_receipt;
 
-#define ODTBL_VERS		UINT64_C(0x0000000000000002)
-#define ODTBL_MAGIC		UINT64_C(0x001122335577bbdd)
-
-/* odtf_inuse values */
-#define ODTBL_INUSE		UINT64_C(0xf0f0f0f0f0f0f0f0)
-#define ODTBL_FREE		UINT64_C(0xffffffffffffffff)
-#define ODTBL_BAD		UINT64_C(0x1010101010101010)
-
-enum od_table_errors {
-	ODTBL_NO_ERR	= 0,
-	ODTBL_MAGIC_ERR	= 1,
-	ODTBL_SLOT_ERR	= 2,
-	ODTBL_INUSE_ERR	= 3,
-	ODTBL_FREE_ERR	= 4,
-	ODTBL_CRC_ERR	= 5,
-	ODTBL_BADSL_ERR	= 6,
-	ODTBL_KEY_ERR	= 7
-};
-
-/* Table entries start on a 4k boundary */
-#define ODTBL_START		0x1000
-
-struct odtable_hdr {
-	size_t			 odth_nelems;
-	size_t			 odth_elemsz;	/* does not include odtable_entftr */
-	size_t			 odth_slotsz;	/* does include odtable_entftr */
-	uint64_t		 odth_magic;
-	uint32_t		 odth_version;
+/* on-disk, a CRC immediately follows this structure */
+struct pfl_odt_hdr {
+	uint32_t		 odth_nelems;
+	uint32_t		 odth_objsz;	/* does not include odt_entftr */
+	uint32_t		 odth_slotsz;	/* does include odt_entftr */
 	uint32_t		 odth_options;	/* see ODTBL_OPT_* below */
 	off_t			 odth_start;
+	uint64_t		 odth_crc;
 } __packed;
 
-/* odtable options */
+/* odth_options */
 #define ODTBL_OPT_CRC		(1 << 0)
 #define ODTBL_OPT_SYNC		(1 << 1)
 
 /* entry footer */
-struct odtable_entftr {
+struct pfl_odt_entftr {
+	uint32_t		 odtf_flags;
+	uint32_t		 odtf_slotno;
 	uint64_t		 odtf_crc;
-	uint64_t		 odtf_inuse;
-	uint64_t		 odtf_slotno;
-	uint64_t		 odtf_magic;
-#define odtf_key odtf_crc
+};
+
+/* odtf_flags values */
+#define ODT_FTRF_INUSE		(1 << 0)
+
+struct pfl_odt_ops {
+	void	(*odtop_close)(struct pfl_odt *);
+	void	(*odtop_create)(struct pfl_odt *, const char *, int);
+	struct pfl_odt_entftr *
+		(*odtop_mapftr)(struct pfl_odt *, size_t);
+	void	(*odtop_open)(struct pfl_odt *, const char *, int);
+	void	(*odtop_read)(struct pfl_odt *,
+		    const struct pfl_odt_receipt *, void *,
+		    struct pfl_odt_entftr *f);
+	void	(*odtop_resize)(struct pfl_odt *);
+	void	(*odtop_sync)(struct pfl_odt *, size_t);
+	void	(*odtop_write)(struct pfl_odt *, const void *,
+		    struct pfl_odt_entftr *, size_t);
+};
+
+struct pfl_odt_stats {
+	uint32_t		odst_read_error;
+	uint32_t		odst_write_error;
+	uint32_t		odst_extend;
+	uint32_t		odst_full;
+	uint32_t		odst_replace;
+	uint32_t		odst_free;
+	uint32_t		odst_read;
+	uint32_t		odst_write;
 };
 
 #define ODT_NAME_MAX		16
-#define ODT_DEFAULT_ITEM_SIZE	128
 
-struct odtable {
+struct pfl_odt {
 	struct psc_vbitmap	*odt_bitmap;
-	void			*odt_base;
-	struct odtable_hdr	*odt_hdr;
+	struct pfl_odt_hdr	*odt_hdr;
 	psc_spinlock_t		 odt_lock;
-	int			 odt_fd;
-	void			*odt_handle;		/* need this for odtable in ZFS */
+	struct pfl_odt_ops	 odt_ops;
+	union {
+		struct {
+			void	*odtum_base;
+			int	 odtum_fd;
+		} m;
+		void		*odtu_handle;		/* need this for odtable in ZFS */
+	} u;
+#define odt_base	u.m.odtum_base
+#define odt_fd		u.m.odtum_fd
+#define odt_mfh		u.odtu_mfh
 	char			 odt_name[ODT_NAME_MAX];
 	struct psclist_head	 odt_lentry;
+	struct psc_iostats_rw	 odt_iostats;
+	struct pfl_odt_stats	 odt_stats;
 };
 
-#define DPRINTF_ODT(lvl, odt, fmt, ...)					\
-	psclog((lvl), "odt@%p[%s] " fmt,				\
-	    (odt), (odt)->odt_name, ## __VA_ARGS__)
+#define ODT_STAT_INCR(t, stat)						\
+	do {								\
+		int _waslocked;						\
+									\
+		_waslocked = reqlock(&(t)->odt_lock);			\
+		(t)->odt_stats.odst_ ## stat ++;			\
+		ureqlock(&(t)->odt_lock, _waslocked);			\
+	} while (0)
 
-struct odtable_receipt {
-	size_t			 odtr_elem;
-	uint64_t		 odtr_key;
+#define PFLOG_ODT(lvl, t, fmt, ...)					\
+	psclog((lvl), "odt@%p[%s] nelems=%u objsz=%u slotsz=%u "	\
+	    "opt=%#x :: " fmt,						\
+	    (t), (t)->odt_name, (t)->odt_hdr->odth_nelems,		\
+	    (t)->odt_hdr->odth_objsz, (t)->odt_hdr->odth_slotsz,	\
+	    (t)->odt_hdr->odth_options, ## __VA_ARGS__)
+
+struct pfl_odt_receipt {
+	uint64_t		 odtr_elem;
+	uint64_t		 odtr_crc;
 };
-
-#define ODTABLE_MAPSZ(odt)	_odtable_getitemoff((odt), (odt)->odt_hdr->odth_nelems, 1)
 
 #define ODTBL_FLG_RDONLY	(1 << 0)
 
-struct odtable_receipt *
-	 odtable_putitem(struct odtable *, void *, size_t);
-int	 odtable_create(const char *, size_t, size_t, int, int);
-int	 odtable_freeitem(struct odtable *, struct odtable_receipt *);
-void	*odtable_getitem(struct odtable *, const struct odtable_receipt *);
-int	 odtable_load(struct odtable **, int, const char *, const char *, ...);
-int	 odtable_release(struct odtable *);
-void	 odtable_scan(struct odtable *, void (*)(void *, struct odtable_receipt *));
-struct odtable_receipt *
-	 odtable_replaceitem(struct odtable *, struct odtable_receipt *, void *, size_t);
+struct pfl_odt_receipt *
+	 pfl_odt_putitem(struct pfl_odt *, void *);
+void	 pfl_odt_create(const char *, size_t, size_t, int, size_t,
+	    size_t, int);
+void	 pfl_odt_freeitem(struct pfl_odt *, struct pfl_odt_receipt *);
+void	 pfl_odt_getitem_ftr(struct pfl_odt *,
+	    const struct pfl_odt_receipt *, void *,
+	    struct pfl_odt_entftr **);
+void	 pfl_odt_load(struct pfl_odt **, struct pfl_odt_ops *, int,
+	    void (*)(void *, struct pfl_odt_receipt *, void *), void *,
+	    const char *, const char *, ...);
+void	 pfl_odt_release(struct pfl_odt *);
+void	 pfl_odt_replaceitem(struct pfl_odt *, struct pfl_odt_receipt *,
+	    void *);
 
-extern struct psc_lockedlist psc_odtables;
-
-/**
- * odtable_getitemoff - Get offset of a table entry, which is relative
- * to either the disk file or start of base memory-mapped address.
- */
-static __inline size_t
-_odtable_getitemoff(const struct odtable *odt, size_t elem, int allow_max)
-{
-	if (allow_max)
-		psc_assert(elem <= odt->odt_hdr->odth_nelems);
-	else
-		psc_assert(elem < odt->odt_hdr->odth_nelems);
-	return (elem * (odt->odt_hdr->odth_elemsz +
-	    sizeof(struct odtable_entftr)));
-}
-
-#define odtable_getitemoff(odt, elem)	_odtable_getitemoff((odt), (elem), 0)
+extern struct psc_lockedlist pfl_odtables;
 
 /**
- * odtable_getitem_foff - Get offset into disk file of table entry.
+ * odtable_footercheck - Test an in-use item's footer for validity.
  */
-static __inline size_t
-odtable_getitem_foff(const struct odtable *odt, size_t elem)
-{
-	return (odt->odt_hdr->odth_start + odtable_getitemoff(odt, elem));
-}
-
-/**
- * odtable_getitem_addr - Get address of memory-mapped table entry.
- */
-#define odtable_getitem_addr(odt, elem)					\
-	PSC_AGP((odt)->odt_base, odtable_getitemoff((odt), (elem)))
-
-/**
- * odtable_getfooter - Get address of memory-mapped table entry's footer.
- */
-static __inline struct odtable_entftr *
-odtable_getfooter(const struct odtable *odt, size_t elem)
-{
-	return (PSC_AGP(odt->odt_base, odtable_getitemoff(odt, elem) +
-	    odt->odt_hdr->odth_elemsz));
-}
-
-static __inline int
-odtable_createmmap(struct odtable *odt, int oflg)
-{
-	int prot = PROT_READ;
-
-	if ((oflg & ODTBL_FLG_RDONLY) == 0)
-		prot |= PROT_WRITE;
-	odt->odt_base = mmap(NULL, ODTABLE_MAPSZ(odt), prot, MAP_SHARED,
-	    odt->odt_fd, odt->odt_hdr->odth_start);
-	if (odt->odt_base == MAP_FAILED)
-		return (errno);
-	return (0);
-}
-
-static __inline int
-odtable_freemap(struct odtable *odt)
-{
-	int rc = 0;
-
-	if (odt->odt_base)
-		rc = munmap(odt->odt_base, ODTABLE_MAPSZ(odt));
-	odt->odt_base = NULL;
-	return (rc);
-}
-
-/**
- * odtable_footercheck - Test an item footer for status control.
- * inuse ==  1 --> test the slot assuming it's being used.
- * inuse ==  0 --> test the slot assuming it's NOT being used.
- * inuse == -1 --> test the slot ignoring whether or not it's being used.
- * inuse ==  2 --> test the slot assuming it's being used but ignoring key.
- */
-#define odtable_footercheck(odtf, odtr, inuse)				\
+#define pfl_odt_footercheck(t, f, r)					\
 	_PFL_RVSTART {							\
 		int _rc = 0;						\
 									\
-		if ((odtf)->odtf_magic != ODTBL_MAGIC)			\
-			_rc = ODTBL_MAGIC_ERR;				\
+		if ((f)->odtf_slotno != (r)->odtr_elem)			\
+			_rc = PFLERR_NOKEY;				\
 									\
-		else if ((odtf)->odtf_slotno != (odtr)->odtr_elem)	\
-			_rc = ODTBL_SLOT_ERR;				\
-									\
-		else if ((odtf)->odtf_inuse == ODTBL_BAD)		\
-			_rc = ODTBL_BADSL_ERR;				\
-									\
-		else if (!(inuse) && (odtf)->odtf_inuse != ODTBL_FREE)	\
-			_rc = ODTBL_FREE_ERR;				\
-									\
-		else if ((inuse) == 1 &&				\
-		    ((odtf)->odtf_inuse == ODTBL_INUSE) &&		\
-		    ((odtf)->odtf_key != (odtr)->odtr_key))		\
-			_rc = ODTBL_KEY_ERR;				\
-									\
-		else if ((inuse) > 0 &&					\
-		    (odtf)->odtf_inuse != ODTBL_INUSE)			\
-			_rc = ODTBL_INUSE_ERR;				\
+		else if ((f)->odtf_crc != (r)->odtr_crc)		\
+			_rc = PFLERR_BADCRC;				\
 									\
 		if (_rc)						\
-			psclog_errorx("slot=%zd has error %d; "		\
-			    "fkey %"PRIx64" rkey %"PRIx64,		\
-			    (odtr)->odtr_elem, _rc,			\
-			    (odtf)->odtf_key, (odtr)->odtr_key);	\
+			PFLOG_ODT(PLL_ERROR, t,				\
+			    "slot=%zd (%u) has error %d; "		\
+			    "ftr_crc %"PRIx64" rcpt_crc %"PRIx64,	\
+			    (r)->odtr_elem, (f)->odtf_slotno, _rc,	\
+			    (f)->odtf_crc, (r)->odtr_crc);		\
 		_rc;							\
 	} _PFL_RVEND
+
+#define pfl_odt_getitem(t, r, p)					\
+	pfl_odt_getitem_ftr((t), (r), (p), NULL)
+
+extern struct pfl_odt_ops pfl_odtops_mmap;
 
 #endif
