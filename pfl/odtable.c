@@ -88,36 +88,24 @@ pfl_odt_mmap_sync(struct pfl_odt *t, size_t elem)
 		PFLOG_ODT(PLL_ERROR, t, "msync: %d", errno);
 }
 
-struct pfl_odt_entftr *
-pfl_odt_mmap_mapftr(struct pfl_odt *t, size_t elem)
+void
+pfl_odt_mmap_mapslot(struct pfl_odt *t, size_t elem, void **pp,
+    struct pfl_odt_entftr **fp)
 {
 	void *p;
 
 	p = GETADDR(t, elem);
-	return (PSC_AGP(p, t->odt_hdr->odth_slotsz -
-	    sizeof(struct pfl_odt_entftr)));
-}
-
-void
-pfl_odt_mmap_write(struct pfl_odt *t, const void *p,
-    struct pfl_odt_entftr *f, size_t elem)
-{
-	if (f->odtf_flags & ODT_FTRF_INUSE)
-		memcpy(GETADDR(t, elem), p, t->odt_hdr->odth_objsz);
-}
-
-void
-pfl_odt_mmap_read(struct pfl_odt *t, const struct pfl_odt_receipt *r,
-    void *p, struct pfl_odt_entftr *f)
-{
-	if (f->odtf_flags & ODT_FTRF_INUSE)
-		memcpy(p, GETADDR(t, r->odtr_elem),
-		    t->odt_hdr->odth_objsz);
+	if (pp)
+		*pp = p;
+	if (fp)
+		*fp = PSC_AGP(p, t->odt_hdr->odth_slotsz -
+		    sizeof(**fp));
 }
 
 void
 pfl_odt_mmap_resize(__unusedx struct pfl_odt *t)
 {
+	psc_fatalx("not supported");
 	// munmap
 	// mmap
 }
@@ -178,27 +166,21 @@ pfl_odt_mmap_close(struct pfl_odt *t)
 struct pfl_odt_ops pfl_odtops_mmap = {
 	pfl_odt_mmap_close,
 	pfl_odt_mmap_create,
-	pfl_odt_mmap_mapftr,
+	pfl_odt_mmap_mapslot,
 	pfl_odt_mmap_open,
-	pfl_odt_mmap_read,
+	NULL,
 	pfl_odt_mmap_resize,
 	pfl_odt_mmap_sync,
-	pfl_odt_mmap_write
+	NULL
 };
 
 void
 _pfl_odt_doput(struct pfl_odt *t, struct pfl_odt_receipt *r,
-    const void *p, int inuse)
+    const void *p, struct pfl_odt_entftr *f, int inuse)
 {
-	struct pfl_odt_entftr ftr, *f;
 	struct pfl_odt_hdr *h;
 
 	h = t->odt_hdr;
-
-	if (t->odt_ops.odtop_mapftr)
-		f = t->odt_ops.odtop_mapftr(t, r->odtr_elem);
-	else
-		f = &ftr;
 
 	f->odtf_flags = inuse ? ODT_FTRF_INUSE : 0;
 	f->odtf_slotno = r->odtr_elem;
@@ -210,7 +192,8 @@ _pfl_odt_doput(struct pfl_odt *t, struct pfl_odt_receipt *r,
 	psc_crc64_fini(&f->odtf_crc);
 	r->odtr_crc = f->odtf_crc;
 
-	t->odt_ops.odtop_write(t, p, f, r->odtr_elem);
+	if (t->odt_ops.odtop_write)
+		t->odt_ops.odtop_write(t, p, f, r->odtr_elem);
 
 	psc_iostats_intv_add(&t->odt_iostats.wr, h->odth_slotsz);
 
@@ -224,26 +207,19 @@ _pfl_odt_doput(struct pfl_odt *t, struct pfl_odt_receipt *r,
 	ODT_STAT_INCR(t, write);
 }
 
-/**
- * odtable_putitem - Store an item into an odtable.
- */
-struct pfl_odt_receipt *
-pfl_odt_putitem(struct pfl_odt *t, void *p)
+size_t
+pfl_odt_allocslot(struct pfl_odt *t)
 {
-	struct pfl_odt_receipt *r;
 	struct pfl_odt_hdr *h;
 	size_t elem;
 
 	h = t->odt_hdr;
-
 	spinlock(&t->odt_lock);
 	if (psc_vbitmap_next(t->odt_bitmap, &elem) <= 0) {
 		ODT_STAT_INCR(t, full);
 		freelock(&t->odt_lock);
-		return (NULL);
+		return (-1);
 	}
-//	f = pfl_odt_getfooter(t, todtr.odtr_elem);
-//	pfl_odt_footercheck(t, )
 	if (elem >= h->odth_nelems) {
 		h->odth_nelems = psc_vbitmap_getsize(t->odt_bitmap);
 		t->odt_ops.odtop_resize(t);
@@ -253,40 +229,70 @@ pfl_odt_putitem(struct pfl_odt *t, void *p)
 		ODT_STAT_INCR(t, extend);
 	}
 	freelock(&t->odt_lock);
+	return (elem);
+}
 
-	/* Setup and return the receipt. */
-	r = PSCALLOC(sizeof(*r));
-	r->odtr_elem = elem;
+void
+pfl_odt_mapslot(struct pfl_odt *t, size_t n, void *pp,
+    struct pfl_odt_entftr **fp)
+{
+	struct pfl_odt_hdr *h;
+	void **p = (void **)pp;
 
-	_pfl_odt_doput(t, r, p, 1);
-	return (r);
+	h = t->odt_hdr;
+	if (t->odt_ops.odtop_mapslot)
+		t->odt_ops.odtop_mapslot(t, n, p, fp);
+	else {
+		if (p)
+			*p = PSCALLOC(h->odth_objsz);
+		if (fp)
+			*fp = PSCALLOC(sizeof(**fp));
+	}
 }
 
 /**
- * odtable_getitem - Retrieve an item from an odtable.
+ * pfl_odtputitem - Store an item into an odtable.
  */
-void
-pfl_odt_getitem_ftr(struct pfl_odt *t,
-    const struct pfl_odt_receipt *r, void *p,
-    struct pfl_odt_entftr **fp)
+struct pfl_odt_receipt *
+pfl_odt_putitemf(struct pfl_odt *t, size_t n, void *p, int inuse)
 {
-	struct pfl_odt_entftr ftr, *f = &ftr;
+	struct pfl_odt_receipt *r;
+	struct pfl_odt_entftr *f;
+
+	/* Setup and return the receipt. */
+	r = PSCALLOC(sizeof(*r));
+	r->odtr_elem = n;
+
+	pfl_odt_mapslot(t, n, NULL, &f);
+	_pfl_odt_doput(t, r, p, f, inuse);
+	pfl_odt_freebuf(t, NULL, f);
+	return (r);
+}
+
+void
+pfl_odt_freebuf(struct pfl_odt *t, void *p, struct pfl_odt_entftr *f)
+{
+	if (t->odt_ops.odtop_mapslot == NULL) {
+		PSCFREE(p);
+		PSCFREE(f);
+	}
+}
+
+void
+pfl_odt_getslot(struct pfl_odt *t, const struct pfl_odt_receipt *r,
+    void *pp, struct pfl_odt_entftr **fp)
+{
 	struct pfl_odt_hdr *h;
+	void **p = (void **)pp;
 
 	h = t->odt_hdr;
 	psc_assert(r->odtr_elem <= h->odth_nelems - 1);
 
-	if (fp) {
-		if (t->odt_ops.odtop_mapftr)
-			*fp = f = t->odt_ops.odtop_mapftr(t,
-			    r->odtr_elem);
-		f = *fp;
-	} else {
-		if (t->odt_ops.odtop_mapftr)
-			f = t->odt_ops.odtop_mapftr(t, r->odtr_elem);
-	}
+	pfl_odt_mapslot(t, r->odtr_elem, p, fp);
 
-	t->odt_ops.odtop_read(t, r, p, f);
+	if (t->odt_ops.odtop_read)
+		t->odt_ops.odtop_read(t, r, p ? *p : NULL,
+		    fp ? *fp : NULL);
 
 	psc_iostats_intv_add(&t->odt_iostats.rd, h->odth_slotsz);
 
@@ -297,15 +303,11 @@ void
 pfl_odt_replaceitem(struct pfl_odt *t, struct pfl_odt_receipt *r,
     void *p)
 {
-//	struct pfl_odt_entftr *f;
+	struct pfl_odt_entftr *f;
 
-//	if (ODTOP(t, getftr))
-//		f = ODTOP(t, getftr, r->odtr_elem);
-//	else
-//		f = &ftr;
-
-	pfl_odt_getitem(t, r, p);
-	_pfl_odt_doput(t, r, p, 1);
+	pfl_odt_mapslot(t, r->odtr_elem, NULL, &f);
+	_pfl_odt_doput(t, r, p, f, 1);
+	pfl_odt_freebuf(t, NULL, f);
 
 	PFLOG_ODT(PLL_DIAG, t, "rcpt=%p slot=%zd",
 	    r, r->odtr_elem);
@@ -321,14 +323,17 @@ pfl_odt_replaceitem(struct pfl_odt *t, struct pfl_odt_receipt *r,
 void
 pfl_odt_freeitem(struct pfl_odt *t, struct pfl_odt_receipt *r)
 {
-	_pfl_odt_doput(t, r, NULL, 0);
+	struct pfl_odt_entftr *f;
+
+	pfl_odt_mapslot(t, r->odtr_elem, NULL, &f);
+	_pfl_odt_doput(t, r, NULL, f, 0);
+	pfl_odt_freebuf(t, NULL, f);
 
 	spinlock(&t->odt_lock);
 	psc_vbitmap_unset(t->odt_bitmap, r->odtr_elem);
 	freelock(&t->odt_lock);
 
-	PFLOG_ODT(PLL_DIAG, t,
-	    "freeitem r=%p slot=%zd",
+	PFLOG_ODT(PLL_DIAG, t, "freeitem r=%p slot=%zd",
 	    r, r->odtr_elem);
 
 	ODT_STAT_INCR(t, free);
@@ -340,10 +345,10 @@ void
 pfl_odt_create(const char *fn, size_t nelems, size_t objsz,
     int overwrite, size_t startoff, size_t pad, int tflg)
 {
-	struct pfl_odt_entftr ftr, *f = &ftr;
+	struct pfl_odt_entftr *f;
+	struct pfl_odt_receipt r;
 	struct pfl_odt_hdr *h;
 	struct pfl_odt *t;
-	struct pfl_odt_receipt r;
 
 	t = PSCALLOC(sizeof(*t));
 	t->odt_ops = pfl_odtops_mmap;
@@ -367,8 +372,11 @@ pfl_odt_create(const char *fn, size_t nelems, size_t objsz,
 
 	t->odt_ops.odtop_create(t, fn, overwrite);
 
-	for (r.odtr_elem = 0; r.odtr_elem < nelems; r.odtr_elem++)
-		_pfl_odt_doput(t, &r, NULL, 0);
+	for (r.odtr_elem = 0; r.odtr_elem < nelems; r.odtr_elem++) {
+		pfl_odt_mapslot(t, r.odtr_elem, NULL, &f);
+		_pfl_odt_doput(t, &r, NULL, f, 0);
+		pfl_odt_freebuf(t, NULL, f);
+	}
 
 	PFLOG_ODT(PLL_DIAG, t, "created");
 
@@ -380,11 +388,11 @@ pfl_odt_load(struct pfl_odt **tp, struct pfl_odt_ops *odtops, int oflg,
     void (*cbf)(void *, struct pfl_odt_receipt *, void *), void *arg,
     const char *fn, const char *fmt, ...)
 {
-	struct pfl_odt_entftr ftr, *f = &ftr;
+	struct psc_meter mtr;
 	struct pfl_odt_receipt r = { 0, 0 };
+	struct pfl_odt_entftr *f;
 	struct pfl_odt_hdr *h;
 	struct pfl_odt *t;
-	struct psc_meter mtr;
 	uint64_t crc;
 	va_list ap;
 	void *p;
@@ -412,16 +420,13 @@ pfl_odt_load(struct pfl_odt **tp, struct pfl_odt_ops *odtops, int oflg,
 	t->odt_bitmap = psc_vbitmap_newf(h->odth_nelems, PVBF_AUTO);
 	psc_assert(t->odt_bitmap);
 
-	p = PSCALLOC(h->odth_slotsz);
-
 	psc_meter_init(&mtr, 0, "odt-%s", t->odt_name);
 	mtr.pm_max = h->odth_nelems;
 
 #define i mtr.pm_cur
 	for (i = 0; i < h->odth_nelems; i++) {
 		r.odtr_elem = i;
-		pfl_odt_getitem_ftr(t, &r, p, &f);
-		r.odtr_crc = f->odtf_crc;
+		pfl_odt_getslot(t, &r, &p, &f);
 
 		if (pfl_odt_footercheck(t, f, &r))
 			PFLOG_ODT(PLL_FATAL, t, "footercheck");
@@ -444,16 +449,16 @@ pfl_odt_load(struct pfl_odt **tp, struct pfl_odt_ops *odtops, int oflg,
 		if (f->odtf_flags & ODT_FTRF_INUSE) {
 			psc_vbitmap_set(t->odt_bitmap, i);
 			if (cbf)
-				cbf(p, &r, arg);
+				cbf(p, &r, arg); // need r?
 		}
+
+		pfl_odt_freebuf(t, p, NULL);
 	}
 #undef i
 
 	psc_meter_destroy(&mtr);
 
-	PSCFREE(p);
-
-	PFLOG_ODT(PLL_INFO, t, "loaded");
+	PFLOG_ODT(PLL_DIAG, t, "loaded");
 
 	pll_add(&pfl_odtables, t);
 }

@@ -1834,7 +1834,7 @@ int
 psc_ctlrep_getodtable(int fd, struct psc_ctlmsghdr *mh, void *m)
 {
 	struct psc_ctlmsg_odtable *pco = m;
-	struct odtable *odt;
+	struct pfl_odt *odt;
 	char name[ODT_NAME_MAX];
 	int rc, found, all;
 
@@ -1843,15 +1843,15 @@ psc_ctlrep_getodtable(int fd, struct psc_ctlmsghdr *mh, void *m)
 	strlcpy(name, pco->pco_name, sizeof(name));
 	all = (name[0] == '0');
 
-	PLL_LOCK(&psc_odtables);
-	PLL_FOREACH(odt, &psc_odtables) {
+	PLL_LOCK(&pfl_odtables);
+	PLL_FOREACH(odt, &pfl_odtables) {
 		if (all || strncmp(name,
 		    odt->odt_name, strlen(name)) == 0) {
 			found = 1;
 
 			snprintf(pco->pco_name, sizeof(pco->pco_name),
 			    "%s", odt->odt_name);
-			pco->pco_elemsz = odt->odt_hdr->odth_elemsz;
+			pco->pco_elemsz = odt->odt_hdr->odth_objsz;
 			pco->pco_opts = odt->odt_hdr->odth_options;
 			psc_vbitmap_getstats(odt->odt_bitmap,
 			    &pco->pco_inuse, &pco->pco_total);
@@ -1864,7 +1864,7 @@ psc_ctlrep_getodtable(int fd, struct psc_ctlmsghdr *mh, void *m)
 				break;
 		}
 	}
-	PLL_ULOCK(&psc_odtables);
+	PLL_ULOCK(&pfl_odtables);
 
 	if (rc && !found && !all)
 		rc = psc_ctlsenderr(fd, mh, "unknown odtable: %s",

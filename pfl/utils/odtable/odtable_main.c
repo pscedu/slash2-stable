@@ -195,12 +195,15 @@ main(int argc, char *argv[])
 	pfl_odt_load(&t, &pfl_odtops_mmap, oflg, visit, &t, fn, "%s",
 	    fn);
 
-	p = PSCALLOC(t->odt_hdr->odth_objsz);
 	for (i = 0; i < num_puts; i++) {
+		size_t elem;
+
+		elem = pfl_odt_allocslot(t);
+		pfl_odt_mapitem(t, elem, &p);
 		snprintf(p, elem_size, "... put_number=%d ...", i);
-		pfl_odt_putitem(t, p);
+		pfl_odt_putitem(t, elem, p);
+		pfl_odt_freebuf(t, p, NULL);
 	}
-	PSCFREE(p);
 
 	DYNARRAY_FOREACH(r, i, &rcpts)
 		pfl_odt_freeitem(t, r);

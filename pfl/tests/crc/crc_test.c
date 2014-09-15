@@ -22,8 +22,9 @@
 #include <unistd.h>
 
 #include "pfl/cdefs.h"
-#include "pfl/pfl.h"
 #include "pfl/crc.h"
+#include "pfl/pfl.h"
+#include "pfl/types.h"
 
 const char *progname;
 
@@ -48,6 +49,7 @@ main(int argc, char *argv[])
 	if (argc)
 		usage();
 
-	psc_crc64_calc(&crc, &n, 1);
+	psc_crc64_calc(&crc, "LER*##kdj3m-=z{]]]e3\\=O$I3llf0934", 24);
+	printf("%"PSCPRIxCRC64"\n", crc);
 	exit(0);
 }

@@ -72,12 +72,12 @@ struct pfl_odt_entftr {
 struct pfl_odt_ops {
 	void	(*odtop_close)(struct pfl_odt *);
 	void	(*odtop_create)(struct pfl_odt *, const char *, int);
-	struct pfl_odt_entftr *
-		(*odtop_mapftr)(struct pfl_odt *, size_t);
+	void	(*odtop_mapslot)(struct pfl_odt *, size_t, void **,
+		    struct pfl_odt_entftr **);
 	void	(*odtop_open)(struct pfl_odt *, const char *, int);
 	void	(*odtop_read)(struct pfl_odt *,
 		    const struct pfl_odt_receipt *, void *,
-		    struct pfl_odt_entftr *f);
+		    struct pfl_odt_entftr *);
 	void	(*odtop_resize)(struct pfl_odt *);
 	void	(*odtop_sync)(struct pfl_odt *, size_t);
 	void	(*odtop_write)(struct pfl_odt *, const void *,
@@ -107,7 +107,7 @@ struct pfl_odt {
 			void	*odtum_base;
 			int	 odtum_fd;
 		} m;
-		void		*odtu_handle;		/* need this for odtable in ZFS */
+		void		*odtu_mfh;		/* need this for odtable in ZFS */
 	} u;
 #define odt_base	u.m.odtum_base
 #define odt_fd		u.m.odtum_fd
@@ -141,20 +141,33 @@ struct pfl_odt_receipt {
 
 #define ODTBL_FLG_RDONLY	(1 << 0)
 
+#define ODTBL_SLOT_INV		((size_t)-1)
+
 struct pfl_odt_receipt *
-	 pfl_odt_putitem(struct pfl_odt *, void *);
+	 pfl_odt_additem(struct pfl_odt *, void *);
+size_t	 pfl_odt_allocslot(struct pfl_odt *);
 void	 pfl_odt_create(const char *, size_t, size_t, int, size_t,
 	    size_t, int);
+void	 pfl_odt_mapslot(struct pfl_odt *, size_t, void *,
+	    struct pfl_odt_entftr **);
 void	 pfl_odt_freeitem(struct pfl_odt *, struct pfl_odt_receipt *);
-void	 pfl_odt_getitem_ftr(struct pfl_odt *,
+void	 pfl_odt_freebuf(struct pfl_odt *, void *,
+	    struct pfl_odt_entftr *);
+void	 pfl_odt_getslot(struct pfl_odt *,
 	    const struct pfl_odt_receipt *, void *,
 	    struct pfl_odt_entftr **);
 void	 pfl_odt_load(struct pfl_odt **, struct pfl_odt_ops *, int,
 	    void (*)(void *, struct pfl_odt_receipt *, void *), void *,
 	    const char *, const char *, ...);
+struct pfl_odt_receipt *
+	 pfl_odt_putitemf(struct pfl_odt *, size_t, void *, int);
 void	 pfl_odt_release(struct pfl_odt *);
 void	 pfl_odt_replaceitem(struct pfl_odt *, struct pfl_odt_receipt *,
 	    void *);
+
+#define pfl_odt_putitem(t, n, p)	pfl_odt_putitemf((t), (n), (p), 1)
+#define pfl_odt_getitem(t, r, p)	pfl_odt_getslot((t), (r), (p), NULL)
+#define pfl_odt_mapitem(t, n, p)	pfl_odt_mapslot((t), (n), (p), NULL)
 
 extern struct psc_lockedlist pfl_odtables;
 
@@ -179,9 +192,6 @@ extern struct psc_lockedlist pfl_odtables;
 			    (f)->odtf_crc, (r)->odtr_crc);		\
 		_rc;							\
 	} _PFL_RVEND
-
-#define pfl_odt_getitem(t, r, p)					\
-	pfl_odt_getitem_ftr((t), (r), (p), NULL)
 
 extern struct pfl_odt_ops pfl_odtops_mmap;
 
