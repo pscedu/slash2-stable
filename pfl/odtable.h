@@ -146,6 +146,8 @@ struct pfl_odt_receipt {
 struct pfl_odt_receipt *
 	 pfl_odt_additem(struct pfl_odt *, void *);
 size_t	 pfl_odt_allocslot(struct pfl_odt *);
+void	 pfl_odt_check(struct pfl_odt *,
+	    void (*)(void *, struct pfl_odt_receipt *, void *), void *);
 void	 pfl_odt_create(const char *, size_t, size_t, int, size_t,
 	    size_t, int);
 void	 pfl_odt_mapslot(struct pfl_odt *, size_t, void *,
@@ -157,7 +159,6 @@ void	 pfl_odt_getslot(struct pfl_odt *,
 	    const struct pfl_odt_receipt *, void *,
 	    struct pfl_odt_entftr **);
 void	 pfl_odt_load(struct pfl_odt **, struct pfl_odt_ops *, int,
-	    void (*)(void *, struct pfl_odt_receipt *, void *), void *,
 	    const char *, const char *, ...);
 struct pfl_odt_receipt *
 	 pfl_odt_putitemf(struct pfl_odt *, size_t, void *, int);

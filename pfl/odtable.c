@@ -385,17 +385,12 @@ pfl_odt_create(const char *fn, size_t nelems, size_t objsz,
 
 void
 pfl_odt_load(struct pfl_odt **tp, struct pfl_odt_ops *odtops, int oflg,
-    void (*cbf)(void *, struct pfl_odt_receipt *, void *), void *arg,
     const char *fn, const char *fmt, ...)
 {
-	struct psc_meter mtr;
-	struct pfl_odt_receipt r = { 0, 0 };
-	struct pfl_odt_entftr *f;
 	struct pfl_odt_hdr *h;
 	struct pfl_odt *t;
 	uint64_t crc;
 	va_list ap;
-	void *p;
 
 	*tp = t = PSCALLOC(sizeof(*t));
 	t->odt_ops = *odtops;
@@ -420,6 +415,24 @@ pfl_odt_load(struct pfl_odt **tp, struct pfl_odt_ops *odtops, int oflg,
 	t->odt_bitmap = psc_vbitmap_newf(h->odth_nelems, PVBF_AUTO);
 	psc_assert(t->odt_bitmap);
 
+	PFLOG_ODT(PLL_DIAG, t, "loaded");
+
+	pll_add(&pfl_odtables, t);
+}
+
+void
+pfl_odt_check(struct pfl_odt *t,
+    void (*cbf)(void *, struct pfl_odt_receipt *, void *), void *arg)
+{
+	struct pfl_odt_receipt r = { 0, 0 };
+	struct pfl_odt_entftr *f;
+	struct pfl_odt_hdr *h;
+	struct psc_meter mtr;
+	uint64_t crc;
+	void *p;
+
+	h = t->odt_hdr;
+
 	psc_meter_init(&mtr, 0, "odt-%s", t->odt_name);
 	mtr.pm_max = h->odth_nelems;
 
@@ -427,6 +440,7 @@ pfl_odt_load(struct pfl_odt **tp, struct pfl_odt_ops *odtops, int oflg,
 	for (i = 0; i < h->odth_nelems; i++) {
 		r.odtr_elem = i;
 		pfl_odt_getslot(t, &r, &p, &f);
+		r.odtr_crc = f->odtf_crc;
 
 		if (pfl_odt_footercheck(t, f, &r))
 			PFLOG_ODT(PLL_FATAL, t, "footercheck");
@@ -441,9 +455,10 @@ pfl_odt_load(struct pfl_odt **tp, struct pfl_odt_ops *odtops, int oflg,
 
 			if (crc != f->odtf_crc)
 				PFLOG_ODT(PLL_FATAL, t,
+				    "CRC failed; slot=%zd "
 				    "mem_crc=%"PSCPRIxCRC64" "
 				    "ftr_crc=%"PSCPRIxCRC64,
-				    crc, f->odtf_crc);
+				    i, crc, f->odtf_crc);
 		}
 
 		if (f->odtf_flags & ODT_FTRF_INUSE) {
@@ -452,15 +467,11 @@ pfl_odt_load(struct pfl_odt **tp, struct pfl_odt_ops *odtops, int oflg,
 				cbf(p, &r, arg); // need r?
 		}
 
-		pfl_odt_freebuf(t, p, NULL);
+		pfl_odt_freebuf(t, p, f);
 	}
 #undef i
 
 	psc_meter_destroy(&mtr);
-
-	PFLOG_ODT(PLL_DIAG, t, "loaded");
-
-	pll_add(&pfl_odtables, t);
 }
 
 void
@@ -474,5 +485,9 @@ pfl_odt_release(struct pfl_odt *t)
 	t->odt_ops.odtop_close(t);
 
 	PSCFREE(t->odt_hdr);
+
+	psc_iostats_destroy(&t->odt_iostats.rd);
+	psc_iostats_destroy(&t->odt_iostats.wr);
+
 	PSCFREE(t);
 }
