@@ -79,6 +79,7 @@ struct psc_iostats_rw {
 #define psc_iostats_init(ist, name, ...)				\
 	psc_iostats_initf((ist), 0, (name), ## __VA_ARGS__)
 
+void psc_iostats_destroy(struct psc_iostats *);
 void psc_iostats_initf(struct psc_iostats *, int, const char *, ...);
 void psc_iostats_rename(struct psc_iostats *, const char *, ...);
 

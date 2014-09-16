@@ -86,3 +86,9 @@ psc_iostats_rename(struct psc_iostats *ist, const char *fmt, ...)
 	if (rc == -1 || rc >= (int)sizeof(ist->ist_name))
 		psc_fatal("vsnprintf");
 }
+
+void
+psc_iostats_destroy(struct psc_iostats *ist)
+{
+	pll_remove(&psc_iostats, ist);
+}
