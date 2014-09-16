@@ -192,8 +192,8 @@ main(int argc, char *argv[])
 		exit(0);
 	}
 
-	pfl_odt_load(&t, &pfl_odtops_mmap, oflg, visit, &t, fn, "%s",
-	    fn);
+	pfl_odt_load(&t, &pfl_odtops_mmap, oflg, fn, "%s", fn);
+	pfl_odt_check(t, visit, &t);
 
 	for (i = 0; i < num_puts; i++) {
 		size_t elem;
