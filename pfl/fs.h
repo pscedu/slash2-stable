@@ -162,8 +162,7 @@ int	pscfs_notify_inval_entry(struct pscfs_req *, pscfs_inum_t, const char *, siz
 #define	PSCFS_SETATTRF_CTIME		(1 <<  6)	/* utimes */
 #define	PSCFS_SETATTRF_ATIME_NOW	(1 <<  7)	/* utimes */
 #define	PSCFS_SETATTRF_MTIME_NOW	(1 <<  8)	/* utimes */
-#define	PSCFS_SETATTRF_FLUSH		(1 <<  9)	/* flush dirty attributes */
-#define	_PSCFS_SETATTRF_LAST		(1 << 10)
+#define	_PSCFS_SETATTRF_LAST		(1 <<  9)
 
 #define PSCFS_SETATTRF_ALL		(~0)
 
