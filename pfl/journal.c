@@ -169,6 +169,20 @@ pjournal_next_replay(struct psc_journal *pj)
 	return (xid);
 }
 
+uint64_t
+pjournal_next_xid(struct psc_journal *pj)
+{
+	uint64_t xid;
+	PJ_LOCK(pj);
+	do {
+		pj->pj_lastxid++;
+	} while (pj->pj_lastxid == PJE_XID_NONE);
+	xid = pj->pj_lastxid;
+	PJ_ULOCK(pj);
+
+	return(xid);
+}
+
 __static void
 pjournal_assign_xid(struct psc_journal *pj,
     struct psc_journal_xidhndl *xh, uint64_t txg)
@@ -178,10 +192,8 @@ pjournal_assign_xid(struct psc_journal *pj,
 	 * it does not necessarily mean transactions will end up in the
 	 * log in the same order.
 	 */
+	xh->pjx_xid = pjournal_next_xid(pj);
 	PJ_LOCK(pj);
-	do {
-		xh->pjx_xid = ++pj->pj_lastxid;
-	} while (xh->pjx_xid == PJE_XID_NONE);
 
 	/*
 	 * Make sure that transactions appear on the distill list in
