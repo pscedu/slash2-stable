@@ -170,7 +170,7 @@ pjournal_next_replay(struct psc_journal *pj)
 }
 
 __static void
-pjournal_next_xid(struct psc_journal *pj,
+pjournal_assign_xid(struct psc_journal *pj,
     struct psc_journal_xidhndl *xh, uint64_t txg)
 {
 	/*
@@ -276,7 +276,7 @@ pjournal_xnew(struct psc_journal *pj, int distill, uint64_t txg)
 	INIT_PSC_LISTENTRY(&xh->pjx_lentry);
 	INIT_PSC_LISTENTRY(&xh->pjx_pndg_lentry);
 	INIT_PSC_LISTENTRY(&xh->pjx_dstl_lentry);
-	pjournal_next_xid(pj, xh, txg);
+	pjournal_assign_xid(pj, xh, txg);
 
 	psclog_info("New trans: xid=%#"PRIx64", txg=%#"PRIx64", distill=%d",
 	    xh->pjx_xid, xh->pjx_txg, distill);
