@@ -269,7 +269,7 @@ void	*pjournal_get_buf(struct psc_journal *, size_t);
 void	 pjournal_put_buf(struct psc_journal *, void *);
 
 void	 pjournal_add_entry(struct psc_journal *, uint64_t, int, int, void *, int);
-uint64_t pjournal_next_ixd(struct psc_journal *);
+uint64_t pjournal_next_xid(struct psc_journal *);
 
 struct psc_lockedlist *
 	pfl_journals_get(void);
