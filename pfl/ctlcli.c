@@ -1256,11 +1256,12 @@ psc_ctlcli_main(const char *osockfn, int ac, char *av[],
 	}
 
 	/* Connect to control socket. */
-	if ((psc_ctl_sock = socket(AF_UNIX, SOCK_STREAM, 0)) == -1)
+	if ((psc_ctl_sock = socket(AF_LOCAL, SOCK_STREAM, 0)) == -1)
 		psc_fatal("socket");
 
 	memset(&saun, 0, sizeof(saun));
-	saun.sun_family = AF_UNIX;
+	saun.sun_family = AF_LOCAL;
+	SOCKADDR_SETLEN(&saun);
 
 	(void)FMTSTR(saun.sun_path, sizeof(saun.sun_path), psc_ctl_sockfn,
 		FMTSTRCASE('h', "s", psclog_getdata()->pld_hostshort)
@@ -1287,7 +1288,8 @@ psc_ctlcli_main(const char *osockfn, int ac, char *av[],
 				*(int *)otab[i].pco_data = 1;
 				break;
 			case PCOF_FUNC:
-				((void (*)(const char *))otab[i].pco_data)(optarg);
+				((void (*)(const char *))otab[
+				    i].pco_data)(optarg);
 				break;
 			}
 			break;

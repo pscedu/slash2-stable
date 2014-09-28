@@ -2127,7 +2127,7 @@ psc_ctlacthr_main(struct psc_thread *thr)
 		fd = accept(s, NULL, NULL);
 		if (fd == -1) {
 			if (errno == EINTR) {
-				usleep(100);
+				usleep(300);
 				continue;
 			}
 			psc_fatal("accept");
@@ -2204,6 +2204,7 @@ psc_ctlthr_main(const char *ofn, const struct psc_ctlop *ct, int nops,
 
 	memset(&saun, 0, sizeof(saun));
 	saun.sun_family = AF_LOCAL;
+	SOCKADDR_SETLEN(&saun);
 
 	/* preform transliteration for "variables" in file path */
 	(void)FMTSTR(saun.sun_path, sizeof(saun.sun_path), ofn,
