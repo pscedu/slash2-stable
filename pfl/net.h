@@ -58,22 +58,31 @@ union pfl_sockaddr_ptr {
 	const void		*cp;
 };
 
-#ifndef SA_SIZE
+#ifdef __APPLE__
+# define SOCKADDR_ALIGNSZ	sizeof(int32_t)
+#else
+# define SOCKADDR_ALIGNSZ	sizeof(long)
+#endif
 
-# ifdef __APPLE__
-#  define SOCKADDR_ALIGN	int32_t
-# else
-#  define SOCKADDR_ALIGN	long
-# endif
+#ifdef HAVE_SA_LEN
 
-# ifdef HAVE_SA_LEN
-#  define SA_SIZE(sa)							\
-    ((sa)->sa_len ? PSC_ALIGN((sa)->sa_len,				\
-	sizeof(SOCKADDR_ALIGN)) : sizeof(SOCKADDR_ALIGN))
-# else
-#  define SA_SIZE(sa)							\
-    (PSC_ALIGN(sizeof(*(sa)), sizeof(SOCKADDR_ALIGN)))
-# endif
+# define SOCKADDR_GETLEN(sa)						\
+	((sa)->sa_len ? PSC_ALIGN((sa)->sa_len, SOCKADDR_ALIGNSZ) :	\
+	 SOCKADDR_ALIGNSZ)
+
+# define SOCKADDR_SETLEN(sa)						\
+	(((struct sockaddr *)(sa))->sa_len = sizeof(*(sa)))
+
+#else
+
+/*
+ * XXX this argument can't be of type 'struct sockaddr' or this value will be
+ * wrong...
+ */
+# define SOCKADDR_GETSIZE(sa)						\
+	(PSC_ALIGN(sizeof(*(sa)), SOCKADDR_ALIGNSZ))
+
+# define SOCKADDR_SETSIZE(sa)
 
 #endif
 
