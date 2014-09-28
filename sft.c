@@ -244,7 +244,7 @@ addwk(struct f *f, off_t off, int chunkid)
 
 int
 proc(const char *fn,
-    __unusedx const struct pfl_stat *pst, int info,
+    __unusedx const struct stat *stb, int info,
     __unusedx int level, __unusedx void *arg)
 {
 	int chunkid;
