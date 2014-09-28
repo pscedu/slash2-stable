@@ -455,13 +455,13 @@ pflnet_getifnfordst_rtsock(const struct sockaddr *sa, char ifn[IFNAMSIZ])
 #define ADDSOCKADDR(p, sa)						\
 	do {								\
 		memcpy((p), (sa), (sa)->sa_len);			\
-		(p) += SA_SIZE(sa);					\
+		(p) += SOCKADDR_GETLEN(sa);					\
 	} while (0)
 #else
 #define ADDSOCKADDR(p, sa)						\
 	do {								\
 		memcpy((p), (sa), sizeof(*(sa)));			\
-		(p) += SA_SIZE(sa);					\
+		(p) += SOCKADDR_GETLEN(sa);					\
 	} while (0)
 #endif
 
@@ -514,7 +514,7 @@ pflnet_getifnfordst_rtsock(const struct sockaddr *sa, char ifn[IFNAMSIZ])
 
 	p = m.buf;
 	for (; rtm->rtm_addrs; rtm->rtm_addrs &= ~(1 << j),
-	    p += SA_SIZE(&psap->sa)) {
+	    p += SOCKADDR_GETLEN(&psap->sa)) {
 		j = ffs(rtm->rtm_addrs) - 1;
 		psap = (void *)p;
 		switch (1 << j) {
