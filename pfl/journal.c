@@ -879,8 +879,9 @@ pjournal_thr_main(struct psc_thread *thr)
 			PJ_ULOCK(pj);
 
 			/*
-			 * Once we clear the distill flag, xh can be freed after
-			 * its associated txg has been committed by the ZFS.
+			 * Once we clear the distill flag, xh can be
+			 * freed after its associated txg has been
+			 * committed by the ZFS.
 			 */
 			spinlock(&xh->pjx_lock);
 			psc_assert(xid < xh->pjx_xid);
