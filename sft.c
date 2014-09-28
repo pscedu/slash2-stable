@@ -138,7 +138,7 @@ thrmain(struct psc_thread *thr)
 			} else {
 				psc_crc64_add(&filecrc, buf, rc);
 				if (eof) {
-					PSC_CRC64_FIN(&filecrc);
+					psc_crc64_fini(&filecrc);
 					fprintf(stdout,
 					    "F '%s' CRC=%"PSCPRIxCRC64"\n",
 					    wk->f->fn, filecrc);
@@ -291,7 +291,7 @@ main(int argc, char *argv[])
 			break;
 		case 'c': /* perform CRC of entire file */
 			docrc = 1;
-			PSC_CRC64_INIT(&filecrc);
+			psc_crc64_init(&filecrc);
 			break;
 		case 'K': /* report checksum of each file chunk */
 			chunk = 1;
