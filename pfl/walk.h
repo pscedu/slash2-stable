@@ -30,7 +30,7 @@
 struct stat;
 
 int pfl_filewalk(const char *, int, void *,
-	int (*)(const char *, const struct pfl_stat *, int, int, void *),
+	int (*)(const char *, const struct stat *, int, int, void *),
 	void *);
 
 #define PFL_FILEWALKF_VERBOSE	(1 << 0)

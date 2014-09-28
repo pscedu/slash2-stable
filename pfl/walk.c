@@ -54,6 +54,7 @@ pfl_filewalk_stm2info(int mode)
  * pfl_filewalk - Traverse a file hierarchy with a given operation.
  * @fn: file root.
  * @flags: behavorial flags.
+ * @cmpf: optional dirent comparator for ordering.
  * @cbf: callback to invoke on each file.
  * @arg: optional argument to supply to callback.
  * Notes: the callback will be invoked with a fully resolved absolute
@@ -63,14 +64,13 @@ pfl_filewalk_stm2info(int mode)
 
 int
 pfl_filewalk(const char *fn, int flags, void *cmpf,
-    int (*cbf)(const char *, const struct pfl_stat *, int, int, void *),
+    int (*cbf)(const char *, const struct stat *, int, int, void *),
     void *arg)
 {
 	char * const pathv[] = { (char *)fn, NULL };
 	char buf[PATH_MAX], *path;
-	struct pfl_stat pst;
 	struct stat stb;
-	int rc = 0;
+	int rc = 0, ptype;
 	FTSENT *f;
 	FTS *fp;
 
@@ -81,14 +81,21 @@ pfl_filewalk(const char *fn, int flags, void *cmpf,
 		if (fp == NULL)
 			psc_fatal("fts_open %s", fn);
 		while ((f = fts_read(fp)) != NULL) {
-			PFL_STAT_EXPORT(f->fts_statp, &pst);
 			switch (f->fts_info) {
 			case FTS_NS:
 				warnx("%s: %s", f->fts_path,
 				    strerror(f->fts_errno));
 				break;
 			case FTS_F:
+				ptype = PFWT_F;
+				if (0)
+				/* FALLTHROUGH */
 			case FTS_D:
+				ptype = PFWT_D;
+				if (0)
+				/* FALLTHROUGH */
+			case FTS_DP:
+				ptype = PFWT_DP;
 				path = buf;
 				if (flags & PFL_FILEWALKF_RELPATH)
 					path = f->fts_path;
@@ -98,10 +105,10 @@ pfl_filewalk(const char *fn, int flags, void *cmpf,
 				}
 				if (flags & PFL_FILEWALKF_VERBOSE)
 					warnx("processing %s%s", path,
-					    f->fts_info == FTS_D ?
-					    "/" : "");
-				rc = cbf(path, &pst, f->fts_info == FTS_D ?
-				    PFWT_D : PFWT_F, f->fts_level, arg);
+					    f->fts_info == FTS_F ?
+					    "" : "/");
+				rc = cbf(path, f->fts_statp, ptype,
+				    f->fts_level, arg);
 				if (rc == PFL_FILEWALK_RC_SKIP)
 					fts_set(fp, f, FTS_SKIP);
 				else if (rc) {
@@ -112,16 +119,14 @@ pfl_filewalk(const char *fn, int flags, void *cmpf,
 			case FTS_SL:
 				if (flags & PFL_FILEWALKF_VERBOSE)
 					warnx("processing %s", f->fts_path);
-				rc = cbf(f->fts_path, &pst, PFWT_SL,
-				    f->fts_level, arg);
+				rc = cbf(f->fts_path, f->fts_statp,
+				    PFWT_SL, f->fts_level, arg);
 				if (rc == PFL_FILEWALK_RC_SKIP)
 					fts_set(fp, f, FTS_SKIP);
 				else if (rc) {
 					fts_close(fp);
 					return (rc);
 				}
-				break;
-			case FTS_DP:
 				break;
 			default:
 				warnx("%s: %s", f->fts_path,
@@ -141,8 +146,7 @@ pfl_filewalk(const char *fn, int flags, void *cmpf,
 			int info;
 
 			info = pfl_filewalk_stm2info(stb.st_mode);
-			PFL_STAT_EXPORT(&stb, &pst);
-			rc = cbf(buf, &pst, info, 0, arg);
+			rc = cbf(buf, &stb, info, 0, arg);
 		}
 	}
 	return (rc);
@@ -150,32 +154,38 @@ pfl_filewalk(const char *fn, int flags, void *cmpf,
 
 #else
 
-int (*pfl_filewalk_cbf)(const char *, const struct pfl_stat *, int, int,
+int (*pfl_filewalk_cbf)(const char *, const struct stat *, int, int,
     void *);
 void *pfl_filewalk_arg;
 
 int
-pfl_filewalk_cb(const char *fn, const struct stat *stb, int flags,
+pfl_filewalk_cb(const char *fn, const struct stat *stb, int wtype,
     struct FTW *ftw)
 {
-	struct pfl_stat pst;
 	char buf[PATH_MAX];
-	int rc;
+	int rc, ptype;
 
-	PFL_STAT_EXPORT(stb, &pst);
-	switch (flags) {
+	switch (wtype) {
 	case FTW_NS:
 		warn("%s: %s", fn);
 		break;
 	case FTW_F:
+		ptype = PFWT_F;
+		if (0)
+		/* FALLTHROUGH */
 	case FTW_D:
+		ptype = PFWT_D;
+		if (0)
+		/* FALLTHROUGH */
+	case FTW_DP:
+		ptype = PFWT_DP;
 		if (realpath(fn, buf) == NULL)
 			warn("%s", fn);
 		else {
-			if (flags & PFL_FILEWALKF_VERBOSE)
+			if (wflags & PFL_FILEWALKF_VERBOSE)
 				warnx("processing %s%s",
-				    buf, flags == FTW_D ? "/" : "");
-			rc = pfl_filewalk_cbf(buf, &pst, flags,
+				    buf, flags == FTW_F ? "" : "/");
+			rc = pfl_filewalk_cbf(buf, stb, ptype,
 			    ftw->level, pfl_filewalk_arg);
 			if (rc == PFL_FILEWALK_RC_SKIP)
 				ftw->__quit = FTW_PRUNE;
@@ -184,16 +194,14 @@ pfl_filewalk_cb(const char *fn, const struct stat *stb, int flags,
 		}
 		break;
 	case FTW_SL:
-		if (flags & PFL_FILEWALKF_VERBOSE)
+		if (wflags & PFL_FILEWALKF_VERBOSE)
 			warnx("processing %s", fn);
-		rc = pfl_filewalk_cbf(fn, &pst, flags, ftw->level,
+		rc = pfl_filewalk_cbf(fn, stb, PFWT_SL, ftw->level,
 		    pfl_filewalk_arg);
 		if (rc == PFL_FILEWALK_RC_SKIP)
 			ftw->__quit = FTW_PRUNE;
 		if (rc)
 			return (rc);
-		break;
-	case FTW_DP:
 		break;
 	default:
 		warn("%s: %s", fn);
@@ -205,10 +213,9 @@ pfl_filewalk_cb(const char *fn, const struct stat *stb, int flags,
 int
 pfl_filewalk(const char *fn, int flags,
     int (*cmpf)(const FTSENT **, const FTSENT **),
-    int (*cbf)(const char *, const struct pfl_stat *, int, int, void *),
+    int (*cbf)(const char *, const struct stat *, int, int, void *),
     void *arg)
 {
-	struct pfl_stat pst;
 	char buf[PATH_MAX];
 	struct stat stb;
 	int rc = 0;
@@ -234,8 +241,7 @@ pfl_filewalk(const char *fn, int flags,
 			int info;
 
 			info = pfl_filewalk_stm2info(stb.st_mode);
-			PFL_STAT_EXPORT(&stb, &pst);
-			rc = cbf(buf, &pst, info, 0, arg);
+			rc = cbf(buf, &stb, info, 0, arg);
 //			if (info == FTS_D)
 //				rc = cbf(buf, &stb, FTS_DP, 0, arg);
 		}
