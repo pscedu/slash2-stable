@@ -79,10 +79,10 @@ union pfl_sockaddr_ptr {
  * XXX this argument can't be of type 'struct sockaddr' or this value will be
  * wrong...
  */
-# define SOCKADDR_GETSIZE(sa)						\
+# define SOCKADDR_GETLEN(sa)						\
 	(PSC_ALIGN(sizeof(*(sa)), SOCKADDR_ALIGNSZ))
 
-# define SOCKADDR_SETSIZE(sa)
+# define SOCKADDR_SETLEN(sa)
 
 #endif
 

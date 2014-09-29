@@ -43,6 +43,7 @@
 #include "pfl/list.h"
 #include "pfl/log.h"
 #include "pfl/meter.h"
+#include "pfl/net.h"
 #include "pfl/pool.h"
 #include "pfl/rpc.h"
 #include "pfl/str.h"
