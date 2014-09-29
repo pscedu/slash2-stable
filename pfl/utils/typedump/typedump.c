@@ -218,7 +218,6 @@ main(int argc, char *argv[])
 	PRTYPE(struct pfl_odt_receipt);
 	PRTYPE(struct pfl_odt_stats);
 	PRTYPE(struct pfl_opstat);
-	PRTYPE(struct pfl_stat);
 	PRTYPE(struct pfl_strbuf);
 	PRTYPE(struct pfl_timespec);
 	PRTYPE(struct pfl_wk_thread);
