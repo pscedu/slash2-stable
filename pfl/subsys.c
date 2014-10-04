@@ -26,10 +26,10 @@
 #include <stdio.h>
 #include <strings.h>
 
-#include "pfl/dynarray.h"
-#include "pfl/subsys.h"
 #include "pfl/alloc.h"
+#include "pfl/dynarray.h"
 #include "pfl/log.h"
+#include "pfl/subsys.h"
 
 struct psc_subsys {
 	const char	*pss_name;
