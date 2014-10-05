@@ -1201,6 +1201,29 @@ matches_cmd(const char *cmd, const char *ucmd)
 
 extern void usage(void);
 
+int psc_ctlcli_docurses = 1;
+struct psc_ctlcli_main_args {
+	const char		 *osockfn;
+	int			  ac;
+	char			**av;
+	const struct psc_ctlopt	 *otab;
+	int			  notab;
+} psc_ctlcli_main_args;
+
+void
+psc_ctlcli_exit(void)
+{
+	struct psc_ctlcli_main_args *a = &psc_ctlcli_main_args;
+	static int ran;
+
+	if (!ran) {
+		ran = 1;
+		psc_ctlcli_docurses = 0;
+		psc_ctlcli_main(a->osockfn, a->ac, a->av, a->otab,
+		    a->notab);
+	}
+}
+
 void
 psc_ctlcli_main(const char *osockfn, int ac, char *av[],
     const struct psc_ctlopt *otab, int notab)
@@ -1213,12 +1236,42 @@ psc_ctlcli_main(const char *osockfn, int ac, char *av[],
 	pthread_t pthr;
 	int rc, c, i;
 
-	filter();
-	if (initscr()) {
+	/*
+	 * Hack to work around initscr() from exiting the entire
+	 * program.  We register an exit handler that actually
+	 * calls this same function again skipping the curses
+	 * routines.
+	 */
+	atexit(psc_ctlcli_exit);
+	psc_ctlcli_main_args.osockfn = osockfn;
+	psc_ctlcli_main_args.ac = ac;
+	psc_ctlcli_main_args.av = av;
+	psc_ctlcli_main_args.otab = otab;
+	psc_ctlcli_main_args.notab = notab;
+
+	if (psc_ctlcli_docurses) {
+		FILE *save, *t;
+		int fds[2];
+
+		filter();
+
+		/* Discard error output. */
+		if (pipe(fds) == -1)
+			err(1, "pipe");
+		save = stderr;
+		t = fdopen(fds[1], "w");
+		if (t == NULL)
+			err(1, "fdopen pipe");
+		stderr = t;
+		initscr();
+		stderr = save;
+		fclose(t);
+		close(fds[0]);
+
 		start_color();
 		has_col = isatty(STDOUT_FILENO) && has_colors();
+		endwin();
 	}
-	endwin();
 
 	prg = strrchr(progname, '/');
 	if (prg)
