@@ -68,7 +68,8 @@ pfl_filewalk(const char *fn, int flags, void *cmpf,
     void *arg)
 {
 	char * const pathv[] = { (char *)fn, NULL };
-	char buf[PATH_MAX], *path;
+	char buf[PATH_MAX];
+	const char *path;
 	struct stat stb;
 	int rc = 0, ptype;
 	FTSENT *f;
@@ -138,16 +139,15 @@ pfl_filewalk(const char *fn, int flags, void *cmpf,
 	} else {
 		if (lstat(fn, &stb) == -1)
 			err(1, "%s", fn);
-		else if (!S_ISREG(stb.st_mode) && !S_ISDIR(stb.st_mode))
-			errx(1, "%s: not a file or directory", fn);
-		else if (realpath(fn, buf) == NULL)
-			err(1, "%s", fn);
+		if (flags & PFL_FILEWALKF_RELPATH)
+			path = fn;
 		else {
-			int info;
-
-			info = pfl_filewalk_stm2info(stb.st_mode);
-			rc = cbf(buf, &stb, info, 0, arg);
+			if (realpath(fn, buf) == NULL)
+				err(1, "%s", fn);
+			path = buf;
 		}
+		ptype = pfl_filewalk_stm2info(stb.st_mode);
+		rc = cbf(path, &stb, ptype, 0, arg);
 	}
 	return (rc);
 }
