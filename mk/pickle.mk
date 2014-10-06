@@ -303,4 +303,8 @@ ifeq ($(filter $(realpath ${ROOTDIR})/compat/%,${CURDIR}),)
   QSORT_R_SRCS+=					${PFL_BASE}/compat/qsort_r.c
  endif
 
+ ifdef PICKLE_HAVE_GETLOADAVG
+  DEFINES+=						-DHAVE_GETLOADAVG
+ endif
+
 endif
