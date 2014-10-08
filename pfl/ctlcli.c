@@ -1210,14 +1210,15 @@ struct psc_ctlcli_main_args {
 	int			  notab;
 } psc_ctlcli_main_args;
 
+int psc_ctlcli_retry_main;
+
 void
 psc_ctlcli_exit(void)
 {
 	struct psc_ctlcli_main_args *a = &psc_ctlcli_main_args;
-	static int ran;
 
-	if (!ran) {
-		ran = 1;
+	if (psc_ctlcli_retry_main) {
+		psc_ctlcli_retry_main = 0;
 		psc_ctlcli_docurses = 0;
 		psc_ctlcli_main(a->osockfn, a->ac, a->av, a->otab,
 		    a->notab);
@@ -1263,7 +1264,9 @@ psc_ctlcli_main(const char *osockfn, int ac, char *av[],
 		if (t == NULL)
 			err(1, "fdopen pipe");
 		stderr = t;
+		psc_ctlcli_retry_main = 1;
 		initscr();
+		psc_ctlcli_retry_main = 0;
 		stderr = save;
 		fclose(t);
 		close(fds[0]);
