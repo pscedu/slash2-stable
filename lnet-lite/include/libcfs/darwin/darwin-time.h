@@ -248,7 +248,7 @@ static inline void cfs_duration_nsec(cfs_duration_t d, struct timespec *s)
 #ifdef __APPLE__
 # define CFS_TIME_T		"%lu"
 #elif defined(__FreeBSD__)
-# include <stdint.h>
+# include <inttypes.h>
 # define CFS_TIME_T		"%"PRId64
 #else
 # define CFS_TIME_T		"%u"
