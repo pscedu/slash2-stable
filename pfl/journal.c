@@ -173,12 +173,11 @@ uint64_t
 pjournal_next_xid(struct psc_journal *pj)
 {
 	uint64_t xid;
-	PJ_LOCK(pj);
+
 	do {
 		pj->pj_lastxid++;
 	} while (pj->pj_lastxid == PJE_XID_NONE);
 	xid = pj->pj_lastxid;
-	PJ_ULOCK(pj);
 
 	return(xid);
 }
@@ -192,8 +191,8 @@ pjournal_assign_xid(struct psc_journal *pj,
 	 * it does not necessarily mean transactions will end up in the
 	 * log in the same order.
 	 */
-	xh->pjx_xid = pjournal_next_xid(pj);
 	PJ_LOCK(pj);
+	xh->pjx_xid = pjournal_next_xid(pj);
 
 	/*
 	 * Make sure that transactions appear on the distill list in
