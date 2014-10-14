@@ -98,16 +98,16 @@ struct pfl_opstat {
 
 #define	OPSTAT_INCR(op)							\
 	do {								\
-		struct pfl_opstat *pos;					\
+		struct pfl_opstat *_pos;				\
 		char *_p;						\
 									\
 		psc_assert((op) < OPSTATS_MAX);				\
-		pos = &pflctl_opstats[op];				\
-		psc_atomic64_inc(&pos->pos_value);			\
-		if (pos->pos_name == NULL) {				\
+		_pos = &pflctl_opstats[op];				\
+		psc_atomic64_inc(&_pos->pos_value);			\
+		if (_pos->pos_name == NULL) {				\
 			_p = strstr(#op, "_OPST_");			\
 			psc_assert(_p);					\
-			for (pos->pos_name = _p = pfl_strdup(_p + 6);	\
+			for (_pos->pos_name = _p = pfl_strdup(_p + 6);	\
 			    *_p; _p++)					\
 				*_p = tolower(*_p);			\
 		}							\
@@ -150,9 +150,9 @@ int	psc_ctlparam_log_file(int, struct psc_ctlmsghdr *,
 int	psc_ctlparam_log_format(int, struct psc_ctlmsghdr *,
 		struct psc_ctlmsg_param *, char **, int, struct psc_ctlparam_node *);
 int	psc_ctlparam_log_level(int, struct psc_ctlmsghdr *,
-		struct psc_ctlmsg_param *, char **, int, struct psc_ctlparam_node *); 
+		struct psc_ctlmsg_param *, char **, int, struct psc_ctlparam_node *);
 int	psc_ctlparam_log_points(int, struct psc_ctlmsghdr *,
-    		struct psc_ctlmsg_param *, char **, int, struct psc_ctlparam_node *); 
+		struct psc_ctlmsg_param *, char **, int, struct psc_ctlparam_node *);
 int	psc_ctlparam_pool(int, struct psc_ctlmsghdr *,
 		struct psc_ctlmsg_param *, char **, int, struct psc_ctlparam_node *);
 int	psc_ctlparam_rlim(int, struct psc_ctlmsghdr *,
