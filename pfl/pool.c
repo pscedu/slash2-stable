@@ -541,8 +541,8 @@ _psc_pool_get(struct psc_poolmgr *m, int flags)
 	 * If this pool user provided a reclaimer routine e.g.
 	 * for reclaiming buffers on a clean list, try that.
 	 */
- tryreclaim:
 	if (m->ppm_reclaimcb) {
+ tryreclaim:
 		atomic_inc(&m->ppm_nwaiters);
 		psc_mutex_lock(&m->ppm_reclaim_mutex);
 		m->ppm_reclaimcb(m);
@@ -588,15 +588,15 @@ _psc_pool_get(struct psc_poolmgr *m, int flags)
 
 	/*
 	 * Try once more, if nothing, a condition should be added to the
-	 * multiwait.  This invocation should have been done in a
-	 * multiwait critical section to prevent dropping notifications.
+	 * multiwait.  This invocation should have been done in a multiwait
+	 * critical section to prevent dropping notifications.
 	 */
 	if (POOL_IS_MLIST(m))
 		return (POOL_TRYGETOBJ(m));
 
 	/*
-	 * If there is a reclaimer routine, invoke it consecutively
-	 * until no more items are reclaimed.
+	 * If there is a reclaimer routine, invoke it consecutively until at
+	 * least one item is reclaimed and available for us.
 	 */
 	if (m->ppm_reclaimcb) {
 		POOL_LOCK(m);
