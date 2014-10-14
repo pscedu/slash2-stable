@@ -39,7 +39,6 @@ int
 main(int argc, char *argv[])
 {
 	uint64_t crc;
-	char n = 0;
 
 	pfl_init();
 	progname = argv[0];
