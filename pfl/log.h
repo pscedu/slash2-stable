@@ -202,7 +202,7 @@ struct pfl_logpoint {
 /* Determine whether a debug/logging operation should occur. */
 #define psc_log_shouldlog(pci, lvl)					\
 	_PFL_RVSTART {							\
-		int _rc = 0;						\
+		int _rc0 = 0;						\
 									\
 		/* check global logging level */			\
 		if ((lvl) > PSCLOG_LEVEL)				\
@@ -210,7 +210,7 @@ struct pfl_logpoint {
 									\
 		/* check thread logging level */			\
 		else if (psc_log_getlevel((pci)->pci_subsys) >= (lvl))	\
-			_rc = 1;					\
+			_rc0 = 1;					\
 									\
 		/* check if specific logpoint exists */			\
 		else if (psc_dynarray_len(&_pfl_logpoints)) {		\
@@ -223,10 +223,10 @@ struct pfl_logpoint {
 									\
 			if (psc_dynarray_getpos(&_pfl_logpoints,	\
 			    _pfl_logpointid))				\
-				_rc = 1;				\
+				_rc0 = 1;				\
 		}							\
 									\
-		(_rc);							\
+		(_rc0);							\
 	} _PFL_RVEND
 
 #define PSCLOG_LOCK()			flockfile(stderr)
