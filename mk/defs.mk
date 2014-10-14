@@ -69,7 +69,7 @@ YFLAGS+=	-d
 
 CFLAGS+=	-Wall -W -pipe
 # -Wredundant-decls
-# CFLAGS+=	-Wshadow
+CFLAGS+=	-Wshadow
 #CFLAGS+=	-Wno-address
 
 ifeq (${GOPROF},1)
@@ -210,7 +210,7 @@ endif
 ifeq (${OSTYPE},Darwin)
   DEFINES+=	-D_DARWIN_C_SOURCE -D_DARWIN_FEATURE_64_BIT_INODE
   DEFINES+=	-DHAVE_NO_POLL_DEV
-  CFLAGS+=	-Wno-deprecated-declarations -Wno-static-local-in-inline
+  CFLAGS+=	-Wno-deprecated-declarations
   THREAD_LIBS=	-lpthread
 endif
 
