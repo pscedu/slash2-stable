@@ -50,7 +50,7 @@ struct psc_lockedlist	 pfl_odtables =
  * odtable_getitemoff - Get offset of a table entry, which is relative
  * to either the disk file or start of base memory-mapped address.
  */
-__inline size_t
+static __inline size_t
 pfl_odt_getitemoff(const struct pfl_odt *t, size_t elem)
 {
 	const struct pfl_odt_hdr *h;
