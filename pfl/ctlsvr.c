@@ -644,7 +644,7 @@ psc_ctlparam_log_file(int fd, struct psc_ctlmsghdr *mh,
 			rc = psc_ctlsenderr(fd, mh, "log.file: %s",
 			    strerror(errno));
 	} else
-		rc = psc_ctlsenderr(fd, mh, "log.file: write-only");
+		rc = psc_ctlsenderr(fd, mh, "log.file: write-only field");
 	return (rc);
 }
 
@@ -1204,6 +1204,10 @@ psc_ctlparam_pool_handle(int fd, struct psc_ctlmsghdr *mh,
 		if (set) {
 			int old;
 
+			if (m->ppm_reclaimcb == NULL)
+				return (psc_ctlsenderr(fd, mh,
+				    "pool.%s: not reapable", levels[1]));
+
 			psc_mutex_lock(&m->ppm_reclaim_mutex);
 			old = atomic_read(&m->ppm_nwaiters);
 			atomic_set(&m->ppm_nwaiters, val);
@@ -1212,7 +1216,7 @@ psc_ctlparam_pool_handle(int fd, struct psc_ctlmsghdr *mh,
 			psc_mutex_unlock(&m->ppm_reclaim_mutex);
 		} else {
 			return (psc_ctlsenderr(fd, mh,
-			    "pool.%s.reap: write-only", levels[1]));
+			    "pool.%s.reap: write-only field", levels[1]));
 		}
 	}
 
