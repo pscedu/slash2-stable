@@ -62,8 +62,6 @@ typedef struct psc_spinlock {
 	const char		*psl_owner_file;
 #ifdef LOCK_TIMING
 	struct timeval		 psl_time;
-#else
-	struct {};
 #endif
 	pthread_t		 psl_owner;
 } psc_spinlock_t;
@@ -88,13 +86,17 @@ typedef struct psc_spinlock {
 #define INIT_SPINLOCK_LOGTMP(psl)INIT_SPINLOCK_FLAGS((psl), PSLF_LOGTMP)
 
 #ifdef LOCK_TIMING
-#  define _SPINLOCK_TIMING_INIT	{ 0, 0 }
+#  define _SPINLOCK_TIMING_INIT	{ 0, 0 },
+
+#  define _psc_spin_checktime(psl)	_psc_spin_checktime_impl(psl)
 #else
-#  define _SPINLOCK_TIMING_INIT { }
+#  define _SPINLOCK_TIMING_INIT
+
+#  define _psc_spin_checktime(psl)
 #endif
 
 #define SPINLOCK_INITF(f)	{ PSC_ATOMIC32_INIT(PSL_UNLOCKED), (f),	\
-				  0, NULL, _SPINLOCK_TIMING_INIT, 0 }
+				  0, NULL, _SPINLOCK_TIMING_INIT 0 }
 
 #define SPINLOCK_INIT		SPINLOCK_INITF(0)
 #define SPINLOCK_INIT_NOLOG	SPINLOCK_INITF(PSLF_NOLOG)
@@ -248,7 +250,9 @@ typedef struct psc_spinlock {
 #define trylock(psl)		trylock_pci(_SPIN_CALLERINFO(psl), (psl))
 #define spinlock(psl)		spinlock_pci(_SPIN_CALLERINFO(psl), (psl))
 
-static __inline void _psc_spin_checktime(struct psc_spinlock *);
+#ifdef LOCK_TIMING
+static __inline void _psc_spin_checktime_impl(struct psc_spinlock *);
+#endif
 
 #ifndef _PFL_ATOMIC_H_
 #  include "pfl/atomic.h"
@@ -276,10 +280,10 @@ static __inline void _psc_spin_checktime(struct psc_spinlock *);
 		ureqlock((lk), _locked);				\
 	} while (0)
 
-static __inline void
-_psc_spin_checktime(struct psc_spinlock *psl)
-{
 #ifdef LOCK_TIMING
+static __inline void
+_psc_spin_checktime_impl(struct psc_spinlock *psl)
+{
 	struct timeval now, diff;
 
 	PFL_GETTIMEVAL(&now);
@@ -289,10 +293,8 @@ _psc_spin_checktime(struct psc_spinlock *psl)
 	if (timercmp(&diff, &max, >))
 		psclog_errorx("lock %p held long (%luus)",
 		    psl, diff.tv_sec * 1000 * 1000 + diff.tv_usec);
-#else
-	(void)psl;
-#endif
 }
+#endif
 
 static __inline int
 psc_spin_haslock(psc_spinlock_t *psl)
