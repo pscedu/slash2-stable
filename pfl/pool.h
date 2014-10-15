@@ -28,11 +28,11 @@
 
 #include <stdarg.h>
 
-#include "pfl/explist.h"
 #include "pfl/dynarray.h"
+#include "pfl/explist.h"
 #include "pfl/listcache.h"
-#include "pfl/lockedlist.h"
 #include "pfl/lock.h"
+#include "pfl/lockedlist.h"
 #include "pfl/log.h"
 #include "pfl/memnode.h"
 #include "pfl/mlist.h"
