@@ -70,8 +70,8 @@ struct psc_poolmaster {
 	int			  pms_min;		/* min bound of #items */
 	int			  pms_max;		/* max bound of #items */
 	int			  pms_flags;		/* flags */
-	void			 *pms_mwcarg;		/* mlist cond arg */
 	int			  pms_thres;		/* autoresize threshold */
+	void			 *pms_mwcarg;		/* mlist cond arg */
 
 	int			(*pms_initf)(struct psc_poolmgr *, void *);
 	void			(*pms_destroyf)(void *);
