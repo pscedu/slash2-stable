@@ -543,11 +543,11 @@ _psc_pool_get(struct psc_poolmgr *m, int flags)
 	 */
 	if (m->ppm_reclaimcb) {
  tryreclaim:
-		atomic_inc(&m->ppm_nwaiters);
+		psc_atomic32_inc(&m->ppm_nwaiters);
 		psc_mutex_lock(&m->ppm_reclaim_mutex);
 		m->ppm_reclaimcb(m);
 		psc_mutex_unlock(&m->ppm_reclaim_mutex);
-		atomic_dec(&m->ppm_nwaiters);
+		psc_atomic32_dec(&m->ppm_nwaiters);
 		p = POOL_TRYGETOBJ(m);
 		if (p)
 			return (p);
@@ -605,10 +605,10 @@ _psc_pool_get(struct psc_poolmgr *m, int flags)
 			POOL_ULOCK(m);
 			return (p);
 		}
-		atomic_inc(&m->ppm_nwaiters);
+		psc_atomic32_inc(&m->ppm_nwaiters);
 		psc_waitq_waitrel_us(&m->ppm_lc.plc_wq_empty,
 		    &m->ppm_lc.plc_lock, 100);
-		atomic_dec(&m->ppm_nwaiters);
+		psc_atomic32_dec(&m->ppm_nwaiters);
 
 		p = POOL_TRYGETOBJ(m);
 		if (p)

@@ -1209,10 +1209,10 @@ psc_ctlparam_pool_handle(int fd, struct psc_ctlmsghdr *mh,
 				    "pool.%s: not reapable", levels[1]));
 
 			psc_mutex_lock(&m->ppm_reclaim_mutex);
-			old = atomic_read(&m->ppm_nwaiters);
-			atomic_set(&m->ppm_nwaiters, val);
+			old = psc_atomic32_read(&m->ppm_nwaiters);
+			psc_atomic32_set(&m->ppm_nwaiters, val);
 			m->ppm_reclaimcb(m);
-			atomic_set(&m->ppm_nwaiters, old);
+			psc_atomic32_set(&m->ppm_nwaiters, old);
 			psc_mutex_unlock(&m->ppm_reclaim_mutex);
 		} else {
 			return (psc_ctlsenderr(fd, mh,
