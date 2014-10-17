@@ -307,4 +307,8 @@ ifeq ($(filter $(realpath ${ROOTDIR})/compat/%,${CURDIR}),)
   DEFINES+=						-DHAVE_GETLOADAVG
  endif
 
+ ifdef PICKLE_HAVE_SYS_ACL_H
+  DEFINES+=						-DHAVE_SYS_ACL_H
+ endif
+
 endif
