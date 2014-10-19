@@ -27,3 +27,5 @@ int	pfl_fmtcol_human(const char *);
 void	psc_fmt_human(char [], double);
 void	psc_fmt_ratio(char [], int64_t, int64_t);
 ssize_t	pfl_humantonum(const char *);
+const char *
+	pfl_fmt_mode(mode_t, char []);

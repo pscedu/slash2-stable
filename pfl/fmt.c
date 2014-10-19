@@ -130,3 +130,51 @@ pfl_humantonum(const char *s)
 		return (-ERANGE);
 	return (sz * m);
 }
+
+const char *
+pfl_fmt_mode(mode_t m, char buf[11])
+{
+	char *p = buf;
+
+	if (S_ISDIR(m))
+		*p++ = 'd';
+	else if (S_ISCHR(m))
+		*p++ = 'c';
+	else if (S_ISBLK(m))
+		*p++ = 'b';
+	else if (S_ISSOCK(m))
+		*p++ = 's';
+	else if (S_ISDIR(m))
+		*p++ = 'd';
+	else if (S_ISLNK(m))
+		*p++ = 'l';
+	else if (S_ISFIFO(m))
+		*p++ = 'f';
+	else if (S_ISREG(m))
+		*p++ = '-';
+	else
+		*p++ = '?';
+
+	*p++ = m & S_IRUSR ? 'r' : '-';
+	*p++ = m & S_IWUSR ? 'w' : '-';
+	if (m & S_ISUID)
+		*p++ = m & S_IXUSR ? 's' : 'S';
+	else
+		*p++ = m & S_IXUSR ? 'x' : '-';
+
+	*p++ = m & S_IRGRP ? 'r' : '-';
+	*p++ = m & S_IWGRP ? 'w' : '-';
+	if (m & S_ISGID)
+		*p++ = m & S_IXGRP ? 's' : 'S';
+	else
+		*p++ = m & S_IXGRP ? 'x' : '-';
+
+	*p++ = m & S_IROTH ? 'r' : '-';
+	*p++ = m & S_IWOTH ? 'w' : '-';
+	if (m & S_ISVTX)
+		*p++ = m & S_IXOTH ? 't' : 'T';
+	else
+		*p++ = m & S_IXOTH ? 'x' : '-';
+	*p = '\0';
+	return (buf);
+}

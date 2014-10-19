@@ -59,54 +59,14 @@ pfl_dump_fflags(int fflags)
 }
 
 void
-pfl_dump_mode(mode_t modes)
+pfl_dump_mode(mode_t m)
 {
-	char ch, buf[10];
-	uint32_t m = modes;
+	char buf[11];
 
-	if (S_ISDIR(m))
-		ch = 'd';
-	else if (S_ISCHR(m))
-		ch = 'c';
-	else if (S_ISBLK(m))
-		ch = 'b';
-	else if (S_ISSOCK(m))
-		ch = 's';
-	else if (S_ISDIR(m))
-		ch = 'd';
-	else if (S_ISLNK(m))
-		ch = 'l';
-	else if (S_ISFIFO(m))
-		ch = 'f';
-	else if (S_ISREG(m))
-		ch = '-';
-	else
-		ch = '?';
-
-	buf[0] = m & S_IRUSR ? 'r' : '-';
-	buf[1] = m & S_IWUSR ? 'w' : '-';
-	if (m & S_ISUID)
-		buf[2] = m & S_IXUSR ? 's' : 'S';
-	else
-		buf[2] = m & S_IXUSR ? 'x' : '-';
-
-	buf[3] = m & S_IRGRP ? 'r' : '-';
-	buf[4] = m & S_IWGRP ? 'w' : '-';
-	if (m & S_ISGID)
-		buf[5] = m & S_IXGRP ? 's' : 'S';
-	else
-		buf[5] = m & S_IXGRP ? 'x' : '-';
-
-	buf[6] = m & S_IROTH ? 'r' : '-';
-	buf[7] = m & S_IWOTH ? 'w' : '-';
-	if (m & S_ISVTX)
-		buf[8] = m & S_IXOTH ? 't' : 'T';
-	else
-		buf[8] = m & S_IXOTH ? 'x' : '-';
-	buf[9] = '\0';
+	pfl_fmt_mode(modes, buf);
 	m &= ~(ALLPERMS | S_IFMT);
 
-	printf("%c%s", ch, buf);
+	printf("%s", buf);
 	if (m)
 		printf(" unknown bits: %#o\n", m);
 	printf("\n");
