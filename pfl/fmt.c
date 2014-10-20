@@ -17,6 +17,8 @@
  * %PSC_END_COPYRIGHT%
  */
 
+#include <sys/stat.h>
+
 #include <ctype.h>
 #include <errno.h>
 #include <stdio.h>
