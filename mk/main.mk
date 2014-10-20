@@ -566,6 +566,11 @@ etags et: recurse-etags
 printenv:
 	@env | sort
 
+scm-%:
+	${ROOTDIR}/tools/update $@
+
+up: scm-update
+
 <stdin>:
 	@touch '<stdin>'
 

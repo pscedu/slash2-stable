@@ -6,17 +6,36 @@
 # TODO
 # parallelize git operations
 
-# internal
-#git clone ssh://source/a p
-#cd p
-#./bootstrap.sh
-
 # open source
 #git clone https://github.com/pscedu/proj.git
 #cd proj
-#./tools/update.sh
+#./tools/update
 
 set -e
+
+usage()
+{
+	echo "usage: $0 [command]" >&2
+	exit 1
+}
+
+if getopts "" c; do
+	usage
+done
+shift $(($OPTIND - 1))
+
+case $1 in
+scm-update)
+	GIT_ACTION=pull
+	SVN_ACTION=up
+	;;
+scm-status)
+	GIT_ACTION=status
+	SVN_ACTION=status
+	;;
+*)
+	usage
+esac
 
 dir=$(readlink -f $(dirname $0)/..)
 base=$(basename $dir)
@@ -39,12 +58,12 @@ getrepo()
 	fi
 	if git status >/dev/null 2>&1; then
 		pwd
-		git pull
+		git $GIT_ACTION
 
 	# XXX remove me
 	elif svn info >/dev/null 2>&1; then
 		pwd
-		svn up
+		svn $SVN_ACTION
 
 	else
 		cd ..
@@ -89,3 +108,5 @@ for i in $dir/inf/*/update.sh; do
 done
 
 pubrepo proj
+
+#git checkout `git rev-list -n 1 --before="2009-07-27 13:37" master`

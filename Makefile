@@ -14,6 +14,3 @@ SUBDIRS+=	src-upd
 
 include ${MAINMK}
 -include local.mk
-
-up:
-	@tools/update
