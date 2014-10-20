@@ -9,6 +9,7 @@
 
 #include "pfl/cdefs.h"
 #include "pfl/fcntl.h"
+#include "pfl/fmt.h"
 #include "pfl/stat.h"
 #include "pfl/types.h"
 
@@ -63,7 +64,7 @@ pfl_dump_mode(mode_t m)
 {
 	char buf[11];
 
-	pfl_fmt_mode(modes, buf);
+	pfl_fmt_mode(m, buf);
 	m &= ~(ALLPERMS | S_IFMT);
 
 	printf("%s", buf);
