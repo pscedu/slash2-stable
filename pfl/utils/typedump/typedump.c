@@ -25,6 +25,7 @@
 
 /* start includes */
 #include "pfl/_atomic32.h"
+#include "pfl/acl.h"
 #include "pfl/acsvc.h"
 #include "pfl/aio.h"
 #include "pfl/alloc.h"
