@@ -527,6 +527,15 @@ _psc_pool_tryget(struct psc_poolmgr *m)
 void
 psc_pool_reap(struct psc_poolmgr *m, int n)
 {
+	int nfree, locked;
+
+	locked = POOL_RLOCK(m);
+	nfree = m->ppm_nfree;
+	POOL_URLOCK(m, locked);
+
+	if (nfree >= n)
+		return;
+
 	/*
 	 * We use atomics to register additional waiters while
 	 * one thread is already reaping, lessening the expense
@@ -534,8 +543,7 @@ psc_pool_reap(struct psc_poolmgr *m, int n)
 	 */
 	psc_atomic32_add(&m->ppm_nwaiters, n);
 	psc_mutex_lock(&m->ppm_reclaim_mutex);
-	if (nfree < n)
-		m->ppm_reclaimcb(m);
+	m->ppm_reclaimcb(m);
 	psc_atomic32_sub(&m->ppm_nwaiters, n);
 	psc_mutex_unlock(&m->ppm_reclaim_mutex);
 }
