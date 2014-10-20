@@ -1202,18 +1202,11 @@ psc_ctlparam_pool_handle(int fd, struct psc_ctlmsghdr *mh,
 	}
 	if (nlevels == 3 && strcmp(levels[2], "reap") == 0) {
 		if (set) {
-			int old;
-
 			if (m->ppm_reclaimcb == NULL)
 				return (psc_ctlsenderr(fd, mh,
 				    "pool.%s: not reapable", levels[1]));
 
-			psc_mutex_lock(&m->ppm_reclaim_mutex);
-			old = psc_atomic32_read(&m->ppm_nwaiters);
-			psc_atomic32_set(&m->ppm_nwaiters, val);
-			m->ppm_reclaimcb(m);
-			psc_atomic32_set(&m->ppm_nwaiters, old);
-			psc_mutex_unlock(&m->ppm_reclaim_mutex);
+			psc_pool_reap(m, val);
 		} else {
 			return (psc_ctlsenderr(fd, mh,
 			    "pool.%s.reap: write-only field", levels[1]));
