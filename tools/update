@@ -19,9 +19,9 @@ usage()
 	exit 1
 }
 
-if getopts "" c; do
+if getopts "" c; then
 	usage
-done
+fi
 shift $(($OPTIND - 1))
 
 case $1 in
