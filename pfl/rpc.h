@@ -496,6 +496,7 @@ struct pscrpc_nbreqset *
 int	 pscrpc_nbreqset_add(struct pscrpc_nbreqset *, struct pscrpc_request *);
 int	 pscrpc_nbreqset_reap(struct pscrpc_nbreqset *);
 int	 pscrpc_nbreqset_flush(struct pscrpc_nbreqset *);
+void	 pscrpc_nbreqset_destroy(struct pscrpc_nbreqset *);
 
 void	 pscrpc_nbreapthr_spawn(struct pscrpc_nbreqset *, int, const char *);
 

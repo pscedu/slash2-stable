@@ -60,6 +60,14 @@ pscrpc_nbreqset_init(pscrpc_set_interpreterf nb_interpret,
 	return (nbs);
 }
 
+void
+pscrpc_nbreqset_destroy(struct pscrpc_nbreqset *nbs)
+{
+	pscrpc_set_destroy(&nbs->nb_reqset)
+	psc_waitq_destroy(&nbs->nb_waitq);
+	PSCFREE(nbs);
+}
+
 /**
  * pscrpc_nbreqset_add - Add a new non-blocking request to a
  *	non-blocking set.
