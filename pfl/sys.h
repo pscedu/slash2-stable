@@ -24,5 +24,6 @@
 
 int	pflsys_getusergroups(uid_t, gid_t, gid_t *, int *);
 int	pflsys_userisgroupmember(uid_t, gid_t, gid_t);
+int	pfl_systemf(const char *fmt, ...);
 
 #endif /* _PFL_SYS_H_ */

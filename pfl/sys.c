@@ -21,8 +21,9 @@
 #include <limits.h>
 #include <pwd.h>
 
-#include "pfl/sys.h"
 #include "pfl/alloc.h"
+#include "pfl/str.h"
+#include "pfl/sys.h"
 
 int
 pflsys_getusergroups(uid_t uid, gid_t defgid, gid_t *gv, int *ng)
@@ -51,4 +52,21 @@ pflsys_userisgroupmember(uid_t uid, gid_t defgid, gid_t gid)
 		if (gid == gv[j])
 			return (1);
 	return (0);
+}
+
+int
+pfl_systemf(const char *fmt, ...)
+{
+	va_list ap;
+	char *buf;
+	int rc;
+
+	va_start(ap, fmt);
+	pfl_vasprintf(&buf, fmt, ap);
+	va_end(ap);
+
+	rc = system(buf);
+
+	free(buf);
+	return (rc);
 }
