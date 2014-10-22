@@ -32,42 +32,54 @@
  * mkdirs - Simple recursive "mkdir -p" type functionality.
  * @dir: path to be created
  * @mode: dir creation mode
+ *
+ *	mkdirs("foo")		-> mkdir("foo")
+ *	mkdirs("foo/bar")	-> mkdir("foo"); mkdir("foo/bar")
+ *	mkdirs("/foo")		-> mkdir("foo")
+ *	mkdirs("/")		->
+ *	mkdirs("/foo/bar")	-> mkdir("/foo"); mkdir("/foo/bar")
+ *	mkdirs("../foo")	-> mkdir("../foo")
  */
 int
 mkdirs(const char *s, mode_t mode)
 {
 	char *p, *path;
-	int rc;
-
-	rc = -1;
-
-	/* XXX realpath() must be used in here */
-
-	/* Sanity check(s) */
-	if (strlen(s) == 0) {
-		errno = ENOENT;
-		return (-1);
-	}
-
-	if (s[0] != '/') {
-		errno = EINVAL;
-		return (-1);
-	}
-
-	if (strcmp(s, "/") == 0)
-		return (0);
+	struct stat stb;
+	int rc = -1;
 
 	path = pfl_strdup(s);
+
+	/* skip past each existing subdir */
 	for (p = path; p; ) {
-		*p++ = '/';
-		if ((p = strchr(p, '/')) != NULL)
+		p = strchr(p, '/');
+		if (p)
 			*p = '\0';
-		if (mkdir(path, mode) == -1 &&
-		    errno != EEXIST)
-			goto done;
+		if (path[0] && stat(path, &stb) == -1) {
+			if (errno == ENOENT)
+				goto create;
+			goto out;
+		}
+		if (p)
+			*p++ = '/';
+	}
+	errno = EEXIST;
+	goto out;
+
+ create:
+	/* now create each component */
+	for (;;) {
+		if (mkdir(path, mode) == -1)
+			goto out;
+		if (p == NULL)
+			break;
+		*p++ = '/';
+		p = strchr(p, '/');
+		if (p)
+			*p = '\0';
 	}
 	rc = 0;
- done:
+
+ out:
 	PSCFREE(path);
 	return (rc);
 }
