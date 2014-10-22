@@ -84,7 +84,7 @@ pfl_filewalk(const char *fn, int flags, void *cmpf,
 		while ((f = fts_read(fp)) != NULL) {
 			switch (f->fts_info) {
 			case FTS_NS:
-				warnx("%s: %s", f->fts_path,
+				psclog_warnx("%s: %s", f->fts_path,
 				    strerror(f->fts_errno));
 				break;
 			case FTS_F:
@@ -101,12 +101,13 @@ pfl_filewalk(const char *fn, int flags, void *cmpf,
 				if (flags & PFL_FILEWALKF_RELPATH)
 					path = f->fts_path;
 				else if (realpath(f->fts_path, buf) == NULL) {
-					warn("%s", f->fts_path);
+					psclog_warn("realpath %s",
+					    f->fts_path);
 					break;
 				}
 				if (flags & PFL_FILEWALKF_VERBOSE)
-					warnx("processing %s%s", path,
-					    f->fts_info == FTS_F ?
+					warnx("processing %s%s",
+					    path, f->fts_info == FTS_F ?
 					    "" : "/");
 				rc = cbf(path, f->fts_statp, ptype,
 				    f->fts_level, arg);
@@ -119,7 +120,8 @@ pfl_filewalk(const char *fn, int flags, void *cmpf,
 				break;
 			case FTS_SL:
 				if (flags & PFL_FILEWALKF_VERBOSE)
-					warnx("processing %s", f->fts_path);
+					warnx("processing %s",
+					    f->fts_path);
 				rc = cbf(f->fts_path, f->fts_statp,
 				    PFWT_SL, f->fts_level, arg);
 				if (rc == PFL_FILEWALK_RC_SKIP)
@@ -130,7 +132,7 @@ pfl_filewalk(const char *fn, int flags, void *cmpf,
 				}
 				break;
 			default:
-				warnx("%s: %s", f->fts_path,
+				psclog_warnx("%s: %s", f->fts_path,
 				    strerror(f->fts_errno));
 				break;
 			}
