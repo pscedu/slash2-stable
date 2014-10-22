@@ -22,6 +22,7 @@
 
 #include <sys/types.h>
 
+#include <stdarg.h>
 #include <string.h>
 
 #ifndef HAVE_STRVIS
@@ -49,6 +50,7 @@ size_t	strnlen(const char *, size_t);
 #define psc_strn_hashify(c, n)	_psc_str_hashify((c), (n))
 
 int	 pfl_asprintf(char **, const char *, ...);
+int	 pfl_vasprintf(char **, const char *, va_list);
 int	 pfl_dirname(const char *, char *);
 char	*pfl_strdup(const char *);
 char	*pfl_strndup(const char *, size_t);

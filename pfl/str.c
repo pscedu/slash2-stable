@@ -22,26 +22,39 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "pfl/str.h"
 #include "pfl/alloc.h"
+#include "pfl/str.h"
 
 int
-pfl_asprintf(char **p, const char *fmt, ...)
+pfl_vasprintf(char **p, const char *fmt, va_list ap)
 {
-	va_list ap, apd;
+	va_list apd;
 	int sz;
 
-	va_start(ap, fmt);
 	va_copy(apd, ap);
 	sz = vsnprintf(NULL, 0, fmt, ap);
-	va_end(ap);
+	//if (sz == -1)
 
+	sz++;
 	*p = PSCALLOC(sz);
 
 	vsnprintf(*p, sz, fmt, apd);
 	va_end(apd);
 
 	return (sz);
+}
+
+int
+pfl_asprintf(char **p, const char *fmt, ...)
+{
+	va_list ap;
+	int rc;
+
+	va_start(ap, fmt);
+	rc = pfl_vasprintf(p, fmt, ap);
+	va_end(ap);
+
+	return (rc);
 }
 
 int
