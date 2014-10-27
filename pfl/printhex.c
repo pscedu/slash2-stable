@@ -50,26 +50,26 @@ pfl_unpack_hex(const void *ptr, size_t len, char buf[])
  * @len: number of bytes to display.
  */
 void
-printhex(const void *ptr, size_t len)
+fprinthex(FILE *fp, const void *ptr, size_t len)
 {
 	const unsigned char *p = ptr;
 	size_t n;
 
-	flockfile(stdout);
+	flockfile(fp);
 	for (n = 0; n < len; p++, n++) {
 		if (n) {
 			if (n % 32 == 0)
-				printf("\n");
+				fprintf(stderr, "\n");
 			else {
 				if (n % 8 == 0)
-					printf(" ");
-				printf(" ");
+					fprintf(stderr, " ");
+				fprintf(stderr, " ");
 			}
 		}
-		printf("%02x", *p);
+		fprintf(stderr, "%02x", *p);
 	}
-	printf("\n------------------------------------------\n");
-	funlockfile(stdout);
+	fprintf(stderr, "\n------------------------------------------\n");
+	funlockfile(fp);
 }
 
 /**

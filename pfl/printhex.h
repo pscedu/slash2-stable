@@ -20,11 +20,15 @@
 #ifndef _PFL_PRINTHEX_H_
 #define _PFL_PRINTHEX_H_
 
+#include <stdio.h>
+
 void pfl_unpack_hex(const void *, size_t, char *);
 
-void printhex(const void *, size_t);
+void fprinthex(FILE *, const void *, size_t);
 void printvbin(const void *, size_t);
 void printvbinr(const void *, size_t);
+
+#define printhex(p, len)	fprinthex(stderr, (p), (len))
 
 static __inline void
 printbin(uint64_t val)
