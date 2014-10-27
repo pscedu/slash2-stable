@@ -88,7 +88,7 @@ if ($data =~ m{^(.*) %PSC(?:GPL)?_(START_)?COPYRIGHT%}m) {
 }
 
 $data =~ s{^(.*)\s*%(PSC|PSCGPL)_COPYRIGHT%.*\n}{<<EOF2}me;
-$d_start$d_cont %$1_START_COPYRIGHT%
+$d_start$d_cont %$2_START_COPYRIGHT%
 $d_cont -----------------------------------------------------------------------------
 $d_cont -----------------------------------------------------------------------------
 $d_cont %PSC_END_COPYRIGHT%$d_end
