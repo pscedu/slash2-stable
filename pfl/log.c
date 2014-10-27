@@ -165,8 +165,19 @@ psc_log_init(void)
 
 	if (pfl_syslog) {
 		extern const char *progname;
+		const char *ident = progname;
 
-		openlog(progname, LOG_CONS | LOG_NDELAY | LOG_PERROR |
+		p = getenv("PFL_SYSLOG_IDENT");
+		if (p) {
+			static char idbuf[32];
+
+			ident = idbuf;
+			(void)FMTSTR(idbuf, sizeof(idbuf), p,
+			    FMTSTRCASE('n', "s", progname)
+			);
+		}
+
+		openlog(ident, LOG_CONS | LOG_NDELAY | LOG_PERROR |
 		    LOG_PID, LOG_DAEMON);
 	}
 
