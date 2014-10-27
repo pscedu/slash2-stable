@@ -8,6 +8,7 @@ SUBDIRS+=	utils
 LIBRARY=	libpfl.a
 NOINSTALL=	1
 
+SRCS+=		${PFL_BASE}/acl.c
 SRCS+=		${PFL_BASE}/acsvc.c
 SRCS+=		${PFL_BASE}/alloc.c
 SRCS+=		${PFL_BASE}/base64.c
