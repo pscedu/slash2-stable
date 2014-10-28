@@ -201,7 +201,7 @@ _pfl_odt_doput(struct pfl_odt *t, struct pfl_odt_receipt *r,
 		t->odt_ops.odtop_sync(t, r->odtr_elem);
 
 	PFLOG_ODT(PLL_DIAG, t,
-	    "r=%p slot=%zd elemcrc=%"PSCPRIxCRC64" ",
+	    "r=%p slot=%"PRId64" elemcrc=%"PSCPRIxCRC64" ",
 	    r, r->odtr_elem, f->odtf_crc);
 
 	ODT_STAT_INCR(t, write);
@@ -309,7 +309,7 @@ pfl_odt_replaceitem(struct pfl_odt *t, struct pfl_odt_receipt *r,
 	_pfl_odt_doput(t, r, p, f, 1);
 	pfl_odt_freebuf(t, NULL, f);
 
-	PFLOG_ODT(PLL_DIAG, t, "rcpt=%p slot=%zd",
+	PFLOG_ODT(PLL_DIAG, t, "rcpt=%p slot=%"PRId64,
 	    r, r->odtr_elem);
 
 	ODT_STAT_INCR(t, replace);
@@ -455,7 +455,7 @@ pfl_odt_check(struct pfl_odt *t,
 
 			if (crc != f->odtf_crc)
 				PFLOG_ODT(PLL_FATAL, t,
-				    "CRC failed; slot=%zd "
+				    "CRC failed; slot=%"PRId64" "
 				    "mem_crc=%"PSCPRIxCRC64" "
 				    "ftr_crc=%"PSCPRIxCRC64,
 				    i, crc, f->odtf_crc);
