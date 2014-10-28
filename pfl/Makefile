@@ -8,7 +8,10 @@ SUBDIRS+=	utils
 LIBRARY=	libpfl.a
 NOINSTALL=	1
 
-SRCS+=		${PFL_BASE}/acl.c
+ifdef PICKLE_HAVE_SYS_ACL_H
+  SRCS+=	${PFL_BASE}/acl.c
+endif
+
 SRCS+=		${PFL_BASE}/acsvc.c
 SRCS+=		${PFL_BASE}/alloc.c
 SRCS+=		${PFL_BASE}/base64.c
