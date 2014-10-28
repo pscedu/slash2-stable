@@ -194,6 +194,8 @@ struct psc_hashent {
 void	 psc_hashent_init(const struct psc_hashtbl *, void *);
 void	 psc_hashent_remove(struct psc_hashtbl *, void *);
 int	 psc_hashent_conjoint(struct psc_hashtbl *, void *);
+struct psc_hashbkt *
+	 psc_hashent_getbucket(struct psc_hashtbl *, void *);
 
 #define psc_hashent_disjoint(t, p)	psclist_disjoint(			\
 					    psc_hashent_getlentry((t), (p)))

@@ -301,6 +301,16 @@ psc_hashent_remove(struct psc_hashtbl *t, void *p)
 	psc_hashbkt_put(t, b);
 }
 
+void
+psc_hashent_getbucket(struct psc_hashtbl *t, void *p)
+{
+	void *pk;
+
+	psc_assert(p);
+	pk = PSC_AGP(p, t->pht_idoff);
+	return (psc_hashbkt_get(t, pk));
+}
+
 /**
  * psc_hashbkt_del_item - Remove an item from the hash table bucket it's
  *	in.
