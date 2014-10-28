@@ -301,7 +301,7 @@ psc_hashent_remove(struct psc_hashtbl *t, void *p)
 	psc_hashbkt_put(t, b);
 }
 
-void
+struct psc_hashbkt *
 psc_hashent_getbucket(struct psc_hashtbl *t, void *p)
 {
 	void *pk;
