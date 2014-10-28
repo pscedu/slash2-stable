@@ -7,6 +7,7 @@ SUBDIRS+=	${PFL_BASE}
 SUBDIRS+=	tools
 SUBDIRS+=	inf
 SUBDIRS+=	fio
+SUBDIRS+=	psync
 SUBDIRS+=	${SLASH_BASE}
 SUBDIRS+=	sft
 SUBDIRS+=	src-upd
