@@ -38,6 +38,7 @@
 #include "lnet/types.h"
 
 #include "pfl/atomic.h"
+#include "pfl/completion.h"
 #include "pfl/hashtbl.h"
 #include "pfl/list.h"
 #include "pfl/listcache.h"
@@ -48,7 +49,6 @@
 #include "pfl/waitq.h"
 
 struct psc_dynarray;
-struct psc_compl;
 
 #define PSCRPC_MD_OPTIONS		0
 #define BULK_GET_SOURCE			0
@@ -473,32 +473,23 @@ struct pscrpc_reply_state {
 /*
  * Non-blocking request sets
  */
-typedef int (*pscrpc_nbreq_callback)(struct pscrpc_request *,
-			      struct pscrpc_async_args *);
-
 struct pscrpc_nbreqset {
-	struct pscrpc_request_set	nb_reqset;
-	pscrpc_nbreq_callback		nb_callback;
-	atomic_t			nb_outstanding;
-	psc_spinlock_t			nb_lock;
-	uint32_t			nb_flags;
-	struct psc_waitq		nb_waitq;
+	struct pscrpc_request_set	 nb_reqset;
+	struct psc_compl		 nb_compl;
+	psc_spinlock_t			 nb_lock;
+	uint32_t			 nb_flags;
 };
 
 #define NBREQSET_WORK_INPROG 1
 
-#define PSCRPC_NBREQSET_INIT(v, setcb, rqcb)				\
-	{ PSCRPC_SET_INIT((v).nb_reqset, (setcb), NULL), (rqcb),	\
-	    ATOMIC_INIT(0), SPINLOCK_INIT, 0, PSC_WAITQ_INIT }
-
 struct pscrpc_nbreqset *
-	 pscrpc_nbreqset_init(pscrpc_set_interpreterf, pscrpc_nbreq_callback);
+	 pscrpc_nbreqset_init(pscrpc_set_interpreterf);
 int	 pscrpc_nbreqset_add(struct pscrpc_nbreqset *, struct pscrpc_request *);
-int	 pscrpc_nbreqset_reap(struct pscrpc_nbreqset *);
-int	 pscrpc_nbreqset_flush(struct pscrpc_nbreqset *);
 void	 pscrpc_nbreqset_destroy(struct pscrpc_nbreqset *);
+int	 pscrpc_nbreqset_flush(struct pscrpc_nbreqset *);
+int	 pscrpc_nbreqset_reap(struct pscrpc_nbreqset *);
 
-void	 pscrpc_nbreapthr_spawn(struct pscrpc_nbreqset *, int, const char *);
+void	 pscrpc_nbreapthr_spawn(struct pscrpc_nbreqset *, int, int, const char *);
 
 int	 pscrpc_put_connection(struct pscrpc_connection *);
 
