@@ -18,7 +18,8 @@
  */
 
 /*
- * Completion - Barrier-like API for thread(s) to wait on an arbitrary event.
+ * Completion - Barrier-like API for thread(s) to wait on an arbitrary
+ * event.
  */
 
 #include "pfl/completion.h"
@@ -50,13 +51,14 @@ _psc_compl_ready(struct psc_compl *pc, int rc, int one)
 		pc->pc_done = 1;
 		psc_waitq_wakeall(&pc->pc_wq);
 	}
+	pc->pc_counter++;
 	freelock(&pc->pc_lock);
 }
 
 int
 psc_compl_waitrel_s(struct psc_compl *pc, int secs)
 {
-	spinlock(&pc->pc_lock);
+	reqlock(&pc->pc_lock);
 	if (!pc->pc_done) {
 		if (secs) {
 			if (psc_waitq_waitrel_s(&pc->pc_wq,
