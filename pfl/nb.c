@@ -74,10 +74,10 @@ pscrpc_nbreqset_add(struct pscrpc_nbreqset *nbs,
 	int rc;
 
 	pscrpc_req_setcompl(rq, &nbs->nb_compl);
-	pscrpc_set_add_new_req(&nbs->nb_reqset, rq);
+	pscrpc_set_add_new_req(nbs->nb_reqset, rq);
 	rc = pscrpc_push_req(rq);
 	if (rc) {
-		pscrpc_set_remove_req(&nbs->nb_reqset, rq);
+		pscrpc_set_remove_req(nbs->nb_reqset, rq);
 		pscrpc_req_setcompl(rq, NULL);
 		DEBUG_REQ(PLL_ERROR, rq, "send failure: %s",
 		    strerror(rc));
