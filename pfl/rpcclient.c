@@ -301,16 +301,6 @@ pscrpc_prep_bulk_exp(struct pscrpc_request *req, int npages, int type,
 	return desc;
 }
 
-void
-pscrpc_set_init(struct pscrpc_request_set *set)
-{
-	INIT_PSCLIST_HEAD(&set->set_requests);
-	INIT_PSC_LISTENTRY(&set->set_lentry);
-	psc_waitq_init(&set->set_waitq);
-	set->set_remaining = 0;
-	INIT_SPINLOCK(&set->set_lock);
-}
-
 struct pscrpc_request_set *
 pscrpc_prep_set(void)
 {
@@ -318,7 +308,10 @@ pscrpc_prep_set(void)
 
 	set = psc_pool_get(pscrpc_set_pool);
 	memset(set, 0, sizeof(*set));
-	pscrpc_set_init(set);
+	INIT_PSCLIST_HEAD(&set->set_requests);
+	INIT_PSC_LISTENTRY(&set->set_lentry);
+	INIT_SPINLOCK(&set->set_lock);
+	psc_waitq_init(&set->set_waitq);
 	return (set);
 }
 

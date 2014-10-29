@@ -474,7 +474,7 @@ struct pscrpc_reply_state {
  * Non-blocking request sets
  */
 struct pscrpc_nbreqset {
-	struct pscrpc_request_set	 nb_reqset;
+	struct pscrpc_request_set	*nb_reqset;
 	struct psc_compl		 nb_compl;
 	psc_spinlock_t			 nb_lock;
 	uint32_t			 nb_flags;

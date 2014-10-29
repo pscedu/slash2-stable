@@ -51,8 +51,8 @@ pscrpc_nbreqset_init(pscrpc_set_interpreterf nb_interpret)
 	nbs = PSCALLOC(sizeof(*nbs));
 	INIT_SPINLOCK(&nbs->nb_lock);
 	psc_compl_init(&nbs->nb_compl);
-	pscrpc_set_init(&nbs->nb_reqset);
-	nbs->nb_reqset.set_interpret = nb_interpret;
+	nbs->nb_reqset = pscrpc_prep_set();
+	nbs->nb_reqset->set_interpret = nb_interpret;
 	return (nbs);
 }
 
@@ -60,7 +60,7 @@ void
 pscrpc_nbreqset_destroy(struct pscrpc_nbreqset *nbs)
 {
 	psc_compl_destroy(&nbs->nb_compl);
-	pscrpc_set_destroy(&nbs->nb_reqset);
+	pscrpc_set_destroy(nbs->nb_reqset);
 	PSCFREE(nbs);
 }
 
@@ -92,7 +92,7 @@ pscrpc_nbreqset_add(struct pscrpc_nbreqset *nbs,
 int
 pscrpc_nbreqset_flush(struct pscrpc_nbreqset *nbs)
 {
-	return (pscrpc_set_wait(&nbs->nb_reqset));
+	return (pscrpc_set_wait(nbs->nb_reqset));
 }
 
 /**
@@ -110,7 +110,7 @@ pscrpc_nbreqset_flush(struct pscrpc_nbreqset *nbs)
 int
 pscrpc_nbreqset_reap(struct pscrpc_nbreqset *nbs)
 {
-	struct pscrpc_request_set *set = &nbs->nb_reqset;
+	struct pscrpc_request_set *set = nbs->nb_reqset;
 	struct pscrpc_request *rq, *next;
 	int rc = 0, nchecked = 0;
 
