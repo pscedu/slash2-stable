@@ -135,8 +135,9 @@ pscrpc_interpret(struct pscrpc_request *rq)
 
 	rq->rq_interpret_reply = NULL;
 
-	/* If request CB has been run then decrement the completion
-	 *   so that set ops don't spin.
+	/*
+	 * If request CB has been run then decrement the completion so
+	 * that set ops don't spin.
 	 */
 	if (rq->rq_compl)
 		rq->rq_compl = NULL;
@@ -628,7 +629,9 @@ pscrpc_queue_wait(struct pscrpc_request *req)
 		psc_assert(!req->rq_no_resend);
 
 		if (req->rq_compl)
-			/* Make sure reply_in_callback doesn't bump rq_compl.
+			/*
+			 * Make sure reply_in_callback doesn't bump
+			 * rq_compl.
 			 */
 			req->rq_abort_reply = 1;
 
@@ -779,7 +782,7 @@ int
 pscrpc_check_set(struct pscrpc_request_set *set, int check_allsent)
 {
 	struct pscrpc_request *req;
-	int ncompleted         = 0;
+	int ncompleted = 0;
 
 //	pscrpc_set_lock(set);
 //	psc_assert((set->set_flags & PSCRPC_SETF_CHECKING) == 0);
@@ -903,8 +906,9 @@ pscrpc_check_set(struct pscrpc_request_set *set, int check_allsent)
 				}
 
 				if (req->rq_compl)
-					/* Make sure reply_in_callback doesn't
-					 *   bump rq_compl.
+					/*
+					 * Make sure reply_in_callback
+					 * doesn't bump rq_compl.
 					 */
 					req->rq_abort_reply = 1;
 
