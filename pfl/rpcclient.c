@@ -344,16 +344,25 @@ pscrpc_set_add_new_req(struct pscrpc_request_set *set,
 }
 
 void
-pscrpc_set_remove_req(struct pscrpc_request_set *set,
+pscrpc_set_remove_req_locked(struct pscrpc_request_set *set,
     struct pscrpc_request *req)
 {
-	pscrpc_set_lock(set);
 	psclist_del(&req->rq_set_chain_lentry, &set->set_requests);
 	req->rq_set = NULL;
-	psc_assert(set->set_remaining > 0);
-	set->set_remaining--;
-	psc_assert(atomic_read(&req->rq_import->imp_inflight) > 0);
-	atomic_dec(&req->rq_import->imp_inflight);
+	if (req->rq_phase != PSCRPC_RQ_PHASE_COMPLETE) {
+		psc_assert(set->set_remaining > 0);
+		set->set_remaining--;
+		psc_assert(atomic_read(&req->rq_import->imp_inflight) > 0);
+		atomic_dec(&req->rq_import->imp_inflight);
+	}
+}
+
+void
+pscrpc_set_remove_req(struct pscrpc_request_set *set,
+    struct pscrpc_request *rq)
+{
+	pscrpc_set_lock(set);
+	pscrpc_set_remove_req_locked(set, rq);
 	psc_waitq_wakeall(&set->set_waitq);
 	freelock(&set->set_lock);
 }
@@ -390,7 +399,8 @@ static void
 interrupted_request(void *data)
 {
 	struct pscrpc_request *req = data;
-	DEBUG_REQ(PLL_INFO, req, "request interrupted");
+
+	DEBUG_REQ(PLL_DIAG, req, "request interrupted");
 	spinlock(&req->rq_lock);
 	req->rq_intr = 1;
 	freelock(&req->rq_lock);
@@ -399,7 +409,7 @@ interrupted_request(void *data)
 static int
 pscrpc_send_new_req_locked(struct pscrpc_request *req)
 {
-	struct pscrpc_import     *imp;
+	struct pscrpc_import *imp;
 	int rc;
 
 	LOCK_ENSURE(&req->rq_lock);
@@ -443,7 +453,7 @@ pscrpc_push_req(struct pscrpc_request *req)
 		 * PSCRPC_RQ_PHASE_NEW.
 		 */
 		freelock(&req->rq_lock);
-		DEBUG_REQ(PLL_INFO, req, "req already inflight");
+		DEBUG_REQ(PLL_DIAG, req, "req already inflight");
 		return (0);
 	}
 }

@@ -580,6 +580,7 @@ void	 pscrpc_set_init(struct pscrpc_request_set *);
 int	 pscrpc_push_req(struct pscrpc_request *);
 void	 pscrpc_set_add_new_req(struct pscrpc_request_set *, struct pscrpc_request *);
 void	 pscrpc_set_remove_req(struct pscrpc_request_set *, struct pscrpc_request *);
+void	 pscrpc_set_remove_req_locked(struct pscrpc_request_set *, struct pscrpc_request *);
 int	 pscrpc_check_set(struct pscrpc_request_set *, int);
 int	 pscrpc_set_finalize(struct pscrpc_request_set *, int, int);
 int	 pscrpc_set_wait(struct pscrpc_request_set *);

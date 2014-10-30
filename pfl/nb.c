@@ -74,13 +74,18 @@ pscrpc_nbreqset_add(struct pscrpc_nbreqset *nbs,
 	int rc;
 
 	pscrpc_req_setcompl(rq, &nbs->nb_compl);
-	pscrpc_set_add_new_req(nbs->nb_reqset, rq);
 	rc = pscrpc_push_req(rq);
 	if (rc) {
-		pscrpc_set_remove_req(nbs->nb_reqset, rq);
 		pscrpc_req_setcompl(rq, NULL);
 		DEBUG_REQ(PLL_ERROR, rq, "send failure: %s",
 		    strerror(rc));
+	} else {
+		/*
+		 * Adding after is OK because it will sit on the list
+		 * marked COMPLETED if it finishes before this add
+		 * occurs.
+		 */
+		pscrpc_set_add_new_req(nbs->nb_reqset, rq);
 	}
 	return (rc);
 }
@@ -131,13 +136,14 @@ pscrpc_nbreqset_reap(struct pscrpc_nbreqset *nbs)
 	}
 
 	pscrpc_set_lock(set);
+	// wait for CHECKING ?
 	psclist_for_each_entry_safe(rq, next,
 	    &set->set_requests, rq_set_chain_lentry) {
 		nchecked++;
 		DEBUG_REQ(PLL_DIAG, rq, "reap if completed");
 
 		if (rq->rq_phase == PSCRPC_RQ_PHASE_COMPLETE) {
-			pscrpc_set_remove_req(set, rq);
+			pscrpc_set_remove_req_locked(set, rq);
 
 			/* Return the first error. */
 			if (!rc)
