@@ -508,8 +508,8 @@ pscrpc_unregister_reply(struct pscrpc_request *request)
 
 	psc_assert(!in_interrupt());             /* might sleep */
 
-	DEBUG_REQ(PLL_INFO, request, "receving_reply=%d",
-		  pscrpc_client_receiving_reply(request));
+	DEBUG_REQ(PLL_DIAG, request, "receving_reply=%d",
+	    pscrpc_client_receiving_reply(request));
 
 	if (!pscrpc_client_receiving_reply(request))
 		return;
@@ -541,24 +541,24 @@ pscrpc_unregister_reply(struct pscrpc_request *request)
 static int
 pscrpc_check_status(struct pscrpc_request *req)
 {
-	int err;
+	int rc;
 
-	err = req->rq_repmsg->status;
+	rc = req->rq_repmsg->status;
 	if (req->rq_repmsg->type == PSCRPC_MSG_ERR) {
-		DEBUG_REQ(PLL_ERROR, req, "type == PSCRPC_MSG_ERR, err == %d",
-			  err);
-		return (err < 0 ? err : -EINVAL);
+		DEBUG_REQ(PLL_ERROR, req,
+		    "type == PSCRPC_MSG_ERR, rc == %d", rc);
+		return (rc < 0 ? rc : -EINVAL);
 	}
 
-	if (err < 0) {
-		DEBUG_REQ(PLL_INFO, req, "status is %d", err);
+	if (rc < 0) {
+		DEBUG_REQ(PLL_DIAG, req, "status is %d", rc);
 
-	} else if (err > 0) {
+	} else if (rc > 0) {
 		/* XXX: translate this error from net to host */
-		DEBUG_REQ(PLL_INFO, req, "status is %d", err);
+		DEBUG_REQ(PLL_DIAG, req, "status is %d", rc);
 	}
 
-	return (err);
+	return (rc);
 }
 
 static int
