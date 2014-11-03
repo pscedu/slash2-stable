@@ -491,9 +491,9 @@ lnet_match_is_unique(lnet_process_id_t match_id,
 }
 
 static inline struct list_head *
-lnet_portal_me_head(int index, lnet_process_id_t id, __u64 mbits)
+lnet_portal_me_head(int idx, lnet_process_id_t id, __u64 mbits)
 {
-        lnet_portal_t *ptl = &the_lnet.ln_portals[index];
+        lnet_portal_t *ptl = &the_lnet.ln_portals[idx];
 
         if (lnet_portal_is_wildcard(ptl)) {
                 return &ptl->ptl_mlist;
