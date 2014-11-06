@@ -1043,7 +1043,7 @@ pjournal_replay(struct psc_journal *pj, int thrtype,
 
 	pj->pj_distill_handler = distill_handler;
 
-	thr = pscthr_init(thrtype, 0, pjournal_thr_main, NULL,
+	thr = pscthr_init(thrtype, pjournal_thr_main, NULL,
 	    sizeof(*pjt), thrname);
 
 	pjt = thr->pscthr_private;

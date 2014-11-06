@@ -34,6 +34,5 @@ psc_eqpollthr_main(struct psc_thread *thr)
 void
 psc_eqpollthr_spawn(int thrtype, const char *thrname)
 {
-	pscthr_init(thrtype, 0, psc_eqpollthr_main,
-	    NULL, 0, thrname);
+	pscthr_init(thrtype, psc_eqpollthr_main, NULL, 0, thrname);
 }

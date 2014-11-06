@@ -101,5 +101,5 @@ psc_tiosthr_main(struct psc_thread *thr)
 void
 psc_tiosthr_spawn(int thrtype, const char *name)
 {
-	pscthr_init(thrtype, 0, psc_tiosthr_main, NULL, 0, name);
+	pscthr_init(thrtype, psc_tiosthr_main, NULL, 0, name);
 }

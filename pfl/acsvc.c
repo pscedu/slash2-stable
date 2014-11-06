@@ -392,7 +392,7 @@ acsvc_init(int thrtype, const char *name, char **av)
 	close(fds[0]);
 	acsvc_fd = fds[1];
 
-	return (pscthr_init(thrtype, 0, acsvc_climain, NULL, 0, name));
+	return (pscthr_init(thrtype, acsvc_climain, NULL, 0, name));
 }
 
 __static struct access_request *

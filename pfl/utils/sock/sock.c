@@ -402,13 +402,13 @@ main(int argc, char *argv[])
 		peersock = doconnect(argv[0]);
 	}
 
-	pscthr_init(THRT_DISPLAY, 0, displaythr_main, NULL, 0,
+	pscthr_init(THRT_DISPLAY, displaythr_main, NULL, 0,
 	    "displaythr");
 
 	for (i = 0; i < nrthr; i++)
-		pscthr_init(THRT_RD, 0, rd_main, NULL, 0, "rdthr%d", i);
+		pscthr_init(THRT_RD, rd_main, NULL, 0, "rdthr%d", i);
 	for (i = 0; i < nwthr; i++)
-		pscthr_init(THRT_WR, 0, wr_main, NULL, 0, "wrthr%d", i);
+		pscthr_init(THRT_WR, wr_main, NULL, 0, "wrthr%d", i);
 
 	for (;;)
 		sleep(1);

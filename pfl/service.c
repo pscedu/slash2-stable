@@ -1067,7 +1067,7 @@ pscrpcsvh_addthr(struct pscrpc_svc_handle *svh)
 
 	svc = svh->svh_service;
 	SVC_LOCK(svc);
-	thr = pscthr_init(svh->svh_type, 0, pscrpcthr_main, NULL,
+	thr = pscthr_init(svh->svh_type, pscrpcthr_main, NULL,
 	    svh->svh_thrsiz, "%sthr%02d", svh->svh_svc_name,
 	    svh->svh_nthreads);
 	if (thr) {

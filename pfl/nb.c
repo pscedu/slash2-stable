@@ -195,8 +195,8 @@ pscrpc_nbreapthr_spawn(struct pscrpc_nbreqset *nbset, int thrtype,
 	int i;
 
 	for (i = 0; i < nthr; i++) {
-		thr = pscthr_init(thrtype, 0, pscrpc_nbreapthr_main,
-		    NULL, sizeof(*pnbt), thrname, i);
+		thr = pscthr_init(thrtype, pscrpc_nbreapthr_main, NULL,
+		    sizeof(*pnbt), thrname, i);
 		pnbt = thr->pscthr_private;
 		pnbt->pnbt_nbset = nbset;
 		pscthr_setready(thr);

@@ -82,7 +82,7 @@ main(int argc, char *argv[])
 	if (argc)
 		usage();
 
-	pscthr_init(LRTHRT_CTL, 0, NULL, NULL,
+	pscthr_init(LRTHRT_CTL, NULL, NULL,
 	    sizeof(struct psc_ctlthr), "lrctlthr");
 
 	rc = LNetInit(2048);

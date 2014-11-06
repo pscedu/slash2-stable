@@ -1251,7 +1251,7 @@ psc_ctlparam_instances(int fd, struct psc_ctlmsghdr *mh,
 
 	if (set) {
 		if (pcp->pcp_flags & PCPF_ADD)
-			pscthr_init(thrtype, 0, thr_main, NULL,
+			pscthr_init(thrtype, thr_main, NULL,
 			    sizeof(struct psc_ctlacthr), "thr%d",
 			    p - me->pscthr_name, me->pscthr_name);
 		else if (pcp->pcp_flags & PCPF_SUB)
@@ -2232,17 +2232,16 @@ psc_ctlthr_main(const char *ofn, const struct psc_ctlop *ct, int nops,
 	 * Spawn a servicing thread to separate processing from acceptor
 	 * and to multiplex between clients for fairness.
 	 */
-	thr = pscthr_init(acthrtype, 0, psc_ctlacthr_main,
-	    NULL, sizeof(struct psc_ctlacthr), "%.*sctlacthr",
+	thr = pscthr_init(acthrtype, psc_ctlacthr_main, NULL,
+	    sizeof(struct psc_ctlacthr), "%.*sctlacthr",
 	    p - me->pscthr_name, me->pscthr_name);
 	psc_ctlacthr(thr)->pcat_sock = s;
 	pscthr_setready(thr);
 
 #define PFL_CTL_NTHRS 4
 	for (i = 1; i < PFL_CTL_NTHRS; i++) {
-		thr = pscthr_init(me->pscthr_type, 0,
-		    psc_ctlthr_mainloop, NULL,
-		    me->pscthr_privsiz, "%.*sctlthr%d",
+		thr = pscthr_init(me->pscthr_type, psc_ctlthr_mainloop,
+		    NULL, me->pscthr_privsiz, "%.*sctlthr%d",
 		    p - me->pscthr_name, me->pscthr_name, i);
 		psc_ctlthr(thr)->pct_ct = ct;
 		psc_ctlthr(thr)->pct_nops = nops;
