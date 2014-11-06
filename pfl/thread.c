@@ -33,16 +33,16 @@
 #include <cpuset.h>
 #endif
 
+#include "pfl/alloc.h"
 #include "pfl/cdefs.h"
+#include "pfl/dynarray.h"
+#include "pfl/lock.h"
+#include "pfl/lockedlist.h"
+#include "pfl/mem.h"
 #include "pfl/str.h"
 #include "pfl/subsys.h"
-#include "pfl/dynarray.h"
-#include "pfl/lockedlist.h"
-#include "pfl/vbitmap.h"
-#include "pfl/alloc.h"
-#include "pfl/lock.h"
-#include "pfl/mem.h"
 #include "pfl/thread.h"
+#include "pfl/vbitmap.h"
 
 struct psc_dynarray		 pfl_thread_classes = DYNARRAY_INIT;
 __static pthread_key_t		 pfl_tlskey;
@@ -60,7 +60,7 @@ _pscthr_destroy(void *arg)
 {
 	struct psc_thread *thr = arg;
 
-	psclog_info("thread dying");
+	psclog_diag("thread dying");
 
 	PLL_LOCK(&psc_threads);
 	(void)reqlock(&thr->pscthr_lock);
