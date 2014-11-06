@@ -276,7 +276,8 @@ _psc_hashbkt_search(struct psc_hashtbl *t, struct psc_hashbkt *b,
 		}
 	}
 	if (p && (flags & PHLF_DEL)) {
-		psclist_del(psc_hashent_getlentry(t, p), &b->phb_listhd);
+		psclist_del(psc_hashent_getlentry(t, p),
+		    &b->phb_listhd);
 		psc_atomic32_dec(&b->phb_nitems);
 	}
 	ureqlock(&b->phb_lock, locked);
@@ -316,7 +317,7 @@ psc_hashent_getbucket(struct psc_hashtbl *t, void *p)
  *	in.
  * @t: the hash table.
  * @b: bucket to remove from.
- * @p: item to add.
+ * @p: item to remove.
  */
 void
 psc_hashbkt_del_item(struct psc_hashtbl *t, struct psc_hashbkt *b,
