@@ -316,7 +316,6 @@ _pscthr_begin(void *arg)
 /**
  * pscthr_init - Initialize a thread.
  * @type: application-specific thread type.
- * @flags: operational flags.
  * @startf: thread execution routine.  By specifying a NULL routine,
  *	no pthread will be spawned (assuming that an actual pthread
  *	already exists or will be taken care of).
@@ -326,7 +325,7 @@ _pscthr_begin(void *arg)
  * @namefmt: application-specific printf(3) name for thread.
  */
 struct psc_thread *
-_pscthr_init(int type, int flags, void (*startf)(struct psc_thread *),
+_pscthr_init(int type, void (*startf)(struct psc_thread *),
     void (*dtor)(void *), size_t privsiz, int memnid,
     const char *namefmt, ...)
 {
@@ -334,12 +333,9 @@ _pscthr_init(int type, int flags, void (*startf)(struct psc_thread *),
 	va_list ap;
 	int rc;
 
-	if (flags & PTF_PAUSED)
-		psc_fatalx("PTF_PAUSED specified");
-
 	/*
 	 * If there is a start routine, we are already in the pthread, *
-	 * so the memory should be local.   Otherwise, we'd like to
+	 * so the memory should be local.  Otherwise, we'd like to
 	 * allocate it within the thread context for local storage.
 	 *
 	 * Either way, the storage will be released via psc_free() upon
@@ -353,7 +349,7 @@ _pscthr_init(int type, int flags, void (*startf)(struct psc_thread *),
 	thr->pscthr_type = type;
 	thr->pscthr_startf = startf;
 	thr->pscthr_privsiz = privsiz;
-	thr->pscthr_flags = flags | PTF_RUN;
+	thr->pscthr_flags = PTF_RUN;
 	thr->pscthr_dtor = dtor;
 	thr->pscthr_memnid = memnid;
 
