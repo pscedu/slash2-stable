@@ -410,7 +410,8 @@ int psc_nsubsys;
 #endif
 
 /**
- * psc_log_getlevel - Get thread logging level for the specified subsystem.
+ * psc_log_getlevel - Get thread logging level for the specified
+ * subsystem.
  * @subsys: subsystem ID.
  */
 int
@@ -422,12 +423,14 @@ psc_log_getlevel(int subsys)
 	if (thr == NULL)
 		return (psc_log_getlevel_ss(subsys));
 	if (subsys >= psc_nsubsys)
-		psc_fatalx("subsystem out of bounds (%d)", subsys);
+		psc_fatalx("subsystem %d out of bounds (%d)", subsys,
+		    psc_nsubsys);
 	return (thr->pscthr_loglevels[subsys]);
 }
 
 /**
- * pscthr_setloglevel - Set thread logging level for the specified subsystem.
+ * pscthr_setloglevel - Set thread logging level for the specified
+ * subsystem.
  * @ssid: subsystem ID to change logging level for.
  * @newlevel: new logging level value to take on.
  */
