@@ -104,15 +104,17 @@ $data =~ s
 $d_cont -----------------------------------------------------------------------------
 $d_cont Copyright (c) $cpyears, Pittsburgh Supercomputing Center (PSC).
 $d_cont
-$d_cont Permission to use, copy, and modify this software and its documentation
-$d_cont without fee for personal use or non-commercial use within your organization
-$d_cont is hereby granted, provided that the above copyright notice is preserved in
-$d_cont all copies and that the copyright and this permission notice appear in
-$d_cont supporting documentation.  Permission to redistribute this software to other
-$d_cont organizations or individuals is not permitted without the written permission
-$d_cont of the Pittsburgh Supercomputing Center.  PSC makes no representations about
-$d_cont the suitability of this software for any purpose.  It is provided "as is"
-$d_cont without express or implied warranty.
+$d_cont Permission to use, copy, modify, and distribute this software for any
+$d_cont purpose with or without fee is hereby granted, provided that the above
+$d_cont copyright notice and this permission notice appear in all copies.
+$d_cont
+$d_cont THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+$d_cont WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+$d_cont MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+$d_cont ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+$d_cont WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+$d_cont ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+$d_cont OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 $d_cont -----------------------------------------------------------------------------$1
 $d_cont %PSC_END_COPYRIGHT%$d_end
 }s;
