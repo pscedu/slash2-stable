@@ -115,6 +115,10 @@ $d_cont ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
 $d_cont WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
 $d_cont ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 $d_cont OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+$d_cont
+$d_cont Pittsburgh Supercomputing Center	phone: 412.268.4960  fax: 412.268.5832
+$d_cont 300 S. Craig Street			e-mail: remarks\@psc.edu
+$d_cont Pittsburgh, PA 15213			web: http://www.psc.edu/
 $d_cont -----------------------------------------------------------------------------$1
 $d_cont %PSC_END_COPYRIGHT%$d_end
 }s;
