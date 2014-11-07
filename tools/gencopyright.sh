@@ -104,17 +104,19 @@ $data =~ s
 $d_cont -----------------------------------------------------------------------------
 $d_cont Copyright (c) $cpyears, Pittsburgh Supercomputing Center (PSC).
 $d_cont
-$d_cont Permission to use, copy, modify, and distribute this software for any
-$d_cont purpose with or without fee is hereby granted, provided that the above
-$d_cont copyright notice and this permission notice appear in all copies.
+$d_cont Permission to use, copy, modify, and distribute this software
+$d_cont for any purpose with or without fee is hereby granted, provided
+$d_cont that the above copyright notice and this permission notice
+$d_cont appear in all copies.
 $d_cont
-$d_cont THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
-$d_cont WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
-$d_cont MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
-$d_cont ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
-$d_cont WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
-$d_cont ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
-$d_cont OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+$d_cont THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL
+$d_cont WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED
+$d_cont WARRANTIES OF MERCHANTABILITY AND FITNESS.  IN NO EVENT SHALL
+$d_cont THE AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT, INDIRECT, OR
+$d_cont CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM
+$d_cont LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT,
+$d_cont NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN
+$d_cont CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 $d_cont
 $d_cont Pittsburgh Supercomputing Center	phone: 412.268.4960  fax: 412.268.5832
 $d_cont 300 S. Craig Street			e-mail: remarks\@psc.edu
