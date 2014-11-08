@@ -859,6 +859,7 @@ usocklnd_passiveconn_hellosent(usock_conn_t *conn)
                         pthread_mutex_unlock(&conn2->uc_lock);
                         pthread_mutex_unlock(&peer->up_lock);
                         usocklnd_peer_decref(peer);
+        		usocklnd_conn_kill(conn2); 
                         goto passive_hellosent_connkill;
                 }
 
