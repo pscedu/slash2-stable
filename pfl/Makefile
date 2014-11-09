@@ -55,6 +55,7 @@ SRCS+=		${PFL_BASE}/workthr.c
 
 SRCS+=		${CLOCK_SRCS}
 SRCS+=		${SETRESUID_SRC}
+SRCS+=		${STRVIS_SRCS}
 
 MODULES+=	lnet-hdrs pthread clock rt
 
