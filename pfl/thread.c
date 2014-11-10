@@ -22,6 +22,8 @@
  * other useful utilities.
  */
 
+#ifdef HAVE_LIBPTHREAD
+
 #include <err.h>
 #include <signal.h>
 #include <stdarg.h>
@@ -614,3 +616,21 @@ pscthr_killall(void)
 	}
 	PLL_ULOCK(&psc_threads);
 }
+
+#else
+
+void *
+pfl_tls_get(int idx, size_t len)
+{
+	if (_pfl_tls[idx] == NULL)
+		_pfl_tls[idx] = psc_alloc(len, PAF_NOLOG | PAF_NOGUARD);
+	return (_pfl_tls[idx]);
+}
+
+struct psc_thread *
+pscthr_get_canfail(void)
+{
+	return (NULL);
+}
+
+#endif

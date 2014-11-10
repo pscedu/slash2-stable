@@ -20,11 +20,12 @@
 #ifndef _PFL_MEMNODE_H_
 #define _PFL_MEMNODE_H_
 
-#include <pthread.h>
-
 #ifdef HAVE_NUMA
 #include <numa.h>
 #endif
+
+#include "pfl/lock.h"
+#include "pfl/dynarray.h"
 
 #ifdef HAVE_NUMA
 # define psc_memnode_getid()	numa_preferred()

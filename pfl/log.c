@@ -56,12 +56,6 @@
 #define PSC_LOG_FMT "[%s:%06u %n:%I:%T %B %F %l] "
 #endif
 
-struct fuse_context {
-	uid_t uid;
-	gid_t gid;
-	pid_t pid;
-};
-
 const char			*psc_logfmt = PSC_LOG_FMT;
 __static int			 psc_loglevel = PLL_NOTICE;
 __static struct psclog_data	*psc_logdata;
@@ -192,18 +186,6 @@ psc_log_getlevel_global(void)
 	return (psc_loglevel);
 }
 
-__weak int
-psc_log_getlevel_ss(__unusedx int subsys)
-{
-	return (psc_log_getlevel_global());
-}
-
-__weak int
-psc_log_getlevel(int subsys)
-{
-	return (psc_log_getlevel_ss(subsys));
-}
-
 void
 psc_log_setlevel_global(int newlevel)
 {
@@ -212,75 +194,70 @@ psc_log_setlevel_global(int newlevel)
 	psc_loglevel = newlevel;
 }
 
-__weak void
+#ifndef HAVE_LIBPTHREAD
+
+int
+psc_log_getlevel_ss(__unusedx int subsys)
+{
+	return (psc_log_getlevel_global());
+}
+
+int
+psc_log_getlevel(int subsys)
+{
+	return (psc_log_getlevel_ss(subsys));
+}
+
+void
 psc_log_setlevel_ss(__unusedx int subsys, int newlevel)
 {
 	psc_log_setlevel_global(newlevel);
 }
 
-__weak void
+void
 psc_log_setlevel(int subsys, int newlevel)
 {
 	psc_log_setlevel_ss(subsys, newlevel);
 }
 
-__weak struct psc_thread *
-pscthr_get_canfail(void)
-{
-	return (NULL);
-}
+#endif
 
-__weak pid_t
-pfl_getsysthrid(void)
-{
-	return (getpid());
-}
-
+#ifndef HAVE_MPI
 /**
  * MPI_Comm_rank - Dummy overrideable MPI rank retriever.
  */
-__weak int
+int
 MPI_Comm_rank(__unusedx int comm, int *rank)
 {
 	*rank = -1;
 	return (0);
 }
+#endif
 
-/**
- * fuse_get_context - Dummy overrideable fuse context retriever.
- */
-__weak struct fuse_context *
-psclog_get_fuse_context(void)
+const char *
+pflog_get_fsctx_uprog_stub(__unusedx struct psc_thread *thr)
 {
 	return (NULL);
 }
 
-pid_t
-psclog_get_fuse_ctx_pid(void)
-{
-	struct fuse_context *ctx;
-
-	ctx = psclog_get_fuse_context();
-	return (ctx ? ctx->pid : -1);
-}
-
 uid_t
-psclog_get_fuse_ctx_uid(void)
+pflog_get_fsctx_uid_stub(void)
 {
-	struct fuse_context *ctx;
-
-	ctx = psclog_get_fuse_context();
-	return (ctx ? ctx->uid : (uid_t)-1);
+	return (-1);
 }
 
-/**
- * psc_subsys_name - Dummy overrideable PFL subsystem ID -> name resolver.
- */
-__weak const char *
-psc_subsys_name(__unusedx int ssid)
+pid_t
+pflog_get_fsctx_pid_stub(void)
 {
-	return ("<unknown>");
+	return (-1);
 }
+
+const char	*(*pflog_get_fsctx_uprog)(struct psc_thread *) =
+		    pflog_get_fsctx_uprog_stub;
+pid_t		 (*pflog_get_fsctx_pid)(void) =
+		    pflog_get_fsctx_pid_stub;
+uid_t		 (*pflog_get_fsctx_uid)(void) =
+		    pflog_get_fsctx_uid_stub;
 
 struct psclog_data *
 psclog_getdata(void)
@@ -310,12 +287,6 @@ psclog_getdata(void)
 #endif
 	}
 	return (d);
-}
-
-__weak const char *
-pscthr_log_get_uprog(__unusedx struct psc_thread *thr)
-{
-	return (NULL);
 }
 
 const char *
@@ -405,15 +376,15 @@ _psclogv(const struct pfl_callerinfo *pci, int level, int options,
 		FMTSTRCASE('L', "d", level)
 		FMTSTRCASE('l', "d", pci->pci_lineno)
 		FMTSTRCASE('N', "s", progname)
-		FMTSTRCASE('X', "s", pscthr_log_get_uprog(thr))
+		FMTSTRCASE('X', "s", pflog_get_fsctx_uprog(thr))
 		FMTSTRCASE('n', "s", thrname)
-		FMTSTRCASE('P', "d", psclog_get_fuse_ctx_pid())
+		FMTSTRCASE('P', "d", pflog_get_fsctx_pid())
 		FMTSTRCASE('r', "d", d->pld_rank)
 //		FMTSTRCASE('S', "s", call stack)
 		FMTSTRCASE('s', "lu", tv.tv_sec)
 		FMTSTRCASE('T', "s", psc_subsys_name(pci->pci_subsys))
 		FMTSTRCASE('t', "d", pci->pci_subsys)
-		FMTSTRCASE('U', "d", psclog_get_fuse_ctx_uid())
+		FMTSTRCASE('U', "d", pflog_get_fsctx_uid())
 		FMTSTRCASE('u', "lu", tv.tv_usec)
 	);
 

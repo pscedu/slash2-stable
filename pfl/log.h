@@ -36,6 +36,8 @@
 #include "pfl/pfl.h"
 #include "pfl/subsys.h"
 
+struct psc_thread;
+
 /* per-thread */
 struct psclog_data {
 	char		 pld_hostshort[HOST_NAME_MAX];
@@ -316,20 +318,24 @@ struct pfl_logpoint {
 			psc_fatal("[assert] %s", #cond);		\
 	} while (0)
 
-void			 psc_log_init(void);
-int			 psc_log_setfn(const char *, const char *);
-void			 psc_log_setlevel(int, int);
+void	 psc_log_init(void);
+int	 psc_log_setfn(const char *, const char *);
+void	 psc_log_setlevel(int, int);
 
-int			 psc_log_getlevel(int);
-int			 psc_log_getlevel_global(void);
-int			 psc_log_getlevel_ss(int);
+int	 psc_log_getlevel(int);
+int	 psc_log_getlevel_global(void);
+int	 psc_log_getlevel_ss(int);
 
-struct psclog_data	*psclog_getdata(void);
+extern const char	*(*pflog_get_fuse_ctx_uprog)(struct psc_thread *);
+extern pid_t		 (*pflog_get_fuse_ctx_pid)(void);
+extern uid_t		 (*pflog_get_fuse_ctx_uid)(void);
 
-const char		*psc_loglevel_getname(int);
-int			 psc_loglevel_fromstr(const char *);
+struct psclog_data	  *psclog_getdata(void);
 
-struct pfl_logpoint	*_pfl_get_logpointid(const char *, int, int);
+const char		  *psc_loglevel_getname(int);
+int			   psc_loglevel_fromstr(const char *);
+
+struct pfl_logpoint	 *_pfl_get_logpointid(const char *, int, int);
 
 void _psclogv(const struct pfl_callerinfo *, int, int, const char *,
     va_list);

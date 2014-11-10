@@ -20,8 +20,8 @@
 #include <pthread.h>
 #include <string.h>
 
-#include "pfl/dynarray.h"
 #include "pfl/alloc.h"
+#include "pfl/dynarray.h"
 #include "pfl/lock.h"
 #include "pfl/memnode.h"
 

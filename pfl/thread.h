@@ -81,6 +81,8 @@ label(struct psc_thread *pt)						\
 
 #define pscthr_gettid()		pscthr_get()->pscthr_thrid
 
+void	pscthrs_init(void);
+
 const char *
 	pscthr_getname(void);
 int	pscthr_getuniqid(void);

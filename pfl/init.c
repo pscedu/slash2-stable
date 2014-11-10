@@ -42,35 +42,7 @@ __threadx int				 _pfl_callerinfo_lvl;
 __static void				*_pfl_tls[PFL_TLSIDX_MAX];
 struct timespec				pfl_uptime;
 
-__weak void
-pscthrs_init(void)
-{
-}
-
-__weak void
-psc_memnode_init(void)
-{
-}
-
-__weak void
-psc_faults_init(void)
-{
-}
-
-__weak void *
-pfl_tls_get(int idx, size_t len)
-{
-	if (_pfl_tls[idx] == NULL)
-		_pfl_tls[idx] = psc_alloc(len, PAF_NOLOG | PAF_NOGUARD);
-	return (_pfl_tls[idx]);
-}
-
-__weak void
-psc_subsys_register(__unusedx int level, __unusedx const char *name)
-{
-}
-
-__inline pid_t
+pid_t
 pfl_getsysthrid(void)
 {
 #if defined(SYS_thread_selfid)
@@ -81,8 +53,10 @@ pfl_getsysthrid(void)
 	return (syscall(SYS_getthrid));
 #elif defined(SYS_thr_self)
 	return (syscall(SYS_thr_self));
-#else
+#elif defiend(HAVE_LIBPTHREAD)
 	return (pthread_self());
+#else
+	return (getpid());
 #endif
 }
 
@@ -156,12 +130,14 @@ pfl_dump_stack1(int sig)
 	pfl_abort();
 }
 
-__weak void
+#ifndef HAVE_LIBPTHREAD
+void
 psc_enter_debugger(const char *str)
 {
 	psclog(PLL_MAX, "enter debugger (%s)", str);
 	kill(0, SIGINT);
 }
+#endif
 
 void
 pfl_init(void)
@@ -173,9 +149,15 @@ pfl_init(void)
 	if (psc_atomic32_xchg(&init, 1))
 		errx(1, "pfl_init: already initialized");
 
+#ifdef HAVE_LIBPTHREAD
 	pscthrs_init();
+#endif
 	psc_log_init();
+#ifdef HAVE_LIBPTHREAD
+	void psc_memnode_init(void);
+
 	psc_memnode_init();
+#endif
 
 	psc_pagesize = sysconf(_SC_PAGESIZE);
 	if (psc_pagesize == -1)
@@ -196,8 +178,6 @@ pfl_init(void)
 	p = getenv("PSC_FORCE_DUMPSTACK");
 	if (p && strcmp(p, "0"))
 		atexit(pfl_dump_stack);
-
-	psc_faults_init();
 
 	p = getenv("PSC_TIMEOUT");
 	if (p) {
