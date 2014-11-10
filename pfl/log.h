@@ -326,9 +326,9 @@ int	 psc_log_getlevel(int);
 int	 psc_log_getlevel_global(void);
 int	 psc_log_getlevel_ss(int);
 
-extern const char	*(*pflog_get_fuse_ctx_uprog)(struct psc_thread *);
-extern pid_t		 (*pflog_get_fuse_ctx_pid)(void);
-extern uid_t		 (*pflog_get_fuse_ctx_uid)(void);
+extern const char	*(*pflog_get_fsctx_uprog)(struct psc_thread *);
+extern pid_t		 (*pflog_get_fsctx_pid)(struct psc_thread *);
+extern uid_t		 (*pflog_get_fsctx_uid)(struct psc_thread *);
 
 struct psclog_data	  *psclog_getdata(void);
 

@@ -89,7 +89,6 @@ int	pscthr_getuniqid(void);
 void	pscthr_killall(void);
 int	pscthr_run(struct psc_thread *);
 void	pscthr_setdead(struct psc_thread *, int);
-void	pscthr_setloglevel(int, int);
 void	pscthr_setpause(struct psc_thread *, int);
 void	pscthr_setready(struct psc_thread *);
 void	pscthr_setrun(struct psc_thread *, int);

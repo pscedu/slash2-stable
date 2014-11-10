@@ -562,6 +562,13 @@ struct pscrpc_connection *
 struct pscrpc_connection *
 	 pscrpc_connection_addref(struct pscrpc_connection *);
 
+/* import.c */
+void	 pscrpc_import_put(struct pscrpc_import *);
+struct pscrpc_import *
+	 pscrpc_new_import(void);
+struct pscrpc_import *
+	 pscrpc_import_get(struct pscrpc_import *);
+
 /* rpcclient.c */
 int	 pscrpc_expire_one_request(struct pscrpc_request *);
 struct pscrpc_request *
@@ -570,9 +577,6 @@ struct pscrpc_bulk_desc *
 	 pscrpc_prep_bulk_imp(struct pscrpc_request *, int, int, int);
 struct pscrpc_request *
 	 pscrpc_request_addref(struct pscrpc_request *);
-void	 pscrpc_import_put(struct pscrpc_import *);
-struct pscrpc_import *
-	 pscrpc_new_import(void);
 int	 pscrpc_queue_wait(struct pscrpc_request *);
 struct pscrpc_request_set *
 	 pscrpc_prep_set(void);

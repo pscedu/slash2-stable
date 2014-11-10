@@ -229,22 +229,22 @@ pflog_get_fsctx_uprog_stub(__unusedx struct psc_thread *thr)
 }
 
 uid_t
-pflog_get_fsctx_uid_stub(void)
+pflog_get_fsctx_uid_stub(__unusedx struct psc_thread *thr)
 {
 	return (-1);
 }
 
 pid_t
-pflog_get_fsctx_pid_stub(void)
+pflog_get_fsctx_pid_stub(__unusedx struct psc_thread *thr)
 {
 	return (-1);
 }
 
 const char	*(*pflog_get_fsctx_uprog)(struct psc_thread *) =
 		    pflog_get_fsctx_uprog_stub;
-pid_t		 (*pflog_get_fsctx_pid)(void) =
+pid_t		 (*pflog_get_fsctx_pid)(struct psc_thread *) =
 		    pflog_get_fsctx_pid_stub;
-uid_t		 (*pflog_get_fsctx_uid)(void) =
+uid_t		 (*pflog_get_fsctx_uid)(struct psc_thread *) =
 		    pflog_get_fsctx_uid_stub;
 
 struct psclog_data *
@@ -366,13 +366,13 @@ _psclogv(const struct pfl_callerinfo *pci, int level, int options,
 		FMTSTRCASE('N', "s", progname)
 		FMTSTRCASE('X', "s", pflog_get_fsctx_uprog(thr))
 		FMTSTRCASE('n', "s", thrname)
-		FMTSTRCASE('P', "d", pflog_get_fsctx_pid())
+		FMTSTRCASE('P', "d", pflog_get_fsctx_pid(thr))
 		FMTSTRCASE('r', "d", d->pld_rank)
 //		FMTSTRCASE('S', "s", call stack)
 		FMTSTRCASE('s', "lu", tv.tv_sec)
 		FMTSTRCASE('T', "s", psc_subsys_name(pci->pci_subsys))
 		FMTSTRCASE('t', "d", pci->pci_subsys)
-		FMTSTRCASE('U', "d", pflog_get_fsctx_uid())
+		FMTSTRCASE('U', "d", pflog_get_fsctx_uid(thr))
 		FMTSTRCASE('u', "lu", tv.tv_usec)
 	);
 
