@@ -311,4 +311,8 @@ ifeq ($(filter $(realpath ${ROOTDIR})/compat/%,${CURDIR}),)
   DEFINES+=						-DHAVE_SYS_ACL_H
  endif
 
+ ifdef PICKLE_HAVE_ENDIAN_H
+  DEFINES+=						-DHAVE_ENDIAN_H
+ endif
+
 endif
