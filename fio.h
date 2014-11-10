@@ -53,7 +53,7 @@
 
 extern pthread_barrier_t barrier;
 
-#elif defined(MPI)
+#elif defined(HAVE_MPI)
 # include <mpi.h>
 #endif
 
@@ -90,7 +90,7 @@ enum TEST_OPTIONS {
 	FIO_THRASH_LOCK		= 1 << 12,
 	FIO_TIME_BLOCK		= 1 << 13,
 	FIO_FSYNC_BLOCK		= 1 << 14,
-	FIOT_INTERSPERSE		= 1 << 15,
+	FIOT_INTERSPERSE	= 1 << 15,
 	FIO_APP_BARRIER		= 1 << 16
 };
 
@@ -104,10 +104,10 @@ enum TEST_OPTIONS {
  *   MPI doesn't need this since every mpi process
  *   has its own heap
  */
-#ifdef  MPI
-#define WORKPE 1
+#ifdef  HAVE_MPI
+#  define WORKPE 1
 #elif defined(HAVE_LIBPTHREAD)
-#define WORKPE ((iot->mytest_pe == mygroup->work_pe) ? 1 : 0)
+#  define WORKPE (iot->mytest_pe == mygroup->work_pe)
 #endif
 
 enum CLOCKS {
@@ -293,7 +293,7 @@ struct test_group {
 #ifdef HAVE_LIBPTHREAD
 	pthread_barrier_t group_barrier;
 	THREAD_t	*threads;
-#elif MPI
+#elif defined(HAVE_MPI)
 	MPI_Group	 group;
 	MPI_Comm	 group_barrier;
 #endif
@@ -505,7 +505,7 @@ _BARRIER(GROUP_t *mygroup, struct io_toolbox *iot)
 {
 #ifdef HAVE_LIBPTHREAD
 	pthread_barrier_wait(&mygroup->group_barrier);
-#elif MPI
+#elif defined(HAVE_MPI)
 	MPI_Barrier(mygroup->group_barrier);
 #else
 	WARN("No barrier support..\n");

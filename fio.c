@@ -386,7 +386,7 @@ init_pe(int mype)
 void
 init_barriers(int mype)
 {
-#ifdef MPI
+#ifdef HAVE_MPI
 	GROUP_t *mygroup;
 	MPI_Group group_world;
 	int *iptr, start_pe, i, rc;
@@ -435,7 +435,7 @@ destroy_barriers(void)
 	psclist_for_each_entry(group, &groupList, group_lentry) {
 #ifdef HAVE_LIBPTHREAD
 		pthread_barrier_destroy(&group->group_barrier);
-#elif MPI
+#elif defined(HAVE_MPI)
 		WARN("MPI implementation not complete\n");
 #endif
 	}
@@ -985,7 +985,7 @@ main(int argc, char *argv[])
 #ifdef HAVE_LIBPTHREAD
 	GROUP_t          *group;
 	int rc, i;
-#elif MPI
+#elif defined(HAVE_MPI)
 	int mype = 0;
 	MPI_Init(&argc, &argv);
 #endif
@@ -1034,7 +1034,7 @@ main(int argc, char *argv[])
 	run_yacc();
 	dump_groups();
 
-#ifdef MPI
+#ifdef HAVE_MPI
 	/* get the total number of pes */
 	MPI_Comm_size(MPI_COMM_WORLD, &TOTAL_PES);
 	MPI_Comm_rank(MPI_COMM_WORLD, &mype);
