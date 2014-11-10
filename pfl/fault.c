@@ -25,14 +25,14 @@
 #include <string.h>
 #include <unistd.h>
 
-#include "pfl/str.h"
-#include "pfl/hashtbl.h"
 #include "pfl/alloc.h"
 #include "pfl/ctl.h"
 #include "pfl/ctlsvr.h"
 #include "pfl/fault.h"
+#include "pfl/hashtbl.h"
 #include "pfl/lock.h"
 #include "pfl/random.h"
+#include "pfl/str.h"
 
 #define			FAULTS_MAX 128
 
