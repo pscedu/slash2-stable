@@ -336,7 +336,7 @@ main(int argc, char *argv[])
 		errx(1, "cannot parallelize filewide CRC");
 
 	if (displaybw)
-		pscthr_init(0, 0, display, NULL, 0, "disp");
+		pscthr_init(0, display, NULL, 0, "disp");
 
 	lc_init(&wkq, struct wk, lentry);
 	psc_poolmaster_init(&wk_poolmaster, struct wk, lentry,
@@ -349,7 +349,7 @@ main(int argc, char *argv[])
 	thrv = PSCALLOC(sizeof(*thrv) * nthr);
 
 	for (n = 0; n < nthr; n++)
-		thrv[n] = pscthr_init(0, 0, thrmain, NULL, 0, "thr%d", n);
+		thrv[n] = pscthr_init(0, thrmain, NULL, 0, "thr%d", n);
 
 	for (; *argv; argv++)
 		pfl_filewalk(*argv, flags, NULL, proc, NULL);
