@@ -53,7 +53,7 @@ pfl_getsysthrid(void)
 	return (syscall(SYS_getthrid));
 #elif defined(SYS_thr_self)
 	return (syscall(SYS_thr_self));
-#elif defiend(HAVE_LIBPTHREAD)
+#elif defined(HAVE_LIBPTHREAD)
 	return (pthread_self());
 #else
 	return (getpid());

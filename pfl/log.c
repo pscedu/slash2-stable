@@ -197,21 +197,9 @@ psc_log_setlevel_global(int newlevel)
 #ifndef HAVE_LIBPTHREAD
 
 int
-psc_log_getlevel_ss(__unusedx int subsys)
-{
-	return (psc_log_getlevel_global());
-}
-
-int
 psc_log_getlevel(int subsys)
 {
 	return (psc_log_getlevel_ss(subsys));
-}
-
-void
-psc_log_setlevel_ss(__unusedx int subsys, int newlevel)
-{
-	psc_log_setlevel_global(newlevel);
 }
 
 void
