@@ -33,7 +33,7 @@ clock_gettime(clockid_t cid, struct timespec *ts)
 
 	switch (cid) {
 	case CLOCK_MONOTONIC:
-		warnx("warning: using realtime instead of monotonic");
+#warning "CLOCK_MONOTONIC support not available; using realtime instead"
 		rc = gettimeofday(&tv, NULL);
 		break;
 	case CLOCK_REALTIME:
