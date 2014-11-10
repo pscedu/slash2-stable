@@ -70,68 +70,13 @@ pscrpc_request_addref(struct pscrpc_request *req)
 	return (req);
 }
 
-struct pscrpc_import *
-pscrpc_new_import(void)
-{
-	struct pscrpc_import *imp;
-
-	imp = psc_pool_get(pscrpc_imp_pool);
-	memset(imp, 0, sizeof(*imp));
-
-	//INIT_PSCLIST_HEAD(&imp->imp_replay_list);
-	INIT_PSCLIST_HEAD(&imp->imp_sending_list);
-	//INIT_PSCLIST_HEAD(&imp->imp_delayed_list);
-	INIT_SPINLOCK(&imp->imp_lock);
-	//imp->imp_last_success_conn = 0;
-	imp->imp_state = PSCRPC_IMP_NEW;
-	//imp->imp_obd = class_incref(obd);
-	psc_waitq_init(&imp->imp_recovery_waitq);
-
-	atomic_set(&imp->imp_refcount, 2);
-	atomic_set(&imp->imp_inflight, 0);
-	//atomic_set(&imp->imp_replay_inflight, 0);
-	//INIT_PSCLIST_HEAD(&imp->imp_handle.h_link);
-	//class_handle_hash(&imp->imp_handle, import_handle_addref);
-
-	return imp;
-}
-
-struct pscrpc_import *
-pscrpc_import_get(struct pscrpc_import *import)
-{
-	psc_assert(atomic_read(&import->imp_refcount) >= 0);
-	psc_assert(atomic_read(&import->imp_refcount) < 0x5a5a5a);
-	atomic_inc(&import->imp_refcount);
-	psclog_info("import get %p refcount=%d", import,
-	    atomic_read(&import->imp_refcount));
-	return import;
-}
-
-void
-pscrpc_import_put(struct pscrpc_import *import)
-{
-	psclog_debug("import put %p refcount=%d", import,
-	    atomic_read(&import->imp_refcount) - 1);
-
-	psc_assert(atomic_read(&import->imp_refcount) > 0);
-	psc_assert(atomic_read(&import->imp_refcount) < 0x5a5a5a);
-	if (!atomic_dec_and_test(&import->imp_refcount))
-		return;
-	psclog_debug("destroying import %p", import);
-
-	/* XXX what if we fail to establish a connect for a new import */
-	psc_assert(import->imp_connection);
-	pscrpc_put_connection(import->imp_connection);
-	psc_waitq_destroy(&import->imp_recovery_waitq);
-	psc_pool_return(pscrpc_imp_pool, import);
-}
-
 __static int
 pscrpc_interpret(struct pscrpc_request *rq)
 {
 	//psc_assert(rq->rq_phase == PSCRPC_RQ_PHASE_COMPLETE);
 	if (rq->rq_interpret_reply)
-		rq->rq_status = rq->rq_interpret_reply(rq, &rq->rq_async_args);
+		rq->rq_status = rq->rq_interpret_reply(rq,
+		    &rq->rq_async_args);
 
 	rq->rq_interpret_reply = NULL;
 
@@ -1106,7 +1051,6 @@ pscrpc_expire_one_request(struct pscrpc_request *req)
 
 	else if (!imp->imp_igntimeout)
 		pscrpc_fail_import(imp, req->rq_reqmsg->conn_cnt);
-
 
 	return (1);
 }
