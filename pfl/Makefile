@@ -28,6 +28,7 @@ SRCS+=		${PFL_BASE}/list.c
 SRCS+=		${PFL_BASE}/listcache.c
 SRCS+=		${PFL_BASE}/lockedlist.c
 SRCS+=		${PFL_BASE}/log.c
+SRCS+=		${PFL_BASE}/memnode.c
 SRCS+=		${PFL_BASE}/meter.c
 SRCS+=		${PFL_BASE}/mkdirs.c
 SRCS+=		${PFL_BASE}/mlist.c
