@@ -17,7 +17,12 @@
  * %PSC_END_COPYRIGHT%
  */
 
+#ifdef HAVE_ENDIAN_H
 #include <endian.h>
+#else
+#include <machine/endian.h>
+#endif
+
 #include <string.h>
 
 #include "pfl/acl.h"
