@@ -179,8 +179,7 @@ struct pscrpc_import {
 	uint32_t			  imp_cli_request_portal;
 	uint32_t			  imp_cli_reply_portal;
 	struct psclist_head		  imp_sending_list;	/* in-flight? */
-	struct psclist_head		  imp_uncomitted;	/* post send  */
-	struct psclist_head		  imp_rpcsets;		/* list of sets */
+	struct psclist_head		  imp_lentry;
 	size_t				  imp_nsets;
 	psc_spinlock_t			  imp_lock;
 	atomic_t			  imp_inflight;
@@ -194,7 +193,6 @@ struct pscrpc_import {
 	uint64_t			  imp_last_transno_checked; /* optimize */
 	uint64_t			  imp_peer_committed_transno;
 	struct psc_waitq		  imp_recovery_waitq;
-	struct psclist_head		  imp_delayed_list;
 	void				(*imp_hldropf)(void *);
 	void				 *imp_hldrop_arg;
 	unsigned int			  imp_invalid:1,

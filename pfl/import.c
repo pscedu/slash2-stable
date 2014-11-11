@@ -224,6 +224,7 @@ pscrpc_new_import(void)
 	imp = psc_pool_get(pscrpc_imp_pool);
 	memset(imp, 0, sizeof(*imp));
 
+	INIT_PSC_LISTENTRY(&imp->imp_lentry);
 	//INIT_PSCLIST_HEAD(&imp->imp_replay_list);
 	INIT_PSCLIST_HEAD(&imp->imp_sending_list);
 	//INIT_PSCLIST_HEAD(&imp->imp_delayed_list);
