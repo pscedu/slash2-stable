@@ -90,7 +90,7 @@ pscrpc_req_getprids(const struct psc_dynarray *prids,
     struct pscrpc_request *rq, lnet_process_id_t *self,
     lnet_process_id_t *peer)
 {
-	if (rq->rq_import) {
+	if (rq->rq_import && rq->rq_import->imp_connection) {
 		*peer = rq->rq_import->imp_connection->c_peer;
 		pscrpc_getpridforpeer(self, prids, peer->nid);
 		if (self->nid == LNET_NID_ANY) {
