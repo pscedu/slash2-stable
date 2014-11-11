@@ -328,7 +328,7 @@ expired_request(void *data)
 
 	atomic_inc(&req->rq_retries);
 
-	DEBUG_REQ(PLL_INFO, req, "request timeout");
+	DEBUG_REQ(PLL_DIAG, req, "request timeout");
 
 	if (atomic_read(&req->rq_retries) >= imp->imp_max_retries)
 		return (pscrpc_expire_one_request(req));
@@ -358,7 +358,7 @@ pscrpc_send_new_req_locked(struct pscrpc_request *req)
 	int rc;
 
 	LOCK_ENSURE(&req->rq_lock);
-	DEBUG_REQ(PLL_INFO, req, "about to send rpc");
+	DEBUG_REQ(PLL_DIAG, req, "about to send rpc");
 
 	psc_assert(req->rq_phase == PSCRPC_RQ_PHASE_NEW);
 	req->rq_phase = PSCRPC_RQ_PHASE_RPC;
@@ -412,7 +412,7 @@ pscrpc_check_reply(struct pscrpc_request *req)
 	spinlock(&req->rq_lock);
 
 	if (req->rq_replied) {
-		DEBUG_REQ(PLL_INFO, req, "REPLIED:");
+		DEBUG_REQ(PLL_DIAG, req, "REPLIED:");
 		GOTO(out, rc = 1);
 	}
 
@@ -440,7 +440,7 @@ pscrpc_check_reply(struct pscrpc_request *req)
 	}
  out:
 	freelock(&req->rq_lock);
-	DEBUG_REQ(rc ? PLL_INFO : PLL_DEBUG, req, "rc=%d", rc);
+	DEBUG_REQ(rc ? PLL_DIAG : PLL_DEBUG, req, "rc=%d", rc);
 	return rc;
 }
 
@@ -565,7 +565,7 @@ pscrpc_queue_wait(struct pscrpc_request *req)
 	atomic_inc(&imp->imp_inflight);
 
 	psc_assert(imp);
-	DEBUG_REQ(PLL_INFO, req, "sending..");
+	DEBUG_REQ(PLL_DIAG, req, "sending..");
 
 	/* Mark phase here for a little debug help */
 	req->rq_phase = PSCRPC_RQ_PHASE_RPC;
@@ -595,7 +595,7 @@ pscrpc_queue_wait(struct pscrpc_request *req)
 			 * registering the bulk again (bug 6371).
 			 * print the old xid first for sanity.
 			 */
-			DEBUG_REQ(PLL_INFO, req, "bumping xid for bulk: ");
+			DEBUG_REQ(PLL_DIAG, req, "bumping xid for bulk: ");
 			req->rq_xid = pscrpc_next_xid();
 		}
 	}
@@ -610,12 +610,12 @@ pscrpc_queue_wait(struct pscrpc_request *req)
 
 	rc = pscrpc_send_rpc(req, 0);
 	if (rc) {
-		DEBUG_REQ(PLL_INFO, req, "send failed (%d); recovering", rc);
+		DEBUG_REQ(PLL_DIAG, req, "send failed (%d); recovering", rc);
 		timeout = 1;
 	} else {
 		//timeout = MAX(req->rq_timeout * 100, 1);
 		timeout = MAX(req->rq_timeout, 1);
-		DEBUG_REQ(PLL_INFO, req,"sleeping for %d sec", timeout);
+		DEBUG_REQ(PLL_DIAG, req,"sleeping for %d sec", timeout);
 	}
 	lwi = LWI_TIMEOUT_INTR(timeout, expired_request,
 	    interrupted_request, req);
@@ -623,7 +623,7 @@ pscrpc_queue_wait(struct pscrpc_request *req)
 	rc = pscrpc_cli_wait_event(&req->rq_reply_waitq,
 	    pscrpc_check_reply(req), &lwi);
 
-	DEBUG_REQ(rc ? PLL_ERROR : PLL_INFO, req,
+	DEBUG_REQ(rc ? PLL_ERROR : PLL_DIAG, req,
 		  "completed (rc=%d), replied=%d", rc, req->rq_replied);
 
 	spinlock(&imp->imp_lock);
@@ -1385,7 +1385,7 @@ pscrpc_abort_inflight(struct pscrpc_import *imp)
 void
 pscrpc_resend_req(struct pscrpc_request *req)
 {
-	DEBUG_REQ(PLL_WARN, req, "going to resend");
+	DEBUG_REQ(PLL_DIAG, req, "going to resend");
 	req->rq_reqmsg->handle.cookie = 0;
 	req->rq_status = -EAGAIN;
 
