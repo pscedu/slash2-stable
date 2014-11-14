@@ -6,10 +6,8 @@
 int
 main(int argc, char *argv[])
 {
-	void *p;
-
 	(void)argc;
 	(void)argv;
-	p = openat;
+	(void)openat;
 	exit(0);
 }
