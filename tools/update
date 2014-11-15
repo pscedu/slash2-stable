@@ -5,13 +5,15 @@
 #
 # TODO
 # parallelize git operations
-
-# open source
-#git clone https://github.com/pscedu/proj.git
-#cd proj
-#./tools/update
+#git checkout `git rev-list -n 1 --before="2009-07-27 13:37" master`
 
 set -e
+
+die()
+{
+	echo "$0: $@" >&2
+	exit 1
+}
 
 usage()
 {
@@ -19,9 +21,13 @@ usage()
 	exit 1
 }
 
-if getopts "" c; then
-	usage
-fi
+reldir=
+while getopts "D:" c; do
+	case $c in
+	D) reldir=${OPTARG%/} ;;
+	*) usage ;;
+	esac
+done
 shift $(($OPTIND - 1))
 
 case $1 in
@@ -29,12 +35,10 @@ scm-update)
 	GIT_ACTION=pull
 	SVN_ACTION=up
 	;;
-scm-status)
-	GIT_ACTION=status
-	SVN_ACTION=status
-	;;
 *)
-	usage
+	GIT_ACTION=${1#scm-}
+	SVN_ACTION=${1#scm-}
+	;;
 esac
 
 dir=$(readlink -f $(dirname $0)/..)
@@ -52,17 +56,21 @@ getrepo()
 	local dir=$2
 	local base=$(basename $dir)
 
-	if [ x"$dir" != x"proj" ]; then
-		mkdir -p $dir
-		cd $dir
+	if [ -n "$reldir" ]; then
+		[ x"$reldir" = x"$dir" ] || return 0
+	else
+		if [ x"$dir" != x"proj" ]; then
+			mkdir -p $dir
+			cd $dir
+			pwd
+		fi
 	fi
+
 	if git status >/dev/null 2>&1; then
-		pwd
 		git $GIT_ACTION
 
 	# XXX remove me
 	elif svn info >/dev/null 2>&1; then
-		pwd
 		svn $SVN_ACTION
 
 	else
@@ -108,5 +116,3 @@ for i in $dir/inf/*/update.sh; do
 done
 
 pubrepo proj
-
-#git checkout `git rev-list -n 1 --before="2009-07-27 13:37" master`
