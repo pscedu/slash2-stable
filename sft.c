@@ -36,6 +36,7 @@
 #include "pfl/fmt.h"
 #include "pfl/iostats.h"
 #include "pfl/listcache.h"
+#include "pfl/lock.h"
 #include "pfl/log.h"
 #include "pfl/pfl.h"
 #include "pfl/pool.h"
@@ -47,27 +48,31 @@
 
 #define THRT_TIOS		0	/* timed I/O stats */
 
+#define NTHR_AUTO		(-1)
+
+struct file {
+	psc_spinlock_t		 lock;
+	char			*fn;
+	struct stat		 stb;
+	int			 fd;
+	int			 done;
+	int			 refcnt;
+	int			 rc;	/* file return code */
+};
+
+
 struct wk {
-	struct psc_listentry lentry;
-	struct f	*f;
-	int64_t		 chunkid;
-	size_t		 off;
+	struct psc_listentry	 lentry;
+	struct file		*f;
+	int64_t			 chunkid;
+	size_t			 off;
+	ssize_t			 len;
 };
-
-struct f {
-	char		*fn;
-	struct stat	 stb;
-	int		 fd;
-	int		 done;
-	int64_t		 nchunks_total;
-	psc_atomic64_t	 nchunks_proc;
-};
-
-#define NTHR_AUTO (-1)
 
 int			 docrc;
 int			 doread = 1;
 int			 chunk;
+int			 verbose;
 int			 checkzero;
 int			 nthr = 1;
 ssize_t			 bufsz = 32 * 1024;
@@ -82,14 +87,51 @@ const char		*progname;
 
 struct psc_listcache	 wkq;
 
+#define lock_output()							\
+	do {								\
+		flockfile(stdout);					\
+		flockfile(stderr);					\
+	} while (0)
+
+#define unlock_output()							\
+	do {								\
+		funlockfile(stderr);					\
+		funlockfile(stdout);					\
+	} while (0)
+
+int
+file_close(struct file *f)
+{
+	spinlock(&f->lock);
+	if (--f->refcnt || !f->done) {
+		freelock(&f->lock);
+		return (0);
+	}
+
+	if (docrc && !chunk && !f->rc) {
+		psc_crc64_fini(&filecrc);
+
+		lock_output();
+		printf("F '%s' CRC=%"PSCPRIxCRC64"\n",
+		    f->fn, filecrc);
+		unlock_output();
+	}
+
+	close(f->fd);
+	free(f->fn);
+	PSCFREE(f);
+	return (1);
+}
+
 void
 thrmain(struct psc_thread *thr)
 {
-	ssize_t rc, bsz;
+	int save_errno;
+	struct file *f;
 	struct wk *wk;
 	uint64_t crc;
+	ssize_t rc;
 	char *buf;
-	int eof;
 
 	buf = PSCALLOC(bufsz);
 
@@ -97,30 +139,32 @@ thrmain(struct psc_thread *thr)
 		wk = lc_getwait(&wkq);
 		if (wk == NULL)
 			break;
+		f = wk->f;
 
 		if (doread)
-			rc = pread(wk->f->fd, buf, bufsz, wk->off);
+			rc = pread(f->fd, buf, wk->len, wk->off);
 		else
-			rc = pwrite(wk->f->fd, buf, bufsz, wk->off);
+			rc = pwrite(f->fd, buf, wk->len, wk->off);
+		save_errno = errno;
 
-		eof = 0;
-		if (psc_atomic64_inc_getnew(&wk->f->nchunks_proc) ==
-		    wk->f->nchunks_total)
-			eof = 1;
-
-		bsz = bufsz;
-		if (wk->f->done &&
-		    wk->f->nchunks_total - 1 == wk->chunkid)
-			bsz = wk->f->stb.st_size % bufsz;
-		if (bsz == 0)
-			bsz = bufsz;
-
-		if (rc > 0 && rc != bsz) {
-			rc = -1;
-			errno = EIO;
+		if (rc == -1) {
+			lock_output();
+			warnx("%s: %s: %s", doread ? "read" : "write",
+			    f->fn, strerror(save_errno));
+			unlock_output();
+			f->rc = -1;
+			goto end;
 		}
-		if (rc == -1)
-			err(1, "%s", wk->f->fn);
+
+		if (rc && rc != wk->len) {
+			lock_output();
+			warnx("%s: %s: unexpected short I/O "
+			    "(expected %zd, got %zd)",
+			    doread ? "read" : "write", f->fn,
+			    wk->len, rc);
+			unlock_output();
+			f->rc = -1;
+		}
 
 		psc_iostats_intv_add(&ist, rc);
 
@@ -128,30 +172,20 @@ thrmain(struct psc_thread *thr)
 			if (chunk) {
 				psc_crc64_calc(&crc, buf, rc);
 
-				flockfile(stdout);
-				fprintf(stdout, "F '%s' %5zd %c "
+				lock_output();
+				printf("F '%s' %5zd %c "
 				    "CRC=%"PSCPRIxCRC64"\n",
-				    wk->f->fn, wk->chunkid,
+				    f->fn, wk->chunkid,
 				    checkzero && pfl_memchk(buf, 0, rc) ?
 				    'Z' : ' ', crc);
-				funlockfile(stdout);
+				unlock_output();
 			} else {
 				psc_crc64_add(&filecrc, buf, rc);
-				if (eof) {
-					psc_crc64_fini(&filecrc);
-					fprintf(stdout,
-					    "F '%s' CRC=%"PSCPRIxCRC64"\n",
-					    wk->f->fn, filecrc);
-				}
 			}
 		}
 
-		if (eof) {
-			close(wk->f->fd);
-			free(wk->f->fn);
-			PSCFREE(wk->f);
-		}
-
+ end:
+		file_close(f);
 		psc_pool_return(wk_pool, wk);
 	}
 }
@@ -226,17 +260,17 @@ nprocessors(void)
 }
 
 void
-addwk(struct f *f, off_t off, int chunkid)
+addwk(struct file *f, off_t off, int chunkid, size_t len)
 {
 	struct wk *wk;
 
-	if (off + bufsz >= f->stb.st_size) {
-		f->nchunks_total = chunkid + 1;
-		f->done = 1;
-	}
+	spinlock(&f->lock);
+	f->refcnt++;
+	freelock(&f->lock);
 
 	wk = psc_pool_get(wk_pool);
 	wk->f = f;
+	wk->len = len;
 	wk->off = off;
 	wk->chunkid = chunkid;
 	lc_add(&wkq, wk);
@@ -247,16 +281,24 @@ proc(const char *fn,
     __unusedx const struct stat *stb, int info,
     __unusedx int level, __unusedx void *arg)
 {
+	struct file *f;
 	int chunkid;
-	struct f *f;
 	off_t off;
 
 	if (info != PFWT_F)
 		return (0);
 
+	if (verbose) {
+		lock_output();
+		warnx("processing %s", fn);
+		unlock_output();
+	}
+
 	f = PSCALLOC(sizeof(*f));
+	INIT_SPINLOCK(&f->lock);
 	f->fn = strdup(fn);
 	f->fd = open(fn, O_RDONLY);
+	f->refcnt = 1;
 	if (f->fd == -1)
 		err(1, "open %s", fn);
 	if (fstat(f->fd, &f->stb) == -1)
@@ -264,7 +306,15 @@ proc(const char *fn,
 
 	for (chunkid = 0, off = seekoff;
 	    off < f->stb.st_size; off += bufsz)
-		addwk(f, off, chunkid++);
+		addwk(f, off, chunkid++,
+		    off + bufsz > f->stb.st_size ?
+		    f->stb.st_size % bufsz : bufsz);
+
+	spinlock(&f->lock);
+	f->done = 1;
+	freelock(&f->lock);
+
+	file_close(f);
 
 	return (0);
 }
@@ -316,7 +366,7 @@ main(int argc, char *argv[])
 			}
 			break;
 		case 'v': /* verbose */
-			flags |= PFL_FILEWALKF_VERBOSE;
+			verbose = 1;
 			break;
 		case 'w': /* write */
 			doread = 0;
