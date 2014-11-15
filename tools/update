@@ -96,20 +96,22 @@ pubrepo()
 }
 
 pubrepo distrib/fuse
-pubrepo distrib/gcrcutil
-pubrepo distrib/iozone
-pubrepo distrib/libs3
-pubrepo distrib/posix-fstest
-pubrepo distrib/spiobench
-pubrepo distrib/stumbleupon-tcollector
-pubrepo fio
-pubrepo idxutils
-pubrepo psync
-pubrepo sft
-#pubrepo slash2
-pubrepo src-upd
-pubrepo xopctl
-pubrepo zfs-fuse zfs
+pubrepo distrib/gcrcutil &
+pubrepo distrib/iozone &
+pubrepo distrib/libs3 &
+pubrepo distrib/posix-fstest &
+pubrepo distrib/spiobench &
+pubrepo distrib/stumbleupon-tcollector &
+pubrepo fio &
+pubrepo idxutils &
+pubrepo psync &
+pubrepo sft &
+#pubrepo slash2 &
+pubrepo src-upd &
+pubrepo xopctl &
+pubrepo zfs-fuse zfs &
+
+wait
 
 for i in $dir/inf/*/update.sh; do
 	[ -e $i ] && . $i
