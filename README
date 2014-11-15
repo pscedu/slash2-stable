@@ -15,7 +15,7 @@ Download instructions
     disabling repositories in `tools/update.sh'.  Then run this script.
     By default, all components are fetched:
 
-	$ ./tools/update.sh
+	$ ./tools/update
 
 Configuration instructions
 
