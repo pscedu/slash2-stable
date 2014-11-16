@@ -40,6 +40,8 @@ struct rnd_iterator {
 
 #define RESET_RND_ITER(ri)	_RESET_RND_ITER(ri)
 
+void pfl_random_getbytes(void *, size_t);
+
 uint32_t psc_random32(void);
 uint32_t psc_random32u(uint32_t);
 uint64_t psc_random64(void);
