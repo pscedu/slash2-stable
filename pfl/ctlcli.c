@@ -25,6 +25,7 @@
 #include <curses.h>
 #include <err.h>
 #include <inttypes.h>
+#include <paths.h>
 #include <pthread.h>
 #include <signal.h>
 #include <stdio.h>
@@ -1251,25 +1252,16 @@ psc_ctlcli_main(const char *osockfn, int ac, char *av[],
 	psc_ctlcli_main_args.notab = notab;
 
 	if (psc_ctlcli_docurses) {
-		FILE *save, *t;
-		int fds[2];
-
 		filter();
 
 		/* Discard error output. */
-		if (pipe(fds) == -1)
-			err(1, "pipe");
-		save = stderr;
-		t = fdopen(fds[1], "w");
-		if (t == NULL)
-			err(1, "fdopen pipe");
-		stderr = t;
+		freopen(_PATH_DEVNULL, "w", stderr);
+
 		psc_ctlcli_retry_main = 1;
 		initscr();
 		psc_ctlcli_retry_main = 0;
-		stderr = save;
-		fclose(t);
-		close(fds[0]);
+
+		freopen("/dev/stderr", "w", stderr);
 
 		start_color();
 		has_col = isatty(STDOUT_FILENO) && has_colors();
