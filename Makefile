@@ -3,9 +3,8 @@
 ROOTDIR=..
 include ${ROOTDIR}/Makefile.path
 
-SRC_PATH+=	.
-
 PROG=		sft
+MAN+=		sft.1
 SRCS+=		sft.c
 SRCS+=		${PFL_BASE}/alloc.c
 SRCS+=		${PFL_BASE}/crc.c
