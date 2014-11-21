@@ -149,7 +149,6 @@ cleanup()
 {
 	$ctl stop
 	postproc 1
-	sleep 1
 	exit 0
 }
 
@@ -179,4 +178,25 @@ preproc()
 	cp `which $prog` c/$prog.$id
 	tm=$(date +%s)
 	trap cleanup EXIT
+}
+
+vsleep()
+{
+	local amt=0
+
+	[ $SECONDS -gt 30 ] && return
+
+	case $ATTEMPT in
+	1)	let amt=10	ATTEMPT++	;;
+	2)	let amt=30	ATTEMPT++	;;
+	3)	let amt=60	ATTEMPT++	;;
+	4)	let amt=600	ATTEMPT++	;;
+	6)	let amt=1800	ATTEMPT++	;;
+	7)	let amt=3600			;;
+	*)	ATTEMPT=1;
+	esac
+	export ATTEMPT
+
+	echo restarting after $amt seconds...
+	sleep $amt
 }
