@@ -17,7 +17,6 @@
    License along with the GNU C Library; if not, see
    <http://www.gnu.org/licenses/>.  */
 
-#include <alloca.h>
 #include <errno.h>
 #include <limits.h>
 #include <stdint.h>
@@ -334,13 +333,15 @@ msort_with_tmp (const struct msort_param *p, void *b, size_t n)
 	{
 	  if ((*cmp) (b1, b2, arg) <= 0)
 	    {
-	      tmp = (char *) __mempcpy (tmp, b1, s);
+	      memcpy (tmp, b1, s);
+	      tmp += s;
 	      b1 += s;
 	      --n1;
 	    }
 	  else
 	    {
-	      tmp = (char *) __mempcpy (tmp, b2, s);
+	      memcpy (tmp, b2, s);
+	      tmp += s;
 	      b2 += s;
 	      --n2;
 	    }
