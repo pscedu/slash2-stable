@@ -333,7 +333,7 @@ pfl_odt_freeitem(struct pfl_odt *t, struct pfl_odt_receipt *r)
 	psc_vbitmap_unset(t->odt_bitmap, r->odtr_elem);
 	freelock(&t->odt_lock);
 
-	PFLOG_ODT(PLL_DIAG, t, "freeitem r=%p slot=%zd",
+	PFLOG_ODT(PLL_DIAG, t, "freeitem r=%p slot=%"PRId64,
 	    r, r->odtr_elem);
 
 	ODT_STAT_INCR(t, free);
