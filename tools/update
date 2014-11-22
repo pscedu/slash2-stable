@@ -62,7 +62,6 @@ getrepo()
 		if [ x"$dir" != x"proj" ]; then
 			mkdir -p $dir
 			cd $dir
-			pwd
 		fi
 	fi
 
