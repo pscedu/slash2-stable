@@ -70,11 +70,12 @@ Specify the number of processing threads that should perform I/O on each
 file.
 Defaults to 1.
 .It Fl v
-Verbosely display ongoing .
-.It Fl w
+Verbosely display ongoing operations.
+.It Fl w Ar size
 Perform
 .Xr write 2
-of junk data over any files specified on the command line.
+of junk data over any files specified on the command line to the given
+.Ar size .
 .It Fl Z
 Check if a file chunk is composed of entirely zeroes and display
 a indicator
