@@ -48,6 +48,7 @@
 #include "pfl/log.h"
 #include "pfl/pfl.h"
 #include "pfl/pool.h"
+#include "pfl/random.h"
 #include "pfl/str.h"
 #include "pfl/thread.h"
 #include "pfl/timerthr.h"
@@ -78,7 +79,7 @@ struct wk {
 };
 
 int			 docrc;
-int			 doread = 1;
+uint64_t		 writesz;
 int			 chunk;
 int			 verbose;
 int			 checkzero;
@@ -143,21 +144,24 @@ thrmain(struct psc_thread *thr)
 
 	buf = PSCALLOC(bufsz);
 
+	if (writesz)
+		pfl_random_getbytes(buf, bufsz);
+
 	while (pscthr_run(thr)) {
 		wk = lc_getwait(&wkq);
 		if (wk == NULL)
 			break;
 		f = wk->f;
 
-		if (doread)
-			rc = pread(f->fd, buf, wk->len, wk->off);
-		else
+		if (writesz)
 			rc = pwrite(f->fd, buf, wk->len, wk->off);
+		else
+			rc = pread(f->fd, buf, wk->len, wk->off);
 		save_errno = errno;
 
 		if (rc == -1) {
 			lock_output();
-			warnx("%s: %s: %s", doread ? "read" : "write",
+			warnx("%s: %s: %s", writesz ? "write" : "read",
 			    f->fn, strerror(save_errno));
 			unlock_output();
 			f->rc = -1;
@@ -168,7 +172,7 @@ thrmain(struct psc_thread *thr)
 			lock_output();
 			warnx("%s: %s: unexpected short I/O "
 			    "(expected %zd, got %zd)",
-			    doread ? "read" : "write", f->fn,
+			    writesz ? "write" : "read", f->fn,
 			    wk->len, rc);
 			unlock_output();
 			f->rc = -1;
@@ -285,8 +289,7 @@ addwk(struct file *f, off_t off, int chunkid, size_t len)
 }
 
 int
-proc(const char *fn,
-    __unusedx const struct stat *stb, int info,
+proc(const char *fn, const struct stat *stb, int info,
     __unusedx int level, __unusedx void *arg)
 {
 	struct file *f;
@@ -305,12 +308,17 @@ proc(const char *fn,
 	f = PSCALLOC(sizeof(*f));
 	INIT_SPINLOCK(&f->lock);
 	f->fn = strdup(fn);
-	f->fd = open(fn, O_RDONLY);
+	if (writesz)
+		f->fd = open(fn, O_CREAT | O_RDWR, 0600);
+	else
+		f->fd = open(fn, O_RDONLY);
 	f->refcnt = 1;
 	if (f->fd == -1)
 		err(1, "open %s", fn);
-	if (fstat(f->fd, &f->stb) == -1)
-		err(1, "stat %s", fn);
+	memcpy(&f->stb, stb, sizeof(f->stb));
+
+	if (writesz)
+		f->stb.st_size = writesz;
 
 	for (chunkid = 0, off = seekoff;
 	    off < f->stb.st_size; off += bufsz)
@@ -336,7 +344,7 @@ main(int argc, char *argv[])
 
 	pfl_init();
 	progname = argv[0];
-	while ((c = getopt(argc, argv, "Bb:cKO:RTt:vwZ")) != -1)
+	while ((c = getopt(argc, argv, "Bb:cKO:RTt:vw:Z")) != -1)
 		switch (c) {
 		case 'B': /* display bandwidth */
 			displaybw = 1;
@@ -367,7 +375,7 @@ main(int argc, char *argv[])
 			break;
 		case 't': /* #threads */
 			if (strcmp(optarg, "a") == 0)
-				nthr = nprocessors();
+				nthr = nprocessors(); // XXX - getload()
 			else {
 				nthr = strtol(optarg, &endp, 10);
 				/* XXX check */
@@ -377,7 +385,8 @@ main(int argc, char *argv[])
 			verbose = 1;
 			break;
 		case 'w': /* write */
-			doread = 0;
+			writesz = strtol(optarg, &endp, 10);
+			/* XXX check */
 			break;
 		case 'Z': /* report if file chunk is all zeroes */
 			checkzero = 1;
