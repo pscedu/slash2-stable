@@ -85,7 +85,7 @@ struct pscfs {
 	void	(*pf_handle_statfs)(struct pscfs_req *, pscfs_inum_t);
 	void	(*pf_handle_symlink)(struct pscfs_req *, const char *, pscfs_inum_t, const char *);
 	void	(*pf_handle_unlink)(struct pscfs_req *, pscfs_inum_t, const char *);
-	void	(*pf_handle_umount)(void);
+	void	(*pf_handle_destroy)(void);
 	void	(*pf_handle_write)(struct pscfs_req *, const void *, size_t, off_t, void *);
 	void	(*pf_handle_listxattr)(struct pscfs_req *, size_t, pscfs_inum_t);
 	void	(*pf_handle_getxattr)(struct pscfs_req *, const char *, size_t, pscfs_inum_t);

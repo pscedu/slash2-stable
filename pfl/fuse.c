@@ -1034,10 +1034,10 @@ pscfs_fuse_handle_symlink(fuse_req_t req, const char *buf,
 }
 
 void
-pscfs_fuse_handle_umount(__unusedx void *userdata)
+pscfs_fuse_handle_destroy(__unusedx void *userdata)
 {
-	if (pscfs.pf_handle_umount)
-		pscfs.pf_handle_umount();
+	if (pscfs.pf_handle_destroy)
+		pscfs.pf_handle_destroy();
 }
 
 void
@@ -1363,7 +1363,7 @@ pscfs_reply_statfs(struct pscfs_req *pfr, const struct statvfs *sfb,
 }
 
 void
-pscfs_reply_umount(struct pscfs_req *pfr)
+pscfs_reply_destroy(struct pscfs_req *pfr)
 {
 	psc_pool_return(pscfs_req_pool, pfr);
 }
@@ -1453,7 +1453,7 @@ pscfs_fuse_replygen_entry(struct pscfs_req *pfr, pscfs_inum_t inum,
 struct fuse_lowlevel_ops pscfs_fuse_ops = {
 	.access		= pscfs_fuse_handle_access,
 	.create		= pscfs_fuse_handle_create,
-	.destroy	= pscfs_fuse_handle_umount,
+	.destroy	= pscfs_fuse_handle_destroy,
 	.flush		= pscfs_fuse_handle_flush,
 	.fsync		= pscfs_fuse_handle_fsync,
 	.fsyncdir	= pscfs_fuse_handle_fsyncdir,
