@@ -62,8 +62,8 @@ struct pscfs_dirent {
 /* user fills these in */
 struct pscfs {
 	void	(*pf_handle_access)(struct pscfs_req *, pscfs_inum_t, int);
-	void	(*pf_handle_close)(struct pscfs_req *, void *);
-	void	(*pf_handle_closedir)(struct pscfs_req *, void *);
+	void	(*pf_handle_release)(struct pscfs_req *, void *);
+	void	(*pf_handle_releasedir)(struct pscfs_req *, void *);
 	void	(*pf_handle_create)(struct pscfs_req *, pscfs_inum_t, const char *, int, mode_t);
 	void	(*pf_handle_flush)(struct pscfs_req *, void *);
 	void	(*pf_handle_fsync)(struct pscfs_req *, int, void *);
@@ -113,8 +113,8 @@ int	pscfs_main(int);
 void	pscfs_mount(const char *, struct pscfs_args *);
 
 void	pscfs_reply_access(struct pscfs_req *, int);
-void	pscfs_reply_close(struct pscfs_req *, int);
-void	pscfs_reply_closedir(struct pscfs_req *, int);
+void	pscfs_reply_release(struct pscfs_req *, int);
+void	pscfs_reply_releasedir(struct pscfs_req *, int);
 void	pscfs_reply_create(struct pscfs_req *, pscfs_inum_t, pscfs_fgen_t, double, const struct stat *, double, void *, int, int);
 void	pscfs_reply_flush(struct pscfs_req *, int);
 void	pscfs_reply_fsync(struct pscfs_req *, int);

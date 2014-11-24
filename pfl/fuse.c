@@ -770,25 +770,25 @@ pscfs_fuse_handle_access(fuse_req_t req, fuse_ino_t inum, int mask)
 }
 
 void
-pscfs_fuse_handle_close(fuse_req_t req, __unusedx fuse_ino_t inum,
+pscfs_fuse_handle_release(fuse_req_t req, __unusedx fuse_ino_t inum,
     struct fuse_file_info *fi)
 {
 	struct pscfs_req *pfr;
 
 	GETPFR(pfr, req);
-	RETIFNOTSUP(pfr, close);
-	pscfs.pf_handle_close(pfr, fi_getdata(fi));
+	RETIFNOTSUP(pfr, release);
+	pscfs.pf_handle_release(pfr, fi_getdata(fi));
 }
 
 void
-pscfs_fuse_handle_closedir(fuse_req_t req, __unusedx fuse_ino_t inum,
+pscfs_fuse_handle_releasedir(fuse_req_t req, __unusedx fuse_ino_t inum,
     struct fuse_file_info *fi)
 {
 	struct pscfs_req *pfr;
 
 	GETPFR(pfr, req);
-	RETIFNOTSUP(pfr, closedir);
-	pscfs.pf_handle_closedir(pfr, fi_getdata(fi));
+	RETIFNOTSUP(pfr, releasedir);
+	pscfs.pf_handle_releasedir(pfr, fi_getdata(fi));
 }
 
 void
@@ -1155,14 +1155,14 @@ pscfs_reply_access(struct pscfs_req *pfr, int rc)
 }
 
 void
-pscfs_reply_close(struct pscfs_req *pfr, int rc)
+pscfs_reply_release(struct pscfs_req *pfr, int rc)
 {
 	PFR_REPLY(err, pfr, rc);
 	psc_pool_return(pscfs_req_pool, pfr);
 }
 
 void
-pscfs_reply_closedir(struct pscfs_req *pfr, int rc)
+pscfs_reply_releasedir(struct pscfs_req *pfr, int rc)
 {
 	PFR_REPLY(err, pfr, rc);
 	psc_pool_return(pscfs_req_pool, pfr);
@@ -1467,8 +1467,8 @@ struct fuse_lowlevel_ops pscfs_fuse_ops = {
 	.read		= pscfs_fuse_handle_read,
 	.readdir	= pscfs_fuse_handle_readdir,
 	.readlink	= pscfs_fuse_handle_readlink,
-	.release	= pscfs_fuse_handle_close,
-	.releasedir	= pscfs_fuse_handle_closedir,
+	.release	= pscfs_fuse_handle_release,
+	.releasedir	= pscfs_fuse_handle_releasedir,
 	.rename		= pscfs_fuse_handle_rename,
 	.rmdir		= pscfs_fuse_handle_rmdir,
 	.setattr	= pscfs_fuse_handle_setattr,
