@@ -591,7 +591,7 @@ pscrpc_target_send_reply_msg(struct pscrpc_request *req, int rc,
 		req->rq_status = rc;
 		return (pscrpc_error(req));
 	} else {
-		DEBUG_REQ(PLL_INFO, req, "sending reply");
+		DEBUG_REQ(PLL_DIAG, req, "sending reply");
 	}
 
 	return (pscrpc_send_reply(req, 1));
