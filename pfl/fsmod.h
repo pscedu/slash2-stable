@@ -44,7 +44,7 @@ struct pscfs_req {
 	struct psc_listentry		 pfr_lentry;
 	struct timespec			 pfr_start;
 	int				 pfr_interrupted;
-	char				*pfr_buf;
+	char				*pfr_buf;	/* read(2) buffer */
 };
 
 #  define PSCFS_ARGS_INIT(n, av)	{ FUSE_ARGS_INIT((n), (av)) }
