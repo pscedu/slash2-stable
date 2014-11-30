@@ -708,6 +708,17 @@ psc_pool_gettotal(struct psc_poolmgr *m)
 	return (n);
 }
 
+int
+psc_pool_inuse(struct psc_poolmgr *m)
+{
+	int rc;
+
+	locked = POOL_RLOCK(m);
+	rc = m->ppm_total != m->ppm_nfree;
+	POOL_URLOCK(m, locked);
+	return (rc);
+}
+
 /**
  * psc_pool_nfree - Retrieve the number of free/available items in a
  * pool.
