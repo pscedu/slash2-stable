@@ -1145,27 +1145,25 @@ pscfs_fuse_handle_removexattr(fuse_req_t req, fuse_ino_t ino,
 			psclog_diag(					\
 			    "in for "PSCPRI_TIMESPEC"s uniqid=%"PRIu64,	\
 			    PSCPRI_TIMESPEC_ARGS(&d), u0);		\
+		psc_pool_return(pscfs_req_pool, (pfr));			\
 	} while (0)
 
 void
 pscfs_reply_access(struct pscfs_req *pfr, int rc)
 {
 	PFR_REPLY(err, pfr, rc);
-	psc_pool_return(pscfs_req_pool, pfr);
 }
 
 void
 pscfs_reply_release(struct pscfs_req *pfr, int rc)
 {
 	PFR_REPLY(err, pfr, rc);
-	psc_pool_return(pscfs_req_pool, pfr);
 }
 
 void
 pscfs_reply_releasedir(struct pscfs_req *pfr, int rc)
 {
 	PFR_REPLY(err, pfr, rc);
-	psc_pool_return(pscfs_req_pool, pfr);
 }
 
 void
@@ -1191,28 +1189,24 @@ pscfs_reply_create(struct pscfs_req *pfr, pscfs_inum_t inum,
 		}
 		PFR_REPLY(create, pfr, &e, pfr->pfr_fuse_fi);
 	}
-	psc_pool_return(pscfs_req_pool, pfr);
 }
 
 void
 pscfs_reply_flush(struct pscfs_req *pfr, int rc)
 {
 	PFR_REPLY(err, pfr, rc);
-	psc_pool_return(pscfs_req_pool, pfr);
 }
 
 void
 pscfs_reply_fsync(struct pscfs_req *pfr, int rc)
 {
 	PFR_REPLY(err, pfr, rc);
-	psc_pool_return(pscfs_req_pool, pfr);
 }
 
 void
 pscfs_reply_fsyncdir(struct pscfs_req *pfr, int rc)
 {
 	PFR_REPLY(err, pfr, rc);
-	psc_pool_return(pscfs_req_pool, pfr);
 }
 
 void
@@ -1226,7 +1220,6 @@ pscfs_reply_getattr(struct pscfs_req *pfr, struct stat *stb,
 		    attr_timeout);
 		PFR_REPLY(attr, pfr, stb, attr_timeout);
 	}
-	psc_pool_return(pscfs_req_pool, pfr);
 }
 
 void
@@ -1263,7 +1256,6 @@ pscfs_reply_open(struct pscfs_req *pfr, void *data, int rflags, int rc)
 		fi_setdata(pfr->pfr_fuse_fi, data);
 		PFR_REPLY(open, pfr, pfr->pfr_fuse_fi);
 	}
-	psc_pool_return(pscfs_req_pool, pfr);
 }
 
 void
@@ -1279,20 +1271,19 @@ pscfs_reply_opendir(struct pscfs_req *pfr, void *data, int rflags, int rc)
 		fi_setdata(pfr->pfr_fuse_fi, data);
 		PFR_REPLY(open, pfr, pfr->pfr_fuse_fi);
 	}
-	psc_pool_return(pscfs_req_pool, pfr);
 }
 
 void
 pscfs_reply_read(struct pscfs_req *pfr, void *buf, ssize_t len, int rc)
 {
+	psc_assert(buf == pfr->pfr_buf);
+
 	if (rc)
 		PFR_REPLY(err, pfr, rc);
 	else
 		PFR_REPLY(buf, pfr, buf, len);
 
-	psc_assert(buf == pfr->pfr_buf);
-	PSCFREE(pfr->pfr_buf);
-	psc_pool_return(pscfs_req_pool, pfr);
+	PSCFREE(buf);
 }
 
 void
@@ -1311,7 +1302,6 @@ pscfs_reply_readdir(struct pscfs_req *pfr, void *buf, ssize_t len, int rc)
 			    dirent->pfd_ino, 8);
 		PFR_REPLY(buf, pfr, buf, len);
 	}
-	psc_pool_return(pscfs_req_pool, pfr);
 }
 
 void
@@ -1321,21 +1311,18 @@ pscfs_reply_readlink(struct pscfs_req *pfr, void *buf, int rc)
 		PFR_REPLY(err, pfr, rc);
 	else
 		PFR_REPLY(readlink, pfr, buf);
-	psc_pool_return(pscfs_req_pool, pfr);
 }
 
 void
 pscfs_reply_rename(struct pscfs_req *pfr, int rc)
 {
 	PFR_REPLY(err, pfr, rc);
-	psc_pool_return(pscfs_req_pool, pfr);
 }
 
 void
 pscfs_reply_rmdir(struct pscfs_req *pfr, int rc)
 {
 	PFR_REPLY(err, pfr, rc);
-	psc_pool_return(pscfs_req_pool, pfr);
 }
 
 void
@@ -1348,7 +1335,6 @@ pscfs_reply_setattr(struct pscfs_req *pfr, struct stat *stb,
 		stb->st_ino = INUM_PSCFS2FUSE(stb->st_ino, attr_timeout);
 		PFR_REPLY(attr, pfr, stb, attr_timeout);
 	}
-	psc_pool_return(pscfs_req_pool, pfr);
 }
 
 void
@@ -1359,7 +1345,6 @@ pscfs_reply_statfs(struct pscfs_req *pfr, const struct statvfs *sfb,
 		PFR_REPLY(err, pfr, rc);
 	else
 		PFR_REPLY(statfs, pfr, sfb);
-	psc_pool_return(pscfs_req_pool, pfr);
 }
 
 void
@@ -1372,7 +1357,6 @@ void
 pscfs_reply_unlink(struct pscfs_req *pfr, int rc)
 {
 	PFR_REPLY(err, pfr, rc);
-	psc_pool_return(pscfs_req_pool, pfr);
 }
 
 void
@@ -1382,8 +1366,6 @@ pscfs_reply_write(struct pscfs_req *pfr, ssize_t len, int rc)
 		PFR_REPLY(err, pfr, rc);
 	else
 		PFR_REPLY(write, pfr, len);
-
-	psc_pool_return(pscfs_req_pool, pfr);
 }
 
 void
@@ -1395,15 +1377,12 @@ pscfs_reply_listxattr(struct pscfs_req *pfr, void *buf, size_t len, int rc)
 		PFR_REPLY(buf, pfr, buf, len);
 	else
 		PFR_REPLY(xattr, pfr, len);
-
-	psc_pool_return(pscfs_req_pool, pfr);
 }
 
 void
 pscfs_reply_setxattr(struct pscfs_req *pfr, int rc)
 {
 	PFR_REPLY(err, pfr, rc);
-	psc_pool_return(pscfs_req_pool, pfr);
 }
 
 void
@@ -1416,15 +1395,12 @@ pscfs_reply_getxattr(struct pscfs_req *pfr, void *buf, size_t len,
 		PFR_REPLY(buf, pfr, buf, len);
 	else
 		PFR_REPLY(xattr, pfr, len);
-
-	psc_pool_return(pscfs_req_pool, pfr);
 }
 
 void
 pscfs_reply_removexattr(struct pscfs_req *pfr, int rc)
 {
 	PFR_REPLY(err, pfr, rc);
-	psc_pool_return(pscfs_req_pool, pfr);
 }
 
 void
@@ -1447,7 +1423,6 @@ pscfs_fuse_replygen_entry(struct pscfs_req *pfr, pscfs_inum_t inum,
 		}
 		PFR_REPLY(entry, pfr, &e);
 	}
-	psc_pool_return(pscfs_req_pool, pfr);
 }
 
 struct fuse_lowlevel_ops pscfs_fuse_ops = {
