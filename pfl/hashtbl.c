@@ -129,7 +129,7 @@ _psc_hashtbl_init(struct psc_hashtbl *t, int flags,
 	pll_add(&psc_hashtbls, t);
 }
 
-/**
+/*
  * psc_hashtbl_lookup - Find a hash table by its name.
  * @name: name of hash table.
  */
@@ -146,7 +146,7 @@ psc_hashtbl_lookup(const char *name)
 	return (t);
 }
 
-/**
+/*
  * psc_hashtbl_destroy - Reclaim a hash table's resources.
  * @t: table to destroy.
  */
@@ -200,7 +200,7 @@ psc_hashbkt_put(struct psc_hashtbl *t, struct psc_hashbkt *b)
 	&(bv)[ ( (t)->pht_flags & PHTF_STR ? psc_str_hashify(key) :	\
 	    *(uint64_t *)(key) ) % (nb) ]
 
-/**
+/*
  * psc_hashbkt_get - Locate the bucket containing an item with the
  *	given ID.
  * @t: table to search.
@@ -284,7 +284,7 @@ _psc_hashbkt_search(struct psc_hashtbl *t, struct psc_hashbkt *b,
 	return (p);
 }
 
-/**
+/*
  * psc_hashent_remove - Remove an item from the hash table it's in.
  * @t: the hash table.
  * @p: the item to remove from hash table.
@@ -312,7 +312,7 @@ psc_hashent_getbucket(struct psc_hashtbl *t, void *p)
 	return (psc_hashbkt_get(t, pk));
 }
 
-/**
+/*
  * psc_hashbkt_del_item - Remove an item from the hash table bucket it's
  *	in.
  * @t: the hash table.
@@ -332,7 +332,7 @@ psc_hashbkt_del_item(struct psc_hashtbl *t, struct psc_hashbkt *b,
 	ureqlock(&b->phb_lock, locked);
 }
 
-/**
+/*
  * psc_hashbkt_add_item - Add an item to a hash table bucket.
  * @t: the hash table.
  * @p: item to add.
@@ -349,7 +349,7 @@ psc_hashbkt_add_item(const struct psc_hashtbl *t, struct psc_hashbkt *b,
 	ureqlock(&b->phb_lock, locked);
 }
 
-/**
+/*
  * psc_hashtbl_add_item - Add an item to a hash table.
  * @t: the hash table.
  * @p: item to add.
@@ -383,7 +383,7 @@ psc_hashent_conjoint(struct psc_hashtbl *t, void *p)
 	return (conjoint);
 }
 
-/**
+/*
  * psc_hashtbl_getstats - Query a hash table for its bucket usage stats.
  * @t: the hash table.
  * @totalbucks: value-result pointer to # of buckets available.
@@ -412,7 +412,7 @@ psc_hashtbl_getstats(const struct psc_hashtbl *t, int *totalbucks,
 	}
 }
 
-/**
+/*
  * psc_hashtbl_prstats - Print hash table bucket usage stats.
  * @t: the hash table.
  */
@@ -443,7 +443,7 @@ psc_hashtbl_walk(const struct psc_hashtbl *t, void (*f)(void *))
 	}
 }
 
-/**
+/*
  * Estimate ideal number of buckets to allocate for a hash table.
  * Given a number of items N, the hash table should be roughly twice the
  * size to statistically reduce chance of collision.
