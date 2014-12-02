@@ -711,7 +711,7 @@ psc_pool_gettotal(struct psc_poolmgr *m)
 int
 psc_pool_inuse(struct psc_poolmgr *m)
 {
-	int rc;
+	int locked, rc;
 
 	locked = POOL_RLOCK(m);
 	rc = m->ppm_total != m->ppm_nfree;
