@@ -464,7 +464,7 @@ _psclist_next_obj(struct psclist_head *hd, void *p,
 	     (p); (p) = psclist_next_obj2((hd), (p), (offset)))
 
 /**
- * psclist_for_each_entry2_backwards - iterate backwards over a list.
+ * psclist_for_each_entry2_backwards - Iterate backwards over a list.
  * @p: the type * to use as a loop counter.
  * @hd: the head for your list.
  * @offset: offset into type * of list entry.
