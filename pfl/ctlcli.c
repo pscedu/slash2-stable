@@ -1252,8 +1252,12 @@ psc_ctlcli_main(const char *osockfn, int ac, char *av[],
 	psc_ctlcli_main_args.notab = notab;
 
 	if (psc_ctlcli_docurses) {
+		char fn[PATH_MAX];
+		int dupfd;
+
 		filter();
 
+		dupfd = dup(fileno(stderr));
 		/* Discard error output. */
 		freopen(_PATH_DEVNULL, "w", stderr);
 
@@ -1261,7 +1265,8 @@ psc_ctlcli_main(const char *osockfn, int ac, char *av[],
 		initscr();
 		psc_ctlcli_retry_main = 0;
 
-		freopen("/dev/stderr", "w", stderr);
+		snprintf(fn, sizeof(fn), "/dev/fd/%d", dupfd);
+		freopen(fn, "w", stderr);
 
 		start_color();
 		has_col = isatty(STDOUT_FILENO) && has_colors();
