@@ -14,6 +14,7 @@ my @ign = (
 	[ qw(_?psc_waitq_waitrel pscfs_fuse_listener_loop) ],
 	[ qw(_psc_waitq_waitabs psc_tiosthr_main _pscthr_begin) ],
 	[ qw(_psc_waitq_waitabs pscrpcthr_main _pscthr_begin) ],
+	[ qw(_psc_waitq_waitrelv pjournal_thr_main _pscthr_begin) ],
 	[ qw(accept libcfs_sock_accept lnet_acceptor _pscthr_begin) ],
 	[ qw(accept libcfs_sock_accept lnet_acceptor psc_usklndthr_begin _pscthr_begin) ],
 	[ qw(accept lnet_acceptor psc_usklndthr_begin _pscthr_begin) ],
@@ -28,7 +29,6 @@ my @ign = (
 
 	# SLASH2 slashd
 	[ qw(_?_?sleep slmbkdbthr_main _pscthr_begin) ],
-	[ qw(_?_?sleep slmfcmhreapthr_main _pscthr_begin) ],
 	[ qw(_?psc_waitq_waitrel _lc_get slm_worker_main _pscthr_begin) ],
 	[ qw(_?psc_waitq_waitrel _lc_get slmrcmthr_main _pscthr_begin) ],
 	[ qw(_psc_waitq_waitrelv slmjreclaimthr_main _pscthr_begin) ],
@@ -41,7 +41,6 @@ my @ign = (
 	# SLASH2 sliod
 	[ qw(_?_?sleep slibmaprlsthr_main _pscthr_begin) ],
 	[ qw(_?_?sleep slibreapthr_main _pscthr_begin) ],
-	[ qw(_?_?sleep slifcmhreapthr_main _pscthr_begin) ],
 	[ qw(_?_?sleep slistatfsthr_main _pscthr_begin) ],
 	[ qw(_?psc_waitq_waitrel _lc_get slibmaprlsthr_main _pscthr_begin) ],
 	[ qw(_?psc_waitq_waitrel _lc_get slireplpndthr_main _pscthr_begin) ],
@@ -52,7 +51,6 @@ my @ign = (
 	[ qw(sleep slihealththr_main _pscthr_begin) ],
 
 	# SLASH2 mount_slash
-	[ qw(_?_?sleep msfcmhreapthr_main _pscthr_begin) ],
 	[ qw(_?psc_waitq_waitrel _lc_get msattrflushthr_main _pscthr_begin) ],
 	[ qw(_?psc_waitq_waitrel _lc_get msbmaprathr_main _pscthr_begin) ],
 	[ qw(_?psc_waitq_waitrel _lc_get msbreleasethr_main _pscthr_begin) ],
@@ -63,7 +61,8 @@ my @ign = (
 	[ qw(_?psc_waitq_waitrel msbreleasethr_main _pscthr_begin) ],
 	[ qw(msbmflwthr_main _pscthr_begin) ],
 
-	[ qw(_psc_waitq_waitrelv pjournal_thr_main _pscthr_begin) ],
+	# SLASH2 common
+	[ qw(_?_?sleep sl_freapthr_main _pscthr_begin) ],
 	[ qw(_sl_csvc_waitrelv slconnthr_main _pscthr_begin) ],
 	[ qw(cv_wait txg_wait_synced zfsslash2_wait_synced pjournal_thr_main _pscthr_begin) ],
 	[ qw(psc_multiwait_usecs slconnthr_main _pscthr_begin) ],
