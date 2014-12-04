@@ -346,19 +346,6 @@ _psc_pool_shrink(struct psc_poolmgr *m, int n, int failok)
 	void *p;
 
 	psc_assert(n > 0);
-
-	if (m->ppm_min) {
-		locked = POOL_RLOCK(m);
-		POOL_CHECK(m);
-		if (m->ppm_total == m->ppm_min) {
-			POOL_URLOCK(m, locked);
-			return (0);
-		}
-		/* Bound number to shrink to ppm_min. */
-		n = MAX(n, m->ppm_total - m->ppm_min);
-		POOL_URLOCK(m, locked);
-	}
-
 	for (i = 0; i < n; i++) {
 		p = NULL;
 		locked = POOL_RLOCK(m);
