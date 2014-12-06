@@ -1272,6 +1272,8 @@ psc_ctlcli_main(const char *osockfn, int ac, char *av[],
 		has_col = isatty(STDOUT_FILENO) && has_colors();
 		endwin();
 	}
+	if (psc_ctlcli_docurses && !isatty(STDOUT_FILENO))
+		psc_ctlcli_docurses = 0; 
 
 	prg = strrchr(progname, '/');
 	if (prg)
