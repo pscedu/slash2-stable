@@ -1212,6 +1212,7 @@ struct psc_ctlcli_main_args {
 } psc_ctlcli_main_args;
 
 int psc_ctlcli_retry_main;
+int psc_ctlcli_retry_fd;
 
 void
 psc_ctlcli_exit(void)
@@ -1219,8 +1220,18 @@ psc_ctlcli_exit(void)
 	struct psc_ctlcli_main_args *a = &psc_ctlcli_main_args;
 
 	if (psc_ctlcli_retry_main) {
+		char fn[PATH_MAX];
+
 		psc_ctlcli_retry_main = 0;
 		psc_ctlcli_docurses = 0;
+
+		snprintf(fn, sizeof(fn), "/dev/fd/%d",
+		    psc_ctlcli_retry_fd);
+		freopen(fn, "w", stderr);
+
+		nofilter();
+		endwin();
+
 		psc_ctlcli_main(a->osockfn, a->ac, a->av, a->otab,
 		    a->notab);
 	}
@@ -1231,49 +1242,46 @@ psc_ctlcli_main(const char *osockfn, int ac, char *av[],
     const struct psc_ctlopt *otab, int notab)
 {
 	extern const char *daemon_name, *progname;
-	char optstr[LINE_MAX], chbuf[3], *p;
+	char fn[PATH_MAX], optstr[LINE_MAX], chbuf[3], *p;
 	struct sockaddr_un saun;
 	struct psc_thread *thr;
 	const char *prg;
 	pthread_t pthr;
 	int rc, c, i;
 
-	/*
-	 * Hack to work around initscr() from exiting the entire
-	 * program.  We register an exit handler that actually
-	 * calls this same function again skipping the curses
-	 * routines.
-	 */
-	atexit(psc_ctlcli_exit);
-	psc_ctlcli_main_args.osockfn = osockfn;
-	psc_ctlcli_main_args.ac = ac;
-	psc_ctlcli_main_args.av = av;
-	psc_ctlcli_main_args.otab = otab;
-	psc_ctlcli_main_args.notab = notab;
-
-	if (psc_ctlcli_docurses) {
-		char fn[PATH_MAX];
-		int dupfd;
-
+	if (psc_ctlcli_docurses && isatty(STDOUT_FILENO)) {
 		filter();
 
-		dupfd = dup(fileno(stderr));
-		/* Discard error output. */
+		/*
+		 * Hack to work around initscr() from exiting the entire
+		 * program.  We register an exit handler that actually
+		 * calls this same function again skipping the curses
+		 * routines.
+		 */
+		atexit(psc_ctlcli_exit);
+		psc_ctlcli_main_args.osockfn = osockfn;
+		psc_ctlcli_main_args.ac = ac;
+		psc_ctlcli_main_args.av = av;
+		psc_ctlcli_main_args.otab = otab;
+		psc_ctlcli_main_args.notab = notab;
+
+		psc_ctlcli_retry_fd = dup(fileno(stderr));
+
+		/* Temporarily discard error output. */
 		freopen(_PATH_DEVNULL, "w", stderr);
 
 		psc_ctlcli_retry_main = 1;
 		initscr();
 		psc_ctlcli_retry_main = 0;
 
-		snprintf(fn, sizeof(fn), "/dev/fd/%d", dupfd);
+		snprintf(fn, sizeof(fn), "/dev/fd/%d",
+		    psc_ctlcli_retry_fd);
 		freopen(fn, "w", stderr);
 
 		start_color();
-		has_col = isatty(STDOUT_FILENO) && has_colors();
+		has_col = has_colors();
 		endwin();
 	}
-	if (psc_ctlcli_docurses && !isatty(STDOUT_FILENO))
-		psc_ctlcli_docurses = 0; 
 
 	prg = strrchr(progname, '/');
 	if (prg)
