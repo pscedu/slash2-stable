@@ -1274,14 +1274,15 @@ pscfs_reply_opendir(struct pscfs_req *pfr, void *data, int rflags, int rc)
 }
 
 void
-pscfs_reply_read(struct pscfs_req *pfr, void *buf, ssize_t len, int rc)
+pscfs_reply_read(struct pscfs_req *pfr, struct iovec *iov, int nio,
+    int rc)
 {
 	psc_assert(buf == pfr->pfr_buf);
 
 	if (rc)
 		PFR_REPLY(err, pfr, rc);
 	else
-		PFR_REPLY(buf, pfr, buf, len);
+		PFR_REPLY(iov, pfr, iov, nio);
 
 	PSCFREE(buf);
 }

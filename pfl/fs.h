@@ -128,7 +128,7 @@ void	pscfs_reply_mkdir(struct pscfs_req *, pscfs_inum_t, pscfs_fgen_t, int, cons
 void	pscfs_reply_mknod(struct pscfs_req *, pscfs_inum_t, pscfs_fgen_t, double, const struct stat *, double, int);
 void	pscfs_reply_open(struct pscfs_req *, void *, int, int);
 void	pscfs_reply_opendir(struct pscfs_req *, void *, int, int);
-void	pscfs_reply_read(struct pscfs_req *, void *, ssize_t, int);
+void	pscfs_reply_read(struct pscfs_req *, struct iovec *, int, int);
 void	pscfs_reply_readdir(struct pscfs_req *, void *, ssize_t, int);
 void	pscfs_reply_readlink(struct pscfs_req *, void *, int);
 void	pscfs_reply_rename(struct pscfs_req *, int);
