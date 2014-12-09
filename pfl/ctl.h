@@ -29,15 +29,15 @@
 
 #include "pfl/explist.h"
 #include "pfl/hashtbl.h"
-#include "pfl/listcache.h"
-#include "pfl/rpc.h"
-#include "pfl/service.h"
 #include "pfl/fault.h"
 #include "pfl/iostats.h"
 #include "pfl/journal.h"
+#include "pfl/listcache.h"
 #include "pfl/meter.h"
 #include "pfl/mlist.h"
 #include "pfl/odtable.h"
+#include "pfl/rpc_intrfc.h"
+#include "pfl/service.h"
 #include "pfl/thread.h"
 
 #define PCTHRNAME_EVERYONE	"everyone"
