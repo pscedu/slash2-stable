@@ -26,6 +26,7 @@
 #include <stdint.h>
 #include <unistd.h>
 
+struct iovec;
 struct stat;
 struct statvfs;
 
