@@ -1246,7 +1246,7 @@ psc_ctlrep_getlni(int fd, struct psc_ctlmsghdr *mh, void *m)
 	LNET_LOCK();
 	list_for_each_entry(ni, &the_lnet.ln_nis, ni_list) {
 		memset(pclni, 0, sizeof(*pclni));
-		pscrpc_nid2str(ni->ni_nid, pclni->pclni_nid);
+		libcfs_nid2str2(ni->ni_nid, pclni->pclni_nid);
 		pclni->pclni_maxtxcredits = ni->ni_maxtxcredits;
 		pclni->pclni_txcredits = ni->ni_txcredits;
 		pclni->pclni_mintxcredits = ni->ni_mintxcredits;
