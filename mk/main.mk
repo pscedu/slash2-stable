@@ -171,6 +171,7 @@ endif
 
 ifneq ($(filter rpc,${MODULES}),)
   SRCS+=	${PSCRPC_SRCS}
+  DEFINES+=	-DPFL_RPC
   MODULES+=	lnet
 endif
 
