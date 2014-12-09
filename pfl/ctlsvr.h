@@ -46,6 +46,13 @@ struct psc_ctlparam_node;
 #define psc_ctlthr(thr)		((struct psc_ctlthr *)(thr)->pscthr_private)
 #define psc_ctlacthr(thr)	((struct psc_ctlacthr *)(thr)->pscthr_private)
 
+#ifdef PFL_RPC
+#  define PFL_CTLOPS_GETRPCSVC \
+	{ psc_ctlrep_getrpcsvc,		sizeof(struct psc_ctlmsg_rpcsvc) },
+#else
+#  define PFL_CTLOPS_GETRPCSVC
+#endif
+
 /* default control operations shared by all controllable daemons */
 #define PSC_CTLDEFOPS								\
 	{ NULL,				0 },					\
@@ -61,7 +68,7 @@ struct psc_ctlparam_node;
 	{ psc_ctlrep_getodtable,	sizeof(struct psc_ctlmsg_odtable) },	\
 	{ psc_ctlrep_param,		sizeof(struct psc_ctlmsg_param) },	\
 	{ psc_ctlrep_getpool,		sizeof(struct psc_ctlmsg_pool) },	\
-	{ psc_ctlrep_getrpcsvc,		sizeof(struct psc_ctlmsg_rpcsvc) },	\
+	PFL_CTLOPS_GETRPCSVC							\
 	{ psc_ctlrep_getsubsys,		0 },					\
 	{ psc_ctlrep_getthread,		sizeof(struct psc_ctlmsg_thread) },	\
 	{ psc_ctlrep_param,		sizeof(struct psc_ctlmsg_param) }
