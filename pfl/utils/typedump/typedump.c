@@ -80,6 +80,7 @@
 #include "pfl/random.h"
 #include "pfl/rlimit.h"
 #include "pfl/rpc.h"
+#include "pfl/rpc_intrfc.h"
 #include "pfl/rpclog.h"
 #include "pfl/rsx.h"
 #include "pfl/service.h"
