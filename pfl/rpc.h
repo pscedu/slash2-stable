@@ -44,6 +44,7 @@
 #include "pfl/listcache.h"
 #include "pfl/lock.h"
 #include "pfl/pool.h"
+#include "pfl/rpc_intrfc.h"
 #include "pfl/thread.h"
 #include "pfl/types.h"
 #include "pfl/waitq.h"
@@ -80,7 +81,6 @@ struct psc_dynarray;
 #define PSCNET_MTCLIENT			0xf0
 #define PSCNET_CLIENT			0x0f
 #define PSCRPC_SVR_PID			54321
-#define PSCRPC_NIDSTR_SIZE		64
 
 #ifdef NAMESPACE_EXPERIMENTAL
 #define PSCRPC_OBD_TIMEOUT		3600
