@@ -3,15 +3,23 @@
 # -----------------------------------------------------------------------------
 # Copyright (c) 2010-2011, Pittsburgh Supercomputing Center (PSC).
 #
-# Permission to use, copy, and modify this software and its documentation
-# without fee for personal use or non-commercial use within your organization
-# is hereby granted, provided that the above copyright notice is preserved in
-# all copies and that the copyright and this permission notice appear in
-# supporting documentation.  Permission to redistribute this software to other
-# organizations or individuals is not permitted without the written permission
-# of the Pittsburgh Supercomputing Center.  PSC makes no representations about
-# the suitability of this software for any purpose.  It is provided "as is"
-# without express or implied warranty.
+# Permission to use, copy, modify, and distribute this software
+# for any purpose with or without fee is hereby granted, provided
+# that the above copyright notice and this permission notice
+# appear in all copies.
+#
+# THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL
+# WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED
+# WARRANTIES OF MERCHANTABILITY AND FITNESS.  IN NO EVENT SHALL
+# THE AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT, INDIRECT, OR
+# CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM
+# LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT,
+# NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN
+# CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+#
+# Pittsburgh Supercomputing Center	phone: 412.268.4960  fax: 412.268.5832
+# 300 S. Craig Street			e-mail: remarks@psc.edu
+# Pittsburgh, PA 15213			web: http://www.psc.edu/
 # -----------------------------------------------------------------------------
 # %PSC_END_COPYRIGHT%
 package PFL::Getoptv;
