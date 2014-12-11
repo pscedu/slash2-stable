@@ -195,7 +195,7 @@ usocklnd_poll_thread(void *arg)
                                 usocklnd_conn_decref(pr->upr_conn);
                         }
                         
-                        LIBCFS_FREE (pr, sizeof(*pr));
+			psc_pool_return(usk_pollreq_pool, pr);
                 }
                 pthread_mutex_unlock(&pt_data->upt_pollrequests_lock);
 
@@ -230,11 +230,9 @@ usocklnd_add_pollrequest(usock_conn_t *conn, int type, short value)
         usock_pollthread_t  *pt     = &usock_data.ud_pollthreads[pt_idx];
         usock_pollrequest_t *pr;
 
-        LIBCFS_ALLOC(pr, sizeof(*pr));
-        if (pr == NULL) {
-                CERROR ("Cannot allocate poll request\n");
-                return -ENOMEM;
-        }
+	pr = psc_pool_get(usk_pollreq_pool);
+	memset(pr, 0, sizeof(*pr));
+	INIT_PSC_LISTENTRY(&pr->upr_lentry);
 
         pr->upr_conn = conn;
         pr->upr_type = type;
@@ -248,7 +246,7 @@ usocklnd_add_pollrequest(usock_conn_t *conn, int type, short value)
                 int rc = pt->upt_errno;
                 pthread_mutex_unlock(&pt->upt_pollrequests_lock);
                 usocklnd_conn_decref(conn);
-                LIBCFS_FREE(pr, sizeof(*pr));
+		psc_pool_return(usk_pollreq_pool, pr);
                 return rc;
         }
         
@@ -336,14 +334,14 @@ usocklnd_process_pollrequest(usock_pollrequest_t *pr,
                               type, idx, pt_data->upt_nfds - 1,
                               usock_data.ud_shutdown);
  out:
-                        LIBCFS_FREE (pr, sizeof(*pr));
+			psc_pool_return(usk_pollreq_pool, pr);
                         usocklnd_conn_decref(conn);
                         return 0;
                 }
         }
 
  skip:
-        LIBCFS_FREE (pr, sizeof(*pr));
+	psc_pool_return(usk_pollreq_pool, pr);
         
         switch (type) {
         case POLL_ADD_REQUEST:
