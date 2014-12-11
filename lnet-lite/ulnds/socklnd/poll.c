@@ -45,6 +45,8 @@
 #include <unistd.h>
 #include <sys/syscall.h>
 
+#include "pfl/pool.h"
+
 void
 usocklnd_process_stale_list(usock_pollthread_t *pt_data)
 {
