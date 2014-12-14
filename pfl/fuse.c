@@ -1277,10 +1277,7 @@ void
 pscfs_reply_read(struct pscfs_req *pfr, struct iovec *iov, int nio,
     int rc)
 {
-	void *buf = iov[0].iov_base;
-
-	psc_assert(nio == 1);
-	psc_assert(buf == pfr->pfr_buf);
+	void *buf = pfr->pfr_buf;
 
 	if (rc)
 		PFR_REPLY(err, pfr, rc);
