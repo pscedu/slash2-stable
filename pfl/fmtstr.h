@@ -25,6 +25,67 @@
 #include <stdlib.h>
 #include <string.h>
 
+#define PRFMTSTRCASE(ch, convfmt, ...)					\
+	case ch:							\
+		if (convfmt) {						\
+			psc_assert(_t - _p + strlen(convfmt) + 1 <=	\
+			    sizeof(_convbuf));				\
+			_twant = snprintf(_convbuf, sizeof(_convbuf),	\
+			    "%.*s%s", (int)(_t - _p), _p, convfmt);	\
+			if (_twant == -1)				\
+				break;					\
+			fprintf(_fp, _convbuf, ## __VA_ARGS__);		\
+		} else {						\
+			## __VA_ARGS__ ;				\
+		}							\
+		break;
+
+#define PRFMTSTR(fp, fmt, cases)					\
+	_PFL_RVSTART {							\
+		char _convbuf[16];					\
+		int _want = 0, _twant, _sawch;				\
+		const char *_p, *_t;					\
+		FILE *_fp = (fp);					\
+									\
+		for (_p = (fmt); *_p != '\0'; _p++) {			\
+			_sawch = 0;					\
+			if (*_p == '%') {				\
+				/* Look for a conversion specifier. */	\
+				for (_t = _p + 1; *_t != '\0'; _t++) {	\
+					if (isalpha(*_t)) {		\
+						_sawch = 1;		\
+						break;			\
+					}				\
+				}					\
+			}						\
+			if (_sawch) {					\
+				switch (*_t) {				\
+				cases					\
+				/*					\
+				 * Handle default (unknown) and `%%'	\
+				 * cases with verbatim copying from	\
+				 * the `invalid' custom format string.	\
+				 */					\
+				default:				\
+				PRFMTSTRCASE('%', "s%c", *_t == '%' ?	\
+				    "" : "%", *_t)			\
+				}					\
+				if (_twant == -1) {			\
+					_want = _twant;			\
+					break;				\
+				}					\
+				_p = _t;				\
+			} else {					\
+				/*					\
+				 * Not a special character;		\
+				 * copy verbatim.			\
+				 */					\
+				fputc(*_p, _fp);			\
+			}						\
+		}							\
+		_want;							\
+	} _PFL_RVEND
+
 #define FMTSTRCASE(ch, convfmt, ...)					\
 	case ch:							\
 		_tlen = _t - _p + strlen(convfmt) + 1;			\
