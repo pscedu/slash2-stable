@@ -25,19 +25,21 @@
 #include <stdlib.h>
 #include <string.h>
 
+#define PRFMTSTRCASEV(ch, code)						\
+	case ch: {							\
+		code;							\
+		break;							\
+	    }
+
 #define PRFMTSTRCASE(ch, convfmt, ...)					\
 	case ch:							\
-		if (convfmt) {						\
-			psc_assert(_t - _p + strlen(convfmt) + 1 <=	\
-			    sizeof(_convbuf));				\
-			_twant = snprintf(_convbuf, sizeof(_convbuf),	\
-			    "%.*s%s", (int)(_t - _p), _p, convfmt);	\
-			if (_twant == -1)				\
-				break;					\
-			fprintf(_fp, _convbuf, ## __VA_ARGS__);		\
-		} else {						\
-			## __VA_ARGS__ ;				\
-		}							\
+		psc_assert(_t - _p + strlen(convfmt) + 1 <=		\
+		    sizeof(_convbuf));					\
+		_twant = snprintf(_convbuf, sizeof(_convbuf),		\
+		    "%.*s%s", (int)(_t - _p), _p, convfmt);		\
+		if (_twant == -1)					\
+			break;						\
+		fprintf(_fp, _convbuf, ## __VA_ARGS__);			\
 		break;
 
 #define PRFMTSTR(fp, fmt, cases)					\
