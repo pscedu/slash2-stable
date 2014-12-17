@@ -1242,7 +1242,7 @@ psc_ctlcli_main(const char *osockfn, int ac, char *av[],
     const struct psc_ctlopt *otab, int notab)
 {
 	extern const char *daemon_name, *progname;
-	char fn[PATH_MAX], optstr[LINE_MAX], chbuf[3], *p;
+	char optstr[LINE_MAX], chbuf[3], *p;
 	struct sockaddr_un saun;
 	struct psc_thread *thr;
 	const char *prg;
@@ -1250,6 +1250,8 @@ psc_ctlcli_main(const char *osockfn, int ac, char *av[],
 	int rc, c, i;
 
 	if (psc_ctlcli_docurses && isatty(STDOUT_FILENO)) {
+		FILE *fp;
+
 		filter();
 
 		/*
@@ -1274,9 +1276,9 @@ psc_ctlcli_main(const char *osockfn, int ac, char *av[],
 		initscr();
 		psc_ctlcli_retry_main = 0;
 
-		snprintf(fn, sizeof(fn), "/dev/fd/%d",
-		    psc_ctlcli_retry_fd);
-		freopen(fn, "w", stderr);
+		fclose(stderr);
+		fp = fdopen(psc_ctlcli_retry_fd, "w");
+		memcpy(stderr, fp, sizeof(*fp));
 
 		start_color();
 		has_col = has_colors();
