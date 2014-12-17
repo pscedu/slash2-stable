@@ -926,9 +926,7 @@ pscfs_fuse_handle_read(fuse_req_t req, __unusedx fuse_ino_t inum,
 
 	GETPFR(pfr, req);
 	pfr->pfr_fuse_fi = fi;
-	pfr->pfr_buf = PSCALLOC(size);
 	RETIFNOTSUP(pfr, read, NULL, 0);
-
 	fuse_req_interrupt_func(req, pscfs_fuse_interrupt, pfr);
 	pscfs.pf_handle_read(pfr, size, off, fi_getdata(fi));
 }
@@ -1277,14 +1275,10 @@ void
 pscfs_reply_read(struct pscfs_req *pfr, struct iovec *iov, int nio,
     int rc)
 {
-	void *buf = pfr->pfr_buf;
-
 	if (rc)
 		PFR_REPLY(err, pfr, rc);
 	else
 		PFR_REPLY(iov, pfr, iov, nio);
-
-	PSCFREE(buf);
 }
 
 void
