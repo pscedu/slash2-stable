@@ -41,4 +41,23 @@
 		*SPLAY_GETRIGHT(name, elm) = NULL;			\
 	} while (0)
 
+#define PSC_RB_XREMOVE(name, head, elm)					\
+	do {								\
+		if (name ## _RB_REMOVE((head), (elm)) != (elm))		\
+			psc_fatalx("RB_REMOVE: item not found");	\
+	} while (0)
+
+#define PSC_RB_XINSERT(name, head, elm)					\
+	do {								\
+		if (name ## _RB_INSERT((head), (elm)))			\
+			psc_fatalx("RB_INSERT: item with key "		\
+			    "already exists");				\
+	} while (0)
+
+#define PSC_RB_ENTRY_INIT(name, elm)					\
+	do {								\
+		*RB_GETLEFT(name, elm) = NULL;				\
+		*RB_GETRIGHT(name, elm) = NULL;				\
+	} while (0)
+
 #endif /* _PFL_TREEUTIL_H_ */
