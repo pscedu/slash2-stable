@@ -753,7 +753,7 @@ pscfs_inum_pscfs2fuse(pscfs_inum_t p_inum, double timeo)
 #define GETPFR(pfr, fsreq)						\
 	do {								\
 		(pfr) = psc_pool_get(pscfs_req_pool);			\
-		memset((pfr), 0, sizeof(*(pfr)));			\
+		memset((pfr), 0, pscfs_req_pool->ppm_entsize);		\
 		PFL_GETTIMESPEC(&(pfr)->pfr_start);			\
 		INIT_LISTENTRY(&(pfr)->pfr_lentry);			\
 		(pfr)->pfr_fuse_req = (fsreq);				\
