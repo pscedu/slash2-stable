@@ -28,8 +28,8 @@
 #include <sys/types.h>
 
 #include "pfl/explist.h"
-#include "pfl/hashtbl.h"
 #include "pfl/fault.h"
+#include "pfl/hashtbl.h"
 #include "pfl/iostats.h"
 #include "pfl/journal.h"
 #include "pfl/listcache.h"
