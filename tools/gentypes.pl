@@ -89,7 +89,7 @@ foreach my $hdr (@hdrs) {
 
 			if ($opts{g}) {
 				foreach my $pat (@{ $opts{g} }) {
-					push @vals, /($pat)/;
+					push @vals, /$pat/;
 				}
 			}
 		}
