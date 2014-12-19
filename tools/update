@@ -94,7 +94,7 @@ pubrepo()
 	(getrepo https://github.com/pscedu/${1//\//.}.git $base)
 }
 
-pubrepo distrib/fuse
+pubrepo distrib/fuse &
 pubrepo distrib/gcrcutil &
 pubrepo distrib/iozone &
 pubrepo distrib/libs3 &
