@@ -125,7 +125,7 @@ postproc()
 		{
 			echo To: $mail_to
 			echo From: $mail_from
-			echo Subject: $host $name down
+			echo Subject: [sysbug] $prof $host $name down
 			echo
 			echo core file is $base/$cf
 			echo binary is $base/c/$prog.$id
