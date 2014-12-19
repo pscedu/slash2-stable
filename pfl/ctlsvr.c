@@ -58,7 +58,7 @@
 #include "pfl/pool.h"
 #include "pfl/random.h"
 #include "pfl/rlimit.h"
-#include "pfl/rpc.h"
+#include "pfl/rpc_intrfc.h"
 #include "pfl/str.h"
 #include "pfl/stree.h"
 #include "pfl/thread.h"
@@ -2128,38 +2128,32 @@ psc_ctlthr_mainloop(struct psc_thread *thr)
 	PSCFREE(buf);
 }
 
-/**
- * psc_ctlthr_main - Main control thread client service loop.
- * @ofn: path to control socket.
- * @ct: control operations.
- * @nops: number of operations in @ct table.
- * @acthrtype: control acceptor thread type.
- */
 void
-psc_ctlthr_main(const char *ofn, const struct psc_ctlop *ct, int nops,
-    int acthrtype)
+psc_ctlthr_spawn_listener(const char *ofn, int acthrtype)
 {
 	extern const char *progname;
 	struct psc_thread *thr, *me;
 	struct sockaddr_un saun;
 	mode_t old_umask;
-	const char *p;
-	int i, s;
+	char *p;
+	int s;
 
 	me = pscthr_get();
 
 	p = strstr(me->pscthr_name, "ctlthr");
 	if (p == NULL)
-		psc_fatalx("'ctlthr' not found in control thread name");
+		psc_fatalx("'ctlthr' not found in thread name '%s'",
+		    me->pscthr_name);
 
-	if ((s = socket(AF_LOCAL, SOCK_STREAM, 0)) == -1)
+	s = socket(AF_LOCAL, SOCK_STREAM, PF_UNSPEC);
+	if (s == -1)
 		psc_fatal("socket");
 
 	memset(&saun, 0, sizeof(saun));
 	saun.sun_family = AF_LOCAL;
 	SOCKADDR_SETLEN(&saun);
 
-	/* preform transliteration for "variables" in file path */
+	/* perform transliteration for "variables" in file path */
 	(void)FMTSTR(saun.sun_path, sizeof(saun.sun_path), ofn,
 		FMTSTRCASE('h', "s", psclog_getdata()->pld_hostshort)
 		FMTSTRCASE('n', "s", progname)
@@ -2189,10 +2183,34 @@ psc_ctlthr_main(const char *ofn, const struct psc_ctlop *ct, int nops,
 	 * and to multiplex between clients for fairness.
 	 */
 	thr = pscthr_init(acthrtype, psc_ctlacthr_main, NULL,
-	    sizeof(struct psc_ctlacthr), "%.*sctlacthr",
+	    sizeof(struct psc_ctlacthr), "%.*sctlacthr%d",
 	    p - me->pscthr_name, me->pscthr_name);
 	psc_ctlacthr(thr)->pcat_sock = s;
 	pscthr_setready(thr);
+}
+
+/**
+ * psc_ctlthr_main - Main control thread client service loop.
+ * @ofn: path to control socket.
+ * @ct: control operations.
+ * @nops: number of operations in @ct table.
+ * @acthrtype: control acceptor thread type.
+ */
+void
+psc_ctlthr_main(const char *ofn, const struct psc_ctlop *ct, int nops,
+    int acthrtype)
+{
+	struct psc_thread *thr, *me;
+	const char *p;
+	int i;
+
+	me = pscthr_get();
+
+	p = strstr(me->pscthr_name, "ctlthr");
+	if (p == NULL)
+		psc_fatalx("'ctlthr' not found in control thread name");
+
+	psc_ctlthr_spawn_listener(ofn, acthrtype);
 
 #define PFL_CTL_NTHRS 4
 	for (i = 1; i < PFL_CTL_NTHRS; i++) {
