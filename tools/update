@@ -101,6 +101,7 @@ pubrepo distrib/libs3 &
 pubrepo distrib/posix-fstest &
 pubrepo distrib/spiobench &
 pubrepo distrib/stumbleupon-tcollector &
+pubrepo adaptfs &
 pubrepo fio &
 pubrepo idxutils &
 pubrepo psync &
