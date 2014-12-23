@@ -136,6 +136,7 @@ postproc()
 			gdb -batch -c $cf -x $cmdfile c/$prog.$id 2>&1 | $src/tools/filter-pstack
 		} | sendmail -t
 		echo binary was $base/c/$prog.$id
+		echo log file was $base/log/$host.$name/$tm
 		rm $cmdfile
 	else
 		rm c/$prog.$id
