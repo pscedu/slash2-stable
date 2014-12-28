@@ -120,6 +120,23 @@ struct pfl_opstat {
 		}							\
 	} while (0)
 
+#define	OPSTAT_ADD(op, n)						\
+	do {								\
+		struct pfl_opstat *_pos;				\
+		char *_p;						\
+									\
+		psc_assert((op) < OPSTATS_MAX);				\
+		_pos = &pflctl_opstats[op];				\
+		psc_atomic64_add(&_pos->pos_value, (n));		\
+		if (_pos->pos_name == NULL) {				\
+			_p = strstr(#op, "_OPST_");			\
+			psc_assert(_p);					\
+			for (_pos->pos_name = _p = pfl_strdup(_p + 6);	\
+			    *_p; _p++)					\
+				*_p = tolower(*_p);			\
+		}							\
+	} while (0)
+
 #define	OPSTAT_CURR(op)							\
 	psc_atomic64_read(&pflctl_opstats[op].pos_value)
 
