@@ -114,7 +114,7 @@ struct pfl_odt {
 #define odt_mfh		u.odtu_mfh
 	char			 odt_name[ODT_NAME_MAX];
 	struct psclist_head	 odt_lentry;
-	struct psc_iostats_rw	 odt_iostats;
+	struct pfl_iostats_rw	 odt_iostats;
 	struct pfl_odt_stats	 odt_stats;
 };
 

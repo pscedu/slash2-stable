@@ -40,7 +40,7 @@ void
 psc_tiosthr_main(struct psc_thread *thr)
 {
 	struct psc_waitq dummy = PSC_WAITQ_INIT;
-	struct psc_iostatv *istv;
+	struct pfl_iostatv *istv;
 	struct psc_iostats *ist;
 	struct timespec ts;
 	struct timeval dtv, tv;
