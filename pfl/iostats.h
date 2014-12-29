@@ -36,14 +36,14 @@
  * accumulator cleared by an external mechanism periodically.
  */
 
-struct psc_iostats {
+struct pfl_iostats {
 	char			ist_name[IST_NAME_MAX];
 	struct psclist_head	ist_lentry;
 	int			ist_flags;
 
 	uint64_t		ist_len_total;			/* lifetime acculumator */
 
-	struct psc_iostatv {
+	struct pfl_iostatv {
 		struct timeval	istv_lastv;			/* time of last accumulation */
 		psc_atomic64_t	istv_cur_len;			/* current accumulator */
 
@@ -52,12 +52,19 @@ struct psc_iostats {
 
 	}			ist_intv[IST_NINTV];
 };
+#define psc_iostats pfl_iostats
 
 #define PISTF_BASE10		(1 << 0)
 
-struct psc_iostats_rw {
-	struct psc_iostats wr;
-	struct psc_iostats rd;
+struct pfl_iostats_rw {
+	struct pfl_iostats	wr;
+	struct pfl_iostats	rd;
+};
+
+/* graduated iostats */
+struct pfl_iostats_grad {
+	int64_t			size;
+	struct pfl_iostats_rw	rw;
 };
 
 #define psc_iostats_calcrate(len, tv)					\
@@ -79,9 +86,11 @@ struct psc_iostats_rw {
 #define psc_iostats_init(ist, name, ...)				\
 	psc_iostats_initf((ist), 0, (name), ## __VA_ARGS__)
 
-void psc_iostats_destroy(struct psc_iostats *);
-void psc_iostats_initf(struct psc_iostats *, int, const char *, ...);
-void psc_iostats_rename(struct psc_iostats *, const char *, ...);
+void psc_iostats_destroy(struct pfl_iostats *);
+void psc_iostats_initf(struct pfl_iostats *, int, const char *, ...);
+void psc_iostats_rename(struct pfl_iostats *, const char *, ...);
+
+void pfl_iostats_grad_init(struct pfl_iostats_grad *, int, const char *);
 
 extern struct psc_lockedlist	psc_iostats;
 extern int			psc_iostat_intvs[];

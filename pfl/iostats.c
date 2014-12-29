@@ -92,3 +92,38 @@ psc_iostats_destroy(struct psc_iostats *ist)
 {
 	pll_remove(&psc_iostats, ist);
 }
+
+void
+pfl_iostats_grad_init(struct pfl_iostats_grad *ist0, int flags,
+    const char *prefix)
+{
+	const char *suf, *nsuf, *mode = "rd";
+	struct pfl_iostats_grad *ist;
+	uint64_t sz, nsz;
+	int sub, i;
+
+	for (i = 0; i < 2; i++) {
+		sz = 0;
+		suf = "";
+		nsuf = "K";
+		for (ist = ist0; ist->size; ist++, sz = nsz) {
+			nsz = ist->size / 1024;
+
+			if (nsz == 1024) {
+				nsuf = "M";
+				nsz = 1;
+			}
+			sub = nsz == 1 || nsz == 1024 ? 0 : 1;
+			psc_iostats_initf(i ? &ist->rw.wr : &ist->rw.rd,
+			    flags, "%s-%s:%d%s-%d%s", prefix, mode, sz,
+			    suf, nsz - sub, nsuf);
+
+			suf = "K";
+		}
+
+		psc_iostats_initf(i ? &ist->rw.wr : &ist->rw.rd, flags,
+		    "%s-%s:>=%d%s", prefix, mode, sz, nsuf);
+
+		mode = "wr";
+	}
+}
