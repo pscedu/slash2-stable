@@ -4,6 +4,7 @@
 #  - add a checker to prevent multiple instances simultaneously
 
 host=$(hostname -s)
+nodaemonize=0
 name=$prog
 ud=/usr/local
 dir=/local
@@ -200,4 +201,23 @@ vsleep()
 
 	echo restarting after $amt seconds...
 	sleep $amt
+}
+
+_rundaemon()
+{
+	preproc
+	"$@"
+	postproc $?
+	vsleep
+	exec $0 "${bkav[@]}"
+}
+
+rundaemon()
+{
+	if [ $nodaemonize -eq 1 ];
+		_rundaemon "$@" &
+		disown
+	else
+		exec _rundaemon "$@"
+	fi
 }
