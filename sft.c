@@ -69,12 +69,11 @@ struct file {
 	int			 rc;	/* file return code */
 };
 
-
 struct wk {
 	struct psc_listentry	 lentry;
 	struct file		*f;
 	int64_t			 chunkid;
-	size_t			 off;
+	int64_t			 off;
 	ssize_t			 len;
 };
 
@@ -153,6 +152,7 @@ thrmain(struct psc_thread *thr)
 			break;
 		f = wk->f;
 
+ nextchunk:
 		if (writesz)
 			rc = pwrite(f->fd, buf, wk->len, wk->off);
 		else
@@ -193,6 +193,15 @@ thrmain(struct psc_thread *thr)
 				unlock_output();
 			} else {
 				psc_crc64_add(&filecrc, buf, rc);
+				wk->off += wk->len;
+				if (wk->off < f->stb.st_size) {
+					wk->chunkid++;
+					if (wk->off + wk->len >
+					    f->stb.st_size)
+						wk->len = f->stb.st_size %
+						    bufsz;
+					goto nextchunk;
+				}
 			}
 		}
 
@@ -321,10 +330,13 @@ proc(const char *fn, const struct stat *stb, int info,
 		f->stb.st_size = writesz;
 
 	for (chunkid = 0, off = seekoff;
-	    off < f->stb.st_size; off += bufsz)
+	    off < f->stb.st_size; off += bufsz) {
 		addwk(f, off, chunkid++,
 		    off + bufsz > f->stb.st_size ?
 		    f->stb.st_size % bufsz : bufsz);
+		if (docrc && !chunk)
+			break;
+	}
 
 	spinlock(&f->lock);
 	f->done = 1;
@@ -344,7 +356,7 @@ main(int argc, char *argv[])
 
 	pfl_init();
 	progname = argv[0];
-	while ((c = getopt(argc, argv, "Bb:cKO:RTt:vw:Z")) != -1)
+	while ((c = getopt(argc, argv, "Bb:cD:KO:RTt:vw:Z")) != -1)
 		switch (c) {
 		case 'B': /* display bandwidth */
 			displaybw = 1;
@@ -358,6 +370,9 @@ main(int argc, char *argv[])
 		case 'c': /* perform CRC of entire file */
 			docrc = 1;
 			psc_crc64_init(&filecrc);
+			break;
+		case 'D': /* digest */
+			docrc = 1;
 			break;
 		case 'K': /* report checksum of each file chunk */
 			chunk = 1;
@@ -398,9 +413,6 @@ main(int argc, char *argv[])
 	argv += optind;
 	if (argc == 0)
 		usage();
-
-	if (nthr && docrc && !chunk)
-		errx(1, "cannot parallelize filewide CRC");
 
 	if (displaybw)
 		pscthr_init(0, display, NULL, 0, "disp");
