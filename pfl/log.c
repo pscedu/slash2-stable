@@ -31,6 +31,7 @@
 #include <ctype.h>
 #include <err.h>
 #include <errno.h>
+#include <fcntl.h>
 #include <limits.h>
 #include <paths.h>
 #include <pthread.h>
@@ -61,6 +62,7 @@ __static int			 psc_loglevel = PLL_NOTICE;
 __static struct psclog_data	*psc_logdata;
 char				 psclog_eol[8] = "\n";	/* overrideable with ncurses EOL */
 int				*pfl_syslog;
+FILE				*pflog_ttyfp;
 
 struct psc_dynarray		_pfl_logpoints = DYNARRAY_INIT_NOLOG;
 struct psc_hashtbl		_pfl_logpoints_hashtbl;
@@ -178,6 +180,9 @@ psc_log_init(void)
 	_psc_hashtbl_init(&_pfl_logpoints_hashtbl, PHTF_STRP |
 	    PHTF_NOLOG, offsetof(struct pfl_logpoint, plogpt_key),
 	    sizeof(struct pfl_logpoint), 3067, NULL, "logpoints");
+
+	if (!isatty(fileno(stderr)))
+		pflog_ttyfp = fopen(_PATH_TTY, "w");
 }
 
 int
@@ -326,7 +331,6 @@ _psclogv(const struct pfl_callerinfo *pci, int level, int options,
 	int rc, save_errno;
 	pid_t thrid;
 	size_t len;
-	FILE *fp;
 
 	save_errno = errno;
 
@@ -397,13 +401,8 @@ _psclogv(const struct pfl_callerinfo *pci, int level, int options,
 	    level >= 0 && level < (int)nitems(pfl_syslog_map))
 		syslog(pfl_syslog_map[level], "%s", buf);
 
-	if (level <= PLL_WARN && !isatty(fileno(stderr))) {
-		fp = fopen(_PATH_TTY, "w");
-		if (fp) {
-			fprintf(fp, "%s\n", buf);
-			fclose(fp);
-		}
-	}
+	if (level <= PLL_WARN && pflog_ttyfp)
+		fprintf(pflog_ttyfp, "%s\n", buf);
 
 	if (level == PLL_FATAL) {
 		p = getenv("PSC_DUMPSTACK");
