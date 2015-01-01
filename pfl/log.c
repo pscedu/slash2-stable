@@ -317,7 +317,7 @@ void
 _psclogv(const struct pfl_callerinfo *pci, int level, int options,
     const char *fmt, va_list ap)
 {
-	char *p, buf[32*LINE_MAX];
+	char *p, buf[BUFSIZ];
 	extern const char *progname;
 	struct psc_thread *thr;
 	struct psclog_data *d;
