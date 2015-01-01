@@ -587,12 +587,6 @@ pscthr_getbyid(pthread_t id)
 }
 
 void
-psc_enter_debugger(__unusedx const char *str)
-{
-	pthread_kill(pthread_self(), SIGINT);
-}
-
-void
 pscthr_killall(void)
 {
 	struct psc_thread *thr;

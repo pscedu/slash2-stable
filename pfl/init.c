@@ -130,15 +130,6 @@ pfl_dump_stack1(int sig)
 	pfl_abort();
 }
 
-#ifndef HAVE_LIBPTHREAD
-void
-psc_enter_debugger(const char *str)
-{
-	psclog(PLL_MAX, "enter debugger (%s)", str);
-	kill(0, SIGINT);
-}
-#endif
-
 void
 pfl_init(void)
 {

@@ -49,8 +49,6 @@ struct pfl_callerinfo {
 	int		 pci_subsys;
 };
 
-void	 psc_enter_debugger(const char *);
-
 void	 pfl_abort(void);
 void	 pfl_atexit(void (*)(void));
 void	 pfl_dump_fflags(int);
