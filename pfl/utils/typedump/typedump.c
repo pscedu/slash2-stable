@@ -211,6 +211,9 @@ main(int argc, char *argv[])
 	PRTYPE(struct pfl_callerinfo);
 	PRTYPE(struct pfl_heap);
 	PRTYPE(struct pfl_heap_entry);
+	PRTYPE(struct pfl_iostats);
+	PRTYPE(struct pfl_iostats_grad);
+	PRTYPE(struct pfl_iostats_rw);
 	PRTYPE(struct pfl_logpoint);
 	PRTYPE(struct pfl_mutex);
 	PRTYPE(struct pfl_odt);
@@ -258,8 +261,6 @@ main(int argc, char *argv[])
 	PRTYPE(struct psc_hashbkt);
 	PRTYPE(struct psc_hashent);
 	PRTYPE(struct psc_hashtbl);
-	PRTYPE(struct psc_iostats);
-	PRTYPE(struct psc_iostats_rw);
 	PRTYPE(struct psc_journal);
 	PRTYPE(struct psc_journal_cursor);
 	PRTYPE(struct psc_journal_enthdr);
