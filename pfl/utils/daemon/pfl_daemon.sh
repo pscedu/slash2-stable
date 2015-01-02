@@ -218,6 +218,6 @@ rundaemon()
 		_rundaemon "$@" &
 		disown
 	else
-		exec _rundaemon "$@"
+		_rundaemon "$@"
 	fi
 }
