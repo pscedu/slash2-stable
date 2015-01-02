@@ -77,7 +77,7 @@ my $d_start = "/*\n";
 my $d_cont = " *";
 my $d_end = "\n */";
 
-if ($data =~ m{^(.*) %PSC(?:GPL)?_(START_)?COPYRIGHT%}m) {
+if ($data =~ m{^(.*) %PSC(?:GPL|PRI)?_(START_)?COPYRIGHT%}m) {
 	$d_cont = $1;
 	$d_cont = " *" if $d_cont eq "/*";
 
@@ -87,7 +87,7 @@ if ($data =~ m{^(.*) %PSC(?:GPL)?_(START_)?COPYRIGHT%}m) {
 	}
 }
 
-$data =~ s{^(.*)\s*%(PSC|PSCGPL)_COPYRIGHT%.*\n}{<<EOF2}me;
+$data =~ s{^(.*)\s*%(PSC|PSCGPL|PSCPRI)_COPYRIGHT%.*\n}{<<EOF2}me;
 $d_start$d_cont %$2_START_COPYRIGHT%
 $d_cont -----------------------------------------------------------------------------
 $d_cont -----------------------------------------------------------------------------
@@ -145,6 +145,33 @@ $d_cont implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
 $d_cont PURPOSE.  See the GNU General Public License contained in the file
 $d_cont `COPYING-GPL' at the top of this distribution or at
 $d_cont https://www.gnu.org/licenses/gpl-2.0.html for more details.
+$d_cont
+$d_cont Pittsburgh Supercomputing Center	phone: 412.268.4960  fax: 412.268.5832
+$d_cont 300 S. Craig Street			e-mail: remarks\@psc.edu
+$d_cont Pittsburgh, PA 15213			web: http://www.psc.edu/
+$d_cont -----------------------------------------------------------------------------$1
+$d_cont %PSC_END_COPYRIGHT%$d_end
+}s;
+
+$data =~ s
+{\Q$d_start$d_cont\E %PSCPRI_START_COPYRIGHT%
+\Q$d_cont\E -----------------------------------------------------------------------------.*?
+\Q$d_cont\E -----------------------------------------------------------------------------(.*)
+\Q$d_cont\E %PSC_END_COPYRIGHT%\Q$d_end\E
+}
+{$d_start$d_cont %PSCPRI_START_COPYRIGHT%
+$d_cont -----------------------------------------------------------------------------
+$d_cont Copyright (c) $cpyears, Pittsburgh Supercomputing Center (PSC).
+$d_cont
+$d_cont Permission to use, copy, and modify this software and its documentation
+$d_cont without fee for personal use or non-commercial use within your organization
+$d_cont is hereby granted, provided that the above copyright notice is preserved in
+$d_cont all copies and that the copyright and this permission notice appear in
+$d_cont supporting documentation.  Permission to redistribute this software to other
+$d_cont organizations or individuals is not permitted without the written permission
+$d_cont of the Pittsburgh Supercomputing Center.  PSC makes no representations about
+$d_cont the suitability of this software for any purpose.  It is provided "as is"
+$d_cont without express or implied warranty.
 $d_cont
 $d_cont Pittsburgh Supercomputing Center	phone: 412.268.4960  fax: 412.268.5832
 $d_cont 300 S. Craig Street			e-mail: remarks\@psc.edu
