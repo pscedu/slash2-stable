@@ -214,7 +214,7 @@ _rundaemon()
 
 rundaemon()
 {
-	if [ $nodaemonize -eq 1 ]; then
+	if [ $nodaemonize -eq 0 ]; then
 		_rundaemon "$@" &
 		disown
 	else
