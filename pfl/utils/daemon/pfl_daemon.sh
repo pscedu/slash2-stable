@@ -4,7 +4,7 @@
 #  - add a checker to prevent multiple instances simultaneously
 
 host=$(hostname -s)
-nodaemonize=0
+nodaemonize=1
 name=$prog
 ud=/usr/local
 dir=/local
