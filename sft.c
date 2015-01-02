@@ -400,8 +400,10 @@ main(int argc, char *argv[])
 			verbose = 1;
 			break;
 		case 'w': /* write */
-			writesz = strtol(optarg, &endp, 10);
-			/* XXX check */
+			writesz = pfl_humantonum(optarg);
+			if (writesz <= 0)
+				errx(1, "%s: %s", optarg, strerror(
+				    writesz ? -writesz : EINVAL));
 			break;
 		case 'Z': /* report if file chunk is all zeroes */
 			checkzero = 1;
