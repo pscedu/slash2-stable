@@ -4,7 +4,7 @@
 #  - add a checker to prevent multiple instances simultaneously
 
 host=$(hostname -s)
-nodaemonize=1
+nodaemonize=0
 name=$prog
 ud=/usr/local
 dir=/local
@@ -214,7 +214,7 @@ _rundaemon()
 
 rundaemon()
 {
-	if [ $nodaemonize -eq 1 ];
+	if [ $nodaemonize -eq 1 ]; then
 		_rundaemon "$@" &
 		disown
 	else
