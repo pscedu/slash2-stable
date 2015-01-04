@@ -2140,6 +2140,8 @@ void
 psc_ctlthr_spawn_listener(const char *ofn, int acthrtype)
 {
 	extern const char *progname;
+	static psc_atomic32_t idx;
+
 	struct psc_thread *thr, *me;
 	struct sockaddr_un saun;
 	mode_t old_umask;
@@ -2192,7 +2194,8 @@ psc_ctlthr_spawn_listener(const char *ofn, int acthrtype)
 	 */
 	thr = pscthr_init(acthrtype, psc_ctlacthr_main, NULL,
 	    sizeof(struct psc_ctlacthr), "%.*sctlacthr%d",
-	    p - me->pscthr_name, me->pscthr_name);
+	    p - me->pscthr_name, me->pscthr_name,
+	    psc_atomic32_inc_getnew(&idx) - 1);
 	psc_ctlacthr(thr)->pcat_sock = s;
 	pscthr_setready(thr);
 }
