@@ -43,11 +43,13 @@
 lnet_handle_eq_t	pscrpc_eq_h;
 struct psclist_head	pscrpc_wait_callbacks;
 
+struct psc_poolmaster	 pscrpc_export_poolmaster;
 struct psc_poolmaster	 pscrpc_conn_poolmaster;
 struct psc_poolmaster	 pscrpc_imp_poolmaster;
 struct psc_poolmaster	 pscrpc_set_poolmaster;
 struct psc_poolmaster	 pscrpc_rq_poolmaster;
 
+struct psc_poolmgr	*pscrpc_export_pool;
 struct psc_poolmgr	*pscrpc_conn_pool;
 struct psc_poolmgr	*pscrpc_imp_pool;
 struct psc_poolmgr	*pscrpc_set_pool;
@@ -583,6 +585,11 @@ pscrpc_ni_init(int type, int nmsgs)
 {
 	int               rc;
 	lnet_process_id_t my_id;
+
+	psc_poolmaster_init(&pscrpc_export_poolmaster,
+	    struct pscrpc_export, exp_lentry, PPMF_AUTO, 64, 64, 0,
+	    NULL, NULL, NULL, "rpcexp");
+	pscrpc_export_pool = psc_poolmaster_getmgr(&pscrpc_export_poolmaster);
 
 	psc_poolmaster_init(&pscrpc_conn_poolmaster,
 	    struct pscrpc_connection, c_hentry.phe_lentry, PPMF_AUTO, 64, 64, 0,

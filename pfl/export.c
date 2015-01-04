@@ -48,9 +48,6 @@ _pscrpc_export_put(struct pscrpc_export *exp)
 		   Not sure what h_link is for - pauln */
 		//LASSERT(list_empty(&exp->exp_outstanding_replies));
 		//LASSERT(list_empty(&exp->exp_handle.h_link));
-#if PAULS_TODO
-		obd_destroy_export(exp);
-#endif
-		PSCRPC_OBD_FREE(exp, sizeof(*exp));
+		psc_pool_return(pscrpc_export_pool, exp);
 	}
 }

@@ -351,9 +351,7 @@ pscrpc_server_handle_request(struct pscrpc_service *svc,
 	if (request->rq_conn->c_exp == NULL) {
 		struct pscrpc_export *exp;
 
-		PSCRPC_OBD_ALLOC(exp, sizeof(*exp));
-		if (exp == NULL)
-			psc_fatal("Couldn't allocate export");
+		exp = psc_pool_get(pscrpc_export_pool);
 
 		/*
 		 * init and associate the connection and export structs

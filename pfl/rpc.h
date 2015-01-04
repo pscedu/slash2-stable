@@ -151,6 +151,7 @@ struct pscrpc_export {
 	int				  exp_failed;
 	void				(*exp_hldropf)(struct pscrpc_export *);
 	void				 *exp_private; /* app-specific data */
+	struct psc_listentry		  exp_lentry;
 //	struct psclist_head		  exp_outstanding_replies;
 };
 
@@ -617,6 +618,7 @@ void	pscrpc_req_getprids(const struct psc_dynarray *,
 	    struct pscrpc_request *, lnet_process_id_t *,
 	    lnet_process_id_t *);
 
+extern struct psc_poolmgr		*pscrpc_export_pool;
 extern struct psc_poolmgr		*pscrpc_conn_pool;
 extern struct psc_poolmgr		*pscrpc_imp_pool;
 extern struct psc_poolmgr		*pscrpc_set_pool;
