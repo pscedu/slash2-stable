@@ -62,6 +62,7 @@ my @ign = (
 	[ qw(_?psc_waitq_waitrel msbreleasethr_main _pscthr_begin) ],
 	[ qw(_?psc_waitq_waitrel msflushthr_main _pscthr_begin) ],
 	[ qw(msbmflwthr_main _pscthr_begin) ],
+	[ qw(usleep msbwatchthr_main _pscthr_begin) ],
 
 	# SLASH2 common
 	[ qw(_?_?sleep sl_freapthr_main _pscthr_begin) ],
