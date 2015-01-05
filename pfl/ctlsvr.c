@@ -791,6 +791,9 @@ struct psc_ctl_rlim {
 #ifdef RLIMIT_RTPRIO
 	{ "rtprio",	RLIMIT_RTPRIO },
 #endif
+#ifdef RLIMIT_RTTIME
+	{ "rttime",	RLIMIT_RTTIME },
+#endif
 #ifdef RLIMIT_SIGPENDING
 	{ "sigpndg",	RLIMIT_SIGPENDING },
 #endif
