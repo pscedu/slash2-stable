@@ -1540,7 +1540,7 @@ pscfs_notify_inval_entry(struct pscfs_req *pfr, pscfs_inum_t pinum,
 {
 	int rc;
 
-#ifdef HAVE_FUSE_REQ_GETCHANNEL
+#if defined(HAVE_FUSE_REQ_GETCHANNEL) && defined(HAVE_FUSE_NOTIFY_INVAL)
 	rc = fuse_lowlevel_notify_inval_entry(fuse_req_getchannel(
 	    pfr->pfr_fuse_req), INUM_PSCFS2FUSE(pinum, 0.0), name,
 	    namelen);

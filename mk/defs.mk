@@ -120,7 +120,12 @@ FUSE_CFLAGS=	$$(${PKG_CONFIG} --cflags fuse | ${EXTRACT_CFLAGS})
 FUSE_DEFINES=	$$(${PKG_CONFIG} --cflags fuse | ${EXTRACT_DEFINES})
 FUSE_INCLUDES=	$$(${PKG_CONFIG} --cflags fuse | ${EXTRACT_INCLUDES})
 FUSE_LIBS=	$$(${PKG_CONFIG} --libs fuse)
+FUSE_KVERSION=	$$(${PKG_CONFIG} --version fuse)
 FUSE_VERSION=	$$(${PKG_CONFIG} --modversion fuse | sed 's/\([0-9]\)*\.\([0-9]*\).*/\1\2/')
+
+ifeq ($(shell ${MINVER} ${FUSE_KVERSION} 0.27.0 && echo 1),1)
+  FUSE_DEFINES+=-DHAVE_FUSE_NOTIFY_INVAL
+endif
 
 SQLITE3_CFLAGS=	$$(${PKG_CONFIG} --cflags sqlite3 | ${EXTRACT_CFLAGS})
 SQLITE3_DEFINES=$$(${PKG_CONFIG} --cflags sqlite3 | ${EXTRACT_DEFINES})
