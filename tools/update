@@ -94,6 +94,8 @@ pubrepo()
 	(getrepo https://github.com/pscedu/${1//\//.}.git $base)
 }
 
+pubrepo adaptfs &
+pubrepo conga &
 pubrepo distrib/fuse &
 pubrepo distrib/gcrcutil &
 pubrepo distrib/iozone &
@@ -101,9 +103,9 @@ pubrepo distrib/libs3 &
 pubrepo distrib/posix-fstest &
 pubrepo distrib/spiobench &
 pubrepo distrib/stumbleupon-tcollector &
-pubrepo adaptfs &
 pubrepo fio &
 pubrepo idxutils &
+pubrepo jives &
 pubrepo psync &
 pubrepo sft &
 #pubrepo slash2 &
