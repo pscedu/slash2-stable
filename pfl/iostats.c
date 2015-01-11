@@ -108,7 +108,7 @@ pfl_iostats_grad_init(struct pfl_iostats_grad *ist0, int flags,
 	const char *suf, *nsuf, *mode = "rd";
 	struct pfl_iostats_grad *ist;
 	uint64_t sz, nsz;
-	int sub, i;
+	int i;
 
 	for (i = 0; i < 2; i++) {
 		sz = 0;
@@ -121,10 +121,9 @@ pfl_iostats_grad_init(struct pfl_iostats_grad *ist0, int flags,
 				nsuf = "M";
 				nsz = 1;
 			}
-			sub = nsz == 1 || nsz == 1024 ? 0 : 1;
 			psc_iostats_initf(i ? &ist->rw.wr : &ist->rw.rd,
-			    flags, "%s-%s:%d%s-%d%s", prefix, mode, sz,
-			    suf, nsz - sub, nsuf);
+			    flags, "%s-%s:%d%s-<%d%s", prefix, mode, sz,
+			    suf, nsz, nsuf);
 
 			suf = "K";
 		}
