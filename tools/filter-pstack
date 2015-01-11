@@ -45,11 +45,11 @@ my @ign = (
 	[ qw(_?psc_waitq_waitrel _lc_get slibmaprlsthr_main _pscthr_begin) ],
 	[ qw(_?psc_waitq_waitrel _lc_get slireplpndthr_main _pscthr_begin) ],
 	[ qw(_?psc_waitq_waitrelv slireplpndthr_main _pscthr_begin) ],
+	[ qw(_lc_get slirathr_main _pscthr_begin) ],
 	[ qw(_lc_get slislvrthr_main _pscthr_begin) ],
 	[ qw(_psc_mutex_lock slislvrthr_main _pscthr_begin) ],
-	[ qw(_psc_waitq_waitrel slireadahead_main _pscthr_begin) ],
+	[ qw(_psc_waitq_waitabs slihealththr_main _pscthr_begin) ],
 	[ qw(psc_waitq_waitabs slislvrthr_main _pscthr_begin) ],
-	[ qw(sleep slihealththr_main _pscthr_begin) ],
 
 	# SLASH2 mount_slash
 	[ qw(_?psc_waitq_waitrel _lc_get msattrflushthr_main _pscthr_begin) ],
