@@ -50,6 +50,8 @@ struct ifaddrs {
 # define PFL_MSG_NOSIGNAL 0
 #endif
 
+#define PFL_HOSTNAME_MAX	256
+
 union pfl_sockaddr {
 	struct sockaddr_storage	 ss;
 	struct sockaddr_in6	 sin6;
