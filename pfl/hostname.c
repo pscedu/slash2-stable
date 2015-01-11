@@ -37,7 +37,7 @@
 #include "pfl/cdefs.h"
 #include "pfl/log.h"
 
-char psc_hostname[HOST_NAME_MAX];
+char psc_hostname[HOST_NAME_MAX + 1];
 
 __weak const char *
 psc_get_hostname(void)
