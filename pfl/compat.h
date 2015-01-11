@@ -42,10 +42,6 @@
 #  define ECOMM		EPROTO
 #endif
 
-#ifndef HOST_NAME_MAX
-#  define HOST_NAME_MAX	MAXHOSTNAMELEN
-#endif
-
 #ifdef HAVE_QSORT_R_THUNK
 #  define pfl_qsort_r(base, nel, wid, cmpf, arg)			\
 	qsort_r((base), (nel), (wid), (arg), (cmpf))

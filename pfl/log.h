@@ -48,8 +48,8 @@ struct psc_thread;
 
 /* per-thread */
 struct psclog_data {
-	char		 pld_hostshort[HOST_NAME_MAX + 1];
-	char		 pld_hostname[HOST_NAME_MAX + 1];
+	char		 pld_hostshort[PFL_HOSTNAME_MAX];
+	char		 pld_hostname[PFL_HOSTNAME_MAX];
 	char		 pld_nothrname[24];
 	int		 pld_rank;	/* MPI rank */
 	pid_t		 pld_thrid;
