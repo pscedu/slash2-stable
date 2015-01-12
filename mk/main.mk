@@ -29,7 +29,7 @@ ADD_FILE_CFLAGS=	$(shell if ! [ -f "$(abspath $1)" ]; then echo "ADD_FILE_CFLAGS
 FORCE_INST?=		0
 
 RELCURDIR=		$(call STRIPROOTDIR,${CURDIR}/)
-OBJDIR=			${OBJBASE}/psc.obj/${HOST}${CURDIR}
+OBJDIR?=		${OBJBASE}/psc.obj/${HOST}${CURDIR}
 DEPEND_FILE=		${OBJDIR}/.depend
 
 HOST=			$(word 1,$(subst ., ,$(shell hostname)))
