@@ -1461,6 +1461,9 @@ psc_ctlrep_param_simple(int fd, struct psc_ctlmsghdr *mh,
 					goto invalid;
 				*(uint64_t *)pcn->pcn_ptr = l;
 				break;
+			    }
+			default:
+				psc_fatalx("internal error");
 			}
 		}
 		return (psc_ctlsenderr(fd, mh, "%s: field is read-only",
@@ -1471,14 +1474,14 @@ psc_ctlrep_param_simple(int fd, struct psc_ctlmsghdr *mh,
 		pcn->pcn_getf(val);
 		break;
 	case PFLCTL_PARAMT_ATOMIC32:
-		snprintf(val, PCP_VALUE_MAX, "%d"
+		snprintf(val, PCP_VALUE_MAX, "%d",
 		    psc_atomic32_read(pcn->pcn_ptr));
 		break;
 	case PFLCTL_PARAMT_INT:
 		snprintf(val, PCP_VALUE_MAX, "%d", *(int *)pcn->pcn_ptr);
 		break;
 	case PFLCTL_PARAMT_STR:
-		snprintf(val, PCP_VALUE_MAX, "%s", pcn->pcn_ptr);
+		snprintf(val, PCP_VALUE_MAX, "%s", (char *)pcn->pcn_ptr);
 		break;
 	case PFLCTL_PARAMT_UINT64:
 		snprintf(val, PCP_VALUE_MAX, "%"PRIu64,
