@@ -1465,6 +1465,7 @@ psc_ctlrep_param_simple(int fd, struct psc_ctlmsghdr *mh,
 			default:
 				psc_fatalx("internal error");
 			}
+			return (1);
 		}
 		return (psc_ctlsenderr(fd, mh, "%s: field is read-only",
 		    psc_ctlparam_fieldname(pcp->pcp_field, nlevels)));
