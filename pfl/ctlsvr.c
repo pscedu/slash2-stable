@@ -2026,8 +2026,10 @@ pfl_opstats_lookup(const char *opname)
 	spinlock(&lock);
 	for (i = 0, pos = pflctl_opstats; pos->pos_name &&
 	    i < nitems(pflctl_opstats); i++, pos++)
-		if (strcmp(opname, pos->pos_name) == 0)
+		if (strcmp(opname, pos->pos_name) == 0) {
+			freelock(&lock);
 			return (i);
+		}
 	psc_assert(i < nitems(pflctl_opstats));
 	pos->pos_name = opname;
 	freelock(&lock);
