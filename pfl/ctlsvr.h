@@ -109,49 +109,33 @@ struct pfl_opstat {
 	psc_atomic64_t		 pos_value;
 };
 
-#define OPSTATS_MAX		128
-
-#define	OPSTAT_INCR(op)							\
-	do {								\
-		struct pfl_opstat *_pos;				\
-		char *_p;						\
-									\
-		psc_assert((op) < OPSTATS_MAX);				\
-		_pos = &pflctl_opstats[op];				\
-		psc_atomic64_inc(&_pos->pos_value);			\
-		if (_pos->pos_name == NULL) {				\
-			_p = strstr(#op, "_OPST_");			\
-			psc_assert(_p);					\
-			for (_pos->pos_name = _p = pfl_strdup(_p + 6);	\
-			    *_p; _p++)					\
-				*_p = tolower(*_p);			\
-		}							\
-	} while (0)
+#define OPSTATS_MAX		256
 
 #define	OPSTAT_ADD(op, n)						\
 	do {								\
-		struct pfl_opstat *_pos;				\
-		char *_p;						\
+		static int _opst_idx = -1;				\
 									\
-		psc_assert((op) < OPSTATS_MAX);				\
-		_pos = &pflctl_opstats[op];				\
-		psc_atomic64_add(&_pos->pos_value, (n));		\
-		if (_pos->pos_name == NULL) {				\
-			_p = strstr(#op, "_OPST_");			\
-			psc_assert(_p);					\
-			for (_pos->pos_name = _p = pfl_strdup(_p + 6);	\
-			    *_p; _p++)					\
-				*_p = tolower(*_p);			\
+		if (_opst_idx == -1)					\
+			_opst_idx = pfl_opstats_lookup(op);		\
+		psc_atomic64_add(&pflctl_opstats[_opst_idx]->pos_value, \
+		    (n));						\
 		}							\
 	} while (0)
 
-#define	OPSTAT_CURR(op)							\
-	psc_atomic64_read(&pflctl_opstats[op].pos_value)
+#define	OPSTAT_INCR(op)		OPSTAT_ADD((op), 1)
 
-#define	OPSTAT_ASSIGN(op, value)					\
-	psc_atomic64_set(&pflctl_opstats[op].pos_value, (value))
-
-#define	PFL_OPSTAT_INIT(name)	{ name, PSC_ATOMIC64_INIT(0) }
+/* XXX race: should use cmpxchg */
+#define	OPSTAT_SET_MAX(op, value)					\
+	do {								\
+		static int _opst_idx = -1;				\
+		struct pfl_opstat *_pos;				\
+									\
+		if (_opst_idx == -1)					\
+			_opst_idx = pfl_opstats_lookup(op);		\
+		_pos = &pflctl_opstats[_opst_idx];			\
+		if ((value) > psc_atomic64_read(&_pos->pos_value))	\
+			psc_atomic64_set(&_pos->pos_value, (value));	\
+	} while (0)
 
 int	psc_ctlsenderr(int, const struct psc_ctlmsghdr *, const char *, ...);
 
@@ -211,6 +195,8 @@ int	psc_ctlmsg_param_send(int, const struct psc_ctlmsghdr *,
 void	psc_ctlthr_main(const char *, const struct psc_ctlop *, int, int);
 int	psc_ctl_applythrop(int, struct psc_ctlmsghdr *, void *, const char *,
 		int (*)(int, struct psc_ctlmsghdr *, void *, struct psc_thread *));
+
+int	pfl_opstats_lookup(const char *);
 
 typedef void (*psc_ctl_thrget_t)(struct psc_thread *, struct psc_ctlmsg_thread *);
 
