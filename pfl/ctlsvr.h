@@ -117,9 +117,8 @@ struct pfl_opstat {
 									\
 		if (_opst_idx == -1)					\
 			_opst_idx = pfl_opstats_lookup(op);		\
-		psc_atomic64_add(&pflctl_opstats[_opst_idx]->pos_value, \
+		psc_atomic64_add(&pflctl_opstats[_opst_idx].pos_value,	\
 		    (n));						\
-		}							\
 	} while (0)
 
 #define	OPSTAT_INCR(op)		OPSTAT_ADD((op), 1)
