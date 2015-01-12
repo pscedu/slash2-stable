@@ -36,6 +36,7 @@
 
 #include "pfl/cdefs.h"
 #include "pfl/log.h"
+#include "pfl/net.h"
 
 char psc_hostname[PFL_HOSTNAME_MAX];
 
