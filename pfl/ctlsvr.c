@@ -1371,6 +1371,11 @@ struct psc_ctlparam_node {
 	/* only used for SIMPLE ctlparam nodes */
 	void			(*pcn_getf)(char [PCP_VALUE_MAX]);
 	int			(*pcn_setf)(const char *);
+
+	/* only used for SIMPLE var ctlparam nodes */
+	enum pflctl_paramt	  pcn_vtype;
+	int			  pcn_flags;
+	void			 *pcn_ptr;
 };
 
 /* Stack processing frame. */
@@ -1408,6 +1413,7 @@ psc_ctlrep_param_simple(int fd, struct psc_ctlmsghdr *mh,
 	if (mh->mh_type == PCMT_SETPARAM) {
 		if (pcn->pcn_setf) {
 			if (pcn->pcn_setf(pcp->pcp_value))
+ invalid:
 				return (psc_ctlsenderr(fd, mh,
 				    "%s: invalid value: %s",
 				    psc_ctlparam_fieldname(
@@ -1415,12 +1421,72 @@ psc_ctlrep_param_simple(int fd, struct psc_ctlmsghdr *mh,
 				    pcp->pcp_value));
 			return (1);
 		}
+		if (pcn->pcn_flags & PFLCTL_PARAMF_RDWR) {
+			char *endp;
+
+			switch (pcn->pcn_vtype) {
+			case PFLCTL_PARAMT_ATOMIC32: {
+				long l;
+
+				l = strtol(pcp->pcp_value, &endp, 10);
+				// min and max check
+				if (endp == pcp->pcp_value ||
+				    *endp != '\0')
+					goto invalid;
+				psc_atomic32_set(pcn->pcn_ptr, l);
+				break;
+			    }
+			case PFLCTL_PARAMT_INT: {
+				long l;
+
+				l = strtol(pcp->pcp_value, &endp, 10);
+				// min and max check
+				if (endp == pcp->pcp_value ||
+				    *endp != '\0')
+					goto invalid;
+				*(int *)pcn->pcn_ptr = l;
+				break;
+			}
+			case PFLCTL_PARAMT_STR:
+				strlcpy(pcn->pcn_ptr, pcp->pcp_value,
+				    PCP_VALUE_MAX);
+				break;
+			case PFLCTL_PARAMT_UINT64: {
+				uint64_t l;
+
+				l = strtoull(pcp->pcp_value, &endp, 10);
+				// min and max check
+				if (endp == pcp->pcp_value ||
+				    *endp != '\0')
+					goto invalid;
+				*(uint64_t *)pcn->pcn_ptr = l;
+				break;
+			}
+		}
 		return (psc_ctlsenderr(fd, mh, "%s: field is read-only",
 		    psc_ctlparam_fieldname(pcp->pcp_field, nlevels)));
 	}
-	pcn->pcn_getf(val);
-	return (psc_ctlmsg_param_send(fd, mh, pcp,
-	    PCTHRNAME_EVERYONE, levels, nlevels, val));
+	switch (pcn->pcn_vtype) {
+	case PFLCTL_PARAMT_NONE:
+		pcn->pcn_getf(val);
+		break;
+	case PFLCTL_PARAMT_ATOMIC32:
+		snprintf(val, PCP_VALUE_MAX, "%d"
+		    psc_atomic32_read(pcn->pcn_ptr));
+		break;
+	case PFLCTL_PARAMT_INT:
+		snprintf(val, PCP_VALUE_MAX, "%d", *(int *)pcn->pcn_ptr);
+		break;
+	case PFLCTL_PARAMT_STR:
+		snprintf(val, PCP_VALUE_MAX, "%s", pcn->pcn_ptr);
+		break;
+	case PFLCTL_PARAMT_UINT64:
+		snprintf(val, PCP_VALUE_MAX, "%"PRIu64,
+		    *(uint64_t *)pcn->pcn_ptr);
+		break;
+	}
+	return (psc_ctlmsg_param_send(fd, mh, pcp, PCTHRNAME_EVERYONE,
+	    levels, nlevels, val));
 }
 
 int
@@ -1642,6 +1708,18 @@ psc_ctlparam_register_simple(const char *name, void (*getf)(char *),
 	pcn = psc_ctlparam_register(name, psc_ctlrep_param_simple);
 	pcn->pcn_getf = getf;
 	pcn->pcn_setf = setf;
+}
+
+void
+psc_ctlparam_register_var(const char *name, enum pflctl_paramt type,
+    int flags, void *p)
+{
+	struct psc_ctlparam_node *pcn;
+
+	pcn = psc_ctlparam_register(name, psc_ctlrep_param_simple);
+	pcn->pcn_vtype = type;
+	pcn->pcn_flags = flags;
+	pcn->pcn_ptr = p;
 }
 
 /**

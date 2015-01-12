@@ -183,10 +183,21 @@ int	psc_ctlparam_pause(int, struct psc_ctlmsghdr *,
 int	psc_ctlparam_faults(int, struct psc_ctlmsghdr *,
 		struct psc_ctlmsg_param *, char **, int, struct psc_ctlparam_node *);
 
+enum pflctl_paramt {
+	PFLCTL_PARAMT_NONE,
+	PFLCTL_PARAMT_ATOMIC32,
+	PFLCTL_PARAMT_INT,
+	PFLCTL_PARAMT_STR,
+	PFLCTL_PARAMT_UINT64
+};
+
+#define PFLCTL_PARAMF_RDWR	(1 << 0)
+
 struct psc_ctlparam_node *
 	psc_ctlparam_register(const char *, int (*)(int, struct psc_ctlmsghdr *,
 		struct psc_ctlmsg_param *, char **, int, struct psc_ctlparam_node *));
 void	psc_ctlparam_register_simple(const char *, void (*)(char *), int (*)(const char *));
+void	psc_ctlparam_register_var(const char *, enum pflctl_paramt, int, void *);
 
 int	psc_ctlmsg_param_send(int, const struct psc_ctlmsghdr *,
 		struct psc_ctlmsg_param *, const char *, char **, int, const char *);
