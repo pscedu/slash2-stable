@@ -36,7 +36,7 @@
 #include "pfl/list.h"
 #include "pfl/lockedlist.h"
 
-#define IST_NAME_MAX	40
+#define IST_NAME_MAX	64
 #define IST_NINTV	2
 
 /*
