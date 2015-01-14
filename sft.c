@@ -78,7 +78,7 @@ struct wk {
 };
 
 int			 docrc;
-uint64_t		 writesz;
+int64_t			 writesz;
 int			 chunk;
 int			 verbose;
 int			 checkzero;
