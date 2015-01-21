@@ -65,7 +65,7 @@ getrepo()
 		fi
 	fi
 
-	if -e .git; then
+	if [ -e .git ]; then
 		git $GIT_ACTION
 
 	# XXX remove me
