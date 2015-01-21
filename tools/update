@@ -65,7 +65,7 @@ getrepo()
 		fi
 	fi
 
-	if git status >/dev/null 2>&1; then
+	if -e .git; then
 		git $GIT_ACTION
 
 	# XXX remove me
