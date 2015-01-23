@@ -16,6 +16,7 @@
 #define PFLERR_BADMAGIC			(_PFLERR_START +  8)
 #define PFLERR_NOKEY			(_PFLERR_START +  9)
 #define PFLERR_BADCRC			(_PFLERR_START + 10)
+#define PFLERR_TIMEDOUT			(_PFLERR_START + 11)
 
 const char *pfl_strerror(int);
 
