@@ -14,9 +14,10 @@ set -e
 exwait()
 {
 	local st rc=0
+	local j=($(jobs | awk '{print $1}' | tr -cd '0-9'))
 	set +e
-	while :; do
-		wait -n
+	for id in ${j[@]}:; do
+		wait $id
 		st=$?
 		if [ $st -eq 127 ]; then
 			break
