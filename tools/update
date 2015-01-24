@@ -9,6 +9,26 @@
 
 set -e
 
+# Like 'wait' without arguments but returns a nonzero exit status if any
+# child reports one.
+exwait()
+{
+	local st rc=0
+	set +e
+	while :; do
+		wait -n
+		st=$?
+		if [ $st -eq 127 ]; then
+			break
+		fi
+		[ $rc -ne 0 ] || rc=$st
+		echo rc=$rc
+	done
+	set -e
+	echo return $rc
+	return $rc
+}
+
 die()
 {
 	echo "$0: $@" >&2
@@ -113,7 +133,7 @@ pubrepo src-upd &
 pubrepo xopctl &
 pubrepo zfs-fuse zfs &
 
-wait
+exwait
 
 for i in $dir/inf/*/update.sh; do
 	[ -e $i ] && . $i
