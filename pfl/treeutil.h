@@ -32,13 +32,13 @@
 
 #define PSC_SPLAY_XREMOVE(name, head, elm)				\
 	do {								\
-		if (name ## _SPLAY_REMOVE((head), (elm)) != (elm))	\
+		if (SPLAY_REMOVE(name, (head), (elm)) != (elm))		\
 			psc_fatalx("SPLAY_REMOVE: item not found");	\
 	} while (0)
 
 #define PSC_SPLAY_XINSERT(name, head, elm)				\
 	do {								\
-		if (name ## _SPLAY_INSERT((head), (elm)))		\
+		if (SPLAY_INSERT(name, (head), (elm)))			\
 			psc_fatalx("SPLAY_INSERT: item with key "	\
 			    "already exists");				\
 	} while (0)
@@ -51,14 +51,14 @@
 
 #define PSC_RB_XREMOVE(name, head, elm)					\
 	do {								\
-		if (name ## _RB_FIND(name, (head), (elm)) == NULL)	\
+		if (RB_FIND(name, (head), (elm)) == NULL)		\
 			psc_fatalx("RB_REMOVE: item not found");	\
-		name ## _RB_REMOVE((head), (elm));			\
+		RB_REMOVE(name, (head), (elm));				\
 	} while (0)
 
 #define PSC_RB_XINSERT(name, head, elm)					\
 	do {								\
-		if (name ## _RB_INSERT((head), (elm)))			\
+		if (RB_INSERT(name, (head), (elm)))			\
 			psc_fatalx("RB_INSERT: item with key "		\
 			    "already exists");				\
 	} while (0)
