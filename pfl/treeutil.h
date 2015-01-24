@@ -51,8 +51,9 @@
 
 #define PSC_RB_XREMOVE(name, head, elm)					\
 	do {								\
-		if (name ## _RB_REMOVE((head), (elm)) != (elm))		\
+		if (name ## _RB_FIND(name, (head), (elm)) == NULL)	\
 			psc_fatalx("RB_REMOVE: item not found");	\
+		name ## _RB_REMOVE((head), (elm));			\
 	} while (0)
 
 #define PSC_RB_XINSERT(name, head, elm)					\
