@@ -158,7 +158,7 @@ struct pscrpc_export {
 struct pscrpc_import;
 
 struct pscrpc_connection {
-	struct psc_hashent		 c_hentry;
+	struct pfl_hashentry		 c_hentry;
 	psc_spinlock_t			 c_lock;
 	lnet_nid_t			 c_self;
 	lnet_process_id_t		 c_peer;
@@ -298,7 +298,7 @@ struct pscrpc_request_buffer_desc;
 struct pscrpc_peer_qlen {
 	atomic_t			 pql_qlen;
 	lnet_process_id_t		 pql_id;
-	struct psc_hashent		 pql_hentry;
+	struct pfl_hashentry		 pql_hentry;
 };
 
 struct pscrpc_request {

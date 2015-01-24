@@ -106,7 +106,7 @@ struct psc_hashtbl {
 	    fmt, ...)							\
 	do {								\
 		if (sizeof(((type *)NULL)->hentmemb) !=			\
-		    sizeof(struct psc_hashent))				\
+		    sizeof(struct pfl_hashentry))				\
 			psc_fatalx("invalid hash ID field");		\
 		_psc_hashtbl_init((t), (flags), offsetof(type, idmemb),	\
 		    offsetof(type, hentmemb), (nb), (cmpf), (fmt),	\
@@ -194,10 +194,10 @@ void	*_psc_hashbkt_search(struct psc_hashtbl *,
 #define psc_hashbkt_reqlock(b)		reqlock(&(b)->phb_lock)
 #define psc_hashbkt_ureqlock(b, lk)	ureqlock(&(b)->phb_lock, (lk))
 
-struct psc_hashent {
+struct pfl_hashentry {
 	struct psc_listentry	  phe_lentry;
 };
-#define psc_hashentry psc_hashent
+#define psc_hashentry pfl_hashentry
 
 void	 psc_hashent_init(const struct psc_hashtbl *, void *);
 void	 psc_hashent_remove(struct psc_hashtbl *, void *);

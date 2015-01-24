@@ -167,7 +167,7 @@ psc_refmgr_init(struct psc_refmgr *prm, int flags, int privsiz, int nobjs,
 			pool_lentry_avail = 0;
 		} else {
 			prm->prm_hash_offset = off;
-			off += sizeof(struct psc_hashent);
+			off += sizeof(struct pfl_hashentry);
 		}
 	}
 	prm->prm_private_offset = off;

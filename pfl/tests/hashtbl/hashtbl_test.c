@@ -36,7 +36,7 @@
 #include "pfl/pfl.h"
 
 struct item {
-	struct psc_hashent	hentry;
+	struct pfl_hashentry	hentry;
 	uint64_t		id;
 };
 

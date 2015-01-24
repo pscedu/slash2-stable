@@ -52,7 +52,7 @@ struct psc_memalloc {
 	void			*pma_guardbase;		/* user alloc region */
 	size_t			 pma_userlen;
 	union {
-		struct psc_hashent	 pmau_hentry;
+		struct pfl_hashentry	 pmau_hentry;
 		struct psc_listentry	 pmau_lru_lentry;
 	} pma_u;
 #define pma_hentry	pma_u.pmau_hentry

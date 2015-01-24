@@ -206,7 +206,7 @@ struct pfl_logpoint {
 	char			*plogpt_key;
 	int			 plogpt_idx;
 	int			_pad;
-//	struct psc_hashent	 plogpt_hentry;
+//	struct pfl_hashentry	 plogpt_hentry;
 };
 
 /* Determine whether a debug/logging operation should occur. */

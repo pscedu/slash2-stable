@@ -267,7 +267,7 @@ main(int argc, char *argv[])
 	PRTYPE(struct psc_explist);
 	PRTYPE(struct psc_fault);
 	PRTYPE(struct psc_hashbkt);
-	PRTYPE(struct psc_hashent);
+	PRTYPE(struct pfl_hashentry);
 	PRTYPE(struct psc_hashtbl);
 	PRTYPE(struct psc_journal);
 	PRTYPE(struct psc_journal_cursor);

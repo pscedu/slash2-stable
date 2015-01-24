@@ -537,7 +537,7 @@ _pfl_get_logpointid(const char *fn, int line, int create)
 	b = psc_hashbkt_get(t, key);
 	pt = psc_hashbkt_search(t, b, NULL, NULL, key);
 	if (pt == NULL) {
-		pt = psc_alloc(sizeof(*pt) + sizeof(struct psc_hashent),
+		pt = psc_alloc(sizeof(*pt) + sizeof(struct pfl_hashentry),
 		    PAF_NOLOG);
 		pt->plogpt_key = key;
 		key = NULL;

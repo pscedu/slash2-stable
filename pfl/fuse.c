@@ -83,7 +83,7 @@ struct pscfs_inumcol {
 	psc_atomic32_t		 pfic_refcnt;
 	struct timeval		 pfic_extime;		/* when fuse expires it */
 	struct psc_listentry	 pfic_lentry;		/* pool */
-	struct psc_hashent	 pfic_hentry;
+	struct pfl_hashentry	 pfic_hentry;
 };
 
 static struct psc_poolmaster	 pscfs_inumcol_poolmaster;
