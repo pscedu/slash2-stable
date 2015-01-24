@@ -217,6 +217,7 @@ main(int argc, char *argv[])
 	PRTYPE(struct ifaddrs);
 	PRTYPE(struct l_wait_info);
 	PRTYPE(struct pfl_callerinfo);
+	PRTYPE(struct pfl_hashentry);
 	PRTYPE(struct pfl_heap);
 	PRTYPE(struct pfl_heap_entry);
 	PRTYPE(struct pfl_iostats);
@@ -267,7 +268,6 @@ main(int argc, char *argv[])
 	PRTYPE(struct psc_explist);
 	PRTYPE(struct psc_fault);
 	PRTYPE(struct psc_hashbkt);
-	PRTYPE(struct pfl_hashentry);
 	PRTYPE(struct psc_hashtbl);
 	PRTYPE(struct psc_journal);
 	PRTYPE(struct psc_journal_cursor);
