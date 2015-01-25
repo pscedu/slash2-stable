@@ -150,7 +150,7 @@ usocklnd_read_msg(usock_conn_t *conn, int *cont_flag)
 	int   rc = 0;
 	__u64 cookie;
 
-       *cont_flag = 0;
+	*cont_flag = 0;
 
 	/* smth. new emerged in RX part - let's process it */
 	switch (conn->uc_rx_state) {
@@ -365,9 +365,9 @@ usocklnd_read_hello(usock_conn_t *conn, int *cont_flag)
 		/* fall through */
 
 	case UC_RX_HELLO_IPS:
-		if (conn->uc_activeflag == 1) /* active conn */
+		if (conn->uc_activeflag == 1)	/* active conn */
 			rc = usocklnd_activeconn_hellorecv(conn);
-		else                          /* passive conn */
+		else				/* passive conn */
 			rc = usocklnd_passiveconn_hellorecv(conn);
 
 		break;
