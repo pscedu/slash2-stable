@@ -125,7 +125,7 @@ struct psc_atomic64 { volatile int64_t value64 __aligned(8); } __packed;
 #define psc_atomic64_sub_getnew(v, i)		psc_atomic64_add_getnew((v), -(i))
 
 static __inline int
-psc_atomic16_testmask_set(psc_atomic16_t *v, int64_t mask, int64_t newval)
+psc_atomic16_testmask_set(psc_atomic16_t *v, int16_t mask, int16_t newval)
 {
 	int16_t oldval;
 
@@ -138,7 +138,7 @@ psc_atomic16_testmask_set(psc_atomic16_t *v, int64_t mask, int64_t newval)
 }
 
 static __inline int
-psc_atomic32_testmask_set(psc_atomic32_t *v, int64_t mask, int64_t newval)
+psc_atomic32_testmask_set(psc_atomic32_t *v, int32_t mask, int32_t newval)
 {
 	int32_t oldval;
 
@@ -161,6 +161,18 @@ psc_atomic64_testmask_set(psc_atomic64_t *v, int64_t mask, int64_t newval)
 	if (psc_atomic64_cmpxchg(v, oldval, newval) != oldval)
 		return (0);
 	return (1);
+}
+
+static __inline void
+psc_atomic32_setmax(psc_atomic32_t *v, int32_t val)
+{
+	int32_t oldval;
+
+	do {
+		oldval = psc_atomic32_read(v);
+		if (val <= oldval)
+			break;
+	} while (psc_atomic32_cmpxchg(v, oldval, val) != oldval);
 }
 
 /* default width */
