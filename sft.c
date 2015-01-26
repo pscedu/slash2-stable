@@ -110,7 +110,7 @@ off_t			 seekoff;
 
 struct psc_poolmaster	 wk_poolmaster;
 struct psc_poolmgr	*wk_pool;
-struct pfl_opstat	 ist;
+struct pfl_opstat	*iostats;
 
 const char		*progname;
 
@@ -255,7 +255,7 @@ thrmain(struct psc_thread *thr)
 			f->rc = -1;
 		}
 
-		pfl_opstat_add(&ist, rc);
+		pfl_opstat_add(iostats, rc);
 
 		if (docrc) {
 			if (chunk) {
@@ -304,7 +304,7 @@ display(__unusedx struct psc_thread *thr)
 	n = 0;
 	for (;;) {
 		sleep(1);
-		psc_fmt_human(ratebuf, ist->opst_last);
+		psc_fmt_human(ratebuf, iostats->opst_last);
 		t = printf("\r%7s", ratebuf);
 		n = MAX(n - t, 0);
 		printf("%*.*s ", n, n, "");
@@ -505,7 +505,7 @@ main(int argc, char *argv[])
 	wk_pool = psc_poolmaster_getmgr(&wk_poolmaster);
 
 	pfl_opstimerthr_spawn(THRT_OPSTIMER, "opstimerthr");
-	ist = pfl_opstat_init("ist");
+	iostats = pfl_opstat_init("iostats");
 
 	thrv = PSCALLOC(sizeof(*thrv) * nthr);
 
