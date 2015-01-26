@@ -630,8 +630,8 @@ usocklnd_destroy_peer(usock_peer_t *peer)
 	}
 	LNET_UNLOCK(); 
 
-	psc_iostats_remove(&peer->up_rx_iostats);
-	psc_iostats_remove(&peer->up_tx_iostats); 
+	pfl_opstat_destroy(peer->up_iostats.rd);
+	pfl_opstat_destroy(peer->up_iostats.wr);
 
 	psc_pool_return(usk_peer_pool, peer);
 
@@ -754,10 +754,10 @@ usocklnd_create_peer(lnet_ni_t *ni, lnet_process_id_t id,
         net->un_peercount++;        
         pthread_mutex_unlock(&net->un_lock);
 
-	psc_iostats_init(&peer->up_rx_iostats, "peer-%s-rcv",
+	peer->up_iostats.rd = pfl_opstat_init("peer-%s-rcv", 
 	    libcfs_id2str(id));
-	psc_iostats_init(&peer->up_tx_iostats, "peer-%s-snd",
-	    libcfs_id2str(id));
+	peer->up_iostats.wr = pfl_opstat_init("peer-%s-snd", 
+	    libcfs_id2str(id)); 
 
         *peerp = peer;
         return 0;

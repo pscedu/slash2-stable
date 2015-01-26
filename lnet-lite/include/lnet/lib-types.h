@@ -455,8 +455,7 @@ typedef struct lnet_ni {
         cfs_time_t        ni_last_alive;        /* when I was last alive */
         lnet_ni_status_t *ni_status;            /* my health status */
         char             *ni_interfaces[LNET_MAX_INTERFACES]; /* equivalent interfaces to use */
-	struct psc_iostats ni_recv_ist;
-	struct psc_iostats ni_send_ist;
+	struct pfl_iostats_rw ni_iostats;
 } lnet_ni_t;
 
 #define LNIF_ACCEPTOR	(1 << 0)

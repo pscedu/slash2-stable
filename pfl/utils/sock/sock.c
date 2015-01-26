@@ -67,7 +67,7 @@
 #define Q		15			/* listen(2) queue length */
 #define PORT		15420			/* IPv4 port */
 
-#define THRT_TIOS	0			/* iostats timer thread type */
+#define THRT_OPSTIMER	0			/* iostats timer thread type */
 #define THRT_DISPLAY	1			/* stats displayer */
 #define THRT_RD		2
 #define THRT_WR		3
@@ -78,8 +78,8 @@ int			 peersock;
 const char		*progname;
 char			*buf;
 size_t			 bufsiz = 1024 * 1024;
-struct psc_iostats	 rdst;			/* read stats */
-struct psc_iostats	 wrst;			/* write stats */
+struct pfl_opstat	*rdst;			/* read stats */
+struct pfl_opstat	*wrst;			/* write stats */
 in_port_t		 port = PORT;
 
 void
@@ -96,7 +96,6 @@ displaythr_main(__unusedx struct psc_thread *thr)
 {
 	char ratebuf[PSCFMT_HUMAN_BUFSIZ];
 	struct psc_waitq dummy = PSC_WAITQ_INIT;
-	struct psc_iostats myist;
 	struct timespec tv;
 	int n = 0;
 
@@ -119,20 +118,14 @@ displaythr_main(__unusedx struct psc_thread *thr)
 			    "==============================\n");
 		}
 
-		memcpy(&myist, &rdst, sizeof(myist));
-		psc_fmt_human(ratebuf,
-		    psc_iostats_getintvrate(&myist, 0));
-		printf("%6.2fs\t%7s\t",
-		    psc_iostats_getintvdur(&myist, 0), ratebuf);
-		psc_fmt_human(ratebuf, myist.ist_len_total);
+		psc_fmt_human(ratebuf, rdst->opst_last);
+		printf("%7s\t", ratebuf);
+		psc_fmt_human(ratebuf, rdst->opst_lifetime);
 		printf("%7s\t\t|\t", ratebuf);
 
-		memcpy(&myist, &wrst, sizeof(myist));
-		psc_fmt_human(ratebuf,
-		    psc_iostats_getintvrate(&myist, 0));
-		printf("%6.2fs\t%7s\t",
-		    psc_iostats_getintvdur(&myist, 0), ratebuf);
-		psc_fmt_human(ratebuf, myist.ist_len_total);
+		psc_fmt_human(ratebuf, wrst->opst_last);
+		printf("%7s\t", ratebuf);
+		psc_fmt_human(ratebuf, wrst->opst_lifetime);
 		printf("%7s\n", ratebuf);
 
 		if (n > 30)
@@ -143,14 +136,14 @@ displaythr_main(__unusedx struct psc_thread *thr)
 void
 ioloop(int ioflags)
 {
-	struct psc_iostats *ist;
+	struct pfl_opstat *ist;
 	ssize_t rv;
 	fd_set set;
 	int wr;
 
 	wr = ioflags & IOF_WR;
 
-	ist = wr ? &wrst : &rdst;
+	ist = wr ? wrst : rdst;
 	for (;;) {
 		if (sel) {
 			/* Specifically test that select(2) works. */
@@ -176,7 +169,7 @@ ioloop(int ioflags)
 			psc_fatalx("%s: reached EOF", wr ? "send" : "recv");
 
 		/* tally amount transferred */
-		psc_iostats_intv_add(ist, rv);
+		pfl_opstat_add(ist, rv);
 
 		pscthr_yield();
 	}
@@ -395,10 +388,10 @@ main(int argc, char *argv[])
 
 	buf = PSCALLOC(bufsiz);
 
-	psc_iostats_init(&rdst, "read");
-	psc_iostats_init(&wrst, "write");
+	rdst = pfl_opstat_init("read");
+	wrst = pfl_opstat_init("write");
 
-	psc_tiosthr_spawn(THRT_TIOS, "tiosthr");
+	pfl_opstimerthr_spawn(THRT_OPSTIMER, "opstimerthr");
 
 	if (listenif)
 		peersock = dolisten(listenif);

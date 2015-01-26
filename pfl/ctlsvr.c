@@ -81,8 +81,6 @@ struct psc_waitq	psc_ctl_clifds_waitq = PSC_WAITQ_INIT;
 
 struct pfl_mutex	pfl_ctl_mutex = PSC_MUTEX_INIT;
 
-struct pfl_opstat	pflctl_opstats[OPSTATS_MAX];
-
 __weak size_t
 psc_multiwaitcond_nwaiters(__unusedx struct psc_multiwaitcond *m)
 {
@@ -292,7 +290,7 @@ psc_ctlrep_getsubsys(int fd, struct psc_ctlmsghdr *mh, __unusedx void *m)
 }
 
 __weak int
-psc_ctlrep_getlni(int fd, struct psc_ctlmsghdr *mh,
+psc_ctlrep_getlnetif(int fd, struct psc_ctlmsghdr *mh,
     __unusedx void *m)
 {
 	return (psc_ctlsenderr(fd, mh, "get lnet interface: %s",
@@ -391,15 +389,15 @@ psc_ctlrep_gethashtable(int fd, struct psc_ctlmsghdr *mh, void *m)
 }
 
 /**
- * psc_ctlrep_getlc - Respond to a "GETLC" inquiry.
+ * psc_ctlrep_getlistcache - Respond to a "GETLISTCACHE" inquiry.
  * @fd: client socket descriptor.
  * @mh: already filled-in control message header.
  * @m: control message to examine and reuse.
  */
 int
-psc_ctlrep_getlc(int fd, struct psc_ctlmsghdr *mh, void *m)
+psc_ctlrep_getlistcache(int fd, struct psc_ctlmsghdr *mh, void *m)
 {
-	struct psc_ctlmsg_lc *pclc = m;
+	struct psc_ctlmsg_listcache *pclc = m;
 	struct psc_listcache *lc;
 	char name[PEXL_NAME_MAX];
 	int rc, found, all;
@@ -1740,7 +1738,7 @@ psc_ctlparam_opstats(int fd, struct psc_ctlmsghdr *mh,
     __unusedx struct psc_ctlparam_node *pcn)
 {
 	int reset = 0, found = 0, rc = 1, i;
-	struct pfl_opstat *pos;
+	struct pfl_opstat *opst;
 	char buf[32];
 	long val;
 
@@ -1751,26 +1749,26 @@ psc_ctlparam_opstats(int fd, struct psc_ctlmsghdr *mh,
 
 	reset = (mh->mh_type == PCMT_SETPARAM);
 
-	for (i = 0; i < (int)nitems(pflctl_opstats); i++) {
-		pos = &pflctl_opstats[i];
-		if (pos->pos_name == NULL)
-			continue;
+	spinlock(&pfl_opstats_lock);
+	DYNARRAY_FOREACH(opst, i, &pfl_opstats)
 		if (nlevels < 2 ||
-		    strcmp(levels[1], pos->pos_name) == 0) {
+		    strcmp(levels[1], opst->opst_name) == 0) {
 			found = 1;
 
 			if (reset) {
 				errno = 0;
 				val = strtol(pcp->pcp_value, NULL, 10);
-				if (errno == ERANGE)
+				if (errno == ERANGE) {
+					freelock(&pfl_opstats_lock);
 					return (psc_ctlsenderr(fd, mh,
 					    "invalid opstat %s value: %s",
 					    levels[1], pcp->pcp_value));
-				psc_atomic64_set(&pos->pos_value, val);
+				}
+				opst->opst_lifetime = val;
 			} else {
-				levels[1] = (char *)pos->pos_name;
+				levels[1] = (char *)opst->opst_name;
 				snprintf(buf, sizeof(buf), "%"PRId64,
-				    psc_atomic64_read(&pos->pos_value));
+				    opst->opst_lifetime);
 				rc = psc_ctlmsg_param_send(fd, mh, pcp,
 				    PCTHRNAME_EVERYONE, levels, 2, buf);
 			}
@@ -1778,7 +1776,7 @@ psc_ctlparam_opstats(int fd, struct psc_ctlmsghdr *mh,
 			if (nlevels == 2)
 				break;
 		}
-	}
+	freelock(&pfl_opstats_lock);
 	if (!found && nlevels > 1)
 		return (psc_ctlsenderr(fd, mh, "%s: invalid opstat",
 		    psc_ctlparam_fieldname(pcp->pcp_field, nlevels)));
@@ -1786,42 +1784,40 @@ psc_ctlparam_opstats(int fd, struct psc_ctlmsghdr *mh,
 }
 
 /**
- * psc_ctlrep_getiostats - Respond to a "GETIOSTATS" inquiry.
+ * psc_ctlrep_getopstat - Respond to a "GETOPSTAT" inquiry.
  * @fd: client socket descriptor.
  * @mh: already filled-in control message header.
- * @m: iostats control message to be filled in and sent out.
+ * @m: opstats control message to be filled in and sent out.
  */
 int
-psc_ctlrep_getiostats(int fd, struct psc_ctlmsghdr *mh, void *m)
+psc_ctlrep_getopstat(int fd, struct psc_ctlmsghdr *mh, void *m)
 {
-	struct psc_ctlmsg_iostats *pci = m;
-	char name[IST_NAME_MAX];
-	struct psc_iostats *ist;
-	int rc, found, all;
+	struct psc_ctlmsg_opstat *pco = m;
+	struct pfl_opstat *opst;
+	char name[OPST_NAME_MAX];
+	int rc, found, all, i;
 
 	rc = 1;
 	found = 0;
-	snprintf(name, sizeof(name), "%s", pci->pci_ist.ist_name);
-	all = (strcmp(name, PCI_NAME_ALL) == 0 || strcmp(name, "") == 0);
-	PLL_LOCK(&psc_iostats);
-	psclist_for_each_entry(ist,
-	    &psc_iostats.pll_listhd, ist_lentry)
-		if (all ||
-		    fnmatch(name, ist->ist_name, 0) == 0) {
+	strlcpy(name, pco->pco_name, sizeof(name));
+	all = (strcmp(name, "") == 0);
+	spinlock(&pfl_opstats_lock);
+	DYNARRAY_FOREACH(opst, i, &pfl_opstats)
+		if (all || fnmatch(name, opst->opst_name, 0) == 0) {
 			found = 1;
 
-			pci->pci_ist = *ist; /* XXX lock? */
-			rc = psc_ctlmsg_sendv(fd, mh, pci);
+			pco->pco_opst = *opst;
+			rc = psc_ctlmsg_sendv(fd, mh, pco);
 			if (!rc)
 				break;
 
 			/* Terminate on exact match. */
-			if (strcmp(ist->ist_name, name) == 0)
+			if (strcmp(opst->opst_name, name) == 0)
 				break;
 		}
-	PLL_ULOCK(&psc_iostats);
+	freelock(&pfl_opstats_lock);
 	if (rc && !found && !all)
-		rc = psc_ctlsenderr(fd, mh, "unknown iostats: %s",
+		rc = psc_ctlsenderr(fd, mh, "unknown opstats: %s",
 		    name);
 	return (rc);
 }
@@ -2014,26 +2010,6 @@ psc_ctlrep_getjournal(int fd, struct psc_ctlmsghdr *mh, void *m)
 	}
 	PLL_ULOCK(pll);
 	return (rc);
-}
-
-int
-pfl_opstats_lookup(const char *opname)
-{
-	static psc_spinlock_t lock = SPINLOCK_INIT;
-	struct pfl_opstat *pos;
-	int i;
-
-	spinlock(&lock);
-	for (i = 0, pos = pflctl_opstats; pos->pos_name &&
-	    i < nitems(pflctl_opstats); i++, pos++)
-		if (strcmp(opname, pos->pos_name) == 0) {
-			freelock(&lock);
-			return (i);
-		}
-	psc_assert(i < nitems(pflctl_opstats));
-	pos->pos_name = opname;
-	freelock(&lock);
-	return (i);
 }
 
 /**

@@ -37,77 +37,51 @@
 #include "pfl/thread.h"
 #include "pfl/time.h"
 
-#define psc_timercmp_addsec(tvp, s, uvp, cmp)				\
-	(((tvp)->tv_sec + (s) == (uvp)->tv_sec) ?			\
-	    ((tvp)->tv_usec cmp (uvp)->tv_usec) :			\
-	    ((tvp)->tv_sec + (s) cmp (uvp)->tv_sec))
-
-struct timeval psc_tiosthr_lastv[IST_NINTV];
-
+/*
+ * Logic for recomputing instantaneous and weighted averages for opstats.
+ * The theory is, under normal operation, the number of opstats will be
+ * constant; so unless CPU is scarce, the opstats will be calculated at
+ * the same time, thus avoiding syscalls to get clock time used to
+ * measure rates.
+ */
 void
-psc_tiosthr_main(struct psc_thread *thr)
+pfl_opstimerthr_main(struct psc_thread *thr)
 {
 	struct psc_waitq dummy = PSC_WAITQ_INIT;
-	struct pfl_iostatv *istv;
-	struct psc_iostats *ist;
+	struct pfl_opstat *opst;
 	struct timespec ts;
-	struct timeval dtv, tv;
-	uint64_t intv_len;
-	int i, stoff;
+	uint64_t len;
+	int i;
 
-	PFL_GETTIMEVAL(&tv);
-	tv.tv_usec = 0;
-
+	PFL_GETTIMESPEC(&ts);
 	ts.tv_nsec = 0;
 
 	while (pscthr_run(thr)) {
-		ts.tv_sec = ++tv.tv_sec;
+		ts.tv_sec++;
 		psc_waitq_waitabs(&dummy, NULL, &ts);
 
-		/* find largest interval to update */
-		for (stoff = 0; stoff < IST_NINTV; stoff++) {
-			if (psc_timercmp_addsec(&psc_tiosthr_lastv[stoff],
-			    psc_iostat_intvs[stoff], &tv, >))
-				break;
-			psc_tiosthr_lastv[stoff] = tv;
+		spinlock(&pfl_opstats_lock);
+		DYNARRAY_FOREACH(opst, i, &pfl_opstats) {
+			/* reset instantaneous interval counter to zero */
+			len = 0;
+			len = psc_atomic64_xchg(&opst->opst_intv, len);
+
+			/* update last second rate */
+			opst->opst_last = len;
+
+			/* compute time weighted average */
+			opst->opst_avg = 9 * opst->opst_avg / 10 +
+			    len / 10;
+
+			/* add to lifetime */
+			opst->opst_lifetime += len;
 		}
-
-		/* if we woke from signal, skip */
-		if (stoff == 0)
-			continue;
-
-		PLL_LOCK(&psc_iostats);
-		PLL_FOREACH(ist, &psc_iostats)
-			for (i = 0; i < stoff; i++) {
-				istv = &ist->ist_intv[i];
-
-				/* reset counter to zero for this interval */
-				intv_len = 0;
-				intv_len = psc_atomic64_xchg(
-				    &istv->istv_cur_len, intv_len);
-
-				PFL_GETTIMEVAL(&dtv);
-
-				if (i == stoff - 1 && i < IST_NINTV - 1)
-					psc_atomic64_add(&ist->ist_intv[i +
-					    1].istv_cur_len, intv_len);
-
-				istv->istv_intv_len = intv_len;
-
-				/* calculate acculumation duration */
-				timersub(&dtv, &istv->istv_lastv,
-				    &istv->istv_intv_dur);
-				istv->istv_lastv = dtv;
-
-				if (i == 0)
-					ist->ist_len_total += intv_len;
-			}
-		PLL_ULOCK(&psc_iostats);
+		spinlock(&pfl_opstats_lock);
 	}
 }
 
 void
-psc_tiosthr_spawn(int thrtype, const char *name)
+pfl_opstimerthr_spawn(int thrtype, const char *name)
 {
-	pscthr_init(thrtype, psc_tiosthr_main, NULL, 0, name);
+	pscthr_init(thrtype, pfl_opstimerthr_main, NULL, 0, name);
 }

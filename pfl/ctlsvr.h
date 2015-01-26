@@ -66,10 +66,10 @@ struct psc_ctlparam_node;
 	{ NULL,				0 },					\
 	{ psc_ctlrep_getfault,		sizeof(struct psc_ctlmsg_fault) },	\
 	{ psc_ctlrep_gethashtable,	sizeof(struct psc_ctlmsg_hashtable) },	\
-	{ psc_ctlrep_getiostats,	sizeof(struct psc_ctlmsg_iostats) },	\
+	{ psc_ctlrep_getopstat,		sizeof(struct psc_ctlmsg_opstat) },	\
 	{ psc_ctlrep_getjournal,	sizeof(struct psc_ctlmsg_journal) },	\
-	{ psc_ctlrep_getlc,		sizeof(struct psc_ctlmsg_lc) },		\
-	{ psc_ctlrep_getlni,		sizeof(struct psc_ctlmsg_lni) },	\
+	{ psc_ctlrep_getlistcache,	sizeof(struct psc_ctlmsg_listcache) },	\
+	{ psc_ctlrep_getlnetif,		sizeof(struct psc_ctlmsg_lnetif) },	\
 	{ psc_ctlrep_getloglevel,	sizeof(struct psc_ctlmsg_loglevel) },	\
 	{ psc_ctlrep_getmeter,		sizeof(struct psc_ctlmsg_meter) },	\
 	{ psc_ctlrep_getmlist,		sizeof(struct psc_ctlmsg_mlist) },	\
@@ -104,38 +104,6 @@ struct psc_ctlop {
 	size_t	  pc_siz;
 };
 
-struct pfl_opstat {
-	const char		*pos_name;
-	psc_atomic64_t		 pos_value;
-};
-
-#define OPSTATS_MAX		256
-
-#define	OPSTAT_ADD(op, n)						\
-	do {								\
-		static int _opst_idx = -1;				\
-									\
-		if (_opst_idx == -1)					\
-			_opst_idx = pfl_opstats_lookup(op);		\
-		psc_atomic64_add(&pflctl_opstats[_opst_idx].pos_value,	\
-		    (n));						\
-	} while (0)
-
-#define	OPSTAT_INCR(op)		OPSTAT_ADD((op), 1)
-
-/* XXX race: should use cmpxchg */
-#define	OPSTAT_SET_MAX(op, value)					\
-	do {								\
-		static int _opst_idx = -1;				\
-		struct pfl_opstat *_pos;				\
-									\
-		if (_opst_idx == -1)					\
-			_opst_idx = pfl_opstats_lookup(op);		\
-		_pos = &pflctl_opstats[_opst_idx];			\
-		if ((value) > psc_atomic64_read(&_pos->pos_value))	\
-			psc_atomic64_set(&_pos->pos_value, (value));	\
-	} while (0)
-
 int	psc_ctlsenderr(int, const struct psc_ctlmsghdr *, const char *, ...);
 
 int	psc_ctlmsg_sendv(int, const struct psc_ctlmsghdr *, const void *);
@@ -143,10 +111,10 @@ int	psc_ctlmsg_send(int, int, int, size_t, const void *);
 
 int	psc_ctlrep_getfault(int, struct psc_ctlmsghdr *, void *);
 int	psc_ctlrep_gethashtable(int, struct psc_ctlmsghdr *, void *);
-int	psc_ctlrep_getiostats(int, struct psc_ctlmsghdr *, void *);
+int	psc_ctlrep_getopstat(int, struct psc_ctlmsghdr *, void *);
 int	psc_ctlrep_getjournal(int, struct psc_ctlmsghdr *, void *);
-int	psc_ctlrep_getlc(int, struct psc_ctlmsghdr *, void *);
-int	psc_ctlrep_getlni(int, struct psc_ctlmsghdr *, void *);
+int	psc_ctlrep_getlistcache(int, struct psc_ctlmsghdr *, void *);
+int	psc_ctlrep_getlnetif(int, struct psc_ctlmsghdr *, void *);
 int	psc_ctlrep_getloglevel(int, struct psc_ctlmsghdr *, void *);
 int	psc_ctlrep_getmeter(int, struct psc_ctlmsghdr *, void *);
 int	psc_ctlrep_getmlist(int, struct psc_ctlmsghdr *, void *);
@@ -206,14 +174,10 @@ void	psc_ctlthr_main(const char *, const struct psc_ctlop *, int, int);
 int	psc_ctl_applythrop(int, struct psc_ctlmsghdr *, void *, const char *,
 		int (*)(int, struct psc_ctlmsghdr *, void *, struct psc_thread *));
 
-int	pfl_opstats_lookup(const char *);
-
 typedef void (*psc_ctl_thrget_t)(struct psc_thread *, struct psc_ctlmsg_thread *);
 
 extern psc_ctl_thrget_t psc_ctl_thrgets[];
 extern int psc_ctl_nthrgets;
-
-extern struct pfl_opstat pflctl_opstats[];
 
 #define PFLCTL_SVR_DEFS							\
 int psc_ctl_nthrgets = nitems(psc_ctl_thrgets);				\

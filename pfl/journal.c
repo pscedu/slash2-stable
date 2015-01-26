@@ -124,7 +124,7 @@ psc_journal_io(struct psc_journal *pj, void *p, size_t len, off_t off,
 		    off, nb);
 	} else {
 		rc = 0;
-		psc_iostats_intv_add(rw == JIO_READ ?
+		pfl_opstat_add(rw == JIO_READ ?
 		    &pj->pj_rdist : &pj->pj_wrist, nb);
 
 		if (rw == JIO_WRITE) {
@@ -743,8 +743,8 @@ pjournal_open(const char *fn)
 		basefn++;
 	else
 		basefn = fn;
-	psc_iostats_init(&pj->pj_rdist, "jrnlrd-%s", basefn);
-	psc_iostats_init(&pj->pj_wrist, "jrnlwr-%s", basefn);
+	pfl_opstat_init(&pj->pj_iostats.rd, "jrnlrd-%s", basefn);
+	pfl_opstat_init(&pj->pj_iostats.wr, "jrnlwr-%s", basefn);
 
 	/*
 	 * O_DIRECT may impose alignment restrictions so align the

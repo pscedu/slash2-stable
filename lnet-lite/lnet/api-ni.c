@@ -1038,8 +1038,8 @@ lnet_shutdown_lndnis (void)
                         CDEBUG(D_LNI, "Removed LNI %s\n",
                                libcfs_nid2str(ni->ni_nid));
 
-		psc_iostats_remove(&ni->ni_send_ist);
-		psc_iostats_remove(&ni->ni_recv_ist);
+		pfl_opstat_destroy(ni->ni_iostats.rd);
+		pfl_opstat_destroy(ni->ni_iostats.wr);
                 LIBCFS_FREE(ni, sizeof(*ni));
 
                 LNET_LOCK();
@@ -1212,8 +1212,8 @@ lnet_startup_lndnis (void)
         while (!list_empty(&nilist)) {
                 ni = list_entry(nilist.next, lnet_ni_t, ni_list);
                 list_del(&ni->ni_list);
-		psc_iostats_remove(&ni->ni_send_ist);
-		psc_iostats_remove(&ni->ni_recv_ist);
+		pfl_opstat_destroy(ni->ni_iostats.rd);
+		pfl_opstat_destroy(ni->ni_iostats.wr); 
                 LIBCFS_FREE(ni, sizeof(*ni));
         }
 
@@ -1236,9 +1236,9 @@ pscrpc_ctlparam_lnet_port_get(char buf[PCP_VALUE_MAX])
 }
 
 int
-psc_ctlrep_getlni(int fd, struct psc_ctlmsghdr *mh, void *m)
+psc_ctlrep_getlnetif(int fd, struct psc_ctlmsghdr *mh, void *m)
 {
-	struct psc_ctlmsg_lni *pclni = m;
+	struct psc_ctlmsg_lnetif *pclni = m;
 	lnet_ni_t *ni;
 	int rc;
 

@@ -40,7 +40,7 @@ psc_ctl_thrget_t psc_ctl_thrgets[] = {
 /* CTLAC	*/ psc_ctlacthr_get,
 /* EQPOLL	*/ NULL,
 /* LNETAC	*/ NULL,
-/* TIOS		*/ NULL,
+/* OPSTIMER	*/ NULL,
 /* USKLNDPL	*/ NULL
 };
 

@@ -190,29 +190,29 @@ void
 psc_ctl_packshow_hashtable(char *table)
 {
 	struct psc_ctlmsg_hashtable *pcht;
-	int n;
+	size_t n;
 
 	pcht = psc_ctlmsg_push(PCMT_GETHASHTABLE, sizeof(*pcht));
 	if (table) {
 		n = strlcpy(pcht->pcht_name, table,
 		    sizeof(pcht->pcht_name));
-		if (n == 0 || n >= (int)sizeof(pcht->pcht_name))
+		if (n == 0 || n >= sizeof(pcht->pcht_name))
 			errx(1, "invalid hash table name: %s", table);
 	}
 }
 
 void
-psc_ctl_packshow_iostats(char *iostats)
+psc_ctl_packshow_opstat(char *opstat)
 {
-	struct psc_ctlmsg_iostats *pci;
-	int n;
+	struct psc_ctlmsg_opstat *pco;
+	size_t n;
 
-	pci = psc_ctlmsg_push(PCMT_GETIOSTATS, sizeof(*pci));
-	if (iostats) {
-		n = strlcpy(pci->pci_ist.ist_name, iostats,
-		    sizeof(pci->pci_ist.ist_name));
-		if (n == 0 || n >= (int)sizeof(pci->pci_ist.ist_name))
-			errx(1, "invalid iostats name: %s", iostats);
+	pco = psc_ctlmsg_push(PCMT_GETOPSTATS, sizeof(*pco));
+	if (opstat) {
+		n = strlcpy(pco->pco_name, opstat,
+		    sizeof(pco->pco_name));
+		if (n == 0 || n >= sizeof(pco->pco_name))
+			errx(1, "invalid opstat name: %s", opstat);
 	}
 }
 
@@ -234,10 +234,10 @@ psc_ctl_packshow_journal(char *journal)
 void
 psc_ctl_packshow_listcache(char *lc)
 {
-	struct psc_ctlmsg_lc *pclc;
+	struct psc_ctlmsg_listcache *pclc;
 	int n;
 
-	pclc = psc_ctlmsg_push(PCMT_GETLC, sizeof(*pclc));
+	pclc = psc_ctlmsg_push(PCMT_GETLISTCACHE, sizeof(*pclc));
 	if (lc) {
 		n = strlcpy(pclc->pclc_name, lc,
 		    sizeof(pclc->pclc_name));
@@ -247,11 +247,11 @@ psc_ctl_packshow_listcache(char *lc)
 }
 
 void
-psc_ctl_packshow_lni(char *lni)
+psc_ctl_packshow_lnetif(char *lni)
 {
-	struct psc_ctlmsg_lni *pclni;
+	struct psc_ctlmsg_lnetif *pclni;
 
-	pclni = psc_ctlmsg_push(PCMT_GETLNI, sizeof(*pclni));
+	pclni = psc_ctlmsg_push(PCMT_GETLNETIF, sizeof(*pclni));
 	if (lni) {
 //		n = strlcpy(pclni->pclni_name, lni,
 //		    sizeof(pclni->pclni_name));
@@ -402,7 +402,7 @@ psc_ctlparse_show(char *showspec)
 void
 psc_ctlparse_lc(char *lists)
 {
-	struct psc_ctlmsg_lc *pclc;
+	struct psc_ctlmsg_listcache *pclc;
 	char *list, *listnext;
 	int n;
 
@@ -411,7 +411,7 @@ psc_ctlparse_lc(char *lists)
 		if ((listnext = strchr(list, ',')) != NULL)
 			*listnext++ = '\0';
 
-		pclc = psc_ctlmsg_push(PCMT_GETLC, sizeof(*pclc));
+		pclc = psc_ctlmsg_push(PCMT_GETLISTCACHE, sizeof(*pclc));
 
 		n = snprintf(pclc->pclc_name, sizeof(pclc->pclc_name),
 		    "%s", list);
@@ -510,29 +510,6 @@ psc_ctlparse_pool(char *pools)
 		if (strlcpy(pcpl->pcpl_name, pool,
 		    sizeof(pcpl->pcpl_name)) >= sizeof(pcpl->pcpl_name))
 			errx(1, "invalid pool: %s", pool);
-	}
-}
-
-void
-psc_ctlparse_iostats(char *iostats)
-{
-	struct psc_ctlmsg_iostats *pci;
-	char *iostat, *next;
-	int n;
-
-	psclog_warnx("-I is deprecated, use -sI");
-	for (iostat = iostats; iostat != NULL; iostat = next) {
-		if ((next = strchr(iostat, ',')) != NULL)
-			*next++ = '\0';
-
-		pci = psc_ctlmsg_push(PCMT_GETIOSTATS, sizeof(*pci));
-
-		n = snprintf(pci->pci_ist.ist_name,
-		    sizeof(pci->pci_ist.ist_name), "%s", iostat);
-		if (n == -1)
-			psc_fatal("snprintf");
-		else if (n == 0 || n > (int)sizeof(pci->pci_ist.ist_name))
-			errx(1, "invalid iostat name: %s", iostat);
 	}
 }
 
@@ -635,46 +612,43 @@ psc_ctlmsg_subsys_check(struct psc_ctlmsghdr *mh, const void *m)
 }
 
 void
-psc_ctlmsg_iostats_prhdr(__unusedx struct psc_ctlmsghdr *mh,
+psc_ctlmsg_opstat_prhdr(__unusedx struct psc_ctlmsghdr *mh,
     __unusedx const void *m)
 {
 	printf("%-38s %13s %13s %13s\n",
-	    "I/O-stat", "rate10s", "ratecur", "total");
+	    "opstat", "rate10s", "ratecur", "total");
 }
 
 void
-psc_ctlmsg_iostats_prdat(__unusedx const struct psc_ctlmsghdr *mh,
+psc_ctlmsg_opstat_prdat(__unusedx const struct psc_ctlmsghdr *mh,
     const void *m)
 {
-	const struct psc_ctlmsg_iostats *pci = m;
-	const struct psc_iostats *ist = &pci->pci_ist;
+	const struct psc_ctlmsg_opstat *pco = m;
+	const struct pfl_opstat *opst = &pco->pco_opst;
 	char buf[PSCFMT_HUMAN_BUFSIZ];
-	int i, base10 = 0;
-	double d;
+	int  base10 = 0;
 
-	if (ist->ist_flags & PISTF_BASE10 || psc_ctl_inhuman)
+	if (opst->opst_flags & OPSTF_BASE10 || psc_ctl_inhuman)
 		base10 = 1;
 
-	printf("%-38s ", ist->ist_name);
-	for (i = IST_NINTV - 1; i >= 0; i--) {
-		d = psc_iostats_getintvrate(ist, i);
+	printf("%-38s ", opst->opst_name);
 
-		if (base10) {
-			if (i)
-				printf("%11.2f/s ", d);
-			else
-				printf("%11.0f/s ", d);
-		} else {
-			psc_fmt_human(buf, d);
-			setcolor(pfl_fmtcol_human(buf));
-			printf("%11s/s ", buf);
-			uncolor();
-		}
-	}
-	if (base10)
-		printf("%13"PRIu64, ist->ist_len_total);
-	else {
-		psc_fmt_human(buf, ist->ist_len_total);
+	if (base10) {
+		printf("%11.2f/s ", opst->opst_avg);
+		printf("%11"PRId64"/s ", opst->opst_last);
+		printf("%13"PRIu64, opst->opst_lifetime);
+	} else {
+		psc_fmt_human(buf, opst->opst_avg);
+		setcolor(pfl_fmtcol_human(buf));
+		printf("%11s/s ", buf);
+		uncolor();
+
+		psc_fmt_human(buf, opst->opst_last);
+		setcolor(pfl_fmtcol_human(buf));
+		printf("%11s/s ", buf);
+		uncolor();
+
+		psc_fmt_human(buf, opst->opst_lifetime);
 		printf("%13s", buf);
 	}
 	printf("\n");
@@ -835,7 +809,7 @@ psc_ctlmsg_pool_prdat(__unusedx const struct psc_ctlmsghdr *mh,
 }
 
 void
-psc_ctlmsg_lc_prhdr(__unusedx struct psc_ctlmsghdr *mh,
+psc_ctlmsg_listcache_prhdr(__unusedx struct psc_ctlmsghdr *mh,
     __unusedx const void *m)
 {
 	printf("%-43s %3s %8s %3s %3s %15s\n",
@@ -843,10 +817,10 @@ psc_ctlmsg_lc_prhdr(__unusedx struct psc_ctlmsghdr *mh,
 }
 
 void
-psc_ctlmsg_lc_prdat(__unusedx const struct psc_ctlmsghdr *mh,
+psc_ctlmsg_listcache_prdat(__unusedx const struct psc_ctlmsghdr *mh,
     const void *m)
 {
-	const struct psc_ctlmsg_lc *pclc = m;
+	const struct psc_ctlmsg_listcache *pclc = m;
 
 	printf("%-43s   %c "
 	    "%8"PRIu64" %3d %3d %15"PRIu64"\n",
@@ -925,7 +899,7 @@ psc_ctlmsg_thread_prdat(__unusedx const struct psc_ctlmsghdr *mh,
 }
 
 void
-psc_ctlmsg_lni_prhdr(__unusedx struct psc_ctlmsghdr *mh,
+psc_ctlmsg_lnetif_prhdr(__unusedx struct psc_ctlmsghdr *mh,
     __unusedx const void *m)
 {
 	printf("%-39s %8s %8s %8s %8s %4s\n",
@@ -933,10 +907,10 @@ psc_ctlmsg_lni_prhdr(__unusedx struct psc_ctlmsghdr *mh,
 }
 
 void
-psc_ctlmsg_lni_prdat(__unusedx const struct psc_ctlmsghdr *mh,
+psc_ctlmsg_lnetif_prdat(__unusedx const struct psc_ctlmsghdr *mh,
     const void *m)
 {
-	const struct psc_ctlmsg_lni *pclni = m;
+	const struct psc_ctlmsg_lnetif *pclni = m;
 
 	printf("%-39s %8d %8d %8d %8d %4d\n",
 	    pclni->pclni_nid, pclni->pclni_maxtxcredits,

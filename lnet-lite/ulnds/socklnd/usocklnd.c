@@ -48,10 +48,8 @@
 #include "pfl/iostats.h"
 #include "pfl/pool.h"
 
-struct psc_iostats usock_pasv_send_ist;	/* passive interface */
-struct psc_iostats usock_pasv_recv_ist;
-struct psc_iostats usock_aggr_send_ist;	/* aggregate across all interfaces */
-struct psc_iostats usock_aggr_recv_ist;
+struct pfl_iostats_rw	usock_pasv_iostats;	/* passive interface */
+struct pfl_iostats_rw	usock_aggr_iostats;	/* aggregate across all interfaces */
 
 struct psc_poolmaster usk_peer_poolmaster;
 struct psc_poolmaster usk_conn_poolmaster;
@@ -372,10 +370,10 @@ usocklnd_base_startup(void)
 
         pthread_rwlock_init(&usock_data.ud_peers_lock, NULL);
 
-	psc_iostats_init(&usock_pasv_send_ist, "lusklnd-pasv-snd");
-	psc_iostats_init(&usock_pasv_recv_ist, "lusklnd-pasv-rcv");
-	psc_iostats_init(&usock_aggr_send_ist, "lusklnd-aggr-snd");
-	psc_iostats_init(&usock_aggr_recv_ist, "lusklnd-aggr-rcv");
+	usock_pasv_iostats.wr = pfl_opstat_init("lusklnd-pasv-snd");
+	usock_pasv_iostats.rd = pfl_opstat_init("lusklnd-pasv-rcv");
+	usock_aggr_iostats.wr = pfl_opstat_init("lusklnd-aggr-snd");
+	usock_aggr_iostats.rd = pfl_opstat_init("lusklnd-aggr-rcv"); 
 
 	psc_poolmaster_init(&usk_peer_poolmaster, usock_peer_t,
 	    up_lentry, PPMF_AUTO, 32, 32, 0, NULL, NULL, NULL, "usk-peer");

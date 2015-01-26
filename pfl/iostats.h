@@ -25,8 +25,15 @@
  * %PSC_END_COPYRIGHT%
  */
 
-#ifndef _PFL_IOSTATS_H_
-#define _PFL_IOSTATS_H_
+/*
+ * Operation statistics: for various types of counters of system operation.
+ * Every second, each registered opstat is recomputed to measure
+ * instantaneous operation rates.  10-second weighted averages are also
+ * computed.
+ */
+
+#ifndef _PFL_OPSTATS_H_
+#define _PFL_OPSTATS_H_
 
 #include <sys/time.h>
 
@@ -36,71 +43,57 @@
 #include "pfl/list.h"
 #include "pfl/lockedlist.h"
 
-#define IST_NAME_MAX	64
-#define IST_NINTV	2
+#define pfl_opstat_add(opst, n)		psc_atomic64_add(&(opst)->opst_intv, (n))
 
-/*
- * XXX Need an instantaneous (accul over last second ) and an arbitrary
- * accumulator cleared by an external mechanism periodically.
- */
+#define	pfl_opstat_incr(opst, ...)	pfl_opstat_add((opst), 1)
 
-struct pfl_iostats {
-	char			ist_name[IST_NAME_MAX];
-	struct psclist_head	ist_lentry;
-	int			ist_flags;
+#define	OPSTATF_ADD(flags, name, n)					\
+	do {								\
+		static struct pfl_opstat *_opst;			\
+									\
+		if (_opst == NULL)					\
+			_opst = pfl_opstat_initf((flags), (name));	\
+		pfl_opstat_add(_opst, (n));				\
+	} while (0)
 
-	uint64_t		ist_len_total;			/* lifetime acculumator */
+#define	OPSTAT_INCR(name)	OPSTATF_ADD(OPSTF_BASE10, (name), 1)
+#define	OPSTAT_ADD(name, n)	OPSTATF_ADD(OPSTF_BASE10, (name), (n))
 
-	struct pfl_iostatv {
-		struct timeval	istv_lastv;			/* time of last accumulation */
-		psc_atomic64_t	istv_cur_len;			/* current accumulator */
+#define	OPSTAT2_ADD(name)	OPSTATF_ADD(0, (name), 1)
 
-		struct timeval	istv_intv_dur;			/* duration of accumulation */
-		uint64_t	istv_intv_len;			/* length of accumulation */
+struct pfl_opstat {
+	const char		*opst_name;
+	int			 opst_flags;
 
-	}			ist_intv[IST_NINTV];
+	uint64_t		 opst_lifetime;	/* lifetime accumulator */
+	psc_atomic64_t		 opst_intv;	/* current instantaneous interval accumulator */
+	uint64_t		 opst_last;	/* last second interval accumulator */
+	double			 opst_avg;	/* 10-second average */
 };
-#define psc_iostats pfl_iostats
 
-#define PISTF_BASE10		(1 << 0)
+#define OPSTF_BASE10		(1 << 0)
 
 struct pfl_iostats_rw {
-	struct pfl_iostats	wr;
-	struct pfl_iostats	rd;
+	struct pfl_opstat	*wr;
+	struct pfl_opstat	*rd;
 };
 
-/* graduated iostats */
+/* graduated I/O stats */
 struct pfl_iostats_grad {
-	int64_t			size;
-	struct pfl_iostats_rw	rw;
+	int64_t			 size;
+	struct pfl_iostats_rw	 rw;
 };
 
-#define psc_iostats_calcrate(len, tv)					\
-	((len) / (((tv)->tv_sec * UINT64_C(1000000) + (tv)->tv_usec) * 1e-6))
+#define pfl_opstat_init(name, ...)					\
+	pfl_opstat_initf(0, (name), ## __VA_ARGS__)
 
-#define psc_iostats_getintvrate(ist, n)					\
-	psc_iostats_calcrate((ist)->ist_intv[n].istv_intv_len,		\
-	    &(ist)->ist_intv[n].istv_intv_dur)
+void	pfl_opstat_destroy(struct pfl_opstat *);
+struct pfl_opstat *
+	pfl_opstat_initf(int, const char *, ...);
 
-#define psc_iostats_getintvdur(ist, n)					\
-	((ist)->ist_intv[n].istv_intv_dur.tv_sec +			\
-	    (ist)->ist_intv[n].istv_intv_dur.tv_usec * 1e-6)
+void	pfl_iostats_grad_init(struct pfl_iostats_grad *, int, const char *);
 
-#define psc_iostats_intv_add(ist, amt)					\
-	psc_atomic64_add(&(ist)->ist_intv[0].istv_cur_len, (amt))
+extern struct psc_dynarray	pfl_opstats;
+extern struct psc_spinlock	pfl_opstats_lock;
 
-#define psc_iostats_remove(ist)		pll_remove(&psc_iostats, (ist))
-
-#define psc_iostats_init(ist, name, ...)				\
-	psc_iostats_initf((ist), 0, (name), ## __VA_ARGS__)
-
-void psc_iostats_destroy(struct pfl_iostats *);
-void psc_iostats_initf(struct pfl_iostats *, int, const char *, ...);
-void psc_iostats_rename(struct pfl_iostats *, const char *, ...);
-
-void pfl_iostats_grad_init(struct pfl_iostats_grad *, int, const char *);
-
-extern struct psc_lockedlist	psc_iostats;
-extern int			psc_iostat_intvs[];
-
-#endif /* _PFL_IOSTATS_H_ */
+#endif /* _PFL_OPSTATS_H_ */

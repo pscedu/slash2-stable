@@ -141,8 +141,7 @@ typedef struct usock_peer_s {
         int               up_errored;      /* a flag for lnet_notify() */
         cfs_time_t        up_last_alive;   /* when the peer was last alive */
 
-	struct psc_iostats up_rx_iostats;
-	struct psc_iostats up_tx_iostats;
+	struct pfl_iostats_rw up_iostats;
 } usock_peer_t;
 
 typedef struct {
@@ -373,10 +372,8 @@ void usocklnd_rx_lnethdr_state_transition(usock_conn_t *conn);
 void usocklnd_rx_ksmhdr_state_transition(usock_conn_t *conn);
 void usocklnd_rx_skipping_state_transition(usock_conn_t *conn);
 
-extern struct psc_iostats usock_pasv_send_ist;
-extern struct psc_iostats usock_pasv_recv_ist;
-extern struct psc_iostats usock_aggr_send_ist;
-extern struct psc_iostats usock_aggr_recv_ist;
+extern struct pfl_iostats_rw	usock_pasv_iostats;
+extern struct pfl_iostats_rw	usock_aggr_iostats;
 
 extern struct psc_poolmgr *usk_peer_pool;
 extern struct psc_poolmgr *usk_conn_pool;

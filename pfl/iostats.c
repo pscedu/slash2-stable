@@ -29,76 +29,51 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "pfl/lockedlist.h"
-#include "pfl/time.h"
+#include "pfl/alloc.h"
 #include "pfl/iostats.h"
+#include "pfl/lockedlist.h"
 #include "pfl/log.h"
+#include "pfl/str.h"
+#include "pfl/time.h"
 
-struct psc_lockedlist	psc_iostats =
-    PLL_INIT(&psc_iostats, struct psc_iostats, ist_lentry);
+struct psc_spinlock	pfl_opstats_lock = SPINLOCK_INIT;
+struct psc_dynarray	pfl_opstats = DYNARRAY_INIT;
 
-/*
- * I/O statistic interval lengths:
- *	(o) values are in seconds,
- *	(o) must be even divisors and multipliers of each other, and
- *	(o) must be sorted by increasing lengths (1,2,3) not (3,2,1).
- */
-int psc_iostat_intvs[] = {
-	1,
-	10
-};
-
-void
-psc_iostats_initf(struct psc_iostats *ist, int flags, const char *fmt,
-    ...)
+struct pfl_opstat *
+pfl_opstat_initf(int flags, const char *namefmt, ...)
 {
-	struct timeval tv;
+	static psc_spinlock_t lock = SPINLOCK_INIT;
+	struct pfl_opstat *opst;
 	va_list ap;
-	int i, rc;
+	char *name;
+	int i;
 
-	memset(ist, 0, sizeof(*ist));
-	INIT_PSC_LISTENTRY(&ist->ist_lentry);
-	ist->ist_flags = flags;
-
-	va_start(ap, fmt);
-	rc = vsnprintf(ist->ist_name, sizeof(ist->ist_name), fmt, ap);
+	va_start(ap, namefmt);
+	pfl_vasprintf(&name, namefmt, ap);
 	va_end(ap);
-	if (rc == -1 || rc >= (int)sizeof(ist->ist_name))
-		psc_fatal("vsnprintf");
 
-	PFL_GETTIMEVAL(&tv);
-
-	for (i = 0; i < IST_NINTV; i++) {
-		ist->ist_intv[i].istv_lastv = tv;
-		ist->ist_intv[i].istv_intv_dur.tv_sec = 1;
-		psc_atomic64_init(&ist->ist_intv[i].istv_cur_len);
-	}
-
-	pll_add(&psc_iostats, ist);
+	spinlock(&lock);
+	DYNARRAY_FOREACH(opst, i, &pfl_opstats)
+		if (strcmp(name, opst->opst_name) == 0) {
+			freelock(&lock);
+			PSCFREE(name);
+			return (opst);
+		}
+	opst = PSCALLOC(sizeof(*opst));
+	opst->opst_name = name;
+	opst->opst_flags = flags;
+	psc_dynarray_add(&pfl_opstats, opst);
+	freelock(&lock);
+	return (opst);
 }
 
 void
-psc_iostats_rename(struct psc_iostats *ist, const char *fmt, ...)
+pfl_opstat_destroy(struct pfl_opstat *opst)
 {
-	va_list ap;
-	int rc;
-
-	PLL_LOCK(&psc_iostats);
-
-	va_start(ap, fmt);
-	rc = vsnprintf(ist->ist_name, sizeof(ist->ist_name), fmt, ap);
-	va_end(ap);
-
-	PLL_ULOCK(&psc_iostats);
-
-	if (rc == -1 || rc >= (int)sizeof(ist->ist_name))
-		psc_fatal("vsnprintf");
-}
-
-void
-psc_iostats_destroy(struct psc_iostats *ist)
-{
-	pll_remove(&psc_iostats, ist);
+	spinlock(&pfl_opstats_lock);
+	psc_dynarray_remove(&pfl_opstats, opst);
+	freelock(&pfl_opstats_lock);
+	PSCFREE(opst);
 }
 
 void
@@ -107,6 +82,7 @@ pfl_iostats_grad_init(struct pfl_iostats_grad *ist0, int flags,
 {
 	const char *suf, *nsuf, *mode = "rd";
 	struct pfl_iostats_grad *ist;
+	struct pfl_opstat **opst;
 	uint64_t sz, nsz;
 	int i;
 
@@ -121,15 +97,17 @@ pfl_iostats_grad_init(struct pfl_iostats_grad *ist0, int flags,
 				nsuf = "M";
 				nsz = 1;
 			}
-			psc_iostats_initf(i ? &ist->rw.wr : &ist->rw.rd,
-			    flags, "%s-%s:%d%s-<%d%s", prefix, mode, sz,
-			    suf, nsz, nsuf);
+			opst = i ? &ist->rw.wr : &ist->rw.rd;
+			*opst = pfl_opstat_initf(flags,
+			    "%s-%s:%d%s-<%d%s", prefix, mode, sz, suf,
+			    nsz, nsuf);
 
 			suf = "K";
 		}
 
-		psc_iostats_initf(i ? &ist->rw.wr : &ist->rw.rd, flags,
-		    "%s-%s:>=%d%s", prefix, mode, sz, nsuf);
+		opst = i ? &ist->rw.wr : &ist->rw.rd;
+		*opst = pfl_opstat_initf(flags, "%s-%s:>=%d%s", prefix,
+		    mode, sz, nsuf);
 
 		mode = "wr";
 	}

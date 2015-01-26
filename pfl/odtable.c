@@ -203,7 +203,7 @@ _pfl_odt_doput(struct pfl_odt *t, struct pfl_odt_receipt *r,
 	if (t->odt_ops.odtop_write)
 		t->odt_ops.odtop_write(t, p, f, r->odtr_elem);
 
-	psc_iostats_intv_add(&t->odt_iostats.wr, h->odth_slotsz);
+	pfl_opstat_add(t->odt_iostats.wr, h->odth_slotsz);
 
 	if (h->odth_options & ODTBL_OPT_SYNC)
 		t->odt_ops.odtop_sync(t, r->odtr_elem);
@@ -302,7 +302,7 @@ pfl_odt_getslot(struct pfl_odt *t, const struct pfl_odt_receipt *r,
 		t->odt_ops.odtop_read(t, r, p ? *p : NULL,
 		    fp ? *fp : NULL);
 
-	psc_iostats_intv_add(&t->odt_iostats.rd, h->odth_slotsz);
+	pfl_opstat_add(t->odt_iostats.rd, h->odth_slotsz);
 
 	ODT_STAT_INCR(t, read);
 }
@@ -364,8 +364,8 @@ pfl_odt_create(const char *fn, size_t nelems, size_t objsz,
 	snprintf(t->odt_name, sizeof(t->odt_name), "%s",
 	    pfl_basename(fn));
 
-	psc_iostats_init(&t->odt_iostats.rd, "odt-%s-rd", t->odt_name);
-	psc_iostats_init(&t->odt_iostats.wr, "odt-%s-wr", t->odt_name);
+	t->odt_iostats.rd = pfl_opstat_init("odt-%s-rd", t->odt_name);
+	t->odt_iostats.wr = pfl_opstat_init("odt-%s-wr", t->odt_name);
 
 	h = PSCALLOC(sizeof(*h));
 	memset(h, 0, sizeof(*h));
@@ -409,8 +409,8 @@ pfl_odt_load(struct pfl_odt **tp, struct pfl_odt_ops *odtops, int oflg,
 	vsnprintf(t->odt_name, sizeof(t->odt_name), fmt, ap);
 	va_end(ap);
 
-	psc_iostats_init(&t->odt_iostats.rd, "odt-%s-rd", t->odt_name);
-	psc_iostats_init(&t->odt_iostats.wr, "odt-%s-wr", t->odt_name);
+	t->odt_iostats.rd = pfl_opstat_init("odt-%s-rd", t->odt_name);
+	t->odt_iostats.wr = pfl_opstat_init("odt-%s-wr", t->odt_name);
 
 	h = t->odt_hdr = PSCALLOC(sizeof(*h));
 
@@ -494,8 +494,8 @@ pfl_odt_release(struct pfl_odt *t)
 
 	PSCFREE(t->odt_hdr);
 
-	psc_iostats_destroy(&t->odt_iostats.rd);
-	psc_iostats_destroy(&t->odt_iostats.wr);
+	pfl_opstat_destroy(t->odt_iostats.rd);
+	pfl_opstat_destroy(t->odt_iostats.wr);
 
 	PSCFREE(t);
 }

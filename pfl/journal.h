@@ -144,8 +144,7 @@ struct psc_journal {
 	psc_distill_handler_t		 pj_distill_handler;
 	int				 pj_fd;			/* file descriptor to backing disk file */
 
-	struct psc_iostats		 pj_rdist;		/* read I/O stats */
-	struct psc_iostats		 pj_wrist;		/* write I/O stats */
+	struct pfl_iostats_rw		 pj_iostats;		/* read/write I/O stats */
 };
 
 #define PJF_NONE			0

@@ -78,8 +78,10 @@ struct psc_ctlmsg_hashtable {
 	char			pcht_name[PSC_HTNAME_MAX];
 };
 
-struct psc_ctlmsg_iostats {
-	struct psc_iostats	pci_ist;
+#define OPST_NAME_MAX 64
+struct psc_ctlmsg_opstat {
+	char			pco_name[OPST_NAME_MAX];
+	struct pfl_opstat	pco_opst;
 };
 
 #define PCI_NAME_ALL		"all"
@@ -102,7 +104,7 @@ struct psc_ctlmsg_journal {
 	uint64_t		pcj_wraparound;
 };
 
-struct psc_ctlmsg_lc {
+struct psc_ctlmsg_listcache {
 	char			pclc_name[PEXL_NAME_MAX];
 	uint64_t		pclc_size;	/* #items on list */
 	uint64_t		pclc_nseen;	/* max #items list can attain */
@@ -113,7 +115,7 @@ struct psc_ctlmsg_lc {
 
 #define PCLC_NAME_ALL		"all"
 
-struct psc_ctlmsg_lni {
+struct psc_ctlmsg_lnetif {
 	char			pclni_nid[PSCRPC_NIDSTR_SIZE];
 	int32_t			pclni_maxtxcredits;
 	int32_t			pclni_txcredits;
@@ -224,10 +226,10 @@ enum {
 	PCMT_ERROR = 0,
 	PCMT_GETFAULT,
 	PCMT_GETHASHTABLE,
-	PCMT_GETIOSTATS,
+	PCMT_GETOPSTATS,
 	PCMT_GETJOURNAL,
-	PCMT_GETLC,
-	PCMT_GETLNI,
+	PCMT_GETLISTCACHE,
+	PCMT_GETLNETIF,
 	PCMT_GETLOGLEVEL,
 	PCMT_GETMETER,
 	PCMT_GETMLIST,

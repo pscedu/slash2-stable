@@ -365,9 +365,9 @@ usocklnd_read_hello(usock_conn_t *conn, int *cont_flag)
 		/* fall through */
 
 	case UC_RX_HELLO_IPS:
-		if (conn->uc_activeflag == 1)	/* active conn */
+		if (conn->uc_activeflag == 1) /* active conn */
 			rc = usocklnd_activeconn_hellorecv(conn);
-		else				/* passive conn */
+		else                          /* passive conn */
 			rc = usocklnd_passiveconn_hellorecv(conn);
 
 		break;
@@ -942,6 +942,7 @@ usocklnd_send_tx(usock_conn_t *conn, usock_tx_t *tx)
 	struct iovec *iov;
 	int           nob;
 	struct lnet_xport *lx = conn->uc_lx;
+	struct pfl_opstat *opst;
 	cfs_time_t    t;
 
 	LASSERT (tx->tx_resid != 0);
@@ -957,13 +958,16 @@ usocklnd_send_tx(usock_conn_t *conn, usock_tx_t *tx)
 		if (nob <= 0) /* write queue is flow-controlled or error */
 			return nob;
 
-		psc_iostats_intv_add(
-		    peer && peer->up_ni ? &peer->up_ni->ni_send_ist :
-		    (conn->uc_ni ? &conn->uc_ni->ni_send_ist :
-		     &usock_pasv_send_ist), nob);
+		if (peer && peer->up_ni)
+			opst = peer->up_ni->ni_iostats.wr;
+		else if (conn->uc_ni)
+			opst = conn->uc_ni->ni_iostats.wr;
+		else
+			opst = usock_pasv_iostats.wr;
+		pfl_opstat_add(opst, nob);
 		if (peer)
-			psc_iostats_intv_add(&peer->up_tx_iostats, nob);
-		psc_iostats_intv_add(&usock_aggr_send_ist, nob);
+			pfl_opstat_add(peer->up_iostats.wr, nob);
+		pfl_opstat_add(usock_aggr_iostats.wr, nob);
 
 		LASSERT (nob <= tx->tx_resid);
 		tx->tx_resid -= nob;
@@ -1000,6 +1004,7 @@ usocklnd_send_tx(usock_conn_t *conn, usock_tx_t *tx)
 int
 usocklnd_read_data(usock_conn_t *conn)
 {
+	struct pfl_opstat *opst;
 	struct iovec *iov;
 	int           nob;
 	cfs_time_t    t;
@@ -1018,13 +1023,16 @@ usocklnd_read_data(usock_conn_t *conn)
 			return nob;
 		}
 
-		psc_iostats_intv_add(
-		    peer && peer->up_ni ? &peer->up_ni->ni_recv_ist :
-		    (conn->uc_ni ? &conn->uc_ni->ni_recv_ist :
-		     &usock_pasv_recv_ist), nob);
+		if (peer && peer->up_ni)
+			opst = peer->up_ni->ni_iostats.rd;
+		else if (conn->uc_ni)
+			opst = conn->uc_ni->ni_iostats.rd;
+		else
+			opst = usock_pasv_iostats.rd;
+		pfl_opstat_add(opst, nob);
 		if (peer)
-			psc_iostats_intv_add(&peer->up_rx_iostats, nob);
-		psc_iostats_intv_add(&usock_aggr_recv_ist, nob);
+			pfl_opstat_add(peer->up_iostats.rd, nob);
+		pfl_opstat_add(usock_aggr_iostats.rd, nob);
 
 		LASSERT (nob <= conn->uc_rx_nob_wanted);
 		conn->uc_rx_nob_wanted -= nob;
