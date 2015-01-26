@@ -32,6 +32,7 @@ struct fuse_req {
 	struct fuse_ll *f;
 	uint64_t unique;
 	int ctr;
+	__u32 opcode;
 	pthread_mutex_t lock;
 	struct fuse_ctx ctx;
 	struct fuse_chan *ch;

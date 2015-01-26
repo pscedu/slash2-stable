@@ -187,7 +187,8 @@ int fuse_send_reply_iov_nofree(fuse_req_t req, int error, struct iovec *iov,
 	struct fuse_out_header out;
 
 	if (error <= -1000 || error > 0) {
-		fprintf(stderr, "fuse: bad error value: %i\n",	error);
+		fprintf(stderr, "fuse: bad error value: %i; op=%d\n",
+		    error, req->opcode);
 		error = -ERANGE;
 	}
 
@@ -2389,6 +2390,7 @@ static void fuse_ll_process_buf(void *data, const struct fuse_buf *buf,
 		goto clear_pipe;
 	}
 
+	req->opcode = in->opcode;
 	req->unique = in->unique;
 	req->ctx.uid = in->uid;
 	req->ctx.gid = in->gid;
