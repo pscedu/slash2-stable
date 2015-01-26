@@ -59,7 +59,7 @@
 #define	OPSTAT_INCR(name)	OPSTATF_ADD(OPSTF_BASE10, (name), 1)
 #define	OPSTAT_ADD(name, n)	OPSTATF_ADD(OPSTF_BASE10, (name), (n))
 
-#define	OPSTAT2_ADD(name)	OPSTATF_ADD(0, (name), 1)
+#define	OPSTAT2_ADD(name, n)	OPSTATF_ADD(0, (name), (n))
 
 struct pfl_opstat {
 	const char		*opst_name;

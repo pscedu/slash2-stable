@@ -125,7 +125,7 @@ psc_journal_io(struct psc_journal *pj, void *p, size_t len, off_t off,
 	} else {
 		rc = 0;
 		pfl_opstat_add(rw == JIO_READ ?
-		    &pj->pj_rdist : &pj->pj_wrist, nb);
+		    pj->pj_iostats.rd : pj->pj_iostats.wr, nb);
 
 		if (rw == JIO_WRITE) {
 			PFL_GETTIMESPEC(&ts[0]);
@@ -743,8 +743,8 @@ pjournal_open(const char *fn)
 		basefn++;
 	else
 		basefn = fn;
-	pfl_opstat_init(&pj->pj_iostats.rd, "jrnlrd-%s", basefn);
-	pfl_opstat_init(&pj->pj_iostats.wr, "jrnlwr-%s", basefn);
+	pj->pj_iostats.rd = pfl_opstat_init("jrnlrd-%s", basefn);
+	pj->pj_iostats.wr = pfl_opstat_init("jrnlwr-%s", basefn);
 
 	/*
 	 * O_DIRECT may impose alignment restrictions so align the
