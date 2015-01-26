@@ -31,6 +31,7 @@
 #include <ctype.h>
 #include <err.h>
 #include <fcntl.h>
+#include <gcrypt.h>
 #include <limits.h>
 #include <sched.h>
 #include <stdio.h>
@@ -55,9 +56,28 @@
 #include "pfl/types.h"
 #include "pfl/walk.h"
 
-#define THRT_TIOS		0	/* timed I/O stats */
+GCRY_THREAD_OPTION_PTHREAD_IMPL;
+
+#define THRT_OPSTIMER		0	/* timed opstats */
 
 #define NTHR_AUTO		(-1)
+
+#define CKSUM_BUFSZ		64
+
+#define CKSUMT_CRC		0
+#define CKSUMT_MD5		1
+
+const char *sft_algs[] = {
+	"crc",
+	"md5",
+};
+
+struct cksum {
+	uint64_t		 crc;
+	gcry_md_hd_t		 md;
+	char			 buf[CKSUM_BUFSZ];
+	int			 gcry_alg;
+};
 
 struct file {
 	psc_spinlock_t		 lock;
@@ -67,30 +87,30 @@ struct file {
 	int			 done;
 	int			 refcnt;
 	int			 rc;	/* file return code */
+	struct cksum		 cksum;
 };
-
 
 struct wk {
 	struct psc_listentry	 lentry;
 	struct file		*f;
 	int64_t			 chunkid;
-	size_t			 off;
+	int64_t			 off;
 	ssize_t			 len;
 };
 
+int			 sft_alg = CKSUMT_CRC;
 int			 docrc;
-uint64_t		 writesz;
+int64_t			 writesz;
 int			 chunk;
 int			 verbose;
 int			 checkzero;
 int			 nthr = 1;
 ssize_t			 bufsz = 32 * 1024;
-uint64_t		 filecrc;
 off_t			 seekoff;
 
 struct psc_poolmaster	 wk_poolmaster;
 struct psc_poolmgr	*wk_pool;
-struct psc_iostats	 ist;
+struct pfl_opstat	*iostats;
 
 const char		*progname;
 
@@ -108,6 +128,63 @@ struct psc_listcache	 wkq;
 		funlockfile(stdout);					\
 	} while (0)
 
+void
+cksum_init(struct cksum *c)
+{
+	gcry_error_t error;
+
+	switch (sft_alg) {
+	case CKSUMT_CRC:
+		psc_crc64_init(&c->crc);
+		break;
+	case CKSUMT_MD5:
+		error = gcry_md_open(&c->md, c->gcry_alg, 0);
+		if (error)
+			errx(1, "%s", gpg_strerror(error));
+		c->gcry_alg = GCRY_MD_MD5;
+		break;
+	}
+}
+
+void
+cksum_add(struct cksum *c, void *buf, size_t len)
+{
+	switch (sft_alg) {
+	case CKSUMT_CRC:
+		psc_crc64_add(&c->crc, buf, len);
+		break;
+	case CKSUMT_MD5:
+		gcry_md_write(c->md, buf, len);
+		break;
+	}
+}
+
+void
+cksum_fini(struct cksum *c)
+{
+	unsigned char *p;
+	int i, len;
+
+	switch (sft_alg) {
+	case CKSUMT_CRC:
+		psc_crc64_fini(&c->crc);
+		snprintf(c->buf, sizeof(c->buf), "%"PSCPRIxCRC64,
+		    c->crc);
+		break;
+	case CKSUMT_MD5:
+		gcry_md_final(c->md);
+		len = gcry_md_get_algo_dlen(c->gcry_alg);
+		p = gcry_md_read(c->md, c->gcry_alg);
+		for (i = 0; i < len; p++) {
+			c->buf[i++] = '0' + ((*p & 0xf0) >> 8);
+			c->buf[i++] = '0' + (*p & 0xf);
+		}
+		c->buf[i] = '\0';
+		gcry_md_close(c->md);
+		break;
+	}
+}
+
 int
 file_close(struct file *f)
 {
@@ -118,11 +195,10 @@ file_close(struct file *f)
 	}
 
 	if (docrc && !chunk && !f->rc) {
-		psc_crc64_fini(&filecrc);
+		cksum_fini(&f->cksum);
 
 		lock_output();
-		printf("F '%s' CRC=%"PSCPRIxCRC64"\n",
-		    f->fn, filecrc);
+		printf("F '%s' %s\n", f->fn, f->cksum.buf);
 		unlock_output();
 	}
 
@@ -136,9 +212,9 @@ void
 thrmain(struct psc_thread *thr)
 {
 	int save_errno;
+	struct cksum cksum;
 	struct file *f;
 	struct wk *wk;
-	uint64_t crc;
 	ssize_t rc;
 	char *buf;
 
@@ -153,6 +229,7 @@ thrmain(struct psc_thread *thr)
 			break;
 		f = wk->f;
 
+ nextchunk:
 		if (writesz)
 			rc = pwrite(f->fd, buf, wk->len, wk->off);
 		else
@@ -178,21 +255,31 @@ thrmain(struct psc_thread *thr)
 			f->rc = -1;
 		}
 
-		psc_iostats_intv_add(&ist, rc);
+		pfl_opstat_add(iostats, rc);
 
 		if (docrc) {
 			if (chunk) {
-				psc_crc64_calc(&crc, buf, rc);
+				cksum_init(&cksum);
+				cksum_add(&cksum, buf, rc);
+				cksum_fini(&cksum);
 
 				lock_output();
-				printf("F '%s' %5zd %c "
-				    "CRC=%"PSCPRIxCRC64"\n",
+				printf("F '%s' %5zd %c %s\n",
 				    f->fn, wk->chunkid,
 				    checkzero && pfl_memchk(buf, 0, rc) ?
-				    'Z' : ' ', crc);
+				    'Z' : ' ', cksum.buf);
 				unlock_output();
 			} else {
-				psc_crc64_add(&filecrc, buf, rc);
+				cksum_add(&f->cksum, buf, rc);
+				wk->off += wk->len;
+				if (wk->off < f->stb.st_size) {
+					wk->chunkid++;
+					if (wk->off + wk->len >
+					    f->stb.st_size)
+						wk->len = f->stb.st_size %
+						    bufsz;
+					goto nextchunk;
+				}
 			}
 		}
 
@@ -206,7 +293,6 @@ void
 display(__unusedx struct psc_thread *thr)
 {
 	char ratebuf[PSCFMT_HUMAN_BUFSIZ];
-	struct psc_iostats myist;
 	int n, t;
 
 	n = printf("%8s %7s", "time (s)", "rate");
@@ -218,12 +304,8 @@ display(__unusedx struct psc_thread *thr)
 	n = 0;
 	for (;;) {
 		sleep(1);
-		memcpy(&myist, &ist, sizeof(myist));
-		psc_fmt_human(ratebuf,
-		    psc_iostats_getintvrate(&myist, 0));
-		t = printf("\r%7.3fs %7s",
-		    psc_iostats_getintvdur(&myist, 0),
-		    ratebuf);
+		psc_fmt_human(ratebuf, iostats->opst_last);
+		t = printf("\r%7s", ratebuf);
 		n = MAX(n - t, 0);
 		printf("%*.*s ", n, n, "");
 		n = t;
@@ -306,6 +388,8 @@ proc(const char *fn, const struct stat *stb, int info,
 	}
 
 	f = PSCALLOC(sizeof(*f));
+	if (docrc && !chunk)
+		cksum_init(&f->cksum);
 	INIT_SPINLOCK(&f->lock);
 	f->fn = strdup(fn);
 	if (writesz)
@@ -321,10 +405,13 @@ proc(const char *fn, const struct stat *stb, int info,
 		f->stb.st_size = writesz;
 
 	for (chunkid = 0, off = seekoff;
-	    off < f->stb.st_size; off += bufsz)
+	    off < f->stb.st_size; off += bufsz) {
 		addwk(f, off, chunkid++,
 		    off + bufsz > f->stb.st_size ?
 		    f->stb.st_size % bufsz : bufsz);
+		if (docrc && !chunk)
+			break;
+	}
 
 	spinlock(&f->lock);
 	f->done = 1;
@@ -342,9 +429,14 @@ main(int argc, char *argv[])
 	struct psc_thread **thrv;
 	char *endp;
 
+	gcry_control(GCRYCTL_SET_THREAD_CBS, &gcry_threads_pthread);
+	if (!gcry_check_version(GCRYPT_VERSION))
+		errx(1, "libgcrypt version mismatch");
+	gcry_control(GCRYCTL_INITIALIZATION_FINISHED, 0);
+
 	pfl_init();
 	progname = argv[0];
-	while ((c = getopt(argc, argv, "Bb:cKO:RTt:vw:Z")) != -1)
+	while ((c = getopt(argc, argv, "Bb:cD:KO:RTt:vw:Z")) != -1)
 		switch (c) {
 		case 'B': /* display bandwidth */
 			displaybw = 1;
@@ -355,12 +447,15 @@ main(int argc, char *argv[])
 				errx(1, "%s: %s", optarg, strerror(
 				    bufsz ? -bufsz : EINVAL));
 			break;
-		case 'c': /* perform CRC of entire file */
+		case 'c': /* perform checksums */
 			docrc = 1;
-			psc_crc64_init(&filecrc);
+			break;
+		case 'D': /* digest */
+			docrc = 1;
 			break;
 		case 'K': /* report checksum of each file chunk */
 			chunk = 1;
+			docrc = 1;
 			break;
 		case 'O': /* offset */
 			seekoff = pfl_humantonum(optarg);
@@ -385,8 +480,10 @@ main(int argc, char *argv[])
 			verbose = 1;
 			break;
 		case 'w': /* write */
-			writesz = strtol(optarg, &endp, 10);
-			/* XXX check */
+			writesz = pfl_humantonum(optarg);
+			if (writesz <= 0)
+				errx(1, "%s: %s", optarg, strerror(
+				    writesz ? -writesz : EINVAL));
 			break;
 		case 'Z': /* report if file chunk is all zeroes */
 			checkzero = 1;
@@ -399,9 +496,6 @@ main(int argc, char *argv[])
 	if (argc == 0)
 		usage();
 
-	if (nthr && docrc && !chunk)
-		errx(1, "cannot parallelize filewide CRC");
-
 	if (displaybw)
 		pscthr_init(0, display, NULL, 0, "disp");
 
@@ -410,8 +504,8 @@ main(int argc, char *argv[])
 	    0, nthr, nthr, 0, NULL, NULL, NULL, "wk");
 	wk_pool = psc_poolmaster_getmgr(&wk_poolmaster);
 
-	psc_tiosthr_spawn(THRT_TIOS, "tiosthr");
-	psc_iostats_init(&ist, "ist");
+	pfl_opstimerthr_spawn(THRT_OPSTIMER, "opstimerthr");
+	iostats = pfl_opstat_init("iostats");
 
 	thrv = PSCALLOC(sizeof(*thrv) * nthr);
 

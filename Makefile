@@ -26,6 +26,6 @@ ifdef QK
 MODULES+=	mpi qk
 endif
 
-MODULES+=	pfl str pthread
+MODULES+=	pfl str pthread gcrypt
 
 include ${MAINMK}
