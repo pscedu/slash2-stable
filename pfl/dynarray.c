@@ -251,7 +251,7 @@ psc_dynarray_removeitem(struct psc_dynarray *pda, const void *item)
  * @pda: dynamic array to splice.
  * @off: offset into array to begin splice.
  * @nrmv: number of items to remove.
- * @base: start array to splice into
+ * @base: start array to splice from.
  * @nadd: number of new items to splice into the array.
  */
 int
