@@ -76,7 +76,7 @@ pfl_opstimerthr_main(struct psc_thread *thr)
 			/* add to lifetime */
 			opst->opst_lifetime += len;
 		}
-		spinlock(&pfl_opstats_lock);
+		freelock(&pfl_opstats_lock);
 	}
 }
 
