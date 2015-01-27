@@ -1792,22 +1792,24 @@ psc_ctlparam_opstats(int fd, struct psc_ctlmsghdr *mh,
 int
 psc_ctlrep_getopstat(int fd, struct psc_ctlmsghdr *mh, void *m)
 {
-	struct psc_ctlmsg_opstat *pco = m;
+	struct psc_ctlmsg_opstat *pcop = m;
 	struct pfl_opstat *opst;
 	char name[OPST_NAME_MAX];
 	int rc, found, all, i;
 
 	rc = 1;
 	found = 0;
-	strlcpy(name, pco->pco_name, sizeof(name));
+	strlcpy(name, pcop->pco_name, sizeof(name));
 	all = (strcmp(name, "") == 0);
 	spinlock(&pfl_opstats_lock);
 	DYNARRAY_FOREACH(opst, i, &pfl_opstats)
 		if (all || fnmatch(name, opst->opst_name, 0) == 0) {
 			found = 1;
 
-			pco->pco_opst = *opst;
-			rc = psc_ctlmsg_sendv(fd, mh, pco);
+			pcop->pco_opst = *opst;
+			strlcpy(pcop->pco_name, opst->opst_name,
+			    sizeof(pcop->pco_name));
+			rc = psc_ctlmsg_sendv(fd, mh, pcop);
 			if (!rc)
 				break;
 
