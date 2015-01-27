@@ -1,7 +1,7 @@
 # $Id$
 # %PSC_START_COPYRIGHT%
 # -----------------------------------------------------------------------------
-# Copyright (c) 2010-2011, Pittsburgh Supercomputing Center (PSC).
+# Copyright (c) 2010-2014, Pittsburgh Supercomputing Center (PSC).
 #
 # Permission to use, copy, modify, and distribute this software
 # for any purpose with or without fee is hereby granted, provided
