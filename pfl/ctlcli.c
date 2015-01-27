@@ -631,7 +631,7 @@ psc_ctlmsg_opstat_prdat(__unusedx const struct psc_ctlmsghdr *mh,
 	if (opst->opst_flags & OPSTF_BASE10 || psc_ctl_inhuman)
 		base10 = 1;
 
-	printf("%-38s ", opst->opst_name);
+	printf("%-38s ", pco->pco_name);
 
 	if (base10) {
 		printf("%11.2f/s ", opst->opst_avg);
