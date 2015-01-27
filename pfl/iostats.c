@@ -39,6 +39,14 @@
 struct psc_spinlock	pfl_opstats_lock = SPINLOCK_INIT;
 struct psc_dynarray	pfl_opstats = DYNARRAY_INIT;
 
+int
+_pfl_opstat_cmp(const void *a, const void *b)
+{
+	const struct pfl_opstat *x = a, *y = b;
+
+	return (strcmp(x->opst_name, y->opst_name));
+}
+
 struct pfl_opstat *
 pfl_opstat_initf(int flags, const char *namefmt, ...)
 {
@@ -46,7 +54,7 @@ pfl_opstat_initf(int flags, const char *namefmt, ...)
 	struct pfl_opstat *opst;
 	va_list ap;
 	char *name;
-	int i;
+	int i, pos;
 
 	va_start(ap, namefmt);
 	pfl_vasprintf(&name, namefmt, ap);
@@ -62,7 +70,8 @@ pfl_opstat_initf(int flags, const char *namefmt, ...)
 	opst = PSCALLOC(sizeof(*opst));
 	opst->opst_name = name;
 	opst->opst_flags = flags;
-	psc_dynarray_add(&pfl_opstats, opst);
+	pos = psc_dynarray_bsearch(&pfl_opstats, opst, _pfl_opstat_cmp);
+	psc_dynarray_splice(&pfl_opstats, pos, 0, &opst, 1);
 	freelock(&lock);
 	return (opst);
 }
