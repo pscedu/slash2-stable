@@ -12,7 +12,7 @@ my @ign = (
 	[ qw(_?psc_waitq_waitrel _lc_get pfl_wkthr_main _pscthr_begin) ],
 	[ qw(_?psc_waitq_waitrel psc_ctlthr_mainloop) ],
 	[ qw(_?psc_waitq_waitrel pscfs_fuse_listener_loop) ],
-	[ qw(_psc_waitq_waitabs psc_tiosthr_main _pscthr_begin) ],
+	[ qw(_psc_waitq_waitabs pfl_opstimerthr_main _pscthr_begin) ],
 	[ qw(_psc_waitq_waitabs pscrpcthr_main _pscthr_begin) ],
 	[ qw(_psc_waitq_waitrelv pjournal_thr_main _pscthr_begin) ],
 	[ qw(accept libcfs_sock_accept lnet_acceptor _pscthr_begin) ],
@@ -51,6 +51,7 @@ my @ign = (
 	[ qw(_psc_mutex_lock slislvrthr_main _pscthr_begin) ],
 	[ qw(_psc_waitq_waitabs slihealththr_main _pscthr_begin) ],
 	[ qw(psc_waitq_waitabs slislvrthr_main _pscthr_begin) ],
+	[ qw(usleep slislvrthr_main _pscthr_begin) ],
 
 	# SLASH2 mount_slash
 	[ qw(_?psc_waitq_waitrel _lc_get msattrflushthr_main _pscthr_begin) ],
