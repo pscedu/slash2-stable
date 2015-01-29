@@ -755,9 +755,9 @@ pscfs_inum_pscfs2fuse(pscfs_inum_t p_inum, double timeo)
 		static struct pfl_opstat *_opst;			\
 									\
 		if (_opst == NULL)					\
-			_opst = pfl_opstat_init(OPSTF_BASE10,		\
+			_opst = pfl_opstat_initf(OPSTF_BASE10,		\
 			    "fsrq.handle.%s", __func__ +		\
-			    strlen("pscfs_fuse_handle_");		\
+			    strlen("pscfs_fuse_handle_"));		\
 		pfl_opstat_incr(_opst);					\
 									\
 		(pfr) = psc_pool_get(pscfs_req_pool);			\
