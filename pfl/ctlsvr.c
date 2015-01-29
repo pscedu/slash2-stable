@@ -271,9 +271,9 @@ psc_ctlrep_getsubsys(int fd, struct psc_ctlmsghdr *mh, __unusedx void *m)
 	int n, rc;
 
 	rc = 1;
-	siz = PCSS_NAME_MAX * psc_nsubsys;
+	siz = PCSS_NAME_MAX * psc_dynarray_len(&psc_subsystems);
 	pcss = PSCALLOC(siz);
-	for (n = 0; n < psc_nsubsys; n++)
+	for (n = 0; n < psc_dynarray_len(&psc_subsystems); n++)
 		if (snprintf(&pcss->pcss_names[n * PCSS_NAME_MAX],
 		    PCSS_NAME_MAX, "%s", psc_subsys_name(n)) == -1) {
 			psclog_warn("snprintf");
@@ -311,11 +311,13 @@ psc_ctlmsg_loglevel_send(int fd, struct psc_ctlmsghdr *mh, void *m,
 	size_t siz;
 	int rc;
 
-	siz = sizeof(*pcl) + sizeof(*pcl->pcl_levels) * psc_nsubsys;
+	siz = sizeof(*pcl) + sizeof(*pcl->pcl_levels) *
+	    psc_dynarray_len(&psc_subsystems);
 	pcl = PSCALLOC(siz);
 	snprintf(pcl->pcl_thrname, sizeof(pcl->pcl_thrname),
 	    "%s", thr->pscthr_name);
-	memcpy(pcl->pcl_levels, thr->pscthr_loglevels, psc_nsubsys *
+	memcpy(pcl->pcl_levels, thr->pscthr_loglevels,
+	    psc_dynarray_len(&psc_subsystems) *
 	    sizeof(*pcl->pcl_levels));
 	mh->mh_size = siz;
 	rc = psc_ctlmsg_sendv(fd, mh, pcl);
@@ -583,7 +585,7 @@ psc_ctlparam_log_level(int fd, struct psc_ctlmsghdr *mh,
 	} else {
 		/* No subsys specified, use all. */
 		start_ss = 0;
-		end_ss = psc_nsubsys;
+		end_ss = psc_dynarray_len(&psc_subsystems);
 		subsys = PSS_ALL;
 	}
 
