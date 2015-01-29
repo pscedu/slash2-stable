@@ -33,9 +33,11 @@
 #include <errno.h>
 #include <stdio.h>
 #include <strings.h>
+#include <syslog.h>
 
 #include "pfl/alloc.h"
 #include "pfl/dynarray.h"
+#include "pfl/fmtstr.h"
 #include "pfl/log.h"
 #include "pfl/subsys.h"
 
@@ -47,7 +49,6 @@ struct psc_subsys {
 extern int		*pfl_syslog;
 
 struct psc_dynarray	 psc_subsystems = DYNARRAY_INIT_NOLOG;
-int			 psc_nsubsys;
 
 int
 psc_subsys_id(const char *name)
@@ -68,7 +69,7 @@ psc_subsys_name(int ssid)
 {
 	const struct psc_subsys *ss;
 
-	if (ssid < 0 || ssid >= psc_nsubsys)
+	if (ssid < 0 || ssid >= psc_dynarray_len(&psc_subsystems))
 		return ("<unknown>");
 	ss = psc_dynarray_getpos(&psc_subsystems, ssid);
 	return (ss->pss_name);
@@ -79,7 +80,9 @@ psc_subsys_register(int ssid, const char *name)
 {
 	struct psc_subsys *ss;
 	char *p, buf[BUFSIZ];
+	int nss;
 
+	nss = psc_dynarray_len(&psc_subsystems);
 	ss = psc_alloc(sizeof(*ss), PAF_NOLOG);
 	ss->pss_name = name;
 
@@ -97,15 +100,35 @@ psc_subsys_register(int ssid, const char *name)
 
 	snprintf(buf, sizeof(buf), "PSC_SYSLOG_%s", name);
 	if (getenv(buf) || getenv("PSC_SYSLOG")) {
+		static int init;
+
+		if (!init) {
+			extern const char *__progname;
+			const char *ident = __progname;
+
+			init = 1;
+			p = getenv("PFL_SYSLOG_IDENT"); 
+			if (p) {
+				static char idbuf[32];
+
+				ident = idbuf;
+				(void)FMTSTR(idbuf, sizeof(idbuf), p,
+				    FMTSTRCASE('n', "s", __progname)
+				);
+			}
+			openlog(ident, LOG_CONS | LOG_NDELAY |
+			    LOG_PERROR | LOG_PID, LOG_DAEMON);
+		}
+
 		pfl_syslog = psc_realloc(pfl_syslog,
-		    sizeof(*pfl_syslog) * (psc_nsubsys + 1), PAF_NOLOG);
-		pfl_syslog[psc_nsubsys] = 1;
+		    sizeof(*pfl_syslog) * (nss + 1), PAF_NOLOG);
+		pfl_syslog[nss] = 1;
 	}
 
-	psc_dynarray_add(&psc_subsystems, ss);
-	if (psc_nsubsys++ != ssid)
+	if (ssid != nss)
 		psc_fatalx("bad ID %d for subsys %s [want %d], "
-		    "check order", ssid, name, psc_nsubsys);
+		    "check order", ssid, name, nss);
+	psc_dynarray_add(&psc_subsystems, ss);
 }
 
 int
@@ -113,10 +136,10 @@ psc_log_getlevel_ss(int ssid)
 {
 	const struct psc_subsys *ss;
 
-	if (ssid >= psc_nsubsys || ssid < 0) {
+	if (ssid >= psc_dynarray_len(&psc_subsystems) || ssid < 0) {
 		/* don't use psclog to avoid loops */
 		warnx("subsystem out of bounds (%d, max %d)", ssid,
-		    psc_nsubsys);
+		    psc_dynarray_len(&psc_subsystems));
 		abort();
 	}
 	ss = psc_dynarray_getpos(&psc_subsystems, ssid);
@@ -127,20 +150,21 @@ void
 psc_log_setlevel_ss(int ssid, int newlevel)
 {
 	struct psc_subsys **ss;
-	int i;
+	int i, nss;
 
 	if (newlevel >= PNLOGLEVELS || newlevel < 0)
 		psc_fatalx("log level out of bounds (%d, max %d)",
 		    newlevel, PNLOGLEVELS);
 
 	ss = psc_dynarray_get(&psc_subsystems);
+	nss = psc_dynarray_len(&psc_subsystems);
 
 	if (ssid == PSS_ALL)
-		for (i = 0; i < psc_nsubsys; i++)
+		for (i = 0; i < nss; i++)
 			ss[i]->pss_loglevel = newlevel;
-	else if (ssid >= psc_nsubsys || ssid < 0)
+	else if (ssid >= nss || ssid < 0)
 		psc_fatalx("subsystem out of bounds (%d, max %d)", ssid,
-		    psc_nsubsys);
+		    nss);
 	else
 		ss[ssid]->pss_loglevel = newlevel;
 }

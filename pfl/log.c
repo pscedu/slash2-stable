@@ -167,24 +167,6 @@ psc_log_init(void)
 			errx(1, "invalid PSC_LOG_LEVEL: %s", p);
 	}
 
-	if (pfl_syslog) {
-		extern const char *progname;
-		const char *ident = progname;
-
-		p = getenv("PFL_SYSLOG_IDENT");
-		if (p) {
-			static char idbuf[32];
-
-			ident = idbuf;
-			(void)FMTSTR(idbuf, sizeof(idbuf), p,
-			    FMTSTRCASE('n', "s", progname)
-			);
-		}
-
-		openlog(ident, LOG_CONS | LOG_NDELAY | LOG_PERROR |
-		    LOG_PID, LOG_DAEMON);
-	}
-
 	_psc_hashtbl_init(&_pfl_logpoints_hashtbl, PHTF_STRP |
 	    PHTF_NOLOG, offsetof(struct pfl_logpoint, plogpt_key),
 	    sizeof(struct pfl_logpoint), 3067, NULL, "logpoints");
