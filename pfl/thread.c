@@ -219,9 +219,10 @@ _pscthr_finish_init(struct psc_thread *thr)
 		thr->pscthr_private = psc_alloc(thr->pscthr_privsiz,
 		    PAF_NOLOG);
 
-	thr->pscthr_loglevels = psc_alloc(psc_nsubsys *
-	    sizeof(*thr->pscthr_loglevels), PAF_NOLOG);
-	for (n = 0; n < psc_nsubsys; n++)
+	thr->pscthr_loglevels = psc_alloc(psc_dynarray_len(
+	    &psc_subsystems) * sizeof(*thr->pscthr_loglevels),
+	    PAF_NOLOG);
+	for (n = 0; n < psc_dynarray_len(&psc_subsystems); n++)
 		thr->pscthr_loglevels[n] = psc_log_getlevel_ss(n);
 	thr->pscthr_pthread = pthread_self();
 	thr->pscthr_thrid = pfl_getsysthrid();
@@ -411,10 +412,6 @@ pscthr_setready(struct psc_thread *thr)
 	freelock(&thr->pscthr_lock);
 }
 
-#ifdef __APPLE__
-int psc_nsubsys;
-#endif
-
 int
 psc_log_getlevel(int subsys)
 {
@@ -423,9 +420,9 @@ psc_log_getlevel(int subsys)
 	thr = pscthr_get_canfail();
 	if (thr == NULL)
 		return (psc_log_getlevel_ss(subsys));
-	if (subsys >= psc_nsubsys)
+	if (subsys >= psc_dynarray_len(&psc_subsystems))
 		psc_fatalx("subsystem %d out of bounds (%d)", subsys,
-		    psc_nsubsys);
+		    psc_dynarray_len(&psc_subsystems));
 	return (thr->pscthr_loglevels[subsys]);
 }
 
@@ -440,9 +437,9 @@ psc_log_setlevel(int ssid, int newlevel)
 		psc_fatalx("log level out of bounds (%d)", newlevel);
 
 	if (ssid == PSS_ALL)
-		for (i = 0; i < psc_nsubsys; i++)
+		for (i = 0; i < psc_dynarray_len(&psc_subsystems); i++)
 			thr->pscthr_loglevels[i] = newlevel;
-	else if (ssid >= psc_nsubsys || ssid < 0)
+	else if (ssid >= psc_dynarray_len(&psc_subsystems) || ssid < 0)
 		psc_fatalx("subsystem out of bounds (%d)", ssid);
 	else
 		thr->pscthr_loglevels[ssid] = newlevel;

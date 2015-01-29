@@ -34,6 +34,8 @@
 #ifndef _PFL_SUBSYS_H_
 #define _PFL_SUBSYS_H_
 
+#include "pfl/dynarray.h"
+
 #define PSS_ALL		(-1)
 #define PSS_DEF		0		/* default */
 #define PSS_TMP		1		/* temporary debug use */
@@ -46,6 +48,6 @@ int		 psc_subsys_id(const char *);
 const char	*psc_subsys_name(int);
 void		 psc_subsys_register(int, const char *);
 
-extern int psc_nsubsys;
+extern struct psc_dynarray psc_subsystems;
 
 #endif /* _PFL_SUBSYS_H_ */
