@@ -752,6 +752,14 @@ pscfs_inum_pscfs2fuse(pscfs_inum_t p_inum, double timeo)
 
 #define GETPFR(pfr, fsreq)						\
 	do {								\
+		static struct pfl_opstat *_opst;			\
+									\
+		if (_opst == NULL)					\
+			_opst = pfl_opstat_init(OPSTF_BASE10,		\
+			    "fsrq.handle.%s", __func__ +		\
+			    strlen("pscfs_fuse_handle_");		\
+		pfl_opstat_incr(_opst);					\
+									\
 		(pfr) = psc_pool_get(pscfs_req_pool);			\
 		memset((pfr), 0, pscfs_req_pool->ppm_entsize);		\
 		PFL_GETTIMESPEC(&(pfr)->pfr_start);			\
