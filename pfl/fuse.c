@@ -766,6 +766,12 @@ pscfs_inum_pscfs2fuse(pscfs_inum_t p_inum, double timeo)
 		(pfr)->pfr_refcnt = 2;					\
 	} while (0)
 
+/*
+ * An error from a module for an file system operation short circuits
+ * the processing.  Success from any single module simply means
+ * continuing to the next module.  The exception is the 'default' pscfs
+ * module.
+ */
 #define FSOP(op, pfr, ...)						\
 	do {								\
 		struct pscfs *_m;					\
@@ -775,16 +781,20 @@ pscfs_inum_pscfs2fuse(pscfs_inum_t p_inum, double timeo)
 			if (_m->pf_handle_ ##op == NULL)		\
 				continue;				\
 			_m->pf_handle_ ##op ((pfr), ##__VA_ARGS__);	\
-			if ((pfr)->pfr_refcnt == 1)			\
-				break;					\
+			if ((pfr)->pfr_refcnt > 1 || (pfr)->pfr_rc ||	\
+			    _mi == psc_dynarray_len(&pscfs_modules) - 2)\
+					break;				\
+			(pfr)->pfr_refcnt++;				\
 		}							\
-		pfr_decref(pfr);					\
+		pfr_decref(pfr, 0);					\
 	} while (0)
 
 void
-pfr_decref(struct pscfs_req *pfr)
+pfr_decref(struct pscfs_req *pfr, int rc)
 {
 	spinlock(&pfr->pfr_lock);
+	if (pfr->pfr_rc == 0 && rc)
+		pfr->pfr_rc = rc;
 	psc_assert(pfr->pfr_refcnt > 0);
 	if (--pfr->pfr_refcnt) {
 		freelock(&pfr->pfr_lock);
@@ -1147,7 +1157,7 @@ pscfs_fuse_handle_removexattr(fuse_req_t req, fuse_ino_t ino,
 			psclog_diag(					\
 			    "in for "PSCPRI_TIMESPEC"s uniqid=%"PRIu64,	\
 			    PSCPRI_TIMESPEC_ARGS(&d), u0);		\
-		pfr_decref(pfr);					\
+		pfr_decref(pfr, rc);					\
 	} while (0)
 
 void
@@ -1228,7 +1238,7 @@ void
 pscfs_reply_ioctl(struct pscfs_req *pfr)
 {
 	//PFR_REPLY(err, pfr, rc);
-	pfr_decref(pfr);
+	pfr_decref(pfr, 0);
 }
 
 void
@@ -1349,7 +1359,7 @@ pscfs_reply_statfs(struct pscfs_req *pfr, const struct statvfs *sfb,
 void
 pscfs_reply_destroy(struct pscfs_req *pfr)
 {
-	pfr_decref(pfr);
+	pfr_decref(pfr, 0);
 }
 
 void
