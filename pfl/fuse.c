@@ -763,7 +763,7 @@ pscfs_inum_pscfs2fuse(pscfs_inum_t p_inum, double timeo)
 		INIT_LISTENTRY(&(pfr)->pfr_lentry);			\
 		INIT_SPINLOCK(&(pfr)->pfr_lock);			\
 		(pfr)->pfr_fuse_req = (fsreq);				\
-		(pfr)->pfr_refcnt = 1;					\
+		(pfr)->pfr_refcnt = 2;					\
 	} while (0)
 
 #define FSOP(op, pfr, ...)						\
