@@ -30,6 +30,7 @@
 
 #include "pfl/fs.h"
 #include "pfl/list.h"
+#include "pfl/lock.h"
 #include "pfl/time.h"
 
 #ifdef HAVE_FUSE
@@ -46,12 +47,14 @@ struct pscfs_args {
 };
 
 struct pscfs_req {
+	struct psc_spinlock		 pfr_lock;
 	fuse_req_t			 pfr_fuse_req;
 	struct fuse_file_info		*pfr_fuse_fi;
 	struct pscfs_clientctx		 pfr_clientctx;
 	struct psc_listentry		 pfr_lentry;
 	struct timespec			 pfr_start;
-	int				 pfr_interrupted;
+	int				 pfr_interrupted; // XXX flags
+	int				 pfr_refcnt;
 };
 
 #  define PSCFS_ARGS_INIT(n, av)	{ FUSE_ARGS_INIT((n), (av)) }

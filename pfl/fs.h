@@ -68,7 +68,7 @@ struct pscfs_dirent {
 #define PFL_DIRENT_SIZE(namelen)	PFL_DIRENT_ALIGN(		\
 					    PFL_DIRENT_NAME_OFFSET + (namelen))
 
-/* user fills these in */
+/* userland file system fills these in */
 struct pscfs {
 	void	(*pf_handle_access)(struct pscfs_req *, pscfs_inum_t, int);
 	void	(*pf_handle_release)(struct pscfs_req *, void *);
@@ -94,7 +94,7 @@ struct pscfs {
 	void	(*pf_handle_statfs)(struct pscfs_req *, pscfs_inum_t);
 	void	(*pf_handle_symlink)(struct pscfs_req *, const char *, pscfs_inum_t, const char *);
 	void	(*pf_handle_unlink)(struct pscfs_req *, pscfs_inum_t, const char *);
-	void	(*pf_handle_destroy)(void);
+	void	(*pf_handle_destroy)(struct pscfs_req *);
 	void	(*pf_handle_write)(struct pscfs_req *, const void *, size_t, off_t, void *);
 	void	(*pf_handle_listxattr)(struct pscfs_req *, size_t, pscfs_inum_t);
 	void	(*pf_handle_getxattr)(struct pscfs_req *, const char *, size_t, pscfs_inum_t);
@@ -177,6 +177,6 @@ int	pscfs_notify_inval_entry(struct pscfs_req *, pscfs_inum_t, const char *, siz
 
 int pscfs_ctlparam(int, struct psc_ctlmsghdr *, struct psc_ctlmsg_param *, char **, int);
 
-extern struct pscfs pscfs;
+extern struct psc_dynarray		pscfs_modules;
 
 #endif /* _PFL_FS_H_ */
