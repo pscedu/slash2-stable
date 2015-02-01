@@ -55,6 +55,7 @@ struct pscfs_req {
 	struct timespec			 pfr_start;
 	int				 pfr_interrupted; // XXX flags
 	int				 pfr_refcnt;
+	int				 pfr_rc;
 };
 
 #  define PSCFS_ARGS_INIT(n, av)	{ FUSE_ARGS_INIT((n), (av)) }
