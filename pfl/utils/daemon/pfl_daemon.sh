@@ -131,6 +131,7 @@ postproc()
 			echo core file is $base/$cf
 			echo binary is $base/c/$prog.$id
 			echo log is $base/log/$host.$name/$tm
+			[ $ex -gt 128 ] && echo exited via signal $((ex-128))
 			echo --------------------------------------------------
 			tail $PSC_LOG_FILE_LINK
 			echo --------------------------------------------------
