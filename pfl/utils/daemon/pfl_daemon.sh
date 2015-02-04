@@ -157,7 +157,7 @@ cleanup()
 
 preproc()
 {
-	if PSC_TIMEOUT=5 $ctl -p sys.version >/dev/null && \
+	PSC_TIMEOUT=5 $ctl -p sys.version >/dev/null && \
 	    die "another instance detected; exiting"
 
 	src=$dir/src/p
