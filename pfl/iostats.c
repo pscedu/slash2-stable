@@ -43,18 +43,8 @@ int
 _pfl_opstat_cmp(const void *a, const void *b)
 {
 	const struct pfl_opstat *x = a, *y = b;
-	const char *s = x->opst_name, *p = y->opst_name;
 
-	while (*s == *p)
-		s++, p++;
-
-	if ((isdigit(*s) || *s == '\0') &&
-	    (isdigit(*p) || *p == '\0')) {
-		da = atoi(s);
-		db = atoi(p);
-		return (CMP(da, db));
-	}
-	return (strcmp(s, p));
+	return (strcmp(x->opst_name, y->opst_name));
 }
 
 struct pfl_opstat *
@@ -103,13 +93,14 @@ pfl_iostats_grad_init(struct pfl_iostats_grad *ist0, int flags,
 	struct pfl_iostats_grad *ist;
 	struct pfl_opstat **opst;
 	uint64_t sz, nsz;
-	int i;
+	int i, label;
 
 	for (i = 0; i < 2; i++) {
 		sz = 0;
 		suf = "";
 		nsuf = "K";
-		for (ist = ist0; ist->size; ist++, sz = nsz) {
+		label = 0;
+		for (ist = ist0; ist->size; ist++, sz = nsz, label++) {
 			nsz = ist->size / 1024;
 
 			if (nsz == 1024) {
@@ -118,15 +109,15 @@ pfl_iostats_grad_init(struct pfl_iostats_grad *ist0, int flags,
 			}
 			opst = i ? &ist->rw.wr : &ist->rw.rd;
 			*opst = pfl_opstat_initf(flags,
-			    "%s-%s:%d%s-<%d%s", prefix, mode, sz, suf,
-			    nsz, nsuf);
+			    "%s-%s:%d:%d%s-<%d%s", prefix, mode, label,
+			    sz, suf, nsz, nsuf);
 
 			suf = "K";
 		}
 
 		opst = i ? &ist->rw.wr : &ist->rw.rd;
-		*opst = pfl_opstat_initf(flags, "%s-%s:>=%d%s", prefix,
-		    mode, sz, nsuf);
+		*opst = pfl_opstat_initf(flags, "%s-%s:%d:>=%d%s", prefix,
+		    mode, label, sz, nsuf);
 
 		mode = "wr";
 	}
