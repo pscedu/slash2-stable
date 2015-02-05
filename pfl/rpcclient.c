@@ -116,7 +116,7 @@ pscrpc_prep_req_pool(struct pscrpc_import *imp, uint32_t version,
 		return (NULL);
 	}
 
-	psclog_info("request %p request->rq_reqmsg %p",
+	psclog_diag("request %p request->rq_reqmsg %p",
 	    request, request->rq_reqmsg);
 
 	request->rq_reqmsg->version |= version;
@@ -605,7 +605,7 @@ pscrpc_queue_wait(struct pscrpc_request *req)
 	psclist_add_tail(&req->rq_lentry, &imp->imp_sending_list);
 	freelock(&imp->imp_lock);
 
-	psclog_info("request %p request->rq_reqmsg %p",
+	psclog_diag("request %p request->rq_reqmsg %p",
 	    req, req->rq_reqmsg);
 
 	rc = pscrpc_send_rpc(req, 0);

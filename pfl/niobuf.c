@@ -283,7 +283,7 @@ pscrpc_register_bulk(struct pscrpc_request *rq)
 		return (-ENOMEM);
 	}
 
-	psclog_info("Setup bulk %s buffers: %u pages %u bytes, xid %#"PRIx64", "
+	psclog_diag("Setup bulk %s buffers: %u pages %u bytes, xid %#"PRIx64", "
 	    "portal %u",
 	    desc->bd_type == BULK_GET_SOURCE ? "get-source" : "put-sink",
 	    desc->bd_iov_count, desc->bd_nob, rq->rq_xid,

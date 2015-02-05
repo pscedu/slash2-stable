@@ -249,7 +249,7 @@ pscrpc_import_get(struct pscrpc_import *import)
 	psc_assert(atomic_read(&import->imp_refcount) >= 0);
 	psc_assert(atomic_read(&import->imp_refcount) < 0x5a5a5a);
 	atomic_inc(&import->imp_refcount);
-	psclog_info("import get %p refcount=%d", import,
+	psclog_diag("import get %p refcount=%d", import,
 	    atomic_read(&import->imp_refcount));
 	return import;
 }
@@ -257,7 +257,7 @@ pscrpc_import_get(struct pscrpc_import *import)
 void
 pscrpc_import_put(struct pscrpc_import *import)
 {
-	psclog_debug("import put %p refcount=%d", import,
+	psclog_diag("import put %p refcount=%d", import,
 	    atomic_read(&import->imp_refcount) - 1);
 
 	psc_assert(atomic_read(&import->imp_refcount) > 0);
