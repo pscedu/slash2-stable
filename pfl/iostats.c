@@ -43,8 +43,18 @@ int
 _pfl_opstat_cmp(const void *a, const void *b)
 {
 	const struct pfl_opstat *x = a, *y = b;
+	const char *s = x->opst_name, *p = y->opst_name;
 
-	return (strcmp(x->opst_name, y->opst_name));
+	while (*s == *p)
+		s++, p++;
+
+	if ((isdigit(*s) || *s == '\0') &&
+	    (isdigit(*p) || *p == '\0')) {
+		da = atoi(s);
+		db = atoi(p);
+		return (CMP(da, db));
+	}
+	return (strcmp(s, p));
 }
 
 struct pfl_opstat *
