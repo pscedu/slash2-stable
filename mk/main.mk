@@ -58,9 +58,6 @@ _TOBJS+=		$(patsubst %.y,%.o,$(filter %.y,${_TSRCS}))
 _TOBJS+=		$(patsubst %.l,%.o,$(filter %.l,${_TSRCS}))
 OBJS=			$(addprefix ${OBJDIR}/,$(notdir ${_TOBJS}))
 
-# XXX flag error if a dir doesn't exist
-_TSUBDIRS=		$(foreach dir,${SUBDIRS},$(realpath ${dir}))
-
 _LEXINTM=		$(patsubst %.l,%.c,$(addprefix ${OBJDIR}/,$(notdir $(filter %.l,${_TSRCS}))))
 _YACCINTM=		$(patsubst %.y,%.c,$(addprefix ${OBJDIR}/,$(notdir $(filter %.y,${_TSRCS}))))
 _C_SRCS=		$(filter %.c,${_TSRCS}) ${_YACCINTM} ${_LEXINTM}
@@ -421,29 +418,11 @@ ${OBJDIR}/$(notdir %.tex) : %.xdc
 %.dvi : ${OBJDIR}/$(notdir %.tex)
 	${TEX} -output-directory=. $<
 
-recurse-%:
-	@if [ $(words ${SUBDIRS}) -ne					\
-	      $(words $(sort ${SUBDIRS})) ]; then			\
-		echo "duplicate in SUBDIRS" >&2;			\
-		false;							\
-	fi
-	@for i in ${_TSUBDIRS}; do					\
-		echo "===> $$i $(patsubst recurse-%,%,$@)";		\
-		if [ "${PSC_MAKE_STATUS}" ]; then			\
-			printf " %s" "$${i#${CROOTDIR}/} $(		\
-			    )$(patsubst recurse-%,%,$@)" >&2;		\
-			${CLEAR_EOL} >&2 || true;			\
-			printf "\r" >&2;				\
-		fi;							\
-		(cd $$i && SUBDIRS= ${MAKE}				\
-		    $(patsubst recurse-%,%,$@)) || exit 1;		\
-	done
-	@if ${NOTEMPTY} "${_TSUBDIRS}"; then				\
-		echo "<=== ${CURDIR}";					\
-		if [ "${PSC_MAKE_STATUS}" ]; then			\
-			${CLEAR_EOL} >&2 || true;			\
-		fi;							\
-	fi
+$(addprefix dir-,${SUBDIRS}):
+	@${MAKE} -C $(patsubst dir-%,%,$@) ${MAKECMDGOALS}
+
+recurse-%: $(addprefix dir-,${SUBDIRS})
+	@:
 
 # empty but overrideable
 install-hook:

@@ -1,4 +1,5 @@
 # $Id$
+# %PSC_COPYRIGHT%
 
 LNET_BASE=	${ROOTDIR}/lnet-lite
 PFL_BASE=	${ROOTDIR}/pfl
