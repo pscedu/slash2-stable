@@ -18,11 +18,7 @@
 #include <string.h>
 #include <unistd.h>
 
-#include <gcrypt.h>
-
 #include "pfl/cdefs.h"
-
-GCRY_THREAD_OPTION_PTHREAD_IMPL;
 
 #ifdef HAVE_FUSE_BIG_WRITES
 # define STD_MOUNT_OPTIONS	"allow_other,max_write=134217728,big_writes"
@@ -30,47 +26,49 @@ GCRY_THREAD_OPTION_PTHREAD_IMPL;
 # define STD_MOUNT_OPTIONS	"allow_other,max_write=134217728"
 #endif
 
+struct psc_vbitmap		 wokfsthr_uniqidmap = VBITMAP_INIT_AUTO;
+psc_spinlock_t			 wokfsthr_uniqidmap_lock = SPINLOCK_INIT;
+
 const char			*progname;
-const char			*ctlsockfn = PATH_MSCTLSOCK;
+const char			*ctlsockfn = PATH_CTLSOCK;
 char				 mountpoint[PATH_MAX];
 
 __static void
-msfsthr_teardown(void *arg)
+wokfsthr_teardown(void *arg)
 {
-	struct msfs_thread *mft = arg;
+	struct wokfs_thread *ft = arg;
 
-	spinlock(&msfsthr_uniqidmap_lock);
-	psc_vbitmap_unset(&msfsthr_uniqidmap, mft->mft_uniqid);
-	psc_vbitmap_setnextpos(&msfsthr_uniqidmap, 0);
-	freelock(&msfsthr_uniqidmap_lock);
+	spinlock(&wokfsthr_uniqidmap_lock);
+	psc_vbitmap_unset(&wokfsthr_uniqidmap, ft->ft_uniqid);
+	psc_vbitmap_setnextpos(&wokfsthr_uniqidmap, 0);
+	freelock(&wokfsthr_uniqidmap_lock);
 }
 
 __static void
-msfsthr_ensure(struct pscfs_req *pfr)
+wokfsthr_ensure(struct pscfs_req *pfr)
 {
-	struct msfs_thread *mft;
+	struct wokfs_thread *ft;
 	struct psc_thread *thr;
 	size_t id;
 
 	thr = pscthr_get_canfail();
 	if (thr == NULL) {
-		spinlock(&msfsthr_uniqidmap_lock);
-		if (psc_vbitmap_next(&msfsthr_uniqidmap, &id) != 1)
+		spinlock(&wokfsthr_uniqidmap_lock);
+		if (psc_vbitmap_next(&wokfsthr_uniqidmap, &id) != 1)
 			psc_fatal("psc_vbitmap_next");
-		freelock(&msfsthr_uniqidmap_lock);
+		freelock(&wokfsthr_uniqidmap_lock);
 
-		thr = pscthr_init(MSTHRT_FS, NULL, msfsthr_teardown,
-		    sizeof(*mft), "msfsthr%02zu", id);
-		mft = thr->pscthr_private;
-		psc_multiwait_init(&mft->mft_mw, "%s",
-		    thr->pscthr_name);
-		mft->mft_uniqid = id;
+		thr = pscthr_init(THRT_FS, NULL, wokfsthr_teardown,
+		    sizeof(*ft), "fsthr%02zu", id);
+		ft = thr->pscthr_private;
+		psc_multiwait_init(&ft->mft_mw, "%s", thr->pscthr_name);
+		ft->mft_uniqid = id;
 		pscthr_setready(thr);
 	}
-	psc_assert(thr->pscthr_type == MSTHRT_FS);
+	psc_assert(thr->pscthr_type == THRT_FS);
 
-	mft = thr->pscthr_private;
-	mft->mft_pfr = pfr;
+	ft = thr->pscthr_private;
+	ft->mft_pfr = pfr;
 }
 
 void
@@ -141,6 +139,24 @@ usage(void)
 }
 
 int
+opt_lookup(const char *opt)
+{
+	struct {
+		const char	*name;
+		int		*var;
+	} *io, opts[] = {
+		{ NULL,		NULL }
+	};
+
+	for (io = opts; io->name; io++)
+		if (strcmp(opt, io->name) == 0) {
+			*io->var = 1;
+			return (1);
+		}
+	return (0);
+}
+
+int
 main(int argc, char *argv[])
 {
 	struct pscfs_args args = PSCFS_ARGS_INIT(0, NULL);
@@ -183,7 +199,7 @@ main(int argc, char *argv[])
 	if (argc != 1)
 		usage();
 
-	pscthr_init(MSTHRT_FSMGR, NULL, NULL, 0, "fsmgrthr");
+	pscthr_init(THRT_FSMGR, NULL, NULL, 0, "fsmgrthr");
 
 	noncanon_mp = argv[0];
 	if (unmount_first)
@@ -202,9 +218,9 @@ main(int argc, char *argv[])
 
 //	drop_privs(1);
 
-	msctlthr_spawn();
+	ctlthr_spawn();
 
-	pfl_opstimerthr_spawn(MSTHRT_OPSTIMER, "opstimerthr");
+	pfl_opstimerthr_spawn(THRT_OPSTIMER, "opstimerthr");
 
 	wok_iosyscall_iostats[0].size =        1024;
 	wok_iosyscall_iostats[1].size =    4 * 1024;
