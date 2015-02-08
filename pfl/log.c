@@ -313,7 +313,7 @@ _psclogv(const struct pfl_callerinfo *pci, int level, int options,
     const char *fmt, va_list ap)
 {
 	char *p, buf[BUFSIZ];
-	extern const char *progname;
+	extern const char *__progname;
 	struct psc_thread *thr;
 	struct psclog_data *d;
 	struct timeval tv;
@@ -357,7 +357,7 @@ _psclogv(const struct pfl_callerinfo *pci, int level, int options,
 		FMTSTRCASE('i', "d", thrid)
 		FMTSTRCASE('L', "d", level)
 		FMTSTRCASE('l', "d", pci->pci_lineno)
-		FMTSTRCASE('N', "s", progname)
+		FMTSTRCASE('N', "s", __progname)
 		FMTSTRCASE('X', "s", pflog_get_fsctx_uprog(thr))
 		FMTSTRCASE('n', "s", thrname)
 		FMTSTRCASE('P', "d", pflog_get_fsctx_pid(thr))
