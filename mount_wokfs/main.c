@@ -1,24 +1,17 @@
 /* $Id: main.c 25363 2015-02-04 20:10:24Z zhihui $ */
 /* %PSC_COPYRIGHT% */
 
-#include <sys/param.h>
-#include <sys/stat.h>
-#include <sys/statvfs.h>
-#include <sys/time.h>
-
-#include <ctype.h>
-#include <dirent.h>
-#include <err.h>
-#include <errno.h>
-#include <fcntl.h>
-#include <grp.h>
-#include <inttypes.h>
-#include <pwd.h>
-#include <stdio.h>
-#include <string.h>
-#include <unistd.h>
+#include <stdlib.h>
 
 #include "pfl/cdefs.h"
+#include "pfl/fs.h"
+#include "pfl/fsmod.h"
+#include "pfl/iostats.h"
+#include "pfl/thread.h"
+#include "pfl/timerthr.h"
+#include "pfl/vbitmap.h"
+
+#include "mount_wokfs.h"
 
 #ifdef HAVE_FUSE_BIG_WRITES
 # define STD_MOUNT_OPTIONS	"allow_other,max_write=134217728,big_writes"
@@ -28,6 +21,8 @@
 
 struct psc_vbitmap		 wokfsthr_uniqidmap = VBITMAP_INIT_AUTO;
 psc_spinlock_t			 wokfsthr_uniqidmap_lock = SPINLOCK_INIT;
+
+struct pfl_iostats_grad		 wok_iosyscall_iostats[8];
 
 const char			*progname;
 const char			*ctlsockfn = PATH_CTLSOCK;
@@ -61,14 +56,13 @@ wokfsthr_ensure(struct pscfs_req *pfr)
 		thr = pscthr_init(THRT_FS, NULL, wokfsthr_teardown,
 		    sizeof(*ft), "fsthr%02zu", id);
 		ft = thr->pscthr_private;
-		psc_multiwait_init(&ft->mft_mw, "%s", thr->pscthr_name);
-		ft->mft_uniqid = id;
+		ft->ft_uniqid = id;
 		pscthr_setready(thr);
 	}
 	psc_assert(thr->pscthr_type == THRT_FS);
 
 	ft = thr->pscthr_private;
-	ft->mft_pfr = pfr;
+	ft->ft_pfr = pfr;
 }
 
 void

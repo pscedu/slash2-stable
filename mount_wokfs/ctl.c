@@ -12,6 +12,7 @@
 #include "pfl/ctl.h"
 #include "pfl/ctlsvr.h"
 #include "pfl/fs.h"
+#include "pfl/net.h"
 #include "pfl/str.h"
 
 #include "mount_wokfs.h"
@@ -37,7 +38,7 @@ wokctl_getclientctx(__unusedx int s, struct pscfs_clientctx *pfcc)
 	return (0);
 }
 
-struct psc_ctlop msctlops[] = {
+struct psc_ctlop ctlops[] = {
 	PSC_CTLDEFOPS
 };
 
@@ -47,14 +48,14 @@ psc_ctl_thrget_t psc_ctl_thrgets[] = {
 PFLCTL_SVR_DEFS;
 
 void
-msctlthr_main(__unusedx struct psc_thread *thr)
+ctlthr_main(__unusedx struct psc_thread *thr)
 {
-	psc_ctlthr_main(ctlsockfn, msctlops, nitems(msctlops),
-	    MSTHRT_CTLAC);
+	psc_ctlthr_main(ctlsockfn, ctlops, nitems(ctlops),
+	    THRT_CTLAC);
 }
 
 void
-msctlthr_spawn(void)
+ctlthr_spawn(void)
 {
 	struct psc_thread *thr;
 
@@ -72,12 +73,12 @@ msctlthr_spawn(void)
 
 	psc_ctlparam_register_var("sys.mountpoint", PFLCTL_PARAMT_STR,
 	    0, mountpoint);
-	psc_ctlparam_register_simple("sys.uptime",
-	    ctlparam_uptime_get, NULL);
-	psc_ctlparam_register_simple("sys.version",
-	    ctlparam_version_get, NULL);
+//	psc_ctlparam_register_simple("sys.uptime", ctlparam_uptime_get,
+//	    NULL);
+//	psc_ctlparam_register_simple("sys.version",
+//	    ctlparam_version_get, NULL);
 
-	thr = pscthr_init(MSTHRT_CTL, msctlthr_main, NULL,
-	    sizeof(struct psc_ctlthr), "msctlthr0");
+	thr = pscthr_init(THRT_CTL, ctlthr_main, NULL,
+	    sizeof(struct psc_ctlthr), "ctlthr0");
 	pscthr_setready(thr);
 }
