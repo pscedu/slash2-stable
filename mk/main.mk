@@ -114,7 +114,7 @@ _EXCLUDES=		$(filter-out -I%,${EXCLUDES}) $(patsubst %,-I%/,$(foreach \
 			dir,$(patsubst -I%,%,$(filter -I%,${EXCLUDES})), $(realpath ${dir})))
 
 CFLAGS+=		${DEFINES} $(filter-out ${_EXCLUDES},${_TINCLUDES})
-TARGET?=		$(sort ${PROG} ${LIBRARY} ${TEST} ${DOCGEN})
+TARGET?=		$(sort ${PROG} ${LIBRARY} ${TEST} ${DOCGEN} ${SHLIB})
 PROG?=			${TEST}
 
 EXTRACT_INCLUDES=	perl -ne 'print $$& while /-I\S+\s?/gc'
@@ -408,8 +408,14 @@ ${PROG}: ${OBJS}
 endif
 
 ifdef LIBRARY
-${LIBRARY}: ${OBJS}
+  ${LIBRARY}: ${OBJS}
 	${AR} ${ARFLAGS} $@ $(sort ${OBJS})
+endif
+
+ifdef SHLIB
+  CFLAGS+=	-fpic
+  ${SHLIB}: ${OBJS}
+	${CC} -shared -o $@ ${LDFLAGS} $(sort ${OBJS})
 endif
 
 ${OBJDIR}/$(notdir %.tex) : %.xdc
@@ -430,6 +436,9 @@ install-hook:
 install: recurse-install install-hook
 	@if [ -n "${LIBRARY}" -a x"${NOINSTALL}" != x"1" ]; then	\
 		${INST} ${LIBRARY} ${INST_LIBDIR}/;			\
+	fi
+	@if [ -n "${SHLIB}" -a x"${NOINSTALL}" != x"1" ]; then	\
+		${INST} ${SHLIB} ${INST_LIBDIR}/;			\
 	fi
 	@# skip programs part of test suites
 	@if ${NOTEMPTY} "${PROG}${BIN}" &&				\
@@ -482,7 +491,7 @@ clean-hook:
 
 clean-core:
 	${RM} -rf ${OBJDIR}
-	${RM} -f ${PROG} ${LIBRARY} core.[0-9]* *.core
+	${RM} -f ${PROG} ${LIBRARY} ${SHLIB} core.[0-9]* *.core
 	@for i in ${DEPLIST}; do					\
 		[ -e "$${i#*:}" ] || continue;				\
 		(cd $${i%:*} && ${MAKE} clean) || exit 1;		\
