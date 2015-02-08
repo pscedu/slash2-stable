@@ -3,7 +3,7 @@
 ROOTDIR=..
 include ${ROOTDIR}/Makefile.path
 
-SUBDIRS+=	benchfs
+SUBDIRS+=	passfs
 SUBDIRS+=	mount_wokfs
 SUBDIRS+=	wokctl
 
