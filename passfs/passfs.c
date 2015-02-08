@@ -9,20 +9,20 @@
 void
 passfsop_open(struct pscfs_req *pfr, pscfs_inum_t inum, int oflags)
 {
-	pscfs_reply_open();
+	pscfs_reply_open(pfr, NULL, 0, 0);
 }
 
 void
 passfsop_read(struct pscfs_req *pfr, size_t size, off_t off, void *data)
 {
-	pscfs_reply_read();
+	pscfs_reply_read(pfr, NULL, 0, 0);
 }
 
 void
 passfsop_write(struct pscfs_req *pfr, const void *buf, size_t size,
     off_t off, void *data)
 {
-	pscfs_reply_write();
+	pscfs_reply_write(pfr, 0, 0);
 }
 
 void
