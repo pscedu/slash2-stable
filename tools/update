@@ -129,6 +129,7 @@ pubrepo psync &
 pubrepo sft &
 #pubrepo slash2 &
 pubrepo src-upd &
+pubrepo wokfs &
 pubrepo xopctl &
 pubrepo zfs-fuse zfs &
 
