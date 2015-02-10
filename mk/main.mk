@@ -107,6 +107,9 @@ PSCRPC_SRCS+=		${PFL_BASE}/rsx.c
 PSCRPC_SRCS+=		${PFL_BASE}/service.c
 PSCRPC_SRCS+=		${PFL_BASE}/util.c
 
+PSCRPC_SRCS+=		${PFL_BASE}/eqpollthr.c
+PSCRPC_SRCS+=		${PFL_BASE}/usklndthr.c
+
 _TINCLUDES=		$(filter-out -I%,${INCLUDES}) $(patsubst %,-I%/,$(foreach \
 			dir,$(patsubst -I%,%,$(filter -I%,${INCLUDES})), $(realpath ${dir})))
 
