@@ -774,19 +774,38 @@ pscfs_inum_pscfs2fuse(pscfs_inum_t p_inum, double timeo)
  */
 #define FSOP(op, pfr, ...)						\
 	do {								\
+		int _mi, _prior_success = 0;				\
 		struct pscfs *_m;					\
-		int _mi;						\
 									\
 		DYNARRAY_FOREACH(_m, _mi, &pscfs_modules) {		\
 			if (_m->pf_handle_ ##op == NULL)		\
 				continue;				\
+									\
+			/*						\
+			 * The last module is pscfs' builtin ENOTSUP	\
+			 * failure layer.  If any previous module was	\
+			 * successful, do not invoke this last module.	\
+			 */						\
+			if (_prior_success && _mi ==			\
+			    psc_dynarray_len(&pscfs_modules) - 1) {	\
+				(pfr)->pfr_refcnt--;			\
+				break;					\
+			}						\
+									\
 			_m->pf_handle_ ##op ((pfr), ##__VA_ARGS__);	\
-			if ((pfr)->pfr_refcnt > 1 || (pfr)->pfr_rc ||	\
-			    _mi == psc_dynarray_len(&pscfs_modules) - 2)\
-					break;				\
+									\
+			/* The module deferred reply. */		\
+			if ((pfr)->pfr_refcnt > 1)			\
+				break;					\
+									\
+			/* The module returned an error. */		\
+			if ((pfr)->pfr_rc)				\
+				break;					\
+									\
+			_prior_success = 1;				\
 			(pfr)->pfr_refcnt++;				\
 		}							\
-		pfr_decref(pfr, 0);					\
+		pfr_decref((pfr), 0);					\
 	} while (0)
 
 void
