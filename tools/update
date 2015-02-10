@@ -28,9 +28,14 @@ exwait()
 	return $rc
 }
 
-die()
+warn()
 {
 	echo "$0: $@" >&2
+}
+
+die()
+{
+	warn "$@"
 	exit 1
 }
 
@@ -69,7 +74,7 @@ echorun()
 	"$@"
 }
 
-getrepo()
+_getrepo()
 {
 	local url=$1
 	local dir=$2
@@ -85,7 +90,7 @@ getrepo()
 	fi
 
 	if [ -e .git ]; then
-		git $GIT_ACTION
+		git $GIT_ACTION || warn "accessing $dir failed"
 
 	# XXX remove me
 	elif svn info >/dev/null 2>&1; then
@@ -106,37 +111,42 @@ getrepo()
 	fi
 }
 
+getrepo()
+{
+	_getrepo "$@" &
+}
+
 pubrepo()
 {
 	base=$1
 	[ $# -eq 2 ] && base=$2
-	(getrepo https://github.com/pscedu/${1//\//.}.git $base)
+	getrepo https://github.com/pscedu/${1//\//.}.git $base
 }
 
-pubrepo adaptfs &
-pubrepo conga &
-pubrepo distrib/fuse &
-pubrepo distrib/gcrcutil &
-pubrepo distrib/iozone &
-pubrepo distrib/libs3 &
-pubrepo distrib/posix-fstest &
-pubrepo distrib/spiobench &
-pubrepo distrib/stumbleupon-tcollector &
-pubrepo fio &
-pubrepo idxutils &
-pubrepo jives &
-pubrepo psync &
-pubrepo sft &
-#pubrepo slash2 &
-pubrepo src-upd &
-pubrepo wokfs &
-pubrepo xopctl &
-pubrepo zfs-fuse zfs &
-
-exwait
+pubrepo adaptfs
+pubrepo conga
+pubrepo distrib/fuse
+pubrepo distrib/gcrcutil
+pubrepo distrib/iozone
+pubrepo distrib/libs3
+pubrepo distrib/posix-fstest
+pubrepo distrib/spiobench
+pubrepo distrib/stumbleupon-tcollector
+pubrepo fio
+pubrepo idxutils
+pubrepo jives
+pubrepo psync
+pubrepo sft
+#pubrepo slash2
+pubrepo src-upd
+pubrepo wokfs
+pubrepo xopctl
+pubrepo zfs-fuse zfs
 
 for i in $dir/inf/*/update.sh; do
 	[ -e $i ] && . $i
 done
 
 pubrepo proj
+
+exwait
