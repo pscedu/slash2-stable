@@ -44,11 +44,11 @@
 #include "pfl/thread.h"
 #include "pfl/time.h"
 
-psc_spinlock_t				 psc_umask_lock = SPINLOCK_INIT;
+psc_spinlock_t				  psc_umask_lock = SPINLOCK_INIT;
 __threadx const struct pfl_callerinfo	*_pfl_callerinfo;
 __threadx int				 _pfl_callerinfo_lvl;
 __static void				*_pfl_tls[PFL_TLSIDX_MAX];
-struct timespec				pfl_uptime;
+struct timespec				  pfl_uptime;
 
 pid_t
 pfl_getsysthrid(void)
