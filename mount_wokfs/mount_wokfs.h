@@ -19,6 +19,8 @@ struct wokfs_thread {
 
 #define PATH_CTLSOCK "/var/run/mount_wokfs.%h.sock"
 
+void ctlthr_spawn(void);
+
 extern const char		*ctlsockfn;
 extern char			 mountpoint[];
 

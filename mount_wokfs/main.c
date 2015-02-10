@@ -1,15 +1,16 @@
 /* $Id: main.c 25363 2015-02-04 20:10:24Z zhihui $ */
 /* %PSC_COPYRIGHT% */
 
+#include <dlfcn.h>
 #include <stdlib.h>
 
 #include "pfl/cdefs.h"
+#include "pfl/alloc.h"
 #include "pfl/fs.h"
 #include "pfl/fsmod.h"
 #include "pfl/iostats.h"
 #include "pfl/thread.h"
 #include "pfl/timerthr.h"
-#include "pfl/vbitmap.h"
 
 #include "mount_wokfs.h"
 
@@ -19,51 +20,11 @@
 # define STD_MOUNT_OPTIONS	"allow_other,max_write=134217728"
 #endif
 
-struct psc_vbitmap		 wokfsthr_uniqidmap = VBITMAP_INIT_AUTO;
-psc_spinlock_t			 wokfsthr_uniqidmap_lock = SPINLOCK_INIT;
-
 struct pfl_iostats_grad		 wok_iosyscall_iostats[8];
 
 const char			*progname;
 const char			*ctlsockfn = PATH_CTLSOCK;
 char				 mountpoint[PATH_MAX];
-
-__static void
-wokfsthr_teardown(void *arg)
-{
-	struct wokfs_thread *ft = arg;
-
-	spinlock(&wokfsthr_uniqidmap_lock);
-	psc_vbitmap_unset(&wokfsthr_uniqidmap, ft->ft_uniqid);
-	psc_vbitmap_setnextpos(&wokfsthr_uniqidmap, 0);
-	freelock(&wokfsthr_uniqidmap_lock);
-}
-
-__static void
-wokfsthr_ensure(struct pscfs_req *pfr)
-{
-	struct wokfs_thread *ft;
-	struct psc_thread *thr;
-	size_t id;
-
-	thr = pscthr_get_canfail();
-	if (thr == NULL) {
-		spinlock(&wokfsthr_uniqidmap_lock);
-		if (psc_vbitmap_next(&wokfsthr_uniqidmap, &id) != 1)
-			psc_fatal("psc_vbitmap_next");
-		freelock(&wokfsthr_uniqidmap_lock);
-
-		thr = pscthr_init(THRT_FS, NULL, wokfsthr_teardown,
-		    sizeof(*ft), "fsthr%02zu", id);
-		ft = thr->pscthr_private;
-		ft->ft_uniqid = id;
-		pscthr_setready(thr);
-	}
-	psc_assert(thr->pscthr_type == THRT_FS);
-
-	ft = thr->pscthr_private;
-	ft->ft_pfr = pfr;
-}
 
 void
 wokfsop_destroy(__unusedx struct pscfs_req *pfr)
@@ -151,6 +112,34 @@ opt_lookup(const char *opt)
 }
 
 int
+mod_load(const char *fn)
+{
+	void (*loadf)(struct pscfs *);
+	struct pscfs *ops;
+	void *h;
+
+	h = dlopen(fn, RTLD_NOW);
+	if (h == NULL)
+		PFL_GOTOERR(error, 0);
+
+	loadf = dlsym(h, "pscfs_module_load");
+	if (h == NULL)
+		PFL_GOTOERR(error, 0);
+
+	ops = PSCALLOC(sizeof(*ops));
+	loadf(ops);
+
+	psc_dynarray_add(&pscfs_modules, ops);
+	return (0);
+
+ error:
+	if (h)
+		dlclose(h);
+	psclog_errorx("unable to load module %s", dlerror());
+	return (-1);
+}
+
+int
 main(int argc, char *argv[])
 {
 	struct pscfs_args args = PSCFS_ARGS_INIT(0, NULL);
@@ -228,6 +217,8 @@ main(int argc, char *argv[])
 
 	pscfs_entry_timeout = 8.;
 	pscfs_attr_timeout = 8.;
+
+	mod_load("/home/yanovich/code/advsys/p/wokfs/passfs/passfs.so");
 
 	psc_dynarray_add(&pscfs_modules, &wok_pscfs);
 
