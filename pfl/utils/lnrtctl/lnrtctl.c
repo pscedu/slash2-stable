@@ -38,8 +38,6 @@
 #include "pfl/log.h"
 
 #include "../lnrtd/lnrtd.h"
-#include "ctl.h"
-#include "ctlcli.h"
 
 struct psc_ctlshow_ent psc_ctlshow_tab[] = {
 	PSC_CTLSHOW_DEFS
