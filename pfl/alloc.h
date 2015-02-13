@@ -33,6 +33,7 @@
 
 #include <stdint.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "pfl/log.h"
 
@@ -133,5 +134,15 @@ void	*_psc_realloc(void *, size_t, int);
 void	  psc_memallocs_init(void);
 
 extern int	psc_pagesize;
+
+static __inline void *
+pfl_memdup(const void *p, size_t len)
+{
+	void *d;
+
+	d = PSCALLOC(len);
+	memcpy(d, p, len);
+	return (d);
+}
 
 #endif /* _PFL_ALLOC_H_ */
