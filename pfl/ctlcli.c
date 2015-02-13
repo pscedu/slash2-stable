@@ -1267,11 +1267,11 @@ psc_ctlcli_main(const char *osockfn, int ac, char *av[],
 		endwin();
 	}
 
-	prg = strrchr(progname, '/');
+	prg = strrchr(__progname, '/');
 	if (prg)
 		prg++;
 	else
-		prg = progname;
+		prg = __progname;
 
 	pscthr_init(PCTHRT_WR, NULL, NULL, 0, "%swrthr", prg);
 
