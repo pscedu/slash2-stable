@@ -2224,7 +2224,7 @@ psc_ctlthr_mainloop(struct psc_thread *thr)
 void
 psc_ctlthr_spawn_listener(const char *ofn, int acthrtype)
 {
-	extern const char *progname;
+	extern const char *__progname;
 	static psc_atomic32_t idx;
 
 	struct psc_thread *thr, *me;

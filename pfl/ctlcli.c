@@ -1223,7 +1223,7 @@ void
 psc_ctlcli_main(const char *osockfn, int ac, char *av[],
     const struct psc_ctlopt *otab, int notab)
 {
-	extern const char *daemon_name, *progname;
+	extern const char *daemon_name, *__progname;
 	char optstr[LINE_MAX], chbuf[3], *p;
 	struct sockaddr_un saun;
 	struct psc_thread *thr;
