@@ -289,13 +289,23 @@ psc_ctlrep_getsubsys(int fd, struct psc_ctlmsghdr *mh, __unusedx void *m)
 	return (rc);
 }
 
-__weak int
+#ifndef PFL_RPC
+int
 psc_ctlrep_getlnetif(int fd, struct psc_ctlmsghdr *mh,
     __unusedx void *m)
 {
 	return (psc_ctlsenderr(fd, mh, "get lnet interface: %s",
 	    strerror(ENOTSUP)));
 }
+
+int
+psc_ctlrep_getrpcsvc(int fd, struct psc_ctlmsghdr *mh,
+    __unusedx void *m)
+{
+	return (psc_ctlsenderr(fd, mh, "get rpcsvc: %s",
+	    strerror(ENOTSUP)));
+}
+#endif
 
 /**
  * psc_ctlmsg_loglevel_send - Send a reply to a "GETLOGLEVEL" inquiry.
@@ -2143,7 +2153,7 @@ psc_ctlthr_service(int fd, const struct psc_ctlop *ct, int nops,
 	    ct[mh.mh_type].pc_op == NULL) {
 		psc_ctlsenderr(fd, &mh,
 		    "unrecognized psc_ctlmsghdr type; "
-		    "type=%d size=%zu", mh.mh_type, mh.mh_size);
+		    "type=%d size=%zu nops=%d", mh.mh_type, mh.mh_size, nops);
 		return (0);
 	}
 	if (ct[mh.mh_type].pc_siz &&

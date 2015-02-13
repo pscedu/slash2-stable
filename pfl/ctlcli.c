@@ -54,12 +54,15 @@
 #include "pfl/meter.h"
 #include "pfl/net.h"
 #include "pfl/pool.h"
-#include "pfl/rpc.h"
 #include "pfl/str.h"
 #include "pfl/subsys.h"
 #include "pfl/syspaths.h"
 #include "pfl/thread.h"
 #include "pfl/vbitmap.h"
+
+#ifdef PFL_RPC
+#include "pfl/rpc.h"
+#endif
 
 #define PCTHRT_RD 0
 #define PCTHRT_WR 1
