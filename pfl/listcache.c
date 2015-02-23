@@ -79,14 +79,15 @@ _lc_get(struct psc_listcache *plc, const struct timespec *abstime,
 			    plc->plc_name);
 		if (abstime) {
 			rc = psc_waitq_waitabs(&plc->plc_wq_empty,
-			    &plc->plc_lock, abstime);
+			    LIST_CACHE_GETLOCK(plc), abstime);
 			if (rc) {
 				psc_assert(rc == ETIMEDOUT);
 				errno = rc;
 				return (NULL);
 			}
 		} else
-			psc_waitq_wait(&plc->plc_wq_empty, &plc->plc_lock);
+			psc_waitq_wait(&plc->plc_wq_empty,
+			    LIST_CACHE_GETLOCK(plc));
 		LIST_CACHE_LOCK(plc);
 	}
 	if (flags & PLCBF_TAIL)
