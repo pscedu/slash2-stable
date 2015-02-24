@@ -62,7 +62,7 @@
 #define	OPSTAT2_ADD(name, n)	OPSTATF_ADD(0, (name), (n))
 
 struct pfl_opstat {
-	const char		*opst_name;
+	char			*opst_name;
 	int			 opst_flags;
 
 	uint64_t		 opst_lifetime;	/* lifetime accumulator */
