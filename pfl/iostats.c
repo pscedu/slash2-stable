@@ -61,6 +61,7 @@ pfl_opstat_initf(int flags, const char *namefmt, ...)
 	va_end(ap);
 
 	spinlock(&lock);
+	/* XXX this is sorted so use bsearch */
 	DYNARRAY_FOREACH(opst, i, &pfl_opstats)
 		if (strcmp(name, opst->opst_name) == 0) {
 			freelock(&lock);
@@ -79,9 +80,13 @@ pfl_opstat_initf(int flags, const char *namefmt, ...)
 void
 pfl_opstat_destroy(struct pfl_opstat *opst)
 {
+	int pos;
+
 	spinlock(&pfl_opstats_lock);
-	psc_dynarray_remove(&pfl_opstats, opst);
+	pos = psc_dynarray_bsearch(&pfl_opstats, opst, _pfl_opstat_cmp);
+	psc_dynarray_splice(&pfl_opstats, pos, 1, NULL, 0);
 	freelock(&pfl_opstats_lock);
+	PSCFREE(opst->opst_name);
 	PSCFREE(opst);
 }
 
