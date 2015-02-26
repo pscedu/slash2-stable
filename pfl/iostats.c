@@ -84,6 +84,7 @@ pfl_opstat_destroy(struct pfl_opstat *opst)
 
 	spinlock(&pfl_opstats_lock);
 	pos = psc_dynarray_bsearch(&pfl_opstats, opst, _pfl_opstat_cmp);
+	psc_assert(psc_dynarray_getpos(&pfl_opstats, pos) == opst);
 	psc_dynarray_splice(&pfl_opstats, pos, 1, NULL, 0);
 	freelock(&pfl_opstats_lock);
 	PSCFREE(opst->opst_name);
