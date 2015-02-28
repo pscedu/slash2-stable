@@ -286,7 +286,7 @@ struct pscrpc_msg {
 	uint64_t			 last_committed;
 	uint64_t			 transno;
 	uint32_t			 status;
-	uint32_t			 flags;
+	uint32_t			 flags;			/* see MSG_* flags */
 	uint32_t			 conn_cnt;
 	uint32_t			 bufcount;
 	uint32_t			 buflens[0];
@@ -654,6 +654,7 @@ pscrpc_str2uuid(struct pscrpc_uuid *uuid, char *tmp)
 #define MSG_GEN_FLAG_MASK	0x0000ffff
 #define MSG_RESENT		0x01
 #define MSG_ABORT_BULK		0x02
+#define _PFLRPC_MSGF_LAST	0x04
 
 static __inline int
 pscrpc_msg_get_flags(struct pscrpc_msg *msg)
