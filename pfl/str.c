@@ -41,7 +41,7 @@ pfl_vasprintf(char **p, const char *fmt, va_list ap)
 
 	va_copy(apd, ap);
 	sz = vsnprintf(NULL, 0, fmt, ap);
-	//if (sz == -1)
+	psc_assert(sz != -1);
 
 	sz++;
 	*p = PSCALLOC(sz);
