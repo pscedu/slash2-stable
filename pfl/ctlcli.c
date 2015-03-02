@@ -677,7 +677,7 @@ psc_ctlmsg_journal_prdat(__unusedx const struct psc_ctlmsghdr *mh,
 
 	printf("%-16s %c%c%c%c %4u %6u %2u "
 	    "%9"PRIx64" %7"PRIx64" %8"PRIx64" "
-	    "%6d %4"PRId64" %4u \n",
+	    "%6d %4"PRId64" %5u\n",
 	    pcj->pcj_name,
 	    pcj->pcj_flags & PJF_WANTBUF	? 'B' : '-',
 	    pcj->pcj_flags & PJF_WANTSLOT	? 'S' : '-',
