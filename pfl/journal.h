@@ -113,9 +113,10 @@ struct psc_journal_hdr {
 #define pjh_iolen pjh_start_off
 };
 
-#define PJ_NAME_MAX			32
+#define PJ_NAME_MAX			16
 
 struct psc_journal {
+	char				 pj_devname[NAME_MAX + 1];
 	char				 pj_name[PJ_NAME_MAX];
 	struct psc_listentry		 pj_lentry;
 
@@ -259,7 +260,7 @@ struct psc_journal_xidhndl {
 
 /* definitions of journal handling functions */
 struct psc_journal
-	*pjournal_open(const char *);
+	*pjournal_open(const char *, const char *);
 struct psc_thread
 	*pjournal_replay(struct psc_journal *, int, const char *,
 	    psc_replay_handler_t, psc_distill_handler_t);

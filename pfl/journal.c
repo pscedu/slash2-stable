@@ -720,7 +720,7 @@ pjournal_scan_slots(struct psc_journal *pj)
  * @fn: path to journal on file system.
  */
 struct psc_journal *
-pjournal_open(const char *fn)
+pjournal_open(const char *name, const char *fn)
 {
 	struct psc_journal_hdr *pjh;
 	struct psc_journal *pj;
@@ -731,7 +731,8 @@ pjournal_open(const char *fn)
 
 	pj = PSCALLOC(sizeof(*pj));
 
-	strlcpy(pj->pj_name, pfl_basename(fn), sizeof(pj->pj_name));
+	strlcpy(pj->pj_name, name, sizeof(pj->pj_name));
+	strlcpy(pj->pj_devname, fn, sizeof(pj->pj_devname));
 
 	pj->pj_fd = open(fn, O_RDWR | O_DIRECT);
 	if (pj->pj_fd == -1)
