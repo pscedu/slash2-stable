@@ -36,6 +36,7 @@
 struct psc_ctlmsg_thread;
 struct psc_ctlmsghdr;
 
+/* 80 appears to be small, perhaps make it larger or adaptable */
 #define PSC_CTL_DISPLAY_WIDTH	80
 
 #define PSC_CTLMSG_PRFMT_DEFS															\
