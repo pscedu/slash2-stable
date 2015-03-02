@@ -663,10 +663,10 @@ psc_ctlmsg_journal_prhdr(__unusedx struct psc_ctlmsghdr *mh,
 {
 	printf("%-32s %4s %4s %6s %2s "
 	    "%9s %7s %8s "
-	    "%5s %4s\n",
+	    "%5s %4s %5s\n",
 	    "journal", "flag", "used", "total", "rs",
 	    "lastxid", "comitxg", "distlxid",
-	    "nxslt", "#wrp");
+	    "nxslot", "#wrp", "nbufs");
 }
 
 void
@@ -677,7 +677,7 @@ psc_ctlmsg_journal_prdat(__unusedx const struct psc_ctlmsghdr *mh,
 
 	printf("%-32s %c%c%c%c %4u %6u %2u "
 	    "%9"PRIx64" %7"PRIx64" %8"PRIx64" "
-	    "%5d %4"PRId64"\n",
+	    "%5d %4"PRId64" %4u \n",
 	    pcj->pcj_name,
 	    pcj->pcj_flags & PJF_WANTBUF	? 'B' : '-',
 	    pcj->pcj_flags & PJF_WANTSLOT	? 'S' : '-',
@@ -685,7 +685,7 @@ psc_ctlmsg_journal_prdat(__unusedx const struct psc_ctlmsghdr *mh,
 	    pcj->pcj_flags & PJF_REPLAYINPROG	? 'R' : '-',
 	    pcj->pcj_inuse, pcj->pcj_total, pcj->pcj_resrv,
 	    pcj->pcj_lastxid, pcj->pcj_commit_txg, pcj->pcj_dstl_xid,
-	    pcj->pcj_nextwrite, pcj->pcj_wraparound);
+	    pcj->pcj_nextwrite, pcj->pcj_wraparound, pcj->pcj_bufs_cnt);
 }
 
 void
