@@ -29,7 +29,6 @@
 #  undef _FILE_OFFSET_BITS	/* FTS is not 64-bit ready */
 #endif
 
-#include <sys/param.h>
 #include <sys/stat.h>
 
 #include <err.h>
@@ -42,11 +41,12 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <limits.h>
 
-#include "pfl/str.h"
-#include "pfl/walk.h"
 #include "pfl/lock.h"
 #include "pfl/log.h"
+#include "pfl/str.h"
+#include "pfl/walk.h"
 
 int
 pfl_filewalk_stm2info(int mode)
@@ -58,8 +58,8 @@ pfl_filewalk_stm2info(int mode)
 	psc_fatalx("invalid mode %#o", mode);
 }
 
-/**
- * pfl_filewalk - Traverse a file hierarchy with a given operation.
+/*
+ * Traverse a file hierarchy with a given operation.
  * @fn: file root.
  * @flags: behavorial flags.
  * @cmpf: optional dirent comparator for ordering.
@@ -76,16 +76,17 @@ pfl_filewalk(const char *fn, int flags, void *cmpf,
     void *arg)
 {
 	char * const pathv[] = { (char *)fn, NULL };
+	int rc = 0, ptype, f_flags = 0;
 	char buf[PATH_MAX];
 	const char *path;
 	struct stat stb;
-	int rc = 0, ptype;
 	FTSENT *f;
 	FTS *fp;
 
 	if (flags & PFL_FILEWALKF_RECURSIVE) {
-		/* XXX security implications of FTS_NOCHDIR? */
-		fp = fts_open(pathv, FTS_COMFOLLOW | FTS_NOCHDIR |
+		if (flags & PFL_FILEWALKF_NOSTAT)
+			f_flags |= FTS_NOSTAT;
+		fp = fts_open(pathv, f_flags | FTS_COMFOLLOW |
 		    FTS_PHYSICAL, cmpf);
 		if (fp == NULL)
 			psc_fatal("fts_open %s", fn);
