@@ -248,10 +248,6 @@ ifeq ($(filter $(realpath ${ROOTDIR})/compat/%,${CURDIR}),)
   DEFINES+=						-DHAVE_GETPEERUCRED
  endif
 
- ifdef PICKLE_HAVE_FTS
-  DEFINES+=						-DHAVE_FTS
- endif
-
  ifdef PICKLE_HAVE_RT_SYSCTL
   DEFINES+=						-DHAVE_RT_SYSCTL
  endif
