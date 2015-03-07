@@ -44,6 +44,18 @@
 
 #include "pfl/fts.h"
 
+#ifndef ALIGN
+#  define _ALIGNBYTES		(sizeof(long) - 1)
+#  define ALIGNBYTES		_ALIGNBYTES
+#  define ALIGN(x)		(((unsigned long)(p) + _ALIGNBYTES) &~_ALIGNBYTES)
+#endif
+
+#ifdef _DIRENT_HAVE_D_NAMLEN
+#  define dent_namlen(d)	(d)->d_namlen
+#else
+#  define dent_namlen(d)	strlen((d)->d_name)
+#endif 
+
 #define MAXIMUM(a, b)	(((a) > (b)) ? (a) : (b))
 
 static FTSENT	*pfl_fts_alloc(FTS *, char *, size_t);
@@ -454,6 +466,7 @@ name:		t = sp->fts_path + NAPPEND(p->fts_parent);
 int
 pfl_fts_set(FTS *sp, FTSENT *p, int instr)
 {
+	(void)sp;
 	if (instr && instr != FTS_AGAIN && instr != FTS_FOLLOW &&
 	    instr != FTS_NOINSTR && instr != FTS_SKIP) {
 		errno = EINVAL;
@@ -668,11 +681,11 @@ pfl_fts_build(FTS *sp, int type)
 		if (!ISSET(FTS_SEEDOT) && ISDOT(dp->d_name))
 			continue;
 
-		if (!(p = pfl_fts_alloc(sp, dp->d_name, (size_t)dp->d_namlen)))
+		if (!(p = pfl_fts_alloc(sp, dp->d_name, (size_t)dent_namlen(dp))))
 			goto mem1;
-		if (dp->d_namlen >= maxlen) {	/* include space for NUL */
+		if (dent_namlen(dp) >= maxlen) {	/* include space for NUL */
 			oldaddr = sp->fts_path;
-			if (pfl_fts_palloc(sp, dp->d_namlen +len + 1)) {
+			if (pfl_fts_palloc(sp, dent_namlen(dp) + len + 1)) {
 				/*
 				 * No more memory for path or structures.  Save
 				 * errno, free up the current structure and the
@@ -699,7 +712,7 @@ mem1:				saved_errno = errno;
 
 		p->fts_level = level;
 		p->fts_parent = sp->fts_cur;
-		p->fts_pathlen = len + dp->d_namlen;
+		p->fts_pathlen = len + dent_namlen(dp);
 		if (p->fts_pathlen < len) {
 			/*
 			 * If we wrap, free up the current structure and
