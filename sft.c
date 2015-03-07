@@ -58,7 +58,7 @@
 
 GCRY_THREAD_OPTION_PTHREAD_IMPL;
 
-#define THRT_TIOS		0	/* timed I/O stats */
+#define THRT_OPSTIMER		0	/* timed opstats */
 
 #define NTHR_AUTO		(-1)
 
@@ -110,7 +110,7 @@ off_t			 seekoff;
 
 struct psc_poolmaster	 wk_poolmaster;
 struct psc_poolmgr	*wk_pool;
-struct psc_iostats	 ist;
+struct pfl_opstat	*iostats;
 
 const char		*progname;
 
@@ -264,7 +264,7 @@ thrmain(struct psc_thread *thr)
 			f->rc = -1;
 		}
 
-		psc_iostats_intv_add(&ist, rc);
+		pfl_opstat_add(iostats, rc);
 
 		if (docrc) {
 			if (chunk) {
@@ -302,7 +302,6 @@ void
 display(__unusedx struct psc_thread *thr)
 {
 	char ratebuf[PSCFMT_HUMAN_BUFSIZ];
-	struct psc_iostats myist;
 	int n, t;
 
 	n = printf("%8s %7s", "time (s)", "rate");
@@ -314,12 +313,8 @@ display(__unusedx struct psc_thread *thr)
 	n = 0;
 	for (;;) {
 		sleep(1);
-		memcpy(&myist, &ist, sizeof(myist));
-		psc_fmt_human(ratebuf,
-		    psc_iostats_getintvrate(&myist, 0));
-		t = printf("\r%7.3fs %7s",
-		    psc_iostats_getintvdur(&myist, 0),
-		    ratebuf);
+		psc_fmt_human(ratebuf, iostats->opst_last);
+		t = printf("\r%7s", ratebuf);
 		n = MAX(n - t, 0);
 		printf("%*.*s ", n, n, "");
 		n = t;
@@ -519,8 +514,8 @@ main(int argc, char *argv[])
 	    0, nthr, nthr, 0, NULL, NULL, NULL, "wk");
 	wk_pool = psc_poolmaster_getmgr(&wk_poolmaster);
 
-	psc_tiosthr_spawn(THRT_TIOS, "tiosthr");
-	psc_iostats_init(&ist, "ist");
+	pfl_opstimerthr_spawn(THRT_OPSTIMER, "opstimerthr");
+	iostats = pfl_opstat_init("iostats");
 
 	thrv = PSCALLOC(sizeof(*thrv) * nthr);
 
