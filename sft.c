@@ -129,6 +129,15 @@ struct psc_listcache	 wkq;
 	} while (0)
 
 void
+choosedigest(const char *alg)
+{
+	for (sft_alg = 0; sft_alg < nitems(sft_algs); sft_alg++)
+		if (strcmp(sft_algs[sft_alg], alg) == 0)
+			return;
+	psc_fatalx("unsupported digest: %s", alg);
+}
+
+void
 cksum_init(struct cksum *c)
 {
 	gcry_error_t error;
@@ -138,10 +147,10 @@ cksum_init(struct cksum *c)
 		psc_crc64_init(&c->crc);
 		break;
 	case CKSUMT_MD5:
+		c->gcry_alg = GCRY_MD_MD5;
 		error = gcry_md_open(&c->md, c->gcry_alg, 0);
 		if (error)
 			errx(1, "%s", gpg_strerror(error));
-		c->gcry_alg = GCRY_MD_MD5;
 		break;
 	}
 }
@@ -175,11 +184,11 @@ cksum_fini(struct cksum *c)
 		gcry_md_final(c->md);
 		len = gcry_md_get_algo_dlen(c->gcry_alg);
 		p = gcry_md_read(c->md, c->gcry_alg);
-		for (i = 0; i < len; p++) {
-			c->buf[i++] = '0' + ((*p & 0xf0) >> 8);
-			c->buf[i++] = '0' + (*p & 0xf);
+		for (i = 0; i < len; i++) {
+			snprintf(c->buf + i*2, sizeof(c->buf) - i*2,
+			    "%02x,", p[i]);
 		}
-		c->buf[i] = '\0';
+		c->buf[i*2] = '\0';
 		gcry_md_close(c->md);
 		break;
 	}
@@ -455,7 +464,8 @@ main(int argc, char *argv[])
 		case 'c': /* perform checksums */
 			docrc = 1;
 			break;
-		case 'D': /* digest */
+		case 'D': /* select digest */
+			choosedigest(optarg);
 			docrc = 1;
 			break;
 		case 'K': /* report checksum of each file chunk */
