@@ -32,11 +32,11 @@
 #include <sys/stat.h>
 
 #include <err.h>
+#include <fts.h>
+#include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <limits.h>
 
-#include "pfl/fts.h"
 #include "pfl/lock.h"
 #include "pfl/log.h"
 #include "pfl/str.h"
@@ -64,9 +64,9 @@ pfl_filewalk_stm2info(int mode)
  *	path name unless the file in question is a symbolic link.
  */
 int
-pfl_filewalk(const char *fn, int flags, void *cmpf,
-    int (*cbf)(const char *, const struct stat *, int, int, void *),
-    void *arg)
+pfl_filewalk(const char *fn, int flags, void *cmpf, int (*cbf)(
+    const char *, const struct stat *, int, ino_t, int, void *), void
+    *arg)
 {
 	char * const pathv[] = { (char *)fn, NULL };
 	int rc = 0, ptype, f_flags = 0;
@@ -79,11 +79,11 @@ pfl_filewalk(const char *fn, int flags, void *cmpf,
 	if (flags & PFL_FILEWALKF_RECURSIVE) {
 		if (flags & PFL_FILEWALKF_NOSTAT)
 			f_flags |= FTS_NOSTAT;
-		fp = pfl_fts_open(pathv, f_flags | FTS_COMFOLLOW |
+		fp = fts_open(pathv, f_flags | FTS_COMFOLLOW |
 		    FTS_PHYSICAL, cmpf);
 		if (fp == NULL)
 			psc_fatal("fts_open %s", fn);
-		while ((f = pfl_fts_read(fp)) != NULL) {
+		while ((f = fts_read(fp)) != NULL) {
 			switch (f->fts_info) {
 			case FTS_NS:
 				psclog_warnx("%s: %s", f->fts_path,
@@ -112,11 +112,11 @@ pfl_filewalk(const char *fn, int flags, void *cmpf,
 					    path, f->fts_info == FTS_F ?
 					    "" : "/");
 				rc = cbf(path, f->fts_statp, ptype,
-				    f->fts_level, arg);
+				    f->fts_ino, f->fts_level, arg);
 				if (rc == PFL_FILEWALK_RC_SKIP)
-					pfl_fts_set(fp, f, FTS_SKIP);
+					fts_set(fp, f, FTS_SKIP);
 				else if (rc) {
-					pfl_fts_close(fp);
+					fts_close(fp);
 					return (rc);
 				}
 				break;
@@ -125,11 +125,12 @@ pfl_filewalk(const char *fn, int flags, void *cmpf,
 					warnx("processing %s",
 					    f->fts_path);
 				rc = cbf(f->fts_path, f->fts_statp,
-				    PFWT_SL, f->fts_level, arg);
+				    PFWT_SL, f->fts_ino, f->fts_level,
+				    arg);
 				if (rc == PFL_FILEWALK_RC_SKIP)
-					pfl_fts_set(fp, f, FTS_SKIP);
+					fts_set(fp, f, FTS_SKIP);
 				else if (rc) {
-					pfl_fts_close(fp);
+					fts_close(fp);
 					return (rc);
 				}
 				break;
@@ -139,7 +140,7 @@ pfl_filewalk(const char *fn, int flags, void *cmpf,
 				break;
 			}
 		}
-		pfl_fts_close(fp);
+		fts_close(fp);
 	} else {
 		if (lstat(fn, &stb) == -1)
 			err(1, "%s", fn);
@@ -151,7 +152,7 @@ pfl_filewalk(const char *fn, int flags, void *cmpf,
 			path = buf;
 		}
 		ptype = pfl_filewalk_stm2info(stb.st_mode);
-		rc = cbf(path, &stb, ptype, 0, arg);
+		rc = cbf(path, &stb, stb.st_ino, ptype, 0, arg);
 	}
 	return (rc);
 }
