@@ -381,7 +381,7 @@ addwk(struct file *f, off_t off, int chunkid, size_t len)
 
 int
 proc(const char *fn, const struct stat *stb, int info,
-    __unusedx int level, __unusedx void *arg)
+    __unusedx ino_t inum, __unusedx int level, __unusedx void *arg)
 {
 	struct file *f;
 	int chunkid;
