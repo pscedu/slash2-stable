@@ -114,12 +114,12 @@ typedef struct _ftsent {
 } FTSENT;
 
 __BEGIN_DECLS
-FTSENT	*fts_children(FTS *, int);
-int	 fts_close(FTS *);
-FTS	*fts_open(char * const *, int,
+FTSENT	*pfl_fts_children(FTS *, int);
+int	 pfl_fts_close(FTS *);
+FTS	*pfl_fts_open(char * const *, int,
 	    int (*)(const FTSENT **, const FTSENT **));
-FTSENT	*fts_read(FTS *);
-int	 fts_set(FTS *, FTSENT *, int);
+FTSENT	*pfl_fts_read(FTS *);
+int	 pfl_fts_set(FTS *, FTSENT *, int);
 __END_DECLS
 
 #endif /* !_FTS_H_ */

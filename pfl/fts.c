@@ -531,6 +531,19 @@ pfl_fts_children(FTS *sp, int instr)
 	return (sp->fts_child);
 }
 
+#ifdef DT_DIR
+static int
+pfl_fts_dtype2ftsinfo(int dtype)
+{
+	switch (dtype) {
+	case DT_DIR:	return (FTS_D);
+	case DT_REG:	return (FTS_F);
+	case DT_LNK:	return (FTS_SL);
+	default:	return (FTS_NSOK);
+	}
+}
+#endif
+
 /*
  * This is the tricky part -- do not casually change *anything* in here.  The
  * idea is to build the linked list of entries that are used by fts_children
@@ -717,7 +730,11 @@ mem1:				saved_errno = errno;
 		    ) {
 			p->fts_accpath =
 			    ISSET(FTS_NOCHDIR) ? p->fts_path : p->fts_name;
+#ifdef DT_DIR
+			p->fts_info = pfl_fts_dtype2ftsinfo(dp->d_type);
+#else
 			p->fts_info = FTS_NSOK;
+#endif
 		} else {
 			/* Build a file name for fts_stat to stat. */
 			if (ISSET(FTS_NOCHDIR)) {
@@ -885,8 +902,8 @@ pfl_fts_sort(FTS *sp, FTSENT *head, int nitems)
 		struct _ftsent **a;
 
 		sp->fts_nitems = nitems + 40;
-		if ((a = reallocarray(sp->fts_array,
-		    sp->fts_nitems, sizeof(FTSENT *))) == NULL) {
+		if ((a = realloc(sp->fts_array,
+		    sp->fts_nitems * sizeof(FTSENT *))) == NULL) {
 			if (sp->fts_array)
 				free(sp->fts_array);
 			sp->fts_array = NULL;

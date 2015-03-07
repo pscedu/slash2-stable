@@ -25,18 +25,16 @@
  * %PSC_END_COPYRIGHT%
  */
 
-#ifdef HAVE_FTS
-#  undef _FILE_OFFSET_BITS	/* FTS is not 64-bit ready */
-#endif
+#undef _FILE_OFFSET_BITS	/* FTS is not 64-bit ready */
 
 #include <sys/stat.h>
 
 #include <err.h>
-#include <fts.h>
 #include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
 
+#include "pfl/fts.h"
 #include "pfl/lock.h"
 #include "pfl/log.h"
 #include "pfl/str.h"
@@ -79,11 +77,11 @@ pfl_filewalk(const char *fn, int flags, void *cmpf, int (*cbf)(
 	if (flags & PFL_FILEWALKF_RECURSIVE) {
 		if (flags & PFL_FILEWALKF_NOSTAT)
 			f_flags |= FTS_NOSTAT;
-		fp = fts_open(pathv, f_flags | FTS_COMFOLLOW |
+		fp = pfl_fts_open(pathv, f_flags | FTS_COMFOLLOW |
 		    FTS_PHYSICAL, cmpf);
 		if (fp == NULL)
 			psc_fatal("fts_open %s", fn);
-		while ((f = fts_read(fp)) != NULL) {
+		while ((f = pfl_fts_read(fp)) != NULL) {
 			switch (f->fts_info) {
 			case FTS_NS:
 				psclog_warnx("%s: %s", f->fts_path,
@@ -114,9 +112,9 @@ pfl_filewalk(const char *fn, int flags, void *cmpf, int (*cbf)(
 				rc = cbf(path, f->fts_statp, ptype,
 				    f->fts_ino, f->fts_level, arg);
 				if (rc == PFL_FILEWALK_RC_SKIP)
-					fts_set(fp, f, FTS_SKIP);
+					pfl_fts_set(fp, f, FTS_SKIP);
 				else if (rc) {
-					fts_close(fp);
+					pfl_fts_close(fp);
 					return (rc);
 				}
 				break;
@@ -128,9 +126,9 @@ pfl_filewalk(const char *fn, int flags, void *cmpf, int (*cbf)(
 				    PFWT_SL, f->fts_ino, f->fts_level,
 				    arg);
 				if (rc == PFL_FILEWALK_RC_SKIP)
-					fts_set(fp, f, FTS_SKIP);
+					pfl_fts_set(fp, f, FTS_SKIP);
 				else if (rc) {
-					fts_close(fp);
+					pfl_fts_close(fp);
 					return (rc);
 				}
 				break;
@@ -140,7 +138,7 @@ pfl_filewalk(const char *fn, int flags, void *cmpf, int (*cbf)(
 				break;
 			}
 		}
-		fts_close(fp);
+		pfl_fts_close(fp);
 	} else {
 		if (lstat(fn, &stb) == -1)
 			err(1, "%s", fn);
