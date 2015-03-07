@@ -58,6 +58,7 @@
 #include "pfl/fmt.h"
 #include "pfl/fmtstr.h"
 #include "pfl/fs.h"
+#include "pfl/fts.h"
 #include "pfl/getopt.h"
 #include "pfl/hashtbl.h"
 #include "pfl/heap.h"
@@ -213,6 +214,7 @@ main(int argc, char *argv[])
 	PRTYPE(psc_atomic_t);
 	PRTYPE(pscfs_fgen_t);
 	PRTYPE(pscfs_inum_t);
+	PRTYPE(struct _ftsent);
 	PRTYPE(struct aiocb);
 	PRTYPE(struct ifaddrs);
 	PRTYPE(struct l_wait_info);
