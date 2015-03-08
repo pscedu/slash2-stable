@@ -119,7 +119,7 @@ int	 pfl_fts_close(FTS *);
 FTS	*pfl_fts_open(char * const *, int,
 	    int (*)(const FTSENT **, const FTSENT **));
 FTSENT	*pfl_fts_read(FTS *);
-int	 pfl_fts_set(FTS *, FTSENT *, int);
+int	 pfl_fts_set(FTSENT *, int);
 __END_DECLS
 
 #endif /* !_FTS_H_ */
