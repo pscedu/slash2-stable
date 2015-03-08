@@ -380,19 +380,18 @@ addwk(struct file *f, off_t off, int chunkid, size_t len)
 }
 
 int
-proc(const char *fn, const struct stat *stb, int info,
-    __unusedx ino_t inum, __unusedx int level, __unusedx void *arg)
+proc(FTSENT *fe, __unusedx void *arg)
 {
 	struct file *f;
 	int chunkid;
 	off_t off;
 
-	if (info != PFWT_F)
+	if (fe->fts_info != FTS_F)
 		return (0);
 
 	if (verbose) {
 		lock_output();
-		warnx("processing %s", fn);
+		warnx("processing %s", fe->fts_path);
 		unlock_output();
 	}
 
@@ -400,15 +399,15 @@ proc(const char *fn, const struct stat *stb, int info,
 	if (docrc && !chunk)
 		cksum_init(&f->cksum);
 	INIT_SPINLOCK(&f->lock);
-	f->fn = strdup(fn);
+	f->fn = strdup(fe->fts_path);
 	if (writesz)
-		f->fd = open(fn, O_CREAT | O_RDWR, 0600);
+		f->fd = open(fe->fts_path, O_CREAT | O_RDWR, 0600);
 	else
-		f->fd = open(fn, O_RDONLY);
+		f->fd = open(fe->fts_path, O_RDONLY);
 	f->refcnt = 1;
 	if (f->fd == -1)
-		err(1, "open %s", fn);
-	memcpy(&f->stb, stb, sizeof(f->stb));
+		err(1, "open %s", fe->fts_path);
+	f->stb = *fe->fts_statp;
 
 	if (writesz)
 		f->stb.st_size = writesz;
@@ -434,7 +433,7 @@ proc(const char *fn, const struct stat *stb, int info,
 int
 main(int argc, char *argv[])
 {
-	int displaybw = 0, c, n, flags = 0;
+	int displaybw = 0, c, n, flags = PFL_FILEWALKF_NOCHDIR;
 	struct psc_thread **thrv;
 	char *endp;
 
