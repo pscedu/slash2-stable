@@ -25,8 +25,6 @@
  * %PSC_END_COPYRIGHT%
  */
 
-#undef _FILE_OFFSET_BITS	/* FTS is not 64-bit ready */
-
 #include <sys/stat.h>
 
 #include <err.h>
