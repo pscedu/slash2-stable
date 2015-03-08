@@ -41,9 +41,8 @@
 #include "pfl/fts.h"
 
 #ifndef ALIGN
-#  define _ALIGNBYTES		(sizeof(long) - 1)
-#  define ALIGNBYTES		_ALIGNBYTES
-#  define ALIGN(x)		(((unsigned long)(p) + _ALIGNBYTES) &~_ALIGNBYTES)
+#  define ALIGNBYTES		(sizeof(long) - 1)
+#  define ALIGN(x)		(((unsigned long)(x) + ALIGNBYTES) & ~ALIGNBYTES)
 #endif
 
 #ifdef _DIRENT_HAVE_D_NAMLEN
