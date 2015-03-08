@@ -34,21 +34,12 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#include "pfl/alloc.h"
 #include "pfl/fts.h"
 #include "pfl/lock.h"
 #include "pfl/log.h"
 #include "pfl/str.h"
 #include "pfl/walk.h"
-
-int
-pfl_filewalk_stm2info(int mode)
-{
-	if (S_ISREG(mode))
-		return (PFWT_F);
-	if (S_ISDIR(mode))
-		return (PFWT_D);
-	psc_fatalx("invalid mode %#o", mode);
-}
 
 /*
  * Traverse a file hierarchy and perform an operation on each file
@@ -62,14 +53,11 @@ pfl_filewalk_stm2info(int mode)
  *	path name unless the file in question is a symbolic link.
  */
 int
-pfl_filewalk(const char *fn, int flags, void *cmpf, int (*cbf)(
-    const char *, const struct stat *, int, ino_t, int, void *), void
-    *arg)
+pfl_filewalk(const char *fn, int flags, void *cmpf, int (*cbf)(FTSENT *,
+    void *), void *arg)
 {
 	char * const pathv[] = { (char *)fn, NULL };
 	int rc = 0, ptype, f_flags = 0;
-	char buf[PATH_MAX];
-	const char *path;
 	struct stat stb;
 	FTSENT *f;
 	FTS *fp;
@@ -88,51 +76,22 @@ pfl_filewalk(const char *fn, int flags, void *cmpf, int (*cbf)(
 				    strerror(f->fts_errno));
 				break;
 			case FTS_F:
-				ptype = PFWT_F;
-				if (0)
-				/* FALLTHROUGH */
 			case FTS_D:
-				ptype = PFWT_D;
-				if (0)
-				/* FALLTHROUGH */
-			case FTS_DP:
-				ptype = PFWT_DP;
-				path = buf;
-				if (flags & PFL_FILEWALKF_RELPATH)
-					path = f->fts_path;
-				else if (realpath(f->fts_path, buf) == NULL) {
-					psclog_warn("realpath %s",
-					    f->fts_path);
-					break;
-				}
-				if (flags & PFL_FILEWALKF_VERBOSE)
-					warnx("processing %s%s",
-					    path, f->fts_info == FTS_F ?
-					    "" : "/");
-				rc = cbf(path, f->fts_statp, ptype,
-				    f->fts_ino, f->fts_level, arg);
-				if (rc == PFL_FILEWALK_RC_SKIP)
-					pfl_fts_set(fp, f, FTS_SKIP);
-				else if (rc) {
-					pfl_fts_close(fp);
-					return (rc);
-				}
-				break;
 			case FTS_SL:
 				if (flags & PFL_FILEWALKF_VERBOSE)
-					warnx("processing %s",
-					    f->fts_path);
-				rc = cbf(f->fts_path, f->fts_statp,
-				    PFWT_SL, f->fts_ino, f->fts_level,
-				    arg);
-				if (rc == PFL_FILEWALK_RC_SKIP)
-					pfl_fts_set(fp, f, FTS_SKIP);
-				else if (rc) {
+					warnx("processing %s%s",
+					    fn, f->fts_info == FTS_D ?
+					    "/" : "");
+			case FTS_DP:
+				rc = cbf(f, arg);
+				if (rc) {
 					pfl_fts_close(fp);
 					return (rc);
 				}
 				break;
 			default:
+				if (f->fts_errno == 0)
+					f->fts_errno = EOPNOTSUPP;
 				psclog_warnx("%s: %s", f->fts_path,
 				    strerror(f->fts_errno));
 				break;
@@ -140,17 +99,33 @@ pfl_filewalk(const char *fn, int flags, void *cmpf, int (*cbf)(
 		}
 		pfl_fts_close(fp);
 	} else {
+		const char *basefn;
+		size_t baselen;
+
 		if (lstat(fn, &stb) == -1)
 			err(1, "%s", fn);
-		if (flags & PFL_FILEWALKF_RELPATH)
-			path = fn;
-		else {
-			if (realpath(fn, buf) == NULL)
-				err(1, "%s", fn);
-			path = buf;
+		basefn = pfl_basename(fn);
+		baselen = strlen(basefn);
+
+		f = PSCALLOC(sizeof(*f) + baselen);
+		f->fts_accpath = (char *)fn;
+		f->fts_path = (char *)fn;
+		f->fts_pathlen = strlen(fn);
+		strlcpy(f->fts_name, basefn, baselen + 1);
+		f->fts_namelen = baselen;
+		f->fts_ino = stb.st_ino;
+		f->fts_statp = &stb;
+		switch (stb.st_mode & S_IFMT) {
+		case S_IFDIR: f->fts_info = FTS_D; break;
+		case S_IFREG: f->fts_info = FTS_F; break;
+		case S_IFLNK: f->fts_info = FTS_SL; break;
+		default:
+			psclog_warnx("%s: %s", fn,
+			    strerror(EOPNOTSUPP));
+			break;
 		}
-		ptype = pfl_filewalk_stm2info(stb.st_mode);
-		rc = cbf(path, &stb, stb.st_ino, ptype, 0, arg);
+		rc = cbf(f, arg);
+		PSCFREE(f);
 	}
 	return (rc);
 }

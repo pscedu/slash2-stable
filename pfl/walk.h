@@ -33,28 +33,14 @@
 #ifndef _PFL_FILEWALK_H_
 #define _PFL_FILEWALK_H_
 
-#include "pfl/stat.h"
+#include "pfl/fts.h"
 
-struct stat;
-
-int pfl_filewalk(const char *, int, void *, int (*)(const char *,
-    const struct stat *, int, ino_t, int, void *), void *);
+int pfl_filewalk(const char *, int, void *, int (*)(FTSENT *, void *),
+    void *);
 
 #define PFL_FILEWALKF_VERBOSE	(1 << 0)
 #define PFL_FILEWALKF_RECURSIVE	(1 << 1)
-#define PFL_FILEWALKF_RELPATH	(1 << 2)	/* relative path (don't realpath(3)) */
-#define PFL_FILEWALKF_NOSTAT	(1 << 3)
-#define PFL_FILEWALKF_NOCHDIR	(1 << 4)
-
-#define PFL_FILEWALK_RC_OK	0
-#define PFL_FILEWALK_RC_BAIL	1
-#define PFL_FILEWALK_RC_SKIP	2
-
-enum {
-	PFWT_D,
-	PFWT_DP,
-	PFWT_F,
-	PFWT_SL
-};
+#define PFL_FILEWALKF_NOSTAT	(1 << 2)
+#define PFL_FILEWALKF_NOCHDIR	(1 << 3)
 
 #endif /* _PFL_FILEWALK_H_ */
