@@ -464,9 +464,8 @@ name:		t = sp->fts_path + NAPPEND(p->fts_parent);
  */
 /* ARGSUSED */
 int
-pfl_fts_set(FTS *sp, FTSENT *p, int instr)
+pfl_fts_set(FTSENT *p, int instr)
 {
-	(void)sp;
 	if (instr && instr != FTS_AGAIN && instr != FTS_FOLLOW &&
 	    instr != FTS_NOINSTR && instr != FTS_SKIP) {
 		errno = EINVAL;
@@ -748,6 +747,7 @@ mem1:				saved_errno = errno;
 #else
 			p->fts_info = FTS_NSOK;
 #endif
+			p->fts_ino = dp->d_ino;
 		} else {
 			/* Build a file name for fts_stat to stat. */
 			if (ISSET(FTS_NOCHDIR)) {
