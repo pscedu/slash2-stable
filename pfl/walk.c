@@ -63,6 +63,8 @@ pfl_filewalk(const char *fn, int flags, void *cmpf, int (*cbf)(FTSENT *,
 	if (flags & PFL_FILEWALKF_RECURSIVE) {
 		if (flags & PFL_FILEWALKF_NOSTAT)
 			f_flags |= FTS_NOSTAT;
+		if (flags & PFL_FILEWALKF_NOCHDIR)
+			f_flags |= FTS_NOCHDIR;
 		fp = pfl_fts_open(pathv, f_flags | FTS_COMFOLLOW |
 		    FTS_PHYSICAL, cmpf);
 		if (fp == NULL)
