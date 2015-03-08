@@ -27,10 +27,6 @@
  * SUCH DAMAGE.
  */
 
-#ifdef HAVE_FTS
-#  undef _FILE_OFFSET_BITS	/* FTS is not 64-bit ready */
-#endif
-
 #include <sys/param.h>	/* ALIGN */
 #include <sys/stat.h>
 
@@ -54,7 +50,7 @@
 #  define dent_namlen(d)	(d)->d_namlen
 #else
 #  define dent_namlen(d)	strlen((d)->d_name)
-#endif 
+#endif
 
 #define MAXIMUM(a, b)	(((a) > (b)) ? (a) : (b))
 
