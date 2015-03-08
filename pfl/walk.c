@@ -57,7 +57,7 @@ pfl_filewalk(const char *fn, int flags, void *cmpf, int (*cbf)(FTSENT *,
     void *), void *arg)
 {
 	char * const pathv[] = { (char *)fn, NULL };
-	int rc = 0, ptype, f_flags = 0;
+	int rc = 0, f_flags = 0;
 	struct stat stb;
 	FTSENT *f;
 	FTS *fp;
