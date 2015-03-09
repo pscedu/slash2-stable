@@ -576,7 +576,7 @@ pfl_fts_build(FTS *sp, int type)
 	size_t len, maxlen;
 	int nitems, cderrno, descend, level, nlinks, nostat, doadjust;
 	int saved_errno;
-	char *cp;
+	char *cp = NULL; /* gcc */
 
 	/* Set current node pointer. */
 	cur = sp->fts_cur;
@@ -598,9 +598,10 @@ pfl_fts_build(FTS *sp, int type)
 	 * directory if we're cheating on stat calls, 0 if we're not doing
 	 * any stat calls at all, -1 if we're doing stats on everything.
 	 */
-	if (type == BNAMES)
+	if (type == BNAMES) {
 		nlinks = 0;
-	else if (ISSET(FTS_NOSTAT) && ISSET(FTS_PHYSICAL)) {
+		nostat = 0;
+	} else if (ISSET(FTS_NOSTAT) && ISSET(FTS_PHYSICAL)) {
 		nlinks = cur->fts_nlink - (ISSET(FTS_SEEDOT) ? 0 : 2);
 		nostat = 1;
 	} else {
