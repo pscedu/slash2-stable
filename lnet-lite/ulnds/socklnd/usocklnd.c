@@ -99,6 +99,9 @@ usock_tunables_t usock_tuns = {
         .ut_sockbufsiz      = 0,
         .ut_cport           = 988,
         .ut_portpid         = 1,
+        .ut_keepalive_cnt   = 0,
+        .ut_keepalive_idle  = 0,
+        .ut_keepalive_intv  = 0,
 };
 
 #define MAX_REASONABLE_TIMEOUT 36000 /* 10 hours */
@@ -260,6 +263,26 @@ usocklnd_update_tunables()
 	usock_tuns.ut_cport = lnet_acceptor_port();
         rc = cfs_parse_int_tunable(&usock_tuns.ut_cport,
                                       "USOCK_CPORT");
+        if (rc)
+                return rc;
+
+        rc = cfs_parse_int_tunable(&usock_tuns.ut_keepalive,
+	    "USOCK_KEEPALIVE");
+        if (rc)
+                return rc;
+
+        rc = cfs_parse_int_tunable(&usock_tuns.ut_keepalive_cnt,
+	    "USOCK_KEEPALIVE_CNT");
+        if (rc)
+                return rc;
+
+        rc = cfs_parse_int_tunable(&usock_tuns.ut_keepalive_idle,
+	    "USOCK_KEEPALIVE_IDLE");
+        if (rc)
+                return rc;
+
+        rc = cfs_parse_int_tunable(&usock_tuns.ut_keepalive_intv,
+	    "USOCK_KEEPALIVE_INTV");
         if (rc)
                 return rc;
 
