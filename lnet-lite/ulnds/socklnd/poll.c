@@ -329,7 +329,7 @@ usocklnd_process_pollrequest(usock_pollrequest_t *pr,
                 if (idx > 0 && idx < pt_data->upt_nfds) { /* hot path */
                         LASSERT(pollfd[idx].fd == conn->uc_lx->lx_fd);
                 } else { /* unlikely */
-                        CWARN("Very unlikely event happend: trying to"
+                        CWARN("Very unlikely event happened: trying to"
                               " handle poll request of type %d but idx=%d"
                               " is out of range [1 ... %d]. Is shutdown"
                               " in progress (%d)?\n",
@@ -543,7 +543,7 @@ usocklnd_wakeup_pollthread(int i)
                      sizeof(notification));
 
         if (rc != sizeof(notification))
-                CERROR("Very unlikely event happend: "
+                CERROR("Very unlikely event happened: "
                        "cannot write to notifier fd (rc=%d; errno=%d)\n",
                        rc, errno);
 }
