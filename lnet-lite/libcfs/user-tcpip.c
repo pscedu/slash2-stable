@@ -511,6 +511,43 @@ libcfs_fcntl_nonblock(int fd)
 }
 
 int
+libcfs_sock_set_keepalive(int fd, int keepalive, int cnt, int idle,
+    int intv)
+{
+	int rc, option = keepalive ? 1 : 0;
+
+	if (setsockopt(fd, SOL_SOCKET, SO_KEEPALIVE, &option,
+	    sizeof(option)) == -1) {
+		rc = -errno;
+		CERROR("Cannot set KEEPALIVE socket option\n");
+		return rc;
+	}
+
+	if (setsockopt(fd, SOL_TCP, TCP_KEEPCNT, &cnt,
+	    sizeof(cnt)) == -1) {
+		rc = -errno;
+		CERROR ("Cannot set KEEPALIVE socket option\n");
+		return rc;
+	}
+
+	if (setsockopt(fd, SOL_TCP, TCP_KEEPIDLE, &idle,
+	    sizeof(idle)) == -1) {
+		rc = -errno;
+		CERROR ("Cannot set KEEPALIVE socket option\n");
+		return rc;
+	}
+
+	if (setsockopt(fd, SOL_TCP, TCP_KEEPINTVL, &intv,
+	    sizeof(intv)) == -1) {
+		rc = -errno;
+		CERROR ("Cannot set KEEPALIVE socket option\n");
+		return rc;
+	}
+
+	return 0;
+}
+
+int
 libcfs_sock_set_nagle(int fd, int nagle)
 {
 	int rc;
