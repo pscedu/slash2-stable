@@ -408,6 +408,16 @@ usocklnd_set_sock_options(int fd)
 {
         int rc;
 
+        if (usock_tuns.ut_keepalive) {
+		rc = libcfs_sock_set_keepalive(fd,
+		    usock_tuns.ut_keepalive,
+		    usock_tuns.ut_keepalive_cnt,
+		    usock_tuns.ut_keepalive_idle,
+		    usock_tuns.ut_keepalive_intv);
+		if (rc)
+			return rc;
+	}
+
         rc = libcfs_sock_set_nagle(fd, usock_tuns.ut_socknagle);
         if (rc)
                 return rc;
