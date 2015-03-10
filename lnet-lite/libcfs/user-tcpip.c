@@ -523,21 +523,21 @@ libcfs_sock_set_keepalive(int fd, int keepalive, int cnt, int idle,
 		return rc;
 	}
 
-	if (setsockopt(fd, SOL_TCP, TCP_KEEPCNT, &cnt,
+	if (cnt && setsockopt(fd, SOL_TCP, TCP_KEEPCNT, &cnt,
 	    sizeof(cnt)) == -1) {
 		rc = -errno;
 		CERROR ("Cannot set KEEPALIVE socket option\n");
 		return rc;
 	}
 
-	if (setsockopt(fd, SOL_TCP, TCP_KEEPIDLE, &idle,
+	if (idle && setsockopt(fd, SOL_TCP, TCP_KEEPIDLE, &idle,
 	    sizeof(idle)) == -1) {
 		rc = -errno;
 		CERROR ("Cannot set KEEPALIVE socket option\n");
 		return rc;
 	}
 
-	if (setsockopt(fd, SOL_TCP, TCP_KEEPINTVL, &intv,
+	if (intv && setsockopt(fd, SOL_TCP, TCP_KEEPINTVL, &intv,
 	    sizeof(intv)) == -1) {
 		rc = -errno;
 		CERROR ("Cannot set KEEPALIVE socket option\n");
