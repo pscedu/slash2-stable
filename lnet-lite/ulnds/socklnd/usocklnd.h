@@ -208,6 +208,10 @@ typedef struct {
         int ut_sockbufsiz;    /* size of socket buffers */
 	int ut_cport;         /* remote peer TCP port for connect(2) */
 	int ut_portpid;       /* substitute peer TCP port for peer PID */
+	int ut_keepalive;     /* enable KEEPALIVE socket option */
+	int ut_keepalive_cnt; 
+	int ut_keepalive_idle;
+	int ut_keepalive_intv;
 } usock_tunables_t;
 
 extern usock_tunables_t usock_tuns;
