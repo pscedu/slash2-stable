@@ -19,12 +19,12 @@ PSC's SLASH2 file system's I/O utilities
 svn co -r %{version} svn+ssh://frodo/cluster/svn/projects .
 
 %build
-cd slash_nara
+cd slash2
 DEVELPATHS=0 SLASH_MODULES=ion make %{?_smp_mflags}
 
 %install
 rm -rf $RPM_BUILD_ROOT
-cd slash_nara
+cd slash2
 INST_BASE=$RPM_BUILD_ROOT/usr/local/psc SLASH_MODULES=ion make install
 
 %clean

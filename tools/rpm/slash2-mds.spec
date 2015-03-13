@@ -24,12 +24,12 @@ svn co -r %{version} svn+ssh://frodo/cluster/svn/projects .
 
 %build
 (cd zfs		&& DEVELPATHS=0 SLASH_MODULES=mds make %{?_smp_mflags})
-(cd slash_nara	&& DEVELPATHS=0 SLASH_MODULES=mds make %{?_smp_mflags})
+(cd slash2	&& DEVELPATHS=0 SLASH_MODULES=mds make %{?_smp_mflags})
 
 %install
 rm -rf $RPM_BUILD_ROOT
 (cd zfs		&& INST_BASE=$RPM_BUILD_ROOT/usr/local/psc SLASH_MODULES=mds make install)
-(cd slash_nara	&& INST_BASE=$RPM_BUILD_ROOT/usr/local/psc SLASH_MODULES=mds make install)
+(cd slash2	&& INST_BASE=$RPM_BUILD_ROOT/usr/local/psc SLASH_MODULES=mds make install)
 
 %clean
 rm -rf $RPM_BUILD_ROOT

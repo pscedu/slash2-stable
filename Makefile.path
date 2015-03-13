@@ -3,7 +3,7 @@
 
 LNET_BASE=	${ROOTDIR}/lnet-lite
 PFL_BASE=	${ROOTDIR}/pfl
-SLASH_BASE=	${ROOTDIR}/slash_nara
+SLASH_BASE=	${ROOTDIR}/slash2
 ZEST_BASE=	${ROOTDIR}/zest
 ZFS_BASE=	${ROOTDIR}/zfs
 GCRC_BASE=	${ROOTDIR}/distrib/gcrcutil/src
