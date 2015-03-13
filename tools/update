@@ -96,7 +96,7 @@ _getrepo()
 	elif svn info >/dev/null 2>&1; then
 		svn $SVN_ACTION
 
-	else
+	elif [ x"$GIT_ACTION" = x"pull" ]; then
 		cd ..
 		mv $base $base.svnold
 
@@ -137,7 +137,7 @@ pubrepo idxutils
 pubrepo jives
 pubrepo psync
 pubrepo sft
-#pubrepo slash2
+pubrepo slash2
 pubrepo src-upd
 pubrepo wokfs
 pubrepo xopctl
