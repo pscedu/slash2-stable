@@ -23,6 +23,12 @@
 # -----------------------------------------------------------------------------
 # %PSC_END_COPYRIGHT%
 
+# pickle: PFL infrastruture for configuration ... environment
+#
+# This file contains routines to run the pickle probe tests (via
+# tools/picklegen) and glues knobs to detected system features.
+
+# do not recursively depend on pickle when running the pickle probes!
 ifeq ($(filter $(realpath ${ROOTDIR})/compat/%,${CURDIR}),)
 
  PICKLEHOSTMK=${ROOTDIR}/mk/gen-localdefs-$(word 1,$(subst ., ,$(shell hostname)))-pickle.mk
