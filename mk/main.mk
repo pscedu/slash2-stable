@@ -393,8 +393,7 @@ ${OBJDIR}/$(notdir %.E) : %.c
 
 ${OBJDIR}/$(notdir %.c) : %.l
 	@${MKDIRS} -m 775 ${OBJDIR}
-	@echo "${LEX} ${LFLAGS} $(realpath $<) > $@"
-	@${LEX} ${LFLAGS} $(realpath $<) > $@
+	${LEX} ${LFLAGS} $(realpath $<) > $@
 
 #	$(eval $$(call FILE_PCPP_FLAGS_VARNAME,$@)+=$$(call FILE_PCPP_FLAGS,$<))
 #	$(eval $$(call FILE_CFLAGS_VARNAME,$@)+=$$(call FILE_CFLAGS,$<))
