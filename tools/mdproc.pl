@@ -24,6 +24,9 @@
 # -----------------------------------------------------------------------------
 # %PSC_END_COPYRIGHT%
 
+# mdproc - Preprocessor for mandoc manual pages, doing things such as
+# expanding templates and updating dates.
+
 # Better algorithm:
 #	use file mtime as long as mtime != ctime
 #	and svn diff -I\$Id yields isn't empty
