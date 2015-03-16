@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/usr/bin/env perl
 # $Id$
 # %PSC_START_COPYRIGHT%
 # -----------------------------------------------------------------------------
@@ -24,85 +24,58 @@
 # -----------------------------------------------------------------------------
 # %PSC_END_COPYRIGHT%
 
-
-usage()
-{
-	echo "usage: $0 file ..." >&2
-	exit 1
-}
-
-if getopts "" c; then
-	usage
-fi
-shift $(($OPTIND - 1))
-
-if [ $# -eq 0 ]; then
-	usage;
-fi
-
-for i; do
-	if [ -h "$i" ]; then
-		continue
-	fi
-	perl -W -i - $i <<'EOF'
-use File::Basename;
-use warnings;
 use strict;
+use warnings;
 
-local $/;
-
-my $data = <>;
-my $yr;
-my $fn = $ARGV;
-my $bn = basename $fn;
-
-my @out = split /\n/, join '\n', `svn log '$fn'`;
-
-my $startyr = 2006;
-
-foreach my $ln (@out) {
-	my (undef, $t_yr) =
-	    ($ln =~ /^r(\d+) \s+ \| \s+ (?:\w+) \s+ \| \s+
-	    (\d+)-(?:\d+)-0*(?:\d+) \s+ (?:\d+):(?:\d+):(?:\d+)/x) or next;
-	$startyr = $t_yr;
+sub usage {
+	die "usage: $0\n";
 }
 
-$startyr = $1 if $data =~
-    m{Copyright \(c\) (\d+)(?:-\d+)?,? Pittsburgh Supercomputing Center \(PSC\)\.};
+sub gencopy {
+	my $fn = shift;
 
-my $endyr = 1900 + (localtime((stat $ARGV)[9]))[5];
-$endyr = $1 if $data =~ m{\A(?:.*\n)?.*\$Id: \Q$bn\E \d+ (\d+)-}m;
+	my @out = `git log --date=short --pretty=format:%ad \Q$fn\E`;
+	return if $? or @out == 0;
 
-if ($endyr < $startyr) {
-	warn "$ARGV: $endyr from Id tag before $startyr\n";
-	$endyr = $startyr;
-}
+	my $newest = pop @out;
+	my $oldest = @out ? shift(@out) : $newest;
 
-my $cpyears = $startyr;
-$cpyears .= "-$endyr" if $endyr > $startyr;
+	my ($startyr) = $newest =~ /^(\d+)/;
+	my ($endyr) = $oldest =~ /^(\d+)/;
 
-my $d_start = "/*\n";
-my $d_cont = " *";
-my $d_end = "\n */";
+	local $/;
+	open F, "<", $fn or die "$fn: $!\n";
+	my $data = <F>;
+	close F;
 
-if ($data =~ m{^(.*) %PSC(?:GPL|PRI)?_(START_)?COPYRIGHT%}m) {
-	$d_cont = $1;
-	$d_cont = " *" if $d_cont eq "/*";
+	$startyr = $1 if $data =~
+	    m{Copyright \(c\) (\d+)(?:-\d+)?,? Pittsburgh Supercomputing Center \(PSC\)\.};
 
-	unless ($d_cont eq " *") {
-		$d_start = "";
-		$d_end = "";
+	my $cpyears = $startyr;
+	$cpyears .= "-$endyr" if $endyr > $startyr;
+
+	my $d_start = "/*\n";
+	my $d_cont = " *";
+	my $d_end = "\n */";
+
+	if ($data =~ m{^(.*) %PSC(?:GPL|PRI)?_(START_)?COPYRIGHT%}m) {
+		$d_cont = $1;
+		$d_cont = " *" if $d_cont eq "/*";
+
+		unless ($d_cont eq " *") {
+			$d_start = "";
+			$d_end = "";
+		}
 	}
-}
 
-$data =~ s{^(.*)\s*%(PSC|PSCGPL|PSCPRI)_COPYRIGHT%.*\n}{<<EOF2}me;
+	$data =~ s{^(.*)\s*%(PSC|PSCGPL|PSCPRI)_COPYRIGHT%.*\n}{<<EOF2}me;
 $d_start$d_cont %$2_START_COPYRIGHT%
 $d_cont -----------------------------------------------------------------------------
 $d_cont -----------------------------------------------------------------------------
 $d_cont %PSC_END_COPYRIGHT%$d_end
 EOF2
 
-$data =~ s
+	$data =~ s
 {\Q$d_start$d_cont\E %PSC_START_COPYRIGHT%
 \Q$d_cont\E -----------------------------------------------------------------------------.*?
 \Q$d_cont\E -----------------------------------------------------------------------------(.*)
@@ -133,7 +106,7 @@ $d_cont ------------------------------------------------------------------------
 $d_cont %PSC_END_COPYRIGHT%$d_end
 }s;
 
-$data =~ s
+	$data =~ s
 {\Q$d_start$d_cont\E %PSCGPL_START_COPYRIGHT%
 \Q$d_cont\E -----------------------------------------------------------------------------.*?
 \Q$d_cont\E -----------------------------------------------------------------------------(.*)
@@ -161,7 +134,7 @@ $d_cont ------------------------------------------------------------------------
 $d_cont %PSC_END_COPYRIGHT%$d_end
 }s;
 
-$data =~ s
+	$data =~ s
 {\Q$d_start$d_cont\E %PSCPRI_START_COPYRIGHT%
 \Q$d_cont\E -----------------------------------------------------------------------------.*?
 \Q$d_cont\E -----------------------------------------------------------------------------(.*)
@@ -188,6 +161,11 @@ $d_cont ------------------------------------------------------------------------
 $d_cont %PSC_END_COPYRIGHT%$d_end
 }s;
 
-print $data;
-EOF
-done
+	open F, ">", $fn or die "$fn: $!\n";
+	print F $data;
+	close F;
+}
+
+foreach (@ARGV) {
+	gencopy $_;
+}
