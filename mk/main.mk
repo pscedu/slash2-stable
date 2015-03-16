@@ -491,9 +491,11 @@ install: recurse-install install-hook
 
 clean-hook:
 
+distclean-hook:
+
 clean-core:
 	${RM} -rf ${OBJDIR}
-	${RM} -f ${PROG} ${LIBRARY} ${SHLIB} core.[0-9]* *.core
+	${RM} -f ${PROG} ${LIBRARY} ${SHLIB} core.[0-9]* *.core ${CLEANFILES}
 	@for i in ${DEPLIST}; do					\
 		[ -e "$${i#*:}" ] || continue;				\
 		(cd $${i%:*} && ${MAKE} clean) || exit 1;		\
@@ -501,8 +503,8 @@ clean-core:
 
 clean: recurse-clean clean-core clean-hook
 
-distclean: recurse-distclean clean-core
-	${RM} -f TAGS cscope.*out
+distclean: recurse-distclean clean-core clean-hook distclean-hook
+	${RM} -f TAGS cscope.*out ${DISTCLEANFILES}
 
 lint: recurse-lint ${_C_SRCS}
 	@if ${NOTEMPTY} "${_TSRCS}"; then				\

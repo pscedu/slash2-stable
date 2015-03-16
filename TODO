@@ -75,7 +75,6 @@ make
 
 - fix cscope: remove the curdir when the parent includes it
 - work on `install' target for the SLASH2 release
-- make build should clean mk/*.mk automatically. 
 
 rename
 - rename RSX_ALLOCREP to something that doesnt mean 'allocate' and
