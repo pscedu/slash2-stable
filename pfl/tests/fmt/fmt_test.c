@@ -79,5 +79,13 @@ main(int argc, char *argv[])
 
 	psc_assert(pfl_humantonum("24g") == INT64_C(24) * 1024 * 1024 * 1024);
 
+	psc_str_hashify("%"PRIx64"\n", psc_str_hashify("foobar"));
+	psc_str_hashify("%"PRIx64"\n", psc_str_hashify("/"));
+	psc_str_hashify("%"PRIx64"\n", psc_str_hashify("//"));
+	psc_str_hashify("%"PRIx64"\n", psc_str_hashify("/foo/bar"));
+	psc_str_hashify("%"PRIx64"\n", psc_str_hashify("fmt/fmt_test.c"));
+	psc_str_hashify("%"PRIx64"\n", psc_str_hashify("Yesterday, all of my troubles seemed so far away."));
+
+
 	exit(0);
 }
