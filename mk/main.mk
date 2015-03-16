@@ -541,7 +541,7 @@ build:
 copyright:
 	find . -type f \( $(						\
 	    ) $(foreach ign,${COPYRIGHT_PATS},-name ${ign} -o) $(	\
-	    ) -false \) -exec ${ECHORUN} ${ROOTDIR}/tools/gencopyright.sh {} \;
+	    ) -false \) -exec ${ECHORUN} ${ROOTDIR}/tools/gencopyright {} \;
 
 doc: recurse-doc
 	@if ${NOTEMPTY} "${MAN}"; then					\
