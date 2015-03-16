@@ -47,19 +47,20 @@ struct psc_lockedlist psc_hashtbls =
  * C compiler (cf. Compilers: Principles, Techniques, and Tools,
  * by Aho, Sethi & Ullman, Addison-Wesley, 1988, p. 436)."
  */
-unsigned
+uint64_t
 _psc_str_hashify(const char *s, int len)
 {
-	unsigned h = 0, g;
-	const char *p;
+	const unsigned char *p;
+	uint64_t h = 0, g;
 
 	if (s == NULL)
 		return (-1);
 	for (p = s; len && *p != '\0'; p++, len--) {
 		h = (h << 4) + *p;
-		if ((g = h & 0xf0000000)) {
-			h = h ^ (g >> 24);
-			h = h ^ g;
+		g = h & 0xf000000000000000;
+		if (g) {
+			h ^= g >> 56;
+			h ^= g;
 		}
 	}
 	return (h);
