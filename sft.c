@@ -111,6 +111,7 @@ off_t			 seekoff;
 struct psc_poolmaster	 wk_poolmaster;
 struct psc_poolmgr	*wk_pool;
 struct pfl_opstat	*iostats;
+volatile int		 running = 1;
 
 const char		*progname;
 
@@ -298,28 +299,40 @@ thrmain(struct psc_thread *thr)
 	}
 }
 
+struct psc_waitq display_wq = PSC_WAITQ_INIT;
+
 void
 display(__unusedx struct psc_thread *thr)
 {
+	struct timespec ts;
 	char ratebuf[PSCFMT_HUMAN_BUFSIZ];
+	FILE *fp;
 	int n, t;
 
-	n = printf("%8s %7s", "time (s)", "rate");
-	printf("\n");
+	fp = stdout;
+
+	n = fprintf(fp, "%7s", "rate");
+	fprintf(fp, "\n");
 	for (t = 0; t < n; t++)
-		putchar('=');
-	printf("\n");
+		fputc('=', fp);
+	fprintf(fp, "\naccum...");
+	fflush(fp);
+
+	PFL_GETTIMESPEC(&ts);
 
 	n = 0;
-	for (;;) {
-		sleep(1);
+	while (running) {
+		ts.tv_sec += 1;
+		psc_waitq_waitabs(&display_wq, NULL, &ts);
+
 		psc_fmt_human(ratebuf, iostats->opst_last);
-		t = printf("\r%7s", ratebuf);
+		t = fprintf(fp, "\r%7s", ratebuf);
 		n = MAX(n - t, 0);
-		printf("%*.*s ", n, n, "");
+		fprintf(fp, "%*.*s ", n, n, "");
 		n = t;
-		fflush(stdout);
+		fflush(fp);
 	}
+	printf("\n");
 }
 
 __dead void
@@ -434,7 +447,7 @@ int
 main(int argc, char *argv[])
 {
 	int displaybw = 0, c, n, flags = PFL_FILEWALKF_NOCHDIR;
-	struct psc_thread **thrv;
+	struct psc_thread **thrv, *dispthr;
 	char *endp;
 
 	gcry_control(GCRYCTL_SET_THREAD_CBS, &gcry_threads_pthread);
@@ -506,7 +519,7 @@ main(int argc, char *argv[])
 		usage();
 
 	if (displaybw)
-		pscthr_init(0, display, NULL, 0, "disp");
+		dispthr = pscthr_init(0, display, NULL, 0, "disp");
 
 	lc_init(&wkq, struct wk, lentry);
 	psc_poolmaster_init(&wk_poolmaster, struct wk, lentry,
@@ -528,8 +541,11 @@ main(int argc, char *argv[])
 	for (n = 0; n < nthr; n++)
 		pthread_join(thrv[n]->pscthr_pthread, NULL);
 
-	if (displaybw)
-		printf("\n");
+	if (displaybw) {
+		running = 0;
+		psc_waitq_wakeall(&display_wq);
+		pthread_join(dispthr->pscthr_pthread, NULL);
+	}
 
 	return (0);
 }
