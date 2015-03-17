@@ -211,6 +211,10 @@ main(int argc, char *argv[])
 	psc_dynarray_splice(&da, 1, 1, NULL, 0);
 	psc_assert(strcmp(psc_dynarray_getpos(&da, psc_dynarray_bsearch(&da, "foobar-b", (void *)strcmp)), "foobar-b") == 0);
 	psc_assert(strcmp(psc_dynarray_getpos(&da, psc_dynarray_bsearch(&da, "foobar-e", (void *)strcmp)), "foobar-e") == 0);
+	CHECK(&da, "foobar-b", "foobar-e", NULL);
+	psc_dynarray_splice(&da, 0, 1, NULL, 0);
+	psc_assert(strcmp(psc_dynarray_getpos(&da, psc_dynarray_bsearch(&da, "foobar-e", (void *)strcmp)), "foobar-e") == 0);
+	CHECK(&da, "foobar-e", NULL);
 	psc_dynarray_free(&da);
 
 	exit(0);
