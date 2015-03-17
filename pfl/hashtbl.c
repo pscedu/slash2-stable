@@ -42,30 +42,6 @@
 struct psc_lockedlist psc_hashtbls =
     PLL_INIT_NOLOG(&psc_hashtbls, struct psc_hashtbl, pht_lentry);
 
-/*
- * "This well-known hash function was used in P.J. Weinberger's
- * C compiler (cf. Compilers: Principles, Techniques, and Tools,
- * by Aho, Sethi & Ullman, Addison-Wesley, 1988, p. 436)."
- */
-uint64_t
-_psc_str_hashify(const char *s, int len)
-{
-	const unsigned char *p;
-	uint64_t h = 0, g;
-
-	if (s == NULL)
-		return (-1);
-	for (p = s; len && *p != '\0'; p++, len--) {
-		h = (h << 4) + *p;
-		g = h & 0xf000000000000000;
-		if (g) {
-			h ^= g >> 56;
-			h ^= g;
-		}
-	}
-	return (h);
-}
-
 #if PFL_DEBUG > 0
 # include <math.h>
 #endif

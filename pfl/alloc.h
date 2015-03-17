@@ -130,19 +130,10 @@ void	 *psc_calloc(size_t, size_t, int);
 void	 _psc_free(void *, int, ...);
 void	 _psc_lru_userfree(void *, int, ...);
 void	*_psc_realloc(void *, size_t, int);
+void	*pfl_memdup(const void *, size_t);
 
 void	  psc_memallocs_init(void);
 
 extern int	psc_pagesize;
-
-static __inline void *
-pfl_memdup(const void *p, size_t len)
-{
-	void *d;
-
-	d = PSCALLOC(len);
-	memcpy(d, p, len);
-	return (d);
-}
 
 #endif /* _PFL_ALLOC_H_ */

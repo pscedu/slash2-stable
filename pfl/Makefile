@@ -34,6 +34,7 @@ SRCS+=		${PFL_BASE}/mlist.c
 SRCS+=		${PFL_BASE}/multiwait.c
 SRCS+=		${PFL_BASE}/netutil.c
 SRCS+=		${PFL_BASE}/odtable.c
+SRCS+=		${PFL_BASE}/opt-misc.c
 SRCS+=		${PFL_BASE}/pool.c
 SRCS+=		${PFL_BASE}/printhex.c
 SRCS+=		${PFL_BASE}/prsig.c
