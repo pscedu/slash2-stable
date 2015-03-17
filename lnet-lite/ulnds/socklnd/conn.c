@@ -123,7 +123,7 @@ usocklnd_conn_free(usock_conn_t *conn)
                              offsetof(ksock_hello_msg_t,
                                       kshm_ips[LNET_MAX_INTERFACES]));
         
-	pthread_mutex_destroy(&conn->up_lock); 
+	pthread_mutex_destroy(&conn->uc_lock); 
 
 	psc_pool_return(usk_conn_pool, conn);
 }

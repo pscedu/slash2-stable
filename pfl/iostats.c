@@ -63,7 +63,7 @@ pfl_opstat_initf(int flags, const char *namefmt, ...)
 	/* XXX this is sorted so use bsearch */
 	DYNARRAY_FOREACH(opst, i, &pfl_opstats)
 		if (strcmp(name, opst->opst_name) == 0) {
-			freelock(&lock);
+			freelock(&pfl_opstats_lock);
 			PSCFREE(name);
 			return (opst);
 		}
