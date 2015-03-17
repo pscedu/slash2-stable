@@ -50,7 +50,6 @@ _pfl_opstat_cmp(const void *a, const void *b)
 struct pfl_opstat *
 pfl_opstat_initf(int flags, const char *namefmt, ...)
 {
-	static psc_spinlock_t lock = SPINLOCK_INIT;
 	struct pfl_opstat *opst;
 	va_list ap;
 	char *name;
@@ -60,7 +59,7 @@ pfl_opstat_initf(int flags, const char *namefmt, ...)
 	pfl_vasprintf(&name, namefmt, ap);
 	va_end(ap);
 
-	spinlock(&lock);
+	spinlock(&pfl_opstats_lock);
 	/* XXX this is sorted so use bsearch */
 	DYNARRAY_FOREACH(opst, i, &pfl_opstats)
 		if (strcmp(name, opst->opst_name) == 0) {
@@ -73,7 +72,7 @@ pfl_opstat_initf(int flags, const char *namefmt, ...)
 	opst->opst_flags = flags;
 	pos = psc_dynarray_bsearch(&pfl_opstats, opst, _pfl_opstat_cmp);
 	psc_dynarray_splice(&pfl_opstats, pos, 0, &opst, 1);
-	freelock(&lock);
+	freelock(&pfl_opstats_lock);
 	return (opst);
 }
 
