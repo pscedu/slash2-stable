@@ -28,6 +28,7 @@
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <unistd.h>
 
 #include "pfl/cdefs.h"
@@ -176,6 +177,20 @@ main(int argc, char *argv[])
 		psc_dynarray_removepos(&da, 0);
 
 	CHECK(&da, NULL);
+
+	psc_dynarray_free(&da);
+
+	psc_dynarray_init(&da);
+	psc_dynarray_add(&da, "foobar-a");
+	psc_dynarray_add(&da, "foobar-b");
+	psc_dynarray_add(&da, "foobar-c");
+	psc_assert(strcmp(psc_dynarray_getpos(&da, psc_dynarray_bsearch(
+	    &da, "foobar-b", (void *)strcmp)), "foobar-b") == 0);
+	psc_assert(strcmp(psc_dynarray_getpos(&da, psc_dynarray_bsearch(
+	    &da, "foobar-a", (void *)strcmp)), "foobar-a") == 0);
+	psc_assert(strcmp(psc_dynarray_getpos(&da, psc_dynarray_bsearch(
+	    &da, "foobar-c", (void *)strcmp)), "foobar-c") == 0);
+	psc_dynarray_free(&da);
 
 	exit(0);
 }
