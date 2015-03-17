@@ -25,16 +25,17 @@
  * %PSC_END_COPYRIGHT%
  */
 
+#include <inttypes.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
 
 #include "pfl/cdefs.h"
-#include "pfl/pfl.h"
-#include "pfl/str.h"
 #include "pfl/fmt.h"
 #include "pfl/log.h"
+#include "pfl/pfl.h"
+#include "pfl/str.h"
 
 const char *progname;
 
@@ -79,13 +80,12 @@ main(int argc, char *argv[])
 
 	psc_assert(pfl_humantonum("24g") == INT64_C(24) * 1024 * 1024 * 1024);
 
-	psc_str_hashify("%"PRIx64"\n", psc_str_hashify("foobar"));
-	psc_str_hashify("%"PRIx64"\n", psc_str_hashify("/"));
-	psc_str_hashify("%"PRIx64"\n", psc_str_hashify("//"));
-	psc_str_hashify("%"PRIx64"\n", psc_str_hashify("/foo/bar"));
-	psc_str_hashify("%"PRIx64"\n", psc_str_hashify("fmt/fmt_test.c"));
-	psc_str_hashify("%"PRIx64"\n", psc_str_hashify("Yesterday, all of my troubles seemed so far away."));
-
+	printf("%"PRIx64"\n", psc_str_hashify("foobar"));
+	printf("%"PRIx64"\n", psc_str_hashify("/"));
+	printf("%"PRIx64"\n", psc_str_hashify("//"));
+	printf("%"PRIx64"\n", psc_str_hashify("/foo/bar"));
+	printf("%"PRIx64"\n", psc_str_hashify("fmt/fmt_test.c"));
+	printf("%"PRIx64"\n", psc_str_hashify("Yesterday, all of my troubles seemed so far away."));
 
 	exit(0);
 }
