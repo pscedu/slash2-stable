@@ -31,6 +31,7 @@
 #include <sys/types.h>
 
 #include <stdarg.h>
+#include <stdint.h>
 #include <string.h>
 
 #ifndef HAVE_STRVIS
@@ -62,9 +63,9 @@ int	 pfl_vasprintf(char **, const char *, va_list);
 int	 pfl_dirname(const char *, char *);
 char	*pfl_strdup(const char *);
 char	*pfl_strndup(const char *, size_t);
+int	 pfl_memchk(const void *, int, size_t); 
 
-unsigned
-int	_psc_str_hashify(const char *, int);
+uint64_t _psc_str_hashify(const void *, size_t);
 
 int	xsnprintf(char *, size_t, const char *, ...);
 
@@ -80,17 +81,6 @@ void	 pfl_strbuf_init(struct pfl_strbuf *);
 int	 pfl_strbuf_len(const struct pfl_strbuf *);
 void	 pfl_strbuf_realloc(struct pfl_strbuf *);
 void	 pfl_strbuf_reset(struct pfl_strbuf *);
-
-static __inline int
-pfl_memchk(const void *buf, int val, size_t len)
-{
-	const char *p;
-
-	for (p = buf; p < (const char *)buf + len; p++)
-		if (*p != val)
-			return (0);
-	return (1);
-}
 
 static __inline const char *
 pfl_basename(const char *s)
