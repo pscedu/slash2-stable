@@ -123,6 +123,8 @@ usocklnd_conn_free(usock_conn_t *conn)
                              offsetof(ksock_hello_msg_t,
                                       kshm_ips[LNET_MAX_INTERFACES]));
         
+	pthread_mutex_destroy(&conn->up_lock); 
+
 	psc_pool_return(usk_conn_pool, conn);
 }
 
@@ -642,6 +644,8 @@ usocklnd_destroy_peer(usock_peer_t *peer)
 
 	pfl_opstat_destroy(peer->up_iostats.rd);
 	pfl_opstat_destroy(peer->up_iostats.wr);
+
+	pthread_mutex_destroy(&peer->up_lock); 
 
 	psc_pool_return(usk_peer_pool, peer);
 
