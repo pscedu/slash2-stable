@@ -20,9 +20,15 @@ pfl_memdup(const void *p, size_t len)
 int
 pfl_memchk(const void *buf, int val, size_t len)
 {
-	const char *p;
+	const char *p, *ep = PSC_AGP(buf, len);
+	const uint64_t *ip;
+	uint64_t ival;
 
-	for (p = buf; p < (const char *)buf + len; p++)
+	ival = ((uint64_t)val << 32) | val;
+	for (ip = buf; (char *)(ip + 1) < ep; ip++)
+		if (*ip != ival)
+			return (0);
+	for (p = (void *)ip; p < ep; p++)
 		if (*p != val)
 			return (0);
 	return (1);
