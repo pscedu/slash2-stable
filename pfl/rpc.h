@@ -794,8 +794,9 @@ pscrpc_wake_client_req(struct pscrpc_request *req)
 			    PSCRPC_SVR_SHORT_TIMEO;			\
 			_abstime.tv_nsec = 0;				\
 			if (mtx)					\
-				ret = psc_waitq_waitabs_mutex((wq),	\
-				    (mtx), &_abstime);			\
+				ret = _psc_waitq_waitabs((wq),		\
+				    PFL_WAITQWF_MUTEX, (mtx),		\
+				    &_abstime);				\
 			else						\
 				ret = psc_waitq_waitabs((wq), (lck),	\
 				    &_abstime);				\
