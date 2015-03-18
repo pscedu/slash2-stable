@@ -523,6 +523,7 @@ libcfs_sock_set_keepalive(int fd, int keepalive, int cnt, int idle,
 		return rc;
 	}
 
+#ifdef SOL_TCP
 	if (cnt && setsockopt(fd, SOL_TCP, TCP_KEEPCNT, &cnt,
 	    sizeof(cnt)) == -1) {
 		rc = -errno;
@@ -543,6 +544,11 @@ libcfs_sock_set_keepalive(int fd, int keepalive, int cnt, int idle,
 		CERROR ("Cannot set KEEPALIVE socket option\n");
 		return rc;
 	}
+#else
+	(void)cnt;
+	(void)idle;
+	(void)intv;
+#endif
 
 	return 0;
 }
