@@ -43,7 +43,7 @@ struct pfl_mutex;
 struct psc_waitq {
 	struct pfl_mutex	wq_mut;
 	pthread_cond_t		wq_cond;
-	atomic_t		wq_nwaiters;
+	psc_atomic32_t		wq_nwaiters;
 	int			wq_flags;
 };
 
@@ -55,49 +55,63 @@ struct psc_waitq {
 #else /* HAVE_LIBPTHREAD */
 
 struct psc_waitq {
-	atomic_t		wq_nwaiters;
+	psc_atomic32_t		wq_nwaiters;
 };
 
 # define PSC_WAITQ_INIT	{ ATOMIC_INIT(0) }
 
 #endif
 
+/* wait flags */
+#define PFL_WAITQWF_SPIN		(1 << 0)
+#define PFL_WAITQWF_MUTEX		(1 << 1)
+#define PFL_WAITQWF_RWLOCK		(1 << 2)
+
 /**
  * psc_waitq_wait - Wait until resource managed by wq_cond is available.
  * @wq: wait queue.
  * @lk: optional lock to prevent race condition in waiting.
  */
-#define psc_waitq_wait(wq, lk)		 _psc_waitq_waitrel((wq), (lk), NULL, NULL)
-#define psc_waitq_wait_mutex(wq, mtx)	 _psc_waitq_waitrel((wq), NULL, (mtx), NULL)
+#define psc_waitq_wait(wq, lk)		 _psc_waitq_waitabs((wq), PFL_WAITQWF_SPIN, (lk), NULL)
+#define psc_waitq_waitf(wq, fl, p)	 _psc_waitq_waitabs((wq), (fl), (p), NULL)
 
-#define psc_waitq_waitrel_s(wq, lk, n)	 _psc_waitq_waitrelv((wq), (lk), (n), 0L)
-#define psc_waitq_waitrel_us(wq, lk, n)	 _psc_waitq_waitrelv((wq), (lk), 0L, (n) * 1000L)
-#define psc_waitq_waitrel_ms(wq, lk, n)	 _psc_waitq_waitrelv((wq), (lk), 0L, (n) * 1000L * 1000L)
-#define psc_waitq_waitrel_tv(wq, lk, tv) _psc_waitq_waitrelv((wq), (lk), (tv)->tv_sec, (tv)->tv_usec * 1000L)
-#define psc_waitq_waitrel(wq, lk, tv)	 _psc_waitq_waitrel((wq), (lk), NULL, (tv))
+/*
+ * Wait at most the amount of time specified (relative to calling time)
+ * for the resource managed by wq_cond to become available.
+ * @wq: the wait queue to wait on.
+ * @lk: optional lock needed to protect the list (optional).
+ * @s: number of seconds to wait for (optional).
+ * @ns: number of nanoseconds to wait for (optional).
+ * Returns: ETIMEDOUT if the resource did not become available if
+ * @s or @ns was specififed.
+ */
+#define psc_waitq_waitrel(wq, lk, s, ns) _psc_waitq_waitrel((wq), PFL_WAITQWF_SPIN, (lk), (s), (ns))
 
-#define psc_waitq_waitabs(wq, lk, ts)	 _psc_waitq_waitabs((wq), (lk), NULL, (ts))
-#define psc_waitq_waitabs_mutex(wq, mtx, ts) \
-					 _psc_waitq_waitabs((wq), NULL, (mtx), (ts))
+#define psc_waitq_waitrel_s(wq, lk, s)	 psc_waitq_waitrel((wq), (lk), (s), 0L)
+#define psc_waitq_waitrel_us(wq, lk, us) psc_waitq_waitrel((wq), (lk), 0L, (us) * 1000L)
+#define psc_waitq_waitrel_ms(wq, lk, ms) psc_waitq_waitrel((wq), (lk), 0L, (ms) * 1000L * 1000L)
+#define psc_waitq_waitrel_tv(wq, lk, tv) psc_waitq_waitrel((wq), (lk), (tv)->tv_sec, (tv)->tv_usec * 1000L)
+#define psc_waitq_waitrel_ts(wq, lk, tv) psc_waitq_waitrel((wq), (lk), (tv)->tv_sec, (tv)->tv_nsec)
+
+#define psc_waitq_waitrelf_us(wq, fl, p, us)	\
+					_psc_waitq_waitrel((wq), (fl), (p), 0L, (us) * 1000L)
+
+#define psc_waitq_waitabs(wq, lk, ts)	_psc_waitq_waitabs((wq), PFL_WAITQWF_SPIN, (lk), (ts))
 
 /**
  * psc_waitq_nwaiters - Determine number of threads waiting on a waitq.
  * @wq: wait queue.
  */
-#define psc_waitq_nwaiters(wq)		atomic_read(&(wq)->wq_nwaiters)
+#define psc_waitq_nwaiters(wq)		psc_atomic32_read(&(wq)->wq_nwaiters)
 
-#define psc_waitq_init(wq)		_psc_waitq_init(wq, 0)
-#define psc_waitq_init_nolog(wq)	_psc_waitq_init(wq, PWQF_NOLOG)
+#define psc_waitq_init(wq)		_psc_waitq_init((wq), 0)
+#define psc_waitq_init_nolog(wq)	_psc_waitq_init((wq), PWQF_NOLOG)
 
 void	_psc_waitq_init(struct psc_waitq *, int);
 void	 psc_waitq_destroy(struct psc_waitq *);
 void	 psc_waitq_wakeone(struct psc_waitq *);
 void	 psc_waitq_wakeall(struct psc_waitq *);
-int	_psc_waitq_waitrel(struct psc_waitq *, psc_spinlock_t *,
-	    struct pfl_mutex *, const struct timespec *);
-int	_psc_waitq_waitrelv(struct psc_waitq *, psc_spinlock_t *,
-	    long, long);
-int	_psc_waitq_waitabs(struct psc_waitq *, psc_spinlock_t *,
-	    struct pfl_mutex *, const struct timespec *);
+int	_psc_waitq_waitrel(struct psc_waitq *, int, void *, long, long);
+int	_psc_waitq_waitabs(struct psc_waitq *, int, void *, const struct timespec *);
 
 #endif /* _PFL_WAITQ_H_ */

@@ -51,7 +51,7 @@ _psc_waitq_init(struct psc_waitq *q, int flags)
 	int rc;
 
 	memset(q, 0, sizeof(*q));
-	atomic_set(&q->wq_nwaiters, 0);
+	psc_atomic32_set(&q->wq_nwaiters, 0);
 
 	_psc_mutex_init(&q->wq_mut, flags & PWQF_NOLOG ?
 	    PMTXF_NOLOG : 0);
@@ -69,7 +69,7 @@ psc_waitq_destroy(struct psc_waitq *q)
 {
 	int rc;
 
-	psc_assert(atomic_read(&q->wq_nwaiters) == 0);
+	psc_assert(psc_atomic32_read(&q->wq_nwaiters) == 0);
 
 	psc_mutex_destroy(&q->wq_mut);
 	rc = pthread_cond_destroy(&q->wq_cond);
@@ -91,63 +91,26 @@ psc_waitq_destroy(struct psc_waitq *q)
  *	the timing calculations accurate.
  */
 int
-_psc_waitq_waitabs(struct psc_waitq *q, psc_spinlock_t *k,
-    struct pfl_mutex *mutex, const struct timespec *abstime)
+_psc_waitq_waitabs(struct psc_waitq *q, int flags, void *p,
+    const struct timespec *abstime)
 {
 	int rc;
 
 	psc_mutex_lock(&q->wq_mut);
-	atomic_inc(&q->wq_nwaiters);
+	psc_atomic32_inc(&q->wq_nwaiters);
 
-	if (k)
-		freelock(k);
-	if (mutex)
-		psc_mutex_unlock(mutex);
+	if (p) {
+		if (flags & PFL_WAITQWF_SPIN)
+			freelock((struct psc_spinlock *)p);
+		if (flags & PFL_WAITQWF_MUTEX)
+			psc_mutex_unlock(p);
+		if (flags & PFL_WAITQWF_RWLOCK)
+			psc_rwlock_unlock(p);
+	}
 
-	rc = pthread_cond_timedwait(&q->wq_cond, &q->wq_mut.pm_mutex,
-	    abstime);
-	if (rc && rc != ETIMEDOUT)
-		psc_fatalx("pthread_cond_timedwait: %s", strerror(rc));
-
-	psc_mutex_unlock(&q->wq_mut);
-	/*
-	 * BZ#91: decrease waiters after releasing the lock to guarantee
-	 * wq_mut remains intact.
-	 */
-	atomic_dec(&q->wq_nwaiters);
-
-	return (rc);
-}
-
-/**
- * psc_waitq_waitrel - Wait at most the amount of time specified
- *	(relative to calling time) for the resource managed by wq_cond
- *	to become available.
- * @q: the wait queue to wait on.
- * @k: optional lock needed to protect the list.
- * @reltime: amount of time to wait for.
- * Notes: returns ETIMEDOUT if the resource has not become available.
- */
-int
-_psc_waitq_waitrel(struct psc_waitq *q, psc_spinlock_t *k,
-    struct pfl_mutex *mut, const struct timespec *reltime)
-{
-	struct timespec abstime;
-	int rc;
-
-	psc_mutex_lock(&q->wq_mut);
-	atomic_inc(&q->wq_nwaiters);
-
-	if (k)
-		freelock(k);
-	if (mut)
-		psc_mutex_unlock(mut);
-
-	if (reltime) {
-		PFL_GETTIMESPEC(&abstime);
-		timespecadd(&abstime, reltime, &abstime);
+	if (abstime) {
 		rc = pthread_cond_timedwait(&q->wq_cond,
-		    &q->wq_mut.pm_mutex, &abstime);
+		    &q->wq_mut.pm_mutex, abstime);
 		if (rc && rc != ETIMEDOUT)
 			psc_fatalx("pthread_cond_timedwait: %s",
 			    strerror(rc));
@@ -158,21 +121,31 @@ _psc_waitq_waitrel(struct psc_waitq *q, psc_spinlock_t *k,
 			psc_fatalx("pthread_cond_wait: %s",
 			    strerror(rc));
 	}
+
 	psc_mutex_unlock(&q->wq_mut);
-	atomic_dec(&q->wq_nwaiters);
+	/*
+	 * BZ#91: decrease waiters after releasing the lock to guarantee
+	 * wq_mut remains intact.
+	 */
+	psc_atomic32_dec(&q->wq_nwaiters);
 
 	return (rc);
 }
 
-__inline int
-_psc_waitq_waitrelv(struct psc_waitq *wq, psc_spinlock_t *lk, long s,
+int
+_psc_waitq_waitrel(struct psc_waitq *q, int flags, void *p, long s,
     long ns)
 {
-	struct timespec ts;
+	struct timespec reltime, abstime;
 
-	ts.tv_sec = s;
-	ts.tv_nsec = ns;
-	return (_psc_waitq_waitrel(wq, lk, NULL, &ts));
+	if (ns || s) {
+		PFL_GETTIMESPEC(&abstime);
+		reltime.tv_sec = s;
+		reltime.tv_nsec = ns;
+		timespecadd(&abstime, &reltime, &abstime);
+		return (_psc_waitq_waitabs(q, flags, p, &abstime));
+	}
+	return (_psc_waitq_waitabs(q, flags, p, NULL));
 }
 
 /**
@@ -183,7 +156,7 @@ void
 psc_waitq_wakeone(struct psc_waitq *q)
 {
 	psc_mutex_lock(&q->wq_mut);
-	if (atomic_read(&q->wq_nwaiters)) {
+	if (psc_atomic32_read(&q->wq_nwaiters)) {
 		int rc;
 
 		rc = pthread_cond_signal(&q->wq_cond);
@@ -202,7 +175,7 @@ void
 psc_waitq_wakeall(struct psc_waitq *q)
 {
 	psc_mutex_lock(&q->wq_mut);
-	if (atomic_read(&q->wq_nwaiters)) {
+	if (psc_atomic32_read(&q->wq_nwaiters)) {
 		int rc;
 
 		rc = pthread_cond_broadcast(&q->wq_cond);
@@ -219,28 +192,19 @@ void
 psc_waitq_init(struct psc_waitq *q)
 {
 	memset(q, 0, sizeof(*q));
-	atomic_set(&q->wq_nwaiters, 0);
+	psc_atomic32_set(&q->wq_nwaiters, 0);
 }
 
 int
-_psc_waitq_waitrel(__unusedx struct psc_waitq *q,
-    __unusedx psc_spinlock_t *k, __unusedx struct pfl_mutex *mut,
-    __unusedx const struct timespec *reltime)
+_psc_waitq_waitrel(__unusedx struct psc_waitq *wq, __unusedx int flags,
+    __unusedx void *p, __unusedx long s, __unusedx long ns)
 {
 	psc_fatalx("wait will sleep forever, single threaded");
 }
 
 int
-_psc_waitq_waitrelv(__unusedx struct psc_waitq *wq,
-    __unusedx psc_spinlock_t *lk, __unusedx long s, __unusedx long ns)
-{
-	psc_fatalx("wait will sleep forever, single threaded");
-}
-
-int
-_psc_waitq_waitabs(__unusedx struct psc_waitq *q,
-    __unusedx psc_spinlock_t *k, __unusedx struct pfl_mutex *mutex,
-    __unusedx const struct timespec *abstime)
+_psc_waitq_waitabs(__unusedx struct psc_waitq *q, __unusedx int flags,
+    __unusedx void *p, __unusedx const struct timespec *abstime)
 {
 	psc_fatalx("wait will sleep forever, single threaded");
 }
