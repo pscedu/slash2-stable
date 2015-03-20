@@ -72,6 +72,7 @@ struct pfl_opstat {
 };
 
 #define OPSTF_BASE10		(1 << 0)
+#define OPSTF_EXCL		(1 << 1)
 
 struct pfl_iostats_rw {
 	struct pfl_opstat	*wr;
