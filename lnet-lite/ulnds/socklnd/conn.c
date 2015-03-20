@@ -768,10 +768,10 @@ usocklnd_create_peer(lnet_ni_t *ni, lnet_process_id_t id,
         net->un_peercount++;        
         pthread_mutex_unlock(&net->un_lock);
 
-	peer->up_iostats.rd = pfl_opstat_init("peer-%s-rcv", 
-	    libcfs_id2str(id));
-	peer->up_iostats.wr = pfl_opstat_init("peer-%s-snd", 
-	    libcfs_id2str(id)); 
+	peer->up_iostats.rd = pfl_opstat_initf(OPSTF_EXCL,
+	    "peer-%s-rcv", libcfs_id2str(id));
+	peer->up_iostats.wr = pfl_opstat_initf(OPSTF_EXCL,
+	    "peer-%s-snd", libcfs_id2str(id)); 
 
         *peerp = peer;
         return 0;
