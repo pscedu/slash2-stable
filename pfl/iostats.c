@@ -54,7 +54,7 @@ pfl_opstat_initf(int flags, const char *namefmt, ...)
 	struct pfl_opstat *opst;
 	va_list ap;
 	char *name;
-	int i, pos;
+	int pos;
 
 	va_start(ap, namefmt);
 	pfl_vasprintf(&name, namefmt, ap);
@@ -63,7 +63,7 @@ pfl_opstat_initf(int flags, const char *namefmt, ...)
 	spinlock(&pfl_opstats_lock);
 	pos = psc_dynarray_bsearch(&pfl_opstats, name, _pfl_opstat_cmp);
 	if (pos < psc_dynarray_len(&pfl_opstats)) {
-		opst = psc_dynarray_get(&pfl_opstats, pos);
+		opst = psc_dynarray_getpos(&pfl_opstats, pos);
 		if (strcmp(name, opst->opst_name) == 0) {
 			psc_assert((flags & OPSTF_EXCL) == 0);
 			freelock(&pfl_opstats_lock);
