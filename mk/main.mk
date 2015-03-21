@@ -207,7 +207,8 @@ ifneq ($(filter ssl,${MODULES}),)
 endif
 
 ifneq ($(filter curses,${MODULES}),)
-  LDFLAGS+=	${LIBCURSES}
+  LDFLAGS+=	${CURSES_LIBS}
+  INCLUDES+=	${CURSES_INCLUDES}
 endif
 
 ifneq ($(filter z,${MODULES}),)
