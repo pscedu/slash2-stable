@@ -30,6 +30,8 @@
 
 #include <stdint.h>
 
+#include "pfl/cdefs.h"
+
 /**
  * psc_crc64_calc - Compute a 64-bit CRC of some data.
  * @cp: pointer to an uninitialized CRC buffer.
