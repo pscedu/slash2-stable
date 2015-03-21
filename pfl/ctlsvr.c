@@ -797,7 +797,9 @@ struct psc_ctl_rlim {
 	{ "nice",	RLIMIT_NICE },
 #endif
 	{ "nofile",	RLIMIT_NOFILE },
+#ifdef RLIMIT_RSS
 	{ "rss",	RLIMIT_RSS },
+#endif
 #ifdef RLIMIT_RTPRIO
 	{ "rtprio",	RLIMIT_RTPRIO },
 #endif
