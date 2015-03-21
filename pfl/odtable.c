@@ -132,8 +132,8 @@ pfl_odt_mmap_create(struct pfl_odt *t, const char *fn, int overwrite)
 		psc_fatal("truncate %s", fn);
 	if (pwrite(t->odt_fd, h, sizeof(*h), 0) != sizeof(*h))
 		psc_fatal("write %s", fn);
-	t->odt_base = mmap(NULL, MMAPSZ(t),  PROT_WRITE,
-	    MAP_FILE | MAP_SHARED, t->odt_fd, h->odth_start);
+	t->odt_base = mmap(NULL, MMAPSZ(t),  PROT_WRITE, MAP_SHARED,
+	    t->odt_fd, h->odth_start);
 	if (t->odt_base == MAP_FAILED)
 		PFLOG_ODT(PLL_FATAL, t, "mmap %s; rc=%d", fn, errno);
 }
@@ -156,8 +156,8 @@ pfl_odt_mmap_open(struct pfl_odt *t, const char *fn, int oflg)
 		    rc, errno);
 	if ((oflg & ODTBL_FLG_RDONLY) == 0)
 		prot |= PROT_WRITE;
-	t->odt_base = mmap(NULL, MMAPSZ(t), prot, MAP_FILE | MAP_SHARED,
-	    t->odt_fd, h->odth_start);
+	t->odt_base = mmap(NULL, MMAPSZ(t), prot, MAP_SHARED, t->odt_fd,
+	    h->odth_start);
 	if (t->odt_base == MAP_FAILED)
 		PFLOG_ODT(PLL_FATAL, t, "mmap %s", fn);
 }
