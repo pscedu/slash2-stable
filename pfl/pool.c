@@ -228,6 +228,13 @@ _psc_poolmaster_initmgr(struct psc_poolmaster *p, struct psc_poolmgr *m)
 	m->ppm_max = p->pms_max;
 	m->ppm_master = p;
 
+	m->ppm_opst_grows = pfl_opstat_initf(OPSTF_BASE10,
+	    "pool.%s.grows", m->ppm_name);
+	m->ppm_opst_shrinks = pfl_opstat_initf(OPSTF_BASE10,
+	    "pool.%s.shrinks", m->ppm_name);
+	m->ppm_opst_returns = pfl_opstat_initf(OPSTF_BASE10,
+	    "pool.%s.returns", m->ppm_name);
+
 	n = p->pms_total;
 	ureqlock(&p->pms_lock, locked);
 
@@ -328,7 +335,7 @@ psc_pool_grow(struct psc_poolmgr *m, int n)
 		if (m->ppm_total < m->ppm_max ||
 		    m->ppm_max == 0) {
 			m->ppm_total++;
-			m->ppm_ngrow++;
+			pfl_opstat_incr(&m->ppm_stats.grows);
 			POOL_ADD_ITEM(m, p);
 			p = NULL;
 		}
@@ -352,7 +359,6 @@ _psc_pool_shrink(struct psc_poolmgr *m, int n, int failok)
 	int i, locked;
 	void *p;
 
-printf("shrink %d\n", n);
 	psc_assert(n > 0);
 	for (i = 0; i < n; i++) {
 		p = NULL;
@@ -361,7 +367,7 @@ printf("shrink %d\n", n);
 			p = POOL_TRYGETOBJ(m);
 			if (p) {
 				m->ppm_total--;
-				m->ppm_nshrink++;
+				pfl_opstat_incr(&m->ppm_stats.shrinks);
 			} else if (!failok)
 				psc_fatalx("no free items available to "
 				    "remove");
@@ -451,7 +457,6 @@ _psc_poolset_reap(struct psc_poolset *s,
 	size_t tmx, culpritmx;
 	int i, np, nobj, locked;
 	void **pv;
-printf("reap\n");
 
 	nobj = 0;
 	culprit = NULL;
@@ -663,12 +668,13 @@ _psc_pool_return(struct psc_poolmgr *m, void *p)
 	 * threshold, directly free this item.
 	 */
 	locked = POOL_RLOCK(m);
+	pfl_opstat_incr(&m->ppm_stats.returns);
 	if ((m->ppm_flags & PPMF_AUTO) && m->ppm_total > m->ppm_min &&
 	    ((m->ppm_max && m->ppm_total > m->ppm_max) ||
 	     m->ppm_nfree * 100 > m->ppm_thres * m->ppm_total)) {
 		/* Reached free threshold; completely deallocate obj. */
 		m->ppm_total--;
-		m->ppm_nshrink++;
+		pfl_opstat_incr(&m->ppm_stats.shrinks);
 		POOL_URLOCK(m, locked);
 		_psc_pool_destroy_obj(m, p);
 	} else {

@@ -105,10 +105,12 @@ struct psc_poolmgr {
 	int			  ppm_thres;		/* autoresize threshold */
 	int			  ppm_flags;		/* flags */
 	int			  ppm_entsize;		/* entry size */
-	uint64_t		  ppm_ngrow;		/* #allocs */
-	uint64_t		  ppm_nshrink;		/* #deallocs */
 	psc_atomic32_t		  ppm_nwaiters;		/* #thrs waiting for item */
 	struct pfl_mutex	  ppm_reclaim_mutex;	/* exclusive reclamation */
+
+	struct pfl_opstat	 *ppm_opst_grows;
+	struct pfl_opstat	 *ppm_opst_shrinks;
+	struct pfl_opstat	 *ppm_opst_returns;
 
 	/* routines to initialize, teardown, & reclaim pool entries */
 	int			(*ppm_initf)(struct psc_poolmgr *, void *);
