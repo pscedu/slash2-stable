@@ -91,6 +91,8 @@ _psc_mlist_initv(struct psc_mlist *pml, int flags, void *mwcarg,
 
 	psc_multiwaitcond_init(&pml->pml_mwcond_empty, mwcarg, flags,
 	    "%s-empty", pml->pml_name);
+	pml->pml_nseen = pfl_opstat_initf(OPSTF_BASE10,
+	    "mlist.%s.seen", pml->pml_name);
 }
 
 void

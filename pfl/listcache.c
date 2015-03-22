@@ -144,7 +144,8 @@ _lc_add(struct psc_listcache *plc, void *p, int flags, void *cmpf)
 	else
 		pll_addhead(&plc->plc_pll, p);
 
-	pfl_opstat_incr(plc->plc_nseen);
+	if (plc->plc_nseen)
+		pfl_opstat_incr(plc->plc_nseen);
 
 	/*
 	 * There is now an item available; wake up waiters who think the
@@ -209,6 +210,8 @@ lc_vregister(struct psc_listcache *plc, const char *name, va_list ap)
 	if (rc > (int)sizeof(plc->plc_name))
 		psc_fatalx("plc_name is too large (%s)", name);
 
+	plc->plc_nseen = pfl_opstat_initf(OPSTF_BASE10,
+	    "listcache.%s.seen", plc->plc_name);
 	pll_add_sorted(&psc_listcaches, plc, lc_cmp);
 
 	LIST_CACHE_ULOCK(plc);
