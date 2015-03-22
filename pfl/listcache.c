@@ -29,6 +29,7 @@
 
 #include <stdarg.h>
 
+#include "pfl/iostats.h"
 #include "pfl/listcache.h"
 #include "pfl/lockedlist.h"
 #include "pfl/log.h"
@@ -36,8 +37,8 @@
 struct psc_lockedlist	psc_listcaches =
     PLL_INIT(&psc_listcaches, struct psc_listcache, plc_lentry);
 
-/**
- * lc_nitems - Grab the number of items present in a list cache.
+/*
+ * Grab the number of items present in a list cache.
  * @plc: list cache to inspect.
  */
 int
@@ -100,8 +101,8 @@ _lc_get(struct psc_listcache *plc, const struct timespec *abstime,
 	return (p);
 }
 
-/**
- * lc_kill - List wants to go away; notify waiters.
+/*
+ * List wants to go away; notify waiters.
  * @plc: list cache to kill.
  */
 void
@@ -115,8 +116,8 @@ lc_kill(struct psc_listcache *plc)
 	LIST_CACHE_URLOCK(plc, locked);
 }
 
-/**
- * lc_add - Add an item entry to a list cache.
+/*
+ * Add an item entry to a list cache.
  * @plc: the list cache to add to.
  * @p: item to add.
  * @flags: PLCBF_* operational behavior flags.
@@ -134,7 +135,7 @@ _lc_add(struct psc_listcache *plc, void *p, int flags, void *cmpf)
 		return (0);
 	}
 
-	if (cmpf && (flags & PLCBF_REVERSE)) {
+	if (cmpf && (flags & PLCBF_REVERSE))
 		pll_add_sorted_backwards(&plc->plc_pll, p, cmpf);
 	else if (cmpf)
 		pll_add_sorted(&plc->plc_pll, p, cmpf);
@@ -143,7 +144,7 @@ _lc_add(struct psc_listcache *plc, void *p, int flags, void *cmpf)
 	else
 		pll_addhead(&plc->plc_pll, p);
 
-	pfl_opstat_incr(&plc->plc_opst_seen);
+	pfl_opstat_incr(plc->plc_nseen);
 
 	/*
 	 * There is now an item available; wake up waiters who think the
@@ -188,8 +189,8 @@ lc_cmp(const void *a, const void *b)
 	return (strcmp(ma->plc_name, mb->plc_name));
 }
 
-/**
- * lc_vregister - Register a list cache for external access.
+/*
+ * Register a list cache for external access.
  * @plc: the list cache to register.
  * @name: printf(3) format of name for list.
  * @ap: variable argument list for printf(3) name argument.
@@ -214,8 +215,8 @@ lc_vregister(struct psc_listcache *plc, const char *name, va_list ap)
 	PLL_ULOCK(&psc_listcaches);
 }
 
-/**
- * lc_register - Register a list cache for external access.
+/*
+ * Register a list cache for external access.
  * @plc: the list cache to register.
  * @name: printf(3) format of name for list.
  */
@@ -242,8 +243,8 @@ _lc_reginit(struct psc_listcache *plc, ptrdiff_t offset,
 	va_end(ap);
 }
 
-/**
- * lc_unregister - Remove list cache external access registration.
+/*
+ * Remove list cache external access registration.
  * @plc: the list cache to unregister, must be UNLOCKED.
  */
 void
@@ -256,8 +257,8 @@ lc_unregister(struct psc_listcache *plc)
 	PLL_ULOCK(&psc_listcaches);
 }
 
-/**
- * lc_lookup - Find a list cache by its registration name.
+/*
+ * Find a list cache by its registration name.
  * @name: name of list cache.
  * Notes: returns the list cache locked if found.
  */

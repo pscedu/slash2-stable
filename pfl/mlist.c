@@ -32,9 +32,10 @@
 #include <stdarg.h>
 #include <string.h>
 
+#include "pfl/iostats.h"
 #include "pfl/list.h"
-#include "pfl/lockedlist.h"
 #include "pfl/lock.h"
+#include "pfl/lockedlist.h"
 #include "pfl/log.h"
 #include "pfl/mlist.h"
 #include "pfl/multiwait.h"
@@ -58,7 +59,7 @@ _psc_mlist_add(const struct pfl_callerinfo *pci, struct psc_mlist *pml,
 		pll_addtail(&pml->pml_pll, p);
 	else
 		pll_addhead(&pml->pml_pll, p);
-	pml->pml_nseen++;
+	pfl_opstat_incr(pml->pml_nseen);
 	psc_multiwaitcond_wakeup(&pml->pml_mwcond_empty);
 	MLIST_URLOCK(pml, locked);
 }

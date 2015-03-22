@@ -39,9 +39,10 @@
 #include "pfl/alloc.h"
 #include "pfl/cdefs.h"
 #include "pfl/dynarray.h"
+#include "pfl/iostats.h"
 #include "pfl/listcache.h"
-#include "pfl/lockedlist.h"
 #include "pfl/lock.h"
+#include "pfl/lockedlist.h"
 #include "pfl/log.h"
 #include "pfl/mem.h"
 #include "pfl/pool.h"
@@ -335,7 +336,7 @@ psc_pool_grow(struct psc_poolmgr *m, int n)
 		if (m->ppm_total < m->ppm_max ||
 		    m->ppm_max == 0) {
 			m->ppm_total++;
-			pfl_opstat_incr(&m->ppm_stats.grows);
+			pfl_opstat_incr(m->ppm_opst_grows);
 			POOL_ADD_ITEM(m, p);
 			p = NULL;
 		}
@@ -367,7 +368,7 @@ _psc_pool_shrink(struct psc_poolmgr *m, int n, int failok)
 			p = POOL_TRYGETOBJ(m);
 			if (p) {
 				m->ppm_total--;
-				pfl_opstat_incr(&m->ppm_stats.shrinks);
+				pfl_opstat_incr(m->ppm_opst_shrinks);
 			} else if (!failok)
 				psc_fatalx("no free items available to "
 				    "remove");
@@ -668,13 +669,13 @@ _psc_pool_return(struct psc_poolmgr *m, void *p)
 	 * threshold, directly free this item.
 	 */
 	locked = POOL_RLOCK(m);
-	pfl_opstat_incr(&m->ppm_stats.returns);
+	pfl_opstat_incr(m->ppm_opst_returns);
 	if ((m->ppm_flags & PPMF_AUTO) && m->ppm_total > m->ppm_min &&
 	    ((m->ppm_max && m->ppm_total > m->ppm_max) ||
 	     m->ppm_nfree * 100 > m->ppm_thres * m->ppm_total)) {
 		/* Reached free threshold; completely deallocate obj. */
 		m->ppm_total--;
-		pfl_opstat_incr(&m->ppm_stats.shrinks);
+		pfl_opstat_incr(m->ppm_opst_shrinks);
 		POOL_URLOCK(m, locked);
 		_psc_pool_destroy_obj(m, p);
 	} else {

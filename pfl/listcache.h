@@ -116,8 +116,9 @@ struct psc_listcache {
 #define lc_addtail(plc, p)		((void)_lc_add((plc), (p), PLCBF_TAIL, NULL))
 #define lc_add(plc, p)			((void)_lc_add((plc), (p), PLCBF_TAIL, NULL))
 
-#define lc_add_sorted(lc, p, f)		_lc_add((plc), (p), 0, (f))
-#define lc_add_sorted_backwards(l, p, f)_lc_add((plc), (p), PLCBF_REVERSE, (f))
+#define lc_add_sorted(plc, p, f)	_lc_add((plc), (p), 0, (f))
+#define lc_add_sorted_backwards(plc, p, f)				\
+					_lc_add((plc), (p), PLCBF_REVERSE, (f))
 
 #define lc_addtail_ifalive(plc, p)	_lc_add((plc), (p), PLCBF_TAIL | PLCBF_DYINGOK, NULL)
 
