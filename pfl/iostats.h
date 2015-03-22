@@ -44,8 +44,7 @@
 #include "pfl/lockedlist.h"
 
 #define pfl_opstat_add(opst, n)		psc_atomic64_add(&(opst)->opst_intv, (n))
-
-#define	pfl_opstat_incr(opst, ...)	pfl_opstat_add((opst), 1)
+#define	pfl_opstat_incr(opst)		pfl_opstat_add((opst), 1)
 
 #define	OPSTATF_ADD(flags, name, n)					\
 	do {								\
