@@ -108,17 +108,18 @@ struct psc_listcache {
 #define PLCBF_NOBLOCK	(1 << 1)	/* return NULL if unavail */
 #define PLCBF_PEEK	(1 << 2)	/* don't remove item */
 #define PLCBF_DYINGOK	(1 << 3)	/* list can die */
+#define PLCBF_REVERSE	(1 << 4)	/* order is reversed */
 
-#define lc_addstack(plc, p)		((void)_lc_add((plc), (p), PLCBF_HEAD))
-#define lc_addqueue(plc, p)		((void)_lc_add((plc), (p), PLCBF_TAIL))
-#define lc_addhead(plc, p)		((void)_lc_add((plc), (p), PLCBF_HEAD))
-#define lc_addtail(plc, p)		((void)_lc_add((plc), (p), PLCBF_TAIL))
-#define lc_add(plc, p)			((void)_lc_add((plc), (p), PLCBF_TAIL))
+#define lc_addstack(plc, p)		((void)_lc_add((plc), (p), PLCBF_HEAD, NULL))
+#define lc_addqueue(plc, p)		((void)_lc_add((plc), (p), PLCBF_TAIL, NULL))
+#define lc_addhead(plc, p)		((void)_lc_add((plc), (p), PLCBF_HEAD, NULL))
+#define lc_addtail(plc, p)		((void)_lc_add((plc), (p), PLCBF_TAIL, NULL))
+#define lc_add(plc, p)			((void)_lc_add((plc), (p), PLCBF_TAIL, NULL))
 
-#define lc_add_sorted(plc, p, f)		((void)_lc_add_sorted((plc), (p), (f)))
-#define lc_add_sorted_backwards(plc, p, f)	((void)_lc_add_sorted_backwards((plc), (p), (f)))
+#define lc_add_sorted(lc, p, f)		_lc_add((plc), (p), 0, (f))
+#define lc_add_sorted_backwards(l, p, f)_lc_add((plc), (p), PLCBF_REVERSE, (f))
 
-#define lc_addtail_ifalive(plc, p)	_lc_add((plc), (p), PLCBF_TAIL | PLCBF_DYINGOK)
+#define lc_addtail_ifalive(plc, p)	_lc_add((plc), (p), PLCBF_TAIL | PLCBF_DYINGOK, NULL)
 
 #define lc_gettimed(plc, tm)		_lc_get((plc), (tm), PLCBF_HEAD)
 #define lc_getwait(plc)			_lc_get((plc), NULL, PLCBF_HEAD)
@@ -167,7 +168,7 @@ struct psc_listcache {
 
 struct psc_listcache *
 	  lc_lookup(const char *);
-int	 _lc_add(struct psc_listcache *, void *, int);
+int	 _lc_add(struct psc_listcache *, void *, int, void *);
 void	*_lc_get(struct psc_listcache *, const struct timespec *, int);
 void	 _lc_init(struct psc_listcache *, ptrdiff_t);
 void	  lc_kill(struct psc_listcache *);

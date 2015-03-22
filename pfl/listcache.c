@@ -122,7 +122,7 @@ lc_kill(struct psc_listcache *plc)
  * @flags: PLCBF_* operational behavior flags.
  */
 int
-_lc_add(struct psc_listcache *plc, void *p, int flags)
+_lc_add(struct psc_listcache *plc, void *p, int flags, void *cmpf)
 {
 	int locked;
 
@@ -134,48 +134,26 @@ _lc_add(struct psc_listcache *plc, void *p, int flags)
 		return (0);
 	}
 
-	if (flags & PLCBF_TAIL)
+	if (cmpf && (flags & PLCBF_REVERSE)) {
+		pll_add_sorted_backwards(&plc->plc_pll, p, cmpf);
+	else if (cmpf)
+		pll_add_sorted(&plc->plc_pll, p, cmpf);
+	else if (flags & PLCBF_TAIL)
 		pll_addtail(&plc->plc_pll, p);
 	else
 		pll_addhead(&plc->plc_pll, p);
 
-	plc->plc_nseen++;
+	pfl_opstat_incr(&plc->plc_opst_seen);
 
 	/*
-	 * There is now an item available; wake up waiters
-	 * who think the list is empty.
+	 * There is now an item available; wake up waiters who think the
+	 * list is empty.
 	 *
 	 * XXX wakeone ??
 	 */
 	psc_waitq_wakeall(&plc->plc_wq_empty);
 	LIST_CACHE_URLOCK(plc, locked);
 	return (1);
-}
-
-void
-_lc_add_sorted(struct psc_listcache *plc, void *p,
-    int (*cmpf)(const void *, const void *))
-{
-	int locked;
-
-	locked = LIST_CACHE_RLOCK(plc);
-	pll_add_sorted(&plc->plc_pll, p, cmpf);
-	plc->plc_nseen++;
-	psc_waitq_wakeall(&plc->plc_wq_empty);
-	LIST_CACHE_URLOCK(plc, locked);
-}
-
-void
-_lc_add_sorted_backwards(struct psc_listcache *plc, void *p,
-    int (*cmpf)(const void *, const void *))
-{
-	int locked;
-
-	locked = LIST_CACHE_RLOCK(plc);
-	pll_add_sorted_backwards(&plc->plc_pll, p, cmpf);
-	plc->plc_nseen++;
-	psc_waitq_wakeall(&plc->plc_wq_empty);
-	LIST_CACHE_URLOCK(plc, locked);
 }
 
 void
