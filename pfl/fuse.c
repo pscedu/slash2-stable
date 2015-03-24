@@ -501,9 +501,15 @@ pfl_fuse_atexit(void)
 int
 pscfs_main(int privsiz)
 {
+	struct pscfs *m;
 	int i;
 
 	psc_dynarray_add(&pscfs_modules, &pscfs_default_ops);
+	DYNARRAY_FOREACH(m, i, &pscfs_modules) {
+		m->pf_opst_read_err = pfl_opstat_initf(OPSTF_BASE10,
+		    "fs.%s.read_err");
+		m->pf_opst_read_reply = pfl_opstat_init("fs.%s.read_reply");
+	}
 
 #ifndef __LP64__
 	struct pscfs_inumcol *pfic;
@@ -792,6 +798,7 @@ pscfs_inum_pscfs2fuse(pscfs_inum_t p_inum, double timeo)
 				break;					\
 			}						\
 									\
+			(pfr)->pfr_mod = _m;				\
 			_m->pf_handle_ ##op ((pfr), ##__VA_ARGS__);	\
 									\
 			/* The module deferred reply. */		\
@@ -1155,7 +1162,7 @@ pscfs_fuse_handle_removexattr(fuse_req_t req, fuse_ino_t ino,
 	FSOP(removexattr, pfr, name, INUM_FUSE2PSCFS(ino));
 }
 
-/* Begin system call reply routines */
+/* Begin file system call reply routines */
 
 #define PFR_REPLY(fun, pfr, ...)					\
 	do {								\
@@ -1308,14 +1315,22 @@ void
 pscfs_reply_read(struct pscfs_req *pfr, struct iovec *iov, int nio,
     int rc)
 {
-	if (rc)
+	int i;
+
+	if (rc) {
 		PFR_REPLY(err, pfr, rc);
-	else
+		pfl_opstat_incr(pfr->pfr_mod->pf_opst_read_err);
+	} else {
 		PFR_REPLY(iov, pfr, iov, nio);
+		for (i = 0; i < q->mfsrq_niov; i++)
+			pfl_opstat_add(pfr->pfr_mod->pf_opst_read,
+			    iov[i].iov_len);
+	}
 }
 
 void
-pscfs_reply_readdir(struct pscfs_req *pfr, void *buf, ssize_t len, int rc)
+pscfs_reply_readdir(struct pscfs_req *pfr, void *buf, ssize_t len,
+    int rc)
 {
 	struct pscfs_dirent *dirent;
 	off_t off;
@@ -1846,6 +1861,8 @@ pscfsop_removexattr(struct pscfs_req *pfr, const char *name,
 }
 
 struct pscfs pscfs_default_ops = {
+	PSCFS_INIT,
+	"default",
 	pscfsop_access,
 	pscfsop_release,
 	pscfsop_releasedir,

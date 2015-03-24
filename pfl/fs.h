@@ -70,6 +70,10 @@ struct pscfs_dirent {
 
 /* userland file system fills these in */
 struct pscfs {
+	struct pfl_opstat	*pf_opst_read_err;
+	struct pfl_opstat	*pf_opst_read_reply;
+	const char		*pf_name;
+
 	void	(*pf_handle_access)(struct pscfs_req *, pscfs_inum_t, int);
 	void	(*pf_handle_release)(struct pscfs_req *, void *);
 	void	(*pf_handle_releasedir)(struct pscfs_req *, void *);
@@ -101,6 +105,10 @@ struct pscfs {
 	void	(*pf_handle_setxattr)(struct pscfs_req *, const char *, const void *, size_t, pscfs_inum_t);
 	void	(*pf_handle_removexattr)(struct pscfs_req *, const char *, pscfs_inum_t);
 };
+
+#define PSCFS_INIT							\
+	NULL,								\
+	NULL
 
 struct pscfs_clientctx {
 	pid_t	pfcc_pid;

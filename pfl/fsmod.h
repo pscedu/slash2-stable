@@ -47,6 +47,7 @@ struct pscfs_args {
 };
 
 struct pscfs_req {
+	struct pscfs			*pfr_mod;
 	struct psc_spinlock		 pfr_lock;
 	fuse_req_t			 pfr_fuse_req;
 	struct fuse_file_info		*pfr_fuse_fi;
