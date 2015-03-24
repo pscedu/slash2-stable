@@ -507,8 +507,9 @@ pscfs_main(int privsiz)
 	psc_dynarray_add(&pscfs_modules, &pscfs_default_ops);
 	DYNARRAY_FOREACH(m, i, &pscfs_modules) {
 		m->pf_opst_read_err = pfl_opstat_initf(OPSTF_BASE10,
-		    "fs.%s.read_err");
-		m->pf_opst_read_reply = pfl_opstat_init("fs.%s.read_reply");
+		    "fs.%s.read_err", m->pf_name);
+		m->pf_opst_read_reply = pfl_opstat_init("fs.%s.read_reply",
+		    m->pf_name);
 	}
 
 #ifndef __LP64__
