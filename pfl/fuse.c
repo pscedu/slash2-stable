@@ -1322,8 +1322,8 @@ pscfs_reply_read(struct pscfs_req *pfr, struct iovec *iov, int nio,
 		pfl_opstat_incr(pfr->pfr_mod->pf_opst_read_err);
 	} else {
 		PFR_REPLY(iov, pfr, iov, nio);
-		for (i = 0; i < q->mfsrq_niov; i++)
-			pfl_opstat_add(pfr->pfr_mod->pf_opst_read,
+		for (i = 0; i < nio; i++)
+			pfl_opstat_add(pfr->pfr_mod->pf_opst_read_reply,
 			    iov[i].iov_len);
 	}
 }
