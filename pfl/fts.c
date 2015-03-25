@@ -40,6 +40,10 @@
 
 #include "pfl/fts.h"
 
+#ifndef O_CLOEXEC
+#  define O_CLOEXEC		0	/* warning: extremely not portable */
+#endif
+
 #ifndef ALIGN
 #  define ALIGNBYTES		(sizeof(long) - 1)
 #  define ALIGN(x)		(((unsigned long)(x) + ALIGNBYTES) & ~ALIGNBYTES)
