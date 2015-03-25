@@ -157,7 +157,7 @@ THREAD_LIBS=	-pthread
 LIBAIO=		-laio
 
 CURSES_LIBS=	$$(ncurses5-config --libs 2>/dev/null || echo -lncurses)
-CURSES_INCLUDES=$$(ncurses5-config --cflags)
+CURSES_INCLUDES=$$(ncurses5-config --cflags 2>/dev/null)
 
 OSTYPE:=	$(shell uname)
 
