@@ -115,6 +115,8 @@ __thread
 #endif
 int				 _pfl_callerinfo_lvl;
 
+extern pid_t			  pfl_pid;
+
 #ifdef HAVE_TLS
 # define __callerinfo const struct pfl_callerinfo *pci
 #else

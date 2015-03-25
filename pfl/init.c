@@ -49,6 +49,7 @@ __threadx const struct pfl_callerinfo	*_pfl_callerinfo;
 __threadx int				 _pfl_callerinfo_lvl;
 __static void				*_pfl_tls[PFL_TLSIDX_MAX];
 struct timespec				  pfl_uptime;
+pid_t					  pfl_pid;
 
 pid_t
 pfl_getsysthrid(void)
@@ -147,6 +148,8 @@ pfl_init(void)
 
 	if (psc_atomic32_xchg(&init, 1))
 		errx(1, "pfl_init: already initialized");
+
+	pfl_pid = getpid();
 
 #ifdef HAVE_LIBPTHREAD
 	pscthrs_init();
