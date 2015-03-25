@@ -325,4 +325,8 @@ ifeq ($(filter $(realpath ${ROOTDIR})/compat/%,${CURDIR}),)
   DEFINES+=						-DHAVE_ENDIAN_H
  endif
 
+ ifdef PICKLE_HAVE_TUNE_NATIVE
+  COPT+=						-mtune=native
+ endif
+
 endif
