@@ -229,6 +229,8 @@ _psc_poolmaster_initmgr(struct psc_poolmaster *p, struct psc_poolmgr *m)
 	m->ppm_max = p->pms_max;
 	m->ppm_master = p;
 
+	m->ppm_nseen = pfl_opstat_initf(OPSTF_BASE10,
+	    "pool.%s.seen", m->ppm_name);
 	m->ppm_opst_grows = pfl_opstat_initf(OPSTF_BASE10,
 	    "pool.%s.grows", m->ppm_name);
 	m->ppm_opst_shrinks = pfl_opstat_initf(OPSTF_BASE10,
