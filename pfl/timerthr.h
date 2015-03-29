@@ -28,6 +28,9 @@
 #ifndef _PFL_TIMERTHR_H_
 #define _PFL_TIMERTHR_H_
 
+struct psc_thread;
+
 void	 pfl_opstimerthr_spawn(int, const char *);
+void	 pfl_rusagethr_main(struct psc_thread *);
 
 #endif /* _PFL_TIMERTHR_H_ */

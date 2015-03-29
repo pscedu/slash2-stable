@@ -27,6 +27,7 @@
 
 #include <sys/types.h>
 #include <sys/time.h>
+#include <sys/resource.h>
 
 #include <unistd.h>
 
@@ -36,6 +37,7 @@
 #include "pfl/lockedlist.h"
 #include "pfl/thread.h"
 #include "pfl/time.h"
+#include "pfl/waitq.h"
 
 /*
  * Logic for recomputing instantaneous and weighted averages for opstats.
@@ -77,6 +79,48 @@ pfl_opstimerthr_main(struct psc_thread *thr)
 			opst->opst_lifetime += len;
 		}
 		freelock(&pfl_opstats_lock);
+	}
+}
+
+void
+pfl_rusagethr_main(struct psc_thread *thr)
+{
+	struct rusage ru, lastru;
+	struct psc_waitq dummy;
+	struct timespec ts;
+	long pgsz;
+
+	PFL_GETTIMESPEC(&ts);
+	pgsz = sysconf(_SC_PAGESIZE);
+
+	while (pscthr_run(thr)) {
+		ts.tv_sec++;
+		psc_waitq_waitabs(&dummy, NULL, &ts);
+
+		getrusage(RUSAGE_SELF, &ru);
+
+#define RUSAGE_FIELD_MULT(name, suffix, mult)				\
+	OPSTAT_ADD("rusage." #name suffix,				\
+	    (mult) * (lastru.ru_##name - ru.ru_##name))
+#define RUSAGE_FIELD(name)	RUSAGE_FIELD_MULT(name, "", 1)
+
+		RUSAGE_FIELD(maxrss);
+		RUSAGE_FIELD(ixrss);
+		RUSAGE_FIELD(idrss);
+		RUSAGE_FIELD(isrss);
+		RUSAGE_FIELD(minflt);
+		RUSAGE_FIELD(majflt);
+		RUSAGE_FIELD_MULT(majflt, "_sz", pgsz);
+		RUSAGE_FIELD(nswap);
+		RUSAGE_FIELD(inblock);
+		RUSAGE_FIELD(oublock);
+		RUSAGE_FIELD(msgsnd);
+		RUSAGE_FIELD(msgrcv);
+		RUSAGE_FIELD(nsignals);
+		RUSAGE_FIELD(nvcsw);
+		RUSAGE_FIELD(nivcsw);
+
+		lastru = ru;
 	}
 }
 
