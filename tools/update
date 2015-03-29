@@ -132,9 +132,9 @@ pubrepo distrib/libs3
 pubrepo distrib/posix-fstest
 pubrepo distrib/spiobench
 pubrepo distrib/stumbleupon-tcollector
-pubrepo fio
 pubrepo idxutils
 pubrepo jives
+pubrepo mfio
 pubrepo psync
 pubrepo sft
 pubrepo slash2
