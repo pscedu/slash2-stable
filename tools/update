@@ -90,7 +90,12 @@ _getrepo()
 	fi
 
 	if [ -e .git ]; then
-		git $GIT_ACTION || warn "accessing $dir failed"
+		if [ x"$GIT_ACTION" = x"st" ]; then
+			git $GIT_ACTION | perl -pe "s^(?<=\S)\s(?=\S)^\t$dir/^"
+		else
+			git $GIT_ACTION || \
+			    warn "accessing $dir failed"
+		fi
 
 	# XXX remove me
 	elif svn info >/dev/null 2>&1; then
