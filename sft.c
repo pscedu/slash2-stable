@@ -313,7 +313,7 @@ display(__unusedx struct psc_thread *thr)
 	fprintf(fp, "\n");
 	for (t = 0; t < n; t++)
 		fputc('=', fp);
-	fprintf(fp, "\naccum...");
+	fprintf(fp, "\naccumulating...");
 	fflush(fp);
 
 	PFL_GETTIMESPEC(&ts);
@@ -323,22 +323,13 @@ display(__unusedx struct psc_thread *thr)
 		psc_waitq_waitabs(&display_wq, NULL, &ts);
 
 		psc_fmt_human(ratebuf, iostats->opst_last);
+		fprintf(fp, "\r%7s ", ratebuf);
 		psc_fmt_human(ratebuf, iostats->opst_lifetime);
-		fprintf(fp, "\r%7s %7s", ratebuf);
+		fprintf(fp, "%7s", ratebuf);
+		fprintf(fp, " %d %d", wk_pool->ppm_nfree, wk_pool->ppm_total);
 		fflush(fp);
 	}
 	printf("\n");
-}
-
-__dead void
-usage(void)
-{
-	extern const char *__progname;
-
-	fprintf(stderr,
-	    "usage: %s [-BcKRvwZ] [-b bufsz] [-t nthr] [-O offset] file ...\n",
-	    __progname);
-	exit(1);
 }
 
 int
@@ -388,7 +379,7 @@ addwk(struct file *f)
 	wk->len = wk->off + bufsz > f->stb.st_size ?
 	    f->stb.st_size % bufsz : bufsz;
 	wk->chunkid = f->chunkid++;
-	done = wk->off + bufsz >= f->stb.st_size || docrc && !chunk;
+	done = wk->off + bufsz >= f->stb.st_size || (docrc && !chunk);
 	lc_add(&wkq, wk);
 
 	if (done) {
@@ -406,8 +397,6 @@ int
 proc(FTSENT *fe, __unusedx void *arg)
 {
 	struct file *f;
-	int chunkid;
-	off_t off;
 
 	if (fe->fts_info != FTS_F)
 		return (0);
@@ -437,8 +426,20 @@ proc(FTSENT *fe, __unusedx void *arg)
 		f->stb.st_size = writesz;
 
 	f->chunkid = seekoff / bufsz;
+	psc_dynarray_add(&files, f);
 
 	return (0);
+}
+
+__dead void
+usage(void)
+{
+	extern const char *__progname;
+
+	fprintf(stderr,
+	    "usage: %s [-BcKPRvwZ] [-b bufsz] [-t nthr] [-O offset] file ...\n",
+	    __progname);
+	exit(1);
 }
 
 int
@@ -446,6 +447,7 @@ main(int argc, char *argv[])
 {
 	int displaybw = 0, c, n, flags = PFL_FILEWALKF_NOCHDIR;
 	struct psc_thread **thrv, *dispthr;
+	struct file *f;
 	char *endp;
 
 	gcry_control(GCRYCTL_SET_THREAD_CBS, &gcry_threads_pthread);
@@ -525,7 +527,7 @@ main(int argc, char *argv[])
 
 	lc_init(&wkq, struct wk, lentry);
 	psc_poolmaster_init(&wk_poolmaster, struct wk, lentry,
-	    0, nthr, 0, 0, NULL, NULL, NULL, "wk");
+	    PPMF_AUTO, nthr, nthr, 0, NULL, NULL, NULL, "wk");
 	wk_pool = psc_poolmaster_getmgr(&wk_poolmaster);
 
 	pfl_opstimerthr_spawn(THRT_OPSTIMER, "opstimerthr");

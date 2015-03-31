@@ -32,7 +32,7 @@
 .Sh SYNOPSIS
 .Nm xopctl
 .Bk -words
-.Op Fl BcKRvwZ
+.Op Fl BcKPRvwZ
 .Op Fl b Ar bufsz
 .Op Fl t Ar nthr
 .Op Fl O Ar offset
@@ -63,6 +63,10 @@ display checksums of each file chunk
 .It Fl O Ar offset
 Start processing each specified file at the given
 .Ar offset .
+.It Fl P
+Perform piecewise processing of each file specified on the command line.
+The default behavior is to perform processing sequentially until
+completion of each file specified instead of round-robin processing.
 .It Fl R
 Recursively process all files and subdirectories in any directories
 specified on the command line.
