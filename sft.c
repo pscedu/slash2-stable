@@ -88,6 +88,7 @@ struct file {
 	int			 refcnt;
 	int			 rc;	/* file return code */
 	struct cksum		 cksum;
+	int64_t			 chunkid;
 };
 
 struct wk {
@@ -98,24 +99,23 @@ struct wk {
 	ssize_t			 len;
 };
 
-int			 sft_alg = CKSUMT_CRC;
-int			 docrc;
-int64_t			 writesz;
-int			 chunk;
-int			 verbose;
-int			 checkzero;
-int			 nthr = 1;
-ssize_t			 bufsz = 32 * 1024;
-off_t			 seekoff;
-
-struct psc_poolmaster	 wk_poolmaster;
-struct psc_poolmgr	*wk_pool;
-struct pfl_opstat	*iostats;
-volatile int		 running = 1;
-
-const char		*progname;
-
-struct psc_listcache	 wkq;
+int				 sft_alg = CKSUMT_CRC;
+int				 docrc;
+int64_t				 writesz;
+int				 chunk;
+int				 verbose;
+int				 checkzero;
+int				 piecewise;
+int				 nthr = 1;
+ssize_t				 bufsz = 32 * 1024;
+off_t				 seekoff;
+struct psc_dynarray		 files;
+struct psc_listcache		 wkq;
+struct psc_poolmaster		 wk_poolmaster;
+struct psc_poolmgr		*wk_pool;
+struct pfl_opstat		*iostats;
+struct psc_waitq		 display_wq = PSC_WAITQ_INIT;
+volatile int			 running = 1;
 
 #define lock_output()							\
 	do {								\
@@ -299,8 +299,6 @@ thrmain(struct psc_thread *thr)
 	}
 }
 
-struct psc_waitq display_wq = PSC_WAITQ_INIT;
-
 void
 display(__unusedx struct psc_thread *thr)
 {
@@ -311,7 +309,7 @@ display(__unusedx struct psc_thread *thr)
 
 	fp = stdout;
 
-	n = fprintf(fp, "%7s", "rate");
+	n = fprintf(fp, "%7s %7s", "rate", "total");
 	fprintf(fp, "\n");
 	for (t = 0; t < n; t++)
 		fputc('=', fp);
@@ -320,16 +318,13 @@ display(__unusedx struct psc_thread *thr)
 
 	PFL_GETTIMESPEC(&ts);
 
-	n = 0;
 	while (running) {
 		ts.tv_sec += 1;
 		psc_waitq_waitabs(&display_wq, NULL, &ts);
 
 		psc_fmt_human(ratebuf, iostats->opst_last);
-		t = fprintf(fp, "\r%7s", ratebuf);
-		n = MAX(n - t, 0);
-		fprintf(fp, "%*.*s ", n, n, "");
-		n = t;
+		psc_fmt_human(ratebuf, iostats->opst_lifetime);
+		fprintf(fp, "\r%7s %7s", ratebuf);
 		fflush(fp);
 	}
 	printf("\n");
@@ -338,9 +333,11 @@ display(__unusedx struct psc_thread *thr)
 __dead void
 usage(void)
 {
+	extern const char *__progname;
+
 	fprintf(stderr,
 	    "usage: %s [-BcKRvwZ] [-b bufsz] [-t nthr] [-O offset] file ...\n",
-	    progname);
+	    __progname);
 	exit(1);
 }
 
@@ -375,10 +372,11 @@ nprocessors(void)
 	return (n);
 }
 
-void
-addwk(struct file *f, off_t off, int chunkid, size_t len)
+int
+addwk(struct file *f)
 {
 	struct wk *wk;
+	int done;
 
 	spinlock(&f->lock);
 	f->refcnt++;
@@ -386,10 +384,22 @@ addwk(struct file *f, off_t off, int chunkid, size_t len)
 
 	wk = psc_pool_get(wk_pool);
 	wk->f = f;
-	wk->len = len;
-	wk->off = off;
-	wk->chunkid = chunkid;
+	wk->off = f->chunkid * bufsz;
+	wk->len = wk->off + bufsz > f->stb.st_size ?
+	    f->stb.st_size % bufsz : bufsz;
+	wk->chunkid = f->chunkid++;
+	done = wk->off + bufsz >= f->stb.st_size || docrc && !chunk;
 	lc_add(&wkq, wk);
+
+	if (done) {
+		spinlock(&f->lock);
+		f->done = 1;
+		freelock(&f->lock);
+
+		file_close(f);
+		psc_dynarray_remove(&files, f);
+	}
+	return (done);
 }
 
 int
@@ -426,20 +436,7 @@ proc(FTSENT *fe, __unusedx void *arg)
 	if (writesz)
 		f->stb.st_size = writesz;
 
-	for (chunkid = 0, off = seekoff;
-	    off < f->stb.st_size; off += bufsz) {
-		addwk(f, off, chunkid++,
-		    off + bufsz > f->stb.st_size ?
-		    f->stb.st_size % bufsz : bufsz);
-		if (docrc && !chunk)
-			break;
-	}
-
-	spinlock(&f->lock);
-	f->done = 1;
-	freelock(&f->lock);
-
-	file_close(f);
+	f->chunkid = seekoff / bufsz;
 
 	return (0);
 }
@@ -457,7 +454,6 @@ main(int argc, char *argv[])
 	gcry_control(GCRYCTL_INITIALIZATION_FINISHED, 0);
 
 	pfl_init();
-	progname = argv[0];
 	while ((c = getopt(argc, argv, "Bb:cD:KO:RTt:vw:Z")) != -1)
 		switch (c) {
 		case 'B': /* display bandwidth */
@@ -486,6 +482,9 @@ main(int argc, char *argv[])
 				errx(1, "%s: %s", optarg,
 				    strerror(-seekoff));
 			break;
+		case 'P': /* process files piecewise */
+			piecewise = 1;
+			break;
 		case 'R': /* recursive */
 			flags |= PFL_FILEWALKF_RECURSIVE;
 			break;
@@ -493,10 +492,12 @@ main(int argc, char *argv[])
 			break;
 		case 't': /* #threads */
 			if (strcmp(optarg, "a") == 0)
-				nthr = nprocessors(); // XXX - getload()
+				nthr = nprocessors(); // - getloadavg()
 			else {
 				nthr = strtol(optarg, &endp, 10);
-				/* XXX check */
+				if (nthr < 1 || nthr > 4096 ||
+				    *endp || optarg == endp)
+					errx(1, "%s: invalid", optarg);
 			}
 			break;
 		case 'v': /* verbose */
@@ -524,7 +525,7 @@ main(int argc, char *argv[])
 
 	lc_init(&wkq, struct wk, lentry);
 	psc_poolmaster_init(&wk_poolmaster, struct wk, lentry,
-	    0, nthr, nthr, 0, NULL, NULL, NULL, "wk");
+	    0, nthr, 0, 0, NULL, NULL, NULL, "wk");
 	wk_pool = psc_poolmaster_getmgr(&wk_poolmaster);
 
 	pfl_opstimerthr_spawn(THRT_OPSTIMER, "opstimerthr");
@@ -537,6 +538,16 @@ main(int argc, char *argv[])
 
 	for (; *argv; argv++)
 		pfl_filewalk(*argv, flags, NULL, proc, NULL);
+
+	if (piecewise) {
+		DYNARRAY_FOREACH(f, n, &files)
+			while (!addwk(f))
+				;
+	} else {
+		while (psc_dynarray_len(&files))
+			DYNARRAY_FOREACH(f, n, &files)
+				addwk(f);
+	}
 
 	lc_kill(&wkq);
 	for (n = 0; n < nthr; n++)
