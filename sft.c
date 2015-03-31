@@ -414,7 +414,8 @@ proc(FTSENT *fe, __unusedx void *arg)
 	INIT_SPINLOCK(&f->lock);
 	f->fn = strdup(fe->fts_path);
 	if (writesz)
-		f->fd = open(fe->fts_path, O_CREAT | O_RDWR, 0600);
+		f->fd = open(fe->fts_path, O_CREAT | O_RDWR | O_TRUNC,
+		    0600);
 	else
 		f->fd = open(fe->fts_path, O_RDONLY);
 	f->refcnt = 1;
