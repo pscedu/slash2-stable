@@ -456,7 +456,7 @@ main(int argc, char *argv[])
 	gcry_control(GCRYCTL_INITIALIZATION_FINISHED, 0);
 
 	pfl_init();
-	while ((c = getopt(argc, argv, "Bb:cD:KO:RTt:vw:Z")) != -1)
+	while ((c = getopt(argc, argv, "Bb:cD:KO:PRTt:vw:Z")) != -1)
 		switch (c) {
 		case 'B': /* display bandwidth */
 			displaybw = 1;
@@ -542,13 +542,13 @@ main(int argc, char *argv[])
 		pfl_filewalk(*argv, flags, NULL, proc, NULL);
 
 	if (piecewise) {
-		DYNARRAY_FOREACH(f, n, &files)
-			while (!addwk(f))
-				;
-	} else {
 		while (psc_dynarray_len(&files))
 			DYNARRAY_FOREACH(f, n, &files)
 				addwk(f);
+	} else {
+		DYNARRAY_FOREACH(f, n, &files)
+			while (!addwk(f))
+				;
 	}
 
 	lc_kill(&wkq);
