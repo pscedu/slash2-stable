@@ -18,7 +18,7 @@ my @ign = (
 	[ qw(_psc_waitq_waitrel pjournal_thr_main _pscthr_begin) ],
 	[ qw(accept libcfs_sock_accept lnet_acceptor _pscthr_begin) ],
 	[ qw(accept lnet_acceptor psc_usklndthr_begin _pscthr_begin) ],
-	[ qw(accept psc_ctlacthr_main _pscthr_begin) ],
+	[ qw(.*accept psc_ctlacthr_main _pscthr_begin) ],
 	[ qw(poll pscfs_fuse_listener_loop) ],
 	[ qw(_?_?poll usocklnd_poll_thread _pscthr_begin) ],
 	[ qw(_?_?poll usocklnd_poll_thread psc_usklndthr_begin _pscthr_begin) ],
@@ -40,19 +40,19 @@ my @ign = (
 	[ qw(usleep slmbchrqthr_main _pscthr_begin) ],
 
 	# SLASH2 sliod
-	[ qw(_?_?sleep slibmaprlsthr_main _pscthr_begin) ],
-	[ qw(_?_?sleep slibreapthr_main _pscthr_begin) ],
-	[ qw(_?_?sleep slistatfsthr_main _pscthr_begin) ],
-	[ qw(_?_?sleep slicrudthr_main _pscthr_begin) ],
-	[ qw(_psc_waitq_waitabs _lc_get slibmaprlsthr_main _pscthr_begin) ],
-	[ qw(_psc_waitq_waitabs _lc_get slireplpndthr_main _pscthr_begin) ],
+	[ qw(.*sleep slibmaprlsthr_main _pscthr_begin) ],
+	[ qw(.*sleep slibreapthr_main _pscthr_begin) ],
+	[ qw(.*sleep slicrudthr_main _pscthr_begin) ],
+	[ qw(.*sleep slislvrthr_main _pscthr_begin) ],
+	[ qw(.*sleep slistatfsthr_main _pscthr_begin) ],
 	[ qw(_?psc_waitq_waitrelv slireplpndthr_main _pscthr_begin) ],
-	[ qw(_psc_waitq_waitabs _lc_get slirathr_main _pscthr_begin) ],
-	[ qw(_psc_waitq_waitabs _lc_get slislvrthr_main _pscthr_begin) ],
 	[ qw(_psc_mutex_lock slislvrthr_main _pscthr_begin) ],
+	[ qw(_psc_waitq_waitabs _lc_get slibmaprlsthr_main _pscthr_begin) ],
+	[ qw(_psc_waitq_waitabs _lc_get slirathr_main _pscthr_begin) ],
+	[ qw(_psc_waitq_waitabs _lc_get slireplpndthr_main _pscthr_begin) ],
+	[ qw(_psc_waitq_waitabs _lc_get slislvrthr_main _pscthr_begin) ],
 	[ qw(_psc_waitq_waitabs slihealththr_main _pscthr_begin) ],
 	[ qw(psc_waitq_waitabs slislvrthr_main _pscthr_begin) ],
-	[ qw(usleep slislvrthr_main _pscthr_begin) ],
 
 	# SLASH2 mount_slash
 	[ qw(_?psc_waitq_waitrel _lc_get msbmaprathr_main _pscthr_begin) ],
@@ -68,7 +68,7 @@ my @ign = (
 	[ qw(usleep msbwatchthr_main _pscthr_begin) ],
 
 	# SLASH2 common
-	[ qw(_?_?sleep sl_freapthr_main _pscthr_begin) ],
+	[ qw(.*sleep sl_freapthr_main _pscthr_begin) ],
 	[ qw(_sl_csvc_waitrelv slconnthr_main _pscthr_begin) ],
 	[ qw(cv_wait txg_wait_synced zfsslash2_wait_synced pjournal_thr_main _pscthr_begin) ],
 	[ qw(psc_multiwait_usecs slconnthr_main _pscthr_begin) ],
