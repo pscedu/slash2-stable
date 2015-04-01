@@ -32,6 +32,7 @@ loadprof()
 	while :; do
 		fl=${_fl%%%*}
 		_fl=${_fl#*%}
+		_fl=$(echo $_fl | perl -pe 's/\\x(..)/chr hex $1/e')
 		case $fl in
 		args=*)	xargs=${fl#args=};;
 		bounce)	;;
