@@ -168,6 +168,8 @@ $(call ADD_FILE_CFLAGS,${PFL_BASE}/crc.c,				${COPT})
 $(call ADD_FILE_CFLAGS,${PFL_BASE}/parity.c,				${COPT})
 $(call ADD_FILE_CFLAGS,${PFL_BASE}/opt-misc.c,				${COPT})
 
+# gcrc module may be disabled so ensure it exists.
+ifneq ($(wildcard ${GCRC_BASE}/crc32c_sse4.cc),)
 $(call ADD_FILE_CFLAGS,${GCRC_BASE}/crc32c_sse4.cc,			${COPT})
 $(call ADD_FILE_CFLAGS,${GCRC_BASE}/interface.cc,			${COPT})
 $(call ADD_FILE_CFLAGS,${GCRC_BASE}/multiword_128_64_gcc_amd64_sse2.cc,	${COPT})
@@ -175,6 +177,7 @@ $(call ADD_FILE_CFLAGS,${GCRC_BASE}/multiword_64_64_cl_i386_mmx.cc,	${COPT})
 $(call ADD_FILE_CFLAGS,${GCRC_BASE}/multiword_64_64_gcc_amd64_asm.cc,	${COPT})
 $(call ADD_FILE_CFLAGS,${GCRC_BASE}/multiword_64_64_gcc_i386_mmx.cc,	${COPT})
 $(call ADD_FILE_CFLAGS,${GCRC_BASE}/multiword_64_64_intrinsic_i386_mmx.cc,${COPT})
+endif
 
 $(call ADD_FILE_CFLAGS,${LNET_BASE}/ulnds/socklnd/conn.c,		-DPSC_SUBSYS=PSS_LNET -Wno-shadow)
 $(call ADD_FILE_CFLAGS,${LNET_BASE}/ulnds/socklnd/handlers.c,		-DPSC_SUBSYS=PSS_LNET -Wno-shadow)
