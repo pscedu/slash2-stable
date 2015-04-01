@@ -29,6 +29,7 @@
 #define _PFL_ACL_H_
 
 #ifdef HAVE_SYS_ACL_H
+#include <sys/types.h>
 #include <sys/acl.h>
 
 acl_t pfl_acl_from_xattr(const void *, size_t);
