@@ -85,11 +85,12 @@ pfl_opstimerthr_main(struct psc_thread *thr)
 void
 pfl_rusagethr_main(struct psc_thread *thr)
 {
+	struct psc_waitq dummy = PSC_WAITQ_INIT;
 	struct rusage ru, lastru;
-	struct psc_waitq dummy;
 	struct timespec ts;
 	long pgsz;
 
+	memset(&lastru, 0, sizeof(lastru));
 	PFL_GETTIMESPEC(&ts);
 	pgsz = sysconf(_SC_PAGESIZE);
 
@@ -101,16 +102,21 @@ pfl_rusagethr_main(struct psc_thread *thr)
 
 #define RUSAGE_FIELD_MULT(name, suffix, mult)				\
 	OPSTAT_ADD("rusage." #name suffix,				\
-	    (mult) * (lastru.ru_##name - ru.ru_##name))
+	    (mult) * (ru.ru_##name - lastru.ru_##name))
+#define RUSAGE_FIELD2_MULT(name, suffix, mult)				\
+	OPSTAT2_ADD("rusage." #name suffix,				\
+	    (mult) * (ru.ru_##name - lastru.ru_##name))
 #define RUSAGE_FIELD(name)	RUSAGE_FIELD_MULT(name, "", 1)
+#define RUSAGE_FIELD2(name)	RUSAGE_FIELD2_MULT(name, "", 1)
 
-		RUSAGE_FIELD(maxrss);
-		RUSAGE_FIELD(ixrss);
-		RUSAGE_FIELD(idrss);
-		RUSAGE_FIELD(isrss);
+		RUSAGE_FIELD2(maxrss);
+		RUSAGE_FIELD2(ixrss);
+		RUSAGE_FIELD2(idrss);
+		RUSAGE_FIELD2(isrss);
 		RUSAGE_FIELD(minflt);
+		RUSAGE_FIELD2_MULT(minflt, "_sz", pgsz);
 		RUSAGE_FIELD(majflt);
-		RUSAGE_FIELD_MULT(majflt, "_sz", pgsz);
+		RUSAGE_FIELD2_MULT(majflt, "_sz", pgsz);
 		RUSAGE_FIELD(nswap);
 		RUSAGE_FIELD(inblock);
 		RUSAGE_FIELD(oublock);
