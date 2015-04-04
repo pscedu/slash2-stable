@@ -64,9 +64,9 @@ struct pfl_opstat {
 	char			*opst_name;
 	int			 opst_flags;
 
-	uint64_t		 opst_lifetime;	/* lifetime accumulator */
+	int64_t			 opst_lifetime;	/* lifetime accumulator */
 	psc_atomic64_t		 opst_intv;	/* current instantaneous interval accumulator */
-	uint64_t		 opst_last;	/* last second interval accumulator */
+	int64_t			 opst_last;	/* last second interval accumulator */
 	double			 opst_avg;	/* 10-second average */
 };
 
