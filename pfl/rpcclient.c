@@ -253,8 +253,7 @@ pscrpc_prep_set(void)
 
 	set = psc_pool_get(pscrpc_set_pool);
 	memset(set, 0, sizeof(*set));
-	INIT_PSCLIST_HEAD(&set->set_req_wait);
-	INIT_PSCLIST_HEAD(&set->set_req_done);
+	INIT_PSCLIST_HEAD(&set->set_requests);
 	INIT_PSC_LISTENTRY(&set->set_lentry);
 	INIT_SPINLOCK(&set->set_lock);
 	psc_waitq_init(&set->set_waitq);
@@ -711,10 +710,12 @@ pscrpc_queue_wait(struct pscrpc_request *req)
  * Send unsent RPCs in @set.  If check_allsent, returns TRUE if all are
  * sent otherwise return true if at least one has completed.
  * @set: the set to process.
- * @finish_one: only process one request.
+ * @finish_one: process up to one request.  This also changes the
+ * meaning of the return status from "set ready" to "number of requests
+ * completed".
  */
 int
-pscrpc_set_check(struct pscrpc_request_set *set, int finish_one)
+_pscrpc_set_check(struct pscrpc_request_set *set, int finish_one)
 {
 	struct pscrpc_request *req;
 	int locked, ncompleted = 0;
@@ -805,7 +806,7 @@ pscrpc_set_check(struct pscrpc_request_set *set, int finish_one)
 			 * If using a non-blocking set, then check for
 			 * expired requests here.
 			 */
-			if (!check_allsent &&
+			if (finish_one &&
 			    !pscrpc_client_replied(req) &&
 			    pscrpc_is_expired(req)) {
 				/*
@@ -1183,7 +1184,7 @@ pscrpc_set_wait(struct pscrpc_request_set *set)
 		    pscrpc_expired_set, pscrpc_interrupted_set, set);
 
 		rc = pscrpc_cli_wait_event(&set->set_waitq,
-		    pscrpc_set_check(set, 1), &lwi);
+		    pscrpc_set_check(set), &lwi);
 
 		psc_assert(rc == 0 || rc == -EINTR || rc == -ETIMEDOUT);
 

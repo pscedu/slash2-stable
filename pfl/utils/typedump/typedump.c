@@ -310,7 +310,6 @@ main(int argc, char *argv[])
 	PRTYPE(struct pscrpc_handle);
 	PRTYPE(struct pscrpc_import);
 	PRTYPE(struct pscrpc_msg);
-	PRTYPE(struct pscrpc_nbreqset);
 	PRTYPE(struct pscrpc_peer_qlen);
 	PRTYPE(struct pscrpc_reply_state);
 	PRTYPE(struct pscrpc_request);

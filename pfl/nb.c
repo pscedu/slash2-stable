@@ -41,7 +41,7 @@ struct pscrpc_nbreapthr {
  * Add a new non-blocking request to a non-blocking set.
  */
 int
-pscrpc_nbreqset_add(struct pscrpc_request_set *nbs,
+pscrpc_nbreqset_add(struct pscrpc_request_set *set,
     struct pscrpc_request *rq)
 {
 	int rc;
@@ -56,7 +56,7 @@ pscrpc_nbreqset_add(struct pscrpc_request_set *nbs,
 		 * marked COMPLETED if it finishes before this add
 		 * occurs.
 		 */
-		pscrpc_set_add_new_req(nbs->nb_reqset, rq);
+		pscrpc_set_add_new_req(set, rq);
 	}
 	return (rc);
 }

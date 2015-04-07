@@ -549,8 +549,8 @@ struct pscrpc_import *
 struct pscrpc_import *
 	 pscrpc_import_get(struct pscrpc_import *);
 
-#define pscrpc_set_checkone(set, rqp)	_pscrpc_set_check((set), 1, (rqp))
-#define pscrpc_set_check(set)		_pscrpc_set_check((set), 0, NULL)
+#define pscrpc_set_checkone(set)	_pscrpc_set_check((set), 1)
+#define pscrpc_set_check(set)		_pscrpc_set_check((set), 0)
 
 /* rpcclient.c */
 int	 pscrpc_expire_one_request(struct pscrpc_request *);
@@ -565,7 +565,7 @@ struct pscrpc_request_set *
 	 pscrpc_prep_set(void);
 int	 pscrpc_push_req(struct pscrpc_request *);
 void	 pscrpc_set_add_new_req(struct pscrpc_request_set *, struct pscrpc_request *);
-int	_pscrpc_set_check(struct pscrpc_request_set *, int, struct pscrpc_request **);
+int	_pscrpc_set_check(struct pscrpc_request_set *, int);
 void	 pscrpc_set_destroy(struct pscrpc_request_set *);
 int	 pscrpc_set_finalize(struct pscrpc_request_set *, int, int);
 void	 pscrpc_set_init(struct pscrpc_request_set *);
