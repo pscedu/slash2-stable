@@ -253,22 +253,12 @@ pscrpc_prep_set(void)
 
 	set = psc_pool_get(pscrpc_set_pool);
 	memset(set, 0, sizeof(*set));
-	INIT_PSCLIST_HEAD(&set->set_requests);
+	INIT_PSCLIST_HEAD(&set->set_req_wait);
+	INIT_PSCLIST_HEAD(&set->set_req_done);
 	INIT_PSC_LISTENTRY(&set->set_lentry);
 	INIT_SPINLOCK(&set->set_lock);
 	psc_waitq_init(&set->set_waitq);
 	return (set);
-}
-
-/* XXX rename this terribly named function */
-void
-pscrpc_set_lock(struct pscrpc_request_set *set)
-{
-	spinlock(&set->set_lock);
-	while (set->set_flags & PSCRPC_SETF_CHECKING) {
-		psc_waitq_wait(&set->set_waitq, &set->set_lock);
-		spinlock(&set->set_lock);
-	}
 }
 
 /*
@@ -279,7 +269,7 @@ void
 pscrpc_set_add_new_req(struct pscrpc_request_set *set,
 		       struct pscrpc_request    *req)
 {
-	pscrpc_set_lock(set);
+	spinlock(&set->set_lock);
 	/* The set takes over the caller's request reference */
 	psclist_add_tail(&req->rq_set_chain_lentry, &set->set_requests);
 	req->rq_set = set;
@@ -292,6 +282,7 @@ void
 pscrpc_set_remove_req_locked(struct pscrpc_request_set *set,
     struct pscrpc_request *req)
 {
+	LOCK_ENSURE(&set->set_lock);
 	psclist_del(&req->rq_set_chain_lentry, &set->set_requests);
 	req->rq_set = NULL;
 	if (req->rq_phase != PSCRPC_RQ_PHASE_COMPLETE) {
@@ -306,7 +297,7 @@ void
 pscrpc_set_remove_req(struct pscrpc_request_set *set,
     struct pscrpc_request *rq)
 {
-	pscrpc_set_lock(set);
+	spinlock(&set->set_lock);
 	pscrpc_set_remove_req_locked(set, rq);
 	psc_waitq_wakeall(&set->set_waitq);
 	freelock(&set->set_lock);
@@ -394,7 +385,7 @@ pscrpc_push_req(struct pscrpc_request *req)
 	else {
 		/*
 		 * This is OK; it means that another thread has done a
-		 * pscrpc_check_set() which also pushes req's which are
+		 * pscrpc_set_check() which also pushes req's which are
 		 * PSCRPC_RQ_PHASE_NEW.
 		 */
 		freelock(&req->rq_lock);
@@ -627,7 +618,7 @@ pscrpc_queue_wait(struct pscrpc_request *req)
 		  "completed (rc=%d), replied=%d", rc, req->rq_replied);
 
 	spinlock(&imp->imp_lock);
-	psclist_del(&req->rq_lentry, psc_lentry_hd(&req->rq_lentry));
+	psclist_del(&req->rq_lentry, &imp->imp_sending_list);
 	freelock(&imp->imp_lock);
 
 	if (rc)
@@ -716,37 +707,22 @@ pscrpc_queue_wait(struct pscrpc_request *req)
 	return (rc);
 }
 
-/**
- * pscrpc_check_set - Send unsent RPCs in @set.  If check_allsent,
- *     returns TRUE if all are sent otherwise return true if at least one
- *     has completed.
- * @set:  the set in question
- * @check_allsent: return true only if all requests are finished; set to '1'
- *                 for original Lustre behavior.
- * NOTES: check_allsent was added to support single, non-blocking sends
- *        implemented within the context of an rpcset.
+/*
+ * Send unsent RPCs in @set.  If check_allsent, returns TRUE if all are
+ * sent otherwise return true if at least one has completed.
+ * @set: the set to process.
+ * @finish_one: only process one request.
  */
 int
-pscrpc_check_set(struct pscrpc_request_set *set, int check_allsent)
+pscrpc_set_check(struct pscrpc_request_set *set, int finish_one)
 {
 	struct pscrpc_request *req;
-	int ncompleted = 0;
+	int locked, ncompleted = 0;
 
-//	pscrpc_set_lock(set);
-//	psc_assert((set->set_flags & PSCRPC_SETF_CHECKING) == 0);
-//	set->set_flags |= PSCRPC_SETF_CHECKING;
-//	freelock(&set->set_lock);
+	if (set->set_remaining == 0)
+		return (finish_one ? 0 : 1);
 
-	if (set->set_remaining == 0) {
-//		spinlock(&set->set_lock);
-//		psc_assert(set->set_flags & PSCRPC_SETF_CHECKING);
-//		set->set_flags &= ~PSCRPC_SETF_CHECKING;
-//		psc_waitq_wakeall(&set->set_waitq);
-//		freelock(&set->set_lock);
-		return (check_allsent ? 1 : 0);
-	}
-
-	spinlock(&set->set_lock);
+	locked = reqlock(&set->set_lock);
 	psclist_for_each_entry(req, &set->set_requests, rq_set_chain_lentry) {
 		struct pscrpc_import *imp = req->rq_import;
 		int rc = 0;
@@ -754,9 +730,8 @@ pscrpc_check_set(struct pscrpc_request_set *set, int check_allsent)
 		DEBUG_REQ(PLL_DEBUG, req, "reqset=%p", set);
 
 		if (req->rq_phase == PSCRPC_RQ_PHASE_NEW &&
-		    pscrpc_push_req(req)) {
+		    pscrpc_push_req(req))
 			DEBUG_REQ(PLL_WARN, req, "PSCRPC_RQ_PHASE_NEW");
-		}
 
 		if (!(req->rq_phase == PSCRPC_RQ_PHASE_RPC ||
 		      req->rq_phase == PSCRPC_RQ_PHASE_BULK ||
@@ -798,7 +773,7 @@ pscrpc_check_set(struct pscrpc_request_set *set, int check_allsent)
 
 			spinlock(&imp->imp_lock);
 			psclist_del(&req->rq_lentry,
-			    psc_lentry_hd(&req->rq_lentry));
+			    &imp->imp_sending_list);
 			freelock(&imp->imp_lock);
 
 			GOTO(interpret, req->rq_status);
@@ -817,7 +792,7 @@ pscrpc_check_set(struct pscrpc_request_set *set, int check_allsent)
 
 			spinlock(&imp->imp_lock);
 			psclist_del(&req->rq_lentry,
-			    psc_lentry_hd(&req->rq_lentry));
+			    &imp->imp_sending_list);
 			freelock(&imp->imp_lock);
 
 			GOTO(interpret, req->rq_status);
@@ -825,14 +800,18 @@ pscrpc_check_set(struct pscrpc_request_set *set, int check_allsent)
 
 		if (req->rq_phase == PSCRPC_RQ_PHASE_RPC) {
 			int status = 0;
-			/* If using a non-blocking set, then check for expired
-			 *   requests here.
+
+			/*
+			 * If using a non-blocking set, then check for
+			 * expired requests here.
 			 */
 			if (!check_allsent &&
 			    !pscrpc_client_replied(req) &&
 			    pscrpc_is_expired(req)) {
-				/* rc == 0 means we're resending the request!
-				 *   otherwise, this request is getting nuked.
+				/*
+				 * rc == 0 means we're resending the
+				 * request!  otherwise, this request is
+				 * getting nuked.
 				 */
 				status = expired_request(req);
 				DEBUG_REQ(PLL_WARN, req, "expired (resend=%d)",
@@ -865,9 +844,9 @@ pscrpc_check_set(struct pscrpc_request_set *set, int check_allsent)
 				 */
 				spinlock(&imp->imp_lock);
 				psclist_del(&req->rq_lentry,
-					    psc_lentry_hd(&req->rq_lentry));
+				    &imp->imp_sending_list);
 				psclist_add_tail(&req->rq_lentry,
-						 &imp->imp_sending_list);
+				    &imp->imp_sending_list);
 				freelock(&imp->imp_lock);
 
 				pscrpc_msg_add_flags(req->rq_reqmsg,
@@ -895,21 +874,22 @@ pscrpc_check_set(struct pscrpc_request_set *set, int check_allsent)
 
 			if (pscrpc_client_receiving_reply(req) ||
 			    !pscrpc_client_replied(req))
-				/* Req is not finished.
-				 */
+				/* Req is not finished. */
 				continue;
 
 			spinlock(&imp->imp_lock);
 			psclist_del(&req->rq_lentry,
-				    psc_lentry_hd(&req->rq_lentry));
+			    &imp->imp_sending_list);
 			freelock(&imp->imp_lock);
 
 			req->rq_status = after_reply(req);
 
-			/* If there is no bulk associated with this request,
-			 * then we're done and should let the interpreter
-			 * process the reply.  Similarly if the RPC returned
-			 * an error, and therefore the bulk will never arrive
+			/*
+			 * If there is no bulk associated with this
+			 * request, then we're done and should let the
+			 * interpreter process the reply.  Similarly if
+			 * the RPC returned an error, and therefore the
+			 * bulk will never arrive
 			 */
 			if (req->rq_bulk == NULL || req->rq_status) {
 				req->rq_phase = PSCRPC_RQ_PHASE_INTERPRET;
@@ -953,30 +933,28 @@ pscrpc_check_set(struct pscrpc_request_set *set, int check_allsent)
 		ncompleted++;
 
 		freelock(&set->set_lock);
+
 		pscrpc_interpret(req);
+
 		spinlock(&set->set_lock);
 
 		set->set_remaining--;
-
-		DEBUG_REQ(PLL_DEBUG, req, "set(%p) rem=(%d) ",
-			  set, set->set_remaining);
+		DEBUG_REQ(PLL_DEBUG, req, "set@%p rem=%d ",
+		    set, set->set_remaining);
 
 		atomic_dec(&imp->imp_inflight);
 		psc_waitq_wakeall(&imp->imp_recovery_waitq);
+
+		if (finish_one) {
+			pscrpc_set_remove_req_locked(set, req);
+			pscrpc_req_finished(req);
+			break;
+		}
 	}
 
-//	spinlock(&set->set_lock);
-//	psc_assert(set->set_flags & PSCRPC_SETF_CHECKING);
-//	set->set_flags &= ~PSCRPC_SETF_CHECKING;
-//	psc_waitq_wakeall(&set->set_waitq);
-	freelock(&set->set_lock);
+	ureqlock(&set->set_lock, locked);
 
-	/* If we hit an error, we want to recover promptly. */
-	if (check_allsent)
-		/* old behavior */
-		return (set->set_remaining == 0);
-	/* new (single non-blocking req) behavior */
-	return (ncompleted);
+	return (finish_one ? ncompleted : set->set_remaining == 0);
 }
 
 void
@@ -1205,7 +1183,7 @@ pscrpc_set_wait(struct pscrpc_request_set *set)
 		    pscrpc_expired_set, pscrpc_interrupted_set, set);
 
 		rc = pscrpc_cli_wait_event(&set->set_waitq,
-		    pscrpc_check_set(set, 1), &lwi);
+		    pscrpc_set_check(set, 1), &lwi);
 
 		psc_assert(rc == 0 || rc == -EINTR || rc == -ETIMEDOUT);
 
@@ -1254,10 +1232,10 @@ pscrpc_set_wait(struct pscrpc_request_set *set)
 }
 
 /**
- * pscrpc_set_finalize - call set_wait or check_set depending on blocking
+ * pscrpc_set_finalize - call set_wait or set_check depending on blocking
  *	mode.  If the set has completed then free it.
  * @set: the set.
- * @block: call set_wait right away or otherwise only if check_set reports
+ * @block: call set_wait right away or otherwise only if set_check reports
  *	the set as being done.
  * @destroy: call destroy if the set has completed.
  * Notes: return 0 when the set has been completed, otherwise return 1
@@ -1278,12 +1256,11 @@ pscrpc_set_finalize(struct pscrpc_request_set *set, int block, int destroy)
 		if (destroy)
 			pscrpc_set_destroy(set);
 	} else {
-		rc = pscrpc_check_set(set, 1);
-		psclog_debug("pscrpc_check_set() returned %d set=%p", rc, set);
+		rc = pscrpc_set_check(set);
+		psclog_debug("pscrpc_set_check() returned %d set=%p", rc, set);
 		if (rc == 1)
 			goto set_wait;
-		else
-			rc = 1;
+		rc = 1;
 	}
 	return (rc);
 }

@@ -235,22 +235,18 @@ struct pscrpc_request_set;
 typedef int (*pscrpc_set_interpreterf)(struct pscrpc_request_set *, void *, int);
 
 struct pscrpc_request_set {
-	struct psclist_head		 set_requests;
-	struct psclist_head		 set_lentry;		/* chain for sets	 */
-	int				 set_remaining;
-	struct psc_waitq		 set_waitq;		/* I block here		 */
-	pscrpc_set_interpreterf		 set_interpret;		/* callback function	 */
-	void				*set_arg;		/* callback pointer	 */
+	struct psclist_head		 set_requests;		/* RPCs */
+	struct psc_listentry		 set_lentry;		/* chain for sets */
+	int				 set_remaining;		/* number of RPCs waiting to complete */
+	struct psc_waitq		 set_waitq;
+	pscrpc_set_interpreterf		 set_interpret;		/* app callback function */
+	void				*set_arg;		/* app callback arg */
 	psc_spinlock_t			 set_lock;
-	int				 set_flags;
 };
-
-/* set_flags */
-#define PSCRPC_SETF_CHECKING		(1 << 0)
 
 #define PSCRPC_SET_INIT(v, cb, cbarg)					\
 	{ PSCLIST_HEAD_INIT((v).set_requests), PSC_LISTENTRY_INIT,	\
-	    0, PSC_WAITQ_INIT, (cb), (cbarg), SPINLOCK_INIT, 0 }
+	    0, PSC_WAITQ_INIT, (cb), (cbarg), SPINLOCK_INIT }
 
 struct pscrpc_bulk_desc {
 	unsigned int			 bd_success:1;		/* completed successfully */
@@ -469,28 +465,11 @@ struct pscrpc_reply_state {
 	struct pscrpc_msg		 rs_msg;		/* msg struct -- MUST BE LAST MEMBER */
 };
 
-/*
- * Non-blocking request sets
- */
-struct pscrpc_nbreqset {
-	struct pscrpc_request_set	*nb_reqset;
-	struct psc_compl		 nb_compl;
-	psc_spinlock_t			 nb_lock;
-	uint32_t			 nb_flags;
-};
+/* nb.c */
+int	 pscrpc_nbreqset_add(struct pscrpc_request_set *, struct pscrpc_request *);
+int	 pscrpc_nbreqset_reap(struct pscrpc_request_set *);
 
-#define NBREQSET_WORK_INPROG 1
-
-struct pscrpc_nbreqset *
-	 pscrpc_nbreqset_init(pscrpc_set_interpreterf);
-int	 pscrpc_nbreqset_add(struct pscrpc_nbreqset *, struct pscrpc_request *);
-void	 pscrpc_nbreqset_destroy(struct pscrpc_nbreqset *);
-int	 pscrpc_nbreqset_flush(struct pscrpc_nbreqset *);
-int	 pscrpc_nbreqset_reap(struct pscrpc_nbreqset *);
-
-void	 pscrpc_nbreapthr_spawn(struct pscrpc_nbreqset *, int, int, const char *);
-
-int	 pscrpc_put_connection(struct pscrpc_connection *);
+void	 pscrpc_nbreapthr_spawn(struct pscrpc_request_set *, int, int, const char *);
 
 /*  events.c */
 lnet_pid_t pscrpc_get_pid(void);
@@ -561,12 +540,17 @@ struct pscrpc_connection *
 struct pscrpc_connection *
 	 pscrpc_connection_addref(struct pscrpc_connection *);
 
+int	 pscrpc_put_connection(struct pscrpc_connection *);
+
 /* import.c */
 void	 pscrpc_import_put(struct pscrpc_import *);
 struct pscrpc_import *
 	 pscrpc_new_import(void);
 struct pscrpc_import *
 	 pscrpc_import_get(struct pscrpc_import *);
+
+#define pscrpc_set_checkone(set, rqp)	_pscrpc_set_check((set), 1, (rqp))
+#define pscrpc_set_check(set)		_pscrpc_set_check((set), 0, NULL)
 
 /* rpcclient.c */
 int	 pscrpc_expire_one_request(struct pscrpc_request *);
@@ -579,16 +563,15 @@ struct pscrpc_request *
 int	 pscrpc_queue_wait(struct pscrpc_request *);
 struct pscrpc_request_set *
 	 pscrpc_prep_set(void);
-void	 pscrpc_set_init(struct pscrpc_request_set *);
 int	 pscrpc_push_req(struct pscrpc_request *);
 void	 pscrpc_set_add_new_req(struct pscrpc_request_set *, struct pscrpc_request *);
+int	_pscrpc_set_check(struct pscrpc_request_set *, int, struct pscrpc_request **);
+void	 pscrpc_set_destroy(struct pscrpc_request_set *);
+int	 pscrpc_set_finalize(struct pscrpc_request_set *, int, int);
+void	 pscrpc_set_init(struct pscrpc_request_set *);
 void	 pscrpc_set_remove_req(struct pscrpc_request_set *, struct pscrpc_request *);
 void	 pscrpc_set_remove_req_locked(struct pscrpc_request_set *, struct pscrpc_request *);
-int	 pscrpc_check_set(struct pscrpc_request_set *, int);
-int	 pscrpc_set_finalize(struct pscrpc_request_set *, int, int);
 int	 pscrpc_set_wait(struct pscrpc_request_set *);
-void	 pscrpc_set_destroy(struct pscrpc_request_set *);
-void	 pscrpc_set_lock(struct pscrpc_request_set *);
 
 struct pscrpc_bulk_desc *
 	 pscrpc_prep_bulk_exp(struct pscrpc_request *, int, int, int);
