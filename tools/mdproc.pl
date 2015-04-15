@@ -54,23 +54,10 @@ my %m;
 sub get_unless_last_rev {
 	my ($fn, $d, $m, $y) = @_;
 
-	my @out = `svn log '$fn'`;
-
-	foreach my $ln (@out) {
-		my ($t_rev, $t_y, $t_m, $t_d) =
-		    ($ln =~ /^r(\d+) \s+ \| \s+ (?:\w+) \s+ \| \s+
-		    (\d+)-(\d+)-0*(\d+) \s+ (\d+):(\d+):(\d+)/x) or next;
-
-		# if this revision solely was comprised of comments or date bump, ignore
-		my $prev_rev = $t_rev - 1;
-		my $t_out = `svn diff -r $prev_rev:$t_rev --diff-cmd=diff -x '-I^\\.Dd -I^\\.\\\\"' '$fn'`;
-		my $cnt = ($t_out =~ tr/\n//);
-
-		next unless $cnt > 2;
-
-		return if $t_y == $y && $t_m == $m && $t_d == $d;
-		return ($t_d, $t_m, $t_y);
-	}
+	my @out = `git log --date=short --pretty=format:%ad \Q$fn\E`;
+	my $ln = shift @out;
+	my ($yr, $mon, $day) = $ln =~ /^(\d+)-0*(\d)+-0*(\d+)$/ or return;
+	return ($day, $mon, $yr);
 }
 
 sub slurp {
@@ -87,11 +74,10 @@ sub slurp {
 my ($d, $m, $y, $sm);
 
 foreach my $fn (@ARGV) {
-	my $out = `svn diff --diff-cmd=diff -x '-I\$Id -I^\\.\\\\"' '$fn'`;
-	my $cnt = ($out =~ tr/\n//);
+	my @out = `git status --porcelain \Q$fn\E`;
 	my $data;
 
-	if ($cnt > 2) {
+	if (@out) {
 		# has local changes, bump date
 		$data = slurp $fn;
 		my ($mt) = (stat $fn)[9];
