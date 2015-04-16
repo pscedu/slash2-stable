@@ -10,5 +10,6 @@ main(int argc, char *argv[])
 {
 	(void)argc;
 	(void)argv;
+	(void)ACL_USER;
 	exit(0);
 }
