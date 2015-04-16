@@ -51,6 +51,8 @@ unmount(const char *mp)
 }
 
 struct pscfs wok_pscfs = {
+	PSCFS_INIT,
+	"wokfs",
 	NULL,
 	NULL,
 	NULL,	/* releasedir */
