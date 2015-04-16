@@ -37,8 +37,6 @@
 #include "pfl/log.h"
 #include "pfl/cdefs.h"
 
-#ifdef HAVE_SYS_ACL_H
-
 #define ACL_EA_VERSION		2
 #define ACL_EA_ACCESS		"system.posix_acl_access"
 
@@ -116,5 +114,3 @@ pfl_acl_from_xattr(const void *buf, size_t size)
 	}
 	return (a);
 }
-
-#endif /* HAVE_SYS_ACL_H */
