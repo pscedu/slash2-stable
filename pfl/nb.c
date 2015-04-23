@@ -66,11 +66,16 @@ pscrpc_nbreapthr_main(struct psc_thread *thr)
 {
 	struct pscrpc_request_set *set;
 	struct pscrpc_nbreapthr *pnbt;
+	struct timespec ts;
+
+	ts.tv_sec = 0;
+	ts.tv_nsec = 500;
 
 	pnbt = thr->pscthr_private;
 	set = pnbt->pnbt_set;
 	while (pscthr_run(thr)) {
-		spinlock(&set->set_lock);
+		while (!trylock(&set->set_lock))
+			nanosleep(&ts, NULL);
 		if (pscrpc_set_checkone(set))
 			freelock(&set->set_lock);
 		else
