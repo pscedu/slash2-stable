@@ -52,6 +52,7 @@ pfl_opstimerthr_main(struct psc_thread *thr)
 	struct psc_waitq dummy = PSC_WAITQ_INIT;
 	struct pfl_opstat *opst;
 	struct timespec ts;
+	double alpha = .5;
 	uint64_t len;
 	int i;
 
@@ -72,8 +73,8 @@ pfl_opstimerthr_main(struct psc_thread *thr)
 			opst->opst_last = len;
 
 			/* compute time weighted average */
-			opst->opst_avg = 9 * opst->opst_avg / 10 +
-			    len / 10;
+			opst->opst_avg = alpha * len + (1 - alpha) *
+			    opst->opst_avg;
 
 			/* add to lifetime */
 			opst->opst_lifetime += len;
