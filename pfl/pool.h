@@ -133,6 +133,7 @@ struct psc_poolmgr {
 #define PPMF_AUTO		(1 << 0)	/* pool automatically resizes */
 #define PPMF_PIN		(1 << 1)	/* mlock(2) items */
 #define PPMF_MLIST		(1 << 2)	/* backend storage is mgt'd via mlist */
+#define PPMF_DESPERATE		(1 << 3)	/* initial reaping attempt failed */
 
 #define POOL_LOCK(m)		PLL_LOCK(&(m)->ppm_pll)
 #define POOL_TRYLOCK(m)		PLL_TRYLOCK(&(m)->ppm_pll)

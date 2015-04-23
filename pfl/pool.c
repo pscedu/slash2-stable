@@ -529,17 +529,21 @@ _psc_pool_tryget(struct psc_poolmgr *m)
 }
 
 void
-psc_pool_reap(struct psc_poolmgr *m, int n)
+psc_pool_reap(struct psc_poolmgr *m, int desperate)
 {
 	/*
 	 * We use atomics to register additional waiters while one
-	 * thread is already reaping, lessening the expense of deep
-	 * reaping.
+	 * thread is already reaping, lessening the expense of "deep"
+	 * reap processing.
 	 */
-	psc_atomic32_add(&m->ppm_nwaiters, n);
+	psc_atomic32_inc(&m->ppm_nwaiters);
 	psc_mutex_lock(&m->ppm_reclaim_mutex);
+	if (desperate)
+		m->ppm_flags |= PPMF_DESPERATE;
 	m->ppm_reclaimcb(m);
-	psc_atomic32_sub(&m->ppm_nwaiters, n);
+	if (desperate)
+		m->ppm_flags &= ~PPMF_DESPERATE;
+	psc_atomic32_dec(&m->ppm_nwaiters);
 	psc_mutex_unlock(&m->ppm_reclaim_mutex);
 }
 
@@ -550,7 +554,7 @@ psc_pool_reap(struct psc_poolmgr *m, int n)
 void *
 _psc_pool_get(struct psc_poolmgr *m, int flags)
 {
-	int locked, n;
+	int desperate = 0, locked, n;
 	void *p;
 
 	p = POOL_TRYGETOBJ(m);
@@ -560,7 +564,7 @@ _psc_pool_get(struct psc_poolmgr *m, int flags)
 	/* If this pool has a reclaimer routine, try that. */
 	if (m->ppm_reclaimcb) {
  tryreclaim:
-		psc_pool_reap(m, 1);
+		psc_pool_reap(m, desperate);
 
 		p = POOL_TRYGETOBJ(m);
 		if (p)
@@ -613,8 +617,10 @@ _psc_pool_get(struct psc_poolmgr *m, int flags)
 	}
 
 	/*
-	 * Try once more, if nothing, a condition should be added to the
-	 * multiwait.  This invocation should have been done in a multiwait
+	 * Try once more for a multiwait-list; if nothing, the caller
+	 * should add a condition should be added to the multiwait since
+	 * there is nothing more we can do to get an object at the
+	 * moment.  This invocation should have been done in a multiwait
 	 * critical section to prevent dropping notifications.
 	 */
 	if (POOL_IS_MLIST(m))
@@ -625,6 +631,11 @@ _psc_pool_get(struct psc_poolmgr *m, int flags)
 	 * until at least one item is reclaimed and available for us.
 	 */
 	if (m->ppm_reclaimcb) {
+		if (!desperate) {
+			desperate = 1;
+			goto tryreclaim;
+		}
+
 		POOL_LOCK(m);
 		p = POOL_TRYGETOBJ(m);
 		if (p) {
@@ -636,8 +647,6 @@ _psc_pool_get(struct psc_poolmgr *m, int flags)
 		 * Before blindly retrying reclaim, sleep to reduce busy
 		 * waiting (unless someone returns a pool item during
 		 * our sleep).
-		 *
-		 * XXX mlist support
 		 */
 		psc_atomic32_inc(&m->ppm_nwaiters);
 		psc_waitq_waitrel_us(&m->ppm_lc.plc_wq_empty,
