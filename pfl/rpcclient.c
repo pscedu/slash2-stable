@@ -782,9 +782,9 @@ _pscrpc_set_check(struct pscrpc_request_set *set, int finish_one)
 
 		/* pscrpc_queue_wait->l_wait_event guarantees that rq_intr
 		 * will only be set after rq_timedout, but the orig waiting
-		 * path sets rq_intr irrespective of whether pscrpcd has
-		 * seen a timeout.  our policy is to only interpret
-		 * interrupted rpcs after they have timed out */
+		 * path sets rq_intr irrespective of whether the async
+		 * RPC thread has seen a timeout.  our policy is to only
+		 * interpret interrupted rpcs after they have timed out */
 		if (req->rq_intr && req->rq_timedout) {
 			/* NB could be on delayed list */
 			pscrpc_unregister_reply(req);
