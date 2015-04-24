@@ -25,10 +25,10 @@
  * %PSC_END_COPYRIGHT%
  */
 
+#include <sys/param.h>
+
 #include <stdint.h>
 #include <stdio.h>
-
-#include "pfl/lock.h"
 
 /**
  * pfl_unpack_hex - Display the hexadecimal representation of some data.
@@ -67,16 +67,16 @@ fprinthex(FILE *fp, const void *ptr, size_t len)
 	for (n = 0; n < len; p++, n++) {
 		if (n) {
 			if (n % 32 == 0)
-				fprintf(stderr, "\n");
+				fprintf(fp, "\n");
 			else {
 				if (n % 8 == 0)
-					fprintf(stderr, " ");
-				fprintf(stderr, " ");
+					fprintf(fp, " ");
+				fprintf(fp, " ");
 			}
 		}
-		fprintf(stderr, "%02x", *p);
+		fprintf(fp, "%02x", *p);
 	}
-	fprintf(stderr, "\n------------------------------------------\n");
+	fprintf(fp, "\n------------------------------------------\n");
 	funlockfile(fp);
 }
 
