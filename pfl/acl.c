@@ -57,8 +57,8 @@ pfl_acl_from_xattr(const void *buf, size_t size)
 	int i, entries;
 	const struct acl_ea_header *h = buf;
 	const struct acl_ea_entry *xe = PSC_AGP(h + 1, 0);
-	unsigned int xperm;
-	acl_permset_t perm;
+	unsigned int xperms;
+	acl_permset_t permset;
 	acl_entry_t e;
 	acl_tag_t tag;
 	acl_t a;
@@ -83,17 +83,20 @@ pfl_acl_from_xattr(const void *buf, size_t size)
 		return (NULL);
 	for (i = 0; i < entries; i++, xe++) {
 		acl_create_entry(&a, &e);
+		if (acl_get_permset(e, &permset) == -1)
+			psclog_error("get_permset");
+		acl_clear_perms(permset);
 
-		xperm = le16toh(xe->perm);
-		memset(&perm, 0, sizeof(perm));
-		acl_clear_perms(perm);
-		if (xperm & ACL_READ)
-			acl_add_perm(perm, ACL_READ);
-		if (xperm & ACL_WRITE)
-			acl_add_perm(perm, ACL_WRITE);
-		if (xperm & ACL_EXECUTE)
-			acl_add_perm(perm, ACL_EXECUTE);
-		acl_set_permset(e, perm);
+		xperms = le16toh(xe->perm);
+
+		if (xperms & ACL_READ)
+			acl_add_perm(permset, ACL_READ);
+		if (xperms & ACL_WRITE)
+			acl_add_perm(permset, ACL_WRITE);
+		if (xperms & ACL_EXECUTE)
+			acl_add_perm(permset, ACL_EXECUTE);
+		if (acl_set_permset(e, permset) == -1)
+			psclog_error("set_permset");
 
 		acl_set_tag_type(e, tag = le16toh(xe->tag));
 
