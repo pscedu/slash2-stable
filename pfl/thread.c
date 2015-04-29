@@ -540,7 +540,7 @@ pscthr_run(struct psc_thread *thr)
 	}
 	if (yield)
 		pscthr_yield();
-	return (live);
+	return (1);
 }
 
 int
