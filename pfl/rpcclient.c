@@ -257,6 +257,7 @@ pscrpc_prep_set(void)
 	INIT_PSC_LISTENTRY(&set->set_lentry);
 	INIT_SPINLOCK(&set->set_lock);
 	psc_waitq_init(&set->set_waitq);
+	psc_compl_init(&set->set_compl);
 	return (set);
 }
 
@@ -997,6 +998,7 @@ pscrpc_set_destroy(struct pscrpc_request_set *set)
 	psc_assert(set->set_remaining == 0);
 	psc_assert(psc_waitq_nwaiters(&set->set_waitq) == 0);
 	psc_waitq_destroy(&set->set_waitq);
+	psc_compl_destroy(&set->set_compl);
 
 	psc_pool_return(pscrpc_set_pool, set);
 }

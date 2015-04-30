@@ -239,6 +239,7 @@ struct pscrpc_request_set {
 	struct psc_listentry		 set_lentry;		/* chain for sets */
 	int				 set_remaining;		/* number of RPCs waiting to complete */
 	struct psc_waitq		 set_waitq;
+	struct psc_compl		 set_compl;
 	pscrpc_set_interpreterf		 set_interpret;		/* app callback function */
 	void				*set_arg;		/* app callback arg */
 	psc_spinlock_t			 set_lock;
