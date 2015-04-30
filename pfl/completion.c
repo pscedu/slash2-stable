@@ -64,9 +64,12 @@ _psc_compl_ready(struct psc_compl *pc, int rc, int one)
 }
 
 int
-psc_compl_waitrel_s(struct psc_compl *pc, int secs)
+psc_compl_waitrel_s(struct psc_compl *pc, struct psc_spinlock *sp,
+    int secs)
 {
 	reqlock(&pc->pc_lock);
+	if (sp)
+		freelock(sp);
 	if (!pc->pc_done) {
 		if (secs) {
 			if (psc_waitq_waitrel_s(&pc->pc_wq,
