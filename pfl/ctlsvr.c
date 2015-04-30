@@ -1228,8 +1228,15 @@ psc_ctlparam_pool_handle(int fd, struct psc_ctlmsghdr *mh,
 			if (m->ppm_reclaimcb == NULL)
 				return (psc_ctlsenderr(fd, mh,
 				    "pool.%s: not reapable", levels[1]));
+			if (pcp->pcp_flags & PCPF_SUB)
+				return (psc_ctlsenderr(fd, mh,
+				    "pool.%s.reap: value cannot be "
+				    "negative", levels[1]));
 
-			psc_pool_reap(m, val);
+			/* XXX hack */
+			psc_atomic32_add(&m->ppm_nwaiters, val);
+			psc_pool_reap(m, 0);
+			psc_atomic32_sub(&m->ppm_nwaiters, val);
 		} else {
 			return (psc_ctlsenderr(fd, mh,
 			    "pool.%s.reap: write-only field", levels[1]));
