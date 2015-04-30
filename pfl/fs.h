@@ -72,6 +72,7 @@ struct pscfs_dirent {
 struct pscfs {
 	struct pfl_opstat	*pf_opst_read_err;
 	struct pfl_opstat	*pf_opst_read_reply;
+	struct pfl_opstat	*pf_opst_write_reply;
 	const char		*pf_name;
 
 	void	(*pf_handle_access)(struct pscfs_req *, pscfs_inum_t, int);
