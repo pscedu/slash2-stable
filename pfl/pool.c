@@ -318,6 +318,8 @@ psc_pool_grow(struct psc_poolmgr *m, int n)
 	flags = PAF_CANFAIL;
 	if (m->ppm_flags & PPMF_PIN)
 		flags |= PAF_LOCK;
+	if (m->ppm_flags & PPMF_ALIGN)
+		flags |= PAF_PAGEALIGN;
 	for (i = 0; i < n; i++) {
 		p = psc_alloc(m->ppm_entsize, flags);
 		if (p == NULL) {

@@ -135,6 +135,7 @@ struct psc_poolmgr {
 #define PPMF_MLIST		(1 << 2)	/* backend storage is mgt'd via mlist */
 #define PPMF_DESPERATE		(1 << 3)	/* initial reaping attempt failed */
 #define PPMF_ZERO		(1 << 4)	/* zero objects before passing them out */
+#define PPMF_ALIGN		(1 << 5)	/* align to system page boundaries */
 
 #define POOL_LOCK(m)		PLL_LOCK(&(m)->ppm_pll)
 #define POOL_TRYLOCK(m)		PLL_TRYLOCK(&(m)->ppm_pll)
