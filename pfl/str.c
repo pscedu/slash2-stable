@@ -25,12 +25,14 @@
  * %PSC_END_COPYRIGHT%
  */
 
+#include <ctype.h>
 #include <limits.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <string.h>
 
 #include "pfl/alloc.h"
+#include "pfl/dynarray.h"
 #include "pfl/str.h"
 
 int
@@ -114,4 +116,50 @@ pfl_dirname(const char *s, char *buf)
 		buf[sep] = '\0';
 	}
 	return (0);
+}
+
+char **
+pfl_str_split(char *s)
+{
+	struct psc_dynarray a = DYNARRAY_INIT;
+	char **v, *p, *beg;
+	int delim, esc;
+	size_t len;
+
+	for (p = beg = s; *p; ) {
+		if (isspace(*p)) {
+			*p++ = '\0';
+			while (isspace(*p))
+				p++;
+			beg = p;
+			continue;
+		}
+		if (*p == '\'' ||
+		    *p == '"') {
+			delim = *p;
+			esc = 0;
+
+			for (; *p; p++) {
+				if (esc) {
+					esc = 0;
+					continue;
+				}
+				if (*p == delim)
+					break;
+				else if (*p == '\\')
+					esc = 1;
+			}
+		}
+		if (beg == p)
+			psc_dynarray_add(&a, beg);
+		p++;
+	}
+
+	psc_dynarray_add(&a, NULL);
+
+	len = sizeof(*v) * psc_dynarray_len(&a);
+	v = PSCALLOC(len + sizeof(*v));
+	memcpy(v, psc_dynarray_get(&a), len);
+	psc_dynarray_free(&a);
+	return (v);
 }
