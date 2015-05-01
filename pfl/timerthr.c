@@ -52,7 +52,7 @@ pfl_opstimerthr_main(struct psc_thread *thr)
 	struct psc_waitq dummy = PSC_WAITQ_INIT;
 	struct pfl_opstat *opst;
 	struct timespec ts;
-	double alpha = .5;
+	double alpha = .25;
 	uint64_t len;
 	int i;
 
