@@ -46,6 +46,7 @@ pscrpc_nbreqset_add(struct pscrpc_request_set *set,
 {
 	int rc;
 
+	rq->rq_compl = &set->set_compl;
 	rc = pscrpc_push_req(rq);
 	if (rc) {
 		DEBUG_REQ(PLL_ERROR, rq, "send failure: %s",
@@ -66,20 +67,20 @@ pscrpc_nbreapthr_main(struct psc_thread *thr)
 {
 	struct pscrpc_request_set *set;
 	struct pscrpc_nbreapthr *pnbt;
-	struct timespec ts;
-
-	ts.tv_sec = 0;
-	ts.tv_nsec = 500;
+	int cntr;
 
 	pnbt = thr->pscthr_private;
 	set = pnbt->pnbt_set;
 	while (pscthr_run(thr)) {
-		while (!trylock(&set->set_lock))
-			nanosleep(&ts, NULL);
+		spinlock(&set->set_lock);
+		cntr = set->set_compl.pc_counter;
 		if (pscrpc_set_checkone(set))
 			freelock(&set->set_lock);
+		else if (cntr == set->set_compl.pc_counter)
+			psc_compl_waitrel_s(&set->set_compl,
+			    &set->set_lock, 1);
 		else
-			psc_waitq_wait(&set->set_waitq, &set->set_lock);
+			freelock(&set->set_lock);
 	}
 }
 
