@@ -2,7 +2,7 @@
 /*
  * %PSC_START_COPYRIGHT%
  * -----------------------------------------------------------------------------
- * Copyright (c) 2006-2015, Pittsburgh Supercomputing Center (PSC).
+ * Copyright (c) 2007-2015, Pittsburgh Supercomputing Center (PSC).
  *
  * Permission to use, copy, modify, and distribute this software
  * for any purpose with or without fee is hereby granted, provided
@@ -33,8 +33,8 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "pfl/str.h"
 #include "pfl/alloc.h"
+#include "pfl/str.h"
 
 /**
  * mkdirs - Simple recursive "mkdir -p" type functionality.
@@ -52,42 +52,24 @@ int
 mkdirs(const char *s, mode_t mode)
 {
 	char *p, *path;
-	struct stat stb;
-	int rc = -1;
+	int rc = 0;
 
 	path = pfl_strdup(s);
+
+	/* XXX the path should be canonicalized. */
 
 	/* skip past each existing subdir */
 	for (p = path; p; ) {
 		p = strchr(p, '/');
 		if (p)
 			*p = '\0';
-		if (path[0] && stat(path, &stb) == -1) {
-			if (errno == ENOENT)
-				goto create;
-			goto out;
-		}
+		if (path[0] && mkdir(path, mode) == -1 &&
+		    (rc = errno) != EEXIST)
+			break;
 		if (p)
 			*p++ = '/';
 	}
-	errno = EEXIST;
-	goto out;
 
- create:
-	/* now create each component */
-	for (;;) {
-		if (mkdir(path, mode) == -1)
-			goto out;
-		if (p == NULL)
-			break;
-		*p++ = '/';
-		p = strchr(p, '/');
-		if (p)
-			*p = '\0';
-	}
-	rc = 0;
-
- out:
 	PSCFREE(path);
 	return (rc);
 }
