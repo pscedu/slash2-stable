@@ -102,6 +102,8 @@ struct psc_listcache {
  */
 #define lc_remove(plc, p)		pll_remove(&(plc)->plc_pll, (p))
 
+#define pfl_listcache_isdead(plc)	((plc)->plc_flags & PLCF_DYING)
+
 /* list cache behavior flags */
 #define PLCBF_HEAD	0
 #define PLCBF_TAIL	(1 << 0)
