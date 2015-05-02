@@ -70,7 +70,7 @@
 		if (POOL_IS_MLIST(m))					\
 			psc_mlist_add(&(m)->ppm_ml, (p));		\
 		else							\
-			lc_add(&(m)->ppm_lc, (p));			\
+			lc_addtail_ifalive(&(m)->ppm_lc, (p));		\
 									\
 		if (_p)							\
 			_POOL_PROTNONE(_p, (m));			\
@@ -105,7 +105,7 @@
 		if (POOL_IS_MLIST(m))					\
 			psc_mlist_add(&(m)->ppm_ml, (p));		\
 		else							\
-			lc_add(&(m)->ppm_lc, (p));			\
+			lc_addtail_ifalive(&(m)->ppm_lc, (p));		\
 	} while (0)
 
 #  define POOL_TRYGETOBJ(m)						\
