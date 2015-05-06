@@ -178,6 +178,7 @@ pfl
   tests
 - make sure in `psclog("%d", errno)' there are no ways errno can be
   modified by pfl_tls_get()
+- never cast sizeof() to int
 
 lnet
 - use TLS buffers for libcfs_nid2str() to avoid NUMA contention
