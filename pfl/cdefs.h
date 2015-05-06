@@ -128,7 +128,7 @@
 		ATTR_UNSET((c), (a));					\
 	} while (0)
 
-/* if multiple of 2, use bitwise ops to simplify math */
+/* XXX if multiple of 2, use bitwise ops to simplify math */
 #define PSC_ALIGN(sz, incr)	((incr) * (((sz) + ((incr) - 1)) / (incr)))
 
 /* arthimetic on a generic pointer */
