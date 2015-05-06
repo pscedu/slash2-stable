@@ -57,11 +57,9 @@ shift $(($OPTIND - 1))
 case $1 in
 scm-update)
 	GIT_ACTION=pull
-	SVN_ACTION=up
 	;;
 *)
 	GIT_ACTION=${1#scm-}
-	SVN_ACTION=${1#scm-}
 	;;
 esac
 
@@ -97,22 +95,9 @@ _getrepo()
 			    warn "accessing $dir failed"
 		fi
 
-	# XXX remove me
-	elif svn info >/dev/null 2>&1; then
-		svn $SVN_ACTION
-
 	elif [ x"$GIT_ACTION" = x"pull" ]; then
 		cd ..
-		mv $base $base.svnold
-
 		echorun git clone $url $base
-
-		for i in $(cd $base.svnold && find . -type f); do
-			mkdir -p $base/$(dirname $i)
-			mv -f $base.svnold/$i $base/$i
-		done
-		find $base.svnold -type l -exec rm {} \;
-		find $base.svnold -depth -type d -print -exec rmdir {} \;
 	fi
 }
 
