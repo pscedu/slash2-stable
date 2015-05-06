@@ -87,6 +87,7 @@ pfl_basename(const char *s)
 {
 	const char *bn, *p;
 
+	// XXX strrchr()
 	for (bn = p = s; *p; p++)
 		if (*p == '/')
 			bn = p + 1;
