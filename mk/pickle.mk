@@ -35,9 +35,11 @@ ifeq ($(filter $(realpath ${ROOTDIR})/compat/%,${CURDIR}),)
 
  -include ${PICKLEHOSTMK}
 
- PICKLE_NEED_VERSION=					$(word 2,$$Rev$$)
+ ifeq ($(shell test "${ROOTDIR}/mk/pickle.mk" -nt "${PICKLEHOSTMK}" && echo 1),1)
+  PICKLE_DONE=0
+ endif
 
- ifneq (${PICKLE_NEED_VERSION},${PICKLE_HAS_VERSION})
+ ifneq (${PICKLE_DONE},1)
   $(shell ${PICKLEGEN} "${ROOTDIR}" "${PICKLE_NEED_VERSION}" "${MAKE}" "${PICKLEHOSTMK}" >&2)
   include ${PICKLEHOSTMK}
  endif
