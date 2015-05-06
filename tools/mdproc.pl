@@ -24,13 +24,14 @@
 # -----------------------------------------------------------------------------
 # %PSC_END_COPYRIGHT%
 
-# mdproc - Preprocessor for mandoc manual pages, doing things such as
+# mdproc - Preprocessor for mdoc manual pages, doing things such as
 # expanding templates and updating dates.
 
 # Better algorithm:
 #	use file mtime as long as mtime != ctime
 #	and svn diff -I\$Id yields isn't empty
-# XXX if file was copied from a revision, switch to that file to continue
+# XXX if file was copied from a revision, switch to that file and
+#	continue backwards
 
 use strict;
 use warnings;
