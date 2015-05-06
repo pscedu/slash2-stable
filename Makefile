@@ -3,7 +3,7 @@
 ROOTDIR=.
 include ${ROOTDIR}/Makefile.path
 
-SUBDIRS+=	$(foreach i,$(wildcard */Makefile),$(patsubst %/Makefile,%,$i))
+SUBDIRS+=	$(filter-out compat,$(foreach i,$(wildcard */Makefile),$(patsubst %/Makefile,%,$i)))
 
 include ${MAINMK}
 -include local.mk
