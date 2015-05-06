@@ -107,7 +107,7 @@ else
   endif
 endif
 
-KERNEL_BASE=	/usr/src/kernels/linux
+REPO_VERSION=	$$(git log --pretty=format:%h | wc -l)
 
 COPYRIGHT_PATS+='*.[chyl]'							\
 		'*.[0-9]'							\
