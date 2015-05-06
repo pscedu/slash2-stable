@@ -4,8 +4,8 @@
 # PSC Advanced Systems projects self updater
 #
 # TODO
-# parallelize git operations
-#git checkout `git rev-list -n 1 --before="2009-07-27 13:37" master`
+# - make a date synchronization primitive:
+#	- git checkout `git rev-list -n 1 --before="2009-07-27 13:37" master`
 
 set -e
 
@@ -81,7 +81,7 @@ _getrepo()
 	if [ -n "$reldir" ]; then
 		[ x"$reldir" = x"$dir" ] || return 0
 	else
-		if [ x"$dir" != x"proj" ]; then
+		if [ x"$dir" != x"pfl" ]; then
 			mkdir -p $dir
 			cd $dir
 		fi
@@ -137,6 +137,6 @@ for i in $dir/inf/*/update.sh; do
 	[ -e $i ] && . $i
 done
 
-pubrepo proj
+pubrepo pfl
 
 exwait
