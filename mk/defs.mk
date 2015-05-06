@@ -107,7 +107,7 @@ else
   endif
 endif
 
-REPO_VERSION=	$$(git log --pretty=format:%h | wc -l)
+REPO_VERSION=	$$(git log --pretty=format:%h | grep -c .)
 
 COPYRIGHT_PATS+='*.[chyl]'							\
 		'*.[0-9]'							\
