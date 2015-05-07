@@ -1,4 +1,4 @@
-/* $Id$ */
+/* $Id: nb.c 25732 2015-05-01 13:58:36Z yanovich $ */
 
 /*
  *  Copyright (c) 2002, 2003 Cluster File Systems, Inc.
@@ -77,6 +77,7 @@ pscrpc_nbreapthr_main(struct psc_thread *thr)
 		if (pscrpc_set_checkone(set))
 			freelock(&set->set_lock);
 		else if (cntr == set->set_compl.pc_counter)
+			/* XXX peg the CPU at 1% even if the system is idle */
 			psc_compl_waitrel_s(&set->set_compl,
 			    &set->set_lock, 1);
 		else
