@@ -106,6 +106,8 @@ int				 chunk;
 int				 verbose;
 int				 checkzero;
 int				 piecewise;
+volatile sig_atomic_t		 exit_from_signal;
+int				 direct_io;
 int				 nthr = 1;
 ssize_t				 bufsz = 32 * 1024;
 off_t				 seekoff;
@@ -228,12 +230,15 @@ thrmain(struct psc_thread *thr)
 	ssize_t rc;
 	char *buf;
 
-	buf = PSCALLOC(bufsz);
+	buf = psc_alloc(bufsz, PAF_PAGEALIGN);
 
 	if (writesz)
 		pfl_random_getbytes(buf, bufsz);
 
 	while (pscthr_run(thr)) {
+		if (exit_from_signal)
+			break;
+
 		wk = lc_getwait(&wkq);
 		if (wk == NULL)
 			break;
@@ -288,7 +293,8 @@ thrmain(struct psc_thread *thr)
 					    f->stb.st_size)
 						wk->len = f->stb.st_size %
 						    bufsz;
-					goto nextchunk;
+					if (!exit_from_signal)
+						goto nextchunk;
 				}
 			}
 		}
@@ -398,7 +404,13 @@ proc(FTSENT *fe, __unusedx void *arg)
 {
 	struct file *f;
 
-	if (fe->fts_info != FTS_F)
+	if (exit_from_signal) {
+		pfl_fts_set(fe, FTS_SKIP);
+		return (0);
+	}
+
+	if (fe->fts_info != FTS_F &&
+	    (fe->fts_statp->st_mode & S_IFBLK) == 0)
 		return (0);
 
 	if (verbose) {
@@ -413,8 +425,8 @@ proc(FTSENT *fe, __unusedx void *arg)
 	INIT_SPINLOCK(&f->lock);
 	f->fn = strdup(fe->fts_path);
 	if (writesz)
-		f->fd = open(fe->fts_path, O_CREAT | O_RDWR | O_TRUNC,
-		    0600);
+		f->fd = open(fe->fts_path, O_CREAT | O_RDWR | O_TRUNC |
+		    (direct_io ? O_DIRECT : 0), 0600);
 	else
 		f->fd = open(fe->fts_path, O_RDONLY);
 	f->refcnt = 1;
@@ -437,9 +449,15 @@ usage(void)
 	extern const char *__progname;
 
 	fprintf(stderr,
-	    "usage: %s [-BcKPRvwZ] [-b bufsz] [-t nthr] [-O offset] file ...\n",
+	    "usage: %s [-BcdKPRvwZ] [-b bufsz] [-t nthr] [-O offset] file ...\n",
 	    __progname);
 	exit(1);
+}
+
+void
+handle_signal(__unusedx int sig)
+{
+	exit_from_signal = 1;
 }
 
 int
@@ -447,6 +465,7 @@ main(int argc, char *argv[])
 {
 	int displaybw = 0, c, n, flags = PFL_FILEWALKF_NOCHDIR;
 	struct psc_thread **thrv, *dispthr;
+	struct sigaction sa;
 	struct file *f;
 	char *endp;
 
@@ -456,7 +475,7 @@ main(int argc, char *argv[])
 	gcry_control(GCRYCTL_INITIALIZATION_FINISHED, 0);
 
 	pfl_init();
-	while ((c = getopt(argc, argv, "Bb:cD:KO:PRTt:vw:Z")) != -1)
+	while ((c = getopt(argc, argv, "Bb:cD:dKO:PRTt:vw:Z")) != -1)
 		switch (c) {
 		case 'B': /* display bandwidth */
 			displaybw = 1;
@@ -473,6 +492,9 @@ main(int argc, char *argv[])
 		case 'D': /* select digest */
 			choosedigest(optarg);
 			docrc = 1;
+			break;
+		case 'd': /* direct I/O (O_DIRECT) */
+			direct_io = 1;
 			break;
 		case 'K': /* report checksum of each file chunk */
 			chunk = 1;
@@ -522,6 +544,11 @@ main(int argc, char *argv[])
 	if (argc == 0)
 		usage();
 
+	memset(&sa, 0, sizeof(sa));
+	sa.sa_handler = handle_signal;
+	if (sigaction(SIGINT, &sa, NULL) == -1)
+		psc_fatal("sigaction");
+
 	if (displaybw)
 		dispthr = pscthr_init(0, display, NULL, 0, "disp");
 
@@ -543,14 +570,19 @@ main(int argc, char *argv[])
 
 	if (piecewise) {
 		while (psc_dynarray_len(&files))
-			DYNARRAY_FOREACH(f, n, &files)
+			DYNARRAY_FOREACH(f, n, &files) {
+				if (exit_from_signal)
+					goto done;
 				addwk(f);
+			}
 	} else {
 		DYNARRAY_FOREACH(f, n, &files)
 			while (!addwk(f))
-				;
+				if (exit_from_signal)
+					goto done;
 	}
 
+ done:
 	lc_kill(&wkq);
 	for (n = 0; n < nthr; n++)
 		pthread_join(thrv[n]->pscthr_pthread, NULL);
