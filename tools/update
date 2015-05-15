@@ -89,7 +89,11 @@ _getrepo()
 
 	if [ -e .git ]; then
 		if [ x"$GIT_ACTION" = x"st" ]; then
-			git $GIT_ACTION | perl -pe "s^(?<=\S)\s(?=\S)^\t$dir/^"
+			if [ x"$dir" = x"pfl" ]; then
+				git $GIT_ACTION
+			else
+				git $GIT_ACTION | perl -pe "s^(?<=\S)\s(?=\S)^\t$dir/^"
+			fi
 		else
 			git $GIT_ACTION || \
 			    warn "accessing $dir failed"
