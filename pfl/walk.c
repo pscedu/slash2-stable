@@ -119,6 +119,7 @@ pfl_filewalk(const char *fn, int flags, void *cmpf, int (*cbf)(FTSENT *,
 		case S_IFDIR: f->fts_info = FTS_D; break;
 		case S_IFREG: f->fts_info = FTS_F; break;
 		case S_IFLNK: f->fts_info = FTS_SL; break;
+		case S_IFBLK: f->fts_info = FTS_DEFAULT; break;
 		default:
 			psclog_warnx("%s: %s", fn,
 			    strerror(EOPNOTSUPP));
