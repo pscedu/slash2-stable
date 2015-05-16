@@ -308,19 +308,22 @@ thrmain(struct psc_thread *thr)
 void
 display(__unusedx struct psc_thread *thr)
 {
-	struct timespec ts;
 	char ratebuf[PSCFMT_HUMAN_BUFSIZ];
+	struct timespec ts;
+	int n, t, istty;
 	FILE *fp;
-	int n, t;
 
 	fp = stdout;
 
-	n = fprintf(fp, "%7s %7s", "rate", "total");
-	fprintf(fp, "\n");
-	for (t = 0; t < n; t++)
-		fputc('=', fp);
-	fprintf(fp, "\naccumulating...");
-	fflush(fp);
+	istty = isatty(STDOUT_FILENO);
+	if (istty) {
+		n = fprintf(fp, "%7s %7s", "rate", "total");
+		fprintf(fp, "\n");
+		for (t = 0; t < n; t++)
+			fputc('=', fp);
+		fprintf(fp, "\naccumulating...");
+		fflush(fp);
+	}
 
 	PFL_GETTIMESPEC(&ts);
 
@@ -329,11 +332,15 @@ display(__unusedx struct psc_thread *thr)
 		psc_waitq_waitabs(&display_wq, NULL, &ts);
 
 		psc_fmt_human(ratebuf, iostats->opst_last);
-		fprintf(fp, "\r%7s ", ratebuf);
+		if (istty)
+			fprintf(fp, "\r");
+		fprintf(fp, "%7s ", ratebuf);
 		psc_fmt_human(ratebuf, iostats->opst_lifetime);
 		fprintf(fp, "%7s", ratebuf);
-		fprintf(fp, " %d %d", wk_pool->ppm_nfree, wk_pool->ppm_total);
-		fflush(fp);
+		if (istty)
+			fflush(fp);
+		else
+			fprintf(fp, "\n");
 	}
 	printf("\n");
 }
