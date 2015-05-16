@@ -29,6 +29,7 @@
 
 #include <ctype.h>
 #include <errno.h>
+#include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -107,12 +108,13 @@ psc_fmt_ratio(char buf[PSCFMT_RATIO_BUFSIZ], int64_t n, int64_t d)
 ssize_t
 pfl_humantonum(const char *s)
 {
-	ssize_t sz, m = 1;
+	ssize_t m = 1;
 	char *endp;
+	double sz;
 
-	sz = strtol(s, &endp, 10);
+	sz = strtod(s, &endp);
 
-	if (s == endp)
+	if (s == endp || sz == HUGE_VAL)
 		return (-EINVAL);
 
 	if (sz < 0)
