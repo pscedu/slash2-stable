@@ -28,6 +28,7 @@ loadprof()
 	local t0=${1#*%}
 	local _p=${t0%%%*}
 	local _fl=${t0#*%}
+	local dobreak=0
 	shift
 
 	vprint "considering host $_h, prog $_p"
@@ -36,10 +37,14 @@ loadprof()
 	[ x"$_p" = x"$prog" ] || return 1
 	[ -n "$_fl" ] || return 0
 
+	vprint "applying profile"
+
 	while :; do
 		fl=${_fl%%%*}
 		_fl=${_fl#*%}
+		[ x"$fl" = x"$_fl" ] && dobreak=1
 		fl=$(echo $fl | perl -pe 's/\\x(..)/chr hex $1/e')
+
 		case $fl in
 		args=*)	xargs=${fl#args=};;
 		bounce)	;;
@@ -51,10 +56,12 @@ loadprof()
 		tag=*)	[ x"$1" = x"${fl#tag=}" ] || return 1 ;;
 		*)	export $fl;;
 		esac
-		[ x"$fl" = x"$_fl" ] && break
+		[ $dobreak -eq 1 ] && break
 	done
 
 	[ $# -gt $narg ] && usage
+
+	vprint "profile applied"
 
 	return 0
 }
@@ -232,6 +239,8 @@ _rundaemon()
 
 rundaemon()
 {
+	vprint "launching daemon"
+
 	if [ $nodaemonize -eq 0 ]; then
 		_rundaemon "$@" &
 		disown
