@@ -1200,7 +1200,7 @@ int psc_ctlcli_retry_main;
 int psc_ctlcli_retry_fd;
 
 void
-psc_ctlcli_exit(void)
+psc_ctlcli_retry(void)
 {
 	struct psc_ctlcli_main_args *a = &psc_ctlcli_main_args;
 
@@ -1212,7 +1212,7 @@ psc_ctlcli_exit(void)
 
 		snprintf(fn, sizeof(fn), "/dev/fd/%d",
 		    psc_ctlcli_retry_fd);
-		freopen(fn, "w", stderr);
+		(void)freopen(fn, "w", stderr);
 
 		nofilter();
 		endwin();
@@ -1245,7 +1245,7 @@ psc_ctlcli_main(const char *osockfn, int ac, char *av[],
 		 * calls this same function again skipping the curses
 		 * routines.
 		 */
-		atexit(psc_ctlcli_exit);
+		atexit(psc_ctlcli_retry);
 		psc_ctlcli_main_args.osockfn = osockfn;
 		psc_ctlcli_main_args.ac = ac;
 		psc_ctlcli_main_args.av = av;
@@ -1255,7 +1255,7 @@ psc_ctlcli_main(const char *osockfn, int ac, char *av[],
 		psc_ctlcli_retry_fd = dup(fileno(stderr));
 
 		/* Temporarily discard error output. */
-		freopen(_PATH_DEVNULL, "w", stderr);
+		(void)freopen(_PATH_DEVNULL, "w", stderr);
 
 		psc_ctlcli_retry_main = 1;
 		initscr();
