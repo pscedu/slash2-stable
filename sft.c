@@ -34,6 +34,7 @@
 #include <gcrypt.h>
 #include <limits.h>
 #include <sched.h>
+#include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -42,6 +43,7 @@
 #include "pfl/alloc.h"
 #include "pfl/cdefs.h"
 #include "pfl/crc.h"
+#include "pfl/fcntl.h"
 #include "pfl/fmt.h"
 #include "pfl/iostats.h"
 #include "pfl/listcache.h"
