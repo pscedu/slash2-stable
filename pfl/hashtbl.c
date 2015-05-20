@@ -115,7 +115,7 @@ _psc_hashtbl_init(struct psc_hashtbl *t, int flags,
 }
 
 /*
- * psc_hashtbl_lookup - Find a hash table by its name.
+ * Find a hash table by its name.
  * @name: name of hash table.
  */
 struct psc_hashtbl *
@@ -132,7 +132,7 @@ psc_hashtbl_lookup(const char *name)
 }
 
 /*
- * psc_hashtbl_destroy - Reclaim a hash table's resources.
+ * Reclaim a hash table's resources.
  * @t: table to destroy.
  */
 void
@@ -186,8 +186,7 @@ psc_hashbkt_put(struct psc_hashtbl *t, struct psc_hashbkt *b)
 	    *(uint64_t *)(key) ) % (nb) ]
 
 /*
- * psc_hashbkt_get - Locate the bucket containing an item with the
- *	given ID.
+ * Locate the bucket containing an item with the given ID.
  * @t: table to search.
  * @key: search key.
  */
@@ -220,21 +219,22 @@ psc_hashbkt_get(struct psc_hashtbl *t, const void *key)
 }
 
 void *
-_psc_hashtbl_search(struct psc_hashtbl *t, int flags,
-    const void *cmp, void (*cbf)(void *), const void *key)
+_psc_hashtbl_search(struct psc_hashtbl *t, int flags, const void *cmp,
+    void (*cbf)(void *, void *), void *arg, const void *key)
 {
 	struct psc_hashbkt *b;
 	void *p;
 
 	b = psc_hashbkt_get(t, key);
-	p = _psc_hashbkt_search(t, b, flags, cmp, cbf, key);
+	p = _psc_hashbkt_search(t, b, flags, cmp, cbf, arg, key);
 	psc_hashbkt_put(t, b);
 	return (p);
 }
 
 void *
 _psc_hashbkt_search(struct psc_hashtbl *t, struct psc_hashbkt *b,
-    int flags, const void *cmp, void (*cbf)(void *), const void *key)
+    int flags, const void *cmp, void (*cbf)(void *, void *), void *arg,
+    const void *key)
 {
 	void *p, *pk;
 	int locked;
@@ -256,7 +256,7 @@ _psc_hashbkt_search(struct psc_hashtbl *t, struct psc_hashbkt *b,
 			continue;
 		if (t->pht_cmpf == NULL || t->pht_cmpf(cmp, p)) {
 			if (cbf)
-				cbf(p);
+				cbf(p, arg);
 			break;
 		}
 	}
@@ -270,7 +270,7 @@ _psc_hashbkt_search(struct psc_hashtbl *t, struct psc_hashbkt *b,
 }
 
 /*
- * psc_hashent_remove - Remove an item from the hash table it's in.
+ * Remove an item from the hash table it is in.
  * @t: the hash table.
  * @p: the item to remove from hash table.
  */
@@ -298,8 +298,7 @@ psc_hashent_getbucket(struct psc_hashtbl *t, void *p)
 }
 
 /*
- * psc_hashbkt_del_item - Remove an item from the hash table bucket it's
- *	in.
+ * Remove an item from the hash table bucket it is in.
  * @t: the hash table.
  * @b: bucket to remove from.
  * @p: item to remove.
@@ -318,7 +317,7 @@ psc_hashbkt_del_item(struct psc_hashtbl *t, struct psc_hashbkt *b,
 }
 
 /*
- * psc_hashbkt_add_item - Add an item to a hash table bucket.
+ * Add an item to a hash table bucket.
  * @t: the hash table.
  * @p: item to add.
  */
@@ -335,7 +334,7 @@ psc_hashbkt_add_item(const struct psc_hashtbl *t, struct psc_hashbkt *b,
 }
 
 /*
- * psc_hashtbl_add_item - Add an item to a hash table.
+ * Add an item to a hash table.
  * @t: the hash table.
  * @p: item to add.
  */
@@ -369,7 +368,7 @@ psc_hashent_conjoint(struct psc_hashtbl *t, void *p)
 }
 
 /*
- * psc_hashtbl_getstats - Query a hash table for its bucket usage stats.
+ * Query a hash table for its bucket usage stats.
  * @t: the hash table.
  * @totalbucks: value-result pointer to # of buckets available.
  * @usedbucks: value-result pointer to # of buckets in use.
@@ -398,7 +397,7 @@ psc_hashtbl_getstats(const struct psc_hashtbl *t, int *totalbucks,
 }
 
 /*
- * psc_hashtbl_prstats - Print hash table bucket usage stats.
+ * Print hash table bucket usage stats.
  * @t: the hash table.
  */
 void

@@ -62,8 +62,7 @@ pscrpc_lookup_conn_locked(lnet_process_id_t peer, lnet_nid_t self)
 	q.c_peer.nid = peer.nid;
 	q.c_peer.pid = peer.pid;
 	q.c_self = self;
-	c = psc_hashtbl_search(&pscrpc_conn_hashtbl, &q, NULL,
-	    &peer.nid);
+	c = psc_hashtbl_search_cmp(&pscrpc_conn_hashtbl, &q, &peer.nid);
 	if (c)
 		return (pscrpc_connection_addref(c));
 	return (NULL);

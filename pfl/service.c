@@ -428,8 +428,8 @@ pscrpc_server_handle_request(struct pscrpc_service *svc,
 		b = psc_hashbkt_get(&svc->srv_peer_qlentab,
 		    &request->rq_peer.nid);
 		/* Look up the struct again in case it disappeared. */
-		pq = psc_hashbkt_search(&svc->srv_peer_qlentab,
-		    b, &request->rq_peer, NULL, &request->rq_peer.nid);
+		pq = psc_hashbkt_search_cmp(&svc->srv_peer_qlentab, b,
+		    &request->rq_peer, &request->rq_peer.nid);
 		if (pq && atomic_read(&pq->pql_qlen) == 0)
 			psc_hashent_remove(&svc->srv_peer_qlentab, pq);
 		else

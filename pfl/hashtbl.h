@@ -123,8 +123,14 @@ struct psc_hashtbl {
  *	- uint64_t hash ID value
  *	- const char * string ID
  */
-#define psc_hashtbl_search(t, cmp, cbf, key)				\
-	_psc_hashtbl_search((t), 0, (cmp), (cbf), (key))
+#define psc_hashtbl_search(t, key)					\
+	_psc_hashtbl_search((t), 0, NULL, NULL, NULL, (key))
+
+#define psc_hashtbl_search_cmp(t, cmp, key)				\
+	_psc_hashtbl_search((t), 0, (cmp), NULL, NULL, (key))
+
+#define psc_hashtbl_search_cb(t, cbf, arg, key)				\
+	_psc_hashtbl_search((t), 0, NULL, (cbf), (arg), (key))
 
 /**
  * psc_hashtbl_searchdel - Search a hash table for an item by its hash ID
@@ -146,7 +152,7 @@ void	  psc_hashtbl_getstats(const struct psc_hashtbl *, int *, int *, int *, int
 void	  psc_hashtbl_destroy(struct psc_hashtbl *);
 void	  psc_hashtbl_resize(struct psc_hashtbl *, int);
 void	*_psc_hashtbl_search(struct psc_hashtbl *, int, const void *,
-	    void (*)(void *), const void *);
+	    void (*)(void *, void *), void *, const void *);
 void	 _psc_hashtbl_init(struct psc_hashtbl *, int, ptrdiff_t, ptrdiff_t, int,
 	    int (*)(const void *, const void *), const char *, ...);
 
@@ -161,8 +167,14 @@ void	 _psc_hashtbl_init(struct psc_hashtbl *, int, ptrdiff_t, ptrdiff_t, int,
  *	- uint64_t hash ID value
  *	- const char * string ID
  */
-#define	psc_hashbkt_search(t, b, cmp, cbf, key)				\
-	_psc_hashbkt_search((t), (b), 0, (cmp), (cbf), (key))
+#define	psc_hashbkt_search(t, b, key)					\
+	_psc_hashbkt_search((t), (b), 0, NULL, NULL, NULL, (key))
+
+#define	psc_hashbkt_search_cmp(t, b, cmp, key)				\
+	_psc_hashbkt_search((t), (b), 0, (cmp), NULL, NULL, (key))
+
+#define	psc_hashbkt_search_cb(t, b, cbf, arg, key)			\
+	_psc_hashbkt_search((t), (b), 0, NULL, (cbf), (arg), (key))
 
 /**
  * psc_hashtbl_searchdel - Search a bucket for an item by its hash ID and
@@ -185,8 +197,8 @@ void	  psc_hashbkt_del_item(struct psc_hashtbl *,
 void	  psc_hashbkt_add_item(const struct psc_hashtbl *,
 		struct psc_hashbkt *, void *);
 void	*_psc_hashbkt_search(struct psc_hashtbl *,
-		struct psc_hashbkt *, int, const void *, void (*)(void *),
-		const void *);
+		struct psc_hashbkt *, int, const void *,
+		void (*)(void *, void *), void *, const void *);
 
 #define psc_hashbkt_lock(b)		spinlock(&(b)->phb_lock)
 #define psc_hashbkt_unlock(b)		freelock(&(b)->phb_lock)

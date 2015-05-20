@@ -27,15 +27,15 @@
 
 #include <inttypes.h>
 
-#include "pfl/types.h"
-#include "pfl/export.h"
-#include "pfl/rpc.h"
-#include "pfl/rpclog.h"
 #include "pfl/alloc.h"
 #include "pfl/atomic.h"
 #include "pfl/completion.h"
+#include "pfl/export.h"
 #include "pfl/log.h"
 #include "pfl/pool.h"
+#include "pfl/rpc.h"
+#include "pfl/rpclog.h"
+#include "pfl/types.h"
 #include "pfl/waitq.h"
 
 #include "../ulnds/socklnd/usocklnd.h"
@@ -90,9 +90,9 @@ pscrpc_request_out_callback(lnet_event_t *ev)
 }
 
 void
-pscrpc_bump_peer_qlen(void *arg)
+pscrpc_bump_peer_qlen(void *p, void *arg)
 {
-	struct pscrpc_peer_qlen *pq = arg;
+	struct pscrpc_peer_qlen *pq = p;
 
 	atomic_inc(&pq->pql_qlen);
 }
@@ -202,8 +202,8 @@ pscrpc_request_in_callback(lnet_event_t *ev)
 	if (svc->srv_count_peer_qlens) {
 		struct pscrpc_peer_qlen *pq;
 
-		pq = psc_hashtbl_search(&svc->srv_peer_qlentab,
-		    &req->rq_peer, pscrpc_bump_peer_qlen,
+		pq = _psc_hashtbl_search(&svc->srv_peer_qlentab, 0,
+		    &req->rq_peer, pscrpc_bump_peer_qlen, NULL,
 		    &req->rq_peer.nid);
 		if (pq == NULL) {
 			struct pscrpc_peer_qlen *tpq;
@@ -220,9 +220,9 @@ pscrpc_request_in_callback(lnet_event_t *ev)
 			 */
 			b = psc_hashbkt_get(&svc->srv_peer_qlentab,
 			    &req->rq_peer.nid);
-			pq = psc_hashbkt_search(&svc->srv_peer_qlentab,
-			    b, &req->rq_peer, pscrpc_bump_peer_qlen,
-			    &req->rq_peer.nid);
+			pq = _psc_hashbkt_search(&svc->srv_peer_qlentab,
+			    b, 0, &req->rq_peer, pscrpc_bump_peer_qlen,
+			    NULL, &req->rq_peer.nid);
 			if (pq == NULL) {
 				psc_hashbkt_add_item(
 				    &svc->srv_peer_qlentab, b, tpq);

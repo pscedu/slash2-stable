@@ -512,12 +512,12 @@ _pfl_get_logpointid(const char *fn, int line, int create)
 
 	if (asprintf(&key, "%s:%d", pfl_basename(fn), line) == -1)
 		err(1, NULL);
-	pt = psc_hashtbl_search(t, NULL, NULL, key);
+	pt = psc_hashtbl_search(t, key);
 	if (pt || create == 0)
 		goto out;
 
 	b = psc_hashbkt_get(t, key);
-	pt = psc_hashbkt_search(t, b, NULL, NULL, key);
+	pt = psc_hashbkt_search(t, b, key);
 	if (pt == NULL) {
 		pt = psc_alloc(sizeof(*pt) + sizeof(struct pfl_hashentry),
 		    PAF_NOLOG);
