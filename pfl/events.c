@@ -90,7 +90,7 @@ pscrpc_request_out_callback(lnet_event_t *ev)
 }
 
 void
-pscrpc_bump_peer_qlen(void *p, void *arg)
+pscrpc_bump_peer_qlen(void *p, __unusedx void *arg)
 {
 	struct pscrpc_peer_qlen *pq = p;
 
