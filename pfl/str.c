@@ -163,3 +163,15 @@ pfl_str_split(char *s)
 	psc_dynarray_free(&a);
 	return (v);
 }
+
+char *
+pfl_strrnstr(const char *s, char c, size_t adj)
+{
+	size_t pos;
+	char *p;
+
+	pos = strlen(s) - adj;
+	for (p = s + len; p > s && *p != c; p--)
+		;
+	return (p);
+}
