@@ -165,13 +165,13 @@ pfl_str_split(char *s)
 }
 
 char *
-pfl_strrnstr(const char *s, char c, size_t adj)
+pfl_strrastr(const char *s, char c, size_t adj)
 {
 	size_t pos;
 	char *p;
 
 	pos = strlen(s) - adj;
-	for (p = s + len; p > s && *p != c; p--)
+	for (p = (char *)s + pos; p > s && *p != c; p--)
 		;
 	return (p);
 }
