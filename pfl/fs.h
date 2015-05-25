@@ -48,25 +48,25 @@ typedef uint64_t pscfs_inum_t;
 typedef uint64_t pscfs_fgen_t;
 
 struct pscfs_creds {
-	uid_t		pcr_uid;
-	gid_t		pcr_gid;
-	gid_t		pcr_gidv[NGROUPS_MAX];
-	int		pcr_ngid;
+	uid_t			pcr_uid;
+	gid_t			pcr_gid;
+	gid_t			pcr_gidv[NGROUPS_MAX];
+	int			pcr_ngid;
 };
 
 struct pscfs_dirent {
-	uint64_t	pfd_ino;
-	uint64_t	pfd_off;
-	uint32_t	pfd_namelen;
-	uint32_t	pfd_type;
-	char		pfd_name[0];
+	uint64_t		pfd_ino;
+	uint64_t		pfd_off;
+	uint32_t		pfd_namelen;
+	uint32_t		pfd_type;
+	char			pfd_name[0];
 };
 
-#define PFL_DIRENT_NAME_OFFSET		offsetof(struct pscfs_dirent, pfd_name)
-#define PFL_DIRENT_ALIGN(x)		(((x) + sizeof(uint64_t) - 1) &	\
-					    ~(sizeof(uint64_t) - 1))
-#define PFL_DIRENT_SIZE(namelen)	PFL_DIRENT_ALIGN(		\
-					    PFL_DIRENT_NAME_OFFSET + (namelen))
+#define PFL_DIRENT_NAME_OFFSET	offsetof(struct pscfs_dirent, pfd_name)
+#define PFL_DIRENT_ALIGN(x)	(((x) + sizeof(uint64_t) - 1) &		\
+				    ~(sizeof(uint64_t) - 1))
+#define PFL_DIRENT_SIZE(len)	PFL_DIRENT_ALIGN(			\
+				    PFL_DIRENT_NAME_OFFSET + (len))
 
 /* userland file system fills these in */
 struct pscfs {
