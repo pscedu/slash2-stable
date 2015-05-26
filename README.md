@@ -1,59 +1,56 @@
 $Id$
 
-Portable File-system Libraries
+# Portable File-system Libraries
 
-    See COPYRIGHT-GPL for license information.
+    See COPYRIGHT for license information.
 
-Download instructions
+## Download instructions
 
-    Grab the main 'projects' component:
+Grab the PFL component:
 
-	$ git clone https://github.com/pscedu/proj.git
-	$ cd proj
+	$ git clone https://github.com/pscedu/pfl
+	$ cd pfl
 
-    Next, select which components to fetch by manually enabling/
-    disabling repositories in `tools/update.sh'.  Then run this script.
-    By default, all components are fetched:
+Next, download any additional components/repositories as necessary.
+PFL itself is usually just a dependency of other projects.
 
-	$ ./tools/update
+## Configuration instructions
 
-Configuration instructions
+Similar to the popular GNU autoconf `./configure' system probe
+process, the PFL build infrastructure probes the host machine for API
+compatibility.
+The mechanism in PFL that performs this is called Pickle.
 
-    Similiar to GNU autoconfig `./configure', the PFL build
-    infrastructure probes the host machine for API compatibility.
+Pickle stores all such information in a file
+`mk/gen-localdefs-$HOSTNAME-pickle.mk' from the root of the top
+directory.
+Pickle uses heuristics to determine when these probe tests may be out of
+date and reruns them when necessary.
 
-    It stores all such information in
-    `mk/gen-localdefs-$HOSTNAME-pickle.mk'.  The build infrastructure
-    uses heuristics to determine when this probe is out of date and
-    regathers it automatically.  If for some reason it needs to be
-    regathered, manually deleting this file will cause the build
-    infrastructure to regenerate it.
+If for some reason the probes need to be manually rerun, deleting this
+file will cause Pickle to regenerate it automatically upon the next
+'make' invocation.
 
-	File		Description
+## Build infrastructure design
+
+	PFL File	Description
 	-------------------------------------------------
 	mk/defs.mk	default configuration settings
 	mk/main.mk	core building rules
 	mk/local.mk	(optional) custom/override settings
 
-    Any custom settings should go in `mk/local.mk'.  Modification of the
-    other files listed above is generally not necessary.
+Any custom system settings should go in `mk/local.mk'.
+Modification of the other files listed above is generally not necessary.
 
-Installation instructions
+## Installation instructions
 
-    After configuration, building of PFL and any components therein
-    selected follows a standard make build procedure:
+After configuration, building of PFL follows a standard make procedure:
 
 	$ make
 	$ sudo make install
 
-Custom components
+## Updating instructions
 
-    Often is is useful to add additional components/repositories to stay
-    in sync with any updates to PFL e.g. local deployment configuration.
-    This can be achieved by placing the component in the following
-    location:
+To update PFL and any components also present in the source tree:
 
-	inf/$name
-
-    Next, an `update.sh' file needs to be added.  See examples for
-    details.
+	$ make up
