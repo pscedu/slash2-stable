@@ -25,17 +25,12 @@
  * %PSC_END_COPYRIGHT%
  */
 
-#ifdef HAVE_ENDIAN_H
-#include <endian.h>
-#else
-#include <machine/endian.h>
-#endif
-
 #include <string.h>
 
 #include "pfl/acl.h"
-#include "pfl/log.h"
 #include "pfl/cdefs.h"
+#include "pfl/endian.h"
+#include "pfl/log.h"
 
 #define ACL_EA_VERSION		2
 #define ACL_EA_ACCESS		"system.posix_acl_access"

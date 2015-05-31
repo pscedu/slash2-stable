@@ -231,6 +231,10 @@ ifneq ($(filter pthread,${MODULES}),)
   MODULES+=	rt
 endif
 
+ifneq ($(filter acl,${MODULES}),)
+  LDFLAGS+=	${ACL_LIBS}
+endif
+
 ifneq ($(filter m,${MODULES}),)
   LDFLAGS+=	-lm
 endif
