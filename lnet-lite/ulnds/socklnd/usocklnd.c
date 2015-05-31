@@ -414,7 +414,7 @@ usocklnd_base_startup(void)
         for (i = 0; i < usock_data.ud_npollthreads; i++) {
                 rc = cfs_create_thread(usocklnd_poll_thread,
                                        &usock_data.ud_pollthreads[i],
-				       "usklndplthr%d", i);
+				       "usklndplthr%03d", i);
                 if (rc) {
                         usocklnd_base_shutdown(i);
                         return rc;
