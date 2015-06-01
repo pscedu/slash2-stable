@@ -49,6 +49,7 @@
 #include "pfl/ctlcli.h"
 #include "pfl/ctlsvr.h"
 #include "pfl/dynarray.h"
+#include "pfl/endian.h"
 #include "pfl/eqpollthr.h"
 #include "pfl/err.h"
 #include "pfl/explist.h"
