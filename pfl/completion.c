@@ -44,7 +44,9 @@ psc_compl_init(struct psc_compl *pc)
 void
 psc_compl_destroy(struct psc_compl *pc)
 {
+	spinlock(&pc->pc_lock);
 	psc_waitq_destroy(&pc->pc_wq);
+	freelock(&pc->pc_lock);
 }
 
 void
@@ -70,14 +72,15 @@ psc_compl_waitrel_s(struct psc_compl *pc, struct psc_spinlock *sp,
 	reqlock(&pc->pc_lock);
 	if (sp)
 		freelock(sp);
-	if (!pc->pc_done) {
+	if (pc->pc_done) {
+		freelock(&pc->pc_lock);
+	} else {
 		if (secs) {
 			if (psc_waitq_waitrel_s(&pc->pc_wq,
 			    &pc->pc_lock, secs))
 				return (0);
 		} else
 			psc_waitq_wait(&pc->pc_wq, &pc->pc_lock);
-	} else
-		freelock(&pc->pc_lock);
+	}
 	return (pc->pc_rc);
 }
