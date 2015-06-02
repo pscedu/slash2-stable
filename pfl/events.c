@@ -315,11 +315,11 @@ pscrpc_reply_in_callback(lnet_event_t *ev)
 		req->rq_nob_received = ev->mlength;
 	}
 
-	/* Do not bump the completion counter if this is a 'resend'.
-	 */
+	/* Do not bump the completion counter if this is a 'resend'. */
 	if (req->rq_compl && !(req->rq_resend && !req->rq_timedout))
-		/* Notify upper layer that an RPC is ready to be
-		 *   finalized.
+		/*
+		 * Notify upper layer that an RPC is ready to be
+		 * finalized.
 		 */
 		psc_compl_one(req->rq_compl, 1);
 
