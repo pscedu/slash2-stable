@@ -108,3 +108,9 @@ pfl_wkthr_spawn(int thrtype, int nthr, const char *thrname)
 		pscthr_setready(thr);
 	}
 }
+
+void
+pfl_wkthr_killall(void)
+{
+	lc_kill(&pfl_workq);
+}

@@ -51,13 +51,14 @@ void   pfl_wkthr_spawn(int, int, const char *);
 void *_pfl_workq_getitem(int (*)(void *), size_t);
 void   pfl_workq_init(size_t);
 void  _pfl_workq_putitemq(struct psc_listcache *, void *, int);
+void   pfl_wkthr_killall(void);
 
 #define _pfl_workq_putitem(p, tail)	_pfl_workq_putitemq(&pfl_workq, (p), (tail))
-#define pfl_workq_putitem_head(p)	_pfl_workq_putitem((p), 0)
-#define pfl_workq_putitem_tail(p)	_pfl_workq_putitem((p), 1)
-#define pfl_workq_putitem(p)		_pfl_workq_putitem((p), 1)
-#define pfl_workq_putitemq(lc, p)	_pfl_workq_putitemq((lc), (p), 1)
-#define pfl_workq_putitemq_head(lc, p)	_pfl_workq_putitemq((lc), (p), 0)
+#define  pfl_workq_putitem_head(p)	_pfl_workq_putitem((p), 0)
+#define  pfl_workq_putitem_tail(p)	_pfl_workq_putitem((p), 1)
+#define  pfl_workq_putitem(p)		_pfl_workq_putitem((p), 1)
+#define  pfl_workq_putitemq(lc, p)	_pfl_workq_putitemq((lc), (p), 1)
+#define  pfl_workq_putitemq_head(lc, p)	_pfl_workq_putitemq((lc), (p), 0)
 
 extern struct psc_listcache	pfl_workq;
 
