@@ -160,50 +160,6 @@ strvis(char *dst, const char *src, int flag)
 }
 
 int
-strnvis(char *dst, const char *src, size_t siz, int flag)
-{
-	char *start, *end;
-	char tbuf[5];
-	int c, i;
-
-	i = 0;
-	for (start = dst, end = start + siz - 1; (c = *src) && dst < end; ) {
-		if (isvisible(c, flag)) {
-			i = 1;
-			*dst++ = c;
-			if (c == '\\' && (flag & VIS_NOSLASH) == 0) {
-				/* need space for the extra '\\' */
-				if (dst < end)
-					*dst++ = '\\';
-				else {
-					dst--;
-					i = 2;
-					break;
-				}
-			}
-			src++;
-		} else {
-			i = vis(tbuf, c, flag, *++src) - tbuf;
-			if (dst + i <= end) {
-				memcpy(dst, tbuf, i);
-				dst += i;
-			} else {
-				src--;
-				break;
-			}
-		}
-	}
-	if (siz > 0)
-		*dst = '\0';
-	if (dst + i > end) {
-		/* adjust return value for truncation */
-		while ((c = *src))
-			dst += vis(tbuf, c, flag, *++src) - tbuf;
-	}
-	return (dst - start);
-}
-
-int
 strvisx(char *dst, const char *src, size_t len, int flag)
 {
 	char c;

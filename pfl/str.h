@@ -34,10 +34,14 @@
 #include <stdint.h>
 #include <string.h>
 
-#ifndef HAVE_STRVIS
-# include "compat/vis.h"
-#else
+#ifdef HAVE_STRVIS
 # include <vis.h>
+#else
+# include "compat/vis.h"
+#endif
+
+#ifndef HAVE_STRNVIS
+# include "compat/strnvis.h"
 #endif
 
 struct pfl_strbuf {

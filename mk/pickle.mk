@@ -298,6 +298,12 @@ ifeq ($(filter $(realpath ${ROOTDIR})/compat/%,${CURDIR}),)
   STRVIS_SRCS+=						${PFL_BASE}/compat/strvis.c
  endif
 
+ ifdef PICKLE_HAVE_STRNVIS
+  DEFINES+=						-DHAVE_STRNVIS
+ else
+  STRVIS_SRCS+=						${PFL_BASE}/compat/strnvis.c
+ endif
+
  ifdef PICKLE_HAVE_PTHREAD_YIELD
   DEFINES+=						-DHAVE_PTHREAD_YIELD
  endif

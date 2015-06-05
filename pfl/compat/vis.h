@@ -32,8 +32,10 @@
  *	@(#)vis.h	5.9 (Berkeley) 4/3/91
  */
 
-#ifndef _VIS_H_
-#define	_VIS_H_
+#ifndef _PFL_COMPAT_VIS_H_
+#define	_PFL_COMPAT_VIS_H_
+
+#include "pfl/cdefs.h"
 
 /*
  * to select alternate encoding format
@@ -72,12 +74,9 @@
  */
 #define	UNVIS_END	1	/* no more characters */
 
-#include "pfl/cdefs.h"
-
 __BEGIN_DECLS
 char	*vis(char *, int, int, int);
 int	strvis(char *, const char *, int);
-int	strnvis(char *, const char *, size_t, int);
 int	strvisx(char *, const char *, size_t, int);
 int	strunvis(char *, const char *);
 int	unvis(char *, char, int *, int);
