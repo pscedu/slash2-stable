@@ -61,15 +61,17 @@ _pfl_workq_putitemq(struct psc_listcache *lc, void *p, int tails)
 }
 
 void
-pfl_wkthr_main(__unusedx struct psc_thread *thr)
+pfl_wkthr_main(struct psc_thread *thr)
 {
 	struct psc_listcache *lc;
 	struct pfl_workrq *wkrq;
 	void *p;
 
 	lc = pfl_wkthr(thr)->wkt_workq;
-	for (;;) {
+	while (pscthr_run(thr)) {
 		wkrq = lc_getwait(lc);
+		if (wkrq == NULL)
+			break;
 		p = PSC_AGP(wkrq, sizeof(*wkrq));
 		if (wkrq->wkrq_cbf(p)) {
 			LIST_CACHE_LOCK(lc);
