@@ -79,12 +79,12 @@ const char		 *psc_ctl_sockfn;
 char			**psc_ctl_subsys_names;
 psc_spinlock_t		  psc_ctl_lock = SPINLOCK_INIT;
 
-int			 has_col;
+int			  psc_ctl_hascolors;
 
 void
 setcolor(int col)
 {
-	if (!has_col || col == -1)
+	if (!psc_ctl_hascolors || col == -1)
 		return;
 	putp(tparm(enter_bold_mode));
 	putp(tparm(set_a_foreground, col));
@@ -93,7 +93,7 @@ setcolor(int col)
 void
 uncolor(void)
 {
-	if (!has_col)
+	if (!psc_ctl_hascolors)
 		return;
 	putp(tparm(orig_pair));
 	putp(tparm(exit_attribute_mode));
@@ -628,32 +628,17 @@ psc_ctlmsg_opstat_prdat(__unusedx const struct psc_ctlmsghdr *mh,
 {
 	const struct psc_ctlmsg_opstat *pco = m;
 	const struct pfl_opstat *opst = &pco->pco_opst;
-	char buf[PSCFMT_HUMAN_BUFSIZ];
-	int  base10 = 0;
+	int base10 = 0;
 
 	if (opst->opst_flags & OPSTF_BASE10 || psc_ctl_inhuman)
 		base10 = 1;
 
 	printf("%-38s ", pco->pco_name);
 
-	if (base10) {
-		printf("%11.2f/s ", opst->opst_avg);
-		printf("%11"PRId64"/s ", opst->opst_last);
-		printf("%13"PRIu64, opst->opst_lifetime);
-	} else {
-		psc_fmt_human(buf, opst->opst_avg);
-		setcolor(pfl_fmtcol_human(buf));
-		printf("%11s/s ", buf);
-		uncolor();
-
-		psc_fmt_human(buf, opst->opst_last);
-		setcolor(pfl_fmtcol_human(buf));
-		printf("%11s/s ", buf);
-		uncolor();
-
-		psc_fmt_human(buf, opst->opst_lifetime);
-		printf("%13s", buf);
-	}
+	// 11.2
+	psc_ctl_prnumber(base10, opst->opst_avg, 11, "/s ");
+	psc_ctl_prnumber(base10, opst->opst_last, 11, "/s ");
+	psc_ctl_prnumber(base10, opst->opst_lifetime, 13, "");
 	printf("\n");
 }
 
@@ -1266,7 +1251,7 @@ psc_ctlcli_main(const char *osockfn, int ac, char *av[],
 		memcpy(stderr, fp, sizeof(*fp));
 
 		start_color();
-		has_col = has_colors();
+		psc_ctl_hascolors = has_colors();
 		endwin();
 	}
 
@@ -1397,14 +1382,46 @@ psc_ctl_get_display_maxwidth(void)
 }
 
 void
-psc_ctl_prhuman(uint64_t n)
+psc_ctl_prnumber(int base10, uint64_t n, int width, const char *suf)
 {
-	char buf[PSCFMT_HUMAN_BUFSIZ];
+	int col = -1;
 
-	if (psc_ctl_inhuman)
-		printf("%7"PRIu64, n);
-	else {
-		psc_fmt_human(buf, n);
-		printf("%s", buf);
+	if (base10) {
+		if (n < 10)
+			col = COLOR_RED;
+		else if (n < 100)
+			col = COLOR_YELLOW;
+		else if (n < 1000)
+			col = COLOR_GREEN;
+		else if (n < 10000)
+			col = COLOR_BLUE;
+		else
+			col = COLOR_MAGENTA;
+
+	} else {
+		if (n < 1024)
+			col = COLOR_RED;
+		else if (n < 1024 * 1024)
+			col = COLOR_YELLOW;
+		else if (n < 1024 * 1024 * 1024)
+			col = COLOR_GREEN;
+		else if (n < UINT64_C(1024) * 1024 * 1024 * 1024)
+			col = COLOR_BLUE;
+		else
+			col = COLOR_MAGENTA;
 	}
+	if (n)
+		setcolor(col);
+	if (psc_ctl_inhuman || base10)
+		printf("%*"PRIu64, width ? width : 7, n);
+	else {
+		char buf[PSCFMT_HUMAN_BUFSIZ];
+
+		psc_fmt_human(buf, n);
+		printf("%*s", width, buf);
+	}
+	if (suf)
+		printf("%s", suf);
+	if (n)
+		uncolor();
 }

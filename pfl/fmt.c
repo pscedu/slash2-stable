@@ -28,6 +28,7 @@
 #include <sys/stat.h>
 
 #include <ctype.h>
+#include <curses.h>
 #include <errno.h>
 #include <math.h>
 #include <stdio.h>
@@ -35,31 +36,6 @@
 #include <string.h>
 
 #include "pfl/fmt.h"
-
-int
-pfl_fmtcol_human(const char *buf)
-{
-	char c;
-
-	if (strcmp(buf, "     0B") == 0)
-		return -1;
-
-	c = buf[strlen(buf) - 1];
-	switch (c) {
-	case 'B':
-		return 1;
-	case 'K':
-		return 3;
-	case 'M':
-		return 2;
-	case 'G':
-	case 'T':
-	case 'P':
-	case 'E':
-		return 4;
-	}
-	return -1;
-}
 
 void
 psc_fmt_human(char buf[PSCFMT_HUMAN_BUFSIZ], double num)
