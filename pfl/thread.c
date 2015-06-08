@@ -61,8 +61,8 @@ __static struct psc_vbitmap	 psc_uniqthridmap = VBITMAP_INIT_AUTO;
 struct psc_lockedlist		 psc_threads =
     PLL_INIT(&psc_threads, struct psc_thread, pscthr_lentry);
 
-/**
- * pscthr_destroy - Thread destructor.
+/*
+ * Thread destructor.
  * @arg: thread data.
  */
 __static void
@@ -124,8 +124,8 @@ pfl_tls_get(int idx, size_t len)
 	return (tbl[idx]);
 }
 
-/**
- * pscthr_pause - pause thread execution.
+/*
+ * Pause thread execution.
  * @sig: signal number.
  */
 void
@@ -146,8 +146,8 @@ _pscthr_pause(__unusedx int sig)
 	ureqlock(&thr->pscthr_lock, locked);
 }
 
-/**
- * pscthr_unpause - unpause thread execution.
+/*
+ * Unpause thread execution.
  * @sig: signal number.
  */
 void
@@ -164,8 +164,8 @@ _pscthr_unpause(__unusedx int sig)
 	ureqlock(&thr->pscthr_lock, locked);
 }
 
-/**
- * pscthrs_init - Initialize threading subsystem.
+/*
+ * Initialize threading subsystem.
  */
 void
 pscthrs_init(void)
@@ -181,9 +181,8 @@ pscthrs_init(void)
 		errx(1, "pthread_key_create: %s", strerror(rc));
 }
 
-/**
- * pscthr_get_canfail - Retrieve thread info from thread-local storage unless
- *	uninitialized.
+/*
+ * Retrieve thread info from thread-local storage unless uninitialized.
  */
 struct psc_thread *
 pscthr_get_canfail(void)
@@ -191,8 +190,8 @@ pscthr_get_canfail(void)
 	return (pthread_getspecific(psc_thrkey));
 }
 
-/**
- * pscthr_get - Retrieve thread info from thread-local storage.
+/*
+ * Retrieve thread info from thread-local storage.
  */
 struct psc_thread *
 pscthr_get(void)
@@ -204,9 +203,8 @@ pscthr_get(void)
 	return (thr);
 }
 
-/**
- * _pscthr_finish_init: Final initilization code common among all
- *	instantiation methods.
+/*
+ * Final initilization code common among all instantiation methods.
  * @thr: thread to finish initializing.
  */
 void
@@ -252,8 +250,8 @@ _pscthr_finish_init(struct psc_thread *thr)
 	    thr->pscthr_thrid);
 }
 
-/**
- * pscthr_bind_memnode: Bind a thread to a specific NUMA memnode.
+/*
+ * Bind a thread to a specific NUMA memnode.
  * @thr: thread structure.
  */
 void
@@ -278,10 +276,10 @@ _pscthr_bind_memnode(struct psc_thread *thr)
 #endif
 }
 
-/**
- * pscthr_begin: Thread start routine.  This routine invokes the
- *	thread's real start routine once it is safe after the thread who
- *	created us has finished our (external) initialization.
+/*
+ * Thread start routine.  This routine invokes the thread's real start
+ * routine once it is safe after the thread who created us has finished
+ * our (external) initialization.
  * @arg: thread structure.
  */
 __static void *
@@ -292,6 +290,10 @@ _pscthr_begin(void *arg)
 	_pscthr_bind_memnode(oldthr);
 
 	/* Setup a localized copy of the thread. */
+	/*
+	 * XXX instead of reallocating, we should just take ownership of
+	 * the memory.
+	 */
 	thr = psc_alloc(sizeof(*thr), PAF_NOLOG);
 	INIT_PSC_LISTENTRY(&thr->pscthr_lentry);
 	psc_waitq_init(&thr->pscthr_waitq);
@@ -324,12 +326,12 @@ _pscthr_begin(void *arg)
 	return (thr);
 }
 
-/**
- * pscthr_init - Initialize a thread.
+/*
+ * Initialize a thread.
  * @type: application-specific thread type.
- * @startf: thread execution routine.  By specifying a NULL routine,
- *	no pthread will be spawned (assuming that an actual pthread
- *	already exists or will be taken care of).
+ * @startf: thread execution routine.  By specifying a NULL routine, no
+ * pthread will be spawned (assuming that an actual pthread already
+ * exists or will be taken care of).
  * @dtor: optional destructor to run when/if thread exits.
  * @privsiz: size of thread-type-specific data.
  * @memnid: memory node ID to allocate memory for this thread.
@@ -377,6 +379,8 @@ _pscthr_init(int type, void (*startf)(struct psc_thread *),
 	/* Pin thread until initialization is complete. */
 	spinlock(&thr->pscthr_lock);
 	if (startf) {
+		void *oldthr = thr;
+
 		/*
 		 * Thread will finish initializing in its own context
 		 * and set pscthr_private to the location of the new
@@ -388,6 +392,7 @@ _pscthr_init(int type, void (*startf)(struct psc_thread *),
 			psc_fatalx("pthread_create: %s", strerror(rc));
 		psc_waitq_wait(&thr->pscthr_waitq, &thr->pscthr_lock);
 		thr = thr->pscthr_private;
+		psc_free(oldthr, PAF_NOLOG);
 		if (thr->pscthr_privsiz == 0)
 			pscthr_setready(thr);
 	} else {
@@ -399,8 +404,8 @@ _pscthr_init(int type, void (*startf)(struct psc_thread *),
 	return (thr);
 }
 
-/**
- * pscthr_setready - Set thread state to READY.
+/*
+ * Set thread state to READY.
  * @thr: thread ready to start.
  */
 void
@@ -445,8 +450,8 @@ psc_log_setlevel(int ssid, int newlevel)
 		thr->pscthr_loglevels[ssid] = newlevel;
 }
 
-/**
- * pscthr_getname - Get current thread name.
+/*
+ * Get current thread name.
  */
 const char *
 pscthr_getname(void)
@@ -459,8 +464,8 @@ pscthr_getname(void)
 	return (thr->pscthr_name);
 }
 
-/**
- * pscthr_setpause - Set thread pause state.
+/*
+ * Set thread pause state.
  * @thr: the thread.
  * @pauseval: whether to pause or unpause the thread.
  */
@@ -474,10 +479,9 @@ pscthr_setpause(struct psc_thread *thr, int pauseval)
 	freelock(&thr->pscthr_lock);
 }
 
-/**
- * psc_get_hostname - Override hostname retrieval to access thread-local
- *	storage for hostname.  Local memory improves the speediness of
- *	logging.
+/*
+ * Override hostname retrieval to access thread-local storage for
+ * hostname.  Local memory improves the speediness of logging.
  */
 const char *
 psc_get_hostname(void)
@@ -485,9 +489,8 @@ psc_get_hostname(void)
 	return (psclog_getdata()->pld_hostname);
 }
 
-/**
- * pscthr_setrun - Set the PTF_RUN flag of a thread, enabling it to
- *	begin its life.
+/*
+ * Set the PTF_RUN flag of a thread, enabling it to begin its life.
  * @thr: thread to modify.
  * @run: boolean whether or not the thread should run.
  */
@@ -518,8 +521,8 @@ pscthr_setdead(struct psc_thread *thr, int dead)
 	ureqlock(&thr->pscthr_lock, locked);
 }
 
-/**
- * pscthr_run - Control point of thread main loop.
+/*
+ * Control point of thread main loop.
  */
 int
 pscthr_run(struct psc_thread *thr)
