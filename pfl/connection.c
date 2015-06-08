@@ -149,12 +149,17 @@ pscrpc_drop_conns(lnet_process_id_t *peer)
 	PSC_HASHTBL_FOREACH_BUCKET(b, &pscrpc_conn_hashtbl) {
 		psc_hashbkt_lock(b);
 		PSC_HASHBKT_FOREACH_ENTRY(&pscrpc_conn_hashtbl, c, b)
-			if (c->c_peer.nid == peer->nid &&
-			    c->c_peer.pid == peer->pid) {
-				if (c->c_exp)
+			if ((c->c_peer.nid == peer->nid &&
+			     c->c_peer.pid == peer->pid) ||
+			    peer->nid == LNET_NID_ANY) {
+				if (c->c_exp) {
 					pscrpc_export_hldrop(c->c_exp);
-				if (c->c_imp)
+					c->c_exp = NULL;
+				}
+				if (c->c_imp) {
 					pscrpc_fail_import(c->c_imp, 0);
+					c->c_imp = NULL;
+				}
 			}
 		psc_hashbkt_unlock(b);
 	}
