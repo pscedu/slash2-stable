@@ -234,11 +234,13 @@ pscrpc_new_import(void)
 	//imp->imp_obd = class_incref(obd);
 	psc_waitq_init(&imp->imp_recovery_waitq);
 
-	atomic_set(&imp->imp_refcount, 2);
+	atomic_set(&imp->imp_refcount, 1);
 	atomic_set(&imp->imp_inflight, 0);
 	//atomic_set(&imp->imp_replay_inflight, 0);
 	//INIT_PSCLIST_HEAD(&imp->imp_handle.h_link);
 	//class_handle_hash(&imp->imp_handle, import_handle_addref);
+
+	psclog_diag("create import %p", imp);
 
 	return imp;
 }
@@ -264,7 +266,7 @@ pscrpc_import_put(struct pscrpc_import *import)
 	psc_assert(atomic_read(&import->imp_refcount) < 0x5a5a5a);
 	if (!atomic_dec_and_test(&import->imp_refcount))
 		return;
-	psclog_debug("destroying import %p", import);
+	psclog_diag("destroying import %p", import);
 
 	/* XXX what if we fail to establish a connect for a new import */
 	psc_assert(import->imp_connection);
