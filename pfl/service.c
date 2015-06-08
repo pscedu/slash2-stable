@@ -67,10 +67,9 @@ pscrpc_free_request_buffer(char *ptr, __unusedx int size)
 	PSCRPC_OBD_FREE(ptr, size);
 }
 
-/**
- * pscrpc_alloc_rqbd - Create a new request buffer desc and alloc
- *	request buffer memory.  This call sets request_in_callback as
- *	the callback handler.
+/*
+ * Create a new request buffer desc and alloc request buffer memory.
+ * This call sets request_in_callback as the callback handler.
  * @svc: pointer to the service which owns this request buffer ptr.
  */
 struct pscrpc_request_buffer_desc *
@@ -120,10 +119,10 @@ pscrpc_free_rqbd(struct pscrpc_request_buffer_desc *rqbd)
 	psc_pool_return(svc->srv_pool, rqbd);
 }
 
-/**
- * pscrpc_server_post_idle_rqbds - Iterate over the srv_idle_rqbds list
- *	and repost buffer desc's found there.  Calls
- *	pscrpc_register_rqbd() which does LNetMEAttach and LNetMDAttach.
+/*
+ * Iterate over the srv_idle_rqbds list and repost buffer desc's found
+ * there.  Calls pscrpc_register_rqbd() which does LNetMEAttach and
+ * LNetMDAttach.
  * @svc: pointer to the service
  */
 int
@@ -334,7 +333,7 @@ pscrpc_server_handle_request(struct pscrpc_service *svc,
 		goto out;
 	}
 
-	DEBUG_REQ(PLL_INFO, request, "got req xid=%"PRId64, request->rq_xid);
+	DEBUG_REQ(PLL_DIAG, request, "got req xid=%"PRId64, request->rq_xid);
 
 	request->rq_svc_thread = thread;
 	request->rq_conn = pscrpc_get_connection(request->rq_peer,
@@ -705,7 +704,7 @@ pscrpcthr_main(struct psc_thread *thr)
 
 	/* XXX maintain a list of all managed devices: insert here */
 	while ((pscthr_run(thr) && prt->prt_alive) ||
-	       svc->srv_n_difficult_replies != 0) {
+	    svc->srv_n_difficult_replies != 0) {
 
 		/* Don't exit while there are replies to be handled */
 		struct l_wait_info lwi = LWI_TIMEOUT(svc->srv_rqbd_timeout,
@@ -784,6 +783,7 @@ pscrpcthr_main(struct psc_thread *thr)
 
 	psc_waitq_wakeall(&thr->t_ctl_waitq);
 #endif
+	psclist_del(&prt->prt_lentry, &svc->srv_threads);
 	SVC_ULOCK(svc);
 }
 
@@ -879,8 +879,8 @@ pscrpc_unregister_service(struct pscrpc_service *svc)
 		    svc->srv_nrqbd_receiving == 0, &lwi,
 		    &svc->srv_mutex);
 		if (rc == -ETIMEDOUT)
-			CWARN("Service %s waiting for request buffers",
-			      svc->srv_name);
+			CWARN("Service %s waiting for %d request buffers",
+			      svc->srv_name, svc->srv_nrqbd_receiving);
 	}
 
 	/* schedule all outstanding replies to terminate them */
@@ -941,15 +941,13 @@ pscrpc_unregister_service(struct pscrpc_service *svc)
 		CWARN("Unexpectedly long timeout %p", svc);
 	}
 
-	//list_for_each_entry_safe(rs, t, &svc->srv_free_rs_list,
 	psclist_for_each_entry_safe(rs, t, &svc->srv_free_rs_list,
 	    rs_list_entry) {
 		psclist_del(&rs->rs_list_entry, &svc->srv_free_rs_list);
 		PSCRPC_OBD_FREE(rs, svc->srv_max_reply_size);
 	}
 
-//	pool_destroy()
-
+	psc_mutex_destroy(&svc->srv_mutex);
 	PSCRPC_OBD_FREE(svc, sizeof(*svc));
 	return 0;
 }
@@ -1110,10 +1108,10 @@ pscrpcsvh_delthr(struct pscrpc_svc_handle *svh)
 	return (rc);
 }
 
-/**
- * pscrpc_svh_spawn - Create an RPC service.
- * @svh:  an initialized service handle structure which holds the
- *	service's relevant information.
+/*
+ * Create an RPC service.
+ * @svh: an initialized service handle structure which holds the
+ * service's relevant information.
  */
 void
 _pscrpc_svh_spawn(struct pscrpc_svc_handle *svh)
@@ -1122,9 +1120,8 @@ _pscrpc_svh_spawn(struct pscrpc_svc_handle *svh)
 
 	svh->svh_service = pscrpc_init_svc(svh->svh_nbufs,
 	    svh->svh_bufsz, svh->svh_reqsz, svh->svh_repsz,
-	    svh->svh_req_portal, svh->svh_rep_portal,
-	    svh->svh_svc_name, svh->svh_handler,
-	    svh->svh_flags);
+	    svh->svh_req_portal, svh->svh_rep_portal, svh->svh_svc_name,
+	    svh->svh_handler, svh->svh_flags);
 
 	psc_assert(svh->svh_service);
 
@@ -1138,10 +1135,18 @@ _pscrpc_svh_spawn(struct pscrpc_svc_handle *svh)
 		pscrpcsvh_addthr(svh);
 }
 
+void
+pscrpc_svh_destroy(struct pscrpc_svc_handle *svh)
+{
+	pscrpc_unregister_service(svh->svh_service);
+	while (svh->svh_service->srv_nthreads)
+		pscrpcsvh_delthr(svh);
+}
+
 #ifdef PFL_CTL
 
-/**
- * psc_ctlrep_getrpcsvc - Respond to a "GETRPCSVC" control inquiry.
+/*
+ * Respond to a "GETRPCSVC" control inquiry.
  * @fd: client socket descriptor.
  * @mh: already filled-in control message header.
  * @m: control message to be filled in and sent out.

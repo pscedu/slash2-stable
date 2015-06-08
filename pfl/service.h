@@ -73,9 +73,10 @@ struct pscrpc_thread {
 		_pscrpc_svh_spawn(svh);				\
 	} while (0)
 
-void _pscrpc_svh_spawn(struct pscrpc_svc_handle *);
-int pscrpcsvh_addthr(struct pscrpc_svc_handle *);
-int pscrpcsvh_delthr(struct pscrpc_svc_handle *);
+void	_pscrpc_svh_spawn(struct pscrpc_svc_handle *);
+void	 pscrpc_svh_destroy(struct pscrpc_svc_handle *);
+int	 pscrpcsvh_addthr(struct pscrpc_svc_handle *);
+int	 pscrpcsvh_delthr(struct pscrpc_svc_handle *);
 
 extern struct psclist_head pscrpc_all_services;
 extern psc_spinlock_t pscrpc_all_services_lock;
