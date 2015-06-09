@@ -379,8 +379,6 @@ _pscthr_init(int type, void (*startf)(struct psc_thread *),
 	/* Pin thread until initialization is complete. */
 	spinlock(&thr->pscthr_lock);
 	if (startf) {
-		void *oldthr = thr;
-
 		/*
 		 * Thread will finish initializing in its own context
 		 * and set pscthr_private to the location of the new
@@ -392,7 +390,6 @@ _pscthr_init(int type, void (*startf)(struct psc_thread *),
 			psc_fatalx("pthread_create: %s", strerror(rc));
 		psc_waitq_wait(&thr->pscthr_waitq, &thr->pscthr_lock);
 		thr = thr->pscthr_private;
-		psc_free(oldthr, PAF_NOLOG);
 		if (thr->pscthr_privsiz == 0)
 			pscthr_setready(thr);
 	} else {
