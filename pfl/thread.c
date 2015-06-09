@@ -392,7 +392,6 @@ _pscthr_init(int type, void (*startf)(struct psc_thread *),
 			psc_fatalx("pthread_create: %s", strerror(rc));
 		psc_waitq_wait(&thr->pscthr_waitq, &thr->pscthr_lock);
 		thr = thr->pscthr_private;
-		psc_free(oldthr, PAF_NOLOG);
 		if (thr->pscthr_privsiz == 0)
 			pscthr_setready(thr);
 	} else {
