@@ -339,4 +339,8 @@ ifeq ($(filter $(realpath ${ROOTDIR})/compat/%,${CURDIR}),)
   COPT+=						-mtune=native
  endif
 
+ ifdef PICKLE_HAVE_PTHREAD_SETSCHEDPRIO
+  COPT+=						-DHAVE_PTHREAD_SETSCHEDPRIO
+ endif
+
 endif
