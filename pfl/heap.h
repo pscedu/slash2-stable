@@ -47,7 +47,11 @@ struct pfl_heap_entry {
 #define HEAP_INIT(type, memb, cmpf)					\
 	{ NULL, (cmpf), offsetof(type, memb), 0, 0 }
 
+#define pfl_heap_init(hp, type, memb, cmpf)				\
+	_pfl_heap_init((hp), offsetof(type, memb), cmpf)
+
 void	 pfl_heap_add(struct pfl_heap *, void *);
+void	_pfl_heap_init(struct pfl_heap *, int, int (*)(const void *, const void *));
 int	 pfl_heap_nitems(struct pfl_heap *);
 void	*pfl_heap_peek(struct pfl_heap *);
 void	*pfl_heap_peekidx(struct pfl_heap *, int);

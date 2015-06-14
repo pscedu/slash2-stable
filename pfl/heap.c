@@ -103,7 +103,7 @@ pfl_heap_peekidx(struct pfl_heap *ph, int idx)
 	struct pfl_heap_entry *phe;
 	void *p;
 
-	if (idx < ph->ph_nitems)
+	if (idx >= ph->ph_nitems)
 		return (NULL);
 
 	p = ph->ph_base[idx];
@@ -142,4 +142,13 @@ int
 pfl_heap_nitems(struct pfl_heap *ph)
 {
 	return (ph->ph_nitems);
+}
+
+void
+_pfl_heap_init(struct pfl_heap *ph, int entoff,
+    int (*cmpf)(const void *, const void *))
+{
+	memset(ph, 0, sizeof(*ph));
+	ph->ph_cmpf = cmpf;
+	ph->ph_entoff = entoff;
 }
