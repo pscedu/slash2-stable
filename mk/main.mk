@@ -534,10 +534,8 @@ test-hook:
 
 runtest: recurse-runtest test-hook
 
-maketest: recurse-maketest ${TEST}
-
 test:
-	@${MAKE} maketest && ${MAKE} runtest
+	${MAKE} all && ${MAKE} runtest
 
 hdrclean:
 	${HDRCLEAN} */*.[clyh]
