@@ -4,8 +4,8 @@ ROOTDIR=../..
 include ${ROOTDIR}/Makefile.path
 
 PROG=		mount_wokfs
-BIN=		mount_wokfs.sh
-MAN+=		mount_wokfs.8
+#BIN=		mount_wokfs.sh
+#MAN+=		mount_wokfs.8
 
 SRCS+=		ctl.c
 SRCS+=		main.c
