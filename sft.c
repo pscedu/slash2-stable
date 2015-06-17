@@ -472,11 +472,14 @@ handle_signal(__unusedx int sig)
 int
 main(int argc, char *argv[])
 {
-	int displaybw = 0, c, n, flags = PFL_FILEWALKF_NOCHDIR;
+	int totalwk = 0, displaybw = 0, c, n, flags = PFL_FILEWALKF_NOCHDIR;
 	struct psc_thread **thrv, *dispthr;
 	struct sigaction sa;
 	struct file *f;
 	char *endp;
+	double rate;
+	struct timeval t1, t2, t3;
+	long long totalbytes;
 
 	gcry_control(GCRYCTL_SET_THREAD_CBS, &gcry_threads_pthread);
 	if (!gcry_check_version(GCRYPT_VERSION))
@@ -558,9 +561,6 @@ main(int argc, char *argv[])
 	if (sigaction(SIGINT, &sa, NULL) == -1)
 		psc_fatal("sigaction");
 
-	if (displaybw)
-		dispthr = pscthr_init(0, display, NULL, 0, "disp");
-
 	lc_init(&wkq, struct wk, lentry);
 	psc_poolmaster_init(&wk_poolmaster, struct wk, lentry,
 	    PPMF_AUTO, nthr, nthr, 0, NULL, NULL, NULL, "wk");
@@ -577,18 +577,28 @@ main(int argc, char *argv[])
 	for (; *argv; argv++)
 		pfl_filewalk(*argv, flags, NULL, proc, NULL);
 
+	if (displaybw)
+		dispthr = pscthr_init(0, display, NULL, 0, "disp");
+
+	gettimeofday(&t1, NULL);
+
 	if (piecewise) {
 		while (psc_dynarray_len(&files))
 			DYNARRAY_FOREACH(f, n, &files) {
 				if (exit_from_signal)
 					goto done;
 				addwk(f);
+				totalwk++;
 			}
 	} else {
 		DYNARRAY_FOREACH(f, n, &files)
-			while (!addwk(f))
+			while (1) {
+				totalwk++;
+				if (addwk(f))
+					break;
 				if (exit_from_signal)
 					goto done;
+			}
 	}
 
  done:
@@ -596,11 +606,50 @@ main(int argc, char *argv[])
 	for (n = 0; n < nthr; n++)
 		pthread_join(thrv[n]->pscthr_pthread, NULL);
 
+	gettimeofday(&t2, NULL);
+
 	if (displaybw) {
 		running = 0;
 		psc_waitq_wakeall(&display_wq);
 		pthread_join(dispthr->pscthr_pthread, NULL);
 	}
+	if (!verbose && !writesz)
+		return (0);
+
+	printf("Total number of threads = %d.\n", nthr);
+	printf("Total number of work items added to the list: %d\n", totalwk);
+
+	/*
+	 * The following is an alternative way to calculate bandwidth.
+	 */
+	if (t2.tv_usec < t1.tv_usec) {
+		t2.tv_usec += 1000000;
+		t2.tv_sec--;
+	}
+
+	t3.tv_sec = t2.tv_sec - t1.tv_sec;
+	t3.tv_usec = t2.tv_usec - t1.tv_usec;
+
+	totalbytes = (long long)writesz * nthr;
+ 
+	if (totalbytes <= (long long)1024)
+		printf("\nTotal time: %ld seconds, %ld useconds, %lld Bytes\n", t3.tv_sec, t3.tv_usec, totalbytes);
+	else if (totalbytes <= (long long)1024 * 1024)
+		printf("\nTotal time: %ld seconds, %ld useconds, %.2f KiB\n", t3.tv_sec, t3.tv_usec, totalbytes * 1.0/1024);
+	else if (totalbytes <= (long long)1024 * 1024 * 1024)
+		printf("\nTotal time: %ld seconds, %ld useconds, %.2f MiB\n", t3.tv_sec, t3.tv_usec, totalbytes * 1.0/1024/1024);
+	else
+		printf("\nTotal time: %ld seconds, %ld useconds, %.2f GiB\n", t3.tv_sec, t3.tv_usec, totalbytes * 1.0/1024/1024/1024);
+
+	rate = totalbytes / ((t3.tv_sec * 1000000 + t3.tv_usec) * 1e-6);
+	if (rate <= 1024.0)
+		printf("Write rate is %.2f Bytes/seconds.\n", rate);
+	else if (rate <= 1024.0 * 1024.0)
+		printf("Write rate is %.2f KiB/seconds.\n", rate / 1024.0);
+	else if (rate <= 1024.0 * 1024.0 * 1024.0)
+		printf("Write rate is %.2f MiB/seconds.\n", rate / 1024.0 / 1024.0);
+	else
+		printf("Write rate is %.2f GiB/seconds.\n", rate / 1024.0 / 1024.0 / 1024.0);
 
 	return (0);
 }
