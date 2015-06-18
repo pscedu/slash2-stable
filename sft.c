@@ -103,7 +103,8 @@ struct wk {
 
 int				 sft_alg = CKSUMT_CRC;
 int				 docrc;
-int64_t				 writesz;
+int				 dowrite;
+int64_t				 totalsz;
 int				 chunk;
 int				 verbose;
 int				 checkzero;
@@ -120,6 +121,9 @@ struct psc_poolmgr		*wk_pool;
 struct pfl_opstat		*iostats;
 struct psc_waitq		 display_wq = PSC_WAITQ_INIT;
 volatile int			 running = 1;
+
+int				 incomplete = 0;
+long long			 totalbytes;
 
 #define lock_output()							\
 	do {								\
@@ -234,7 +238,7 @@ thrmain(struct psc_thread *thr)
 
 	buf = psc_alloc(bufsz, PAF_PAGEALIGN);
 
-	if (writesz)
+	if (dowrite)
 		pfl_random_getbytes(buf, bufsz);
 
 	while (pscthr_run(thr)) {
@@ -247,7 +251,7 @@ thrmain(struct psc_thread *thr)
 		f = wk->f;
 
  nextchunk:
-		if (writesz)
+		if (dowrite)
 			rc = pwrite(f->fd, buf, wk->len, wk->off);
 		else
 			rc = pread(f->fd, buf, wk->len, wk->off);
@@ -255,10 +259,11 @@ thrmain(struct psc_thread *thr)
 
 		if (rc == -1) {
 			lock_output();
-			warnx("%s: %s: %s", writesz ? "write" : "read",
+			warnx("%s: %s: %s", dowrite ? "write" : "read",
 			    f->fn, strerror(save_errno));
 			unlock_output();
 			f->rc = -1;
+			incomplete = 1;
 			goto end;
 		}
 
@@ -266,7 +271,7 @@ thrmain(struct psc_thread *thr)
 			lock_output();
 			warnx("%s: %s: unexpected short I/O "
 			    "(expected %zd, got %zd)",
-			    writesz ? "write" : "read", f->fn,
+			    dowrite ? "write" : "read", f->fn,
 			    wk->len, rc);
 			unlock_output();
 			f->rc = -1;
@@ -382,6 +387,7 @@ int
 addwk(struct file *f)
 {
 	struct wk *wk;
+	int64_t size;
 	int done;
 
 	spinlock(&f->lock);
@@ -391,10 +397,14 @@ addwk(struct file *f)
 	wk = psc_pool_get(wk_pool);
 	wk->f = f;
 	wk->off = f->chunkid * bufsz;
-	wk->len = wk->off + bufsz > f->stb.st_size ?
-	    f->stb.st_size % bufsz : bufsz;
+
+	size = totalsz ? totalsz : f->stb.st_size;
+	if (wk->off + bufsz > size) {
+		wk->len = size % bufsz;
+	} else
+		wk->len = bufsz;
 	wk->chunkid = f->chunkid++;
-	done = wk->off + bufsz >= f->stb.st_size || (docrc && !chunk);
+	done = wk->off + bufsz >= size || (docrc && !chunk);
 	lc_add(&wkq, wk);
 
 	if (done) {
@@ -405,6 +415,7 @@ addwk(struct file *f)
 		file_close(f);
 		psc_dynarray_remove(&files, f);
 	}
+	totalbytes += wk->len;
 	return (done);
 }
 
@@ -433,7 +444,7 @@ proc(FTSENT *fe, __unusedx void *arg)
 		cksum_init(&f->cksum);
 	INIT_SPINLOCK(&f->lock);
 	f->fn = strdup(fe->fts_path);
-	if (writesz)
+	if (dowrite)
 		f->fd = open(fe->fts_path, O_CREAT | O_RDWR | O_TRUNC |
 		    (direct_io ? O_DIRECT : 0), 0600);
 	else
@@ -442,9 +453,6 @@ proc(FTSENT *fe, __unusedx void *arg)
 	if (f->fd == -1)
 		err(1, "open %s", fe->fts_path);
 	f->stb = *fe->fts_statp;
-
-	if (writesz)
-		f->stb.st_size = writesz;
 
 	f->chunkid = seekoff / bufsz;
 	psc_dynarray_add(&files, f);
@@ -467,6 +475,7 @@ void
 handle_signal(__unusedx int sig)
 {
 	exit_from_signal = 1;
+	incomplete = 1;
 }
 
 int
@@ -479,7 +488,6 @@ main(int argc, char *argv[])
 	char *endp;
 	double rate;
 	struct timeval t1, t2, t3;
-	long long totalbytes;
 
 	gcry_control(GCRYCTL_SET_THREAD_CBS, &gcry_threads_pthread);
 	if (!gcry_check_version(GCRYPT_VERSION))
@@ -487,7 +495,7 @@ main(int argc, char *argv[])
 	gcry_control(GCRYCTL_INITIALIZATION_FINISHED, 0);
 
 	pfl_init();
-	while ((c = getopt(argc, argv, "Bb:cD:dKO:PRTt:vw:Z")) != -1)
+	while ((c = getopt(argc, argv, "Bb:cD:dKO:PRTt:vws:Z")) != -1)
 		switch (c) {
 		case 'B': /* display bandwidth */
 			displaybw = 1;
@@ -539,11 +547,14 @@ main(int argc, char *argv[])
 		case 'v': /* verbose */
 			verbose = 1;
 			break;
-		case 'w': /* write */
-			writesz = pfl_humantonum(optarg);
-			if (writesz <= 0)
+		case 'w': /* dowrite */
+			dowrite = 1;
+			break;
+		case 's': /* size */
+			totalsz = pfl_humantonum(optarg);
+			if (totalsz <= 0)
 				errx(1, "%s: %s", optarg, strerror(
-				    writesz ? -writesz : EINVAL));
+				    totalsz ? -totalsz : EINVAL));
 			break;
 		case 'Z': /* report if file chunk is all zeroes */
 			checkzero = 1;
@@ -613,14 +624,16 @@ main(int argc, char *argv[])
 		psc_waitq_wakeall(&display_wq);
 		pthread_join(dispthr->pscthr_pthread, NULL);
 	}
-	if (!verbose && !writesz)
+	if (!verbose || incomplete)
 		return (0);
 
+	printf("\n");
 	printf("Total number of threads = %d.\n", nthr);
 	printf("Total number of work items added to the list: %d\n", totalwk);
 
 	/*
-	 * The following is an alternative way to calculate bandwidth.
+	 * The following is an alternative way to calculate bandwidth.  Note that totalbytes is
+	 * only valid when all I/Os are complete normally.
 	 */
 	if (t2.tv_usec < t1.tv_usec) {
 		t2.tv_usec += 1000000;
@@ -630,8 +643,6 @@ main(int argc, char *argv[])
 	t3.tv_sec = t2.tv_sec - t1.tv_sec;
 	t3.tv_usec = t2.tv_usec - t1.tv_usec;
 
-	totalbytes = (long long)writesz * nthr;
- 
 	if (totalbytes <= (long long)1024)
 		printf("\nTotal time: %ld seconds, %ld useconds, %lld Bytes\n", t3.tv_sec, t3.tv_usec, totalbytes);
 	else if (totalbytes <= (long long)1024 * 1024)
@@ -643,13 +654,13 @@ main(int argc, char *argv[])
 
 	rate = totalbytes / ((t3.tv_sec * 1000000 + t3.tv_usec) * 1e-6);
 	if (rate <= 1024.0)
-		printf("Write rate is %.2f Bytes/seconds.\n", rate);
+		printf("%s rate is %.2f Bytes/seconds.\n", dowrite ? "Write" : "Read", rate);
 	else if (rate <= 1024.0 * 1024.0)
-		printf("Write rate is %.2f KiB/seconds.\n", rate / 1024.0);
+		printf("%s rate is %.2f KiB/seconds.\n", dowrite ? "Write" : "Read", rate / 1024.0);
 	else if (rate <= 1024.0 * 1024.0 * 1024.0)
-		printf("Write rate is %.2f MiB/seconds.\n", rate / 1024.0 / 1024.0);
+		printf("%s rate is %.2f MiB/seconds.\n", dowrite ? "Write" : "Read", rate / 1024.0 / 1024.0);
 	else
-		printf("Write rate is %.2f GiB/seconds.\n", rate / 1024.0 / 1024.0 / 1024.0);
+		printf("%s rate is %.2f GiB/seconds.\n", dowrite ? "Write" : "Read", rate / 1024.0 / 1024.0 / 1024.0);
 
 	return (0);
 }
