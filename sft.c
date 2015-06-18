@@ -448,7 +448,8 @@ proc(FTSENT *fe, __unusedx void *arg)
 		f->fd = open(fe->fts_path, O_CREAT | O_RDWR | O_TRUNC |
 		    (direct_io ? O_DIRECT : 0), 0600);
 	else
-		f->fd = open(fe->fts_path, O_RDONLY);
+		f->fd = open(fe->fts_path, O_RDONLY |
+		    (direct_io ? O_DIRECT : 0));
 	f->refcnt = 1;
 	if (f->fd == -1)
 		err(1, "open %s", fe->fts_path);
