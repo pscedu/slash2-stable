@@ -91,8 +91,8 @@ struct psc_hashtbl {
 #define PSC_HASHBKT_FOREACH_ENTRY_SAFE(t, p, pn, b)			\
 	psclist_for_each_entry2_safe((p), (pn), &(b)->phb_listhd, (t)->pht_hentoff)
 
-/**
- * psc_hashtbl_init - Initialize a hash table.
+/*
+ * Initialize a hash table.
  * @t: hash table to initialize.
  * @flags: optional modifier flags.
  * @type: type of the structure to be put into the hash table.
@@ -113,8 +113,8 @@ struct psc_hashtbl {
 		    ## __VA_ARGS__);					\
 	} while (0)
 
-/**
- * psc_hashtbl_search - Search a hash table for an item by its hash ID.
+/*
+ * Search a hash table for an item by its hash ID.
  * @t: the hash table.
  * @cmp: optional value to compare with to differentiate entries with same ID.
  * @cbf: optional callback routine invoked when the entry is found, executed
@@ -132,9 +132,9 @@ struct psc_hashtbl {
 #define psc_hashtbl_search_cb(t, cbf, arg, key)				\
 	_psc_hashtbl_search((t), 0, NULL, (cbf), (arg), (key))
 
-/**
- * psc_hashtbl_searchdel - Search a hash table for an item by its hash ID
- *	and remove and return if found.
+/*
+ * Search a hash table for an item by its hash ID and remove and return
+ * if found.
  * @t: the hash table.
  * @cmp: optional value to compare with to differentiate entries with same ID.
  * @key: search key pointer to either of:
@@ -156,8 +156,8 @@ void	*_psc_hashtbl_search(struct psc_hashtbl *, int, const void *,
 void	 _psc_hashtbl_init(struct psc_hashtbl *, int, ptrdiff_t, ptrdiff_t, int,
 	    int (*)(const void *, const void *), const char *, ...);
 
-/**
- * psc_hashbkt_search - Search a bucket for an item by its hash ID.
+/*
+ * Search a bucket for an item by its hash ID.
  * @t: the hash table.
  * @b: the bucket to search.
  * @cmp: optional value to compare with to differentiate entries with same ID.
@@ -176,9 +176,9 @@ void	 _psc_hashtbl_init(struct psc_hashtbl *, int, ptrdiff_t, ptrdiff_t, int,
 #define	psc_hashbkt_search_cb(t, b, cbf, arg, key)			\
 	_psc_hashbkt_search((t), (b), 0, NULL, (cbf), (arg), (key))
 
-/**
- * psc_hashtbl_searchdel - Search a bucket for an item by its hash ID and
- *	remove and return if found.
+/*
+ * Search a bucket for an item by its hash ID and remove and return if
+ * found.
  * @t: the hash table.
  * @b: the bucket to search.
  * @cmp: optional value to compare with to differentiate entries with same ID.
