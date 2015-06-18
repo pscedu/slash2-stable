@@ -76,11 +76,14 @@ file.
 Defaults to 1.
 .It Fl v
 Verbosely display ongoing operations.
-.It Fl w Ar size
-Perform
-.Xr write 2
-of junk data over any files specified on the command line to the given
-.Ar size .
+.It Fl w
+Perform write operation. Default is read.
+.It Fl d
+Perform direct read or write I/O operation.
+.It Fl s Ar size
+Specify the total I/O 
+.Ar size 
+on each file specified on the command line.
 .It Fl Z
 Check if a file chunk is composed of entirely zeroes and display
 a indicator
