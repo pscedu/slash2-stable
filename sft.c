@@ -467,7 +467,7 @@ usage(void)
 	extern const char *__progname;
 
 	fprintf(stderr,
-	    "usage: %s [-BcdKPRvwZ] [-b bufsz] [-t nthr] [-O offset] file ...\n",
+	    "usage: %s [-BcdKPRvwZ] [-b bufsz] [-O offset] [-s size] [-t nthr] file ...\n",
 	    __progname);
 	exit(1);
 }
@@ -496,7 +496,7 @@ main(int argc, char *argv[])
 	gcry_control(GCRYCTL_INITIALIZATION_FINISHED, 0);
 
 	pfl_init();
-	while ((c = getopt(argc, argv, "Bb:cD:dKO:PRTt:vws:Z")) != -1)
+	while ((c = getopt(argc, argv, "Bb:cD:dKO:PRs:Tt:vwZ")) != -1)
 		switch (c) {
 		case 'B': /* display bandwidth */
 			displaybw = 1;
@@ -533,6 +533,12 @@ main(int argc, char *argv[])
 		case 'R': /* recursive */
 			flags |= PFL_FILEWALKF_RECURSIVE;
 			break;
+		case 's': /* size */
+			totalsz = pfl_humantonum(optarg);
+			if (totalsz <= 0)
+				errx(1, "%s: %s", optarg, strerror(
+				    totalsz ? -totalsz : EINVAL));
+			break;
 		case 'T': /* report total */
 			break;
 		case 't': /* #threads */
@@ -550,12 +556,6 @@ main(int argc, char *argv[])
 			break;
 		case 'w': /* dowrite */
 			dowrite = 1;
-			break;
-		case 's': /* size */
-			totalsz = pfl_humantonum(optarg);
-			if (totalsz <= 0)
-				errx(1, "%s: %s", optarg, strerror(
-				    totalsz ? -totalsz : EINVAL));
 			break;
 		case 'Z': /* report if file chunk is all zeroes */
 			checkzero = 1;
@@ -633,8 +633,9 @@ main(int argc, char *argv[])
 	printf("Total number of work items added to the list: %d\n", totalwk);
 
 	/*
-	 * The following is an alternative way to calculate bandwidth.  Note that totalbytes is
-	 * only valid when all I/Os are complete normally.
+	 * The following is an alternative way to calculate bandwidth.
+	 * Note that totalbytes is only valid when all I/Os are complete
+	 * normally.
 	 */
 	if (t2.tv_usec < t1.tv_usec) {
 		t2.tv_usec += 1000000;
