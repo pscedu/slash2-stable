@@ -643,6 +643,9 @@ main(int argc, char *argv[])
 	 * The following is an alternative way to calculate bandwidth.
 	 * Note that totalbytes is only valid when all I/Os are complete
 	 * normally.
+	 *
+	 * If the read or write performance takes a long time to ramp up, 
+	 * the following numbers will be different from last-second rate.
 	 */
 	if (t2.tv_usec < t1.tv_usec) {
 		t2.tv_usec += 1000000;
