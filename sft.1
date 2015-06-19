@@ -22,28 +22,29 @@
 .\" Pittsburgh, PA 15213			web: http://www.psc.edu/
 .\" -----------------------------------------------------------------------------
 .\" %PSC_END_COPYRIGHT%
-.Dd December 17, 2012
-.Dt XOPCTL 1
+.Dd June 19, 2015
+.Dt SFT 1
 .ds volume PSC \- User Reference Manual
 .Os http://www.psc.edu/
 .Sh NAME
 .Nm sft
-.Nd swissarmy file transfer tool
+.Nd \&"Swiss army" file tool
 .Sh SYNOPSIS
-.Nm xopctl
+.Nm sft
 .Bk -words
-.Op Fl BcKPRvwZ
+.Op Fl BcdKPRvwZ
 .Op Fl b Ar bufsz
-.Op Fl t Ar nthr
 .Op Fl O Ar offset
+.Op Fl s Ar size
+.Op Fl t Ar nthr
 .Ar
 .Ek
 .Sh DESCRIPTION
 The
 .Nm
 utility provides a few handy capabilities for file I/O.
-It can read, checksum, and write data and provide basic performance
-metrics about the activity.
+It can read, checksum, and write data and can provide basic performance
+metrics about the activity it performs.
 .Pp
 The following options are available:
 .Bl -tag -width Ds
@@ -55,6 +56,10 @@ Change the default file chunk size to
 Defaults to 32768.
 .It Fl c
 Compute and display a checksum over the entire file contents.
+.It Fl d
+Use direct I/O
+.Pq Li O_DIRECT
+for read or write I/O.
 .It Fl K
 When used with
 .Fl K ,
@@ -70,6 +75,10 @@ completion of each file specified instead of round-robin processing.
 .It Fl R
 Recursively process all files and subdirectories in any directories
 specified on the command line.
+.It Fl s Ar size
+Specify the total I/O
+.Ar size
+to perform on each file specified on the command line.
 .It Fl t Ar nthr
 Specify the number of processing threads that should perform I/O on each
 file.
@@ -77,13 +86,12 @@ Defaults to 1.
 .It Fl v
 Verbosely display ongoing operations.
 .It Fl w
-Perform write operation. Default is read.
-.It Fl d
-Perform direct read or write I/O operation.
-.It Fl s Ar size
-Specify the total I/O 
-.Ar size 
-on each file specified on the command line.
+Perform write operation over the file contents with random junk.
+The default amount of data to write is the current existing file size
+which may be overridden with the
+.Fl s
+option.
+The default operation is to read file contents.
 .It Fl Z
 Check if a file chunk is composed of entirely zeroes and display
 a indicator

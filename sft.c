@@ -473,7 +473,7 @@ usage(void)
 	extern const char *__progname;
 
 	fprintf(stderr,
-	    "usage: %s [-BcdKPRvwZ] [-b bufsz] [-t nthr] [-O offset] file ...\n",
+	    "usage: %s [-BcdKPRvwZ] [-b bufsz] [-O offset] [-s size] [-t nthr] file ...\n",
 	    __progname);
 	exit(1);
 }
@@ -488,13 +488,14 @@ handle_signal(__unusedx int sig)
 int
 main(int argc, char *argv[])
 {
+	char hbuf[PSCFMT_HUMAN_BUFSIZ];
 	int totalwk = 0, displaybw = 0, c, n, flags = PFL_FILEWALKF_NOCHDIR;
 	struct psc_thread **thrv, *dispthr;
+	struct timeval t1, t2, t3;
 	struct sigaction sa;
 	struct file *f;
-	char *endp;
 	double rate;
-	struct timeval t1, t2, t3;
+	char *endp;
 
 	gcry_control(GCRYCTL_SET_THREAD_CBS, &gcry_threads_pthread);
 	if (!gcry_check_version(GCRYPT_VERSION))
@@ -502,7 +503,7 @@ main(int argc, char *argv[])
 	gcry_control(GCRYCTL_INITIALIZATION_FINISHED, 0);
 
 	pfl_init();
-	while ((c = getopt(argc, argv, "Bb:cD:dKO:PRTt:vws:Z")) != -1)
+	while ((c = getopt(argc, argv, "Bb:cD:dKO:PRs:Tt:vwZ")) != -1)
 		switch (c) {
 		case 'B': /* display bandwidth */
 			displaybw = 1;
@@ -539,6 +540,12 @@ main(int argc, char *argv[])
 		case 'R': /* recursive */
 			flags |= PFL_FILEWALKF_RECURSIVE;
 			break;
+		case 's': /* size */
+			totalsz = pfl_humantonum(optarg);
+			if (totalsz <= 0)
+				errx(1, "%s: %s", optarg, strerror(
+				    totalsz ? -totalsz : EINVAL));
+			break;
 		case 'T': /* report total */
 			break;
 		case 't': /* #threads */
@@ -556,12 +563,6 @@ main(int argc, char *argv[])
 			break;
 		case 'w': /* dowrite */
 			dowrite = 1;
-			break;
-		case 's': /* size */
-			totalsz = pfl_humantonum(optarg);
-			if (totalsz <= 0)
-				errx(1, "%s: %s", optarg, strerror(
-				    totalsz ? -totalsz : EINVAL));
 			break;
 		case 'Z': /* report if file chunk is all zeroes */
 			checkzero = 1;
@@ -639,8 +640,9 @@ main(int argc, char *argv[])
 	printf("Total number of work items added to the list: %d\n", totalwk);
 
 	/*
-	 * The following is an alternative way to calculate bandwidth.  Note that totalbytes is
-	 * only valid when all I/Os are complete normally.
+	 * The following is an alternative way to calculate bandwidth.
+	 * Note that totalbytes is only valid when all I/Os are complete
+	 * normally.
 	 */
 	if (t2.tv_usec < t1.tv_usec) {
 		t2.tv_usec += 1000000;
@@ -650,24 +652,14 @@ main(int argc, char *argv[])
 	t3.tv_sec = t2.tv_sec - t1.tv_sec;
 	t3.tv_usec = t2.tv_usec - t1.tv_usec;
 
-	if (totalbytes <= (long long)1024)
-		printf("\nTotal time: %ld seconds, %ld useconds, %lld Bytes\n", t3.tv_sec, t3.tv_usec, totalbytes);
-	else if (totalbytes <= (long long)1024 * 1024)
-		printf("\nTotal time: %ld seconds, %ld useconds, %.2f KiB\n", t3.tv_sec, t3.tv_usec, totalbytes * 1.0/1024);
-	else if (totalbytes <= (long long)1024 * 1024 * 1024)
-		printf("\nTotal time: %ld seconds, %ld useconds, %.2f MiB\n", t3.tv_sec, t3.tv_usec, totalbytes * 1.0/1024/1024);
-	else
-		printf("\nTotal time: %ld seconds, %ld useconds, %.2f GiB\n", t3.tv_sec, t3.tv_usec, totalbytes * 1.0/1024/1024/1024);
+	psc_fmt_human(hbuf, totalbytes);
+	printf("\nTotal time: %"PSCPRI_TIMET" seconds, "
+	    "%"PSCPRI_UTIMET" useconds, %s\n",
+	    t3.tv_sec, t3.tv_usec, hbuf);
 
 	rate = totalbytes / ((t3.tv_sec * 1000000 + t3.tv_usec) * 1e-6);
-	if (rate <= 1024.0)
-		printf("%s rate is %.2f Bytes/seconds.\n", dowrite ? "Write" : "Read", rate);
-	else if (rate <= 1024.0 * 1024.0)
-		printf("%s rate is %.2f KiB/seconds.\n", dowrite ? "Write" : "Read", rate / 1024.0);
-	else if (rate <= 1024.0 * 1024.0 * 1024.0)
-		printf("%s rate is %.2f MiB/seconds.\n", dowrite ? "Write" : "Read", rate / 1024.0 / 1024.0);
-	else
-		printf("%s rate is %.2f GiB/seconds.\n", dowrite ? "Write" : "Read", rate / 1024.0 / 1024.0 / 1024.0);
+	psc_fmt_human(hbuf, rate);
+	printf("%s rate is %s/s\n", dowrite ? "Write" : "Read", hbuf);
 
 	return (0);
 }
