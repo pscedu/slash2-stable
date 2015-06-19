@@ -104,6 +104,10 @@ struct wk {
 int				 sft_alg = CKSUMT_CRC;
 int				 docrc;
 int				 dowrite;
+/*
+ * If given, use it instead of the sizes of each individual files.
+ * Note, read beyond EOF returns all zero.
+ */
 int64_t				 totalsz;
 int				 chunk;
 int				 verbose;
@@ -123,6 +127,8 @@ struct psc_waitq		 display_wq = PSC_WAITQ_INIT;
 volatile int			 running = 1;
 
 int				 incomplete = 0;
+
+/* only main thread updates it, so it is thread-safe */
 long long			 totalbytes;
 
 #define lock_output()							\
