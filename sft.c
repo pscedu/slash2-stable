@@ -647,7 +647,8 @@ main(int argc, char *argv[])
 	t3.tv_usec = t2.tv_usec - t1.tv_usec;
 
 	psc_fmt_human(hbuf, totalbytes);
-	printf("\nTotal time: %ld seconds, %ld useconds, %s\n",
+	printf("\nTotal time: %"PSCPRI_TIMET" seconds, "
+	    "%"PSCPRI_UTIMET" useconds, %s\n",
 	    t3.tv_sec, t3.tv_usec, hbuf);
 
 	rate = totalbytes / ((t3.tv_sec * 1000000 + t3.tv_usec) * 1e-6);
