@@ -93,6 +93,7 @@ struct file {
 	int64_t			 chunkid;
 };
 
+/* where to read or write a file */
 struct wk {
 	struct psc_listentry	 lentry;
 	struct file		*f;
@@ -242,6 +243,7 @@ thrmain(struct psc_thread *thr)
 	ssize_t rc;
 	char *buf;
 
+	/* use the same buffer for all reads or writes */
 	buf = psc_alloc(bufsz, PAF_PAGEALIGN);
 
 	if (dowrite)
@@ -316,6 +318,7 @@ thrmain(struct psc_thread *thr)
 		file_close(f);
 		psc_pool_return(wk_pool, wk);
 	}
+	psc_free(buf, PAF_PAGEALIGN);
 }
 
 void
