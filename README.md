@@ -2,7 +2,7 @@ $Id$
 
 # Portable File-system Libraries
 
-    See COPYRIGHT for license information.
+See COPYRIGHT for license information.
 
 ## Download instructions
 
