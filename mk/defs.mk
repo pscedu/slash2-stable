@@ -69,7 +69,7 @@ YFLAGS+=	-d
 
 CFLAGS+=	-Wall -W -pipe
 # -Wredundant-decls
-CFLAGS+=	-Wshadow
+CFLAGS+=	-Wshadow -fno-omit-frame-pointer
 #CFLAGS+=	-Wno-address
 
 ifeq (${GOPROF},1)
@@ -98,12 +98,12 @@ INCLUDES+=	-I${ROOTDIR} -I.
 EXCLUDES+=	-I${PFL_BASE}
 
 ifneq ($(wildcard /local/tmp),)
-  OBJBASE?=		/local/tmp
+  OBJBASE?=	/local/tmp
 else
   ifneq ($(wildcard /log/tmp),)
-    OBJBASE?=		/log/tmp
+    OBJBASE?=	/log/tmp
   else
-    OBJBASE?=		/tmp
+    OBJBASE?=	/tmp
   endif
 endif
 
