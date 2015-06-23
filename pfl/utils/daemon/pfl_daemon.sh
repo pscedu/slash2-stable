@@ -61,7 +61,7 @@ loadprof()
 
 	[ $# -gt $narg ] && usage
 
-	vprint "profile applied"
+	vprint "profile applied: $t0"
 
 	return 0
 }
