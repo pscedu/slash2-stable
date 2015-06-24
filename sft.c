@@ -639,6 +639,7 @@ main(int argc, char *argv[])
 		return (0);
 
 	printf("\n");
+	printf("I/O buffer size = %zd.\n", bufsz);
 	printf("Total number of threads = %d.\n", nthr);
 	printf("Total number of work items added to the list: %d\n", totalwk);
 
