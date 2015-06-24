@@ -111,6 +111,7 @@ struct psc_listcache {
 #define PLCBF_PEEK	(1 << 2)	/* don't remove item */
 #define PLCBF_DYINGOK	(1 << 3)	/* list can die */
 #define PLCBF_REVERSE	(1 << 4)	/* order is reversed */
+#define PLCBF_WAKEONE	(1 << 5)	/* wake only one */
 
 #define lc_addstack(plc, p)		((void)_lc_add((plc), (p), PLCBF_HEAD, NULL))
 #define lc_addqueue(plc, p)		((void)_lc_add((plc), (p), PLCBF_TAIL, NULL))
