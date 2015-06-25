@@ -136,6 +136,8 @@ struct psc_poolmgr {
 #define PPMF_DESPERATE		(1 << 3)	/* initial reaping attempt failed */
 #define PPMF_ZERO		(1 << 4)	/* zero objects before passing them out */
 #define PPMF_ALIGN		(1 << 5)	/* align to system page boundaries */
+#define PPMF_NOPREEMPT		(1 << 6)	/* do reactive reaping */
+#define PPMF_PREEMPTQ		(1 << 7)	/* queued for preemptive reaping */
 
 #define POOL_LOCK(m)		PLL_LOCK(&(m)->ppm_pll)
 #define POOL_TRYLOCK(m)		PLL_TRYLOCK(&(m)->ppm_pll)
@@ -157,10 +159,10 @@ struct psc_poolmgr {
 #define PSC_POOLSET_INIT	{ SPINLOCK_INIT, DYNARRAY_INIT }
 
 /* default value of pool fill before freeing items directly on pool_return */
-#define POOL_AUTOSIZE_THRESH 80
+#define POOL_AUTOSIZE_THRESH	80
 
-/**
- * psc_poolmaster_init - Initialize a pool resource.
+/*
+ * Initialize a pool resource.
  * @p: pool master.
  * @type: managed structure type.
  * @member: name of psclist_head structure used to interlink managed structs.
@@ -187,8 +189,8 @@ struct psc_poolmgr {
 
 #define psc_poolmaster_getmgr(p)	_psc_poolmaster_getmgr((p), psc_memnode_getid())
 
-/**
- * psc_pool_shrink - Decrease #items in a pool.
+/*
+ * Decrease #items in a pool.
  * @m: the pool manager.
  * @i: #items to remove from pool.
  */

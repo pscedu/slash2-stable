@@ -48,6 +48,7 @@
 #include "pfl/pool.h"
 #include "pfl/pthrutil.h"
 #include "pfl/waitq.h"
+#include "pfl/workthr.h"
 
 #if PFL_DEBUG > 1
 #  define _POOL_SETPROT(p, m, prot)					\
@@ -116,6 +117,10 @@
 __static struct psc_poolset psc_poolset_main = PSC_POOLSET_INIT;
 struct psc_lockedlist psc_pools =
     PLL_INIT(&psc_pools, struct psc_poolmgr, ppm_lentry);
+
+struct pfl_wkdata_poolreap {
+	struct psc_poolmgr *poolmgr;
+};
 
 __weak void
 _psc_mlist_init(__unusedx struct psc_mlist *m, __unusedx int flags,
@@ -549,6 +554,19 @@ psc_pool_reap(struct psc_poolmgr *m, int desperate)
 	psc_mutex_unlock(&m->ppm_reclaim_mutex);
 }
 
+int
+pfl_pool_reap_wkcb(void *arg)
+{
+	struct pfl_wkdata_poolreap *wk = arg;
+	struct psc_poolmgr *m = wk->poolmgr;
+
+	psc_pool_reap(m, 0);
+	POOL_LOCK(m);
+	m->ppm_flags &= ~PPMF_PREEMPTQ;
+	POOL_ULOCK(m);
+	return (0);
+}
+
 /*
  * Grab an item from a pool.
  * @m: the pool manager.
@@ -559,33 +577,37 @@ _psc_pool_get(struct psc_poolmgr *m, int flags)
 	int desperate = 0, locked, n;
 	void *p;
 
+	POOL_LOCK(m);
 	p = POOL_TRYGETOBJ(m);
 	if (p || (flags & PPGF_NONBLOCK))
-		return (p);
+		PFL_GOTOERR(gotitem, 0);
 
 	/* If this pool has a reclaimer routine, try that. */
 	if (m->ppm_reclaimcb) {
  tryreclaim:
+		POOL_ULOCK(m);
 		psc_pool_reap(m, desperate);
+		POOL_LOCK(m);
 
 		p = POOL_TRYGETOBJ(m);
 		if (p)
-			return (p);
+			PFL_GOTOERR(gotitem, 0);
 	}
 
 	/* If total < min, try to grow the pool. */
-	locked = POOL_RLOCK(m);
 	n = m->ppm_min - m->ppm_total;
-	POOL_URLOCK(m, locked);
 	if (n > 0) {
+		POOL_ULOCK(m);
 		psc_pool_grow(m, n);
+		POOL_LOCK(m);
+
 		p = POOL_TRYGETOBJ(m);
 		if (p)
-			return (p);
+			PFL_GOTOERR(gotitem, 0);
 	}
 
 	/* If autoresizable, try to grow the pool. */
-	while (_psc_pool_flagtest(m, PPMF_AUTO)) {
+	while (m->ppm_flags & PPMF_AUTO) {
 		/*
 		 * XXX we should increase by some % to amortize
 		 * allocation costs.
@@ -594,10 +616,13 @@ _psc_pool_get(struct psc_poolmgr *m, int flags)
 		 * adj = MIN(64, adj)
 		 * adj = PSC_ALIGN(adj, 8)
 		 */
+		POOL_ULOCK(m);
 		n = psc_pool_grow(m, 2); // MAX(1, m->ppm_total / 20)
+		POOL_LOCK(m);
+
 		p = POOL_TRYGETOBJ(m);
 		if (p)
-			return (p);
+			PFL_GOTOERR(gotitem, 0);
 
 		/* If we were unable to grow, stop. */
 		if (n == 0)
@@ -605,17 +630,25 @@ _psc_pool_get(struct psc_poolmgr *m, int flags)
 	}
 
 	/* If communal, try reaping other pools in sets. */
-	locked = reqlock(&m->ppm_master->pms_lock);
-	for (n = 0; n < psc_dynarray_len(&m->ppm_master->pms_sets); n++)
-		_psc_poolset_reap(psc_dynarray_getpos(
-		    &m->ppm_master->pms_sets, n), m->ppm_master,
-		    m->ppm_entsize);
-	ureqlock(&m->ppm_master->pms_lock, locked);
-	if (n) {
-		psc_pool_grow(m, 2);
-		p = POOL_TRYGETOBJ(m);
-		if (p)
-			return (p);
+	if (psc_dynarray_len(&m->ppm_master->pms_sets)) {
+		POOL_ULOCK(m);
+
+		locked = reqlock(&m->ppm_master->pms_lock);
+		for (n = 0; n < psc_dynarray_len(
+		    &m->ppm_master->pms_sets); n++)
+			_psc_poolset_reap(psc_dynarray_getpos(
+			    &m->ppm_master->pms_sets, n), m->ppm_master,
+			    m->ppm_entsize);
+		ureqlock(&m->ppm_master->pms_lock, locked);
+		if (n) {
+			psc_pool_grow(m, 2);
+
+			POOL_LOCK(m);
+			p = POOL_TRYGETOBJ(m);
+			if (p)
+				PFL_GOTOERR(gotitem, 0);
+		} else
+			POOL_LOCK(m);
 	}
 
 	/*
@@ -625,8 +658,10 @@ _psc_pool_get(struct psc_poolmgr *m, int flags)
 	 * moment.  This invocation should have been done in a multiwait
 	 * critical section to prevent dropping notifications.
 	 */
-	if (POOL_IS_MLIST(m))
-		return (POOL_TRYGETOBJ(m));
+	if (POOL_IS_MLIST(m)) {
+		p = POOL_TRYGETOBJ(m);
+		PFL_GOTOERR(gotitem, 0);
+	}
 
 	/*
 	 * If there is a reclaimer routine, invoke it consecutively
@@ -638,32 +673,48 @@ _psc_pool_get(struct psc_poolmgr *m, int flags)
 			goto tryreclaim;
 		}
 
-		POOL_LOCK(m);
 		p = POOL_TRYGETOBJ(m);
-		if (p) {
-			POOL_ULOCK(m);
-			return (p);
-		}
+		if (p)
+			PFL_GOTOERR(gotitem, 0);
 
 		/*
 		 * Before blindly retrying reclaim, sleep to reduce busy
 		 * waiting (unless someone returns a pool item during
 		 * our sleep).
 		 */
+		POOL_ULOCK(m);
 		psc_atomic32_inc(&m->ppm_nwaiters);
 		psc_waitq_waitrel_us(&m->ppm_lc.plc_wq_empty,
 		    &m->ppm_lc.plc_lock, 1000);
 		psc_atomic32_dec(&m->ppm_nwaiters);
 
+		POOL_LOCK(m);
 		p = POOL_TRYGETOBJ(m);
 		if (p)
-			return (p);
+			PFL_GOTOERR(gotitem, 0);
 
 		goto tryreclaim;
 	}
 
 	/* Nothing else we can do; wait for an item to return. */
 	return (lc_getwait(&m->ppm_lc));
+
+ gotitem:
+	if (p && m->ppm_reclaimcb && !m->ppm_nfree &&
+	    (m->ppm_flags & (PPMF_NOPREEMPT | PPMF_PREEMPTQ)) == 0 &&
+	    m != pfl_workrq_pool) {
+		struct pfl_wkdata_poolreap *wk;
+
+		wk = pfl_workq_getitem_nb(pfl_pool_reap_wkcb,
+		    struct pfl_wkdata_poolreap);
+		if (wk) {
+			m->ppm_flags |= PPMF_PREEMPTQ;
+			wk->poolmgr = m;
+			pfl_workq_putitem(wk);
+		}
+	}
+	POOL_ULOCK(m);
+	return (p);
 }
 
 /*
