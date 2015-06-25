@@ -60,7 +60,7 @@ int nlocks = 2000;
 int nrd = 8;
 int nwr = 3;
 
-struct psc_rwlock rw = PSC_RWLOCK_INIT;
+struct pfl_rwlock rw = pfl_rwlock_INIT;
 struct psclist_head thrs = PSCLIST_HEAD_INIT(thrs);
 const char *progname;
 
@@ -82,13 +82,13 @@ rd_main(void *arg)
 //			if (rc)
 //				usleep(1);
 //		} while (rc);
-		psc_rwlock_rdlock(&rw);
+		pfl_rwlock_rdlock(&rw);
 //		rc = pthread_rwlock_rdlock(&rw);
 //		if (rc != EBUSY)
 //			errx(1, "rdlock: %s", strerror(rc));
 
 		usleep(SLEEP_US);
-		psc_rwlock_unlock(&rw);
+		pfl_rwlock_unlock(&rw);
 		sched_yield();
 	}
 	return (NULL);
@@ -103,11 +103,11 @@ wr_main(void *arg)
 
 	for (; thr->st < nlocks; thr->st++) {
 		if (psc_random32u(10) == 3) {
-			psc_rwlock_rdlock(&rw);
+			pfl_rwlock_rdlock(&rw);
 			usleep(SLEEP_US);
-			psc_rwlock_unlock(&rw);
+			pfl_rwlock_unlock(&rw);
 		}
-		psc_rwlock_wrlock(&rw);
+		pfl_rwlock_wrlock(&rw);
 
 		rc = pthread_rwlock_tryrdlock(&rw.pr_rwlock);
 		if (rc != EBUSY)
@@ -134,7 +134,7 @@ wr_main(void *arg)
 #endif
 
 		usleep(SLEEP_US);
-		psc_rwlock_unlock(&rw);
+		pfl_rwlock_unlock(&rw);
 		sched_yield();
 		usleep(20 * SLEEP_US);
 	}

@@ -105,7 +105,7 @@ _psc_waitq_waitabs(struct psc_waitq *q, int flags, void *p,
 		if (flags & PFL_WAITQWF_MUTEX)
 			psc_mutex_unlock(p);
 		if (flags & PFL_WAITQWF_RWLOCK)
-			psc_rwlock_unlock(p);
+			pfl_rwlock_unlock(p);
 	}
 
 	if (abstime) {

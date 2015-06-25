@@ -75,7 +75,7 @@ int	_psc_mutex_tryreqlock(const struct pfl_callerinfo *, struct pfl_mutex *, int
 void	_psc_mutex_unlock(const struct pfl_callerinfo *, struct pfl_mutex *);
 void	_psc_mutex_ureqlock(const struct pfl_callerinfo *, struct pfl_mutex *, int);
 
-struct psc_rwlock {
+struct pfl_rwlock {
 	pthread_rwlock_t	pr_rwlock;
 	pthread_t		pr_writer;
 	struct psc_dynarray	pr_readers;
@@ -83,29 +83,29 @@ struct psc_rwlock {
 };
 
 #ifdef PTHREAD_RWLOCK_WRITER_NONRECURSIVE_INITIALIZER_NP
-# define PSC_RWLOCK_INIT		{ PTHREAD_RWLOCK_WRITER_NONRECURSIVE_INITIALIZER_NP, \
+# define pfl_rwlock_INIT		{ PTHREAD_RWLOCK_WRITER_NONRECURSIVE_INITIALIZER_NP, \
 					  0, DYNARRAY_INIT, SPINLOCK_INIT }
 #else
-# define PSC_RWLOCK_INIT		{ PTHREAD_RWLOCK_INITIALIZER, 0, DYNARRAY_INIT, SPINLOCK_INIT }
+# define pfl_rwlock_INIT		{ PTHREAD_RWLOCK_INITIALIZER, 0, DYNARRAY_INIT, SPINLOCK_INIT }
 #endif
 
-#define psc_rwlock_rdlock(rw)		_psc_rwlock_rdlock(PFL_CALLERINFO(), (rw))
-#define psc_rwlock_reqrdlock(rw)	_psc_rwlock_reqrdlock(PFL_CALLERINFO(), (rw))
-#define psc_rwlock_reqwrlock(rw)	_psc_rwlock_reqwrlock(PFL_CALLERINFO(), (rw))
-#define psc_rwlock_unlock(rw)		_psc_rwlock_unlock(PFL_CALLERINFO(), (rw))
-#define psc_rwlock_ureqlock(rw, lk)	_psc_rwlock_ureqlock(PFL_CALLERINFO(), (rw), (lk))
-#define psc_rwlock_wrlock(rw)		_psc_rwlock_wrlock(PFL_CALLERINFO(), (rw))
+#define pfl_rwlock_rdlock(rw)		_pfl_rwlock_rdlock(PFL_CALLERINFO(), (rw))
+#define pfl_rwlock_reqrdlock(rw)	_pfl_rwlock_reqrdlock(PFL_CALLERINFO(), (rw))
+#define pfl_rwlock_reqwrlock(rw)	_pfl_rwlock_reqwrlock(PFL_CALLERINFO(), (rw))
+#define pfl_rwlock_unlock(rw)		_pfl_rwlock_unlock(PFL_CALLERINFO(), (rw))
+#define pfl_rwlock_ureqlock(rw, lk)	_pfl_rwlock_ureqlock(PFL_CALLERINFO(), (rw), (lk))
+#define pfl_rwlock_wrlock(rw)		_pfl_rwlock_wrlock(PFL_CALLERINFO(), (rw))
 
-void	 psc_rwlock_destroy(struct psc_rwlock *);
-int	 psc_rwlock_hasrdlock(struct psc_rwlock *);
-int	 psc_rwlock_haswrlock(struct psc_rwlock *);
-void	 psc_rwlock_init(struct psc_rwlock *);
-void	_psc_rwlock_rdlock(const struct pfl_callerinfo *, struct psc_rwlock *);
-int	_psc_rwlock_reqrdlock(const struct pfl_callerinfo *, struct psc_rwlock *);
-int	_psc_rwlock_reqwrlock(const struct pfl_callerinfo *, struct psc_rwlock *);
-void	_psc_rwlock_unlock(const struct pfl_callerinfo *, struct psc_rwlock *);
-void	_psc_rwlock_ureqlock(const struct pfl_callerinfo *, struct psc_rwlock *, int);
-void	_psc_rwlock_wrlock(const struct pfl_callerinfo *, struct psc_rwlock *);
+void	 pfl_rwlock_destroy(struct pfl_rwlock *);
+int	 pfl_rwlock_hasrdlock(struct pfl_rwlock *);
+int	 pfl_rwlock_haswrlock(struct pfl_rwlock *);
+void	 pfl_rwlock_init(struct pfl_rwlock *);
+void	_pfl_rwlock_rdlock(const struct pfl_callerinfo *, struct pfl_rwlock *);
+int	_pfl_rwlock_reqrdlock(const struct pfl_callerinfo *, struct pfl_rwlock *);
+int	_pfl_rwlock_reqwrlock(const struct pfl_callerinfo *, struct pfl_rwlock *);
+void	_pfl_rwlock_unlock(const struct pfl_callerinfo *, struct pfl_rwlock *);
+void	_pfl_rwlock_ureqlock(const struct pfl_callerinfo *, struct pfl_rwlock *, int);
+void	_pfl_rwlock_wrlock(const struct pfl_callerinfo *, struct pfl_rwlock *);
 
 static __inline int
 psc_listhd_empty_mutex_locked(struct pfl_mutex *m, struct psclist_head *hd)
