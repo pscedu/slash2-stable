@@ -33,13 +33,18 @@ struct psc_poolmgr	*pfl_workrq_pool;
 struct psc_listcache	 pfl_workq;
 
 void *
-_pfl_workq_getitem(int (*cb)(void *), size_t len)
+_pfl_workq_getitem(int (*cb)(void *), size_t len, int flags)
 {
 	struct pfl_workrq *wk;
 	void *p;
 
 	psc_assert(len <= pfl_workrq_pool->ppm_entsize - sizeof(*wk));
-	wk = psc_pool_get(pfl_workrq_pool);
+	if (flags & PFL_WKF_NONBLOCK) {
+		wk = psc_pool_tryget(pfl_workrq_pool);
+		if (wk == NULL)
+			return (NULL);
+	} else
+		wk = psc_pool_get(pfl_workrq_pool);
 	wk->wkrq_cbf = cb;
 	p = PSC_AGP(wk, sizeof(*wk));
 	memset(p, 0, len);
