@@ -359,7 +359,9 @@ vpath %.l  $(sort $(dir $(filter %.l,${_TSRCS})))
 vpath %.cc $(sort $(dir $(filter %.cc,${_TSRCS})))
 vpath %.c  $(sort $(dir $(filter %.c,${_TSRCS})) ${OBJDIR})
 
-all: recurse-all all-hook
+_TDEPLIST=	$(subst :,@,${DEPLIST})
+
+all: ${_TDEPLIST} recurse-all all-hook
 	@for i in ${SRCS}; do						\
 		[ -n "$$i" ] || continue;				\
 		if ! [ -e "$$i" ]; then					\
@@ -367,13 +369,16 @@ all: recurse-all all-hook
 			exit 1;						\
 		fi;							\
 	done
-	@for i in ${DEPLIST}; do					\
-		(cd $${i%:*} && ${MAKE} $${i#*:}) || exit 1;		\
-	done
 	@if ${NOTEMPTY} "${TARGET}"; then				\
 		${MKDIRS} -m 775 ${OBJDIR};				\
 		${MAKE} ${TARGET};					\
 	fi
+
+${_TDEPLIST}:
+	@dep="$@";							\
+	dir="$${dep%@*}";						\
+	target="$${dep#*@}";						\
+	${MAKE} -C $$(readlink -f $${dir}) $${target}
 
 all-hook:
 
