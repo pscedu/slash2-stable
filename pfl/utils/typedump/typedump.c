@@ -234,6 +234,7 @@ main(int argc, char *argv[])
 	PRTYPE(struct pfl_odt_receipt);
 	PRTYPE(struct pfl_odt_stats);
 	PRTYPE(struct pfl_opstat);
+	PRTYPE(struct pfl_rwlock);
 	PRTYPE(struct pfl_strbuf);
 	PRTYPE(struct pfl_timespec);
 	PRTYPE(struct pfl_wk_thread);
@@ -288,7 +289,6 @@ main(int argc, char *argv[])
 	PRTYPE(struct psc_poolmaster);
 	PRTYPE(struct psc_poolmgr);
 	PRTYPE(struct psc_poolset);
-	PRTYPE(struct psc_rwlock);
 	PRTYPE(struct psc_spinlock);
 	PRTYPE(struct psc_streenode);
 	PRTYPE(struct psc_thread);
