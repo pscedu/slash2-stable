@@ -702,7 +702,7 @@ _psc_pool_get(struct psc_poolmgr *m, int flags)
  gotitem:
 	if (p && m->ppm_reclaimcb && !m->ppm_nfree &&
 	    (m->ppm_flags & (PPMF_NOPREEMPT | PPMF_PREEMPTQ)) == 0 &&
-	    m != pfl_workrq_pool) {
+	    m != pfl_workrq_pool && pfl_workrq_pool) {
 		struct pfl_wkdata_poolreap *wk;
 
 		wk = pfl_workq_getitem_nb(pfl_pool_reap_wkcb,
