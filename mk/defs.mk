@@ -23,6 +23,7 @@ MINVER=		${ROOTDIR}/tools/minver.pl
 PCPP=		${_PERLENV} ${CROOTDIR}/tools/pcpp.pl
 PICKLEGEN=	${ROOTDIR}/tools/pickle-gen.sh
 MKDIRS=		${ROOTDIR}/tools/mkdirs
+SYNCMAKE=	${ROOTDIR}/tools/syncmake
 XSLTPROC=	xsltproc
 XDC2TEX_XSL=	${ROOTDIR}/tools/lib/xdc2tex.xsl
 CLEAR_EOL=	(tput el || tput ce)

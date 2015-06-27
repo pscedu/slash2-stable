@@ -62,8 +62,6 @@ _LEXINTM=		$(patsubst %.l,%.c,$(addprefix ${OBJDIR}/,$(notdir $(filter %.l,${_TS
 _YACCINTM=		$(patsubst %.y,%.c,$(addprefix ${OBJDIR}/,$(notdir $(filter %.y,${_TSRCS}))))
 _C_SRCS=		$(filter %.c,${_TSRCS}) ${_YACCINTM} ${_LEXINTM}
 
-DOCGEN=			$(patsubst %.xdc,%.dvi,${DOC})
-
 LNET_SOCKLND_SRCS+=	${LNET_BASE}/ulnds/socklnd/conn.c
 LNET_SOCKLND_SRCS+=	${LNET_BASE}/ulnds/socklnd/handlers.c
 LNET_SOCKLND_SRCS+=	${LNET_BASE}/ulnds/socklnd/poll.c
@@ -250,13 +248,6 @@ ifneq ($(filter mpi,${MODULES}),)
   LDFLAGS+=	${MPILIBS}
 endif
 
-ifneq ($(filter qk,${MODULES}),)
-  CC=		${QKCC}
-  DEFINES+=	-DQK
-#INCLUDES+=	-I/opt/xt-mpt/default/mpich2-64/P2/include
-#LDFLAGS+=	-L/opt/xt-mpt/default/mpich2-64/P2/lib -lmpich
-endif
-
 ifneq ($(filter zcc,${MODULES}),)
   CC=		ZINCPATH=${ZEST_BASE}/intercept/include \
 		ZLIBPATH=${ZEST_BASE}/client/linux-mt ${ZEST_BASE}/scripts/zcc
@@ -359,9 +350,14 @@ vpath %.l  $(sort $(dir $(filter %.l,${_TSRCS})))
 vpath %.cc $(sort $(dir $(filter %.cc,${_TSRCS})))
 vpath %.c  $(sort $(dir $(filter %.c,${_TSRCS})) ${OBJDIR})
 
-_TDEPLIST=	$(subst :,@,${DEPLIST})
+_TDEPLIST=	$(addprefix dep-,$(subst :,@,${DEPLIST}))
 
-all: ${_TDEPLIST} recurse-all all-hook
+all: checksrcs ${_TDEPLIST} recurse-all all-hook ${OBJDIR} ${TARGET}
+
+${OBJDIR}:
+	@${MKDIRS} -m 775 ${OBJDIR}
+
+checksrcs:
 	@for i in ${SRCS}; do						\
 		[ -n "$$i" ] || continue;				\
 		if ! [ -e "$$i" ]; then					\
@@ -369,16 +365,12 @@ all: ${_TDEPLIST} recurse-all all-hook
 			exit 1;						\
 		fi;							\
 	done
-	@if ${NOTEMPTY} "${TARGET}"; then				\
-		${MKDIRS} -m 775 ${OBJDIR};				\
-		${MAKE} ${TARGET};					\
-	fi
 
 ${_TDEPLIST}:
-	@dep="$@";							\
+	@dep="$(patsubst dep-%,%,$@)";					\
 	dir="$${dep%@*}";						\
 	target="$${dep#*@}";						\
-	${MAKE} -C $$(readlink -f $${dir}) $${target}
+	${SYNCMAKE} "$$dir" "${MAKE}" -C "$$dir" $${target}
 
 all-hook:
 
@@ -389,32 +381,27 @@ all-hook:
 # XXX this doesn't seem to work as advertised
 .SILENT: ${OBJDIR}/$(notdir %.d)
 
-${OBJDIR}/$(notdir %.o) : %.cc
-	@${MKDIRS} -m 775 ${OBJDIR}
+${OBJDIR}/$(notdir %.o) : %.cc | ${OBJDIR}
 	${PCPP} ${PCPP_FLAGS} $(call FILE_PCPP_FLAGS,$<) $(realpath $<	\
 	    ) | ${CXX} -x c++ ${CFLAGS} $(call FILE_CFLAGS,$<) $(	\
 	    ) $(filter-out ${_EXCLUDES},-I$(realpath $(dir $<))/) - -c -o $@ -MD -MP
 
-${OBJDIR}/$(notdir %.o) : %.c
-	@${MKDIRS} -m 775 ${OBJDIR}
+${OBJDIR}/$(notdir %.o) : %.c | ${OBJDIR}
 	${PCPP} ${PCPP_FLAGS} $(call FILE_PCPP_FLAGS,$<) $(realpath $<	\
 	    ) | ${CC} -x c ${CFLAGS} $(call FILE_CFLAGS,$<) $(		\
 	    ) $(filter-out ${_EXCLUDES},-I$(realpath $(dir $<))/) - -c -o $@ -MD -MP
 
-${OBJDIR}/$(notdir %.E) : %.c
-	@${MKDIRS} -m 775 ${OBJDIR}
+${OBJDIR}/$(notdir %.E) : %.c | ${OBJDIR}
 	${CC} ${CFLAGS} $(call FILE_CFLAGS,$<) $(realpath $<) $(	\
 	    ) $(filter-out ${_EXCLUDES},-I$(realpath $(dir $<))/) -E -o $@
 
-${OBJDIR}/$(notdir %.c) : %.l
-	@${MKDIRS} -m 775 ${OBJDIR}
+${OBJDIR}/$(notdir %.c) : %.l | ${OBJDIR}
 	${LEX} ${LFLAGS} $(realpath $<) > $@
 
 #	$(eval $$(call FILE_PCPP_FLAGS_VARNAME,$@)+=$$(call FILE_PCPP_FLAGS,$<))
 #	$(eval $$(call FILE_CFLAGS_VARNAME,$@)+=$$(call FILE_CFLAGS,$<))
 
-${OBJDIR}/$(notdir %.c) : %.y
-	@${MKDIRS} -m 775 ${OBJDIR}
+${OBJDIR}/$(notdir %.c) : %.y | ${OBJDIR}
 	${YACC} ${YFLAGS} -o $@ $(realpath $<)
 
 ifdef PROG
@@ -434,9 +421,6 @@ ifdef SHLIB
   ${SHLIB}: ${OBJS}
 	${CC} -shared -o $@ ${LDFLAGS} $(sort ${OBJS})
 endif
-
-${OBJDIR}/$(notdir %.tex) : %.xdc
-	${XSLTPROC} -o $@ ${XDC2TEX_XSL} $<
 
 %.dvi : ${OBJDIR}/$(notdir %.tex)
 	${TEX} -output-directory=. $<
@@ -500,9 +484,6 @@ install: recurse-install install-hook
 			${INST} -m 444 $$i $$dir/;			\
 		done;							\
 	fi
-#	@for i in ${DEPLIST}; do					\
-#		(cd $${i%:*} && ${MAKE} $${i#*:}) || exit 1;		\
-#	done
 
 clean-hook:
 
