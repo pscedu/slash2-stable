@@ -19,7 +19,7 @@ makelocked()
 	mv -n $tmpfn $fn
 	[ -e $tmpfn ] || return 1
 	read pid < $fn
-	[ -n "$pid" ] && ps -p $pid || rm -f $fn
+	[ -n "$pid" ] && ps -p $pid >/dev/null || rm -f $fn
 	return 0
 }
 
@@ -30,7 +30,7 @@ cleanup()
 
 trap cleanup EXIT
 while makelocked; do
-	vsleep .25
+	vsleep .33
 done
 
 tmpfn=$fn
