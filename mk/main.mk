@@ -352,7 +352,14 @@ vpath %.c  $(sort $(dir $(filter %.c,${_TSRCS})) ${OBJDIR})
 
 _TDEPLIST=	$(addprefix dep-,$(subst :,@,${DEPLIST}))
 
-all: checksrcs ${_TDEPLIST} recurse-all all-hook ${OBJDIR} ${TARGET}
+all: checksrcs ${_TDEPLIST} recurse-all all-hook ${OBJDIR}
+	@if ${NOTEMPTY} "${TARGET}"; then				\
+		${MAKE} ${TARGET};					\
+	fi
+
+# XXX although these aren't real targets and should be marked PHONY,
+# enabling this line causes nothing to actually build correctly.
+#.PHONY: checksrcs ${_TDEPLIST} all recurse-all all-hook $(addprefix dir-,${SUBDIRS})
 
 ${OBJDIR}:
 	@${MKDIRS} -m 775 ${OBJDIR}
