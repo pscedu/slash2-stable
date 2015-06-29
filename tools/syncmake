@@ -30,5 +30,5 @@ while makelocked >/dev/null 2>&1; do
 	vsleep .1
 done
 
-trap cleanup EXIT
+trap cleanup EXIT HUP INT
 "$@"
