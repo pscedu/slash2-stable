@@ -682,7 +682,6 @@ _psc_pool_get(struct psc_poolmgr *m, int flags)
 		 * waiting (unless someone returns a pool item during
 		 * our sleep).
 		 */
-		POOL_ULOCK(m);
 		psc_atomic32_inc(&m->ppm_nwaiters);
 		psc_waitq_waitrel_us(&m->ppm_lc.plc_wq_empty,
 		    &m->ppm_lc.plc_lock, 1000);
