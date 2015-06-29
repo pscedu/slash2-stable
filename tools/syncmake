@@ -4,7 +4,6 @@ dir=$1
 shift
 
 fn=$dir/.makepid
-tmpfn=$dir/.makepid.$$
 
 vsleep()
 {
@@ -15,24 +14,21 @@ makelocked()
 {
 	local pid
 
-	echo $$ > $tmpfn
-	mv -n $tmpfn $fn
-	[ -e $tmpfn ] || return 1
+	echo $$ > $fn && return 1
 	read pid < $fn
-	[ -n "$pid" ] && ps -p $pid >/dev/null || rm -f $fn
+	[ -n "$pid" ] && ps -p $pid || rm -f $fn
 	return 0
 }
 
 cleanup()
 {
-	rm -f $tmpfn
+	rm -f $fn
 }
 
-trap cleanup EXIT
-while makelocked; do
-	vsleep .33
+set -C
+while makelocked >/dev/null 2>&1; do
+	vsleep .1
 done
 
-tmpfn=$fn
-
+trap cleanup EXIT
 "$@"
