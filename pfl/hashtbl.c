@@ -219,27 +219,30 @@ psc_hashbkt_get(struct psc_hashtbl *t, const void *key)
 }
 
 void *
-_psc_hashtbl_search(struct psc_hashtbl *t, int flags, const void *cmp,
+_psc_hashtbl_search(struct psc_hashtbl *t, int flags,
+    int (*cmpf)(const void *, const void *), const void *cmp,
     void (*cbf)(void *, void *), void *arg, const void *key)
 {
 	struct psc_hashbkt *b;
 	void *p;
 
 	b = psc_hashbkt_get(t, key);
-	p = _psc_hashbkt_search(t, b, flags, cmp, cbf, arg, key);
+	p = _psc_hashbkt_search(t, b, flags, cmpf, cmp, cbf, arg, key);
 	psc_hashbkt_put(t, b);
 	return (p);
 }
 
 void *
 _psc_hashbkt_search(struct psc_hashtbl *t, struct psc_hashbkt *b,
-    int flags, const void *cmp, void (*cbf)(void *, void *), void *arg,
-    const void *key)
+    int flags, int (*cmpf)(const void *, const void *), const void *cmp,
+    void (*cbf)(void *, void *), void *arg, const void *key)
 {
 	void *p, *pk;
 	int locked;
 
-	if (t->pht_cmpf)
+	if (cmpf == NULL)
+		cmpf = t->pht_cmpf;
+	if (cmpf)
 		psc_assert(cmp);
 	else
 		psc_assert(cmp == NULL);
@@ -254,7 +257,7 @@ _psc_hashbkt_search(struct psc_hashtbl *t, struct psc_hashbkt *b,
 				continue;
 		} else if (*(uint64_t *)key != *(uint64_t *)pk)
 			continue;
-		if (t->pht_cmpf == NULL || t->pht_cmpf(cmp, p)) {
+		if (cmpf == NULL || cmpf(cmp, p)) {
 			if (cbf)
 				cbf(p, arg);
 			break;

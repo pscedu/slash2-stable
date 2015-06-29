@@ -139,7 +139,7 @@ _psc_getpma(void *p)
 
 	memset(&key, 0, sizeof(key));
 	key.p = p;
-	pma = psc_hashtbl_searchdel(&psc_memallocs, NULL, &key);
+	pma = psc_hashtbl_searchdel(&psc_memallocs, &key);
 	psc_assert(pma);
 	return (pma);
 }

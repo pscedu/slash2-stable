@@ -202,7 +202,7 @@ pscrpc_request_in_callback(lnet_event_t *ev)
 	if (svc->srv_count_peer_qlens) {
 		struct pscrpc_peer_qlen *pq;
 
-		pq = _psc_hashtbl_search(&svc->srv_peer_qlentab, 0,
+		pq = psc_hashtbl_search_cmpcb(&svc->srv_peer_qlentab,
 		    &req->rq_peer, pscrpc_bump_peer_qlen, NULL,
 		    &req->rq_peer.nid);
 		if (pq == NULL) {
@@ -220,9 +220,10 @@ pscrpc_request_in_callback(lnet_event_t *ev)
 			 */
 			b = psc_hashbkt_get(&svc->srv_peer_qlentab,
 			    &req->rq_peer.nid);
-			pq = _psc_hashbkt_search(&svc->srv_peer_qlentab,
-			    b, 0, &req->rq_peer, pscrpc_bump_peer_qlen,
-			    NULL, &req->rq_peer.nid);
+			pq = psc_hashbkt_search_cmpcb(
+			    &svc->srv_peer_qlentab, b, &req->rq_peer,
+			    pscrpc_bump_peer_qlen, NULL,
+			    &req->rq_peer.nid);
 			if (pq == NULL) {
 				psc_hashbkt_add_item(
 				    &svc->srv_peer_qlentab, b, tpq);
