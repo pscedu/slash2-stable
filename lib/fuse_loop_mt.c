@@ -12,7 +12,6 @@
 #include "fuse_i.h"
 
 #ifdef HAVE_NUMA
-#include <cpuset.h>
 #include <err.h>
 #include <numa.h>
 #endif
@@ -110,7 +109,7 @@ static void *fuse_do_work(void *data)
 
 	if (fuse_thread_init)
 		fuse_thread_init(w->bindnode);
-#endif 
+#endif
 
 	while (!fuse_session_exited(mt->se)) {
 		int isforget = 0;
@@ -274,7 +273,6 @@ int fuse_session_loop_mt(struct fuse_session *se)
 #ifdef HAVE_NUMA
 	int i, j, nnodes;
 	struct bitmask *nm;
-	struct cpuset *cs;
 #endif
 
 	memset(&mt, 0, sizeof(struct fuse_mt));
@@ -293,15 +291,13 @@ int fuse_session_loop_mt(struct fuse_session *se)
 	fuse_mutex_init(&mt.lock);
 
 #ifdef HAVE_NUMA
-# define PATH_CS_ROOT "/"
 
+	if (numa_available() == -1) {
+		warn("NUMA support not available");
+		goto nonuma;
+	}
 	nnodes = numa_max_node();
-	cs = cpuset_alloc();
-	nm = numa_allocate_nodemask();
-	if (cpuset_query(cs, PATH_CS_ROOT) == -1)
-		errx(1, "unable to query root cpuset");
-	if (cpuset_getmems(cs, nm) == -1)
-		errx(1, "unable to query memnodes on root cpuset");
+	nm = numa_all_nodes_ptr;
 	pthread_mutex_lock(&mt.lock);
 	for (i = err = 0; i < nnodes; i++) {
 		if (numa_bitmask_isbitset(nm, i)) {
@@ -314,13 +310,13 @@ int fuse_session_loop_mt(struct fuse_session *se)
 		}
 	}
 	pthread_mutex_unlock(&mt.lock);
-	cpuset_free(cs);
 	numa_free_nodemask(nm);
+ nonuma:
 #else
 	pthread_mutex_lock(&mt.lock);
 	err = fuse_loop_start_thread(&mt, 0);
 	pthread_mutex_unlock(&mt.lock);
-#endif 
+#endif
 
 	if (!err) {
 		/* sem_wait() is interruptible */
