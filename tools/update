@@ -45,6 +45,7 @@ usage()
 	exit 1
 }
 
+shopt -s nullglob
 reldir=
 while getopts "D:" c; do
 	case $c in
@@ -54,10 +55,10 @@ while getopts "D:" c; do
 done
 shift $(($OPTIND - 1))
 
-extra_repos=
+repos=( */.git inf/*/.git distrib/*/.git )
 case $1 in
 scm-fetch:*)
-	extra_repos=${1#scm-fetch:}
+	repos=${1#scm-fetch:}
 	GIT_ACTION=clone
 	;;
 scm-update)
@@ -102,7 +103,7 @@ _accrepo()
 			    warn "accessing $dir failed"
 		fi
 
-	elif [ x"$GIT_ACTION" = x"fetch" ]; then
+	elif [ x"$GIT_ACTION" = x"clone" ]; then
 		cd ..
 		echorun git clone $url $base
 		[ -e $base/.dep ] || continue
@@ -123,7 +124,7 @@ access_repo()
 	access_repo_async https://github.com/pscedu/${1//\//.}.git $1
 }
 
-for repo in */.git inf/*/.git distrib/*/.git $extra_repos; do
+for repo in ${repos[@]}; do
 	access_repo ${repo%/.git}
 done
 
