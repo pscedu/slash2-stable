@@ -58,7 +58,7 @@ shift $(($OPTIND - 1))
 repos=( */.git inf/*/.git distrib/*/.git )
 case $1 in
 scm-fetch:*)
-	repos=${1#scm-fetch:}
+	repos=(${1#scm-fetch:})
 	GIT_ACTION=clone
 	;;
 scm-update)
