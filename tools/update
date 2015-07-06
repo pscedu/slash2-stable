@@ -93,7 +93,7 @@ _accrepo()
 			if [ x"$dir" = x"pfl" ]; then
 				git $GIT_ACTION
 			else
-				git $GIT_ACTION | perl -pe "s^(?<=\S)\s(?=\S)^\t$dir/^"
+				git $GIT_ACTION | perl -pe "s^(?<=\S)\s+(?=\S)^\t$dir/^"
 			fi
 		else
 			git $GIT_ACTION || \
