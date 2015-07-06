@@ -45,6 +45,7 @@ usage()
 	exit 1
 }
 
+shopt -s nullglob
 reldir=
 while getopts "D:" c; do
 	case $c in
@@ -54,7 +55,12 @@ while getopts "D:" c; do
 done
 shift $(($OPTIND - 1))
 
+repos=( */.git inf/*/.git distrib/*/.git )
 case $1 in
+scm-fetch:*)
+	repos=(${1#scm-fetch:})
+	GIT_ACTION=clone
+	;;
 scm-update)
 	GIT_ACTION=pull
 	;;
@@ -72,7 +78,7 @@ echorun()
 	"$@"
 }
 
-_getrepo()
+_accrepo()
 {
 	local url=$1
 	local dir=$2
@@ -80,11 +86,9 @@ _getrepo()
 
 	if [ -n "$reldir" ]; then
 		[ x"$reldir" = x"$dir" ] || return 0
-	else
-		if [ x"$dir" != x"pfl" ]; then
-			mkdir -p $dir
-			cd $dir
-		fi
+	elif [ x"$dir" != x"pfl" ]; then
+		mkdir -p $dir
+		cd $dir
 	fi
 
 	if [ -e .git ]; then
@@ -92,55 +96,36 @@ _getrepo()
 			if [ x"$dir" = x"pfl" ]; then
 				git $GIT_ACTION
 			else
-				git $GIT_ACTION | perl -pe "s^(?<=\S)\s(?=\S)^\t$dir/^"
+				git $GIT_ACTION | perl -pe "s^(?<=\S)\s+(?=\S)^\t$dir/^"
 			fi
 		else
 			git $GIT_ACTION || \
 			    warn "accessing $dir failed"
 		fi
 
-	elif [ x"$GIT_ACTION" = x"pull" ]; then
+	elif [ x"$GIT_ACTION" = x"clone" ]; then
 		cd ..
 		echorun git clone $url $base
+		[ -e $base/.dep ] || continue
+		for repo in $(cat $base/.dep); do
+			[ -e $repo ] && continue
+			access_repo $repo
+		done
 	fi
 }
 
-getrepo()
+access_repo_async()
 {
-	_getrepo "$@" &
+	_accrepo "$@" &
 }
 
-pubrepo()
+access_repo()
 {
-	base=$1
-	[ $# -eq 2 ] && base=$2
-	getrepo https://github.com/pscedu/${1//\//.}.git $base
+	access_repo_async https://github.com/pscedu/${1//\//.}.git $1
 }
 
-pubrepo adaptfs
-pubrepo conga
-pubrepo distrib/fuse
-pubrepo distrib/gcrcutil
-pubrepo distrib/iozone
-pubrepo distrib/libs3
-pubrepo distrib/posix-fstest
-pubrepo distrib/spiobench
-pubrepo distrib/stumbleupon-tcollector
-pubrepo idxutils
-pubrepo jives
-pubrepo mfio
-pubrepo psync
-pubrepo sft
-pubrepo slash2
-pubrepo src-upd
-pubrepo wokfs
-pubrepo xopctl
-pubrepo zfs-fuse zfs
-
-for i in $dir/inf/*/update.sh; do
-	[ -e $i ] && . $i
+for repo in ${repos[@]}; do
+	access_repo ${repo%/.git}
 done
-
-pubrepo pfl
 
 exwait

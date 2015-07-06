@@ -668,6 +668,7 @@ pscfs_inum_reclaim(struct psc_poolmgr *m, int n)
 #endif
 
 #ifndef __LP64__
+/* convert a 32-bit system inum to a 64-bit pscfs inum */
 pscfs_inum_t
 pscfs_inum_fuse2pscfs(fuse_ino_t f_inum, int del)
 {
@@ -708,6 +709,7 @@ pscfs_inum_fuse2pscfs(fuse_ino_t f_inum, int del)
 		timeradd((tv), &_tv, (tv));				\
 	} while (0)
 
+/* convert a 64-bit pscfs inum to a 32-bit system inum */
 fuse_ino_t
 pscfs_inum_pscfs2fuse(pscfs_inum_t p_inum, double timeo)
 {

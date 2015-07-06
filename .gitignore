@@ -1,14 +1,4 @@
-adaptfs
-conga
-idxutils
-jives
-mfio
+distrib
+inf
 mk/gen-localdefs-*-pickle.mk
-psync
-sft
-slash2
-src-upd
-wokfs
-xopctl
-zest
-zfs
+*/

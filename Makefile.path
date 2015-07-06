@@ -3,13 +3,9 @@
 
 LNET_BASE=	${ROOTDIR}/lnet-lite
 PFL_BASE=	${ROOTDIR}/pfl
-SLASH_BASE=	${ROOTDIR}/slash2
-ZEST_BASE=	${ROOTDIR}/zest
-ZFS_BASE=	${ROOTDIR}/zfs
-GCRC_BASE=	${ROOTDIR}/distrib/gcrcutil/src
 
 MAINMK=		${ROOTDIR}/mk/main.mk
 PFLMK=		${PFL_BASE}/mk/main.mk
-SLASHMK=	${SLASH_BASE}/mk/main.mk
-ZESTMK=		${ZEST_BASE}/mk/main.mk
-OBSD_REGRESS_MK=${ROOTDIR}/../distrib/obsd.regress/main.mk
+
+-include ${ROOTDIR}/distrib/*/mk/dep.mk
+-include ${ROOTDIR}/*/mk/dep.mk
