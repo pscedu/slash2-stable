@@ -54,8 +54,10 @@ while getopts "D:" c; do
 done
 shift $(($OPTIND - 1))
 
+extra_repos=
 case $1 in
-scm-fetch)
+scm-fetch:*)
+	extra_repos=${1#scm-fetch:}
 	GIT_ACTION=clone
 	;;
 scm-update)
@@ -121,7 +123,7 @@ access_repo()
 	access_repo_async https://github.com/pscedu/${1//\//.}.git $1
 }
 
-for repo in */.git inf/*/.git distrib/*/.git; do
+for repo in */.git inf/*/.git distrib/*/.git $extra_repos; do
 	access_repo ${repo%/.git}
 done
 
