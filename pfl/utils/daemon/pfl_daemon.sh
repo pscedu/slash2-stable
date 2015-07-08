@@ -88,6 +88,7 @@ apply_host_prefs()
 			vprint "scanning profiles from $fn"
 			[ $# -eq 0 ] && die "unknown deployment: ${av[0]}"
 			for ln; do
+				vprint '  + ' $ln ${av[@]}
 				loadprof $ln ${av[@]} || continue
 				vprint "deployment $prof, host $host"
 				return
