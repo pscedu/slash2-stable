@@ -9,4 +9,4 @@ __BEGIN_DECLS
 int	strnvis(char *, const char *, size_t, int);
 __END_DECLS
 
-#endif /* _PFL_COMPAT_STRNVIS_H_ */ 
+#endif /* _PFL_COMPAT_STRNVIS_H_ */
