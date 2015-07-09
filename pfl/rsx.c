@@ -163,7 +163,6 @@ rsx_bulkserver(struct pscrpc_request *rq, int type, int ptl,
 			DEBUG_REQ(PLL_ERROR, rq, "%s bulk GET %d(%d)",
 			    desc->bd_success ? "truncated" : "network error on",
 			    desc->bd_nob_transferred, desc->bd_nob);
-			/* XXX should this be a different errno? */
 			rc = -ETIMEDOUT;
 		}
 	} else {
