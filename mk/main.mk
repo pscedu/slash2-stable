@@ -362,7 +362,7 @@ all: checksrcs ${_TDEPLIST} recurse-all all-hook ${OBJDIR}
 #.PHONY: checksrcs ${_TDEPLIST} all recurse-all all-hook $(addprefix dir-,${SUBDIRS})
 
 ${OBJDIR}:
-	@${MKDIRS} -m 775 ${OBJDIR}
+	@${MKDIRS} -m 2775 ${OBJDIR}
 
 checksrcs:
 	@for i in ${SRCS}; do						\
