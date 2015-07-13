@@ -64,7 +64,7 @@
 #include "pfl/hashtbl.h"
 #include "pfl/heap.h"
 #include "pfl/hostname.h"
-#include "pfl/iostats.h"
+#include "pfl/opstats.h"
 #include "pfl/journal.h"
 #include "pfl/list.h"
 #include "pfl/listcache.h"

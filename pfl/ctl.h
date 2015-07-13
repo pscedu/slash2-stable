@@ -38,7 +38,7 @@
 #include "pfl/explist.h"
 #include "pfl/fault.h"
 #include "pfl/hashtbl.h"
-#include "pfl/iostats.h"
+#include "pfl/opstats.h"
 #include "pfl/journal.h"
 #include "pfl/listcache.h"
 #include "pfl/meter.h"

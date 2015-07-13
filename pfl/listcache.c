@@ -29,7 +29,7 @@
 
 #include <stdarg.h>
 
-#include "pfl/iostats.h"
+#include "pfl/opstats.h"
 #include "pfl/listcache.h"
 #include "pfl/lockedlist.h"
 #include "pfl/log.h"

@@ -45,7 +45,7 @@
 #include <unistd.h>
 #include <sys/syscall.h>
 
-#include "pfl/iostats.h"
+#include "pfl/opstats.h"
 
 int
 usocklnd_notifier_handler(int fd)

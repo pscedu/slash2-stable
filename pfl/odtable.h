@@ -43,7 +43,7 @@
 
 #include "pfl/crc.h"
 #include "pfl/err.h"
-#include "pfl/iostats.h"
+#include "pfl/opstats.h"
 #include "pfl/list.h"
 #include "pfl/lock.h"
 #include "pfl/lockedlist.h"

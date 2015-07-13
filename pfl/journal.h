@@ -30,7 +30,7 @@
 
 #include "pfl/atomic.h"
 #include "pfl/dynarray.h"
-#include "pfl/iostats.h"
+#include "pfl/opstats.h"
 #include "pfl/lock.h"
 #include "pfl/thread.h"
 #include "pfl/waitq.h"

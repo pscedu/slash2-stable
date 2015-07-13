@@ -54,7 +54,7 @@
 #include "pfl/fault.h"
 #include "pfl/fmtstr.h"
 #include "pfl/hashtbl.h"
-#include "pfl/iostats.h"
+#include "pfl/opstats.h"
 #include "pfl/journal.h"
 #include "pfl/list.h"
 #include "pfl/listcache.h"
