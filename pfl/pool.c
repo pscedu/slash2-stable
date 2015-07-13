@@ -242,6 +242,8 @@ _psc_poolmaster_initmgr(struct psc_poolmaster *p, struct psc_poolmgr *m)
 	    "pool.%s.shrinks", m->ppm_name);
 	m->ppm_opst_returns = pfl_opstat_initf(OPSTF_BASE10,
 	    "pool.%s.returns", m->ppm_name);
+	m->ppm_opst_preaps = pfl_opstat_initf(OPSTF_BASE10,
+	    "pool.%s.preaps", m->ppm_name);
 
 	n = p->pms_total;
 	ureqlock(&p->pms_lock, locked);
@@ -509,22 +511,6 @@ psc_pool_reapmem(size_t size)
 }
 
 /*
- * Test pool state.
- * @m: pool to inspect.
- * @flags: flags to check.
- */
-__static int
-_psc_pool_flagtest(struct psc_poolmgr *m, int flags)
-{
-	int rc, locked;
-
-	locked = POOL_RLOCK(m);
-	rc = m->ppm_flags & flags;
-	POOL_URLOCK(m, locked);
-	return (rc);
-}
-
-/*
  * Try to grab an item from a pool, failing if none are immediately
  * available.
  * @m: the pool manager.
@@ -710,6 +696,7 @@ _psc_pool_get(struct psc_poolmgr *m, int flags)
 			m->ppm_flags |= PPMF_PREEMPTQ;
 			wk->poolmgr = m;
 			pfl_workq_putitem(wk);
+			pfl_opstat_incr(m->ppm_opst_preaps);
 		}
 	}
 	POOL_ULOCK(m);
