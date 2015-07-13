@@ -45,7 +45,7 @@
 #include "pfl/crc.h"
 #include "pfl/fcntl.h"
 #include "pfl/fmt.h"
-#include "pfl/iostats.h"
+#include "pfl/opstats.h"
 #include "pfl/listcache.h"
 #include "pfl/lock.h"
 #include "pfl/log.h"
