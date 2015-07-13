@@ -8,7 +8,7 @@
 #include "pfl/alloc.h"
 #include "pfl/fs.h"
 #include "pfl/fsmod.h"
-#include "pfl/iostats.h"
+#include "pfl/opstats.h"
 #include "pfl/thread.h"
 #include "pfl/timerthr.h"
 
