@@ -209,11 +209,15 @@ usocklnd_check_peer_stale(lnet_ni_t *ni, lnet_process_id_t id)
 
         if (cfs_atomic_read(&peer->up_refcount) == 2) {
                 int i;
+
                 for (i = 0; i < N_CONN_TYPES; i++)
                         LASSERT (peer->up_conns[i] == NULL);
 
+		pfl_opstat_destroy(peer->up_iostats.rd);
+		pfl_opstat_destroy(peer->up_iostats.wr); 
+
                 list_del(&peer->up_list);                        
-                
+
                 if (peer->up_errored &&
                     (peer->up_peerid.pid & LNET_PID_USERFLAG) == 0)
                         lnet_notify (peer->up_ni, peer->up_peerid.nid, 0,
@@ -641,9 +645,6 @@ usocklnd_destroy_peer(usock_peer_t *peer)
 		lnet_enq_event_locked(eq, &ev);
 	}
 	LNET_UNLOCK(); 
-
-	pfl_opstat_destroy(peer->up_iostats.rd);
-	pfl_opstat_destroy(peer->up_iostats.wr);
 
 	pthread_mutex_destroy(&peer->up_lock); 
 
