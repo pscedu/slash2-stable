@@ -45,7 +45,7 @@
 #include <sys/time.h>
 #include <sys/resource.h>
 
-#include "pfl/iostats.h"
+#include "pfl/opstats.h"
 #include "pfl/pool.h"
 
 struct pfl_iostats_rw	usock_pasv_iostats;	/* passive interface */

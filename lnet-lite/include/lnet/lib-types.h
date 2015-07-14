@@ -61,7 +61,7 @@
 #include <libcfs/list.h>
 #include <lnet/types.h>
 
-#include "pfl/iostats.h"
+#include "pfl/opstats.h"
 
 #define WIRE_ATTR	__attribute__((packed))
 

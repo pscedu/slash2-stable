@@ -40,7 +40,7 @@
 #include "pfl/crc.h"
 #include "pfl/dynarray.h"
 #include "pfl/fcntl.h"
-#include "pfl/iostats.h"
+#include "pfl/opstats.h"
 #include "pfl/journal.h"
 #include "pfl/lock.h"
 #include "pfl/pool.h"

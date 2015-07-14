@@ -30,7 +30,7 @@
 #include <string.h>
 
 #include "pfl/alloc.h"
-#include "pfl/iostats.h"
+#include "pfl/opstats.h"
 #include "pfl/lockedlist.h"
 #include "pfl/log.h"
 #include "pfl/str.h"

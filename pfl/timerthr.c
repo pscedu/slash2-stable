@@ -33,7 +33,7 @@
 
 #include "pfl/atomic.h"
 #include "pfl/cdefs.h"
-#include "pfl/iostats.h"
+#include "pfl/opstats.h"
 #include "pfl/lockedlist.h"
 #include "pfl/thread.h"
 #include "pfl/time.h"

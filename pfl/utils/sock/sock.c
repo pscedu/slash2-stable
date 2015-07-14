@@ -50,7 +50,7 @@
 #include "pfl/atomic.h"
 #include "pfl/cdefs.h"
 #include "pfl/fmt.h"
-#include "pfl/iostats.h"
+#include "pfl/opstats.h"
 #include "pfl/log.h"
 #include "pfl/net.h"
 #include "pfl/pfl.h"

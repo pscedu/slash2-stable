@@ -27,6 +27,7 @@
 
 #include <string.h>
 
+#include "pfl/err.h"
 #include "pfl/log.h"
 #include "pfl/rpc.h"
 #include "pfl/rpclog.h"
@@ -50,7 +51,7 @@ pscrpc_nbreqset_add(struct pscrpc_request_set *set,
 	rc = pscrpc_push_req(rq);
 	if (rc) {
 		DEBUG_REQ(PLL_ERROR, rq, "send failure: %s",
-		    strerror(rc));
+		    pfl_strerror(rc));
 	} else {
 		/*
 		 * Adding after is OK because it will sit on the list

@@ -55,10 +55,10 @@ while getopts "D:" c; do
 done
 shift $(($OPTIND - 1))
 
-repos=( */.git inf/*/.git distrib/*/.git )
+repos=( pfl */.git inf/*/.git distrib/*/.git )
 case $1 in
 scm-fetch:*)
-	repos=(${1#scm-fetch:})
+	repos=($(echo ${1#scm-fetch:} | tr . /))
 	GIT_ACTION=clone
 	;;
 scm-update)

@@ -46,7 +46,7 @@
 #include <lnet/lib-lnet.h>
 #include <lnet/socklnd.h>
 
-#include "pfl/iostats.h"
+#include "pfl/opstats.h"
 
 typedef struct {
         struct list_head tx_list;    /* neccessary to form tx list */

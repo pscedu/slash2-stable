@@ -66,6 +66,7 @@ pfl_random_getbytes(void *p, size_t len)
 				psc_fatal("read %s", _PATH_URANDOM);
 			if (rc == 0)
 				psc_fatalx("EOF on %s", _PATH_URANDOM);
+			// XXX check early return
 			pos = buf;
 		}
 

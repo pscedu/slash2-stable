@@ -111,6 +111,7 @@ struct psc_poolmgr {
 	struct pfl_opstat	 *ppm_opst_grows;
 	struct pfl_opstat	 *ppm_opst_shrinks;
 	struct pfl_opstat	 *ppm_opst_returns;
+	struct pfl_opstat	 *ppm_opst_preaps;
 
 	/* routines to initialize, teardown, & reclaim pool entries */
 	int			(*ppm_initf)(struct psc_poolmgr *, void *);
