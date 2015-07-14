@@ -682,7 +682,9 @@ _psc_pool_get(struct psc_poolmgr *m, int flags)
 	}
 
 	/* Nothing else we can do; wait for an item to return. */
-	return (lc_getwait(&m->ppm_lc));
+	p = lc_getwait(&m->ppm_lc);
+	POOL_ULOCK(m);
+	return (p);
 
  gotitem:
 	if (p && m->ppm_reclaimcb && !m->ppm_nfree &&
