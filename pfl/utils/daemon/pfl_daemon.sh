@@ -246,8 +246,8 @@ rundaemon()
 	vprint "launching daemon"
 
 	if [ $nodaemonize -eq 0 ]; then
-		_rundaemon "$@" &
-		disown
+		(_rundaemon "$@" 0<&- &>/dev/null &) &
+		disown -a
 	else
 		_rundaemon "$@"
 	fi
