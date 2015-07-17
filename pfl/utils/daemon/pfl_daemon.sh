@@ -54,7 +54,9 @@ loadprof()
 		narg=*)	narg=${fl#narg=};;
 		share)	;;
 		tag=*)	[ x"$1" = x"${fl#tag=}" ] || return 1 ;;
-		*)	export $fl;;
+		[A-Z][A-Z_]*=*)
+			export $fl;;
+		*)	warn "unknown setting $fl";;
 		esac
 		[ $dobreak -eq 1 ] && break
 	done
@@ -137,6 +139,8 @@ postproc()
 {
 	ex=$1
 
+	trap '' EXIT
+
 	cf=c/$prog.$id.core
 	mv -f *core* $cf 2>/dev/null
 
@@ -148,7 +152,7 @@ postproc()
 		{
 			echo To: $mail_to
 			echo From: $mail_from
-			echo Subject: [sysbug] $prof $host $name down
+			echo "Subject: [sysbug] $prof $host $name down"
 			echo
 			echo core file is $base/$cf
 			echo binary is $base/c/$prog.$id
@@ -166,7 +170,6 @@ postproc()
 		rm c/$prog.$id
 	fi
 
-	trap '' EXIT
 	[ $ex -eq 0 ] && exit
 }
 
@@ -243,8 +246,8 @@ rundaemon()
 	vprint "launching daemon"
 
 	if [ $nodaemonize -eq 0 ]; then
-		_rundaemon "$@" &
-		disown
+		(_rundaemon "$@" 0<&- &>/dev/null &) &
+		disown -a
 	else
 		_rundaemon "$@"
 	fi
