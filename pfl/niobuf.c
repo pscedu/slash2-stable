@@ -179,7 +179,7 @@ pscrpc_abort_bulk(struct pscrpc_bulk_desc *desc)
 	struct l_wait_info  lwi;
 	int    rc;
 
-	DEBUG_REQ(PLL_INFO, desc->bd_req, "bulk active = %d",
+	DEBUG_REQ(PLL_DIAG, desc->bd_req, "bulk active = %d",
 	    pscrpc_bulk_active(desc));
 
 	if (!pscrpc_bulk_active(desc))		/* completed or */
@@ -268,6 +268,7 @@ pscrpc_register_bulk(struct pscrpc_request *rq)
 	if (rc) {
 		psclog_errorx("LNetMEAttach failed: %d", rc);
 		psc_assert(rc == -ENOMEM);
+		desc->bd_registered = 0;
 		return (-ENOMEM);
 	}
 
@@ -280,6 +281,7 @@ pscrpc_register_bulk(struct pscrpc_request *rq)
 		desc->bd_network_rw = 0;
 		rc2 = LNetMEUnlink(me_h);
 		psc_assert(rc2 == 0);
+		desc->bd_registered = 0;
 		return (-ENOMEM);
 	}
 
