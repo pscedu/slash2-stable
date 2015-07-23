@@ -170,7 +170,7 @@ pfl_strrastr(const char *s, char c, size_t adj)
 	size_t pos;
 	char *p;
 
-	pos = strlen(s) - adj;
+	pos = strlen(s) - adj - 1;
 	for (p = (char *)s + pos; p > s && *p != c; p--)
 		;
 	return (p);
