@@ -8,9 +8,7 @@ INSTDIR=	${INST_SBINDIR}
 FORCE_INST=	1
 
 include ${PFLMK}
--include local.mk
 
 install-hook:
-	@if [ -n "${CFG_DST}" ]; then					\
-		${ECHORUN} cp -f pfl_daemon.cfg ${CFG_DST};		\
-	fi
+	perl -i -pe 's/%%INST_BASE%%/${INST_BASE}/' $(strip
+	    )${INST_SBIN}/pfl_daemon.sh

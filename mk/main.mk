@@ -445,7 +445,7 @@ install: recurse-install install-hook
 	@if [ -n "${LIBRARY}" -a x"${NOINSTALL}" != x"1" ]; then	\
 		${INST} ${LIBRARY} ${INST_LIBDIR}/;			\
 	fi
-	@if [ -n "${SHLIB}" -a x"${NOINSTALL}" != x"1" ]; then	\
+	@if [ -n "${SHLIB}" -a x"${NOINSTALL}" != x"1" ]; then		\
 		${INST} ${SHLIB} ${INST_LIBDIR}/;			\
 	fi
 	@# skip programs part of test suites

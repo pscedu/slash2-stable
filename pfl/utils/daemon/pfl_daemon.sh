@@ -13,6 +13,7 @@ nodaemonize=0
 name=$prog
 ud=/usr/local
 dir=/local
+uname=$(uname)
 filter=
 verbose=0
 prof=
@@ -70,37 +71,38 @@ loadprof()
 
 apply_host_prefs()
 {
-	local narg=0
+	local narg=0 base fn
 
 	vprint "looking for profile for host $host, prog $prog"
 
-	for dir in							\
-	    /local							\
-	    /ufs/local							\
-	    /usr/local							\
-	    /opt
-	do
-		fn=$dir/pfl_daemon.cfg
-		if [ -f $fn ]; then
-			av="$@"
-			[ $verbose -eq 1 ] && set -x
-			[ -f $fn.local ] && . $fn.local
-			[ $verbose -eq 1 ] && set +x
-			. $fn
-			vprint "scanning profiles from $fn"
-			[ $# -eq 0 ] && die "unknown deployment: ${av[0]}"
-			for ln; do
-				vprint '  + ' $ln ${av[@]}
-				loadprof $ln ${av[@]} || continue
-				vprint "deployment $prof, host $host"
-				return
-			done
-			warn "no profile for this host; assuming defaults"
-			[ ${#av[@]} -gt $narg ] && usage
+	for dir in %%INST_BASE%%; do
+		base=$dir/pfl_daemon.cfg
+		[ -d $base ] || continue
+
+		fn=$base/local
+		[ -f $fn ] && . $fn
+
+		fn=$base/$prof.dcfg
+		[ -f $fn ] || continue
+
+		av="$@"
+
+		export PFL_SYSLOG_IDENT=%n-$prof
+
+		. $fn
+		vprint "scanning profiles from $fn"
+		[ $# -eq 0 ] && die "unknown deployment: ${av[0]}"
+		for ln; do
+			vprint '  + ' $ln ${av[@]}
+			loadprof $ln ${av[@]} || continue
+			vprint "deployment $prof, host $host"
 			return
-		fi
+		done
+		warn "no profile for this host; assuming defaults"
+		[ ${#av[@]} -gt $narg ] && usage
+		return
 	done
-	die "cannot find pfl_daemon.cfg"
+	die "cannot find $prof.dcfg"
 }
 
 warn()
@@ -251,4 +253,74 @@ rundaemon()
 	else
 		_rundaemon "$@"
 	fi
+}
+
+mksliods()
+{
+	local noif0=0 OPTIND c i _
+
+	# Linux does not have if:0, so make a special exception to just
+	# use `if'
+	case $uname in
+	Linux) noif0=1;;
+	esac
+
+	local host=$1
+	local np=$2
+	local if=$3
+	local ctlsock=$4
+	local opts=$5
+	local nif
+
+	for i in $(seq 0 $((np - 1))); do
+		echo -n $host
+		echo -n %sliod
+		echo -n %tag=$i
+		echo -n %narg=1
+		echo -n %ctl=slictl$i
+		echo -n %name=sliod$i
+		echo -n %CTL_SOCK_FILE=
+		printf $ctlsock $i
+		echo -n %LNET_NETWORKS=
+
+		if [ $noif0 -eq 1 -a $i -eq 0 ]; then
+			nif=$(echo $if | sed 's/:%d//g')
+		else
+			nif=$(echo $if | sed "s/%d/$i/g")
+		fi
+		echo -n $nif
+
+		[ $i -gt 0 ] && echo -n %share
+		echo $opts
+	done
+}
+
+mkclients()
+{
+	local opts=$1 i _ start=0
+	shift
+
+	[ -n "$opts" ] && opts=%$opts
+
+	for hspec; do
+		local hclass=${hspec%:*}
+		local range=${hspec#*:}
+		if [ x"${range%-*}" = x"$range" ]; then
+			# range is not set; start at zero and interpret
+			# range as number of hosts
+			start=0
+			end=$range
+		else
+			# range (`start'-`end') is specified; interpret
+			# directly
+			start=${range%-*}
+			end=${range#*-}
+		fi
+		for i in $(seq $start $end); do
+			printf -- $hclass $i
+			echo -n %mount_slash
+			[ $i -gt 0 ] && echo -n %share
+			echo $opts
+		done
+	done
 }

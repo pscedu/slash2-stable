@@ -42,7 +42,7 @@ LEX:=		$(shell if ${NOTEMPTY} "${LEX}"; then			\
 			echo lex;					\
 		fi)
 
-INST_BASE?=	/usr/psc
+INST_BASE?=	/local
 INST_BINDIR?=	${INST_BASE}/bin
 INST_SBINDIR?=	${INST_BASE}/sbin
 INST_LIBDIR?=	${INST_BASE}/lib
@@ -84,7 +84,7 @@ LDFLAGS+=	-lefence
 endif
 
 DEBUG?=		1
-DEVELPATHS?=	1
+DEVELPATHS?=	0
 ifeq (${DEBUG},0)
   CFLAGS+=	-Wunused -Wuninitialized -O2 -fno-strict-aliasing
 else
