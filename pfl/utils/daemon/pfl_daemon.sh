@@ -11,8 +11,7 @@
 host=$(hostname -s)
 nodaemonize=0
 name=$prog
-ud=/usr/local
-dir=/local
+srcdir=/local/src/p
 uname=$(uname)
 filter=
 verbose=0
@@ -46,18 +45,19 @@ loadprof()
 		[ x"$fl" = x"$_fl" ] && dobreak=1
 		fl=$(echo $fl | perl -pe 's/\\x(..)/chr hex $1/e')
 
+		vprint "  + processing setting: $fl"
+
 		case $fl in
-		args=*)	xargs=${fl#args=};;
-		bounce)	;;
-		ctl=*)	ctl=${fl#ctl=};;
-		dir=*)	dir=${fl#dir=};;
-		name=*)	name=${fl#name=};;
-		narg=*)	narg=${fl#narg=};;
-		share)	;;
-		tag=*)	[ x"$1" = x"${fl#tag=}" ] || return 1 ;;
-		[A-Z][A-Z_]*=*)
-			export $fl;;
-		*)	warn "unknown setting $fl";;
+		args=*)		xargs=${fl#args=};;
+		bounce)		;;
+		ctl=*)		ctl=${fl#ctl=};;
+		name=*)		name=${fl#name=};;
+		narg=*)		narg=${fl#narg=};;
+		share)		;;
+		srcdir=*)	srcdir=${fl#srcdir=};;
+		tag=*)		[ x"$1" = x"${fl#tag=}" ] || return 1 ;;
+		[A-Z][A-Z_]*=*)	export $fl;;
+		*)		warn "unknown setting $fl";;
 		esac
 		[ $dobreak -eq 1 ] && break
 	done
@@ -73,7 +73,7 @@ apply_host_prefs()
 {
 	local narg=0 base fn
 
-	vprint "looking for profile for host $host, prog $prog"
+	vprint "searching for profile; prof=$prof; host=$host; prog=$prog"
 
 	for dir in %%INST_BASE%%; do
 		base=$dir/pfl_daemon.cfg
@@ -163,7 +163,7 @@ postproc()
 			echo --------------------------------------------------
 			tail $PSC_LOG_FILE_LINK
 			echo --------------------------------------------------
-			gdb -batch -c $cf -x $cmdfile c/$prog.$id 2>&1 | $src/tools/filter-pstack
+			gdb -batch -c $cf -x $cmdfile c/$prog.$id 2>&1 | $srcdir/tools/filter-pstack
 		} | sendmail -t
 		echo binary was $base/c/$prog.$id
 		echo log file was $base/log/$host.$name/$tm
@@ -187,7 +187,6 @@ preproc()
 	PSC_TIMEOUT=5 $ctl -p sys.version >/dev/null && \
 	    die "another instance detected; exiting"
 
-	src=$dir/src/p
 	mkdir -p $(dirname $PSC_LOG_FILE)
 	cd $base
 	mkdir -p c
@@ -271,6 +270,8 @@ mksliods()
 	local ctlsock=$4
 	local opts=$5
 	local nif
+
+	[ -n "$opts" ] && opts=%$opts
 
 	for i in $(seq 0 $((np - 1))); do
 		echo -n $host
