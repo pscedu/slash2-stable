@@ -440,6 +440,7 @@ recurse-%: $(addprefix dir-,${SUBDIRS})
 
 # empty but overrideable
 install-hook:
+install-hook-post:
 
 install: recurse-install install-hook
 	@if [ -n "${LIBRARY}" -a x"${NOINSTALL}" != x"1" ]; then	\
@@ -491,6 +492,7 @@ install: recurse-install install-hook
 			${INST} -m 444 $$i $$dir/;			\
 		done;							\
 	fi
+	@${MAKE} -s install-hook-post
 
 clean-hook:
 

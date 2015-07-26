@@ -9,6 +9,6 @@ FORCE_INST=	1
 
 include ${PFLMK}
 
-install-hook:
-	perl -i -pe 's/%%INST_BASE%%/${INST_BASE}/' $(strip
-	    )${INST_SBIN}/pfl_daemon.sh
+install-hook-post:
+	perl -i -pe 's{%%INST_BASE%%}{${INST_BASE}}' $(strip \
+	    ) ${INST_SBINDIR}/pfl_daemon.sh

@@ -305,17 +305,23 @@ mkclients()
 	for hspec; do
 		local hclass=${hspec%:*}
 		local range=${hspec#*:}
-		if [ x"${range%-*}" = x"$range" ]; then
-			# range is not set; start at zero and interpret
-			# range as number of hosts
-			start=0
-			end=$range
+		if [ x"$hclass" = x"$hspec" ]; then
+			start=1
+			end=1
 		else
-			# range (`start'-`end') is specified; interpret
-			# directly
-			start=${range%-*}
-			end=${range#*-}
+			if [ x"${range%-*}" = x"$range" ]; then
+				# range is not set; start at zero and interpret
+				# range as number of hosts
+				start=0
+				end=$range
+			else
+				# range (`start'-`end') is specified; interpret
+				# directly
+				start=${range%-*}
+				end=${range#*-}
+			fi
 		fi
+		echo $hspec: $hclass $start $end >&2
 		for i in $(seq $start $end); do
 			printf -- $hclass $i
 			echo -n %mount_slash
