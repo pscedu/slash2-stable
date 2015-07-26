@@ -321,7 +321,6 @@ mkclients()
 				end=${range#*-}
 			fi
 		fi
-		echo $hspec: $hclass $start $end >&2
 		for i in $(seq $start $end); do
 			printf -- $hclass $i
 			echo -n %mount_slash
