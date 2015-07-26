@@ -30,7 +30,9 @@ CLEAR_EOL=	(tput el || tput ce)
 INST=		inst() {						\
 			(while [ $$\# -gt 1 ]; do			\
 				shift;					\
-			 done ; mkdir -p $$1);				\
+			 done ;						\
+			 _dir="$$1";					\
+			 ${ECHORUN} mkdir -p $${_dir%/*});		\
 			 ${ECHORUN} ${INSTALL} -C -b "$$@";		\
 		} ; inst
 
