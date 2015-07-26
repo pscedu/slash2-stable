@@ -53,6 +53,7 @@ loadprof()
 		ctl=*)		ctl=${fl#ctl=};;
 		name=*)		name=${fl#name=};;
 		narg=*)		narg=${fl#narg=};;
+		prog=*)		prog=${fl#prog=};;
 		share)		;;
 		srcdir=*)	srcdir=${fl#srcdir=};;
 		tag=*)		[ x"$1" = x"${fl#tag=}" ] || return 1 ;;
