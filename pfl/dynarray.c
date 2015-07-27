@@ -222,8 +222,7 @@ psc_dynarray_removepos(struct psc_dynarray *pda, int pos)
 
 	p = psc_dynarray_get(pda);
 	psc_assert(pos >= 0 && pos < psc_dynarray_len(pda));
-	if (psc_dynarray_len(pda) > 0 &&
-	    pos != psc_dynarray_len(pda) - 1)
+	if (pos != psc_dynarray_len(pda) - 1)
 		p[pos] = p[psc_dynarray_len(pda) - 1];
 	pda->pda_pos--;
 }
