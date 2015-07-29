@@ -51,6 +51,7 @@ loadprof()
 		args=*)		xargs=${fl#args=};;
 		bounce)		;;
 		ctl=*)		ctl=${fl#ctl=};;
+		mp=*)		mp=${fl#mp=};;
 		name=*)		name=${fl#name=};;
 		narg=*)		narg=${fl#narg=};;
 		prog=*)		prog=${fl#prog=};;
