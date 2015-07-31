@@ -43,7 +43,7 @@ loadprof()
 		fl=${_fl%%%*}
 		_fl=${_fl#*%}
 		[ x"$fl" = x"$_fl" ] && dobreak=1
-		fl=$(echo $fl | perl -pe 's/\\x(..)/chr hex $1/e')
+		fl=$(echo $fl | perl -pe 's/\\x(..)/chr hex $1/ge')
 
 		vprint "  + processing setting: $fl"
 
