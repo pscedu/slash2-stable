@@ -116,8 +116,8 @@ psc_subsys_register(int ssid, const char *name)
 				    FMTSTRCASE('n', "s", __progname)
 				);
 			}
-			openlog(ident, LOG_CONS | LOG_NDELAY |
-			    LOG_PERROR | LOG_PID, LOG_DAEMON);
+			openlog(ident, LOG_CONS | LOG_NDELAY | LOG_PID,
+			    LOG_DAEMON);
 		}
 
 		pfl_syslog = psc_realloc(pfl_syslog,
