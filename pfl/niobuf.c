@@ -701,6 +701,7 @@ _pscrpc_free_req(struct pscrpc_request *rq, __unusedx int locked)
 	psc_assert(rq->rq_rqbd == NULL);/* client-side */
 	psc_assert(psclist_disjoint(&rq->rq_lentry));
 	psc_assert(psclist_disjoint(&rq->rq_set_chain_lentry));
+	psc_assert(rq->rq_set == NULL);
 
 	psc_assert(!atomic_read(&rq->rq_reply_waitq.wq_nwaiters));
 	psc_waitq_destroy(&rq->rq_reply_waitq);
