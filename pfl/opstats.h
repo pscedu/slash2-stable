@@ -43,7 +43,11 @@
 #include "pfl/list.h"
 #include "pfl/lockedlist.h"
 
-#define pfl_opstat_add(opst, n)		psc_atomic64_add(&(opst)->opst_lifetime, (n))
+#define pfl_opstat_add(opst, n)						\
+	do {								\
+		(opst)->opst_lifetime += n;				\
+	} while (0)
+
 #define	pfl_opstat_incr(opst)		pfl_opstat_add((opst), 1)
 
 #define	OPSTATF_ADD(flags, name, n)					\
