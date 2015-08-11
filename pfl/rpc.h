@@ -777,6 +777,10 @@ pscrpc_wake_client_req(struct pscrpc_request *req)
 			_abstime.tv_sec = _now +			\
 			    PSCRPC_SVR_SHORT_TIMEO;			\
 			_abstime.tv_nsec = 0;				\
+			/*						\
+			 * Don't wake up periodically unless there is 	\
+			 * real work to do.				\
+			 */						\
 			if (mtx)					\
 				ret = _psc_waitq_waitabs((wq),		\
 				    PFL_WAITQWF_MUTEX, (mtx),		\
