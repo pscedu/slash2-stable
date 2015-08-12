@@ -111,6 +111,7 @@ struct pscfs {
 #define PSCFS_INIT							\
 	NULL,								\
 	NULL,								\
+	NULL,								\
 	NULL
 
 struct pscfs_clientctx {
