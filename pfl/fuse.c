@@ -508,6 +508,8 @@ pscfs_main(int privsiz)
 	DYNARRAY_FOREACH(m, i, &pscfs_modules) {
 		m->pf_opst_read_err = pfl_opstat_initf(OPSTF_BASE10,
 		    "fs.%s.read.err", m->pf_name);
+		m->pf_opst_write_err = pfl_opstat_initf(OPSTF_BASE10,
+		    "fs.%s.write.err", m->pf_name);
 		m->pf_opst_read_reply =
 		    pfl_opstat_init("fs.%s.read.reply", m->pf_name);
 		m->pf_opst_write_reply =
@@ -1410,9 +1412,10 @@ pscfs_reply_unlink(struct pscfs_req *pfr, int rc)
 void
 pscfs_reply_write(struct pscfs_req *pfr, ssize_t len, int rc)
 {
-	if (rc)
+	if (rc) {
 		PFR_REPLY(err, pfr, rc);
-	else {
+		pfl_opstat_incr(pfr->pfr_mod->pf_opst_write_err);
+	} else {
 		PFR_REPLY(write, pfr, len);
 		pfl_opstat_add(pfr->pfr_mod->pf_opst_write_reply, len);
 	}
