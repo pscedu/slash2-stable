@@ -428,7 +428,8 @@ psc_ctlrep_getlistcache(int fd, struct psc_ctlmsghdr *mh, void *m)
 			strlcpy(pclc->pclc_name, lc->plc_name,
 			    sizeof(pclc->pclc_name));
 			pclc->pclc_size = lc->plc_nitems;
-			pclc->pclc_nseen = lc->plc_nseen->opst_lifetime;
+			pclc->pclc_nseen = 
+			    psc_atomic64_read(&lc->plc_nseen->opst_lifetime);
 			pclc->pclc_flags = lc->plc_flags;
 			pclc->pclc_nw_want = psc_waitq_nwaiters(
 			    &lc->plc_wq_want);
@@ -483,9 +484,12 @@ psc_ctlrep_getpool(int fd, struct psc_ctlmsghdr *mh, void *msg)
 			pcpl->pcpl_total = m->ppm_total;
 			pcpl->pcpl_flags = m->ppm_flags;
 			pcpl->pcpl_thres = m->ppm_thres;
-			pcpl->pcpl_nseen = m->ppm_nseen->opst_lifetime;
-			pcpl->pcpl_ngrow = m->ppm_opst_grows->opst_lifetime;
-			pcpl->pcpl_nshrink = m->ppm_opst_shrinks->opst_lifetime;
+			pcpl->pcpl_nseen = 
+			    psc_atomic64_read(&m->ppm_nseen->opst_lifetime);
+			pcpl->pcpl_ngrow = 
+			    psc_atomic64_read(&m->ppm_opst_grows->opst_lifetime);
+			pcpl->pcpl_nshrink = 
+			    psc_atomic64_read(&m->ppm_opst_shrinks->opst_lifetime);
 			if (POOL_IS_MLIST(m)) {
 				pcpl->pcpl_free = psc_mlist_size(&m->ppm_ml);
 				pcpl->pcpl_nw_empty = psc_multiwaitcond_nwaiters(
@@ -1785,11 +1789,11 @@ psc_ctlparam_opstats(int fd, struct psc_ctlmsghdr *mh,
 					    "invalid opstat %s value: %s",
 					    levels[1], pcp->pcp_value));
 				}
-				opst->opst_lifetime = val;
+				psc_atomic64_set(&opst->opst_lifetime, val);
 			} else {
 				levels[1] = (char *)opst->opst_name;
 				snprintf(buf, sizeof(buf), "%"PRId64,
-				    opst->opst_lifetime);
+				    psc_atomic64_read(&opst->opst_lifetime));
 				rc = psc_ctlmsg_param_send(fd, mh, pcp,
 				    PCTHRNAME_EVERYONE, levels, 2, buf);
 			}
@@ -1914,7 +1918,8 @@ psc_ctlrep_getmlist(int fd, struct psc_ctlmsghdr *mh, void *m)
 			    sizeof(pcml->pcml_name),
 			    "%s", pml->pml_name);
 			pcml->pcml_size = pml->pml_nitems;
-			pcml->pcml_nseen = pml->pml_nseen->opst_lifetime;
+			pcml->pcml_nseen = 
+			    psc_atomic64_read(&pml->pml_nseen->opst_lifetime);
 			pcml->pcml_nwaiters =
 			    psc_multiwaitcond_nwaiters(&pml->pml_mwcond_empty);
 			MLIST_ULOCK(pml);

@@ -43,11 +43,7 @@
 #include "pfl/list.h"
 #include "pfl/lockedlist.h"
 
-#define pfl_opstat_add(opst, n)						\
-	do {								\
-		(opst)->opst_lifetime += n;				\
-	} while (0)
-
+#define pfl_opstat_add(opst, n)		psc_atomic64_add(&(opst)->opst_lifetime, (n))
 #define	pfl_opstat_incr(opst)		pfl_opstat_add((opst), 1)
 
 #define	OPSTATF_ADD(flags, name, n)					\
@@ -68,8 +64,8 @@ struct pfl_opstat {
 	char			*opst_name;
 	int			 opst_flags;
 
-	int64_t			 opst_lifetime;	/* lifetime accumulator */
-	psc_atomic64_t		 opst_intv;	/* current instantaneous interval accumulator */
+	psc_atomic64_t		 opst_lifetime;	/* lifetime accumulator */
+	int64_t		 	 opst_intv;	/* current instantaneous interval accumulator */
 	int64_t			 opst_last;	/* last second interval accumulator */
 	double			 opst_avg;	/* 10-second average */
 };

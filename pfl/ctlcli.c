@@ -627,7 +627,7 @@ psc_ctlmsg_opstat_prdat(__unusedx const struct psc_ctlmsghdr *mh,
     const void *m)
 {
 	const struct psc_ctlmsg_opstat *pco = m;
-	const struct pfl_opstat *opst = &pco->pco_opst;
+	struct pfl_opstat *opst = (struct pfl_opstat *)&pco->pco_opst;
 	int base10 = 0;
 
 	if (opst->opst_flags & OPSTF_BASE10 || psc_ctl_inhuman)
@@ -638,7 +638,7 @@ psc_ctlmsg_opstat_prdat(__unusedx const struct psc_ctlmsghdr *mh,
 	// 11.2
 	psc_ctl_prnumber(base10, opst->opst_avg, 11, "/s ");
 	psc_ctl_prnumber(base10, opst->opst_last, 11, "/s ");
-	psc_ctl_prnumber(base10, opst->opst_lifetime, 13, "");
+	psc_ctl_prnumber(base10, psc_atomic64_read(&opst->opst_lifetime), 13, "");
 	printf("\n");
 }
 

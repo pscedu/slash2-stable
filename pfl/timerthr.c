@@ -53,7 +53,7 @@ pfl_opstimerthr_main(struct psc_thread *thr)
 	struct pfl_opstat *opst;
 	struct timespec ts;
 	double alpha = .25;
-	uint64_t len, last = 0;
+	int64_t len, last;
 	int i;
 
 #if HAVE_PTHREAD_SETSCHEDPRIO
@@ -70,21 +70,18 @@ pfl_opstimerthr_main(struct psc_thread *thr)
 		spinlock(&pfl_opstats_lock);
 		DYNARRAY_FOREACH(opst, i, &pfl_opstats) {
 
-			/* reset instantaneous interval counter to zero */
-			len = opst->opst_lifetime;
-			len = len - last;
-
-			psc_atomic64_set(&opst->opst_intv, len);
-
 			/* update last second rate */
+			last = psc_atomic64_read(&opst->opst_lifetime);
+			len = last - opst->opst_intv;
+			if (len < 0)
+				len = -len;
 			opst->opst_last = len;
 
 			/* compute time weighted average */
 			opst->opst_avg = alpha * len + (1 - alpha) *
 			    opst->opst_avg;
 
-			opst->opst_lifetime += len;
-			last = opst->opst_lifetime;
+			opst->opst_intv = last;
 		}
 		freelock(&pfl_opstats_lock);
 	}
