@@ -65,6 +65,10 @@ struct pfl_opstat {
 	int			 opst_flags;
 
 	psc_atomic64_t		 opst_lifetime;	/* lifetime accumulator */
+	/*
+	 * Unlike the above lifetime counter, the following are 
+	 * maintained by a timer thread.
+	 */
 	int64_t		 	 opst_last;	/* last second lifetime value */
 	int64_t			 opst_intv;	/* last second counter */
 	double			 opst_avg;	/* 10-second average */
