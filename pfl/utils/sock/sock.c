@@ -118,12 +118,12 @@ displaythr_main(__unusedx struct psc_thread *thr)
 			    "==============================\n");
 		}
 
-		psc_fmt_human(ratebuf, rdst->opst_last);
+		psc_fmt_human(ratebuf, rdst->opst_intv);
 		printf("%7s\t", ratebuf);
 		psc_fmt_human(ratebuf, psc_atomic64_read(&rdst->opst_lifetime));
 		printf("%7s\t\t|\t", ratebuf);
 
-		psc_fmt_human(ratebuf, wrst->opst_last);
+		psc_fmt_human(ratebuf, wrst->opst_intv);
 		printf("%7s\t", ratebuf);
 		psc_fmt_human(ratebuf, psc_atomic64_read(&wrst->opst_lifetime));
 		printf("%7s\n", ratebuf);
