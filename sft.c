@@ -351,7 +351,7 @@ display(__unusedx struct psc_thread *thr)
 		if (istty)
 			fprintf(fp, "\r");
 		fprintf(fp, "%7s ", ratebuf);
-		psc_fmt_human(ratebuf, iostats->opst_lifetime);
+		psc_fmt_human(ratebuf, psc_atomic64_read(&iostats->opst_lifetime));
 		fprintf(fp, "%7s", ratebuf);
 		if (istty)
 			fflush(fp);
