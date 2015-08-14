@@ -79,7 +79,7 @@ pscrpc_nbreapthr_main(struct psc_thread *thr)
 			freelock(&set->set_lock);
 		else if (cntr == set->set_compl.pc_counter)
 			psc_compl_waitrel_s(&set->set_compl,
-			    &set->set_lock, 0);
+			    &set->set_lock, 1);
 		else
 			freelock(&set->set_lock);
 	}
