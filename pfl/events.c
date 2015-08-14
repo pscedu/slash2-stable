@@ -317,6 +317,7 @@ pscrpc_reply_in_callback(lnet_event_t *ev)
 	}
 
 	/* Do not bump the completion counter if this is a 'resend'. */
+	/* XXX this condition reads funny, should we wake up unconditionally */
 	if (req->rq_compl && !(req->rq_resend && !req->rq_timedout))
 		/*
 		 * Notify upper layer that an RPC is ready to be
