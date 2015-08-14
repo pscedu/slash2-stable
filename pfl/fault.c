@@ -100,10 +100,10 @@ _psc_fault_here(struct psc_fault *pflt, int *rcp, int rc)
 		goto out;
 	if (pflt->pflt_chance < (int)psc_random32u(100))
 		goto out;
-	if (rc)
-		*rcp = rc;
-	else if (pflt->pflt_retval)
+	if (pflt->pflt_retval)
 		*rcp = pflt->pflt_retval;
+	else
+		*rcp = rc;
 	pflt->pflt_hits++;
 	delay = pflt->pflt_delay;
 	faulted = 1;
