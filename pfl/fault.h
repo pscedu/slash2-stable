@@ -42,7 +42,7 @@ struct psc_fault {
 	long			pflt_delay;		/* usec to sleep inside fault */
 	int			pflt_count;		/* #times to respond with programmed behavior */
 	int			pflt_begin;		/* #times to skip programmed behavior */
-	int			pflt_chance;		/* liklihood of event to occur from 0-100 */
+	int			pflt_chance;		/* likelihood of event to occur from 0-100 */
 	int			pflt_retval;		/* interject return code */
 };
 
