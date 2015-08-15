@@ -627,7 +627,7 @@ psc_ctlmsg_opstat_prdat(__unusedx const struct psc_ctlmsghdr *mh,
     const void *m)
 {
 	const struct psc_ctlmsg_opstat *pco = m;
-	struct pfl_opstat *opst = (struct pfl_opstat *)&pco->pco_opst;
+	const struct pfl_opstat *opst = &pco->pco_opst;
 	int base10 = 0;
 
 	if (opst->opst_flags & OPSTF_BASE10 || psc_ctl_inhuman)
