@@ -635,6 +635,9 @@ usocklnd_destroy_peer(usock_peer_t *peer)
         for (i = 0; i < N_CONN_TYPES; i++)
                 LASSERT (peer->up_conns[i] == NULL);
 
+	psc_assert(peer->up_iostats.rd == NULL);
+	psc_assert(peer->up_iostats.wr == NULL); 
+
 	/* Inform all eq's to drop associations to this peer. */
 	LNET_LOCK();
 	list_for_each_entry(eq, &the_lnet.ln_active_eqs, eq_list) {
@@ -769,11 +772,6 @@ usocklnd_create_peer(lnet_ni_t *ni, lnet_process_id_t id,
         net->un_peercount++;        
         pthread_mutex_unlock(&net->un_lock);
 
-	peer->up_iostats.rd = pfl_opstat_initf(OPSTF_EXCL,
-	    "peer-%s-rcv", libcfs_id2str(id));
-	peer->up_iostats.wr = pfl_opstat_initf(OPSTF_EXCL,
-	    "peer-%s-snd", libcfs_id2str(id)); 
-
         *peerp = peer;
         return 0;
 }
@@ -809,6 +807,11 @@ usocklnd_find_or_create_peer(lnet_ni_t *ni, lnet_process_id_t id,
                         CERROR("Can't create peer: network shutdown\n");
                         return -ESHUTDOWN;
                 }
+
+		peer->up_iostats.rd = pfl_opstat_initf(OPSTF_EXCL,
+	    	    "peer-%s-rcv", libcfs_id2str(id));
+		peer->up_iostats.wr = pfl_opstat_initf(OPSTF_EXCL,
+	    	    "peer-%s-snd", libcfs_id2str(id)); 
                 
                 /* peer table will take 1 of my refs on peer */
                 usocklnd_peer_addref(peer);
