@@ -70,7 +70,7 @@ psc_atomic32_read(psc_atomic32_t *v)
 
 #undef psc_atomic64_read
 static __inline int64_t
-psc_atomic64_read(psc_atomic64_t *v)
+psc_atomic64_read(const psc_atomic64_t *v)
 {
 	return (_PFL_GETA64(v));
 }
