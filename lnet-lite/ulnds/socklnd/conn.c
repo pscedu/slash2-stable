@@ -214,7 +214,9 @@ usocklnd_check_peer_stale(lnet_ni_t *ni, lnet_process_id_t id)
                         LASSERT (peer->up_conns[i] == NULL);
 
 		pfl_opstat_destroy(peer->up_iostats.rd);
+		peer->up_iostats.rd = NULL;
 		pfl_opstat_destroy(peer->up_iostats.wr); 
+		peer->up_iostats.wr = NULL;
 
                 list_del(&peer->up_list);                        
 

@@ -670,7 +670,9 @@ usocklnd_del_peer_and_conns(usock_peer_t *peer)
         pthread_mutex_unlock(&peer->up_lock);
 
 	pfl_opstat_destroy(peer->up_iostats.rd);
+	peer->up_iostats.rd = NULL;
 	pfl_opstat_destroy(peer->up_iostats.wr); 
+	peer->up_iostats.wr = NULL;
 
         /* peer hash list is still protected by the caller */
         list_del(&peer->up_list);
