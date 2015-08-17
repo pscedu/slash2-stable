@@ -30,8 +30,8 @@
 #include <stdint.h>
 #include <stdio.h>
 
-/**
- * pfl_unpack_hex - Display the hexadecimal representation of some data.
+/*
+ * Display the hexadecimal representation of some data.
  * @ptr: data to display.
  * @len: number of bytes to display.
  * @buf: buffer to place representation in; must be at least 2 * @len +
@@ -52,8 +52,8 @@ pfl_unpack_hex(const void *ptr, size_t len, char buf[])
 	*t = '\0';
 }
 
-/**
- * printhex - Display the hexadecimal representation of some data.
+/*
+ * Display the hexadecimal representation of some data.
  * @ptr: data to display.
  * @len: number of bytes to display.
  */
@@ -80,8 +80,8 @@ fprinthex(FILE *fp, const void *ptr, size_t len)
 	funlockfile(fp);
 }
 
-/**
- * printvbinr - Display the bit representation of some data in reverse.
+/*
+ * Display the bit representation of some data in reverse.
  * @ptr: data to display.
  * @len: number of bytes to display.
  */
@@ -106,8 +106,8 @@ printvbinr(const void *ptr, size_t len)
 	funlockfile(stdout);
 }
 
-/**
- * printvbin - Display the bit representation of some data.
+/*
+ * Display the bit representation of some data.
  * @ptr: data to display.
  * @len: number of bytes to display.
  */
