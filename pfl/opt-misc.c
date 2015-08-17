@@ -1,6 +1,12 @@
 /* $Id$ */
 /* %PSC_COPYRIGHT% */
 
+/*
+ * Compiler optimized miscellaneous routines.
+ * These routines are compiled with optimization even in debug builds
+ * as the code is considered to be robust...
+ */
+
 #include <sys/types.h>
 
 #include <string.h>
