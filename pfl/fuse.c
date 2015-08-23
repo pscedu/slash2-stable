@@ -1322,16 +1322,18 @@ void
 pscfs_reply_read(struct pscfs_req *pfr, struct iovec *iov, int nio,
     int rc)
 {
-	int i;
-
 	if (rc) {
 		PFR_REPLY(err, pfr, rc);
 		pfl_opstat_incr(pfr->pfr_mod->pf_opst_read_err);
 	} else {
-		PFR_REPLY(iov, pfr, iov, nio);
+		size_t size = 0;
+		int i;
+
 		for (i = 0; i < nio; i++)
-			pfl_opstat_add(pfr->pfr_mod->pf_opst_read_reply,
-			    iov[i].iov_len);
+			size += iov[i].iov_len;
+		pfl_opstat_add(pfr->pfr_mod->pf_opst_read_reply, size);
+
+		PFR_REPLY(iov, pfr, iov, nio);
 	}
 }
 
