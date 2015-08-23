@@ -106,6 +106,7 @@ struct psclog_data {
 /* Current/default/active subsystem. */
 #define psc_fatal(fmt, ...)		_psclogk(0, PLL_FATAL, PLO_ERRNO, (fmt), ## __VA_ARGS__)
 #define psc_fatalx(fmt, ...)		_psclogk(0, PLL_FATAL, 0, (fmt), ## __VA_ARGS__)
+#define psclog_max(fmt, ...)		_psclogk(PSC_SUBSYS, PLL_MAX, 0, (fmt), ## __VA_ARGS__)
 #define psclog_error(fmt, ...)		_psclogk(PSC_SUBSYS, PLL_ERROR, PLO_ERRNO, (fmt), ## __VA_ARGS__)
 #define psclog_errorx(fmt, ...)		_psclogk(PSC_SUBSYS, PLL_ERROR, 0, (fmt), ## __VA_ARGS__)
 #define psclog_warn(fmt, ...)		_psclogk(PSC_SUBSYS, PLL_WARN, PLO_ERRNO, (fmt), ## __VA_ARGS__)
@@ -116,12 +117,12 @@ struct psclog_data {
 #define psclog_debug(fmt, ...)		_psclogk(PSC_SUBSYS, PLL_DEBUG, 0, (fmt), ## __VA_ARGS__)
 #define psclog_vdebug(fmt, ...)		_psclogk(PSC_SUBSYS, PLL_VDEBUG, 0, (fmt), ## __VA_ARGS__)
 #define psclog_trace(fmt, ...)		_psclogk(PSC_SUBSYS, PLL_TRACE, 0, (fmt), ## __VA_ARGS__)
-#define psclog_max(fmt, ...)		_psclogk(PSC_SUBSYS, PLL_MAX, 0, (fmt), ## __VA_ARGS__)
 #define psclog(lvl, fmt, ...)		_psclogk(PSC_SUBSYS, (lvl), 0, (fmt), ## __VA_ARGS__)
 
 #define pflog_warn(fmt, ...)		_psclogk(PSC_SUBSYS, PLL_WARN, PLO_ERRNO, (fmt), ## __VA_ARGS__)
 
 /* Specify subsystem. */
+#define pflogs_max(ss, fmt, ...)	_psclogk((ss), PLL_MAX, 0, (fmt), ## __VA_ARGS__)
 #define psclogs_error(ss, fmt, ...)	_psclogk((ss), PLL_ERROR, PLO_ERRNO, (fmt), ## __VA_ARGS__)
 #define psclogs_errorx(ss, fmt, ...)	_psclogk((ss), PLL_ERROR, 0, (fmt), ## __VA_ARGS__)
 #define psclogs_warn(ss, fmt, ...)	_psclogk((ss), PLL_WARN, PLO_ERRNO, (fmt), ## __VA_ARGS__)
