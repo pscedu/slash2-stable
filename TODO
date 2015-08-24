@@ -179,6 +179,8 @@ pfl
 - make sure in `psclog("%d", errno)' there are no ways errno can be
   modified by pfl_tls_get()
 - never cast sizeof() to int
+- add some accounting to hash table ID collisions, where resort to the
+  cmpf is required
 
 lnet
 - use TLS buffers for libcfs_nid2str() to avoid NUMA contention
