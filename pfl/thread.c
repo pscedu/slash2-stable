@@ -524,17 +524,22 @@ pscthr_setdead(struct psc_thread *thr, int dead)
 int
 pscthr_run(struct psc_thread *thr)
 {
+	int yield = 1;
+
 	if (thr->pscthr_flags & PTF_DEAD)
 		return (0);
 	if ((thr->pscthr_flags & PTF_RUN) == 0) {
 		spinlock(&thr->pscthr_lock);
 		while ((thr->pscthr_flags & PTF_RUN) == 0) {
+			yield = 0;
 			psc_waitq_wait(&thr->pscthr_waitq,
 			    &thr->pscthr_lock);
 			spinlock(&thr->pscthr_lock);
 		}
 		freelock(&thr->pscthr_lock);
 	}
+	if (yield)
+		pscthr_yield();
 	return (1);
 }
 
