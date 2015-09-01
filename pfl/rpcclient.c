@@ -1342,6 +1342,9 @@ pscrpc_abort_inflight(struct pscrpc_import *imp)
 	 /* XXX locking?  Maybe we should remove each request with the list
 	  * locked?  Also, how do we know if the requests on the list are
 	  * being freed at this time?
+	  *
+	  * XXX What happens to requests that have taken our reference, but not
+	  * yet put on this sending list?
 	  */
 	 psclist_for_each_entry_safe(req, next, &imp->imp_sending_list,
 	     rq_lentry) {
