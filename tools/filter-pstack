@@ -56,7 +56,6 @@ my @ign = (
 
 	# SLASH2 mount_slash
 	[ qw(_?psc_waitq_waitrel _lc_get msbmaprathr_main _pscthr_begin) ],
-	[ qw(_?psc_waitq_waitrel msbreleasethr_main _pscthr_begin) ],
 	[ qw(_?psc_waitq_waitrel msflushthr_main _pscthr_begin) ],
 	[ qw(_psc_waitq_waitabs _lc_get msattrflushthr_main _pscthr_begin) ],
 	[ qw(_psc_waitq_waitabs _lc_get msbreleasethr_main _pscthr_begin) ],
@@ -64,6 +63,7 @@ my @ign = (
 	[ qw(_psc_waitq_waitabs _lc_get msflushthr_main _pscthr_begin) ],
 	[ qw(_psc_waitq_waitabs _lc_get msreadaheadthr_main _pscthr_begin) ],
 	[ qw(_psc_waitq_waitabs _psc_waitq_waitrel msattrflushthr_main _pscthr_begin) ],
+	[ qw(_psc_waitq_waitabs msbreleasethr_main _pscthr_begin) ],
 	[ qw(msbmflwthr_main _pscthr_begin) ],
 	[ qw(usleep msbwatchthr_main _pscthr_begin) ],
 
