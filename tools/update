@@ -9,6 +9,8 @@
 
 set -e
 
+source $(dirname $0)/init.sh
+
 # Like 'wait' without arguments but returns a nonzero exit status if any
 # child reports one.
 exwait()
@@ -69,7 +71,7 @@ scm-update)
 	;;
 esac
 
-dir=$(readlink -f $(dirname $0)/..)
+dir=$(realpath $(dirname $0)/..)
 base=$(basename $dir)
 
 echorun()
