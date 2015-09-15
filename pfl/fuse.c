@@ -1323,8 +1323,8 @@ pscfs_reply_read(struct pscfs_req *pfr, struct iovec *iov, int nio,
     int rc)
 {
 	if (rc) {
-		PFR_REPLY(err, pfr, rc);
 		pfl_opstat_incr(pfr->pfr_mod->pf_opst_read_err);
+		PFR_REPLY(err, pfr, rc);
 	} else {
 		size_t size = 0;
 		int i;
@@ -1415,11 +1415,11 @@ void
 pscfs_reply_write(struct pscfs_req *pfr, ssize_t len, int rc)
 {
 	if (rc) {
-		PFR_REPLY(err, pfr, rc);
 		pfl_opstat_incr(pfr->pfr_mod->pf_opst_write_err);
+		PFR_REPLY(err, pfr, rc);
 	} else {
-		PFR_REPLY(write, pfr, len);
 		pfl_opstat_add(pfr->pfr_mod->pf_opst_write_reply, len);
+		PFR_REPLY(write, pfr, len);
 	}
 }
 
