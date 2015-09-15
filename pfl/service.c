@@ -195,7 +195,7 @@ _pscrpc_server_free_request(struct pscrpc_request *req)
 		 * req if the incoming req unlinked the
 		 * MD; this isn't one of them!
 		 */
-		PSCRPC_OBD_FREE(req, sizeof(*req));
+		psc_pool_return(pscrpc_rq_pool, req);
 	}
 }
 

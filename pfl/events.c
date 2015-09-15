@@ -135,18 +135,7 @@ pscrpc_request_in_callback(lnet_event_t *ev)
 			/* We moaned above already... */
 			return;
 		}
-#if 0
-		PSCRPC_OBD_ALLOC_GFP(req, sizeof(*req), GFP_ATOMIC);
-#endif
-		// pool
-		req = TRY_PSCALLOC(sizeof(*req));
-		if (req == NULL) {
-			CERROR("Can't allocate incoming request descriptor: "
-			       "Dropping %s RPC from %s",
-			       svc->srv_name,
-			       libcfs_id2str(ev->initiator));
-			return;
-		}
+		req = psc_pool_get(pscrpc_rq_pool);
 	}
 
 	/* NB we ABSOLUTELY RELY on req being zeroed, so pointers are NULL,
