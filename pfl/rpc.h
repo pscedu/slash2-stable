@@ -309,7 +309,7 @@ struct pscrpc_request {
 	int				 rq_reqlen;
 	int				 rq_replen;
 	int				 rq_import_generation;
-	time_t				 rq_sent;
+	time_t				 rq_sent;		/* time when request was sent or re-sent */
 	psc_spinlock_t			 rq_lock;
 	uint64_t			 rq_transno;
 	uint64_t			 rq_xid;
