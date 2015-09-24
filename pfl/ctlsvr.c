@@ -428,7 +428,7 @@ psc_ctlrep_getlistcache(int fd, struct psc_ctlmsghdr *mh, void *m)
 			strlcpy(pclc->pclc_name, lc->plc_name,
 			    sizeof(pclc->pclc_name));
 			pclc->pclc_size = lc->plc_nitems;
-			pclc->pclc_nseen = 
+			pclc->pclc_nseen =
 			    psc_atomic64_read(&lc->plc_nseen->opst_lifetime);
 			pclc->pclc_flags = lc->plc_flags;
 			pclc->pclc_nw_want = psc_waitq_nwaiters(
@@ -484,11 +484,11 @@ psc_ctlrep_getpool(int fd, struct psc_ctlmsghdr *mh, void *msg)
 			pcpl->pcpl_total = m->ppm_total;
 			pcpl->pcpl_flags = m->ppm_flags;
 			pcpl->pcpl_thres = m->ppm_thres;
-			pcpl->pcpl_nseen = 
+			pcpl->pcpl_nseen =
 			    psc_atomic64_read(&m->ppm_nseen->opst_lifetime);
-			pcpl->pcpl_ngrow = 
+			pcpl->pcpl_ngrow =
 			    psc_atomic64_read(&m->ppm_opst_grows->opst_lifetime);
-			pcpl->pcpl_nshrink = 
+			pcpl->pcpl_nshrink =
 			    psc_atomic64_read(&m->ppm_opst_shrinks->opst_lifetime);
 			if (POOL_IS_MLIST(m)) {
 				pcpl->pcpl_free = psc_mlist_size(&m->ppm_ml);
@@ -642,15 +642,18 @@ psc_ctlparam_log_file(int fd, struct psc_ctlmsghdr *mh,
     struct psc_ctlmsg_param *pcp, char **levels, int nlevels,
     __unusedx struct psc_ctlparam_node *pcn)
 {
-	int rc, set;
+	int rc = 1, set;
 
 	if (nlevels > 2)
 		return (psc_ctlsenderr(fd, mh, "invalid field"));
 
-	if (strcmp(pcp->pcp_thrname, PCTHRNAME_EVERYONE) != 0)
-		return (psc_ctlsenderr(fd, mh, "invalid thread field"));
+	if (strcmp(pcp->pcp_thrname, PCTHRNAME_EVERYONE) != 0) {
+		if (nlevels == 2)
+			rc = psc_ctlsenderr(fd, mh, "log.file: "
+			    "not thread specific");
+		return (rc);
+	}
 
-	rc = 1;
 	levels[0] = "log";
 	levels[1] = "file";
 
@@ -675,15 +678,18 @@ psc_ctlparam_log_format(int fd, struct psc_ctlmsghdr *mh,
     struct psc_ctlmsg_param *pcp, char **levels, int nlevels,
     __unusedx struct psc_ctlparam_node *pcn)
 {
-	int rc, set;
+	int rc = 0, set;
 
 	if (nlevels > 2)
 		return (psc_ctlsenderr(fd, mh, "invalid field"));
 
-	if (strcmp(pcp->pcp_thrname, PCTHRNAME_EVERYONE) != 0)
-		return (psc_ctlsenderr(fd, mh, "invalid thread field"));
+	if (strcmp(pcp->pcp_thrname, PCTHRNAME_EVERYONE) != 0) {
+		if (nlevels == 2)
+			rc = psc_ctlsenderr(fd, mh, "log.format: "
+			    "not thread specific");
+		return (rc);
+	}
 
-	rc = 1;
 	levels[0] = "log";
 	levels[1] = "format";
 
@@ -694,8 +700,8 @@ psc_ctlparam_log_format(int fd, struct psc_ctlmsghdr *mh,
 		static char logbuf[LINE_MAX];
 
 		if (nlevels != 2)
-			return (psc_ctlsenderr(fd, mh,
-			    "invalid thread field"));
+			return (psc_ctlsenderr(fd, mh, "log.format: "
+			    "invalid level of specification"));
 
 		if (pcp->pcp_flags & (PCPF_ADD | PCPF_SUB))
 			return (psc_ctlsenderr(fd, mh,
@@ -715,15 +721,19 @@ psc_ctlparam_log_points(int fd, struct psc_ctlmsghdr *mh,
     __unusedx struct psc_ctlparam_node *pcn)
 {
 	struct pfl_logpoint *pt;
-	int line, n, rc = 1;
+	int line, n, rc = 0;
 	char *sln, *endp;
 	long l;
 
 	if (nlevels > 2)
 		return (psc_ctlsenderr(fd, mh, "invalid field"));
 
-	if (strcmp(pcp->pcp_thrname, PCTHRNAME_EVERYONE) != 0)
-		return (psc_ctlsenderr(fd, mh, "invalid thread field"));
+	if (strcmp(pcp->pcp_thrname, PCTHRNAME_EVERYONE) != 0) {
+		if (nlevels == 2)
+			rc = psc_ctlsenderr(fd, mh, "log.points: "
+			    "not thread specific");
+		return (rc);
+	}
 
 	levels[0] = "log";
 	levels[1] = "points";
@@ -830,8 +840,9 @@ psc_ctlparam_rlim(int fd, struct psc_ctlmsghdr *mh,
 	if (nlevels > 2)
 		return (psc_ctlsenderr(fd, mh, "invalid field"));
 
-	if (strcmp(pcp->pcp_thrname, PCTHRNAME_EVERYONE) != 0)
-		return (psc_ctlsenderr(fd, mh, "invalid thread field"));
+	if (strcmp(pcp->pcp_thrname, PCTHRNAME_EVERYONE) != 0) 
+		return (psc_ctlsenderr(fd, mh, "rlim: not thread "
+		    "specific"));
 
 	rc = 1;
 	levels[0] = "rlim";
@@ -952,7 +963,8 @@ psc_ctlparam_rusage(int fd, struct psc_ctlmsghdr *mh,
 		return (psc_ctlsenderr(fd, mh, "invalid field"));
 
 	if (strcmp(pcp->pcp_thrname, PCTHRNAME_EVERYONE) != 0)
-		return (psc_ctlsenderr(fd, mh, "invalid thread field"));
+		return (psc_ctlsenderr(fd, mh, "rusage: not thread "
+		    "specific"));
 
 	rc = 1;
 	levels[0] = "rusage";
@@ -1431,7 +1443,8 @@ psc_ctlrep_param_simple(int fd, struct psc_ctlmsghdr *mh,
 	char val[PCP_VALUE_MAX];
 
 	if (strcmp(pcp->pcp_thrname, PCTHRNAME_EVERYONE) != 0)
-		return (psc_ctlsenderr(fd, mh, "invalid thread field"));
+		return (psc_ctlsenderr(fd, mh, "simple parameters are "
+		    "not thread specific"));
 
 	if (mh->mh_type == PCMT_SETPARAM) {
 		if (pcn->pcn_setf) {
@@ -1638,7 +1651,7 @@ psc_ctlrep_param(int fd, struct psc_ctlmsghdr *mh, void *m)
 						levels[n + 1] = pcn->pcn_name;
 						rc = pcn->pcn_cbf(fd,
 						    mh, pcp, levels,
-						    n + 2, pcn);
+						    n + 1, pcn);
 						if (rc == 0)
 							goto shortcircuit;
 					} else {
@@ -1918,7 +1931,7 @@ psc_ctlrep_getmlist(int fd, struct psc_ctlmsghdr *mh, void *m)
 			    sizeof(pcml->pcml_name),
 			    "%s", pml->pml_name);
 			pcml->pcml_size = pml->pml_nitems;
-			pcml->pcml_nseen = 
+			pcml->pcml_nseen =
 			    psc_atomic64_read(&pml->pml_nseen->opst_lifetime);
 			pcml->pcml_nwaiters =
 			    psc_multiwaitcond_nwaiters(&pml->pml_mwcond_empty);
