@@ -1416,7 +1416,7 @@ struct psc_ctlparam_node {
 /* Stack processing frame. */
 struct psc_ctlparam_procframe {
 	struct psc_listentry	 pcf_lentry;
-	struct psc_streenode	*pcf_ptn;
+	struct psc_streenode	*pcf_ptn;	/* parameter tree node */
 	int			 pcf_level;
 	int			 pcf_flags;
 	int			 pcf_pos;
@@ -1587,6 +1587,11 @@ psc_ctlrep_param(int fd, struct psc_ctlmsghdr *mh, void *m)
 	pcf->pcf_ptn = &psc_ctlparamtree;
 	psclist_add(&pcf->pcf_lentry, &stack);
 
+	/*
+	 * Walk down the parameter tree according to the number of levels
+	 * specified by the user input. Note that the root of the tree is
+	 * at level 0.
+	 */
 	while (!psc_listhd_empty(&stack)) {
 		pcf = psc_listhd_first_obj(&stack,
 		    struct psc_ctlparam_procframe, pcf_lentry);
@@ -1639,7 +1644,12 @@ psc_ctlrep_param(int fd, struct psc_ctlmsghdr *mh, void *m)
 					goto shortcircuit;
 				break;
 			} else if (pcf->pcf_level + 1 >= nlevels) {
-				/* disallow setting values of non-leaf nodes */
+				/*
+				 * If the paramater tree has more levels than that is given
+				 * by the user, then we end up on a non-leaf node. We are 
+				 * going to visit all children of this node.  Also, we must
+				 * disallow setting a value on a non-leaf node.
+				 */
 				if (set)
 					goto invalid;
 
