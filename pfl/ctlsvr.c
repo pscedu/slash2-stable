@@ -678,7 +678,7 @@ psc_ctlparam_log_format(int fd, struct psc_ctlmsghdr *mh,
     struct psc_ctlmsg_param *pcp, char **levels, int nlevels,
     __unusedx struct psc_ctlparam_node *pcn)
 {
-	int rc = 0, set;
+	int rc = 1, set;
 
 	if (nlevels > 2)
 		return (psc_ctlsenderr(fd, mh, "invalid field"));
@@ -1446,6 +1446,14 @@ psc_ctlrep_param_simple(int fd, struct psc_ctlmsghdr *mh,
 		return (psc_ctlsenderr(fd, mh, "simple parameters are "
 		    "not thread specific"));
 
+	/*
+	 * The last level usually points to NULL. But it can point
+	 * to a name that is added automatically. If so, increment
+	 * the original nlevels accordingly.
+	 */
+	if (levels[nlevels])
+		nlevels++;
+
 	if (mh->mh_type == PCMT_SETPARAM) {
 		if (pcn->pcn_setf) {
 			if (pcn->pcn_setf(pcp->pcp_value))
@@ -1665,7 +1673,7 @@ psc_ctlrep_param(int fd, struct psc_ctlmsghdr *mh, void *m)
 						levels[n + 1] = pcn->pcn_name;
 						rc = pcn->pcn_cbf(fd,
 						    mh, pcp, levels,
-						    n + 2, pcn);
+						    n + 1, pcn);
 						if (rc == 0)
 							goto shortcircuit;
 					} else {
