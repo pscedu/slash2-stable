@@ -1578,7 +1578,7 @@ psc_ctlrep_param(int fd, struct psc_ctlmsghdr *mh, void *m)
 		return (psc_ctlsenderr(fd, mh,
 		    "%s: parameter field exceeds maximum depth",
 		    psc_ctlparam_fieldname(pcp->pcp_field,
-		    MAX_LEVELS)));
+		    MAX_LEVELS-1)));
 
 	if (set) {
 		rc = pfl_socket_getpeercred(fd, &uid, &gid);
