@@ -1658,10 +1658,14 @@ psc_ctlrep_param(int fd, struct psc_ctlmsghdr *mh, void *m)
 					pcn = d->ptn_data;
 					/* avoid stack frame by processing directly */
 					if (psc_listhd_empty(&d->ptn_children)) {
+						/*
+						 * Automatically add a level based on the
+						 * name of a children.
+						 */
 						levels[n + 1] = pcn->pcn_name;
 						rc = pcn->pcn_cbf(fd,
 						    mh, pcp, levels,
-						    n + 1, pcn);
+						    n + 2, pcn);
 						if (rc == 0)
 							goto shortcircuit;
 					} else {
