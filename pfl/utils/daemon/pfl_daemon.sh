@@ -235,6 +235,11 @@ vsleep()
 	sleep $amt
 }
 
+#
+# This script runs within another service script using the source or dot
+# operator. The backup argv (bkav) is saved by the service script and is
+# used here to execute ourself when the service daemon dies.
+#
 _rundaemon()
 {
 	preproc
