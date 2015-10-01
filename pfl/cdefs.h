@@ -148,4 +148,27 @@
 
 #define MAXVALMASK(nb)		((UINT64_C(1) << (nb)) - 1)
 
+/*
+ * Simple compare of two pointers based on address.  This is used in
+ * places such as lock ordering to avoid deadlock.
+ */
+static __inline int
+pfl_addr_cmp(const void *a, const void *b)
+{
+	return (CMP(a, b));
+}
+
+/*
+ * Simple compare of two pointer-pointers based on address.  This is
+ * used in places such as lock ordering to avoid deadlock.
+ */
+static __inline int
+pfl_addr_addr_cmp(const void *a, const void *b)
+{
+	const void * const *x = a;
+	const void * const *y = b;
+
+	return (CMP(*x, *y));
+}
+
 #endif /* _PFL_CDEFS_H_ */
