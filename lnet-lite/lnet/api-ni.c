@@ -451,18 +451,46 @@ lnet_freelist_fini (lnet_freelist_t *fl)
         memset (fl, 0, sizeof (*fl));
 }
 
+struct psc_poolmaster lnet_eq_poolmaster;
+struct psc_poolmaster lnet_md_poolmaster;
+struct psc_poolmaster lnet_me_poolmaster;
+struct psc_poolmaster lnet_msg_poolmaster;
+
+struct psc_poolmgr *lnet_eq_pool;
+struct psc_poolmgr *lnet_md_pool;
+struct psc_poolmgr *lnet_me_pool;
+struct psc_poolmgr *lnet_msg_pool;
+
 int
 lnet_descriptor_setup (void)
 {
         /* NB on failure caller must still call lnet_descriptor_cleanup */
         /*               ******                                         */
-        int        rc;
+        int        rc = 0;
 
         memset (&the_lnet.ln_free_mes,  0, sizeof (the_lnet.ln_free_mes));
         memset (&the_lnet.ln_free_msgs, 0, sizeof (the_lnet.ln_free_msgs));
         memset (&the_lnet.ln_free_mds,  0, sizeof (the_lnet.ln_free_mds));
         memset (&the_lnet.ln_free_eqs,  0, sizeof (the_lnet.ln_free_eqs));
 
+#if 1
+	psc_poolmaster_init(&lnet_md_poolmaster, lnet_libmd_t,
+	    md_lentry, PPMF_AUTO, 32, 32, 0, NULL, NULL, NULL, "lnetmd");
+	lnet_md_pool = psc_poolmaster_getmgr(&lnet_md_poolmaster);
+
+	psc_poolmaster_init(&lnet_me_poolmaster, lnet_me_t,
+	    me_lentry, PPMF_AUTO, 32, 32, 0, NULL, NULL, NULL, "lnetme");
+	lnet_me_pool = psc_poolmaster_getmgr(&lnet_me_poolmaster);
+
+	psc_poolmaster_init(&lnet_eq_poolmaster, lnet_eq_t,
+	    eq_lentry, PPMF_AUTO, 32, 32, 0, NULL, NULL, NULL, "lneteq");
+	lnet_eq_pool = psc_poolmaster_getmgr(&lnet_eq_poolmaster);
+	
+	psc_poolmaster_init(&lnet_msg_poolmaster, lnet_msg_t,
+	    msg_lentry, PPMF_AUTO, 32, 32, 0, NULL, NULL, NULL, "lnetmsg");
+	lnet_msg_pool = psc_poolmaster_getmgr(&lnet_msg_poolmaster); 
+
+#elif defined(LNET_USE_LIB_FREELIST)
         rc = lnet_freelist_init(&the_lnet.ln_free_mes,
                                 the_lnet.ln_nmsgs, sizeof (lnet_me_t));
         if (rc != 0)
@@ -480,6 +508,7 @@ lnet_descriptor_setup (void)
 
         rc = lnet_freelist_init(&the_lnet.ln_free_eqs,
                                 MAX_EQS, sizeof (lnet_eq_t));
+#endif
         return (rc);
 }
 
@@ -523,7 +552,9 @@ lnet_setup_handle_hash (void)
         /* Arbitrary choice of hash table size */
 #ifdef __KERNEL__
         the_lnet.ln_lh_hash_size = (2 * CFS_PAGE_SIZE) / sizeof (struct list_head);
-#else
+#elif 1
+        the_lnet.ln_lh_hash_size = 12281; /* prime near 4096 * 3 */
+#elif defined(LNET_USE_LIB_FREELIST)
         the_lnet.ln_lh_hash_size = (MAX_MES + MAX_MDS + MAX_EQS)/4;
 #endif
         LIBCFS_ALLOC(the_lnet.ln_lh_hash_table,

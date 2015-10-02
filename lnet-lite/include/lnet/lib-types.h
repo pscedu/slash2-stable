@@ -198,6 +198,7 @@ struct lnet_libmd;
 typedef struct lnet_msg {
         struct list_head    msg_activelist;
         struct list_head    msg_list;           /* Q for credits/MD */
+	struct psc_listentry msg_lentry;
 
         lnet_process_id_t   msg_target;
         __u32               msg_type;
@@ -248,6 +249,7 @@ typedef struct lnet_libhandle {
 
 typedef struct lnet_eq {
         struct list_head  eq_list;
+	struct psc_listentry eq_lentry;
         lnet_libhandle_t  eq_lh;
         lnet_seq_t        eq_enq_seq;
         lnet_seq_t        eq_deq_seq;
@@ -259,6 +261,7 @@ typedef struct lnet_eq {
 
 typedef struct lnet_me {
         struct list_head   me_list;
+	struct psc_listentry me_lentry;
         lnet_libhandle_t   me_lh;
         lnet_process_id_t  me_match_id;
         unsigned int       me_portal;
@@ -270,6 +273,7 @@ typedef struct lnet_me {
 
 typedef struct lnet_libmd {
         struct list_head  md_list;
+	struct psc_listentry md_lentry;
         lnet_libhandle_t  md_lh;
         lnet_me_t        *md_me;
         char             *md_start;

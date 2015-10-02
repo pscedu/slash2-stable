@@ -60,6 +60,8 @@
 #include <lnet/lnet.h>
 #include <lnet/lib-types.h>
 
+#include "pfl/pool.h"
+
 extern lnet_t  the_lnet;                        /* THE network */
 
 static inline int lnet_is_wire_handle_none (lnet_handle_wire_t *wh)
@@ -143,7 +145,63 @@ do {                                            \
 
 #define MAX_PORTALS     64
 
-#ifdef LNET_USE_LIB_FREELIST
+#if 1
+
+extern struct psc_poolmgr *lnet_eq_pool;
+extern struct psc_poolmgr *lnet_md_pool;
+extern struct psc_poolmgr *lnet_me_pool;
+extern struct psc_poolmgr *lnet_msg_pool;
+
+#define lnet_eq_alloc()							\
+    	({								\
+	 	lnet_eq_t *_eq;						\
+	 								\
+	 	_eq = psc_pool_get(lnet_eq_pool);			\
+	 	INIT_PSC_LISTENTRY(&_eq->eq_lentry);			\
+		memset(_eq, 0, sizeof(*_eq));				\
+	 	_eq;							\
+	})
+#define lnet_eq_free(eq)	psc_pool_return(lnet_eq_pool, (eq))
+
+#define lnet_md_alloc(junk)						\
+	({								\
+		lnet_libmd_t *_md;					\
+									\
+		_md = psc_pool_get(lnet_md_pool);			\
+		memset(_md, 0, sizeof(*_md));				\
+	 	INIT_PSC_LISTENTRY(&_md->md_lentry);			\
+		CFS_INIT_LIST_HEAD(&_md->md_list);			\
+		_md;							\
+	})
+#define lnet_md_free(mq)	psc_pool_return(lnet_md_pool, (mq))
+
+#define lnet_me_alloc()							\
+    	({								\
+	 	lnet_me_t *_me;						\
+	 								\
+	 	_me = psc_pool_get(lnet_me_pool);			\
+		memset(_me, 0, sizeof(*_me));				\
+	 	INIT_PSC_LISTENTRY(&_me->me_lentry);			\
+	 	_me;							\
+	})
+#define lnet_me_free(me)	psc_pool_return(lnet_me_pool, (me))
+
+#define lnet_msg_alloc()						\
+	({								\
+		lnet_msg_t *_msg;					\
+									\
+		_msg = psc_pool_get(lnet_msg_pool);			\
+		memset(_msg, 0, sizeof(*_msg));				\
+	 	INIT_PSC_LISTENTRY(&_msg->msg_lentry);			\
+		_msg;							\
+	})
+#define lnet_msg_free(msg)						\
+	do {								\
+		LASSERT(!(msg)->msg_onactivelist);			\
+		psc_pool_return(lnet_msg_pool, (msg));			\
+	} while (0)
+
+#elif defined(LNET_USE_LIB_FREELIST)
 
 #define MAX_MES         16384
 #define MAX_MDS         16384
