@@ -182,7 +182,7 @@ rsx_bulkserver(struct pscrpc_request *rq, int type, int ptl,
 			goto out;
 		}
 
-		DEBUG_REQ(PLL_INFO, rq,
+		DEBUG_REQ(PLL_DIAG, rq,
 		    "got %u bytes of bulk data across %d IOVs: "
 		    "first byte is %#x (%"PRIx64")",
 		    desc->bd_nob, desc->bd_iov_count, *v1, *v8);
