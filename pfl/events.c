@@ -283,7 +283,7 @@ pscrpc_reply_in_callback(lnet_event_t *ev)
 	LASSERT(ev->offset == 0);
 	LASSERT(ev->mlength <= (uint32_t)req->rq_replen);
 
-	DEBUG_REQ((ev->status == 0) ? PLL_INFO : PLL_ERROR, req,
+	DEBUG_REQ((ev->status == 0) ? PLL_DIAG : PLL_ERROR, req,
 		  "type %d, status %d initiator ;%s;",
 		  ev->type, ev->status, libcfs_id2str(ev->initiator));
 

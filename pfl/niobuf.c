@@ -321,7 +321,7 @@ pscrpc_unregister_bulk(struct pscrpc_request *rq)
 
 	l = reqlock(&desc->bd_lock);
 
-	DEBUG_REQ(PLL_INFO, rq,
+	DEBUG_REQ(PLL_DIAG, rq,
 	    "desc->bd_registered=(%d) pscrpc_bulk_active(desc)=(%d)",
 	    desc->bd_registered, pscrpc_bulk_active(desc));
 
