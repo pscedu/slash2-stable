@@ -167,7 +167,7 @@ pscrpc_request_in_callback(lnet_event_t *ev)
 		    svc->srv_nrqbd_receiving, svc->srv_name);
 
 		if (!svc->srv_nrqbd_receiving)
-			CERROR("Service %s, all request buffer are busy",
+			CERROR("Service %s, all request buffers are busy",
 			    svc->srv_name);
 #if 0
 		/* Normally, don't complain about 0 buffers posted; LNET won't
@@ -625,7 +625,6 @@ pscrpc_ni_init(int type, int nmsgs)
 		    pscrpc_eq_h.cookie);
 
 	} else if (type == PSCNET_MTCLIENT) {
-		lnet_server_mode();
 		rc = LNetNIInit(pscrpc_get_pid());
 		if (rc)
 			psc_fatalx("failed LNetNIInit() (rc=%d)", rc);
