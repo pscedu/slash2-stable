@@ -766,7 +766,7 @@ pscfs_inum_pscfs2fuse(pscfs_inum_t p_inum, double timeo)
 									\
 		if (_opst == NULL)					\
 			_opst = pfl_opstat_initf(OPSTF_BASE10,		\
-			    "fsrq.handle.%s", __func__ +		\
+			    "fs.handle.%s", __func__ +			\
 			    strlen("pscfs_fuse_handle_"));		\
 		pfl_opstat_incr(_opst);					\
 									\
