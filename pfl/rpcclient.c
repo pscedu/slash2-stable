@@ -67,6 +67,7 @@ struct pscrpc_request *
 pscrpc_request_addref(struct pscrpc_request *req)
 {
 	atomic_inc(&req->rq_refcount);
+	DEBUG_REQ(PLL_DEBUG, req, "addref");
 	return (req);
 }
 

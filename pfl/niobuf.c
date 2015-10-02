@@ -759,10 +759,7 @@ _pscrpc_req_finished(struct pscrpc_request *rq, int locked)
 		return (1);
 	}
 
-#if 0
-	DEBUG_REQ(D_INFO, rq, "refcount now %u",
-		  atomic_read(&rq->rq_refcount) - 1);
-#endif
+	DEBUG_REQ(PLL_DEBUG, rq, "decref");
 
 	if (atomic_dec_and_test(&rq->rq_refcount)) {
 		_pscrpc_free_req(rq, locked);
