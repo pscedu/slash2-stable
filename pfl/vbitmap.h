@@ -44,10 +44,10 @@ struct psc_vbitmap {
 	unsigned char		*vb_end;
 	unsigned char		*vb_pos;	/* ptr to current slot for speed */
 	int			 vb_lastsize;	/* #ents in last byte, for sizes not multiple of NBBY */
-	int			 vb_flags;
+	int			 vb_flags;	/* see PVBF_* flags below */
 };
 
-/* vbitmap flags */
+/* vb_flags */
 #define PVBF_AUTO		(1 << 0)	/* auto grow bitmap as necessary */
 #define PVBF_STATIC		(1 << 1)	/* vbitmap is statically allocated */
 #define PVBF_EXTALLOC		(1 << 2)	/* bitmap mem is externally alloc'd */
@@ -56,8 +56,8 @@ struct psc_vbitmap {
 
 #define psc_vbitmap_new(siz)	psc_vbitmap_newf((siz), 0)
 
-/**
- * psc_vbitmap_free - reclaim memory from a variable-sized bitmap.
+/*
+ * Reclaim memory from a variable-sized bitmap.
  * @vb: variable bitmap.
  */
 #define psc_vbitmap_free(vb)						\
@@ -65,6 +65,13 @@ struct psc_vbitmap {
 		_psc_vbitmap_free(vb);					\
 		(vb) = NULL;						\
 	} while (0)
+
+/*
+ * Get the number of elements a bitmap represents.
+ * @vb: variable bitmap.
+ */
+#define psc_vbitmap_getsize(vb)						\
+	((size_t)(((vb)->vb_end - (vb)->vb_start) * NBBY + (vb)->vb_lastsize))
 
 #define psc_vbitmap_getnextpos(vb)		(((vb)->vb_pos - (vb)->vb_start) * NBBY)
 
@@ -77,6 +84,11 @@ struct psc_vbitmap {
 #define psc_vbitmap_unsetrange(vb, pos, siz)	psc_vbitmap_setval_range((vb), (pos), (siz), 0)
 
 #define psc_vbitmap_nset(vb)			(psc_vbitmap_getsize(vb) - psc_vbitmap_nfree(vb))
+
+#define psc_vbitmap_isfull(vb)			pfl_vbitmap_israngeset((vb), 1,	\
+						    0, psc_vbitmap_getsize(vb))
+#define pfl_vbitmap_isempty(vb)			pfl_vbitmap_israngeset((vb), 0,	\
+						    0, psc_vbitmap_getsize(vb))
 
 #define psc_vbitmap_printbin1(vb)						\
 	do {									\
@@ -106,9 +118,8 @@ void	_psc_vbitmap_free(struct psc_vbitmap *);
 void	 psc_vbitmap_clearall(struct psc_vbitmap *);
 int	 psc_vbitmap_get(const struct psc_vbitmap *, size_t);
 int	 psc_vbitmap_getncontig(struct psc_vbitmap *, int *);
-size_t	 psc_vbitmap_getsize(const struct psc_vbitmap *);
 void	 psc_vbitmap_invert(struct psc_vbitmap *);
-int	 psc_vbitmap_isfull(struct psc_vbitmap *);
+int	 pfl_vbitmap_israngeset(struct psc_vbitmap *, int, size_t, size_t);
 int	 psc_vbitmap_lcr(struct psc_vbitmap *);
 int	 psc_vbitmap_next(struct psc_vbitmap *, size_t *);
 int	 psc_vbitmap_nfree(const struct psc_vbitmap *);
