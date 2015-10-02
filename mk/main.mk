@@ -114,8 +114,10 @@ _TINCLUDES=		$(filter-out -I%,${INCLUDES}) $(patsubst %,-I%/,$(foreach \
 _EXCLUDES=		$(filter-out -I%,${EXCLUDES}) $(patsubst %,-I%/,$(foreach \
 			dir,$(patsubst -I%,%,$(filter -I%,${EXCLUDES})), $(realpath ${dir})))
 
+_TPROG=			$(shell echo ${PROG} | sed 's/:[^:]*//g')
+
 CFLAGS+=		${DEFINES} $(filter-out ${_EXCLUDES},${_TINCLUDES})
-TARGET?=		$(sort ${PROG} ${LIBRARY} ${TEST} ${DOCGEN} ${SHLIB})
+TARGET?=		$(sort ${_TPROG} ${LIBRARY} ${TEST} ${DOCGEN} ${SHLIB})
 PROG?=			${TEST}
 
 EXTRACT_INCLUDES=	perl -ne 'print $$& while /-I\S+\s?/gc'
@@ -416,9 +418,9 @@ ${OBJDIR}/$(notdir %.c) : %.y | ${OBJDIR}
 	${YACC} ${YFLAGS} -o $@ $(realpath $<)
 
 ifdef PROG
-${PROG}: ${OBJS}
+${_TPROG}: ${OBJS}
 	${LD} -o $@ $(sort ${OBJS}) ${LDFLAGS}
-	@printf "%s" "${PROG}:" > ${DEPEND_FILE}
+	@printf "%s" "${_TPROG}:" > ${DEPEND_FILE}
 	@${LIBDEP} ${LDFLAGS} ${LIBDEP_ADD} >> ${DEPEND_FILE}
 endif
 
@@ -466,13 +468,20 @@ install: recurse-install install-hook
 		if ${NOTEMPTY} "${INSTDIR}"; then			\
 			dir="${INSTDIR}";				\
 		fi;							\
-		${INST} -m 555 ${PROG} ${BIN} "$$dir"/;			\
+		for bin in ${PROG} ${BIN}; do				\
+			srcbin=$${bin%:*};				\
+			dstbin=$${bin#*:};				\
+			[ -z "$$dstbin" ] && dstbin=$$srcbin;		\
+			${INST} -m 555 $$srcbin "$$dir"/$$dstbin;	\
+		done;							\
+		# replace constants in installed scripts for system	\
+		# settings						\
 		for bin in ${BIN}; do					\
-			if head -1 $$bin | grep -aq perl; then		\
-				${ECHORUN} perl -i -Wpe			\
-				    's{^# use lib qw\(%INST_PLMODDIR%\);$$}$(	\
-				     ){use lib qw(${INST_PLMODDIR});}'	\
-				     $$dir/$$bin;			\
+			if head -1 $$srcbin | grep -aq perl; then	\
+				${ECHORUN} perl -i -Wpe 's{^# use $(	\
+				    )lib qw\(%INST_PLMODDIR%\);$$}$(	\
+				    ){use lib qw(${INST_PLMODDIR});}'	\
+				    $$dir/$$dstbin;			\
 			fi;						\
 		done;							\
 	fi
@@ -504,7 +513,7 @@ distclean-hook:
 
 clean-core:
 	${RM} -rf ${OBJDIR}
-	${RM} -f ${PROG} ${LIBRARY} ${SHLIB} core.[0-9]* *.core ${CLEANFILES}
+	${RM} -f ${_TPROG} ${LIBRARY} ${SHLIB} core.[0-9]* *.core ${CLEANFILES}
 	@for i in ${DEPLIST}; do					\
 		[ -e "$${i#*:}" ] || continue;				\
 		(cd $${i%:*} && ${MAKE} clean) || exit 1;		\
@@ -555,7 +564,7 @@ copyright:
 doc: recurse-doc
 	@if ${NOTEMPTY} "${MAN}"; then					\
 		${ECHORUN} ${MDPROC} $$(echo ${MAN} $(			\
-		    ) $$([ -e ${PROG}.[0-9] ] && echo ${PROG}.[0-9]) $(	\
+		    ) $$([ -e ${_TPROG}.[0-9] ] && echo ${_TPROG}.[0-9]) $(	\
 		    ) $$([ -e ${LIBRARY}.[0-9] ] && $(			\
 		    ) echo ${LIBRARY}.[0-9]) | tr ' ' '\n' | sort -u);	\
 	fi
