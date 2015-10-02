@@ -30,11 +30,11 @@
 #include <stdlib.h>
 #include <unistd.h>
 
+#include "pfl/alloc.h"
 #include "pfl/cdefs.h"
+#include "pfl/log.h"
 #include "pfl/pfl.h"
 #include "pfl/vbitmap.h"
-#include "pfl/alloc.h"
-#include "pfl/log.h"
 
 const char *progname;
 
@@ -159,6 +159,29 @@ main(int argc, char *argv[])
 	if (psc_vbitmap_next(vb, &elem))
 		psc_fatalx("an unexpected extra unused elem was found; pos=%zu", elem);
 
+	psc_vbitmap_setval_range(vb, 0, NELEM, 0);
+	psc_assert(pfl_vbitmap_israngeset(vb, 0, 581, 371));
+	psc_assert(pfl_vbitmap_israngeset(vb, 1, 581, 371) == 0);
+	psc_assert(pfl_vbitmap_israngeset(vb, 0, 581, 1));
+	psc_assert(pfl_vbitmap_israngeset(vb, 1, 581, 1) == 0);
+	psc_assert(pfl_vbitmap_isempty(vb));
+
+	psc_vbitmap_setval_range(vb, 0, NELEM, 1);
+	psc_assert(pfl_vbitmap_israngeset(vb, 1, 581, 371));
+	psc_assert(pfl_vbitmap_israngeset(vb, 0, 581, 371) == 0);
+	psc_assert(pfl_vbitmap_israngeset(vb, 1, 581, 1));
+	psc_assert(pfl_vbitmap_israngeset(vb, 0, 581, 1) == 0);
+	psc_assert(psc_vbitmap_isfull(vb));
+
 	psc_vbitmap_free(vb);
+
+	vb = psc_vbitmap_new(0);
+	for (i = 1; i < 101; i++) {
+		if (psc_vbitmap_resize(vb, i) == -1)
+			psc_fatal("psc_vbitmap_new");
+		psc_vbitmap_setval(vb, i - 1, i % 2);
+		psc_assert(psc_vbitmap_get(vb, i - 1) == i % 2);
+	}
+
 	exit(0);
 }
