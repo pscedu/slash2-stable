@@ -352,3 +352,14 @@ psc_dynarray_swap(struct psc_dynarray *da, int a, int b)
 	if (a != b)
 		SWAP(da->pda_items[a], da->pda_items[b], tmp);
 }
+
+int
+psc_dynarray_copy(const struct psc_dynarray *src,
+    struct psc_dynarray *dst)
+{
+	psc_dynarray_ensurelen(dst, psc_dynarray_len(src));
+	memcpy(dst->pda_items, src->pda_items, sizeof(void *) *
+	    psc_dynarray_len(src));
+	dst->pda_pos = psc_dynarray_len(src);
+	return (0);
+}
