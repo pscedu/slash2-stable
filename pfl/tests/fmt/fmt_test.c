@@ -95,7 +95,7 @@ main(int argc, char *argv[])
 	printf("3: %s\n", pfl_strrastr(cp, '_', 3));
 	printf("4: %s\n", pfl_strrastr(cp, '_', 4));
 	cp = pfl_strrastr(cp, '_', 3);
-	printf("s: %s\n", cp + strspn(, "_"));
+	printf("s: %s\n", cp + strspn(cp, "_"));
 
 	exit(0);
 }
