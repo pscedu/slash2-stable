@@ -49,7 +49,8 @@ usage(void)
 int
 main(int argc, char *argv[])
 {
-	char buf[PSCFMT_RATIO_BUFSIZ], hbuf[PSCFMT_HUMAN_BUFSIZ], fn[PATH_MAX];
+	char buf[PSCFMT_RATIO_BUFSIZ], hbuf[PSCFMT_HUMAN_BUFSIZ];
+	char *cp, fn[PATH_MAX];
 	int c;
 
 	while ((c = getopt(argc, argv, "")) != -1)
@@ -86,6 +87,15 @@ main(int argc, char *argv[])
 	printf("%"PRIx64"\n", psc_str_hashify("/foo/bar"));
 	printf("%"PRIx64"\n", psc_str_hashify("fmt/fmt_test.c"));
 	printf("%"PRIx64"\n", psc_str_hashify("Yesterday, all of my troubles seemed so far away."));
+
+	cp = "msl_rmc_bmlreassign_cb";
+	printf("0: %s\n", pfl_strrastr(cp, '_', 0));
+	printf("1: %s\n", pfl_strrastr(cp, '_', 1));
+	printf("2: %s\n", pfl_strrastr(cp, '_', 2));
+	printf("3: %s\n", pfl_strrastr(cp, '_', 3));
+	printf("4: %s\n", pfl_strrastr(cp, '_', 4));
+	cp = pfl_strrastr(cp, '_', 3);
+	printf("s: %s\n", cp + strspn(cp, "_"));
 
 	exit(0);
 }

@@ -169,6 +169,6 @@ void
 pscrpc_conns_init(void)
 {
 	psc_hashtbl_init(&pscrpc_conn_hashtbl, 0,
-	    struct pscrpc_connection, c_peer.nid, c_hentry, 47,
+	    struct pscrpc_connection, c_peer.nid, c_hentry, 3067,
 	    pscrpc_conn_cmp, "rpcconn");
 }

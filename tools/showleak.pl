@@ -24,36 +24,49 @@
 # -----------------------------------------------------------------------------
 # %PSC_END_COPYRIGHT%
 
-# use warnings;
-# use strict;
+use Getopt::Std;
+use warnings;
+use strict;
 
-#[1330381035:740627 sliricthr19:0x801c15400:mem dynarray.c _psc_dynarray_resize 67] alloc()=0x80a952060 sz=8 fl=0
-#[1330381035:740843 sliricthr19:0x801c15400:mem dynarray.c _psc_dynarray_resize 67] realloc(0x80a952060)=0x822125d60 sz=16 fl=0
-#[1330381035:741191 sliricthr19:0x801c15400:mem dynarray.c psc_dynarray_free 180] free(0x822125d60)
+sub usage {
+}
+
+my %opts;
+getopts("A:F:R:", \%opts) or usage;
+
+# alloc()=0x80a952060
+# realloc(0x80a952060)=0x822125d60
+# free(0x822125d60)
+
+$opts{A} = qr/alloc\(\)=(0x[a-f0-9]+)/ unless exists $opts{A};
+$opts{F} = qr/free\((0x[a-f0-9]+)\)/ unless exists $opts{F};
+$opts{R} = qr/realloc\((0x[a-f0-9]+)\)=(0x[a-f0-9]+)/ unless exists $opts{R};
 
 my %h;
 
+my $tty = -t STDERR;
+
 while (<>) {
-	if ($. % 3000 == 0) {
-		print STDERR "\rline $.";
+	$_ = "$.\t$_";
+
+	if ($tty) {
+		print STDERR "\rline $." unless $. % 3000;
 	}
 
-	if (/alloc\(\)=(0x[a-f0-9]+)/) {
-		#print "alloc $1\n";
+	if (/$opts{A}/) {
+		print "$h{$1}: clobber\n" if exists $h{$1};
 		$h{$1} = $_;
 
-	} elsif (/realloc\((0x[a-f0-9]+)\)=(0x[a-f0-9]+)/) {
-		#print "realloc $1 -> $2\n";
+	} elsif (/$opts{R}/) {
 		delete $h{$1};
-
 		$h{$2} = $_;
 
-	} elsif (/free\((0x[a-f0-9]+)\)/) {
-		#print "free $1\n";
+	} elsif (/$opts{F}/) {
+		# XXX check for double frees or dangling frees
 		delete $h{$1};
 	}
 }
 
-foreach $k (keys %h) {
+foreach my $k (keys %h) {
 	print $h{$k};
 }
