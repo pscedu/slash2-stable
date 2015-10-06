@@ -141,6 +141,7 @@ pscrpc_request_in_callback(lnet_event_t *ev)
 	/* NB we ABSOLUTELY RELY on req being zeroed, so pointers are NULL,
 	 * flags are reset and scalars are zero.  We only set the message
 	 * size to non-zero if this was a successful receive. */
+	INIT_PSC_LISTENTRY(&req->rq_global_lentry);
 	INIT_PSC_LISTENTRY(&req->rq_history_lentry);
 	INIT_PSC_LISTENTRY(&req->rq_lentry);
 	req->rq_xid = ev->match_bits;
@@ -155,6 +156,8 @@ pscrpc_request_in_callback(lnet_event_t *ev)
 #ifdef CRAY_XT3
 	//req->rq_uid = ev->uid;
 #endif
+
+	pll_add(&pscrpc_requests, req);
 
 	SVC_LOCK(svc);
 

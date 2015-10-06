@@ -299,6 +299,14 @@ psc_ctlrep_getlnetif(int fd, struct psc_ctlmsghdr *mh,
 
 #ifndef PFL_RPC
 int
+psc_ctlrep_getrpcrq(int fd, struct psc_ctlmsghdr *mh,
+    __unusedx void *m)
+{
+	return (psc_ctlsenderr(fd, mh, "get rpcrq: %s",
+	    strerror(ENOTSUP)));
+}
+
+int
 psc_ctlrep_getrpcsvc(int fd, struct psc_ctlmsghdr *mh,
     __unusedx void *m)
 {

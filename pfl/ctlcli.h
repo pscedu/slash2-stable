@@ -53,6 +53,7 @@ struct psc_ctlmsghdr;
 	{ psc_ctlmsg_odtable_prhdr,	psc_ctlmsg_odtable_prdat,	sizeof(struct psc_ctlmsg_odtable),	NULL },				\
 	{ psc_ctlmsg_param_prhdr,	psc_ctlmsg_param_prdat,		sizeof(struct psc_ctlmsg_param),	NULL },				\
 	{ psc_ctlmsg_pool_prhdr,	psc_ctlmsg_pool_prdat,		sizeof(struct psc_ctlmsg_pool),		NULL },				\
+	{ psc_ctlmsg_rpcrq_prhdr,	psc_ctlmsg_rpcrq_prdat,		sizeof(struct psc_ctlmsg_rpcrq),	NULL },				\
 	{ psc_ctlmsg_rpcsvc_prhdr,	psc_ctlmsg_rpcsvc_prdat,	sizeof(struct psc_ctlmsg_rpcsvc),	NULL },				\
 	{ NULL,				NULL,				0,					psc_ctlmsg_subsys_check },	\
 	{ psc_ctlmsg_thread_prhdr,	psc_ctlmsg_thread_prdat,	sizeof(struct psc_ctlmsg_thread),	NULL },				\
@@ -70,6 +71,7 @@ struct psc_ctlmsghdr;
 	{ "odtables",		psc_ctl_packshow_odtable },		\
 	{ "opstats",		psc_ctl_packshow_opstat },		\
 	{ "pools",		psc_ctl_packshow_pool },		\
+	{ "rpcrqs",		psc_ctl_packshow_rpcrq },		\
 	{ "rpcsvcs",		psc_ctl_packshow_rpcsvc },		\
 	{ "threads",		psc_ctl_packshow_thread },		\
 									\
@@ -121,6 +123,7 @@ void  psc_ctl_packshow_meter(char *);
 void  psc_ctl_packshow_mlist(char *);
 void  psc_ctl_packshow_odtable(char *);
 void  psc_ctl_packshow_pool(char *);
+void  psc_ctl_packshow_rpcrq(char *);
 void  psc_ctl_packshow_rpcsvc(char *);
 void  psc_ctl_packshow_thread(char *);
 
@@ -156,6 +159,8 @@ void  psc_ctlmsg_param_prdat(const struct psc_ctlmsghdr *, const void *);
 void  psc_ctlmsg_param_prhdr(struct psc_ctlmsghdr *, const void *);
 void  psc_ctlmsg_pool_prdat(const struct psc_ctlmsghdr *, const void *);
 void  psc_ctlmsg_pool_prhdr(struct psc_ctlmsghdr *, const void *);
+void  psc_ctlmsg_rpcrq_prdat(const struct psc_ctlmsghdr *, const void *);
+void  psc_ctlmsg_rpcrq_prhdr(struct psc_ctlmsghdr *, const void *);
 void  psc_ctlmsg_rpcsvc_prdat(const struct psc_ctlmsghdr *, const void *);
 void  psc_ctlmsg_rpcsvc_prhdr(struct psc_ctlmsghdr *, const void *);
 int   psc_ctlmsg_subsys_check(struct psc_ctlmsghdr *, const void *);

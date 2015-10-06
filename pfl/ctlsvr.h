@@ -69,6 +69,7 @@ struct psc_ctlparam_node;
 	{ psc_ctlrep_getodtable,	sizeof(struct psc_ctlmsg_odtable) },	\
 	{ psc_ctlrep_param,		sizeof(struct psc_ctlmsg_param) },	\
 	{ psc_ctlrep_getpool,		sizeof(struct psc_ctlmsg_pool) },	\
+	{ psc_ctlrep_getrpcrq,		sizeof(struct psc_ctlmsg_rpcrq) },	\
 	{ psc_ctlrep_getrpcsvc,		sizeof(struct psc_ctlmsg_rpcsvc) },	\
 	{ psc_ctlrep_getsubsys,		0 },					\
 	{ psc_ctlrep_getthread,		sizeof(struct psc_ctlmsg_thread) },	\
@@ -113,6 +114,7 @@ int	psc_ctlrep_getmeter(int, struct psc_ctlmsghdr *, void *);
 int	psc_ctlrep_getmlist(int, struct psc_ctlmsghdr *, void *);
 int	psc_ctlrep_getodtable(int, struct psc_ctlmsghdr *, void *);
 int	psc_ctlrep_getpool(int, struct psc_ctlmsghdr *, void *);
+int	psc_ctlrep_getrpcrq(int, struct psc_ctlmsghdr *, void *);
 int	psc_ctlrep_getrpcsvc(int, struct psc_ctlmsghdr *, void *);
 int	psc_ctlrep_getsubsys(int, struct psc_ctlmsghdr *, void *);
 int	psc_ctlrep_getthread(int, struct psc_ctlmsghdr *, void *);

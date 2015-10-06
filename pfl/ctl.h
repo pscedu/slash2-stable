@@ -178,6 +178,51 @@ struct psc_ctlmsg_pool {
 
 #define PCPL_NAME_ALL		"all"
 
+struct psc_ctlmsg_rpcrq {
+	uint64_t		 pcrq_addr;
+	 int32_t		 pcrq_type;
+	 int32_t		 pcrq_status;
+	 int32_t		 pcrq_timeout;
+	 int32_t		 pcrq_request_portal;
+	 int32_t		 pcrq_reply_portal;
+	 int32_t		 pcrq_nob_received;
+	 int32_t		 pcrq_reqlen;
+	 int32_t		 pcrq_replen;
+	 int32_t		 pcrq_import_generation;
+	 int32_t		 pcrq_opc;
+	 int64_t		 pcrq_sent;
+	uint64_t		 pcrq_transno;
+	uint64_t		 pcrq_xid;
+	uint64_t		 pcrq_history_seq;
+	unsigned int		 pcrq_intr:1,
+				 pcrq_replied:1,
+				 pcrq_err:1,
+				 pcrq_timedout:1,
+				 pcrq_resend:1,
+				 pcrq_restart:1,
+				 pcrq_replay:1,
+				 pcrq_no_resend:1,
+				 pcrq_waiting:1,
+				 pcrq_receiving_reply:1,
+				 pcrq_no_delay:1,
+				 pcrq_net_err:1,
+				 pcrq_abort_reply:1,
+				 pcrq_timeoutable:1,
+
+				 pcrq_has_bulk:1,
+				 pcrq_has_set:1,
+				 pcrq_has_intr:1,
+
+				 pcrq_bulk_abortable:1;
+	 int32_t		 pcrq_refcount;
+	 int32_t		 pcrq_retries;
+	char			 pcrq_peer[PSCRPC_NIDSTR_SIZE];
+	char			 pcrq_self[PSCRPC_NIDSTR_SIZE];
+	 int32_t		 pcrq_phase;
+	 int32_t		 pcrq_send_state;
+	 int32_t		 pcrq_nwaiters;
+};
+
 struct psc_ctlmsg_rpcsvc {
 	char			pcrs_name[PSCRPC_SVCNAME_MAX];
 	uint32_t		pcrs_flags;
@@ -236,6 +281,7 @@ enum {
 	PCMT_GETODTABLE,
 	PCMT_GETPARAM,
 	PCMT_GETPOOL,
+	PCMT_GETRPCRQ,
 	PCMT_GETRPCSVC,
 	PCMT_GETSUBSYS,
 	PCMT_GETTHREAD,

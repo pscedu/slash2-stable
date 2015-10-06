@@ -340,6 +340,15 @@ psc_ctl_packshow_pool(char *pool)
 }
 
 void
+psc_ctl_packshow_rpcrq(__unusedx char *rpcrq)
+{
+	struct psc_ctlmsg_rpcrq *pcrq;
+
+	psc_ctlmsg_push(PCMT_GETRPCRQ, sizeof(*pcrq));
+	/* XXX filter by xid or addr? */
+}
+
+void
 psc_ctl_packshow_rpcsvc(char *rpcsvc)
 {
 	struct psc_ctlmsg_rpcsvc *pcrs;
@@ -1017,6 +1026,74 @@ psc_ctlmsg_odtable_prdat(__unusedx const struct psc_ctlmsghdr *mh,
 	    pco->pco_opts & ODTBL_OPT_CRC	? 'c' : '-',
 	    pco->pco_opts & ODTBL_OPT_SYNC	? 's' : '-',
 	    pco->pco_elemsz, pco->pco_inuse, pco->pco_total, buf);
+}
+
+void
+psc_ctlmsg_rpcrq_prhdr(__unusedx struct psc_ctlmsghdr *mh,
+    __unusedx const void *m)
+{
+	/* strlen(xxx.xxx.xxx.xxx@lnd10) = 21 */
+	printf("%-16s %5s %4s "
+	    "%2s %20s %2s %4s "
+	    "%21s %21s "
+	    "%2s %2s %4s %4s "
+	    "%4s %3s %2s %2s\n",
+	    "rpcrq-addr", "xid", "tran",
+	    "rf", "flags", "op", "stat",
+	    "peernid", "selfnid",
+	    "qp", "pp", "qlen", "plen",
+	    "recv", "try", "ig", "nw");
+}
+
+void
+psc_ctlmsg_rpcrq_prdat(__unusedx const struct psc_ctlmsghdr *mh,
+    const void *m)
+{
+	const struct psc_ctlmsg_rpcrq *pcrq = m;
+
+#ifdef PFL_RPC
+	printf("%16"PRIx64" %5d %4d %2d "
+	    "%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c "
+	    "%2d %4d "
+	    "%21s %21s "
+	    "%2d %2d "
+	    "%4d %4d "
+	    "%4d %3d %2d %2d\n",
+	    pcrq->pcrq_addr, pcrq->pcrq_xid, pcrq->pcrq_transno,
+	    pcrq->pcrq_refcount,
+	    pcrq->pcrq_type == PSCRPC_MSG_ERR ? 'e' :
+	      pcrq->pcrq_type == PSCRPC_MSG_REPLY ? 'p' : 'q',
+	    pcrq->prcrq_phase >= PSCRPC_RQ_PHASE_NEW &&
+	    pcrq->prcrq_phase <= PSCRPC_RQ_PHASE_COMPLETE ?
+	      PSCRPC_PHASE_NAMES[pcrq->prcrq_phase -
+		PSCRPC_RQ_PHASE_NEW] : '?',
+	    pcrq->pcrq_abort_reply	? 'A' : '-',
+	    pcrq->pcrq_bulk_abortable	? 'B' : '-',
+	    pcrq->pcrq_err		? 'E' : '-',
+	    pcrq->pcrq_has_bulk		? 'b' : '-',
+	    pcrq->pcrq_has_intr		? 'i' : '-',
+	    pcrq->pcrq_has_set		? 's' : '-',
+	    pcrq->pcrq_intr		? 'I' : '-',
+	    pcrq->pcrq_net_err		? 'e' : '-',
+	    pcrq->pcrq_no_delay		? 'd' : '-',
+	    pcrq->pcrq_no_resend	? 'N' : '-',
+	    pcrq->pcrq_receiving_reply	? 'r' : '-',
+	    pcrq->pcrq_replay		? 'P' : '-',
+	    pcrq->pcrq_replied		? 'R' : '-',
+	    pcrq->pcrq_resend		? 'S' : '-',
+	    pcrq->pcrq_restart		? 'T' : '-',
+	    pcrq->pcrq_timedout		? 'X' : '-',
+	    pcrq->pcrq_timeoutable	? 't' : '-',
+	    pcrq->pcrq_waiting		? 'W' : '-'
+	    pcrq->pcrq_opc, abs(pcrq->pcrq_status),
+	    pcrq->pcrq_peer, pcrq->pcrq_self,
+	    pcrq->pcrq_request_portal, pcrq->pcrq_reply_portal,
+	    pcrq->pcrq_reqlen, pcrq->pcrq_replen,
+	    pcrq->pcrq_nob_received, pcrq->pcrq_retries,
+	    pcrq->pcrq_import_generation, pcrq->pcrq_nwaiters);
+#else
+	(void)pcrq;
+#endif
 }
 
 void

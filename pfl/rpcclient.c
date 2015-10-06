@@ -30,6 +30,7 @@
 
 #include "pfl/alloc.h"
 #include "pfl/atomic.h"
+#include "pfl/ctlsvr.h"
 #include "pfl/export.h"
 #include "pfl/list.h"
 #include "pfl/lock.h"
@@ -40,6 +41,9 @@
 
 static uint64_t		pscrpc_last_xid = 0;
 static psc_spinlock_t	pscrpc_last_xid_lock = SPINLOCK_INIT;
+
+struct psc_lockedlist	pscrpc_requests = PLL_INIT(&pscrpc_requests,
+			    struct pscrpc_request, rq_global_lentry);
 
 uint64_t
 pscrpc_next_xid(void)
@@ -145,6 +149,7 @@ pscrpc_prep_req_pool(struct pscrpc_import *imp, uint32_t version,
 	request->rq_reply_portal = imp->imp_cli_reply_portal;
 
 	INIT_SPINLOCK(&request->rq_lock);
+	INIT_PSC_LISTENTRY(&request->rq_global_lentry);
 	INIT_PSC_LISTENTRY(&request->rq_lentry);
 	INIT_PSC_LISTENTRY(&request->rq_history_lentry);
 	//INIT_PSCLIST_HEAD(&request->rq_replay_list);
@@ -155,6 +160,8 @@ pscrpc_prep_req_pool(struct pscrpc_import *imp, uint32_t version,
 
 	request->rq_reqmsg->opc = opcode;
 	request->rq_reqmsg->flags = 0;
+
+	pll_add(&pscrpc_requests, request);
 
 	return (request);
 }
@@ -607,7 +614,7 @@ pscrpc_queue_wait(struct pscrpc_request *req)
 	} else {
 		//timeout = MAX(req->rq_timeout * 100, 1);
 		timeout = MAX(req->rq_timeout, 1);
-		DEBUG_REQ(PLL_DIAG, req,"sleeping for %d sec", timeout);
+		DEBUG_REQ(PLL_DIAG, req, "sleeping for %d sec", timeout);
 	}
 	lwi = LWI_TIMEOUT_INTR(timeout, expired_request,
 	    interrupted_request, req);
@@ -1388,3 +1395,76 @@ pscrpc_resend_req(struct pscrpc_request *req)
 	pscrpc_wake_client_req(req);
 	freelock(&req->rq_lock);
 }
+
+#ifdef PFL_CTL
+
+#include "pfl/ctl.h"
+
+/*
+ * Respond to a "GETRPCRQ" control inquiry.
+ * @fd: client socket descriptor.
+ * @mh: already filled-in control message header.
+ * @m: control message to be filled in and sent out.
+ */
+int
+psc_ctlrep_getrpcrq(int fd, struct psc_ctlmsghdr *mh, void *m)
+{
+	struct psc_ctlmsg_rpcrq *pcrq = m;
+	struct pscrpc_request *rq;
+	int rc = 1;
+
+	PLL_LOCK(&pscrpc_requests);
+	PLL_FOREACH(rq, &pscrpc_requests) {
+		pcrq->pcrq_addr = (uint64_t)rq;
+		pcrq->pcrq_type = rq->rq_type;
+		pcrq->pcrq_status = rq->rq_status;
+		pcrq->pcrq_timeout = rq->rq_timeout;
+		pcrq->pcrq_opc = rq->rq_reqmsg ? rq->rq_reqmsg->opc : 0;
+		pcrq->pcrq_request_portal = rq->rq_request_portal;
+		pcrq->pcrq_reply_portal = rq->rq_reply_portal;
+		pcrq->pcrq_nob_received = rq->rq_nob_received;
+		pcrq->pcrq_reqlen = rq->rq_reqlen;
+		pcrq->pcrq_replen = rq->rq_replen;
+		pcrq->pcrq_import_generation = rq->rq_import_generation;
+		pcrq->pcrq_sent = rq->rq_sent;
+		pcrq->pcrq_transno = rq->rq_transno;
+		pcrq->pcrq_xid = rq->rq_xid;
+		pcrq->pcrq_history_seq = rq->rq_history_seq;
+		pcrq->pcrq_intr = rq->rq_intr;
+		pcrq->pcrq_replied = rq->rq_replied;
+		pcrq->pcrq_err = rq->rq_err;
+		pcrq->pcrq_timedout = rq->rq_timedout;
+		pcrq->pcrq_resend = rq->rq_resend;
+		pcrq->pcrq_restart = rq->rq_restart;
+		pcrq->pcrq_replay = rq->rq_replay;
+		pcrq->pcrq_no_resend = rq->rq_no_resend;
+		pcrq->pcrq_waiting = rq->rq_waiting;
+		pcrq->pcrq_receiving_reply = rq->rq_receiving_reply;
+		pcrq->pcrq_no_delay = rq->rq_no_delay;
+		pcrq->pcrq_net_err = rq->rq_net_err;
+		pcrq->pcrq_abort_reply = rq->rq_abort_reply;
+		pcrq->pcrq_timeoutable = rq->rq_timeoutable;
+		pcrq->pcrq_has_bulk = !!rq->rq_bulk;
+		pcrq->pcrq_has_set = !!rq->rq_set;
+		pcrq->pcrq_has_intr = !!rq->rq_interpret_reply;
+		pcrq->pcrq_bulk_abortable = rq->rq_bulk_abortable;
+		pcrq->pcrq_refcount = atomic_read(&rq->rq_refcount);
+		pcrq->pcrq_retries = atomic_read(&rq->rq_retries);
+		libcfs_nid2str2(rq->rq_peer.nid, pcrq->pcrq_peer);
+		libcfs_nid2str2(rq->rq_self, pcrq->pcrq_self);
+		pcrq->pcrq_phase = rq->rq_phase;
+		pcrq->pcrq_send_state = rq->rq_send_state;
+		pcrq->pcrq_nwaiters = rq->rq_waitq ?
+		    psc_waitq_nwaiters(rq->rq_waitq) : 0 +
+		    psc_waitq_nwaiters(&rq->rq_reply_waitq) +
+		    rq->rq_compl ?
+		    psc_waitq_nwaiters(&rq->rq_compl->pc_wq) : 0;
+		rc = psc_ctlmsg_sendv(fd, mh, pcrq);
+		if (!rc)
+			break;
+	}
+	PLL_ULOCK(&pscrpc_requests);
+	return (rc);
+}
+
+#endif

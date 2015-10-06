@@ -43,6 +43,7 @@
 #include "pfl/list.h"
 #include "pfl/listcache.h"
 #include "pfl/lock.h"
+#include "pfl/lockedlist.h"
 #include "pfl/pool.h"
 #include "pfl/rpc_intrfc.h"
 #include "pfl/thread.h"
@@ -52,6 +53,7 @@
 struct psc_dynarray;
 
 #define PSCRPC_MD_OPTIONS		0
+
 #define BULK_GET_SOURCE			0
 #define BULK_PUT_SINK			1
 #define BULK_GET_SINK			2
@@ -117,6 +119,8 @@ enum pscrpc_rq_phase {
 	PSCRPC_RQ_PHASE_INTERPRET	= 0xebc0de03,
 	PSCRPC_RQ_PHASE_COMPLETE	= 0xebc0de04,
 };
+
+#define PSCRPC_PHASES_NAMES 		"nrbic"
 
 enum pscrpc_imp_state {
 	PSCRPC_IMP_CLOSED		=  1,
@@ -337,6 +341,7 @@ struct pscrpc_request {
 	enum pscrpc_imp_state		 rq_send_state;
 	struct psclist_head		 rq_lentry;
 	struct psclist_head		 rq_set_chain_lentry;
+	struct psclist_head		 rq_global_lentry;
 	struct psclist_head		 rq_history_lentry;
 	struct pscrpc_import		*rq_import;		/* client side */
 	struct pscrpc_request_pool	*rq_pool;
@@ -607,6 +612,7 @@ extern struct psc_poolmgr		*pscrpc_conn_pool;
 extern struct psc_poolmgr		*pscrpc_imp_pool;
 extern struct psc_poolmgr		*pscrpc_set_pool;
 extern struct psc_poolmgr		*pscrpc_rq_pool;
+extern struct psc_lockedlist		 pscrpc_requests;
 
 static __inline void
 pscrpc_rs_addref(struct pscrpc_reply_state *rs)

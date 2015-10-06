@@ -189,6 +189,7 @@ _pscrpc_server_free_request(struct pscrpc_request *req)
 		pscrpc_put_connection(req->rq_conn);
 	req->rq_conn = NULL;
 
+	pll_remove(&pscrpc_requests, req);
 	if (req != &rqbd->rqbd_req) {
 		/*
 		 * NB request buffers use an embedded

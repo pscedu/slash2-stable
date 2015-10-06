@@ -736,6 +736,7 @@ _pscrpc_free_req(struct pscrpc_request *rq, __unusedx int locked)
 			    rq->rq_reqlen);
 			rq->rq_reqmsg = NULL;
 		}
+		pll_remove(&pscrpc_requests, rq);
 		psc_pool_return(pscrpc_rq_pool, rq);
 	}
 }
