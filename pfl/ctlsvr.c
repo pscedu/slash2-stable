@@ -94,8 +94,8 @@ psc_ctlrep_getfault(int fd, struct psc_ctlmsghdr *mh,
 	return (psc_ctlsenderr(fd, mh, "fault support not compiled in"));
 }
 
-/**
- * psc_ctlmsg_sendv - Send a control message back to client.
+/*
+ * Send a control message back to client.
  * @fd: client socket descriptor.
  * @mh: already filled-out control message header.
  * @m: control message contents.
@@ -138,8 +138,8 @@ psc_ctlmsg_sendv(int fd, const struct psc_ctlmsghdr *mh, const void *m)
 	return (1);
 }
 
-/**
- * psc_ctlmsg_send - Send a control message back to client.
+/*
+ * Send a control message back to client.
  * @fd: client socket descriptor.
  * @id: client-provided passback identifier.
  * @type: type of message.
@@ -161,13 +161,14 @@ psc_ctlmsg_send(int fd, int id, int type, size_t siz, const void *m)
 }
 
 int
-psc_ctlsenderrv(int fd, const struct psc_ctlmsghdr *mhp, const char *fmt,
-    va_list ap)
+psc_ctlsenderrv(int fd, const struct psc_ctlmsghdr *mhp,
+    const char *fmt, va_list ap)
 {
 	struct psc_ctlmsg_error pce;
 	struct psc_ctlmsghdr mh;
 
-	vsnprintf(pce.pce_errmsg, sizeof(pce.pce_errmsg), fmt, ap); /* XXX */
+	/* XXX */
+	vsnprintf(pce.pce_errmsg, sizeof(pce.pce_errmsg), fmt, ap);
 
 	mh.mh_id = mhp->mh_id;
 	mh.mh_type = PCMT_ERROR;
@@ -175,8 +176,8 @@ psc_ctlsenderrv(int fd, const struct psc_ctlmsghdr *mhp, const char *fmt,
 	return (psc_ctlmsg_sendv(fd, &mh, &pce));
 }
 
-/**
- * psc_ctlsenderr - Send an error to client over control interface.
+/*
+ * Send an error to client over control interface.
  * @fd: client socket descriptor.
  * @mh: message header to use.
  * @fmt: printf(3) format of error message.
@@ -194,8 +195,8 @@ psc_ctlsenderr(int fd, const struct psc_ctlmsghdr *mhp, const char *fmt,
 	return (rc);
 }
 
-/**
- * psc_ctlthr_get - Export control thread stats.
+/*
+ * Export control thread stats.
  * @thr: thread begin queried.
  * @pcst: thread stats control message to be filled in.
  */
@@ -207,8 +208,8 @@ psc_ctlthr_get(struct psc_thread *thr, struct psc_ctlmsg_thread *pcst)
 	pcst->pcst_ndrop	= psc_ctlthr(thr)->pct_stat.ndrop;
 }
 
-/**
- * psc_ctlacthr_get - Export control thread stats.
+/*
+ * Export control thread stats.
  * @thr: thread begin queried.
  * @pcst: thread stats control message to be filled in.
  */
@@ -218,8 +219,8 @@ psc_ctlacthr_get(struct psc_thread *thr, struct psc_ctlmsg_thread *pcst)
 	pcst->pcst_nclients	= psc_ctlacthr(thr)->pcat_stat.nclients;
 }
 
-/**
- * psc_ctlmsg_thread_send - Send a reply to a "GETTHREAD" inquiry.
+/*
+ * Send a reply to a "GETTHREAD" inquiry.
  * @fd: client socket descriptor.
  * @mh: already filled-in control message header.
  * @m: control message to be filled in and sent out.
@@ -243,8 +244,8 @@ psc_ctlmsg_thread_send(int fd, struct psc_ctlmsghdr *mh, void *m,
 	return (psc_ctlmsg_sendv(fd, mh, pcst));
 }
 
-/**
- * psc_ctlrep_getthread - Respond to a "GETTHREAD" inquiry.
+/*
+ * Respond to a "GETTHREAD" inquiry.
  * @fd: client socket descriptor.
  * @mh: already filled-in control message header.
  * @m: control message to examine and reuse.
@@ -258,13 +259,14 @@ psc_ctlrep_getthread(int fd, struct psc_ctlmsghdr *mh, void *m)
 	    psc_ctlmsg_thread_send));
 }
 
-/**
- * psc_ctlrep_getsubsys - Send a response to a "GETSUBSYS" inquiry.
+/*
+ * Send a response to a "GETSUBSYS" inquiry.
  * @fd: client socket descriptor.
  * @mh: already filled-in control message header.
  */
 int
-psc_ctlrep_getsubsys(int fd, struct psc_ctlmsghdr *mh, __unusedx void *m)
+psc_ctlrep_getsubsys(int fd, struct psc_ctlmsghdr *mh,
+    __unusedx void *m)
 {
 	struct psc_ctlmsg_subsys *pcss;
 	size_t siz;
@@ -284,7 +286,8 @@ psc_ctlrep_getsubsys(int fd, struct psc_ctlmsghdr *mh, __unusedx void *m)
 	mh->mh_size = siz;
 	rc = psc_ctlmsg_sendv(fd, mh, pcss);
  done:
-	mh->mh_size = 0;	/* reset because we used our own buffer */
+	/* reset because we used our own buffer */
+	mh->mh_size = 0;
 	PSCFREE(pcss);
 	return (rc);
 }
@@ -315,8 +318,8 @@ psc_ctlrep_getrpcsvc(int fd, struct psc_ctlmsghdr *mh,
 }
 #endif
 
-/**
- * psc_ctlmsg_loglevel_send - Send a reply to a "GETLOGLEVEL" inquiry.
+/*
+ * Send a reply to a "GETLOGLEVEL" inquiry.
  * @fd: client socket descriptor.
  * @mh: already filled-in control message header.
  * @thr: thread begin queried.
@@ -339,13 +342,14 @@ psc_ctlmsg_loglevel_send(int fd, struct psc_ctlmsghdr *mh, void *m,
 	    sizeof(*pcl->pcl_levels));
 	mh->mh_size = siz;
 	rc = psc_ctlmsg_sendv(fd, mh, pcl);
-	mh->mh_size = 0;	/* reset because we used our own buffer */
+	/* reset because we used our own buffer */
+	mh->mh_size = 0;
 	PSCFREE(pcl);
 	return (rc);
 }
 
-/**
- * psc_ctlrep_getloglevel - Respond to a "GETLOGLEVEL" inquiry.
+/*
+ * Respond to a "GETLOGLEVEL" inquiry.
  * @fd: client socket descriptor.
  * @mh: already filled-in control message header.
  * @m: control message to examine.
@@ -359,10 +363,9 @@ psc_ctlrep_getloglevel(int fd, struct psc_ctlmsghdr *mh, void *m)
 	    psc_ctlmsg_loglevel_send));
 }
 
-/**
- * psc_ctlrep_gethashtable - Respond to a "GETHASHTABLE" inquiry.
- *	This computes bucket usage statistics of a hash table and
- *	sends the results back to the client.
+/*
+ * Respond to a "GETHASHTABLE" inquiry.  This computes bucket usage
+ * statistics of a hash table and sends the results back to the client.
  * @fd: client socket descriptor.
  * @mh: already filled-in control message header.
  * @m: control message to be filled in and sent out.
@@ -386,9 +389,11 @@ psc_ctlrep_gethashtable(int fd, struct psc_ctlmsghdr *mh, void *m)
 		    strncmp(name, pht->pht_name, strlen(name)) == 0) {
 			found = 1;
 
-			snprintf(pcht->pcht_name, sizeof(pcht->pcht_name),
-			    "%s", pht->pht_name);
-			psc_hashtbl_getstats(pht, &pcht->pcht_totalbucks,
+			snprintf(pcht->pcht_name,
+			    sizeof(pcht->pcht_name), "%s",
+			    pht->pht_name);
+			psc_hashtbl_getstats(pht,
+			    &pcht->pcht_totalbucks,
 			    &pcht->pcht_usedbucks, &pcht->pcht_nents,
 			    &pcht->pcht_maxbucklen);
 			rc = psc_ctlmsg_sendv(fd, mh, pcht);
@@ -408,8 +413,8 @@ psc_ctlrep_gethashtable(int fd, struct psc_ctlmsghdr *mh, void *m)
 	return (rc);
 }
 
-/**
- * psc_ctlrep_getlistcache - Respond to a "GETLISTCACHE" inquiry.
+/*
+ * Respond to a "GETLISTCACHE" inquiry.
  * @fd: client socket descriptor.
  * @mh: already filled-in control message header.
  * @m: control message to examine and reuse.
@@ -436,8 +441,8 @@ psc_ctlrep_getlistcache(int fd, struct psc_ctlmsghdr *mh, void *m)
 			strlcpy(pclc->pclc_name, lc->plc_name,
 			    sizeof(pclc->pclc_name));
 			pclc->pclc_size = lc->plc_nitems;
-			pclc->pclc_nseen =
-			    psc_atomic64_read(&lc->plc_nseen->opst_lifetime);
+			pclc->pclc_nseen = psc_atomic64_read(
+			    &lc->plc_nseen->opst_lifetime);
 			pclc->pclc_flags = lc->plc_flags;
 			pclc->pclc_nw_want = psc_waitq_nwaiters(
 			    &lc->plc_wq_want);
@@ -460,8 +465,8 @@ psc_ctlrep_getlistcache(int fd, struct psc_ctlmsghdr *mh, void *m)
 	return (rc);
 }
 
-/**
- * psc_ctlrep_getpool - Send a response to a "GETPOOL" inquiry.
+/*
+ * Send a response to a "GETPOOL" inquiry.
  * @fd: client socket descriptor.
  * @mh: already filled-in control message header.
  * @msg: control message to examine and reuse.
@@ -492,22 +497,25 @@ psc_ctlrep_getpool(int fd, struct psc_ctlmsghdr *mh, void *msg)
 			pcpl->pcpl_total = m->ppm_total;
 			pcpl->pcpl_flags = m->ppm_flags;
 			pcpl->pcpl_thres = m->ppm_thres;
-			pcpl->pcpl_nseen =
-			    psc_atomic64_read(&m->ppm_nseen->opst_lifetime);
-			pcpl->pcpl_ngrow =
-			    psc_atomic64_read(&m->ppm_opst_grows->opst_lifetime);
-			pcpl->pcpl_nshrink =
-			    psc_atomic64_read(&m->ppm_opst_shrinks->opst_lifetime);
+			pcpl->pcpl_nseen = psc_atomic64_read(
+			    &m->ppm_nseen->opst_lifetime);
+			pcpl->pcpl_ngrow = psc_atomic64_read(
+			    &m->ppm_opst_grows->opst_lifetime);
+			pcpl->pcpl_nshrink = psc_atomic64_read(
+			    &m->ppm_opst_shrinks->opst_lifetime);
 			if (POOL_IS_MLIST(m)) {
-				pcpl->pcpl_free = psc_mlist_size(&m->ppm_ml);
-				pcpl->pcpl_nw_empty = psc_multiwaitcond_nwaiters(
-				    &m->ppm_ml.pml_mwcond_empty);
+				pcpl->pcpl_free = psc_mlist_size(
+				    &m->ppm_ml);
+				pcpl->pcpl_nw_empty =
+				    psc_multiwaitcond_nwaiters(
+					&m->ppm_ml.pml_mwcond_empty);
 			} else {
 				pcpl->pcpl_free = lc_nitems(&m->ppm_lc);
 				pcpl->pcpl_nw_want = psc_waitq_nwaiters(
 				    &m->ppm_lc.plc_wq_want);
-				pcpl->pcpl_nw_empty = psc_waitq_nwaiters(
-				    &m->ppm_lc.plc_wq_empty);
+				pcpl->pcpl_nw_empty =
+				    psc_waitq_nwaiters(
+					&m->ppm_lc.plc_wq_empty);
 			}
 			POOL_ULOCK(m);
 			rc = psc_ctlmsg_sendv(fd, mh, pcpl);
@@ -546,7 +554,9 @@ psc_ctlmsg_param_send(int fd, const struct psc_ctlmsghdr *mh,
 	snprintf(pcp->pcp_thrname, sizeof(pcp->pcp_thrname), "%s",
 	    thrname);
 
-	/* Concatenate each levels[] element together with dots (`.'). */
+	/*
+	 * Concatenate each levels[] element together with dots (`.').
+	 */
 	s = pcp->pcp_field;
 	end = s + sizeof(pcp->pcp_field) - 1;
 	for (lvl = 0; s < end && lvl < nlevels; lvl++) {
@@ -560,7 +570,9 @@ psc_ctlmsg_param_send(int fd, const struct psc_ctlmsghdr *mh,
 	snprintf(pcp->pcp_value, sizeof(pcp->pcp_value), "%s", value);
 	rc = psc_ctlmsg_sendv(fd, mh, pcp);
 
-	/* Restore original threadname value for additional processing. */
+	/*
+	 * Restore original threadname value for additional processing.
+	 */
 	snprintf(pcp->pcp_thrname, sizeof(pcp->pcp_thrname), "%s",
 	    othrname);
 	return (rc);
@@ -624,9 +636,11 @@ psc_ctlparam_log_level(int fd, struct psc_ctlmsghdr *mh,
 
 		for (subsys = start_ss; subsys < end_ss; subsys++) {
 			if (set)
-				thr->pscthr_loglevels[subsys] = loglevel;
+				thr->pscthr_loglevels[subsys] =
+				    loglevel;
 			else {
-				levels[2] = (char *)psc_subsys_name(subsys);
+				levels[2] = (char *)psc_subsys_name(
+				    subsys);
 				rc = psc_ctlmsg_param_send(fd, mh, pcp,
 				    thr->pscthr_name, levels, 3,
 				    psc_loglevel_getname(thr->
@@ -677,7 +691,8 @@ psc_ctlparam_log_file(int fd, struct psc_ctlmsghdr *mh,
 			rc = psc_ctlsenderr(fd, mh, "log.file: %s",
 			    strerror(errno));
 	} else
-		rc = psc_ctlsenderr(fd, mh, "log.file: write-only field");
+		rc = psc_ctlsenderr(fd, mh,
+		    "log.file: write-only field");
 	return (rc);
 }
 
@@ -848,7 +863,7 @@ psc_ctlparam_rlim(int fd, struct psc_ctlmsghdr *mh,
 	if (nlevels > 2)
 		return (psc_ctlsenderr(fd, mh, "invalid field"));
 
-	if (strcmp(pcp->pcp_thrname, PCTHRNAME_EVERYONE) != 0) 
+	if (strcmp(pcp->pcp_thrname, PCTHRNAME_EVERYONE) != 0)
 		return (psc_ctlsenderr(fd, mh, "rlim: not thread "
 		    "specific"));
 
@@ -880,7 +895,8 @@ psc_ctlparam_rlim(int fd, struct psc_ctlmsghdr *mh,
 			    pcr->pcr_name, pcp->pcp_value));
 
 		if (pcp->pcp_flags & (PCPF_ADD | PCPF_SUB)) {
-			if (psc_getrlimit(pcr->pcr_id, &n, NULL) == -1) {
+			if (psc_getrlimit(pcr->pcr_id, &n,
+			    NULL) == -1) {
 				int error = errno;
 
 				psclog_error("getrlimit");
@@ -1074,8 +1090,8 @@ psc_ctlparam_run(int fd, struct psc_ctlmsghdr *mh,
 	return (rc);
 }
 
-/**
- * psc_ctlparam_pause - Handle thread pause state parameter.
+/*
+ * Handle thread pause state parameter.
  * @fd: control connection file descriptor.
  * @mh: already filled-in control message header.
  * @pcp: parameter control message.
@@ -1204,7 +1220,8 @@ psc_ctlparam_pool_handle(int fd, struct psc_ctlmsghdr *mh,
 				psc_pool_settotal(m, val);
 		} else {
 			levels[2] = "total";
-			snprintf(nbuf, sizeof(nbuf), "%d", m->ppm_total);
+			snprintf(nbuf, sizeof(nbuf), "%d",
+			    m->ppm_total);
 			if (!psc_ctlmsg_param_send(fd, mh, pcp,
 			    PCTHRNAME_EVERYONE, levels, 3, nbuf))
 				return (0);
@@ -1241,7 +1258,8 @@ psc_ctlparam_pool_handle(int fd, struct psc_ctlmsghdr *mh,
 				m->ppm_thres = 99;
 		} else {
 			levels[2] = "thres";
-			snprintf(nbuf, sizeof(nbuf), "%d", m->ppm_thres);
+			snprintf(nbuf, sizeof(nbuf), "%d",
+			    m->ppm_thres);
 			if (!psc_ctlmsg_param_send(fd, mh, pcp,
 			    PCTHRNAME_EVERYONE, levels, 3, nbuf))
 				return (0);
@@ -1251,7 +1269,8 @@ psc_ctlparam_pool_handle(int fd, struct psc_ctlmsghdr *mh,
 		if (set) {
 			if (m->ppm_reclaimcb == NULL)
 				return (psc_ctlsenderr(fd, mh,
-				    "pool.%s: not reapable", levels[1]));
+				    "pool.%s: not reapable",
+				    levels[1]));
 			if (pcp->pcp_flags & PCPF_SUB)
 				return (psc_ctlsenderr(fd, mh,
 				    "pool.%s.reap: value cannot be "
@@ -1263,7 +1282,8 @@ psc_ctlparam_pool_handle(int fd, struct psc_ctlmsghdr *mh,
 			psc_atomic32_sub(&m->ppm_nwaiters, val);
 		} else {
 			return (psc_ctlsenderr(fd, mh,
-			    "pool.%s.reap: write-only field", levels[1]));
+			    "pool.%s.reap: write-only field",
+			    levels[1]));
 		}
 	}
 
@@ -1616,19 +1636,24 @@ psc_ctlrep_param(int fd, struct psc_ctlmsghdr *mh, void *m)
 		n = pcf->pcf_level;
 		ptn = pcf->pcf_ptn;
 		do {
-			if (n == nlevels - 1 && strcmp(levels[n], "?") == 0) {
+			if (n == nlevels - 1 &&
+			    strcmp(levels[n], "?") == 0) {
 				if (n)
-					psc_ctlparam_fieldname(pcp->pcp_value,
+					psc_ctlparam_fieldname(
+					    pcp->pcp_value,
 					    nlevels - 1);
 				PSC_STREE_FOREACH_CHILD(c, ptn) {
 					pcn = c->ptn_data;
 					if (n)
-						rc = psc_ctlsenderr(fd, mh,
-						    "%s: available subnode: %s",
-						    pcp->pcp_field, pcn->pcn_name);
+						rc = psc_ctlsenderr(fd,
+						    mh, "%s: available "
+						    "subnode: %s",
+						    pcp->pcp_field,
+						    pcn->pcn_name);
 					else
-						rc = psc_ctlsenderr(fd, mh,
-						    "available top-level node: %s",
+						rc = psc_ctlsenderr(fd,
+						    mh, "available "
+						    "top-level node: %s",
 						    pcn->pcn_name);
 					if (rc == 0)
 						break;
@@ -1661,10 +1686,12 @@ psc_ctlrep_param(int fd, struct psc_ctlmsghdr *mh, void *m)
 				break;
 			} else if (pcf->pcf_level + 1 >= nlevels) {
 				/*
-				 * If the paramater tree has more levels than that is given
-				 * by the user, then we end up on a non-leaf node. We are 
-				 * going to visit all children of this node.  Also, we must
-				 * disallow setting a value on a non-leaf node.
+				 * If the paramater tree has more levels
+				 * than that is given by the user, then
+				 * we end up on a non-leaf node.  We are
+				 * going to visit all children of this
+				 * node.  Also, we must disallow setting
+				 * a value on a non-leaf node.
 				 */
 				if (set)
 					goto invalid;
@@ -1672,13 +1699,19 @@ psc_ctlrep_param(int fd, struct psc_ctlmsghdr *mh, void *m)
 				k = 0;
 				PSC_STREE_FOREACH_CHILD(d, c) {
 					pcn = d->ptn_data;
-					/* avoid stack frame by processing directly */
-					if (psc_listhd_empty(&d->ptn_children)) {
+					/*
+					 * Avoid stack frame by
+					 * processing directly.
+					 */
+					if (psc_listhd_empty(
+					    &d->ptn_children)) {
 						/*
-						 * Automatically add a level based on the
-						 * name of a children.
+						 * Automatically add a
+						 * level based on the
+						 * name of a child.
 						 */
-						levels[n + 1] = pcn->pcn_name;
+						levels[n + 1] =
+						    pcn->pcn_name;
 						rc = pcn->pcn_cbf(fd,
 						    mh, pcp, levels,
 						    n + 1, pcn);
@@ -1720,7 +1753,8 @@ psc_ctlrep_param(int fd, struct psc_ctlmsghdr *mh, void *m)
 	if (set)
 		return (psc_ctlsenderr(fd, mh,
 		    "%s: not a leaf node", pcp->pcp_field));
-	return (psc_ctlsenderr(fd, mh, "%s: invalid field", pcp->pcp_field));
+	return (psc_ctlsenderr(fd, mh, "%s: invalid field",
+	    pcp->pcp_field));
 }
 
 int
@@ -1792,8 +1826,8 @@ psc_ctlparam_register_var(const char *name, enum pflctl_paramt type,
 	pcn->pcn_ptr = p;
 }
 
-/**
- * psc_ctlparam_opstats - Handle opstats parameter.
+/*
+ * Handle opstats parameter.
  * @fd: control connection file descriptor.
  * @mh: already filled-in control message header.
  * @pcp: parameter control message.
@@ -1851,8 +1885,8 @@ psc_ctlparam_opstats(int fd, struct psc_ctlmsghdr *mh,
 	return (rc);
 }
 
-/**
- * psc_ctlrep_getopstat - Respond to a "GETOPSTAT" inquiry.
+/*
+ * Respond to a "GETOPSTAT" inquiry.
  * @fd: client socket descriptor.
  * @mh: already filled-in control message header.
  * @m: opstats control message to be filled in and sent out.
@@ -1892,8 +1926,8 @@ psc_ctlrep_getopstat(int fd, struct psc_ctlmsghdr *mh, void *m)
 	return (rc);
 }
 
-/**
- * psc_ctlrep_getmeter - Respond to a "GETMETER" inquiry.
+/*
+ * Respond to a "GETMETER" inquiry.
  * @fd: client socket descriptor.
  * @mh: already filled-in control message header.
  * @m: control message to examine and reuse.
@@ -1932,8 +1966,8 @@ psc_ctlrep_getmeter(int fd, struct psc_ctlmsghdr *mh, void *m)
 	return (rc);
 }
 
-/**
- * psc_ctlrep_getmlist - Respond to a "GETMLIST" inquiry.
+/*
+ * Respond to a "GETMLIST" inquiry.
  * @fd: client socket descriptor.
  * @mh: already filled-in control message header.
  * @m: control message to examine and reuse.
@@ -1961,10 +1995,11 @@ psc_ctlrep_getmlist(int fd, struct psc_ctlmsghdr *mh, void *m)
 			    sizeof(pcml->pcml_name),
 			    "%s", pml->pml_name);
 			pcml->pcml_size = pml->pml_nitems;
-			pcml->pcml_nseen =
-			    psc_atomic64_read(&pml->pml_nseen->opst_lifetime);
+			pcml->pcml_nseen = psc_atomic64_read(
+			    &pml->pml_nseen->opst_lifetime);
 			pcml->pcml_nwaiters =
-			    psc_multiwaitcond_nwaiters(&pml->pml_mwcond_empty);
+			    psc_multiwaitcond_nwaiters(
+				&pml->pml_mwcond_empty);
 			MLIST_ULOCK(pml);
 
 			rc = psc_ctlmsg_sendv(fd, mh, pcml);
@@ -1981,8 +2016,8 @@ psc_ctlrep_getmlist(int fd, struct psc_ctlmsghdr *mh, void *m)
 	return (rc);
 }
 
-/**
- * psc_ctlrep_getodtable - Respond to a "GETODTABLE" control inquiry.
+/*
+ * Respond to a "GETODTABLE" control inquiry.
  * @fd: client socket descriptor.
  * @mh: already filled-in control message header.
  * @m: control message to be filled in and sent out.
@@ -2035,8 +2070,8 @@ pfl_journals_get(void)
 	return (NULL);
 }
 
-/**
- * psc_ctlrep_getjournal - Respond to a "GETJOURNAL" control inquiry.
+/*
+ * Respond to a "GETJOURNAL" control inquiry.
  * @fd: client socket descriptor.
  * @mh: already filled-in control message header.
  * @m: control message to be filled in and sent out.
@@ -2083,8 +2118,8 @@ psc_ctlrep_getjournal(int fd, struct psc_ctlmsghdr *mh, void *m)
 	return (rc);
 }
 
-/**
- * psc_ctl_applythrop - Invoke an operation on all applicable threads.
+/*
+ * Invoke an operation on all applicable threads.
  * @fd: client socket descriptor.
  * @mh: already filled-in control message header.
  * @m: control message to examine.
@@ -2133,8 +2168,8 @@ psc_ctl_applythrop(int fd, struct psc_ctlmsghdr *mh, void *m,
 	return (rc);
 }
 
-/**
- * psc_ctlthr_service - Satisfy a client connection.
+/*
+ * Satisfy a client connection.
  * @fd: client socket descriptor.
  * @ct: control operation table.
  * @nops: number of operations in table.
@@ -2226,8 +2261,8 @@ psc_ctlthr_service(int fd, const struct psc_ctlop *ct, int nops,
 	return (0);
 }
 
-/**
- * psc_ctlacthr_main - Control thread connection acceptor.
+/*
+ * Control thread connection acceptor.
  * @thr: thread.
  */
 void
@@ -2352,8 +2387,8 @@ psc_ctlthr_spawn_listener(const char *ofn, int acthrtype)
 	pscthr_setready(thr);
 }
 
-/**
- * psc_ctlthr_main - Main control thread client service loop.
+/*
+ * Main control thread client service loop.
  * @ofn: path to control socket.
  * @ct: control operations.
  * @nops: number of operations in @ct table.
