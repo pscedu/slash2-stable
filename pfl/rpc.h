@@ -120,7 +120,7 @@ enum pscrpc_rq_phase {
 	PSCRPC_RQ_PHASE_COMPLETE	= 0xebc0de04,
 };
 
-#define PSCRPC_PHASES_NAMES 		"nrbic"
+#define PSCRPC_PHASE_NAMES 		"nrbic"
 
 enum pscrpc_imp_state {
 	PSCRPC_IMP_CLOSED		=  1,

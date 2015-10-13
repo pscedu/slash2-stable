@@ -218,7 +218,7 @@ struct psc_ctlmsg_rpcrq {
 	 int32_t		 pcrq_retries;
 	char			 pcrq_peer[PSCRPC_NIDSTR_SIZE];
 	char			 pcrq_self[PSCRPC_NIDSTR_SIZE];
-	 int32_t		 pcrq_phase;
+	uint32_t		 pcrq_phase;
 	 int32_t		 pcrq_send_state;
 	 int32_t		 pcrq_nwaiters;
 };

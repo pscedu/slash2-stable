@@ -54,15 +54,12 @@
 #include "pfl/meter.h"
 #include "pfl/net.h"
 #include "pfl/pool.h"
+#include "pfl/rpc.h"
 #include "pfl/str.h"
 #include "pfl/subsys.h"
 #include "pfl/syspaths.h"
 #include "pfl/thread.h"
 #include "pfl/vbitmap.h"
-
-#ifdef PFL_RPC
-#include "pfl/rpc.h"
-#endif
 
 #define PCTHRT_RD 0
 #define PCTHRT_WR 1
@@ -1033,12 +1030,12 @@ psc_ctlmsg_rpcrq_prhdr(__unusedx struct psc_ctlmsghdr *mh,
     __unusedx const void *m)
 {
 	/* strlen(xxx.xxx.xxx.xxx@lnd10) = 21 */
-	printf("%-16s %5s %4s "
+	printf("%-16s %7s %2s "
 	    "%2s %20s %2s %4s "
 	    "%21s %21s "
 	    "%2s %2s %4s %4s "
 	    "%4s %3s %2s %2s\n",
-	    "rpcrq-addr", "xid", "tran",
+	    "rpcrq-addr", "xid", "tr",
 	    "rf", "flags", "op", "stat",
 	    "peernid", "selfnid",
 	    "qp", "pp", "qlen", "plen",
@@ -1051,8 +1048,7 @@ psc_ctlmsg_rpcrq_prdat(__unusedx const struct psc_ctlmsghdr *mh,
 {
 	const struct psc_ctlmsg_rpcrq *pcrq = m;
 
-#ifdef PFL_RPC
-	printf("%16"PRIx64" %5d %4d %2d "
+	printf("%016"PRIx64" %7"PRId64" %2"PRId64" %2d "
 	    "%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c "
 	    "%2d %4d "
 	    "%21s %21s "
@@ -1063,9 +1059,9 @@ psc_ctlmsg_rpcrq_prdat(__unusedx const struct psc_ctlmsghdr *mh,
 	    pcrq->pcrq_refcount,
 	    pcrq->pcrq_type == PSCRPC_MSG_ERR ? 'e' :
 	      pcrq->pcrq_type == PSCRPC_MSG_REPLY ? 'p' : 'q',
-	    pcrq->prcrq_phase >= PSCRPC_RQ_PHASE_NEW &&
-	    pcrq->prcrq_phase <= PSCRPC_RQ_PHASE_COMPLETE ?
-	      PSCRPC_PHASE_NAMES[pcrq->prcrq_phase -
+	    pcrq->pcrq_phase >= PSCRPC_RQ_PHASE_NEW &&
+	    pcrq->pcrq_phase <= PSCRPC_RQ_PHASE_COMPLETE ?
+	      PSCRPC_PHASE_NAMES[pcrq->pcrq_phase -
 		PSCRPC_RQ_PHASE_NEW] : '?',
 	    pcrq->pcrq_abort_reply	? 'A' : '-',
 	    pcrq->pcrq_bulk_abortable	? 'B' : '-',
@@ -1084,16 +1080,13 @@ psc_ctlmsg_rpcrq_prdat(__unusedx const struct psc_ctlmsghdr *mh,
 	    pcrq->pcrq_restart		? 'T' : '-',
 	    pcrq->pcrq_timedout		? 'X' : '-',
 	    pcrq->pcrq_timeoutable	? 't' : '-',
-	    pcrq->pcrq_waiting		? 'W' : '-'
+	    pcrq->pcrq_waiting		? 'W' : '-',
 	    pcrq->pcrq_opc, abs(pcrq->pcrq_status),
 	    pcrq->pcrq_peer, pcrq->pcrq_self,
 	    pcrq->pcrq_request_portal, pcrq->pcrq_reply_portal,
 	    pcrq->pcrq_reqlen, pcrq->pcrq_replen,
 	    pcrq->pcrq_nob_received, pcrq->pcrq_retries,
 	    pcrq->pcrq_import_generation, pcrq->pcrq_nwaiters);
-#else
-	(void)pcrq;
-#endif
 }
 
 void
