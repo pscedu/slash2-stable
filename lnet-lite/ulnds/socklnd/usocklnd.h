@@ -195,6 +195,13 @@ typedef struct {
         pthread_mutex_t un_lock;        /* a lock to protect un_cond */
 } usock_net_t;
 
+struct maxseg_range {
+	struct psc_listentry 	msr_lentry;
+	int			msr_maxseg;
+	__u32			msr_net;
+	__u32			msr_mask;
+};
+
 typedef struct {
         int ut_poll_timeout;  /* the third arg for poll(2) (seconds) */
         int ut_timeout;       /* "stuck" socket timeout (seconds) */
@@ -212,6 +219,7 @@ typedef struct {
 	int ut_keepalive_cnt; 
 	int ut_keepalive_idle;
 	int ut_keepalive_intv;
+	struct psclist_head ut_maxsegs;
 } usock_tunables_t;
 
 extern usock_tunables_t usock_tuns;
@@ -337,7 +345,7 @@ int usocklnd_create_active_conn(usock_peer_t *peer, int type,
                                 usock_conn_t **connp);
 int usocklnd_connect_srv_mode(int *fdp, lnet_nid_t, __u32 dst_ip, __u16 dst_port);
 int usocklnd_connect_cli_mode(int *fdp, lnet_nid_t, __u32 dst_ip, __u16 dst_port, __u32);
-int usocklnd_set_sock_options(int fd);
+int usocklnd_set_sock_options(int fd, __u32 ip);
 usock_tx_t *usocklnd_create_noop_tx(__u64 cookie);
 usock_tx_t *usocklnd_create_tx(lnet_msg_t *lntmsg);
 void usocklnd_init_hello_msg(ksock_hello_msg_t *hello,

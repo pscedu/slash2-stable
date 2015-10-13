@@ -246,7 +246,7 @@ usocklnd_create_passive_conn(lnet_ni_t *ni, struct lnet_xport *lx,
         if (rc)
                 return rc;
 
-        rc = usocklnd_set_sock_options(lx->lx_fd);
+        rc = usocklnd_set_sock_options(lx->lx_fd, INADDR_ANY);
         if (rc)
                 return rc;
 
@@ -356,7 +356,7 @@ usocklnd_connect_srv_mode(int *fdp, lnet_nid_t nid, __u32 dst_ip,
                         continue;
                 }
 
-                rc = usocklnd_set_sock_options(fd);
+                rc = usocklnd_set_sock_options(fd, dst_ip);
                 if (rc) {
                         close(fd);
                         return rc;
@@ -395,7 +395,7 @@ usocklnd_connect_cli_mode(int *fdp, lnet_nid_t nid, __u32 dst_ip,
 	if (src_ip != INADDR_ANY)
 		libcfs_sock_bind_to_port(fd, nid, src_ip, 0);
         
-        rc = usocklnd_set_sock_options(fd);
+        rc = usocklnd_set_sock_options(fd, dst_ip);
         if (rc) {
                 close(fd);
                 return rc;
@@ -412,8 +412,9 @@ usocklnd_connect_cli_mode(int *fdp, lnet_nid_t nid, __u32 dst_ip,
 }
 
 int
-usocklnd_set_sock_options(int fd)
+usocklnd_set_sock_options(int fd, __u32 dst_ip)
 {
+	struct maxseg_range *msr;
         int rc;
 
         if (usock_tuns.ut_keepalive) {
@@ -429,6 +430,15 @@ usocklnd_set_sock_options(int fd)
         rc = libcfs_sock_set_nagle(fd, usock_tuns.ut_socknagle);
         if (rc)
                 return rc;
+
+	psclist_for_each_entry(msr, &usock_tuns.ut_maxsegs, msr_lentry) {
+		if ((dst_ip & msr->msr_mask) == msr->msr_net) {
+			rc = libcfs_sock_set_maxseg(fd,
+			    msr->msr_maxseg);
+			if (rc)
+				return rc;
+		}
+	}
 
         if (usock_tuns.ut_sockbufsiz) {
                 rc = libcfs_sock_set_bufsiz(fd, usock_tuns.ut_sockbufsiz);

@@ -554,6 +554,22 @@ libcfs_sock_set_keepalive(int fd, int keepalive, int cnt, int idle,
 }
 
 int
+libcfs_sock_set_maxseg(int fd, int maxseg)
+{
+	int rc;
+
+	rc = setsockopt(fd, IPPROTO_TCP, TCP_MAXSEG, &maxseg,
+	    sizeof(maxseg));
+	if (rc != 0) {
+		rc = -errno;
+		CERROR ("Cannot set MAXSEG socket option\n");
+		return rc;
+	}
+
+	return 0;
+} 
+
+int
 libcfs_sock_set_nagle(int fd, int nagle)
 {
 	int rc;

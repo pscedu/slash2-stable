@@ -78,6 +78,7 @@ int libcfs_socketpair(int *fdp);
 int libcfs_fcntl_nonblock(int fd);
 int libcfs_sock_set_keepalive(int, int, int, int, int);
 int libcfs_sock_set_nagle(int fd, int nagle);
+int libcfs_sock_set_maxseg(int fd, int maxseg);
 int libcfs_sock_set_bufsiz(int fd, int bufsiz);
 int libcfs_sock_create(int *fdp, __u64);
 int libcfs_sock_bind_to_port(int fd, __u64, __u32, __u16 port);

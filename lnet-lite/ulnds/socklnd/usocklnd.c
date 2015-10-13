@@ -45,6 +45,8 @@
 #include <sys/time.h>
 #include <sys/resource.h>
 
+#include <arpa/inet.h>
+
 #include "pfl/opstats.h"
 #include "pfl/pool.h"
 
@@ -208,6 +210,7 @@ usocklnd_release_poll_states(int n)
 int
 usocklnd_update_tunables()
 {
+	char *p;
         int rc;
 
         rc = cfs_parse_int_tunable(&usock_tuns.ut_timeout,
@@ -285,6 +288,40 @@ usocklnd_update_tunables()
 	    "USOCK_KEEPALIVE_INTV");
         if (rc)
                 return rc;
+
+	INIT_PSCLIST_HEAD(&usock_tuns.ut_maxsegs);
+	p = getenv("USOCK_MAXSEG");
+	if (p) {
+		struct maxseg_range *msr;
+		char *next, *val, *mask;
+
+		for (; p; p = next) {
+			next = strchr(p, ':');
+			if (next)
+				*next++ = '\0';
+
+			LIBCFS_ALLOC(msr, sizeof(*msr));
+			INIT_PSC_LISTENTRY(&msr->msr_lentry);
+
+			/* 136.142.165.176/28=1480:... */
+
+			val = strchr(p, '=');
+			psc_assert(val);
+			*val++ = '\0';
+			msr->msr_maxseg = strtoull(val, NULL, 0);
+
+			mask = strchr(p, '/');
+			psc_assert(mask);
+			*mask++ = '\0';
+			msr->msr_mask = ~0 << (32 - strtoull(mask,
+			    NULL, 10));
+
+			msr->msr_net = ntohl(inet_addr(p));
+
+			psclist_add_tail(&msr->msr_lentry,
+			    &usock_tuns.ut_maxsegs);
+		}
+	}
 
         if (usocklnd_validate_tunables())
                 return -EINVAL;
