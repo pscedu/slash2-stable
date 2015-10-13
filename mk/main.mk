@@ -193,6 +193,11 @@ ifneq ($(filter rpc,${MODULES}),)
   MODULES+=	lnet
 endif
 
+ifneq ($(filter ctlcli,${MODULES}),)
+  SRCS+=	${PFL_BASE}/ctlcli.c
+  MODULES+=	lnet-hdrs
+endif
+
 ifneq ($(filter lnet,${MODULES}),)
   SRCS+=	${LNET_SOCKLND_SRCS}
   SRCS+=	${LNET_CFS_SRCS}
@@ -279,10 +284,6 @@ endif
 ifneq ($(filter ctl,${MODULES}),)
   SRCS+=	${PFL_BASE}/ctlsvr.c
   DEFINES+=	-DPFL_CTL
-endif
-
-ifneq ($(filter ctlcli,${MODULES}),)
-  SRCS+=	${PFL_BASE}/ctlcli.c
 endif
 
 ifneq ($(filter sgio,${MODULES}),)
