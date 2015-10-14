@@ -259,6 +259,7 @@ main(int argc, char *argv[])
 	PRTYPE(struct psc_ctlmsg_param);
 	PRTYPE(struct psc_ctlmsg_pool);
 	PRTYPE(struct psc_ctlmsg_prfmt);
+	PRTYPE(struct psc_ctlmsg_rpcrq);
 	PRTYPE(struct psc_ctlmsg_rpcsvc);
 	PRTYPE(struct psc_ctlmsg_subsys);
 	PRTYPE(struct psc_ctlmsg_thread);
@@ -367,6 +368,7 @@ main(int argc, char *argv[])
 	PRVAL(PCMT_GETOPSTATS);
 	PRVAL(PCMT_GETPARAM);
 	PRVAL(PCMT_GETPOOL);
+	PRVAL(PCMT_GETRPCRQ);
 	PRVAL(PCMT_GETRPCSVC);
 	PRVAL(PCMT_GETSUBSYS);
 	PRVAL(PCMT_GETTHREAD);
