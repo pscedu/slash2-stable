@@ -80,7 +80,7 @@ typedef struct psc_spinlock {
 #define PSL_SLEEP_NTRIES	256
 #define PSL_SLEEP_NSEC		5001
 
-#define _SPIN_GETATOM(psl)	((psc_atomic32_t *)(void *)&(psl)->psl_value)
+#define _SPIN_GETATOM(psl)	(&(psl)->psl_value)
 
 #define INIT_SPINLOCK_FLAGS(psl, flg)					\
 	do {								\
