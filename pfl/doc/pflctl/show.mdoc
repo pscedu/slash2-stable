@@ -50,8 +50,9 @@ following:
 .\"			is left unspecified, all threads will be accessed.
 .\"			EOF
 .\"	exists $mods{rpc} ? (
+.\"		lnetif	=> "Lustre network interfaces.",
+.\"		rpcrqs	=> "Remote procedure calls (RPC).",
 .\"		rpcsvcs	=> ".Tn RPC\nservices.",
-.\"		lni	=> "Lustre network interfaces.",
 .\"	) : (),
 .\"	exists $DATA->{pools} ? (
 .\"		pools => <<'EOF'
@@ -168,24 +169,23 @@ following:
 .\"			is left unspecified, all list caches will be accessed.
 .\"			EOF
 .\"	) : (),
-.\"	(exists $DATA->{iostats} or exists $mods{rpc}) ? (
-.\"		iostats => <<'EOF'
-.\"			.Tn I/O
-.\"			statistics.
+.\"	(exists $DATA->{opstats} or exists $mods{rpc}) ? (
+.\"		opstats => <<'EOF'
+.\"			Operation counters/statistics.
 .\"			.Ar subspec
 .\"			has the following format:
 .\"			.Pp
 .\"			.Bd -unfilled -offset 3n
-.\"			.Ar iostats Ns Op , Ns Ar ...
+.\"			.Ar opstats Ns Op , Ns Ar ...
 .\"			.Ed
 .\"			.Pp
-.\"			.Ar iostats
+.\"			.Ar opstats
 .\"			may be one of the following:
 .\"			.Pp
 .\"			.Bl -tag -compact -offset 3n -width 3n
 .\"			EOF
 .\"		  . build_list(
-.\"			%{ $DATA->{iostats} },
+.\"			%{ $DATA->{opstats} },
 .\"			exists $mods{rpc} ? (
 .\"				qq{lni-rcv- Ns Ar if ,} => "",
 .\"				qq{lni-snd- Ns Ar if} =>
