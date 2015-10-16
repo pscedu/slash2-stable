@@ -670,7 +670,7 @@ _psc_pool_get(struct psc_poolmgr *m, int flags)
 		 */
 		psc_atomic32_inc(&m->ppm_nwaiters);
 		psc_waitq_waitrel_us(&m->ppm_lc.plc_wq_empty,
-		    &m->ppm_lc.plc_lock, 1000);
+		    &m->ppm_lc.plc_lock, 100);
 		psc_atomic32_dec(&m->ppm_nwaiters);
 
 		POOL_LOCK(m);
