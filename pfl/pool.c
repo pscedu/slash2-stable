@@ -654,6 +654,15 @@ _psc_pool_get(struct psc_poolmgr *m, int flags)
 	 * until at least one item is reclaimed and available for us.
 	 */
 	if (m->ppm_reclaimcb) {
+		if (flags & PPGF_SHALLOW) {
+			/*
+			 * Best effort service: we tried a bunch of
+			 * stuff and nothing worked so give up.
+			 */
+			p = POOL_TRYGETOBJ(m);
+			PFL_GOTOERR(gotitem, 0);
+		}
+
 		if (!desperate) {
 			desperate = 1;
 			goto tryreclaim;

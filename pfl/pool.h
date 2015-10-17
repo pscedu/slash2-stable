@@ -199,6 +199,7 @@ struct psc_poolmgr {
 #define psc_pool_tryshrink(m, i)	_psc_pool_shrink((m), (i), 1)
 
 #define PPGF_NONBLOCK			(1 << 0)
+#define PPGF_SHALLOW			(1 << 1)
 
 #if PFL_DEBUG >= 2
 # define _PSC_POOL_CHECK_OBJ(m, p)	psc_assert(pfl_memchk((p), 0xa5, (m)->ppm_entsize));
@@ -221,6 +222,7 @@ struct psc_poolmgr {
 
 #define psc_pool_get(m)			(_PSC_POOL_GET((m), 0))
 #define psc_pool_tryget(m)		(_PSC_POOL_GET((m), PPGF_NONBLOCK))
+#define psc_pool_shallowget(m)		(_PSC_POOL_GET((m), PPGF_SHALLOW))
 
 #define psc_pool_return(m, p)						\
 	do {								\
