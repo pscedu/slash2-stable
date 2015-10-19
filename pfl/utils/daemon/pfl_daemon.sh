@@ -48,7 +48,7 @@ loadprof()
 		vprint "  + processing setting: $fl"
 
 		case $fl in
-		args=*)		xargs=${fl#args=};;
+		args=*)		xargs+=("${fl#args=}");;
 		bounce)		;;
 		ctl=*)		ctl=${fl#ctl=};;
 		mp=*)		mp=${fl#mp=};;
