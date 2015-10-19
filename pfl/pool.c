@@ -526,12 +526,16 @@ _psc_pool_tryget(struct psc_poolmgr *m)
 void
 psc_pool_reap(struct psc_poolmgr *m, int desperate)
 {
+	int need;
+
 	/*
 	 * We use atomics to register additional waiters while one
 	 * thread is already reaping, lessening the expense of "deep"
 	 * reap processing.
 	 */
-	psc_atomic32_inc(&m->ppm_nwaiters);
+	need = psc_atomic32_inc_getnew(&m->ppm_nwaiters);
+	if (need == 1)
+		psc_atomic32_inc(&m->ppm_nwaiters);
 	psc_mutex_lock(&m->ppm_reclaim_mutex);
 	if (desperate)
 		m->ppm_flags |= PPMF_DESPERATE;
@@ -539,6 +543,8 @@ psc_pool_reap(struct psc_poolmgr *m, int desperate)
 	if (desperate)
 		m->ppm_flags &= ~PPMF_DESPERATE;
 	psc_atomic32_dec(&m->ppm_nwaiters);
+	if (need == 1)
+		psc_atomic32_dec(&m->ppm_nwaiters);
 	psc_mutex_unlock(&m->ppm_reclaim_mutex);
 }
 
