@@ -61,6 +61,7 @@ struct psc_listcache {
 #define plc_name	plc_explist.pexl_name
 #define plc_nitems	plc_explist.pexl_nitems
 #define plc_nseen	plc_explist.pexl_nseen
+#define plc_st_removed	plc_explist.pexl_st_removed
 #define plc_offset	plc_explist.pexl_offset
 #define plc_pll		plc_explist.pexl_pll
 };
@@ -100,7 +101,12 @@ struct psc_listcache {
  * @plc: the list cache.
  * @p: the item.
  */
-#define lc_remove(plc, p)		pll_remove(&(plc)->plc_pll, (p))
+#define lc_remove(plc, p)						\
+	do {								\
+		pll_remove(&(plc)->plc_pll, (p))			\
+		if ((plc)->plc_st_removed)				\
+			pfl_opstat_incr((plc)->plc_st_removed);		\
+	} while (0)
 
 #define pfl_listcache_isdead(plc)	((plc)->plc_flags & PLCF_DYING)
 

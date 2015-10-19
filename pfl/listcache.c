@@ -96,7 +96,7 @@ _lc_get(struct psc_listcache *plc, const struct timespec *abstime,
 	else
 		p = pll_peekhead(&plc->plc_pll);
 	if ((flags & PLCBF_PEEK) == 0)
-		pll_remove(&plc->plc_pll, p);
+		lc_remove(plc, p);
 	LIST_CACHE_URLOCK(plc, locked);
 	return (p);
 }
@@ -212,7 +212,9 @@ lc_vregister(struct psc_listcache *plc, const char *name, va_list ap)
 		psc_fatalx("plc_name is too large (%s)", name);
 
 	plc->plc_nseen = pfl_opstat_initf(OPSTF_BASE10,
-	    "listcache.%s.seen", plc->plc_name);
+	    "listcache.%s.adds", plc->plc_name);
+	plc->plc_st_removed = pfl_opstat_initf(OPSTF_BASE10,
+	    "listcache.%s.removed", plc->plc_name);
 	pll_add_sorted(&psc_listcaches, plc, lc_cmp);
 
 	LIST_CACHE_ULOCK(plc);
