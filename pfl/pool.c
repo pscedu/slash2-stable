@@ -244,6 +244,8 @@ _psc_poolmaster_initmgr(struct psc_poolmaster *p, struct psc_poolmgr *m)
 	    "pool.%s.returns", m->ppm_name);
 	m->ppm_opst_preaps = pfl_opstat_initf(OPSTF_BASE10,
 	    "pool.%s.preaps", m->ppm_name);
+	m->ppm_opst_fails = pfl_opstat_initf(OPSTF_BASE10,
+	    "pool.%s.fails", m->ppm_name);
 
 	n = p->pms_total;
 	ureqlock(&p->pms_lock, locked);
@@ -711,6 +713,8 @@ _psc_pool_get(struct psc_poolmgr *m, int flags)
 		}
 	}
 	POOL_ULOCK(m);
+	if (p == NULL)
+		pfl_opstat_incr(m->ppm_opst_fails);
 	return (p);
 }
 
