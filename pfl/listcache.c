@@ -213,8 +213,8 @@ lc_vregister(struct psc_listcache *plc, const char *name, va_list ap)
 
 	plc->plc_nseen = pfl_opstat_initf(OPSTF_BASE10,
 	    "listcache.%s.adds", plc->plc_name);
-	plc->plc_st_removed = pfl_opstat_initf(OPSTF_BASE10,
-	    "listcache.%s.removed", plc->plc_name);
+	plc->plc_st_removes = pfl_opstat_initf(OPSTF_BASE10,
+	    "listcache.%s.removes", plc->plc_name);
 	pll_add_sorted(&psc_listcaches, plc, lc_cmp);
 
 	LIST_CACHE_ULOCK(plc);

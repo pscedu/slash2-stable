@@ -45,7 +45,7 @@ struct psc_explist {
 	struct psc_listentry	 pexl_lentry;			/* link adjoining lists */
 	char			 pexl_name[PEXL_NAME_MAX];	/* for list mgt */
 	struct pfl_opstat	*pexl_nseen;			/* stat: total #times add() */
-	struct pfl_opstat	*pexl_st_removed;		/* stat: total #times remove() */
+	struct pfl_opstat	*pexl_st_removes;		/* stat: total #times remove() */
 #define pexl_flags	pexl_pll.pll_flags
 #define pexl_listhd	pexl_pll.pll_listhd
 #define pexl_lock	pexl_pll.pll_lock

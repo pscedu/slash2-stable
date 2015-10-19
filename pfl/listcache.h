@@ -41,12 +41,13 @@
 #include <string.h>
 #include <time.h>
 
+#include "pfl/alloc.h"
 #include "pfl/explist.h"
 #include "pfl/list.h"
-#include "pfl/lockedlist.h"
-#include "pfl/alloc.h"
 #include "pfl/lock.h"
+#include "pfl/lockedlist.h"
 #include "pfl/log.h"
+#include "pfl/opstats.h"
 #include "pfl/waitq.h"
 
 struct psc_listcache {
@@ -61,7 +62,7 @@ struct psc_listcache {
 #define plc_name	plc_explist.pexl_name
 #define plc_nitems	plc_explist.pexl_nitems
 #define plc_nseen	plc_explist.pexl_nseen
-#define plc_st_removed	plc_explist.pexl_st_removed
+#define plc_st_removes	plc_explist.pexl_st_removes
 #define plc_offset	plc_explist.pexl_offset
 #define plc_pll		plc_explist.pexl_pll
 };
@@ -103,9 +104,9 @@ struct psc_listcache {
  */
 #define lc_remove(plc, p)						\
 	do {								\
-		pll_remove(&(plc)->plc_pll, (p))			\
-		if ((plc)->plc_st_removed)				\
-			pfl_opstat_incr((plc)->plc_st_removed);		\
+		pll_remove(&(plc)->plc_pll, (p));			\
+		if ((plc)->plc_st_removes)				\
+			pfl_opstat_incr((plc)->plc_st_removes);		\
 	} while (0)
 
 #define pfl_listcache_isdead(plc)	((plc)->plc_flags & PLCF_DYING)
