@@ -1400,6 +1400,23 @@ pscrpc_resend_req(struct pscrpc_request *req)
 
 #include "pfl/ctl.h"
 
+int
+psc_ctl_rpcrq_getnwaiters(struct pscrpc_request *rq)
+{
+	struct psc_waitq *wq;
+	struct psc_compl *c;
+	int n = 0;
+
+	wq = rq->rq_waitq;
+	if (wq)
+		n += psc_waitq_nwaiters(wq);
+	n += psc_waitq_nwaiters(&rq->rq_reply_waitq);
+	c = rq->rq_compl;
+	if (c)
+		n += psc_waitq_nwaiters(&c->pc_wq);
+	return (n);
+}
+
 /*
  * Respond to a "GETRPCRQ" control inquiry.
  * @fd: client socket descriptor.
@@ -1454,11 +1471,7 @@ psc_ctlrep_getrpcrq(int fd, struct psc_ctlmsghdr *mh, void *m)
 		libcfs_nid2str2(rq->rq_self, pcrq->pcrq_self);
 		pcrq->pcrq_phase = rq->rq_phase;
 		pcrq->pcrq_send_state = rq->rq_send_state;
-		pcrq->pcrq_nwaiters = rq->rq_waitq ?
-		    psc_waitq_nwaiters(rq->rq_waitq) : 0 +
-		    psc_waitq_nwaiters(&rq->rq_reply_waitq) +
-		    rq->rq_compl ?
-		    psc_waitq_nwaiters(&rq->rq_compl->pc_wq) : 0;
+		pcrq->pcrq_nwaiters = psc_ctl_rpcrq_getnwaiters(rq);
 		rc = psc_ctlmsg_sendv(fd, mh, pcrq);
 		if (!rc)
 			break;
