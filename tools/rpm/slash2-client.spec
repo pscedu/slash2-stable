@@ -1,31 +1,35 @@
 # $Id$
 
 Name:		slash2-client
-Version:	18221
+Version:	1.0
 Release:	1%{?dist}
-Summary:	PSC's SLASH2 file system's client utilities
+Summary:	SLASH2 file system client (CLI) utilities
 
 Group:		File systems
 License:	Propietary
-URL:		http://www.psc.edu/slash2
+URL:		http://www.psc.edu/index.php/research-programs/advanced-systems/slash2
 Source0:	dummy.tgz
 BuildRoot:	%{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 
 %description
-PSC's SLASH2 file system's client utilities
+Pittsburgh Supercomputing Center's SLASH2 distributed file system
+client (CLI) utilities.
 
 %prep
 %setup -c
-svn co -r %{version} svn+ssh://frodo/cluster/svn/projects .
+git clone https://github.com/pscedu/pfl projects
+cd projects
+make scm-fetch:slash2
 
 %build
 cd slash2
-DEVELPATHS=0 SLASH_MODULES=cli make %{?_smp_mflags}
+SLASH_MODULES=cli make %{?_smp_mflags}
 
 %install
 rm -rf $RPM_BUILD_ROOT
 cd slash2
-INST_BASE=$RPM_BUILD_ROOT/usr/local/psc SLASH_MODULES=cli make install
+export INST_BASE=$RPM_BUILD_ROOT/usr/local/psc
+export SLASH_MODULES=cli make install
 
 %clean
 rm -rf $RPM_BUILD_ROOT

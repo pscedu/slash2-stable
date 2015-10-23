@@ -1,30 +1,33 @@
 # $Id$
 
 Name:		slash2-mds
-Version:	18221
+Version:	1.0
 Release:	1%{?dist}
-Summary:	PSC's SLASH2 file system's metadata utilities
+Summary:	SLASH2 file system metadata server (MDS) utilities
 
 Group:		File systems
 License:	Propietary
-URL:		http://www.psc.edu/slash2
+URL:		http://www.psc.edu/index.php/research-programs/advanced-systems/slash2
 Source0:	dummy.tgz
 BuildRoot:	%{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 
 Requires:	libaio
 Requires:	z
 Requires:	gcrypt
+Requires:	sqlite3
 
 %description
-PSC's SLASH2 file system's metadata utilities
+Pittsburgh Supercomputing Center's SLASH2 distributed file system
+metadata server (MDS) utilities.
 
 %prep
 %setup -c
-svn co -r %{version} svn+ssh://frodo/cluster/svn/projects .
+git clone https://github.com/pscedu/pfl projects
+cd projects
+make scm-fetch:slash2
 
 %build
-(cd zfs		&& DEVELPATHS=0 SLASH_MODULES=mds make %{?_smp_mflags})
-(cd slash2	&& DEVELPATHS=0 SLASH_MODULES=mds make %{?_smp_mflags})
+(cd slash2	&& SLASH_MODULES=mds make %{?_smp_mflags})
 
 %install
 rm -rf $RPM_BUILD_ROOT
