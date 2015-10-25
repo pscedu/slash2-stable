@@ -6,7 +6,7 @@ Release:	1%{?dist}
 Summary:	SLASH2 file system client (CLI) utilities
 
 Group:		File systems
-License:	Propietary
+License:	GPLv2
 URL:		http://www.psc.edu/index.php/research-programs/advanced-systems/slash2
 Source0:	dummy.tgz
 BuildRoot:	%{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
@@ -37,9 +37,14 @@ rm -rf $RPM_BUILD_ROOT
 %files
 %defattr(-,root,root,-)
 %doc
-/usr/local/psc/sbin/mount_slash
-/usr/local/psc/sbin/msctl
-/usr/local/psc/sbin/slkeymgt
 /usr/local/psc/man/*/*
+/usr/local/psc/sbin/mount_slash
+/usr/local/psc/sbin/mount_slash.sh
+/usr/local/psc/sbin/msctl
+/usr/local/psc/sbin/msctl.sh
+/usr/local/psc/sbin/pfl_daemon.sh
+/usr/local/psc/sbin/slash2_check
+/usr/local/psc/sbin/slash2_check.py
+/usr/local/psc/sbin/slkeymgt
 
 %changelog

@@ -6,7 +6,7 @@ Release:	1%{?dist}
 Summary:	SLASH2 file system metadata server (MDS) utilities
 
 Group:		File systems
-License:	Propietary
+License:	GPLv2
 URL:		http://www.psc.edu/index.php/research-programs/advanced-systems/slash2
 Source0:	dummy.tgz
 BuildRoot:	%{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
@@ -42,10 +42,18 @@ rm -rf $RPM_BUILD_ROOT
 %doc
 /usr/local/psc/bin/cursor_mgr
 /usr/local/psc/etc/zfs_pool_alert
+/usr/local/psc/man/*/*
+/usr/local/psc/sbin/dumpfid
+/usr/local/psc/sbin/odtable
+/usr/local/psc/sbin/pfl_daemon.sh
+/usr/local/psc/sbin/reclaim
+/usr/local/psc/sbin/slash2_check
+/usr/local/psc/sbin/slash2_check.py
 /usr/local/psc/sbin/slashd
-/usr/local/psc/sbin/slmkfs
+/usr/local/psc/sbin/slashd.sh
 /usr/local/psc/sbin/slkeymgt
 /usr/local/psc/sbin/slmctl
+/usr/local/psc/sbin/slmkfs
 /usr/local/psc/sbin/slmkjrnl
 /usr/local/psc/sbin/zdb
 /usr/local/psc/sbin/zfs
@@ -53,6 +61,5 @@ rm -rf $RPM_BUILD_ROOT
 /usr/local/psc/sbin/zpool
 /usr/local/psc/sbin/zstreamdump
 /usr/local/psc/sbin/ztest
-/usr/local/psc/man/*/*
 
 %changelog
