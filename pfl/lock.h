@@ -242,7 +242,7 @@ typedef struct psc_spinlock {
 		if ((waslocked) == PSLRV_WASNOTLOCKED)			\
 			freelock_pci((pci), (psl));			\
 		else							\
-			_SPIN_CHECK("ureqlock", (psl));			\
+			_SPIN_ENSURELOCKED("ureqlock", (psl));		\
 	} while (0)
 
 #define LOCK_ENSURE_RC(psl)	PSC_MAKETRUE(_SPIN_ENSURELOCKED("LOCK_ENSURE", (psl)))
