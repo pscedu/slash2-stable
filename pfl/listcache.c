@@ -113,6 +113,7 @@ lc_kill(struct psc_listcache *plc)
 	locked = LIST_CACHE_RLOCK(plc);
 	plc->plc_flags |= PLCF_DYING;
 	psc_waitq_wakeall(&plc->plc_wq_empty);
+	psc_waitq_wakeall(&plc->plc_wq_want);
 	LIST_CACHE_URLOCK(plc, locked);
 }
 
