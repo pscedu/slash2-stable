@@ -54,8 +54,8 @@
 struct psc_lockedlist	 pfl_odtables =
     PLL_INIT(&pfl_odtables, struct pfl_odt, odt_lentry);
 
-/**
- * odtable_getitemoff - Get offset of a table entry, which is relative
+/*
+ * Get offset of a table entry, which is relative
  * to either the disk file or start of base memory-mapped address.
  */
 static __inline size_t
@@ -258,8 +258,8 @@ pfl_odt_mapslot(struct pfl_odt *t, size_t n, void *pp,
 	}
 }
 
-/**
- * pfl_odtputitem - Store an item into an odtable.
+/*
+ * Store an item into an odtable.
  */
 struct pfl_odt_receipt *
 pfl_odt_putitemf(struct pfl_odt *t, size_t n, void *p, int inuse)
@@ -323,9 +323,8 @@ pfl_odt_replaceitem(struct pfl_odt *t, struct pfl_odt_receipt *r,
 	ODT_STAT_INCR(t, replace);
 }
 
-/**
- * odtable_freeitem - Free the odtable slot which corresponds to the
- *	provided receipt.
+/*
+ * Free the odtable slot which corresponds to the provided receipt.
  * Note: r is freed here.
  */
 void
