@@ -80,6 +80,11 @@ struct pfl_odt_entftr {
 struct pfl_odt_ops {
 	void	(*odtop_close)(struct pfl_odt *);
 	void	(*odtop_create)(struct pfl_odt *, const char *, int);
+
+	/*
+ 	 * Allow the use of mmap() interface to work on the table.
+ 	 * Currently only used by the odtable (not by slashd).
+ 	 */
 	void	(*odtop_mapslot)(struct pfl_odt *, size_t, void **,
 		    struct pfl_odt_entftr **);
 	void	(*odtop_open)(struct pfl_odt *, const char *, int);
