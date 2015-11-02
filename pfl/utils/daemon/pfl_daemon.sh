@@ -58,7 +58,7 @@ loadprof()
 		share)		;;
 		srcdir=*)	srcdir=${fl#srcdir=};;
 		tag=*)		[ x"$1" = x"${fl#tag=}" ] || return 1 ;;
-		[A-Z][A-Z_]*=*)	export $fl;;
+		[A-Z][A-Z_]*=*)	export "$fl";;
 		*)		warn "unknown setting $fl";;
 		esac
 		[ $dobreak -eq 1 ] && break
