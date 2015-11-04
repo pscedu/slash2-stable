@@ -1838,6 +1838,7 @@ pscfsop_destroy(struct pscfs_req *pfr)
 {
 	(void)pfr;
 	pscthr_killall();
+	pfl_wkthr_killall();
 }
 
 void
