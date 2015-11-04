@@ -52,6 +52,7 @@
 #include "pfl/random.h"
 #include "pfl/sys.h"
 #include "pfl/waitq.h"
+#include "pfl/workthr.h"
 
 #ifdef __LP64__
 #  include "pfl/hashtbl.h"
