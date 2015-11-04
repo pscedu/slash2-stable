@@ -31,34 +31,53 @@ sub usage {
 	die "usage: $0\n";
 }
 
+my @authors = (
+	{ name => "Google, Inc." ,
+	  regex => qr/\@google\.com/, },
+	{ name => "Pittsburgh Supercomputing Center",
+	  regex => qr/\@psc\.edu/, },
+);
+
+my %mailmap = (
+	'slovichon@gmail.com' => 'yanovich@psc.edu',
+);
+
 sub gencopy {
 	my $fn = shift;
 
-	my @out = `git log --date=short --pretty=format:%ad \Q$fn\E`;
-	return if $? or @out == 0;
-
-	my $newest = pop @out;
-	my $oldest = @out ? shift(@out) : $newest;
-
-	my ($startyr) = $newest =~ /^(\d+)/;
-	my ($endyr) = $oldest =~ /^(\d+)/;
+	my @commits = `git log --reverse --date=short --pretty=format:"%ad %ae" \Q$fn\E`;
+	return if $? or @commits == 0;
 
 	local $/;
 	open F, "<", $fn or die "$fn: $!\n";
 	my $data = <F>;
 	close F;
 
-	$startyr = $1 if $data =~
-	    m{Copyright \(c\) (\d+)(?:-\d+)?,? Pittsburgh Supercomputing Center \(PSC\)\.};
-
-	my $cpyears = $startyr;
-	$cpyears .= "-$endyr" if $endyr > $startyr;
+	my %authors;
+	foreach my $commit (@commits) {
+		my ($date, $email) = split / /, $commit;
+		$email = $mailmap{$email} if exists $mailmap{$email};
+		my ($yr) = $date =~ /^(\d+)/;
+		foreach my $author (@authors) {
+			if ($email =~ $author->{regex}) {
+				if (exists $authors{$author->{name}}) {
+					$authors{$author->{name}}{end_year} =
+					    $yr;
+				} else {
+					$authors{$author->{name}} = {
+						start_year	=> $yr,
+						end_year	=> $yr,
+					};
+				}
+			}
+		}
+	}
 
 	my $d_start = "/*\n";
 	my $d_cont = " *";
 	my $d_end = "\n */";
 
-	if ($data =~ m{^(.*) %PSC(?:GPL|PRI)?_(START_)?COPYRIGHT%}m) {
+	if ($data =~ m{^(.*) %(?:PSC|PSCGPL|GPL|ISC|PSCPRI|)_(START_)?(?:LICENSE|COPYRIGHT)%}m) {
 		$d_cont = $1;
 		$d_cont = " *" if $d_cont eq "/*";
 
@@ -68,53 +87,81 @@ sub gencopy {
 		}
 	}
 
-	$data =~ s{^(.*)\s*%(PSC|PSCGPL|PSCPRI)_COPYRIGHT%.*\n}{<<EOF2}me;
-$d_start$d_cont %$2_START_COPYRIGHT%
-$d_cont -----------------------------------------------------------------------------
-$d_cont -----------------------------------------------------------------------------
-$d_cont %PSC_END_COPYRIGHT%$d_end
-EOF2
+	my $authors = "";
+	foreach my $a_name (sort keys %authors) {
+		my $author = $authors{$a_name};
+		my $start_year = $author->{start_year};
+		my $end_year = $author->{end_year};
+
+		# Preserve start year in case it is different from the
+		# first commit (which can happen if code moves around).
+		my ($t_start_year, $t_end_year) = ($1, $2) if $data =~
+		    m{Copyright (?:\(c\) |)(\d+)(-\d+|),? \Q$a_name\E.*};
+		$authors .= "\n$d_cont " if $authors;
+
+		if ($t_start_year) {
+			if ($t_end_year) {
+				$t_end_year = -$t_end_year;
+			} else {
+				$t_end_year = $start_year;
+			}
+			if ($end_year == $t_end_year) {
+				$authors .= $&;
+				next;
+			}
+		}
+		$start_year = $t_start_year if $t_start_year;
+
+		$authors .= "Copyright $start_year";
+		$authors .= "-$end_year" if $start_year != $end_year;
+		$authors .= ", $a_name";
+	}
+
+	$data =~ s{^(.*)\s*%(PSC|PSCGPL|PSCPRI|ISC|GPL|)_(?:LICENSE|COPYRIGHT)%.*\n}
+{$d_start$d_cont %$2_START_LICENSE%
+$d_cont ---------------------------------------------------------------------
+$d_cont ---------------------------------------------------------------------
+$d_cont %END_LICENSE%$d_end
+}m;
 
 	$data =~ s
-{\Q$d_start$d_cont\E %PSC_START_COPYRIGHT%
-\Q$d_cont\E -----------------------------------------------------------------------------.*?
-\Q$d_cont\E -----------------------------------------------------------------------------(.*)
-\Q$d_cont\E %PSC_END_COPYRIGHT%\Q$d_end\E
+{\Q$d_start$d_cont\E %[IP]SC_START_(?:COPYRIGHT|LICENSE)%
+\Q$d_cont\E ---------------------------------------------+?.*?
+\Q$d_cont\E ---------------------------------------------+?
+\Q$d_cont\E %(?:PSC_|)END_(?:COPYRIGHT|LICENSE)%\Q$d_end\E
 }
-{$d_start$d_cont %PSC_START_COPYRIGHT%
-$d_cont -----------------------------------------------------------------------------
-$d_cont Copyright (c) $cpyears, Pittsburgh Supercomputing Center (PSC).
+{$d_start$d_cont %ISC_START_LICENSE%
+$d_cont ---------------------------------------------------------------------
+$d_cont $authors
+$d_cont All rights reserved.
 $d_cont
-$d_cont Permission to use, copy, modify, and distribute this software
-$d_cont for any purpose with or without fee is hereby granted, provided
-$d_cont that the above copyright notice and this permission notice
-$d_cont appear in all copies.
+$d_cont Permission to use, copy, modify, and distribute this software for any
+$d_cont purpose with or without fee is hereby granted, provided that the
+$d_cont above copyright notice and this permission notice appear in all
+$d_cont copies.
 $d_cont
 $d_cont THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL
 $d_cont WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED
-$d_cont WARRANTIES OF MERCHANTABILITY AND FITNESS.  IN NO EVENT SHALL
-$d_cont THE AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT, INDIRECT, OR
-$d_cont CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM
-$d_cont LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT,
-$d_cont NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN
-$d_cont CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
-$d_cont
-$d_cont Pittsburgh Supercomputing Center	phone: 412.268.4960  fax: 412.268.5832
-$d_cont 300 S. Craig Street			e-mail: remarks\@psc.edu
-$d_cont Pittsburgh, PA 15213			web: http://www.psc.edu/
-$d_cont -----------------------------------------------------------------------------$1
-$d_cont %PSC_END_COPYRIGHT%$d_end
-}s;
+$d_cont WARRANTIES OF MERCHANTABILITY AND FITNESS.  IN NO EVENT SHALL THE
+$d_cont AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL
+$d_cont DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR
+$d_cont PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
+$d_cont TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
+$d_cont PERFORMANCE OF THIS SOFTWARE.
+$d_cont --------------------------------------------------------------------
+$d_cont %END_LICENSE%$d_end
+}sm;
 
 	$data =~ s
-{\Q$d_start$d_cont\E %PSCGPL_START_COPYRIGHT%
-\Q$d_cont\E -----------------------------------------------------------------------------.*?
-\Q$d_cont\E -----------------------------------------------------------------------------(.*)
-\Q$d_cont\E %PSC_END_COPYRIGHT%\Q$d_end\E
+{\Q$d_start$d_cont\E %(?:PSC|)GPL_START_(?:COPYRIGHT|LICENSE)%
+\Q$d_cont\E ---------------------------------------------+?.*?
+\Q$d_cont\E ---------------------------------------------+?
+\Q$d_cont\E %(?:PSC_|)END_(?:COPYRIGHT|LICENSE)%\Q$d_end\E
 }
-{$d_start$d_cont %PSCGPL_START_COPYRIGHT%
-$d_cont -----------------------------------------------------------------------------
-$d_cont Copyright (c) $cpyears, Pittsburgh Supercomputing Center (PSC).
+{$d_start$d_cont %GPL_START_LICENSE%
+$d_cont ---------------------------------------------------------------------
+$d_cont $authors
+$d_cont All rights reserved.
 $d_cont
 $d_cont This program is free software; you can redistribute it and/or modify
 $d_cont it under the terms of the GNU General Public License as published by
@@ -126,39 +173,33 @@ $d_cont implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
 $d_cont PURPOSE.  See the GNU General Public License contained in the file
 $d_cont `COPYING-GPL' at the top of this distribution or at
 $d_cont https://www.gnu.org/licenses/gpl-2.0.html for more details.
-$d_cont
-$d_cont Pittsburgh Supercomputing Center	phone: 412.268.4960  fax: 412.268.5832
-$d_cont 300 S. Craig Street			e-mail: remarks\@psc.edu
-$d_cont Pittsburgh, PA 15213			web: http://www.psc.edu/
-$d_cont -----------------------------------------------------------------------------$1
-$d_cont %PSC_END_COPYRIGHT%$d_end
+$d_cont ---------------------------------------------------------------------
+$d_cont %END_LICENSE%$d_end
 }s;
 
 	$data =~ s
-{\Q$d_start$d_cont\E %PSCPRI_START_COPYRIGHT%
-\Q$d_cont\E -----------------------------------------------------------------------------.*?
-\Q$d_cont\E -----------------------------------------------------------------------------(.*)
-\Q$d_cont\E %PSC_END_COPYRIGHT%\Q$d_end\E
+{\Q$d_start$d_cont\E %PSCPRI_START_(?:COPYRIGHT|LICENSE)%
+\Q$d_cont\E ---------------------------------------------+?.*?
+\Q$d_cont\E ---------------------------------------------+?
+\Q$d_cont\E %(?:PSC_|)END_(?:COPYRIGHT|LICENSE)%\Q$d_end\E
 }
-{$d_start$d_cont %PSCPRI_START_COPYRIGHT%
-$d_cont -----------------------------------------------------------------------------
-$d_cont Copyright (c) $cpyears, Pittsburgh Supercomputing Center (PSC).
+{$d_start$d_cont %PSCPRI_START_LICENSE%
+$d_cont ---------------------------------------------------------------------
+$d_cont $authors
+$d_cont All rights reserved.
 $d_cont
-$d_cont Permission to use, copy, and modify this software and its documentation
-$d_cont without fee for personal use or non-commercial use within your organization
-$d_cont is hereby granted, provided that the above copyright notice is preserved in
-$d_cont all copies and that the copyright and this permission notice appear in
-$d_cont supporting documentation.  Permission to redistribute this software to other
-$d_cont organizations or individuals is not permitted without the written permission
-$d_cont of the Pittsburgh Supercomputing Center.  PSC makes no representations about
-$d_cont the suitability of this software for any purpose.  It is provided "as is"
+$d_cont Permission to use, copy, and modify this software and its
+$d_cont documentation without fee for personal use or non-commercial use
+$d_cont within your organization is hereby granted, provided that the above
+$d_cont copyright notice is preserved in all copies and that the copyright and
+$d_cont this permission notice appear in supporting documentation.  Permission
+$d_cont to redistribute this software to other organizations or individuals is
+$d_cont not permitted without the written permission of the Pittsburgh
+$d_cont Supercomputing Center (PSC).  PSC makes no representations about the
+$d_cont suitability of this software for any purpose.  It is provided "as is"
 $d_cont without express or implied warranty.
-$d_cont
-$d_cont Pittsburgh Supercomputing Center	phone: 412.268.4960  fax: 412.268.5832
-$d_cont 300 S. Craig Street			e-mail: remarks\@psc.edu
-$d_cont Pittsburgh, PA 15213			web: http://www.psc.edu/
-$d_cont -----------------------------------------------------------------------------$1
-$d_cont %PSC_END_COPYRIGHT%$d_end
+$d_cont ---------------------------------------------------------------------
+$d_cont %END_LICENSE%$d_end
 }s;
 
 	open F, ">", $fn or die "$fn: $!\n";
