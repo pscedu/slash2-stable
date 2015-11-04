@@ -16,6 +16,7 @@ SRCS+=		${PFL_BASE}/dbgutil.c
 SRCS+=		${PFL_BASE}/dynarray.c
 SRCS+=		${PFL_BASE}/fault.c
 SRCS+=		${PFL_BASE}/fmt.c
+SRCS+=		${PFL_BASE}/fs.c
 SRCS+=		${PFL_BASE}/fts.c
 SRCS+=		${PFL_BASE}/hashtbl.c
 SRCS+=		${PFL_BASE}/heap.c

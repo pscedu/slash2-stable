@@ -496,20 +496,9 @@ pfl_fuse_atexit(void)
 int
 pscfs_main(int privsiz)
 {
-	struct pscfs *m;
 	int i;
 
-	psc_dynarray_add(&pscfs_modules, &pscfs_default_ops);
-	DYNARRAY_FOREACH(m, i, &pscfs_modules) {
-		m->pf_opst_read_err = pfl_opstat_initf(OPSTF_BASE10,
-		    "fs.%s.read.err", m->pf_name);
-		m->pf_opst_write_err = pfl_opstat_initf(OPSTF_BASE10,
-		    "fs.%s.write.err", m->pf_name);
-		m->pf_opst_read_reply =
-		    pfl_opstat_init("fs.%s.read.reply", m->pf_name);
-		m->pf_opst_write_reply =
-		    pfl_opstat_init("fs.%s.write.reply", m->pf_name);
-	}
+	pflfs_module_add(PFLFS_MOD_POS_LAST, &pscfs_default_ops);
 
 #ifndef __LP64__
 	struct pscfs_inumcol *pfic;
@@ -785,6 +774,7 @@ pscfs_inum_pscfs2fuse(pscfs_inum_t p_inum, double timeo)
 		int _mi, _prior_success = 0;				\
 		struct pscfs *_m;					\
 									\
+		pflfs_modules_rdpin();					\
 		DYNARRAY_FOREACH(_m, _mi, &pscfs_modules) {		\
 			if (_m->pf_handle_ ##op == NULL)		\
 				continue;				\
@@ -829,6 +819,8 @@ pfr_decref(struct pscfs_req *pfr, int rc)
 		return;
 	}
 	psc_pool_return(pscfs_req_pool, pfr);
+
+	pflfs_modules_rdunpin();
 }
 
 void
@@ -1845,6 +1837,7 @@ void
 pscfsop_destroy(struct pscfs_req *pfr)
 {
 	(void)pfr;
+	pscthr_killall();
 }
 
 void
