@@ -431,7 +431,7 @@ ifdef LIBRARY
 endif
 
 ifdef SHLIB
-  CFLAGS+=	-fpic
+  CFLAGS+=	-fPIC
   ${SHLIB}: ${OBJS}
 	${CC} -shared -o $@ ${LDFLAGS} $(sort ${OBJS})
 endif
