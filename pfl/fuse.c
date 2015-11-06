@@ -757,6 +757,7 @@ pscfs_inum_pscfs2fuse(pscfs_inum_t p_inum, double timeo)
 									\
 		(pfr) = psc_pool_get(pscfs_req_pool);			\
 		memset((pfr), 0, pscfs_req_pool->ppm_entsize);		\
+		(pfr)->pfr_clientctx.pfcc_magic = PFCC_MAGIC;		\
 		PFL_GETTIMESPEC(&(pfr)->pfr_start);			\
 		INIT_LISTENTRY(&(pfr)->pfr_lentry);			\
 		INIT_SPINLOCK(&(pfr)->pfr_lock);			\
