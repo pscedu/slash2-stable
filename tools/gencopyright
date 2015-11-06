@@ -56,6 +56,7 @@ sub gencopy {
 	my %authors;
 	foreach my $commit (@commits) {
 		my ($date, $email) = split / /, $commit;
+		$email =~ s/\s$//g;
 		$email = $mailmap{$email} if exists $mailmap{$email};
 		my ($yr) = $date =~ /^(\d+)/;
 		foreach my $author (@authors) {

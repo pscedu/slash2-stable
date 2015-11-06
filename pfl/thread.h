@@ -84,7 +84,7 @@ label(struct psc_thread *pt)						\
  * pscthr_init - Initialize an application thread.
  */
 #define pscthr_init(thrtype, startf, dtor, privsiz, namefmt, ...)	\
-	_pscthr_init((thrtype), (startf), (dtor), (privsiz), -1, 	\
+	_pscthr_init((thrtype), (startf), (dtor), (privsiz), -1,	\
 	    (namefmt), ## __VA_ARGS__)
 
 #define pscthr_gettid()		pscthr_get()->pscthr_thrid
