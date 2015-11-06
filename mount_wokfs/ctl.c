@@ -242,7 +242,7 @@ psc_ctl_thrget_t psc_ctl_thrgets[] = {
 PFLCTL_SVR_DEFS;
 
 void
-ctlacthr_main(__unusedx struct psc_thread *thr)
+ctlthr_main(__unusedx struct psc_thread *thr)
 {
 	psc_ctlthr_main(ctlsockfn, ctlops, nitems(ctlops),
 	    THRT_CTLAC);
