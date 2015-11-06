@@ -68,7 +68,6 @@ wokctlcmd_insert(int fd, struct psc_ctlmsghdr *mh, void *msg)
 {
 	struct wokctlmsg_modspec *wcms = msg;
 	struct pscfs_creds pcr;
-	struct wok_module *wm;
 	int rc;
 
 	rc = wokctl_getcreds(fd, &pcr);
