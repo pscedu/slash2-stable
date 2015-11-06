@@ -17,6 +17,11 @@
 
 #include "mount_wokfs.h"
 
+struct wok_module {
+	const char	*wm_path;
+	struct pscfs	 wm_module;
+};
+
 int
 wokctl_getcreds(int s, struct pscfs_creds *pcrp)
 {
@@ -38,8 +43,70 @@ wokctl_getclientctx(__unusedx int s, struct pscfs_clientctx *pfcc)
 	return (0);
 }
 
+int
+wokctlcmd_insert(int fd, struct psc_ctlmsghdr *mh, void *msg)
+{
+	void *h, (*loadf)(struct pscfs *);
+	struct wokctlmsg_modspec *wcms = msg;
+	struct wok_module *wm;
+
+	h = dlopen(wcms->wcms_fn, RTLD_NOW);
+	if (h == NULL)
+		PFL_GOTOERR(error, 0);
+
+	loadf = dlsym(h, "pscfs_module_load");
+	if (h == NULL)
+		PFL_GOTOERR(error, 0);
+
+	wm = PSCALLOC(sizeof(*wm));
+	loadf(&wm->wm_module);
+	wm->wm_module->pf_private = wm;
+	pflfs_module_add(wcms->wcms_pos, &wm->wm_module);
+
+	return (0);
+
+ error:
+	if (h)
+		dlclose(h);
+	return (psc_ctlsenderr(fd, mh, "insert: %s",
+	    slstrerror(ENOENT)));
+}
+
+int
+wokctlcmd_list(int fd, struct psc_ctlmsghdr *mh, void *msg)
+{
+	struct wokctlmsg_modspec *wcms = msg;
+	struct pscfs *m;
+	int i;
+
+	pflfs_modules_rdpin();
+	DYNARRAY_FOREACH(m, i, &pscfs_modules) {
+		strlcpy(wcms->wcms_path, m->pf_path,
+		    sizeof(wcms->wcms_path));
+		wcms->wcms_pos = i;
+		rc = psc_ctlmsg_sendv(fd, mh, wcms);
+		if (!rc)
+			break;
+	}
+	pflfs_modules_rdunpin();
+	return (0);
+}
+
+int
+wokctlcmd_remove(__unusedx int fd, __unusedx struct psc_ctlmsghdr *mh,
+    void *msg)
+{
+	struct wokctlmsg_modctl *wcmc = msg;
+
+	pflfs_module_remove(pos);
+}
+
 struct psc_ctlop ctlops[] = {
-	PSC_CTLDEFOPS
+	PSC_CTLDEFOPS,
+	{ wokctlcmd_insert,		sizeof(wokctlmsg_modspec) },
+	{ wokctlcmd_list,		sizeof(wokctlmsg_modspec) },
+	{ wokctlcmd_reload,		sizeof(wokctlmsg_modctl) },
+	{ wokctlcmd_remove,		sizeof(wokctlmsg_modctl) },
 };
 
 psc_ctl_thrget_t psc_ctl_thrgets[] = {
@@ -48,7 +115,7 @@ psc_ctl_thrget_t psc_ctl_thrgets[] = {
 PFLCTL_SVR_DEFS;
 
 void
-ctlthr_main(__unusedx struct psc_thread *thr)
+ctlacthr_main(__unusedx struct psc_thread *thr)
 {
 	psc_ctlthr_main(ctlsockfn, ctlops, nitems(ctlops),
 	    THRT_CTLAC);
@@ -78,7 +145,7 @@ ctlthr_spawn(void)
 //	psc_ctlparam_register_simple("sys.version",
 //	    ctlparam_version_get, NULL);
 
-	thr = pscthr_init(THRT_CTL, ctlthr_main, NULL,
-	    sizeof(struct psc_ctlthr), "ctlthr0");
+	thr = pscthr_init(THRT_CTL, ctlacthr_main, NULL,
+	    sizeof(struct psc_ctlthr), "ctlacthr");
 	pscthr_setready(thr);
 }

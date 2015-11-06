@@ -4,8 +4,8 @@
 #include <dlfcn.h>
 #include <stdlib.h>
 
-#include "pfl/cdefs.h"
 #include "pfl/alloc.h"
+#include "pfl/cdefs.h"
 #include "pfl/fs.h"
 #include "pfl/fsmod.h"
 #include "pfl/opstats.h"
@@ -20,17 +20,8 @@
 # define STD_MOUNT_OPTIONS	"allow_other,max_write=134217728"
 #endif
 
-struct pfl_iostats_grad		 wok_iosyscall_iostats[8];
-
-const char			*progname;
 const char			*ctlsockfn = PATH_CTLSOCK;
 char				 mountpoint[PATH_MAX];
-
-void
-wokfsop_destroy(__unusedx struct pscfs_req *pfr)
-{
-	pscthr_killall();
-}
 
 void
 unmount(const char *mp)
@@ -50,48 +41,14 @@ unmount(const char *mp)
 		psclog_warn("system(%s)", buf);
 }
 
-struct pscfs wok_pscfs = {
-	PSCFS_INIT,
-	"wokfs",
-	NULL,
-	NULL,
-	NULL,	/* releasedir */
-	NULL,
-	NULL,
-	NULL,
-	NULL,	/* fsyncdir */
-	NULL,
-	NULL,	/* ioctl */
-	NULL,
-	NULL,
-	NULL,
-	NULL,
-	NULL,
-	NULL,
-	NULL,
-	NULL,
-	NULL,
-	NULL,
-	NULL,
-	NULL,
-	NULL,
-	NULL,
-	NULL,
-	wokfsop_destroy,
-	NULL,
-	NULL,
-	NULL,
-	NULL,
-	NULL
-};
-
 __dead void
 usage(void)
 {
+	extern const char *__progname;
+
 	fprintf(stderr,
-	    "usage: %s [-dQUVX] [-f conf] [-I iosystem] [-M mds]\n"
-	    "\t[-o mountopt] [-S socket] node\n",
-	    progname);
+	    "usage: %s [-dU] [-o mountopt] [-S socket] node\n",
+	    __progname);
 	exit(1);
 }
 
@@ -113,32 +70,23 @@ opt_lookup(const char *opt)
 	return (0);
 }
 
+/*
+ * Replace a module in the file system processing stack.  Note that the order
+ * of operations here is tricky due to instantiation issues with the old and
+ * new modules in the case of reloading the same module.
+ */
 int
-mod_load(const char *fn)
+mod_reload(int pos)
 {
-	void (*loadf)(struct pscfs *);
-	struct pscfs *ops;
-	void *h;
+	struct pscfs *oldm;
 
-	h = dlopen(fn, RTLD_NOW);
-	if (h == NULL)
-		PFL_GOTOERR(error, 0);
+	pflfs_modules_wrpin();
+	oldm = psc_dynarray_getpos(&pscfs_modules, pos);
+	pflfs_module_destroy(oldm);
 
-	loadf = dlsym(h, "pscfs_module_load");
-	if (h == NULL)
-		PFL_GOTOERR(error, 0);
-
-	ops = PSCALLOC(sizeof(*ops));
-	loadf(ops);
-
-	psc_dynarray_add(&pscfs_modules, ops);
-	return (0);
-
- error:
-	if (h)
-		dlclose(h);
-	psclog_errorx("unable to load module %s", dlerror());
-	return (-1);
+	pflfs_module_prepare(m);
+	psc_dynarray_setpos(&pscfs_modules, pos, newm);
+	pflfs_modules_wrunpin();
 }
 
 int
@@ -148,7 +96,6 @@ main(int argc, char *argv[])
 	char c, *p, *noncanon_mp;
 	int unmount_first = 0;
 
-	progname = argv[0];
 	pfl_init();
 
 	pscfs_addarg(&args, "");		/* progname/argv[0] */
@@ -207,22 +154,8 @@ main(int argc, char *argv[])
 
 	pfl_opstimerthr_spawn(THRT_OPSTIMER, "opstimerthr");
 
-	wok_iosyscall_iostats[0].size =        1024;
-	wok_iosyscall_iostats[1].size =    4 * 1024;
-	wok_iosyscall_iostats[2].size =   16 * 1024;
-	wok_iosyscall_iostats[3].size =   64 * 1024;
-	wok_iosyscall_iostats[4].size =  128 * 1024;
-	wok_iosyscall_iostats[5].size =  512 * 1024;
-	wok_iosyscall_iostats[6].size = 1024 * 1024;
-	wok_iosyscall_iostats[7].size = 0;
-	pfl_iostats_grad_init(wok_iosyscall_iostats, OPSTF_BASE10, "iosz");
-
 	pscfs_entry_timeout = 8.;
 	pscfs_attr_timeout = 8.;
-
-	mod_load("/home/yanovich/code/advsys/p/wokfs/passfs/passfs.so");
-
-	psc_dynarray_add(&pscfs_modules, &wok_pscfs);
 
 	exit(pscfs_main(0));
 }
