@@ -20,7 +20,7 @@
 .\" --------------------------------------------------------------------
 .\" %END_LICENSE%
 .\" %PFL_MODULES ctl fuse rpc %
-.Dd January 6, 2015
+.Dd November 6, 2015
 .Dt MSCTL 8
 .ds volume PSC \- Administrator's Manual
 .Os http://www.psc.edu/
@@ -31,7 +31,7 @@
 file system mount daemon runtime control
 .Sh SYNOPSIS
 .Nm msctl
-.Op Fl HInRv
+.Op Fl HInv
 .Op Fl p Ar paramspec
 .Op Fl S Ar socket
 .Op Fl s Ar showspec
@@ -46,9 +46,39 @@ behavior.
 .\" %PFL_INCLUDE $PFL_BASE/doc/pflctl/cmd.mdoc {
 .\"	daemon => "mount_slash",
 .\"	cmds	=> {
+.\"		"insert Ar pos file" =>
+.\"			"Add the file system module specified by\n" .
+.\"			".Ar file\n" .
+.\"			"to the processing stack at position\n" .
+.\"			".Ar pos .",
+.\"		"list" =>
+.\"			"List modules in the current processing stack.",
+.\"		"reload Ar pos" =>
+.\"			"Unload and reload module at the specified position\n" .
+.\"			".Ar pos\n" .
+.\"			"in the processing stack.",
+.\"		"remove Ar pos" =>
+.\"			"Remove the module at the specified position\n" .
+.\"			".Ar pos\n" .
+.\"			"from the processing stack.",
 .\"	}
 The supported commands are as follows:
 .Bl -tag -width 3n
+.It Cm insert Ar pos file
+Add the file system module specified by
+.Ar file
+to the processing stack at position
+.Ar pos .
+.It Cm list
+List modules in the current processing stack.
+.It Cm reload Ar pos
+Unload and reload module at the specified position
+.Ar pos
+in the processing stack.
+.It Cm remove Ar pos
+Remove the module at the specified position
+.Ar pos
+from the processing stack.
 .El
 .\" }%
 .Pp
