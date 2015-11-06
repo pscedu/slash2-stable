@@ -272,7 +272,7 @@ ctlthr_spawn(void)
 //	psc_ctlparam_register_simple("sys.version",
 //	    ctlparam_version_get, NULL);
 
-	thr = pscthr_init(THRT_CTL, ctlacthr_main, NULL,
-	    sizeof(struct psc_ctlthr), "ctlacthr");
+	thr = pscthr_init(THRT_CTL, ctlthr_main, NULL,
+	    sizeof(struct psc_ctlthr), "ctlthr0");
 	pscthr_setready(thr);
 }
