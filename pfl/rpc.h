@@ -120,7 +120,7 @@ enum pscrpc_rq_phase {
 	PSCRPC_RQ_PHASE_COMPLETE	= 0xebc0de04,
 };
 
-#define PSCRPC_PHASE_NAMES 		"nrbic"
+#define PSCRPC_PHASE_NAMES		"nrbic"
 
 enum pscrpc_imp_state {
 	PSCRPC_IMP_CLOSED		=  1,
@@ -784,7 +784,7 @@ pscrpc_wake_client_req(struct pscrpc_request *req)
 			    PSCRPC_SVR_SHORT_TIMEO;			\
 			_abstime.tv_nsec = 0;				\
 			/*						\
-			 * Don't wake up periodically unless there is 	\
+			 * Don't wake up periodically unless there is	\
 			 * real work to do.				\
 			 */						\
 			if (mtx)					\
