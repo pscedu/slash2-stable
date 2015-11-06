@@ -24,9 +24,13 @@
  */
 
 #include <stdio.h>
+#include <string.h>
 
 #include "pfl/ctl.h"
 #include "pfl/ctlcli.h"
+#include "pfl/str.h"
+
+#include "mount_wokfs/ctl.h"
 
 int			 verbose;
 int			 recursive;
@@ -51,33 +55,40 @@ void
 cmd_insert(int ac, char **av)
 {
 	struct wokctlmsg_modspec *wcms;
+	char *endp;
 	long l;
 
-	if (ac != 3)
-		errx(1, "usage: %s insert position path",
+	if (ac != 3) {
+		fprintf(stderr, "usage: %s insert position path\n",
 		    __progname);
-	l = strtol(av[0], &endp, 10);
+		exit(1);
+	}
+	l = strtol(av[1], &endp, 10);
 	if (l < 0 || l > MAX_MODULES ||
-	    endp == av[0] || *endp)
-		errx(1, "position: invalid value: %s", av[0]);
+	    endp == av[1] || *endp)
+		errx(1, "position: invalid value: %s", av[1]);
 	wcms = psc_ctlmsg_push(WOKCMT_INSERT, sizeof(*wcms));
-	strlcpy(wcms->wcms_path, av[1], sizeof(wcms->wcms_path));
+	if (realpath(av[2], wcms->wcms_path) == NULL)
+		err(1, "path %s", av[2]);
 	wcms->wcms_pos = l;
 }
 
 void
 cmd_remove(int ac, char **av)
 {
-	struct wokctlmsg_modcmd *wcmc;
+	struct wokctlmsg_modctl *wcmc;
 	char *endp;
 	long l;
 
-	if (ac != 1)
-		errx(1, "usage: %s remove position", __progname);
-	l = strtol(av[0], &endp, 10);
+	if (ac != 2) {
+		fprintf(stderr, "usage: %s remove position\n",
+		    __progname);
+		exit(1);
+	}
+	l = strtol(av[1], &endp, 10);
 	if (l < 0 || l > MAX_MODULES ||
-	    endp == av[0] || *endp)
-		errx(1, "position: invalid value: %s", av[0]);
+	    endp == av[1] || *endp)
+		errx(1, "position: invalid value: %s", av[1]);
 	wcmc = psc_ctlmsg_push(WOKCMT_REMOVE, sizeof(*wcmc));
 	wcmc->wcmc_pos = l;
 }
@@ -85,25 +96,47 @@ cmd_remove(int ac, char **av)
 void
 cmd_reload(int ac, char **av)
 {
-	struct wokctlmsg_modcmd *wcre;
+	struct wokctlmsg_modctl *wcmc;
 	char *endp;
 	long l;
 
-	if (ac != 1)
-		errx(1, "usage: %s reload position", __progname);
+	if (ac != 2) {
+		fprintf(stderr, "usage: %s reload position\n",
+		    __progname);
+		exit(1);
+	}
+	l = strtol(av[1], &endp, 10);
 	if (l < 0 || l > MAX_MODULES ||
-	    endp == av[0] || *endp)
-		errx(1, "position: invalid value: %s", av[0]);
+	    endp == av[1] || *endp)
+		errx(1, "position: invalid value: %s", av[1]);
 	wcmc = psc_ctlmsg_push(WOKCMT_RELOAD, sizeof(*wcmc));
 	wcmc->wcmc_pos = l;
 }
 
 void
-cmd_list(int ac, char **av)
+cmd_list(int ac, __unusedx char **av)
 {
-	if (ac)
-		errx(1, "usage: %s list", __progname);
-	psc_ctlmsg_push(WOKCMT_LIST, sizeof(struct wokctl_modspec));
+	if (ac != 1) {
+		fprintf(stderr, "usage: %s list\n", __progname);
+		exit(1);
+	}
+	psc_ctlmsg_push(WOKCMT_LIST, sizeof(struct wokctlmsg_modspec));
+}
+
+void
+wok_list_prhdr(__unusedx struct psc_ctlmsghdr *mh,
+    __unusedx const void *m)
+{
+	printf("%8s %-63s\n",
+	    "position", "module");
+}
+
+void
+wok_list_prdat(__unusedx const struct psc_ctlmsghdr *mh, const void *m)
+{
+	const struct wokctlmsg_modspec *wcms = m;
+
+	printf("%8d %s\n", wcms->wcms_pos, wcms->wcms_path);
 }
 
 struct psc_ctlshow_ent psc_ctlshow_tab[] = {
@@ -111,7 +144,11 @@ struct psc_ctlshow_ent psc_ctlshow_tab[] = {
 };
 
 struct psc_ctlmsg_prfmt psc_ctlmsg_prfmts[] = {
-	PSC_CTLMSG_PRFMT_DEFS
+	PSC_CTLMSG_PRFMT_DEFS,
+	{ NULL,			NULL,		0,					NULL },
+	{ wok_list_prhdr,	wok_list_prdat,	sizeof(struct wokctlmsg_modspec),	NULL },
+	{ NULL,			NULL,		0,					NULL },
+	{ NULL,			NULL,		0,					NULL },
 };
 
 psc_ctl_prthr_t psc_ctl_prthrs[] = {
@@ -125,6 +162,7 @@ psc_ctl_prthr_t psc_ctl_prthrs[] = {
 
 struct psc_ctlcmd_req psc_ctlcmd_reqs[] = {
 	{ "insert",		cmd_insert },
+	{ "list",		cmd_list },
 	{ "reload",		cmd_reload },
 	{ "remove",		cmd_remove },
 };

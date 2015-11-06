@@ -34,6 +34,15 @@ enum {
 	THRT_OPSTIMER
 };
 
+struct wok_module {
+	char		*wm_path;
+	struct pscfs	 wm_module;
+	void		*wm_handle;
+};
+
+int	mod_load(int, const char *);
+void	mod_destroy(struct wok_module *);
+
 extern char	 mountpoint[];
 
 #endif /* _MOUNT_WOKFS_H_ */

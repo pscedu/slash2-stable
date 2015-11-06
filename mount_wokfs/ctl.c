@@ -30,6 +30,8 @@
 #include <sys/param.h>
 #include <sys/socket.h>
 
+#include <dlfcn.h>
+
 #include "pfl/cdefs.h"
 #include "pfl/ctl.h"
 #include "pfl/ctlsvr.h"
@@ -37,12 +39,8 @@
 #include "pfl/net.h"
 #include "pfl/str.h"
 
+#include "ctl.h"
 #include "mount_wokfs.h"
-
-struct wok_module {
-	const char	*wm_path;
-	struct pscfs	 wm_module;
-};
 
 int
 wokctl_getcreds(int s, struct pscfs_creds *pcrp)
@@ -68,42 +66,70 @@ wokctl_getclientctx(__unusedx int s, struct pscfs_clientctx *pfcc)
 int
 wokctlcmd_insert(int fd, struct psc_ctlmsghdr *mh, void *msg)
 {
-	void *h, (*loadf)(struct pscfs *);
 	struct wokctlmsg_modspec *wcms = msg;
+	struct pscfs_creds pcr;
 	struct wok_module *wm;
+	int rc;
 
-	h = dlopen(wcms->wcms_fn, RTLD_NOW);
-	if (h == NULL)
-		PFL_GOTOERR(error, 0);
+	rc = wokctl_getcreds(fd, &pcr);
+	if (rc)
+		return (psc_ctlsenderr(fd, mh, "insert: %s",
+		    strerror(rc)));
+	if (pcr.pcr_uid)
+		return (psc_ctlsenderr(fd, mh, "insert: %s",
+		    strerror(EPERM)));
 
-	loadf = dlsym(h, "pscfs_module_load");
-	if (h == NULL)
-		PFL_GOTOERR(error, 0);
+	pflfs_modules_wrpin();
 
-	wm = PSCALLOC(sizeof(*wm));
-	loadf(&wm->wm_module);
-	wm->wm_module->pf_private = wm;
-	pflfs_module_add(wcms->wcms_pos, &wm->wm_module);
+	if (wcms->wcms_pos < 0 ||
+	    wcms->wcms_pos > psc_dynarray_len(&pscfs_modules)) {
+		pflfs_modules_wrunpin();
+		return (psc_ctlsenderr(fd, mh, "insert %d: invalid "
+		    "position", wcms->wcms_pos));
+	}
 
-	return (0);
+	rc = mod_load(wcms->wcms_pos, wcms->wcms_path);
+	pflfs_modules_wrunpin();
+	if (rc) {
+		const char *error;
 
- error:
-	if (h)
-		dlclose(h);
-	return (psc_ctlsenderr(fd, mh, "insert: %s",
-	    slstrerror(ENOENT)));
+		switch (rc) {
+		case -1:
+			error = dlerror();
+			break;
+		case ENXIO:
+			error = "module does not define symbol "
+			    "'pscfs_module_load' ";
+			break;
+		default:
+			error = strerror(rc);
+			break;
+		}
+		return (psc_ctlsenderr(fd, mh, "insert %s: %s",
+		    wcms->wcms_path, error));
+	}
+	return (1);
 }
 
 int
 wokctlcmd_list(int fd, struct psc_ctlmsghdr *mh, void *msg)
 {
 	struct wokctlmsg_modspec *wcms = msg;
+	struct wok_module *wm;
 	struct pscfs *m;
-	int i;
+	int i, rc = 1;
 
 	pflfs_modules_rdpin();
 	DYNARRAY_FOREACH(m, i, &pscfs_modules) {
-		strlcpy(wcms->wcms_path, m->pf_path,
+		/*
+		 * Skip default module which is internal to pflfs
+		 * itself and is only used for handing unmount.
+		 */
+		if (i == psc_dynarray_len(&pscfs_modules) - 1)
+			break;
+
+		wm = m->pf_private;
+		strlcpy(wcms->wcms_path, wm->wm_path,
 		    sizeof(wcms->wcms_path));
 		wcms->wcms_pos = i;
 		rc = psc_ctlmsg_sendv(fd, mh, wcms);
@@ -111,7 +137,59 @@ wokctlcmd_list(int fd, struct psc_ctlmsghdr *mh, void *msg)
 			break;
 	}
 	pflfs_modules_rdunpin();
-	return (0);
+	return (rc);
+}
+
+/*
+ * Replace a module in the file system processing stack.  Note that the
+ * order of operations here is tricky due to instantiation issues with
+ * the old and new modules in the case of reloading the same module.
+ */
+int
+wokctlcmd_reload(__unusedx int fd, __unusedx struct psc_ctlmsghdr *mh,
+    void *msg)
+{
+	struct wokctlmsg_modctl *wcmc = msg;
+	struct pscfs_creds pcr;
+	struct wok_module *wm;
+	struct pscfs *m;
+	char *path;
+	int rc;
+
+	rc = wokctl_getcreds(fd, &pcr);
+	if (rc)
+		return (psc_ctlsenderr(fd, mh, "reload: %s",
+		    strerror(rc)));
+	if (pcr.pcr_uid)
+		return (psc_ctlsenderr(fd, mh, "reload: %s",
+		    strerror(EPERM)));
+
+	pflfs_modules_wrpin();
+
+	if (wcmc->wcmc_pos < 0 ||
+	    wcmc->wcmc_pos >= psc_dynarray_len(&pscfs_modules) - 1) {
+		pflfs_modules_wrunpin();
+		return (psc_ctlsenderr(fd, mh, "reload %d: invalid "
+		    "position", wcmc->wcmc_pos));
+	}
+
+	m = psc_dynarray_getpos(&pscfs_modules, wcmc->wcmc_pos);
+	wm = m->pf_private;
+	path = pfl_strdup(wm->wm_path);
+	pflfs_module_destroy(m);
+
+	mod_destroy(wm);
+
+	rc = mod_load(wcmc->wcmc_pos, path);
+	PSCFREE(path);
+
+	pflfs_modules_wrunpin();
+
+	if (rc)
+		return (psc_ctlsenderr(fd, mh, "reload %d: %s",
+		    wcmc->wcmc_pos, dlerror()));
+
+	return (1);
 }
 
 int
@@ -119,16 +197,44 @@ wokctlcmd_remove(__unusedx int fd, __unusedx struct psc_ctlmsghdr *mh,
     void *msg)
 {
 	struct wokctlmsg_modctl *wcmc = msg;
+	struct pscfs_creds pcr;
+	struct wok_module *wm;
+	struct pscfs *m;
+	int rc;
 
-	pflfs_module_remove(pos);
+	rc = wokctl_getcreds(fd, &pcr);
+	if (rc)
+		return (psc_ctlsenderr(fd, mh, "remove: %s",
+		    strerror(rc)));
+	if (pcr.pcr_uid)
+		return (psc_ctlsenderr(fd, mh, "remove: %s",
+		    strerror(EPERM)));
+
+	pflfs_modules_wrpin();
+
+	if (wcmc->wcmc_pos < 0 ||
+	    wcmc->wcmc_pos >= psc_dynarray_len(&pscfs_modules) - 1) {
+		pflfs_modules_wrunpin();
+		return (psc_ctlsenderr(fd, mh, "remove %d: invalid "
+		    "position", wcmc->wcmc_pos));
+	}
+
+	m = pflfs_module_remove(wcmc->wcmc_pos);
+	wm = m->pf_private;
+	pflfs_module_destroy(m);
+	pflfs_modules_wrunpin();
+
+	mod_destroy(wm);
+
+	return (1);
 }
 
 struct psc_ctlop ctlops[] = {
 	PSC_CTLDEFOPS,
-	{ wokctlcmd_insert,		sizeof(wokctlmsg_modspec) },
-	{ wokctlcmd_list,		sizeof(wokctlmsg_modspec) },
-	{ wokctlcmd_reload,		sizeof(wokctlmsg_modctl) },
-	{ wokctlcmd_remove,		sizeof(wokctlmsg_modctl) },
+	{ wokctlcmd_insert,		sizeof(struct wokctlmsg_modspec) },
+	{ wokctlcmd_list,		sizeof(struct wokctlmsg_modspec) },
+	{ wokctlcmd_reload,		sizeof(struct wokctlmsg_modctl) },
+	{ wokctlcmd_remove,		sizeof(struct wokctlmsg_modctl) },
 };
 
 psc_ctl_thrget_t psc_ctl_thrgets[] = {

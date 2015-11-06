@@ -11,7 +11,7 @@ SRCS+=		ctl.c
 SRCS+=		main.c
 SRCS+=		${PFL_BASE}/fuse.c
 
-LDFLAGS+=	-ldl -rdynamic
-MODULES+=	pthread pscfs ctl clock pfl
+LDFLAGS+=	-ldl -rdynamic -Wl,--whole-archive
+MODULES+=	pthread pscfs ctl clock pfl-whole acl
 
 include ${PFLMK}

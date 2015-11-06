@@ -1,4 +1,4 @@
-/* $Id: main.c 25363 2015-02-04 20:10:24Z zhihui $ */
+/* $Id$ */
 /*
  * %ISC_START_LICENSE%
  * ---------------------------------------------------------------------
@@ -31,10 +31,12 @@
 #include "pfl/fs.h"
 #include "pfl/fsmod.h"
 #include "pfl/opstats.h"
+#include "pfl/str.h"
 #include "pfl/thread.h"
 #include "pfl/timerthr.h"
 
 #include "mount_wokfs.h"
+#include "ctl.h"
 
 #ifdef HAVE_FUSE_BIG_WRITES
 # define STD_MOUNT_OPTIONS	"allow_other,max_write=134217728,big_writes"
@@ -92,23 +94,44 @@ opt_lookup(const char *opt)
 	return (0);
 }
 
-/*
- * Replace a module in the file system processing stack.  Note that the order
- * of operations here is tricky due to instantiation issues with the old and
- * new modules in the case of reloading the same module.
- */
 int
-mod_reload(int pos)
+mod_load(int pos, const char *path)
 {
-	struct pscfs *oldm;
+	void *h, (*loadf)(struct pscfs *);
+	struct wok_module *wm;
 
-	pflfs_modules_wrpin();
-	oldm = psc_dynarray_getpos(&pscfs_modules, pos);
-	pflfs_module_destroy(oldm);
+	h = dlopen(path, RTLD_NOW);
+	if (h == NULL)
+		PFL_GOTOERR(error, 0);
 
-	pflfs_module_prepare(m);
-	psc_dynarray_setpos(&pscfs_modules, pos, newm);
-	pflfs_modules_wrunpin();
+	loadf = dlsym(h, "pscfs_module_load");
+	if (loadf == NULL)
+		PFL_GOTOERR(error, 0);
+
+	wm = PSCALLOC(sizeof(*wm));
+	wm->wm_path = pfl_strdup(path);
+	wm->wm_handle = h;
+	loadf(&wm->wm_module);
+	wm->wm_module.pf_private = wm;
+	pflfs_module_init(&wm->wm_module);
+	pflfs_module_add(pos, &wm->wm_module);
+
+	return (0);
+
+ error:
+	if (h)
+		dlclose(h);
+	if (dlerror() == NULL)
+		return (ENXIO);
+	return (-1);
+}
+
+void
+mod_destroy(struct wok_module *wm)
+{
+	dlclose(wm->wm_handle);
+	PSCFREE(wm->wm_path);
+	PSCFREE(wm);
 }
 
 int
