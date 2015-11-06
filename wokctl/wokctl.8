@@ -20,7 +20,7 @@
 .\" --------------------------------------------------------------------
 .\" %END_LICENSE%
 .\" %PFL_MODULES ctl fuse rpc %
-.Dd November 26, 2014
+.Dd January 6, 2015
 .Dt MSCTL 8
 .ds volume PSC \- Administrator's Manual
 .Os http://www.psc.edu/
@@ -123,7 +123,7 @@ port to use to connect to remote
 peers.
 .It Cm log.file
 File path name where log messages will be written.
-This value is write-only.
+This field is write-only.
 If the
 .Li +=
 assignment operator is used, this file will not be truncated.
@@ -151,30 +151,39 @@ See the description of
 in
 .Xr mount_slash 8
 for recognized log level values.
+.It Cm log.points
+List of places in the source code (in the form
+.Dq file:line-number )
+where granular logging can be enabled on a case-by-case
+basis.
+Usually assigned to by the
+.Li +=
+operator.
 .It Cm mountpoint
 File hierarchy node where
 .Tn SLASH2
 file system is mounted.
-.It Cm offline_nretries
-Number of times to retry remote peer connection
-establishment per file system request.
 .It Cm pool. Ns Ar name
 Access the memory pool specified by
 .Ar name .
 The following sub-fields are available:
 .Pp
 .Bl -tag -compact -offset 3n -width 13n
+.It Cm free
+Current number of allocated entries available for use in pool.
 .It Cm max
 Upper bound for number of entries to which auto-sized pools can grow.
 .It Cm min
 Lower bound for number of entries to which auto-sized pools can shrink.
+.It Cm reap
+Assign a value to reap the specified number of entries.
+Only applies to pools that have a reaper routine.
+This field is write-only.
 .It Cm thres
 Threshold for unused items for auto-sized pools before items are freed.
 .It Cm total
 Current number of entries contained in pool.
 .El
-.It Cm pref_ios
-Preferred I/O system.
 .It Cm pscfs.attr_timeout
 Amount of time to cache
 .Xr stat 2
@@ -183,8 +192,6 @@ information in
 .It Cm pscfs.entry_timeout
 Amount of time to cache name space entries in
 .Tn FUSE .
-.It Cm readahead_pgs
-Number of pages to read ahead when read I/O is performed.
 .It Cm rlim
 Process resource limits.
 See
@@ -193,12 +200,30 @@ or
 .Xr ulimit 1
 for more information.
 .Pp
-.Bl -tag -compact -offset 3n -width 13n
-.It Cm nofiles
-Corresponds to
-.Dv RLIMIT_NOFILE ,
-the maximum number of open files.
+.Bl -column "msgqueue" -offset 3n
+.It Sy Name Ta Sy Field
+.It =============================
+.It Cm cpu        Ta Dv RLIMIT_CPU
+.It Cm csize      Ta Dv RLIMIT_CORE
+.It Cm dsize      Ta Dv RLIMIT_DATA
+.It Cm fsize      Ta Dv RLIMIT_FSIZE
+.It Cm locks      Ta Dv RLIMIT_LOCKS
+.It Cm maxproc    Ta Dv RLIMIT_NPROC
+.It Cm mem        Ta Dv RLIMIT_AS
+.It Cm mlock      Ta Dv RLIMIT_MEMLOCK
+.It Cm msgqueue   Ta Dv RLIMIT_MSGQUEUE
+.It Cm nice       Ta Dv RLIMIT_NICE
+.It Cm nofile     Ta Dv RLIMIT_NOFILE
+.It Cm rss        Ta Dv RLIMIT_RSS
+.It Cm rtprio     Ta Dv RLIMIT_RTPRIO
+.It Cm rttime     Ta Dv RLIMIT_RTTIME
+.It Cm sigpndg    Ta Dv RLIMIT_SIGPENDING
+.It Cm stksize    Ta Dv RLIMIT_STACK
 .El
+.It Cm rusage
+Process resource usage information.
+See
+.Xr getrusage 2 .
 .El
 .\" }%
 .It Fl Q Ar replrqspec Ns : Ns Ar fn
@@ -315,50 +340,6 @@ network resources
 If
 .Ar subspec
 is left unspecified, all hash tables will be accessed.
-.It Cm iostats
-.Tn I/O
-statistics.
-.Ar subspec
-has the following format:
-.Pp
-.Bd -unfilled -offset 3n
-.Ar iostats Ns Op , Ns Ar ...
-.Ed
-.Pp
-.Ar iostats
-may be one of the following:
-.Pp
-.Bl -tag -compact -offset 3n -width 3n
-.It Cm lni-rcv- Ns Ar if ,
-.It Cm lni-snd- Ns Ar if
-Data sent/received per
-.Tn LNET
-networking interface.
-.Pp
-.It Cm lusklnd- Ns Ar mode Ns Cm -rcv ,
-.It Cm lusklnd- Ns Ar mode Ns Cm -snd
-Data sent/received over userland socket networking device.
-.Ar mode
-may be
-.Cm pasv
-.Pq passive
-or
-.Cm aggr
-.Pq aggregate .
-.Pp
-.It Cm rpc- Ns Ar addr Ns Cm -rcv ,
-.It Cm rpc- Ns Ar addr Ns Cm -snd
-Data sent/received per
-.Tn RPC
-peer.
-.Pp
-.El
-.Pp
-If
-.Ar subspec
-is left unspecified, all
-.Tn I/O
-statistics will be accessed.
 .It Cm listcaches
 List cache statistics.
 .Ar subspec
@@ -392,7 +373,7 @@ files
 If
 .Ar subspec
 is left unspecified, all list caches will be accessed.
-.It Cm lni
+.It Cm lnetif
 Lustre network interfaces.
 .It Cm loglevels
 Thread logging levels.
@@ -409,6 +390,49 @@ for details on specifying
 If
 .Ar subspec
 is left unspecified, all threads will be accessed.
+.It Cm opstats
+Operation counters/statistics.
+.Ar subspec
+has the following format:
+.Pp
+.Bd -unfilled -offset 3n
+.Ar opstats Ns Op , Ns Ar ...
+.Ed
+.Pp
+.Ar opstats
+may be one of the following:
+.Pp
+.Bl -tag -compact -offset 3n -width 3n
+.It Cm lni-rcv- Ns Ar if ,
+.It Cm lni-snd- Ns Ar if
+Data sent/received per
+.Tn LNET
+networking interface.
+.Pp
+.It Cm lusklnd- Ns Ar mode Ns Cm -rcv ,
+.It Cm lusklnd- Ns Ar mode Ns Cm -snd
+Data sent/received over userland socket networking device.
+.Ar mode
+may be
+.Cm pasv
+.Pq passive
+or
+.Cm aggr
+.Pq aggregate .
+.Pp
+.It Cm rpc- Ns Ar addr Ns Cm -rcv ,
+.It Cm rpc- Ns Ar addr Ns Cm -snd
+Data sent/received per
+.Tn RPC
+peer.
+.Pp
+.El
+.Pp
+If
+.Ar subspec
+is left unspecified, all
+.Tn I/O
+statistics will be accessed.
 .It Cm pools
 Memory pool statistics.
 .Ar subspec
@@ -428,6 +452,8 @@ Block map structures
 If
 .Ar subspec
 is left unspecified, all pools will be accessed.
+.It Cm rpcrqs
+Remote procedure calls (RPC).
 .It Cm rpcsvcs
 .Tn RPC
 services.
@@ -475,49 +501,21 @@ parameters may be specified by one or more of the following tokens,
 separated by commas:
 .Pp
 .Bl -tag -compact -offset 3n -width 16n
-.It Cm msattrflushthr
-File attribute flusher
-.It Cm msbreleasethr
-Bmap lease revoker
-.It Cm msbwatchthr
-Bmap lease watcher
-.It Cm msconnthr
-Peer resource connection monitor
 .It Cm msctlacthr
 .Nm
 connection acceptor/multiplexor
 .It Cm msctlthr
 .Nm
 connection processor
-.It Cm mseqpollthr
-Lustre
-.Fn LNetEQPoll
-issuer
-.It Cm msflushthr Ns Ar %d
-Bmap flusher
 .It Cm msfsmgrthr
 Userland file system manager
 .Pq e.g. FUSE
 .It Cm msfsthr Ns Ar %d
 File system syscall handler
-.It Cm msnbrqthr Ns Ar %d
-Non-blocking
-.Tn RPC
-reply handler
-.It Cm msrcithr Ns Ar %02d
-.Tn IO RPC
-request service
-.It Cm msrcmthr Ns Ar %02d
-.Tn MDS RPC
-request service
-.It Cm msreadaheadthr
-Bmap read-ahead queuer
 .It Cm mstiosthr
 Timed
 .Tn I/O
 stats updater
-.It Cm msusklndplthr Ns Ar %d
-Lustre userland socket poll
 .It Cm mswkthr Ns Ar %d
 Generic worker
 .It Cm everyone
