@@ -1,0 +1,11 @@
+# $Id$
+# %PSC_COPYRIGHT%
+
+LNET_BASE=	${ROOTDIR}/lnet-lite
+PFL_BASE=	${ROOTDIR}/pfl
+
+MAINMK=		${ROOTDIR}/mk/main.mk
+PFLMK=		${PFL_BASE}/mk/main.mk
+
+-include ${ROOTDIR}/distrib/*/mk/dep.mk
+-include ${ROOTDIR}/*/mk/dep.mk

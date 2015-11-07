@@ -1,0 +1,20 @@
+#!/bin/sh
+# $Id$
+# %PSC_COPYRIGHT%
+
+# setcc: set env `CC' appropriately to avoid recursion with wrappers.
+
+: ${CC:?not set}
+
+newcc=$CC
+for i in ${CC}; do
+	if [ x"${i#CC=}" != x"$i" ]; then
+		newcc=${i#CC=}
+	fi
+done
+
+if [ x"$(basename $($newcc -? 2>&1 | awk '{print $2}'))" = x"zcc" ]; then
+	newcc=cc
+fi
+
+CC=$newcc exec "$@"

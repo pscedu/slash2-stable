@@ -1,0 +1,135 @@
+#!/usr/bin/env perl
+# $Id$
+
+use strict;
+use warnings;
+
+my @thr;
+
+my @ign = (
+	# pfl
+	[ qw(.*accept libcfs_sock_accept lnet_acceptor psc_usklndthr_begin _pscthr_begin) ],
+	[ qw(.*accept psc_ctlacthr_main _pscthr_begin) ],
+	[ qw(LNetEQPoll pscrpc_check_events psc_eqpollthr_main _pscthr_begin) ],
+	[ qw(_?_?poll usocklnd_poll_thread _pscthr_begin) ],
+	[ qw(_?_?poll usocklnd_poll_thread psc_usklndthr_begin _pscthr_begin) ],
+	[ qw(_psc_waitq_waitabs _lc_get pfl_wkthr_main _pscthr_begin) ],
+	[ qw(_psc_waitq_waitabs pfl_opstimerthr_main _pscthr_begin) ],
+	[ qw(_psc_waitq_waitabs psc_ctlthr_mainloop) ],
+	[ qw(_psc_waitq_waitabs pscfs_fuse_listener_loop) ],
+	[ qw(_psc_waitq_waitabs pscrpcthr_main _pscthr_begin) ],
+	[ qw(_psc_waitq_waitrel pjournal_thr_main _pscthr_begin) ],
+	[ qw(_psc_waitq_waitrel psc_compl_waitrel_s pscrpc_nbreapthr_main _pscthr_begin) ],
+	[ qw(accept libcfs_sock_accept lnet_acceptor _pscthr_begin) ],
+	[ qw(accept lnet_acceptor psc_usklndthr_begin _pscthr_begin) ],
+	[ qw(poll pscfs_fuse_listener_loop) ],
+	[ qw(pscrpcthr_waitevent pscrpcthr_main _pscthr_begin) ],
+	[ qw(pthread_join pscfs_main _pscthr_begin) ],
+	[ qw(pthread_join pscfs_main main) ],
+
+	# SLASH2 slashd
+	[ qw(_?_?sleep slmbkdbthr_main _pscthr_begin) ],
+	[ qw(_psc_waitq_waitabs _lc_get slm_worker_main _pscthr_begin) ],
+	[ qw(_psc_waitq_waitabs _lc_get slmbchrqthr_main _pscthr_begin) ],
+	[ qw(_psc_waitq_waitabs _lc_get slmrcmthr_main _pscthr_begin) ],
+	[ qw(_psc_waitq_waitrel slmjreclaimthr_main _pscthr_begin) ],
+	[ qw(psc_multiwait_usecs slmupschthr_main _pscthr_begin) ],
+	[ qw(pthread_join pscfs_main slmzfskstatmthr_main _pscthr_begin) ],
+	[ qw(slmbmaptimeothr_begin _pscthr_begin) ],
+	[ qw(usleep pscfs_main slmzfskstatmthr_main _pscthr_begin) ],
+	[ qw(usleep slmbchrqthr_main _pscthr_begin) ],
+
+	# SLASH2 sliod
+	[ qw(.*sleep slibmaprlsthr_main _pscthr_begin) ],
+	[ qw(.*sleep slibreapthr_main _pscthr_begin) ],
+	[ qw(.*sleep slicrudthr_main _pscthr_begin) ],
+	[ qw(.*sleep slislvrthr_main _pscthr_begin) ],
+	[ qw(.*sleep slistatfsthr_main _pscthr_begin) ],
+	[ qw(_?psc_waitq_waitrelv slireplpndthr_main _pscthr_begin) ],
+	[ qw(_psc_mutex_lock slislvrthr_main _pscthr_begin) ],
+	[ qw(_psc_waitq_waitabs _lc_get slibmaprlsthr_main _pscthr_begin) ],
+	[ qw(_psc_waitq_waitabs _lc_get slirathr_main _pscthr_begin) ],
+	[ qw(_psc_waitq_waitabs _lc_get slireplpndthr_main _pscthr_begin) ],
+	[ qw(_psc_waitq_waitabs _lc_get slislvrthr_main _pscthr_begin) ],
+	[ qw(_psc_waitq_waitabs slihealththr_main _pscthr_begin) ],
+	[ qw(psc_waitq_waitabs slislvrthr_main _pscthr_begin) ],
+
+	# SLASH2 mount_slash
+	[ qw(_?psc_waitq_waitrel _lc_get msbmaprathr_main _pscthr_begin) ],
+	[ qw(_?psc_waitq_waitrel msflushthr_main _pscthr_begin) ],
+	[ qw(_psc_waitq_waitabs _lc_get msattrflushthr_main _pscthr_begin) ],
+	[ qw(_psc_waitq_waitabs _lc_get msbreleasethr_main _pscthr_begin) ],
+	[ qw(_psc_waitq_waitabs _lc_get msbwatchthr_main _pscthr_begin) ],
+	[ qw(_psc_waitq_waitabs _lc_get msflushthr_main _pscthr_begin) ],
+	[ qw(_psc_waitq_waitabs _lc_get msreadaheadthr_main _pscthr_begin) ],
+	[ qw(_psc_waitq_waitabs _psc_waitq_waitrel msattrflushthr_main _pscthr_begin) ],
+	[ qw(_psc_waitq_waitabs msbreleasethr_main _pscthr_begin) ],
+	[ qw(msbmflwthr_main _pscthr_begin) ],
+	[ qw(usleep msbwatchthr_main _pscthr_begin) ],
+
+	# SLASH2 common
+	[ qw(.*sleep sl_freapthr_main _pscthr_begin) ],
+	[ qw(_sl_csvc_waitrelv slconnthr_main _pscthr_begin) ],
+	[ qw(cv_wait txg_wait_synced zfsslash2_wait_synced pjournal_thr_main _pscthr_begin) ],
+	[ qw(psc_multiwait_usecs slconnthr_main _pscthr_begin) ],
+	[ qw(sleep sl_nbrqthr_main _pscthr_begin) ],
+
+	# zest
+	[ qw(psc_multiwait_usecs ziothr_workq_proc_one ziothr_main _pscthr_begin) ],
+
+	# zfs
+	[ qw(cv_timedwait arc_reclaim_thread) ],
+	[ qw(cv_timedwait l2arc_feed_thread) ],
+	[ qw(cv_timedwait taskq_thread_wait taskq_d_thread) ],
+	[ qw(cv_timedwait txg_thread_wait txg_sync_thread) ],
+	[ qw(cv_wait taskq_thread_wait.* taskq_thread) ],
+	[ qw(cv_wait txg_slash2_wait zfs_write fop_write zfsslash2_write_cursor slmjcursorthr_main _pscthr_begin) ],
+	[ qw(cv_wait txg_slash2_wait zfs_write zfsslash2_write_cursor slmjcursorthr_main _pscthr_begin) ],
+	[ qw(cv_wait txg_thread_wait txg_quiesce_thread) ],
+	[ qw(cv_wait txg_quiesce txg_quiesce_thread) ],
+	#[ qw(zio_wait trim_thread) ],
+	[ qw(cv_timedwait trim_thread) ],
+	[ qw(listener_loop) ],
+	[ qw(.*pthread_mutex_lock zfsfuse_listener_loop) ],
+	[ qw(taskq_thread_wait taskq_thread) ],
+	[ qw(umem_update_thread) ],
+	[ qw(zfsfuse_ioctl_queue_worker_thread) ],
+	[ qw(zio_aio_thread) ],
+);
+
+sub ign_thr {
+	for (my $i = 1; $i < @thr; $i++) {
+		IGN: foreach my $ign (@ign) {
+			my $j = 0;
+			foreach my $frame (@$ign) {
+				next IGN unless $i + $j < @thr && $thr[$i + $j] =~
+				    /^#\d+\s+0x[a-fA-F0-9]+\s+in\s+$frame\s/;
+				$j++;
+			}
+			return (1);
+		}
+	}
+	return (0);
+}
+
+sub print_thr {
+	chomp $thr[$#thr];
+	print @thr, "\n\n" unless ign_thr;
+	@thr = ();
+}
+
+while (<>) {
+	if (/^Thread\s+\d+/) {
+		print_thr if @thr;
+		push @thr, $_;
+	} elsif (@thr && /./) {
+		if (/^#\d+/) {
+			push @thr, $_;
+		} else {
+			chomp $thr[$#thr];
+			$thr[$#thr] .= " " . $_;
+		}
+	}
+}
+
+print_thr;

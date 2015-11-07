@@ -1,0 +1,82 @@
+/* $Id$ */
+/*
+ * %PSC_START_COPYRIGHT%
+ * -----------------------------------------------------------------------------
+ * Copyright (c) 2006-2015, Pittsburgh Supercomputing Center (PSC).
+ *
+ * Permission to use, copy, modify, and distribute this software
+ * for any purpose with or without fee is hereby granted, provided
+ * that the above copyright notice and this permission notice
+ * appear in all copies.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL
+ * WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED
+ * WARRANTIES OF MERCHANTABILITY AND FITNESS.  IN NO EVENT SHALL
+ * THE AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT, INDIRECT, OR
+ * CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM
+ * LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT,
+ * NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN
+ * CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+ *
+ * Pittsburgh Supercomputing Center	phone: 412.268.4960  fax: 412.268.5832
+ * 300 S. Craig Street			e-mail: remarks@psc.edu
+ * Pittsburgh, PA 15213			web: http://www.psc.edu/
+ * -----------------------------------------------------------------------------
+ * %PSC_END_COPYRIGHT%
+ */
+
+#include <sys/types.h>
+
+#include <stdarg.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+
+#include "pfl/pfl.h"
+#include "pfl/str.h"
+#include "pfl/log.h"
+
+void
+pfl_setprocesstitle(char **av, const char *fmt, ...)
+{
+#ifdef HAVE_SETPROCTITLE
+	va_list ap;
+	char *p;
+	int rc;
+
+	va_start(ap, fmt);
+	rc = vasprintf(&p, fmt, ap);
+	va_end(ap);
+
+	if (rc == -1)
+		psc_fatal("vasprintf");
+
+	setproctitle("%s", p);
+	free(p);
+	(void)av;
+#else
+	char buf[2048];
+	size_t len, newlen;
+	va_list ap;
+	int j;
+
+	/* XXX handle fmt==NULL which trims args */
+
+	va_start(ap, fmt);
+	vsnprintf(buf, sizeof(buf), fmt, ap);
+	va_end(ap);
+
+	newlen = strlen(buf);
+
+	if (av[1])
+		len = av[1] - av[0];
+	else
+		len = strlen(av[0]);
+	strlcpy(av[0], buf, len + 1);
+	if (newlen < len)
+		memset(av[0] + newlen, '\0', len - newlen);
+	for (j = 1; av[j]; j++)
+		memset(av[j], '\0', strlen(av[j]));
+#endif
+}

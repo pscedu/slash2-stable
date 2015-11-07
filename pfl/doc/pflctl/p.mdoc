@@ -1,0 +1,143 @@
+.\" $Id$
+.It Fl p Ar paramspec
+Query/manipulate operational parameters.
+.Ar paramspec
+has the following format:
+.Pp
+.Bd -unfilled -offset 3n
+.Sm off
+.Oo Ar thread-name Ns Li .\& Oc Ar param
+.Op Oo Li +- Oc Li = Ar value
+.Sm on
+.Ed
+.Pp
+Some parameters may be read- or write-only.
+Some support modification by the assignment operators
+.Li +=
+and
+.Li -= .
+.Pp
+See
+.Sx Thread Specification
+for details on specifying
+.Ar thread-name .
+The default behavior is to apply the operation to all applicable threads.
+.Pp
+.Ar param
+may be one of the following:
+.Bl -tag -width 1n -offset 3n
+.\" %PFL_LIST {
+.\"	exists $mods{fuse} ? (
+.\"	    "fuse.debug"		=> ".Tn FUSE\ndebug messages.",
+.\"	    "fuse.version"		=> ".Tn FUSE\ninterface version.",
+.\"	    "pscfs.entry_timeout"	=> "Amount of time to cache name space entries in\n.Tn FUSE .",
+.\"	    "pscfs.attr_timeout"	=> "Amount of time to cache\n.Xr stat 2\ninformation in\n.Tn FUSE ."
+.\"	) : (),
+.\"	exists $mods{rpc} ? (
+.\"	    "lnet.networks"		=> ".Tn LNET\nnetwork configuration.",
+.\"	    "lnet.port"			=> "If applicable,\n.Xr tcp 7\nport to use to connect to remote\n.Tn LNET\npeers.",
+.\"	) : (),
+.\"	exists $DATA->{params} ? %{ $DATA->{params} } : (),
+.\"	"log.format" => <<'EOF' .
+.\"		The header prepended to server log messages.
+.\"		See the description of
+.\"		.Ev PSC_LOG_FORMAT
+.\"		EOF
+.\"	    (exists $DATA->{log_xr} ? $DATA->{log_xr} : "") .
+.\"	    <<'EOF',
+.\"		for details on this format.
+.\"		EOF
+.\"	"log.file" => <<'EOF',
+.\"		File path name where log messages will be written.
+.\"		This field is write-only.
+.\"		If the
+.\"		.Li +=
+.\"		assignment operator is used, this file will not be truncated.
+.\"		EOF
+.\"	"log.points" => <<'EOF',
+.\"		List of places in the source code (in the form
+.\"		.Dq file:line-number )
+.\"		where granular logging can be enabled on a case-by-case
+.\"		basis.
+.\"		Usually assigned to by the
+.\"		.Li +=
+.\"		operator.
+.\"		EOF
+.\"	"pool. Ns Ar name" => <<'EOF',
+.\"		Access the memory pool specified by
+.\"		.Ar name .
+.\"		The following sub-fields are available:
+.\"		.Pp
+.\"		.Bl -tag -compact -offset 3n -width 13n
+.\"		.It Cm free
+.\"		Current number of allocated entries available for use in pool.
+.\"		.It Cm max
+.\"		Upper bound for number of entries to which auto-sized pools can grow.
+.\"		.It Cm min
+.\"		Lower bound for number of entries to which auto-sized pools can shrink.
+.\"		.It Cm reap
+.\"		Assign a value to reap the specified number of entries.
+.\"		Only applies to pools that have a reaper routine.
+.\"		This field is write-only.
+.\"		.It Cm thres
+.\"		Threshold for unused items for auto-sized pools before items are freed.
+.\"		.It Cm total
+.\"		Current number of entries contained in pool.
+.\"		.El
+.\"		EOF
+.\"	"rlim" => <<'EOF',
+.\"		Process resource limits.
+.\"		See
+.\"		.Xr getrlimit 2
+.\"		or
+.\"		.Xr ulimit 1
+.\"		for more information.
+.\"		.Pp
+.\"		.Bl -column "msgqueue" -offset 3n
+.\"		.It Sy Name Ta Sy Field
+.\"		.It =============================
+.\"		.It Cm cpu        Ta Dv RLIMIT_CPU
+.\"		.It Cm csize      Ta Dv RLIMIT_CORE
+.\"		.It Cm dsize      Ta Dv RLIMIT_DATA
+.\"		.It Cm fsize      Ta Dv RLIMIT_FSIZE
+.\"		.It Cm locks      Ta Dv RLIMIT_LOCKS
+.\"		.It Cm maxproc    Ta Dv RLIMIT_NPROC
+.\"		.It Cm mem        Ta Dv RLIMIT_AS
+.\"		.It Cm mlock      Ta Dv RLIMIT_MEMLOCK
+.\"		.It Cm msgqueue   Ta Dv RLIMIT_MSGQUEUE
+.\"		.It Cm nice       Ta Dv RLIMIT_NICE
+.\"		.It Cm nofile     Ta Dv RLIMIT_NOFILE
+.\"		.It Cm rss        Ta Dv RLIMIT_RSS
+.\"		.It Cm rtprio     Ta Dv RLIMIT_RTPRIO
+.\"		.It Cm rttime     Ta Dv RLIMIT_RTTIME
+.\"		.It Cm sigpndg    Ta Dv RLIMIT_SIGPENDING
+.\"		.It Cm stksize    Ta Dv RLIMIT_STACK
+.\"		.El
+.\"		EOF
+.\"	"rusage" => <<'EOF',
+.\"		Process resource usage information.
+.\"		See
+.\"		.Xr getrusage 2 .
+.\"		EOF
+.\"	"log.level Ns Op . Ns Ar subsystem" => <<'EOF' .
+.\"		The logging level of debug message output.
+.\"		.Pp
+.\"		See the description of
+.\"		.Ev PSC_LOG_LEVEL_ Ns Ar subsys
+.\"		EOF
+.\"	    (exists $DATA->{log_xr} ? $DATA->{log_xr} : "") .
+.\"	    <<'EOF' .
+.\"		for a list of available subsystems.
+.\"		If
+.\"		.Ar subsystem
+.\"		is not specified, all subsystems will be accessed.
+.\"		.Pp
+.\"		See the description of
+.\"		.Ev PSC_LOG_LEVEL
+.\"		EOF
+.\"	    (exists $DATA->{log_xr} ? $DATA->{log_xr} : "") .
+.\"	    <<'EOF',
+.\"		for recognized log level values.
+.\"		EOF
+.\" }%
+.El

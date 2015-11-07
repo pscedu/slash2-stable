@@ -1,0 +1,239 @@
+.\" $Id$
+.It Fl s Ar showspec
+Show values.
+.Ar showspec
+has the following format:
+.Bd -unfilled -offset 3n
+.Sm off
+.Ar param
+.Op : Ar subspec
+.Sm on
+.Ed
+.Pp
+.Ar param
+may be specified as any non-ambiguous prefix abbreviation of the
+following:
+.Pp
+.Bl -tag -width 1n -offset 3n
+.\" %PFL_LIST {
+.\"	%{ $DATA->{show} },
+.\"	loglevels	=> <<'EOF',
+.\"			Thread logging levels.
+.\"			.Ar subspec
+.\"			has the following format:
+.\"			.Bd -unfilled -offset 3n
+.\"			.Ar thread Ns Op , Ns Ar ...
+.\"			.Ed
+.\"			.Pp
+.\"			See
+.\"			.Sx Thread Specification
+.\"			for details on specifying
+.\"			.Ar thread .
+.\"			If
+.\"			.Ar subspec
+.\"			is left unspecified, all threads will be accessed.
+.\"			EOF
+.\"	threads		=> <<'EOF',
+.\"			Daemon thread activity and statistics.
+.\"			.Ar subspec
+.\"			has the following format:
+.\"			.Bd -unfilled -offset 3n
+.\"			.Ar thread Ns Op , Ns Ar ...
+.\"			.Ed
+.\"			.Pp
+.\"			See
+.\"			.Sx Thread Specification
+.\"			for details on specifying
+.\"			.Ar thread .
+.\"			If
+.\"			.Ar subspec
+.\"			is left unspecified, all threads will be accessed.
+.\"			EOF
+.\"	exists $mods{rpc} ? (
+.\"		lnetif	=> "Lustre network interfaces.",
+.\"		rpcrqs	=> "Remote procedure calls (RPC).",
+.\"		rpcsvcs	=> ".Tn RPC\nservices.",
+.\"	) : (),
+.\"	exists $DATA->{pools} ? (
+.\"		pools => <<'EOF'
+.\"			Memory pool statistics.
+.\"			.Ar subspec
+.\"			has the following format:
+.\"			.Bd -unfilled -offset 3n
+.\"			.Ar pool Ns Op , Ns Ar ...
+.\"			.Ed
+.\"			.Pp
+.\"			.Ar pool
+.\"			may be one of the following:
+.\"			.Pp
+.\"			.Bl -tag -compact -offset 3n -width 13n
+.\"			EOF
+.\"		  . build_list(%{ $DATA->{pools} }) . <<'EOF'
+.\"			.El
+.\"			.Pp
+.\"			If
+.\"			.Ar subspec
+.\"			is left unspecified, all pools will be accessed.
+.\"			EOF
+.\"	) : (),
+.\"	exists $DATA->{hashtables} ? (
+.\"		hashtables => <<'EOF'
+.\"			Hash table statistics.
+.\"			.Ar subspec
+.\"			has the following format:
+.\"			.Bd -unfilled -offset 3n
+.\"			.Ar hash-table Ns Op , Ns Ar ...
+.\"			.Ed
+.\"			.Pp
+.\"			.Ar hash-table
+.\"			may be one of the following:
+.\"			.Pp
+.\"			.Bl -tag -compact -offset 3n -width 13n
+.\"			EOF
+.\"		  . build_list(%{ $DATA->{hashtables} }) . <<'EOF'
+.\"			.El
+.\"			.Pp
+.\"			If
+.\"			.Ar subspec
+.\"			is left unspecified, all hash tables will be accessed.
+.\"			EOF
+.\"	) : (),
+.\"	exists $DATA->{meters} ? (
+.\"		meters => <<'EOF'
+.\"			Report on ongoing operations in progress meters.
+.\"			.Ar subspec
+.\"			has the following format:
+.\"			.Bd -unfilled -offset 3n
+.\"			.Ar meter Ns Op , Ns Ar ...
+.\"			.Ed
+.\"			.Pp
+.\"			.Ar meter
+.\"			may be one of the following:
+.\"			.Pp
+.\"			.Bl -tag -compact -offset 3n -width 13n
+.\"			EOF
+.\"		  . build_list(%{ $DATA->{meters} }) . <<'EOF'
+.\"			.El
+.\"			.Pp
+.\"			If
+.\"			.Ar subspec
+.\"			is left unspecified, all ongoing operations will be reported.
+.\"			EOF
+.\"	) : (),
+.\"	exists $DATA->{mlists} ? (
+.\"		mlists => <<'EOF'
+.\"			Mlist statistics.
+.\"			Mlists are lists which interface with multiwait structures.
+.\"			Multiwaits are wait queues that allow any of a number of conditions to
+.\"			wake threads waiting on the resource list.
+.\"			.Ar subspec
+.\"			has the following format:
+.\"			.Pp
+.\"			.Bd -unfilled -offset 3n
+.\"			.Ar mlist Ns Op , Ns Ar ...
+.\"			.Ed
+.\"			.Pp
+.\"			.Ar mlist
+.\"			may be one of the following:
+.\"			.Pp
+.\"			.Bl -tag -compact -offset 3n -width 13n
+.\"			EOF
+.\"		  . build_list(%{ $DATA->{mlists} }) . <<'EOF'
+.\"			.El
+.\"			.Pp
+.\"			If
+.\"			.Ar subspec
+.\"			is left unspecified, all mlists will be accessed.
+.\"			EOF
+.\"	) : (),
+.\"	exists $DATA->{listcaches} ? (
+.\"		listcaches => <<'EOF'
+.\"			List cache statistics.
+.\"			.Ar subspec
+.\"			has the following format:
+.\"			.Pp
+.\"			.Bd -unfilled -offset 3n
+.\"			.Ar list Ns Op , Ns Ar ...
+.\"			.Ed
+.\"			.Pp
+.\"			.Ar list
+.\"			may be one of the following:
+.\"			.Pp
+.\"			.Bl -tag -compact -offset 3n -width 13n
+.\"			EOF
+.\"		  . build_list(%{ $DATA->{listcaches} }) . <<'EOF'
+.\"			.El
+.\"			.Pp
+.\"			If
+.\"			.Ar subspec
+.\"			is left unspecified, all list caches will be accessed.
+.\"			EOF
+.\"	) : (),
+.\"	(exists $DATA->{opstats} or exists $mods{rpc}) ? (
+.\"		opstats => <<'EOF'
+.\"			Operation counters/statistics.
+.\"			.Ar subspec
+.\"			has the following format:
+.\"			.Pp
+.\"			.Bd -unfilled -offset 3n
+.\"			.Ar opstats Ns Op , Ns Ar ...
+.\"			.Ed
+.\"			.Pp
+.\"			.Ar opstats
+.\"			may be one of the following:
+.\"			.Pp
+.\"			.Bl -tag -compact -offset 3n -width 3n
+.\"			EOF
+.\"		  . build_list(
+.\"			%{ $DATA->{opstats} },
+.\"			exists $mods{rpc} ? (
+.\"				qq{lni-rcv- Ns Ar if ,} => "",
+.\"				qq{lni-snd- Ns Ar if} =>
+.\"				    qq{Data sent/received per\n.Tn LNET\nnetworking interface.\n.Pp},
+.\"				qq{lusklnd- Ns Ar mode Ns Cm -rcv ,} => "",
+.\"				qq{lusklnd- Ns Ar mode Ns Cm -snd} =>
+.\"				    qq{Data sent/received over userland socket networking device.\n} .
+.\"				    qq{.Ar mode\nmay be\n.Cm pasv\n.Pq passive\nor\n.Cm aggr\n.Pq aggregate .\n.Pp},
+.\"				qq{rpc- Ns Ar addr Ns Cm -rcv ,} => "",
+.\"				qq{rpc- Ns Ar addr Ns Cm -snd} =>
+.\"				    qq{Data sent/received per\n.Tn RPC\npeer.\n.Pp}
+.\"			) : ()
+.\"		  ) . <<'EOF'
+.\"			.El
+.\"			.Pp
+.\"			If
+.\"			.Ar subspec
+.\"			is left unspecified, all
+.\"			.Tn I/O
+.\"			statistics will be accessed.
+.\"			EOF
+.\"	) : (),
+.\"	(exists $DATA->{journals}) ? (
+.\"		journals => <<'EOF'
+.\"			Journal statistics.
+.\"			.Ar subspec
+.\"			has the following format:
+.\"			.Pp
+.\"			.Bd -unfilled -offset 3n
+.\"			.Ar journal Ns Op , Ns Ar ...
+.\"			.Ed
+.\"			.Pp
+.\"			.Ar journal
+.\"			may be one of the following:
+.\"			.Pp
+.\"			.Bl -tag -compact -offset 3n -width 13n
+.\"			EOF
+.\"		  . build_list(%{ $DATA->{journals} }) . <<'EOF'
+.\"			.El
+.\"			.Pp
+.\"			If
+.\"			.Ar subspec
+.\"			is left unspecified, all journals will be accessed.
+.\"			EOF
+.\"	) : ()
+.\" }%
+.El
+.Pp
+The special value
+.Sq \&?
+may also be specified to display a list of recognized values.

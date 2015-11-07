@@ -1,0 +1,9 @@
+#!/usr/bin/env perl
+# $Id$
+
+use warnings;
+use strict;
+
+my $arg = shift || "";
+$arg =~ s/^\s+|\s$//g;
+exit($arg ? 0 : 1);

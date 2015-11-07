@@ -1,0 +1,133 @@
+#!/usr/bin/env bash
+# $Id$
+
+# PSC Advanced Systems projects self updater
+#
+# TODO
+# - make a date synchronization primitive:
+#	- git checkout `git rev-list -n 1 --before="2009-07-27 13:37" master`
+
+set -e
+
+source $(dirname $0)/init.sh
+
+# Like 'wait' without arguments but returns a nonzero exit status if any
+# child reports one.
+exwait()
+{
+	local id st rc=0
+	local j=($(jobs -l | awk '{print $2}'))
+	set +e
+	for pid in ${j[@]}; do
+		wait $pid
+		st=$?
+		if [ $st -eq 127 ]; then
+			break
+		fi
+		[ $rc -ne 0 ] || rc=$st
+	done
+	set -e
+	return $rc
+}
+
+warn()
+{
+	echo "$0: $@" >&2
+}
+
+die()
+{
+	warn "$@"
+	exit 1
+}
+
+usage()
+{
+	echo "usage: $0 [command]" >&2
+	exit 1
+}
+
+shopt -s nullglob
+reldir=
+while getopts "D:" c; do
+	case $c in
+	D) reldir=${OPTARG%/} ;;
+	*) usage ;;
+	esac
+done
+shift $(($OPTIND - 1))
+
+repos=( pfl */.git inf/*/.git distrib/*/.git )
+case $1 in
+scm-fetch:*)
+	repos=($(echo ${1#scm-fetch:} | tr . /))
+	GIT_ACTION=clone
+	;;
+scm-update)
+	GIT_ACTION=pull
+	;;
+*)
+	GIT_ACTION=${1#scm-}
+	;;
+esac
+
+dir=$(realpath $(dirname $0)/..)
+base=$(basename $dir)
+
+echorun()
+{
+	echo "$@"
+	"$@"
+}
+
+_accrepo()
+{
+	local url=$1
+	local dir=$2
+	local base=$(basename $dir)
+
+	if [ -n "$reldir" ]; then
+		[ x"$reldir" = x"$dir" ] || return 0
+	elif [ x"$dir" != x"pfl" ]; then
+		mkdir -p $dir
+		cd $dir
+	fi
+
+	if [ -e .git ]; then
+		if [ x"$GIT_ACTION" = x"st" ]; then
+			if [ x"$dir" = x"pfl" ]; then
+				git $GIT_ACTION
+			else
+				git $GIT_ACTION | perl -pe "s^(?<=\S)\s+(?=\S)^\t$dir/^"
+			fi
+		else
+			git $GIT_ACTION || \
+			    warn "accessing $dir failed"
+		fi
+
+	elif [ x"$GIT_ACTION" = x"clone" ]; then
+		cd ..
+		echorun git clone $url $base
+		[ -e $base/.dep ] || continue
+		for repo in $(cat $base/.dep); do
+			[ -e $repo ] && continue
+			access_repo $repo
+		done
+	fi
+}
+
+access_repo_async()
+{
+	_accrepo "$@" &
+}
+
+access_repo()
+{
+	access_repo_async https://github.com/pscedu/${1//\//.}.git $1
+}
+
+for repo in ${repos[@]}; do
+	access_repo ${repo%/.git}
+done
+
+exwait

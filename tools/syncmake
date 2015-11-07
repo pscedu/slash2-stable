@@ -1,0 +1,34 @@
+#!/bin/sh
+
+dir=$1
+shift
+
+fn=$dir/.makepid
+
+vsleep()
+{
+	perl -We "select undef, undef, undef, $1"
+}
+
+makelocked()
+{
+	local pid
+
+	echo $$ > $fn && return 1
+	read pid < $fn
+	[ -n "$pid" ] && ps -p $pid || rm -f $fn
+	return 0
+}
+
+cleanup()
+{
+	rm -f $fn
+}
+
+set -C
+while makelocked >/dev/null 2>&1; do
+	vsleep .1
+done
+
+trap cleanup EXIT HUP INT
+"$@"

@@ -1,0 +1,84 @@
+.\" $Id$
+.\" %ISC_START_LICENSE%
+.\" ---------------------------------------------------------------------
+.\" Copyright 2015, Google, Inc.
+.\" Copyright (c) 2009-2015, Pittsburgh Supercomputing Center (PSC).
+.\" All rights reserved.
+.\"
+.\" Permission to use, copy, modify, and distribute this software for any
+.\" purpose with or without fee is hereby granted, provided that the
+.\" above copyright notice and this permission notice appear in all
+.\" copies.
+.\"
+.\" THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL
+.\" WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED
+.\" WARRANTIES OF MERCHANTABILITY AND FITNESS.  IN NO EVENT SHALL THE
+.\" AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL
+.\" DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR
+.\" PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
+.\" TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
+.\" PERFORMANCE OF THIS SOFTWARE.
+.\" --------------------------------------------------------------------
+.\" %END_LICENSE%
+.Dd January 2, 2015
+.Dt ODTABLE 1
+.ds volume PSC \- Administrator's Manual
+.Os http://www.psc.edu/
+.Sh NAME
+.Nm odtable
+.Nd on-disk data storage table management utility
+.Sh SYNOPSIS
+.Nm odtable
+.Bk -words
+.Op Fl Ccos
+.Op Fl e Ar elem_size
+.Op Fl F Ar #frees
+.Op Fl n Ar #puts
+.Op Fl z Ar table_size
+.Ek
+.Bk -words
+.Ar table_file
+.Ek
+.Sh DESCRIPTION
+The
+.Nm
+utility creates and manipulates on-disk data storage tables.
+The default behavior loads, scans, and displays summary information
+about the specified odtable.
+.Pp
+The following options are available:
+.Bl -tag -width Ds
+.It Fl C
+Create a new table.
+.It Fl c
+Enable
+.Tn CRC
+checks on data stored in the table.
+.It Fl e Ar elem_size
+Set the entry size of elements to be stored in the odtable.
+Defaults to 128 bytes.
+.It Fl F Ar #frees
+Clear out the given number of elements
+.Ar #frees
+from the beginning of the odtable.
+.It Fl n Ar #puts
+Store the given number of test elements
+.Ar #puts
+in the odtable.
+.It Fl o
+By default,
+.Nm
+will refuse overwrite of an existing file.
+This option will force an overwrite.
+.It Fl s
+Show each entry in the odtable.
+Note that this is really only a test mode to be used in conjunction with
+.Fl n .
+.It Fl z Ar table_size
+Specify the number of entries a new table will be created with.
+Defaults to
+.Li 128 * 1024
+slots.
+.El
+.Sh SEE ALSO
+.Xr hexdump 1

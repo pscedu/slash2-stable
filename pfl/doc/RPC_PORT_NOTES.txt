@@ -1,0 +1,91 @@
+Client Rpc w/ Bulk Xfer Call Trace
+----------------------------------
+//Using the osc read/write call as an example of a single, bulk-enabled rpc.
+//
+osc_brw_internal()@osc_request.c	
+
+	osc_brw_prep_request()@osc_request.c
+
+		ptlrpc_prep_req_pool()@client.c
+
+		ptlrpc_prep_bulk_imp()@client.c
+		. sets callback	
+		. allocs pages
+
+			new_bulk()@client.c
+
+	ptlrpc_queue_wait()@niobuf.c
+
+		ptl_send_rpc()@niobuf.c
+
+			ptlrpc_register_bulk()@niobuf.c		
+			. setup buffer for put/get		
+			. handle reply buffer
+			. set client_bulk_callback
+
+			ptl_send_buf()@niobuf.c
+			. lnet put the rpc buffer 
+				
+		l_wait_event(!ptlrpc_bulk_active)@lustre_lib.h
+			. block until the bulk xfer has completed
+
+
+Client Import Requirements
+--------------------------
+//How does the above trace manipulate the obd_import struct?
+// as performed by ptlrpc_queue_wait
+. Increment In-flight
+. Verify imp_obd != NULL
+. Copy imp_generation into rq_import_generation
+. Run ptlrpc_import_delay_req() to ensure that the import is in a usable state
+. Add request to imp_sending, after asserting that the req is not on any other list.
+. Remove request from imp_sending after rpc has gone out
+. Decrement in_flight
+. Wake the imp_recovery_waitq
+
+
+
+Server Rpc w/ Bulk Xfer Call Trace
+----------------------------------
+//Using the ost read/write call as an example of a single, bulk-enabled rpc.
+// this is the recv'ing end of the above call
+
+ptlrpc_server_handle_request()@service.c
+	svc->srv_handler() == ost_handle
+		ost_brw_write()@ost_handle.c		
+	
+			ptlrpc_prep_bulk_exp()@client.c
+				. set the callback to server_bulk_callback
+
+				new_bulk()@client.c
+
+			ptlrpc_start_bulk_transfer()@niobuf.c
+				. Does LNetPut or Get
+
+			l_wait_event(!ptlrpc_bulk_active)@lustre_lib.h
+	
+			ptlrpc_free_bulk()@client.c
+
+			ptlrpc_reply()@niobuf.c
+				ptlrpc_send_reply()@niobuf.c
+
+
+Server Svc and Export Requirements
+-----------------------------------
+. Handle request counters
+        svc->srv_n_queued_reqs--;
+        svc->srv_n_active_reqs++;
+. Check the status of the service, can it handle new requests?
+. Note the age of the request
+. Perform the request via svc->svr_handler() function pointer
+. ptlrpc_server_free_request()
+	svc->srv_n_active_reqs--
+	handle request buffer history..
+
+* Note ptlrpc_server_handle_reply() is for handling of difficult replies only.  As far as I know right now, zest will not have to use those.
+
+Things that need to be Changed or Added
+---------------------------------------
+Export things must be moved into the service struct to accommodate the removal of the export.  
+
+This means that the connection structure must be locatable via the request
