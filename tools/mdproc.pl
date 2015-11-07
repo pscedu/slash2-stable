@@ -57,7 +57,7 @@ sub get_unless_last_rev {
 
 	my @out = `git log --date=short --pretty=format:%ad \Q$fn\E`;
 	my $ln = shift @out;
-	my ($yr, $mon, $day) = $ln =~ /^(\d+)-0*(\d)+-0*(\d+)$/ or return;
+	my ($yr, $mon, $day) = $ln =~ /^(\d+)-0*(\d+)+-0*(\d+)$/ or return;
 	return ($day, $mon, $yr);
 }
 
