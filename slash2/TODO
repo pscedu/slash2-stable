@@ -1,0 +1,713 @@
+$Id$
+
+* Bmpce Write
+There may be some advantage to maintaining a seq or numeric window id for
+each bmpce being processed for write.  Right before the bmpce is put on the
+wire, the current window is closed and proceeding biorq's using that bmpce
+must wait for the next window (and completion of the pending RPC).  This
+is to prevent the same bmpce from being on the wire twice.  It should also
+augment the coalescer by allowing for later writes to be included.  The
+main change here is that biorq's could have their bmpces complete in totally
+different rpc's or even rpcsets.  Essentially the biorq doesn't complete
+until the window id for each bmpce is <= than the last processed bmpce window.
+-----------------------------------------------------------------------
+* Restore Issues:
+1) need to split 64-bit inode space into upper and lower segments.  Each
+   MDS in the system will be given a start # and range for use in the upper
+   segment.  The upper value will be incremented on restore (when the
+   journal does not agree with the cursor) or when all IDs in the lower
+   segment have been exhausted.
+
+2) How does sliod and mds deal with the LWM in post restore scenarios?
+   Atm, the sliod doesn't like when the LWM decreases.
+3) How do we deal with CRC's and size updates which were lost on mds restore
+4) distillation XID - how do we cope with this when the journal has been reformatted
+
+-----------------------------------------------------------------------
+* Pending I/O Issues:
+	. Sliod threads may be get tied up servicing requests from a
+	failed client or client connection.  If the socket doesn't immediately
+	fail, the rpc's need to time out.  This can cause requests from other
+	clients to accumulate on the sliod, these requests could time out also.
+	Worse yet, the leases for the blocked clients may expire causing
+	more problems.  Unfortunately, all of this is exacerbated by the
+	lack of flow control and aggressive read ahead.
+
+-----------------------------------------------------------------------
+- there should be a slictl/msctl cmd to see other/aggr replicas:
+
+	(o) msctl -s repl-disk-usage:file[,...]
+
+TRUNCATE
+
+Truncate is more of a problem because the fid+gen remains, thus making async IOS
+truncate operations problematic because new writes may come from the client before
+the truncate is processed by the IOS (whoops!).  Client to IOS truncate ops are
+also unfavorable because replica maintenance may need to be done, the client may have
+the replica table but should he be the one directing the truncates to all IOS's?
+I'm inclined to say 'no'.  Care must be taken here so that we don't hurt performance
+for (O_CREAT|O_TRUNC) of existing files which is the case where the fid+gen is not
+changed.  As an optimization we could possibly delete the file on the mds first,
+invoking the GC routines for that fid+gen and then create a new inode.  Of course
+this may break semantics for some apps which assume the same inode # to be used.
+
+* Truncate Implementation
+  - holdup:
+     (o) sliod needs to perform the actual truncate via the slvr API
+     (o) sliod then needs to send a CRC update
+     (o) MDS needs to account for ptrunc/trunc changes in st_blocks
+
+-----------------------------------------------------------------------
+1/26/11
+* ./fio.pthreads -i MTWT_SZV.ves -- This test is causing unnecessary RBW requests.
+
+1/14/10
+* Deal with problems surrounding full odtable. ATM odtable put errors are not dealt with properly
+leading to problems later in cfdfree where the bmap refcnt is wrong.
+
+11/23/09
+* mds_bmap_ion_assign fails when the caller doesn't specify a PIOS.
+
+11/02/09
+* msl_io and rpc ION calls need to return actual size so that read() can
+be short circuited on EOF.
+
+09/23/09
+* Sliod has too many open files but reports success anyway to mount_slash.
+
+* Sliod runs out of space in filesystem and returns from an rpc early (client sees the rc -28)
+	the problem is that other sliod threads are blocked on a waitq and are never woken
+	up.  Need a way to deal with the failure mode.
+
+* While running a small file / create intensive fio test, I find that most of the threads
+are blocking here waiting for rpc completion.  This makes things like 'ls -al' very slow
+because no threads are left to process incoming operations.
+
+Thread 4 (Thread 0x50fa7940 (LWP 31008)):
+#0  0x000000331c20a899 in pthread_cond_wait@@GLIBC_2.3.2 ()
+#1  0x00000000004748a9 in psc_waitq_waitrel ()
+#2  0x0000000000423d2b in bmap_oftrq_waitempty ()
+#3  0x0000000000424151 in msl_bmap_tryrelease ()
+#4  0x000000000042425d in msl_fbr_free ()
+#5  0x0000000000424f4d in msl_bmap_fhcache_clear ()
+#6  0x000000000041b62c in slash2fuse_release ()
+#7  0x00002b93b5a6c7c3 in do_release () from /usr/local/lib/libfuse.so.2
+#8  0x000000000040f302 in slash2fuse_listener_loop ()
+#9  0x000000331c206367 in start_thread () from /lib64/libpthread.so.0
+#10 0x000000331bad309d in clone () from /lib64/libc.so.6
+
+Actually, if all of the operations performed in slash2fuse_release could be done
+asynchronously then performance would be greatly improved.
+- this should be safe too, as FUSE guarentees to call flush() before release().
+  however, perhaps the problem is that flush().
+
+Well, after increasing the number of fuse threads to 48 I don't see the entire set blocked
+in release but I don't see good performance for 'ls -al'.
+
+* Fidcache Generation Numbering
+	Fidcache must support generation numbers.
+		. hash table code should be modified to add a cmp function.
+		. ambiguous inode lookups should prefer the highest gen #
+
+	On the fidcache generation # subject.  Implementing the FC with gen #'s is
+	awkward because fuse does not provide the generation number except when it
+	provides an 'fi'.  This means that the gen cannot be used for hash table lookups
+	taking place on behalf of operations like: create, mkdir, open,	etc.
+
+	Done but seeing a problem on the client when doing stress testing:
+	[1233201864:695906 msfsthr9:__fidc_lookup_fg:320] [assert] fcmh_2_gen(tmp) != FID_ANY
+
+	Not seeing the above on the server..
+
+------------------------------------------------------
+
+- add some high-level aliases to the replication interface for users:
+
+  mid-level persistence control aliases:
+    $ slfctl [-R] -p file ...				# msctl -f new-repl-policy=persist
+    $ slfctl [-R] -o file ...				# msctl -f new-repl-policy=onetime
+    $ slfctl -B bmapspec:file ...			# msctl -f bmap-repl-policy=persist
+    $ slfctl -b bmapspec:file ...			# msctl -f bmap-repl-policy=onetime
+
+  mid-level replication request control aliases:
+    $ slfs replstatus [-R] file ...			# msctl [-R] -r file -r...
+    $ slfs replqueue [-R] res[,...]:bmapspec:file ...	# msctl [-R] -Q spec -Q...
+    $ slfs replremove [-R] res[,...]:bmapspec:file ...	# msctl [-R] -U spec -U...
+
+  high-level aliases:
+    $ slfs replicate [-Rp] res[,...] file ...
+	if (-p)
+		slfctl [-R] -p file ...
+	msctl [-R] -Q res,...|*[P]:file ...
+    $ slfs replcancel|cancel [res,...] file ...
+	if (-p)
+		slfctl [-R] -o file ...
+	msctl [-R] -U res,...|*[P]:file ...
+    $ slfs setpersist file ...
+	slfctl -p file ...
+	slfctl -B *:file *:...
+    $ slfs setonetime file ...
+	slfctl -o file ...
+	slfctl -b *:file *:...
+
+------------------------------------------------------------------------
+
+- libsl_init() is getting an ENOMEM somewhere in slashd, maybe LNET
+------------------------------------------------------------------------
+- removing the persistence policy on a bmap should mds_repl_delrq()
+  for that bmap
+- merge set_bmapreplpol into fattr interface
+- push O_APPEND writes always to EOF instead of the client-sent offset
+
+- allow multiple preferred IOS servers to get rid of necessity of making
+  subsets of IOS (sense345 e.g.)
+
+-------------------------------------------------------------------------
+
+sliod import
+- slictl import path
+    other approaches:
+    (o) link into slfidns, calculate and transmit CRCS,
+	delete link from user path.
+    (o) link into slfidns, calculate and transmit CRCs,
+	wait for CRC failure and auto deject.
+
+sliod export
+- slictl export path
+    lookup path FID and move file to destination
+    if recursive, lookup recursively
+
+---------------------------------------------------------
+
+upsch/network scheduling
+- investigate activemq
+   - http://activemq.apache.org/index.html
+- need slcfg rules to specify link bandwidth/topology?
+- fix starvation problem denying fairness to data in same priority class
+
+netsched/libnetsch - universal interface, kinda like Grand Central
+  - interface with kernel
+  grand central dispatch for net
+   (o) LD_PRELOAD?
+   (o) intercept for recompiling
+   (o) API
+   (o) needs to communicate with other nodes about traffic situation
+
+tracks endpoint connections
+- if new ones are made that utilize the same link, manage and
+  limit and wait until bandwidth is available
+
+- per-site network upscheduling is not enough; it has to be per link to
+  maintain network link saturation effectively
+
+- must consider multiple interfaces
+
+MDS must do this for scheduling traffic between sliods
+
+- networking scheduling:
+   (*) knowledge of topological intrinsics, especially important in the WAN,
+   (*) dynamic adjustment to live conditions,
+   (*) honor local (system and user) prioritization,
+   (*) interplay with other network services in a reasonable yet (likely)
+       advisory fashion,
+   (*) integration of this knowledge into the selection of POSIX I/O
+       arrangements
+networking exploration
+- interface/link rates bandwidth
+- remote site link path
+- specification for reservation policies
+
+
+
+
+
+------------------------------
+
+- convert authbuf to pki, put hash back inside bdbuf fdbuf
+  reasoning: if authbuf succeeded, we trust anything, so there is no
+  point in having extra provisions such as src ION
+
+  consequence: kill authbuf
+- in the meantime, expand slkeymgt to make per-client authbufs with uid
+- sprinkle some iostats on zfs, namespace changelog
+- add journal I/O test mode to slashd
+
+---------------
+
+- failure of connections
+    (o) write messages to stderr of the process trying to do I/O when
+	the connections are down, or maybe TTY
+
+- add throttling and ping channel control
+
+utime
+    (o)	track how long sliod has held the I/O and send the difference to
+	the MDS so the MDS can more accurately estimate when the I/O
+	took place
+
+tree
+- rename the zfs_init() alias, it is already a routine in ZFS
+- rename slconfig.h to slcfg.h to disambiguate slco prefix
+
+API rename
+- rename FCMH_CREATE to LOAD?
+- mdsio_fid_t -> mdsio_inum_t
+
+- ensure PINGs only happen every 30 seconds
+- ensure GETATTR should never return nlinks=0
+- replace FCMH_CTOR_FAILED with fmi_ctor_rc
+- slmkfs -W should instead should rename the top-level its contents in
+  the (forked) background after returning quickly to admin
+  . not sure about the removal step.  Why not make use of a UUID that's
+  generated by the MDS and provided as a parameter to the sliod slmkfs
+  operation?  So we'd have something like:  /s2io/{UUID}/.slmkfs
+  The UUID could be just a timestamp too.  This would allow admins to
+  remove old backing directories at their convenience while not
+  compromising data integrity.
+
+- if the target ptrunc offset falls inside a bmap, do more stuff:
+    (o) mark the CRC for this bmap as unknown (we don't do this)
+
+- use pfl_memchk instead of null inode structures for memcmp
+- CRCs are currently ignored in the I/O path
+- need a general mechanism to pass data between msctl/slictl/slmctl
+  so we get all the functionality everywhere and don't have to copy huge
+  chunks of code
+- ensure all system errno values in rpc msgs are standardized
+  - ETIMEDOUT 60 (BSD) vs 110 (linux)
+  - ECONNABORTED
+  - ECONNREFUSED
+  - ECONNRESET
+  - EHOSTDOWN
+  - EHOSTUNREACH
+  - ENETDOWN
+  - ENETRESET
+  - ENETUNREACH
+  - ENOTCONN
+- convert CONF_LOCK to a rwlock
+- we can't hold fcmh in memory at all times just because PTRUNC has to
+  be resolved.  have to store in inode and release fcmh.  we pass the
+  fid to the ptrunc worker and when it processes it loads the fcmh.
+- have slashd umount /zfs-kstat on teardown
+- allow override of /zfs-kstat for running multiple instances of slashd/zfs-fuse
+- add a generic SRMT_BMAPCTL that bunches up ops such as WAKE, RELEASE,
+  DIO, etc.
+- do full truncate and unlink do the right things while ptrunc is resolving?
+
+- write a ptrunc tester: or just use truncate(1) or a dd(1) that does truncate(2)
+- for -s connections, we arguably do not need to show members of the
+  same resource we are part of since we will never connect to them
+- IOS that do not connect to an MDS (outside a site) will never be upsch
+  scheduled
+- use F_FREESP on Solaris to implement replication ejection
+- msattrflushthr_main should be async 
+- use-after-unlink also affects directories
+
+- client needs to track when MDS goes down and recheck pinned ptrunc
+  bmaps for resolvement
+- on MDS resm failure inside msl, clear a bit on all fcmh's pinned by ptrunc
+  whenever we check this flag, if the bit is not set, issue an RPC so
+  that we get registered with the MDS to be notified when ptrunc resolves
+- need way to specify in slash.conf other sites without MDS which MDS
+  should be responsible for replications to resources at that site
+
+      global pref_mds=md@PSC
+
+- pjd tests used to fail due to inability to send FUSE updates to its
+  cache after UNLINK, RENAME operations?
+
+	link/00.t	18-19, 22, 44-45, 48
+	rename/00.t	49, 53, 57, 61
+	unlink/00.t	17, 22, 53
+
+========================================================= KNOWN CAVEATS
+- sljournal constraint on small file names (1023-byte symlink must fit
+  in SLJ_NAMES_MAX):
+
+- FUSE bug: during LOOKUP, there is no check for invalidated dirs to
+  re-force lookups for child nodes.
+
+  if this gets resolves, we should remove the code that explicitly
+  invalidates FUSE child dentries of a directory when handling CHMOD
+
+- move namespace in zfs into a subdir so we dont have to do any
+  strcmp(fn, ".slmd") -> EPERM tricks
+
+- make sure replrq over garbage does the right thing in sliod backfs (zeroing)
+- mds: do not allow repl changes while IN_PTRUNC
+- should replay crcupdate set ion to VALID ?
+- for long running I/O patterns by processes that issue no other syscalls,
+  do fcmh's timeout and reload from MDS sst_size/gen values?
+    - need fcmh_get() in mslfsop_read()
+- try locally caching st_blocks in msl
+- msl with sst_size local caching should still take higher values from MDS
+  in cases of direct I/O (or maybe sliod)
+- use uint32_t for nanosecond atime/mtime/ctime in znode_phys to save space
+- 'slmctl stop' should completely wait for all ops to prevent relying on journal
+- upsch will not scale without multiwait waker arg
+- ensure user mode mounting works
+- add provisions to ensure journal disk doesnt overwrite something special
+  (superblock check)
+
+- Add the ability to remove an I/O server from slcfg.  Right now struct
+  reclaim_prog_entry has a field "pad".  Should be easy to turn it into
+  a flag to mark obsolete entries.  But we need a tool or edit the disk
+  file manually to be compatible.
+
+  We might want to do the same thing for metadata server.
+   - write a tool to purge specified IOS's from the garbage reclaim log files
+
+- msctl is broken on 32-bit because of ino # compression
+- have msctl access a special $DIR/.slctlsock file?
+- move msctl sock to $MOUNTPOINT/.slmd/ctlsock and have msctl ascend to
+  that on arguments?
+- add authbuf file path to slcfg
+
+reimport
+- add a scanner to DELETE things in .slmd/fidns with st_nlink==1 in sliod
+
+- debug lnrtd
+- cluster_noshare replication changes
+   - use a random resm, just like regular I/O
+   - specify degree of multiresidency with
+
+       $ msctl -Q cluster@SITE=3:bnospec:file,
+
+     for 3 copies on the cluster
+
+- replay setattr (not result of SETATTR, but result of another action
+  which indirectly issues setattr code) bugs:
+   (o) rename doesn't replay parentdir mtime setattr
+   (o) crc update doesn't replay nblks setattr
+
+- watch out for EMFILE on freebsd
+- wolverine/single cpu missed wakeup
+- file system-level and/or xattr replication controls, e.g.
+
+    $ cp myfile .slrpl/foo@BAR
+    $ ls .slrpl/myfile
+    foo@BAR
+    bar@FOO
+    $ rm .slrpl/myfile/foo@BAR
+
+    $ setfattr -n .slrpl-ios@SITE:4-8 myfile
+    $ getfattr myfile
+
+- kill -D argument; provide arg/slcfg var for authbuf key
+- add -d arg to daemons to stop daemonization and make that behavior
+  default in developer builds
+- test msctl -Q <symlink>
+- uptime instance nonce variable that allows msl to dump data if it
+  changes while communicating with sliod
+   (o) mark new flag on msl csvc when upnonce changes in CONNECT
+
+- convert MDS rcmc.c to async RPCs
+- add du(1) functionality in dumpfid via extattr
+- add slmctl -ss fstypes for linux with f_type
+   - parse /proc/mounts if it's there for sliod statfs f_fstype
+- make macro version of accessors for speed in gdb (e.g. bmap_2_bmi())
+  inline are for debugging/gdb
+- expose SLASH2 non-POSIX (e.g. repl) interface through extattr magic
+- fix bug when no IODs are online yet CLI writes are somehow successful
+- UNLINK is very slow when interspersed with READDIR
+
+- TRUNCATE should wipe out the inode reptbl
+- fix round robin among senses when open(O_TRUNC) -- prefer old IOS
+- make cursor file contents ASCII for debugging
+- do journal logs for SETATTR factor in nlink, nblks, etc??
+- while :; do dmesg > file; done      produces lots of EBADMSG from sliod
+
+- investigate diaser(1)
+- listxattr returns ERANGE
+- extattr are broke
+- ENOENT on GETATTR and REPL_RQ_ADD produce ERANGE
+- msl timeout change no longer waits when server offline, EIO immediately
+- client should not psclog ERRORs from SLERR_AIOWAIT on WRITE/READ RPC
+- fix bug when src ION comes online and upsch doesn't know he should now
+  try to schedule some new work
+    -- upsch_multiwait should be getting woken, needs a PAGEIN for dst though...
+    -- maybe add PAGEIN for src?
+- make sure when RPC fails that disconnect() is called and the structure
+  actually goes entirely away to avoid 'duplicate CONNECT msg received'
+  stuff and so callback handlers are run to ensure consistency in protocols
+- some combination of truncate(2) or O_TRUNC and replication can produce
+  corrupt files with no valid bmaps as rbudden has discovered
+- RPC standardized error messages:
+   - ENOSTR = ETIMEDOUT between BSD and Linux, and the client
+     will not treat ENOSTR as an RPC error
+- msctl repl-policy read isnt implemented
+- idea to support user quotas?
+   - track user database when CRC updates come in with st_blocks
+     and fail new write assignments when over quota
+- Not all items on the flush queue are flushable.  We may want to defer
+  putting an item on the queue until it is flushable.  dd-test.sh can
+  have thousands of pending biorqs.
+- slm_ptrunc_wake_clients() may need to use rpcsets or nbreqsets to deal
+  with large numbers of blocking clients.  Or, the algorithm should be
+  modified so that the clients retry after some brief sleep period.  (I
+  believe this is how DIO works).
+- FID modifications details in docs/supporting_recovery.txt.  Without
+  these changes we'll be forced to modify internal MDS structures
+  manually and will be forced to restart all clients and sliods.
+- imported files should create CRCs
+- stash directory replication settings in dir/.sldir
+- ensure flush() wakeups are being called from failed/timedout RPC
+  callbacks
+- import should utilize fallocate(2) where available
+- because we use cryptography, rely less on peer IP addresses for
+  authentication to allow clients behind internal networks
+- what happens when a single replica on a write disabled ios tries to
+  get modified?  what should happen??
+- replication notification service
+- tuck reclaim/update logs in a subdir in .slmd
+- bump size of reclaim/update logs files to create less
+    - 48K -> 1MB
+- getxattr(2) family (e.g. zfsslash2_getxattr()) should return ENOATTR/ENODATA
+- get rid of XCTL and reuse xattr interface with special .sl prefix
+- have sliod persistently track CRC updates in case of failure
+- some IOS seem to get reclaim updates when they have never been online
+- does IOS need to send REPLSCHED back to MDS?  won't crcupd suffice?
+- merge PFLERR_NOTCONN with SLERR_ION_OFFLINE
+- get rid of FIDC_LOOKUP_LOAD
+- are these messages from successful replication?
+[1376505142:641367 slmrmithr17:10079:rpc slm_rmi_handle_bmap_crcwrt rmi.c 186] mds_bmap_crc_write() failed: fid=0x0000000011dfd0ba, rc=-22
+- survey all threads loops to ensure clean shutdown (pscthr_run() can
+  exit on slmctl stop)
+- EIO is not being delivered to app when IOS is down
+- slash2root /var should be root 0700 so users can't see authbuf.key size
+- convert msbrathr to wkthr
+- mds_inode_update_interrupted is slowing CREATE
+- make READDIR as fast as possible and return the prefetch attrs OOB
+
+- use pahole(1) to examine cacheline flushes
+- port slash2 openstack
+    - make a file system driver that intercepts calls and issues libsl2 APIs
+- discover which JBOD/physical characteristics from sense3 errors
+    - write generic archiver visual monitor
+- vtune license for profiling
+- open file descriptors after UNLINK run into risk of accessing
+  reclaimed data on the IOS
+- change notion of mtime clocks in readdir to deal with time
+  synchronization problems in a more robust fashion
+- increment directory fcmh generation on modification
+- changes made by upsch dont get reverted in sqlite because they aren't
+  written to disk so don't go through slm_repl_upd_write
+- when write IO is done in mount_slash, we should set BREPLST_VALID
+  if it isn't
+- check svn histories for when small I/Os performance broke
+- we should reload the file inode in CLI from MDS
+  (o) normal attr expiration
+  (o) specifically when mtime gets updated (uptime mtime when ino changes)
+- is fuse OPEN for mmap/dio still broke?  double check and open
+  turn off PSCFS_OPENF_DIO for non-X_OK files on older fuse
+- we should move the mds_bmap_crc_write() code that turns off SGID and
+  SUID bits on the file to mds_bmap_ion_assign()
+- we should use a flag SETATTRF_MTIME_NOW that updates a file's mtim
+  to whatever is the current time on MDS instead of using the client's
+  time specified
+- ctlsvr messages specified as 0 may accept any sized requests
+  (also cap maximum ctlmsg size allowed)
+- think of ways to improve performance for normal users
+   - survey what operations users are doing
+   - parallelize tar/scp
+   - parallelize far and toolchain on tg-login (scp/sftp/ssh-tar)
+   - after successful first I/O: cache all user requests in memory
+- there shouldnt be two fs_root options: one for gconf and one for res,
+  make it just for res
+- add psclog for slashd to get hostname of client in rmc
+- grace is reporting bogus inums in /arc
+- implement lz4 as compression in zfs
+- illusion2 can use more of its RAM
+- bmap.odtab, ptrunc.odt, op-* should not be on SSD
+- why aren't cursor and bmap.odt getting updated?
+- add TRIM support to our zfs-fuse
+- add LZ4 support to our zfs-fuse
+- DEBUG_BMAP() should do everything inside the shouldlog()
+- can errors be injected into our scheme circumventing authbuf?
+- if high priority work cannot be done in upsch, do some lower priority
+  work
+- bia odtable should move to /dev/shm
+- PFLERR_OPNOTSUP is being returned back to FUSE somewhere in sl2 'make
+  build'
+- lots of time in fidlink() lookup
+  Thread 27 (Thread 0x7fef8b7cb700 (LWP 2221)):
+#0  0x00007ff229137ff4 in __lll_lock_wait () from /lib64/libpthread.so.0
+#1  0x00007ff229133328 in _L_lock_854 () from /lib64/libpthread.so.0
+#2  0x00007ff2291331f7 in pthread_mutex_lock () from /lib64/libpthread.so.0
+#3  0x00000000005c364d in mutex_enter ()
+#4  0x00000000005a2763 in zfs_zget ()
+#5  0x000000000054cd46 in zfs_dirent_lock ()
+#6  0x000000000054cfc1 in zfs_dirlook ()
+#7  0x000000000053d415 in zfs_lookup ()
+#8  0x00000000005cb0b5 in fop_lookup ()
+#9  0x0000000000543c52 in _zfsslash2_fidlink ()
+#10 0x0000000000546ff9 in zfsslash2_lookup_slfid ()
+#11 0x0000000000439f65 in slm_fcmh_ctor ()
+#12 0x00000000004380d6 in _fidc_lookup ()
+#13 0x00000000004c0065 in slm_rmc_handle_getattr ()
+#14 0x00000000004c4254 in slm_rmc_handler ()
+#15 0x00000000004f6f46 in pscrpcthr_main ()
+#16 0x0000000000528bfa in _pscthr_begin ()
+#17 0x00007ff2291317f1 in start_thread () from /lib64/libpthread.so.0
+#18 0x00007ff228e6e70d in clone () from /lib64/libc.so.6
+- merge authbuf bulkhash and hash into single buf
+- sessid from mount_slash 'file closed' info psclog is not correct
+- progname from mount_slash 'file closed' info psclog is not correct
+- reclaim logs should be async as synchronous waiting doesnt scale with
+  large numbers of deletes
+
+- metadata constitutes almost as much as the data????
+MDS:
+peer-54321-128.182.99.27@tcp10-rcv          32.6M
+peer-54321-128.182.99.27@tcp10-snd          25.3M
+IOS:
+peer-54321-128.182.99.29@tcp10-rcv          17.8M
+peer-54321-128.182.99.29@tcp10-snd          46.1M
+
+- CLI should ensure connection to IOS is actually valid as the
+  connection is initiated in non-block mode, so CONNECT waits,
+  until it times out then EIO/ENOTCONN comes.  by this logic,
+  asynchronous FLUSH should be OK as long as connection is actually
+  established
+- add 'msctl softstop' that exits when all procs are done
+- add tunables ctlparam - similar to opstats
+- add ctl -p pid to get the pid
+
+- remove ./src/lib/libsolkerncompat/include/sys/zfs_debug.h
+
+
+- zfs snapshot
+   -> tie callback into something that COW's all odtables+journal
+
+- add crcalg={none,basic,fastcry} option?
+
+- this breaks:
+	dd if=/dev/urandom of=r000 seek=1M count=1 bs=64k
+	md5sum r000
+
+- this breaks:
+	dd if=/dev/urandom of=r000 seek=1G count=1 bs=64k
+	dd if=/dev/urandom of=r000 seek=1M count=1 bs=64k
+
+upsch
+- optimize queries by reordering SELECT verbs
+
+st_blocks
+- account metadata overhead in st_blocks?
+- fix ios_nblks[idx] and aggr accounting on setsize0 and ptrunc
+
+- implement dedup in IOS with CRC checking and upsch?
+
+- ask paul about difficulty of CRCs
+
+- readdir optimizations
+   (o) can we avoid an rpc when st_size==2?  This involves knowing the inum for ".."
+
+- wrapper scripts:
+   - purge old corefiles
+   - purge long-running psclogs (if no restarts, no opportunity to clear
+     old logs)
+
+- caching exploration
+   (*) read caching for clients to serve other local clients
+   (*) read-ahead to improve performance through locality exploitation
+       ("pre-replication")
+   (*) write push-through caching for efficient remote I/O staging
+
+- cryptographic authentication integration (Kerberos/X.509/etc.)
+- per-client authbuf.key with uid= to control untrusted clients
+   slkeymgt to manage/issue keys
+- are crcupdates coalescing?  seems we are generating many mdslog
+  entries for SETSIZE appends
+- support quotas by using s2size in dmu_objset_do_userquota_callbacks ->
+  do_userquota_callback -> zap_increment_int
+
+- replication notification service, informing users when workloads have
+  finished, launching a job, etc.
+
+- use global mount to supported distributed MDS, no forwarding after
+  initial contact, no division of a pool into multiple file systems.
+
+
+
+ls /slfs/.slfidns/0x101010 should return ENOENT not ERANGE
+   (bad site ID?)
+
+slashd
+- rcm mutex csvc decref crash from repl-status
+- arc_get_buf OOM crash
+
+- piggyback small GETXATTR/LISTXATTR directly into RPC
+
+add rpc xid to psc_log_fmt
+
+- fuse: bad error value: 101 (ENETUNREACH) probably from bmap_to_csvc
+1297480 fuse: bad error value: 504
+
+VM images for slash2?
+
+- msctl -S or infer sockfn from mountpoint name:
+   msctl -r /supercell/tmp/foo
+     -> statfs() parent dir until fsid changes
+     -> connect(AF_LOCAL, .slctlsock)
+
+honor .slmd/resid on startup for MDS and IOD
+
+
+move from splay -> redblack in bmpc_biorq
+
+
+- failed replication need to reset upschdb
+- batchrq is reaching limit then hanging
+
+would fuse_reply_poll help us?
+would fuse_reply_ioctl help us in place of msctl?
+
+unify setting st_blksize for all of:
+- getattr
+- setattr
+- create
+- mknod
+- link
+- lookup
+- mkdir
+- symlink
+
+leaks:
+  slmctl -sc refcnt leaks
+  rpcimp       A--      1    977    978 99.90%     64  <inf> 80          0   0   0
+  bchrq        A--     84    291    375 77.60%      8  <inf> 80       7095   0   0
+
+  rpcimp       A--      0   3136   3136   100%     64  <inf> 80          0   0   0
+
+- use XATTR_MAXNAMELEN to check on xattr name length
+- how do multiple user streams affect mount_slash readahead tracking?
+- synchronous bmap lease fetching in readahead is probably killing
+  readahead effectiveness
+- ensure readahead window can properly fill 10gE, 20gE, 40gE
+- bim_getcurseq() shouldnt hold a mutex during an RPC:
+- does mount_slash flush_attr_wait impose synchronous SETATTR flush
+  waiting on I/O path?
+- change IP addr for sliod in slcfg *on client slcfg only* and notice
+  ERANGE returned to fuse
+    - also, attrflush threads sends SETSIZE RPC to MDS, even though
+      no data is received by IOS
+- replace lockedlists with dynarrays:
+	- sli_replwk_active
+	- msctl_replsts
+- lnet export refcnt leak: export@0xefbee0 ref=5664
+- get rid of fmid_dino_mfid and fmid_dino_mfh
+- write FSUUID into sliod and check
+- authbuf file dir should not be world readable so people can
+  determine key size
+   - make default size much bigger, and random
+- breleasethr 'skip due to not expire' should put such bmaps at
+  the end of the list and stop processing when encountering one
+
+unnecessary lock contention?
+mount_slash/io.c:
+ 728                                 MFH_LOCK(q->mfsrq_mfh);
+ 729                                 len = msl_pages_copyout(r, q);
+ 730                                 MFH_ULOCK(q->mfsrq_mfh);
+
+ stkvers is not getting updated from certain clients/sliod

@@ -1,0 +1,802 @@
+03/19/2010
+----------
+
+Looks like the hide_vnode() on a local fuse mount is failing:
+
+root@citron: ~$ tree -a /zhihui_slash2/ | head -20
+/zhihui_slash2/
+|-- .slfidns
+|   |-- 0
+|   |   |-- 0
+|   |   |   |-- 0
+|   |   |   |-- 1
+|   |   |   |-- 2
+|   |   |   |-- 3
+|   |   |   |   |-- 0004000000003ac2
+|   |   |   |   |-- 0004000000003ac7
+|   |   |   |   |-- 0004000000003ac8
+|   |   |   |   `-- 0004000000003eb4
+|   |   |   |-- 4
+|   |   |   |   |-- 000400000000468d
+|   |   |   |   `-- 000400000000468e
+|   |   |   |       `-- newfilehere
+|   |   |   |-- 5
+|   |   |   |-- 6
+|   |   |   |-- 7
+|   |   |   |-- 8
+
+
+We probably can't present both namespaces to the use at the same time to avoid confusing people/shell.
+
+We can do some trick to convert a directory link to a regular file. But ZFS is going to read
+the znode on disk and find out it is really a directory. 
+
+Right now, I have:
+
+root@citron: ~$ ls -ali /zhihui_slash2/.slfidns/0/0/4/
+total 39
+  12 drwx--x--x  6 root root  6 Mar 19 14:56 .
+   7 drwx--x--x 18 root root 18 Mar 19 11:04 ..
+4382 drwxr-xr-x  4 root root  3 Mar 19 14:56 000400000000468d
+4383 drwxr-xr-x  3 root root  3 Mar 19 15:25 000400000000468e
+   ? ?---------  ? ?    ?     ?            ? /zhihui_slash2/.slfidns/0/0/4/000400000000468b	<-- bug here
+   ? ?---------  ? ?    ?     ?            ? /zhihui_slash2/.slfidns/0/0/4/000400000000468c
+
+We can avoid traverse the two namespaces this way:
+
+yanovich@psc.edu: we knew this when we investigated using directory hardlinking
+yanovich@psc.edu: we just have to use find -maxdepth 3 on the .slfidns
+
+03/24/2010
+----------
+
+We did an almost rewrite of the FID cache, and I did some experiments with a new test.  The setup are as follows:
+
+root@citron: ~/projects/slash_nara/slashd$ PSC_LOG_LEVEL=3 gdb ./slashd
+(gdb) r -p ~/zhihui_slash2.cf zhihui_slash2 2>/local/mds.log
+
+
+root@grapefruit: ~/projects/slash_nara/mount_slash$ PSC_LOG_LEVEL=3 SLASH_MDS_NID="citron@PSC" SLASH2_PIOS_ID="bessemer@PSC" gdb ./mount_slash
+(gdb) r /slash2 2> /local/client.log
+
+
+
+zhihui@grapefruit: ~/projects/slash_nara/tests/namespace$ ./namespace -o 100000 /slash2/zhihui/testdir/
+
+......
+
+
+Files = 00011542, dirs = 000075, ops = 00011616
+Files = 00011547, dirs = 000075, ops = 00011621
+Files = 00011552, dirs = 000075, ops = 00011626
+Files = 00011557, dirs = 000075, ops = 00011631
+
+Delete dir operations: 0
+Delete file operations: 0
+Create dir operations: 74
+Create file operations: 11560
+
+Total files: 11560, dirs: 75, ops: 11634
+Time used to age the directory is 1100.000000
+
+It is very slow until I pressed control+C to stop it.
+
+Potential reasons for slowness:
+
+(1) Logging
+	
+	(gdb) shell ls -al /local/mds.log 
+	-rw-r--r-- 1 root root 118159248 Mar 24 10:25 /local/mds.log
+	(gdb) shell ls -al /local/client.log
+	-rw-r--r-- 1 root root 360103727 Mar 24 10:26 /local/client.log
+
+(2) test program: it has to do a lot of small allocations to scan a directory. It also
+    has to do stat() to avoid reuse a filename.
+
+(3) FID cache issues: too many duplicate asserts.
+
+04/01/2010
+----------
+
+As of this change, new fid cache code seems to be in shape, albeit slow:
+
+zhihui@grapefruit: ~$ ./projects/slash_nara/tests/namespace/namespace  -o 1000000 /slash2/zhihui/testdir39
+
+....
+
+Files = 00165256, dirs = 001925, ops = 00408488
+Files = 00165257, dirs = 001925, ops = 00408493
+Files = 00165258, dirs = 001925, ops = 00408498
+Files = 00165262, dirs = 001926, ops = 00408503
+Files = 00165259, dirs = 001926, ops = 00408508
+Files = 00165260, dirs = 001926, ops = 00408513
+Operation interrupted by signal 2.				<-- press control+C
+
+Delete dir operations: 36
+Delete file operations: 120628
+Create dir operations: 1961
+Create file operations: 285888
+
+Total files: 165260, dirs: 1926, ops: 408513
+Time used to age the directory is 19105.000000 seconds.
+
+04/14/2010
+----------
+
+Make sure that the zp_parent field always points to the parent in the regular namespace, not the
+by-id namespace.  This fixes the issue of readdir returning the right ".." information.
+
+This fix only affects directories. We should re-create the ZFS pool to make this change take effect.
+
+04/21/2010
+----------
+
+I have planned to let each log file to have a constant number of log entries.  That makes it easy
+to find the right file that contains a log entry given its update sequence number.
+
+We also need to support aging of updates.  If an update is, say, 30 seconds old, it will be propagated
+to other MDSes immediately before the current log file is filled.
+
+Paul proposes a idea of using batch numbers.  Basically one batch is stored in one log file.  A
+log file is closed after its capacity is reached or when its old entry is too old.
+
+Correspondingly, we can store batch numbers in the progress table for each MDS.  The problem with
+this idea is that we can have lots of small files.
+
+The other problem concerns the receiving MDS.  If it crashes in the middle of applying a log,
+how can we maintain atomicity?  Should be because
+
+	(1) We never re-use SLASH FID - used to detect if a file is already created/deleted.
+	(2) ZFS guarantees internal consistency
+
+We do have to make sure that the a file or a directory exist in both namespace (by-name
+and by-id).  ZFS can only make sure one link exists or not.
+
+We may have to stored an update sequence number in the disk inode (like zp_gen in znode_phys,
+but that's used by ZFS transaction internally I guess).
+
+Another idea is to use a different SLASH FID for each rename (possibly keep the original ZFS 
+inode number).  But this does not cover the case of chmod etc.
+
+A generation number is the best way to cope with this.  Note that within the same batch of 
+changes, the same file can be changed multiple times.  But we have to add more fields into
+znode_phys.
+
+For now, we can settle down with using the timestamp fields.  They are originating from the 
+same site that owns a file.
+
+05/13/2010
+----------
+
+Stuck on how to tie our journaling with ZFS transaction.  Anyway, the following is a way
+to find out the currently open transaction group in ZFS:
+
+int
+zfs_txg_info(zfsvfs_t *zfsvfs, uint64_t *txg)
+{
+        tx_state_t *tx; 
+        tx_cpu_t *tc; 
+        dsl_pool_t *dp; 
+
+        dp = dmu_objset_pool(zfsvfs->z_os);
+        tx = &dp->dp_tx;
+        tc = &tx->tx_cpu[CPU_SEQID];
+
+        mutex_enter(&tc->tc_lock);
+        *txg = tx->tx_open_txg;
+        mutex_exit(&tc->tc_lock);
+}
+
+The above method has a problem because the open transaction group can change afterwards.
+
+I am going to push the logging code further down into the VOP_XXX() functions. There are 
+two benefits for this:
+
+	(1) I only log after I am sure that the operation was a success.  As a result,
+	    I only propapage namespace update when I am sure the operation was a success.
+
+	(2) I also record the current tx group number into the log record. That
+	    tell me positively if I need to replay a log entry in our journal or not.
+
+I am sure that until I call dmu_tx_commit(), the transaction group of which the tranaction is 
+a part of won't commit.  I can do our own logging before that.   In other words, our logging
+happens before the corresponding ZFS transaction commits, so I won't miss any update. 
+
+The ZFS intent log (ZIL) won't commit unless you call zil_commit() explicitly. Most often,
+they just die in memory.
+
+05/20/2010
+----------
+
+Currently, the code assumes that each namespace update needs one 512 byte log entry to log.  But 
+for an operation such as a rename, we might need two log entries (max name length is 256 and we 
+need two names plus some extra fields).  
+
+The problem is that it is hard to make two log entries atomic (they might not even be next to 
+each other).  For example, we need to propagate them at the same time to that the rename will 
+be atomic on the receiving MDS.  We also need to change the underlying journaling and namespace 
+logging code to allow chaining two log entries together.
+
+To make things easier, we can separate a rename into at most three log operations even if they
+could have been done atomically.  By the way, we have to do that anyway if the old and new parents
+are managed by different sites.
+
+Here is the relevant code in ZFS:
+
+3347         if (tzp)        /* Attempt to remove the existing target */
+3348                 error = zfs_link_destroy(tdl, tzp, tx, zflg, NULL);		<-- one log
+3349 
+3350         if (error == 0) {
+3351                 error = zfs_link_create(tdl, szp, tx, ZRENAMING);			<-- one log
+3352                 if (error == 0) {
+3353                         szp->z_phys->zp_flags |= ZFS_AV_MODIFIED;
+3354 
+3355                         error = zfs_link_destroy(sdl, szp, tx, ZRENAMING, NULL);	<-- one log
+3356                         ASSERT(error == 0);
+3357 
+3358                         zfs_log_rename(zilog, tx,
+3359                             TX_RENAME | (flags & FIGNORECASE ? TX_CI : 0),
+3360                             sdzp, sdl->dl_name, tdzp, tdl->dl_name, szp);
+3361 
+3362                         /* Update path information for the target vnode */
+3363                         vn_renamepath(tdvp, ZTOV(szp), tnm, strlen(tnm));
+3364                 }
+3365         }
+3366 
+3367         dmu_tx_commit(tx);
+
+It is interesting to note that they commit even if there might be an error (perhaps they should
+asser that error == 0).
+
+We can somehow justify this decision because eventually all log entries of a rename should be 
+applied and the end result is the same.
+
+Here is the code that implements this idea:
+
+	if (tzp) {	/* Attempt to remove the existing target */
+		error = zfs_link_destroy(tdl, tzp, tx, zflg, NULL);
+		if (logfunc) {
+			uint64_t txg;
+
+			txg = dmu_tx_get_txg(tx);
+			logfunc(ZTOV(tzp)->v_type != VDIR ? NS_OP_UNLINK : NS_OP_RMDIR, 
+				txg, tdzp->z_phys->zp_s2fid, 0, tzp->z_phys->zp_s2fid, NULL, tnm, NULL);
+		}
+	}
+
+	if (error == 0) {
+		error = zfs_link_create(tdl, szp, tx, ZRENAMING);
+		if (error == 0) {
+			szp->z_phys->zp_flags |= ZFS_AV_MODIFIED;
+
+			error = zfs_link_destroy(sdl, szp, tx, ZRENAMING, NULL);
+			ASSERT(error == 0);
+			if (logfunc) {
+				uint64_t txg;
+				struct srt_stat stat;
+				vattr_t vattr;
+
+				txg = dmu_tx_get_txg(tx);
+
+				memset(&vattr, 0, sizeof(vattr_t));
+				vattr.va_uid  = szp->z_phys->zp_uid;
+				vattr.va_gid  = szp->z_phys->zp_gid;
+				vattr.va_mode = szp->z_phys->zp_mode;
+				ZFS_TIME_DECODE(&vattr.va_atime, szp->z_phys->zp_atime);
+				ZFS_TIME_DECODE(&vattr.va_mtime, szp->z_phys->zp_mtime);
+				ZFS_TIME_DECODE(&vattr.va_ctime, szp->z_phys->zp_ctime);
+				
+				zfs_vattr_to_stat(&stat, &vattr);
+
+				txg = dmu_tx_get_txg(tx);
+				/*
+				 * A receiving MDS replays log entries in order.  We must remove
+				 * the old target first so that the same fidlink can be removed
+				 * and added back to point to the new target.  Note that the 
+				 * SLASH FID remains the same during a rename.
+				 */
+				logfunc(ZTOV(szp)->v_type != VDIR ? NS_OP_UNLINK : NS_OP_RMDIR, 
+					txg, sdzp->z_phys->zp_s2fid, 0, szp->z_phys->zp_s2fid, NULL, snm, NULL); 
+				logfunc(ZTOV(szp)->v_type != VDIR ? NS_OP_CREATE : NS_OP_MKDIR, 
+					txg, tdzp->z_phys->zp_s2fid, 0, szp->z_phys->zp_s2fid, &stat, tnm, NULL);
+			}
+
+			zfs_log_rename(zilog, tx,
+			    TX_RENAME | (flags & FIGNORECASE ? TX_CI : 0),
+			    sdzp, sdl->dl_name, tdzp, tdl->dl_name, szp);
+
+			/* Update path information for the target vnode */
+			vn_renamepath(tdvp, ZTOV(szp), tnm, strlen(tnm));
+		}
+	}
+
+05/27/2010
+----------
+
+Suppose I do the following:
+
+	mkdir zhihui1
+	mv zhihui1 zhihui2
+
+Whey replaying the first operation, the fidlink is created for zhihui1 based on its SLASH FID.
+To replay the second operation, I am doing two things (assuming that zhihui2 does not already
+exist yet) based on the idea outlined on 05/20/2010:
+
+	(1) mkdir zhihui2
+	(2) rmdir zhihui1
+
+(1) will fail because it can't create a fidlink again for zhihui2, the same SLASH FID is already
+used by zhihui1.  So perhaps I need to reverse the order of (1) and (2).
+
+
+06/04/2010
+----------
+
+After I implemented the above method.  I did the following:
+
+	(1) mkdir dir1 on client A connected to MDS A
+	(2) stat dir1 on client B connected to MDS B.  You have to wait for a while before
+	    it shows up.
+	(3) watch -n 1 "stat dir2" on client B.  It returns "No such file or directory'.
+	(4) mv dir1 dir2 on client A
+	(5) Step (3) returns EIO now.
+
+Paul can reproduce this problem with only one MDS.  After some study, Paul found out that the 
+following code is probably the suspect:
+
+ 179 static struct dentry *fuse_lookup(struct inode *dir, struct dentry *entry,
+ 180                                   struct nameidata *nd)
+ 181 {
+ 182         int err;
+ 183         struct fuse_entry_out outarg;
+ 184         struct inode *inode = NULL;
+ 185         struct fuse_conn *fc = get_fuse_conn(dir);
+ 186         struct fuse_req *req;
+ 187 
+ 188         if (entry->d_name.len > FUSE_NAME_MAX)
+ 189                 return ERR_PTR(-ENAMETOOLONG);
+ 190 
+ 191         req = fuse_get_request(fc);
+ 192         if (!req)
+ 193                 return ERR_PTR(-EINTR);
+ 194 
+ 195         fuse_lookup_init(req, dir, entry, &outarg);
+ 196         request_send(fc, req);
+ 197         err = req->out.h.error;
+ 198         /* Zero nodeid is same as -ENOENT, but with valid timeout */
+ 199         if (!err && outarg.nodeid &&
+ 200             (invalid_nodeid(outarg.nodeid) || !valid_mode(outarg.attr.mode)))
+ 201                 err = -EIO;
+ 202         if (!err && outarg.nodeid) {
+ 203                 inode = fuse_iget(dir->i_sb, outarg.nodeid, outarg.generation,
+ 204                                   &outarg.attr);
+ 205                 if (!inode) {
+ 206                         fuse_send_forget(fc, req, outarg.nodeid, 1);
+ 207                         return ERR_PTR(-ENOMEM);
+ 208                 }
+ 209         }
+ 210         fuse_put_request(fc, req);
+ 211         if (err && err != -ENOENT)
+ 212                 return ERR_PTR(err);
+ 213 
+ 214         if (inode && dir_alias(inode)) {
+ 215                 iput(inode);
+ 216                 return ERR_PTR(-EIO);		<-- H E R E
+ 217         }
+
+The test is done on tangerine. But the procedure works fine on wolverine.  Why?
+
+zhihui@tangerine: ~$ uname -a
+Linux tangerine 2.6.16-27-0.9_lustre-1.4.11customZestion_Oprofile #4 SMP Wed Sep 10 12:23:20 EDT 2008 x86_64 x86_64 x86_64 GNU/Linux
+
+-bash-3.2$ uname -a
+Linux wolverine.psc.edu 2.6.18-194.3.1.el5xen #1 SMP Thu May 13 13:49:53 EDT 2010 x86_64 x86_64 x86_64 GNU/Linux
+
+Looks like in the newer kernel version, if an alias of a directory is found, the FUSE kernel module just invalidates it
+instead of returning EIO.
+
+06/07/2010
+----------
+
+Looks like I need to solve the logging issue for symlink as well, which like rename, also needs two names.  In the case
+of rename, I can break it into 2 or 3 logical operations.   But in the case of symlink, it is not possible to do so.
+
+Guess I have to extend the current journaling/tiling code to deal with a multi-log entry transaction.
+
+If we support multi-sector log entries, we have to overcome the tile boundary. We must make sure that a multi-sector log 
+entry be sent in ONE RPC.
+
+To get rid of tile boundaries, we could use a linked list of log entries.  That can lead to better use of memory.
+
+An easy way is to limit the size of the two names in a rename or a symlink operation so that the whole operation
+can be fit into a 512 byte log entry.
+
+06/09/2010
+----------
+
+Rename now works as an atomic operation - I now pack two filenames in the same 512-byte log entry.  But creating 
+symlink gives EIO. 
+
+Just come across the following at http://sourceforge.net/apps/mediawiki/fuse/index.php?title=FAQ:
+
+What is the reason for IO errors?
+
+The kernel part of FUSE returns the EIO error value, whenever the userspace filesystem sends a "bad" reply. 
+Sometimes these are unavoidable, and not necessarily a fault of the filesystem. Possible causes of this are 
+(non-exhaustive)
+
+    * the filesystem returned a short count on write(). 
+
+    * the type of the file has changed (e.g. a directory suddenly became a symlink). 
+
+    * a directory entry contained a filename that was too long (no, ENAMETOOLONG is not the right error here). 
+
+    * the same node ID value was used for two different directories (i.e. hard-linked directories are not allowed). 
+
+    * In the GETATTR function, st_mode needs to have a valid filetype bit set, like S_IFREG or S_IFDIR, see the stat 
+      manual for more. 
+
+    * Make sure that the fid passed back is valid (for example, not zero).
+
+06/10/2010
+----------
+
+Try to make readlink() works on slash2, hit the following bug:
+
+(gdb) down
+#0  fs_nosys () at lib/libsolkerncompat/fs_subr.c:48
+48              return (ENOSYS);
+(gdb) bt
+#0  fs_nosys () at lib/libsolkerncompat/fs_subr.c:48
+#1  0x000000000059a9c1 in fop_open (vpp=0x2aaac0fff660, mode=3, cr=0x2aaac0fff670, ct=0x0) at lib/libsolkerncompat/vnode.c:821
+#2  0x00000000004e491c in zfsslash2_opencreate (ino=4479, slcrp=0x86eac0, fflags=2, createmode=0, name=0x0, fg=0x0, mfp=0x0, sstb=0x0, finfo=0x8a48f0, 
+    logfunc=0, getslfid=0) at zfs-fuse/zfs_operations_slash.c:842
+#3  0x00000000004ad79c in mdsio_opencreate (pino=4479, cr=0x86eac0, flags=2, mode=0, fn=0x0, fgp=0x0, mfp=0x0, sstb=0x0, mdsio_datap=0x8a48f0, logfunc=0, 
+    getslfid=0) at /home/zhihui/projects/slash_nara/slashd/mdsio_zfs.c:247
+#4  0x0000000000497fa9 in slm_fcmh_ctor (fcmh=0x8a4710) at /home/zhihui/projects/slash_nara/slashd/fidc_mds.c:98
+#5  0x0000000000492057 in _fidc_lookup (fgp=0x1a42ce8, flags=1, sstb=0x0, setattrflags=0, fcmhp=0x2aaac1000a28, 
+    file=0x5bc338 "/home/zhihui/projects/slash_nara/slashd/rmc.c", func=0x5bc670 "slm_rmc_handle_readlink", line=527)
+    at /home/zhihui/projects/slash_nara/share/fidc_common.c:402
+#6  0x00000000004c09f7 in slm_rmc_handle_readlink (rq=0x1a42a80) at /home/zhihui/projects/slash_nara/slashd/rmc.c:527
+#7  0x00000000004c34ab in slm_rmc_handler (rq=0x1a42a80) at /home/zhihui/projects/slash_nara/slashd/rmc.c:925
+#8  0x000000000045af71 in pscrpc_server_handle_request (svc=0x1a41130, thread=0x1b632d0) at /home/zhihui/projects/psc_fsutil_libs/psc_rpc/service.c:369
+#9  0x000000000045e456 in pscrpcthr_main (thr=0x1b632d0) at /home/zhihui/projects/psc_fsutil_libs/psc_rpc/service.c:729
+#10 0x0000000000484bbc in _pscthr_begin (arg=0x7fff36b1eaa0) at /home/zhihui/projects/psc_fsutil_libs/psc_util/thread.c:270
+#11 0x00002af874c08305 in start_thread () from /lib64/libpthread.so.0
+#12 0x00002af874eea50d in clone () from /lib64/libc.so.6
+#13 0x0000000000000000 in ?? ()
+
+Basically, we can't call VOP_OPEN() on a symlink.  However, we are doing just that when we try to construct
+a fid cache for the vnode.
+
+06/11/2010
+----------
+
+At this point, rename and symlink are working - they can be propagated to other MDS.  Link is not working - we need
+a way to distinguish between internal and external links.
+
+06/24/2010
+----------
+
+I have removed tiling code recently. The rename and symlink still work - they can still be propagated.
+
+07/15/2010
+----------
+
+While chatting with Paul today, it occurred to me that we can really open a ZFS file
+by its ZFS ID. Right now, we create a fid namespace to allow a client to open a file
+by its ID.  But this by-id namespace is only used internally by the MDS (slash daemon).  
+The slash daemon code is linked with the ZFS user level library.  So it should be able 
+to open a file by its ZFS ID.  My experiment with gdb seems to prove it.
+
+Furthermore, we may not need to remember the mapping between a SLASH FID and a ZFS ID. 
+A client should do it (we can return both IDs for a file). Otherwise, it can lookup by 
+names again.
+
+If we take this route, the metadata performance of SLASH2 can be increased substantially.
+Right now, each time we create a file, we need to add a link by its SLASH2 FID.  Each time
+we remove a file, we need to remove its link.  We also need to add a link to a directory,
+which is normally not allowed.
+
+By the way, how does NFS/ext2 convert a file handle to an inode?  See ext2_nfs_get_inode().
+
+07/16/2010
+----------
+
+Right now, we only log the first operation (such as a create), not the second one that 
+creates a link in the by-id namespace.  If the two operations are in different transaction 
+groups, we can have a problem.
+
+02/04/2011
+----------
+
+So far, I can duplicate a tree on a second MDS just fine.  But the size keeps to be 0
+instead of a real size.  I need to propogate the size change along with a CRC update
+from the IOS.  The problem is that the redo works at the ZFS layer, not at the fcmh 
+layer.
+
+I can treat namespace propagation the same way as a request coming from a client.  But 
+the redo operations do not necessarily come in order (e.g., it may be asked to create file
+before its parent exists).
+
+So perhaps a better way is to patch the fcmh if it exists.
+
+02/08/2011
+----------
+
+So the size seems to be propagated to the peer MDS correctly.  But trying to cat a file will panic
+for now:
+
+zhihui@lemon: /zzh-slash2-lemon/zhihui3/linux-2.6.34$ ls -al
+total 36
+drwxr-xr-x  3 zhihui staff     7 Feb  8 12:20 .
+drwxr-xr-x  3 zhihui staff     3 Feb  8 11:59 ..
+-rw-r--r--  1 zhihui staff 18693 Feb  8 12:20 COPYING
+-rw-r--r--  1 zhihui staff 94031 Feb  8 12:20 CREDITS
+drwxr-xr-x 33 zhihui staff    90 Feb  8 12:20 Documentation
+-rw-r--r--  1 zhihui staff   930 Feb  8 12:20 .gitignore
+-rw-r--r--  1 zhihui staff  4021 Feb  8 12:20 .mailmap
+zhihui@lemon: /zzh-slash2-lemon/zhihui3/linux-2.6.34$ cat COPYING 
+^C^C
+
+
+[1297185387:989826 mseqpollthr:1772:rpc pscrpc_set_import_discon 97] Connection to service via nid 128.182.99.28@tcp10 was lost; in progress operations using this service will fail.
+[1297185715:562807 msfsthr14:1797:def msl_read_rpc_create 1214] [assert] csvc
+
+Program received signal SIGABRT, Aborted.
+[Switching to Thread 0x7fff3b5fe700 (LWP 1797)]
+0x000000302ea328f5 in raise (sig=6) at ../nptl/sysdeps/unix/sysv/linux/raise.c:64
+64        return INLINE_SYSCALL (tgkill, 3, pid, selftid, sig);
+(gdb) bt
+#0  0x000000302ea328f5 in raise (sig=6) at ../nptl/sysdeps/unix/sysv/linux/raise.c:64
+#1  0x000000302ea340d5 in abort () at abort.c:92
+#2  0x00000000004b0537 in _psclogv (pci=0x7fff2c000910, level=PLL_FATAL, options=0, fmt=0x58874f "[assert] %s", ap=0x7fff3b5fd120)
+    at /home/zhihui/projects-lemon/psc_fsutil_libs/psc_util/log.c:309
+#3  0x00000000004b0712 in _psc_fatal (pci=0x7fff2c000910, level=PLL_FATAL, options=0, fmt=0x58874f "[assert] %s")
+    at /home/zhihui/projects-lemon/psc_fsutil_libs/psc_util/log.c:338
+#4  0x00000000004e2dff in msl_read_rpc_create (r=0x7fff2c008bd0, startpage=0, npages=1)
+    at /home/zhihui/projects-lemon/slash_nara/mount_slash/mount_slash_int.c:1214
+#5  0x00000000004e52d9 in msl_pages_prefetch (r=0x7fff2c008bd0) at /home/zhihui/projects-lemon/slash_nara/mount_slash/mount_slash_int.c:1347
+#6  0x00000000004eb415 in msl_io (mfh=0x7fff20000c10, buf=0x7fff2c000bc0 "", size=32768, off=0, rw=SL_READ)
+    at /home/zhihui/projects-lemon/slash_nara/mount_slash/mount_slash_int.c:1683
+#7  0x00000000004c859f in mslfsop_read (pfr=0x7fff3b5fdce0, size=32768, off=0, data=0x7fff20000c10)
+    at /home/zhihui/projects-lemon/slash_nara/mount_slash/main.c:1919
+#8  0x0000000000480251 in pscfs_fuse_handle_read (req=0x7fff2c000930, inum=4503599627370501, size=32768, off=0, fi=0x7fff3b5fdd30)
+    at /home/zhihui/projects-lemon/psc_fsutil_libs/psc_fs/fuse.c:748
+#9  0x00007ffff7dcb620 in do_read (req=<value optimized out>, nodeid=<value optimized out>, inarg=<value optimized out>) at fuse_lowlevel.c:738
+#10 0x000000000047d2c9 in pscfs_fuse_listener_loop (arg=0x0) at /home/zhihui/projects-lemon/psc_fsutil_libs/psc_fs/fuse.c:295
+#11 0x000000302ee07761 in start_thread (arg=0x7fff3b5fe700) at pthread_create.c:301
+#12 0x000000302eae098d in clone () at ../sysdeps/unix/sysv/linux/x86_64/clone.S:115
+
+02/15/2011
+----------
+
+So I was able to duplicate namespace on a different mds, but it takes too much time:
+
+root@lemon: /home/zhihui$ time tar xvfj linux-2.6.34.tar.bz2 -C /zzh-slash2-lemon/ | tail
+linux-2.6.34/virt/kvm/assigned-dev.c
+linux-2.6.34/virt/kvm/coalesced_mmio.c
+linux-2.6.34/virt/kvm/coalesced_mmio.h
+linux-2.6.34/virt/kvm/eventfd.c
+linux-2.6.34/virt/kvm/ioapic.c
+linux-2.6.34/virt/kvm/ioapic.h
+linux-2.6.34/virt/kvm/iodev.h
+linux-2.6.34/virt/kvm/iommu.c
+linux-2.6.34/virt/kvm/irq_comm.c
+linux-2.6.34/virt/kvm/kvm_main.c
+
+real	91m30.234s
+user	0m16.175s
+sys	0m3.263s
+
+Also, the timestamp is not right:
+
+root@lemon: /home/zhihui$ ls -al /zzh-slash2-lemon/linux-2.6.34/virt/kvm
+total 7
+drwxr-xr-x 2 root root    13 May 16  2010 .
+drwxr-xr-x 3 root root     3 May 16  2010 ..
+-rw-r--r-- 1 root root 20140 May 16  2010 assigned-dev.c
+-rw-r--r-- 1 root root  4101 May 16  2010 coalesced_mmio.c
+-rw-r--r-- 1 root root   969 May 16  2010 coalesced_mmio.h
+-rw-r--r-- 1 root root 13721 May 16  2010 eventfd.c
+-rw-r--r-- 1 root root 10871 May 16  2010 ioapic.c
+-rw-r--r-- 1 root root  2289 May 16  2010 ioapic.h
+-rw-r--r-- 1 root root  1987 May 16  2010 iodev.h
+-rw-r--r-- 1 root root  5636 May 16  2010 iommu.c
+-rw-r--r-- 1 root root 12097 May 16  2010 irq_comm.c
+-rw-r--r-- 1 root root   242 May 16  2010 Kconfig
+-rw-r--r-- 1 root root 51063 May 16  2010 kvm_main.c
+root@lemon: /home/zhihui$ ls -al /zzh-slash2/linux-2.6.34/virt/kvm
+total 25
+drwxr-xr-x 2 root root    13 Feb 15 12:57 .
+drwxr-xr-x 3 root root     3 Feb 15 12:57 ..
+-rw-r--r-- 1 root root 20140 Feb 15 12:57 assigned-dev.c
+-rw-r--r-- 1 root root  4101 Feb 15 12:57 coalesced_mmio.c
+-rw-r--r-- 1 root root   969 Feb 15 12:57 coalesced_mmio.h
+-rw-r--r-- 1 root root 13721 Feb 15 12:57 eventfd.c
+-rw-r--r-- 1 root root 10871 Feb 15 12:57 ioapic.c
+-rw-r--r-- 1 root root  2289 Feb 15 12:57 ioapic.h
+-rw-r--r-- 1 root root  1987 Feb 15 12:57 iodev.h
+-rw-r--r-- 1 root root  5636 Feb 15 12:57 iommu.c
+-rw-r--r-- 1 root root 12097 Feb 15 12:57 irq_comm.c
+-rw-r--r-- 1 root root   242 Feb 15 12:57 Kconfig
+-rw-r--r-- 1 root root 51063 Feb 15 12:57 kvm_main.c
+
+The problem is probably at setattr redo.
+
+02/21/2011
+----------
+
+So I got log files moved into ZFS:
+
+root@lemon: /home/zhihui$ time tar xvfj linux-2.6.34.tar.bz2 -C /zzh-slash2-lemon/
+
+real	3m18.978s
+user	0m15.517s
+sys	0m3.138s
+
+But some files seem missing from the MDS (wolverine) that receiving the updates.
+
+The above issue seems to be fixed before this submission:
+
+zhihui@lemon: ~$ ls -al /zzh-slash2-lemon/linux-2.6.34/ | wc
+     33     290    1642
+zhihui@lemon: ~$ ls -al /zzh-slash2/linux-2.6.34/ | wc
+     33     290    1642
+
+04/04/2011
+----------
+
+Looks like a symlink can have an entry in our by-id namespace:
+
+root@orange: /home/zhihui$ ls -al /zhihui_slash2_orange/.slmd/fidns/0/0/8 | tail -3
+-rw-r--r--   2 zhihui staff 5288 Apr  4 11:20 000c0000000085e8
+-rw-r--r--   2 zhihui staff 5288 Apr  4 11:20 000c0000000085e9
+lrwxrwxrwx   2 zhihui staff   33 Dec 31  1969 000c0000000085ea -> ../../platform/generic/system.dts
+
+Not needed, but won't hurt anything.
+
+05/20/2011
+----------
+
+Saw sporadic errors like below.  Other than this and rename forwarding, namespace forwarding to 
+a remote MDS that owns the parent directory seems working.
+
+root@citron: /zzh-slash2/zhihui$ rm goodfile
+rm: cannot remove `goodfile': Numerical result out of range
+
+05/23/2011
+----------
+
+Here is how I test rename manually:
+
+root@lemon: /home/zhihui$ cd /zzh-slash2
+root@lemon: /zzh-slash2$ mkdir zhihui
+root@lemon: /zzh-slash2$ cd
+root@lemon: ~$ cd /zzh-slash2-lemon
+root@lemon: /zzh-slash2-lemon$ ls
+zhihui
+root@lemon: /zzh-slash2-lemon$ cd zhihui
+root@lemon: /zzh-slash2-lemon/zhihui$ mkdir dir1
+root@lemon: /zzh-slash2-lemon/zhihui$ touch file1
+root@lemon: /zzh-slash2-lemon/zhihui$ ls -ail
+total 12
+4503599627370498 drwxr-xr-x 3 root root 4 May 23 10:21 .
+               1 drwxr-xr-x 3 root root 4 May 23 10:17 ..
+3377699720527874 drwxr-xr-x 2 root root 2 May 23 10:21 dir1
+3377699720527875 -rw-r--r-- 1 root root 0 May 23 10:21 file1
+root@lemon: /zzh-slash2-lemon/zhihui$ mv dir1 dir2
+root@lemon: /zzh-slash2-lemon/zhihui$ mv file1 file2
+root@lemon: /zzh-slash2-lemon/zhihui$ ls -ali
+total 12
+4503599627370498 drwxr-xr-x 3 root root 4 May 23 10:21 .
+               1 drwxr-xr-x 3 root root 4 May 23 10:17 ..
+3377699720527874 drwxr-xr-x 2 root root 2 May 23 10:21 dir2
+3377699720527875 -rw-r--r-- 1 root root 0 May 23 10:21 file2
+
+The above seems working, but the following is weird though:
+
+root@lemon: /zzh-slash2-lemon/zhihui$ rmdir dir2
+root@lemon: /zzh-slash2-lemon/zhihui$ rm file2
+rm: remove regular empty file `file2'? y
+root@lemon: /zzh-slash2-lemon/zhihui$ ls -ali
+total 21
+4503599627370498 drwxr-xr-x 3 root root 4 May 23 10:23 .
+               1 drwxr-xr-x 3 root root 4 May 23 10:17 ..
+3377699720527874 drwxr-xr-x 1 root root 2 May 23 10:21 dir1
+3377699720527875 -rw-r--r-- 1 root root 0 May 23 10:21 file1
+
+The views are different now from two mount points:
+
+root@lemon: /zzh-slash2-lemon/zhihui$ ls -ali /zzh-slash2/zhihui/
+total 19
+4503599627370498 drwxr-xr-x 2 root root 2 May 23 10:20 .
+               1 drwxr-xr-x 3 root root 4 May 23 10:20 ..
+root@lemon: /zzh-slash2-lemon/zhihui$ ls -ali /zzh-slash2-lemon/zhihui/
+total 21
+4503599627370498 drwxr-xr-x 3 root root 4 May 23 10:23 .
+               1 drwxr-xr-x 3 root root 4 May 23 10:17 ..
+3377699720527874 drwxr-xr-x 1 root root 2 May 23 10:21 dir1
+3377699720527875 -rw-r--r-- 1 root root 0 May 23 10:21 file1
+
+06/07/2011
+----------
+
+Namespace operation still have some minor issues (I guess it is related
+to error handling or cleanup):
+
+zhihui@lemon: ~$ cd /zzh-slash2
+zhihui@lemon: /zzh-slash2$ ls
+zhihui@lemon: /zzh-slash2$ sudo mkdir zhihui
+mkdir: cannot create directory `zhihui': Device or resource busy
+zhihui@lemon: /zzh-slash2$ sudo mkdir zhihui
+mkdir: cannot create directory `zhihui': File exists
+zhihui@lemon: /zzh-slash2$ ls -ali
+total 15
+               1 drwxr-xr-x   3 root root    4 Jun  7 11:35 .
+               2 dr-xr-xr-x. 39 root root 4096 May 25 11:32 ..
+4503599627370498 drwxr-xr-x   2 root root    2 Jun  7 11:35 zhihui
+
+
+06/10/2011
+----------
+
+MDS on orange, log level 4; client on lemon, log level 2.  File system is freshly formatted
+and populated with one-million-file.c written yesterday.  I restart them between tests.
+
+No one seems to be using orange and lemon at the moment, grapefruit is the I/O server, but
+this is metadata only test.
+
+zhihui@lemon: ~/projects-lemon/slash_nara/tests/namespace$ time ls -al /zzh-slash2-lemon/test1/ 
+
+.....
+
+-rwx------ 1 zhihui staff       0 Jun  9 16:25 9817652403
+-rwx------ 1 zhihui staff       0 Jun  9 16:25 9817652430
+-rwx------ 1 zhihui staff       0 Jun  9 16:29 9817653204
+-rwx------ 1 zhihui staff       0 Jun  9 16:29 9817653240
+
+real	158m11.899s
+user	0m9.357s
+sys	0m19.760s
+
+
+zhihui@lemon: ~/projects-lemon/slash_nara/tests/namespace$ time ls -al -U /zzh-slash2-lemon/test1/ 
+
+.....
+
+-rwx------ 1 zhihui staff       0 Jun  9 16:12 8712495360
+-rwx------ 1 zhihui staff       0 Jun  9 15:29 1630958274
+-rwx------ 1 zhihui staff       0 Jun  9 15:24 1592607438
+-rwx------ 1 zhihui staff       0 Jun  9 15:28 1758602439
+-rwx------ 1 zhihui staff       0 Jun  9 15:27 1890425763
+-rwx------ 1 zhihui staff       0 Jun  9 15:40 0182943675
+-rwx------ 1 zhihui staff       0 Jun  9 16:04 2315984067
+-rwx------ 1 zhihui staff       0 Jun  9 16:29 6710853249
+-rwx------ 1 zhihui staff       0 Jun  9 16:17 3816024759
+-rwx------ 1 zhihui staff       0 Jun  9 15:26 1537028496
+-rwx------ 1 zhihui staff       0 Jun  9 16:10 7216849305
+-rwx------ 1 zhihui staff       0 Jun  9 16:07 2816054379
+-rwx------ 1 zhihui staff       0 Jun  9 15:40 9162853704
+-rwx------ 1 zhihui staff       0 Jun  9 16:10 4215076893
+
+real	163m21.320s
+user	0m5.495s
+sys	0m21.260s
+
+So -U does not help?
+
+zhihui@lemon: ~/projects-lemon/slash_nara/tests/namespace$ time ls -U /zzh-slash2-lemon/test1/ 
+
+9123458076  2718094635  1692305487  9716432850  6192078453  1680357924  9186750342  5108439672  8134965702  1273496058  8316742905  3190652487
+4516302978  3156840972  6193742580  8102547639  8612943750  1874259063  0619827534  3215687490  1428903567  1628590734  1746053829  0125948673
+0149287365  1259408736  0137846592  0124975836  4918753260  8410296573  7109265384  8103754926  7180629534  0917462835  7125364890  0124693785
+
+real	153m15.911s
+user	0m2.403s
+sys	0m13.926s
+
+ls is alias to '--color=auto', so it still stat.
+
+I have found a CPU spin on mount (probably fixed by r17018), so the above results are not very reliable.
+

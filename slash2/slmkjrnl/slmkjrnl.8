@@ -1,0 +1,73 @@
+.\" $Id$
+.\" %GPL_START_LICENSE%
+.\" ---------------------------------------------------------------------
+.\" Copyright 2015, Google, Inc.
+.\" Copyright (c) 2009-2015, Pittsburgh Supercomputing Center (PSC).
+.\" All rights reserved.
+.\"
+.\" This program is free software; you can redistribute it and/or modify
+.\" it under the terms of the GNU General Public License as published by
+.\" the Free Software Foundation; either version 2 of the License, or (at
+.\" your option) any later version.
+.\"
+.\" This program is distributed WITHOUT ANY WARRANTY; without even the
+.\" implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
+.\" PURPOSE.  See the GNU General Public License contained in the file
+.\" `COPYING-GPL' at the top of this distribution or at
+.\" https://www.gnu.org/licenses/gpl-2.0.html for more details.
+.\" ---------------------------------------------------------------------
+.\" %END_LICENSE%
+.Dd November 6, 2015
+.Dt SLMKJRNL 8
+.ds volume PSC \- SLASH2 Administrator's Manual
+.Os http://www.psc.edu/
+.Sh NAME
+.Nm slmkjrnl
+.Nd create
+.Tn SLASH2
+metadata server operations journal
+.Sh SYNOPSIS
+.Nm slmkjrnl
+.Op Fl fqv
+.Op Fl b Ar block-device
+.Op Fl D Ar datadir
+.Op Fl n Ar nentries
+.Sh DESCRIPTION
+The
+.Nm
+utility creates and formats the pending operations journal for
+.Tn SLASH2
+metadata servers.
+.Pp
+The following options are available:
+.Bl -tag -width Ds
+.It Fl b Ar block-device
+Specify a raw device as the journal target instead of a regular file.
+This option is incompatible with
+.Fl D .
+This is the recommended setup for performance reasons.
+.It Fl D Ar datadir
+Specify an alternative directory where operation data is stored.
+Defaults to
+.Pa /var/lib/slash .
+The journal file is always named
+.Pa op-journal .
+.It Fl f
+Format the operations journal.
+.It Fl n Ar nentries
+Specify the number of journal entries.
+Defaults to 131072.
+.It Fl q
+Query and display current journal information.
+No formatting is performed.
+.It Fl v
+Display verbose information about activity performed.
+.El
+.Sh FILES
+.Bl -tag -width Pa -compact
+.It Pa /var/lib/slash/op-journal
+journal file for pending operations
+.El
+.Sh SEE ALSO
+.Xr sladm 7 ,
+.Xr slashd 8

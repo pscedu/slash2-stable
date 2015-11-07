@@ -1,0 +1,1037 @@
+.\" $Id$
+.\" %GPL_START_LICENSE%
+.\" ---------------------------------------------------------------------
+.\" Copyright 2015, Google, Inc.
+.\" Copyright (c) 2008-2015, Pittsburgh Supercomputing Center (PSC).
+.\" All rights reserved.
+.\"
+.\" This program is free software; you can redistribute it and/or modify
+.\" it under the terms of the GNU General Public License as published by
+.\" the Free Software Foundation; either version 2 of the License, or (at
+.\" your option) any later version.
+.\"
+.\" This program is distributed WITHOUT ANY WARRANTY; without even the
+.\" implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
+.\" PURPOSE.  See the GNU General Public License contained in the file
+.\" `COPYING-GPL' at the top of this distribution or at
+.\" https://www.gnu.org/licenses/gpl-2.0.html for more details.
+.\" ---------------------------------------------------------------------
+.\" %END_LICENSE%
+.\" %PFL_MODULES ctl fuse rpc %
+.Dd October 16, 2015
+.Dt MSCTL 8
+.ds volume PSC \- SLASH2 Administrator's Manual
+.Os http://www.psc.edu/
+.Sh NAME
+.Nm msctl
+.Nd
+.Tn SLASH2
+file system mount daemon runtime control
+.Sh SYNOPSIS
+.Nm msctl
+.Op Fl HInRv
+.Op Fl p Ar paramspec
+.Op Fl S Ar socket
+.Op Fl s Ar showspec
+.Op Ar cmd arg ...
+.Sh DESCRIPTION
+The
+.Nm
+utility controls
+.Xr mount_slash 8
+behavior.
+.Pp
+.\" %PFL_INCLUDE $PFL_BASE/doc/pflctl/cmd.mdoc {
+.\"	daemon => "mount_slash",
+.\"	cmds	=> {
+.\" #		reconfig => "Reload configuration",
+.\"		"bmap-repl-policy Cm : Ar bmapspec\n" .
+.\"		qq{.Oo = Ar repl-policy Oc " " Ar} => <<'EOF',
+.\"			Get or set the replication policy for the specified bmaps
+.\"			.Po
+.\"			.Dq block maps ,
+.\"			or file regions
+.\"			.Pc
+.\"			of the specified files.
+.\"			.Pp
+.\"			The following replication policies are recognized:
+.\"			.Bl -tag -width one-time
+.\"			.It Cm one-time
+.\"			Replication requests are completed once then removed from the system.
+.\"			Data replicated will continue to exist at replicas even after new
+.\"			.Tn I/O
+.\"			invalidates these copies.
+.\"			.Pp
+.\"			See
+.\"			.Cm repl-status
+.\"			for checking the replication status of bmaps and retrieving the current
+.\"			default replication policy of files.
+.\"			.Pp
+.\"			This is the default mode, although the policy is always inherited from the
+.\"			parent directory when new files and subdirectories are created.
+.\"			.It Cm persist
+.\"			Perpetually propagate any new
+.\"			.Tn I/O
+.\"			done to a bmap to other replicas where the bmap is registered for
+.\"			replication.
+.\"			.El
+.\"			.Pp
+.\"			.Ar bmapspec
+.\"			has the following format:
+.\"			.Bd -literal -offset 3n
+.\"			.Sm off
+.\"			.Ar bmapno-min
+.\"			.Op Li -\& Ar bmapno-max
+.\"			.Op Li ,\& Ar ...
+.\"			.Sm on
+.\"			.Ed
+.\"			.Pp
+.\"			The value
+.\"			.Sq Li *
+.\"			will affect all bmaps currently residing in the file.
+.\"			.Pp
+.\"			See
+.\"			.Cm fattr
+.\"			for accessing a file's default
+.\"			.Pq i.e.\& new
+.\"			bmap replication policy.
+.\"			.Pp
+.\"			See
+.\"			.Cm repl-status
+.\"			for inspecting the replication policy of bmaps.
+.\"			EOF
+.\"		"fattr : Ar attr\n" .
+.\"		qq{.Oo = Ar value Oc " " Ar} => <<'EOF',
+.\"			Set attributes on the specified files.
+.\"			.Pp
+.\"			The attributes are as follows:
+.\"			.Bl -tag -width 3n
+.\"			.It Cm ios-aff Ns Op = Ns Ar on|off
+.\"			Set IOS affinity.
+.\"			This will prefer the first IOS in the file's residency table for
+.\"			all bmaps that would be allocated by growing the file.
+.\"			Defaults to
+.\"			.Cm off .
+.\"			.It Cm repl-pol Ns Op = Ns Ar pol
+.\"			Set default replication policy for any new bmaps
+.\"			that would be allocated by growing the file.
+.\"			.Pp
+.\"			If specified on a directory, all new files and subdirectories
+.\"			created thereafter under the directory will inherit the policy.
+.\"			.Pp
+.\"			See
+.\"			.Cm bmap-repl-policy
+.\"			for more information about replication policies.
+.\"			.El
+.\"			EOF
+.\"		"repl-add Ns : Ns Ar replrqspec\n" .
+.\"		qq{.Op : Ns Ar uprio Op Cm s Ar prio\n} .
+.\"		qq{.No " " Ar} => <<'EOF',
+.\"			Enqueue data replication as specified by
+.\"			.Ar replrqspec
+.\"			to the specified files.
+.\"			The
+.\"			.Tn I/O
+.\"			node responsible for the data regions specified will propagate the data
+.\"			to all other
+.\"			.Tn I/O
+.\"			systems specified.
+.\"			.Pp
+.\"			If specified on a directory, all new files and subdirectories
+.\"			created thereafter under the directory will inherit the settings.
+.\"			.Pp
+.\"			.Ar replrqspec
+.\"			has the following format:
+.\"			.Bd -unfilled -offset 3n
+.\"			.Sm off
+.\"			.Ar ios Op Cm ,\& Ar ...
+.\"			.Cm :\& Ar bmapno-min
+.\"			.Op Cm -\& Ar bmapno-max
+.\"			.Op Cm ,\& Ar ...
+.\"			.Sm on
+.\"			.Ed
+.\"			.Pp
+.\"			If the special value
+.\"			.Sq Li *
+.\"			is supplied as the bmap specification, all present bmaps in the file
+.\"			will be replicated;
+.\"			otherwise, only the bmaps with the given indexes will be replicated.
+.\"			.Pp
+.\"			The default replication policy is to arrange a one time replica.
+.\"			At any time after obtaining residency, other replicas will be
+.\"			invalidated if any replica is modified.
+.\"			See
+.\"			.Cm bmap-repl-policy
+.\"			for information on modifying the replication policy.
+.\"			.Pp
+.\"			A positive integer priority value
+.\"			.Ar uprio
+.\"			may be specified to assign higher user-level precedence on the workload.
+.\"			A higher precedent system-level priority value may be specified via
+.\"			.Ar prio .
+.\"			The level of either priority can be changed by reissuing the request
+.\"			with the desired value(s) specified.
+.\"			EOF
+.\"		"repl-remove Ns : Ns Ar replrqspec file ..." => <<'EOF',
+.\"			Cancel ongoing file replication requests as specified by
+.\"			.Ar replrqspec .
+.\"			.Pp
+.\"			If specified on a directory, this will clear the default settings
+.\"			inherited by all files and subdirectories created under the directory.
+.\"			.Pp
+.\"			See
+.\"			.Cm repl-add
+.\"			for details on the format of
+.\"			.Ar replrqspec .
+.\"			EOF
+.\"		"repl-status Op Ar" => <<'EOF',
+.\"			List the status of all replicas of the specified
+.\"			.Ar file .
+.\"			Information about every bmap
+.\"			.Po Dq block map ,
+.\"			or file data chunks
+.\"			.Pc
+.\"			of the file including
+.\"			.Tn I/O
+.\"			systems where they have been registered for replication and their status
+.\"			is displayed.
+.\"			.Pp
+.\"			If no
+.\"			.Ar file
+.\"			arguments are specified all pending replications will be queried.
+.\"			Note that file names are unavailable in this mode.
+.\"			.Pp
+.\"			The following legend lists the states a bmap may be in:
+.\"			.Bl -column "Indicator" "one-ti" -offset 3n
+.\"			.It Sy Indicator Ta Sy State
+.\"			.It ====================================
+.\"			.It Li + Ta active
+.\"			.It Li - Ta inactive
+.\"			.It Li q Ta queued for replication
+.\"			.It Li s Ta replicating
+.\"			.It Li g Ta garbage
+.\"			.It Li x Ta garbage being reclaimed
+.\"			.It Li t Ta truncated
+.\"			.It Li p Ta resolving truncation
+.\"			.El
+.\"			.Pp
+.\"			See
+.\"			.Cm bmap-repl-policy
+.\"			for details on modifying a bmap's replication policy.
+.\"			EOF
+.\"	}
+The supported commands are as follows:
+.Bl -tag -width 3n
+.It Xo
+.Sm off
+.Cm bmap-repl-policy Cm : Ar bmapspec
+.Oo = Ar repl-policy Oc " " Ar
+.Sm on
+.Xc
+Get or set the replication policy for the specified bmaps
+.Po
+.Dq block maps ,
+or file regions
+.Pc
+of the specified files.
+.Pp
+The following replication policies are recognized:
+.Bl -tag -width one-time
+.It Cm one-time
+Replication requests are completed once then removed from the system.
+Data replicated will continue to exist at replicas even after new
+.Tn I/O
+invalidates these copies.
+.Pp
+See
+.Cm repl-status
+for checking the replication status of bmaps and retrieving the current
+default replication policy of files.
+.Pp
+This is the default mode, although the policy is always inherited from the
+parent directory when new files and subdirectories are created.
+.It Cm persist
+Perpetually propagate any new
+.Tn I/O
+done to a bmap to other replicas where the bmap is registered for
+replication.
+.El
+.Pp
+.Ar bmapspec
+has the following format:
+.Bd -literal -offset 3n
+.Sm off
+.Ar bmapno-min
+.Op Li -\& Ar bmapno-max
+.Op Li ,\& Ar ...
+.Sm on
+.Ed
+.Pp
+The value
+.Sq Li *
+will affect all bmaps currently residing in the file.
+.Pp
+See
+.Cm fattr
+for accessing a file's default
+.Pq i.e.\& new
+bmap replication policy.
+.Pp
+See
+.Cm repl-status
+for inspecting the replication policy of bmaps.
+.It Xo
+.Sm off
+.Cm fattr : Ar attr
+.Oo = Ar value Oc " " Ar
+.Sm on
+.Xc
+Set attributes on the specified files.
+.Pp
+The attributes are as follows:
+.Bl -tag -width 3n
+.It Cm ios-aff Ns Op = Ns Ar on|off
+Set IOS affinity.
+This will prefer the first IOS in the file's residency table for
+all bmaps that would be allocated by growing the file.
+Defaults to
+.Cm off .
+.It Cm repl-pol Ns Op = Ns Ar pol
+Set default replication policy for any new bmaps
+that would be allocated by growing the file.
+.Pp
+If specified on a directory, all new files and subdirectories
+created thereafter under the directory will inherit the policy.
+.Pp
+See
+.Cm bmap-repl-policy
+for more information about replication policies.
+.El
+.It Xo
+.Sm off
+.Cm repl-add Ns : Ns Ar replrqspec
+.Op : Ns Ar uprio Op Cm s Ar prio
+.No " " Ar
+.Sm on
+.Xc
+Enqueue data replication as specified by
+.Ar replrqspec
+to the specified files.
+The
+.Tn I/O
+node responsible for the data regions specified will propagate the data
+to all other
+.Tn I/O
+systems specified.
+.Pp
+If specified on a directory, all new files and subdirectories
+created thereafter under the directory will inherit the settings.
+.Pp
+.Ar replrqspec
+has the following format:
+.Bd -unfilled -offset 3n
+.Sm off
+.Ar ios Op Cm ,\& Ar ...
+.Cm :\& Ar bmapno-min
+.Op Cm -\& Ar bmapno-max
+.Op Cm ,\& Ar ...
+.Sm on
+.Ed
+.Pp
+If the special value
+.Sq Li *
+is supplied as the bmap specification, all present bmaps in the file
+will be replicated;
+otherwise, only the bmaps with the given indexes will be replicated.
+.Pp
+The default replication policy is to arrange a one time replica.
+At any time after obtaining residency, other replicas will be
+invalidated if any replica is modified.
+See
+.Cm bmap-repl-policy
+for information on modifying the replication policy.
+.Pp
+A positive integer priority value
+.Ar uprio
+may be specified to assign higher user-level precedence on the workload.
+A higher precedent system-level priority value may be specified via
+.Ar prio .
+The level of either priority can be changed by reissuing the request
+with the desired value(s) specified.
+.It Cm repl-remove Ns : Ns Ar replrqspec file ...
+Cancel ongoing file replication requests as specified by
+.Ar replrqspec .
+.Pp
+If specified on a directory, this will clear the default settings
+inherited by all files and subdirectories created under the directory.
+.Pp
+See
+.Cm repl-add
+for details on the format of
+.Ar replrqspec .
+.It Cm repl-status Op Ar
+List the status of all replicas of the specified
+.Ar file .
+Information about every bmap
+.Po Dq block map ,
+or file data chunks
+.Pc
+of the file including
+.Tn I/O
+systems where they have been registered for replication and their status
+is displayed.
+.Pp
+If no
+.Ar file
+arguments are specified all pending replications will be queried.
+Note that file names are unavailable in this mode.
+.Pp
+The following legend lists the states a bmap may be in:
+.Bl -column "Indicator" "one-ti" -offset 3n
+.It Sy Indicator Ta Sy State
+.It ====================================
+.It Li + Ta active
+.It Li - Ta inactive
+.It Li q Ta queued for replication
+.It Li s Ta replicating
+.It Li g Ta garbage
+.It Li x Ta garbage being reclaimed
+.It Li t Ta truncated
+.It Li p Ta resolving truncation
+.El
+.Pp
+See
+.Cm bmap-repl-policy
+for details on modifying a bmap's replication policy.
+.El
+.\" }%
+.Pp
+The following options are recognized:
+.Bl -tag -width 3n
+.\" %PFL_INCLUDE $PFL_BASE/doc/pflctl/H.mdoc {
+.It Fl H
+Suppress headers when showing data displays.
+.\" }%
+.\" %PFL_INCLUDE $PFL_BASE/doc/pflctl/I.mdoc {
+.It Fl I
+Display large numerical values accurately instead of rounded with
+postfixes of demonination such as
+.Sq G
+for gibibytes,
+.Sq M
+for mebibytes, etc.\&
+.Pq Do inhuman Dc number mode .
+.\" }%
+.\" %PFL_INCLUDE $PFL_BASE/doc/pflctl/n.mdoc {
+.It Fl n
+Suppress
+.Tn DNS
+lookups for network addresses.
+.\" }%
+.\" %PFL_INCLUDE $PFL_BASE/doc/pflctl/p.mdoc {
+.\"	log_xr => "in\n.Xr mount_slash 8\n",
+.\"	params => {
+.\"		'sys.mountpoint'
+.\"		     =>	"File hierarchy node where\n" .
+.\"			".Tn SLASH2\nfile system is mounted.",
+.\"		'sys.mds'
+.\"		     =>	"Preferred MDS resource name.",
+.\"		'sys.pref_ios'
+.\"		     =>	"Preferred I/O system resource name.\n" .
+.\"			"For read I/O, data replicas on residing on this " .
+.\"			"resource are always accessed before other replicas.\n" .
+.\"			"For write I/O within a bmap, the existing " .
+.\"			"resource is leased.\n" .
+.\"			"For write I/O in new bmaps, this resource will " .
+.\"			"be prioritized before other resources unless " .
+.\"			"file IOS affinity is set.",
+.\"		'sys.readahead_window_minpages'
+.\"		     =>	"Minimum number of pages necessary before the " .
+.\"			"I/O prediction mechanism is allowed to issue a " .
+.\"			"predictive I/O, to group many small requests " .
+.\"			"into larger batches during streaming.",
+.\"		'sys.readahead_window_maxpages'
+.\"		     =>	"Maximum number of pages to be requested by the " .
+.\"			"prediction mechanism when an I/O is issued.",
+.\"		'sys.resources'
+.\"		     => "Resources/peers in the deployment.",
+.\"		'sys.uptime'
+.\"		     => "Elapsed time since daemon launch.",
+.\"		'sys.bmap-max-cache'
+.\"		     => "Maximum number of bmaps to allow to be loaded " .
+.\"			"into memory before the reaper is invoked.",
+.\"		'sys.direct_io'
+.\"		     => "Whether to use the direct I/O facility provided " .
+.\"			"by kernel.",
+.\"		'sys.version'
+.\"		     => "Software revision number.",
+.\"		'sys.root_squash'
+.\"		     => "Whether root squashing is enabled.",
+.\"		'sys.nbrq-outstanding'
+.\"		     => "Number of currently outstanding asynchronous RPCs.",
+.\"		'sys.offline_nretries'
+.\"		     => "Number of times to retry remote peer connection " .
+.\"			"establishment per file system request.",
+.\"	},
+.It Fl p Ar paramspec
+Query/manipulate operational parameters.
+.Ar paramspec
+has the following format:
+.Pp
+.Bd -unfilled -offset 3n
+.Sm off
+.Oo Ar thread-name Ns Li .\& Oc Ar param
+.Op Oo Li +- Oc Li = Ar value
+.Sm on
+.Ed
+.Pp
+Some parameters may be read- or write-only.
+Some support modification by the assignment operators
+.Li +=
+and
+.Li -= .
+.Pp
+See
+.Sx Thread Specification
+for details on specifying
+.Ar thread-name .
+The default behavior is to apply the operation to all applicable threads.
+.Pp
+.Ar param
+may be one of the following:
+.Bl -tag -width 1n -offset 3n
+.It Cm fuse.debug
+.Tn FUSE
+debug messages.
+.It Cm fuse.version
+.Tn FUSE
+interface version.
+.It Cm lnet.networks
+.Tn LNET
+network configuration.
+.It Cm lnet.port
+If applicable,
+.Xr tcp 7
+port to use to connect to remote
+.Tn LNET
+peers.
+.It Cm log.file
+File path name where log messages will be written.
+This field is write-only.
+If the
+.Li +=
+assignment operator is used, this file will not be truncated.
+.It Cm log.format
+The header prepended to server log messages.
+See the description of
+.Ev PSC_LOG_FORMAT
+in
+.Xr mount_slash 8
+for details on this format.
+.It Cm log.level Ns Op . Ns Ar subsystem
+The logging level of debug message output.
+.Pp
+See the description of
+.Ev PSC_LOG_LEVEL_ Ns Ar subsys
+in
+.Xr mount_slash 8
+for a list of available subsystems.
+If
+.Ar subsystem
+is not specified, all subsystems will be accessed.
+.Pp
+See the description of
+.Ev PSC_LOG_LEVEL
+in
+.Xr mount_slash 8
+for recognized log level values.
+.It Cm log.points
+List of places in the source code (in the form
+.Dq file:line-number )
+where granular logging can be enabled on a case-by-case
+basis.
+Usually assigned to by the
+.Li +=
+operator.
+.It Cm pool. Ns Ar name
+Access the memory pool specified by
+.Ar name .
+The following sub-fields are available:
+.Pp
+.Bl -tag -compact -offset 3n -width 13n
+.It Cm free
+Current number of allocated entries available for use in pool.
+.It Cm max
+Upper bound for number of entries to which auto-sized pools can grow.
+.It Cm min
+Lower bound for number of entries to which auto-sized pools can shrink.
+.It Cm reap
+Assign a value to reap the specified number of entries.
+Only applies to pools that have a reaper routine.
+This field is write-only.
+.It Cm thres
+Threshold for unused items for auto-sized pools before items are freed.
+.It Cm total
+Current number of entries contained in pool.
+.El
+.It Cm pscfs.attr_timeout
+Amount of time to cache
+.Xr stat 2
+information in
+.Tn FUSE .
+.It Cm pscfs.entry_timeout
+Amount of time to cache name space entries in
+.Tn FUSE .
+.It Cm rlim
+Process resource limits.
+See
+.Xr getrlimit 2
+or
+.Xr ulimit 1
+for more information.
+.Pp
+.Bl -column "msgqueue" -offset 3n
+.It Sy Name Ta Sy Field
+.It =============================
+.It Cm cpu        Ta Dv RLIMIT_CPU
+.It Cm csize      Ta Dv RLIMIT_CORE
+.It Cm dsize      Ta Dv RLIMIT_DATA
+.It Cm fsize      Ta Dv RLIMIT_FSIZE
+.It Cm locks      Ta Dv RLIMIT_LOCKS
+.It Cm maxproc    Ta Dv RLIMIT_NPROC
+.It Cm mem        Ta Dv RLIMIT_AS
+.It Cm mlock      Ta Dv RLIMIT_MEMLOCK
+.It Cm msgqueue   Ta Dv RLIMIT_MSGQUEUE
+.It Cm nice       Ta Dv RLIMIT_NICE
+.It Cm nofile     Ta Dv RLIMIT_NOFILE
+.It Cm rss        Ta Dv RLIMIT_RSS
+.It Cm rtprio     Ta Dv RLIMIT_RTPRIO
+.It Cm rttime     Ta Dv RLIMIT_RTTIME
+.It Cm sigpndg    Ta Dv RLIMIT_SIGPENDING
+.It Cm stksize    Ta Dv RLIMIT_STACK
+.El
+.It Cm rusage
+Process resource usage information.
+See
+.Xr getrusage 2 .
+.It Cm sys.bmap-max-cache
+Maximum number of bmaps to allow to be loaded into memory before the reaper is invoked.
+.It Cm sys.direct_io
+Whether to use the direct I/O facility provided by kernel.
+.It Cm sys.mds
+Preferred MDS resource name.
+.It Cm sys.mountpoint
+File hierarchy node where
+.Tn SLASH2
+file system is mounted.
+.It Cm sys.nbrq-outstanding
+Number of currently outstanding asynchronous RPCs.
+.It Cm sys.offline_nretries
+Number of times to retry remote peer connection establishment per file system request.
+.It Cm sys.pref_ios
+Preferred I/O system resource name.
+For read I/O, data replicas on residing on this resource are always accessed before other replicas.
+For write I/O within a bmap, the existing resource is leased.
+For write I/O in new bmaps, this resource will be prioritized before other resources unless file IOS affinity is set.
+.It Cm sys.readahead_window_maxpages
+Maximum number of pages to be requested by the prediction mechanism when an I/O is issued.
+.It Cm sys.readahead_window_minpages
+Minimum number of pages necessary before the I/O prediction mechanism is allowed to issue a predictive I/O, to group many small requests into larger batches during streaming.
+.It Cm sys.resources
+Resources/peers in the deployment.
+.It Cm sys.root_squash
+Whether root squashing is enabled.
+.It Cm sys.uptime
+Elapsed time since daemon launch.
+.It Cm sys.version
+Software revision number.
+.El
+.\" }%
+.It Fl Q Ar replrqspec Ns : Ns Ar fn
+Shorthand for
+.Cm repl-add .
+.It Fl R
+Apply operations on directories recursively.
+.It Fl r Ar file
+Shorthand for
+.Cm repl-status .
+If
+.Ar fn
+is the special value
+.Sq \&: ,
+all pending replications will be queried.
+Note that file names are unavailable in this mode.
+.\" %PFL_INCLUDE $PFL_BASE/doc/pflctl/S.mdoc {
+.\"	sock => "/var/run/mount_slash. Ns Ic %h Ns Pa .sock"
+.It Fl S Ar socket
+Specify an alternative socket file.
+The following tokens are replaced in the file name specified:
+.Pp
+.Bl -tag -offset 3n -width Ds -compact
+.It Cm %h
+the machine hostname
+.It Cm %n
+the daemon executable base name, i.e.\&
+.Dq mount_slash
+.It Cm %%
+a literal
+.Sq %
+character
+.El
+.Pp
+The default is
+.Pa /var/run/mount_slash. Ns Ic %h Ns Pa .sock .
+.\" }%
+.\" %PFL_INCLUDE $PFL_BASE/doc/pflctl/show.mdoc {
+.\"	show => {
+.\"		biorqs		=> qq{I/O requests.},
+.\"		bmaps		=> qq{In-memory bmaps},
+.\"		bmpces		=> qq{Page cache entries.},
+.\"		connections	=> qq{Status of\n.Tn SLASH2\npeers on network.},
+.\"		fidcache	=> qq{.Tn FID\n.Pq file- Ns Tn ID\ncache members.},
+.\"	},
+.\"	hashtables => {
+.\"		fidc		=> qq{Files\n.Po file\n.Tn ID\ncache\n.Pc},
+.\"		namecache	=> qq{Directory entry name cache},
+.\"		res		=> qq{Deployment peer/resource network IDs},
+.\"		rpcconn		=> qq{RPC peer connection structures},
+.\"	},
+.\"	pools => {
+.\"		asyncrq		=> qq{Asynchronous I/O requests},
+.\"		biorq		=> qq{Bmap I/O requests},
+.\"		bmpce		=> qq{Bmap page cache entries},
+.\"		bwc		=> qq{Bmap write coalescers},
+.\"		csvc		=> qq{Client RPC service structures},
+.\"		dircachent	=> qq{Directory cache entries},
+.\"		dircachepg	=> qq{Directory cache pages},
+.\"		fcmh		=> qq{FID cache},
+.\"		mfh		=> qq{Open file handles},
+.\"		readaheadrq	=> qq{Predictive I/O requests},
+.\"	},
+.\"	listcaches => {
+.\"		attrtimeout	=> "File attribute updates from write activity",
+.\"		bmapflushq	=> "Recently written bmaps awaiting transmission",
+.\"		bmaptimeout	=> "Bmaps that will eventually be reaped",
+.\"		fcmhidle	=> "Recently used files",
+.\"		idlepages	=> "Valid I/O pages",
+.\"		readaheadq	=> "Readahead I/O queue",
+.\"		readapages	=> "Completed readahead I/O pages",
+.\"		workq		=> "Generic work items",
+.\"	}
+.It Fl s Ar showspec
+Show values.
+.Ar showspec
+has the following format:
+.Bd -unfilled -offset 3n
+.Sm off
+.Ar param
+.Op : Ar subspec
+.Sm on
+.Ed
+.Pp
+.Ar param
+may be specified as any non-ambiguous prefix abbreviation of the
+following:
+.Pp
+.Bl -tag -width 1n -offset 3n
+.It Cm biorqs
+I/O requests.
+.It Cm bmaps
+In-memory bmaps
+.It Cm bmpces
+Page cache entries.
+.It Cm connections
+Status of
+.Tn SLASH2
+peers on network.
+.It Cm fidcache
+.Tn FID
+.Pq file- Ns Tn ID
+cache members.
+.It Cm hashtables
+Hash table statistics.
+.Ar subspec
+has the following format:
+.Bd -unfilled -offset 3n
+.Ar hash-table Ns Op , Ns Ar ...
+.Ed
+.Pp
+.Ar hash-table
+may be one of the following:
+.Pp
+.Bl -tag -compact -offset 3n -width 13n
+.It Cm fidc
+Files
+.Po file
+.Tn ID
+cache
+.Pc
+.It Cm namecache
+Directory entry name cache
+.It Cm res
+Deployment peer/resource network IDs
+.It Cm rpcconn
+RPC peer connection structures
+.El
+.Pp
+If
+.Ar subspec
+is left unspecified, all hash tables will be accessed.
+.It Cm listcaches
+List cache statistics.
+.Ar subspec
+has the following format:
+.Pp
+.Bd -unfilled -offset 3n
+.Ar list Ns Op , Ns Ar ...
+.Ed
+.Pp
+.Ar list
+may be one of the following:
+.Pp
+.Bl -tag -compact -offset 3n -width 13n
+.It Cm attrtimeout
+File attribute updates from write activity
+.It Cm bmapflushq
+Recently written bmaps awaiting transmission
+.It Cm bmaptimeout
+Bmaps that will eventually be reaped
+.It Cm fcmhidle
+Recently used files
+.It Cm idlepages
+Valid I/O pages
+.It Cm readaheadq
+Readahead I/O queue
+.It Cm readapages
+Completed readahead I/O pages
+.It Cm workq
+Generic work items
+.El
+.Pp
+If
+.Ar subspec
+is left unspecified, all list caches will be accessed.
+.It Cm lnetif
+Lustre network interfaces.
+.It Cm loglevels
+Thread logging levels.
+.Ar subspec
+has the following format:
+.Bd -unfilled -offset 3n
+.Ar thread Ns Op , Ns Ar ...
+.Ed
+.Pp
+See
+.Sx Thread Specification
+for details on specifying
+.Ar thread .
+If
+.Ar subspec
+is left unspecified, all threads will be accessed.
+.It Cm opstats
+Operation counters/statistics.
+.Ar subspec
+has the following format:
+.Pp
+.Bd -unfilled -offset 3n
+.Ar opstats Ns Op , Ns Ar ...
+.Ed
+.Pp
+.Ar opstats
+may be one of the following:
+.Pp
+.Bl -tag -compact -offset 3n -width 3n
+.It Cm lni-rcv- Ns Ar if ,
+.It Cm lni-snd- Ns Ar if
+Data sent/received per
+.Tn LNET
+networking interface.
+.Pp
+.It Cm lusklnd- Ns Ar mode Ns Cm -rcv ,
+.It Cm lusklnd- Ns Ar mode Ns Cm -snd
+Data sent/received over userland socket networking device.
+.Ar mode
+may be
+.Cm pasv
+.Pq passive
+or
+.Cm aggr
+.Pq aggregate .
+.Pp
+.It Cm rpc- Ns Ar addr Ns Cm -rcv ,
+.It Cm rpc- Ns Ar addr Ns Cm -snd
+Data sent/received per
+.Tn RPC
+peer.
+.Pp
+.El
+.Pp
+If
+.Ar subspec
+is left unspecified, all
+.Tn I/O
+statistics will be accessed.
+.It Cm pools
+Memory pool statistics.
+.Ar subspec
+has the following format:
+.Bd -unfilled -offset 3n
+.Ar pool Ns Op , Ns Ar ...
+.Ed
+.Pp
+.Ar pool
+may be one of the following:
+.Pp
+.Bl -tag -compact -offset 3n -width 13n
+.It Cm asyncrq
+Asynchronous I/O requests
+.It Cm biorq
+Bmap I/O requests
+.It Cm bmpce
+Bmap page cache entries
+.It Cm bwc
+Bmap write coalescers
+.It Cm csvc
+Client RPC service structures
+.It Cm dircachent
+Directory cache entries
+.It Cm dircachepg
+Directory cache pages
+.It Cm fcmh
+FID cache
+.It Cm mfh
+Open file handles
+.It Cm readaheadrq
+Predictive I/O requests
+.El
+.Pp
+If
+.Ar subspec
+is left unspecified, all pools will be accessed.
+.It Cm rpcrqs
+Remote procedure calls (RPC).
+.It Cm rpcsvcs
+.Tn RPC
+services.
+.It Cm threads
+Daemon thread activity and statistics.
+.Ar subspec
+has the following format:
+.Bd -unfilled -offset 3n
+.Ar thread Ns Op , Ns Ar ...
+.Ed
+.Pp
+See
+.Sx Thread Specification
+for details on specifying
+.Ar thread .
+If
+.Ar subspec
+is left unspecified, all threads will be accessed.
+.El
+.Pp
+The special value
+.Sq \&?
+may also be specified to display a list of recognized values.
+.\" }%
+.It Fl U Ar replrqspec Ns : Ns Ar fn
+Shorthand for
+.Cm repl-remove .
+.It Fl v
+Verbose mode:
+display additional information about each operation being performed.
+.El
+.\" %PFL_INCLUDE $PFL_BASE/doc/pflctl/thr.mdoc {
+.\"	thrs => {
+.\"		q{msattrflushthr}		=> qq{File attribute flusher},
+.\"		q{msflushthr Ns Ar %d}		=> qq{Bmap flusher},
+.\"		q{msbreleasethr}		=> qq{Bmap lease revoker},
+.\"		q{msbwatchthr}			=> qq{Bmap lease watcher},
+.\"		q{msconnthr}			=> qq{Peer resource connection monitor},
+.\"		q{msctlacthr}			=> qq{.Nm\nconnection acceptor/multiplexor},
+.\"		q{msctlthr}			=> qq{.Nm\nconnection processor},
+.\"		q{msfsmgrthr}			=> qq{Userland file system manager\n.Pq e.g. FUSE},
+.\"		q{msfsthr Ns Ar %d}		=> qq{File system syscall handler},
+.\"		q{msnbrqthr Ns Ar %d}		=> qq{Non-blocking\n.Tn RPC\nreply handler},
+.\"		q{msopstimerthr}		=> qq{Internal operation count updater},
+.\"		q{msrcithr Ns Ar %02d}		=> qq{.Tn IO RPC\nrequest service},
+.\"		q{msrcmthr Ns Ar %02d}		=> qq{.Tn MDS RPC\nrequest service},
+.\"		q{msreadaheadthr}		=> qq{Bmap read-ahead queuer},
+.\"		q{msusklndplthr Ns Ar %d}	=> qq{Lustre userland socket poll},
+.\"		q{mswkthr Ns Ar %d}		=> qq{Generic worker},
+.\"	}
+.Ss Thread Specification
+Options which take
+.Ar thread-name
+parameters may be specified by one or more of the following tokens,
+separated by commas:
+.Pp
+.Bl -tag -compact -offset 3n -width 16n
+.It Cm msattrflushthr
+File attribute flusher
+.It Cm msbreleasethr
+Bmap lease revoker
+.It Cm msbwatchthr
+Bmap lease watcher
+.It Cm msconnthr
+Peer resource connection monitor
+.It Cm msctlacthr
+.Nm
+connection acceptor/multiplexor
+.It Cm msctlthr
+.Nm
+connection processor
+.It Cm msflushthr Ns Ar %d
+Bmap flusher
+.It Cm msfsmgrthr
+Userland file system manager
+.Pq e.g. FUSE
+.It Cm msfsthr Ns Ar %d
+File system syscall handler
+.It Cm msnbrqthr Ns Ar %d
+Non-blocking
+.Tn RPC
+reply handler
+.It Cm msopstimerthr
+Internal operation count updater
+.It Cm msrcithr Ns Ar %02d
+.Tn IO RPC
+request service
+.It Cm msrcmthr Ns Ar %02d
+.Tn MDS RPC
+request service
+.It Cm msreadaheadthr
+Bmap read-ahead queuer
+.It Cm msusklndplthr Ns Ar %d
+Lustre userland socket poll
+.It Cm mswkthr Ns Ar %d
+Generic worker
+.It Cm everyone
+All threads
+.Pq default, where applicable
+.El
+.\" }%
+.\" %PFL_INCLUDE $PFL_BASE/doc/env.mdoc {
+.Sh ENVIRONMENT
+.Bl -tag -width 3n
+.It Ev CTL_SOCK_FILE
+Override the default control socket file path.
+.El
+.\" }%
+.Sh FILES
+.Bl -tag -width Pa
+.It Pa /var/run/mount_slash. Ns Ic %h Ns Pa .sock
+default
+.Xr mount_slash 8
+control socket
+.El
+.Sh EXAMPLES
+Recursively enqueue replication of all content for all files below the
+current directory to a destination
+.Tn I/O
+server:
+.Pp
+.Dl $ msctl -R repl-add:dst-io@SITE:* \&.
+.Sh SEE ALSO
+.Xr sladm 7 ,
+.Xr mount_slash 8

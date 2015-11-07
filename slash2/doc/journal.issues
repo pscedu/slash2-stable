@@ -1,0 +1,293 @@
+06/24/2010
+----------
+
+Recently, I have removed the tiling code and instead use the pending transaction
+list to hold data for log entires that need to be distilled.
+
+Today, I have uncovered two issues with our journaling code.
+
+(1) Right now MDS accepts updates to inode replication info and bmap CRCs
+    to its private cache described as journal flush items (JFI).  They are
+    flushed by the mdsfssyncthr. After flush, we close the trasaction.
+
+    The problem is that when we close the transaction, the bmap updates
+    probably have not reached the disk yet. That is controlled by ZFS.  
+    mdsfssyncthr only tells ZFS that they are dirty.  The risk here is 
+    that we could reclaim log space prematurely.
+
+    We could make mdsfssyncthr do synchronous writes, but that's not good 
+    for performance.
+
+(2) Right now, we don't enforce a transaction with lower XID to be
+    written earlier.  It could happen that a slot reserved by a
+    trasaction is never written.   When we replay, we can find a stale
+    entry in the slot.  But if we order transactions before replaying
+    them.  This should be fine, assuming updates are idempotent.
+
+    Well, life is more complicated than that. If you decide to replay XID 
+    X on an item.  Then you must replay ALL transactions affecting the
+    item starting from X, some of them may or may not have been overwritten.
+    In other words, the history must be complete.
+
+    The solution is easy.  Don't reserve any specific slot (remember
+    traditional journal file systems reserve space amount, not specific
+    location within the log area).  The idea is to consume journal space
+    sequentially.  No need to reserve, just write at the current log
+    tail.
+
+(1) and (2) prompt me into thinking more on our journal code.  We already
+put transaction group numbers (txn) of ZFS into our namespace log entries.  
+Perhaps we should include txn into all our log entries.
+
+If so, we can use txg to do the following:
+
+(i) Decide whether we can reclaim log space at run time.
+
+(ii) Decide whether we need to replay a log entry at replay time.
+
+The possibility of unifying the way to handle both is attractive
+to me.
+
+06/25/2010
+----------
+
+Also, there will be no need to write a close log entry to mark the
+closure of a transaction.  That should save us some log bandwidth.
+
+One potential problem is that we rely on ZFS to flush its transactions
+to reclaim log space.
+
+I am thinking about invoking the log function from within ZFS, which
+I can get the txg easily (like I did with the namespace).  However,
+I probably have to pass in both func and data pointers so that I can
+log only the changes I have made, not the entire block.
+
+
+06/30/2010
+----------
+
+Here is a bit of estimate of log space consumption.  The ZFS
+times out a transaction group every 30 seconds (see txg.c). Assuming
+that we perform 10000 operations / second, we would need:
+
+	30 * 10000 * 2 * 512 = 307,200,000
+
+of log space (times 2 because each operation such as create also
+needs to log bmap etc).  So this should not be a problem if we use
+big enough log space.
+
+Also, I need to call log function after dmu_tx_commit() to avoid
+potential deadlock when log space is very small.  To do so, I need
+to make a copy of the txg.
+
+There used to be only one sync thread (see file mdsfssync.c) 
+that commits all logs into ZFS.  Now any threads can write into ZFS 
+directly.
+
+07/07/2010
+----------
+
+Revert myself: I should do a log upcall after dmu_tx_commit() because
+I want any operation to appear in our system journal first.  To
+avoid deadlock with a small log file, I am going to use a reservation
+system.
+
+07/09/2010
+----------
+
+With gdb, I found out that last synced txg is not the one I recorded 
+before I kill slashd on the MDS minus one.  It turns out on startup, 
+ZFS does the following, which further increases txg:
+
+(gdb) c
+[Thread 0x7fffad864710 (LWP 9125) exited]
+
+Breakpoint 1, uberblock_update (ub=0x7ffff7b9d410, rvd=0x7ffff7b9a800, txg=796) at lib/libzpool/uberblock.c:51
+51              ASSERT(ub->ub_txg < txg);
+(gdb) bt
+#0  uberblock_update (ub=0x7ffff7b9d410, rvd=0x7ffff7b9a800, txg=796) at lib/libzpool/uberblock.c:51
+#1  0x0000000000554456 in vdev_config_sync (svd=0x7fffae264dc0, svdcount=1, txg=796, tryhard=B_FALSE) at lib/libzpool/vdev_label.c:1045
+#2  0x000000000054285c in spa_sync (spa=0x7ffff7b9d000, txg=796) at lib/libzpool/spa.c:4257
+#3  0x00000000005490a9 in txg_sync_thread (dp=0x7fffb15e4940) at lib/libzpool/txg.c:345
+#4  0x0000003be0e07761 in start_thread () from /lib64/libpthread.so.0
+#5  0x0000003be0ae14dd in clone () from /lib64/libc.so.6
+
+I need to find a way to work around this.  In addition, I need to find out
+the effect of replaying ZIL on the txg (transaction group number).
+
+Looks like ZFS loads our pool more than once, so I can't rely on spa->spa_first_txg.
+
+07/13/2010
+----------
+
+I decided to use a ZFS special file (.sltxg) to remember the current transaction group
+number.  This file is updated if we detect a txg change.  If this file is being synced
+out as part of an old transaction group, new value written into the file will only appear 
+in the new trasaction group.
+
+07/15/2010
+----------
+
+ZFS does not like nested transactions - it is deadlock-prone.  So we are going to make
+a thread whose job is to update the ZFS special file (now named .slcursor and contains
+more fields).  We make sure that the first transaction of every group is the one created
+by this thread.
+
+03/07/2011
+----------
+
+Today (after I moved od table inside ZFS), I untar the linux 2.6.34 tar ball and then crashed the mds. 
+On restart, the MDS looks stuck, and sure it is:
+
+(gdb) bt
+#0  0x00000039ede0aee9 in pthread_cond_wait@@GLIBC_2.3.2 () from /lib64/libpthread.so.0
+#1  0x000000000068a8d8 in cv_wait (cv=0x2aaaab3546e0, mp=0x2aaaab354710) at lib/libsolkerncompat/condvar.c:59
+#2  0x000000000060bc87 in dmu_tx_try_assign (tx=0x2aaaab3145b0, txg_how=2) at lib/libzpool/dmu_tx.c:929
+#3  0x000000000060c139 in dmu_tx_assign (tx=0x2aaaab3145b0, txg_how=2) at lib/libzpool/dmu_tx.c:1091
+#4  0x00000000005dd593 in zfs_create (dvp=0x2aaaacabe7f0, name=0x2aaaad5db070 "ssi.c", vap=0x5c22b560, excl=NONEXCL, mode=0, vpp=0x5c22b690, cr=0x975b10, 
+    flag=0, ct=0x0, vsecp=0x0, funcp=0x0) at zfs-fuse/zfs_vnops.c:1423
+#5  0x0000000000696347 in fop_create (dvp=0x2aaaacabe7f0, name=0x2aaaad5db070 "ssi.c", vap=0x5c22b560, excl=NONEXCL, mode=0, vpp=0x5c22b690, cr=0x975b10, 
+    flags=0, ct=0x0, vsecp=0x0, logfunc=0x0) at lib/libsolkerncompat/vnode.c:1052
+#6  0x00000000005f691b in zfs_replay_create (zfsvfs=0x2aaaad5da000, lr=0x2aaaad5db000, byteswap=B_FALSE) at zfs-fuse/zfs_replay.c:480
+#7  0x000000000065f686 in zil_replay_log_record (zilog=0x2aaaab3401c0, lr=0x2aaaabf27000, zra=0x5c22b950, claim_txg=33) at lib/libzpool/zil.c:1658
+#8  0x000000000065c8fb in zil_parse (zilog=0x2aaaab3401c0, parse_blk_func=0x65f705 <zil_incr_blks>, parse_lr_func=0x65f4a6 <zil_replay_log_record>, 
+    arg=0x5c22b950, txg=33) at lib/libzpool/zil.c:332
+#9  0x000000000065f820 in zil_replay (os=0x2aaaab340540, arg=0x2aaaad5da000, replay_func=0x94b860) at lib/libzpool/zil.c:1712
+#10 0x00000000005da10e in zfsvfs_setup (zfsvfs=0x2aaaad5da000, mounting=B_TRUE) at zfs-fuse/zfs_vfsops.c:1021
+#11 0x00000000005da40a in zfs_domount (vfsp=0x2aaaabe89ba0, osname=0x2aaaacadb000 "zhihui_slash2_wolverine") at zfs-fuse/zfs_vfsops.c:1151
+#12 0x00000000005dab47 in zfs_mount (vfsp=0x2aaaabe89ba0, mvp=0x954ca0, uap=0x5c22bfe0, cr=0x975b10) at zfs-fuse/zfs_vfsops.c:1615
+#13 0x0000000000694bb4 in fsop_mount (vfsp=0x2aaaabe89ba0, mvp=0x954ca0, uap=0x5c22bfe0, cr=0x975b10) at lib/libsolkerncompat/vfs.c:254
+#14 0x00000000005d1b3a in do_mount (spec=0x2aaaab32de40 "zhihui_slash2_wolverine", dir=0x2aaaab32de20 "/zhihui_slash2_wolverine", mflag=0, 
+    opt=0x2aaaab32bf68 "") at zfs-fuse/util.c:334
+#15 0x00000000005ebee4 in cmd_mount_req (sock=11, cmd=0x5c22c0b0) at zfs-fuse/cmd_listener.c:72
+#16 0x00000000005ebfd9 in handle_connection (sock=11) at zfs-fuse/cmd_listener.c:117
+#17 0x00000000005ec208 in zfsfuse_ioctl_queue_worker_thread (init=0x95e5a0) at zfs-fuse/cmd_listener.c:199
+#18 0x00000039ede0673d in start_thread () from /lib64/libpthread.so.0
+#19 0x00000039ed6d3f6d in clone () from /lib64/libc.so.6
+(gdb) up
+
+Note that the file ssi.c is a kernel file in linux 2.6.34.
+
+So our special transaction mechanism kicks in before we take control.  Not good.  I thought may be
+I opened the od table synchronously (with O_SYNC), it does not look that way.
+
+Fixed, hopefully, in r15709.
+
+Note on 03/09/2011: I don't know why ZIL should replay the creation of a regular file like ssi.c. MDS
+does not do any synchronous I/O (except for some log files, where we use mdsio_fsync()).
+
+03/07/2011
+----------
+
+During replay, I see some complains about "failed to look up fid".  We are creating files under
+a directory in this scenario:
+
+bash-3.2# ls /zhihui_slash2_wolverine/.slfidns/0/0/0 | grep 04c[0-5]
+00100000000004c0
+00100000000004c1
+00100000000004c2
+bash-3.2# ls /zhihui_slash2_wolverine/.slfidns/0/0/0 | grep 0b3[a-d]
+0010000000000b3a
+0010000000000b3b
+0010000000000b3c
+0010000000000b3d
+bash-3.2# ls /zhihui_slash2_wolverine/.slfidns/0/0/0 | grep 0eaa
+bash-3.2# ls /zhihui_slash2_wolverine/.slfidns/0/0/0 | grep 0aea
+0010000000000aea
+
+Here is the log from my fprintf statements:
+
+mkdir: name = fsl, fid = 0x10000000000491, errno = 11		<-- Not sure about this.
+mkdir: name = cpm_qe, fid = 0x10000000000496, errno = 0
+mkdir: name = cpm, fid = 0x10000000000498, errno = 0
+mkdir: name = qe, fid = 0x100000000004a0, errno = 0
+mkdir: name = gpio, fid = 0x100000000004bc, errno = 11
+mkdir: name = nintendo, fid = 0x100000000004c3, errno = 0	<-- Does NOT exist under .slfidns
+mkdir: name = pps, fid = 0x100000000004d3, errno = 0
+mkdir: name = prctl, fid = 0x100000000004d5, errno = 0
+mkdir: name = s390, fid = 0x100000000004e3, errno = 0
+
+......
+
+mkdir: name = include, fid = 0x10000000000aea, errno = 0
+mkdir: name = mach, fid = 0x10000000000aeb, errno = 0
+mkdir: name = mach-dove, fid = 0x10000000000b1d, errno = 0
+mkdir: name = include, fid = 0x10000000000b25, errno = 0
+mkdir: name = mach, fid = 0x10000000000b26, errno = 0
+mkdir: name = mach-ebsa110, fid = 0x10000000000b37, errno = 0
+mkdir: name = include, fid = 0x10000000000b3b, errno = 0
+mkdir: name = mach, fid = 0x10000000000b3c, errno = 0		<-- exists under .slfidns
+mkdir: name = mach-ep93xx, fid = 0x10000000000b49, errno = 0
+
+See: the later-created directory mach exists, but not the earlier created directory nintendo.
+
+This seems to imply operations do not necessarily commit in order.  If so, I guess this may have 
+something to do with ZIL.
+
+Note on 03/09/2011: This remains a concern for me although now I can't reproduce it with the
+same process.
+
+03/11/2011
+----------
+
+Fail to reply creation of a file because its parent "obj" does not exist:
+
+root@orange: /zhihui_slash2_orange/.slmd/fidns/0/0/3$ ls -al | grep -B4 000c000000003f74
+-r--r--r--   2 zhihui staff 5288 Mar 11 12:36 000c000000003f6c
+-rw-r--r--   2 zhihui staff 5288 Mar 11 14:01 000c000000003f6d	
+-rwxr-xr-x   2 zhihui staff 5288 Mar 11 14:01 000c000000003f71		<-- gap here
+drwxr-xr-x   3 zhihui staff    5 Mar 11 14:01 000c000000003f73
+-rw-------   2 zhihui staff 5288 Mar 11 14:01 000c000000003f74
+
+
+zhihui@orange: ~/projects-orange/slash_nara/slashd$ g 3f6e log1 | grep mkdir
+1040618:mkdir: name = obj, fid = 0xc000000003f6e, errno = 0
+
+03/14/2011
+----------
+
+Looks like ZIL is interfering with our log replay.  I can't decide whether a log
+replay should succeed or not.  So I am thinking about disabling ZIL on MDS and
+will play with it tommorrow.
+
+But I should allow ZIL to happen for our log files, which we need to sync from
+time to time with mdsio_fsync().  There should be NO other sync activities on
+MDS.
+
+Reading the minute details of ZIL, some operations like TX_CREATE, TX_RENAME
+can't be logged out-of-order (see TX_OOO() in sys/zil.h).  So whenever we call 
+mdsio_fsync() on behalf of the distilling process, we are going to put ZIL log 
+entries on-disk as well.
+
+I have done experiments with gdb and read the source code to confirm this
+understanding.
+
+03/16/2011
+----------
+
+So I did create test after moving all logs into ZFS:
+
+zhihui@lemon: ~$ ./fio.pthreads -i create.test 2> create.out
+
+I got 550+/sec rate, this is down from 600+/sec rate at @ r15677.
+
+Hopefully I can get some loss back after I disable ZIL for normal
+operations.
+
+03/16/2011
+----------
+
+If we create a file and then remove it, any in-between CRC update
+will fail with ENOENT.
+
+Within one transaction, a file is created and removed:
+
+[1300384320:281584 slmrmcthr13:13163:def mds_namespace_log 631] namespace op: op=0, fid=0x000c00000000206d, name=log, new name=(null), txg=26
+[1300384320:285865 slmrmcthr26:13176:def mds_namespace_log 631] namespace op: op=3, fid=0x000c00000000206d, name=log, new name=log, txg=26
+[1300384320:286585 slmrmcthr02:13152:def mds_namespace_log 631] namespace op: op=6, fid=0x000c00000000206d, name=(null), new name=(null), txg=26
+[1300384320:312064 slmrmcthr20:13170:def mds_namespace_log 631] namespace op: op=8, fid=0x000c00000000206d, name=log, new name=(null), txg=26
+
+Later when we replay, got:
+
+[1300387772:185805 slmctlthr:14754:def mds_bia_odtable_startup_cb 1284] fid=0x000c00000000206d failed to load
+

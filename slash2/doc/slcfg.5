@@ -1,0 +1,312 @@
+.\" $Id$
+.\" %GPL_START_LICENSE%
+.\" ---------------------------------------------------------------------
+.\" Copyright 2015, Google, Inc.
+.\" Copyright (c) 2009-2015, Pittsburgh Supercomputing Center (PSC).
+.\" All rights reserved.
+.\"
+.\" This program is free software; you can redistribute it and/or modify
+.\" it under the terms of the GNU General Public License as published by
+.\" the Free Software Foundation; either version 2 of the License, or (at
+.\" your option) any later version.
+.\"
+.\" This program is distributed WITHOUT ANY WARRANTY; without even the
+.\" implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
+.\" PURPOSE.  See the GNU General Public License contained in the file
+.\" `COPYING-GPL' at the top of this distribution or at
+.\" https://www.gnu.org/licenses/gpl-2.0.html for more details.
+.\" ---------------------------------------------------------------------
+.\" %END_LICENSE%
+.Dd October 23, 2015
+.Dt SLCFG 5
+.ds volume PSC \- SLASH2 Administrator's Manual
+.Os http://www.psc.edu/
+.Sh NAME
+.Nm /etc/slash/slcfg
+.Nd
+.Tn SLASH2
+file system configuration
+.Sh DESCRIPTION
+The
+.Nm slcfg
+configuration file specifies storage resources and networks for use on a
+.Tn SLASH2
+deployment.
+This document describes the format of this file.
+.Pp
+Empty lines and lines beginning with
+.Sq Li #
+are ignored.
+.Pp
+This file is consists of variables and site configurations.
+.Ss Variables
+Variables ascribe defaults to settings in site configuration profiles
+as well as provide access to per-resource settings.
+The syntax is:
+.Bl -tag -offset 3n
+.It Xo
+.Ic set Ar var Li =
+.Ar val Ns Li ;\&
+.Xc
+.Pp
+Set the variable
+.Ar var
+to the given value
+.Ar val .
+The following variables may be set:
+.Bl -tag -offset 3n -width 1n
+.It Ic allow_exec Pq optional; client-only
+Executable
+.Xr open 2
+access list, separated by colons
+.Pq Sq :\& .
+.It Ic fsuuid
+File system unique ID.
+This is a 64-bit number that is generated when formatting the MDS file
+system that is used to uniquely identify this SLASH2 deployment to avoid
+conflict among multiple deployments accessible from the same host.
+.It Ic nets
+This value is used to construct the LNet networks setting
+.Pq Ev LNET_NETWORKS ,
+although it has the same format as the
+.Ev LNET_IP2NETS
+setting
+.Po see
+.Xr slashd 8 ,
+.Xr mount_slash 8 ,
+or
+.Xr sliod 8
+for more information
+.Pc .
+Note that manually specifying
+.Pq Ev LNET_NETWORKS
+or
+.Pq Ev LNET_IP2NETS
+will cause ignore this setting to be ignored.
+.It Ic port
+.Tn TCP
+port used to establish connections to
+.Tn SLASH2
+peers.
+.It Ic routes
+This value, if specified, is used to specify the environment variable
+.Ev LNET_ROUTES
+.Po see
+.Xr slashd 8 ,
+.Xr mount_slash 8 ,
+or
+.Xr sliod 8
+for more information
+.Pc .
+.El
+.El
+.Pp
+Additional configuration files may be included with
+.Ic include :
+.Bd -literal -offset 3n
+.Ic include Dq Ar pattern
+.Ed
+.Pp
+The
+.Ar pattern
+argument may be a filename or
+.Xr glob 7
+pattern.
+.Ss Site configuration
+Each site resident on a
+.Tn SLASH2
+network requires its own section in
+.Nm slcfg
+and has the following format:
+.Bd -unfilled -offset 3n
+.Ic site @ Ns Ar site-name Li {
+.D1 ...
+.Li }
+.Ed
+.Pp
+A
+.Ic site
+definition may itself contain variable definitions and resource
+specifications.
+The following variables may be set:
+.Pp
+.Bl -tag -offset 3n -width site_descXX -compact
+.It Ic site_desc
+Description of site
+.It Ic site_id
+Numerical identifier for site
+.El
+.Pp
+A resource specification has the following form:
+.Bd -unfilled -offset 3n
+.Ic resource Ar resource-name Li {
+.D1 ...
+.Li }
+.Ed
+.Pp
+Resources can specify individual systems or clusters of systems.
+Each member node of a cluster must also have its own resource profile.
+Resource specifications recognize the following variables:
+.Pp
+.Bl -tag -offset 3n -width jnrldevX -compact
+.It Ic arc_max Pq optional; MDS-only
+.It Ic desc Pq optional
+Short description of the resource.
+.It Ic fidcachesz Pq optional
+.It Ic flags
+.It Ic fsroot
+For
+.Xr sliod 8 ,
+the file system root where backend data is stored.
+This directory must be initialized with
+.Xr slmkfs 8 .
+.It Ic id
+Numerical identifier for the resource, required to be unique for all
+resources in a site.
+.It Ic ios
+One or more resource names comprising the cluster, separated by comma
+delimiters
+.Pq applies only to clusters .
+.It Ic journal
+Set the path of the operation journal file.
+May be a direct device for increased performance.
+Defaults to
+.Pa /var/lib/slash/op-journal .
+This setting applies to
+.Xr slashd 8
+only.
+.It Ic nids
+One or more host addresses this resource identifies through.
+Domain name services are accessed as necessary and the
+.Tn LNET
+network may be specified if it cannot be unambiguously determined.
+.It Ic pref_ios
+Preferred
+.Tn I/O
+system resource name.
+This setting applies to
+.Xr mount_slash 8
+only.
+.It Ic pref_mds
+Default
+.Tn MDS
+resource name.
+This setting applies to
+.Xr sliod 8
+and
+.Xr mount_slash 8
+only.
+.It Ic self_test
+Command to run occasionally as a self health test to report to the
+.Tn MDS
+to indicate high level file system backend or other kinds of problems
+.Pq ION only .
+.It Ic type
+A required resource type used to distinguish behavioral characteristics:
+.Pp
+.Bl -tag -width cluster_noshare_fsX -offset 3n -compact
+.It Ic archival_fs
+Potentially long delay storage e.g. tape archiver systems
+.It Ic mds
+.Tn SLASH2
+metadata servers
+.It Ic parallel_lfs_compnt
+Node in shared parallel file system
+.It Ic standalone_fs
+Independent file systems
+.Pp
+.It Ic parallel_lfs
+Cluster composed of one or more nodes sharing a parallel file system
+.It Ic cluster_noshare_lfs
+Cluster composed of one or more nodes with independent
+.Pq non-shared
+file systems
+.El
+.It Ic zpool_name Pq MDS-only
+The
+.Tn ZFS
+pool name for the backend metadata storage.
+This setting applies to
+.Xr slashd 8
+only.
+.It Ic zpool_cache Pq MDS-only
+The
+.Tn ZFS
+pool cache file for loading the backend metadata storage.
+This setting applies to
+.Xr slashd 8
+only.
+
+
+
+.El
+.Sh FILES
+.Bl -tag -width Pa -compact
+.It Pa /etc/slash/slcfg
+default
+.Tn SLASH2
+resource configuration
+.El
+.Sh EXAMPLES
+The following is an example
+.Nm slcfg :
+.Bd -literal
+set port=1000;
+set nets=tcp10;
+
+site @MYSITE {
+	site_desc	= "my site name";
+	site_id		= 1;
+
+	resource test {
+		desc	= "test network";
+		type	= mds;
+		id	= 1;
+		fsroot	= /tmp/slashfs;
+		nid	= 10.32.5.82;
+	}
+
+	resource parfs0 { type = parallel_lfs_compnt; id = 100; nids = 128.182.112.110; }
+	resource parfs1 { type = parallel_lfs_compnt; id = 101; nids = 128.182.112.111; }
+	resource parfs2 { type = parallel_lfs_compnt; id = 102; nids = 128.182.112.112; }
+	resource parfs3 { type = parallel_lfs_compnt; id = 103; nids = 128.182.112.113; }
+
+	resource parfs {
+		desc	= "my parallel file system";
+		type	= parallel_lfs;
+		id	= 199;
+		ios	= parfs0,
+			  parfs1,
+			  parfs2,
+			  parfs3;
+	}
+
+	resource bigstore0 { type = archival_fs; id = 200; nids = 128.182.112.242; }
+	resource bigstore1 { type = archival_fs; id = 201; nids = 128.182.112.240; }
+	resource bigstore2 { type = archival_fs; id = 202; nids = 128.182.112.105; }
+	resource bigstore3 { type = archival_fs; id = 203; nids = 128.182.112.226; }
+
+	resource bigstore {
+		desc	= "my archival storage system";
+		type	= cluster_noshare_lfs;
+		id	= 299;
+		ios	= bigstore0@MYSITE,
+			  bigstore1@MYSITE,
+			  bigstore2@MYSITE,
+			  bigstore3@MYSITE;
+	}
+
+	resource user_pc {
+		desc	= "user home network";
+		type	= standalone_fs;
+		id	= 400;
+		nid	= 67.171.74.150;
+	}
+}
+.Ed
+.Sh SEE ALSO
+.Xr sladm 7 ,
+.Xr mount_slash 8 ,
+.Xr slashd 8 ,
+.Xr sliod 8 ,
+.Xr slmkfs 8

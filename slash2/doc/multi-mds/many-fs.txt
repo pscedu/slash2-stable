@@ -1,0 +1,254 @@
+03/13/2012
+----------
+
+Right now, we support only one file system in the pool. In the furture:
+
+ * More than one file system per pool is allowed.
+
+ * The contents of all file systems are accessible from a slash2 client.
+
+ * Only one file system can be made writable per mds, all other file systems 
+   are strictly read-only.
+
+The idea is that the pool layout will be the same across MDS.  Only one MDS
+can write a file system, and we will use snapshot mechanism to propagate
+the updates to other MDs.
+
+The root file system is a place holder now, not really used by any MDS.  We
+need to fake the contents of the root to allow access to other file systems.
+Presumably, we can put private stuff to the root file system that will not
+be shared by other MDS in any way.
+
+We will use site id bits in the fid for each file systems.  The ID of the 
+root file system is 0.   
+
+There could be compatibility issue.  Right under root, we can have existing
+files and directories that do not represent a file system.
+
+
+03/14/2012
+----------
+
+We need to come up with the attributes of roots of these file systems for
+readdir() purpose.  Looks like I can borrow some code from zfs_root().
+            
+03/27/2012
+----------
+
+If the pool is created with old utility:
+
+	- there is no fsid file in the default file system
+	- new slashd should be able to read and write it
+	- we can go back and forth between new and old slashd at will.
+
+If the pool is created with new utility:
+
+	- there is a fsid file in the default file system
+	- there is NO going back
+
+To choose a different file system, we must
+
+	- reformat the journal with the matching uuid
+	- change the uuid in the slash2 config file to match the uuid in the journal.
+
+The uuid is used to select a file system in a pool.
+
+04/16/2012
+----------
+
+A script used to test the code:
+
+#!/bin/bash
+#
+# 03/05/2012: many-fs.sh, setup many file systems in a pool.
+#
+
+umount /zhihui_slash2_orange1
+umount /zhihui_slash2_orange1/zfs1
+umount /zhihui_slash2_orange1/zfs2
+umount /zhihui_slash2_orange1/zfs3
+
+killall zfs-fuse
+
+rm -rf /zhihui_slash2_orange1/.slmd
+rm -rf /zhihui_slash2_orange1/zfs1
+rm -rf /zhihui_slash2_orange1/zfs2
+rm -rf /zhihui_slash2_orange1/zfs3
+rm /home/zhihui/zhihui_slash2_orange1.cf
+
+sleep 5
+
+/home/zhihui/projects/zfs/src/zfs-fuse/zfs-fuse
+/home/zhihui/projects/zfs/src/cmd/zpool/zpool destroy zhihui_slash2_orange1
+/home/zhihui/projects/zfs/src/cmd/zpool/zpool create -f zhihui_slash2_orange1 mirror sdc sdd
+/home/zhihui/projects/zfs/src/cmd/zpool/zpool set cachefile=/home/zhihui/zhihui_slash2_orange1.cf zhihui_slash2_orange1
+/home/zhihui/projects/zfs/src/cmd/zfs/zfs create zhihui_slash2_orange1/zfs1
+/home/zhihui/projects/zfs/src/cmd/zfs/zfs create zhihui_slash2_orange1/zfs2
+
+/home/zhihui/projects/slash_nara/slimmns/slimmns_format  -u 1234567812345678 /zhihui_slash2_orange1
+/home/zhihui/projects/slash_nara/slimmns/slimmns_format  -u 1234567812345679 -I 234 /zhihui_slash2_orange1/zfs1
+/home/zhihui/projects/slash_nara/slimmns/slimmns_format  -u 1234567812345680 -I 235 /zhihui_slash2_orange1/zfs2
+find /zhihui_slash2_orange1 -maxdepth 3
+
+sync
+sleep 10
+
+umount /zhihui_slash2_orange1/zfs1
+umount /zhihui_slash2_orange1/zfs2
+umount /zhihui_slash2_orange1/zfs3
+umount /zhihui_slash2_orange1
+
+/home/zhihui/projects/slash_nara/slmkjrnl/slmkjrnl -f -b /dev/sdg1 -n 4096 -u 1234567812345678
+
+killall zfs-fuse
+
+
+#
+# 03/20/2012
+#
+# I can create file systems and snapshots while slashd is running:
+# 
+# [root@orange zhihui]# /home/zhihui/projects/zfs/src/cmd/zfs/zfs create zhihui_slash2_orange1/zfs3
+# [root@orange zhihui]# /home/zhihui/projects/zfs/src/cmd/zfs/zfs snapshot zhihui_slash2_orange1@`date +%s`
+# [root@orange zhihui]# /home/zhihui/projects/zfs/src/cmd/zpool/zpool list
+# NAME                    SIZE  ALLOC   FREE    CAP  DEDUP  HEALTH  ALTROOT
+# zhihui_slash2_orange1   696G   405M   696G     0%  1.00x  ONLINE  -
+# [root@orange zhihui]# /home/zhihui/projects/zfs/src/cmd/zpool/zpool status
+#   pool: zhihui_slash2_orange1
+#  state: ONLINE
+#  scrub: none requested
+# config:
+# 
+# 	NAME        STATE     READ WRITE CKSUM
+# 	zhihui_slash2_orange1  ONLINE       0     0     0
+# 	  mirror-0  ONLINE       0     0     0
+# 	    sdc     ONLINE       0     0     0
+# 	    sdd     ONLINE       0     0     0
+# 
+# errors: No known data errors
+# [root@orange zhihui]# /home/zhihui/projects/zfs/src/cmd/zfs/zfs list
+# NAME                         USED  AVAIL  REFER  MOUNTPOINT
+# zhihui_slash2_orange1        405M   685G   134M  /zhihui_slash2_orange1
+# zhihui_slash2_orange1/zfs1   135M   685G   135M  /zhihui_slash2_orange1/zfs1
+# zhihui_slash2_orange1/zfs2   135M   685G   135M  /zhihui_slash2_orange1/zfs2
+# zhihui_slash2_orange1/zfs3    21K   685G    21K  /zhihui_slash2_orange1/zfs3
+# [root@orange zhihui]# /home/zhihui/projects/zfs/src/cmd/zfs/zfs list -t snapshot
+# NAME                               USED  AVAIL  REFER  MOUNTPOINT
+# zhihui_slash2_orange1@1332258436  23.5K      -   134M  -
+# 
+
+
+The following work:
+
+	* With old disk format: switch from old code (slashd) to new code and switch back
+
+	* With new disk format, you can switch between file systems in a pool with new code
+
+Really, the only difference between the old and new format is that the new format has a file
+named fsid.  The root file system must have fsid of 0.
+
+The following should work:
+
+	* Create a file system and accept snapshots from a remote mds.  When the file system
+	  is ready (i.e., contains all the .slmds stuff), it will show up if you do ls -al
+	  under /.
+
+To switch file systems in a pool:
+
+	* change fsuuid in your config file.
+	* reformat journal with the same fsuuid.
+	* slashd will pick the file system with the same fsuuid as the only writable file system.
+	* all other file systems in the pool will be read-only.
+	* make sure you have all the uuid directories on the I/O server.
+
+Because you are going to reformat the journal, make sure the journal is empty with the following:
+
+zhihui@orange: ~/projects/slash_nara/slmctl$ ./slmctl -s journal
+journal    flag used  total rsv      last-xid    commit-txg   distill-xid nxtslt wraps
+================================================================================
+sdg1       --B-    0   4096   0          f704            b4          f704   1796    15
+
+My impression is that the journal can be reformatted once its contents are used.  But Paul has
+some concerns.  Anyway, my tests work fine with me.
+
+06/11/2012
+----------
+
+Now I can register a newly-created file system on the fly.
+
+
+11/02/2012
+----------
+
+Save some command lines:
+
+Take a snapshot on citron and send it to orange:
+
+root@citron: ~# ZFS_SOCK_NAME=/var/run/zfs/zfs_socket_zhihui ZFS_LOCK_FILE=/var/lock/zfs/zfs_lock_zhihui \
+                /home/zhihui/projects-citron-manyfs/zfs/src/cmd/zfs/zfs snapshot zhihui_slash2_citron/citron@`date +%s`
+root@citron: ~# ZFS_SOCK_NAME=/var/run/zfs/zfs_socket_zhihui ZFS_LOCK_FILE=/var/lock/zfs/zfs_lock_zhihui \
+                /home/zhihui/projects-citron-manyfs/zfs/src/cmd/zfs/zfs list -t snapshot
+NAME                                     USED  AVAIL  REFER  MOUNTPOINT
+xwfs_test@test                           155M      -   586M  -
+zhihui_slash2_citron/citron@1338919874  36.5K      -   291M  -
+
+root@citron: ~# ZFS_SOCK_NAME=/var/run/zfs/zfs_socket_zhihui ZFS_LOCK_FILE=/var/lock/zfs/zfs_lock_zhihui \
+                /home/zhihui/projects-citron-manyfs/zfs/src/cmd/zfs/zfs send zhihui_slash2_citron/citron@1338919874 > \
+                citron@1338919874.dump
+root@citron: ~# ls -al citron@1338919874.dump
+-rw-r--r-- 1 root root 411143352 Jun  5 14:15 citron@1338919874.dump
+
+[root@orange zhihui]# /home/zhihui/projects-orange-manyfs/zfs/src/cmd/zfs/zfs recv zhihui_slash2_orange/citron < \
+                      citron@1338919874.dump
+[root@orange zhihui]# /home/zhihui/projects-orange-manyfs/zfs/src/cmd/zfs/zfs list -t snapshot
+NAME                                     USED  AVAIL  REFER  MOUNTPOINT
+zhihui_slash2_orange/citron@1338919874  36.6M      -   291M  -
+
+
+Do it the other way:
+
+[root@orange zhihui]# /home/zhihui/projects-orange-manyfs/zfs/src/cmd/zfs/zfs snapshot zhihui_slash2_orange/orange@`date +%s`
+[root@orange zhihui]# /home/zhihui/projects-orange-manyfs/zfs/src/cmd/zfs/zfs list -t snapshot
+NAME                                     USED  AVAIL  REFER  MOUNTPOINT
+zhihui_slash2_orange/citron@1338919874  39.8M      -   291M  -
+zhihui_slash2_orange/orange@1338921645  34.5K      -   133M  -
+
+[root@orange zhihui]# /home/zhihui/projects-orange-manyfs/zfs/src/cmd/zfs/zfs send zhihui_slash2_orange/orange@1338921645 > \
+                      orange@1338921645.dump 
+
+root@citron: ~# ZFS_SOCK_NAME=/var/run/zfs/zfs_socket_zhihui ZFS_LOCK_FILE=/var/lock/zfs/zfs_lock_zhihui \
+                /home/zhihui/projects-citron-manyfs/zfs/src/cmd/zfs/zfs recv zhihui_slash2_citron/orange < \
+                orange@1338921645.dump
+root@citron: ~# 
+
+Take another snapshot, and send a delta:
+
+root@citron: ~# ZFS_SOCK_NAME=/var/run/zfs/zfs_socket_zhihui ZFS_LOCK_FILE=/var/lock/zfs/zfs_lock_zhihui \
+                /home/zhihui/projects-citron-manyfs/zfs/src/cmd/zfs/zfs snapshot zhihui_slash2_citron/citron@`date +%s`
+root@citron: ~# ZFS_SOCK_NAME=/var/run/zfs/zfs_socket_zhihui ZFS_LOCK_FILE=/var/lock/zfs/zfs_lock_zhihui \
+                /home/zhihui/projects-citron-manyfs/zfs/src/cmd/zfs/zfs list -t snapshot
+NAME                                     USED  AVAIL  REFER  MOUNTPOINT
+xwfs_test@test                           155M      -   586M  -
+zhihui_slash2_citron/citron@1338919874  1.93M      -   291M  -
+zhihui_slash2_citron/citron@1338922388  36.5K      -   291M  -
+zhihui_slash2_citron/orange@1338921645  8.27M      -   133M  -
+
+root@citron: ~# ZFS_SOCK_NAME=/var/run/zfs/zfs_socket_zhihui ZFS_LOCK_FILE=/var/lock/zfs/zfs_lock_zhihui \
+                /home/zhihui/projects-citron-manyfs/zfs/src/cmd/zfs/zfs send -i \
+                zhihui_slash2_citron/citron@1338919874 zhihui_slash2_citron/citron@1338922388 > citron@1338922388.delta
+
+root@citron: ~# ls -al citron@1338922388.delta
+-rw-r--r-- 1 root root 3772472 Jun  5 15:07 citron@1338922388.delta
+
+
+[root@orange zhihui]# /home/zhihui/projects-orange-manyfs/zfs/src/cmd/zfs/zfs set readonly=on \
+                      zhihui_slash2_orange/citron@1338919874
+cannot set property for 'zhihui_slash2_orange/citron@1338919874': this property can not be modified for snapshots
+
+[root@orange zhihui]# /home/zhihui/projects-orange-manyfs/zfs/src/cmd/zfs/zfs recv zhihui_slash2_orange/citron < \
+                      citron@1338922388.delta
+cannot receive incremental stream: destination zhihui_slash2_orange/citron has been modified
+since most recent snapshot
+
+
+[web] ls will modify a snapshot.

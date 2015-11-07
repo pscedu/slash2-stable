@@ -1,0 +1,38 @@
+# $Id$
+
+set port=6667;
+set net=tcp10;
+set fsuuid=0x1;
+
+site @SITEA {
+	site_desc	= "mysite";
+	site_id		= 1;
+	resource r0 {
+		desc	= "desc";
+		type	= mds;
+		id	= 2;
+		nids	= 127.0.0.1, 127.0.0.2;
+	}
+}
+
+site @SITEB {
+	site_desc	= "mysite";
+	site_id		= 2;
+	resource r0 {
+		desc	= "desc";
+		type	= archival_fs;
+		id	= 2;
+		nids	= 127.0.0.3;
+	}
+}
+
+site @SITEC {
+	site_desc	= "mysite";
+	site_id		= 3;
+	resource r0 {
+		desc	= "desc";
+		type	= archival_fs;
+		id	= 2;
+		nids	= 127.0.0.4;
+	}
+}
