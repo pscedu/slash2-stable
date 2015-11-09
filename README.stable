@@ -1,0 +1,39 @@
+11/09/2015
+----------
+
+The slash2-stable git tree is a merge of of the following five git trees:
+
+	* https://github.com/pscedu/pfl
+	* https://github.com/pscedu/slash2
+	* https://github.com/pscedu/zfs-fuse
+	* https://github.com/pscedu/sft
+	* https://github.com/pscedu/distrib.fuse
+
+Only the first three trees are essential for slash2 software.
+
+The goals of this git tree are as follows:
+
+	* Always keep a stable tree regardless of the code churn at 
+          the developement trees.
+
+	* Provide a history of stable slash2 bits that can be binary
+          searched for regression.
+
+All history are preserved. This tree can be tagged or branched if necessary.
+
+Example commands to pull commits from development trees:
+
+$ git pull -X theirs --no-edit pfl master
+$ git pull -X subtree=slash2 --no-edit slash2 master
+
+Note: Any change to this tree that does not meet the current stability test
+      will be reverted UNCONDITIONALLY.
+
+The current stability bar is defined as follows:
+
+	- iozone -a
+	- slash2 self build (wipe the tree after each build)
+	- Linux kernel build
+	- tar over ssh with a large directory
+
+All the above tests are run in parallel for at least four hours without a glitch.
