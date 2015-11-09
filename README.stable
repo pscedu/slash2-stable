@@ -21,10 +21,17 @@ The goals of this git tree are as follows:
 
 All history are preserved. This tree can be tagged or branched if necessary.
 
-Example commands to pull commits from development trees:
+The following commands can be used to pull commits from development trees:
 
+$ git remote add pfl https://github.com/pscedu/pfl
 $ git pull -X theirs --no-edit pfl master
+
+$ git remote add slash2 https://github.com/pscedu/slash2
 $ git pull -X subtree=slash2 --no-edit slash2 master
+
+$ git remote add zfs-fuse https://github.com/pscedu/zfs-fuse
+$ git pull -X subtree=zfs-fuse --no-edit zfs-fuse master
+
 
 Note: Any change to this tree that does not meet the current stability test
       will be reverted UNCONDITIONALLY.
