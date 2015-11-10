@@ -117,11 +117,8 @@ struct pscfs {
 	NULL
 
 struct pscfs_clientctx {
-	uint64_t	pfcc_magic;
 	pid_t		pfcc_pid;
 };
-
-#define PFCC_MAGIC	UINT64_C(0x5729aaaa5782bbbb)
 
 void	pscfs_addarg(struct pscfs_args *, const char *);
 void	pscfs_freeargs(struct pscfs_args *);
