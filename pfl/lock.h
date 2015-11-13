@@ -197,13 +197,17 @@ typedef struct psc_spinlock {
  */
 #define freelock_pci(pci, psl)						\
 	do {								\
+		int _dolog = 0;						\
+									\
 		_SPIN_ENSURELOCKED("freelock", (psl));			\
 		_psc_spin_checktime(psl);				\
 		(psl)->psl_owner = 0;					\
 		(psl)->psl_owner_file = NULL;				\
 		(psl)->psl_owner_lineno = 0;				\
-		psc_atomic32_set(_SPIN_GETATOM(psl), PSL_UNLOCKED);	\
 		if (((psl)->psl_flags & PSLF_NOLOG) == 0)		\
+			_dolog = 1;					\
+		psc_atomic32_set(_SPIN_GETATOM(psl), PSL_UNLOCKED);	\
+		if (_dolog)						\
 			_psclog_pci((pci), PLL_VDEBUG, 0,		\
 			    "lock %p released", (psl));			\
 	} while (0)
