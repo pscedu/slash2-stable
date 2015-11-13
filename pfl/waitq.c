@@ -25,6 +25,10 @@
  * %PSC_END_COPYRIGHT%
  */
 
+/*
+ * Wait queue: suspend execution until notifiction from another thread.
+ */
+
 #include <errno.h>
 #include <string.h>
 
@@ -41,8 +45,8 @@
 
 #include <pthread.h>
 
-/**
- * psc_waitq_init - Prepare a wait queue for use.
+/*
+ * Prepare a wait queue for use.
  * @q: the struct to be initialized.
  */
 void
@@ -60,8 +64,8 @@ _psc_waitq_init(struct psc_waitq *q, int flags)
 		psc_fatalx("pthread_cond_init: %s", strerror(rc));
 }
 
-/**
- * psc_waitq_destroy - Release resources associated with a waitq.
+/*
+ * Release resources associated with a waitq.
  * @q: waitq to destroy.
  */
 void
@@ -80,9 +84,9 @@ psc_waitq_destroy(struct psc_waitq *q)
 #endif
 }
 
-/**
- * psc_waitq_waitabs - Wait until the time specified for the
- *	resource managed by wq_cond to become available.
+/*
+ * Wait until the time specified for the resource managed by wq_cond to
+ * become available.
  * @q: the wait queue to wait on.
  * @k: optional lock needed to protect the list.
  * @abstime: time to wait till.
@@ -148,8 +152,8 @@ _psc_waitq_waitrel(struct psc_waitq *q, int flags, void *p, long s,
 	return (_psc_waitq_waitabs(q, flags, p, NULL));
 }
 
-/**
- * psc_waitq_wakeone - Unblock one thread waiting on a wait queue.
+/*
+ * Unblock one thread waiting on a wait queue.
  * @q: wait queue to operate on.
  */
 void
@@ -167,8 +171,8 @@ psc_waitq_wakeone(struct psc_waitq *q)
 	psc_mutex_unlock(&q->wq_mut);
 }
 
-/**
- * psc_waitq_wakeall - Wake everyone waiting on a wait queue.
+/*
+ * Wake everyone waiting on a wait queue.
  * @q: wait queue to operate on.
  */
 void

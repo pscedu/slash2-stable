@@ -164,16 +164,15 @@ typedef struct psc_spinlock {
 		_lrc;							\
 	}
 
-/**
- * trylock - Try to acquire a lock; will not block if spinlock is not
- *	immediately available.
+/*
+ * Try to acquire a lock; will not block if spinlock is not immediately
+ * available.
  * @psl: the spinlock.
  */
 #define trylock_pci(pci, psl)	(_SPIN_TEST_AND_SET((pci), "trylock", (psl)))
 
-/**
- * freelock - Block until the caller locks a spinlock for a critical
- *	section.
+/*
+ * Block until the caller locks a spinlock for a critical section.
  * @psl: the spinlock.
  */
 #define spinlock_pci(pci, psl)						\
@@ -192,8 +191,8 @@ typedef struct psc_spinlock {
 			}						\
 	} while (0)
 
-/**
- * freelock - Release a spinlock that is locked by the caller.
+/*
+ * Release a spinlock that is locked by the caller.
  * @psl: the spinlock.
  */
 #define freelock_pci(pci, psl)						\
@@ -209,9 +208,9 @@ typedef struct psc_spinlock {
 			    "lock %p released", (psl));			\
 	} while (0)
 
-/**
- * reqlock - Require a lock for a critical section.  Locks if unlocked,
- *	doesn't if already locked (to avoid deadlock).
+/*
+ * Require a lock for a critical section.  Locks if unlocked, doesn't if
+ * already locked (to avoid deadlock).
  * @psl: the spinlock.
  * Returns a value that ureqlock() must use.
  */
@@ -219,9 +218,9 @@ typedef struct psc_spinlock {
 	(psc_spin_haslock(psl) ? PSLRV_WASLOCKED :			\
 	    ((void)PSC_MAKETRUE(spinlock_pci((pci), (psl))), PSLRV_WASNOTLOCKED))
 
-/**
- * tryreqlock - Try to require a lock.  Will not block if the lock
- *	cannot be obtained immediately.
+/*
+ * Try to require a lock.  Will not block if the lock cannot be obtained
+ * immediately.
  * @psl: the spinlock.
  * @waslockedp: value-result to "unrequire" lock.
  */
@@ -230,10 +229,10 @@ typedef struct psc_spinlock {
 	    (*(waslockedp) = PSLRV_WASLOCKED, 1) :			\
 	    (*(waslockedp) = PSLRV_WASNOTLOCKED, trylock_pci((pci), (psl))))
 
-/**
- * ureqlock - "Unrequire" a lock -- unlocks the lock if it was locked
- *	for the nearest "reqlock ... ureqlock" section and doesn't if
- *	the lock was already locked before the critical section began.
+/*
+ * "Unrequire" a lock -- unlocks the lock if it was locked for the
+ * nearest "reqlock ... ureqlock" section and doesn't if the lock was
+ * already locked before the critical section began.
  * @psl: the spinlock.
  * @waslkd: return value from reqlock().
  */
