@@ -167,7 +167,9 @@ psc_ctlsenderrv(int fd, const struct psc_ctlmsghdr *mhp,
 	struct psc_ctlmsg_error pce;
 	struct psc_ctlmsghdr mh;
 
-	/* XXX */
+	memset(&pce, 0, sizeof(pce));
+
+	/* XXX check overflow */
 	vsnprintf(pce.pce_errmsg, sizeof(pce.pce_errmsg), fmt, ap);
 
 	mh.mh_id = mhp->mh_id;
