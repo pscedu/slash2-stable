@@ -1478,8 +1478,9 @@ pscfs_fuse_replygen_entry(struct pscfs_req *pfr, pscfs_inum_t inum,
 {
 	struct fuse_entry_param e;
 
+	memset(&e, 0, sizeof(e));
+
 	if (rc == ENOENT) {
-		e.ino = 0;
 		e.entry_timeout = entry_timeout;
 		PFR_REPLY(entry, pfr, &e);
 	} else if (rc) {
