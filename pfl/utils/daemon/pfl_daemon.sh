@@ -245,8 +245,8 @@ vsleep()
 	2)	let amt=30	ATTEMPT++	;;
 	3)	let amt=60	ATTEMPT++	;;
 	4)	let amt=600	ATTEMPT++	;;
-	6)	let amt=1800	ATTEMPT++	;;
-	7)	let amt=3600			;;
+	5)	let amt=1800	ATTEMPT++	;;
+	6)	let amt=3600			;;
 	*)	ATTEMPT=1;
 	esac
 	export ATTEMPT
