@@ -9,7 +9,7 @@ die()
 dir=$1
 shift
 
-[ -n "$dir" || die "no dir specified"
+[ -n "$dir" ] || die "no dir specified"
 
 fn=$dir/.makepid
 
