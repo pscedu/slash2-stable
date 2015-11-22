@@ -8,5 +8,5 @@ MAINMK=		${ROOTDIR}/mk/main.mk
 PFLMK=		${PFL_BASE}/mk/main.mk
 
 -include ${ROOTDIR}/distrib/*/mk/dep.mk
-AA:=$(shell ls -l ${ROOTDIR}/*/mk/dep.mk >&2)
+AA:=$(shell sh -c "{ pwd; ls -l ${ROOTDIR}/*/mk/dep.mk ; } >&2")
 -include ${ROOTDIR}/*/mk/dep.mk
