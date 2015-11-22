@@ -1,7 +1,15 @@
 #!/bin/sh
 
+die()
+{
+	echo "$@" >&2
+	exit 1
+}
+
 dir=$1
 shift
+
+[ -n "$dir" || die "no dir specified"
 
 fn=$dir/.makepid
 
