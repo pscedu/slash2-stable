@@ -97,8 +97,9 @@ opt_lookup(const char *opt)
 int
 mod_load(int pos, const char *path)
 {
-	void *h, (*loadf)(struct pscfs *);
+	int (*loadf)(struct pscfs *);
 	struct wok_module *wm;
+	void *h;
 	int rc;
 
 	h = dlopen(path, RTLD_NOW);
