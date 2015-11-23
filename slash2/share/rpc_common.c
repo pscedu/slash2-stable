@@ -1,8 +1,10 @@
 /* $Id$ */
 /*
- * %PSCGPL_START_COPYRIGHT%
- * -----------------------------------------------------------------------------
+ * %GPL_START_LICENSE%
+ * ---------------------------------------------------------------------
+ * Copyright 2015, Google, Inc.
  * Copyright (c) 2007-2015, Pittsburgh Supercomputing Center (PSC).
+ * All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -14,12 +16,8 @@
  * PURPOSE.  See the GNU General Public License contained in the file
  * `COPYING-GPL' at the top of this distribution or at
  * https://www.gnu.org/licenses/gpl-2.0.html for more details.
- *
- * Pittsburgh Supercomputing Center	phone: 412.268.4960  fax: 412.268.5832
- * 300 S. Craig Street			e-mail: remarks@psc.edu
- * Pittsburgh, PA 15213			web: http://www.psc.edu/
- * -----------------------------------------------------------------------------
- * %PSC_END_COPYRIGHT%
+ * ---------------------------------------------------------------------
+ * %END_LICENSE%
  */
 
 #include <sys/types.h>
@@ -519,6 +517,9 @@ _sl_csvc_disconnect_core(struct slashrpc_cservice *csvc, int flags)
 	csvc->csvc_flags &= ~CSVCF_CONNECTED;
 	csvc->csvc_lasterrno = 0;
 	imp = csvc->csvc_import;
+	csvc->csvc_import = NULL;
+
+	CSVC_ULOCK(csvc);
 	if (imp) {
 		// deactivate(imp) ?
 		pscrpc_abort_inflight(imp);
@@ -527,7 +528,7 @@ _sl_csvc_disconnect_core(struct slashrpc_cservice *csvc, int flags)
 			pscrpc_drop_conns(&imp->imp_connection->c_peer);
 		pscrpc_import_put(imp);
 	}
-	csvc->csvc_import = NULL;
+	CSVC_LOCK(csvc);
 	CSVC_WAKE(csvc);
 }
 
@@ -972,11 +973,16 @@ _sl_csvc_get(const struct pfl_callerinfo *pci,
 	if (csvc)
 		sl_csvc_incref(csvc);
 	else if ((flags & CSVCF_NONBLOCK) && mw) {
+		struct psc_thread *thr;
+
+		thr = pscthr_get();
+		PSCTHR_LOCK(thr);
 		if (psc_multiwait_hascond(mw, &(*csvcp)->csvc_mwc))
 			psc_multiwait_setcondwakeable(mw,
 			    &(*csvcp)->csvc_mwc, 1);
 		else
 			psc_multiwait_addcond(mw, &(*csvcp)->csvc_mwc);
+		PSCTHR_LOCK(thr);
 	}
 	CSVC_URLOCK(*csvcp, locked);
 	return (csvc);
@@ -1126,9 +1132,9 @@ slconnthr_watch(struct psc_thread *thr, struct slashrpc_cservice *csvc,
 	CSVC_ULOCK(csvc);
 
 	PSCTHR_LOCK(thr);
-	psc_multiwait_addcond(&sct->sct_mw, &csvc->csvc_mwc);
+	if (!psc_multiwait_hascond(&sct->sct_mw, &csvc->csvc_mwc))
+		psc_multiwait_addcond(&sct->sct_mw, &csvc->csvc_mwc);
 	psc_dynarray_add(&sct->sct_monres, scp);
-	psc_multiwaitcond_wakeup(&sct->sct_mwc);
 	PSCTHR_ULOCK(thr);
 }
 

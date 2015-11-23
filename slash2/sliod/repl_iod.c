@@ -78,6 +78,7 @@ sli_repl_findwq(const struct sl_fidgen *fgp, sl_bmapno_t bmapno)
 void
 sli_bwqueued_adj(int32_t *p, int amt_bytes)
 {
+	struct slashrpc_cservice *csvc;
 	int amt;
 
 	amt = SIGN(amt_bytes) * howmany(abs(amt_bytes), BW_UNITSZ);
@@ -90,6 +91,15 @@ sli_bwqueued_adj(int32_t *p, int amt_bytes)
 	spinlock(&sli_ssfb_lock);
 	sli_ssfb_send.tv_sec = 0;	/* reset timer */
 	freelock(&sli_ssfb_lock);
+
+	/* XXX use non-blocking version */
+	if (!sli_rmi_getcsvc(&csvc)) {
+		CSVC_LOCK(csvc);
+		clock_gettime(CLOCK_MONOTONIC, &csvc->csvc_mtime);
+		csvc->csvc_mtime.tv_sec -= CSVC_PING_INTV;
+		// XXX could do a wakeup here to send update immediately
+		CSVC_ULOCK(csvc);
+	}
 }
 
 /*

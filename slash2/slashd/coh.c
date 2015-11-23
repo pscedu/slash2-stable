@@ -54,15 +54,14 @@ slm_coh_bml_release(struct bmap_mds_lease *bml)
 	struct bmap_mds_info *bmi;
 	struct bmap *b;
 
-	BML_LOCK(bml);
+	BML_RLOCK(bml);
 	bml->bml_flags &= ~BML_DIOCB;
 	BML_ULOCK(bml);
 
 	bmi = bml->bml_bmi;
 	b = bmi_2_bmap(bmi);
-	BMAP_LOCK(b);
+	BMAP_RLOCK(b);
 	bmi->bmi_diocb--;
-	BMAP_ULOCK(b);
 
 	mds_bmap_bml_release(bml);
 }
@@ -92,7 +91,6 @@ slm_rcm_bmapdio_cb(struct pscrpc_request *rq,
 
 	BML_LOCK(bml);
 	bml->bml_flags |= BML_DIO;
-	BML_ULOCK(bml);
 
  out:
 	DEBUG_BMAP(rc ? PLL_WARN : PLL_DIAG, bml_2_bmap(bml),
@@ -113,7 +111,7 @@ slm_rcm_bmapdio_cb(struct pscrpc_request *rq,
  *
  * Note: @bml is unlocked upon return.
  */
-void
+int
 mdscoh_req(struct bmap_mds_lease *bml)
 {
 	struct slashrpc_cservice *csvc = NULL;
@@ -124,18 +122,13 @@ mdscoh_req(struct bmap_mds_lease *bml)
 	struct bmap *b;
 	int rc;
 
-	DEBUG_BMAP(PLL_DIAG, bml_2_bmap(bml), "bml=%p", bml);
+	PFLOG_BML(PLL_DIAG, bml, "send BMAPDIO");
 
 	bmi = bml->bml_bmi;
 	b = bmi_2_bmap(bmi);
 
 	BML_LOCK_ENSURE(bml);
 	BMAP_LOCK_ENSURE(b);
-
-	/* Take a reference for the asynchronous RPC. */
-	bmi->bmi_diocb++;
-	bml->bml_refcnt++;
-	bml->bml_flags |= BML_DIOCB;
 
 	if (bml->bml_flags & BML_RECOVER) {
 		psc_assert(!bml->bml_exp);
@@ -146,7 +139,6 @@ mdscoh_req(struct bmap_mds_lease *bml)
 	csvc = slm_getclcsvc(bml->bml_exp);
 	if (csvc == NULL)
 		PFL_GOTOERR(out, rc = -PFLERR_NOTCONN);
-	BML_ULOCK(bml);
 
 	rc = SL_RSX_NEWREQ(csvc, SRMT_BMAPDIO, rq, mq, mp);
 	if (rc)
@@ -157,17 +149,28 @@ mdscoh_req(struct bmap_mds_lease *bml)
 	mq->seq = bml->bml_seq;
 	mq->dio = 1;
 
+	/* Take a reference for the asynchronous RPC. */
+	bmi->bmi_diocb++;
+	bml->bml_refcnt++;
+	bml->bml_flags |= BML_DIOCB;
+
 	rq->rq_async_args.pointer_arg[SLM_CBARG_SLOT_CSVC] = csvc;
 	rq->rq_async_args.pointer_arg[SLM_CBARG_SLOT_BML] = bml;
 	rq->rq_interpret_reply = slm_rcm_bmapdio_cb;
 	rc = SL_NBRQSET_ADD(csvc, rq);
 	if (rc == 0)
-		return;
+		return (0);
+
+	bml->bml_flags &= ~BML_DIOCB;
+
+	bmi->bmi_diocb--;
 
  out:
 	pscrpc_req_finished(rq);
 	if (csvc)
 		sl_csvc_decref(csvc);
 
-	slm_coh_bml_release(bml);
+	PFLOG_BML(PLL_WARN, bml, "rc=%d", rc);
+
+	return (rc);
 }

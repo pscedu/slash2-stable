@@ -302,9 +302,8 @@ int	 msl_stat(struct fidc_membh *, void *);
 int	 msl_read_cleanup(struct pscrpc_request *, int, struct pscrpc_async_args *);
 int	 msl_dio_cleanup(struct pscrpc_request *, int, struct pscrpc_async_args *);
 
-ssize_t	 slc_getxattr(const struct pscfs_clientctx *,
-	    const struct pscfs_creds *, const char *, void *, size_t,
-	    struct fidc_membh *, size_t *);
+ssize_t	 slc_getxattr(struct pscfs_req *pfr, const struct pscfs_creds *,
+	    const char *, void *, size_t, struct fidc_membh *, size_t *);
 
 size_t	 msl_pages_copyout(struct bmpc_ioreq *, struct msl_fsrqinfo *);
 int	 msl_fd_should_retry(struct msl_fhent *, struct pscfs_req *, int);
@@ -385,6 +384,7 @@ extern struct psc_poolmgr	*slc_mfh_pool;
 extern int			 slc_direct_io;
 extern int			 slc_root_squash;
 extern int			 slc_max_nretries;
+extern int			 msl_acl;
 extern int			 msl_predio_window_size;
 extern int			 msl_predio_issue_minpages;
 extern int			 msl_predio_issue_maxpages;

@@ -49,6 +49,9 @@ bcr_update_inodeinfo(struct bcrcupd *bcr)
 	b = bcr_2_bmap(bcr);
 	f = b->bcm_fcmh;
 
+	if (bcr->bcr_crcup.fg.fg_gen == FID_ANY)
+		return (EINVAL);
+
 	psc_assert(bcr->bcr_crcup.fg.fg_fid == f->fcmh_fg.fg_fid);
 
 	if (bcr->bcr_crcup.fg.fg_gen != f->fcmh_fg.fg_gen)
@@ -134,7 +137,7 @@ sli_fcmh_getattr(struct fidc_membh *f)
 }
 
 int
-sli_fcmh_lookup_fid(struct slashrpc_cservice *csvc,
+sli_rmi_lookup_fid(struct slashrpc_cservice *csvc,
     const struct sl_fidgen *pfg, const char *cpn,
     struct sl_fidgen *cfg, int *isdir)
 {

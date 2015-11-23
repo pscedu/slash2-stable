@@ -22,6 +22,7 @@
 
 #include "pfl/cdefs.h"
 #include "pfl/fs.h"
+#include "pfl/fsmod.h"
 #include "pfl/list.h"
 #include "pfl/rpc.h"
 #include "pfl/rsx.h"
@@ -127,7 +128,7 @@ slc_rmc_setmds(const char *name)
  * timeout has been reached for MDS communication.
  */
 int
-slc_rmc_retry_pfcc(const struct pscfs_clientctx *pfcc, int *rc)
+slc_rmc_retry(struct pscfs_req *pfr, int *rc)
 {
 	int retry = 1;
 
@@ -154,18 +155,22 @@ slc_rmc_retry_pfcc(const struct pscfs_clientctx *pfcc, int *rc)
 	}
 
 //	retry = global setting
-	if (pfcc)
+	if (pfr) {
+		if (pfr->pfr_interrupted) {
+			*rc = EINTR;
+			retry = 0;
+		}
 //		retry = read_proc_env(ctx->pid, "");
-		;
-	else
+	} else
 		retry = 0;
 //	retry = hard timeout
 	*rc = retry ? 0 : ETIMEDOUT;
+
 	return (retry);
 }
 
 int
-slc_rmc_getcsvc(const struct pscfs_clientctx *pfcc,
+slc_rmc_getcsvc(struct pscfs_req *pfr,
     struct sl_resm *resm, struct slrpc_cservice **csvcp)
 {
 	int rc;
@@ -182,7 +187,7 @@ slc_rmc_getcsvc(const struct pscfs_clientctx *pfcc,
 			break;
 
 		rc = resm->resm_csvc->csvc_lasterrno;
-		if (!slc_rmc_retry_pfcc(pfcc, &rc))
+		if (!slc_rmc_retry(pfr, &rc))
 			break;
 		sl_csvc_waitrel_s(resm->resm_csvc, CSVC_RECONNECT_INTV);
 	}
