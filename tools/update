@@ -16,14 +16,13 @@ source $(dirname $0)/init.sh
 exwait()
 {
 	local id st rc=0
-	local j=($(jobs -l | awk '{print $2}'))
 	set +e
-	for pid in ${j[@]}; do
+	while :; do
+		local pid=($(jobs -l | awk '{print $2}' | tail -1))
+		[ -n "$pid" ] || break
 		wait $pid
 		st=$?
-		if [ $st -eq 127 ]; then
-			break
-		fi
+		[ $st -eq 127 ] && break
 		[ $rc -ne 0 ] || rc=$st
 	done
 	set -e
