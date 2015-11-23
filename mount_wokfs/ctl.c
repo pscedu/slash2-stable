@@ -87,7 +87,7 @@ wokctlcmd_insert(int fd, struct psc_ctlmsghdr *mh, void *msg)
 		    "position", wcms->wcms_pos));
 	}
 
-	rc = mod_load(wcms->wcms_pos, wcms->wcms_path);
+	rc = mod_load(wcms->wcms_pos, wcms->wcms_path, wcms->wcms_opts);
 	pflfs_modules_wrunpin();
 	if (rc) {
 		const char *error;
@@ -152,7 +152,7 @@ wokctlcmd_reload(__unusedx int fd, __unusedx struct psc_ctlmsghdr *mh,
 	struct pscfs_creds pcr;
 	struct wok_module *wm;
 	struct pscfs *m;
-	char *path;
+	char *path, *opts;
 	int rc;
 
 	rc = wokctl_getcreds(fd, &pcr);
@@ -175,12 +175,14 @@ wokctlcmd_reload(__unusedx int fd, __unusedx struct psc_ctlmsghdr *mh,
 	m = psc_dynarray_getpos(&pscfs_modules, wcmc->wcmc_pos);
 	wm = m->pf_private;
 	path = pfl_strdup(wm->wm_path);
+	opts = pfl_strdup(wm->wm_opts);
 	pflfs_module_destroy(m);
 
 	mod_destroy(wm);
 
-	rc = mod_load(wcmc->wcmc_pos, path);
+	rc = mod_load(wcmc->wcmc_pos, path, opts);
 	PSCFREE(path);
+	PSCFREE(opts);
 
 	pflfs_modules_wrunpin();
 

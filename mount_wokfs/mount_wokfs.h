@@ -36,11 +36,12 @@ enum {
 
 struct wok_module {
 	char		*wm_path;
+	char		*wm_opts;
 	struct pscfs	 wm_module;
 	void		*wm_handle;
 };
 
-int	mod_load(int, const char *);
+int	mod_load(int, const char *, const char *);
 void	mod_destroy(struct wok_module *);
 
 extern char	 mountpoint[];

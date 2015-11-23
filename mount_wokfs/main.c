@@ -95,7 +95,7 @@ opt_lookup(const char *opt)
 }
 
 int
-mod_load(int pos, const char *path)
+mod_load(int pos, const char *path, const char *opts)
 {
 	int (*loadf)(struct pscfs *);
 	struct wok_module *wm;
@@ -122,7 +122,7 @@ mod_load(int pos, const char *path)
 		return (rc);
 	}
 	wm->wm_module.pf_private = wm;
-	pflfs_module_init(&wm->wm_module);
+	pflfs_module_init(&wm->wm_module, opts);
 	pflfs_module_add(pos, &wm->wm_module);
 
 	return (0);
