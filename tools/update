@@ -112,6 +112,7 @@ _accrepo()
 			[ -e $repo ] && continue
 			access_repo $repo
 		done
+		exwait
 	fi
 }
 
