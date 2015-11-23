@@ -382,7 +382,7 @@ ${_TDEPLIST}:
 	@dep="$(patsubst dep-%,%,$@)";					\
 	dir="$${dep%@*}";						\
 	target="$${dep#*@}";						\
-	${ECHORUN} ${SYNCMAKE} "$$dir" "${MAKE}" -C "$$dir" $${target}
+	${SYNCMAKE} "$$dir" "${MAKE}" -C "$$dir" $${target}
 
 all-hook:
 
