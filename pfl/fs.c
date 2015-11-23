@@ -119,13 +119,15 @@ pflfs_module_init(struct pscfs *m, const char *opts)
 	m->pf_opst_write_reply =
 	    pfl_opstat_init("fs.%s.write.reply", m->pf_name);
 
-	opt = pfl_strdup(opts);
-	do {
-		psc_dynarray_add(&m->pf_opts, opt);
-		opt = strchr(opt, ',');
-		if (opt)
-			*opt++ = '\0';
-	} while (opt);
+	if (opts && opts[0]) {
+		opt = pfl_strdup(opts);
+		do {
+			psc_dynarray_add(&m->pf_opts, opt);
+			opt = strchr(opt, ',');
+			if (opt)
+				*opt++ = '\0';
+		} while (opt);
+	}
 }
 
 /*
@@ -156,7 +158,7 @@ pflfs_module_destroy(struct pscfs *m)
 
 	if (psc_dynarray_len(&m->pf_opts)) {
 		char *opts;
-		
+
 		opts = psc_dynarray_getpos(&m->pf_opts, 0);
 		PSCFREE(opts);
 	}
