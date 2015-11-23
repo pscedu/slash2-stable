@@ -21,7 +21,7 @@
 .\" --------------------------------------------------------------------
 .\" %END_LICENSE%
 .\" %PFL_MODULES ctl fuse rpc %
-.Dd November 6, 2015
+.Dd November 23, 2015
 .Dt MSCTL 8
 .ds volume PSC \- Administrator's Manual
 .Os http://www.psc.edu/
@@ -47,7 +47,7 @@ behavior.
 .\" %PFL_INCLUDE $PFL_BASE/doc/pflctl/cmd.mdoc {
 .\"	daemon => "mount_slash",
 .\"	cmds	=> {
-.\"		"insert Ar pos file" =>
+.\"		"insert Ar pos file Op Ar option Ns , Ns Ar ..." =>
 .\"			"Add the file system module specified by\n" .
 .\"			".Ar file\n" .
 .\"			"to the processing stack at position\n" .
@@ -65,7 +65,7 @@ behavior.
 .\"	}
 The supported commands are as follows:
 .Bl -tag -width 3n
-.It Cm insert Ar pos file
+.It Cm insert Ar pos file Op Ar option Ns , Ns Ar ...
 Add the file system module specified by
 .Ar file
 to the processing stack at position
