@@ -113,16 +113,19 @@ mod_load(int pos, const char *path, const char *opts)
 	wm = PSCALLOC(sizeof(*wm));
 	wm->wm_path = pfl_strdup(path);
 	wm->wm_handle = h;
+	wm->wm_module.pf_private = wm;
+	pflfs_module_init(&wm->wm_module, opts);
 	rc = loadf(&wm->wm_module);
 	if (rc) {
+		wm->wm_module.pf_handle_destroy = NULL;
+		pflfs_module_destroy(&wm->wm_module);
+
 		dlclose(h);
 		PSCFREE(wm->wm_path);
 		PSCFREE(wm);
 		psclog_warnx("module failed to load: %s", path);
 		return (rc);
 	}
-	wm->wm_module.pf_private = wm;
-	pflfs_module_init(&wm->wm_module, opts);
 	pflfs_module_add(pos, &wm->wm_module);
 
 	return (0);
