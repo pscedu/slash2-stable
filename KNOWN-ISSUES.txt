@@ -1,0 +1,9 @@
+11/23/2015
+----------
+
+Self build in a loop generally works fine. But I see one instance of the following
+failure:
+
+lib/libzpool/libzpool-user.a: could not read symbols: File format not recognized
+
+Possible causes: (1) -511 error handling (2) read versus write race.
