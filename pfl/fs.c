@@ -31,10 +31,12 @@
 
 #include <unistd.h>
 
+#include "pfl/alloc.h"
 #include "pfl/fs.h"
 #include "pfl/lock.h"
 #include "pfl/log.h"
 #include "pfl/opstats.h"
+#include "pfl/str.h"
 
 struct psc_spinlock	pflfs_modules_lock = SPINLOCK_INIT;
 int			pflfs_modules_modifying;
@@ -104,8 +106,10 @@ pflfs_modules_wrunpin(void)
  * Initialize a module for the file system processing stack.
  */
 void
-pflfs_module_init(struct pscfs *m)
+pflfs_module_init(struct pscfs *m, const char *opts)
 {
+	char *opt;
+
 	m->pf_opst_read_err = pfl_opstat_initf(OPSTF_BASE10,
 	    "fs.%s.read.err", m->pf_name);
 	m->pf_opst_write_err = pfl_opstat_initf(OPSTF_BASE10,
@@ -114,6 +118,14 @@ pflfs_module_init(struct pscfs *m)
 	    pfl_opstat_init("fs.%s.read.reply", m->pf_name);
 	m->pf_opst_write_reply =
 	    pfl_opstat_init("fs.%s.write.reply", m->pf_name);
+
+	opt = pfl_strdup(opts);
+	do {
+		psc_dynarray_add(&m->pf_opts, opt);
+		opt = strchr(opt, ',');
+		if (opt)
+			*opt++ = '\0';
+	} while (opt);
 }
 
 /*
@@ -141,6 +153,14 @@ pflfs_module_destroy(struct pscfs *m)
 	pfl_opstat_destroy(m->pf_opst_write_err);
 	pfl_opstat_destroy(m->pf_opst_read_reply);
 	pfl_opstat_destroy(m->pf_opst_write_reply);
+
+	if (psc_dynarray_len(&m->pf_opts)) {
+		char *opts;
+		
+		opts = psc_dynarray_getpos(&m->pf_opts, 0);
+		PSCFREE(opts);
+	}
+	psc_dynarray_free(&m->pf_opts);
 }
 
 /*
