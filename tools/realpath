@@ -2,7 +2,9 @@
 # $Id$
 
 if readlink -f / >/dev/null 2>&1; then
-	walk "readlink -f" "$@"
+	for i in "$@"; do
+		readlink -f "$i"
+	done
 else
 	perl -MCwd -Wle 'print Cwd::realpath($_) for @ARGV' "$@"
 fi

@@ -1,28 +1,26 @@
 /* $Id$ */
 /*
- * %PSC_START_COPYRIGHT%
- * -----------------------------------------------------------------------------
+ * %ISC_START_LICENSE%
+ * ---------------------------------------------------------------------
+ * Copyright 2015, Google, Inc.
  * Copyright (c) 2009-2015, Pittsburgh Supercomputing Center (PSC).
+ * All rights reserved.
  *
- * Permission to use, copy, modify, and distribute this software
- * for any purpose with or without fee is hereby granted, provided
- * that the above copyright notice and this permission notice
- * appear in all copies.
+ * Permission to use, copy, modify, and distribute this software for any
+ * purpose with or without fee is hereby granted, provided that the
+ * above copyright notice and this permission notice appear in all
+ * copies.
  *
  * THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL
  * WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED
- * WARRANTIES OF MERCHANTABILITY AND FITNESS.  IN NO EVENT SHALL
- * THE AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT, INDIRECT, OR
- * CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM
- * LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT,
- * NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN
- * CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
- *
- * Pittsburgh Supercomputing Center	phone: 412.268.4960  fax: 412.268.5832
- * 300 S. Craig Street			e-mail: remarks@psc.edu
- * Pittsburgh, PA 15213			web: http://www.psc.edu/
- * -----------------------------------------------------------------------------
- * %PSC_END_COPYRIGHT%
+ * WARRANTIES OF MERCHANTABILITY AND FITNESS.  IN NO EVENT SHALL THE
+ * AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL
+ * DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR
+ * PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
+ * TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
+ * PERFORMANCE OF THIS SOFTWARE.
+ * --------------------------------------------------------------------
+ * %END_LICENSE%
  */
 
 #include <errno.h>
@@ -35,12 +33,15 @@
 #include "pfl/time.h"
 #include "pfl/vbitmap.h"
 
+#define PFLOG_MUTEX(level, mut, fmt, ...)				\
+	psclog((level), "mutex@%p: " fmt, (mut), ##__VA_ARGS__)
+
 #define PMUT_LOG(mut, fmt, ...)						\
 	do {								\
 		if (((mut)->pm_flags & PMTXF_NOLOG) == 0)		\
-			psclog((mut)->pm_flags & PMTXF_DEBUG ?		\
-			    PLL_MAX : PLL_VDEBUG, "mutex@%p: " fmt,	\
-			    (mut), ##__VA_ARGS__);			\
+			PFLOG_MUTEX((mut)->pm_flags & PMTXF_DEBUG ?	\
+			    PLL_MAX : PLL_VDEBUG, (mut), fmt,		\
+			    ##__VA_ARGS__);				\
 	} while (0)
 
 void
@@ -98,14 +99,19 @@ void
 _psc_mutex_unlock(const struct pfl_callerinfo *pci,
     struct pfl_mutex *mut)
 {
-	int rc;
+	int rc, dolog = 0, loglevel = PLL_VDEBUG;
 
 	mut->pm_owner = 0;
+	PMUT_LOG(mut, "releasing log=%d level=%d",
+	    dolog = ((mut->pm_flags & PMTXF_NOLOG) == 0),
+	    loglevel = (mut->pm_flags & PMTXF_DEBUG ? PLL_MAX :
+	    PLL_VDEBUG));
 	rc = pthread_mutex_unlock(&mut->pm_mutex);
-	PMUT_LOG(mut, "releasing");
 	if (rc)
-		psc_fatalx("pthread_mutex_unlock: %s", strerror(rc));
-	PMUT_LOG(mut, "released");
+		PFLOG_MUTEX(PLL_FATAL, mut,
+		    "pthread_mutex_unlock: %s", strerror(rc));
+	if (dolog)
+		PFLOG_MUTEX(loglevel, mut, "released");
 }
 
 int

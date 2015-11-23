@@ -112,10 +112,10 @@ apply_host_prefs()
 		export PFL_SYSLOG_IDENT=%n-$prof
 
 		. $fn
-		vprint "scanning profiles from $fn"
+		vprint "scanning profiles from $fn; args ${av[@]}"
 		[ $# -eq 0 ] && die "unknown deployment: ${av[0]}"
 		for ln; do
-			vprint '  + ' $ln ${av[@]}
+			vprint "checking: $ln"
 			loadprof $ln ${av[@]} || continue
 			vprint "deployment $prof, host $host"
 			return
@@ -174,8 +174,8 @@ postproc()
 		cmdfile=/tmp/gdbcmd.$id
 		echo thr ap all bt > $cmdfile
 		{
-			echo To: $mail_to
 			echo From: $mail_from
+			echo To: $mail_to
 			echo "Subject: [sysbug] $prof $host $name down"
 			echo
 			echo core file is $base/$cf

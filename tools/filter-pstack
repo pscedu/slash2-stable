@@ -64,6 +64,7 @@ my @ign = (
 	[ qw(_psc_waitq_waitabs _lc_get msreadaheadthr_main _pscthr_begin) ],
 	[ qw(_psc_waitq_waitabs _psc_waitq_waitrel msattrflushthr_main _pscthr_begin) ],
 	[ qw(_psc_waitq_waitabs msbreleasethr_main _pscthr_begin) ],
+	[ qw(_psc_waitq_waitabs msflushthr_main _pscthr_begin) ],
 	[ qw(msbmflwthr_main _pscthr_begin) ],
 	[ qw(usleep msbwatchthr_main _pscthr_begin) ],
 
