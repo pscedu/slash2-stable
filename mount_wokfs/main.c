@@ -99,6 +99,7 @@ mod_load(int pos, const char *path)
 {
 	void *h, (*loadf)(struct pscfs *);
 	struct wok_module *wm;
+	int rc;
 
 	h = dlopen(path, RTLD_NOW);
 	if (h == NULL)
@@ -111,7 +112,14 @@ mod_load(int pos, const char *path)
 	wm = PSCALLOC(sizeof(*wm));
 	wm->wm_path = pfl_strdup(path);
 	wm->wm_handle = h;
-	loadf(&wm->wm_module);
+	rc = loadf(&wm->wm_module);
+	if (rc) {
+		dlclose(h);
+		PSCFREE(wm->wm_path);
+		PSCFREE(wm);
+		psclog_warnx("module failed to load: %s", path);
+		return (rc);
+	}
 	wm->wm_module.pf_private = wm;
 	pflfs_module_init(&wm->wm_module);
 	pflfs_module_add(pos, &wm->wm_module);

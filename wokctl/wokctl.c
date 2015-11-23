@@ -58,8 +58,9 @@ cmd_insert(int ac, char **av)
 	char *endp;
 	long l;
 
-	if (ac != 3) {
-		fprintf(stderr, "usage: %s insert position path\n",
+	if (ac != 3 && ac != 4) {
+		fprintf(stderr, "usage: %s insert position path "
+		    "[option,...]\n",
 		    __progname);
 		exit(1);
 	}
@@ -71,6 +72,10 @@ cmd_insert(int ac, char **av)
 	if (realpath(av[2], wcms->wcms_path) == NULL)
 		err(1, "path %s", av[2]);
 	wcms->wcms_pos = l;
+
+	if (ac == 4 && strlcpy(wcms->wcms_opts, av[3],
+	    sizeof(wcms->wcms_opts)) >= sizeof(wcms->wcms_opts))
+		err(1, "option list too long: %s", av[3]);
 }
 
 void

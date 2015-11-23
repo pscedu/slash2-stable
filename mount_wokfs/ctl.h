@@ -27,6 +27,7 @@
 
 struct wokctlmsg_modspec {
 	char			wcms_path[PATH_MAX];
+	char			wcms_opts[LINE_MAX];
 	int32_t			wcms_pos;
 };
 
