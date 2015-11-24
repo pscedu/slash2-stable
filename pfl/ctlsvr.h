@@ -73,7 +73,15 @@ struct psc_ctlparam_node;
 	{ psc_ctlrep_getthread,		sizeof(struct psc_ctlmsg_thread) },	\
 	{ psc_ctlrep_param,		sizeof(struct psc_ctlmsg_param) }
 
+struct pfl_ctl_data {
+	struct psc_dynarray	 pcd_clifds;
+	psc_spinlock_t		 pcd_lock;
+	struct psc_waitq	 pcd_waitq;
+	struct pfl_mutex	 pcd_mutex;
+};
+
 struct psc_ctlacthr {
+	struct pfl_ctl_data	 pcat_ctldata;
 	int			 pcat_sock;
 	struct {
 		int nclients;
@@ -81,8 +89,8 @@ struct psc_ctlacthr {
 };
 
 struct psc_ctlthr {
-	int			 pct_sockfd;
 	int			 pct_nops;
+	struct pfl_ctl_data	*pct_ctldata;
 	const struct psc_ctlop	*pct_ct;
 	struct {
 		int nsent;
