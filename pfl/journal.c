@@ -1051,7 +1051,6 @@ pjournal_replay(struct psc_journal *pj, int thrtype,
 
 	thr = pscthr_init(thrtype, pjournal_thr_main, NULL,
 	    sizeof(*pjt), thrname);
-
 	pjt = thr->pscthr_private;
 	pjt->pjt_pj = pj;
 	pscthr_setready(thr);
