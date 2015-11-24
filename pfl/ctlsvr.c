@@ -2313,6 +2313,7 @@ psc_ctlacthr_main(struct psc_thread *thr)
 void
 pfl_ctl_destroy(struct pfl_ctl_data *pcd)
 {
+	unlink(pcd->pcd_saun.sun_path);
 	spinlock(&pcd->pcd_lock);
 	pcd->pcd_dead = 1;
 	psc_waitq_wakeall(&pcd->pcd_waitq);
