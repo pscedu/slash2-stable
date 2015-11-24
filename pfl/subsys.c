@@ -104,7 +104,7 @@ psc_subsys_register(int ssid, const char *name)
 			const char *ident = __progname;
 
 			init = 1;
-			p = getenv("PFL_SYSLOG_IDENT"); 
+			p = getenv("PFL_SYSLOG_IDENT");
 			if (p) {
 				static char idbuf[32];
 
@@ -126,6 +126,17 @@ psc_subsys_register(int ssid, const char *name)
 		psc_fatalx("bad ID %d for subsys %s [want %d], "
 		    "check order", ssid, name, nss);
 	psc_dynarray_add(&psc_subsystems, ss);
+}
+
+void
+psc_subsys_unregister(int ssid)
+{
+	struct psc_subsys *ss;
+
+	psc_assert(ssid == psc_dynarray_len(&psc_subsystems) - 1);
+	ss = psc_dynarray_getpos(&psc_subsystems, ssid);
+	psc_dynarray_removepos(&psc_subsystems, ssid);
+	PSCFREE(ss);
 }
 
 int
