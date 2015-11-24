@@ -78,11 +78,20 @@ pscrpc_nbreapthr_main(struct psc_thread *thr)
 		cntr = set->set_compl.pc_counter;
 		if (pscrpc_set_checkone(set))
 			freelock(&set->set_lock);
-		else if (cntr == set->set_compl.pc_counter)
+		else if (cntr == set->set_compl.pc_counter) {
+			if (set->set_dead)
+				break;
 			psc_compl_waitrel_s(&set->set_compl,
 			    &set->set_lock, 1);
-		else
+		} else
 			freelock(&set->set_lock);
+	}
+	reqlock(&set->set_lock);
+	if (--set->set_refcnt) {
+		psc_waitq_wakeall(&set->set_waitq);
+		freelock(&set->set_lock);
+	} else {
+		pscrpc_set_destroy(set);
 	}
 }
 
@@ -94,11 +103,16 @@ pscrpc_nbreapthr_spawn(struct pscrpc_request_set *set, int thrtype,
 	struct psc_thread *thr;
 	int i;
 
+	spinlock(&set->set_lock);
+
 	for (i = 0; i < nthr; i++) {
 		thr = pscthr_init(thrtype, pscrpc_nbreapthr_main, NULL,
 		    sizeof(*pnbt), thrname, i);
 		pnbt = thr->pscthr_private;
 		pnbt->pnbt_set = set;
+		set->set_refcnt++;
 		pscthr_setready(thr);
 	}
+
+	freelock(&set->set_lock);
 }

@@ -968,6 +968,16 @@ _pscrpc_set_check(struct pscrpc_request_set *set, int finish_one)
 }
 
 void
+pscrpc_set_kill(struct pscrpc_request_set *set)
+{
+	spinlock(&set->set_lock);
+	set->set_dead = 1;
+	psc_waitq_wakeall(&set->set_waitq);
+	psc_compl_ready(&set->set_compl, 1);
+	freelock(&set->set_lock);
+}
+
+void
 pscrpc_set_destroy(struct pscrpc_request_set *set)
 {
 	struct pscrpc_request *req, *next;
