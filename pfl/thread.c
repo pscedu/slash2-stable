@@ -352,7 +352,9 @@ _pscthr_init(int type, void (*startf)(struct psc_thread *),
 	 * Either way, the storage will be released via psc_free() upon
 	 * thread exit.
 	 */
-	thr = startf ? &mythr : psc_alloc(sizeof(*thr), PAF_NOLOG);
+	thr = startf ? &mythr : psc_alloc(sizeof(*thr), PAF_NOLOG |
+	    PAF_NOZERO);
+	memset(thr, 0, sizeof(*thr));
 	INIT_PSC_LISTENTRY(&thr->pscthr_lentry);
 	psc_waitq_init(&thr->pscthr_waitq);
 	INIT_SPINLOCK_NOLOG(&thr->pscthr_lock);
