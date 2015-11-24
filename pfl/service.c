@@ -1070,19 +1070,15 @@ pscrpcsvh_addthr(struct pscrpc_svc_handle *svh)
 	thr = pscthr_init(svh->svh_type, pscrpcthr_main, NULL,
 	    svh->svh_thrsiz, "%sthr%02d", svh->svh_svc_name,
 	    svh->svh_nthreads);
-	if (thr) {
-		prt = thr->pscthr_private;
-		prt->prt_alive = 1;
-		prt->prt_svh = svh;
-		INIT_PSC_LISTENTRY(&prt->prt_lentry);
+	prt = thr->pscthr_private;
+	prt->prt_alive = 1;
+	prt->prt_svh = svh;
+	INIT_PSC_LISTENTRY(&prt->prt_lentry);
 
-		psclist_add(&prt->prt_lentry,
-		    &svh->svh_service->srv_threads);
-		svh->svh_nthreads++;
-	}
+	psclist_add(&prt->prt_lentry,
+	    &svh->svh_service->srv_threads);
+	svh->svh_nthreads++;
 	SVC_ULOCK(svc);
-	if (thr == NULL)
-		return (-1);
 	pscthr_setready(thr);
 	return (0);
 }
