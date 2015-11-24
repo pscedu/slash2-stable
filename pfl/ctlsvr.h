@@ -30,6 +30,9 @@
 #ifndef _PFL_CTLSVR_H_
 #define _PFL_CTLSVR_H_
 
+#include <sys/socket.h>
+#include <sys/un.h>
+
 #include <ctype.h>
 #include <string.h>
 
@@ -74,6 +77,11 @@ struct psc_ctlparam_node;
 	{ psc_ctlrep_param,		sizeof(struct psc_ctlmsg_param) }
 
 struct pfl_ctl_data {
+	struct sockaddr_un	 pcd_saun;
+	struct psc_thread	*pcd_acthr;
+	int			 pcd_dead;
+	int			 pcd_refcnt;
+	int			 pcd_sock;
 	struct psc_dynarray	 pcd_clifds;
 	psc_spinlock_t		 pcd_lock;
 	struct psc_waitq	 pcd_waitq;
@@ -82,7 +90,6 @@ struct pfl_ctl_data {
 
 struct psc_ctlacthr {
 	struct pfl_ctl_data	 pcat_ctldata;
-	int			 pcat_sock;
 	struct {
 		int nclients;
 	}			 pcat_stat;
@@ -171,6 +178,7 @@ void	psc_ctlparam_register_var(const char *, enum pflctl_paramt, int, void *);
 int	psc_ctlmsg_param_send(int, const struct psc_ctlmsghdr *,
 		struct psc_ctlmsg_param *, const char *, char **, int, const char *);
 
+void	pfl_ctl_destroy(struct pfl_ctl_data *);
 void	psc_ctlthr_main(const char *, const struct psc_ctlop *, int, int);
 int	psc_ctl_applythrop(int, struct psc_ctlmsghdr *, void *, const char *,
 		int (*)(int, struct psc_ctlmsghdr *, void *, struct psc_thread *));

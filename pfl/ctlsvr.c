@@ -2272,18 +2272,21 @@ psc_ctlacthr_main(struct psc_thread *thr)
 {
 	struct psc_ctlacthr *pcat;
 	struct pfl_ctl_data *pcd;
-	int s, fd;
+	int i, s, fd;
+	void *p;
 
 	pcat = psc_ctlacthr(thr);
-	s = pcat->pcat_sock;
 	pcd = &pcat->pcat_ctldata;
+	s = pcd->pcd_sock;
+	pcd->pcd_acthr = thr;
 	while (pscthr_run(thr)) {
 		fd = accept(s, NULL, NULL);
 		if (fd == -1) {
 			if (errno == EINTR) {
 				usleep(300);
 				continue;
-			}
+			} else if (errno == EBADF)
+				break;
 			psc_fatal("accept");
 		}
 		pcat->pcat_stat.nclients++;
@@ -2293,9 +2296,28 @@ psc_ctlacthr_main(struct psc_thread *thr)
 		psc_waitq_wakeall(&pcd->pcd_waitq);
 		freelock(&pcd->pcd_lock);
 	}
+
+	spinlock(&pcd->pcd_lock);
+	while (pcd->pcd_refcnt) {
+		psc_waitq_wait(&pcd->pcd_waitq, &pcd->pcd_lock);
+		spinlock(&pcd->pcd_lock);
+	}
+
+	DYNARRAY_FOREACH(p, i, &pcd->pcd_clifds)
+		close((int)(long)p);
 	psc_dynarray_free(&pcd->pcd_clifds);
 	psc_waitq_destroy(&pcd->pcd_waitq);
 	psc_mutex_destroy(&pcd->pcd_mutex);
+}
+
+void
+pfl_ctl_destroy(struct pfl_ctl_data *pcd)
+{
+	spinlock(&pcd->pcd_lock);
+	pcd->pcd_dead = 1;
+	psc_waitq_wakeall(&pcd->pcd_waitq);
+	close(pcd->pcd_sock);
+	freelock(&pcd->pcd_lock);
 }
 
 void
@@ -2315,6 +2337,12 @@ psc_ctlthr_mainloop(struct psc_thread *thr)
 	nops = pct->pct_nops;
 	while (pscthr_run(thr)) {
 		spinlock(&pcd->pcd_lock);
+		if (pcd->pcd_dead) {
+			pcd->pcd_refcnt--;
+			psc_waitq_wakeall(&pcd->pcd_waitq);
+			freelock(&pcd->pcd_lock);
+			break;
+		}
 		if (psc_dynarray_len(&pcd->pcd_clifds) == 0) {
 			psc_waitq_wait(&pcd->pcd_waitq, &pcd->pcd_lock);
 			continue;
@@ -2337,16 +2365,15 @@ psc_ctlthr_mainloop(struct psc_thread *thr)
 	PSCFREE(buf);
 }
 
-struct psc_thread *
+struct psc_ctlacthr *
 psc_ctlthr_spawn_listener(const char *ofn, int acthrtype)
 {
 	extern const char *__progname;
-	static psc_atomic32_t idx;
 
-	struct psc_thread *thr, *me;
+	struct psc_thread *acthr, *me;
 	struct psc_ctlacthr *pcat;
 	struct pfl_ctl_data *pcd;
-	struct sockaddr_un saun;
+	struct sockaddr_un *saun;
 	mode_t old_umask;
 	char *p;
 	int s;
@@ -2358,56 +2385,56 @@ psc_ctlthr_spawn_listener(const char *ofn, int acthrtype)
 		psc_fatalx("'ctlthr' not found in thread name '%s'",
 		    me->pscthr_name);
 
-	s = socket(AF_LOCAL, SOCK_STREAM, PF_UNSPEC);
-	if (s == -1)
-		psc_fatal("socket");
-
-	memset(&saun, 0, sizeof(saun));
-	saun.sun_family = AF_LOCAL;
-	SOCKADDR_SETLEN(&saun);
-
-	/* perform transliteration for "variables" in file path */
-	(void)FMTSTR(saun.sun_path, sizeof(saun.sun_path), ofn,
-		FMTSTRCASE('h', "s", psclog_getdata()->pld_hostshort)
-		FMTSTRCASE('n', "s", __progname)
-	);
-
-	if (unlink(saun.sun_path) == -1 && errno != ENOENT)
-		psclog_error("unlink %s", saun.sun_path);
-
-	spinlock(&psc_umask_lock);
-	old_umask = umask(S_IXUSR | S_IXGRP | S_IWOTH | S_IROTH |
-	    S_IXOTH);
-	if (bind(s, (struct sockaddr *)&saun, sizeof(saun)) == -1)
-		psc_fatal("bind %s", saun.sun_path);
-	umask(old_umask);
-	freelock(&psc_umask_lock);
-
-	/* XXX fchmod */
-	if (chmod(saun.sun_path, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP |
-	    S_IROTH | S_IWOTH) == -1)
-		psc_fatal("chmod %s", saun.sun_path); /* XXX errno */
-
-	if (listen(s, QLEN) == -1)
-		psc_fatal("listen");
-
 	/*
 	 * Spawn a servicing thread to separate processing from acceptor
 	 * and to multiplex between clients for fairness.
 	 */
-	thr = pscthr_init(acthrtype, psc_ctlacthr_main, NULL,
-	    sizeof(struct psc_ctlacthr), "%.*sctlacthr%d",
-	    p - me->pscthr_name, me->pscthr_name,
-	    psc_atomic32_inc_getnew(&idx) - 1);
-	pcat = psc_ctlacthr(thr);
-	pcat->pcat_sock = s;
+	acthr = pscthr_init(acthrtype, psc_ctlacthr_main, NULL,
+	    sizeof(struct psc_ctlacthr), "%.*sctlacthr",
+	    p - me->pscthr_name, me->pscthr_name);
+	pcat = psc_ctlacthr(acthr);
 	pcd = &pcat->pcat_ctldata;
+	saun = &pcd->pcd_saun;
+
+	s = socket(AF_LOCAL, SOCK_STREAM, PF_UNSPEC);
+	if (s == -1)
+		psc_fatal("socket");
+
+	saun->sun_family = AF_LOCAL;
+	SOCKADDR_SETLEN(saun);
+
+	/* perform transliteration for "variables" in file path */
+	(void)FMTSTR(saun->sun_path, sizeof(saun->sun_path), ofn,
+		FMTSTRCASE('h', "s", psclog_getdata()->pld_hostshort)
+		FMTSTRCASE('n', "s", __progname)
+	);
+
+	if (unlink(saun->sun_path) == -1 && errno != ENOENT)
+		psclog_error("unlink %s", saun->sun_path);
+
+	spinlock(&psc_umask_lock);
+	old_umask = umask(S_IXUSR | S_IXGRP | S_IWOTH | S_IROTH |
+	    S_IXOTH);
+	if (bind(s, (struct sockaddr *)saun, sizeof(*saun)) == -1)
+		psc_fatal("bind %s", saun->sun_path);
+	umask(old_umask);
+	freelock(&psc_umask_lock);
+
+	/* XXX fchmod */
+	if (chmod(saun->sun_path, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP |
+	    S_IROTH | S_IWOTH) == -1)
+		psc_fatal("chmod %s", saun->sun_path); /* XXX errno */
+
+	if (listen(s, QLEN) == -1)
+		psc_fatal("listen");
+
+	pcd->pcd_sock = s;
 	psc_dynarray_init(&pcd->pcd_clifds);
 	INIT_SPINLOCK(&pcd->pcd_lock);
 	psc_waitq_init(&pcd->pcd_waitq);
 	psc_mutex_init(&pcd->pcd_mutex);
-	pscthr_setready(thr);
-	return (thr);
+	pscthr_setready(acthr);
+	return (pcat);
 }
 
 /*
@@ -2421,7 +2448,8 @@ void
 psc_ctlthr_main(const char *ofn, const struct psc_ctlop *ct, int nops,
     int acthrtype)
 {
-	struct psc_thread *thr, *me, *acthr;
+	struct psc_thread *thr, *me;
+	struct psc_ctlacthr *pcat;
 	struct pfl_ctl_data *pcd;
 	struct psc_ctlthr *pct;
 	const char *p;
@@ -2433,8 +2461,9 @@ psc_ctlthr_main(const char *ofn, const struct psc_ctlop *ct, int nops,
 	if (p == NULL)
 		psc_fatalx("'ctlthr' not found in control thread name");
 
-	acthr = psc_ctlthr_spawn_listener(ofn, acthrtype);
-	pcd = &psc_ctlacthr(acthr)->pcat_ctldata;
+	pcat = psc_ctlthr_spawn_listener(ofn, acthrtype);
+	pcd = &pcat->pcat_ctldata;
+	spinlock(&pcd->pcd_lock);
 
 #define PFL_CTL_NTHRS 4
 	for (i = 1; i < PFL_CTL_NTHRS; i++) {
@@ -2445,6 +2474,7 @@ psc_ctlthr_main(const char *ofn, const struct psc_ctlop *ct, int nops,
 		pct->pct_ct = ct;
 		pct->pct_nops = nops;
 		pct->pct_ctldata = pcd;
+		pcd->pcd_refcnt++;
 		pscthr_setready(thr);
 	}
 
@@ -2452,5 +2482,8 @@ psc_ctlthr_main(const char *ofn, const struct psc_ctlop *ct, int nops,
 	pct->pct_ct = ct;
 	pct->pct_nops = nops;
 	pct->pct_ctldata = pcd;
+	pcd->pcd_refcnt++;
+	psc_waitq_wakeall(&pcd->pcd_waitq);
+	freelock(&pcd->pcd_lock);
 	psc_ctlthr_mainloop(me);
 }
