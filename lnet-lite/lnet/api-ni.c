@@ -1666,6 +1666,7 @@ lnet_create_ping_info(void)
 static void
 lnet_destroy_ping_info(void)
 {
+	size_t len;
         lnet_ni_t *ni;
 
         LNET_LOCK();
@@ -1676,8 +1677,8 @@ lnet_destroy_ping_info(void)
 
         LNET_UNLOCK();
 
-        LIBCFS_FREE(the_lnet.ln_ping_info,
-                    lnet_pinginfo_size(the_lnet.ln_ping_info->pi_nnis));
+	len = lnet_pinginfo_size(the_lnet.ln_ping_info->pi_nnis);
+        LIBCFS_FREE(the_lnet.ln_ping_info, len);
         the_lnet.ln_ping_info = NULL;
         return;
 }
