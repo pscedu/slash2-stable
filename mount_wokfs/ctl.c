@@ -131,6 +131,9 @@ wokctlcmd_list(int fd, struct psc_ctlmsghdr *mh, void *msg)
 		strlcpy(wcms->wcms_path, wm->wm_path,
 		    sizeof(wcms->wcms_path));
 		wcms->wcms_pos = i;
+		if (wm->wm_opts)
+			strlcpy(wcms->wcms_opts, wm->wm_opts,
+			    sizeof(wcms->wcms_opts));
 		rc = psc_ctlmsg_sendv(fd, mh, wcms);
 		if (!rc)
 			break;

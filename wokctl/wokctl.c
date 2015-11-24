@@ -132,8 +132,8 @@ void
 wok_list_prhdr(__unusedx struct psc_ctlmsghdr *mh,
     __unusedx const void *m)
 {
-	printf("%8s %-63s\n",
-	    "position", "module");
+	printf("%3s %s\n",
+	    "pos", "module");
 }
 
 void
@@ -141,7 +141,8 @@ wok_list_prdat(__unusedx const struct psc_ctlmsghdr *mh, const void *m)
 {
 	const struct wokctlmsg_modspec *wcms = m;
 
-	printf("%8d %s\n", wcms->wcms_pos, wcms->wcms_path);
+	printf("%3d %s\n    %s\n", wcms->wcms_pos, wcms->wcms_path,
+	    wcms->wcms_opts);
 }
 
 struct psc_ctlshow_ent psc_ctlshow_tab[] = {

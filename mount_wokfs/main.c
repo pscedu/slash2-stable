@@ -113,6 +113,7 @@ mod_load(int pos, const char *path, const char *opts)
 	wm = PSCALLOC(sizeof(*wm));
 	wm->wm_path = pfl_strdup(path);
 	wm->wm_handle = h;
+	wm->wm_opts = pfl_strdup(opts);
 	wm->wm_module.pf_private = wm;
 	pflfs_module_init(&wm->wm_module, opts);
 	rc = loadf(&wm->wm_module);
