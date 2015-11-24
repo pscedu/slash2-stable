@@ -32,6 +32,8 @@
 #include <stdint.h>
 #include <unistd.h>
 
+#include "pfl/dynarray.h"
+
 struct iovec;
 struct stat;
 struct statvfs;
@@ -73,6 +75,7 @@ struct pscfs {
 	struct pfl_opstat	*pf_opst_write_reply;
 	struct pfl_opstat	*pf_opst_write_err;
 	void			*pf_private;
+	struct psc_dynarray	 pf_opts;
 	const char		*pf_name;
 
 	void	(*pf_handle_access)(struct pscfs_req *, pscfs_inum_t, int);
@@ -112,7 +115,8 @@ struct pscfs {
 	NULL,								\
 	NULL,								\
 	NULL,								\
-	NULL
+	NULL,								\
+	DYNARRAY_INIT
 
 struct pscfs_clientctx {
 	pid_t		pfcc_pid;
@@ -196,7 +200,7 @@ struct pscfs *
 	pflfs_module_remove(int);
 
 void	pflfs_module_destroy(struct pscfs *);
-void	pflfs_module_init(struct pscfs *);
+void	pflfs_module_init(struct pscfs *, const char *);
 
 void	pflfs_modules_rdpin(void);
 void	pflfs_modules_rdunpin(void);

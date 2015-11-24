@@ -73,12 +73,6 @@
 
 #define QLEN 15	/* listen(2) queue */
 
-struct psc_dynarray	psc_ctl_clifds = DYNARRAY_INIT;
-psc_spinlock_t		psc_ctl_clifds_lock = SPINLOCK_INIT;
-struct psc_waitq	psc_ctl_clifds_waitq = PSC_WAITQ_INIT;
-
-struct pfl_mutex	pfl_ctl_mutex = PSC_MUTEX_INIT;
-
 __weak size_t
 psc_multiwaitcond_nwaiters(__unusedx struct psc_multiwaitcond *m)
 {
@@ -101,10 +95,17 @@ psc_ctlrep_getfault(int fd, struct psc_ctlmsghdr *mh,
 int
 psc_ctlmsg_sendv(int fd, const struct psc_ctlmsghdr *mh, const void *m)
 {
+	struct pfl_ctl_data *pcd;
+	struct psc_thread *thr;
+	struct psc_ctlthr *pct;
 	struct iovec iov[2];
 	struct msghdr msg;
 	size_t tsiz;
 	ssize_t n;
+
+	thr = pscthr_get();
+	pct = psc_ctlthr(thr);
+	pcd = pct->pct_ctldata;
 
 	iov[0].iov_base = (void *)mh;
 	iov[0].iov_len = sizeof(*mh);
@@ -116,9 +117,10 @@ psc_ctlmsg_sendv(int fd, const struct psc_ctlmsghdr *mh, const void *m)
 	msg.msg_iov = iov;
 	msg.msg_iovlen = nitems(iov);
 
-	psc_mutex_lock(&pfl_ctl_mutex);
+	/* XXX just need a lock on the fd, not the entire ctldata */
+	psc_mutex_lock(&pcd->pcd_mutex);
 	n = sendmsg(fd, &msg, PFL_MSG_NOSIGNAL);
-	psc_mutex_unlock(&pfl_ctl_mutex);
+	psc_mutex_unlock(&pcd->pcd_mutex);
 
 	if (n == -1) {
 		if (errno == EPIPE || errno == ECONNRESET) {
@@ -2268,9 +2270,13 @@ psc_ctlthr_service(int fd, const struct psc_ctlop *ct, int nops,
 void
 psc_ctlacthr_main(struct psc_thread *thr)
 {
+	struct psc_ctlacthr *pcat;
+	struct pfl_ctl_data *pcd;
 	int s, fd;
 
-	s = psc_ctlacthr(thr)->pcat_sock;
+	pcat = psc_ctlacthr(thr);
+	s = pcat->pcat_sock;
+	pcd = &pcat->pcat_ctldata;
 	while (pscthr_run(thr)) {
 		fd = accept(s, NULL, NULL);
 		if (fd == -1) {
@@ -2280,56 +2286,66 @@ psc_ctlacthr_main(struct psc_thread *thr)
 			}
 			psc_fatal("accept");
 		}
-		psc_ctlacthr(pscthr_get())->pcat_stat.nclients++;
+		pcat->pcat_stat.nclients++;
 
-		spinlock(&psc_ctl_clifds_lock);
-		psc_dynarray_add(&psc_ctl_clifds, (void *)(long)fd);
-		psc_waitq_wakeall(&psc_ctl_clifds_waitq);
-		freelock(&psc_ctl_clifds_lock);
+		spinlock(&pcd->pcd_lock);
+		psc_dynarray_add(&pcd->pcd_clifds, (void *)(long)fd);
+		psc_waitq_wakeall(&pcd->pcd_waitq);
+		freelock(&pcd->pcd_lock);
 	}
+	psc_dynarray_free(&pcd->pcd_clifds);
+	psc_waitq_destroy(&pcd->pcd_waitq);
+	psc_mutex_destroy(&pcd->pcd_mutex);
 }
 
 void
 psc_ctlthr_mainloop(struct psc_thread *thr)
 {
 	const struct psc_ctlop *ct;
+	struct pfl_ctl_data *pcd;
+	struct psc_ctlthr *pct;
 	size_t bufsiz = 0;
 	void *buf = NULL;
 	uint32_t rnd;
 	int s, nops;
 
-	ct = psc_ctlthr(thr)->pct_ct;
-	nops = psc_ctlthr(thr)->pct_nops;
+	pct = psc_ctlthr(thr);
+	pcd = pct->pct_ctldata;
+	ct = pct->pct_ct;
+	nops = pct->pct_nops;
 	while (pscthr_run(thr)) {
-		spinlock(&psc_ctl_clifds_lock);
-		if (psc_dynarray_len(&psc_ctl_clifds) == 0) {
-			psc_waitq_wait(&psc_ctl_clifds_waitq,
-			    &psc_ctl_clifds_lock);
+		spinlock(&pcd->pcd_lock);
+		if (psc_dynarray_len(&pcd->pcd_clifds) == 0) {
+			psc_waitq_wait(&pcd->pcd_waitq, &pcd->pcd_lock);
 			continue;
 		}
-		rnd = psc_random32u(psc_dynarray_len(&psc_ctl_clifds));
-		s = (int)(long)psc_dynarray_getpos(&psc_ctl_clifds, rnd);
-		psc_dynarray_remove(&psc_ctl_clifds, (void *)(long)s);
-		freelock(&psc_ctl_clifds_lock);
+		rnd = psc_random32u(psc_dynarray_len(&pcd->pcd_clifds));
+		s = (int)(long)psc_dynarray_getpos(&pcd->pcd_clifds,
+		    rnd);
+		psc_dynarray_remove(&pcd->pcd_clifds, (void *)(long)s);
+		freelock(&pcd->pcd_lock);
 
 		if (!psc_ctlthr_service(s, ct, nops, &bufsiz, &buf)) {
-			spinlock(&psc_ctl_clifds_lock);
-			psc_dynarray_add(&psc_ctl_clifds, (void *)(long)s);
-			psc_waitq_wakeall(&psc_ctl_clifds_waitq);
-			freelock(&psc_ctl_clifds_lock);
+			spinlock(&pcd->pcd_lock);
+			psc_dynarray_add(&pcd->pcd_clifds,
+			    (void *)(long)s);
+			psc_waitq_wakeall(&pcd->pcd_waitq);
+			freelock(&pcd->pcd_lock);
 		} else
 			close(s);
 	}
 	PSCFREE(buf);
 }
 
-void
+struct psc_thread *
 psc_ctlthr_spawn_listener(const char *ofn, int acthrtype)
 {
 	extern const char *__progname;
 	static psc_atomic32_t idx;
 
 	struct psc_thread *thr, *me;
+	struct psc_ctlacthr *pcat;
+	struct pfl_ctl_data *pcd;
 	struct sockaddr_un saun;
 	mode_t old_umask;
 	char *p;
@@ -2383,8 +2399,15 @@ psc_ctlthr_spawn_listener(const char *ofn, int acthrtype)
 	    sizeof(struct psc_ctlacthr), "%.*sctlacthr%d",
 	    p - me->pscthr_name, me->pscthr_name,
 	    psc_atomic32_inc_getnew(&idx) - 1);
-	psc_ctlacthr(thr)->pcat_sock = s;
+	pcat = psc_ctlacthr(thr);
+	pcat->pcat_sock = s;
+	pcd = &pcat->pcat_ctldata;
+	psc_dynarray_init(&pcd->pcd_clifds);
+	INIT_SPINLOCK(&pcd->pcd_lock);
+	psc_waitq_init(&pcd->pcd_waitq);
+	psc_mutex_init(&pcd->pcd_mutex);
 	pscthr_setready(thr);
+	return (thr);
 }
 
 /*
@@ -2398,7 +2421,9 @@ void
 psc_ctlthr_main(const char *ofn, const struct psc_ctlop *ct, int nops,
     int acthrtype)
 {
-	struct psc_thread *thr, *me;
+	struct psc_thread *thr, *me, *acthr;
+	struct pfl_ctl_data *pcd;
+	struct psc_ctlthr *pct;
 	const char *p;
 	int i;
 
@@ -2408,19 +2433,24 @@ psc_ctlthr_main(const char *ofn, const struct psc_ctlop *ct, int nops,
 	if (p == NULL)
 		psc_fatalx("'ctlthr' not found in control thread name");
 
-	psc_ctlthr_spawn_listener(ofn, acthrtype);
+	acthr = psc_ctlthr_spawn_listener(ofn, acthrtype);
+	pcd = &psc_ctlacthr(acthr)->pcat_ctldata;
 
 #define PFL_CTL_NTHRS 4
 	for (i = 1; i < PFL_CTL_NTHRS; i++) {
 		thr = pscthr_init(me->pscthr_type, psc_ctlthr_mainloop,
 		    NULL, me->pscthr_privsiz, "%.*sctlthr%d",
 		    p - me->pscthr_name, me->pscthr_name, i);
-		psc_ctlthr(thr)->pct_ct = ct;
-		psc_ctlthr(thr)->pct_nops = nops;
+		pct = psc_ctlthr(thr);
+		pct->pct_ct = ct;
+		pct->pct_nops = nops;
+		pct->pct_ctldata = pcd;
 		pscthr_setready(thr);
 	}
 
-	psc_ctlthr(me)->pct_ct = ct;
-	psc_ctlthr(me)->pct_nops = nops;
+	pct = psc_ctlthr(me);
+	pct->pct_ct = ct;
+	pct->pct_nops = nops;
+	pct->pct_ctldata = pcd;
 	psc_ctlthr_mainloop(me);
 }
