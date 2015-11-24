@@ -218,6 +218,7 @@ main(int argc, char *argv[])
 	PRTYPE(struct ifaddrs);
 	PRTYPE(struct l_wait_info);
 	PRTYPE(struct pfl_callerinfo);
+	PRTYPE(struct pfl_ctl_data);
 	PRTYPE(struct pfl_hashentry);
 	PRTYPE(struct pfl_heap);
 	PRTYPE(struct pfl_heap_entry);
