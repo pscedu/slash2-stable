@@ -345,15 +345,14 @@ _pscthr_init(int type, void (*startf)(struct psc_thread *),
 	int rc;
 
 	/*
-	 * If there is a start routine, we are already in the pthread, *
+	 * If there is a start routine, we are already in the pthread,
 	 * so the memory should be local.  Otherwise, we'd like to
 	 * allocate it within the thread context for local storage.
 	 *
 	 * Either way, the storage will be released via psc_free() upon
 	 * thread exit.
 	 */
-	thr = startf ? &mythr : psc_alloc(sizeof(*thr), PAF_NOLOG);
-	memset(thr, 0, sizeof(*thr));
+	thr = psc_alloc(sizeof(*thr), PAF_NOLOG);
 	INIT_PSC_LISTENTRY(&thr->pscthr_lentry);
 	psc_waitq_init(&thr->pscthr_waitq);
 	INIT_SPINLOCK_NOLOG(&thr->pscthr_lock);
@@ -410,6 +409,7 @@ pscthr_setready(struct psc_thread *thr)
 	thr->pscthr_flags |= PTF_READY;
 	psc_waitq_wakeall(&thr->pscthr_waitq);
 	freelock(&thr->pscthr_lock);
+	PSCFREE(thr);
 }
 
 int
