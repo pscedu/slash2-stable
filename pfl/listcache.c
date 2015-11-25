@@ -189,6 +189,13 @@ pfl_listcache_destroy(struct psc_listcache *plc)
 	psc_waitq_destroy(&plc->plc_wq_want);
 }
 
+void
+pfl_listcache_destroy_registered(struct psc_listcache *plc)
+{
+	lc_unregister(plc);
+	pfl_listcache_destroy(plc);
+}
+
 int
 lc_cmp(const void *a, const void *b)
 {
