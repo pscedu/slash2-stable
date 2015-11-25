@@ -717,5 +717,6 @@ pscrpc_init_portals(int type, int nmsgs)
 void
 pscrpc_exit_portals(void)
 {
+	pscrpc_conns_destroy();
 	pscrpc_ni_fini();
 }

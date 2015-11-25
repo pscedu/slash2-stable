@@ -188,6 +188,8 @@ void	  lc_register(struct psc_listcache *, const char *, ...);
 void	  lc_unregister(struct psc_listcache *);
 void	  lc_vregister(struct psc_listcache *, const char *, va_list);
 
+void	  pfl_listcache_destroy(struct psc_listcache *);
+
 void	 _lc_add_sorted(struct psc_listcache *, void *, int (*)(const void *, const void *));
 void	 _lc_add_sorted_backwards(struct psc_listcache *, void *, int (*)(const void *, const void *));
 

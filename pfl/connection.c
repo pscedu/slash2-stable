@@ -172,3 +172,9 @@ pscrpc_conns_init(void)
 	    struct pscrpc_connection, c_peer.nid, c_hentry, 3067,
 	    pscrpc_conn_cmp, "rpcconn");
 }
+
+void
+pscrpc_conns_destroy(void)
+{
+	psc_hashtbl_destroy(&pscrpc_conn_hashtbl);
+}

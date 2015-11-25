@@ -182,6 +182,13 @@ _lc_init(struct psc_listcache *plc, ptrdiff_t offset)
 	psc_waitq_init(&plc->plc_wq_want);
 }
 
+void
+pfl_listcache_destroy(struct psc_listcache *plc)
+{
+	psc_waitq_destroy(&plc->plc_wq_empty);
+	psc_waitq_destroy(&plc->plc_wq_want);
+}
+
 int
 lc_cmp(const void *a, const void *b)
 {

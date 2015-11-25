@@ -537,6 +537,7 @@ void	 pscrpc_abort_inflight(struct pscrpc_import *);
 /* connection.c */
 void	 pscrpc_drop_conns(lnet_process_id_t *);
 void	 pscrpc_conns_init(void);
+void	 pscrpc_conns_destroy(void);
 
 struct pscrpc_connection *
 	pscrpc_req_getconn(struct pscrpc_request *);
