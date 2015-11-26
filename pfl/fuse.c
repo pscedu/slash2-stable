@@ -495,7 +495,7 @@ pfl_fuse_atexit(void)
 }
 
 int
-pscfs_main(int privsiz)
+pscfs_main(void)
 {
 	int i;
 
@@ -524,7 +524,7 @@ pscfs_main(int privsiz)
 #endif
 
 	_psc_poolmaster_init(&pscfs_req_poolmaster,
-	    sizeof(struct pscfs_req) + privsiz,
+	    sizeof(struct pscfs_req),
 	    offsetof(struct pscfs_req, pfr_lentry),
 	    PPMF_AUTO, 64, 64, 1024, NULL,
 	    NULL, NULL, NULL, "fsrq");
@@ -756,7 +756,7 @@ pscfs_inum_pscfs2fuse(pscfs_inum_t p_inum, double timeo)
 		pfl_opstat_incr(_opst);					\
 									\
 		(pfr) = psc_pool_get(pscfs_req_pool);			\
-		memset((pfr), 0, pscfs_req_pool->ppm_entsize);		\
+		memset((pfr), 0, sizeof(*(pfr)));			\
 		PFL_GETTIMESPEC(&(pfr)->pfr_start);			\
 		INIT_LISTENTRY(&(pfr)->pfr_lentry);			\
 		INIT_SPINLOCK(&(pfr)->pfr_lock);			\
