@@ -68,6 +68,8 @@ wokctlcmd_insert(int fd, struct psc_ctlmsghdr *mh, void *msg)
 {
 	struct wokctlmsg_modspec *wcms = msg;
 	struct pscfs_creds pcr;
+	struct wok_module *wm;
+	char errbuf[LINE_MAX];
 	int rc;
 
 	rc = wokctl_getcreds(fd, &pcr);
@@ -87,26 +89,14 @@ wokctlcmd_insert(int fd, struct psc_ctlmsghdr *mh, void *msg)
 		    "position", wcms->wcms_pos));
 	}
 
-	rc = mod_load(wcms->wcms_pos, wcms->wcms_path, wcms->wcms_opts);
+	wm = mod_load(wcms->wcms_path, wcms->wcms_opts, errbuf,
+	    sizeof(errbuf));
+	if (wm)
+		pflfs_module_add(wcms->wcms_pos, &wm->wm_module);
 	pflfs_modules_wrunpin();
-	if (rc) {
-		const char *error;
-
-		switch (rc) {
-		case -1:
-			error = dlerror();
-			break;
-		case ENXIO:
-			error = "module does not define symbol "
-			    "'pscfs_module_load' ";
-			break;
-		default:
-			error = strerror(rc);
-			break;
-		}
+	if (!wm)
 		return (psc_ctlsenderr(fd, mh, "insert %s: %s",
-		    wcms->wcms_path, error));
-	}
+		    wcms->wcms_path, errbuf));
 	return (1);
 }
 
@@ -151,11 +141,11 @@ int
 wokctlcmd_reload(__unusedx int fd, __unusedx struct psc_ctlmsghdr *mh,
     void *msg)
 {
+	char *path, *opts, errbuf[LINE_MAX];
 	struct wokctlmsg_modctl *wcmc = msg;
 	struct pscfs_creds pcr;
 	struct wok_module *wm;
 	struct pscfs *m;
-	char *path, *opts;
 	int rc;
 
 	rc = wokctl_getcreds(fd, &pcr);
@@ -183,15 +173,15 @@ wokctlcmd_reload(__unusedx int fd, __unusedx struct psc_ctlmsghdr *mh,
 
 	mod_destroy(wm);
 
-	rc = mod_load(wcmc->wcmc_pos, path, opts);
+	wm = mod_load(path, opts, errbuf, sizeof(errbuf));
 	PSCFREE(path);
 	PSCFREE(opts);
 
 	pflfs_modules_wrunpin();
 
-	if (rc)
+	if (!wm)
 		return (psc_ctlsenderr(fd, mh, "reload %d: %s",
-		    wcmc->wcmc_pos, dlerror()));
+		    wcmc->wcmc_pos, errbuf));
 
 	return (1);
 }

@@ -94,8 +94,9 @@ opt_lookup(const char *opt)
 	return (0);
 }
 
-int
-mod_load(int pos, const char *path, const char *opts)
+struct wok_module *
+mod_load(const char *path, const char *opts, char *errbuf,
+    size_t errlen)
 {
 	int (*loadf)(struct pscfs *);
 	struct wok_module *wm;
@@ -103,12 +104,18 @@ mod_load(int pos, const char *path, const char *opts)
 	int rc;
 
 	h = dlopen(path, RTLD_NOW);
-	if (h == NULL)
-		PFL_GOTOERR(error, 0);
+	if (h == NULL) {
+		strlcpy(errbuf, dlerror(), errlen);
+		return (NULL);
+	}
 
 	loadf = dlsym(h, "pscfs_module_load");
-	if (loadf == NULL)
-		PFL_GOTOERR(error, 0);
+	if (loadf == NULL) {
+		dlclose(h);
+		strlcpy(errbuf, "module does not define symbol "
+		    "'pscfs_module_load'", errlen);
+		return (NULL);
+	}
 
 	wm = PSCALLOC(sizeof(*wm));
 	wm->wm_path = pfl_strdup(path);
@@ -124,19 +131,12 @@ mod_load(int pos, const char *path, const char *opts)
 		dlclose(h);
 		PSCFREE(wm->wm_path);
 		PSCFREE(wm);
-		psclog_warnx("module failed to load: %s", path);
-		return (rc);
+		psclog_warnx("module failed to load: rc=%d module=%s",
+		    rc, path);
+		strlcpy(errbuf, strerror(rc), errlen);
+		return (NULL);
 	}
-	pflfs_module_add(pos, &wm->wm_module);
-
-	return (0);
-
- error:
-	if (h)
-		dlclose(h);
-	if (dlerror() == NULL)
-		return (ENXIO);
-	return (-1);
+	return (wm);
 }
 
 void
@@ -199,14 +199,8 @@ main(int argc, char *argv[])
 	if (realpath(noncanon_mp, mountpoint) == NULL)
 		psc_fatal("realpath %s", noncanon_mp);
 
-//	pflog_get_fsctx_uprog = slc_log_get_fsctx_uprog;
-//	pflog_get_fsctx_uid = slc_log_get_fsctx_uid;
-//	pflog_get_fsctx_pid = slc_log_get_fsctx_pid;
-
 	pscfs_mount(mountpoint, &args);
 	pscfs_freeargs(&args);
-
-//	drop_privs(1);
 
 	ctlthr_spawn();
 

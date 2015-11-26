@@ -41,8 +41,9 @@ struct wok_module {
 	void		*wm_handle;
 };
 
-int	mod_load(int, const char *, const char *);
 void	mod_destroy(struct wok_module *);
+struct wok_module *
+	mod_load(const char *, const char *, char *, size_t);
 
 extern char	 mountpoint[];
 
