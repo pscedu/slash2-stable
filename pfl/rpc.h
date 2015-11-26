@@ -545,7 +545,8 @@ struct pscrpc_connection *
 struct pscrpc_connection *
 	 pscrpc_get_connection(lnet_process_id_t, lnet_nid_t, struct pscrpc_uuid *);
 struct pscrpc_connection *
-	 pscrpc_lookup_conn_locked(lnet_process_id_t, lnet_nid_t);
+	 pscrpc_lookup_conn_locked(struct psc_hashbkt *,
+	     lnet_process_id_t, lnet_nid_t);
 struct pscrpc_connection *
 	 pscrpc_connection_addref(struct pscrpc_connection *);
 

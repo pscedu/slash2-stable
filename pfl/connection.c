@@ -55,14 +55,15 @@ pscrpc_conn_cmp(const void *a, const void *b)
 }
 
 struct pscrpc_connection *
-pscrpc_lookup_conn_locked(lnet_process_id_t peer, lnet_nid_t self)
+pscrpc_lookup_conn_locked(struct psc_hashbkt *b, lnet_process_id_t peer,
+    lnet_nid_t self)
 {
 	struct pscrpc_connection *c, q;
 
 	q.c_peer.nid = peer.nid;
 	q.c_peer.pid = peer.pid;
 	q.c_self = self;
-	c = psc_hashtbl_search_cmp(&pscrpc_conn_hashtbl, &q, &peer.nid);
+	c = psc_hashbkt_search_cmp(&pscrpc_conn_hashtbl, b, &q, &peer.nid);
 	if (c)
 		return (pscrpc_connection_addref(c));
 	return (NULL);
@@ -81,15 +82,17 @@ pscrpc_get_connection(lnet_process_id_t peer, lnet_nid_t self,
 	    libcfs_nid2str(self), libcfs_id2str(peer));
 
 	b = psc_hashbkt_get(&pscrpc_conn_hashtbl, &peer.nid);
-	c = pscrpc_lookup_conn_locked(peer, self);
-	psc_hashbkt_put(&pscrpc_conn_hashtbl, b);
+	c = pscrpc_lookup_conn_locked(b, peer, self);
 
 	if (c) {
+		psc_hashbkt_put(&pscrpc_conn_hashtbl, b);
+
 		psclog_debug("got self %s peer %s",
 		    libcfs_nid2str(c->c_self),
 		    libcfs_nid2str(c->c_peer.nid));
 		return (c);
 	}
+	psc_hashbkt_unlock(b);
 
 	psclog_debug("malloc'ing a new rpc_conn for %s",
 	    libcfs_id2str(peer));
@@ -104,8 +107,7 @@ pscrpc_get_connection(lnet_process_id_t peer, lnet_nid_t self,
 	if (uuid)
 		pscrpc_str2uuid(&c->c_remote_uuid, (char *)uuid->uuid);
 
-	b = psc_hashbkt_get(&pscrpc_conn_hashtbl, &peer.nid);
-	c2 = pscrpc_lookup_conn_locked(peer, self);
+	c2 = pscrpc_lookup_conn_locked(b, peer, self);
 	if (c2 == NULL) {
 		psclog_info("adding connection %p for %s",
 		    c, libcfs_id2str(peer));
@@ -176,5 +178,19 @@ pscrpc_conns_init(void)
 void
 pscrpc_conns_destroy(void)
 {
+	struct pscrpc_connection *c, *c_next;
+	struct psc_hashbkt *b;
+
+	PSC_HASHTBL_FOREACH_BUCKET(b, &pscrpc_conn_hashtbl) {
+		psc_hashbkt_lock(b);
+		PSC_HASHBKT_FOREACH_ENTRY_SAFE(&pscrpc_conn_hashtbl, c,
+		    c_next, b) {
+			psc_hashbkt_del_item(&pscrpc_conn_hashtbl, b,
+			    c);
+			psc_pool_return(pscrpc_conn_pool, c);
+		}
+		psc_hashbkt_unlock(b);
+	}
+
 	psc_hashtbl_destroy(&pscrpc_conn_hashtbl);
 }
