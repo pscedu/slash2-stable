@@ -92,6 +92,7 @@ void	pscthrs_init(void);
 const char *
 	pscthr_getname(void);
 int	pscthr_getuniqid(void);
+void	pscthr_destroy(struct psc_thread *);
 void	pscthr_killall(void);
 int	pscthr_run(struct psc_thread *);
 void	pscthr_setdead(struct psc_thread *, int);
