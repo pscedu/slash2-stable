@@ -209,5 +209,5 @@ main(int argc, char *argv[])
 	pscfs_entry_timeout = 8.;
 	pscfs_attr_timeout = 8.;
 
-	exit(pscfs_main(0));
+	exit(pscfs_main());
 }
