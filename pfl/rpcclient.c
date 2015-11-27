@@ -727,15 +727,15 @@ int
 _pscrpc_set_check(struct pscrpc_request_set *set, int finish_one)
 {
 	struct pscrpc_request *req;
-	int locked, ncompleted = 0;
+	int rc, locked, ncompleted = 0;
 
+	/* race that can lead to assert in destruction? */
 	if (set->set_remaining == 0)
 		return (finish_one ? 0 : 1);
 
 	locked = reqlock(&set->set_lock);
 	psclist_for_each_entry(req, &set->set_requests, rq_set_chain_lentry) {
 		struct pscrpc_import *imp = req->rq_import;
-		int rc = 0;
 
 		DEBUG_REQ(PLL_DEBUG, req, "reqset=%p", set);
 
@@ -962,9 +962,10 @@ _pscrpc_set_check(struct pscrpc_request_set *set, int finish_one)
 		}
 	}
 
+	rc = finish_one ? ncompleted : set->set_remaining == 0;
 	ureqlock(&set->set_lock, locked);
 
-	return (finish_one ? ncompleted : set->set_remaining == 0);
+	return (rc);
 }
 
 void
@@ -981,7 +982,7 @@ void
 pscrpc_set_destroy(struct pscrpc_request_set *set)
 {
 	struct pscrpc_request *req, *next;
-	unsigned expected_phase;
+	enum pscrpc_rq_phase expected_phase;
 	int n = 0;
 
 	/* Requests on the set should either all be completed, or all be new */
