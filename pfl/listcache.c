@@ -269,6 +269,9 @@ _lc_reginit(struct psc_listcache *plc, ptrdiff_t offset,
 void
 lc_unregister(struct psc_listcache *plc)
 {
+	pfl_opstat_destroy(plc->plc_nseen);
+	pfl_opstat_destroy(plc->plc_st_removes);
+
 	PLL_LOCK(&psc_listcaches);
 	LIST_CACHE_LOCK(plc);
 	pll_remove(&psc_listcaches, plc);
@@ -294,4 +297,16 @@ lc_lookup(const char *name)
 		}
 	PLL_ULOCK(&psc_listcaches);
 	return (plc);
+}
+
+void
+pfl_listcache_wait_empty(struct psc_listcache *plc)
+{
+	LIST_CACHE_LOCK(plc);
+	while (lc_nitems(plc)) {
+		psc_waitq_wait(&plc->plc_wq_empty,
+		    LIST_CACHE_GETLOCK(plc));
+		LIST_CACHE_LOCK(plc);
+	}
+	LIST_CACHE_ULOCK(plc);
 }
