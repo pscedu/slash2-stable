@@ -94,6 +94,7 @@ struct pfl_opstat *
 	pfl_opstat_initf(int, const char *, ...);
 
 void	pfl_iostats_grad_init(struct pfl_iostats_grad *, int, const char *);
+void	pfl_iostats_grad_destroy(struct pfl_iostats_grad *);
 
 extern struct psc_dynarray	pfl_opstats;
 extern struct psc_spinlock	pfl_opstats_lock;

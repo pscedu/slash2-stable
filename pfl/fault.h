@@ -53,7 +53,7 @@ struct pfl_fault {
 #define pfl_fault_peek(name)	_pfl_fault_get((name), 0)
 
 int	_pfl_fault_here(struct pfl_fault *, int *, int);
-void	 pfl_fault_destroy(const char *);
+void	 pfl_fault_destroy(int);
 struct pfl_fault *
 	_pfl_fault_get(const char *, int);
 

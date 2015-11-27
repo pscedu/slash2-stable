@@ -43,7 +43,7 @@ struct psc_dynarray	pfl_faults;
 psc_spinlock_t		pfl_faults_lock = SPINLOCK_INIT;
 
 int
-pfl_fault_cmp(const void *a, const void *b)
+_pfl_fault_cmp(const void *a, const void *b)
 {
 	const struct pfl_fault *x = a, *y = b;
 
@@ -51,15 +51,13 @@ pfl_fault_cmp(const void *a, const void *b)
 }
 
 void
-pfl_fault_destroy(const char *name)
+pfl_fault_destroy(int pos)
 {
 	struct pfl_fault *flt;
-	int pos, locked;
+	int locked;
 
 	locked = reqlock(&pfl_faults_lock);
-	pos = psc_dynarray_bsearch(&pfl_faults, name, pfl_fault_cmp);
 	flt = psc_dynarray_getpos(&pfl_faults, pos);
-	psc_assert(strcmp(name, flt->pflt_name) == 0);
 	psc_dynarray_splice(&pfl_faults, pos, 1, NULL, 0);
 	ureqlock(&pfl_faults_lock, locked);
 
@@ -70,12 +68,15 @@ struct pfl_fault *
 _pfl_fault_get(const char *name, int populate)
 {
 	struct pfl_fault *flt;
-	int i, locked;
+	int pos, locked;
 
 	locked = reqlock(&pfl_faults_lock);
-	DYNARRAY_FOREACH(flt, i, &pfl_faults)
+	pos = psc_dynarray_bsearch(&pfl_faults, name, _pfl_fault_cmp);
+	if (pos < psc_dynarray_len(&pfl_faults)) {
+		flt = psc_dynarray_getpos(&pfl_faults, pos);
 		if (strcmp(flt->pflt_name, name) == 0)
 			goto out;
+	}
 	if (!populate)
 		goto out;
 	flt = PSCALLOC(sizeof(*flt));
@@ -83,6 +84,7 @@ _pfl_fault_get(const char *name, int populate)
 	strlcpy(flt->pflt_name, name, sizeof(flt->pflt_name));
 	flt->pflt_chance = 100;
 	flt->pflt_count = -1;
+	psc_dynarray_splice(&pfl_faults, pos, 1, &flt, 1);
  out:
 	ureqlock(&pfl_faults_lock, locked);
 	return (flt);
