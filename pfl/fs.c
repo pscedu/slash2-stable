@@ -23,10 +23,10 @@
  */
 
 /*
- * This file contains routines for the stackable file system modules capability
- * of PFL.  Each entry in the pscfs_modules list contains a table of routines
- * implementing the standard file system operations (read, write, open, unlink,
- * etc.).
+ * This file contains routines for the stackable file system modules
+ * capability of PFL.  Each entry in the pscfs_modules list contains a
+ * table of routines implementing the standard file system operations
+ * (read, write, open, unlink, etc.).
  */
 
 #include <unistd.h>
