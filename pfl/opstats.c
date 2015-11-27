@@ -128,3 +128,19 @@ pfl_iostats_grad_init(struct pfl_iostats_grad *ist0, int flags,
 		mode = "wr";
 	}
 }
+
+void
+pfl_iostats_grad_destroy(struct pfl_iostats_grad *ist0)
+{
+	struct pfl_iostats_grad *ist;
+	struct pfl_opstat *opst;
+	int i;
+
+	for (i = 0; i < 2; i++) 
+		for (ist = ist0; ; ist++) {
+			opst = i ? ist->rw.wr : ist->rw.rd;
+			pfl_opstat_destroy(opst);
+			if (!ist->size)
+				break;
+		}
+}
