@@ -91,6 +91,7 @@ pscrpc_nbreapthr_main(struct psc_thread *thr)
 		psc_waitq_wakeall(&set->set_waitq);
 		freelock(&set->set_lock);
 	} else {
+		pscrpc_set_wait(set);
 		pscrpc_set_destroy(set);
 	}
 }
