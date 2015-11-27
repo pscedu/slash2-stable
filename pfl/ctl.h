@@ -56,7 +56,7 @@ struct psc_ctlmsg_error {
 
 struct psc_ctlmsg_fault {
 	char			pcflt_thrname[PSC_THRNAME_MAX];
-	char			pcflt_name[PSC_FAULT_NAME_MAX];
+	char			pcflt_name[PFL_FAULT_NAME_MAX];
 	uint32_t		pcflt_flags;
 	uint32_t		pcflt_hits;
 	uint32_t		pcflt_unhits;
