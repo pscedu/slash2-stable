@@ -278,6 +278,37 @@ _psc_poolmaster_getmgr(struct psc_poolmaster *p, int memnid)
 	return (m);
 }
 
+void
+pfl_poolmaster_destroy(struct psc_poolmaster *pms)
+{
+	struct psc_poolmgr *m;
+	int i;
+
+	spinlock(&pms->pms_lock);
+	DYNARRAY_FOREACH(m, i, &pms->pms_poolmgrs) {
+		pll_remove(&psc_pools, m);
+
+		psc_mutex_destroy(&m->ppm_reclaim_mutex);
+
+		if (pms->pms_flags & PPMF_MLIST)
+			pfl_mlist_destroy(&m->ppm_ml);
+		else
+			pfl_listcache_destroy(&m->ppm_lc);
+
+		psc_dynarray_free(&pms->pms_poolmgrs);
+		psc_dynarray_free(&pms->pms_sets);
+
+		pfl_opstat_destroy(m->ppm_nseen);
+		pfl_opstat_destroy(m->ppm_opst_grows);
+		pfl_opstat_destroy(m->ppm_opst_shrinks);
+		pfl_opstat_destroy(m->ppm_opst_returns);
+		pfl_opstat_destroy(m->ppm_opst_preaps);
+		pfl_opstat_destroy(m->ppm_opst_fails);
+		PSCFREE(m);
+	}
+	freelock(&pms->pms_lock);
+}
+
 /*
  * Release an object allocated by pool.
  * @m: pool manager.
