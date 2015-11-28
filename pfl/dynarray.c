@@ -169,7 +169,7 @@ void
 psc_dynarray_setpos(struct psc_dynarray *pda, int pos, void *p)
 {
 	psc_assert(pos >= 0);
-	if (pos >= psc_dynarray_len(pda))
+	if (pos >= pda->pda_nalloc)
 		psc_fatalx("out of bounds array access");
 	pda->pda_items[pos] = p;
 	if (pos <= pda->pda_pos)
