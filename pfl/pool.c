@@ -263,12 +263,13 @@ _psc_poolmaster_initmgr(struct psc_poolmaster *p, struct psc_poolmgr *m)
 struct psc_poolmgr *
 _psc_poolmaster_getmgr(struct psc_poolmaster *p, int memnid)
 {
-	struct psc_poolmgr *m;
+	struct psc_poolmgr *m, **mv;
 
 	spinlock(&p->pms_lock);
 	if (psc_dynarray_ensurelen(&p->pms_poolmgrs, memnid + 1) == -1)
 		psc_fatal("unable to resize poolmgrs");
-	m = psc_dynarray_getpos(&p->pms_poolmgrs, memnid);
+	mv = psc_dynarray_get_mutable(&p->pms_poolmgrs);
+	m = mv[memnid];
 	if (m == NULL) {
 		m = PSCALLOC(sizeof(*m));
 		_psc_poolmaster_initmgr(p, m);

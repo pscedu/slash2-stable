@@ -47,7 +47,7 @@ psc_memnode_init(void)
 struct psc_memnode *
 psc_memnode_get(void)
 {
-	struct psc_memnode *pmn;
+	struct psc_memnode *pmn, **pmnv;
 	int memnid, rc;
 
 	pmn = pthread_getspecific(psc_memnodes_key);
@@ -58,7 +58,8 @@ psc_memnode_get(void)
 	spinlock(&psc_memnodes_lock);
 	if (psc_dynarray_ensurelen(&psc_memnodes, memnid + 1) == -1)
 		psc_fatalx("ensurelen");
-	pmn = psc_dynarray_getpos(&psc_memnodes, memnid);
+	pmnv = psc_dynarray_get_mutable(&psc_memnodes);
+	pmn = pmnv[memnid];
 	if (pmn == NULL) {
 		pmn = psc_alloc(sizeof(*pmn), PAF_NOLOG);
 		INIT_SPINLOCK(&pmn->pmn_lock);
