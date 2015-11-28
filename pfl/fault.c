@@ -84,7 +84,7 @@ _pfl_fault_get(const char *name, int populate)
 	strlcpy(flt->pflt_name, name, sizeof(flt->pflt_name));
 	flt->pflt_chance = 100;
 	flt->pflt_count = -1;
-	psc_dynarray_splice(&pfl_faults, pos, 1, &flt, 1);
+	psc_dynarray_splice(&pfl_faults, pos, 0, &flt, 1);
  out:
 	ureqlock(&pfl_faults_lock, locked);
 	return (flt);
