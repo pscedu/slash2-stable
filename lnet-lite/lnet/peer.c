@@ -81,6 +81,8 @@ lnet_destroy_peer_table(void)
         if (the_lnet.ln_peer_hash == NULL)
                 return;
 
+	pfl_poolmaster_destroy(&lnet_peer_poolmaster);
+
 	for (i = 0; i < LNET_PEER_HASHSIZE; i++)
 		LASSERT (list_empty(&the_lnet.ln_peer_hash[i]));
 	

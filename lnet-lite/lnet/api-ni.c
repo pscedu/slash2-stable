@@ -515,6 +515,11 @@ lnet_descriptor_setup (void)
 void
 lnet_descriptor_cleanup (void)
 {
+	pfl_poolmaster_destroy(&lnet_md_poolmaster);
+	pfl_poolmaster_destroy(&lnet_me_poolmaster);
+	pfl_poolmaster_destroy(&lnet_eq_poolmaster);
+	pfl_poolmaster_destroy(&lnet_msg_poolmaster);
+
         lnet_freelist_fini (&the_lnet.ln_free_mes);
         lnet_freelist_fini (&the_lnet.ln_free_msgs);
         lnet_freelist_fini (&the_lnet.ln_free_mds);

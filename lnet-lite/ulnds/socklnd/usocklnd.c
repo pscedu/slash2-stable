@@ -499,6 +499,10 @@ usocklnd_base_shutdown(int n)
                      usock_data.ud_npollthreads *
                      sizeof(usock_pollthread_t));
 
+	pfl_poolmaster_destroy(&usk_peer_poolmaster);
+	pfl_poolmaster_destroy(&usk_conn_poolmaster);
+	pfl_poolmaster_destroy(&usk_pollreq_poolmaster);
+
         usock_data.ud_state = UD_STATE_INIT_NOTHING;
 }
 
