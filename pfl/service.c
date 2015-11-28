@@ -911,7 +911,10 @@ pscrpc_unregister_service(struct pscrpc_service *svc)
 		PSCRPC_OBD_FREE(rs, svc->srv_max_reply_size);
 	}
 
+	pfl_poolmaster_destroy(&svc->srv_poolmaster);
 	psc_mutex_destroy(&svc->srv_mutex);
+	psc_waitq_destroy(&svc->srv_waitq);
+	psc_waitq_destroy(&svc->srv_free_rs_waitq);
 	PSCRPC_OBD_FREE(svc, sizeof(*svc));
 	return 0;
 }
