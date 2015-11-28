@@ -77,6 +77,18 @@ pfl_opstat_initf(int flags, const char *namefmt, ...)
 }
 
 void
+pfl_opstat_destroy_pos(int pos)
+{
+	struct pfl_opstat *opst;
+
+	LOCK_ENSURE(&pfl_opstats_lock);
+	opst = psc_dynarray_getpos(&pfl_opstats, pos);
+	psc_dynarray_splice(&pfl_opstats, pos, 1, NULL, 0);
+	PSCFREE(opst->opst_name);
+	PSCFREE(opst);
+}
+
+void
 pfl_opstat_destroy(struct pfl_opstat *opst)
 {
 	int pos;
@@ -85,10 +97,8 @@ pfl_opstat_destroy(struct pfl_opstat *opst)
 	pos = psc_dynarray_bsearch(&pfl_opstats, opst->opst_name,
 	    _pfl_opstat_cmp);
 	psc_assert(psc_dynarray_getpos(&pfl_opstats, pos) == opst);
-	psc_dynarray_splice(&pfl_opstats, pos, 1, NULL, 0);
+	pfl_opstat_destroy_pos(pos);
 	freelock(&pfl_opstats_lock);
-	PSCFREE(opst->opst_name);
-	PSCFREE(opst);
 }
 
 void
@@ -136,7 +146,7 @@ pfl_iostats_grad_destroy(struct pfl_iostats_grad *ist0)
 	struct pfl_opstat *opst;
 	int i;
 
-	for (i = 0; i < 2; i++) 
+	for (i = 0; i < 2; i++)
 		for (ist = ist0; ; ist++) {
 			opst = i ? ist->rw.wr : ist->rw.rd;
 			pfl_opstat_destroy(opst);

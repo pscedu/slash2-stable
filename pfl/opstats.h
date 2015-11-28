@@ -90,6 +90,7 @@ struct pfl_iostats_grad {
 	pfl_opstat_initf(0, (name), ## __VA_ARGS__)
 
 void	pfl_opstat_destroy(struct pfl_opstat *);
+void	pfl_opstat_destroy_pos(int);
 struct pfl_opstat *
 	pfl_opstat_initf(int, const char *, ...);
 
