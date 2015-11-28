@@ -2035,7 +2035,7 @@ psc_ctlrep_getodtable(int fd, struct psc_ctlmsghdr *mh, void *m)
 	rc = 1;
 	found = 0;
 	strlcpy(name, pco->pco_name, sizeof(name));
-	all = (name[0] == '0');
+	all = (name[0] == '\0');
 
 	PLL_LOCK(&pfl_odtables);
 	PLL_FOREACH(odt, &pfl_odtables) {
