@@ -719,4 +719,9 @@ pscrpc_exit_portals(void)
 {
 	pscrpc_conns_destroy();
 	pscrpc_ni_fini();
+	pfl_poolmaster_destroy(&pscrpc_export_poolmaster);
+	pfl_poolmaster_destroy(&pscrpc_conn_poolmaster);
+	pfl_poolmaster_destroy(&pscrpc_set_poolmaster);
+	pfl_poolmaster_destroy(&pscrpc_imp_poolmaster);
+	pfl_poolmaster_destroy(&pscrpc_rq_poolmaster);
 }
