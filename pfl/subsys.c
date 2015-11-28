@@ -50,13 +50,11 @@ struct psc_dynarray	 psc_subsystems = DYNARRAY_INIT_NOLOG;
 int
 psc_subsys_id(const char *name)
 {
-	const struct psc_subsys **ss;
-	int n, len;
+	const struct psc_subsys *ss;
+	int n;
 
-	ss = psc_dynarray_get(&psc_subsystems);
-	len = psc_dynarray_len(&psc_subsystems);
-	for (n = 0; n < len; n++)
-		if (strcasecmp(name, ss[n]->pss_name) == 0)
+	DYNARRAY_FOREACH(ss, n, &psc_subsystems)
+		if (strcasecmp(name, ss->pss_name) == 0)
 			return (n);
 	return (-1);
 }
@@ -157,22 +155,22 @@ psc_log_getlevel_ss(int ssid)
 void
 psc_log_setlevel_ss(int ssid, int newlevel)
 {
-	struct psc_subsys **ss;
-	int i, nss;
+	struct psc_subsys *ss;
+	int i;
 
 	if (newlevel >= PNLOGLEVELS || newlevel < 0)
 		psc_fatalx("log level out of bounds (%d, max %d)",
 		    newlevel, PNLOGLEVELS);
 
-	ss = psc_dynarray_get(&psc_subsystems);
-	nss = psc_dynarray_len(&psc_subsystems);
-
-	if (ssid == PSS_ALL)
-		for (i = 0; i < nss; i++)
-			ss[i]->pss_loglevel = newlevel;
-	else if (ssid >= nss || ssid < 0)
+	if (ssid == PSS_ALL) {
+		DYNARRAY_FOREACH(ss, i, &psc_subsystems)
+			ss->pss_loglevel = newlevel;
+	} else if (ssid >= psc_dynarray_len(&psc_subsystems) ||
+	    ssid < 0)
 		psc_fatalx("subsystem out of bounds (%d, max %d)", ssid,
-		    nss);
-	else
-		ss[ssid]->pss_loglevel = newlevel;
+		    psc_dynarray_len(&psc_subsystems));
+	else {
+		ss = psc_dynarray_getpos(&psc_subsystems, ssid);
+		ss->pss_loglevel = newlevel;
+	}
 }

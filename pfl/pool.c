@@ -263,16 +263,16 @@ _psc_poolmaster_initmgr(struct psc_poolmaster *p, struct psc_poolmgr *m)
 struct psc_poolmgr *
 _psc_poolmaster_getmgr(struct psc_poolmaster *p, int memnid)
 {
-	struct psc_poolmgr *m, **mv;
+	struct psc_poolmgr *m;
 
 	spinlock(&p->pms_lock);
 	if (psc_dynarray_ensurelen(&p->pms_poolmgrs, memnid + 1) == -1)
 		psc_fatal("unable to resize poolmgrs");
-	mv = psc_dynarray_get(&p->pms_poolmgrs);
-	m = mv[memnid];
+	m = psc_dynarray_getpos(&p->pms_poolmgrs, memnid);
 	if (m == NULL) {
-		mv[memnid] = m = PSCALLOC(sizeof(*m));
+		m = PSCALLOC(sizeof(*m));
 		_psc_poolmaster_initmgr(p, m);
+		psc_dynarray_setpos(&p->pms_poolmgrs, memnid, m);
 	}
 	freelock(&p->pms_lock);
 	return (m);
@@ -498,17 +498,13 @@ _psc_poolset_reap(struct psc_poolset *s,
 	struct psc_poolmgr *m, *culprit;
 	struct psc_poolmaster *p;
 	size_t tmx, culpritmx;
-	int i, np, nobj, locked;
-	void **pv;
+	int i, nobj, locked;
 
 	nobj = 0;
 	culprit = NULL;
 	culpritmx = tmx = 0;
 	spinlock(&s->pps_lock);
-	np = psc_dynarray_len(&s->pps_pools);
-	pv = psc_dynarray_get(&s->pps_pools);
-	for (i = 0; i < np; i++) {
-		p = pv[i];
+	DYNARRAY_FOREACH(p, i, &s->pps_pools) {
 		if (p == initiator)
 			continue;
 		m = psc_poolmaster_getmgr(p);
