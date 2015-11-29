@@ -216,5 +216,6 @@ void	pflfs_modules_wrpin(void);
 void	pflfs_modules_wrunpin(void);
 
 extern struct psc_dynarray		pscfs_modules;
+extern struct psc_lockedlist		pflfs_filehandles;
 
 #endif /* _PFL_FS_H_ */
