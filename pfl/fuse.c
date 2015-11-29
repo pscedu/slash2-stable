@@ -62,8 +62,25 @@
 #define MAX_FILESYSTEMS			5
 #define MAX_FDS				(MAX_FILESYSTEMS + 1)
 
-#define fi_getdata(fi)			((void *)(unsigned long)(fi)->fh)
-#define fi_setdata(fi, data)		((fi)->fh = (unsigned long)(data))
+#define fileinfo_getdata(fi)						\
+	_PFL_RVSTART {							\
+		struct pflfs_filehandle *_pfh;				\
+									\
+		_pfh = (void *)(unsigned long)(fi)->fh;			\
+		_pfh->pfh_data;						\
+	 } _PFL_RVEND
+
+#define fileinfo_setdata(fi, data)					\
+	do {								\
+		struct pflfs_filehandle *_pfh;				\
+									\
+		_pfh = psc_pool_get(pflfs_fileinfo_pool);		\
+		memset(_pfh, 0, sizeof(*_pfh));				\
+		INIT_LISTENTRY(&_pfh->pfh_lentry);			\
+		_pfh->pfh_data = data;					\
+		(fi)->fh = (unsigned long)_pfh;				\
+		pll_add(&pflfs_filehandles, _pfh);			\
+	} while (0)
 
 #ifdef __LP64__
 #  define INUM_FUSE2PSCFS(inum)		(inum)
@@ -95,6 +112,9 @@ typedef struct {
 	struct fuse_session	*se;
 	int			 mntlen;
 } fuse_fs_info_t;
+
+struct psc_lockedlist pflfs_filehandles = PLL_INIT(
+    &pflfs_filehandles, struct pflfs_filehandle, pfh_lentry);
 
 double				 pscfs_entry_timeout;
 double				 pscfs_attr_timeout;
@@ -842,7 +862,7 @@ pscfs_fuse_handle_release(fuse_req_t req, __unusedx fuse_ino_t inum,
 
 	GETPFR(pfr, req);
 	fuse_req_interrupt_func(req, pscfs_fuse_interrupt, pfr);
-	FSOP(release, pfr, fi_getdata(fi));
+	FSOP(release, pfr, fileinfo_getdata(fi));
 }
 
 void
@@ -853,7 +873,7 @@ pscfs_fuse_handle_releasedir(fuse_req_t req, __unusedx fuse_ino_t inum,
 
 	GETPFR(pfr, req);
 	fuse_req_interrupt_func(req, pscfs_fuse_interrupt, pfr);
-	FSOP(releasedir, pfr, fi_getdata(fi));
+	FSOP(releasedir, pfr, fileinfo_getdata(fi));
 }
 
 void
@@ -863,7 +883,7 @@ pscfs_fuse_handle_create(fuse_req_t req, fuse_ino_t pinum,
 	struct pscfs_req *pfr;
 
 	GETPFR(pfr, req);
-	pfr->pfr_fuse_fi = fi;
+	PFR_STASH_FILEINFO(pfr, fi);
 	fuse_req_interrupt_func(req, pscfs_fuse_interrupt, pfr);
 	FSOP(create, pfr, INUM_FUSE2PSCFS(pinum), name, fi->flags,
 	    mode);
@@ -877,7 +897,7 @@ pscfs_fuse_handle_flush(fuse_req_t req, __unusedx fuse_ino_t inum,
 
 	GETPFR(pfr, req);
 	fuse_req_interrupt_func(req, pscfs_fuse_interrupt, pfr);
-	FSOP(flush, pfr, fi_getdata(fi));
+	FSOP(flush, pfr, fileinfo_getdata(fi));
 }
 
 void
@@ -888,7 +908,7 @@ pscfs_fuse_handle_fsync(fuse_req_t req, __unusedx fuse_ino_t inum,
 
 	GETPFR(pfr, req);
 	fuse_req_interrupt_func(req, pscfs_fuse_interrupt, pfr);
-	FSOP(fsync, pfr, datasync, fi_getdata(fi));
+	FSOP(fsync, pfr, datasync, fileinfo_getdata(fi));
 }
 
 void
@@ -899,7 +919,7 @@ pscfs_fuse_handle_fsyncdir(fuse_req_t req, __unusedx fuse_ino_t inum,
 
 	GETPFR(pfr, req);
 	fuse_req_interrupt_func(req, pscfs_fuse_interrupt, pfr);
-	FSOP(fsyncdir, pfr, datasync, fi_getdata(fi));
+	FSOP(fsyncdir, pfr, datasync, fileinfo_getdata(fi));
 }
 
 void
@@ -965,7 +985,7 @@ pscfs_fuse_handle_open(fuse_req_t req, fuse_ino_t inum,
 	struct pscfs_req *pfr;
 
 	GETPFR(pfr, req);
-	pfr->pfr_fuse_fi = fi;
+	PFR_STASH_FILEINFO(pfr, fi);
 	fuse_req_interrupt_func(req, pscfs_fuse_interrupt, pfr);
 	FSOP(open, pfr, INUM_FUSE2PSCFS(inum), fi->flags);
 }
@@ -977,7 +997,7 @@ pscfs_fuse_handle_opendir(fuse_req_t req, fuse_ino_t inum,
 	struct pscfs_req *pfr;
 
 	GETPFR(pfr, req);
-	pfr->pfr_fuse_fi = fi;
+	PFR_STASH_FILEINFO(pfr, fi);
 	fuse_req_interrupt_func(req, pscfs_fuse_interrupt, pfr);
 	FSOP(opendir, pfr, INUM_FUSE2PSCFS(inum), fi->flags);
 }
@@ -989,9 +1009,9 @@ pscfs_fuse_handle_read(fuse_req_t req, __unusedx fuse_ino_t inum,
 	struct pscfs_req *pfr;
 
 	GETPFR(pfr, req);
-	pfr->pfr_fuse_fi = fi;
+	PFR_STASH_FILEINFO(pfr, fi);
 	fuse_req_interrupt_func(req, pscfs_fuse_interrupt, pfr);
-	FSOP(read, pfr, size, off, fi_getdata(fi));
+	FSOP(read, pfr, size, off, fileinfo_getdata(fi));
 }
 
 void
@@ -1002,7 +1022,7 @@ pscfs_fuse_handle_readdir(fuse_req_t req, __unusedx fuse_ino_t inum,
 
 	GETPFR(pfr, req);
 	fuse_req_interrupt_func(req, pscfs_fuse_interrupt, pfr);
-	FSOP(readdir, pfr, size, off, fi_getdata(fi));
+	FSOP(readdir, pfr, size, off, fileinfo_getdata(fi));
 }
 
 void
@@ -1068,7 +1088,7 @@ pscfs_fuse_handle_setattr(fuse_req_t req, fuse_ino_t inum,
 	GETPFR(pfr, req);
 	stb->st_ino = INUM_FUSE2PSCFS(stb->st_ino);
 	FSOP(setattr, pfr, INUM_FUSE2PSCFS(inum), stb, pfl_to_set, fi ?
-	    fi_getdata(fi) : NULL);
+	    fileinfo_getdata(fi) : NULL);
 }
 
 void
@@ -1119,9 +1139,9 @@ pscfs_fuse_handle_write(fuse_req_t req, __unusedx fuse_ino_t ino,
 	struct pscfs_req *pfr;
 
 	GETPFR(pfr, req);
-	pfr->pfr_fuse_fi = fi;
+	PFR_STASH_FILEINFO(pfr, fi);
 	fuse_req_interrupt_func(req, pscfs_fuse_interrupt, pfr);
-	FSOP(write, pfr, buf, size, off, fi_getdata(fi));
+	FSOP(write, pfr, buf, size, off, fileinfo_getdata(fi));
 }
 
 void
@@ -1215,13 +1235,23 @@ pscfs_reply_access(struct pscfs_req *pfr, int rc)
 void
 pscfs_reply_release(struct pscfs_req *pfr, int rc)
 {
+	struct pflfs_filehandle *pfh;
+
+	pfh = pfr->pfr_filehandle;
 	PFR_REPLY(err, pfr, rc);
+	pll_remove(&pflfs_filehandles, pfh);
+	psc_pool_return(&pflfs_filehandle_pool, pfh);
 }
 
 void
 pscfs_reply_releasedir(struct pscfs_req *pfr, int rc)
 {
+	struct pflfs_filehandle *pfh;
+
+	pfh = pfr->pfr_fileinfo;
 	PFR_REPLY(err, pfr, rc);
+	pll_remove(&pflfs_filehandles, pfh);
+	psc_pool_return(&pflfs_filehandle_pool, pfh);
 }
 
 void
@@ -1236,7 +1266,7 @@ pscfs_reply_create(struct pscfs_req *pfr, pscfs_inum_t inum,
 	else {
 		if (rflags & PSCFS_CREATEF_DIO)
 			pfr->pfr_fuse_fi->direct_io = 1;
-		fi_setdata(pfr->pfr_fuse_fi, data);
+		fileinfo_setdata(pfr->pfr_fuse_fi, data);
 		e.entry_timeout = entry_timeout;
 		e.ino = INUM_PSCFS2FUSE(inum, entry_timeout);
 		if (e.ino) {
@@ -1311,7 +1341,7 @@ pscfs_reply_open(struct pscfs_req *pfr, void *data, int rflags, int rc)
 			pfr->pfr_fuse_fi->direct_io = 0;
 #endif
 
-		fi_setdata(pfr->pfr_fuse_fi, data);
+		fileinfo_setdata(pfr->pfr_fuse_fi, data);
 		PFR_REPLY(open, pfr, pfr->pfr_fuse_fi);
 	}
 }
@@ -1326,7 +1356,7 @@ pscfs_reply_opendir(struct pscfs_req *pfr, void *data, int rflags, int rc)
 			pfr->pfr_fuse_fi->keep_cache = 1;
 		if (rflags & PSCFS_OPENF_DIO)
 			pfr->pfr_fuse_fi->direct_io = 1;
-		fi_setdata(pfr->pfr_fuse_fi, data);
+		fileinfo_setdata(pfr->pfr_fuse_fi, data);
 		PFR_REPLY(open, pfr, pfr->pfr_fuse_fi);
 	}
 }

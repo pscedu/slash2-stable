@@ -43,11 +43,17 @@ struct pscfs_args {
 	struct fuse_args		 pfa_av;
 };
 
+struct pflfs_filehandle {
+	struct psc_listentry		 pfh_lentry;
+	struct fuse_file_info		*pfh_fi;	// `fh' points back to this struct
+	void				*pfh_data;	// XXX per-module private data
+};
+
 struct pscfs_req {
 	struct pscfs			*pfr_mod;
 	struct psc_spinlock		 pfr_lock;
 	fuse_req_t			 pfr_fuse_req;
-	struct fuse_file_info		*pfr_fuse_fi;
+	struct pflfs_filehandle		*pfr_filehandle;
 	struct pscfs_clientctx		 pfr_clientctx;
 	struct psc_listentry		 pfr_lentry;
 	struct timespec			 pfr_start;
