@@ -41,6 +41,8 @@ struct statvfs;
 struct pscfs_args;
 struct pscfs_req;
 
+struct pflfs_filehandle;
+
 struct psc_ctlmsghdr;
 struct psc_ctlmsg_param;
 
@@ -76,6 +78,10 @@ struct pscfs {
 	struct pfl_opstat	*pf_opst_write_err;
 	void			*pf_private;
 	struct psc_dynarray	 pf_opts;
+
+	void			(*pf_filehandle_freeze)(struct pflfs_filehandle *);
+	void			(*pf_filehandle_thaw)(struct pflfs_filehandle *);
+
 	const char		*pf_name;
 
 	void	(*pf_handle_access)(struct pscfs_req *, pscfs_inum_t, int);
@@ -111,12 +117,14 @@ struct pscfs {
 };
 
 #define PSCFS_INIT							\
-	NULL,								\
-	NULL,								\
-	NULL,								\
-	NULL,								\
-	NULL,								\
-	DYNARRAY_INIT
+/* opst_read_err */	NULL,						\
+/* opst_read_reply */	NULL,						\
+/* opst_write_reply */	NULL,						\
+/* opst_write_err */	NULL,						\
+/* private */		NULL,						\
+/* opts */		DYNARRAY_INIT,					\
+/* filehandle_freeze */	NULL,						\
+/* filehandle_thaw */	NULL
 
 struct pscfs_clientctx {
 	pid_t		pfcc_pid;

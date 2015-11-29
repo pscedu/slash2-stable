@@ -53,7 +53,7 @@ struct pscfs_req {
 	struct pscfs			*pfr_mod;
 	struct psc_spinlock		 pfr_lock;
 	fuse_req_t			 pfr_fuse_req;
-	struct pflfs_filehandle		*pfr_filehandle;
+	struct fuse_file_info		*pfr_fuse_fi;	// `fh' points back to pflfs_filehandle
 	struct pscfs_clientctx		 pfr_clientctx;
 	struct psc_listentry		 pfr_lentry;
 	struct timespec			 pfr_start;

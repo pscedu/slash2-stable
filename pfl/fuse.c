@@ -62,19 +62,16 @@
 #define MAX_FILESYSTEMS			5
 #define MAX_FDS				(MAX_FILESYSTEMS + 1)
 
-#define fileinfo_getdata(fi)						\
-	_PFL_RVSTART {							\
-		struct pflfs_filehandle *_pfh;				\
-									\
-		_pfh = (void *)(unsigned long)(fi)->fh;			\
-		_pfh->pfh_data;						\
-	 } _PFL_RVEND
+#define fusefi_to_pfh(fi)						\
+	((struct pflfs_filehandle *)(void *)(unsigned long)(fi)->fh)
 
-#define fileinfo_setdata(fi, data)					\
+#define fusefi_to_pri(fi)		fusefi_to_pfh(fi)->pfh_data
+
+#define fusefi_stash_pri(fi, data)					\
 	do {								\
 		struct pflfs_filehandle *_pfh;				\
 									\
-		_pfh = psc_pool_get(pflfs_fileinfo_pool);		\
+		_pfh = psc_pool_get(pflfs_filehandle_pool);		\
 		memset(_pfh, 0, sizeof(*_pfh));				\
 		INIT_LISTENTRY(&_pfh->pfh_lentry);			\
 		_pfh->pfh_data = data;					\
@@ -113,15 +110,18 @@ typedef struct {
 	int			 mntlen;
 } fuse_fs_info_t;
 
-struct psc_lockedlist pflfs_filehandles = PLL_INIT(
-    &pflfs_filehandles, struct pflfs_filehandle, pfh_lentry);
-
 double				 pscfs_entry_timeout;
 double				 pscfs_attr_timeout;
 struct psc_poolmaster		 pscfs_req_poolmaster;
 struct psc_poolmgr		*pscfs_req_pool;
 struct psc_dynarray		 pscfs_modules;
 extern struct pscfs		 pscfs_default_ops;
+
+struct psc_poolmaster		 pflfs_filehandle_poolmaster;
+struct psc_poolmgr		*pflfs_filehandle_pool;
+
+struct psc_lockedlist pflfs_filehandles = PLL_INIT(
+    &pflfs_filehandles, struct pflfs_filehandle, pfh_lentry);
 
 int				 pscfs_exit_fuse_listener;
 int				 newfs_fd[2];
@@ -543,13 +543,16 @@ pscfs_main(void)
 	psc_hashtbl_add_item(&pscfs_inumcol_hashtbl, pfic);
 #endif
 
-	_psc_poolmaster_init(&pscfs_req_poolmaster,
-	    sizeof(struct pscfs_req),
-	    offsetof(struct pscfs_req, pfr_lentry),
-	    PPMF_AUTO, 64, 64, 1024, NULL,
-	    NULL, NULL, NULL, "fsrq");
-
+	psc_poolmaster_init(&pscfs_req_poolmaster, struct pscfs_req,
+	    pfr_lentry, PPMF_AUTO, 64, 64, 1024, NULL, NULL, NULL, NULL,
+	    "fsrq");
 	pscfs_req_pool = psc_poolmaster_getmgr(&pscfs_req_poolmaster);
+
+	psc_poolmaster_init(&pflfs_filehandle_poolmaster,
+	    struct pflfs_filehandle, pfh_lentry, PPMF_AUTO, 64, 64,
+	    1024, NULL, NULL, NULL, NULL, "fh");
+	pflfs_filehandle_pool = psc_poolmaster_getmgr(
+	    &pflfs_filehandle_poolmaster);
 
 #ifdef PFL_CTL
 	/* XXX: add max_fuse_iosz */
@@ -861,8 +864,9 @@ pscfs_fuse_handle_release(fuse_req_t req, __unusedx fuse_ino_t inum,
 	struct pscfs_req *pfr;
 
 	GETPFR(pfr, req);
+	pfr->pfr_fuse_fi = fi;
 	fuse_req_interrupt_func(req, pscfs_fuse_interrupt, pfr);
-	FSOP(release, pfr, fileinfo_getdata(fi));
+	FSOP(release, pfr, fusefi_to_pri(fi));
 }
 
 void
@@ -872,8 +876,9 @@ pscfs_fuse_handle_releasedir(fuse_req_t req, __unusedx fuse_ino_t inum,
 	struct pscfs_req *pfr;
 
 	GETPFR(pfr, req);
+	pfr->pfr_fuse_fi = fi;
 	fuse_req_interrupt_func(req, pscfs_fuse_interrupt, pfr);
-	FSOP(releasedir, pfr, fileinfo_getdata(fi));
+	FSOP(releasedir, pfr, fusefi_to_pri(fi));
 }
 
 void
@@ -883,7 +888,7 @@ pscfs_fuse_handle_create(fuse_req_t req, fuse_ino_t pinum,
 	struct pscfs_req *pfr;
 
 	GETPFR(pfr, req);
-	PFR_STASH_FILEINFO(pfr, fi);
+	pfr->pfr_fuse_fi = fi;
 	fuse_req_interrupt_func(req, pscfs_fuse_interrupt, pfr);
 	FSOP(create, pfr, INUM_FUSE2PSCFS(pinum), name, fi->flags,
 	    mode);
@@ -897,7 +902,7 @@ pscfs_fuse_handle_flush(fuse_req_t req, __unusedx fuse_ino_t inum,
 
 	GETPFR(pfr, req);
 	fuse_req_interrupt_func(req, pscfs_fuse_interrupt, pfr);
-	FSOP(flush, pfr, fileinfo_getdata(fi));
+	FSOP(flush, pfr, fusefi_to_pri(fi));
 }
 
 void
@@ -908,7 +913,7 @@ pscfs_fuse_handle_fsync(fuse_req_t req, __unusedx fuse_ino_t inum,
 
 	GETPFR(pfr, req);
 	fuse_req_interrupt_func(req, pscfs_fuse_interrupt, pfr);
-	FSOP(fsync, pfr, datasync, fileinfo_getdata(fi));
+	FSOP(fsync, pfr, datasync, fusefi_to_pri(fi));
 }
 
 void
@@ -919,7 +924,7 @@ pscfs_fuse_handle_fsyncdir(fuse_req_t req, __unusedx fuse_ino_t inum,
 
 	GETPFR(pfr, req);
 	fuse_req_interrupt_func(req, pscfs_fuse_interrupt, pfr);
-	FSOP(fsyncdir, pfr, datasync, fileinfo_getdata(fi));
+	FSOP(fsyncdir, pfr, datasync, fusefi_to_pri(fi));
 }
 
 void
@@ -985,7 +990,7 @@ pscfs_fuse_handle_open(fuse_req_t req, fuse_ino_t inum,
 	struct pscfs_req *pfr;
 
 	GETPFR(pfr, req);
-	PFR_STASH_FILEINFO(pfr, fi);
+	pfr->pfr_fuse_fi = fi;
 	fuse_req_interrupt_func(req, pscfs_fuse_interrupt, pfr);
 	FSOP(open, pfr, INUM_FUSE2PSCFS(inum), fi->flags);
 }
@@ -997,7 +1002,7 @@ pscfs_fuse_handle_opendir(fuse_req_t req, fuse_ino_t inum,
 	struct pscfs_req *pfr;
 
 	GETPFR(pfr, req);
-	PFR_STASH_FILEINFO(pfr, fi);
+	pfr->pfr_fuse_fi = fi;
 	fuse_req_interrupt_func(req, pscfs_fuse_interrupt, pfr);
 	FSOP(opendir, pfr, INUM_FUSE2PSCFS(inum), fi->flags);
 }
@@ -1009,9 +1014,9 @@ pscfs_fuse_handle_read(fuse_req_t req, __unusedx fuse_ino_t inum,
 	struct pscfs_req *pfr;
 
 	GETPFR(pfr, req);
-	PFR_STASH_FILEINFO(pfr, fi);
+	pfr->pfr_fuse_fi = fi;
 	fuse_req_interrupt_func(req, pscfs_fuse_interrupt, pfr);
-	FSOP(read, pfr, size, off, fileinfo_getdata(fi));
+	FSOP(read, pfr, size, off, fusefi_to_pri(fi));
 }
 
 void
@@ -1022,7 +1027,7 @@ pscfs_fuse_handle_readdir(fuse_req_t req, __unusedx fuse_ino_t inum,
 
 	GETPFR(pfr, req);
 	fuse_req_interrupt_func(req, pscfs_fuse_interrupt, pfr);
-	FSOP(readdir, pfr, size, off, fileinfo_getdata(fi));
+	FSOP(readdir, pfr, size, off, fusefi_to_pri(fi));
 }
 
 void
@@ -1088,7 +1093,7 @@ pscfs_fuse_handle_setattr(fuse_req_t req, fuse_ino_t inum,
 	GETPFR(pfr, req);
 	stb->st_ino = INUM_FUSE2PSCFS(stb->st_ino);
 	FSOP(setattr, pfr, INUM_FUSE2PSCFS(inum), stb, pfl_to_set, fi ?
-	    fileinfo_getdata(fi) : NULL);
+	    fusefi_to_pri(fi) : NULL);
 }
 
 void
@@ -1139,9 +1144,9 @@ pscfs_fuse_handle_write(fuse_req_t req, __unusedx fuse_ino_t ino,
 	struct pscfs_req *pfr;
 
 	GETPFR(pfr, req);
-	PFR_STASH_FILEINFO(pfr, fi);
+	pfr->pfr_fuse_fi = fi;
 	fuse_req_interrupt_func(req, pscfs_fuse_interrupt, pfr);
-	FSOP(write, pfr, buf, size, off, fileinfo_getdata(fi));
+	FSOP(write, pfr, buf, size, off, fusefi_to_pri(fi));
 }
 
 void
@@ -1237,10 +1242,10 @@ pscfs_reply_release(struct pscfs_req *pfr, int rc)
 {
 	struct pflfs_filehandle *pfh;
 
-	pfh = pfr->pfr_filehandle;
+	pfh = fusefi_to_pfh(pfr->pfr_fuse_fi);
 	PFR_REPLY(err, pfr, rc);
 	pll_remove(&pflfs_filehandles, pfh);
-	psc_pool_return(&pflfs_filehandle_pool, pfh);
+	psc_pool_return(pflfs_filehandle_pool, pfh);
 }
 
 void
@@ -1248,10 +1253,10 @@ pscfs_reply_releasedir(struct pscfs_req *pfr, int rc)
 {
 	struct pflfs_filehandle *pfh;
 
-	pfh = pfr->pfr_fileinfo;
+	pfh = fusefi_to_pfh(pfr->pfr_fuse_fi);
 	PFR_REPLY(err, pfr, rc);
 	pll_remove(&pflfs_filehandles, pfh);
-	psc_pool_return(&pflfs_filehandle_pool, pfh);
+	psc_pool_return(pflfs_filehandle_pool, pfh);
 }
 
 void
@@ -1266,7 +1271,7 @@ pscfs_reply_create(struct pscfs_req *pfr, pscfs_inum_t inum,
 	else {
 		if (rflags & PSCFS_CREATEF_DIO)
 			pfr->pfr_fuse_fi->direct_io = 1;
-		fileinfo_setdata(pfr->pfr_fuse_fi, data);
+		fusefi_stash_pri(pfr->pfr_fuse_fi, data);
 		e.entry_timeout = entry_timeout;
 		e.ino = INUM_PSCFS2FUSE(inum, entry_timeout);
 		if (e.ino) {
@@ -1341,7 +1346,7 @@ pscfs_reply_open(struct pscfs_req *pfr, void *data, int rflags, int rc)
 			pfr->pfr_fuse_fi->direct_io = 0;
 #endif
 
-		fileinfo_setdata(pfr->pfr_fuse_fi, data);
+		fusefi_stash_pri(pfr->pfr_fuse_fi, data);
 		PFR_REPLY(open, pfr, pfr->pfr_fuse_fi);
 	}
 }
@@ -1356,7 +1361,7 @@ pscfs_reply_opendir(struct pscfs_req *pfr, void *data, int rflags, int rc)
 			pfr->pfr_fuse_fi->keep_cache = 1;
 		if (rflags & PSCFS_OPENF_DIO)
 			pfr->pfr_fuse_fi->direct_io = 1;
-		fileinfo_setdata(pfr->pfr_fuse_fi, data);
+		fusefi_stash_pri(pfr->pfr_fuse_fi, data);
 		PFR_REPLY(open, pfr, pfr->pfr_fuse_fi);
 	}
 }
