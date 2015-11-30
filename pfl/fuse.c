@@ -546,13 +546,13 @@ pscfs_main(int nthr, int thrtype, const char *thrname)
 #endif
 
 	psc_poolmaster_init(&pflfs_req_poolmaster, struct pscfs_req,
-	    pfr_lentry, PPMF_AUTO, 64, 64, 1024, NULL, NULL, NULL, NULL,
+	    pfr_lentry, PPMF_AUTO, 64, 64, 1024, NULL, NULL, NULL,
 	    "fsrq");
 	pflfs_req_pool = psc_poolmaster_getmgr(&pflfs_req_poolmaster);
 
 	psc_poolmaster_init(&pflfs_filehandle_poolmaster,
 	    struct pflfs_filehandle, pfh_lentry, PPMF_AUTO, 64, 64,
-	    1024, NULL, NULL, NULL, NULL, "fh");
+	    1024, NULL, NULL, NULL, "fh");
 	pflfs_filehandle_pool = psc_poolmaster_getmgr(
 	    &pflfs_filehandle_poolmaster);
 
