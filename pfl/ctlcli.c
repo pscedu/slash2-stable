@@ -623,7 +623,7 @@ void
 psc_ctlmsg_journal_prhdr(__unusedx struct psc_ctlmsghdr *mh,
     __unusedx const void *m)
 {
-	printf("%-16s %4s %4s %6s %2s "
+	printf("%-15s %4s %4s %6s %2s "
 	    "%9s %7s %8s "
 	    "%6s %4s %5s\n",
 	    "journal", "flag", "used", "total", "rs",
@@ -637,7 +637,7 @@ psc_ctlmsg_journal_prdat(__unusedx const struct psc_ctlmsghdr *mh,
 {
 	const struct psc_ctlmsg_journal *pcj = m;
 
-	printf("%-16s %c%c%c%c %4u %6u %2u "
+	printf("%-15s %c%c%c%c %4u %6u %2u "
 	    "%9"PRIx64" %7"PRIx64" %8"PRIx64" "
 	    "%6d %4"PRId64" %5u\n",
 	    pcj->pcj_name,
