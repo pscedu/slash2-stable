@@ -33,17 +33,6 @@ struct psc_ctlop lrctlops[] = {
 	PSC_CTLDEFOPS
 };
 
-psc_ctl_thrget_t psc_ctl_thrgets[] = {
-/* CTL		*/ psc_ctlthr_get,
-/* CTLAC	*/ psc_ctlacthr_get,
-/* EQPOLL	*/ NULL,
-/* LNETAC	*/ NULL,
-/* OPSTIMER	*/ NULL,
-/* USKLNDPL	*/ NULL
-};
-
-PFLCTL_SVR_DEFS;
-
 void
 lrctlthr_main(void)
 {

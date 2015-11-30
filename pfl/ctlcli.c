@@ -259,18 +259,19 @@ psc_ctl_packshow_lnetif(char *lni)
 }
 
 void
-psc_ctl_packshow_loglevels(char *thr)
+psc_ctl_packshow_thread(char *thr)
 {
-	struct psc_ctlmsg_loglevel *pcl;
-	int n;
+	struct psc_ctlmsg_thread *pct;
+	size_t n;
 
 	psc_ctlmsg_push(PCMT_GETSUBSYS,
 	    sizeof(struct psc_ctlmsg_subsys));
 
-	pcl = psc_ctlmsg_push(PCMT_GETLOGLEVEL, sizeof(*pcl));
+	pct = psc_ctlmsg_push(PCMT_GETTHREAD, sizeof(*pct));
 	if (thr) {
-		n = strlcpy(pcl->pcl_thrname, thr, sizeof(pcl->pcl_thrname));
-		if (n == 0 || n >= (int)sizeof(pcl->pcl_thrname))
+		n = strlcpy(pct->pct_thrname, thr,
+		    sizeof(pct->pct_thrname));
+		if (n == 0 || n >= sizeof(pct->pct_thrname))
 			errx(1, "invalid thread name: %s", thr);
 	}
 }
@@ -354,20 +355,6 @@ psc_ctl_packshow_rpcsvc(char *rpcsvc)
 		n = strlcpy(pcrs->pcrs_name, rpcsvc, sizeof(pcrs->pcrs_name));
 		if (n == 0 || n >= (int)sizeof(pcrs->pcrs_name))
 			errx(1, "invalid rpcsvc name: %s", rpcsvc);
-	}
-}
-
-void
-psc_ctl_packshow_thread(char *thr)
-{
-	struct psc_ctlmsg_thread *pcst;
-	int n;
-
-	pcst = psc_ctlmsg_push(PCMT_GETTHREAD, sizeof(*pcst));
-	if (thr) {
-		n = strlcpy(pcst->pcst_thrname, thr, sizeof(pcst->pcst_thrname));
-		if (n == 0 || n >= (int)sizeof(pcst->pcst_thrname))
-			errx(1, "invalid thread name: %s", thr);
 	}
 }
 
@@ -530,20 +517,6 @@ psc_ctl_loglevel_namelen(int n)
 	for (j = 0; j < PNLOGLEVELS; j++)
 		maxlen = MAX(maxlen, strlen(psc_loglevel_getname(j)));
 	return (maxlen);
-}
-
-void
-psc_ctlthr_pr(const struct psc_ctlmsg_thread *pcst)
-{
-	printf(" #sent %9u #recv %9u #drop %9u",
-	    pcst->pcst_nsent, pcst->pcst_nrecv,
-	    pcst->pcst_ndrop);
-}
-
-void
-psc_ctlacthr_pr(const struct psc_ctlmsg_thread *pcst)
-{
-	printf(" #conn %8u", pcst->pcst_nclients);
 }
 
 void
@@ -845,48 +818,68 @@ psc_ctlmsg_param_prdat(__unusedx const struct psc_ctlmsghdr *mh,
 		    pcp->pcp_field, pcp->pcp_value);
 }
 
+int
+psc_ctlmsg_thread_check(struct psc_ctlmsghdr *mh,
+    __unusedx const void *m)
+{
+	__unusedx struct psc_ctlmsg_thread *pct;
+
+	if (mh->mh_size != sizeof(*pct) +
+	    psc_ctl_nsubsys * sizeof(*pct->pct_loglevels))
+		return (sizeof(*pct));
+	return (0);
+}
+
 void
 psc_ctlmsg_thread_prhdr(__unusedx struct psc_ctlmsghdr *mh,
     __unusedx const void *m)
 {
-	const char *msg = "thread-specific-stats";
-	int n;
+	const char *memnid = "";
+	int n, memnid_len = 0;
 
-	n = printf("%-16s %5s"
 #ifdef HAVE_NUMA
-	    " %6s"
+	memnid_len = 7;
+	memnid = " memnid";
 #endif
-	    " %3s ",
-	    "thread", "thrid",
-#ifdef HAVE_NUMA
-	    "memnid",
-#endif
-	    "flg");
-	printf("%*s%s\n", (PSC_CTL_DISPLAY_WIDTH - n - 1) / 2 -
-	    (int)strlen(msg) / 2, "", msg);
+
+	printf("%-16s %3s%*s", "thread", "flg", memnid_len, memnid);
+	for (n = 0; n < psc_ctl_nsubsys; n++)
+		printf(" %.3s", psc_ctl_subsys_names[n]);
+	printf("\n");
+}
+
+int
+pflctl_loglevel_abbr(int level)
+{
+	int c;
+
+	if (level == PLL_MAX)
+		return ('m');
+	c = "fewnidbvt"[level];
+	return (c);
 }
 
 void
 psc_ctlmsg_thread_prdat(__unusedx const struct psc_ctlmsghdr *mh,
     const void *m)
 {
-	const struct psc_ctlmsg_thread *pcst = m;
+	const struct psc_ctlmsg_thread *pct = m;
+	int n, ll;
 
-	printf("%-16s %5d"
+	printf("%-16s %c%c%c",
+	    pct->pct_thrname,
+	    pct->pct_flags & PTF_PAUSED	? 'P' : '-',
+	    pct->pct_flags & PTF_RUN	? 'R' : '-',
+	    pct->pct_flags & PTF_READY	? 'I' : '-');
+
 #ifdef HAVE_NUMA
-	    " %6d"
+	printf(" %6d", pct->pct_memnode);
 #endif
-	    " %c%c%c",
-	    pcst->pcst_thrname, pcst->pcst_thrid,
-#ifdef HAVE_NUMA
-	    pcst->pcst_memnode,
-#endif
-	    pcst->pcst_flags & PTF_PAUSED	? 'P' : '-',
-	    pcst->pcst_flags & PTF_RUN		? 'R' : '-',
-	    pcst->pcst_flags & PTF_READY	? 'I' : '-');
-	if (pcst->pcst_thrtype < psc_ctl_nprthrs &&
-	    psc_ctl_prthrs[pcst->pcst_thrtype])
-		psc_ctl_prthrs[pcst->pcst_thrtype](pcst);
+
+	for (n = 0; n < psc_ctl_nsubsys; n++) {
+		ll = pct->pct_loglevels[n];
+		printf(" %c:%d", pflctl_loglevel_abbr(ll), ll);
+	}
 	printf("\n");
 }
 
@@ -908,49 +901,6 @@ psc_ctlmsg_lnetif_prdat(__unusedx const struct psc_ctlmsghdr *mh,
 	    pclni->pclni_nid, pclni->pclni_maxtxcredits,
 	    pclni->pclni_txcredits, pclni->pclni_mintxcredits,
 	    pclni->pclni_peertxcredits, pclni->pclni_refcount);
-}
-
-int
-psc_ctlmsg_loglevel_check(struct psc_ctlmsghdr *mh,
-    __unusedx const void *m)
-{
-	__unusedx struct psc_ctlmsg_loglevel *pcl;
-
-	if (mh->mh_size != sizeof(*pcl) +
-	    psc_ctl_nsubsys * sizeof(*pcl->pcl_levels))
-		return (sizeof(*pcl));
-	return (0);
-}
-
-void
-psc_ctlmsg_loglevel_prhdr(__unusedx struct psc_ctlmsghdr *mh,
-    __unusedx const void *m)
-{
-	int n;
-
-	n = PSC_THRNAME_MAX - (int)strlen("thread") -
-	    (int)strlen("loglevel:") - 1;
-	if (n < 0)
-		n = 0;
-	printf("thread %*s loglevel:", n, "");
-	for (n = 0; n < psc_ctl_nsubsys; n++)
-		printf(" %*s", psc_ctl_loglevel_namelen(n),
-		    psc_ctl_subsys_names[n]);
-	printf("\n");
-}
-
-void
-psc_ctlmsg_loglevel_prdat(__unusedx const struct psc_ctlmsghdr *mh,
-    const void *m)
-{
-	const struct psc_ctlmsg_loglevel *pcl = m;
-	int n;
-
-	printf("%-*s ", PSC_THRNAME_MAX, pcl->pcl_thrname);
-	for (n = 0; n < psc_ctl_nsubsys; n++)
-		printf(" %*s", psc_ctl_loglevel_namelen(n),
-		    psc_loglevel_getname(pcl->pcl_levels[n]));
-	printf("\n");
 }
 
 void

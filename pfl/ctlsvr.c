@@ -124,7 +124,7 @@ psc_ctlmsg_sendv(int fd, const struct psc_ctlmsghdr *mh, const void *m)
 
 	if (n == -1) {
 		if (errno == EPIPE || errno == ECONNRESET) {
-			psc_ctlthr(pscthr_get())->pct_stat.ndrop++;
+			OPSTAT_INCR("ctl.drop");
 			pscthr_yield();
 			return (0);
 		}
@@ -133,7 +133,7 @@ psc_ctlmsg_sendv(int fd, const struct psc_ctlmsghdr *mh, const void *m)
 	tsiz = sizeof(*mh) + mh->mh_size;
 	if ((size_t)n != tsiz)
 		psclog_warn("short sendmsg");
-	psc_ctlthr(pscthr_get())->pct_stat.nsent++;
+	OPSTAT_INCR("ctl.sent");
 	pscthr_yield();
 	return (1);
 }
@@ -198,70 +198,6 @@ psc_ctlsenderr(int fd, const struct psc_ctlmsghdr *mhp, const char *fmt,
 }
 
 /*
- * Export control thread stats.
- * @thr: thread begin queried.
- * @pcst: thread stats control message to be filled in.
- */
-void
-psc_ctlthr_get(struct psc_thread *thr, struct psc_ctlmsg_thread *pcst)
-{
-	pcst->pcst_nsent	= psc_ctlthr(thr)->pct_stat.nsent;
-	pcst->pcst_nrecv	= psc_ctlthr(thr)->pct_stat.nrecv;
-	pcst->pcst_ndrop	= psc_ctlthr(thr)->pct_stat.ndrop;
-}
-
-/*
- * Export control thread stats.
- * @thr: thread begin queried.
- * @pcst: thread stats control message to be filled in.
- */
-void
-psc_ctlacthr_get(struct psc_thread *thr, struct psc_ctlmsg_thread *pcst)
-{
-	pcst->pcst_nclients	= psc_ctlacthr(thr)->pcat_stat.nclients;
-}
-
-/*
- * Send a reply to a "GETTHREAD" inquiry.
- * @fd: client socket descriptor.
- * @mh: already filled-in control message header.
- * @m: control message to be filled in and sent out.
- * @thr: thread begin queried.
- */
-__static int
-psc_ctlmsg_thread_send(int fd, struct psc_ctlmsghdr *mh, void *m,
-    struct psc_thread *thr)
-{
-	struct psc_ctlmsg_thread *pcst = m;
-
-	snprintf(pcst->pcst_thrname, sizeof(pcst->pcst_thrname),
-	    "%s", thr->pscthr_name);
-	pcst->pcst_thrid = thr->pscthr_thrid;
-	pcst->pcst_thrtype = thr->pscthr_type;
-	pcst->pcst_flags = thr->pscthr_flags;
-	if (thr->pscthr_type >= 0 &&
-	    thr->pscthr_type < psc_ctl_nthrgets &&
-	    psc_ctl_thrgets[thr->pscthr_type])
-		psc_ctl_thrgets[thr->pscthr_type](thr, pcst);
-	return (psc_ctlmsg_sendv(fd, mh, pcst));
-}
-
-/*
- * Respond to a "GETTHREAD" inquiry.
- * @fd: client socket descriptor.
- * @mh: already filled-in control message header.
- * @m: control message to examine and reuse.
- */
-int
-psc_ctlrep_getthread(int fd, struct psc_ctlmsghdr *mh, void *m)
-{
-	struct psc_ctlmsg_thread *pcst = m;
-
-	return (psc_ctl_applythrop(fd, mh, m, pcst->pcst_thrname,
-	    psc_ctlmsg_thread_send));
-}
-
-/*
  * Send a response to a "GETSUBSYS" inquiry.
  * @fd: client socket descriptor.
  * @mh: already filled-in control message header.
@@ -321,48 +257,48 @@ psc_ctlrep_getrpcsvc(int fd, struct psc_ctlmsghdr *mh,
 #endif
 
 /*
- * Send a reply to a "GETLOGLEVEL" inquiry.
+ * Send a reply to a "GETTHREAD" inquiry.
  * @fd: client socket descriptor.
  * @mh: already filled-in control message header.
  * @thr: thread begin queried.
  */
 __static int
-psc_ctlmsg_loglevel_send(int fd, struct psc_ctlmsghdr *mh, void *m,
+psc_ctlmsg_thread_send(int fd, struct psc_ctlmsghdr *mh, void *m,
     struct psc_thread *thr)
 {
-	struct psc_ctlmsg_loglevel *pcl = m;
+	struct psc_ctlmsg_thread *pct = m;
 	size_t siz;
 	int rc;
 
-	siz = sizeof(*pcl) + sizeof(*pcl->pcl_levels) *
+	siz = sizeof(*pct) + sizeof(*pct->pct_loglevels) *
 	    psc_dynarray_len(&psc_subsystems);
-	pcl = PSCALLOC(siz);
-	snprintf(pcl->pcl_thrname, sizeof(pcl->pcl_thrname),
+	pct = PSCALLOC(siz);
+	snprintf(pct->pct_thrname, sizeof(pct->pct_thrname),
 	    "%s", thr->pscthr_name);
-	memcpy(pcl->pcl_levels, thr->pscthr_loglevels,
+	memcpy(pct->pct_loglevels, thr->pscthr_loglevels,
 	    psc_dynarray_len(&psc_subsystems) *
-	    sizeof(*pcl->pcl_levels));
+	    sizeof(*pct->pct_loglevels));
 	mh->mh_size = siz;
-	rc = psc_ctlmsg_sendv(fd, mh, pcl);
+	rc = psc_ctlmsg_sendv(fd, mh, pct);
 	/* reset because we used our own buffer */
 	mh->mh_size = 0;
-	PSCFREE(pcl);
+	PSCFREE(pct);
 	return (rc);
 }
 
 /*
- * Respond to a "GETLOGLEVEL" inquiry.
+ * Respond to a "GETTHREAD" inquiry.
  * @fd: client socket descriptor.
  * @mh: already filled-in control message header.
  * @m: control message to examine.
  */
 int
-psc_ctlrep_getloglevel(int fd, struct psc_ctlmsghdr *mh, void *m)
+psc_ctlrep_getthread(int fd, struct psc_ctlmsghdr *mh, void *m)
 {
-	struct psc_ctlmsg_loglevel *pcl = m;
+	struct psc_ctlmsg_thread *pct = m;
 
-	return (psc_ctl_applythrop(fd, mh, m, pcl->pcl_thrname,
-	    psc_ctlmsg_loglevel_send));
+	return (psc_ctl_applythrop(fd, mh, m, pct->pct_thrname,
+	    psc_ctlmsg_thread_send));
 }
 
 /*
@@ -2257,7 +2193,7 @@ psc_ctlthr_service(int fd, const struct psc_ctlop *ct, int nops,
 		    mh.mh_type, mh.mh_size, ct[mh.mh_type].pc_siz);
 		return (0);
 	}
-	psc_ctlthr(pscthr_get())->pct_stat.nrecv++;
+	OPSTAT_INCR("ctl.recv");
 	if (!ct[mh.mh_type].pc_op(fd, &mh, m))
 		return (EOF);
 	return (0);
@@ -2289,7 +2225,7 @@ psc_ctlacthr_main(struct psc_thread *thr)
 				break;
 			psc_fatal("accept");
 		}
-		pcat->pcat_stat.nclients++;
+		OPSTAT_INCR("ctl.accept");
 
 		spinlock(&pcd->pcd_lock);
 		psc_dynarray_add(&pcd->pcd_clifds, (void *)(long)fd);
