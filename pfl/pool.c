@@ -296,9 +296,6 @@ pfl_poolmaster_destroy(struct psc_poolmaster *pms)
 		else
 			pfl_listcache_destroy(&m->ppm_lc);
 
-		psc_dynarray_free(&pms->pms_poolmgrs);
-		psc_dynarray_free(&pms->pms_sets);
-
 		pfl_opstat_destroy(m->ppm_nseen);
 		pfl_opstat_destroy(m->ppm_opst_grows);
 		pfl_opstat_destroy(m->ppm_opst_shrinks);
@@ -308,6 +305,8 @@ pfl_poolmaster_destroy(struct psc_poolmaster *pms)
 		PSCFREE(m);
 	}
 	freelock(&pms->pms_lock);
+	psc_dynarray_free(&pms->pms_poolmgrs);
+	psc_dynarray_free(&pms->pms_sets);
 }
 
 /*
