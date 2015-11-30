@@ -122,7 +122,7 @@ mod_load(const char *path, const char *opts, char *errbuf,
 	wm->wm_handle = h;
 	wm->wm_opts = pfl_strdup(opts);
 	wm->wm_module.pf_private = wm;
-	pflfs_module_init(&wm->wm_module, opts);
+	pflfs_module_init(&wm->wm_module);
 	rc = loadf(&wm->wm_module);
 	if (rc) {
 		wm->wm_module.pf_handle_destroy = NULL;
@@ -209,5 +209,5 @@ main(int argc, char *argv[])
 	pscfs_entry_timeout = 8.;
 	pscfs_attr_timeout = 8.;
 
-	exit(pscfs_main());
+	exit(pscfs_main(0));
 }
