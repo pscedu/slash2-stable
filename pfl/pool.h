@@ -129,7 +129,7 @@ struct psc_poolmgr {
 };
 
 /* Pool manager flags */
-#define PPMF_NONE		0		/* no pool manager flag specified */
+#define PPMF_NONE		0		/* no pool manager flags specified */
 #define PPMF_AUTO		(1 << 0)	/* pool automatically resizes */
 #define PPMF_PIN		(1 << 1)	/* mlock(2) items */
 #define PPMF_MLIST		(1 << 2)	/* backend storage is mgt'd via mlist */
