@@ -273,6 +273,7 @@ psc_ctlmsg_thread_send(int fd, struct psc_ctlmsghdr *mh, void *m,
 	siz = sizeof(*pct) + sizeof(*pct->pct_loglevels) *
 	    psc_dynarray_len(&psc_subsystems);
 	pct = PSCALLOC(siz);
+	pct->pct_flags = thr->pscthr_flags;
 	snprintf(pct->pct_thrname, sizeof(pct->pct_thrname),
 	    "%s", thr->pscthr_name);
 	memcpy(pct->pct_loglevels, thr->pscthr_loglevels,
