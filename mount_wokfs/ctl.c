@@ -36,6 +36,7 @@
 #include "pfl/ctl.h"
 #include "pfl/ctlsvr.h"
 #include "pfl/fs.h"
+#include "pfl/fsmod.h"
 #include "pfl/net.h"
 #include "pfl/str.h"
 
@@ -143,6 +144,7 @@ wokctlcmd_reload(__unusedx int fd, __unusedx struct psc_ctlmsghdr *mh,
 {
 	char *path, *opts, errbuf[LINE_MAX];
 	struct wokctlmsg_modctl *wcmc = msg;
+	struct pflfs_filehandle *pfh;
 	struct pscfs_creds pcr;
 	struct wok_module *wm;
 	struct pscfs *m;
@@ -166,6 +168,11 @@ wokctlcmd_reload(__unusedx int fd, __unusedx struct psc_ctlmsghdr *mh,
 	}
 
 	m = psc_dynarray_getpos(&pscfs_modules, wcmc->wcmc_pos);
+
+	if (m->pf_filehandle_freeze)
+		PLL_FOREACH(pfh, &pflfs_filehandles)
+			m->pf_filehandle_freeze(pfh);
+
 	wm = m->pf_private;
 	path = pfl_strdup(wm->wm_path);
 	opts = pfl_strdup(wm->wm_opts);
@@ -176,6 +183,10 @@ wokctlcmd_reload(__unusedx int fd, __unusedx struct psc_ctlmsghdr *mh,
 	wm = mod_load(path, opts, errbuf, sizeof(errbuf));
 	PSCFREE(path);
 	PSCFREE(opts);
+
+	if (m->pf_filehandle_thaw)
+		PLL_FOREACH(pfh, &pflfs_filehandles)
+			m->pf_filehandle_thaw(pfh);
 
 	pflfs_modules_wrunpin();
 
