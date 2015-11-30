@@ -157,7 +157,7 @@ mode_t	pscfs_getumask(struct pscfs_req *);
 int	pscfs_setdebug(int);
 int	pscfs_getdebug(int *);
 
-int	pscfs_main(int, const char *);
+int	pscfs_main(int, int, const char *);
 void	pscfs_mount(const char *, struct pscfs_args *);
 
 void	pscfs_reply_access(struct pscfs_req *, int);
