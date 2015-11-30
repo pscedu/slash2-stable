@@ -13,6 +13,7 @@ function bail-if-fail {
 }
 
 pfl=0
+wokfs=0
 slash2=0
 zfsfuse=0
 for name in $(git remote)
@@ -20,6 +21,10 @@ do
     if [[ "$name" == "pfl" ]]
     then
         pfl=1
+    fi
+    if [[ "$name" == "wokfs" ]]
+    then
+        wokfs=1
     fi
     if [[ "$name" == "slash2" ]]
     then
@@ -37,6 +42,12 @@ then
     bail-if-fail
 fi
 
+if [ $wokfs -eq 0 ]
+then
+    git remote add wokfs https://github.com/pscedu/wokfs
+    bail-if-fail
+fi
+
 if [ $slash2 -eq 0 ]
 then
     git remote add slash2 https://github.com/pscedu/slash2
@@ -50,6 +61,9 @@ then
 fi
 
 git pull -X theirs --no-edit pfl master
+bail-if-fail
+
+git pull -X subtree=wokfs --no-edit wokfs master
 bail-if-fail
 
 git pull -X subtree=slash2 --no-edit slash2 master
