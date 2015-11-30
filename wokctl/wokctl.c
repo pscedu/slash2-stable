@@ -157,15 +157,6 @@ struct psc_ctlmsg_prfmt psc_ctlmsg_prfmts[] = {
 	{ NULL,			NULL,		0,					NULL },
 };
 
-psc_ctl_prthr_t psc_ctl_prthrs[] = {
-/* FS		*/ NULL,
-/* FSMGR	*/ NULL,
-/* CTL		*/ psc_ctlthr_pr,
-/* CTLAC	*/ psc_ctlacthr_pr,
-/* OPSTIMER	*/ NULL,
-/* WORKER	*/ NULL
-};
-
 struct psc_ctlcmd_req psc_ctlcmd_reqs[] = {
 	{ "insert",		cmd_insert },
 	{ "list",		cmd_list },

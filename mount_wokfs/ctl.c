@@ -242,11 +242,6 @@ struct psc_ctlop ctlops[] = {
 	{ wokctlcmd_remove,		sizeof(struct wokctlmsg_modctl) },
 };
 
-psc_ctl_thrget_t psc_ctl_thrgets[] = {
-};
-
-PFLCTL_SVR_DEFS;
-
 void
 ctlthr_main(__unusedx struct psc_thread *thr)
 {
