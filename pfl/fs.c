@@ -132,18 +132,13 @@ pflfs_module_init(struct pscfs *m, const char *opts)
 }
 
 /*
- * Initialize and push a new module into the file system processing
- * stack.
+ * Run module-specific thread-local storage constructors on each fsthr.
  */
 void
-pflfs_module_add(int pos, struct pscfs *m)
+_pflfs_module_init_threads(struct pscfs *m)
 {
 	struct psc_thread *thr;
 	struct pfl_fsthr *pft;
-
-	if (pos == PFLFS_MOD_POS_LAST)
-		pos = psc_dynarray_len(&pscfs_modules);
-	psc_dynarray_splice(&pscfs_modules, pos, 0, &m, 1);
 
 	PLL_LOCK(&psc_threads);
 	PLL_FOREACH(thr, &psc_threads)
@@ -155,16 +150,13 @@ pflfs_module_add(int pos, struct pscfs *m)
 }
 
 /*
- * Destroy a file system processing stack module.
+ * Run module-specific thread-local storage destructors on each fsthr.
  */
 void
-pflfs_module_destroy(struct pscfs *m)
+_pflfs_module_destroy_threads(struct pscfs *m)
 {
 	struct psc_thread *thr;
 	struct pfl_fsthr *pft;
-
-	if (m->pf_handle_destroy)
-		m->pf_handle_destroy(NULL);
 
 	PLL_LOCK(&psc_threads);
 	PLL_FOREACH(thr, &psc_threads)
@@ -174,6 +166,34 @@ pflfs_module_destroy(struct pscfs *m)
 			pft->pft_private = NULL;
 		}
 	PLL_ULOCK(&psc_threads);
+}
+
+/*
+ * Initialize and push a new module into the file system processing
+ * stack.
+ */
+void
+pflfs_module_add(int pos, struct pscfs *m)
+{
+	if (pos == PFLFS_MOD_POS_LAST)
+		pos = psc_dynarray_len(&pscfs_modules);
+	psc_dynarray_splice(&pscfs_modules, pos, 0, &m, 1);
+
+	if (m->pf_thr_init)
+		_pflfs_module_init_threads(m);
+}
+
+/*
+ * Destroy a file system processing stack module.
+ */
+void
+pflfs_module_destroy(struct pscfs *m)
+{
+	if (m->pf_handle_destroy)
+		m->pf_handle_destroy(NULL);
+
+	if (m->pf_thr_destroy)
+		_pflfs_module_destroy_threads(m);
 
 	pfl_opstat_destroy(m->pf_opst_read_err);
 	pfl_opstat_destroy(m->pf_opst_write_err);
@@ -207,7 +227,7 @@ pfl_fsthr_getpri(struct psc_thread *thr)
 {
 	struct pfl_fsthr *pft;
 
-	//psc_assert(thr->pscthr_type == WOKTHRT_FSTHR);
+	//psc_assert(thr->pscthr_type == PFL_THRT_FSTHR);
 	pft = thr->pscthr_private;
 	return (pft->pft_private);
 }
@@ -217,7 +237,7 @@ pfl_fsthr_setpri(struct psc_thread *thr, void *data)
 {
 	struct pfl_fsthr *pft;
 
-	//psc_assert(thr->pscthr_type == WOKTHRT_FSTHR);
+	//psc_assert(thr->pscthr_type == PFL_THRT_FSTHR);
 	pft = thr->pscthr_private;
 	pft->pft_private = data;
 }

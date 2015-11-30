@@ -157,7 +157,7 @@ mode_t	pscfs_getumask(struct pscfs_req *);
 int	pscfs_setdebug(int);
 int	pscfs_getdebug(int *);
 
-int	pscfs_main(int, int, const char *);
+int	pscfs_main(int, const char *);
 void	pscfs_mount(const char *, struct pscfs_args *);
 
 void	pscfs_reply_access(struct pscfs_req *, int);
@@ -229,6 +229,8 @@ void	pflfs_modules_rdpin(void);
 void	pflfs_modules_rdunpin(void);
 void	pflfs_modules_wrpin(void);
 void	pflfs_modules_wrunpin(void);
+
+void 	_pflfs_module_init_threads(struct pscfs *);
 
 void	*pfl_fsthr_getpri(struct psc_thread *);
 void	 pfl_fsthr_setpri(struct psc_thread *, void *);

@@ -514,11 +514,12 @@ pfl_fuse_atexit(void)
 }
 
 int
-pscfs_main(int nthr, int thrtype, const char *thrname)
+pscfs_main(int nthr, const char *thrname)
 {
-	pthread_t *thrv;
 	struct psc_thread *thr;
 	struct pfl_fsthr *pft;
+	struct pscfs *m;
+	pthread_t *thrv;
 	int i;
 
 	pflfs_module_add(PFLFS_MOD_POS_LAST, &pscfs_default_ops);
@@ -575,12 +576,22 @@ pscfs_main(int nthr, int thrtype, const char *thrname)
 
 	thrv = PSCALLOC(sizeof(*thrv) * nthr);
 
+	pflfs_modules_wrpin();
+
 	for (i = 0; i < nthr; i++) {
-		thr = pscthr_init(thrtype, pscfs_fuse_listener_loop,
+		thr = pscthr_init(PFL_THRT_FS, pscfs_fuse_listener_loop,
 		    NULL, sizeof(*pft), "%sfsthr%02d", thrname, i);
 		thrv[i] = thr->pscthr_pthread;
 		pscthr_setready(thr);
 	}
+
+	pflfs_modules_wrunpin();
+
+	DYNARRAY_FOREACH(m, i, &pscfs_modules)
+		if (m->pf_thr_init)
+			_pflfs_module_init_threads(m);
+
+	/* XXX run destructors */
 
 	pfl_atexit(pfl_fuse_atexit);
 
