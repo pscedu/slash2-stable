@@ -1,0 +1,573 @@
+.\" $Id$
+.\" %ISC_START_LICENSE%
+.\" ---------------------------------------------------------------------
+.\" Copyright 2015, Google, Inc.
+.\" Copyright 2015, Pittsburgh Supercomputing Center
+.\" All rights reserved.
+.\"
+.\" Permission to use, copy, modify, and distribute this software for any
+.\" purpose with or without fee is hereby granted, provided that the
+.\" above copyright notice and this permission notice appear in all
+.\" copies.
+.\"
+.\" THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL
+.\" WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED
+.\" WARRANTIES OF MERCHANTABILITY AND FITNESS.  IN NO EVENT SHALL THE
+.\" AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL
+.\" DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR
+.\" PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
+.\" TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
+.\" PERFORMANCE OF THIS SOFTWARE.
+.\" --------------------------------------------------------------------
+.\" %END_LICENSE%
+.\" %PFL_MODULES ctl fuse rpc %
+.Dd November 23, 2015
+.Dt MSCTL 8
+.ds volume PSC \- Administrator's Manual
+.Os http://www.psc.edu/
+.Sh NAME
+.Nm msctl
+.Nd
+.Tn WOK
+file system mount daemon runtime control
+.Sh SYNOPSIS
+.Nm msctl
+.Op Fl HInv
+.Op Fl p Ar paramspec
+.Op Fl S Ar socket
+.Op Fl s Ar showspec
+.Op Ar cmd arg ...
+.Sh DESCRIPTION
+The
+.Nm
+utility controls
+.Xr mount_wokfs 8
+behavior.
+.Pp
+.\" %PFL_INCLUDE $PFL_BASE/doc/pflctl/cmd.mdoc {
+.\"	daemon => "mount_slash",
+.\"	cmds	=> {
+.\"		"insert Ar pos file Op Ar option Ns , Ns Ar ..." =>
+.\"			"Add the file system module specified by\n" .
+.\"			".Ar file\n" .
+.\"			"to the processing stack at position\n" .
+.\"			".Ar pos .",
+.\"		"list" =>
+.\"			"List modules in the current processing stack.",
+.\"		"reload Ar pos" =>
+.\"			"Unload and reload module at the specified position\n" .
+.\"			".Ar pos\n" .
+.\"			"in the processing stack.",
+.\"		"remove Ar pos" =>
+.\"			"Remove the module at the specified position\n" .
+.\"			".Ar pos\n" .
+.\"			"from the processing stack.",
+.\"	}
+The supported commands are as follows:
+.Bl -tag -width 3n
+.It Cm insert Ar pos file Op Ar option Ns , Ns Ar ...
+Add the file system module specified by
+.Ar file
+to the processing stack at position
+.Ar pos .
+.It Cm list
+List modules in the current processing stack.
+.It Cm reload Ar pos
+Unload and reload module at the specified position
+.Ar pos
+in the processing stack.
+.It Cm remove Ar pos
+Remove the module at the specified position
+.Ar pos
+from the processing stack.
+.El
+.\" }%
+.Pp
+The following options are recognized:
+.Bl -tag -width 3n
+.\" %PFL_INCLUDE $PFL_BASE/doc/pflctl/H.mdoc {
+.It Fl H
+Suppress headers when showing data displays.
+.\" }%
+.\" %PFL_INCLUDE $PFL_BASE/doc/pflctl/I.mdoc {
+.It Fl I
+Display large numerical values accurately instead of rounded with
+postfixes of demonination such as
+.Sq G
+for gibibytes,
+.Sq M
+for mebibytes, etc.\&
+.Pq Do inhuman Dc number mode .
+.\" }%
+.\" %PFL_INCLUDE $PFL_BASE/doc/pflctl/n.mdoc {
+.It Fl n
+Suppress
+.Tn DNS
+lookups for network addresses.
+.\" }%
+.\" %PFL_INCLUDE $PFL_BASE/doc/pflctl/p.mdoc {
+.\"	log_xr => "in\n.Xr mount_slash 8\n",
+.\"	params => {
+.\"		mountpoint	=> "File hierarchy node where\n.Tn SLASH2\nfile system is mounted.",
+.\"	},
+.It Fl p Ar paramspec
+Query/manipulate operational parameters.
+.Ar paramspec
+has the following format:
+.Pp
+.Bd -unfilled -offset 3n
+.Sm off
+.Oo Ar thread-name Ns Li .\& Oc Ar param
+.Op Oo Li +- Oc Li = Ar value
+.Sm on
+.Ed
+.Pp
+Some parameters may be read- or write-only.
+Some support modification by the assignment operators
+.Li +=
+and
+.Li -= .
+.Pp
+See
+.Sx Thread Specification
+for details on specifying
+.Ar thread-name .
+The default behavior is to apply the operation to all applicable threads.
+.Pp
+.Ar param
+may be one of the following:
+.Bl -tag -width 1n -offset 3n
+.It Cm fuse.debug
+.Tn FUSE
+debug messages.
+.It Cm fuse.version
+.Tn FUSE
+interface version.
+.It Cm lnet.networks
+.Tn LNET
+network configuration.
+.It Cm lnet.port
+If applicable,
+.Xr tcp 7
+port to use to connect to remote
+.Tn LNET
+peers.
+.It Cm log.file
+File path name where log messages will be written.
+This field is write-only.
+If the
+.Li +=
+assignment operator is used, this file will not be truncated.
+.It Cm log.format
+The header prepended to server log messages.
+See the description of
+.Ev PSC_LOG_FORMAT
+in
+.Xr mount_slash 8
+for details on this format.
+.It Cm log.level Ns Op . Ns Ar subsystem
+The logging level of debug message output.
+.Pp
+See the description of
+.Ev PSC_LOG_LEVEL_ Ns Ar subsys
+in
+.Xr mount_slash 8
+for a list of available subsystems.
+If
+.Ar subsystem
+is not specified, all subsystems will be accessed.
+.Pp
+See the description of
+.Ev PSC_LOG_LEVEL
+in
+.Xr mount_slash 8
+for recognized log level values.
+.It Cm log.points
+List of places in the source code (in the form
+.Dq file:line-number )
+where granular logging can be enabled on a case-by-case
+basis.
+Usually assigned to by the
+.Li +=
+operator.
+.It Cm mountpoint
+File hierarchy node where
+.Tn SLASH2
+file system is mounted.
+.It Cm pool. Ns Ar name
+Access the memory pool specified by
+.Ar name .
+The following sub-fields are available:
+.Pp
+.Bl -tag -compact -offset 3n -width 13n
+.It Cm free
+Current number of allocated entries available for use in pool.
+.It Cm max
+Upper bound for number of entries to which auto-sized pools can grow.
+.It Cm min
+Lower bound for number of entries to which auto-sized pools can shrink.
+.It Cm reap
+Assign a value to reap the specified number of entries.
+Only applies to pools that have a reaper routine.
+This field is write-only.
+.It Cm thres
+Threshold for unused items for auto-sized pools before items are freed.
+.It Cm total
+Current number of entries contained in pool.
+.El
+.It Cm pscfs.attr_timeout
+Amount of time to cache
+.Xr stat 2
+information in
+.Tn FUSE .
+.It Cm pscfs.entry_timeout
+Amount of time to cache name space entries in
+.Tn FUSE .
+.It Cm rlim
+Process resource limits.
+See
+.Xr getrlimit 2
+or
+.Xr ulimit 1
+for more information.
+.Pp
+.Bl -column "msgqueue" -offset 3n
+.It Sy Name Ta Sy Field
+.It =============================
+.It Cm cpu        Ta Dv RLIMIT_CPU
+.It Cm csize      Ta Dv RLIMIT_CORE
+.It Cm dsize      Ta Dv RLIMIT_DATA
+.It Cm fsize      Ta Dv RLIMIT_FSIZE
+.It Cm locks      Ta Dv RLIMIT_LOCKS
+.It Cm maxproc    Ta Dv RLIMIT_NPROC
+.It Cm mem        Ta Dv RLIMIT_AS
+.It Cm mlock      Ta Dv RLIMIT_MEMLOCK
+.It Cm msgqueue   Ta Dv RLIMIT_MSGQUEUE
+.It Cm nice       Ta Dv RLIMIT_NICE
+.It Cm nofile     Ta Dv RLIMIT_NOFILE
+.It Cm rss        Ta Dv RLIMIT_RSS
+.It Cm rtprio     Ta Dv RLIMIT_RTPRIO
+.It Cm rttime     Ta Dv RLIMIT_RTTIME
+.It Cm sigpndg    Ta Dv RLIMIT_SIGPENDING
+.It Cm stksize    Ta Dv RLIMIT_STACK
+.El
+.It Cm rusage
+Process resource usage information.
+See
+.Xr getrusage 2 .
+.El
+.\" }%
+.It Fl Q Ar replrqspec Ns : Ns Ar fn
+Shorthand for
+.Cm repl-add .
+.It Fl R
+Apply operations on directories recursively.
+.It Fl r Ar file
+Shorthand for
+.Cm repl-status .
+If
+.Ar fn
+is the special value
+.Sq \&: ,
+all pending replications will be queried.
+Note that file names are unavailable in this mode.
+.\" %PFL_INCLUDE $PFL_BASE/doc/pflctl/S.mdoc {
+.\"	sock => "/var/run/mount_slash. Ns Ic %h Ns Pa .sock"
+.It Fl S Ar socket
+Specify an alternative socket file.
+The following tokens are replaced in the file name specified:
+.Pp
+.Bl -tag -offset 3n -width Ds -compact
+.It Cm %h
+the machine hostname
+.It Cm %n
+the daemon executable base name, i.e.\&
+.Dq mount_slash
+.It Cm %%
+a literal
+.Sq %
+character
+.El
+.Pp
+The default is
+.Pa /var/run/mount_slash. Ns Ic %h Ns Pa .sock .
+.\" }%
+.\" %PFL_INCLUDE $PFL_BASE/doc/pflctl/show.mdoc {
+.\"	show => {
+.\"		biorqs		=> qq{I/O requests.},
+.\"		bmaps		=> qq{In-memory bmaps},
+.\"		bmpces		=> qq{Page cache entries.},
+.\"		connections	=> qq{Status of\n.Tn SLASH2\npeers on network.},
+.\"		fidcache	=> qq{.Tn FID\n.Pq file- Ns Tn ID\ncache members.},
+.\"	},
+.\"	hashtables => {
+.\"		fidc		=> qq{files\n.Po file\n.Tn ID\ncache\n.Pc},
+.\"		resnid		=> qq{network resources\n.Pq network Tn ID},
+.\"	},
+.\"	pools => {
+.\"		bmap		=> qq{Block map structures},
+.\"	},
+.\"	listcaches => {
+.\"		bmapflush	=> "Bmaps awaiting flush completion",
+.\"		bmaptimeout	=> "Expired bmaps awaiting release",
+.\"		bmpclru		=> "Reapable bmap structures",
+.\"		dircache	=> "Directory entries",
+.\"		fcmhbusy	=> "Files with pending activity e.g.\\&\n.Tn I/O",
+.\"		fcmhidle	=> "Clean\n.Pq reapable\nfiles",
+.\"	}
+.It Fl s Ar showspec
+Show values.
+.Ar showspec
+has the following format:
+.Bd -unfilled -offset 3n
+.Sm off
+.Ar param
+.Op : Ar subspec
+.Sm on
+.Ed
+.Pp
+.Ar param
+may be specified as any non-ambiguous prefix abbreviation of the
+following:
+.Pp
+.Bl -tag -width 1n -offset 3n
+.It Cm biorqs
+I/O requests.
+.It Cm bmaps
+In-memory bmaps
+.It Cm bmpces
+Page cache entries.
+.It Cm connections
+Status of
+.Tn SLASH2
+peers on network.
+.It Cm fidcache
+.Tn FID
+.Pq file- Ns Tn ID
+cache members.
+.It Cm hashtables
+Hash table statistics.
+.Ar subspec
+has the following format:
+.Bd -unfilled -offset 3n
+.Ar hash-table Ns Op , Ns Ar ...
+.Ed
+.Pp
+.Ar hash-table
+may be one of the following:
+.Pp
+.Bl -tag -compact -offset 3n -width 13n
+.It Cm fidc
+files
+.Po file
+.Tn ID
+cache
+.Pc
+.It Cm resnid
+network resources
+.Pq network Tn ID
+.El
+.Pp
+If
+.Ar subspec
+is left unspecified, all hash tables will be accessed.
+.It Cm listcaches
+List cache statistics.
+.Ar subspec
+has the following format:
+.Pp
+.Bd -unfilled -offset 3n
+.Ar list Ns Op , Ns Ar ...
+.Ed
+.Pp
+.Ar list
+may be one of the following:
+.Pp
+.Bl -tag -compact -offset 3n -width 13n
+.It Cm bmapflush
+Bmaps awaiting flush completion
+.It Cm bmaptimeout
+Expired bmaps awaiting release
+.It Cm bmpclru
+Reapable bmap structures
+.It Cm dircache
+Directory entries
+.It Cm fcmhbusy
+Files with pending activity e.g.\&
+.Tn I/O
+.It Cm fcmhidle
+Clean
+.Pq reapable
+files
+.El
+.Pp
+If
+.Ar subspec
+is left unspecified, all list caches will be accessed.
+.It Cm lnetif
+Lustre network interfaces.
+.It Cm loglevels
+Thread logging levels.
+.Ar subspec
+has the following format:
+.Bd -unfilled -offset 3n
+.Ar thread Ns Op , Ns Ar ...
+.Ed
+.Pp
+See
+.Sx Thread Specification
+for details on specifying
+.Ar thread .
+If
+.Ar subspec
+is left unspecified, all threads will be accessed.
+.It Cm opstats
+Operation counters/statistics.
+.Ar subspec
+has the following format:
+.Pp
+.Bd -unfilled -offset 3n
+.Ar opstats Ns Op , Ns Ar ...
+.Ed
+.Pp
+.Ar opstats
+may be one of the following:
+.Pp
+.Bl -tag -compact -offset 3n -width 3n
+.It Cm lni-rcv- Ns Ar if ,
+.It Cm lni-snd- Ns Ar if
+Data sent/received per
+.Tn LNET
+networking interface.
+.Pp
+.It Cm lusklnd- Ns Ar mode Ns Cm -rcv ,
+.It Cm lusklnd- Ns Ar mode Ns Cm -snd
+Data sent/received over userland socket networking device.
+.Ar mode
+may be
+.Cm pasv
+.Pq passive
+or
+.Cm aggr
+.Pq aggregate .
+.Pp
+.It Cm rpc- Ns Ar addr Ns Cm -rcv ,
+.It Cm rpc- Ns Ar addr Ns Cm -snd
+Data sent/received per
+.Tn RPC
+peer.
+.Pp
+.El
+.Pp
+If
+.Ar subspec
+is left unspecified, all
+.Tn I/O
+statistics will be accessed.
+.It Cm pools
+Memory pool statistics.
+.Ar subspec
+has the following format:
+.Bd -unfilled -offset 3n
+.Ar pool Ns Op , Ns Ar ...
+.Ed
+.Pp
+.Ar pool
+may be one of the following:
+.Pp
+.Bl -tag -compact -offset 3n -width 13n
+.It Cm bmap
+Block map structures
+.El
+.Pp
+If
+.Ar subspec
+is left unspecified, all pools will be accessed.
+.It Cm rpcrqs
+Remote procedure calls (RPC).
+.It Cm rpcsvcs
+.Tn RPC
+services.
+.It Cm threads
+Daemon thread activity and statistics.
+.Ar subspec
+has the following format:
+.Bd -unfilled -offset 3n
+.Ar thread Ns Op , Ns Ar ...
+.Ed
+.Pp
+See
+.Sx Thread Specification
+for details on specifying
+.Ar thread .
+If
+.Ar subspec
+is left unspecified, all threads will be accessed.
+.El
+.Pp
+The special value
+.Sq \&?
+may also be specified to display a list of recognized values.
+.\" }%
+.It Fl U Ar replrqspec Ns : Ns Ar fn
+Shorthand for
+.Cm repl-remove .
+.It Fl v
+Verbose mode:
+display additional information about each operation being performed.
+.El
+.\" %PFL_INCLUDE $PFL_BASE/doc/pflctl/thr.mdoc {
+.\"	thrs => {
+.\"		q{msctlacthr}			=> qq{.Nm\nconnection acceptor/multiplexor},
+.\"		q{msctlthr}			=> qq{.Nm\nconnection processor},
+.\"		q{msfsmgrthr}			=> qq{Userland file system manager\n.Pq e.g. FUSE},
+.\"		q{msfsthr Ns Ar %d}		=> qq{File system syscall handler},
+.\"		q{mstiosthr}			=> qq{Timed\n.Tn I/O\nstats updater},
+.\"		q{mswkthr Ns Ar %d}		=> qq{Generic worker},
+.\"	}
+.Ss Thread Specification
+Options which take
+.Ar thread-name
+parameters may be specified by one or more of the following tokens,
+separated by commas:
+.Pp
+.Bl -tag -compact -offset 3n -width 16n
+.It Cm msctlacthr
+.Nm
+connection acceptor/multiplexor
+.It Cm msctlthr
+.Nm
+connection processor
+.It Cm msfsmgrthr
+Userland file system manager
+.Pq e.g. FUSE
+.It Cm msfsthr Ns Ar %d
+File system syscall handler
+.It Cm mstiosthr
+Timed
+.Tn I/O
+stats updater
+.It Cm mswkthr Ns Ar %d
+Generic worker
+.It Cm everyone
+All threads
+.Pq default, where applicable
+.El
+.\" }%
+.\" %PFL_INCLUDE $PFL_BASE/doc/env.mdoc {
+.Sh ENVIRONMENT
+.Bl -tag -width 3n
+.It Ev CTL_SOCK_FILE
+Override the default control socket file path.
+.El
+.\" }%
+.Sh FILES
+.Bl -tag -width Pa
+.It Pa /var/run/mount_wokfs. Ns Ic %h Ns Pa .sock
+default
+.Xr mount_wokfs 8
+control socket
+.El
+.Sh SEE ALSO
+.Xr sladm 7 ,
+.Xr mount_wokfs 8
