@@ -7,3 +7,14 @@ failure:
 lib/libzpool/libzpool-user.a: could not read symbols: File format not recognized
 
 Possible causes: (1) -511 error handling (2) read versus write race.
+
+11/30/2015
+----------
+
+Build Linux 4.2 kernel:
+
+kernel/sched/built-in.o: could not read symbols: File truncated
+make[1]: *** [kernel/built-in.o] Error 1
+make: *** [kernel] Error 2
+make: *** Waiting for unfinished jobs....
+  CC [M]  arch/x86/kvm/mtrr.o
