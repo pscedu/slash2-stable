@@ -37,6 +37,7 @@
 #include "pfl/log.h"
 #include "pfl/opstats.h"
 #include "pfl/str.h"
+#include "pfl/thread.h"
 
 struct psc_spinlock	pflfs_modules_lock = SPINLOCK_INIT;
 int			pflfs_modules_modifying;
@@ -137,9 +138,20 @@ pflfs_module_init(struct pscfs *m, const char *opts)
 void
 pflfs_module_add(int pos, struct pscfs *m)
 {
+	struct psc_thread *thr;
+	struct pfl_fsthr *pft;
+
 	if (pos == PFLFS_MOD_POS_LAST)
 		pos = psc_dynarray_len(&pscfs_modules);
 	psc_dynarray_splice(&pscfs_modules, pos, 0, &m, 1);
+
+	PLL_LOCK(&psc_threads);
+	PLL_FOREACH(thr, &psc_threads)
+		if (thr->pscthr_type == PFL_THRT_FS) {
+			pft = thr->pscthr_private;
+			pft->pft_private = m->pf_thr_init(thr);
+		}
+	PLL_ULOCK(&psc_threads);
 }
 
 /*
@@ -148,8 +160,20 @@ pflfs_module_add(int pos, struct pscfs *m)
 void
 pflfs_module_destroy(struct pscfs *m)
 {
+	struct psc_thread *thr;
+	struct pfl_fsthr *pft;
+
 	if (m->pf_handle_destroy)
 		m->pf_handle_destroy(NULL);
+
+	PLL_LOCK(&psc_threads);
+	PLL_FOREACH(thr, &psc_threads)
+		if (thr->pscthr_type == PFL_THRT_FS) {
+			pft = thr->pscthr_private;
+			m->pf_thr_destroy(pft->pft_private);
+			pft->pft_private = NULL;
+		}
+	PLL_ULOCK(&psc_threads);
 
 	pfl_opstat_destroy(m->pf_opst_read_err);
 	pfl_opstat_destroy(m->pf_opst_write_err);
@@ -176,4 +200,24 @@ pflfs_module_remove(int pos)
 	m = psc_dynarray_getpos(&pscfs_modules, pos);
 	psc_dynarray_splice(&pscfs_modules, pos, 1, NULL, 0);
 	return (m);
+}
+
+void *
+pfl_fsthr_getpri(struct psc_thread *thr)
+{
+	struct pfl_fsthr *pft;
+
+	//psc_assert(thr->pscthr_type == WOKTHRT_FSTHR);
+	pft = thr->pscthr_private;
+	return (pft->pft_private);
+}
+
+void
+pfl_fsthr_setpri(struct psc_thread *thr, void *data)
+{
+	struct pfl_fsthr *pft;
+
+	//psc_assert(thr->pscthr_type == WOKTHRT_FSTHR);
+	pft = thr->pscthr_private;
+	pft->pft_private = data;
 }

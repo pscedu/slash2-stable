@@ -33,10 +33,13 @@
 #include <unistd.h>
 
 #include "pfl/dynarray.h"
+#include "pfl/list.h"
 
 struct iovec;
 struct stat;
 struct statvfs;
+
+struct psc_thread;
 
 struct pscfs_args;
 struct pscfs_req;
@@ -79,8 +82,11 @@ struct pscfs {
 	void			*pf_private;
 	struct psc_dynarray	 pf_opts;
 
-	void			(*pf_filehandle_freeze)(struct pflfs_filehandle *);
-	void			(*pf_filehandle_thaw)(struct pflfs_filehandle *);
+	void			 (*pf_filehandle_freeze)(struct pflfs_filehandle *);
+	void			 (*pf_filehandle_thaw)(struct pflfs_filehandle *);
+
+	void			*(*pf_thr_init)(struct psc_thread *);
+	void			 (*pf_thr_destroy)(void *);
 
 	const char		*pf_name;
 
@@ -124,10 +130,19 @@ struct pscfs {
 /* private */		NULL,						\
 /* opts */		DYNARRAY_INIT,					\
 /* filehandle_freeze */	NULL,						\
-/* filehandle_thaw */	NULL
+/* filehandle_thaw */	NULL,						\
+/* thr_init */		NULL,						\
+/* thr_destroy */	NULL
 
 struct pscfs_clientctx {
 	pid_t		pfcc_pid;
+};
+
+struct pfl_fsthr {
+	struct psc_listentry		 pft_lentry;
+	struct pscfs_req		*pft_pfr;
+	char				 pft_uprog[128];
+	void				*pft_private;	// XXX make per-module
 };
 
 void	pscfs_addarg(struct pscfs_args *, const char *);
@@ -142,7 +157,7 @@ mode_t	pscfs_getumask(struct pscfs_req *);
 int	pscfs_setdebug(int);
 int	pscfs_getdebug(int *);
 
-int	pscfs_main(void);
+int	pscfs_main(int, const char *);
 void	pscfs_mount(const char *, struct pscfs_args *);
 
 void	pscfs_reply_access(struct pscfs_req *, int);
@@ -214,6 +229,9 @@ void	pflfs_modules_rdpin(void);
 void	pflfs_modules_rdunpin(void);
 void	pflfs_modules_wrpin(void);
 void	pflfs_modules_wrunpin(void);
+
+void	*pfl_fsthr_getpri(struct psc_thread *);
+void	 pfl_fsthr_setpri(struct psc_thread *, void *);
 
 extern struct psc_dynarray		pscfs_modules;
 extern struct psc_lockedlist		pflfs_filehandles;

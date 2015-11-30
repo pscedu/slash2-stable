@@ -278,8 +278,8 @@ pscfs_fuse_destroy(int i)
 	PSCFREE(mountpoints[i]);
 }
 
-static void *
-pscfs_fuse_listener_loop(__unusedx void *arg)
+void
+pscfs_fuse_listener_loop(__unusedx struct psc_thread *thr)
 {
 	static psc_spinlock_t lock = SPINLOCK_INIT;
 	static struct psc_waitq wq = PSC_WAITQ_INIT;
@@ -419,8 +419,6 @@ pscfs_fuse_listener_loop(__unusedx void *arg)
 	busy = 0;
 	psc_waitq_wakeone(&wq);
 	freelock(&lock);
-
-	return (NULL);
 }
 
 #ifdef PFL_CTL
@@ -515,7 +513,7 @@ pfl_fuse_atexit(void)
 }
 
 int
-pscfs_main(void)
+pscfs_main(int thrtype, const char *thrname)
 {
 	int i;
 
@@ -571,9 +569,15 @@ pscfs_main(void)
 	    pscfs_ctlparam_attr_timeout_set);
 #endif
 
-	for (i = 0; i < NUM_THREADS; i++)
-		psc_assert(pthread_create(&fuse_threads[i], NULL,
-		    pscfs_fuse_listener_loop, NULL) == 0);
+	for (i = 0; i < NUM_THREADS; i++) {
+		struct psc_thread *thr;
+		struct pfl_fsthr *pft;
+
+		thr = pscthr_init(thrtype, pscfs_fuse_listener_loop,
+		    NULL, sizeof(*pft), "%sfsthr%02d", thrname, i);
+		fuse_threads[i] = thr->pscthr_pthread;
+		pscthr_setready(thr);
+	}
 
 	pfl_atexit(pfl_fuse_atexit);
 
@@ -771,6 +775,8 @@ pscfs_inum_pscfs2fuse(pscfs_inum_t p_inum, double timeo)
 #define GETPFR(pfr, fsreq)						\
 	do {								\
 		static struct pfl_opstat *_opst;			\
+		struct psc_thread *_thr;				\
+		struct pfl_fsthr *_pft;					\
 									\
 		if (_opst == NULL)					\
 			_opst = pfl_opstat_initf(OPSTF_BASE10,		\
@@ -785,6 +791,10 @@ pscfs_inum_pscfs2fuse(pscfs_inum_t p_inum, double timeo)
 		INIT_SPINLOCK(&(pfr)->pfr_lock);			\
 		(pfr)->pfr_fuse_req = (fsreq);				\
 		(pfr)->pfr_refcnt = 2;					\
+									\
+		_thr = pscthr_get();					\
+		_pft = _thr->pscthr_private;				\
+		_pft->pft_pfr = (pfr);					\
 	} while (0)
 
 /*

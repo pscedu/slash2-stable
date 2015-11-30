@@ -87,6 +87,12 @@ label(struct psc_thread *pt)						\
 
 #define pscthr_gettid()		pscthr_get()->pscthr_thrid
 
+enum {
+	PFL_THRT_FS,
+	PFL_THRT_OPSTIMER,
+	_PFL_NTHRT
+};
+
 void	pscthrs_init(void);
 
 const char *

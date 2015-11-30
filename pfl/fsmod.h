@@ -43,6 +43,8 @@ struct pscfs_args {
 	struct fuse_args		 pfa_av;
 };
 
+#  define PSCFS_ARGS_INIT(n, av)	{ FUSE_ARGS_INIT((n), (av)) }
+
 struct pflfs_filehandle {
 	struct psc_listentry		 pfh_lentry;
 	struct fuse_file_info		*pfh_fi;	// `fh' points back to this struct
@@ -61,8 +63,6 @@ struct pscfs_req {
 	int				 pfr_refcnt;
 	int				 pfr_rc;
 };
-
-#  define PSCFS_ARGS_INIT(n, av)	{ FUSE_ARGS_INIT((n), (av)) }
 
 void	pscfs_fuse_replygen_entry(struct pscfs_req *, pscfs_inum_t,
 	    pscfs_fgen_t, double, const struct stat *, double, int);
