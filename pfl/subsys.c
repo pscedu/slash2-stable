@@ -37,6 +37,7 @@
 #include "pfl/fmtstr.h"
 #include "pfl/log.h"
 #include "pfl/subsys.h"
+#include "pfl/thread.h"
 
 struct psc_subsys {
 	const char	*pss_name;
@@ -71,6 +72,26 @@ psc_subsys_name(int ssid)
 }
 
 void
+_psc_threads_rebuild_subsys(void)
+{
+	struct psc_thread *thr;
+	int *ll, *oldll, nss;
+
+	nss = psc_dynarray_len(&psc_subsystems);
+
+	/* XXX we could pause all threads to do this */
+	PLL_LOCK(&psc_threads);
+	PLL_FOREACH(thr, &psc_threads) {
+		ll = psc_alloc(sizeof(*thr->pscthr_loglevels) * nss,
+		    PAF_NOLOG);
+		oldll = thr->pscthr_loglevels;
+		thr->pscthr_loglevels = ll;
+		psc_free(oldll, PAF_NOLOG);
+	}
+	PLL_ULOCK(&psc_threads); 
+}
+
+void
 psc_subsys_register(int ssid, const char *name)
 {
 	struct psc_subsys *ss;
@@ -86,7 +107,7 @@ psc_subsys_register(int ssid, const char *name)
 	if (p) {
 		ss->pss_loglevel = psc_loglevel_fromstr(p);
 		if (ss->pss_loglevel == PNLOGLEVELS)
-			psc_fatalx("invalid %s value", name);
+			errx(1, "invalid %s value", name);
 	} else {
 		ss->pss_loglevel = psc_log_getlevel_global();
 		if (ssid == PSS_TMP)
@@ -121,9 +142,11 @@ psc_subsys_register(int ssid, const char *name)
 	}
 
 	if (ssid != nss)
-		psc_fatalx("bad ID %d for subsys %s [want %d], "
+		errx(1, "bad ID %d for subsys %s [want %d], "
 		    "check order", ssid, name, nss);
 	psc_dynarray_add(&psc_subsystems, ss);
+
+	_psc_threads_rebuild_subsys();
 }
 
 void
@@ -135,6 +158,8 @@ psc_subsys_unregister(int ssid)
 	ss = psc_dynarray_getpos(&psc_subsystems, ssid);
 	psc_dynarray_removepos(&psc_subsystems, ssid);
 	PSCFREE(ss);
+
+	_psc_threads_rebuild_subsys();
 }
 
 int
