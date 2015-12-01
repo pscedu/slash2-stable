@@ -189,7 +189,7 @@ main(int argc, char *argv[])
 	if (argc != 1)
 		usage();
 
-	pscthr_init(THRT_FSMGR, NULL, NULL, 0, "fsmgrthr");
+	pscthr_init(PFL_THRT_FSMGR, NULL, NULL, 0, "fsmgrthr");
 
 	noncanon_mp = argv[0];
 	if (unmount_first)
@@ -204,7 +204,7 @@ main(int argc, char *argv[])
 
 	ctlthr_spawn();
 
-	pfl_opstimerthr_spawn(THRT_OPSTIMER, "opstimerthr");
+	pfl_opstimerthr_spawn(PFL_THRT_OPSTIMER, "opstimerthr");
 
 	pscfs_entry_timeout = 8.;
 	pscfs_attr_timeout = 8.;

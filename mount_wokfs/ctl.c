@@ -259,7 +259,7 @@ void
 ctlthr_main(__unusedx struct psc_thread *thr)
 {
 	psc_ctlthr_main(ctlsockfn, ctlops, nitems(ctlops),
-	    THRT_CTLAC);
+	    PFL_THRT_CTLAC);
 }
 
 void
@@ -286,7 +286,7 @@ ctlthr_spawn(void)
 //	psc_ctlparam_register_simple("sys.version",
 //	    ctlparam_version_get, NULL);
 
-	thr = pscthr_init(THRT_CTL, ctlthr_main, NULL,
+	thr = pscthr_init(PFL_THRT_CTL, ctlthr_main, NULL,
 	    sizeof(struct psc_ctlthr), "ctlthr0");
 	pscthr_setready(thr);
 }
