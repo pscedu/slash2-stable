@@ -74,7 +74,7 @@ fi
 git pull -X theirs --no-edit pfl master
 bail-if-fail
 
-git pull -X theirs --no-edit sft master
+git pull -X subtree=sft --no-edit sft master
 bail-if-fail
 
 git pull -X subtree=wokfs --no-edit wokfs master
