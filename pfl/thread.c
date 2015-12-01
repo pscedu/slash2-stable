@@ -57,7 +57,7 @@ __static pthread_key_t		 pfl_tlskey;
 __static pthread_key_t		 psc_thrkey;
 __static struct psc_vbitmap	 psc_uniqthridmap = VBITMAP_INIT_AUTO;
 struct psc_lockedlist		 psc_threads =
-    PLL_INIT(&psc_threads, struct psc_thread, pscthr_lentry);
+    PLL_INIT_NOLOG(&psc_threads, struct psc_thread, pscthr_lentry);
 
 /*
  * Thread destructor.
