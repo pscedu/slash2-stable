@@ -184,15 +184,28 @@ wokctlcmd_reload(__unusedx int fd, __unusedx struct psc_ctlmsghdr *mh,
 	PSCFREE(path);
 	PSCFREE(opts);
 
+#if 0
+	if (wm == NULL) {
+		pflfs_modules_wrunpin();
+		return (psc_ctlsenderr(fd, mh, "reload %d: %s",
+		    wcmc->wcmc_pos, errbuf));
+
+	}
+#endif
+
+	psc_assert(wm);
+
+	m = &wm->wm_module;
+	psc_dynarray_setpos(&pscfs_modules, wcmc->wcmc_pos, m);
+
+	if (m->pf_thr_init)
+		_pflfs_module_init_threads(m);
+
 	if (m->pf_filehandle_thaw)
 		PLL_FOREACH(pfh, &pflfs_filehandles)
 			m->pf_filehandle_thaw(pfh);
 
 	pflfs_modules_wrunpin();
-
-	if (!wm)
-		return (psc_ctlsenderr(fd, mh, "reload %d: %s",
-		    wcmc->wcmc_pos, errbuf));
 
 	return (1);
 }
