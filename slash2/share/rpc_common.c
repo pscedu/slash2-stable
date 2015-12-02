@@ -982,7 +982,7 @@ _sl_csvc_get(const struct pfl_callerinfo *pci,
 			    &(*csvcp)->csvc_mwc, 1);
 		else
 			psc_multiwait_addcond(mw, &(*csvcp)->csvc_mwc);
-		PSCTHR_LOCK(thr);
+		PSCTHR_ULOCK(thr);
 	}
 	CSVC_URLOCK(*csvcp, locked);
 	return (csvc);
