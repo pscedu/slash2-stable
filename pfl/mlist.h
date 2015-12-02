@@ -104,6 +104,7 @@ struct psc_mlist {
 	    (namefmt), ## __VA_ARGS__)
 
 void	_psc_mlist_add(const struct pfl_callerinfo *, struct psc_mlist *, void *, int);
+void	 pfl_mlist_destroy(struct psc_mlist *);
 void	_psc_mlist_init(struct psc_mlist *, int, void *, ptrdiff_t,
 	    const char *, ...);
 void	_psc_mlist_reginit(struct psc_mlist *, int, void *, ptrdiff_t,

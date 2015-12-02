@@ -23,18 +23,21 @@
  */
 
 /*
- * This file contains routines for the stackable file system modules capability
- * of PFL.  Each entry in the pscfs_modules list contains a table of routines
- * implementing the standard file system operations (read, write, open, unlink,
- * etc.).
+ * This file contains routines for the stackable file system modules
+ * capability of PFL.  Each entry in the pscfs_modules list contains a
+ * table of routines implementing the standard file system operations
+ * (read, write, open, unlink, etc.).
  */
 
 #include <unistd.h>
 
+#include "pfl/alloc.h"
 #include "pfl/fs.h"
 #include "pfl/lock.h"
 #include "pfl/log.h"
 #include "pfl/opstats.h"
+#include "pfl/str.h"
+#include "pfl/thread.h"
 
 struct psc_spinlock	pflfs_modules_lock = SPINLOCK_INIT;
 int			pflfs_modules_modifying;
@@ -104,8 +107,10 @@ pflfs_modules_wrunpin(void)
  * Initialize a module for the file system processing stack.
  */
 void
-pflfs_module_init(struct pscfs *m)
+pflfs_module_init(struct pscfs *m, const char *opts)
 {
+	char *opt;
+
 	m->pf_opst_read_err = pfl_opstat_initf(OPSTF_BASE10,
 	    "fs.%s.read.err", m->pf_name);
 	m->pf_opst_write_err = pfl_opstat_initf(OPSTF_BASE10,
@@ -114,6 +119,53 @@ pflfs_module_init(struct pscfs *m)
 	    pfl_opstat_init("fs.%s.read.reply", m->pf_name);
 	m->pf_opst_write_reply =
 	    pfl_opstat_init("fs.%s.write.reply", m->pf_name);
+
+	if (opts && opts[0]) {
+		opt = pfl_strdup(opts);
+		do {
+			psc_dynarray_add(&m->pf_opts, opt);
+			opt = strchr(opt, ',');
+			if (opt)
+				*opt++ = '\0';
+		} while (opt);
+	}
+}
+
+/*
+ * Run module-specific thread-local storage constructors on each fsthr.
+ */
+void
+_pflfs_module_init_threads(struct pscfs *m)
+{
+	struct psc_thread *thr;
+	struct pfl_fsthr *pft;
+
+	PLL_LOCK(&psc_threads);
+	PLL_FOREACH(thr, &psc_threads)
+		if (thr->pscthr_type == PFL_THRT_FS) {
+			pft = thr->pscthr_private;
+			pft->pft_private = m->pf_thr_init(thr);
+		}
+	PLL_ULOCK(&psc_threads);
+}
+
+/*
+ * Run module-specific thread-local storage destructors on each fsthr.
+ */
+void
+_pflfs_module_destroy_threads(struct pscfs *m)
+{
+	struct psc_thread *thr;
+	struct pfl_fsthr *pft;
+
+	PLL_LOCK(&psc_threads);
+	PLL_FOREACH(thr, &psc_threads)
+		if (thr->pscthr_type == PFL_THRT_FS) {
+			pft = thr->pscthr_private;
+			m->pf_thr_destroy(pft->pft_private);
+			pft->pft_private = NULL;
+		}
+	PLL_ULOCK(&psc_threads);
 }
 
 /*
@@ -126,6 +178,9 @@ pflfs_module_add(int pos, struct pscfs *m)
 	if (pos == PFLFS_MOD_POS_LAST)
 		pos = psc_dynarray_len(&pscfs_modules);
 	psc_dynarray_splice(&pscfs_modules, pos, 0, &m, 1);
+
+	if (m->pf_thr_init)
+		_pflfs_module_init_threads(m);
 }
 
 /*
@@ -137,10 +192,21 @@ pflfs_module_destroy(struct pscfs *m)
 	if (m->pf_handle_destroy)
 		m->pf_handle_destroy(NULL);
 
+	if (m->pf_thr_destroy)
+		_pflfs_module_destroy_threads(m);
+
 	pfl_opstat_destroy(m->pf_opst_read_err);
 	pfl_opstat_destroy(m->pf_opst_write_err);
 	pfl_opstat_destroy(m->pf_opst_read_reply);
 	pfl_opstat_destroy(m->pf_opst_write_reply);
+
+	if (psc_dynarray_len(&m->pf_opts)) {
+		char *opts;
+
+		opts = psc_dynarray_getpos(&m->pf_opts, 0);
+		PSCFREE(opts);
+	}
+	psc_dynarray_free(&m->pf_opts);
 }
 
 /*
@@ -154,4 +220,24 @@ pflfs_module_remove(int pos)
 	m = psc_dynarray_getpos(&pscfs_modules, pos);
 	psc_dynarray_splice(&pscfs_modules, pos, 1, NULL, 0);
 	return (m);
+}
+
+void *
+pfl_fsthr_getpri(struct psc_thread *thr)
+{
+	struct pfl_fsthr *pft;
+
+	//psc_assert(thr->pscthr_type == PFL_THRT_FSTHR);
+	pft = thr->pscthr_private;
+	return (pft->pft_private);
+}
+
+void
+pfl_fsthr_setpri(struct psc_thread *thr, void *data)
+{
+	struct pfl_fsthr *pft;
+
+	//psc_assert(thr->pscthr_type == PFL_THRT_FSTHR);
+	pft = thr->pscthr_private;
+	pft->pft_private = data;
 }

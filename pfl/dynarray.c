@@ -40,8 +40,8 @@
 #include "pfl/dynarray.h"
 #include "pfl/log.h"
 
-/**
- * psc_dynarray_initf - Initialize a dynamically resizable array.
+/*
+ * Initialize a dynamically resizable array.
  * @pda: dynamic array to initialize.
  * @flags: behavioral flags.
  */
@@ -54,8 +54,8 @@ psc_dynarray_initf(struct psc_dynarray *pda, int flags)
 	pda->pda_items = NULL;
 }
 
-/**
- * _psc_dynarray_resize - Resize a dynamic array.
+/*
+ * Resize a dynamic array.
  * @pda: dynamic array to resize.
  * @n: size.
  * Returns -1 on failure and zero on success.
@@ -79,9 +79,10 @@ _psc_dynarray_resize(struct psc_dynarray *pda, int n)
 	return (0);
 }
 
-/**
- * psc_dynarray_ensurelen - If necessary, enlarge the allocation for
- *	a dynamic array to fit the given number of elements.
+/*
+ * If necessary, enlarge the allocation for a dynamic array to fit the
+ * given number of elements.
+ *
  * @pda: dynamic array to ensure.
  * @n: size.
  * Returns -1 on failure and zero on success.
@@ -97,8 +98,8 @@ psc_dynarray_ensurelen(struct psc_dynarray *pda, int n)
 	return (rc);
 }
 
-/**
- * psc_dynarray_reverse - Reverse the order of array entries.
+/*
+ * Reverse the order of array entries.
  * @pda: the dynamic array to reverse.
  */
 void
@@ -112,9 +113,8 @@ psc_dynarray_reverse(struct psc_dynarray *pda)
 		    psc_dynarray_len(pda) - 1 - i], tmp);
 }
 
-/**
- * psc_dynarray_add - Add a new item to a dynamic sized array, resizing
- *	if necessary.
+/*
+ * Add a new item to a dynamic sized array, resizing if necessary.
  * @pda: dynamic array to add to.
  * @item: element to add.
  * Returns -1 on failure or zero on success.
@@ -130,12 +130,12 @@ psc_dynarray_add(struct psc_dynarray *pda, void *item)
 	return (0);
 }
 
-/**
- * psc_dynarray_add_ifdne - Add an item to a dynamic array unless it
- *	already exists in the array.
+/*
+ * Add an item to a dynamic array unless it already exists in the array.
  * @pda: dynamic array to add to.
  * @item: element to add.
- * Returns 1 if already existent, -1 on failure, or zero on nonexistence.
+ * Returns 1 if already existent, -1 on failure, or zero on
+ * nonexistence.
  */
 int
 psc_dynarray_add_ifdne(struct psc_dynarray *pda, void *item)
@@ -145,8 +145,8 @@ psc_dynarray_add_ifdne(struct psc_dynarray *pda, void *item)
 	return (psc_dynarray_add(pda, item));
 }
 
-/**
- * psc_dynarray_getpos - Access an item in a dynamic array.
+/*
+ * Access an item in a dynamic array.
  * @pda: dynamic array to access.
  * @pos: item index.
  */
@@ -159,8 +159,8 @@ psc_dynarray_getpos(const struct psc_dynarray *pda, int pos)
 	return (pda->pda_items[pos]);
 }
 
-/**
- * psc_dynarray_setpos - Set the item for a position in a dynamic array.
+/*
+ * Set the item for a position in a dynamic array.
  * @pda: dynamic array to access.
  * @pos: item index.
  * @p: item.
@@ -169,13 +169,15 @@ void
 psc_dynarray_setpos(struct psc_dynarray *pda, int pos, void *p)
 {
 	psc_assert(pos >= 0);
-	if (pos >= psc_dynarray_len(pda))
+	if (pos >= pda->pda_nalloc)
 		psc_fatalx("out of bounds array access");
 	pda->pda_items[pos] = p;
+	if (pos >= pda->pda_pos)
+		pda->pda_pos = pos + 1;
 }
 
-/**
- * psc_dynarray_free - Release memory associated with a dynamic array.
+/*
+ * Release memory associated with a dynamic array.
  * @pda: dynamic array to access.
  * @pos: item index.
  */
@@ -190,8 +192,8 @@ psc_dynarray_free(struct psc_dynarray *pda)
 	psc_dynarray_init(pda);
 }
 
-/**
- * psc_dynarray_reset - Clear all items from a dynamic array.
+/*
+ * Clear all items from a dynamic array.
  * @pda: dynamic array to reset.
  */
 void
@@ -203,22 +205,26 @@ psc_dynarray_reset(struct psc_dynarray *pda)
 int
 psc_dynarray_finditem(struct psc_dynarray *pda, const void *item)
 {
-	void **p;
+	void *p;
 	int j;
 
-	p = psc_dynarray_get(pda);
-	for (j = 0; j < psc_dynarray_len(pda); j++)
-		if (p[j] == item)
+	DYNARRAY_FOREACH(p, j, pda)
+		if (p == item)
 			return (j);
 	return (-1);
 }
 
+/*
+ * Remove the given position from the dynarray.  This API assumes the
+ * dynarray is unordered so it will reposition the final element in the
+ * emptied slot.  Use a different API if this is undesirable.
+ */
 void
 psc_dynarray_removepos(struct psc_dynarray *pda, int pos)
 {
 	void **p;
 
-	p = psc_dynarray_get(pda);
+	p = psc_dynarray_get_mutable(pda);
 	psc_assert(pos >= 0 && pos < psc_dynarray_len(pda));
 	if (pos != psc_dynarray_len(pda) - 1)
 		p[pos] = p[psc_dynarray_len(pda) - 1];
@@ -245,8 +251,8 @@ psc_dynarray_removeitem(struct psc_dynarray *pda, const void *item)
 	return (idx);
 }
 
-/**
- * psc_dynarray_splice - Cut and replace a section of a dynarray.
+/*
+ * Cut and replace a section of a dynarray.
  * @pda: dynamic array to splice.
  * @off: offset into array to begin splice.
  * @nrmv: number of items to remove.
@@ -279,9 +285,8 @@ psc_dynarray_splice(struct psc_dynarray *pda, int off, int nrmv,
 	return (0);
 }
 
-/**
- * psc_dynarray_bsearch - Find the position of an item in a sorted
- *	dynarray.
+/*
+ * Find the position of an item in a sorted dynarray.
  * @pda: sorted dynamic array to search.
  * @item: item contained within whose array index is desired.
  * @cmpf: comparison routine.
@@ -319,8 +324,8 @@ psc_dynarray_bsearch(const struct psc_dynarray *pda, const void *item,
 	return (mid);
 }
 
-/**
- * psc_dynarray_concat - Duplicate items in one dynarray to another.
+/*
+ * Duplicate items in one dynarray to another.
  * @pda: dynamic array to copy to.
  * @src: dynamic array to copy from.
  */

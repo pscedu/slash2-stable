@@ -218,6 +218,9 @@ main(int argc, char *argv[])
 	PRTYPE(struct ifaddrs);
 	PRTYPE(struct l_wait_info);
 	PRTYPE(struct pfl_callerinfo);
+	PRTYPE(struct pfl_ctl_data);
+	PRTYPE(struct pfl_fault);
+	PRTYPE(struct pfl_fsthr);
 	PRTYPE(struct pfl_hashentry);
 	PRTYPE(struct pfl_heap);
 	PRTYPE(struct pfl_heap_entry);
@@ -249,7 +252,6 @@ main(int argc, char *argv[])
 	PRTYPE(struct psc_ctlmsg_journal);
 	PRTYPE(struct psc_ctlmsg_listcache);
 	PRTYPE(struct psc_ctlmsg_lnetif);
-	PRTYPE(struct psc_ctlmsg_loglevel);
 	PRTYPE(struct psc_ctlmsg_meter);
 	PRTYPE(struct psc_ctlmsg_mlist);
 	PRTYPE(struct psc_ctlmsg_odtable);
@@ -268,7 +270,6 @@ main(int argc, char *argv[])
 	PRTYPE(struct psc_ctlthr);
 	PRTYPE(struct psc_dynarray);
 	PRTYPE(struct psc_explist);
-	PRTYPE(struct psc_fault);
 	PRTYPE(struct psc_hashbkt);
 	PRTYPE(struct psc_hashtbl);
 	PRTYPE(struct psc_journal);
@@ -359,7 +360,6 @@ main(int argc, char *argv[])
 	PRVAL(PCMT_GETJOURNAL);
 	PRVAL(PCMT_GETLISTCACHE);
 	PRVAL(PCMT_GETLNETIF);
-	PRVAL(PCMT_GETLOGLEVEL);
 	PRVAL(PCMT_GETMETER);
 	PRVAL(PCMT_GETMLIST);
 	PRVAL(PCMT_GETODTABLE);
@@ -378,6 +378,14 @@ main(int argc, char *argv[])
 	PRVAL(PFLCTL_PARAMT_NONE);
 	PRVAL(PFLCTL_PARAMT_STR);
 	PRVAL(PFLCTL_PARAMT_UINT64);
+	PRVAL(PFL_THRT_CTL);
+	PRVAL(PFL_THRT_CTLAC);
+	PRVAL(PFL_THRT_FS);
+	PRVAL(PFL_THRT_FSMGR);
+	PRVAL(PFL_THRT_NBRPC);
+	PRVAL(PFL_THRT_OPSTIMER);
+	PRVAL(PFL_THRT_USKLNDPL);
+	PRVAL(PFL_THRT_WORKER);
 	PRVAL(PSCRPC_IMP_CLOSED);
 	PRVAL(PSCRPC_IMP_CONNECTING);
 	PRVAL(PSCRPC_IMP_DISCON);
@@ -396,6 +404,7 @@ main(int argc, char *argv[])
 	PRVAL(PSCRPC_RQ_PHASE_RPC);
 	PRVAL(PSL_LOCKED);
 	PRVAL(PSL_UNLOCKED);
+	PRVAL(_PFL_NTHRT);
 	/* end enums */
 
 	PRVAL(offsetof(struct psc_listcache, plc_listhd));

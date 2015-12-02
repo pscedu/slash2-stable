@@ -44,6 +44,7 @@
 int		 psc_subsys_id(const char *);
 const char	*psc_subsys_name(int);
 void		 psc_subsys_register(int, const char *);
+void		 psc_subsys_unregister(int);
 
 extern struct psc_dynarray psc_subsystems;
 

@@ -732,7 +732,8 @@ pscrpcthr_main(struct psc_thread *thr)
 		);
 #endif
 		(void)pscrpc_svr_wait_event(&svc->srv_waitq,
-		    pscrpcthr_waitevent(thr, svc), &lwi, NULL);
+		    pscrpcthr_waitevent(thr, svc) || !prt->prt_alive,
+		    &lwi, NULL);
 
 		pscrpc_check_rqbd_pool(svc);
 		/*
@@ -785,46 +786,9 @@ pscrpcthr_main(struct psc_thread *thr)
 	psc_waitq_wakeall(&thr->t_ctl_waitq);
 #endif
 	psclist_del(&prt->prt_lentry, &svc->srv_threads);
+	psc_waitq_wakeall(&svc->srv_waitq);
 	SVC_ULOCK(svc);
 }
-
-#if 0
-static void
-pscrpc_stop_thread(struct pscrpc_service *svc, struct pscrpc_thread *thread)
-{
-	struct l_wait_info lwi = { 0 };
-
-	SVC_LOCK(svc);
-	thread->t_flags = SVC_STOPPING;
-	SVC_ULOCK(svc);
-
-	wake_up_all(&svc->srv_waitq);
-	l_wait_event(thread->t_ctl_waitq, (thread->t_flags & SVC_STOPPED),
-		     &lwi);
-
-	SVC_LOCK(svc);
-	psclist_del(&thread->t_link);
-	SVC_ULOCK(svc);
-
-	PSCRPC_OBD_FREE(thread, sizeof(*thread));
-}
-
-void pscrpc_stop_all_threads(struct pscrpc_service *svc)
-{
-	struct pscrpc_thread *thread;
-
-	SVC_LOCK(svc);
-	while (!psc_listhd_empty(&svc->srv_threads)) {
-		thread = psc_lentry_obj(svc->srv_threads.next,
-		    struct pscrpc_thread, t_link);
-
-		SVC_ULOCK(svc);
-		pscrpc_stop_thread(svc, thread);
-		SVC_LOCK(svc);
-	}
-	SVC_ULOCK(svc);
-}
-#endif
 
 int
 pscrpc_unregister_service(struct pscrpc_service *svc)
@@ -834,7 +798,6 @@ pscrpc_unregister_service(struct pscrpc_service *svc)
 	struct l_wait_info lwi;
 	int rc;
 
-	//pscrpc_stop_all_threads(svc);
 	LASSERT(psc_listhd_empty(&svc->srv_threads));
 
 	spinlock(&pscrpc_all_services_lock);
@@ -948,7 +911,10 @@ pscrpc_unregister_service(struct pscrpc_service *svc)
 		PSCRPC_OBD_FREE(rs, svc->srv_max_reply_size);
 	}
 
+	pfl_poolmaster_destroy(&svc->srv_poolmaster);
 	psc_mutex_destroy(&svc->srv_mutex);
+	psc_waitq_destroy(&svc->srv_waitq);
+	psc_waitq_destroy(&svc->srv_free_rs_waitq);
 	PSCRPC_OBD_FREE(svc, sizeof(*svc));
 	return 0;
 }
@@ -1070,19 +1036,15 @@ pscrpcsvh_addthr(struct pscrpc_svc_handle *svh)
 	thr = pscthr_init(svh->svh_type, pscrpcthr_main, NULL,
 	    svh->svh_thrsiz, "%sthr%02d", svh->svh_svc_name,
 	    svh->svh_nthreads);
-	if (thr) {
-		prt = thr->pscthr_private;
-		prt->prt_alive = 1;
-		prt->prt_svh = svh;
-		INIT_PSC_LISTENTRY(&prt->prt_lentry);
+	prt = thr->pscthr_private;
+	prt->prt_alive = 1;
+	prt->prt_svh = svh;
+	INIT_PSC_LISTENTRY(&prt->prt_lentry);
 
-		psclist_add(&prt->prt_lentry,
-		    &svh->svh_service->srv_threads);
-		svh->svh_nthreads++;
-	}
+	psclist_add(&prt->prt_lentry,
+	    &svh->svh_service->srv_threads);
+	svh->svh_nthreads++;
 	SVC_ULOCK(svc);
-	if (thr == NULL)
-		return (-1);
 	pscthr_setready(thr);
 	return (0);
 }
@@ -1100,11 +1062,11 @@ pscrpcsvh_delthr(struct pscrpc_svc_handle *svh)
 	if (svc->srv_nthreads == 0)
 		rc = -1;
 	else {
-		svc->srv_nthreads--;
 		prt = psc_listhd_first_obj(&svc->srv_threads,
 		    struct pscrpc_thread, prt_lentry);
 		prt->prt_alive = 0;
 	}
+	psc_waitq_wakeall(&svc->srv_waitq);
 	SVC_ULOCK(svc);
 	return (rc);
 }
@@ -1139,9 +1101,9 @@ _pscrpc_svh_spawn(struct pscrpc_svc_handle *svh)
 void
 pscrpc_svh_destroy(struct pscrpc_svc_handle *svh)
 {
-	pscrpc_unregister_service(svh->svh_service);
 	while (svh->svh_service->srv_nthreads)
 		pscrpcsvh_delthr(svh);
+	pscrpc_unregister_service(svh->svh_service);
 }
 
 #ifdef PFL_CTL

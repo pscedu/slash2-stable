@@ -515,6 +515,11 @@ lnet_descriptor_setup (void)
 void
 lnet_descriptor_cleanup (void)
 {
+	pfl_poolmaster_destroy(&lnet_md_poolmaster);
+	pfl_poolmaster_destroy(&lnet_me_poolmaster);
+	pfl_poolmaster_destroy(&lnet_eq_poolmaster);
+	pfl_poolmaster_destroy(&lnet_msg_poolmaster);
+
         lnet_freelist_fini (&the_lnet.ln_free_mes);
         lnet_freelist_fini (&the_lnet.ln_free_msgs);
         lnet_freelist_fini (&the_lnet.ln_free_mds);
@@ -1666,6 +1671,7 @@ lnet_create_ping_info(void)
 static void
 lnet_destroy_ping_info(void)
 {
+	size_t len;
         lnet_ni_t *ni;
 
         LNET_LOCK();
@@ -1676,8 +1682,8 @@ lnet_destroy_ping_info(void)
 
         LNET_UNLOCK();
 
-        LIBCFS_FREE(the_lnet.ln_ping_info,
-                    lnet_pinginfo_size(the_lnet.ln_ping_info->pi_nnis));
+	len = lnet_pinginfo_size(the_lnet.ln_ping_info->pi_nnis);
+        LIBCFS_FREE(the_lnet.ln_ping_info, len);
         the_lnet.ln_ping_info = NULL;
         return;
 }

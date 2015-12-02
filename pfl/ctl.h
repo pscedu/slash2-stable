@@ -56,7 +56,7 @@ struct psc_ctlmsg_error {
 
 struct psc_ctlmsg_fault {
 	char			pcflt_thrname[PSC_THRNAME_MAX];
-	char			pcflt_name[PSC_FAULT_NAME_MAX];
+	char			pcflt_name[PFL_FAULT_NAME_MAX];
 	uint32_t		pcflt_flags;
 	uint32_t		pcflt_hits;
 	uint32_t		pcflt_unhits;
@@ -122,9 +122,11 @@ struct psc_ctlmsg_lnetif {
 	int32_t			pclni_refcount;
 };
 
-struct psc_ctlmsg_loglevel {
-	char			pcl_thrname[PSC_THRNAME_MAX];
-	int32_t			pcl_levels[0];
+struct psc_ctlmsg_thread {
+	char			pct_thrname[PSC_THRNAME_MAX];
+	int32_t			pct_memnode;
+	uint32_t		pct_flags;
+	int32_t			pct_loglevels[0];
 };
 
 struct psc_ctlmsg_meter {
@@ -132,10 +134,10 @@ struct psc_ctlmsg_meter {
 };
 
 struct psc_ctlmsg_mlist {
-	uint64_t		 pcml_nseen;
-	uint32_t		 pcml_size;
-	uint32_t		 pcml_nwaiters;
-	char			 pcml_name[PEXL_NAME_MAX];
+	uint64_t		pcml_nseen;
+	uint32_t		pcml_size;
+	uint32_t		pcml_nwaiters;
+	char			pcml_name[PEXL_NAME_MAX];
 };
 
 struct psc_ctlmsg_odtable {
@@ -244,39 +246,18 @@ struct psc_ctlmsg_subsys {
 	char			pcss_names[0];
 };
 
-struct psc_ctlmsg_thread {
-	char			pcst_thrname[PSC_THRNAME_MAX];
-#ifdef HAVE_NUMA
-	int32_t			pcst_memnode;
-#endif
-	int32_t			pcst_thrtype;
-	int32_t			pcst_thrid;
-	uint32_t		pcst_flags;
-	uint32_t		pcst_u32_1;
-	uint32_t		pcst_u32_2;
-	uint32_t		pcst_u32_3;
-	uint32_t		pcst_u32_4;
-};
-
-/* psc_ctlthr aliases */
-#define pcst_nclients	pcst_u32_1
-#define pcst_nsent	pcst_u32_2
-#define pcst_nrecv	pcst_u32_3
-#define pcst_ndrop	pcst_u32_4
-
 /* Control message types. */
 enum {
 	PCMT_ERROR = 0,
 	PCMT_GETFAULT,
 	PCMT_GETHASHTABLE,
-	PCMT_GETOPSTATS,
 	PCMT_GETJOURNAL,
 	PCMT_GETLISTCACHE,
 	PCMT_GETLNETIF,
-	PCMT_GETLOGLEVEL,
 	PCMT_GETMETER,
 	PCMT_GETMLIST,
 	PCMT_GETODTABLE,
+	PCMT_GETOPSTATS,
 	PCMT_GETPARAM,
 	PCMT_GETPOOL,
 	PCMT_GETRPCRQ,

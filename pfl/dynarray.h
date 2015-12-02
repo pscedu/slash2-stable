@@ -73,9 +73,16 @@ struct psc_dynarray {
 
 /**
  * psc_dynarray_get - Access a dynamic array's item list.
+ * Note: this should only ever be used for read access and never modify
+ * access, otherwise the internal structure of the dynarray may become
+ * inconsistent!
+ *
  * @pda: dynamic array to access.
  */
-#define psc_dynarray_get(pda)	((void *)(pda)->pda_items)
+#define psc_dynarray_get(pda)	((const void *)(pda)->pda_items)
+
+#define psc_dynarray_get_mutable(pda)					\
+	((void *)(pda)->pda_items)
 
 /**
  * psc_dynarray_sort - Reorder elements of a dynarray.

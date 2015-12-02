@@ -73,12 +73,6 @@
 
 #define QLEN 15	/* listen(2) queue */
 
-struct psc_dynarray	psc_ctl_clifds = DYNARRAY_INIT;
-psc_spinlock_t		psc_ctl_clifds_lock = SPINLOCK_INIT;
-struct psc_waitq	psc_ctl_clifds_waitq = PSC_WAITQ_INIT;
-
-struct pfl_mutex	pfl_ctl_mutex = PSC_MUTEX_INIT;
-
 __weak size_t
 psc_multiwaitcond_nwaiters(__unusedx struct psc_multiwaitcond *m)
 {
@@ -101,10 +95,17 @@ psc_ctlrep_getfault(int fd, struct psc_ctlmsghdr *mh,
 int
 psc_ctlmsg_sendv(int fd, const struct psc_ctlmsghdr *mh, const void *m)
 {
+	struct pfl_ctl_data *pcd;
+	struct psc_thread *thr;
+	struct psc_ctlthr *pct;
 	struct iovec iov[2];
 	struct msghdr msg;
 	size_t tsiz;
 	ssize_t n;
+
+	thr = pscthr_get();
+	pct = psc_ctlthr(thr);
+	pcd = pct->pct_ctldata;
 
 	iov[0].iov_base = (void *)mh;
 	iov[0].iov_len = sizeof(*mh);
@@ -116,13 +117,14 @@ psc_ctlmsg_sendv(int fd, const struct psc_ctlmsghdr *mh, const void *m)
 	msg.msg_iov = iov;
 	msg.msg_iovlen = nitems(iov);
 
-	psc_mutex_lock(&pfl_ctl_mutex);
+	/* XXX just need a lock on the fd, not the entire ctldata */
+	psc_mutex_lock(&pcd->pcd_mutex);
 	n = sendmsg(fd, &msg, PFL_MSG_NOSIGNAL);
-	psc_mutex_unlock(&pfl_ctl_mutex);
+	psc_mutex_unlock(&pcd->pcd_mutex);
 
 	if (n == -1) {
 		if (errno == EPIPE || errno == ECONNRESET) {
-			psc_ctlthr(pscthr_get())->pct_stat.ndrop++;
+			OPSTAT_INCR("ctl.drop");
 			pscthr_yield();
 			return (0);
 		}
@@ -131,7 +133,7 @@ psc_ctlmsg_sendv(int fd, const struct psc_ctlmsghdr *mh, const void *m)
 	tsiz = sizeof(*mh) + mh->mh_size;
 	if ((size_t)n != tsiz)
 		psclog_warn("short sendmsg");
-	psc_ctlthr(pscthr_get())->pct_stat.nsent++;
+	OPSTAT_INCR("ctl.sent");
 	pscthr_yield();
 	return (1);
 }
@@ -196,70 +198,6 @@ psc_ctlsenderr(int fd, const struct psc_ctlmsghdr *mhp, const char *fmt,
 }
 
 /*
- * Export control thread stats.
- * @thr: thread begin queried.
- * @pcst: thread stats control message to be filled in.
- */
-void
-psc_ctlthr_get(struct psc_thread *thr, struct psc_ctlmsg_thread *pcst)
-{
-	pcst->pcst_nsent	= psc_ctlthr(thr)->pct_stat.nsent;
-	pcst->pcst_nrecv	= psc_ctlthr(thr)->pct_stat.nrecv;
-	pcst->pcst_ndrop	= psc_ctlthr(thr)->pct_stat.ndrop;
-}
-
-/*
- * Export control thread stats.
- * @thr: thread begin queried.
- * @pcst: thread stats control message to be filled in.
- */
-void
-psc_ctlacthr_get(struct psc_thread *thr, struct psc_ctlmsg_thread *pcst)
-{
-	pcst->pcst_nclients	= psc_ctlacthr(thr)->pcat_stat.nclients;
-}
-
-/*
- * Send a reply to a "GETTHREAD" inquiry.
- * @fd: client socket descriptor.
- * @mh: already filled-in control message header.
- * @m: control message to be filled in and sent out.
- * @thr: thread begin queried.
- */
-__static int
-psc_ctlmsg_thread_send(int fd, struct psc_ctlmsghdr *mh, void *m,
-    struct psc_thread *thr)
-{
-	struct psc_ctlmsg_thread *pcst = m;
-
-	snprintf(pcst->pcst_thrname, sizeof(pcst->pcst_thrname),
-	    "%s", thr->pscthr_name);
-	pcst->pcst_thrid = thr->pscthr_thrid;
-	pcst->pcst_thrtype = thr->pscthr_type;
-	pcst->pcst_flags = thr->pscthr_flags;
-	if (thr->pscthr_type >= 0 &&
-	    thr->pscthr_type < psc_ctl_nthrgets &&
-	    psc_ctl_thrgets[thr->pscthr_type])
-		psc_ctl_thrgets[thr->pscthr_type](thr, pcst);
-	return (psc_ctlmsg_sendv(fd, mh, pcst));
-}
-
-/*
- * Respond to a "GETTHREAD" inquiry.
- * @fd: client socket descriptor.
- * @mh: already filled-in control message header.
- * @m: control message to examine and reuse.
- */
-int
-psc_ctlrep_getthread(int fd, struct psc_ctlmsghdr *mh, void *m)
-{
-	struct psc_ctlmsg_thread *pcst = m;
-
-	return (psc_ctl_applythrop(fd, mh, m, pcst->pcst_thrname,
-	    psc_ctlmsg_thread_send));
-}
-
-/*
  * Send a response to a "GETSUBSYS" inquiry.
  * @fd: client socket descriptor.
  * @mh: already filled-in control message header.
@@ -319,48 +257,49 @@ psc_ctlrep_getrpcsvc(int fd, struct psc_ctlmsghdr *mh,
 #endif
 
 /*
- * Send a reply to a "GETLOGLEVEL" inquiry.
+ * Send a reply to a "GETTHREAD" inquiry.
  * @fd: client socket descriptor.
  * @mh: already filled-in control message header.
  * @thr: thread begin queried.
  */
 __static int
-psc_ctlmsg_loglevel_send(int fd, struct psc_ctlmsghdr *mh, void *m,
+psc_ctlmsg_thread_send(int fd, struct psc_ctlmsghdr *mh, void *m,
     struct psc_thread *thr)
 {
-	struct psc_ctlmsg_loglevel *pcl = m;
+	struct psc_ctlmsg_thread *pct = m;
 	size_t siz;
 	int rc;
 
-	siz = sizeof(*pcl) + sizeof(*pcl->pcl_levels) *
+	siz = sizeof(*pct) + sizeof(*pct->pct_loglevels) *
 	    psc_dynarray_len(&psc_subsystems);
-	pcl = PSCALLOC(siz);
-	snprintf(pcl->pcl_thrname, sizeof(pcl->pcl_thrname),
+	pct = PSCALLOC(siz);
+	pct->pct_flags = thr->pscthr_flags;
+	snprintf(pct->pct_thrname, sizeof(pct->pct_thrname),
 	    "%s", thr->pscthr_name);
-	memcpy(pcl->pcl_levels, thr->pscthr_loglevels,
+	memcpy(pct->pct_loglevels, thr->pscthr_loglevels,
 	    psc_dynarray_len(&psc_subsystems) *
-	    sizeof(*pcl->pcl_levels));
+	    sizeof(*pct->pct_loglevels));
 	mh->mh_size = siz;
-	rc = psc_ctlmsg_sendv(fd, mh, pcl);
+	rc = psc_ctlmsg_sendv(fd, mh, pct);
 	/* reset because we used our own buffer */
 	mh->mh_size = 0;
-	PSCFREE(pcl);
+	PSCFREE(pct);
 	return (rc);
 }
 
 /*
- * Respond to a "GETLOGLEVEL" inquiry.
+ * Respond to a "GETTHREAD" inquiry.
  * @fd: client socket descriptor.
  * @mh: already filled-in control message header.
  * @m: control message to examine.
  */
 int
-psc_ctlrep_getloglevel(int fd, struct psc_ctlmsghdr *mh, void *m)
+psc_ctlrep_getthread(int fd, struct psc_ctlmsghdr *mh, void *m)
 {
-	struct psc_ctlmsg_loglevel *pcl = m;
+	struct psc_ctlmsg_thread *pct = m;
 
-	return (psc_ctl_applythrop(fd, mh, m, pcl->pcl_thrname,
-	    psc_ctlmsg_loglevel_send));
+	return (psc_ctl_applythrop(fd, mh, m, pct->pct_thrname,
+	    psc_ctlmsg_thread_send));
 }
 
 /*
@@ -2033,7 +1972,7 @@ psc_ctlrep_getodtable(int fd, struct psc_ctlmsghdr *mh, void *m)
 	rc = 1;
 	found = 0;
 	strlcpy(name, pco->pco_name, sizeof(name));
-	all = (name[0] == '0');
+	all = (name[0] == '\0');
 
 	PLL_LOCK(&pfl_odtables);
 	PLL_FOREACH(odt, &pfl_odtables) {
@@ -2255,7 +2194,7 @@ psc_ctlthr_service(int fd, const struct psc_ctlop *ct, int nops,
 		    mh.mh_type, mh.mh_size, ct[mh.mh_type].pc_siz);
 		return (0);
 	}
-	psc_ctlthr(pscthr_get())->pct_stat.nrecv++;
+	OPSTAT_INCR("ctl.recv");
 	if (!ct[mh.mh_type].pc_op(fd, &mh, m))
 		return (EOF);
 	return (0);
@@ -2268,69 +2207,111 @@ psc_ctlthr_service(int fd, const struct psc_ctlop *ct, int nops,
 void
 psc_ctlacthr_main(struct psc_thread *thr)
 {
-	int s, fd;
+	struct psc_ctlacthr *pcat;
+	struct pfl_ctl_data *pcd;
+	int i, s, fd;
+	void *p;
 
-	s = psc_ctlacthr(thr)->pcat_sock;
+	pcat = psc_ctlacthr(thr);
+	pcd = &pcat->pcat_ctldata;
+	s = pcd->pcd_sock;
+	pcd->pcd_acthr = thr;
 	while (pscthr_run(thr)) {
 		fd = accept(s, NULL, NULL);
 		if (fd == -1) {
 			if (errno == EINTR) {
 				usleep(300);
 				continue;
-			}
+			} else if (errno == EBADF)
+				break;
 			psc_fatal("accept");
 		}
-		psc_ctlacthr(pscthr_get())->pcat_stat.nclients++;
+		OPSTAT_INCR("ctl.accept");
 
-		spinlock(&psc_ctl_clifds_lock);
-		psc_dynarray_add(&psc_ctl_clifds, (void *)(long)fd);
-		psc_waitq_wakeall(&psc_ctl_clifds_waitq);
-		freelock(&psc_ctl_clifds_lock);
+		spinlock(&pcd->pcd_lock);
+		psc_dynarray_add(&pcd->pcd_clifds, (void *)(long)fd);
+		psc_waitq_wakeall(&pcd->pcd_waitq);
+		freelock(&pcd->pcd_lock);
 	}
+
+	spinlock(&pcd->pcd_lock);
+	while (pcd->pcd_refcnt) {
+		psc_waitq_wait(&pcd->pcd_waitq, &pcd->pcd_lock);
+		spinlock(&pcd->pcd_lock);
+	}
+
+	DYNARRAY_FOREACH(p, i, &pcd->pcd_clifds)
+		close((int)(long)p);
+	psc_dynarray_free(&pcd->pcd_clifds);
+	psc_waitq_destroy(&pcd->pcd_waitq);
+	psc_mutex_destroy(&pcd->pcd_mutex);
+}
+
+void
+pfl_ctl_destroy(struct pfl_ctl_data *pcd)
+{
+	unlink(pcd->pcd_saun.sun_path);
+	spinlock(&pcd->pcd_lock);
+	pcd->pcd_dead = 1;
+	psc_waitq_wakeall(&pcd->pcd_waitq);
+	close(pcd->pcd_sock);
+	freelock(&pcd->pcd_lock);
 }
 
 void
 psc_ctlthr_mainloop(struct psc_thread *thr)
 {
 	const struct psc_ctlop *ct;
+	struct pfl_ctl_data *pcd;
+	struct psc_ctlthr *pct;
 	size_t bufsiz = 0;
 	void *buf = NULL;
 	uint32_t rnd;
 	int s, nops;
 
-	ct = psc_ctlthr(thr)->pct_ct;
-	nops = psc_ctlthr(thr)->pct_nops;
+	pct = psc_ctlthr(thr);
+	pcd = pct->pct_ctldata;
+	ct = pct->pct_ct;
+	nops = pct->pct_nops;
 	while (pscthr_run(thr)) {
-		spinlock(&psc_ctl_clifds_lock);
-		if (psc_dynarray_len(&psc_ctl_clifds) == 0) {
-			psc_waitq_wait(&psc_ctl_clifds_waitq,
-			    &psc_ctl_clifds_lock);
+		spinlock(&pcd->pcd_lock);
+		if (pcd->pcd_dead) {
+			pcd->pcd_refcnt--;
+			psc_waitq_wakeall(&pcd->pcd_waitq);
+			freelock(&pcd->pcd_lock);
+			break;
+		}
+		if (psc_dynarray_len(&pcd->pcd_clifds) == 0) {
+			psc_waitq_wait(&pcd->pcd_waitq, &pcd->pcd_lock);
 			continue;
 		}
-		rnd = psc_random32u(psc_dynarray_len(&psc_ctl_clifds));
-		s = (int)(long)psc_dynarray_getpos(&psc_ctl_clifds, rnd);
-		psc_dynarray_remove(&psc_ctl_clifds, (void *)(long)s);
-		freelock(&psc_ctl_clifds_lock);
+		rnd = psc_random32u(psc_dynarray_len(&pcd->pcd_clifds));
+		s = (int)(long)psc_dynarray_getpos(&pcd->pcd_clifds,
+		    rnd);
+		psc_dynarray_remove(&pcd->pcd_clifds, (void *)(long)s);
+		freelock(&pcd->pcd_lock);
 
 		if (!psc_ctlthr_service(s, ct, nops, &bufsiz, &buf)) {
-			spinlock(&psc_ctl_clifds_lock);
-			psc_dynarray_add(&psc_ctl_clifds, (void *)(long)s);
-			psc_waitq_wakeall(&psc_ctl_clifds_waitq);
-			freelock(&psc_ctl_clifds_lock);
+			spinlock(&pcd->pcd_lock);
+			psc_dynarray_add(&pcd->pcd_clifds,
+			    (void *)(long)s);
+			psc_waitq_wakeall(&pcd->pcd_waitq);
+			freelock(&pcd->pcd_lock);
 		} else
 			close(s);
 	}
 	PSCFREE(buf);
 }
 
-void
+struct psc_ctlacthr *
 psc_ctlthr_spawn_listener(const char *ofn, int acthrtype)
 {
 	extern const char *__progname;
-	static psc_atomic32_t idx;
 
-	struct psc_thread *thr, *me;
-	struct sockaddr_un saun;
+	struct psc_thread *acthr, *me;
+	struct psc_ctlacthr *pcat;
+	struct pfl_ctl_data *pcd;
+	struct sockaddr_un *saun;
 	mode_t old_umask;
 	char *p;
 	int s;
@@ -2342,49 +2323,56 @@ psc_ctlthr_spawn_listener(const char *ofn, int acthrtype)
 		psc_fatalx("'ctlthr' not found in thread name '%s'",
 		    me->pscthr_name);
 
-	s = socket(AF_LOCAL, SOCK_STREAM, PF_UNSPEC);
-	if (s == -1)
-		psc_fatal("socket");
-
-	memset(&saun, 0, sizeof(saun));
-	saun.sun_family = AF_LOCAL;
-	SOCKADDR_SETLEN(&saun);
-
-	/* perform transliteration for "variables" in file path */
-	(void)FMTSTR(saun.sun_path, sizeof(saun.sun_path), ofn,
-		FMTSTRCASE('h', "s", psclog_getdata()->pld_hostshort)
-		FMTSTRCASE('n', "s", __progname)
-	);
-
-	if (unlink(saun.sun_path) == -1 && errno != ENOENT)
-		psclog_error("unlink %s", saun.sun_path);
-
-	spinlock(&psc_umask_lock);
-	old_umask = umask(S_IXUSR | S_IXGRP | S_IWOTH | S_IROTH |
-	    S_IXOTH);
-	if (bind(s, (struct sockaddr *)&saun, sizeof(saun)) == -1)
-		psc_fatal("bind %s", saun.sun_path);
-	umask(old_umask);
-	freelock(&psc_umask_lock);
-
-	/* XXX fchmod */
-	if (chmod(saun.sun_path, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP |
-	    S_IROTH | S_IWOTH) == -1)
-		psc_fatal("chmod %s", saun.sun_path); /* XXX errno */
-
-	if (listen(s, QLEN) == -1)
-		psc_fatal("listen");
-
 	/*
 	 * Spawn a servicing thread to separate processing from acceptor
 	 * and to multiplex between clients for fairness.
 	 */
-	thr = pscthr_init(acthrtype, psc_ctlacthr_main, NULL,
-	    sizeof(struct psc_ctlacthr), "%.*sctlacthr%d",
-	    p - me->pscthr_name, me->pscthr_name,
-	    psc_atomic32_inc_getnew(&idx) - 1);
-	psc_ctlacthr(thr)->pcat_sock = s;
-	pscthr_setready(thr);
+	acthr = pscthr_init(acthrtype, psc_ctlacthr_main, NULL,
+	    sizeof(struct psc_ctlacthr), "%.*sctlacthr",
+	    p - me->pscthr_name, me->pscthr_name);
+	pcat = psc_ctlacthr(acthr);
+	pcd = &pcat->pcat_ctldata;
+	saun = &pcd->pcd_saun;
+
+	s = socket(AF_LOCAL, SOCK_STREAM, PF_UNSPEC);
+	if (s == -1)
+		psc_fatal("socket");
+
+	saun->sun_family = AF_LOCAL;
+	SOCKADDR_SETLEN(saun);
+
+	/* perform transliteration for "variables" in file path */
+	(void)FMTSTR(saun->sun_path, sizeof(saun->sun_path), ofn,
+		FMTSTRCASE('h', "s", psclog_getdata()->pld_hostshort)
+		FMTSTRCASE('n', "s", __progname)
+	);
+
+	if (unlink(saun->sun_path) == -1 && errno != ENOENT)
+		psclog_error("unlink %s", saun->sun_path);
+
+	spinlock(&psc_umask_lock);
+	old_umask = umask(S_IXUSR | S_IXGRP | S_IWOTH | S_IROTH |
+	    S_IXOTH);
+	if (bind(s, (struct sockaddr *)saun, sizeof(*saun)) == -1)
+		psc_fatal("bind %s", saun->sun_path);
+	umask(old_umask);
+	freelock(&psc_umask_lock);
+
+	/* XXX fchmod */
+	if (chmod(saun->sun_path, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP |
+	    S_IROTH | S_IWOTH) == -1)
+		psc_fatal("chmod %s", saun->sun_path); /* XXX errno */
+
+	if (listen(s, QLEN) == -1)
+		psc_fatal("listen");
+
+	pcd->pcd_sock = s;
+	psc_dynarray_init(&pcd->pcd_clifds);
+	INIT_SPINLOCK(&pcd->pcd_lock);
+	psc_waitq_init(&pcd->pcd_waitq);
+	psc_mutex_init(&pcd->pcd_mutex);
+	pscthr_setready(acthr);
+	return (pcat);
 }
 
 /*
@@ -2399,6 +2387,9 @@ psc_ctlthr_main(const char *ofn, const struct psc_ctlop *ct, int nops,
     int acthrtype)
 {
 	struct psc_thread *thr, *me;
+	struct psc_ctlacthr *pcat;
+	struct pfl_ctl_data *pcd;
+	struct psc_ctlthr *pct;
 	const char *p;
 	int i;
 
@@ -2408,19 +2399,29 @@ psc_ctlthr_main(const char *ofn, const struct psc_ctlop *ct, int nops,
 	if (p == NULL)
 		psc_fatalx("'ctlthr' not found in control thread name");
 
-	psc_ctlthr_spawn_listener(ofn, acthrtype);
+	pcat = psc_ctlthr_spawn_listener(ofn, acthrtype);
+	pcd = &pcat->pcat_ctldata;
+	spinlock(&pcd->pcd_lock);
 
 #define PFL_CTL_NTHRS 4
 	for (i = 1; i < PFL_CTL_NTHRS; i++) {
 		thr = pscthr_init(me->pscthr_type, psc_ctlthr_mainloop,
 		    NULL, me->pscthr_privsiz, "%.*sctlthr%d",
 		    p - me->pscthr_name, me->pscthr_name, i);
-		psc_ctlthr(thr)->pct_ct = ct;
-		psc_ctlthr(thr)->pct_nops = nops;
+		pct = psc_ctlthr(thr);
+		pct->pct_ct = ct;
+		pct->pct_nops = nops;
+		pct->pct_ctldata = pcd;
+		pcd->pcd_refcnt++;
 		pscthr_setready(thr);
 	}
 
-	psc_ctlthr(me)->pct_ct = ct;
-	psc_ctlthr(me)->pct_nops = nops;
+	pct = psc_ctlthr(me);
+	pct->pct_ct = ct;
+	pct->pct_nops = nops;
+	pct->pct_ctldata = pcd;
+	pcd->pcd_refcnt++;
+	psc_waitq_wakeall(&pcd->pcd_waitq);
+	freelock(&pcd->pcd_lock);
 	psc_ctlthr_mainloop(me);
 }

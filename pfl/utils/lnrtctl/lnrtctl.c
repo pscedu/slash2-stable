@@ -45,14 +45,6 @@ struct psc_ctlmsg_prfmt psc_ctlmsg_prfmts[] = {
 	PSC_CTLMSG_PRFMT_DEFS
 };
 
-psc_ctl_prthr_t psc_ctl_prthrs[] = {
-/* CTL		*/ psc_ctlthr_pr,
-/* CTLAC	*/ psc_ctlacthr_pr,
-/* LNETAC	*/ NULL,
-/* OPSTIMER	*/ NULL,
-/* USKLNDPL	*/ NULL
-};
-
 struct psc_ctlcmd_req psc_ctlcmd_reqs[] = {
 };
 

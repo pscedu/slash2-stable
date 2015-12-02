@@ -24,24 +24,27 @@
 
 /*
  * mlists are psc_listcaches that can interface with multiwaits.
+ *
+ * XXX this API should really have been just merged with listcache and
+ * renamed to something like waitlist.
  */
 
 #include <stdarg.h>
 #include <string.h>
 
-#include "pfl/opstats.h"
 #include "pfl/list.h"
 #include "pfl/lock.h"
 #include "pfl/lockedlist.h"
 #include "pfl/log.h"
 #include "pfl/mlist.h"
+#include "pfl/opstats.h"
 #include "pfl/multiwait.h"
 
 struct psc_lockedlist psc_mlists =
     PLL_INIT(&psc_mlists, struct psc_mlist, pml_lentry);
 
-/**
- * psc_mlist_add - Put an item on an mlist.
+/*
+ * Put an item on an mlist.
  * @pml: the mlist to access.
  * @p: item to return.
  */
@@ -61,8 +64,8 @@ _psc_mlist_add(const struct pfl_callerinfo *pci, struct psc_mlist *pml,
 	MLIST_URLOCK(pml, locked);
 }
 
-/**
- * _psc_mlist_initv - Initialize an mlist.
+/*
+ * Initialize an mlist.
  * @pml: mlist to initialize.
  * @flags: multiwaitcond flags.
  * @mwcarg: multiwaitcond to use for availability notification.
@@ -103,8 +106,16 @@ _psc_mlist_init(struct psc_mlist *pml, int flags, void *mwcarg,
 	va_end(ap);
 }
 
-/**
- * psc_mlist_reginit - Register an mlist for external control.
+void
+pfl_mlist_destroy(struct psc_mlist *ml)
+{
+	psc_assert(pll_nitems(&ml->pml_pll) == 0);
+	pfl_opstat_destroy(ml->pml_nseen);
+	psc_multiwaitcond_destroy(&ml->pml_mwcond_empty);
+}
+
+/*
+ * Register an mlist for external control.
  * @pml: mlist to register.
  */
 void

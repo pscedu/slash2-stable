@@ -129,7 +129,7 @@ struct psc_poolmgr {
 };
 
 /* Pool manager flags */
-#define PPMF_NONE		0		/* no pool manager flag specified */
+#define PPMF_NONE		0		/* no pool manager flags specified */
 #define PPMF_AUTO		(1 << 0)	/* pool automatically resizes */
 #define PPMF_PIN		(1 << 1)	/* mlock(2) items */
 #define PPMF_MLIST		(1 << 2)	/* backend storage is mgt'd via mlist */
@@ -234,14 +234,15 @@ struct psc_poolmgr {
 
 struct psc_poolmgr *
 	_psc_poolmaster_getmgr(struct psc_poolmaster *, int);
+void	 pfl_poolmaster_destroy(struct psc_poolmaster *);
 void	_psc_poolmaster_init(struct psc_poolmaster *, size_t, ptrdiff_t,
-		int, int, int, int, int (*)(struct psc_poolmgr *, void *),
-		void (*)(void *), int (*)(struct psc_poolmgr *),
-		void *, const char *, ...);
+	    int, int, int, int, int (*)(struct psc_poolmgr *, void *),
+	    void (*)(void *), int (*)(struct psc_poolmgr *),
+	    void *, const char *, ...);
 void	_psc_poolmaster_initv(struct psc_poolmaster *, size_t, ptrdiff_t,
-		int, int, int, int, int (*)(struct psc_poolmgr *, void *),
-		void (*)(void *), int (*)(struct psc_poolmgr *),
-		void *, const char *, va_list);
+	    int, int, int, int, int (*)(struct psc_poolmgr *, void *),
+	    void (*)(void *), int (*)(struct psc_poolmgr *),
+	    void *, const char *, va_list);
 
 struct psc_poolmgr *
 	  psc_pool_lookup(const char *);

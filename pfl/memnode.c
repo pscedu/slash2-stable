@@ -48,8 +48,7 @@ struct psc_memnode *
 psc_memnode_get(void)
 {
 	struct psc_memnode *pmn, **pmnv;
-	int memnid;
-	int rc;
+	int memnid, rc;
 
 	pmn = pthread_getspecific(psc_memnodes_key);
 	if (pmn)
@@ -59,18 +58,19 @@ psc_memnode_get(void)
 	spinlock(&psc_memnodes_lock);
 	if (psc_dynarray_ensurelen(&psc_memnodes, memnid + 1) == -1)
 		psc_fatalx("ensurelen");
-	pmnv = psc_dynarray_get(&psc_memnodes);
+	pmnv = psc_dynarray_get_mutable(&psc_memnodes);
 	pmn = pmnv[memnid];
 	if (pmn == NULL) {
-		pmn = pmnv[memnid] = psc_alloc(sizeof(*pmn),
-		    PAF_NOLOG);
+		pmn = psc_alloc(sizeof(*pmn), PAF_NOLOG);
 		INIT_SPINLOCK(&pmn->pmn_lock);
 		psc_dynarray_init(&pmn->pmn_keys);
+		rc = pthread_setspecific(psc_memnodes_key, pmn);
+		if (rc)
+			psc_fatalx("pthread_setspecific: %s",
+			    strerror(rc));
+		psc_dynarray_setpos(&psc_memnodes, memnid, pmn);
 	}
 	freelock(&psc_memnodes_lock);
-	rc = pthread_setspecific(psc_memnodes_key, pmn);
-	if (rc)
-		psc_fatalx("pthread_setspecific: %s", strerror(rc));
 	return (pmn);
 }
 
@@ -92,13 +92,11 @@ void
 psc_memnode_setkey(struct psc_memnode *pmn, int pos, void *val)
 {
 	int locked;
-	void **v;
 
 	locked = reqlock(&pmn->pmn_lock);
 	if (psc_dynarray_ensurelen(&pmn->pmn_keys, pos + 1) == -1)
 		psc_fatalx("ensurelen");
-	v = psc_dynarray_get(&pmn->pmn_keys);
-	v[pos] = val;
+	psc_dynarray_setpos(&pmn->pmn_keys, pos, val);
 	ureqlock(&pmn->pmn_lock, locked);
 }
 

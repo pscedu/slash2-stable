@@ -87,11 +87,24 @@ label(struct psc_thread *pt)						\
 
 #define pscthr_gettid()		pscthr_get()->pscthr_thrid
 
+enum {
+	PFL_THRT_CTL,			/* control processor */
+	PFL_THRT_CTLAC,			/* control acceptor */
+	PFL_THRT_FS,			/* fs worker */
+	PFL_THRT_FSMGR,			/* pscfs manager */
+	PFL_THRT_NBRPC,			/* non-blocking RPC reply handler */
+	PFL_THRT_OPSTIMER,		/* opstats updater */
+	PFL_THRT_USKLNDPL,		/* userland socket lustre net dev poll thr */
+	PFL_THRT_WORKER,		/* generic worker */
+	_PFL_NTHRT,
+};
+
 void	pscthrs_init(void);
 
 const char *
 	pscthr_getname(void);
 int	pscthr_getuniqid(void);
+void	pscthr_destroy(struct psc_thread *);
 void	pscthr_killall(void);
 int	pscthr_run(struct psc_thread *);
 void	pscthr_setdead(struct psc_thread *, int);
