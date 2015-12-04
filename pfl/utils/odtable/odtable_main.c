@@ -50,8 +50,8 @@ int			 num_puts;
 int			 overwrite;
 int			 show;
 struct psc_dynarray	 rcpts = DYNARRAY_INIT;
-size_t			 elem_size = 128;
-size_t			 nelems = 1024 * 128;
+size_t			 elem_size = ODT_ELEM_SIZE;
+size_t			 nelems = ODT_ELEM_NUMBER;
 
 void
 visit(__unusedx void *data, struct pfl_odt_receipt *r,
