@@ -170,14 +170,14 @@ pfl_odt_mmap_close(struct pfl_odt *t)
 }
 
 struct pfl_odt_ops pfl_odtops_mmap = {
-	pfl_odt_mmap_close,
-	pfl_odt_mmap_create,
-	pfl_odt_mmap_mapslot,
-	pfl_odt_mmap_open,
-	NULL,
-	pfl_odt_mmap_resize,
-	pfl_odt_mmap_sync,
-	NULL
+	pfl_odt_mmap_close,	/* odtop_close() */
+	pfl_odt_mmap_create,	/* odtop_create() */
+	pfl_odt_mmap_mapslot,	/* odtop_mapslot() */
+	pfl_odt_mmap_open,	/* odtop_open() */
+	NULL,			/* odtop_read() */
+	pfl_odt_mmap_resize,	/* odtop_resize() */
+	pfl_odt_mmap_sync,	/* odtop_sync() */
+	NULL			/* odtop_write() */
 };
 
 void
