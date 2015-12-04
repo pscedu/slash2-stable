@@ -107,7 +107,7 @@ psc_usklndthr_get_namev(char buf[PSC_THRNAME_MAX], const char *namefmt,
 /*
  * Use system() calls to import pool and mount file systems.  Note that
  * the paths needed by the system() are compiled in to potentially avoid
- * system binaries (e.g. fZFSOnLinux).
+ * system binaries (e.g. ZFSOnLinux).
  *
  * We don't check WEXITSTATUS(rc) after a system() call because
  * sometimes the ZFS tool can return an error (e.g. EEXIST) even if the
@@ -445,7 +445,7 @@ main(int argc, char *argv[])
 			sfn = optarg;
 			break;
 		case 'V':
-			errx(0, "revision is %d", SL_STK_VERSION);
+			errx(0, "revision is %d", sl_stk_version);
 		default:
 			usage();
 		}
@@ -500,7 +500,7 @@ main(int argc, char *argv[])
 	sl_drop_privs(1);
 
 	/* startup meter */
-	psc_meter_destroy(&res2mdsinfo(nodeResProf)->sp_batchmeter);
+	psc_meter_destroy(&res2mdsinfo(sl_resprof)->sp_batchmeter);
 
 	if (slcfg_local->cfg_arc_max) {
 		void arc_set_maxsize(uint64_t);

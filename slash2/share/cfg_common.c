@@ -308,7 +308,7 @@ libsl_init(int nmsgs)
 	 * configuration.
 	 */
 	for (i = 0, p = (void *)slcfg_local,
-	    t = (void *)nodeResProf->res_localcfg;
+	    t = (void *)sl_resprof->res_localcfg;
 	    i < (int)sizeof(*slcfg_local); p++, t++, i++)
 		if (*t)
 			*p = *t;
@@ -348,4 +348,35 @@ slcfg_res_cmp(const void *a, const void *b)
 	const struct sl_resource * const *py = b, *y = *py;
 
 	return (CMP(x->res_id, y->res_id));
+}
+
+void
+slcfg_destroy(void)
+{
+	struct sl_site *s, *s_next;
+	struct sl_resource *r;
+	struct sl_resm_nid *n;
+	struct sl_resm *m;
+	int i, j, k;
+
+	PLL_FOREACH_SAFE(s, s_next, &globalConfig.gconf_sites) {
+		SITE_FOREACH_RES(s, r, i) {
+			psc_hashent_remove(
+			    &globalConfig.gconf_res_hashtbl, r);
+			if (RES_ISCLUSTER(r))
+				goto release_res;
+			RES_FOREACH_MEMB(r, m, j) {
+				RESM_FOREACH_NID(m, n, k)
+					PSCFREE(n);
+				psc_dynarray_free(&m->resm_nids);
+				PSCFREE(m);
+			}
+ release_res:
+			psc_dynarray_free(&r->res_members);
+			PSCFREE(r);
+		}
+		psc_dynarray_free(&s->site_resources);
+		PSCFREE(s);
+	}
+	psc_hashtbl_destroy(&globalConfig.gconf_res_hashtbl);
 }

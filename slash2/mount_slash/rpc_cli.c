@@ -36,7 +36,7 @@
 #include "slconn.h"
 #include "slerr.h"
 
-struct sl_resm			*slc_rmc_resm;
+struct sl_resm			*msl_rmc_resm;
 struct pscrpc_svc_handle	*msl_rci_svh;
 struct pscrpc_svc_handle	*msl_rcm_svh;
 
@@ -116,9 +116,9 @@ slc_rmc_setmds(const char *name)
 		res = libsl_str2res(name);
 		if (res == NULL)
 			return (SLERR_RES_UNKNOWN);
-		slc_rmc_resm = psc_dynarray_getpos(&res->res_members, 0);
+		msl_rmc_resm = psc_dynarray_getpos(&res->res_members, 0);
 	} else
-		slc_rmc_resm = libsl_nid2resm(nid);
+		msl_rmc_resm = libsl_nid2resm(nid);
 
 	return (0);
 }
@@ -230,7 +230,7 @@ sl_resm_hldrop(struct sl_resm *resm)
 			psclog_diag("return car=%p car_id=%"PRIx64" q=%p",
 			    car, car->car_id, car->car_fsrqinfo);
 
-			psc_pool_return(slc_async_req_pool, car);
+			psc_pool_return(msl_async_req_pool, car);
 		}
 	}
 }

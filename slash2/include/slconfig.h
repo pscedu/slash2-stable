@@ -274,6 +274,7 @@ void			 slcfg_init_site(struct sl_site *);
 int			 slcfg_res_cmp(const void *, const void *);
 int			 slcfg_site_cmp(const void *, const void *);
 
+void			 slcfg_destroy(void);
 void			 slcfg_parse(const char *);
 void			 slcfg_resm_addaddr(char *, const char *);
 
@@ -300,7 +301,7 @@ void			yywarn(const char *, ...);
 extern struct sl_resm	*nodeResm;
 
 #define nodeSite	nodeResm->resm_site
-#define nodeResProf	nodeResm->resm_res
+#define sl_resprof	nodeResm->resm_res
 
 extern struct slcfg_local *slcfg_local;
 extern struct sl_config	 globalConfig;
@@ -314,6 +315,7 @@ extern int		 cfg_lineno;
 extern struct psclist_head cfg_lnetif_pairs;
 
 extern uint32_t		 sl_sys_upnonce;
+extern int		 sl_stk_version;
 
 /**
  * sl_global_id_build - Produce a global, unique identifier for a

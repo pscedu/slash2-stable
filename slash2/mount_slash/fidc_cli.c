@@ -76,7 +76,7 @@ slc_fcmh_setattrf(struct fidc_membh *f, struct srt_stat *sstb,
 
 	if ((FID_GET_INUM(fcmh_2_fid(f))) != SLFID_ROOT &&
 	    fcmh_2_gen(f) > sstb->sst_gen) {
-		OPSTAT_INCR("generation-backwards");
+		OPSTAT_INCR("msl.generation-backwards");
 		DEBUG_FCMH(PLL_DIAG, f, "attempt to set attr with "
 		    "gen %"PRIu64" from old gen %"PRIu64,
 		    fcmh_2_gen(f), sstb->sst_gen);
@@ -218,7 +218,7 @@ slc_fcmh_ctor(struct fidc_membh *f, __unusedx int flags)
 	siteid = FID_GET_SITEID(fcmh_2_fid(f));
 
 	if (fcmh_2_fid(f) != SLFID_ROOT &&
-	    siteid != slc_rmc_resm->resm_siteid) {
+	    siteid != msl_rmc_resm->resm_siteid) {
 		s = libsl_siteid2site(siteid);
 		if (s == NULL) {
 			psclog_errorx("fid "SLPRI_FID" has "
@@ -236,7 +236,7 @@ slc_fcmh_ctor(struct fidc_membh *f, __unusedx int flags)
 		    fcmh_2_fid(f), siteid);
 		return (ESTALE);
 	}
-	fci->fci_resm = slc_rmc_resm;
+	fci->fci_resm = msl_rmc_resm;
 
 	return (0);
 }
@@ -267,8 +267,10 @@ dump_fcmh_flags(int flags)
 	_dump_fcmh_flags_common(&flags, &seq);
 	PFL_PRFLAG(FCMH_CLI_INITDIRCACHE, &flags, &seq);
 	PFL_PRFLAG(FCMH_CLI_TRUNC, &flags, &seq);
-	PFL_PRFLAG(FCMH_CLI_DIRTY_ATTRS, &flags, &seq);
+	PFL_PRFLAG(FCMH_CLI_DIRTY_DSIZE, &flags, &seq);
+	PFL_PRFLAG(FCMH_CLI_DIRTY_MTIME, &flags, &seq);
 	PFL_PRFLAG(FCMH_CLI_DIRTY_QUEUE, &flags, &seq);
+	PFL_PRFLAG(FCMH_CLI_XATTR_INFO, &flags, &seq);
 	if (flags)
 		printf(" unknown: %x", flags);
 	printf("\n");

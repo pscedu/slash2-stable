@@ -20,6 +20,11 @@
  * %END_LICENSE%
  */
 
+/*
+ * Main SLASH2 client (mount_slash) logic: file system handling
+ * routines, daemon initialization, etc.
+ */
+
 #include <sys/param.h>
 #include <sys/stat.h>
 #include <sys/statvfs.h>
@@ -114,44 +119,46 @@ GCRY_THREAD_OPTION_PTHREAD_IMPL;
 struct psc_hashtbl		 msl_namecache_hashtbl;
 struct psc_waitq		 msl_flush_attrq = PSC_WAITQ_INIT;
 
-struct psc_listcache		 slc_attrtimeoutq;
+struct psc_listcache		 msl_attrtimeoutq;
 
 sl_ios_id_t			 msl_mds = IOS_ID_ANY;
 sl_ios_id_t			 msl_pref_ios = IOS_ID_ANY;
 
-const char			*ctlsockfn = SL_PATH_MSCTLSOCK;
+const char			*msl_ctlsockfn = SL_PATH_MSCTLSOCK;
+
 char				 mountpoint[PATH_MAX];
-int				 slc_use_mapfile;
+int				 msl_use_mapfile;
 struct psc_dynarray		 allow_exe = DYNARRAY_INIT;
+char				*msl_cfgfn = SL_PATH_CONF;
 
-struct psc_vbitmap		 msfsthr_uniqidmap = VBITMAP_INIT_AUTO;
-psc_spinlock_t			 msfsthr_uniqidmap_lock = SPINLOCK_INIT;
+struct psc_poolmaster		 msl_async_req_poolmaster;
+struct psc_poolmgr		*msl_async_req_pool;
 
-struct psc_poolmaster		 slc_async_req_poolmaster;
-struct psc_poolmgr		*slc_async_req_pool;
+struct psc_poolmaster		 msl_biorq_poolmaster;
+struct psc_poolmgr		*msl_biorq_pool;
 
-struct psc_poolmaster		 slc_biorq_poolmaster;
-struct psc_poolmgr		*slc_biorq_pool;
-
-struct psc_poolmaster		 slc_mfh_poolmaster;
-struct psc_poolmgr		*slc_mfh_pool;
+struct psc_poolmaster		 msl_mfh_poolmaster;
+struct psc_poolmgr		*msl_mfh_pool;
 
 struct psc_poolmaster		 mfsrq_poolmaster;
 struct psc_poolmgr		*mfsrq_pool;
 
+struct psc_poolmaster		 msl_iorq_poolmaster;
+struct psc_poolmgr		*msl_iorq_pool;
+
 uint32_t			 sl_sys_upnonce;
 
-struct psc_hashtbl		 slc_uidmap_ext;
-struct psc_hashtbl		 slc_uidmap_int;
-struct psc_hashtbl		 slc_gidmap_int;
+struct psc_hashtbl		 msl_uidmap_ext;
+struct psc_hashtbl		 msl_uidmap_int;
+struct psc_hashtbl		 msl_gidmap_int;
 
 /*
  * This allows io_submit(2) to work before Linux kernel version 4.1.
  * Before that, O_DIRECT and the FUSE direct_io path were not fully
  * integrated.
  */
-int				 slc_direct_io = 1;
-int				 slc_root_squash;
+int				 msl_direct_io = 1;
+int				 msl_root_squash;
 int				 msl_acl;
 uint64_t			 msl_pagecache_maxsize;
 
@@ -175,7 +182,7 @@ fcmh_checkcreds(struct fidc_membh *f,
 {
 	int rc, locked;
 
-	if (slc_root_squash && pcrp->pcr_uid == 0)
+	if (msl_root_squash && pcrp->pcr_uid == 0)
 		return (EACCES);
 
 #ifdef SLOPT_POSIX_ACLS
@@ -204,17 +211,6 @@ newent_select_group(struct fidc_membh *p, struct pscfs_creds *pcr)
 	return (pcr->pcr_gid);
 }
 
-__static void
-msfsthr_teardown(void *arg)
-{
-	struct msfs_thread *mft = arg;
-
-	spinlock(&msfsthr_uniqidmap_lock);
-	psc_vbitmap_unset(&msfsthr_uniqidmap, mft->mft_uniqid);
-	psc_vbitmap_setnextpos(&msfsthr_uniqidmap, 0);
-	freelock(&msfsthr_uniqidmap_lock);
-}
-
 void
 slc_getfscreds(struct pscfs_req *pfr, struct pscfs_creds *pcr)
 {
@@ -223,31 +219,22 @@ slc_getfscreds(struct pscfs_req *pfr, struct pscfs_creds *pcr)
 }
 
 __static void
-msfsthr_ensure(struct pscfs_req *pfr)
+msfsthr_destroy(void *arg)
+{
+	struct msfs_thread *mft = arg;
+
+	psc_multiwait_free(&mft->mft_mw);
+	PSCFREE(mft);
+}
+
+__static void *
+msfsthr_init(struct psc_thread *thr)
 {
 	struct msfs_thread *mft;
-	struct psc_thread *thr;
-	size_t id;
 
-	thr = pscthr_get_canfail();
-	if (thr == NULL) {
-		spinlock(&msfsthr_uniqidmap_lock);
-		if (psc_vbitmap_next(&msfsthr_uniqidmap, &id) != 1)
-			psc_fatal("psc_vbitmap_next");
-		freelock(&msfsthr_uniqidmap_lock);
-
-		thr = pscthr_init(MSTHRT_FS, NULL, msfsthr_teardown,
-		    sizeof(*mft), "msfsthr%02zu", id);
-		mft = thr->pscthr_private;
-		psc_multiwait_init(&mft->mft_mw, "%s",
-		    thr->pscthr_name);
-		mft->mft_uniqid = id;
-		pscthr_setready(thr);
-	}
-	psc_assert(thr->pscthr_type == MSTHRT_FS);
-
-	mft = thr->pscthr_private;
-	mft->mft_pfr = pfr;
+	mft = PSCALLOC(sizeof(*mft));
+	psc_multiwait_init(&mft->mft_mw, "%s", thr->pscthr_name);
+	return (mft);
 }
 
 void
@@ -256,8 +243,6 @@ mslfsop_access(struct pscfs_req *pfr, pscfs_inum_t inum, int accmode)
 	struct pscfs_creds pcr;
 	struct fidc_membh *c;
 	int rc;
-
-	msfsthr_ensure(pfr);
 
 	rc = msl_load_fcmh(pfr, inum, &c);
 	if (rc)
@@ -358,8 +343,6 @@ mslfsop_create(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	struct pscfs_creds pcr;
 	struct stat stb;
 	struct bmap *b;
-
-	msfsthr_ensure(pfr);
 
 	psc_assert(oflags & O_CREAT);
 
@@ -464,7 +447,7 @@ mslfsop_create(struct pscfs_req *pfr, pscfs_inum_t pinum,
 
 	fcmh_op_start_type(c, FCMH_OPCNT_OPEN);
 
-	if ((c->fcmh_sstb.sst_mode & _S_IXUGO) == 0 && slc_direct_io)
+	if ((c->fcmh_sstb.sst_mode & _S_IXUGO) == 0 && msl_direct_io)
 		rflags |= PSCFS_CREATEF_DIO;
 
 	FCMH_ULOCK(c);
@@ -532,8 +515,6 @@ msl_open(struct pscfs_req *pfr, pscfs_inum_t inum, int oflags,
 	struct pscfs_creds pcr;
 	int rc = 0;
 
-	msfsthr_ensure(pfr);
-
 	slc_getfscreds(pfr, &pcr);
 
 	*mfhp = NULL;
@@ -582,7 +563,7 @@ msl_open(struct pscfs_req *pfr, pscfs_inum_t inum, int oflags,
 	 * so don't enable DIO on executable files so they can be
 	 * executed.
 	 */
-	if ((c->fcmh_sstb.sst_mode & _S_IXUGO) == 0 && slc_direct_io)
+	if ((c->fcmh_sstb.sst_mode & _S_IXUGO) == 0 && msl_direct_io)
 		*rflags |= PSCFS_OPENF_DIO;
 
 	if (oflags & O_TRUNC) {
@@ -717,8 +698,6 @@ mslfsop_getattr(struct pscfs_req *pfr, pscfs_inum_t inum)
 	struct stat stb;
 	int rc;
 
-	msfsthr_ensure(pfr);
-
 	slc_getfscreds(pfr, &pcr);
 
 	/*
@@ -762,8 +741,6 @@ mslfsop_link(struct pscfs_req *pfr, pscfs_inum_t c_inum,
 	struct pscfs_creds pcr;
 	struct stat stb;
 	int rc = 0;
-
-	msfsthr_ensure(pfr);
 
 	if (strlen(newname) == 0)
 		PFL_GOTOERR(out, rc = ENOENT);
@@ -865,8 +842,6 @@ mslfsop_mkdir(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	struct pscfs_creds pcr;
 	struct stat stb;
 	int rc;
-
-	msfsthr_ensure(pfr);
 
 	if (strlen(name) == 0)
 		PFL_GOTOERR(out, rc = ENOENT);
@@ -1065,7 +1040,7 @@ msl_lookup_fidcache_dcu(struct pscfs_req *pfr,
 			return (EACCES);
 
 		fid = SLFID_NS;
-		FID_SET_SITEID(fid, slc_rmc_resm->resm_siteid);
+		FID_SET_SITEID(fid, msl_rmc_resm->resm_siteid);
 		if (fgp) {
 			fgp->fg_fid = fid;
 			fgp->fg_gen = 0;
@@ -1171,8 +1146,6 @@ msl_unlink(struct pscfs_req *pfr, pscfs_inum_t pinum, const char *name,
 	struct pscfs_creds pcr;
 	int rc;
 
-	msfsthr_ensure(pfr);
-
 	if (strlen(name) == 0)
 		PFL_GOTOERR(out, rc = ENOENT);
 	if (strlen(name) > SL_NAME_MAX)
@@ -1241,13 +1214,13 @@ msl_unlink(struct pscfs_req *pfr, pscfs_inum_t pinum, const char *name,
 
 		if (sl_fcmh_lookup(mp->cattr.sst_fg.fg_fid, FGEN_ANY,
 		    FIDC_LOOKUP_LOCK, &c, pfr))
-			OPSTAT_INCR("delete-skipped");
+			OPSTAT_INCR("msl.delete-skipped");
 		else {
 			if (mp->valid) {
 				slc_fcmh_setattr_locked(c, &mp->cattr);
 			} else {
 				c->fcmh_flags |= FCMH_DELETED;
-				OPSTAT_INCR("delete-marked");
+				OPSTAT_INCR("msl.delete-marked");
 			}
 		}
 	}
@@ -1310,8 +1283,6 @@ mslfsop_mknod(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	struct pscfs_creds pcr;
 	struct stat stb;
 	int rc;
-
-	msfsthr_ensure(pfr);
 
 	if (!S_ISFIFO(mode))
 		PFL_GOTOERR(out, rc = ENOTSUP);
@@ -1402,7 +1373,7 @@ msl_readdir_error(struct fidc_membh *d, struct dircache_page *p, int rc)
 	if (p->dcp_flags & DIRCACHEPGF_LOADING) {
 		p->dcp_flags &= ~DIRCACHEPGF_LOADING;
 		p->dcp_rc = rc;
-		OPSTAT_INCR("dircache-load-error");
+		OPSTAT_INCR("msl.dircache-load-error");
 		PFL_GETPTIMESPEC(&p->dcp_local_tm);
 		p->dcp_remote_tm = d->fcmh_sstb.sst_mtim;
 		DIRCACHE_WAKE(d);
@@ -1442,7 +1413,7 @@ msl_readdir_finish(struct fidc_membh *d, struct dircache_page *p,
 
 			if (!f->fcmh_sstb.sst_nlink)
 				// XXX don't enter into namecache
-				OPSTAT_INCR("namecache-junk");
+				OPSTAT_INCR("msl.namecache-junk");
 
 			msl_fcmh_stash_xattrsize(f, e->xattrsize);
 			fcmh_op_done(f);
@@ -1487,11 +1458,11 @@ msl_readdir_cb(struct pscrpc_request *rq, struct pscrpc_async_args *av)
 		mq = pscrpc_msg_buf(rq->rq_reqmsg, 0, sizeof(*mq));
 		if (SRM_READDIR_BUFSZ(mp->size, mp->nents) <=
 		    sizeof(mp->ents)) {
-			OPSTAT_INCR("readdir-piggyback");
+			OPSTAT_INCR("msl.readdir-piggyback");
 
 			memcpy(dentbuf, mp->ents, len);
 		} else {
-			OPSTAT_INCR("readdir-bulk-reply");
+			OPSTAT_INCR("msl.readdir-bulk-reply");
 
 			iov.iov_base = dentbuf;
 			iov.iov_len = len;
@@ -1597,8 +1568,6 @@ mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off,
 	struct fidc_membh *d;
 	off_t raoff = 0;
 
-	msfsthr_ensure(pfr);
-
 	if (off < 0 || size > 1024 * 1024)
 		PFL_GOTOERR(out, rc = EINVAL);
 
@@ -1637,7 +1606,7 @@ mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off,
 
 		if (p->dcp_flags & DIRCACHEPGF_LOADING) {
 			// XXX need to wake up if csvc fails
-			OPSTAT_INCR("dircache-wait");
+			OPSTAT_INCR("msl.dircache-wait");
 			DIRCACHE_WAIT(d);
 			goto restart;
 		}
@@ -1650,9 +1619,8 @@ mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off,
 		if (off == p->dcp_nextoff &&
 		    p->dcp_flags & DIRCACHEPGF_EOF) {
 			DIRCACHE_ULOCK(d);
-			OPSTAT_INCR("dircache-hit-eof");
-			pscfs_reply_readdir(pfr, NULL, 0, rc);
-			return;
+			OPSTAT_INCR("msl.dircache-hit-eof");
+			PFL_GOTOERR(out, rc = 0);
 		}
 
 		if (dircache_hasoff(p, off)) {
@@ -1661,9 +1629,7 @@ mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off,
 				dircache_free_page(d, p);
 				if (!slc_rmc_retry(pfr, &rc)) {
 					DIRCACHE_ULOCK(d);
-					pscfs_reply_readdir(pfr, NULL,
-					    0, rc);
-					return;
+					PFL_GOTOERR(out, rc);
 				}
 				break;
 			} else {
@@ -1700,7 +1666,12 @@ mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off,
 				    p->dcp_base + poff, len, 0);
 				p->dcp_flags |= DIRCACHEPGF_READ;
 				if (hit)
-					OPSTAT_INCR("dircache-hit");
+					OPSTAT_INCR("msl.dircache-hit");
+
+				psclogs_diag(SLCSS_FSOP, "READDIR: "
+				    "fid="SLPRI_FID" size=%zd "
+				    "off=%"PSCPRIdOFFT" rc=%d",
+				    fcmh_2_fid(d), size, off, rc);
 
 				if ((p->dcp_flags &
 				    DIRCACHEPGF_EOF) == 0) {
@@ -1730,21 +1701,20 @@ mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off,
 		 */
 		hit = 0;
 		rc = msl_readdir_issue(pfr, d, off, size, 1);
-		if (rc && !slc_rmc_retry(pfr, &rc)) {
-			pscfs_reply_readdir(pfr, NULL, 0, rc);
-			return;
-		}
+		if (rc && !slc_rmc_retry(pfr, &rc))
+			PFL_GOTOERR(out, rc);
 		DIRCACHE_WRLOCK(d);
 		goto restart;
 	}
 
-	/*
-	 * XXX consolidate three pscfs_reply_readdir() calls above
-	 * into the following one.
-	 */
-	if (0)
+	if (0) {
  out:
+		psclogs_diag(SLCSS_FSOP, "READDIR: fid="SLPRI_FID" "
+		    "size=%zd off=%"PSCPRIdOFFT" rc=%d",
+		    fcmh_2_fid(d), size, off, rc);
 		pscfs_reply_readdir(pfr, NULL, 0, rc);
+		raoff = 0;
+	}
 
 	if (raoff) {
 		msl_readdir_issue(NULL, d, raoff, size, 0);
@@ -1763,8 +1733,6 @@ mslfsop_lookup(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	struct sl_fidgen fg;
 	struct stat stb;
 	int rc;
-
-	msfsthr_ensure(pfr);
 
 	memset(&sstb, 0, sizeof(sstb));
 
@@ -1802,8 +1770,6 @@ mslfsop_readlink(struct pscfs_req *pfr, pscfs_inum_t inum)
 	struct pscfs_creds pcr;
 	struct iovec iov;
 	int rc;
-
-	msfsthr_ensure(pfr);
 
 	rc = msl_load_fcmh(pfr, inum, &c);
 	if (rc)
@@ -1844,7 +1810,7 @@ mslfsop_readlink(struct pscfs_req *pfr, pscfs_inum_t inum)
 		iov.iov_len = mp->len;
 		rc = slrpc_bulk_checkmsg(rq, rq->rq_repmsg, &iov, 1);
 		if (rc == 0)
-			OPSTAT_INCR("readlink-bulk");
+			OPSTAT_INCR("msl.readlink-bulk");
 	}
 	if (!rc)
 		retbuf[mp->len] = '\0';
@@ -1887,7 +1853,7 @@ msl_flush(struct msl_fhent *mfh)
 		 */
 		if (!BMAP_TRYLOCK(b)) {
 			pfl_rwlock_unlock(&f->fcmh_rwlock);
-			OPSTAT_INCR("flush-backout");
+			OPSTAT_INCR("msl.flush-backout");
 			goto restart;
 		}
 		if (!(b->bcm_flags & BMAPF_TOFREE)) {
@@ -2008,7 +1974,7 @@ msl_flush_ioattrs(struct pscfs_req *pfr, struct fidc_membh *f)
 
 	FCMH_ULOCK(f);
 
-	OPSTAT_INCR("flush-attr");
+	OPSTAT_INCR("msl.flush-attr");
 
 	rc = msl_setattr(pfr, f, to_set, &attr, NULL, NULL);
 
@@ -2037,7 +2003,7 @@ msl_flush_ioattrs(struct pscfs_req *pfr, struct fidc_membh *f)
 		psc_assert(f->fcmh_flags & FCMH_CLI_DIRTY_QUEUE);
 		f->fcmh_flags &= ~FCMH_CLI_DIRTY_QUEUE;
 		// XXX locking order violation
-		lc_remove(&slc_attrtimeoutq, fcmh_2_fci(f));
+		lc_remove(&msl_attrtimeoutq, fcmh_2_fci(f));
 		fcmh_op_done_type(f, FCMH_OPCNT_DIRTY_QUEUE);
 		if (waslocked == PSLRV_WASLOCKED)
 			FCMH_LOCK(f);
@@ -2056,8 +2022,6 @@ mslfsop_flush(struct pscfs_req *pfr, void *data)
 {
 	struct msl_fhent *mfh = data;
 	int rc, rc2;
-
-	msfsthr_ensure(pfr);
 
 	DEBUG_FCMH(PLL_DIAG, mfh->mfh_fcmh, "flushing (mfh=%p)", mfh);
 
@@ -2088,7 +2052,7 @@ mfh_decref(struct msl_fhent *mfh)
 	psc_assert(mfh->mfh_refcnt > 0);
 	if (--mfh->mfh_refcnt == 0) {
 		fcmh_op_done_type(mfh->mfh_fcmh, FCMH_OPCNT_OPEN);
-		psc_pool_return(slc_mfh_pool, mfh);
+		psc_pool_return(msl_mfh_pool, mfh);
 	} else
 		MFH_ULOCK(mfh);
 }
@@ -2189,7 +2153,7 @@ const char *
 slc_log_get_fsctx_uprog(struct psc_thread *thr)
 {
 	struct psclog_data *pld;
-	struct msfs_thread *mft;
+	struct pfl_fsthr *pft;
 	struct pscfs_req *pfr;
 
 	pld = psclog_getdata();
@@ -2197,15 +2161,14 @@ slc_log_get_fsctx_uprog(struct psc_thread *thr)
 	if (pld->pld_uprog)
 		return (pld->pld_uprog);
 
-	if (thr->pscthr_type != MSTHRT_FS)
+	if (thr->pscthr_type != PFL_THRT_FS)
 		return "<n/a>";
 
-	mft = msfsthr(thr);
-
-	if (mft->mft_uprog[0] == '\0' && mft->mft_pfr) {
+	pft = thr->pscthr_private;
+	if (pft->pft_uprog[0] == '\0' && pft->pft_pfr) {
 		pid_t pid;
 
-		pfr = mft->mft_pfr; /* set by GETPFR() */
+		pfr = pft->pft_pfr; /* set by GETPFR() */
 		if (pfr && pfr->pfr_fuse_fi) {
 			struct msl_fhent *mfh;
 
@@ -2214,39 +2177,39 @@ slc_log_get_fsctx_uprog(struct psc_thread *thr)
 		} else
 			pid = pscfs_getclientctx(pfr)->pfcc_pid;
 
-		slc_getuprog(pid, mft->mft_uprog,
-		    sizeof(mft->mft_uprog));
+		slc_getuprog(pid, pft->pft_uprog,
+		    sizeof(pft->pft_uprog));
 	}
 
-	return (pld->pld_uprog = mft->mft_uprog);
+	return (pld->pld_uprog = pft->pft_uprog);
 }
 
 pid_t
 slc_log_get_fsctx_pid(struct psc_thread *thr)
 {
-	struct msfs_thread *mft;
+	struct pfl_fsthr *pft;
 
-	if (thr->pscthr_type != MSTHRT_FS)
+	if (thr->pscthr_type != PFL_THRT_FS)
 		return (-1);
 
-	mft = msfsthr(thr);
-	if (mft->mft_pfr)
-		return (pscfs_getclientctx(mft->mft_pfr)->pfcc_pid);
+	pft = thr->pscthr_private;
+	if (pft->pft_pfr)
+		return (pscfs_getclientctx(pft->pft_pfr)->pfcc_pid);
 	return (-1);
 }
 
 uid_t
 slc_log_get_fsctx_uid(struct psc_thread *thr)
 {
-	struct msfs_thread *mft;
 	struct pscfs_creds pcr;
+	struct pfl_fsthr *pft;
 
-	if (thr->pscthr_type != MSTHRT_FS)
+	if (thr->pscthr_type != PFL_THRT_FS)
 		return (-1);
 
-	mft = msfsthr(thr);
-	if (mft->mft_pfr) {
-		slc_getfscreds(mft->mft_pfr, &pcr);
+	pft = thr->pscthr_private;
+	if (pft->pft_pfr) {
+		slc_getfscreds(pft->pft_pfr, &pcr);
 		return (pcr.pcr_uid);
 	}
 	return (-1);
@@ -2258,8 +2221,6 @@ mslfsop_release(struct pscfs_req *pfr, void *data)
 	struct msl_fhent *mfh = data;
 	struct fcmh_cli_info *fci;
 	struct fidc_membh *f;
-
-	msfsthr_ensure(pfr);
 
 	f = mfh->mfh_fcmh;
 	fci = fcmh_2_fci(f);
@@ -2318,8 +2279,6 @@ mslfsop_rename(struct pscfs_req *pfr, pscfs_inum_t opinum,
 	struct pscfs_creds pcr;
 	struct iovec iov[2];
 	int sticky, rc;
-
-	msfsthr_ensure(pfr);
 
 	memset(&dstsstb, 0, sizeof(dstsstb));
 	srcfg.fg_fid = FID_ANY;
@@ -2526,8 +2485,6 @@ mslfsop_statfs(struct pscfs_req *pfr, pscfs_inum_t inum)
 	struct statvfs sfb;
 	int rc = 0;
 
-	msfsthr_ensure(pfr);
-
 //	slc_getfscreds(pfr, &pcr);
 //	rc = fcmh_checkcreds(c, pfr, &pcr, R_OK);
 
@@ -2603,8 +2560,6 @@ mslfsop_symlink(struct pscfs_req *pfr, const char *buf,
 	struct iovec iov;
 	struct stat stb;
 	int rc;
-
-	msfsthr_ensure(pfr);
 
 	if (strlen(buf) == 0 || strlen(name) == 0)
 		PFL_GOTOERR(out, rc = ENOENT);
@@ -2726,8 +2681,6 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 	struct pscfs_creds pcr;
 	struct timespec ts;
 
-	msfsthr_ensure(pfr);
-
 	if ((to_set & PSCFS_SETATTRF_UID) && stb->st_uid == (uid_t)-1)
 		to_set &= ~PSCFS_SETATTRF_UID;
 	if ((to_set & PSCFS_SETATTRF_GID) && stb->st_gid == (gid_t)-1)
@@ -2833,7 +2786,7 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 			DEBUG_FCMH(PLL_DIAG, c,
 			    "full truncate, free bmaps");
 
-			OPSTAT_INCR("truncate-full");
+			OPSTAT_INCR("msl.truncate-full");
 			bmap_free_all_locked(c);
 			FCMH_ULOCK(c);
 
@@ -2847,7 +2800,7 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 			struct psc_dynarray a = DYNARRAY_INIT;
 			uint32_t x = stb->st_size / SLASH_BMAP_SIZE;
 
-			OPSTAT_INCR("truncate-part");
+			OPSTAT_INCR("msl.truncate-part");
 
 			DEBUG_FCMH(PLL_DIAG, c, "partial truncate");
 
@@ -2967,7 +2920,7 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 				fci = fcmh_2_fci(c);
 				psc_assert(c->fcmh_flags & FCMH_CLI_DIRTY_QUEUE);
 				c->fcmh_flags &= ~FCMH_CLI_DIRTY_QUEUE;
-				lc_remove(&slc_attrtimeoutq, fci);
+				lc_remove(&msl_attrtimeoutq, fci);
 				fcmh_op_done_type(c, FCMH_OPCNT_DIRTY_QUEUE);
 			}
 			if (rc) {
@@ -3028,8 +2981,6 @@ mslfsop_fsync(struct pscfs_req *pfr, int datasync_only, void *data)
 	struct fidc_membh *f;
 	int rc = 0;
 
-	msfsthr_ensure(pfr);
-
 	mfh = data;
 	f = mfh->mfh_fcmh;
 	if (fcmh_isdir(f)) {
@@ -3054,29 +3005,63 @@ mslfsop_fsync(struct pscfs_req *pfr, int datasync_only, void *data)
 void
 mslfsop_destroy(__unusedx struct pscfs_req *pfr)
 {
-	struct slashrpc_cservice *csvc;
 	lnet_process_id_t peer;
+	struct psc_thread *thr, *thr_next;
+	struct slashrpc_cservice *csvc;
+	struct pfl_opstat *opst;
 	struct sl_resource *r;
+	struct psc_poolmgr *p;
+	struct pfl_fault *flt;
 	struct sl_resm *m;
 	struct sl_site *s;
-	int i, j;
+	int i, j, remaining;
 
-	lc_kill(&slc_bmapflushq);
-	lc_kill(&slc_bmaptimeoutq);
-	lc_kill(&slc_attrtimeoutq);
+	/* mark listcaches as dead */
+	lc_kill(&msl_bmapflushq);
+	lc_kill(&msl_bmaptimeoutq);
+	lc_kill(&msl_attrtimeoutq);
 	lc_kill(&msl_readaheadq);
 
-	LIST_CACHE_LOCK(&slc_bmaptimeoutq);
-	psc_waitq_wakeall(&slc_bmaptimeoutq.plc_wq_empty);
-	LIST_CACHE_ULOCK(&slc_bmaptimeoutq);
+	/* notify of termination */
+	LIST_CACHE_LOCK(&msl_bmaptimeoutq);
+	psc_waitq_wakeall(&msl_bmaptimeoutq.plc_wq_empty);
+	LIST_CACHE_ULOCK(&msl_bmaptimeoutq);
 
 	psc_waitq_wakeall(&msl_flush_attrq);
+
+	pscthr_setdead(sl_freapthr, 1);
+	psc_waitq_wakeall(&sl_freap_waitq);
+
+	/* wait for drain */
+	LISTCACHE_WAITEMPTY_UNLOCKED(&msl_bmapflushq,
+	    lc_nitems(&msl_bmapflushq));
+	LISTCACHE_WAITEMPTY_UNLOCKED(&msl_bmaptimeoutq,
+	    lc_nitems(&msl_bmaptimeoutq));
+	LISTCACHE_WAITEMPTY_UNLOCKED(&msl_attrtimeoutq,
+	    lc_nitems(&msl_attrtimeoutq));
+	LISTCACHE_WAITEMPTY_UNLOCKED(&msl_readaheadq,
+	    lc_nitems(&msl_readaheadq));
+
+	/* XXX force flush */
+
+	p = sl_fcmh_pool;
+	for (;;) {
+		POOL_LOCK(p);
+		remaining = p->ppm_total - lc_nitems(&p->ppm_lc);
+		POOL_ULOCK(p);
+
+		if (!remaining)
+			break;
+
+		if (!fidc_reap(FCMH_MAX_REAP, SL_FIDC_REAPF_ROOT))
+			usleep(10);
+	}
 
 	peer.nid = LNET_NID_ANY;
 	pscrpc_drop_conns(&peer);
 
 	CONF_FOREACH_RESM(s, r, i, m, j)
-		if (m->resm_csvc) {
+		if (!RES_ISCLUSTER(r) && m->resm_csvc) {
 			csvc = m->resm_csvc;
 			CSVC_LOCK(csvc);
 			sl_csvc_incref(csvc);
@@ -3084,15 +3069,94 @@ mslfsop_destroy(__unusedx struct pscfs_req *pfr)
 			sl_csvc_decref(csvc);
 			continue;
 		}
-	psc_compl_ready(&sl_nbrqset->set_compl, 1);
-	sleep(1);
-	pscrpc_set_destroy(sl_nbrqset);
+	pscrpc_set_kill(sl_nbrqset);
 
-exit(0);
 	pscrpc_svh_destroy(msl_rci_svh);
 	pscrpc_svh_destroy(msl_rcm_svh);
 
 	pscrpc_exit_portals();
+
+	/*
+	 * Removal of the control socket is the last thing for
+	 * observability reasons.
+	 */
+	pfl_ctl_destroy(psc_ctlthr(msl_ctlthr0)->pct_ctldata);
+
+	PLL_LOCK(&psc_threads);
+	PLL_FOREACH_SAFE(thr, thr_next, &psc_threads)
+	    if (strncmp(thr->pscthr_name, "msfsthr",
+		strlen("msfsthr")) == 0)
+		    pscthr_destroy(thr);
+
+	do {
+		PLL_FOREACH(thr, &psc_threads)
+			if (strncmp(thr->pscthr_name, "ms", 2) == 0)
+				break;
+		PLL_ULOCK(&psc_threads);
+		if (thr) {
+			usleep(10);
+			PLL_LOCK(&psc_threads);
+		}
+	} while (thr);
+
+	fidc_destroy();
+	psc_hashtbl_destroy(&msl_namecache_hashtbl);
+	slcfg_destroy();
+
+	if (msl_use_mapfile) {
+		psc_hashtbl_destroy(&msl_uidmap_ext);
+		psc_hashtbl_destroy(&msl_uidmap_int);
+		psc_hashtbl_destroy(&msl_gidmap_int);
+	}
+
+	spinlock(&pfl_faults_lock);
+	DYNARRAY_FOREACH(flt, i, &pfl_faults)
+		if (strncmp(flt->pflt_name, "slash2.",
+		    strlen("slash2.")) == 0)
+			pfl_fault_destroy(i--);
+	freelock(&pfl_faults_lock);
+
+	/* XXX wait for wkq to drain, or perhaps at the pflfs layer? */
+
+	pfl_listcache_destroy_registered(&msl_attrtimeoutq);
+	pfl_listcache_destroy_registered(&msl_bmapflushq);
+	pfl_listcache_destroy_registered(&msl_bmaptimeoutq);
+	pfl_listcache_destroy_registered(&msl_readaheadq);
+	pfl_listcache_destroy_registered(&msl_idle_pages);
+	pfl_listcache_destroy_registered(&msl_readahead_pages);
+
+	pfl_iostats_grad_destroy(slc_iosyscall_iostats);
+	pfl_iostats_grad_destroy(slc_iorpc_iostats);
+
+	bmap_pagecache_destroy();
+	bmap_cache_destroy();
+
+	pfl_poolmaster_destroy(&msl_async_req_poolmaster);
+	pfl_poolmaster_destroy(&msl_biorq_poolmaster);
+	pfl_poolmaster_destroy(&msl_iorq_poolmaster);
+	pfl_poolmaster_destroy(&msl_mfh_poolmaster);
+	    //csvc
+
+	msl_readahead_svc_destroy();
+	dircache_mgr_destroy();
+	slrpc_destroy();
+
+	spinlock(&pfl_opstats_lock);
+	DYNARRAY_FOREACH(opst, i, &pfl_opstats)
+		if (strncmp(opst->opst_name, "msl.",
+		    strlen("msl.")) == 0 ||
+		    strncmp(opst->opst_name, "rpc.",
+		    strlen("rpc.")) == 0)
+			pfl_opstat_destroy_pos(i--);
+	freelock(&pfl_opstats_lock);
+
+	pflog_get_fsctx_uprog = NULL;
+	pflog_get_fsctx_uid = NULL;
+	pflog_get_fsctx_pid = NULL;
+
+	psc_subsys_unregister(SLCSS_FSOP);
+	psc_subsys_unregister(SLCSS_INFO);
+	sl_subsys_unregister();
 }
 
 void
@@ -3103,13 +3167,11 @@ mslfsop_write(struct pscfs_req *pfr, const void *buf, size_t size,
 	struct fidc_membh *f;
 	int rc = 0;
 
-	msfsthr_ensure(pfr);
-
 	f = mfh->mfh_fcmh;
 
 	/* XXX EBADF if fd is not open for writing */
 	if (fcmh_isdir(f)) {
-		OPSTAT_INCR("fsrq-write-isdir");
+		OPSTAT_INCR("msl.fsrq-write-isdir");
 		PFL_GOTOERR(out, rc = EISDIR);
 	}
 
@@ -3135,15 +3197,13 @@ mslfsop_read(struct pscfs_req *pfr, size_t size, off_t off, void *data)
 	struct fidc_membh *f;
 	int rc = 0;
 
-	msfsthr_ensure(pfr);
-
 	f = mfh->mfh_fcmh;
 
 	DEBUG_FCMH(PLL_DIAG, f, "read (start): rc=%d sz=%zu "
 	    "off=%"PSCPRIdOFFT, rc, size, off);
 
 	if (fcmh_isdir(f)) {
-		OPSTAT_INCR("fsrq-read-isdir");
+		OPSTAT_INCR("msl.fsrq-read-isdir");
 		PFL_GOTOERR(out, rc = EISDIR);
 	}
 
@@ -3175,8 +3235,6 @@ mslfsop_listxattr(struct pscfs_req *pfr, size_t size, pscfs_inum_t inum)
 	char *buf = NULL;
 	int rc;
 
-	msfsthr_ensure(pfr);
-
 	if (size > LNET_MTU)
 		PFL_GOTOERR(out, rc = EINVAL);
 
@@ -3201,20 +3259,20 @@ mslfsop_listxattr(struct pscfs_req *pfr, size_t size, pscfs_inum_t inum)
 		if (timercmp(&now, &fci->fci_age, >=)) {
 			f->fcmh_flags &= ~FCMH_CLI_XATTR_INFO;
 		} else if (size == 0 && fci->fci_xattrsize != (uint32_t)-1) {
-			OPSTAT_INCR("xattr-hit-size");
+			OPSTAT_INCR("msl.xattr-hit-size");
 			FCMH_ULOCK(f);
 			tmp.size = fci->fci_xattrsize;
 			mp = &tmp;
 			PFL_GOTOERR(out, rc = 0);
 		} else if (size && fci->fci_xattrsize == 0) {
-			OPSTAT_INCR("xattr-hit-noattr");
+			OPSTAT_INCR("msl.xattr-hit-noattr");
 			FCMH_ULOCK(f);
 			tmp.size = 0;
 			mp = &tmp;
 			PFL_GOTOERR(out, rc = 0);
 		} else if (size && fci->fci_xattrsize != (uint32_t)-1 &&
 			   size < fci->fci_xattrsize) {
-			OPSTAT_INCR("xattr-hit-erange");
+			OPSTAT_INCR("msl.xattr-hit-erange");
 			FCMH_ULOCK(f);
 			PFL_GOTOERR(out, rc = ERANGE);
 		}
@@ -3252,7 +3310,7 @@ mslfsop_listxattr(struct pscfs_req *pfr, size_t size, pscfs_inum_t inum)
 		iov.iov_len = mp->size;
 		rc = slrpc_bulk_checkmsg(rq, rq->rq_repmsg, &iov, 1);
 		if (rc == 0)
-			OPSTAT_INCR("listxattr-bulk");
+			OPSTAT_INCR("msl.listxattr-bulk");
 	}
 	if (!rc && !size) {
 		FCMH_LOCK(f);
@@ -3287,8 +3345,6 @@ mslfsop_setxattr(struct pscfs_req *pfr, const char *name,
 	struct pscfs_creds pcr;
 	struct iovec iov;
 	int rc;
-
-	msfsthr_ensure(pfr);
 
 	if (strlen(name) >= sizeof(mq->name))
 		PFL_GOTOERR(out, rc = EINVAL);
@@ -3420,7 +3476,7 @@ slc_getxattr(struct pscfs_req *pfr,
 		iov.iov_len = mp->valuelen;
 		rc = slrpc_bulk_checkmsg(rq, rq->rq_repmsg, &iov, 1);
 		if (rc == 0)
-			OPSTAT_INCR("getxattr-bulk");
+			OPSTAT_INCR("msl.getxattr-bulk");
 	}
 	if (!rc)
 		*retsz = mp->valuelen;
@@ -3443,8 +3499,6 @@ mslfsop_getxattr(struct pscfs_req *pfr, const char *name, size_t size,
 	size_t retsz = 0;
 	void *buf = NULL;
 	int rc;
-
-	msfsthr_ensure(pfr);
 
 	if (size > LNET_MTU)
 		PFL_GOTOERR(out, rc = EINVAL);
@@ -3479,8 +3533,6 @@ mslfsop_removexattr(struct pscfs_req *pfr, const char *name,
 	struct fidc_membh *f = NULL;
 	struct pscfs_creds pcr;
 	int rc;
-
-	msfsthr_ensure(pfr);
 
 	if (strlen(name) >= sizeof(mq->name))
 		PFL_GOTOERR(out, rc = EINVAL);
@@ -3542,10 +3594,13 @@ msattrflushthr_main(struct psc_thread *thr)
 		nexttimeo.tv_sec = FCMH_ATTR_TIMEO;
 		nexttimeo.tv_nsec = 0;
 
-		LIST_CACHE_LOCK(&slc_attrtimeoutq);
-		lc_peekheadwait(&slc_attrtimeoutq);
+		LIST_CACHE_LOCK(&msl_attrtimeoutq);
+		if (lc_peekheadwait(&msl_attrtimeoutq) == NULL) {
+			LIST_CACHE_ULOCK(&msl_attrtimeoutq);
+			break;
+		}
 		PFL_GETTIMESPEC(&ts);
-		LIST_CACHE_FOREACH(fci, &slc_attrtimeoutq) {
+		LIST_CACHE_FOREACH(fci, &msl_attrtimeoutq) {
 			f = fci_2_fcmh(fci);
 			if (!FCMH_TRYLOCK(f))
 				continue;
@@ -3562,16 +3617,16 @@ msattrflushthr_main(struct psc_thread *thr)
 				continue;
 			}
 
-			LIST_CACHE_ULOCK(&slc_attrtimeoutq);
+			LIST_CACHE_ULOCK(&msl_attrtimeoutq);
 
 			msl_flush_ioattrs(NULL, f);
 			FCMH_ULOCK(f);
 			break;
 		}
 		if (fci == NULL) {
-			OPSTAT_INCR("flush-attr-wait");
+			OPSTAT_INCR("msl.flush-attr-wait");
 			psc_waitq_waitrel_ts(&msl_flush_attrq,
-			    &slc_attrtimeoutq.plc_lock, &nexttimeo);
+			    &msl_attrtimeoutq.plc_lock, &nexttimeo);
 		}
 	}
 }
@@ -3583,7 +3638,7 @@ msattrflushthr_spawn(void)
 	struct psc_thread *thr;
 	int i;
 
-	lc_reginit(&slc_attrtimeoutq, struct fcmh_cli_info, fci_lentry,
+	lc_reginit(&msl_attrtimeoutq, struct fcmh_cli_info, fci_lentry,
 	    "attrtimeout");
 
 	for (i = 0; i < NUM_ATTR_FLUSH_THREADS; i++) {
@@ -3672,12 +3727,22 @@ parse_allowexe(void)
 	}
 }
 
-void
-msl_init(const char *cfgfn)
+int
+msl_init(void)
 {
 	struct sl_resource *r;
 	char *name;
 	int rc;
+
+	gcry_control(GCRYCTL_SET_THREAD_CBS, &gcry_threads_pthread);
+	if (!gcry_check_version(GCRYPT_VERSION)) {
+		warnx("libgcrypt version mismatch");
+		return (-1);
+	}
+
+	sl_subsys_register();
+	psc_subsys_register(SLCSS_INFO, "info");
+	psc_subsys_register(SLCSS_FSOP, "fsop");
 
 	pflog_get_fsctx_uprog = slc_log_get_fsctx_uprog;
 	pflog_get_fsctx_uid = slc_log_get_fsctx_uid;
@@ -3688,17 +3753,17 @@ msl_init(const char *cfgfn)
 	/* defaults */
 	slcfg_local->cfg_fidcachesz = 1024;
 
-	slcfg_parse(cfgfn);
+	slcfg_parse(msl_cfgfn);
 	if (slcfg_local->cfg_root_squash)
-		slc_root_squash = 1;
+		msl_root_squash = 1;
 	parse_allowexe();
-	if (slc_use_mapfile) {
-		psc_hashtbl_init(&slc_uidmap_ext, 0, struct uid_mapping,
+	if (msl_use_mapfile) {
+		psc_hashtbl_init(&msl_uidmap_ext, 0, struct uid_mapping,
 		    um_key, um_hentry, 191, NULL, "uidmapext");
-		psc_hashtbl_init(&slc_uidmap_int, 0, struct uid_mapping,
+		psc_hashtbl_init(&msl_uidmap_int, 0, struct uid_mapping,
 		    um_key, um_hentry, 191, NULL, "uidmapint");
 
-		psc_hashtbl_init(&slc_gidmap_int, 0, struct gid_mapping,
+		psc_hashtbl_init(&msl_gidmap_int, 0, struct gid_mapping,
 		    gm_key, gm_hentry, 191, NULL, "gidmapint");
 
 		parse_mapfile();
@@ -3717,24 +3782,33 @@ msl_init(const char *cfgfn)
 	    dce_key, dce_hentry, 3 * slcfg_local->cfg_fidcachesz - 1,
 	    dircache_ent_cmp, "namecache");
 
-	psc_poolmaster_init(&slc_async_req_poolmaster,
+	psc_poolmaster_init(&msl_async_req_poolmaster,
 	    struct slc_async_req, car_lentry, PPMF_AUTO, 64, 64, 0,
 	    NULL, NULL, NULL, "asyncrq");
-	slc_async_req_pool = psc_poolmaster_getmgr(&slc_async_req_poolmaster);
+	msl_async_req_pool = psc_poolmaster_getmgr(&msl_async_req_poolmaster);
 
-	psc_poolmaster_init(&slc_biorq_poolmaster,
+	psc_poolmaster_init(&msl_biorq_poolmaster,
 	    struct bmpc_ioreq, biorq_lentry, PPMF_AUTO, 64, 64, 0, NULL,
 	    NULL, NULL, "biorq");
-	slc_biorq_pool = psc_poolmaster_getmgr(&slc_biorq_poolmaster);
+	msl_biorq_pool = psc_poolmaster_getmgr(&msl_biorq_poolmaster);
 
-	psc_poolmaster_init(&slc_mfh_poolmaster,
+	psc_poolmaster_init(&msl_mfh_poolmaster,
 	    struct msl_fhent, mfh_lentry, PPMF_AUTO, 64, 64, 0, NULL,
 	    NULL, NULL, "mfh");
-	slc_mfh_pool = psc_poolmaster_getmgr(&slc_mfh_poolmaster);
+	msl_mfh_pool = psc_poolmaster_getmgr(&msl_mfh_poolmaster);
 
+	psc_poolmaster_init(&msl_iorq_poolmaster, struct msl_fsrqinfo,
+	    mfsrq_lentry, PPMF_AUTO, 64, 64, 0, NULL, NULL, NULL,
+	    "iorq");
+	msl_iorq_pool = psc_poolmaster_getmgr(&msl_iorq_poolmaster);
+
+#ifndef MSL_PFLFS_MODULE
 	pfl_workq_init(128);
 	pfl_wkthr_spawn(MSTHRT_WORKER, 4, "mswkthr%d");
+	pfl_opstimerthr_spawn(MSTHRT_OPSTIMER, "msopstimerthr");
+#endif
 
+	/* Start up service threads. */
 	slrpc_initcli();
 	slc_rpc_initsvc();
 
@@ -3742,18 +3816,7 @@ msl_init(const char *cfgfn)
 	pscrpc_nbreapthr_spawn(sl_nbrqset, MSTHRT_NBRQ, 8,
 	    "msnbrqthr%d");
 
-	/* Start up service threads. */
 	msctlthr_spawn();
-
-	/*
-	 * This should only be enabled when we really care about
-	 * the average stuff in order to save energy.
-	 */
-	pfl_opstimerthr_spawn(MSTHRT_OPSTIMER, "msopstimerthr");
-
-	slc_dio_iostats.rd = pfl_opstat_init("dio-rpc-rd");
-	slc_dio_iostats.wr = pfl_opstat_init("dio-rpc-wr");
-	slc_rdcache_iostats = pfl_opstat_init("rd-cache-hit");
 
 	slc_iosyscall_iostats[0].size = slc_iorpc_iostats[0].size =        1024;
 	slc_iosyscall_iostats[1].size = slc_iorpc_iostats[1].size =    4 * 1024;
@@ -3763,8 +3826,10 @@ msl_init(const char *cfgfn)
 	slc_iosyscall_iostats[5].size = slc_iorpc_iostats[5].size =  512 * 1024;
 	slc_iosyscall_iostats[6].size = slc_iorpc_iostats[6].size = 1024 * 1024;
 	slc_iosyscall_iostats[7].size = slc_iorpc_iostats[7].size = 0;
-	pfl_iostats_grad_init(slc_iosyscall_iostats, OPSTF_BASE10, "iosz");
-	pfl_iostats_grad_init(slc_iorpc_iostats, OPSTF_BASE10, "iorpc");
+	pfl_iostats_grad_init(slc_iosyscall_iostats, OPSTF_BASE10,
+	    "msl.iosz");
+	pfl_iostats_grad_init(slc_iorpc_iostats, OPSTF_BASE10,
+	    "msl.iorpc");
 
 	msbmapthr_spawn();
 	sl_freapthr_spawn(MSTHRT_FREAP, "msfreapthr");
@@ -3796,42 +3861,9 @@ msl_init(const char *cfgfn)
 
 	pscfs_entry_timeout = 8.;
 	pscfs_attr_timeout = 8.;
-}
 
-struct pscfs slc_pscfs = {
-	PSCFS_INIT,
-	"slash2",
-	mslfsop_access,
-	mslfsop_release,
-	mslfsop_release,	/* releasedir */
-	mslfsop_create,
-	mslfsop_flush,
-	mslfsop_fsync,
-	mslfsop_fsync,		/* fsyncdir */
-	mslfsop_getattr,
-	NULL,			/* ioctl */
-	mslfsop_link,
-	mslfsop_lookup,
-	mslfsop_mkdir,
-	mslfsop_mknod,
-	mslfsop_open,
-	mslfsop_opendir,
-	mslfsop_read,
-	mslfsop_readdir,
-	mslfsop_readlink,
-	mslfsop_rename,
-	mslfsop_rmdir,
-	mslfsop_setattr,
-	mslfsop_statfs,
-	mslfsop_symlink,
-	mslfsop_unlink,
-	mslfsop_destroy,
-	mslfsop_write,
-	mslfsop_listxattr,
-	mslfsop_getxattr,
-	mslfsop_setxattr,
-	mslfsop_removexattr
-};
+	return (0);
+}
 
 int
 psc_usklndthr_get_type(const char *namefmt)
@@ -3854,11 +3886,12 @@ psc_usklndthr_get_namev(char buf[PSC_THRNAME_MAX], const char *namefmt,
 
 enum {
 	LOOKUP_TYPE_BOOL,
+	LOOKUP_TYPE_STR,
 	LOOKUP_TYPE_UINT64,
 };
 
 int
-opt_lookup(const char *opt)
+msl_opt_lookup(const char *opt)
 {
 	struct {
 		const char	*name;
@@ -3866,9 +3899,12 @@ opt_lookup(const char *opt)
 		void		*ptr;
 	} *io, opts[] = {
 		{ "acl",		LOOKUP_TYPE_BOOL,	&msl_acl },
-		{ "mapfile",		LOOKUP_TYPE_BOOL,	&slc_use_mapfile },
+		{ "ctlsock",		LOOKUP_TYPE_STR,	&msl_ctlsockfn },
+		{ "datadir",		LOOKUP_TYPE_STR,	&sl_datadir },
+		{ "mapfile",		LOOKUP_TYPE_BOOL,	&msl_use_mapfile },
 		{ "pagecache_maxsize",	LOOKUP_TYPE_UINT64,	&msl_pagecache_maxsize },
-		{ "root_squash",	LOOKUP_TYPE_BOOL,	&slc_root_squash },
+		{ "root_squash",	LOOKUP_TYPE_BOOL,	&msl_root_squash },
+		{ "slcfg",		LOOKUP_TYPE_STR,	&msl_cfgfn },
 		{ NULL,			0,			NULL }
 	};
 	const char *val;
@@ -3888,6 +3924,9 @@ opt_lookup(const char *opt)
 			case LOOKUP_TYPE_BOOL:
 				*(int *)io->ptr = 1;
 				break;
+			case LOOKUP_TYPE_STR:
+				*(const char **)io->ptr = val;
+				break;
 			case LOOKUP_TYPE_UINT64:
 				sz = pfl_humantonum(val);
 				if (sz < 0)
@@ -3906,50 +3945,62 @@ usage(void)
 {
 	extern char *__progname;
 
-	fprintf(stderr,
-	    "usage: %s [-dUV] [-D datadir] [-f conf] [-I iosystem] [-M mds]\n"
-	    "\t[-o mountopt] [-S socket] node\n",
+	fprintf(stderr, "usage: %s [-dUV] [-o mountopt] node\n",
 	    __progname);
 	exit(1);
 }
+
+struct msl_filehandle_frozen {
+	struct msl_fhent	mff_mfh;
+	struct sl_fidgen	mff_fg;
+};
 
 /*
  * This routine is called when pscfs fileinfo data is serialized i.e.
  * for purposes of reloading the entire SLASH2 file system module.
  */
 void
-msl_fileinfo_freeze(void *fh)
+msl_filehandle_freeze(struct pflfs_filehandle *pfh)
 {
-	struct msl_fhent *mfh = fh;
+	struct msl_filehandle_frozen *mff;
+	struct msl_fhent *mfh;
 	struct fidc_membh *f;
 
+	mfh = pfh->pfh_data;
 	f = mfh->mfh_fcmh;
-	mfh->mfh_fg = f->fcmh_fg;
+	pfh->pfh_data = mff = PSCALLOC(sizeof(*mff));
+	mff->mff_mfh = *mfh;
+	mff->mff_fg = f->fcmh_fg;
 	fcmh_op_done_type(f, FCMH_OPCNT_OPEN);
+	psc_pool_return(msl_mfh_pool, mfh);
 }
 
 /*
  * This routine is called when pscfs fileinfo data is deserialized.
  */
 void
-msl_fileinfo_thaw(void *fh)
+msl_filehandle_thaw(struct pflfs_filehandle *pfh)
 {
-	struct msl_fhent *mfh = fh;
+	struct msl_filehandle_frozen *mff;
+	struct msl_fhent *mfh;
 	struct fidc_membh *f;
 
-	psc_assert(!sl_fcmh_load_fg(&mfh->mfh_fg, &f));
+	mff = pfh->pfh_data;
+	pfh->pfh_data = mfh = psc_pool_get(msl_mfh_pool);
+	*mfh = mff->mff_mfh;
+	INIT_SPINLOCK(&mfh->mfh_lock);
+	INIT_PSC_LISTENTRY(&mfh->mfh_lentry);
+	psc_assert(!sl_fcmh_load_fg(&mff->mff_fg, &f));
 	mfh->mfh_fcmh = f;
 	fcmh_op_start_type(f, FCMH_OPCNT_OPEN);
 	fcmh_op_done(f);
+	PSCFREE(mff);
 }
 
 void
-pscfs_module_load(struct pscfs *m)
+msl_populate_module(struct pscfs *m)
 {
 	m->pf_name = "slash2";
-
-//	m->pf_fileinfo_freeze		= msl_fileinfo_freeze;
-//	m->pf_fileinfo_thaw		= msl_fileinfo_thaw;
 
 	m->pf_handle_access		= mslfsop_access;
 	m->pf_handle_release		= mslfsop_release;
@@ -3981,30 +4032,40 @@ pscfs_module_load(struct pscfs *m)
 	m->pf_handle_setxattr		= mslfsop_setxattr;
 	m->pf_handle_removexattr	= mslfsop_removexattr;
 
-	msl_init(NULL);
+	m->pf_thr_init			= msfsthr_init;
+	m->pf_thr_destroy		= msfsthr_destroy;
 }
 
 int
+pscfs_module_load(struct pscfs *m)
+{
+	const char *opt;
+	int i;
+
+	msl_populate_module(m);
+
+	m->pf_filehandle_freeze		= msl_filehandle_freeze;
+	m->pf_filehandle_thaw		= msl_filehandle_thaw;
+
+	DYNARRAY_FOREACH(opt, i, &m->pf_opts)
+		if (!msl_opt_lookup(opt)) {
+			warnx("invalid option: %s", opt);
+			return (EINVAL);
+		}
+
+	return (msl_init());
+}
+
+#ifndef MSL_PFLFS_MODULE
+int
 main(int argc, char *argv[])
 {
+	struct pscfs m;
 	struct pscfs_args args = PSCFS_ARGS_INIT(0, NULL);
-	char c, *p, *noncanon_mp, *cfg = SL_PATH_CONF;
+	char c, *p, *noncanon_mp;
 	int unmount_first = 0;
 
-	/* gcrypt must be initialized very early on */
-	gcry_control(GCRYCTL_SET_THREAD_CBS, &gcry_threads_pthread);
-	if (!gcry_check_version(GCRYPT_VERSION))
-		errx(1, "libgcrypt version mismatch");
-
 	pfl_init();
-	sl_subsys_register();
-	psc_subsys_register(SLCSS_INFO, "info");
-	psc_subsys_register(SLCSS_FSOP, "fsop");
-
-	psc_fault_register(SLC_FAULT_READAHEAD_CB_EIO);
-	psc_fault_register(SLC_FAULT_READRPC_OFFLINE);
-	psc_fault_register(SLC_FAULT_READ_CB_EIO);
-	psc_fault_register(SLC_FAULT_REQUEST_TIMEOUT);
 
 	pscfs_addarg(&args, "");		/* progname/argv[0] */
 	pscfs_addarg(&args, "-o");
@@ -4012,12 +4073,11 @@ main(int argc, char *argv[])
 
 	p = getenv("CTL_SOCK_FILE");
 	if (p)
-		ctlsockfn = p;
+		msl_ctlsockfn = p;
 
-	cfg = SL_PATH_CONF;
 	p = getenv("CONFIG_FILE");
 	if (p)
-		cfg = p;
+		msl_cfgfn = p;
 
 	optind = 1;
 	while ((c = getopt(argc, argv, "D:df:I:M:o:S:UV")) != -1)
@@ -4029,7 +4089,7 @@ main(int argc, char *argv[])
 			pscfs_addarg(&args, "-odebug");
 			break;
 		case 'f':
-			cfg = optarg;
+			msl_cfgfn = optarg;
 			break;
 		case 'I':
 			setenv("PREF_IOS", optarg, 1);
@@ -4038,19 +4098,19 @@ main(int argc, char *argv[])
 			setenv("MDS", optarg, 1);
 			break;
 		case 'o':
-			if (!opt_lookup(optarg)) {
+			if (!msl_opt_lookup(optarg)) {
 				pscfs_addarg(&args, "-o");
 				pscfs_addarg(&args, optarg);
 			}
 			break;
 		case 'S':
-			ctlsockfn = optarg;
+			msl_ctlsockfn = optarg;
 			break;
 		case 'U':
 			unmount_first = 1;
 			break;
 		case 'V':
-			errx(0, "revision is %d", SL_STK_VERSION);
+			errx(0, "revision is %d", sl_stk_version);
 		default:
 			usage();
 		}
@@ -4074,10 +4134,14 @@ main(int argc, char *argv[])
 
 	sl_drop_privs(1);
 
-	msl_init(cfg);
+	if (msl_init())
+		exit(1);
 
-	pflfs_module_init(&slc_pscfs);
-	pflfs_module_add(0, &slc_pscfs);
+	memset(&m, 0, sizeof(m));
+	msl_populate_module(&m);
+	pflfs_module_init(&m, NULL);
+	pflfs_module_add(0, &m);
 
-	exit(pscfs_main(sizeof(struct msl_fsrqinfo)));
+	exit(pscfs_main(32, "ms"));
 }
+#endif

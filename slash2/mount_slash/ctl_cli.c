@@ -51,6 +51,8 @@
 
 #include "slashd/inode.h"
 
+struct psc_thread	*msl_ctlthr0;
+
 psc_atomic32_t		 msctl_id = PSC_ATOMIC32_INIT(0);
 struct psc_lockedlist	 msctl_replsts = PLL_INIT(&msctl_replsts,
     struct msctl_replstq, mrsq_lentry);
@@ -775,48 +777,28 @@ const struct slctl_res_field slctl_resios_fields[] = {
 };
 
 struct psc_ctlop msctlops[] = {
-	PSC_CTLDEFOPS
-/* ADDREPLRQ		*/ , { msctlrep_replrq,		sizeof(struct msctlmsg_replrq) }
-/* DELREPLRQ		*/ , { msctlrep_replrq,		sizeof(struct msctlmsg_replrq) }
-/* GETCONNS		*/ , { slctlrep_getconn,	sizeof(struct slctlmsg_conn) }
-/* GETFCMH		*/ , { slctlrep_getfcmh,	sizeof(struct slctlmsg_fcmh) }
-/* GETREPLST		*/ , { msctlrep_getreplst,	sizeof(struct msctlmsg_replst) }
-/* GETREPLST_SLAVE	*/ , { NULL,			0 }
-/* GET_BMAPREPLPOL	*/ , { NULL,			0 }
-/* GET_FATTR		*/ , { msctlhnd_get_fattr,	sizeof(struct msctlmsg_fattr) }
-/* SET_BMAPREPLPOL	*/ , { msctlhnd_set_bmapreplpol,sizeof(struct msctlmsg_bmapreplpol) }
-/* SET_FATTR		*/ , { msctlhnd_set_fattr,	sizeof(struct msctlmsg_fattr) }
-/* GETBMAP		*/ , { slctlrep_getbmap,	sizeof(struct slctlmsg_bmap) }
-/* GETBIORQ		*/ , { msctlrep_getbiorq,	sizeof(struct msctlmsg_biorq) }
-/* GETBMPCE		*/ , { msctlrep_getbmpce,	sizeof(struct msctlmsg_bmpce) }
+	PSC_CTLDEFOPS,
+/* ADDREPLRQ		*/ { msctlrep_replrq,		sizeof(struct msctlmsg_replrq) },
+/* DELREPLRQ		*/ { msctlrep_replrq,		sizeof(struct msctlmsg_replrq) },
+/* GETCONNS		*/ { slctlrep_getconn,		sizeof(struct slctlmsg_conn) },
+/* GETFCMH		*/ { slctlrep_getfcmh,		sizeof(struct slctlmsg_fcmh) },
+/* GETREPLST		*/ { msctlrep_getreplst,	sizeof(struct msctlmsg_replst) },
+/* GETREPLST_SLAVE	*/ { NULL,			0 },
+/* GET_BMAPREPLPOL	*/ { NULL,			0 },
+/* GET_FATTR		*/ { msctlhnd_get_fattr,	sizeof(struct msctlmsg_fattr) },
+/* SET_BMAPREPLPOL	*/ { msctlhnd_set_bmapreplpol,	sizeof(struct msctlmsg_bmapreplpol) },
+/* SET_FATTR		*/ { msctlhnd_set_fattr,	sizeof(struct msctlmsg_fattr) },
+/* GETBMAP		*/ { slctlrep_getbmap,		sizeof(struct slctlmsg_bmap) },
+/* GETBIORQ		*/ { msctlrep_getbiorq,		sizeof(struct msctlmsg_biorq) },
+/* GETBMPCE		*/ { msctlrep_getbmpce,		sizeof(struct msctlmsg_bmpce) },
 };
-
-psc_ctl_thrget_t psc_ctl_thrgets[] = {
-/* ATTR_FLSH	*/ NULL,
-/* BENCH	*/ NULL,
-/* BRELEASE	*/ NULL,
-/* BWATCH	*/ NULL,
-/* CTL		*/ psc_ctlthr_get,
-/* CTLAC	*/ psc_ctlacthr_get,
-/* FCMHREAP	*/ NULL,
-/* FLUSH	*/ NULL,
-/* FS		*/ NULL,
-/* FSMGR	*/ NULL,
-/* NBRQ		*/ NULL,
-/* RCI		*/ NULL,
-/* RCM		*/ NULL,
-/* READAHEAD	*/ NULL,
-/* OPSTIMER	*/ NULL,
-/* USKLNDPL	*/ NULL,
-/* WORKER	*/ NULL
-};
-
-PFLCTL_SVR_DEFS;
 
 void
-msctlthr_main(__unusedx struct psc_thread *thr)
+msctlthr_main(struct psc_thread *thr)
 {
-	psc_ctlthr_main(ctlsockfn, msctlops, nitems(msctlops),
+	/* stash thread so mslfsop_destroy() can kill ctlthr */
+	msl_ctlthr0 = thr;
+	psc_ctlthr_main(msl_ctlsockfn, msctlops, nitems(msctlops),
 	    MSTHRT_CTLAC);
 }
 
@@ -851,13 +833,13 @@ msctlthr_spawn(void)
 	psc_ctlparam_register_var("sys.mountpoint", PFLCTL_PARAMT_STR,
 	    0, mountpoint);
 	psc_ctlparam_register_var("sys.offline_nretries",
-	    PFLCTL_PARAMT_INT, PFLCTL_PARAMF_RDWR, &slc_max_nretries);
+	    PFLCTL_PARAMT_INT, PFLCTL_PARAMF_RDWR, &msl_max_nretries);
 	psc_ctlparam_register_simple("sys.pref_ios",
 	    msctlparam_prefios_get, msctlparam_prefios_set);
 	psc_ctlparam_register_simple("sys.mds", msctlparam_mds_get,
 	    NULL);
 	psc_ctlparam_register_var("sys.direct_io", PFLCTL_PARAMT_INT,
-	    PFLCTL_PARAMF_RDWR, &slc_direct_io);
+	    PFLCTL_PARAMF_RDWR, &msl_direct_io);
 	psc_ctlparam_register_var("sys.predio_window_size",
 	    PFLCTL_PARAMT_INT, PFLCTL_PARAMF_RDWR,
 	    &msl_predio_window_size);
@@ -868,7 +850,7 @@ msctlthr_spawn(void)
 	    PFLCTL_PARAMT_INT, PFLCTL_PARAMF_RDWR,
 	    &msl_predio_issue_maxpages);
 	psc_ctlparam_register_var("sys.root_squash", PFLCTL_PARAMT_INT,
-	    PFLCTL_PARAMF_RDWR, &slc_root_squash);
+	    PFLCTL_PARAMF_RDWR, &msl_root_squash);
 
 	thr = pscthr_init(MSTHRT_CTL, msctlthr_main, NULL,
 	    sizeof(struct psc_ctlthr), "msctlthr0");

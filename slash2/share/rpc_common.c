@@ -290,7 +290,7 @@ slrpc_issue_connect(lnet_nid_t local, lnet_nid_t server,
 	rq->rq_timeoutable = 1;
 	mq->magic = csvc->csvc_magic;
 	mq->version = csvc->csvc_version;
-	mq->stkvers = SL_STK_VERSION;
+	mq->stkvers = sl_stk_version;
 
 	CSVC_LOCK(csvc);
 	csvc->csvc_tryref++;
@@ -446,7 +446,7 @@ slrpc_handle_connect(struct pscrpc_request *rq, uint64_t magic,
 	default:
 		psc_fatal("choke");
 	}
-	mp->stkvers = SL_STK_VERSION;
+	mp->stkvers = sl_stk_version;
 	return (0);
 }
 
@@ -559,6 +559,7 @@ _sl_csvc_decref(const struct pfl_callerinfo *pci,
 			// XXX assert(mutex.nwaiters == 0)
 			psc_mutex_unlock(&csvc->csvc_mutex);
 			psc_mutex_destroy(&csvc->csvc_mutex);
+			psc_multiwaitcond_destroy(&csvc->csvc_mwc);
 			psc_pool_return(sl_csvc_pool, csvc);
 			return;
 		}
@@ -1041,6 +1042,7 @@ slconnthr_main(struct psc_thread *thr)
 				 * reconnect while we wait.
 				 */
 				goto next;
+
 			/*
 			 * Only used by MDS to watch for its I/O servers.
 			 * So scp_useablef is always mds_sliod_alive().
@@ -1071,9 +1073,6 @@ slconnthr_main(struct psc_thread *thr)
 
 			if (scp->scp_flags & CSVCF_WANTFREE) {
 				sl_csvc_decref(csvc);
-
-				/* XXX touch after free */
-				psc_multiwaitcond_destroy(&csvc->csvc_mwc);
 
 				PSCTHR_LOCK(thr);
 				psc_dynarray_remove(&sct->sct_monres,
@@ -1307,4 +1306,10 @@ slrpc_initcli(void)
 	    struct slashrpc_cservice, csvc_lentry, PPMF_AUTO, 64, 64, 0,
 	    NULL, NULL, NULL, "csvc");
 	sl_csvc_pool = psc_poolmaster_getmgr(&sl_csvc_poolmaster);
+}
+
+void
+slrpc_destroy(void)
+{
+	pfl_poolmaster_destroy(&sl_csvc_poolmaster);
 }

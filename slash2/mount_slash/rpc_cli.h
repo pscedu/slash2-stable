@@ -78,7 +78,7 @@ enum {
 									\
 		(mq) = NULL;						\
 		(mp) = NULL;						\
-		_resm = (f) ? fcmh_2_fci(f)->fci_resm : slc_rmc_resm;	\
+		_resm = (f) ? fcmh_2_fci(f)->fci_resm : msl_rmc_resm;	\
 		if (rq) {						\
 			pscrpc_req_finished(rq);			\
 			(rq) = NULL;					\
@@ -149,7 +149,7 @@ msl_getmw(void)
 		return (&msbwatchthr(thr)->mbwt_mw);
 	case MSTHRT_FLUSH:
 		return (&msflushthr(thr)->mflt_mw);
-	case MSTHRT_FS:
+	case PFL_THRT_FS:
 		return (&msfsthr(thr)->mft_mw);
 	case MSTHRT_RCI:
 		return (&msrcithr(thr)->mrci_mw);
@@ -159,6 +159,7 @@ msl_getmw(void)
 		return (&msreadaheadthr(thr)->mrat_mw);
 	case MSTHRT_CTL:
 	case MSTHRT_WORKER:
+	case PFL_THRT_CTL:
 		return (NULL);
 	}
 	psc_fatalx("unknown thread type");

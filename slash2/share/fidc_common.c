@@ -45,13 +45,12 @@
 #include "slconfig.h"
 #include "slutil.h"
 
-struct psc_poolmaster	  fidcPoolMaster;
-struct psc_poolmgr	 *fidcPool;
-struct psc_listcache	  fidcIdleList;		/* identity untouched, but reapable */
+struct psc_poolmaster	  sl_fcmh_poolmaster;
+struct psc_poolmgr	 *sl_fcmh_pool;
+struct psc_listcache	  sl_fcmh_idle;		/* identity untouched, but reapable */
 struct psc_hashtbl	  sl_fcmh_hashtbl;
-
-#define fcmh_get()	psc_pool_get(fidcPool)
-#define fcmh_put(f)	psc_pool_return(fidcPool, (f))
+struct psc_thread	 *sl_freapthr;
+struct psc_waitq	  sl_freap_waitq = PSC_WAITQ_INIT;
 
 #if PFL_DEBUG > 0
 psc_spinlock_t		fcmh_ref_lock = SPINLOCK_INIT;
@@ -83,10 +82,8 @@ fcmh_destroy(struct fidc_membh *f)
 	}
 
 	f->fcmh_flags = FCMH_FREE;
-	fcmh_put(f);
+	psc_pool_return(sl_fcmh_pool, f);
 }
-
-#define FCMH_MAX_REAP 128
 
 /*
  * Reap some files from the fidcache.
@@ -94,7 +91,7 @@ fcmh_destroy(struct fidc_membh *f)
  * @only_expired: whether to restrict reaping to only expired files.
  */
 int
-fidc_reap(int max, int only_expired)
+fidc_reap(int max, int flags)
 {
 	struct fidc_membh *f, *tmp, *reap[FCMH_MAX_REAP];
 	struct timespec crtime;
@@ -103,10 +100,13 @@ fidc_reap(int max, int only_expired)
 	if (!max || max > FCMH_MAX_REAP)
 		max = FCMH_MAX_REAP;
 
-	LIST_CACHE_LOCK(&fidcIdleList);
-	LIST_CACHE_FOREACH_SAFE(f, tmp, &fidcIdleList) {
-		/* never reap root (/) */
-		if ((FID_GET_INUM(fcmh_2_fid(f))) == SLFID_ROOT)
+	if (flags & SL_FIDC_REAPF_EXPIRED)
+		PFL_GETTIMESPEC(&crtime);
+
+	LIST_CACHE_LOCK(&sl_fcmh_idle);
+	LIST_CACHE_FOREACH_SAFE(f, tmp, &sl_fcmh_idle) {
+		if ((FID_GET_INUM(fcmh_2_fid(f))) == SLFID_ROOT &&
+		    (flags & SL_FIDC_REAPF_ROOT) == 0)
 			continue;
 
 		if (!FCMH_TRYLOCK(f))
@@ -114,26 +114,24 @@ fidc_reap(int max, int only_expired)
 
 		psc_assert(!f->fcmh_refcnt);
 
-		if (only_expired) {
-			PFL_GETTIMESPEC(&crtime);
-			if (timespeccmp(&crtime, &f->fcmh_etime, <)) {
-				FCMH_ULOCK(f);
-				continue;
-			}
+		if (flags & SL_FIDC_REAPF_EXPIRED &&
+		    timespeccmp(&crtime, &f->fcmh_etime, <)) {
+			FCMH_ULOCK(f);
+			continue;
 		}
 
 		psc_assert(f->fcmh_flags & FCMH_IDLE);
 		DEBUG_FCMH(PLL_DEBUG, f, "reaped");
 
 		f->fcmh_flags |= FCMH_TOFREE;
-		lc_remove(&fidcIdleList, f);
+		lc_remove(&sl_fcmh_idle, f);
 		reap[nreap++] = f;
 		FCMH_ULOCK(f);
 
 		if (nreap >= max)
 			break;
 	}
-	LIST_CACHE_ULOCK(&fidcIdleList);
+	LIST_CACHE_ULOCK(&sl_fcmh_idle);
 
 	psclog_debug("reaping %d files from fidcache", nreap);
 
@@ -182,11 +180,6 @@ _fidc_lookup(const struct pfl_callerinfo *pci, slfid_t fid,
 	*fp = NULL;
 	fnew = NULL; /* gcc */
 
-	/* sanity checks */
-#ifndef _SLASH_CLIENT
-	psc_assert(!(flags & FIDC_LOOKUP_EXCL));
-#endif
-
 	/* OK.  Now check if it is already in the cache. */
 	b = psc_hashbkt_get(&sl_fcmh_hashtbl, &fid);
  restart:
@@ -233,12 +226,12 @@ _fidc_lookup(const struct pfl_callerinfo *pci, slfid_t fid,
 	 */
 	if (f) {
 		/*
-		 * Test to see if we jumped here from fidcIdleList.
+		 * Test to see if we jumped here from sl_fcmh_idle.
 		 * Note an unlucky thread could find that the FID does
 		 * not exist before allocation and exist after that.
 		 */
 		if (try_create) {
-			fcmh_put(fnew);
+			psc_pool_return(sl_fcmh_pool, fnew);
 			fnew = NULL;
 		}
 
@@ -267,7 +260,7 @@ _fidc_lookup(const struct pfl_callerinfo *pci, slfid_t fid,
 		if (!try_create) {
 			psc_hashbkt_unlock(b);
 
-			fnew = fcmh_get();
+			fnew = psc_pool_get(sl_fcmh_pool);
 			try_create = 1;
 
 			psc_hashbkt_lock(b);
@@ -289,7 +282,7 @@ _fidc_lookup(const struct pfl_callerinfo *pci, slfid_t fid,
 	 */
 	f = fnew;
 
-	memset(f, 0, fidcPoolMaster.pms_entsize);
+	memset(f, 0, sl_fcmh_poolmaster.pms_entsize);
 	INIT_PSC_LISTENTRY(&f->fcmh_lentry);
 	RB_INIT(&f->fcmh_bmaptree);
 	INIT_SPINLOCK(&f->fcmh_lock);
@@ -360,18 +353,26 @@ fidc_init(int privsiz)
 
 	nobj = slcfg_local->cfg_fidcachesz;
 
-	_psc_poolmaster_init(&fidcPoolMaster,
+	_psc_poolmaster_init(&sl_fcmh_poolmaster,
 	    sizeof(struct fidc_membh) + privsiz,
 	    offsetof(struct fidc_membh, fcmh_lentry),
 	    PPMF_AUTO, nobj, nobj, 0, NULL,
 	    NULL, fidc_reaper, NULL, "fcmh");
-	fidcPool = psc_poolmaster_getmgr(&fidcPoolMaster);
+	sl_fcmh_pool = psc_poolmaster_getmgr(&sl_fcmh_poolmaster);
 
-	lc_reginit(&fidcIdleList, struct fidc_membh, fcmh_lentry,
+	lc_reginit(&sl_fcmh_idle, struct fidc_membh, fcmh_lentry,
 	    "fcmhidle");
 
 	psc_hashtbl_init(&sl_fcmh_hashtbl, 0, struct fidc_membh,
 	    fcmh_fg, fcmh_hentry, 3 * nobj - 1, NULL, "fidc");
+}
+
+void
+fidc_destroy(void)
+{
+	psc_hashtbl_destroy(&sl_fcmh_hashtbl);
+	pfl_listcache_destroy_registered(&sl_fcmh_idle);
+	pfl_poolmaster_destroy(&sl_fcmh_poolmaster);
 }
 
 ssize_t
@@ -386,12 +387,6 @@ fcmh_getsize(struct fidc_membh *h)
 	return (size);
 }
 
-/*
- * We only move a cache item to the busy list if we know that the
- * reference being taken is a long one.  For short-lived references, we
- * avoid moving the cache item around.  Also, we only move a cache item
- * back to the idle list when the _last_ reference is dropped.
- */
 void
 _fcmh_op_start_type(const struct pfl_callerinfo *pci,
     struct fidc_membh *f, int type)
@@ -413,7 +408,7 @@ _fcmh_op_start_type(const struct pfl_callerinfo *pci,
 
 	if (f->fcmh_flags & FCMH_IDLE) {
 		f->fcmh_flags &= ~FCMH_IDLE;
-		lc_remove(&fidcIdleList, f);
+		lc_remove(&sl_fcmh_idle, f);
 	}
 	FCMH_URLOCK(f, locked);
 }
@@ -464,7 +459,7 @@ _fcmh_op_done_type(const struct pfl_callerinfo *pci,
 
 		psc_assert(!(f->fcmh_flags & FCMH_IDLE));
 		f->fcmh_flags |= FCMH_IDLE;
-		lc_add(&fidcIdleList, f);
+		lc_add(&sl_fcmh_idle, f);
 		PFL_GETTIMESPEC(&f->fcmh_etime);
 		f->fcmh_etime.tv_sec += MAX_FCMH_LIFETIME;
 	}
@@ -477,16 +472,17 @@ void
 sl_freapthr_main(struct psc_thread *thr)
 {
 	while (pscthr_run(thr)) {
-		while (fidc_reap(0, 1))
+		while (fidc_reap(0, SL_FIDC_REAPF_EXPIRED))
 			;
-		sleep(MAX_FCMH_LIFETIME);
+		psc_waitq_waitrel_s(&sl_freap_waitq, NULL, 10);
 	}
 }
 
 void
 sl_freapthr_spawn(int thrtype, const char *name)
 {
-	pscthr_init(thrtype, sl_freapthr_main, NULL, 0, name);
+	sl_freapthr = pscthr_init(thrtype, sl_freapthr_main, NULL, 0,
+	    name);
 }
 
 #if PFL_DEBUG > 0

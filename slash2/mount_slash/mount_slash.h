@@ -47,7 +47,7 @@ struct dircache_page;
 
 /* mount_slash thread types */
 enum {
-	MSTHRT_ATTR_FLUSH,		/* attr write data flush thread */
+	MSTHRT_ATTR_FLUSH = _PFL_NTHRT,	/* attr write data flush thread */
 	MSTHRT_BENCH,			/* I/O benchmarking thread */
 	MSTHRT_BRELEASE,		/* bmap lease releaser */
 	MSTHRT_BWATCH,			/* bmap lease watcher */
@@ -55,7 +55,6 @@ enum {
 	MSTHRT_CTLAC,			/* control acceptor */
 	MSTHRT_FREAP,			/* fcmh reap thread */
 	MSTHRT_FLUSH,			/* bmap write data flush thread */
-	MSTHRT_FS,			/* file system syscall handler workers */
 	MSTHRT_FSMGR,			/* pscfs manager */
 	MSTHRT_NBRQ,			/* non-blocking RPC reply handler */
 	MSTHRT_RCI,			/* service RPC reqs for CLI from ION */
@@ -65,6 +64,12 @@ enum {
 	MSTHRT_USKLNDPL,		/* userland socket lustre net dev poll thr */
 	MSTHRT_WORKER			/* generic worker */
 };
+
+struct msfs_thread {
+	struct psc_multiwait		 mft_mw;
+};
+
+#define msfsthr(thr)	((struct msfs_thread *)pfl_fsthr_getpri(thr))
 
 struct msattrflush_thread {
 	struct psc_multiwait		 maft_mw;
@@ -81,13 +86,6 @@ struct msbwatch_thread {
 struct msflush_thread {
 	int				 mflt_failcnt;
 	struct psc_multiwait		 mflt_mw;
-};
-
-struct msfs_thread {
-	size_t				 mft_uniqid;
-	struct psc_multiwait		 mft_mw;
-	char				 mft_uprog[128];
-	struct pscfs_req		*mft_pfr;
 };
 
 struct msrci_thread {
@@ -108,7 +106,6 @@ PSCTHR_MKCAST(msattrflushthr, msattrflush_thread, MSTHRT_ATTR_FLUSH);
 PSCTHR_MKCAST(msflushthr, msflush_thread, MSTHRT_FLUSH);
 PSCTHR_MKCAST(msbreleasethr, msbrelease_thread, MSTHRT_BRELEASE);
 PSCTHR_MKCAST(msbwatchthr, msbwatch_thread, MSTHRT_BWATCH);
-PSCTHR_MKCAST(msfsthr, msfs_thread, MSTHRT_FS);
 PSCTHR_MKCAST(msrcithr, msrci_thread, MSTHRT_RCI);
 PSCTHR_MKCAST(msrcmthr, msrcm_thread, MSTHRT_RCM);
 PSCTHR_MKCAST(msreadaheadthr, msreadahead_thread, MSTHRT_READAHEAD);
@@ -167,7 +164,6 @@ struct msl_fhent {
 	struct pfl_timespec		 mfh_open_atime;/* st_atime at open(2) time */
 	off_t				 mfh_nbytes_rd;
 	off_t				 mfh_nbytes_wr;
-	struct sl_fidgen		 mfh_fg;	/* used during serialization */
 	char				 mfh_uprog[128];
 };
 
@@ -186,7 +182,9 @@ struct msl_fhent {
  * I/O requests (read/write).
  */
 struct msl_fsrqinfo {
+	struct psc_listentry		 mfsrq_lentry;
 	struct bmpc_ioreq		*mfsrq_biorq[MAX_BMAPS_REQ];
+	struct pscfs_req		*mfsrq_pfr;
 	struct msl_fhent		*mfsrq_mfh;
 	char				*mfsrq_buf;
 	size_t				 mfsrq_size;	/* incoming request size */
@@ -205,7 +203,7 @@ struct msl_fsrqinfo {
 #define MFSRQ_FSREPLIED			(1 << 2)	/* replied to pscfs, as a sanity check */
 #define MFSRQ_COPIED			(1 << 3)	/* data has been copied in/out from user to our buffers */
 
-#define mfsrq_2_pfr(q)			((struct pscfs_req *)(q) - 1)
+#define mfsrq_2_pfr(q)			(q)->mfsrq_pfr
 
 #define DPRINTFS_MFSRQ(level, ss, q, fmt, ...)				\
 	psclogs((level), (ss), "mfsrq@%p ref=%d flags=%d len=%zd "	\
@@ -323,6 +321,7 @@ int	 _msl_resm_throttle(struct sl_resm *, int);
 void	 msbmapthr_spawn(void);
 void	 msctlthr_spawn(void);
 void	 msreadaheadthr_spawn(void);
+void	 msl_readahead_svc_destroy(void);
 
 void	 slc_getuprog(pid_t, char *, size_t);
 void	 slc_setprefios(sl_ios_id_t);
@@ -348,42 +347,33 @@ void	  bmap_flush_resched(struct bmpc_ioreq *, int);
 #define BMAPFLSH_RPCDONE	(1 << 4)
 #define BMAPFLSH_REAP		(1 << 5)
 
-enum {
-	SLC_FAULT_READAHEAD_CB_EIO,
-	SLC_FAULT_READRPC_OFFLINE,
-	SLC_FAULT_READ_CB_EIO,
-	SLC_FAULT_REQUEST_TIMEOUT
-};
-
-extern const char		*ctlsockfn;
+extern const char		*msl_ctlsockfn;
 extern sl_ios_id_t		 msl_mds;
 extern sl_ios_id_t		 msl_pref_ios;
-extern struct sl_resm		*slc_rmc_resm;
+extern struct sl_resm		*msl_rmc_resm;
 extern char			 mountpoint[];
-extern int			 slc_use_mapfile;
+extern int			 msl_use_mapfile;
 
-extern struct psc_hashtbl	 slc_uidmap_ext;
-extern struct psc_hashtbl	 slc_uidmap_int;
-extern struct psc_hashtbl	 slc_gidmap_int;
-
-extern struct pfl_iostats_rw	 slc_dio_iostats;
-extern struct pfl_opstat	*slc_rdcache_iostats;
+extern struct psc_hashtbl	 msl_uidmap_ext;
+extern struct psc_hashtbl	 msl_uidmap_int;
+extern struct psc_hashtbl	 msl_gidmap_int;
 
 extern struct pfl_iostats_grad	 slc_iosyscall_iostats[];
 extern struct pfl_iostats_grad	 slc_iorpc_iostats[];
 
-extern struct psc_listcache	 slc_attrtimeoutq;
-extern struct psc_listcache	 slc_bmapflushq;
-extern struct psc_listcache	 slc_bmaptimeoutq;
+extern struct psc_listcache	 msl_attrtimeoutq;
+extern struct psc_listcache	 msl_bmapflushq;
+extern struct psc_listcache	 msl_bmaptimeoutq;
 extern struct psc_listcache	 msl_readaheadq;
 
-extern struct psc_poolmgr	*slc_async_req_pool;
-extern struct psc_poolmgr	*slc_biorq_pool;
-extern struct psc_poolmgr	*slc_mfh_pool;
+extern struct psc_poolmgr	*msl_iorq_pool;
+extern struct psc_poolmgr	*msl_async_req_pool;
+extern struct psc_poolmgr	*msl_biorq_pool;
+extern struct psc_poolmgr	*msl_mfh_pool;
 
-extern int			 slc_direct_io;
-extern int			 slc_root_squash;
-extern int			 slc_max_nretries;
+extern int			 msl_direct_io;
+extern int			 msl_root_squash;
+extern int			 msl_max_nretries;
 extern int			 msl_acl;
 extern int			 msl_predio_window_size;
 extern int			 msl_predio_issue_minpages;

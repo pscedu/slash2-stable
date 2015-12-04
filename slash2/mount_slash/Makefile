@@ -2,8 +2,13 @@
 
 ROOTDIR=../..
 include ${ROOTDIR}/Makefile.path
+include ${SLASH_BASE}/mk/pre.mk
 
-PROG=		mount_slash
+ifeq ($(filter module,${SLASH_OPTIONS}),)
+  PROG=		mount_slash
+else
+  SHLIB=	slash2.so
+endif
 BIN=		mount_slash.sh
 MAN+=		mount_slash.8
 
@@ -20,6 +25,7 @@ SRCS+=		rci.c
 SRCS+=		rcm.c
 SRCS+=		rpc_cli.c
 SRCS+=		usermap.c
+SRCS+=		${SLASH_BASE}/share/version.c
 SRCS+=		${SLASH_BASE}/share/authbuf_mgt.c
 SRCS+=		${SLASH_BASE}/share/authbuf_sign.c
 SRCS+=		${SLASH_BASE}/share/bmap.c
@@ -32,12 +38,16 @@ SRCS+=		${SLASH_BASE}/share/priv.c
 SRCS+=		${SLASH_BASE}/share/rpc_common.c
 SRCS+=		${SLASH_BASE}/share/slerr.c
 SRCS+=		${SLASH_BASE}/share/slutil.c
+SRCS+=		${SLASH_BASE}/share/version.c
 SRCS+=		${SLASH_BASE}/share/yconf.y
-SRCS+=		${PFL_BASE}/fuse.c
+
+ifeq ($(filter module,${SLASH_OPTIONS}),)
+  SRCS+=	${PFL_BASE}/fuse.c
+  MODULES+=	lnet pthread gcrypt pscfs ctl rpc clock pfl
+else
+  MODULES+=	pthread gcrypt pscfs-hdrs rpc ctl
+endif
 
 DEFINES+=	-D_SLASH_CLIENT
-#DEFINES+=	-DFHENT_EARLY_RELEASE
-
-MODULES+=	lnet pthread gcrypt pscfs ctl rpc clock pfl
 
 include ${SLASHMK}

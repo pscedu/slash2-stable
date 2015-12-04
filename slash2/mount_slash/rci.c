@@ -77,9 +77,10 @@ slc_rci_handle_ctl(struct pscrpc_request *rq)
 	return (0);
 }
 
-/**
- * slc_rci_handle_io - Handle a READ or WRITE completion to CLI from
- *	ION (only used for async I/O).
+/*
+ * Handle a READ or WRITE completion to CLI from ION (only used for
+ * async I/O).
+ *
  * @rq: request.
  */
 int
@@ -115,7 +116,7 @@ slc_rci_handle_io(struct pscrpc_request *rq)
 			struct timespec ts = { 0, RCI_AIO_READ_WAIT_NS };
 
 			nwait++;
-			OPSTAT_INCR("read-aio-wait");
+			OPSTAT_INCR("msl.read-aio-wait");
 
 			/*
 			 * The AIO RPC from the sliod beat our fs
@@ -135,7 +136,7 @@ slc_rci_handle_io(struct pscrpc_request *rq)
 	if (!found) {
 		psclog_warnx("could not find async req id=%#"PRIx64,
 		    mp->id);
-		OPSTAT_INCR("read-aio-not-found");
+		OPSTAT_INCR("msl.read-aio-not-found");
 		PFL_GOTOERR(out, mp->rc = -ENOENT);
 	}
 
@@ -144,7 +145,7 @@ slc_rci_handle_io(struct pscrpc_request *rq)
 		struct psc_dynarray *a;
 		int i;
 
-		OPSTAT_INCR("read-cb");
+		OPSTAT_INCR("msl.read-cb");
 
 		r = car->car_argv.pointer_arg[MSL_CBARG_BIORQ];
 		a = car->car_argv.pointer_arg[MSL_CBARG_BMPCE];
@@ -173,9 +174,9 @@ slc_rci_handle_io(struct pscrpc_request *rq)
 		r = car->car_argv.pointer_arg[MSL_CBARG_BIORQ];
 
 		if (mq->op == SRMIOP_RD)
-			OPSTAT_INCR("dio-cb-read");
+			OPSTAT_INCR("msl.dio-cb-read");
 		else
-			OPSTAT_INCR("dio-cb-write");
+			OPSTAT_INCR("msl.dio-cb-write");
 
 	} else {
 		psc_fatalx("unknown callback");
@@ -190,7 +191,7 @@ slc_rci_handle_io(struct pscrpc_request *rq)
 	psclog_diag("return car=%p car_id=%"PRIx64" q=%p, r=%p", car,
 	    car->car_id, car->car_fsrqinfo, r);
 
-	psc_pool_return(slc_async_req_pool, car);
+	psc_pool_return(msl_async_req_pool, car);
 
  out:
 	if (mp->rc)
@@ -199,8 +200,8 @@ slc_rci_handle_io(struct pscrpc_request *rq)
 	return (mp->rc);
 }
 
-/**
- * slc_rci_handler - Handle a request for CLI from ION.
+/*
+ * Handle a request for CLI from ION.
  * @rq: request.
  */
 int

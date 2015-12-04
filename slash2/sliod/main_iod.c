@@ -221,10 +221,6 @@ main(int argc, char *argv[])
 	sl_subsys_register();
 	psc_subsys_register(SLISS_SLVR, "slvr");
 
-	psc_fault_register(SLI_FAULT_AIO_FAIL);
-	psc_fault_register(SLI_FAULT_CRCUP_FAIL);
-	psc_fault_register(SLI_FAULT_FSIO_READ_FAIL);
-
 	sfn = SL_PATH_SLICTLSOCK;
 	p = getenv("CTL_SOCK_FILE");
 	if (p)
@@ -247,7 +243,7 @@ main(int argc, char *argv[])
 			sfn = optarg;
 			break;
 		case 'V':
-			errx(0, "revision is %d", SL_STK_VERSION);
+			errx(0, "revision is %d", sl_stk_version);
 		default:
 			usage();
 		}

@@ -27,6 +27,7 @@
 
 #include "pfl/completion.h"
 #include "pfl/ctlsvr.h"
+#include "pfl/fs.h"
 #include "pfl/random.h"
 #include "pfl/rpc.h"
 
@@ -58,8 +59,8 @@ msl_bmap_reap(void)
 	bmap_flushq_wake(BMAPFLSH_REAP);
 
 	/* wake up the reaper if we are out of resources */
-	if (lc_nitems(&slc_bmaptimeoutq) > bmap_max_cache)
-		psc_waitq_wakeall(&slc_bmaptimeoutq.plc_wq_empty);
+	if (lc_nitems(&msl_bmaptimeoutq) > bmap_max_cache)
+		psc_waitq_wakeall(&msl_bmaptimeoutq.plc_wq_empty);
 }
 
 /*
@@ -190,16 +191,16 @@ msl_bmap_modeset(struct bmap *b, enum rw rw, int flags)
 	struct srm_bmap_chwrmode_rep *mp;
 	struct pscfs_req *pfr = NULL;
 	struct fcmh_cli_info *fci;
-	struct msfs_thread *mft;
 	struct psc_thread *thr;
 	struct psc_compl compl;
+	struct pfl_fsthr *pft;
 	struct fidc_membh *f;
 	int rc, nretries = 0;
 
 	thr = pscthr_get();
-	if (thr->pscthr_type == MSTHRT_FS) {
-		mft = thr->pscthr_private;
-		pfr = mft->mft_pfr;
+	if (thr->pscthr_type == PFL_THRT_FS) {
+		pft = thr->pscthr_private;
+		pfr = pft->pft_pfr;
 	}
 
 	f = b->bcm_fcmh;
@@ -402,7 +403,7 @@ msl_bmap_lease_tryreassign(struct bmap *b)
 	    !pll_empty(&bmpc->bmpc_pndg_biorqs) ||
 	    bci->bci_nreassigns >= SL_MAX_IOSREASSIGN) {
 		BMAP_ULOCK(b);
-		OPSTAT_INCR("bmap-reassign-bail");
+		OPSTAT_INCR("msl.bmap-reassign-bail");
 		return;
 	}
 
@@ -512,7 +513,7 @@ msl_bmap_lease_tryext(struct bmap *b, int blockable)
 	if (secs >= BMAP_CLI_EXTREQSECS &&
 	    !(b->bcm_flags & BMAPF_LEASEEXPIRED)) {
 		if (blockable)
-			OPSTAT_INCR("bmap-lease-ext-hit");
+			OPSTAT_INCR("msl.bmap-lease-ext-hit");
 		BMAP_ULOCK(b);
 		return (0);
 	}
@@ -562,7 +563,7 @@ msl_bmap_lease_tryext(struct bmap *b, int blockable)
 		/*
 		 * We should never cache data without a lease.
 		 */
-		OPSTAT_INCR("bmap-lease-ext-wait");
+		OPSTAT_INCR("msl.bmap-lease-ext-wait");
 		bmap_wait_locked(b, b->bcm_flags & BMAPF_LEASEEXTREQ);
 		rc = bmap_2_bci(b)->bci_error;
 		BMAP_ULOCK(b);
@@ -685,16 +686,16 @@ msl_bmap_retrieve(struct bmap *b, int flags)
 	struct srm_leasebmap_rep *mp;
 	struct pscfs_req *pfr = NULL;
 	struct fcmh_cli_info *fci;
-	struct msfs_thread *mft;
 	struct psc_thread *thr;
 	struct psc_compl compl;
+	struct pfl_fsthr *pft;
 	struct fidc_membh *f;
 	int rc, nretries = 0;
 
 	thr = pscthr_get();
-	if (thr->pscthr_type == MSTHRT_FS) {
-		mft = thr->pscthr_private;
-		pfr = mft->mft_pfr;
+	if (thr->pscthr_type == PFL_THRT_FS) {
+		pft = thr->pscthr_private;
+		pfr = pft->pft_pfr;
 	}
 
 	f = b->bcm_fcmh;
@@ -838,7 +839,7 @@ msl_bmap_reap_init(struct bmap *b)
 	 * Add ourselves here otherwise zero length files will not be
 	 * removed.
 	 */
-	lc_addtail(&slc_bmaptimeoutq, bci);
+	lc_addtail(&msl_bmaptimeoutq, bci);
 }
 
 int
@@ -877,7 +878,7 @@ msl_bmap_release(struct sl_resm *resm)
 
 	rmci = resm2rmci(resm);
 
-	csvc = (resm == slc_rmc_resm) ?
+	csvc = (resm == msl_rmc_resm) ?
 	    slc_getmcsvc(resm) : slc_geticsvc(resm);
 	if (csvc == NULL) {
 		rc = -abs(resm->resm_csvc->csvc_lasterrno); /* XXX race */
@@ -929,23 +930,27 @@ msbreleasethr_main(struct psc_thread *thr)
 	struct fcmh_cli_info *fci;
 	struct bmapc_memb *b;
 	struct sl_resm *resm;
-	int i, nitems;
+	int exiting, i, nitems;
 
 	/*
 	 * XXX: just put the resm's in the dynarray.  When pushing out
-	 * the bid's, assume an ion unless resm == slc_rmc_resm.
+	 * the bid's, assume an ion unless resm == msl_rmc_resm.
 	 */
 	psc_dynarray_ensurelen(&rels, MAX_BMAP_RELEASE);
 	psc_dynarray_ensurelen(&bcis, MAX_BMAP_RELEASE);
 	while (pscthr_run(thr)) {
 		PFL_GETTIMESPEC(&crtime);
-		LIST_CACHE_LOCK(&slc_bmaptimeoutq);
-		lc_peekheadwait(&slc_bmaptimeoutq);
-		OPSTAT_INCR("release-wakeup");
+		LIST_CACHE_LOCK(&msl_bmaptimeoutq);
+		if (lc_peekheadwait(&msl_bmaptimeoutq) == NULL) {
+			LIST_CACHE_ULOCK(&msl_bmaptimeoutq);
+			break;
+		}
+		OPSTAT_INCR("msl.release-wakeup");
 		timespecadd(&crtime, &msl_bmap_max_lease, &nto);
 
-		nitems = lc_nitems(&slc_bmaptimeoutq);
-		LIST_CACHE_FOREACH(bci, &slc_bmaptimeoutq) {
+		nitems = lc_nitems(&msl_bmaptimeoutq);
+		exiting = pfl_listcache_isdead(&msl_bmaptimeoutq);
+		LIST_CACHE_FOREACH(bci, &msl_bmaptimeoutq) {
 			b = bci_2_bmap(bci);
 			if (!BMAP_TRYLOCK(b))
 				continue;
@@ -958,6 +963,8 @@ msbreleasethr_main(struct psc_thread *thr)
 				BMAP_ULOCK(b);
 				continue;
 			}
+			if (exiting)
+				goto evict;
 			if (timespeccmp(&crtime, &bci->bci_etime, >=))
 				goto evict;
 
@@ -990,12 +997,12 @@ msbreleasethr_main(struct psc_thread *thr)
 			if (psc_dynarray_len(&bcis) >= MAX_BMAP_RELEASE)
 				break;
 		}
-		LIST_CACHE_ULOCK(&slc_bmaptimeoutq);
+		LIST_CACHE_ULOCK(&msl_bmaptimeoutq);
 
 		DYNARRAY_FOREACH(bci, i, &bcis) {
 			b = bci_2_bmap(bci);
 			b->bcm_flags &= ~BMAPF_TIMEOQ;
-			lc_remove(&slc_bmaptimeoutq, bci);
+			lc_remove(&msl_bmaptimeoutq, bci);
 
 			if (b->bcm_flags & BMAPF_WR) {
 				/* Setup a msg to an ION. */
@@ -1006,12 +1013,12 @@ msbreleasethr_main(struct psc_thread *thr)
 
 				DEBUG_BMAP(PLL_DIAG, b, "res(%s)",
 				    resm->resm_res->res_name);
-				OPSTAT_INCR("bmap-release-write");
+				OPSTAT_INCR("msl.bmap-release-write");
 			} else {
 				fci = fcmh_get_pri(b->bcm_fcmh);
 				resm = fci->fci_resm;
 				rmci = resm2rmci(resm);
-				OPSTAT_INCR("bmap-release-read");
+				OPSTAT_INCR("msl.bmap-release-read");
 			}
 
 			memcpy(&rmci->rmci_bmaprls.sbd[rmci->rmci_bmaprls.nbmaps],
@@ -1031,10 +1038,10 @@ msbreleasethr_main(struct psc_thread *thr)
 		psc_dynarray_reset(&bcis);
 
 		PFL_GETTIMESPEC(&crtime);
-		if (timespeccmp(&crtime, &nto, <)) {
-			LIST_CACHE_LOCK(&slc_bmaptimeoutq);
-			psc_waitq_waitabs(&slc_bmaptimeoutq.plc_wq_empty,
-			    &slc_bmaptimeoutq.plc_lock, &nto);
+		if (timespeccmp(&crtime, &nto, <) && !exiting) {
+			LIST_CACHE_LOCK(&msl_bmaptimeoutq);
+			psc_waitq_waitabs(&msl_bmaptimeoutq.plc_wq_empty,
+			    &msl_bmaptimeoutq.plc_lock, &nto);
 		}
 	}
 	psc_dynarray_free(&rels);
@@ -1170,7 +1177,7 @@ bmap_biorq_waitempty(struct bmap *b)
 
 	bmpc = bmap_2_bmpc(b);
 	BMAP_LOCK(b);
-	OPSTAT_INCR("bmap-wait-empty");
+	OPSTAT_INCR("msl.bmap-wait-empty");
 	bmap_wait_locked(b, atomic_read(&b->bcm_opcnt) > 2);
 
 	psc_assert(pll_empty(&bmpc->bmpc_pndg_biorqs));

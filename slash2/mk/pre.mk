@@ -51,4 +51,8 @@ ifeq (${CURDIR},$(realpath ${SLASH_BASE}/mount_slash))
  endif
 endif
 
+ifneq ($(filter module,${SLASH_OPTIONS}),)
+  DEFINES+=		-DMSL_PFLFS_MODULE
+endif
+
 endif
