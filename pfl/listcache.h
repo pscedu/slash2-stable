@@ -77,7 +77,7 @@ struct psc_listcache {
 #define LIST_CACHE_FOREACH_SAFE(p, t, plc)				\
 	PLL_FOREACH_SAFE((p), (t), &(plc)->plc_pll)
 
-#define LIST_CACHE_FOREACH_BACKWARDS_SAFE(p, t, plc)		\
+#define LIST_CACHE_FOREACH_BACKWARDS_SAFE(p, t, plc)			\
 	PLL_FOREACH_BACKWARDS_SAFE((p), (t), &(plc)->plc_pll)
 
 #define LIST_CACHE_GETLOCK(plc)		_PLL_GETLOCK(&(plc)->plc_pll)
@@ -88,6 +88,19 @@ struct psc_listcache {
 #define LIST_CACHE_URLOCK(plc, lk)	PLL_URLOCK(&(plc)->plc_pll, (lk))
 #define LIST_CACHE_TRYLOCK(plc)		PLL_TRYLOCK(&(plc)->plc_pll)
 #define LIST_CACHE_LOCK_ENSURE(plc)	PLL_LOCK_ENSURE(&(plc)->plc_pll)
+
+#define LISTCACHE_WAITEMPTY(l, cond)					\
+	while (cond) {							\
+		psc_waitq_wait(&(l)->plc_wq_empty, &(l)->plc_lock);	\
+		LIST_CACHE_LOCK(l);					\
+	}
+
+#define LISTCACHE_WAITEMPTY_UNLOCKED(l, cond)				\
+	do {								\
+		LIST_CACHE_LOCK(l);					\
+		LISTCACHE_WAITEMPTY((l), (cond));			\
+		LIST_CACHE_ULOCK(l);					\
+	} while (0)
 
 /**
  * lc_empty - Determine if a list cache has no elements.
@@ -103,6 +116,7 @@ struct psc_listcache {
 #define lc_remove(plc, p)						\
 	do {								\
 		pll_remove(&(plc)->plc_pll, (p));			\
+		psc_waitq_wakeall(&(plc)->plc_wq_empty);		\
 		if ((plc)->plc_st_removes)				\
 			pfl_opstat_incr((plc)->plc_st_removes);		\
 	} while (0)
@@ -187,6 +201,10 @@ void	 _lc_reginit(struct psc_listcache *, ptrdiff_t, const char *, ...);
 void	  lc_register(struct psc_listcache *, const char *, ...);
 void	  lc_unregister(struct psc_listcache *);
 void	  lc_vregister(struct psc_listcache *, const char *, va_list);
+
+void	  pfl_listcache_destroy(struct psc_listcache *);
+void	  pfl_listcache_destroy_registered(struct psc_listcache *);
+void	  pfl_listcache_wait_empty(struct psc_listcache *);
 
 void	 _lc_add_sorted(struct psc_listcache *, void *, int (*)(const void *, const void *));
 void	 _lc_add_sorted_backwards(struct psc_listcache *, void *, int (*)(const void *, const void *));

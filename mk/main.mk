@@ -323,6 +323,10 @@ ifneq ($(filter clock,${MODULES}),)
   MODULES+=	rt
 endif
 
+ifneq ($(filter dl,${MODULES}),)
+  LDFLAGS+=	${LIBDL}
+endif
+
 ifneq ($(filter rt,${MODULES}),)
   LDFLAGS+=	${LIBRT}
 endif

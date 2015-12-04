@@ -28,11 +28,11 @@
 #include "pfl/hashtbl.h"
 #include "pfl/lock.h"
 
-#define PSC_FAULT_NAME_MAX	32
+#define PFL_FAULT_NAME_MAX	32
 
-struct psc_fault {
+struct pfl_fault {
 	psc_spinlock_t		pflt_lock;
-	char			pflt_name[PSC_FAULT_NAME_MAX];
+	char			pflt_name[PFL_FAULT_NAME_MAX];
 	int			pflt_flags;		/* see below */
 	int			pflt_hits;		/* #times triggered */
 	int			pflt_unhits;		/* #times skipped */
@@ -46,27 +46,32 @@ struct psc_fault {
 /* fault flags */
 #define PFLTF_ACTIVE		(1 << 0)		/* fault point is activated */
 
-#define	psc_fault_lock(pflt)	spinlock(&(pflt)->pflt_lock)
-#define	psc_fault_unlock(pflt)	freelock(&(pflt)->pflt_lock)
+#define	pfl_fault_lock(pflt)	spinlock(&(pflt)->pflt_lock)
+#define	pfl_fault_unlock(pflt)	freelock(&(pflt)->pflt_lock)
 
-int	_psc_fault_here(struct psc_fault *, int *, int);
-struct psc_fault *
-	_psc_fault_register(const char *);
+#define pfl_fault_get(name)	_pfl_fault_get((name), 1)
+#define pfl_fault_peek(name)	_pfl_fault_get((name), 0)
 
-#define psc_fault_here_rc(f, rcp, rc)					\
-	_PFL_RVSTART {							\
+int	_pfl_fault_here(struct pfl_fault *, int *, int);
+void	 pfl_fault_destroy(int);
+struct pfl_fault *
+	_pfl_fault_get(const char *, int);
+
+#define pfl_fault_here_rc(name, rcp, rc)				\
+	({								\
+		static struct pfl_fault *_fault;			\
 		int _rc = 0;						\
 									\
-		if (psc_faults[f].pflt_flags & PFLTF_ACTIVE)		\
-			_rc = _psc_fault_here(&psc_faults[f], (rcp),	\
-			    (rc));					\
+		if (_fault == NULL)					\
+			_fault = pfl_fault_get(name);			\
+		if (_fault->pflt_flags & PFLTF_ACTIVE)			\
+			_rc = _pfl_fault_here(_fault, (rcp), (rc));	\
 		_rc;							\
-	} _PFL_RVEND
+	})
 
-#define psc_fault_here(f, rcp)	psc_fault_here_rc((f), (rcp), 0)
+#define pfl_fault_here(f, rcp)	pfl_fault_here_rc((f), (rcp), 0)
 
-#define psc_fault_register(f)	_psc_fault_register(#f)
-
-extern struct psc_fault		 psc_faults[];
+extern struct psc_dynarray	pfl_faults;
+extern psc_spinlock_t		pfl_faults_lock;
 
 #endif /* _PFL_FAULT_H_ */

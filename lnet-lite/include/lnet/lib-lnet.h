@@ -157,8 +157,8 @@ extern struct psc_poolmgr *lnet_msg_pool;
 	 	lnet_eq_t *_eq;						\
 	 								\
 	 	_eq = psc_pool_get(lnet_eq_pool);			\
-	 	INIT_PSC_LISTENTRY(&_eq->eq_lentry);			\
 		memset(_eq, 0, sizeof(*_eq));				\
+	 	INIT_PSC_LISTENTRY(&_eq->eq_lentry);			\
 	 	_eq;							\
 	})
 #define lnet_eq_free(eq)	psc_pool_return(lnet_eq_pool, (eq))

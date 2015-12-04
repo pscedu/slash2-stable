@@ -242,6 +242,8 @@ struct pscrpc_request_set {
 	struct psclist_head		 set_requests;		/* RPCs */
 	struct psc_listentry		 set_lentry;		/* chain for sets */
 	int				 set_remaining;		/* number of RPCs waiting to complete */
+	int				 set_dead:1;
+	int				 set_refcnt:31;
 	struct psc_waitq		 set_waitq;
 	struct psc_compl		 set_compl;
 	pscrpc_set_interpreterf		 set_interpret;		/* app callback function */
@@ -535,6 +537,7 @@ void	 pscrpc_abort_inflight(struct pscrpc_import *);
 /* connection.c */
 void	 pscrpc_drop_conns(lnet_process_id_t *);
 void	 pscrpc_conns_init(void);
+void	 pscrpc_conns_destroy(void);
 
 struct pscrpc_connection *
 	pscrpc_req_getconn(struct pscrpc_request *);
@@ -542,7 +545,8 @@ struct pscrpc_connection *
 struct pscrpc_connection *
 	 pscrpc_get_connection(lnet_process_id_t, lnet_nid_t, struct pscrpc_uuid *);
 struct pscrpc_connection *
-	 pscrpc_lookup_conn_locked(lnet_process_id_t, lnet_nid_t);
+	 pscrpc_lookup_conn_locked(struct psc_hashbkt *,
+	     lnet_process_id_t, lnet_nid_t);
 struct pscrpc_connection *
 	 pscrpc_connection_addref(struct pscrpc_connection *);
 
@@ -572,6 +576,7 @@ struct pscrpc_request_set *
 int	 pscrpc_push_req(struct pscrpc_request *);
 void	 pscrpc_set_add_new_req(struct pscrpc_request_set *, struct pscrpc_request *);
 int	_pscrpc_set_check(struct pscrpc_request_set *, int);
+void	 pscrpc_set_kill(struct pscrpc_request_set *);
 void	 pscrpc_set_destroy(struct pscrpc_request_set *);
 int	 pscrpc_set_finalize(struct pscrpc_request_set *, int, int);
 void	 pscrpc_set_init(struct pscrpc_request_set *);

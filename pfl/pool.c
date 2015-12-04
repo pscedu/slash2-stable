@@ -268,14 +268,45 @@ _psc_poolmaster_getmgr(struct psc_poolmaster *p, int memnid)
 	spinlock(&p->pms_lock);
 	if (psc_dynarray_ensurelen(&p->pms_poolmgrs, memnid + 1) == -1)
 		psc_fatal("unable to resize poolmgrs");
-	mv = psc_dynarray_get(&p->pms_poolmgrs);
+	mv = psc_dynarray_get_mutable(&p->pms_poolmgrs);
 	m = mv[memnid];
 	if (m == NULL) {
-		mv[memnid] = m = PSCALLOC(sizeof(*m));
+		m = PSCALLOC(sizeof(*m));
 		_psc_poolmaster_initmgr(p, m);
+		psc_dynarray_setpos(&p->pms_poolmgrs, memnid, m);
 	}
 	freelock(&p->pms_lock);
 	return (m);
+}
+
+void
+pfl_poolmaster_destroy(struct psc_poolmaster *pms)
+{
+	struct psc_poolmgr *m;
+	int i;
+
+	spinlock(&pms->pms_lock);
+	DYNARRAY_FOREACH(m, i, &pms->pms_poolmgrs) {
+		pll_remove(&psc_pools, m);
+
+		psc_mutex_destroy(&m->ppm_reclaim_mutex);
+
+		if (pms->pms_flags & PPMF_MLIST)
+			pfl_mlist_destroy(&m->ppm_ml);
+		else
+			pfl_listcache_destroy(&m->ppm_lc);
+
+		pfl_opstat_destroy(m->ppm_nseen);
+		pfl_opstat_destroy(m->ppm_opst_grows);
+		pfl_opstat_destroy(m->ppm_opst_shrinks);
+		pfl_opstat_destroy(m->ppm_opst_returns);
+		pfl_opstat_destroy(m->ppm_opst_preaps);
+		pfl_opstat_destroy(m->ppm_opst_fails);
+		PSCFREE(m);
+	}
+	freelock(&pms->pms_lock);
+	psc_dynarray_free(&pms->pms_poolmgrs);
+	psc_dynarray_free(&pms->pms_sets);
 }
 
 /*
@@ -467,17 +498,13 @@ _psc_poolset_reap(struct psc_poolset *s,
 	struct psc_poolmgr *m, *culprit;
 	struct psc_poolmaster *p;
 	size_t tmx, culpritmx;
-	int i, np, nobj, locked;
-	void **pv;
+	int i, nobj, locked;
 
 	nobj = 0;
 	culprit = NULL;
 	culpritmx = tmx = 0;
 	spinlock(&s->pps_lock);
-	np = psc_dynarray_len(&s->pps_pools);
-	pv = psc_dynarray_get(&s->pps_pools);
-	for (i = 0; i < np; i++) {
-		p = pv[i];
+	DYNARRAY_FOREACH(p, i, &s->pps_pools) {
 		if (p == initiator)
 			continue;
 		m = psc_poolmaster_getmgr(p);

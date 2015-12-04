@@ -57,7 +57,7 @@ __static pthread_key_t		 pfl_tlskey;
 __static pthread_key_t		 psc_thrkey;
 __static struct psc_vbitmap	 psc_uniqthridmap = VBITMAP_INIT_AUTO;
 struct psc_lockedlist		 psc_threads =
-    PLL_INIT(&psc_threads, struct psc_thread, pscthr_lentry);
+    PLL_INIT_NOLOG(&psc_threads, struct psc_thread, pscthr_lentry);
 
 /*
  * Thread destructor.
@@ -67,10 +67,11 @@ __static void
 _pscthr_destroy(void *arg)
 {
 	struct psc_thread *thr = arg;
+	int locked;
 
 	psclog_diag("thread dying");
 
-	PLL_LOCK(&psc_threads);
+	locked = PLL_RLOCK(&psc_threads);
 	(void)reqlock(&thr->pscthr_lock);
 	pll_remove(&psc_threads, thr);
 	if (thr->pscthr_uniqid) {
@@ -81,7 +82,7 @@ _pscthr_destroy(void *arg)
 			psc_vbitmap_setnextpos(&psc_uniqthridmap,
 			    thr->pscthr_uniqid - 1);
 	}
-	PLL_ULOCK(&psc_threads);
+	PLL_URLOCK(&psc_threads, locked);
 
 	if (thr->pscthr_dtor) {
 		thr->pscthr_dtor(thr->pscthr_private);
@@ -90,6 +91,12 @@ _pscthr_destroy(void *arg)
 	psc_waitq_destroy(&thr->pscthr_waitq);
 	psc_free(thr->pscthr_loglevels, PAF_NOLOG);
 	psc_free(thr, PAF_NOLOG);
+}
+
+void
+pscthr_destroy(struct psc_thread *arg)
+{
+	_pscthr_destroy(arg);
 }
 
 void
@@ -345,14 +352,15 @@ _pscthr_init(int type, void (*startf)(struct psc_thread *),
 	int rc;
 
 	/*
-	 * If there is a start routine, we are already in the pthread, *
+	 * If there is a start routine, we are already in the pthread,
 	 * so the memory should be local.  Otherwise, we'd like to
 	 * allocate it within the thread context for local storage.
 	 *
 	 * Either way, the storage will be released via psc_free() upon
 	 * thread exit.
 	 */
-	thr = startf ? &mythr : psc_alloc(sizeof(*thr), PAF_NOLOG);
+	thr = startf ? &mythr : psc_alloc(sizeof(*thr), PAF_NOLOG |
+	    PAF_NOZERO);
 	memset(thr, 0, sizeof(*thr));
 	INIT_PSC_LISTENTRY(&thr->pscthr_lentry);
 	psc_waitq_init(&thr->pscthr_waitq);

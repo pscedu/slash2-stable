@@ -39,57 +39,63 @@
 #include "pfl/random.h"
 #include "pfl/str.h"
 
-#define			FAULTS_MAX 128
+struct psc_dynarray	pfl_faults;
+psc_spinlock_t		pfl_faults_lock = SPINLOCK_INIT;
 
-struct psc_fault	psc_faults[FAULTS_MAX];
-int			psc_nfaults;
-
-struct psc_fault *
-psc_fault_lookup(const char *name)
+int
+_pfl_fault_cmp(const void *a, const void *b)
 {
-	struct psc_fault *pflt;
-	int i;
+	const struct pfl_fault *x = a, *y = b;
 
-	for (i = 0, pflt = psc_faults; i < psc_nfaults; i++, pflt++)
-		if (strcmp(pflt->pflt_name, name) == 0)
-			return (pflt);
-	return (NULL);
+	return (strcmp(x->pflt_name, y->pflt_name));
 }
 
-/**
- * psc_fault_register -
- */
-struct psc_fault *
-_psc_fault_register(const char *name)
+void
+pfl_fault_destroy(int pos)
 {
-	struct psc_fault *pflt;
-	char *p;
+	struct pfl_fault *flt;
+	int locked;
 
-	pflt = psc_fault_lookup(name);
-	psc_assert(pflt == NULL);
+	locked = reqlock(&pfl_faults_lock);
+	flt = psc_dynarray_getpos(&pfl_faults, pos);
+	psc_dynarray_splice(&pfl_faults, pos, 1, NULL, 0);
+	ureqlock(&pfl_faults_lock, locked);
 
-	p = strstr(name, "_FAULT_");
-	psc_assert(p);
+	PSCFREE(flt);
+}
 
-	psc_assert(strlen(p + 7) < sizeof(pflt->pflt_name));
+struct pfl_fault *
+_pfl_fault_get(const char *name, int populate)
+{
+	struct pfl_fault *flt;
+	int pos, locked;
 
-	/* expected format: <daemon>_FAULT_<fault-name> */
-	pflt = &psc_faults[psc_nfaults++];
-	INIT_SPINLOCK(&pflt->pflt_lock);
-	strlcpy(pflt->pflt_name, p + 7, sizeof(pflt->pflt_name));
-	for (p = pflt->pflt_name; *p; p++)
-		*p = tolower(*p);
-	pflt->pflt_chance = 100;
-	pflt->pflt_count = -1;
-	return (pflt);
+	locked = reqlock(&pfl_faults_lock);
+	pos = psc_dynarray_bsearch(&pfl_faults, name, _pfl_fault_cmp);
+	if (pos < psc_dynarray_len(&pfl_faults)) {
+		flt = psc_dynarray_getpos(&pfl_faults, pos);
+		if (strcmp(flt->pflt_name, name) == 0)
+			goto out;
+	}
+	if (!populate)
+		goto out;
+	flt = PSCALLOC(sizeof(*flt));
+	INIT_SPINLOCK(&flt->pflt_lock);
+	strlcpy(flt->pflt_name, name, sizeof(flt->pflt_name));
+	flt->pflt_chance = 100;
+	flt->pflt_count = -1;
+	psc_dynarray_splice(&pfl_faults, pos, 0, &flt, 1);
+ out:
+	ureqlock(&pfl_faults_lock, locked);
+	return (flt);
 }
 
 int
-_psc_fault_here(struct psc_fault *pflt, int *rcp, int rc)
+_pfl_fault_here(struct pfl_fault *pflt, int *rcp, int rc)
 {
 	long delay = 0, faulted = 0;
 
-	psc_fault_lock(pflt);
+	pfl_fault_lock(pflt);
 	if (pflt->pflt_unhits < pflt->pflt_begin)
 		goto out;
 	if (pflt->pflt_count >= 0 &&
@@ -107,15 +113,15 @@ _psc_fault_here(struct psc_fault *pflt, int *rcp, int rc)
 	if (0)
  out:
 		pflt->pflt_unhits++;
-	psc_fault_unlock(pflt);
+	pfl_fault_unlock(pflt);
 
 	if (delay)
 		usleep(delay);
 	return (faulted);
 }
 
-/**
- * psc_ctlrep_getfault - Send a response to a "getfault" inquiry.
+/*
+ * Send a response to a "getfault" inquiry.
  * @fd: client socket descriptor.
  * @mh: already filled-in control message header.
  */
@@ -123,20 +129,21 @@ int
 psc_ctlrep_getfault(int fd, struct psc_ctlmsghdr *mh, void *msg)
 {
 	struct psc_ctlmsg_fault *pcflt = msg;
-	struct psc_fault *pflt;
-	char name[PSC_FAULT_NAME_MAX];
+	struct pfl_fault *pflt;
+	char name[PFL_FAULT_NAME_MAX];
 	int i, rc, found, all;
 
 	rc = 1;
 	found = 0;
 	strlcpy(name, pcflt->pcflt_name, sizeof(name));
 	all = (name[0] == '\0');
-	for (i = 0, pflt = psc_faults; i < psc_nfaults; i++, pflt++)
+	spinlock(&pfl_faults_lock);
+	DYNARRAY_FOREACH(pflt, i, &pfl_faults)
 		if (all || strncmp(pflt->pflt_name, name,
 		    strlen(name)) == 0) {
 			found = 1;
 
-			psc_fault_lock(pflt);
+			pfl_fault_lock(pflt);
 			strlcpy(pcflt->pcflt_name, pflt->pflt_name,
 			    sizeof(pcflt->pcflt_name));
 			pcflt->pcflt_flags = pflt->pflt_flags;
@@ -147,7 +154,7 @@ psc_ctlrep_getfault(int fd, struct psc_ctlmsghdr *mh, void *msg)
 			pcflt->pcflt_begin = pflt->pflt_begin;
 			pcflt->pcflt_retval = pflt->pflt_retval;
 			pcflt->pcflt_chance = pflt->pflt_chance;
-			psc_fault_unlock(pflt);
+			pfl_fault_unlock(pflt);
 
 			rc = psc_ctlmsg_sendv(fd, mh, pcflt);
 			if (!rc)
@@ -166,7 +173,7 @@ psc_ctlrep_getfault(int fd, struct psc_ctlmsghdr *mh, void *msg)
 int
 psc_ctlparam_faults_handle(int fd, struct psc_ctlmsghdr *mh,
     struct psc_ctlmsg_param *pcp, char **levels, int nlevels,
-    struct psc_fault *pflt, int val)
+    struct pfl_fault *pflt, int val)
 {
 	char nbuf[20];
 	int set;
@@ -320,7 +327,7 @@ psc_ctlparam_faults(int fd, struct psc_ctlmsghdr *mh,
     struct psc_ctlmsg_param *pcp, char **levels, int nlevels,
     __unusedx struct psc_ctlparam_node *pcn)
 {
-	struct psc_fault *pflt;
+	struct pfl_fault *pflt;
 	int i, rc, set;
 	char *endp;
 	long val;
@@ -366,24 +373,23 @@ psc_ctlparam_faults(int fd, struct psc_ctlmsghdr *mh,
 	}
 
 	if (nlevels == 1) {
-		for (i = 0, pflt = psc_faults; i < psc_nfaults;
-		    i++, pflt++) {
-			psc_fault_lock(pflt);
+		DYNARRAY_FOREACH(pflt, i, &pfl_faults) {
+			pfl_fault_lock(pflt);
 			rc = psc_ctlparam_faults_handle(fd, mh, pcp,
 			    levels, nlevels, pflt, val);
-			psc_fault_unlock(pflt);
+			pfl_fault_unlock(pflt);
 			if (!rc)
 				break;
 		}
 	} else {
-		pflt = psc_fault_lookup(levels[1]);
+		pflt = pfl_fault_peek(levels[1]);
 		if (pflt == NULL)
 			return (psc_ctlsenderr(fd, mh,
 			    "invalid fault point: %s", levels[1]));
-		psc_fault_lock(pflt);
+		pfl_fault_lock(pflt);
 		rc = psc_ctlparam_faults_handle(fd, mh, pcp, levels,
 		    nlevels, pflt, val);
-		psc_fault_unlock(pflt);
+		pfl_fault_unlock(pflt);
 	}
 	return (rc);
 }

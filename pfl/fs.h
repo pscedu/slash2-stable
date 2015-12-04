@@ -32,12 +32,19 @@
 #include <stdint.h>
 #include <unistd.h>
 
+#include "pfl/dynarray.h"
+#include "pfl/list.h"
+
 struct iovec;
 struct stat;
 struct statvfs;
 
+struct psc_thread;
+
 struct pscfs_args;
 struct pscfs_req;
+
+struct pflfs_filehandle;
 
 struct psc_ctlmsghdr;
 struct psc_ctlmsg_param;
@@ -73,6 +80,14 @@ struct pscfs {
 	struct pfl_opstat	*pf_opst_write_reply;
 	struct pfl_opstat	*pf_opst_write_err;
 	void			*pf_private;
+	struct psc_dynarray	 pf_opts;
+
+	void			 (*pf_filehandle_freeze)(struct pflfs_filehandle *);
+	void			 (*pf_filehandle_thaw)(struct pflfs_filehandle *);
+
+	void			*(*pf_thr_init)(struct psc_thread *);
+	void			 (*pf_thr_destroy)(void *);
+
 	const char		*pf_name;
 
 	void	(*pf_handle_access)(struct pscfs_req *, pscfs_inum_t, int);
@@ -108,14 +123,26 @@ struct pscfs {
 };
 
 #define PSCFS_INIT							\
-	NULL,								\
-	NULL,								\
-	NULL,								\
-	NULL,								\
-	NULL
+/* opst_read_err */	NULL,						\
+/* opst_read_reply */	NULL,						\
+/* opst_write_reply */	NULL,						\
+/* opst_write_err */	NULL,						\
+/* private */		NULL,						\
+/* opts */		DYNARRAY_INIT,					\
+/* filehandle_freeze */	NULL,						\
+/* filehandle_thaw */	NULL,						\
+/* thr_init */		NULL,						\
+/* thr_destroy */	NULL
 
 struct pscfs_clientctx {
 	pid_t		pfcc_pid;
+};
+
+struct pfl_fsthr {
+	struct psc_listentry		 pft_lentry;
+	struct pscfs_req		*pft_pfr;
+	char				 pft_uprog[128];
+	void				*pft_private;	// XXX make per-module
 };
 
 void	pscfs_addarg(struct pscfs_args *, const char *);
@@ -130,7 +157,7 @@ mode_t	pscfs_getumask(struct pscfs_req *);
 int	pscfs_setdebug(int);
 int	pscfs_getdebug(int *);
 
-int	pscfs_main(int);
+int	pscfs_main(int, const char *);
 void	pscfs_mount(const char *, struct pscfs_args *);
 
 void	pscfs_reply_access(struct pscfs_req *, int);
@@ -196,13 +223,19 @@ struct pscfs *
 	pflfs_module_remove(int);
 
 void	pflfs_module_destroy(struct pscfs *);
-void	pflfs_module_init(struct pscfs *);
+void	pflfs_module_init(struct pscfs *, const char *);
 
 void	pflfs_modules_rdpin(void);
 void	pflfs_modules_rdunpin(void);
 void	pflfs_modules_wrpin(void);
 void	pflfs_modules_wrunpin(void);
 
+void 	_pflfs_module_init_threads(struct pscfs *);
+
+void	*pfl_fsthr_getpri(struct psc_thread *);
+void	 pfl_fsthr_setpri(struct psc_thread *, void *);
+
 extern struct psc_dynarray		pscfs_modules;
+extern struct psc_lockedlist		pflfs_filehandles;
 
 #endif /* _PFL_FS_H_ */
