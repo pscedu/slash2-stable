@@ -26,14 +26,6 @@
 #ifndef _MOUNT_WOKFS_H_
 #define _MOUNT_WOKFS_H_
 
-enum {
-	THRT_CTL,
-	THRT_CTLAC,
-	THRT_FS,
-	THRT_FSMGR,
-	THRT_OPSTIMER
-};
-
 struct wok_module {
 	char		*wm_path;
 	char		*wm_opts;

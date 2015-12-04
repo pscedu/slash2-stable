@@ -122,7 +122,7 @@ mod_load(const char *path, const char *opts, char *errbuf,
 	wm->wm_handle = h;
 	wm->wm_opts = pfl_strdup(opts);
 	wm->wm_module.pf_private = wm;
-	pflfs_module_init(&wm->wm_module);
+	pflfs_module_init(&wm->wm_module, opts);
 	rc = loadf(&wm->wm_module);
 	if (rc) {
 		wm->wm_module.pf_handle_destroy = NULL;
@@ -189,7 +189,7 @@ main(int argc, char *argv[])
 	if (argc != 1)
 		usage();
 
-	pscthr_init(THRT_FSMGR, NULL, NULL, 0, "fsmgrthr");
+	pscthr_init(PFL_THRT_FSMGR, NULL, NULL, 0, "fsmgrthr");
 
 	noncanon_mp = argv[0];
 	if (unmount_first)
@@ -204,10 +204,10 @@ main(int argc, char *argv[])
 
 	ctlthr_spawn();
 
-	pfl_opstimerthr_spawn(THRT_OPSTIMER, "opstimerthr");
+	pfl_opstimerthr_spawn(PFL_THRT_OPSTIMER, "opstimerthr");
 
 	pscfs_entry_timeout = 8.;
 	pscfs_attr_timeout = 8.;
 
-	exit(pscfs_main(0));
+	exit(pscfs_main(32, ""));
 }

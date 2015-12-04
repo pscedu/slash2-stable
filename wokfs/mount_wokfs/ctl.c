@@ -36,6 +36,7 @@
 #include "pfl/ctl.h"
 #include "pfl/ctlsvr.h"
 #include "pfl/fs.h"
+#include "pfl/fsmod.h"
 #include "pfl/net.h"
 #include "pfl/str.h"
 
@@ -143,6 +144,7 @@ wokctlcmd_reload(__unusedx int fd, __unusedx struct psc_ctlmsghdr *mh,
 {
 	char *path, *opts, errbuf[LINE_MAX];
 	struct wokctlmsg_modctl *wcmc = msg;
+	struct pflfs_filehandle *pfh;
 	struct pscfs_creds pcr;
 	struct wok_module *wm;
 	struct pscfs *m;
@@ -166,6 +168,11 @@ wokctlcmd_reload(__unusedx int fd, __unusedx struct psc_ctlmsghdr *mh,
 	}
 
 	m = psc_dynarray_getpos(&pscfs_modules, wcmc->wcmc_pos);
+
+	if (m->pf_filehandle_freeze)
+		PLL_FOREACH(pfh, &pflfs_filehandles)
+			m->pf_filehandle_freeze(pfh);
+
 	wm = m->pf_private;
 	path = pfl_strdup(wm->wm_path);
 	opts = pfl_strdup(wm->wm_opts);
@@ -177,11 +184,28 @@ wokctlcmd_reload(__unusedx int fd, __unusedx struct psc_ctlmsghdr *mh,
 	PSCFREE(path);
 	PSCFREE(opts);
 
-	pflfs_modules_wrunpin();
-
-	if (!wm)
+#if 0
+	if (wm == NULL) {
+		pflfs_modules_wrunpin();
 		return (psc_ctlsenderr(fd, mh, "reload %d: %s",
 		    wcmc->wcmc_pos, errbuf));
+
+	}
+#endif
+
+	psc_assert(wm);
+
+	m = &wm->wm_module;
+	psc_dynarray_setpos(&pscfs_modules, wcmc->wcmc_pos, m);
+
+	if (m->pf_thr_init)
+		_pflfs_module_init_threads(m);
+
+	if (m->pf_filehandle_thaw)
+		PLL_FOREACH(pfh, &pflfs_filehandles)
+			m->pf_filehandle_thaw(pfh);
+
+	pflfs_modules_wrunpin();
 
 	return (1);
 }
@@ -231,16 +255,11 @@ struct psc_ctlop ctlops[] = {
 	{ wokctlcmd_remove,		sizeof(struct wokctlmsg_modctl) },
 };
 
-psc_ctl_thrget_t psc_ctl_thrgets[] = {
-};
-
-PFLCTL_SVR_DEFS;
-
 void
 ctlthr_main(__unusedx struct psc_thread *thr)
 {
 	psc_ctlthr_main(ctlsockfn, ctlops, nitems(ctlops),
-	    THRT_CTLAC);
+	    PFL_THRT_CTLAC);
 }
 
 void
@@ -267,7 +286,7 @@ ctlthr_spawn(void)
 //	psc_ctlparam_register_simple("sys.version",
 //	    ctlparam_version_get, NULL);
 
-	thr = pscthr_init(THRT_CTL, ctlthr_main, NULL,
+	thr = pscthr_init(PFL_THRT_CTL, ctlthr_main, NULL,
 	    sizeof(struct psc_ctlthr), "ctlthr0");
 	pscthr_setready(thr);
 }
