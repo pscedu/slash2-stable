@@ -78,6 +78,7 @@ struct pfl_odt_entftr {
 /* odtf_flags values */
 #define ODT_FTRF_INUSE		(1 << 0)
 
+/* pfl_odtops_mmap and slm_odtops */
 struct pfl_odt_ops {
 	void	(*odtop_close)(struct pfl_odt *);
 	void	(*odtop_create)(struct pfl_odt *, const char *, int);
