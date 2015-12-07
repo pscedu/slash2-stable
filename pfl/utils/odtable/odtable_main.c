@@ -48,7 +48,7 @@ int			 create_table;
 int			 num_free;
 int			 num_puts;
 int			 overwrite;
-int			 show;
+int			 dump;
 struct psc_dynarray	 rcpts = DYNARRAY_INIT;
 size_t			 item_size = ODT_ITEM_SIZE;
 size_t			 nitems = ODT_ITEM_COUNT;
@@ -76,7 +76,7 @@ visit(__unusedx void *data, struct pfl_odt_receipt *r,
 		num_free--;
 	}
 
-	if (!show)
+	if (!dump)
 		return;
 
 	if (!shown_hdr) {
@@ -164,8 +164,8 @@ main(int argc, char *argv[])
 		case 'o':
 			overwrite = 1;
 			break;
-		case 's':
-			show = 1;
+		case 'd':
+			dump = 1;
 			break;
 		case 'v':
 			verbose = 1;
