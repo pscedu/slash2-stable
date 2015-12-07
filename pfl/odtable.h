@@ -51,9 +51,9 @@
 struct pfl_odt;
 struct pfl_odt_receipt;
 
-#define	ODT_ELEM_SIZE		128
-#define	ODT_ELEM_START		0x1000
-#define ODT_ELEM_NUMBER		1024*128
+#define	ODT_ITEM_SIZE		128
+#define	ODT_ITEM_START		0x1000
+#define ODT_ITEM_COUNT		1024*128
 
 /* on-disk, a CRC immediately follows this structure */
 struct pfl_odt_hdr {

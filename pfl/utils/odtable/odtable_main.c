@@ -50,8 +50,8 @@ int			 num_puts;
 int			 overwrite;
 int			 show;
 struct psc_dynarray	 rcpts = DYNARRAY_INIT;
-size_t			 elem_size = ODT_ELEM_SIZE;
-size_t			 nelems = ODT_ELEM_NUMBER;
+size_t			 elem_size = ODT_ITEM_SIZE;
+size_t			 nelems = ODT_ITEM_COUNT;
 
 void
 visit(__unusedx void *data, struct pfl_odt_receipt *r,
@@ -190,7 +190,7 @@ main(int argc, char *argv[])
 
 	if (create_table) {
 		pfl_odt_create(fn, nelems, elem_size, overwrite,
-			ODT_ELEM_START, 0, tflg);
+			ODT_ITEM_START, 0, tflg);
 		if (verbose)
 			warnx("created od-table %s "
 			    "(elemsize=%zu, nelems=%zu)",
