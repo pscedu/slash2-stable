@@ -57,22 +57,22 @@ struct psc_lockedlist	 pfl_odtables =
  * to either the disk file or start of base memory-mapped address.
  */
 static __inline size_t
-pfl_odt_getitemoff(const struct pfl_odt *t, size_t elem)
+pfl_odt_getitemoff(const struct pfl_odt *t, size_t item)
 {
 	const struct pfl_odt_hdr *h;
 
 	h = t->odt_hdr;
-	psc_assert(elem < h->odth_nelems);
-	return (elem * h->odth_slotsz);
+	psc_assert(item < h->odth_nitems);
+	return (item * h->odth_slotsz);
 }
 
-#define GETADDR(t, elem)						\
-	PSC_AGP((t)->odt_base, pfl_odt_getitemoff((t), (elem)))
+#define GETADDR(t, item)						\
+	PSC_AGP((t)->odt_base, pfl_odt_getitemoff((t), (item)))
 
-#define MMAPSZ(t)	((t)->odt_hdr->odth_nelems * (t)->odt_hdr->odth_slotsz)
+#define MMAPSZ(t)	((t)->odt_hdr->odth_nitems * (t)->odt_hdr->odth_slotsz)
 
 void
-pfl_odt_mmap_sync(struct pfl_odt *t, size_t elem)
+pfl_odt_mmap_sync(struct pfl_odt *t, size_t item)
 {
 	int rc, flags;
 	size_t len;
@@ -81,11 +81,11 @@ pfl_odt_mmap_sync(struct pfl_odt *t, size_t elem)
 	flags = t->odt_hdr->odth_options & ODTBL_OPT_SYNC ?
 	    MS_SYNC : MS_ASYNC;
 
-	if (elem == (size_t)-1) {
+	if (item == (size_t)-1) {
 		p = t->odt_base;
 		len = MMAPSZ(t);
 	} else {
-		p = GETADDR(t, elem);
+		p = GETADDR(t, item);
 		len = t->odt_hdr->odth_slotsz;
 	}
 
@@ -95,12 +95,12 @@ pfl_odt_mmap_sync(struct pfl_odt *t, size_t elem)
 }
 
 void
-pfl_odt_mmap_mapslot(struct pfl_odt *t, size_t elem, void **pp,
+pfl_odt_mmap_mapslot(struct pfl_odt *t, size_t item, void **pp,
     struct pfl_odt_entftr **fp)
 {
 	void *p;
 
-	p = GETADDR(t, elem);
+	p = GETADDR(t, item);
 	if (pp)
 		*pp = p;
 	if (fp)
@@ -226,12 +226,12 @@ pfl_odt_allocslot(struct pfl_odt *t)
 		freelock(&t->odt_lock);
 		return (-1);
 	}
-	if (elem >= h->odth_nelems) {
-		h->odth_nelems = psc_vbitmap_getsize(t->odt_bitmap);
+	if (elem >= h->odth_nitems) {
+		h->odth_nitems = psc_vbitmap_getsize(t->odt_bitmap);
 		t->odt_ops.odtop_resize(t);
 		PFLOG_ODT(PLL_WARN, t,
 		    "odtable now has %u elements (used to be %zd)",
-		    h->odth_nelems, elem);
+		    h->odth_nitems, elem);
 		ODT_STAT_INCR(t, extend);
 	}
 	freelock(&t->odt_lock);
@@ -292,7 +292,7 @@ pfl_odt_getslot(struct pfl_odt *t, const struct pfl_odt_receipt *r,
 	void **p = (void **)pp;
 
 	h = t->odt_hdr;
-	psc_assert(r->odtr_elem <= h->odth_nelems - 1);
+	psc_assert(r->odtr_elem <= h->odth_nitems - 1);
 
 	pfl_odt_mapslot(t, r->odtr_elem, p, fp);
 
@@ -347,7 +347,7 @@ pfl_odt_freeitem(struct pfl_odt *t, struct pfl_odt_receipt *r)
 }
 
 void
-pfl_odt_create(const char *fn, size_t nelems, size_t objsz,
+pfl_odt_create(const char *fn, size_t nitems, size_t objsz,
     int overwrite, size_t startoff, size_t pad, int tflg)
 {
 	struct pfl_odt_entftr *f;
@@ -366,7 +366,7 @@ pfl_odt_create(const char *fn, size_t nelems, size_t objsz,
 
 	h = PSCALLOC(sizeof(*h));
 	memset(h, 0, sizeof(*h));
-	h->odth_nelems = nelems;
+	h->odth_nitems = nitems;
 	h->odth_objsz = objsz;
 	h->odth_slotsz = objsz + pad + sizeof(*f);
 	h->odth_options = tflg;
@@ -377,7 +377,7 @@ pfl_odt_create(const char *fn, size_t nelems, size_t objsz,
 
 	t->odt_ops.odtop_create(t, fn, overwrite);
 
-	for (r.odtr_elem = 0; r.odtr_elem < nelems; r.odtr_elem++) {
+	for (r.odtr_elem = 0; r.odtr_elem < nitems; r.odtr_elem++) {
 		pfl_odt_mapslot(t, r.odtr_elem, NULL, &f);
 		_pfl_odt_doput(t, &r, NULL, f, 0);
 		pfl_odt_freebuf(t, NULL, f);
@@ -417,7 +417,7 @@ pfl_odt_load(struct pfl_odt **tp, struct pfl_odt_ops *odtops, int oflg,
 	    sizeof(t->odt_hdr->odth_crc));
 	psc_assert(h->odth_crc == crc);
 
-	t->odt_bitmap = psc_vbitmap_newf(h->odth_nelems, PVBF_AUTO);
+	t->odt_bitmap = psc_vbitmap_newf(h->odth_nitems, PVBF_AUTO);
 	psc_assert(t->odt_bitmap);
 
 	PFLOG_ODT(PLL_DIAG, t, "loaded");
@@ -439,10 +439,10 @@ pfl_odt_check(struct pfl_odt *t,
 	h = t->odt_hdr;
 
 	psc_meter_init(&mtr, 0, "odt-%s", t->odt_name);
-	mtr.pm_max = h->odth_nelems;
+	mtr.pm_max = h->odth_nitems;
 
 #define i mtr.pm_cur
-	for (i = 0; i < h->odth_nelems; i++) {
+	for (i = 0; i < h->odth_nitems; i++) {
 		r.odtr_elem = i;
 		pfl_odt_getslot(t, &r, &p, &f);
 		r.odtr_crc = f->odtf_crc;
