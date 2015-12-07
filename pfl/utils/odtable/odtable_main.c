@@ -126,7 +126,7 @@ __dead void
 usage(void)
 {
 	fprintf(stderr,
-	    "usage: %s [-CcDosvZ] [-e item_size] [-F #frees] [-n #puts]\n"
+	    "usage: %s [-CcDosvZ] [-s item_size] [-F #frees] [-n #puts]\n"
 	    "\t[-X fmt] [-z table_size] file\n", progname);
 	exit(1);
 }
@@ -150,7 +150,7 @@ main(int argc, char *argv[])
 		case 'c':
 			tflg |= ODTBL_OPT_CRC;
 			break;
-		case 'e':
+		case 's':
 			item_size = atoi(optarg);
 			break;
 		case 'F':
