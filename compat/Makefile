@@ -4,6 +4,11 @@ SUBDIRS=$(wildcard */)
 
 all: $(patsubst %/,dir-%,${SUBDIRS})
 
+clean:
+	for dir in $(SUBDIRS); do \
+		$(MAKE) -C $$dir -f Makefile $@; \
+	done
+
 $(patsubst %/,dir-%,${SUBDIRS}):
 	@name='$(patsubst dir-%,%,$@)';					\
 	if ${MAKE} -sC $${name}; then					\
