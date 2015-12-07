@@ -51,7 +51,7 @@
 struct pfl_odt;
 struct pfl_odt_receipt;
 
-#define	ODT_ITEM_SIZE		128
+#define	ODT_ITEM_SIZE		128 - sizeof(struct pfl_odt_slotftr)
 #define	ODT_ITEM_START		0x1000
 #define ODT_ITEM_COUNT		1024*128
 
