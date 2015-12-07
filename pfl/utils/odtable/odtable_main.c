@@ -190,7 +190,7 @@ main(int argc, char *argv[])
 
 	if (create_table) {
 		pfl_odt_create(fn, nelems, elem_size, overwrite,
-		    0x1000, 0, tflg);
+			ODT_ELEM_START, 0, tflg);
 		if (verbose)
 			warnx("created od-table %s "
 			    "(elemsize=%zu, nelems=%zu)",
