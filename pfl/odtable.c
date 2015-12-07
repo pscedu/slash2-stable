@@ -189,7 +189,7 @@ _pfl_odt_doput(struct pfl_odt *t, struct pfl_odt_receipt *r,
 	h = t->odt_hdr;
 
 	f->odtf_flags = inuse ? ODT_FTRF_INUSE : 0;
-	f->odtf_slotno = r->odtr_elem;
+	f->odtf_slotno = r->odtr_item;
 	psc_crc64_init(&f->odtf_crc);
 	if (inuse)
 		psc_crc64_add(&f->odtf_crc, p, h->odth_objsz);
@@ -199,16 +199,16 @@ _pfl_odt_doput(struct pfl_odt *t, struct pfl_odt_receipt *r,
 	r->odtr_crc = f->odtf_crc;
 
 	if (t->odt_ops.odtop_write)
-		t->odt_ops.odtop_write(t, p, f, r->odtr_elem);
+		t->odt_ops.odtop_write(t, p, f, r->odtr_item);
 
 	pfl_opstat_add(t->odt_iostats.wr, h->odth_slotsz);
 
 	if (h->odth_options & ODTBL_OPT_SYNC)
-		t->odt_ops.odtop_sync(t, r->odtr_elem);
+		t->odt_ops.odtop_sync(t, r->odtr_item);
 
 	PFLOG_ODT(PLL_DIAG, t,
 	    "r=%p slot=%"PRId64" elemcrc=%"PSCPRIxCRC64" ",
-	    r, r->odtr_elem, f->odtf_crc);
+	    r, r->odtr_item, f->odtf_crc);
 
 	ODT_STAT_INCR(t, write);
 }
@@ -267,7 +267,7 @@ pfl_odt_putitemf(struct pfl_odt *t, size_t n, void *p, int inuse)
 
 	/* Setup and return the receipt. */
 	r = PSCALLOC(sizeof(*r));
-	r->odtr_elem = n;
+	r->odtr_item = n;
 
 	pfl_odt_mapslot(t, n, NULL, &f);
 	_pfl_odt_doput(t, r, p, f, inuse);
@@ -292,9 +292,9 @@ pfl_odt_getslot(struct pfl_odt *t, const struct pfl_odt_receipt *r,
 	void **p = (void **)pp;
 
 	h = t->odt_hdr;
-	psc_assert(r->odtr_elem <= h->odth_nitems - 1);
+	psc_assert(r->odtr_item <= h->odth_nitems - 1);
 
-	pfl_odt_mapslot(t, r->odtr_elem, p, fp);
+	pfl_odt_mapslot(t, r->odtr_item, p, fp);
 
 	if (t->odt_ops.odtop_read)
 		t->odt_ops.odtop_read(t, r, p ? *p : NULL,
@@ -311,12 +311,12 @@ pfl_odt_replaceitem(struct pfl_odt *t, struct pfl_odt_receipt *r,
 {
 	struct pfl_odt_entftr *f;
 
-	pfl_odt_mapslot(t, r->odtr_elem, NULL, &f);
+	pfl_odt_mapslot(t, r->odtr_item, NULL, &f);
 	_pfl_odt_doput(t, r, p, f, 1);
 	pfl_odt_freebuf(t, NULL, f);
 
 	PFLOG_ODT(PLL_DIAG, t, "rcpt=%p slot=%"PRId64,
-	    r, r->odtr_elem);
+	    r, r->odtr_item);
 
 	ODT_STAT_INCR(t, replace);
 }
@@ -330,16 +330,16 @@ pfl_odt_freeitem(struct pfl_odt *t, struct pfl_odt_receipt *r)
 {
 	struct pfl_odt_entftr *f;
 
-	pfl_odt_mapslot(t, r->odtr_elem, NULL, &f);
+	pfl_odt_mapslot(t, r->odtr_item, NULL, &f);
 	_pfl_odt_doput(t, r, NULL, f, 0);
 	pfl_odt_freebuf(t, NULL, f);
 
 	spinlock(&t->odt_lock);
-	psc_vbitmap_unset(t->odt_bitmap, r->odtr_elem);
+	psc_vbitmap_unset(t->odt_bitmap, r->odtr_item);
 	freelock(&t->odt_lock);
 
 	PFLOG_ODT(PLL_DIAG, t, "freeitem r=%p slot=%"PRId64,
-	    r, r->odtr_elem);
+	    r, r->odtr_item);
 
 	ODT_STAT_INCR(t, free);
 
@@ -377,8 +377,8 @@ pfl_odt_create(const char *fn, size_t nitems, size_t objsz,
 
 	t->odt_ops.odtop_create(t, fn, overwrite);
 
-	for (r.odtr_elem = 0; r.odtr_elem < nitems; r.odtr_elem++) {
-		pfl_odt_mapslot(t, r.odtr_elem, NULL, &f);
+	for (r.odtr_item = 0; r.odtr_item < nitems; r.odtr_item++) {
+		pfl_odt_mapslot(t, r.odtr_item, NULL, &f);
 		_pfl_odt_doput(t, &r, NULL, f, 0);
 		pfl_odt_freebuf(t, NULL, f);
 	}
@@ -443,7 +443,7 @@ pfl_odt_check(struct pfl_odt *t,
 
 #define i mtr.pm_cur
 	for (i = 0; i < h->odth_nitems; i++) {
-		r.odtr_elem = i;
+		r.odtr_item = i;
 		pfl_odt_getslot(t, &r, &p, &f);
 		r.odtr_crc = f->odtf_crc;
 

@@ -89,7 +89,7 @@ visit(__unusedx void *data, struct pfl_odt_receipt *r,
 		shown_hdr = 1;
 	}
 
-	printf("%7zd %16"PRIx64" ", r->odtr_elem, r->odtr_crc);
+	printf("%7zd %16"PRIx64" ", r->odtr_item, r->odtr_crc);
 
 	if (fmt) {
 		(void)FMTSTR(buf, sizeof(buf), fmt,
