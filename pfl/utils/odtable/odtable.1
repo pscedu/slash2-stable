@@ -30,10 +30,11 @@
 .Sh SYNOPSIS
 .Nm odtable
 .Bk -words
-.Op Fl Ccod
-.Op Fl s Ar item_size
+.Op Fl CcdosvZ
 .Op Fl F Ar #frees
 .Op Fl n Ar #puts
+.Op Fl s Ar item_size
+.Op Fl X Ar fmt
 .Op Fl z Ar table_size
 .Ek
 .Bk -words
@@ -42,7 +43,8 @@
 .Sh DESCRIPTION
 The
 .Nm
-utility creates and manipulates an on-disk data storage table (i.e., odtable).
+utility creates and manipulates an on-disk data storage table
+.Pq i.e. Dq odtable .
 The default behavior loads, scans, and displays summary information
 about the specified odtable.
 .Pp
