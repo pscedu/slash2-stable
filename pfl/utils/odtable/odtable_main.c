@@ -142,7 +142,7 @@ main(int argc, char *argv[])
 
 	pfl_init();
 	progname = argv[0];
-	while ((c = getopt(argc, argv, "CcDe:F:n:osvX:Zz:")) != -1)
+	while ((c = getopt(argc, argv, "CcDe:F:n:odsvX:Zz:")) != -1)
 		switch (c) {
 		case 'C':
 			create_table = 1;
