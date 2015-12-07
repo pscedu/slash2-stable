@@ -207,7 +207,7 @@ _pfl_odt_doput(struct pfl_odt *t, struct pfl_odt_receipt *r,
 		t->odt_ops.odtop_sync(t, r->odtr_item);
 
 	PFLOG_ODT(PLL_DIAG, t,
-	    "r=%p slot=%"PRId64" elemcrc=%"PSCPRIxCRC64" ",
+	    "r=%p slot=%"PRId64" item crc=%"PSCPRIxCRC64" ",
 	    r, r->odtr_item, f->odtf_crc);
 
 	ODT_STAT_INCR(t, write);
