@@ -96,7 +96,7 @@ pfl_odt_mmap_sync(struct pfl_odt *t, size_t item)
 
 void
 pfl_odt_mmap_mapslot(struct pfl_odt *t, size_t item, void **pp,
-    struct pfl_odt_entftr **fp)
+    struct pfl_odt_slotftr **fp)
 {
 	void *p;
 
@@ -182,7 +182,7 @@ struct pfl_odt_ops pfl_odtops_mmap = {
 
 void
 _pfl_odt_doput(struct pfl_odt *t, struct pfl_odt_receipt *r,
-    const void *p, struct pfl_odt_entftr *f, int inuse)
+    const void *p, struct pfl_odt_slotftr *f, int inuse)
 {
 	struct pfl_odt_hdr *h;
 
@@ -240,7 +240,7 @@ pfl_odt_allocslot(struct pfl_odt *t)
 
 void
 pfl_odt_mapslot(struct pfl_odt *t, size_t n, void *pp,
-    struct pfl_odt_entftr **fp)
+    struct pfl_odt_slotftr **fp)
 {
 	struct pfl_odt_hdr *h;
 	void **p = (void **)pp;
@@ -263,7 +263,7 @@ struct pfl_odt_receipt *
 pfl_odt_putitemf(struct pfl_odt *t, size_t n, void *p, int inuse)
 {
 	struct pfl_odt_receipt *r;
-	struct pfl_odt_entftr *f;
+	struct pfl_odt_slotftr *f;
 
 	/* Setup and return the receipt. */
 	r = PSCALLOC(sizeof(*r));
@@ -276,7 +276,7 @@ pfl_odt_putitemf(struct pfl_odt *t, size_t n, void *p, int inuse)
 }
 
 void
-pfl_odt_freebuf(struct pfl_odt *t, void *p, struct pfl_odt_entftr *f)
+pfl_odt_freebuf(struct pfl_odt *t, void *p, struct pfl_odt_slotftr *f)
 {
 	if (t->odt_ops.odtop_mapslot == NULL) {
 		PSCFREE(p);
@@ -286,7 +286,7 @@ pfl_odt_freebuf(struct pfl_odt *t, void *p, struct pfl_odt_entftr *f)
 
 void
 pfl_odt_getslot(struct pfl_odt *t, const struct pfl_odt_receipt *r,
-    void *pp, struct pfl_odt_entftr **fp)
+    void *pp, struct pfl_odt_slotftr **fp)
 {
 	struct pfl_odt_hdr *h;
 	void **p = (void **)pp;
@@ -309,7 +309,7 @@ void
 pfl_odt_replaceitem(struct pfl_odt *t, struct pfl_odt_receipt *r,
     void *p)
 {
-	struct pfl_odt_entftr *f;
+	struct pfl_odt_slotftr *f;
 
 	pfl_odt_mapslot(t, r->odtr_item, NULL, &f);
 	_pfl_odt_doput(t, r, p, f, 1);
@@ -328,7 +328,7 @@ pfl_odt_replaceitem(struct pfl_odt *t, struct pfl_odt_receipt *r,
 void
 pfl_odt_freeitem(struct pfl_odt *t, struct pfl_odt_receipt *r)
 {
-	struct pfl_odt_entftr *f;
+	struct pfl_odt_slotftr *f;
 
 	pfl_odt_mapslot(t, r->odtr_item, NULL, &f);
 	_pfl_odt_doput(t, r, NULL, f, 0);
@@ -350,7 +350,7 @@ void
 pfl_odt_create(const char *fn, size_t nitems, size_t itemsz,
     int overwrite, size_t startoff, size_t pad, int tflg)
 {
-	struct pfl_odt_entftr *f;
+	struct pfl_odt_slotftr *f;
 	struct pfl_odt_receipt r;
 	struct pfl_odt_hdr *h;
 	struct pfl_odt *t;
@@ -430,7 +430,7 @@ pfl_odt_check(struct pfl_odt *t,
     void (*cbf)(void *, struct pfl_odt_receipt *, void *), void *arg)
 {
 	struct pfl_odt_receipt r = { 0, 0 };
-	struct pfl_odt_entftr *f;
+	struct pfl_odt_slotftr *f;
 	struct pfl_odt_hdr *h;
 	struct psc_meter mtr;
 	uint64_t crc;

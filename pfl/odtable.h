@@ -58,8 +58,8 @@ struct pfl_odt_receipt;
 /* on-disk, a CRC immediately follows this structure */
 struct pfl_odt_hdr {
 	uint32_t		 odth_nitems;
-	uint32_t		 odth_itemsz;	/* does not include pfl_odt_entftr */
-	uint32_t		 odth_slotsz;	/* does include pfl_odt_entftr */
+	uint32_t		 odth_itemsz;	/* does not include pfl_odt_slotftr */
+	uint32_t		 odth_slotsz;	/* does include pfl_odt_slotftr */
 	uint32_t		 odth_options;	/* see ODTBL_OPT_* below */
 	off_t			 odth_start;
 	uint64_t		 odth_crc;
@@ -69,8 +69,8 @@ struct pfl_odt_hdr {
 #define ODTBL_OPT_CRC		(1 << 0)
 #define ODTBL_OPT_SYNC		(1 << 1)
 
-/* entry footer */
-struct pfl_odt_entftr {
+/* slot footer */
+struct pfl_odt_slotftr {
 	uint32_t		 odtf_flags;
 	uint32_t		 odtf_slotno;
 	uint64_t		 odtf_crc;
@@ -89,15 +89,15 @@ struct pfl_odt_ops {
 	 * Currently only used by the odtable (not by slashd).
 	 */
 	void	(*odtop_mapslot)(struct pfl_odt *, size_t, void **,
-		    struct pfl_odt_entftr **);
+		    struct pfl_odt_slotftr **);
 	void	(*odtop_open)(struct pfl_odt *, const char *, int);
 	void	(*odtop_read)(struct pfl_odt *,
 		    const struct pfl_odt_receipt *, void *,
-		    struct pfl_odt_entftr *);
+		    struct pfl_odt_slotftr *);
 	void	(*odtop_resize)(struct pfl_odt *);
 	void	(*odtop_sync)(struct pfl_odt *, size_t);
 	void	(*odtop_write)(struct pfl_odt *, const void *,
-		    struct pfl_odt_entftr *, size_t);
+		    struct pfl_odt_slotftr *, size_t);
 };
 
 struct pfl_odt_stats {
@@ -167,13 +167,13 @@ void	 pfl_odt_check(struct pfl_odt *,
 void	 pfl_odt_create(const char *, size_t, size_t, int, size_t,
 	    size_t, int);
 void	 pfl_odt_mapslot(struct pfl_odt *, size_t, void *,
-	    struct pfl_odt_entftr **);
+	    struct pfl_odt_slotftr **);
 void	 pfl_odt_freeitem(struct pfl_odt *, struct pfl_odt_receipt *);
 void	 pfl_odt_freebuf(struct pfl_odt *, void *,
-	    struct pfl_odt_entftr *);
+	    struct pfl_odt_slotftr *);
 void	 pfl_odt_getslot(struct pfl_odt *,
 	    const struct pfl_odt_receipt *, void *,
-	    struct pfl_odt_entftr **);
+	    struct pfl_odt_slotftr **);
 void	 pfl_odt_load(struct pfl_odt **, struct pfl_odt_ops *, int,
 	    const char *, const char *, ...);
 struct pfl_odt_receipt *
