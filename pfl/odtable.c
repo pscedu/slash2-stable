@@ -192,7 +192,7 @@ _pfl_odt_doput(struct pfl_odt *t, struct pfl_odt_receipt *r,
 	f->odtf_slotno = r->odtr_item;
 	psc_crc64_init(&f->odtf_crc);
 	if (inuse)
-		psc_crc64_add(&f->odtf_crc, p, h->odth_objsz);
+		psc_crc64_add(&f->odtf_crc, p, h->odth_itemsz);
 	psc_crc64_add(&f->odtf_crc, f, sizeof(*f) -
 	    sizeof(f->odtf_crc));
 	psc_crc64_fini(&f->odtf_crc);
@@ -250,7 +250,7 @@ pfl_odt_mapslot(struct pfl_odt *t, size_t n, void *pp,
 		t->odt_ops.odtop_mapslot(t, n, p, fp);
 	else {
 		if (p)
-			*p = PSCALLOC(h->odth_objsz);
+			*p = PSCALLOC(h->odth_itemsz);
 		if (fp)
 			*fp = PSCALLOC(sizeof(**fp));
 	}
@@ -347,7 +347,7 @@ pfl_odt_freeitem(struct pfl_odt *t, struct pfl_odt_receipt *r)
 }
 
 void
-pfl_odt_create(const char *fn, size_t nitems, size_t objsz,
+pfl_odt_create(const char *fn, size_t nitems, size_t itemsz,
     int overwrite, size_t startoff, size_t pad, int tflg)
 {
 	struct pfl_odt_entftr *f;
@@ -367,8 +367,8 @@ pfl_odt_create(const char *fn, size_t nitems, size_t objsz,
 	h = PSCALLOC(sizeof(*h));
 	memset(h, 0, sizeof(*h));
 	h->odth_nitems = nitems;
-	h->odth_objsz = objsz;
-	h->odth_slotsz = objsz + pad + sizeof(*f);
+	h->odth_itemsz = itemsz;
+	h->odth_slotsz = itemsz + pad + sizeof(*f);
 	h->odth_options = tflg;
 	h->odth_start = startoff;
 	t->odt_hdr = h;
@@ -453,7 +453,7 @@ pfl_odt_check(struct pfl_odt *t,
 		if (h->odth_options & ODTBL_OPT_CRC) {
 			psc_crc64_init(&crc);
 			if (f->odtf_flags & ODT_FTRF_INUSE)
-				psc_crc64_add(&crc, p, h->odth_objsz);
+				psc_crc64_add(&crc, p, h->odth_itemsz);
 			psc_crc64_add(&crc, f, sizeof(*f) -
 			    sizeof(f->odtf_crc));
 			psc_crc64_fini(&crc);

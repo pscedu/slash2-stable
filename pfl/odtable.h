@@ -58,7 +58,7 @@ struct pfl_odt_receipt;
 /* on-disk, a CRC immediately follows this structure */
 struct pfl_odt_hdr {
 	uint32_t		 odth_nitems;
-	uint32_t		 odth_objsz;	/* does not include pfl_odt_entftr */
+	uint32_t		 odth_itemsz;	/* does not include pfl_odt_entftr */
 	uint32_t		 odth_slotsz;	/* does include pfl_odt_entftr */
 	uint32_t		 odth_options;	/* see ODTBL_OPT_* below */
 	off_t			 odth_start;
@@ -147,7 +147,7 @@ struct pfl_odt {
 	psclog((lvl), "odt@%p[%s] nitems=%u objsz=%u slotsz=%u "	\
 	    "opt=%#x :: " fmt,						\
 	    (t), (t)->odt_name, (t)->odt_hdr->odth_nitems,		\
-	    (t)->odt_hdr->odth_objsz, (t)->odt_hdr->odth_slotsz,	\
+	    (t)->odt_hdr->odth_itemsz, (t)->odt_hdr->odth_slotsz,	\
 	    (t)->odt_hdr->odth_options, ## __VA_ARGS__)
 
 struct pfl_odt_receipt {
