@@ -53,7 +53,7 @@ struct pfl_odt_receipt;
 
 #define ODT_ITEM_SIZE		(128 - sizeof(struct pfl_odt_slotftr))
 #define ODT_ITEM_START		0x1000
-#define ODT_ITEM_COUNT		1024*128
+#define ODT_ITEM_COUNT		(1024 * 128)
 
 /* on-disk, a CRC immediately follows this structure */
 struct pfl_odt_hdr {
