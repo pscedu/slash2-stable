@@ -1982,7 +1982,7 @@ psc_ctlrep_getodtable(int fd, struct psc_ctlmsghdr *mh, void *m)
 
 			snprintf(pco->pco_name, sizeof(pco->pco_name),
 			    "%s", odt->odt_name);
-			pco->pco_elemsz = odt->odt_hdr->odth_objsz;
+			pco->pco_elemsz = odt->odt_hdr->odth_itemsz;
 			pco->pco_opts = odt->odt_hdr->odth_options;
 			psc_vbitmap_getstats(odt->odt_bitmap,
 			    &pco->pco_inuse, &pco->pco_total);

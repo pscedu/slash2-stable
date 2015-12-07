@@ -50,8 +50,8 @@ int			 num_puts;
 int			 overwrite;
 int			 show;
 struct psc_dynarray	 rcpts = DYNARRAY_INIT;
-size_t			 elem_size = ODT_ELEM_SIZE;
-size_t			 nelems = ODT_ELEM_NUMBER;
+size_t			 item_size = ODT_ITEM_SIZE;
+size_t			 nitems = ODT_ITEM_COUNT;
 
 void
 visit(__unusedx void *data, struct pfl_odt_receipt *r,
@@ -83,13 +83,13 @@ visit(__unusedx void *data, struct pfl_odt_receipt *r,
 		struct pfl_odt_hdr *h;
 
 		h = (*t)->odt_hdr;
-		printf("nelems\t%u\n", h->odth_nelems);
-		printf("elemsz\t%u\n", h->odth_objsz);
+		printf("nitems\t%u\n", h->odth_nitems);
+		printf("itemsz\t%u\n", h->odth_itemsz);
 		printf("%7s %16s data\n", "slot", "crc");
 		shown_hdr = 1;
 	}
 
-	printf("%7zd %16"PRIx64" ", r->odtr_elem, r->odtr_crc);
+	printf("%7zd %16"PRIx64" ", r->odtr_item, r->odtr_crc);
 
 	if (fmt) {
 		(void)FMTSTR(buf, sizeof(buf), fmt,
@@ -117,7 +117,7 @@ visit(__unusedx void *data, struct pfl_odt_receipt *r,
 	return;
 
  skip:
-	for (i = 0, p = data; i < elem_size; p++, i++)
+	for (i = 0, p = data; i < item_size; p++, i++)
 		printf("%02x", *p);
 	printf("\n");
 }
@@ -126,7 +126,7 @@ __dead void
 usage(void)
 {
 	fprintf(stderr,
-	    "usage: %s [-CcDosvZ] [-e elem_size] [-F #frees] [-n #puts]\n"
+	    "usage: %s [-CcDosvZ] [-e item_size] [-F #frees] [-n #puts]\n"
 	    "\t[-X fmt] [-z table_size] file\n", progname);
 	exit(1);
 }
@@ -151,7 +151,7 @@ main(int argc, char *argv[])
 			tflg |= ODTBL_OPT_CRC;
 			break;
 		case 'e':
-			elem_size = atoi(optarg);
+			item_size = atoi(optarg);
 			break;
 		case 'F':
 			num_free = atoi(optarg);
@@ -177,7 +177,7 @@ main(int argc, char *argv[])
 			tflg |= ODTBL_OPT_SYNC;
 			break;
 		case 'z':
-			nelems = atoi(optarg);
+			nitems = atoi(optarg);
 			break;
 		default:
 			usage();
@@ -189,12 +189,12 @@ main(int argc, char *argv[])
 	fn = argv[0];
 
 	if (create_table) {
-		pfl_odt_create(fn, nelems, elem_size, overwrite,
-		    0x1000, 0, tflg);
+		pfl_odt_create(fn, nitems, item_size, overwrite,
+			ODT_ITEM_START, 0, tflg);
 		if (verbose)
 			warnx("created od-table %s "
-			    "(elemsize=%zu, nelems=%zu)",
-			    fn, elem_size, nelems);
+			    "(elemsize=%zu, nitems=%zu)",
+			    fn, item_size, nitems);
 		exit(0);
 	}
 
@@ -206,7 +206,7 @@ main(int argc, char *argv[])
 
 		elem = pfl_odt_allocslot(t);
 		pfl_odt_mapitem(t, elem, &p);
-		snprintf(p, elem_size, "... put_number=%d ...", i);
+		snprintf(p, item_size, "... put_number=%d ...", i);
 		pfl_odt_putitem(t, elem, p);
 		pfl_odt_freebuf(t, p, NULL);
 	}

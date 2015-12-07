@@ -51,14 +51,15 @@
 struct pfl_odt;
 struct pfl_odt_receipt;
 
-#define	ODT_ELEM_SIZE		128
-#define ODT_ELEM_NUMBER		1024*128
+#define	ODT_ITEM_SIZE		128
+#define	ODT_ITEM_START		0x1000
+#define ODT_ITEM_COUNT		1024*128
 
 /* on-disk, a CRC immediately follows this structure */
 struct pfl_odt_hdr {
-	uint32_t		 odth_nelems;
-	uint32_t		 odth_objsz;	/* does not include odt_entftr */
-	uint32_t		 odth_slotsz;	/* does include odt_entftr */
+	uint32_t		 odth_nitems;
+	uint32_t		 odth_itemsz;	/* does not include pfl_odt_entftr */
+	uint32_t		 odth_slotsz;	/* does include pfl_odt_entftr */
 	uint32_t		 odth_options;	/* see ODTBL_OPT_* below */
 	off_t			 odth_start;
 	uint64_t		 odth_crc;
@@ -143,14 +144,14 @@ struct pfl_odt {
 	} while (0)
 
 #define PFLOG_ODT(lvl, t, fmt, ...)					\
-	psclog((lvl), "odt@%p[%s] nelems=%u objsz=%u slotsz=%u "	\
+	psclog((lvl), "odt@%p[%s] nitems=%u objsz=%u slotsz=%u "	\
 	    "opt=%#x :: " fmt,						\
-	    (t), (t)->odt_name, (t)->odt_hdr->odth_nelems,		\
-	    (t)->odt_hdr->odth_objsz, (t)->odt_hdr->odth_slotsz,	\
+	    (t), (t)->odt_name, (t)->odt_hdr->odth_nitems,		\
+	    (t)->odt_hdr->odth_itemsz, (t)->odt_hdr->odth_slotsz,	\
 	    (t)->odt_hdr->odth_options, ## __VA_ARGS__)
 
 struct pfl_odt_receipt {
-	uint64_t		 odtr_elem;
+	uint64_t		 odtr_item;
 	uint64_t		 odtr_crc;
 };
 
@@ -194,7 +195,7 @@ extern struct psc_lockedlist pfl_odtables;
 	_PFL_RVSTART {							\
 		int _rc = 0;						\
 									\
-		if ((f)->odtf_slotno != (r)->odtr_elem)			\
+		if ((f)->odtf_slotno != (r)->odtr_item)			\
 			_rc = PFLERR_NOKEY;				\
 									\
 		else if ((f)->odtf_crc != (r)->odtr_crc)		\
@@ -204,7 +205,7 @@ extern struct psc_lockedlist pfl_odtables;
 			PFLOG_ODT(PLL_ERROR, t,				\
 			    "slot=%zd (%u) has error %d; "		\
 			    "ftr_crc %"PRIx64" rcpt_crc %"PRIx64,	\
-			    (r)->odtr_elem, (f)->odtf_slotno, _rc,	\
+			    (r)->odtr_item, (f)->odtf_slotno, _rc,	\
 			    (f)->odtf_crc, (r)->odtr_crc);		\
 		_rc;							\
 	} _PFL_RVEND
