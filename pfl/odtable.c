@@ -217,25 +217,25 @@ size_t
 pfl_odt_allocslot(struct pfl_odt *t)
 {
 	struct pfl_odt_hdr *h;
-	size_t elem;
+	size_t item; 
 
 	h = t->odt_hdr;
 	spinlock(&t->odt_lock);
-	if (psc_vbitmap_next(t->odt_bitmap, &elem) <= 0) {
+	if (psc_vbitmap_next(t->odt_bitmap, &item) <= 0) {
 		ODT_STAT_INCR(t, full);
 		freelock(&t->odt_lock);
 		return (-1);
 	}
-	if (elem >= h->odth_nitems) {
+	if (item >= h->odth_nitems) {
 		h->odth_nitems = psc_vbitmap_getsize(t->odt_bitmap);
 		t->odt_ops.odtop_resize(t);
 		PFLOG_ODT(PLL_WARN, t,
-		    "odtable now has %u elements (used to be %zd)",
-		    h->odth_nitems, elem);
+		    "odtable now has %u items (used to be %zd)",
+		    h->odth_nitems, item);
 		ODT_STAT_INCR(t, extend);
 	}
 	freelock(&t->odt_lock);
-	return (elem);
+	return (item);
 }
 
 void
