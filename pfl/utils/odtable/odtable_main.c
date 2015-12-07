@@ -41,8 +41,6 @@
 #include "pfl/odtable.h"
 #include "pfl/pfl.h"
 
-const char		*progname;
-
 const char		*fmt;
 int			 create_table;
 int			 num_free;
@@ -125,9 +123,11 @@ visit(__unusedx void *data, struct pfl_odt_receipt *r,
 __dead void
 usage(void)
 {
+	extern const char *__progname;
+
 	fprintf(stderr,
-	    "usage: %s [-CcDosvZ] [-s item_size] [-F #frees] [-n #puts]\n"
-	    "\t[-X fmt] [-z table_size] file\n", progname);
+	    "usage: %s [-CcdosvZ] [-F #frees] [-n #puts]\n"
+	    "\t[-s item_size] [-X fmt] [-z table_size] file\n", __progname);
 	exit(1);
 }
 
@@ -141,8 +141,7 @@ main(int argc, char *argv[])
 	char *p, *fn;
 
 	pfl_init();
-	progname = argv[0];
-	while ((c = getopt(argc, argv, "CcDe:F:n:odsvX:Zz:")) != -1)
+	while ((c = getopt(argc, argv, "CcdF:n:osvX:Zz:")) != -1)
 		switch (c) {
 		case 'C':
 			create_table = 1;
@@ -150,8 +149,8 @@ main(int argc, char *argv[])
 		case 'c':
 			tflg |= ODTBL_OPT_CRC;
 			break;
-		case 's':
-			item_size = atoi(optarg);
+		case 'd':
+			dump = 1;
 			break;
 		case 'F':
 			num_free = atoi(optarg);
@@ -164,8 +163,8 @@ main(int argc, char *argv[])
 		case 'o':
 			overwrite = 1;
 			break;
-		case 'd':
-			dump = 1;
+		case 's':
+			item_size = atoi(optarg);
 			break;
 		case 'v':
 			verbose = 1;
@@ -190,7 +189,7 @@ main(int argc, char *argv[])
 
 	if (create_table) {
 		pfl_odt_create(fn, nitems, item_size, overwrite,
-			ODT_ITEM_START, 0, tflg);
+		    ODT_ITEM_START, 0, tflg);
 		if (verbose)
 			warnx("created od-table %s "
 			    "(elemsize=%zu, nitems=%zu)",
