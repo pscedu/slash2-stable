@@ -84,7 +84,7 @@ visit(__unusedx void *data, struct pfl_odt_receipt *r,
 
 		h = (*t)->odt_hdr;
 		printf("nitems\t%u\n", h->odth_nitems);
-		printf("itemsz\t%u\n", h->odth_objsz);
+		printf("itemsz\t%u\n", h->odth_itemsz);
 		printf("%7s %16s data\n", "slot", "crc");
 		shown_hdr = 1;
 	}
