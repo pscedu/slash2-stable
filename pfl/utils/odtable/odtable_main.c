@@ -57,7 +57,7 @@ visit(__unusedx void *data, struct pfl_odt_receipt *r,
 {
 	char buf[LINE_MAX], *p = data;
 	struct pfl_odt **t = arg;
-	static int shown_hdr;
+	static int dump_hdr;
 	union {
 		int	*d;
 		int64_t	*q;
@@ -77,14 +77,14 @@ visit(__unusedx void *data, struct pfl_odt_receipt *r,
 	if (!dump)
 		return;
 
-	if (!shown_hdr) {
+	if (!dump_hdr) {
 		struct pfl_odt_hdr *h;
 
 		h = (*t)->odt_hdr;
 		printf("nitems\t%u\n", h->odth_nitems);
 		printf("itemsz\t%u\n", h->odth_itemsz);
 		printf("%7s %16s data\n", "slot", "crc");
-		shown_hdr = 1;
+		dump_hdr = 1;
 	}
 
 	printf("%7zd %16"PRIx64" ", r->odtr_item, r->odtr_crc);
