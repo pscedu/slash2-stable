@@ -1204,6 +1204,17 @@ psc_ctlparam_pool_handle(int fd, struct psc_ctlmsghdr *mh,
 				return (0);
 		}
 	}
+	if (nlevels < 3 || strcmp(levels[2], "grows") == 0) {
+		if (set)
+			return (psc_ctlsenderr(fd, mh,
+			    "pool.%s.grows: read-only", levels[1]));
+		levels[2] = "grows";
+		snprintf(nbuf, sizeof(nbuf), "%zd",
+		    psc_atomic64_read(&m->ppm_opst_grows->opst_lifetime));
+		if (!psc_ctlmsg_param_send(fd, mh, pcp,
+		    PCTHRNAME_EVERYONE, levels, 3, nbuf))
+			return (0);
+	}
 	if (nlevels == 3 && strcmp(levels[2], "reap") == 0) {
 		if (set) {
 			if (m->ppm_reclaimcb == NULL)
