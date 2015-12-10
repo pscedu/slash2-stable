@@ -145,6 +145,8 @@ ifneq ($(filter pfl,${MODULES}),)
   endif
 endif
 
+# Dokan is the obsolete windows user mode file system library
+ 
 ifneq ($(filter pscfs,${MODULES}),)
   MODULES+=	pscfs-hdrs
 
