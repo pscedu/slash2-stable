@@ -40,7 +40,7 @@ struct pfl_mutex;
 struct psc_waitq {
 	struct pfl_mutex	wq_mut;
 	pthread_cond_t		wq_cond;
-	psc_atomic32_t		wq_nwaiters;
+	int			wq_nwaiters;
 	int			wq_flags;
 };
 
@@ -52,7 +52,7 @@ struct psc_waitq {
 #else /* HAVE_LIBPTHREAD */
 
 struct psc_waitq {
-	psc_atomic32_t		wq_nwaiters;
+	int			wq_nwaiters;
 };
 
 # define PSC_WAITQ_INIT	{ ATOMIC_INIT(0) }
@@ -95,11 +95,11 @@ struct psc_waitq {
 
 #define psc_waitq_waitabs(wq, lk, ts)	_psc_waitq_waitabs((wq), PFL_WAITQWF_SPIN, (lk), (ts))
 
-/**
- * psc_waitq_nwaiters - Determine number of threads waiting on a waitq.
+/*
+ * Determine number of threads waiting on a waitq.
  * @wq: wait queue.
  */
-#define psc_waitq_nwaiters(wq)		psc_atomic32_read(&(wq)->wq_nwaiters)
+#define psc_waitq_nwaiters(wq)		(wq)->wq_nwaiters
 
 #define psc_waitq_init(wq)		_psc_waitq_init((wq), 0)
 #define psc_waitq_init_nolog(wq)	_psc_waitq_init((wq), PWQF_NOLOG)
