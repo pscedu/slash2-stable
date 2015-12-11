@@ -27,7 +27,6 @@
 
 #include <time.h>
 
-#include "pfl/atomic.h"
 #include "pfl/lock.h"
 #include "pfl/pthrutil.h"
 
@@ -47,7 +46,7 @@ struct psc_waitq {
 #define PWQF_NOLOG		(1 << 0)
 
 # define PSC_WAITQ_INIT	{ PSC_MUTEX_INIT, PTHREAD_COND_INITIALIZER,	\
-			  ATOMIC_INIT(0), 0 }
+			  0, 0 }
 
 #else /* HAVE_LIBPTHREAD */
 
@@ -55,7 +54,7 @@ struct psc_waitq {
 	int			wq_nwaiters;
 };
 
-# define PSC_WAITQ_INIT	{ ATOMIC_INIT(0) }
+# define PSC_WAITQ_INIT	{ 0 }
 
 #endif
 
