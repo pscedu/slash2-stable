@@ -152,8 +152,6 @@ pfl
 - mutex is broken on freebsd -- psc_mutex_haslock() implemented with
   pthread_mutex_timedlock() returns ETIMEDOUT instead of EDEADLK
 - differentiate pll abbreviation for log level vs. locked list
-- remove regen from make and just use the .h files as deps on
-  typedump.c
 - parse thr(-.*)? for connthr-foo not matching 'thr$' for thread names in ctl parsing
 - list head vs list entry vs hash entry etc - magic numbers should differ
 - tests/rwlock is broken on mymichelle with DEBUG=0

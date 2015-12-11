@@ -5,13 +5,15 @@ include ${ROOTDIR}/Makefile.path
 
 PROG=		typedump
 SRCS+=		typedump.c
+INCLUDES+=	-I${OBJDIR}
 
 # pthread is specified here to use correct struct sizes
 MODULES+=	lnet-hdrs pthread pfl
 
 include ${PFLMK}
 
-regen-hook:
-	${GENTYPES} -h '../../include/*/*.h' -h '../../../pfl/*.h' $(	\
-	    ) -x '../../../pfl/{fsmod,refmgr,queue,tree}.h' $(		\
-	    ) typedump.c
+typedump.c: ${OBJDIR}/typedump.h
+
+${OBJDIR}/typedump.h: ${PFL_BASE}/*.h
+	${GENTYPES} -h '../../*.h' $(				\
+	    ) -x '../../{fsmod,refmgr,queue,tree}.h' > $@

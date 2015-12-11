@@ -26,7 +26,7 @@ use warnings;
 use PFL::Getoptv;
 
 sub usage {
-	die "usage: $0 [-g pat] [-h headers] [-x exclude] file\n";
+	die "usage: $0 [-g pat] [-h headers] [-x exclude]\n";
 }
 
 sub in_array {
@@ -62,7 +62,7 @@ sub filter {
 
 my %opts;
 getoptv("g:h:x:", \%opts) or usage();
-usage() unless @ARGV == 1;
+usage() if @ARGV;
 
 my $outfn = $ARGV[0];
 
@@ -102,30 +102,22 @@ foreach my $hdr (@hdrs) {
 	close HDR;
 }
 
-open OUT, "<", $outfn;
-my $lines = eval {
-	local $/;
-	return <OUT>;
-};
-close OUT;
+print <<EOF;
+@{[map { qq{#include "$_"\n} } @hdrs]}
 
-my $includes = join '', map { s!(?:include|\.\.)/!!g; qq{#include "$_"\n} } @hdrs;
-$lines =~ s!(?<=/\* start includes \*/\n).*?(?=/\* end includes \*/)!$includes!s;
+void
+typedump(void)
+{
+	@{[@types ? q{printf("structures:\n");} : ""]}
+@{[map { "\tPRTYPE($_);\n" } uniq sort @types]}
+	@{[@types ? q{printf("\n");} : ""]}
 
-my $types = join '', map { "\tPRTYPE($_);\n" } uniq sort @types;
-$types = "\tprintf(\"structures:\\n\");\n" . $types if $types;
-$lines =~ s!(?<=/\* start structs \*/\n).*?(?=/\* end structs \*/)!$types\t!s;
+	@{[@vals ? q{printf("values:\n");} : ""]}
+@{[map { s/^\s+|\s+$//g; "\tPRVAL($_);\n" } uniq sort @vals]}
+	@{[@vals ? q{printf("\n");} : ""]}
 
-my $vals = join '', map { s/^\s+|\s+$//g; "\tPRVAL($_);\n" } uniq sort @vals;
-$vals = "\tprintf(\"\\nvalues:\\n\");\n" . $vals if $vals;
-$lines =~ s!(?<=/\* start constants \*/\n).*?(?=/\* end constants \*/)!$vals\t!s;
-
-my $enums = join '', map { "\tPRVAL($_);\n" } uniq sort @enums;
-$enums = "\tprintf(\"\\nenums:\\n\");\n" . $enums if $enums;
-$lines =~ s!(?<=/\* start enums \*/\n).*?(?=/\* end enums \*/)!$enums\t!s;
-
-open OUT, ">", $outfn or die "$outfn: $!\n";
-print OUT $lines;
-close OUT;
-
-exit 0;
+	@{[@enums ? q{printf("enums:\n");} : ""]}
+@{[map { "\tPRVAL($_);\n" } uniq sort @enums]}
+	@{[@enums ? q{printf("\n");} : ""]}
+}
+EOF

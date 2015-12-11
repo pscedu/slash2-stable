@@ -145,8 +145,6 @@ ifneq ($(filter pfl,${MODULES}),)
   endif
 endif
 
-# Dokan is the obsolete windows user mode file system library
- 
 ifneq ($(filter pscfs,${MODULES}),)
   MODULES+=	pscfs-hdrs
 
@@ -553,13 +551,8 @@ test:
 hdrclean:
 	${HDRCLEAN} */*.[clyh]
 
-# empty but overrideable
-regen-hook:
-
-regen: recurse-regen regen-hook
-
 build:
-	${MAKE} clean && ${MAKE} regen && ${MAKE} all
+	${MAKE} clean && ${MAKE} all
 
 copyright:
 	find . -type f \( $(						\
