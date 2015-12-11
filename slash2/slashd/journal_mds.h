@@ -41,6 +41,7 @@ struct srt_stat;
 #define SLJ_MDS_JNENTS			(128 * 1024)
 #define SLJ_MDS_READSZ			1024
 #define SLJ_MDS_NCRCS			MAX_BMAP_INODE_PAIRS
+#define SLJ_MDS_MAX_JNENTS		((1UL << 32) - 1)
 
 /**
  * slmds_jent_bmap_crc - Log for bmap CRC updates from IONs.
@@ -133,7 +134,7 @@ struct slmds_jent_bmapseq {
  */
 struct slmds_jent_assign_rep {
 	uint32_t			sjar_flags;
-	 int32_t			sjar_elem;
+	 int32_t			sjar_item;
 	struct slmds_jent_ino_repls	sjar_ino;
 	struct slmds_jent_bmap_repls	sjar_rep;
 	struct slmds_jent_bmap_assign	sjar_bmap;

@@ -62,11 +62,11 @@ usage(void)
 /*
  * Initialize an on-disk journal.
  * @fn: file path to store journal.
- * @nents: number of entries journal may contain.
+ * @nents: number of entries journal may contain if non-zero.
  * @entsz: size of a journal entry.
- * Returns 0 on success, errno on error.
+ * Returns the number of entries created.
  */
-void
+uint32_t
 sl_journal_format(const char *fn, uint32_t nents, uint32_t entsz,
     uint32_t rs, uint64_t uuid, int block_dev)
 {
@@ -74,14 +74,13 @@ sl_journal_format(const char *fn, uint32_t nents, uint32_t entsz,
 	struct psc_journal pj;
 	struct stat stb;
 	unsigned char *jbuf;
-	uint32_t i, j, slot;
-	int rc, fd;
+	uint32_t i, slot, tmpnents;
+	int fd;
 	ssize_t nb;
 	size_t numblocks;
 
 	memset(&pj, 0, sizeof(struct psc_journal));
 
-	rc = 0;
 	fd = open(fn, O_WRONLY | O_CREAT | O_TRUNC, 0600);
 	if (fd == -1)
 		psc_fatal("%s", fn);
@@ -96,14 +95,25 @@ sl_journal_format(const char *fn, uint32_t nents, uint32_t entsz,
 	if (nents == 0 && !block_dev)
 		nents = SLJ_MDS_JNENTS;
 
-	if (nents == 0 && block_dev) {
+	if (block_dev) {
 		if (ioctl(fd, BLKGETSIZE, &numblocks))
 			errx(1, "ioctl fails on: %s", fn);
 
 		/* show progress, it is going to be a while */
 		verbose = 1;
-		nents = numblocks - stb.st_blksize/SLJ_MDS_ENTSIZE - 16;
-		nents = (nents / rs) * rs;
+
+		/* deal with large disks */
+		tmpnents = MIN(numblocks, SLJ_MDS_MAX_JNENTS);
+
+		/* leave room on both ends */
+		tmpnents = tmpnents - stb.st_blksize/SLJ_MDS_ENTSIZE - 16;
+
+		/* efficiency */
+		tmpnents = (tmpnents / rs) * rs;
+		if (!nents)
+			nents = tmpnents;
+		else
+			nents = (nents > tmpnents) ? tmpnents : nents;
 	}
 
 	if (nents % rs)
@@ -151,7 +161,7 @@ sl_journal_format(const char *fn, uint32_t nents, uint32_t entsz,
 		psc_crc64_fini(&pje->pje_chksum);
 	}
 
-	j = 0;
+	i = 0;
 	/* XXX use an option to write only one entry in fast create mode */
 	for (slot = 0; slot < pj.pj_hdr->pjh_nents; slot += rs) {
 		nb = pwrite(pj.pj_fd, jbuf, PJ_PJESZ(&pj) * rs,
@@ -163,19 +173,19 @@ sl_journal_format(const char *fn, uint32_t nents, uint32_t entsz,
 			printf(".");
 			fflush(stdout);
 			fsync(pj.pj_fd);
-			if (++j == 80) {
+			if (++i == 80) {
 				printf("\n");
-				j = 0;
+				i = 0;
 			}
 		}
 	}
-	if (verbose && j)
+	if (verbose && i)
 		printf("\n");
 	if (close(fd) == -1)
 		psc_fatal("failed to close journal");
 	psc_free(jbuf, PAF_PAGEALIGN, PJ_PJESZ(&pj) * rs);
-	psclog_info("journal %s formatted: %d slots, %d readsize, error=%d",
-	    fn, nents, rs, rc);
+
+	return (nents);
 }
 
 void
@@ -216,7 +226,7 @@ sl_journal_dump_entry(uint32_t slot, struct psc_journal_enthdr *pje)
 		break;
 	case MDS_LOG_BMAP_ASSIGN:
 		if (u.logentry->sjar_flags & SLJ_ASSIGN_REP_FREE)
-			printf("bia item=%d", u.logentry->sjar_elem);
+			printf("bia item=%d", u.logentry->sjar_item);
 		else {
 			printf("fid=%016"PRIx64" bia flags=%x",
 			    u.logentry->sjar_bmap.sjba_fid,
@@ -454,7 +464,7 @@ int
 main(int argc, char *argv[])
 {
 	int block_dev = 0;
-	ssize_t nents = 0;
+	ssize_t newnents, nents = 0;
 	char *endp, c, fn[PATH_MAX];
 	uint64_t uuid = 0;
 	long l;
@@ -516,9 +526,9 @@ main(int argc, char *argv[])
 	if (format) {
 		if (!uuid)
 			psc_fatalx("no fsuuid specified");
-		sl_journal_format(fn, nents, SLJ_MDS_ENTSIZE,
+		newnents = sl_journal_format(fn, nents, SLJ_MDS_ENTSIZE,
 		    SLJ_MDS_READSZ, uuid, block_dev);
-		if (verbose || !nents)
+		if (verbose || nents != newnents)
 			warnx("created log file %s with %zu %d-byte entries "
 			      "(uuid=%"PRIx64")",
 			      fn, nents, SLJ_MDS_ENTSIZE, uuid);
