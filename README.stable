@@ -1,3 +1,14 @@
+12/11/2015
+----------
+
+Command I use to compare the stable tree and the sum of development trees:
+
+zhihui@yuzu: ~$ diff -dru -x .git projects-yuzu-2015-12-11/ projects-stable-yuzu-2015-12-11/
+Only in projects-stable-yuzu-2015-12-11/: KNOWN-ISSUES.txt
+Only in projects-stable-yuzu-2015-12-11/: README.stable
+Only in projects-stable-yuzu-2015-12-11/: slash2-merge.sh
+Only in projects-stable-yuzu-2015-12-11/: slash2-update.sh
+
 12/07/2015
 ----------
 
