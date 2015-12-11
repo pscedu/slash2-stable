@@ -1204,6 +1204,17 @@ psc_ctlparam_pool_handle(int fd, struct psc_ctlmsghdr *mh,
 				return (0);
 		}
 	}
+	if (nlevels < 3 || strcmp(levels[2], "grows") == 0) {
+		if (set)
+			return (psc_ctlsenderr(fd, mh,
+			    "pool.%s.grows: read-only", levels[1]));
+		levels[2] = "grows";
+		snprintf(nbuf, sizeof(nbuf), "%zd",
+		    psc_atomic64_read(&m->ppm_opst_grows->opst_lifetime));
+		if (!psc_ctlmsg_param_send(fd, mh, pcp,
+		    PCTHRNAME_EVERYONE, levels, 3, nbuf))
+			return (0);
+	}
 	if (nlevels == 3 && strcmp(levels[2], "reap") == 0) {
 		if (set) {
 			if (m->ppm_reclaimcb == NULL)
@@ -1982,7 +1993,7 @@ psc_ctlrep_getodtable(int fd, struct psc_ctlmsghdr *mh, void *m)
 
 			snprintf(pco->pco_name, sizeof(pco->pco_name),
 			    "%s", odt->odt_name);
-			pco->pco_elemsz = odt->odt_hdr->odth_objsz;
+			pco->pco_elemsz = odt->odt_hdr->odth_itemsz;
 			pco->pco_opts = odt->odt_hdr->odth_options;
 			psc_vbitmap_getstats(odt->odt_bitmap,
 			    &pco->pco_inuse, &pco->pco_total);

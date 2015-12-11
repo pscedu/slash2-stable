@@ -76,15 +76,25 @@ pscrpc_nbreapthr_main(struct psc_thread *thr)
 	while (pscthr_run(thr)) {
 		spinlock(&set->set_lock);
 		cntr = set->set_compl.pc_counter;
-		if (pscrpc_set_checkone(set))
+		if (pscrpc_set_checkone(set)) {
+			/* We processed a piece of work. */
 			freelock(&set->set_lock);
-		else if (cntr == set->set_compl.pc_counter) {
+		} else if (cntr == set->set_compl.pc_counter) {
 			if (set->set_dead)
 				break;
+			/*
+			 * No work to do: wait around for some to show
+			 * up.
+			 */
 			psc_compl_waitrel_s(&set->set_compl,
 			    &set->set_lock, 1);
-		} else
+		} else {
+			/*
+			 * There wasn't work to do but there is now:
+			 * retry.
+			 */
 			freelock(&set->set_lock);
+		}
 	}
 	reqlock(&set->set_lock);
 	if (--set->set_refcnt) {

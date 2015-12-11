@@ -229,10 +229,10 @@ main(int argc, char *argv[])
 	PRTYPE(struct pfl_logpoint);
 	PRTYPE(struct pfl_mutex);
 	PRTYPE(struct pfl_odt);
-	PRTYPE(struct pfl_odt_entftr);
 	PRTYPE(struct pfl_odt_hdr);
 	PRTYPE(struct pfl_odt_ops);
 	PRTYPE(struct pfl_odt_receipt);
+	PRTYPE(struct pfl_odt_slotftr);
 	PRTYPE(struct pfl_odt_stats);
 	PRTYPE(struct pfl_opstat);
 	PRTYPE(struct pfl_rwlock);
