@@ -69,7 +69,6 @@ psc_waitq_destroy(struct psc_waitq *q)
 {
 	int rc;
 
-	psc_mutex_lock(&q->wq_mut);
 	psc_assert(q->wq_nwaiters == 0);
 
 	psc_mutex_destroy(&q->wq_mut);
