@@ -38,8 +38,8 @@
 #define RBUFSZ		4096
 
 /*
- * Get a byte from our random data buffer and refill our buffer if
- * needed.
+ * Get some data random data.  An internal buffer is used and
+ * continually refilled until the request has been satisfied.
  */
 void
 pfl_random_getbytes(void *p, size_t len)
@@ -98,8 +98,8 @@ psc_random64(void)
 }
 
 /*
- * Get a uniformly distributed random 32-bit number from /dev/urandom.
- * @max: bound.
+ * Get a uniformly distributed random 32-bit number between [0,@max).
+ * @max: one beyond the upper bound.
  */
 uint32_t
 psc_random32u(uint32_t max)
