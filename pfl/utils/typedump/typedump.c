@@ -26,10 +26,9 @@
 #include <sys/param.h>
 
 #include <err.h>
+#include <inttypes.h>
 #include <stdio.h>
 #include <unistd.h>
-
-#include "lnet/socklnd.h"
 
 void
 pr(const char *name, uint64_t value)
@@ -52,6 +51,8 @@ pr(const char *name, uint64_t value)
 #define PRVAL(val)	pr(#val, (unsigned long)(val))
 
 #include "typedump.h"
+
+#include "lnet/socklnd.h"
 
 __dead void
 usage(void)
