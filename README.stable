@@ -1,3 +1,9 @@
+12/12/2015
+----------
+
+Merge development git trees. Fix some minor journal issues and a MDS crash.  Now MDS can
+create a default bmap on-disk table if it does not exist.
+  
 12/11/2015
 ----------
 
@@ -12,7 +18,7 @@ Only in projects-stable-yuzu-2015-12-11/: slash2-update.sh
 12/07/2015
 ----------
 
-Merge developement git trees. The big feature included in this merge is continuous 
+Merge development git trees. The big feature included in this merge is continuous 
 development.
 
 11/09/2015
