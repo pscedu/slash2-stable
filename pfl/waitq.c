@@ -53,8 +53,6 @@ _psc_waitq_init(struct psc_waitq *q, int flags)
 	int rc;
 
 	memset(q, 0, sizeof(*q));
-	psc_atomic32_set(&q->wq_nwaiters, 0);
-
 	_psc_mutex_init(&q->wq_mut, flags & PWQF_NOLOG ?
 	    PMTXF_NOLOG : 0);
 	rc = pthread_cond_init(&q->wq_cond, NULL);
@@ -71,7 +69,7 @@ psc_waitq_destroy(struct psc_waitq *q)
 {
 	int rc;
 
-	psc_assert(psc_atomic32_read(&q->wq_nwaiters) == 0);
+	psc_assert(q->wq_nwaiters == 0);
 
 	psc_mutex_destroy(&q->wq_mut);
 	rc = pthread_cond_destroy(&q->wq_cond);
@@ -99,7 +97,7 @@ _psc_waitq_waitabs(struct psc_waitq *q, int flags, void *p,
 	int rc;
 
 	psc_mutex_lock(&q->wq_mut);
-	psc_atomic32_inc(&q->wq_nwaiters);
+	q->wq_nwaiters++;
 
 	if (p) {
 		if (flags & PFL_WAITQWF_SPIN)
@@ -124,12 +122,8 @@ _psc_waitq_waitabs(struct psc_waitq *q, int flags, void *p,
 			    strerror(rc));
 	}
 
+	q->wq_nwaiters--;
 	psc_mutex_unlock(&q->wq_mut);
-	/*
-	 * BZ#91: decrease waiters after releasing the lock to guarantee
-	 * wq_mut remains intact.
-	 */
-	psc_atomic32_dec(&q->wq_nwaiters);
 
 	return (rc);
 }
@@ -158,7 +152,7 @@ void
 psc_waitq_wakeone(struct psc_waitq *q)
 {
 	psc_mutex_lock(&q->wq_mut);
-	if (psc_atomic32_read(&q->wq_nwaiters)) {
+	if (q->wq_nwaiters) {
 		int rc;
 
 		rc = pthread_cond_signal(&q->wq_cond);
@@ -177,7 +171,7 @@ void
 psc_waitq_wakeall(struct psc_waitq *q)
 {
 	psc_mutex_lock(&q->wq_mut);
-	if (psc_atomic32_read(&q->wq_nwaiters)) {
+	if (q->wq_nwaiters) {
 		int rc;
 
 		rc = pthread_cond_broadcast(&q->wq_cond);
@@ -194,7 +188,6 @@ void
 psc_waitq_init(struct psc_waitq *q)
 {
 	memset(q, 0, sizeof(*q));
-	psc_atomic32_set(&q->wq_nwaiters, 0);
 }
 
 int

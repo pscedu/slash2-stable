@@ -551,13 +551,8 @@ test:
 hdrclean:
 	${HDRCLEAN} */*.[clyh]
 
-# empty but overrideable
-regen-hook:
-
-regen: recurse-regen regen-hook
-
 build:
-	${MAKE} clean && ${MAKE} regen && ${MAKE} all
+	${MAKE} clean && ${MAKE} all
 
 copyright:
 	find . -type f \( $(						\
