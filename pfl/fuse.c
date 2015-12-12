@@ -1242,8 +1242,8 @@ pscfs_fuse_handle_removexattr(fuse_req_t req, fuse_ino_t ino,
 		} *r0p = (void *)(pfr)->pfr_fuse_req;			\
 		uint64_t u0 = r0p->uniqid;				\
 									\
-		psclog_getdata()->pld_uprog = NULL;			\
 		fuse_reply_##fun((pfr)->pfr_fuse_req, ## __VA_ARGS__);	\
+		psclog_getdata()->pld_uprog = NULL;			\
 		PFL_GETTIMESPEC(&t0);					\
 		timespecsub(&t0, &(pfr)->pfr_start, &d);		\
 		t0.tv_sec = 0;						\
