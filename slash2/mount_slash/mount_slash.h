@@ -225,6 +225,7 @@ struct resprof_cli_info {
 	struct timespec			 rpci_sfb_time;
 	struct psc_waitq		 rpci_waitq;
 	int				 rpci_flags;
+	int				 rpci_infl_rpcs;
 };
 
 #define RPCIF_AVOID			(1 << 0)	/* IOS self-advertised degradation */
@@ -246,7 +247,6 @@ res2rpci(struct sl_resource *res)
 struct resm_cli_info {
 	struct srm_bmap_release_req	 rmci_bmaprls;
 	struct psc_listcache		 rmci_async_reqs;
-	psc_atomic32_t			 rmci_infl_rpcs;
 };
 
 static __inline struct resm_cli_info *
@@ -342,10 +342,7 @@ void	  bmap_flush_resched(struct bmpc_ioreq *, int);
 /* bmap flush modes (bmap_flushq_wake) */
 #define BMAPFLSH_RPCWAIT	(1 << 0)
 #define BMAPFLSH_EXPIRE		(1 << 1)
-#define BMAPFLSH_TIMEOA		(1 << 2)
-#define BMAPFLSH_TRUNCATE	(1 << 3)
-#define BMAPFLSH_RPCDONE	(1 << 4)
-#define BMAPFLSH_REAP		(1 << 5)
+#define BMAPFLSH_TIMEOADD	(1 << 2)
 
 extern const char		*msl_ctlsockfn;
 extern sl_ios_id_t		 msl_mds;

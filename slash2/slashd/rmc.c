@@ -1061,7 +1061,6 @@ int
 slm_rmc_handle_setattr(struct pscrpc_request *rq)
 {
 	int to_set, tadj = 0, unbump = 0;
-	struct slashrpc_cservice *csvc;
 	struct fidc_membh *f = NULL;
 	struct srm_setattr_req *mq;
 	struct srm_setattr_rep *mp;
@@ -1117,7 +1116,9 @@ slm_rmc_handle_setattr(struct pscrpc_request *rq)
 		} else if (mq->attr.sst_size < fcmh_2_fsz(f)) {
 
 			OPSTAT_INCR("truncate-shrink");
+#if 1
 			PFL_GOTOERR(out, mp->rc = -PFLERR_NOTSUP);
+#endif
 
 			/* partial truncate */
 			if (f->fcmh_flags & FCMH_MDS_IN_PTRUNC)
@@ -1155,12 +1156,6 @@ slm_rmc_handle_setattr(struct pscrpc_request *rq)
 
 	if (tadj & PSCFS_SETATTRF_DATASIZE) {
 		f->fcmh_flags |= FCMH_MDS_IN_PTRUNC;
-
-		csvc = slm_getclcsvc(rq->rq_export);
-		if (csvc)
-			psc_dynarray_add(&fcmh_2_fmi(f)->
-			    fmi_ptrunc_clients, csvc);
-
 		slm_setattr_core(f, &mq->attr, to_set | tadj);
 		mp->rc = -SLERR_BMAP_PTRUNC_STARTED;
 	}

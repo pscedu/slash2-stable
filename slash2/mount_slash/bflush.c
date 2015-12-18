@@ -121,7 +121,7 @@ bmap_free_all_locked(struct fidc_membh *f)
 		PFL_GETTIMESPEC(&bci->bci_etime);
 		BMAP_ULOCK(b);
 	}
-	bmap_flushq_wake(BMAPFLSH_TRUNCATE);
+	psc_waitq_wakeall(&msl_bmaptimeoutq.plc_wq_empty);
 }
 
 /*
@@ -235,11 +235,11 @@ _bmap_flushq_wake(const struct pfl_callerinfo *pci, int reason)
 
 	if (slc_bflush_tmout_flags & BMAPFLSH_RPCWAIT) {
 		wake = 1;
-		psc_waitq_wakeall(&slc_bflush_waitq);
+		if (reason == BMAPFLSH_EXPIRE)
+			psc_waitq_wakeall(&slc_bflush_waitq);
+		else
+			psc_waitq_wakeone(&slc_bflush_waitq);
 	}
-
-	if (reason == BMAPFLSH_TRUNCATE)
-		psc_waitq_wakeall(&msl_bmaptimeoutq.plc_wq_empty);
 
 	psclog_diag("wakeup flusher: reason=%x wake=%d", reason, wake);
 }
@@ -252,17 +252,19 @@ msl_ric_bflush_cb(struct pscrpc_request *rq,
 	struct bmpc_write_coalescer *bwc =
 	    args->pointer_arg[MSL_CBARG_BIORQS];
 	struct sl_resm *m = args->pointer_arg[MSL_CBARG_RESM];
-	struct resm_cli_info *rmci = resm2rmci(m);
+	struct resprof_cli_info *rpci = res2rpci(m->resm_res);
 	struct bmpc_ioreq *r;
 	int i, rc;
 
-	psc_atomic32_dec(&rmci->rmci_infl_rpcs);
+	RPCI_LOCK(rpci);
+	rpci->rpci_infl_rpcs--;
+	RPCI_WAKE(rpci);
+	RPCI_ULOCK(rpci);
 
 	SL_GET_RQ_STATUS_TYPE(csvc, rq, struct srm_io_rep, rc);
 
 	psclog_diag("callback to write RPC bwc=%p ios=%d infl=%d rc=%d",
-	    bwc, m->resm_res_id,
-	    psc_atomic32_read(&rmci->rmci_infl_rpcs), rc);
+	    bwc, m->resm_res_id, rpci->rpci_infl_rpcs, rc);
 
 	bwc_unpin_pages(bwc);
 
@@ -279,7 +281,6 @@ msl_ric_bflush_cb(struct pscrpc_request *rq,
 
 	bwc_release(bwc);
 	sl_csvc_decref(csvc);
-	bmap_flushq_wake(BMAPFLSH_RPCDONE);
 
 	return (0);
 }
@@ -289,14 +290,14 @@ bmap_flush_create_rpc(struct bmpc_write_coalescer *bwc,
     struct slashrpc_cservice *csvc, struct bmap *b)
 {
 	struct pscrpc_request *rq = NULL;
-	struct resm_cli_info *rmci;
+	struct resprof_cli_info *rpci;
 	struct srm_io_req *mq;
 	struct srm_io_rep *mp;
 	struct sl_resm *m;
 	int rc;
 
 	m = libsl_ios2resm(bmap_2_ios(b));
-	rmci = resm2rmci(m);
+	rpci = res2rpci(m->resm_res);
 
 	rc = SL_RSX_NEWREQ(csvc, SRMT_WRITE, rq, mq, mp);
 	if (rc)
@@ -333,11 +334,12 @@ bmap_flush_create_rpc(struct bmpc_write_coalescer *bwc,
 	DEBUG_REQ(PLL_DIAG, rq, "sending WRITE RPC to iosid=%#x "
 	    "fid="SLPRI_FG" off=%u sz=%u ios=%u infl=%d",
 	    m->resm_res_id, SLPRI_FG_ARGS(&mq->sbd.sbd_fg), mq->offset,
-	    mq->size, bmap_2_ios(b),
-	    psc_atomic32_read(&rmci->rmci_infl_rpcs));
+	    mq->size, bmap_2_ios(b), rpci->rpci_infl_rpcs);
 
 	/* Do we need this inc/dec combo for biorq reference? */
-	psc_atomic32_inc(&rmci->rmci_infl_rpcs);
+	RPCI_LOCK(rpci);
+	rpci->rpci_infl_rpcs++;
+	RPCI_ULOCK(rpci);
 
 	bwc_pin_pages(bwc);
 
@@ -348,7 +350,11 @@ bmap_flush_create_rpc(struct bmpc_write_coalescer *bwc,
 	rc = SL_NBRQSET_ADD(csvc, rq);
 	if (rc) {
 		bwc_unpin_pages(bwc);
-		psc_atomic32_dec(&rmci->rmci_infl_rpcs);
+
+		RPCI_LOCK(rpci);
+		rpci->rpci_infl_rpcs--;
+		RPCI_WAKE(rpci);
+		RPCI_ULOCK(rpci);
 		goto out;
 	}
 
@@ -757,42 +763,38 @@ bmap_flush_trycoalesce(const struct psc_dynarray *biorqs, int *indexp)
 }
 
 int
-_msl_resm_throttle(struct sl_resm *m, int wait)
+_msl_resm_throttle(struct sl_resm *m, int block)
 {
 	struct timespec ts0, ts1, tsd;
-	struct resm_cli_info *rmci;
+	struct resprof_cli_info *rpci;
 	int account = 0;
 
-	rmci = resm2rmci(m);
+	rpci = res2rpci(m->resm_res);
 	/*
 	 * XXX use resm multiwait?
 	 */
-	spinlock(&slc_bflush_lock);
-	if (!wait && atomic_read(&rmci->rmci_infl_rpcs) >=
+	RPCI_LOCK(rpci);
+	if (!block && rpci->rpci_infl_rpcs >=
 	    RESM_MAX_OUTSTANDING_RPCS) {
-		freelock(&slc_bflush_lock);
+		RPCI_ULOCK(rpci);
 		return (-EAGAIN);
 	}
 
-	while (atomic_read(&rmci->rmci_infl_rpcs) >=
-	    RESM_MAX_OUTSTANDING_RPCS) {
+	while (rpci->rpci_infl_rpcs >= RESM_MAX_OUTSTANDING_RPCS) {
 		if (!account) {
 			PFL_GETTIMESPEC(&ts0);
 			account = 1;
 		}
-		slc_bflush_tmout_flags |= BMAPFLSH_RPCWAIT;
-		psc_waitq_waitrel_ts(&slc_bflush_waitq,
-		    &slc_bflush_lock, &msl_bflush_timeout);
-		spinlock(&slc_bflush_lock);
+		RPCI_WAIT(rpci);
+		RPCI_LOCK(rpci);
 	}
+	RPCI_ULOCK(rpci);
 	if (account) {
 		PFL_GETTIMESPEC(&ts1);
 		timespecsub(&ts1, &ts0, &tsd);
 		OPSTAT_ADD("msl.flush-wait-usecs",
 		    tsd.tv_sec * 1000000 + tsd.tv_nsec / 1000);
 	}
-	slc_bflush_tmout_flags &= ~BMAPFLSH_RPCWAIT;
-	freelock(&slc_bflush_lock);
 	return (0);
 }
 
@@ -956,7 +958,7 @@ bmap_flush(void)
 void
 msflushthr_main(struct psc_thread *thr)
 {
-	struct timespec work, wait, tmp1, tmp2;
+	struct timespec work, delta, tmp1, tmp2;
 	struct msflush_thread *mflt;
 
 	mflt = msflushthr(thr);
@@ -981,8 +983,6 @@ msflushthr_main(struct psc_thread *thr)
 
 		timespecsub(&tmp2, &tmp1, &work);
 
-		PFL_GETTIMESPEC(&tmp1);
-
 		spinlock(&slc_bflush_lock);
 		slc_bflush_tmout_flags |= BMAPFLSH_RPCWAIT;
 		psc_waitq_waitrel_ts(&slc_bflush_waitq,
@@ -991,13 +991,13 @@ msflushthr_main(struct psc_thread *thr)
 		slc_bflush_tmout_flags &= ~BMAPFLSH_RPCWAIT;
 		freelock(&slc_bflush_lock);
 
-		PFL_GETTIMESPEC(&tmp2);
-		timespecsub(&tmp2, &tmp1, &wait);
+		PFL_GETTIMESPEC(&tmp1);
+		timespecsub(&tmp1, &tmp2, &delta);
 
 		psclogs_debug(SLSS_BMAP, "work time ("PSCPRI_TIMESPEC"),"
 		    "wait time ("PSCPRI_TIMESPEC")",
 		    PSCPRI_TIMESPEC_ARGS(&work),
-		    PSCPRI_TIMESPEC_ARGS(&wait));
+		    PSCPRI_TIMESPEC_ARGS(&delta));
 	}
 }
 

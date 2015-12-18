@@ -1485,7 +1485,7 @@ msl_readdir_cb(struct pscrpc_request *rq, struct pscrpc_async_args *av)
 
 int
 msl_readdir_issue(struct pscfs_req *pfr, struct fidc_membh *d,
-    off_t off, size_t size, int wait)
+    off_t off, size_t size, int block)
 {
 	void *dentbuf = NULL;
 	struct slashrpc_cservice *csvc = NULL;
@@ -1496,7 +1496,7 @@ msl_readdir_issue(struct pscfs_req *pfr, struct fidc_membh *d,
 	struct iovec iov;
 	int rc, nents;
 
-	p = dircache_new_page(d, off, wait);
+	p = dircache_new_page(d, off, block);
 	if (p == NULL)
 		return (-ESRCH);
 
@@ -2233,7 +2233,7 @@ mslfsop_release(struct pscfs_req *pfr, void *data)
 	PFL_GETTIMESPEC(&fci->fci_etime);
 	fci->fci_etime.tv_sec--;
 	FCMH_ULOCK(f);
-	psc_waitq_wakeall(&msl_flush_attrq);
+	psc_waitq_wakeone(&msl_flush_attrq);
 
 	if (fcmh_isdir(f)) {
 		pscfs_reply_releasedir(pfr, 0);
@@ -2763,7 +2763,6 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 		}
 	}
 
- wait_trunc_res:
 	if (to_set & PSCFS_SETATTRF_DATASIZE) {
 		fcmh_wait_locked(c, c->fcmh_flags & FCMH_CLI_TRUNC);
 		/*
@@ -2832,6 +2831,7 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 			 */
 			DYNARRAY_FOREACH(b, i, &a) {
 				struct bmap_pagecache *bmpc;
+
 				bmpc = bmap_2_bmpc(b);
 				BMAP_LOCK(b);
 				bmpc_expire_biorqs(bmpc);
@@ -2889,20 +2889,11 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 	rc = msl_setattr(pfr, c, to_set, NULL, &c->fcmh_fg, stb);
 	if (rc && slc_rmc_retry(pfr, &rc))
 		goto retry;
-	switch (rc) {
-	case -SLERR_BMAP_IN_PTRUNC:
-		if (getting_attrs) {
-			getting_attrs = 0;
-			FCMH_LOCK(c);
-			c->fcmh_flags &= ~FCMH_GETTING_ATTRS;
-		}
+
+	if (rc == -SLERR_BMAP_IN_PTRUNC)
+		rc = EAGAIN;
+	if (rc == -SLERR_BMAP_PTRUNC_STARTED)
 		rc = 0;
-		goto wait_trunc_res;
-	case -SLERR_BMAP_PTRUNC_STARTED:
-		unset_trunc = 0;
-		rc = 0;
-		break;
-	}
 
  out:
 	if (c) {
