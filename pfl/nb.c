@@ -75,6 +75,7 @@ pscrpc_nbreapthr_main(struct psc_thread *thr)
 	set = pnbt->pnbt_set;
 	while (pscthr_run(thr)) {
 		spinlock(&set->set_lock);
+ retry:
 		cntr = set->set_compl.pc_counter;
 		if (pscrpc_set_checkone(set)) {
 			/* We processed a piece of work. */
@@ -93,7 +94,7 @@ pscrpc_nbreapthr_main(struct psc_thread *thr)
 			 * There wasn't work to do but there is now:
 			 * retry.
 			 */
-			freelock(&set->set_lock);
+			goto retry;
 		}
 	}
 	reqlock(&set->set_lock);

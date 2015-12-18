@@ -39,7 +39,8 @@ my @authors = (
 );
 
 my %mailmap = (
-	'slovichon@gmail.com' => 'yanovich@psc.edu',
+	'slovichon@gmail.com'	=> 'yanovich@psc.edu',
+	'zzhsuny@gmail.com'	=> 'zhihui@psc.edu',
 );
 
 sub gencopy {
