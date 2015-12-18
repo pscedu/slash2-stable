@@ -347,11 +347,12 @@ display(__unusedx struct psc_thread *thr)
 		ts.tv_sec += 1;
 		psc_waitq_waitabs(&display_wq, NULL, &ts);
 
-		psc_fmt_human(ratebuf, iostats->opst_last);
+		psc_fmt_human(ratebuf, iostats->opst_intv);
 		if (istty)
 			fprintf(fp, "\r");
 		fprintf(fp, "%7s ", ratebuf);
-		psc_fmt_human(ratebuf, psc_atomic64_read(&iostats->opst_lifetime));
+		psc_fmt_human(ratebuf,
+		    psc_atomic64_read(&iostats->opst_lifetime));
 		fprintf(fp, "%7s", ratebuf);
 		if (istty)
 			fflush(fp);
