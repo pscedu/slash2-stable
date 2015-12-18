@@ -45,10 +45,10 @@
 #include "pfl/crc.h"
 #include "pfl/fcntl.h"
 #include "pfl/fmt.h"
-#include "pfl/opstats.h"
 #include "pfl/listcache.h"
 #include "pfl/lock.h"
 #include "pfl/log.h"
+#include "pfl/opstats.h"
 #include "pfl/pfl.h"
 #include "pfl/pool.h"
 #include "pfl/random.h"
@@ -86,12 +86,15 @@ struct file {
 	char			*fn;
 	struct stat		 stb;
 	int			 fd;
-	int			 done;
+	int			 flags;		/* see FF_* below */
 	int			 refcnt;
-	int			 rc;	/* file return code */
+	int			 rc;		/* file return code */
 	struct cksum		 cksum;
 	int64_t			 chunkid;
 };
+
+#define FF_ZEROES		(1 << 0)	/* data is all zeroes */
+#define FF_DONE			(1 << 1)	/* all work enqueued */
 
 /* where to read or write a file */
 struct wk {
@@ -214,7 +217,7 @@ int
 file_close(struct file *f)
 {
 	spinlock(&f->lock);
-	if (--f->refcnt || !f->done) {
+	if (--f->refcnt || !(f->flags & FF_DONE)) {
 		freelock(&f->lock);
 		return (0);
 	}
@@ -223,7 +226,8 @@ file_close(struct file *f)
 		cksum_fini(&f->cksum);
 
 		lock_output();
-		printf("F '%s' %s\n", f->fn, f->cksum.buf);
+		printf("F '%s' %c %s\n", f->fn,
+		    f->flags & FF_ZEROES ? 'Z' : ' ', f->cksum.buf);
 		unlock_output();
 	}
 
@@ -300,6 +304,12 @@ thrmain(struct psc_thread *thr)
 				    'Z' : ' ', cksum.buf);
 				unlock_output();
 			} else {
+				if (checkzero && !pfl_memchk(buf, 0,
+				    rc)) {
+					spinlock(&f->lock);
+					f->flags &= ~FF_ZEROES;
+					freelock(&f->lock);
+				}
 				cksum_add(&f->cksum, buf, rc);
 				wk->off += wk->len;
 				if (wk->off < f->stb.st_size) {
@@ -416,15 +426,15 @@ addwk(struct file *f)
 	wk->chunkid = f->chunkid++;
 	done = wk->off + bufsz >= size || (docrc && !chunk);
 
-	/* 
-	 * Use WAKEONE to avoid wasting time on yield() and lc_get() 
+	/*
+	 * Use WAKEONE to avoid wasting time on yield() and lc_get()
 	 * during startup phase when the number of threads is large.
 	 */
 	_lc_add(&wkq, wk, PLCBF_TAIL|PLCBF_WAKEONE, NULL);
 
 	if (done) {
 		spinlock(&f->lock);
-		f->done = 1;
+		f->flags |= FF_DONE;
 		freelock(&f->lock);
 
 		file_close(f);
@@ -458,6 +468,7 @@ proc(FTSENT *fe, __unusedx void *arg)
 	if (docrc && !chunk)
 		cksum_init(&f->cksum);
 	INIT_SPINLOCK(&f->lock);
+	f->flags |= FF_ZEROES;
 	f->fn = strdup(fe->fts_path);
 	if (dowrite)
 		f->fd = open(fe->fts_path, O_CREAT | O_RDWR | O_TRUNC |
@@ -620,7 +631,7 @@ main(int argc, char *argv[])
 			}
 	} else {
 		DYNARRAY_FOREACH(f, n, &files)
-			while (1) {
+			for (;;) {
 				totalwk++;
 				if (addwk(f))
 					break;
@@ -654,7 +665,7 @@ main(int argc, char *argv[])
 	 * Note that totalbytes is only valid when all I/Os are complete
 	 * normally.
 	 *
-	 * If the read or write performance takes a long time to ramp up, 
+	 * If the read or write performance takes a long time to ramp up,
 	 * the following numbers will be different from last-second rate.
 	 */
 	if (t2.tv_usec < t1.tv_usec) {
