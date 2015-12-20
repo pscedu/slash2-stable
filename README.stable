@@ -1,3 +1,12 @@
+12/19/2015
+----------
+
+I did two kernel 4.2 compile (make -j 3) in parallel without any problem:
+
+real    218m55.008s
+user    54m44.695s
+sys     11m17.265s
+
 12/12/2015
 ----------
 
