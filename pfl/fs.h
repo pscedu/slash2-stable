@@ -193,7 +193,8 @@ void	pscfs_reply_setxattr(struct pscfs_req *, int);
 void	pscfs_reply_getxattr(struct pscfs_req *, void *, size_t, int);
 void	pscfs_reply_removexattr(struct pscfs_req *, int);
 
-int	pscfs_notify_inval_entry(struct pscfs_req *, pscfs_inum_t, const char *, size_t);
+void	*pflfs_notify_getprivate(struct pscfs_req *);
+int	pscfs_notify_inval_entry(void *, pscfs_inum_t, const char *, size_t);
 
 #define PSCFS_CREATEF_DIO		(1 << 0)
 
@@ -230,7 +231,7 @@ void	pflfs_modules_rdunpin(void);
 void	pflfs_modules_wrpin(void);
 void	pflfs_modules_wrunpin(void);
 
-void 	_pflfs_module_init_threads(struct pscfs *);
+void	_pflfs_module_init_threads(struct pscfs *);
 
 void	*pfl_fsthr_getpri(struct psc_thread *);
 void	 pfl_fsthr_setpri(struct psc_thread *, void *);

@@ -1667,18 +1667,23 @@ pscfs_getgroups(struct pscfs_req *pfr, gid_t *gv, int *ng)
 	return (rc);
 }
 
+void *
+pflfs_notify_getprivate(struct pscfs_req *pfr)
+{
+	return (fuse_req_getchannel(pfr->pfr_fuse_req));
+}
+
 int
-pscfs_notify_inval_entry(struct pscfs_req *pfr, pscfs_inum_t pinum,
+pscfs_notify_inval_entry(void *pri, pscfs_inum_t pinum,
     const char *name, size_t namelen)
 {
 	int rc;
 
 #if defined(HAVE_FUSE_REQ_GETCHANNEL) && defined(HAVE_FUSE_NOTIFY_INVAL)
-	rc = fuse_lowlevel_notify_inval_entry(fuse_req_getchannel(
-	    pfr->pfr_fuse_req), INUM_PSCFS2FUSE(pinum, 0.0), name,
-	    namelen);
+	rc = fuse_lowlevel_notify_inval_entry(pri,
+	    INUM_PSCFS2FUSE(pinum, 0.0), name, namelen);
 #else
-	(void)pfr;
+	(void)pri;
 	(void)pinum;
 	(void)name;
 	(void)namelen;
