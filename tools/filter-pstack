@@ -69,7 +69,7 @@ my @ign = (
 	[ qw(usleep msbwatchthr_main _pscthr_begin) ],
 
 	# SLASH2 common
-	[ qw(.*sleep sl_freapthr_main _pscthr_begin) ],
+	[ qw(_psc_waitq_waitrel sl_freapthr_main _pscthr_begin) ],
 	[ qw(_sl_csvc_waitrelv slconnthr_main _pscthr_begin) ],
 	[ qw(cv_wait txg_wait_synced zfsslash2_wait_synced pjournal_thr_main _pscthr_begin) ],
 	[ qw(psc_multiwait_usecs slconnthr_main _pscthr_begin) ],
