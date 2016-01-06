@@ -193,7 +193,8 @@ void	pscfs_reply_setxattr(struct pscfs_req *, int);
 void	pscfs_reply_getxattr(struct pscfs_req *, void *, size_t, int);
 void	pscfs_reply_removexattr(struct pscfs_req *, int);
 
-void	*pflfs_notify_getprivate(struct pscfs_req *);
+void	*pflfs_inval_getprivate(struct pscfs_req *);
+int	pflfs_inval_inode(void *, pscfs_inum_t);
 int	pscfs_notify_inval_entry(void *, pscfs_inum_t, const char *, size_t);
 
 #define PSCFS_CREATEF_DIO		(1 << 0)

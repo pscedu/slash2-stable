@@ -1668,9 +1668,19 @@ pscfs_getgroups(struct pscfs_req *pfr, gid_t *gv, int *ng)
 }
 
 void *
-pflfs_notify_getprivate(struct pscfs_req *pfr)
+pflfs_inval_getprivate(struct pscfs_req *pfr)
 {
-	return (fuse_req_getchannel(pfr->pfr_fuse_req));
+	struct fuse_chan *ch;
+
+	ch = fuse_req_getchannel(pfr->pfr_fuse_req);
+	return (ch);
+}
+
+int
+pflfs_inval_inode(void *pri, pscfs_inum_t inum)
+{
+	return (fuse_lowlevel_notify_inval_entry(pri, INUM_PSCFS2FUSE(inum,
+	    0.0), 0, 0));
 }
 
 int
