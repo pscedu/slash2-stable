@@ -22,9 +22,20 @@
  * %END_LICENSE%
  */
 
+#include <sys/param.h>
+#include <sys/stat.h>
+
+#ifdef HAVE_STATFS_FSTYPE
+# include <sys/mount.h>
+#else
+# include <mntent.h>
+#endif
+
 #include <grp.h>
 #include <limits.h>
 #include <pwd.h>
+#include <stdio.h>
+#include <stdlib.h>
 
 #include "pfl/alloc.h"
 #include "pfl/str.h"
@@ -74,4 +85,50 @@ pfl_systemf(const char *fmt, ...)
 
 	free(buf);
 	return (rc);
+}
+
+int
+pfl_getfstype(const char *ofn, char *buf, size_t len)
+{
+#ifdef HAVE_STATFS_FSTYPE
+	struct statfs b;
+
+	rc = statfs(slcfg_local->cfg_fsroot, &b);
+	if (rc == -1)
+		return (errno);
+	strlcpy(buf, b.f_fstypename, len);
+#else
+	char *p, mbuf[BUFSIZ], fn[PATH_MAX];
+	struct mntent *m, mntbuf;
+	struct stat stb, pstb;
+	FILE *fp;
+
+	if (realpath(ofn, fn) == NULL)
+		return (errno);
+	if (stat(fn, &stb) == -1)
+		return (errno);
+	do {
+		p = strrchr(fn, '/');
+		if (p == NULL)
+			return (ENXIO);
+		*p = '\0';
+		if (stat(fn, &pstb) == -1)
+			return (errno);
+	} while (stb.st_dev == pstb.st_dev &&
+		 stb.st_rdev == pstb.st_rdev);
+	*p = '/';
+
+	fp = setmntent(_PATH_MOUNTED, "r");
+	if (fp == NULL)
+		return (errno);
+	while ((m = getmntent_r(fp, &mntbuf, mbuf, sizeof(mbuf)))) {
+		if (strcmp(m->mnt_dir, fn) == 0) {
+			strlcpy(buf, m->mnt_type, len);
+			break;
+		}
+	}
+	endmntent(fp);
+	/* XXX check for errors */
+#endif
+	return (0);
 }

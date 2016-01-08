@@ -67,7 +67,7 @@ pfl_random_getbytes(void *p, size_t len)
 			pos = buf;
 		}
 
-		amt = MIN(len, sizeof(buf) - (pos - buf));
+		amt = MIN(rem, sizeof(buf) - (pos - buf));
 		memcpy(p, pos, amt);
 	}
 	freelock(&lock);

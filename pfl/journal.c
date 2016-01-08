@@ -37,11 +37,12 @@
 #include "pfl/crc.h"
 #include "pfl/dynarray.h"
 #include "pfl/fcntl.h"
-#include "pfl/opstats.h"
 #include "pfl/journal.h"
 #include "pfl/lock.h"
+#include "pfl/opstats.h"
 #include "pfl/pool.h"
 #include "pfl/str.h"
+#include "pfl/sys.h"
 #include "pfl/thread.h"
 #include "pfl/time.h"
 #include "pfl/types.h"
@@ -725,13 +726,19 @@ pjournal_open(const char *name, const char *fn)
 	const char *basefn;
 	uint64_t chksum;
 	ssize_t pjhlen;
+	char type[LINE_MAX];
+	int flags = 0;
 
 	pj = PSCALLOC(sizeof(*pj));
 
 	strlcpy(pj->pj_name, name, sizeof(pj->pj_name));
 	strlcpy(pj->pj_devname, fn, sizeof(pj->pj_devname));
 
-	pj->pj_fd = open(fn, O_RDWR | O_DIRECT);
+	pfl_getfstype(fn, type, sizeof(type));
+	if (strcmp(type, "tmpfs"))
+		flags |= O_DIRECT;
+
+	pj->pj_fd = open(fn, O_RDWR | flags);
 	if (pj->pj_fd == -1)
 		psc_fatal("failed to open journal %s", fn);
 	if (fstat(pj->pj_fd, &statbuf) == -1)

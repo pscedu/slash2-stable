@@ -52,8 +52,7 @@ foreach my $arg (@ARGV) {
 
 my @dirs = grep { -d $_ } @L_opts;
 
-my $cc = $ENV{CC} || "cc";
-my $out = `$cc -print-search-dirs`;
+my $out = `\${CC:-cc} -print-search-dirs`;
 my @lines = split /\n/, $out;
 foreach my $line (@lines) {
 	if ($line =~ /^libraries: =/) {
