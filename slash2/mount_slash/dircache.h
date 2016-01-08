@@ -264,6 +264,8 @@ void	dircache_walk_async(struct fidc_membh *, void (*)(
 	    struct dircache_page *, struct dircache_ent *, void *),
 	    void *, struct psc_compl *);
 int	dircache_ent_cmp(const void *, const void *);
+void	dircache_walk(struct fidc_membh *, void (*)(struct dircache_page *,
+	    struct dircache_ent *, void *), void *);
 
 #define namecache_get_entry(dcu, d, name)				\
 	_namecache_get_entry(PFL_CALLERINFO(), (dcu), (d), (name), 0)
@@ -271,6 +273,7 @@ int	dircache_ent_cmp(const void *, const void *);
 #define namecache_hold_entry(dcu, d, name)				\
 	_namecache_get_entry(PFL_CALLERINFO(), (dcu), (d), (name), 1)
 
+/* XXX capitalize this name to inform it's a macro */
 #define namecache_update(dcu, fid, rc)					\
 	_namecache_update(PFL_CALLERINFO(), (dcu),			\
 	    (rc) ? FID_ANY : (fid), (rc))

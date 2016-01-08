@@ -1,9 +1,11 @@
 #!/bin/sh
 
+[ $1 -eq 0 ] || exit 0
+
 dep sft
 
 niters=100
-sizes=$(cat <<EOF)
+sizes=$(cat <<EOF
 	123
 	24789
 	770924789
@@ -13,7 +15,8 @@ sizes=$(cat <<EOF)
 	52478900
 	2111524789
 	3111520000
-EOF)
+EOF
+)
 
 for i in $(seq $niters); do
 	for j in $(seq $sizes); do

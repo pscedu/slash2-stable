@@ -1735,7 +1735,7 @@ mds_bmap_load_cli(struct fidc_membh *f, sl_bmapno_t bmapno, int lflags,
 	if ((f->fcmh_flags & FCMH_MDS_IN_PTRUNC) &&
 	    (bmapno >= fcmh_2_fsz(f) / SLASH_BMAP_SIZE)) {
 		FCMH_ULOCK(f);
-		return (SLERR_BMAP_IN_PTRUNC);
+		return (-SLERR_BMAP_IN_PTRUNC);
 	}
 	FCMH_ULOCK(f);
 
@@ -2049,18 +2049,22 @@ ptrunc_tally_ios(struct bmap *b, int iosidx, int val, void *arg)
 __static void
 slm_ptrunc_apply(struct slm_wkdata_ptrunc *wk)
 {
-	int done = 0, tract[NBREPLST];
+	int done = 1, tract[NBREPLST];
 	struct ios_list ios_list;
 	struct fidc_membh *f;
 	struct bmap *b;
 	sl_bmapno_t i;
+	struct fcmh_mds_info *fmi;
 
 	f = wk->f;
+	fmi = fcmh_2_fmi(f);
 
 	brepls_init(tract, -1);
 	tract[BREPLST_VALID] = BREPLST_TRUNCPNDG;
 
+	/* get the number of replies we expect */
 	ios_list.nios = 0;
+	fmi->fmi_ptrunc_nios = 0;
 
 	i = fcmh_2_fsz(f) / SLASH_BMAP_SIZE;
 	if (fcmh_2_fsz(f) % SLASH_BMAP_SIZE) {
@@ -2072,18 +2076,21 @@ slm_ptrunc_apply(struct slm_wkdata_ptrunc *wk)
 			BMAP_ULOCK(b);
 			mds_repl_bmap_walkcb(b, tract, NULL, 0,
 			    ptrunc_tally_ios, &ios_list);
-			mds_bmap_write_repls_rel(b);
-
-			/*
-			 * Queue work immediately instead of waiting for
-			 * it to be causally paged to reduce latency to
-			 * the client.
-			 */
-			upsch_enqueue(bmap_2_upd(b));
+			fmi->fmi_ptrunc_nios = ios_list.nios;
+			if (fmi->fmi_ptrunc_nios) {
+				done = 0;
+				mds_bmap_write_repls_rel(b);
+				/*
+				 * Queue work immediately instead
+				 * of waiting for it to be causally
+				 * paged to reduce latency to the
+				 * client.
+				 */
+				upsch_enqueue(bmap_2_upd(b));
+				OPSTAT_INCR("ptrunc-pending");
+			}
 		}
 		i++;
-	} else {
-		done = 1;
 	}
 
 	brepls_init(tract, -1);
@@ -2129,6 +2136,8 @@ slm_ptrunc_prepare(void *p)
 	struct bmap *b;
 	sl_bmapno_t i;
 
+	mds_note_update(1);
+
 	f = wk->f;
 	fmi = fcmh_2_fmi(f);
 
@@ -2149,10 +2158,14 @@ slm_ptrunc_prepare(void *p)
 			if (bml->bml_exp == NULL)
 				continue;
 			csvc = slm_getclcsvc(bml->bml_exp);
-			if (csvc == NULL)
+			if (csvc == NULL) {
+				psclog_warnx("Unable to get csvc: %p",
+				    bml->bml_exp);
+				BMAP_LOCK(b);
 				continue;
-			rc = SL_RSX_NEWREQ(csvc, SRMT_RELEASEBMAP,
-				rq, mq, mp);
+			}
+			rc = SL_RSX_NEWREQ(csvc, SRMT_RELEASEBMAP, rq,
+			    mq, mp);
 			if (!rc) {
 				mq->sbd[0].sbd_fg.fg_fid = fcmh_2_fid(f);
 				mq->sbd[0].sbd_bmapno = i;
@@ -2179,10 +2192,16 @@ slm_ptrunc_prepare(void *p)
 	    fcmh_2_mfh(f), mdslog_namespace);
 	mds_unreserve_slot(1);
 
-	if (rc)
-		psclog_error("setattr rc=%d", rc);
+	if (rc) {
+		FCMH_LOCK(f);
+		f->fcmh_flags &= ~FCMH_MDS_IN_PTRUNC;
+		fcmh_2_ptruncgen(f)--;
+		FCMH_ULOCK(f);
+		psclog_error("partical truncate setattr: rc=%d", rc);
+	} else
+		slm_ptrunc_apply(wk);
 
-	slm_ptrunc_apply(wk);
+	mds_note_update(-1);
 	return (0);
 }
 
@@ -2223,6 +2242,14 @@ slmbkdbthr_main(struct psc_thread *thr)
 	}
 }
 
+/*
+ * Execute an SQL query on the SQLite database.
+ *
+ * @cb: optional; callback to retrieve fields for a SELECT.
+ * @cbarg: optional; argument to provide to callback.
+ * @fmt: printf(3)-like format string to properly escape any
+ * interpolated values in the SQL query.
+ */
 void
 _dbdo(const struct pfl_callerinfo *pci,
     int (*cb)(struct slm_sth *, void *), void *cbarg,

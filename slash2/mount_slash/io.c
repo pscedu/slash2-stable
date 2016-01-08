@@ -585,6 +585,7 @@ msl_complete_fsrq(struct msl_fsrqinfo *q, size_t len,
 	struct msl_fhent *mfh;
 	struct pscfs_req *pfr;
 	struct bmpc_ioreq *r;
+	struct fidc_membh *f;
 	int i;
 
 	pfr = mfsrq_2_pfr(q);
@@ -668,6 +669,13 @@ msl_complete_fsrq(struct msl_fsrqinfo *q, size_t len,
 		}
 		pscfs_reply_write(pfr, q->mfsrq_len, abs(q->mfsrq_err));
 	}
+
+	f = mfh->mfh_fcmh;
+	DEBUG_FCMH(PLL_DIAG, f, "reply: off=%"PRId64", size=%zu, rw=%s, "
+	    "rc = %d", q->mfsrq_off, q->mfsrq_len, 
+	    (q->mfsrq_flags & MFSRQ_READ) ? 
+	    "read" : "write", q->mfsrq_err);
+
 	PSCFREE(oiov);
 
 	for (i = 0; i < MAX_BMAPS_REQ; i++) {
@@ -1922,8 +1930,9 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 
 	f = mfh->mfh_fcmh;
 
-	DEBUG_FCMH(PLL_DIAG, f, "buf=%p size=%zu off=%"PRId64" rw=%s",
-	    buf, size, off, (rw == SL_READ) ? "read" : "write");
+	DEBUG_FCMH(PLL_DIAG, f, "request: off=%"PRId64", size=%zu, "
+	    "buf=%p, rw=%s", off, size, buf, (rw == SL_READ) ? 
+	    "read" : "write");
 
 	FCMH_LOCK(f);
 	/*

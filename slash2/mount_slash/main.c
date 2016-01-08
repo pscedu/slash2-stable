@@ -175,6 +175,9 @@ sl_resource_put(__unusedx struct sl_resource *res)
 {
 }
 
+/*
+ * Perform a access check on a file against the specified credentials.
+ */
 int
 fcmh_checkcreds(struct fidc_membh *f,
     struct pscfs_req *pfr, const struct pscfs_creds *pcrp,
@@ -199,6 +202,10 @@ fcmh_checkcreds(struct fidc_membh *f,
 	return (rc);
 }
 
+/*
+ * Select the group for a new entity (file or directory) that is being
+ * created.
+ */
 gid_t
 newent_select_group(struct fidc_membh *p, struct pscfs_creds *pcr)
 {
@@ -269,6 +276,10 @@ mslfsop_access(struct pscfs_req *pfr, pscfs_inum_t inum, int accmode)
 #define msl_progallowed(r)						\
 	(psc_dynarray_len(&allow_exe) == 0 || _msl_progallowed(r))
 
+/*
+ * For ProgACLs, determine if the user process that is accessing a file
+ * is on the allowed program list.
+ */
 int
 _msl_progallowed(struct pscfs_req *pfr)
 {
@@ -315,6 +326,11 @@ _msl_progallowed(struct pscfs_req *pfr)
 	return (0);
 }
 
+/*
+ * Convert an error code acquired from RPC (either from the RPC stack,
+ * underlying network stack, OS, or from the remote SLASH2 peer) to an
+ * error value native to this system.
+ */
 int
 msl_io_convert_errno(int rc)
 {
@@ -1012,6 +1028,15 @@ slc_wk_issue_readdir(void *p)
 	msl_lookup_fidcache_dcu((pfr), (pcrp), (pinum), (name), (fgp),	\
 	    (sstb), (fp), NULL)
 
+/*
+ * Query the fidcache for a file system entity name.
+ *
+ * Special handling for pseudo files is made first.
+ *
+ * Then the local caches are queried.  If not present and fresh, remote
+ * RPCs are made to perform classic UNIX-style "namei" resolution and
+ * refresh file attribute metadata.
+ */
 __static int
 msl_lookup_fidcache_dcu(struct pscfs_req *pfr,
     const struct pscfs_creds *pcrp, pscfs_inum_t pinum,
@@ -1381,6 +1406,9 @@ msl_readdir_error(struct fidc_membh *d, struct dircache_page *p, int rc)
 	DIRCACHE_ULOCK(d);
 }
 
+/*
+ * Perform successful READDIR RPC reception processing.
+ */
 void
 msl_readdir_finish(struct fidc_membh *d, struct dircache_page *p,
     int eof, int nents, int size, void *base)
@@ -1411,6 +1439,8 @@ msl_readdir_finish(struct fidc_membh *d, struct dircache_page *p,
 		    FIDC_LOOKUP_CREATE | FIDC_LOOKUP_LOCK, &f, NULL)) {
 			slc_fcmh_setattr_locked(f, &e->sstb);
 
+			psc_assert((f->fcmh_flags & FCMH_DELETED) == 0);
+
 			if (!f->fcmh_sstb.sst_nlink)
 				// XXX don't enter into namecache
 				OPSTAT_INCR("msl.namecache-junk");
@@ -1430,6 +1460,9 @@ msl_readdir_finish(struct fidc_membh *d, struct dircache_page *p,
 	DIRCACHE_ULOCK(d);
 }
 
+/*
+ * Callback triggered when READDIR RPC is received.
+ */
 int
 msl_readdir_cb(struct pscrpc_request *rq, struct pscrpc_async_args *av)
 {
@@ -1483,6 +1516,9 @@ msl_readdir_cb(struct pscrpc_request *rq, struct pscrpc_async_args *av)
 	return (0);
 }
 
+/*
+ * Send out an asynchronous READDIR RPC.
+ */
 int
 msl_readdir_issue(struct pscfs_req *pfr, struct fidc_membh *d,
     off_t off, size_t size, int block)
@@ -1881,7 +1917,7 @@ msl_setattr(struct pscfs_req *pfr, struct fidc_membh *f, int32_t to_set,
     const struct srt_stat *sstb, const struct sl_fidgen *fgp,
     const struct stat *stb)
 {
-	int rc, ptrunc_started = 0, flags = 0;
+	int rc, flags = 0;
 	struct slashrpc_cservice *csvc = NULL;
 	struct pscrpc_request *rq = NULL;
 	struct srm_setattr_req *mq;
@@ -1911,10 +1947,12 @@ msl_setattr(struct pscfs_req *pfr, struct fidc_membh *f, int32_t to_set,
 	rc = SL_RSX_WAITREP(csvc, rq, mp);
 	if (rc == 0)
 		rc = -mp->rc;
-	if (rc == -SLERR_BMAP_PTRUNC_STARTED) {
-		ptrunc_started = 1;
+
+	if (rc == SLERR_BMAP_IN_PTRUNC)
+		rc = EAGAIN;
+	else if (rc == SLERR_BMAP_PTRUNC_STARTED)
 		rc = 0;
-	}
+
 	DEBUG_SSTB(rc ? PLL_WARN : PLL_DIAG, &f->fcmh_sstb,
 	    "attr flush; set=%x rc=%d", to_set, rc);
 	if (rc)
@@ -1929,11 +1967,14 @@ msl_setattr(struct pscfs_req *pfr, struct fidc_membh *f, int32_t to_set,
 	pscrpc_req_finished(rq);
 	if (csvc)
 		sl_csvc_decref(csvc);
-	if (ptrunc_started)
-		return (-SLERR_BMAP_PTRUNC_STARTED);
 	return (rc);
 }
 
+/*
+ * Send out a synchronous RPC to update file attribute metadata (e.g.
+ * mtime) as a result of I/O operation.  These updates are sent out
+ * periodically instead of continuously to reduce traffic.
+ */
 int
 msl_flush_ioattrs(struct pscfs_req *pfr, struct fidc_membh *f)
 {
@@ -2641,18 +2682,28 @@ mslfsop_symlink(struct pscfs_req *pfr, const char *buf,
 		sl_csvc_decref(csvc);
 }
 
+/*
+ * Used for sending asynchronous invalidation requests to PFLFS.
+ */
 struct msl_dc_inv_entry_data {
-	struct pscfs_req	*mdie_pfr;
+	/*
+	 * Private data used by the PFLFS module to send the
+	 * invalidation request.
+	 */
+	void			*mdie_pri;
 	pscfs_inum_t		 mdie_pinum;
 };
 
+/*
+ * Send an name entry cache invalidation notification to the kernel.
+ */
 void
-msl_dc_inv_entry(__unusedx struct dircache_page *p,
+msl_dircache_inval_entry(__unusedx struct dircache_page *p,
     struct dircache_ent *d, void *arg)
 {
 	const struct msl_dc_inv_entry_data *mdie = arg;
 
-	pscfs_notify_inval_entry(mdie->mdie_pfr, mdie->mdie_pinum,
+	pscfs_notify_inval_entry(mdie->mdie_pri, mdie->mdie_pinum,
 	    d->dce_pfd->pfd_name, d->dce_pfd->pfd_namelen);
 }
 
@@ -2674,6 +2725,7 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 	int i, rc = 0, unset_trunc = 0, getting_attrs = 0;
 	int flush_mtime = 0, flush_size = 0;
 	struct slashrpc_cservice *csvc = NULL;
+	struct msl_dc_inv_entry_data mdie;
 	struct pscrpc_request *rq = NULL;
 	struct msl_fhent *mfh = data;
 	struct fidc_membh *c = NULL;
@@ -2681,13 +2733,7 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 	struct pscfs_creds pcr;
 	struct timespec ts;
 
-	if ((to_set & PSCFS_SETATTRF_UID) && stb->st_uid == (uid_t)-1)
-		to_set &= ~PSCFS_SETATTRF_UID;
-	if ((to_set & PSCFS_SETATTRF_GID) && stb->st_gid == (gid_t)-1)
-		to_set &= ~PSCFS_SETATTRF_GID;
-
-	if (to_set == 0)
-		goto out;
+	memset(&mdie, 0, sizeof(mdie));
 
 	rc = msl_load_fcmh(pfr, inum, &c);
 	if (rc)
@@ -2695,6 +2741,19 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 
 	if (mfh)
 		psc_assert(c == mfh->mfh_fcmh);
+
+	/*
+	 * pscfs_reply_setattr() needs a fresh statbuf to refresh the
+	 * entry, so we have to defer the short circuit processing till
+	 * after loading the fcmh to avoid sending garbage resulting in
+	 * EIO.
+	 */
+	if ((to_set & PSCFS_SETATTRF_UID) && stb->st_uid == (uid_t)-1)
+		to_set &= ~PSCFS_SETATTRF_UID;
+	if ((to_set & PSCFS_SETATTRF_GID) && stb->st_gid == (gid_t)-1)
+		to_set &= ~PSCFS_SETATTRF_GID;
+	if (to_set == 0)
+		goto out;
 
 	FCMH_WAIT_BUSY(c);
 
@@ -2890,11 +2949,6 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 	if (rc && slc_rmc_retry(pfr, &rc))
 		goto retry;
 
-	if (rc == -SLERR_BMAP_IN_PTRUNC)
-		rc = EAGAIN;
-	if (rc == -SLERR_BMAP_PTRUNC_STARTED)
-		rc = 0;
-
  out:
 	if (c) {
 		(void)FCMH_RLOCK(c);
@@ -2923,8 +2977,19 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 					    FCMH_CLI_DIRTY_DSIZE;
 			}
 		}
-		FCMH_UNBUSY(c);
 
+		/* See note below. */
+		if (!rc && (to_set & PSCFS_SETATTRF_MODE) &&
+		    fcmh_isdir(c)) {
+			mdie.mdie_pri = pflfs_inval_getprivate(pfr);
+			mdie.mdie_pinum = fcmh_2_fid(c);
+		}
+
+	}
+
+	pscfs_reply_setattr(pfr, stb, pscfs_attr_timeout, rc);
+
+	if (c) {
 		/*
 		 * If permissions changed for a directory, we need to
 		 * specifically invalidate all entries under the dir
@@ -2939,23 +3004,17 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 		 * XXX Something may have been evicted from our cache
 		 * but still held by the kernel.  Whenever we evict, we
 		 * should clear the kernel cache too.
+		 *
+		 * XXX should we block access to the namecache until
+		 * this operation completes?
 		 */
-#if 0
-		if (!rc && (to_set & PSCFS_SETATTRF_MODE) &&
-		    fcmh_isdir(c)) {
-			struct msl_dc_inv_entry_data mdie;
+		if (mdie.mdie_pri)
+			dircache_walk(c, msl_dircache_inval_entry, &mdie);
 
-			mdie.mdie_pfr = pfr;
-			mdie.mdie_pinum = fcmh_2_fid(c);
-			dircache_walk_async(c, msl_dc_inv_entry, &mdie,
-			    NULL);
-		}
-#endif
-
+		if (FCMH_HAS_BUSY(c))
+			FCMH_UNBUSY(c);
 		fcmh_op_done(c);
 	}
-
-	pscfs_reply_setattr(pfr, stb, pscfs_attr_timeout, rc);
 
 	psclogs_diag(SLCSS_FSOP, "SETATTR: fid="SLPRI_FID" to_set=%#x "
 	    "rc=%d", inum, to_set, rc);
@@ -3661,6 +3720,9 @@ unmount(const char *mp)
 		psclog_warn("system(%s)", buf);
 }
 
+/*
+ * Set preferred I/O system.
+ */
 void
 slc_setprefios(sl_ios_id_t id)
 {
@@ -3741,8 +3803,7 @@ msl_init(void)
 
 	sl_sys_upnonce = psc_random32();
 
-	/* defaults */
-	slcfg_local->cfg_fidcachesz = 1024;
+	slcfg_local->cfg_fidcachesz = MSL_FIDCACHE_SIZE;
 
 	slcfg_parse(msl_cfgfn);
 	if (slcfg_local->cfg_root_squash)

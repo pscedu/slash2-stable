@@ -1,18 +1,21 @@
 #!/bin/sh
 
+[ $1 -eq 0 ] || exit 0
+
 dep wget
 
 V=4.3
 
-wget https://cdn.kernel.org/pub/linux/kernel/v4.x/linux-$V.tar.xz
-tar xf linux-$V.tar.xz
+wget -nv https://cdn.kernel.org/pub/linux/kernel/v4.x/linux-$V.tar.xz
+decompress_xz linux-$V.tar.xz | tar fx -
 
 dir=$(pwd)
 (
 	cd $LOCAL_TMP
-	tar xf $dir/linux-$V.tar.xz
+	decompress_xz $dir/linux-$V.tar.xz | tar fx -
 )
 diff -qr $LOCAL_TMP/linux-$V linux-$V
 
+cd linux-$V
 make oldconfig </dev/null
-make -j$(nproc) bzImage
+make bzImage

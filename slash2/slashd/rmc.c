@@ -1072,26 +1072,25 @@ slm_rmc_handle_setattr(struct pscrpc_request *rq)
 	if (mp->rc)
 		PFL_GOTOERR(out, mp->rc);
 
-	if (mq->attr.sst_fg.fg_fid == SLFID_ROOT && use_global_mount) {
-		mp->rc = -EACCES;
-		return (0);
-	}
+	if (mq->attr.sst_fg.fg_fid == SLFID_ROOT && use_global_mount)
+		PFL_GOTOERR(out, mp->rc = -EACCES);
 
 	mp->rc = -slm_fcmh_get(&mq->attr.sst_fg, &f);
 	if (mp->rc)
-		return (0);
+		PFL_GOTOERR(out, mp->rc);
 
-	FCMH_WAIT_BUSY(f);
-
+	FCMH_LOCK(f);
 	to_set = mq->to_set & SL_SETATTRF_CLI_ALL;
 
+	/*
+	 * Disallow new settattr while a ptruncate is still in progress.
+	 */
+	if ((f->fcmh_flags & FCMH_MDS_IN_PTRUNC) && 
+	    (to_set & PSCFS_SETATTRF_DATASIZE))
+		PFL_GOTOERR(out, mp->rc = -SLERR_BMAP_IN_PTRUNC);
+
 	if (to_set & PSCFS_SETATTRF_DATASIZE) {
-#if 0
-		if (IS_REMOTE_FID(mq->attr.sst_fg.fg_fid)) {
-			mp->rc = -PFLERR_NOSYS;
-			goto out;
-		}
-#endif
+
 		/* our client should really do this on its own */
 		if (!(to_set & PSCFS_SETATTRF_MTIME)) {
 			psclog_warnx("missing MTIME flag in RPC request");
@@ -1121,9 +1120,6 @@ slm_rmc_handle_setattr(struct pscrpc_request *rq)
 #endif
 
 			/* partial truncate */
-			if (f->fcmh_flags & FCMH_MDS_IN_PTRUNC)
-				PFL_GOTOERR(out, mp->rc =
-				    -SLERR_BMAP_IN_PTRUNC);
 			to_set &= ~PSCFS_SETATTRF_DATASIZE;
 			tadj |= PSCFS_SETATTRF_DATASIZE;
 
@@ -1134,13 +1130,6 @@ slm_rmc_handle_setattr(struct pscrpc_request *rq)
 	}
 
 	if (to_set) {
-		if (IS_REMOTE_FID(mq->attr.sst_fg.fg_fid)) {
-			mp->rc = slm_rmm_forward_namespace(
-			    SLM_FORWARD_SETATTR, &mq->attr.sst_fg, NULL,
-			    NULL, NULL, 0, NULL, &mq->attr, to_set);
-			if (mp->rc)
-				PFL_GOTOERR(out, mp->rc);
-		}
 		/*
 		 * If the file is open, mfh will be valid and used.
 		 * Otherwise, it will be NULL, and we'll use the
@@ -1152,6 +1141,7 @@ slm_rmc_handle_setattr(struct pscrpc_request *rq)
 				fcmh_2_gen(f)--;
 			goto out;
 		}
+		FCMH_LOCK(f);
 	}
 
 	if (tadj & PSCFS_SETATTRF_DATASIZE) {
@@ -1163,10 +1153,9 @@ slm_rmc_handle_setattr(struct pscrpc_request *rq)
  out:
 
 	if (f) {
-		(void)FCMH_RLOCK(f);
+		FCMH_LOCK_ENSURE(f);
 		if (mp->rc == 0 || mp->rc == -SLERR_BMAP_PTRUNC_STARTED)
 			mp->attr = f->fcmh_sstb;
-		FCMH_UNBUSY(f);
 		fcmh_op_done(f);
 	}
 	return (0);

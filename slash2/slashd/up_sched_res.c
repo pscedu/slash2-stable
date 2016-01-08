@@ -319,6 +319,11 @@ slm_upsch_tryrepl(struct bmap *b, int off, struct sl_resm *src_resm,
 	if (rc != BREPLST_REPL_QUEUED)
 		PFL_GOTOERR(out, rc = -ENODEV);
 
+	/*
+	 * The residency table is not written back to persistent
+	 * storage, so the upschdb must be updated manually to prevent
+	 * immediate re-scheduling of this work.
+	 */
 	dbdo(NULL, NULL,
 	    " UPDATE	upsch"
 	    " SET	status = 'S'"
@@ -396,17 +401,28 @@ slm_upsch_finish_ptrunc(struct slashrpc_cservice *csvc,
 	struct resprof_mds_info *rpmi;
 	struct slm_update_data *upd;
 	int tract[NBREPLST];
+	struct fidc_membh *f;
+	struct fcmh_mds_info *fmi;
 
 	if (rc && b) {
 		/* undo brepls changes */
 		brepls_init(tract, -1);
 		tract[BREPLST_TRUNCPNDG_SCHED] = BREPLST_TRUNCPNDG;
 		mds_repl_bmap_apply(b, tract, NULL, off);
+		/* XXX clear REPLMOD? */
 
 		rpmi = res2rpmi(dst_resm->resm_res);
 		upd = bmap_2_upd(b);
 		upd_rpmi_remove(rpmi, upd);
 	}
+	f = b->bcm_fcmh;
+
+	FCMH_LOCK(f);
+	fmi = fcmh_2_fmi(f);
+	fmi->fmi_ptrunc_nios--;
+	if (!fmi->fmi_ptrunc_nios)
+		f->fcmh_flags &= ~FCMH_MDS_IN_PTRUNC;
+	FCMH_ULOCK(f);
 
 	psclog(rc ? PLL_WARN: PLL_DIAG,
 	    "partial truncation resolution failed rc=%d", rc);
@@ -441,11 +457,11 @@ int
 slm_upsch_tryptrunc_cb(struct pscrpc_request *rq,
     struct pscrpc_async_args *av)
 {
-	struct slashrpc_cservice *csvc = av->pointer_arg[IP_CSVC];
-	struct fidc_membh *f;
-	struct bmap *b = av->pointer_arg[IP_BMAP];
 	int rc = 0, off = av->space[IN_OFF];
+	struct slashrpc_cservice *csvc = av->pointer_arg[IP_CSVC];
 	struct sl_resm *dst_resm = av->pointer_arg[IP_DSTRESM];
+	struct bmap *b = av->pointer_arg[IP_BMAP];
+	struct fidc_membh *f;
 
 	SL_GET_RQ_STATUS_TYPE(csvc, rq, struct srm_bmap_ptrunc_rep, rc);
 	if (rc == 0)
@@ -644,7 +660,6 @@ upd_proc_hldrop(struct slm_update_data *tupd)
 	struct bmap_mds_info *bmi;
 	struct bmap *b;
 	sl_replica_t repl;
-return;
 
 	upg = upd_getpriv(tupd);
 	repl.bs_id = upg->upg_resm->resm_res_id;
@@ -719,6 +734,8 @@ upd_proc_bmap(struct slm_update_data *upd)
 
 	BMAP_WAIT_BUSY(b);
 	BMAP_ULOCK(b);
+
+	mds_note_update(1);
 
 	UPD_WAIT(upd);
 	upd->upd_flags |= UPDF_BUSY;
@@ -819,7 +836,7 @@ upd_proc_bmap(struct slm_update_data *upd)
 
 					if (slm_upsch_tryrepl(b, off, m,
 					    dst_res))
-						return;
+						goto out;
 				}
 			}
 			if (!valid_exists) {
@@ -840,7 +857,7 @@ upd_proc_bmap(struct slm_update_data *upd)
 				if (mds_repl_bmap_apply(b, tract,
 				    retifset, off)) {
 					mds_bmap_write_logrepls(b);
-					return;
+					goto out;
 				}
 			}
 			break;
@@ -860,7 +877,7 @@ upd_proc_bmap(struct slm_update_data *upd)
 		case BREPLST_GARBAGE:
 			rc = slm_upsch_trypreclaim(dst_res, b, off);
 			if (rc > 0)
-				return;
+				goto out;
 			break;
 		}
 	}
@@ -868,6 +885,9 @@ upd_proc_bmap(struct slm_update_data *upd)
 		BMAPOD_MODIFY_DONE(b, 0);
 	BMAP_UNBUSY(b);
 	FCMH_UNBUSY(f);
+
+ out:
+	mds_note_update(-1);
 }
 
 void
@@ -1158,6 +1178,10 @@ slmupschthr_main(struct psc_thread *thr)
 		if (upd)
 			psc_multiwait_leavecritsect(&slm_upsch_mw);
 		else {
+			/*
+ 			 * In theory we should avoid this. However, there
+ 			 * might be outside updates to the upsch database.
+ 			 */
 			rc = psc_multiwait_secs(&slm_upsch_mw, &upd, 30);
 			if (rc == -ETIMEDOUT)
 				upschq_resm(NULL, UPDT_PAGEIN);
