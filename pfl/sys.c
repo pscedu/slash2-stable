@@ -122,7 +122,6 @@ pfl_getfstype(const char *ofn, char *buf, size_t len)
 	if (fp == NULL)
 		return (errno);
 	while ((m = getmntent_r(fp, &mntbuf, mbuf, sizeof(mbuf)))) {
-printf("cmp %s %s\n", m->mnt_dir, fn);
 		if (strcmp(m->mnt_dir, fn) == 0) {
 			strlcpy(buf, m->mnt_type, len);
 			break;
