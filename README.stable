@@ -1,3 +1,11 @@
+01/09/2016
+----------
+
+Release 1.03
+
+I did eight hours of 4-way parallel tests over the span of two days.  This release includes
+a test suite, two replication fixes, initial work on partial truncation, and other fixes.
+
 12/19/2015
 ----------
 
