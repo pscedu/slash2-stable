@@ -872,3 +872,7 @@ s2re
 - 01/11/2016: We still have connection issue: MDS can't contact IOS because 
   it is down.  When I restart IOS (lime), it took ages to connect. Perhaps 
   each side is waiting for the other side to respond its request first.
+
+- 01/11/2016: I create a tree on one IOS and replicate to another IOS, then
+  I kill the first IOS. Run make will fail, retry works. The transition
+  could be made more transparent.
