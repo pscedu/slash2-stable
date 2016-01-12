@@ -1214,8 +1214,8 @@ slm_rmc_handle_set_bmapreplpol(struct pscrpc_request *rq)
 {
 	struct srm_set_bmapreplpol_req *mq;
 	struct srm_set_bmapreplpol_rep *mp;
+	struct bmapc_memb *b = NULL;
 	struct fidc_membh *f;
-	struct bmapc_memb *b;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
 
