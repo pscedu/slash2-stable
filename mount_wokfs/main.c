@@ -228,7 +228,6 @@ main(int argc, char *argv[])
 	    p ? ":" : "", p ? p : "");
 	psc_assert(rc != -1);
 	setenv("PATH", path_env, 1);
-	system("env|sort");
 
 	DYNARRAY_FOREACH(cmd, i, &startup_cmds)
 		pfl_systemf("wokctl -S %s %s", ctlsockfn, cmd);
