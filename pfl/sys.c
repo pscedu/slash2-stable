@@ -91,9 +91,10 @@ int
 pfl_getfstype(const char *ofn, char *buf, size_t len)
 {
 #ifdef HAVE_STATFS_FSTYPE
+	int rc;
 	struct statfs b;
 
-	rc = statfs(slcfg_local->cfg_fsroot, &b);
+	rc = statfs(ofn, &b);
 	if (rc == -1)
 		return (errno);
 	strlcpy(buf, b.f_fstypename, len);
