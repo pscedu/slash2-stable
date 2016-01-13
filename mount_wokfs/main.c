@@ -65,17 +65,6 @@ unmount(const char *mp)
 		psclog_warn("system(%s)", buf);
 }
 
-__dead void
-usage(void)
-{
-	extern const char *__progname;
-
-	fprintf(stderr,
-	    "usage: %s [-dU] [-o mountopt] [-S socket] node\n",
-	    __progname);
-	exit(1);
-}
-
 int
 opt_lookup(const char *opt)
 {
@@ -147,12 +136,25 @@ mod_destroy(struct wok_module *wm)
 	PSCFREE(wm);
 }
 
+__dead void
+usage(void)
+{
+	extern const char *__progname;
+
+	fprintf(stderr,
+	    "usage: %s [-dU] [-L cmd] [-o mountopt] [-S socket] node\n",
+	    __progname);
+	exit(1);
+}
+
 int
 main(int argc, char *argv[])
 {
 	struct pscfs_args args = PSCFS_ARGS_INIT(0, NULL);
-	char c, *p, *noncanon_mp;
-	int unmount_first = 0;
+	struct psc_dynarray startup_cmds = DYNARRAY_INIT;
+	char c, *p, *noncanon_mp, *cmd, dir[PATH_MAX];
+	const char *dirsep = "/";
+	int i, unmount_first = 0;
 
 	pfl_init();
 
@@ -164,10 +166,13 @@ main(int argc, char *argv[])
 	if (p)
 		ctlsockfn = p;
 
-	while ((c = getopt(argc, argv, "do:S:U")) != -1)
+	while ((c = getopt(argc, argv, "dL:o:S:U")) != -1)
 		switch (c) {
 		case 'd':
 			pscfs_addarg(&args, "-odebug");
+			break;
+		case 'L':
+			psc_dynarray_add(&startup_cmds, optarg);
 			break;
 		case 'o':
 			if (!opt_lookup(optarg)) {
@@ -208,6 +213,15 @@ main(int argc, char *argv[])
 
 	pscfs_entry_timeout = 8.;
 	pscfs_attr_timeout = 8.;
+
+	pfl_dirname(argv[0], dir);
+	if (strcmp(dir, ".") == 0) {
+		dirsep = "";
+		strlcpy(dir, "", sizeof(dir));
+	}
+	DYNARRAY_FOREACH(cmd, i, &startup_cmds)
+		pfl_systemf("%s%swokctl -S %s %s", dir, dirsep,
+		    ctlsockfn, cmd);
 
 	exit(pscfs_main(32, ""));
 }
