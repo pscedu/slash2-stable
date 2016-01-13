@@ -70,7 +70,7 @@ LFLAGS+=	-t
 
 YFLAGS+=	-d
 
-CFLAGS+=	-Wall -W -pipe
+CFLAGS+=	-Wall -Wextra -pipe
 # -Wredundant-decls
 CFLAGS+=	-Wshadow -fno-omit-frame-pointer
 #CFLAGS+=	-Wno-address
