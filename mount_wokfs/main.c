@@ -32,6 +32,7 @@
 #include "pfl/fsmod.h"
 #include "pfl/opstats.h"
 #include "pfl/str.h"
+#include "pfl/sys.h"
 #include "pfl/thread.h"
 #include "pfl/timerthr.h"
 
@@ -150,11 +151,11 @@ usage(void)
 int
 main(int argc, char *argv[])
 {
+	char c, *p, *noncanon_mp, *cmd, *path_env, dir[PATH_MAX];
 	struct pscfs_args args = PSCFS_ARGS_INIT(0, NULL);
 	struct psc_dynarray startup_cmds = DYNARRAY_INIT;
-	char c, *p, *noncanon_mp, *cmd, dir[PATH_MAX];
-	const char *dirsep = "/";
-	int i, unmount_first = 0;
+	const char *progpath = argv[0];
+	int rc, i, unmount_first = 0;
 
 	pfl_init();
 
@@ -214,14 +215,23 @@ main(int argc, char *argv[])
 	pscfs_entry_timeout = 8.;
 	pscfs_attr_timeout = 8.;
 
-	pfl_dirname(argv[0], dir);
-	if (strcmp(dir, ".") == 0) {
-		dirsep = "";
-		strlcpy(dir, "", sizeof(dir));
-	}
+	/*
+	 * Here, $p = (directory this daemon binary resides in).
+	 * Now we add the following to $PATH:
+	 *
+	 *   1) $p
+	 *   2) $p/../wokctl (for developers)
+	 */
+	pfl_dirname(progpath, dir);
+	p = getenv("PATH");
+	rc = pfl_asprintf(&path_env, "%s:%s/../wokctl%s%s", dir, dir,
+	    p ? ":" : "", p ? p : "");
+	psc_assert(rc != -1);
+	setenv("PATH", path_env, 1);
+	system("env|sort");
+
 	DYNARRAY_FOREACH(cmd, i, &startup_cmds)
-		pfl_systemf("%s%swokctl -S %s %s", dir, dirsep,
-		    ctlsockfn, cmd);
+		pfl_systemf("wokctl -S %s %s", ctlsockfn, cmd);
 
 	exit(pscfs_main(32, ""));
 }
