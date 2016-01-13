@@ -113,9 +113,10 @@ _EXCLUDES=		$(filter-out -I%,${EXCLUDES}) $(patsubst %,-I%/,$(foreach \
 			dir,$(patsubst -I%,%,$(filter -I%,${EXCLUDES})), $(realpath ${dir})))
 
 _TPROG=			$(shell echo ${PROG} | sed 's/:[^:]*//g')
+_TSHLIB=		$(shell echo ${SHLIB} | sed 's/:[^:]*//g')
 
 CFLAGS+=		${DEFINES} $(filter-out ${_EXCLUDES},${_TINCLUDES})
-TARGET?=		$(sort ${_TPROG} ${LIBRARY} ${TEST} ${DOCGEN} ${SHLIB})
+TARGET?=		$(sort ${_TPROG} ${LIBRARY} ${TEST} ${DOCGEN} ${_TSHLIB})
 PROG?=			${TEST}
 
 EXTRACT_INCLUDES=	perl -ne 'print $$& while /-I\S+\s?/gc'
@@ -434,7 +435,7 @@ endif
 
 ifdef SHLIB
   CFLAGS+=	-fPIC
-  ${SHLIB}: ${OBJS}
+  ${_TSHLIB}: ${OBJS}
 	${CC} -shared -o $@ ${LDFLAGS} $(sort ${OBJS})
 endif
 
@@ -455,8 +456,12 @@ install: recurse-install install-hook
 	@if [ -n "${LIBRARY}" -a x"${NOINSTALL}" != x"1" ]; then	\
 		${INST} ${LIBRARY} ${INST_LIBDIR}/;			\
 	fi
-	@if [ -n "${SHLIB}" -a x"${NOINSTALL}" != x"1" ]; then		\
-		${INST} ${SHLIB} ${INST_LIBDIR}/;			\
+	@if [ x"${NOINSTALL}" != x"1" ]; then				\
+		for shlib in ${SHLIB}; do				\
+			src=$${shlib%:*};				\
+			dst=$${shlib#*:};				\
+			${INST} -m 555 $$src "${INST_LIBDIR}"/$$dst;	\
+		done;							\
 	fi
 	@# skip programs part of test suites
 	@if ${NOTEMPTY} "${PROG}${BIN}" &&				\
@@ -516,7 +521,7 @@ distclean-hook:
 
 clean-core:
 	${RM} -rf ${OBJDIR}
-	${RM} -f ${_TPROG} ${LIBRARY} ${SHLIB} core.[0-9]* *.core ${CLEANFILES}
+	${RM} -f ${_TPROG} ${LIBRARY} ${_TSHLIB} core.[0-9]* *.core ${CLEANFILES}
 	@for i in ${DEPLIST}; do					\
 		[ -e "$${i#*:}" ] || continue;				\
 		(cd $${i%:*} && ${MAKE} clean) || exit 1;		\
