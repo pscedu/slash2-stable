@@ -51,6 +51,8 @@ loadprof()
 	local dobreak=0
 	shift
 
+	[ x"$_p" = x"mount_slash" ] && _p=mount_wokfs
+
 	vprint "considering host $_h, prog $_p"
 
 	[ x"${_h%%.*}" = x"$host" ] || return 1
@@ -71,6 +73,7 @@ loadprof()
 		args=*)		xargs+=("${fl#args=}");;
 		bounce)		;;
 		ctl=*)		ctl=${fl#ctl=};;
+		mod=*)		mod=${fl#mod=};;
 		mp=*)		mp=${fl#mp=};;
 		name=*)		name=${fl#name=};;
 		narg=*)		narg=${fl#narg=};;
@@ -255,11 +258,9 @@ vsleep()
 	sleep $amt
 }
 
-#
 # This script runs within another service script using the source or dot
-# operator. The backup argv (bkav) is saved by the service script and is
-# used here to re-execute ourself when the service daemon dies.
-#
+# operator.  The backup argv (bkav) is saved by the service script and
+# is used here to re-execute ourself when the service daemon dies.
 _rundaemon()
 {
 	preproc
@@ -271,7 +272,7 @@ _rundaemon()
 
 rundaemon()
 {
-	vprint "launching daemon"
+	vprint "launching daemon: $@"
 
 	if [ $nodaemonize -eq 0 ]; then
 		(_rundaemon "$@" 0<&- &>/dev/null &) &

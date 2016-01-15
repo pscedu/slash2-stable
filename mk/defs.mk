@@ -48,7 +48,7 @@ INST_BASE?=	/local
 INST_BINDIR?=	${INST_BASE}/bin
 INST_SBINDIR?=	${INST_BASE}/sbin
 INST_LIBDIR?=	${INST_BASE}/lib
-INST_LIBDIR?=	${INST_BASE}/include
+INST_INCDIR?=	${INST_BASE}/include
 INST_MANDIR?=	${INST_BASE}/man
 INST_ETCDIR?=	${INST_BASE}/etc
 INST_PLMODDIR?=	${INST_BASE}/lib/perl5
@@ -70,7 +70,7 @@ LFLAGS+=	-t
 
 YFLAGS+=	-d
 
-CFLAGS+=	-Wall -W -pipe
+CFLAGS+=	-Wall -Wextra -pipe
 # -Wredundant-decls
 CFLAGS+=	-Wshadow -fno-omit-frame-pointer
 #CFLAGS+=	-Wno-address
