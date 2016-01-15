@@ -361,7 +361,9 @@ mds_bmap_crc_update(struct bmap *bmap, sl_ios_id_t iosid,
 	if (idx < 0)
 		psc_fatal("not found");
 
-	/* only update the block usage when there is a real change */
+	/* 
+	 * Only update the block usage when there is a real change.
+	 */
 	if (crcup->nblks != fcmh_2_repl_nblks(f, idx)) {
 		sstb.sst_blocks = fcmh_2_nblks(f) + crcup->nblks -
 		    fcmh_2_repl_nblks(f, idx);
@@ -406,20 +408,6 @@ mds_bmap_crc_update(struct bmap *bmap, sl_ios_id_t iosid,
 		    crcup->crcs[i].slot, crcup->crcs[i].crc);
 	}
 	return (mds_bmap_write(bmap, mdslog_bmap_crc, &crclog));
-}
-
-/*
- * Release a bmap after use.
- */
-int
-_mds_bmap_write_rel(const struct pfl_callerinfo *pci, struct bmap *b,
-    void *logf)
-{
-	int rc;
-
-	rc = mds_bmap_write(b, logf, b);
-	bmap_op_done(b);
-	return (rc);
 }
 
 void

@@ -1085,7 +1085,7 @@ slm_rmc_handle_setattr(struct pscrpc_request *rq)
 	/*
 	 * Disallow new settattr while a ptruncate is still in progress.
 	 */
-	if ((f->fcmh_flags & FCMH_MDS_IN_PTRUNC) && 
+	if ((f->fcmh_flags & FCMH_MDS_IN_PTRUNC) &&
 	    (to_set & PSCFS_SETATTRF_DATASIZE))
 		PFL_GOTOERR(out, mp->rc = -SLERR_BMAP_IN_PTRUNC);
 
@@ -1119,14 +1119,13 @@ slm_rmc_handle_setattr(struct pscrpc_request *rq)
 			PFL_GOTOERR(out, mp->rc = -PFLERR_NOTSUP);
 #endif
 
-			/* partial truncate */
 			to_set &= ~PSCFS_SETATTRF_DATASIZE;
 			tadj |= PSCFS_SETATTRF_DATASIZE;
 
 		} else if (mq->attr.sst_size > fcmh_2_fsz(f))
 			OPSTAT_INCR("truncate-extend");
 		else
-			OPSTAT_INCR("truncate-same");
+			OPSTAT_INCR("truncate-noop");
 	}
 
 	if (to_set) {

@@ -2049,16 +2049,21 @@ ptrunc_tally_ios(struct bmap *b, int iosidx, int val, void *arg)
 __static void
 slm_ptrunc_apply(struct slm_wkdata_ptrunc *wk)
 {
+	int rc;
 	int done = 1, tract[NBREPLST];
 	struct ios_list ios_list;
 	struct fidc_membh *f;
 	struct bmap *b;
 	sl_bmapno_t i;
 	struct fcmh_mds_info *fmi;
+	struct slm_update_data *upd;
 
 	f = wk->f;
 	fmi = fcmh_2_fmi(f);
 
+	/*
+ 	 * Arrange upd_proc_bmap() to call slm_upsch_tryptrunc() later.
+ 	 */
 	brepls_init(tract, -1);
 	tract[BREPLST_VALID] = BREPLST_TRUNCPNDG;
 
@@ -2067,32 +2072,41 @@ slm_ptrunc_apply(struct slm_wkdata_ptrunc *wk)
 	fmi->fmi_ptrunc_nios = 0;
 
 	i = fcmh_2_fsz(f) / SLASH_BMAP_SIZE;
-	if (fcmh_2_fsz(f) % SLASH_BMAP_SIZE) {
-		/*
-		 * If a bmap sliver was sliced, we must await for a
-		 * sliod to reply with the new CRC.
-		 */
-		if (bmap_get(f, i, SL_WRITE, &b) == 0) {
-			BMAP_ULOCK(b);
-			mds_repl_bmap_walkcb(b, tract, NULL, 0,
-			    ptrunc_tally_ios, &ios_list);
-			fmi->fmi_ptrunc_nios = ios_list.nios;
-			if (fmi->fmi_ptrunc_nios) {
-				done = 0;
-				mds_bmap_write_logrepls(b);
-				/*
-				 * Queue work immediately instead
-				 * of waiting for it to be causally
-				 * paged to reduce latency to the
-				 * client.
-				 */
-				upsch_enqueue(bmap_2_upd(b));
-				OPSTAT_INCR("ptrunc-pending");
-			}
-		}
-		i++;
-	}
+	if ((fcmh_2_fsz(f) % SLASH_BMAP_SIZE) == 0)
+		goto out1;
 
+	/*
+	 * If a bmap sliver was sliced, we must await for a
+	 * sliod to reply with the new CRC.
+	 */
+	if (bmap_get(f, i, SL_WRITE, &b) == 0) {
+		BMAP_ULOCK(b);
+		mds_repl_bmap_walkcb(b, tract, NULL, 0,
+		    ptrunc_tally_ios, &ios_list);
+		fmi->fmi_ptrunc_nios = ios_list.nios;
+		if (fmi->fmi_ptrunc_nios) {
+			done = 0;
+			rc = mds_bmap_write_logrepls(b);
+			if (rc) {
+			 	done = 1;
+			     	goto out2;
+			}
+			/*
+			 * Queue work immediately instead
+			 * of waiting for it to be causally
+			 * paged to reduce latency to the
+			 * client.
+			 */
+			OPSTAT_INCR("ptrunc-enqueue");
+			upd = bmap_2_upd(b);
+			DPRINTF_UPD(PLL_MAX, upd, "fid="SLPRI_FID" bno=%u",
+			    b->bcm_fcmh->fcmh_fg.fg_fid, b->bcm_bmapno);
+			upsch_enqueue(upd);
+		}
+	}
+	i++;
+
+ out1:
 	brepls_init(tract, -1);
 	tract[BREPLST_REPL_SCHED] = BREPLST_GARBAGE;
 	tract[BREPLST_VALID] = BREPLST_GARBAGE;
@@ -2110,6 +2124,7 @@ slm_ptrunc_apply(struct slm_wkdata_ptrunc *wk)
 		bmap_op_done(b);
 	}
 
+ out2:
 	if (done) {
 		FCMH_LOCK(f);
 		f->fcmh_flags &= ~FCMH_MDS_IN_PTRUNC;
@@ -2119,6 +2134,7 @@ slm_ptrunc_apply(struct slm_wkdata_ptrunc *wk)
 
 	/* XXX adjust nblks */
 
+	OPSTAT_INCR("ptrunc-apply");
 	fcmh_op_done_type(f, FCMH_OPCNT_WORKER);
 }
 
@@ -2189,7 +2205,7 @@ slm_ptrunc_prepare(void *p)
 
 	mds_reserve_slot(1);
 	rc = mdsio_setattr(current_vfsid, fcmh_2_mfid(f),
-	    &f->fcmh_sstb, to_set, &rootcreds, &f->fcmh_sstb, // outbuf
+	    &f->fcmh_sstb, to_set, &rootcreds, &f->fcmh_sstb,
 	    fcmh_2_mfh(f), mdslog_namespace);
 	mds_unreserve_slot(1);
 
