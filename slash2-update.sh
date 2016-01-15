@@ -74,16 +74,16 @@ fi
 git pull -X theirs --no-edit pfl master
 bail-if-fail
 
-git pull -X subtree=sft --no-edit sft master
+git pull -X subtree=sft -X theirs --no-edit sft master
 bail-if-fail
 
-git pull -X subtree=wokfs --no-edit wokfs master
+git pull -X subtree=wokfs -X theirs --no-edit wokfs master
 bail-if-fail
 
-git pull -X subtree=slash2 --no-edit slash2 master
+git pull -X subtree=slash2 -X theirs --no-edit slash2 master
 bail-if-fail
 
-git pull -X subtree=zfs-fuse --no-edit zfs-fuse master
+git pull -X subtree=zfs-fuse -X theirs --no-edit zfs-fuse master
 bail-if-fail
 
 exit 0
