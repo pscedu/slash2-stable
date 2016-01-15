@@ -1,0 +1,43 @@
+.\" $Id$
+.\" %ISC_LICENSE%
+.\" %PFL_MODULES pflenv %
+.Dd January 13, 2016
+.Dt MOUNT_WOKFS 8
+.ds volume Pittsburgh Supercomputing Center
+.Os http://www.psc.edu/
+.Sh NAME
+.Nm mount_wokfs
+.Nd weldable overlay file system
+.Sh SYNOPSIS
+.Nm mount_wokfs
+.Op Fl dU
+.Bk -words
+.Op Fl L Ar cmd
+.Op Fl o Ar mountopt
+.Op Fl S Ar socket
+.Ar node
+.Ek -words
+.Sh DESCRIPTION
+The
+.Nm
+utility
+.Pp
+The following options are available:
+.Bl -tag -width Ds
+.It Fl d
+.It Fl L Ar cmd
+.It Fl o Ar mountopt
+.It Fl S Ar socket
+.It Fl U
+.El
+.Sh ENVIRONMENT
+.Bl -width Ev
+.It Ev CTL_SOCK_FILE
+.El
+.Sh FILES
+.Bl -tag -width Pa -compact
+.It Pa /var/run/mount_wokfs. Ns Ar %h Ns Pa .sock
+default control socket
+.El
+.Sh SEE ALSO
+.Xr wokctl 8
