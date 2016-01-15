@@ -1,3 +1,9 @@
+01/15/2016
+----------
+
+zhihui@yuzu: ~/projects-stable-yuzu-2016-01-15$ cat slash2/mk/local.mk 
+SLASH_OPTIONS+=module
+
 01/13/2016
 ----------
 
