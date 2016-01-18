@@ -2240,7 +2240,8 @@ psc_ctlacthr_main(struct psc_thread *thr)
 		OPSTAT_INCR("ctl.accept");
 
 		spinlock(&pcd->pcd_lock);
-		psc_dynarray_add(&pcd->pcd_clifds, (void *)(long)fd);
+		psc_dynarray_add(&pcd->pcd_clifds,
+		    (void *)(uintptr_t)fd);
 		psc_waitq_wakeall(&pcd->pcd_waitq);
 		freelock(&pcd->pcd_lock);
 	}
@@ -2299,13 +2300,14 @@ psc_ctlthr_mainloop(struct psc_thread *thr)
 		rnd = psc_random32u(psc_dynarray_len(&pcd->pcd_clifds));
 		s = (int)(long)psc_dynarray_getpos(&pcd->pcd_clifds,
 		    rnd);
-		psc_dynarray_remove(&pcd->pcd_clifds, (void *)(long)s);
+		psc_dynarray_remove(&pcd->pcd_clifds,
+		    (void *)(uintptr_t)s);
 		freelock(&pcd->pcd_lock);
 
 		if (!psc_ctlthr_service(s, ct, nops, &bufsiz, &buf)) {
 			spinlock(&pcd->pcd_lock);
 			psc_dynarray_add(&pcd->pcd_clifds,
-			    (void *)(long)s);
+			    (void *)(uintptr_t)s);
 			psc_waitq_wakeall(&pcd->pcd_waitq);
 			freelock(&pcd->pcd_lock);
 		} else

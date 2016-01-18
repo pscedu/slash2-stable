@@ -37,12 +37,14 @@
 #include <stdlib.h>
 
 #include "pfl/compat/posix_memalign.h"
+
 #include "pfl/alloc.h"
 #include "pfl/bitflag.h"
 
-/**
- * posix_memalign - An overrideable aligned memory allocator for systems
- *	which do not support posix_memalign(3).
+/*
+ * An overrideable aligned memory allocator for systems which do not
+ * support posix_memalign(3).
+ *
  * @p: value-result pointer to memory.
  * @alignment: alignment size, must be power-of-two.
  * @size: amount of memory to allocate.
@@ -66,14 +68,14 @@ err(1, "posix_memalign");
 		return (errno);
 	/* XXX track original pointer value somewhere. */
 	/* Align to boundary. */
-	*p = (void *)(((unsigned long)startp) & ~(alignment - 1));
+	*p = (void *)(((uintptr_t)startp) & ~(alignment - 1));
 	if (*p != startp)
 		*p += alignment;
 	return (0);
 }
 
 /*
- * psc_free_aligned - Free aligned memory.
+ * Free aligned memory.
  * @p: memory chunk to free.
  */
 void
