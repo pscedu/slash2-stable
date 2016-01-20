@@ -241,7 +241,7 @@ vsleep()
 {
 	local amt=0
 
-	[ $SECONDS -gt 30 ] && return
+	[ $SECONDS -gt 60 ] && return
 
 	case $ATTEMPT in
 	1)	let amt=10	ATTEMPT++	;;

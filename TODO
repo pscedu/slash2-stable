@@ -47,6 +47,7 @@ general reminders
 - scan for leaks for pthread_mutex and pthread_cond
 - our tree api (BSD sys/tree.h) does not allow duplicate keys, eradicate INSERT
 - ensure reentrancy of 'static' variables in functions
+- don't use (long) typecast for pointers: use uintptr_t
 - the proper way to do callerinfo:
 
 	void

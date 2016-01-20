@@ -54,7 +54,8 @@ pfl_opstimerthr_main(struct psc_thread *thr)
 	int i;
 
 #if HAVE_PTHREAD_SETSCHEDPRIO
-	pthread_setschedprio(sched_get_priority_max(SCHED_RR));
+	pthread_setschedprio(thr->pscthr_pthread,
+	    sched_get_priority_max(SCHED_RR));
 #endif
 
 	PFL_GETTIMESPEC(&ts);
@@ -93,7 +94,8 @@ pfl_rusagethr_main(struct psc_thread *thr)
 	long pgsz;
 
 #if HAVE_PTHREAD_SETSCHEDPRIO
-	pthread_setschedprio(sched_get_priority_max(SCHED_RR));
+	pthread_setschedprio(thr->pscthr_pthread,
+	    sched_get_priority_max(SCHED_RR));
 #endif
 
 	memset(&lastru, 0, sizeof(lastru));

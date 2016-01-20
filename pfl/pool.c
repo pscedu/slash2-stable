@@ -50,7 +50,7 @@
 
 #if PFL_DEBUG > 1
 #  define _POOL_SETPROT(p, m, prot)					\
-	psc_mprotect((void *)(((unsigned long)(p)) &			\
+	psc_mprotect((void *)(((uintptr_t)(p)) &			\
 	    ~(psc_pagesize - 1)), (m)->ppm_entsize, (prot))
 
 #  define _POOL_PROTNONE(p, m)	_POOL_SETPROT((p), (m), PROT_NONE)

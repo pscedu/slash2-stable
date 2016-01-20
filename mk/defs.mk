@@ -88,11 +88,16 @@ endif
 DEBUG?=		1
 DEVELPATHS?=	0
 ifeq (${DEBUG},0)
-  CFLAGS+=	-Wunused -Wuninitialized -O2 -fno-strict-aliasing
+  CFLAGS+=	-Wunused -Wuninitialized
+  CFLAGS+=	-fno-strict-aliasing -flto -fno-use-linker-plugin
+  CFLAGS+=	${COPT}
+  LDFLAGS+=	-flto -fno-use-linker-plugin
 else
   CFLAGS+=	-g
   LDFLAGS+=	-fstack-protector-all
 endif
+
+COPT=		-g0 -O2
 
 DEFINES+=	-D_REENTRANT -DYY_NO_UNPUT -DYY_NO_INPUT -DYYERROR_VERBOSE
 DEFINES+=	-DPFL_DEBUG=${DEBUG} -DDEVELPATHS=${DEVELPATHS}
@@ -163,8 +168,6 @@ CURSES_LIBS=	$$(ncurses5-config --libs 2>/dev/null || echo -lncurses)
 CURSES_INCLUDES=$$(ncurses5-config --cflags 2>/dev/null)
 
 OSTYPE:=	$(shell uname)
-
-COPT=		-O3 -g0
 
 # global file-specific settings
 $(call ADD_FILE_CFLAGS,${PFL_BASE}/crc.c,				${COPT})

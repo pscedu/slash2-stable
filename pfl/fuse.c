@@ -62,7 +62,7 @@
 #define MAX_FDS				(MAX_FILESYSTEMS + 1)
 
 #define fusefi_to_pfh(fi)						\
-	((struct pflfs_filehandle *)(void *)(unsigned long)(fi)->fh)
+	((struct pflfs_filehandle *)(void *)(uintptr_t)(fi)->fh)
 
 #define fusefi_to_pri(fi)		fusefi_to_pfh(fi)->pfh_data
 

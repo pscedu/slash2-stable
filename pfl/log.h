@@ -252,7 +252,7 @@ struct pfl_logpoint {
 									\
 		psclog_trace("exit %s rc=%ld %p", __func__,		\
 		    (long)_pfl_rv,					\
-		    (void *)(unsigned long)_pfl_rv);			\
+		    (void *)(uintptr_t)_pfl_rv);			\
 		return (_pfl_rv);					\
 	} while (0)
 
@@ -283,7 +283,7 @@ struct pfl_logpoint {
 									\
 		psclog_trace("exit %s rc=%ld %p", __func__,		\
 		    (long)_pfl_rv,					\
-		    (void *)(unsigned long)_pfl_rv);			\
+		    (void *)(uintptr_t)_pfl_rv);			\
 		_PFL_END_PCI();						\
 		return (_pfl_rv);					\
 	} while (0)
