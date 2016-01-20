@@ -490,7 +490,7 @@ mslfsop_create(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	if (rc2)
 		PFL_GOTOERR(out, rc2);
 
-	msl_bmap_stash_lease(b, &mp->sbd, 0, "preload");
+	msl_bmap_stash_lease(b, &mp->sbd, 0, "preload", 1);
 	msl_bmap_reap_init(b);
 
 	DEBUG_BMAP(PLL_DIAG, b, "ios(%s) sbd_seq=%"PRId64,
@@ -1597,11 +1597,11 @@ mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off,
 	int hit = 1, j, nd, issue, rc;
 	struct dircache_page *p, *np;
 	struct msl_fhent *mfh = data;
+	struct fidc_membh *d = NULL;
 	struct dircache_expire dexp;
 	struct fcmh_cli_info *fci;
 	struct pscfs_dirent *pfd;
 	struct pscfs_creds pcr;
-	struct fidc_membh *d;
 	off_t raoff = 0;
 
 	if (off < 0 || size > 1024 * 1024)
