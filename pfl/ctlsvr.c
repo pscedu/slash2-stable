@@ -827,8 +827,7 @@ psc_ctlparam_rlim(int fd, struct psc_ctlmsghdr *mh,
 			    "invalid operation"));
 		endp = NULL;
 		val = strtol(pcp->pcp_value, &endp, 10);
-		if (val <= 0 || val > 10 * 1024 ||
-		    endp == pcp->pcp_value || *endp != '\0')
+		if (endp == pcp->pcp_value || *endp != '\0')
 			return (psc_ctlsenderr(fd, mh,
 			    "invalid rlim.%s value: %s",
 			    pcr->pcr_name, pcp->pcp_value));
