@@ -9,7 +9,11 @@ fix for live update with wokfs.
 ----------
 
 Release 1.05.  I was able to use wokfs to start a slash2 client.  However, live update
-seems to have issues - don't use it at least for now.
+seems to have issues - don't use it at least for now. Here is how I used wokfs:
+
+bash-4.2# SLASH_MDS_NID="orange@PSC1" PREF_IOS="lemon@PSC1" gdb mount_wokfs -q 
+Reading symbols from /home/zhihui/projects-yuzu/wokfs/mount_wokfs/mount_wokfs...done.
+(gdb) r -L "insert 0 /home/zhihui/projects-stable/slash2/mount_slash/slash2.so slcfg=/home/zhihui/two-ios.conf,datadir=/var/lib/slash2-zhihui" -U /zzh-slash2 2> log.txt
 
 01/15/2016
 ----------
