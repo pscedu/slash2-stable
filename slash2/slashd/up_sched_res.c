@@ -65,9 +65,8 @@
 #include "zfs-fuse/zfs_slashlib.h"
 
 /* RPC callback numeric arg indexes */
-#define IN_RC		0
-#define IN_OFF		1
-#define IN_AMT		2
+#define IN_OFF		0
+#define IN_AMT		1
 
 /* RPC callback pointer arg indexes */
 #define IP_CSVC		0
@@ -396,26 +395,28 @@ slm_upsch_tryrepl(struct bmap *b, int off, struct sl_resm *src_resm,
 
 void
 slm_upsch_finish_ptrunc(struct slashrpc_cservice *csvc,
-    struct sl_resm *dst_resm, struct bmap *b, int rc, int off)
+    struct bmap *b, int rc, int off)
 {
-	struct resprof_mds_info *rpmi;
-	struct slm_update_data *upd;
 	int tract[NBREPLST];
 	struct fidc_membh *f;
 	struct fcmh_mds_info *fmi;
 
 	psc_assert(b);
-	if (rc) {
-		/* undo brepls changes */
-		brepls_init(tract, -1);
-		tract[BREPLST_TRUNCPNDG_SCHED] = BREPLST_TRUNCPNDG;
-		mds_repl_bmap_apply(b, tract, NULL, off);
-		/* XXX clear REPLMOD? */
 
-		rpmi = res2rpmi(dst_resm->resm_res);
-		upd = bmap_2_upd(b);
-		upd_rpmi_remove(rpmi, upd);
-	}
+	/*
+ 	 * If successful, the IOS is responsible to send a 
+ 	 * SRMT_BMAPCRCWRT RPC to update CRCs in the block
+ 	 * and the disk usage. However, we don't wait for 
+ 	 * it to happen.
+ 	 */
+	brepls_init(tract, -1);
+	tract[BREPLST_TRUNCPNDG_SCHED] = rc ? 
+	    BREPLST_TRUNCPNDG : BREPLST_VALID;
+	mds_repl_bmap_apply(b, tract, NULL, off);
+
+	if (!rc)
+	    mds_bmap_write_logrepls(b);
+
 	f = b->bcm_fcmh;
 
 	FCMH_LOCK(f);
@@ -426,32 +427,24 @@ slm_upsch_finish_ptrunc(struct slashrpc_cservice *csvc,
 	FCMH_ULOCK(f);
 
 	psclog(rc ? PLL_WARN: PLL_DIAG,
-	    "partial truncation resolution failed rc=%d", rc);
+	    "partial truncation resolution: rc=%d", rc);
 
 	if (csvc)
 		sl_csvc_decref(csvc);
-	if (b)
-		bmap_op_done_type(b, BMAP_OPCNT_UPSCH);
-	UPSCH_WAKE();
+	bmap_op_done_type(b, BMAP_OPCNT_UPSCH);
 }
 
 int
 slm_upsch_tryptrunc_cb(struct pscrpc_request *rq,
     struct pscrpc_async_args *av)
 {
-	int rc = 0, off = av->space[IN_OFF];
+	int rc, off = av->space[IN_OFF];
 	struct slashrpc_cservice *csvc = av->pointer_arg[IP_CSVC];
-	struct sl_resm *dst_resm = av->pointer_arg[IP_DSTRESM];
 	struct bmap *b = av->pointer_arg[IP_BMAP];
 
 	SL_GET_RQ_STATUS_TYPE(csvc, rq, struct srm_bmap_ptrunc_rep, rc);
-	if (rc == 0)
-		rc = av->space[IN_RC];
 
-	if (rc)
-		DEBUG_REQ(PLL_ERROR, rq, "rc=%d", rc);
-
-	slm_upsch_finish_ptrunc(csvc, dst_resm, b, rc, off);
+	slm_upsch_finish_ptrunc(csvc, b, rc, off);
 	return (0);
 }
 
@@ -472,6 +465,8 @@ slm_upsch_tryptrunc(struct bmap *b, int off,
 	struct sl_resm *dst_resm;
 	struct fidc_membh *f;
 
+	bmap_op_start_type(b, BMAP_OPCNT_UPSCH);
+
 	upd = bmap_2_upd(b);
 	f = upd_2_fcmh(upd);
 	dst_resm = res_getmemb(dst_res);
@@ -481,8 +476,8 @@ slm_upsch_tryptrunc(struct bmap *b, int off,
 	av.space[IN_OFF] = off;
 
 	/*
-	 * Make sure that a truncation is not already scheduled on this
-	 * bmap.
+	 * Make sure that a truncation is not already scheduled on 
+	 * this bmap.
 	 */
 	brepls_init(retifset, 0);
 	retifset[BREPLST_TRUNCPNDG_SCHED] = 1;
@@ -514,9 +509,6 @@ slm_upsch_tryptrunc(struct bmap *b, int off,
 		    "bmap is corrupted");
 
 	av.pointer_arg[IP_BMAP] = b;
-	bmap_op_start_type(b, BMAP_OPCNT_UPSCH);
-
-	upd_rpmi_add(res2rpmi(dst_resm->resm_res), upd);
 
 	rq->rq_interpret_reply = slm_upsch_tryptrunc_cb;
 	rq->rq_async_args = av;
@@ -527,8 +519,7 @@ slm_upsch_tryptrunc(struct bmap *b, int off,
  out:
 	if (rq)
 		pscrpc_req_finished(rq);
-	slm_upsch_finish_ptrunc(av.pointer_arg[IP_CSVC],
-	    dst_resm, av.pointer_arg[IP_BMAP], rc, off);
+	slm_upsch_finish_ptrunc(csvc, b, rc, off);
 	return (rc);
 }
 
@@ -1087,6 +1078,7 @@ slm_upsch_revert_cb(struct slm_sth *sth, __unusedx void *p)
 	tract[BREPLST_REPL_SCHED] = BREPLST_REPL_QUEUED;
 	tract[BREPLST_GARBAGE_SCHED] = BREPLST_GARBAGE;
 
+	// XXX mds_note_update(1)
 	brepls_init(retifset, 0);
 	retifset[BREPLST_REPL_SCHED] = 1;
 	retifset[BREPLST_GARBAGE_SCHED] = 1;

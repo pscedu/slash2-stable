@@ -3094,10 +3094,6 @@ mslfsop_destroy(__unusedx struct pscfs_req *pfr)
 
 	/* XXX force flush */
 
-	/* 
- 	 * XXX: fdic_reap() only works on idle loop. This causes
-	 * hang with removal when iozone is running.
-	 */
 	p = sl_fcmh_pool;
 	for (;;) {
 		POOL_LOCK(p);
