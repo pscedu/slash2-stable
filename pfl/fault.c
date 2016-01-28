@@ -67,11 +67,12 @@ pfl_fault_destroy(int pos)
 struct pfl_fault *
 _pfl_fault_get(const char *name, int populate)
 {
-	struct pfl_fault *flt = NULL;
+	struct pfl_fault *flt = NULL, dummy;
 	int pos, locked;
 
 	locked = reqlock(&pfl_faults_lock);
-	pos = psc_dynarray_bsearch(&pfl_faults, name, _pfl_fault_cmp);
+	snprintf(dummy.pflt_name, PFL_FAULT_NAME_MAX-1, "%s", name);
+	pos = psc_dynarray_bsearch(&pfl_faults, &dummy, _pfl_fault_cmp);
 	if (pos < psc_dynarray_len(&pfl_faults)) {
 		flt = psc_dynarray_getpos(&pfl_faults, pos);
 		if (strcmp(flt->pflt_name, name) == 0)
