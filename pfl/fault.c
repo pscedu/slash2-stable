@@ -386,7 +386,7 @@ psc_ctlparam_faults(int fd, struct psc_ctlmsghdr *mh,
 		pflt = pfl_fault_peek(levels[1]);
 		if (pflt == NULL)
 			return (psc_ctlsenderr(fd, mh,
-			    "invalid fault point: %s", levels[1]));
+			    "unknown fault point: %s", levels[1]));
 		pfl_fault_lock(pflt);
 		rc = psc_ctlparam_faults_handle(fd, mh, pcp, levels,
 		    nlevels, pflt, val);
