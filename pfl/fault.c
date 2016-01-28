@@ -67,7 +67,7 @@ pfl_fault_destroy(int pos)
 struct pfl_fault *
 _pfl_fault_get(const char *name, int populate)
 {
-	struct pfl_fault *flt;
+	struct pfl_fault *flt = NULL;
 	int pos, locked;
 
 	locked = reqlock(&pfl_faults_lock);
