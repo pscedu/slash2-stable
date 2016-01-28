@@ -1,3 +1,9 @@
+01/28/2016
+----------
+
+Release 1.07. This release contains a potential fix that solves the ZFS-fuse umem/vmem allocation
+failure when we try to send a full snapshot on a MDS. Also, slash2.so is now compiled by default.
+
 01/20/2016
 ----------
 
