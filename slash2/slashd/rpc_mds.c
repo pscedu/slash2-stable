@@ -274,10 +274,11 @@ batchrq_decref(struct batchrq *br, int rc)
 {
 	int finish = 0;
 
-	// LOCK_ENSURE(&batchrqs_lock);
-
 	if (br->br_rc == 0)
 		br->br_rc = rc;
+
+	PFLOG_BATCHRPC(PLL_DIAG, br, "decref");
+
 	psc_assert(br->br_refcnt > 0);
 	if (--br->br_refcnt == 0) {
 		struct psc_listcache *l;
@@ -327,6 +328,8 @@ batchrq_sched_finish(struct batchrq *br, int rc)
 
 	wk = pfl_workq_getitem(batchrq_finish_wkcb,
 	    struct slm_wkdata_batchrq_cb);
+
+	/* need reference count here? */
 	wk->br = br;
 	wk->rc = rc;
 	pfl_workq_putitemq(&slm_db_lopri_workq, wk);
@@ -382,6 +385,10 @@ batchrq_send(struct batchrq *br)
 
 	ml = &batchrqs_delayed;
 
+	/*
+	 * The following list lock is the same as BATCHMGR_LOCK() due to
+	 * the way list lock is set up.
+	 */
 	LIST_CACHE_LOCK_ENSURE(ml);
 
 	rq = br->br_rq;
@@ -393,6 +400,8 @@ batchrq_send(struct batchrq *br)
 	lc_remove(ml, br);
 
 	lc_add(&batchrqs_waitreply, br);
+
+	PFLOG_BATCHRPC(PLL_DIAG, br, "sending");
 
 	iov.iov_base = br->br_buf;
 	iov.iov_len = br->br_len;
@@ -523,6 +532,8 @@ batchrq_add(struct sl_resource *r, struct slashrpc_cservice *csvc,
 
 	PFL_GETTIMEVAL(&br->br_expire);
 	br->br_expire.tv_sec += expire;
+
+	PFLOG_BATCHRPC(PLL_DIAG, br, "created");
 
 	lc_add(l, br);
 	lc_add_sorted(ml, br, batchrq_cmp);
