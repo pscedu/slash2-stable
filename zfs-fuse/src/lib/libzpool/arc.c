@@ -3486,6 +3486,14 @@ arc_init(void)
 
 	/* set min cache to 16 MB */
 	arc_c_min = 16<<20;
+
+	/*
+	 * slashd can set arc_c_max using slconfig file. zfs-fuse can do the same
+	 * with max_arc_size.  They never run at the same time.
+	 */
+	if (arc_c_max)
+		goto skip;
+
 	if (max_arc_size) {
 		if (max_arc_size < arc_c_min) {
 			syslog(LOG_WARNING,"max_arc_size too small (" FI64 " bytes), using arc_c_min (" FI64 " bytes)",max_arc_size,arc_c_min);
@@ -3501,12 +3509,24 @@ arc_init(void)
 		arc_c_max = 64<<20;
 #endif
 	}
+
+  skip:
+	/* 
+	 * Limit the max arc size (i.e., /zfs-kstat/zfs/arcstats/c_max) to 
+	 * 75% of the system memory.
+ 	 */
+	if (arc_c_max > physmem * PAGESIZE * 75 / 100)
+		arc_c_max = physmem * PAGESIZE * 75 / 100;
+
 	syslog(LOG_NOTICE,"ARC setup: min ARC size set to " FI64 " bytes",arc_c_min);
 	syslog(LOG_NOTICE,"ARC setup: max ARC size set to " FI64 " bytes",arc_c_max);
 
 	/*
 	 * Allow the tunables to override our calculations if they are
 	 * reasonable (ie. over 64MB)
+	 *
+	 * I don't think the following if statements ever executed because
+	 * zfs_arc_min and zfs_arc_max are both 0.
 	 */
 	if (zfs_arc_max > 64<<20 && zfs_arc_max < physmem * PAGESIZE)
 		arc_c_max = zfs_arc_max;
