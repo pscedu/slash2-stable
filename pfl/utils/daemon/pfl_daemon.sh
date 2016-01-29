@@ -267,6 +267,11 @@ _rundaemon()
 	"$@"
 	postproc $?
 	vsleep
+
+	# Do we need to somehow clean up the socket here? zfs-fuse listener
+	# sometimes reads garbage and abort. We have to kill slashd.sh to
+	# restart slashd.
+
 	exec $0 "${bkav[@]}"
 }
 
