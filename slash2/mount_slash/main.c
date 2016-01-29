@@ -1539,6 +1539,7 @@ msl_readdir_issue(struct pscfs_req *pfr, struct fidc_membh *d,
 	fcmh_op_start_type(d, FCMH_OPCNT_READDIR);
 
 	MSL_RMC_NEWREQ(pfr, d, csvc, SRMT_READDIR, rq, mq, mp, rc);
+	(void)pfl_fault_here_rc("slash2/readdir", &rc, EHOSTDOWN);
 	if (rc)
 		PFL_GOTOERR(out2, rc);
 
@@ -1584,6 +1585,7 @@ msl_readdir_issue(struct pscfs_req *pfr, struct fidc_membh *d,
 
  out2:
 	DIRCACHE_WRLOCK(d);
+	p->dcp_refcnt--;
 	dircache_free_page(d, p);
 	DIRCACHE_ULOCK(d);
 	fcmh_op_done_type(d, FCMH_OPCNT_READDIR);
@@ -3161,8 +3163,8 @@ mslfsop_destroy(__unusedx struct pscfs_req *pfr)
 
 	spinlock(&pfl_faults_lock);
 	DYNARRAY_FOREACH(flt, i, &pfl_faults)
-		if (strncmp(flt->pflt_name, "slash2.",
-		    strlen("slash2.")) == 0)
+		if (strncmp(flt->pflt_name, "slash2/",
+		    strlen("slash2/")) == 0)
 			pfl_fault_destroy(i--);
 	freelock(&pfl_faults_lock);
 
