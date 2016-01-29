@@ -67,11 +67,12 @@ pfl_fault_destroy(int pos)
 struct pfl_fault *
 _pfl_fault_get(const char *name, int populate)
 {
-	struct pfl_fault *flt;
+	struct pfl_fault *flt = NULL, dummy;
 	int pos, locked;
 
 	locked = reqlock(&pfl_faults_lock);
-	pos = psc_dynarray_bsearch(&pfl_faults, name, _pfl_fault_cmp);
+	snprintf(dummy.pflt_name, PFL_FAULT_NAME_MAX-1, "%s", name);
+	pos = psc_dynarray_bsearch(&pfl_faults, &dummy, _pfl_fault_cmp);
 	if (pos < psc_dynarray_len(&pfl_faults)) {
 		flt = psc_dynarray_getpos(&pfl_faults, pos);
 		if (strcmp(flt->pflt_name, name) == 0)
@@ -385,7 +386,7 @@ psc_ctlparam_faults(int fd, struct psc_ctlmsghdr *mh,
 		pflt = pfl_fault_peek(levels[1]);
 		if (pflt == NULL)
 			return (psc_ctlsenderr(fd, mh,
-			    "invalid fault point: %s", levels[1]));
+			    "unknown fault point: %s", levels[1]));
 		pfl_fault_lock(pflt);
 		rc = psc_ctlparam_faults_handle(fd, mh, pcp, levels,
 		    nlevels, pflt, val);
