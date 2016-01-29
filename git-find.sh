@@ -19,7 +19,7 @@ then
     fi
 fi
 
-total=$(git log | grep "^commit" | wc -l)
+total=$(git log | grep -c ^commit)
 
 if [ $# -eq 1 ]
 then
