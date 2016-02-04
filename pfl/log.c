@@ -427,6 +427,8 @@ _psc_fatal(const struct pfl_callerinfo *pci, int level, int options,
 	va_start(ap, fmt);
 	_psclogv(pci, level, options, fmt, ap);
 	va_end(ap);
+
+	errx(1, "should not reach here");
 }
 
 __dead void
@@ -434,6 +436,8 @@ _psc_fatalv(const struct pfl_callerinfo *pci, int level, int options,
     const char *fmt, va_list ap)
 {
 	_psclogv(pci, level, options, fmt, ap);
+
+	errx(1, "should not reach here");
 }
 
 /* Keep synced with PLL_* constants. */
