@@ -1,4 +1,5 @@
 /* $Id$ */
+/* %ISC_COPYRIGHT% */
 
 #ifndef _PFL_SETRESUID_H_
 #define _PFL_SETRESUID_H_
