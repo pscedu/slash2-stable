@@ -1,4 +1,5 @@
 /* $Id$ */
+/* %ISC_COPYRIGHT% */
 
 #include <sys/types.h>
 #include <sys/stat.h>

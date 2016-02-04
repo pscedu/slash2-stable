@@ -1,4 +1,5 @@
 /* $Id$ */
+/* %ISC_COPYRIGHT% */
 
 #include <sys/param.h>
 
