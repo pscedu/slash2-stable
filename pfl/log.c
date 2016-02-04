@@ -50,6 +50,7 @@
 
 #include "pfl/alloc.h"
 #include "pfl/cdefs.h"
+#include "pfl/err.h"
 #include "pfl/fmtstr.h"
 #include "pfl/hashtbl.h"
 #include "pfl/log.h"
@@ -299,12 +300,6 @@ pfl_fmtlogdate(const struct timeval *tv, const char **s)
 	return (bufp);
 }
 
-__weak const char *
-pfl_strerror(int rc)
-{
-	return (strerror(rc));
-}
-
 void
 _psclogv(const struct pfl_callerinfo *pci, int level, int options,
     const char *fmt, va_list ap)
@@ -323,7 +318,7 @@ _psclogv(const struct pfl_callerinfo *pci, int level, int options,
 
 	d = psclog_getdata();
 	if (d->pld_flags & PLDF_INLOG) {
-//		write(); ?
+		// XXX use write(); ?
 		// also place line, file, etc
 		vfprintf(stderr, fmt, ap); /* XXX syslog, etc */
 
@@ -431,8 +426,6 @@ _psc_fatal(const struct pfl_callerinfo *pci, int level, int options,
 	va_start(ap, fmt);
 	_psclogv(pci, level, options, fmt, ap);
 	va_end(ap);
-
-	errx(1, "should not reach here");
 }
 
 __dead void
@@ -440,7 +433,6 @@ _psc_fatalv(const struct pfl_callerinfo *pci, int level, int options,
     const char *fmt, va_list ap)
 {
 	_psclogv(pci, level, options, fmt, ap);
-	errx(1, "should not reach here");
 }
 
 /* Keep synced with PLL_* constants. */

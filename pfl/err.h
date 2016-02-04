@@ -1,4 +1,5 @@
 /* $Id$ */
+/* %ISC_COPYRIGHT% */
 
 #ifndef _PFL_ERR_H_
 #define _PFL_ERR_H_

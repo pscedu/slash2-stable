@@ -14,6 +14,7 @@ SRCS+=		${PFL_BASE}/base64.c
 SRCS+=		${PFL_BASE}/completion.c
 SRCS+=		${PFL_BASE}/dbgutil.c
 SRCS+=		${PFL_BASE}/dynarray.c
+SRCS+=		${PFL_BASE}/err_pfl.c
 SRCS+=		${PFL_BASE}/fault.c
 SRCS+=		${PFL_BASE}/fmt.c
 SRCS+=		${PFL_BASE}/fs.c
