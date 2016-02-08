@@ -3,7 +3,7 @@
  * %GPL_START_LICENSE%
  * ---------------------------------------------------------------------
  * Copyright 2015, Google, Inc.
- * Copyright (c) 2006-2015, Pittsburgh Supercomputing Center (PSC).
+ * Copyright 2006-2016, Pittsburgh Supercomputing Center
  * All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
@@ -319,7 +319,7 @@ struct bmap {
 #define BMAPGETF_NODIO		(1 << 5)	/* cancel lease request if it would conjure DIO */
 
 int	 bmap_cmp(const void *, const void *);
-void	 bmap_cache_init(size_t);
+void	 bmap_cache_init(size_t, int);
 void	 bmap_cache_destroy(void);
 void	 bmap_free_all_locked(struct fidc_membh *);
 void	 bmap_biorq_waitempty(struct bmap *);

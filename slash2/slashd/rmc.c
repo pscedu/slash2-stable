@@ -2,8 +2,8 @@
 /*
  * %GPL_START_LICENSE%
  * ---------------------------------------------------------------------
- * Copyright 2015, Google, Inc.
- * Copyright (c) 2007-2015, Pittsburgh Supercomputing Center (PSC).
+ * Copyright 2015-2016, Google, Inc.
+ * Copyright 2007-2016, Pittsburgh Supercomputing Center
  * All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
@@ -66,8 +66,9 @@
 #include "lib/libsolkerncompat/include/errno_compat.h"
 #include "zfs-fuse/zfs_slashlib.h"
 
-int			slm_ptrunc_enabled;
 int			slm_global_mount;
+int			slm_ptrunc_enabled;
+int			slm_preclaim_enabled = 1;
 
 uint64_t		slm_next_fid = UINT64_MAX;
 psc_spinlock_t		slm_fid_lock = SPINLOCK_INIT;

@@ -2,8 +2,8 @@
 /*
  * %GPL_START_LICENSE%
  * ---------------------------------------------------------------------
- * Copyright 2015, Google, Inc.
- * Copyright (c) 2009-2015, Pittsburgh Supercomputing Center (PSC).
+ * Copyright 2015-2016, Google, Inc.
+ * Copyright 2009-2016, Pittsburgh Supercomputing Center
  * All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
@@ -1076,7 +1076,7 @@ void
 slvr_cache_init(void)
 {
 	psc_poolmaster_init(&slvr_poolmaster,
-	    struct slvr, slvr_lentry, PPMF_AUTO, 64, 64, 0,
+	    struct slvr, slvr_lentry, PPMF_AUTO, 512, 512, 0,
 	    NULL, NULL, NULL, "slvr");
 	slvr_pool = psc_poolmaster_getmgr(&slvr_poolmaster);
 

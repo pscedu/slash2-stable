@@ -2,7 +2,7 @@
 /*
  * %GPL_START_LICENSE%
  * ---------------------------------------------------------------------
- * Copyright 2015, Google, Inc.
+ * Copyright 2015-2016, Google, Inc.
  * Copyright (c) 2009-2014, Pittsburgh Supercomputing Center (PSC).
  * All rights reserved.
  *
@@ -26,8 +26,6 @@
 #include <sys/errno.h>
 
 #include "pfl/err.h"
-
-#define slstrerror(rc)			strerror(rc)
 
 #define _SLERR_START			1000		/* must be >max errno */
 
@@ -72,5 +70,10 @@
 #define SLERR_CRCABSENT			(_SLERR_START + 34)
 /* 35 - reuse me */
 /* 36 - reuse me */
+
+#undef strerror
+#define strerror(rc)			sl_strerror(rc)
+
+const char *sl_strerror(int);
 
 #endif /* _SLERR_H_ */

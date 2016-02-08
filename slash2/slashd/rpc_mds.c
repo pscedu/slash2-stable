@@ -2,8 +2,8 @@
 /*
  * %GPL_START_LICENSE%
  * ---------------------------------------------------------------------
- * Copyright 2015, Google, Inc.
- * Copyright (c) 2006-2015, Pittsburgh Supercomputing Center (PSC).
+ * Copyright 2015-2016, Google, Inc.
+ * Copyright 2006-2016, Pittsburgh Supercomputing Center
  * All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
@@ -324,12 +324,23 @@ batchrq_finish_wkcb(void *p)
 void
 batchrq_sched_finish(struct batchrq *br, int rc)
 {
+	int locked = 0;
+	struct psc_listcache *lc;
 	struct slm_wkdata_batchrq_cb *wk;
+
+	lc = &batchrqs_waitreply;
+	locked = LIST_CACHE_RLOCK(lc);
+	if (br->br_flags & BATCHF_CLEANUP) {
+		LIST_CACHE_URLOCK(lc, locked);
+		return;
+	}
+
+	br->br_flags |= BATCHF_CLEANUP;
+	LIST_CACHE_URLOCK(lc, locked);
 
 	wk = pfl_workq_getitem(batchrq_finish_wkcb,
 	    struct slm_wkdata_batchrq_cb);
 
-	/* need reference count here? */
 	wk->br = br;
 	wk->rc = rc;
 	pfl_workq_putitemq(&slm_db_lopri_workq, wk);
@@ -407,14 +418,13 @@ batchrq_send(struct batchrq *br)
 	iov.iov_len = br->br_len;
 	rc = slrpc_bulkclient(rq, BULK_GET_SOURCE, br->br_snd_ptl, &iov,
 	    1);
-	if (rc)
-		goto err;
 
-	rq->rq_interpret_reply = sl_batchrqsend_cb;
-	rq->rq_async_args.pointer_arg[0] = br;
-	rc = SL_NBRQSET_ADD(br->br_csvc, rq);
+	if (!rc) {
+		rq->rq_interpret_reply = sl_batchrqsend_cb;
+		rq->rq_async_args.pointer_arg[0] = br;
+		rc = SL_NBRQSET_ADD(br->br_csvc, rq);
+	}
 	if (rc) {
- err:
 		/*
 		 * If we failed, check again to see if the connection
 		 * has been reestablished since there can be delay in
@@ -500,6 +510,9 @@ batchrq_add(struct sl_resource *r, struct slashrpc_cservice *csvc,
 		if ((br->br_flags & (BATCHF_RQINFL |
 		    BATCHF_WAITREPLY)) == 0 &&
 		    opc == br->br_rq->rq_reqmsg->opc) {
+			/*
+			 * Tack this request onto the pending batch set.
+			 */
 			sl_csvc_decref(csvc);
 			mq = pscrpc_msg_buf(br->br_rq->rq_reqmsg, 0,
 			    sizeof(*mq));

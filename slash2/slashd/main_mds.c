@@ -2,8 +2,8 @@
 /*
  * %GPL_START_LICENSE%
  * ---------------------------------------------------------------------
- * Copyright 2015, Google, Inc.
- * Copyright (c) 2008-2015, Pittsburgh Supercomputing Center (PSC).
+ * Copyright 2015-2016, Google, Inc.
+ * Copyright 2008-2016, Pittsburgh Supercomputing Center
  * All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
@@ -198,14 +198,14 @@ read_vfsid(int vfsid, char *fn, uint64_t *field)
 	    &rootcreds, NULL);
 	if (rc) {
 		psclog_errorx("lookup %s/%s: %s", SL_RPATH_META_DIR,
-		    fn, slstrerror(rc));
+		    fn, sl_strerror(rc));
 		goto out;
 	}
 	rc = mdsio_opencreate(vfsid, mf, &rootcreds, O_RDONLY, 0, NULL,
 	    NULL, NULL, &h, NULL, NULL, 0);
 	if (rc) {
 		psclog_errorx("open %s/%s: %s", SL_RPATH_META_DIR,
-		    fn, slstrerror(rc));
+		    fn, sl_strerror(rc));
 		goto out;
 	}
 	rc = mdsio_read(vfsid, &rootcreds, buf, sizeof(buf), &nb, 0, h);
@@ -213,7 +213,7 @@ read_vfsid(int vfsid, char *fn, uint64_t *field)
 
 	if (rc) {
 		psclog_errorx("read %s/%s: %s", SL_RPATH_META_DIR,
-		    fn, slstrerror(rc));
+		    fn, sl_strerror(rc));
 		goto out;
 	}
 
@@ -222,7 +222,7 @@ read_vfsid(int vfsid, char *fn, uint64_t *field)
 	if (*endp || endp == buf) {
 		rc = EINVAL;
 		psclog_errorx("read %s/%s: %s", SL_RPATH_META_DIR,
-		    fn, slstrerror(rc));
+		    fn, sl_strerror(rc));
 	}
  out:
 	return (rc);
@@ -289,7 +289,7 @@ psc_register_filesystem(int vfsid)
 		}
 		if (rc) {
 			psclog_warnx("Verify %s entry: %s", fsname,
-			    slstrerror(rc));
+			    sl_strerror(rc));
 			return;
 		}
 	}
@@ -298,7 +298,7 @@ psc_register_filesystem(int vfsid)
 	rc = mdsio_lookup(vfsid, MDSIO_FID_ROOT, SL_RPATH_META_DIR,
 	    &mds_metadir_inum[vfsid], &rootcreds, NULL);
 	if (rc) {
-		psclog_warnx("lookup .slmd metadir: %s", slstrerror(rc));
+		psclog_warnx("lookup .slmd metadir: %s", sl_strerror(rc));
 		return;
 	}
 
@@ -307,7 +307,7 @@ psc_register_filesystem(int vfsid)
 	    NULL);
 	if (rc) {
 		psclog_warnx("lookup %s/%s dir: %s", SL_RPATH_META_DIR,
-		    SL_RPATH_FIDNS_DIR, slstrerror(rc));
+		    SL_RPATH_FIDNS_DIR, sl_strerror(rc));
 		return;
 	}
 
@@ -316,7 +316,7 @@ psc_register_filesystem(int vfsid)
 	    NULL);
 	if (rc) {
 		psclog_warnx("lookup %s/%s dir: %s", SL_RPATH_META_DIR,
-		    SL_RPATH_TMP_DIR, slstrerror(rc));
+		    SL_RPATH_TMP_DIR, sl_strerror(rc));
 		return;
 	}
 
@@ -480,18 +480,16 @@ main(int argc, char *argv[])
 	}
 
 	fidc_init(sizeof(struct fcmh_mds_info));
-	bmap_cache_init(sizeof(struct bmap_mds_info));
+	bmap_cache_init(sizeof(struct bmap_mds_info), 1024);
 
-	/* 
- 	 * Start up ZFS threads and import the MDS zpool.
- 	 * Also, make sure ARC max size is finalized
- 	 * before calling arc_init().
- 	 */
-	if (slcfg_local->cfg_arc_max) {
-		void arc_set_maxsize(uint64_t);
-
+	/*
+	 * Start up ZFS threads and import the MDS zpool.  Also, make
+	 * sure ARC max size is finalized before calling arc_init().
+	 */
+	if (slcfg_local->cfg_arc_max)
 		arc_set_maxsize(slcfg_local->cfg_arc_max);
-	}
+
+	arc_set_slashd();
 	mdsio_init();
 	import_zpool(zpname, zpcachefn);
 
@@ -557,8 +555,8 @@ main(int argc, char *argv[])
 	slm_upsch_init();
 
 	psc_poolmaster_init(&slm_bml_poolmaster,
-	    struct bmap_mds_lease, bml_bmi_lentry, PPMF_AUTO, 256,
-	    256, 0, NULL, NULL, NULL, "bmplease");
+	    struct bmap_mds_lease, bml_bmi_lentry, PPMF_AUTO, 2048,
+	    2048, 0, NULL, NULL, NULL, "bmplease");
 	slm_bml_pool = psc_poolmaster_getmgr(&slm_bml_poolmaster);
 
 	sl_nbrqset = pscrpc_prep_set();
@@ -651,11 +649,11 @@ main(int argc, char *argv[])
 	pfl_odt_check(slm_ptrunc_odt, slm_ptrunc_odt_startup_cb, NULL);
 
 	/*
- 	 * As soon as log replay is over, we should be able to set the 
- 	 * state to NORMAL. However, we had issues when trying to write
- 	 * new log entries while replaying odtable. So keep it this 
- 	 * way for now.
- 	 */
+	 * As soon as log replay is over, we should be able to set the
+	 * state to NORMAL.  However, we had issues when trying to write
+	 * new log entries while replaying odtable.  So keep it this way
+	 * for now.
+	 */
 	slm_opstate = SLM_OPSTATE_NORMAL;
 
 	pfl_workq_lock();
@@ -695,7 +693,9 @@ main(int argc, char *argv[])
 	sl_freapthr_spawn(SLMTHRT_FREAP, "slmfreapthr");
 
 	time(&now);
-	psclog_max("MDS has started at %s", ctime(&now));	
+	psclog_info("MDS revision %d has started at %s", sl_stk_version,
+	    ctime(&now));
+	psclog_info("Max ARC caching size is %"PRIu64, arc_get_maxsize());
 
 	slmctlthr_main(sfn);
 	exit(0);

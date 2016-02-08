@@ -2,7 +2,7 @@
 /*
  * %GPL_START_LICENSE%
  * ---------------------------------------------------------------------
- * Copyright 2015, Google, Inc.
+ * Copyright 2015-2016, Google, Inc.
  * Copyright (c) 2008-2015, Pittsburgh Supercomputing Center (PSC).
  * All rights reserved.
  *
@@ -245,7 +245,7 @@ sli_rii_handle_repl_read_aio(struct pscrpc_request *rq)
 		 */
 		psclog_errorx("failed to load bmap: fid="SLPRI_FID" "
 		    "bmap=%u: %s",
-		    mq->fg.fg_fid, mq->bmapno, slstrerror(mp->rc));
+		    mq->fg.fg_fid, mq->bmapno, sl_strerror(mp->rc));
 		goto out;
 	}
 

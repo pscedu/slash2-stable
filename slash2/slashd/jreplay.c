@@ -3,7 +3,7 @@
  * %GPL_START_LICENSE%
  * ---------------------------------------------------------------------
  * Copyright 2015, Google, Inc.
- * Copyright (c) 2008-2015, Pittsburgh Supercomputing Center (PSC).
+ * Copyright 2008-2016, Pittsburgh Supercomputing Center
  * All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
@@ -225,6 +225,10 @@ mds_replay_bmap_seq(struct psc_journal_enthdr *pje)
 
 /*
  * Replay an inode update.
+ *
+ * Note that the replica table can be stored for a directory for inheritance purposes,
+ * and it is named according to /deployment_s2md/.slmd/fidns/a/b/c/d/$fid.ino. 
+ * See slm_fcmh_ctor() for details.
  */
 static int
 mds_replay_ino(void *jent, int op)

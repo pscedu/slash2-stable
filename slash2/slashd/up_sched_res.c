@@ -2,8 +2,8 @@
 /*
  * %GPL_START_LICENSE%
  * ---------------------------------------------------------------------
- * Copyright 2015, Google, Inc.
- * Copyright (c) 2009-2015, Pittsburgh Supercomputing Center (PSC).
+ * Copyright 2015-2016, Google, Inc.
+ * Copyright 2009-2016, Pittsburgh Supercomputing Center
  * All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
@@ -414,17 +414,17 @@ slm_upsch_finish_ptrunc(struct slashrpc_cservice *csvc,
 	    BREPLST_TRUNCPNDG : BREPLST_VALID;
 	mds_repl_bmap_apply(b, tract, NULL, off);
 
-	if (!rc)
-	    mds_bmap_write_logrepls(b);
+	mds_bmap_write_logrepls(b);
 
-	f = b->bcm_fcmh;
-
-	FCMH_LOCK(f);
-	fmi = fcmh_2_fmi(f);
-	fmi->fmi_ptrunc_nios--;
-	if (!fmi->fmi_ptrunc_nios)
-		f->fcmh_flags &= ~FCMH_MDS_IN_PTRUNC;
-	FCMH_ULOCK(f);
+	if (!rc) {
+		f = b->bcm_fcmh;
+		FCMH_LOCK(f);
+		fmi = fcmh_2_fmi(f);
+		fmi->fmi_ptrunc_nios--;
+		if (!fmi->fmi_ptrunc_nios)
+			f->fcmh_flags &= ~FCMH_MDS_IN_PTRUNC;
+		FCMH_ULOCK(f);
+	}
 
 	psclog(rc ? PLL_WARN: PLL_DIAG,
 	    "partial truncation resolution: rc=%d", rc);
@@ -465,11 +465,16 @@ slm_upsch_tryptrunc(struct bmap *b, int off,
 	struct sl_resm *dst_resm;
 	struct fidc_membh *f;
 
-	bmap_op_start_type(b, BMAP_OPCNT_UPSCH);
-
 	upd = bmap_2_upd(b);
 	f = upd_2_fcmh(upd);
+
+	if (!slm_ptrunc_enabled) {
+		DEBUG_FCMH(PLL_MAX, f, "ptrunc averted");
+		return (0);
+	}
+
 	dst_resm = res_getmemb(dst_res);
+	bmap_op_start_type(b, BMAP_OPCNT_UPSCH);
 
 	memset(&av, 0, sizeof(av));
 	av.pointer_arg[IP_DSTRESM] = dst_resm;
@@ -576,6 +581,13 @@ slm_upsch_trypreclaim(struct sl_resource *r, struct bmap *b, int off)
 	struct srt_preclaim_reqent pe;
 	struct sl_mds_iosinfo *si;
 	struct sl_resm *m;
+	struct fidc_membh *f;
+
+	f = b->bcm_fcmh;
+	if (!slm_preclaim_enabled) {
+		DEBUG_FCMH(PLL_MAX, f, "preclaim averted");
+		return (0);
+	}
 
 	si = res2iosinfo(r);
 	if (si->si_flags & SIF_PRECLAIM_NOTSUP)

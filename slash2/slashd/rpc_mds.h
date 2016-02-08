@@ -2,8 +2,8 @@
 /*
  * %GPL_START_LICENSE%
  * ---------------------------------------------------------------------
- * Copyright 2015, Google, Inc.
- * Copyright (c) 2006-2015, Pittsburgh Supercomputing Center (PSC).
+ * Copyright 2015-2016, Google, Inc.
+ * Copyright 2006-2016, Pittsburgh Supercomputing Center
  * All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
@@ -35,7 +35,7 @@ struct pscrpc_export;
 #define SLM_RMM_REPSZ			512
 #define SLM_RMM_SVCNAME			"slmrmm"
 
-#define SLM_RMI_NTHREADS		8
+#define SLM_RMI_NTHREADS		32
 #define SLM_RMI_NBUFS			1024
 #define SLM_RMI_BUFSZ			768
 #define SLM_RMI_REPSZ			1320
@@ -105,6 +105,7 @@ struct batchrq {
 
 #define BATCHF_RQINFL			(1 << 0)	/* request RPC inflight */
 #define BATCHF_WAITREPLY		(1 << 1)	/* awaiting RPC reply */
+#define BATCHF_CLEANUP			(1 << 2)	/* scheduled for cleanup */
 
 #define PFLOG_BATCHRPC(level, br, fmt, ...)				\
 	psclogs((level), PSS_RPC,					\

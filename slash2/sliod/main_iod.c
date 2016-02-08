@@ -2,8 +2,8 @@
 /*
  * %GPL_START_LICENSE%
  * ---------------------------------------------------------------------
- * Copyright 2015, Google, Inc.
- * Copyright (c) 2006-2015, Pittsburgh Supercomputing Center (PSC).
+ * Copyright 2015-2016, Google, Inc.
+ * Copyright 2006-2016, Pittsburgh Supercomputing Center
  * All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
@@ -204,6 +204,7 @@ main(int argc, char *argv[])
 	sigset_t signal_set;
 	struct stat stb;
 	int rc, c;
+	time_t now;
 
 	/* gcrypt must be initialized very early on */
 	gcry_control(GCRYCTL_SET_THREAD_CBS, &gcry_threads_pthread);
@@ -265,7 +266,7 @@ main(int argc, char *argv[])
 	if (stat(slcfg_local->cfg_fsroot, &stb) == -1)
 		psc_fatal("%s", slcfg_local->cfg_fsroot);
 
-	bmap_cache_init(sizeof(struct bmap_iod_info));
+	bmap_cache_init(sizeof(struct bmap_iod_info), 256);
 	fidc_init(sizeof(struct fcmh_iod_info));
 	bim_init();
 	sl_nbrqset = pscrpc_prep_set();
@@ -314,7 +315,7 @@ main(int argc, char *argv[])
 	rc = sli_rmi_setmds(prefmds);
 	if (rc)
 		psc_fatalx("invalid MDS %s: %s", prefmds,
-		    slstrerror(rc));
+		    sl_strerror(rc));
 
 	psc_assert(globalConfig.gconf_fsuuid);
 	psclog_info("gconf_fsuuid=%"PRIx64, globalConfig.gconf_fsuuid);
@@ -327,6 +328,10 @@ main(int argc, char *argv[])
 	sl_freapthr_spawn(SLITHRT_FREAP, "slifreapthr");
 
 	OPSTAT_INCR("min-seqno");
+
+	time(&now);
+	psclog_max("IOS revision %d has started at %s", sl_stk_version,
+	    ctime(&now));
 
 	slictlthr_main(sfn);
 	exit(0);

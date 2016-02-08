@@ -2,8 +2,8 @@
 /*
  * %GPL_START_LICENSE%
  * ---------------------------------------------------------------------
- * Copyright 2015, Google, Inc.
- * Copyright (c) 2007-2015, Pittsburgh Supercomputing Center (PSC).
+ * Copyright 2015-2016, Google, Inc.
+ * Copyright 2007-2016, Pittsburgh Supercomputing Center
  * All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
@@ -218,11 +218,12 @@ newent_select_group(struct fidc_membh *p, struct pscfs_creds *pcr)
 	return (pcr->pcr_gid);
 }
 
-void
+struct pscfs_creds *
 slc_getfscreds(struct pscfs_req *pfr, struct pscfs_creds *pcr)
 {
 	pscfs_getcreds(pfr, pcr);
 	gidmap_int_cred(pcr);
+	return (pcr);
 }
 
 __static void
@@ -2285,16 +2286,19 @@ mslfsop_release(struct pscfs_req *pfr, void *data)
 	}
 
 	if (!fcmh_isdir(f) &&
-	    (mfh->mfh_nbytes_rd || mfh->mfh_nbytes_wr))
+	    (mfh->mfh_nbytes_rd || mfh->mfh_nbytes_wr)) {
+		struct pscfs_creds pcr;
+
 		psclogs(PLL_INFO, SLCSS_INFO,
 		    "file closed fid="SLPRI_FID" "
-		    "uid=%u gid=%u "
+		    "euid=%u owner=%u fgrp=%u "
 		    "fsize=%"PRId64" "
 		    "oatime="PFLPRI_PTIMESPEC" "
 		    "mtime="PFLPRI_PTIMESPEC" sessid=%d "
 		    "otime="PSCPRI_TIMESPEC" "
 		    "rd=%"PSCPRIdOFFT" wr=%"PSCPRIdOFFT" prog=%s",
 		    fcmh_2_fid(f),
+		    slc_getfscreds(pfr, &pcr)->pcr_uid,
 		    f->fcmh_sstb.sst_uid, f->fcmh_sstb.sst_gid,
 		    f->fcmh_sstb.sst_size,
 		    PFLPRI_PTIMESPEC_ARGS(&mfh->mfh_open_atime),
@@ -2303,6 +2307,7 @@ mslfsop_release(struct pscfs_req *pfr, void *data)
 		    PSCPRI_TIMESPEC_ARGS(&mfh->mfh_open_time),
 		    mfh->mfh_nbytes_rd, mfh->mfh_nbytes_wr,
 		    mfh->mfh_uprog);
+	}
 
 	mfh_decref(mfh);
 }
@@ -3788,6 +3793,7 @@ msl_init(void)
 	struct sl_resource *r;
 	char *name;
 	int rc;
+	time_t now;
 
 	gcry_control(GCRYCTL_SET_THREAD_CBS, &gcry_threads_pthread);
 	if (!gcry_check_version(GCRYPT_VERSION)) {
@@ -3829,7 +3835,7 @@ msl_init(void)
 	libsl_init(4096);//2 * (SRCI_NBUFS + SRCM_NBUFS));
 	fidc_init(sizeof(struct fcmh_cli_info));
 	bmpc_global_init();
-	bmap_cache_init(sizeof(struct bmap_cli_info));
+	bmap_cache_init(sizeof(struct bmap_cli_info), 64);
 	dircache_mgr_init();
 
 	psc_hashtbl_init(&msl_namecache_hashtbl, 0, struct dircache_ent,
@@ -3899,7 +3905,7 @@ msl_init(void)
 
 	rc = slc_rmc_setmds(name);
 	if (rc)
-		psc_fatalx("invalid MDS %s: %s", name, slstrerror(rc));
+		psc_fatalx("invalid MDS %s: %s", name, sl_strerror(rc));
 
 	name = getenv("PREF_IOS");
 	if (name) {
@@ -3915,6 +3921,10 @@ msl_init(void)
 
 	pscfs_entry_timeout = 8.;
 	pscfs_attr_timeout = 8.;
+
+	time(&now);
+	psclog_max("slash2 client revision %d has started at %s", sl_stk_version, 
+	    ctime(&now));	
 
 	return (0);
 }

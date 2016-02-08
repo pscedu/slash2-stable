@@ -3,7 +3,7 @@
  * %GPL_START_LICENSE%
  * ---------------------------------------------------------------------
  * Copyright 2015, Google, Inc.
- * Copyright (c) 2006-2015, Pittsburgh Supercomputing Center (PSC).
+ * Copyright 2006-2016, Pittsburgh Supercomputing Center
  * All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
@@ -372,7 +372,7 @@ void	 slm_set_curr_slashfid(slfid_t);
 int	 slm_get_next_slashfid(slfid_t *);
 
 void	 slm_ptrunc_odt_startup_cb(void *, struct pfl_odt_receipt *, void *);
-void	 slm_setattr_core(struct fidc_membh *, struct srt_stat *, int);
+int	 slm_setattr_core(struct fidc_membh *, struct srt_stat *, int);
 
 int	 mdscoh_req(struct bmap_mds_lease *);
 
@@ -399,6 +399,7 @@ extern struct pfl_odt_ops	 slm_odtops;
 
 extern int			 slm_global_mount;
 extern int			 slm_ptrunc_enabled;
+extern int			 slm_preclaim_enabled;
 
 extern struct psc_hashtbl	 slm_roots;
 

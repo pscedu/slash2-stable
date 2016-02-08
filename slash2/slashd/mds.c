@@ -2,8 +2,8 @@
 /*
  * %GPL_START_LICENSE%
  * ---------------------------------------------------------------------
- * Copyright 2015, Google, Inc.
- * Copyright (c) 2006-2015, Pittsburgh Supercomputing Center (PSC).
+ * Copyright 2015-2016, Google, Inc.
+ * Copyright 2006-2016, Pittsburgh Supercomputing Center
  * All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
@@ -54,9 +54,11 @@
 
 #include "zfs-fuse/zfs_slashlib.h"
 
+#define	SLM_CBARG_SLOT_CSVC	0
+
 struct pfl_odt		*slm_bia_odt;
 
-__static int slm_ptrunc_prepare(void *);
+__static int slm_ptrunc_prepare(struct fidc_membh *);
 
 int
 mds_bmap_exists(struct fidc_membh *f, sl_bmapno_t n)
@@ -529,7 +531,7 @@ mds_bmap_add_repl(struct bmap *b, struct bmap_ios_assign *bia)
 
 	if (iosidx < 0)
 		psc_fatalx("ios_lookup_add %d: %s", bia->bia_ios,
-		    slstrerror(iosidx));
+		    sl_strerror(iosidx));
 
 //	BMAP_WAIT_BUSY(b);
 
@@ -1979,26 +1981,25 @@ mds_lease_renew(struct fidc_membh *f, struct srt_bmapdesc *sbd_in,
 	return (rc);
 }
 
-void
+int
 slm_setattr_core(struct fidc_membh *f, struct srt_stat *sstb,
     int to_set)
 {
 	int locked, deref = 0, rc = 0;
-	struct slm_wkdata_ptrunc *wk;
 	struct fcmh_mds_info *fmi;
 
 	if ((to_set & PSCFS_SETATTRF_DATASIZE) && sstb->sst_size) {
 		if (!slm_ptrunc_enabled) {
 			DEBUG_SSTB(PLL_MAX, sstb, "ptrunc averted");
-			return;
+			return 0;
 		}
 		if (f == NULL) {
 			rc = slm_fcmh_get(&sstb->sst_fg, &f);
 			if (rc) {
 				psclog_errorx("unable to retrieve FID "
 				    SLPRI_FID": %s",
-				    sstb->sst_fid, slstrerror(rc));
-				return;
+				    sstb->sst_fid, sl_strerror(rc));
+				return (rc);
 			}
 			deref = 1;
 		}
@@ -2009,15 +2010,12 @@ slm_setattr_core(struct fidc_membh *f, struct srt_stat *sstb,
 		fmi->fmi_ptrunc_size = sstb->sst_size;
 		FCMH_URLOCK(f, locked);
 
-		wk = pfl_workq_getitem(slm_ptrunc_prepare,
-		    struct slm_wkdata_ptrunc);
-		wk->f = f;
-		fcmh_op_start_type(f, FCMH_OPCNT_WORKER);
-		pfl_workq_putitem(wk);
+		rc = slm_ptrunc_prepare(f);
 
 		if (deref)
 			fcmh_op_done(f);
 	}
+	return (rc);
 }
 
 struct ios_list {
@@ -2051,18 +2049,16 @@ ptrunc_tally_ios(struct bmap *b, int iosidx, int val, void *arg)
 }
 
 __static void
-slm_ptrunc_apply(struct slm_wkdata_ptrunc *wk)
+slm_ptrunc_apply(struct fidc_membh *f)
 {
 	int rc;
 	int done = 1, tract[NBREPLST];
 	struct ios_list ios_list;
-	struct fidc_membh *f;
 	struct bmap *b;
 	sl_bmapno_t i;
 	struct fcmh_mds_info *fmi;
 	struct slm_update_data *upd;
 
-	f = wk->f;
 	fmi = fcmh_2_fmi(f);
 
 	/*
@@ -2093,6 +2089,7 @@ slm_ptrunc_apply(struct slm_wkdata_ptrunc *wk)
 			rc = mds_bmap_write_logrepls(b);
 			if (rc) {
 			 	done = 1;
+				bmap_op_done(b);
 			     	goto out2;
 			}
 			/*
@@ -2139,27 +2136,34 @@ slm_ptrunc_apply(struct slm_wkdata_ptrunc *wk)
 	/* XXX adjust nblks */
 
 	OPSTAT_INCR("ptrunc-apply");
-	fcmh_op_done_type(f, FCMH_OPCNT_WORKER);
+}
+
+int
+slm_bmap_release_cb(struct pscrpc_request *rq,
+    struct pscrpc_async_args *av)
+{
+	struct slashrpc_cservice *csvc = av->pointer_arg[SLM_CBARG_SLOT_CSVC];
+
+	sl_csvc_decref(csvc);
+	return (0);
 }
 
 __static int
-slm_ptrunc_prepare(void *p)
+slm_ptrunc_prepare(struct fidc_membh *f)
 {
 	int to_set, rc;
-	struct slm_wkdata_ptrunc *wk = p;
 	struct srm_bmap_release_req *mq;
 	struct srm_bmap_release_rep *mp;
 	struct slashrpc_cservice *csvc;
 	struct bmap_mds_lease *bml;
 	struct pscrpc_request *rq;
 	struct fcmh_mds_info *fmi;
-	struct fidc_membh *f;
 	struct bmap *b;
 	sl_bmapno_t i;
+	uint64_t size;
 
 	mds_note_update(1);
 
-	f = wk->f;
 	fmi = fcmh_2_fmi(f);
 
 	/*
@@ -2187,14 +2191,15 @@ slm_ptrunc_prepare(void *p)
 			}
 			rc = SL_RSX_NEWREQ(csvc, SRMT_RELEASEBMAP, rq,
 			    mq, mp);
-			if (!rc) {
-				mq->sbd[0].sbd_fg.fg_fid = fcmh_2_fid(f);
-				mq->sbd[0].sbd_bmapno = i;
-				mq->nbmaps = 1;
-				(void)SL_RSX_WAITREP(csvc, rq, mp);
+			if (rc) 
+				continue;
+			rq->rq_async_args.pointer_arg[SLM_CBARG_SLOT_CSVC] = csvc;
+			rq->rq_interpret_reply = slm_bmap_release_cb;
+			rc = SL_NBRQSET_ADD(csvc, rq);
+			if (rc) {
+				sl_csvc_decref(csvc);
 				pscrpc_req_finished(rq);
 			}
-			sl_csvc_decref(csvc);
 
 			BMAP_LOCK(b);
 		}
@@ -2204,6 +2209,7 @@ slm_ptrunc_prepare(void *p)
 	FCMH_LOCK(f);
 	to_set = PSCFS_SETATTRF_DATASIZE | SL_SETATTRF_PTRUNCGEN;
 	fcmh_2_ptruncgen(f)++;
+	size = f->fcmh_sstb.sst_size;
 	f->fcmh_sstb.sst_size = fmi->fmi_ptrunc_size;
 	FCMH_ULOCK(f);
 
@@ -2217,13 +2223,14 @@ slm_ptrunc_prepare(void *p)
 		FCMH_LOCK(f);
 		f->fcmh_flags &= ~FCMH_MDS_IN_PTRUNC;
 		fcmh_2_ptruncgen(f)--;
+		f->fcmh_sstb.sst_size = size;
 		FCMH_ULOCK(f);
 		psclog_error("partical truncate setattr: rc=%d", rc);
 	} else
-		slm_ptrunc_apply(wk);
+		slm_ptrunc_apply(f);
 
 	mds_note_update(-1);
-	return (0);
+	return (rc);
 }
 
 int

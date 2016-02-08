@@ -2,7 +2,7 @@
 /*
  * %GPL_START_LICENSE%
  * ---------------------------------------------------------------------
- * Copyright 2015, Google, Inc.
+ * Copyright 2015-2016, Google, Inc.
  * Copyright (c) 2007-2015, Pittsburgh Supercomputing Center (PSC).
  * All rights reserved.
  *
@@ -675,7 +675,7 @@ slcfg_resm_addaddr(char *addr, const char *lnetname)
 		if (rc == -1)
 			yyerror("resource member %s address %s: %s",
 			    currentRes->res_name, addr,
-			    slstrerror(errno));
+			    sl_strerror(errno));
 
 		psc_dynarray_add(&m->resm_nids, resm_nidp);
 	}

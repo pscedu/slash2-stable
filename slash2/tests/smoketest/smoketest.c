@@ -476,6 +476,123 @@ test_open(void)
 	return (0);
 }
 
+#define	BUF_SIZE	132*1024*1024
+
+static int get_random(char *buf, int size)
+{
+	int ret;
+	FILE *fp;
+
+	fp = fopen("/dev/urandom", "r");
+	ret = fread(buf, 1, size, fp);
+	fclose(fp);
+	return ret;
+}
+
+static int test_large()
+{
+	char *buf;
+	int fd, ret;
+	size_t i, offset;
+	unsigned char ch1, ch2;
+	char *filename = "large-file-test.dat";
+
+	buf = malloc(BUF_SIZE);
+	if (buf == NULL) {
+		printf("Error allocating buffer.\n");
+		return (1);
+	}
+
+	ret = get_random(buf, BUF_SIZE);
+	if (ret != BUF_SIZE) {
+		printf("Error reading random data.\n");
+		return (1);
+	}
+
+#if 0
+	printf("%d random bytes have been retrieved...\n", BUF_SIZE);
+	for (i = 0; i < 100; i++) {
+		printf("0x%02x, ", (unsigned char)buf[i]);
+		fflush(stdout);
+	}
+#endif
+
+	fd = open(filename, O_RDWR | O_CREAT | O_TRUNC, 0600);
+	if (fd == -1) {
+		printf("Error opening file %s for writing at line %d.\n", filename, __LINE__);
+		return (1);
+	}
+
+	ret = write(fd, buf, BUF_SIZE);
+	if (ret != BUF_SIZE) {
+		printf("Error writing last byte of the file.");
+		return (1);
+	}
+
+	close(fd);
+
+	fd = open(filename, O_RDWR);
+	if (fd == -1) {
+		printf("Error opening file %s for writing at line %d.\n", filename, __LINE__);
+		return (1);
+	}
+
+	for (i = 0; i < BUF_SIZE; i++) {
+		ret = read(fd, &ch1, 1);
+		if (ret != 1) {
+			printf("Error reading file %s for writing.", filename);
+			return (1);
+		}
+		ch2 = buf[i];
+		if (ch1 != ch2) {
+			printf("Unexpected contents: 0x%02x vs 0x%02x", ch1, ch2);
+			return (1);
+		}
+	}
+	offset = 128*1024*1024 - 157;
+	for (i = offset; i < offset + 834; i++)
+		buf[i] = buf[i] - i;
+
+	ret = lseek(fd, offset, SEEK_SET);
+	if (ret != (int)offset) {
+		printf("Error seeking file %s for writing.", filename);
+		return (1);
+	}
+
+	for (i = offset; i < offset + 834; i++) {
+		ch1 = buf[i];
+		ret = write(fd, &ch1, 1);
+		if (ret != 1) {
+			printf("Error writing file %s for writing.", filename);
+			return (1);
+		}
+	}
+	close(fd);
+
+	fd = open(filename, O_RDWR);
+	if (fd == -1) {
+		printf("Error opening file %s for writing.", filename);
+		return (1);
+	}
+
+	for (i = 0; i < BUF_SIZE; i++) {
+		ret = read(fd, &ch1, 1);
+		if (ret != 1) {
+			printf("Error reading file %s for writing.", filename);
+			return (1);
+		}
+		ch2 = buf[i];
+		if (ch1 != ch2) { 
+			printf("Unexpected contents: 0x%02x vs 0x%02x", ch1, ch2);
+			return (1);
+		}
+	}
+	free(buf);
+	close(fd);
+	unlink(filename);
+	return (0);
+}
+
 struct test_desc test_list[] = {
 
 	{
@@ -507,6 +624,10 @@ struct test_desc test_list[] = {
 		test_open
 	},
 	{
+		"Test basic large file I/O",
+		test_large
+	},
+	{
 		NULL,
 		NULL
 	}
@@ -515,6 +636,7 @@ struct test_desc test_list[] = {
 int
 main(int argc, char *argv[])
 {
+	int total, success;
 	int c, rc, pid, index, testindex, listonly;
 
 	listonly = 0;
@@ -574,6 +696,7 @@ main(int argc, char *argv[])
 	srandom(seed);
 
 	index = 0;
+	total = success = 0;
 	while (1) {
 		if (test_list[index].descp == NULL)
 			break;
@@ -581,11 +704,13 @@ main(int argc, char *argv[])
 			index++;
 			continue;
 		}
-		printf("Checking item %d: %s\n",index+1, test_list[index].descp);
+		total++;
+		printf("Running test %d: %s...\n",index+1, test_list[index].descp);
 		rc = (*test_list[index].funcp)();
-		if (rc)
-			break;
+		if (!rc)
+			success++;
 		index++;
 	}
+	printf("Total number of tests = %d, number of successes = %d\n", total, success);
 	exit(0);
 }
