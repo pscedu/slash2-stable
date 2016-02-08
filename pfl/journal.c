@@ -2,7 +2,8 @@
 /*
  * %ISC_START_LICENSE%
  * ---------------------------------------------------------------------
- * Copyright (c) 2007-2015, Pittsburgh Supercomputing Center (PSC).
+ * Copyright 2015, Google, Inc.
+ * Copyright 2007-2016, Pittsburgh Supercomputing Center
  * All rights reserved.
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -816,8 +817,8 @@ pjournal_open(const char *name, const char *fn)
 	pll_add(&pfl_journals, pj);
 
 	psc_poolmaster_init(&pfl_xidhndl_poolmaster,
-	    struct psc_journal_xidhndl, pjx_lentry, PPMF_AUTO, 1024,
-	    1024, 0, NULL, NULL, NULL, "xidhndl");
+	    struct psc_journal_xidhndl, pjx_lentry, PPMF_AUTO, 4096,
+	    4096, 0, NULL, NULL, NULL, "xidhndl");
 	pfl_xidhndl_pool = psc_poolmaster_getmgr(
 	    &pfl_xidhndl_poolmaster);
 

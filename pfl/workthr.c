@@ -1,21 +1,25 @@
 /* $Id$ */
 /*
- * %GPL_START_LICENSE%
+ * %ISC_START_LICENSE%
  * ---------------------------------------------------------------------
- * Copyright 2011-2015, Pittsburgh Supercomputing Center
+ * Copyright 2015-2016, Google, Inc.
+ * Copyright 2014-2015, Pittsburgh Supercomputing Center
  * All rights reserved.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or (at
- * your option) any later version.
+ * Permission to use, copy, modify, and distribute this software for any
+ * purpose with or without fee is hereby granted, provided that the
+ * above copyright notice and this permission notice appear in all
+ * copies.
  *
- * This program is distributed WITHOUT ANY WARRANTY; without even the
- * implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
- * PURPOSE.  See the GNU General Public License contained in the file
- * `COPYING-GPL' at the top of this distribution or at
- * https://www.gnu.org/licenses/gpl-2.0.html for more details.
- * ---------------------------------------------------------------------
+ * THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL
+ * WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED
+ * WARRANTIES OF MERCHANTABILITY AND FITNESS.  IN NO EVENT SHALL THE
+ * AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL
+ * DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR
+ * PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
+ * TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
+ * PERFORMANCE OF THIS SOFTWARE.
+ * --------------------------------------------------------------------
  * %END_LICENSE%
  */
 

@@ -2,7 +2,8 @@
 /*
  * %ISC_START_LICENSE%
  * ---------------------------------------------------------------------
- * Copyright (c) 2007-2015, Pittsburgh Supercomputing Center (PSC).
+ * Copyright 2015, Google, Inc.
+ * Copyright 2007-2016, Pittsburgh Supercomputing Center
  * All rights reserved.
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -36,7 +37,7 @@ struct psc_journal;
 struct psc_journal_enthdr;
 
 #define	PJ_MAX_TRY			3		/* number of retry before giving up */
-#define	PJ_MAX_BUF			1024		/* number of journal buffers to keep around */
+#define	PJ_MAX_BUF			8192		/* number of journal buffers to keep around */
 
 #define PJH_MAGIC			UINT64_C(0x45678912aabbccff)
 #define PJH_VERSION			0x02

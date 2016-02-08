@@ -1,7 +1,7 @@
 # $Id$
 # %ISC_START_LICENSE%
 # ---------------------------------------------------------------------
-# Copyright 2015, Google, Inc.
+# Copyright 2015-2016, Google, Inc.
 # Copyright (c) 2006-2015, Pittsburgh Supercomputing Center (PSC).
 # All rights reserved.
 #
@@ -154,7 +154,7 @@ ifneq ($(filter pscfs,${MODULES}),)
   else ifdef PICKLE_HAVE_DOKAN
     MODULES+=	dokan
   else
-    $(error no pscfs support available)
+    $(error pscfs was not able to find a suitable backend -- check FUSE installation)
   endif
 endif
 
@@ -164,7 +164,7 @@ ifneq ($(filter pscfs-hdrs,${MODULES}),)
   else ifdef PICKLE_HAVE_DOKAN
     MODULES+=	dokan-hdrs
   else
-    $(error no pscfs support available)
+    $(error pscfs was not able to find a suitable backend -- check FUSE installation)
   endif
 endif
 
