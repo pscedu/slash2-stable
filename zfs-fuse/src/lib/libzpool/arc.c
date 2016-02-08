@@ -137,6 +137,8 @@
 #include <syslog.h>
 #include "format.h"
 
+static int arc_slashd_running = 0;
+
 static kmutex_t		arc_reclaim_thr_lock;
 static kcondvar_t	arc_reclaim_thr_cv;	/* used to signal reclaim thr */
 static uint8_t		arc_thread_exit;
@@ -3466,6 +3468,8 @@ arc_tempreserve_space(uint64_t reserve, uint64_t txg)
 void
 arc_init(void)
 {
+	int percentage;
+
 	mutex_init(&arc_reclaim_thr_lock, NULL, MUTEX_DEFAULT, NULL);
 	cv_init(&arc_reclaim_thr_cv, NULL, CV_DEFAULT, NULL);
 
@@ -3487,6 +3491,7 @@ arc_init(void)
 	/* set min cache to 16 MB */
 	arc_c_min = 16<<20;
 
+	percentage = arc_slashd_running ? 60 : 75;
 	/*
 	 * slashd can set arc_c_max using slconfig file. zfs-fuse can do the same
 	 * with max_arc_size.  They never run at the same time.
@@ -3515,8 +3520,8 @@ arc_init(void)
 	 * Limit the max arc size (i.e., /zfs-kstat/zfs/arcstats/c_max) to 
 	 * 75% of the system memory.
  	 */
-	if (arc_c_max > physmem * PAGESIZE * 75 / 100)
-		arc_c_max = physmem * PAGESIZE * 75 / 100;
+	if (arc_c_max > physmem * PAGESIZE * percentage / 100)
+		arc_c_max = physmem * PAGESIZE * percentage / 100;
 
 	syslog(LOG_NOTICE,"ARC setup: min ARC size set to " FI64 " bytes",arc_c_min);
 	syslog(LOG_NOTICE,"ARC setup: max ARC size set to " FI64 " bytes",arc_c_max);
@@ -3668,6 +3673,18 @@ arc_fini(void)
 	buf_fini();
 
 	ASSERT(arc_loaned_bytes == 0);
+}
+
+void
+arc_set_slashd(void)
+{
+	arc_slashd_running = 1;
+}
+
+uint64_t
+arc_get_maxsize(void)
+{
+	return (arc_c_max);
 }
 
 void
