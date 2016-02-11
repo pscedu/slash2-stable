@@ -553,7 +553,7 @@ pscfs_main(int nthr, const char *thrname)
 
 	psc_poolmaster_init(&pflfs_filehandle_poolmaster,
 	    struct pflfs_filehandle, pfh_lentry, PPMF_AUTO, 64, 64,
-	    1024, NULL, NULL, NULL, "fh");
+	    0, NULL, NULL, NULL, "fh");
 	pflfs_filehandle_pool = psc_poolmaster_getmgr(
 	    &pflfs_filehandle_poolmaster);
 
