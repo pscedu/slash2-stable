@@ -1135,8 +1135,8 @@ psc_ctlparam_pool_handle(int fd, struct psc_ctlmsghdr *mh,
 				m->ppm_max -= val;
 			else
 				m->ppm_max = val;
-			if (m->ppm_max < 1)
-				m->ppm_max = 1;
+			if (m->ppm_max < 0)
+				m->ppm_max = 0;
 			if (m->ppm_max && m->ppm_max < m->ppm_min)
 				m->ppm_max = m->ppm_min;
 			psc_pool_resize(m);
