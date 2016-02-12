@@ -341,6 +341,7 @@ pjournal_reserve_slot(struct psc_journal *pj, int count)
 			    "on over-reservation: resrv=%d inuse=%d",
 			    pj->pj_resrv, pj->pj_inuse);
 
+			OPSTAT_INCR("pfl.block-reserv");
 			pj->pj_flags |= PJF_WANTSLOT;
 			psc_waitq_wait(&pj->pj_waitq, &pj->pj_lock);
 			continue;
@@ -355,6 +356,7 @@ pjournal_reserve_slot(struct psc_journal *pj, int count)
 			    "(xid=%#"PRIx64", txg=%"PRId64", slot=%d)",
 			    t, t->pjx_xid, t->pjx_txg, t->pjx_slot);
 
+			OPSTAT_INCR("pfl.block-commit");
 			txg = t->pjx_txg;
 			freelock(&t->pjx_lock);
 			PJ_ULOCK(pj);
@@ -368,6 +370,7 @@ pjournal_reserve_slot(struct psc_journal *pj, int count)
 			    "(xid=%#"PRIx64", slot=%d, flags=%#x)",
 			    t, t->pjx_xid, t->pjx_slot, t->pjx_flags);
 
+			OPSTAT_INCR("pfl.block-distill");
 			freelock(&t->pjx_lock);
 			PJ_ULOCK(pj);
 			usleep(100);
