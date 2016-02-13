@@ -17,6 +17,7 @@ sft=0
 wokfs=0
 slash2=0
 zfsfuse=0
+distribfuse=0
 for name in $(git remote)
 do
     if [[ "$name" == "pfl" ]]
@@ -38,6 +39,10 @@ do
     if [[ "$name" == "zfs-fuse" ]]
     then
         zfsfuse=1
+    fi
+    if [[ "$name" == "distrib.fuse" ]]
+    then
+        distribfuse=1
     fi
 done
 
@@ -71,6 +76,12 @@ then
     bail-if-fail
 fi
 
+if [ $distribfuse -eq 0 ]
+then
+    git remote add distrib.fuse https://github.com/pscedu/distrib.fuse
+    bail-if-fail
+fi
+
 git pull -X theirs --no-edit pfl master
 bail-if-fail
 
@@ -84,6 +95,9 @@ git pull -X subtree=slash2 -X theirs --no-edit slash2 master
 bail-if-fail
 
 git pull -X subtree=zfs-fuse -X theirs --no-edit zfs-fuse master
+bail-if-fail
+ 
+git pull -X subtree=distrib/fuse -X theirs --no-edit distrib.fuse master
 bail-if-fail
 
 exit 0
