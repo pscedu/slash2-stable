@@ -1,7 +1,10 @@
 #!/bin/bash
 #
-# 11/06/2015: slash2-merge.sh
+# 11/06/2015: slash2-build.sh
 #
+# Build a container git repository out of several slash2 related git
+# trees.  After this, you can run slash2-merge.sh to keep this tree
+# in sync with those individual slash2 related trees.
 
 function bail-if-fail {
     if [ $? -ne 0 ]

@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# 11/12/2015: slash2-update.sh
+# 11/12/2015: slash2-merge.sh
 #
 # Pull commits from each subtree of slash2
 #
