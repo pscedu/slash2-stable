@@ -1117,6 +1117,10 @@ msl_lookup_fidcache_dcu(struct pscfs_req *pfr,
 		rc = msl_lookuprpc(pfr, p, name, fgp, sstb, &c);
 		PFL_GOTOERR(out, rc);
 	}
+	/*
+ 	 * Note that the name cache is actually disconnected from the
+ 	 * fcmh cache. So we must populate the name cache carefully.
+ 	 */
 	psc_assert((c->fcmh_flags & FCMH_DELETED) == 0);
 	FCMH_ULOCK(c);
 
@@ -1155,14 +1159,9 @@ msl_lookup_fidcache_dcu(struct pscfs_req *pfr,
 	return (rc);
 }
 
-#define msl_unlink_file(pfr, pinum, name, pp, dcu)			\
-	msl_unlink((pfr), (pinum), (name), (pp), (dcu), 1)
-#define msl_unlink_dir(pfr, pinum, name, pp, dcu)			\
-	msl_unlink((pfr), (pinum), (name), (pp), (dcu), 0)
-
-__static int
+__static void 
 msl_unlink(struct pscfs_req *pfr, pscfs_inum_t pinum, const char *name,
-    struct fidc_membh **pp, struct dircache_ent_update *dcu, int isfile)
+    int isfile)
 {
 	struct fidc_membh *c = NULL, *p = NULL;
 	struct slashrpc_cservice *csvc = NULL;
@@ -1171,6 +1170,7 @@ msl_unlink(struct pscfs_req *pfr, pscfs_inum_t pinum, const char *name,
 	struct srm_unlink_req *mq;
 	struct pscfs_creds pcr;
 	int rc;
+	struct dircache_ent_update dcu = DCE_UPD_INIT;
 
 	if (strlen(name) == 0)
 		PFL_GOTOERR(out, rc = ENOENT);
@@ -1212,22 +1212,22 @@ msl_unlink(struct pscfs_req *pfr, pscfs_inum_t pinum, const char *name,
 		PFL_GOTOERR(out, rc);
 
  retry:
-	if (isfile)
-		MSL_RMC_NEWREQ(pfr, p, csvc, SRMT_UNLINK, rq, mq, mp,
-		    rc);
+
+	if (isfile) 
+		MSL_RMC_NEWREQ(pfr, p, csvc, SRMT_UNLINK, rq, mq, mp, rc);
 	else
-		MSL_RMC_NEWREQ(pfr, p, csvc, SRMT_RMDIR, rq, mq, mp,
-		    rc);
+		MSL_RMC_NEWREQ(pfr, p, csvc,  SRMT_RMDIR, rq, mq, mp, rc);
+
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
 	mq->pfid = pinum;
 	strlcpy(mq->name, name, sizeof(mq->name));
 
-	namecache_hold_entry(dcu, p, name);
+	namecache_hold_entry(&dcu, p, name);
 	rc = SL_RSX_WAITREP(csvc, rq, mp);
 	if (rc && slc_rmc_retry(pfr, &rc)) {
-		namecache_fail(dcu);
+		namecache_fail(&dcu);
 		goto retry;
 	}
 	if (rc)
@@ -1257,43 +1257,36 @@ msl_unlink(struct pscfs_req *pfr, pscfs_inum_t pinum, const char *name,
 	    pinum, mp ? mp->cattr.sst_fid : FID_ANY,
 	    mp ? mp->valid : -1, name, isfile, rc);
 
+
+	if (isfile)
+		pscfs_reply_unlink(pfr, rc);
+	else
+		pscfs_reply_rmdir(pfr, rc);
+
+	namecache_delete(&dcu, rc);
+
 	if (c)
 		fcmh_op_done(c);
-	*pp = p;
+	if (p)
+		fcmh_op_done(p);
+
 	pscrpc_req_finished(rq);
 	if (csvc)
 		sl_csvc_decref(csvc);
-	return (rc);
 }
 
 void
 mslfsop_unlink(struct pscfs_req *pfr, pscfs_inum_t pinum,
     const char *name)
 {
-	struct dircache_ent_update dcu = DCE_UPD_INIT;
-	struct fidc_membh *p = NULL;
-	int rc;
-
-	rc = msl_unlink_file(pfr, pinum, name, &p, &dcu);
-	pscfs_reply_unlink(pfr, rc);
-	namecache_delete(&dcu, rc);
-	if (p)
-		fcmh_op_done(p);
+	msl_unlink(pfr, pinum, name, 1);
 }
 
 void
 mslfsop_rmdir(struct pscfs_req *pfr, pscfs_inum_t pinum,
     const char *name)
 {
-	struct dircache_ent_update dcu = DCE_UPD_INIT;
-	struct fidc_membh *p = NULL;
-	int rc;
-
-	rc = msl_unlink_dir(pfr, pinum, name, &p, &dcu);
-	pscfs_reply_rmdir(pfr, rc);
-	namecache_delete(&dcu, rc);
-	if (p)
-		fcmh_op_done(p);
+	msl_unlink(pfr, pinum, name, 0);
 }
 
 void
@@ -1410,7 +1403,7 @@ msl_readdir_error(struct fidc_membh *d, struct dircache_page *p, int rc)
 /*
  * Perform successful READDIR RPC reception processing.
  */
-void
+int
 msl_readdir_finish(struct fidc_membh *d, struct dircache_page *p,
     int eof, int nents, int size, void *base)
 {
@@ -1418,11 +1411,13 @@ msl_readdir_finish(struct fidc_membh *d, struct dircache_page *p,
 	struct sl_fidgen *fgp;
 	struct fidc_membh *f;
 	void *ebase;
-	int i;
+	int rc, i;
 
 	ebase = PSC_AGP(base, size);
 
-	dircache_reg_ents(d, p, nents, base, size, eof);
+	rc = dircache_reg_ents(d, p, &nents, base, size, eof);
+	if (rc)
+		return (rc);
 	DIRCACHE_WAKE(d);
 	for (i = 0, e = ebase; i < nents; i++, e++) {
 		fgp = &e->sstb.sst_fg;
@@ -1440,11 +1435,14 @@ msl_readdir_finish(struct fidc_membh *d, struct dircache_page *p,
 		    FIDC_LOOKUP_CREATE | FIDC_LOOKUP_LOCK, &f, NULL)) {
 			slc_fcmh_setattr_locked(f, &e->sstb);
 
-			psc_assert((f->fcmh_flags & FCMH_DELETED) == 0);
-
-			if (!f->fcmh_sstb.sst_nlink)
-				// XXX don't enter into namecache
-				OPSTAT_INCR("msl.namecache-junk");
+			/*
+			 * Race: entry was entered into namecache, file
+			 * system unlink occurred, then we tried to
+			 * refresh stat(2) attributes.  This is OK
+			 * however, since namecache is synchronized with
+			 * unlink, we just did extra work here.
+			 */
+//			psc_assert((f->fcmh_flags & FCMH_DELETED) == 0);
 
 			msl_fcmh_stash_xattrsize(f, e->xattrsize);
 			fcmh_op_done(f);
@@ -1459,6 +1457,7 @@ msl_readdir_finish(struct fidc_membh *d, struct dircache_page *p,
 	p->dcp_refcnt--;
 	PFLOG_DIRCACHEPG(PLL_DEBUG, p, "decref");
 	DIRCACHE_ULOCK(d);
+	return (0);
 }
 
 /*
@@ -1505,8 +1504,10 @@ msl_readdir_cb(struct pscrpc_request *rq, struct pscrpc_async_args *av)
 			if (rc)
 				PFL_GOTOERR(error, rc);
 		}
-		msl_readdir_finish(d, p, mp->eof, mp->nents, mp->size,
-		    dentbuf);
+		rc = msl_readdir_finish(d, p, mp->eof, mp->nents,
+		    mp->size, dentbuf);
+		if (rc)
+			goto error;
 		dentbuf = NULL;
 	}
 	fcmh_op_done_type(d, FCMH_OPCNT_READDIR);
@@ -2289,7 +2290,7 @@ mslfsop_release(struct pscfs_req *pfr, void *data)
 	    (mfh->mfh_nbytes_rd || mfh->mfh_nbytes_wr)) {
 		struct pscfs_creds pcr;
 
-		psclogs(PLL_INFO, SLCSS_INFO,
+		psclogs_info(SLCSS_INFO,
 		    "file closed fid="SLPRI_FID" "
 		    "euid=%u owner=%u fgrp=%u "
 		    "fsize=%"PRId64" "
@@ -2489,8 +2490,13 @@ mslfsop_rename(struct pscfs_req *pfr, pscfs_inum_t opinum,
 	 * evict.
 	 */
 	if (mp->srr_clattr.sst_fid != FID_ANY &&
-	    msl_fcmh_load_fg(&mp->srr_clattr.sst_fg, &ch, pfr) == 0) {
-		slc_fcmh_setattr(ch, &mp->srr_clattr);
+	    sl_fcmh_lookup(mp->srr_clattr.sst_fg.fg_fid, FGEN_ANY,
+	    FIDC_LOOKUP_LOCK, &ch, pfr) == 0) {
+		if (!mp->srr_clattr.sst_nlink) {
+			ch->fcmh_flags |= FCMH_DELETED;
+			OPSTAT_INCR("msl.clobber");
+		}
+		slc_fcmh_setattr_locked(ch, &mp->srr_clattr);
 		fcmh_op_done(ch);
 	}
 
@@ -2624,6 +2630,10 @@ mslfsop_symlink(struct pscfs_req *pfr, const char *buf,
 	if (!fcmh_isdir(p))
 		PFL_GOTOERR(out, rc = ENOTDIR);
 	rc = fcmh_reserved(p);
+	if (rc)
+		PFL_GOTOERR(out, rc);
+
+	rc = fcmh_checkcreds(p, pfr, &pcr, W_OK);
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
@@ -3862,12 +3872,6 @@ msl_init(void)
 	    "iorq");
 	msl_iorq_pool = psc_poolmaster_getmgr(&msl_iorq_poolmaster);
 
-#ifndef MSL_PFLFS_MODULE
-	pfl_workq_init(128);
-	pfl_wkthr_spawn(MSTHRT_WORKER, 4, "mswkthr%d");
-	pfl_opstimerthr_spawn(MSTHRT_OPSTIMER, "msopstimerthr");
-#endif
-
 	/* Start up service threads. */
 	slrpc_initcli();
 	slc_rpc_initsvc();
@@ -3923,8 +3927,8 @@ msl_init(void)
 	pscfs_attr_timeout = 8.;
 
 	time(&now);
-	psclog_max("slash2 client revision %d has started at %s", sl_stk_version, 
-	    ctime(&now));	
+	psclogs_info(SLCSS_INFO, "SLASH2 client revision %d "
+	    "started at %s", sl_stk_version, ctime(&now));
 
 	return (0);
 }
@@ -4007,7 +4011,7 @@ msl_opt_lookup(const char *opt)
 __dead void
 usage(void)
 {
-	extern char *__progname;
+	extern const char *__progname;
 
 	fprintf(stderr, "usage: %s [-dUV] [-o mountopt] node\n",
 	    __progname);
@@ -4119,93 +4123,3 @@ pscfs_module_load(struct pscfs *m)
 
 	return (msl_init());
 }
-
-#ifndef MSL_PFLFS_MODULE
-int
-main(int argc, char *argv[])
-{
-	struct pscfs m;
-	struct pscfs_args args = PSCFS_ARGS_INIT(0, NULL);
-	char c, *p, *noncanon_mp;
-	int unmount_first = 0;
-
-	pfl_init();
-
-	pscfs_addarg(&args, "");		/* progname/argv[0] */
-	pscfs_addarg(&args, "-o");
-	pscfs_addarg(&args, STD_MOUNT_OPTIONS);
-
-	p = getenv("CTL_SOCK_FILE");
-	if (p)
-		msl_ctlsockfn = p;
-
-	p = getenv("CONFIG_FILE");
-	if (p)
-		msl_cfgfn = p;
-
-	optind = 1;
-	while ((c = getopt(argc, argv, "D:df:I:M:o:S:UV")) != -1)
-		switch (c) {
-		case 'D':
-			sl_datadir = optarg;
-			break;
-		case 'd':
-			pscfs_addarg(&args, "-odebug");
-			break;
-		case 'f':
-			msl_cfgfn = optarg;
-			break;
-		case 'I':
-			setenv("PREF_IOS", optarg, 1);
-			break;
-		case 'M':
-			setenv("MDS", optarg, 1);
-			break;
-		case 'o':
-			if (!msl_opt_lookup(optarg)) {
-				pscfs_addarg(&args, "-o");
-				pscfs_addarg(&args, optarg);
-			}
-			break;
-		case 'S':
-			msl_ctlsockfn = optarg;
-			break;
-		case 'U':
-			unmount_first = 1;
-			break;
-		case 'V':
-			errx(0, "revision is %d", sl_stk_version);
-		default:
-			usage();
-		}
-	argc -= optind;
-	argv += optind;
-	if (argc != 1)
-		usage();
-
-	pscthr_init(MSTHRT_FSMGR, NULL, NULL, 0, "msfsmgrthr");
-
-	noncanon_mp = argv[0];
-	if (unmount_first)
-		unmount(noncanon_mp);
-
-	/* canonicalize mount path */
-	if (realpath(noncanon_mp, mountpoint) == NULL)
-		psc_fatal("realpath %s", noncanon_mp);
-
-	pscfs_mount(mountpoint, &args);
-	pscfs_freeargs(&args);
-
-	sl_drop_privs(1);
-
-	if (msl_init())
-		exit(1);
-
-	memset(&m, 0, sizeof(m));
-	msl_populate_module(&m);
-	pflfs_module_init(&m, NULL);
-	pflfs_module_add(0, &m);
-
-	exit(pscfs_main(32, "ms"));
-}
-#endif

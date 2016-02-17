@@ -75,10 +75,17 @@ slibreapthr_main(struct psc_thread *thr)
 void
 sl_buffer_cache_init(void)
 {
+	size_t nbuf;
+
 	psc_assert(SLASH_SLVR_SIZE <= LNET_MTU);
 
+	if (slcfg_local->cfg_slab_cache_size < SLAB_CACHE_MIN)
+		psc_fatalx("invalid slab_cache_size setting; "
+		    "minimum allowed is %zu", SLAB_CACHE_MIN);
+
+	nbuf = slcfg_local->cfg_slab_cache_size / SLASH_SLVR_SIZE;
 	psc_poolmaster_init(&sl_bufs_poolmaster, struct sl_buffer,
-	    slb_mgmt_lentry, PPMF_AUTO, 256, 256, 2048,
+	    slb_mgmt_lentry, PPMF_AUTO, nbuf, nbuf, nbuf,
 	    sl_buffer_init, sl_buffer_destroy, slvr_buffer_reap, "slab",
 	    NULL);
 	sl_bufs_pool = psc_poolmaster_getmgr(&sl_bufs_poolmaster);

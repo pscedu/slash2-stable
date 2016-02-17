@@ -46,7 +46,6 @@ int		 format;
 int		 query;
 int		 verbose;
 const char	*datadir = SL_PATH_DATA_DIR;
-const char	*progname;
 struct pscfs	 pscfs;
 struct mdsio_ops mdsio_ops;
 
@@ -199,7 +198,7 @@ sl_journal_dump_entry(uint32_t slot, struct psc_journal_enthdr *pje)
 	u.p = PJE_DATA(pje);
 
 	type = pje->pje_type & ~(_PJE_FLSHFT - 1);
-	printf("%6d: %3x %4"PRIx64" %4"PRIx64" ",
+	printf("%10d  %3x %12"PRId64" %12"PRId64"  ",
 	    slot, type, pje->pje_xid, pje->pje_txg);
 	switch (type) {
 	case MDS_LOG_BMAP_REPLS:
@@ -209,7 +208,7 @@ sl_journal_dump_entry(uint32_t slot, struct psc_journal_enthdr *pje)
 		printf("fid=%016"PRIx64" bmap_crc", u.sjbc->sjbc_fid);
 		break;
 	case MDS_LOG_BMAP_SEQ:
-		printf("lwm=%"PRIx64" hwm=%"PRIx64,
+		printf("lwm=%"PRIu64" hwm=%"PRIu64,
 		    u.sjsq->sjbsq_low_wm,
 		    u.sjsq->sjbsq_high_wm);
 		break;
@@ -361,11 +360,11 @@ sl_journal_dump(const char *fn)
 	    "  entry start offset: %"PRId64"\n"
 	    "  format time: %s"
 	    "  uuid: %"PRIx64"\n"
-	    "  %4s  %3s %4s %4s %s\n",
+	    "  %8s %3s %12s %12s  %s\n",
 	    fn, pjh->pjh_version, PJ_PJESZ(pj), pjh->pjh_nents,
 	    pjh->pjh_readsize, pjh->pjh_start_off,
 	    ctime(&ts), pjh->pjh_fsuuid,
-	    "idx", "typ", "xid", "txg", "details");
+	    "idx", "type", "xid", "txg", "details");
 
 	jbuf = psc_alloc(PJ_PJESZ(pj) * pj->pj_hdr->pjh_readsize,
 	    PAF_PAGEALIGN);
@@ -455,9 +454,11 @@ sl_journal_dump(const char *fn)
 __dead void
 usage(void)
 {
+	extern const char *__progname;
+
 	fprintf(stderr,
 	    "usage: %s [-fqv] [-b block-device] [-D dir] [-n nentries] [-u uuid]\n",
-	    progname);
+	    __progname);
 	exit(1);
 }
 
@@ -468,13 +469,12 @@ main(int argc, char *argv[])
 	ssize_t newnents, nents = 0;
 	char *endp, c, fn[PATH_MAX];
 	uint64_t uuid = 0;
-	long l;
+	long long ll;
 
 	pfl_init();
 	sl_subsys_register();
 
 	fn[0] = '\0';
-	progname = argv[0];
 	while ((c = getopt(argc, argv, "b:D:fn:qu:v")) != -1)
 		switch (c) {
 		case 'b':
@@ -489,12 +489,12 @@ main(int argc, char *argv[])
 			break;
 		case 'n':
 			endp = NULL;
-			l = strtol(optarg, &endp, 10);
-			if (l <= 0 || l > INT_MAX ||
+			ll = strtoll(optarg, &endp, 10);
+			if (ll <= 0 || ll > (long long)SLJ_MDS_MAX_JNENTS ||
 			    endp == optarg || *endp)
 				errx(1, "invalid -n nentries: %s",
 				    optarg);
-			nents = (ssize_t)l;
+			nents = (ssize_t)ll;
 			break;
 		case 'q':
 			query = 1;

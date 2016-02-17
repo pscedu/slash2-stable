@@ -46,9 +46,10 @@ mds_bmap_timeotbl_init(void)
 	    bml_timeo_lentry, &slm_bmap_leases.btt_lock);
 }
 
-static void
+static uint32_t
 mds_bmap_journal_bmapseq(struct slmds_jent_bmapseq *sjbsq)
 {
+	uint32_t slot;
 	struct slmds_jent_bmapseq *buf;
 
 	buf = pjournal_get_buf(slm_journal,
@@ -57,11 +58,12 @@ mds_bmap_journal_bmapseq(struct slmds_jent_bmapseq *sjbsq)
 	*buf = *sjbsq;
 
 	mds_reserve_slot(1);
-	pjournal_add_entry(slm_journal, 0, MDS_LOG_BMAP_SEQ, 0, buf,
+	slot = pjournal_add_entry(slm_journal, 0, MDS_LOG_BMAP_SEQ, 0, buf,
 	    sizeof(struct slmds_jent_bmapseq));
 	mds_unreserve_slot(1);
 
 	pjournal_put_buf(slm_journal, buf);
+	return slot;
 }
 
 void
@@ -71,44 +73,51 @@ mds_bmap_setcurseq(uint64_t maxseq, uint64_t minseq)
 	slm_bmap_leases.btt_minseq = minseq;
 }
 
-int
+void
 mds_bmap_getcurseq(uint64_t *maxseq, uint64_t *minseq)
 {
-	int locked;
+	spinlock(&slm_bmap_leases.btt_lock);
 
-	locked = reqlock(&slm_bmap_leases.btt_lock);
-
-	if (maxseq)
-		*maxseq = slm_bmap_leases.btt_maxseq;
 	if (minseq)
 		*minseq = slm_bmap_leases.btt_minseq;
+	if (maxseq)
+		*maxseq = slm_bmap_leases.btt_maxseq;
 
-	ureqlock(&slm_bmap_leases.btt_lock, locked);
+	freelock(&slm_bmap_leases.btt_lock);
 
-	return (0);
+	psclog_debug("retrieve: low watermark = %"PRIu64", "
+	    "high watermark = %"PRIu64, 
+	    minseq ? (*minseq) : BMAPSEQ_ANY, 
+	    maxseq ? (*maxseq) : BMAPSEQ_ANY);
 }
 
 void
 mds_bmap_timeotbl_journal_seqno(void)
 {
+	uint32_t slot;
 	static int log = 0;
 	struct slmds_jent_bmapseq sjbsq;
 
-	sjbsq.sjbsq_high_wm = slm_bmap_leases.btt_maxseq;
 	sjbsq.sjbsq_low_wm = slm_bmap_leases.btt_minseq;
+	sjbsq.sjbsq_high_wm = slm_bmap_leases.btt_maxseq;
 
 	log++;
-	if (!(log % BMAP_SEQLOG_FACTOR))
-		mds_bmap_journal_bmapseq(&sjbsq);
+	if (log % BMAP_SEQLOG_FACTOR)
+		return;
+
+	slot = mds_bmap_journal_bmapseq(&sjbsq);
+	psclog_debug("journal: slot = %u, "
+	    "low watermark = %"PRIu64", "
+	    "high watermark = %"PRIu64, 
+	    slot, sjbsq.sjbsq_low_wm, sjbsq.sjbsq_high_wm);
 }
 
 uint64_t
 mds_bmap_timeotbl_getnextseq(void)
 {
-	int locked;
 	uint64_t hwm;
 
-	locked = reqlock(&slm_bmap_leases.btt_lock);
+	spinlock(&slm_bmap_leases.btt_lock);
 
 	/*
 	 * Skip a zero sequence number because the client does not like
@@ -125,7 +134,7 @@ mds_bmap_timeotbl_getnextseq(void)
 	hwm = slm_bmap_leases.btt_maxseq;
 	mds_bmap_timeotbl_journal_seqno();
 
-	ureqlock(&slm_bmap_leases.btt_lock, locked);
+	freelock(&slm_bmap_leases.btt_lock);
 
 	return (hwm);
 }
@@ -214,30 +223,35 @@ slmbmaptimeothr_begin(struct psc_thread *thr)
 		if (!bml) {
 			freelock(&slm_bmap_leases.btt_lock);
 			nsecs = BMAP_TIMEO_MAX;
-			goto sleep;
+			goto out;
 		}
 
 		if (!BML_TRYLOCK(bml)) {
 			freelock(&slm_bmap_leases.btt_lock);
 			nsecs = 1;
-			goto sleep;
+			goto out;
 		}
 		if (bml->bml_refcnt) {
 			BML_ULOCK(bml);
 			freelock(&slm_bmap_leases.btt_lock);
 			nsecs = 1;
-			goto sleep;
+			goto out;
+		}
+		if (bml->bml_flags & BML_FREEING) {
+			BML_ULOCK(bml);
+			freelock(&slm_bmap_leases.btt_lock);
+			nsecs = 1;
+			goto out;
+		}
+		nsecs = bml->bml_expire - time(NULL);
+		if (nsecs > 0) {
+			BML_ULOCK(bml);
+			freelock(&slm_bmap_leases.btt_lock);
+			goto out;
 		}
 
-		if (!(bml->bml_flags & BML_FREEING)) {
-			nsecs = bml->bml_expire - time(NULL);
-			if (nsecs > 0) {
-				BML_ULOCK(bml);
-				freelock(&slm_bmap_leases.btt_lock);
-				goto sleep;
-			}
-			bml->bml_flags |= BML_FREEING;
-		}
+		bml->bml_refcnt++;
+		bml->bml_flags |= BML_FREEING;
 
 		BML_ULOCK(bml);
 		freelock(&slm_bmap_leases.btt_lock);
@@ -250,7 +264,7 @@ slmbmaptimeothr_begin(struct psc_thread *thr)
 			nsecs = 1;
 		} else
 			nsecs = 0;
- sleep:
+ out:
 		psclog_debug("nsecs=%d", nsecs);
 
 		if (nsecs > 0)

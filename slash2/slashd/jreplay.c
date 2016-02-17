@@ -215,10 +215,15 @@ mds_replay_bmap_seq(struct psc_journal_enthdr *pje)
 
 	sjsq = PJE_DATA(pje);
 
-	if (mds_cursor.pjc_seqno_hwm < sjsq->sjbsq_high_wm)
-		mds_cursor.pjc_seqno_hwm = sjsq->sjbsq_high_wm;
-	if (mds_cursor.pjc_seqno_lwm < sjsq->sjbsq_low_wm)
-		mds_cursor.pjc_seqno_lwm = sjsq->sjbsq_low_wm;
+	/*
+ 	 * We update slm_bmap_leases directly. Otherwise, cursor updates
+ 	 * during replay will pick up stale values.  However, this is
+ 	 * just one way to make sure watermarks are bumped correctly.
+ 	 */
+	if (slm_bmap_leases.btt_maxseq < sjsq->sjbsq_high_wm)
+		slm_bmap_leases.btt_maxseq = sjsq->sjbsq_high_wm;
+	if (slm_bmap_leases.btt_minseq < sjsq->sjbsq_low_wm)
+		slm_bmap_leases.btt_minseq = sjsq->sjbsq_low_wm;
 
 	return (0);
 }
@@ -505,7 +510,7 @@ mds_replay_namespace(struct slmds_jent_namespace *sjnm, int replay)
 }
 
 /*
- * Handle journal replay events.
+ * Handle journal replay events. It is called from pjournal_replay().
  */
 int
 mds_replay_handler(struct psc_journal_enthdr *pje)

@@ -1142,9 +1142,9 @@ mds_bmap_bml_release(struct bmap_mds_lease *bml)
 	b->bcm_flags |= BMAPF_IOSASSIGNED;
 
 	BML_LOCK(bml);
-	if (bml->bml_refcnt > 1 || !(bml->bml_flags & BML_FREEING)) {
-		psc_assert(bml->bml_refcnt > 0);
-		bml->bml_refcnt--;
+	bml->bml_refcnt--;
+	psc_assert(bml->bml_refcnt >= 0);
+	if (bml->bml_refcnt > 0 || !(bml->bml_flags & BML_FREEING)) {
 		BML_ULOCK(bml);
 		b->bcm_flags &= ~BMAPF_IOSASSIGNED;
 		bmap_wake_locked(b);
@@ -1152,21 +1152,12 @@ mds_bmap_bml_release(struct bmap_mds_lease *bml)
 		return (0);
 	}
 
-	/*
-	 * While holding the last reference to the lease, take the lease
-	 * off the timeout list to avoid a race with the timeout thread.
-	 */
 	if (bml->bml_flags & BML_TIMEOQ) {
 		BML_ULOCK(bml);
 		mds_bmap_timeotbl_mdsi(bml, BTE_DEL);
 		BML_LOCK(bml);
 	}
 
-	/*
-	 * If I am called by the timeout thread, then the refcnt is
-	 * zero.
-	 */
-	psc_assert(bml->bml_refcnt <= 1);
 	if (!(bml->bml_flags & BML_BMI)) {
 		BML_ULOCK(bml);
 		goto out;
@@ -2062,8 +2053,8 @@ slm_ptrunc_apply(struct fidc_membh *f)
 	fmi = fcmh_2_fmi(f);
 
 	/*
- 	 * Arrange upd_proc_bmap() to call slm_upsch_tryptrunc() later.
- 	 */
+	 * Arrange upd_proc_bmap() to call slm_upsch_tryptrunc() later.
+	 */
 	brepls_init(tract, -1);
 	tract[BREPLST_VALID] = BREPLST_TRUNCPNDG;
 
@@ -2088,9 +2079,9 @@ slm_ptrunc_apply(struct fidc_membh *f)
 			done = 0;
 			rc = mds_bmap_write_logrepls(b);
 			if (rc) {
-			 	done = 1;
+				done = 1;
 				bmap_op_done(b);
-			     	goto out2;
+				goto out2;
 			}
 			/*
 			 * Queue work immediately instead
@@ -2191,14 +2182,17 @@ slm_ptrunc_prepare(struct fidc_membh *f)
 			}
 			rc = SL_RSX_NEWREQ(csvc, SRMT_RELEASEBMAP, rq,
 			    mq, mp);
-			if (rc) 
+			if (rc) {
+				sl_csvc_decref(csvc);
+				BMAP_LOCK(b);
 				continue;
+			}
 			rq->rq_async_args.pointer_arg[SLM_CBARG_SLOT_CSVC] = csvc;
 			rq->rq_interpret_reply = slm_bmap_release_cb;
 			rc = SL_NBRQSET_ADD(csvc, rq);
 			if (rc) {
-				sl_csvc_decref(csvc);
 				pscrpc_req_finished(rq);
+				sl_csvc_decref(csvc);
 			}
 
 			BMAP_LOCK(b);

@@ -493,6 +493,8 @@ mds_write_logentry(uint64_t xid, uint64_t fid, uint64_t gen)
  * We encode the cursor creation time and hostname into the log file
  * names to minimize collisions.  If undetected, these collisions can
  * lead to insidious bugs, especially when on-disk format changes.
+ *
+ * It is called via pj->pj_distill_handler().
  */
 int
 mds_distill_handler(struct psc_journal_enthdr *pje,
@@ -1158,14 +1160,13 @@ mds_send_batch_update(uint64_t batchno)
 
 /*
  * Write some system information into our cursor file.  Note that every
- * field must be protected by a spinlock.
+ * field must be protected by a spinlock. It is called from zfs_write().
  */
 void
 mds_update_cursor(void *buf, uint64_t txg, int flag)
 {
 	static uint64_t start_txg = 0;
 	struct psc_journal_cursor *cursor = buf;
-	uint64_t hwm, lwm;
 
 	if (flag == 1) {
 		start_txg = txg;
@@ -1208,9 +1209,7 @@ mds_update_cursor(void *buf, uint64_t txg, int flag)
 
 	cursor->pjc_fid = slm_get_curr_slashfid();
 
-	mds_bmap_getcurseq(&hwm, &lwm);
-	cursor->pjc_seqno_lwm = lwm;
-	cursor->pjc_seqno_hwm = hwm;
+	mds_bmap_getcurseq(&cursor->pjc_seqno_hwm, &cursor->pjc_seqno_lwm);
 }
 
 /*
@@ -1318,9 +1317,9 @@ mds_open_cursor(void)
 	mds_bmap_setcurseq(mds_cursor.pjc_seqno_hwm,
 	    mds_cursor.pjc_seqno_lwm);
 
-	psclog_info("Last bmap sequence number LWM prior to replay is %"PRId64,
+	psclogs_info(SLMSS_INFO, "bmap sequence number LWM before replay is %"PRId64,
 	    mds_cursor.pjc_seqno_lwm);
-	psclog_info("Last bmap sequence number HWM prior to replay is %"PRId64,
+	psclogs_info(SLMSS_INFO, "bmap sequence number HWM before replay is %"PRId64,
 	    mds_cursor.pjc_seqno_hwm);
 
 	tm = mds_cursor.pjc_timestamp;
@@ -1904,7 +1903,7 @@ mds_journal_init(uint64_t fsuuid)
 	char *journalfn, fn[PATH_MAX];
 	int i, ri, rc, max, nios, count, stale, total, idx, npeers;
 	uint64_t last_update_xid = 0, last_distill_xid = 0;
-	uint64_t lwm, hwm, batchno, last_reclaim_xid = 0;
+	uint64_t lwm, batchno, last_reclaim_xid = 0;
 	struct reclaim_prog_entry *rbase, *rp;
 	struct update_prog_entry *ubase, *up;
 	struct resprof_mds_info *rpmi;
@@ -2249,9 +2248,10 @@ mds_journal_init(uint64_t fsuuid)
 
 	psclog_info("The next FID will be %"PRId64, slm_get_curr_slashfid());
 
-	mds_bmap_getcurseq(&hwm, &lwm);
-	psclog_info("Last bmap sequence number LWM is %"PRId64, lwm);
-	psclog_info("Last bmap sequence number HWM is %"PRId64, hwm);
+	psclogs_info(SLMSS_INFO, "bmap sequence number LWM after replay is %"PRId64,
+	    slm_bmap_leases.btt_minseq);
+	psclogs_info(SLMSS_INFO, "bmap sequence number HWM after replay is %"PRId64,
+	    slm_bmap_leases.btt_maxseq);
 
 	psclog_info("Journal UUID=%"PRIx64" MDS UUID=%"PRIx64,
 	    slm_journal->pj_hdr->pjh_fsuuid, fsuuid);

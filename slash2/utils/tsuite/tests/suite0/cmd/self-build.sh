@@ -4,10 +4,14 @@
 
 dep git
 
+exclude_time_start
 git clone ssh://source/a proj
+exclude_time_end
+
 cd proj
 ./bootstrap.sh
 
+OBJBASE=$(pwd)/obj
 make build
 make test
 
