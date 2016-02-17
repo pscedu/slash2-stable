@@ -1,3 +1,10 @@
+02/17/2016
+----------
+
+Release 1.09. Jared's test suite is code complete. A race condition in the name cache code is fixed.
+The low water mark (minseq) issue after MDS restart is fixed. A workaround of ACL issue is in. Now 
+a pool max of zero means infinity.
+
 02/08/2016
 ----------
 
