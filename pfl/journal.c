@@ -58,7 +58,7 @@ struct psc_journalthr {
 	struct psc_journal *pjt_pj;
 };
 
-__static void		pjournal_logwrite(struct psc_journal_xidhndl *, int,
+__static uint32_t	pjournal_logwrite(struct psc_journal_xidhndl *, int,
 				struct psc_journal_enthdr *, int);
 
 __static int		pjournal_logwrite_internal(struct psc_journal *,
@@ -341,6 +341,7 @@ pjournal_reserve_slot(struct psc_journal *pj, int count)
 			    "on over-reservation: resrv=%d inuse=%d",
 			    pj->pj_resrv, pj->pj_inuse);
 
+			OPSTAT_INCR("pfl.block-reserv");
 			pj->pj_flags |= PJF_WANTSLOT;
 			psc_waitq_wait(&pj->pj_waitq, &pj->pj_lock);
 			continue;
@@ -355,6 +356,7 @@ pjournal_reserve_slot(struct psc_journal *pj, int count)
 			    "(xid=%#"PRIx64", txg=%"PRId64", slot=%d)",
 			    t, t->pjx_xid, t->pjx_txg, t->pjx_slot);
 
+			OPSTAT_INCR("pfl.block-commit");
 			txg = t->pjx_txg;
 			freelock(&t->pjx_lock);
 			PJ_ULOCK(pj);
@@ -368,6 +370,7 @@ pjournal_reserve_slot(struct psc_journal *pj, int count)
 			    "(xid=%#"PRIx64", slot=%d, flags=%#x)",
 			    t, t->pjx_xid, t->pjx_slot, t->pjx_flags);
 
+			OPSTAT_INCR("pfl.block-distill");
 			freelock(&t->pjx_lock);
 			PJ_ULOCK(pj);
 			usleep(100);
@@ -401,10 +404,11 @@ pjournal_unreserve_slot(struct psc_journal *pj, int count)
 /**
  * pjournal_add_entry - Add a log entry into the journal.
  */
-void
+uint32_t
 pjournal_add_entry(struct psc_journal *pj, uint64_t txg,
     int type, int distill, void *buf, int size)
 {
+	uint32_t slot;
 	struct psc_journal_xidhndl *xh;
 	struct psc_journal_enthdr *pje;
 
@@ -413,7 +417,8 @@ pjournal_add_entry(struct psc_journal *pj, uint64_t txg,
 	pje = DATA_2_PJE(buf);
 	psc_assert(pje->pje_magic == PJE_MAGIC);
 
-	pjournal_logwrite(xh, type | PJE_NORMAL, pje, size);
+	slot = pjournal_logwrite(xh, type | PJE_NORMAL, pje, size);
+	return (slot);
 }
 
 void *
@@ -512,7 +517,7 @@ pjournal_logwrite_internal(struct psc_journal *pj,
  * @data: the journal entry contents to store.
  * @size: size of the custom data
  */
-__static void
+__static uint32_t 
 pjournal_logwrite(struct psc_journal_xidhndl *xh, int type,
     struct psc_journal_enthdr *pje, int size)
 {
@@ -556,6 +561,7 @@ pjournal_logwrite(struct psc_journal_xidhndl *xh, int type,
 		psc_assert(!xh->pjx_data);
 		freelock(&xh->pjx_lock);
 	}
+	return (xh->pjx_slot);
 }
 
 __static void *

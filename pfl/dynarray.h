@@ -106,6 +106,11 @@ struct psc_dynarray {
 
 #define pfl_dynarray_xadd(da, p)	psc_assert(!psc_dynarray_add_ifdne((da), (p)))
 
+#define pfl_dynarray_truncate(da, n)					\
+	do {								\
+		(da)->pda_pos = (n);					\
+	} while (0)
+
 int	 psc_dynarray_add(struct psc_dynarray *, void *);
 int	 psc_dynarray_add_ifdne(struct psc_dynarray *, void *);
 int	 psc_dynarray_bsearch(const struct psc_dynarray *, const void *,
