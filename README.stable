@@ -3,7 +3,9 @@
 
 Release 1.09. Jared's test suite is code complete. A race condition in the name cache code is fixed.
 The low water mark (minseq) issue after MDS restart is fixed. A workaround of ACL issue is in. Now 
-a pool max of zero means infinity.
+a pool max of zero means infinity.  I will tag the commit with the following command:
+
+	$ git tag -a v1.09 -m "Release 1.09"
 
 02/08/2016
 ----------
