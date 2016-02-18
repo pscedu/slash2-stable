@@ -341,7 +341,7 @@ pjournal_reserve_slot(struct psc_journal *pj, int count)
 			    "on over-reservation: resrv=%d inuse=%d",
 			    pj->pj_resrv, pj->pj_inuse);
 
-			OPSTAT_INCR("pfl.block-reserv");
+			pfl_opstat_incr(pj->pj_opst_block_reserves);
 			pj->pj_flags |= PJF_WANTSLOT;
 			psc_waitq_wait(&pj->pj_waitq, &pj->pj_lock);
 			continue;
@@ -356,7 +356,7 @@ pjournal_reserve_slot(struct psc_journal *pj, int count)
 			    "(xid=%#"PRIx64", txg=%"PRId64", slot=%d)",
 			    t, t->pjx_xid, t->pjx_txg, t->pjx_slot);
 
-			OPSTAT_INCR("pfl.block-commit");
+			pfl_opstat_incr(pj->pj_opst_block_commits);
 			txg = t->pjx_txg;
 			freelock(&t->pjx_lock);
 			PJ_ULOCK(pj);
@@ -370,7 +370,7 @@ pjournal_reserve_slot(struct psc_journal *pj, int count)
 			    "(xid=%#"PRIx64", slot=%d, flags=%#x)",
 			    t, t->pjx_xid, t->pjx_slot, t->pjx_flags);
 
-			OPSTAT_INCR("pfl.block-distill");
+			pfl_opstat_incr(pj->pj_opst_block_distills);
 			freelock(&t->pjx_lock);
 			PJ_ULOCK(pj);
 			usleep(100);
@@ -517,7 +517,7 @@ pjournal_logwrite_internal(struct psc_journal *pj,
  * @data: the journal entry contents to store.
  * @size: size of the custom data
  */
-__static uint32_t 
+__static uint32_t
 pjournal_logwrite(struct psc_journal_xidhndl *xh, int type,
     struct psc_journal_enthdr *pje, int size)
 {
@@ -757,6 +757,13 @@ pjournal_open(const char *name, const char *fn)
 		basefn = fn;
 	pj->pj_iostats.rd = pfl_opstat_init("jrnlrd-%s", basefn);
 	pj->pj_iostats.wr = pfl_opstat_init("jrnlwr-%s", basefn);
+
+	pj->pj_opst_block_commits = pfl_opstat_init(
+	    "journal.%s.block_commits", basefn);
+	pj->pj_opst_block_reserves = pfl_opstat_init(
+	    "journal.%s.block_reserves", basefn);
+	pj->pj_opst_block_distills = pfl_opstat_init(
+	    "journal.%s.block_distills", basefn);
 
 	/*
 	 * O_DIRECT may impose alignment restrictions so align the
