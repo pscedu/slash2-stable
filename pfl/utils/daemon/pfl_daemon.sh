@@ -207,12 +207,26 @@ cleanup()
 	exit 0
 }
 
+is_on_nfs()
+{
+	local dir=$1
+
+	mp=$(df $dir | { read; sed 's/.* //'; })
+	mount | grep " on $mp " | grep -qw nfs
+	[ $? -ne 0 ]
+}
+
 preproc()
 {
 	PSC_TIMEOUT=5 $ctl -p sys.version >/dev/null && \
 	    die "another instance detected; exiting"
 
-	mkdir -p $(dirname $PSC_LOG_FILE)
+	local logdir=$(dirname "$PSC_LOG_FILE")
+
+	is_on_nfs "$logdir" && \
+	    die "$logdir: refusing to write log files on NFS"
+
+	mkdir -p $logdir
 	cd $base
 	mkdir -p c
 
