@@ -159,10 +159,13 @@ struct psc_hashtbl		 msl_gidmap_int;
  */
 int				 msl_direct_io = 1;
 int				 msl_root_squash;
+int				 msl_statfs_pref_ios_only;
 int				 msl_acl;
 uint64_t			 msl_pagecache_maxsize;
 
 int				 msl_newent_inherit_groups = 1;
+
+struct resprof_cli_info		 msl_statfs_aggr_rpci;
 
 struct sl_resource *
 msl_get_pref_ios(void)
@@ -176,7 +179,7 @@ sl_resource_put(__unusedx struct sl_resource *res)
 }
 
 /*
- * Perform a access check on a file against the specified credentials.
+ * Perform an access check on a file against the specified credentials.
  */
 int
 fcmh_checkcreds(struct fidc_membh *f,
@@ -1118,9 +1121,9 @@ msl_lookup_fidcache_dcu(struct pscfs_req *pfr,
 		PFL_GOTOERR(out, rc);
 	}
 	/*
- 	 * Note that the name cache is actually disconnected from the
- 	 * fcmh cache. So we must populate the name cache carefully.
- 	 */
+	 * Note that the name cache is actually disconnected from the
+	 * fcmh cache.  So we must populate the name cache carefully.
+	 */
 	psc_assert((c->fcmh_flags & FCMH_DELETED) == 0);
 	FCMH_ULOCK(c);
 
@@ -1159,7 +1162,7 @@ msl_lookup_fidcache_dcu(struct pscfs_req *pfr,
 	return (rc);
 }
 
-__static void 
+__static void
 msl_unlink(struct pscfs_req *pfr, pscfs_inum_t pinum, const char *name,
     int isfile)
 {
@@ -1213,7 +1216,7 @@ msl_unlink(struct pscfs_req *pfr, pscfs_inum_t pinum, const char *name,
 
  retry:
 
-	if (isfile) 
+	if (isfile)
 		MSL_RMC_NEWREQ(pfr, p, csvc, SRMT_UNLINK, rq, mq, mp, rc);
 	else
 		MSL_RMC_NEWREQ(pfr, p, csvc,  SRMT_RMDIR, rq, mq, mp, rc);
@@ -2526,6 +2529,9 @@ mslfsop_rename(struct pscfs_req *pfr, pscfs_inum_t opinum,
 		sl_csvc_decref(csvc);
 }
 
+#define MSL_STATFS_EXPIRE_S	4
+#define MSL_STATFS_AGGR_IOSID	0
+
 void
 mslfsop_statfs(struct pscfs_req *pfr, pscfs_inum_t inum)
 {
@@ -2537,16 +2543,19 @@ mslfsop_statfs(struct pscfs_req *pfr, pscfs_inum_t inum)
 	struct srm_statfs_rep *mp;
 	struct timespec expire;
 	struct statvfs sfb;
+	sl_ios_id_t iosid;
 	int rc = 0;
 
-//	slc_getfscreds(pfr, &pcr);
-//	rc = fcmh_checkcreds(c, pfr, &pcr, R_OK);
-
-	pref_ios = msl_get_pref_ios();
 	PFL_GETTIMESPEC(&expire);
-#define MSL_STATFS_EXPIRE_S 4
 	expire.tv_sec -= MSL_STATFS_EXPIRE_S;
-	rpci = res2rpci(pref_ios);
+	if (msl_statfs_pref_ios_only) {
+		pref_ios = msl_get_pref_ios();
+		iosid = pref_ios->res_id;
+		rpci = res2rpci(pref_ios);
+	} else {
+		iosid = MSL_STATFS_AGGR_IOSID;
+		rpci = &msl_statfs_aggr_rpci;
+	}
 	RPCI_LOCK(rpci);
 	while (rpci->rpci_flags & RPCIF_STATFS_FETCHING) {
 		RPCI_WAIT(rpci);
@@ -2565,7 +2574,7 @@ mslfsop_statfs(struct pscfs_req *pfr, pscfs_inum_t inum)
 	if (rc)
 		PFL_GOTOERR(out, rc);
 	mq->fid = inum;
-	mq->iosid = pref_ios->res_id;
+	mq->iosid = iosid;
 	if (rc)
 		PFL_GOTOERR(out, rc);
 	rc = SL_RSX_WAITREP(csvc, rq, mp);
@@ -2577,24 +2586,21 @@ mslfsop_statfs(struct pscfs_req *pfr, pscfs_inum_t inum)
 		PFL_GOTOERR(out, rc);
 
 	sl_internalize_statfs(&mp->ssfb, &sfb);
-	sfb.f_bsize = MSL_FS_BLKSIZ;
-	sfb.f_fsid = SLASH_FSID;
 
 	PFL_GETTIMESPEC(&expire);
-	RPCI_LOCK(rpci);
 	memcpy(&rpci->rpci_sfb, &sfb, sizeof(sfb));
 	rpci->rpci_sfb_time = expire;
 
-	if (0)
  out:
-		RPCI_LOCK(rpci);
+	RPCI_LOCK(rpci);
 	rpci->rpci_flags &= ~RPCIF_STATFS_FETCHING;
 	RPCI_WAKE(rpci);
 	RPCI_ULOCK(rpci);
 
 	pscfs_reply_statfs(pfr, &sfb, rc);
 
-	sl_resource_put(pref_ios);
+	if (iosid)
+		sl_resource_put(pref_ios);
 	pscrpc_req_finished(rq);
 	if (csvc)
 		sl_csvc_decref(csvc);
@@ -3221,6 +3227,8 @@ mslfsop_destroy(__unusedx struct pscfs_req *pfr)
 	pflog_get_fsctx_uid = NULL;
 	pflog_get_fsctx_pid = NULL;
 
+	slc_destroy_rpci(&msl_statfs_aggr_rpci);
+
 	psc_subsys_unregister(SLCSS_FSOP);
 	psc_subsys_unregister(SLCSS_INFO);
 	sl_subsys_unregister();
@@ -3417,7 +3425,8 @@ mslfsop_setxattr(struct pscfs_req *pfr, const char *name,
 		PFL_GOTOERR(out, rc = EINVAL);
 
 	/*
-	 * This prevents a crash in the RPC layer downwards. So disable it for now.
+	 * This prevents a crash in the RPC layer downwards.  So disable
+	 * it for now.
 	 */
 	if (size == 0)
 		PFL_GOTOERR(out, rc = EINVAL);
@@ -3802,8 +3811,8 @@ msl_init(void)
 {
 	struct sl_resource *r;
 	char *name;
-	int rc;
 	time_t now;
+	int rc;
 
 	gcry_control(GCRYCTL_SET_THREAD_CBS, &gcry_threads_pthread);
 	if (!gcry_check_version(GCRYPT_VERSION)) {
@@ -3820,6 +3829,7 @@ msl_init(void)
 	pflog_get_fsctx_pid = slc_log_get_fsctx_pid;
 
 	sl_sys_upnonce = psc_random32();
+	slc_init_rpci(&msl_statfs_aggr_rpci);
 
 	slcfg_local->cfg_fidcachesz = MSL_FIDCACHE_SIZE;
 
