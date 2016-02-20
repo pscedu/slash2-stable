@@ -81,8 +81,8 @@ struct psc_lockedlist	pfl_journals = PLL_INIT(&pfl_journals,
 struct psc_poolmaster	 pfl_xidhndl_poolmaster;
 struct psc_poolmgr	*pfl_xidhndl_pool;
 
-/**
- * psc_journal_io - Perform a low-level I/O operation on the journal store.
+/*
+ * Perform a low-level I/O operation on the journal store.
  * @pj: the journal.
  * @p: data.
  * @p: length of I/O.
@@ -225,10 +225,9 @@ pjournal_assign_xid(struct psc_journal *pj,
 	PJ_ULOCK(pj);
 }
 
-/**
- * pjournal_next_slot - Determine where to write the transaction's log.
- *	Because we have already reserved a slot for it, we can simply
- *	write at the next slot.
+/*
+ * Determine where to write the transaction's log.  Because we have
+ * already reserved a slot for it, we can simply write at the next slot.
  */
 __static void
 pjournal_next_slot(struct psc_journal_xidhndl *xh)
@@ -270,9 +269,8 @@ pjournal_next_slot(struct psc_journal_xidhndl *xh)
 	PJ_ULOCK(pj);
 }
 
-/**
- * pjournal_xnew - Start a new transaction with a unique ID in the given
- *	journal.
+/*
+ * Start a new transaction with a unique ID in the given journal.
  * @pj: the owning journal.
  */
 __static struct psc_journal_xidhndl *
@@ -341,7 +339,7 @@ pjournal_reserve_slot(struct psc_journal *pj, int count)
 			    "on over-reservation: resrv=%d inuse=%d",
 			    pj->pj_resrv, pj->pj_inuse);
 
-			OPSTAT_INCR("pfl.block-reserv");
+			pfl_opstat_incr(pj->pj_opst_block_reserves);
 			pj->pj_flags |= PJF_WANTSLOT;
 			psc_waitq_wait(&pj->pj_waitq, &pj->pj_lock);
 			continue;
@@ -356,7 +354,7 @@ pjournal_reserve_slot(struct psc_journal *pj, int count)
 			    "(xid=%#"PRIx64", txg=%"PRId64", slot=%d)",
 			    t, t->pjx_xid, t->pjx_txg, t->pjx_slot);
 
-			OPSTAT_INCR("pfl.block-commit");
+			pfl_opstat_incr(pj->pj_opst_block_commits);
 			txg = t->pjx_txg;
 			freelock(&t->pjx_lock);
 			PJ_ULOCK(pj);
@@ -370,7 +368,7 @@ pjournal_reserve_slot(struct psc_journal *pj, int count)
 			    "(xid=%#"PRIx64", slot=%d, flags=%#x)",
 			    t, t->pjx_xid, t->pjx_slot, t->pjx_flags);
 
-			OPSTAT_INCR("pfl.block-distill");
+			pfl_opstat_incr(pj->pj_opst_block_distills);
 			freelock(&t->pjx_lock);
 			PJ_ULOCK(pj);
 			usleep(100);
@@ -401,8 +399,8 @@ pjournal_unreserve_slot(struct psc_journal *pj, int count)
 	PJ_ULOCK(pj);
 }
 
-/**
- * pjournal_add_entry - Add a log entry into the journal.
+/*
+ * Add a log entry into the journal.
  */
 uint32_t
 pjournal_add_entry(struct psc_journal *pj, uint64_t txg,
@@ -459,8 +457,8 @@ pjournal_put_buf(struct psc_journal *pj, void *buf)
 	PJ_ULOCK(pj);
 }
 
-/**
- * pjournal_logwrite_internal - Write a new log entry for a transaction.
+/*
+ * Write a new log entry for a transaction.
  * @pj: the journal.
  * @pje: the log entry to be written.
  * @slot: the slot to contain the entry.
@@ -473,7 +471,10 @@ pjournal_logwrite_internal(struct psc_journal *pj,
 	uint64_t chksum;
 	int rc, ntries;
 
-	/* calculate the CRC checksum, excluding the checksum field itself */
+	/*
+	 * Calculate the CRC checksum, excluding the checksum field
+	 * itself.
+	 */
 	psc_crc64_init(&chksum);
 	psc_crc64_add(&chksum, pje, offsetof(struct psc_journal_enthdr,
 	    pje_chksum));
@@ -510,14 +511,14 @@ pjournal_logwrite_internal(struct psc_journal *pj,
 	return (0);
 }
 
-/**
- * pjournal_logwrite - Store a new entry in a journal transaction.
+/*
+ * Store a new entry in a journal transaction.
  * @xh: the transaction to receive the log entry.
  * @type: the application-specific log entry type.
  * @data: the journal entry contents to store.
  * @size: size of the custom data
  */
-__static uint32_t 
+__static uint32_t
 pjournal_logwrite(struct psc_journal_xidhndl *xh, int type,
     struct psc_journal_enthdr *pje, int size)
 {
@@ -571,8 +572,8 @@ pjournal_alloc_buf(struct psc_journal *pj)
 	    PAF_PAGEALIGN | PAF_LOCK));
 }
 
-/**
- * pjournal_xid_cmp - Compare tranactions for use in sorting.
+/*
+ * Compare tranactions for use in sorting.
  */
 __static int
 pjournal_xid_cmp(const void *x, const void *y)
@@ -587,10 +588,10 @@ pjournal_xid_cmp(const void *x, const void *y)
 	return (CMP(a->pje_txg, b->pje_txg));
 }
 
-/**
- * pjournal_scan_slots - Accumulate all journal entries that need to be
- *	replayed in memory.  To reduce memory usage, we remove entries
- *	of closed transactions as soon as we find them.
+/*
+ * Accumulate all journal entries that need to be replayed in memory.
+ * To reduce memory usage, we remove entries of closed transactions as
+ * soon as we find them.
  */
 __static int
 pjournal_scan_slots(struct psc_journal *pj)
@@ -720,8 +721,8 @@ pjournal_scan_slots(struct psc_journal *pj)
 	return (rc);
 }
 
-/**
- * pjournal_open - Initialize the in-memory representation of a journal.
+/*
+ * Initialize the in-memory representation of a journal.
  * @fn: path to journal on file system.
  */
 struct psc_journal *
@@ -758,6 +759,13 @@ pjournal_open(const char *name, const char *fn)
 	pj->pj_iostats.rd = pfl_opstat_init("jrnlrd-%s", basefn);
 	pj->pj_iostats.wr = pfl_opstat_init("jrnlwr-%s", basefn);
 
+	pj->pj_opst_block_commits = pfl_opstat_init(
+	    "journal.%s.block_commits", basefn);
+	pj->pj_opst_block_reserves = pfl_opstat_init(
+	    "journal.%s.block_reserves", basefn);
+	pj->pj_opst_block_distills = pfl_opstat_init(
+	    "journal.%s.block_distills", basefn);
+
 	/*
 	 * O_DIRECT may impose alignment restrictions so align the
 	 * buffer and perform I/O in multiples of file system block
@@ -781,7 +789,8 @@ pjournal_open(const char *name, const char *fn)
 	}
 
 	psc_crc64_init(&chksum);
-	psc_crc64_add(&chksum, pjh, offsetof(struct psc_journal_hdr, pjh_chksum));
+	psc_crc64_add(&chksum, pjh, offsetof(struct psc_journal_hdr,
+	    pjh_chksum));
 	psc_crc64_fini(&chksum);
 
 	if (pjh->pjh_chksum != chksum) {
@@ -796,8 +805,9 @@ pjournal_open(const char *name, const char *fn)
 
 	else if (statbuf.st_size !=
 	    (off_t)(pjhlen + pjh->pjh_nents * PJ_PJESZ(pj))) {
-		psclog_errorx("size of the journal log %"PSCPRIdOFFT" does not match "
-		    "specs in its header", statbuf.st_size);
+		psclog_errorx("size of the journal log %"PSCPRIdOFFT" "
+		    "does not match specs in its header",
+		    statbuf.st_size);
 		goto error;
 	}
 
@@ -836,9 +846,8 @@ pjournal_open(const char *name, const char *fn)
 	return (NULL);
 }
 
-/**
- * pjournal_release - Release resources associated with an in-memory
- *	journal.
+/*
+ * Release resources associated with an in-memory journal.
  * @pj: journal to release.
  */
 __static void
@@ -914,7 +923,10 @@ pjournal_thr_main(struct psc_thread *thr)
 
 			pjournal_put_buf(pj, PJE_DATA(pje));
 
-			/* the logic only works when the system is otherwise quiet */
+			/*
+			 * The logic only works when the system is
+			 * otherwise quiet.
+			 */
 			last_reclaimed = 1;
 		}
 
@@ -984,8 +996,8 @@ pjournal_thr_main(struct psc_thread *thr)
 	}
 }
 
-/**
- * pjournal_init - Replay all open transactions in a journal.
+/*
+ * Replay all open transactions in a journal.
  * @pj: journal.
  * @thrtype: application-specified thread type ID for distill processor.
  * @thrname: application-specified thread name for distill processor.
