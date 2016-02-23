@@ -211,9 +211,10 @@ is_on_nfs()
 {
 	local dir=$1
 
+	# get the Mounted on column of df output
 	mp=$(df $dir | { read; sed 's/.* //'; })
 	mount | grep " on $mp " | grep -qw nfs
-	[ $? -ne 0 ]
+	[ $? -eq 0 ]
 }
 
 preproc()
