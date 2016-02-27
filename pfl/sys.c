@@ -100,33 +100,22 @@ pfl_getfstype(const char *ofn, char *buf, size_t len)
 		return (errno);
 	strlcpy(buf, b.f_fstypename, len);
 #else
-	char *p, mbuf[BUFSIZ], fn[PATH_MAX];
+	char mbuf[BUFSIZ], fn[PATH_MAX];
 	struct mntent *m, mntbuf;
-	struct stat stb, pstb;
+	size_t bestlen = 0;
 	FILE *fp;
 
 	if (realpath(ofn, fn) == NULL)
 		return (errno);
-	if (stat(fn, &stb) == -1)
-		return (errno);
-	do {
-		p = strrchr(fn, '/');
-		if (p == NULL)
-			return (ENXIO);
-		*p = '\0';
-		if (stat(fn, &pstb) == -1)
-			return (errno);
-	} while (stb.st_dev == pstb.st_dev &&
-		 stb.st_rdev == pstb.st_rdev);
-	*p = '/';
 
 	fp = setmntent(_PATH_MOUNTED, "r");
 	if (fp == NULL)
 		return (errno);
 	while ((m = getmntent_r(fp, &mntbuf, mbuf, sizeof(mbuf)))) {
-		if (strcmp(m->mnt_dir, fn) == 0) {
+		len = pfl_string_eqlen(m->mnt_dir, fn);
+		if (len > bestlen) {
+			bestlen = len;
 			strlcpy(buf, m->mnt_type, len);
-			break;
 		}
 	}
 	endmntent(fp);
