@@ -67,6 +67,9 @@ char	*pfl_strdup(const char *);
 char	*pfl_strndup(const char *, size_t);
 char   **pfl_str_split(char *);
 char	*pfl_strrastr(const char *, char, size_t);
+
+size_t	 pfl_string_eqlen(const char *, const char *);
+
 int	 pfl_memchk(const void *, int, size_t);
 
 uint64_t _psc_str_hashify(const void *, size_t);

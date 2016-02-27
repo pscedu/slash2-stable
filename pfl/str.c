@@ -173,3 +173,13 @@ pfl_strrastr(const char *s, char c, size_t adj)
 		;
 	return (p);
 }
+
+size_t
+pfl_string_eqlen(const char *a, const char *b)
+{
+	size_t n;
+
+	for (n = 0; *a && *b && *a == *b; n++, a++, b++) 
+		;
+	return (n); 
+}
