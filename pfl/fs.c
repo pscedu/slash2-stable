@@ -111,15 +111,6 @@ pflfs_module_init(struct pscfs *m, const char *opts)
 {
 	char *opt;
 
-	m->pf_opst_read_err = pfl_opstat_initf(OPSTF_BASE10,
-	    "fs.%s.read.err", m->pf_name);
-	m->pf_opst_write_err = pfl_opstat_initf(OPSTF_BASE10,
-	    "fs.%s.write.err", m->pf_name);
-	m->pf_opst_read_reply =
-	    pfl_opstat_init("fs.%s.read.reply", m->pf_name);
-	m->pf_opst_write_reply =
-	    pfl_opstat_init("fs.%s.write.reply", m->pf_name);
-
 	if (opts && opts[0]) {
 		opt = pfl_strdup(opts);
 		do {
@@ -175,6 +166,15 @@ _pflfs_module_destroy_threads(struct pscfs *m)
 void
 pflfs_module_add(int pos, struct pscfs *m)
 {
+	m->pf_opst_read_err = pfl_opstat_initf(OPSTF_BASE10,
+	    "fs.%s.read.err", m->pf_name);
+	m->pf_opst_write_err = pfl_opstat_initf(OPSTF_BASE10,
+	    "fs.%s.write.err", m->pf_name);
+	m->pf_opst_read_reply =
+	    pfl_opstat_init("fs.%s.read.reply", m->pf_name);
+	m->pf_opst_write_reply =
+	    pfl_opstat_init("fs.%s.write.reply", m->pf_name);
+
 	if (pos == PFLFS_MOD_POS_LAST)
 		pos = psc_dynarray_len(&pscfs_modules);
 	psc_dynarray_splice(&pscfs_modules, pos, 0, &m, 1);
