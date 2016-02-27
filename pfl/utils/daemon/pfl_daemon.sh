@@ -35,6 +35,7 @@ srcdir=/local/src/p
 uname=$(uname)
 filter=
 verbose=0
+testmail=0
 prof=
 
 vprint()
@@ -377,4 +378,12 @@ mkclients()
 			echo $opts
 		done
 	done
+}
+
+preinit()
+{
+	if [ $testmail -eq 1 ]; then
+		:
+		postproc 0
+	fi
 }
