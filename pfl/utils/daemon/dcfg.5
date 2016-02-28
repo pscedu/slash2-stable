@@ -1,0 +1,134 @@
+.\" $Id$
+.\" %ISC_LICENSE%
+.Dd October 23, 2015
+.Dt DCFG 5
+.ds volume PSC \- Administrator's Manual
+.Os http://www.psc.edu/
+.Sh NAME
+.Nm dcfg
+.Nd system deployment configuration
+.Sh DESCRIPTION
+The
+.Nm dcfg
+configuration file specifies all hosts participating in a system
+deployment.
+This document describes the format of this file.
+.Pp
+The
+.Nm dcfg
+file is sourced by a
+.Xr bash 1
+script; ergo, it must follow valid
+.Xr bash 1
+syntax.
+.Pp
+The
+.Nm dcfg
+file must emit specifications for each host in the deployment as
+positional parameters:
+.Pp
+.Bd -literal -offset 3n
+set -- host0_spec \e
+       host1_spec \e
+       host2_spec
+.Ed
+.Pp
+These parameters are then read by the deployment launcher wrapper
+scripts to discover which specification to use for the host where the
+scripts are executed.
+.Pp
+The host specifications must have the following format:
+.Pp
+.Bd -literal -offset 3n
+hostname '%' service [ '%' option [ '%' option ... ]]
+.Ed
+.Pp
+Examples:
+.Pp
+.Bd -literal -offset 3n
+client0.somesite.org%mount_slash%srcdir=/opt/src
+
+mds0.somesite2.net%slashd
+.Ed
+.Ss Options
+Many system/environment settings can be specified by the use of
+.Em options
+in the host specification.
+Any such parameters are set before the launch of service daemons.
+.Pp
+See service documentation for service-specific options.
+.Pp
+The following options may be set:
+.Bl -tag -offset 3n -width 1n
+.It Ic mail_from
+.It Ic mail_from
+If specified, the recipient e-mail address to where daemon crash alerts
+are sent.
+.It Ic mail_to
+If specified, the sender e-mail address from where daemon crash alerts
+are sent.
+.It Ic srcdir
+The location of custom source code on the host.
+Primarily used by
+.Xr src-upd 8 .
+
+.It Ic mp
+Override the file system mount point on the client.
+The default is the deployment name.
+
+.It Ic bounce_host
+For deployment hosts only reachable via internal networks, this host
+will be used like a proxy when connections need to be established.
+Note:
+this is only used during certain administration functions and has
+absolutely no effect on the deployment system proper.
+.El
+.It Ic bounce
+.It Ic share
+Any options that begin with capital letters (A-Z) are also exported into
+the process environment.
+.Ss Utility Routines
+The following routines are defined and may be used to simplify
+repetitive host specifications:
+.Pp
+.Bl -tag -offset 3n -width 1n
+.It Ic mkclients Ar options Ar host ...
+foo bar blah
+.It Ic mksliods Ar hostname nsliods ifspec ctlsock options
+foo bar blah
+.El
+.Sh FILES
+.Bl -tag -width Pa -compact
+.It Pa /
+default
+.El
+.Sh EXAMPLES
+The following is an example
+.Nm dcfg
+file:
+.Bd -literal
+hosts="
+  login%2d:1-3
+  compute%02d:50
+  admin%2d:1-2
+"
+
+set -- $(cat <<EOF
+
+  mds%slashd
+
+  mdfs-mirror%zfs-fuse%share
+
+  $(mksliods io0 4 'tcp9(if0:%d)' /var/run/\\\\x25h-sliod%d.sock share)
+  $(mksliods io1 4 'tcp9(if0:%d)' /var/run/\\\\x25h-sliod%d.sock share)
+  $(mksliods io2 4 'tcp9(if0:%d)' /var/run/\\\\x25h-sliod%d.sock share)
+  $(mksliods io3 4 'tcp9(if0:%d)' /var/run/\\\\x25h-sliod%d.sock share)
+  $(mksliods io4 4 'tcp9(if0:%d)' /var/run/\\\\x25h-sliod%d.sock share)
+
+  $(mkclients args=pagecache_maxsize=4g,ctlsock=/var/run/\\x25n.$prof.\\x25h.sock%share $hosts)
+
+EOF
+)
+.Ed
+.Sh SEE ALSO
+.Xr src-upd 8
