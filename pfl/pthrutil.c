@@ -297,7 +297,7 @@ _pfl_rwlock_reqwrlock(const struct pfl_callerinfo *pci,
 	if (pfl_rwlock_haswrlock(rw))
 		return (1);
 	/*
-	 * If we have read lock, drop it and acqure
+	 * If we have a read lock, drop it and acquire
 	 * the write lock.
 	 */
 	if (pfl_rwlock_hasrdlock(rw)) {
