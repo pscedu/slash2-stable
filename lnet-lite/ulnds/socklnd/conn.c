@@ -140,6 +140,7 @@ usocklnd_tear_peer_conn(usock_conn_t *conn)
         void             *rx_lnetmsg   = NULL; 
         CFS_LIST_HEAD    (zombie_txs);
 	struct pfl_opstat *opst;
+	char pridbuf[LNET_NIDSTR_SIZE];
         
         if (peer == NULL) /* nothing to tear */
                 return;
@@ -179,10 +180,10 @@ usocklnd_tear_peer_conn(usock_conn_t *conn)
 
         pthread_mutex_unlock(&peer->up_lock);
         
-	opst = pfl_opstat_init(OPSTF_BASE10, "peer-%s-disconnects-%s",
-	    libcfs_expid2str(id), decref_flag ? "full" : "part");
-		char buf[LNET_NIDSTR_SIZE];
-	opfl_opstat_incr(opst);
+	opst = pfl_opstat_initf(OPSTF_BASE10, "peer-%s-disconnects-%s",
+	    libcfs_expid2str(id, pridbuf),
+	    decref_flag ? "full" : "part");
+	pfl_opstat_incr(opst);
 
         if (!decref_flag)
                 return;

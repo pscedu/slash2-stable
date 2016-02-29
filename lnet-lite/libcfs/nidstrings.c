@@ -51,7 +51,9 @@
 #include <netinet/in.h>
 
 #include <lnet/lnet.h>
+#include <lnet/lib-lnet.h>
 #include <libcfs/kp30.h>
+
 #ifndef __KERNEL__
 #ifdef HAVE_GETHOSTBYNAME
 # include <netdb.h>
