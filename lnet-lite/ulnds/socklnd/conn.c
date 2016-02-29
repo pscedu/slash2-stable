@@ -139,6 +139,7 @@ usocklnd_tear_peer_conn(usock_conn_t *conn)
         int               killall_flag = 0;
         void             *rx_lnetmsg   = NULL; 
         CFS_LIST_HEAD    (zombie_txs);
+	struct pfl_opstat *opst;
         
         if (peer == NULL) /* nothing to tear */
                 return;
@@ -178,6 +179,11 @@ usocklnd_tear_peer_conn(usock_conn_t *conn)
 
         pthread_mutex_unlock(&peer->up_lock);
         
+	opst = pfl_opstat_init(OPSTF_BASE10, "peer-%s-disconnects-%s",
+	    libcfs_expid2str(id), decref_flag ? "full" : "part");
+		char buf[LNET_NIDSTR_SIZE];
+	opfl_opstat_incr(opst);
+
         if (!decref_flag)
                 return;
 
@@ -813,6 +819,8 @@ usocklnd_find_or_create_peer(lnet_ni_t *ni, lnet_process_id_t id,
         pthread_rwlock_wrlock(&usock_data.ud_peers_lock);
         peer2 = usocklnd_find_peer_locked(ni, id);
         if (peer2 == NULL) {
+		char pridbuf[LNET_NIDSTR_SIZE];
+
                 if (net->un_shutdown) {
                         pthread_rwlock_unlock(&usock_data.ud_peers_lock);
                         usocklnd_peer_decref(peer); /* should destroy peer */
@@ -821,9 +829,9 @@ usocklnd_find_or_create_peer(lnet_ni_t *ni, lnet_process_id_t id,
                 }
 
 		peer->up_iostats.rd = pfl_opstat_initf(OPSTF_EXCL,
-	    	    "peer-%s-rcv", libcfs_id2str(id));
+		    "peer-%s-rcv", libcfs_expid2str(id, pridbuf));
 		peer->up_iostats.wr = pfl_opstat_initf(OPSTF_EXCL,
-	    	    "peer-%s-snd", libcfs_id2str(id)); 
+		    "peer-%s-snd", libcfs_expid2str(id, pridbuf));
                 
                 /* peer table will take 1 of my refs on peer */
                 usocklnd_peer_addref(peer);
