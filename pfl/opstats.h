@@ -44,6 +44,10 @@
 #define pfl_opstat_add(opst, n)		psc_atomic64_add(&(opst)->opst_lifetime, (n))
 #define	pfl_opstat_incr(opst)		pfl_opstat_add((opst), 1)
 
+/*
+ * This API explicitly disallows printf-like args as it caches the
+ * opstat for speed and thus cannot do so with variadic names.
+ */
 #define	OPSTATF_ADD(flags, name, n)					\
 	do {								\
 		static struct pfl_opstat *_opst;			\
@@ -72,8 +76,8 @@ struct pfl_opstat {
 	double			 opst_avg;	/* 10-second average */
 };
 
-#define OPSTF_BASE10		(1 << 0)
-#define OPSTF_EXCL		(1 << 1)
+#define OPSTF_BASE10		(1 << 0)	/* use base-10 numbering instead of default of base-2 */
+#define OPSTF_EXCL		(1 << 1)	/* like O_EXCL: when creating, opstat must not exist  */
 
 struct pfl_iostats_rw {
 	struct pfl_opstat	*wr;
