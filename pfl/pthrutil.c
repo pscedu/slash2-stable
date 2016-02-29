@@ -233,13 +233,10 @@ _pfl_rwlock_wrlock(const struct pfl_callerinfo *pci,
     struct pfl_rwlock *rw)
 {
 	pthread_t p;
-	void *pa;
 	int rc;
 
 	p = pthread_self();
 	psc_assert(rw->pr_writer != p);
-
-	pa = (void *)(uintptr_t)p;
 
 	rc = pthread_rwlock_wrlock(&rw->pr_rwlock);
 	if (rc)
@@ -290,7 +287,6 @@ _pfl_rwlock_reqwrlock(const struct pfl_callerinfo *pci,
 {
 	if (pfl_rwlock_haswrlock(rw))
 		return (1);
-
 	pfl_rwlock_wrlock(rw);
 	return (0);
 }
