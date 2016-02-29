@@ -241,10 +241,6 @@ _pfl_rwlock_wrlock(const struct pfl_callerinfo *pci,
 
 	pa = (void *)(uintptr_t)p;
 
-	spinlock(&rw->pr_lock);
-	psc_assert(!psc_dynarray_exists(&rw->pr_readers, pa));
-	freelock(&rw->pr_lock);
-
 	rc = pthread_rwlock_wrlock(&rw->pr_rwlock);
 	if (rc)
 		psc_fatalx("pthread_rwlock_wrlock: %s", strerror(rc));
@@ -292,20 +288,11 @@ int
 _pfl_rwlock_reqwrlock(const struct pfl_callerinfo *pci,
     struct pfl_rwlock *rw)
 {
-	int rc = 0;
-
 	if (pfl_rwlock_haswrlock(rw))
 		return (1);
-	/*
-	 * If we have a read lock, drop it and acquire
-	 * the write lock.
-	 */
-	if (pfl_rwlock_hasrdlock(rw)) {
-		pfl_rwlock_unlock(rw);
-		rc = 0;
-	}
+
 	pfl_rwlock_wrlock(rw);
-	return (rc);
+	return (0);
 }
 
 void
