@@ -302,7 +302,7 @@ _pfl_rwlock_reqwrlock(const struct pfl_callerinfo *pci,
 	 */
 	if (pfl_rwlock_hasrdlock(rw)) {
 		pfl_rwlock_unlock(rw);
-		rc = 1;
+		rc = 0;
 	}
 	pfl_rwlock_wrlock(rw);
 	return (rc);
