@@ -46,9 +46,9 @@ psc_spinlock_t		pfl_faults_lock = SPINLOCK_INIT;
 int
 _pfl_fault_cmp(const void *a, const void *b)
 {
-	const struct pfl_fault *x = a, *y = b;
+	const struct pfl_fault *y = b;
 
-	return (strcmp(x->pflt_name, y->pflt_name));
+	return (strcmp(a, y->pflt_name));
 }
 
 void
@@ -68,12 +68,11 @@ pfl_fault_destroy(int pos)
 struct pfl_fault *
 _pfl_fault_get(const char *name, int populate)
 {
-	struct pfl_fault *flt = NULL, dummy;
+	struct pfl_fault *flt = NULL;
 	int pos, locked;
 
 	locked = reqlock(&pfl_faults_lock);
-	snprintf(dummy.pflt_name, PFL_FAULT_NAME_MAX-1, "%s", name);
-	pos = psc_dynarray_bsearch(&pfl_faults, &dummy, _pfl_fault_cmp);
+	pos = psc_dynarray_bsearch(&pfl_faults, name, _pfl_fault_cmp);
 	if (pos < psc_dynarray_len(&pfl_faults)) {
 		flt = psc_dynarray_getpos(&pfl_faults, pos);
 		if (strcmp(flt->pflt_name, name) == 0)

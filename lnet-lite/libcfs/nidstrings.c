@@ -51,7 +51,9 @@
 #include <netinet/in.h>
 
 #include <lnet/lnet.h>
+#include <lnet/lib-lnet.h>
 #include <libcfs/kp30.h>
+
 #ifndef __KERNEL__
 #ifdef HAVE_GETHOSTBYNAME
 # include <netdb.h>
@@ -536,13 +538,15 @@ libcfs_str2nid(const char *str)
 }
 
 const char *
-libcfs_id2str2(lnet_process_id_t id, char str[LNET_NIDSTR_SIZE])
+_libcfs_id2str2(lnet_process_id_t id, char *str, int exclude_pid)
 {
 	char buf[LNET_NIDSTR_SIZE];
 
 	libcfs_nid2str2(id.nid, buf);
 
-	if (id.pid == LNET_PID_ANY)
+	if (exclude_pid && id.pid == the_lnet.ln_peer_pid)
+		snprintf(str, LNET_NIDSTR_SIZE, "%s", buf); 
+	else if (id.pid == LNET_PID_ANY)
 		snprintf(str, LNET_NIDSTR_SIZE, "LNET_PID_ANY-%s", buf);
 	else
 		snprintf(str, LNET_NIDSTR_SIZE, "%s%u-%s",

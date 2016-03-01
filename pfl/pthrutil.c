@@ -233,17 +233,10 @@ _pfl_rwlock_wrlock(const struct pfl_callerinfo *pci,
     struct pfl_rwlock *rw)
 {
 	pthread_t p;
-	void *pa;
 	int rc;
 
 	p = pthread_self();
 	psc_assert(rw->pr_writer != p);
-
-	pa = (void *)(uintptr_t)p;
-
-	spinlock(&rw->pr_lock);
-	psc_assert(!psc_dynarray_exists(&rw->pr_readers, pa));
-	freelock(&rw->pr_lock);
 
 	rc = pthread_rwlock_wrlock(&rw->pr_rwlock);
 	if (rc)
@@ -292,16 +285,10 @@ int
 _pfl_rwlock_reqwrlock(const struct pfl_callerinfo *pci,
     struct pfl_rwlock *rw)
 {
-	int rc = 0;
-
 	if (pfl_rwlock_haswrlock(rw))
 		return (1);
-	if (pfl_rwlock_hasrdlock(rw)) {
-		pfl_rwlock_unlock(rw);
-		rc = 1;
-	}
 	pfl_rwlock_wrlock(rw);
-	return (rc);
+	return (0);
 }
 
 void
