@@ -40,6 +40,7 @@
 #define PFLERR_NOKEY			(_PFLERR_START +  9)
 #define PFLERR_BADCRC			(_PFLERR_START + 10)
 #define PFLERR_TIMEDOUT			(_PFLERR_START + 11)
+#define PFLERR_WOULDBLOCK		(_PFLERR_START + 12)
 
 const char *pfl_strerror(int);
 

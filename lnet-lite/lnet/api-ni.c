@@ -750,6 +750,7 @@ lnet_prepare(lnet_pid_t requested_pid)
 
         CDEBUG(D_OTHER, "my pid=%u\n", the_lnet.ln_pid);
 #endif
+        the_lnet.ln_peer_pid = requested_pid;
 
         rc = lnet_descriptor_setup();
         if (rc != 0)

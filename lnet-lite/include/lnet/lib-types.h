@@ -616,6 +616,7 @@ typedef struct
         lnet_portal_t     *ln_portals;          /* the vector of portals */
 
         lnet_pid_t         ln_pid;              /* requested pid */
+        lnet_pid_t         ln_peer_pid;        	/* PID used when establishing connections to peers */
 
         struct list_head   ln_nis;              /* LND instances */
         lnet_ni_t         *ln_loni;             /* the loopback NI */

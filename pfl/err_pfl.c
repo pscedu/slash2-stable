@@ -27,6 +27,7 @@ char *pfl_errstrs[] = {
 /*  9 */ "Required key not available",
 /* 10 */ "Invalid checksum",
 /* 11 */ "Operation timed out",
+/* 12 */ "Resource temporarily unavailable",
 	  NULL
 };
 

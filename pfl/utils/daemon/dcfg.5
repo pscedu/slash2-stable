@@ -1,0 +1,211 @@
+.\" $Id$
+.\" %ISC_START_LICENSE%
+.\" ---------------------------------------------------------------------
+.\" Copyright 2016, Google, Inc.
+.\" All rights reserved.
+.\"
+.\" Permission to use, copy, modify, and distribute this software for any
+.\" purpose with or without fee is hereby granted, provided that the
+.\" above copyright notice and this permission notice appear in all
+.\" copies.
+.\"
+.\" THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL
+.\" WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED
+.\" WARRANTIES OF MERCHANTABILITY AND FITNESS.  IN NO EVENT SHALL THE
+.\" AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL
+.\" DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR
+.\" PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
+.\" TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
+.\" PERFORMANCE OF THIS SOFTWARE.
+.\" --------------------------------------------------------------------
+.\" %END_LICENSE%
+.Dd February 28, 2016
+.Dt DCFG 5
+.ds volume PSC \- Administrator's Manual
+.Os http://www.psc.edu/
+.Sh NAME
+.Nm dcfg
+.Nd system deployment configuration
+.Sh DESCRIPTION
+The
+.Nm dcfg
+configuration file specifies all hosts participating in a system
+deployment.
+This document describes the format of this file.
+.Pp
+The
+.Nm dcfg
+file is sourced by a
+.Xr bash 1
+script; ergo, it must follow valid
+.Xr bash 1
+syntax.
+.Pp
+The
+.Nm dcfg
+file must emit specifications for each host in the deployment as
+positional parameters:
+.Pp
+.Bd -literal -offset 3n
+set -- host0_spec \e
+       host1_spec \e
+       host2_spec
+.Ed
+.Pp
+These parameters are then read by the deployment launcher wrapper
+scripts to discover which specification to use for the host where the
+scripts are executed.
+.Pp
+The host specifications must have the following format:
+.Pp
+.Bd -literal -offset 3n
+hostname '%' service [ '%' option [ '%' option ... ]]
+.Ed
+.Pp
+Examples:
+.Pp
+.Bd -literal -offset 3n
+client0.somesite.org%mount_slash%srcdir=/opt/src
+
+mds0.somesite2.net%slashd
+.Ed
+.Ss Options
+Many system/environment settings can be specified by the use of
+.Em options
+in the host specification.
+Any such parameters are set before the launch of service daemons.
+.Pp
+See service documentation for service-specific options.
+.Pp
+The following options may be set:
+.Bl -tag -offset 3n -width 1n
+.It Ic bounce
+When certain administrative actions
+.Pq for example,
+.Xr src-upd 8
+or
+.Xr xopctl 8
+need to reach this host, an SSH bounce may be used to reach this host.
+.Pp
+The bounce chosen will be the first one specified from the following
+list:
+.Pp
+.Bl -enum -offset 3n -width 1n -compact
+.It
+the hostname if directly specified in the
+.Fl B
+flag
+.It
+the
+.Ic bounce
+option value, if specified, for this
+.Nm
+entry specification
+.It
+the
+.Nm
+deployment default bounce
+.El
+.It Ic mail_from
+If specified, the recipient e-mail address to where daemon crash alerts
+are sent.
+.It Ic mail_to
+If specified, the sender e-mail address from where daemon crash alerts
+are sent.
+.It Ic name
+Override the executable name used to launch the service.
+Defaults to the service name.
+.It Ic narg
+As multiple service instances can run on the same host, this option is
+used to select
+.Nm
+entries from the launched instances.
+See also the
+.Ic tag
+option.
+.It Ic srcdir
+The location of custom source code on the host.
+Primarily used by
+.Xr src-upd 8 .
+.It Ic tag
+The value of this option is used to match
+.Nm
+host entry specifications against launch instances.
+.El
+.Pp
+Note that any options that begin with capital letters (A-Z) are also
+exported into the process environment for daemon launch.
+.Ss Utility Routines
+The following routines are defined and may be used to simplify
+repetitive host specifications:
+.Pp
+.Bl -tag -offset 3n -width 1n
+.It Ic mkclients Ar options Ar host ...
+Generate entries for multiple hosts for
+.Tn SLASH2
+clients.
+.Ar host
+has the following specification:
+.It Ic mksliods Ar hostname nsliods ifspec ctlsock options
+Generate entries for a single host with multiple
+.Tn SLASH2
+I/O service instances.
+.Pp
+.Ar nsliods
+specifies the number of instances to generate.
+.Pp
+.Ar ifspec
+specifies a
+.Xr printf 3 Ns -like
+format to set the interface in
+.Ev LNET_NETWORKS .
+.Pp
+.Ar ctlsock
+specifies the format of the daemon control socket path name.
+.Pp
+.Ar options
+contains any additional arguments to set in all generated entries.
+.El
+.Sh FILES
+.Bl -tag -width Pa -compact
+.It Ar base Ns Pa /c
+core files
+.It Ar base Ns Pa /log
+error log files
+.It Ar base Ns Pa /var
+runtime files
+.El
+.Sh EXAMPLES
+The following is an example
+.Nm dcfg
+file:
+.Bd -literal
+hosts="
+  login%2d:1-3
+  compute%02d:50
+  admin%2d:1-2
+"
+
+srcdir=/usr/local/src/projects
+
+set -- $(cat <<EOF
+
+  mds%slashd
+
+  mdfs-mirror%zfs-fuse%srcdir=/nfs/src/projects
+
+  $(mksliods io0 4 'tcp9(if0:%d)' /var/run/\\\\x25h-sliod%d.sock)
+  $(mksliods io1 4 'tcp9(if0:%d)' /var/run/\\\\x25h-sliod%d.sock)
+  $(mksliods io2 4 'tcp9(if0:%d)' /var/run/\\\\x25h-sliod%d.sock)
+  $(mksliods io3 4 'tcp9(if0:%d)' /var/run/\\\\x25h-sliod%d.sock)
+  $(mksliods io4 4 'tcp9(if0:%d)' /var/run/\\\\x25h-sliod%d.sock)
+
+  $(mkclients args=pagecache_maxsize=4g,$(
+      )ctlsock=/var/run/\\x25n.$prof.\\x25h.sock $hosts)
+
+EOF
+)
+.Ed
+.Sh SEE ALSO
+.Xr src-upd 8 ,
+.Xr xopctl 8

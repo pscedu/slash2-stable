@@ -35,6 +35,7 @@ srcdir=/local/src/p
 uname=$(uname)
 filter=
 verbose=0
+testmail=0
 prof=
 
 vprint()
@@ -214,7 +215,6 @@ is_on_nfs()
 	# get the Mounted on column of df output
 	mp=$(df $dir | { read; sed 's/.* //'; })
 	mount | grep " on $mp " | grep -qw nfs
-	[ $? -eq 0 ]
 }
 
 preproc()
@@ -377,4 +377,12 @@ mkclients()
 			echo $opts
 		done
 	done
+}
+
+preinit()
+{
+	if [ $testmail -eq 1 ]; then
+		:
+		postproc 0
+	fi
 }
