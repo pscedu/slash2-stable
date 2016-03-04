@@ -395,29 +395,35 @@ slm_upsch_tryrepl(struct bmap *b, int off, struct sl_resm *src_resm,
 
 void
 slm_upsch_finish_ptrunc(struct slashrpc_cservice *csvc,
-    struct bmap *b, int rc, int off)
+    struct bmap *b, int sched, int rc, int off)
 {
-	int tract[NBREPLST];
 	struct fidc_membh *f;
 	struct fcmh_mds_info *fmi;
+	int ret, tract[NBREPLST], retifset[NBREPLST];
 
 	psc_assert(b);
 
-	/*
- 	 * If successful, the IOS is responsible to send a 
- 	 * SRMT_BMAPCRCWRT RPC to update CRCs in the block
- 	 * and the disk usage. However, we don't wait for 
- 	 * it to happen.
- 	 */
-	brepls_init(tract, -1);
-	tract[BREPLST_TRUNCPNDG_SCHED] = rc ? 
-	    BREPLST_TRUNCPNDG : BREPLST_VALID;
-	mds_repl_bmap_apply(b, tract, NULL, off);
+	f = b->bcm_fcmh;
+	DEBUG_FCMH(PLL_MAX, f, "ptrunc finished");
 
-	mds_bmap_write_logrepls(b);
+	if (sched) {
+		/*
+		 * If successful, the IOS is responsible to send a
+		 * SRMT_BMAPCRCWRT RPC to update CRCs in the block
+		 * and the disk usage. However, we don't wait for
+		 * it to happen.
+		 */
+		brepls_init(tract, -1);
+		tract[BREPLST_TRUNCPNDG_SCHED] = rc ?
+		    BREPLST_TRUNCPNDG : BREPLST_VALID;
+		brepls_init_idx(retifset);
+		ret = mds_repl_bmap_apply(b, tract, retifset, off);
+		if (ret != BREPLST_TRUNCPNDG_SCHED)
+			DEBUG_BMAPOD(PLL_FATAL, b, "bmap is corrupted");
+		mds_bmap_write_logrepls(b);
+	}
 
 	if (!rc) {
-		f = b->bcm_fcmh;
 		FCMH_LOCK(f);
 		fmi = fcmh_2_fmi(f);
 		fmi->fmi_ptrunc_nios--;
@@ -427,7 +433,7 @@ slm_upsch_finish_ptrunc(struct slashrpc_cservice *csvc,
 	}
 
 	psclog(rc ? PLL_WARN: PLL_DIAG,
-	    "partial truncation resolution: rc=%d", rc);
+	    "partial truncation resolution: off=%d, rc=%d", off, rc);
 
 	if (csvc)
 		sl_csvc_decref(csvc);
@@ -444,7 +450,7 @@ slm_upsch_tryptrunc_cb(struct pscrpc_request *rq,
 
 	SL_GET_RQ_STATUS_TYPE(csvc, rq, struct srm_bmap_ptrunc_rep, rc);
 
-	slm_upsch_finish_ptrunc(csvc, b, rc, off);
+	slm_upsch_finish_ptrunc(csvc, b, 1, rc, off);
 	return (0);
 }
 
@@ -455,7 +461,7 @@ int
 slm_upsch_tryptrunc(struct bmap *b, int off,
     struct sl_resource *dst_res)
 {
-	int tract[NBREPLST], retifset[NBREPLST], rc;
+	int tract[NBREPLST], retifset[NBREPLST], rc, sched = 0;
 	struct pscrpc_request *rq = NULL;
 	struct slashrpc_cservice *csvc;
 	struct srm_bmap_ptrunc_req *mq;
@@ -464,6 +470,7 @@ slm_upsch_tryptrunc(struct bmap *b, int off,
 	struct slm_update_data *upd;
 	struct sl_resm *dst_resm;
 	struct fidc_membh *f;
+	struct bmap_mds_info *bmi = bmap_2_bmi(b);
 
 	upd = bmap_2_upd(b);
 	f = upd_2_fcmh(upd);
@@ -472,6 +479,8 @@ slm_upsch_tryptrunc(struct bmap *b, int off,
 		DEBUG_FCMH(PLL_MAX, f, "ptrunc averted");
 		return (0);
 	}
+	DEBUG_FCMH(PLL_MAX, f, "ptrunc request, off = %d, id = 0x%x",
+	    off, dst_res->res_id);
 
 	dst_resm = res_getmemb(dst_res);
 	bmap_op_start_type(b, BMAP_OPCNT_UPSCH);
@@ -481,15 +490,18 @@ slm_upsch_tryptrunc(struct bmap *b, int off,
 	av.space[IN_OFF] = off;
 
 	/*
-	 * Make sure that a truncation is not already scheduled on 
+	 * Make sure that a truncation is not already scheduled on
 	 * this bmap.
 	 */
 	brepls_init(retifset, 0);
 	retifset[BREPLST_TRUNCPNDG_SCHED] = 1;
+
+	BMAPOD_RDLOCK(bmi);
 	if (mds_repl_bmap_walk_all(b, NULL, retifset,
 	    REPL_WALKF_SCIRCUIT))
 		DEBUG_BMAPOD(PLL_FATAL, b,
 		    "truncate already scheduled");
+	BMAPOD_ULOCK(bmi);
 
 	csvc = slm_geticsvc(dst_resm, NULL, CSVCF_NONBLOCK |
 	    CSVCF_NORECON, &slm_upsch_mw);
@@ -500,6 +512,9 @@ slm_upsch_tryptrunc(struct bmap *b, int off,
 	rc = SL_RSX_NEWREQ(csvc, SRMT_BMAP_PTRUNC, rq, mq, mp);
 	if (rc)
 		PFL_GOTOERR(out, rc);
+
+	rq->rq_timeout *= 2;
+
 	mq->fg = f->fcmh_fg;
 	mq->bmapno = b->bcm_bmapno;
 	BHGEN_GET(b, &mq->bgen);
@@ -510,9 +525,9 @@ slm_upsch_tryptrunc(struct bmap *b, int off,
 	retifset[BREPLST_TRUNCPNDG] = BREPLST_TRUNCPNDG;
 	rc = mds_repl_bmap_apply(b, tract, retifset, off);
 	if (rc != BREPLST_TRUNCPNDG)
-		DEBUG_BMAPOD(PLL_FATAL, b,
-		    "bmap is corrupted");
+		DEBUG_BMAPOD(PLL_FATAL, b, "bmap is corrupted");
 
+	sched = 1;
 	av.pointer_arg[IP_BMAP] = b;
 
 	rq->rq_interpret_reply = slm_upsch_tryptrunc_cb;
@@ -524,7 +539,7 @@ slm_upsch_tryptrunc(struct bmap *b, int off,
  out:
 	if (rq)
 		pscrpc_req_finished(rq);
-	slm_upsch_finish_ptrunc(csvc, b, rc, off);
+	slm_upsch_finish_ptrunc(csvc, b, sched, rc, off);
 	return (rc);
 }
 
@@ -720,7 +735,7 @@ upd_proc_bmap(struct slm_update_data *upd)
 	upd->upd_flags |= UPDF_BUSY;
 	upd->upd_owner = pthread_self();
 
-	DEBUG_BMAPOD(PLL_DEBUG, b, "processing");
+	DEBUG_BMAPOD(PLL_MAX, b, "processing");
 
 	/*
 	 * Scan residency states (through file's inode table) of bmap
@@ -842,15 +857,7 @@ upd_proc_bmap(struct slm_update_data *upd)
 			break;
 
 		case BREPLST_TRUNCPNDG:
-			/*
-			 * If we got at least one success, we can mark
-			 * any unresponsive IOS as garbage to open up
-			 * new bmap request at & beyond the truncation
-			 * point.
-			 */
 			rc = slm_upsch_tryptrunc(b, off, dst_res);
-			if (rc == 0)
-				continue;
 			break;
 
 		case BREPLST_GARBAGE:
@@ -893,8 +900,9 @@ upd_proc_pagein_unit(struct slm_update_data *upd)
 
 	brepls_init(retifset, 0);
 	retifset[BREPLST_REPL_QUEUED] = 1;
-//	retifset[BREPLST_GARBAGE_QUEUED] = 1;
 	retifset[BREPLST_TRUNCPNDG] = 1;
+	if (slm_preclaim_enabled)
+		retifset[BREPLST_GARBAGE] = 1;
 
 	BMAP_WAIT_BUSY(b);
 	BMAPOD_WRLOCK(bmi);
@@ -949,6 +957,8 @@ int
 upd_proc_pagein_cb(struct slm_sth *sth, __unusedx void *p)
 {
 	struct slm_wkdata_upschq *wk;
+
+	OPSTAT_INCR("upsch-db-pagein");
 
 	wk = pfl_workq_getitem(upd_pagein_wk, struct slm_wkdata_upschq);
 	wk->fg.fg_fid = sqlite3_column_int64(sth->sth_sth, 0);
@@ -1121,18 +1131,34 @@ slm_upsch_insert(struct bmap *b, sl_ios_id_t resid, int sys_prio,
 		return;
 	dbdo(NULL, NULL,
 	    " INSERT INTO upsch ("
-	    "	resid, fid, bno, uid, gid, status, sys_prio, usr_prio, nonce "
+	    "	resid,"						/* 1 */
+	    "	fid,"						/* 2 */
+	    "	bno,"						/* 3 */
+	    "	uid,"						/* 4 */
+	    "	gid,"						/* 5 */
+	    "	status,"
+	    "	sys_prio,"					/* 6 */
+	    "	usr_prio,"					/* 7 */
+	    "	nonce"						/* 8 */
 	    ") VALUES ("
-	    "	?,     ?,   ?,   ?,   ?,   'Q',    ?,        ?,        ?"
+	    "	?,"						/* 1 */
+	    "	?,"						/* 2 */
+	    "	?,"						/* 3 */
+	    "	?,"						/* 4 */
+	    "	?,"						/* 5 */
+	    "	'Q',"
+	    "	?,"						/* 6 */
+	    "	?,"						/* 7 */
+	    "	?"						/* 8 */
 	    ")",
-	    SQLITE_INTEGER, resid,
-	    SQLITE_INTEGER64, bmap_2_fid(b),
-	    SQLITE_INTEGER, b->bcm_bmapno,
-	    SQLITE_INTEGER, b->bcm_fcmh->fcmh_sstb.sst_uid,
-	    SQLITE_INTEGER, b->bcm_fcmh->fcmh_sstb.sst_gid,
-	    SQLITE_INTEGER, sys_prio,
-	    SQLITE_INTEGER, usr_prio,
-	    SQLITE_INTEGER, sl_sys_upnonce);
+	    SQLITE_INTEGER, resid,				/* 1 */
+	    SQLITE_INTEGER64, bmap_2_fid(b),			/* 2 */
+	    SQLITE_INTEGER, b->bcm_bmapno,			/* 3 */
+	    SQLITE_INTEGER, b->bcm_fcmh->fcmh_sstb.sst_uid,	/* 4 */
+	    SQLITE_INTEGER, b->bcm_fcmh->fcmh_sstb.sst_gid,	/* 5 */
+	    SQLITE_INTEGER, sys_prio,				/* 6 */
+	    SQLITE_INTEGER, usr_prio,				/* 7 */
+	    SQLITE_INTEGER, sl_sys_upnonce);			/* 8 */
 	upschq_resm(res_getmemb(r), UPDT_PAGEIN);
 }
 

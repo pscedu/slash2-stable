@@ -2,7 +2,7 @@
 /*
  * %GPL_START_LICENSE%
  * ---------------------------------------------------------------------
- * Copyright 2015, Google, Inc.
+ * Copyright 2015-2016, Google, Inc.
  * Copyright (c) 2006-2015, Pittsburgh Supercomputing Center (PSC).
  * All rights reserved.
  *
@@ -79,10 +79,8 @@ enum {
 		(mq) = NULL;						\
 		(mp) = NULL;						\
 		_resm = (f) ? fcmh_2_fci(f)->fci_resm : msl_rmc_resm;	\
-		if (rq) {						\
-			pscrpc_req_finished(rq);			\
-			(rq) = NULL;					\
-		}							\
+		pscrpc_req_finished(rq);				\
+		(rq) = NULL;						\
 		if (csvc) {						\
 			sl_csvc_decref(csvc);				\
 			(csvc) = NULL;					\

@@ -58,6 +58,9 @@
 
 struct pfl_odt		*slm_bia_odt;
 
+int			slm_ptrunc_enabled;
+int			slm_preclaim_enabled;
+
 __static int slm_ptrunc_prepare(struct fidc_membh *);
 
 int
@@ -1461,7 +1464,7 @@ mds_bia_odtable_startup_cb(void *data, struct pfl_odt_receipt *odtr,
  */
 int
 mds_bmap_crc_write(struct srt_bmap_crcup *c, sl_ios_id_t iosid,
-    const struct srm_bmap_crcwrt_req *mq)
+    __unusedx const struct srm_bmap_crcwrt_req *mq)
 {
 	struct sl_resource *res = libsl_id2res(iosid);
 	struct bmap *bmap = NULL;
@@ -1621,7 +1624,7 @@ mds_bmap_loadvalid(struct fidc_membh *f, sl_bmapno_t bmapno,
 		return (rc);
 
 	bmi = bmap_2_bmi(b);
-	for (n = 0; n < SLASH_CRCS_PER_BMAP; n++)
+	for (n = 0; n < SLASH_SLVRS_PER_BMAP; n++)
 		/*
 		 * XXX need a bitmap to see which CRCs are
 		 * actually uninitialized and not just happen
@@ -1972,11 +1975,14 @@ mds_lease_renew(struct fidc_membh *f, struct srt_bmapdesc *sbd_in,
 	return (rc);
 }
 
+/*
+ * Note: The caller must lock the fcmh if it is not NULL.
+ */
 int
 slm_setattr_core(struct fidc_membh *f, struct srt_stat *sstb,
     int to_set)
 {
-	int locked, deref = 0, rc = 0;
+	int deref = 0, rc = 0;
 	struct fcmh_mds_info *fmi;
 
 	if ((to_set & PSCFS_SETATTRF_DATASIZE) && sstb->sst_size) {
@@ -1992,19 +1998,22 @@ slm_setattr_core(struct fidc_membh *f, struct srt_stat *sstb,
 				    sstb->sst_fid, sl_strerror(rc));
 				return (rc);
 			}
+			FCMH_LOCK(f);
 			deref = 1;
 		}
-
-		locked = FCMH_RLOCK(f);
+		FCMH_LOCK_ENSURE(f);
 		f->fcmh_flags |= FCMH_MDS_IN_PTRUNC;
 		fmi = fcmh_2_fmi(f);
 		fmi->fmi_ptrunc_size = sstb->sst_size;
-		FCMH_URLOCK(f, locked);
+
+		FCMH_ULOCK(f);
 
 		rc = slm_ptrunc_prepare(f);
 
 		if (deref)
 			fcmh_op_done(f);
+		else
+			FCMH_LOCK(f);
 	}
 	return (rc);
 }
@@ -2043,7 +2052,7 @@ __static void
 slm_ptrunc_apply(struct fidc_membh *f)
 {
 	int rc;
-	int done = 1, tract[NBREPLST];
+	int queued = 0, tract[NBREPLST], retifset[NBREPLST];
 	struct ios_list ios_list;
 	struct bmap *b;
 	sl_bmapno_t i;
@@ -2066,23 +2075,19 @@ slm_ptrunc_apply(struct fidc_membh *f)
 	if ((fcmh_2_fsz(f) % SLASH_BMAP_SIZE) == 0)
 		goto out1;
 
-	/*
-	 * If a bmap sliver was sliced, we must await for a
-	 * sliod to reply with the new CRC.
-	 */
+	/* When do we drop this reference? */
 	if (bmap_get(f, i, SL_WRITE, &b) == 0) {
 		BMAP_ULOCK(b);
 		mds_repl_bmap_walkcb(b, tract, NULL, 0,
 		    ptrunc_tally_ios, &ios_list);
 		fmi->fmi_ptrunc_nios = ios_list.nios;
 		if (fmi->fmi_ptrunc_nios) {
-			done = 0;
 			rc = mds_bmap_write_logrepls(b);
 			if (rc) {
-				done = 1;
 				bmap_op_done(b);
 				goto out2;
 			}
+			queued++;
 			/*
 			 * Queue work immediately instead
 			 * of waiting for it to be causally
@@ -2091,17 +2096,19 @@ slm_ptrunc_apply(struct fidc_membh *f)
 			 */
 			OPSTAT_INCR("ptrunc-enqueue");
 			upd = bmap_2_upd(b);
-			DPRINTF_UPD(PLL_MAX, upd, "fid="SLPRI_FID" bno=%u",
-			    b->bcm_fcmh->fcmh_fg.fg_fid, b->bcm_bmapno);
+			DEBUG_FCMH(PLL_MAX, f, "ptrunc queued");
 			upsch_enqueue(upd);
 		}
+		bmap_op_done(b);
 	}
 	i++;
 
  out1:
 	brepls_init(tract, -1);
-	tract[BREPLST_REPL_SCHED] = BREPLST_GARBAGE;
-	tract[BREPLST_VALID] = BREPLST_GARBAGE;
+	tract[BREPLST_VALID] = BREPLST_INVALID;
+
+	brepls_init(retifset, 0);
+	retifset[BREPLST_VALID] = 1;
 
 	for (;; i++) {
 		if (bmap_getf(f, i, SL_WRITE, BMAPGETF_CREATE |
@@ -2110,27 +2117,26 @@ slm_ptrunc_apply(struct fidc_membh *f)
 
 		BMAP_ULOCK(b);
 		BHGEN_INCREMENT(b);
-		mds_repl_bmap_walkcb(b, tract, NULL, 0,
+		rc = mds_repl_bmap_walkcb(b, tract, NULL, 0,
 		    ptrunc_tally_ios, &ios_list);
-		mds_bmap_write_logrepls(b);
+		if (rc)
+			mds_bmap_write_logrepls(b);
 		bmap_op_done(b);
 	}
 
  out2:
-	if (done) {
+	if (!queued) {
 		FCMH_LOCK(f);
 		f->fcmh_flags &= ~FCMH_MDS_IN_PTRUNC;
 		fcmh_wake_locked(f);
+		DEBUG_FCMH(PLL_MAX, f, "ptrunc completed.");
 		FCMH_ULOCK(f);
 	}
-
-	/* XXX adjust nblks */
-
 	OPSTAT_INCR("ptrunc-apply");
 }
 
 int
-slm_bmap_release_cb(struct pscrpc_request *rq,
+slm_bmap_release_cb(__unusedx struct pscrpc_request *rq,
     struct pscrpc_async_args *av)
 {
 	struct slashrpc_cservice *csvc = av->pointer_arg[SLM_CBARG_SLOT_CSVC];
@@ -2153,10 +2159,9 @@ slm_ptrunc_prepare(struct fidc_membh *f)
 	sl_bmapno_t i;
 	uint64_t size;
 
-	mds_note_update(1);
-
 	fmi = fcmh_2_fmi(f);
 
+	DEBUG_FCMH(PLL_MAX, f, "prepare ptrunc");
 	/*
 	 * Inform lease holders to give up their leases.  This is only
 	 * best-effort.
@@ -2218,12 +2223,11 @@ slm_ptrunc_prepare(struct fidc_membh *f)
 		f->fcmh_flags &= ~FCMH_MDS_IN_PTRUNC;
 		fcmh_2_ptruncgen(f)--;
 		f->fcmh_sstb.sst_size = size;
+		DEBUG_FCMH(PLL_MAX, f, "ptrunc aborted, rc = %d", rc);
 		FCMH_ULOCK(f);
-		psclog_error("partical truncate setattr: rc=%d", rc);
 	} else
 		slm_ptrunc_apply(f);
 
-	mds_note_update(-1);
 	return (rc);
 }
 
@@ -2443,6 +2447,8 @@ _dbdo(const struct pfl_callerinfo *pci,
 	if (log) {
 		PFL_GETTIMEVAL(&tv);
 		timersub(&tv, &tv0, &tvd);
+		OPSTAT_ADD("sql-wait-usecs",
+		    tvd.tv_sec * 1000000 + tvd.tv_usec);
 		psclog_debug("ran SQL in %.2fs: %s", tvd.tv_sec +
 		    tvd.tv_usec / 1000000.0, dbuf);
 	}

@@ -61,7 +61,7 @@ struct srt_bmapdesc;
  * This structure must be 64-bit aligned and padded.
  */
 struct bmap_core_state {
-	uint8_t			bcs_crcstates[SLASH_CRCS_PER_BMAP];
+	uint8_t			bcs_crcstates[SLASH_SLVRS_PER_BMAP];
 	uint8_t			bcs_repls[SL_REPLICA_NBYTES];
 };
 
@@ -76,7 +76,7 @@ struct bmap_core_state {
  * This structure must be 64-bit aligned and padded.
  */
 struct bmap_extra_state {
-	uint64_t		bes_crcs[SLASH_CRCS_PER_BMAP];
+	uint64_t		bes_crcs[SLASH_SLVRS_PER_BMAP];
 	sl_bmapgen_t		bes_gen;
 	uint32_t		bes_replpol;
 };
@@ -201,7 +201,7 @@ struct bmap {
 		    (b)->bcm_owner != _pthr);				\
 		(b)->bcm_flags |= BMAPF_BUSY;				\
 		(b)->bcm_owner = _pthr;					\
-		DEBUG_BMAP(PLL_DEBUG, (b), "set BUSY");			\
+		DEBUG_BMAP(PLL_DIAG, (b), "set BUSY");			\
 	} while (0)
 
 #define BMAP_UNBUSY(b)							\
@@ -210,7 +210,7 @@ struct bmap {
 		BMAP_BUSY_ENSURE(b);					\
 		(b)->bcm_owner = 0;					\
 		(b)->bcm_flags &= ~BMAPF_BUSY;				\
-		DEBUG_BMAP(PLL_DEBUG, (b), "cleared BUSY");		\
+		DEBUG_BMAP(PLL_DIAG, (b), "cleared BUSY");		\
 		bmap_wake_locked(b);					\
 		BMAP_ULOCK(b);						\
 	} while (0)

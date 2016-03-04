@@ -3,7 +3,7 @@
  * %GPL_START_LICENSE%
  * ---------------------------------------------------------------------
  * Copyright 2015, Google, Inc.
- * Copyright (c) 2009-2015, Pittsburgh Supercomputing Center (PSC).
+ * Copyright 2009-2016, Pittsburgh Supercomputing Center
  * All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
@@ -259,7 +259,7 @@ pr_bmaps(FILE *outfp, struct file *f)
 		fprintf(outfp, "\n");
 
 		fprintf(outfp, "   %5u: crcstates ", bno);
-		for (i = 0; i < SLASH_CRCS_PER_BMAP; i++)
+		for (i = 0; i < SLASH_SLVRS_PER_BMAP; i++)
 			fprintf(outfp, "%s%d", i ? "," : "",
 			    bd.bod.bod_crcstates[i]);
 		fprintf(outfp, "\n");

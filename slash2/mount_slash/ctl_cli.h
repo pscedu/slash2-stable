@@ -2,8 +2,8 @@
 /*
  * %GPL_START_LICENSE%
  * ---------------------------------------------------------------------
- * Copyright 2015, Google, Inc.
- * Copyright (c) 2006-2015, Pittsburgh Supercomputing Center (PSC).
+ * Copyright 2015-2016, Google, Inc.
+ * Copyright 2006-2016, Pittsburgh Supercomputing Center
  * All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
@@ -53,9 +53,10 @@ struct msctlmsg_replst_slave {
 struct msctlmsg_replrq {
 	slfid_t			mrq_fid;
 	char			mrq_iosv[SL_MAX_REPLICAS][RES_NAME_MAX];
-	uint32_t		mrq_nios;
-	sl_bmapno_t		mrq_bmapno;
-	 int32_t		mrq_sys_prio;
+	uint32_t		mrq_nios;	/* # elements in iosv */
+	sl_bmapno_t		mrq_bmapno;	/* start position */
+	sl_bmapno_t		mrq_nbmaps;	/* length */
+	 int32_t		mrq_sys_prio;	/* priority of request */
 	 int32_t		mrq_usr_prio;
 };
 
@@ -71,8 +72,6 @@ struct msctlmsg_bmapreplpol {
 	sl_bmapno_t		mfbrp_nbmaps;
 	int32_t			mfbrp_pol;
 };
-
-#define REPLRQ_BMAPNO_ALL	(-1)
 
 struct msctlmsg_biorq {
 	slfid_t			msr_fid;

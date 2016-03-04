@@ -1306,7 +1306,7 @@ mslfsop_mknod(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	struct stat stb;
 	int rc;
 
-	if (!S_ISFIFO(mode))
+	if (!S_ISFIFO(mode) && !S_ISSOCK(mode))
 		PFL_GOTOERR(out, rc = ENOTSUP);
 	if (strlen(name) == 0)
 		PFL_GOTOERR(out, rc = ENOENT);
@@ -2268,7 +2268,9 @@ mslfsop_release(struct pscfs_req *pfr, void *data)
 {
 	struct msl_fhent *mfh = data;
 	struct fcmh_cli_info *fci;
+	struct pfl_callerinfo pci;
 	struct fidc_membh *f;
+	uid_t euid = -1;
 
 	f = mfh->mfh_fcmh;
 	fci = fcmh_2_fci(f);
@@ -2283,34 +2285,38 @@ mslfsop_release(struct pscfs_req *pfr, void *data)
 	FCMH_ULOCK(f);
 	psc_waitq_wakeone(&msl_flush_attrq);
 
+	/* Stash process euid if it is needed for the activity log. */
+	pci.pci_subsys = SLCSS_INFO;
+	if (psc_log_shouldlog(&pci, PLL_INFO)) {
+		struct pscfs_creds pcr;
+
+		euid = slc_getfscreds(pfr, &pcr)->pcr_uid;
+	}
+
 	if (fcmh_isdir(f)) {
 		pscfs_reply_releasedir(pfr, 0);
 	} else {
 		pscfs_reply_release(pfr, 0);
-	}
 
-	if (!fcmh_isdir(f) &&
-	    (mfh->mfh_nbytes_rd || mfh->mfh_nbytes_wr)) {
-		struct pscfs_creds pcr;
-
-		psclogs_info(SLCSS_INFO,
-		    "file closed fid="SLPRI_FID" "
-		    "euid=%u owner=%u fgrp=%u "
-		    "fsize=%"PRId64" "
-		    "oatime="PFLPRI_PTIMESPEC" "
-		    "mtime="PFLPRI_PTIMESPEC" sessid=%d "
-		    "otime="PSCPRI_TIMESPEC" "
-		    "rd=%"PSCPRIdOFFT" wr=%"PSCPRIdOFFT" prog=%s",
-		    fcmh_2_fid(f),
-		    slc_getfscreds(pfr, &pcr)->pcr_uid,
-		    f->fcmh_sstb.sst_uid, f->fcmh_sstb.sst_gid,
-		    f->fcmh_sstb.sst_size,
-		    PFLPRI_PTIMESPEC_ARGS(&mfh->mfh_open_atime),
-		    PFLPRI_PTIMESPEC_ARGS(&f->fcmh_sstb.sst_mtim),
-		    mfh->mfh_sid,
-		    PSCPRI_TIMESPEC_ARGS(&mfh->mfh_open_time),
-		    mfh->mfh_nbytes_rd, mfh->mfh_nbytes_wr,
-		    mfh->mfh_uprog);
+		if (mfh->mfh_nbytes_rd || mfh->mfh_nbytes_wr)
+			psclogs_info(SLCSS_INFO,
+			    "file closed fid="SLPRI_FID" "
+			    "euid=%u owner=%u fgrp=%u "
+			    "fsize=%"PRId64" "
+			    "oatime="PFLPRI_PTIMESPEC" "
+			    "mtime="PFLPRI_PTIMESPEC" sessid=%d "
+			    "otime="PSCPRI_TIMESPEC" "
+			    "rd=%"PSCPRIdOFFT" wr=%"PSCPRIdOFFT" prog=%s",
+			    fcmh_2_fid(f),
+			    euid, f->fcmh_sstb.sst_uid,
+			    f->fcmh_sstb.sst_gid,
+			    f->fcmh_sstb.sst_size,
+			    PFLPRI_PTIMESPEC_ARGS(&mfh->mfh_open_atime),
+			    PFLPRI_PTIMESPEC_ARGS(&f->fcmh_sstb.sst_mtim),
+			    mfh->mfh_sid,
+			    PSCPRI_TIMESPEC_ARGS(&mfh->mfh_open_time),
+			    mfh->mfh_nbytes_rd, mfh->mfh_nbytes_wr,
+			    mfh->mfh_uprog);
 	}
 
 	mfh_decref(mfh);
@@ -3208,7 +3214,6 @@ mslfsop_destroy(__unusedx struct pscfs_req *pfr)
 	pfl_poolmaster_destroy(&msl_biorq_poolmaster);
 	pfl_poolmaster_destroy(&msl_iorq_poolmaster);
 	pfl_poolmaster_destroy(&msl_mfh_poolmaster);
-	    //csvc
 
 	msl_readahead_svc_destroy();
 	dircache_mgr_destroy();
@@ -3261,7 +3266,7 @@ mslfsop_write(struct pscfs_req *pfr, const void *buf, size_t size,
 	if (rc)
 		pscfs_reply_write(pfr, size, rc);
 
-	DEBUG_FCMH(PLL_DIAG, f, "write: buf=%p rc=%d sz=%zu "
+	DEBUG_FCMH(rc ? PLL_INFO : PLL_DIAG, f, "write: buf=%p rc=%d sz=%zu "
 	    "off=%"PSCPRIdOFFT, buf, rc, size, off);
 }
 
