@@ -508,6 +508,33 @@ psc_vbitmap_resize(struct psc_vbitmap *vb, size_t newsize)
 }
 
 /*
+ * Get a string of the vbitmap in binary encoding.
+ */
+char *
+pfl_vbitmap_getbinstring(const struct psc_vbitmap *vb)
+{
+	unsigned char *p;
+	char *str, *t;
+	ptrdiff_t len;
+	int i;
+
+	len = psc_vbitmap_getsize(vb) + 1;
+	str = PSCALLOC(len);
+	for (p = vb->vb_start, t = str; p < vb->vb_end; p++)
+		for (i = 0; i < NBBY; i++) {
+			*t++ = ((*p >> i) & 1) ? '1' : '0';
+			if (t - str >= len)
+				goto done;
+		}
+	for (i = 0; i < vb->vb_lastsize && t - str < len; i++)
+		*t++ = ((*p >> i) & 1) ? '1' : '0';
+
+ done:
+	*t = '\0';
+	return (str);
+}
+
+/*
  * Print the contents of a bitmap in binary.
  * @vb: variable bitmap.
  */
