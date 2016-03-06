@@ -36,6 +36,25 @@
 
 const char *progname;
 
+#define ENSURE(vb, fmt, ...)						\
+	do {								\
+		char *_got_str, *_want_str, *_p;			\
+		int _rc;						\
+									\
+		_rc = asprintf(&_want_str, fmt, ##__VA_ARGS__);		\
+		if (_rc == -1)						\
+			psc_fatal("asprintf");				\
+		for (_p = _want_str; *_p; _p++)				\
+			if (*_p == ' ')					\
+				*_p = '1';				\
+		_got_str = pfl_vbitmap_getbinstring(vb);		\
+		if (strcmp(_got_str, _want_str))			\
+		    psc_fatalx("test failed; got=%s expected=%s",	\
+			_got_str, _want_str);				\
+		PSCFREE(_got_str);					\
+		PSCFREE(_want_str);					\
+	} while (0)
+
 #define NELEM 524288	/* # of 2MB blocks in 1TG. */
 
 __dead void
@@ -49,8 +68,8 @@ int
 main(int argc, char *argv[])
 {
 	struct psc_vbitmap *vb, vba = VBITMAP_INIT_AUTO;
+	size_t elem, j, cap, len, off;
 	int i, c, u, t;
-	size_t elem, j;
 
 	pfl_init();
 	progname = argv[0];
@@ -118,7 +137,7 @@ main(int argc, char *argv[])
 	    psc_assert(psc_vbitmap_get(vb, i) == 1);
 
 	if (psc_vbitmap_resize(vb, NELEM) == -1)
-		psc_fatal("psc_vbitmap_new");
+		psc_fatal("psc_vbitmap_resize");
 
 	psc_assert(psc_vbitmap_getsize(vb) == NELEM);
 
@@ -173,12 +192,60 @@ main(int argc, char *argv[])
 
 	psc_vbitmap_free(vb);
 
+	vb = psc_vbitmap_newf(0, PVBF_AUTO);
+	psc_assert(vb);
+	psc_assert(pfl_vbitmap_isempty(vb));
+	psc_assert(psc_vbitmap_getsize(vb) == 0);
+	psc_assert(psc_vbitmap_resize(vb, 6) == 0);
+	psc_assert(psc_vbitmap_getsize(vb) == 6);
+	psc_assert(pfl_vbitmap_isempty(vb));
+	psc_vbitmap_free(vb);
+
+	vb = psc_vbitmap_newf(0, PVBF_AUTO);
+	cap = psc_vbitmap_getsize(vb);
+	off = 0;
+	len = 6;
+	if (off + len > cap)
+		psc_vbitmap_resize(vb, off + len);
+	psc_vbitmap_setrange(vb, off, len);
+	ENSURE(vb, "111111");
+	psc_assert(pfl_vbitmap_israngeset(vb, 1, 2, 4));
+	psc_assert(!pfl_vbitmap_israngeset(vb, 0, 2, 4));
+
+	psc_vbitmap_clearall(vb);
+	psc_assert(psc_vbitmap_setval_range(vb, 2, 4, 1) == 0);
+	psc_assert(!pfl_vbitmap_israngeset(vb, 0, 2, 4));
+	ENSURE(vb, "001111");
+	psc_vbitmap_free(vb);
+
 	vb = psc_vbitmap_new(0);
 	for (i = 1; i < 101; i++) {
 		if (psc_vbitmap_resize(vb, i) == -1)
 			psc_fatal("psc_vbitmap_new");
 		psc_vbitmap_setval(vb, i - 1, i % 2);
 		psc_assert(psc_vbitmap_get(vb, i - 1) == i % 2);
+	}
+	psc_vbitmap_free(vb);
+
+	for (cap = 0; cap < 100; cap++) {
+		for (off = 1; off < cap; off++) {
+			for (len = 1; off + len < cap; len++) {
+				size_t last;
+
+				last = cap - off - len;
+				vb = psc_vbitmap_new(cap);
+				psc_vbitmap_setrange(vb, off, len);
+				ENSURE(vb, "%0*d%*d%0*d", (int)off, 0,
+				    (int)len, 1, (int)last, 0);
+				psc_assert(pfl_vbitmap_israngeset(vb, 0,
+				    0, off));
+				psc_assert(pfl_vbitmap_israngeset(vb, 1,
+				    off, len));
+				psc_assert(pfl_vbitmap_israngeset(vb, 0,
+				    off+len, last));
+				psc_vbitmap_free(vb);
+			}
+		}
 	}
 
 	exit(0);
