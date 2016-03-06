@@ -288,21 +288,20 @@ pfl_vbitmap_israngeset(struct psc_vbitmap *vb, int val,
 	if (adj) {
 		int mask;
 
-		mask = 0xff;
-		if (len < 8)
-			mask = ~(0xff << len) & 0xff;
-		mask = (mask << (8 - adj)) & 0xff;
+		mask = ((1 << MIN(len, NBBY)) - 1) << adj;
 		if ((*p & mask) != (fv & mask))
 			return (0);
+		if (len < NBBY)
+			return (1);
 
 		if (adj > len)
 			len = 0;
 		else
-			len -= adj;
+			len -= NBBY - adj;
 		p++;
 	}
 	// XXX use native word size for speed
-	for (; p < vb->vb_end && len >= 8; p++, len -= 8)
+	for (; p < vb->vb_end && len >= NBBY; p++, len -= 8)
 		if (*p != fv)
 			return (0);
 	if (len == 0)
@@ -310,6 +309,7 @@ pfl_vbitmap_israngeset(struct psc_vbitmap *vb, int val,
 
 	psc_assert(len <= 8);
 
+	/* Check last byte. */
 	if (fv) {
 		if ((0xff & (*p | (0xff << len))) != 0xff)
 			return (0);
