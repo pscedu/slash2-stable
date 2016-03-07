@@ -73,23 +73,23 @@ psc_subsys_name(int ssid)
 }
 
 void
-_psc_threads_rebuild_subsys(void)
+_psc_threads_rebuild_subsys(int init)
 {
 	struct psc_thread *thr;
 	int *ll, *oldll, nss;
 
-	nss = psc_dynarray_len(&psc_subsystems);
-
-	/* XXX we could pause all threads to do this */
 	PLL_LOCK(&psc_threads);
+	nss = psc_dynarray_len(&psc_subsystems);
 	PLL_FOREACH(thr, &psc_threads) {
 		ll = psc_alloc(sizeof(*thr->pscthr_loglevels) * nss,
 		    PAF_NOLOG);
 		oldll = thr->pscthr_loglevels;
+		if (init)
+			ll[nss - 1] = psc_loglevel;
 		thr->pscthr_loglevels = ll;
 		psc_free(oldll, PAF_NOLOG);
 	}
-	PLL_ULOCK(&psc_threads); 
+	PLL_ULOCK(&psc_threads);
 }
 
 void
@@ -147,7 +147,7 @@ psc_subsys_register(int ssid, const char *name)
 		    "check order", ssid, name, nss);
 	psc_dynarray_add(&psc_subsystems, ss);
 
-	_psc_threads_rebuild_subsys();
+	_psc_threads_rebuild_subsys(1);
 }
 
 void
@@ -160,7 +160,7 @@ psc_subsys_unregister(int ssid)
 	psc_dynarray_removepos(&psc_subsystems, ssid);
 	PSCFREE(ss);
 
-	_psc_threads_rebuild_subsys();
+	_psc_threads_rebuild_subsys(0);
 }
 
 int
