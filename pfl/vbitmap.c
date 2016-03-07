@@ -288,21 +288,20 @@ pfl_vbitmap_israngeset(struct psc_vbitmap *vb, int val,
 	if (adj) {
 		int mask;
 
-		mask = 0xff;
-		if (len < 8)
-			mask = ~(0xff << len) & 0xff;
-		mask = (mask << (8 - adj)) & 0xff;
+		mask = ((1 << MIN(len, NBBY)) - 1) << adj;
 		if ((*p & mask) != (fv & mask))
 			return (0);
+		if (len < NBBY)
+			return (1);
 
 		if (adj > len)
 			len = 0;
 		else
-			len -= adj;
+			len -= NBBY - adj;
 		p++;
 	}
 	// XXX use native word size for speed
-	for (; p < vb->vb_end && len >= 8; p++, len -= 8)
+	for (; p < vb->vb_end && len >= NBBY; p++, len -= 8)
 		if (*p != fv)
 			return (0);
 	if (len == 0)
@@ -310,6 +309,7 @@ pfl_vbitmap_israngeset(struct psc_vbitmap *vb, int val,
 
 	psc_assert(len <= 8);
 
+	/* Check last byte. */
 	if (fv) {
 		if ((0xff & (*p | (0xff << len))) != 0xff)
 			return (0);
@@ -505,6 +505,33 @@ psc_vbitmap_resize(struct psc_vbitmap *vb, size_t newsize)
 	if (newsize && vb->vb_lastsize == 0)
 		vb->vb_lastsize = NBBY;
 	return (0);
+}
+
+/*
+ * Get a string of the vbitmap in binary encoding.
+ */
+char *
+pfl_vbitmap_getbinstring(const struct psc_vbitmap *vb)
+{
+	unsigned char *p;
+	char *str, *t;
+	ptrdiff_t len;
+	int i;
+
+	len = psc_vbitmap_getsize(vb) + 1;
+	str = PSCALLOC(len);
+	for (p = vb->vb_start, t = str; p < vb->vb_end; p++)
+		for (i = 0; i < NBBY; i++) {
+			*t++ = ((*p >> i) & 1) ? '1' : '0';
+			if (t - str >= len)
+				goto done;
+		}
+	for (i = 0; i < vb->vb_lastsize && t - str < len; i++)
+		*t++ = ((*p >> i) & 1) ? '1' : '0';
+
+ done:
+	*t = '\0';
+	return (str);
 }
 
 /*

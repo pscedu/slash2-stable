@@ -805,11 +805,16 @@ pscfs_inum_pscfs2fuse(pscfs_inum_t p_inum, double timeo)
 		INIT_SPINLOCK(&(pfr)->pfr_lock);			\
 		(pfr)->pfr_fuse_req = (fsreq);				\
 		(pfr)->pfr_refcnt = 2;					\
+		PFLOG_PFR(PLL_DEBUG, (pfr), "create");			\
 									\
 		_thr = pscthr_get();					\
 		_pft = _thr->pscthr_private;				\
 		_pft->pft_pfr = (pfr);					\
 	} while (0)
+
+#define PFLOG_PFR(level, pfr, fmt, ...)					\
+	psclog((level), "pfr@%p ref=%d " fmt, (pfr), (pfr)->pfr_refcnt,	\
+	    ##__VA_ARGS__)
 
 /*
  * An error from a module for an file system operation short circuits
@@ -835,6 +840,7 @@ pscfs_inum_pscfs2fuse(pscfs_inum_t p_inum, double timeo)
 			if (_prior_success && _mi ==			\
 			    psc_dynarray_len(&pscfs_modules) - 1) {	\
 				(pfr)->pfr_refcnt--;			\
+				PFLOG_PFR(PLL_DEBUG, (pfr), "decref");	\
 				break;					\
 			}						\
 									\
@@ -851,21 +857,26 @@ pscfs_inum_pscfs2fuse(pscfs_inum_t p_inum, double timeo)
 									\
 			_prior_success = 1;				\
 			(pfr)->pfr_refcnt++;				\
+			PFLOG_PFR(PLL_DEBUG, pfr, "incref");		\
 		}							\
 		pfr_decref((pfr), 0);					\
 	} while (0)
 
+#define pfr_decref(pfr, rc)	_pfr_decref(PFL_CALLERINFO(), (pfr), (rc))
+
 void
-pfr_decref(struct pscfs_req *pfr, int rc)
+_pfr_decref(const struct pfl_callerinfo *pci, struct pscfs_req *pfr, int rc)
 {
-	spinlock(&pfr->pfr_lock);
+	spinlock_pci(pci, &pfr->pfr_lock);
 	if (pfr->pfr_rc == 0 && rc)
 		pfr->pfr_rc = rc;
 	psc_assert(pfr->pfr_refcnt > 0);
+	PFLOG_PFR(PLL_DEBUG, pfr, "decref");
 	if (--pfr->pfr_refcnt) {
 		freelock(&pfr->pfr_lock);
 		return;
 	}
+	PFLOG_PFR(PLL_DEBUG, pfr, "destroying");
 	psc_pool_return(pflfs_req_pool, pfr);
 
 	pflfs_modules_rdunpin();
@@ -1252,7 +1263,7 @@ pscfs_fuse_handle_removexattr(fuse_req_t req, fuse_ino_t ino,
 			psclog_diag(					\
 			    "in for "PSCPRI_TIMESPEC"s uniqid=%"PRIu64,	\
 			    PSCPRI_TIMESPEC_ARGS(&d), u0);		\
-		pfr_decref(pfr, rc);					\
+		pfr_decref((pfr), rc);					\
 	} while (0)
 
 void
