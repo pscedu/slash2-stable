@@ -2030,22 +2030,14 @@ ptrunc_tally_ios(struct bmap *b, int iosidx, int val, void *arg)
 	sl_ios_id_t ios_id;
 	int i;
 
-	switch (val) {
-	case BREPLST_VALID:
-	case BREPLST_REPL_SCHED:
-	case BREPLST_REPL_QUEUED:
-		break;
-	default:
-		return;
+	if (val == BREPLST_VALID) {
+		ios_id = bmap_2_repl(b, iosidx);
+		for (i = 0; i < ios_list->nios; i++)
+			if (ios_list->iosv[i].bs_id == ios_id)
+				return;
+
+		ios_list->iosv[ios_list->nios++].bs_id = ios_id;
 	}
-
-	ios_id = bmap_2_repl(b, iosidx);
-
-	for (i = 0; i < ios_list->nios; i++)
-		if (ios_list->iosv[i].bs_id == ios_id)
-			return;
-
-	ios_list->iosv[ios_list->nios++].bs_id = ios_id;
 }
 
 __static void
@@ -2069,6 +2061,8 @@ slm_ptrunc_apply(struct fidc_membh *f)
 
 	/* get the number of replies we expect */
 	ios_list.nios = 0;
+	for (i = 0; i < SL_MAX_REPLICAS; i++)
+		ios_list.iosv[i].bs_id = 0;
 	fmi->fmi_ptrunc_nios = 0;
 
 	i = fcmh_2_fsz(f) / SLASH_BMAP_SIZE;
@@ -2077,6 +2071,7 @@ slm_ptrunc_apply(struct fidc_membh *f)
 
 	/* When do we drop this reference? */
 	if (bmap_get(f, i, SL_WRITE, &b) == 0) {
+		DEBUG_BMAPOD(PLL_DIAG, b, "truncate bmap");
 		BMAP_ULOCK(b);
 		mds_repl_bmap_walkcb(b, tract, NULL, 0,
 		    ptrunc_tally_ios, &ios_list);
@@ -2084,6 +2079,7 @@ slm_ptrunc_apply(struct fidc_membh *f)
 		if (fmi->fmi_ptrunc_nios) {
 			rc = mds_bmap_write_logrepls(b);
 			if (rc) {
+				FCMH_UNBUSY(f);
 				bmap_op_done(b);
 				goto out2;
 			}
@@ -2098,7 +2094,8 @@ slm_ptrunc_apply(struct fidc_membh *f)
 			upd = bmap_2_upd(b);
 			DEBUG_FCMH(PLL_MAX, f, "ptrunc queued");
 			upsch_enqueue(upd);
-		}
+		} else
+			FCMH_UNBUSY(f);
 		bmap_op_done(b);
 	}
 	i++;
@@ -2118,7 +2115,7 @@ slm_ptrunc_apply(struct fidc_membh *f)
 		BMAP_ULOCK(b);
 		BHGEN_INCREMENT(b);
 		rc = mds_repl_bmap_walkcb(b, tract, NULL, 0,
-		    ptrunc_tally_ios, &ios_list);
+		    NULL, NULL);
 		if (rc)
 			mds_bmap_write_logrepls(b);
 		bmap_op_done(b);
@@ -2212,6 +2209,7 @@ slm_ptrunc_prepare(struct fidc_membh *f)
 	f->fcmh_sstb.sst_size = fmi->fmi_ptrunc_size;
 	FCMH_ULOCK(f);
 
+	/* XXX assert on PJF_REPLAYINPROG during replay */
 	mds_reserve_slot(1);
 	rc = mdsio_setattr(current_vfsid, fcmh_2_mfid(f),
 	    &f->fcmh_sstb, to_set, &rootcreds, &f->fcmh_sstb,
