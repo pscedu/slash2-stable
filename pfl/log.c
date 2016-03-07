@@ -68,11 +68,14 @@ const char			*psc_logfmt = PSC_LOG_FMT;
 __static int			 psc_loglevel = PLL_NOTICE;
 __static struct psclog_data	*psc_logdata;
 char				 psclog_eol[8] = "\n";	/* overrideable with ncurses EOL */
-int				*pfl_syslog;
-FILE				*pflog_ttyfp;
 
-struct psc_dynarray		_pfl_logpoints = DYNARRAY_INIT_NOLOG;
-struct psc_hashtbl		_pfl_logpoints_hashtbl;
+/*
+ * A user can define one or more PSC_SYSLOG_xxx environment variables or simply 
+ * the PSC_SYSLOG environment variable to select some or all subsystems whose
+ * log messages should also go to syslog(3). If so, the pfl_syslog_map[] array 
+ * is used to map our log level a syslog(3) priority.
+ */
+int				*pfl_syslog;
 
 int pfl_syslog_map[] = {
 /* fatal */	LOG_EMERG,
@@ -81,6 +84,11 @@ int pfl_syslog_map[] = {
 /* notice */	LOG_NOTICE,
 /* info */	LOG_INFO
 };
+
+FILE				*pflog_ttyfp;
+
+struct psc_dynarray		_pfl_logpoints = DYNARRAY_INIT_NOLOG;
+struct psc_hashtbl		_pfl_logpoints_hashtbl;
 
 int
 psc_log_setfn(const char *p, const char *mode)
