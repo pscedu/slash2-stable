@@ -180,7 +180,7 @@ usocklnd_tear_peer_conn(usock_conn_t *conn)
 
         pthread_mutex_unlock(&peer->up_lock);
         
-	opst = pfl_opstat_initf(OPSTF_BASE10, "peer-%s-disconnects-%s",
+	opst = pfl_opstat_initf(OPSTF_BASE10, "peer-%s-dsc-%s",
 	    libcfs_expid2str(id, pridbuf),
 	    decref_flag ? "full" : "part");
 	pfl_opstat_incr(opst);
