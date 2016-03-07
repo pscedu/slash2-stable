@@ -17,6 +17,7 @@ The low water mark (minseq) issue after MDS restart is fixed. A workaround of AC
 a pool max of zero means infinity.  I will tag the commit with the following command:
 
 	$ git tag -a v1.09 -m "Release 1.09"
+	$ git push --tags
 
 02/08/2016
 ----------
