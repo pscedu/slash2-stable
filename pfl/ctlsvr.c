@@ -74,7 +74,7 @@
 #define QLEN 15	/* listen(2) queue */
 
 __weak size_t
-psc_multiwaitcond_nwaiters(__unusedx struct psc_multiwaitcond *m)
+pfl_multiwaitcond_nwaiters(__unusedx struct pfl_multiwaitcond *m)
 {
 	psc_fatalx("multiwait support not compiled in");
 }
@@ -446,7 +446,7 @@ psc_ctlrep_getpool(int fd, struct psc_ctlmsghdr *mh, void *msg)
 				pcpl->pcpl_free = psc_mlist_size(
 				    &m->ppm_ml);
 				pcpl->pcpl_nw_empty =
-				    psc_multiwaitcond_nwaiters(
+				    pfl_multiwaitcond_nwaiters(
 					&m->ppm_ml.pml_mwcond_empty);
 			} else {
 				pcpl->pcpl_free = lc_nitems(&m->ppm_lc);
@@ -1947,7 +1947,7 @@ psc_ctlrep_getmlist(int fd, struct psc_ctlmsghdr *mh, void *m)
 			pcml->pcml_nseen = psc_atomic64_read(
 			    &pml->pml_nseen->opst_lifetime);
 			pcml->pcml_nwaiters =
-			    psc_multiwaitcond_nwaiters(
+			    pfl_multiwaitcond_nwaiters(
 				&pml->pml_mwcond_empty);
 			MLIST_ULOCK(pml);
 

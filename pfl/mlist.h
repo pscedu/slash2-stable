@@ -48,8 +48,8 @@
 
 struct psc_mlist {
 	struct psc_explist		pml_explist;
-//	struct psc_multiwaitcond	pml_mwcond_want;	/* when someone wants an obj */
-	struct psc_multiwaitcond	pml_mwcond_empty;	/* when we're empty */
+//	struct pfl_multiwaitcond	pml_mwcond_want;	/* when someone wants an obj */
+	struct pfl_multiwaitcond	pml_mwcond_empty;	/* when we're empty */
 #define pml_lentry	pml_explist.pexl_lentry
 #define pml_lock	pml_explist.pexl_lock
 #define pml_name	pml_explist.pexl_name

@@ -61,7 +61,7 @@ _psc_mlist_add(const struct pfl_callerinfo *pci, struct psc_mlist *pml,
 	else
 		pll_addhead(&pml->pml_pll, p);
 	pfl_opstat_incr(pml->pml_nseen);
-	psc_multiwaitcond_wakeup(&pml->pml_mwcond_empty);
+	pfl_multiwaitcond_wakeup(&pml->pml_mwcond_empty);
 	MLIST_URLOCK(pml, locked);
 }
 
@@ -90,7 +90,7 @@ _psc_mlist_initv(struct psc_mlist *pml, int flags, void *mwcarg,
 	if (rc >= (int)sizeof(pml->pml_name))
 		psc_fatalx("mlist name is too long: %s", fmt);
 
-	psc_multiwaitcond_init(&pml->pml_mwcond_empty, mwcarg, flags,
+	pfl_multiwaitcond_init(&pml->pml_mwcond_empty, mwcarg, flags,
 	    "%s-empty", pml->pml_name);
 	pml->pml_nseen = pfl_opstat_initf(OPSTF_BASE10,
 	    "mlist.%s.seen", pml->pml_name);
@@ -112,7 +112,7 @@ pfl_mlist_destroy(struct psc_mlist *ml)
 {
 	psc_assert(pll_nitems(&ml->pml_pll) == 0);
 	pfl_opstat_destroy(ml->pml_nseen);
-	psc_multiwaitcond_destroy(&ml->pml_mwcond_empty);
+	pfl_multiwaitcond_destroy(&ml->pml_mwcond_empty);
 }
 
 /*

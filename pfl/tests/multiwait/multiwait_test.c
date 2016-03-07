@@ -42,11 +42,11 @@
 
 struct thr {
 	pthread_t			t_pthread;
-	struct psc_multiwait		t_ml;
-	struct psc_multiwaitcond	t_mlc;
+	struct pfl_multiwait		t_ml;
+	struct pfl_multiwaitcond	t_mlc;
 };
 
-struct psc_multiwaitcond mastermlc;
+struct pfl_multiwaitcond mastermlc;
 int nthreads = 32;
 int iterations = 1000;
 const char *progname;
@@ -59,7 +59,7 @@ thr_main(void *arg)
 	int i;
 
 	for (i = 0; i < iterations; i++) {
-		psc_multiwait(&t->t_ml, &p);
+		pfl_multiwait(&t->t_ml, &p);
 		usleep(200);
 	}
 	return (NULL);
@@ -104,16 +104,16 @@ main(int argc, char *argv[])
 	if ((threads = calloc(nthreads, sizeof(*threads))) == NULL)
 		err(1, "calloc");
 
-	psc_multiwaitcond_init(&mastermlc, NULL, 0, "master");
+	pfl_multiwaitcond_init(&mastermlc, NULL, 0, "master");
 
 	for (j = 0, t = threads; j < nthreads; j++, t++) {
-		psc_multiwaitcond_init(&t->t_mlc, NULL, 0, "cond%d", j);
+		pfl_multiwaitcond_init(&t->t_mlc, NULL, 0, "cond%d", j);
 
-		psc_multiwait_init(&t->t_ml, "ml%d", j);
-		rc = psc_multiwait_addcond(&t->t_ml, &mastermlc);
+		pfl_multiwait_init(&t->t_ml, "ml%d", j);
+		rc = pfl_multiwait_addcond(&t->t_ml, &mastermlc);
 		if (rc)
 			psc_fatal("addcond");
-		rc = psc_multiwait_addcond(&t->t_ml, &t->t_mlc);
+		rc = pfl_multiwait_addcond(&t->t_ml, &t->t_mlc);
 		if (rc)
 			psc_fatal("addcond");
 
@@ -124,7 +124,7 @@ main(int argc, char *argv[])
 	}
 
 	for (j = 0; j < iterations; j++) {
-		psc_multiwaitcond_wakeup(&mastermlc);
+		pfl_multiwaitcond_wakeup(&mastermlc);
 		usleep(100);
 	}
 	exit(0);

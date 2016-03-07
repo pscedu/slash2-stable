@@ -25,7 +25,7 @@
 
 /*
  * Multiwait: for waiting on any of a number of conditions to become
- * available.
+ * available as opposed to a single pthread_cond_wait.
  */
 
 #ifndef _PFL_MULTIWAIT_H_
@@ -38,14 +38,14 @@
 #include "pfl/dynarray.h"
 #include "pfl/pthrutil.h"
 
-struct psc_multiwait;
+struct pfl_multiwait;
 struct psc_vbitmap;
 
-struct psc_multiwaitcond {
+struct pfl_multiwaitcond {
 	struct pfl_mutex		 mwc_mutex;
 	pthread_cond_t			 mwc_cond;	/* for single waiters */
 	struct psc_dynarray		 mwc_multiwaits;/* where cond is registered */
-	struct psc_multiwait		*mwc_winner;	/* which multiwait awoke first */
+	struct pfl_multiwait		*mwc_winner;	/* which multiwait awoke first */
 	const void			*mwc_data;	/* pointer to user data */
 	int				 mwc_flags;
 	char				 mwc_name[48];	/* should be on 8-byte boundary */
@@ -57,7 +57,7 @@ struct psc_multiwaitcond {
 	{ PSC_MUTEX_INIT, PTHREAD_COND_INITIALIZER,			\
 	    DYNARRAY_INIT, NULL, (data), (flags), (name) }
 
-struct psc_multiwait {
+struct pfl_multiwait {
 	/*
 	 * Multiwaits have mutexes not because threads may "share" them,
 	 * explicitly, but because threads may modify some fields
@@ -65,7 +65,7 @@ struct psc_multiwait {
 	 */
 	struct pfl_mutex		 mw_mutex;
 	pthread_cond_t			 mw_cond;	/* master condition */
-	struct psc_multiwaitcond	*mw_waker;	/* which mwcond woke us */
+	struct pfl_multiwaitcond	*mw_waker;	/* which mwcond woke us */
 	struct psc_dynarray		 mw_conds;	/* registered conditions */
 	struct psc_vbitmap		*mw_condmask;	/* which conds can wake us */
 	int				 mw_flags;
@@ -77,44 +77,44 @@ struct psc_multiwait {
 #define	DLOG_MULTIWAIT(level, mw, fmt, ...)				\
 	psclog((level), "%s@%p " fmt, (mw)->mw_name, (mw), ##__VA_ARGS__)
 
-/**
- * psc_multiwait_addcond - Add a condition to a multiwait.
+/*
+ * Add a condition to a multiwait.
  * @mw: a multiwait.
  * @mwc: the condition to add.
  */
-#define psc_multiwait_addcond(mw, c)		_psc_multiwait_addcond((mw), (c), 1)
-#define psc_multiwait_addcond_masked(mw, c, m)	_psc_multiwait_addcond((mw), (c), (m))
+#define pfl_multiwait_addcond(mw, c)		_pfl_multiwait_addcond((mw), (c), 1)
+#define pfl_multiwait_addcond_masked(mw, c, m)	_pfl_multiwait_addcond((mw), (c), (m))
 
-/**
- * psc_multiwait_* - Wait for any of a number of conditions in a multiwait
- *	to become available.
+/*
+ * Wait for any of a number of conditions in a multiwait to become
+ * available.
  * @mw: the multiwait whose registered conditions will be waited upon.
  * @data: pointer to user data filled in from the multiwaitcond.
  * @usec: # microseconds till timeout.
  */
-#define psc_multiwait_msecs(mw, p, ms)		psc_multiwait_usecs((mw), (p), (ms) * 1000)
-#define psc_multiwait_secs(mw, p, s)		psc_multiwait_usecs((mw), (p), (s) * 1000 * 1000)
-#define psc_multiwait(mw, p)			psc_multiwait_usecs((mw), (p), 0)
+#define pfl_multiwait_msecs(mw, p, ms)		pfl_multiwait_usecs((mw), (p), (ms) * 1000)
+#define pfl_multiwait_secs(mw, p, s)		pfl_multiwait_usecs((mw), (p), (s) * 1000 * 1000)
+#define pfl_multiwait(mw, p)			pfl_multiwait_usecs((mw), (p), 0)
 
-int	_psc_multiwait_addcond(struct psc_multiwait *, struct psc_multiwaitcond *, int);
-void	 psc_multiwait_entercritsect(struct psc_multiwait *);
-void	 psc_multiwait_free(struct psc_multiwait *);
-int	 psc_multiwait_hascond(struct psc_multiwait *, struct psc_multiwaitcond *);
-void	 psc_multiwait_init(struct psc_multiwait *, const char *, ...);
-void	 psc_multiwait_leavecritsect(struct psc_multiwait *);
-void	 psc_multiwait_setcondwakeable(struct psc_multiwait *, const struct psc_multiwaitcond *, int);
-void	 psc_multiwait_reset(struct psc_multiwait *);
-void	 psc_multiwait_prconds(struct psc_multiwait *);
-int	 psc_multiwait_usecs(struct psc_multiwait *, void *, int);
+int	_pfl_multiwait_addcond(struct pfl_multiwait *, struct pfl_multiwaitcond *, int);
+void	 pfl_multiwait_entercritsect(struct pfl_multiwait *);
+void	 pfl_multiwait_free(struct pfl_multiwait *);
+int	 pfl_multiwait_hascond(struct pfl_multiwait *, struct pfl_multiwaitcond *);
+void	 pfl_multiwait_init(struct pfl_multiwait *, const char *, ...);
+void	 pfl_multiwait_leavecritsect(struct pfl_multiwait *);
+void	 pfl_multiwait_setcondwakeable(struct pfl_multiwait *, const struct pfl_multiwaitcond *, int);
+void	 pfl_multiwait_reset(struct pfl_multiwait *);
+void	 pfl_multiwait_prconds(struct pfl_multiwait *);
+int	 pfl_multiwait_usecs(struct pfl_multiwait *, void *, int);
 
-#define	psc_multiwaitcond_wait(mwc, mx)		psc_multiwaitcond_waitrel_ts((mwc), (mx), NULL)
-#define	psc_multiwaitcond_waitrel(mwc, mx, ts)	psc_multiwaitcond_waitrel_ts((mwc), (mx), (ts))
+#define	pfl_multiwaitcond_wait(mwc, mx)		pfl_multiwaitcond_waitrel_ts((mwc), (mx), NULL)
+#define	pfl_multiwaitcond_waitrel(mwc, mx, ts)	pfl_multiwaitcond_waitrel_ts((mwc), (mx), (ts))
 
-void	 psc_multiwaitcond_destroy(struct psc_multiwaitcond *);
-void	 psc_multiwaitcond_init(struct psc_multiwaitcond *, const void *, int, const char *, ...);
-size_t	 psc_multiwaitcond_nwaiters(struct psc_multiwaitcond *);
-void	 psc_multiwaitcond_prmwaits(struct psc_multiwaitcond *);
-int	 psc_multiwaitcond_waitrel_ts(struct psc_multiwaitcond *, struct pfl_mutex *, const struct timespec *);
-void	 psc_multiwaitcond_wakeup(struct psc_multiwaitcond *);
+void	 pfl_multiwaitcond_destroy(struct pfl_multiwaitcond *);
+void	 pfl_multiwaitcond_init(struct pfl_multiwaitcond *, const void *, int, const char *, ...);
+size_t	 pfl_multiwaitcond_nwaiters(struct pfl_multiwaitcond *);
+void	 pfl_multiwaitcond_prmwaits(struct pfl_multiwaitcond *);
+int	 pfl_multiwaitcond_waitrel_ts(struct pfl_multiwaitcond *, struct pfl_mutex *, const struct timespec *);
+void	 pfl_multiwaitcond_wakeup(struct pfl_multiwaitcond *);
 
 #endif /* _PFL_MULTIWAIT_H_ */
