@@ -287,7 +287,7 @@ pfl_multiwaitcond_waitrel_ts(struct pfl_multiwaitcond *mwc,
  * @active: whether condition is active.
  */
 int
-_psc_multiwait_addcond(struct pfl_multiwait *mw,
+_pfl_multiwait_addcond(struct pfl_multiwait *mw,
     struct pfl_multiwaitcond *mwc, int active)
 {
 	struct pfl_multiwaitcond *c;
