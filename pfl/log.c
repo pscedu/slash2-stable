@@ -65,7 +65,7 @@
 #endif
 
 const char			*psc_logfmt = PSC_LOG_FMT;
-__static int			 psc_loglevel = PLL_NOTICE;
+int			 	 psc_loglevel = PLL_NOTICE;
 __static struct psclog_data	*psc_logdata;
 char				 psclog_eol[8] = "\n";	/* overrideable with ncurses EOL */
 
