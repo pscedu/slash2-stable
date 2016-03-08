@@ -42,11 +42,11 @@
 #define PSS_RPC		4
 #define _PSS_LAST	5
 
-int		 psc_subsys_id(const char *);
-const char	*psc_subsys_name(int);
-void		 psc_subsys_register(int, const char *);
-void		 psc_subsys_unregister(int);
+int		 pfl_subsys_id(const char *);
+const char	*pfl_subsys_name(int);
+void		 pfl_subsys_register(int, const char *);
+void		 pfl_subsys_unregister(int);
 
-extern struct psc_dynarray psc_subsystems;
+extern struct psc_dynarray pfl_subsystems;
 
 #endif /* _PFL_SUBSYS_H_ */

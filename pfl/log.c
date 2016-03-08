@@ -365,7 +365,7 @@ _psclogv(const struct pfl_callerinfo *pci, int level, int options,
 		FMTSTRCASE('r', "d", d->pld_rank)
 //		FMTSTRCASE('S', "s", call stack)
 		FMTSTRCASE('s', "lu", tv.tv_sec)
-		FMTSTRCASE('T', "s", psc_subsys_name(pci->pci_subsys))
+		FMTSTRCASE('T', "s", pfl_subsys_name(pci->pci_subsys))
 		FMTSTRCASE('t', "d", pci->pci_subsys)
 		FMTSTRCASE('U', "d", pflog_get_fsctx_uid(thr))
 		FMTSTRCASE('u', "lu", tv.tv_usec)

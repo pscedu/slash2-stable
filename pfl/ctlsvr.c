@@ -211,11 +211,11 @@ psc_ctlrep_getsubsys(int fd, struct psc_ctlmsghdr *mh,
 	int n, rc;
 
 	rc = 1;
-	siz = PCSS_NAME_MAX * psc_dynarray_len(&psc_subsystems);
+	siz = PCSS_NAME_MAX * psc_dynarray_len(&pfl_subsystems);
 	pcss = PSCALLOC(siz);
-	for (n = 0; n < psc_dynarray_len(&psc_subsystems); n++)
+	for (n = 0; n < psc_dynarray_len(&pfl_subsystems); n++)
 		if (snprintf(&pcss->pcss_names[n * PCSS_NAME_MAX],
-		    PCSS_NAME_MAX, "%s", psc_subsys_name(n)) == -1) {
+		    PCSS_NAME_MAX, "%s", pfl_subsys_name(n)) == -1) {
 			psclog_warn("snprintf");
 			rc = psc_ctlsenderr(fd, mh,
 			    "unable to retrieve subsystems");
@@ -271,13 +271,13 @@ psc_ctlmsg_thread_send(int fd, struct psc_ctlmsghdr *mh, void *m,
 	int rc;
 
 	siz = sizeof(*pct) + sizeof(*pct->pct_loglevels) *
-	    psc_dynarray_len(&psc_subsystems);
+	    psc_dynarray_len(&pfl_subsystems);
 	pct = PSCALLOC(siz);
 	pct->pct_flags = thr->pscthr_flags;
 	snprintf(pct->pct_thrname, sizeof(pct->pct_thrname),
 	    "%s", thr->pscthr_name);
 	memcpy(pct->pct_loglevels, thr->pscthr_loglevels,
-	    psc_dynarray_len(&psc_subsystems) *
+	    psc_dynarray_len(&pfl_subsystems) *
 	    sizeof(*pct->pct_loglevels));
 	mh->mh_size = siz;
 	rc = psc_ctlmsg_sendv(fd, mh, pct);
@@ -548,7 +548,7 @@ psc_ctlparam_log_level(int fd, struct psc_ctlmsghdr *mh,
 
 	if (nlevels == 3) {
 		/* Subsys specified, use it. */
-		subsys = psc_subsys_id(levels[2]);
+		subsys = pfl_subsys_id(levels[2]);
 		if (subsys == -1)
 			return (psc_ctlsenderr(fd, mh,
 			    "invalid log.level subsystem: %s",
@@ -558,7 +558,7 @@ psc_ctlparam_log_level(int fd, struct psc_ctlmsghdr *mh,
 	} else {
 		/* No subsys specified, use all. */
 		start_ss = 0;
-		end_ss = psc_dynarray_len(&psc_subsystems);
+		end_ss = psc_dynarray_len(&pfl_subsystems);
 		subsys = PSS_ALL;
 	}
 
@@ -578,7 +578,7 @@ psc_ctlparam_log_level(int fd, struct psc_ctlmsghdr *mh,
 				thr->pscthr_loglevels[subsys] =
 				    loglevel;
 			else {
-				levels[2] = (char *)psc_subsys_name(
+				levels[2] = (char *)pfl_subsys_name(
 				    subsys);
 				rc = psc_ctlmsg_param_send(fd, mh, pcp,
 				    thr->pscthr_name, levels, 3,

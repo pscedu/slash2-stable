@@ -40,7 +40,7 @@
 #include "pfl/subsys.h"
 #include "pfl/thread.h"
 
-struct psc_subsys {
+struct pfl_subsys {
 	const char	*pss_name;
 	int		 pss_loglevel;
 };
@@ -48,28 +48,28 @@ struct psc_subsys {
 extern int		*pfl_syslog;
 extern int		 psc_loglevel;
 
-struct psc_dynarray	 psc_subsystems = DYNARRAY_INIT_NOLOG;
+struct psc_dynarray	 pfl_subsystems = DYNARRAY_INIT_NOLOG;
 
 int
-psc_subsys_id(const char *name)
+pfl_subsys_id(const char *name)
 {
-	const struct psc_subsys *ss;
+	const struct pfl_subsys *ss;
 	int n;
 
-	DYNARRAY_FOREACH(ss, n, &psc_subsystems)
+	DYNARRAY_FOREACH(ss, n, &pfl_subsystems)
 		if (strcasecmp(name, ss->pss_name) == 0)
 			return (n);
 	return (-1);
 }
 
 const char *
-psc_subsys_name(int ssid)
+pfl_subsys_name(int ssid)
 {
-	const struct psc_subsys *ss;
+	const struct pfl_subsys *ss;
 
-	if (ssid < 0 || ssid >= psc_dynarray_len(&psc_subsystems))
+	if (ssid < 0 || ssid >= psc_dynarray_len(&pfl_subsystems))
 		return ("<unknown>");
-	ss = psc_dynarray_getpos(&psc_subsystems, ssid);
+	ss = psc_dynarray_getpos(&pfl_subsystems, ssid);
 	return (ss->pss_name);
 }
 
@@ -80,7 +80,7 @@ _psc_threads_rebuild_subsys(int init)
 	int *ll, *oldll, nss;
 
 	PLL_LOCK(&psc_threads);
-	nss = psc_dynarray_len(&psc_subsystems);
+	nss = psc_dynarray_len(&pfl_subsystems);
 	PLL_FOREACH(thr, &psc_threads) {
 		ll = psc_alloc(sizeof(*thr->pscthr_loglevels) * nss,
 		    PAF_NOLOG);
@@ -94,13 +94,13 @@ _psc_threads_rebuild_subsys(int init)
 }
 
 void
-psc_subsys_register(int ssid, const char *name)
+pfl_subsys_register(int ssid, const char *name)
 {
-	struct psc_subsys *ss;
+	struct pfl_subsys *ss;
 	char *p, buf[BUFSIZ];
 	int nss;
 
-	nss = psc_dynarray_len(&psc_subsystems);
+	nss = psc_dynarray_len(&pfl_subsystems);
 	ss = psc_alloc(sizeof(*ss), PAF_NOLOG);
 	ss->pss_name = name;
 
@@ -146,19 +146,19 @@ psc_subsys_register(int ssid, const char *name)
 	if (ssid != nss)
 		errx(1, "bad ID %d for subsys %s [want %d], "
 		    "check order", ssid, name, nss);
-	psc_dynarray_add(&psc_subsystems, ss);
+	psc_dynarray_add(&pfl_subsystems, ss);
 
 	_psc_threads_rebuild_subsys(1);
 }
 
 void
-psc_subsys_unregister(int ssid)
+pfl_subsys_unregister(int ssid)
 {
-	struct psc_subsys *ss;
+	struct pfl_subsys *ss;
 
-	psc_assert(ssid == psc_dynarray_len(&psc_subsystems) - 1);
-	ss = psc_dynarray_getpos(&psc_subsystems, ssid);
-	psc_dynarray_removepos(&psc_subsystems, ssid);
+	psc_assert(ssid == psc_dynarray_len(&pfl_subsystems) - 1);
+	ss = psc_dynarray_getpos(&pfl_subsystems, ssid);
+	psc_dynarray_removepos(&pfl_subsystems, ssid);
 	PSCFREE(ss);
 
 	_psc_threads_rebuild_subsys(0);
@@ -167,22 +167,22 @@ psc_subsys_unregister(int ssid)
 int
 psc_log_getlevel_ss(int ssid)
 {
-	const struct psc_subsys *ss;
+	const struct pfl_subsys *ss;
 
-	if (ssid >= psc_dynarray_len(&psc_subsystems) || ssid < 0) {
+	if (ssid >= psc_dynarray_len(&pfl_subsystems) || ssid < 0) {
 		/* don't use psclog to avoid loops */
 		warnx("subsystem out of bounds (%d, max %d)", ssid,
-		    psc_dynarray_len(&psc_subsystems));
+		    psc_dynarray_len(&pfl_subsystems));
 		abort();
 	}
-	ss = psc_dynarray_getpos(&psc_subsystems, ssid);
+	ss = psc_dynarray_getpos(&pfl_subsystems, ssid);
 	return (ss->pss_loglevel);
 }
 
 void
 psc_log_setlevel_ss(int ssid, int newlevel)
 {
-	struct psc_subsys *ss;
+	struct pfl_subsys *ss;
 	int i;
 
 	if (newlevel >= PNLOGLEVELS || newlevel < 0)
@@ -190,14 +190,14 @@ psc_log_setlevel_ss(int ssid, int newlevel)
 		    newlevel, PNLOGLEVELS);
 
 	if (ssid == PSS_ALL) {
-		DYNARRAY_FOREACH(ss, i, &psc_subsystems)
+		DYNARRAY_FOREACH(ss, i, &pfl_subsystems)
 			ss->pss_loglevel = newlevel;
-	} else if (ssid >= psc_dynarray_len(&psc_subsystems) ||
+	} else if (ssid >= psc_dynarray_len(&pfl_subsystems) ||
 	    ssid < 0)
 		psc_fatalx("subsystem out of bounds (%d, max %d)", ssid,
-		    psc_dynarray_len(&psc_subsystems));
+		    psc_dynarray_len(&pfl_subsystems));
 	else {
-		ss = psc_dynarray_getpos(&psc_subsystems, ssid);
+		ss = psc_dynarray_getpos(&pfl_subsystems, ssid);
 		ss->pss_loglevel = newlevel;
 	}
 }
