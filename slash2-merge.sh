@@ -18,6 +18,7 @@ wokfs=0
 slash2=0
 zfsfuse=0
 distribfuse=0
+distribiozone=0
 for name in $(git remote)
 do
     if [[ "$name" == "pfl" ]]
@@ -43,6 +44,10 @@ do
     if [[ "$name" == "distrib.fuse" ]]
     then
         distribfuse=1
+    fi
+    if [[ "$name" == "distrib.iozone" ]]
+    then
+        distribiozone=1
     fi
 done
 
@@ -82,6 +87,12 @@ then
     bail-if-fail
 fi
 
+if [ $distribiozone -eq 0 ]
+then
+    git remote add distrib.iozone https://github.com/pscedu/distrib.iozone
+    bail-if-fail
+fi
+
 git pull -X theirs --no-edit pfl master
 bail-if-fail
 
@@ -98,6 +109,9 @@ git pull -X subtree=zfs-fuse -X theirs --no-edit zfs-fuse master
 bail-if-fail
  
 git pull -X subtree=distrib/fuse -X theirs --no-edit distrib.fuse master
+bail-if-fail
+
+git pull -X subtree=distrib/iozone -X theirs --no-edit distrib.iozone master
 bail-if-fail
 
 exit 0
