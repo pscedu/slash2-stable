@@ -68,6 +68,12 @@ git merge -s ours --no-commit distrib.fuse/master
 git read-tree --prefix=distrib/fuse -u distrib.fuse/master
 git commit -m "Add distrib.fuse project under distrib/fuse directory"
 
+git remote add distrib.iozone https://github.com/pscedu/distrib.iozone
+git fetch distrib.iozone
+git merge -s ours --no-commit distrib.iozone/master
+git read-tree --prefix=distrib/iozone -u distrib.iozone/master
+git commit -m "Add distrib.iozone project under distrib/iozone directory"
+
 git remote add wokfs https://github.com/pscedu/wokfs
 git fetch wokfs
 bail-if-fail
