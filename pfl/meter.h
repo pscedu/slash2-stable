@@ -40,7 +40,7 @@
 
 #define PSC_METER_NAME_MAX	32
 
-struct psc_meter {
+struct pfl_meter {
 	struct psclist_head	 pm_lentry;
 	char			 pm_name[PSC_METER_NAME_MAX];
 	uint64_t		 pm_cur;
@@ -48,11 +48,11 @@ struct psc_meter {
 	uint64_t		*pm_maxp;
 };
 
-#define psc_meter_free(pm)	pll_remove(&psc_meters, (m))
+#define pfl_meter_free(pm)	pll_remove(&pfl_meters, (m))
 
-void psc_meter_init(struct psc_meter *, uint64_t, const char *, ...);
-void psc_meter_destroy(struct psc_meter *);
+void pfl_meter_init(struct pfl_meter *, uint64_t, const char *, ...);
+void pfl_meter_destroy(struct pfl_meter *);
 
-extern struct psc_lockedlist	 psc_meters;
+extern struct psc_lockedlist	 pfl_meters;
 
 #endif /* _PFL_METER_H_ */

@@ -1886,15 +1886,15 @@ psc_ctlrep_getmeter(int fd, struct psc_ctlmsghdr *mh, void *m)
 {
 	struct psc_ctlmsg_meter *pcm = m;
 	char name[PSC_METER_NAME_MAX];
-	struct psc_meter *pm;
+	struct pfl_meter *pm;
 	int rc, found, all;
 
 	rc = 1;
 	found = 0;
 	snprintf(name, sizeof(name), "%s", pcm->pcm_mtr.pm_name);
 	all = (name[0] == '\0');
-	PLL_LOCK(&psc_meters);
-	PLL_FOREACH(pm, &psc_meters)
+	PLL_LOCK(&pfl_meters);
+	PLL_FOREACH(pm, &pfl_meters)
 		if (all || strncmp(pm->pm_name, name,
 		    strlen(name)) == 0) {
 			found = 1;
@@ -1909,7 +1909,7 @@ psc_ctlrep_getmeter(int fd, struct psc_ctlmsghdr *mh, void *m)
 			if (strcmp(pm->pm_name, name) == 0)
 				break;
 		}
-	PLL_ULOCK(&psc_meters);
+	PLL_ULOCK(&pfl_meters);
 	if (rc && !found && !all)
 		rc = psc_ctlsenderr(fd, mh, "unknown meter: %s", name);
 	return (rc);

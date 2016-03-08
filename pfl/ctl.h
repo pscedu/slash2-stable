@@ -130,7 +130,7 @@ struct psc_ctlmsg_thread {
 };
 
 struct psc_ctlmsg_meter {
-	struct psc_meter	pcm_mtr;
+	struct pfl_meter	pcm_mtr;
 };
 
 struct psc_ctlmsg_mlist {
