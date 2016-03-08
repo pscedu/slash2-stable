@@ -2511,4 +2511,14 @@ Adjust formatting so fields don't run together.
 Revision 3.429
 Add two more characters to array my_port_num.
 =============================================================================
-
+=============================================================================
+Revision 3.430
+Adding -+b option for bursty operations. 
+Donated by: Avi Shchislowski <Avi.Shchislowski@sandisk.com>
+=============================================================================
+Revision 3.432
+Adding NetBSD 64 bit.
+=============================================================================
+Revision 3.434
+Adding code from Alexey Skidanov. Pthread burst I/O.
+=============================================================================

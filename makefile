@@ -1,5 +1,5 @@
 #
-# Version $Revision: 1.144 $
+# Version $Revision: 1.146 $
 #
 # The makefile for building all versions of iozone for all supported
 # platforms
@@ -57,6 +57,7 @@ all:
 	@echo "        ->   linux-sparc          (32bit)   <-"
 	@echo "        ->   macosx               (32bit)   <-"
 	@echo "        ->   netbsd               (32bit)   <-"
+	@echo "        ->   netbsd-AMD64         (64bit)   <-"
 	@echo "        ->   openbsd              (32bit)   <-"
 	@echo "        ->   openbsd-threads      (32bit)   <-"
 	@echo "        ->   OSFV3                (64bit)   <-"
@@ -207,7 +208,7 @@ linux-powerpc64: iozone_linux-powerpc64.o  libbif.o libasync.o fileop_linux-ppc6
 		-lrt $(FLAG64BIT) -o iozone
 	$(CC)  -O3 -Dlinux fileop_linux-ppc64.o $(FLAG64BIT) -o fileop
 	$(CC)  -O3 -Dlinux pit_server-linux-powerpc64.o $(FLAG64BIT) -o pit_server
-		
+
 #
 # GNU 'C' compiler Linux build with threads, largefiles, async I/O
 #
@@ -587,13 +588,25 @@ SCO_Unixware_gcc:	iozone_SCO_Unixware_gcc.o  libbif.o libasync.o
 		-lsocket -lthread -o iozone
 
 #
-# GNU C compiler NetBSD build with no threads, no largefiles, no async I/O
+# GNU C compiler NetBSD build with threads, no largefiles, no async I/O
 #
 
-netbsd:	iozone_netbsd.o  libbif.o fileop_netbsd.o pit_server.o
-	$(CC) -O $(LDFLAGS) iozone_netbsd.o libbif.o -o iozone
+netbsd:		iozone_netbsd.o libbif.o libasync.o fileop_netbsd.o pit_server.o
+	$(CC) -O $(LDFLAGS) iozone_netbsd.o libbif.o libasync.o \
+               -lrt -lpthread -o iozone
 	$(CC) -O fileop_netbsd.o -o fileop
 	$(CC) -O pit_server.o -o pit_server
+
+#
+# GNU C compiler NetBSD/amd64 build with threads, no largefiles, async I/O
+#
+netbsd-AMD64:  iozone_netbsd-AMD64.o libbif.o libasync.o fileop_netbsd-AMD64.o pit_server.o
+	$(CC)  -O $(LDFLAGS) iozone_netbsd-AMD64.o libbif.o libasync.o \
+		-lrt -lpthread -o iozone
+	$(CC)  -O fileop_netbsd-AMD64.o -o fileop
+	$(CC)  -O pit_server.o -o pit_server
+
+#
 
 #
 #
@@ -778,7 +791,6 @@ iozone_linux-powerpc64.o:	iozone.c libbif.c libasync.c
 	$(CC) -c -O3 -Dunix -Dlinux -DHAVE_ANSIC_C -DASYNC_IO \
 		-D_LARGEFILE64_SOURCE $(CFLAGS) libasync.c $(FLAG64BIT) -o libasync.o 
 		
-
 iozone_linux-sparc.o:	iozone.c libbif.c libasync.c
 	@echo ""
 	@echo "Building iozone for Linux Sparc"
@@ -850,6 +862,12 @@ fileop_netbsd.o:	fileop.c
 	@echo "Building fileop for NetBSD"
 	@echo ""
 	$(CC) -c -O $(CFLAGS) fileop.c -o fileop_netbsd.o
+
+fileop_netbsd-AMD64.o: fileop.c
+	@echo ""
+	@echo "Building fileop for NetBSD/AMD64"
+	@echo ""
+	$(CC) -Wall -c -O $(CFLAGS) fileop.c -o fileop_netbsd-AMD64.o
 
 fileop_Solaris.o:	fileop.c
 	@echo ""
@@ -1461,7 +1479,25 @@ iozone_netbsd.o:	iozone.c libbif.c
 	@echo ""
 	@echo "Building iozone NetBSD "
 	@echo ""
-	$(CC) -c -O -Dunix -Dbsd4_4 -DHAVE_ANSIC_C -DNO_THREADS \
-		-DNAME='"netbsd"' -DSHARED_MEM $(CFLAGS) iozone.c -o iozone_netbsd.o
+
+	$(CC) -c -O -Dunix -DHAVE_ANSIC_C -DASYNC_IO -DNAME='"netbsd"' \
+               -DSHARED_MEM \
+               -DHAVE_PREAD $(CFLAGS) iozone.c -o iozone_netbsd.o
+	$(CC) -c -O -Dunix -DHAVE_ANSIC_C -DASYNC_IO \
+               -DSHARED_MEM $(CFLAGS) libbif.c -o libbif.o
+	$(CC) -c -O -Dunix -DHAVE_ANSIC_C -DASYNC_IO \
+               $(CFLAGS) libasync.c  -o libasync.o
+
+iozone_netbsd-AMD64.o: iozone.c libbif.c libasync.c
+	@echo ""
+	@echo "Building iozone for NetBSD/amd64"
+	@echo ""
+	$(CC) -c -O -Dunix -DHAVE_ANSIC_C -DASYNC_IO -DNAME='"netbsd-AMD64"' \
+               -D__AMD64__ -DSHARED_MEM \
+               -DHAVE_PREAD $(CFLAGS) iozone.c -o iozone_netbsd-AMD64.o
+	$(CC) -c -O -Dunix -DHAVE_ANSIC_C -DASYNC_IO \
+               -DSHARED_MEM $(CFLAGS) libbif.c -o libbif.o
+	$(CC) -c -O -Dunix -DHAVE_ANSIC_C -DASYNC_IO \
+               $(CFLAGS) libasync.c  -o libasync.o
 	$(CC) -c -O -Dunix -Dbsd4_4 -DHAVE_ANSIC_C -DNO_THREADS \
 		-DSHARED_MEM $(CFLAGS) libbif.c -o libbif.o

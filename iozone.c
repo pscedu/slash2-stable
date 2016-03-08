@@ -60,7 +60,7 @@
 
 
 /* The version number */
-#define THISVERSION "        Version $Revision: 3.429 $"
+#define THISVERSION "        Version $Revision: 3.434 $"
 
 #if defined(linux)
   #define _GNU_SOURCE
@@ -70,7 +70,7 @@
 #include <windows.h>
 #include <errno.h>
 #else
-#if defined(linux) || defined(solaris) || defined(IOZ_macosx) || defined(__AIX__) || defined(FreeBSD) || defined(_HPUX_SOURCE) || defined(__OpenBSD__) || defined(__DragonFly__)
+#if defined(linux) || defined(solaris) || defined(IOZ_macosx) || defined(__AIX__) || defined(FreeBSD) || defined(_HPUX_SOURCE) || defined(__OpenBSD__) || defined(__DragonFly__) || defined(__NetBSD__)
 #include <errno.h>
 #else
 extern  int errno;   /* imported for errors */
@@ -201,6 +201,7 @@ char *help[] = {
 "           -Y filename  Read  telemetry file. Contains lines with (offset reclen compute_time) in ascii",
 "           -z  Used in conjunction with -a to test all possible record sizes",
 "           -Z  Enable mixing of mmap I/O and file I/O",
+"           -+b #,#  burst size (KB),sleep between burst (mili-second)",
 "           -+E Use existing non-Iozone file for read-only testing",
 "           -+F Truncate file before write in thread_mix_test",
 "           -+J Include think time (-j #) in throughput calculation",
@@ -290,7 +291,7 @@ THISVERSION,
 #if !defined(__FreeBSD__) && !defined(__OpenBSD__) && !defined(__APPLE__) && !defined(__DragonFly__)
 #include <malloc.h>
 #endif
-#if defined(__FreeBSD__) || defined(__OpenBSD__) || defined(__APPLE__) || defined(__DragonFly__)
+#if defined(__FreeBSD__) || defined(__OpenBSD__) || defined(__APPLE__) || defined(__DragonFly__) || defined(__NetBSD__)
 #include <stdlib.h>
 #include <string.h>
 #endif
@@ -977,6 +978,10 @@ static double cputime_so_far();
 #else
 #define cputime_so_far()	time_so_far()
 #endif
+static void update_burst_sleep(int, long long, double *);
+#ifndef NO_THREADS
+static void count_burst(double* burst_acc_time_sec, long long stream_id);
+#endif
 static double time_so_far1();	/* time since start of program    */
 void get_resolution();
 void get_rusage_resolution();
@@ -1236,22 +1241,28 @@ char *test_output[] = {"                ",
 		      "                   ",
 		      "                   \n" };
 */
-char *test_output[] = {"                ",
+
+#ifdef FOOBAR
+                                                 random    random     bkwd    record    stride                                    
+               write  rewrite    read    reread    read     write     read   rewrite      read   fwrite frewrite    fread  freread  pwv prwv  prv prrv
+#endif
+char *test_output[] ={"                  ",  
+		      "                  ",  
+		      "                  ",  
+		      "         ",
+		      "          ",
+		      "          ",
 		      "                  ",
-		      "                ",
-		      "        ",
-		      "        ",
-		      "        ",
-		      "                  ",
-		      "                ",
-		      "",
 		      "                 ",
-		      "                   ",
-		      "                   ",
-		      "                   ",
-		      "                   ",
-		      "                   ",
-		      "                   \n" };
+		      "",
+		      "                  ",
+		      "                  ",
+		      "                  ",
+		      "                  ",
+
+		      "                  ",
+		      "                  ",
+		      "                 \n" };
 long long test_soutput[] = {2,2,2,1,1,1,2,2,2,2,2,2,2,2};
 
 
@@ -1362,6 +1373,16 @@ struct size_entry *size_list=0;
 struct size_entry *rec_size_list=0;
 off64_t maximum_file_size;
 off64_t minimum_file_size;
+
+off64_t burst_size_kb_64 = -1;             /* the size of the burst (in KBytes) */
+long long burst_sleep_duration_msec = -1;  /* the sleep duration between burst */
+long long written_this_burst = 0;          /* How much data was writen so far in this burst*/
+#ifndef NO_THREADS
+pthread_barrierattr_t barrier_attr;
+pthread_barrier_t *barrier;
+off64_t burst_size_per_child = 0;
+long long burst_written_so_far[MAXSTREAMS] = {0};  /* How much data was written so far in this burst per stream (thread/process)*/
+#endif
 
 char bif_filename [MAXNAMESIZE];           /* name of biff file      */
 char filename [MAXNAMESIZE];               /* name of temporary file */
@@ -1654,7 +1675,7 @@ char **argv;
 	mygen=rand(); /* Pick a random generation number */
 
 	/* Try to find the actual VM page size, if possible */
-#if defined (solaris) || defined (_HPUX_SOURCE) || defined (linux) || defined(IRIX) || defined (IRIX64)
+#if defined (solaris) || defined (_HPUX_SOURCE) || defined (linux) || defined(IRIX) || defined (IRIX64) || defined(__NetBSD__)
 #ifndef __convex_spp
 	page_size=getpagesize();
 #endif
@@ -1686,7 +1707,8 @@ char **argv;
     	sprintf(splash[splash_line++],"\t             Jean-Marc Zucconi, Jeff Blomberg, Benny Halevy, Dave Boone,\n");
     	sprintf(splash[splash_line++],"\t             Erik Habbinga, Kris Strecker, Walter Wong, Joshua Root,\n");
     	sprintf(splash[splash_line++],"\t             Fabrice Bacchella, Zhenghua Xue, Qin Li, Darren Sawyer,\n");
-    	sprintf(splash[splash_line++],"\t             Vangel Bojaxhi, Ben England, Vikentsi Lapa.\n\n");
+    	sprintf(splash[splash_line++],"\t             Vangel Bojaxhi, Ben England, Vikentsi Lapa,\n");
+    	sprintf(splash[splash_line++],"\t             Alexey Skidanov.\n\n");
 	sprintf(splash[splash_line++],"\tRun began: %s\n",ctime(&time_run));
 	argcsave=argc;
 	argvsave=argv;
@@ -2182,6 +2204,14 @@ char **argv;
 				printf("Can not run throughput tests with unmount & remounts.\n");
 				exit(15);
 			}
+
+#ifdef NO_THREADS
+			if(burst_size_kb_64 != -1 && burst_sleep_duration_msec != -1)
+			{
+				printf("Can not run throughput tests with burst option.\n");
+				exit(100);
+			}
+#endif
 			break;
 		case 'd':	/* Specify the delay of children to run */
 			delay_start = (long long)(atoi(optarg));
@@ -2389,7 +2419,53 @@ char **argv;
 					/* if(subarg!=(char *)0)   Error checking. */
 					/* printf("Plus option argument = >%s<\n",subarg);*/
 					break;
-				case 'b':  /* Example: Does not have an argument */
+				case 'b':  /* burst */
+#ifdef NO_THREADS
+					if(trflag)
+					{
+						printf("Can not run throughput tests with burst option.\n");
+						exit(100);
+					}
+#endif
+					subarg=argv[optind++];
+					if(subarg==(char *)0)
+					{
+						printf("-+b takes an operand !!\n");
+						exit(200);
+					}
+					if (strchr(subarg,',') == NULL)
+					{
+						printf("-+b operand is of the format #,# (burst size (K/M/G) ,mili-second) !!\n");
+						exit(400);
+					}
+					burst_sleep_duration_msec = atoi(strchr(subarg,',') + 1);
+					if (burst_sleep_duration_msec == 0) {
+						printf("-+b  cannot parse sleep duration !!\n");
+						exit(400);
+					}
+					*strchr(subarg,',') = '\0';
+					#ifdef NO_PRINT_LLD
+						sscanf(subarg,"%ld",&burst_size_kb_64);
+					#else
+						sscanf(subarg,"%lld",&burst_size_kb_64);
+					#endif
+					if(subarg[strlen(subarg)-1]=='k' ||
+						subarg[strlen(subarg)-1]=='K'){
+					;
+					}
+					if(subarg[strlen(subarg)-1]=='m' ||
+						subarg[strlen(subarg)-1]=='M'){
+						burst_size_kb_64 = burst_size_kb_64 * 1024;
+					}
+					if(subarg[strlen(optarg)-1]=='g' ||
+						subarg[strlen(optarg)-1]=='G'){
+						burst_size_kb_64 = burst_size_kb_64 * 1024 * 1024;
+					}
+					if (burst_size_kb_64 <= 0) {
+						printf("-+b  cannot parse burst size '%s'!!\n",subarg);
+						exit(400);
+					}
+					*(subarg + strlen(subarg)) = ','; /* so it will be printed when dumping the argsuments */
 					break;
 				case 'F':  /* Example: Does not have an argument */
 					del_flag = 1;
@@ -3027,6 +3103,14 @@ char **argv;
     	if(!silent) printf("\tProcessor cache line size set to %ld bytes.\n",cache_line_size);
 	if(!silent) printf("\tFile stride size set to %lld * record size.\n",stride);
 #endif
+	if (burst_size_kb_64 != -1 && !silent)
+#ifdef NO_PRINT_LLD
+		printf("\tBurst size set to %ld Kbytes.\n\tBurst sleep duration set to %ld msec\n",
+		burst_size_kb_64, burst_sleep_duration_msec);
+#else
+		printf("\tBurst size set to %lld Kbytes.\n\tBurst sleep duration set to %lld msec\n",
+		burst_size_kb_64, burst_sleep_duration_msec);
+#endif
 	if(!rflag)
 		reclen=(long long)4096;
 
@@ -3583,6 +3667,25 @@ throughput_test()
 		unit="ops";
 	else
 		unit="kB";
+
+#ifndef NO_THREADS
+	/*Init barriers*/
+	if(use_thread)
+	{
+		barrier = (pthread_barrier_t*)alloc_mem(sizeof(pthread_barrier_t), 0); // Not shared
+		pthread_barrierattr_setpshared(&barrier_attr, PTHREAD_PROCESS_PRIVATE);
+		pthread_barrier_init(barrier, &barrier_attr, num_child);
+	}
+	else
+	{
+		barrier = (pthread_barrier_t*)alloc_mem(sizeof(pthread_barrier_t), 1); // Shared
+		pthread_barrierattr_setpshared(&barrier_attr, PTHREAD_PROCESS_SHARED);
+		pthread_barrier_init(barrier, &barrier_attr, num_child);
+	}
+
+	if (burst_size_kb_64 != -1)
+		burst_size_per_child = burst_size_kb_64 * 1024 / num_child;
+#endif
 
 	if(!haveshm)
 	{
@@ -6847,6 +6950,12 @@ next10:
 			cleanup_comm();
 		}
 	}
+
+#ifndef NO_THREADS
+	/* Destroy the barrier */
+	pthread_barrier_destroy(barrier);
+#endif
+
 	/********************************************************/
 	/* End of cleanup					*/
 	/********************************************************/
@@ -7291,6 +7400,8 @@ long long *data1;
 long long *data2;
 #endif
 {
+	double burst_sleep_time_till_now[2] = {0, 0};
+
 	double starttime1;
 	double writetime[2];
 	double walltime[2], cputime[2];
@@ -7703,6 +7814,10 @@ long long *data2;
 #if defined(Windows)
 			    }
 #endif
+					/* The burst work does not work for async or memory
+					 * mapped IO */
+					if (wval != -1)
+						update_burst_sleep(fd, wval, &burst_sleep_time_till_now[j]);
 			  }
 			}
 			if(hist_summary)
@@ -7793,9 +7908,9 @@ long long *data2;
 			   }
 		}
 		if(inc_think)
-		   writetime[j] = ((time_so_far() - starttime1)-time_res);
+		   writetime[j] = ((time_so_far() - starttime1)-time_res - burst_sleep_time_till_now[j]);
 		else
-		   writetime[j] = ((time_so_far() - starttime1)-time_res)
+		   writetime[j] = ((time_so_far() - starttime1)-time_res - burst_sleep_time_till_now[j])
 			-compute_val;
 		if(writetime[j] < (double).000001) 
 		{
@@ -7905,6 +8020,7 @@ long long *data1;
 long long *data2;
 #endif
 {
+	double burst_sleep_time_till_now[2] = {0, 0};
 	double starttime1;
 	double writetime[2];
 	double walltime[2], cputime[2];
@@ -8010,6 +8126,7 @@ long long *data2;
 				exit_code = 74;
 				signal_handler();
 			}
+			update_burst_sleep(fd, reclen, &burst_sleep_time_till_now[j]);
 		}
 
 		if(include_flush)
@@ -8030,9 +8147,9 @@ long long *data2;
 			}
 		}
 		if(inc_think)
-		   writetime[j] = ((time_so_far() - starttime1)-time_res);
+		   writetime[j] = ((time_so_far() - starttime1)-time_res - burst_sleep_time_till_now[j]);
 		else
-		   writetime[j] = ((time_so_far() - starttime1)-time_res)
+		   writetime[j] = ((time_so_far() - starttime1)-time_res - burst_sleep_time_till_now[j])
 			-compute_val;
 		if(writetime[j] < (double).000001) 
 		{
@@ -8857,6 +8974,7 @@ long long *data1, *data2;
 	long long j;
 	off64_t i,numrecs64;
 	long long Index=0;
+	double burst_sleep_time_till_now[2] = {0, 0};
 	int flags;
 	unsigned long long randreadrate[2];
 	off64_t filebytes64;
@@ -9027,7 +9145,7 @@ long long *data1, *data2;
 #endif
 	     compute_val=(double)0;
 	     starttime2 = time_so_far();
-	     if ( j==0 ){
+	     if ( j==0 ){ /* start read */
 		for(i=0; i<numrecs64; i++) {
 			if(compute_flag)
 				compute_val+=do_compute(compute_time);
@@ -9139,7 +9257,7 @@ long long *data1, *data2;
 				  lock_offset, reclen);
 			}
 		}
-	     }
+	     } /* start write */
 	     else
 	     {
 			if(verify || dedup || dedup_interior)
@@ -9240,6 +9358,8 @@ long long *data1, *data2;
 						exit_code = 74;
 						signal_handler();
 			 		  }
+					  if (wval != -1)
+						update_burst_sleep(fd, wval, &burst_sleep_time_till_now[j]);
 					}
 				}
 				if(rlocking)
@@ -9282,9 +9402,9 @@ long long *data1, *data2;
 		}
 	     }
 	     if(inc_think)
-	        randreadtime[j] = ((time_so_far() - starttime2)-time_res);
+	        randreadtime[j] = ((time_so_far() - starttime2)-time_res - burst_sleep_time_till_now[j]);
 	     else
-	        randreadtime[j] = ((time_so_far() - starttime2)-time_res)-
+	        randreadtime[j] = ((time_so_far() - starttime2)-time_res - burst_sleep_time_till_now[j])-
 			compute_val;
 	     if(randreadtime[j] < (double).000001) 
 	     {
@@ -9679,6 +9799,7 @@ long long reclen;
 long long *data1,*data2;
 #endif
 {
+	double burst_sleep_time_till_now = 0;
 	double writeintime;
 	double starttime1;
 	double walltime, cputime;
@@ -9873,6 +9994,8 @@ long long *data1,*data2;
 				   exit_code = 74;
 				   signal_handler();
 			       }
+			       if (wval != -1)
+						update_burst_sleep(fd, wval, &burst_sleep_time_till_now);
 			  }
 		}
 		if(rlocking)
@@ -9930,6 +10053,7 @@ long long *data1,*data2;
 		if (walltime < cputime)
 		   walltime = cputime;
 	}
+	writeintime  -= burst_sleep_time_till_now;
 	if(writeintime < (double).000001) 
 	{
 		writeintime= time_res;
@@ -10324,6 +10448,7 @@ long long reclen;
 long long *data1,*data2;
 #endif
 {
+	double burst_sleep_time_till_now[2] = {0, 0};
 	double pwritetime[2];
 	double starttime1;
 	double walltime[2], cputime[2];
@@ -10483,6 +10608,8 @@ long long *data1,*data2;
 				perror("pwrite");
 				exit_code = 74;
 				signal_handler();
+			} else {
+				update_burst_sleep(fd, reclen, &burst_sleep_time_till_now[j]);
 			}
 			if(rlocking)
 			{
@@ -10507,9 +10634,9 @@ long long *data1,*data2;
 			}
 		}
 		if(inc_think)
-		   pwritetime[j] = ((time_so_far() - starttime1)-time_res);
+		   pwritetime[j] = ((time_so_far() - starttime1)-time_res - burst_sleep_time_till_now[j]);
 		else
-		   pwritetime[j] = ((time_so_far() - starttime1)-time_res)
+		   pwritetime[j] = ((time_so_far() - starttime1)-time_res - burst_sleep_time_till_now[j])
 			-compute_val;
 		if(pwritetime[j] < (double).000001) 
 		{
@@ -12436,6 +12563,7 @@ thread_write_test( x)
 #else
 	long long *gc=0;
 #endif
+	double burst_acc_time_sec = 0;
 
 	if(compute_flag)
 		delay=compute_time;
@@ -12759,7 +12887,7 @@ thread_write_test( x)
 			  close(fd);
 			}
 			child_stat->throughput = 
-				(time_so_far() - starttime1)-time_res;
+				(time_so_far() - starttime1)-time_res - burst_acc_time_sec;
 			if(include_close)
 			{
 			  if((fd = I_OPEN(dummyfile[xx], (int)flags,0))<0)
@@ -12841,6 +12969,11 @@ again:
 		      {
 #endif
 		      wval=write(fd, nbuff, (size_t) reclen);
+
+#ifndef NO_THREADS
+		      count_burst(&burst_acc_time_sec, xx);
+#endif
+
 #if defined(Windows)
 		      }
 #endif
@@ -12856,7 +12989,7 @@ again:
 				}
 				temp_time = time_so_far();
 				child_stat->throughput = 
-					(temp_time - starttime1)-time_res;
+					(temp_time - starttime1)-time_res - burst_acc_time_sec;
 				if(child_stat->throughput < (double).000001) 
 				{
 					child_stat->throughput= time_res;
@@ -12986,9 +13119,9 @@ printf("Desired rate %g  Actual rate %g Nap %g microseconds\n",desired_op_rate_t
 	if(!stopped){
 		temp_time = time_so_far();
 		if(inc_think)
-		   child_stat->throughput = ((temp_time - starttime1)-time_res);
+		   child_stat->throughput = ((temp_time - starttime1)-time_res - burst_acc_time_sec);
 		else
-		   child_stat->throughput = ((temp_time - starttime1)-time_res)
+		   child_stat->throughput = ((temp_time - starttime1)-time_res - burst_acc_time_sec)
 			-compute_val;
 		if(child_stat->throughput < (double).000001) 
 		{
@@ -13784,6 +13917,8 @@ thread_rwrite_test(x)
 	long long *gc=0;
 #endif
 
+	double burst_acc_time_sec = 0;
+
 	if(compute_flag)
 		delay=compute_time;
 	wmaddr=nbuff=maddr=free_addr=0;
@@ -14126,6 +14261,10 @@ fprintf(newstdout,"Chid: %lld Rewriting offset %lld for length of %lld\n",chid, 
 			   else
 #endif
 			   wval=write(fd, nbuff, (size_t) reclen);
+
+#ifndef NO_THREADS
+			   count_burst(&burst_acc_time_sec, xx);
+#endif
 			   if(wval != reclen)
 			   {
 				if(*stop_flag)
@@ -14229,9 +14368,9 @@ printf("Desired rate %g  Actual rate %g Nap %g microseconds\n",desired_op_rate_t
 	temp_time=time_so_far();
 	child_stat=(struct child_stats *)&shmaddr[xx];
 	if(inc_think)
-		child_stat->throughput = ((temp_time - starttime1)-time_res);
+		child_stat->throughput = ((temp_time - starttime1)-time_res - burst_acc_time_sec);
 	else
-		child_stat->throughput = ((temp_time - starttime1)-time_res)
+		child_stat->throughput = ((temp_time - starttime1)-time_res - burst_acc_time_sec)
 		-compute_val;
 	if(child_stat->throughput < (double).000001) 
 	{
@@ -17858,6 +17997,8 @@ thread_ranwrite_test( x)
         unsigned long long init[4]={0x12345ULL, 0x23456ULL, 0x34567ULL, 0x45678ULL}, length=4;
 #endif
 
+        double burst_acc_time_sec = 0;
+
 	if(compute_flag)
 		delay=compute_time;
 	hist_time=thread_qtime_stop=thread_qtime_start=0;
@@ -18198,7 +18339,7 @@ thread_ranwrite_test( x)
 					fsync(fd);
 			}
 			child_stat->throughput = 
-				(time_so_far() - starttime1)-time_res;
+				(time_so_far() - starttime1)-time_res - burst_acc_time_sec;
 			if(child_stat->throughput < (double).000001) 
 			{
 				child_stat->throughput = time_res;
@@ -18257,6 +18398,11 @@ again:
 		   else
 		   {
 		      wval = write(fd, nbuff, (size_t) reclen);
+
+#ifndef NO_THREADS
+		      count_burst(&burst_acc_time_sec, xx);
+#endif
+
 		      if(wval != reclen)
 		      {
 			if(*stop_flag && !stopped){
@@ -18269,7 +18415,7 @@ again:
 				}
 				temp_time = time_so_far();
 				child_stat->throughput = 
-					(temp_time - starttime1)-time_res;
+					(temp_time - starttime1)-time_res - burst_acc_time_sec;
 				if(child_stat->throughput < (double).000001) 
 				{
 					child_stat->throughput= time_res;
@@ -18394,9 +18540,9 @@ printf("Desired rate %g  Actual rate %g Nap %g microseconds\n",desired_op_rate_t
 	if(!stopped){
 		temp_time = time_so_far();
 		if(inc_think)
-			child_stat->throughput = ((temp_time - starttime1)-time_res);
+			child_stat->throughput = ((temp_time - starttime1)-time_res - burst_acc_time_sec);
 		else
-			child_stat->throughput = ((temp_time - starttime1)-time_res)
+			child_stat->throughput = ((temp_time - starttime1)-time_res - burst_acc_time_sec)
 				-compute_val;
 		if(child_stat->throughput < (double).000001) 
 		{
@@ -24604,7 +24750,13 @@ void * thread_fwrite_test( x)
         char *how;
         long long Index = 0;
         FILE *stream = NULL;
-        static int First_Run = 1;
+        int First_Run[MAXSTREAMS];
+	int kk;
+
+	for(kk=0;kk<MAXSTREAMS;kk++)
+		First_Run[kk]=1;
+
+        double burst_acc_time_sec = 0;
 
         if(compute_flag)
                 delay=compute_time;
@@ -24701,9 +24853,9 @@ void * thread_fwrite_test( x)
                 purge_buffer_cache();
         }
 
-        if(First_Run==1)
+        if(First_Run[xx]==1)
         {
-		First_Run=0;
+		First_Run[xx]=0;
                 if(check_filename(filename))
                         how="r+"; /* file exists, don't create and zero a new one. */
                 else
@@ -24853,6 +25005,11 @@ void * thread_fwrite_test( x)
 			exit_code = 74;
                         signal_handler();
                 }
+
+#ifndef NO_THREADS
+		      count_burst(&burst_acc_time_sec, xx);
+#endif
+
 		if(hist_summary)
 		{
 			thread_qtime_stop=time_so_far();
@@ -24901,9 +25058,9 @@ void * thread_fwrite_test( x)
         if(!stopped){
                 temp_time = time_so_far();
 		if(inc_think)
-                	child_stat->throughput = ((temp_time - starttime1)-time_res);
+                	child_stat->throughput = ((temp_time - starttime1)-time_res - burst_acc_time_sec);
 		else
-                	child_stat->throughput = ((temp_time - starttime1)-time_res)
+                	child_stat->throughput = ((temp_time - starttime1)-time_res - burst_acc_time_sec)
                         	-compute_val;
                 if(child_stat->throughput < (double).000001)
                 {
@@ -25462,3 +25619,65 @@ void * thread_fread_test( x)
 
 return(0);
 }
+
+static void update_burst_sleep(int fd, long long reclen, double *burst_sleep_time_till_now)
+{
+	if (burst_size_kb_64 == -1 || burst_sleep_duration_msec == -1)
+		return;
+	written_this_burst += reclen;
+	if (written_this_burst >= (burst_size_kb_64 * 1024)) {
+		struct timespec req, rem;
+		int err;
+		double sleep_start_time;
+
+		written_this_burst = 0;
+		rem.tv_sec = burst_sleep_duration_msec/1000;
+		rem.tv_nsec = (burst_sleep_duration_msec%1000)*1000000;
+		fsync(fd);
+		sleep_start_time = time_so_far();
+		do {
+			req = rem;
+			err = nanosleep(&req, &rem);
+		} while ((err == -1) && (errno == EINTR));
+		*burst_sleep_time_till_now += (time_so_far() - sleep_start_time);
+	}
+}
+
+#ifndef NO_THREADS
+static void count_burst(double* burst_acc_time_sec, long long stream_id)
+{
+	double burst_start_time_sec;
+	struct timespec req, rem;
+	int err;
+
+	if (burst_size_per_child == 0 || burst_sleep_duration_msec == -1)
+		return;
+
+	/* Burst mode is handled */
+	burst_written_so_far[stream_id] += reclen;
+
+	/* Need to sleep to empty the burst buffer ? */
+	if (burst_size_per_child  <= burst_written_so_far[stream_id])
+	{
+		burst_written_so_far[stream_id] = 0;
+		if (!direct_flag) {
+			fsync(fd);
+		}
+
+		/* Wait for other threads*/
+		burst_start_time_sec = time_so_far();
+		pthread_barrier_wait(barrier);
+
+		/* Sleep to empty the burst buffer*/
+		rem.tv_sec = burst_sleep_duration_msec/1000;
+		rem.tv_nsec = (burst_sleep_duration_msec%1000)*1000000;
+		do {
+			req = rem;
+			err = nanosleep(&req, &rem);
+		} while ((err == -1) && (errno == EINTR));
+
+		*burst_acc_time_sec += time_so_far() - burst_start_time_sec;
+	}
+}
+#endif
+
