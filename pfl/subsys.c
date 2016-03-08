@@ -86,7 +86,7 @@ _psc_threads_rebuild_subsys(int init)
 		    PAF_NOLOG);
 		oldll = thr->pscthr_loglevels;
 		if (init)
-			ll[nss - 1] = psc_loglevel;
+			ll[nss - 1] = psc_log_getlevel_global();
 		thr->pscthr_loglevels = ll;
 		psc_free(oldll, PAF_NOLOG);
 	}
