@@ -28,9 +28,12 @@
 
 #include <sys/types.h>
 
+const char *
+	pflsys_get_hostname(void);
 int	pflsys_getusergroups(uid_t, gid_t, gid_t *, int *);
 int	pflsys_userisgroupmember(uid_t, gid_t, gid_t);
+
 int	pfl_systemf(const char *, ...);
-int 	pfl_getfstype(const char *, char *, size_t);
+int	pfl_getfstype(const char *, char *, size_t);
 
 #endif /* _PFL_SYS_H_ */

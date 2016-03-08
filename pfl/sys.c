@@ -37,8 +37,12 @@
 #include <pwd.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <unistd.h>
 
 #include "pfl/alloc.h"
+#include "pfl/cdefs.h"
+#include "pfl/log.h"
+#include "pfl/net.h"
 #include "pfl/str.h"
 #include "pfl/sys.h"
 
@@ -123,3 +127,18 @@ pfl_getfstype(const char *ofn, char *buf, size_t len)
 #endif
 	return (0);
 }
+
+#ifdef HAVE_LIBPTHREAD
+
+char psc_hostname[PFL_HOSTNAME_MAX];
+
+const char *
+pflsys_get_hostname(void)
+{
+	if (psc_hostname[0] == '\0')
+		if (gethostname(psc_hostname, sizeof(psc_hostname)) == -1)
+			psc_fatal("gethostname");
+	return (PCPP_STR(psc_hostname));
+}
+
+#endif

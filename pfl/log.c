@@ -65,15 +65,16 @@
 #endif
 
 const char			*psc_logfmt = PSC_LOG_FMT;
-int			 	 psc_loglevel = PLL_NOTICE;
+int				 psc_loglevel = PLL_NOTICE;
 __static struct psclog_data	*psc_logdata;
 char				 psclog_eol[8] = "\n";	/* overrideable with ncurses EOL */
 
 /*
- * A user can define one or more PSC_SYSLOG_xxx environment variables or simply 
- * the PSC_SYSLOG environment variable to select some or all subsystems whose
- * log messages should also go to syslog(3). If so, the pfl_syslog_map[] array 
- * is used to map our log level a syslog(3) priority.
+ * A user can define one or more PSC_SYSLOG_$subsys environment
+ * variables or simply the PSC_SYSLOG environment variable to select
+ * some or all subsystems whose log messages should also go to
+ * syslog(3).  If so, the pfl_syslog_map[] array is used to map our log
+ * level to a syslog(3) priority.
  */
 int				*pfl_syslog;
 
@@ -257,7 +258,6 @@ psclog_getdata(void)
 
 	d = pfl_tls_get(PFL_TLSIDX_LOGDATA, sizeof(*d));
 	if (d->pld_thrid == 0) {
-		/* XXX use psc_get_hostname() */
 		if (gethostname(d->pld_hostname,
 		    sizeof(d->pld_hostname)) == -1)
 			err(1, "gethostname");

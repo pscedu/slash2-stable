@@ -487,7 +487,7 @@ pscthr_setpause(struct psc_thread *thr, int pauseval)
  * hostname.  Local memory improves the speediness of logging.
  */
 const char *
-psc_get_hostname(void)
+pflsys_get_hostname(void)
 {
 	return (psclog_getdata()->pld_hostname);
 }
