@@ -50,8 +50,10 @@ struct pfl_fault {
 #define	pfl_fault_lock(pflt)	spinlock(&(pflt)->pflt_lock)
 #define	pfl_fault_unlock(pflt)	freelock(&(pflt)->pflt_lock)
 
-#define pfl_fault_get(name)	_pfl_fault_get((name), 1)
-#define pfl_fault_peek(name)	_pfl_fault_get((name), 0)
+#define pfl_fault_register(name)	_pfl_fault_get((name), 1)
+
+#define pfl_fault_get(name)		_pfl_fault_get((name), 1)
+#define pfl_fault_peek(name)		_pfl_fault_get((name), 0)
 
 int	_pfl_fault_here(struct pfl_fault *, int *, int);
 void	 pfl_fault_destroy(int);
