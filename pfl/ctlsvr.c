@@ -443,7 +443,7 @@ psc_ctlrep_getpool(int fd, struct psc_ctlmsghdr *mh, void *msg)
 			pcpl->pcpl_nshrink = psc_atomic64_read(
 			    &m->ppm_opst_shrinks->opst_lifetime);
 			if (POOL_IS_MLIST(m)) {
-				pcpl->pcpl_free = psc_mlist_size(
+				pcpl->pcpl_free = pfl_mlist_size(
 				    &m->ppm_ml);
 				pcpl->pcpl_nw_empty =
 				    pfl_multiwaitcond_nwaiters(
@@ -1173,7 +1173,7 @@ psc_ctlparam_pool_handle(int fd, struct psc_ctlmsghdr *mh,
 			levels[2] = "free";
 			if (POOL_IS_MLIST(m))
 				snprintf(nbuf, sizeof(nbuf), "%d",
-				    psc_mlist_size(&m->ppm_ml));
+				    pfl_mlist_size(&m->ppm_ml));
 			else
 				snprintf(nbuf, sizeof(nbuf), "%d",
 				    lc_nitems(&m->ppm_lc));
@@ -1926,15 +1926,15 @@ psc_ctlrep_getmlist(int fd, struct psc_ctlmsghdr *mh, void *m)
 {
 	struct psc_ctlmsg_mlist *pcml = m;
 	char name[PEXL_NAME_MAX];
-	struct psc_mlist *pml;
+	struct pfl_mlist *pml;
 	int rc, found, all;
 
 	rc = 1;
 	found = 0;
 	snprintf(name, sizeof(name), "%s", pcml->pcml_name);
 	all = (name[0] == '\0');
-	PLL_LOCK(&psc_mlists);
-	PLL_FOREACH(pml, &psc_mlists)
+	PLL_LOCK(&pfl_mlists);
+	PLL_FOREACH(pml, &pfl_mlists)
 		if (all || strncmp(pml->pml_name, name,
 		    strlen(name)) == 0) {
 			found = 1;
@@ -1959,7 +1959,7 @@ psc_ctlrep_getmlist(int fd, struct psc_ctlmsghdr *mh, void *m)
 			if (strcmp(pml->pml_name, name) == 0)
 				break;
 		}
-	PLL_ULOCK(&psc_mlists);
+	PLL_ULOCK(&pfl_mlists);
 	if (rc && !found && !all)
 		rc = psc_ctlsenderr(fd, mh, "unknown mlist: %s", name);
 	return (rc);

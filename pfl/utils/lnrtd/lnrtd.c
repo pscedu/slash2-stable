@@ -42,7 +42,7 @@ const char		*ctlsockfn = PATH_CTLSOCK;
 const char		*progname;
 
 struct psc_lockedlist	psc_odtables;
-struct psc_lockedlist	psc_mlists;
+struct psc_lockedlist	pfl_mlists;
 struct psc_lockedlist	psc_meters;
 struct psc_lockedlist	psc_pools;
 

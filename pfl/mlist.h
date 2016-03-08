@@ -30,7 +30,7 @@
  * can pull a single item off any of a number of lists whenever an
  * item becomes available on any of them.
  *
- * A single psc_mlist variable represent one list, so to properly
+ * A single pfl_mlist variable represent one list, so to properly
  * poll a set, there is a bit of custom setup required by adding each
  * mlist's mwcond to a multiwait and then waiting on it.
  */
@@ -46,7 +46,7 @@
 #include "pfl/lock.h"
 #include "pfl/multiwait.h"
 
-struct psc_mlist {
+struct pfl_mlist {
 	struct psc_explist		pml_explist;
 //	struct pfl_multiwaitcond	pml_mwcond_want;	/* when someone wants an obj */
 	struct pfl_multiwaitcond	pml_mwcond_empty;	/* when we're empty */
@@ -65,52 +65,52 @@ struct psc_mlist {
 #define MLIST_URLOCK(pml, lk)		PLL_URLOCK(&(pml)->pml_pll, (lk))
 #define MLIST_HASLOCK(pml)		PLL_HASLOCK(&(pml)->pml_pll)
 
-#define psc_mlist_addtail(pml, p)	_psc_mlist_add(PFL_CALLERINFO(), (pml), (p), 1)
-#define psc_mlist_addhead(pml, p)	_psc_mlist_add(PFL_CALLERINFO(), (pml), (p), 0)
+#define pfl_mlist_addtail(pml, p)	_pfl_mlist_add(PFL_CALLERINFO(), (pml), (p), 1)
+#define pfl_mlist_addhead(pml, p)	_pfl_mlist_add(PFL_CALLERINFO(), (pml), (p), 0)
 
-#define psc_mlist_add(pml, p)		 psc_mlist_addtail((pml), (p))
+#define pfl_mlist_add(pml, p)		 pfl_mlist_addtail((pml), (p))
 
 /**
- * psc_mlist_empty - Check if an mlist is empty.
+ * pfl_mlist_empty - Check if an mlist is empty.
  * @pml: the mlist to check.
  */
-#define psc_mlist_empty(pml)		pll_empty(&(pml)->pml_pll)
+#define pfl_mlist_empty(pml)		pll_empty(&(pml)->pml_pll)
 
-#define psc_mlist_size(pml)		pll_nitems(&(pml)->pml_pll)
+#define pfl_mlist_size(pml)		pll_nitems(&(pml)->pml_pll)
 
 /**
- * psc_mlist_tryget - Get an item from an mlist if one is available.
+ * pfl_mlist_tryget - Get an item from an mlist if one is available.
  * @pml: the mlist to access.
  */
-#define psc_mlist_tryget(pml)		pll_get(&(pml)->pml_pll)
+#define pfl_mlist_tryget(pml)		pll_get(&(pml)->pml_pll)
 
 /**
- * psc_mlist_remove - Remove an item's membership from a mlist.
+ * pfl_mlist_remove - Remove an item's membership from a mlist.
  * @pml: the mlist to access.
  * @p: item to unlink.
  */
-#define psc_mlist_remove(pml, p)	pll_remove(&(pml)->pml_pll, (p))
+#define pfl_mlist_remove(pml, p)	pll_remove(&(pml)->pml_pll, (p))
 
-#define psc_mlist_conjoint(pml, p)	pll_conjoint(&(pml)->pml_pll, (p))
+#define pfl_mlist_conjoint(pml, p)	pll_conjoint(&(pml)->pml_pll, (p))
 
 /**
- * psc_mlist_reginit - Initialize and register an mlist.
+ * pfl_mlist_reginit - Initialize and register an mlist.
  * @pml: mlist to initialize.
  * @mwcarg: multiwaitcond to use for availability notification.
  * @offset: offset into entry for the psclist_head for list mgt.
  * @namefmt: printf(3) format for mlist name.
  */
-#define psc_mlist_reginit(pml, mwcarg, type, member, namefmt, ...)	\
-	_psc_mlist_reginit((pml), 0, (mwcarg), offsetof(type, member),	\
+#define pfl_mlist_reginit(pml, mwcarg, type, member, namefmt, ...)	\
+	_pfl_mlist_reginit((pml), 0, (mwcarg), offsetof(type, member),	\
 	    (namefmt), ## __VA_ARGS__)
 
-void	_psc_mlist_add(const struct pfl_callerinfo *, struct psc_mlist *, void *, int);
-void	 pfl_mlist_destroy(struct psc_mlist *);
-void	_psc_mlist_init(struct psc_mlist *, int, void *, ptrdiff_t,
+void	_pfl_mlist_add(const struct pfl_callerinfo *, struct pfl_mlist *, void *, int);
+void	 pfl_mlist_destroy(struct pfl_mlist *);
+void	_pfl_mlist_init(struct pfl_mlist *, int, void *, ptrdiff_t,
 	    const char *, ...);
-void	_psc_mlist_reginit(struct psc_mlist *, int, void *, ptrdiff_t,
+void	_pfl_mlist_reginit(struct pfl_mlist *, int, void *, ptrdiff_t,
 	    const char *, ...);
 
-extern struct psc_lockedlist psc_mlists;
+extern struct psc_lockedlist pfl_mlists;
 
 #endif /* _PFL_MLIST_H_ */
