@@ -128,7 +128,7 @@ pfl_getfstype(const char *ofn, char *buf, size_t len)
 	return (0);
 }
 
-#ifdef HAVE_LIBPTHREAD
+#ifndef HAVE_LIBPTHREAD
 
 char psc_hostname[PFL_HOSTNAME_MAX];
 
