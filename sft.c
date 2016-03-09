@@ -357,11 +357,11 @@ display(__unusedx struct psc_thread *thr)
 		ts.tv_sec += 1;
 		psc_waitq_waitabs(&display_wq, NULL, &ts);
 
-		psc_fmt_human(ratebuf, iostats->opst_intv);
+		pfl_fmt_human(ratebuf, iostats->opst_intv);
 		if (istty)
 			fprintf(fp, "\r");
 		fprintf(fp, "%7s ", ratebuf);
-		psc_fmt_human(ratebuf,
+		pfl_fmt_human(ratebuf,
 		    psc_atomic64_read(&iostats->opst_lifetime));
 		fprintf(fp, "%7s", ratebuf);
 		if (istty)
@@ -676,13 +676,13 @@ main(int argc, char *argv[])
 	t3.tv_sec = t2.tv_sec - t1.tv_sec;
 	t3.tv_usec = t2.tv_usec - t1.tv_usec;
 
-	psc_fmt_human(hbuf, totalbytes);
+	pfl_fmt_human(hbuf, totalbytes);
 	printf("\nTotal time: %"PSCPRI_TIMET" seconds, "
 	    "%"PSCPRI_UTIMET" useconds, %s\n",
 	    t3.tv_sec, t3.tv_usec, hbuf);
 
 	rate = totalbytes / ((t3.tv_sec * 1000000 + t3.tv_usec) * 1e-6);
-	psc_fmt_human(hbuf, rate);
+	pfl_fmt_human(hbuf, rate);
 	printf("%s rate is %s/s\n", dowrite ? "Write" : "Read", hbuf);
 
 	return (0);
