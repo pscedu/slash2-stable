@@ -250,7 +250,7 @@ _pscthr_finish_init(struct psc_thread *thr)
 	 * corrupted.
 	 */
 	psclog_getdata();
-	psclog_info("%s <pthr %"PSCPRI_PTHRT" thrid %d> alive",
+	psclog_diag("%s <pthr %"PSCPRI_PTHRT" thrid %d> alive",
 	    thr->pscthr_name, thr->pscthr_pthread,
 	    thr->pscthr_thrid);
 }
