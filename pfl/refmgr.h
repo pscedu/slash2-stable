@@ -39,7 +39,7 @@
 #include "pfl/pthrutil.h"
 #include "pfl/tree.h"
 
-SPLAY_HEAD(psc_objref_tree, psc_objref);
+SPLAY_HEAD(pfl_objref_tree, pfl_objref);
 
 struct psc_refmgr {
 	struct psc_poolmaster		 prm_pms;
@@ -78,7 +78,7 @@ struct psc_refmgr {
 /* additional lookup preference flags */
 #define PRMF_ANY			(PRMF_LIST | PRMF_LRU | PRMF_HASH | PRMF_TREE)
 
-struct psc_objref {
+struct pfl_objref {
 #if PFL_DEBUG
 	uint64_t			 pobj_magic;
 #endif
@@ -87,7 +87,7 @@ struct psc_objref {
 	struct psclist_head		 pobj_pool_lentry;
 
 	/* this is a ghost field; it will only be there if TREE is set in refmgr */
-	SPLAY_ENTRY(psc_objref)		 pobj_tree_entry;
+	SPLAY_ENTRY(pfl_objref)		 pobj_tree_entry;
 };
 
 #if PFL_DEBUG
@@ -130,7 +130,7 @@ void	*psc_refmgr_getobj(struct psc_refmgr *, int, void *);
 #define psc_refmgr_findobj(prm, pref, key)				\
 	psc_refmgr_findobj((prm), (pref), (key), 0)
 
-int	 psc_objref_cmp(const void *, const void *);
+int	 pfl_objref_cmp(const void *, const void *);
 
 void	 psc_obj_share(struct psc_refmgr *prm, void *);
 void	 psc_obj_incref(struct psc_refmgr *prm, void *);
@@ -138,10 +138,10 @@ void	 psc_obj_decref(struct psc_refmgr *prm, void *);
 
 void	 psc_obj_dump(const struct psc_refmgr *prm, const void *);
 
-static __inline struct psc_objref *
+static __inline struct pfl_objref *
 psc_obj_getref(const struct psc_refmgr *prm, void *p)
 {
-	struct psc_objref *pobj;
+	struct pfl_objref *pobj;
 
 	psc_assert(p);
 	pobj = (void *)((char *)p - prm->prm_private_offset);
@@ -150,7 +150,7 @@ psc_obj_getref(const struct psc_refmgr *prm, void *p)
 }
 
 static __inline void
-psc_objref_lock(const struct psc_refmgr *prm, struct psc_objref *pobj)
+pfl_objref_lock(const struct psc_refmgr *prm, struct pfl_objref *pobj)
 {
 	if (prm->prm_flags & PRMF_MULTIWAIT)
 		psc_pthread_mutex_lock(PSC_OBJREF_GETMUTEX(prm, pobj));
@@ -159,7 +159,7 @@ psc_objref_lock(const struct psc_refmgr *prm, struct psc_objref *pobj)
 }
 
 static __inline void
-psc_objref_unlock(const struct psc_refmgr *prm, struct psc_objref *pobj)
+pfl_objref_unlock(const struct psc_refmgr *prm, struct pfl_objref *pobj)
 {
 	if (prm->prm_flags & PRMF_MULTIWAIT)
 		psc_pthread_mutex_unlock(PSC_OBJREF_GETMUTEX(prm, pobj));
@@ -168,7 +168,7 @@ psc_objref_unlock(const struct psc_refmgr *prm, struct psc_objref *pobj)
 }
 
 static __inline int
-psc_objref_reqlock(const struct psc_refmgr *prm, struct psc_objref *pobj)
+pfl_objref_reqlock(const struct psc_refmgr *prm, struct pfl_objref *pobj)
 {
 	if (prm->prm_flags & PRMF_MULTIWAIT)
 		return (psc_pthread_mutex_reqlock(
@@ -177,8 +177,8 @@ psc_objref_reqlock(const struct psc_refmgr *prm, struct psc_objref *pobj)
 }
 
 static __inline void
-psc_objref_ureqlock(const struct psc_refmgr *prm,
-    struct psc_objref *pobj, int locked)
+pfl_objref_ureqlock(const struct psc_refmgr *prm,
+    struct pfl_objref *pobj, int locked)
 {
 	if (prm->prm_flags & PRMF_MULTIWAIT)
 		psc_pthread_mutex_ureqlock(
@@ -188,11 +188,11 @@ psc_objref_ureqlock(const struct psc_refmgr *prm,
 }
 
 static __inline void
-psc_objref_wait(const struct psc_refmgr *prm, struct psc_objref *pobj)
+pfl_objref_wait(const struct psc_refmgr *prm, struct pfl_objref *pobj)
 {
 	int waslocked;
 
-	waslocked = psc_objref_reqlock(prm, pobj);
+	waslocked = pfl_objref_reqlock(prm, pobj);
 	if (prm->prm_flags & PRMF_MULTIWAIT)
 		pfl_multiwaitcond_wait(PSC_OBJREF_GETMWCOND(prm, pobj),
 		    PSC_OBJREF_GETMUTEX(prm, pobj));
@@ -200,22 +200,22 @@ psc_objref_wait(const struct psc_refmgr *prm, struct psc_objref *pobj)
 		psc_waitq_wait(PSC_OBJREF_GETWAITQ(prm, pobj),
 		    PSC_OBJREF_GETLOCK(prm, pobj));
 	if (waslocked)
-		psc_objref_lock(prm, pobj);
+		pfl_objref_lock(prm, pobj);
 }
 
 static __inline void
-psc_objref_wake(const struct psc_refmgr *prm, struct psc_objref *pobj)
+pfl_objref_wake(const struct psc_refmgr *prm, struct pfl_objref *pobj)
 {
 	int locked;
 
-	locked = psc_objref_reqlock(prm, pobj);
+	locked = pfl_objref_reqlock(prm, pobj);
 	if (prm->prm_flags & PRMF_MULTIWAIT)
 		pfl_multiwaitcond_wakeup(PSC_OBJREF_GETMWCOND(prm, pobj));
 	else
 		psc_waitq_wakeall(PSC_OBJREF_GETWAITQ(prm, pobj));
-	psc_objref_ureqlock(prm, pobj, locked);
+	pfl_objref_ureqlock(prm, pobj, locked);
 }
 
-SPLAY_PROTOTYPE(psc_objref_tree, psc_objref, pobj_tree_entry, psc_objref_cmp);
+SPLAY_PROTOTYPE(pfl_objref_tree, pfl_objref, pobj_tree_entry, pfl_objref_cmp);
 
 #endif /* _PFL_REFMGR_H_ */
