@@ -300,6 +300,9 @@ slm_try_sliodresm(struct sl_resm *resm)
 	 * are marked RES_ISCLUSTER().  resm_res always points back to
 	 * the member's native resource and not to a logical resource
 	 * like a CNOS.
+	 *
+	 * XXX: If the IOS already has the block mapped, given out a
+	 * lease should be Okay because it does NOT increse disk usage.
 	 */
 	si = res2iosinfo(resm->resm_res);
 	if (si->si_flags & (SIF_DISABLE_LEASE | SIF_DISABLE_ADVLEASE)) {
@@ -709,7 +712,6 @@ mds_bmap_ios_update(struct bmap_mds_lease *bml)
 	pfl_odt_replaceitem(slm_bia_odt, bmi->bmi_assign, bia);
 
 	bml->bml_ios = bia->bia_ios;
-	bml->bml_seq = bia->bia_seq;
 
 	rc = mds_bmap_add_repl(b, bia);
 	pfl_odt_freebuf(slm_bia_odt, bia, NULL);
@@ -1005,8 +1007,6 @@ mds_bmap_bml_add(struct bmap_mds_lease *bml, enum rw rw,
 		b->bcm_flags &= ~BMAPF_IOSASSIGNED;
 
 	} else { //rw == SL_READ
-		bml->bml_seq = mds_bmap_timeotbl_getnextseq();
-
 		if (!wlease && !rlease)
 			bmi->bmi_readers++;
 		mds_bmap_timeotbl_mdsi(bml, BTE_ADD);

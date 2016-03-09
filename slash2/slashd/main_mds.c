@@ -410,10 +410,10 @@ main(int argc, char *argv[])
 
 	pfl_init();
 	sl_subsys_register();
-	psc_subsys_register(SLMSS_ZFS, "zfs");
-	psc_subsys_register(SLMSS_JOURNAL, "log");
-	psc_subsys_register(SLMSS_UPSCH, "upsch");
-	psc_subsys_register(SLMSS_INFO, "info");
+	pfl_subsys_register(SLMSS_ZFS, "zfs");
+	pfl_subsys_register(SLMSS_JOURNAL, "log");
+	pfl_subsys_register(SLMSS_UPSCH, "upsch");
+	pfl_subsys_register(SLMSS_INFO, "info");
 
 	rc = pfl_asprintf(&path_env, "%s:%s:%s", ZFS_BIN_PATH,
 	    ZPOOL_PATH, getenv("PATH"));
@@ -507,8 +507,7 @@ main(int argc, char *argv[])
 	sl_drop_privs(1);
 
 	/* startup meter */
-	psc_meter_destroy(&res2mdsinfo(sl_resprof)->sp_batchmeter);
-
+	pfl_meter_destroy(&res2mdsinfo(sl_resprof)->sp_batchmeter);
 
 	for (vfsid = 0; vfsid < zfs_nmounts; vfsid++)
 		psc_register_filesystem(vfsid);

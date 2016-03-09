@@ -59,16 +59,16 @@ bim_updateseq(uint64_t seq)
 
 	spinlock(&sli_bminseq.bim_lock);
 
-	if (seq == BMAPSEQ_ANY) {
-		invalid = 1;
-		goto done;
-	}
+	if (seq == BMAPSEQ_ANY)
+		goto out1;
+
 	if (seq >= sli_bminseq.bim_minseq ||
 	    sli_bminseq.bim_minseq == BMAPSEQ_ANY) {
 		sli_bminseq.bim_minseq = seq;
 		psclog_info("update min seq to %"PRId64, seq);
 		PFL_GETTIMESPEC(&sli_bminseq.bim_age);
-		goto done;
+		OPSTAT_INCR("seqno-update");
+		goto out2;
 	}
 
 	if (seq >= sli_bminseq.bim_minseq - BMAP_SEQLOG_FACTOR) {
@@ -86,9 +86,10 @@ bim_updateseq(uint64_t seq)
 		    sli_bminseq.bim_minseq, seq);
 		sli_bminseq.bim_minseq = seq;
 		OPSTAT_INCR("seqno-reduce");
-		goto done;
+		goto out2;
 	}
 
+ out1:
 	/*
 	 * This should never happen.  Complain and ask our caller to
 	 * retry again.
@@ -99,7 +100,7 @@ bim_updateseq(uint64_t seq)
 	    seq, sli_bminseq.bim_minseq);
 	OPSTAT_INCR("seqno-invalid");
 
- done:
+ out2:
 	freelock(&sli_bminseq.bim_lock);
 
 	return (invalid);

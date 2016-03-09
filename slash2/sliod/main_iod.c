@@ -213,8 +213,8 @@ main(int argc, char *argv[])
 
 	pfl_init();
 	sl_subsys_register();
-	psc_subsys_register(SLISS_SLVR, "slvr");
-	psc_subsys_register(SLISS_INFO, "info");
+	pfl_subsys_register(SLISS_SLVR, "slvr");
+	pfl_subsys_register(SLISS_INFO, "info");
 
 	sfn = SL_PATH_SLICTLSOCK;
 	p = getenv("CTL_SOCK_FILE");
@@ -328,11 +328,12 @@ main(int argc, char *argv[])
 	pfl_opstimerthr_spawn(SLITHRT_OPSTIMER, "sliopstimerthr");
 	sl_freapthr_spawn(SLITHRT_FREAP, "slifreapthr");
 
-	OPSTAT_INCR("min-seqno");
-
 	time(&now);
 	psclogs_info(SLISS_INFO, "SLASH2 %s revision %d started at %s",
 	    __progname, sl_stk_version, ctime(&now));
+
+	pfl_fault_register("sliod/seqno_read_fail");
+	pfl_fault_register("sliod/seqno_write_fail");
 
 	slictlthr_main(sfn);
 	exit(0);

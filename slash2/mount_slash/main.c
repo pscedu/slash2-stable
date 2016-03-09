@@ -234,7 +234,7 @@ msfsthr_destroy(void *arg)
 {
 	struct msfs_thread *mft = arg;
 
-	psc_multiwait_free(&mft->mft_mw);
+	pfl_multiwait_free(&mft->mft_mw);
 	PSCFREE(mft);
 }
 
@@ -244,7 +244,7 @@ msfsthr_init(struct psc_thread *thr)
 	struct msfs_thread *mft;
 
 	mft = PSCALLOC(sizeof(*mft));
-	psc_multiwait_init(&mft->mft_mw, "%s", thr->pscthr_name);
+	pfl_multiwait_init(&mft->mft_mw, "%s", thr->pscthr_name);
 	return (mft);
 }
 
@@ -2605,7 +2605,7 @@ mslfsop_statfs(struct pscfs_req *pfr, pscfs_inum_t inum)
 
 	pscfs_reply_statfs(pfr, &sfb, rc);
 
-	if (iosid)
+	if (iosid != MSL_STATFS_AGGR_IOSID)
 		sl_resource_put(pref_ios);
 	pscrpc_req_finished(rq);
 	if (csvc)
@@ -3234,8 +3234,8 @@ mslfsop_destroy(__unusedx struct pscfs_req *pfr)
 
 	slc_destroy_rpci(&msl_statfs_aggr_rpci);
 
-	psc_subsys_unregister(SLCSS_FSOP);
-	psc_subsys_unregister(SLCSS_INFO);
+	pfl_subsys_unregister(SLCSS_FSOP);
+	pfl_subsys_unregister(SLCSS_INFO);
 	sl_subsys_unregister();
 }
 
@@ -3298,7 +3298,7 @@ mslfsop_read(struct pscfs_req *pfr, size_t size, off_t off, void *data)
 	if (rc)
 		pscfs_reply_read(pfr, NULL, 0, rc);
 
-	DEBUG_FCMH(PLL_DIAG, f, "read (end): rc=%d sz=%zu "
+	DEBUG_FCMH(rc ? PLL_INFO : PLL_DIAG, f, "read (end): rc=%d sz=%zu "
 	    "off=%"PSCPRIdOFFT, rc, size, off);
 }
 
@@ -3727,7 +3727,7 @@ msattrflushthr_spawn(void)
 		    msattrflushthr_main, NULL, sizeof(*maft),
 		    "msattrflushthr%d", i);
 		maft = msattrflushthr(thr);
-		psc_multiwait_init(&maft->maft_mw, "%s",
+		pfl_multiwait_init(&maft->maft_mw, "%s",
 		    thr->pscthr_name);
 		pscthr_setready(thr);
 	}
@@ -3826,8 +3826,8 @@ msl_init(void)
 	}
 
 	sl_subsys_register();
-	psc_subsys_register(SLCSS_INFO, "info");
-	psc_subsys_register(SLCSS_FSOP, "fsop");
+	pfl_subsys_register(SLCSS_INFO, "info");
+	pfl_subsys_register(SLCSS_FSOP, "fsop");
 
 	pflog_get_fsctx_uprog = slc_log_get_fsctx_uprog;
 	pflog_get_fsctx_uid = slc_log_get_fsctx_uid;
