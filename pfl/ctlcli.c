@@ -536,7 +536,7 @@ psc_ctlmsg_hashtable_prdat(__unusedx const struct psc_ctlmsghdr *mh,
 	const struct psc_ctlmsg_hashtable *pcht = m;
 	char rbuf[PSCFMT_RATIO_BUFSIZ];
 
-	psc_fmt_ratio(rbuf, pcht->pcht_usedbucks, pcht->pcht_totalbucks);
+	pfl_fmt_ratio(rbuf, pcht->pcht_usedbucks, pcht->pcht_totalbucks);
 	printf("%-30s    %c%c "
 	    "%7d %7d "
 	    "%6s %6d "
@@ -672,7 +672,7 @@ psc_ctlmsg_meter_prdat(__unusedx const struct psc_ctlmsghdr *mh,
 	if (cur > max)
 		max = pcm->pcm_mtr.pm_cur;
 
-	psc_fmt_ratio(rbuf, cur, max);
+	pfl_fmt_ratio(rbuf, cur, max);
 	p = strchr(rbuf, '.');
 	if (p) {
 		p[0] = '%';
@@ -739,7 +739,7 @@ psc_ctlmsg_pool_prdat(__unusedx const struct psc_ctlmsghdr *mh,
 	const struct psc_ctlmsg_pool *pcpl = m;
 	char rbuf[PSCFMT_RATIO_BUFSIZ];
 
-	psc_fmt_ratio(rbuf, pcpl->pcpl_total - pcpl->pcpl_free,
+	pfl_fmt_ratio(rbuf, pcpl->pcpl_total - pcpl->pcpl_free,
 	    pcpl->pcpl_total);
 	printf("%-12s %c%c%c "
 	    "%6d %6d "
@@ -964,7 +964,7 @@ psc_ctlmsg_odtable_prdat(__unusedx const struct psc_ctlmsghdr *mh,
 	const struct psc_ctlmsg_odtable *pco = m;
 	char buf[PSCFMT_RATIO_BUFSIZ];
 
-	psc_fmt_ratio(buf, pco->pco_inuse, pco->pco_total);
+	pfl_fmt_ratio(buf, pco->pco_inuse, pco->pco_total);
 	printf("%-46s  %c%c "
 	    "%6d %7d %7d %6s\n",
 	    pco->pco_name,
@@ -1435,7 +1435,7 @@ psc_ctl_prnumber(int base10, uint64_t n, int width, const char *suf)
 	else {
 		char buf[PSCFMT_HUMAN_BUFSIZ];
 
-		psc_fmt_human(buf, n);
+		pfl_fmt_human(buf, n);
 		printf("%*s", width, buf);
 	}
 	if (suf)

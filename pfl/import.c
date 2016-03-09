@@ -84,8 +84,8 @@ pscrpc_set_import_discon(struct pscrpc_import *imp, uint32_t conn_cnt)
 
 	spinlock(&imp->imp_lock);
 
-	psclog_warnx("inhere conn_cnt=%u imp_conn_cnt=%u imp_state=%d",
-	    conn_cnt, imp->imp_conn_cnt, imp->imp_state);
+	psclog_warnx("imp=%p conn_cnt=%u imp_conn_cnt=%u imp_state=%d",
+	    imp, conn_cnt, imp->imp_conn_cnt, imp->imp_state);
 
 	if (imp->imp_state == PSCRPC_IMP_FULL &&
 	    (conn_cnt == 0 || conn_cnt == (uint32_t)imp->imp_conn_cnt)) {
