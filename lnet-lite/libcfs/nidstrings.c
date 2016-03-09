@@ -544,7 +544,9 @@ _libcfs_id2str2(lnet_process_id_t id, char *str, int exclude_pid)
 
 	libcfs_nid2str2(id.nid, buf);
 
-	if (exclude_pid && id.pid == the_lnet.ln_peer_pid)
+	if (exclude_pid &&
+	    (LNET_PID_USERFLAG & id.pid) == 
+	    (LNET_PID_USERFLAG & the_lnet.ln_peer_pid))
 		snprintf(str, LNET_NIDSTR_SIZE, "%s", buf); 
 	else if (id.pid == LNET_PID_ANY)
 		snprintf(str, LNET_NIDSTR_SIZE, "LNET_PID_ANY-%s", buf);

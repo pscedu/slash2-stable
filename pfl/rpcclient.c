@@ -103,8 +103,8 @@ pscrpc_prep_req_pool(struct pscrpc_import *imp, uint32_t version,
 	struct pscrpc_request *request = NULL;
 	int rc;
 
-	psc_assert((unsigned long)imp > 0x1000);
-	psc_assert(imp != LP_POISON);
+	if ((unsigned long)imp <= 0x1000 || imp == LP_POISON)
+		psc_fatalx("Unexpected import value %p", imp);
 
 	request = psc_pool_get(pscrpc_rq_pool);
 

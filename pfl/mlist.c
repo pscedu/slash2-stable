@@ -2,7 +2,7 @@
 /*
  * %ISC_START_LICENSE%
  * ---------------------------------------------------------------------
- * Copyright 2015, Google, Inc.
+ * Copyright 2015-2016, Google, Inc.
  * Copyright (c) 2006-2015, Pittsburgh Supercomputing Center (PSC).
  * All rights reserved.
  *
@@ -41,8 +41,8 @@
 #include "pfl/opstats.h"
 #include "pfl/multiwait.h"
 
-struct psc_lockedlist psc_mlists =
-    PLL_INIT(&psc_mlists, struct psc_mlist, pml_lentry);
+struct psc_lockedlist pfl_mlists =
+    PLL_INIT(&pfl_mlists, struct pfl_mlist, pml_lentry);
 
 /*
  * Put an item on an mlist.
@@ -50,7 +50,7 @@ struct psc_lockedlist psc_mlists =
  * @p: item to return.
  */
 void
-_psc_mlist_add(const struct pfl_callerinfo *pci, struct psc_mlist *pml,
+_pfl_mlist_add(const struct pfl_callerinfo *pci, struct pfl_mlist *pml,
     void *p, int tail)
 {
 	int locked;
@@ -61,7 +61,7 @@ _psc_mlist_add(const struct pfl_callerinfo *pci, struct psc_mlist *pml,
 	else
 		pll_addhead(&pml->pml_pll, p);
 	pfl_opstat_incr(pml->pml_nseen);
-	psc_multiwaitcond_wakeup(&pml->pml_mwcond_empty);
+	pfl_multiwaitcond_wakeup(&pml->pml_mwcond_empty);
 	MLIST_URLOCK(pml, locked);
 }
 
@@ -75,7 +75,7 @@ _psc_mlist_add(const struct pfl_callerinfo *pci, struct psc_mlist *pml,
  * @ap: va_list of arguments to mlist name printf(3) format.
  */
 void
-_psc_mlist_initv(struct psc_mlist *pml, int flags, void *mwcarg,
+_pfl_mlist_initv(struct pfl_mlist *pml, int flags, void *mwcarg,
     ptrdiff_t offset, const char *fmt, va_list ap)
 {
 	int rc;
@@ -90,29 +90,29 @@ _psc_mlist_initv(struct psc_mlist *pml, int flags, void *mwcarg,
 	if (rc >= (int)sizeof(pml->pml_name))
 		psc_fatalx("mlist name is too long: %s", fmt);
 
-	psc_multiwaitcond_init(&pml->pml_mwcond_empty, mwcarg, flags,
+	pfl_multiwaitcond_init(&pml->pml_mwcond_empty, mwcarg, flags,
 	    "%s-empty", pml->pml_name);
 	pml->pml_nseen = pfl_opstat_initf(OPSTF_BASE10,
 	    "mlist.%s.seen", pml->pml_name);
 }
 
 void
-_psc_mlist_init(struct psc_mlist *pml, int flags, void *mwcarg,
+_pfl_mlist_init(struct pfl_mlist *pml, int flags, void *mwcarg,
     ptrdiff_t offset, const char *fmt, ...)
 {
 	va_list ap;
 
 	va_start(ap, fmt);
-	_psc_mlist_initv(pml, flags, mwcarg, offset, fmt, ap);
+	_pfl_mlist_initv(pml, flags, mwcarg, offset, fmt, ap);
 	va_end(ap);
 }
 
 void
-pfl_mlist_destroy(struct psc_mlist *ml)
+pfl_mlist_destroy(struct pfl_mlist *ml)
 {
 	psc_assert(pll_nitems(&ml->pml_pll) == 0);
 	pfl_opstat_destroy(ml->pml_nseen);
-	psc_multiwaitcond_destroy(&ml->pml_mwcond_empty);
+	pfl_multiwaitcond_destroy(&ml->pml_mwcond_empty);
 }
 
 /*
@@ -120,24 +120,24 @@ pfl_mlist_destroy(struct psc_mlist *ml)
  * @pml: mlist to register.
  */
 void
-psc_mlist_register(struct psc_mlist *pml)
+pfl_mlist_register(struct pfl_mlist *pml)
 {
-	PLL_LOCK(&psc_mlists);
+	PLL_LOCK(&pfl_mlists);
 	MLIST_LOCK(pml);
-	pll_addtail(&psc_mlists, pml);
+	pll_addtail(&pfl_mlists, pml);
 	MLIST_ULOCK(pml);
-	PLL_ULOCK(&psc_mlists);
+	PLL_ULOCK(&pfl_mlists);
 }
 
 void
-_psc_mlist_reginit(struct psc_mlist *pml, int flags, void *mwcarg,
+_pfl_mlist_reginit(struct pfl_mlist *pml, int flags, void *mwcarg,
     ptrdiff_t offset, const char *fmt, ...)
 {
 	va_list ap;
 
 	va_start(ap, fmt);
-	_psc_mlist_initv(pml, flags, mwcarg, offset, fmt, ap);
+	_pfl_mlist_initv(pml, flags, mwcarg, offset, fmt, ap);
 	va_end(ap);
 
-	psc_mlist_register(pml);
+	pfl_mlist_register(pml);
 }

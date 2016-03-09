@@ -2,7 +2,7 @@
 /*
  * %ISC_START_LICENSE%
  * ---------------------------------------------------------------------
- * Copyright 2015, Google, Inc.
+ * Copyright 2015-2016, Google, Inc.
  * Copyright (c) 2006-2015, Pittsburgh Supercomputing Center (PSC).
  * All rights reserved.
  *
@@ -130,7 +130,7 @@ struct psc_ctlmsg_thread {
 };
 
 struct psc_ctlmsg_meter {
-	struct psc_meter	pcm_mtr;
+	struct pfl_meter	pcm_mtr;
 };
 
 struct psc_ctlmsg_mlist {

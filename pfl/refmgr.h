@@ -2,7 +2,7 @@
 /*
  * %ISC_START_LICENSE%
  * ---------------------------------------------------------------------
- * Copyright 2015, Google, Inc.
+ * Copyright 2015-2016, Google, Inc.
  * Copyright (c) 2006-2015, Pittsburgh Supercomputing Center (PSC).
  * All rights reserved.
  *
@@ -23,6 +23,11 @@
  * %END_LICENSE%
  */
 
+/*
+ * A generic object reference count manager, complete with caching and
+ * a variety of lookup methods.
+ */
+
 /* XXX integrate this directly into pools */
 
 #ifndef _PFL_REFMGR_H_
@@ -30,9 +35,9 @@
 
 #include "pfl/hashtbl.h"
 #include "pfl/lockedlist.h"
-#include "pfl/tree.h"
 #include "pfl/pool.h"
 #include "pfl/pthrutil.h"
+#include "pfl/tree.h"
 
 SPLAY_HEAD(psc_objref_tree, psc_objref);
 
@@ -105,7 +110,7 @@ struct psc_objref {
 #define PSC_OBJREF_GETLOCK(m, r)	_PSC_OBJCAST(m, r, prm_lock_offset, psc_spinlock_t)
 #define PSC_OBJREF_GETMUTEX(m, r)	_PSC_OBJCAST(m, r, prm_lock_offset, pthread_mutex_t)
 #define PSC_OBJREF_GETWAITQ(m, r)	_PSC_OBJCAST(m, r, prm_wait_offset, struct psc_waitq)
-#define PSC_OBJREF_GETMWCOND(m, r)	_PSC_OBJCAST(m, r, prm_wait_offset, struct psc_multiwaitcond)
+#define PSC_OBJREF_GETMWCOND(m, r)	_PSC_OBJCAST(m, r, prm_wait_offset, struct pfl_multiwaitcond)
 #define PSC_OBJREF_GETLISTENTRY(m, r)	_PSC_OBJCAST(m, r, prm_list_offset, struct psclist_head)
 #define PSC_OBJREF_GETLRUENTRY(m, r)	_PSC_OBJCAST(m, r, prm_lru_offset, struct psclist_head)
 #define PSC_OBJREF_GETHASHENTRY(m, r)	_PSC_OBJCAST(m, r, prm_hash_offset, struct psclist_head)
@@ -189,7 +194,7 @@ psc_objref_wait(const struct psc_refmgr *prm, struct psc_objref *pobj)
 
 	waslocked = psc_objref_reqlock(prm, pobj);
 	if (prm->prm_flags & PRMF_MULTIWAIT)
-		psc_multiwaitcond_wait(PSC_OBJREF_GETMWCOND(prm, pobj),
+		pfl_multiwaitcond_wait(PSC_OBJREF_GETMWCOND(prm, pobj),
 		    PSC_OBJREF_GETMUTEX(prm, pobj));
 	else
 		psc_waitq_wait(PSC_OBJREF_GETWAITQ(prm, pobj),
@@ -205,7 +210,7 @@ psc_objref_wake(const struct psc_refmgr *prm, struct psc_objref *pobj)
 
 	locked = psc_objref_reqlock(prm, pobj);
 	if (prm->prm_flags & PRMF_MULTIWAIT)
-		psc_multiwaitcond_wakeup(PSC_OBJREF_GETMWCOND(prm, pobj));
+		pfl_multiwaitcond_wakeup(PSC_OBJREF_GETMWCOND(prm, pobj));
 	else
 		psc_waitq_wakeall(PSC_OBJREF_GETWAITQ(prm, pobj));
 	psc_objref_ureqlock(prm, pobj, locked);

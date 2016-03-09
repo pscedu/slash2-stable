@@ -2,7 +2,7 @@
 /*
  * %ISC_START_LICENSE%
  * ---------------------------------------------------------------------
- * Copyright 2015, Google, Inc.
+ * Copyright 2015-2016, Google, Inc.
  * Copyright (c) 2006-2015, Pittsburgh Supercomputing Center (PSC).
  * All rights reserved.
  *
@@ -223,9 +223,9 @@ _pscthr_finish_init(struct psc_thread *thr)
 		    PAF_NOLOG);
 
 	thr->pscthr_loglevels = psc_alloc(psc_dynarray_len(
-	    &psc_subsystems) * sizeof(*thr->pscthr_loglevels),
+	    &pfl_subsystems) * sizeof(*thr->pscthr_loglevels),
 	    PAF_NOLOG);
-	for (n = 0; n < psc_dynarray_len(&psc_subsystems); n++)
+	for (n = 0; n < psc_dynarray_len(&pfl_subsystems); n++)
 		thr->pscthr_loglevels[n] = psc_log_getlevel_ss(n);
 	thr->pscthr_pthread = pthread_self();
 	thr->pscthr_thrid = pfl_getsysthrid();
@@ -428,9 +428,9 @@ psc_log_getlevel(int subsys)
 	thr = pscthr_get_canfail();
 	if (thr == NULL)
 		return (psc_log_getlevel_ss(subsys));
-	if (subsys >= psc_dynarray_len(&psc_subsystems))
+	if (subsys >= psc_dynarray_len(&pfl_subsystems))
 		psc_fatalx("subsystem %d out of bounds (%d)", subsys,
-		    psc_dynarray_len(&psc_subsystems));
+		    psc_dynarray_len(&pfl_subsystems));
 	return (thr->pscthr_loglevels[subsys]);
 }
 
@@ -445,9 +445,9 @@ psc_log_setlevel(int ssid, int newlevel)
 		psc_fatalx("log level out of bounds (%d)", newlevel);
 
 	if (ssid == PSS_ALL)
-		for (i = 0; i < psc_dynarray_len(&psc_subsystems); i++)
+		for (i = 0; i < psc_dynarray_len(&pfl_subsystems); i++)
 			thr->pscthr_loglevels[i] = newlevel;
-	else if (ssid >= psc_dynarray_len(&psc_subsystems) || ssid < 0)
+	else if (ssid >= psc_dynarray_len(&pfl_subsystems) || ssid < 0)
 		psc_fatalx("subsystem out of bounds (%d)", ssid);
 	else
 		thr->pscthr_loglevels[ssid] = newlevel;
@@ -487,7 +487,7 @@ pscthr_setpause(struct psc_thread *thr, int pauseval)
  * hostname.  Local memory improves the speediness of logging.
  */
 const char *
-psc_get_hostname(void)
+pflsys_get_hostname(void)
 {
 	return (psclog_getdata()->pld_hostname);
 }

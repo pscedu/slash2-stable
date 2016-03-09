@@ -2,7 +2,7 @@
 /*
  * %ISC_START_LICENSE%
  * ---------------------------------------------------------------------
- * Copyright 2015, Google, Inc.
+ * Copyright 2015-2016, Google, Inc.
  * Copyright (c) 2006-2015, Pittsburgh Supercomputing Center (PSC).
  * All rights reserved.
  *
@@ -32,11 +32,11 @@
 #include "pfl/log.h"
 #include "pfl/meter.h"
 
-struct psc_lockedlist	psc_meters =
-    PLL_INIT(&psc_meters, struct psc_meter, pm_lentry);
+struct psc_lockedlist	pfl_meters =
+    PLL_INIT(&pfl_meters, struct pfl_meter, pm_lentry);
 
 void
-psc_meter_init(struct psc_meter *pm, uint64_t max, const char *fmt, ...)
+pfl_meter_init(struct pfl_meter *pm, uint64_t max, const char *fmt, ...)
 {
 	va_list ap;
 	int rc;
@@ -53,11 +53,11 @@ psc_meter_init(struct psc_meter *pm, uint64_t max, const char *fmt, ...)
 	if (rc == -1)
 		psc_fatal("vsnprintf");
 
-	pll_addtail(&psc_meters, pm);
+	pll_addtail(&pfl_meters, pm);
 }
 
 void
-psc_meter_destroy(struct psc_meter *pm)
+pfl_meter_destroy(struct pfl_meter *pm)
 {
-	pll_remove(&psc_meters, pm);
+	pll_remove(&pfl_meters, pm);
 }

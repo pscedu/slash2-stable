@@ -2,7 +2,7 @@
 /*
  * %ISC_START_LICENSE%
  * ---------------------------------------------------------------------
- * Copyright 2015, Google, Inc.
+ * Copyright 2015-2016, Google, Inc.
  * Copyright (c) 2006-2015, Pittsburgh Supercomputing Center (PSC).
  * All rights reserved.
  *
@@ -92,7 +92,7 @@ struct psc_poolmaster {
 struct psc_poolmgr {
 	union {
 		struct psc_listcache	ppmu_lc;	/* free pool entries */
-		struct psc_mlist	ppmu_ml;
+		struct pfl_mlist	ppmu_ml;
 		struct psc_explist	ppmu_explist;
 	} ppm_u;
 	struct psc_poolmaster	 *ppm_master;

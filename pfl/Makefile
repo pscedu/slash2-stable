@@ -21,7 +21,6 @@ SRCS+=		${PFL_BASE}/fs.c
 SRCS+=		${PFL_BASE}/fts.c
 SRCS+=		${PFL_BASE}/hashtbl.c
 SRCS+=		${PFL_BASE}/heap.c
-SRCS+=		${PFL_BASE}/hostname.c
 SRCS+=		${PFL_BASE}/init.c
 SRCS+=		${PFL_BASE}/list.c
 SRCS+=		${PFL_BASE}/listcache.c

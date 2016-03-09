@@ -67,7 +67,7 @@
 			_POOL_PROTRDWR(_p, (m));			\
 									\
 		if (POOL_IS_MLIST(m))					\
-			psc_mlist_add(&(m)->ppm_ml, (p));		\
+			pfl_mlist_add(&(m)->ppm_ml, (p));		\
 		else							\
 			lc_addtail_ifalive(&(m)->ppm_lc, (p));		\
 									\
@@ -102,13 +102,13 @@
 #  define POOL_ADD_ITEM(m, p)						\
 	do {								\
 		if (POOL_IS_MLIST(m))					\
-			psc_mlist_add(&(m)->ppm_ml, (p));		\
+			pfl_mlist_add(&(m)->ppm_ml, (p));		\
 		else							\
 			lc_addtail_ifalive(&(m)->ppm_lc, (p));		\
 	} while (0)
 
 #  define POOL_TRYGETOBJ(m)						\
-	(POOL_IS_MLIST(m) ? psc_mlist_tryget(&(m)->ppm_ml) :		\
+	(POOL_IS_MLIST(m) ? pfl_mlist_tryget(&(m)->ppm_ml) :		\
 	    lc_getnb(&(m)->ppm_lc))
 #endif
 
@@ -121,7 +121,7 @@ struct pfl_wkdata_poolreap {
 };
 
 __weak void
-_psc_mlist_init(__unusedx struct psc_mlist *m, __unusedx int flags,
+_pfl_mlist_init(__unusedx struct pfl_mlist *m, __unusedx int flags,
     __unusedx void *arg, __unusedx ptrdiff_t offset,
     __unusedx const char *fmt, ...)
 {
@@ -129,8 +129,8 @@ _psc_mlist_init(__unusedx struct psc_mlist *m, __unusedx int flags,
 }
 
 __weak void
-_psc_mlist_add(__unusedx const struct pfl_callerinfo *pci,
-    __unusedx struct psc_mlist *pml, __unusedx void *p,
+_pfl_mlist_add(__unusedx const struct pfl_callerinfo *pci,
+    __unusedx struct pfl_mlist *pml, __unusedx void *p,
     __unusedx int tail)
 {
 	psc_fatalx("mlist support not compiled in");
@@ -195,11 +195,11 @@ _psc_poolmaster_initmgr(struct psc_poolmaster *p, struct psc_poolmgr *m)
 
 	if (p->pms_flags & PPMF_MLIST) {
 #ifdef HAVE_NUMA
-		_psc_mlist_init(&m->ppm_ml, PMWCF_WAKEALL,
+		_pfl_mlist_init(&m->ppm_ml, PMWCF_WAKEALL,
 		    p->pms_mwcarg, p->pms_offset, "%s:%d", p->pms_name,
 		    psc_memnode_getid());
 #else
-		_psc_mlist_init(&m->ppm_ml, PMWCF_WAKEALL,
+		_pfl_mlist_init(&m->ppm_ml, PMWCF_WAKEALL,
 		    p->pms_mwcarg, p->pms_offset, "%s", p->pms_name);
 #endif
 	} else {

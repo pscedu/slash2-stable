@@ -2,7 +2,7 @@
 /*
  * %ISC_START_LICENSE%
  * ---------------------------------------------------------------------
- * Copyright 2015, Google, Inc.
+ * Copyright 2015-2016, Google, Inc.
  * Copyright (c) 2006-2015, Pittsburgh Supercomputing Center (PSC).
  * All rights reserved.
  *
@@ -53,6 +53,14 @@ const char *progname;
 			_got_str, _want_str);				\
 		PSCFREE(_got_str);					\
 		PSCFREE(_want_str);					\
+	} while (0)
+
+#define CHECK_RANGE(vb, val, off, len)					\
+	do {								\
+		psc_assert(pfl_vbitmap_israngeset((vb), (val), (off),	\
+		    (len)) == 1);					\
+		psc_assert(pfl_vbitmap_israngeset((vb), !(val), (off),	\
+		    (len)) == 0);					\
 	} while (0)
 
 #define NELEM 524288	/* # of 2MB blocks in 1TG. */
@@ -177,17 +185,13 @@ main(int argc, char *argv[])
 		psc_fatalx("an unexpected extra unused elem was found; pos=%zu", elem);
 
 	psc_vbitmap_setval_range(vb, 0, NELEM, 0);
-	psc_assert(pfl_vbitmap_israngeset(vb, 0, 581, 371));
-	psc_assert(pfl_vbitmap_israngeset(vb, 1, 581, 371) == 0);
-	psc_assert(pfl_vbitmap_israngeset(vb, 0, 581, 1));
-	psc_assert(pfl_vbitmap_israngeset(vb, 1, 581, 1) == 0);
+	CHECK_RANGE(vb, 0, 581, 371);
+	CHECK_RANGE(vb, 0, 581, 1);
 	psc_assert(pfl_vbitmap_isempty(vb));
 
 	psc_vbitmap_setval_range(vb, 0, NELEM, 1);
-	psc_assert(pfl_vbitmap_israngeset(vb, 1, 581, 371));
-	psc_assert(pfl_vbitmap_israngeset(vb, 0, 581, 371) == 0);
-	psc_assert(pfl_vbitmap_israngeset(vb, 1, 581, 1));
-	psc_assert(pfl_vbitmap_israngeset(vb, 0, 581, 1) == 0);
+	CHECK_RANGE(vb, 1, 581, 371);
+	CHECK_RANGE(vb, 1, 581, 1);
 	psc_assert(psc_vbitmap_isfull(vb));
 
 	psc_vbitmap_free(vb);
@@ -209,12 +213,11 @@ main(int argc, char *argv[])
 		psc_vbitmap_resize(vb, off + len);
 	psc_vbitmap_setrange(vb, off, len);
 	ENSURE(vb, "111111");
-	psc_assert(pfl_vbitmap_israngeset(vb, 1, 2, 4));
-	psc_assert(!pfl_vbitmap_israngeset(vb, 0, 2, 4));
+	CHECK_RANGE(vb, 1, 2, 4);
 
 	psc_vbitmap_clearall(vb);
 	psc_assert(psc_vbitmap_setval_range(vb, 2, 4, 1) == 0);
-	psc_assert(!pfl_vbitmap_israngeset(vb, 0, 2, 4));
+	CHECK_RANGE(vb, 1, 2, 4);
 	ENSURE(vb, "001111");
 	psc_vbitmap_free(vb);
 
@@ -237,16 +240,33 @@ main(int argc, char *argv[])
 				psc_vbitmap_setrange(vb, off, len);
 				ENSURE(vb, "%0*d%*d%0*d", (int)off, 0,
 				    (int)len, 1, (int)last, 0);
-				psc_assert(pfl_vbitmap_israngeset(vb, 0,
-				    0, off));
-				psc_assert(pfl_vbitmap_israngeset(vb, 1,
-				    off, len));
-				psc_assert(pfl_vbitmap_israngeset(vb, 0,
-				    off+len, last));
+				CHECK_RANGE(vb, 0, 0, off);
+				CHECK_RANGE(vb, 1, off, len);
+				CHECK_RANGE(vb, 0, off+len, last);
 				psc_vbitmap_free(vb);
 			}
 		}
 	}
+
+	vb = psc_vbitmap_new(8200);
+	psc_assert(pfl_vbitmap_isempty(vb));
+	CHECK_RANGE(vb, 0, 8, 8192);
+	psc_vbitmap_free(vb);
+
+	vb = psc_vbitmap_new(16);
+	ENSURE(vb, "0000000000000000");
+	psc_assert(pfl_vbitmap_isempty(vb));
+	CHECK_RANGE(vb, 0, 8, 8);
+	CHECK_RANGE(vb, 0, 9, 7);
+	psc_vbitmap_setval(vb, 15, 1);
+	ENSURE(vb, "0000000000000001");
+	CHECK_RANGE(vb, 0, 9, 6);
+	CHECK_RANGE(vb, 1, 15, 1);
+	psc_assert(pfl_vbitmap_israngeset(vb, 0, 8, 8) == 0);
+	psc_assert(pfl_vbitmap_israngeset(vb, 1, 8, 8) == 0);
+	psc_vbitmap_clearall(vb);
+	psc_assert(pfl_vbitmap_isempty(vb));
+	psc_vbitmap_free(vb);
 
 	exit(0);
 }

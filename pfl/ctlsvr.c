@@ -74,7 +74,7 @@
 #define QLEN 15	/* listen(2) queue */
 
 __weak size_t
-psc_multiwaitcond_nwaiters(__unusedx struct psc_multiwaitcond *m)
+pfl_multiwaitcond_nwaiters(__unusedx struct pfl_multiwaitcond *m)
 {
 	psc_fatalx("multiwait support not compiled in");
 }
@@ -211,11 +211,11 @@ psc_ctlrep_getsubsys(int fd, struct psc_ctlmsghdr *mh,
 	int n, rc;
 
 	rc = 1;
-	siz = PCSS_NAME_MAX * psc_dynarray_len(&psc_subsystems);
+	siz = PCSS_NAME_MAX * psc_dynarray_len(&pfl_subsystems);
 	pcss = PSCALLOC(siz);
-	for (n = 0; n < psc_dynarray_len(&psc_subsystems); n++)
+	for (n = 0; n < psc_dynarray_len(&pfl_subsystems); n++)
 		if (snprintf(&pcss->pcss_names[n * PCSS_NAME_MAX],
-		    PCSS_NAME_MAX, "%s", psc_subsys_name(n)) == -1) {
+		    PCSS_NAME_MAX, "%s", pfl_subsys_name(n)) == -1) {
 			psclog_warn("snprintf");
 			rc = psc_ctlsenderr(fd, mh,
 			    "unable to retrieve subsystems");
@@ -271,13 +271,13 @@ psc_ctlmsg_thread_send(int fd, struct psc_ctlmsghdr *mh, void *m,
 	int rc;
 
 	siz = sizeof(*pct) + sizeof(*pct->pct_loglevels) *
-	    psc_dynarray_len(&psc_subsystems);
+	    psc_dynarray_len(&pfl_subsystems);
 	pct = PSCALLOC(siz);
 	pct->pct_flags = thr->pscthr_flags;
 	snprintf(pct->pct_thrname, sizeof(pct->pct_thrname),
 	    "%s", thr->pscthr_name);
 	memcpy(pct->pct_loglevels, thr->pscthr_loglevels,
-	    psc_dynarray_len(&psc_subsystems) *
+	    psc_dynarray_len(&pfl_subsystems) *
 	    sizeof(*pct->pct_loglevels));
 	mh->mh_size = siz;
 	rc = psc_ctlmsg_sendv(fd, mh, pct);
@@ -443,10 +443,10 @@ psc_ctlrep_getpool(int fd, struct psc_ctlmsghdr *mh, void *msg)
 			pcpl->pcpl_nshrink = psc_atomic64_read(
 			    &m->ppm_opst_shrinks->opst_lifetime);
 			if (POOL_IS_MLIST(m)) {
-				pcpl->pcpl_free = psc_mlist_size(
+				pcpl->pcpl_free = pfl_mlist_size(
 				    &m->ppm_ml);
 				pcpl->pcpl_nw_empty =
-				    psc_multiwaitcond_nwaiters(
+				    pfl_multiwaitcond_nwaiters(
 					&m->ppm_ml.pml_mwcond_empty);
 			} else {
 				pcpl->pcpl_free = lc_nitems(&m->ppm_lc);
@@ -548,7 +548,7 @@ psc_ctlparam_log_level(int fd, struct psc_ctlmsghdr *mh,
 
 	if (nlevels == 3) {
 		/* Subsys specified, use it. */
-		subsys = psc_subsys_id(levels[2]);
+		subsys = pfl_subsys_id(levels[2]);
 		if (subsys == -1)
 			return (psc_ctlsenderr(fd, mh,
 			    "invalid log.level subsystem: %s",
@@ -558,7 +558,7 @@ psc_ctlparam_log_level(int fd, struct psc_ctlmsghdr *mh,
 	} else {
 		/* No subsys specified, use all. */
 		start_ss = 0;
-		end_ss = psc_dynarray_len(&psc_subsystems);
+		end_ss = psc_dynarray_len(&pfl_subsystems);
 		subsys = PSS_ALL;
 	}
 
@@ -578,7 +578,7 @@ psc_ctlparam_log_level(int fd, struct psc_ctlmsghdr *mh,
 				thr->pscthr_loglevels[subsys] =
 				    loglevel;
 			else {
-				levels[2] = (char *)psc_subsys_name(
+				levels[2] = (char *)pfl_subsys_name(
 				    subsys);
 				rc = psc_ctlmsg_param_send(fd, mh, pcp,
 				    thr->pscthr_name, levels, 3,
@@ -1173,7 +1173,7 @@ psc_ctlparam_pool_handle(int fd, struct psc_ctlmsghdr *mh,
 			levels[2] = "free";
 			if (POOL_IS_MLIST(m))
 				snprintf(nbuf, sizeof(nbuf), "%d",
-				    psc_mlist_size(&m->ppm_ml));
+				    pfl_mlist_size(&m->ppm_ml));
 			else
 				snprintf(nbuf, sizeof(nbuf), "%d",
 				    lc_nitems(&m->ppm_lc));
@@ -1886,15 +1886,15 @@ psc_ctlrep_getmeter(int fd, struct psc_ctlmsghdr *mh, void *m)
 {
 	struct psc_ctlmsg_meter *pcm = m;
 	char name[PSC_METER_NAME_MAX];
-	struct psc_meter *pm;
+	struct pfl_meter *pm;
 	int rc, found, all;
 
 	rc = 1;
 	found = 0;
 	snprintf(name, sizeof(name), "%s", pcm->pcm_mtr.pm_name);
 	all = (name[0] == '\0');
-	PLL_LOCK(&psc_meters);
-	PLL_FOREACH(pm, &psc_meters)
+	PLL_LOCK(&pfl_meters);
+	PLL_FOREACH(pm, &pfl_meters)
 		if (all || strncmp(pm->pm_name, name,
 		    strlen(name)) == 0) {
 			found = 1;
@@ -1909,7 +1909,7 @@ psc_ctlrep_getmeter(int fd, struct psc_ctlmsghdr *mh, void *m)
 			if (strcmp(pm->pm_name, name) == 0)
 				break;
 		}
-	PLL_ULOCK(&psc_meters);
+	PLL_ULOCK(&pfl_meters);
 	if (rc && !found && !all)
 		rc = psc_ctlsenderr(fd, mh, "unknown meter: %s", name);
 	return (rc);
@@ -1926,15 +1926,15 @@ psc_ctlrep_getmlist(int fd, struct psc_ctlmsghdr *mh, void *m)
 {
 	struct psc_ctlmsg_mlist *pcml = m;
 	char name[PEXL_NAME_MAX];
-	struct psc_mlist *pml;
+	struct pfl_mlist *pml;
 	int rc, found, all;
 
 	rc = 1;
 	found = 0;
 	snprintf(name, sizeof(name), "%s", pcml->pcml_name);
 	all = (name[0] == '\0');
-	PLL_LOCK(&psc_mlists);
-	PLL_FOREACH(pml, &psc_mlists)
+	PLL_LOCK(&pfl_mlists);
+	PLL_FOREACH(pml, &pfl_mlists)
 		if (all || strncmp(pml->pml_name, name,
 		    strlen(name)) == 0) {
 			found = 1;
@@ -1947,7 +1947,7 @@ psc_ctlrep_getmlist(int fd, struct psc_ctlmsghdr *mh, void *m)
 			pcml->pcml_nseen = psc_atomic64_read(
 			    &pml->pml_nseen->opst_lifetime);
 			pcml->pcml_nwaiters =
-			    psc_multiwaitcond_nwaiters(
+			    pfl_multiwaitcond_nwaiters(
 				&pml->pml_mwcond_empty);
 			MLIST_ULOCK(pml);
 
@@ -1959,7 +1959,7 @@ psc_ctlrep_getmlist(int fd, struct psc_ctlmsghdr *mh, void *m)
 			if (strcmp(pml->pml_name, name) == 0)
 				break;
 		}
-	PLL_ULOCK(&psc_mlists);
+	PLL_ULOCK(&pfl_mlists);
 	if (rc && !found && !all)
 		rc = psc_ctlsenderr(fd, mh, "unknown mlist: %s", name);
 	return (rc);

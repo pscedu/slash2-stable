@@ -2,7 +2,7 @@
 /*
  * %ISC_START_LICENSE%
  * ---------------------------------------------------------------------
- * Copyright 2015, Google, Inc.
+ * Copyright 2015-2016, Google, Inc.
  * Copyright (c) 2011-2015, Pittsburgh Supercomputing Center (PSC).
  * All rights reserved.
  *
@@ -42,8 +42,8 @@ const char		*ctlsockfn = PATH_CTLSOCK;
 const char		*progname;
 
 struct psc_lockedlist	psc_odtables;
-struct psc_lockedlist	psc_mlists;
-struct psc_lockedlist	psc_meters;
+struct psc_lockedlist	pfl_mlists;
+struct psc_lockedlist	pfl_meters;
 struct psc_lockedlist	psc_pools;
 
 PSCLIST_HEAD(pscrpc_all_services);

@@ -2,7 +2,7 @@
 /*
  * %ISC_START_LICENSE%
  * ---------------------------------------------------------------------
- * Copyright 2015, Google, Inc.
+ * Copyright 2015-2016, Google, Inc.
  * Copyright (c) 2009-2015, Pittsburgh Supercomputing Center (PSC).
  * All rights reserved.
  *
@@ -432,13 +432,13 @@ pfl_odt_check(struct pfl_odt *t,
 	struct pfl_odt_receipt r = { 0, 0 };
 	struct pfl_odt_slotftr *f;
 	struct pfl_odt_hdr *h;
-	struct psc_meter mtr;
+	struct pfl_meter mtr;
 	uint64_t crc;
 	void *p;
 
 	h = t->odt_hdr;
 
-	psc_meter_init(&mtr, 0, "odt-%s", t->odt_name);
+	pfl_meter_init(&mtr, 0, "odt-%s", t->odt_name);
 	mtr.pm_max = h->odth_nitems;
 
 #define i mtr.pm_cur
@@ -476,7 +476,7 @@ pfl_odt_check(struct pfl_odt *t,
 	}
 #undef i
 
-	psc_meter_destroy(&mtr);
+	pfl_meter_destroy(&mtr);
 }
 
 void
