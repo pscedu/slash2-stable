@@ -24,7 +24,9 @@
  */
 
 /*
- * Subsystem definitions.
+ * Subsystem definitions.  This is used exclusively for granular
+ * debug/runtime logging of different components.  Note that most of
+ * this code is not thread safe.
  */
 
 #include <err.h>
@@ -77,18 +79,16 @@ void
 _psc_threads_rebuild_subsys(int init)
 {
 	struct psc_thread *thr;
-	int *ll, *oldll, nss;
+	int nss;
 
 	PLL_LOCK(&psc_threads);
 	nss = psc_dynarray_len(&pfl_subsystems);
 	PLL_FOREACH(thr, &psc_threads) {
-		ll = psc_alloc(sizeof(*thr->pscthr_loglevels) * nss,
-		    PAF_NOLOG);
-		oldll = thr->pscthr_loglevels;
-		if (init)
-			ll[nss - 1] = psc_log_getlevel_global();
-		thr->pscthr_loglevels = ll;
-		psc_free(oldll, PAF_NOLOG);
+		thr->pscthr_loglevels = psc_realloc(
+		    thr->pscthr_loglevels,
+		    sizeof(*thr->pscthr_loglevels) * nss, PAF_NOLOG);
+		if (init != -1)
+			thr->pscthr_loglevels[nss - 1] = init;
 	}
 	PLL_ULOCK(&psc_threads);
 }
@@ -148,7 +148,7 @@ pfl_subsys_register(int ssid, const char *name)
 		    "check order", ssid, name, nss);
 	psc_dynarray_add(&pfl_subsystems, ss);
 
-	_psc_threads_rebuild_subsys(1);
+	_psc_threads_rebuild_subsys(ss->pss_loglevel);
 }
 
 void
@@ -161,7 +161,7 @@ pfl_subsys_unregister(int ssid)
 	psc_dynarray_removepos(&pfl_subsystems, ssid);
 	PSCFREE(ss);
 
-	_psc_threads_rebuild_subsys(0);
+	_psc_threads_rebuild_subsys(-1);
 }
 
 int
