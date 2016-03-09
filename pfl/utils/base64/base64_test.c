@@ -86,7 +86,7 @@ main(int argc, char *argv[])
 		buf = realloc(buf, 4 * stb.st_size / 3 + 2);
 		if (buf == NULL)
 			psc_fatal("realloc");
-		psc_base64_encode(p, buf, stb.st_size);
+		pfl_base64_encode(p, buf, stb.st_size);
 		printf("base64(%s)=%s\n", *argv, buf);
 		munmap(p, stb.st_size);
  next:

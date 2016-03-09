@@ -28,14 +28,14 @@
 #include "pfl/base64.h"
 
 /*
- * psc_base64_encode - Encode data into standard base 64 encoding.
+ * Encode data into standard base 64 encoding.
  * @buf: data to encode.
  * @enc: value-result buffer to receive encoding.
  * @siz: length of data.
  * Note: @enc must be sized 4/3+1 the size of buf!
  */
 void
-psc_base64_encode(const void *buf, char *enc, size_t siz)
+pfl_base64_encode(const void *buf, char *enc, size_t siz)
 {
 	static char pr[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
 	    "abcdefghijklmnopqrstuvwxyz0123456789+/";
