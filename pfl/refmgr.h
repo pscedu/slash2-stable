@@ -49,7 +49,7 @@ struct psc_refmgr {
 	struct psc_lockedlist		 prm_list;
 	struct psc_lockedlist		 prm_lru;
 	struct psc_hashtbl		 prm_hashtbl;
-	struct psc_refmgr_tree		*prm_tree;
+	struct pfl_refmgr_tree		*prm_tree;
 	psc_spinlock_t			 prm_trlock;
 
 	/* offsets into various object properties */
@@ -117,29 +117,29 @@ struct pfl_objref {
 #define PSC_OBJREF_GETREFMGRTREE(m, r)	_PSC_OBJCAST(m, r, prm_refmgrtree_offset, struct psc_refmgr)
 #define PSC_OBJREF_GETPRIVATE(m, r)	_PSC_OBJCAST(m, r, prm_private_offset, void)
 
-void	 psc_refmgr_init(struct psc_refmgr *, int, int, int, int, int,
+void	 pfl_refmgr_init(struct psc_refmgr *, int, int, int, int, int,
 	    int (*)(struct psc_poolmgr *, void *), void (*)(void *),
 	    const char *, ...);
 
-void	*_psc_refmgr_findobj(struct psc_refmgr *, int, void *, int);
-void	*psc_refmgr_getobj(struct psc_refmgr *, int, void *);
+void	*_pfl_refmgr_findobj(struct psc_refmgr *, int, void *, int);
+void	*pfl_refmgr_getobj(struct psc_refmgr *, int, void *);
 
-#define psc_refmgr_findremoveobj(prm, pref, key)			\
-	psc_refmgr_findobj((prm), (pref), (key), 1)
+#define pfl_refmgr_findremoveobj(prm, pref, key)			\
+	pfl_refmgr_findobj((prm), (pref), (key), 1)
 
-#define psc_refmgr_findobj(prm, pref, key)				\
-	psc_refmgr_findobj((prm), (pref), (key), 0)
+#define pfl_refmgr_findobj(prm, pref, key)				\
+	pfl_refmgr_findobj((prm), (pref), (key), 0)
 
 int	 pfl_objref_cmp(const void *, const void *);
 
-void	 psc_obj_share(struct psc_refmgr *prm, void *);
-void	 psc_obj_incref(struct psc_refmgr *prm, void *);
-void	 psc_obj_decref(struct psc_refmgr *prm, void *);
+void	 pfl_obj_share(struct psc_refmgr *prm, void *);
+void	 pfl_obj_incref(struct psc_refmgr *prm, void *);
+void	 pfl_obj_decref(struct psc_refmgr *prm, void *);
 
-void	 psc_obj_dump(const struct psc_refmgr *prm, const void *);
+void	 pfl_obj_dump(const struct psc_refmgr *prm, const void *);
 
 static __inline struct pfl_objref *
-psc_obj_getref(const struct psc_refmgr *prm, void *p)
+pfl_obj_getref(const struct psc_refmgr *prm, void *p)
 {
 	struct pfl_objref *pobj;
 
