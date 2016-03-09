@@ -28,6 +28,6 @@
 
 #include <sys/types.h>
 
-void psc_base64_encode(const void *, char *, size_t);
+void pfl_base64_encode(const void *, char *, size_t);
 
 #endif /* _PFL_BASE64_H_ */
