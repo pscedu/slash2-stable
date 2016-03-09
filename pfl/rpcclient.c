@@ -1049,8 +1049,10 @@ pscrpc_expire_one_request(struct pscrpc_request *req)
 	if (imp == NULL)
 		DEBUG_REQ(PLL_WARN, req, "NULL import: already cleaned up?");
 
-	else if (!imp->imp_igntimeout)
+	else if (!imp->imp_igntimeout) {
+		psclog_warnx("timeout: req=%p, imp=%p", req, imp);
 		pscrpc_fail_import(imp, req->rq_reqmsg->conn_cnt);
+	}
 
 	return (1);
 }
