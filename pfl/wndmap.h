@@ -30,14 +30,14 @@
 #include "pfl/lockedlist.h"
 #include "pfl/lock.h"
 
-struct psc_wndmap {
+struct pfl_wndmap {
 	size_t			 pwm_min;	/* bottom edge of window */
 	size_t			 pwm_nextmin;
 	psc_spinlock_t		 pwm_lock;
 	struct psc_lockedlist	 pwm_wmbs;
 };
 
-struct psc_wndmap_block {
+struct pfl_wndmap_block {
 	struct psclist_head	 pwmb_lentry;
 	unsigned char		 pwmb_buf[32];
 };
@@ -47,10 +47,10 @@ struct psc_wndmap_block {
 #define WNDMAP_RLOCK(wm)	reqlock(&(wm)->pwm_lock)
 #define WNDMAP_URLOCK(wm, lk)	ureqlock(&(wm)->pwm_lock, (lk))
 
-void	psc_wndmap_clearpos(struct psc_wndmap *, size_t);
-void	psc_wndmap_free(struct psc_wndmap *);
-size_t	psc_wndmap_getnext(struct psc_wndmap *);
-void	psc_wndmap_init(struct psc_wndmap *, size_t);
-int	psc_wndmap_isset(struct psc_wndmap *, size_t);
+void	pfl_wndmap_clearpos(struct pfl_wndmap *, size_t);
+void	pfl_wndmap_free(struct pfl_wndmap *);
+size_t	pfl_wndmap_getnext(struct pfl_wndmap *);
+void	pfl_wndmap_init(struct pfl_wndmap *, size_t);
+int	pfl_wndmap_isset(struct pfl_wndmap *, size_t);
 
 #endif /* _PFL_WNDMAP_H_ */
