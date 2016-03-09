@@ -60,12 +60,12 @@ main(int argc, char *argv[])
 	if (argc)
 		usage();
 
-	psc_fmt_ratio(buf,  9998, 10001); psc_assert(strcmp(buf, "99.97%") == 0);
-	psc_fmt_ratio(buf,  9999, 10001); psc_assert(strcmp(buf, "99.98%") == 0);
-	psc_fmt_ratio(buf, 10000, 10001); psc_assert(strcmp(buf, "99.99%") == 0);
-	psc_fmt_ratio(buf, 10001, 10001); psc_assert(strcmp(buf, "100%") == 0);
+	pfl_fmt_ratio(buf,  9998, 10001); psc_assert(strcmp(buf, "99.97%") == 0);
+	pfl_fmt_ratio(buf,  9999, 10001); psc_assert(strcmp(buf, "99.98%") == 0);
+	pfl_fmt_ratio(buf, 10000, 10001); psc_assert(strcmp(buf, "99.99%") == 0);
+	pfl_fmt_ratio(buf, 10001, 10001); psc_assert(strcmp(buf, "100%") == 0);
 
-	psc_fmt_human(hbuf, 12); psc_assert(strcmp(hbuf, "    12B") == 0);
+	pfl_fmt_human(hbuf, 12); psc_assert(strcmp(hbuf, "    12B") == 0);
 
 	pfl_dirname("", fn); psc_assert(strcmp(fn, ".") == 0);
 	pfl_dirname(NULL, fn); psc_assert(strcmp(fn, ".") == 0);
