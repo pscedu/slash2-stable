@@ -161,6 +161,14 @@ struct psclog_data {
 #define psclogsv_trace(fmt, ap)		_psclogvk((ss), PLL_TRACE, 0, (fmt), (ap))
 #define psclogsv(lvl, ss, fmt, ap)	_psclogvk((ss), (lvl), 0, (fmt), (ap))
 
+/*
+ * To compile some logging statements out, add the following line
+ * in file slash2/mk/local.mk:
+ *
+ * 	DEFINES+=       -DPSCLOG_LEVEL=PLL_INFO
+ *
+ * This would compile any logging statements higher than PLL_INFO out.
+ */
 #ifndef PSCLOG_LEVEL
 #  define PSCLOG_LEVEL			PNLOGLEVELS
 #endif
