@@ -1,3 +1,14 @@
+03/09/2016
+----------
+
+The default log level is currently broken.  Also I see "tar: Exiting with failure status due to 
+previous errors" with tar-ssh over a large kernel build tree (with objects in it).  But this push 
+contains a lease sequence number fix that should make the following test work much better:
+
+	$ iozone -u 4 -l 1 -i 0 -i 1 -r 256 -s 10240000 -b result -e
+
+I did pass the above test two in a row on my test fruits.
+
 03/07/2016
 ----------
 
