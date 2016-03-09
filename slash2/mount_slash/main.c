@@ -157,11 +157,12 @@ struct psc_hashtbl		 msl_gidmap_int;
  * Before that, O_DIRECT and the FUSE direct_io path were not fully
  * integrated.
  */
-int				 msl_direct_io = 1;
-int				 msl_root_squash;
-int				 msl_statfs_pref_ios_only;
-int				 msl_acl;
-uint64_t			 msl_pagecache_maxsize;
+int			 msl_acl;
+int			 msl_direct_io = 1;
+int			 msl_root_squash;
+uint64_t		 msl_pagecache_maxsize;
+int			 msl_statfs_pref_ios_only; 
+int			 msl_max_inflight_rpcs = RESM_MAX_OUTSTANDING_RPCS;
 
 int				 msl_newent_inherit_groups = 1;
 
@@ -3942,7 +3943,7 @@ msl_init(void)
 	pscfs_attr_timeout = 8.;
 
 	time(&now);
-	psclogs_info(SLCSS_INFO, "SLASH2 client revision %d "
+	psclogs_notice(SLCSS_INFO, "SLASH2 client revision %d "
 	    "started at %s", sl_stk_version, ctime(&now));
 
 	return (0);
