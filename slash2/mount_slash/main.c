@@ -1167,6 +1167,7 @@ __static void
 msl_unlink(struct pscfs_req *pfr, pscfs_inum_t pinum, const char *name,
     int isfile)
 {
+	struct dircache_ent_update dcu = DCE_UPD_INIT;
 	struct fidc_membh *c = NULL, *p = NULL;
 	struct slashrpc_cservice *csvc = NULL;
 	struct pscrpc_request *rq = NULL;
@@ -1174,7 +1175,6 @@ msl_unlink(struct pscfs_req *pfr, pscfs_inum_t pinum, const char *name,
 	struct srm_unlink_req *mq;
 	struct pscfs_creds pcr;
 	int rc;
-	struct dircache_ent_update dcu = DCE_UPD_INIT;
 
 	if (strlen(name) == 0)
 		PFL_GOTOERR(out, rc = ENOENT);
@@ -1795,11 +1795,11 @@ mslfsop_lookup(struct pscfs_req *pfr, pscfs_inum_t pinum,
 		stb.st_blksize = MSL_FS_BLKSIZ;
 
  out:
-	if (fp)
-		fcmh_op_done(fp);
 	pscfs_reply_lookup(pfr, sstb.sst_fid, sstb.sst_gen,
 	    pscfs_entry_timeout, &stb, pscfs_attr_timeout, rc);
 	namecache_update(&dcu, sstb.sst_fid, rc);
+	if (fp)
+		fcmh_op_done(fp);
 }
 
 void
