@@ -48,7 +48,6 @@ struct pfl_subsys {
 };
 
 extern int		*pfl_syslog;
-extern int		 psc_loglevel;
 
 struct psc_dynarray	 pfl_subsystems = DYNARRAY_INIT_NOLOG;
 
