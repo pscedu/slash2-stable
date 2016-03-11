@@ -163,9 +163,9 @@ struct psclog_data {
 
 /*
  * To compile some logging statements out, add the following line
- * in file slash2/mk/local.mk:
+ * to mk/local.mk:
  *
- * 	DEFINES+=       -DPSCLOG_LEVEL=PLL_INFO
+ *	DEFINES+=       -DPSCLOG_LEVEL=PLL_INFO
  *
  * This would compile any logging statements higher than PLL_INFO out.
  */
