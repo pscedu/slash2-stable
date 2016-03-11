@@ -1043,12 +1043,12 @@ psc_ctlmsg_rpcsvc_prhdr(__unusedx struct psc_ctlmsghdr *mh,
 {
 	printf("%-9s %3s "
 	    "%4s %4s %5s "
-	    "%4s %5s %5s "
+	    "%5s %5s %5s "
 	    "%4s %4s %4s "
 	    "%5s %6s %5s\n",
 	    "rpcsvc", "flg",
 	    "rqsz", "rpsz", "bufsz",
-	    "#buf", "rqptl", "rpptl",
+	    "#bufs", "rqptl", "rpptl",
 	    "#thr", "#que", "#act",
 	    "#wait", "#outrp", "nrqbd");
 }
@@ -1061,7 +1061,7 @@ psc_ctlmsg_rpcsvc_prdat(__unusedx const struct psc_ctlmsghdr *mh,
 
 	printf("%-9s   %c "
 	    "%4d %4d %5d "
-	    "%4d %5u %5u "
+	    "%5d %5u %5u "
 	    "%4d %4d %4d "
 	    "%5d %6d %5d\n",
 	    pcrs->pcrs_name,
