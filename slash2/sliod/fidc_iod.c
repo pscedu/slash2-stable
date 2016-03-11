@@ -257,6 +257,10 @@ int
 sli_fcmh_ctor(struct fidc_membh *f, __unusedx int flags)
 {
 	int rc = 0;
+	struct fcmh_iod_info *fii;
+
+	fii = fcmh_2_fii(f);
+	INIT_PSC_LISTENTRY(&fii->fii_lentry);
 
 	if (f->fcmh_fg.fg_gen == FGEN_ANY) {
 		DEBUG_FCMH(PLL_NOTICE, f, "refusing to open backing file "
@@ -285,6 +289,8 @@ sli_fcmh_ctor(struct fidc_membh *f, __unusedx int flags)
 void
 sli_fcmh_dtor(__unusedx struct fidc_membh *f)
 {
+	struct fcmh_iod_info *fii;
+
 	if (f->fcmh_flags & FCMH_IOD_BACKFILE) {
 		if (close(fcmh_2_fd(f)) == -1) {
 			OPSTAT_INCR("close-fail");
@@ -294,6 +300,11 @@ sli_fcmh_dtor(__unusedx struct fidc_membh *f)
 			OPSTAT_INCR("close-succeed");
 		psc_rlim_adj(RLIMIT_NOFILE, -1);
 		f->fcmh_flags &= ~FCMH_IOD_BACKFILE;
+	}
+	if (f->fcmh_flags & FCMH_IOD_DIRTYFILE) {
+		fii = fcmh_2_fii(f);
+		lc_remove(&sli_fcmh_dirty, fii);
+		f->fcmh_flags &= ~FCMH_IOD_DIRTYFILE;
 	}
 }
 

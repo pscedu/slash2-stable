@@ -39,6 +39,7 @@
 
 #include "bmap_iod.h"
 #include "fid.h"
+#include "fidc_iod.h"
 #include "fidcache.h"
 #include "rpc_iod.h"
 #include "sliod.h"
@@ -401,6 +402,74 @@ slislvrthr_proc(struct slvr *s)
 	bmap_op_done_type(b, BMAP_OPCNT_BCRSCHED);
 }
 
+#define	SLI_SYNC_AHEAD_BATCH	10
+
+void
+sli_sync_ahead(void)
+{
+	int i, skip;
+	struct fidc_membh *f;
+	struct fcmh_iod_info *fii;
+	struct psc_dynarray a = DYNARRAY_INIT;
+
+	psc_dynarray_ensurelen(&a, SLI_SYNC_AHEAD_BATCH);
+
+ restart:
+
+	skip = 0;
+	LIST_CACHE_LOCK(&sli_fcmh_dirty);
+	LIST_CACHE_FOREACH(fii, &sli_fcmh_dirty) {
+		f = fii_2_fcmh(fii);
+
+		if (!FCMH_TRYLOCK(f)) {
+			skip++;
+			continue;
+		}
+		if (f->fcmh_flags & FCMH_IOD_SYNCFILE) {
+			FCMH_ULOCK(f);
+			continue;
+		}
+		fii->fii_nwrite = 0;
+		f->fcmh_flags |= FCMH_IOD_SYNCFILE;
+		fcmh_op_start_type(f, FCMH_OPCNT_SYNC_AHEAD);
+		FCMH_ULOCK(f);
+		psc_dynarray_add(&a, f);
+	}
+	LIST_CACHE_ULOCK(&sli_fcmh_dirty);
+
+	DYNARRAY_FOREACH(f, i, &a) {
+
+		fsync(fcmh_2_fd(f));
+		OPSTAT_INCR("sync-ahead");
+
+		DEBUG_FCMH(PLL_DIAG, f, "sync ahead");
+
+		FCMH_LOCK(f);
+		fii = fcmh_2_fii(f);
+		if (fii->fii_nwrite < sli_sync_max_writes / 2) {
+			OPSTAT_INCR("sync-ahead-remove");
+			lc_remove(&sli_fcmh_dirty, fii);
+			f->fcmh_flags &= ~FCMH_IOD_DIRTYFILE;
+		}
+		f->fcmh_flags &= ~FCMH_IOD_SYNCFILE;
+		fcmh_op_done_type(f, FCMH_OPCNT_SYNC_AHEAD);
+	}
+	if (skip) {
+		sleep(5);
+		psc_dynarray_reset(&a);
+		goto restart;
+	}
+	psc_dynarray_free(&a);
+}
+void
+slisyncthr_main(struct psc_thread *thr)
+{
+	while (pscthr_run(thr)) {
+		lc_peekheadwait(&sli_fcmh_dirty);
+		sli_sync_ahead();
+	}
+}
+
 /*
  * Guts of the sliver bmap CRC update RPC generator thread.  RPCs are
  * constructed from slivers on the queue after the minimal expiration is
@@ -494,6 +563,10 @@ slvr_worker_init(void)
 	for (i = 0; i < NSLVRCRC_THRS; i++)
 		pscthr_init(SLITHRT_SLVR_CRC, slislvrthr_main, NULL, 0,
 		    "slislvrthr%d", i);
+
+	for (i = 0; i < NSLVRSYNC_THRS; i++)
+		pscthr_init(SLITHRT_SLVR_SYNC, slisyncthr_main, NULL, 0,
+		    "slisyncthr%d", i);
 
 	pscthr_init(SLITHRT_CRUD, slicrudthr_main, NULL, 0,
 	    "slicrudthr");

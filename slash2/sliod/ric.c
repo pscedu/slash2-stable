@@ -28,12 +28,12 @@
 #include <stdio.h>
 
 #include "pfl/ctlsvr.h"
+#include "pfl/fault.h"
 #include "pfl/opstats.h"
 #include "pfl/rpc.h"
 #include "pfl/rpclog.h"
 #include "pfl/rsx.h"
 #include "pfl/service.h"
-#include "pfl/fault.h"
 
 #include "authbuf.h"
 #include "bmap_iod.h"
@@ -48,9 +48,12 @@
 #include "slvr.h"
 
 #define NOTIFY_FSYNC_TIMEOUT	10		/* seconds */
+#define MAX_WRITE_PER_FILE	2048		/* slivers */
 
 void				*sli_benchmark_buf;
 uint32_t			 sli_benchmark_bufsiz;
+
+int				 sli_sync_max_writes = MAX_WRITE_PER_FILE;
 
 int
 sli_ric_write_sliver(uint32_t off, uint32_t size, struct slvr **slvrs,
@@ -104,6 +107,7 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 	struct bmap *bmap;
 	uint64_t seqno;
 	ssize_t rv;
+	struct fcmh_iod_info *fii;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
 
@@ -170,10 +174,10 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 	psclog_diag("bmapdesc check okay");
 
 	if (rw == SL_READ)
-		(void)pfl_fault_here_rc("sliod/seqno_read_fail", 
+		(void)pfl_fault_here_rc("sliod/seqno_read_fail",
 		    &mp->rc, -PFLERR_KEYEXPIRED);
 	else
-		(void)pfl_fault_here_rc("sliod/seqno_write_fail", 
+		(void)pfl_fault_here_rc("sliod/seqno_write_fail",
 		    &mp->rc, -PFLERR_KEYEXPIRED);
 	if (mp->rc)
 		return (mp->rc);
@@ -198,10 +202,34 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 	if (mp->rc)
 		return (mp->rc);
 
+	/*
+	 * Currently we have LNET_MTU = SLASH_SLVR_SIZE = 1MiB,
+	 * therefore we would never exceed two slivers.
+	 */
+	nslvrs = 1;
+	slvrno = mq->offset / SLASH_SLVR_SIZE;
+	if ((mq->offset + mq->size - 1) / SLASH_SLVR_SIZE > slvrno)
+		nslvrs++;
+
 	FCMH_LOCK(f);
 	/* Update the utimegen if necessary. */
 	if (f->fcmh_sstb.sst_utimgen < mq->utimgen)
 		f->fcmh_sstb.sst_utimgen = mq->utimgen;
+
+	if (rw == SL_WRITE) {
+		/* 
+		 * Simplistic tracking of dirty slivers, ignoring duplicates.
+		 * We rely on clients to absort them.
+		 */
+		fii = fcmh_2_fii(f);
+		fii->fii_nwrite += nslvrs;
+		if (!(f->fcmh_flags & FCMH_IOD_DIRTYFILE) &&
+		    fii->fii_nwrite >= sli_sync_max_writes) {
+			OPSTAT_INCR("sync-ahead-add");
+			lc_add(&sli_fcmh_dirty, fii);
+			f->fcmh_flags |= FCMH_IOD_DIRTYFILE;
+		}
+	}
 	FCMH_ULOCK(f);
 
 	rc = mp->rc = bmap_get(f, bmapno, rw, &bmap);
@@ -215,14 +243,6 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 	    "sbd_seq=%"PRId64, bmap->bcm_bmapno, mq->size, mq->offset,
 	    rw == SL_WRITE ? "wr" : "rd", mq->sbd.sbd_seq);
 
-	/*
-	 * Currently we have LNET_MTU = SLASH_SLVR_SIZE = 1MiB,
-	 * therefore we would never exceed two slivers.
-	 */
-	nslvrs = 1;
-	slvrno = mq->offset / SLASH_SLVR_SIZE;
-	if ((mq->offset + mq->size - 1) / SLASH_SLVR_SIZE > slvrno)
-		nslvrs++;
 
 	/* Paranoid: clear more than necessary. */
 	for (i = 0; i < RIC_MAX_SLVRS_PER_IO; i++) {
@@ -391,17 +411,32 @@ sli_ric_handle_rlsbmap(struct pscrpc_request *rq)
 	struct srt_bmapdesc *sbd, *newsbd, *p;
 	struct srm_bmap_release_req *mq;
 	struct srm_bmap_release_rep *mp;
+	struct timespec ts0, ts1, delta;
 	struct bmap_iod_info *bii;
 	struct fidc_membh *f;
 	struct bmap *b;
 	uint32_t i;
 
-	struct timespec ts0, ts1, delta;
-
 	SL_RSX_ALLOCREP(rq, mq, mp);
 
 	if (mq->nbmaps > MAX_BMAP_RELEASE)
 		PFL_GOTOERR(out, mp->rc = -E2BIG);
+
+#ifdef HAVE_SYNC_FILE_RANGE
+	for (i = 0; i < mq->nbmaps; i++) {
+		sbd = &mq->sbd[i];
+		if (sli_fcmh_peek(&sbd->sbd_fg, &f))
+			continue;
+		FCMH_LOCK(f);
+		if (f->fcmh_flags & FCMH_IOD_BACKFILE) {
+			FCMH_ULOCK(f);
+			sync_file_range(fcmh_2_fd(f), sbd->sbd_bmapno *
+			    SLASH_BMAP_SIZE, SLASH_BMAP_SIZE,
+			    SYNC_FILE_RANGE_WRITE);
+		}
+		fcmh_op_done(f);
+	}
+#endif
 
 	for (i = 0; i < mq->nbmaps; i++) {
 		sbd = &mq->sbd[i];
@@ -421,13 +456,25 @@ sli_ric_handle_rlsbmap(struct pscrpc_request *rq)
 		 */
 		FCMH_LOCK(f);
 		if (f->fcmh_flags & FCMH_IOD_BACKFILE) {
+			int error;
+
 			FCMH_ULOCK(f);
 
 			PFL_GETTIMESPEC(&ts0);
 
 			fsync_time = CURRENT_SECONDS;
+#ifdef HAVE_SYNC_FILE_RANGE
+			rc = sync_file_range(fcmh_2_fd(f),
+			    sbd->sbd_bmapno * SLASH_BMAP_SIZE,
+			    SLASH_BMAP_SIZE,
+			    SYNC_FILE_RANGE_WAIT_AFTER);
+#else
 			rc = fsync(fcmh_2_fd(f));
+#endif
 			fsync_time = CURRENT_SECONDS - fsync_time;
+
+			if (rc == -1)
+				error = errno;
 
 			PFL_GETTIMESPEC(&ts1);
 			timespecsub(&ts1, &ts0, &delta);
@@ -435,7 +482,12 @@ sli_ric_handle_rlsbmap(struct pscrpc_request *rq)
 			    delta.tv_sec * 1000000 + delta.tv_nsec / 1000);
 
 			if (fsync_time > NOTIFY_FSYNC_TIMEOUT) {
-				OPSTAT_INCR("fsync-slow");
+				if (fsync_time > 6 * NOTIFY_FSYNC_TIMEOUT)
+					OPSTAT_INCR("fsync-slooow");
+				else if (fsync_time > 3 * NOTIFY_FSYNC_TIMEOUT)
+					OPSTAT_INCR("fsync-sloow");
+				else
+					OPSTAT_INCR("fsync-slow");
 				DEBUG_FCMH(PLL_NOTICE, f,
 				    "long fsync %d", fsync_time);
 			}
@@ -443,7 +495,7 @@ sli_ric_handle_rlsbmap(struct pscrpc_request *rq)
 				OPSTAT_INCR("fsync-fail");
 				DEBUG_FCMH(PLL_ERROR, f,
 				    "fsync failure rc=%d fd=%d errno=%d",
-				    rc, fcmh_2_fd(f), errno);
+				    rc, fcmh_2_fd(f), error);
 			}
 			OPSTAT_INCR("fsync");
 		} else

@@ -55,12 +55,15 @@ enum {
 	SLITHRT_RII,			/* service RPC requests from ION */
 	SLITHRT_RIM,			/* service RPC requests from MDS */
 	SLITHRT_SLVR_CRC,		/* sliver CRC updaters */
+	SLITHRT_SLVR_SYNC,		/* sliver SYNC to reduce fsync spikes */
 	SLITHRT_STATFS,			/* statvfs(2) updater */
 	SLITHRT_USKLNDPL,		/* userland socket Lustre net dev poll thr */
 	SLITHRT_WORKER			/* generic worker thread */
 };
 
 #define NSLVRCRC_THRS		4	/* perhaps default to ncores + configurable? */
+
+#define NSLVRSYNC_THRS		2	/* perhaps default to ncores + configurable? */
 
 enum {
 	SLI_FAULT_AIO_FAIL,
@@ -106,6 +109,8 @@ extern psc_spinlock_t		 sli_bwqueued_lock;
 extern struct srt_statfs	 sli_ssfb;
 extern psc_spinlock_t		 sli_ssfb_lock;
 extern struct timespec		 sli_ssfb_send;
+extern struct psc_listcache	 sli_fcmh_dirty;
+extern int			 sli_sync_max_writes;
 extern struct psc_thread	*sliconnthr;
 
 extern uint64_t			 current_reclaim_xid;
