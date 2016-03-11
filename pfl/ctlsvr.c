@@ -629,9 +629,24 @@ psc_ctlparam_log_file(int fd, struct psc_ctlmsghdr *mh,
 		    "a" : "w", stderr) == NULL)
 			rc = psc_ctlsenderr(fd, mh, "log.file: %s",
 			    strerror(errno));
-	} else
-		rc = psc_ctlsenderr(fd, mh,
-		    "log.file: write-only field");
+	} else {
+#if 0
+		rc = psc_ctlsenderr(fd, mh, "log.file: write-only field");
+#else
+		char linkname[128], logname[1024];
+		int pid = getpid();
+
+		snprintf(linkname, 128, "/proc/%d/fd/2", pid);
+		rc = readlink(linkname, logname, 1024);
+		if (rc < 0) 
+			snprintf(pcp->pcp_value, sizeof(pcp->pcp_value), 
+				"%s", "stderr");
+		else
+			snprintf(pcp->pcp_value, sizeof(pcp->pcp_value), 
+				"%s", logname);
+		rc = psc_ctlmsg_sendv(fd, mh, pcp);
+#endif
+	}
 	return (rc);
 }
 
