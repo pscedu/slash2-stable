@@ -30,12 +30,13 @@
 #include <errno.h>
 #include <string.h>
 
-#include "pfl/dynarray.h"
-#include "pfl/list.h"
-#include "pfl/rpc.h"
 #include "pfl/alloc.h"
+#include "pfl/dynarray.h"
+#include "pfl/err.h"
+#include "pfl/list.h"
 #include "pfl/log.h"
 #include "pfl/net.h"
+#include "pfl/rpc.h"
 
 #include "lnet/lib-types.h"
 #include "lnet/lib-lnet.h"
@@ -109,4 +110,13 @@ pscrpc_req_getprids(const struct psc_dynarray *prids,
 		self->nid = rq->rq_self;
 		self->pid = the_lnet.ln_pid;
 	}
+}
+
+int
+pflrpc_portable_rc(int rc)
+{
+	switch (rc) {
+	case -ETIMEDOUT: return (-PFLERR_TIMEDOUT);
+	}
+	return (rc);
 }

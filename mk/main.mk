@@ -98,10 +98,10 @@ PSCRPC_SRCS+=		${PFL_BASE}/nb.c
 PSCRPC_SRCS+=		${PFL_BASE}/niobuf.c
 PSCRPC_SRCS+=		${PFL_BASE}/packgeneric.c
 PSCRPC_SRCS+=		${PFL_BASE}/pool.c
+PSCRPC_SRCS+=		${PFL_BASE}/rpc_util.c
 PSCRPC_SRCS+=		${PFL_BASE}/rpcclient.c
 PSCRPC_SRCS+=		${PFL_BASE}/rsx.c
 PSCRPC_SRCS+=		${PFL_BASE}/service.c
-PSCRPC_SRCS+=		${PFL_BASE}/util.c
 
 PSCRPC_SRCS+=		${PFL_BASE}/eqpollthr.c
 PSCRPC_SRCS+=		${PFL_BASE}/usklndthr.c
