@@ -110,3 +110,12 @@ pscrpc_req_getprids(const struct psc_dynarray *prids,
 		self->pid = the_lnet.ln_pid;
 	}
 }
+
+int
+pflrpc_portable_rc(int rc)
+{
+	switch (rc) {
+	case -ETIMEDOUT: return (-PFLERR_TIMEDOUT);
+	}
+	return (rc);
+}
