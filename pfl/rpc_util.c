@@ -30,12 +30,13 @@
 #include <errno.h>
 #include <string.h>
 
-#include "pfl/dynarray.h"
-#include "pfl/list.h"
-#include "pfl/rpc.h"
 #include "pfl/alloc.h"
+#include "pfl/dynarray.h"
+#include "pfl/err.h"
+#include "pfl/list.h"
 #include "pfl/log.h"
 #include "pfl/net.h"
+#include "pfl/rpc.h"
 
 #include "lnet/lib-types.h"
 #include "lnet/lib-lnet.h"
