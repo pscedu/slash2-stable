@@ -55,6 +55,8 @@ uint32_t			 sli_benchmark_bufsiz;
 
 int				 sli_sync_max_writes = MAX_WRITE_PER_FILE;
 
+extern struct psc_lockedlist	 sli_bii_rls;
+
 int
 sli_ric_write_sliver(uint32_t off, uint32_t size, struct slvr **slvrs,
     int nslvrs)
@@ -232,6 +234,13 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 	}
 	FCMH_ULOCK(f);
 
+	/* Paranoid: clear more than necessary. */
+	for (i = 0; i < RIC_MAX_SLVRS_PER_IO; i++) {
+		slvr[i] = NULL;
+		iovs[i].iov_len = 0;
+		iovs[i].iov_base = 0;
+	}
+
 	rc = mp->rc = bmap_get(f, bmapno, rw, &bmap);
 	if (rc) {
 		DEBUG_FCMH(PLL_ERROR, f, "failed to load bmap %u",
@@ -242,14 +251,6 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 	DEBUG_FCMH(PLL_DIAG, f, "bmapno=%u size=%u off=%u rw=%s "
 	    "sbd_seq=%"PRId64, bmap->bcm_bmapno, mq->size, mq->offset,
 	    rw == SL_WRITE ? "wr" : "rd", mq->sbd.sbd_seq);
-
-
-	/* Paranoid: clear more than necessary. */
-	for (i = 0; i < RIC_MAX_SLVRS_PER_IO; i++) {
-		slvr[i] = NULL;
-		iovs[i].iov_len = 0;
-		iovs[i].iov_base = 0;
-	}
 
 	/*
 	 * This loop assumes that nslvrs is always no larger than
@@ -411,14 +412,10 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 __static int
 sli_ric_handle_rlsbmap(struct pscrpc_request *rq)
 {
-	int rc, new, fsync_time = 0;
-	struct srt_bmapdesc *sbd, *newsbd, *p;
+	struct srt_bmapdesc *sbd;
+	struct bmap_iod_rls *newbrls;
 	struct srm_bmap_release_req *mq;
 	struct srm_bmap_release_rep *mp;
-	struct timespec ts0, ts1, delta;
-	struct bmap_iod_info *bii;
-	struct fidc_membh *f;
-	struct bmap *b;
 	uint32_t i;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
@@ -426,126 +423,11 @@ sli_ric_handle_rlsbmap(struct pscrpc_request *rq)
 	if (mq->nbmaps > MAX_BMAP_RELEASE)
 		PFL_GOTOERR(out, mp->rc = -E2BIG);
 
-#ifdef HAVE_SYNC_FILE_RANGE
 	for (i = 0; i < mq->nbmaps; i++) {
 		sbd = &mq->sbd[i];
-		if (sli_fcmh_peek(&sbd->sbd_fg, &f))
-			continue;
-		FCMH_LOCK(f);
-		if (f->fcmh_flags & FCMH_IOD_BACKFILE) {
-			FCMH_ULOCK(f);
-			sync_file_range(fcmh_2_fd(f), sbd->sbd_bmapno *
-			    SLASH_BMAP_SIZE, SLASH_BMAP_SIZE,
-			    SYNC_FILE_RANGE_WRITE);
-		}
-		fcmh_op_done(f);
-	}
-#endif
-
-	for (i = 0; i < mq->nbmaps; i++) {
-		sbd = &mq->sbd[i];
-		rc = sli_fcmh_peek(&sbd->sbd_fg, &f);
-		if (rc) {
-			OPSTAT_INCR("rlsbmap-fail");
-			psclog(rc == ENOENT ? PLL_DIAG : PLL_ERROR,
-			    "load fcmh failed; fid="SLPRI_FG" rc=%d",
-			    SLPRI_FG_ARGS(&sbd->sbd_fg), rc);
-			continue;
-		}
-
-		/*
-		 * fsync here to guarantee that buffers are flushed to
-		 * disk before the MDS releases its odtable entry for
-		 * this bmap.
-		 */
-		FCMH_LOCK(f);
-		if (f->fcmh_flags & FCMH_IOD_BACKFILE) {
-			int error;
-
-			FCMH_ULOCK(f);
-
-			PFL_GETTIMESPEC(&ts0);
-
-			fsync_time = CURRENT_SECONDS;
-#ifdef HAVE_SYNC_FILE_RANGE
-			rc = sync_file_range(fcmh_2_fd(f),
-			    sbd->sbd_bmapno * SLASH_BMAP_SIZE,
-			    SLASH_BMAP_SIZE,
-			    SYNC_FILE_RANGE_WAIT_AFTER);
-#else
-			rc = fsync(fcmh_2_fd(f));
-#endif
-			fsync_time = CURRENT_SECONDS - fsync_time;
-
-			if (rc == -1)
-				error = errno;
-
-			PFL_GETTIMESPEC(&ts1);
-			timespecsub(&ts1, &ts0, &delta);
-			OPSTAT_ADD("rlsbmap-fsync-usecs",
-			    delta.tv_sec * 1000000 + delta.tv_nsec / 1000);
-
-			if (fsync_time > NOTIFY_FSYNC_TIMEOUT) {
-				if (fsync_time > 6 * NOTIFY_FSYNC_TIMEOUT)
-					OPSTAT_INCR("fsync-slooow");
-				else if (fsync_time > 3 * NOTIFY_FSYNC_TIMEOUT)
-					OPSTAT_INCR("fsync-sloow");
-				else
-					OPSTAT_INCR("fsync-slow");
-				DEBUG_FCMH(PLL_NOTICE, f,
-				    "long fsync %d", fsync_time);
-			}
-			if (rc) {
-				OPSTAT_INCR("fsync-fail");
-				DEBUG_FCMH(PLL_ERROR, f,
-				    "fsync failure rc=%d fd=%d errno=%d",
-				    rc, fcmh_2_fd(f), error);
-			}
-			OPSTAT_INCR("fsync");
-		} else
-			FCMH_ULOCK(f);
-
-		rc = bmap_getf(f, sbd->sbd_bmapno, SL_WRITE,
-		    BMAPGETF_CREATE | BMAPGETF_NORETRIEVE, &b);
-		if (rc) {
-			psclog_errorx("failed to load bmap %u",
-			    sbd->sbd_bmapno);
-			fcmh_op_done(f);
-			continue;
-		}
-
-		new = 1;
-		bii = bmap_2_bii(b);
-		PLL_FOREACH(p, &bii->bii_rls) {
-			if (!memcmp(p, sbd, sizeof(*p))) {
-				new = 0;
-				break;
-			}
-		}
-		if (new) {
-			BMAP_ULOCK(b);
-			newsbd = psc_pool_get(bmap_rls_pool);
-			BMAP_LOCK(b);
-
-			/*
-			 * Reaper thread has marked this bmap for
-			 * release so do a no-op.
-			 */
-			if (b->bcm_flags & BMAPF_RELEASING) {
-				psc_pool_return(bmap_rls_pool, newsbd);
-			} else {
-				memcpy(newsbd, sbd, sizeof(*sbd));
-
-				DEBUG_BMAP(PLL_DIAG, b, "brls=%p "
-				    "seq=%"PRId64" key=%"PRId64,
-				    newsbd, sbd->sbd_seq, sbd->sbd_key);
-
-				pll_add(&bii->bii_rls, newsbd);
-			}
-		}
-
-		bmap_op_done(b);
-		fcmh_op_done(f);
+		newbrls = psc_pool_get(bmap_rls_pool);
+		memcpy(&newbrls->bir_sbd, sbd, sizeof(*sbd));
+		pll_add(&sli_bii_rls, newbrls);
 	}
  out:
 	return (0);

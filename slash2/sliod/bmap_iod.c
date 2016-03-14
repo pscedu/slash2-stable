@@ -31,15 +31,20 @@
 #include "pfl/rsx.h"
 
 #include "bmap_iod.h"
+#include "fidc_iod.h"
 #include "fidcache.h"
 #include "rpc_iod.h"
 #include "sliod.h"
 #include "slvr.h"
 
+#define NOTIFY_FSYNC_TIMEOUT	10
+
 struct bmap_iod_minseq	 sli_bminseq;
 static struct timespec	 bim_timeo = { BIM_MINAGE, 0 };
 
 struct psc_listcache	 sli_bmap_releaseq;
+
+struct psc_lockedlist	 sli_bii_rls;
 
 struct psc_poolmaster    bmap_rls_poolmaster;
 struct psc_poolmgr	*bmap_rls_pool;
@@ -200,6 +205,130 @@ bcr_ready_remove(struct bcrcupd *bcr)
 	psc_pool_return(bmap_crcupd_pool, bcr);
 }
 
+
+void
+slibmaprlsthr_work(struct psc_dynarray *a)
+{
+	struct bmap_iod_info *bii;
+	struct fidc_membh *f;
+	struct bmap *b;
+	int32_t i;
+	struct srt_bmapdesc *sbd;
+	struct bmap_iod_rls *brls, *tmpbrls;
+	int rc, new, fsync_time = 0;
+	struct timespec ts0, ts1, delta;
+
+	i = 0;
+	while ((brls = pll_get(&sli_bii_rls))) {
+		psc_dynarray_add(a, brls);
+		i++;
+		if (i == MAX_BMAP_RELEASE)
+			break;
+	}
+	DYNARRAY_FOREACH(brls, i, a) {
+		sbd = &brls->bir_sbd;
+		rc = sli_fcmh_peek(&sbd->sbd_fg, &f);
+		if (rc) {
+			OPSTAT_INCR("rlsbmap-fail");
+			psclog(rc == ENOENT || rc == ESTALE ? 
+			    PLL_DIAG : PLL_ERROR,
+			    "load fcmh failed; fid="SLPRI_FG" rc=%d",
+			    SLPRI_FG_ARGS(&sbd->sbd_fg), rc);
+			continue;
+		}
+
+		/*
+		 * fsync here to guarantee that buffers are flushed to
+		 * disk before the MDS releases its odtable entry for
+		 * this bmap.
+		 */
+		FCMH_LOCK(f);
+		if (f->fcmh_flags & FCMH_IOD_BACKFILE) {
+			int error;
+
+			FCMH_ULOCK(f);
+
+			PFL_GETTIMESPEC(&ts0);
+
+			fsync_time = CURRENT_SECONDS;
+#ifdef HAVE_SYNC_FILE_RANGE
+			rc = sync_file_range(fcmh_2_fd(f),
+			    sbd->sbd_bmapno * SLASH_BMAP_SIZE,
+			    SLASH_BMAP_SIZE,
+			    SYNC_FILE_RANGE_WAIT_AFTER);
+#else
+			rc = fsync(fcmh_2_fd(f));
+#endif
+			fsync_time = CURRENT_SECONDS - fsync_time;
+
+			if (rc == -1)
+				error = errno;
+
+			PFL_GETTIMESPEC(&ts1);
+			timespecsub(&ts1, &ts0, &delta);
+			OPSTAT_ADD("rlsbmap-fsync-usecs",
+			    delta.tv_sec * 1000000 + delta.tv_nsec / 1000);
+
+			if (fsync_time > NOTIFY_FSYNC_TIMEOUT) {
+				if (fsync_time > 6 * NOTIFY_FSYNC_TIMEOUT)
+					OPSTAT_INCR("fsync-slooow");
+				else if (fsync_time > 3 * NOTIFY_FSYNC_TIMEOUT)
+					OPSTAT_INCR("fsync-sloow");
+				else
+					OPSTAT_INCR("fsync-slow");
+				DEBUG_FCMH(PLL_NOTICE, f,
+				    "long fsync %d", fsync_time);
+			}
+			if (rc) {
+				OPSTAT_INCR("fsync-fail");
+				DEBUG_FCMH(PLL_ERROR, f,
+				    "fsync failure rc=%d fd=%d errno=%d",
+				    rc, fcmh_2_fd(f), error);
+			}
+			OPSTAT_INCR("release-fsync");
+		} else
+			FCMH_ULOCK(f);
+
+		rc = bmap_getf(f, sbd->sbd_bmapno, SL_WRITE,
+		    BMAPGETF_CREATE | BMAPGETF_NORETRIEVE, &b);
+		if (rc) {
+			psclog_errorx("failed to load bmap %u",
+			    sbd->sbd_bmapno);
+			fcmh_op_done(f);
+			continue;
+		}
+
+		new = 1;
+		bii = bmap_2_bii(b);
+		PLL_FOREACH(tmpbrls, &bii->bii_rls) {
+			if (!memcmp(&tmpbrls->bir_sbd, sbd, sizeof(*sbd))) {
+				OPSTAT_INCR("bmap-duplicate");
+				new = 0;
+				break;
+			}
+		}
+		if (new) {
+			/*
+			 * Reaper thread has marked this bmap for
+			 * release so do a no-op.
+			 */
+			if (b->bcm_flags & BMAPF_RELEASING) {
+				psc_pool_return(bmap_rls_pool, brls);
+			} else {
+
+				DEBUG_BMAP(PLL_DIAG, b, "brls=%p "
+				    "seq=%"PRId64" key=%"PRId64,
+				    brls, sbd->sbd_seq, sbd->sbd_key);
+
+				pll_add(&bii->bii_rls, brls);
+			}
+		}
+
+		bmap_op_done(b);
+		fcmh_op_done(f);
+	}
+}
+
 void
 slibmaprlsthr_main(struct psc_thread *thr)
 {
@@ -217,6 +346,9 @@ slibmaprlsthr_main(struct psc_thread *thr)
 	brr = PSCALLOC(sizeof(struct srm_bmap_release_req));
 
 	while (pscthr_run(thr)) {
+
+		slibmaprlsthr_work(&a);
+		psc_dynarray_reset(&a);
 
 		nrls = 0;
 		LIST_CACHE_LOCK(&sli_bmap_releaseq);
@@ -262,7 +394,8 @@ slibmaprlsthr_main(struct psc_thread *thr)
 		psc_dynarray_reset(&a);
 
 		if (!nrls) {
-			sleep(SLIOD_BMAP_RLS_WAIT_SECS);
+			if (!pll_nitems(&sli_bii_rls))
+				sleep(SLIOD_BMAP_RLS_WAIT_SECS);
 			continue;
 		}
 
@@ -303,11 +436,17 @@ slibmaprlsthr_main(struct psc_thread *thr)
 void
 slibmaprlsthr_spawn(void)
 {
+	int i;
+
 	lc_reginit(&sli_bmap_releaseq, struct bmap_iod_info, bii_lentry,
 	    "breleaseq");
 
-	pscthr_init(SLITHRT_BMAPRLS, slibmaprlsthr_main, NULL, 0,
-	    "slibmaprlsthr");
+	pll_init(&sli_bii_rls, struct bmap_iod_rls, bir_lentry, NULL);
+
+	for (i = 0; i < NBMAPRLS_THRS; i++) {
+		pscthr_init(SLITHRT_BMAPRLS, slibmaprlsthr_main, NULL, 0,
+		    "slibmaprlsthr%d", i);
+	}
 }
 
 void
