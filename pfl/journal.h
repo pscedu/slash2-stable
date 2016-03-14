@@ -144,9 +144,9 @@ struct psc_journal {
 	int				 pj_fd;			/* file descriptor to backing disk file */
 
 	struct pfl_iostats_rw		 pj_iostats;		/* read/write I/O stats */
-	struct pfl_opstat		*pj_opst_block_reserves;
-	struct pfl_opstat		*pj_opst_block_commits;
-	struct pfl_opstat		*pj_opst_block_distills;
+	struct pfl_opstat		*pj_opst_reserves;
+	struct pfl_opstat		*pj_opst_commits;
+	struct pfl_opstat		*pj_opst_distills;
 };
 
 #define PJF_NONE			0

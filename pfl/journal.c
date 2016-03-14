@@ -339,7 +339,7 @@ pjournal_reserve_slot(struct psc_journal *pj, int count)
 			    "on over-reservation: resrv=%d inuse=%d",
 			    pj->pj_resrv, pj->pj_inuse);
 
-			pfl_opstat_incr(pj->pj_opst_block_reserves);
+			pfl_opstat_incr(pj->pj_opst_reserves);
 			pj->pj_flags |= PJF_WANTSLOT;
 			psc_waitq_wait(&pj->pj_waitq, &pj->pj_lock);
 			continue;
@@ -354,7 +354,7 @@ pjournal_reserve_slot(struct psc_journal *pj, int count)
 			    "(xid=%#"PRIx64", txg=%"PRId64", slot=%d)",
 			    t, t->pjx_xid, t->pjx_txg, t->pjx_slot);
 
-			pfl_opstat_incr(pj->pj_opst_block_commits);
+			pfl_opstat_incr(pj->pj_opst_commits);
 			txg = t->pjx_txg;
 			freelock(&t->pjx_lock);
 			PJ_ULOCK(pj);
@@ -368,7 +368,7 @@ pjournal_reserve_slot(struct psc_journal *pj, int count)
 			    "(xid=%#"PRIx64", slot=%d, flags=%#x)",
 			    t, t->pjx_xid, t->pjx_slot, t->pjx_flags);
 
-			pfl_opstat_incr(pj->pj_opst_block_distills);
+			pfl_opstat_incr(pj->pj_opst_distills);
 			freelock(&t->pjx_lock);
 			PJ_ULOCK(pj);
 			usleep(100);
@@ -759,12 +759,9 @@ pjournal_open(const char *name, const char *fn)
 	pj->pj_iostats.rd = pfl_opstat_init("jrnlrd-%s", basefn);
 	pj->pj_iostats.wr = pfl_opstat_init("jrnlwr-%s", basefn);
 
-	pj->pj_opst_block_commits = pfl_opstat_init(
-	    "journal.%s.block_commits", basefn);
-	pj->pj_opst_block_reserves = pfl_opstat_init(
-	    "journal.%s.block_reserves", basefn);
-	pj->pj_opst_block_distills = pfl_opstat_init(
-	    "journal.%s.block_distills", basefn);
+	pj->pj_opst_commits = pfl_opstat_init("jrnl.%s.commits", basefn);
+	pj->pj_opst_reserves = pfl_opstat_init("jrnl.%s.reserves", basefn);
+	pj->pj_opst_distills = pfl_opstat_init("jrnl.%s.distills", basefn);
 
 	/*
 	 * O_DIRECT may impose alignment restrictions so align the
