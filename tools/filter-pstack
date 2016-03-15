@@ -52,6 +52,7 @@ my @ign = (
 	[ qw(_psc_waitq_waitabs _lc_get slibmaprlsthr_main _pscthr_begin) ],
 	[ qw(_psc_waitq_waitabs _lc_get slireplpndthr_main _pscthr_begin) ],
 	[ qw(_psc_waitq_waitabs _lc_get slislvrthr_main _pscthr_begin) ],
+	[ qw(_psc_waitq_waitabs _lc_get slisyncthr_main _pscthr_begin) ],
 	[ qw(_psc_waitq_waitabs slihealththr_main _pscthr_begin) ],
 	[ qw(psc_waitq_waitabs slislvrthr_main _pscthr_begin) ],
 
