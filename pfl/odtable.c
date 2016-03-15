@@ -227,13 +227,14 @@ pfl_odt_allocslot(struct pfl_odt *t)
 		return (-1);
 	}
 	if (item >= h->odth_nitems) {
+		ODT_STAT_INCR(t, extend);
 		OPSTAT_INCR("pfl.odtable-resize");
 		h->odth_nitems = psc_vbitmap_getsize(t->odt_bitmap);
-		t->odt_ops.odtop_resize(t);
+
+		t->odt_ops.odtop_resize(t);	/* slm_odt_resize() */
 		PFLOG_ODT(PLL_WARN, t,
 		    "odtable now has %u items (used to be %zd)",
 		    h->odth_nitems, item);
-		ODT_STAT_INCR(t, extend);
 	}
 	freelock(&t->odt_lock);
 	return (item);
