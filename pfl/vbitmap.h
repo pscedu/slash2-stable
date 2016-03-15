@@ -127,6 +127,7 @@ void	 psc_vbitmap_setnextpos(struct psc_vbitmap *, size_t);
 int	 psc_vbitmap_setval(struct psc_vbitmap *, size_t, int);
 int	 psc_vbitmap_setval_range(struct psc_vbitmap *, size_t, size_t, int);
 
+char	*pfl_vbitmap_getabbrbinstring(const struct psc_vbitmap *);
 char	*pfl_vbitmap_getbinstring(const struct psc_vbitmap *);
 void	 psc_vbitmap_printbin(const struct psc_vbitmap *);
 void	 psc_vbitmap_printhex(const struct psc_vbitmap *);

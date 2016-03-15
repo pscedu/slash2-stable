@@ -535,6 +535,55 @@ pfl_vbitmap_getbinstring(const struct psc_vbitmap *vb)
 }
 
 /*
+ * Get an abbreviated binary representation of a vbitmap.
+ */
+char *
+pfl_vbitmap_getabbrbinstring(const struct psc_vbitmap *vb)
+{
+	int i, runlen = 0, n, thisval, lastval = -1;
+	unsigned char *p;
+	char *str, *t;
+	ptrdiff_t len;
+
+	len = psc_vbitmap_getsize(vb) + 1;
+	str = PSCALLOC(len);
+	for (p = vb->vb_start, t = str; p < vb->vb_end; p++)
+		if ((*p == 0 || *p == 0xff) &&
+		    (*p & lastval) == lastval) {
+			runlen += NBBY;
+			continue;
+		}
+		for (i = 0; i < NBBY; i++) {
+			runlen++;
+			thisval = (*p >> i) & 1;
+			if (thisval != lastval) {
+				*t++ = thisval ? '1' : '0';
+				if (runlen > 9) {
+					n = snprintf(t, len - (t - str), ":%d,",
+					    runlen);
+					psc_assert(n != -1);
+					t += n;
+				}
+				runlen = 0;
+				if (t - str >= len)
+					goto done;
+			}
+		}
+	if (runlen) {
+		*t++ = thisval ? '1' : '0';
+		n = snprintf(t, len - (t - str), ":%d,", runlen);
+		psc_assert(n != -1);
+		t += n;
+	}
+	for (i = 0; i < vb->vb_lastsize && t - str < len; i++)
+		*t++ = ((*p >> i) & 1) ? '1' : '0';
+
+ done:
+	*t = '\0';
+	return (str);
+}
+
+/*
  * Print the contents of a bitmap in binary.
  * @vb: variable bitmap.
  */
