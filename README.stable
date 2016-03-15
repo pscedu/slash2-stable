@@ -1,3 +1,14 @@
+03/14/2016
+----------
+
+I did 5 hours of four way testing on a client before the following commit:
+
+commit 0da7d49befa8fe89d4a36449fbea8eb6353208a5
+Author: Jared Yanovich <jaredy@google.com>
+Date:   Mon Mar 14 17:54:04 2016 -0400
+
+    i think this might be the the elusive csvc ref leak
+
 03/09/2016
 ----------
 
