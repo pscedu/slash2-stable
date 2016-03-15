@@ -137,10 +137,6 @@ ifneq ($(filter pfl,${MODULES}),)
   DEPLIST+=	${PFL_BASE}:libpfl.a
   SRCS+=	${QSORT_R_SRCS}
 
-  ifneq (${DEBUG},0)
-    LDFLAGS+=	-u fprinthex
-  endif
-
   ifneq ($(filter pthread,${MODULES}),)
     MODULES+=	numa
   endif
