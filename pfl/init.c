@@ -172,9 +172,10 @@ pfl_init(void)
 	pfl_subsys_register(PSS_RPC, "rpc");
 
 	p = getenv("PSC_DUMPSTACK");
-	if (p && strcmp(p, "0") &&
-	    signal(SIGSEGV, pfl_dump_stack1) == SIG_ERR)
-		psc_fatal("signal");
+	if (p && strcmp(p, "0"))
+		if (signal(SIGSEGV, pfl_dump_stack1) == SIG_ERR ||
+		    signal(SIGFPE, pfl_dump_stack1) == SIG_ERR)
+			psc_fatal("signal");
 	p = getenv("PSC_FORCE_DUMPSTACK");
 	if (p && strcmp(p, "0"))
 		atexit(pfl_dump_stack);
