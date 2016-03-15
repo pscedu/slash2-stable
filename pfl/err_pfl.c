@@ -79,9 +79,8 @@ void
 pfl_errno_init(void)
 {
 	psc_hashtbl_init(&pfl_errno_hashtbl, 0, struct pfl_errno, code,
-	    hentry, 100, NULL, "errno");
+	    hentry, 191, NULL, "errno");
 }
-
 
 const char *
 pfl_strerror(int error)
