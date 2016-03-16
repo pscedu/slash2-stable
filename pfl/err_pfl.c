@@ -64,9 +64,10 @@ pfl_register_errno(int code, const char *str)
 
 	q = code;
 	e = psc_hashtbl_search(&pfl_errno_hashtbl, &q);
-	psc_assert(e->code == q);
-	if (e)
+	if (e) {
+		psc_assert(e->code == q);
 		return;
+	}
 
 	e = PSCALLOC(sizeof(*e));
 	e->code = q;
