@@ -47,6 +47,7 @@ sys_strerror(int rc)
 #include "pfl/cdefs.h"
 #include "pfl/err.h"
 #include "pfl/hashtbl.h"
+#include "pfl/str.h"
 
 struct pfl_errno {
 	struct pfl_hashentry	 hentry;
@@ -66,12 +67,13 @@ pfl_register_errno(int code, const char *str)
 	e = psc_hashtbl_search(&pfl_errno_hashtbl, &q);
 	if (e) {
 		psc_assert(e->code == q);
+		psc_assert(strcmp(e->str, str));
 		return;
 	}
 
 	e = PSCALLOC(sizeof(*e));
 	e->code = q;
-	e->str = str;
+	e->str = pfl_strdup(str);
 	psc_hashent_init(&pfl_errno_hashtbl, e);
 	psc_hashtbl_add_item(&pfl_errno_hashtbl, e);
 }
