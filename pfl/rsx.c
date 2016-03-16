@@ -95,8 +95,6 @@ pfl_rsx_waitrep(struct pscrpc_request *rq, int replen, void *mpp)
 	return (0);
 }
 
-#define OBD_TIMEOUT 60
-
 int
 pfl_rsx_timeout(__unusedx void *arg)
 {
@@ -141,7 +139,7 @@ rsx_bulkserver(struct pscrpc_request *rq, int type, int ptl,
 	else
 		rc = pscrpc_start_bulk_transfer(desc);
 	if (rc == 0) {
-		lwi = LWI_TIMEOUT_INTERVAL(OBD_TIMEOUT / 2,
+		lwi = LWI_TIMEOUT_INTERVAL(PSCRPC_OBD_TIMEOUT,
 		    100, pfl_rsx_timeout, desc);
 
 		rc = pscrpc_svr_wait_event(&desc->bd_waitq,
