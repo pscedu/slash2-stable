@@ -26,6 +26,8 @@
 #ifndef _PFL_ERR_H_
 #define _PFL_ERR_H_
 
+#include <string.h>
+
 #define _PFLERR_START			500
 
 #define PFLERR_BADMSG			(_PFLERR_START +  0)
@@ -42,8 +44,14 @@
 #define PFLERR_TIMEDOUT			(_PFLERR_START + 11)
 #define PFLERR_WOULDBLOCK		(_PFLERR_START + 12)
 
-const char *pfl_strerror(int);
+const char *
+	pfl_strerror(int);
 
-#define strerror(rc)			pfl_strerror(rc)
+#ifndef PFL_USE_SYSTEM_STRERROR
+#  define strerror(rc)			pfl_strerror(rc)
+#endif
+
+void	pfl_register_errno(int, const char *);
+void	pfl_errno_init(void);
 
 #endif /* _PFL_ERR_H_ */

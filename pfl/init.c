@@ -36,13 +36,12 @@
 #include "pfl/alloc.h"
 #include "pfl/atomic.h"
 #include "pfl/cdefs.h"
+#include "pfl/err.h"
 #include "pfl/lock.h"
 #include "pfl/log.h"
 #include "pfl/pfl.h"
 #include "pfl/thread.h"
 #include "pfl/time.h"
-
-void pfl_errno_init(void);
 
 psc_spinlock_t				  psc_umask_lock = SPINLOCK_INIT;
 __threadx const struct pfl_callerinfo	*_pfl_callerinfo;
