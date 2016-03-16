@@ -110,8 +110,7 @@ pfl_dump_stack(void)
 	char buf[BUFSIZ];
 
 	snprintf(buf, sizeof(buf),
-	    "{ pstack %d 2>/dev/null || gstack %d 2>/dev/null; "
-	    "  pstack %d 2>/dev/null || gstack %d 2>/dev/null; } | "
+	    "{ pstack %d 2>/dev/null || gstack %d 2>/dev/null; } | "
 	    "{ tools/filter-pstack - 2>/dev/null; cat -; }",
 	    pfl_getsysthrid(), pfl_getsysthrid(), getpid(), getpid());
 	if (system(buf) == -1)
