@@ -139,7 +139,7 @@ rsx_bulkserver(struct pscrpc_request *rq, int type, int ptl,
 	else
 		rc = pscrpc_start_bulk_transfer(desc);
 	if (rc == 0) {
-		lwi = LWI_TIMEOUT_INTERVAL(PSCRPC_OBD_TIMEOUT,
+		lwi = LWI_TIMEOUT_INTERVAL(pfl_rpc_timeout,
 		    100, pfl_rsx_timeout, desc);
 
 		rc = pscrpc_svr_wait_event(&desc->bd_waitq,
