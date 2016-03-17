@@ -36,9 +36,11 @@
 #include "pfl/alloc.h"
 #include "pfl/atomic.h"
 #include "pfl/cdefs.h"
+#include "pfl/err.h"
 #include "pfl/lock.h"
 #include "pfl/log.h"
 #include "pfl/pfl.h"
+#include "pfl/rpc.h"
 #include "pfl/thread.h"
 #include "pfl/time.h"
 
@@ -48,6 +50,7 @@ __threadx int				 _pfl_callerinfo_lvl;
 __static void				*_pfl_tls[PFL_TLSIDX_MAX];
 struct timespec				  pfl_uptime;
 pid_t					  pfl_pid;
+int					  pfl_rpc_timeout = PSCRPC_OBD_TIMEOUT;
 
 pid_t
 pfl_getsysthrid(void)
@@ -109,10 +112,9 @@ pfl_dump_stack(void)
 	char buf[BUFSIZ];
 
 	snprintf(buf, sizeof(buf),
-	    "{ pstack %d 2>/dev/null || gstack %d 2>/dev/null; "
-	    "  pstack %d 2>/dev/null || gstack %d 2>/dev/null; } | "
+	    "{ pstack %d 2>/dev/null || gstack %d 2>/dev/null; } | "
 	    "{ tools/filter-pstack - 2>/dev/null; cat -; }",
-	    pfl_getsysthrid(), pfl_getsysthrid(), getpid(), getpid());
+	    getpid(), getpid());
 	if (system(buf) == -1)
 		warn("%s", buf);
 }
@@ -172,9 +174,10 @@ pfl_init(void)
 	pfl_subsys_register(PSS_RPC, "rpc");
 
 	p = getenv("PSC_DUMPSTACK");
-	if (p && strcmp(p, "0") &&
-	    signal(SIGSEGV, pfl_dump_stack1) == SIG_ERR)
-		psc_fatal("signal");
+	if (p && strcmp(p, "0"))
+		if (signal(SIGSEGV, pfl_dump_stack1) == SIG_ERR ||
+		    signal(SIGFPE, pfl_dump_stack1) == SIG_ERR)
+			psc_fatal("signal");
 	p = getenv("PSC_FORCE_DUMPSTACK");
 	if (p && strcmp(p, "0"))
 		atexit(pfl_dump_stack);
@@ -197,4 +200,6 @@ pfl_init(void)
 		psc_fatal("sigaction");
 
 	_PFL_GETTIMESPEC(CLOCK_MONOTONIC, &pfl_uptime);
+
+	pfl_errno_init();
 }

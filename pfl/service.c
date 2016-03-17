@@ -370,7 +370,7 @@ pscrpc_server_handle_request(struct pscrpc_service *svc,
 	/* Discard requests queued for longer than my timeout.  If the
 	 * client's timeout is similar to mine, she'll be timing out this
 	 * REQ anyway (bug 1502) */
-	if (timediff / 1000000 > PSCRPC_OBD_TIMEOUT) {
+	if (timediff / 1000000 > pfl_rpc_timeout) {
 		CERROR("Dropping timed-out opc %d request from %s"
 		       ": %ld seconds old", request->rq_reqmsg->opc,
 		       libcfs_id2str(request->rq_peer),
@@ -440,7 +440,7 @@ pscrpc_server_handle_request(struct pscrpc_service *svc,
 
 	timediff = cfs_timeval_sub(&work_end, &work_start, NULL);
 
-	if (timediff / 1000000 > PSCRPC_OBD_TIMEOUT)
+	if (timediff / 1000000 > pfl_rpc_timeout)
 		DEBUG_REQ(PLL_ERROR, request,
 		    "timeout, processed in %lds",
 		    cfs_timeval_sub(&work_end, &request->rq_arrival_time,

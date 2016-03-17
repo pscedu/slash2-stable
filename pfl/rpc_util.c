@@ -113,10 +113,10 @@ pscrpc_req_getprids(const struct psc_dynarray *prids,
 }
 
 int
-pflrpc_portable_rc(int rc)
+pflrpc_portable_errno(int error)
 {
-	switch (rc) {
+	switch (error) {
 	case -ETIMEDOUT: return (-PFLERR_TIMEDOUT);
 	}
-	return (rc);
+	return (error);
 }

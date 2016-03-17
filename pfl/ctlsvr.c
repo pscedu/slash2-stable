@@ -239,7 +239,7 @@ psc_ctlrep_getlnetif(int fd, struct psc_ctlmsghdr *mh,
 }
 
 #ifndef PFL_RPC
-int
+__weak int
 psc_ctlrep_getrpcrq(int fd, struct psc_ctlmsghdr *mh,
     __unusedx void *m)
 {
@@ -247,7 +247,7 @@ psc_ctlrep_getrpcrq(int fd, struct psc_ctlmsghdr *mh,
 	    strerror(ENOTSUP)));
 }
 
-int
+__weak int
 psc_ctlrep_getrpcsvc(int fd, struct psc_ctlmsghdr *mh,
     __unusedx void *m)
 {

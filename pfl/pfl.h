@@ -28,6 +28,8 @@
 
 #include "pfl/compat.h"
 
+#include "pfl/err.h"
+
 #if HAVE_PTHREAD_YIELD
 #  include <pthread.h>
 #  define pscthr_yield()	pthread_yield()
@@ -114,6 +116,7 @@ __thread
 int				 _pfl_callerinfo_lvl;
 
 extern pid_t			  pfl_pid;
+extern int			  pfl_rpc_timeout;
 
 #ifdef HAVE_TLS
 # define __callerinfo const struct pfl_callerinfo *pci

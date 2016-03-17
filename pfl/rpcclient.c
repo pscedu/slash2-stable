@@ -127,9 +127,9 @@ pscrpc_prep_req_pool(struct pscrpc_import *imp, uint32_t version,
 	request->rq_reqmsg->version |= version;
 
 	if (imp->imp_server_timeout)
-		request->rq_timeout = PSCRPC_OBD_TIMEOUT / 2;
+		request->rq_timeout = pfl_rpc_timeout / 2;
 	else
-		request->rq_timeout = PSCRPC_OBD_TIMEOUT;
+		request->rq_timeout = pfl_rpc_timeout;
 
 	request->rq_send_state = PSCRPC_IMP_NOOP;
 	request->rq_type = PSCRPC_MSG_REQUEST;
