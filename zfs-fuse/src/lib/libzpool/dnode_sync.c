@@ -53,7 +53,7 @@ dnode_increase_indirection(dnode_t *dn, dmu_tx_t *tx)
 	ASSERT(db != NULL);
 
 	dn->dn_phys->dn_nlevels = new_level;
-	dprintf("os=%p obj=%llu, increase to %d\n", dn->dn_objset,
+	dprintf("os=%p obj=%"PRIu64", increase to %d\n", dn->dn_objset,
 	    dn->dn_object, dn->dn_phys->dn_nlevels);
 
 	/* check for existing blkptrs in the dnode */
@@ -114,7 +114,7 @@ free_blocks(dnode_t *dn, blkptr_t *bp, int num, dmu_tx_t *tx)
 	uint64_t bytesfreed = 0;
 	int i, blocks_freed = 0;
 
-	dprintf("ds=%p obj=%llx num=%d\n", ds, dn->dn_object, num);
+	dprintf("ds=%p obj=%"PRIx64" num=%d\n", ds, dn->dn_object, num);
 
 	for (i = 0; i < num; i++, bp++) {
 		if (BP_IS_HOLE(bp))

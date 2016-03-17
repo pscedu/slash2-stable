@@ -610,7 +610,7 @@ __dprintf(const char *file, const char *func, int line, const char *fmt, ...)
 /*		if (dprintf_find_string("cpu"))
 			(void) printf("%u ", getcpuid());*/
 		if (dprintf_find_string("time"))
-			(void) printf("%llu ", gethrtime());
+			(void) printf("%"PRIu64" ", (uint64_t)gethrtime());
 		if (dprintf_find_string("long"))
 			(void) printf("%s, line %d: ", newfile, line);
 		(void) printf("%s: ", func);
@@ -804,7 +804,7 @@ kernel_init(int mode)
 
 	physmem = sysconf(_SC_PHYS_PAGES);
 
-	dprintf("physmem = %llu pages (%.2f GB)\n", physmem,
+	dprintf("physmem = %"PRIu64" pages (%.2f GB)\n", physmem,
 	    (double)physmem * sysconf(_SC_PAGE_SIZE) / (1ULL << 30));
 
 	uname(&utsname);

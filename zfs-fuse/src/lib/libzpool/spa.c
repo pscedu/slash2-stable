@@ -2941,8 +2941,8 @@ spa_import_rootpool(char *devpath, char *devid)
 	 * Get the boot vdev.
 	 */
 	if ((bvd = vdev_lookup_by_guid(rvd, guid)) == NULL) {
-		cmn_err(CE_NOTE, "Can not find the boot vdev for guid %llu",
-		    (u_longlong_t)guid);
+		cmn_err(CE_NOTE, "Can not find the boot vdev for guid %"PRIu64,
+		    guid);
 		error = ENOENT;
 		goto out;
 	}
@@ -4742,7 +4742,7 @@ spa_async_thread(spa_t *spa)
 		if (new_space != old_space) {
 			spa_history_log_internal(LOG_POOL_VDEV_ONLINE,
 			    spa, NULL,
-			    "pool '%s' size: %llu(+%llu)",
+			    "pool '%s' size: %"PRIu64"(+%"PRIu64")",
 			    spa_name(spa), new_space, new_space - old_space);
 		}
 	}
@@ -5089,7 +5089,7 @@ spa_sync_props(void *arg1, void *arg2, dmu_tx_t *tx)
 		if (spa_version(spa) >= SPA_VERSION_ZPOOL_HISTORY &&
 		    tx->tx_txg != TXG_INITIAL) {
 			spa_history_log_internal(LOG_POOL_PROPSET,
-			    spa, tx, "%s %lld %s",
+			    spa, tx, "%s %"PRId64" %s",
 			    nvpair_name(elem), intval, spa_name(spa));
 		}
 	}

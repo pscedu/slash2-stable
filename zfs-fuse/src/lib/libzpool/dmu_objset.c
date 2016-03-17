@@ -658,7 +658,7 @@ dmu_objset_create_sync(void *arg1, void *arg2, dmu_tx_t *tx)
 	}
 
 	spa_history_log_internal(LOG_DS_CREATE, dd->dd_pool->dp_spa,
-	    tx, "dataset = %llu", dsobj);
+	    tx, "dataset = %"PRIu64, dsobj);
 }
 
 int
@@ -970,7 +970,7 @@ dmu_objset_sync(objset_t *os, zio_t *pio, dmu_tx_t *tx)
 	list_t *newlist = NULL;
 	dbuf_dirty_record_t *dr;
 
-	dprintf_ds(os->os_dsl_dataset, "txg=%llu\n", tx->tx_txg);
+	dprintf_ds(os->os_dsl_dataset, "txg=%"PRIu64"\n", tx->tx_txg);
 
 	ASSERT(dmu_tx_is_syncing(tx));
 	/* XXX the write_done callback should really give us the tx... */

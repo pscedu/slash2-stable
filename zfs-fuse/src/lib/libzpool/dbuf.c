@@ -732,7 +732,7 @@ dbuf_free_range(dnode_t *dn, uint64_t start, uint64_t end, dmu_tx_t *tx)
 		end = dn->dn_maxblkid;
 		last_l1 = end >> epbs;
 	}
-	dprintf_dnode(dn, "start=%llu end=%llu\n", start, end);
+	dprintf_dnode(dn, "start=%"PRIu64" end=%"PRIu64"\n", start, end);
 	mutex_enter(&dn->dn_dbufs_mtx);
 	for (db = list_head(&dn->dn_dbufs); db; db = db_next) {
 		db_next = list_next(&dn->dn_dbufs, db);
@@ -1015,7 +1015,7 @@ dbuf_dirty(dmu_buf_impl_t *db, dmu_tx_t *tx)
 	    os->os_dsl_dataset == NULL || BP_IS_HOLE(os->os_rootbp));
 	ASSERT(db->db.db_size != 0);
 
-	dprintf_dbuf(db, "size=%llx\n", (u_longlong_t)db->db.db_size);
+	dprintf_dbuf(db, "size=%"PRIx64"\n", db->db.db_size);
 
 	if (db->db_blkid != DB_BONUS_BLKID) {
 		/*
@@ -1211,7 +1211,7 @@ dbuf_undirty(dmu_buf_impl_t *db, dmu_tx_t *tx)
 		return (0);
 	}
 
-	dprintf_dbuf(db, "size=%llx\n", (u_longlong_t)db->db.db_size);
+	dprintf_dbuf(db, "size=%"PRIx64"\n", db->db.db_size);
 
 	ASSERT(db->db.db_size != 0);
 

@@ -500,7 +500,7 @@ zap_lockdir(objset_t *os, uint64_t obj, dmu_tx_t *tx,
 	    zap->zap_m.zap_num_entries == zap->zap_m.zap_num_chunks) {
 		uint64_t newsz = db->db_size + SPA_MINBLOCKSIZE;
 		if (newsz > MZAP_MAX_BLKSZ) {
-			dprintf("upgrading obj %llu: num_entries=%u\n",
+			dprintf("upgrading obj %"PRIu64": num_entries=%u\n",
 			    obj, zap->zap_m.zap_num_entries);
 			*zapp = zap;
 			return (mzap_upgrade(zapp, tx, 0));
@@ -546,7 +546,7 @@ mzap_upgrade(zap_t **zapp, dmu_tx_t *tx, zap_flags_t flags)
 		}
 	}
 
-	dprintf("upgrading obj=%llu with %u chunks\n",
+	dprintf("upgrading obj=%"PRIu64" with %u chunks\n",
 	    zap->zap_object, nchunks);
 	/* XXX destroy the avl later, so we can use the stored hash value */
 	mze_destroy(zap);
@@ -558,7 +558,7 @@ mzap_upgrade(zap_t **zapp, dmu_tx_t *tx, zap_flags_t flags)
 		zap_name_t *zn;
 		if (mze->mze_name[0] == 0)
 			continue;
-		dprintf("adding %s=%llu\n",
+		dprintf("adding %s=%"PRIu64"\n",
 		    mze->mze_name, mze->mze_value);
 		zn = zap_name_alloc(zap, mze->mze_name, MT_EXACT);
 		err = fzap_add_cd(zn, 8, 1, &mze->mze_value, mze->mze_cd, tx);
@@ -1049,7 +1049,7 @@ zap_update(objset_t *os, uint64_t zapobj, const char *name,
 		zap = zn->zn_zap;	/* fzap_update() may change zap */
 	} else if (integer_size != 8 || num_integers != 1 ||
 	    strlen(name) >= MZAP_NAME_LEN) {
-		dprintf("upgrading obj %llu: intsz=%u numint=%llu name=%s\n",
+		dprintf("upgrading obj %"PRIu64": intsz=%u numint=%"PRIu64" name=%s\n",
 		    zapobj, integer_size, num_integers, name);
 		err = mzap_upgrade(&zn->zn_zap, tx, 0);
 		if (err == 0)

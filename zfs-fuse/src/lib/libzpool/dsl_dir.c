@@ -346,7 +346,7 @@ dsl_dir_open_spa(spa_t *spa, const char *name, void *tag,
 		ASSERT(next[0] != '\0');
 		if (next[0] == '@')
 			break;
-		dprintf("looking up %s in obj%lld\n",
+		dprintf("looking up %s in obj%"PRId64"\n",
 		    buf, dd->dd_phys->dd_child_dir_zapobj);
 
 		err = zap_lookup(dp->dp_meta_objset,
@@ -590,7 +590,7 @@ dsl_dir_sync(dsl_dir_t *dd, dmu_tx_t *tx)
 
 	mutex_enter(&dd->dd_lock);
 	ASSERT3U(dd->dd_tempreserved[tx->tx_txg&TXG_MASK], ==, 0);
-	dprintf_dd(dd, "txg=%llu towrite=%lluK\n", tx->tx_txg,
+	dprintf_dd(dd, "txg=%"PRIu64" towrite=%"PRIu64"\n", tx->tx_txg,
 	    dd->dd_space_towrite[tx->tx_txg&TXG_MASK] / 1024);
 	dd->dd_space_towrite[tx->tx_txg&TXG_MASK] = 0;
 	mutex_exit(&dd->dd_lock);
@@ -772,8 +772,8 @@ dsl_dir_tempreserve_impl(dsl_dir_t *dd, uint64_t asize, boolean_t netfree,
 		if (est_inflight > 0 || used_on_disk < quota ||
 		    (retval == ENOSPC && used_on_disk < quota + deferred))
 			retval = ERESTART;
-		dprintf_dd(dd, "failing: used=%lluK inflight = %lluK "
-		    "quota=%lluK tr=%lluK err=%d\n",
+		dprintf_dd(dd, "failing: used=%"PRIu64"K inflight = %"PRIu64"K "
+		    "quota=%"PRIu64"K tr=%"PRIu64"K err=%d\n",
 		    used_on_disk>>10, est_inflight>>10,
 		    quota>>10, asize>>10, retval);
 		mutex_exit(&dd->dd_lock);
@@ -1061,7 +1061,7 @@ dsl_dir_set_quota_sync(void *arg1, void *arg2, dmu_tx_t *tx)
 	mutex_exit(&dd->dd_lock);
 
 	spa_history_log_internal(LOG_DS_QUOTA, dd->dd_pool->dp_spa,
-	    tx, "%lld dataset = %llu ",
+	    tx, "%"PRId64" dataset = %"PRIu64" ",
 	    (longlong_t)effective_value, dd->dd_phys->dd_head_dataset_obj);
 }
 
@@ -1178,7 +1178,7 @@ dsl_dir_set_reservation_sync(void *arg1, void *arg2, dmu_tx_t *tx)
 	mutex_exit(&dd->dd_lock);
 
 	spa_history_log_internal(LOG_DS_RESERVATION, dd->dd_pool->dp_spa,
-	    tx, "%lld dataset = %llu",
+	    tx, "%"PRId64" dataset = %"PRIu64,
 	    (longlong_t)effective_value, dd->dd_phys->dd_head_dataset_obj);
 }
 
@@ -1343,7 +1343,7 @@ dsl_dir_rename_sync(void *arg1, void *arg2, dmu_tx_t *tx)
 	ASSERT3U(err, ==, 0);
 
 	spa_history_log_internal(LOG_DS_RENAME, dd->dd_pool->dp_spa,
-	    tx, "dataset = %llu", dd->dd_phys->dd_head_dataset_obj);
+	    tx, "dataset = %"PRIu64, dd->dd_phys->dd_head_dataset_obj);
 }
 
 int

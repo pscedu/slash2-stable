@@ -100,7 +100,7 @@ space_map_add(space_map_t *sm, uint64_t start, uint64_t size)
 
 	if (ss != NULL && ss->ss_start <= start && ss->ss_end >= end) {
 		zfs_panic_recover("zfs: allocating allocated segment"
-		    "(offset=%llu size=%llu)\n",
+		    "(offset=%"PRIu64" size=%"PRIu64")\n",
 		    (longlong_t)start, (longlong_t)size);
 		return;
 	}
@@ -166,7 +166,7 @@ space_map_remove(space_map_t *sm, uint64_t start, uint64_t size)
 	/* Make sure we completely overlap with someone */
 	if (ss == NULL) {
 		zfs_panic_recover("zfs: freeing free segment "
-		    "(offset=%llu size=%llu)",
+		    "(offset=%"PRIu64" size=%"PRIu64")",
 		    (longlong_t)start, (longlong_t)size);
 		return;
 	}
@@ -306,7 +306,7 @@ space_map_load(space_map_t *sm, space_map_ops_t *ops, uint8_t maptype,
 		VERIFY(P2PHASE(size, sizeof (uint64_t)) == 0);
 		VERIFY(size != 0);
 
-		dprintf("object=%llu  offset=%llx  size=%llx\n",
+		dprintf("object=%"PRIu64"  offset=%"PRIx64"  size=%"PRIx64"\n",
 		    smo->smo_object, offset, size);
 
 		mutex_exit(sm->sm_lock);
@@ -414,7 +414,7 @@ space_map_sync(space_map_t *sm, uint8_t maptype,
 	if (sm->sm_space == 0)
 		return;
 
-	dprintf("object %4llu, txg %llu, pass %d, %c, count %lu, space %llx\n",
+	dprintf("object %4"PRIu64", txg %"PRIu64", pass %d, %c, count %lu, space %"PRIx64"\n",
 	    smo->smo_object, dmu_tx_get_txg(tx), spa_sync_pass(spa),
 	    maptype == SM_ALLOC ? 'A' : 'F', avl_numnodes(&sm->sm_root),
 	    sm->sm_space);

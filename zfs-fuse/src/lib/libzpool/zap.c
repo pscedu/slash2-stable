@@ -196,7 +196,7 @@ zap_table_grow(zap_t *zap, zap_table_phys_t *tbl,
 
 	tbl->zt_blks_copied++;
 
-	dprintf("copied block %llu of %llu\n",
+	dprintf("copied block %"PRIu64" of %"PRIu64"\n",
 	    tbl->zt_blks_copied, tbl->zt_numblks);
 
 	if (tbl->zt_blks_copied == tbl->zt_numblks) {
@@ -209,8 +209,8 @@ zap_table_grow(zap_t *zap, zap_table_phys_t *tbl,
 		tbl->zt_nextblk = 0;
 		tbl->zt_blks_copied = 0;
 
-		dprintf("finished; numblocks now %llu (%lluk entries)\n",
-		    tbl->zt_numblks, 1<<(tbl->zt_shift-10));
+		dprintf("finished; numblocks now %"PRIu64" (%"PRIu64"k entries)\n",
+		    tbl->zt_numblks, ((uint64_t)1)<<(tbl->zt_shift-10));
 	}
 
 	return (0);
@@ -228,7 +228,7 @@ zap_table_store(zap_t *zap, zap_table_phys_t *tbl, uint64_t idx, uint64_t val,
 	ASSERT(RW_LOCK_HELD(&zap->zap_rwlock));
 	ASSERT(tbl->zt_blk != 0);
 
-	dprintf("storing %llx at index %llx\n", val, idx);
+	dprintf("storing %"PRIx64" at index %"PRIx64"\n", val, idx);
 
 	blk = idx >> (bs-3);
 	off = idx & ((1<<(bs-3))-1);
@@ -1029,7 +1029,7 @@ zap_add_int(objset_t *os, uint64_t obj, uint64_t value, dmu_tx_t *tx)
 {
 	char name[20];
 
-	(void) snprintf(name, sizeof (name), "%llx", (longlong_t)value);
+	(void) snprintf(name, sizeof (name), "%"PRIx64, value);
 	return (zap_add(os, obj, name, 8, 1, &value, tx));
 }
 
@@ -1038,7 +1038,7 @@ zap_remove_int(objset_t *os, uint64_t obj, uint64_t value, dmu_tx_t *tx)
 {
 	char name[20];
 
-	(void) snprintf(name, sizeof (name), "%llx", (longlong_t)value);
+	(void) snprintf(name, sizeof (name), "%"PRIx64, value);
 	return (zap_remove(os, obj, name, tx));
 }
 
@@ -1047,7 +1047,7 @@ zap_lookup_int(objset_t *os, uint64_t obj, uint64_t value)
 {
 	char name[20];
 
-	(void) snprintf(name, sizeof (name), "%llx", (longlong_t)value);
+	(void) snprintf(name, sizeof (name), "%"PRIx64, value);
 	return (zap_lookup(os, obj, name, 8, 1, &value));
 }
 
@@ -1057,7 +1057,7 @@ zap_add_int_key(objset_t *os, uint64_t obj,
 {
 	char name[20];
 
-	(void) snprintf(name, sizeof (name), "%llx", (longlong_t)key);
+	(void) snprintf(name, sizeof (name), "%"PRIx64, key);
 	return (zap_add(os, obj, name, 8, 1, &value, tx));
 }
 
@@ -1066,7 +1066,7 @@ zap_lookup_int_key(objset_t *os, uint64_t obj, uint64_t key, uint64_t *valuep)
 {
 	char name[20];
 
-	(void) snprintf(name, sizeof (name), "%llx", (longlong_t)key);
+	(void) snprintf(name, sizeof (name), "%"PRIx64, key);
 	return (zap_lookup(os, obj, name, 8, 1, valuep));
 }
 
@@ -1097,7 +1097,7 @@ zap_increment_int(objset_t *os, uint64_t obj, uint64_t key, int64_t delta,
 {
 	char name[20];
 
-	(void) snprintf(name, sizeof (name), "%llx", (longlong_t)key);
+	(void) snprintf(name, sizeof (name), "%"PRIx64"", key);
 	return (zap_increment(os, obj, name, delta, tx));
 }
 

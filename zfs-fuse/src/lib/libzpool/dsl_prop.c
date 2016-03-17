@@ -422,11 +422,11 @@ dsl_prop_check_prediction(dsl_dir_t *dd, dsl_prop_setarg_t *psa)
 	    setpoint, B_FALSE);
 	if (err == 0 && intval != psa->psa_effective_value) {
 		cmn_err(CE_PANIC, "%s property, source: %x, "
-		    "predicted effective value: %llu, "
-		    "actual effective value: %llu (setpoint: %s)",
+		    "predicted effective value: %"PRIu64" "
+		    "actual effective value: %"PRIu64" (setpoint: %s)",
 		    psa->psa_name, psa->psa_source,
-		    (unsigned long long)psa->psa_effective_value,
-		    (unsigned long long)intval, setpoint);
+		    psa->psa_effective_value,
+		    intval, setpoint);
 	}
 }
 #endif
@@ -690,7 +690,7 @@ dsl_prop_set_sync(void *arg1, void *arg2, dmu_tx_t *tx)
 		}
 
 		(void) snprintf(valbuf, sizeof (valbuf),
-		    "%lld", (longlong_t)intval);
+		    "%"PRId64, intval);
 		valstr = valbuf;
 	} else {
 		if (source == ZPROP_SRC_LOCAL) {
@@ -770,7 +770,7 @@ dsl_dir_prop_set_uint64_sync(dsl_dir_t *dd, const char *name, uint64_t val,
 	dsl_prop_changed_notify(dd->dd_pool, dd->dd_object, name, val, TRUE);
 
 	spa_history_log_internal(LOG_DS_PROPSET, dd->dd_pool->dp_spa, tx, 
-	    "%s=%llu dataset = %llu", name, (u_longlong_t)val,
+	    "%s=%"PRIu64" dataset = %"PRIu64, name, (u_longlong_t)val,
 	    dd->dd_phys->dd_head_dataset_obj);
 }
 

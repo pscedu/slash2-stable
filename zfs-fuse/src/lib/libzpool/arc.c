@@ -415,6 +415,8 @@ static uint64_t		arc_loaned_bytes;
 static uint64_t		arc_meta_used;
 static uint64_t		arc_meta_limit;
 static uint64_t		arc_meta_max = 0;
+static uint64_t		arc_meta_eviction1 = 0;
+static uint64_t		arc_meta_eviction2 = 0;
 
 #define L2ARC_IS_VALID_COMPRESS(_c_) \
     ((_c_) == ZIO_COMPRESS_LZ4 || (_c_) == ZIO_COMPRESS_EMPTY)
@@ -1709,8 +1711,8 @@ arc_evict(arc_state_t *state, uint64_t spa, int64_t bytes, boolean_t recycle,
 	mutex_exit(&state->arcs_mtx);
 
 	if (bytes_evicted < bytes)
-		dprintf("only evicted %lld bytes from %x",
-		    (longlong_t)bytes_evicted, state);
+		dprintf("only evicted %"PRIu64" bytes from %"PRIx64,
+		    bytes_evicted, (uint64_t)state);
 
 	if (skipped)
 		ARCSTAT_INCR(arcstat_evict_skip, skipped);
@@ -1813,8 +1815,8 @@ top:
 	}
 
 	if (bytes_deleted < bytes)
-		dprintf("only deleted %lld bytes from %p",
-		    (longlong_t)bytes_deleted, state);
+		dprintf("only deleted %"PRId64" bytes from %p",
+		    bytes_deleted, state);
 }
 
 static void
@@ -2209,8 +2211,22 @@ arc_adapt(int bytes, arc_state_t *state)
 static int
 arc_evict_needed(arc_buf_contents_t type)
 {
-	if (type == ARC_BUFC_METADATA && arc_meta_used >= arc_meta_limit)
-		return (1);
+	uint64_t delta;
+
+	if (type == ARC_BUFC_METADATA) {
+		if (arc_meta_used >= arc_meta_limit) {
+			arc_meta_eviction1++;
+			return (1);
+		}
+		/*
+ 		 * Metadata allocation must succeed or we die.
+ 		 */
+		delta = arc_meta_limit - arc_meta_used;
+		if (delta >= (arc_c_max - arc_c) / 4) {
+			arc_meta_eviction2++;
+			return (1);
+		}
+	}
 
 #if 0
 	/*
@@ -3453,8 +3469,8 @@ arc_tempreserve_space(uint64_t reserve, uint64_t txg)
 
 	if (reserve + arc_tempreserve + anon_size > arc_c / 2 &&
 	    anon_size > arc_c / 4) {
-		dprintf("failing, arc_tempreserve=%lluK anon_meta=%lluK "
-		    "anon_data=%lluK tempreserve=%lluK arc_c=%lluK\n",
+		dprintf("failing, arc_tempreserve=%luK anon_meta=%luK "
+		    "anon_data=%luK tempreserve=%luK arc_c=%luK\n",
 		    arc_tempreserve>>10,
 		    arc_anon->arcs_lsize[ARC_BUFC_METADATA]>>10,
 		    arc_anon->arcs_lsize[ARC_BUFC_DATA]>>10,
