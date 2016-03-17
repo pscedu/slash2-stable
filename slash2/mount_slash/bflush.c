@@ -269,11 +269,6 @@ msl_ric_bflush_cb(struct pscrpc_request *rq,
 	struct bmpc_ioreq *r;
 	int i, rc;
 
-	RPCI_LOCK(rpci);
-	rpci->rpci_infl_rpcs--;
-	RPCI_WAKE(rpci);
-	RPCI_ULOCK(rpci);
-
 	SL_GET_RQ_STATUS_TYPE(csvc, rq, struct srm_io_rep, rc);
 
 	psclog_diag("callback to write RPC bwc=%p ios=%d infl=%d rc=%d",
@@ -311,8 +306,6 @@ bmap_flush_create_rpc(struct bmpc_write_coalescer *bwc,
 
 	m = libsl_ios2resm(bmap_2_ios(b));
 	rpci = res2rpci(m->resm_res);
-
-	msl_resm_throttle_wait(m);
 
 	rc = SL_RSX_NEWREQ(csvc, SRMT_WRITE, rq, mq, mp);
 	if (rc)
@@ -372,11 +365,6 @@ bmap_flush_create_rpc(struct bmpc_write_coalescer *bwc,
 	return (0);
 
  out:
-	RPCI_LOCK(rpci);
-	rpci->rpci_infl_rpcs--;
-	RPCI_WAKE(rpci);
-	RPCI_ULOCK(rpci);
-
 	if (rq)
 		pscrpc_req_finished(rq);
 	return (rc);
@@ -776,45 +764,6 @@ bmap_flush_trycoalesce(const struct psc_dynarray *biorqs, int *indexp)
 	*indexp += idx;
 
 	return (bwc);
-}
-
-int
-_msl_resm_throttle(struct sl_resm *m, int block)
-{
-	struct timespec ts0, ts1, tsd;
-	struct resprof_cli_info *rpci;
-	int account = 0;
-
-	rpci = res2rpci(m->resm_res);
-	/*
-	 * XXX use resm multiwait?
-	 */
-	RPCI_LOCK(rpci);
-	if (!block && rpci->rpci_infl_rpcs >=
-	    msl_ios_max_inflight_rpcs) {
-		RPCI_ULOCK(rpci);
-		return (-EAGAIN);
-	}
-
-	while (rpci->rpci_infl_rpcs >= msl_ios_max_inflight_rpcs) {
-		if (!account) {
-			PFL_GETTIMESPEC(&ts0);
-			account = 1;
-		}
-		RPCI_WAIT(rpci);
-		RPCI_LOCK(rpci);
-	}
-	rpci->rpci_infl_rpcs++;
-	if (rpci->rpci_infl_rpcs > rpci->rpci_max_infl_rpcs)
-		rpci->rpci_max_infl_rpcs = rpci->rpci_infl_rpcs;
-	RPCI_ULOCK(rpci);
-	if (account) {
-		PFL_GETTIMESPEC(&ts1);
-		timespecsub(&ts1, &ts0, &tsd);
-		OPSTAT_ADD("msl.flush-wait-usecs",
-		    tsd.tv_sec * 1000000 + tsd.tv_nsec / 1000);
-	}
-	return (0);
 }
 
 /*

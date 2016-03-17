@@ -366,6 +366,7 @@ _msl_biorq_release(const struct pfl_callerinfo *pci,
 struct msl_fhent *
 msl_fhent_new(struct pscfs_req *pfr, struct fidc_membh *f)
 {
+	struct pscfs_creds pcr;
 	struct msl_fhent *mfh;
 
 	mfh = psc_pool_get(msl_mfh_pool);
@@ -374,6 +375,7 @@ msl_fhent_new(struct pscfs_req *pfr, struct fidc_membh *f)
 	mfh->mfh_fcmh = f;
 	mfh->mfh_pid = pscfs_getclientctx(pfr)->pfcc_pid;
 	mfh->mfh_sid = getsid(mfh->mfh_pid);
+	mfh->mfh_accessing_euid = slc_getfscreds(pfr, &pcr)->pcr_uid;
 	INIT_SPINLOCK(&mfh->mfh_lock);
 	INIT_PSC_LISTENTRY(&mfh->mfh_lentry);
 
@@ -671,7 +673,7 @@ msl_complete_fsrq(struct msl_fsrqinfo *q, size_t len,
 	}
 
 	f = mfh->mfh_fcmh;
-	DEBUG_FCMH(q->mfsrq_err ? PLL_NOTICE : PLL_DIAG, f, 
+	DEBUG_FCMH(q->mfsrq_err ? PLL_NOTICE : PLL_DIAG, f,
 	    "reply: off=%"PRId64" size=%zu rw=%s "
 	    "rc=%d", q->mfsrq_off, q->mfsrq_len,
 	    q->mfsrq_flags & MFSRQ_READ ?
@@ -833,9 +835,7 @@ msl_read_cleanup(struct pscrpc_request *rq, int rc,
 	struct slashrpc_cservice *csvc = args->pointer_arg[MSL_CBARG_CSVC];
 	struct psc_dynarray *a = args->pointer_arg[MSL_CBARG_BMPCE];
 	struct bmpc_ioreq *r = args->pointer_arg[MSL_CBARG_BIORQ];
-	struct sl_resm *m = args->pointer_arg[MSL_CBARG_RESM];
 	struct bmap_pagecache_entry *e;
-	struct resprof_cli_info *rpci;
 	struct srm_io_req *mq;
 	struct bmap *b;
 	int i;
@@ -877,12 +877,6 @@ msl_read_cleanup(struct pscrpc_request *rq, int rc,
 
 	msl_biorq_release(r);
 
-	rpci = res2rpci(m->resm_res);
-	RPCI_LOCK(rpci);
-	rpci->rpci_infl_rpcs--;
-	RPCI_WAKE(rpci);
-	RPCI_ULOCK(rpci);
-
 	/*
 	 * Free the dynarray which was allocated in
 	 * msl_read_rpc_launch().
@@ -921,8 +915,6 @@ msl_dio_cleanup(struct pscrpc_request *rq, int rc,
     struct pscrpc_async_args *args)
 {
 	struct bmpc_ioreq *r = args->pointer_arg[MSL_CBARG_BIORQ];
-	struct sl_resm *m = args->pointer_arg[MSL_CBARG_RESM];
-	struct resprof_cli_info *rpci;
 	struct msl_fsrqinfo *q;
 	struct srm_io_req *mq;
 	int op;
@@ -956,12 +948,6 @@ msl_dio_cleanup(struct pscrpc_request *rq, int rc,
 
 	//msl_update_iocounters(slc_iorpc_iostats, rw, bwc->bwc_size);
 
-	rpci = res2rpci(m->resm_res);
-	RPCI_LOCK(rpci);
-	rpci->rpci_infl_rpcs--;
-	RPCI_WAKE(rpci);
-	RPCI_ULOCK(rpci);
-
 	return (rc);
 }
 
@@ -987,7 +973,6 @@ msl_pages_dio_getput(struct bmpc_ioreq *r)
 	struct slashrpc_cservice *csvc = NULL;
 	struct pscrpc_request_set *nbs = NULL;
 	struct pscrpc_request *rq = NULL;
-	struct resprof_cli_info *rpci;
 	struct bmap_cli_info *bci;
 	struct msl_fsrqinfo *q;
 	struct srm_io_req *mq;
@@ -995,7 +980,7 @@ msl_pages_dio_getput(struct bmpc_ioreq *r)
 	struct iovec *iovs;
 	struct sl_resm *m;
 	struct bmap *b;
-	uint64_t *v8, throttled = 0;
+	uint64_t *v8;
 
 	psc_assert(r->biorq_bmap);
 
@@ -1024,9 +1009,6 @@ msl_pages_dio_getput(struct bmpc_ioreq *r)
 	rc = msl_bmap_to_csvc(b, op == SRMT_WRITE, &m, &csvc);
 	if (rc)
 		PFL_GOTOERR(out, rc);
-
-	rpci = res2rpci(m->resm_res);
-
   retry:
 	nbs = pscrpc_prep_set();
 
@@ -1037,8 +1019,6 @@ msl_pages_dio_getput(struct bmpc_ioreq *r)
 	for (i = 0, off = 0; i < n; i++, off += len) {
 		len = MIN(LNET_MTU, size - off);
 
-		msl_resm_throttle_wait(m);
-		throttled = 1;
 		if (op == SRMT_WRITE)
 			rc = SL_RSX_NEWREQ(csvc, SRMT_WRITE, rq, mq,
 			    mp);
@@ -1072,17 +1052,10 @@ msl_pages_dio_getput(struct bmpc_ioreq *r)
 
 		rc = SL_NBRQSETX_ADD(nbs, csvc, rq);
 		if (rc) {
-
-			RPCI_LOCK(rpci);
-			rpci->rpci_infl_rpcs--;
-			RPCI_WAKE(rpci);
-			RPCI_ULOCK(rpci);
-
 			msl_biorq_release(r);
 			OPSTAT_INCR("msl.dio-add-req-fail");
 			PFL_GOTOERR(out, rc);
 		}
-		throttled = 0;
 		rq = NULL;
 	}
 
@@ -1131,13 +1104,6 @@ msl_pages_dio_getput(struct bmpc_ioreq *r)
 	}
 
  out:
-	if (throttled) {
-		rpci = res2rpci(m->resm_res);
-		RPCI_LOCK(rpci);
-		rpci->rpci_infl_rpcs--;
-		RPCI_WAKE(rpci);
-		RPCI_ULOCK(rpci);
-	}
 	if (rq)
 		pscrpc_req_finished(rq);
 
@@ -1212,13 +1178,12 @@ msl_read_rpc_launch(struct bmpc_ioreq *r, struct psc_dynarray *bmpces,
 	struct pscrpc_request *rq = NULL;
 	struct bmap_pagecache_entry *e;
 	struct psc_dynarray *a = NULL;
-	struct resprof_cli_info *rpci;
 	struct srm_io_req *mq;
 	struct srm_io_rep *mp;
 	struct iovec *iovs;
 	struct sl_resm *m;
 	uint32_t off = 0;
-	int rc = 0, throttled = 0, i;
+	int rc = 0, i;
 
 	a = PSCALLOC(sizeof(*a));
 	psc_dynarray_init(a);
@@ -1265,14 +1230,11 @@ msl_read_rpc_launch(struct bmpc_ioreq *r, struct psc_dynarray *bmpces,
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
-	if (r->biorq_flags & BIORQ_READAHEAD) {
-		rc = msl_resm_throttle_nowait(m);
-		if (rc)
-			PFL_GOTOERR(out, rc);
-	} else
-		msl_resm_throttle_wait(m);
+	if (r->biorq_flags & BIORQ_READAHEAD)
+		rc = msl_resm_throttle_yield(m);
+	if (rc)
+		PFL_GOTOERR(out, rc);
 
-	throttled = 1;
 	rc = SL_RSX_NEWREQ(csvc, SRMT_READ, rq, mq, mp);
 	if (rc)
 		PFL_GOTOERR(out, rc);
@@ -1302,7 +1264,6 @@ msl_read_rpc_launch(struct bmpc_ioreq *r, struct psc_dynarray *bmpces,
 	rq->rq_async_args.pointer_arg[MSL_CBARG_RESM] = m;
 	rq->rq_interpret_reply = msl_read_cb;
 
-
 	biorq_incref(r);
 
 	rc = SL_NBRQSET_ADD(csvc, rq);
@@ -1317,14 +1278,6 @@ msl_read_rpc_launch(struct bmpc_ioreq *r, struct psc_dynarray *bmpces,
 	return (0);
 
  out:
-
-	if (throttled) {
-		rpci = res2rpci(m->resm_res);
-		RPCI_LOCK(rpci);
-		rpci->rpci_infl_rpcs--;
-		RPCI_WAKE(rpci);
-		RPCI_ULOCK(rpci);
-	}
 
 	if (rq) {
 		DEBUG_REQ(PLL_ERROR, rq, "req failed rc=%d", rc);

@@ -41,7 +41,6 @@
 #include "ctl.h"
 #include "ctl_cli.h"
 #include "ctlsvr.h"
-#include "ctlsvr_cli.h"
 #include "fidc_cli.h"
 #include "mount_slash.h"
 #include "pathnames.h"
@@ -786,7 +785,7 @@ mslctl_resfield_mtime(int fd, struct psc_ctlmsghdr *mh,
 }
 
 int
-mslctl_resfieldi_infl_rpcs(int fd, struct psc_ctlmsghdr *mh,
+mslctl_resfield_infl_rpcs(int fd, struct psc_ctlmsghdr *mh,
     struct psc_ctlmsg_param *pcp, char **levels, int nlevels, int set,
     struct sl_resource *r)
 {
@@ -803,7 +802,7 @@ mslctl_resfieldi_infl_rpcs(int fd, struct psc_ctlmsghdr *mh,
 }
 
 int
-mslctl_resfieldi_max_infl_rpcs(int fd, struct psc_ctlmsghdr *mh,
+mslctl_resfield_max_infl_rpcs(int fd, struct psc_ctlmsghdr *mh,
     struct psc_ctlmsg_param *pcp, char **levels, int nlevels, int set,
     struct sl_resource *r)
 {
@@ -829,14 +828,16 @@ mslctl_resfieldi_max_infl_rpcs(int fd, struct psc_ctlmsghdr *mh,
 
 const struct slctl_res_field slctl_resmds_fields[] = {
 	{ "connected",		mslctl_resfield_connected },
+	{ "infl_rpcs",		mslctl_resfield_infl_rpcs },
+	{ "max_infl_rpcs",	mslctl_resfield_max_infl_rpcs },
 	{ "mtime",		mslctl_resfield_mtime },
 	{ NULL, NULL }
 };
 
 const struct slctl_res_field slctl_resios_fields[] = {
 	{ "connected",		mslctl_resfield_connected },
-	{ "infl_rpcs",		mslctl_resfieldi_infl_rpcs },
-	{ "max_infl_rpcs",	mslctl_resfieldi_max_infl_rpcs },
+	{ "infl_rpcs",		mslctl_resfield_infl_rpcs },
+	{ "max_infl_rpcs",	mslctl_resfield_max_infl_rpcs },
 	{ "mtime",		mslctl_resfield_mtime },
 	{ NULL, NULL }
 };
@@ -897,8 +898,8 @@ msctlthr_spawn(void)
 	psc_ctlparam_register_var("sys.bmap_max_cache",
 	    PFLCTL_PARAMT_INT, PFLCTL_PARAMF_RDWR, &slc_bmap_max_cache);
 	/* XXX: add max_fs_iosz */
-	psc_ctlparam_register_var("sys.datadir", PFLCTL_PARAMT_STR,
-	    0, (char *)sl_datadir);
+	psc_ctlparam_register_var("sys.datadir", PFLCTL_PARAMT_STR, 0,
+	    (char *)sl_datadir);
 	psc_ctlparam_register_var("sys.mountpoint", PFLCTL_PARAMT_STR,
 	    0, mountpoint);
 	psc_ctlparam_register_var("sys.offline_nretries",
@@ -921,12 +922,18 @@ msctlthr_spawn(void)
 	psc_ctlparam_register_var("sys.root_squash", PFLCTL_PARAMT_INT,
 	    PFLCTL_PARAMF_RDWR, &msl_root_squash);
 
+	psc_ctlparam_register_var("sys.rpc_timeout", PFLCTL_PARAMT_INT, 
+	    PFLCTL_PARAMF_RDWR, &pfl_rpc_timeout);
+
 	psc_ctlparam_register_var("sys.statfs_pref_ios_only",
 	    PFLCTL_PARAMT_INT, PFLCTL_PARAMF_RDWR,
 	    &msl_statfs_pref_ios_only);
 	psc_ctlparam_register_var("sys.ios_max_inflight_rpcs",
 	    PFLCTL_PARAMT_INT, PFLCTL_PARAMF_RDWR,
 	    &msl_ios_max_inflight_rpcs);
+	psc_ctlparam_register_var("sys.mds_max_inflight_rpcs",
+	    PFLCTL_PARAMT_INT, PFLCTL_PARAMF_RDWR,
+	    &msl_mds_max_inflight_rpcs);
 
 	thr = pscthr_init(MSTHRT_CTL, msctlthr_main, NULL,
 	    sizeof(struct psc_ctlthr), "msctlthr0");

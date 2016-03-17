@@ -281,12 +281,17 @@ struct sl_expcli_ops {
 	} while (0)
 
 #define SL_NBRQSETX_ADD(set, csvc, rq)					\
-	_PFL_RVSTART {							\
+	({								\
+		int _rc;						\
+									\
 		if (slrpc_ops.slrpc_req_out)				\
 			slrpc_ops.slrpc_req_out((csvc), (rq));		\
 		authbuf_sign((rq), PSCRPC_MSG_REQUEST);			\
-		pscrpc_nbreqset_add((set), (rq));			\
-	} _PFL_RVEND
+		_rc = pscrpc_nbreqset_add((set), (rq));			\
+		if (_rc && slrpc_ops.slrpc_req_out_failed)		\
+			slrpc_ops.slrpc_req_out_failed((csvc), (rq));	\
+		_rc;							\
+	})
 
 #define SL_NBRQSET_ADD(csvc, rq)					\
 	SL_NBRQSETX_ADD(sl_nbrqset, (csvc), (rq))
@@ -374,6 +379,7 @@ struct slrpc_ops {
 	int	 (*slrpc_newreq)(struct slashrpc_cservice *, int, struct pscrpc_request **, int, int, void *);
 	void	 (*slrpc_req_in)(struct pscrpc_request *);
 	void	 (*slrpc_req_out)(struct slashrpc_cservice *, struct pscrpc_request *);
+	void	 (*slrpc_req_out_failed)(struct slashrpc_cservice *, struct pscrpc_request *);
 	int	 (*slrpc_allocrep)(struct pscrpc_request *, void *, int, void *, int, int);
 	void	 (*slrpc_rep_in)(struct slashrpc_cservice *, struct pscrpc_request *);
 	void	 (*slrpc_rep_out)(struct pscrpc_request *);
@@ -402,7 +408,7 @@ struct psc_thread
 void	 slconnthr_watch(struct psc_thread *, struct slashrpc_cservice *,
 	    int, int (*)(void *), void *);
 
-void	 slrpc_initcli(int size);
+void	 slrpc_initcli(void);
 void	 slrpc_destroy(void);
 
 int	 slrpc_handle_connect(struct pscrpc_request *, uint64_t,

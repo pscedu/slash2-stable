@@ -35,6 +35,7 @@
 #include "ctlsvr.h"
 #include "mdsio.h"
 #include "mdslog.h"
+#include "pathnames.h"
 #include "repl_mds.h"
 #include "slashd.h"
 #include "slconfig.h"
@@ -489,6 +490,8 @@ slmctlthr_main(const char *fn)
 	    slctlparam_uptime_get, NULL);
 	psc_ctlparam_register_simple("sys.version",
 	    slctlparam_version_get, NULL);
+	psc_ctlparam_register_var("sys.datadir", PFLCTL_PARAMT_STR, 0,
+	    (char *)sl_datadir);
 
 	psc_ctlparam_register_simple("sys.next_fid",
 	    slmctlparam_nextfid_get, slmctlparam_nextfid_set);
@@ -506,6 +509,9 @@ slmctlthr_main(const char *fn)
 	    PFLCTL_PARAMT_UINT64, 0, &reclaim_prg.cur_batchno);
 	psc_ctlparam_register_var("sys.reclaim_cursor",
 	    PFLCTL_PARAMT_UINT64, 0, &slm_reclaim_proc_batchno);
+	psc_ctlparam_register_var("sys.rpc_timeout",
+	    PFLCTL_PARAMT_INT, PFLCTL_PARAMF_RDWR, &pfl_rpc_timeout);
+
 	psc_ctlparam_register_var("sys.bmaxseqno", PFLCTL_PARAMT_UINT64,
 	    0, &slm_bmap_leases.btt_maxseq);
 	psc_ctlparam_register_var("sys.bminseqno", PFLCTL_PARAMT_UINT64,

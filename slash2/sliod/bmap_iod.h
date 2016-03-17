@@ -102,7 +102,6 @@ struct bmap_iod_info {
 
 /* sliod-specific bcm_flags */
 #define BMAPF_CRUD_INFLIGHT	(_BMAPF_SHIFT << 0)	/* CRC update RPC inflight */
-#define BMAPF_RELEASING		(_BMAPF_SHIFT << 1)	/* marked for release by reaper */
 
 #define bii_2_flags(b)		bii_2_bmap(b)->bcm_flags
 
@@ -143,6 +142,9 @@ extern struct psc_poolmaster	 bmap_crcupd_poolmaster;
 extern struct psc_poolmgr	*bmap_crcupd_pool;
 
 extern struct psc_listcache	 bcr_ready;
+
+extern psc_spinlock_t		 sli_release_bmap_lock;
+extern struct psc_waitq		 sli_release_bmap_waitq;
 
 static __inline struct bmap *
 bii_2_bmap(struct bmap_iod_info *bii)

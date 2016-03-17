@@ -41,6 +41,7 @@
 #include "ctl_iod.h"
 #include "ctlsvr.h"
 #include "fidc_iod.h"
+#include "pathnames.h"
 #include "repl_iod.h"
 #include "rpc_iod.h"
 #include "sliod.h"
@@ -624,17 +625,23 @@ slictlthr_main(const char *fn)
 	psc_ctlparam_register_var("sys.nbrq_outstanding",
 	    PFLCTL_PARAMT_INT, 0, &sl_nbrqset->set_remaining);
 	psc_ctlparam_register("sys.resources", slctlparam_resources);
+
+	psc_ctlparam_register_var("sys.rpc_timeout", PFLCTL_PARAMT_INT, 
+	    PFLCTL_PARAMF_RDWR, &pfl_rpc_timeout);
+
 	psc_ctlparam_register_simple("sys.uptime",
 	    slctlparam_uptime_get, NULL);
 	psc_ctlparam_register_simple("sys.version",
 	    slctlparam_version_get, NULL);
+	psc_ctlparam_register_var("sys.datadir", PFLCTL_PARAMT_STR, 0,
+	    (char *)sl_datadir);
 
 	psc_ctlparam_register_var("sys.bminseqno", PFLCTL_PARAMT_UINT64,
 	    0, &sli_bminseq.bim_minseq);
 	psc_ctlparam_register_var("sys.reclaim_batchno",
-	    PFLCTL_PARAMT_UINT64, 0, &current_reclaim_batchno);
+	    PFLCTL_PARAMT_UINT64, 0, &sli_current_reclaim_batchno);
 	psc_ctlparam_register_var("sys.reclaim_xid",
-	    PFLCTL_PARAMT_UINT64, 0, &current_reclaim_xid);
+	    PFLCTL_PARAMT_UINT64, 0, &sli_current_reclaim_xid);
 	psc_ctlparam_register_var("sys.selftestrc", PFLCTL_PARAMT_INT,
 	    0, &sli_selftest_rc);
 

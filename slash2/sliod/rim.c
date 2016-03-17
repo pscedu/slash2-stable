@@ -48,8 +48,8 @@
 #include "sliod.h"
 #include "slvr.h"
 
-uint64_t	current_reclaim_xid;
-uint64_t	current_reclaim_batchno;
+uint64_t	sli_current_reclaim_xid;
+uint64_t	sli_current_reclaim_batchno;
 
 /*
  * Handle SRMT_BATCH_RQ request from the MDS.
@@ -161,12 +161,12 @@ sli_rim_handle_reclaim(struct pscrpc_request *rq)
 
 	xid = mq->xid;
 	batchno = mq->batchno;
-	if (xid > current_reclaim_xid)
-		current_reclaim_xid = xid;
-	if (batchno > current_reclaim_batchno) {
+	if (xid > sli_current_reclaim_xid)
+		sli_current_reclaim_xid = xid;
+	if (batchno > sli_current_reclaim_batchno) {
 		psclog_info("reclaim batchno advances from %"PRId64" to "
-		    "%"PRId64, current_reclaim_batchno, batchno);
-		current_reclaim_batchno = batchno;
+		    "%"PRId64, sli_current_reclaim_batchno, batchno);
+		sli_current_reclaim_batchno = batchno;
 	}
 
 	PFL_GETTIMEVAL(&t0);
@@ -258,21 +258,20 @@ sli_rim_handle_bmap_ptrunc(struct pscrpc_request *rq)
 
 	fd = fcmh_2_fd(f);
 	size = SLASH_BMAP_SIZE * mq->bmapno + mq->offset;
-	mp->rc = ftruncate(fd, size);
-	if (!mp->rc)
-		OPSTAT_INCR("ftruncate-success");
-	else {
-		psclogs_errorx(SLISS_INFO, "Truncate: fg="SLPRI_FG","
-		    "rc = %d\n", SLPRI_FG_ARGS(fgp), mp->rc);
+	if (ftruncate(fd, size) == -1) {
+		mp->rc = pflrpc_portable_errno(-errno);
+		DEBUG_FCMH(PLL_ERROR, f, "truncate failed; rc=%d",
+		    mp->rc);
 		OPSTAT_INCR("ftruncate-failure");
-	}
+	} else
+		OPSTAT_INCR("ftruncate");
 
 	slvr_crc_update(f, mq->bmapno, mq->offset);
 
 	fcmh_op_done(f);
 #if 0
-	mp->rc = sli_repl_addwk(SLI_REPLWKOP_PTRUNC, IOS_ID_ANY, &mq->fg,
-	    mq->bmapno, mq->bgen, mq->offset, NULL, NULL);
+	mp->rc = sli_repl_addwk(SLI_REPLWKOP_PTRUNC, IOS_ID_ANY,
+	    &mq->fg, mq->bmapno, mq->bgen, mq->offset, NULL, NULL);
 #endif
 	return (0);
 }

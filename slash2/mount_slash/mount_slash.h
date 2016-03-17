@@ -150,6 +150,7 @@ struct msl_fhent {
 	int				 mfh_refcnt;
 	pid_t				 mfh_pid;
 	pid_t				 mfh_sid;
+	uid_t				 mfh_accessing_euid;
 
 	int				 mfh_retries;
 	int				 mfh_oflags;	/* open(2) flags */
@@ -317,8 +318,9 @@ int	 msl_try_get_replica_res(struct bmap *, int, int,
 struct msl_fhent *
 	 msl_fhent_new(struct pscfs_req *, struct fidc_membh *);
 
-#define msl_resm_throttle_wait(m)	_msl_resm_throttle((m), 1)
-#define msl_resm_throttle_nowait(m)	_msl_resm_throttle((m), 0)
+void	msl_resm_throttle_wake(struct sl_resm *);
+void	msl_resm_throttle_wait(struct sl_resm *);
+int	msl_resm_throttle_yield(struct sl_resm *);
 
 int	 _msl_resm_throttle(struct sl_resm *, int);
 
@@ -328,6 +330,8 @@ void	 msreadaheadthr_spawn(void);
 void	 msl_readahead_svc_destroy(void);
 
 void	 slc_getuprog(pid_t, char *, size_t);
+struct pscfs_creds *
+	 slc_getfscreds(struct pscfs_req *, struct pscfs_creds *);
 void	 slc_setprefios(sl_ios_id_t);
 int	 msl_pages_fetch(struct bmpc_ioreq *);
 
@@ -375,6 +379,7 @@ extern struct psc_poolmgr	*msl_mfh_pool;
 extern int			 msl_acl;
 extern int			 msl_direct_io;
 extern int			 msl_ios_max_inflight_rpcs;
+extern int			 msl_mds_max_inflight_rpcs;
 extern int			 msl_max_nretries;
 extern int			 msl_predio_issue_maxpages;
 extern int			 msl_predio_issue_minpages;

@@ -162,11 +162,12 @@ int				 msl_direct_io = 1;
 int				 msl_root_squash;
 uint64_t			 msl_pagecache_maxsize;
 int				 msl_statfs_pref_ios_only;
-int				 msl_ios_max_inflight_rpcs = RESM_MAX_OUTSTANDING_RPCS;
+struct resprof_cli_info		 msl_statfs_aggr_rpci;
+
+int				 msl_ios_max_inflight_rpcs = RESM_MAX_IOS_OUTSTANDING_RPCS;
+int				 msl_mds_max_inflight_rpcs = RESM_MAX_MDS_OUTSTANDING_RPCS;
 
 int				 msl_newent_inherit_groups = 1;
-
-struct resprof_cli_info		 msl_statfs_aggr_rpci;
 
 struct sl_resource *
 msl_get_pref_ios(void)
@@ -393,6 +394,7 @@ mslfsop_create(struct pscfs_req *pfr, pscfs_inum_t pinum,
 		PFL_GOTOERR(out, rc);
 
  retry:
+
 	MSL_RMC_NEWREQ(pfr, p, csvc, SRMT_CREATE, rq, mq, mp, rc);
 	if (rc)
 		PFL_GOTOERR(out, rc);
@@ -1217,7 +1219,6 @@ msl_unlink(struct pscfs_req *pfr, pscfs_inum_t pinum, const char *name,
 		PFL_GOTOERR(out, rc);
 
  retry:
-
 	if (isfile)
 		MSL_RMC_NEWREQ(pfr, p, csvc, SRMT_UNLINK, rq, mq, mp, rc);
 	else
@@ -1261,7 +1262,6 @@ msl_unlink(struct pscfs_req *pfr, pscfs_inum_t pinum, const char *name,
 	    "fid="SLPRI_FID" valid=%d name='%s' isfile=%d rc=%d",
 	    pinum, mp ? mp->cattr.sst_fid : FID_ANY,
 	    mp ? mp->valid : -1, name, isfile, rc);
-
 
 	if (isfile)
 		pscfs_reply_unlink(pfr, rc);
@@ -2270,9 +2270,7 @@ mslfsop_release(struct pscfs_req *pfr, void *data)
 {
 	struct msl_fhent *mfh = data;
 	struct fcmh_cli_info *fci;
-	struct pfl_callerinfo pci;
 	struct fidc_membh *f;
-	uid_t euid = -1;
 
 	f = mfh->mfh_fcmh;
 	fci = fcmh_2_fci(f);
@@ -2286,14 +2284,6 @@ mslfsop_release(struct pscfs_req *pfr, void *data)
 	fci->fci_etime.tv_sec--;
 	FCMH_ULOCK(f);
 	psc_waitq_wakeone(&msl_flush_attrq);
-
-	/* Stash process euid if it is needed for the activity log. */
-	pci.pci_subsys = SLCSS_INFO;
-	if (psc_log_shouldlog(&pci, PLL_INFO)) {
-		struct pscfs_creds pcr;
-
-		euid = slc_getfscreds(pfr, &pcr)->pcr_uid;
-	}
 
 	if (fcmh_isdir(f)) {
 		pscfs_reply_releasedir(pfr, 0);
@@ -2310,8 +2300,8 @@ mslfsop_release(struct pscfs_req *pfr, void *data)
 			    "otime="PSCPRI_TIMESPEC" "
 			    "rd=%"PSCPRIdOFFT" wr=%"PSCPRIdOFFT" prog=%s",
 			    fcmh_2_fid(f),
-			    euid, f->fcmh_sstb.sst_uid,
-			    f->fcmh_sstb.sst_gid,
+			    mfh->mfh_accessing_euid,
+			    f->fcmh_sstb.sst_uid, f->fcmh_sstb.sst_gid,
 			    f->fcmh_sstb.sst_size,
 			    PFLPRI_PTIMESPEC_ARGS(&mfh->mfh_open_atime),
 			    PFLPRI_PTIMESPEC_ARGS(&f->fcmh_sstb.sst_mtim),
@@ -2865,8 +2855,9 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 	}
 
 	/*
-	 * XXX: While the Linux kernel should synchronize a read with a truncate,
-	 * we probably should synchronize with any read-ahead launched ourselves.
+	 * XXX: While the Linux kernel should synchronize a read with a
+	 * truncate, we probably should synchronize with any read-ahead
+	 * launched ourselves.
 	 */
 	if (to_set & PSCFS_SETATTRF_DATASIZE) {
 		struct bmap *b;
@@ -3890,7 +3881,7 @@ msl_init(void)
 	msl_iorq_pool = psc_poolmaster_getmgr(&msl_iorq_poolmaster);
 
 	/* Start up service threads. */
-	slrpc_initcli(64);
+	slrpc_initcli();
 	slc_rpc_initsvc();
 
 	sl_nbrqset = pscrpc_prep_set();
@@ -3973,6 +3964,7 @@ enum {
 	LOOKUP_TYPE_BOOL,
 	LOOKUP_TYPE_STR,
 	LOOKUP_TYPE_UINT64,
+	LOOKUP_TYPE_INT,
 };
 
 int
@@ -3988,13 +3980,17 @@ msl_opt_lookup(const char *opt)
 		{ "datadir",		LOOKUP_TYPE_STR,	&sl_datadir },
 		{ "mapfile",		LOOKUP_TYPE_BOOL,	&msl_use_mapfile },
 		{ "pagecache_maxsize",	LOOKUP_TYPE_UINT64,	&msl_pagecache_maxsize },
+		{ "predio_issue_maxpages",
+					LOOKUP_TYPE_INT,	&msl_predio_issue_maxpages},
 		{ "root_squash",	LOOKUP_TYPE_BOOL,	&msl_root_squash },
 		{ "slcfg",		LOOKUP_TYPE_STR,	&msl_cfgfn },
 		{ NULL,			0,			NULL }
 	};
 	const char *val;
 	size_t optlen;
+	char *endp;
 	ssize_t sz;
+	long l;
 
 	val = strchr(opt, '=');
 	if (val) {
@@ -4019,6 +4015,16 @@ msl_opt_lookup(const char *opt)
 					    strerror(-sz), val);
 				*(uint64_t *)io->ptr = sz;
 				break;
+			case LOOKUP_TYPE_INT:
+				l = strtol(val, &endp, 10);
+				if (l < 0 || l > INT_MAX ||
+				    endp == val || *endp)
+					errx(1, "%s: invalid format: "
+					    "%s", io->name, val);
+				*(int *)io->ptr = l;
+				break;
+			default:
+				psc_fatalx("invalid type");
 			}
 			return (1);
 		}

@@ -252,7 +252,6 @@ msl_bmap_modeset(struct bmap *b, enum rw rw, int flags)
 		rq->rq_async_args.pointer_arg[MSL_BMODECHG_CBARG_COMPL] =
 		    &compl;
 	}
-
 	rq->rq_async_args.pointer_arg[MSL_BMODECHG_CBARG_BMAP] = b;
 	rq->rq_async_args.pointer_arg[MSL_BMODECHG_CBARG_CSVC] = csvc;
 	rq->rq_interpret_reply = msl_rmc_bmodechg_cb;
@@ -436,6 +435,7 @@ msl_bmap_lease_tryreassign(struct bmap *b)
 
 	BMAP_ULOCK(b);
 
+	psc_assert(fcmh_2_fci(b->bcm_fcmh)->fci_resm == msl_rmc_resm);
 	rc = slc_rmc_getcsvc1(&csvc, fcmh_2_fci(b->bcm_fcmh)->fci_resm);
 	if (rc)
 		goto out;
@@ -458,6 +458,7 @@ msl_bmap_lease_tryreassign(struct bmap *b)
  out:
 	DEBUG_BMAP(rc ? PLL_ERROR : PLL_DIAG, b,
 	    "lease reassign req (rc=%d)", rc);
+
 	if (rc) {
 		BMAP_LOCK(b);
 		b->bcm_flags &= ~BMAPF_REASSIGNREQ;
@@ -787,7 +788,7 @@ msl_bmap_retrieve(struct bmap *b, int flags)
 		goto retry;
 	}
 	if (rc == -SLERR_BMAP_IN_PTRUNC)
-		rc = EAGAIN;
+		rc = -EAGAIN;
 
 	if (rc)
 		DEBUG_BMAP(PLL_WARN, b, "unable to retrieve bmap rc=%d",
@@ -874,8 +875,6 @@ msl_rmc_bmaprelease_cb(struct pscrpc_request *rq,
     struct pscrpc_async_args *args)
 {
 	struct slashrpc_cservice *csvc = args->pointer_arg[MSL_CBARG_CSVC];
-	struct sl_resm *resm = args->pointer_arg[MSL_CBARG_RESM];
-	struct resprof_cli_info *rpci;
 	struct srm_bmap_release_req *mq;
 	uint32_t i;
 	int rc;
@@ -891,14 +890,6 @@ msl_rmc_bmaprelease_cb(struct pscrpc_request *rq,
 		    mq->sbd[i].sbd_bmapno, mq->sbd[i].sbd_key,
 		    mq->sbd[i].sbd_seq, rc);
 
-	if (resm != msl_rmc_resm) {
-		rpci = res2rpci(resm->resm_res);
-		RPCI_LOCK(rpci);
-		rpci->rpci_infl_rpcs--;
-		RPCI_WAKE(rpci);
-		RPCI_ULOCK(rpci);
-	}
-
 	sl_csvc_decref(csvc);
 	return (rc);
 }
@@ -911,8 +902,7 @@ msl_bmap_release(struct sl_resm *resm)
 	struct srm_bmap_release_req *mq;
 	struct srm_bmap_release_rep *mp;
 	struct resm_cli_info *rmci;
-	int rc, throttled = 0;
-	struct resprof_cli_info *rpci;
+	int rc;
 
 	rmci = resm2rmci(resm);
 
@@ -926,11 +916,6 @@ msl_bmap_release(struct sl_resm *resm)
 	}
 
 	psc_assert(rmci->rmci_bmaprls.nbmaps);
-
-	if (resm != msl_rmc_resm) {
-		throttled = 1;
-		msl_resm_throttle_wait(resm);
-	}
 	rc = SL_RSX_NEWREQ(csvc, SRMT_RELEASEBMAP, rq, mq, mp);
 	if (rc)
 		goto out;
@@ -939,19 +924,11 @@ msl_bmap_release(struct sl_resm *resm)
 
 	rq->rq_interpret_reply = msl_rmc_bmaprelease_cb;
 	rq->rq_async_args.pointer_arg[MSL_CBARG_CSVC] = csvc;
-	rq->rq_async_args.pointer_arg[MSL_CBARG_RESM] = resm;
 	rc = SL_NBRQSET_ADD(csvc, rq);
 
  out:
 	rmci->rmci_bmaprls.nbmaps = 0;
 	if (rc) {
-		if (throttled) {
-			rpci = res2rpci(resm->resm_res);
-			RPCI_LOCK(rpci);
-			rpci->rpci_infl_rpcs--;
-			RPCI_WAKE(rpci);
-			RPCI_ULOCK(rpci);
-		}
 		/*
 		 * At this point the bmaps have already been purged from
 		 * our cache.  If the MDS RLS request fails then the MDS

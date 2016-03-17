@@ -49,6 +49,9 @@ struct psc_lockedlist	 sli_bii_rls;
 struct psc_poolmaster    bmap_rls_poolmaster;
 struct psc_poolmgr	*bmap_rls_pool;
 
+psc_spinlock_t		 sli_release_bmap_lock = SPINLOCK_INIT;
+struct psc_waitq	 sli_release_bmap_waitq = PSC_WAITQ_INIT;
+
 void
 bim_init(void)
 {
@@ -267,13 +270,12 @@ sli_bmap_sync(struct bmap *b)
 void
 slibmaprlsthr_process_releases(struct psc_dynarray *a)
 {
-	int rc, new;
+	int i, rc, new;
 	struct bmap_iod_rls *brls, *tmpbrls;
 	struct bmap_iod_info *bii;
 	struct srt_bmapdesc *sbd;
 	struct fidc_membh *f;
 	struct bmap *b;
-	int32_t i;
 
 	i = 0;
 	while ((brls = pll_get(&sli_bii_rls))) {
@@ -315,20 +317,11 @@ slibmaprlsthr_process_releases(struct psc_dynarray *a)
 			}
 		}
 		if (new) {
-			/*
-			 * Reaper thread has marked this bmap for
-			 * release so do a no-op.
-			 */
-			if (b->bcm_flags & BMAPF_RELEASING) {
-				psc_pool_return(bmap_rls_pool, brls);
-			} else {
+			DEBUG_BMAP(PLL_DIAG, b, "brls=%p "
+			    "seq=%"PRId64" key=%"PRId64,
+			    brls, sbd->sbd_seq, sbd->sbd_key);
 
-				DEBUG_BMAP(PLL_DIAG, b, "brls=%p "
-				    "seq=%"PRId64" key=%"PRId64,
-				    brls, sbd->sbd_seq, sbd->sbd_key);
-
-				pll_add(&bii->bii_rls, brls);
-			}
+			pll_add(&bii->bii_rls, brls);
 		} else
 			psc_pool_return(bmap_rls_pool, brls);
 
@@ -371,7 +364,7 @@ slibmaprlsthr_main(struct psc_thread *thr)
 	struct slashrpc_cservice *csvc;
 	struct bmap_iod_rls *brls;
 	struct bmap *b;
-	int nrls, rc, i;
+	int nrls, rc, i, skip;
 
 	psc_dynarray_ensurelen(&a, MAX_BMAP_RELEASE);
 
@@ -379,19 +372,27 @@ slibmaprlsthr_main(struct psc_thread *thr)
 
 		slibmaprlsthr_process_releases(&a);
 
-		nrls = 0;
+		skip = nrls = 0;
 		LIST_CACHE_LOCK(&sli_bmap_releaseq);
 		lc_peekheadwait(&sli_bmap_releaseq);
 		LIST_CACHE_FOREACH_SAFE(bii, tmp, &sli_bmap_releaseq) {
 
 			b = bii_2_bmap(bii);
-			if (!BMAP_TRYLOCK(b))
+			if (!BMAP_TRYLOCK(b)) {
+				skip = 1;
 				continue;
-
+			}
+			if (b->bcm_flags &BMAPF_TOFREE) {
+				DEBUG_BMAP(PLL_DIAG, b,
+				    "skip due to freeing");
+				BMAP_ULOCK(b);
+				continue;
+			}
 			if (psc_atomic32_read(&b->bcm_opcnt) > 1) {
 				DEBUG_BMAP(PLL_DIAG, b,
 				    "skip due to refcnt");
 				BMAP_ULOCK(b);
+				skip = 1;
 				continue;
 			}
 			i = pll_nitems(&bii->bii_rls);
@@ -406,9 +407,7 @@ slibmaprlsthr_main(struct psc_thread *thr)
 					break;
 			}
 			if (!pll_nitems(&bii->bii_rls)) {
-				b->bcm_flags |= BMAPF_RELEASING;
-				/* XXX locking violation */
-				lc_remove(&sli_bmap_releaseq, bii);
+				b->bcm_flags |= BMAPF_TOFREE;
 				psc_dynarray_add(&a, b);
 			}
 			BMAP_ULOCK(b);
@@ -419,14 +418,25 @@ slibmaprlsthr_main(struct psc_thread *thr)
 		LIST_CACHE_ULOCK(&sli_bmap_releaseq);
 
 		DYNARRAY_FOREACH(b, i, &a) {
+			bii = bmap_2_bii(b);
+			lc_remove(&sli_bmap_releaseq, bii);
 			bmap_op_done_type(b, BMAP_OPCNT_REAPER);
 		}
 
 		psc_dynarray_reset(&a);
 
-		if (!nrls)
+		if (!nrls) {
+			if (skip) {
+				sleep(1);
+				continue;
+			}
+			spinlock(&sli_release_bmap_lock);
+			psc_waitq_wait(&sli_release_bmap_waitq,
+			    &sli_release_bmap_lock);
+			freelock(&sli_release_bmap_lock);
 			continue;
-
+		}
+			
 		OPSTAT_INCR("bmap-release");
 
 		brr.nbmaps = nrls;
@@ -468,6 +478,8 @@ void
 slibmaprlsthr_spawn(void)
 {
 	int i;
+
+	psc_waitq_init(&sli_release_bmap_waitq);
 
 	lc_reginit(&sli_bmap_releaseq, struct bmap_iod_info, bii_lentry,
 	    "breleaseq");
