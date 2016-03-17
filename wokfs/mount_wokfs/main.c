@@ -114,6 +114,15 @@ mod_load(const char *path, const char *opts, char *errbuf,
 	wm->wm_module.pf_private = wm;
 	pflfs_module_init(&wm->wm_module, opts);
 	rc = loadf(&wm->wm_module);
+
+	/*
+	 * XXX XXX XXX
+	 * This is a complete hack but this flush somehow avoids a bunch
+	 * of zeroes from ending up in the log...
+	 * XXX XXX XXX
+	 */
+	fflush(stderr);
+
 	if (rc) {
 		wm->wm_module.pf_handle_destroy = NULL;
 		pflfs_module_destroy(&wm->wm_module);
@@ -162,6 +171,8 @@ main(int argc, char *argv[])
 	pscfs_addarg(&args, "");		/* progname/argv[0] */
 	pscfs_addarg(&args, "-o");
 	pscfs_addarg(&args, STD_MOUNT_OPTIONS);
+
+	setenv("LD_DYNAMIC_WEAK", "1", 1);
 
 	p = getenv("CTL_SOCK_FILE");
 	if (p)
