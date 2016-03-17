@@ -540,27 +540,27 @@ pfl_vbitmap_getbinstring(const struct psc_vbitmap *vb)
 char *
 pfl_vbitmap_getabbrbinstring(const struct psc_vbitmap *vb)
 {
-	int i, runlen = 0, n, thisval, lastval = -1;
+	int i, runlen = 0, n, thisval, lastval = *vb->vb_start & 1;
 	unsigned char *p;
 	char *str, *t;
 	ptrdiff_t len;
 
 	len = psc_vbitmap_getsize(vb) + 1;
 	str = PSCALLOC(len);
-	for (p = vb->vb_start, t = str; p < vb->vb_end; p++)
+	for (p = vb->vb_start, t = str; p < vb->vb_end; p++) {
 		if ((*p == 0 || *p == 0xff) &&
 		    (*p & lastval) == lastval) {
 			runlen += NBBY;
 			continue;
 		}
 		for (i = 0; i < NBBY; i++) {
-			runlen++;
 			thisval = (*p >> i) & 1;
 			if (thisval != lastval) {
-				*t++ = thisval ? '1' : '0';
-				if (runlen > 9) {
-					n = snprintf(t, len - (t - str), ":%d,",
-					    runlen);
+				*t++ = lastval ? '1' : '0';
+				lastval = thisval;
+				if (runlen > 3) {
+					n = snprintf(t, len - (t - str),
+					    ":%d,", runlen);
 					psc_assert(n != -1);
 					t += n;
 				}
@@ -568,9 +568,11 @@ pfl_vbitmap_getabbrbinstring(const struct psc_vbitmap *vb)
 				if (t - str >= len)
 					goto done;
 			}
+			runlen++;
 		}
+	}
 	if (runlen) {
-		*t++ = thisval ? '1' : '0';
+		*t++ = lastval ? '1' : '0';
 		n = snprintf(t, len - (t - str), ":%d,", runlen);
 		psc_assert(n != -1);
 		t += n;

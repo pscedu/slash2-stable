@@ -55,6 +55,25 @@ const char *progname;
 		PSCFREE(_want_str);					\
 	} while (0)
 
+#define ENSURE_ABBR(vb, fmt, ...)					\
+	do {								\
+		char *_got_str, *_want_str, *_p;			\
+		int _rc;						\
+									\
+		_rc = asprintf(&_want_str, fmt, ##__VA_ARGS__);		\
+		if (_rc == -1)						\
+			psc_fatal("asprintf");				\
+		for (_p = _want_str; *_p; _p++)				\
+			if (*_p == ' ')					\
+				*_p = '1';				\
+		_got_str = pfl_vbitmap_getabbrbinstring(vb);		\
+		if (strcmp(_got_str, _want_str))			\
+		    psc_fatalx("test failed; got=%s expected=%s",	\
+			_got_str, _want_str);				\
+		PSCFREE(_got_str);					\
+		PSCFREE(_want_str);					\
+	} while (0)
+
 #define CHECK_RANGE(vb, val, off, len)					\
 	do {								\
 		psc_assert(pfl_vbitmap_israngeset((vb), (val), (off),	\
@@ -251,6 +270,17 @@ main(int argc, char *argv[])
 	vb = psc_vbitmap_new(8200);
 	psc_assert(pfl_vbitmap_isempty(vb));
 	CHECK_RANGE(vb, 0, 8, 8192);
+	psc_vbitmap_free(vb);
+
+	vb = psc_vbitmap_new(16);
+	ENSURE_ABBR(vb, "0:8,00000000");
+	psc_vbitmap_free(vb);
+
+	vb = psc_vbitmap_new(40);
+	psc_vbitmap_setval_range(vb, 0, 10, 0);
+	psc_vbitmap_setval_range(vb, 10, 10, 1);
+	ENSURE(vb, "0000000000111111111100000000000000000000");
+	ENSURE_ABBR(vb, "0:10,1:10,0:12,00000000");
 	psc_vbitmap_free(vb);
 
 	vb = psc_vbitmap_new(16);
