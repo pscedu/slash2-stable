@@ -1,3 +1,8 @@
+03/16/2016
+----------
+
+All client RPCs are throttled. Fix a MDS crash, adjust timeout for bulk RPC, etc.
+
 03/14/2016
 ----------
 
