@@ -430,10 +430,13 @@ slibmaprlsthr_main(struct psc_thread *thr)
 				sleep(1);
 				continue;
 			}
+			sleep(1);
+#if 0
 			spinlock(&sli_release_bmap_lock);
 			psc_waitq_wait(&sli_release_bmap_waitq,
 			    &sli_release_bmap_lock);
 			freelock(&sli_release_bmap_lock);
+#endif
 			continue;
 		}
 			
