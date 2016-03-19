@@ -368,7 +368,7 @@ _psclogv(const struct pfl_callerinfo *pci, int level, int options,
 		FMTSTRCASE('T', "s", pfl_subsys_name(pci->pci_subsys))
 		FMTSTRCASE('t', "d", pci->pci_subsys)
 		FMTSTRCASE('U', "d", pflog_get_fsctx_uid(thr))
-		FMTSTRCASE('u', "lu", tv.tv_usec)
+		FMTSTRCASE('u', "lu", tv.tv_usec*100)
 	);
 
 	len = strlen(buf);
