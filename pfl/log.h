@@ -165,15 +165,20 @@ struct psclog_data {
  * To compile some logging statements out, add the following line
  * to mk/local.mk:
  *
- *	DEFINES+=       -DPSCLOG_LEVEL=PLL_INFO
+ *	DEFINES+=       -DPFLOG_FROM_LEVEL=PLL_INFO
  *
  * This would compile any logging statements higher than PLL_INFO out.
  */
-#ifndef PSCLOG_LEVEL
-#  define PSCLOG_LEVEL			PNLOGLEVELS
+#ifdef PSCLOG_LEVEL
+#  warn "PSCLOG_LEVEL is deprecated; use PFLOG_FROM_LEVEL"
+#  define PFLOG_FROM_LEVEL PSCLOG_LEVEL
 #endif
 
-#if PSCLOG_LEVEL < PLL_TRACE
+#ifndef PFLOG_FROM_LEVEL
+#  define PFLOG_FROM_LEVEL		PNLOGLEVELS
+#endif
+
+#if PFLOG_FROM_LEVEL < PLL_TRACE
 #  undef psclog_trace
 #  undef psclogs_trace
 #  undef psclogv_trace
@@ -185,7 +190,7 @@ struct psclog_data {
 #  define psclogsv_trace(fmt, ap)	do { } while (0)
 #endif
 
-#if PSCLOG_LEVEL < PLL_VDEBUG
+#if PFLOG_FROM_LEVEL < PLL_VDEBUG
 #  undef psclog_vdebug
 #  undef psclogs_vdebug
 #  undef psclogv_vdebug
@@ -197,7 +202,7 @@ struct psclog_data {
 #  define psclogsv_vdebug(fmt, ap)	do { } while (0)
 #endif
 
-#if PSCLOG_LEVEL < PLL_DEBUG
+#if PFLOG_FROM_LEVEL < PLL_DEBUG
 #  undef psclog_debug
 #  undef psclogs_debug
 #  undef psclogv_debug
@@ -207,6 +212,18 @@ struct psclog_data {
 #  define psclogs_debug(ss, fmt, ...)	do { } while (0)
 #  define psclogv_debug(fmt, ap)	do { } while (0)
 #  define psclogsv_debug(fmt, ap)	do { } while (0)
+#endif
+
+#if PFLOG_FROM_LEVEL < PLL_DIAG
+#  undef psclog_diag
+#  undef psclogs_diag
+#  undef psclogv_diag
+#  undef psclogsv_diag
+
+#  define psclog_diag(fmt, ...)		do { } while (0)
+#  define psclogs_diag(ss, fmt, ...)	do { } while (0)
+#  define psclogv_diag(fmt, ap)		do { } while (0)
+#  define psclogsv_diag(fmt, ap)	do { } while (0)
 #endif
 
 struct pfl_logpoint {
@@ -222,7 +239,7 @@ struct pfl_logpoint {
 		int _rc0 = 0;						\
 									\
 		/* check global logging level */			\
-		if ((lvl) > PSCLOG_LEVEL)				\
+		if ((lvl) > PFLOG_FROM_LEVEL)				\
 			;						\
 									\
 		/* check thread logging level */			\
