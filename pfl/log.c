@@ -61,7 +61,7 @@
 #include "pfl/time.h"
 
 #ifndef PSC_LOG_FMT
-#define PSC_LOG_FMT "[@%s.%06u %n:%I:%T %B %F %l] "
+#define PSC_LOG_FMT "[@%s.%06u00 %n:%I:%T %B %F %l] "
 #endif
 
 const char			*psc_logfmt = PSC_LOG_FMT;
@@ -368,7 +368,7 @@ _psclogv(const struct pfl_callerinfo *pci, int level, int options,
 		FMTSTRCASE('T', "s", pfl_subsys_name(pci->pci_subsys))
 		FMTSTRCASE('t', "d", pci->pci_subsys)
 		FMTSTRCASE('U', "d", pflog_get_fsctx_uid(thr))
-		FMTSTRCASE('u', "lu", tv.tv_usec*100)
+		FMTSTRCASE('u', "lu", tv.tv_usec)
 	);
 
 	len = strlen(buf);
