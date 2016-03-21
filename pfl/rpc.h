@@ -776,21 +776,20 @@ pscrpc_wake_client_req(struct pscrpc_request *req)
  * @lck: optional spinlock used for @wq.
  */
 
-#define PSCRPC_SVR_TIMEOUT	60
-#define PSCRPC_SVR_SHORT_TIMEO	1
+#define PSCRPC_SVR_SHORT_WAIT	1
 #define _pscrpc_server_wait_event(wq, cond, info, ret, excl, lck, mtx)	\
 	do {								\
 		time_t _now	  = time(NULL);				\
 		time_t _then	  = _now;				\
 		time_t _timeout	  = (info)->lwi_timeout ?		\
-			(info)->lwi_timeout : PSCRPC_SVR_TIMEOUT;	\
+			(info)->lwi_timeout : PSCRPC_TIMEOUT;		\
 		struct timespec _abstime = { 0, 0 };			\
 									\
 		(ret) = 0;						\
 									\
 		while (!(cond)) {					\
 			_abstime.tv_sec = _now +			\
-			    PSCRPC_SVR_SHORT_TIMEO;			\
+			    PSCRPC_SVR_SHORT_WAIT;			\
 			_abstime.tv_nsec = 0;				\
 			/*						\
 			 * Don't wake up periodically unless there is	\
