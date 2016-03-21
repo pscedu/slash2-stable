@@ -84,11 +84,11 @@ struct psc_dynarray;
 #define PSCNET_CLIENT			0x0f
 #define PSCRPC_SVR_PID			54321
 
-#ifndef PSCRPC_OBD_TIMEOUT
+#ifndef PSCRPC_TIMEOUT
 #ifdef NAMESPACE_EXPERIMENTAL
-#define PSCRPC_OBD_TIMEOUT		3600
+#define PSCRPC_TIMEOUT			3600
 #else
-#define PSCRPC_OBD_TIMEOUT		60
+#define PSCRPC_TIMEOUT			60
 #endif
 #endif
 

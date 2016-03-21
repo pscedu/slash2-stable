@@ -50,7 +50,7 @@ __threadx int				 _pfl_callerinfo_lvl;
 __static void				*_pfl_tls[PFL_TLSIDX_MAX];
 struct timespec				  pfl_uptime;
 pid_t					  pfl_pid;
-int					  pfl_rpc_timeout = PSCRPC_OBD_TIMEOUT;
+int					  pfl_rpc_timeout = PSCRPC_TIMEOUT;
 
 pid_t
 pfl_getsysthrid(void)
