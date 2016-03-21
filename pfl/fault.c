@@ -117,7 +117,7 @@ _pfl_fault_here(struct pfl_fault *pflt, int *rcp, int rc)
 	pfl_fault_unlock(pflt);
 
 	if (delay)
-		usleep(delay);
+		sleep(delay);
 	return (faulted);
 }
 
