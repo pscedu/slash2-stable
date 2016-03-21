@@ -382,7 +382,6 @@ mkclients()
 preinit()
 {
 	if [ $testmail -eq 1 ]; then
-		:
 		postproc 0
 	fi
 }
