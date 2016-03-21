@@ -92,6 +92,8 @@ struct psc_dynarray;
 #endif
 #endif
 
+#define PSCRPC_MAX_RETRY		3
+
 extern lnet_handle_eq_t			pscrpc_eq_h;
 extern struct psclist_head		pscrpc_wait_callbacks;
 
