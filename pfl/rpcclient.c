@@ -327,7 +327,7 @@ expired_request(void *data)
 
 	atomic_inc(&req->rq_retries);
 
-	DEBUG_REQ(PLL_DIAG, req, "request timeout");
+	DEBUG_REQ(PLL_MAX, req, "request timeout");
 
 	if (atomic_read(&req->rq_retries) >= imp->imp_max_retries)
 		return (pscrpc_expire_one_request(req));

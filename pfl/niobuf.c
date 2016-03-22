@@ -573,8 +573,6 @@ pscrpc_send_rpc(struct pscrpc_request *rq, int noreply)
 	atomic_inc(&rq->rq_import->imp_inflight);
 
 	rq->rq_sent = CURRENT_SECONDS;
-	rq->rq_timeout = pfl_rpc_timeout + 
-	    PSCRPC_TIMEOUT_INC * atomic_read(&rq->rq_retries);
 
 	rc = pscrpc_send_buf(&rq->rq_req_md_h, rq->rq_reqmsg,
 	    rq->rq_reqlen, LNET_NOACK_REQ, &rq->rq_req_cbid,
