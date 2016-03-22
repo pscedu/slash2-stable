@@ -1025,6 +1025,8 @@ pscrpc_expire_one_request(struct pscrpc_request *req)
 {
 	struct pscrpc_import *imp = req->rq_import;
 
+	psc_assert(imp);
+
 	DEBUG_REQ(imp->imp_igntimeout ? PLL_WARN : PLL_ERROR, req,
 	    "timeout (sent at %"PSCPRI_TIMET", %"PSCPRI_TIMET"s ago)",
 	    req->rq_sent, CURRENT_SECONDS - req->rq_sent);
@@ -1044,10 +1046,7 @@ pscrpc_expire_one_request(struct pscrpc_request *req)
 	if (req->rq_bulk)
 		pscrpc_unregister_bulk(req);
 
-	if (imp == NULL)
-		DEBUG_REQ(PLL_WARN, req, "NULL import: already cleaned up?");
-
-	else if (!imp->imp_igntimeout) {
+	if (!imp->imp_igntimeout) {
 		psclog_warnx("timeout: req=%p, imp=%p", req, imp);
 		pscrpc_fail_import(imp, req->rq_reqmsg->conn_cnt);
 	}
