@@ -467,6 +467,7 @@ pscrpc_unregister_reply(struct pscrpc_request *request)
 	else
 		wq = &request->rq_reply_waitq;
 
+	/* wait for pscrpc_wake_client_req() */
 	for (;;) {
 		/* Network access will complete in finite time but the HUGE
 		 * timeout lets us CWARN for visibility of sluggish NALs */
