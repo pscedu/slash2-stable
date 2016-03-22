@@ -35,6 +35,7 @@
 #include "pfl/sys.h"
 #include "pfl/thread.h"
 #include "pfl/timerthr.h"
+#include "pfl/workthr.h"
 
 #include "mount_wokfs.h"
 #include "ctl.h"
@@ -222,6 +223,7 @@ main(int argc, char *argv[])
 	ctlthr_spawn();
 
 	pfl_opstimerthr_spawn(PFL_THRT_OPSTIMER, "opstimerthr");
+	pfl_workq_init(128);
 
 	pscfs_entry_timeout = 8.;
 	pscfs_attr_timeout = 8.;
