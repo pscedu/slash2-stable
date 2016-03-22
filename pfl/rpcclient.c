@@ -761,11 +761,8 @@ _pscrpc_set_check(struct pscrpc_request_set *set, int finish_one)
 		if (req->rq_phase == PSCRPC_RQ_PHASE_INTERPRET)
 			GOTO(interpret, req->rq_status);
 
-		if (req->rq_net_err && !req->rq_timedout) {
+		if (req->rq_net_err && !req->rq_timedout)
 			pscrpc_expire_one_request(req);
-			if (!req->rq_err)
-				req->rq_err = 1;
-		}
 
  handle_error:
 		if (req->rq_err) {
