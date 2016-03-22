@@ -746,27 +746,25 @@ pscrpc_free_req(struct pscrpc_request *rq)
 	_pscrpc_free_req(rq, 0);
 }
 
-int
+void
 _pscrpc_req_finished(struct pscrpc_request *rq, int locked)
 {
 	if (rq == NULL)
-		return (1);
+		return;
 
 	if (rq == LP_POISON ||
 	    rq->rq_reqmsg == LP_POISON) {
 		CERROR("dereferencing freed request (bug 575)\n");
 		LBUG();
-		return (1);
+		return;
 	}
 
 	DEBUG_REQ(PLL_DEBUG, rq, "decref");
 
-	if (atomic_dec_and_test(&rq->rq_refcount)) {
+	if (atomic_dec_and_test(&rq->rq_refcount))
 		_pscrpc_free_req(rq, locked);
-		return (1);
-	}
 
-	return (0);
+	return;
 }
 
 void

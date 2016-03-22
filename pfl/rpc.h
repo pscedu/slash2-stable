@@ -520,7 +520,7 @@ void	 pscrpc_free_req(struct pscrpc_request *);
 int	 pscrpc_register_bulk(struct pscrpc_request *);
 int	 pscrpc_register_rqbd(struct pscrpc_request_buffer_desc *);
 int	 pscrpc_reply(struct pscrpc_request *);
-int	_pscrpc_req_finished(struct pscrpc_request *, int);
+void	_pscrpc_req_finished(struct pscrpc_request *, int);
 int	 pscrpc_send_reply(struct pscrpc_request *, int);
 int	 pscrpc_start_bulk_transfer(struct pscrpc_bulk_desc *);
 void	 pscrpc_unregister_bulk(struct pscrpc_request *);
