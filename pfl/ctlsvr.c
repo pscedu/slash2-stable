@@ -1234,10 +1234,14 @@ psc_ctlparam_pool_handle(int fd, struct psc_ctlmsghdr *mh,
 				    "pool.%s.reap: value cannot be "
 				    "negative", levels[1]));
 
+			POOL_ULOCK(m);
+
 			/* XXX hack */
 			psc_atomic32_add(&m->ppm_nwaiters, val);
 			psc_pool_reap(m, 0);
 			psc_atomic32_sub(&m->ppm_nwaiters, val);
+
+			POOL_LOCK(m);
 		} else {
 			return (psc_ctlsenderr(fd, mh,
 			    "pool.%s.reap: write-only field",
