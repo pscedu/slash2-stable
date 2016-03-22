@@ -173,8 +173,6 @@ main(int argc, char *argv[])
 	pscfs_addarg(&args, "-o");
 	pscfs_addarg(&args, STD_MOUNT_OPTIONS);
 
-	setenv("LD_DYNAMIC_WEAK", "1", 1);
-
 	p = getenv("CTL_SOCK_FILE");
 	if (p)
 		ctlsockfn = p;
