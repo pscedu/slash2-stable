@@ -33,6 +33,10 @@
 #include "pfl/time.h"
 #include "pfl/vbitmap.h"
 
+#if PFL_DEBUG > 1
+# include "pfl/str.h"
+#endif
+
 #define PFLOG_MUTEX(level, mut, fmt, ...)				\
 	psclog((level), "mutex@%p: " fmt, (mut), ##__VA_ARGS__)
 
@@ -87,6 +91,10 @@ _psc_mutex_lock(const struct pfl_callerinfo *pci,
     struct pfl_mutex *mut)
 {
 	int rc;
+
+#if PFL_DEBUG > 1
+	psc_assert(!pfl_memchk(mut, 0, sizeof(*mut)));
+#endif
 
 	rc = pthread_mutex_lock(&mut->pm_mutex);
 	if (rc)
