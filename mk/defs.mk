@@ -12,9 +12,9 @@ MPICC?=		mpicc
 ROFF?=		nroff
 INSTALL?=	install
 
-NOTEMPTY=	${ROOTDIR}/tools/notempty
 ECHORUN=	${ROOTDIR}/tools/echorun.sh
 _PERLENV=	env PERL5LIB=${PERL5LIB}:${ROOTDIR}/tools/lib perl
+NOTEMPTY=	${_PERLENV} ${ROOTDIR}/tools/notempty
 GENTYPES=	${_PERLENV} ${ROOTDIR}/tools/gentypes.pl
 HDRCLEAN=	${_PERLENV} ${ROOTDIR}/tools/hdrclean.pl
 LIBDEP=		${_PERLENV} ${ROOTDIR}/tools/libdep.pl
@@ -89,9 +89,14 @@ DEBUG?=		1
 DEVELPATHS?=	0
 ifeq (${DEBUG},0)
   CFLAGS+=	-Wunused -Wuninitialized
-  CFLAGS+=	-fno-strict-aliasing -flto -fno-use-linker-plugin
+  CFLAGS+=	-fno-strict-aliasing
   CFLAGS+=	${COPT}
-  LDFLAGS+=	-flto -fno-use-linker-plugin
+
+  GCC_VERSION=$(shell ${CC} -v 2>&1 | grep -o 'gcc version [0-9.]*' | awk '{print $$3}')
+  ifeq ($(shell ${MINVER} "${GCC_VERSION}" 4.2.3 && echo 1),1)
+	CFLAGS+=-flto -fno-use-linker-plugin
+	LDFLAGS+=-flto -fno-use-linker-plugin
+  endif
 else
   CFLAGS+=	-g
   LDFLAGS+=	-fstack-protector-all
@@ -211,7 +216,7 @@ $(call ADD_FILE_CFLAGS,${LNET_BASE}/lnet/peer.c,			-DPSC_SUBSYS=PSS_LNET -Wno-sh
 $(call ADD_FILE_CFLAGS,${LNET_BASE}/lnet/router.c,			-DPSC_SUBSYS=PSS_LNET -Wno-shadow)
 $(call ADD_FILE_CFLAGS,${LNET_BASE}/lnet/router_proc.c,			-DPSC_SUBSYS=PSS_LNET -Wno-shadow)
 
-ifeq ($(shell ${MINVER} ${LEXVER} 2.5.35 || echo 1),1)
+ifeq ($(shell ${MINVER} ${LEXVER} 2.5.35 && echo 1),1)
   LIBL=		-lfl
   PCPP_FLAGS+=	-H yytext
 endif
