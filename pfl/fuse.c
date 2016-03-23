@@ -1263,6 +1263,7 @@ pscfs_fuse_handle_removexattr(fuse_req_t req, fuse_ino_t ino,
 			psclog_diag(					\
 			    "in for "PSCPRI_TIMESPEC"s uniqid=%"PRIu64,	\
 			    PSCPRI_TIMESPEC_ARGS(&d), u0);		\
+		(void)u0;						\
 		pfr_decref((pfr), rc);					\
 	} while (0)
 
@@ -1695,14 +1696,16 @@ pflfs_inval_getprivate(struct pscfs_req *pfr)
 int
 pflfs_inval_inode(void *pri, pscfs_inum_t inum)
 {
+	int rc = -ENOTSUP;
+
 #ifdef HAVE_FUSE_NOTIFY_INVAL
-	return (fuse_lowlevel_notify_inval_entry(pri, INUM_PSCFS2FUSE(inum,
-	    0.0), 0, 0));
+	rc = fuse_lowlevel_notify_inval_entry(pri, INUM_PSCFS2FUSE(inum,
+	    0.0), 0, 0);
 #else
 	(void)pri;
 	(void)inum;
-	return (-ENOTSUP);
 #endif
+	return (rc);
 }
 
 int
