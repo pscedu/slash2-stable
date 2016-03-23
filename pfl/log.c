@@ -103,6 +103,8 @@ psc_log_setfn(const char *p, const char *mode)
 	(void)FMTSTR(fn, sizeof(fn), p,
 		FMTSTRCASE('t', "d", tv.tv_sec)
 	);
+	if (fileno(stderr) != 2)
+		warn("stderr file no is %d\n", fileno(stderr));
 	if (freopen(fn, mode, stderr) == NULL)
 		return (errno);
 
