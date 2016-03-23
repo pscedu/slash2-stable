@@ -32,19 +32,19 @@
 #include <string.h>
 #include <unistd.h>
 
-#include "pfl/cdefs.h"
-#include "pfl/pfl.h"
-#include "pfl/str.h"
 #include "pfl/acsvc.h"
 #include "pfl/alloc.h"
+#include "pfl/cdefs.h"
 #include "pfl/log.h"
+#include "pfl/pfl.h"
+#include "pfl/str.h"
 
-const char *progname;
+extern const char *__progname;
 
 __dead void
 usage(void)
 {
-	fprintf(stderr, "usage: %s\n", progname);
+	fprintf(stderr, "usage: %s\n", __progname);
 	exit(1);
 }
 
@@ -55,7 +55,6 @@ main(int argc, char *argv[])
 	int fd;
 
 	pfl_init();
-	progname = argv[0];
 	while (getopt(argc, argv, "") != -1)
 		usage();
 	argc -= optind;
@@ -64,7 +63,7 @@ main(int argc, char *argv[])
 
 	acsvc_init(0, "test", argv);
 
-	dir = pfl_strdup(progname);
+	dir = pfl_strdup(__progname);
 	if (dirname(dir) == NULL)
 		psc_fatal("dirname");
 	snprintf(fn, sizeof(fn), "%s%s%s",

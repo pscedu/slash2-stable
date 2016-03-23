@@ -34,8 +34,6 @@
 #include "pfl/pfl.h"
 #include "pfl/vbitmap.h"
 
-const char *progname;
-
 #define ENSURE(vb, fmt, ...)						\
 	do {								\
 		char *_got_str, *_want_str, *_p;			\
@@ -87,7 +85,9 @@ const char *progname;
 __dead void
 usage(void)
 {
-	fprintf(stderr, "usage: %s\n", progname);
+	extern const char *__progname;
+
+	fprintf(stderr, "usage: %s\n", __progname);
 	exit(1);
 }
 
@@ -99,7 +99,6 @@ main(int argc, char *argv[])
 	int i, c, u, t;
 
 	pfl_init();
-	progname = argv[0];
 	while ((c = getopt(argc, argv, "")) != -1)
 		switch (c) {
 		default:

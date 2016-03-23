@@ -35,12 +35,12 @@
 #include "pfl/pfl.h"
 #include "pfl/str.h"
 
-const char *progname;
-
 __dead void
 usage(void)
 {
-	fprintf(stderr, "usage: %s\n", progname);
+	extern const char *__progname;
+
+	fprintf(stderr, "usage: %s\n", __progname);
 	exit(1);
 }
 

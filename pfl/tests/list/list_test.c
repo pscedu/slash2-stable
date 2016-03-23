@@ -35,14 +35,15 @@
 #include "pfl/list.h"
 #include "pfl/listcache.h"
 
-const char *progname;
 struct psclist_head hd = PSCLIST_HEAD_INIT(hd);
 int nitems;
 
 __dead void
 usage(void)
 {
-	fprintf(stderr, "usage: %s\n", progname);
+	extern const char *__progname;
+
+	fprintf(stderr, "usage: %s\n", __progname);
 	exit(1);
 }
 
@@ -200,7 +201,6 @@ main(int argc, char *argv[])
 	int i;
 
 	pfl_init();
-	progname = argv[0];
 	if (getopt(argc, argv, "") != -1)
 		usage();
 	argc -= optind;

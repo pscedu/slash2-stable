@@ -60,12 +60,14 @@ int nwr = 3;
 
 struct pfl_rwlock rw = pfl_rwlock_INIT;
 struct psclist_head thrs = PSCLIST_HEAD_INIT(thrs);
-const char *progname;
 
 __dead void
 usage(void)
 {
-	fprintf(stderr, "usage: %s [-n locks] [-r readers] [-w writers]\n", progname);
+	extern const char *__progname;
+
+	fprintf(stderr, "usage: %s [-n locks] [-r readers] [-w writers]\n", 
+	    __progname);
 	exit(1);
 }
 
@@ -170,7 +172,6 @@ main(int argc, char *argv[])
 	long l;
 
 	pfl_init();
-	progname = argv[0];
 	while ((c = getopt(argc, argv, "n:r:w:")) != -1)
 		switch (c) {
 		case 'n':

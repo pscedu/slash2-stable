@@ -35,7 +35,6 @@
 #include "pfl/cdefs.h"
 #include "pfl/types.h"
 
-const char *progname;
 pthread_t thr1;
 pthread_t thr2;
 pthread_t thr3;
@@ -78,7 +77,9 @@ char *signames[] = {
 __dead void
 usage(void)
 {
-	fprintf(stderr, "usage: %s\n", progname);
+	extern const char *__progname;
+
+	fprintf(stderr, "usage: %s\n", __progname);
 	exit(1);
 }
 

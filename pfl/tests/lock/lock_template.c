@@ -52,12 +52,13 @@ atomic_t	 nworkers = ATOMIC_INIT(0);
 int		 nthrs = 32;
 int		 nruns = 4000;
 int		*buf;
-const char	*progname;
 
 __dead void
 usage(void)
 {
-	fprintf(stderr, "usage: %s [-n nruns] [-t nthr]\n", progname);
+	extern const char *__progname;
+
+	fprintf(stderr, "usage: %s [-n nruns] [-t nthr]\n", __progname);
 	exit(1);
 }
 
@@ -82,7 +83,6 @@ main(int argc, char *argv[])
 	int slen, oldidx, c, i, *j;
 	struct timeval tv[2], res;
 
-	progname = argv[0];
 	pfl_init();
 	while (((c = getopt(argc, argv, "n:t:")) != -1))
 		switch (c) {

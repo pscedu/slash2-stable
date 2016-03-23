@@ -30,11 +30,11 @@
 #include <string.h>
 #include <unistd.h>
 
-#include "pfl/pfl.h"
-#include "pfl/cdefs.h"
 #include "pfl/alloc.h"
 #include "pfl/atomic.h"
+#include "pfl/cdefs.h"
 #include "pfl/log.h"
+#include "pfl/pfl.h"
 #include "pfl/pthrutil.h"
 
 struct thr {
@@ -44,7 +44,6 @@ struct thr {
 int nthr = 4;
 int niter = 1024 * 1024 * 2;
 pthread_barrier_t barrier;
-const char *progname;
 
 psc_atomic64_t v64 = PSC_ATOMIC64_INIT(UINT64_C(100000000000));
 psc_atomic32_t v32 = PSC_ATOMIC32_INIT(0);
@@ -101,7 +100,9 @@ startf(void *arg)
 __dead void
 usage(void)
 {
-	fprintf(stderr, "usage: %s [-i niter] [-n nthr]\n", progname);
+	extern const char *__progname;
+
+	fprintf(stderr, "usage: %s [-i niter] [-n nthr]\n", __progname);
 	exit(1);
 }
 
@@ -113,7 +114,6 @@ main(int argc, char *argv[])
 	int c, rc, i;
 
 	pfl_init();
-	progname = argv[0];
 	while ((c = getopt(argc, argv, "i:n:")) != -1)
 		switch (c) {
 		case 'i':
