@@ -35,10 +35,10 @@
 #include "pfl/completion.h"
 #include "pfl/pthrutil.h"
 
-const char		*progname;
-struct pfl_mutex	 m;
+struct pfl_mutex	 m = PSC_MUTEX_INIT;
 struct psc_compl	 compl = PSC_COMPL_INIT;
 struct psc_waitq	 wq = PSC_WAITQ_INIT;
+int			 var = 0;
 
 void *
 spawn(__unusedx void *arg)
@@ -46,6 +46,7 @@ spawn(__unusedx void *arg)
 	psc_mutex_lock(&m);
 	psc_compl_ready(&compl, 1);
 	psc_waitq_wait(&wq, NULL);
+	var = 1;
 	psc_mutex_unlock(&m);
 	return (NULL);
 }
@@ -53,7 +54,9 @@ spawn(__unusedx void *arg)
 __dead void
 usage(void)
 {
-	fprintf(stderr, "usage: %s\n", progname);
+	extern const char *__progname;
+
+	fprintf(stderr, "usage: %s\n", __progname);
 	exit(1);
 }
 
@@ -64,21 +67,23 @@ main(int argc, char *argv[])
 	int rc, lk;
 
 	pfl_init();
-	progname = argv[0];
 	if (getopt(argc, argv, "") != -1)
 		usage();
 	argc -= optind;
 	if (argc)
 		usage();
 
-	psc_mutex_init(&m);
+	//psc_mutex_init(&m);
 
 	rc = pthread_create(&pt, NULL, spawn, NULL);
 	psc_compl_wait(&compl);
 
 	psc_assert(!psc_mutex_trylock(&m));
 
-	psc_waitq_wakeall(&wq);
+	while (var == 0) {
+		psc_waitq_wakeall(&wq);
+		sleep(1);
+	}
 
 	psc_mutex_lock(&m);
 	rc = pthread_mutex_lock(&m.pm_mutex);
