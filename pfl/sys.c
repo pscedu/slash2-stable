@@ -213,5 +213,5 @@ pfl_getnfreecores(int want)
 		nstr = MAX(1, nstr - avg);
 	}
 #endif
-	return (MIN(nstr, MAX_STREAMS));
+	return (nstr);
 }
