@@ -1683,15 +1683,26 @@ pflfs_inval_getprivate(struct pscfs_req *pfr)
 {
 	struct fuse_chan *ch;
 
+#ifdef HAVE_FUSE_REQ_GETCHANNEL
 	ch = fuse_req_getchannel(pfr->pfr_fuse_req);
+#else
+	(void)pfr;
+	ch = NULL;
+#endif
 	return (ch);
 }
 
 int
 pflfs_inval_inode(void *pri, pscfs_inum_t inum)
 {
+#ifdef HAVE_FUSE_NOTIFY_INVAL
 	return (fuse_lowlevel_notify_inval_entry(pri, INUM_PSCFS2FUSE(inum,
 	    0.0), 0, 0));
+#else
+	(void)pri;
+	(void)inum;
+	return (-ENOTSUP);
+#endif
 }
 
 int
@@ -1700,7 +1711,7 @@ pscfs_notify_inval_entry(void *pri, pscfs_inum_t pinum,
 {
 	int rc;
 
-#if defined(HAVE_FUSE_REQ_GETCHANNEL) && defined(HAVE_FUSE_NOTIFY_INVAL)
+#ifdef HAVE_FUSE_NOTIFY_INVAL
 	rc = fuse_lowlevel_notify_inval_entry(pri,
 	    INUM_PSCFS2FUSE(pinum, 0.0), name, namelen);
 #else
