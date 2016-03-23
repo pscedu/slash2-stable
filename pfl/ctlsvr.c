@@ -632,7 +632,8 @@ psc_ctlparam_log_file(int fd, struct psc_ctlmsghdr *mh,
 	} else {
 		char linkname[128], logname[1024];
 
-		snprintf(linkname, 128, "/proc/%d/fd/2", pfl_pid);
+		snprintf(linkname, 128, "/proc/%d/fd/%d", 
+		    pfl_pid, fileno(stderr));
 		rc = readlink(linkname, logname, 1024);
 		if (rc != -1)
 			logname[rc] = '\0';
