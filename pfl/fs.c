@@ -195,10 +195,16 @@ pflfs_module_destroy(struct pscfs *m)
 	if (m->pf_thr_destroy)
 		_pflfs_module_destroy_threads(m);
 
-	pfl_opstat_destroy(m->pf_opst_read_err);
-	pfl_opstat_destroy(m->pf_opst_write_err);
-	pfl_opstat_destroy(m->pf_opst_read_reply);
-	pfl_opstat_destroy(m->pf_opst_write_reply);
+	/*
+	 * Since these are registered in pflfs_module_add(), they may
+	 * not be available if early module initializtion failed.
+	 */
+	if (m->pf_opst_read_err) {
+		pfl_opstat_destroy(m->pf_opst_read_err);
+		pfl_opstat_destroy(m->pf_opst_write_err);
+		pfl_opstat_destroy(m->pf_opst_read_reply);
+		pfl_opstat_destroy(m->pf_opst_write_reply);
+	}
 
 	if (psc_dynarray_len(&m->pf_opts)) {
 		char *opts;
