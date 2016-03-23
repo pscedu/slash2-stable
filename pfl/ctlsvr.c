@@ -636,8 +636,9 @@ psc_ctlparam_log_file(int fd, struct psc_ctlmsghdr *mh,
 		rc = readlink(linkname, logname, 1024);
 		if (rc != -1)
 			logname[rc] = '\0';
-		snprintf(pcp->pcp_value, sizeof(pcp->pcp_value),
-		    "%s", rc == -1 ? "stderr" : logname);
+		else
+			snprintf(logname, sizeof(logname), 
+			    "%s", "stderr");
 		rc = psc_ctlmsg_param_send(fd, mh, pcp,
 		    PCTHRNAME_EVERYONE, levels, 2, logname);
 	}
