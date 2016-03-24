@@ -103,8 +103,6 @@ psc_log_setfn(const char *p, const char *mode)
 	(void)FMTSTR(fn, sizeof(fn), p,
 		FMTSTRCASE('t', "d", tv.tv_sec)
 	);
-	if (fileno(stderr) != 2)
-		warn("stderr file no is %d\n", fileno(stderr));
 	if (freopen(fn, mode, stderr) == NULL)
 		return (errno);
 
@@ -230,7 +228,7 @@ MPI_Comm_rank(__unusedx int comm, int *rank)
 const char *
 pflog_get_fsctx_uprog_stub(__unusedx struct psc_thread *thr)
 {
-	return (NULL);
+	return ("");
 }
 
 uid_t
@@ -248,7 +246,7 @@ pflog_get_fsctx_pid_stub(__unusedx struct psc_thread *thr)
 const char *
 pflog_get_peer_addr_stub(__unusedx struct psc_thread *thr)
 {
-	return (NULL);
+	return ("");
 }
 
 const char	*(*pflog_get_fsctx_uprog)(struct psc_thread *) =
