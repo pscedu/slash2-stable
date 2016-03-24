@@ -233,6 +233,7 @@ endif
 ifeq (${OSTYPE},Darwin)
   DEFINES+=	-D_DARWIN_C_SOURCE -D_DARWIN_FEATURE_64_BIT_INODE
   DEFINES+=	-DHAVE_NO_POLL_DEV
+  INCLUDES+=	-I/opt/local/include
   CFLAGS+=	-Wno-deprecated-declarations
   THREAD_LIBS=	-lpthread
 endif
