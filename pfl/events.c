@@ -708,10 +708,11 @@ pflrpc_log_get_peer_addr(struct psc_thread *thr)
 	const char *s;
 
 	if (!(thr->pscthr_flags & PTF_RPC_SVC_THREAD))
-		return (NULL);
+		return ("");
 
 	prt = pscrpcthr(thr);
-	if (prt->prt_peer_addrbuf[0] == '\0')
+	if (prt->prt_peer_addrbuf[0] == '\0' &&
+	    prt->prt_peer_addr != LNET_NID_ANY)
 		pscrpc_nid2str(prt->prt_peer_addr,
 		    prt->prt_peer_addrbuf);
 	s = prt->prt_peer_addrbuf;
