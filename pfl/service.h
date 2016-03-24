@@ -61,6 +61,8 @@ struct pscrpc_thread {
 	struct pscrpc_svc_handle *prt_svh;
 	struct psclist_head	  prt_lentry;	/* link among thrs in service */
 	int			  prt_alive;
+	lnet_nid_t		  prt_peer_addr;
+	char			  prt_peer_addrbuf[PSCRPC_NIDSTR_SIZE];
 };
 
 #define pscrpcthr(thr)		((struct pscrpc_thread *)(thr)->pscthr_private)

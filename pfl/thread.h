@@ -65,6 +65,7 @@ struct psc_thread {
 #define PTF_RUN			(1 << 1)			/* thread should operate normally */
 #define PTF_READY		(1 << 2)			/* thread can start (used during init) */
 #define PTF_DEAD		(1 << 3)			/* thread will terminate now */
+#define PTF_RPC_SVC_THREAD	(1 << 4)			/* thread is an RPC servicer */
 
 #define PSCTHR_LOCK(thr)	spinlock(&(thr)->pscthr_lock)
 #define PSCTHR_ULOCK(thr)	freelock(&(thr)->pscthr_lock)

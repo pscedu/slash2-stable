@@ -245,12 +245,20 @@ pflog_get_fsctx_pid_stub(__unusedx struct psc_thread *thr)
 	return (-1);
 }
 
+const char *
+pflog_get_peer_addr_stub(__unusedx struct psc_thread *thr)
+{
+	return (NULL);
+}
+
 const char	*(*pflog_get_fsctx_uprog)(struct psc_thread *) =
 		    pflog_get_fsctx_uprog_stub;
 pid_t		 (*pflog_get_fsctx_pid)(struct psc_thread *) =
 		    pflog_get_fsctx_pid_stub;
 uid_t		 (*pflog_get_fsctx_uid)(struct psc_thread *) =
 		    pflog_get_fsctx_uid_stub;
+const char	 (*pflog_get_peer_addr)(struct psc_thread *) =
+		    pflog_get_peer_addr_stub;
 
 struct psclog_data *
 psclog_getdata(void)
@@ -350,6 +358,7 @@ _psclogv(const struct pfl_callerinfo *pci, int level, int options,
 
 	gettimeofday(&tv, NULL);
 	(void)FMTSTR(buf, sizeof(buf), psc_logfmt,
+		FMTSTRCASE('A', "s", pflog_get_peer_addr(thr))
 		FMTSTRCASE('B', "s", pfl_basename(pci->pci_filename))
 		FMTSTRCASE('D', "s", pfl_fmtlogdate(&tv, &_t))
 		FMTSTRCASE('F', "s", pci->pci_func)

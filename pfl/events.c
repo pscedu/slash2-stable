@@ -700,6 +700,19 @@ pscrpc_ni_fini(void)
 	/* NOTREACHED */
 }
 
+const char *
+pflrpc_log_get_peer_addr(struct psc_thread *thr)
+{
+	if (!(thr->pscthr_flags & PTF_RPC_SVC_THREAD))
+		return (NULL);
+
+	prt = pscrpcthr(thr);
+	if (prt->prt_peer_addrbuf[0] == '\0')
+		pscrpc_nid2str(prt->prt_peer_addr,
+		    prt->prt_peer_addrbuf);
+	return (prt->prt_peer_addrbuf);
+}
+
 void
 pscrpc_init_portals(int type, int nmsgs)
 {
@@ -712,11 +725,15 @@ pscrpc_init_portals(int type, int nmsgs)
 	rc = pscrpc_ni_init(type, nmsgs);
 	if (rc)
 		psc_fatal("network initialization: %s", strerror(-rc));
+
+	pflog_get_peer_addr = pflrpc_log_get_peer_addr;
 }
 
 void
 pscrpc_exit_portals(void)
 {
+	pflog_get_peer_addr = NULL;
+
 	pscrpc_conns_destroy();
 	pscrpc_ni_fini();
 	pfl_poolmaster_destroy(&pscrpc_export_poolmaster);
