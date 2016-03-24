@@ -632,13 +632,13 @@ psc_ctlparam_log_file(int fd, struct psc_ctlmsghdr *mh,
 	} else {
 		char linkname[128], logname[1024];
 
-		snprintf(linkname, 128, "/proc/%d/fd/%d", 
+		snprintf(linkname, sizeof(linkname), "/proc/%d/fd/%d",
 		    pfl_pid, fileno(stderr));
-		rc = readlink(linkname, logname, 1024);
+		rc = readlink(linkname, logname, sizeof(logname));
 		if (rc != -1)
 			logname[rc] = '\0';
 		else
-			snprintf(logname, sizeof(logname), 
+			snprintf(logname, sizeof(logname),
 			    "%s", "stderr");
 		rc = psc_ctlmsg_param_send(fd, mh, pcp,
 		    PCTHRNAME_EVERYONE, levels, 2, logname);
