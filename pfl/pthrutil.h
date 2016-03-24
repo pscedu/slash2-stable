@@ -42,7 +42,7 @@
 #elif defined(PTHREAD_ERRORCHECK_MUTEX_INITIALIZER_NP)
 # define PSC_MUTEX_INIT			{ PTHREAD_ERRORCHECK_MUTEX_INITIALIZER_NP, 0, 0 }
 #else
-# warn "unable to find an error checking mutex; beware"
+# warning "unable to find an error checking mutex; beware"
 # define PSC_MUTEX_INIT			{ PTHREAD_MUTEX_INITIALIZER, 0, 0 }
 #endif
 
@@ -89,7 +89,7 @@ struct pfl_rwlock {
 # define pfl_rwlock_INIT		{ PTHREAD_RWLOCK_WRITER_NONRECURSIVE_INITIALIZER_NP, \
 					  0, DYNARRAY_INIT, SPINLOCK_INIT }
 #else
-# warn "unable to find an nonrecursive rw writer; beware"
+# warning "unable to find an nonrecursive rw writer; beware"
 # define pfl_rwlock_INIT		{ PTHREAD_RWLOCK_INITIALIZER, 0, DYNARRAY_INIT, SPINLOCK_INIT }
 #endif
 
