@@ -170,7 +170,7 @@ struct psclog_data {
  * This would compile any logging statements higher than PLL_INFO out.
  */
 #ifdef PSCLOG_LEVEL
-#  warn "PSCLOG_LEVEL is deprecated; use PFLOG_FROM_LEVEL"
+#  warning "PSCLOG_LEVEL is deprecated; use PFLOG_FROM_LEVEL"
 #  define PFLOG_FROM_LEVEL PSCLOG_LEVEL
 #endif
 
