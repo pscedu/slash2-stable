@@ -37,6 +37,7 @@ filter=
 verbose=0
 testmail=0
 prof=
+allow_logfiles_over_nfs=0
 
 vprint()
 {
@@ -83,6 +84,8 @@ loadprof()
 		srcdir=*)	srcdir=${fl#srcdir=};;
 		tag=*)		[ x"$1" = x"${fl#tag=}" ] || return 1 ;;
 		[A-Z][A-Z_]*=*)	export "$fl";;
+		allow_logfiles_over_nfs=*)
+				allow_logfiles_over_nfs=${fl#allow_logfiles_over_nfs=};;
 		*)		warn "unknown setting $fl";;
 		esac
 		[ $dobreak -eq 1 ] && break
@@ -224,7 +227,7 @@ preproc()
 
 	local logdir=$(dirname "$PSC_LOG_FILE")
 
-	is_on_nfs "$logdir" && \
+	is_on_nfs "$logdir" && [ $allow_logfiles_over_nfs -eq 0 ] && \
 	    die "$logdir: refusing to write log files on NFS"
 
 	mkdir -p $logdir
