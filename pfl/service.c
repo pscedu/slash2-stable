@@ -381,7 +381,7 @@ pscrpc_server_handle_request(struct pscrpc_service *svc,
 
 	request->rq_phase = PSCRPC_RQ_PHASE_INTERPRET;
 
-	prt = pscrpcthr(thr);
+	prt = pscrpcthr(thread);
 	prt->prt_peer_addr = request->rq_peer.nid;
 
 	DEBUG_REQ(PLL_DEBUG, request, "handling RPC");

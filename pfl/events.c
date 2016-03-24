@@ -35,6 +35,7 @@
 #include "pfl/pool.h"
 #include "pfl/rpc.h"
 #include "pfl/rpclog.h"
+#include "pfl/service.h"
 #include "pfl/types.h"
 #include "pfl/waitq.h"
 
@@ -703,6 +704,9 @@ pscrpc_ni_fini(void)
 const char *
 pflrpc_log_get_peer_addr(struct psc_thread *thr)
 {
+	struct pscrpc_thread *prt;
+	const char *s;
+
 	if (!(thr->pscthr_flags & PTF_RPC_SVC_THREAD))
 		return (NULL);
 
@@ -710,7 +714,8 @@ pflrpc_log_get_peer_addr(struct psc_thread *thr)
 	if (prt->prt_peer_addrbuf[0] == '\0')
 		pscrpc_nid2str(prt->prt_peer_addr,
 		    prt->prt_peer_addrbuf);
-	return (prt->prt_peer_addrbuf);
+	s = prt->prt_peer_addrbuf;
+	return (s);
 }
 
 void

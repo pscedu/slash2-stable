@@ -257,7 +257,7 @@ pid_t		 (*pflog_get_fsctx_pid)(struct psc_thread *) =
 		    pflog_get_fsctx_pid_stub;
 uid_t		 (*pflog_get_fsctx_uid)(struct psc_thread *) =
 		    pflog_get_fsctx_uid_stub;
-const char	 (*pflog_get_peer_addr)(struct psc_thread *) =
+const char	*(*pflog_get_peer_addr)(struct psc_thread *) =
 		    pflog_get_peer_addr_stub;
 
 struct psclog_data *
