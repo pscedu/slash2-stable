@@ -118,7 +118,7 @@ void  psc_ctl_packshow_rpcsvc(char *);
 void  psc_ctl_packshow_thread(char *);
 
 void *psc_ctlmsg_push(int, size_t);
-void  psc_ctlcli_main(const char *, int, char **, const struct psc_ctlopt *, int, int);
+void  psc_ctlcli_main(const char *, int, char **, const struct psc_ctlopt *, int);
 
 void  psc_ctlmsg_error_prdat(const struct psc_ctlmsghdr *, const void *);
 void  psc_ctlmsg_fault_prdat(const struct psc_ctlmsghdr *, const void *);

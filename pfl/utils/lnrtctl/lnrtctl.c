@@ -76,6 +76,6 @@ main(int argc, char *argv[])
 	pfl_init();
 	progname = argv[0];
 	psc_ctlcli_main(PATH_CTLSOCK, argc, argv, opts,
-	    nitems(opts), 0);
+	    nitems(opts));
 	exit(0);
 }
