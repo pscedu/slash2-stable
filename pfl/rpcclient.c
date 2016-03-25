@@ -634,7 +634,7 @@ pscrpc_queue_wait(struct pscrpc_request *req)
 		GOTO(out, 0);
 
 	if (req->rq_err)
-		GOTO(out, rc = -EIO);
+		GOTO(out, rc = req->rq_status);
 
 	/* Resend if we need to, unless we were interrupted. */
 	if (req->rq_resend && !req->rq_intr) {
@@ -833,6 +833,9 @@ _pscrpc_set_check(struct pscrpc_request_set *set, int finish_one)
 				}
 			}
 			if (req->rq_resend) {
+				/*
+ 				 * XXX This code is never executed.
+ 				 */
 				if (req->rq_no_resend) {
 					if (!req->rq_err)
 						req->rq_err = 1;
@@ -1370,8 +1373,9 @@ pscrpc_abort_inflight(struct pscrpc_import *imp)
 
 		 spinlock(&req->rq_lock);
 		 if (req->rq_import_generation < imp->imp_generation) {
-			 req->rq_err = 1;
-			 pscrpc_wake_client_req(req);
+			req->rq_err = 1;
+			req->rq_status = -ETIMEDOUT;
+			pscrpc_wake_client_req(req);
 		 }
 		 //req->rq_abort_reply = 1;
 		 if (req->rq_bulk)
