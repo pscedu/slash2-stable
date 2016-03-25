@@ -1304,9 +1304,19 @@ psc_ctlcli_main(const char *osockfn, int ac, char *av[],
 			psc_ctl_sockfn = optarg;
 			continue;
 		}
-		for (i = 0; i < notab; i++)
+		for (i = 0; i < notab; i++) {
+			/* Special case for version reporting. */
+			if (c == 'V') {
+				void (*cbf)(void);
+
+				cbf = otab[i].pco_data;
+				cbf();
+				exit(0);
+			}
+
 			if (c == otab[i].pco_ch)
 				break;
+		}
 		if (i == notab)
 			usage();
 	}
