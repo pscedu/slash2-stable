@@ -61,6 +61,8 @@ struct pscrpc_thread {
 	struct pscrpc_svc_handle *prt_svh;
 	struct psclist_head	  prt_lentry;	/* link among thrs in service */
 	int			  prt_alive;
+	char			  prt_peer_addrbuf[64];
+	uint64_t		  prt_peer_addr;
 };
 
 #define pscrpcthr(thr)		((struct pscrpc_thread *)(thr)->pscthr_private)

@@ -273,6 +273,7 @@ pscrpc_server_handle_request(struct pscrpc_service *svc,
 	struct pscrpc_request *request;
 	struct timeval         work_start;
 	struct timeval         work_end;
+	struct pscrpc_thread *prt;
 	long                   timediff;
 	int                    rc;
 
@@ -380,32 +381,20 @@ pscrpc_server_handle_request(struct pscrpc_service *svc,
 
 	request->rq_phase = PSCRPC_RQ_PHASE_INTERPRET;
 
-	DEBUG_REQ(PLL_DEBUG, request, "Handling RPC");
-#if 0
-	psclog_info("Handling RPC peer+ref:pid:xid:nid:opc "
-	    "%s+%d:%d:%"PRIu64":%d",
-	    libcfs_id2str(request->rq_conn->c_peer),
-	    atomic_read(&request->rq_export->exp_refcount),
-	    request->rq_reqmsg->status,
-	    request->rq_xid,
-	    request->rq_reqmsg->opc);
-#endif
+	prt = pscrpcthr(thread);
+	prt->prt_peer_addr = request->rq_peer.nid;
+
+	DEBUG_REQ(PLL_DEBUG, request, "handling RPC");
 
 	rc = svc->srv_handler(request);
 
 	request->rq_phase = PSCRPC_RQ_PHASE_COMPLETE;
 
-	DEBUG_REQ(PLL_TRACE, request, "Handled RPC");
+	DEBUG_REQ(PLL_DEBUG, request, "handled RPC");
 
-#if 0
-	psclog_info("Handled RPC peer+ref:pid:xid:nid:opc "
-	    "%s+%d:%d:%"PRIu64":%d",
-	    libcfs_id2str(request->rq_conn->c_peer),
-	    atomic_read(&request->rq_export->exp_refcount),
-	    request->rq_reqmsg->status,
-	    request->rq_xid,
-	    request->rq_reqmsg->opc);
-#endif
+	prt->prt_peer_addr = LNET_NID_ANY;
+	prt->prt_peer_addrbuf[0] = '\0';
+
  put_rpc_export:
 	pscrpc_export_rpc_put(request->rq_export);
 	request->rq_export = NULL;
@@ -1036,6 +1025,7 @@ pscrpcsvh_addthr(struct pscrpc_svc_handle *svh)
 	thr = pscthr_init(svh->svh_type, pscrpcthr_main, NULL,
 	    svh->svh_thrsiz, "%sthr%02d", svh->svh_svc_name,
 	    svh->svh_nthreads);
+	thr->pscthr_flags |= PTF_RPC_SVC_THREAD;
 	prt = thr->pscthr_private;
 	prt->prt_alive = 1;
 	prt->prt_svh = svh;

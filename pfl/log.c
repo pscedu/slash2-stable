@@ -61,7 +61,7 @@
 #include "pfl/time.h"
 
 #ifndef PSC_LOG_FMT
-#define PSC_LOG_FMT "[@%s.%06u00 %n:%I:%T %B %F %l] "
+#define PSC_LOG_FMT "[%s.%06u00 %n:%I:%T %B %F %l] "
 #endif
 
 const char			*psc_logfmt = PSC_LOG_FMT;
@@ -103,8 +103,6 @@ psc_log_setfn(const char *p, const char *mode)
 	(void)FMTSTR(fn, sizeof(fn), p,
 		FMTSTRCASE('t', "d", tv.tv_sec)
 	);
-	if (fileno(stderr) != 2)
-		warn("stderr file no is %d\n", fileno(stderr));
 	if (freopen(fn, mode, stderr) == NULL)
 		return (errno);
 
@@ -230,7 +228,7 @@ MPI_Comm_rank(__unusedx int comm, int *rank)
 const char *
 pflog_get_fsctx_uprog_stub(__unusedx struct psc_thread *thr)
 {
-	return (NULL);
+	return ("");
 }
 
 uid_t
@@ -245,12 +243,20 @@ pflog_get_fsctx_pid_stub(__unusedx struct psc_thread *thr)
 	return (-1);
 }
 
+const char *
+pflog_get_peer_addr_stub(__unusedx struct psc_thread *thr)
+{
+	return ("");
+}
+
 const char	*(*pflog_get_fsctx_uprog)(struct psc_thread *) =
 		    pflog_get_fsctx_uprog_stub;
 pid_t		 (*pflog_get_fsctx_pid)(struct psc_thread *) =
 		    pflog_get_fsctx_pid_stub;
 uid_t		 (*pflog_get_fsctx_uid)(struct psc_thread *) =
 		    pflog_get_fsctx_uid_stub;
+const char	*(*pflog_get_peer_addr)(struct psc_thread *) =
+		    pflog_get_peer_addr_stub;
 
 struct psclog_data *
 psclog_getdata(void)
@@ -350,6 +356,7 @@ _psclogv(const struct pfl_callerinfo *pci, int level, int options,
 
 	gettimeofday(&tv, NULL);
 	(void)FMTSTR(buf, sizeof(buf), psc_logfmt,
+		FMTSTRCASE('A', "s", pflog_get_peer_addr(thr))
 		FMTSTRCASE('B', "s", pfl_basename(pci->pci_filename))
 		FMTSTRCASE('D', "s", pfl_fmtlogdate(&tv, &_t))
 		FMTSTRCASE('F', "s", pci->pci_func)
