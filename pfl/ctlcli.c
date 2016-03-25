@@ -1304,21 +1304,24 @@ psc_ctlcli_main(const char *osockfn, int ac, char *av[],
 			psc_ctl_sockfn = optarg;
 			continue;
 		}
-		for (i = 0; i < notab; i++) {
-			/* Special case for version reporting. */
-			if (c == 'V') {
-				void (*cbf)(void);
-
-				cbf = otab[i].pco_data;
-				cbf();
-				exit(0);
-			}
-
+		for (i = 0; i < notab; i++)
 			if (c == otab[i].pco_ch)
 				break;
-		}
 		if (i == notab)
 			usage();
+		/* 
+		 * Special shortcut case for version reporting. This 
+		 * must be handled before connecting to the socket so 
+		 * it always work. Note that other actions need the
+		 * socket to work.
+		 */
+		if (c == 'V') {
+			void (*cbf)(void);
+
+			cbf = otab[i].pco_data;
+			cbf();
+			exit(0);
+		}
 	}
 
 	/* Connect to control socket. */
