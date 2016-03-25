@@ -630,7 +630,7 @@ psc_ctlparam_log_file(int fd, struct psc_ctlmsghdr *mh,
 			rc = psc_ctlsenderr(fd, mh, "log.file: %s",
 			    strerror(errno));
 	} else {
-		char linkname[128], logname[1024];
+		char linkname[128], logname[PCP_VALUE_MAX];
 
 		snprintf(linkname, sizeof(linkname), "/proc/%d/fd/%d",
 		    pfl_pid, fileno(stderr));
