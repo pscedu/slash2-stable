@@ -621,7 +621,7 @@ pscrpc_ni_init(int type, int nmsgs)
 		psclog_info("Requesting PID %u", PSCRPC_SVR_PID);
 		rc = LNetNIInit(PSCRPC_SVR_PID);
 		if (rc)
-			psc_fatalx("failed LNetNIInit() (rc=%d)", rc);
+			errx(1, "failed LNetNIInit() (rc=%d)", rc);
 
 		rc = LNetEQAlloc(1024, pscrpc_master_callback, &pscrpc_eq_h);
 		psclog_info("%#"PRIx64" pscrpc_eq_h cookie value",
@@ -630,7 +630,7 @@ pscrpc_ni_init(int type, int nmsgs)
 	} else if (type == PSCNET_MTCLIENT) {
 		rc = LNetNIInit(pscrpc_get_pid());
 		if (rc)
-			psc_fatalx("failed LNetNIInit() (rc=%d)", rc);
+			errx(1, "failed LNetNIInit() (rc=%d)", rc);
 
 		rc = LNetEQAlloc(1024, pscrpc_master_callback, &pscrpc_eq_h);
 		psclog_info("%#"PRIx64" pscrpc_eq_h cookie value",
@@ -643,7 +643,7 @@ pscrpc_ni_init(int type, int nmsgs)
 		 */
 		rc = LNetNIInit(pscrpc_get_pid());
 		if (rc)
-			psc_fatalx("failed LNetNIInit() (rc=%d)", rc);
+			errx(1, "failed LNetNIInit() (rc=%d)", rc);
 		rc = LNetEQAlloc(10240, 0, &pscrpc_eq_h);
 	}
 
