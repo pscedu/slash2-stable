@@ -1197,6 +1197,7 @@ struct psc_ctlcli_main_args {
 	char			**av;
 	const struct psc_ctlopt	 *otab;
 	int			  notab;
+	int			  version;
 } psc_ctlcli_main_args;
 
 int psc_ctlcli_retry_main;
@@ -1221,13 +1222,13 @@ psc_ctlcli_retry(void)
 		endwin();
 
 		psc_ctlcli_main(a->osockfn, a->ac, a->av, a->otab,
-		    a->notab);
+		    a->notab, a->version);
 	}
 }
 
 void
 psc_ctlcli_main(const char *osockfn, int ac, char *av[],
-    const struct psc_ctlopt *otab, int notab)
+    const struct psc_ctlopt *otab, int notab, int version)
 {
 	extern const char *daemon_name, *__progname;
 	char optstr[LINE_MAX], chbuf[3], *p;
@@ -1254,6 +1255,7 @@ psc_ctlcli_main(const char *osockfn, int ac, char *av[],
 		psc_ctlcli_main_args.av = av;
 		psc_ctlcli_main_args.otab = otab;
 		psc_ctlcli_main_args.notab = notab;
+		psc_ctlcli_main_args.version = version;
 
 		psc_ctlcli_retry_fd = dup(fileno(stderr));
 
@@ -1363,7 +1365,7 @@ psc_ctlcli_main(const char *osockfn, int ac, char *av[],
 	}
 
 	if (psc_ctl_msghdr == NULL)
-		errx(1, "no actions specified");
+		errx(1, "no actions specified (version %d).", version);
 
 	psc_ctlmsg_sendlast();
 
