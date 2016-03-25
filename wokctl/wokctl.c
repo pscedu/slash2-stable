@@ -188,6 +188,6 @@ int
 main(int argc, char *argv[])
 {
 	pfl_init();
-	psc_ctlcli_main(PATH_CTLSOCK, argc, argv, opts, nitems(opts));
+	psc_ctlcli_main(PATH_CTLSOCK, argc, argv, opts, nitems(opts), 0);
 	exit(0);
 }
