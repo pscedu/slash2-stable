@@ -100,6 +100,11 @@ ifeq (${DEBUG},0)
 else
   CFLAGS+=	-g
   LDFLAGS+=	-fstack-protector-all
+
+  ifdef PICKLE_HAVE_FSANITIZE
+    CFLAGS+=	-fsanitize=address
+  endif
+
 endif
 
 COPT=		-g0 -O2
