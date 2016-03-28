@@ -332,10 +332,20 @@ thrmain(struct psc_thread *thr)
 }
 
 void
+print_status_line(FILE *fp, uint64_t intv, uint64_t lifetime)
+{
+	char buf[PSCFMT_HUMAN_BUFSIZ];
+
+	pfl_fmt_human(buf, intv);
+	fprintf(fp, "%7s ", buf);
+	pfl_fmt_human(buf, lifetime);
+	fprintf(fp, "%7s", buf);
+}
+
+void
 display(__unusedx struct psc_thread *thr)
 {
-	char ratebuf[PSCFMT_HUMAN_BUFSIZ];
-	struct timespec ts;
+	struct timespec ts, ts0, delta;
 	int n, t, istty;
 	FILE *fp;
 
@@ -351,25 +361,31 @@ display(__unusedx struct psc_thread *thr)
 		fflush(fp);
 	}
 
-	PFL_GETTIMESPEC(&ts);
+	PFL_GETTIMESPEC(&ts0);
+	ts = ts0;
 
 	while (running) {
 		ts.tv_sec += 1;
 		psc_waitq_waitabs(&display_wq, NULL, &ts);
 
-		pfl_fmt_human(ratebuf, iostats->opst_intv);
 		if (istty)
 			fprintf(fp, "\r");
-		fprintf(fp, "%7s ", ratebuf);
-		pfl_fmt_human(ratebuf,
+		print_status_line(fp,
+		    iostats->opst_intv,
 		    psc_atomic64_read(&iostats->opst_lifetime));
-		fprintf(fp, "%7s", ratebuf);
 		if (istty)
 			fflush(fp);
 		else
 			fprintf(fp, "\n");
 	}
-	printf("\n");
+	timespecsub(&ts, &ts0, &delta);
+	if (istty)
+		fprintf(fp, "\r");
+	print_status_line(fp,
+	    psc_atomic64_read(&iostats->opst_lifetime) /
+	      (delta.tv_sec + delta.tv_nsec / 1e9),
+	    psc_atomic64_read(&iostats->opst_lifetime));
+	fprintf(fp, "\n");
 }
 
 int
