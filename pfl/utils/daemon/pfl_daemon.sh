@@ -96,11 +96,12 @@ loadprof()
 		narg=*|\
 		prog=*|\
 		srcdir=*)
-			let ${fl%%=*}=${fl#*=};;
+			declare ${fl%%=*}=${fl#*=};;
 
-		args=*)	xargs+=("${fl#args=}");;
+		args=*)	xargs+=("${fl#args=}")
 			ctlsock=$(echo $xargs | extract_value ctlsock)
 			[ -n "$ctlsock" ] && export CTL_SOCK_FILE=$ctlsock
+			;;
 		bounce)	;;
 		share)	;;
 		tag=*)	[ x"$1" = x"${fl#tag=}" ] || return 1 ;;
