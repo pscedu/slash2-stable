@@ -49,6 +49,10 @@
 #include <syslog.h>
 #include <unistd.h>
 
+#ifdef HAVE_BACKTRACE
+#  include <execinfo.h>
+#endif
+
 #include "pfl/alloc.h"
 #include "pfl/cdefs.h"
 #include "pfl/err.h"
@@ -317,6 +321,62 @@ pfl_fmtlogdate(const struct timeval *tv, const char **s)
 	return (bufp);
 }
 
+__inline const char *
+pflog_get_stacktrace(struct psclog_data *d)
+{
+#ifdef HAVE_BACKTRACE
+	char **symv, *sym, *name, *end;
+	int rc, i, n, adj = 0, len;
+
+	n = backtrace(d->pld_stack_ptrbuf, nitems(d->pld_stack_ptrbuf));
+	symv = backtrace_symbols(d->pld_stack_ptrbuf, n);
+	if (symv == NULL)
+		return ("");
+
+	for (i = 2; i < n; i++) {
+		sym = symv[i];
+		name = strchr(sym, '(');
+		if (name == NULL)
+			goto out;
+		name++;
+		end = strchr(name, '+');
+		if (end == NULL)
+			goto out;
+		len = end - name;
+
+		if ((len == 4 && strncmp(name, "main", len) == 0) ||
+		    (len == 5 && strncmp(name, "clone", len) == 0))
+			break;
+	}
+	i--;
+	for (; i > 2; i--) {
+		sym = symv[i];
+		name = strchr(sym, '(') + 1;
+		end = strchr(name, '+');
+		len = end - name;
+
+		if (len == 7 && strncmp(name, "_psclog", len) == 0)
+			break;
+
+		rc = snprintf(d->pld_stack_symbuf + adj,
+		    sizeof(d->pld_stack_symbuf) - adj,
+		    "%s%.*s", adj ? ":" : "", len, name);
+		if (rc == -1)
+			goto out;
+		adj += rc;
+	}
+
+	if (0)
+ out:
+		printf("bail\n");
+	free(symv);
+	return (d->pld_stack_symbuf);
+#else
+	(void)d;
+	return ("");
+#endif
+}
+
 void
 _psclogv(const struct pfl_callerinfo *pci, int level, int options,
     const char *fmt, va_list ap)
@@ -372,7 +432,7 @@ _psclogv(const struct pfl_callerinfo *pci, int level, int options,
 		FMTSTRCASE('n', "s", thrname)
 		FMTSTRCASE('P', "d", pflog_get_fsctx_pid(thr))
 		FMTSTRCASE('r', "d", d->pld_rank)
-//		FMTSTRCASE('S', "s", call stack)
+		FMTSTRCASE('S', "s", pflog_get_stacktrace(d))
 		FMTSTRCASE('s', "lu", tv.tv_sec)
 		FMTSTRCASE('T', "s", pfl_subsys_name(pci->pci_subsys))
 		FMTSTRCASE('t', "d", pci->pci_subsys)

@@ -134,6 +134,9 @@ endif
 ifneq ($(filter pfl,${MODULES}),)
   MODULES+=	pfl-hdrs str clock pthread
   LDFLAGS+=	-L${PFL_BASE} ${LIBPFL} -lm
+  ifdef PICKLE_HAVE_BACKTRACE
+    LDFLAGS+=	-rdynamic
+  endif
   DEPLIST+=	${PFL_BASE}:libpfl.a
   SRCS+=	${QSORT_R_SRCS}
 

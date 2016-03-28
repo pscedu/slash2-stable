@@ -53,6 +53,8 @@ struct psclog_data {
 	pid_t		 pld_thrid;
 	int		 pld_flags;	/* see PLDF_* */
 	const char	*pld_uprog;	/* userland program via FUSE */
+	void		*pld_stack_ptrbuf[32];
+	char		 pld_stack_symbuf[256];
 };
 
 #define PLDF_INLOG	(1 << 0)
