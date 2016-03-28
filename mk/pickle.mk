@@ -341,4 +341,8 @@ ifeq ($(filter $(realpath ${ROOTDIR})/compat/%,${CURDIR}),)
   COPT+=						-DHAVE_PTHREAD_SETSCHEDPRIO
  endif
 
+ ifdef PICKLE_HAVE_BACKTRACE
+  DEFINES+=						-DHAVE_BACKTRACE
+ endif
+
 endif
