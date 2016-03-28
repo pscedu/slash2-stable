@@ -385,7 +385,10 @@ psc_ctlparam_faults(int fd, struct psc_ctlmsghdr *mh,
 				break;
 		}
 	} else {
-		pflt = pfl_fault_peek(levels[1]);
+		if (set)
+			pflt = pfl_fault_get(levels[1]);
+		else
+			pflt = pfl_fault_peek(levels[1]);
 		if (pflt == NULL)
 			return (psc_ctlsenderr(fd, mh,
 			    "unknown fault point: %s", levels[1]));
