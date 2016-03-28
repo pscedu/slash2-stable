@@ -74,18 +74,11 @@ loadprof()
 		case $fl in
 		args=*)		xargs+=("${fl#args=}");;
 		bounce)		;;
-		ctl=*)		ctl=${fl#ctl=};;
-		mod=*)		mod=${fl#mod=};;
-		mp=*)		mp=${fl#mp=};;
-		name=*)		name=${fl#name=};;
-		narg=*)		narg=${fl#narg=};;
-		prog=*)		prog=${fl#prog=};;
 		share)		;;
-		srcdir=*)	srcdir=${fl#srcdir=};;
 		tag=*)		[ x"$1" = x"${fl#tag=}" ] || return 1 ;;
+		ctl=*|mod=*|mp=*|name=*|narg=*|prog=*|srcdir=*|allow_logfiles_over_nfs=*)
+				let ${fl%%=*}=${fl#*=};;
 		[A-Z][A-Z_]*=*)	export "$fl";;
-		allow_logfiles_over_nfs=*)
-				allow_logfiles_over_nfs=${fl#allow_logfiles_over_nfs=};;
 		*)		warn "unknown setting $fl";;
 		esac
 		[ $dobreak -eq 1 ] && break
