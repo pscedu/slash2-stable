@@ -95,6 +95,8 @@ struct psc_dynarray;
 #define PSCRPC_TIMEOUT_INC		20
 #define PSCRPC_MAX_RETRIES		2
 
+#define PSCRPC_MAX_ASYNC_ARGS		9
+
 extern lnet_handle_eq_t			pscrpc_eq_h;
 extern struct psclist_head		pscrpc_wait_callbacks;
 
@@ -231,7 +233,7 @@ struct pscrpc_async_args {
 	 * least big enough for that.
 	 */
 	uint64_t space[4];
-	void    *pointer_arg[9];
+	void    *pointer_arg[PSCRPC_MAX_ASYNC_ARGS];
 /*
 	union {
 		uint64_t u64;
