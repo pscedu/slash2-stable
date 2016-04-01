@@ -139,6 +139,9 @@
 
 static int arc_slashd_running = 0;
 
+static kmutex_t		evict_lock;
+static kcondvar_t	evict_cond;
+
 static kmutex_t		arc_reclaim_thr_lock;
 static kcondvar_t	arc_reclaim_thr_cv;	/* used to signal reclaim thr */
 static uint8_t		arc_thread_exit;
@@ -420,6 +423,7 @@ static uint64_t		arc_meta_max = 0;
 static uint64_t		arc_data_eviction = 0;
 static uint64_t		arc_meta_eviction1 = 0;
 static uint64_t		arc_meta_eviction2 = 0;
+static uint64_t		arc_meta_eviction3 = 0;
 
 extern int should_reap_umem_default(void);
 
@@ -2224,6 +2228,14 @@ arc_evict_needed(arc_buf_contents_t type)
 			return (1);
 		}
 		/*
+		 * If less than 1/16 is free, evict now.
+		 */
+		delta = arc_meta_limit - arc_meta_used;
+		if (delta < (arc_meta_limit >> 4)) {
+			arc_meta_eviction2++;
+			return (1);
+		}
+		/*
  		 * XXX https://github.com/joyent/illumos-joyent.git
  		 *
  		 * Metadata allocation must succeed or we die. This
@@ -2235,9 +2247,8 @@ arc_evict_needed(arc_buf_contents_t type)
  		 * The case arc_size > arc_c will be catched at the 
  		 * end.
  		 */
-		delta = arc_meta_limit - arc_meta_used;
 		if (delta >= (arc_c - arc_size) / 4) {
-			arc_meta_eviction2++;
+			arc_meta_eviction3++;
 			return (1);
 		}
 	}
@@ -2343,6 +2354,9 @@ arc_get_data_buf(arc_buf_t *buf)
 			ARCSTAT_INCR(arcstat_data_size, size);
 			atomic_add_64(&arc_size, size);
 		}
+		/* 
+		 * (gdb) p arc_stats.arcstat_recycle_miss.value.ui64 
+		 */ 
 		ARCSTAT_BUMP(arcstat_recycle_miss);
 	}
 	ASSERT(buf->b_data != NULL);
@@ -3504,6 +3518,9 @@ void
 arc_init(void)
 {
 	int percentage;
+
+	cv_init(&evict_cond, NULL, CV_DEFAULT, NULL);
+	mutex_init(&evict_lock, NULL, MUTEX_DEFAULT, NULL);
 
 	mutex_init(&arc_reclaim_thr_lock, NULL, MUTEX_DEFAULT, NULL);
 	cv_init(&arc_reclaim_thr_cv, NULL, CV_DEFAULT, NULL);

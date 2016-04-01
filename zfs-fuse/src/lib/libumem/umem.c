@@ -1937,6 +1937,8 @@ _umem_alloc(size_t size, int umflag)
 umem_alloc_retry:
 	if (index < UMEM_MAXBUF >> UMEM_ALIGN_SHIFT) {
 		umem_cache_t *cp = umem_alloc_table[index];
+
+		/* (gdb) p cp->cache_arena->vm_name */
 		buf = _umem_cache_alloc(cp, umflag);
 		if ((cp->cache_flags & UMF_BUFTAG) && buf != NULL) {
 			umem_buftag_t *btp = UMEM_BUFTAG(cp, buf);
@@ -3214,10 +3216,16 @@ int should_reap_umem_default(void)
 	 *
 	 * Hit ENOMEM today. umem_default_arena is once again exhausted, while
 	 * arc_stats.arcstat_size.value.ui64 is only 12843403664.
+	 *
+	 * (gdb) p umem_default_arena->vm_kstat.vk_mem_inuse
+	 * (gdb) p umem_default_arena->vm_kstat.vk_mem_total
+	 *
 	 */
 	if (umem_default_arena != NULL &&
 	    vmem_size(umem_default_arena, VMEM_FREE) <
-	    (vmem_size(umem_default_arena, VMEM_ALLOC) >> 5))
+	    (vmem_size(umem_default_arena, VMEM_ALLOC) >> 4)) {
+		vmem_reap();
 		return (1);
+	}
 	return (0);
 }
