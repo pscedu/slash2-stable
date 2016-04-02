@@ -19,6 +19,8 @@ then
     fi
 fi
 
+# This must match whatever is in file slash2/mk/pre.mk
+
 total=$(git log | grep -c ^commit)
 
 if [ $# -eq 1 ]
