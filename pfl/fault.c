@@ -167,6 +167,7 @@ psc_ctlrep_getfault(int fd, struct psc_ctlmsghdr *mh, void *msg)
 			if (strcmp(pflt->pflt_name, name) == 0)
 				break;
 		}
+	freelock(&pfl_faults_lock);
 	if (rc && !found && !all)
 		rc = psc_ctlsenderr(fd, mh, "unknown fault point: %s",
 		    name);
