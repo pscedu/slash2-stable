@@ -69,11 +69,11 @@ my @ign = (
 	[ qw(usleep msbwatchthr_main _pscthr_begin) ],
 
 	# SLASH2 common
+	[ qw(_psc_waitq_waitabs _lc_get slrpc_batch_thr_main _pscthr_begin) ],
 	[ qw(_psc_waitq_waitrel sl_freapthr_main _pscthr_begin) ],
 	[ qw(_sl_csvc_waitrelv slconnthr_main _pscthr_begin) ],
-
 	[ qw(pfl_multiwait_usecs slconnthr_main _pscthr_begin) ],
-	[ qw(sleep sl_nbrqthr_main _pscthr_begin) ],
+	[ qw(.*sleep sl_nbrqthr_main _pscthr_begin) ],
 
 	# zest
 	[ qw(pfl_multiwait_usecs ziothr_workq_proc_one ziothr_main _pscthr_begin) ],
