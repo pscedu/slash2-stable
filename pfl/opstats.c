@@ -101,56 +101,75 @@ pfl_opstat_destroy(struct pfl_opstat *opst)
 	freelock(&pfl_opstats_lock);
 }
 
-void
-pfl_iostats_grad_init(struct pfl_iostats_grad *ist0, int flags,
-    const char *prefix)
+__static const char *
+_pfl_opstats_base2_suffix(int64_t *val)
 {
-	const char *suf, *nsuf, *mode = "rd";
-	struct pfl_iostats_grad *ist;
-	struct pfl_opstat **opst;
-	uint64_t sz, nsz;
-	int i, label;
+	const char *suffixes = "kmgtpezyx";
+	const char *suffix = suffixes;
+	int i;
 
-	for (i = 0; i < 2; i++) {
-		sz = 0;
-		suf = "";
-		nsuf = "K";
-		label = 0;
-		for (ist = ist0; ist->size; ist++, sz = nsz, label++) {
-			nsz = ist->size / 1024;
+	if (*val < 1024)
+		return ("");
 
-			if (nsz == 1024) {
-				nsuf = "M";
-				nsz = 1;
-			}
-			opst = i ? &ist->rw.wr : &ist->rw.rd;
-			*opst = pfl_opstat_initf(flags,
-			    "%s-%s:%d:%d%s-<%d%s", prefix, mode, label,
-			    sz, suf, nsz, nsuf);
+	for (i = 0; i < nitems(suffixes) && *val > 1024; i++, suffix++)
+		*val /= 1024;
+	return (suffix);
+}
 
-			suf = "K";
+void
+pfl_opstats_grad_init(struct pfl_opstats_grad *og, int flags,
+    int64_t *buckets, int nbuckets, const char *fmt, ...)
+{
+	const char *lower_suffix = "", *upper_suffix = "";
+	int64_t lower_bound, upper_bound;
+	struct pfl_opstat_bucket *ob;
+	char label[16];
+	int rc, i;
+
+	og->og_buckets = PSCALLOC(nbuckets * sizeof(og->og_buckets));
+	og->og_nbuckets = nbuckets;
+
+	for (i = 0, ob = og->og_buckets; i < nbuckets; i++, ob++) {
+		if (i)
+			psc_assert(buckets[i] < buckets[i - 1]);
+		else
+			psc_assert(buckets[i] == 0);
+
+		lower_bound = buckets[i];
+		if (flags & OPSTF_BASE10)
+			lower_suffix = _pfl_opstats_base2_suffix(
+			    &lower_bound);
+
+		if (i == nbuckets - 1) {
+			rc = snprintf(label, sizeof(label),
+			    "%d:>=%"PRId64"%s", i, lower_bound,
+			    lower_suffix);
+		} else {
+			upper_bound = buckets[i + 1];
+			if (flags & OPSTF_BASE10)
+				upper_suffix =
+				    _pfl_opstats_base2_suffix(
+					&upper_bound);
+
+			rc = snprintf(label, sizeof(label),
+			    "%d:%"PRId64"%s-<%"PRId64"%s", i,
+			    lower_bound, lower_suffix,
+			    upper_bound, upper_suffix);
 		}
-
-		opst = i ? &ist->rw.wr : &ist->rw.rd;
-		*opst = pfl_opstat_initf(flags, "%s-%s:%d:>=%d%s", prefix,
-		    mode, label, sz, nsuf);
-
-		mode = "wr";
+		if (rc == -1)
+			psc_fatal("snprintf");
+		ob->ob_lower_bound = buckets[i];
+		ob->ob_opst = pfl_opstat_initf(flags, fmt, label);
 	}
 }
 
 void
-pfl_iostats_grad_destroy(struct pfl_iostats_grad *ist0)
+pfl_opstats_grad_destroy(struct pfl_opstats_grad *og)
 {
-	struct pfl_iostats_grad *ist;
-	struct pfl_opstat *opst;
+	struct pfl_opstat_bucket *ob;
 	int i;
 
-	for (i = 0; i < 2; i++)
-		for (ist = ist0; ; ist++) {
-			opst = i ? ist->rw.wr : ist->rw.rd;
-			pfl_opstat_destroy(opst);
-			if (!ist->size)
-				break;
-		}
+	for (i = 0, ob = og->og_buckets; i < og->og_nbuckets; i++, ob++)
+		pfl_opstat_destroy(ob->ob_opst);
+	PSCFREE(og->og_buckets);
 }

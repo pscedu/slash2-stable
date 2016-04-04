@@ -41,8 +41,25 @@
 #include "pfl/list.h"
 #include "pfl/lockedlist.h"
 
-#define pfl_opstat_add(opst, n)		psc_atomic64_add(&(opst)->opst_lifetime, (n))
-#define	pfl_opstat_incr(opst)		pfl_opstat_add((opst), 1)
+struct pfl_opstat {
+	char			*opst_name;
+	int			 opst_flags;
+
+	psc_atomic64_t		 opst_lifetime;	/* lifetime accumulator */
+	/*
+	 * Unlike the above lifetime counter, the following are
+	 * maintained by a timer thread.
+	 */
+	int64_t			 opst_last;	/* last second lifetime value */
+	int64_t			 opst_intv;	/* last second counter */
+	double			 opst_avg;	/* 10-second average */
+};
+
+#define OPSTF_BASE10		(1 << 0)	/* use base-10 numbering instead of default of base-2 */
+#define OPSTF_EXCL		(1 << 1)	/* like O_EXCL: when creating, opstat must not exist  */
+
+#define pfl_opstat_add(opst, n)	psc_atomic64_add(&(opst)->opst_lifetime, (n))
+#define	pfl_opstat_incr(opst)	pfl_opstat_add((opst), 1)
 
 /*
  * This API explicitly disallows printf-like args as it caches the
@@ -62,32 +79,22 @@
 
 #define	OPSTAT2_ADD(name, n)	OPSTATF_ADD(0, (name), (n))
 
-struct pfl_opstat {
-	char			*opst_name;
-	int			 opst_flags;
-
-	psc_atomic64_t		 opst_lifetime;	/* lifetime accumulator */
-	/*
-	 * Unlike the above lifetime counter, the following are
-	 * maintained by a timer thread.
-	 */
-	int64_t			 opst_last;	/* last second lifetime value */
-	int64_t			 opst_intv;	/* last second counter */
-	double			 opst_avg;	/* 10-second average */
-};
-
-#define OPSTF_BASE10		(1 << 0)	/* use base-10 numbering instead of default of base-2 */
-#define OPSTF_EXCL		(1 << 1)	/* like O_EXCL: when creating, opstat must not exist  */
-
+/* read/write counters */
 struct pfl_iostats_rw {
 	struct pfl_opstat	*wr;
 	struct pfl_opstat	*rd;
 };
 
-/* graduated I/O stats */
-struct pfl_iostats_grad {
-	int64_t			 size;
-	struct pfl_iostats_rw	 rw;
+struct pfl_opstat_bucket {
+	int64_t			 ob_lower_bound;
+	struct pfl_opstat	*ob_opst;
+};
+
+/* graduated opstats (i.e. bucketized by some criteria) */
+struct pfl_opstats_grad {
+	int			 og_nbuckets;
+	struct pfl_opstat_bucket
+				*og_buckets;
 };
 
 #define pfl_opstat_init(name, ...)					\
@@ -98,10 +105,28 @@ void	pfl_opstat_destroy_pos(int);
 struct pfl_opstat *
 	pfl_opstat_initf(int, const char *, ...);
 
-void	pfl_iostats_grad_init(struct pfl_iostats_grad *, int, const char *);
-void	pfl_iostats_grad_destroy(struct pfl_iostats_grad *);
+void	pfl_opstats_grad_init(struct pfl_opstats_grad *, int, int64_t *,
+	    int, const char *, ...);
+void	pfl_opstats_grad_destroy(struct pfl_opstats_grad *);
+
+#define pfl_opstats_grad_get(og, val)					\
+	((struct pfl_opstat_bucket *)bsearch((void *)(uintptr_t)(val),	\
+	    (og)->og_buckets, (og)->og_nbuckets,			\
+	    sizeof((og)->og_buckets[0]), pfl_opstats_grad_cmp))
+
+#define pfl_opstats_grad_incr(og, criteria)				\
+	pfl_opstat_incr(pfl_opstats_grad_get((og), (criteria))->ob_opst)
 
 extern struct psc_dynarray	pfl_opstats;
 extern struct psc_spinlock	pfl_opstats_lock;
+
+static __inline int
+pfl_opstats_grad_cmp(const void *key, const void *item)
+{
+	const struct pfl_opstat_bucket *ob = item;
+	uintptr_t keyval = (uintptr_t)key;
+
+	return (CMP((int64_t)keyval, ob->ob_lower_bound));
+}
 
 #endif /* _PFL_OPSTATS_H_ */
