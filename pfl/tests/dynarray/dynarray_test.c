@@ -115,6 +115,7 @@ main(int argc, char *argv[])
 {
 	extern int _psc_dynarray_resize(struct psc_dynarray *, int);
 	struct psc_dynarray da = DYNARRAY_INIT;
+	int i, j;
 	void *p;
 
 	pfl_init();
@@ -213,6 +214,16 @@ main(int argc, char *argv[])
 	psc_assert(strcmp(psc_dynarray_getpos(&da, psc_dynarray_bsearch(&da, "foobar-e", (void *)strcmp)), "foobar-e") == 0);
 	CHECK(&da, "foobar-e", NULL);
 	psc_dynarray_free(&da);
+
+	psc_dynarray_init(&da);
+	for (i = 0; i < 1025; i++) {
+		uintptr_t foo = i;
+
+		psc_dynarray_splice(&da, i, 0, &foo, 1);
+		for (j = 0; j < i; j++) 
+			psc_assert(psc_dynarray_getpos(&da, j) ==
+			    (void *)(uintptr_t)j);
+	}
 
 	exit(0);
 }
