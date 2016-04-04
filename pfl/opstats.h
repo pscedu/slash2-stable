@@ -38,6 +38,7 @@
 #include <stdint.h>
 
 #include "pfl/atomic.h"
+#include "pfl/bsearch.h"
 #include "pfl/list.h"
 #include "pfl/lockedlist.h"
 
@@ -110,9 +111,9 @@ void	pfl_opstats_grad_init(struct pfl_opstats_grad *, int, int64_t *,
 void	pfl_opstats_grad_destroy(struct pfl_opstats_grad *);
 
 #define pfl_opstats_grad_get(og, val)					\
-	((struct pfl_opstat_bucket *)bsearch((void *)(uintptr_t)(val),	\
+	(&(og)->og_buckets[bsearch_floor((void *)(uintptr_t)(val),	\
 	    (og)->og_buckets, (og)->og_nbuckets,			\
-	    sizeof((og)->og_buckets[0]), pfl_opstats_grad_cmp))
+	    sizeof((og)->og_buckets[0]), pfl_opstats_grad_cmp)])
 
 #define pfl_opstats_grad_incr(og, criteria)				\
 	pfl_opstat_incr(pfl_opstats_grad_get((og), (criteria))->ob_opst)
