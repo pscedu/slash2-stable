@@ -7,6 +7,7 @@ SUBDIRS+=	acsvc
 SUBDIRS+=	alloc
 SUBDIRS+=	atomic
 SUBDIRS+=	bitflag
+SUBDIRS+=	bsearch
 SUBDIRS+=	crc
 SUBDIRS+=	dynarray
 SUBDIRS+=	fmt

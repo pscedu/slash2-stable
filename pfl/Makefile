@@ -11,6 +11,7 @@ NOINSTALL=	1
 SRCS+=		${PFL_BASE}/acsvc.c
 SRCS+=		${PFL_BASE}/alloc.c
 SRCS+=		${PFL_BASE}/base64.c
+SRCS+=		${PFL_BASE}/bsearch.c
 SRCS+=		${PFL_BASE}/completion.c
 SRCS+=		${PFL_BASE}/dbgutil.c
 SRCS+=		${PFL_BASE}/dynarray.c
