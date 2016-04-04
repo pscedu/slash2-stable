@@ -136,7 +136,7 @@ pfl_opstats_grad_init(struct pfl_opstats_grad *og, int flags,
 			psc_assert(buckets[i] == 0);
 
 		lower_bound = buckets[i];
-		if (flags & OPSTF_BASE10)
+		if (!(flags & OPSTF_BASE10))
 			lower_suffix = _pfl_opstats_base2_suffix(
 			    &lower_bound);
 
@@ -146,7 +146,7 @@ pfl_opstats_grad_init(struct pfl_opstats_grad *og, int flags,
 			    lower_suffix);
 		} else {
 			upper_bound = buckets[i + 1];
-			if (flags & OPSTF_BASE10)
+			if (!(flags & OPSTF_BASE10))
 				upper_suffix =
 				    _pfl_opstats_base2_suffix(
 					&upper_bound);
