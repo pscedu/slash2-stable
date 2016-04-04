@@ -37,6 +37,7 @@
 #include "pfl/list.h"
 #include "pfl/lock.h"
 #include "pfl/log.h"
+#include "pfl/opstats.h"
 #include "pfl/rpc.h"
 #include "pfl/rpclog.h"
 #include "pfl/service.h"
@@ -46,6 +47,19 @@
 static int test_req_buffer_pressure;
 
 static int pscrpc_server_post_idle_rqbds(struct pscrpc_service *);
+
+struct pfl_opstats_grad pfl_rpc_service_reply_latencies;
+
+int64_t pfl_rpc_service_reply_latency_durations[] = {
+	0,
+	1,
+	5,
+	10,
+	20,
+	30,
+	40,
+	50,
+};
 
 PSCLIST_HEAD(pscrpc_all_services);
 psc_spinlock_t pscrpc_all_services_lock = SPINLOCK_INIT;
@@ -305,6 +319,9 @@ pscrpc_server_handle_request(struct pscrpc_service *svc,
 	do_gettimeofday(&work_start);
 	timediff = cfs_timeval_sub(&work_start,
 				   &request->rq_arrival_time, NULL);
+
+	pfl_opstat_grad_incr(&pfl_rpc_service_reply_latencies,
+	    timediff / 1000000);
 
 #if WETRACKSTATSSOMEDAY
 	if (svc->srv_stats != NULL) {
@@ -921,8 +938,18 @@ pscrpc_init_svc(int nbufs, int bufsize, int max_req_size,
     int max_reply_size, int req_portal, int rep_portal, char *name,
     svc_handler_t handler, int flags)
 {
+	static int init_globals;
 	struct pscrpc_service *svc;
 	int rc;
+
+	if (!init_globals) {
+		init_globals = 1;
+		pfl_opstat_grad_init(&pfl_rpc_service_reply_latencies,
+		    OPSTATF_BASE10,
+		    pfl_rpc_service_reply_latency_durations,
+		    nitems(pfl_rpc_service_reply_latency_durations),
+		    "rpc-reply-latency:%ss");
+	}
 
 	psclog_info("bufsize %d max_req_size %d", bufsize, max_req_size);
 
