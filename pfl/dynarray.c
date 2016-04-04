@@ -294,6 +294,8 @@ psc_dynarray_splice(struct psc_dynarray *pda, int off, int nrmv,
  * Returns the item's index into the array.  If the item is not in the
  * dynarray, the index value returned is the position the element should
  * take on to maintain sort order.
+ *
+ * XXX this should be changed to use bsearch_ceil().
  */
 int
 psc_dynarray_bsearch(const struct psc_dynarray *pda, const void *item,
