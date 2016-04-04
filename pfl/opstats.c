@@ -104,14 +104,14 @@ pfl_opstat_destroy(struct pfl_opstat *opst)
 __static const char *
 _pfl_opstats_base2_suffix(int64_t *val)
 {
-	const char *suffixes = "kmgtpezyx";
+	const char *suffixes = "bkmgtpezyx";
 	const char *suffix = suffixes;
 	int i;
 
 	if (*val < 1024)
 		return ("");
 
-	for (i = 0; i < nitems(suffixes) && *val > 1024; i++, suffix++)
+	for (i = 0; i < nitems(suffixes) && *val >= 1024; i++, suffix++)
 		*val /= 1024;
 	return (suffix);
 }
@@ -131,7 +131,7 @@ pfl_opstats_grad_init(struct pfl_opstats_grad *og, int flags,
 
 	for (i = 0, ob = og->og_buckets; i < nbuckets; i++, ob++) {
 		if (i)
-			psc_assert(buckets[i] < buckets[i - 1]);
+			psc_assert(buckets[i - 1] < buckets[i]);
 		else
 			psc_assert(buckets[i] == 0);
 
@@ -142,7 +142,7 @@ pfl_opstats_grad_init(struct pfl_opstats_grad *og, int flags,
 
 		if (i == nbuckets - 1) {
 			rc = snprintf(label, sizeof(label),
-			    "%d:>=%"PRId64"%s", i, lower_bound,
+			    "%d:>=%"PRId64"%.1s", i, lower_bound,
 			    lower_suffix);
 		} else {
 			upper_bound = buckets[i + 1];
@@ -152,7 +152,7 @@ pfl_opstats_grad_init(struct pfl_opstats_grad *og, int flags,
 					&upper_bound);
 
 			rc = snprintf(label, sizeof(label),
-			    "%d:%"PRId64"%s-<%"PRId64"%s", i,
+			    "%d:%"PRId64"%.1s-<%"PRId64"%.1s", i,
 			    lower_bound, lower_suffix,
 			    upper_bound, upper_suffix);
 		}
