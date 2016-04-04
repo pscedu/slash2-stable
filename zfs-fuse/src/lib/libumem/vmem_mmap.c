@@ -63,6 +63,8 @@ static vmem_t *mmap_heap;
 static int nb_mmap;
 static int nb_mmap_fail;
 
+#define	MMAP_INCREMENT		10000
+
 void read_mmap() {
     char buf[80];
     FILE *f = fopen("/proc/sys/vm/max_map_count","r");
@@ -91,13 +93,13 @@ static void raise_mmap() {
      * almost pointless.
      */
     read_mmap();
-    nb_mmap += 10000;
+    nb_mmap += MMAP_INCREMENT;
     syslog(LOG_WARNING,"raising max_map_count to %d\n",nb_mmap);
     FILE *f = fopen("/proc/sys/vm/max_map_count","w");
     if (!f) {
 	nb_mmap_fail++;
 	syslog(LOG_WARNING,"could not write to /proc/sys/vm/max_map_count");
-	nb_mmap -= 10000;
+    	nb_mmap -= MMAP_INCREMENT;
 	return;
     }
     fprintf(f,"%d\n",nb_mmap);
