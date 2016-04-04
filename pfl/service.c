@@ -320,7 +320,7 @@ pscrpc_server_handle_request(struct pscrpc_service *svc,
 	timediff = cfs_timeval_sub(&work_start,
 				   &request->rq_arrival_time, NULL);
 
-	pfl_opstat_grad_incr(&pfl_rpc_service_reply_latencies,
+	pfl_opstats_grad_incr(&pfl_rpc_service_reply_latencies,
 	    timediff / 1000000);
 
 #if WETRACKSTATSSOMEDAY
@@ -944,8 +944,8 @@ pscrpc_init_svc(int nbufs, int bufsize, int max_req_size,
 
 	if (!init_globals) {
 		init_globals = 1;
-		pfl_opstat_grad_init(&pfl_rpc_service_reply_latencies,
-		    OPSTATF_BASE10,
+		pfl_opstats_grad_init(&pfl_rpc_service_reply_latencies,
+		    OPSTF_BASE10,
 		    pfl_rpc_service_reply_latency_durations,
 		    nitems(pfl_rpc_service_reply_latency_durations),
 		    "rpc-reply-latency:%ss");
