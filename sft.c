@@ -114,6 +114,7 @@ int64_t				 totalsz;
 int				 chunk;
 int				 verbose;
 int				 checkzero;
+int				 continue_after_errors;
 int				 piecewise;
 volatile sig_atomic_t		 exit_from_signal;
 int				 direct_io;
@@ -272,6 +273,8 @@ thrmain(struct psc_thread *thr)
 			warnx("%s: %s: %s", dowrite ? "write" : "read",
 			    f->fn, strerror(save_errno));
 			unlock_output();
+			if (!continue_after_errors)
+				exit(1);
 			f->rc = -1;
 			incomplete = 1;
 			goto end;
@@ -537,7 +540,7 @@ main(int argc, char *argv[])
 	gcry_control(GCRYCTL_INITIALIZATION_FINISHED, 0);
 
 	pfl_init();
-	while ((c = getopt(argc, argv, "Bb:cD:dKO:PRs:Tt:vwZ")) != -1)
+	while ((c = getopt(argc, argv, "Bb:CcD:dKO:PRs:Tt:vwZ")) != -1)
 		switch (c) {
 		case 'B': /* display bandwidth */
 			displaybw = 1;
@@ -547,6 +550,9 @@ main(int argc, char *argv[])
 			if (bufsz <= 0)
 				errx(1, "%s: %s", optarg, strerror(
 				    bufsz ? -bufsz : EINVAL));
+			break;
+		case 'C': /* continue after IO errors */
+			continue_after_errors = 1;
 			break;
 		case 'c': /* perform checksums */
 			docrc = 1;
