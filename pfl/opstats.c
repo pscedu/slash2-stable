@@ -126,7 +126,7 @@ pfl_opstats_grad_init(struct pfl_opstats_grad *og, int flags,
 	char label[16];
 	int rc, i;
 
-	og->og_buckets = PSCALLOC(nbuckets * sizeof(og->og_buckets));
+	og->og_buckets = PSCALLOC(nbuckets * sizeof(og->og_buckets[0]));
 	og->og_nbuckets = nbuckets;
 
 	for (i = 0, ob = og->og_buckets; i < nbuckets; i++, ob++) {
