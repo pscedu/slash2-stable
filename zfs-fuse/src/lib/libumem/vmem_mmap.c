@@ -63,7 +63,7 @@ static vmem_t *mmap_heap;
 static int nb_mmap;
 static int nb_mmap_fail;
 
-#define	MMAP_INCREMENT		10000
+#define	MMAP_INCREMENT		20000
 
 void read_mmap() {
     char buf[80];
