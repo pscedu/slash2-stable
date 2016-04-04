@@ -321,7 +321,7 @@ pfl_fmtlogdate(const struct timeval *tv, const char **s)
 	return (bufp);
 }
 
-__inline const char *
+const char *
 pflog_get_stacktrace(struct psclog_data *d)
 {
 #ifdef HAVE_BACKTRACE
