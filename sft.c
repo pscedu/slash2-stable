@@ -443,11 +443,7 @@ addwk(struct file *f)
 	wk->chunkid = f->chunkid++;
 	done = wk->off + bufsz >= size || (docrc && !chunk);
 
-	/*
-	 * Use WAKEONE to avoid wasting time on yield() and lc_get()
-	 * during startup phase when the number of threads is large.
-	 */
-	_lc_add(&wkq, wk, PLCBF_TAIL|PLCBF_WAKEONE, NULL);
+	_lc_add(&wkq, wk, PLCBF_TAIL, NULL);
 
 	if (done) {
 		spinlock(&f->lock);
