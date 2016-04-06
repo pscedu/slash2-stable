@@ -11,6 +11,8 @@ set -e
 
 source $(dirname $0)/init.sh
 
+use_async=1
+
 # Like 'wait' without arguments but returns a nonzero exit status if any
 # child reports one.
 exwait()
@@ -64,6 +66,10 @@ scm-fetch:*)
 	;;
 scm-update)
 	GIT_ACTION=pull
+	;;
+scm-diff)
+	GIT_ACTION=diff
+	use_async=0
 	;;
 *)
 	GIT_ACTION=${1#scm-}
@@ -124,7 +130,11 @@ _accrepo()
 
 access_repo_async()
 {
-	_accrepo "$@" &
+	if [ $use_async -eq 1 ]; then
+		_accrepo "$@" &
+	else
+		(_accrepo "$@")
+	fi
 }
 
 access_repo()
