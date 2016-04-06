@@ -67,7 +67,7 @@ pfl_register_errno(int code, const char *str)
 	e = psc_hashtbl_search(&pfl_errno_hashtbl, &q);
 	if (e) {
 		psc_assert(e->code == q);
-		psc_assert(strcmp(e->str, str));
+		psc_assert(strcmp(e->str, str) == 0);
 		return;
 	}
 
