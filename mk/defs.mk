@@ -73,14 +73,17 @@ YFLAGS+=	-d
 CFLAGS+=	-Wall -Wextra -pipe
 # -Wredundant-decls
 CFLAGS+=	-Wshadow -fno-omit-frame-pointer
+LDFLAGS+=	-fno-omit-frame-pointer
 #CFLAGS+=	-Wno-address
 
+# Bits to enable Google profiler.
 ifeq (${GOPROF},1)
 CFLAGS+=	-fno-builtin-malloc -fno-builtin-calloc $( \
 		) -fno-builtin-realloc -fno-builtin-free
 LDFLAGS+=	-ltcmalloc -lprofiler
 endif
 
+# Bits to enable efence.
 ifeq (${EFENCE},1)
 LDFLAGS+=	-lefence
 endif
@@ -99,10 +102,12 @@ ifeq (${DEBUG},0)
   endif
 else
   CFLAGS+=	-g
+  CFLAGS+=	-fstack-protector-all
   LDFLAGS+=	-fstack-protector-all
 
   ifdef PICKLE_HAVE_FSANITIZE
     CFLAGS+=	-fsanitize=address
+    LDFLAGS+=	-fsanitize=address
   endif
 
 endif
