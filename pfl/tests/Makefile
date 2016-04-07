@@ -24,6 +24,7 @@ SUBDIRS+=	rwlock
 SUBDIRS+=	setprocesstitle
 SUBDIRS+=	sig
 SUBDIRS+=	vbitmap
+SUBDIRS+=	waitlist
 SUBDIRS+=	waitq
 
 include ${PFLMK}
