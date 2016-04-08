@@ -1228,15 +1228,17 @@ pscrpc_set_wait(struct pscrpc_request_set *set)
 	psclist_for_each_entry(req, &set->set_requests, rq_set_chain_lentry) {
 		DEBUG_REQ(PLL_DEBUG, req, "set wait loop");
 
+#if 0
 		if (req->rq_import->imp_failed) {
 			psclog_errorx("failed import detected!");
 			rc = -ECONNABORTED;
 			continue;
 		}
+#endif
 
 		psc_assert(req->rq_phase == PSCRPC_RQ_PHASE_COMPLETE);
 
-		if (req->rq_status) {
+		if (req->rq_status && !rc) {
 			rc = -abs(req->rq_status);
 			DEBUG_REQ(PLL_ERROR, req, "error rq_status=%d set=%p",
 			    rc, set);
