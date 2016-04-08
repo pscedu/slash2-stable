@@ -117,6 +117,7 @@ int				 _pfl_callerinfo_lvl;
 
 extern pid_t			  pfl_pid;
 extern int			  pfl_rpc_timeout;
+extern int			  pfl_rpc_max_retry;
 
 #ifdef HAVE_TLS
 # define __callerinfo const struct pfl_callerinfo *pci

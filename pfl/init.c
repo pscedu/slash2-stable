@@ -51,6 +51,7 @@ __static void				*_pfl_tls[PFL_TLSIDX_MAX];
 struct timespec				  pfl_uptime;
 pid_t					  pfl_pid;
 int					  pfl_rpc_timeout = PSCRPC_TIMEOUT;
+int					  pfl_rpc_max_retry = PSCRPC_MAX_RETRIES;
 
 pid_t
 pfl_getsysthrid(void)
