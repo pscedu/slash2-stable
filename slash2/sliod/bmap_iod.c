@@ -352,6 +352,7 @@ slibmaprlsthr_main(struct psc_thread *thr)
 	while (pscthr_run(thr)) {
 		nrls = 0;
 		LIST_CACHE_LOCK(&sli_bmap_releaseq);
+		lc_peekheadwait(&sli_bmap_releaseq);
 		LIST_CACHE_FOREACH_SAFE(bii, tmp, &sli_bmap_releaseq) {
 			b = bii_2_bmap(bii);
 

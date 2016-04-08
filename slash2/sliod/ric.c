@@ -478,10 +478,6 @@ sli_ric_handle_rlsbmap(struct pscrpc_request *rq)
 		memcpy(&newbrls->bir_sbd, sbd, sizeof(*sbd));
 		lc_add(&sli_bmaplease_releaseq, newbrls);
 	}
-	spinlock(&sli_release_bmap_lock);
-	psc_waitq_wakeall(&sli_release_bmap_waitq);
-	freelock(&sli_release_bmap_lock);
-
  out:
 	return (0);
 }
