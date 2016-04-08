@@ -2,7 +2,7 @@
 /*
  * %ISC_START_LICENSE%
  * ---------------------------------------------------------------------
- * Copyright 2015, Google, Inc.
+ * Copyright 2015-2016, Google, Inc.
  * Copyright 2015, Pittsburgh Supercomputing Center
  * All rights reserved.
  *
@@ -35,6 +35,7 @@
 #include "pfl/sys.h"
 #include "pfl/thread.h"
 #include "pfl/timerthr.h"
+#include "pfl/workthr.h"
 
 #include "mount_wokfs.h"
 #include "ctl.h"
@@ -172,8 +173,6 @@ main(int argc, char *argv[])
 	pscfs_addarg(&args, "-o");
 	pscfs_addarg(&args, STD_MOUNT_OPTIONS);
 
-	setenv("LD_DYNAMIC_WEAK", "1", 1);
-
 	p = getenv("CTL_SOCK_FILE");
 	if (p)
 		ctlsockfn = p;
@@ -222,6 +221,7 @@ main(int argc, char *argv[])
 	ctlthr_spawn();
 
 	pfl_opstimerthr_spawn(PFL_THRT_OPSTIMER, "opstimerthr");
+	pfl_workq_init(128);
 
 	pscfs_entry_timeout = 8.;
 	pscfs_attr_timeout = 8.;
