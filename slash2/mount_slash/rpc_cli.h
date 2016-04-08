@@ -3,7 +3,7 @@
  * %GPL_START_LICENSE%
  * ---------------------------------------------------------------------
  * Copyright 2015-2016, Google, Inc.
- * Copyright (c) 2006-2015, Pittsburgh Supercomputing Center (PSC).
+ * Copyright 2006-2016, Pittsburgh Supercomputing Center
  * All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
@@ -32,14 +32,14 @@ struct pscrpc_request;
 
 struct slrpc_cservice;
 
-/* async RPC pointers */
+/* async RPC pointers, must be less than PSCRPC_MAX_ASYNC_ARGS */
 #define MSL_CBARG_BMPCE			0
 #define MSL_CBARG_CSVC			1
 #define MSL_CBARG_BIORQ			3
 #define MSL_CBARG_BIORQS		4
-#define MSL_CBARG_BMPC			5
-#define MSL_CBARG_BMAP			6
-#define MSL_CBARG_RESM			7
+#define MSL_CBARG_BMAP			5
+#define MSL_CBARG_RESM			6
+#define MSL_CBARG_IOVS			7
 
 enum {
 	MSL_BMLGET_CBARG_BMAP,
@@ -73,7 +73,7 @@ enum {
  * Initialize a new RPC request for a pscfs clientctx.
  * Most arguments here are macro-value-result.
  */
-#define MSL_RMC_NEWREQ(pfr, f, csvc, op, rq, mq, mp, rc)		\
+#define MSL_RMC_NEWREQ(f, csvc, op, rq, mq, mp, rc)			\
 	do {								\
 		struct sl_resm *_resm;					\
 									\
@@ -86,7 +86,7 @@ enum {
 			sl_csvc_decref(csvc);				\
 			(csvc) = NULL;					\
 		}							\
-		(rc) = slc_rmc_getcsvc((pfr), _resm, &(csvc));		\
+		(rc) = slc_rmc_getcsvc(_resm, &(csvc));			\
 		if (rc)							\
 			break;						\
 		(rc) = SL_RSX_NEWREQ((csvc), (op), (rq), (mq), (mp));	\
@@ -94,7 +94,7 @@ enum {
 			sl_csvc_decref(csvc);				\
 			(csvc) = NULL;					\
 		}							\
-	} while ((rc) && slc_rmc_retry((pfr), &(rc)))
+	} while (0)
 
 /* obtain csvc to an IOS */
 #define slc_geticsvcxf(resm, fl, exp)					\
@@ -120,9 +120,7 @@ enum {
 
 void	slc_rpc_initsvc(void);
 
-int	slc_rmc_getcsvc(struct pscfs_req *, struct sl_resm *,
-	    struct slrpc_cservice **);
-int	slc_rmc_getcsvc1(struct slrpc_cservice **, struct sl_resm *);
+int	slc_rmc_getcsvc(struct sl_resm *, struct slrpc_cservice **);
 int	slc_rmc_retry(struct pscfs_req *, int *);
 int	slc_rmc_setmds(const char *);
 

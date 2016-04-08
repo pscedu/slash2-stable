@@ -3,7 +3,7 @@
  * %GPL_START_LICENSE%
  * ---------------------------------------------------------------------
  * Copyright 2015-2016, Google, Inc.
- * Copyright (c) 2006-2015, Pittsburgh Supercomputing Center (PSC).
+ * Copyright 2006-2016, Pittsburgh Supercomputing Center
  * All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
@@ -474,9 +474,6 @@ slictlrep_getreplwkst(int fd, struct psc_ctlmsghdr *mh, void *m)
 	rc = 1;
 	PLL_LOCK(&sli_replwkq_active);
 	PLL_FOREACH(w, &sli_replwkq_active) {
-		if (w->srw_op != SLI_REPLWKOP_REPL)
-			continue;
-
 		srws->srws_fg = w->srw_fg;
 		srws->srws_bmapno = w->srw_bmapno;
 		srws->srws_refcnt = psc_atomic32_read(&w->srw_refcnt);
@@ -644,6 +641,10 @@ slictlthr_main(const char *fn)
 	    PFLCTL_PARAMT_UINT64, 0, &sli_current_reclaim_xid);
 	psc_ctlparam_register_var("sys.selftestrc", PFLCTL_PARAMT_INT,
 	    0, &sli_selftest_rc);
+
+	psc_ctlparam_register_var("sys.min_space_reserve",
+	    PFLCTL_PARAMT_INT, PFLCTL_PARAMF_RDWR,
+	    &sli_min_space_reserve);
 
 	psc_ctlparam_register_var("sys.sync_max_writes",
 	    PFLCTL_PARAMT_INT, PFLCTL_PARAMF_RDWR,

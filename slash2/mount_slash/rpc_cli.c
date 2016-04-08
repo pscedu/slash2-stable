@@ -2,8 +2,8 @@
 /*
  * %GPL_START_LICENSE%
  * ---------------------------------------------------------------------
- * Copyright 2015, Google, Inc.
- * Copyright (c) 2007-2015, Pittsburgh Supercomputing Center (PSC).
+ * Copyright 2015-2016, Google, Inc.
+ * Copyright 2007-2016, Pittsburgh Supercomputing Center
  * All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
@@ -59,8 +59,8 @@ msl_resm_throttle_wake(struct sl_resm *m)
 int
 msl_resm_throttle_yield(struct sl_resm *m)
 {
-	int max, rc = 0;
 	struct resprof_cli_info *rpci;
+	int max, rc = 0;
 
 	if (m->resm_type == SLREST_MDS) {
 		max = msl_mds_max_inflight_rpcs;
@@ -69,9 +69,9 @@ msl_resm_throttle_yield(struct sl_resm *m)
 	}
 
 	rpci = res2rpci(m->resm_res);
-        RPCI_LOCK(rpci);
-        if (rpci->rpci_infl_rpcs >= max)
-                rc = -EAGAIN;
+	RPCI_LOCK(rpci);
+	if (rpci->rpci_infl_rpcs >= max)
+		rc = -EAGAIN;
 	RPCI_ULOCK(rpci);
 	return rc;
 }
@@ -200,6 +200,22 @@ slc_rmc_setmds(const char *name)
 /*
  * Determine if process doesn't want to wait or if maximum allowed
  * timeout has been reached for MDS communication.
+ * 
+ *
+ * From now-gone msl_fd_should_retry():
+ *
+ * Determine if an I/O operation should be retried after successive
+ * RPC/communication failures.
+ *
+ * We want to check:
+ *	- administration/control/configuration policy (e.g. "5
+ *	  retries").
+ *	- user process/environment/file descriptor policy
+ *	- user process interrupt
+ *
+ * XXX this should likely be merged with slc_rmc_retry_pfr().
+ * XXX mfh_retries access and modification is racy here, e.g. if the
+ *	process has multiple threads or forks.
  */
 int
 slc_rmc_retry(struct pscfs_req *pfr, int *rc)
@@ -222,7 +238,12 @@ slc_rmc_retry(struct pscfs_req *pfr, int *rc)
 	case ENONET:
 #endif
 	case ENOTCONN:
+		break;
 	case ETIMEDOUT:
+		/* XXX track on per IOS/MDS basis */
+		OPSTAT_INCR("msl.timeout");
+		if (pfr && pfr->pfr_retries > msl_max_retries)
+			return (0);
 		break;
 
 	/*
@@ -242,6 +263,7 @@ slc_rmc_retry(struct pscfs_req *pfr, int *rc)
 	 * going to retry.
 	 */
 	if (pfr) {
+		pfr->pfr_retries++;
 		if (pfr->pfr_interrupted) {
 			retry = 0;
 			*rc = EINTR;
@@ -257,45 +279,18 @@ slc_rmc_retry(struct pscfs_req *pfr, int *rc)
 			retry = 0;
 			*rc = EINTR;
 		}
+		OPSTAT_INCR("msl.retry");
 	}
 	return (retry);
 }
 
 int
-slc_rmc_getcsvc(struct pscfs_req *pfr,
-    struct sl_resm *resm, struct slrpc_cservice **csvcp)
+slc_rmc_getcsvc(struct sl_resm *resm, struct slrpc_cservice **csvcp)
 {
-	int rc;
-
 	*csvcp = slc_getmcsvc(resm);
 	if (*csvcp)
 		return (0);
-
-	for (;;) {
-		rc = 0;
-		CSVC_LOCK(resm->resm_csvc);
-		*csvcp = slc_getmcsvc(resm);
-		if (*csvcp)
-			break;
-
-		rc = resm->resm_csvc->csvc_lasterrno;
-		if (!slc_rmc_retry(pfr, &rc))
-			break;
-		sl_csvc_waitrel_s(resm->resm_csvc, CSVC_RECONNECT_INTV);
-	}
-	CSVC_ULOCK(resm->resm_csvc);
-	return (rc);
-}
-
-int
-slc_rmc_getcsvc1(struct slrpc_cservice **csvcp, struct sl_resm *resm)
-{
-	int rc = 0;
-
-	*csvcp = slc_getmcsvc(resm);
-	if (*csvcp == NULL)
-		rc = resm->resm_csvc->csvc_lasterrno;
-	return (rc);
+	return (resm->resm_csvc->csvc_lasterrno);
 }
 
 void

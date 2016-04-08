@@ -33,6 +33,7 @@
 
 #include "pfl/alloc.h"
 #include "pfl/ctlsvr.h"
+#include "pfl/fault.h"
 #include "pfl/fs.h"
 #include "pfl/log.h"
 #include "pfl/odtable.h"
@@ -84,6 +85,8 @@ int			 slm_opstate;
 
 struct psc_poolmaster	 slm_bml_poolmaster;
 struct psc_poolmgr	*slm_bml_pool;
+
+struct psc_poolmaster	 slm_repl_status_poolmaster;
 
 int
 psc_usklndthr_get_type(const char *namefmt)
@@ -445,7 +448,7 @@ main(int argc, char *argv[])
 			sfn = optarg;
 			break;
 		case 'V':
-			errx(0, "revision is %d", sl_stk_version);
+			errx(0, "version is %d", sl_stk_version);
 		default:
 			usage();
 		}
@@ -543,11 +546,18 @@ main(int argc, char *argv[])
 		    nodeSite->site_id);
 	}
 
-	if (zfs_mounts[current_vfsid].zm_uuid != globalConfig.gconf_fsuuid)
+	if (zfs_mounts[current_vfsid].zm_uuid !=
+	    globalConfig.gconf_fsuuid)
 		psc_fatalx("FSUUID do not match; "
 		    "ZFS=%"PRIx64" slcfg=%"PRIx64,
 		    zfs_mounts[current_vfsid].zm_uuid,
 		    globalConfig.gconf_fsuuid);
+
+	psc_poolmaster_init(&slm_repl_status_poolmaster,
+	    struct slm_replst_workreq, rsw_lentry, PPMF_AUTO, 64,
+	    64, 0, NULL, NULL, NULL, "replst");
+	slm_repl_status_pool = psc_poolmaster_getmgr(
+	    &slm_repl_status_poolmaster);
 
 	lc_reginit(&slm_replst_workq, struct slm_replst_workreq,
 	    rsw_lentry, "replstwkq");
@@ -560,7 +570,8 @@ main(int argc, char *argv[])
 	slm_bml_pool = psc_poolmaster_getmgr(&slm_bml_poolmaster);
 
 	sl_nbrqset = pscrpc_prep_set();
-	pscrpc_nbreapthr_spawn(sl_nbrqset, SLMTHRT_NBRQ, 8, "slmnbrqthr");
+	pscrpc_nbreapthr_spawn(sl_nbrqset, SLMTHRT_NBRQ, 8,
+	    "slmnbrqthr");
 
 	slm_opstate = SLM_OPSTATE_REPLAY;
 
@@ -693,10 +704,13 @@ main(int argc, char *argv[])
 	sl_freapthr_spawn(SLMTHRT_FREAP, "slmfreapthr");
 
 	time(&now);
-	psclogs_info(SLMSS_INFO, "SLASH2 %s revision %d started at %s",
+	psclogs_info(SLMSS_INFO, "SLASH2 %s version %d started at %s",
 	    __progname, sl_stk_version, ctime(&now));
 	psclogs_info(SLMSS_INFO, "Max ARC caching size is %"PRIu64,
 	    arc_get_maxsize());
+
+	pfl_fault_register("slashd/get_bmap_delay");
+	pfl_fault_register("slashd/incoming_rpc_delay");
 
 	slmctlthr_main(sfn);
 	exit(0);

@@ -755,7 +755,7 @@ slvr_remove(struct slvr *s)
 	bmap_op_done_type(bii_2_bmap(bii), BMAP_OPCNT_SLVR);
 
 	if (s->slvr_slab)
-		psc_pool_return(sl_bufs_pool, s->slvr_slab);
+		psc_pool_return(slab_pool, s->slvr_slab);
 	psc_pool_return(slvr_pool, s);
 }
 
@@ -929,7 +929,7 @@ _slvr_lookup(const struct pfl_callerinfo *pci, uint32_t num,
     struct bmap_iod_info *bii)
 {
 	struct slvr *s, *tmp1 = NULL, ts;
-	struct sl_buffer *tmp2 = NULL;
+	struct slab *tmp2 = NULL;
 	int alloc = 0;
 
 	ts.slvr_num = num;
@@ -951,10 +951,12 @@ _slvr_lookup(const struct pfl_callerinfo *pci, uint32_t num,
 			 * from being freed before we release the lock.
 			 */
 			BII_ULOCK(bii);
-			pscthr_yield();
+			usleep(1);
 			BII_LOCK(bii);
 			goto retry;
 		}
+
+		OPSTAT_INCR("slvr-cache-hit");
 
 		s->slvr_refcnt++;
 
@@ -964,14 +966,14 @@ _slvr_lookup(const struct pfl_callerinfo *pci, uint32_t num,
 			alloc = 1;
 			BII_ULOCK(bii);
 			tmp1 = psc_pool_get(slvr_pool);
-			tmp2 = psc_pool_get(sl_bufs_pool);
+			tmp2 = psc_pool_get(slab_pool);
 			BII_LOCK(bii);
 			goto retry;
 		}
 
 		alloc = 0;
 
-		OPSTAT_INCR("slvr-get");
+		OPSTAT_INCR("slvr-cache-miss");
 
 		s = tmp1;
 		memset(s, 0, sizeof(*s));
@@ -992,35 +994,30 @@ _slvr_lookup(const struct pfl_callerinfo *pci, uint32_t num,
 		 * private to the bmap's biod_slvrtree.
 		 */
 		s->slvr_flags |= SLVRF_LRU;
-		/* note: lc_addtail() will grab the list lock itself */
 		lc_addtail(&sli_lruslvrs, s);
 
 	}
 	if (alloc) {
 		psc_pool_return(slvr_pool, tmp1);
-		psc_pool_return(sl_bufs_pool, tmp2);
+		psc_pool_return(slab_pool, tmp2);
 	}
 	return (s);
 }
 
 /*
- * The reclaim function for sl_bufs_pool.  Note that our caller
+ * The reclaim function for slab_pool.  Note that our caller
  * psc_pool_get() ensures that we are called exclusively.
  */
 int
-slvr_buffer_reap(struct psc_poolmgr *m)
+slab_cache_reap(struct psc_poolmgr *m)
 {
-	static struct psc_dynarray a;
-	struct slvr *s, *dummy;
-	int i, n;
-
-	psc_dynarray_init(&a);
+	static struct psc_dynarray a = DYNARRAY_INIT;
+	struct slvr *s;
+	int i;
 
 	LIST_CACHE_LOCK(&sli_lruslvrs);
-	LIST_CACHE_FOREACH_SAFE(s, dummy, &sli_lruslvrs) {
-		DEBUG_SLVR(PLL_DIAG, s,
-		    "considering for reap, nwaiters=%d",
-		    psc_atomic32_read(&m->ppm_nwaiters));
+	LIST_CACHE_FOREACH(s, &sli_lruslvrs) {
+		DEBUG_SLVR(PLL_DIAG, s, "considering for reap");
 
 		/*
 		 * We are reaping so it is fine to back off on some
@@ -1051,15 +1048,11 @@ slvr_buffer_reap(struct psc_poolmgr *m)
 	}
 	LIST_CACHE_ULOCK(&sli_lruslvrs);
 
-	n = psc_dynarray_len(&a);
 	DYNARRAY_FOREACH(s, i, &a)
 		slvr_remove(s);
-	psc_dynarray_free(&a);
+	psc_dynarray_reset(&a);
 
-	if (!n || n < psc_atomic32_read(&m->ppm_nwaiters))
-		psc_waitq_wakeone(&sli_slvr_waitq);
-
-	return (n);
+	return (0);
 }
 
 void
@@ -1118,7 +1111,7 @@ slvr_cache_init(void)
 	lc_reginit(&sli_lruslvrs, struct slvr, slvr_lentry, "lruslvrs");
 	lc_reginit(&sli_crcqslvrs, struct slvr, slvr_lentry, "crcqslvrs");
 
-	lc_reginit(&sli_fcmh_dirty, struct fcmh_iod_info, fii_lentry, 
+	lc_reginit(&sli_fcmh_dirty, struct fcmh_iod_info, fii_lentry,
 	    "fcmhdirty");
 
 	if (slcfg_local->cfg_async_io) {
@@ -1139,7 +1132,7 @@ slvr_cache_init(void)
 		    "sliaiothr");
 	}
 
-	sl_buffer_cache_init();
+	slab_cache_init();
 	slvr_worker_init();
 }
 

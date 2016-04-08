@@ -2,7 +2,7 @@
 /*
  * %GPL_START_LICENSE%
  * ---------------------------------------------------------------------
- * Copyright 2015, Google, Inc.
+ * Copyright 2015-2016, Google, Inc.
  * Copyright (c) 2008-2015, Pittsburgh Supercomputing Center (PSC).
  * All rights reserved.
  *
@@ -209,9 +209,23 @@ slmrcmthr_walk_bmaps(struct slm_replst_workreq *rsw,
 	rc = slm_rcm_issue_getreplst(rsw, f);
 	if (fcmh_isreg(f)) {
 		for (n = 0; rc == 0; n++) {
-			if (bmap_getf(f, n, SL_WRITE, BMAPGETF_CREATE |
-			    BMAPGETF_NOAUTOINST, &b))
+			/*
+			 * Client write-ahead can create empty bmaps
+			 * after EOF.  These shouldn't be shown; dumpfid
+			 * can be used to examine the entire file for
+			 * system debugging.
+			 */
+			if (n >= fcmh_nvalidbmaps(f))
+				    break;
+
+			rc = bmap_getf(f, n, SL_WRITE, BMAPGETF_CREATE |
+			    BMAPGETF_NOAUTOINST, &b);
+			if (rc == SLERR_BMAP_INVALID)
 				break;
+			if (rc) {
+				// XXX send sl_strerror(rc) message
+				break;
+			}
 
 			rc = slmrcmthr_walk_brepls(rsw, f, b, n, &rq);
 			bmap_op_done(b);
@@ -285,7 +299,7 @@ slmrcmthr_main(struct psc_thread *thr)
 		slm_rcm_issue_getreplst(rsw, NULL);
 
 		sl_csvc_decref(rsw->rsw_csvc);
-		PSCFREE(rsw);
+		psc_pool_return(slm_repl_status_pool, rsw);
 		psc_dynarray_reset(&da);
 	}
 }

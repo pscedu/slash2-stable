@@ -2,7 +2,7 @@
 /*
  * %GPL_START_LICENSE%
  * ---------------------------------------------------------------------
- * Copyright 2015, Google, Inc.
+ * Copyright 2015-2016, Google, Inc.
  * Copyright (c) 2007-2015, Pittsburgh Supercomputing Center (PSC).
  * All rights reserved.
  *
@@ -115,7 +115,7 @@ fci_2_fcmh(struct fcmh_cli_info *fci)
 }
 
 /* Client-specific fcmh_flags */
-#define FCMH_CLI_INITDIRCACHE		(_FCMH_FLGSHFT << 0)	/* dircache initialized */
+#define FCMHF_INIT_DIRCACHE		(_FCMH_FLGSHFT << 0)	/* dircache initialized */
 #define FCMH_CLI_TRUNC			(_FCMH_FLGSHFT << 1)	/* truncate in progress */
 #define FCMH_CLI_DIRTY_DSIZE		(_FCMH_FLGSHFT << 2)	/* has dirty datesize */
 #define FCMH_CLI_DIRTY_MTIME		(_FCMH_FLGSHFT << 3)	/* has dirty mtime */

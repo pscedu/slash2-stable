@@ -60,6 +60,7 @@ enum {
 	MSTHRT_RCI,			/* service RPC reqs for CLI from ION */
 	MSTHRT_RCM,			/* service RPC reqs for CLI from MDS */
 	MSTHRT_READAHEAD,		/* readahead thread */
+	MSTHRT_IORETRY,			/* I/O retry thread */
 	MSTHRT_OPSTIMER,		/* opstats updater */
 	MSTHRT_USKLNDPL,		/* userland socket lustre net dev poll thr */
 	MSTHRT_WORKER			/* generic worker */
@@ -102,16 +103,22 @@ struct msreadahead_thread {
 	struct pfl_multiwait		 mrat_mw;
 };
 
+struct msioretry_thread {
+	struct pfl_multiwait		 mrat_mw;
+};
+
 PSCTHR_MKCAST(msattrflushthr, msattrflush_thread, MSTHRT_ATTR_FLUSH);
 PSCTHR_MKCAST(msflushthr, msflush_thread, MSTHRT_FLUSH);
 PSCTHR_MKCAST(msbreleasethr, msbrelease_thread, MSTHRT_BRELEASE);
 PSCTHR_MKCAST(msbwatchthr, msbwatch_thread, MSTHRT_BWATCH);
 PSCTHR_MKCAST(msrcithr, msrci_thread, MSTHRT_RCI);
 PSCTHR_MKCAST(msrcmthr, msrcm_thread, MSTHRT_RCM);
+PSCTHR_MKCAST(msioretrythr, msioretry_thread, MSTHRT_IORETRY);
 PSCTHR_MKCAST(msreadaheadthr, msreadahead_thread, MSTHRT_READAHEAD);
 
 #define NUM_BMAP_FLUSH_THREADS		16
 #define NUM_ATTR_FLUSH_THREADS		4
+#define NUM_IO_RETRY_THREADS		4
 #define NUM_READAHEAD_THREADS		4
 
 #define MSL_FIDNS_RPATH			".slfidns"
@@ -124,6 +131,14 @@ PSCTHR_MKCAST(msreadaheadthr, msreadahead_thread, MSTHRT_READAHEAD);
  * XXX This value should be calculated dynamically.
  */
 #define MAX_BMAPS_REQ			2
+
+/*
+ * Used to retry an I/O request in the background.
+ */
+struct slc_retry_req {
+	struct psc_listentry		 srr_lentry;
+	struct bmpc_ioreq		*srr_ioreq;
+};
 
 struct slc_async_req {
 	struct psc_listentry		  car_lentry;
@@ -311,21 +326,20 @@ ssize_t	 slc_getxattr(struct pscfs_req *pfr, const struct pscfs_creds *,
 size_t	 msl_pages_copyout(struct bmpc_ioreq *, struct msl_fsrqinfo *);
 int	 msl_fd_should_retry(struct msl_fhent *, struct pscfs_req *, int);
 
-void	 msl_update_iocounters(struct pfl_iostats_grad *, enum rw, int);
-
 int	 msl_try_get_replica_res(struct bmap *, int, int,
 	    struct sl_resm **, struct slashrpc_cservice **);
 struct msl_fhent *
 	 msl_fhent_new(struct pscfs_req *, struct fidc_membh *);
 
-void	msl_resm_throttle_wake(struct sl_resm *);
-void	msl_resm_throttle_wait(struct sl_resm *);
-int	msl_resm_throttle_yield(struct sl_resm *);
+void	 msl_resm_throttle_wake(struct sl_resm *);
+void	 msl_resm_throttle_wait(struct sl_resm *);
+int	 msl_resm_throttle_yield(struct sl_resm *);
 
 int	 _msl_resm_throttle(struct sl_resm *, int);
 
 void	 msbmapthr_spawn(void);
 void	 msctlthr_spawn(void);
+void	 msioretrythr_spawn(void);
 void	 msreadaheadthr_spawn(void);
 void	 msl_readahead_svc_destroy(void);
 
@@ -353,7 +367,6 @@ void	  bmap_flush_resched(struct bmpc_ioreq *, int);
 #define BMAPFLSH_TIMEOADD	(1 << 2)
 
 extern const char		*msl_ctlsockfn;
-extern sl_ios_id_t		 msl_mds;
 extern sl_ios_id_t		 msl_pref_ios;
 extern struct sl_resm		*msl_rmc_resm;
 extern char			 mountpoint[];
@@ -363,8 +376,10 @@ extern struct psc_hashtbl	 msl_uidmap_ext;
 extern struct psc_hashtbl	 msl_uidmap_int;
 extern struct psc_hashtbl	 msl_gidmap_int;
 
-extern struct pfl_iostats_grad	 slc_iosyscall_iostats[];
-extern struct pfl_iostats_grad	 slc_iorpc_iostats[];
+extern struct pfl_opstats_grad	 slc_iosyscall_iostats_rd;
+extern struct pfl_opstats_grad	 slc_iosyscall_iostats_wr;
+extern struct pfl_opstats_grad	 slc_iorpc_iostats_rd;
+extern struct pfl_opstats_grad	 slc_iorpc_iostats_wr;
 
 extern struct psc_listcache	 msl_attrtimeoutq;
 extern struct psc_listcache	 msl_bmapflushq;
@@ -373,6 +388,7 @@ extern struct psc_listcache	 msl_readaheadq;
 
 extern struct psc_poolmgr	*msl_iorq_pool;
 extern struct psc_poolmgr	*msl_async_req_pool;
+extern struct psc_poolmgr	*msl_retry_req_pool;
 extern struct psc_poolmgr	*msl_biorq_pool;
 extern struct psc_poolmgr	*msl_mfh_pool;
 
@@ -384,6 +400,7 @@ extern int			 msl_max_nretries;
 extern int			 msl_predio_issue_maxpages;
 extern int			 msl_predio_issue_minpages;
 extern int			 msl_predio_window_size;
+extern int			 msl_max_retries;
 extern int			 msl_root_squash;
 extern int			 msl_statfs_pref_ios_only;
 extern uint64_t			 msl_pagecache_maxsize;

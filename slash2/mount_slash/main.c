@@ -67,7 +67,6 @@
 #include "pfl/timerthr.h"
 #include "pfl/usklndthr.h"
 #include "pfl/vbitmap.h"
-#include "pfl/workthr.h"
 
 #include "bmap_cli.h"
 #include "cache_params.h"
@@ -121,7 +120,6 @@ struct psc_waitq		 msl_flush_attrq = PSC_WAITQ_INIT;
 
 struct psc_listcache		 msl_attrtimeoutq;
 
-sl_ios_id_t			 msl_mds = IOS_ID_ANY;
 sl_ios_id_t			 msl_pref_ios = IOS_ID_ANY;
 
 const char			*msl_ctlsockfn = SL_PATH_MSCTLSOCK;
@@ -136,6 +134,9 @@ struct psc_poolmgr		*msl_async_req_pool;
 
 struct psc_poolmaster		 msl_biorq_poolmaster;
 struct psc_poolmgr		*msl_biorq_pool;
+
+struct psc_poolmaster		 msl_retry_req_poolmaster;
+struct psc_poolmgr		*msl_retry_req_pool;
 
 struct psc_poolmaster		 msl_mfh_poolmaster;
 struct psc_poolmgr		*msl_mfh_pool;
@@ -160,6 +161,7 @@ struct psc_hashtbl		 msl_gidmap_int;
 int				 msl_acl;
 int				 msl_direct_io = 1;
 int				 msl_root_squash;
+int				 msl_max_retries = 3;
 uint64_t			 msl_pagecache_maxsize;
 int				 msl_statfs_pref_ios_only;
 struct resprof_cli_info		 msl_statfs_aggr_rpci;
@@ -168,6 +170,23 @@ int				 msl_ios_max_inflight_rpcs = RESM_MAX_IOS_OUTSTANDING_RPCS;
 int				 msl_mds_max_inflight_rpcs = RESM_MAX_MDS_OUTSTANDING_RPCS;
 
 int				 msl_newent_inherit_groups = 1;
+
+/*
+ * I/O requests that have failed due to timeouts are placed here for
+ * retry.
+ */
+struct psc_lockedlist		 slc_retry_req_list;
+
+int64_t slc_io_grad_sizes[] = {
+		0,
+	     1024,
+	 4 * 1024,
+	16 * 1024,
+	64 * 1024,
+       128 * 1024,
+       512 * 1024,
+      1024 * 1024,
+};
 
 struct sl_resource *
 msl_get_pref_ios(void)
@@ -393,11 +412,10 @@ mslfsop_create(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
- retry:
-
-	MSL_RMC_NEWREQ(pfr, p, csvc, SRMT_CREATE, rq, mq, mp, rc);
+ retry1:
+	MSL_RMC_NEWREQ(p, csvc, SRMT_CREATE, rq, mq, mp, rc);
 	if (rc)
-		PFL_GOTOERR(out, rc);
+		goto retry2;
 
 	mq->mode = !(mode & 0777) ? (0666 & ~pscfs_getumask(pfr)) :
 	    mode;
@@ -414,9 +432,11 @@ mslfsop_create(struct pscfs_req *pfr, pscfs_inum_t pinum,
 
 	namecache_hold_entry(&dcu, p, name);
 	rc = SL_RSX_WAITREP(csvc, rq, mp);
+
+ retry2:
 	if (rc && slc_rmc_retry(pfr, &rc)) {
 		namecache_fail(&dcu);
-		goto retry;
+		goto retry1;
 	}
 	if (rc == 0)
 		rc = -mp->rc;
@@ -517,7 +537,7 @@ mslfsop_create(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	    pscfs_attr_timeout, mfh, rflags, rc);
 	namecache_update(&dcu, mp->cattr.sst_fid, rc);
 
-	psclogs_diag(SLCSS_FSOP, "CREATE: pfid="SLPRI_FID" "
+	psclogs(rc ? PLL_INFO : PLL_DIAG, SLCSS_FSOP, "CREATE: pfid="SLPRI_FID" "
 	    "cfid="SLPRI_FID" name='%s' mode=%#o oflags=%#o rc=%d",
 	    pinum, mp ? mp->cattr.sst_fid : FID_ANY, name, mode, oflags,
 	    rc);
@@ -607,7 +627,8 @@ msl_open(struct pscfs_req *pfr, pscfs_inum_t inum, int oflags,
 
  out:
 	if (c) {
-		DEBUG_FCMH(PLL_DIAG, c, "new mfh=%p dir=%s rc=%d oflags=%#o",
+		DEBUG_FCMH(rc ? PLL_INFO : PLL_DIAG, c, 
+		    "new mfh=%p dir=%s rc=%d oflags=%#o",
 		    *mfhp, (oflags & O_DIRECTORY) ? "yes" : "no", rc, oflags);
 		fcmh_op_done(c);
 	}
@@ -681,17 +702,16 @@ msl_stat(struct fidc_membh *f, void *arg)
 	FCMH_ULOCK(f);
 
 	do {
-		MSL_RMC_NEWREQ(pfr, f, csvc, SRMT_GETATTR, rq, mq, mp,
-		    rc);
-		if (rc)
-			break;
+		MSL_RMC_NEWREQ(f, csvc, SRMT_GETATTR, rq, mq, mp, rc);
+		if (!rc) {
+			mq->fg = f->fcmh_fg;
+			mq->iosid = msl_pref_ios;
 
-		mq->fg = f->fcmh_fg;
-		mq->iosid = msl_pref_ios;
-
-		rc = SL_RSX_WAITREP(csvc, rq, mp);
+			rc = SL_RSX_WAITREP(csvc, rq, mp);
+		}
 	} while (rc && slc_rmc_retry(pfr, &rc));
 
+	rc = abs(rc);
 	if (rc == 0)
 		rc = -mp->rc;
 
@@ -808,16 +828,15 @@ mslfsop_link(struct pscfs_req *pfr, pscfs_inum_t c_inum,
 		PFL_GOTOERR(out, rc = EXDEV);
 
  retry:
-	MSL_RMC_NEWREQ(pfr, p, csvc, SRMT_LINK, rq, mq, mp, rc);
-	if (rc)
-		PFL_GOTOERR(out, rc);
+	MSL_RMC_NEWREQ(p, csvc, SRMT_LINK, rq, mq, mp, rc);
+	if (!rc) {
+		mq->pfg = p->fcmh_fg;
+		mq->fg = c->fcmh_fg;
+		strlcpy(mq->name, newname, sizeof(mq->name));
 
-	mq->pfg = p->fcmh_fg;
-	mq->fg = c->fcmh_fg;
-	strlcpy(mq->name, newname, sizeof(mq->name));
-
-	namecache_hold_entry(&dcu, p, newname);
-	rc = SL_RSX_WAITREP(csvc, rq, mp);
+		namecache_hold_entry(&dcu, p, newname);
+		rc = SL_RSX_WAITREP(csvc, rq, mp);
+	}
 	if (rc && slc_rmc_retry(pfr, &rc)) {
 		namecache_fail(&dcu);
 		goto retry;
@@ -840,7 +859,7 @@ mslfsop_link(struct pscfs_req *pfr, pscfs_inum_t c_inum,
 	    pscfs_attr_timeout, rc);
 	namecache_update(&dcu, fcmh_2_fid(c), rc);
 
-	psclogs_diag(SLCSS_FSOP, "LINK: cfid="SLPRI_FID" "
+	psclogs(rc ? PLL_INFO : PLL_DIAG, SLCSS_FSOP, "LINK: cfid="SLPRI_FID" "
 	    "pfid="SLPRI_FID" name='%s' rc=%d",
 	    c_inum, p_inum, newname, rc);
 
@@ -894,10 +913,10 @@ mslfsop_mkdir(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	if (p->fcmh_sstb.sst_mode & S_ISGID)
 		mode |= S_ISGID;
 
- retry:
-	MSL_RMC_NEWREQ(pfr, p, csvc, SRMT_MKDIR, rq, mq, mp, rc);
+ retry1:
+	MSL_RMC_NEWREQ(p, csvc, SRMT_MKDIR, rq, mq, mp, rc);
 	if (rc)
-		PFL_GOTOERR(out, rc);
+		goto retry2;
 
 	mq->pfg.fg_fid = pinum;
 	mq->pfg.fg_gen = FGEN_ANY;
@@ -912,9 +931,11 @@ mslfsop_mkdir(struct pscfs_req *pfr, pscfs_inum_t pinum,
 
 	namecache_hold_entry(&dcu, p, name);
 	rc = SL_RSX_WAITREP(csvc, rq, mp);
+
+  retry2:
 	if (rc && slc_rmc_retry(pfr, &rc)) {
 		namecache_fail(&dcu);
-		goto retry;
+		goto retry1;
 	}
 	if (rc == 0)
 		rc = -mp->rc;
@@ -938,7 +959,7 @@ mslfsop_mkdir(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	    pscfs_attr_timeout, rc);
 	namecache_update(&dcu, mp->cattr.sst_fid, rc);
 
-	psclogs_diag(SLCSS_FSOP, "MKDIR: pfid="SLPRI_FID" "
+	psclogs(rc ? PLL_INFO : PLL_DIAG, SLCSS_FSOP, "MKDIR: pfid="SLPRI_FID" "
 	    "cfid="SLPRI_FID" mode=%#o name='%s' rc=%d",
 	    pinum, c ? c->fcmh_sstb.sst_fid : FID_ANY, mode, name, rc);
 
@@ -965,15 +986,14 @@ msl_lookuprpc(struct pscfs_req *pfr, struct fidc_membh *p,
 	int rc;
 
  retry:
-	MSL_RMC_NEWREQ(pfr, p, csvc, SRMT_LOOKUP, rq, mq, mp, rc);
-	if (rc)
-		PFL_GOTOERR(out, rc);
+	MSL_RMC_NEWREQ(p, csvc, SRMT_LOOKUP, rq, mq, mp, rc);
+	if (!rc) {
+		mq->pfg.fg_fid = pfid;
+		mq->pfg.fg_gen = FGEN_ANY;
+		strlcpy(mq->name, name, sizeof(mq->name));
 
-	mq->pfg.fg_fid = pfid;
-	mq->pfg.fg_gen = FGEN_ANY;
-	strlcpy(mq->name, name, sizeof(mq->name));
-
-	rc = SL_RSX_WAITREP(csvc, rq, mp);
+		rc = SL_RSX_WAITREP(csvc, rq, mp);
+	}
 	if (rc && slc_rmc_retry(pfr, &rc))
 		goto retry;
 	if (rc == 0)
@@ -1034,7 +1054,7 @@ slc_wk_issue_readdir(void *p)
 
 #define msl_lookup_fidcache(pfr, pcrp, pinum, name, fgp, sstb, fp)	\
 	msl_lookup_fidcache_dcu((pfr), (pcrp), (pinum), (name), (fgp),	\
-	    (sstb), (fp), NULL)
+	    (sstb), (fp), NULL, NULL)
 
 /*
  * Query the fidcache for a file system entity name.
@@ -1049,9 +1069,10 @@ __static int
 msl_lookup_fidcache_dcu(struct pscfs_req *pfr,
     const struct pscfs_creds *pcrp, pscfs_inum_t pinum,
     const char *name, struct sl_fidgen *fgp, struct srt_stat *sstb,
-    struct fidc_membh **fp, struct dircache_ent_update *dcup)
+    struct fidc_membh **fp, struct fidc_membh **parentp,
+    struct dircache_ent_update *dcup)
 {
-	struct dircache_ent_update dcu = DCE_UPD_INIT;
+	struct dircache_ent_update *orig_dcu = dcup, dcu = DCE_UPD_INIT;
 	struct fidc_membh *p = NULL, *c = NULL;
 	int rc;
 
@@ -1060,6 +1081,8 @@ msl_lookup_fidcache_dcu(struct pscfs_req *pfr,
 
 	if (fp)
 		*fp = NULL;
+	if (parentp)
+		*parentp = NULL;
 
 	/*
 	 * The parent inode number is either the super root or the site
@@ -1150,6 +1173,11 @@ msl_lookup_fidcache_dcu(struct pscfs_req *pfr,
 		FCMH_ULOCK(c);
 
  out:
+	if (parentp && p) {
+		*parentp = p;
+		p = NULL;
+		psc_assert(orig_dcu);
+	}
 	namecache_update(&dcu, fcmh_2_fid(c), rc);
 	if (rc == 0 && fp) {
 		*fp = c;
@@ -1220,18 +1248,16 @@ msl_unlink(struct pscfs_req *pfr, pscfs_inum_t pinum, const char *name,
 
  retry:
 	if (isfile)
-		MSL_RMC_NEWREQ(pfr, p, csvc, SRMT_UNLINK, rq, mq, mp, rc);
+		MSL_RMC_NEWREQ(p, csvc, SRMT_UNLINK, rq, mq, mp, rc);
 	else
-		MSL_RMC_NEWREQ(pfr, p, csvc,  SRMT_RMDIR, rq, mq, mp, rc);
+		MSL_RMC_NEWREQ(p, csvc,  SRMT_RMDIR, rq, mq, mp, rc);
 
-	if (rc)
-		PFL_GOTOERR(out, rc);
-
-	mq->pfid = pinum;
-	strlcpy(mq->name, name, sizeof(mq->name));
-
-	namecache_hold_entry(&dcu, p, name);
-	rc = SL_RSX_WAITREP(csvc, rq, mp);
+	if (!rc) {
+		mq->pfid = pinum;
+		strlcpy(mq->name, name, sizeof(mq->name));
+		namecache_hold_entry(&dcu, p, name);
+		rc = SL_RSX_WAITREP(csvc, rq, mp);
+	}
 	if (rc && slc_rmc_retry(pfr, &rc)) {
 		namecache_fail(&dcu);
 		goto retry;
@@ -1331,10 +1357,10 @@ mslfsop_mknod(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
- retry:
-	MSL_RMC_NEWREQ(pfr, p, csvc, SRMT_MKNOD, rq, mq, mp, rc);
+ retry1:
+	MSL_RMC_NEWREQ( p, csvc, SRMT_MKNOD, rq, mq, mp, rc);
 	if (rc)
-		PFL_GOTOERR(out, rc);
+		goto retry2;
 
 	mq->creds.scr_uid = pcr.pcr_uid;
 	mq->creds.scr_gid = newent_select_group(p, &pcr);
@@ -1349,9 +1375,12 @@ mslfsop_mknod(struct pscfs_req *pfr, pscfs_inum_t pinum,
 
 	namecache_hold_entry(&dcu, p, name);
 	rc = SL_RSX_WAITREP(csvc, rq, mp);
+
+ retry2:
+
 	if (rc && slc_rmc_retry(pfr, &rc)) {
 		namecache_fail(&dcu);
-		goto retry;
+		goto retry1;
 	}
 	if (rc == 0)
 		rc = -mp->rc;
@@ -1545,7 +1574,7 @@ msl_readdir_issue(struct pscfs_req *pfr, struct fidc_membh *d,
 
 	fcmh_op_start_type(d, FCMH_OPCNT_READDIR);
 
-	MSL_RMC_NEWREQ(pfr, d, csvc, SRMT_READDIR, rq, mq, mp, rc);
+	MSL_RMC_NEWREQ(d, csvc, SRMT_READDIR, rq, mq, mp, rc);
 	(void)pfl_fault_here_rc("slash2/readdir", &rc, EHOSTDOWN);
 	if (rc)
 		PFL_GOTOERR(out2, rc);
@@ -1730,6 +1759,7 @@ mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off,
 					fcmh_op_start_type(d,
 					    FCMH_OPCNT_READAHEAD);
 					raoff = p->dcp_nextoff;
+					psc_assert(raoff);
 				}
 
 				issue = 0;
@@ -1772,7 +1802,7 @@ mslfsop_lookup(struct pscfs_req *pfr, pscfs_inum_t pinum,
     const char *name)
 {
 	struct dircache_ent_update dcu = DCE_UPD_INIT;
-	struct fidc_membh *fp = NULL;
+	struct fidc_membh *p = NULL, *c = NULL;
 	struct pscfs_creds pcr;
 	struct srt_stat sstb;
 	struct sl_fidgen fg;
@@ -1788,7 +1818,7 @@ mslfsop_lookup(struct pscfs_req *pfr, pscfs_inum_t pinum,
 		PFL_GOTOERR(out, rc = ENAMETOOLONG);
 
 	rc = msl_lookup_fidcache_dcu(pfr, &pcr, pinum, name, &fg, &sstb,
-	    &fp, &dcu);
+	    &c, &p, &dcu);
 	if (rc == ENOENT)
 		sstb.sst_fid = 0;
 	sl_internalize_stat(&sstb, &stb);
@@ -1799,8 +1829,10 @@ mslfsop_lookup(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	pscfs_reply_lookup(pfr, sstb.sst_fid, sstb.sst_gen,
 	    pscfs_entry_timeout, &stb, pscfs_attr_timeout, rc);
 	namecache_update(&dcu, sstb.sst_fid, rc);
-	if (fp)
-		fcmh_op_done(fp);
+	if (c)
+		fcmh_op_done(c);
+	if (p)
+		fcmh_op_done(p);
 }
 
 void
@@ -1827,19 +1859,18 @@ mslfsop_readlink(struct pscfs_req *pfr, pscfs_inum_t inum)
 		PFL_GOTOERR(out, rc);
 
  retry:
-	MSL_RMC_NEWREQ(pfr, c, csvc, SRMT_READLINK, rq, mq, mp, rc);
-	if (rc)
-		PFL_GOTOERR(out, rc);
+	MSL_RMC_NEWREQ(c, csvc, SRMT_READLINK, rq, mq, mp, rc);
+	if (!rc) {
 
-	mq->fg = c->fcmh_fg;
+		mq->fg = c->fcmh_fg;
+		iov.iov_base = buf;
+		iov.iov_len = sizeof(buf) - 1;
+		rq->rq_bulk_abortable = 1;
+		slrpc_bulkclient(rq, BULK_PUT_SINK, SRMC_BULK_PORTAL, &iov, 1);
 
-	iov.iov_base = buf;
-	iov.iov_len = sizeof(buf) - 1;
-	rq->rq_bulk_abortable = 1;
-	slrpc_bulkclient(rq, BULK_PUT_SINK, SRMC_BULK_PORTAL, &iov, 1);
-
-	rc = SL_RSX_WAITREPF(csvc, rq, mp,
-	    SRPCWAITF_DEFER_BULK_AUTHBUF_CHECK);
+		rc = SL_RSX_WAITREPF(csvc, rq, mp,
+		    SRPCWAITF_DEFER_BULK_AUTHBUF_CHECK);
+	}
 	if (rc && slc_rmc_retry(pfr, &rc))
 		goto retry;
 	if (!rc)
@@ -1914,6 +1945,7 @@ msl_flush(struct msl_fhent *mfh)
 		bmpc_biorqs_flush(b);
 		if (!rc)
 			rc = -bmap_2_bci(b)->bci_flush_rc;
+		bmap_2_bci(b)->bci_flush_rc = 0;
 		bmap_op_done_type(b, BMAP_OPCNT_FLUSH);
 	}
 	psc_dynarray_free(&a);
@@ -1932,7 +1964,7 @@ msl_setattr(struct pscfs_req *pfr, struct fidc_membh *f, int32_t to_set,
 	struct srm_setattr_req *mq;
 	struct srm_setattr_rep *mp;
 
-	MSL_RMC_NEWREQ(pfr, f, csvc, SRMT_SETATTR, rq, mq, mp, rc);
+	MSL_RMC_NEWREQ(f, csvc, SRMT_SETATTR, rq, mq, mp, rc);
 	if (rc)
 		return (rc);
 
@@ -2435,10 +2467,10 @@ mslfsop_rename(struct pscfs_req *pfr, pscfs_inum_t opinum,
 			PFL_GOTOERR(out, rc);
 	}
 
- retry:
-	MSL_RMC_NEWREQ(pfr, np, csvc, SRMT_RENAME, rq, mq, mp, rc);
+ retry1:
+	MSL_RMC_NEWREQ(np, csvc, SRMT_RENAME, rq, mq, mp, rc);
 	if (rc)
-		PFL_GOTOERR(out, rc);
+		goto retry2;
 
 	mq->opfg.fg_fid = opinum;
 	mq->npfg.fg_fid = npinum;
@@ -2460,11 +2492,14 @@ mslfsop_rename(struct pscfs_req *pfr, pscfs_inum_t opinum,
 	}
 
 	namecache_get_entries(&odcu, op, oldname, &ndcu, np, newname);
+
 	rc = SL_RSX_WAITREP(csvc, rq, mp);
+
+  retry2:
 	if (rc && slc_rmc_retry(pfr, &rc)) {
 		namecache_fail(&odcu);
 		namecache_fail(&ndcu);
-		goto retry;
+		goto retry1;
 	}
 	if (rc == 0)
 		rc = -mp->rc;
@@ -2568,7 +2603,7 @@ mslfsop_statfs(struct pscfs_req *pfr, pscfs_inum_t inum)
 	RPCI_ULOCK(rpci);
 
  retry:
-	MSL_RMC_NEWREQ(pfr, NULL, csvc, SRMT_STATFS, rq, mq, mp, rc);
+	MSL_RMC_NEWREQ(NULL, csvc, SRMT_STATFS, rq, mq, mp, rc);
 	if (rc)
 		PFL_GOTOERR(out, rc);
 	mq->fid = inum;
@@ -2642,7 +2677,7 @@ mslfsop_symlink(struct pscfs_req *pfr, const char *buf,
 		PFL_GOTOERR(out, rc);
 
  retry:
-	MSL_RMC_NEWREQ(pfr, p, csvc, SRMT_SYMLINK, rq, mq, mp, rc);
+	MSL_RMC_NEWREQ(p, csvc, SRMT_SYMLINK, rq, mq, mp, rc);
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
@@ -3197,8 +3232,10 @@ mslfsop_destroy(__unusedx struct pscfs_req *pfr)
 	pfl_listcache_destroy_registered(&msl_idle_pages);
 	pfl_listcache_destroy_registered(&msl_readahead_pages);
 
-	pfl_iostats_grad_destroy(slc_iosyscall_iostats);
-	pfl_iostats_grad_destroy(slc_iorpc_iostats);
+	pfl_opstats_grad_destroy(&slc_iosyscall_iostats_rd);
+	pfl_opstats_grad_destroy(&slc_iosyscall_iostats_wr);
+	pfl_opstats_grad_destroy(&slc_iorpc_iostats_rd);
+	pfl_opstats_grad_destroy(&slc_iorpc_iostats_wr);
 
 	bmap_pagecache_destroy();
 	bmap_cache_destroy();
@@ -3356,7 +3393,7 @@ mslfsop_listxattr(struct pscfs_req *pfr, size_t size, pscfs_inum_t inum)
 		buf = PSCALLOC(size);
 
  retry:
-	MSL_RMC_NEWREQ(pfr, f, csvc, SRMT_LISTXATTR, rq, mq, mp, rc);
+	MSL_RMC_NEWREQ(f, csvc, SRMT_LISTXATTR, rq, mq, mp, rc);
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
@@ -3440,7 +3477,7 @@ mslfsop_setxattr(struct pscfs_req *pfr, const char *name,
 		PFL_GOTOERR(out, rc);
 
  retry:
-	MSL_RMC_NEWREQ(pfr, f, csvc, SRMT_SETXATTR, rq, mq, mp, rc);
+	MSL_RMC_NEWREQ(f, csvc, SRMT_SETXATTR, rq, mq, mp, rc);
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
@@ -3525,7 +3562,7 @@ slc_getxattr(struct pscfs_req *pfr,
 		FCMH_ULOCK(f);
 
  retry:
-	MSL_RMC_NEWREQ(pfr, f, csvc, SRMT_GETXATTR, rq, mq, mp, rc);
+	MSL_RMC_NEWREQ(f, csvc, SRMT_GETXATTR, rq, mq, mp, rc);
 	if (rc)
 		PFL_GOTOERR(out, rc = -rc);
 
@@ -3622,7 +3659,7 @@ mslfsop_removexattr(struct pscfs_req *pfr, const char *name,
 		PFL_GOTOERR(out, rc);
 
  retry:
-	MSL_RMC_NEWREQ(pfr, f, csvc, SRMT_REMOVEXATTR, rq, mq, mp, rc);
+	MSL_RMC_NEWREQ(f, csvc, SRMT_REMOVEXATTR, rq, mq, mp, rc);
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
@@ -3860,14 +3897,19 @@ msl_init(void)
 	    dce_key, dce_hentry, 3 * slcfg_local->cfg_fidcachesz - 1,
 	    dircache_ent_cmp, "namecache");
 
+	psc_poolmaster_init(&msl_retry_req_poolmaster,
+	    struct slc_retry_req, srr_lentry, PPMF_AUTO, 64, 64, 0,
+	    NULL, NULL, NULL, "retryrq");
+	msl_retry_req_pool = psc_poolmaster_getmgr(&msl_retry_req_poolmaster);
+
 	psc_poolmaster_init(&msl_async_req_poolmaster,
 	    struct slc_async_req, car_lentry, PPMF_AUTO, 64, 64, 0,
 	    NULL, NULL, NULL, "asyncrq");
 	msl_async_req_pool = psc_poolmaster_getmgr(&msl_async_req_poolmaster);
 
 	psc_poolmaster_init(&msl_biorq_poolmaster,
-	    struct bmpc_ioreq, biorq_lentry, PPMF_AUTO, 64, 64, 0, NULL,
-	    NULL, NULL, "biorq");
+	    struct bmpc_ioreq, biorq_lentry, PPMF_AUTO, 512, 512, 0,
+	    NULL, NULL, NULL, "biorq");
 	msl_biorq_pool = psc_poolmaster_getmgr(&msl_biorq_poolmaster);
 
 	psc_poolmaster_init(&msl_mfh_poolmaster,
@@ -3880,6 +3922,9 @@ msl_init(void)
 	    "iorq");
 	msl_iorq_pool = psc_poolmaster_getmgr(&msl_iorq_poolmaster);
 
+	pll_init(&slc_retry_req_list, struct slc_retry_req, srr_lentry,
+	    NULL);
+
 	/* Start up service threads. */
 	slrpc_initcli();
 	slc_rpc_initsvc();
@@ -3890,30 +3935,28 @@ msl_init(void)
 
 	msctlthr_spawn();
 
-	slc_iosyscall_iostats[0].size = slc_iorpc_iostats[0].size =        1024;
-	slc_iosyscall_iostats[1].size = slc_iorpc_iostats[1].size =    4 * 1024;
-	slc_iosyscall_iostats[2].size = slc_iorpc_iostats[2].size =   16 * 1024;
-	slc_iosyscall_iostats[3].size = slc_iorpc_iostats[3].size =   64 * 1024;
-	slc_iosyscall_iostats[4].size = slc_iorpc_iostats[4].size =  128 * 1024;
-	slc_iosyscall_iostats[5].size = slc_iorpc_iostats[5].size =  512 * 1024;
-	slc_iosyscall_iostats[6].size = slc_iorpc_iostats[6].size = 1024 * 1024;
-	slc_iosyscall_iostats[7].size = slc_iorpc_iostats[7].size = 0;
-	pfl_iostats_grad_init(slc_iosyscall_iostats, OPSTF_BASE10,
-	    "msl.iosz");
-	pfl_iostats_grad_init(slc_iorpc_iostats, OPSTF_BASE10,
-	    "msl.iorpc");
+	pfl_opstats_grad_init(&slc_iosyscall_iostats_rd, 0,
+	    slc_io_grad_sizes, nitems(slc_io_grad_sizes),
+	    "msl.iosz-rd:%s");
+	pfl_opstats_grad_init(&slc_iosyscall_iostats_wr, 0,
+	    slc_io_grad_sizes, nitems(slc_io_grad_sizes),
+	    "msl.iosz-wr:%s");
+	pfl_opstats_grad_init(&slc_iorpc_iostats_rd, 0,
+	    slc_io_grad_sizes, nitems(slc_io_grad_sizes),
+	    "msl.iorpc-rd:%s");
+	pfl_opstats_grad_init(&slc_iorpc_iostats_wr, 0,
+	    slc_io_grad_sizes, nitems(slc_io_grad_sizes),
+	    "msl.iorpc-wr:%s");
 
 	msbmapthr_spawn();
 	sl_freapthr_spawn(MSTHRT_FREAP, "msfreapthr");
 	msattrflushthr_spawn();
 	msreadaheadthr_spawn();
+	msioretrythr_spawn();
 
 	name = getenv("MDS");
 	if (name == NULL)
 		psc_fatalx("environment variable MDS not specified");
-
-	r = libsl_str2res(name);
-	msl_mds = r->res_id;
 
 	rc = slc_rmc_setmds(name);
 	if (rc)
@@ -3935,7 +3978,7 @@ msl_init(void)
 	pscfs_attr_timeout = 8.;
 
 	time(&now);
-	psclogs_info(SLCSS_INFO, "SLASH2 client revision %d "
+	psclogs_info(SLCSS_INFO, "SLASH2 client version %d "
 	    "started at %s", sl_stk_version, ctime(&now));
 
 	return (0);

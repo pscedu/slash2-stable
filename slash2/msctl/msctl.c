@@ -2,8 +2,8 @@
 /*
  * %GPL_START_LICENSE%
  * ---------------------------------------------------------------------
- * Copyright 2015, Google, Inc.
- * Copyright (c) 2007-2015, Pittsburgh Supercomputing Center (PSC).
+ * Copyright 2015-2016, Google, Inc.
+ * Copyright 2007-2016, Pittsburgh Supercomputing Center
  * All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
@@ -63,6 +63,7 @@ int				 verbose;
 int				 recursive;
 
 const char			*daemon_name = "mount_slash";
+int				 exit_status;
 
 struct msctlmsg_replst		 current_mrs;
 int				 current_mrs_eof;
@@ -324,13 +325,14 @@ parse_replrq(int opcode, const char *fn, const char *oreplrqspec,
 	/* parse I/O systems */
 	ra.nios = 0;
 	for (ios = iosv; ios; ios = next) {
-		if ((next = strchr(ios, ',')) != NULL)
+		next = strchr(ios, ',');
+		if (next)
 			*next++ = '\0';
 		if (ra.nios >= (int)nitems(ra.iosv))
 			errx(1, "%s: too many replicas specified",
 			    replrqspec);
 		if (strchr(ios, '@') == NULL)
-			errx(1, "%s: no I/O system site specified", ios);
+			errx(1, "%s: no site specified", ios);
 		if (strlcpy(ra.iosv[ra.nios++], ios,
 		    sizeof(ra.iosv[0])) >= sizeof(ra.iosv[0]))
 			errx(1, "%s: I/O system name too long", ios);
@@ -848,7 +850,7 @@ void
 ms_bmpce_prhdr(__unusedx struct psc_ctlmsghdr *mh, __unusedx const void *m)
 {
 	printf("%-16s %6s %3s %4s %7s %7s "
-	    "%12s %3s %3s %8s\n",
+	    "%11s %3s %3s %8s\n",
 	    "fid", "bno", "ref", "err", "offset", "start",
 	    "flags", "nwr", "aio", "lastacc");
 }
@@ -860,7 +862,7 @@ ms_bmpce_prdat(__unusedx const struct psc_ctlmsghdr *mh, const void *m)
 
 	printf("%016"SLPRIxFID" %6d %3d "
 	    "%4d %7x %7x "
-	    "%c%c%c%c%c%c%c%c%c%c%c%c "
+	    "%c%c%c%c%c%c%c%c%c%c%c "
 	    "%3d %3d "
 	    "%8"PRIx64"\n",
 	    mpce->mpce_fid, mpce->mpce_bno, mpce->mpce_ref,
@@ -871,7 +873,6 @@ ms_bmpce_prdat(__unusedx const struct psc_ctlmsghdr *mh, const void *m)
 	    mpce->mpce_flags & BMPCEF_EIO	? 'e' : '-',
 	    mpce->mpce_flags & BMPCEF_AIOWAIT	? 'w' : '-',
 	    mpce->mpce_flags & BMPCEF_DISCARD	? 'D' : '-',
-	    mpce->mpce_flags & BMPCEF_PINNED	? 'p' : '-',
 	    mpce->mpce_flags & BMPCEF_READAHEAD	? 'r' : '-',
 	    mpce->mpce_flags & BMPCEF_ACCESSED	? 'a' : '-',
 	    mpce->mpce_flags & BMPCEF_IDLE	? 'i' : '-',
@@ -891,9 +892,16 @@ ms_ctlmsg_error_prdat(__unusedx const struct psc_ctlmsghdr *mh,
 	slfid_t fid;
 	int i;
 
+	exit_status = 1;
+
 	if (psc_ctl_lastmsgtype != mh->mh_type &&
 	    psc_ctl_lastmsgtype != -1)
 		fprintf(stderr, "\n");
+
+	/*
+	 * If the beginning of a message looks like a FID, try translate
+	 * it back to full pathname from our cache.
+	 */
 	p = pce->pce_errmsg;
 	if (*p++ != '0')
 		goto out;
@@ -1017,9 +1025,15 @@ usage(void)
 	extern const char *__progname;
 
 	fprintf(stderr,
-	    "usage: %s [-HInRv] [-p paramspec] [-S socket] [-s value] [cmd arg ...]\n",
+	    "usage: %s [-HInRVv] [-p paramspec] [-S socket] [-s value] [cmd arg ...]\n",
 	    __progname);
 	exit(1);
+}
+
+void
+msctl_show_version(void)
+{
+	fprintf(stderr, "%d\n", sl_stk_version);
 }
 
 struct psc_ctlopt opts[] = {
@@ -1032,7 +1046,8 @@ struct psc_ctlopt opts[] = {
 	{ 'r', PCOF_FUNC, parse_replst },
 	{ 's', PCOF_FUNC, psc_ctlparse_show },
 	{ 'U', PCOF_FUNC, parse_dequeue },
-	{ 'v', PCOF_FLAG, &verbose }
+	{ 'V', PCOF_FLAG, msctl_show_version },
+	{ 'v', PCOF_FLAG, &verbose },
 };
 
 int
@@ -1049,5 +1064,5 @@ main(int argc, char *argv[])
 	if (!pfl_memchk(&current_mrs, 0, sizeof(current_mrs)))
 		errx(1, "communication error: replication status "
 		    "not completed");
-	exit(0);
+	exit(exit_status);
 }

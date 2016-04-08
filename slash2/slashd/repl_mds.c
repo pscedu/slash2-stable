@@ -3,7 +3,7 @@
  * %GPL_START_LICENSE%
  * ---------------------------------------------------------------------
  * Copyright 2015-2016, Google, Inc.
- * Copyright (c) 2008-2015, Pittsburgh Supercomputing Center (PSC).
+ * Copyright 2008-2016, Pittsburgh Supercomputing Center
  * All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
@@ -60,6 +60,8 @@
 #include "up_sched_res.h"
 
 #include "zfs-fuse/zfs_slashlib.h"
+
+struct psc_poolmgr *slm_repl_status_pool;
 
 struct sl_mds_iosinfo	 slm_null_iosinfo = {
 	.si_flags = SIF_PRECLAIM_NOTSUP
@@ -228,7 +230,7 @@ int
 _mds_repl_iosv_lookup(int vfsid, struct slash_inode_handle *ih,
     const sl_replica_t iosv[], int iosidx[], int nios, int flags)
 {
-	int k, last;
+	int k;
 
 	for (k = 0; k < nios; k++)
 		if ((iosidx[k] = _mds_repl_ios_lookup(vfsid, ih,
@@ -237,9 +239,8 @@ _mds_repl_iosv_lookup(int vfsid, struct slash_inode_handle *ih,
 
 	qsort(iosidx, nios, sizeof(iosidx[0]), iosidx_cmp);
 	/* check for dups */
-	last = -1;
-	for (k = 0; k < nios; k++, last = iosidx[k])
-		if (iosidx[k] == last)
+	for (k = 1; k < nios; k++)
+		if (iosidx[k] == iosidx[k - 1])
 			return (EINVAL);
 	return (0);
 }
@@ -554,7 +555,7 @@ slm_repl_upd_write(struct bmap *b, int rel)
 		char		*stat[SL_MAX_REPLICAS];
 		unsigned	 nios;
 	} add, del, chg;
-	int locked, off, vold, vnew, sprio, uprio;
+	int locked, off, vold, vnew, sprio, uprio, rc;
 	struct slm_update_data *upd;
 	struct sl_mds_iosinfo *si;
 	struct bmap_mds_info *bmi;
@@ -596,8 +597,11 @@ slm_repl_upd_write(struct bmap *b, int rel)
 
 		/* Work was added. */
 		else if ((vold != BREPLST_REPL_SCHED &&
+		    vold != BREPLST_GARBAGE &&
+		    vold != BREPLST_GARBAGE_SCHED &&
 		    vnew == BREPLST_REPL_QUEUED) ||
-		    (vnew == BREPLST_GARBAGE &&
+		    (vold != BREPLST_GARBAGE_SCHED &&
+		     vnew == BREPLST_GARBAGE &&
 		     (si->si_flags & SIF_PRECLAIM_NOTSUP) == 0))
 			PUSH_IOS(b, &add, resid, NULL);
 
@@ -608,7 +612,8 @@ slm_repl_upd_write(struct bmap *b, int rel)
 		     vold == BREPLST_TRUNCPNDG ||
 		     vold == BREPLST_GARBAGE_SCHED ||
 		     vold == BREPLST_VALID) &&
-		    (vnew == BREPLST_GARBAGE ||
+		    (((si->si_flags & SIF_PRECLAIM_NOTSUP) &&
+		      vnew == BREPLST_GARBAGE) ||
 		     vnew == BREPLST_VALID ||
 		     vnew == BREPLST_INVALID))
 			PUSH_IOS(b, &del, resid, NULL);
@@ -618,11 +623,13 @@ slm_repl_upd_write(struct bmap *b, int rel)
 		 * it.
 		 */
 		else if (vold == BREPLST_REPL_SCHED ||
+		    vold == BREPLST_GARBAGE_SCHED ||
 		    vold == BREPLST_TRUNCPNDG_SCHED)
 			PUSH_IOS(b, &chg, resid, "Q");
 
 		/* Work was scheduled. */
 		else if (vnew == BREPLST_REPL_SCHED ||
+		    vnew == BREPLST_GARBAGE_SCHED ||
 		    vnew == BREPLST_TRUNCPNDG_SCHED)
 			PUSH_IOS(b, &chg, resid, "S");
 
@@ -631,8 +638,15 @@ slm_repl_upd_write(struct bmap *b, int rel)
 			PUSH_IOS(b, &chg, resid, NULL);
 	}
 
-	for (n = 0; n < add.nios; n++)
-		slm_upsch_insert(b, add.iosv[n].bs_id, sprio, uprio);
+	for (n = 0; n < add.nios; n++) {
+		rc = slm_upsch_insert(b, add.iosv[n].bs_id, sprio,
+		    uprio);
+		if (rc)
+			DEBUG_BMAPOD(PLL_WARN, b,
+			    "unable to insert into upsch database; "
+			    "ios=%#x rc=%d",
+			    add.iosv[n].bs_id, rc);
+	}
 
 	for (n = 0; n < del.nios; n++)
 		dbdo(NULL, NULL,
@@ -946,9 +960,9 @@ mds_repl_delrq(const struct sl_fidgen *fgp, sl_bmapno_t bmapno,
 		}
 
 		/*
-		 * Before blindly doing the transition, we have
-		 * to check to ensure this operation would retain
-		 * at least one valid replica.
+		 * Before blindly doing the transition, we have to check
+		 * to ensure this operation would retain at least one
+		 * valid replica.
 		 */
 		replv.n = 0;
 		mds_repl_bmap_walkcb(b, NULL, NULL, 0,
@@ -961,12 +975,12 @@ mds_repl_delrq(const struct sl_fidgen *fgp, sl_bmapno_t bmapno,
 		    nios, slm_repl_delrq_cb, &flags);
 		if (flags & FLAG_DIRTY)
 			mds_bmap_write_logrepls(b);
+
  bmap_done:
 		slm_repl_bmap_rel(b);
 		if (flags & FLAG_REPLICA_STATE_INVALID)
 			PFL_GOTOERR(out,
 			    rc = -SLERR_REPLICA_STATE_INVALID);
-
 	}
 
  out:
@@ -1029,6 +1043,9 @@ resmpair_bw_adj(struct sl_resm *src, struct sl_resm *dst,
 		ADJ_BW(&is->si_bw_aggr, amt);
 		ADJ_BW(&id->si_bw_ingress, amt);
 		ADJ_BW(&id->si_bw_aggr, amt);
+
+		psclog_diag("adjust bandwidth; src=%s dst=%s amt=%d",
+		    src->resm_name, dst->resm_name, amt);
 
 		if (moreavail &&
 		    HAS_BW(&is->si_bw_egress, 1) &&

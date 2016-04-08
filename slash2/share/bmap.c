@@ -2,7 +2,7 @@
 /*
  * %GPL_START_LICENSE%
  * ---------------------------------------------------------------------
- * Copyright 2015, Google, Inc.
+ * Copyright 2015-2016, Google, Inc.
  * Copyright 2008-2016, Pittsburgh Supercomputing Center
  * All rights reserved.
  *
@@ -86,6 +86,8 @@ _bmap_op_done(const struct pfl_callerinfo *pci, struct bmap *b,
 	va_list ap;
 
 	BMAP_LOCK_ENSURE(b);
+
+	psc_assert(!(b->bcm_flags & BMAPF_TOFREE));
 
 	va_start(ap, fmt);
 	_psclogv_pci(pci, SLSS_BMAP, 0, fmt, ap);
@@ -194,7 +196,7 @@ bmap_lookup_cache(struct fidc_membh *f, sl_bmapno_t n, int bmaprw,
 
 	bmap_op_start_type(b, BMAP_OPCNT_LOOKUP);
 
-	/* 
+	/*
 	 * Perform app-specific substructure initialization, which is
 	 * msl_bmap_init(), iod_bmap_init(), or mds_bmap_init().
 	 */

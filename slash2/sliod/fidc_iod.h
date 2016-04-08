@@ -3,7 +3,7 @@
  * %GPL_START_LICENSE%
  * ---------------------------------------------------------------------
  * Copyright 2015, Google, Inc.
- * Copyright (c) 2006-2015, Pittsburgh Supercomputing Center (PSC).
+ * Copyright 2006-2016, Pittsburgh Supercomputing Center
  * All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
@@ -64,7 +64,6 @@ fii_2_fcmh(struct fcmh_iod_info *fii)
 #define sli_fcmh_peek(fgp, fp)  sl_fcmh_peek_fg((fgp), (fp))
 
 void	sli_fg_makepath(const struct sl_fidgen *, char *);
-int	sli_fcmh_getattr(struct fidc_membh *);
 
 int	sli_rmi_lookup_fid(struct slashrpc_cservice *,
 	    const struct sl_fidgen *, const char *,

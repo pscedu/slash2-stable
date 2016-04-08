@@ -2,7 +2,7 @@
 /*
  * %GPL_START_LICENSE%
  * ---------------------------------------------------------------------
- * Copyright 2015, Google, Inc.
+ * Copyright 2015-2016, Google, Inc.
  * Copyright 2006-2016, Pittsburgh Supercomputing Center
  * All rights reserved.
  *
@@ -495,6 +495,9 @@ slmctlthr_main(const char *fn)
 
 	psc_ctlparam_register_simple("sys.next_fid",
 	    slmctlparam_nextfid_get, slmctlparam_nextfid_set);
+
+	psc_ctlparam_register_var("sys.force_dio",
+	    PFLCTL_PARAMT_INT, PFLCTL_PARAMF_RDWR, &slm_force_dio);
 
 	psc_ctlparam_register_var("sys.global",
 	    PFLCTL_PARAMT_INT, PFLCTL_PARAMF_RDWR, &slm_global_mount);

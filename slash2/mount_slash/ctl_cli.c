@@ -159,10 +159,10 @@ msctlrep_replrq(int fd, struct psc_ctlmsghdr *mh, void *m)
 
  issue:
 	if (mh->mh_type == MSCMT_ADDREPLRQ)
-		MSL_RMC_NEWREQ(NULL, f, csvc, SRMT_REPL_ADDRQ, rq, mq,
+		MSL_RMC_NEWREQ(f, csvc, SRMT_REPL_ADDRQ, rq, mq,
 		    mp, rc);
 	else
-		MSL_RMC_NEWREQ(NULL, f, csvc, SRMT_REPL_DELRQ, rq, mq,
+		MSL_RMC_NEWREQ(f, csvc, SRMT_REPL_DELRQ, rq, mq,
 		    mp, rc);
 	if (rc) {
 		rc = psc_ctlsenderr(fd, mh, SLPRI_FID": %s",
@@ -261,7 +261,7 @@ msctlrep_getreplst(int fd, struct psc_ctlmsghdr *mh, void *m)
 		    mrq->mrq_fid, sl_strerror(rc)));
 
  issue:
-	MSL_RMC_NEWREQ(NULL, f, csvc, SRMT_REPL_GETST, rq, mq, mp, rc);
+	MSL_RMC_NEWREQ(f, csvc, SRMT_REPL_GETST, rq, mq, mp, rc);
 	if (rc) {
 		rc = psc_ctlsenderr(fd, mh, SLPRI_FID": %s",
 		    fg.fg_fid, sl_strerror(rc));
@@ -436,7 +436,7 @@ msctlhnd_set_fattr(int fd, struct psc_ctlmsghdr *mh, void *m)
 		return (psc_ctlsenderr(fd, mh, SLPRI_FID": %s",
 		    mfa->mfa_fid, sl_strerror(rc)));
 
-	MSL_RMC_NEWREQ(NULL, f, csvc, SRMT_SET_FATTR, rq, mq, mp, rc);
+	MSL_RMC_NEWREQ(f, csvc, SRMT_SET_FATTR, rq, mq, mp, rc);
 	if (rc) {
 		rc = psc_ctlsenderr(fd, mh, SLPRI_FID": %s",
 		    mfa->mfa_fid, sl_strerror(rc));
@@ -502,7 +502,7 @@ msctlhnd_set_bmapreplpol(int fd, struct psc_ctlmsghdr *mh, void *m)
 		return (psc_ctlsenderr(fd, mh, SLPRI_FID": %s",
 		    mfbrp->mfbrp_fid, sl_strerror(rc)));
 
-	MSL_RMC_NEWREQ(NULL, f, csvc, SRMT_SET_BMAPREPLPOL, rq, mq, mp,
+	MSL_RMC_NEWREQ(f, csvc, SRMT_SET_BMAPREPLPOL, rq, mq, mp,
 	    rc);
 	if (rc) {
 		rc = psc_ctlsenderr(fd, mh, SLPRI_FID": %s",
@@ -531,13 +531,7 @@ msctlhnd_set_bmapreplpol(int fd, struct psc_ctlmsghdr *mh, void *m)
 void
 msctlparam_mds_get(char buf[PCP_VALUE_MAX])
 {
-	struct sl_resource *r;
-
-	r = libsl_id2res(msl_mds);
-	if (r)
-		strlcpy(buf, r->res_name, PCP_VALUE_MAX);
-	else
-		strlcpy(buf, "(null)", PCP_VALUE_MAX);
+	strlcpy(buf, msl_rmc_resm->resm_name, PCP_VALUE_MAX);
 }
 
 void
@@ -616,6 +610,7 @@ msctlmsg_biorq_send(int fd, struct psc_ctlmsghdr *mh,
 	return (psc_ctlmsg_sendv(fd, mh, msr));
 }
 
+/* See also ms_biorq_prdat() in msctl.c */
 int
 msctlrep_getbiorq(int fd, struct psc_ctlmsghdr *mh, void *m)
 {
@@ -862,10 +857,28 @@ struct psc_ctlop msctlops[] = {
 void
 msctlthr_main(struct psc_thread *thr)
 {
+	char *s, *newstr, *fn = (void *)msl_ctlsockfn;
+	int rc;
+
+	for (;;) {
+		/*
+		 * Under wokfs, %n will expand to "mount_wokfs" and not
+		 * "mount_slash" so substitute it here.
+		 */
+		s = strstr(fn, "%n");
+		if (s == NULL)
+			break;
+		rc = pfl_asprintf(&newstr, "%.*s%s%s", (int)(s - fn),
+		    fn, "mount_slash", s + 2);
+		if (rc == -1)
+			psc_fatal("expand %s", msl_ctlsockfn);
+		PSCFREE(fn);
+		fn = newstr;
+	}
+
 	/* stash thread so mslfsop_destroy() can kill ctlthr */
 	msl_ctlthr0 = thr;
-	psc_ctlthr_main(msl_ctlsockfn, msctlops, nitems(msctlops),
-	    MSTHRT_CTLAC);
+	psc_ctlthr_main(fn, msctlops, nitems(msctlops), MSTHRT_CTLAC);
 }
 
 void
@@ -889,6 +902,8 @@ msctlthr_spawn(void)
 
 	psc_ctlparam_register_var("sys.nbrq_outstanding",
 	    PFLCTL_PARAMT_INT, 0, &sl_nbrqset->set_remaining);
+	psc_ctlparam_register_var("sys.nbrqthr_wait", PFLCTL_PARAMT_INT,
+	    0, &sl_nbrqset->set_compl.pc_wq.wq_nwaiters);
 	psc_ctlparam_register("sys.resources", slctlparam_resources);
 	psc_ctlparam_register_simple("sys.uptime",
 	    slctlparam_uptime_get, NULL);
@@ -910,6 +925,10 @@ msctlthr_spawn(void)
 	    NULL);
 	psc_ctlparam_register_var("sys.direct_io", PFLCTL_PARAMT_INT,
 	    PFLCTL_PARAMF_RDWR, &msl_direct_io);
+
+	psc_ctlparam_register_var("sys.max_retries", PFLCTL_PARAMT_INT,
+	    PFLCTL_PARAMF_RDWR, &msl_max_retries);
+
 	psc_ctlparam_register_var("sys.predio_window_size",
 	    PFLCTL_PARAMT_INT, PFLCTL_PARAMF_RDWR,
 	    &msl_predio_window_size);
@@ -922,8 +941,12 @@ msctlthr_spawn(void)
 	psc_ctlparam_register_var("sys.root_squash", PFLCTL_PARAMT_INT,
 	    PFLCTL_PARAMF_RDWR, &msl_root_squash);
 
-	psc_ctlparam_register_var("sys.rpc_timeout", PFLCTL_PARAMT_INT, 
+	psc_ctlparam_register_var("sys.rpc_timeout", PFLCTL_PARAMT_INT,
 	    PFLCTL_PARAMF_RDWR, &pfl_rpc_timeout);
+
+	pfl_rpc_max_retry = 0;
+	psc_ctlparam_register_var("sys.rpc_max_retry", PFLCTL_PARAMT_INT,
+	    PFLCTL_PARAMF_RDWR, &pfl_rpc_max_retry);
 
 	psc_ctlparam_register_var("sys.statfs_pref_ios_only",
 	    PFLCTL_PARAMT_INT, PFLCTL_PARAMF_RDWR,

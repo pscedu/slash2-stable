@@ -38,6 +38,7 @@
 
 #include "pfl/ctlsvr.h"
 #include "pfl/export.h"
+#include "pfl/fault.h"
 #include "pfl/fs.h"
 #include "pfl/lock.h"
 #include "pfl/rpc.h"
@@ -66,6 +67,7 @@
 #include "lib/libsolkerncompat/include/errno_compat.h"
 #include "zfs-fuse/zfs_slashlib.h"
 
+int			slm_force_dio;
 int			slm_global_mount;
 
 uint64_t		slm_next_fid = UINT64_MAX;
@@ -224,7 +226,7 @@ slm_rmc_handle_bmap_chwrmode(struct pscrpc_request *rq)
 	mp->rc = -slm_fcmh_get(&mq->sbd.sbd_fg, &f);
 	if (mp->rc)
 		PFL_GOTOERR(out, mp->rc);
-	mp->rc = bmap_lookup(f, mq->sbd.sbd_bmapno, &b);
+	mp->rc = -bmap_lookup(f, mq->sbd.sbd_bmapno, &b);
 	if (mp->rc)
 		PFL_GOTOERR(out, mp->rc);
 
@@ -352,6 +354,8 @@ slm_rmc_handle_getbmap(struct pscrpc_request *rq)
 		mp->rc = -EINVAL;
 		return (0);
 	}
+
+	pfl_fault_here("slashd/get_bmap_delay", NULL);
 
 	mp->rc = -slm_fcmh_get(&mq->fg, &f);
 	if (mp->rc)
@@ -1228,7 +1232,7 @@ slm_rmc_handle_set_bmapreplpol(struct pscrpc_request *rq)
 
 	if (!mds_bmap_exists(f, mq->bmapno))
 		PFL_GOTOERR(out, mp->rc = -SLERR_BMAP_INVALID);
-	mp->rc = bmap_get(f, mq->bmapno, SL_WRITE, &b);
+	mp->rc = -bmap_get(f, mq->bmapno, SL_WRITE, &b);
 	if (mp->rc)
 		PFL_GOTOERR(out, mp->rc);
 
@@ -1432,9 +1436,12 @@ slm_rmc_handle_unlink(struct pscrpc_request *rq, int isfile)
 {
 	struct sl_fidgen fg, oldfg, chfg;
 	struct fidc_membh *p = NULL;
+	struct fidc_membh *c = NULL;
 	struct srm_unlink_req *mq;
 	struct srm_unlink_rep *mp;
-	int vfsid;
+	struct srt_stat	attr;
+	uint32_t xattrsize;
+	int rc, vfsid;
 
 	chfg.fg_fid = FID_ANY;
 
@@ -1464,6 +1471,16 @@ slm_rmc_handle_unlink(struct pscrpc_request *rq, int isfile)
 	if (mp->rc)
 		PFL_GOTOERR(out, mp->rc);
 
+	mp->rc = -mdsio_lookupx(vfsid, fcmh_2_mfid(p), mq->name, NULL,
+	    &rootcreds, &attr, &xattrsize);
+	if (mp->rc)
+		PFL_GOTOERR(out, mp->rc);
+
+	chfg = attr.sst_fg;
+	mp->rc = slm_fcmh_get(&chfg, &c);
+	if (mp->rc)
+		PFL_GOTOERR(out, mp->rc);
+
 	mds_reserve_slot(1);
 	if (isfile)
 		mp->rc = -mdsio_unlink(vfsid, fcmh_2_mfid(p), &oldfg,
@@ -1474,25 +1491,27 @@ slm_rmc_handle_unlink(struct pscrpc_request *rq, int isfile)
 	mds_unreserve_slot(1);
 
  out:
-	if (mp->rc == 0)
+	if (mp->rc == 0) {
 		mdsio_fcmh_refreshattr(p, &mp->pattr);
+		rc = mdsio_fcmh_refreshattr(c, &mp->cattr);
+
+		if (rc) {
+			OPSTAT_INCR("unlink-error");
+			psc_assert(rc == ENOENT);
+		}
+
+		mp->valid = 1;
+		if (rc || !c->fcmh_sstb.sst_nlink) {
+			mp->valid = 0;
+			mp->cattr.sst_fg = oldfg;
+			slm_coh_delete_file(c);
+		}	
+	}
+
 	if (p)
 		fcmh_op_done(p);
-
-	mp->valid = 0;
-	if (chfg.fg_fid != FID_ANY) {
-		struct fidc_membh *c;
-
-		if (slm_fcmh_get(&chfg, &c) == 0) {
-			if (c->fcmh_sstb.sst_nlink) {
-				mp->valid = 1;
-				mdsio_fcmh_refreshattr(c, &mp->cattr);
-			}
-			fcmh_op_done(c);
-		}
-	}
-	if (!mp->valid)
-		mp->cattr.sst_fg = oldfg;
+	if (c)
+		fcmh_op_done(c);
 
 	psclog_diag("%s parent="SLPRI_FID" name=%s rc=%d",
 	    isfile ? "unlink" : "rmdir", mq->pfid, mq->name, mp->rc);
@@ -1709,7 +1728,8 @@ slm_rmc_handle_getreplst(struct pscrpc_request *rq)
 	if (csvc == NULL)
 		return (0);
 
-	rsw = PSCALLOC(sizeof(*rsw));
+	rsw = psc_pool_get(slm_repl_status_pool);
+	memset(rsw, 0, sizeof(*rsw));
 	INIT_PSC_LISTENTRY(&rsw->rsw_lentry);
 	rsw->rsw_fg = mq->fg;
 	rsw->rsw_cid = mq->id;
@@ -1736,6 +1756,8 @@ slm_rmc_handler(struct pscrpc_request *rq)
 		if (rc)
 			PFL_GOTOERR(out, rc);
 	}
+
+	pfl_fault_here("slashd/incoming_rpc_delay", NULL);
 
 	switch (rq->rq_reqmsg->opc) {
 	/* bmap messages */

@@ -124,15 +124,19 @@ _bmpce_lookup(const struct pfl_callerinfo *pci,
 	for (;;) {
 		e = RB_FIND(bmap_pagecachetree, &bmpc->bmpc_tree, &q);
 		if (e) {
+			BMPCE_LOCK(e);
+			/*
+			 * It is possible that the EIO flag can be cleared
+			 * and the page is re-used now.
+			 */
 			if (e->bmpce_flags & BMPCEF_EIO) {
 				if (e->bmpce_flags & BMPCEF_READAHEAD) {
-					BMPCE_LOCK(e);
 					e->bmpce_flags &= ~BMPCEF_EIO;
-					BMPCE_ULOCK(e);
 				} else {
 					DEBUG_BMPCE(PLL_WARN, e,
 					    "skipping an EIO page");
 					OPSTAT_INCR("msl.bmpce-eio");
+					BMPCE_ULOCK(e);
  retry:
 					psc_waitq_waitrelf_us(
 					    &b->bcm_fcmh->fcmh_waitq,
@@ -147,7 +151,6 @@ _bmpce_lookup(const struct pfl_callerinfo *pci,
 					continue;
 				}
 			}
-			BMPCE_LOCK(e);
 			if (e->bmpce_flags & BMPCEF_TOFREE) {
 				BMPCE_ULOCK(e);
 				goto retry;
@@ -173,7 +176,7 @@ _bmpce_lookup(const struct pfl_callerinfo *pci,
 			    "add reference");
 			BMPCE_ULOCK(e);
 
-			OPSTAT_INCR("msl.bmpce-hit");
+			OPSTAT_INCR("msl.bmpce-cache-hit");
 			break;
 		}
 
@@ -190,6 +193,8 @@ _bmpce_lookup(const struct pfl_callerinfo *pci,
 			pfl_rwlock_wrlock(&bci->bci_rwlock);
 			continue;
 		} else {
+			OPSTAT_INCR("msl.bmpce-cache-miss");
+
 			e = e2;
 			e2 = NULL;
 			e->bmpce_off = off;
@@ -423,14 +428,15 @@ void
 bmpc_expire_biorqs(struct bmap_pagecache *bmpc)
 {
 	struct bmpc_ioreq *r;
+	int wake = 0;
 
 	PLL_FOREACH_BACKWARDS(r, &bmpc->bmpc_new_biorqs_exp) {
 		BIORQ_LOCK(r);
 		/*
-		 * A biorq can only be added at the end of the
-		 * list. So when we encounter an already expired
-		 * biorq we can stop since we've already processed
-		 * it and all biorqs before it.
+		 * A biorq can only be added at the end of the list.  So
+		 * when we encounter an already expired biorq we can
+		 * stop since we've already processed it and all biorqs
+		 * before it.
 		 */
 		if (r->biorq_flags & BIORQ_EXPIRE) {
 			BIORQ_ULOCK(r);
@@ -439,8 +445,10 @@ bmpc_expire_biorqs(struct bmap_pagecache *bmpc)
 		r->biorq_flags |= BIORQ_EXPIRE;
 		DEBUG_BIORQ(PLL_DIAG, r, "force expire");
 		BIORQ_ULOCK(r);
+		wake = 1;
 	}
-	bmap_flushq_wake(BMAPFLSH_EXPIRE);
+	if (wake)
+		bmap_flushq_wake(BMAPFLSH_EXPIRE);
 }
 
 /*
@@ -472,8 +480,8 @@ bmpc_biorqs_destroy_locked(struct bmap *b, int rc)
 {
 	struct psc_dynarray a = DYNARRAY_INIT;
 	struct bmap_pagecache *bmpc;
-	struct bmpc_ioreq *r;
 	struct bmap_cli_info *bci;
+	struct bmpc_ioreq *r;
 	int i;
 
 	BMAP_LOCK_ENSURE(b);
@@ -621,7 +629,6 @@ dump_bmpce_flags(uint32_t flags)
 	PFL_PRFLAG(BMPCEF_EIO, &flags, &seq);
 	PFL_PRFLAG(BMPCEF_AIOWAIT, &flags, &seq);
 	PFL_PRFLAG(BMPCEF_DISCARD, &flags, &seq);
-	PFL_PRFLAG(BMPCEF_PINNED, &flags, &seq);
 	PFL_PRFLAG(BMPCEF_READAHEAD, &flags, &seq);
 	PFL_PRFLAG(BMPCEF_ACCESSED, &flags, &seq);
 	PFL_PRFLAG(BMPCEF_IDLE, &flags, &seq);

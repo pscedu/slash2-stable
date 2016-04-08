@@ -2,8 +2,8 @@
 /*
  * %GPL_START_LICENSE%
  * ---------------------------------------------------------------------
- * Copyright 2015, Google, Inc.
- * Copyright (c) 2006-2015, Pittsburgh Supercomputing Center (PSC).
+ * Copyright 2015-2016, Google, Inc.
+ * Copyright 2006-2016, Pittsburgh Supercomputing Center
  * All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
@@ -39,8 +39,10 @@ struct fidc_membh;
 /* sliod thread types */
 enum {
 	SLITHRT_AIO = _PFL_NTHRT,	/* asynchronous I/O handlers */
-	SLITHRT_BMAPRLS,		/* notify MDS of completed write bmaps */
+	SLITHRT_BMAPRLS,		/* notifier to MDS of completed write bmaps */
+	SLITHRT_BMAPLEASE_PROC,		/* bmap lease relinquish processor */
 	SLITHRT_BREAP,			/* bmap reaper */
+	SLITHRT_BATCHRPC,		/* batch RPC sender */
 	SLITHRT_CONN,			/* connection monitor */
 	SLITHRT_CRUD,			/* CRC update sender */
 	SLITHRT_CTL,			/* control processor */
@@ -66,12 +68,6 @@ enum {
 #define NSLVRSYNC_THRS		2	/* perhaps default to ncores + configurable? */
 
 #define NBMAPRLS_THRS		4	/* perhaps default to ncores + configurable? */
-
-enum {
-	SLI_FAULT_AIO_FAIL,
-	SLI_FAULT_CRCUP_FAIL,
-	SLI_FAULT_FSIO_READ_FAIL
-};
 
 struct sliric_thread {
 	struct pscrpc_thread	 sirct_prt;
@@ -99,11 +95,15 @@ resm2rmii(struct sl_resm *resm)
 	return (resm_get_pri(resm));
 }
 
-void		slictlthr_main(const char *);
+void	slictlthr_main(const char *);
 
-int		bcr_update_inodeinfo(struct bcrcupd *);
+int	sli_has_enough_space(struct fidc_membh *, uint32_t, uint32_t,
+	    uint32_t);
 
-extern struct pfl_iostats_grad	 sli_iorpc_iostats[];
+int	bcr_update_inodeinfo(struct bcrcupd *);
+
+extern struct pfl_opstats_grad	 sli_iorpc_iostats_rd;
+extern struct pfl_opstats_grad	 sli_iorpc_iostats_wr;
 extern struct pfl_iostats_rw	 sli_backingstore_iostats;
 extern int			 sli_selftest_rc;
 extern struct srt_bwqueued	 sli_bwqueued;
@@ -113,9 +113,13 @@ extern psc_spinlock_t		 sli_ssfb_lock;
 extern struct timespec		 sli_ssfb_send;
 extern struct psc_listcache	 sli_fcmh_dirty;
 extern int			 sli_sync_max_writes;
+extern int			 sli_min_space_reserve;
 extern struct psc_thread	*sliconnthr;
 
 extern uint64_t			 sli_current_reclaim_xid;
 extern uint64_t			 sli_current_reclaim_batchno;
+
+extern struct psc_listcache	 sli_bmaplease_releaseq;
+extern struct statvfs		 sli_statvfs_buf;
 
 #endif /* _SLIOD_H_ */

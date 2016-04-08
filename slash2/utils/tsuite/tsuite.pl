@@ -157,12 +157,14 @@ EOF
 	{
 		local host=\$1
 		local line=\$2
+		local timestamp=\$3
+
 		local n=\$((SHLVL - 2))
-		printf "%\${n}s[%s:%5d:%3d] " "" \$host \$\$ \$line
+		printf "%\${n}s[%s:%d:%d %d] " "" \$host \$\$ \$timestamp \$line
 	}
 	export -f _make_ps4
 
-	PS4='\$(_make_ps4 "\\h" \$LINENO)'
+	PS4='\$(_make_ps4 "\\h" \$LINENO "\\D{%s}")'
 	export PS4
 
 	die()
@@ -170,6 +172,7 @@ EOF
 		echo \$@ >&2
 		exit 1
 	}
+	export -f die
 
 	hasprog()
 	{
@@ -278,12 +281,13 @@ EOF
 	addpath $n->{src_dir}/wokfs/mount_wokfs
 	addpath $n->{src_dir}/wokfs/wokctl
 
+	nproc=\$(nproc)
 	@{[ $opts{v} ? "set -x" : "" ]}
 
 	data_dir=$n->{data_dir}
 
-	export MAKEFLAGS=-j\$(nproc)
-	export SCONSFLAGS=-j\$(nproc)
+	export MAKEFLAGS=-j\$nproc
+	export SCONSFLAGS=-j\$nproc
 	export PSC_DUMPSTACK=1 @env_vars
 
 	@cmd
@@ -473,7 +477,7 @@ my $src_dir = $`;
 
 chdir($src_dir) or die "chdir $src_dir";
 my $diff = "";
-$diff = join '', `make scm-diff` unless $opts{P};
+$diff = join '', `make scm-diff | grep -v ^index` unless $opts{P};
 
 my $ts_cfg = slurp "$ts_base/cfg";
 
@@ -591,11 +595,11 @@ my @cli_pids;
 
 my $success = 0;
 
-local $SIG{CHLD} = sub { };
+$SIG{CHLD} = sub { };
 
 eval {
 
-local $SIG{ALRM} = sub { fatal "timeout exceeded" };
+$SIG{ALRM} = sub { fatal "timeout exceeded" };
 
 # Generate authbuf key
 my $authbuf_minkeysize =
@@ -629,6 +633,8 @@ foreach my $commspec (split /,/, $opts{c} || "") {
 	$dir = "." if $dir eq "pfl";
 	push @comm_checkout, "(cd $dir && git checkout $comm)";
 }
+
+my $src_done_fn = ".src.done." . time();
 
 # Checkout the source and build it
 foreach my $n (@mds, @ios, @cli) {
@@ -688,8 +694,8 @@ EOF
 			# may have previously mounted here, so clear it.
 			$sudo umount -l -f $n->{base_dir}/mp || true
 
-			$sudo rm -rf $n->{base_dir}
 			$sudo rm -rf $n->{base_dir}/mp
+			$sudo rm -rf $n->{base_dir}
 			mkdir -p @mkdir
 
 			cd $n->{src_dir}
@@ -722,13 +728,13 @@ $authbuf
 ___AUTHBUF_EOF
 			$sudo chown root $authbuf_fn
 			$sudo chmod 400 $authbuf_fn
-			touch .src.done
+			touch $src_done_fn
 		}
 
 		wait_until_src()
 		{
 			set +x
-			until [ -e $n->{src_dir}/.src.done ]; do
+			until [ -e $n->{src_dir}/$src_done_fn ]; do
 				sleep 1
 			done
 		}
@@ -773,6 +779,7 @@ foreach my $n (@mds) {
 		$sudo umount /$n->{zpool_name}
 		$sudo pkill zfs-fuse
 		sleep 8
+		$sudo rm -f /dev/shm/upsch.*
 
 		@cmds
 EOF
@@ -832,7 +839,7 @@ EOF
 
 $SIG{INT} = sub {
 	debug_msg "handling interrupt";
-	cleanup() unless $opts{C};
+	cleanup();
 	exit 1;
 };
 
@@ -898,7 +905,7 @@ foreach my $n (@cli) {
 		@{[init_env($n)]}
 		@{[daemon_setup($n)]}
 		$sudo modprobe fuse
-		run_daemon -O mount_wokfs -U -L "insert 0 $n->{src_dir}/slash2/mount_slash/slash2.so $args" $n->{mp}
+		run_daemon -O mount_wokfs -U -L "insert 0 $n->{src_dir}/slash2/mount_slash/slash2client.so $args" $n->{mp}
 EOF
 }
 
@@ -915,7 +922,6 @@ sub test_setup {
 	my $n = shift;
 
 	return <<EOF;
-	export TMPDIR=$n->{mp}/tmp
 	export RANDOM_DATA=$TSUITE_RANDOM
 	@{[map { "export $_\n" } @{ $gcfg{testenv} }]}
 
@@ -929,20 +935,24 @@ sub test_setup {
 		local id=\$2
 		local max=\$3
 
-		# XXX need some local storage next to mp to do
-		# comparisons
-		export LOCAL_TMP=$n->{mp}/tmp/\$id/\${test##*/}
+		local testrpath=\$id/\${test##*/}
+		export LOCAL_TMP=\$TMPDIR/tsuite.\$RANDOM/\$testrpath
+		local testdir=$n->{mp}/tmp/\$id/\${test##*/}
 		export SRC=$n->{src_dir}
-		rm -rf \$LOCAL_TMP
+
+		rm -rf "\$LOCAL_TMP"
 		mkdir_recurse "\$LOCAL_TMP"
-		cd \$LOCAL_TMP
+
+		rm -rf "\$testdir"
+		mkdir_recurse "\$testdir"
+		cd "\$testdir"
 
 		local launcher=
 		if [ x"\$test" != x"\${test%.sh}" ]; then
 			launcher='bash -eu@{[ $opts{v} ? "x" : ""]}'
 		fi
 
-		\$launcher \$test \$id \$max && rm -rf \$LOCAL_TMP
+		TMPDIR=\$testdir \$launcher \$test \$id \$max && rm -rf \$testdir
 	}
 
 	convert_ms()
@@ -1021,8 +1031,20 @@ sub test_setup {
 		_EXCLUDE_TIME_MS+=\$((time1_ms - time0_ms))
 	}
 	export -f exclude_time_end
+
+#	sleep()
+#	{
+#		exclude_time_start()
+#		command sleep \$@
+#		exclude_time_end()
+#	}
+
+	shopt -s extglob
 EOF
 }
+
+# Give IOS a moment to connect.
+sleep(4);
 
 # Set 1: run the client application tests, serially, measuring stats on
 # each so we can present historical performance analysis.
@@ -1173,6 +1195,8 @@ if ($emsg) {
 }
 
 sub cleanup {
+	return if $opts{C};
+
 	debug_msg "running cleanup";
 
 	my $n;
@@ -1248,8 +1272,8 @@ lock @all_output;
 
 my $output = join '', @all_output;
 
-my $pfl_commid = $output =~ /^%PFL_COMMID% (\S+?)/m;
-my $sl2_commid = $output =~ /^%SL2_COMMID% (\S+?)/m;
+my ($pfl_commid) = $output =~ /^%PFL_COMMID% (\S+)/m;
+my ($sl2_commid) = $output =~ /^%SL2_COMMID% (\S+)/m;
 
 sub parse_results {
 	my ($output) = @_;

@@ -2,7 +2,7 @@
 /*
  * %GPL_START_LICENSE%
  * ---------------------------------------------------------------------
- * Copyright 2015, Google, Inc.
+ * Copyright 2015-2016, Google, Inc.
  * Copyright 2008-2016, Pittsburgh Supercomputing Center
  * All rights reserved.
  *
@@ -24,8 +24,11 @@
  * Routines for handling RPC requests for ION from CLIENT.
  */
 
+#include <sys/statvfs.h>
+
 #include <errno.h>
 #include <stdio.h>
+#include <unistd.h>
 
 #include "pfl/ctlsvr.h"
 #include "pfl/fault.h"
@@ -47,15 +50,15 @@
 #include "sliod.h"
 #include "slvr.h"
 
-#define NOTIFY_FSYNC_TIMEOUT	10		/* seconds */
+#define MIN_SPACE_RESERVE	5		/* percentage */
 #define MAX_WRITE_PER_FILE	2048		/* slivers */
+#define NOTIFY_FSYNC_TIMEOUT	10		/* seconds */
 
 void				*sli_benchmark_buf;
 uint32_t			 sli_benchmark_bufsiz;
 
 int				 sli_sync_max_writes = MAX_WRITE_PER_FILE;
-
-extern struct psc_lockedlist	 sli_bii_rls;
+int				 sli_min_space_reserve = MIN_SPACE_RESERVE;
 
 int
 sli_ric_write_sliver(uint32_t off, uint32_t size, struct slvr **slvrs,
@@ -92,6 +95,41 @@ sli_ric_write_sliver(uint32_t off, uint32_t size, struct slvr **slvrs,
 	return (rc);
 }
 
+/*
+ * Check if the local storage is near full and if we are writing
+ * into a hole in the given file.
+ */
+int
+sli_has_enough_space(struct fidc_membh *f, uint32_t bmapno,
+    uint32_t b_off, uint32_t size)
+{
+	off_t rc, f_off;
+	int fd, percentage;
+
+	/* lockless read is fine */
+	percentage = sli_statvfs_buf.f_bavail * 100 /
+	    sli_statvfs_buf.f_blocks;
+	if (percentage >= sli_min_space_reserve)
+		return (1);
+
+	fd = fcmh_2_fd(f);
+	f_off = (off_t)bmapno * SLASH_BMAP_SIZE + b_off;
+#ifdef SEEK_HOLE
+	rc = lseek(fd, f_off, SEEK_HOLE);
+#else
+	rc = -1;
+#endif
+	/*
+	 * rc = -1 is possible if the backend file system does not
+	 * support it (e.g. ZFS on FreeBSD 9.0) or the offset is beyond
+	 * EOF.
+	 */
+	if (rc != -1 && f_off + size <= rc)
+		return (1);
+
+	return (0);
+}
+
 __static int
 sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 {
@@ -101,15 +139,14 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 	struct slvr *s, *slvr[RIC_MAX_SLVRS_PER_IO];
 	struct iovec iovs[RIC_MAX_SLVRS_PER_IO];
 	struct sli_aiocb_reply *aiocbr = NULL;
-	struct pfl_iostats_grad *ist;
+	struct fcmh_iod_info *fii;
+	struct bmap *bmap = NULL;
 	struct sl_fidgen *fgp;
 	struct srm_io_req *mq;
 	struct srm_io_rep *mp;
 	struct fidc_membh *f;
-	struct bmap *bmap;
 	uint64_t seqno;
 	ssize_t rv;
-	struct fcmh_iod_info *fii;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
 
@@ -184,8 +221,12 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 	if (mp->rc)
 		return (mp->rc);
 
+	/*
+ 	 * Limit key checking for write for now until the client
+ 	 * side can extend read lease in the background as well.
+ 	 */
 	seqno = bim_getcurseq();
-	if (mq->sbd.sbd_seq < seqno) {
+	if (rw == SL_WRITE && mq->sbd.sbd_seq < seqno) {
 		/* Reject old bmapdesc. */
 		psclog_warnx("op: %d, seq %"PRId64" < bim_getcurseq(%"PRId64")",
 		    rw, mq->sbd.sbd_seq, seqno);
@@ -194,13 +235,14 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 		return (mp->rc);
 	}
 
-	/* XXX move this until after success and do accounting for errors */
-	for (ist = sli_iorpc_iostats; ist->size; ist++)
-		if (mq->size < ist->size)
-			break;
-	pfl_opstat_add(rw == SL_WRITE ? ist->rw.wr : ist->rw.rd, 1);
+	/*
+	 * XXX move this until after success and do accounting for
+	 * errors.
+	 */
+	pfl_opstats_grad_incr(rw == SL_WRITE ?
+	    &sli_iorpc_iostats_wr : &sli_iorpc_iostats_rd, mq->size);
 
-	mp->rc = sli_fcmh_get(fgp, &f);
+	mp->rc = -sli_fcmh_get(fgp, &f);
 	if (mp->rc)
 		return (mp->rc);
 
@@ -218,10 +260,24 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 	if (f->fcmh_sstb.sst_utimgen < mq->utimgen)
 		f->fcmh_sstb.sst_utimgen = mq->utimgen;
 
+	/* Paranoid: clear more than necessary. */
+	for (i = 0; i < RIC_MAX_SLVRS_PER_IO; i++) {
+		slvr[i] = NULL;
+		iovs[i].iov_len = 0;
+		iovs[i].iov_base = 0;
+	}
+
 	if (rw == SL_WRITE) {
+		if (!sli_has_enough_space(f, bmapno, mq->offset,
+		    mq->size)) {
+			FCMH_ULOCK(f);
+			OPSTAT_INCR("write-out-of-space");
+			PFL_GOTOERR(out1, rc = mp->rc = -ENOSPC);
+		}
+
 		/*
-		 * Simplistic tracking of dirty slivers, ignoring duplicates.
-		 * We rely on clients to absort them.
+		 * Simplistic tracking of dirty slivers, ignoring
+		 * duplicates.  We rely on clients to absorb them.
 		 */
 		fii = fcmh_2_fii(f);
 		fii->fii_nwrite += nslvrs;
@@ -234,18 +290,12 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 	}
 	FCMH_ULOCK(f);
 
-	/* Paranoid: clear more than necessary. */
-	for (i = 0; i < RIC_MAX_SLVRS_PER_IO; i++) {
-		slvr[i] = NULL;
-		iovs[i].iov_len = 0;
-		iovs[i].iov_base = 0;
-	}
 
-	rc = mp->rc = bmap_get(f, bmapno, rw, &bmap);
+	rc = bmap_get(f, bmapno, rw, &bmap);
 	if (rc) {
-		DEBUG_FCMH(PLL_ERROR, f, "failed to load bmap %u",
-		    bmapno);
-		PFL_GOTOERR(out1, rc);
+		DEBUG_FCMH(PLL_ERROR, f, "failed to load bmap %u; rc=%d",
+		    bmapno, rc);
+		PFL_GOTOERR(out1, mp->rc = -rc);
 	}
 
 	DEBUG_FCMH(PLL_DIAG, f, "bmapno=%u size=%u off=%u rw=%s "
@@ -287,9 +337,10 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 		 * mq->offset is the offset into the bmap, here we must
 		 * translate it into the offset of the sliver.
 		 *
-		 * The client should not send us any read request that goes
-		 * beyond the EOF. Otherwise, we are in trouble here because
-		 * reading beyond EOF should return 0 bytes.
+		 * The client should not send us any read request that
+		 * goes beyond the EOF.  Otherwise, we are in trouble
+		 * here because reading beyond EOF should return 0
+		 * bytes.
 		 */
 		iovs[i].iov_base = slvr[i]->slvr_slab->slb_base + roff;
 		tsize -= iovs[i].iov_len = len[i];
@@ -399,6 +450,11 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 		bmap_op_done(bmap);
 
 	fcmh_op_done(f);
+
+	if (rw == SL_READ)
+		pfl_fault_here("sliod/read_delay", &rc);
+	else
+		pfl_fault_here("sliod/write_delay", &rc);
 	return (rc);
 }
 
@@ -420,7 +476,7 @@ sli_ric_handle_rlsbmap(struct pscrpc_request *rq)
 		sbd = &mq->sbd[i];
 		newbrls = psc_pool_get(bmap_rls_pool);
 		memcpy(&newbrls->bir_sbd, sbd, sizeof(*sbd));
-		pll_add(&sli_bii_rls, newbrls);
+		lc_add(&sli_bmaplease_releaseq, newbrls);
 	}
 	spinlock(&sli_release_bmap_lock);
 	psc_waitq_wakeall(&sli_release_bmap_waitq);

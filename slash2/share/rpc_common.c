@@ -3,7 +3,7 @@
  * %GPL_START_LICENSE%
  * ---------------------------------------------------------------------
  * Copyright 2015-2016, Google, Inc.
- * Copyright (c) 2007-2015, Pittsburgh Supercomputing Center (PSC).
+ * Copyright 2007-2016, Pittsburgh Supercomputing Center
  * All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
@@ -214,8 +214,8 @@ slrpc_connect_cb(struct pscrpc_request *rq,
 
 	CSVC_LOCK(csvc);
 	clock_gettime(CLOCK_MONOTONIC, &csvc->csvc_mtime);
+	csvc->csvc_lasterrno = rc;
 	if (rc) {
-		csvc->csvc_lasterrno = rc;
 		slrpc_connect_finish(csvc, imp, oimp, 0);
 	} else {
 		*stkversp = mp->stkvers;
@@ -237,7 +237,9 @@ slrpc_new_import(struct slashrpc_cservice *csvc)
 		psc_fatalx("pscrpc_new_import");
 	imp->imp_cli_request_portal = csvc->csvc_rqptl;
 	imp->imp_cli_reply_portal = csvc->csvc_rpptl;
-	imp->imp_max_retries = 2;
+
+	imp->imp_max_retries = pfl_rpc_max_retry;
+
 //	imp->imp_igntimeout = 1;	/* XXX only if archiver */
 	imp->imp_igntimeout = 0;
 	imp->imp_hldropf = csvc->csvc_hldropf;
@@ -764,6 +766,7 @@ _sl_csvc_get(const struct pfl_callerinfo *pci,
 
 	if (*csvcp) {
 		csvc = *csvcp;
+		/* 04/04/2016: Hit crash wth peer type SLCONNT_CLI */
 		locked = CSVC_RLOCK(csvc);
 		goto restart;
 	}
@@ -962,12 +965,12 @@ _sl_csvc_get(const struct pfl_callerinfo *pci,
 			goto out;
 		}
 
+		csvc->csvc_lasterrno = rc;
 		clock_gettime(CLOCK_MONOTONIC, &csvc->csvc_mtime);
 		csvc->csvc_flags &= ~CSVCF_CONNECTING;
 		if (rc) {
 			if (csvc->csvc_import)
 				csvc->csvc_import->imp_failed = 1;
-			csvc->csvc_lasterrno = rc;
 			/*
 			 * The csvc stays allocated but is marked as
 			 * unusable until the next connection

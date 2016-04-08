@@ -2,8 +2,8 @@
 /*
  * %GPL_START_LICENSE%
  * ---------------------------------------------------------------------
- * Copyright 2015, Google, Inc.
- * Copyright (c) 2008-2015, Pittsburgh Supercomputing Center (PSC).
+ * Copyright 2015-2016, Google, Inc.
+ * Copyright 2008-2016, Pittsburgh Supercomputing Center
  * All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
@@ -48,6 +48,15 @@
 #define SLM_CBARG_SLOT_CSVC	0
 #define SLM_CBARG_SLOT_BML	1
 
+/*
+ * Notify clients that a file/directory has been removed.
+ */
+void
+slm_coh_delete_file(struct fidc_membh *c)
+{
+	return (0);
+}
+
 void
 slm_coh_bml_release(struct bmap_mds_lease *bml)
 {
@@ -80,6 +89,10 @@ slm_rcm_bmapdio_cb(struct pscrpc_request *rq,
 
 	mq = pscrpc_msg_buf(rq->rq_reqmsg, 0, sizeof(*mq));
 
+	/*
+	 * We need to retry if the RPC timed out or when the lease
+	 * timeout, which ever comes first.
+	 */ 
 	SL_GET_RQ_STATUS_TYPE(csvc, rq, struct srm_bmap_dio_rep, rc);
 	if (rc && rc != -ENOENT)
 		goto out;

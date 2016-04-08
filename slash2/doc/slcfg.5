@@ -1,7 +1,7 @@
 .\" $Id$
 .\" %GPL_START_LICENSE%
 .\" ---------------------------------------------------------------------
-.\" Copyright 2015, Google, Inc.
+.\" Copyright 2015-2016, Google, Inc.
 .\" Copyright (c) 2009-2015, Pittsburgh Supercomputing Center (PSC).
 .\" All rights reserved.
 .\"
@@ -17,7 +17,7 @@
 .\" https://www.gnu.org/licenses/gpl-2.0.html for more details.
 .\" ---------------------------------------------------------------------
 .\" %END_LICENSE%
-.Dd March 8, 2016
+.Dd March 23, 2016
 .Dt SLCFG 5
 .ds volume PSC \- SLASH2 Administrator's Manual
 .Os http://www.psc.edu/
@@ -79,7 +79,7 @@ although it has the same format as the
 setting
 .Po see
 .Xr slashd 8 ,
-.Xr mount_slash 8 ,
+.Xr slash2client.so 5 ,
 or
 .Xr sliod 8
 for more information
@@ -99,7 +99,7 @@ This value, if specified, is used to specify the environment variable
 .Ev LNET_ROUTES
 .Po see
 .Xr slashd 8 ,
-.Xr mount_slash 8 ,
+.Xr slash2client.so 5 ,
 or
 .Xr sliod 8
 for more information
@@ -344,8 +344,8 @@ site @B {
 }
 .Ed
 .Sh SEE ALSO
+.Xr slash2client.so 5 ,
 .Xr sladm 7 ,
-.Xr mount_slash 8 ,
 .Xr slashd 8 ,
 .Xr sliod 8 ,
 .Xr slmkfs 8

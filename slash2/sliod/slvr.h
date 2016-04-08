@@ -3,7 +3,7 @@
  * %GPL_START_LICENSE%
  * ---------------------------------------------------------------------
  * Copyright 2015, Google, Inc.
- * Copyright (c) 2006-2015, Pittsburgh Supercomputing Center (PSC).
+ * Copyright 2006-2016, Pittsburgh Supercomputing Center
  * All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
@@ -59,7 +59,7 @@ struct slvr {
 	struct bmap_iod_info	*slvr_bii;
 	struct timespec		 slvr_ts;
 	struct sli_iocb		*slvr_iocb;
-	struct sl_buffer	*slvr_slab;
+	struct slab		*slvr_slab;
 	struct sli_aiocb_reply  *slvr_aioreply;
 	struct psclist_head	 slvr_lentry;	/* dirty queue */
 	SPLAY_ENTRY(slvr)	 slvr_tentry;	/* bmap tree entry */
@@ -162,7 +162,8 @@ struct sli_aiocb_reply {
 	uint32_t		  aiocbr_off;
 };
 
-#define SLI_AIOCBSF_NONE	(0 << 0)
+/* aiocbr_flags */
+#define SLI_AIOCBSF_NONE	(0)
 #define SLI_AIOCBSF_REPL	(1 << 0)
 #define SLI_AIOCBSF_DIO		(1 << 1)
 
@@ -205,7 +206,7 @@ struct sli_aiocb_reply *
 
 void	sli_aio_aiocbr_release(struct sli_aiocb_reply *);
 
-int	slvr_buffer_reap(struct psc_poolmgr *);
+void	slvr_crc_update(struct fidc_membh *, sl_bmapno_t, int32_t);
 
 struct sli_readaheadrq {
 	struct sl_fidgen	rarq_fg;
@@ -219,7 +220,6 @@ extern struct psc_poolmgr	*sli_readaheadrq_pool;
 extern struct psc_listcache	 sli_lruslvrs;
 extern struct psc_listcache	 sli_crcqslvrs;
 extern struct psc_listcache	 sli_readaheadq;
-extern struct psc_waitq		 sli_slvr_waitq;
 
 static __inline int
 slvr_cmp(const void *x, const void *y)
@@ -230,7 +230,5 @@ slvr_cmp(const void *x, const void *y)
 }
 
 SPLAY_PROTOTYPE(biod_slvrtree, slvr, slvr_tentry, slvr_cmp)
-
-void slvr_crc_update(struct fidc_membh *, sl_bmapno_t, int32_t);
 
 #endif /* _SLIOD_SLVR_H_ */

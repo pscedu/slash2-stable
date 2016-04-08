@@ -2,7 +2,7 @@
 /*
  * %GPL_START_LICENSE%
  * ---------------------------------------------------------------------
- * Copyright 2015, Google, Inc.
+ * Copyright 2015-2016, Google, Inc.
  * Copyright (c) 2011-2015, Pittsburgh Supercomputing Center (PSC).
  * All rights reserved.
  *
@@ -80,6 +80,9 @@ slc_rci_handle_ctl(struct pscrpc_request *rq)
 /*
  * Handle a READ or WRITE completion to CLI from ION (only used for
  * async I/O).
+ *
+ * XXX: if a read or write never comes back, those pages are held
+ * hostage.  We need a way to drop those async requests on the floor.
  *
  * @rq: request.
  */
@@ -177,7 +180,6 @@ slc_rci_handle_io(struct pscrpc_request *rq)
 			OPSTAT_INCR("msl.dio-cb-read");
 		else
 			OPSTAT_INCR("msl.dio-cb-write");
-
 	} else {
 		psc_fatalx("unknown callback");
 	}
@@ -190,6 +192,7 @@ slc_rci_handle_io(struct pscrpc_request *rq)
 
 	psclog_diag("return car=%p car_id=%"PRIx64" q=%p, r=%p", car,
 	    car->car_id, car->car_fsrqinfo, r);
+	(void)r;
 
 	psc_pool_return(msl_async_req_pool, car);
 

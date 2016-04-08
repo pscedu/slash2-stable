@@ -95,7 +95,7 @@ sli_rii_replread_release_sliver(struct sli_repl_workrq *w, int slvridx,
 	w->srw_slvr[slvridx] = NULL;
 	freelock(&w->srw_lock);
 
-	replwk_queue(w);
+	sli_replwk_queue(w);
 	sli_replwkrq_decref(w, rc);
 
 	return (rc);
@@ -127,11 +127,11 @@ sli_rii_handle_repl_read(struct pscrpc_request *rq)
 	if (mq->slvrno < 0 || mq->slvrno >= SLASH_SLVRS_PER_BMAP)
 		PFL_GOTOERR(out, mp->rc = -EINVAL);
 
-	mp->rc = sli_fcmh_get(&mq->fg, &f);
+	mp->rc = -sli_fcmh_get(&mq->fg, &f);
 	if (mp->rc)
 		goto out;
 
-	mp->rc = bmap_get(f, mq->bmapno, SL_READ, &b);
+	mp->rc = -bmap_get(f, mq->bmapno, SL_READ, &b);
 	if (mp->rc) {
 		/*
 		 * XXX abort bulk here, otherwise all future RPCs will
@@ -153,6 +153,7 @@ sli_rii_handle_repl_read(struct pscrpc_request *rq)
 	if (rv == -SLERR_AIOWAIT) {
 		aiocbr = sli_aio_replreply_setup(rq, s, &iov);
 		SLVR_LOCK(s);
+		/* XXX missing slvr_rio_done()? */
 		if (s->slvr_flags & SLVRF_FAULTING) {
 			s->slvr_aioreply = aiocbr;
 			OPSTAT_INCR("aio-insert");
@@ -173,7 +174,6 @@ sli_rii_handle_repl_read(struct pscrpc_request *rq)
 		slvr_io_done(s, rv);
 
 	if (rv)
-		/* XXX missing slvr_rio_done()? */
 		PFL_GOTOERR(out, mp->rc = rv);
 
 	sli_bwqueued_adj(&sli_bwqueued.sbq_egress, mq->len);
@@ -233,11 +233,11 @@ sli_rii_handle_repl_read_aio(struct pscrpc_request *rq)
 		return (mp->rc);
 	}
 
-	mp->rc = sli_fcmh_get(&mq->fg, &f);
+	mp->rc = -sli_fcmh_get(&mq->fg, &f);
 	if (mp->rc)
 		goto out;
 
-	mp->rc = bmap_get(f, mq->bmapno, SL_READ, &b);
+	mp->rc = -bmap_get(f, mq->bmapno, SL_READ, &b);
 	if (mp->rc) {
 		/*
 		 * XXX abort bulk here, otherwise all future RPCs will
@@ -260,10 +260,6 @@ sli_rii_handle_repl_read_aio(struct pscrpc_request *rq)
 
 	s = slvr_lookup(mq->slvrno, bmap_2_bii(b));
 
-	rc = slvr_io_prep(s, 0, SLASH_SLVR_SIZE, SL_WRITE, 0);
-	psc_assert(!rc);
-	BMAP_ULOCK(b);
-
 	/* Ensure the sliver is found in the work item's array. */
 	for (slvridx = 0; slvridx < (int)nitems(w->srw_slvr);
 	     slvridx++)
@@ -271,12 +267,17 @@ sli_rii_handle_repl_read_aio(struct pscrpc_request *rq)
 			break;
 
 	if (slvridx == (int)nitems(w->srw_slvr)) {
+		OPSTAT_INCR("repl-no-slot");
 		// FATAL?
 		DEBUG_SLVR(PLL_ERROR, s,
 		    "failed to find slvr in wq=%p", w);
 		// XXX leak srw
 		PFL_GOTOERR(out, mp->rc = -ENOENT);
 	}
+
+	rc = slvr_io_prep(s, 0, SLASH_SLVR_SIZE, SL_WRITE, 0);
+	psc_assert(!rc);
+	BMAP_ULOCK(b);
 
 	iov.iov_base = s->slvr_slab->slb_base;
 	iov.iov_len = mq->len;
@@ -360,7 +361,7 @@ sli_rii_issue_repl_read(struct slashrpc_cservice *csvc, int slvrno,
 	mq->slvrno = slvrno;
 
 	psc_atomic32_inc(&w->srw_refcnt);
-	DEBUG_SRW(w, PLL_DEBUG, "incref");
+	PFLOG_REPLWK(PLL_DEBUG, w, "incref");
 
 	psc_assert(w->srw_slvr[slvridx] == SLI_REPL_SLVR_SCHED);
 
@@ -385,7 +386,6 @@ sli_rii_issue_repl_read(struct slashrpc_cservice *csvc, int slvrno,
 	if (rc)
 		goto out;
 
-	/* Setup state for callbacks */
 	rq->rq_interpret_reply = sli_rii_replread_cb;
 	rq->rq_async_args.pointer_arg[SRII_REPLREAD_CBARG_WKRQ] = w;
 	rq->rq_async_args.pointer_arg[SRII_REPLREAD_CBARG_SLVR] = s;
@@ -405,7 +405,7 @@ sli_rii_issue_repl_read(struct slashrpc_cservice *csvc, int slvrno,
 		w->srw_slvr[slvridx] = NULL;
 		freelock(&w->srw_lock);
 
-		replwk_queue(w);
+		sli_replwk_queue(w);
 		sli_replwkrq_decref(w, rc);
 		OPSTAT_INCR("issue-replread-error");
 	} else {

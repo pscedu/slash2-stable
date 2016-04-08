@@ -49,6 +49,7 @@
 #include "pfl/workthr.h"
 
 #include "authbuf.h"
+#include "batchrpc.h"
 #include "bmap_iod.h"
 #include "fidc_iod.h"
 #include "fidcache.h"
@@ -75,12 +76,25 @@ psc_spinlock_t		 sli_bwqueued_lock = SPINLOCK_INIT;
 struct srt_statfs	 sli_ssfb;
 psc_spinlock_t		 sli_ssfb_lock = SPINLOCK_INIT;
 struct timespec		 sli_ssfb_send;
+struct statvfs		 sli_statvfs_buf;
 
-struct pfl_iostats_grad	 sli_iorpc_iostats[8];
+struct pfl_opstats_grad	 sli_iorpc_iostats_rd;
+struct pfl_opstats_grad	 sli_iorpc_iostats_wr;
 struct pfl_iostats_rw	 sli_backingstore_iostats;
 struct psc_thread	*sliconnthr;
 
 uint32_t		 sl_sys_upnonce;
+
+int64_t sli_io_grad_sizes[] = {
+		0,
+	     1024,
+	 4 * 1024,
+	16 * 1024,
+	64 * 1024,
+       128 * 1024,
+       512 * 1024,
+      1024 * 1024,
+};
 
 int
 psc_usklndthr_get_type(const char *namefmt)
@@ -104,21 +118,21 @@ psc_usklndthr_get_namev(char buf[PSC_THRNAME_MAX], const char *namefmt,
 void
 slistatfsthr_main(struct psc_thread *thr)
 {
-	struct statvfs sfb;
 	char type[LINE_MAX];
 	int rc;
 
 	pfl_getfstype(slcfg_local->cfg_fsroot, type, sizeof(type));
 
 	while (pscthr_run(thr)) {
-		rc = statvfs(slcfg_local->cfg_fsroot, &sfb);
+		rc = statvfs(slcfg_local->cfg_fsroot, &sli_statvfs_buf);
 		if (rc == -1)
 			psclog_error("statvfs %s",
 			    slcfg_local->cfg_fsroot);
 
 		if (rc == 0) {
 			spinlock(&sli_ssfb_lock);
-			sl_externalize_statfs(&sfb, &sli_ssfb);
+			sl_externalize_statfs(&sli_statvfs_buf,
+			    &sli_ssfb);
 			strlcpy(sli_ssfb.sf_type, type,
 			    sizeof(sli_ssfb.sf_type));
 			freelock(&sli_ssfb_lock);
@@ -202,7 +216,6 @@ main(int argc, char *argv[])
 {
 	const char *cfn, *sfn, *p, *prefmds;
 	sigset_t signal_set;
-	struct stat stb;
 	time_t now;
 	int rc, c;
 
@@ -238,7 +251,7 @@ main(int argc, char *argv[])
 			sfn = optarg;
 			break;
 		case 'V':
-			errx(0, "revision is %d", sl_stk_version);
+			errx(0, "version is %d", sl_stk_version);
 		default:
 			usage();
 		}
@@ -264,7 +277,11 @@ main(int argc, char *argv[])
 
 	libsl_init((SLI_RIM_NBUFS + SLI_RIC_NBUFS + SLI_RII_NBUFS) * 2);
 
-	if (stat(slcfg_local->cfg_fsroot, &stb) == -1)
+	/*
+	 * Make sure our root is workable and initialize our statvfs
+	 * buffer.
+	 */
+	if (statvfs(slcfg_local->cfg_fsroot, &sli_statvfs_buf) == -1)
 		psc_fatal("%s", slcfg_local->cfg_fsroot);
 
 	bmap_cache_init(sizeof(struct bmap_iod_info), SLI_BMAP_COUNT);
@@ -273,15 +290,12 @@ main(int argc, char *argv[])
 	sl_nbrqset = pscrpc_prep_set();
 	slvr_cache_init();
 
-	sli_iorpc_iostats[0].size =        1024;
-	sli_iorpc_iostats[1].size =    4 * 1024;
-	sli_iorpc_iostats[2].size =   16 * 1024;
-	sli_iorpc_iostats[3].size =   64 * 1024;
-	sli_iorpc_iostats[4].size =  128 * 1024;
-	sli_iorpc_iostats[5].size =  512 * 1024;
-	sli_iorpc_iostats[6].size = 1024 * 1024;
-	sli_iorpc_iostats[7].size = 0;
-	pfl_iostats_grad_init(sli_iorpc_iostats, OPSTF_BASE10, "iorpc");
+	pfl_opstats_grad_init(&sli_iorpc_iostats_rd, 0,
+	    sli_io_grad_sizes, nitems(sli_io_grad_sizes),
+	    "iorpc-rd:%s");
+	pfl_opstats_grad_init(&sli_iorpc_iostats_wr, 0,
+	    sli_io_grad_sizes, nitems(sli_io_grad_sizes),
+	    "iorpc-wr:%s");
 
 	sli_backingstore_iostats.rd = pfl_opstat_init("backingstore-rd");
 	sli_backingstore_iostats.wr = pfl_opstat_init("backingstore-wr");
@@ -328,12 +342,11 @@ main(int argc, char *argv[])
 	pfl_opstimerthr_spawn(SLITHRT_OPSTIMER, "sliopstimerthr");
 	sl_freapthr_spawn(SLITHRT_FREAP, "slifreapthr");
 
-	time(&now);
-	psclogs_info(SLISS_INFO, "SLASH2 %s revision %d started at %s",
-	    __progname, sl_stk_version, ctime(&now));
+	slrpc_batches_init(SLITHRT_BATCHRPC, "sli");
 
-	pfl_fault_register("sliod/seqno_read_fail");
-	pfl_fault_register("sliod/seqno_write_fail");
+	time(&now);
+	psclogs_info(SLISS_INFO, "SLASH2 %s version %d started at %s",
+	    __progname, sl_stk_version, ctime(&now));
 
 	slictlthr_main(sfn);
 	exit(0);

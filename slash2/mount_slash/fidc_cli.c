@@ -2,8 +2,8 @@
 /*
  * %GPL_START_LICENSE%
  * ---------------------------------------------------------------------
- * Copyright 2015, Google, Inc.
- * Copyright (c) 2007-2015, Pittsburgh Supercomputing Center (PSC).
+ * Copyright 2015-2016, Google, Inc.
+ * Copyright 2007-2016, Pittsburgh Supercomputing Center
  * All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
@@ -147,7 +147,7 @@ slc_fcmh_refresh_age(struct fidc_membh *f)
 	PFL_GETTIMEVAL(&fci->fci_age);
 	timeradd(&fci->fci_age, &tmp, &fci->fci_age);
 
-	if (fcmh_isdir(f))
+	if (fcmh_isdir(f) && !(f->fcmh_flags & FCMHF_INIT_DIRCACHE))
 		dircache_init(f);
 }
 
@@ -177,7 +177,7 @@ msl_fcmh_fetch_inode(struct fidc_membh *f)
 	int rc;
 
 	fci = fcmh_2_fci(f);
-	rc = slc_rmc_getcsvc1(&csvc, fci->fci_resm);
+	rc = slc_rmc_getcsvc(fci->fci_resm, &csvc);
 	if (rc)
 		goto out;
 	rc = SL_RSX_NEWREQ(csvc, SRMT_GET_INODE, rq, mq, mp);
@@ -244,10 +244,18 @@ slc_fcmh_ctor(struct fidc_membh *f, __unusedx int flags)
 void
 slc_fcmh_dtor(struct fidc_membh *f)
 {
-	if (fcmh_isdir(f))
-		namecache_purge(f);
-	if (f->fcmh_flags & FCMH_CLI_INITDIRCACHE)
+	if (f->fcmh_flags & FCMHF_INIT_DIRCACHE) {
+		/*
+		 * We must lock here or other threads with HOLDs on ents
+		 * can race with us.
+		 */
+		DIRCACHE_WRLOCK(f);
 		dircache_purge(f);
+		namecache_purge(f);
+		DIRCACHE_ULOCK(f);
+	}
+
+	DEBUG_FCMH(PLL_DEBUG, f, "dtor");
 }
 
 void
@@ -265,7 +273,7 @@ dump_fcmh_flags(int flags)
 	int seq = 0;
 
 	_dump_fcmh_flags_common(&flags, &seq);
-	PFL_PRFLAG(FCMH_CLI_INITDIRCACHE, &flags, &seq);
+	PFL_PRFLAG(FCMHF_INIT_DIRCACHE, &flags, &seq);
 	PFL_PRFLAG(FCMH_CLI_TRUNC, &flags, &seq);
 	PFL_PRFLAG(FCMH_CLI_DIRTY_DSIZE, &flags, &seq);
 	PFL_PRFLAG(FCMH_CLI_DIRTY_MTIME, &flags, &seq);

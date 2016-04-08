@@ -3,7 +3,7 @@
  * %GPL_START_LICENSE%
  * ---------------------------------------------------------------------
  * Copyright 2015-2016, Google, Inc.
- * Copyright (c) 2008-2015, Pittsburgh Supercomputing Center (PSC).
+ * Copyright 2008-2016, Pittsburgh Supercomputing Center
  * All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
@@ -102,6 +102,7 @@ bmap_free_all_locked(struct fidc_membh *f)
 
 	FCMH_LOCK_ENSURE(f);
 
+	/* 03/18/2016: Hit SIGSEGV when called from do_setattr() */
 	RB_FOREACH(b, bmaptree, &f->fcmh_bmaptree) {
 		DEBUG_BMAP(PLL_DIAG, b, "mark bmap free");
 
@@ -128,76 +129,6 @@ bmap_free_all_locked(struct fidc_membh *f)
 	psc_waitq_wakeall(&msl_bmaptimeoutq.plc_wq_empty);
 }
 
-/*
- * Determine if an I/O operation should be retried after successive
- * RPC/communication failures.
- *
- * We want to check:
- *	- administration/control/configuration policy (e.g. "5
- *	  retries").
- *	- user process/environment/file descriptor policy
- *	- user process interrupt
- *
- * XXX this should likely be merged with slc_rmc_retry_pfr().
- * XXX mfh_retries access and modification is racy here, e.g. if the
- *	process has multiple threads or forks.
- */
-int
-msl_fd_should_retry(struct msl_fhent *mfh, struct pscfs_req *pfr,
-    int rc)
-{
-	int retry = 1;
-
-	DEBUG_FCMH(PLL_DIAG, mfh->mfh_fcmh,
-	    "nretries=%d, maxretries=%d (non-blocking=%d)",
-	    mfh->mfh_retries, msl_max_nretries,
-	    mfh->mfh_oflags & O_NONBLOCK);
-
-	/* test for retryable error codes */
-	switch (rc) {
-	case -ENOTCONN:
-	case -ETIMEDOUT:
-	case -PFLERR_KEYEXPIRED:
-	case -PFLERR_TIMEDOUT:
-	case -SLERR_ION_OFFLINE:
-//	case -ECONNABORTED:
-//	case -ECONNREFUSED:
-//	case -ECONNRESET:
-//	case -EHOSTDOWN:
-//	case -EHOSTUNREACH:
-//	case -EIO:
-//	case -ENETDOWN:
-//	case -ENETRESET:
-//	case -ENETUNREACH:
-#ifdef ENONET
-//	case -ENONET:
-#endif
-		break;
-	default:
-		retry = 0;
-		break;
-	}
-	// XXX can this flag be changed dynamically?
-	// fcntl(2)
-	if (mfh->mfh_oflags & O_NONBLOCK)
-		retry = 0;
-	else if (++mfh->mfh_retries >= msl_max_nretries)
-		retry = 0;
-
-	if (retry) {
-		if (mfh->mfh_retries < 10)
-			usleep(1000);
-		else
-			usleep(1000000);
-		OPSTAT_INCR("msl.offline-retry");
-	} else
-		OPSTAT_INCR("msl.offline-no-retry");
-
-	if (pfr->pfr_interrupted)
-		retry = 0;
-
-	return (retry);
-}
 
 /*
  * Pin (mark read-only) all pages attached to a bmap write coalescer.
@@ -211,11 +142,7 @@ bwc_pin_pages(struct bmpc_write_coalescer *bwc)
 	for (i = 0; i < bwc->bwc_nbmpces; i++) {
 		pg = bwc->bwc_bmpces[i];
 		BMPCE_LOCK(pg);
-		while (pg->bmpce_flags & BMPCEF_PINNED) {
-			BMPCE_WAIT(pg);
-			BMPCE_LOCK(pg);
-		}
-		pg->bmpce_flags |= BMPCEF_PINNED;
+		pg->bmpce_pins++;
 		BMPCE_ULOCK(pg);
 	}
 }
@@ -232,7 +159,7 @@ bwc_unpin_pages(struct bmpc_write_coalescer *bwc)
 	for (i = 0; i < bwc->bwc_nbmpces; i++) {
 		pg = bwc->bwc_bmpces[i];
 		BMPCE_LOCK(pg);
-		pg->bmpce_flags &= ~BMPCEF_PINNED;
+		pg->bmpce_pins--;
 		BMPCE_WAKE(pg);
 		BMPCE_ULOCK(pg);
 	}
@@ -251,7 +178,13 @@ _bmap_flushq_wake(const struct pfl_callerinfo *pci, int reason)
 			psc_waitq_wakeone(&slc_bflush_waitq);
 	}
 
+	if (reason == BMAPFLSH_EXPIRE)
+		psc_waitq_wakeall(&msl_bmapflushq.plc_wq_empty);
+	else
+		psc_waitq_wakeone(&msl_bmapflushq.plc_wq_empty);
+
 	psclog_diag("wakeup flusher: reason=%x wake=%d", reason, wake);
+	(void)wake;
 }
 
 /*
@@ -273,6 +206,7 @@ msl_ric_bflush_cb(struct pscrpc_request *rq,
 
 	psclog_diag("callback to write RPC bwc=%p ios=%d infl=%d rc=%d",
 	    bwc, m->resm_res_id, rpci->rpci_infl_rpcs, rc);
+	(void)rpci;
 
 	bwc_unpin_pages(bwc);
 
@@ -284,8 +218,7 @@ msl_ric_bflush_cb(struct pscrpc_request *rq,
 		}
 	}
 
-	msl_update_iocounters(slc_iorpc_iostats, SL_WRITE,
-	    bwc->bwc_size);
+	pfl_opstats_grad_incr(&slc_iorpc_iostats_wr, bwc->bwc_size);
 
 	bwc_release(bwc);
 	sl_csvc_decref(csvc);
@@ -318,7 +251,7 @@ bmap_flush_create_rpc(struct bmpc_write_coalescer *bwc,
 
 #if 0
 	/*
-	 * Instead of timeout ourselves, the IOS will return 
+	 * Instead of timeout ourselves, the IOS will return
 	 * -PFLERR_KEYEXPIRED and we should retry.
 	 */
 	rq->rq_timeout = msl_bmap_lease_secs_remaining(b);
@@ -642,8 +575,8 @@ bmap_flushable(struct bmap *b)
 
 	if (flush) {
 		PFL_GETTIMESPEC(&ts);
-		if ((bmap_2_bci(b)->bci_etime.tv_sec < ts.tv_sec) ||
-		    (bmap_2_bci(b)->bci_etime.tv_sec - ts.tv_sec < BMAP_CLI_EXTREQSECS) ||
+		ts.tv_sec += BMAP_CLI_EXTREQSECS;
+		if (timespeccmp(&bmap_2_bci(b)->bci_etime, &ts, <) ||
 		    (b->bcm_flags & BMAPF_LEASEEXPIRED)) {
 			OPSTAT_INCR("msl.flush-skip-expire");
 			flush = 0;
@@ -789,6 +722,8 @@ msbwatchthr_main(struct psc_thread *thr)
 			LIST_CACHE_ULOCK(&msl_bmapflushq);
 			break;
 		}
+		PFL_GETTIMESPEC(&ts);
+		ts.tv_sec += BMAP_CLI_EXTREQSECS;
 		LIST_CACHE_FOREACH_SAFE(b, tmpb, &msl_bmapflushq) {
 			if (!BMAP_TRYLOCK(b))
 				continue;
@@ -799,10 +734,8 @@ msbwatchthr_main(struct psc_thread *thr)
 				BMAP_ULOCK(b);
 				continue;
 			}
-			PFL_GETTIMESPEC(&ts);
-			if ((bmap_2_bci(b)->bci_etime.tv_sec < ts.tv_sec) ||
-			    (bmap_2_bci(b)->bci_etime.tv_sec - ts.tv_sec <
-				BMAP_CLI_EXTREQSECS))
+			if (timespeccmp(&bmap_2_bci(b)->bci_etime, &ts,
+			    <))
 				psc_dynarray_add(&bmaps, b);
 			BMAP_ULOCK(b);
 		}

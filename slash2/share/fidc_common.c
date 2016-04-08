@@ -243,8 +243,10 @@ _fidc_lookup(const struct pfl_callerinfo *pci, slfid_t fid,
 		psc_hashbkt_put(&sl_fcmh_hashtbl, b);
 
 		/* call sli_fcmh_reopen() sliod only */
-		if (sl_fcmh_ops.sfop_modify)
+		if (sl_fcmh_ops.sfop_modify) {
 			rc = sl_fcmh_ops.sfop_modify(f, fgen);
+			FCMH_LOCK_ENSURE(f);
+		}
 		if (rc)
 			fcmh_op_done_type(f, FCMH_OPCNT_LOOKUP_FIDC);
 		else {
@@ -376,15 +378,22 @@ fidc_destroy(void)
 }
 
 ssize_t
-fcmh_getsize(struct fidc_membh *h)
+fcmh_getsize(struct fidc_membh *f)
 {
 	ssize_t size;
-	int locked;
 
-	locked = reqlock(&h->fcmh_lock);
-	size = fcmh_2_fsz(h);
-	ureqlock(&h->fcmh_lock, locked);
+	FCMH_LOCK(f);
+	size = fcmh_2_fsz(f);
+	FCMH_ULOCK(f);
 	return (size);
+}
+
+off_t
+fcmh_getsize_locked(struct fidc_membh *f)
+{
+	FCMH_LOCK_ENSURE(f);
+
+	return (fcmh_2_fsz(f));
 }
 
 void

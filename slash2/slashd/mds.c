@@ -59,7 +59,7 @@
 struct pfl_odt		*slm_bia_odt;
 
 int			slm_ptrunc_enabled;
-int			slm_preclaim_enabled;
+int			slm_preclaim_enabled = 1;
 
 __static int slm_ptrunc_prepare(struct fidc_membh *);
 
@@ -239,15 +239,21 @@ mds_bmap_ios_restart(struct bmap_mds_lease *bml)
 	int rc = 0;
 
 	rmmi = resm2rmmi(resm);
-	psc_atomic32_inc(&rmmi->rmmi_refcnt);
 
 	psc_assert(bml->bml_bmi->bmi_assign);
-	bml->bml_bmi->bmi_wr_ion = rmmi;
+
+	if (bml->bml_bmi->bmi_wr_ion) {
+		psc_assert(bml->bml_bmi->bmi_wr_ion == rmmi);
+	} else {
+		psc_atomic32_inc(&rmmi->rmmi_refcnt);
+		bml->bml_bmi->bmi_wr_ion = rmmi;
+	}
 
 	if (mds_bmap_timeotbl_mdsi(bml, BTE_REATTACH) == BMAPSEQ_ANY)
 		rc = 1;
 
-	bml->bml_bmi->bmi_seq = bml->bml_seq;
+	if (bml->bml_seq > bml->bml_bmi->bmi_seq)
+		bml->bml_bmi->bmi_seq = bml->bml_seq;
 
 	DEBUG_BMAP(PLL_DIAG, bml_2_bmap(bml), "res(%s) seq=%"PRIx64,
 	    resm->resm_res->res_name, bml->bml_seq);
@@ -617,8 +623,8 @@ mds_bmap_ios_assign(struct bmap_mds_lease *bml, sl_ios_id_t iosid)
 		bml->bml_flags |= BML_ASSFAIL; // XXX bml locked?
 
 		r = libsl_id2res(iosid);
-		psclog_warnx("unable to contact IOS %#x (%s) for lease",
-		    iosid, r ? r->res_name : NULL);
+		psclog_warnx("unable to contact IOS %#x (pref_ios=%s) "
+		    "for lease", iosid, r ? r->res_name : NULL);
 
 		return (-SLERR_ION_OFFLINE);
 	}
@@ -918,8 +924,9 @@ mds_bmap_bml_add(struct bmap_mds_lease *bml, enum rw rw,
 	rc = mds_bmap_directio(b, rw, bml->bml_flags & BML_DIO,
 	    &bml->bml_cli_nidpid);
 	if (rc && !(bml->bml_flags & BML_RECOVER))
-		/* 'rc != 0' means that we're waiting on an async cb
-		 *    completion.
+		/*
+		 * 'rc' means that we're waiting on an async cb
+		 * completion.
 		 */
 		goto out;
 
@@ -981,7 +988,6 @@ mds_bmap_bml_add(struct bmap_mds_lease *bml, enum rw rw,
 		if (bml->bml_flags & BML_RECOVER) {
 			psc_assert(bmi->bmi_writers == 1);
 			psc_assert(!bmi->bmi_readers);
-			psc_assert(!bmi->bmi_wr_ion);
 			psc_assert(bml->bml_ios &&
 			    bml->bml_ios != IOS_ID_ANY);
 			BMAP_ULOCK(b);
@@ -1676,7 +1682,7 @@ slm_fill_bmapdesc(struct srt_bmapdesc *sbd, struct bmap *b)
 	locked = BMAP_RLOCK(b);
 	sbd->sbd_fg = b->bcm_fcmh->fcmh_fg;
 	sbd->sbd_bmapno = b->bcm_bmapno;
-	if (b->bcm_flags & BMAPF_DIO)
+	if (b->bcm_flags & BMAPF_DIO || slm_force_dio)
 		sbd->sbd_flags |= SRM_LEASEBMAPF_DIO;
 	for (i = 0; i < SLASH_SLVRS_PER_BMAP; i++)
 		if (bmi->bmi_crcstates[i] & BMAP_SLVR_DATA) {
@@ -2274,7 +2280,7 @@ slmbkdbthr_main(struct psc_thread *thr)
  * @fmt: printf(3)-like format string to properly escape any
  * interpolated values in the SQL query.
  */
-void
+int
 _dbdo(const struct pfl_callerinfo *pci,
     int (*cb)(struct slm_sth *, void *), void *cbarg,
     const char *fmt, ...)
@@ -2375,12 +2381,12 @@ _dbdo(const struct pfl_callerinfo *pci,
 
 	n = sqlite3_bind_parameter_count(sth->sth_sth);
 	va_start(ap, fmt);
-	log = psc_log_getlevel(pci->pci_subsys) >= PLL_DEBUG;
+	log = psc_log_shouldlog(pci, PLL_DEBUG);
 	if (log) {
 		strlcpy(dbuf, fmt, sizeof(dbuf));
 		dbuf_off = strlen(fmt);
-		PFL_GETTIMEVAL(&tv0);
 	}
+	PFL_GETTIMEVAL(&tv0);
 	for (j = 0; j < n; j++) {
 		type = va_arg(ap, int);
 		switch (type) {
@@ -2442,19 +2448,19 @@ _dbdo(const struct pfl_callerinfo *pci,
 	} while (rc == SQLITE_ROW || rc == SQLITE_BUSY ||
 	    rc == SQLITE_LOCKED);
 
-	if (log) {
-		PFL_GETTIMEVAL(&tv);
-		timersub(&tv, &tv0, &tvd);
-		OPSTAT_ADD("sql-wait-usecs",
-		    tvd.tv_sec * 1000000 + tvd.tv_usec);
+	PFL_GETTIMEVAL(&tv);
+	timersub(&tv, &tv0, &tvd);
+	OPSTAT_ADD("sql-wait-usecs",
+	    tvd.tv_sec * 1000000 + tvd.tv_usec);
+	if (log)
 		psclog_debug("ran SQL in %.2fs: %s", tvd.tv_sec +
 		    tvd.tv_usec / 1000000.0, dbuf);
-	}
 
 	if (rc != SQLITE_DONE)
 		psclog_errorx("SQL error: rc=%d query=%s; msg=%s", rc,
 		    fmt, sqlite3_errmsg(dbh->dbh));
 	sqlite3_reset(sth->sth_sth);
+	return (rc == SQLITE_DONE ? 0 : rc);
 }
 
 void

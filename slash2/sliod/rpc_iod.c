@@ -2,7 +2,7 @@
 /*
  * %GPL_START_LICENSE%
  * ---------------------------------------------------------------------
- * Copyright 2015, Google, Inc.
+ * Copyright 2015-2016, Google, Inc.
  * Copyright (c) 2008-2015, Pittsburgh Supercomputing Center (PSC).
  * All rights reserved.
  *
@@ -99,6 +99,8 @@ sli_rpc_initsvc(void)
 	strlcpy(svh->svh_svc_name, SLI_RII_SVCNAME,
 	    sizeof(svh->svh_svc_name));
 	pscrpc_thread_spawn(svh, struct slirii_thread);
+
+	sli_rim_init();
 }
 
 void

@@ -3,7 +3,7 @@
  * %GPL_START_LICENSE%
  * ---------------------------------------------------------------------
  * Copyright 2015-2016, Google, Inc.
- * Copyright (c) 2006-2015, Pittsburgh Supercomputing Center (PSC).
+ * Copyright 2006-2016, Pittsburgh Supercomputing Center
  * All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
@@ -51,7 +51,6 @@ psc_atomic32_t			 sli_ninfl_bcrcupd;
 
 struct psc_listcache		 bcr_ready;
 struct timespec			 sli_bcr_pause = { 0, 200000L };
-struct psc_waitq		 sli_slvr_waitq = PSC_WAITQ_INIT;
 
 int
 sli_rmi_bcrcupd_cb(struct pscrpc_request *rq,
@@ -136,6 +135,8 @@ slvr_worker_crcup_genrq(const struct psc_dynarray *bcrs)
 	rc = sli_rmi_getcsvc(&csvc);
 	if (rc)
 		return (rc);
+
+	/* 04/01/2016: Hit crash due to NULL import */
 	rc = SL_RSX_NEWREQ(csvc, SRMT_BMAPCRCWRT, rq, mq, mp);
 	if (rc)
 		PFL_GOTOERR(out, rc);

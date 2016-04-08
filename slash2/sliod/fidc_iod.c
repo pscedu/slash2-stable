@@ -2,7 +2,7 @@
 /*
  * %GPL_START_LICENSE%
  * ---------------------------------------------------------------------
- * Copyright 2015, Google, Inc.
+ * Copyright 2015-2016, Google, Inc.
  * Copyright 2010-2016, Pittsburgh Supercomputing Center
  * All rights reserved.
  *
@@ -121,22 +121,6 @@ sli_open_backing_file(struct fidc_membh *f)
 	psclog(lvl, "opened backing file path=%s fd=%d rc=%d",
 	    strstr(fidfn, SL_RPATH_FIDNS_DIR), fcmh_2_fd(f), rc);
 	return (rc);
-}
-
-int
-sli_fcmh_getattr(struct fidc_membh *f)
-{
-	struct stat stb;
-
-	if (fstat(fcmh_2_fd(f), &stb) == -1)
-		return (-errno);
-
-	FCMH_LOCK(f);
-	sl_externalize_stat(&stb, &f->fcmh_sstb);
-	// XXX get ptruncgen and gen
-	f->fcmh_flags |= FCMH_HAVE_ATTRS;
-	FCMH_ULOCK(f);
-	return (0);
 }
 
 int
@@ -265,7 +249,8 @@ sli_fcmh_reopen(struct fidc_membh *f, slfgen_t fgen)
 int
 sli_fcmh_ctor(struct fidc_membh *f, __unusedx int flags)
 {
-	int rc = 0;
+	int rc;
+	struct stat stb;
 	struct fcmh_iod_info *fii;
 
 	fii = fcmh_2_fii(f);
@@ -285,10 +270,16 @@ sli_fcmh_ctor(struct fidc_membh *f, __unusedx int flags)
 	/* try to get a file descriptor for this backing obj */
 	rc = sli_open_backing_file(f);
 	if (rc == 0) {
-		rc = sli_fcmh_getattr(f);
-		if (rc)
+		if (fstat(fcmh_2_fd(f), &stb) == -1) {
+			rc = -errno;
 			DEBUG_FCMH(PLL_WARN, f, "error during "
 			    "getattr backing file rc=%d", rc);
+			close(fcmh_2_fd(f));
+		} else {
+			sl_externalize_stat(&stb, &f->fcmh_sstb);
+			// XXX get ptruncgen and gen
+			f->fcmh_flags |= FCMH_HAVE_ATTRS;
+		}
 	}
 	if (!rc)
 		f->fcmh_flags |= FCMH_IOD_BACKFILE;

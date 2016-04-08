@@ -2,8 +2,8 @@
 /*
  * %GPL_START_LICENSE%
  * ---------------------------------------------------------------------
- * Copyright 2015, Google, Inc.
- * Copyright 2008-2015, Pittsburgh Supercomputing Center
+ * Copyright 2015-2016, Google, Inc.
+ * Copyright 2008-2016, Pittsburgh Supercomputing Center
  * All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
@@ -28,9 +28,6 @@
 #include "slashrpc.h"
 #include "slconfig.h"
 #include "slconn.h"
-
-/* async RPC pointers */
-#define SLI_CBARG_CSVC                  0
 
 struct sli_repl_workrq;
 
@@ -92,10 +89,12 @@ void	sli_rci_ctl_health_send(struct slashrpc_cservice *);
 int	sli_rmi_getcsvc(struct slashrpc_cservice **);
 int	sli_rmi_setmds(const char *);
 
-int	sli_rmi_issue_repl_schedwk(struct sli_repl_workrq *);
+void	sli_rmi_issue_bmap_release(struct srm_bmap_release_req *);
 
 int	sli_rii_issue_repl_read(struct slashrpc_cservice *, int, int,
 	    struct sli_repl_workrq *);
+
+void	sli_rim_init(void);
 
 extern struct pscrpc_svc_handle sli_ric_svc;
 extern struct pscrpc_svc_handle sli_rii_svc;

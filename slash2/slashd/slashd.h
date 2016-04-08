@@ -2,7 +2,7 @@
 /*
  * %GPL_START_LICENSE%
  * ---------------------------------------------------------------------
- * Copyright 2015, Google, Inc.
+ * Copyright 2015-2016, Google, Inc.
  * Copyright 2006-2016, Pittsburgh Supercomputing Center
  * All rights reserved.
  *
@@ -50,7 +50,7 @@ struct bmap_mds_lease;
 
 /* MDS thread types. */
 enum {
-	SLMTHRT_BATCHRQ = _PFL_NTHRT,	/* batch RPC reaper */
+	SLMTHRT_BATCHRPC = _PFL_NTHRT,	/* batch RPC reaper */
 	SLMTHRT_FREAP,			/* file reaper */
 	SLMTHRT_BKDB,			/* upsch database backup */
 	SLMTHRT_BMAPTIMEO,		/* bmap timeout thread */
@@ -217,8 +217,8 @@ struct bw_dir {
 };
 
 /*
- * This structure is attached to the sl_resource for IOS peers.  It tracks the
- * progress of garbage collection on each IOS.
+ * This structure is attached to the sl_resource for IOS peers.  It
+ * tracks the progress of garbage collection on each IOS.
  */
 struct rpmi_ios {
 	struct timespec		  si_lastcomm;		/* PING timeout to trigger conn reset */
@@ -319,11 +319,6 @@ struct slm_wkdata_upsch_cb {
 	int64_t			 amt;
 };
 
-struct slm_wkdata_batchrq_cb {
-	struct batchrq		*br;
-	int			 rc;
-};
-
 struct slm_wkdata_upschq {
 	struct sl_fidgen	 fg;
 	sl_bmapno_t		 bno;
@@ -336,6 +331,11 @@ struct slm_wkdata_rmdir_ino {
 struct slm_batchscratch_repl {
 	int64_t			 bsr_amt;
 	int			 bsr_off;
+	struct sl_resource	*bsr_res;
+};
+
+struct slm_batchscratch_preclaim {
+	struct sl_resource	*bsp_res;
 };
 
 struct mio_rootnames {
@@ -375,12 +375,13 @@ void	 slm_ptrunc_odt_startup_cb(void *, struct pfl_odt_receipt *, void *);
 int	 slm_setattr_core(struct fidc_membh *, struct srt_stat *, int);
 
 int	 mdscoh_req(struct bmap_mds_lease *);
+void	 slm_coh_delete_file(struct fidc_membh *);
 
 void	 psc_scan_filesystems(void);
 void	 mds_note_update(int);
 
 #define dbdo(cb, arg, fmt, ...)	_dbdo(PFL_CALLERINFO(), (cb), (arg), (fmt), ## __VA_ARGS__)
-void	 _dbdo(const struct pfl_callerinfo *,
+int	 _dbdo(const struct pfl_callerinfo *,
 	    int (*)(struct slm_sth *, void *), void *, const char *,
 	    ...);
 
@@ -397,6 +398,7 @@ extern int			 slm_opstate;
 
 extern struct pfl_odt_ops	 slm_odtops;
 
+extern int			 slm_force_dio;
 extern int			 slm_global_mount;
 extern int			 slm_ptrunc_enabled;
 extern int			 slm_preclaim_enabled;

@@ -3,7 +3,7 @@
  * %GPL_START_LICENSE%
  * ---------------------------------------------------------------------
  * Copyright 2015-2016, Google, Inc.
- * Copyright (c) 2008-2015, Pittsburgh Supercomputing Center (PSC).
+ * Copyright 2008-2016, Pittsburgh Supercomputing Center
  * All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
@@ -44,7 +44,8 @@
 #define BMAP_CACHE_MAX		1024
 
 #define BMAP_DIOWAIT_USEC	100
-#define BMAP_DIOWAIT_MAX_TRIES	20	/* BMAP_DIOWAIT_USEC * 2**N / 1e6 */
+#define BMAP_DIOWAIT_MAX_USEC	60*1000000
+#define BMAP_DIOWAIT_MAX_TRIES	32	/* BMAP_DIOWAIT_USEC * 2**N / 1e6 */
 
 enum {
 	MSL_BMODECHG_CBARG_BMAP,
@@ -108,6 +109,7 @@ msl_bmap_stash_lease(struct bmap *b, const struct srt_bmapdesc *sbd,
 		if (b->bcm_flags & BMAPF_WR)
 			psc_assert(sbd->sbd_ios != IOS_ID_ANY);
 
+		/* overwrite previous error */
 		bci->bci_error = 0;
 		b->bcm_flags &= ~BMAPF_LEASEFAILED;
 
@@ -236,7 +238,7 @@ msl_bmap_modeset(struct bmap *b, enum rw rw, int flags)
 	psc_assert(rw == SL_WRITE && (b->bcm_flags & BMAPF_RD));
 
 	/* XXX respect NONBLOCK */
-	rc = slc_rmc_getcsvc1(&csvc, fci->fci_resm);
+	rc = slc_rmc_getcsvc(fci->fci_resm, &csvc);
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
@@ -290,16 +292,15 @@ msl_bmap_modeset(struct bmap *b, enum rw rw, int flags)
 		if (nretries > BMAP_DIOWAIT_MAX_TRIES)
 			return (-ETIMEDOUT);
 		usleep(diowait_usec);
-		/* XXX detect overflow */
 		diowait_usec += diowait_usec;
+		if (diowait_usec > BMAP_DIOWAIT_MAX_USEC)
+			diowait_usec = BMAP_DIOWAIT_MAX_USEC;
 		goto retry;
 	}
 
 	if (rc)
 		DEBUG_BMAP(PLL_WARN, b, "unable to modeset bmap rc=%d",
 		    rc);
-
-	return (rc);
 
  out:
 	pscrpc_req_finished(rq);
@@ -309,8 +310,10 @@ msl_bmap_modeset(struct bmap *b, enum rw rw, int flags)
 		csvc = NULL;
 	}
 
-	if (rc && pfr && slc_rmc_retry(pfr, &rc))
-		goto retry;
+	if (!(flags & BMAPGETF_NONBLOCK)) {
+		if (rc && pfr && slc_rmc_retry(pfr, &rc))
+			goto retry;
+	}
 
 	return (rc);
 }
@@ -436,7 +439,7 @@ msl_bmap_lease_tryreassign(struct bmap *b)
 	BMAP_ULOCK(b);
 
 	psc_assert(fcmh_2_fci(b->bcm_fcmh)->fci_resm == msl_rmc_resm);
-	rc = slc_rmc_getcsvc1(&csvc, fcmh_2_fci(b->bcm_fcmh)->fci_resm);
+	rc = slc_rmc_getcsvc(fcmh_2_fci(b->bcm_fcmh)->fci_resm, &csvc);
 	if (rc)
 		goto out;
 
@@ -545,7 +548,7 @@ msl_bmap_lease_tryext(struct bmap *b, int blockable)
 	sbd = bmap_2_sbd(b);
 	psc_assert(sbd->sbd_fg.fg_fid == fcmh_2_fid(b->bcm_fcmh));
 
-	rc = slc_rmc_getcsvc1(&csvc, fcmh_2_fci(b->bcm_fcmh)->fci_resm);
+	rc = slc_rmc_getcsvc(fcmh_2_fci(b->bcm_fcmh)->fci_resm, &csvc);
 	if (rc)
 		goto out;
 	rc = SL_RSX_NEWREQ(csvc, SRMT_EXTENDBMAPLS, rq, mq, mp);
@@ -720,7 +723,7 @@ msl_bmap_retrieve(struct bmap *b, int flags)
 
  retry:
 	// XXX respect NONBLOCK
-	rc = slc_rmc_getcsvc1(&csvc, fci->fci_resm);
+	rc = slc_rmc_getcsvc(fci->fci_resm, &csvc);
 	if (rc)
 		PFL_GOTOERR(out, rc);
 	rc = SL_RSX_NEWREQ(csvc, SRMT_GETBMAP, rq, mq, mp);
@@ -783,8 +786,9 @@ msl_bmap_retrieve(struct bmap *b, int flags)
 		if (nretries > BMAP_DIOWAIT_MAX_TRIES)
 			return (-ETIMEDOUT);
 		usleep(diowait_usec);
-		/* XXX detect overflow */
 		diowait_usec += diowait_usec;
+		if (diowait_usec > BMAP_DIOWAIT_MAX_USEC)
+			diowait_usec = BMAP_DIOWAIT_MAX_USEC;
 		goto retry;
 	}
 	if (rc == -SLERR_BMAP_IN_PTRUNC)
@@ -793,19 +797,18 @@ msl_bmap_retrieve(struct bmap *b, int flags)
 	if (rc)
 		DEBUG_BMAP(PLL_WARN, b, "unable to retrieve bmap rc=%d",
 		    rc);
-
-	return (rc);
-
  out:
+
 	pscrpc_req_finished(rq);
-	rq = NULL;
 	if (csvc) {
 		sl_csvc_decref(csvc);
 		csvc = NULL;
 	}
 
-	if (rc && pfr && slc_rmc_retry(pfr, &rc))
-		goto retry;
+	if (!(flags & BMAPGETF_NONBLOCK)) {
+		if (rc && pfr && slc_rmc_retry(pfr, &rc))
+			goto retry;
+	}
 
 	return (rc);
 }
@@ -879,7 +882,8 @@ msl_rmc_bmaprelease_cb(struct pscrpc_request *rq,
 	uint32_t i;
 	int rc;
 
-	SL_GET_RQ_STATUS_TYPE(csvc, rq, struct srm_bmap_release_rep, rc);
+	SL_GET_RQ_STATUS_TYPE(csvc, rq, struct srm_bmap_release_rep,
+	    rc);
 
 	mq = pscrpc_msg_buf(rq->rq_reqmsg, 0, sizeof(*mq));
 
@@ -1119,10 +1123,10 @@ msl_bmap_to_csvc(struct bmap *b, int exclusive, struct sl_resm **pm,
 				*pm = m;
 			return (0);
 		}
+
 		rc = m->resm_csvc->csvc_lasterrno;
-		if (rc)
-			return (-abs(rc));
-		return (-ETIMEDOUT);
+		psc_assert(rc < 0);
+		return (rc);
 	}
 
 	fci = fcmh_get_pri(b->bcm_fcmh);
@@ -1132,7 +1136,8 @@ msl_bmap_to_csvc(struct bmap *b, int exclusive, struct sl_resm **pm,
 	 * Occasionally stir the order of replicas to distribute load.
 	 */
 	FCMH_LOCK(b->bcm_fcmh);
-	if (fci->fci_inode.nrepls > 1 && ++fci->fcif_mapstircnt >= MAPSTIR_THRESH) {
+	if (fci->fci_inode.nrepls > 1 && ++fci->fcif_mapstircnt >=
+	    MAPSTIR_THRESH) {
 		pfl_qsort_r(fci->fcif_idxmap, fci->fci_inode.nrepls,
 		    sizeof(fci->fcif_idxmap[0]), slc_reptbl_cmp, fci);
 		fci->fcif_mapstircnt = 0;

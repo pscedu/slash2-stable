@@ -37,6 +37,7 @@
 #include "pfl/lock.h"
 
 #include "authbuf.h"
+#include "batchrpc.h"
 #include "bmap_mds.h"
 #include "fid.h"
 #include "fidc_mds.h"
@@ -205,31 +206,29 @@ slm_rmi_handle_rls_bmap(struct pscrpc_request *rq)
 }
 
 /*
- * Handle a BMAP_PTRUNC reply from ION.  This means an ION has trashed
+ * Handle a PTRUNC reply from ION.  This means an ION has trashed
  * some partial truncation garbage.  Note: if a sliod resolved a ptrunc
  * CRC recalculation, this path is not taken; CRCWRT is issued as
  * notification instead.
  * @rq: request.
  */
 int
-slm_rmi_handle_bmap_ptrunc(struct pscrpc_request *rq)
+slm_rmi_ptrunc_cb(struct pscrpc_request *rq)
 {
 	int iosidx, tract[NBREPLST];
-	struct srm_bmap_ptrunc_req *mq;
-	struct srm_bmap_ptrunc_rep *mp;
+	struct srt_ptrunc_req *q = NULL;
+	struct srt_ptrunc_rep *p = NULL;
 	struct fidc_membh *f = NULL;
 	struct bmap *b = NULL;
 	sl_bmapno_t bno;
 
-	SL_RSX_ALLOCREP(rq, mq, mp);
+	p->rc = slm_fcmh_peek(&q->fg, &f);
+	if (p->rc)
+		PFL_GOTOERR(out, p->rc);
 
-	mp->rc = slm_fcmh_peek(&mq->fg, &f);
-	if (mp->rc)
-		PFL_GOTOERR(out, mp->rc);
-
-	mp->rc = bmap_get(f, mq->bmapno, SL_WRITE, &b);
-	if (mp->rc)
-		PFL_GOTOERR(out, mp->rc);
+	p->rc = bmap_get(f, q->bmapno, SL_WRITE, &b);
+	if (p->rc)
+		PFL_GOTOERR(out, p->rc);
 
 	BMAP_ULOCK(b);
 	iosidx = mds_repl_ios_lookup(current_vfsid, fcmh_2_inoh(f),
@@ -592,10 +591,6 @@ slm_rmi_handler(struct pscrpc_request *rq)
 		rc = slm_rmi_handle_bmap_getminseq(rq);
 		break;
 
-	case SRMT_BMAP_PTRUNC:
-		rc = slm_rmi_handle_bmap_ptrunc(rq);
-		break;
-
 	/* control messages */
 	case SRMT_CONNECT:
 		rc = slrpc_handle_connect(rq, SRMI_MAGIC, SRMI_VERSION,
@@ -634,7 +629,7 @@ slm_rmi_handler(struct pscrpc_request *rq)
 
 	/* miscellaneous messages */
 	case SRMT_BATCH_RP:
-		rc = sl_handle_batchrp(rq);
+		rc = slrpc_batch_handle_reply(rq);
 		break;
 
 	default:
