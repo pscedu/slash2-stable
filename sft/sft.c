@@ -1,28 +1,26 @@
 /* $Id$ */
 /*
- * %PSC_START_COPYRIGHT%
- * -----------------------------------------------------------------------------
- * Copyright (c) 2006-2014, Pittsburgh Supercomputing Center (PSC).
+ * %ISC_START_LICENSE%
+ * ---------------------------------------------------------------------
+ * Copyright 2015-2016, Google, Inc.
+ * Copyright 2006-2015, Pittsburgh Supercomputing Center
+ * All rights reserved.
  *
- * Permission to use, copy, modify, and distribute this software
- * for any purpose with or without fee is hereby granted, provided
- * that the above copyright notice and this permission notice
- * appear in all copies.
+ * Permission to use, copy, modify, and distribute this software for any
+ * purpose with or without fee is hereby granted, provided that the
+ * above copyright notice and this permission notice appear in all
+ * copies.
  *
  * THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL
  * WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED
- * WARRANTIES OF MERCHANTABILITY AND FITNESS.  IN NO EVENT SHALL
- * THE AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT, INDIRECT, OR
- * CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM
- * LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT,
- * NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN
- * CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
- *
- * Pittsburgh Supercomputing Center	phone: 412.268.4960  fax: 412.268.5832
- * 300 S. Craig Street			e-mail: remarks@psc.edu
- * Pittsburgh, PA 15213			web: http://www.psc.edu/
- * -----------------------------------------------------------------------------
- * %PSC_END_COPYRIGHT%
+ * WARRANTIES OF MERCHANTABILITY AND FITNESS.  IN NO EVENT SHALL THE
+ * AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL
+ * DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR
+ * PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
+ * TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
+ * PERFORMANCE OF THIS SOFTWARE.
+ * --------------------------------------------------------------------
+ * %END_LICENSE%
  */
 
 #include <sys/param.h>
@@ -116,6 +114,7 @@ int64_t				 totalsz;
 int				 chunk;
 int				 verbose;
 int				 checkzero;
+int				 continue_after_errors;
 int				 piecewise;
 volatile sig_atomic_t		 exit_from_signal;
 int				 direct_io;
@@ -274,6 +273,8 @@ thrmain(struct psc_thread *thr)
 			warnx("%s: %s: %s", dowrite ? "write" : "read",
 			    f->fn, strerror(save_errno));
 			unlock_output();
+			if (!continue_after_errors)
+				exit(1);
 			f->rc = -1;
 			incomplete = 1;
 			goto end;
@@ -332,10 +333,20 @@ thrmain(struct psc_thread *thr)
 }
 
 void
+print_status_line(FILE *fp, uint64_t intv, uint64_t lifetime)
+{
+	char buf[PSCFMT_HUMAN_BUFSIZ];
+
+	pfl_fmt_human(buf, intv);
+	fprintf(fp, "%7s ", buf);
+	pfl_fmt_human(buf, lifetime);
+	fprintf(fp, "%7s", buf);
+}
+
+void
 display(__unusedx struct psc_thread *thr)
 {
-	char ratebuf[PSCFMT_HUMAN_BUFSIZ];
-	struct timespec ts;
+	struct timespec ts, ts0, delta;
 	int n, t, istty;
 	FILE *fp;
 
@@ -351,25 +362,31 @@ display(__unusedx struct psc_thread *thr)
 		fflush(fp);
 	}
 
-	PFL_GETTIMESPEC(&ts);
+	PFL_GETTIMESPEC(&ts0);
+	ts = ts0;
 
 	while (running) {
 		ts.tv_sec += 1;
 		psc_waitq_waitabs(&display_wq, NULL, &ts);
 
-		pfl_fmt_human(ratebuf, iostats->opst_intv);
 		if (istty)
 			fprintf(fp, "\r");
-		fprintf(fp, "%7s ", ratebuf);
-		pfl_fmt_human(ratebuf,
+		print_status_line(fp,
+		    iostats->opst_intv,
 		    psc_atomic64_read(&iostats->opst_lifetime));
-		fprintf(fp, "%7s", ratebuf);
 		if (istty)
 			fflush(fp);
 		else
 			fprintf(fp, "\n");
 	}
-	printf("\n");
+	timespecsub(&ts, &ts0, &delta);
+	if (istty)
+		fprintf(fp, "\r");
+	print_status_line(fp,
+	    psc_atomic64_read(&iostats->opst_lifetime) /
+	      (delta.tv_sec + delta.tv_nsec / 1e9),
+	    psc_atomic64_read(&iostats->opst_lifetime));
+	fprintf(fp, "\n");
 }
 
 int
@@ -426,11 +443,7 @@ addwk(struct file *f)
 	wk->chunkid = f->chunkid++;
 	done = wk->off + bufsz >= size || (docrc && !chunk);
 
-	/*
-	 * Use WAKEONE to avoid wasting time on yield() and lc_get()
-	 * during startup phase when the number of threads is large.
-	 */
-	_lc_add(&wkq, wk, PLCBF_TAIL|PLCBF_WAKEONE, NULL);
+	_lc_add(&wkq, wk, PLCBF_TAIL, NULL);
 
 	if (done) {
 		spinlock(&f->lock);
@@ -523,7 +536,7 @@ main(int argc, char *argv[])
 	gcry_control(GCRYCTL_INITIALIZATION_FINISHED, 0);
 
 	pfl_init();
-	while ((c = getopt(argc, argv, "Bb:cD:dKO:PRs:Tt:vwZ")) != -1)
+	while ((c = getopt(argc, argv, "Bb:CcD:dKO:PRs:Tt:vwZ")) != -1)
 		switch (c) {
 		case 'B': /* display bandwidth */
 			displaybw = 1;
@@ -533,6 +546,9 @@ main(int argc, char *argv[])
 			if (bufsz <= 0)
 				errx(1, "%s: %s", optarg, strerror(
 				    bufsz ? -bufsz : EINVAL));
+			break;
+		case 'C': /* continue after IO errors */
+			continue_after_errors = 1;
 			break;
 		case 'c': /* perform checksums */
 			docrc = 1;
