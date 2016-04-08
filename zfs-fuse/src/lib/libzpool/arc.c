@@ -420,7 +420,8 @@ static uint64_t		arc_meta_limit;
 static uint64_t		arc_meta_max = 0;
 
 /* slash2 specific changes */
-static uint64_t		arc_data_eviction = 0;
+static uint64_t		arc_data_eviction1 = 0;
+static uint64_t		arc_data_eviction2 = 0;
 static uint64_t		arc_meta_eviction1 = 0;
 static uint64_t		arc_meta_eviction2 = 0;
 static uint64_t		arc_meta_eviction3 = 0;
@@ -2244,6 +2245,7 @@ arc_evict_needed(arc_buf_contents_t type)
  		 * logic has been proved to be exercised a lot in
  		 * practice.
  		 *
+ 		 * (gdb) p arc_stats.arcstat_size.value.ui64
  		 * (gdb) p arc_stats.arcstat_c_max.value.ui64
  		 *
  		 * The case arc_size > arc_c will be catched at the 
@@ -2256,7 +2258,7 @@ arc_evict_needed(arc_buf_contents_t type)
 	}
 
 	if (type == ARC_BUFC_DATA && should_reap_umem_default()) {
-		arc_data_eviction++;
+		arc_data_eviction1++;
 		return (1);
 	}
 
@@ -2274,6 +2276,11 @@ arc_evict_needed(arc_buf_contents_t type)
 
 	if (arc_reclaim_needed())
 		return (1);
+
+	if (arc_size > arc_c_max - (1ULL << 32)) {
+		arc_data_eviction2++;
+		return (1);
+	}
 
 	return (arc_size > arc_c);
 }
@@ -2366,6 +2373,9 @@ out:
 	/*
 	 * Update the state size.  Note that ghost states have a
 	 * "ghost size" and so don't need to be updated.
+	 *
+	 * Hit buf->b_hdr NULL crash at revision 40031 when the ARC
+	 * and the umem_default_arena are completely exhausted.
 	 */
 	if (!GHOST_STATE(buf->b_hdr->b_state)) {
 		arc_buf_hdr_t *hdr = buf->b_hdr;
