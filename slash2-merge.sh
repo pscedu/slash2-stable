@@ -114,4 +114,6 @@ bail-if-fail
 git pull -X subtree=distrib/iozone -X theirs --no-edit distrib.iozone master
 bail-if-fail
 
+echo
+echo "Please do recursive diff of two trees to make sure !!!"
 exit 0
