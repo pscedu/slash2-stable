@@ -501,6 +501,9 @@ int	 pscrpc_ni_init(int, int);
 void	 pscrpc_init_portals(int, int);
 void	 pscrpc_exit_portals(void);
 
+extern int	  pfl_rpc_timeout;
+extern int	  pfl_rpc_max_retry;
+
 /* packgeneric.c */
 int	 pscrpc_msg_size(int, const int *);
 int	 pscrpc_msg_swabbed(struct pscrpc_msg *);
