@@ -229,6 +229,8 @@ psc_ctlparam_faults_handle(int fd, struct psc_ctlmsghdr *mh,
 				pflt->pflt_count -= val;
 			else
 				pflt->pflt_count = val;
+			/* reset counter */
+			pflt->pflt_hits = 0;
 		} else {
 			levels[2] = "count";
 			snprintf(nbuf, sizeof(nbuf), "%d",
