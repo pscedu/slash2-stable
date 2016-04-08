@@ -49,7 +49,6 @@ struct thr {
 struct pfl_multiwaitcond mastermlc;
 int nthreads = 32;
 int iterations = 1000;
-const char *progname;
 
 void *
 thr_main(void *arg)
@@ -68,7 +67,9 @@ thr_main(void *arg)
 __dead void
 usage(void)
 {
-	fprintf(stderr, "%s [-i iterations] [-n nthreads]\n", progname);
+	extern const char *__progname;
+
+	fprintf(stderr, "%s [-i iterations] [-n nthreads]\n", __progname);
 	exit(1);
 }
 

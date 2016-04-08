@@ -31,8 +31,6 @@
 #include "pfl/ctl.h"
 #include "pfl/ctlcli.h"
 
-const char *progname;
-
 const char *daemon_name = "test";
 struct psc_ctlshow_ent psc_ctlshow_tab[] = { };
 psc_ctl_prthr_t psc_ctl_prthrs[] = { };
@@ -44,7 +42,9 @@ PFLCTL_CLI_DEFS;
 __dead void
 usage(void)
 {
-	fprintf(stderr, "usage: %s\n", progname);
+	extern const char *__progname;
+
+	fprintf(stderr, "usage: %s\n", __progname);
 	exit(1);
 }
 
@@ -54,7 +54,6 @@ main(int argc, char *argv[])
 	struct psc_ctlmsg_meter pcm;
 
 	pfl_init();
-	progname = argv[0];
 	if (getopt(argc, argv, "") != -1)
 		usage();
 	argc -= optind;

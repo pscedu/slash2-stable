@@ -60,6 +60,7 @@ struct pscfs_req {
 	struct pscfs_clientctx		 pfr_clientctx;
 	struct psc_listentry		 pfr_lentry;
 	struct timespec			 pfr_start;
+	int				 pfr_retries;
 	int				 pfr_interrupted; // XXX flags
 	int				 pfr_refcnt;
 	int				 pfr_rc;

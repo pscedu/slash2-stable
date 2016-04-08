@@ -3,7 +3,7 @@
  * %ISC_START_LICENSE%
  * ---------------------------------------------------------------------
  * Copyright 2015-2016, Google, Inc.
- * Copyright (c) 2006-2015, Pittsburgh Supercomputing Center (PSC).
+ * Copyright 2006-2016, Pittsburgh Supercomputing Center
  * All rights reserved.
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -53,6 +53,8 @@ struct psclog_data {
 	pid_t		 pld_thrid;
 	int		 pld_flags;	/* see PLDF_* */
 	const char	*pld_uprog;	/* userland program via FUSE */
+	void		*pld_stack_ptrbuf[32];
+	char		 pld_stack_symbuf[256];
 };
 
 #define PLDF_INLOG	(1 << 0)
@@ -165,15 +167,20 @@ struct psclog_data {
  * To compile some logging statements out, add the following line
  * to mk/local.mk:
  *
- *	DEFINES+=       -DPSCLOG_LEVEL=PLL_INFO
+ *	DEFINES+=       -DPFLOG_FROM_LEVEL=PLL_INFO
  *
  * This would compile any logging statements higher than PLL_INFO out.
  */
-#ifndef PSCLOG_LEVEL
-#  define PSCLOG_LEVEL			PNLOGLEVELS
+#ifdef PSCLOG_LEVEL
+#  warning "PSCLOG_LEVEL is deprecated; use PFLOG_FROM_LEVEL"
+#  define PFLOG_FROM_LEVEL PSCLOG_LEVEL
 #endif
 
-#if PSCLOG_LEVEL < PLL_TRACE
+#ifndef PFLOG_FROM_LEVEL
+#  define PFLOG_FROM_LEVEL		PNLOGLEVELS
+#endif
+
+#if PFLOG_FROM_LEVEL < PLL_TRACE
 #  undef psclog_trace
 #  undef psclogs_trace
 #  undef psclogv_trace
@@ -185,7 +192,7 @@ struct psclog_data {
 #  define psclogsv_trace(fmt, ap)	do { } while (0)
 #endif
 
-#if PSCLOG_LEVEL < PLL_VDEBUG
+#if PFLOG_FROM_LEVEL < PLL_VDEBUG
 #  undef psclog_vdebug
 #  undef psclogs_vdebug
 #  undef psclogv_vdebug
@@ -197,7 +204,7 @@ struct psclog_data {
 #  define psclogsv_vdebug(fmt, ap)	do { } while (0)
 #endif
 
-#if PSCLOG_LEVEL < PLL_DEBUG
+#if PFLOG_FROM_LEVEL < PLL_DEBUG
 #  undef psclog_debug
 #  undef psclogs_debug
 #  undef psclogv_debug
@@ -207,6 +214,18 @@ struct psclog_data {
 #  define psclogs_debug(ss, fmt, ...)	do { } while (0)
 #  define psclogv_debug(fmt, ap)	do { } while (0)
 #  define psclogsv_debug(fmt, ap)	do { } while (0)
+#endif
+
+#if PFLOG_FROM_LEVEL < PLL_DIAG
+#  undef psclog_diag
+#  undef psclogs_diag
+#  undef psclogv_diag
+#  undef psclogsv_diag
+
+#  define psclog_diag(fmt, ...)		do { } while (0)
+#  define psclogs_diag(ss, fmt, ...)	do { } while (0)
+#  define psclogv_diag(fmt, ap)		do { } while (0)
+#  define psclogsv_diag(fmt, ap)	do { } while (0)
 #endif
 
 struct pfl_logpoint {
@@ -222,7 +241,7 @@ struct pfl_logpoint {
 		int _rc0 = 0;						\
 									\
 		/* check global logging level */			\
-		if ((lvl) > PSCLOG_LEVEL)				\
+		if ((lvl) > PFLOG_FROM_LEVEL)				\
 			;						\
 									\
 		/* check thread logging level */			\
@@ -344,6 +363,7 @@ int	 psc_log_getlevel_ss(int);
 extern const char	*(*pflog_get_fsctx_uprog)(struct psc_thread *);
 extern pid_t		 (*pflog_get_fsctx_pid)(struct psc_thread *);
 extern uid_t		 (*pflog_get_fsctx_uid)(struct psc_thread *);
+extern const char	*(*pflog_get_peer_addr)(struct psc_thread *);
 
 struct psclog_data	  *psclog_getdata(void);
 

@@ -2,8 +2,8 @@
 /*
  * %ISC_START_LICENSE%
  * ---------------------------------------------------------------------
- * Copyright 2015, Google, Inc.
- * Copyright (c) 2006-2015, Pittsburgh Supercomputing Center (PSC).
+ * Copyright 2015-2016, Google, Inc.
+ * Copyright 2006-2016, Pittsburgh Supercomputing Center
  * All rights reserved.
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -800,7 +800,7 @@ void
 psc_ctlmsg_param_prhdr(__unusedx struct psc_ctlmsghdr *mh,
     __unusedx const void *m)
 {
-	printf("%-40s %s\n",
+	printf("%-46s %s\n",
 	    "parameter", "value");
 }
 
@@ -811,7 +811,7 @@ psc_ctlmsg_param_prdat(__unusedx const struct psc_ctlmsghdr *mh,
 	const struct psc_ctlmsg_param *pcp = m;
 
 	if (strcmp(pcp->pcp_thrname, PCTHRNAME_EVERYONE) == 0)
-		printf("%-40s %s\n", pcp->pcp_field, pcp->pcp_value);
+		printf("%-46s %s\n", pcp->pcp_field, pcp->pcp_value);
 	else
 		printf("%s.%-*s %s\n", pcp->pcp_thrname,
 		    40 - (int)strlen(pcp->pcp_thrname) - 1,
@@ -1307,6 +1307,19 @@ psc_ctlcli_main(const char *osockfn, int ac, char *av[],
 				break;
 		if (i == notab)
 			usage();
+		/* 
+		 * Special shortcut case for version reporting. This 
+		 * must be handled before connecting to the socket so 
+		 * it always work. Note that other actions need the
+		 * socket to work.
+		 */
+		if (c == 'V') {
+			void (*cbf)(void);
+
+			cbf = otab[i].pco_data;
+			cbf();
+			exit(0);
+		}
 	}
 
 	/* Connect to control socket. */
@@ -1363,7 +1376,7 @@ psc_ctlcli_main(const char *osockfn, int ac, char *av[],
 	}
 
 	if (psc_ctl_msghdr == NULL)
-		errx(1, "no actions specified");
+		errx(1, "no actions specified.");
 
 	psc_ctlmsg_sendlast();
 

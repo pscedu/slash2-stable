@@ -103,14 +103,15 @@ psc_dynarray_ensurelen(struct psc_dynarray *pda, int n)
  * @pda: the dynamic array to reverse.
  */
 void
-psc_dynarray_reverse(struct psc_dynarray *pda)
+psc_dynarray_reverse_subsequence(struct psc_dynarray *pda, int start,
+    int len)
 {
 	void *tmp;
 	int i;
 
-	for (i = 0; i < psc_dynarray_len(pda) / 2; i++)
+	for (i = start; i < len / 2; i++)
 		SWAP(pda->pda_items[i], pda->pda_items[
-		    psc_dynarray_len(pda) - 1 - i], tmp);
+		    start + len - 1 - i], tmp);
 }
 
 /*
@@ -293,6 +294,8 @@ psc_dynarray_splice(struct psc_dynarray *pda, int off, int nrmv,
  * Returns the item's index into the array.  If the item is not in the
  * dynarray, the index value returned is the position the element should
  * take on to maintain sort order.
+ *
+ * XXX this should be changed to use bsearch_ceil().
  */
 int
 psc_dynarray_bsearch(const struct psc_dynarray *pda, const void *item,

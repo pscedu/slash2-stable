@@ -150,10 +150,10 @@ _lc_add(struct psc_listcache *plc, void *p, int flags, void *cmpf)
 	 * There is now an item available; wake up waiters who think the
 	 * list is empty.
 	 */
-	if (flags & PLCBF_WAKEONE)
-		psc_waitq_wakeone(&plc->plc_wq_empty);
-	else
+	if (flags & PLCBF_WAKEALL)
 		psc_waitq_wakeall(&plc->plc_wq_empty);
+	else
+		psc_waitq_wakeone(&plc->plc_wq_empty);
 	LIST_CACHE_URLOCK(plc, locked);
 	return (1);
 }

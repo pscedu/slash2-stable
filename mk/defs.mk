@@ -12,9 +12,9 @@ MPICC?=		mpicc
 ROFF?=		nroff
 INSTALL?=	install
 
-NOTEMPTY=	${ROOTDIR}/tools/notempty
 ECHORUN=	${ROOTDIR}/tools/echorun.sh
 _PERLENV=	env PERL5LIB=${PERL5LIB}:${ROOTDIR}/tools/lib perl
+NOTEMPTY=	${_PERLENV} ${ROOTDIR}/tools/notempty
 GENTYPES=	${_PERLENV} ${ROOTDIR}/tools/gentypes.pl
 HDRCLEAN=	${_PERLENV} ${ROOTDIR}/tools/hdrclean.pl
 LIBDEP=		${_PERLENV} ${ROOTDIR}/tools/libdep.pl
@@ -73,14 +73,17 @@ YFLAGS+=	-d
 CFLAGS+=	-Wall -Wextra -pipe
 # -Wredundant-decls
 CFLAGS+=	-Wshadow -fno-omit-frame-pointer
+LDFLAGS+=	-fno-omit-frame-pointer
 #CFLAGS+=	-Wno-address
 
+# Bits to enable Google profiler.
 ifeq (${GOPROF},1)
 CFLAGS+=	-fno-builtin-malloc -fno-builtin-calloc $( \
 		) -fno-builtin-realloc -fno-builtin-free
 LDFLAGS+=	-ltcmalloc -lprofiler
 endif
 
+# Bits to enable efence.
 ifeq (${EFENCE},1)
 LDFLAGS+=	-lefence
 endif
@@ -89,12 +92,24 @@ DEBUG?=		1
 DEVELPATHS?=	0
 ifeq (${DEBUG},0)
   CFLAGS+=	-Wunused -Wuninitialized
-  CFLAGS+=	-fno-strict-aliasing -flto -fno-use-linker-plugin
+  CFLAGS+=	-fno-strict-aliasing
   CFLAGS+=	${COPT}
-  LDFLAGS+=	-flto -fno-use-linker-plugin
+
+  GCC_VERSION=$(shell ${CC} -v 2>&1 | grep -o 'gcc version [0-9.]*' | awk '{print $$3}')
+  ifeq ($(shell ${MINVER} "${GCC_VERSION}" 4.2.3 && echo 1),1)
+	CFLAGS+=-flto -fno-use-linker-plugin
+	LDFLAGS+=-flto -fno-use-linker-plugin
+  endif
 else
   CFLAGS+=	-g
+  CFLAGS+=	-fstack-protector-all
   LDFLAGS+=	-fstack-protector-all
+
+  ifdef PICKLE_HAVE_FSANITIZE
+    CFLAGS+=	-fsanitize=address
+    LDFLAGS+=	-fsanitize=address
+  endif
+
 endif
 
 COPT=		-g0 -O2
@@ -211,7 +226,7 @@ $(call ADD_FILE_CFLAGS,${LNET_BASE}/lnet/peer.c,			-DPSC_SUBSYS=PSS_LNET -Wno-sh
 $(call ADD_FILE_CFLAGS,${LNET_BASE}/lnet/router.c,			-DPSC_SUBSYS=PSS_LNET -Wno-shadow)
 $(call ADD_FILE_CFLAGS,${LNET_BASE}/lnet/router_proc.c,			-DPSC_SUBSYS=PSS_LNET -Wno-shadow)
 
-ifeq ($(shell ${MINVER} ${LEXVER} 2.5.35 || echo 1),1)
+ifeq ($(shell ${MINVER} ${LEXVER} 2.5.35 && echo 1),1)
   LIBL=		-lfl
   PCPP_FLAGS+=	-H yytext
 endif
@@ -228,6 +243,7 @@ endif
 ifeq (${OSTYPE},Darwin)
   DEFINES+=	-D_DARWIN_C_SOURCE -D_DARWIN_FEATURE_64_BIT_INODE
   DEFINES+=	-DHAVE_NO_POLL_DEV
+  INCLUDES+=	-I/opt/local/include
   CFLAGS+=	-Wno-deprecated-declarations
   THREAD_LIBS=	-lpthread
 endif

@@ -119,9 +119,8 @@ struct psc_lockedlist	psc_memallocs_lru =
     PLL_INIT_NOLOG(&psc_memallocs_lru, struct psc_memalloc, pma_lru_lentry);
 #endif
 
-/**
- * _psc_pool_reapsome - Provide an overrideable reclaimer for when pools
- *	are not in use.
+/*
+ * Provide an overrideable reclaimer for when pools are not in use.
  */
 __weak void
 _psc_pool_reapsome(__unusedx size_t size)
@@ -159,8 +158,8 @@ pscmem_checkinnerguard(struct psc_memalloc *pma)
 void _psc_lru_sysfree(struct psc_memalloc *);
 #endif
 
-/**
- * psc_realloc - Allocate or resize a chunk of memory.
+/*
+ * Allocate or resize a chunk of memory.
  * @oldp: current chunk of memory to resize or NULL for new chunk.
  * @size: desired size of memory chunk.
  * @flags: operational flags.
@@ -361,8 +360,8 @@ psc_fatalx("not ready");
 	return (newp);
 }
 
-/**
- * psc_calloc - Allocate zeroed memory for an array.
+/*
+ * Allocate zeroed memory for an array.
  * @size: size of chunk to allocate.
  * @flags: operational flags.
  */
@@ -386,9 +385,8 @@ pfl_strndup(const char *str, size_t len)
 	return (p);
 }
 
-/**
- * pfl_strdup - Duplicate a string, allocating memory as necessary for
- *	duplicate.
+/*
+ * Duplicate a string, allocating memory as necessary for duplicate.
  * @str: original string to duplicate.
  *
  * Advantages of using this over strdup(2) are ties into reaping pool
@@ -401,10 +399,11 @@ pfl_strdup(const char *str)
 }
 
 #if PFL_DEBUG > 1 && PFL_MEMGUARD_LINGERSZ
-/**
- * _psc_lru_userfree - The user wants to release a chunk of memory.
- *	Instead of releasing it back into the system, set PROT_NONE
- *	on it and keep it around for awhile.
+/*
+ * The user wants to release a chunk of memory.  Instead of releasing it
+ * back into the system, set PROT_NONE on it and keep it around for
+ * awhile.
+ *
  * @p: memory base.
  * @flags: flags the region was allocated with.
  */
@@ -432,9 +431,10 @@ _psc_lru_userfree(void *p, int flags, ...)
 	pll_add(&psc_memallocs_lru, pma);
 }
 
-/**
- * _psc_lru_sysfree - OK, no more games, the system needs the memory
- *	back so release it for real.
+/*
+ * OK, no more games, the system needs the memory back so release it for
+ * real.
+ *
  * @p: memory base.
  * @flags: flags the region was allocated with.
  */
@@ -450,9 +450,8 @@ _psc_lru_sysfree(struct psc_memalloc *pma)
 	free(p);
 }
 #else
-/**
- * _psc_free - counterpart to psc_alloc (unless LINGER is enabled):
- *	release memory.
+/*
+ * Counterpart to psc_alloc (unless LINGER is enabled): release memory.
  * @p: memory base.
  * @flags: flags the region was allocated with.
  */

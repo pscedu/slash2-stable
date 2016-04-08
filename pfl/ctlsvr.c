@@ -630,14 +630,16 @@ psc_ctlparam_log_file(int fd, struct psc_ctlmsghdr *mh,
 			rc = psc_ctlsenderr(fd, mh, "log.file: %s",
 			    strerror(errno));
 	} else {
-		char linkname[128], logname[1024];
+		char linkname[128], logname[PCP_VALUE_MAX];
 
-		snprintf(linkname, 128, "/proc/%d/fd/2", pfl_pid);
-		rc = readlink(linkname, logname, 1024);
+		snprintf(linkname, sizeof(linkname), "/proc/%d/fd/%d",
+		    pfl_pid, fileno(stderr));
+		rc = readlink(linkname, logname, sizeof(logname));
 		if (rc != -1)
 			logname[rc] = '\0';
-		snprintf(pcp->pcp_value, sizeof(pcp->pcp_value),
-		    "%s", rc == -1 ? "stderr" : logname);
+		else
+			snprintf(logname, sizeof(logname),
+			    "%s", "stderr");
 		rc = psc_ctlmsg_param_send(fd, mh, pcp,
 		    PCTHRNAME_EVERYONE, levels, 2, logname);
 	}
@@ -1234,10 +1236,14 @@ psc_ctlparam_pool_handle(int fd, struct psc_ctlmsghdr *mh,
 				    "pool.%s.reap: value cannot be "
 				    "negative", levels[1]));
 
+			POOL_ULOCK(m);
+
 			/* XXX hack */
 			psc_atomic32_add(&m->ppm_nwaiters, val);
 			psc_pool_reap(m, 0);
 			psc_atomic32_sub(&m->ppm_nwaiters, val);
+
+			POOL_LOCK(m);
 		} else {
 			return (psc_ctlsenderr(fd, mh,
 			    "pool.%s.reap: write-only field",

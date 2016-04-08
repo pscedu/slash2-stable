@@ -37,12 +37,29 @@ filter=
 verbose=0
 testmail=0
 prof=
+allow_logfiles_over_nfs=0
 
+# Print a message if verbose (-v) mode is enabled.
 vprint()
 {
 	[ $verbose -eq 1 ] && echo "$@"
 }
 
+# Extract something out of a key1=val1,key2=val2,... expression.
+extract_value()
+{
+	key=$1
+	perl -MEnglish -Wle '
+		while (<>) {
+			for (split /,/, $_) {
+				/=/ or next;
+				$h{$PREMATCH} = $POSTMATCH;
+			}
+		}
+		print $h{'$key'}'
+}
+
+# Load profile for the host where invoked.
 loadprof()
 {
 	local _h=${1%%%*}
@@ -71,19 +88,26 @@ loadprof()
 		vprint "  + processing setting: $fl"
 
 		case $fl in
-		args=*)		xargs+=("${fl#args=}");;
-		bounce)		;;
-		ctl=*)		ctl=${fl#ctl=};;
-		mod=*)		mod=${fl#mod=};;
-		mp=*)		mp=${fl#mp=};;
-		name=*)		name=${fl#name=};;
-		narg=*)		narg=${fl#narg=};;
-		prog=*)		prog=${fl#prog=};;
-		share)		;;
-		srcdir=*)	srcdir=${fl#srcdir=};;
-		tag=*)		[ x"$1" = x"${fl#tag=}" ] || return 1 ;;
-		[A-Z][A-Z_]*=*)	export "$fl";;
-		*)		warn "unknown setting $fl";;
+		allow_logfiles_over_nfs=*|\
+		ctl=*|\
+		mod=*|\
+		mp=*|\
+		name=*|\
+		narg=*|\
+		prog=*|\
+		srcdir=*)
+			declare ${fl%%=*}=${fl#*=};;
+
+		args=*)	xargs+=("${fl#args=}")
+			ctlsock=$(echo $xargs | extract_value ctlsock)
+			[ -n "$ctlsock" ] && export CTL_SOCK_FILE=$ctlsock
+			;;
+		bounce)	;;
+		share)	;;
+		tag=*)	[ x"$1" = x"${fl#tag=}" ] || return 1 ;;
+		[A-Z][A-Z_]*=*)
+			export "$fl";;
+		*)	warn "unknown setting $fl";;
 		esac
 		[ $dobreak -eq 1 ] && break
 	done
@@ -95,6 +119,8 @@ loadprof()
 	return 0
 }
 
+# Apply settings to the shell interpretter environment from the loaded
+# profile.
 apply_host_prefs()
 {
 	local narg=0 base fn
@@ -142,6 +168,7 @@ die()
 	exit 1
 }
 
+# Launch gdb with some custom settings.
 mygdb()
 {
 	shift
@@ -163,6 +190,7 @@ mygdb()
 	exec gdb -f -q -x $tmpfn $prog
 }
 
+# Perform daemon post processing (i.e. after the daemon exits).
 postproc()
 {
 	ex=$1
@@ -208,6 +236,7 @@ cleanup()
 	exit 0
 }
 
+# Determine if the given directory is remotely mounted.
 is_on_nfs()
 {
 	local dir=$1
@@ -217,6 +246,7 @@ is_on_nfs()
 	mount | grep " on $mp " | grep -qw nfs
 }
 
+# Perform daemon launch pre processing.
 preproc()
 {
 	PSC_TIMEOUT=5 $ctl -p sys.version >/dev/null && \
@@ -224,7 +254,7 @@ preproc()
 
 	local logdir=$(dirname "$PSC_LOG_FILE")
 
-	is_on_nfs "$logdir" && \
+	is_on_nfs "$logdir" && [ $allow_logfiles_over_nfs -eq 0 ] && \
 	    die "$logdir: refusing to write log files on NFS"
 
 	mkdir -p $logdir
@@ -252,6 +282,7 @@ preproc()
 	trap cleanup EXIT
 }
 
+# Backoff-sensitive sleep, invoked before relaunch of a daemon instance.
 vsleep()
 {
 	local amt=0
@@ -290,6 +321,7 @@ _rundaemon()
 	exec $0 "${bkav[@]}"
 }
 
+# Launch a daemon, doing any "daemonization" necessary.
 rundaemon()
 {
 	vprint "launching daemon: $@"
@@ -302,6 +334,8 @@ rundaemon()
 	fi
 }
 
+# Utility routine for generating a batch of profiles for hosts offering
+# the SLASH2 I/O service.
 mksliods()
 {
 	local noif0=0 OPTIND c i _
@@ -344,6 +378,8 @@ mksliods()
 	done
 }
 
+# Utility routine for generating a batch of profiles for hosts offering
+# the SLASH2 client service.
 mkclients()
 {
 	local opts=$1 i _ start=0
@@ -382,7 +418,6 @@ mkclients()
 preinit()
 {
 	if [ $testmail -eq 1 ]; then
-		:
 		postproc 0
 	fi
 }

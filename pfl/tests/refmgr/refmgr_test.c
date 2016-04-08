@@ -27,11 +27,10 @@
 #include <stdlib.h>
 #include <unistd.h>
 
-#include "pfl/cdefs.h"
 #include "pfl/atomic.h"
+#include "pfl/cdefs.h"
 #include "pfl/refmgr.h"
 
-const char		*progname;
 struct psc_refmgr	 refmgr;
 psc_atomic32_t		 c = PSC_ATOMIC32_INIT(0);
 
@@ -42,7 +41,9 @@ struct obj {
 __dead void
 usage(void)
 {
-	fprintf(stderr, "usage: %s\n", progname);
+	extern const char *__progname;
+
+	fprintf(stderr, "usage: %s\n", __progname);
 	exit(1);
 }
 
@@ -69,7 +70,7 @@ main(int argc, char *argv[])
 {
 	struct obj *o;
 
-	progname = argv[0];
+	pfl_init();
 	if (getopt(argc, argv, "") != -1)
 		usage();
 	argc -= optind;

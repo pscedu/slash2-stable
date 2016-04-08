@@ -25,6 +25,7 @@
 
 #include <sys/param.h>
 #include <sys/stat.h>
+#include <sys/sysctl.h>
 
 #ifdef HAVE_STATFS_FSTYPE
 # include <sys/mount.h>
@@ -142,3 +143,75 @@ pflsys_get_hostname(void)
 }
 
 #endif
+
+#if defined(SYS_sched_getaffinity) && !defined(CPU_COUNT)
+#  define CPU_COUNT(set) _cpu_count(set)
+int
+_cpu_count(cpu_set_t *set)
+{
+	int i, n = 0;
+
+	for (i = 0; i < sizeof(*set) / sizeof(__cpu_mask); i++)
+		if (CPU_ISSET(i, set))
+			n++;
+	return (n);
+}
+#endif
+
+int
+pfl_getnprocessors(void)
+{
+	int np = 1;
+
+#ifdef SYS_sched_getaffinity	/* Linux */
+	cpu_set_t mask;
+
+	if (sched_getaffinity(0, sizeof(mask), &mask) == -1)
+		psclog_warn("sched_getaffinity");
+	else
+		np = CPU_COUNT(&mask);
+
+#elif defined(HW_LOGICALCPU)	/* MacOS X */
+	int mib[2];
+	size_t size;
+
+	size = sizeof(np);
+	mib[0] = CTL_HW;
+	mib[1] = HW_LOGICALCPU;
+	if (sysctl(mib, 2, &np, &size, NULL, 0) == 0)
+		np = size;
+
+#elif defined(HW_NCPU)		/* BSD */
+	int mib[2];
+	size_t size;
+
+	size = sizeof(np);
+	mib[0] = CTL_HW;
+	mib[1] = HW_NCPU;
+	if (sysctl(mib, 2, &np, &size, NULL, 0) == 0)
+		np = size;
+
+#endif
+	return (np);
+}
+
+/* XXX not dynamic adjusting but better than nothing */
+/* when copying local-to-local, make sure to cut estimate by half */
+int
+pfl_getnfreecores(int want)
+{
+	int nstr = want;
+
+#ifdef HAVE_GETLOADAVG
+	{
+		double avg;
+
+		if (getloadavg(&avg, 1) == -1)
+			psclog_warn("getloadavg");
+		// XXX round up
+
+		nstr = MAX(1, nstr - avg);
+	}
+#endif
+	return (nstr);
+}

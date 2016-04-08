@@ -43,6 +43,10 @@
 #include "pfl/memnode.h"
 #include "pfl/mlist.h"
 
+#if PFL_DEBUG > 1
+# include "pfl/str.h"
+#endif
+
 struct psc_poolmgr;
 
 /*

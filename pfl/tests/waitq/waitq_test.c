@@ -33,10 +33,10 @@
 #include <time.h>
 #include <unistd.h>
 
-#include "pfl/cdefs.h"
-#include "pfl/pfl.h"
 #include "pfl/alloc.h"
+#include "pfl/cdefs.h"
 #include "pfl/fmtstr.h"
+#include "pfl/pfl.h"
 #include "pfl/lock.h"
 #include "pfl/log.h"
 #include "pfl/thread.h"
@@ -44,14 +44,15 @@
 
 int nthreads = 4;
 int iterations = 4;
-const char *progname;
 struct psc_waitq waitq;
 
 __dead void
 usage(void)
 {
+	extern const char *__progname;
+
 	fprintf(stderr, "usage: %s [-n nthr] [-i iterations]\n",
-	    progname);
+	    __progname);
 	exit(1);
 }
 
@@ -84,7 +85,6 @@ main(int argc, char *argv[])
 {
 	int c, i, rc = 0;
 
-	progname = argv[0];
 	pfl_init();
 	while ((c = getopt(argc, argv, "n:i:")) != -1)
 		switch (c) {

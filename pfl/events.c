@@ -35,6 +35,7 @@
 #include "pfl/pool.h"
 #include "pfl/rpc.h"
 #include "pfl/rpclog.h"
+#include "pfl/service.h"
 #include "pfl/types.h"
 #include "pfl/waitq.h"
 
@@ -621,7 +622,7 @@ pscrpc_ni_init(int type, int nmsgs)
 		psclog_info("Requesting PID %u", PSCRPC_SVR_PID);
 		rc = LNetNIInit(PSCRPC_SVR_PID);
 		if (rc)
-			psc_fatalx("failed LNetNIInit() (rc=%d)", rc);
+			errx(1, "failed LNetNIInit() (rc=%d)", rc);
 
 		rc = LNetEQAlloc(1024, pscrpc_master_callback, &pscrpc_eq_h);
 		psclog_info("%#"PRIx64" pscrpc_eq_h cookie value",
@@ -630,7 +631,7 @@ pscrpc_ni_init(int type, int nmsgs)
 	} else if (type == PSCNET_MTCLIENT) {
 		rc = LNetNIInit(pscrpc_get_pid());
 		if (rc)
-			psc_fatalx("failed LNetNIInit() (rc=%d)", rc);
+			errx(1, "failed LNetNIInit() (rc=%d)", rc);
 
 		rc = LNetEQAlloc(1024, pscrpc_master_callback, &pscrpc_eq_h);
 		psclog_info("%#"PRIx64" pscrpc_eq_h cookie value",
@@ -643,7 +644,7 @@ pscrpc_ni_init(int type, int nmsgs)
 		 */
 		rc = LNetNIInit(pscrpc_get_pid());
 		if (rc)
-			psc_fatalx("failed LNetNIInit() (rc=%d)", rc);
+			errx(1, "failed LNetNIInit() (rc=%d)", rc);
 		rc = LNetEQAlloc(10240, 0, &pscrpc_eq_h);
 	}
 
@@ -700,6 +701,24 @@ pscrpc_ni_fini(void)
 	/* NOTREACHED */
 }
 
+const char *
+pflrpc_log_get_peer_addr(struct psc_thread *thr)
+{
+	struct pscrpc_thread *prt;
+	const char *s;
+
+	if (!(thr->pscthr_flags & PTF_RPC_SVC_THREAD))
+		return ("");
+
+	prt = pscrpcthr(thr);
+	if (prt->prt_peer_addrbuf[0] == '\0' &&
+	    prt->prt_peer_addr != LNET_NID_ANY)
+		pscrpc_nid2str(prt->prt_peer_addr,
+		    prt->prt_peer_addrbuf);
+	s = prt->prt_peer_addrbuf;
+	return (s);
+}
+
 void
 pscrpc_init_portals(int type, int nmsgs)
 {
@@ -712,11 +731,15 @@ pscrpc_init_portals(int type, int nmsgs)
 	rc = pscrpc_ni_init(type, nmsgs);
 	if (rc)
 		psc_fatal("network initialization: %s", strerror(-rc));
+
+	pflog_get_peer_addr = pflrpc_log_get_peer_addr;
 }
 
 void
 pscrpc_exit_portals(void)
 {
+	pflog_get_peer_addr = NULL;
+
 	pscrpc_conns_destroy();
 	pscrpc_ni_fini();
 	pfl_poolmaster_destroy(&pscrpc_export_poolmaster);

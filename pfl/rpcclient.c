@@ -327,7 +327,7 @@ expired_request(void *data)
 
 	atomic_inc(&req->rq_retries);
 
-	DEBUG_REQ(PLL_DIAG, req, "request timeout");
+	DEBUG_REQ(PLL_WARN, req, "request timeout");
 
 	if (atomic_read(&req->rq_retries) >= imp->imp_max_retries)
 		return (pscrpc_expire_one_request(req));
@@ -467,6 +467,7 @@ pscrpc_unregister_reply(struct pscrpc_request *request)
 	else
 		wq = &request->rq_reply_waitq;
 
+	/* wait for pscrpc_wake_client_req() */
 	for (;;) {
 		/* Network access will complete in finite time but the HUGE
 		 * timeout lets us CWARN for visibility of sluggish NALs */
@@ -633,7 +634,7 @@ pscrpc_queue_wait(struct pscrpc_request *req)
 		GOTO(out, 0);
 
 	if (req->rq_err)
-		GOTO(out, rc = -EIO);
+		GOTO(out, rc = req->rq_status);
 
 	/* Resend if we need to, unless we were interrupted. */
 	if (req->rq_resend && !req->rq_intr) {
@@ -760,11 +761,8 @@ _pscrpc_set_check(struct pscrpc_request_set *set, int finish_one)
 		if (req->rq_phase == PSCRPC_RQ_PHASE_INTERPRET)
 			GOTO(interpret, req->rq_status);
 
-		if (req->rq_net_err && !req->rq_timedout) {
+		if (req->rq_net_err && !req->rq_timedout)
 			pscrpc_expire_one_request(req);
-			if (!req->rq_err)
-				req->rq_err = 1;
-		}
 
  handle_error:
 		if (req->rq_err) {
@@ -835,6 +833,9 @@ _pscrpc_set_check(struct pscrpc_request_set *set, int finish_one)
 				}
 			}
 			if (req->rq_resend) {
+				/*
+ 				 * XXX This code is never executed.
+ 				 */
 				if (req->rq_no_resend) {
 					if (!req->rq_err)
 						req->rq_err = 1;
@@ -1027,6 +1028,8 @@ pscrpc_expire_one_request(struct pscrpc_request *req)
 {
 	struct pscrpc_import *imp = req->rq_import;
 
+	psc_assert(imp);
+
 	DEBUG_REQ(imp->imp_igntimeout ? PLL_WARN : PLL_ERROR, req,
 	    "timeout (sent at %"PSCPRI_TIMET", %"PSCPRI_TIMET"s ago)",
 	    req->rq_sent, CURRENT_SECONDS - req->rq_sent);
@@ -1046,10 +1049,7 @@ pscrpc_expire_one_request(struct pscrpc_request *req)
 	if (req->rq_bulk)
 		pscrpc_unregister_bulk(req);
 
-	if (imp == NULL)
-		DEBUG_REQ(PLL_WARN, req, "NULL import: already cleaned up?");
-
-	else if (!imp->imp_igntimeout) {
+	if (!imp->imp_igntimeout) {
 		psclog_warnx("timeout: req=%p, imp=%p", req, imp);
 		pscrpc_fail_import(imp, req->rq_reqmsg->conn_cnt);
 	}
@@ -1228,15 +1228,17 @@ pscrpc_set_wait(struct pscrpc_request_set *set)
 	psclist_for_each_entry(req, &set->set_requests, rq_set_chain_lentry) {
 		DEBUG_REQ(PLL_DEBUG, req, "set wait loop");
 
+#if 0
 		if (req->rq_import->imp_failed) {
 			psclog_errorx("failed import detected!");
 			rc = -ECONNABORTED;
 			continue;
 		}
+#endif
 
 		psc_assert(req->rq_phase == PSCRPC_RQ_PHASE_COMPLETE);
 
-		if (req->rq_status) {
+		if (req->rq_status && !rc) {
 			rc = -abs(req->rq_status);
 			DEBUG_REQ(PLL_ERROR, req, "error rq_status=%d set=%p",
 			    rc, set);
@@ -1373,8 +1375,9 @@ pscrpc_abort_inflight(struct pscrpc_import *imp)
 
 		 spinlock(&req->rq_lock);
 		 if (req->rq_import_generation < imp->imp_generation) {
-			 req->rq_err = 1;
-			 pscrpc_wake_client_req(req);
+			req->rq_err = 1;
+			req->rq_status = -ETIMEDOUT;
+			pscrpc_wake_client_req(req);
 		 }
 		 //req->rq_abort_reply = 1;
 		 if (req->rq_bulk)

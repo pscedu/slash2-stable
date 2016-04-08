@@ -2,7 +2,7 @@
 /*
  * %ISC_START_LICENSE%
  * ---------------------------------------------------------------------
- * Copyright 2015, Google, Inc.
+ * Copyright 2015-2016, Google, Inc.
  * Copyright (c) 2010-2015, Pittsburgh Supercomputing Center (PSC).
  * All rights reserved.
  *
@@ -35,12 +35,12 @@
 #include "pfl/pfl.h"
 #include "pfl/str.h"
 
-const char *progname;
-
 __dead void
 usage(void)
 {
-	fprintf(stderr, "usage: %s\n", progname);
+	extern const char *__progname;
+
+	fprintf(stderr, "usage: %s\n", __progname);
 	exit(1);
 }
 

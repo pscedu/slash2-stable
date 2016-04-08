@@ -38,12 +38,12 @@
 
 #define _PATH_CMDLINE "/proc/self/cmdline"
 
-const char *progname;
-
 __dead void
 usage(void)
 {
-	fprintf(stderr, "usage: %s\n", progname);
+	extern const char *__progname;
+
+	fprintf(stderr, "usage: %s\n", __progname);
 	exit(1);
 }
 
@@ -56,7 +56,6 @@ main(__unusedx int argc, char *argv[])
 	FILE *fp;
 
 	pfl_init();
-	progname = argv[0];
 	if (getopt(argc, argv, "") != -1)
 		usage();
 	argc -= optind;

@@ -84,13 +84,18 @@ struct psc_dynarray;
 #define PSCNET_CLIENT			0x0f
 #define PSCRPC_SVR_PID			54321
 
-#ifndef PSCRPC_OBD_TIMEOUT
+#ifndef PSCRPC_TIMEOUT
 #ifdef NAMESPACE_EXPERIMENTAL
-#define PSCRPC_OBD_TIMEOUT		3600
+#define PSCRPC_TIMEOUT			3600
 #else
-#define PSCRPC_OBD_TIMEOUT		60
+#define PSCRPC_TIMEOUT			60
 #endif
 #endif
+
+#define PSCRPC_TIMEOUT_INC		20
+#define PSCRPC_MAX_RETRIES		2
+
+#define PSCRPC_MAX_ASYNC_ARGS		9
 
 extern lnet_handle_eq_t			pscrpc_eq_h;
 extern struct psclist_head		pscrpc_wait_callbacks;
@@ -228,7 +233,7 @@ struct pscrpc_async_args {
 	 * least big enough for that.
 	 */
 	uint64_t space[4];
-	void    *pointer_arg[9];
+	void    *pointer_arg[PSCRPC_MAX_ASYNC_ARGS];
 /*
 	union {
 		uint64_t u64;
@@ -517,7 +522,7 @@ void	 pscrpc_free_req(struct pscrpc_request *);
 int	 pscrpc_register_bulk(struct pscrpc_request *);
 int	 pscrpc_register_rqbd(struct pscrpc_request_buffer_desc *);
 int	 pscrpc_reply(struct pscrpc_request *);
-int	_pscrpc_req_finished(struct pscrpc_request *, int);
+void	_pscrpc_req_finished(struct pscrpc_request *, int);
 int	 pscrpc_send_reply(struct pscrpc_request *, int);
 int	 pscrpc_start_bulk_transfer(struct pscrpc_bulk_desc *);
 void	 pscrpc_unregister_bulk(struct pscrpc_request *);
@@ -776,21 +781,20 @@ pscrpc_wake_client_req(struct pscrpc_request *req)
  * @lck: optional spinlock used for @wq.
  */
 
-#define PSCRPC_SVR_TIMEOUT	60
-#define PSCRPC_SVR_SHORT_TIMEO	1
+#define PSCRPC_SVR_SHORT_WAIT	1
 #define _pscrpc_server_wait_event(wq, cond, info, ret, excl, lck, mtx)	\
 	do {								\
 		time_t _now	  = time(NULL);				\
 		time_t _then	  = _now;				\
 		time_t _timeout	  = (info)->lwi_timeout ?		\
-			(info)->lwi_timeout : PSCRPC_SVR_TIMEOUT;	\
+			(info)->lwi_timeout : PSCRPC_TIMEOUT;		\
 		struct timespec _abstime = { 0, 0 };			\
 									\
 		(ret) = 0;						\
 									\
 		while (!(cond)) {					\
 			_abstime.tv_sec = _now +			\
-			    PSCRPC_SVR_SHORT_TIMEO;			\
+			    PSCRPC_SVR_SHORT_WAIT;			\
 			_abstime.tv_nsec = 0;				\
 			/*						\
 			 * Don't wake up periodically unless there is	\

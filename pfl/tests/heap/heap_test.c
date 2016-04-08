@@ -32,8 +32,6 @@
 #include "pfl/pfl.h"
 #include "pfl/random.h"
 
-const char *progname;
-
 struct a {
 	int val;
 	struct pfl_heap_entry entry;
@@ -86,12 +84,11 @@ add(int v)
 }
 
 int
-main(__unusedx int argc, char *argv[])
+main(__unusedx int argc, __unusedx char *argv[])
 {
 	struct a *p;
 	int i, last;
 
-	progname = argv[0];
 	pfl_init();
 
 	psc_assert(sizeof(struct a) == 8);

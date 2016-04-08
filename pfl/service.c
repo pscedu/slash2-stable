@@ -37,6 +37,7 @@
 #include "pfl/list.h"
 #include "pfl/lock.h"
 #include "pfl/log.h"
+#include "pfl/opstats.h"
 #include "pfl/rpc.h"
 #include "pfl/rpclog.h"
 #include "pfl/service.h"
@@ -46,6 +47,19 @@
 static int test_req_buffer_pressure;
 
 static int pscrpc_server_post_idle_rqbds(struct pscrpc_service *);
+
+struct pfl_opstats_grad pfl_rpc_service_reply_latencies;
+
+int64_t pfl_rpc_service_reply_latency_durations[] = {
+	0,
+	1,
+	5,
+	10,
+	20,
+	30,
+	40,
+	50,
+};
 
 PSCLIST_HEAD(pscrpc_all_services);
 psc_spinlock_t pscrpc_all_services_lock = SPINLOCK_INIT;
@@ -273,6 +287,7 @@ pscrpc_server_handle_request(struct pscrpc_service *svc,
 	struct pscrpc_request *request;
 	struct timeval         work_start;
 	struct timeval         work_end;
+	struct pscrpc_thread *prt;
 	long                   timediff;
 	int                    rc;
 
@@ -304,6 +319,9 @@ pscrpc_server_handle_request(struct pscrpc_service *svc,
 	do_gettimeofday(&work_start);
 	timediff = cfs_timeval_sub(&work_start,
 				   &request->rq_arrival_time, NULL);
+
+	pfl_opstats_grad_incr(&pfl_rpc_service_reply_latencies,
+	    timediff / 1000000);
 
 #if WETRACKSTATSSOMEDAY
 	if (svc->srv_stats != NULL) {
@@ -380,32 +398,20 @@ pscrpc_server_handle_request(struct pscrpc_service *svc,
 
 	request->rq_phase = PSCRPC_RQ_PHASE_INTERPRET;
 
-	DEBUG_REQ(PLL_DEBUG, request, "Handling RPC");
-#if 0
-	psclog_info("Handling RPC peer+ref:pid:xid:nid:opc "
-	    "%s+%d:%d:%"PRIu64":%d",
-	    libcfs_id2str(request->rq_conn->c_peer),
-	    atomic_read(&request->rq_export->exp_refcount),
-	    request->rq_reqmsg->status,
-	    request->rq_xid,
-	    request->rq_reqmsg->opc);
-#endif
+	prt = pscrpcthr(thread);
+	prt->prt_peer_addr = request->rq_peer.nid;
+
+	DEBUG_REQ(PLL_DEBUG, request, "handling RPC");
 
 	rc = svc->srv_handler(request);
 
 	request->rq_phase = PSCRPC_RQ_PHASE_COMPLETE;
 
-	DEBUG_REQ(PLL_TRACE, request, "Handled RPC");
+	DEBUG_REQ(PLL_DEBUG, request, "handled RPC");
 
-#if 0
-	psclog_info("Handled RPC peer+ref:pid:xid:nid:opc "
-	    "%s+%d:%d:%"PRIu64":%d",
-	    libcfs_id2str(request->rq_conn->c_peer),
-	    atomic_read(&request->rq_export->exp_refcount),
-	    request->rq_reqmsg->status,
-	    request->rq_xid,
-	    request->rq_reqmsg->opc);
-#endif
+	prt->prt_peer_addr = LNET_NID_ANY;
+	prt->prt_peer_addrbuf[0] = '\0';
+
  put_rpc_export:
 	pscrpc_export_rpc_put(request->rq_export);
 	request->rq_export = NULL;
@@ -932,8 +938,18 @@ pscrpc_init_svc(int nbufs, int bufsize, int max_req_size,
     int max_reply_size, int req_portal, int rep_portal, char *name,
     svc_handler_t handler, int flags)
 {
+	static int init_globals;
 	struct pscrpc_service *svc;
 	int rc;
+
+	if (!init_globals) {
+		init_globals = 1;
+		pfl_opstats_grad_init(&pfl_rpc_service_reply_latencies,
+		    OPSTF_BASE10,
+		    pfl_rpc_service_reply_latency_durations,
+		    nitems(pfl_rpc_service_reply_latency_durations),
+		    "rpc-reply-latency:%ss");
+	}
 
 	psclog_info("bufsize %d max_req_size %d", bufsize, max_req_size);
 
@@ -1036,6 +1052,7 @@ pscrpcsvh_addthr(struct pscrpc_svc_handle *svh)
 	thr = pscthr_init(svh->svh_type, pscrpcthr_main, NULL,
 	    svh->svh_thrsiz, "%sthr%02d", svh->svh_svc_name,
 	    svh->svh_nthreads);
+	thr->pscthr_flags |= PTF_RPC_SVC_THREAD;
 	prt = thr->pscthr_private;
 	prt->prt_alive = 1;
 	prt->prt_svh = svh;

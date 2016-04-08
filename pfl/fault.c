@@ -104,10 +104,12 @@ _pfl_fault_here(struct pfl_fault *pflt, int *rcp, int rc)
 		goto out;
 	if (pflt->pflt_chance < (int)psc_random32u(100))
 		goto out;
-	if (pflt->pflt_retval)
-		*rcp = pflt->pflt_retval;
-	else
-		*rcp = rc;
+	if (rcp) {
+		if (pflt->pflt_retval)
+			*rcp = pflt->pflt_retval;
+		else
+			*rcp = rc;
+	}
 	pflt->pflt_hits++;
 	delay = pflt->pflt_delay;
 	faulted = 1;
@@ -117,7 +119,7 @@ _pfl_fault_here(struct pfl_fault *pflt, int *rcp, int rc)
 	pfl_fault_unlock(pflt);
 
 	if (delay)
-		usleep(delay);
+		sleep(delay);
 	return (faulted);
 }
 
@@ -165,6 +167,7 @@ psc_ctlrep_getfault(int fd, struct psc_ctlmsghdr *mh, void *msg)
 			if (strcmp(pflt->pflt_name, name) == 0)
 				break;
 		}
+	freelock(&pfl_faults_lock);
 	if (rc && !found && !all)
 		rc = psc_ctlsenderr(fd, mh, "unknown fault point: %s",
 		    name);
@@ -226,6 +229,8 @@ psc_ctlparam_faults_handle(int fd, struct psc_ctlmsghdr *mh,
 				pflt->pflt_count -= val;
 			else
 				pflt->pflt_count = val;
+			/* reset counter */
+			pflt->pflt_hits = 0;
 		} else {
 			levels[2] = "count";
 			snprintf(nbuf, sizeof(nbuf), "%d",
@@ -383,7 +388,10 @@ psc_ctlparam_faults(int fd, struct psc_ctlmsghdr *mh,
 				break;
 		}
 	} else {
-		pflt = pfl_fault_peek(levels[1]);
+		if (set)
+			pflt = pfl_fault_get(levels[1]);
+		else
+			pflt = pfl_fault_peek(levels[1]);
 		if (pflt == NULL)
 			return (psc_ctlsenderr(fd, mh,
 			    "unknown fault point: %s", levels[1]));

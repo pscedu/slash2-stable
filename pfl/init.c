@@ -3,7 +3,7 @@
  * %ISC_START_LICENSE%
  * ---------------------------------------------------------------------
  * Copyright 2015-2016, Google, Inc.
- * Copyright (c) 2007-2015, Pittsburgh Supercomputing Center (PSC).
+ * Copyright 2007-2016, Pittsburgh Supercomputing Center
  * All rights reserved.
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -50,7 +50,8 @@ __threadx int				 _pfl_callerinfo_lvl;
 __static void				*_pfl_tls[PFL_TLSIDX_MAX];
 struct timespec				  pfl_uptime;
 pid_t					  pfl_pid;
-int					  pfl_rpc_timeout = PSCRPC_OBD_TIMEOUT;
+int					  pfl_rpc_timeout = PSCRPC_TIMEOUT;
+int					  pfl_rpc_max_retry = PSCRPC_MAX_RETRIES;
 
 pid_t
 pfl_getsysthrid(void)

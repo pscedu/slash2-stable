@@ -3,7 +3,7 @@
  * %ISC_START_LICENSE%
  * ---------------------------------------------------------------------
  * Copyright 2015-2016, Google, Inc.
- * Copyright (c) 2006-2015, Pittsburgh Supercomputing Center (PSC).
+ * Copyright 2006-2016, Pittsburgh Supercomputing Center
  * All rights reserved.
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -117,6 +117,7 @@ int				 _pfl_callerinfo_lvl;
 
 extern pid_t			  pfl_pid;
 extern int			  pfl_rpc_timeout;
+extern int			  pfl_rpc_max_retry;
 
 #ifdef HAVE_TLS
 # define __callerinfo const struct pfl_callerinfo *pci

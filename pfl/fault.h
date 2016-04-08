@@ -3,7 +3,7 @@
  * %ISC_START_LICENSE%
  * ---------------------------------------------------------------------
  * Copyright 2015-2016, Google, Inc.
- * Copyright (c) 2006-2015, Pittsburgh Supercomputing Center (PSC).
+ * Copyright 2006-2016, Pittsburgh Supercomputing Center
  * All rights reserved.
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -37,7 +37,7 @@ struct pfl_fault {
 	int			pflt_flags;		/* see below */
 	int			pflt_hits;		/* #times triggered */
 	int			pflt_unhits;		/* #times skipped */
-	long			pflt_delay;		/* usec to sleep inside fault */
+	long			pflt_delay;		/* seconds to sleep inside fault */
 	int			pflt_count;		/* #times to respond with programmed behavior */
 	int			pflt_begin;		/* #times to skip programmed behavior */
 	int			pflt_chance;		/* likelihood of event to occur from 0-100 */

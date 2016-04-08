@@ -38,12 +38,12 @@
 #include "pfl/fmtstr.h"
 #include "pfl/log.h"
 
-const char *progname;
-
 __dead void
 usage(void)
 {
-	fprintf(stderr, "usage: %s\n", progname);
+	extern const char *__progname;
+
+	fprintf(stderr, "usage: %s\n", __progname);
 	exit(1);
 }
 
@@ -54,7 +54,6 @@ main(int argc, char *argv[])
 	struct stat stb;
 	int ch;
 
-	progname = argv[0];
 	while ((ch = getopt(argc, argv, "")) != -1)
 		switch (ch) {
 		default:

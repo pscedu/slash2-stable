@@ -81,6 +81,9 @@ struct psc_dynarray {
  */
 #define psc_dynarray_get(pda)	((const void *)(pda)->pda_items)
 
+#define psc_dynarray_reverse(pda)					\
+	psc_dynarray_reverse_subsequence((pda), 0, psc_dynarray_len(pda))
+
 #define psc_dynarray_get_mutable(pda)					\
 	((void *)(pda)->pda_items)
 
@@ -125,7 +128,7 @@ void	 psc_dynarray_initf(struct psc_dynarray *, int);
 int	 psc_dynarray_removeitem(struct psc_dynarray *, const void *);
 void	 psc_dynarray_removepos(struct psc_dynarray *, int);
 void	 psc_dynarray_reset(struct psc_dynarray *);
-void	 psc_dynarray_reverse(struct psc_dynarray *);
+void	 psc_dynarray_reverse_subsequence(struct psc_dynarray *, int, int);
 void	 psc_dynarray_setpos(struct psc_dynarray *, int, void *);
 int	 psc_dynarray_splice(struct psc_dynarray *, int, int, const void *, int);
 void	 psc_dynarray_swap(struct psc_dynarray *, int, int);
