@@ -41,8 +41,11 @@
 
 #include "../ulnds/socklnd/usocklnd.h"
 
-lnet_handle_eq_t	pscrpc_eq_h;
-struct psclist_head	pscrpc_wait_callbacks;
+int			 pfl_rpc_timeout = PSCRPC_TIMEOUT;
+int			 pfl_rpc_max_retry = PSCRPC_MAX_RETRIES;
+
+lnet_handle_eq_t	 pscrpc_eq_h;
+struct psclist_head	 pscrpc_wait_callbacks;
 
 struct psc_poolmaster	 pscrpc_export_poolmaster;
 struct psc_poolmaster	 pscrpc_conn_poolmaster;
