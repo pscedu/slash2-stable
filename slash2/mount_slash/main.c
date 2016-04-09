@@ -1964,9 +1964,10 @@ msl_setattr(struct pscfs_req *pfr, struct fidc_membh *f, int32_t to_set,
 	struct srm_setattr_req *mq;
 	struct srm_setattr_rep *mp;
 
+ retry1:
 	MSL_RMC_NEWREQ(f, csvc, SRMT_SETATTR, rq, mq, mp, rc);
 	if (rc)
-		return (rc);
+		goto retry2;
 
 	if (sstb)
 		mq->attr = *sstb;
@@ -1986,6 +1987,11 @@ msl_setattr(struct pscfs_req *pfr, struct fidc_membh *f, int32_t to_set,
 	    to_set);
 
 	rc = SL_RSX_WAITREP(csvc, rq, mp);
+
+ retry2:
+	if (rc && slc_rmc_retry(pfr, &rc))
+		goto retry1;
+
 	if (rc == 0)
 		rc = -mp->rc;
 
@@ -2602,17 +2608,19 @@ mslfsop_statfs(struct pscfs_req *pfr, pscfs_inum_t inum)
 	rpci->rpci_flags |= RPCIF_STATFS_FETCHING;
 	RPCI_ULOCK(rpci);
 
- retry:
+ retry1:
 	MSL_RMC_NEWREQ(NULL, csvc, SRMT_STATFS, rq, mq, mp, rc);
 	if (rc)
-		PFL_GOTOERR(out, rc);
+		goto retry2;
+
 	mq->fid = inum;
 	mq->iosid = iosid;
 	if (rc)
 		PFL_GOTOERR(out, rc);
 	rc = SL_RSX_WAITREP(csvc, rq, mp);
+ retry2:
 	if (rc && slc_rmc_retry(pfr, &rc))
-		goto retry;
+		goto retry1;
 	if (rc == 0)
 		rc = -mp->rc;
 	if (rc)
@@ -2676,10 +2684,10 @@ mslfsop_symlink(struct pscfs_req *pfr, const char *buf,
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
- retry:
+ retry1:
 	MSL_RMC_NEWREQ(p, csvc, SRMT_SYMLINK, rq, mq, mp, rc);
 	if (rc)
-		PFL_GOTOERR(out, rc);
+		goto retry2;
 
 	mq->sstb.sst_uid = pcr.pcr_uid;
 	mq->sstb.sst_gid = newent_select_group(p, &pcr);
@@ -2694,14 +2702,15 @@ mslfsop_symlink(struct pscfs_req *pfr, const char *buf,
 	iov.iov_base = (char *)buf;
 	iov.iov_len = mq->linklen;
 
-	slrpc_bulkclient(rq, BULK_GET_SOURCE, SRMC_BULK_PORTAL, &iov,
-	    1);
+	slrpc_bulkclient(rq, BULK_GET_SOURCE, SRMC_BULK_PORTAL, &iov, 1);
 
 	namecache_hold_entry(&dcu, p, name);
 	rc = SL_RSX_WAITREP(csvc, rq, mp);
+
+ retry2:
 	if (rc && slc_rmc_retry(pfr, &rc)) {
 		namecache_fail(&dcu);
-		goto retry;
+		goto retry1;
 	}
 	if (rc == 0)
 		rc = -mp->rc;
@@ -3392,10 +3401,10 @@ mslfsop_listxattr(struct pscfs_req *pfr, size_t size, pscfs_inum_t inum)
 	if (size)
 		buf = PSCALLOC(size);
 
- retry:
+ retry1:
 	MSL_RMC_NEWREQ(f, csvc, SRMT_LISTXATTR, rq, mq, mp, rc);
 	if (rc)
-		PFL_GOTOERR(out, rc);
+		goto retry2;
 
 	mq->fg.fg_fid = inum;
 	mq->fg.fg_gen = FGEN_ANY;
@@ -3411,8 +3420,9 @@ mslfsop_listxattr(struct pscfs_req *pfr, size_t size, pscfs_inum_t inum)
 
 	rc = SL_RSX_WAITREPF(csvc, rq, mp,
 	    SRPCWAITF_DEFER_BULK_AUTHBUF_CHECK);
+ retry2:
 	if (rc && slc_rmc_retry(pfr, &rc))
-		goto retry;
+		goto retry1;
 	if (!rc)
 		rc = -mp->rc;
 	if (!rc && size) {
@@ -3476,10 +3486,10 @@ mslfsop_setxattr(struct pscfs_req *pfr, const char *name,
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
- retry:
+ retry1:
 	MSL_RMC_NEWREQ(f, csvc, SRMT_SETXATTR, rq, mq, mp, rc);
 	if (rc)
-		PFL_GOTOERR(out, rc);
+		goto retry2;
 
 	mq->fg.fg_fid = inum;
 	mq->fg.fg_gen = FGEN_ANY;
@@ -3493,8 +3503,9 @@ mslfsop_setxattr(struct pscfs_req *pfr, const char *name,
 	    1);
 
 	rc = SL_RSX_WAITREP(csvc, rq, mp);
+ retry2:
 	if (rc && slc_rmc_retry(pfr, &rc))
-		goto retry;
+		goto retry1;
 	if (!rc)
 		rc = -mp->rc;
 	if (!rc) {
@@ -3561,10 +3572,10 @@ slc_getxattr(struct pscfs_req *pfr,
 	if (locked)
 		FCMH_ULOCK(f);
 
- retry:
+ retry1:
 	MSL_RMC_NEWREQ(f, csvc, SRMT_GETXATTR, rq, mq, mp, rc);
 	if (rc)
-		PFL_GOTOERR(out, rc = -rc);
+		goto retry2;
 
 	mq->fg = f->fcmh_fg;
 	mq->size = size;
@@ -3579,8 +3590,9 @@ slc_getxattr(struct pscfs_req *pfr,
 	}
 	rc = SL_RSX_WAITREPF(csvc, rq, mp,
 	    SRPCWAITF_DEFER_BULK_AUTHBUF_CHECK);
+ retry2:
 	if (rc && slc_rmc_retry(pfr, &rc))
-		goto retry;
+		goto retry1;
 	if (!rc)
 		rc = -mp->rc;
 	if (!rc && size) {
@@ -3658,18 +3670,20 @@ mslfsop_removexattr(struct pscfs_req *pfr, const char *name,
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
- retry:
+ retry1:
 	MSL_RMC_NEWREQ(f, csvc, SRMT_REMOVEXATTR, rq, mq, mp, rc);
 	if (rc)
-		PFL_GOTOERR(out, rc);
+		goto retry2;
 
 	mq->fg.fg_fid = inum;
 	mq->fg.fg_gen = FGEN_ANY;
 	strlcpy(mq->name, name, sizeof(mq->name));
 
 	rc = SL_RSX_WAITREP(csvc, rq, mp);
+
+ retry2:
 	if (rc && slc_rmc_retry(pfr, &rc))
-		goto retry;
+		goto retry1;
 	if (rc == 0)
 		rc = -mp->rc;
 
