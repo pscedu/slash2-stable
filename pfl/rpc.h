@@ -93,7 +93,7 @@ struct psc_dynarray;
 #endif
 
 #define PSCRPC_TIMEOUT_INC		20
-#define PSCRPC_MAX_RETRIES		2
+#define PSCRPC_MAX_RETRIES		3
 
 #define PSCRPC_MAX_ASYNC_ARGS		9
 
