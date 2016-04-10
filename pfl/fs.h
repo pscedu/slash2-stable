@@ -139,10 +139,11 @@ struct pscfs_clientctx {
 };
 
 struct pfl_fsthr {
-	struct psc_listentry		 pft_lentry;
 	struct pscfs_req		*pft_pfr;
 	char				 pft_uprog[128];
 	void				*pft_private;	// XXX make per-module
+	struct pfl_multiwait		 pft_multiwait;
+	struct pfl_multiwait_cond	 pft_multiwaitcond;
 };
 
 void	pscfs_addarg(struct pscfs_args *, const char *);

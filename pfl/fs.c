@@ -247,3 +247,50 @@ pfl_fsthr_setpri(struct psc_thread *thr, void *data)
 	pft = thr->pscthr_private;
 	pft->pft_private = data;
 }
+
+/*
+ * An fsthr is blocking on some (number of) condition(s).  Instead of
+ * doing that, which would affect responsiveness for
+ * interrupt/signalling, we add a condition so PFLFS can wake itself up.
+ *
+ * This presumes that the multiwait critical section has already been
+ * entered and high-level (i.e. PFLFS module) conditions checked.
+ */
+int
+pflfs_req_multiwait_usec(struct pscfs_req *pfr, void *p, useconds_t usec)
+{
+	struct psc_thread *thr;
+	struct pfl_fsthr *pft;
+
+	pft = pfl_fsthr_getpri(thr);
+	if (pfr->pfr_interrupted)
+		pfl_multiwait_leavecritsect(&pft->pft_multiwait);
+	else {
+		pfl_multiwait_usecs(&pft->pft_multiwait, p, usec);
+#if 0
+		/*
+		 * If the thread woke itself, it must have come from
+		 * PFLFS.
+		 */
+		if (p == thr)
+			return (pfr->pfr_interrupted ? EINTR : 0);
+#endif
+	}
+	return (pfr->pfr_interrupted ? EINTR : 0);
+}
+
+/*
+ * A fsthr is requesting to sleep.  Instead of doing that, which would
+ * affect responsiveness for interrupt/signalling, we use a single
+ * multiwait on the thread condition so PFLFS can wake itself up.
+ */
+int
+pflfs_req_sleep_usec(struct pscfs_req *pfr, useconds_t usec)
+{
+	struct psc_thread *thr;
+	struct pfl_fsthr *pft;
+
+	pft = pfl_fsthr_getpri(pfr->pfr_thread);
+	pfl_multiwait_entercritsect(&pft->pft_multiwait);
+	return (pflfs_req_multiwait_usec(pfr, NULL, usec));
+}

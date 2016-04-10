@@ -62,6 +62,7 @@ struct pscfs_req {
 	struct timespec			 pfr_start;
 	int				 pfr_retries;
 	int				 pfr_interrupted; // XXX flags
+	struct psc_thread		*pfr_thread;
 	int				 pfr_refcnt;
 	int				 pfr_rc;
 };

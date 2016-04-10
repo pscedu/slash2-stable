@@ -140,8 +140,11 @@ static void
 pscfs_fuse_interrupt(__unusedx fuse_req_t req, void *d)
 {
 	struct pscfs_req *pfr = d;
+	struct pfl_fsthr *pft;
 
+	pft = pfr->pfr_thread;
 	pfr->pfr_interrupted = 1;
+	pfl_multiwaitcond_wakeup(&pft->pft_multiwaitcond);
 }
 
 int
@@ -581,6 +584,13 @@ pscfs_main(int nthr, const char *thrname)
 	for (i = 0; i < nthr; i++) {
 		thr = pscthr_init(PFL_THRT_FS, pscfs_fuse_listener_loop,
 		    NULL, sizeof(*pft), "%sfsthr%02d", thrname, i);
+		pft = thr->pscthr_private;
+		pfl_multiwait_init(&pft->pft_multiwait, "%s",
+		    thr->pscthr_name);
+		pfl_multiwaitcond_init(&pft->pft_multiwaitcond, thr, 0,
+		    "%s", thr->pscthr_name);
+		pfl_multiwait_addcond(&pft->pft_multiwait,
+		    &pft->pft_multiwaitcond);
 		thrv[i] = thr->pscthr_pthread;
 		pscthr_setready(thr);
 	}
@@ -810,6 +820,7 @@ pscfs_inum_pscfs2fuse(pscfs_inum_t p_inum, double timeo)
 		_thr = pscthr_get();					\
 		_pft = _thr->pscthr_private;				\
 		_pft->pft_pfr = (pfr);					\
+		pfr->pfr_thread = _thr;					\
 	} while (0)
 
 #define PFLOG_PFR(level, pfr, fmt, ...)					\
