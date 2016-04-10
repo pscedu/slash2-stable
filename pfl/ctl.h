@@ -65,6 +65,7 @@ struct psc_ctlmsg_fault {
 	uint32_t		pcflt_begin;
 	int32_t			pcflt_retval;
 	int8_t			pcflt_chance;
+	int32_t			pcflt_interval;
 };
 
 struct psc_ctlmsg_hashtable {

@@ -37,6 +37,8 @@ struct pfl_fault {
 	int			pflt_flags;		/* see below */
 	int			pflt_hits;		/* #times triggered */
 	int			pflt_unhits;		/* #times skipped */
+	int			pflt_skips;		/* fault skipped */
+	int			pflt_interval;		/* fault every # times */
 	long			pflt_delay;		/* seconds to sleep inside fault */
 	int			pflt_count;		/* #times to respond with programmed behavior */
 	int			pflt_begin;		/* #times to skip programmed behavior */
