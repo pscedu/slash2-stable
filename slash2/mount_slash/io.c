@@ -817,7 +817,7 @@ _msl_bmpce_read_rpc_done(const struct pfl_callerinfo *pci,
 }
 
 int
-msl_read_should_retry(struct msl_fsrqinfo *fsrqi, int rc0,
+msl_read_attempt_retry(struct msl_fsrqinfo *fsrqi, int rc0,
     struct pscrpc_async_args *args)
 {
 	struct slashrpc_cservice *csvc = args->pointer_arg[MSL_CBARG_CSVC];
@@ -834,7 +834,7 @@ msl_read_should_retry(struct msl_fsrqinfo *fsrqi, int rc0,
 	struct pscfs_req *pfr;
 
 	pfr = mfsrq_2_pfr(fsrqi);
-	if (!slc_rmc_retry(pfr, &rc0))
+	if (!slc_rpc_retry(pfr, &rc0))
 		return (0);
 
 	e = psc_dynarray_getpos(a, 0);
@@ -868,11 +868,11 @@ msl_read_should_retry(struct msl_fsrqinfo *fsrqi, int rc0,
 	if (rc)
 		 PFL_GOTOERR(out, rc);
 
-	return (0);
+	return (1);
 
  out:
 	pscrpc_req_finished(rq);
-	return (rc);
+	return (0);
 }
 
 /*
@@ -914,7 +914,7 @@ msl_read_cleanup(struct pscrpc_request *rq, int rc,
 if (!pfl_rpc_max_retry) {
 
 	if (rc && r->biorq_fsrqi && 
-	    msl_read_should_retry(r->biorq_fsrqi, rc, args))
+	    msl_read_attempt_retry(r->biorq_fsrqi, rc, args))
 		return (0);
 
 }
@@ -1189,7 +1189,7 @@ msl_pages_dio_getput(struct bmpc_ioreq *r)
 
 if (!pfl_rpc_max_retry) {
 
-	if (rc && slc_rmc_retry(pfr, &rc)) {
+	if (rc && slc_rpc_retry(pfr, &rc)) {
 		pscrpc_set_destroy(nbs);
 		sl_csvc_decref(csvc);
 		goto retry;
