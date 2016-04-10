@@ -941,7 +941,7 @@ psc_ctlmsg_fault_prdat(__unusedx const struct psc_ctlmsghdr *mh,
 	printf("%-28s   %c "
 	    "%7d %7d %5d "
 	    "%10d %5d %3d%% "
-	    "%3d\n",
+	    "%3d %3d\n",
 	    pcflt->pcflt_name,
 	    pcflt->pcflt_flags & PFLTF_ACTIVE ? 'A' : '-',
 	    pcflt->pcflt_hits, pcflt->pcflt_unhits, pcflt->pcflt_delay,
