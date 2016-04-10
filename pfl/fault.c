@@ -97,29 +97,43 @@ _pfl_fault_here(struct pfl_fault *pflt, int *rcp, int rc)
 	long delay = 0, faulted = 0;
 
 	pfl_fault_lock(pflt);
+
 	if (pflt->pflt_unhits < pflt->pflt_begin)
 		goto out;
+
 	if (pflt->pflt_count >= 0 &&
 	    pflt->pflt_hits >= pflt->pflt_count)
 		goto out;
+
 	if (pflt->pflt_chance < (int)psc_random32u(100))
 		goto out;
+
+	if (pflt->pflt_interval) {
+		if (pflt->pflt_skips < pflt->pflt_interval) {
+			pflt->pflt_skips++;
+			goto out;
+		}
+		pflt->pflt_skips = 0;
+	}
+
+	/* take action now */
+	faulted = 1;
 	if (rcp) {
 		if (pflt->pflt_retval)
 			*rcp = pflt->pflt_retval;
 		else
 			*rcp = rc;
 	}
-	pflt->pflt_hits++;
 	delay = pflt->pflt_delay;
-	faulted = 1;
-	if (0)
- out:
-		pflt->pflt_unhits++;
 	pfl_fault_unlock(pflt);
 
 	if (delay)
 		sleep(delay);
+ out:
+	if (faulted)
+		pflt->pflt_hits++;
+	else
+		pflt->pflt_unhits++;
 	return (faulted);
 }
 
@@ -286,6 +300,23 @@ psc_ctlparam_faults_handle(int fd, struct psc_ctlmsghdr *mh,
 			levels[2] = "retval";
 			snprintf(nbuf, sizeof(nbuf), "%d",
 			    pflt->pflt_retval);
+			if (!psc_ctlmsg_param_send(fd, mh, pcp,
+			    PCTHRNAME_EVERYONE, levels, 3, nbuf))
+				return (0);
+		}
+	}
+	if (nlevels < 3 || strcmp(levels[2], "interval") == 0) {
+		if (nlevels == 3 && set) {
+			if (pcp->pcp_flags & PCPF_ADD)
+				pflt->pflt_interval += val;
+			else if (pcp->pcp_flags & PCPF_SUB)
+				pflt->pflt_interval -= val;
+			else
+				pflt->pflt_interval = val;
+		} else {
+			levels[2] = "interval";
+			snprintf(nbuf, sizeof(nbuf), "%d",
+			    pflt->pflt_interval);
 			if (!psc_ctlmsg_param_send(fd, mh, pcp,
 			    PCTHRNAME_EVERYONE, levels, 3, nbuf))
 				return (0);
