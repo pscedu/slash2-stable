@@ -125,15 +125,17 @@ _pfl_fault_here(struct pfl_fault *pflt, int *rcp, int rc)
 			*rcp = rc;
 	}
 	delay = pflt->pflt_delay;
+
+	pflt->pflt_hits++;
 	pfl_fault_unlock(pflt);
 
 	if (delay)
 		sleep(delay);
  out:
-	if (faulted)
-		pflt->pflt_hits++;
-	else
+	if (!faulted) {
 		pflt->pflt_unhits++;
+		pfl_fault_unlock(pflt);
+	}
 	return (faulted);
 }
 
