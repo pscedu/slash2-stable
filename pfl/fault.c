@@ -105,7 +105,11 @@ _pfl_fault_here(struct pfl_fault *pflt, int *rcp, int rc)
 	    pflt->pflt_hits >= pflt->pflt_count)
 		goto out;
 
-	if (pflt->pflt_chance < (int)psc_random32u(100))
+	/*
+	 * Ignore probability if a count is explicitly given.
+	 */
+	if (pflt->pflt_count < 0 &&
+	    pflt->pflt_chance < (int)psc_random32u(100))
 		goto out;
 
 	if (pflt->pflt_interval) {
