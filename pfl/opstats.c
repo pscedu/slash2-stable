@@ -159,7 +159,8 @@ pfl_opstats_grad_init(struct pfl_opstats_grad *og, int flags,
 		if (rc == -1)
 			psc_fatal("snprintf");
 		ob->ob_lower_bound = buckets[i];
-		ob->ob_opst = pfl_opstat_initf(flags, fmt, label);
+		ob->ob_opst = pfl_opstat_initf(flags | OPSTF_BASE10,
+		    fmt, label);
 	}
 }
 
