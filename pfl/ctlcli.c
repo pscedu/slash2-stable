@@ -974,20 +974,54 @@ psc_ctlmsg_odtable_prdat(__unusedx const struct psc_ctlmsghdr *mh,
 }
 
 void
+pflctl_print_extra_field(int *remaining, const char *fmt, ...)
+{
+	va_list ap, apd;
+	int n;
+
+	va_start(ap, fmt);
+	va_copy(apd, ap);
+	n = vsnprintf(NULL, 0, fmt, ap);
+	va_end(ap);
+
+	if (n == -1)
+		psclog_warn("formatting string");
+	else if (*remaining > n) {
+		vprintf(fmt, apd);
+		va_end(apd);
+		*remaining -= n;
+	}
+}
+
+void
 psc_ctlmsg_rpcrq_prhdr(__unusedx struct psc_ctlmsghdr *mh,
     __unusedx const void *m)
 {
-	/* strlen(xxx.xxx.xxx.xxx@lnd10) = 21 */
-	printf("%-16s %7s %2s "
-	    "%2s %20s %2s %4s "
-	    "%21s %21s "
-	    "%2s %2s %4s %4s "
-	    "%4s %3s %2s %2s\n",
-	    "rpcrq-addr", "xid", "tr",
-	    "rf", "flags", "op", "stat",
-	    "peernid", "selfnid",
-	    "qp", "pp", "qlen", "plen",
-	    "recv", "try", "ig", "nw");
+	int remaining;
+
+	remaining = psc_ctl_get_display_maxwidth() -
+	    PSC_CTL_DISPLAY_WIDTH;
+
+	pflctl_print_extra_field(&remaining, "%-16s ", "rpcrq-addr");
+
+	/*
+	 * We eliminate LNET from the NID to conserve display space
+	 * since NIDs won't overlap in 99% of deployment circumstances
+	 * as this is mostly a debugging feature.
+	 */
+	/* strlen(IPV4 address e.g. `xxx.xxx.xxx.xxx') = 15 */
+	printf("%7s %2s %-20s %2s %4s "
+	    "%15s %2s %2s %4s %4s "
+	    "%3s %2s",
+	    "rpc-xid", "rf", "flags", "op", "stat",
+	    "peernid", "qp", "pp", "qlen", "plen",
+	    "try", "nw");
+
+	pflctl_print_extra_field(&remaining, "%4s ", "nbrc");
+	pflctl_print_extra_field(&remaining, "%2s ", "tr");
+	pflctl_print_extra_field(&remaining, "%2s", "ig");
+
+	printf("\n");
 }
 
 void
@@ -995,16 +1029,30 @@ psc_ctlmsg_rpcrq_prdat(__unusedx const struct psc_ctlmsghdr *mh,
     const void *m)
 {
 	const struct psc_ctlmsg_rpcrq *pcrq = m;
+	int remaining;
+	char *p;
 
-	printf("%016"PRIx64" %7"PRId64" %2"PRId64" %2d "
+	remaining = psc_ctl_get_display_maxwidth() -
+	    PSC_CTL_DISPLAY_WIDTH;
+
+	pflctl_print_extra_field(&remaining, "%016"PRIx64" ",
+	    pcrq->pcrq_addr);
+
+	p = strchr(pcrq->pcrq_peer, '@');
+	if (p)
+		*p = '\0';
+	p = strchr(pcrq->pcrq_self, '@');
+	if (p)
+		*p = '\0';
+
+	printf("%7"PRId64" %2d "
 	    "%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c "
 	    "%2d %4d "
-	    "%21s %21s "
+	    "%15s "
 	    "%2d %2d "
 	    "%4d %4d "
-	    "%4d %3d %2d %2d\n",
-	    pcrq->pcrq_addr, pcrq->pcrq_xid, pcrq->pcrq_transno,
-	    pcrq->pcrq_refcount,
+	    "%3d %2d",
+	    pcrq->pcrq_xid, pcrq->pcrq_refcount,
 	    pcrq->pcrq_type == PSCRPC_MSG_ERR ? 'e' :
 	      pcrq->pcrq_type == PSCRPC_MSG_REPLY ? 'p' : 'q',
 	    pcrq->pcrq_phase >= PSCRPC_RQ_PHASE_NEW &&
@@ -1030,11 +1078,19 @@ psc_ctlmsg_rpcrq_prdat(__unusedx const struct psc_ctlmsghdr *mh,
 	    pcrq->pcrq_timeoutable	? 't' : '-',
 	    pcrq->pcrq_waiting		? 'W' : '-',
 	    pcrq->pcrq_opc, abs(pcrq->pcrq_status),
-	    pcrq->pcrq_peer, pcrq->pcrq_self,
+	    pcrq->pcrq_peer,
 	    pcrq->pcrq_request_portal, pcrq->pcrq_reply_portal,
 	    pcrq->pcrq_reqlen, pcrq->pcrq_replen,
-	    pcrq->pcrq_nob_received, pcrq->pcrq_retries,
-	    pcrq->pcrq_import_generation, pcrq->pcrq_nwaiters);
+	    pcrq->pcrq_retries, pcrq->pcrq_nwaiters);
+
+	pflctl_print_extra_field(&remaining, "%4d ",
+	    pcrq->pcrq_nob_received);
+	pflctl_print_extra_field(&remaining, "%2"PRId64" ",
+	    pcrq->pcrq_transno);
+	pflctl_print_extra_field(&remaining, "%2d",
+	    pcrq->pcrq_import_generation);
+
+	(void)printf("\n");
 }
 
 void
@@ -1307,11 +1363,11 @@ psc_ctlcli_main(const char *osockfn, int ac, char *av[],
 				break;
 		if (i == notab)
 			usage();
-		/* 
-		 * Special shortcut case for version reporting. This 
-		 * must be handled before connecting to the socket so 
-		 * it always work. Note that other actions need the
-		 * socket to work.
+		/*
+		 * Special shortcut case for version reporting.  This
+		 * must be handled before connecting to the socket so it
+		 * always work.  Note that other actions need the socket
+		 * to work.
 		 */
 		if (c == 'V') {
 			void (*cbf)(void);
@@ -1331,8 +1387,8 @@ psc_ctlcli_main(const char *osockfn, int ac, char *av[],
 	SOCKADDR_SETLEN(&saun);
 
 	(void)FMTSTR(saun.sun_path, sizeof(saun.sun_path), psc_ctl_sockfn,
-		FMTSTRCASE('h', "s", psclog_getdata()->pld_hostshort)
-		FMTSTRCASE('n', "s", daemon_name)
+	    FMTSTRCASE('h', "s", psclog_getdata()->pld_hostshort)
+	    FMTSTRCASE('n', "s", daemon_name)
 	);
 
 	if (connect(psc_ctl_sock, (struct sockaddr *)&saun,
