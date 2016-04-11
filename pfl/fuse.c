@@ -61,10 +61,13 @@
 #define MAX_FILESYSTEMS			5
 #define MAX_FDS				(MAX_FILESYSTEMS + 1)
 
-#define fusefi_to_pfh(fi)						\
-	((struct pflfs_filehandle *)(void *)(uintptr_t)(fi)->fh)
-
-#define fusefi_to_pri(fi)		fusefi_to_pfh(fi)->pfh_data
+/*
+ *
+ */
+#define fusefi_to_pfh(fi)		((struct pflfs_filehandle *)(void *)(uintptr_t)(fi)->fh)
+#define fusefi_to_pri(fi)		fusefi_to_pfh(fi)->pfh_mod_data
+#define pfr_to_fusefi(pfr)		((struct fuse_file_info *)(pfr)->pfr_ufsi_fhdata)
+#define pfr_to_pfh(pfr)			fusefi_to_pfh(pfr_to_fusefi(pfr))
 
 #define fusefi_stash_pri(fi, data)					\
 	do {								\
@@ -73,7 +76,7 @@
 		_pfh = psc_pool_get(pflfs_filehandle_pool);		\
 		memset(_pfh, 0, sizeof(*_pfh));				\
 		INIT_LISTENTRY(&_pfh->pfh_lentry);			\
-		_pfh->pfh_data = data;					\
+		_pfh->pfh_mod_data = data;				\
 		(fi)->fh = (unsigned long)_pfh;				\
 		pll_add(&pflfs_filehandles, _pfh);			\
 	} while (0)
@@ -140,9 +143,11 @@ static void
 pscfs_fuse_interrupt(__unusedx fuse_req_t req, void *d)
 {
 	struct pscfs_req *pfr = d;
+	struct psc_thread *thr;
 	struct pfl_fsthr *pft;
 
-	pft = pfr->pfr_thread;
+	thr = pfr->pfr_thread;
+	pft = thr->pscthr_private;
 	pfr->pfr_interrupted = 1;
 	pfl_multiwaitcond_wakeup(&pft->pft_multiwaitcond);
 }
@@ -648,7 +653,7 @@ pscfs_freeargs(struct pscfs_args *pfa)
 struct pscfs_clientctx *
 pscfs_getclientctx(struct pscfs_req *pfr)
 {
-	const struct fuse_ctx *ctx = fuse_req_ctx(pfr->pfr_fuse_req);
+	const struct fuse_ctx *ctx = fuse_req_ctx(pfr->pfr_ufsi_req);
 	struct pscfs_clientctx *pfcc = &pfr->pfr_clientctx;
 
 	if (pfcc->pfcc_pid == 0)
@@ -659,7 +664,7 @@ pscfs_getclientctx(struct pscfs_req *pfr)
 void
 pscfs_getcreds(struct pscfs_req *pfr, struct pscfs_creds *pcr)
 {
-	const struct fuse_ctx *ctx = fuse_req_ctx(pfr->pfr_fuse_req);
+	const struct fuse_ctx *ctx = fuse_req_ctx(pfr->pfr_ufsi_req);
 
 	pcr->pcr_uid = ctx->uid;
 	pcr->pcr_gid = ctx->gid;
@@ -673,7 +678,7 @@ mode_t
 pscfs_getumask(struct pscfs_req *pfr)
 {
 #if FUSE_VERSION > FUSE_MAKE_VERSION(2,7)
-	const struct fuse_ctx *ctx = fuse_req_ctx(pfr->pfr_fuse_req);
+	const struct fuse_ctx *ctx = fuse_req_ctx(pfr->pfr_ufsi_req);
 
 	return (ctx->umask);
 #endif
@@ -813,7 +818,7 @@ pscfs_inum_pscfs2fuse(pscfs_inum_t p_inum, double timeo)
 		PFL_GETTIMESPEC(&(pfr)->pfr_start);			\
 		INIT_LISTENTRY(&(pfr)->pfr_lentry);			\
 		INIT_SPINLOCK(&(pfr)->pfr_lock);			\
-		(pfr)->pfr_fuse_req = (fsreq);				\
+		(pfr)->pfr_ufsi_req = (fsreq);				\
 		(pfr)->pfr_refcnt = 2;					\
 		PFLOG_PFR(PLL_DEBUG, (pfr), "create");			\
 									\
@@ -910,7 +915,7 @@ pscfs_fuse_handle_release(fuse_req_t req, __unusedx fuse_ino_t inum,
 	struct pscfs_req *pfr;
 
 	GETPFR(pfr, req);
-	pfr->pfr_fuse_fi = fi;
+	pfr->pfr_ufsi_fhdata = fi;
 	fuse_req_interrupt_func(req, pscfs_fuse_interrupt, pfr);
 	FSOP(release, pfr, fusefi_to_pri(fi));
 }
@@ -922,7 +927,7 @@ pscfs_fuse_handle_releasedir(fuse_req_t req, __unusedx fuse_ino_t inum,
 	struct pscfs_req *pfr;
 
 	GETPFR(pfr, req);
-	pfr->pfr_fuse_fi = fi;
+	pfr->pfr_ufsi_fhdata = fi;
 	fuse_req_interrupt_func(req, pscfs_fuse_interrupt, pfr);
 	FSOP(releasedir, pfr, fusefi_to_pri(fi));
 }
@@ -934,7 +939,7 @@ pscfs_fuse_handle_create(fuse_req_t req, fuse_ino_t pinum,
 	struct pscfs_req *pfr;
 
 	GETPFR(pfr, req);
-	pfr->pfr_fuse_fi = fi;
+	pfr->pfr_ufsi_fhdata = fi;
 	fuse_req_interrupt_func(req, pscfs_fuse_interrupt, pfr);
 	FSOP(create, pfr, INUM_FUSE2PSCFS(pinum), name, fi->flags,
 	    mode);
@@ -1036,7 +1041,7 @@ pscfs_fuse_handle_open(fuse_req_t req, fuse_ino_t inum,
 	struct pscfs_req *pfr;
 
 	GETPFR(pfr, req);
-	pfr->pfr_fuse_fi = fi;
+	pfr->pfr_ufsi_fhdata = fi;
 	fuse_req_interrupt_func(req, pscfs_fuse_interrupt, pfr);
 	FSOP(open, pfr, INUM_FUSE2PSCFS(inum), fi->flags);
 }
@@ -1048,7 +1053,7 @@ pscfs_fuse_handle_opendir(fuse_req_t req, fuse_ino_t inum,
 	struct pscfs_req *pfr;
 
 	GETPFR(pfr, req);
-	pfr->pfr_fuse_fi = fi;
+	pfr->pfr_ufsi_fhdata = fi;
 	fuse_req_interrupt_func(req, pscfs_fuse_interrupt, pfr);
 	FSOP(opendir, pfr, INUM_FUSE2PSCFS(inum), fi->flags);
 }
@@ -1060,7 +1065,7 @@ pscfs_fuse_handle_read(fuse_req_t req, __unusedx fuse_ino_t inum,
 	struct pscfs_req *pfr;
 
 	GETPFR(pfr, req);
-	pfr->pfr_fuse_fi = fi;
+	pfr->pfr_ufsi_fhdata = fi;
 	fuse_req_interrupt_func(req, pscfs_fuse_interrupt, pfr);
 	FSOP(read, pfr, size, off, fusefi_to_pri(fi));
 }
@@ -1190,7 +1195,7 @@ pscfs_fuse_handle_write(fuse_req_t req, __unusedx fuse_ino_t ino,
 	struct pscfs_req *pfr;
 
 	GETPFR(pfr, req);
-	pfr->pfr_fuse_fi = fi;
+	pfr->pfr_ufsi_fhdata = fi;
 	fuse_req_interrupt_func(req, pscfs_fuse_interrupt, pfr);
 	FSOP(write, pfr, buf, size, off, fusefi_to_pri(fi));
 }
@@ -1261,10 +1266,10 @@ pscfs_fuse_handle_removexattr(fuse_req_t req, fuse_ino_t ino,
 		struct {						\
 			void *p;					\
 			uint64_t uniqid;				\
-		} *r0p = (void *)(pfr)->pfr_fuse_req;			\
+		} *r0p = (void *)(pfr)->pfr_ufsi_req;			\
 		uint64_t u0 = r0p->uniqid;				\
 									\
-		fuse_reply_##fun((pfr)->pfr_fuse_req, ## __VA_ARGS__);	\
+		fuse_reply_##fun((pfr)->pfr_ufsi_req, ## __VA_ARGS__);	\
 		psclog_getdata()->pld_uprog = NULL;			\
 		PFL_GETTIMESPEC(&t0);					\
 		timespecsub(&t0, &(pfr)->pfr_start, &d);		\
@@ -1289,7 +1294,7 @@ pscfs_reply_release(struct pscfs_req *pfr, int rc)
 {
 	struct pflfs_filehandle *pfh;
 
-	pfh = fusefi_to_pfh(pfr->pfr_fuse_fi);
+	pfh = pfr_to_pfh(pfr);
 	PFR_REPLY(err, pfr, rc);
 	pll_remove(&pflfs_filehandles, pfh);
 	psc_pool_return(pflfs_filehandle_pool, pfh);
@@ -1300,7 +1305,7 @@ pscfs_reply_releasedir(struct pscfs_req *pfr, int rc)
 {
 	struct pflfs_filehandle *pfh;
 
-	pfh = fusefi_to_pfh(pfr->pfr_fuse_fi);
+	pfh = pfr_to_pfh(pfr);
 	PFR_REPLY(err, pfr, rc);
 	pll_remove(&pflfs_filehandles, pfh);
 	psc_pool_return(pflfs_filehandle_pool, pfh);
@@ -1316,9 +1321,12 @@ pscfs_reply_create(struct pscfs_req *pfr, pscfs_inum_t inum,
 	if (rc)
 		PFR_REPLY(err, pfr, rc);
 	else {
+		struct fuse_file_info *fi;
+
+		fi = pfr_to_fusefi(pfr);
 		if (rflags & PSCFS_CREATEF_DIO)
-			pfr->pfr_fuse_fi->direct_io = 1;
-		fusefi_stash_pri(pfr->pfr_fuse_fi, data);
+			fi->direct_io = 1;
+		fusefi_stash_pri(fi, data);
 		e.entry_timeout = entry_timeout;
 		e.ino = INUM_PSCFS2FUSE(inum, entry_timeout);
 		if (e.ino) {
@@ -1327,7 +1335,7 @@ pscfs_reply_create(struct pscfs_req *pfr, pscfs_inum_t inum,
 			e.attr.st_ino = e.ino;
 			e.generation = gen;
 		}
-		PFR_REPLY(create, pfr, &e, pfr->pfr_fuse_fi);
+		PFR_REPLY(create, pfr, &e, fi);
 	}
 }
 
@@ -1375,10 +1383,13 @@ pscfs_reply_open(struct pscfs_req *pfr, void *data, int rflags, int rc)
 	if (rc)
 		PFR_REPLY(err, pfr, rc);
 	else {
+		struct fuse_file_info *fi;
+
+		fi = pfr_to_fusefi(pfr);
 		if (rflags & PSCFS_OPENF_KEEPCACHE)
-			pfr->pfr_fuse_fi->keep_cache = 1;
+			fi->keep_cache = 1;
 		if (rflags & PSCFS_OPENF_DIO)
-			pfr->pfr_fuse_fi->direct_io = 1;
+			fi->direct_io = 1;
 
 #ifdef HAVE_NO_FUSE_PRIVATE_MMAP
 		/*
@@ -1390,12 +1401,21 @@ pscfs_reply_open(struct pscfs_req *pfr, void *data, int rflags, int rc)
 		 * be turned off, exposed to userland (per-process).
 		 */
 		if (c->fcmh_sstb.sst_mode & _S_IXUGO)
-			pfr->pfr_fuse_fi->direct_io = 0;
+			fi->direct_io = 0;
 #endif
 
-		fusefi_stash_pri(pfr->pfr_fuse_fi, data);
-		PFR_REPLY(open, pfr, pfr->pfr_fuse_fi);
+		fusefi_stash_pri(fi, data);
+		PFR_REPLY(open, pfr, fi);
 	}
+}
+
+void *
+pflfs_req_getfh(struct pscfs_req *pfr)
+{
+	struct fuse_file_info *fi;
+
+	fi = pfr_to_fusefi(pfr);
+	return (fusefi_to_pri(fi));
 }
 
 void
@@ -1404,12 +1424,15 @@ pscfs_reply_opendir(struct pscfs_req *pfr, void *data, int rflags, int rc)
 	if (rc)
 		PFR_REPLY(err, pfr, rc);
 	else {
+		struct fuse_file_info *fi;
+
+		fi = pfr_to_fusefi(pfr);
 		if (rflags & PSCFS_OPENF_KEEPCACHE)
-			pfr->pfr_fuse_fi->keep_cache = 1;
+			fi->keep_cache = 1;
 		if (rflags & PSCFS_OPENF_DIO)
-			pfr->pfr_fuse_fi->direct_io = 1;
-		fusefi_stash_pri(pfr->pfr_fuse_fi, data);
-		PFR_REPLY(open, pfr, pfr->pfr_fuse_fi);
+			fi->direct_io = 1;
+		fusefi_stash_pri(fi, data);
+		PFR_REPLY(open, pfr, fi);
 	}
 }
 
@@ -1671,7 +1694,7 @@ pscfs_getgroups(struct pscfs_req *pfr, gid_t *gv, int *ng)
 {
 	int rc = 0;
 
-	*ng = fuse_req_getgroups(pfr->pfr_fuse_req, NGROUPS_MAX, gv);
+	*ng = fuse_req_getgroups(pfr->pfr_ufsi_req, NGROUPS_MAX, gv);
 	if (*ng > NGROUPS_MAX) {
 		psclog_error("fuse_req_getgroups returned "
 		    "%d > NGROUPS_MAX (%d)", *ng, NGROUPS_MAX);
@@ -1683,8 +1706,8 @@ pscfs_getgroups(struct pscfs_req *pfr, gid_t *gv, int *ng)
 		/* not supported; revert to getgrent(3) */
 		*ng = NGROUPS_MAX;
 		rc = pflsys_getusergroups(
-		    fuse_req_ctx(pfr->pfr_fuse_req)->uid,
-		    fuse_req_ctx(pfr->pfr_fuse_req)->gid, gv, ng);
+		    fuse_req_ctx(pfr->pfr_ufsi_req)->uid,
+		    fuse_req_ctx(pfr->pfr_ufsi_req)->gid, gv, ng);
 	} else
 		rc = abs(*ng);
 	return (rc);
@@ -1696,7 +1719,7 @@ pflfs_inval_getprivate(struct pscfs_req *pfr)
 	struct fuse_chan *ch;
 
 #ifdef HAVE_FUSE_REQ_GETCHANNEL
-	ch = fuse_req_getchannel(pfr->pfr_fuse_req);
+	ch = fuse_req_getchannel(pfr->pfr_ufsi_req);
 #else
 	(void)pfr;
 	ch = NULL;

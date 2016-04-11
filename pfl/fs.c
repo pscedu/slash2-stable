@@ -257,16 +257,18 @@ pfl_fsthr_setpri(struct psc_thread *thr, void *data)
  * entered and high-level (i.e. PFLFS module) conditions checked.
  */
 int
-pflfs_req_multiwait_usec(struct pscfs_req *pfr, void *p, useconds_t usec)
+pflfs_req_multiwait_rel(struct pscfs_req *pfr, void *p,
+    const struct timespec *ts)
 {
 	struct psc_thread *thr;
 	struct pfl_fsthr *pft;
 
-	pft = pfl_fsthr_getpri(thr);
+	thr = pfr->pfr_thread;
+	pft = thr->pscthr_private;
 	if (pfr->pfr_interrupted)
 		pfl_multiwait_leavecritsect(&pft->pft_multiwait);
 	else {
-		pfl_multiwait_usecs(&pft->pft_multiwait, p, usec);
+		pfl_multiwait_relts(&pft->pft_multiwait, p, ts);
 #if 0
 		/*
 		 * If the thread woke itself, it must have come from
@@ -285,12 +287,13 @@ pflfs_req_multiwait_usec(struct pscfs_req *pfr, void *p, useconds_t usec)
  * multiwait on the thread condition so PFLFS can wake itself up.
  */
 int
-pflfs_req_sleep_usec(struct pscfs_req *pfr, useconds_t usec)
+pflfs_req_sleep_rel(struct pscfs_req *pfr, const struct timespec *ts)
 {
 	struct psc_thread *thr;
 	struct pfl_fsthr *pft;
 
-	pft = pfl_fsthr_getpri(pfr->pfr_thread);
+	thr = pfr->pfr_thread;
+	pft = thr->pscthr_private;
 	pfl_multiwait_entercritsect(&pft->pft_multiwait);
-	return (pflfs_req_multiwait_usec(pfr, NULL, usec));
+	return (pflfs_req_multiwait_rel(pfr, NULL, ts));
 }
