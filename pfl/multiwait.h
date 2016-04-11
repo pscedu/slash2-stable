@@ -92,9 +92,11 @@ struct pfl_multiwait {
  * @data: pointer to user data filled in from the multiwaitcond.
  * @usec: # microseconds till timeout.
  */
-#define pfl_multiwait_msecs(mw, p, ms)		pfl_multiwait_usecs((mw), (p), (ms) * 1000)
-#define pfl_multiwait_secs(mw, p, s)		pfl_multiwait_usecs((mw), (p), (s) * 1000 * 1000)
-#define pfl_multiwait(mw, p)			pfl_multiwait_usecs((mw), (p), 0)
+#define pfl_multiwait_usecs(mw, p, us)		pfl_multiwait_rel((mw), (p), 0, (us) * 1000)
+#define pfl_multiwait_msecs(mw, p, ms)		pfl_multiwait_rel((mw), (p), 0, (ms) * 1000 * 1000L)
+#define pfl_multiwait_secs(mw, p, s)		pfl_multiwait_rel((mw), (p), (s), 0)
+#define pfl_multiwait_relts(mw, p, ts)		pfl_multiwait_rel((mw), (p), (ts)->tv_sec, (ts)->tv_nsec)
+#define pfl_multiwait(mw, p)			pfl_multiwait_rel((mw), (p), 0, 0)
 
 int	_pfl_multiwait_addcond(struct pfl_multiwait *, struct pfl_multiwaitcond *, int);
 void	 pfl_multiwait_entercritsect(struct pfl_multiwait *);
@@ -105,7 +107,7 @@ void	 pfl_multiwait_leavecritsect(struct pfl_multiwait *);
 void	 pfl_multiwait_setcondwakeable(struct pfl_multiwait *, const struct pfl_multiwaitcond *, int);
 void	 pfl_multiwait_reset(struct pfl_multiwait *);
 void	 pfl_multiwait_prconds(struct pfl_multiwait *);
-int	 pfl_multiwait_usecs(struct pfl_multiwait *, void *, int);
+int	 pfl_multiwait_rel(struct pfl_multiwait *, void *, int, int);
 
 #define	pfl_multiwaitcond_wait(mwc, mx)		pfl_multiwaitcond_waitrel_ts((mwc), (mx), NULL)
 #define	pfl_multiwaitcond_waitrel(mwc, mx, ts)	pfl_multiwaitcond_waitrel_ts((mwc), (mx), (ts))

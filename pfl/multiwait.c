@@ -415,8 +415,10 @@ pfl_multiwait_setcondwakeable(struct pfl_multiwait *mw,
 }
 
 int
-pfl_multiwait_usecs(struct pfl_multiwait *mw, void *datap, int usec)
+pfl_multiwait_rel(struct pfl_multiwait *mw, void *datap, int sec,
+    int nsec)
 {
+	struct timespec adj = { sec, nsec };
 	struct pfl_multiwaitcond *mwc;
 	int rc, won = 0, j;
 
@@ -443,20 +445,16 @@ pfl_multiwait_usecs(struct pfl_multiwait *mw, void *datap, int usec)
 			goto checkwaker;
 	}
 
-	DLOG_MULTIWAIT(PLL_DEBUG, mw, "entering wait; usec=%d", usec);
-	if (usec) {
-		struct timeval tv, res, adj;
-		struct timespec ntv;
+	DLOG_MULTIWAIT(PLL_DEBUG, mw, "entering wait; sec=%d nsec=%d",
+	    sec, nsec);
+	if (sec || nsec) {
+		struct timespec ts;
 
-		PFL_GETTIMEVAL(&tv);
-		adj.tv_sec = usec / 1000000;
-		adj.tv_usec = usec % 1000000;
-		timeradd(&tv, &adj, &res);
-		ntv.tv_sec = res.tv_sec;
-		ntv.tv_nsec = res.tv_usec * 1000;
+		PFL_GETTIMESPEC(&ts);
+		timespecadd(&ts, &adj, &ts);
 
 		rc = pthread_cond_timedwait(&mw->mw_cond,
-		    &mw->mw_mutex.pm_mutex, &ntv);
+		    &mw->mw_mutex.pm_mutex, &ts);
 		if (rc == ETIMEDOUT) {
 			psc_mutex_unlock(&mw->mw_mutex);
 			return (-ETIMEDOUT);
