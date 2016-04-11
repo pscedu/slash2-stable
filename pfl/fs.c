@@ -291,9 +291,10 @@ pflfs_req_sleep_rel(struct pscfs_req *pfr, const struct timespec *ts)
 {
 	struct psc_thread *thr;
 	struct pfl_fsthr *pft;
+	void *dummy;
 
 	thr = pfr->pfr_thread;
 	pft = thr->pscthr_private;
 	pfl_multiwait_entercritsect(&pft->pft_multiwait);
-	return (pflfs_req_multiwait_rel(pfr, NULL, ts));
+	return (pflfs_req_multiwait_rel(pfr, &dummy, ts));
 }
