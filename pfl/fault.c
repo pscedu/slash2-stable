@@ -394,6 +394,7 @@ psc_ctlparam_faults(int fd, struct psc_ctlmsghdr *mh,
 	    strcmp(levels[2], "delay")  != 0 &&
 	    strcmp(levels[2], "hits")   != 0 &&
 	    strcmp(levels[2], "unhits") != 0 &&
+	    strcmp(levels[2], "interval") != 0 &&
 	    strcmp(levels[2], "retval") != 0)
 		return (psc_ctlsenderr(fd, mh,
 		    "invalid faults field: %s", levels[2]));
