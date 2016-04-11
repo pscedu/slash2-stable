@@ -628,7 +628,7 @@ msl_open(struct pscfs_req *pfr, pscfs_inum_t inum, int oflags,
 
  out:
 	if (c) {
-		DEBUG_FCMH(rc ? PLL_INFO : PLL_DIAG, c, 
+		DEBUG_FCMH(rc ? PLL_INFO : PLL_DIAG, c,
 		    "new mfh=%p dir=%s rc=%d oflags=%#o",
 		    *mfhp, (oflags & O_DIRECTORY) ? "yes" : "no", rc, oflags);
 		fcmh_op_done(c);
@@ -1791,6 +1791,7 @@ mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off,
 
 	if (0) {
  out:
+		rc = abs(rc);
 		psclogs_diag(SLCSS_FSOP, "READDIR: fid="SLPRI_FID" "
 		    "size=%zd off=%"PSCPRIdOFFT" rc=%d",
 		    fcmh_2_fid(d), size, off, rc);
@@ -2263,15 +2264,14 @@ slc_log_get_fsctx_uprog(struct psc_thread *thr)
 
 	pft = thr->pscthr_private;
 	if (pft->pft_uprog[0] == '\0' && pft->pft_pfr) {
+		struct msl_fhent *mfh;
 		pid_t pid;
 
 		pfr = pft->pft_pfr; /* set by GETPFR() */
-		if (pfr && pfr->pfr_fuse_fi) {
-			struct msl_fhent *mfh;
-
-			mfh = (void *)pfr->pfr_fuse_fi->fh; // XXX protocol violation
+		mfh = pfr ? pflfs_req_getfh(pfr) : NULL;
+		if (mfh)
 			pid = mfh->mfh_pid;
-		} else
+		else
 			pid = pscfs_getclientctx(pfr)->pfcc_pid;
 
 		slc_getuprog(pid, pft->pft_uprog,
@@ -3959,8 +3959,8 @@ msl_init(void)
 	slc_rpc_initsvc();
 
 	sl_nbrqset = pscrpc_prep_set();
-	pscrpc_nbreapthr_spawn(sl_nbrqset, MSTHRT_NBRQ, 8,
-	    "msnbrqthr%d");
+	pscrpc_nbreapthr_spawn(sl_nbrqset, MSTHRT_NBRQ, 
+	    NUM_NBRQ_THREADS, "msnbrqthr%d");
 
 	msctlthr_spawn();
 
@@ -4129,9 +4129,9 @@ msl_filehandle_freeze(struct pflfs_filehandle *pfh)
 	struct msl_fhent *mfh;
 	struct fidc_membh *f;
 
-	mfh = pfh->pfh_data;
+	mfh = pfh->pfh_mod_data;
 	f = mfh->mfh_fcmh;
-	pfh->pfh_data = mff = PSCALLOC(sizeof(*mff));
+	pfh->pfh_mod_data = mff = PSCALLOC(sizeof(*mff));
 	mff->mff_mfh = *mfh;
 	mff->mff_fg = f->fcmh_fg;
 	fcmh_op_done_type(f, FCMH_OPCNT_OPEN);
@@ -4148,8 +4148,8 @@ msl_filehandle_thaw(struct pflfs_filehandle *pfh)
 	struct msl_fhent *mfh;
 	struct fidc_membh *f;
 
-	mff = pfh->pfh_data;
-	pfh->pfh_data = mfh = psc_pool_get(msl_mfh_pool);
+	mff = pfh->pfh_mod_data;
+	pfh->pfh_mod_data = mfh = psc_pool_get(msl_mfh_pool);
 	*mfh = mff->mff_mfh;
 	INIT_SPINLOCK(&mfh->mfh_lock);
 	INIT_PSC_LISTENTRY(&mfh->mfh_lentry);
