@@ -105,7 +105,11 @@ _pfl_fault_here(struct pfl_fault *pflt, int *rcp, int rc)
 	    pflt->pflt_hits >= pflt->pflt_count)
 		goto out;
 
-	if (pflt->pflt_chance < (int)psc_random32u(100))
+	/*
+	 * Ignore probability if a count is explicitly given.
+	 */
+	if (pflt->pflt_count < 0 &&
+	    pflt->pflt_chance < (int)psc_random32u(100))
 		goto out;
 
 	if (pflt->pflt_interval) {
@@ -125,15 +129,17 @@ _pfl_fault_here(struct pfl_fault *pflt, int *rcp, int rc)
 			*rcp = rc;
 	}
 	delay = pflt->pflt_delay;
+
+	pflt->pflt_hits++;
 	pfl_fault_unlock(pflt);
 
 	if (delay)
 		sleep(delay);
  out:
-	if (faulted)
-		pflt->pflt_hits++;
-	else
+	if (!faulted) {
 		pflt->pflt_unhits++;
+		pfl_fault_unlock(pflt);
+	}
 	return (faulted);
 }
 
@@ -388,6 +394,7 @@ psc_ctlparam_faults(int fd, struct psc_ctlmsghdr *mh,
 	    strcmp(levels[2], "delay")  != 0 &&
 	    strcmp(levels[2], "hits")   != 0 &&
 	    strcmp(levels[2], "unhits") != 0 &&
+	    strcmp(levels[2], "interval") != 0 &&
 	    strcmp(levels[2], "retval") != 0)
 		return (psc_ctlsenderr(fd, mh,
 		    "invalid faults field: %s", levels[2]));

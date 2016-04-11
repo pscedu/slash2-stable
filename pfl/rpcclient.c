@@ -335,6 +335,7 @@ expired_request(void *data)
 	spinlock(&req->rq_lock);
 	req->rq_resend = 1;
 	freelock(&req->rq_lock);
+	OPSTAT_INCR("pfl.rpc_retries");
 
 	return 0;
 }

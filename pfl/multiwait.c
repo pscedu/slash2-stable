@@ -210,16 +210,14 @@ void
 pfl_multiwaitcond_wakeup(struct pfl_multiwaitcond *mwc)
 {
 	struct pfl_multiwait *mw;
-	int j, count;
-
-	count = 0;
+	int j, count = 0;
 
  restart:
 	psc_mutex_lock(&mwc->mwc_mutex);
 	if (pfl_multiwaitcond_trylockallmw(mwc)) {
 		if (count++ == 300000)
 			psclog_errorx("mwcond %s failed to lock his "
-			    "multiwaits after attempting many times, "
+			    "multiwaits after attempting many times; "
 			    "possible deadlock", mwc->mwc_name);
 		psc_mutex_unlock(&mwc->mwc_mutex);
 		pscthr_yield();
@@ -417,12 +415,25 @@ pfl_multiwait_setcondwakeable(struct pfl_multiwait *mw,
 }
 
 int
-pfl_multiwait_usecs(struct pfl_multiwait *mw, void *datap, int usec)
+pfl_multiwait_rel(struct pfl_multiwait *mw, void *datap, int sec,
+    int nsec)
 {
+	struct timespec adj = { sec, nsec };
 	struct pfl_multiwaitcond *mwc;
-	int rc, won, j;
+	int rc, won = 0, j;
 
-	won = 0;
+	/* Sanity checks. */
+	if (psc_dynarray_len(&mw->mw_conds) == 0)
+		psc_fatalx("multiwait %s has no conditions and "
+		    "will never wake up", mw->mw_name);
+
+	/* Check for no active conditions. */
+	DYNARRAY_FOREACH(mwc, j, &mw->mw_conds)
+		if (psc_vbitmap_get(mw->mw_condmask, j))
+			break;
+	if (!mwc)
+		psc_fatalx("multiwait %s has all conditions masked and "
+		    "will never wake up", mw->mw_name);
 
  restart:
 	psc_mutex_lock(&mw->mw_mutex);
@@ -434,32 +445,16 @@ pfl_multiwait_usecs(struct pfl_multiwait *mw, void *datap, int usec)
 			goto checkwaker;
 	}
 
-	if (psc_dynarray_len(&mw->mw_conds) == 0)
-		psc_fatalx("multiwait %s has no conditions and "
-		    "will never wake up", mw->mw_name);
+	DLOG_MULTIWAIT(PLL_DEBUG, mw, "entering wait; sec=%d nsec=%d",
+	    sec, nsec);
+	if (sec || nsec) {
+		struct timespec ts;
 
-	/* check for no active conditions */
-	for (j = 0; j < psc_dynarray_len(&mw->mw_conds); j++)
-		if (psc_vbitmap_get(mw->mw_condmask, j))
-			goto wait;
-	psc_fatalx("multiwait %s has all conditions masked and "
-	    "will never wake up", mw->mw_name);
-
- wait:
-	DLOG_MULTIWAIT(PLL_DEBUG, mw, "entering wait usec=%d", usec);
-	if (usec) {
-		struct timeval tv, res, adj;
-		struct timespec ntv;
-
-		PFL_GETTIMEVAL(&tv);
-		adj.tv_sec = usec / 1000000;
-		adj.tv_usec = usec % 1000000;
-		timeradd(&tv, &adj, &res);
-		ntv.tv_sec = res.tv_sec;
-		ntv.tv_nsec = res.tv_usec * 1000;
+		PFL_GETTIMESPEC(&ts);
+		timespecadd(&ts, &adj, &ts);
 
 		rc = pthread_cond_timedwait(&mw->mw_cond,
-		    &mw->mw_mutex.pm_mutex, &ntv);
+		    &mw->mw_mutex.pm_mutex, &ts);
 		if (rc == ETIMEDOUT) {
 			psc_mutex_unlock(&mw->mw_mutex);
 			return (-ETIMEDOUT);
@@ -567,7 +562,11 @@ pfl_multiwaitcond_nwaiters(struct pfl_multiwaitcond *mwc)
 }
 
 /*
- * Enter a multiwait critical section.
+ * Enter a multiwait critical section.  As multiple conditions need to
+ * be checked before entering sleep, this API provides a 'critical
+ * section' so all such conditions can be checked, in case an earlier
+ * checked condition changes when we are checking later ones before
+ * going to sleep, in which case, multiwait will return immediately.
  * @mw: the multiwait.
  */
 void
@@ -587,8 +586,8 @@ void
 pfl_multiwait_leavecritsect(struct pfl_multiwait *mw)
 {
 	psc_mutex_lock(&mw->mw_mutex);
+	psc_assert(mw->mw_flags & PMWF_CRITSECT);
 	mw->mw_flags &= ~PMWF_CRITSECT;
-	mw->mw_waker = NULL;
 	psc_mutex_unlock(&mw->mw_mutex);
 }
 
@@ -602,17 +601,14 @@ pfl_multiwait_hascond(struct pfl_multiwait *mw,
     struct pfl_multiwaitcond *mwc)
 {
 	struct pfl_multiwaitcond *c;
-	int j, rc;
+	int i;
 
-	rc = 0;
 	psc_mutex_lock(&mw->mw_mutex);
-	DYNARRAY_FOREACH(c, j, &mw->mw_conds)
-		if (c == mwc) {
-			rc = 1;
+	DYNARRAY_FOREACH(c, i, &mw->mw_conds)
+		if (c == mwc)
 			break;
-		}
 	psc_mutex_unlock(&mw->mw_mutex);
-	return (rc);
+	return (c ? 1 : 0);
 }
 
 /*

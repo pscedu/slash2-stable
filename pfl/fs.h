@@ -34,10 +34,12 @@
 
 #include "pfl/dynarray.h"
 #include "pfl/list.h"
+#include "pfl/multiwait.h"
 
 struct iovec;
 struct stat;
 struct statvfs;
+struct timespec;
 
 struct psc_thread;
 
@@ -138,11 +140,33 @@ struct pscfs_clientctx {
 	pid_t		pfcc_pid;
 };
 
+struct pflfs_filehandle {
+	struct psc_listentry		 pfh_lentry;
+	void				*pfh_ufsi_fhdata; // userland FS interface
+	void				*pfh_mod_data;	// XXX per-module private data
+};
+
+struct pscfs_req {
+	struct pscfs			*pfr_mod;
+	struct psc_spinlock		 pfr_lock;
+	void				*pfr_ufsi_req;	// userland FS interface
+	void				*pfr_ufsi_fhdata; // userland FS interface
+	struct pscfs_clientctx		 pfr_clientctx;
+	struct psc_listentry		 pfr_lentry;
+	struct timespec			 pfr_start;
+	int				 pfr_retries;
+	int				 pfr_interrupted; // XXX flags
+	struct psc_thread		*pfr_thread;
+	int				 pfr_refcnt;
+	int				 pfr_rc;
+};
+
 struct pfl_fsthr {
-	struct psc_listentry		 pft_lentry;
 	struct pscfs_req		*pft_pfr;
 	char				 pft_uprog[128];
 	void				*pft_private;	// XXX make per-module
+	struct pfl_multiwait		 pft_multiwait;
+	struct pfl_multiwaitcond	 pft_multiwaitcond;
 };
 
 void	pscfs_addarg(struct pscfs_args *, const char *);
@@ -216,7 +240,8 @@ int	pscfs_notify_inval_entry(void *, pscfs_inum_t, const char *, size_t);
 
 #define PSCFS_SETATTRF_ALL		(~0)
 
-int pscfs_ctlparam(int, struct psc_ctlmsghdr *, struct psc_ctlmsg_param *, char **, int);
+int	pscfs_ctlparam(int, struct psc_ctlmsghdr *,
+	    struct psc_ctlmsg_param *, char **, int);
 
 #define PFLFS_MOD_POS_LAST		(-1)
 
@@ -237,7 +262,16 @@ void	_pflfs_module_init_threads(struct pscfs *);
 void	*pfl_fsthr_getpri(struct psc_thread *);
 void	 pfl_fsthr_setpri(struct psc_thread *, void *);
 
+void	*pflfs_req_getfh(struct pscfs_req *);
+int	 pflfs_req_multiwait_rel(struct pscfs_req *, void *,
+	    const struct timespec *);
+int	 pflfs_req_sleep_rel(struct pscfs_req *,
+	    const struct timespec *);
+
 extern struct psc_dynarray		pscfs_modules;
 extern struct psc_lockedlist		pflfs_filehandles;
+
+extern double				pscfs_entry_timeout;
+extern double				pscfs_attr_timeout;
 
 #endif /* _PFL_FS_H_ */
