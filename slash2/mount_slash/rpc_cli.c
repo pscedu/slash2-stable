@@ -271,7 +271,7 @@ slc_rpc_retry(struct pscfs_req *pfr, int *rc)
 	}
 
 	if (retry) {
-		sleep(count ? count * 1 : 10);
+		sleep(count ? count * 3 : 10);
 		if (pfr && pfr->pfr_interrupted) {
 			retry = 0;
 			*rc = EINTR;
