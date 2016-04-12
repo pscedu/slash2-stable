@@ -322,7 +322,8 @@ struct pscrpc_request {
 	int				 rq_reqlen;
 	int				 rq_replen;
 	int				 rq_import_generation;
-	time_t				 rq_sent;		/* time when request was sent or re-sent */
+	struct timespec			 rq_sent_ts;		/* time when request was sent or re-sent */
+#define rq_sent rq_sent_ts.tv_sec
 	psc_spinlock_t			 rq_lock;
 	uint64_t			 rq_transno;
 	uint64_t			 rq_xid;
@@ -501,8 +502,11 @@ int	 pscrpc_ni_init(int, int);
 void	 pscrpc_init_portals(int, int);
 void	 pscrpc_exit_portals(void);
 
-extern int	  pfl_rpc_timeout;
-extern int	  pfl_rpc_max_retry;
+extern int			pfl_rpc_timeout;
+extern int			pfl_rpc_max_retry;
+
+extern struct pfl_opstats_grad	pfl_rpc_service_reply_latencies;
+extern struct pfl_opstats_grad	pfl_rpc_client_request_latencies;
 
 /* packgeneric.c */
 int	 pscrpc_msg_size(int, const int *);

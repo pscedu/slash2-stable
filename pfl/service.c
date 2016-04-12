@@ -48,19 +48,6 @@ static int test_req_buffer_pressure;
 
 static int pscrpc_server_post_idle_rqbds(struct pscrpc_service *);
 
-struct pfl_opstats_grad pfl_rpc_service_reply_latencies;
-
-int64_t pfl_rpc_service_reply_latency_durations[] = {
-	0,
-	1,
-	5,
-	10,
-	20,
-	30,
-	40,
-	50,
-};
-
 PSCLIST_HEAD(pscrpc_all_services);
 psc_spinlock_t pscrpc_all_services_lock = SPINLOCK_INIT;
 
@@ -854,6 +841,7 @@ pscrpc_unregister_service(struct pscrpc_service *svc)
 	}
 
 	/* schedule all outstanding replies to terminate them */
+#if 0
 	SVC_LOCK(svc);
 	while (!psc_listhd_empty(&svc->srv_active_replies)) {
 		rs = psc_listhd_first_obj(&svc->srv_active_replies,
@@ -862,6 +850,7 @@ pscrpc_unregister_service(struct pscrpc_service *svc)
 		//pscrpc_schedule_difficult_reply(rs);
 	}
 	SVC_ULOCK(svc);
+#endif
 
 	/*
 	 * Purge the request queue.  NB No new replies (rqbds all unlinked)
@@ -938,20 +927,11 @@ pscrpc_init_svc(int nbufs, int bufsize, int max_req_size,
     int max_reply_size, int req_portal, int rep_portal, char *name,
     svc_handler_t handler, int flags)
 {
-	static int init_globals;
 	struct pscrpc_service *svc;
 	int rc;
 
-	if (!init_globals) {
-		init_globals = 1;
-		pfl_opstats_grad_init(&pfl_rpc_service_reply_latencies,
-		    OPSTF_BASE10,
-		    pfl_rpc_service_reply_latency_durations,
-		    nitems(pfl_rpc_service_reply_latency_durations),
-		    "rpc-reply-latency:%ss");
-	}
-
-	psclog_info("bufsize %d max_req_size %d", bufsize, max_req_size);
+	psclog_debug("bufsize %d max_req_size %d", bufsize,
+	    max_req_size);
 
 	LASSERT(nbufs > 0);
 	LASSERT(bufsize >= max_req_size);
