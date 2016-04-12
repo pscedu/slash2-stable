@@ -835,8 +835,8 @@ _pscrpc_set_check(struct pscrpc_request_set *set, int finish_one)
 			}
 			if (req->rq_resend) {
 				/*
- 				 * XXX This code is never executed.
- 				 */
+				 * XXX This code is never executed.
+				 */
 				if (req->rq_no_resend) {
 					if (!req->rq_err)
 						req->rq_err = 1;
@@ -1484,7 +1484,10 @@ psc_ctlrep_getrpcrq(int fd, struct psc_ctlmsghdr *mh, void *m)
 		pcrq->pcrq_bulk_abortable = rq->rq_bulk_abortable;
 		pcrq->pcrq_refcount = atomic_read(&rq->rq_refcount);
 		pcrq->pcrq_retries = atomic_read(&rq->rq_retries);
-		libcfs_nid2str2(rq->rq_peer.nid, pcrq->pcrq_peer);
+		libcfs_nid2str2(rq->rq_import &&
+		    rq->rq_import->imp_connection ?
+		    rq->rq_import->imp_connection->c_peer.nid :
+		    rq->rq_peer.nid, pcrq->pcrq_peer);
 		libcfs_nid2str2(rq->rq_self, pcrq->pcrq_self);
 		pcrq->pcrq_phase = rq->rq_phase;
 		pcrq->pcrq_send_state = rq->rq_send_state;
