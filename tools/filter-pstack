@@ -19,7 +19,7 @@ my @ign = (
 	[ qw(_psc_waitq_waitabs pscfs_fuse_listener_loop) ],
 	[ qw(_psc_waitq_waitabs pscrpcthr_main _pscthr_begin) ],
 	[ qw(_psc_waitq_waitrel pjournal_thr_main _pscthr_begin) ],
-	[ qw(_psc_waitq_waitrel psc_compl_waitrel_s pscrpc_nbreapthr_main _pscthr_begin) ],
+	[ qw(_psc_waitq_waitrel psc_compl_waitrel pscrpc_nbreapthr_main _pscthr_begin) ],
 	[ qw(accept libcfs_sock_accept lnet_acceptor _pscthr_begin) ],
 	[ qw(accept lnet_acceptor psc_usklndthr_begin _pscthr_begin) ],
 	[ qw(poll pscfs_fuse_listener_loop) ],
@@ -31,6 +31,7 @@ my @ign = (
 	[ qw(_?_?sleep slmbkdbthr_main _pscthr_begin) ],
 	[ qw(_psc_waitq_waitabs _lc_get slmbchrqthr_main _pscthr_begin) ],
 	[ qw(_psc_waitq_waitabs _lc_get slmrcmthr_main _pscthr_begin) ],
+	[ qw(_psc_waitq_waitabs slmjcursorthr_main _pscthr_begin) ],
 	[ qw(_psc_waitq_waitrel slmjreclaimthr_main _pscthr_begin) ],
 	[ qw(cv_wait txg_slash2_wait zfs_write fop_write zfsslash2_write_cursor slmjcursorthr_main _pscthr_begin) ],
 	[ qw(cv_wait txg_slash2_wait zfs_write zfsslash2_write_cursor slmjcursorthr_main _pscthr_begin) ],
@@ -73,7 +74,7 @@ my @ign = (
 	[ qw(_psc_waitq_waitabs _lc_get slrpc_batch_thr_main _pscthr_begin) ],
 	[ qw(_psc_waitq_waitrel sl_freapthr_main _pscthr_begin) ],
 	[ qw(_sl_csvc_waitrelv slconnthr_main _pscthr_begin) ],
-	[ qw(pfl_multiwait_usecs slconnthr_main _pscthr_begin) ],
+	[ qw(pfl_multiwait_rel slconnthr_main _pscthr_begin) ],
 	[ qw(.*sleep sl_nbrqthr_main _pscthr_begin) ],
 
 	# zest
