@@ -1,6 +1,16 @@
 04/12/2016
 ----------
 
+Move v1.12 tag as follows:
+
+	$ git tag -d v1.12
+	$ git push --delete origin v1.12
+	$ git tag -a v1.12 -m "Release 1.12"
+	$ git push --tags
+
+04/12/2016
+----------
+
 Release 1.12.  The highlights of this release are:
 
 	* batch RPC rework
