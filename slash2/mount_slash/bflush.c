@@ -70,6 +70,9 @@ struct psc_waitq		 slc_bflush_waitq = PSC_WAITQ_INIT;
 psc_spinlock_t			 slc_bflush_lock = SPINLOCK_INIT;
 int				 slc_bflush_tmout_flags;
 
+int64_t				 slc_pending_writes;
+psc_spinlock_t			 slc_pending_writes_lock = SPINLOCK_INIT;
+
 psc_atomic32_t			 slc_write_coalesce_max;
 
 __static int
@@ -374,6 +377,9 @@ bmap_flush_resched(struct bmpc_ioreq *r, int rc)
 	 * XXX These magic numbers should be made into tunables.
 	 *
 	 * Note that PSCRPC_OBD_TIMEOUT = 60.
+	 *
+	 * XXX: This logic ignores the fact that a large request
+	 * will always be selected.
 	 */
 	if (r->biorq_retries < 32)
 		delta = 20;
