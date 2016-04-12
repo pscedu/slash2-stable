@@ -1017,8 +1017,8 @@ psc_ctlmsg_rpcrq_prhdr(__unusedx struct psc_ctlmsghdr *mh,
 	    "peernid", "qp", "pp", "qlen", "plen",
 	    "try", "nw");
 
-	pflctl_print_extra_field(&remaining, "%4s ", "nbrc");
-	pflctl_print_extra_field(&remaining, "%2s ", "tr");
+	pflctl_print_extra_field(&remaining, " %4s", "nbrc");
+	pflctl_print_extra_field(&remaining, " %2s", "tr");
 	pflctl_print_extra_field(&remaining, "%2s", "ig");
 
 	printf("\n");
@@ -1054,7 +1054,8 @@ psc_ctlmsg_rpcrq_prdat(__unusedx const struct psc_ctlmsghdr *mh,
 	    "%3d %2d",
 	    pcrq->pcrq_xid, pcrq->pcrq_refcount,
 	    pcrq->pcrq_type == PSCRPC_MSG_ERR ? 'e' :
-	      pcrq->pcrq_type == PSCRPC_MSG_REPLY ? 'p' : 'q',
+	      pcrq->pcrq_type == PSCRPC_MSG_REQUEST ? 'q' :
+	      pcrq->pcrq_type == PSCRPC_MSG_REPLY ? 'p' : '?',
 	    pcrq->pcrq_phase >= PSCRPC_RQ_PHASE_NEW &&
 	    pcrq->pcrq_phase <= PSCRPC_RQ_PHASE_COMPLETE ?
 	      PSCRPC_PHASE_NAMES[pcrq->pcrq_phase -
@@ -1083,11 +1084,11 @@ psc_ctlmsg_rpcrq_prdat(__unusedx const struct psc_ctlmsghdr *mh,
 	    pcrq->pcrq_reqlen, pcrq->pcrq_replen,
 	    pcrq->pcrq_retries, pcrq->pcrq_nwaiters);
 
-	pflctl_print_extra_field(&remaining, "%4d ",
+	pflctl_print_extra_field(&remaining, " %4d",
 	    pcrq->pcrq_nob_received);
-	pflctl_print_extra_field(&remaining, "%2"PRId64" ",
+	pflctl_print_extra_field(&remaining, " %2"PRId64,
 	    pcrq->pcrq_transno);
-	pflctl_print_extra_field(&remaining, "%2d",
+	pflctl_print_extra_field(&remaining, " %2d",
 	    pcrq->pcrq_import_generation);
 
 	(void)printf("\n");
