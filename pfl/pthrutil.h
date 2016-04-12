@@ -126,4 +126,30 @@ psc_listhd_empty_mutex_locked(struct pfl_mutex *m, struct psclist_head *hd)
 # include "pfl/compat/pthread_barrier.h"
 #endif
 
+enum pfl_lockprim {
+	PFL_LOCKPRIMT_MUTEX = 10,
+	PFL_LOCKPRIMT_RWLOCK,
+	PFL_LOCKPRIMT_SPIN,
+};
+
+#define PFL_LOCKPRIM_ULOCK(type, lockp)					\
+	do {								\
+		if (lockp) {						\
+			switch (type) {					\
+			case PFL_LOCKPRIMT_SPIN:			\
+				freelock((struct psc_spinlock *)lockp);	\
+				break;					\
+			case PFL_LOCKPRIMT_MUTEX:			\
+				psc_mutex_unlock(lockp);		\
+				break;					\
+			case PFL_LOCKPRIMT_RWLOCK:			\
+				pfl_rwlock_unlock(lockp);		\
+				break;					\
+			default:					\
+				psc_fatalx("invalid locking primitive "	\
+				    "type: %d", (type));		\
+			}						\
+		}							\
+	} while (0)
+
 #endif /* _PFL_PTHRUTIL_H_ */

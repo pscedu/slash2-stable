@@ -805,7 +805,7 @@ pscrpc_wake_client_req(struct pscrpc_request *req)
 			 */						\
 			if (mtx)					\
 				ret = _psc_waitq_waitabs((wq),		\
-				    PFL_WAITQWF_MUTEX, (mtx),		\
+				    PFL_LOCKPRIMT_MUTEX, (mtx),		\
 				    &_abstime);				\
 			else						\
 				ret = psc_waitq_waitabs((wq), (lck),	\

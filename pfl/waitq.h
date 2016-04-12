@@ -59,17 +59,12 @@ struct psc_waitq {
 
 #endif
 
-/* wait flags */
-#define PFL_WAITQWF_SPIN		(1 << 0)
-#define PFL_WAITQWF_MUTEX		(1 << 1)
-#define PFL_WAITQWF_RWLOCK		(1 << 2)
-
-/**
- * psc_waitq_wait - Wait until resource managed by wq_cond is available.
+/*
+ * Wait until resource managed by wq_cond is available.
  * @wq: wait queue.
  * @lk: optional lock to prevent race condition in waiting.
  */
-#define psc_waitq_wait(wq, lk)		 _psc_waitq_waitabs((wq), PFL_WAITQWF_SPIN, (lk), NULL)
+#define psc_waitq_wait(wq, lk)		 _psc_waitq_waitabs((wq), PFL_LOCKPRIMT_SPIN, (lk), NULL)
 #define psc_waitq_waitf(wq, fl, p)	 _psc_waitq_waitabs((wq), (fl), (p), NULL)
 
 /*
@@ -82,7 +77,7 @@ struct psc_waitq {
  * Returns: ETIMEDOUT if the resource did not become available if
  * @s or @ns was specififed.
  */
-#define psc_waitq_waitrel(wq, lk, s, ns) _psc_waitq_waitrel((wq), PFL_WAITQWF_SPIN, (lk), (s), (ns))
+#define psc_waitq_waitrel(wq, lk, s, ns) _psc_waitq_waitrel((wq), PFL_LOCKPRIMT_SPIN, (lk), (s), (ns))
 
 #define psc_waitq_waitrel_s(wq, lk, s)	 psc_waitq_waitrel((wq), (lk), (s), 0L)
 #define psc_waitq_waitrel_us(wq, lk, us) psc_waitq_waitrel((wq), (lk), 0L, (us) * 1000L)
@@ -93,7 +88,7 @@ struct psc_waitq {
 #define psc_waitq_waitrelf_us(wq, fl, p, us)	\
 					_psc_waitq_waitrel((wq), (fl), (p), 0L, (us) * 1000L)
 
-#define psc_waitq_waitabs(wq, lk, ts)	_psc_waitq_waitabs((wq), PFL_WAITQWF_SPIN, (lk), (ts))
+#define psc_waitq_waitabs(wq, lk, ts)	_psc_waitq_waitabs((wq), PFL_LOCKPRIMT_SPIN, (lk), (ts))
 
 /*
  * Determine number of threads waiting on a waitq.
@@ -108,7 +103,7 @@ void	_psc_waitq_init(struct psc_waitq *, int);
 void	 psc_waitq_destroy(struct psc_waitq *);
 void	 psc_waitq_wakeone(struct psc_waitq *);
 void	 psc_waitq_wakeall(struct psc_waitq *);
-int	_psc_waitq_waitrel(struct psc_waitq *, int, void *, long, long);
-int	_psc_waitq_waitabs(struct psc_waitq *, int, void *, const struct timespec *);
+int	_psc_waitq_waitrel(struct psc_waitq *, enum pfl_lockprim, void *, long, long);
+int	_psc_waitq_waitabs(struct psc_waitq *, enum pfl_lockprim, void *, const struct timespec *);
 
 #endif /* _PFL_WAITQ_H_ */
