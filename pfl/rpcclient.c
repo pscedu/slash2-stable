@@ -1415,6 +1415,14 @@ pscrpc_resend_req(struct pscrpc_request *req)
 	freelock(&req->rq_lock);
 }
 
+int
+pflrpc_req_get_opcode(struct pscrpc_request *rq)
+{
+	if (rq && rq->rq_reqmsg)
+		return (rq->rq_reqmsg->opc);
+	return (0);
+}
+
 #ifdef PFL_CTL
 
 #include "pfl/ctl.h"

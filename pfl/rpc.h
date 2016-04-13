@@ -598,6 +598,8 @@ void	 pscrpc_set_remove_req(struct pscrpc_request_set *, struct pscrpc_request *
 void	 pscrpc_set_remove_req_locked(struct pscrpc_request_set *, struct pscrpc_request *);
 int	 pscrpc_set_wait(struct pscrpc_request_set *);
 
+int	 pflrpc_req_get_opcode(struct pscrpc_request *);
+
 struct pscrpc_bulk_desc *
 	 pscrpc_prep_bulk_exp(struct pscrpc_request *, int, int, int);
 
