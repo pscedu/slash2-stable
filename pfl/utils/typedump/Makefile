@@ -14,6 +14,6 @@ include ${PFLMK}
 
 typedump.c: ${OBJDIR}/typedump.h
 
-${OBJDIR}/typedump.h: ${PFL_BASE}/*.h
+${OBJDIR}/typedump.h: ${OBJDIR} ${PFL_BASE}/*.h
 	${GENTYPES} -h '../../*.h' $(				\
 	    ) -x '../../{fsmod,refmgr,queue,tree}.h' > $@
