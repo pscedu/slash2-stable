@@ -373,7 +373,7 @@ all: checksrcs ${_TDEPLIST} recurse-all all-hook ${OBJDIR}
 ${OBJDIR}:
 	@${MKDIRS} -m 2775 ${OBJDIR}
 
-checksrcs:
+checksrcs: ${SRCS}
 	@for i in ${SRCS}; do						\
 		[ -n "$$i" ] || continue;				\
 		if ! [ -e "$$i" ]; then					\
