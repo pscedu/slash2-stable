@@ -634,8 +634,10 @@ pscrpc_queue_wait(struct pscrpc_request *req)
 	if (rc)
 		GOTO(out, 0);
 
-	if (req->rq_err)
+	if (req->rq_err) {
+		psc_assert(req->rq_status);
 		GOTO(out, rc = req->rq_status);
+	}
 
 	/* Resend if we need to, unless we were interrupted. */
 	if (req->rq_resend && !req->rq_intr) {
@@ -1445,6 +1447,7 @@ psc_ctlrep_getrpcrq(int fd, struct psc_ctlmsghdr *mh, void *m)
 {
 	struct psc_ctlmsg_rpcrq *pcrq = m;
 	struct pscrpc_request *rq;
+	struct pscrpc_import *imp;
 	int rc = 1;
 
 	PLL_LOCK(&pscrpc_requests);
@@ -1484,9 +1487,9 @@ psc_ctlrep_getrpcrq(int fd, struct psc_ctlmsghdr *mh, void *m)
 		pcrq->pcrq_bulk_abortable = rq->rq_bulk_abortable;
 		pcrq->pcrq_refcount = atomic_read(&rq->rq_refcount);
 		pcrq->pcrq_retries = atomic_read(&rq->rq_retries);
-		libcfs_nid2str2(rq->rq_import &&
-		    rq->rq_import->imp_connection ?
-		    rq->rq_import->imp_connection->c_peer.nid :
+		imp = rq->rq_import;
+		libcfs_nid2str2(imp && imp->imp_connection ?
+		    imp->imp_connection->c_peer.nid :
 		    rq->rq_peer.nid, pcrq->pcrq_peer);
 		libcfs_nid2str2(rq->rq_self, pcrq->pcrq_self);
 		pcrq->pcrq_phase = rq->rq_phase;
