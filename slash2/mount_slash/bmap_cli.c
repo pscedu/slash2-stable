@@ -1214,6 +1214,7 @@ msl_bmap_to_csvc(struct bmap *b, int exclusive, struct sl_resm **pm,
 			 * online since any will suffice.
 			 */
 //			psc_assert(!hasvalid && !hasdataflag);
+			pfl_multiwait_leavecritsect(mw);
 			continue;
 		}
 
@@ -1226,7 +1227,6 @@ msl_bmap_to_csvc(struct bmap *b, int exclusive, struct sl_resm **pm,
 		// XXX if ETIMEDOUT, return NULL, otherwise nonblock
 		// recheck
 	}
-	pfl_multiwait_leavecritsect(mw);
 	return (-ETIMEDOUT);
 }
 
