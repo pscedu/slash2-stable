@@ -66,10 +66,16 @@ pfl_fault_destroy(int pos)
 }
 
 struct pfl_fault *
-_pfl_fault_get(const char *name, int populate)
+_pfl_fault_get(int populate, const char *namefmt, ...)
 {
+	char name[PFL_FAULT_NAME_MAX];
 	struct pfl_fault *flt = NULL;
 	int pos, locked;
+	va_list ap;
+
+	va_start(ap, namefmt);
+	vsnprintf(name, sizeof(name), namefmt, ap);
+	va_end(ap);
 
 	locked = reqlock(&pfl_faults_lock);
 	pos = psc_dynarray_bsearch(&pfl_faults, name, _pfl_fault_cmp);

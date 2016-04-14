@@ -52,30 +52,31 @@ struct pfl_fault {
 #define	pfl_fault_lock(pflt)	spinlock(&(pflt)->pflt_lock)
 #define	pfl_fault_unlock(pflt)	freelock(&(pflt)->pflt_lock)
 
-#define pfl_fault_register(name)	_pfl_fault_get((name), 1)
-#define pfl_fault_get(name)		_pfl_fault_get((name), 1)
-#define pfl_fault_peek(name)		_pfl_fault_get((name), 0)
+#define pfl_fault_register(name, ...)	_pfl_fault_get(1, (name), ##__VA_ARGS__)
+#define pfl_fault_get(name, ...)	_pfl_fault_get(1, (name), ##__VA_ARGS__)
+#define pfl_fault_peek(name, ...)	_pfl_fault_get(0, (name), ##__VA_ARGS__)
 
 int	_pfl_fault_here(struct pfl_fault *, int *, int);
 void	 pfl_fault_destroy(int);
 struct pfl_fault *
-	_pfl_fault_get(const char *, int);
+	_pfl_fault_get(int, const char *, ...);
 
-#define pfl_fault_here_rc(name, rcp, rc)				\
+#define pfl_fault_here_rc(rcp, rc, name, ...)				\
 	({								\
 		static struct pfl_fault *_fault;			\
-		int _rc = 0;						\
+		int _fault_rc = 0;					\
 									\
 		if (_fault == NULL)					\
-			_fault = pfl_fault_get(name);			\
+			_fault = pfl_fault_get(name, ##__VA_ARGS__);	\
 		if (_fault->pflt_flags & PFLTF_ACTIVE)			\
-			_rc = _pfl_fault_here(_fault, (rcp), (rc));	\
-		_rc;							\
+			_fault_rc = _pfl_fault_here(_fault, (rcp),	\
+			    (rc));					\
+		_fault_rc;						\
 	})
 
-#define pfl_fault_here(f, rcp)	pfl_fault_here_rc((f), (rcp), 0)
+#define pfl_fault_here(rcp, name, ...)	pfl_fault_here_rc((rcp), 0, (name), ##__VA_ARGS__)
 
 extern struct psc_dynarray	pfl_faults;
-extern psc_spinlock_t		pfl_faults_lock;
+extern struct psc_spinlock	pfl_faults_lock;
 
 #endif /* _PFL_FAULT_H_ */
