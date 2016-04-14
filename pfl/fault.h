@@ -61,7 +61,9 @@ void	 pfl_fault_destroy(int);
 struct pfl_fault *
 	_pfl_fault_get(int, const char *, ...);
 
-#define pfl_fault_here_rc(rcp, rc, name, ...)				\
+#if PFL_DEBUG > 0
+
+#  define pfl_fault_here_rc(rcp, rc, name, ...)				\
 	({								\
 		static struct pfl_fault *_fault;			\
 		int _fault_rc = 0;					\
@@ -73,6 +75,10 @@ struct pfl_fault *
 			    (rc));					\
 		_fault_rc;						\
 	})
+
+#else
+#  define pfl_fault_here_rc(rcp, rc, name, ...) 0
+#endif
 
 #define pfl_fault_here(rcp, name, ...)	pfl_fault_here_rc((rcp), 0, (name), ##__VA_ARGS__)
 
