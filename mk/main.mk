@@ -125,6 +125,11 @@ EXTRACT_CFLAGS=		perl -ne 'print $$& while /-[^ID]\S+\s?/gc'
 
 # Process modules
 
+ifdef PICKLE_HAVE_FSANITIZE
+  FSANITIZE_CFLAGS=	-fsanitize=address
+  FSANITIZE_LDFLAGS=	-fsanitize=address
+endif
+
 LIBPFL=			-lpfl
 ifneq ($(filter pfl-whole,${MODULES}),)
   MODULES+=		pfl
