@@ -36,9 +36,9 @@ fi
 
 which=$(($total - $commit + 1))
 
-echo "Total commit is $total, the one you want is as follows:"
-echo
-
 output=$(git log | grep "^commit" | awk 'NR=='$which'')
-echo "$commit: $output"
+output=${output#* }
 
+printf "Total # of commit is $total, you can checkout commit $commit as follows:\n"
+printf "\ngit checkout $output\n"
+printf "\nWarning: You can only checkout a commit made directly in the stable tree!\n"
