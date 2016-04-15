@@ -322,6 +322,7 @@ pscrpc_set_remove_req(struct pscrpc_request_set *set,
 static int
 expired_request(void *data)
 {
+	int silent;
 	struct pscrpc_request *req = data;
 	struct pscrpc_import *imp = req->rq_import;
 
@@ -331,9 +332,13 @@ expired_request(void *data)
 		return (pscrpc_expire_one_request(req));
 
 	spinlock(&req->rq_lock);
+	silent = req->rq_silent_timeout;
 	req->rq_resend = 1;
 	freelock(&req->rq_lock);
 	OPSTAT_INCR("pfl.rpc_retries");
+
+	if (!silent)
+		DEBUG_REQ(PLL_WARN, req, "expired and resend");
 
 	return 0;
 }
@@ -823,8 +828,6 @@ _pscrpc_set_check(struct pscrpc_request_set *set, int finish_one)
 				 * getting nuked.
 				 */
 				status = expired_request(req);
-				DEBUG_REQ(PLL_WARN, req, "expired (resend=%d)",
-					  !status);
 
 				if (status) {
 					psc_assert(req->rq_status);
