@@ -1052,10 +1052,8 @@ pscrpc_expire_one_request(struct pscrpc_request *req)
 	if (req->rq_bulk)
 		pscrpc_unregister_bulk(req);
 
-	if (!imp->imp_igntimeout) {
-		psclog_warnx("timeout: req=%p, imp=%p", req, imp);
+	if (!imp->imp_igntimeout)
 		pscrpc_fail_import(imp, req->rq_reqmsg->conn_cnt);
-	}
 
 	return (1);
 }
