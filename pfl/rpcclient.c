@@ -1493,7 +1493,6 @@ psc_ctlrep_getrpcrq(int fd, struct psc_ctlmsghdr *mh, void *m)
 		pcrq->pcrq_no_delay = rq->rq_no_delay;
 		pcrq->pcrq_net_err = rq->rq_net_err;
 		pcrq->pcrq_abort_reply = rq->rq_abort_reply;
-		pcrq->pcrq_timeoutable = rq->rq_timeoutable;
 		pcrq->pcrq_has_bulk = !!rq->rq_bulk;
 		pcrq->pcrq_has_set = !!rq->rq_set;
 		pcrq->pcrq_has_intr = !!rq->rq_interpret_reply;

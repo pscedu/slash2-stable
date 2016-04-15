@@ -1046,7 +1046,7 @@ psc_ctlmsg_rpcrq_prdat(__unusedx const struct psc_ctlmsghdr *mh,
 		*p = '\0';
 
 	printf("%7"PRId64" %2d "
-	    "%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c "
+	    "%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c "
 	    "%2d %4d "
 	    "%15s "
 	    "%2d %2d "
@@ -1076,7 +1076,6 @@ psc_ctlmsg_rpcrq_prdat(__unusedx const struct psc_ctlmsghdr *mh,
 	    pcrq->pcrq_resend		? 'S' : '-',
 	    pcrq->pcrq_restart		? 'T' : '-',
 	    pcrq->pcrq_timedout		? 'X' : '-',
-	    pcrq->pcrq_timeoutable	? 't' : '-',
 	    pcrq->pcrq_waiting		? 'W' : '-',
 	    pcrq->pcrq_opc, abs(pcrq->pcrq_status),
 	    pcrq->pcrq_peer,

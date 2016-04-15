@@ -341,7 +341,6 @@ struct pscrpc_request {
 					 rq_no_delay:1,
 					 rq_net_err:1,
 					 rq_abort_reply:1,
-					 rq_timeoutable:1,
 					 rq_bulk_abortable:1,
 					 rq_silent_timeout:1;
 	atomic_t			 rq_refcount;		/* client-side refcnt for SENT race */
