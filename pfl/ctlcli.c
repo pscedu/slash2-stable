@@ -926,10 +926,10 @@ void
 psc_ctlmsg_fault_prhdr(__unusedx struct psc_ctlmsghdr *mh,
     __unusedx const void *m)
 {
-	printf("%-28s %3s %7s %7s %5s "
-	    "%10s %5s %4s %3s %8s\n",
-	    "fault-point", "flg", "#hit", "#unhit", "delay",
-	    "count", "begin", "prob", "rc", "interval");
+	printf("%-24s %1s %7s %7s %5s "
+	    "%10s %5s %4s %4s %4s\n",
+	    "fault-point", "f", "#hit", "#unhit", "delay",
+	    "count", "begin", "prob", "rc", "intv");
 }
 
 void
@@ -938,10 +938,10 @@ psc_ctlmsg_fault_prdat(__unusedx const struct psc_ctlmsghdr *mh,
 {
 	const struct psc_ctlmsg_fault *pcflt = m;
 
-	printf("%-28s   %c "
+	printf("%-24s %c "
 	    "%7d %7d %5d "
 	    "%10d %5d %3d%% "
-	    "%3d %3d\n",
+	    "%4d %4d\n",
 	    pcflt->pcflt_name,
 	    pcflt->pcflt_flags & PFLTF_ACTIVE ? 'A' : '-',
 	    pcflt->pcflt_hits, pcflt->pcflt_unhits, pcflt->pcflt_delay,
