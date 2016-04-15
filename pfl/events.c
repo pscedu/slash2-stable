@@ -91,6 +91,7 @@ int64_t pfl_rpc_service_reply_latency_durations[] = {
 void
 pscrpc_request_out_callback(lnet_event_t *ev)
 {
+	int silent;
 	struct pscrpc_cb_id   *cbid = ev->md.user_ptr;
 	struct pscrpc_request *req = cbid->cbid_arg;
 
@@ -98,21 +99,24 @@ pscrpc_request_out_callback(lnet_event_t *ev)
 		ev->type == LNET_EVENT_UNLINK);
 	LASSERT(ev->unlinked);
 
-	DEBUG_REQ(ev->status ? PLL_ERROR : PLL_DIAG, req,
-	    "type %d, status %d", ev->type, ev->status);
-
 	if (ev->type == LNET_EVENT_UNLINK || ev->status != 0) {
 		/*
 		 * Failed send: make it seem like the reply timed out, just
 		 * like failing sends in rpcclient.c does currently...
 		 */
 		spinlock(&req->rq_lock);
+		silent = req->rq_silent_timeout;
 		req->rq_net_err = 1;
+		req->rq_abort_reply = 1;
 		req->rq_abort_reply = 1;
 		freelock(&req->rq_lock);
 
 		pscrpc_wake_client_req(req);
 	}
+
+	if (!silent)
+		DEBUG_REQ(ev->status ? PLL_ERROR : PLL_DIAG, req,
+		    "type %d, status %d", ev->type, ev->status);
 
 	/* these balance the references in ptl_send_rpc() */
 	atomic_dec(&req->rq_import->imp_inflight);

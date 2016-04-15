@@ -342,7 +342,8 @@ struct pscrpc_request {
 					 rq_net_err:1,
 					 rq_abort_reply:1,
 					 rq_timeoutable:1,
-					 rq_bulk_abortable:1;
+					 rq_bulk_abortable:1,
+					 rq_silent_timeout:1;
 	atomic_t			 rq_refcount;		/* client-side refcnt for SENT race */
 	atomic_t			 rq_retries;		/* count retries */
 	lnet_process_id_t		 rq_peer;		/* filled in by svh */

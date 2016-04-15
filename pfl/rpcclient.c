@@ -327,8 +327,6 @@ expired_request(void *data)
 
 	atomic_inc(&req->rq_retries);
 
-	DEBUG_REQ(PLL_WARN, req, "request timeout");
-
 	if (atomic_read(&req->rq_retries) >= imp->imp_max_retries)
 		return (pscrpc_expire_one_request(req));
 
@@ -1029,13 +1027,10 @@ pscrpc_set_destroy(struct pscrpc_request_set *set)
 int
 pscrpc_expire_one_request(struct pscrpc_request *req)
 {
+	int silent;
 	struct pscrpc_import *imp = req->rq_import;
 
 	psc_assert(imp);
-
-	DEBUG_REQ(imp->imp_igntimeout ? PLL_WARN : PLL_ERROR, req,
-	    "timeout (sent at %"PSCPRI_TIMET", %"PSCPRI_TIMET"s ago)",
-	    req->rq_sent, CURRENT_SECONDS - req->rq_sent);
 
 	psc_assert(req->rq_send_state == PSCRPC_IMP_NOOP);
 
@@ -1043,9 +1038,15 @@ pscrpc_expire_one_request(struct pscrpc_request *req)
 	/* Error out the request here so that the upper layers may
 	 *    retry.
 	 */
+	silent= req->rq_silent_timeout;
 	req->rq_err = req->rq_timedout = 1;
 	req->rq_status = -ETIMEDOUT;
 	freelock(&req->rq_lock);
+
+	if (!silent)
+		DEBUG_REQ(imp->imp_igntimeout ? PLL_WARN : PLL_ERROR, req,
+		    "timeout (sent at %"PSCPRI_TIMET", %"PSCPRI_TIMET"s ago)",
+		    req->rq_sent, CURRENT_SECONDS - req->rq_sent);
 
 	pscrpc_unregister_reply(req);
 
@@ -1354,6 +1355,7 @@ pscrpc_free_committed(struct pscrpc_import *imp)
 void
 pscrpc_abort_inflight(struct pscrpc_import *imp)
 {
+	int silent;
 	struct pscrpc_request *req, *next;
 
 	 /* Make sure that no new requests get processed for this import.
@@ -1372,7 +1374,6 @@ pscrpc_abort_inflight(struct pscrpc_import *imp)
 	  */
 	 psclist_for_each_entry_safe(req, next, &imp->imp_sending_list,
 	     rq_lentry) {
-		 DEBUG_REQ(PLL_WARN, req, "aborted");
 
 		 spinlock(&req->rq_lock);
 		 if (req->rq_import_generation < imp->imp_generation) {
@@ -1383,8 +1384,11 @@ pscrpc_abort_inflight(struct pscrpc_import *imp)
 		 //req->rq_abort_reply = 1;
 		 if (req->rq_bulk)
 			 req->rq_bulk->bd_abort = 1;
-
+		
+		silent = req->rq_silent_timeout;
 		 freelock(&req->rq_lock);
+		if (!silent)
+			DEBUG_REQ(PLL_WARN, req, "aborted");
 	 }
 
 	 freelock(&imp->imp_lock);
