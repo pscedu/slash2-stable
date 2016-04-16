@@ -87,9 +87,6 @@
 #undef __unusedx
 #define __unusedx		__attribute__((__unused__))
 
-#undef __weak
-#define __weak			__attribute__((__weak__))
-
 #undef __aligned
 #define __aligned(n)		__attribute__((__aligned__(n)))
 
