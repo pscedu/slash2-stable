@@ -73,19 +73,6 @@
 
 #define QLEN 15	/* listen(2) queue */
 
-__weak size_t
-pfl_multiwaitcond_nwaiters(__unusedx struct pfl_multiwaitcond *m)
-{
-	psc_fatalx("multiwait support not compiled in");
-}
-
-__weak int
-psc_ctlrep_getfault(int fd, struct psc_ctlmsghdr *mh,
-    __unusedx void *c)
-{
-	return (psc_ctlsenderr(fd, mh, "fault support not compiled in"));
-}
-
 /*
  * Send a control message back to client.
  * @fd: client socket descriptor.
@@ -229,32 +216,6 @@ psc_ctlrep_getsubsys(int fd, struct psc_ctlmsghdr *mh,
 	PSCFREE(pcss);
 	return (rc);
 }
-
-__weak int
-psc_ctlrep_getlnetif(int fd, struct psc_ctlmsghdr *mh,
-    __unusedx void *m)
-{
-	return (psc_ctlsenderr(fd, mh, "get lnet interface: %s",
-	    strerror(ENOTSUP)));
-}
-
-#ifndef PFL_RPC
-__weak int
-psc_ctlrep_getrpcrq(int fd, struct psc_ctlmsghdr *mh,
-    __unusedx void *m)
-{
-	return (psc_ctlsenderr(fd, mh, "get rpcrq: %s",
-	    strerror(ENOTSUP)));
-}
-
-__weak int
-psc_ctlrep_getrpcsvc(int fd, struct psc_ctlmsghdr *mh,
-    __unusedx void *m)
-{
-	return (psc_ctlsenderr(fd, mh, "get rpcsvc: %s",
-	    strerror(ENOTSUP)));
-}
-#endif
 
 /*
  * Send a reply to a "GETTHREAD" inquiry.
@@ -2026,12 +1987,6 @@ psc_ctlrep_getodtable(int fd, struct psc_ctlmsghdr *mh, void *m)
 		rc = psc_ctlsenderr(fd, mh, "unknown odtable: %s",
 		    name);
 	return (rc);
-}
-
-__weak struct psc_lockedlist *
-pfl_journals_get(void)
-{
-	return (NULL);
 }
 
 /*
