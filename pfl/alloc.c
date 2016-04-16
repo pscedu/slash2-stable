@@ -119,14 +119,6 @@ struct psc_lockedlist	psc_memallocs_lru =
     PLL_INIT_NOLOG(&psc_memallocs_lru, struct psc_memalloc, pma_lru_lentry);
 #endif
 
-/*
- * Provide an overrideable reclaimer for when pools are not in use.
- */
-__weak void
-_psc_pool_reapsome(__unusedx size_t size)
-{
-}
-
 #if PFL_DEBUG > 1
 struct psc_memalloc *
 _psc_getpma(void *p)
@@ -281,7 +273,7 @@ _psc_realloc(void *oldp, size_t size, int flags)
 		 * if enabled and retry; otherwise, handle failure.
 		 */
 		if ((flags & PAF_NOREAP) == 0) {
-			_psc_pool_reapsome(size);
+			psc_pool_reapmem(size);
 			flags |= PAF_NOREAP;
 			goto retry;
 		}
