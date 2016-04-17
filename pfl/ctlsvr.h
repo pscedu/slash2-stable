@@ -60,17 +60,17 @@ struct psc_ctlparam_node;
 	{ NULL,				0 },					\
 	{ psc_ctlrep_getfault,		sizeof(struct psc_ctlmsg_fault) },	\
 	{ psc_ctlrep_gethashtable,	sizeof(struct psc_ctlmsg_hashtable) },	\
-	{ psc_ctlrep_getjournal,	sizeof(struct psc_ctlmsg_journal) },	\
+	{ NULL,				0 },					\
 	{ psc_ctlrep_getlistcache,	sizeof(struct psc_ctlmsg_listcache) },	\
-	{ psc_ctlrep_getlnetif,		sizeof(struct psc_ctlmsg_lnetif) },	\
+	{ NULL,				0 },					\
 	{ psc_ctlrep_getmeter,		sizeof(struct psc_ctlmsg_meter) },	\
 	{ psc_ctlrep_getmlist,		sizeof(struct psc_ctlmsg_mlist) },	\
 	{ psc_ctlrep_getodtable,	sizeof(struct psc_ctlmsg_odtable) },	\
 	{ psc_ctlrep_getopstat,		sizeof(struct psc_ctlmsg_opstat) },	\
 	{ psc_ctlrep_param,		sizeof(struct psc_ctlmsg_param) },	\
 	{ psc_ctlrep_getpool,		sizeof(struct psc_ctlmsg_pool) },	\
-	{ psc_ctlrep_getrpcrq,		sizeof(struct psc_ctlmsg_rpcrq) },	\
-	{ psc_ctlrep_getrpcsvc,		sizeof(struct psc_ctlmsg_rpcsvc) },	\
+	{ NULL,				0 },					\
+	{ NULL,				0 },					\
 	{ psc_ctlrep_getsubsys,		0 },					\
 	{ psc_ctlrep_getthread,		sizeof(struct psc_ctlmsg_thread) },	\
 	{ psc_ctlrep_param,		sizeof(struct psc_ctlmsg_param) }

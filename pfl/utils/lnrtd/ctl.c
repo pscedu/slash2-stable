@@ -26,6 +26,7 @@
 #include "pfl/cdefs.h"
 #include "pfl/ctl.h"
 #include "pfl/ctlsvr.h"
+#include "pfl/service.h"
 
 #include "lnrtd.h"
 
@@ -36,6 +37,8 @@ struct psc_ctlop lrctlops[] = {
 void
 lrctlthr_main(void)
 {
+	//pflrpc_register_ctlops(lrctlops);
+
 //	psc_ctlparam_register("faults", psc_ctlparam_faults);
 	psc_ctlparam_register("log.file", psc_ctlparam_log_file);
 	psc_ctlparam_register("log.format", psc_ctlparam_log_format);

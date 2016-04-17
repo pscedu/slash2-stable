@@ -36,6 +36,8 @@
 #include "pfl/alloc.h"
 #include "pfl/atomic.h"
 #include "pfl/crc.h"
+#include "pfl/ctl.h"
+#include "pfl/ctlsvr.h"
 #include "pfl/dynarray.h"
 #include "pfl/fcntl.h"
 #include "pfl/journal.h"
@@ -58,11 +60,11 @@ struct psc_journalthr {
 	struct psc_journal *pjt_pj;
 };
 
-__static uint32_t	pjournal_logwrite(struct psc_journal_xidhndl *, int,
-				struct psc_journal_enthdr *, int);
+__static uint32_t	pjournal_logwrite(struct psc_journal_xidhndl *,
+			    int, struct psc_journal_enthdr *, int);
 
 __static int		pjournal_logwrite_internal(struct psc_journal *,
-				struct psc_journal_enthdr *, uint32_t);
+			    struct psc_journal_enthdr *, uint32_t);
 
 psc_spinlock_t		pjournal_count = SPINLOCK_INIT;
 psc_spinlock_t		pjournal_reserve = SPINLOCK_INIT;
@@ -70,7 +72,7 @@ psc_spinlock_t		pjournal_reserve = SPINLOCK_INIT;
 struct psc_waitq	pjournal_waitq = PSC_WAITQ_INIT;
 psc_spinlock_t		pjournal_waitqlock = SPINLOCK_INIT;
 struct psc_lockedlist	pfl_journals = PLL_INIT(&pfl_journals,
-				struct psc_journal, pj_lentry);
+			    struct psc_journal, pj_lentry);
 
 #define JIO_READ	0
 #define JIO_WRITE	1
@@ -85,8 +87,8 @@ struct psc_poolmgr	*pfl_xidhndl_pool;
  * Perform a low-level I/O operation on the journal store.
  * @pj: the journal.
  * @p: data.
- * @p: length of I/O.
- * @p: offset into backing store.
+ * @len: length of I/O.
+ * @off: offset into backing store.
  * @rw: read or write.
  */
 __static int
@@ -759,9 +761,12 @@ pjournal_open(const char *name, const char *fn)
 	pj->pj_iostats.rd = pfl_opstat_init("jrnlrd-%s", basefn);
 	pj->pj_iostats.wr = pfl_opstat_init("jrnlwr-%s", basefn);
 
-	pj->pj_opst_commits = pfl_opstat_init("jrnl.%s.commits", basefn);
-	pj->pj_opst_reserves = pfl_opstat_init("jrnl.%s.reserves", basefn);
-	pj->pj_opst_distills = pfl_opstat_init("jrnl.%s.distills", basefn);
+	pj->pj_opst_commits = pfl_opstat_init("jrnl.%s.commits",
+	    basefn);
+	pj->pj_opst_reserves = pfl_opstat_init("jrnl.%s.reserves",
+	    basefn);
+	pj->pj_opst_distills = pfl_opstat_init("jrnl.%s.distills",
+	    basefn);
 
 	/*
 	 * O_DIRECT may impose alignment restrictions so align the
@@ -1082,8 +1087,54 @@ pjournal_replay(struct psc_journal *pj, int thrtype,
 	return (thr);
 }
 
-struct psc_lockedlist *
-pfl_journals_get(void)
+/*
+ * Respond to a "GETJOURNAL" control inquiry.
+ * @fd: client socket descriptor.
+ * @mh: already filled-in control message header.
+ * @m: control message to be filled in and sent out.
+ */
+int
+psc_ctlrep_getjournal(int fd, struct psc_ctlmsghdr *mh, void *m)
 {
-	return (&pfl_journals);
+	struct psc_ctlmsg_journal *pcj = m;
+	struct psc_journal *j;
+	int rc = 1;
+
+	PLL_LOCK(&pfl_journals);
+	PLL_FOREACH(j, &pfl_journals) {
+		PJ_LOCK(j);
+		strlcpy(pcj->pcj_name, j->pj_name,
+		    sizeof(pcj->pcj_name));
+		pcj->pcj_flags		= j->pj_flags;
+		pcj->pcj_inuse		= j->pj_inuse;
+		pcj->pcj_total		= j->pj_total;
+		pcj->pcj_resrv		= j->pj_resrv;
+		pcj->pcj_lastxid	= j->pj_lastxid;
+		pcj->pcj_commit_txg	= j->pj_commit_txg;
+		pcj->pcj_replay_xid	= j->pj_replay_xid;
+		pcj->pcj_dstl_xid	= j->pj_distill_xid;
+		pcj->pcj_pndg_xids_cnt	= pll_nitems(&j->pj_pendingxids);
+		pcj->pcj_dstl_xids_cnt	= pll_nitems(&j->pj_distillxids);
+		pcj->pcj_bufs_cnt	= psc_dynarray_len(&j->pj_bufs);
+		pcj->pcj_nwaiters	= psc_waitq_nwaiters(&j->pj_waitq);
+		pcj->pcj_nextwrite	= j->pj_nextwrite;
+		pcj->pcj_wraparound	= j->pj_wraparound;
+		PJ_ULOCK(j);
+
+		rc = psc_ctlmsg_sendv(fd, mh, pcj);
+		if (!rc)
+			break;
+	}
+	PLL_ULOCK(&pfl_journals);
+	return (rc);
+}
+
+void
+pfl_journal_register_ctlops(struct psc_ctlop *ops)
+{
+	struct psc_ctlop *op;
+
+	op = &ops[PCMT_GETJOURNAL];
+	op->pc_op = psc_ctlrep_getjournal;
+	op->pc_siz = sizeof(struct psc_ctlmsg_journal);
 }

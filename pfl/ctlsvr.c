@@ -1990,54 +1990,6 @@ psc_ctlrep_getodtable(int fd, struct psc_ctlmsghdr *mh, void *m)
 }
 
 /*
- * Respond to a "GETJOURNAL" control inquiry.
- * @fd: client socket descriptor.
- * @mh: already filled-in control message header.
- * @m: control message to be filled in and sent out.
- */
-int
-psc_ctlrep_getjournal(int fd, struct psc_ctlmsghdr *mh, void *m)
-{
-	struct psc_ctlmsg_journal *pcj = m;
-	struct psc_lockedlist *pll;
-	struct psc_journal *j;
-	int rc;
-
-	rc = 1;
-
-	pll = pfl_journals_get();
-	if (pll == NULL)
-		return (rc);
-	PLL_LOCK(pll);
-	PLL_FOREACH(j, pll) {
-		PJ_LOCK(j);
-		strlcpy(pcj->pcj_name, j->pj_name,
-		    sizeof(pcj->pcj_name));
-		pcj->pcj_flags		= j->pj_flags;
-		pcj->pcj_inuse		= j->pj_inuse;
-		pcj->pcj_total		= j->pj_total;
-		pcj->pcj_resrv		= j->pj_resrv;
-		pcj->pcj_lastxid	= j->pj_lastxid;
-		pcj->pcj_commit_txg	= j->pj_commit_txg;
-		pcj->pcj_replay_xid	= j->pj_replay_xid;
-		pcj->pcj_dstl_xid	= j->pj_distill_xid;
-		pcj->pcj_pndg_xids_cnt	= pll_nitems(&j->pj_pendingxids);
-		pcj->pcj_dstl_xids_cnt	= pll_nitems(&j->pj_distillxids);
-		pcj->pcj_bufs_cnt	= psc_dynarray_len(&j->pj_bufs);
-		pcj->pcj_nwaiters	= psc_waitq_nwaiters(&j->pj_waitq);
-		pcj->pcj_nextwrite	= j->pj_nextwrite;
-		pcj->pcj_wraparound	= j->pj_wraparound;
-		PJ_ULOCK(j);
-
-		rc = psc_ctlmsg_sendv(fd, mh, pcj);
-		if (!rc)
-			break;
-	}
-	PLL_ULOCK(pll);
-	return (rc);
-}
-
-/*
  * Invoke an operation on all applicable threads.
  * @fd: client socket descriptor.
  * @mh: already filled-in control message header.

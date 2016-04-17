@@ -273,6 +273,8 @@ _psc_realloc(void *oldp, size_t size, int flags)
 		 * if enabled and retry; otherwise, handle failure.
 		 */
 		if ((flags & PAF_NOREAP) == 0) {
+			void psc_pool_reapmem(size_t);
+
 			psc_pool_reapmem(size);
 			flags |= PAF_NOREAP;
 			goto retry;

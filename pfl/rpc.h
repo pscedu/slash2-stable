@@ -51,6 +51,7 @@
 #include "pfl/waitq.h"
 
 struct psc_dynarray;
+struct psc_ctlop;
 
 #define PSCRPC_MD_OPTIONS		0
 
@@ -620,13 +621,15 @@ pscrpc_bulk_active(struct pscrpc_bulk_desc *desc)
 int	 pscrpc_target_send_reply_msg(struct pscrpc_request *, int, int);
 void	 pscrpc_fail_import(struct pscrpc_import *, uint32_t);
 
-/* util.c */
-int	pflrpc_portable_errno(int);
+void	 pflrpc_register_ctlops(struct psc_ctlop *);
 
-void	pscrpc_getlocalprids(struct psc_dynarray *);
-void	pscrpc_getpridforpeer(lnet_process_id_t *,
+/* util.c */
+int	 pflrpc_portable_errno(int);
+
+void	 pscrpc_getlocalprids(struct psc_dynarray *);
+void	 pscrpc_getpridforpeer(lnet_process_id_t *,
 	    const struct psc_dynarray *, lnet_nid_t);
-void	pscrpc_req_getprids(const struct psc_dynarray *,
+void	 pscrpc_req_getprids(const struct psc_dynarray *,
 	    struct pscrpc_request *, lnet_process_id_t *,
 	    lnet_process_id_t *);
 

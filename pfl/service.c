@@ -1149,4 +1149,22 @@ psc_ctlrep_getrpcsvc(int fd, struct psc_ctlmsghdr *mh, void *m)
 	return (rc);
 }
 
+void
+pflrpc_register_ctlops(struct psc_ctlop *ops)
+{
+	struct psc_ctlop *op;
+
+	op = &ops[PCMT_GETLNETIF];
+	op->pc_op = psc_ctlrep_getlnetif;
+	op->pc_siz = sizeof(struct psc_ctlmsg_lnetif);
+
+	op = &ops[PCMT_GETRPCRQ];
+	op->pc_op = psc_ctlrep_getrpcrq;
+	op->pc_siz = sizeof(struct psc_ctlmsg_rpcrq);
+
+	op = &ops[PCMT_GETRPCSVC];
+	op->pc_op = psc_ctlrep_getrpcsvc;
+	op->pc_siz = sizeof(struct psc_ctlmsg_rpcsvc);
+} 
+
 #endif
