@@ -1,0 +1,12 @@
+#PBS -j oe -l size=16,walltime=16:40:00
+
+/bin/date +"START TIME: %m/%d/%Y %H:%M:%S"
+set -x
+
+export IOBUF_PARAMS='%stdout,%stderr'
+export LNET_ROUTES='o2ib 3@ptl0'
+
+pbsyod /usr/users/2/pauln/fio/fio.qk -i /usr/users/2/pauln/fio/lustre_extfs-smallio.input -o /usr/users/2/pauln/fio_out/lustre_extfs_smallio_4x4
+
+set +x
+/bin/date +"END TIME: %m/%d/%Y %H:%M:%S"
