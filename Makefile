@@ -10,7 +10,6 @@ SRCS+=		scan.l
 SRCS+=		sym.c
 SRCS+=		symtab.c
 
-DEBUG?=		0
 MODULES+=	m pfl barrier
 
 ifdef QK
