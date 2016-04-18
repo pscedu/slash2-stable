@@ -1,0 +1,39 @@
+group 8peReadWrite {
+  files_per_dir = 1;
+  tree_depth    = 0;
+  tree_width    = 0;
+  pes           = 8;
+  test_freq     = 0; 
+  block_freq    = 0;
+  path          = /media/hdb1/fio;
+  output_path   = /tmp;
+  filename      = 8peRW_1mbs;
+  file_size     = 20m;
+  block_size    = 1m;
+  thrash_lock   = yes;
+  samedir       = yes;
+  samefile      = no;
+  intersperse   = no;
+  seekoff       = no;
+  fsync_block   = yes;
+  verify        = yes;
+  barrier       = yes;
+  time_block    = yes;
+  block_barrier = yes;
+  time_barrier  = yes;
+  iterations    = 1;
+  debug_conf    = no;
+  debug_block    = yes;
+  debug_memory    = no;
+  debug_buffer    = no;
+  debug_output    = no;
+  debug_dtree     = no;
+  debug_barrier   = no;
+  debug_iofunc    = no;	
+		
+  iotests (
+	WriteEmUp 	[create:openwr:write:close]	
+	ReadEmUp	[openrd:read:close]
+	Unlink		[unlink]	
+  )	
+}

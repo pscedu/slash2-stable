@@ -1,11 +1,29 @@
 # $Id$
 
-ROOTDIR=.
+ROOTDIR=..
 include ${ROOTDIR}/Makefile.path
 
-SUBDIRS+=	$(filter-out zfs-fuse compat,$(foreach i,$(wildcard */Makefile inf/*/Makefile),$(patsubst %/Makefile,%,$i)))
+PROG=		fio
+SRCS+=		fio.c
+SRCS+=		parse.y
+SRCS+=		scan.l
+SRCS+=		sym.c
+SRCS+=		symtab.c
+
+MODULES+=	m pfl barrier
+
+ifdef QK
+  MODULES+=	qk
+endif
+
+ifdef ZCC
+  MODULES+=	zcc
+endif
+
+ifdef MPI
+  MODULES+=	mpi
+else
+  MODULES+=	pthread
+endif
 
 include ${MAINMK}
--include local.mk
-
-DISTCLEANFILES+=${PICKLEHOSTMK}
