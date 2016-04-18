@@ -1,3 +1,14 @@
+04/18/2016
+----------
+
+I tried to use slash2-merge.sh to add mfio tree. The files end up at
+the top directory.  I had to revert the merge with the following.
+
+ $ git revert -m 1 dd73378cbcf888367c05ef891104ca6022a50efc
+ $ git push
+
+Then I use the steps in slash2-build.sh to re-do the merge.
+
 04/12/2016
 ----------
 
