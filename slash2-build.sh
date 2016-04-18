@@ -61,6 +61,13 @@ git merge -s ours --no-commit sft/master
 git read-tree --prefix=sft/ -u sft/master
 git commit -m "Add sft project under sft directory"
 
+git remote add mfio https://github.com/pscedu/mfio
+git fetch mfio 
+bail-if-fail
+git merge -s ours --no-commit mfio/master
+git read-tree --prefix=mfio/ -u mfio/master
+git commit -m "Add mfio project under mfio directory"
+
 git remote add distrib.fuse https://github.com/pscedu/distrib.fuse
 git fetch distrib.fuse 
 bail-if-fail
