@@ -578,7 +578,7 @@ struct pscrpc_import *
 #define pscrpc_set_check(set)		_pscrpc_set_check((set), 0)
 
 /* rpcclient.c */
-int	 pscrpc_expire_one_request(struct pscrpc_request *);
+int	 pscrpc_expire_one_request(struct pscrpc_request *, int);
 struct pscrpc_request *
 	 pscrpc_prep_req(struct pscrpc_import *, uint32_t, int, int, int *, char **);
 struct pscrpc_bulk_desc *

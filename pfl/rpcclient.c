@@ -326,7 +326,7 @@ expired_request(void *data)
 	struct pscrpc_request *req = data;
 	struct pscrpc_import *imp = req->rq_import;
 
-	if (pscrpc_expire_one_request(req))
+	if (pscrpc_expire_one_request(req, 0))
 		return (1);
 
 	spinlock(&req->rq_lock);
@@ -420,7 +420,7 @@ pscrpc_check_reply(struct pscrpc_request *req)
 	if (req->rq_net_err && !req->rq_timedout) {
 		DEBUG_REQ(PLL_ERROR, req, "NET_ERR: %d", req->rq_net_err);
 		freelock(&req->rq_lock);
-		rc = pscrpc_expire_one_request(req);
+		rc = pscrpc_expire_one_request(req, 1);
 		spinlock(&req->rq_lock);
 		GOTO(out, rc);
 	}
@@ -766,7 +766,7 @@ _pscrpc_set_check(struct pscrpc_request_set *set, int finish_one)
 			GOTO(interpret, req->rq_status);
 
 		if (req->rq_net_err && !req->rq_timedout)
-			pscrpc_expire_one_request(req);
+			pscrpc_expire_one_request(req, 1);
 
  handle_error:
 		if (req->rq_err) {
@@ -1026,7 +1026,7 @@ pscrpc_set_destroy(struct pscrpc_request_set *set)
 }
 
 int
-pscrpc_expire_one_request(struct pscrpc_request *req)
+pscrpc_expire_one_request(struct pscrpc_request *req, int force)
 {
 	int silent;
 	struct pscrpc_import *imp = req->rq_import;
@@ -1037,7 +1037,7 @@ pscrpc_expire_one_request(struct pscrpc_request *req)
 
 	spinlock(&req->rq_lock);
 	req->rq_retries++;
-	if (req->rq_retries < imp->imp_max_retries) {
+	if (!force && req->rq_retries < imp->imp_max_retries) {
 		freelock(&req->rq_lock);
 		return (0);
 	}
@@ -1085,7 +1085,7 @@ pscrpc_expired_set(void *data)
 			continue;
 
 		/* deal with this guy */
-		pscrpc_expire_one_request(req);
+		pscrpc_expire_one_request(req, 1);
 	}
 
 	/* When waiting for a whole set, we always to break out of the
@@ -1499,7 +1499,7 @@ psc_ctlrep_getrpcrq(int fd, struct psc_ctlmsghdr *mh, void *m)
 		pcrq->pcrq_has_intr = !!rq->rq_interpret_reply;
 		pcrq->pcrq_bulk_abortable = rq->rq_bulk_abortable;
 		pcrq->pcrq_refcount = atomic_read(&rq->rq_refcount);
-		pcrq->pcrq_retries = atomic_read(&rq->rq_retries);
+		pcrq->pcrq_retries = &rq->rq_retries;
 		imp = rq->rq_import;
 		libcfs_nid2str2(imp && imp->imp_connection ?
 		    imp->imp_connection->c_peer.nid :
