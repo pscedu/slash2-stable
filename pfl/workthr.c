@@ -34,7 +34,8 @@ struct psc_poolmgr	*pfl_workrq_pool;
 struct psc_listcache	 pfl_workq;
 
 void *
-_pfl_workq_getitem(int (*cb)(void *), size_t len, int flags)
+_pfl_workq_getitem(const char *typename, int (*cb)(void *), size_t len,
+    int flags)
 {
 	struct pfl_workrq *wk;
 	void *p;
@@ -47,6 +48,7 @@ _pfl_workq_getitem(int (*cb)(void *), size_t len, int flags)
 	} else
 		wk = psc_pool_get(pfl_workrq_pool);
 	wk->wkrq_cbf = cb;
+	wk->wkrq_type = typename;
 	p = PSC_AGP(wk, sizeof(*wk));
 	memset(p, 0, len);
 	return (p);
