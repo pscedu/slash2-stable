@@ -336,7 +336,8 @@ expired_request(void *data)
 	OPSTAT_INCR("pfl.rpc_retries");
 
 	if (!silent)
-		DEBUG_REQ(PLL_WARN, req, "expired and resend");
+		DEBUG_REQ(PLL_WARN, req, 
+		    "expired and resend %d", req->rq_retries);
 
 	return 0;
 }
