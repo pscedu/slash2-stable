@@ -270,6 +270,7 @@ int	 pflfs_req_sleep_rel(struct pscfs_req *,
 
 extern struct psc_dynarray		pscfs_modules;
 extern struct psc_lockedlist		pflfs_filehandles;
+extern struct psc_lockedlist		pflfs_requests;
 
 extern double				pscfs_entry_timeout;
 extern double				pscfs_attr_timeout;
