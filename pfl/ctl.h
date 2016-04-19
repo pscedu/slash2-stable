@@ -247,10 +247,33 @@ struct psc_ctlmsg_subsys {
 	char			pcss_names[0];
 };
 
+struct pfl_ctlmsg_fsrq {
+	char			 pcfr_mod[16];
+	uint64_t		 pcfr_req;
+	uint64_t		 pcfr_ufsi_req;
+	uint64_t		 pcfr_ufsi_fhdata;
+	 int32_t		 pcfr_euid;
+	 int32_t		 pcfr_pid;
+	struct pfl_timespec	 pcfr_start;
+	 int32_t		 pcfr_flags;
+	 int32_t		 pcfr_refcnt;
+	char			 pcfr_opname[16];
+	char			 pcfr_thread[PSC_THRNAME_MAX];
+	 int32_t		 pcfr_rc;
+};
+
+#define PFLCTL_FSRQF_INTR	(1 << 0)
+
+struct pfl_ctlmsg_workrq {
+	uint64_t		 pcw_addr;
+	char			 pcw_type[32];
+};
+
 /* Control message types. */
 enum {
 	PCMT_ERROR = 0,
 	PCMT_GETFAULT,
+	PCMT_GETFSRQ,
 	PCMT_GETHASHTABLE,
 	PCMT_GETJOURNAL,
 	PCMT_GETLISTCACHE,
@@ -265,6 +288,7 @@ enum {
 	PCMT_GETRPCSVC,
 	PCMT_GETSUBSYS,
 	PCMT_GETTHREAD,
+	PCMT_GETWORKRQ,
 	PCMT_SETPARAM,
 	NPCMT
 };

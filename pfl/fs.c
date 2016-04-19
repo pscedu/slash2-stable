@@ -32,12 +32,16 @@
 #include <unistd.h>
 
 #include "pfl/alloc.h"
+#include "pfl/ctl.h"
+#include "pfl/ctlsvr.h"
 #include "pfl/fs.h"
+#include "pfl/listcache.h"
 #include "pfl/lock.h"
 #include "pfl/log.h"
 #include "pfl/opstats.h"
 #include "pfl/str.h"
 #include "pfl/thread.h"
+#include "pfl/time.h"
 
 struct psc_spinlock	pflfs_modules_lock = SPINLOCK_INIT;
 int			pflfs_modules_modifying;
@@ -298,3 +302,62 @@ pflfs_req_sleep_rel(struct pscfs_req *pfr, const struct timespec *ts)
 	pfl_multiwait_entercritsect(&pft->pft_multiwait);
 	return (pflfs_req_multiwait_rel(pfr, &dummy, ts));
 }
+
+#ifdef PFL_CTL
+
+/*
+ * Respond to a "GETFSRQ" control inquiry.
+ * @fd: client socket descriptor.
+ * @mh: already filled-in control message header.
+ * @m: control message to examine and reuse.
+ */
+int
+pfl_ctlrep_getfsrq(int fd, struct psc_ctlmsghdr *mh, void *m)
+{
+	struct pfl_ctlmsg_fsrq *pcfr = m;
+	struct pscfs_creds cr;
+	struct pscfs_req *pfr;
+	int rc = 1;
+
+	PLL_LOCK(&pflfs_requests);
+	PLL_FOREACH(pfr, &pflfs_requests) {
+		memset(pcfr, 0, sizeof(*pcfr));
+		pcfr->pcfr_req = (uintptr_t)pfr;
+		pcfr->pcfr_ufsi_req = (uintptr_t)pfr->pfr_ufsi_req;
+		pcfr->pcfr_ufsi_fhdata =
+		    (uintptr_t)pfr->pfr_ufsi_fhdata;
+		pcfr->pcfr_euid = cr.pcr_uid;
+		pcfr->pcfr_pid = pfr->pfr_clientctx.pfcc_pid;
+		pcfr->pcfr_start.tv_sec = pfr->pfr_start.tv_sec;
+		pcfr->pcfr_start.tv_nsec = pfr->pfr_start.tv_nsec;
+		pcfr->pcfr_refcnt = pfr->pfr_refcnt;
+		pcfr->pcfr_rc = pfr->pfr_rc;
+		if (pfr->pfr_interrupted)
+			pcfr->pcfr_flags |= PFLCTL_FSRQF_INTR;
+		snprintf(pcfr->pcfr_opname, sizeof(pcfr->pcfr_opname),
+		    "%s", pfr->pfr_opname);
+		snprintf(pcfr->pcfr_mod, sizeof(pcfr->pcfr_mod), "%s",
+		    pfr->pfr_mod ? pfr->pfr_mod->pf_name : "<none>");
+		snprintf(pcfr->pcfr_thread, sizeof(pcfr->pcfr_thread),
+		    "%s", pfr->pfr_thread ? pfr->pfr_thread->pscthr_name
+		    : "<none>");
+
+		rc = psc_ctlmsg_sendv(fd, mh, pcfr);
+		if (!rc)
+			break;
+	}
+	PLL_ULOCK(&pflfs_requests);
+	return (rc);
+}
+
+void
+pflfs_register_ctlops(struct psc_ctlop *ops)
+{
+	struct psc_ctlop *op;
+
+	op = &ops[PCMT_GETFSRQ];
+	op->pc_op = pfl_ctlrep_getfsrq;
+	op->pc_siz = sizeof(struct pfl_ctlmsg_fsrq);
+}
+
+#endif
