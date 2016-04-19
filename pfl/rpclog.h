@@ -86,7 +86,7 @@ pscrpc_rqphase2str(struct pscrpc_request *req)
 	       (int)(rq)->rq_import->imp_cli_request_portal : -1,	\
 	    (rq)->rq_reqlen, (rq)->rq_replen,				\
 	    atomic_read(&(rq)->rq_refcount), (rq)->rq_resend,		\
-	    atomic_read(&(rq)->rq_retries), DEBUG_REQ_FLAGS(rq),	\
+	    (rq)->rq_retries, DEBUG_REQ_FLAGS(rq),			\
 	    (rq)->rq_reqmsg ?						\
 	       pscrpc_msg_get_flags((rq)->rq_reqmsg) : -1,		\
 	    (rq)->rq_repmsg ?						\

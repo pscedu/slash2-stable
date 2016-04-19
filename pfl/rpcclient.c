@@ -326,10 +326,8 @@ expired_request(void *data)
 	struct pscrpc_request *req = data;
 	struct pscrpc_import *imp = req->rq_import;
 
-	atomic_inc(&req->rq_retries);
-
-	if (atomic_read(&req->rq_retries) >= imp->imp_max_retries)
-		return (pscrpc_expire_one_request(req));
+	if (pscrpc_expire_one_request(req))
+		return (1);
 
 	spinlock(&req->rq_lock);
 	silent = req->rq_silent_timeout;
@@ -1038,9 +1036,12 @@ pscrpc_expire_one_request(struct pscrpc_request *req)
 	psc_assert(req->rq_send_state == PSCRPC_IMP_NOOP);
 
 	spinlock(&req->rq_lock);
-	/* Error out the request here so that the upper layers may
-	 *    retry.
-	 */
+	req->rq_retries++;
+	if (req->rq_retries < imp->imp_max_retries) {
+		freelock(&req->rq_lock);
+		return (0);
+	}
+
 	silent= req->rq_silent_timeout;
 	req->rq_err = req->rq_timedout = 1;
 	req->rq_status = -ETIMEDOUT;
