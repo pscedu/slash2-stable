@@ -126,7 +126,7 @@ EXTRACT_CFLAGS=		perl -ne 'print $$& while /-[^ID]\S+\s?/gc'
 # Process modules
 
 ifdef PICKLE_HAVE_FSANITIZE
-  FSANITIZE_CFLAGS=	-fsanitize=address
+  FSANITIZE_CFLAGS=	-fsanitize=address -fno-optimize-sibling-calls
   FSANITIZE_LDFLAGS=	-fsanitize=address
 endif
 
@@ -152,6 +152,8 @@ endif
 
 ifneq ($(filter pscfs,${MODULES}),)
   MODULES+=	pscfs-hdrs
+  SRCS+=	${PFL_BASE}/fs.c
+  SRCS+=	${PSCFS_SRCS}
 
   ifdef PICKLE_HAVE_FUSE
     MODULES+=	fuse
