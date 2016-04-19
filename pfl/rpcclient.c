@@ -324,7 +324,6 @@ expired_request(void *data)
 {
 	int silent;
 	struct pscrpc_request *req = data;
-	struct pscrpc_import *imp = req->rq_import;
 
 	if (pscrpc_expire_one_request(req, 0))
 		return (1);
@@ -1026,6 +1025,10 @@ pscrpc_set_destroy(struct pscrpc_request_set *set)
 	psc_pool_return(pscrpc_set_pool, set);
 }
 
+/*
+ * Expire a request if the number of retries has exceeded the import 
+ * max or it is forced to expire.
+ */
 int
 pscrpc_expire_one_request(struct pscrpc_request *req, int force)
 {
@@ -1500,7 +1503,7 @@ psc_ctlrep_getrpcrq(int fd, struct psc_ctlmsghdr *mh, void *m)
 		pcrq->pcrq_has_intr = !!rq->rq_interpret_reply;
 		pcrq->pcrq_bulk_abortable = rq->rq_bulk_abortable;
 		pcrq->pcrq_refcount = atomic_read(&rq->rq_refcount);
-		pcrq->pcrq_retries = &rq->rq_retries;
+		pcrq->pcrq_retries = rq->rq_retries;
 		imp = rq->rq_import;
 		libcfs_nid2str2(imp && imp->imp_connection ?
 		    imp->imp_connection->c_peer.nid :
