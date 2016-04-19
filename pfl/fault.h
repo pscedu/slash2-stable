@@ -66,18 +66,15 @@ struct pfl_fault *
 #  define pfl_fault_here_rc(rcp, rc, name, ...)				\
 	({								\
 		static struct pfl_fault *_fault;			\
-		int _fault_rc = 0;					\
 									\
 		if (_fault == NULL)					\
 			_fault = pfl_fault_get(name, ##__VA_ARGS__);	\
 		if (_fault->pflt_flags & PFLTF_ACTIVE)			\
-			_fault_rc = _pfl_fault_here(_fault, (rcp),	\
-			    (rc));					\
-		_fault_rc;						\
+			_pfl_fault_here(_fault, (rcp),	(rc));		\
 	})
 
 #else
-#  define pfl_fault_here_rc(rcp, rc, name, ...) 0
+#  define pfl_fault_here_rc(rcp, rc, name, ...)
 #endif
 
 #define pfl_fault_here(rcp, name, ...)	pfl_fault_here_rc((rcp), 0, (name), ##__VA_ARGS__)
