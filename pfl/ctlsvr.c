@@ -70,6 +70,7 @@
 #include "pfl/thread.h"
 #include "pfl/umask.h"
 #include "pfl/waitq.h"
+#include "pfl/workthr.h"
 
 #define QLEN 15	/* listen(2) queue */
 
@@ -1986,6 +1987,38 @@ psc_ctlrep_getodtable(int fd, struct psc_ctlmsghdr *mh, void *m)
 	if (rc && !found && !all)
 		rc = psc_ctlsenderr(fd, mh, "unknown odtable: %s",
 		    name);
+	return (rc);
+}
+
+/*
+ * Respond to a "GETWORKRQ" inquiry.
+ * @fd: client socket descriptor.
+ * @mh: already filled-in control message header.
+ * @m: control message to examine and reuse.
+ */
+int
+pfl_ctlrep_getworkrq(int fd, struct psc_ctlmsghdr *mh, void *m)
+{
+	struct pfl_ctlmsg_workrq *pcw = m;
+	struct pfl_workrq *wk;
+	const char *type;
+	int rc = 1;
+
+	LIST_CACHE_LOCK(&pfl_workq);
+	LIST_CACHE_FOREACH(wk, &pfl_workq) {
+		memset(pcw, 0, sizeof(*pcw));
+		pcw->pcw_addr = (uintptr_t)wk;
+		type = wk->wkrq_type;
+		if (strncmp(type, "struct ", strlen("struct ")) == 0)
+		    	type += strlen("struct ");
+		snprintf(pcw->pcw_type, sizeof(pcw->pcw_type), "%s",
+		    type);
+
+		rc = psc_ctlmsg_sendv(fd, mh, pcw);
+		if (!rc)
+			break;
+	}
+	LIST_CACHE_ULOCK(&pfl_workq);
 	return (rc);
 }
 

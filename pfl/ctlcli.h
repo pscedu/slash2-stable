@@ -36,9 +36,11 @@ struct psc_ctlmsghdr;
 
 #define PSC_CTL_DISPLAY_WIDTH	80
 
+/* Must be kept in sync with the PCMT_* list. */
 #define PSC_CTLMSG_PRFMT_DEFS															\
-	{ NULL,				psc_ctlmsg_error_prdat,		sizeof(struct psc_ctlmsg_error),	NULL },				\
+	{ NULL /* ERROR */,		psc_ctlmsg_error_prdat,		sizeof(struct psc_ctlmsg_error),	NULL },				\
 	{ psc_ctlmsg_fault_prhdr,	psc_ctlmsg_fault_prdat,		sizeof(struct psc_ctlmsg_fault),	NULL },				\
+	{ pfl_ctlmsg_fsrq_prhdr,	pfl_ctlmsg_fsrq_prdat,		sizeof(struct pfl_ctlmsg_fsrq),		NULL },				\
 	{ psc_ctlmsg_hashtable_prhdr,	psc_ctlmsg_hashtable_prdat,	sizeof(struct psc_ctlmsg_hashtable),	NULL },				\
 	{ psc_ctlmsg_journal_prhdr,	psc_ctlmsg_journal_prdat,	sizeof(struct psc_ctlmsg_journal),	NULL },				\
 	{ psc_ctlmsg_listcache_prhdr,	psc_ctlmsg_listcache_prdat,	sizeof(struct psc_ctlmsg_listcache),	NULL },				\
@@ -51,12 +53,14 @@ struct psc_ctlmsghdr;
 	{ psc_ctlmsg_pool_prhdr,	psc_ctlmsg_pool_prdat,		sizeof(struct psc_ctlmsg_pool),		NULL },				\
 	{ psc_ctlmsg_rpcrq_prhdr,	psc_ctlmsg_rpcrq_prdat,		sizeof(struct psc_ctlmsg_rpcrq),	NULL },				\
 	{ psc_ctlmsg_rpcsvc_prhdr,	psc_ctlmsg_rpcsvc_prdat,	sizeof(struct psc_ctlmsg_rpcsvc),	NULL },				\
-	{ NULL,				NULL,				0,					psc_ctlmsg_subsys_check },	\
+	{ NULL /* GETSUBSYS */,		NULL,				0,					psc_ctlmsg_subsys_check },	\
 	{ psc_ctlmsg_thread_prhdr,	psc_ctlmsg_thread_prdat,	0,					psc_ctlmsg_thread_check },	\
-	{ NULL,				NULL,				0,					NULL }
+	{ pfl_ctlmsg_workrq_prhdr,	pfl_ctlmsg_workrq_prdat,	sizeof(struct pfl_ctlmsg_workrq),	NULL },				\
+	{ NULL /* SETPARAM */,		NULL,				0,					NULL }
 
 #define PSC_CTLSHOW_DEFS						\
 	{ "faults",		psc_ctl_packshow_fault },		\
+	{ "fsrq",		pfl_ctl_packshow_fsrq },		\
 	{ "hashtables",		psc_ctl_packshow_hashtable },		\
 	{ "journals",		psc_ctl_packshow_journal },		\
 	{ "listcaches",		psc_ctl_packshow_listcache },		\
@@ -68,7 +72,8 @@ struct psc_ctlmsghdr;
 	{ "pools",		psc_ctl_packshow_pool },		\
 	{ "rpcrqs",		psc_ctl_packshow_rpcrq },		\
 	{ "rpcsvcs",		psc_ctl_packshow_rpcsvc },		\
-	{ "threads",		psc_ctl_packshow_thread }
+	{ "threads",		psc_ctl_packshow_thread },		\
+	{ "workrq",		pfl_ctl_packshow_workrq }
 
 struct psc_ctlshow_ent {
 	const char		 *pse_name;
@@ -104,6 +109,7 @@ void  psc_ctlparse_pool(char *);
 void  psc_ctlparse_show(char *);
 
 void  psc_ctl_packshow_fault(char *);
+void  pfl_ctl_packshow_fsrq(char *);
 void  psc_ctl_packshow_hashtable(char *);
 void  psc_ctl_packshow_journal(char *);
 void  psc_ctl_packshow_listcache(char *);
@@ -116,6 +122,7 @@ void  psc_ctl_packshow_pool(char *);
 void  psc_ctl_packshow_rpcrq(char *);
 void  psc_ctl_packshow_rpcsvc(char *);
 void  psc_ctl_packshow_thread(char *);
+void  pfl_ctl_packshow_workrq(char *);
 
 void *psc_ctlmsg_push(int, size_t);
 void  psc_ctlcli_main(const char *, int, char **, const struct psc_ctlopt *, int);
@@ -123,6 +130,8 @@ void  psc_ctlcli_main(const char *, int, char **, const struct psc_ctlopt *, int
 void  psc_ctlmsg_error_prdat(const struct psc_ctlmsghdr *, const void *);
 void  psc_ctlmsg_fault_prdat(const struct psc_ctlmsghdr *, const void *);
 void  psc_ctlmsg_fault_prhdr(struct psc_ctlmsghdr *, const void *);
+void  pfl_ctlmsg_fsrq_prdat(const struct psc_ctlmsghdr *, const void *);
+void  pfl_ctlmsg_fsrq_prhdr(struct psc_ctlmsghdr *, const void *);
 void  psc_ctlmsg_hashtable_prdat(const struct psc_ctlmsghdr *, const void *);
 void  psc_ctlmsg_hashtable_prhdr(struct psc_ctlmsghdr *, const void *);
 void  psc_ctlmsg_opstat_prdat(const struct psc_ctlmsghdr *, const void *);
@@ -151,6 +160,8 @@ int   psc_ctlmsg_subsys_check(struct psc_ctlmsghdr *, const void *);
 int   psc_ctlmsg_thread_check(struct psc_ctlmsghdr *, const void *);
 void  psc_ctlmsg_thread_prdat(const struct psc_ctlmsghdr *, const void *);
 void  psc_ctlmsg_thread_prhdr(struct psc_ctlmsghdr *, const void *);
+void  pfl_ctlmsg_workrq_prdat(const struct psc_ctlmsghdr *, const void *);
+void  pfl_ctlmsg_workrq_prhdr(struct psc_ctlmsghdr *, const void *);
 
 int   psc_ctl_get_display_maxwidth(void);
 void  psc_ctl_prnumber(int, uint64_t, int, const char *);

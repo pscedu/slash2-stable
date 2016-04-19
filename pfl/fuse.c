@@ -823,12 +823,14 @@ pscfs_inum_pscfs2fuse(pscfs_inum_t p_inum, double timeo)
 		INIT_SPINLOCK(&(pfr)->pfr_lock);			\
 		(pfr)->pfr_ufsi_req = (fsreq);				\
 		(pfr)->pfr_refcnt = 2;					\
+		(pfr)->pfr_opname = __func__ +				\
+		    strlen("pscfs_fuse_handle_");			\
 		PFLOG_PFR(PLL_DEBUG, (pfr), "create");			\
 									\
 		_thr = pscthr_get();					\
 		_pft = _thr->pscthr_private;				\
 		_pft->pft_pfr = (pfr);					\
-		pfr->pfr_thread = _thr;					\
+		(pfr)->pfr_thread = _thr;				\
 									\
 		if (fsreq)						\
 			fuse_req_interrupt_func((fsreq),		\

@@ -49,10 +49,16 @@ following:
 .\"			.Ar subspec
 .\"			is left unspecified, all threads will be accessed.
 .\"			EOF
+.\"	workrqs		=> <<'EOF',
+.\"			Work requests.
+.\"			EOF
 .\"	exists $mods{rpc} ? (
 .\"		lnetif	=> "Lustre network interfaces.",
 .\"		rpcrqs	=> "Remote procedure calls (RPC).",
 .\"		rpcsvcs	=> ".Tn RPC\nservices.",
+.\"	) : (),
+.\"	exists $mods{fs} ? (
+.\"		fsrqs	=> "File system operation requests.",
 .\"	) : (),
 .\"	exists $DATA->{pools} ? (
 .\"		pools => <<'EOF'

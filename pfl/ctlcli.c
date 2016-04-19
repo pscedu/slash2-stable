@@ -352,10 +352,27 @@ psc_ctl_packshow_rpcsvc(char *rpcsvc)
 
 	pcrs = psc_ctlmsg_push(PCMT_GETRPCSVC, sizeof(*pcrs));
 	if (rpcsvc) {
-		n = strlcpy(pcrs->pcrs_name, rpcsvc, sizeof(pcrs->pcrs_name));
+		n = strlcpy(pcrs->pcrs_name, rpcsvc,
+		    sizeof(pcrs->pcrs_name));
 		if (n == 0 || n >= (int)sizeof(pcrs->pcrs_name))
 			errx(1, "invalid rpcsvc name: %s", rpcsvc);
 	}
+}
+
+void
+pfl_ctl_packshow_fsrq(__unusedx char *rpcrq)
+{
+	struct pfl_ctlmsg_fsrq *pcfr;
+
+	psc_ctlmsg_push(PCMT_GETFSRQ, sizeof(*pcfr));
+}
+
+void
+pfl_ctl_packshow_workrq(__unusedx char *rpcrq)
+{
+	struct pfl_ctlmsg_workrq *pcw;
+
+	psc_ctlmsg_push(PCMT_GETWORKRQ, sizeof(*pcw));
 }
 
 void
@@ -1126,6 +1143,49 @@ psc_ctlmsg_rpcsvc_prdat(__unusedx const struct psc_ctlmsghdr *mh,
 	    pcrs->pcrs_nbufs, pcrs->pcrs_rqptl, pcrs->pcrs_rpptl,
 	    pcrs->pcrs_nthr, pcrs->pcrs_nque, pcrs->pcrs_nact,
 	    pcrs->pcrs_nwq, pcrs->pcrs_nrep, pcrs->pcrs_nrqbd);
+}
+
+void
+pfl_ctlmsg_fsrq_prhdr(__unusedx struct psc_ctlmsghdr *mh,
+    __unusedx const void *m)
+{
+	(void)printf("%-16s %-4s %-9s %1s %-6s %1s %5s "
+	    "%6s %-10s %4s\n",
+	    "fsrq-address", "thr", "op", "f", "module", "r", "euid",
+	    "pid", "start", "rc");
+}
+
+void
+pfl_ctlmsg_fsrq_prdat(__unusedx const struct psc_ctlmsghdr *mh,
+    const void *m)
+{
+	const struct pfl_ctlmsg_fsrq *pcfr = m;
+
+	(void)printf("%016"PRIx64" %-4s %-9s "
+	    "%c "
+	    "%-6s %1d %5d "
+	    "%6d %10"PRIu64" %4d\n",
+	    pcfr->pcfr_req, pcfr->pcfr_thread + 5, pcfr->pcfr_opname,
+	    pcfr->pcfr_flags & PFLCTL_FSRQF_INTR ? 'I' : '-',
+	    pcfr->pcfr_mod, pcfr->pcfr_refcnt, pcfr->pcfr_euid,
+	    pcfr->pcfr_pid, pcfr->pcfr_start.tv_sec, pcfr->pcfr_rc);
+}
+
+void
+pfl_ctlmsg_workrq_prhdr(__unusedx struct psc_ctlmsghdr *mh,
+    __unusedx const void *m)
+{
+	(void)printf("%-16s %-30s\n", "workrq-address", "type");
+}
+
+void
+pfl_ctlmsg_workrq_prdat(__unusedx const struct psc_ctlmsghdr *mh,
+    const void *m)
+{
+	const struct pfl_ctlmsg_workrq *pcw = m;
+
+	(void)printf("%016"PRIx64" %-30s\n", pcw->pcw_addr,
+	    pcw->pcw_type);
 }
 
 __static void
