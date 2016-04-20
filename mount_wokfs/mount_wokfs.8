@@ -20,7 +20,7 @@
 .\" --------------------------------------------------------------------
 .\" %END_LICENSE%
 .\" %PFL_MODULES pflenv %
-.Dd March 22, 2016
+.Dd April 19, 2016
 .Dt MOUNT_WOKFS 8
 .ds volume Pittsburgh Supercomputing Center
 .Os http://www.psc.edu/
@@ -111,9 +111,12 @@ character
 This
 .Xr printf 3 Ns -like
 value is prepended to each log message reported.
-The following specifiers are recognized:
+The following specifiers are recognized
+.Pq not all may be applicable :
 .Pp
 .Bl -tag -offset 3n -compact -width 6n
+.It Ic A
+RPC peer address
 .It Ic B
 source code file base name
 .It Ic D Ns Aq Ar fmt
@@ -149,6 +152,9 @@ symbolic thread name which generated log message
 .It Ic r
 .Tn MPI
 rank of process
+.It Ic S
+function call stack with frames separated by
+.Sq :\&
 .It Ic s
 seconds since Epoch
 .Pq same as Li %D\*(Lt%s\*(Gt
