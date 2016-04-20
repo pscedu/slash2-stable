@@ -774,7 +774,7 @@ pjournal_open(const char *name, const char *fn)
 	 * size.
 	 */
 	pjhlen = PSC_ALIGN(sizeof(*pjh), statbuf.st_blksize);
-	pjh = psc_alloc(pjhlen, PAF_PAGEALIGN | PAF_LOCK);
+	pjh = psc_alloc(pjhlen, PAF_PAGEALIGN);
 	if (psc_journal_read(pj, pjh, pjhlen, 0))
 		psc_fatal("failed to read journal header");
 
