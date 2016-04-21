@@ -81,6 +81,7 @@ pscrpc_get_connection(lnet_process_id_t peer, lnet_nid_t self,
 	psclog_debug("self %s peer %s",
 	    libcfs_nid2str(self), libcfs_id2str(peer));
 
+	/* 04/21/2016: segfault on value b */
 	b = psc_hashbkt_get(&pscrpc_conn_hashtbl, &peer.nid);
 	c = pscrpc_lookup_conn_locked(b, peer, self);
 
