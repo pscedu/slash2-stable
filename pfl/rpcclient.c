@@ -103,7 +103,6 @@ pscrpc_prep_req_pool(struct pscrpc_import *imp, uint32_t version,
 	struct pscrpc_request *request = NULL;
 	int rc;
 
-	/* 04/21/2016: hit NULL imp coming from slrpc_newgenreq() */
 	if ((unsigned long)imp <= 0x1000 || imp == LP_POISON)
 		psc_fatalx("Unexpected import value %p", imp);
 
