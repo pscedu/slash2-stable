@@ -325,6 +325,8 @@ struct pscrpc_request {
 	int				 rq_import_generation;
 	struct timespec			 rq_sent_ts;		/* time when request was sent or re-sent */
 #define rq_sent rq_sent_ts.tv_sec
+	struct timespec			 rq_reply_recv_ts;	/* time when reply was received */
+	struct timespec			 rq_reply_duration_ts;	/* elapsed duration of RPC */
 	psc_spinlock_t			 rq_lock;
 	uint64_t			 rq_transno;
 	uint64_t			 rq_xid;
