@@ -230,7 +230,15 @@ file_close(struct file *f)
 		unlock_output();
 	}
 
-	close(f->fd);
+	if (close(f->fd) == -1) {
+		int save_errno = errno;
+
+		lock_output();
+		warnx("close: %s: %s", f->fn, strerror(save_errno));
+		unlock_output();
+		if (!continue_after_errors)
+			exit(1);
+	}
 	free(f->fn);
 	PSCFREE(f);
 	return (1);
