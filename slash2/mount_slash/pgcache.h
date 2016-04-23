@@ -159,7 +159,7 @@ struct bmpc_ioreq {
 	uint32_t		 biorq_off;	/* bmap relative */
 	uint32_t		 biorq_len;	/* length of the original req */
 	uint32_t		 biorq_flags;	/* state and op type bits */
-	uint32_t		 biorq_retries;	/* dirty data flush retries */
+	int		 	 biorq_retries;	/* dirty data flush retries */
 	sl_ios_id_t		 biorq_last_sliod;
 	psc_spinlock_t		 biorq_lock;
 	struct timespec		 biorq_expire;
@@ -288,7 +288,6 @@ void	 bmap_pagecache_destroy(void);
 void	 bmpc_global_init(void);
 void	 bmpc_freeall(struct bmap *);
 void	 bmpc_biorqs_flush(struct bmap *);
-void	 bmpc_biorqs_destroy_locked(struct bmap *, int);
 
 void	bmpc_expire_biorqs(struct bmap_pagecache *);
 

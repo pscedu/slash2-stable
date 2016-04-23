@@ -53,6 +53,7 @@ msl_resm_throttle_wake(struct sl_resm *m, int rc)
 	RPCI_LOCK(rpci);
 	if (abs(rc) == ETIMEDOUT)
 		rpci->rpci_timeouts++;
+	psc_assert(rpci->rpci_infl_rpcs > 0);
 	rpci->rpci_infl_rpcs--;
 	RPCI_WAKE(rpci);
 	RPCI_ULOCK(rpci);
@@ -196,6 +197,7 @@ slc_rmc_setmds(const char *name)
 	} else
 		msl_rmc_resm = libsl_nid2resm(nid);
 
+	slc_getmcsvc_nb(msl_rmc_resm);
 	return (0);
 }
 
@@ -217,7 +219,8 @@ slc_rmc_setmds(const char *name)
 int
 slc_rpc_retry(struct pscfs_req *pfr, int *rc)
 {
-	int retry = 0, count = 0;
+	struct timespec ts;
+	int count = 0;
 
 	switch (abs(*rc)) {
 	case PFLERR_TIMEDOUT:
@@ -240,46 +243,46 @@ slc_rpc_retry(struct pscfs_req *pfr, int *rc)
 		/* XXX track on per IOS/MDS basis */
 		OPSTAT_INCR("msl.timeout");
 		if (pfr && pfr->pfr_retries > msl_max_retries)
-			goto out;
+			PFL_GOTOERR(out, *rc = ETIMEDOUT);
 		break;
 
 	/*
 	 * Translate error codes from the SLASH2 level to the OS level.
 	 */
 	case PFLERR_NOTSUP:
-		*rc = ENOTSUP;
+		PFL_GOTOERR(out, *rc = ENOTSUP);
 		/* FALLTHROUGH */
 	default:
-		goto out;
+		PFL_GOTOERR(out, *rc);
 	}
-
-	retry = 1;
 
 	/*
-	 * We only need to set returned rc if we are not
-	 * going to retry.
+	 * We only need to set rc if we are not going to retry.
 	 */
-	if (pfr) {
-		count = pfr->pfr_retries++;
-		if (pfr->pfr_interrupted) {
-			retry = 0;
-			*rc = EINTR;
-		}
-	} else {
-		retry = 0;
-		*rc = ETIMEDOUT;
-	}
+	if (!pfr)
+		PFL_GOTOERR(out, *rc = ETIMEDOUT);
 
-	if (retry) {
-		sleep(count ? count * 3 : 10);
-		if (pfr && pfr->pfr_interrupted) {
-			retry = 0;
-			*rc = EINTR;
-		}
-		OPSTAT_INCR("msl.retry");
-	}
+	*rc = 0;
+	count = pfr->pfr_retries++;
+
+	if (pfr) {
+		ts.tv_sec = count ? count * 3 : 10;
+		ts.tv_nsec = 0;
+
+		/*
+		 * XXX we can do better here: in the case of offline
+		 * peers, we can multiwait on the csvc to be immediately
+		 * awoken when the connection is established.
+		 */
+		*rc = pflfs_req_sleep_rel(pfr, &ts);
+	} else
+		sleep(count ? count * 1 : 10);
+
  out:
-	return (retry);
+	if (*rc)
+		return (0);
+	OPSTAT_INCR("msl.retry");
+	return (1);
 }
 
 int

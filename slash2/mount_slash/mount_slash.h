@@ -168,7 +168,6 @@ struct msl_fhent {
 	pid_t				 mfh_sid;
 	uid_t				 mfh_accessing_euid;
 
-	int				 mfh_retries;
 	int				 mfh_oflags;	/* open(2) flags */
 
 	/* offsets are file-wise */
@@ -184,9 +183,8 @@ struct msl_fhent {
 	char				 mfh_uprog[128];
 };
 
-#define MFHF_CLOSING			(1 << 0)	/* close(2) has been issued */
-#define MFHF_TRACKING_RA		(1 << 1)	/* tracking for readahead */
-#define MFHF_TRACKING_WA		(1 << 2)	/* tracking for writeahead */
+#define MFHF_TRACKING_RA		(1 << 0)	/* tracking for readahead */
+#define MFHF_TRACKING_WA		(1 << 1)	/* tracking for writeahead */
 
 #define MFH_LOCK(m)			spinlock(&(m)->mfh_lock)
 #define MFH_ULOCK(m)			freelock(&(m)->mfh_lock)
@@ -306,8 +304,7 @@ struct gid_mapping {
 
 #define msl_biorq_release(r)		_msl_biorq_release(PFL_CALLERINFOSS(SLSS_FCMH), (r))
 
-void	 msl_bmap_stash_lease(struct bmap *,
-	    const struct srt_bmapdesc *, int, const char *, int);
+void	 msl_bmap_stash_lease(struct bmap *, const struct srt_bmapdesc *,  const char *);
 int	 msl_bmap_to_csvc(struct bmap *, int, struct sl_resm **, struct slashrpc_cservice **);
 void	 msl_bmap_reap_init(struct bmap *);
 void	 msl_bmpces_fail(struct bmpc_ioreq *, int);
@@ -316,7 +313,7 @@ void	_msl_biorq_release(const struct pfl_callerinfo *, struct bmpc_ioreq *);
 void	 mfh_decref(struct msl_fhent *);
 void	 mfh_incref(struct msl_fhent *);
 
-ssize_t	 msl_io(struct pscfs_req *, struct msl_fhent *, char *, size_t, off_t, enum rw);
+void	 msl_io(struct pscfs_req *, struct msl_fhent *, char *, size_t, off_t, enum rw);
 int	 msl_stat(struct fidc_membh *, void *);
 
 int	 msl_read_cleanup(struct pscrpc_request *, int, struct pscrpc_async_args *);
@@ -395,6 +392,7 @@ extern struct psc_poolmgr	*msl_biorq_pool;
 extern struct psc_poolmgr	*msl_mfh_pool;
 
 extern int			 msl_acl;
+extern int			 msl_force_dio;
 extern int			 msl_direct_io;
 extern int			 msl_ios_max_inflight_rpcs;
 extern int			 msl_mds_max_inflight_rpcs;

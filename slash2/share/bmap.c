@@ -139,7 +139,7 @@ bmap_lookup_cache(struct fidc_membh *f, sl_bmapno_t n, int bmaprw,
 	if (b) {
 		if (!BMAP_TRYLOCK(b)) {
 			pfl_rwlock_unlock(&f->fcmh_rwlock);
-			usleep(30);
+			usleep(10);
 			goto restart;
 		}
 
@@ -155,7 +155,7 @@ bmap_lookup_cache(struct fidc_membh *f, sl_bmapno_t n, int bmaprw,
 			 * flush to clear.
 			 */
 			psc_waitq_waitrelf_us(&f->fcmh_waitq,
-			    PFL_WAITQWF_RWLOCK, &f->fcmh_rwlock, 100);
+			    PFL_LOCKPRIMT_RWLOCK, &f->fcmh_rwlock, 100);
 			goto restart;
 		}
 		bmap_op_start_type(b, BMAP_OPCNT_LOOKUP);
@@ -165,6 +165,7 @@ bmap_lookup_cache(struct fidc_membh *f, sl_bmapno_t n, int bmaprw,
 		if (bnew)
 			psc_pool_return(bmap_pool, bnew);
 		*new_bmap = 0;
+		OPSTAT_INCR("bmapcache.hit");
 		return (b);
 	}
 	if (bnew == NULL) {
@@ -177,6 +178,8 @@ bmap_lookup_cache(struct fidc_membh *f, sl_bmapno_t n, int bmaprw,
 		goto restart;
 	}
 	b = bnew;
+
+	OPSTAT_INCR("bmapcache.miss");
 
 	*new_bmap = 1;
 	memset(b, 0, bmap_pool->ppm_master->pms_entsize);
@@ -280,6 +283,10 @@ _bmap_get(const struct pfl_callerinfo *pci, struct fidc_membh *f,
 	}
 
  loaded:
+
+	if (rc || !bmaprw)
+		goto out;
+
 	/*
 	 * Others wishing to access this bmap in the same mode must wait
 	 * until MODECHNG ops have completed.  If the desired mode is
@@ -300,8 +307,7 @@ _bmap_get(const struct pfl_callerinfo *pci, struct fidc_membh *f,
 	 * bmo_mode_chngf is currently CLI only and is
 	 * msl_bmap_modeset().
 	 */
-	if (rc == 0 && bmaprw && !(bmaprw & b->bcm_flags) &&
-	    sl_bmap_ops.bmo_mode_chngf) {
+	if (!(bmaprw & b->bcm_flags) && sl_bmap_ops.bmo_mode_chngf) {
 
 		psc_assert(!(b->bcm_flags & BMAPF_MODECHNG));
 		b->bcm_flags |= BMAPF_MODECHNG;
@@ -396,9 +402,4 @@ _dump_bmap_common(struct bmap *b)
 	DEBUG_BMAP(PLL_MAX, b, "");
 }
 
-__weak void
-dump_bmap(struct bmap *b)
-{
-	_dump_bmap_common(b);
-}
 #endif

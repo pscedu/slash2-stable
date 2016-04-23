@@ -50,29 +50,24 @@ struct sl_resm *rmi_resm;
 int
 sli_rmi_getcsvc(struct slashrpc_cservice **csvcp)
 {
-	int rc;
-
-	*csvcp = sli_getmcsvc(rmi_resm);
-	if (*csvcp)
-		return (0);
-
 	for (;;) {
-		rc = 0;
-		CSVC_LOCK(rmi_resm->resm_csvc);
 		*csvcp = sli_getmcsvc(rmi_resm);
 		if (*csvcp)
 			break;
-		sl_csvc_waitrel_s(rmi_resm->resm_csvc,
-		    CSVC_RECONNECT_INTV);
+
+		CSVC_LOCK(rmi_resm->resm_csvc);
+		if (sl_csvc_useable(rmi_resm->resm_csvc))
+			CSVC_ULOCK(rmi_resm->resm_csvc);
+		else
+			sl_csvc_waitrel_s(rmi_resm->resm_csvc,
+			    CSVC_RECONNECT_INTV);
 	}
-	CSVC_ULOCK(rmi_resm->resm_csvc);
-	return (rc);
+	return (0);
 }
 
-int
+void
 sli_rmi_setmds(const char *name)
 {
-	struct slashrpc_cservice *csvc;
 	struct sl_resource *res;
 	lnet_nid_t nid;
 
@@ -80,23 +75,14 @@ sli_rmi_setmds(const char *name)
 	if (nid == LNET_NID_ANY) {
 		res = libsl_str2res(name);
 		if (res == NULL)
-			return (SLERR_RES_UNKNOWN);
+			psc_fatalx("invalid MDS name %s", name);
 		rmi_resm = psc_dynarray_getpos(&res->res_members, 0);
 	} else
 		rmi_resm = libsl_nid2resm(nid);
 
-	/*
- 	 * XXX This blocks until MDS is started. We should alow sliod
- 	 * to start no matter what.
- 	 */
-	if (sli_rmi_getcsvc(&csvc))
-		psclog_errorx("error connecting to MDS");
-	else {
-		slconnthr_watch(sliconnthr, csvc, CSVCF_PING, NULL,
-		    NULL);
-		sl_csvc_decref(csvc);
-	}
-	return (0);
+	sli_getmcsvc_nb(rmi_resm);
+	slconnthr_watch(sliconnthr, rmi_resm->resm_csvc, 
+	    CSVCF_PING, NULL, NULL);
 }
 
 int

@@ -140,7 +140,7 @@ _bmpce_lookup(const struct pfl_callerinfo *pci,
  retry:
 					psc_waitq_waitrelf_us(
 					    &b->bcm_fcmh->fcmh_waitq,
-					    PFL_WAITQWF_RWLOCK,
+					    PFL_LOCKPRIMT_RWLOCK,
 					    &bci->bci_rwlock, 100);
 					if (wrlock)
 						pfl_rwlock_wrlock(
@@ -442,6 +442,7 @@ bmpc_expire_biorqs(struct bmap_pagecache *bmpc)
 			BIORQ_ULOCK(r);
 			break;
 		}
+		r->biorq_retries = 0;
 		r->biorq_flags |= BIORQ_EXPIRE;
 		DEBUG_BIORQ(PLL_DIAG, r, "force expire");
 		BIORQ_ULOCK(r);
@@ -473,49 +474,6 @@ bmpc_biorqs_flush(struct bmap *b)
 		    100);
 		BMAP_LOCK(b);
 	}
-}
-
-void
-bmpc_biorqs_destroy_locked(struct bmap *b, int rc)
-{
-	struct psc_dynarray a = DYNARRAY_INIT;
-	struct bmap_pagecache *bmpc;
-	struct bmap_cli_info *bci;
-	struct bmpc_ioreq *r;
-	int i;
-
-	BMAP_LOCK_ENSURE(b);
-
-	bci = bmap_2_bci(b);
-	if (rc && !bci->bci_flush_rc)
-		bci->bci_flush_rc = rc;
-
-	bmpc = bmap_2_bmpc(b);
-	while ((r = RB_ROOT(&bmpc->bmpc_new_biorqs)) != NULL) {
-		psc_dynarray_add(&a, r);
-
-		/*
-		 * Avoid another thread from reaching here and
-		 * destroying the same biorq again.
-		 */
-		BIORQ_LOCK(r);
-		psc_assert(r->biorq_flags & BIORQ_FLUSHRDY);
-		r->biorq_flags &= ~BIORQ_ONTREE;
-		PSC_RB_XREMOVE(bmpc_biorq_tree, &bmpc->bmpc_new_biorqs,
-		    r);
-		pll_remove(&bmpc->bmpc_new_biorqs_exp, r);
-		BIORQ_ULOCK(r);
-	}
-	if (psc_dynarray_len(&a))
-		bmap_wake_locked(b);
-	BMAP_ULOCK(b);
-
-	DYNARRAY_FOREACH(r, i, &a) {
-		msl_bmpces_fail(r, rc);
-		msl_biorq_release(r);
-	}
-	OPSTAT_INCR("msl.biorq-destroy-batch");
-	psc_dynarray_free(&a);
 }
 
 void

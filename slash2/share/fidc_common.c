@@ -254,6 +254,7 @@ _fidc_lookup(const struct pfl_callerinfo *pci, slfid_t fid,
 				FCMH_ULOCK(f);
 			*fp = f;
 		}
+		OPSTAT_INCR("fidcache.hit");
 		return (rc);
 	}
 
@@ -277,6 +278,8 @@ _fidc_lookup(const struct pfl_callerinfo *pci, slfid_t fid,
 		psc_hashbkt_put(&sl_fcmh_hashtbl, b);
 		return (ENOENT);
 	}
+
+	OPSTAT_INCR("fidcache.miss");
 
 	/*
 	 * OK, we've got a new fcmh.  No need to lock it since it's not
@@ -534,14 +537,4 @@ _dump_fcmh_flags_common(int *flags, int *seq)
 	PFL_PRFLAG(FCMH_DELETED, flags, seq);
 }
 
-__weak void
-dump_fcmh_flags(int flags)
-{
-	int seq = 0;
-
-	_dump_fcmh_flags_common(&flags, &seq);
-	if (flags)
-		printf(" unknown: %x", flags);
-	printf("\n");
-}
 #endif

@@ -159,6 +159,7 @@ struct psc_hashtbl		 msl_gidmap_int;
  * integrated.
  */
 int				 msl_acl;
+int				 msl_force_dio;
 int				 msl_direct_io = 1;
 int				 msl_root_squash;
 int				 msl_max_retries = 5;
@@ -519,7 +520,7 @@ mslfsop_create(struct pscfs_req *pfr, pscfs_inum_t pinum,
 		PFL_GOTOERR(out, rc2);
 
 	b->bcm_flags |= BMAPF_LOADED;
-	msl_bmap_stash_lease(b, &mp->sbd, 0, "preload", 1);
+	msl_bmap_stash_lease(b, &mp->sbd, "preload");
 	msl_bmap_reap_init(b);
 
 	DEBUG_BMAP(PLL_DIAG, b, "ios(%s) sbd_seq=%"PRId64,
@@ -627,19 +628,18 @@ msl_open(struct pscfs_req *pfr, pscfs_inum_t inum, int oflags,
 	fcmh_op_start_type(c, FCMH_OPCNT_OPEN);
 
  out:
-	if (c) {
-		DEBUG_FCMH(rc ? PLL_INFO : PLL_DIAG, c,
-		    "new mfh=%p dir=%s rc=%d oflags=%#o",
-		    *mfhp, (oflags & O_DIRECTORY) ? "yes" : "no", rc, oflags);
+	if (c) 
 		fcmh_op_done(c);
-	}
+	psclogs(rc ? PLL_INFO : PLL_DIAG, SLCSS_FSOP, ""
+	    "OPEN: new mfh=%p dir=%s rc=%d oflags=%#o rflags=%#o",
+	    *mfhp, (oflags & O_DIRECTORY) ? "yes" : "no", rc, oflags, *rflags);
 	return (rc);
 }
 
 void
 mslfsop_open(struct pscfs_req *pfr, pscfs_inum_t inum, int oflags)
 {
-	struct msl_fhent *mfh;
+	struct msl_fhent *mfh = NULL;
 	int rflags, rc;
 
 	rflags = 0;
@@ -650,7 +650,7 @@ mslfsop_open(struct pscfs_req *pfr, pscfs_inum_t inum, int oflags)
 void
 mslfsop_opendir(struct pscfs_req *pfr, pscfs_inum_t inum, int oflags)
 {
-	struct msl_fhent *mfh;
+	struct msl_fhent *mfh = NULL;
 	int rflags, rc;
 
 	rflags = 0;
@@ -1049,7 +1049,7 @@ slc_wk_issue_readdir(void *p)
 {
 	struct slc_wkdata_readdir *wk = p;
 
-	msl_readdir_issue(NULL, wk->d, wk->off, wk->size, 0);
+	msl_readdir_issue(wk->d, wk->off, wk->size, 0);
 	FCMH_LOCK(wk->d);
 	wk->pg->dcp_refcnt--;
 	fcmh_op_done_type(wk->d, FCMH_OPCNT_WORKER);
@@ -1178,11 +1178,18 @@ msl_lookup_fidcache_dcu(struct pscfs_req *pfr,
 		FCMH_ULOCK(c);
 
  out:
+	/* Caller wants parent; don't drop. */
 	if (parentp && p) {
 		*parentp = p;
 		p = NULL;
 		psc_assert(orig_dcu);
 	}
+
+	/*
+	 * Use 'dcu' here instead of 'dcup' because we only want to
+	 * release HOLD if we grabbed it; whereas a caller will want to
+	 * release it if they grabbed HOLD.
+	 */
 	namecache_update(&dcu, fcmh_2_fid(c), rc);
 	if (rc == 0 && fp) {
 		*fp = c;
@@ -1364,7 +1371,7 @@ mslfsop_mknod(struct pscfs_req *pfr, pscfs_inum_t pinum,
 		PFL_GOTOERR(out, rc);
 
  retry1:
-	MSL_RMC_NEWREQ( p, csvc, SRMT_MKNOD, rq, mq, mp, rc);
+	MSL_RMC_NEWREQ(p, csvc, SRMT_MKNOD, rq, mq, mp, rc);
 	if (rc)
 		goto retry2;
 
@@ -1563,8 +1570,8 @@ msl_readdir_cb(struct pscrpc_request *rq, struct pscrpc_async_args *av)
  * Send out an asynchronous READDIR RPC.
  */
 int
-msl_readdir_issue(struct pscfs_req *pfr, struct fidc_membh *d,
-    off_t off, size_t size, int block)
+msl_readdir_issue(struct fidc_membh *d, off_t off, size_t size,
+    int block)
 {
 	void *dentbuf = NULL;
 	struct slashrpc_cservice *csvc = NULL;
@@ -1582,7 +1589,6 @@ msl_readdir_issue(struct pscfs_req *pfr, struct fidc_membh *d,
 	fcmh_op_start_type(d, FCMH_OPCNT_READDIR);
 
 	MSL_RMC_NEWREQ(d, csvc, SRMT_READDIR, rq, mq, mp, rc);
-	(void)pfl_fault_here_rc("slash2/readdir", &rc, EHOSTDOWN);
 	if (rc)
 		PFL_GOTOERR(out2, rc);
 
@@ -1782,7 +1788,7 @@ mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off,
 		 * had an error.  Issue a READDIR then wait for a reply.
 		 */
 		hit = 0;
-		rc = msl_readdir_issue(pfr, d, off, size, 1);
+		rc = msl_readdir_issue(d, off, size, 1);
 		if (rc && !slc_rpc_retry(pfr, &rc))
 			PFL_GOTOERR(out, rc);
 		DIRCACHE_WRLOCK(d);
@@ -1800,7 +1806,7 @@ mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off,
 	}
 
 	if (raoff) {
-		msl_readdir_issue(NULL, d, raoff, size, 0);
+		msl_readdir_issue(d, raoff, size, 0);
 		fcmh_op_done_type(d, FCMH_OPCNT_READAHEAD);
 	}
 }
@@ -1962,28 +1968,30 @@ msl_flush(struct msl_fhent *mfh)
 	return (rc);
 }
 
+/*
+ * Send a SETATTR RPC to the MDS.  @sstb is filled out according to the
+ * new values any attributes should take on.  Upon reply, the fcmh is
+ * updated according to how the MDS refreshes it, naturally handling
+ * success and failure.
+ */
 int
-msl_setattr(struct pscfs_req *pfr, struct fidc_membh *f, int32_t to_set,
-    const struct srt_stat *sstb, const struct sl_fidgen *fgp,
-    const struct stat *stb)
+msl_setattr(struct fidc_membh *f, int32_t to_set,
+    const struct srt_stat *sstb, int setattrflags)
 {
-	int rc, flags = 0;
 	struct slashrpc_cservice *csvc = NULL;
 	struct pscrpc_request *rq = NULL;
 	struct srm_setattr_req *mq;
 	struct srm_setattr_rep *mp;
+	int rc;
 
- retry1:
+	FCMH_BUSY_ENSURE(f);
+
 	MSL_RMC_NEWREQ(f, csvc, SRMT_SETATTR, rq, mq, mp, rc);
 	if (rc)
-		goto retry2;
+		PFL_GOTOERR(out, rc);
 
-	if (sstb)
-		mq->attr = *sstb;
-	else {
-		sl_externalize_stat(stb, &mq->attr);
-		mq->attr.sst_fg = *fgp;
-	}
+	mq->attr = *sstb;
+	mq->attr.sst_fg = f->fcmh_fg;
 	mq->to_set = to_set;
 
 	if (to_set & (PSCFS_SETATTRF_GID | PSCFS_SETATTRF_UID)) {
@@ -1996,10 +2004,8 @@ msl_setattr(struct pscfs_req *pfr, struct fidc_membh *f, int32_t to_set,
 	    to_set);
 
 	rc = SL_RSX_WAITREP(csvc, rq, mp);
-
- retry2:
-	if (rc && slc_rpc_retry(pfr, &rc))
-		goto retry1;
+	if (rc)
+		PFL_GOTOERR(out, rc);
 
 	rc = abs(rc);
 	if (rc == 0)
@@ -2011,14 +2017,11 @@ msl_setattr(struct pscfs_req *pfr, struct fidc_membh *f, int32_t to_set,
 		rc = 0;
 
 	DEBUG_SSTB(rc ? PLL_WARN : PLL_DIAG, &f->fcmh_sstb,
-	    "attr flush; set=%x rc=%d", to_set, rc);
+	    "attr flush; set=%#x rc=%d", to_set, rc);
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
-	if (to_set & (PSCFS_SETATTRF_MTIME | PSCFS_SETATTRF_DATASIZE))
-		flags |= FCMH_SETATTRF_CLOBBER;
-
-	slc_fcmh_setattrf(f, &mp->attr, flags);
+	slc_fcmh_setattrf(f, &mp->attr, setattrflags);
 
  out:
 	pscrpc_req_finished(rq);
@@ -2043,8 +2046,6 @@ msl_flush_ioattrs(struct pscfs_req *pfr, struct fidc_membh *f)
 
 	waslocked = FCMH_RLOCK(f);
 	fcmh_wait_locked(f, f->fcmh_flags & FCMH_BUSY);
-
-	attr.sst_fg = f->fcmh_fg;
 
 	/*
 	 * Perhaps this checking should only be done on the mfh, with
@@ -2072,9 +2073,7 @@ msl_flush_ioattrs(struct pscfs_req *pfr, struct fidc_membh *f)
 
 	FCMH_ULOCK(f);
 
-	OPSTAT_INCR("msl.flush-attr");
-
-	rc = msl_setattr(pfr, f, to_set, &attr, NULL, NULL);
+	rc = msl_setattr(f, to_set, &attr, 0);
 
 	FCMH_LOCK(f);
 	FCMH_UREQ_BUSY(f, 0, PSLRV_WASLOCKED);
@@ -2125,7 +2124,6 @@ mslfsop_flush(struct pscfs_req *pfr, void *data)
 
 	rc = msl_flush(mfh);
 	rc2 = msl_flush_ioattrs(pfr, mfh->mfh_fcmh);
-	//if (rc && slc_rpc_retry(pfr, &rc))
 	if (!rc)
 		rc = rc2;
 
@@ -2323,14 +2321,19 @@ mslfsop_release(struct pscfs_req *pfr, void *data)
 	fci = fcmh_2_fci(f);
 
 	MFH_LOCK(mfh);
-	mfh->mfh_flags |= MFHF_CLOSING;
-
-	/* force expire to provoke immediate flush */
+	/*
+	 * Force expire to provoke immediate flush.
+	 * We probably do not need this because we
+	 * already did this at flush time.
+	 */
 	FCMH_LOCK(f);
-	PFL_GETTIMESPEC(&fci->fci_etime);
-	fci->fci_etime.tv_sec--;
+	if (f->fcmh_flags & FCMH_CLI_DIRTY_QUEUE) {
+		OPSTAT_INCR("msl.release_dirty_attrs");
+		PFL_GETTIMESPEC(&fci->fci_etime);
+		fci->fci_etime.tv_sec--;
+		psc_waitq_wakeone(&msl_flush_attrq);
+	}
 	FCMH_ULOCK(f);
-	psc_waitq_wakeone(&msl_flush_attrq);
 
 	if (fcmh_isdir(f)) {
 		pscfs_reply_releasedir(pfr, 0);
@@ -2713,7 +2716,8 @@ mslfsop_symlink(struct pscfs_req *pfr, const char *buf,
 	iov.iov_base = (char *)buf;
 	iov.iov_len = mq->linklen;
 
-	slrpc_bulkclient(rq, BULK_GET_SOURCE, SRMC_BULK_PORTAL, &iov, 1);
+	slrpc_bulkclient(rq, BULK_GET_SOURCE, SRMC_BULK_PORTAL, &iov,
+	    1);
 
 	namecache_hold_entry(&dcu, p, name);
 	rc = SL_RSX_WAITREP(csvc, rq, mp);
@@ -2799,15 +2803,14 @@ void
 mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
     struct stat *stb, int to_set, void *data)
 {
-	int i, rc = 0, unset_trunc = 0, getting_attrs = 0;
-	int flush_mtime = 0, flush_size = 0;
-	struct slashrpc_cservice *csvc = NULL;
+	int flush_mtime = 0, flush_size = 0, setattrflags = 0;
+	int i, busied = 0, rc = 0, unset_trunc = 0, getting_attrs = 0;
 	struct msl_dc_inv_entry_data mdie;
-	struct pscrpc_request *rq = NULL;
 	struct msl_fhent *mfh = data;
 	struct fidc_membh *c = NULL;
 	struct fcmh_cli_info *fci;
 	struct pscfs_creds pcr;
+	struct srt_stat sstb;
 	struct timespec ts;
 
 	memset(&mdie, 0, sizeof(mdie));
@@ -2832,6 +2835,7 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 	if (to_set == 0)
 		goto out;
 
+	busied = 1;
 	FCMH_WAIT_BUSY(c);
 
 	slc_getfscreds(pfr, &pcr);
@@ -3022,8 +3026,12 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 	c->fcmh_flags &= ~FCMH_CLI_DIRTY_ATTRS;
 	FCMH_ULOCK(c);
 
+	sl_externalize_stat(stb, &sstb);
+	if (to_set & (PSCFS_SETATTRF_MTIME | PSCFS_SETATTRF_DATASIZE))
+		setattrflags |= FCMH_SETATTRF_CLOBBER;
+
  retry:
-	rc = msl_setattr(pfr, c, to_set, NULL, &c->fcmh_fg, stb);
+	rc = msl_setattr(c, to_set, &sstb, setattrflags);
 	if (rc && slc_rpc_retry(pfr, &rc))
 		goto retry;
 
@@ -3039,13 +3047,6 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 		sl_internalize_stat(&c->fcmh_sstb, stb);
 
 		if (flush_mtime || flush_size) {
-			if (!rc && !(c->fcmh_flags & FCMH_CLI_DIRTY_ATTRS)) {
-				fci = fcmh_2_fci(c);
-				psc_assert(c->fcmh_flags & FCMH_CLI_DIRTY_QUEUE);
-				c->fcmh_flags &= ~FCMH_CLI_DIRTY_QUEUE;
-				lc_remove(&msl_attrtimeoutq, fci);
-				fcmh_op_done_type(c, FCMH_OPCNT_DIRTY_QUEUE);
-			}
 			if (rc) {
 				if (flush_mtime)
 					c->fcmh_flags |=
@@ -3053,6 +3054,15 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 				if (flush_size)
 					c->fcmh_flags |=
 					    FCMH_CLI_DIRTY_DSIZE;
+			} else if (!(c->fcmh_flags &
+			    FCMH_CLI_DIRTY_ATTRS)) {
+				fci = fcmh_2_fci(c);
+				psc_assert(c->fcmh_flags &
+				    FCMH_CLI_DIRTY_QUEUE);
+				c->fcmh_flags &= ~FCMH_CLI_DIRTY_QUEUE;
+				lc_remove(&msl_attrtimeoutq, fci);
+				fcmh_op_done_type(c,
+				    FCMH_OPCNT_DIRTY_QUEUE);
 			}
 		}
 
@@ -3068,6 +3078,9 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 	pscfs_reply_setattr(pfr, stb, pscfs_attr_timeout, rc);
 
 	if (c) {
+		if (busied)
+			FCMH_UNBUSY(c);
+
 		/*
 		 * If permissions changed for a directory, we need to
 		 * specifically invalidate all entries under the dir
@@ -3087,19 +3100,14 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 		 * this operation completes?
 		 */
 		if (mdie.mdie_pri)
-			dircache_walk(c, msl_dircache_inval_entry, &mdie);
+			dircache_walk(c, msl_dircache_inval_entry,
+			    &mdie);
 
-		if (FCMH_HAS_BUSY(c))
-			FCMH_UNBUSY(c);
 		fcmh_op_done(c);
 	}
 
 	psclogs_diag(SLCSS_FSOP, "SETATTR: fid="SLPRI_FID" to_set=%#x "
 	    "rc=%d", inum, to_set, rc);
-
-	pscrpc_req_finished(rq);
-	if (csvc)
-		sl_csvc_decref(csvc);
 }
 
 void
@@ -3262,6 +3270,7 @@ mslfsop_destroy(__unusedx struct pscfs_req *pfr)
 	bmap_cache_destroy();
 
 	pfl_poolmaster_destroy(&msl_async_req_poolmaster);
+	pfl_poolmaster_destroy(&msl_retry_req_poolmaster);
 	pfl_poolmaster_destroy(&msl_biorq_poolmaster);
 	pfl_poolmaster_destroy(&msl_iorq_poolmaster);
 	pfl_poolmaster_destroy(&msl_mfh_poolmaster);
@@ -3296,29 +3305,13 @@ mslfsop_write(struct pscfs_req *pfr, const void *buf, size_t size,
 {
 	struct msl_fhent *mfh = data;
 	struct fidc_membh *f;
-	int rc = 0;
 
 	f = mfh->mfh_fcmh;
 
-	/* XXX EBADF if fd is not open for writing */
-	if (fcmh_isdir(f)) {
-		OPSTAT_INCR("msl.fsrq-write-isdir");
-		PFL_GOTOERR(out, rc = EISDIR);
-	}
+	DEBUG_FCMH(PLL_DIAG, f, "write start: pfr=%p sz=%zu "
+	    "off=%"PSCPRIdOFFT" buf=%p", pfr, size, off, buf);
 
-	rc = msl_write(pfr, mfh, (void *)buf, size, off);
-
- out:
-	/*
-	 * msl_write() will arrange to have the pscfs_reply_write()
-	 * executed when the RPC callback runs to avoid tying up
-	 * threads, especially when doing aio to ARCHIVAL_FS.
-	 */
-	if (rc)
-		pscfs_reply_write(pfr, size, rc);
-
-	DEBUG_FCMH(rc ? PLL_NOTICE: PLL_DIAG, f, "write: buf=%p rc=%d sz=%zu "
-	    "off=%"PSCPRIdOFFT, buf, rc, size, off);
+	msl_write(pfr, mfh, (void *)buf, size, off);
 }
 
 void
@@ -3326,31 +3319,13 @@ mslfsop_read(struct pscfs_req *pfr, size_t size, off_t off, void *data)
 {
 	struct msl_fhent *mfh = data;
 	struct fidc_membh *f;
-	int rc = 0;
 
 	f = mfh->mfh_fcmh;
 
-	DEBUG_FCMH(PLL_DIAG, f, "read (start): rc=%d sz=%zu "
-	    "off=%"PSCPRIdOFFT, rc, size, off);
+	DEBUG_FCMH(PLL_DIAG, f, "read start: pfr=%p sz=%zu "
+	    "off=%"PSCPRIdOFFT, pfr, size, off);
 
-	if (fcmh_isdir(f)) {
-		OPSTAT_INCR("msl.fsrq-read-isdir");
-		PFL_GOTOERR(out, rc = EISDIR);
-	}
-
-	rc = msl_read(pfr, mfh, NULL, size, off);
-
- out:
-	/*
-	 * msl_read() will arrange to have the pscfs_reply_read()
-	 * executed when the RPC callback runs to avoid tying up
-	 * threads, especially when doing aio to ARCHIVAL_FS.
-	 */
-	if (rc)
-		pscfs_reply_read(pfr, NULL, 0, rc);
-
-	DEBUG_FCMH(rc ? PLL_INFO : PLL_DIAG, f, "read (end): rc=%d sz=%zu "
-	    "off=%"PSCPRIdOFFT, rc, size, off);
+	msl_read(pfr, mfh, NULL, size, off);
 }
 
 void
@@ -3959,7 +3934,7 @@ msl_init(void)
 	slc_rpc_initsvc();
 
 	sl_nbrqset = pscrpc_prep_set();
-	pscrpc_nbreapthr_spawn(sl_nbrqset, MSTHRT_NBRQ, 
+	pscrpc_nbreapthr_spawn(sl_nbrqset, MSTHRT_NBRQ,
 	    NUM_NBRQ_THREADS, "msnbrqthr%d");
 
 	msctlthr_spawn();

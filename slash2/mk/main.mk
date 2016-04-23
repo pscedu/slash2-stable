@@ -24,3 +24,14 @@ include ${MAINMK}
 $(call ADD_FILE_CFLAGS,${SLASH_BASE}/share/adler32.c,${COPT})
 
 ${OBJDIR}/version.o: $(filter-out ${SLASH_BASE}/share/version.c},${SRCS})
+
+${OBJDIR}/rpc_names.c: ${SLASH_BASE}/include/slashrpc.h
+	${MAKE} ${OBJDIR}
+	{								\
+		echo '#include <stdlib.h>';				\
+		echo;							\
+		echo 'const char *slrpc_names[] = { NULL,';		\
+		perl -Wne 'print lc qq{\t"$$1",\n} if /SRMT_([A-Z_]+)/'	\
+		    ${SLASH_BASE}/include/slashrpc.h;			\
+		echo '};';						\
+	} > $@

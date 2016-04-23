@@ -217,7 +217,7 @@ main(int argc, char *argv[])
 	const char *cfn, *sfn, *p, *prefmds;
 	sigset_t signal_set;
 	time_t now;
-	int rc, c;
+	int c;
 
 	/* gcrypt must be initialized very early on */
 	gcry_control(GCRYCTL_SET_THREAD_CBS, &gcry_threads_pthread);
@@ -327,10 +327,8 @@ main(int argc, char *argv[])
 	prefmds = slcfg_local->cfg_prefmds;
 	if (argc)
 		prefmds = argv[0];
-	rc = sli_rmi_setmds(prefmds);
-	if (rc)
-		psc_fatalx("invalid MDS %s: %s", prefmds,
-		    sl_strerror(rc));
+
+	sli_rmi_setmds(prefmds);
 
 	psc_assert(globalConfig.gconf_fsuuid);
 	psclog_info("gconf_fsuuid=%"PRIx64, globalConfig.gconf_fsuuid);

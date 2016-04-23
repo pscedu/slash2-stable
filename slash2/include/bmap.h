@@ -138,7 +138,12 @@ struct bmap {
 #define bmap_2_fid(b)		fcmh_2_fid((b)->bcm_fcmh)
 
 #define SL_MAX_IOSREASSIGN	16
-#define SL_MAX_BMAPFLSH_RETRIES	2048
+
+/*
+ * This will retry for > 20 hours.
+ */
+#define SL_MAX_BMAPFLSH_DELAY	10
+#define SL_MAX_BMAPFLSH_RETRIES	8192
 
 #define BMAP_LOCK_ENSURE(b)	LOCK_ENSURE(&(b)->bcm_lock)
 #define BMAP_HASLOCK(b)		psc_spin_haslock(&(b)->bcm_lock)
@@ -360,10 +365,8 @@ enum bmap_opcnt_types {
 	BMAP_OPCNT_BIORQ,		/* all: IO request */
 	BMAP_OPCNT_FLUSH,		/* CLI: flusher queue */
 	BMAP_OPCNT_LEASE,		/* MDS: bmap_lease */
-	BMAP_OPCNT_LEASEEXT,		/* CLI: lease extension async RPC */
 	BMAP_OPCNT_LOOKUP,		/* all: bmap_get */
 	BMAP_OPCNT_REAPER,		/* all: client bmap timeout */
-	BMAP_OPCNT_REASSIGN,		/* CLI: lease reassignment async RPC */
 	BMAP_OPCNT_RELEASER,		/* IOD: bmap lease relinquisher */
 	BMAP_OPCNT_REPLWK,		/* IOD: repl work */
 	BMAP_OPCNT_SLVR,		/* all: IOD sliver */

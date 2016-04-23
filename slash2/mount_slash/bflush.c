@@ -64,7 +64,7 @@ struct psc_listcache		 msl_bmaptimeoutq;
 
 int				 msl_max_nretries = 256;
 
-#define MIN_COALESCE_RPC_SZ	LNET_MTU
+#define MIN_COALESCE_RPC_SZ	 LNET_MTU
 
 struct psc_waitq		 slc_bflush_waitq = PSC_WAITQ_INIT;
 psc_spinlock_t			 slc_bflush_lock = SPINLOCK_INIT;
@@ -76,11 +76,11 @@ psc_spinlock_t			 slc_pending_writes_lock = SPINLOCK_INIT;
 psc_atomic32_t			 slc_write_coalesce_max;
 
 __static int
-bmap_flush_biorq_expired(const struct bmpc_ioreq *a)
+bmap_flush_biorq_expired(const struct bmpc_ioreq *a, int force)
 {
 	struct timespec ts;
 
-	if (a->biorq_flags & BIORQ_EXPIRE)
+	if (force && (a->biorq_flags & BIORQ_EXPIRE))
 		return (1);
 
 	PFL_GETTIMESPEC(&ts);
@@ -104,6 +104,8 @@ bmap_free_all_locked(struct fidc_membh *f)
 	struct bmap_cli_info *bci;
 	struct bmap *b;
 	
+ retry:
+
  retry:
 
 	FCMH_LOCK_ENSURE(f);
@@ -136,8 +138,8 @@ bmap_free_all_locked(struct fidc_membh *f)
 		BMAP_ULOCK(b);
 	}
 	/*
- 	 * Need to race with the bmap timeout code path.
- 	 */
+	 * Need to race with the bmap timeout code path.
+	 */
 	if (redo) {
 		redo = 0;
 		FCMH_ULOCK(f);
@@ -268,26 +270,6 @@ bmap_flush_create_rpc(struct bmpc_write_coalescer *bwc,
 	if (rc)
 		goto out;
 
-#if 0
-	/*
-	 * Instead of timeout ourselves, the IOS will return
-	 * -PFLERR_KEYEXPIRED and we should retry.
-	 */
-	rq->rq_timeout = msl_bmap_lease_secs_remaining(b);
-#endif
-
-	(void)pfl_fault_here_rc("slash2/request_timeout",
-	    &rq->rq_timeout, -1);
-
-	if (rq->rq_timeout < 0) {
-		rc = -EAGAIN;
-		DEBUG_REQ(PLL_ERROR, rq,
-		    "negative timeout: off=%u sz=%u op=%u",
-		    mq->offset, mq->size, mq->op);
-		OPSTAT_INCR("msl.flush-rpc-expire");
-		goto out;
-	}
-
 	mq->offset = bwc->bwc_soff;
 	mq->size = bwc->bwc_size;
 	mq->op = SRMIOP_WR;
@@ -295,7 +277,7 @@ bmap_flush_create_rpc(struct bmpc_write_coalescer *bwc,
 	if (b->bcm_flags & BMAPF_BENCH)
 		mq->flags |= SRM_IOF_BENCH;
 
-	memcpy(&mq->sbd, &bmap_2_bci(b)->bci_sbd, sizeof(mq->sbd));
+	mq->sbd = *bmap_2_sbd(b);
 
 	DEBUG_REQ(PLL_DIAG, rq, "sending WRITE RPC to iosid=%#x "
 	    "fid="SLPRI_FG" off=%u sz=%u ios=%u infl=%d",
@@ -309,12 +291,10 @@ bmap_flush_create_rpc(struct bmpc_write_coalescer *bwc,
 	rq->rq_async_args.pointer_arg[MSL_CBARG_RESM] = m;
 	rq->rq_async_args.pointer_arg[MSL_CBARG_BIORQS] = bwc;
 	rc = SL_NBRQSET_ADD(csvc, rq);
-	if (rc) {
-		bwc_unpin_pages(bwc);
-		goto out;
-	}
+	if (!rc)
+		return (0);
 
-	return (0);
+	bwc_unpin_pages(bwc);
 
  out:
 	if (rq)
@@ -333,7 +313,6 @@ bmap_flush_resched(struct bmpc_ioreq *r, int rc)
 	struct bmap *b = r->biorq_bmap;
 	struct bmap_pagecache *bmpc;
 	struct bmap_cli_info *bci;
-	int delta;
 
 	DEBUG_BIORQ(PLL_DIAG, r, "resched rc=%d", rc);
 
@@ -345,9 +324,9 @@ bmap_flush_resched(struct bmpc_ioreq *r, int rc)
 
 	BIORQ_LOCK(r);
 
-	if (rc == -ENOSPC || r->biorq_retries >=
-	    SL_MAX_BMAPFLSH_RETRIES) {
-		BIORQ_ULOCK(r);
+	if (rc == -ENOSPC || r->biorq_retries >= SL_MAX_BMAPFLSH_RETRIES ||
+	    ((r->biorq_flags & BIORQ_EXPIRE) && 
+	     (r->biorq_retries >= msl_max_retries * 32))) {
 
 		bci = bmap_2_bci(r->biorq_bmap);
 		if (rc && !bci->bci_flush_rc)
@@ -385,26 +364,7 @@ bmap_flush_resched(struct bmpc_ioreq *r, int rc)
 	 * complicated to get right.
 	 */
 	PFL_GETTIMESPEC(&r->biorq_expire);
-
-	/*
-	 * Retry last more than 11 hours, but don't make it too long
-	 * between retries.
-	 *
-	 * XXX These magic numbers should be made into tunables.
-	 *
-	 * Note that PSCRPC_OBD_TIMEOUT = 60.
-	 *
-	 * XXX: This logic ignores the fact that a large request
-	 * will always be selected.
-	 */
-	if (r->biorq_retries < 32)
-		delta = 20;
-	else if (r->biorq_retries < 64)
-		delta = (r->biorq_retries - 32) * 20 + 20;
-	else
-		delta = 32 * 20;
-
-	r->biorq_expire.tv_sec += delta;
+	r->biorq_expire.tv_sec += SL_MAX_BMAPFLSH_DELAY;
 
 	BIORQ_ULOCK(r);
 	BMAP_ULOCK(b);
@@ -412,7 +372,7 @@ bmap_flush_resched(struct bmpc_ioreq *r, int rc)
 	 * If we were able to connect to an IOS, but the RPC fails
 	 * somehow, try to use a different IOS if possible.
 	 */
-	msl_bmap_lease_tryreassign(r->biorq_bmap);
+	msl_bmap_lease_reassign(r->biorq_bmap);
 }
 
 __static void
@@ -431,6 +391,11 @@ bmap_flush_send_rpcs(struct bmpc_write_coalescer *bwc)
 		PFL_GOTOERR(out, rc);
 
 	b = r->biorq_bmap;
+	BMAP_LOCK(b);
+	rc = msl_bmap_lease_extend(b, 1);
+	if (rc)
+		PFL_GOTOERR(out, rc);
+
 	psc_assert(bwc->bwc_soff == r->biorq_off);
 
 	BMAP_LOCK(b);
@@ -636,12 +601,17 @@ bmap_flush_trycoalesce(const struct psc_dynarray *biorqs, int *indexp)
 	    idx++, last = curr) {
 		curr = psc_dynarray_getpos(biorqs, idx + *indexp);
 
+		if (curr->biorq_retries && !bmap_flush_biorq_expired(curr, 0)) {
+			OPSTAT_INCR("msl.bmap-flush-wait-retry");
+			break;
+		}
+
 		/*
 		 * If any member is expired then we'll push everything
 		 * out.
 		 */
 		if (!expired)
-			expired = bmap_flush_biorq_expired(curr);
+			expired = bmap_flush_biorq_expired(curr, 1);
 
 		DEBUG_BIORQ(PLL_DIAG, curr, "biorq #%d (expired=%d)",
 		    idx, expired);
@@ -751,7 +721,6 @@ msbwatchthr_main(struct psc_thread *thr)
 				continue;
 			DEBUG_BMAP(PLL_DEBUG, b, "begin");
 			if ((b->bcm_flags & BMAPF_TOFREE) ||
-			    (b->bcm_flags & BMAPF_LEASEFAILED) ||
 			    (b->bcm_flags & BMAPF_REASSIGNREQ)) {
 				BMAP_ULOCK(b);
 				continue;
@@ -779,7 +748,7 @@ msbwatchthr_main(struct psc_thread *thr)
 			 * although with a different patch.
 			 */
 			BMAP_LOCK(b);
-			msl_bmap_lease_tryext(b, 0);
+			msl_bmap_lease_extend(b, 0);
 		}
 		psc_dynarray_reset(&bmaps);
 	}
@@ -816,9 +785,7 @@ bmap_flush(void)
 			continue;
 		}
 
-		if (bmap_flushable(b) ||
-		   (b->bcm_flags & BMAPF_TOFREE) ||
-		   (b->bcm_flags & BMAPF_LEASEFAILED)) {
+		if (bmap_flushable(b)) {
 			b->bcm_flags |= BMAPF_SCHED;
 			psc_dynarray_add(&bmaps, b);
 			bmap_op_start_type(b, BMAP_OPCNT_FLUSH);
@@ -834,20 +801,8 @@ bmap_flush(void)
 		b = psc_dynarray_getpos(&bmaps, i);
 		bmpc = bmap_2_bmpc(b);
 
-		/*
-		 * Try to catch recently expired bmaps before they are
-		 * processed by the write back flush mechanism.
-		 */
 		BMAP_LOCK(b);
-		if (b->bcm_flags & (BMAPF_TOFREE | BMAPF_LEASEFAILED)) {
-			b->bcm_flags &= ~BMAPF_SCHED;
-			bmpc_biorqs_destroy_locked(b,
-			    bmap_2_bci(b)->bci_error);
-			goto next;
-		}
-
 		DEBUG_BMAP(PLL_DIAG, b, "try flush");
-
 		RB_FOREACH(r, bmpc_biorq_tree, &bmpc->bmpc_new_biorqs) {
 			DEBUG_BIORQ(PLL_DEBUG, r, "flushable");
 			psc_dynarray_add(&reqs, r);
@@ -863,7 +818,6 @@ bmap_flush(void)
 		}
 		psc_dynarray_reset(&reqs);
 
- next:
 		BMAP_LOCK(b);
 		b->bcm_flags &= ~BMAPF_SCHED;
 		bmap_op_done_type(b, BMAP_OPCNT_FLUSH);

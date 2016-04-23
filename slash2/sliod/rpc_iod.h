@@ -68,12 +68,15 @@ struct sli_exp_cli {
 
 #define sli_geticsvcx(m, exp)		sli_geticsvcxf((m), (exp), 0)
 #define sli_getmcsvcx(m, exp)		sli_getmcsvcxf((m), (exp), 0)
+#define sli_getmcsvcx_nb(m, exp)	sli_getmcsvcxf((m), (exp), CSVCF_NONBLOCK)
 
 #define sli_geticsvcf(m, flags)		sli_geticsvcxf((m), NULL, (flags))
 #define sli_getmcsvcf(m, flags)		sli_getmcsvcxf((m), NULL, (flags))
 
 #define sli_geticsvc(m)			sli_geticsvcx((m), NULL)
 #define sli_getmcsvc(m)			sli_getmcsvcx((m), NULL)
+
+#define sli_getmcsvc_nb(m)		sli_getmcsvcx_nb((m), NULL)
 
 #define sli_ric_handle_read(rq)		sli_ric_handle_io((rq), SL_READ)
 #define sli_ric_handle_write(rq)	sli_ric_handle_io((rq), SL_WRITE)
@@ -87,7 +90,7 @@ int	sli_rii_handler(struct pscrpc_request *);
 void	sli_rci_ctl_health_send(struct slashrpc_cservice *);
 
 int	sli_rmi_getcsvc(struct slashrpc_cservice **);
-int	sli_rmi_setmds(const char *);
+void	sli_rmi_setmds(const char *);
 
 void	sli_rmi_issue_bmap_release(struct srm_bmap_release_req *);
 

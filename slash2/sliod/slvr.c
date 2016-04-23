@@ -518,12 +518,15 @@ slvr_fsio(struct slvr *s, uint32_t off, uint32_t size, enum rw rw)
 
 		PFL_GETTIMESPEC(&ts0);
 
-		rc = pread(slvr_2_fd(s), slvr_2_buf(s, sblk), size,
-		    foff);
-
-		if (pfl_fault_here_rc("sliod/fsio_read_fail", &errno,
-		    EBADF))
+		save_errno = 0;
+		pfl_fault_here_rc(&save_errno, EBADF,
+		    "sliod/fsio_read_fail");
+		if (save_errno) {
+			errno = save_errno;
 			rc = -1;
+		} else
+			rc = pread(slvr_2_fd(s), slvr_2_buf(s, sblk),
+			    size, foff);
 
 		if (rc == -1) {
 			save_errno = errno;
@@ -727,9 +730,14 @@ slvr_crc_update(struct fidc_membh *f, sl_bmapno_t bmapno, int32_t offset)
 	for (i = slvrno; i < SLASH_SLVRS_PER_BMAP; i++) {
 		s = slvr_lookup(slvrno + i, bmap_2_bii(bmap));
 		rc = slvr_io_prep(s, 0, SLASH_SLVR_SIZE, SL_READ, 0);
-		SLVR_LOCK(s);
-		SLVR_WAIT(s, s->slvr_flags & SLVRF_FAULTING);
-		SLVR_ULOCK(s);
+		if (rc == -SLERR_AIOWAIT) {
+			SLVR_LOCK(s);
+			SLVR_WAIT(s, s->slvr_flags & SLVRF_FAULTING);
+			SLVR_ULOCK(s);
+		}
+		/*
+ 		 * XXX AIO will call me as well.
+ 		 */
 		slvr_wio_done(s, 0);
 	}
 	bmap_op_done(bmap);
@@ -1078,8 +1086,8 @@ sliaiothr_main(__unusedx struct psc_thread *thr)
 				continue;
 			psc_assert(iocb->iocb_rc != ECANCELED);
 
-			(void)pfl_fault_here_rc("sliod/aio_fail",
-			    &iocb->iocb_rc, EIO);
+			pfl_fault_here_rc(&iocb->iocb_rc, EIO,
+			    "sliod/aio_fail");
 
 			psclog_diag("got signal: iocb=%p", iocb);
 			lc_remove(&sli_iocb_pndg, iocb);

@@ -905,6 +905,9 @@ msctlthr_spawn(void)
 {
 	struct psc_thread *thr;
 
+	pflrpc_register_ctlops(msctlops);
+	pflfs_register_ctlops(msctlops);
+
 	psc_ctlparam_register("faults", psc_ctlparam_faults);
 	psc_ctlparam_register("log.file", psc_ctlparam_log_file);
 	psc_ctlparam_register("log.format", psc_ctlparam_log_format);
@@ -938,12 +941,16 @@ msctlthr_spawn(void)
 	    0, mountpoint);
 	psc_ctlparam_register_var("sys.offline_nretries",
 	    PFLCTL_PARAMT_INT, PFLCTL_PARAMF_RDWR, &msl_max_nretries);
+
 	psc_ctlparam_register_simple("sys.pref_ios",
 	    msctlparam_prefios_get, msctlparam_prefios_set);
 	psc_ctlparam_register_simple("sys.mds", msctlparam_mds_get,
 	    NULL);
 	psc_ctlparam_register_var("sys.direct_io", PFLCTL_PARAMT_INT,
 	    PFLCTL_PARAMF_RDWR, &msl_direct_io);
+
+	psc_ctlparam_register_var("sys.force_dio",
+	    PFLCTL_PARAMT_INT, PFLCTL_PARAMF_RDWR, &msl_force_dio);
 
 	psc_ctlparam_register_var("sys.max_retries", PFLCTL_PARAMT_INT,
 	    PFLCTL_PARAMF_RDWR, &msl_max_retries);
