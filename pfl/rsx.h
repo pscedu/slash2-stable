@@ -104,9 +104,6 @@ struct rsx_msg_portablizer {
 		    1, &_plen, (mq));					\
 	} _PFL_RVEND
 
-#define RSX_WAITREP(rq, mp)						\
-	pfl_rsx_waitrep((rq), sizeof(*(mp)), &(mp))
-
 int _pfl_rsx_newreq(struct pscrpc_import *, int, int,
 	struct pscrpc_request **, int, int *, int, int *, void *);
 int pfl_rsx_waitrep(struct pscrpc_request *, int, void *);
