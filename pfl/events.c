@@ -674,7 +674,7 @@ pscrpc_ni_init(int type, int nmsgs)
 
 		rc = LNetEQAlloc(1024, pscrpc_master_callback, &pscrpc_eq_h);
 		psclog_info("%#"PRIx64" pscrpc_eq_h cookie value",
-			    pscrpc_eq_h.cookie);
+		    pscrpc_eq_h.cookie);
 	} else {
 		/*
 		 * liblustre calls the master callback when it removes events from the
