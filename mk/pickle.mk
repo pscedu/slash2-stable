@@ -162,7 +162,6 @@ ifeq ($(filter $(realpath ${ROOTDIR})/compat/%,${CURDIR}),)
  ifdef PICKLE_HAVE_FUSE
   DEFINES+=						-DHAVE_FUSE
   PSCFS_SRCS+=						${PFL_BASE}/fuse.c
-  PSCFS_SRCS+=						${PFL_BASE}/sys.c
  endif
 
  ifdef PICKLE_HAVE_DOKAN

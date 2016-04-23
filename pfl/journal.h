@@ -35,6 +35,7 @@
 
 struct psc_journal;
 struct psc_journal_enthdr;
+struct psc_ctlop;
 
 #define	PJ_MAX_TRY			3		/* number of retry before giving up */
 #define	PJ_MAX_BUF			8192		/* number of journal buffers to keep around */
@@ -48,7 +49,8 @@ typedef int (*psc_replay_handler_t)(struct psc_journal_enthdr *);
  * These log entries carry information that we might need to preserve a
  * longer time, and outside the journal.
  */
-typedef int (*psc_distill_handler_t)(struct psc_journal_enthdr *, uint64_t, int, int);
+typedef int (*psc_distill_handler_t)(struct psc_journal_enthdr *,
+    uint64_t, int, int);
 
 #define PJRNL_TXG_GET			0
 #define PJRNL_TXG_PUT			1
@@ -277,10 +279,10 @@ void	 pjournal_unreserve_slot(struct psc_journal *, int);
 void	*pjournal_get_buf(struct psc_journal *, size_t);
 void	 pjournal_put_buf(struct psc_journal *, void *);
 
-uint32_t pjournal_add_entry(struct psc_journal *, uint64_t, int, int, void *, int);
+uint32_t pjournal_add_entry(struct psc_journal *, uint64_t, int, int,
+	    void *, int);
 uint64_t pjournal_next_xid(struct psc_journal *);
 
-struct psc_lockedlist *
-	pfl_journals_get(void);
+void	 pfl_journal_register_ctlops(struct psc_ctlop *);
 
 #endif /* _PFL_JOURNAL_H_ */

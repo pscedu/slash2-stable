@@ -120,22 +120,6 @@ struct pfl_wkdata_poolreap {
 	struct psc_poolmgr *poolmgr;
 };
 
-__weak void
-_pfl_mlist_init(__unusedx struct pfl_mlist *m, __unusedx int flags,
-    __unusedx void *arg, __unusedx ptrdiff_t offset,
-    __unusedx const char *fmt, ...)
-{
-	psc_fatalx("mlist support not compiled in");
-}
-
-__weak void
-_pfl_mlist_add(__unusedx const struct pfl_callerinfo *pci,
-    __unusedx struct pfl_mlist *pml, __unusedx void *p,
-    __unusedx int tail)
-{
-	psc_fatalx("mlist support not compiled in");
-}
-
 void
 _psc_poolmaster_initv(struct psc_poolmaster *p, size_t entsize,
     ptrdiff_t offset, int flags, int total, int min, int max,

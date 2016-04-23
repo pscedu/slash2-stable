@@ -51,6 +51,7 @@
 #include "pfl/waitq.h"
 
 struct psc_dynarray;
+struct psc_ctlop;
 
 #define PSCRPC_MD_OPTIONS		0
 
@@ -322,7 +323,10 @@ struct pscrpc_request {
 	int				 rq_reqlen;
 	int				 rq_replen;
 	int				 rq_import_generation;
-	time_t				 rq_sent;		/* time when request was sent or re-sent */
+	struct timespec			 rq_sent_ts;		/* time when request was sent or re-sent */
+#define rq_sent rq_sent_ts.tv_sec
+	struct timespec			 rq_reply_recv_ts;	/* time when reply was received */
+	struct timespec			 rq_reply_duration_ts;	/* elapsed duration of RPC */
 	psc_spinlock_t			 rq_lock;
 	uint64_t			 rq_transno;
 	uint64_t			 rq_xid;
@@ -340,10 +344,10 @@ struct pscrpc_request {
 					 rq_no_delay:1,
 					 rq_net_err:1,
 					 rq_abort_reply:1,
-					 rq_timeoutable:1,
-					 rq_bulk_abortable:1;
+					 rq_bulk_abortable:1,
+					 rq_silent_timeout:1;
 	atomic_t			 rq_refcount;		/* client-side refcnt for SENT race */
-	atomic_t			 rq_retries;		/* count retries */
+	int			 	 rq_retries;		/* count retries */
 	lnet_process_id_t		 rq_peer;		/* filled in by svh */
 	lnet_nid_t			 rq_self;
 	enum pscrpc_rq_phase		 rq_phase;		/* one of PSCRQ_PHASE_* */
@@ -501,8 +505,11 @@ int	 pscrpc_ni_init(int, int);
 void	 pscrpc_init_portals(int, int);
 void	 pscrpc_exit_portals(void);
 
-extern int	  pfl_rpc_timeout;
-extern int	  pfl_rpc_max_retry;
+extern int			pfl_rpc_timeout;
+extern int			pfl_rpc_max_retry;
+
+extern struct pfl_opstats_grad	pfl_rpc_service_reply_latencies;
+extern struct pfl_opstats_grad	pfl_rpc_client_request_latencies;
 
 /* packgeneric.c */
 int	 pscrpc_msg_size(int, const int *);
@@ -573,7 +580,7 @@ struct pscrpc_import *
 #define pscrpc_set_check(set)		_pscrpc_set_check((set), 0)
 
 /* rpcclient.c */
-int	 pscrpc_expire_one_request(struct pscrpc_request *);
+int	 pscrpc_expire_one_request(struct pscrpc_request *, int);
 struct pscrpc_request *
 	 pscrpc_prep_req(struct pscrpc_import *, uint32_t, int, int, int *, char **);
 struct pscrpc_bulk_desc *
@@ -593,6 +600,8 @@ void	 pscrpc_set_init(struct pscrpc_request_set *);
 void	 pscrpc_set_remove_req(struct pscrpc_request_set *, struct pscrpc_request *);
 void	 pscrpc_set_remove_req_locked(struct pscrpc_request_set *, struct pscrpc_request *);
 int	 pscrpc_set_wait(struct pscrpc_request_set *);
+
+int	 pflrpc_req_get_opcode(struct pscrpc_request *);
 
 struct pscrpc_bulk_desc *
 	 pscrpc_prep_bulk_exp(struct pscrpc_request *, int, int, int);
@@ -614,13 +623,15 @@ pscrpc_bulk_active(struct pscrpc_bulk_desc *desc)
 int	 pscrpc_target_send_reply_msg(struct pscrpc_request *, int, int);
 void	 pscrpc_fail_import(struct pscrpc_import *, uint32_t);
 
-/* util.c */
-int	pflrpc_portable_errno(int);
+void	 pflrpc_register_ctlops(struct psc_ctlop *);
 
-void	pscrpc_getlocalprids(struct psc_dynarray *);
-void	pscrpc_getpridforpeer(lnet_process_id_t *,
+/* util.c */
+int	 pflrpc_portable_errno(int);
+
+void	 pscrpc_getlocalprids(struct psc_dynarray *);
+void	 pscrpc_getpridforpeer(lnet_process_id_t *,
 	    const struct psc_dynarray *, lnet_nid_t);
-void	pscrpc_req_getprids(const struct psc_dynarray *,
+void	 pscrpc_req_getprids(const struct psc_dynarray *,
 	    struct pscrpc_request *, lnet_process_id_t *,
 	    lnet_process_id_t *);
 
@@ -805,7 +816,7 @@ pscrpc_wake_client_req(struct pscrpc_request *req)
 			 */						\
 			if (mtx)					\
 				ret = _psc_waitq_waitabs((wq),		\
-				    PFL_WAITQWF_MUTEX, (mtx),		\
+				    PFL_LOCKPRIMT_MUTEX, (mtx),		\
 				    &_abstime);				\
 			else						\
 				ret = psc_waitq_waitabs((wq), (lck),	\

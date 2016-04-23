@@ -70,21 +70,9 @@
 #include "pfl/thread.h"
 #include "pfl/umask.h"
 #include "pfl/waitq.h"
+#include "pfl/workthr.h"
 
 #define QLEN 15	/* listen(2) queue */
-
-__weak size_t
-pfl_multiwaitcond_nwaiters(__unusedx struct pfl_multiwaitcond *m)
-{
-	psc_fatalx("multiwait support not compiled in");
-}
-
-__weak int
-psc_ctlrep_getfault(int fd, struct psc_ctlmsghdr *mh,
-    __unusedx void *c)
-{
-	return (psc_ctlsenderr(fd, mh, "fault support not compiled in"));
-}
 
 /*
  * Send a control message back to client.
@@ -229,32 +217,6 @@ psc_ctlrep_getsubsys(int fd, struct psc_ctlmsghdr *mh,
 	PSCFREE(pcss);
 	return (rc);
 }
-
-__weak int
-psc_ctlrep_getlnetif(int fd, struct psc_ctlmsghdr *mh,
-    __unusedx void *m)
-{
-	return (psc_ctlsenderr(fd, mh, "get lnet interface: %s",
-	    strerror(ENOTSUP)));
-}
-
-#ifndef PFL_RPC
-__weak int
-psc_ctlrep_getrpcrq(int fd, struct psc_ctlmsghdr *mh,
-    __unusedx void *m)
-{
-	return (psc_ctlsenderr(fd, mh, "get rpcrq: %s",
-	    strerror(ENOTSUP)));
-}
-
-__weak int
-psc_ctlrep_getrpcsvc(int fd, struct psc_ctlmsghdr *mh,
-    __unusedx void *m)
-{
-	return (psc_ctlsenderr(fd, mh, "get rpcsvc: %s",
-	    strerror(ENOTSUP)));
-}
-#endif
 
 /*
  * Send a reply to a "GETTHREAD" inquiry.
@@ -2028,57 +1990,35 @@ psc_ctlrep_getodtable(int fd, struct psc_ctlmsghdr *mh, void *m)
 	return (rc);
 }
 
-__weak struct psc_lockedlist *
-pfl_journals_get(void)
-{
-	return (NULL);
-}
-
 /*
- * Respond to a "GETJOURNAL" control inquiry.
+ * Respond to a "GETWORKRQ" inquiry.
  * @fd: client socket descriptor.
  * @mh: already filled-in control message header.
- * @m: control message to be filled in and sent out.
+ * @m: control message to examine and reuse.
  */
 int
-psc_ctlrep_getjournal(int fd, struct psc_ctlmsghdr *mh, void *m)
+pfl_ctlrep_getworkrq(int fd, struct psc_ctlmsghdr *mh, void *m)
 {
-	struct psc_ctlmsg_journal *pcj = m;
-	struct psc_lockedlist *pll;
-	struct psc_journal *j;
-	int rc;
+	struct pfl_ctlmsg_workrq *pcw = m;
+	struct pfl_workrq *wk;
+	const char *type;
+	int rc = 1;
 
-	rc = 1;
+	LIST_CACHE_LOCK(&pfl_workq);
+	LIST_CACHE_FOREACH(wk, &pfl_workq) {
+		memset(pcw, 0, sizeof(*pcw));
+		pcw->pcw_addr = (uintptr_t)wk;
+		type = wk->wkrq_type;
+		if (strncmp(type, "struct ", strlen("struct ")) == 0)
+		    	type += strlen("struct ");
+		snprintf(pcw->pcw_type, sizeof(pcw->pcw_type), "%s",
+		    type);
 
-	pll = pfl_journals_get();
-	if (pll == NULL)
-		return (rc);
-	PLL_LOCK(pll);
-	PLL_FOREACH(j, pll) {
-		PJ_LOCK(j);
-		strlcpy(pcj->pcj_name, j->pj_name,
-		    sizeof(pcj->pcj_name));
-		pcj->pcj_flags		= j->pj_flags;
-		pcj->pcj_inuse		= j->pj_inuse;
-		pcj->pcj_total		= j->pj_total;
-		pcj->pcj_resrv		= j->pj_resrv;
-		pcj->pcj_lastxid	= j->pj_lastxid;
-		pcj->pcj_commit_txg	= j->pj_commit_txg;
-		pcj->pcj_replay_xid	= j->pj_replay_xid;
-		pcj->pcj_dstl_xid	= j->pj_distill_xid;
-		pcj->pcj_pndg_xids_cnt	= pll_nitems(&j->pj_pendingxids);
-		pcj->pcj_dstl_xids_cnt	= pll_nitems(&j->pj_distillxids);
-		pcj->pcj_bufs_cnt	= psc_dynarray_len(&j->pj_bufs);
-		pcj->pcj_nwaiters	= psc_waitq_nwaiters(&j->pj_waitq);
-		pcj->pcj_nextwrite	= j->pj_nextwrite;
-		pcj->pcj_wraparound	= j->pj_wraparound;
-		PJ_ULOCK(j);
-
-		rc = psc_ctlmsg_sendv(fd, mh, pcj);
+		rc = psc_ctlmsg_sendv(fd, mh, pcw);
 		if (!rc)
 			break;
 	}
-	PLL_ULOCK(pll);
+	LIST_CACHE_ULOCK(&pfl_workq);
 	return (rc);
 }
 

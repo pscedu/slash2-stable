@@ -322,20 +322,21 @@ pscrpc_set_remove_req(struct pscrpc_request_set *set,
 static int
 expired_request(void *data)
 {
+	int silent;
 	struct pscrpc_request *req = data;
-	struct pscrpc_import *imp = req->rq_import;
 
-	atomic_inc(&req->rq_retries);
-
-	DEBUG_REQ(PLL_WARN, req, "request timeout");
-
-	if (atomic_read(&req->rq_retries) >= imp->imp_max_retries)
-		return (pscrpc_expire_one_request(req));
+	if (pscrpc_expire_one_request(req, 0))
+		return (1);
 
 	spinlock(&req->rq_lock);
+	silent = req->rq_silent_timeout;
 	req->rq_resend = 1;
 	freelock(&req->rq_lock);
 	OPSTAT_INCR("pfl.rpc_retries");
+
+	if (!silent)
+		DEBUG_REQ(PLL_WARN, req, 
+		    "expired and resend %d", req->rq_retries);
 
 	return 0;
 }
@@ -419,7 +420,7 @@ pscrpc_check_reply(struct pscrpc_request *req)
 	if (req->rq_net_err && !req->rq_timedout) {
 		DEBUG_REQ(PLL_ERROR, req, "NET_ERR: %d", req->rq_net_err);
 		freelock(&req->rq_lock);
-		rc = pscrpc_expire_one_request(req);
+		rc = pscrpc_expire_one_request(req, 1);
 		spinlock(&req->rq_lock);
 		GOTO(out, rc);
 	}
@@ -634,8 +635,10 @@ pscrpc_queue_wait(struct pscrpc_request *req)
 	if (rc)
 		GOTO(out, 0);
 
-	if (req->rq_err)
+	if (req->rq_err) {
+		psc_assert(req->rq_status);
 		GOTO(out, rc = req->rq_status);
+	}
 
 	/* Resend if we need to, unless we were interrupted. */
 	if (req->rq_resend && !req->rq_intr) {
@@ -763,7 +766,7 @@ _pscrpc_set_check(struct pscrpc_request_set *set, int finish_one)
 			GOTO(interpret, req->rq_status);
 
 		if (req->rq_net_err && !req->rq_timedout)
-			pscrpc_expire_one_request(req);
+			pscrpc_expire_one_request(req, 1);
 
  handle_error:
 		if (req->rq_err) {
@@ -823,8 +826,6 @@ _pscrpc_set_check(struct pscrpc_request_set *set, int finish_one)
 				 * getting nuked.
 				 */
 				status = expired_request(req);
-				DEBUG_REQ(PLL_WARN, req, "expired (resend=%d)",
-					  !status);
 
 				if (status) {
 					psc_assert(req->rq_status);
@@ -835,8 +836,8 @@ _pscrpc_set_check(struct pscrpc_request_set *set, int finish_one)
 			}
 			if (req->rq_resend) {
 				/*
- 				 * XXX This code is never executed.
- 				 */
+				 * XXX This code is never executed.
+				 */
 				if (req->rq_no_resend) {
 					if (!req->rq_err)
 						req->rq_err = 1;
@@ -1024,36 +1025,44 @@ pscrpc_set_destroy(struct pscrpc_request_set *set)
 	psc_pool_return(pscrpc_set_pool, set);
 }
 
+/*
+ * Expire a request if the number of retries has exceeded the import 
+ * max or it is forced to expire.
+ */
 int
-pscrpc_expire_one_request(struct pscrpc_request *req)
+pscrpc_expire_one_request(struct pscrpc_request *req, int force)
 {
+	int silent;
 	struct pscrpc_import *imp = req->rq_import;
 
 	psc_assert(imp);
 
-	DEBUG_REQ(imp->imp_igntimeout ? PLL_WARN : PLL_ERROR, req,
-	    "timeout (sent at %"PSCPRI_TIMET", %"PSCPRI_TIMET"s ago)",
-	    req->rq_sent, CURRENT_SECONDS - req->rq_sent);
-
 	psc_assert(req->rq_send_state == PSCRPC_IMP_NOOP);
 
 	spinlock(&req->rq_lock);
-	/* Error out the request here so that the upper layers may
-	 *    retry.
-	 */
+	req->rq_retries++;
+	if (!force && req->rq_retries < imp->imp_max_retries) {
+		freelock(&req->rq_lock);
+		return (0);
+	}
+
+	silent= req->rq_silent_timeout;
 	req->rq_err = req->rq_timedout = 1;
 	req->rq_status = -ETIMEDOUT;
 	freelock(&req->rq_lock);
+
+	if (!silent)
+		DEBUG_REQ(imp->imp_igntimeout ? PLL_WARN : PLL_ERROR, req,
+		    "timeout (sent at %"PSCPRI_TIMET", %"PSCPRI_TIMET"s ago)",
+		    req->rq_sent, CURRENT_SECONDS - req->rq_sent);
 
 	pscrpc_unregister_reply(req);
 
 	if (req->rq_bulk)
 		pscrpc_unregister_bulk(req);
 
-	if (!imp->imp_igntimeout) {
-		psclog_warnx("timeout: req=%p, imp=%p", req, imp);
+	if (!imp->imp_igntimeout)
 		pscrpc_fail_import(imp, req->rq_reqmsg->conn_cnt);
-	}
 
 	return (1);
 }
@@ -1080,7 +1089,7 @@ pscrpc_expired_set(void *data)
 			continue;
 
 		/* deal with this guy */
-		pscrpc_expire_one_request(req);
+		pscrpc_expire_one_request(req, 1);
 	}
 
 	/* When waiting for a whole set, we always to break out of the
@@ -1354,6 +1363,7 @@ pscrpc_free_committed(struct pscrpc_import *imp)
 void
 pscrpc_abort_inflight(struct pscrpc_import *imp)
 {
+	int silent;
 	struct pscrpc_request *req, *next;
 
 	 /* Make sure that no new requests get processed for this import.
@@ -1372,7 +1382,6 @@ pscrpc_abort_inflight(struct pscrpc_import *imp)
 	  */
 	 psclist_for_each_entry_safe(req, next, &imp->imp_sending_list,
 	     rq_lentry) {
-		 DEBUG_REQ(PLL_WARN, req, "aborted");
 
 		 spinlock(&req->rq_lock);
 		 if (req->rq_import_generation < imp->imp_generation) {
@@ -1383,8 +1392,11 @@ pscrpc_abort_inflight(struct pscrpc_import *imp)
 		 //req->rq_abort_reply = 1;
 		 if (req->rq_bulk)
 			 req->rq_bulk->bd_abort = 1;
-
+		
+		silent = req->rq_silent_timeout;
 		 freelock(&req->rq_lock);
+		if (!silent)
+			DEBUG_REQ(PLL_WARN, req, "aborted");
 	 }
 
 	 freelock(&imp->imp_lock);
@@ -1411,6 +1423,14 @@ pscrpc_resend_req(struct pscrpc_request *req)
 	}
 	pscrpc_wake_client_req(req);
 	freelock(&req->rq_lock);
+}
+
+int
+pflrpc_req_get_opcode(struct pscrpc_request *rq)
+{
+	if (rq && rq->rq_reqmsg)
+		return (rq->rq_reqmsg->opc);
+	return (0);
 }
 
 #ifdef PFL_CTL
@@ -1445,6 +1465,7 @@ psc_ctlrep_getrpcrq(int fd, struct psc_ctlmsghdr *mh, void *m)
 {
 	struct psc_ctlmsg_rpcrq *pcrq = m;
 	struct pscrpc_request *rq;
+	struct pscrpc_import *imp;
 	int rc = 1;
 
 	PLL_LOCK(&pscrpc_requests);
@@ -1477,14 +1498,16 @@ psc_ctlrep_getrpcrq(int fd, struct psc_ctlmsghdr *mh, void *m)
 		pcrq->pcrq_no_delay = rq->rq_no_delay;
 		pcrq->pcrq_net_err = rq->rq_net_err;
 		pcrq->pcrq_abort_reply = rq->rq_abort_reply;
-		pcrq->pcrq_timeoutable = rq->rq_timeoutable;
 		pcrq->pcrq_has_bulk = !!rq->rq_bulk;
 		pcrq->pcrq_has_set = !!rq->rq_set;
 		pcrq->pcrq_has_intr = !!rq->rq_interpret_reply;
 		pcrq->pcrq_bulk_abortable = rq->rq_bulk_abortable;
 		pcrq->pcrq_refcount = atomic_read(&rq->rq_refcount);
-		pcrq->pcrq_retries = atomic_read(&rq->rq_retries);
-		libcfs_nid2str2(rq->rq_peer.nid, pcrq->pcrq_peer);
+		pcrq->pcrq_retries = rq->rq_retries;
+		imp = rq->rq_import;
+		libcfs_nid2str2(imp && imp->imp_connection ?
+		    imp->imp_connection->c_peer.nid :
+		    rq->rq_peer.nid, pcrq->pcrq_peer);
 		libcfs_nid2str2(rq->rq_self, pcrq->pcrq_self);
 		pcrq->pcrq_phase = rq->rq_phase;
 		pcrq->pcrq_send_state = rq->rq_send_state;

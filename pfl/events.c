@@ -59,12 +59,39 @@ struct psc_poolmgr	*pscrpc_imp_pool;
 struct psc_poolmgr	*pscrpc_set_pool;
 struct psc_poolmgr	*pscrpc_rq_pool;
 
+struct pfl_opstats_grad pfl_rpc_client_request_latencies;
+
+int64_t pfl_rpc_client_request_latency_durations[] = {
+	0,
+	1,
+	5,
+	10,
+	20,
+	30,
+	40,
+	50,
+};
+
+struct pfl_opstats_grad pfl_rpc_service_reply_latencies;
+
+int64_t pfl_rpc_service_reply_latency_durations[] = {
+	0,
+	1,
+	5,
+	10,
+	20,
+	30,
+	40,
+	50,
+};
+
 /*
  *  Client's outgoing request callback
  */
 void
 pscrpc_request_out_callback(lnet_event_t *ev)
 {
+	int silent;
 	struct pscrpc_cb_id   *cbid = ev->md.user_ptr;
 	struct pscrpc_request *req = cbid->cbid_arg;
 
@@ -72,21 +99,24 @@ pscrpc_request_out_callback(lnet_event_t *ev)
 		ev->type == LNET_EVENT_UNLINK);
 	LASSERT(ev->unlinked);
 
-	DEBUG_REQ(ev->status ? PLL_ERROR : PLL_DIAG, req,
-	    "type %d, status %d", ev->type, ev->status);
-
 	if (ev->type == LNET_EVENT_UNLINK || ev->status != 0) {
 		/*
 		 * Failed send: make it seem like the reply timed out, just
 		 * like failing sends in rpcclient.c does currently...
 		 */
 		spinlock(&req->rq_lock);
+		silent = req->rq_silent_timeout;
 		req->rq_net_err = 1;
+		req->rq_abort_reply = 1;
 		req->rq_abort_reply = 1;
 		freelock(&req->rq_lock);
 
 		pscrpc_wake_client_req(req);
 	}
+
+	if (!silent)
+		DEBUG_REQ(ev->status ? PLL_ERROR : PLL_DIAG, req,
+		    "type %d, status %d", ev->type, ev->status);
 
 	/* these balance the references in ptl_send_rpc() */
 	atomic_dec(&req->rq_import->imp_inflight);
@@ -284,18 +314,17 @@ pscrpc_reply_in_callback(lnet_event_t *ev)
 	struct pscrpc_request *req = cbid->cbid_arg;
 
 	LASSERT(ev->type == LNET_EVENT_PUT ||
-		 ev->type == LNET_EVENT_UNLINK);
+		ev->type == LNET_EVENT_UNLINK);
 	LASSERT(ev->unlinked);
 	LASSERT(ev->md.start == req->rq_repmsg);
 	LASSERT(ev->offset == 0);
 	LASSERT(ev->mlength <= (uint32_t)req->rq_replen);
 
-	DEBUG_REQ((ev->status == 0) ? PLL_DIAG : PLL_ERROR, req,
-		  "type %d, status %d initiator ;%s;",
+	DEBUG_REQ(ev->status ? PLL_ERROR : PLL_DIAG, req,
+		  "type=%d status=%d initiator=%s",
 		  ev->type, ev->status, libcfs_id2str(ev->initiator));
-
-	psclog_debug("event: type=%d, status=%d, offset=%d, mlength=%d",
-		ev->type, ev->status, ev->offset, ev->mlength);
+	psclog_debug("event: type=%d status=%d offset=%d mlength=%d",
+	    ev->type, ev->status, ev->offset, ev->mlength);
 
 	if (!req->rq_peer.nid)
 		req->rq_peer = ev->initiator;
@@ -308,8 +337,15 @@ pscrpc_reply_in_callback(lnet_event_t *ev)
 	req->rq_receiving_reply = 0;
 
 	if (ev->type == LNET_EVENT_PUT && ev->status == 0) {
+		struct timespec ts;
+
 		req->rq_replied = 1;
 		req->rq_nob_received = ev->mlength;
+
+		PFL_GETTIMESPEC(&ts);
+		timespecsub(&ts, &req->rq_sent_ts, &ts);
+		pfl_opstats_grad_incr(&pfl_rpc_client_request_latencies,
+		    ts.tv_sec);
 	}
 
 	if (req->rq_compl)
@@ -638,7 +674,7 @@ pscrpc_ni_init(int type, int nmsgs)
 
 		rc = LNetEQAlloc(1024, pscrpc_master_callback, &pscrpc_eq_h);
 		psclog_info("%#"PRIx64" pscrpc_eq_h cookie value",
-			    pscrpc_eq_h.cookie);
+		    pscrpc_eq_h.cookie);
 	} else {
 		/*
 		 * liblustre calls the master callback when it removes events from the
@@ -733,14 +769,29 @@ pscrpc_init_portals(int type, int nmsgs)
 
 	rc = pscrpc_ni_init(type, nmsgs);
 	if (rc)
-		psc_fatal("network initialization: %s", strerror(-rc));
+		psc_fatalx("network initialization: %s", strerror(-rc));
 
 	pflog_get_peer_addr = pflrpc_log_get_peer_addr;
+
+	pfl_opstats_grad_init(&pfl_rpc_client_request_latencies,
+	    OPSTF_BASE10,
+	    pfl_rpc_client_request_latency_durations,
+	    nitems(pfl_rpc_client_request_latency_durations),
+	    "rpc-request-latency:%ss");
+
+	pfl_opstats_grad_init(&pfl_rpc_service_reply_latencies,
+	    OPSTF_BASE10,
+	    pfl_rpc_service_reply_latency_durations,
+	    nitems(pfl_rpc_service_reply_latency_durations),
+	    "rpc-reply-latency:%ss");
 }
 
 void
 pscrpc_exit_portals(void)
 {
+	pfl_opstats_grad_destroy(&pfl_rpc_client_request_latencies);
+	pfl_opstats_grad_destroy(&pfl_rpc_service_reply_latencies);
+
 	pflog_get_peer_addr = NULL;
 
 	pscrpc_conns_destroy();

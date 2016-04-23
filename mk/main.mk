@@ -125,6 +125,11 @@ EXTRACT_CFLAGS=		perl -ne 'print $$& while /-[^ID]\S+\s?/gc'
 
 # Process modules
 
+ifdef PICKLE_HAVE_FSANITIZE
+  FSANITIZE_CFLAGS=	-fsanitize=address -fno-optimize-sibling-calls
+  FSANITIZE_LDFLAGS=	-fsanitize=address
+endif
+
 LIBPFL=			-lpfl
 ifneq ($(filter pfl-whole,${MODULES}),)
   MODULES+=		pfl
@@ -147,6 +152,8 @@ endif
 
 ifneq ($(filter pscfs,${MODULES}),)
   MODULES+=	pscfs-hdrs
+  SRCS+=	${PFL_BASE}/fs.c
+  SRCS+=	${PSCFS_SRCS}
 
   ifdef PICKLE_HAVE_FUSE
     MODULES+=	fuse
@@ -373,7 +380,7 @@ all: checksrcs ${_TDEPLIST} recurse-all all-hook ${OBJDIR}
 ${OBJDIR}:
 	@${MKDIRS} -m 2775 ${OBJDIR}
 
-checksrcs:
+checksrcs: ${SRCS}
 	@for i in ${SRCS}; do						\
 		[ -n "$$i" ] || continue;				\
 		if ! [ -e "$$i" ]; then					\

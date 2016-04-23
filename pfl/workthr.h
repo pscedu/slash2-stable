@@ -31,6 +31,7 @@
 
 struct pfl_workrq {
 	int				(*wkrq_cbf)(void *);
+	const char 			 *wkrq_type;
 	struct psc_listentry		  wkrq_lentry;
 };
 
@@ -42,8 +43,8 @@ struct pfl_wk_thread {
 
 #define PFL_WKF_NONBLOCK		(1 << 0)
 
-#define pfl_workq_getitem(cb, type)	_pfl_workq_getitem((cb), sizeof(type), 0)
-#define pfl_workq_getitem_nb(cb, type)	_pfl_workq_getitem((cb), sizeof(type), PFL_WKF_NONBLOCK)
+#define pfl_workq_getitem(cb, type)	_pfl_workq_getitem(#type, (cb), sizeof(type), 0)
+#define pfl_workq_getitem_nb(cb, type)	_pfl_workq_getitem(#type, (cb), sizeof(type), PFL_WKF_NONBLOCK)
 
 #define	pfl_workq_lock()		LIST_CACHE_LOCK(&pfl_workq)
 #define	pfl_workq_unlock()		LIST_CACHE_LOCK(&pfl_workq)
@@ -52,7 +53,7 @@ struct pfl_wk_thread {
 
 void   pfl_wkthr_main(struct psc_thread *);
 void   pfl_wkthr_spawn(int, int, const char *);
-void *_pfl_workq_getitem(int (*)(void *), size_t, int);
+void *_pfl_workq_getitem(const char *, int (*)(void *), size_t, int);
 void   pfl_workq_init(size_t);
 void  _pfl_workq_putitemq(struct psc_listcache *, void *, int);
 void   pfl_wkthr_killall(void);

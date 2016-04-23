@@ -84,29 +84,22 @@ psc_waitq_destroy(struct psc_waitq *q)
  * Wait until the time specified for the resource managed by wq_cond to
  * become available.
  * @q: the wait queue to wait on.
- * @k: optional lock needed to protect the list.
+ * @lockp: optional lock needed to protect the list.
  * @abstime: time to wait till.
  * Note: returns ETIMEDOUT if the resource has not become available.
  * Note: this code could be merged with waitrel() but we try to make
  *	the timing calculations accurate.
  */
 int
-_psc_waitq_waitabs(struct psc_waitq *q, int flags, void *p,
-    const struct timespec *abstime)
+_psc_waitq_waitabs(struct psc_waitq *q, enum pfl_lockprim type,
+    void *lockp, const struct timespec *abstime)
 {
 	int rc;
 
 	psc_mutex_lock(&q->wq_mut);
 	q->wq_nwaiters++;
 
-	if (p) {
-		if (flags & PFL_WAITQWF_SPIN)
-			freelock((struct psc_spinlock *)p);
-		if (flags & PFL_WAITQWF_MUTEX)
-			psc_mutex_unlock(p);
-		if (flags & PFL_WAITQWF_RWLOCK)
-			pfl_rwlock_unlock(p);
-	}
+	PFL_LOCKPRIM_ULOCK(type, lockp);
 
 	if (abstime) {
 		rc = pthread_cond_timedwait(&q->wq_cond,
@@ -129,8 +122,8 @@ _psc_waitq_waitabs(struct psc_waitq *q, int flags, void *p,
 }
 
 int
-_psc_waitq_waitrel(struct psc_waitq *q, int flags, void *p, long s,
-    long ns)
+_psc_waitq_waitrel(struct psc_waitq *q, enum pfl_lockprim type,
+    void *lockp, long s, long ns)
 {
 	struct timespec reltime, abstime;
 
@@ -139,9 +132,9 @@ _psc_waitq_waitrel(struct psc_waitq *q, int flags, void *p, long s,
 		reltime.tv_sec = s;
 		reltime.tv_nsec = ns;
 		timespecadd(&abstime, &reltime, &abstime);
-		return (_psc_waitq_waitabs(q, flags, p, &abstime));
+		return (_psc_waitq_waitabs(q, type, lockp, &abstime));
 	}
-	return (_psc_waitq_waitabs(q, flags, p, NULL));
+	return (_psc_waitq_waitabs(q, type, lockp, NULL));
 }
 
 /*
@@ -191,8 +184,9 @@ psc_waitq_init(struct psc_waitq *q)
 }
 
 int
-_psc_waitq_waitrel(__unusedx struct psc_waitq *wq, __unusedx int flags,
-    __unusedx void *p, __unusedx long s, __unusedx long ns)
+_psc_waitq_waitrel(__unusedx struct psc_waitq *q,
+    __unusedx enum pfl_lockprim type, __unusedx void *lockp,
+    __unusedx long s, __unusedx long ns)
 {
 	psc_fatalx("wait will sleep forever, single threaded");
 }

@@ -36,7 +36,6 @@ psc_compl_init(struct psc_compl *pc)
 	memset(pc, 0, sizeof(*pc));
 	INIT_SPINLOCK(&pc->pc_lock);
 	psc_waitq_init(&pc->pc_wq);
-	pc->pc_rc = 1;
 }
 
 void
@@ -51,11 +50,10 @@ void
 _psc_compl_ready(struct psc_compl *pc, int rc, int one)
 {
 	spinlock(&pc->pc_lock);
-	if (rc)
-		pc->pc_rc = rc;
 	if (one)
 		psc_waitq_wakeone(&pc->pc_wq);
 	else {
+		pc->pc_rc = rc;
 		pc->pc_done = 1;
 		psc_waitq_wakeall(&pc->pc_wq);
 	}
@@ -64,18 +62,19 @@ _psc_compl_ready(struct psc_compl *pc, int rc, int one)
 }
 
 int
-psc_compl_waitrel_s(struct psc_compl *pc, struct psc_spinlock *sp,
-    int secs)
+psc_compl_waitrel(struct psc_compl *pc, enum pfl_lockprim type,
+    void *lockp, long sec, long nsec)
 {
 	reqlock(&pc->pc_lock);
-	if (sp)
-		freelock(sp);
+
+	PFL_LOCKPRIM_ULOCK(type, lockp);
+
 	if (pc->pc_done) {
 		freelock(&pc->pc_lock);
 	} else {
-		if (secs) {
-			if (psc_waitq_waitrel_s(&pc->pc_wq,
-			    &pc->pc_lock, secs))
+		if (sec || nsec) {
+			if (psc_waitq_waitrel(&pc->pc_wq, &pc->pc_lock,
+			    sec, nsec))
 				return (0);
 		} else
 			psc_waitq_wait(&pc->pc_wq, &pc->pc_lock);

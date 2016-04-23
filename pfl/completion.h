@@ -27,6 +27,7 @@
 #define _PFL_COMPLETION_H_
 
 #include "pfl/lock.h"
+#include "pfl/pthrutil.h"
 #include "pfl/waitq.h"
 
 struct psc_compl {
@@ -42,11 +43,15 @@ struct psc_compl {
 #define psc_compl_ready(pc, rc)	_psc_compl_ready((pc), (rc), 0)
 #define psc_compl_one(pc, rc)	_psc_compl_ready((pc), (rc), 1)
 
-#define psc_compl_wait(pc)	 psc_compl_waitrel_s((pc), NULL, 0)
+#define psc_compl_wait(pc)	 psc_compl_waitrel((pc), 0, NULL, 0, 0)
+#define psc_compl_waitrel_s(pc, spinlock, s)				\
+				 psc_compl_waitrel((pc),		\
+				     PFL_LOCKPRIMT_SPIN, (spinlock),	\
+				     (s), 0)
 
 void	 psc_compl_destroy(struct psc_compl *);
 void	 psc_compl_init(struct psc_compl *);
 void	_psc_compl_ready(struct psc_compl *, int, int);
-int	 psc_compl_waitrel_s(struct psc_compl *, struct psc_spinlock *, int);
+int	 psc_compl_waitrel(struct psc_compl *, enum pfl_lockprim, void *, long, long);
 
 #endif /* _PFL_COMPLETION_H_ */

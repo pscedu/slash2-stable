@@ -1,5 +1,8 @@
 # $Id$
 
+# Globally applicable definitions for the PFL build stack.
+# Note: pickle variables may not be accessed at parse time in this file.
+
 LINT?=		splint +posixlib
 MD5?=		md5sum
 SHA1?=		sha1sum
@@ -105,11 +108,8 @@ else
   CFLAGS+=	-fstack-protector-all
   LDFLAGS+=	-fstack-protector-all
 
-  ifdef PICKLE_HAVE_FSANITIZE
-    CFLAGS+=	-fsanitize=address
-    LDFLAGS+=	-fsanitize=address
-  endif
-
+  CFLAGS+=	${FSANITIZE_CFLAGS}
+  LDFLAGS+=	${FSANITIZE_LDFLAGS}
 endif
 
 COPT=		-g0 -O2

@@ -50,6 +50,7 @@ struct pflfs_filehandle;
 
 struct psc_ctlmsghdr;
 struct psc_ctlmsg_param;
+struct psc_ctlop;
 
 typedef uint64_t pscfs_inum_t;
 typedef uint64_t pscfs_fgen_t;
@@ -159,6 +160,7 @@ struct pscfs_req {
 	struct psc_thread		*pfr_thread;
 	int				 pfr_refcnt;
 	int				 pfr_rc;
+	const char			*pfr_opname;
 };
 
 struct pfl_fsthr {
@@ -268,8 +270,11 @@ int	 pflfs_req_multiwait_rel(struct pscfs_req *, void *,
 int	 pflfs_req_sleep_rel(struct pscfs_req *,
 	    const struct timespec *);
 
+void	 pflfs_register_ctlops(struct psc_ctlop *);
+
 extern struct psc_dynarray		pscfs_modules;
 extern struct psc_lockedlist		pflfs_filehandles;
+extern struct psc_lockedlist		pflfs_requests;
 
 extern double				pscfs_entry_timeout;
 extern double				pscfs_attr_timeout;

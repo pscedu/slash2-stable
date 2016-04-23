@@ -36,10 +36,11 @@
 #include "pfl/rpclog.h"
 #include "pfl/waitq.h"
 
-/**
- * pscrpc_send_buf - Rudimentary send function which uses LNetPut().
- *	This is called by pscrpc_send_reply() & pscrpc_send_rpc() which
- *	use pscrpc_send_buf() to PUT RPC replies and requests.
+/*
+ * Rudimentary send function which uses LNetPut().  This is called by
+ * pscrpc_send_reply() & pscrpc_send_rpc() which use pscrpc_send_buf()
+ * to PUT RPC replies and requests.
+ *
  * @mdh:  md handle to peer.
  */
 static int
@@ -95,8 +96,8 @@ pscrpc_send_buf(lnet_handle_md_t *mdh, void *base, int len,
 	return (0);
 }
 
-/**
- * pscrpc_start_bulk_transfer - Server initiated bulk data transfer.
+/*
+ * Server initiated bulk data transfer.
  * @desc: the bulk data desc
  */
 int
@@ -215,8 +216,8 @@ pscrpc_abort_bulk(struct pscrpc_bulk_desc *desc)
 	}
 }
 
-/**
- * pscrpc_register_bulk - client-side registration of bulk data buffer
+/*
+ * Client-side registration of bulk data buffer.
  * @rq: the request associated with the bulk
  */
 int
@@ -305,8 +306,8 @@ pscrpc_req_getconn(struct pscrpc_request *rq)
 	return (NULL);
 }
 
-/**
- * pscrpc_unregister_bulk - Client-side deregistration of bulk data buffer.
+/*
+ * Client-side deregistration of bulk data buffer.
  * @rq: the request associated with the bulk
  */
 void
@@ -372,8 +373,8 @@ pscrpc_unregister_bulk(struct pscrpc_request *rq)
 	}
 }
 
-/**
- * pscrpc_send_reply - Server-side reply function.
+/*
+ * Server-side reply function.
  * @rq: the request in question
  * @may_be_difficult: not sure if we're going to use this.
  */
@@ -468,8 +469,8 @@ pscrpc_error(struct pscrpc_request *rq)
 	return (rc);
 }
 
-/**
- * pscrpc_send_rpc - Client-side push of RPC request to a server.
+/*
+ * Client-side push of RPC request to a server.
  * @rq: the request in question
  * @reply:   not sure if we're going to use this.
  */
@@ -572,7 +573,7 @@ pscrpc_send_rpc(struct pscrpc_request *rq, int noreply)
 	pscrpc_request_addref(rq);
 	atomic_inc(&rq->rq_import->imp_inflight);
 
-	rq->rq_sent = CURRENT_SECONDS;
+	PFL_GETTIMESPEC(&rq->rq_sent_ts);
 
 	rc = pscrpc_send_buf(&rq->rq_req_md_h, rq->rq_reqmsg,
 	    rq->rq_reqlen, LNET_NOACK_REQ, &rq->rq_req_cbid,
@@ -608,8 +609,8 @@ pscrpc_send_rpc(struct pscrpc_request *rq, int noreply)
 	return rc;
 }
 
-/**
- * pscrpc_register_rqbd - Server-side registration of RPC request buffers.
+/*
+ * Server-side registration of RPC request buffers.
  * @rqbd: the request buffer pointer
  */
 int

@@ -352,10 +352,27 @@ psc_ctl_packshow_rpcsvc(char *rpcsvc)
 
 	pcrs = psc_ctlmsg_push(PCMT_GETRPCSVC, sizeof(*pcrs));
 	if (rpcsvc) {
-		n = strlcpy(pcrs->pcrs_name, rpcsvc, sizeof(pcrs->pcrs_name));
+		n = strlcpy(pcrs->pcrs_name, rpcsvc,
+		    sizeof(pcrs->pcrs_name));
 		if (n == 0 || n >= (int)sizeof(pcrs->pcrs_name))
 			errx(1, "invalid rpcsvc name: %s", rpcsvc);
 	}
+}
+
+void
+pfl_ctl_packshow_fsrq(__unusedx char *rpcrq)
+{
+	struct pfl_ctlmsg_fsrq *pcfr;
+
+	psc_ctlmsg_push(PCMT_GETFSRQ, sizeof(*pcfr));
+}
+
+void
+pfl_ctl_packshow_workrq(__unusedx char *rpcrq)
+{
+	struct pfl_ctlmsg_workrq *pcw;
+
+	psc_ctlmsg_push(PCMT_GETWORKRQ, sizeof(*pcw));
 }
 
 void
@@ -926,10 +943,10 @@ void
 psc_ctlmsg_fault_prhdr(__unusedx struct psc_ctlmsghdr *mh,
     __unusedx const void *m)
 {
-	printf("%-28s %3s %7s %7s %5s "
-	    "%10s %5s %4s %3s %8s\n",
-	    "fault-point", "flg", "#hit", "#unhit", "delay",
-	    "count", "begin", "prob", "rc", "interval");
+	printf("%-29s %1s %5s %5s %5s "
+	    "%9s %5s %3s %5s %4s\n",
+	    "fault-point", "f", "hit", "unhit", "delay",
+	    "count", "begin", "pro", "rc", "intv");
 }
 
 void
@@ -938,10 +955,10 @@ psc_ctlmsg_fault_prdat(__unusedx const struct psc_ctlmsghdr *mh,
 {
 	const struct psc_ctlmsg_fault *pcflt = m;
 
-	printf("%-28s   %c "
-	    "%7d %7d %5d "
-	    "%10d %5d %3d%% "
-	    "%3d %3d\n",
+	printf("%-29s %c "
+	    "%5d %5d %5d "
+	    "%9d %5d %3d "
+	    "%5d %4d\n",
 	    pcflt->pcflt_name,
 	    pcflt->pcflt_flags & PFLTF_ACTIVE ? 'A' : '-',
 	    pcflt->pcflt_hits, pcflt->pcflt_unhits, pcflt->pcflt_delay,
@@ -1017,8 +1034,8 @@ psc_ctlmsg_rpcrq_prhdr(__unusedx struct psc_ctlmsghdr *mh,
 	    "peernid", "qp", "pp", "qlen", "plen",
 	    "try", "nw");
 
-	pflctl_print_extra_field(&remaining, "%4s ", "nbrc");
-	pflctl_print_extra_field(&remaining, "%2s ", "tr");
+	pflctl_print_extra_field(&remaining, " %4s", "nbrc");
+	pflctl_print_extra_field(&remaining, " %2s", "tr");
 	pflctl_print_extra_field(&remaining, "%2s", "ig");
 
 	printf("\n");
@@ -1046,7 +1063,7 @@ psc_ctlmsg_rpcrq_prdat(__unusedx const struct psc_ctlmsghdr *mh,
 		*p = '\0';
 
 	printf("%7"PRId64" %2d "
-	    "%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c "
+	    "%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c "
 	    "%2d %4d "
 	    "%15s "
 	    "%2d %2d "
@@ -1054,7 +1071,8 @@ psc_ctlmsg_rpcrq_prdat(__unusedx const struct psc_ctlmsghdr *mh,
 	    "%3d %2d",
 	    pcrq->pcrq_xid, pcrq->pcrq_refcount,
 	    pcrq->pcrq_type == PSCRPC_MSG_ERR ? 'e' :
-	      pcrq->pcrq_type == PSCRPC_MSG_REPLY ? 'p' : 'q',
+	      pcrq->pcrq_type == PSCRPC_MSG_REQUEST ? 'q' :
+	      pcrq->pcrq_type == PSCRPC_MSG_REPLY ? 'p' : '?',
 	    pcrq->pcrq_phase >= PSCRPC_RQ_PHASE_NEW &&
 	    pcrq->pcrq_phase <= PSCRPC_RQ_PHASE_COMPLETE ?
 	      PSCRPC_PHASE_NAMES[pcrq->pcrq_phase -
@@ -1075,7 +1093,6 @@ psc_ctlmsg_rpcrq_prdat(__unusedx const struct psc_ctlmsghdr *mh,
 	    pcrq->pcrq_resend		? 'S' : '-',
 	    pcrq->pcrq_restart		? 'T' : '-',
 	    pcrq->pcrq_timedout		? 'X' : '-',
-	    pcrq->pcrq_timeoutable	? 't' : '-',
 	    pcrq->pcrq_waiting		? 'W' : '-',
 	    pcrq->pcrq_opc, abs(pcrq->pcrq_status),
 	    pcrq->pcrq_peer,
@@ -1083,11 +1100,11 @@ psc_ctlmsg_rpcrq_prdat(__unusedx const struct psc_ctlmsghdr *mh,
 	    pcrq->pcrq_reqlen, pcrq->pcrq_replen,
 	    pcrq->pcrq_retries, pcrq->pcrq_nwaiters);
 
-	pflctl_print_extra_field(&remaining, "%4d ",
+	pflctl_print_extra_field(&remaining, " %4d",
 	    pcrq->pcrq_nob_received);
-	pflctl_print_extra_field(&remaining, "%2"PRId64" ",
+	pflctl_print_extra_field(&remaining, " %2"PRId64,
 	    pcrq->pcrq_transno);
-	pflctl_print_extra_field(&remaining, "%2d",
+	pflctl_print_extra_field(&remaining, " %2d",
 	    pcrq->pcrq_import_generation);
 
 	(void)printf("\n");
@@ -1126,6 +1143,49 @@ psc_ctlmsg_rpcsvc_prdat(__unusedx const struct psc_ctlmsghdr *mh,
 	    pcrs->pcrs_nbufs, pcrs->pcrs_rqptl, pcrs->pcrs_rpptl,
 	    pcrs->pcrs_nthr, pcrs->pcrs_nque, pcrs->pcrs_nact,
 	    pcrs->pcrs_nwq, pcrs->pcrs_nrep, pcrs->pcrs_nrqbd);
+}
+
+void
+pfl_ctlmsg_fsrq_prhdr(__unusedx struct psc_ctlmsghdr *mh,
+    __unusedx const void *m)
+{
+	(void)printf("%-16s %-4s %-9s %1s %-6s %1s %5s "
+	    "%6s %-10s %4s\n",
+	    "fsrq-address", "thr", "op", "f", "module", "r", "euid",
+	    "pid", "start", "rc");
+}
+
+void
+pfl_ctlmsg_fsrq_prdat(__unusedx const struct psc_ctlmsghdr *mh,
+    const void *m)
+{
+	const struct pfl_ctlmsg_fsrq *pcfr = m;
+
+	(void)printf("%016"PRIx64" %-4s %-9s "
+	    "%c "
+	    "%-6s %1d %5d "
+	    "%6d %10"PRIu64" %4d\n",
+	    pcfr->pcfr_req, pcfr->pcfr_thread + 5, pcfr->pcfr_opname,
+	    pcfr->pcfr_flags & PFLCTL_FSRQF_INTR ? 'I' : '-',
+	    pcfr->pcfr_mod, pcfr->pcfr_refcnt, pcfr->pcfr_euid,
+	    pcfr->pcfr_pid, pcfr->pcfr_start.tv_sec, pcfr->pcfr_rc);
+}
+
+void
+pfl_ctlmsg_workrq_prhdr(__unusedx struct psc_ctlmsghdr *mh,
+    __unusedx const void *m)
+{
+	(void)printf("%-16s %-30s\n", "workrq-address", "type");
+}
+
+void
+pfl_ctlmsg_workrq_prdat(__unusedx const struct psc_ctlmsghdr *mh,
+    const void *m)
+{
+	const struct pfl_ctlmsg_workrq *pcw = m;
+
+	(void)printf("%016"PRIx64" %-30s\n", pcw->pcw_addr,
+	    pcw->pcw_type);
 }
 
 __static void
