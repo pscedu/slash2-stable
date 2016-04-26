@@ -431,7 +431,6 @@ ifdef PROG
 ${_TPROG}: ${OBJS}
 	${LD} -o $@ $(sort ${OBJS}) ${LDFLAGS}
 	@printf "%s" "${_TPROG}:" > ${DEPEND_FILE}
-	# Determine dependencies on static libraries.
 	@${LIBDEP} ${LDFLAGS} ${LIBDEP_ADD} >> ${DEPEND_FILE}
 endif
 
@@ -445,7 +444,6 @@ ifdef SHLIB
   ${_TSHLIB}: ${OBJS}
 	${CC} -shared -o $@ ${LDFLAGS} $(sort ${OBJS})
 	@printf "%s" "${_TSHLIB}:" > ${DEPEND_FILE}
-	# Determine dependencies on static libraries.
 	@${LIBDEP} ${LDFLAGS} ${LIBDEP_ADD} >> ${DEPEND_FILE}
 endif
 
