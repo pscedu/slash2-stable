@@ -1288,6 +1288,7 @@ psc_ctlparam_pool(int fd, struct psc_ctlmsghdr *mh,
 	int rc, set;
 	char *endp;
 	long val;
+	long long size = 0;
 
 	if (nlevels > 3)
 		return (psc_ctlsenderr(fd, mh, "invalid field"));
@@ -1325,6 +1326,20 @@ psc_ctlparam_pool(int fd, struct psc_ctlmsghdr *mh,
 			return (psc_ctlsenderr(fd, mh,
 			    "invalid pool %s value: %s",
 			    levels[2], pcp->pcp_value));
+	}
+
+	/* Special case for getting a summary of all pools */
+	if (nlevels == 2 && strcmp(levels[1], "total") == 0) {
+		PLL_LOCK(&psc_pools);
+		PLL_FOREACH(m, &psc_pools) {
+			POOL_LOCK(m);
+			size += (long long)m->ppm_total * m->ppm_entsize;
+			POOL_ULOCK(m);
+		}
+		PLL_ULOCK(&psc_pools);
+		snprintf(pcp->pcp_value, sizeof(pcp->pcp_value), "%lld", size);
+		rc = psc_ctlmsg_sendv(fd, mh, pcp);
+		return (rc);
 	}
 
 	if (nlevels == 1) {
