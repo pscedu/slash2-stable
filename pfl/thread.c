@@ -290,36 +290,12 @@ _pscthr_bind_memnode(struct psc_thread *thr)
 __static void *
 _pscthr_begin(void *arg)
 {
-	struct psc_thread *thr, *oldthr = arg;
+	struct psc_thread *thr = arg;
 
-	_pscthr_bind_memnode(oldthr);
-
-	/* Setup a localized copy of the thread. */
-	/*
-	 * XXX instead of reallocating, we should just take ownership of
-	 * the memory.
-	 */
-	thr = psc_alloc(sizeof(*thr), PAF_NOLOG);
-	INIT_PSC_LISTENTRY(&thr->pscthr_lentry);
-	psc_waitq_init(&thr->pscthr_waitq);
-	INIT_SPINLOCK(&thr->pscthr_lock);
 	spinlock(&thr->pscthr_lock);
-
-	/* Copy values from original. */
-	spinlock(&oldthr->pscthr_lock);
-	thr->pscthr_type = oldthr->pscthr_type;
-	thr->pscthr_startf = oldthr->pscthr_startf;
-	thr->pscthr_privsiz = oldthr->pscthr_privsiz;
-	thr->pscthr_flags = oldthr->pscthr_flags;
-	thr->pscthr_dtor = oldthr->pscthr_dtor;
-	strlcpy(thr->pscthr_name, oldthr->pscthr_name,
-	    sizeof(thr->pscthr_name));
-
+	_pscthr_bind_memnode(thr);
 	_pscthr_finish_init(thr);
-
-	/* Inform the spawner where our memory is. */
-	oldthr->pscthr_private = thr;
-	psc_waitq_wakeall(&oldthr->pscthr_waitq);
+	psc_waitq_wakeall(&thr->pscthr_waitq);
 
 	/* Wait for the spawner to finish us. */
 	do {
@@ -347,20 +323,11 @@ _pscthr_init(int type, void (*startf)(struct psc_thread *),
     void (*dtor)(void *), size_t privsiz, int memnid,
     const char *namefmt, ...)
 {
-	struct psc_thread mythr, *thr;
+	struct psc_thread  *thr;
 	va_list ap;
 	int rc;
 
-	/*
-	 * If there is a start routine, we are already in the pthread,
-	 * so the memory should be local.  Otherwise, we'd like to
-	 * allocate it within the thread context for local storage.
-	 *
-	 * Either way, the storage will be released via psc_free() upon
-	 * thread exit.
-	 */
-	thr = startf ? &mythr : psc_alloc(sizeof(*thr), PAF_NOLOG |
-	    PAF_NOZERO);
+	thr = psc_alloc(sizeof(*thr), PAF_NOLOG | PAF_NOZERO);
 	memset(thr, 0, sizeof(*thr));
 	INIT_PSC_LISTENTRY(&thr->pscthr_lentry);
 	psc_waitq_init(&thr->pscthr_waitq);
@@ -395,7 +362,6 @@ _pscthr_init(int type, void (*startf)(struct psc_thread *),
 		if (rc)
 			psc_fatalx("pthread_create: %s", strerror(rc));
 		psc_waitq_wait(&thr->pscthr_waitq, &thr->pscthr_lock);
-		thr = thr->pscthr_private;
 		if (thr->pscthr_privsiz == 0)
 			pscthr_setready(thr);
 	} else {
