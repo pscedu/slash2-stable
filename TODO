@@ -184,6 +184,10 @@ pfl
 lnet
 - use TLS buffers for libcfs_nid2str() to avoid NUMA contention
 - merge LNET_ACCEPT_PORT and USOCK_CPORT
+- sync with http://git.whamcloud.com/fs/lustre-release.git/blob/HEAD:/lustre/ptlrpc/client.c
+
+zfs-fuse
+- sync with libumem from illumos
 
 - pcpp:
   if an arg is a pointer, dont trace an integer version of it in PFL_ENTER()
