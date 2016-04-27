@@ -365,11 +365,6 @@ _pscthr_init(int type, void (*startf)(struct psc_thread *),
 	/* Pin thread until initialization is complete. */
 	spinlock(&thr->pscthr_lock);
 	if (startf) {
-		/*
-		 * Thread will finish initializing in its own context
-		 * and set pscthr_private to the location of the new
-		 * localized memory.
-		 */
 		rc = pthread_create(&thr->pscthr_pthread, &pthread_attr, 
 		    _pscthr_begin, thr);
 		if (rc)
