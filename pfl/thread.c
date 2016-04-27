@@ -323,7 +323,7 @@ _pscthr_init(int type, void (*startf)(struct psc_thread *),
     void (*dtor)(void *), size_t privsiz, int memnid,
     const char *namefmt, ...)
 {
-	struct psc_thread  *thr;
+	struct psc_thread *thr;
 	va_list ap;
 	int rc;
 
@@ -357,8 +357,16 @@ _pscthr_init(int type, void (*startf)(struct psc_thread *),
 		 * and set pscthr_private to the location of the new
 		 * localized memory.
 		 */
-		rc = pthread_create(&thr->pscthr_pthread, NULL,
+#if 0
+		pthread_attr_t attr;
+		pthread_attr_init(&attr);
+		pthread_attr_setstacksize(&attr, 1024 * 1024);
+		rc = pthread_create(&thr->pscthr_pthread, &attr, 
 		    _pscthr_begin, thr);
+#else
+		rc = pthread_create(&thr->pscthr_pthread, NULL, 
+		    _pscthr_begin, thr);
+#endif
 		if (rc)
 			psc_fatalx("pthread_create: %s", strerror(rc));
 		psc_waitq_wait(&thr->pscthr_waitq, &thr->pscthr_lock);
