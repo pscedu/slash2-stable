@@ -59,6 +59,11 @@ __static struct psc_vbitmap	 psc_uniqthridmap = VBITMAP_INIT_AUTO;
 struct psc_lockedlist		 psc_threads =
     PLL_INIT_NOLOG(&psc_threads, struct psc_thread, pscthr_lentry);
 
+#define	PTHREAD_STACK_SIZE		512*1024
+#define	PTHREAD_GUARD_SIZE		4096
+
+__static pthread_attr_t			pthread_attr;
+
 /*
  * Thread destructor.
  * @arg: thread data.
@@ -184,6 +189,14 @@ pscthrs_init(void)
 	rc = pthread_key_create(&pfl_tlskey, _pfl_tls_release);
 	if (rc)
 		errx(1, "pthread_key_create: %s", strerror(rc));
+
+	pthread_attr_init(&pthread_attr);
+	rc = pthread_attr_setstacksize(&pthread_attr, PTHREAD_STACK_SIZE);
+	if (rc)
+		errx(1, "pthread_attr_setstacksize: %s", strerror(rc));
+	rc = pthread_attr_setguardsize(&pthread_attr, PTHREAD_GUARD_SIZE);
+	if (rc)
+		errx(1, "pthread_attr_setguardsize: %s", strerror(rc));
 }
 
 /*
@@ -357,16 +370,8 @@ _pscthr_init(int type, void (*startf)(struct psc_thread *),
 		 * and set pscthr_private to the location of the new
 		 * localized memory.
 		 */
-#if 0
-		pthread_attr_t attr;
-		pthread_attr_init(&attr);
-		pthread_attr_setstacksize(&attr, 1024 * 1024);
-		rc = pthread_create(&thr->pscthr_pthread, &attr, 
+		rc = pthread_create(&thr->pscthr_pthread, &pthread_attr, 
 		    _pscthr_begin, thr);
-#else
-		rc = pthread_create(&thr->pscthr_pthread, NULL, 
-		    _pscthr_begin, thr);
-#endif
 		if (rc)
 			psc_fatalx("pthread_create: %s", strerror(rc));
 		psc_waitq_wait(&thr->pscthr_waitq, &thr->pscthr_lock);
