@@ -68,10 +68,6 @@ struct psc_thread {
 #define PTF_INIT		(1 << 4)			/* thread being inited now */
 #define PTF_RPC_SVC_THREAD	(1 << 5)			/* thread is an RPC servicer */
 
-#define PSCTHR_LOCK(thr)	spinlock(&pthread_lock)
-#define PSCTHR_ULOCK(thr)	freelock(&pthread_lock)
-#define PSCTHR_RLOCK(thr)	reqlock(&pthread_lock)
-
 #define PSCTHR_MKCAST(label, name, type)				\
 static inline struct name *						\
 label(struct psc_thread *pt)						\
