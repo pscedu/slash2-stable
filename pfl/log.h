@@ -46,8 +46,6 @@ struct psc_thread;
 
 /* per-thread */
 struct psclog_data {
-	char		 pld_hostshort[64];
-	char		 pld_hostname[64];
 	char		 pld_nothrname[24];
 	int		 pld_rank;	/* MPI rank */
 	pid_t		 pld_thrid;
@@ -386,6 +384,8 @@ __dead void _psc_fatal(const struct pfl_callerinfo *, int, int,
 
 extern const char		*psc_logfmt;
 extern char			 psclog_eol[8];
+extern char		 	 psc_hostshort[64];
+extern char			 psc_hostname[64];
 
 extern struct psc_dynarray	_pfl_logpoints;
 

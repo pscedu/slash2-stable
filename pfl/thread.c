@@ -466,16 +466,6 @@ pscthr_setpause(struct psc_thread *thr, int pauseval)
 }
 
 /*
- * Override hostname retrieval to access thread-local storage for
- * hostname.  Local memory improves the speediness of logging.
- */
-const char *
-pflsys_get_hostname(void)
-{
-	return (psclog_getdata()->pld_hostname);
-}
-
-/*
  * Set the PTF_RUN flag of a thread, enabling it to begin its life.
  * @thr: thread to modify.
  * @run: boolean whether or not the thread should run.

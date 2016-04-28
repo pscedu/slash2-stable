@@ -73,6 +73,9 @@ int				 psc_loglevel = PLL_NOTICE;
 __static struct psclog_data	*psc_logdata;
 char				 psclog_eol[8] = "\n";	/* overrideable with ncurses EOL */
 
+char		 		 psc_hostshort[64];
+char		 		 psc_hostname[64];
+
 /*
  * A user can define one or more PSC_SYSLOG_$subsys environment
  * variables or simply the PSC_SYSLOG environment variable to select
@@ -185,6 +188,12 @@ psc_log_init(void)
 
 	if (!isatty(fileno(stderr)))
 		pflog_ttyfp = fopen(_PATH_TTY, "w");
+
+	if (gethostname(psc_hostname, sizeof(psc_hostname)) == -1)
+		err(1, "gethostname");
+	strlcpy(psc_hostshort, psc_hostname, sizeof(psc_hostshort));
+	if ((p = strchr(psc_hostshort, '.')) != NULL)
+		*p = '\0';
 }
 
 int
@@ -270,13 +279,6 @@ psclog_getdata(void)
 
 	d = pfl_tls_get(PFL_TLSIDX_LOGDATA, sizeof(*d));
 	if (d->pld_thrid == 0) {
-		if (gethostname(d->pld_hostname,
-		    sizeof(d->pld_hostname)) == -1)
-			err(1, "gethostname");
-		strlcpy(d->pld_hostshort, d->pld_hostname,
-		    sizeof(d->pld_hostshort));
-		if ((p = strchr(d->pld_hostshort, '.')) != NULL)
-			*p = '\0';
 		/* XXX try to read this if the pscthr is available */
 		d->pld_thrid = pfl_getsysthrid();
 		snprintf(d->pld_nothrname, sizeof(d->pld_nothrname),
@@ -411,8 +413,8 @@ _psclogv(const struct pfl_callerinfo *pci, int level, int options,
 		FMTSTRCASE('D', "s", pfl_fmtlogdate(&tv, &_t))
 		FMTSTRCASE('F', "s", pci->pci_func)
 		FMTSTRCASE('f', "s", pci->pci_filename)
-		FMTSTRCASE('H', "s", d->pld_hostname)
-		FMTSTRCASE('h', "s", d->pld_hostshort)
+		FMTSTRCASE('H', "s", psc_hostname)
+		FMTSTRCASE('h', "s", psc_hostshort)
 		FMTSTRCASE('I', PSCPRI_PTHRT, pthread_self())
 		FMTSTRCASE('i', "d", thrid)
 		FMTSTRCASE('L', "d", level)

@@ -2325,7 +2325,7 @@ psc_ctlthr_spawn_listener(const char *ofn, int acthrtype)
 
 	/* perform transliteration for "variables" in file path */
 	(void)FMTSTR(saun->sun_path, sizeof(saun->sun_path), ofn,
-		FMTSTRCASE('h', "s", psclog_getdata()->pld_hostshort)
+		FMTSTRCASE('h', "s", psc_hostshort)
 		FMTSTRCASE('n', "s", __progname)
 	);
 

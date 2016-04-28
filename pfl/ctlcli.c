@@ -1447,7 +1447,7 @@ psc_ctlcli_main(const char *osockfn, int ac, char *av[],
 	SOCKADDR_SETLEN(&saun);
 
 	(void)FMTSTR(saun.sun_path, sizeof(saun.sun_path), psc_ctl_sockfn,
-	    FMTSTRCASE('h', "s", psclog_getdata()->pld_hostshort)
+	    FMTSTRCASE('h', "s", psc_hostshort)
 	    FMTSTRCASE('n', "s", daemon_name)
 	);
 
