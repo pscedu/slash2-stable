@@ -62,7 +62,9 @@ struct psc_lockedlist		 psc_threads =
 #define	PTHREAD_GUARD_SIZE		4096
 #define	PTHREAD_STACK_SIZE		640*1024
 
-__static pthread_attr_t			pthread_attr;
+pthread_attr_t			pthread_attr;
+psc_spinlock_t		  	pthread_lock;
+struct psc_waitq		pthread_waitq;
 
 /*
  * Thread destructor.
@@ -77,7 +79,7 @@ _pscthr_destroy(void *arg)
 	psclog_diag("thread dying");
 
 	locked = PLL_RLOCK(&psc_threads);
-	(void)reqlock(&thr->pscthr_lock);
+	(void)reqlock(&pthread_lock);
 	pll_remove(&psc_threads, thr);
 	if (thr->pscthr_uniqid) {
 		psc_vbitmap_unset(&psc_uniqthridmap,
@@ -93,7 +95,7 @@ _pscthr_destroy(void *arg)
 		thr->pscthr_dtor(thr->pscthr_private);
 		psc_free(thr->pscthr_private, PAF_NOLOG);
 	}
-	psc_waitq_destroy(&thr->pscthr_waitq);
+	psc_waitq_destroy(&pthread_waitq);
 	psc_free(thr->pscthr_loglevels, PAF_NOLOG);
 	psc_free(thr, PAF_NOLOG);
 }
@@ -145,15 +147,15 @@ _pscthr_pause(__unusedx int sig)
 	int locked;
 
 	thr = pscthr_get();
-	while (!tryreqlock(&thr->pscthr_lock, &locked))
+	while (!tryreqlock(&pthread_lock, &locked))
 		pscthr_yield();
 	thr->pscthr_flags |= PTF_PAUSED;
 	while (thr->pscthr_flags & PTF_PAUSED) {
-		psc_waitq_wait(&thr->pscthr_waitq,
-		    &thr->pscthr_lock);
-		spinlock(&thr->pscthr_lock);
+		psc_waitq_wait(&pthread_waitq,
+		    &pthread_lock);
+		spinlock(&pthread_lock);
 	}
-	ureqlock(&thr->pscthr_lock, locked);
+	ureqlock(&pthread_lock, locked);
 }
 
 /*
@@ -167,11 +169,11 @@ _pscthr_unpause(__unusedx int sig)
 	int locked;
 
 	thr = pscthr_get();
-	while (!tryreqlock(&thr->pscthr_lock, &locked))
+	while (!tryreqlock(&pthread_lock, &locked))
 		pscthr_yield();
 	thr->pscthr_flags &= ~PTF_PAUSED;
-	psc_waitq_wakeall(&thr->pscthr_waitq);
-	ureqlock(&thr->pscthr_lock, locked);
+	psc_waitq_wakeall(&pthread_waitq);
+	ureqlock(&pthread_lock, locked);
 }
 
 /*
@@ -181,6 +183,9 @@ void
 pscthrs_init(void)
 {
 	int rc;
+
+	INIT_SPINLOCK_NOLOG(&pthread_lock);
+	psc_waitq_init_nolog(&pthread_waitq);
 
 	rc = pthread_key_create(&psc_thrkey, _pscthr_destroy);
 	if (rc)
@@ -305,17 +310,18 @@ _pscthr_begin(void *arg)
 {
 	struct psc_thread *thr = arg;
 
-	spinlock(&thr->pscthr_lock);
+	spinlock(&pthread_lock);
 	_pscthr_bind_memnode(thr);
 	_pscthr_finish_init(thr);
-	psc_waitq_wakeall(&thr->pscthr_waitq);
+	thr->pscthr_flags &= ~PTF_INIT;
+	psc_waitq_wakeall(&pthread_waitq);
 
 	/* Wait for the spawner to finish us. */
 	do {
-		psc_waitq_wait(&thr->pscthr_waitq, &thr->pscthr_lock);
-		spinlock(&thr->pscthr_lock);
+		psc_waitq_wait(&pthread_waitq, &pthread_lock);
+		spinlock(&pthread_lock);
 	} while ((thr->pscthr_flags & PTF_READY) == 0);
-	freelock(&thr->pscthr_lock);
+	freelock(&pthread_lock);
 	thr->pscthr_startf(thr);
 	return (thr);
 }
@@ -343,12 +349,10 @@ _pscthr_init(int type, void (*startf)(struct psc_thread *),
 	thr = psc_alloc(sizeof(*thr), PAF_NOLOG | PAF_NOZERO);
 	memset(thr, 0, sizeof(*thr));
 	INIT_PSC_LISTENTRY(&thr->pscthr_lentry);
-	psc_waitq_init(&thr->pscthr_waitq);
-	INIT_SPINLOCK_NOLOG(&thr->pscthr_lock);
 	thr->pscthr_type = type;
 	thr->pscthr_startf = startf;
 	thr->pscthr_privsiz = privsiz;
-	thr->pscthr_flags = PTF_RUN;
+	thr->pscthr_flags = PTF_RUN | PTF_INIT;
 	thr->pscthr_dtor = dtor;
 	thr->pscthr_memnid = memnid;
 
@@ -363,13 +367,17 @@ _pscthr_init(int type, void (*startf)(struct psc_thread *),
 		psc_fatalx("thread name too long: %s", namefmt);
 
 	/* Pin thread until initialization is complete. */
-	spinlock(&thr->pscthr_lock);
+	spinlock(&pthread_lock);
 	if (startf) {
 		rc = pthread_create(&thr->pscthr_pthread, &pthread_attr, 
 		    _pscthr_begin, thr);
 		if (rc)
 			psc_fatalx("pthread_create: %s", strerror(rc));
-		psc_waitq_wait(&thr->pscthr_waitq, &thr->pscthr_lock);
+		while (thr->pscthr_flags & PTF_INIT) {
+			psc_waitq_wait(&pthread_waitq, &pthread_lock);
+			spinlock(&pthread_lock);
+		}
+		freelock(&pthread_lock);
 		/* XXX */
 		if (thr->pscthr_privsiz == 0)
 			pscthr_setready(thr);
@@ -377,7 +385,7 @@ _pscthr_init(int type, void (*startf)(struct psc_thread *),
 		/* Initializing our own thread context. */
 		_pscthr_bind_memnode(thr);
 		_pscthr_finish_init(thr);
-		freelock(&thr->pscthr_lock);
+		freelock(&pthread_lock);
 	}
 	return (thr);
 }
@@ -389,10 +397,10 @@ _pscthr_init(int type, void (*startf)(struct psc_thread *),
 void
 pscthr_setready(struct psc_thread *thr)
 {
-	(void)reqlock(&thr->pscthr_lock);
+	(void)reqlock(&pthread_lock);
 	thr->pscthr_flags |= PTF_READY;
-	psc_waitq_wakeall(&thr->pscthr_waitq);
-	freelock(&thr->pscthr_lock);
+	psc_waitq_wakeall(&pthread_waitq);
+	freelock(&pthread_lock);
 }
 
 int
@@ -450,11 +458,11 @@ pscthr_getname(void)
 void
 pscthr_setpause(struct psc_thread *thr, int pauseval)
 {
-	spinlock(&thr->pscthr_lock);
+	spinlock(&pthread_lock);
 	if (pauseval ^ (thr->pscthr_flags & PTF_PAUSED))
 		pthread_kill(thr->pscthr_pthread,
 		    pauseval ? SIGUSR1 : SIGUSR2);
-	freelock(&thr->pscthr_lock);
+	freelock(&pthread_lock);
 }
 
 /*
@@ -477,13 +485,13 @@ pscthr_setrun(struct psc_thread *thr, int run)
 {
 	int locked;
 
-	locked = reqlock(&thr->pscthr_lock);
+	locked = reqlock(&pthread_lock);
 	if (run) {
 		thr->pscthr_flags |= PTF_RUN;
-		psc_waitq_wakeall(&thr->pscthr_waitq);
+		psc_waitq_wakeall(&pthread_waitq);
 	} else
 		thr->pscthr_flags &= ~PTF_RUN;
-	ureqlock(&thr->pscthr_lock, locked);
+	ureqlock(&pthread_lock, locked);
 }
 
 void
@@ -491,12 +499,12 @@ pscthr_setdead(struct psc_thread *thr, int dead)
 {
 	int locked;
 
-	locked = reqlock(&thr->pscthr_lock);
+	locked = reqlock(&pthread_lock);
 	if (dead)
 		thr->pscthr_flags |= PTF_DEAD;
 	else
 		thr->pscthr_flags &= ~PTF_DEAD;
-	ureqlock(&thr->pscthr_lock, locked);
+	ureqlock(&pthread_lock, locked);
 }
 
 /*
@@ -508,13 +516,13 @@ pscthr_run(struct psc_thread *thr)
 	if (thr->pscthr_flags & PTF_DEAD)
 		return (0);
 	if ((thr->pscthr_flags & PTF_RUN) == 0) {
-		spinlock(&thr->pscthr_lock);
+		spinlock(&pthread_lock);
 		while ((thr->pscthr_flags & PTF_RUN) == 0) {
-			psc_waitq_wait(&thr->pscthr_waitq,
-			    &thr->pscthr_lock);
-			spinlock(&thr->pscthr_lock);
+			psc_waitq_wait(&pthread_waitq,
+			    &pthread_lock);
+			spinlock(&pthread_lock);
 		}
-		freelock(&thr->pscthr_lock);
+		freelock(&pthread_lock);
 	}
 	return (1);
 }
@@ -570,9 +578,9 @@ pscthr_killall(void)
 
 	PLL_LOCK(&psc_threads);
 	PLL_FOREACH(thr, &psc_threads) {
-		spinlock(&thr->pscthr_lock);
+		spinlock(&pthread_lock);
 		thr->pscthr_flags |= PTF_DEAD;
-		freelock(&thr->pscthr_lock);
+		freelock(&pthread_lock);
 	}
 	PLL_ULOCK(&psc_threads);
 }
