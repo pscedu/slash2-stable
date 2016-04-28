@@ -463,7 +463,6 @@ _psclogv(const struct pfl_callerinfo *pci, int level, int options,
 
 	PSCLOG_UNLOCK();
 
- out:
 	/*
 	 * Restore in case app needs it after our printf()'s may have
 	 * modified it.
