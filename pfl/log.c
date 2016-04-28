@@ -394,16 +394,6 @@ _psclogv(const struct pfl_callerinfo *pci, int level, int options,
 	save_errno = errno;
 
 	d = psclog_getdata();
-	if (d->pld_flags & PLDF_INLOG) {
-		// XXX use write(); ?
-		// also place line, file, etc
-		vfprintf(stderr, fmt, ap); /* XXX syslog, etc */
-
-		if (level == PLL_FATAL)
-			abort();
-		goto out;
-	}
-	d->pld_flags |= PLDF_INLOG;
 
 	thr = pscthr_get_canfail();
 	if (thr) {
@@ -468,13 +458,10 @@ _psclogv(const struct pfl_callerinfo *pci, int level, int options,
 		p = getenv("PSC_DUMPSTACK");
 		if (p && strcmp(p, "0"))
 			pfl_dump_stack();
-		d->pld_flags &= ~PLDF_INLOG;
 		pfl_abort();
 	}
 
 	PSCLOG_UNLOCK();
-
-	d->pld_flags &= ~PLDF_INLOG;
 
  out:
 	/*
