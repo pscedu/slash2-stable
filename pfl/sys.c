@@ -129,21 +129,6 @@ pfl_getfstype(const char *ofn, char *buf, size_t len)
 	return (0);
 }
 
-#ifndef HAVE_LIBPTHREAD
-
-char psc_hostname[PFL_HOSTNAME_MAX];
-
-const char *
-pflsys_get_hostname(void)
-{
-	if (psc_hostname[0] == '\0')
-		if (gethostname(psc_hostname, sizeof(psc_hostname)) == -1)
-			psc_fatal("gethostname");
-	return (PCPP_STR(psc_hostname));
-}
-
-#endif
-
 #if defined(SYS_sched_getaffinity) && !defined(CPU_COUNT)
 #  define CPU_COUNT(set) _cpu_count(set)
 int
