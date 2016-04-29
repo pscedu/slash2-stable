@@ -251,6 +251,13 @@ _pscthr_finish_init(struct psc_thread *thr)
 	if (rc)
 		psc_fatalx("pthread_setspecific: %s", strerror(rc));
 
+#if 0
+	/* this trigger crash in the pscfs_fuse_listener_loop() */
+	rc = pthread_detach(thr->pscthr_pthread);
+	if (rc)
+		psc_fatalx("pthread_detach: %s", strerror(rc));
+#endif
+
 	memset(&sa, 0, sizeof(sa));
 	sa.sa_handler = _pscthr_pause;
 	if (sigaction(SIGUSR1, &sa, NULL) == -1)
