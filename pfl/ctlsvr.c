@@ -772,9 +772,11 @@ psc_ctlparam_get_rss(int fd, struct psc_ctlmsghdr *mh,
 		}
 	}
 	sscanf(line, "%lld ", &rss);
-	rss = rss * 4;
-	snprintf(pcp->pcp_value, sizeof(pcp->pcp_value), "%lld kB", rss);
-	rc = psc_ctlmsg_sendv(fd, mh, pcp);
+
+	line = (char *)buf;
+	snprintf(line, sizeof(buf), "%lld kB", rss * 4);
+	rc = psc_ctlmsg_param_send(fd, mh, pcp, PCTHRNAME_EVERYONE,
+	    levels, nlevels, line);
 	return (rc);
 }
 
