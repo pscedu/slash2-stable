@@ -635,13 +635,13 @@ main(int argc, char *argv[])
 	thrv = PSCALLOC(sizeof(*thrv) * nthr);
 
 	for (n = 0; n < nthr; n++)
-		thrv[n] = pscthr_init(0, thrmain, NULL, 0, "thr%d", n);
+		thrv[n] = pscthr_init(0, thrmain, 0, "thr%d", n);
 
 	for (; *argv; argv++)
 		pfl_filewalk(*argv, flags, NULL, proc, NULL);
 
 	if (displaybw)
-		dispthr = pscthr_init(0, display, NULL, 0, "disp");
+		dispthr = pscthr_init(0, display, 0, "disp");
 
 	gettimeofday(&t1, NULL);
 
