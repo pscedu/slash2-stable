@@ -45,9 +45,6 @@ struct psc_thread {
 	pthread_t		  pscthr_pthread;		/* pthread_self() */
 	pid_t			  pscthr_thrid;			/* gettid(2) */
 	int			  pscthr_uniqid;		/* transiency bookkeeping */
-
-	void			(*pscthr_dtor)(void *);		/* custom destructor */
-
 	int			  pscthr_flags;			/* operational flags */
 	int			  pscthr_type;			/* app-specific type */
 	char			  pscthr_name[PSC_THRNAME_MAX];/* human readable name */

@@ -88,11 +88,6 @@ _pscthr_destroy(void *arg)
 			    thr->pscthr_uniqid - 1);
 	}
 	PLL_ULOCK(&psc_threads);
-
-	if (thr->pscthr_dtor) {
-		thr->pscthr_dtor(thr->pscthr_private);
-		psc_free(thr->pscthr_private, PAF_NOLOG);
-	}
 	psc_free(thr->pscthr_loglevels, PAF_NOLOG);
 	psc_free(thr, PAF_NOLOG);
 }
@@ -342,7 +337,6 @@ _pscthr_begin(void *arg)
  * @startf: thread execution routine.  By specifying a NULL routine, no
  * pthread will be spawned (assuming that an actual pthread already
  * exists or will be taken care of).
- * @dtor: optional destructor to run when/if thread exits.
  * @privsiz: size of thread-type-specific data.
  * @memnid: memory node ID to allocate memory for this thread.
  * @namefmt: application-specific printf(3) name for thread.
