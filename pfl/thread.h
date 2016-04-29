@@ -81,8 +81,8 @@ label(struct psc_thread *pt)						\
 /*
  * pscthr_init - Initialize an application thread.
  */
-#define pscthr_init(thrtype, startf, dtor, privsiz, namefmt, ...)	\
-	_pscthr_init((thrtype), (startf), (dtor), (privsiz), -1,	\
+#define pscthr_init(thrtype, startf, privsiz, namefmt, ...)		\
+	_pscthr_init((thrtype), (startf), (privsiz), -1,		\
 	    (namefmt), ## __VA_ARGS__)
 
 #define pscthr_gettid()		pscthr_get()->pscthr_thrid
@@ -115,7 +115,7 @@ void	pscthr_setrun(struct psc_thread *, int);
 struct psc_thread *pscthr_get(void);
 struct psc_thread *pscthr_get_canfail(void);
 struct psc_thread *
-	_pscthr_init(int, void (*)(struct psc_thread *), void (*)(void *),
+	_pscthr_init(int, void (*)(struct psc_thread *),
 	    size_t, int, const char *, ...);
 
 extern struct psc_lockedlist	psc_threads;

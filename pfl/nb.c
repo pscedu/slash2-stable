@@ -118,7 +118,7 @@ pscrpc_nbreapthr_spawn(struct pscrpc_request_set *set, int thrtype,
 	spinlock(&set->set_lock);
 
 	for (i = 0; i < nthr; i++) {
-		thr = pscthr_init(thrtype, pscrpc_nbreapthr_main, NULL,
+		thr = pscthr_init(thrtype, pscrpc_nbreapthr_main,
 		    sizeof(*pnbt), thrname, i);
 		pnbt = thr->pscthr_private;
 		pnbt->pnbt_set = set;

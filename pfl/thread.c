@@ -349,8 +349,7 @@ _pscthr_begin(void *arg)
  */
 struct psc_thread *
 _pscthr_init(int type, void (*startf)(struct psc_thread *),
-    void (*dtor)(void *), size_t privsiz, int memnid,
-    const char *namefmt, ...)
+    size_t privsiz, int memnid, const char *namefmt, ...)
 {
 	struct psc_thread *thr;
 	struct psc_thread_init thr_init;
@@ -362,7 +361,6 @@ _pscthr_init(int type, void (*startf)(struct psc_thread *),
 	INIT_PSC_LISTENTRY(&thr->pscthr_lentry);
 	thr->pscthr_type = type;
 	thr->pscthr_flags = PTF_RUN | PTF_INIT;
-	thr->pscthr_dtor = dtor;
 
 	thr_init.pti_thread = thr;
 	thr_init.pti_startf = startf;

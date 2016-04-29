@@ -405,9 +405,9 @@ main(int argc, char *argv[])
 	    "displaythr");
 
 	for (i = 0; i < nrthr; i++)
-		pscthr_init(THRT_RD, rd_main, NULL, 0, "rdthr%d", i);
+		pscthr_init(THRT_RD, rd_main, 0, "rdthr%d", i);
 	for (i = 0; i < nwthr; i++)
-		pscthr_init(THRT_WR, wr_main, NULL, 0, "wrthr%d", i);
+		pscthr_init(THRT_WR, wr_main, 0, "wrthr%d", i);
 
 	for (;;)
 		sleep(1);
