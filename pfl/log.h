@@ -50,8 +50,6 @@ struct psclog_data {
 	int		 pld_rank;	/* MPI rank */
 	pid_t		 pld_thrid;
 	const char	*pld_uprog;	/* userland program via FUSE */
-	void		*pld_stack_ptrbuf[32];
-	char		 pld_stack_symbuf[256];
 };
 
 /* Log levels. */
@@ -386,6 +384,9 @@ extern const char		*psc_logfmt;
 extern char			 psclog_eol[8];
 extern char		 	 psc_hostshort[64];
 extern char			 psc_hostname[64];
+
+extern void			*psc_stack_ptrbuf[32];
+extern char		 	 psc_stack_symbuf[256];
 
 extern struct psc_dynarray	_pfl_logpoints;
 

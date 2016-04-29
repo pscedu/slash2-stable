@@ -76,6 +76,10 @@ char				 psclog_eol[8] = "\n";	/* overrideable with ncurses EOL */
 char		 		 psc_hostshort[64];
 char		 		 psc_hostname[64];
 
+psc_spinlock_t			 psc_stack_lock = SPINLOCK_INIT;
+void				*psc_stack_ptrbuf[32];
+char		 		 psc_stack_symbuf[256];
+
 /*
  * A user can define one or more PSC_SYSLOG_$subsys environment
  * variables or simply the PSC_SYSLOG environment variable to select
@@ -322,16 +326,19 @@ pfl_fmtlogdate(const struct timeval *tv, const char **s)
 }
 
 const char *
-pflog_get_stacktrace(struct psclog_data *d)
+pflog_get_stacktrace()
 {
 #ifdef HAVE_BACKTRACE
 	char **symv, *sym, *name, *end;
 	int rc, i, n, adj = 0, len;
 
-	n = backtrace(d->pld_stack_ptrbuf, nitems(d->pld_stack_ptrbuf));
-	symv = backtrace_symbols(d->pld_stack_ptrbuf, n);
-	if (symv == NULL)
+	spinlock(&psc_stack_lock);
+	n = backtrace(psc_stack_ptrbuf, nitems(psc_stack_ptrbuf));
+	symv = backtrace_symbols(psc_stack_ptrbuf, n);
+	if (symv == NULL) {
+		freelock(&psc_stack_lock);
 		return ("");
+	}
 
 	for (i = 2; i < n; i++) {
 		sym = symv[i];
@@ -358,8 +365,8 @@ pflog_get_stacktrace(struct psclog_data *d)
 		if (len == 7 && strncmp(name, "_psclog", len) == 0)
 			break;
 
-		rc = snprintf(d->pld_stack_symbuf + adj,
-		    sizeof(d->pld_stack_symbuf) - adj,
+		rc = snprintf(psc_stack_symbuf + adj,
+		    sizeof(psc_stack_symbuf) - adj,
 		    "%s%.*s", adj ? ":" : "", len, name);
 		if (rc == -1)
 			goto out;
@@ -370,7 +377,8 @@ pflog_get_stacktrace(struct psclog_data *d)
  out:
 		printf("bail\n");
 	free(symv);
-	return (d->pld_stack_symbuf);
+	freelock(&psc_stack_lock);
+	return (psc_stack_symbuf);
 #else
 	(void)d;
 	return ("");
@@ -422,7 +430,7 @@ _psclogv(const struct pfl_callerinfo *pci, int level, int options,
 		FMTSTRCASE('n', "s", thrname)
 		FMTSTRCASE('P', "d", pflog_get_fsctx_pid(thr))
 		FMTSTRCASE('r', "d", d->pld_rank)
-		FMTSTRCASE('S', "s", pflog_get_stacktrace(d))
+		FMTSTRCASE('S', "s", pflog_get_stacktrace())
 		FMTSTRCASE('s', "lu", tv.tv_sec)
 		FMTSTRCASE('T', "s", pfl_subsys_name(pci->pci_subsys))
 		FMTSTRCASE('t', "d", pci->pci_subsys)
