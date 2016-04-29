@@ -62,9 +62,9 @@ struct psc_lockedlist		 psc_threads =
 #define	PTHREAD_GUARD_SIZE		4096
 #define	PTHREAD_STACK_SIZE		640*1024
 
-pthread_attr_t			pthread_attr;
-psc_spinlock_t		  	pthread_lock;
-struct psc_waitq		pthread_waitq;
+__static pthread_attr_t		pthread_attr;
+__static psc_spinlock_t	  	pthread_lock;
+__static struct psc_waitq	pthread_waitq;
 
 /*
  * Thread destructor.
