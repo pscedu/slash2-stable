@@ -74,12 +74,10 @@ __static void
 _pscthr_destroy(void *arg)
 {
 	struct psc_thread *thr = arg;
-	int locked;
 
 	psclog_diag("thread dying");
 
-	locked = PLL_RLOCK(&psc_threads);
-	(void)reqlock(&pthread_lock);
+	PLL_LOCK(&psc_threads);
 	pll_remove(&psc_threads, thr);
 	if (thr->pscthr_uniqid) {
 		psc_vbitmap_unset(&psc_uniqthridmap,
@@ -89,7 +87,7 @@ _pscthr_destroy(void *arg)
 			psc_vbitmap_setnextpos(&psc_uniqthridmap,
 			    thr->pscthr_uniqid - 1);
 	}
-	PLL_URLOCK(&psc_threads, locked);
+	PLL_ULOCK(&psc_threads);
 
 	if (thr->pscthr_dtor) {
 		thr->pscthr_dtor(thr->pscthr_private);
