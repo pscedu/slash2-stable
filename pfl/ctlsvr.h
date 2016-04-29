@@ -130,6 +130,9 @@ int	psc_ctlrep_getthread(int, struct psc_ctlmsghdr *, void *);
 int	pfl_ctlrep_getworkrq(int, struct psc_ctlmsghdr *, void *);
 int	psc_ctlrep_param(int, struct psc_ctlmsghdr *, void *);
 
+int	psc_ctlparam_get_rss(int, struct psc_ctlmsghdr *,
+		struct psc_ctlmsg_param *, char **, int, struct psc_ctlparam_node *);
+
 int	psc_ctlparam_log_file(int, struct psc_ctlmsghdr *,
 		struct psc_ctlmsg_param *, char **, int, struct psc_ctlparam_node *);
 int	psc_ctlparam_log_format(int, struct psc_ctlmsghdr *,
