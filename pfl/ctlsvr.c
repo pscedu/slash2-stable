@@ -1350,6 +1350,7 @@ psc_ctlparam_pool(int fd, struct psc_ctlmsghdr *mh,
 	char *endp;
 	long val;
 	long long size = 0;
+	char buf[32];
 
 	if (nlevels > 3)
 		return (psc_ctlsenderr(fd, mh, "invalid field"));
@@ -1398,8 +1399,9 @@ psc_ctlparam_pool(int fd, struct psc_ctlmsghdr *mh,
 			POOL_ULOCK(m);
 		}
 		PLL_ULOCK(&psc_pools);
-		snprintf(pcp->pcp_value, sizeof(pcp->pcp_value), "%lld", size);
-		rc = psc_ctlmsg_sendv(fd, mh, pcp);
+		snprintf(buf, sizeof(buf), "%lld", size);
+		rc = psc_ctlmsg_param_send(fd, mh, pcp, PCTHRNAME_EVERYONE,
+		    levels, nlevels, buf);
 		return (rc);
 	}
 
