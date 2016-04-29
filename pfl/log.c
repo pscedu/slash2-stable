@@ -275,7 +275,6 @@ struct psclog_data *
 psclog_getdata(void)
 {
 	struct psclog_data *d;
-	char *p;
 
 	d = pfl_tls_get(PFL_TLSIDX_LOGDATA, sizeof(*d));
 	if (d->pld_thrid == 0) {
@@ -283,7 +282,6 @@ psclog_getdata(void)
 		d->pld_thrid = pfl_getsysthrid();
 		snprintf(d->pld_nothrname, sizeof(d->pld_nothrname),
 		    "<%"PSCPRI_PTHRT">", pthread_self());
-
 #ifdef HAVE_CNOS
 		d->pld_rank = cnos_get_rank();
 #else
