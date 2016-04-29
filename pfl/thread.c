@@ -410,7 +410,7 @@ _pscthr_init(int type, void (*startf)(struct psc_thread *),
 void
 pscthr_setready(struct psc_thread *thr)
 {
-	(void)reqlock(&pthread_lock);
+	spinlock(&pthread_lock);
 	thr->pscthr_flags |= PTF_READY;
 	psc_waitq_wakeall(&pthread_waitq);
 	freelock(&pthread_lock);
@@ -486,28 +486,24 @@ pscthr_setpause(struct psc_thread *thr, int pauseval)
 void
 pscthr_setrun(struct psc_thread *thr, int run)
 {
-	int locked;
-
-	locked = reqlock(&pthread_lock);
+	spinlock(&pthread_lock);
 	if (run) {
 		thr->pscthr_flags |= PTF_RUN;
 		psc_waitq_wakeall(&pthread_waitq);
 	} else
 		thr->pscthr_flags &= ~PTF_RUN;
-	ureqlock(&pthread_lock, locked);
+	freelock(&pthread_lock);
 }
 
 void
 pscthr_setdead(struct psc_thread *thr, int dead)
 {
-	int locked;
-
-	locked = reqlock(&pthread_lock);
+	spinlock(&pthread_lock);
 	if (dead)
 		thr->pscthr_flags |= PTF_DEAD;
 	else
 		thr->pscthr_flags &= ~PTF_DEAD;
-	ureqlock(&pthread_lock, locked);
+	freelock(&pthread_lock);
 }
 
 /*
