@@ -231,13 +231,15 @@ pscthr_get(void)
  * @thr: thread to finish initializing.
  */
 void
-_pscthr_finish_init(struct psc_thread *thr)
+_pscthr_finish_init(struct psc_thread_init *thr_init)
 {
 	struct sigaction sa;
+	struct psc_thread *thr;
 	int n, rc;
 
-	if (thr->pscthr_privsiz)
-		thr->pscthr_private = psc_alloc(thr->pscthr_privsiz,
+	thr = thr_init->pti_thread;
+	if (thr_init->pti_privsiz)
+		thr->pscthr_private = psc_alloc(thr_init->pti_privsiz,
 		    PAF_NOLOG);
 
 	thr->pscthr_loglevels = psc_alloc(psc_dynarray_len(
@@ -285,24 +287,24 @@ _pscthr_finish_init(struct psc_thread *thr)
  * @thr: thread structure.
  */
 void
-_pscthr_bind_memnode(struct psc_thread *thr)
+_pscthr_bind_memnode(struct psc_thread_init *thr_init)
 {
 #ifdef HAVE_NUMA
-	struct bitmask *bm;
 
-	if (thr->pscthr_memnid != -1) {
+	struct bitmask *bm;
+	if (thr_init->pti_memnid != -1) {
 		bm = numa_allocate_nodemask();
 		numa_bitmask_clearall(bm);
 		numa_bitmask_setbit(bm,
 		    cpuset_p_rel_to_sys_mem(pfl_getsysthrid(),
-		    thr->pscthr_memnid));
+		    thr_init->pti_memnid));
 		if (numa_run_on_node_mask(bm) == -1)
 			psc_fatal("numa");
 		numa_set_membind(bm);
 		numa_bitmask_free(bm);
 	}
 #else
-	(void)thr; /* avoid unused warnings */
+	(void)thr_init; /* avoid unused warnings */
 #endif
 }
 
@@ -315,11 +317,14 @@ _pscthr_bind_memnode(struct psc_thread *thr)
 __static void *
 _pscthr_begin(void *arg)
 {
-	struct psc_thread *thr = arg;
+	struct psc_thread *thr;
+	struct psc_thread_init *thr_init = arg;
+
+	thr = thr_init->pti_thread;
 
 	spinlock(&pthread_lock);
-	_pscthr_bind_memnode(thr);
-	_pscthr_finish_init(thr);
+	_pscthr_bind_memnode(thr_init);
+	_pscthr_finish_init(thr_init);
 	thr->pscthr_flags &= ~PTF_INIT;
 	psc_waitq_wakeall(&pthread_waitq);
 
@@ -350,6 +355,7 @@ _pscthr_init(int type, void (*startf)(struct psc_thread *),
     const char *namefmt, ...)
 {
 	struct psc_thread *thr;
+	struct psc_thread_init thr_init;
 	va_list ap;
 	int rc;
 
@@ -358,10 +364,12 @@ _pscthr_init(int type, void (*startf)(struct psc_thread *),
 	INIT_PSC_LISTENTRY(&thr->pscthr_lentry);
 	thr->pscthr_type = type;
 	thr->pscthr_startf = startf;
-	thr->pscthr_privsiz = privsiz;
 	thr->pscthr_flags = PTF_RUN | PTF_INIT;
 	thr->pscthr_dtor = dtor;
-	thr->pscthr_memnid = memnid;
+
+	thr_init.pti_thread = thr;
+	thr_init.pti_memnid = memnid;
+	thr_init.pti_privsiz = privsiz;
 
 	va_start(ap, namefmt);
 	rc = vsnprintf(thr->pscthr_name, sizeof(thr->pscthr_name),
@@ -377,7 +385,7 @@ _pscthr_init(int type, void (*startf)(struct psc_thread *),
 	spinlock(&pthread_lock);
 	if (startf) {
 		rc = pthread_create(&thr->pscthr_pthread, &pthread_attr, 
-		    _pscthr_begin, thr);
+		    _pscthr_begin, &thr_init);
 		if (rc)
 			psc_fatalx("pthread_create: %s", strerror(rc));
 		while (thr->pscthr_flags & PTF_INIT) {
@@ -386,12 +394,12 @@ _pscthr_init(int type, void (*startf)(struct psc_thread *),
 		}
 		freelock(&pthread_lock);
 		/* XXX */
-		if (thr->pscthr_privsiz == 0)
+		if (privsiz == 0)
 			pscthr_setready(thr);
 	} else {
 		/* Initializing our own thread context. */
-		_pscthr_bind_memnode(thr);
-		_pscthr_finish_init(thr);
+		_pscthr_bind_memnode(&thr_init);
+		_pscthr_finish_init(&thr_init);
 		freelock(&pthread_lock);
 	}
 	return (thr);

@@ -2451,7 +2451,7 @@ psc_ctlthr_main(const char *ofn, const struct psc_ctlop *ct, int nops,
 #define PFL_CTL_NTHRS 4
 	for (i = 1; i < PFL_CTL_NTHRS; i++) {
 		thr = pscthr_init(me->pscthr_type, psc_ctlthr_mainloop,
-		    NULL, me->pscthr_privsiz, "%.*sctlthr%d",
+		    NULL, sizeof(struct psc_ctlthr), "%.*sctlthr%d",
 		    p - me->pscthr_name, me->pscthr_name, i);
 		pct = psc_ctlthr(thr);
 		pct->pct_ct = ct;

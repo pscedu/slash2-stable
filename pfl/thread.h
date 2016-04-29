@@ -54,10 +54,12 @@ struct psc_thread {
 	char			  pscthr_name[PSC_THRNAME_MAX];/* human readable name */
 	int			 *pscthr_loglevels;		/* logging granularity */
 	void			 *pscthr_private;		/* app-specific data */
+};
 
-	/* only used for thread initialization */
-	int			  pscthr_memnid;		/* ID of memnode */
-	size_t			  pscthr_privsiz;		/* size of app data */
+struct psc_thread_init {
+	struct psc_thread	 *pti_thread;
+	int			  pti_memnid;			/* ID of memnode */
+	int			  pti_privsiz;			/* size of app data */
 };
 
 /* internal operation flags */
