@@ -46,7 +46,6 @@ struct psc_thread {
 	pid_t			  pscthr_thrid;			/* gettid(2) */
 	int			  pscthr_uniqid;		/* transiency bookkeeping */
 
-	void			(*pscthr_startf)(struct psc_thread *);	/* thread main */
 	void			(*pscthr_dtor)(void *);		/* custom destructor */
 
 	int			  pscthr_flags;			/* operational flags */
@@ -58,6 +57,7 @@ struct psc_thread {
 
 struct psc_thread_init {
 	struct psc_thread	 *pti_thread;
+	void			(*pti_startf)(struct psc_thread *);	/* thread main */
 	int			  pti_memnid;			/* ID of memnode */
 	int			  pti_privsiz;			/* size of app data */
 };

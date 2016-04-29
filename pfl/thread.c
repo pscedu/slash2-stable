@@ -318,9 +318,11 @@ __static void *
 _pscthr_begin(void *arg)
 {
 	struct psc_thread *thr;
+	void (*startf)(struct psc_thread *);
 	struct psc_thread_init *thr_init = arg;
 
 	thr = thr_init->pti_thread;
+	startf = thr_init->pti_startf;
 
 	spinlock(&pthread_lock);
 	_pscthr_bind_memnode(thr_init);
@@ -334,7 +336,7 @@ _pscthr_begin(void *arg)
 		spinlock(&pthread_lock);
 	} while ((thr->pscthr_flags & PTF_READY) == 0);
 	freelock(&pthread_lock);
-	thr->pscthr_startf(thr);
+	startf(thr);
 	return (thr);
 }
 
@@ -363,11 +365,11 @@ _pscthr_init(int type, void (*startf)(struct psc_thread *),
 	memset(thr, 0, sizeof(*thr));
 	INIT_PSC_LISTENTRY(&thr->pscthr_lentry);
 	thr->pscthr_type = type;
-	thr->pscthr_startf = startf;
 	thr->pscthr_flags = PTF_RUN | PTF_INIT;
 	thr->pscthr_dtor = dtor;
 
 	thr_init.pti_thread = thr;
+	thr_init.pti_startf = startf;
 	thr_init.pti_memnid = memnid;
 	thr_init.pti_privsiz = privsiz;
 
