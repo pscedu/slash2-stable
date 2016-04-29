@@ -239,8 +239,7 @@ _pscthr_finish_init(struct psc_thread_init *thr_init)
 
 	thr = thr_init->pti_thread;
 	if (thr_init->pti_privsiz)
-		thr->pscthr_private = psc_alloc(thr_init->pti_privsiz,
-		    PAF_NOLOG);
+		thr->pscthr_private = (void *)(thr + 1);
 
 	thr->pscthr_loglevels = psc_alloc(psc_dynarray_len(
 	    &pfl_subsystems) * sizeof(*thr->pscthr_loglevels),
@@ -361,8 +360,8 @@ _pscthr_init(int type, void (*startf)(struct psc_thread *),
 	va_list ap;
 	int rc;
 
-	thr = psc_alloc(sizeof(*thr), PAF_NOLOG | PAF_NOZERO);
-	memset(thr, 0, sizeof(*thr));
+	thr = psc_alloc(sizeof(*thr) + privsiz, PAF_NOLOG | PAF_NOZERO);
+	memset(thr, 0, sizeof(*thr) + privsiz);
 	INIT_PSC_LISTENTRY(&thr->pscthr_lentry);
 	thr->pscthr_type = type;
 	thr->pscthr_flags = PTF_RUN | PTF_INIT;
