@@ -66,7 +66,6 @@ pfl_opstat_initf(int flags, const char *namefmt, ...)
 		if (strcmp(name, opst->opst_name) == 0) {
 			psc_assert((flags & OPSTF_EXCL) == 0);
 			freelock(&pfl_opstats_lock);
-			PSCFREE(name);
 			return (opst);
 		}
 	}
