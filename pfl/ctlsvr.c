@@ -735,7 +735,7 @@ psc_ctlparam_get_rss(int fd, struct psc_ctlmsghdr *mh,
 
 	if (strcmp(pcp->pcp_thrname, PCTHRNAME_EVERYONE) != 0) {
 		if (nlevels == 2)
-			rc = psc_ctlsenderr(fd, mh, "log.file: "
+			rc = psc_ctlsenderr(fd, mh, "sys.rss: "
 			    "not thread specific");
 		return (rc);
 	}
@@ -774,9 +774,9 @@ psc_ctlparam_get_rss(int fd, struct psc_ctlmsghdr *mh,
 	sscanf(line, "%lld ", &rss);
 
 	line = (char *)buf;
-	snprintf(line, sizeof(buf), "%lld kB", rss * 4);
+	snprintf(line, sizeof(buf), "%lldkB", rss * 4);
 	rc = psc_ctlmsg_param_send(fd, mh, pcp, PCTHRNAME_EVERYONE,
-	    levels, nlevels, line);
+	    levels, 2, line);
 	return (rc);
 }
 
