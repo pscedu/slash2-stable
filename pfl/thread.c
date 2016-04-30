@@ -60,7 +60,7 @@ struct psc_lockedlist		 psc_threads =
     PLL_INIT_NOLOG(&psc_threads, struct psc_thread, pscthr_lentry);
 
 #define	PTHREAD_GUARD_SIZE		4096
-#define	PTHREAD_STACK_SIZE		640*1024
+#define	PTHREAD_STACK_SIZE		1024*1024
 
 __static pthread_attr_t		pthread_attr;
 __static psc_spinlock_t	  	pthread_lock;
