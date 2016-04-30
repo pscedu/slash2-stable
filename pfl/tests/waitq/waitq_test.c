@@ -106,7 +106,7 @@ main(int argc, char *argv[])
 	psc_waitq_init(&waitq);
 
 	for (i = 0; i < nthreads; i++)
-		pscthr_init(0, child_main, NULL, 0, "thr%d", i);
+		pscthr_init(0, child_main, 0, "thr%d", i);
 
 	sleep(1);
 	psc_waitq_wakeall(&waitq);
