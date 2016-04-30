@@ -112,7 +112,7 @@ pfl_wkthr_spawn(int thrtype, int nthr, const char *thrname)
 	int i;
 
 	for (i = 0; i < nthr; i++) {
-		thr = pscthr_init(thrtype, pfl_wkthr_main, NULL,
+		thr = pscthr_init(thrtype, pfl_wkthr_main,
 		    sizeof(struct pfl_wk_thread), thrname, i);
 		pfl_wkthr(thr)->wkt_workq = &pfl_workq;
 		pscthr_setready(thr);

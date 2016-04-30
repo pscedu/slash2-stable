@@ -1395,7 +1395,7 @@ psc_ctlcli_main(const char *osockfn, int ac, char *av[],
 	else
 		prg = __progname;
 
-	pscthr_init(PCTHRT_WR, NULL, NULL, 0, "%swrthr", prg);
+	pscthr_init(PCTHRT_WR, NULL, 0, "%swrthr", prg);
 
 	psc_ctl_sockfn = osockfn;
 
@@ -1455,8 +1455,7 @@ psc_ctlcli_main(const char *osockfn, int ac, char *av[],
 	    sizeof(saun)) == -1)
 		err(1, "connect: %s", saun.sun_path);
 
-	thr = pscthr_init(PCTHRT_RD, psc_ctlcli_rd_main, 1,
-	    "%srdthr", prg);
+	thr = pscthr_init(PCTHRT_RD, psc_ctlcli_rd_main, 1, "%srdthr", prg);
 	pthr = thr->pscthr_pthread;
 	pscthr_setready(thr);
 
