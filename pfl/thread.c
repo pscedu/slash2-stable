@@ -47,6 +47,7 @@
 #include "pfl/lock.h"
 #include "pfl/lockedlist.h"
 #include "pfl/mem.h"
+#include "pfl/opstats.h"
 #include "pfl/str.h"
 #include "pfl/subsys.h"
 #include "pfl/thread.h"
@@ -77,6 +78,7 @@ _pscthr_destroy(void *arg)
 
 	psclog_diag("thread dying");
 
+	OPSTAT_INCR("pfl.thread-destroy");
 	PLL_LOCK(&psc_threads);
 	pll_remove(&psc_threads, thr);
 	if (thr->pscthr_uniqid) {
@@ -346,6 +348,8 @@ _pscthr_init(int type, void (*startf)(struct psc_thread *),
 	struct psc_thread_init thr_init;
 	va_list ap;
 	int rc;
+
+	OPSTAT_INCR("pfl.thread-create");
 
 	thr = psc_alloc(sizeof(*thr) + privsiz, PAF_NOLOG | PAF_NOZERO);
 	memset(thr, 0, sizeof(*thr) + privsiz);
