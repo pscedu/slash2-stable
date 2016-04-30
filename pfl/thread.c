@@ -383,7 +383,7 @@ _pscthr_init(int type, void (*startf)(struct psc_thread *),
 			spinlock(&pthread_lock);
 		}
 		freelock(&pthread_lock);
-		/* XXX */
+		/* Automatically set ready if no private data */
 		if (privsiz == 0)
 			pscthr_setready(thr);
 	} else {
