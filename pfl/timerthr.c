@@ -142,5 +142,5 @@ pfl_rusagethr_main(struct psc_thread *thr)
 void
 pfl_opstimerthr_spawn(int thrtype, const char *name)
 {
-	pscthr_init(thrtype, pfl_opstimerthr_main, NULL, 0, name);
+	pscthr_init(thrtype, pfl_opstimerthr_main, 0, name);
 }
