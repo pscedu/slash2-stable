@@ -401,8 +401,7 @@ main(int argc, char *argv[])
 		peersock = doconnect(argv[0]);
 	}
 
-	pscthr_init(THRT_DISPLAY, displaythr_main, NULL, 0,
-	    "displaythr");
+	pscthr_init(THRT_DISPLAY, displaythr_main, 0, "displaythr");
 
 	for (i = 0; i < nrthr; i++)
 		pscthr_init(THRT_RD, rd_main, 0, "rdthr%d", i);
