@@ -103,7 +103,7 @@ main(int argc, char *argv[])
 
 	atomic_set(&nworkers, nthrs);
 	for (i = 0; i < nthrs; i++)
-		pscthr_init(0, thr_main, NULL, 0, "thr%d", i);
+		pscthr_init(0, thr_main, 0, "thr%d", i);
 
 	slen = snprintf(NULL, 0, "%d", nruns * nthrs);
 
