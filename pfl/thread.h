@@ -56,7 +56,6 @@ struct psc_thread_init {
 	struct psc_thread	 *pti_thread;
 	void			(*pti_startf)(struct psc_thread *);	/* thread main */
 	int			  pti_memnid;			/* ID of memnode */
-	int			  pti_privsiz;			/* size of app data */
 };
 
 /* internal operation flags */
