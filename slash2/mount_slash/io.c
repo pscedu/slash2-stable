@@ -2377,7 +2377,7 @@ msreadaheadthr_spawn(void)
 
 	for (i = 0; i < NUM_READAHEAD_THREADS; i++) {
 		thr = pscthr_init(MSTHRT_READAHEAD, msreadaheadthr_main,
-		    NULL, sizeof(*mrat), "msreadaheadthr%d", i);
+		    sizeof(*mrat), "msreadaheadthr%d", i);
 		mrat = msreadaheadthr(thr);
 		pfl_multiwait_init(&mrat->mrat_mw, "%s",
 		    thr->pscthr_name);
@@ -2395,7 +2395,7 @@ return;
 
 	for (i = 0; i < NUM_IO_RETRY_THREADS; i++) {
 		thr = pscthr_init(MSTHRT_IORETRY, msioretrythr_main,
-		    NULL, sizeof(*mirt), "msioretrythr%d", i);
+		    sizeof(*mirt), "msioretrythr%d", i);
 		mirt = msioretrythr(thr);
 		pfl_multiwait_init(&mirt->mirt_mw, "%s",
 		    thr->pscthr_name);

@@ -876,7 +876,8 @@ struct psc_ctlop msctlops[] = {
 void
 msctlthr_main(struct psc_thread *thr)
 {
-	char *s, *newstr, *fn = (void *)msl_ctlsockfn;
+	char expandbuf[PATH_MAX];
+	char *s, *fn = (void *)msl_ctlsockfn;
 	int rc;
 
 	for (;;) {
@@ -887,12 +888,11 @@ msctlthr_main(struct psc_thread *thr)
 		s = strstr(fn, "%n");
 		if (s == NULL)
 			break;
-		rc = pfl_asprintf(&newstr, "%.*s%s%s", (int)(s - fn),
-		    fn, "mount_slash", s + 2);
+		rc = snprintf(expandbuf, sizeof(expandbuf), "%.*s%s%s",
+		    (int)(s - fn), fn, "mount_slash", s + 2);
 		if (rc == -1)
 			psc_fatal("expand %s", msl_ctlsockfn);
-		PSCFREE(fn);
-		fn = newstr;
+		fn = expandbuf;
 	}
 
 	/* stash thread so mslfsop_destroy() can kill ctlthr */
@@ -974,6 +974,8 @@ msctlthr_spawn(void)
 	psc_ctlparam_register_var("sys.rpc_max_retry", PFLCTL_PARAMT_INT,
 	    PFLCTL_PARAMF_RDWR, &pfl_rpc_max_retry);
 
+	psc_ctlparam_register("sys.rss", psc_ctlparam_get_rss);
+
 	psc_ctlparam_register_var("sys.statfs_pref_ios_only",
 	    PFLCTL_PARAMT_INT, PFLCTL_PARAMF_RDWR,
 	    &msl_statfs_pref_ios_only);
@@ -984,7 +986,7 @@ msctlthr_spawn(void)
 	    PFLCTL_PARAMT_INT, PFLCTL_PARAMF_RDWR,
 	    &msl_mds_max_inflight_rpcs);
 
-	thr = pscthr_init(MSTHRT_CTL, msctlthr_main, NULL,
+	thr = pscthr_init(MSTHRT_CTL, msctlthr_main,
 	    sizeof(struct psc_ctlthr), "msctlthr0");
 	pscthr_setready(thr);
 }
