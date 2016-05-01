@@ -1395,7 +1395,7 @@ psc_ctlcli_main(const char *osockfn, int ac, char *av[],
 	else
 		prg = __progname;
 
-	pscthr_init(PCTHRT_WR, NULL, NULL, 0, "%swrthr", prg);
+	pscthr_init(PCTHRT_WR, NULL, 0, "%swrthr", prg);
 
 	psc_ctl_sockfn = osockfn;
 
@@ -1447,7 +1447,7 @@ psc_ctlcli_main(const char *osockfn, int ac, char *av[],
 	SOCKADDR_SETLEN(&saun);
 
 	(void)FMTSTR(saun.sun_path, sizeof(saun.sun_path), psc_ctl_sockfn,
-	    FMTSTRCASE('h', "s", psclog_getdata()->pld_hostshort)
+	    FMTSTRCASE('h', "s", psc_hostshort)
 	    FMTSTRCASE('n', "s", daemon_name)
 	);
 
@@ -1455,8 +1455,7 @@ psc_ctlcli_main(const char *osockfn, int ac, char *av[],
 	    sizeof(saun)) == -1)
 		err(1, "connect: %s", saun.sun_path);
 
-	thr = pscthr_init(PCTHRT_RD, psc_ctlcli_rd_main, NULL, 1,
-	    "%srdthr", prg);
+	thr = pscthr_init(PCTHRT_RD, psc_ctlcli_rd_main, 1, "%srdthr", prg);
 	pthr = thr->pscthr_pthread;
 	pscthr_setready(thr);
 

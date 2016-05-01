@@ -35,6 +35,7 @@
 
 struct psc_spinlock	pfl_opstats_lock = SPINLOCK_INIT;
 struct psc_dynarray	pfl_opstats = DYNARRAY_INIT;
+__static char		pfl_opstat_name[128];
 
 int
 _pfl_opstat_cmp(const void *a, const void *b)
@@ -49,30 +50,30 @@ struct pfl_opstat *
 pfl_opstat_initf(int flags, const char *namefmt, ...)
 {
 	struct pfl_opstat *opst;
-	int pos, locked;
+	int sz, pos;
 	va_list ap;
-	char *name;
+	char *name = pfl_opstat_name;
+
+	spinlock(&pfl_opstats_lock);
 
 	va_start(ap, namefmt);
-	pfl_vasprintf(&name, namefmt, ap);
+	sz = vsnprintf(name, 128, namefmt, ap) + 1;
 	va_end(ap);
 
-	locked = reqlock(&pfl_opstats_lock);
 	pos = psc_dynarray_bsearch(&pfl_opstats, name, _pfl_opstat_cmp);
 	if (pos < psc_dynarray_len(&pfl_opstats)) {
 		opst = psc_dynarray_getpos(&pfl_opstats, pos);
 		if (strcmp(name, opst->opst_name) == 0) {
 			psc_assert((flags & OPSTF_EXCL) == 0);
-			ureqlock(&pfl_opstats_lock, locked);
-			PSCFREE(name);
+			freelock(&pfl_opstats_lock);
 			return (opst);
 		}
 	}
-	opst = PSCALLOC(sizeof(*opst));
-	opst->opst_name = name;
+	opst = PSCALLOC(sizeof(*opst) + sz);
+	strlcpy(opst->opst_name, name, 128);
 	opst->opst_flags = flags;
 	psc_dynarray_splice(&pfl_opstats, pos, 0, &opst, 1);
-	ureqlock(&pfl_opstats_lock, locked);
+	freelock(&pfl_opstats_lock);
 	return (opst);
 }
 
@@ -84,7 +85,6 @@ pfl_opstat_destroy_pos(int pos)
 	LOCK_ENSURE(&pfl_opstats_lock);
 	opst = psc_dynarray_getpos(&pfl_opstats, pos);
 	psc_dynarray_splice(&pfl_opstats, pos, 1, NULL, 0);
-	PSCFREE(opst->opst_name);
 	PSCFREE(opst);
 }
 

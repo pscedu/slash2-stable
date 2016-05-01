@@ -719,6 +719,67 @@ psc_ctlparam_log_points(int fd, struct psc_ctlmsghdr *mh,
 }
 
 
+int
+psc_ctlparam_get_rss(int fd, struct psc_ctlmsghdr *mh,
+    struct psc_ctlmsg_param *pcp, char **levels, int nlevels,
+    __unusedx struct psc_ctlparam_node *pcn)
+{
+	long long rss;
+	char buf[1024];
+	char *line, ch;
+	char statname[256];
+	int rc = 1, statfd, len, set, skip;
+
+	if (nlevels > 2)
+		return (psc_ctlsenderr(fd, mh, "invalid field"));
+
+	if (strcmp(pcp->pcp_thrname, PCTHRNAME_EVERYONE) != 0) {
+		if (nlevels == 2)
+			rc = psc_ctlsenderr(fd, mh, "sys.rss: "
+			    "not thread specific");
+		return (rc);
+	}
+
+	levels[0] = "sys";
+	levels[1] = "rss";
+
+	set = (mh->mh_type == PCMT_SETPARAM);
+
+	if (set) 
+		return (psc_ctlsenderr(fd, mh,
+		    "field is read-only", levels[1]));
+
+	skip = 0;
+	snprintf(statname, sizeof(statname), "/proc/%d/stat", pfl_pid);
+	statfd = open(statname, O_RDONLY);
+	if (statfd < 0) 
+		return (psc_ctlsenderr(fd, mh,
+		    "fail to open file %s", statname));
+
+	len = read(statfd, buf, 1024);
+	if (len < 0) 
+		return (psc_ctlsenderr(fd, mh,
+		    "fail to read file %s", statname));
+	close(statfd);
+	skip = 0;
+	line = (char *)buf;
+	while (1) {
+		ch = *line++;
+		if (ch == 0x20) {
+			skip++;
+			if (skip == 23)
+				break;
+		}
+	}
+	sscanf(line, "%lld ", &rss);
+
+	line = (char *)buf;
+	snprintf(line, sizeof(buf), "%lldkB", rss * 4);
+	rc = psc_ctlmsg_param_send(fd, mh, pcp, PCTHRNAME_EVERYONE,
+	    levels, 2, line);
+	return (rc);
+}
+
 struct psc_ctl_rlim {
 	char	*pcr_name;
 	int	 pcr_id;
@@ -1251,7 +1312,7 @@ psc_ctlparam_instances(int fd, struct psc_ctlmsghdr *mh,
 
 	if (set) {
 		if (pcp->pcp_flags & PCPF_ADD)
-			pscthr_init(thrtype, thr_main, NULL,
+			pscthr_init(thrtype, thr_main,
 			    sizeof(struct psc_ctlacthr), "thr%d",
 			    p - me->pscthr_name, me->pscthr_name);
 		else if (pcp->pcp_flags & PCPF_SUB)
@@ -1288,6 +1349,8 @@ psc_ctlparam_pool(int fd, struct psc_ctlmsghdr *mh,
 	int rc, set;
 	char *endp;
 	long val;
+	long long size = 0;
+	char buf[32];
 
 	if (nlevels > 3)
 		return (psc_ctlsenderr(fd, mh, "invalid field"));
@@ -1325,6 +1388,21 @@ psc_ctlparam_pool(int fd, struct psc_ctlmsghdr *mh,
 			return (psc_ctlsenderr(fd, mh,
 			    "invalid pool %s value: %s",
 			    levels[2], pcp->pcp_value));
+	}
+
+	/* Special case for getting a summary of all pools */
+	if (nlevels == 2 && strcmp(levels[1], "total") == 0) {
+		PLL_LOCK(&psc_pools);
+		PLL_FOREACH(m, &psc_pools) {
+			POOL_LOCK(m);
+			size += (long long)m->ppm_total * m->ppm_entsize;
+			POOL_ULOCK(m);
+		}
+		PLL_ULOCK(&psc_pools);
+		snprintf(buf, sizeof(buf), "%lld", size);
+		rc = psc_ctlmsg_param_send(fd, mh, pcp, PCTHRNAME_EVERYONE,
+		    levels, nlevels, buf);
+		return (rc);
 	}
 
 	if (nlevels == 1) {
@@ -2294,7 +2372,7 @@ psc_ctlthr_spawn_listener(const char *ofn, int acthrtype)
 	 * Spawn a servicing thread to separate processing from acceptor
 	 * and to multiplex between clients for fairness.
 	 */
-	acthr = pscthr_init(acthrtype, psc_ctlacthr_main, NULL,
+	acthr = pscthr_init(acthrtype, psc_ctlacthr_main,
 	    sizeof(struct psc_ctlacthr), "%.*sctlacthr",
 	    p - me->pscthr_name, me->pscthr_name);
 	pcat = psc_ctlacthr(acthr);
@@ -2310,7 +2388,7 @@ psc_ctlthr_spawn_listener(const char *ofn, int acthrtype)
 
 	/* perform transliteration for "variables" in file path */
 	(void)FMTSTR(saun->sun_path, sizeof(saun->sun_path), ofn,
-		FMTSTRCASE('h', "s", psclog_getdata()->pld_hostshort)
+		FMTSTRCASE('h', "s", psc_hostshort)
 		FMTSTRCASE('n', "s", __progname)
 	);
 
@@ -2373,7 +2451,7 @@ psc_ctlthr_main(const char *ofn, const struct psc_ctlop *ct, int nops,
 #define PFL_CTL_NTHRS 4
 	for (i = 1; i < PFL_CTL_NTHRS; i++) {
 		thr = pscthr_init(me->pscthr_type, psc_ctlthr_mainloop,
-		    NULL, me->pscthr_privsiz, "%.*sctlthr%d",
+		    sizeof(struct psc_ctlthr), "%.*sctlthr%d",
 		    p - me->pscthr_name, me->pscthr_name, i);
 		pct = psc_ctlthr(thr);
 		pct->pct_ct = ct;

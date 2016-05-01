@@ -28,8 +28,6 @@
 
 #include <sys/types.h>
 
-const char *
-	pflsys_get_hostname(void);
 int	pflsys_getusergroups(uid_t, gid_t, gid_t *, int *);
 int	pflsys_userisgroupmember(uid_t, gid_t, gid_t);
 

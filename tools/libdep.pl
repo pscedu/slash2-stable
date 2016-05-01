@@ -22,6 +22,10 @@
 # --------------------------------------------------------------------
 # %END_LICENSE%
 
+# This program accepts linker arguments (e.g. -Ldir -llib) normally
+# specified to the compiler and generates any necessary make(1)
+# dependencies on static libraries used by the resulting executable.
+
 use strict;
 use warnings;
 use constant WIDTH => 78;

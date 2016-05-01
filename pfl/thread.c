@@ -47,6 +47,7 @@
 #include "pfl/lock.h"
 #include "pfl/lockedlist.h"
 #include "pfl/mem.h"
+#include "pfl/opstats.h"
 #include "pfl/str.h"
 #include "pfl/subsys.h"
 #include "pfl/thread.h"
@@ -59,6 +60,13 @@ __static struct psc_vbitmap	 psc_uniqthridmap = VBITMAP_INIT_AUTO;
 struct psc_lockedlist		 psc_threads =
     PLL_INIT_NOLOG(&psc_threads, struct psc_thread, pscthr_lentry);
 
+#define	PTHREAD_GUARD_SIZE	 4096
+#define	PTHREAD_STACK_SIZE	 2*1024*1024
+
+__static pthread_attr_t		 pthread_attr;
+__static psc_spinlock_t	  	 pthread_lock;
+__static struct psc_waitq	 pthread_waitq;
+
 /*
  * Thread destructor.
  * @arg: thread data.
@@ -67,12 +75,11 @@ __static void
 _pscthr_destroy(void *arg)
 {
 	struct psc_thread *thr = arg;
-	int locked;
 
 	psclog_diag("thread dying");
 
-	locked = PLL_RLOCK(&psc_threads);
-	(void)reqlock(&thr->pscthr_lock);
+	OPSTAT_INCR("pfl.thread-destroy");
+	PLL_LOCK(&psc_threads);
 	pll_remove(&psc_threads, thr);
 	if (thr->pscthr_uniqid) {
 		psc_vbitmap_unset(&psc_uniqthridmap,
@@ -82,13 +89,7 @@ _pscthr_destroy(void *arg)
 			psc_vbitmap_setnextpos(&psc_uniqthridmap,
 			    thr->pscthr_uniqid - 1);
 	}
-	PLL_URLOCK(&psc_threads, locked);
-
-	if (thr->pscthr_dtor) {
-		thr->pscthr_dtor(thr->pscthr_private);
-		psc_free(thr->pscthr_private, PAF_NOLOG);
-	}
-	psc_waitq_destroy(&thr->pscthr_waitq);
+	PLL_ULOCK(&psc_threads);
 	psc_free(thr->pscthr_loglevels, PAF_NOLOG);
 	psc_free(thr, PAF_NOLOG);
 }
@@ -140,15 +141,15 @@ _pscthr_pause(__unusedx int sig)
 	int locked;
 
 	thr = pscthr_get();
-	while (!tryreqlock(&thr->pscthr_lock, &locked))
+	while (!tryreqlock(&pthread_lock, &locked))
 		pscthr_yield();
 	thr->pscthr_flags |= PTF_PAUSED;
 	while (thr->pscthr_flags & PTF_PAUSED) {
-		psc_waitq_wait(&thr->pscthr_waitq,
-		    &thr->pscthr_lock);
-		spinlock(&thr->pscthr_lock);
+		psc_waitq_wait(&pthread_waitq,
+		    &pthread_lock);
+		spinlock(&pthread_lock);
 	}
-	ureqlock(&thr->pscthr_lock, locked);
+	ureqlock(&pthread_lock, locked);
 }
 
 /*
@@ -162,11 +163,11 @@ _pscthr_unpause(__unusedx int sig)
 	int locked;
 
 	thr = pscthr_get();
-	while (!tryreqlock(&thr->pscthr_lock, &locked))
+	while (!tryreqlock(&pthread_lock, &locked))
 		pscthr_yield();
 	thr->pscthr_flags &= ~PTF_PAUSED;
-	psc_waitq_wakeall(&thr->pscthr_waitq);
-	ureqlock(&thr->pscthr_lock, locked);
+	psc_waitq_wakeall(&pthread_waitq);
+	ureqlock(&pthread_lock, locked);
 }
 
 /*
@@ -177,6 +178,9 @@ pscthrs_init(void)
 {
 	int rc;
 
+	INIT_SPINLOCK_NOLOG(&pthread_lock);
+	psc_waitq_init_nolog(&pthread_waitq);
+
 	rc = pthread_key_create(&psc_thrkey, _pscthr_destroy);
 	if (rc)
 		errx(1, "pthread_key_create: %s", strerror(rc));
@@ -184,6 +188,14 @@ pscthrs_init(void)
 	rc = pthread_key_create(&pfl_tlskey, _pfl_tls_release);
 	if (rc)
 		errx(1, "pthread_key_create: %s", strerror(rc));
+
+	pthread_attr_init(&pthread_attr);
+	rc = pthread_attr_setstacksize(&pthread_attr, PTHREAD_STACK_SIZE);
+	if (rc)
+		errx(1, "pthread_attr_setstacksize: %s", strerror(rc));
+	rc = pthread_attr_setguardsize(&pthread_attr, PTHREAD_GUARD_SIZE);
+	if (rc)
+		errx(1, "pthread_attr_setguardsize: %s", strerror(rc));
 }
 
 /*
@@ -213,15 +225,13 @@ pscthr_get(void)
  * @thr: thread to finish initializing.
  */
 void
-_pscthr_finish_init(struct psc_thread *thr)
+_pscthr_finish_init(struct psc_thread_init *thr_init)
 {
 	struct sigaction sa;
+	struct psc_thread *thr;
 	int n, rc;
 
-	if (thr->pscthr_privsiz)
-		thr->pscthr_private = psc_alloc(thr->pscthr_privsiz,
-		    PAF_NOLOG);
-
+	thr = thr_init->pti_thread;
 	thr->pscthr_loglevels = psc_alloc(psc_dynarray_len(
 	    &pfl_subsystems) * sizeof(*thr->pscthr_loglevels),
 	    PAF_NOLOG);
@@ -232,6 +242,13 @@ _pscthr_finish_init(struct psc_thread *thr)
 	rc = pthread_setspecific(psc_thrkey, thr);
 	if (rc)
 		psc_fatalx("pthread_setspecific: %s", strerror(rc));
+
+#if 0
+	/* this trigger crash in the pscfs_fuse_listener_loop() */
+	rc = pthread_detach(thr->pscthr_pthread);
+	if (rc)
+		psc_fatalx("pthread_detach: %s", strerror(rc));
+#endif
 
 	memset(&sa, 0, sizeof(sa));
 	sa.sa_handler = _pscthr_pause;
@@ -260,24 +277,24 @@ _pscthr_finish_init(struct psc_thread *thr)
  * @thr: thread structure.
  */
 void
-_pscthr_bind_memnode(struct psc_thread *thr)
+_pscthr_bind_memnode(struct psc_thread_init *thr_init)
 {
 #ifdef HAVE_NUMA
-	struct bitmask *bm;
 
-	if (thr->pscthr_memnid != -1) {
+	struct bitmask *bm;
+	if (thr_init->pti_memnid != -1) {
 		bm = numa_allocate_nodemask();
 		numa_bitmask_clearall(bm);
 		numa_bitmask_setbit(bm,
 		    cpuset_p_rel_to_sys_mem(pfl_getsysthrid(),
-		    thr->pscthr_memnid));
+		    thr_init->pti_memnid));
 		if (numa_run_on_node_mask(bm) == -1)
 			psc_fatal("numa");
 		numa_set_membind(bm);
 		numa_bitmask_free(bm);
 	}
 #else
-	(void)thr; /* avoid unused warnings */
+	(void)thr_init; /* avoid unused warnings */
 #endif
 }
 
@@ -290,44 +307,26 @@ _pscthr_bind_memnode(struct psc_thread *thr)
 __static void *
 _pscthr_begin(void *arg)
 {
-	struct psc_thread *thr, *oldthr = arg;
+	struct psc_thread *thr;
+	void (*startf)(struct psc_thread *);
+	struct psc_thread_init *thr_init = arg;
 
-	_pscthr_bind_memnode(oldthr);
+	thr = thr_init->pti_thread;
+	startf = thr_init->pti_startf;
 
-	/* Setup a localized copy of the thread. */
-	/*
-	 * XXX instead of reallocating, we should just take ownership of
-	 * the memory.
-	 */
-	thr = psc_alloc(sizeof(*thr), PAF_NOLOG);
-	INIT_PSC_LISTENTRY(&thr->pscthr_lentry);
-	psc_waitq_init(&thr->pscthr_waitq);
-	INIT_SPINLOCK(&thr->pscthr_lock);
-	spinlock(&thr->pscthr_lock);
-
-	/* Copy values from original. */
-	spinlock(&oldthr->pscthr_lock);
-	thr->pscthr_type = oldthr->pscthr_type;
-	thr->pscthr_startf = oldthr->pscthr_startf;
-	thr->pscthr_privsiz = oldthr->pscthr_privsiz;
-	thr->pscthr_flags = oldthr->pscthr_flags;
-	thr->pscthr_dtor = oldthr->pscthr_dtor;
-	strlcpy(thr->pscthr_name, oldthr->pscthr_name,
-	    sizeof(thr->pscthr_name));
-
-	_pscthr_finish_init(thr);
-
-	/* Inform the spawner where our memory is. */
-	oldthr->pscthr_private = thr;
-	psc_waitq_wakeall(&oldthr->pscthr_waitq);
+	spinlock(&pthread_lock);
+	_pscthr_bind_memnode(thr_init);
+	_pscthr_finish_init(thr_init);
+	thr->pscthr_flags &= ~PTF_INIT;
+	psc_waitq_wakeall(&pthread_waitq);
 
 	/* Wait for the spawner to finish us. */
 	do {
-		psc_waitq_wait(&thr->pscthr_waitq, &thr->pscthr_lock);
-		spinlock(&thr->pscthr_lock);
+		psc_waitq_wait(&pthread_waitq, &pthread_lock);
+		spinlock(&pthread_lock);
 	} while ((thr->pscthr_flags & PTF_READY) == 0);
-	freelock(&thr->pscthr_lock);
-	thr->pscthr_startf(thr);
+	freelock(&pthread_lock);
+	startf(thr);
 	return (thr);
 }
 
@@ -337,40 +336,31 @@ _pscthr_begin(void *arg)
  * @startf: thread execution routine.  By specifying a NULL routine, no
  * pthread will be spawned (assuming that an actual pthread already
  * exists or will be taken care of).
- * @dtor: optional destructor to run when/if thread exits.
  * @privsiz: size of thread-type-specific data.
  * @memnid: memory node ID to allocate memory for this thread.
  * @namefmt: application-specific printf(3) name for thread.
  */
 struct psc_thread *
 _pscthr_init(int type, void (*startf)(struct psc_thread *),
-    void (*dtor)(void *), size_t privsiz, int memnid,
-    const char *namefmt, ...)
+    size_t privsiz, int memnid, const char *namefmt, ...)
 {
-	struct psc_thread mythr, *thr;
+	struct psc_thread *thr;
+	struct psc_thread_init thr_init;
 	va_list ap;
 	int rc;
 
-	/*
-	 * If there is a start routine, we are already in the pthread,
-	 * so the memory should be local.  Otherwise, we'd like to
-	 * allocate it within the thread context for local storage.
-	 *
-	 * Either way, the storage will be released via psc_free() upon
-	 * thread exit.
-	 */
-	thr = startf ? &mythr : psc_alloc(sizeof(*thr), PAF_NOLOG |
-	    PAF_NOZERO);
-	memset(thr, 0, sizeof(*thr));
+	OPSTAT_INCR("pfl.thread-create");
+
+	thr = psc_alloc(sizeof(*thr) + privsiz, PAF_NOLOG | PAF_NOZERO);
+	memset(thr, 0, sizeof(*thr) + privsiz);
 	INIT_PSC_LISTENTRY(&thr->pscthr_lentry);
-	psc_waitq_init(&thr->pscthr_waitq);
-	INIT_SPINLOCK_NOLOG(&thr->pscthr_lock);
 	thr->pscthr_type = type;
-	thr->pscthr_startf = startf;
-	thr->pscthr_privsiz = privsiz;
-	thr->pscthr_flags = PTF_RUN;
-	thr->pscthr_dtor = dtor;
-	thr->pscthr_memnid = memnid;
+	thr->pscthr_private = (void *)(thr + 1);
+	thr->pscthr_flags = PTF_RUN | PTF_INIT;
+
+	thr_init.pti_thread = thr;
+	thr_init.pti_startf = startf;
+	thr_init.pti_memnid = memnid;
 
 	va_start(ap, namefmt);
 	rc = vsnprintf(thr->pscthr_name, sizeof(thr->pscthr_name),
@@ -383,26 +373,25 @@ _pscthr_init(int type, void (*startf)(struct psc_thread *),
 		psc_fatalx("thread name too long: %s", namefmt);
 
 	/* Pin thread until initialization is complete. */
-	spinlock(&thr->pscthr_lock);
+	spinlock(&pthread_lock);
 	if (startf) {
-		/*
-		 * Thread will finish initializing in its own context
-		 * and set pscthr_private to the location of the new
-		 * localized memory.
-		 */
-		rc = pthread_create(&thr->pscthr_pthread, NULL,
-		    _pscthr_begin, thr);
+		rc = pthread_create(&thr->pscthr_pthread, &pthread_attr, 
+		    _pscthr_begin, &thr_init);
 		if (rc)
 			psc_fatalx("pthread_create: %s", strerror(rc));
-		psc_waitq_wait(&thr->pscthr_waitq, &thr->pscthr_lock);
-		thr = thr->pscthr_private;
-		if (thr->pscthr_privsiz == 0)
+		while (thr->pscthr_flags & PTF_INIT) {
+			psc_waitq_wait(&pthread_waitq, &pthread_lock);
+			spinlock(&pthread_lock);
+		}
+		freelock(&pthread_lock);
+		/* Automatically set ready if no private data */
+		if (privsiz == 0)
 			pscthr_setready(thr);
 	} else {
 		/* Initializing our own thread context. */
-		_pscthr_bind_memnode(thr);
-		_pscthr_finish_init(thr);
-		freelock(&thr->pscthr_lock);
+		_pscthr_bind_memnode(&thr_init);
+		_pscthr_finish_init(&thr_init);
+		freelock(&pthread_lock);
 	}
 	return (thr);
 }
@@ -414,10 +403,10 @@ _pscthr_init(int type, void (*startf)(struct psc_thread *),
 void
 pscthr_setready(struct psc_thread *thr)
 {
-	(void)reqlock(&thr->pscthr_lock);
+	spinlock(&pthread_lock);
 	thr->pscthr_flags |= PTF_READY;
-	psc_waitq_wakeall(&thr->pscthr_waitq);
-	freelock(&thr->pscthr_lock);
+	psc_waitq_wakeall(&pthread_waitq);
+	freelock(&pthread_lock);
 }
 
 int
@@ -475,21 +464,11 @@ pscthr_getname(void)
 void
 pscthr_setpause(struct psc_thread *thr, int pauseval)
 {
-	spinlock(&thr->pscthr_lock);
+	spinlock(&pthread_lock);
 	if (pauseval ^ (thr->pscthr_flags & PTF_PAUSED))
 		pthread_kill(thr->pscthr_pthread,
 		    pauseval ? SIGUSR1 : SIGUSR2);
-	freelock(&thr->pscthr_lock);
-}
-
-/*
- * Override hostname retrieval to access thread-local storage for
- * hostname.  Local memory improves the speediness of logging.
- */
-const char *
-pflsys_get_hostname(void)
-{
-	return (psclog_getdata()->pld_hostname);
+	freelock(&pthread_lock);
 }
 
 /*
@@ -500,28 +479,24 @@ pflsys_get_hostname(void)
 void
 pscthr_setrun(struct psc_thread *thr, int run)
 {
-	int locked;
-
-	locked = reqlock(&thr->pscthr_lock);
+	spinlock(&pthread_lock);
 	if (run) {
 		thr->pscthr_flags |= PTF_RUN;
-		psc_waitq_wakeall(&thr->pscthr_waitq);
+		psc_waitq_wakeall(&pthread_waitq);
 	} else
 		thr->pscthr_flags &= ~PTF_RUN;
-	ureqlock(&thr->pscthr_lock, locked);
+	freelock(&pthread_lock);
 }
 
 void
 pscthr_setdead(struct psc_thread *thr, int dead)
 {
-	int locked;
-
-	locked = reqlock(&thr->pscthr_lock);
+	spinlock(&pthread_lock);
 	if (dead)
 		thr->pscthr_flags |= PTF_DEAD;
 	else
 		thr->pscthr_flags &= ~PTF_DEAD;
-	ureqlock(&thr->pscthr_lock, locked);
+	freelock(&pthread_lock);
 }
 
 /*
@@ -533,13 +508,13 @@ pscthr_run(struct psc_thread *thr)
 	if (thr->pscthr_flags & PTF_DEAD)
 		return (0);
 	if ((thr->pscthr_flags & PTF_RUN) == 0) {
-		spinlock(&thr->pscthr_lock);
+		spinlock(&pthread_lock);
 		while ((thr->pscthr_flags & PTF_RUN) == 0) {
-			psc_waitq_wait(&thr->pscthr_waitq,
-			    &thr->pscthr_lock);
-			spinlock(&thr->pscthr_lock);
+			psc_waitq_wait(&pthread_waitq,
+			    &pthread_lock);
+			spinlock(&pthread_lock);
 		}
-		freelock(&thr->pscthr_lock);
+		freelock(&pthread_lock);
 	}
 	return (1);
 }
@@ -595,9 +570,9 @@ pscthr_killall(void)
 
 	PLL_LOCK(&psc_threads);
 	PLL_FOREACH(thr, &psc_threads) {
-		spinlock(&thr->pscthr_lock);
+		spinlock(&pthread_lock);
 		thr->pscthr_flags |= PTF_DEAD;
-		freelock(&thr->pscthr_lock);
+		freelock(&pthread_lock);
 	}
 	PLL_ULOCK(&psc_threads);
 }

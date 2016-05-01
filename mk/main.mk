@@ -443,6 +443,8 @@ ifdef SHLIB
   CFLAGS+=	-fPIC
   ${_TSHLIB}: ${OBJS}
 	${CC} -shared -o $@ ${LDFLAGS} $(sort ${OBJS})
+	@printf "%s" "${_TSHLIB}:" > ${DEPEND_FILE}
+	@${LIBDEP} ${LDFLAGS} ${LIBDEP_ADD} >> ${DEPEND_FILE}
 endif
 
 %.dvi : ${OBJDIR}/$(notdir %.tex)

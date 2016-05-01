@@ -46,18 +46,11 @@ struct psc_thread;
 
 /* per-thread */
 struct psclog_data {
-	char		 pld_hostshort[64];
-	char		 pld_hostname[64];
 	char		 pld_nothrname[24];
 	int		 pld_rank;	/* MPI rank */
 	pid_t		 pld_thrid;
-	int		 pld_flags;	/* see PLDF_* */
 	const char	*pld_uprog;	/* userland program via FUSE */
-	void		*pld_stack_ptrbuf[32];
-	char		 pld_stack_symbuf[256];
 };
-
-#define PLDF_INLOG	(1 << 0)
 
 /* Log levels. */
 #define PLL_FATAL	0		/* process termination */
@@ -389,6 +382,11 @@ __dead void _psc_fatal(const struct pfl_callerinfo *, int, int,
 
 extern const char		*psc_logfmt;
 extern char			 psclog_eol[8];
+extern char		 	 psc_hostshort[64];
+extern char			 psc_hostname[64];
+
+extern void			*psc_stack_ptrbuf[32];
+extern char		 	 psc_stack_symbuf[256];
 
 extern struct psc_dynarray	_pfl_logpoints;
 

@@ -591,7 +591,7 @@ pscfs_main(int nthr, const char *thrname)
 
 	for (i = 0; i < nthr; i++) {
 		thr = pscthr_init(PFL_THRT_FS, pscfs_fuse_listener_loop,
-		    NULL, sizeof(*pft), "%sfsthr%02d", thrname, i);
+		    sizeof(*pft), "%sfsthr%02d", thrname, i);
 		pft = thr->pscthr_private;
 		pfl_multiwait_init(&pft->pft_multiwait, "%s",
 		    thr->pscthr_name);

@@ -43,7 +43,6 @@
 #include "pfl/lockedlist.h"
 
 struct pfl_opstat {
-	char			*opst_name;
 	int			 opst_flags;
 
 	psc_atomic64_t		 opst_lifetime;	/* lifetime accumulator */
@@ -54,6 +53,7 @@ struct pfl_opstat {
 	int64_t			 opst_last;	/* last second lifetime value */
 	int64_t			 opst_intv;	/* last second counter */
 	double			 opst_avg;	/* 10-second average */
+	char			 opst_name[0];
 };
 
 #define OPSTF_BASE10		(1 << 0)	/* use base-10 numbering instead of default of base-2 */

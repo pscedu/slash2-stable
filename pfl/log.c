@@ -73,6 +73,13 @@ int				 psc_loglevel = PLL_NOTICE;
 __static struct psclog_data	*psc_logdata;
 char				 psclog_eol[8] = "\n";	/* overrideable with ncurses EOL */
 
+char		 		 psc_hostshort[64];
+char		 		 psc_hostname[64];
+
+psc_spinlock_t			 psc_stack_lock = SPINLOCK_INIT;
+void				*psc_stack_ptrbuf[32];
+char		 		 psc_stack_symbuf[256];
+
 /*
  * A user can define one or more PSC_SYSLOG_$subsys environment
  * variables or simply the PSC_SYSLOG environment variable to select
@@ -185,6 +192,12 @@ psc_log_init(void)
 
 	if (!isatty(fileno(stderr)))
 		pflog_ttyfp = fopen(_PATH_TTY, "w");
+
+	if (gethostname(psc_hostname, sizeof(psc_hostname)) == -1)
+		err(1, "gethostname");
+	strlcpy(psc_hostshort, psc_hostname, sizeof(psc_hostshort));
+	if ((p = strchr(psc_hostshort, '.')) != NULL)
+		*p = '\0';
 }
 
 int
@@ -266,22 +279,13 @@ struct psclog_data *
 psclog_getdata(void)
 {
 	struct psclog_data *d;
-	char *p;
 
 	d = pfl_tls_get(PFL_TLSIDX_LOGDATA, sizeof(*d));
 	if (d->pld_thrid == 0) {
-		if (gethostname(d->pld_hostname,
-		    sizeof(d->pld_hostname)) == -1)
-			err(1, "gethostname");
-		strlcpy(d->pld_hostshort, d->pld_hostname,
-		    sizeof(d->pld_hostshort));
-		if ((p = strchr(d->pld_hostshort, '.')) != NULL)
-			*p = '\0';
 		/* XXX try to read this if the pscthr is available */
 		d->pld_thrid = pfl_getsysthrid();
 		snprintf(d->pld_nothrname, sizeof(d->pld_nothrname),
 		    "<%"PSCPRI_PTHRT">", pthread_self());
-
 #ifdef HAVE_CNOS
 		d->pld_rank = cnos_get_rank();
 #else
@@ -322,16 +326,19 @@ pfl_fmtlogdate(const struct timeval *tv, const char **s)
 }
 
 const char *
-pflog_get_stacktrace(struct psclog_data *d)
+pflog_get_stacktrace()
 {
 #ifdef HAVE_BACKTRACE
 	char **symv, *sym, *name, *end;
 	int rc, i, n, adj = 0, len;
 
-	n = backtrace(d->pld_stack_ptrbuf, nitems(d->pld_stack_ptrbuf));
-	symv = backtrace_symbols(d->pld_stack_ptrbuf, n);
-	if (symv == NULL)
+	spinlock(&psc_stack_lock);
+	n = backtrace(psc_stack_ptrbuf, nitems(psc_stack_ptrbuf));
+	symv = backtrace_symbols(psc_stack_ptrbuf, n);
+	if (symv == NULL) {
+		freelock(&psc_stack_lock);
 		return ("");
+	}
 
 	for (i = 2; i < n; i++) {
 		sym = symv[i];
@@ -358,8 +365,8 @@ pflog_get_stacktrace(struct psclog_data *d)
 		if (len == 7 && strncmp(name, "_psclog", len) == 0)
 			break;
 
-		rc = snprintf(d->pld_stack_symbuf + adj,
-		    sizeof(d->pld_stack_symbuf) - adj,
+		rc = snprintf(psc_stack_symbuf + adj,
+		    sizeof(psc_stack_symbuf) - adj,
 		    "%s%.*s", adj ? ":" : "", len, name);
 		if (rc == -1)
 			goto out;
@@ -370,7 +377,8 @@ pflog_get_stacktrace(struct psclog_data *d)
  out:
 		printf("bail\n");
 	free(symv);
-	return (d->pld_stack_symbuf);
+	freelock(&psc_stack_lock);
+	return (psc_stack_symbuf);
 #else
 	(void)d;
 	return ("");
@@ -394,16 +402,6 @@ _psclogv(const struct pfl_callerinfo *pci, int level, int options,
 	save_errno = errno;
 
 	d = psclog_getdata();
-	if (d->pld_flags & PLDF_INLOG) {
-		// XXX use write(); ?
-		// also place line, file, etc
-		vfprintf(stderr, fmt, ap); /* XXX syslog, etc */
-
-		if (level == PLL_FATAL)
-			abort();
-		goto out;
-	}
-	d->pld_flags |= PLDF_INLOG;
 
 	thr = pscthr_get_canfail();
 	if (thr) {
@@ -421,8 +419,8 @@ _psclogv(const struct pfl_callerinfo *pci, int level, int options,
 		FMTSTRCASE('D', "s", pfl_fmtlogdate(&tv, &_t))
 		FMTSTRCASE('F', "s", pci->pci_func)
 		FMTSTRCASE('f', "s", pci->pci_filename)
-		FMTSTRCASE('H', "s", d->pld_hostname)
-		FMTSTRCASE('h', "s", d->pld_hostshort)
+		FMTSTRCASE('H', "s", psc_hostname)
+		FMTSTRCASE('h', "s", psc_hostshort)
 		FMTSTRCASE('I', PSCPRI_PTHRT, pthread_self())
 		FMTSTRCASE('i', "d", thrid)
 		FMTSTRCASE('L', "d", level)
@@ -432,7 +430,7 @@ _psclogv(const struct pfl_callerinfo *pci, int level, int options,
 		FMTSTRCASE('n', "s", thrname)
 		FMTSTRCASE('P', "d", pflog_get_fsctx_pid(thr))
 		FMTSTRCASE('r', "d", d->pld_rank)
-		FMTSTRCASE('S', "s", pflog_get_stacktrace(d))
+		FMTSTRCASE('S', "s", pflog_get_stacktrace())
 		FMTSTRCASE('s', "lu", tv.tv_sec)
 		FMTSTRCASE('T', "s", pfl_subsys_name(pci->pci_subsys))
 		FMTSTRCASE('t', "d", pci->pci_subsys)
@@ -468,15 +466,11 @@ _psclogv(const struct pfl_callerinfo *pci, int level, int options,
 		p = getenv("PSC_DUMPSTACK");
 		if (p && strcmp(p, "0"))
 			pfl_dump_stack();
-		d->pld_flags &= ~PLDF_INLOG;
 		pfl_abort();
 	}
 
 	PSCLOG_UNLOCK();
 
-	d->pld_flags &= ~PLDF_INLOG;
-
- out:
 	/*
 	 * Restore in case app needs it after our printf()'s may have
 	 * modified it.

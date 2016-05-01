@@ -38,26 +38,24 @@
 
 #define PSC_THRNAME_MAX		32				/* must be 8-byte aligned */
 
+extern psc_spinlock_t		  	pthread_lock;
+
 struct psc_thread {
 	struct psclist_head	  pscthr_lentry;		/* list management */
-	psc_spinlock_t		  pscthr_lock;			/* for mutex */
 	pthread_t		  pscthr_pthread;		/* pthread_self() */
 	pid_t			  pscthr_thrid;			/* gettid(2) */
 	int			  pscthr_uniqid;		/* transiency bookkeeping */
-
-	void			(*pscthr_startf)(struct psc_thread *);	/* thread main */
-	void			(*pscthr_dtor)(void *);		/* custom destructor */
-
 	int			  pscthr_flags;			/* operational flags */
 	int			  pscthr_type;			/* app-specific type */
 	char			  pscthr_name[PSC_THRNAME_MAX];/* human readable name */
 	int			 *pscthr_loglevels;		/* logging granularity */
 	void			 *pscthr_private;		/* app-specific data */
-	struct psc_waitq	  pscthr_waitq;			/* for init, at least */
+};
 
-	/* only used for thread initialization */
-	int			  pscthr_memnid;		/* ID of memnode */
-	size_t			  pscthr_privsiz;		/* size of app data */
+struct psc_thread_init {
+	struct psc_thread	 *pti_thread;
+	void			(*pti_startf)(struct psc_thread *);	/* thread main */
+	int			  pti_memnid;			/* ID of memnode */
 };
 
 /* internal operation flags */
@@ -65,11 +63,8 @@ struct psc_thread {
 #define PTF_RUN			(1 << 1)			/* thread should operate normally */
 #define PTF_READY		(1 << 2)			/* thread can start (used during init) */
 #define PTF_DEAD		(1 << 3)			/* thread will terminate now */
-#define PTF_RPC_SVC_THREAD	(1 << 4)			/* thread is an RPC servicer */
-
-#define PSCTHR_LOCK(thr)	spinlock(&(thr)->pscthr_lock)
-#define PSCTHR_ULOCK(thr)	freelock(&(thr)->pscthr_lock)
-#define PSCTHR_RLOCK(thr)	reqlock(&(thr)->pscthr_lock)
+#define PTF_INIT		(1 << 4)			/* thread being inited now */
+#define PTF_RPC_SVC_THREAD	(1 << 5)			/* thread is an RPC servicer */
 
 #define PSCTHR_MKCAST(label, name, type)				\
 static inline struct name *						\
@@ -82,8 +77,8 @@ label(struct psc_thread *pt)						\
 /*
  * pscthr_init - Initialize an application thread.
  */
-#define pscthr_init(thrtype, startf, dtor, privsiz, namefmt, ...)	\
-	_pscthr_init((thrtype), (startf), (dtor), (privsiz), -1,	\
+#define pscthr_init(thrtype, startf, privsiz, namefmt, ...)		\
+	_pscthr_init((thrtype), (startf), (privsiz), -1,		\
 	    (namefmt), ## __VA_ARGS__)
 
 #define pscthr_gettid()		pscthr_get()->pscthr_thrid
@@ -116,7 +111,7 @@ void	pscthr_setrun(struct psc_thread *, int);
 struct psc_thread *pscthr_get(void);
 struct psc_thread *pscthr_get_canfail(void);
 struct psc_thread *
-	_pscthr_init(int, void (*)(struct psc_thread *), void (*)(void *),
+	_pscthr_init(int, void (*)(struct psc_thread *),
 	    size_t, int, const char *, ...);
 
 extern struct psc_lockedlist	psc_threads;
