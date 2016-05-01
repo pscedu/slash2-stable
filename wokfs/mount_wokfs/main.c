@@ -205,7 +205,7 @@ main(int argc, char *argv[])
 	if (argc != 1)
 		usage();
 
-	pscthr_init(PFL_THRT_FSMGR, NULL, NULL, 0, "fsmgrthr");
+	pscthr_init(PFL_THRT_FSMGR, NULL, 0, "fsmgrthr");
 
 	noncanon_mp = argv[0];
 	if (unmount_first)
