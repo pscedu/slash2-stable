@@ -42,3 +42,15 @@ bii=0xa19a18 slab=0xcddc40 bmap=0xa199a0 fid=0x048c00000006315f iocb=(nil) flgs=
 [1461373640.06741200 sliricthr08:7fff277fe700:slvr ric.c sli_ric_handle_io 333] slvr@0xcda570 num=7 ref=1 ts=0:000000000 
 bii=0xa19a18 slab=0xcddc10 bmap=0xa199a0 fid=0x048c00000006315f iocb=(nil) flgs=f--l--- :: post io_prep rw=rd rv=-9
 
+
+05/01/2016
+----------
+
+I saw the following once in a looong while the following messsage in my tar-ssh.sh test:
+
+linux-git/scripts/.recordmcount.cmd
+linux-git/scripts/mksysmap
+linux-git/scripts/unifdef.c
+linux-git/scripts/gen_initramfs_list.sh
+tar: linux-git: file changed as we read it
+
