@@ -1,3 +1,15 @@
+05/01/2016
+----------
+
+Pull in some thread code changes in an effort to reduce RSS.  Add sys.rss.  I 
+did testing for a long time:
+
+bash-4.2# msctl -p sys.uptime
+parameter                                      value
+================================================================================
+sys.uptime                                     0d12h45m
+
+
 04/25/2016
 ----------
 
