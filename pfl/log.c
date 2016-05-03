@@ -414,14 +414,11 @@ _psclogv(const struct pfl_callerinfo *pci, int level, int options,
 	size_t len;
 
 	thr = pscthr_get();
-	if (!thr)
-		return;
 
 	thrid = thr->pscthr_thrid;
 	thrname = thr->pscthr_name;
 
 	save_errno = errno;
-
 	d = psclog_getdata();
 
 	gettimeofday(&tv, NULL);
