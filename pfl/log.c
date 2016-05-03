@@ -413,13 +413,18 @@ _psclogv(const struct pfl_callerinfo *pci, int level, int options,
 	pid_t thrid;
 	size_t len;
 
-	thr = pscthr_get();
-
-	thrid = thr->pscthr_thrid;
-	thrname = thr->pscthr_name;
-
 	save_errno = errno;
+
 	d = psclog_getdata();
+
+	thr = pscthr_get_canfail();
+	if (thr) {
+		thrid = thr->pscthr_thrid;
+		thrname = thr->pscthr_name;
+	} else {
+		thrid = d->pld_thrid;
+		thrname = d->pld_nothrname;
+	}
 
 	gettimeofday(&tv, NULL);
 	(void)FMTSTR(buf, sizeof(buf), psc_logfmt,
