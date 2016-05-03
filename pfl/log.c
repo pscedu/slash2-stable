@@ -306,16 +306,24 @@ pfl_fmtlogdate(const struct timeval *tv, const char **s)
 	time_t sec;
 
 	start = *s + 1;
-	if (*start != '<' && psc_logfmt_error < 5) {
-		psc_logfmt_error++;
-		warnx("invalid log prefix format: %s", start);
+	if (*start != '<') {
+		if (psc_logfmt_error < 5) {
+			psc_logfmt_error++;
+			warnx("invalid log prefix format: %s", start);
+		}
+		*s = *s + 1;
+		return ("");
 	}
 	for (end = start++;
 	    *end && *end != '>' && end - start < LINE_MAX; end++)
 		;
-	if (*end != '>' && psc_logfmt_error < 5) {
-		psc_logfmt_error++;
-		warnx("invalid log suffix format: %s", end);
+	if (*end != '>') {
+		if (psc_logfmt_error < 5) {
+			psc_logfmt_error++;
+			warnx("invalid log suffix format: %s", end);
+		}
+		*s = *s + 1;
+		return ("");
 	}
 
 	memcpy(fmtbuf, start, end - start);
@@ -405,13 +413,16 @@ _psclogv(const struct pfl_callerinfo *pci, int level, int options,
 	pid_t thrid;
 	size_t len;
 
+	thr = pscthr_get();
+	if (!thr)
+		return;
+
+	thrid = thr->pscthr_thrid;
+	thrname = thr->pscthr_name;
+
 	save_errno = errno;
 
 	d = psclog_getdata();
-
-	thr = pscthr_get();
-	thrid = thr->pscthr_thrid;
-	thrname = thr->pscthr_name;
 
 	gettimeofday(&tv, NULL);
 	(void)FMTSTR(buf, sizeof(buf), psc_logfmt,
