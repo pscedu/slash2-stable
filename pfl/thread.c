@@ -443,20 +443,6 @@ psc_log_setlevel(int ssid, int newlevel)
 }
 
 /*
- * Get current thread name.
- */
-const char *
-pscthr_getname(void)
-{
-	struct psc_thread *thr;
-
-	thr = pscthr_get_canfail();
-	if (thr == NULL)
-		return (NULL);
-	return (thr->pscthr_name);
-}
-
-/*
  * Set thread pause state.
  * @thr: the thread.
  * @pauseval: whether to pause or unpause the thread.
