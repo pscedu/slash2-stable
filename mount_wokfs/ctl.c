@@ -281,10 +281,6 @@ ctlthr_spawn(void)
 
 	psc_ctlparam_register_var("sys.mountpoint", PFLCTL_PARAMT_STR,
 	    0, mountpoint);
-//	psc_ctlparam_register_simple("sys.uptime", ctlparam_uptime_get,
-//	    NULL);
-//	psc_ctlparam_register_simple("sys.version",
-//	    ctlparam_version_get, NULL);
 
 	thr = pscthr_init(PFL_THRT_CTL, ctlthr_main, 
 	    sizeof(struct psc_ctlthr), "ctlthr0");
