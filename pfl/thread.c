@@ -349,8 +349,6 @@ _pscthr_init(int type, void (*startf)(struct psc_thread *),
 	va_list ap;
 	int rc;
 
-	OPSTAT_INCR("pfl.thread-create");
-
 	thr = psc_alloc(sizeof(*thr) + privsiz, PAF_NOLOG | PAF_NOZERO);
 	memset(thr, 0, sizeof(*thr) + privsiz);
 	INIT_PSC_LISTENTRY(&thr->pscthr_lentry);
@@ -393,6 +391,7 @@ _pscthr_init(int type, void (*startf)(struct psc_thread *),
 		_pscthr_finish_init(&thr_init);
 		freelock(&pthread_lock);
 	}
+	OPSTAT_INCR("pfl.thread-create");
 	return (thr);
 }
 
