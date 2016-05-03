@@ -65,10 +65,12 @@
 #include "pfl/time.h"
 
 #ifndef PSC_LOG_FMT
-#define PSC_LOG_FMT "[%s.%06u00 %n:%I:%T %B %F %l] "
+#define PSC_LOG_FMT "[%s.%06u00 %D %n:%I:%T %B %F %l] "
 #endif
 
 const char			*psc_logfmt = PSC_LOG_FMT;
+int				 psc_logfmt_error = 0;
+
 int				 psc_loglevel = PLL_NOTICE;
 __static struct psclog_data	*psc_logdata;
 char				 psclog_eol[8] = "\n";	/* overrideable with ncurses EOL */
@@ -304,13 +306,17 @@ pfl_fmtlogdate(const struct timeval *tv, const char **s)
 	time_t sec;
 
 	start = *s + 1;
-	if (*start != '<')
-		errx(1, "invalid log prefix format: %s", start);
+	if (*start != '<' && psc_logfmt_error < 5) {
+		psc_logfmt_error++;
+		warnx("invalid log prefix format: %s", start);
+	}
 	for (end = start++;
 	    *end && *end != '>' && end - start < LINE_MAX; end++)
 		;
-	if (*end != '>')
-		errx(1, "invalid log prefix format: %s", end);
+	if (*end != '>' && psc_logfmt_error < 5) {
+		psc_logfmt_error++;
+		warnx("invalid log suffix format: %s", end);
+	}
 
 	memcpy(fmtbuf, start, end - start);
 	fmtbuf[end - start] = '\0';

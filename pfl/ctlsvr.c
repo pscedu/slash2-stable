@@ -631,7 +631,6 @@ psc_ctlparam_log_format(int fd, struct psc_ctlmsghdr *mh,
 	set = (mh->mh_type == PCMT_SETPARAM);
 
 	if (set) {
-		/* XXX race */
 		static char logbuf[LINE_MAX];
 
 		if (nlevels != 2)
@@ -643,7 +642,12 @@ psc_ctlparam_log_format(int fd, struct psc_ctlmsghdr *mh,
 			    "invalid operation"));
 
 		strlcpy(logbuf, pcp->pcp_value, sizeof(logbuf));
+		/*
+ 		 * Let it race, the new format will settle down
+ 		 * after a while.
+ 		 */
 		psc_logfmt = logbuf;
+		psc_logfmt_error = 0;
 	} else
 		rc = psc_ctlmsg_param_send(fd, mh, pcp,
 		    PCTHRNAME_EVERYONE, levels, 2, psc_logfmt);
