@@ -92,6 +92,7 @@ void
 pscrpc_request_out_callback(lnet_event_t *ev)
 {
 	int silent;
+	char buf[PSCRPC_NIDSTR_SIZE];
 	struct pscrpc_cb_id   *cbid = ev->md.user_ptr;
 	struct pscrpc_request *req = cbid->cbid_arg;
 
@@ -115,7 +116,7 @@ pscrpc_request_out_callback(lnet_event_t *ev)
 	}
 
 	if (!silent)
-		DEBUG_REQ(ev->status ? PLL_ERROR : PLL_DIAG, req,
+		DEBUG_REQ(ev->status ? PLL_ERROR : PLL_DIAG, req, buf,
 		    "type %d, status %d", ev->type, ev->status);
 
 	/* these balance the references in ptl_send_rpc() */
@@ -312,6 +313,7 @@ pscrpc_reply_in_callback(lnet_event_t *ev)
 {
 	struct pscrpc_cb_id   *cbid = ev->md.user_ptr;
 	struct pscrpc_request *req = cbid->cbid_arg;
+	char buf[PSCRPC_NIDSTR_SIZE];
 
 	LASSERT(ev->type == LNET_EVENT_PUT ||
 		ev->type == LNET_EVENT_UNLINK);
@@ -320,7 +322,7 @@ pscrpc_reply_in_callback(lnet_event_t *ev)
 	LASSERT(ev->offset == 0);
 	LASSERT(ev->mlength <= (uint32_t)req->rq_replen);
 
-	DEBUG_REQ(ev->status ? PLL_ERROR : PLL_DIAG, req,
+	DEBUG_REQ(ev->status ? PLL_ERROR : PLL_DIAG, req, buf,
 		  "type=%d status=%d initiator=%s",
 		  ev->type, ev->status, libcfs_id2str(ev->initiator));
 	psclog_debug("event: type=%d status=%d offset=%d mlength=%d",

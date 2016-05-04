@@ -178,9 +178,10 @@ pscrpc_abort_bulk(struct pscrpc_bulk_desc *desc)
 	/* Server side bulk abort.  Idempotent.  Not thread-safe (i.e. only
 	 * serialises with completion callback) */
 	struct l_wait_info  lwi;
+	char buf[PSCRPC_NIDSTR_SIZE];
 	int    rc;
 
-	DEBUG_REQ(PLL_DIAG, desc->bd_req, "bulk active = %d",
+	DEBUG_REQ(PLL_DIAG, desc->bd_req, buf, "bulk active = %d",
 	    pscrpc_bulk_active(desc));
 
 	if (!pscrpc_bulk_active(desc))		/* completed or */
@@ -210,7 +211,7 @@ pscrpc_abort_bulk(struct pscrpc_bulk_desc *desc)
 			return;
 
 		psc_assert(rc == -ETIMEDOUT);
-		DEBUG_REQ(PLL_ERROR, desc->bd_req,
+		DEBUG_REQ(PLL_ERROR, desc->bd_req, buf,
 			  "Unexpectedly long timeout: desc %p", desc);
 		//abort();
 	}
@@ -318,11 +319,12 @@ pscrpc_unregister_bulk(struct pscrpc_request *rq)
 	struct pscrpc_bulk_desc *desc = rq->rq_bulk;
 	struct psc_waitq        *wq;
 	struct l_wait_info       lwi;
+	char buf[PSCRPC_NIDSTR_SIZE];
 	int                      rc, l, registered=0;
 
 	l = reqlock(&desc->bd_lock);
 
-	DEBUG_REQ(PLL_DIAG, rq,
+	DEBUG_REQ(PLL_DIAG, rq, buf,
 	    "desc->bd_registered=(%d) pscrpc_bulk_active(desc)=(%d)",
 	    desc->bd_registered, pscrpc_bulk_active(desc));
 
@@ -367,7 +369,7 @@ pscrpc_unregister_bulk(struct pscrpc_request *rq)
 			return;
 
 		psc_assert(rc == -ETIMEDOUT);
-		DEBUG_REQ(PLL_ERROR, rq,
+		DEBUG_REQ(PLL_ERROR, rq, buf,
 			  "Unexpectedly long timeout: desc %p", desc);
 		//abort();
 	}
@@ -480,10 +482,11 @@ pscrpc_send_rpc(struct pscrpc_request *rq, int noreply)
 	struct pscrpc_connection *connection;
 	lnet_handle_me_t  reply_me_h;
 	lnet_md_t         reply_md;
+	char buf[PSCRPC_NIDSTR_SIZE];
 	int rc, rc2;
 
 	//OBD_FAIL_RETURN(OBD_FAIL_PSCRPC_DROP_RPC, 0);
-	DEBUG_REQ(PLL_DEBUG, rq, "sending rpc");
+	DEBUG_REQ(PLL_DEBUG, rq, buf, "sending rpc");
 
 	psc_assert(rq->rq_type == PSCRPC_MSG_REQUEST);
 
@@ -693,10 +696,11 @@ pscrpc_free_reply_state(struct pscrpc_reply_state *rs)
 static void
 _pscrpc_free_req(struct pscrpc_request *rq, __unusedx int locked)
 {
+	char buf[PSCRPC_NIDSTR_SIZE];
 	if (rq == NULL)
 		return;
 
-	DEBUG_REQ(PLL_DIAG, rq, "freeing");
+	DEBUG_REQ(PLL_DIAG, rq, buf, "freeing");
 
 	psc_assert(!rq->rq_receiving_reply);
 	psc_assert(rq->rq_rqbd == NULL);/* client-side */
@@ -707,7 +711,7 @@ _pscrpc_free_req(struct pscrpc_request *rq, __unusedx int locked)
 	psc_waitq_destroy(&rq->rq_reply_waitq);
 
 	if (atomic_read(&rq->rq_refcount) != 0) {
-		DEBUG_REQ(PLL_ERROR, rq,
+		DEBUG_REQ(PLL_ERROR, rq, buf,
 			  "freeing request with nonzero refcount");
 		LBUG();
 	}
@@ -750,6 +754,7 @@ pscrpc_free_req(struct pscrpc_request *rq)
 void
 _pscrpc_req_finished(struct pscrpc_request *rq, int locked)
 {
+	char buf[PSCRPC_NIDSTR_SIZE];
 	if (rq == NULL)
 		return;
 
@@ -760,7 +765,7 @@ _pscrpc_req_finished(struct pscrpc_request *rq, int locked)
 		return;
 	}
 
-	DEBUG_REQ(PLL_DEBUG, rq, "decref");
+	DEBUG_REQ(PLL_DEBUG, rq, buf, "decref");
 
 	if (atomic_dec_and_test(&rq->rq_refcount))
 		_pscrpc_free_req(rq, locked);

@@ -119,6 +119,7 @@ rsx_bulkserver(struct pscrpc_request *rq, int type, int ptl,
 	struct l_wait_info lwi;
 	uint64_t *v8;
 	uint8_t *v1;
+	char buf[PSCRPC_NIDSTR_SIZE];
 
 	psc_assert(type == BULK_GET_SINK || type == BULK_PUT_SOURCE);
 
@@ -148,21 +149,21 @@ rsx_bulkserver(struct pscrpc_request *rq, int type, int ptl,
 
 		LASSERT(rc == 0 || rc == -ETIMEDOUT);
 		if (rc == -ETIMEDOUT) {
-			DEBUG_REQ(PLL_ERROR, rq, "timeout on bulk GET");
+			DEBUG_REQ(PLL_ERROR, rq, buf, "timeout on bulk GET");
 			pscrpc_abort_bulk(desc);
 		} else if (desc->bd_export->exp_failed) {
-			DEBUG_REQ(PLL_ERROR, rq, "eviction on bulk GET");
+			DEBUG_REQ(PLL_ERROR, rq, buf, "eviction on bulk GET");
 			rc = -ENOTCONN;
 			pscrpc_abort_bulk(desc);
 		} else if (!desc->bd_success ||
 		    desc->bd_nob_transferred != desc->bd_nob) {
-			DEBUG_REQ(PLL_ERROR, rq, "%s bulk GET %d(%d)",
+			DEBUG_REQ(PLL_ERROR, rq, buf, "%s bulk GET %d(%d)",
 			    desc->bd_success ? "truncated" : "network error on",
 			    desc->bd_nob_transferred, desc->bd_nob);
 			rc = -ETIMEDOUT;
 		}
 	} else {
-		DEBUG_REQ(PLL_ERROR, rq, "pscrpc I/O bulk get failed: "
+		DEBUG_REQ(PLL_ERROR, rq, buf, "pscrpc I/O bulk get failed: "
 		    "rc=%d", rc);
 	}
 	comms_error = (rc != 0);
@@ -172,13 +173,13 @@ rsx_bulkserver(struct pscrpc_request *rq, int type, int ptl,
 		v1 = desc->bd_iov[0].iov_base;
 		v8 = desc->bd_iov[0].iov_base;
 		if (v1 == NULL) {
-			DEBUG_REQ(PLL_ERROR, rq,
+			DEBUG_REQ(PLL_ERROR, rq, buf,
 			    "desc->bd_iov[0].iov_base is NULL");
 			rc = -ENXIO;
 			goto out;
 		}
 
-		DEBUG_REQ(PLL_DIAG, rq,
+		DEBUG_REQ(PLL_DIAG, rq, buf,
 		    "got %u bytes of bulk data across %d IOVs: "
 		    "first byte is %#x (%"PRIx64")",
 		    desc->bd_nob, desc->bd_iov_count, *v1, *v8);
@@ -187,7 +188,7 @@ rsx_bulkserver(struct pscrpc_request *rq, int type, int ptl,
 		for (i = 0; i < desc->bd_iov_count; i++)
 			sum += desc->bd_iov[i].iov_len;
 		if (sum != desc->bd_nob)
-			DEBUG_REQ(PLL_WARN, rq,
+			DEBUG_REQ(PLL_WARN, rq, buf,
 			    "sum (%d) does not match bd_nob (%d)",
 			    sum, desc->bd_nob);
 		//rc = pscrpc_reply(rq);
@@ -210,7 +211,7 @@ rsx_bulkserver(struct pscrpc_request *rq, int type, int ptl,
 			rq->rq_repmsg      = NULL;
 		}
 #endif
-		DEBUG_REQ(PLL_WARN, rq,
+		DEBUG_REQ(PLL_WARN, rq, buf,
 		    "ignoring bulk I/O comm error; "
 		    "id %s - client will retry",
 		    libcfs_id2str(rq->rq_peer));
