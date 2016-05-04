@@ -72,8 +72,7 @@ void	*pfl_tls_get(int, size_t);
 #define PFL_TLSIDX_LOGDATEBUF	2
 #define PFL_TLSIDX_NIDBUF	3
 #define PFL_TLSIDX_IDBUF	4
-#define PFL_TLSIDX_LASTRESERVED	5
-#define PFL_TLSIDX_MAX		16
+#define PFL_TLSIDX_MAX		5
 
 #ifdef HAVE_TLS
 /*
