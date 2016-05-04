@@ -298,9 +298,9 @@ psclog_getdata(void)
 }
 
 const char *
-pfl_fmtlogdate(const struct timeval *tv, const char **s)
+pfl_fmtlogdate(const struct timeval *tv, const char **s, char *bufp)
 {
-	char fmtbuf[LINE_MAX], *bufp;
+	char fmtbuf[LINE_MAX];
 	const char *end, *start;
 	struct tm tm;
 	time_t sec;
@@ -328,8 +328,6 @@ pfl_fmtlogdate(const struct timeval *tv, const char **s)
 
 	memcpy(fmtbuf, start, end - start);
 	fmtbuf[end - start] = '\0';
-
-	bufp = pfl_tls_get(PFL_TLSIDX_LOGDATEBUF, LINE_MAX);
 
 	sec = tv->tv_sec;
 	localtime_r(&sec, &tm);
@@ -403,6 +401,7 @@ void
 _psclogv(const struct pfl_callerinfo *pci, int level, int options,
     const char *fmt, va_list ap)
 {
+	char bufp[LINE_MAX];
 	char *p, buf[BUFSIZ];
 	extern const char *__progname;
 	struct psc_thread *thr;
@@ -430,7 +429,7 @@ _psclogv(const struct pfl_callerinfo *pci, int level, int options,
 	(void)FMTSTR(buf, sizeof(buf), psc_logfmt,
 		FMTSTRCASE('A', "s", pflog_get_peer_addr(thr))
 		FMTSTRCASE('B', "s", pfl_basename(pci->pci_filename))
-		FMTSTRCASE('D', "s", pfl_fmtlogdate(&tv, &_t))
+		FMTSTRCASE('D', "s", pfl_fmtlogdate(&tv, &_t, bufp))
 		FMTSTRCASE('F', "s", pci->pci_func)
 		FMTSTRCASE('f', "s", pci->pci_filename)
 		FMTSTRCASE('H', "s", psc_hostname)
