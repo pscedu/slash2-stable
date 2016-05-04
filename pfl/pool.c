@@ -298,18 +298,22 @@ pfl_poolmaster_destroy(struct psc_poolmaster *pms)
  * @m: pool manager.
  * @p: item to free.
  */
-void
+int
 _psc_pool_destroy_obj(struct psc_poolmgr *m, void *p)
 {
-	int flags;
+	int rc, flags;
 
-	if (p && m->ppm_destroyf)
-		m->ppm_destroyf(p);
+	if (p && m->ppm_destroyf) {
+		rc = m->ppm_destroyf(p);
+		if (!rc)
+			return (0);
+	}
 	flags = 0;
 	if (m->ppm_flags & PPMF_PIN)
 		flags |= PAF_LOCK;
 	_PSC_POOL_CLEAR_OBJ(m, p);
 	psc_free(p, flags, m->ppm_entsize);
+	return (1);
 }
 
 /*
@@ -358,24 +362,14 @@ psc_pool_grow(struct psc_poolmgr *m, int n)
 				PSCFREE(p);
 			return (i);
 		}
-		locked = POOL_RLOCK(m);
-		if (m->ppm_total < m->ppm_max ||
-		    m->ppm_max == 0) {
-			m->ppm_total++;
-			pfl_opstat_incr(m->ppm_opst_grows);
-			POOL_ADD_ITEM(m, p);
-			p = NULL;
-		}
-		POOL_URLOCK(m, locked);
-
 		/*
-		 * If we are prematurely exiting, we didn't use this
-		 * item.
-		 */
-		if (p) {
-			_psc_pool_destroy_obj(m, p);
-			break;
-		}
+ 		 * Add unconditionally, we might go overboard occasionally.
+ 		 */
+		locked = POOL_RLOCK(m);
+		m->ppm_total++;
+		pfl_opstat_incr(m->ppm_opst_grows);
+		POOL_ADD_ITEM(m, p);
+		POOL_URLOCK(m, locked);
 	}
 	return (i);
 }
@@ -393,8 +387,13 @@ _psc_pool_shrink(struct psc_poolmgr *m, int n, int failok)
 		if (m->ppm_total > m->ppm_min) {
 			p = POOL_TRYGETOBJ(m);
 			if (p) {
-				m->ppm_total--;
-				pfl_opstat_incr(m->ppm_opst_shrinks);
+				if (_psc_pool_destroy_obj(m, p)) {
+					m->ppm_total--;
+					pfl_opstat_incr(m->ppm_opst_shrinks);
+				} else {
+					POOL_ADD_ITEM(m, p);
+					p = NULL;
+				}
 			} else if (!failok)
 				psc_fatalx("no free items available to "
 				    "remove");
@@ -402,7 +401,6 @@ _psc_pool_shrink(struct psc_poolmgr *m, int n, int failok)
 		POOL_URLOCK(m, locked);
 		if (p == NULL)
 			break;
-		_psc_pool_destroy_obj(m, p);
 	}
 	return (i);
 }
@@ -749,6 +747,8 @@ _psc_pool_return(struct psc_poolmgr *m, void *p)
 	 * threshold, directly free this item.
 	 */
 	locked = POOL_RLOCK(m);
+	if (!_psc_pool_destroy_obj(m, p))
+		goto keep;
 	pfl_opstat_incr(m->ppm_opst_returns);
 	if ((m->ppm_flags & PPMF_AUTO) && m->ppm_total > m->ppm_min &&
 	    ((m->ppm_max && m->ppm_total > m->ppm_max) ||
@@ -757,8 +757,10 @@ _psc_pool_return(struct psc_poolmgr *m, void *p)
 		m->ppm_total--;
 		pfl_opstat_incr(m->ppm_opst_shrinks);
 		POOL_URLOCK(m, locked);
-		_psc_pool_destroy_obj(m, p);
 	} else {
+
+ keep:
+
 		/* Pool should keep this item. */
 		POOL_ADD_ITEM(m, p);
 		POOL_URLOCK(m, locked);
