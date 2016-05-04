@@ -123,7 +123,7 @@ struct pfl_wkdata_poolreap {
 void
 _psc_poolmaster_initv(struct psc_poolmaster *p, size_t entsize,
     ptrdiff_t offset, int flags, int total, int min, int max,
-    int (*initf)(struct psc_poolmgr *, void *), void (*destroyf)(void *),
+    int (*initf)(struct psc_poolmgr *, void *), int (*destroyf)(void *),
     int (*reclaimcb)(struct psc_poolmgr *), void *mwcarg,
     const char *namefmt, va_list ap)
 {
@@ -149,7 +149,7 @@ _psc_poolmaster_initv(struct psc_poolmaster *p, size_t entsize,
 void
 _psc_poolmaster_init(struct psc_poolmaster *p, size_t entsize,
     ptrdiff_t offset, int flags, int total, int min, int max,
-    int (*initf)(struct psc_poolmgr *, void *), void (*destroyf)(void *),
+    int (*initf)(struct psc_poolmgr *, void *), int (*destroyf)(void *),
     int (*reclaimcb)(struct psc_poolmgr *), void *mwcarg,
     const char *namefmt, ...)
 {

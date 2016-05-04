@@ -84,7 +84,7 @@ struct psc_poolmaster {
 	void			 *pms_mwcarg;		/* mlist cond arg */
 
 	int			(*pms_initf)(struct psc_poolmgr *, void *);
-	void			(*pms_destroyf)(void *);
+	int			(*pms_destroyf)(void *);
 	int			(*pms_reclaimcb)(struct psc_poolmgr *);
 };
 
@@ -118,7 +118,7 @@ struct psc_poolmgr {
 
 	/* routines to initialize, teardown, & reclaim pool entries */
 	int			(*ppm_initf)(struct psc_poolmgr *, void *);
-	void			(*ppm_destroyf)(void *);
+	int			(*ppm_destroyf)(void *);
 	int			(*ppm_reclaimcb)(struct psc_poolmgr *);
 #define ppm_explist	ppm_u.ppmu_explist
 #define ppm_lc		ppm_u.ppmu_lc
@@ -241,11 +241,11 @@ struct psc_poolmgr *
 void	 pfl_poolmaster_destroy(struct psc_poolmaster *);
 void	_psc_poolmaster_init(struct psc_poolmaster *, size_t, ptrdiff_t,
 	    int, int, int, int, int (*)(struct psc_poolmgr *, void *),
-	    void (*)(void *), int (*)(struct psc_poolmgr *),
+	    int (*)(void *), int (*)(struct psc_poolmgr *),
 	    void *, const char *, ...);
 void	_psc_poolmaster_initv(struct psc_poolmaster *, size_t, ptrdiff_t,
 	    int, int, int, int, int (*)(struct psc_poolmgr *, void *),
-	    void (*)(void *), int (*)(struct psc_poolmgr *),
+	    int (*)(void *), int (*)(struct psc_poolmgr *),
 	    void *, const char *, va_list);
 
 struct psc_poolmgr *
