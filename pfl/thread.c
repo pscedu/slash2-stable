@@ -160,14 +160,13 @@ void
 _pscthr_unpause(__unusedx int sig)
 {
 	struct psc_thread *thr;
-	int locked;
 
 	thr = pscthr_get();
-	while (!tryreqlock(&pthread_lock, &locked))
+	while (!trylock(&pthread_lock))
 		pscthr_yield();
 	thr->pscthr_flags &= ~PTF_PAUSED;
 	psc_waitq_wakeall(&pthread_waitq);
-	ureqlock(&pthread_lock, locked);
+	freelock(&pthread_lock);
 }
 
 /*
