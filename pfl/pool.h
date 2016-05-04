@@ -83,7 +83,7 @@ struct psc_poolmaster {
 	int			  pms_thres;		/* autoresize threshold */
 	void			 *pms_mwcarg;		/* mlist cond arg */
 
-	int			(*pms_initf)(struct psc_poolmgr *, void *);
+	int			(*pms_initf)(struct psc_poolmgr *, void *, int);
 	int			(*pms_destroyf)(void *);
 	int			(*pms_reclaimcb)(struct psc_poolmgr *);
 };
@@ -117,7 +117,7 @@ struct psc_poolmgr {
 	struct pfl_opstat	 *ppm_opst_fails;
 
 	/* routines to initialize, teardown, & reclaim pool entries */
-	int			(*ppm_initf)(struct psc_poolmgr *, void *);
+	int			(*ppm_initf)(struct psc_poolmgr *, void *, int);
 	int			(*ppm_destroyf)(void *);
 	int			(*ppm_reclaimcb)(struct psc_poolmgr *);
 #define ppm_explist	ppm_u.ppmu_explist
@@ -240,11 +240,11 @@ struct psc_poolmgr *
 	_psc_poolmaster_getmgr(struct psc_poolmaster *, int);
 void	 pfl_poolmaster_destroy(struct psc_poolmaster *);
 void	_psc_poolmaster_init(struct psc_poolmaster *, size_t, ptrdiff_t,
-	    int, int, int, int, int (*)(struct psc_poolmgr *, void *),
+	    int, int, int, int, int (*)(struct psc_poolmgr *, void *, int),
 	    int (*)(void *), int (*)(struct psc_poolmgr *),
 	    void *, const char *, ...);
 void	_psc_poolmaster_initv(struct psc_poolmaster *, size_t, ptrdiff_t,
-	    int, int, int, int, int (*)(struct psc_poolmgr *, void *),
+	    int, int, int, int, int (*)(struct psc_poolmgr *, void *, int),
 	    int (*)(void *), int (*)(struct psc_poolmgr *),
 	    void *, const char *, va_list);
 
@@ -252,7 +252,7 @@ struct psc_poolmgr *
 	  psc_pool_lookup(const char *);
 void	*_psc_pool_get(struct psc_poolmgr *, int);
 int	  psc_pool_gettotal(struct psc_poolmgr *);
-int	  psc_pool_grow(struct psc_poolmgr *, int);
+int	  psc_pool_grow(struct psc_poolmgr *, int, int);
 int	  psc_pool_inuse(struct psc_poolmgr *);
 int	  psc_pool_nfree(struct psc_poolmgr *);
 void	  psc_pool_reap(struct psc_poolmgr *, int);
