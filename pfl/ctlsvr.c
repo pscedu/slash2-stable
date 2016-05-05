@@ -1191,7 +1191,7 @@ psc_ctlparam_pool_handle(int fd, struct psc_ctlmsghdr *mh,
 			if (pcp->pcp_flags & PCPF_ADD)
 				psc_pool_grow(m, val, 0);
 			else if (pcp->pcp_flags & PCPF_SUB)
-				psc_pool_tryshrink(m, val);
+				psc_pool_try_shrink(m, val);
 			else
 				psc_pool_settotal(m, val);
 		} else {

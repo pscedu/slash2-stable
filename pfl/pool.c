@@ -375,7 +375,7 @@ psc_pool_grow(struct psc_poolmgr *m, int n, int init)
 }
 
 int
-_psc_pool_shrink(struct psc_poolmgr *m, int n)
+psc_pool_try_shrink(struct psc_poolmgr *m, int n)
 {
 	int i, locked;
 	void *p;
@@ -422,7 +422,7 @@ psc_pool_settotal(struct psc_poolmgr *m, int total)
 	POOL_URLOCK(m, locked);
 
 	if (adj < 0)
-		adj = psc_pool_tryshrink(m, -adj);
+		adj = psc_pool_try_shrink(m, -adj);
 	else if (adj)
 		adj = psc_pool_grow(m, adj, 0);
 	return (adj);
@@ -448,7 +448,7 @@ psc_pool_resize(struct psc_poolmgr *m)
 	POOL_URLOCK(m, locked);
 
 	if (adj < 0)
-		psc_pool_tryshrink(m, -adj);
+		psc_pool_try_shrink(m, -adj);
 	else if (adj)
 		psc_pool_grow(m, adj, 0);
 }
@@ -503,7 +503,7 @@ _psc_poolset_reap(struct psc_poolset *s,
 	freelock(&s->pps_lock);
 
 	if (culprit && nobj)
-		psc_pool_tryshrink(culprit, nobj);
+		psc_pool_try_shrink(culprit, nobj);
 }
 
 /*
