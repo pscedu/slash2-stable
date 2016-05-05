@@ -198,7 +198,6 @@ struct psc_poolmgr {
  * @m: the pool manager.
  * @i: #items to remove from pool.
  */
-#define psc_pool_shrink(m, i)		_psc_pool_shrink((m), (i), 0)
 #define psc_pool_tryshrink(m, i)	_psc_pool_shrink((m), (i), 1)
 
 #define PPGF_NONBLOCK			(1 << 0)
