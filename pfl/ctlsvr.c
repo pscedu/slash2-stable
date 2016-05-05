@@ -1849,6 +1849,7 @@ psc_ctlparam_opstats(int fd, struct psc_ctlmsghdr *mh,
 {
 	int reset = 0, found = 0, rc = 1, i;
 	struct pfl_opstat *opst;
+	struct psc_dynarray all_ops = DYNARRAY_INIT;
 	char buf[32];
 	long val;
 
@@ -1861,6 +1862,10 @@ psc_ctlparam_opstats(int fd, struct psc_ctlmsghdr *mh,
 
 	spinlock(&pfl_opstats_lock);
 	DYNARRAY_FOREACH(opst, i, &pfl_opstats)
+		psc_dynarray_add(&all_ops, opst);
+	freelock(&pfl_opstats_lock);
+	
+	DYNARRAY_FOREACH(opst, i, &all_ops)
 		if (nlevels < 2 ||
 		    strcmp(levels[1], opst->opst_name) == 0) {
 			found = 1;
@@ -1869,10 +1874,11 @@ psc_ctlparam_opstats(int fd, struct psc_ctlmsghdr *mh,
 				errno = 0;
 				val = strtol(pcp->pcp_value, NULL, 10);
 				if (errno == ERANGE) {
-					freelock(&pfl_opstats_lock);
-					return (psc_ctlsenderr(fd, mh,
+					psc_dynarray_free(&all_ops);
+					rc = psc_ctlsenderr(fd, mh,
 					    "invalid opstat %s value: %s",
-					    levels[1], pcp->pcp_value));
+					    levels[1], pcp->pcp_value);
+					goto out;
 				}
 				psc_atomic64_set(&opst->opst_lifetime, val);
 			} else {
@@ -1886,10 +1892,11 @@ psc_ctlparam_opstats(int fd, struct psc_ctlmsghdr *mh,
 			if (nlevels == 2)
 				break;
 		}
-	freelock(&pfl_opstats_lock);
 	if (!found && nlevels > 1)
 		return (psc_ctlsenderr(fd, mh, "%s: invalid opstat",
 		    psc_ctlparam_fieldname(pcp->pcp_field, nlevels)));
+ out:
+	psc_dynarray_free(&all_ops);
 	return (rc);
 }
 
