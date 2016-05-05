@@ -1874,7 +1874,6 @@ psc_ctlparam_opstats(int fd, struct psc_ctlmsghdr *mh,
 				errno = 0;
 				val = strtol(pcp->pcp_value, NULL, 10);
 				if (errno == ERANGE) {
-					psc_dynarray_free(&all_ops);
 					rc = psc_ctlsenderr(fd, mh,
 					    "invalid opstat %s value: %s",
 					    levels[1], pcp->pcp_value);
@@ -1913,13 +1912,19 @@ psc_ctlrep_getopstat(int fd, struct psc_ctlmsghdr *mh, void *m)
 	struct pfl_opstat *opst;
 	char name[OPST_NAME_MAX];
 	int rc, found, all, i;
+	struct psc_dynarray all_ops = DYNARRAY_INIT;
 
 	rc = 1;
 	found = 0;
 	strlcpy(name, pcop->pco_name, sizeof(name));
 	all = (strcmp(name, "") == 0);
+
 	spinlock(&pfl_opstats_lock);
 	DYNARRAY_FOREACH(opst, i, &pfl_opstats)
+		psc_dynarray_add(&all_ops, opst);
+	freelock(&pfl_opstats_lock);
+
+	DYNARRAY_FOREACH(opst, i, &all_ops)
 		if (all || fnmatch(name, opst->opst_name, 0) == 0) {
 			found = 1;
 
@@ -1934,10 +1939,10 @@ psc_ctlrep_getopstat(int fd, struct psc_ctlmsghdr *mh, void *m)
 			if (strcmp(opst->opst_name, name) == 0)
 				break;
 		}
-	freelock(&pfl_opstats_lock);
 	if (rc && !found && !all)
 		rc = psc_ctlsenderr(fd, mh, "unknown opstats: %s",
 		    name);
+	psc_dynarray_free(&all_ops);
 	return (rc);
 }
 
