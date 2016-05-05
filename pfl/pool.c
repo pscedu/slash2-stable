@@ -375,7 +375,7 @@ psc_pool_grow(struct psc_poolmgr *m, int n, int init)
 }
 
 int
-_psc_pool_shrink(struct psc_poolmgr *m, int n, int failok)
+_psc_pool_shrink(struct psc_poolmgr *m, int n)
 {
 	int i, locked;
 	void *p;
@@ -394,9 +394,7 @@ _psc_pool_shrink(struct psc_poolmgr *m, int n, int failok)
 					POOL_ADD_ITEM(m, p);
 					p = NULL;
 				}
-			} else if (!failok)
-				psc_fatalx("no free items available to "
-				    "remove");
+			}
 		}
 		POOL_URLOCK(m, locked);
 		if (p == NULL)

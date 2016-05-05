@@ -198,7 +198,7 @@ struct psc_poolmgr {
  * @m: the pool manager.
  * @i: #items to remove from pool.
  */
-#define psc_pool_tryshrink(m, i)	_psc_pool_shrink((m), (i), 1)
+#define psc_pool_tryshrink(m, i)	_psc_pool_shrink((m), (i))
 
 #define PPGF_NONBLOCK			(1 << 0)
 #define PPGF_SHALLOW			(1 << 1)
@@ -259,7 +259,7 @@ void	  psc_pool_resize(struct psc_poolmgr *);
 void	 _psc_pool_return(struct psc_poolmgr *, void *);
 int	  psc_pool_settotal(struct psc_poolmgr *, int);
 void	  psc_pool_share(struct psc_poolmaster *);
-int	 _psc_pool_shrink(struct psc_poolmgr *, int, int);
+int	 _psc_pool_shrink(struct psc_poolmgr *, int);
 void	  psc_pool_unshare(struct psc_poolmaster *);
 
 void	  psc_poolset_disbar(struct psc_poolset *, struct psc_poolmaster *);
