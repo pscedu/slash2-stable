@@ -362,6 +362,12 @@ psc_pool_grow(struct psc_poolmgr *m, int n, int init)
 				PSCFREE(p);
 			return (i);
 		}
+
+#if 0
+		fprintf(stderr, "m = %p, p = %p, size = %d, name = %s\n", 
+		    m, p, m->ppm_entsize, m->ppm_master->pms_name);
+#endif
+			
 		/*
  		 * Add unconditionally, we might go overboard occasionally.
  		 */
@@ -745,6 +751,7 @@ _psc_pool_return(struct psc_poolmgr *m, void *p)
 	pfl_opstat_incr(m->ppm_opst_returns);
 	if ((m->ppm_flags & PPMF_AUTO) && m->ppm_total > m->ppm_min &&
 	    ((m->ppm_max && m->ppm_total > m->ppm_max) ||
+	     // (m->ppm_nfree > m->ppm_min) ||
 	     m->ppm_nfree > m->ppm_total * m->ppm_thres / 100)) {
 		if (_psc_pool_destroy_obj(m, p)) {
 			/* Reached free threshold; completely deallocate obj. */
