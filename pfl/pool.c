@@ -377,28 +377,25 @@ psc_pool_grow(struct psc_poolmgr *m, int n, int init)
 int
 psc_pool_try_shrink(struct psc_poolmgr *m, int n)
 {
-	int i, locked;
+	int i;
 	void *p;
 
-	psc_assert(n > 0);
 	for (i = 0; i < n; i++) {
-		p = NULL;
-		locked = POOL_RLOCK(m);
+		POOL_LOCK(m);
 		if (m->ppm_total > m->ppm_min) {
 			p = POOL_TRYGETOBJ(m);
-			if (p) {
-				if (_psc_pool_destroy_obj(m, p)) {
-					m->ppm_total--;
-					pfl_opstat_incr(m->ppm_opst_shrinks);
-				} else {
-					POOL_ADD_ITEM(m, p);
-					p = NULL;
-				}
+			psc_assert(p);
+			if (_psc_pool_destroy_obj(m, p)) {
+				m->ppm_total--;
+				pfl_opstat_incr(m->ppm_opst_shrinks);
+			} else {
+				POOL_ADD_ITEM(m, p);
 			}
-		}
-		POOL_URLOCK(m, locked);
-		if (p == NULL)
+		} else {
+			POOL_ULOCK(m);
 			break;
+		}
+		POOL_ULOCK(m);
 	}
 	return (i);
 }
