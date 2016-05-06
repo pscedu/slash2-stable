@@ -364,6 +364,7 @@ psc_pool_grow(struct psc_poolmgr *m, int n, int init)
 		}
 
 #if 0
+		if (init)
 		fprintf(stderr, "m = %p, p = %p, size = %d, name = %s\n", 
 		    m, p, m->ppm_entsize, m->ppm_master->pms_name);
 #endif
@@ -390,7 +391,13 @@ psc_pool_try_shrink(struct psc_poolmgr *m, int n)
 		POOL_LOCK(m);
 		if (m->ppm_total > m->ppm_min) {
 			p = POOL_TRYGETOBJ(m);
-			psc_assert(p);
+			/* XXX Hit NULL p case below, don't know why */
+			if (!p) {
+				fprintf(stderr, "corrupt? m = %p, name = %s.\n",  
+				    m, m->ppm_master->pms_name);
+				POOL_ULOCK(m);
+				return (i);
+			}
 			if (_psc_pool_destroy_obj(m, p)) {
 				m->ppm_total--;
 				pfl_opstat_incr(m->ppm_opst_shrinks);
@@ -751,7 +758,7 @@ _psc_pool_return(struct psc_poolmgr *m, void *p)
 	pfl_opstat_incr(m->ppm_opst_returns);
 	if ((m->ppm_flags & PPMF_AUTO) && m->ppm_total > m->ppm_min &&
 	    ((m->ppm_max && m->ppm_total > m->ppm_max) ||
-	     // (m->ppm_nfree > m->ppm_min) ||
+	     (m->ppm_nfree > m->ppm_min) ||
 	     m->ppm_nfree > m->ppm_total * m->ppm_thres / 100)) {
 		if (_psc_pool_destroy_obj(m, p)) {
 			/* Reached free threshold; completely deallocate obj. */
@@ -763,6 +770,7 @@ _psc_pool_return(struct psc_poolmgr *m, void *p)
 	} 
 	if (p) {
 		/* Pool should keep this item. */
+		INIT_PSC_LISTENTRY(psclist_entry2(p, m->ppm_explist.pexl_offset));
 		POOL_ADD_ITEM(m, p);
 		POOL_URLOCK(m, locked);
 	}
