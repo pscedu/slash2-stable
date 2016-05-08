@@ -388,14 +388,12 @@ psc_pool_try_shrink(struct psc_poolmgr *m, int n)
 	void *p;
 
 	for (i = 0; i < n; i++) {
-		POOL_LOCK(m);
 		if (m->ppm_total > m->ppm_min) {
 			p = POOL_TRYGETOBJ(m);
 			/* XXX Hit NULL p case below, don't know why */
 			if (!p) {
 				fprintf(stderr, "corrupt? m = %p, name = %s.\n",  
 				    m, m->ppm_master->pms_name);
-				POOL_ULOCK(m);
 				return (i);
 			}
 			if (_psc_pool_destroy_obj(m, p)) {
@@ -405,10 +403,8 @@ psc_pool_try_shrink(struct psc_poolmgr *m, int n)
 				POOL_ADD_ITEM(m, p);
 			}
 		} else {
-			POOL_ULOCK(m);
 			break;
 		}
-		POOL_ULOCK(m);
 	}
 	return (i);
 }
@@ -825,7 +821,7 @@ psc_pool_nfree(struct psc_poolmgr *m)
 struct psc_poolmgr *
 psc_pool_lookup(const char *name)
 {
-	struct psc_poolmgr *m;
+	struct psc_poolmgr *m = NULL;
 
 	PLL_LOCK(&psc_pools);
 	PLL_FOREACH(m, &psc_pools)
