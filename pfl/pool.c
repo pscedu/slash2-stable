@@ -754,7 +754,6 @@ _psc_pool_return(struct psc_poolmgr *m, void *p)
 	pfl_opstat_incr(m->ppm_opst_returns);
 	if ((m->ppm_flags & PPMF_AUTO) && m->ppm_total > m->ppm_min &&
 	    ((m->ppm_max && m->ppm_total > m->ppm_max) ||
-	     (m->ppm_nfree > m->ppm_min) ||
 	     m->ppm_nfree > m->ppm_total * m->ppm_thres / 100)) {
 		if (_psc_pool_destroy_obj(m, p)) {
 			/* Reached free threshold; completely deallocate obj. */
