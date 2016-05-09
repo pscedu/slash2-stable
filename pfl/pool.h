@@ -180,16 +180,16 @@ struct psc_poolmgr {
  * @namefmt: printf(3)-like name of pool for external access.
  */
 #define psc_poolmaster_init(p, type, member, flags, total, min,	max,	\
-	    initf, destroyf, reclaimcb, namefmt, ...)			\
+	    reclaimcb, namefmt, ...)					\
 	_psc_poolmaster_init((p), sizeof(type), offsetof(type, member),	\
-	    (flags), (total), (min), (max), (initf), (destroyf),	\
+	    (flags), (total), (min), (max),				\
 	    (reclaimcb), NULL, (namefmt), ## __VA_ARGS__)
 
 #define psc_poolmaster_initml(p, type, member, flags, total, min, max,	\
-	    initf, destroyf, reclaimcb, mlcarg, namefmt, ...)		\
+	    reclaimcb, mlcarg, namefmt, ...)				\
 	_psc_poolmaster_init((p), sizeof(type), offsetof(type, member),	\
-	    (flags) | PPMF_MLIST, (total), (min), (max), (initf),	\
-	    (destroyf),	(reclaimcb), (mlcarg), (namefmt), ## __VA_ARGS__)
+	    (flags) | PPMF_MLIST, (total), (min), (max),		\
+	    (reclaimcb), (mlcarg), (namefmt), ## __VA_ARGS__)
 
 #define psc_poolmaster_getmgr(p)	_psc_poolmaster_getmgr((p), psc_memnode_getid())
 
@@ -238,12 +238,10 @@ struct psc_poolmgr *
 	_psc_poolmaster_getmgr(struct psc_poolmaster *, int);
 void	 pfl_poolmaster_destroy(struct psc_poolmaster *);
 void	_psc_poolmaster_init(struct psc_poolmaster *, size_t, ptrdiff_t,
-	    int, int, int, int, int (*)(struct psc_poolmgr *, void *, int),
-	    int (*)(void *), int (*)(struct psc_poolmgr *),
+	    int, int, int, int, int (*)(struct psc_poolmgr *),
 	    void *, const char *, ...);
 void	_psc_poolmaster_initv(struct psc_poolmaster *, size_t, ptrdiff_t,
-	    int, int, int, int, int (*)(struct psc_poolmgr *, void *, int),
-	    int (*)(void *), int (*)(struct psc_poolmgr *),
+	    int, int, int, int, int (*)(struct psc_poolmgr *),
 	    void *, const char *, va_list);
 
 struct psc_poolmgr *

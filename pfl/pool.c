@@ -123,7 +123,6 @@ struct pfl_wkdata_poolreap {
 void
 _psc_poolmaster_initv(struct psc_poolmaster *p, size_t entsize,
     ptrdiff_t offset, int flags, int total, int min, int max,
-    int (*initf)(struct psc_poolmgr *, void *, int), int (*destroyf)(void *),
     int (*reclaimcb)(struct psc_poolmgr *), void *mwcarg,
     const char *namefmt, va_list ap)
 {
@@ -132,11 +131,9 @@ _psc_poolmaster_initv(struct psc_poolmaster *p, size_t entsize,
 	psc_dynarray_init(&p->pms_poolmgrs);
 	psc_dynarray_init(&p->pms_sets);
 	p->pms_reclaimcb = reclaimcb;
-	p->pms_destroyf = destroyf;
 	p->pms_entsize = entsize;
 	p->pms_offset = offset;
 	p->pms_flags = flags;
-	p->pms_initf = initf;
 	p->pms_total = total;
 	p->pms_min = min;
 	p->pms_max = max;
@@ -149,7 +146,6 @@ _psc_poolmaster_initv(struct psc_poolmaster *p, size_t entsize,
 void
 _psc_poolmaster_init(struct psc_poolmaster *p, size_t entsize,
     ptrdiff_t offset, int flags, int total, int min, int max,
-    int (*initf)(struct psc_poolmgr *, void *, int), int (*destroyf)(void *),
     int (*reclaimcb)(struct psc_poolmgr *), void *mwcarg,
     const char *namefmt, ...)
 {
@@ -157,7 +153,7 @@ _psc_poolmaster_init(struct psc_poolmaster *p, size_t entsize,
 
 	va_start(ap, namefmt);
 	_psc_poolmaster_initv(p, entsize, offset, flags, total, min,
-	    max, initf, destroyf, reclaimcb, mwcarg, namefmt, ap);
+	    max, reclaimcb, mwcarg, namefmt, ap);
 	va_end(ap);
 }
 
@@ -207,7 +203,6 @@ _psc_poolmaster_initmgr(struct psc_poolmaster *p, struct psc_poolmgr *m)
 	locked = reqlock(&p->pms_lock);
 	m->ppm_reclaimcb = p->pms_reclaimcb;
 	m->ppm_destroyf = p->pms_destroyf;
-	m->ppm_initf = p->pms_initf;
 
 	m->ppm_thres = p->pms_thres;
 	m->ppm_flags = p->pms_flags;
