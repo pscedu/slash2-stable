@@ -33,6 +33,8 @@
 #include "pfl/lock.h"
 #include "pfl/pfl.h"
 
+/* The last "unable" case happens on FreeBSD 9.0-CURRENT */
+ 
 #ifdef PTHREAD_MUTEX_ERRORCHECK_INITIALIZER
 # define PSC_MUTEX_INIT			{ PTHREAD_MUTEX_ERRORCHECK_INITIALIZER, 0, 0 }
 #elif defined(PTHREAD_MUTEX_ERRORCHECK_INITIALIZER_NP)
@@ -84,6 +86,8 @@ struct pfl_rwlock {
 	struct psc_dynarray	pr_readers;
 	psc_spinlock_t		pr_lock;
 };
+
+/* The last "unable" case happens on FreeBSD 9.0-CURRENT */
 
 #ifdef PTHREAD_RWLOCK_WRITER_NONRECURSIVE_INITIALIZER_NP
 # define pfl_rwlock_INIT		{ PTHREAD_RWLOCK_WRITER_NONRECURSIVE_INITIALIZER_NP, \
