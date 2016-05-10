@@ -292,7 +292,7 @@ pfl_poolmaster_destroy(struct psc_poolmaster *pms)
  * @m: pool manager.
  * @p: item to free.
  */
-int
+void
 _psc_pool_destroy_obj(struct psc_poolmgr *m, void *p)
 {
 	int flags;
@@ -302,7 +302,6 @@ _psc_pool_destroy_obj(struct psc_poolmgr *m, void *p)
 		flags |= PAF_LOCK;
 	_PSC_POOL_CLEAR_OBJ(m, p);
 	psc_free(p, flags, m->ppm_entsize);
-	return (1);
 }
 
 /*
