@@ -736,9 +736,7 @@ _psc_pool_return(struct psc_poolmgr *m, void *p)
 		m->ppm_total--;
 		pfl_opstat_incr(m->ppm_opst_shrinks);
 		POOL_URLOCK(m, locked);
-		p = NULL;
-	} 
-	if (p) {
+	} else {
 		/* Pool should keep this item. */
 		INIT_PSC_LISTENTRY(psclist_entry2(p, m->ppm_explist.pexl_offset));
 		POOL_ADD_ITEM(m, p);
