@@ -376,12 +376,9 @@ psc_pool_try_shrink(struct psc_poolmgr *m, int n)
 				    m, m->ppm_master->pms_name);
 				return (i);
 			}
-			if (_psc_pool_destroy_obj(m, p)) {
-				m->ppm_total--;
-				pfl_opstat_incr(m->ppm_opst_shrinks);
-			} else {
-				POOL_ADD_ITEM(m, p);
-			}
+			_psc_pool_destroy_obj(m, p);
+			m->ppm_total--;
+			pfl_opstat_incr(m->ppm_opst_shrinks);
 		} else {
 			break;
 		}
@@ -735,13 +732,12 @@ _psc_pool_return(struct psc_poolmgr *m, void *p)
 	if ((m->ppm_flags & PPMF_AUTO) && m->ppm_total > m->ppm_min &&
 	    ((m->ppm_max && m->ppm_total > m->ppm_max) ||
 	     m->ppm_nfree > m->ppm_total * m->ppm_thres / 100)) {
-		if (_psc_pool_destroy_obj(m, p)) {
-			/* Reached free threshold; completely deallocate obj. */
-			m->ppm_total--;
-			pfl_opstat_incr(m->ppm_opst_shrinks);
-			POOL_URLOCK(m, locked);
-			p = NULL;
-		}
+		/* Reached free threshold; completely deallocate obj. */
+		_psc_pool_destroy_obj(m, p);
+		m->ppm_total--;
+		pfl_opstat_incr(m->ppm_opst_shrinks);
+		POOL_URLOCK(m, locked);
+		p = NULL;
 	} 
 	if (p) {
 		/* Pool should keep this item. */
