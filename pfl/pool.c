@@ -738,7 +738,13 @@ _psc_pool_return(struct psc_poolmgr *m, void *p)
 		POOL_URLOCK(m, locked);
 	} else {
 		/* Pool should keep this item. */
+#if 0
+		/*
+		 * We need this if all the memory of the item will be used 
+		 * including the link entry. Right now, we don't do this.
+		 */
 		INIT_PSC_LISTENTRY(psclist_entry2(p, m->ppm_explist.pexl_offset));
+#endif
 		POOL_ADD_ITEM(m, p);
 		POOL_URLOCK(m, locked);
 	}
