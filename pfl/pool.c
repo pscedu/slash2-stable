@@ -202,7 +202,6 @@ _psc_poolmaster_initmgr(struct psc_poolmaster *p, struct psc_poolmgr *m)
 
 	locked = reqlock(&p->pms_lock);
 	m->ppm_reclaimcb = p->pms_reclaimcb;
-	m->ppm_destroyf = p->pms_destroyf;
 
 	m->ppm_thres = p->pms_thres;
 	m->ppm_flags = p->pms_flags;
@@ -298,11 +297,6 @@ _psc_pool_destroy_obj(struct psc_poolmgr *m, void *p)
 {
 	int rc, flags;
 
-	if (p && m->ppm_destroyf) {
-		rc = m->ppm_destroyf(p);
-		if (!rc)
-			return (0);
-	}
 	flags = 0;
 	if (m->ppm_flags & PPMF_PIN)
 		flags |= PAF_LOCK;
@@ -347,19 +341,10 @@ psc_pool_grow(struct psc_poolmgr *m, int n, int init)
 			errno = ENOMEM;
 			return (i);
 		}
-		if (m->ppm_initf == NULL)
-			INIT_PSC_LISTENTRY(psclist_entry2(p,
-			    m->ppm_explist.pexl_offset));
-		else if (m->ppm_initf(m, p, init)) {
-			if (flags & PAF_LOCK)
-				psc_free(p, PAF_LOCK, m->ppm_entsize);
-			else
-				PSCFREE(p);
-			return (i);
-		}
+		INIT_PSC_LISTENTRY(psclist_entry2(p,
+		    m->ppm_explist.pexl_offset));
 
 #if 0
-		if (init)
 		fprintf(stderr, "m = %p, p = %p, size = %d, name = %s\n", 
 		    m, p, m->ppm_entsize, m->ppm_master->pms_name);
 #endif

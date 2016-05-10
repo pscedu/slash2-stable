@@ -83,8 +83,6 @@ struct psc_poolmaster {
 	int			  pms_thres;		/* autoresize threshold */
 	void			 *pms_mwcarg;		/* mlist cond arg */
 
-	int			(*pms_initf)(struct psc_poolmgr *, void *, int);
-	int			(*pms_destroyf)(void *);
 	int			(*pms_reclaimcb)(struct psc_poolmgr *);
 };
 
@@ -116,10 +114,8 @@ struct psc_poolmgr {
 	struct pfl_opstat	 *ppm_opst_preaps;
 	struct pfl_opstat	 *ppm_opst_fails;
 
-	/* routines to initialize, teardown, & reclaim pool entries */
-	int			(*ppm_initf)(struct psc_poolmgr *, void *, int);
-	int			(*ppm_destroyf)(void *);
 	int			(*ppm_reclaimcb)(struct psc_poolmgr *);
+
 #define ppm_explist	ppm_u.ppmu_explist
 #define ppm_lc		ppm_u.ppmu_lc
 #define ppm_ml		ppm_u.ppmu_ml
