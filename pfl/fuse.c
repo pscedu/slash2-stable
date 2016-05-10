@@ -541,7 +541,7 @@ pscfs_main(int nthr, const char *thrname)
 #define INUMCOL_SZ (4096 - 1)
 	psc_poolmaster_init(&pflfs_inumcol_poolmaster, struct
 	    pscfs_inumcol, pfic_lentry, PPMF_AUTO, INUMCOL_SZ,
-	    INUMCOL_SZ / 2, INUMCOL_SZ * 2, NULL, NULL, NULL,
+	    INUMCOL_SZ / 2, INUMCOL_SZ * 2, NULL,
 	    "inumcol");
 	pflfs_inumcol_pool = psc_poolmaster_getmgr(&pflfs_inumcol_poolmaster);
 	psc_hashtbl_init(&pflfs_inumcol_hashtbl, 0,
@@ -558,13 +558,13 @@ pscfs_main(int nthr, const char *thrname)
 #endif
 
 	psc_poolmaster_init(&pflfs_req_poolmaster, struct pscfs_req,
-	    pfr_lentry, PPMF_AUTO, 64, 64, 1024, NULL, NULL, NULL,
+	    pfr_lentry, PPMF_AUTO, 64, 64, 1024, NULL,
 	    "fsrq");
 	pflfs_req_pool = psc_poolmaster_getmgr(&pflfs_req_poolmaster);
 
 	psc_poolmaster_init(&pflfs_filehandle_poolmaster,
 	    struct pflfs_filehandle, pfh_lentry, PPMF_AUTO, 64, 64,
-	    0, NULL, NULL, NULL, "fh");
+	    0, NULL, "fh");
 	pflfs_filehandle_pool = psc_poolmaster_getmgr(
 	    &pflfs_filehandle_poolmaster);
 
