@@ -295,7 +295,7 @@ pfl_poolmaster_destroy(struct psc_poolmaster *pms)
 int
 _psc_pool_destroy_obj(struct psc_poolmgr *m, void *p)
 {
-	int rc, flags;
+	int flags;
 
 	flags = 0;
 	if (m->ppm_flags & PPMF_PIN)
