@@ -986,7 +986,7 @@ pscrpc_init_svc(int nbufs, int bufsize, int max_req_size,
 
 	psc_poolmaster_init(&svc->srv_poolmaster,
 	    struct pscrpc_request_buffer_desc, rqbd_lentry, PPMF_AUTO,
-	    64, 64, 0, NULL, NULL, NULL, "rqbd-%s", svc->srv_name);
+	    64, 64, 0, NULL, "rqbd-%s", svc->srv_name);
 	svc->srv_pool = psc_poolmaster_getmgr(
 	    &svc->srv_poolmaster);
 
