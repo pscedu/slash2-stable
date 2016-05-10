@@ -475,19 +475,19 @@ lnet_descriptor_setup (void)
 
 #if 1
 	psc_poolmaster_init(&lnet_md_poolmaster, lnet_libmd_t,
-	    md_lentry, PPMF_AUTO, 32, 32, 0, NULL, NULL, NULL, "lnetmd");
+	    md_lentry, PPMF_AUTO, 32, 32, 0, NULL, "lnetmd");
 	lnet_md_pool = psc_poolmaster_getmgr(&lnet_md_poolmaster);
 
 	psc_poolmaster_init(&lnet_me_poolmaster, lnet_me_t,
-	    me_lentry, PPMF_AUTO, 32, 32, 0, NULL, NULL, NULL, "lnetme");
+	    me_lentry, PPMF_AUTO, 32, 32, 0, NULL, "lnetme");
 	lnet_me_pool = psc_poolmaster_getmgr(&lnet_me_poolmaster);
 
 	psc_poolmaster_init(&lnet_eq_poolmaster, lnet_eq_t,
-	    eq_lentry, PPMF_AUTO, 32, 32, 0, NULL, NULL, NULL, "lneteq");
+	    eq_lentry, PPMF_AUTO, 32, 32, 0, NULL, "lneteq");
 	lnet_eq_pool = psc_poolmaster_getmgr(&lnet_eq_poolmaster);
 	
 	psc_poolmaster_init(&lnet_msg_poolmaster, lnet_msg_t,
-	    msg_lentry, PPMF_AUTO, 32, 32, 0, NULL, NULL, NULL, "lnetmsg");
+	    msg_lentry, PPMF_AUTO, 32, 32, 0, NULL, "lnetmsg");
 	lnet_msg_pool = psc_poolmaster_getmgr(&lnet_msg_poolmaster); 
 
 #elif defined(LNET_USE_LIB_FREELIST)
