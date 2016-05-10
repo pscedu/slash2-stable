@@ -436,15 +436,15 @@ usocklnd_base_startup(void)
 	usock_aggr_iostats.rd = pfl_opstat_init("lusklnd-aggr-rcv"); 
 
 	psc_poolmaster_init(&usk_peer_poolmaster, usock_peer_t,
-	    up_lentry, PPMF_AUTO, 32, 32, 0, NULL, NULL, NULL, "usk-peer");
+	    up_lentry, PPMF_AUTO, 32, 32, 0, NULL, "usk-peer");
 	usk_peer_pool = psc_poolmaster_getmgr(&usk_peer_poolmaster);
 
 	psc_poolmaster_init(&usk_conn_poolmaster, usock_conn_t,
-	    uc_lentry, PPMF_AUTO, 32, 32, 0, NULL, NULL, NULL, "usk-conn");
+	    uc_lentry, PPMF_AUTO, 32, 32, 0, NULL, "usk-conn");
 	usk_conn_pool = psc_poolmaster_getmgr(&usk_conn_poolmaster);
 
 	psc_poolmaster_init(&usk_pollreq_poolmaster, usock_pollrequest_t, 
-	    upr_lentry, PPMF_AUTO, 32, 32, 0, NULL, NULL, NULL, "usk-pollrq");
+	    upr_lentry, PPMF_AUTO, 32, 32, 0, NULL, "usk-pollrq");
 	usk_pollreq_pool = psc_poolmaster_getmgr(&usk_pollreq_poolmaster);
 
         /* Spawn poll threads */
