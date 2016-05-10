@@ -836,7 +836,7 @@ pjournal_open(const char *name, const char *fn)
 
 	psc_poolmaster_init(&pfl_xidhndl_poolmaster,
 	    struct psc_journal_xidhndl, pjx_lentry, PPMF_AUTO, 4096,
-	    4096, 0, NULL, NULL, NULL, "xidhndl");
+	    4096, 0, NULL, "xidhndl");
 	pfl_xidhndl_pool = psc_poolmaster_getmgr(
 	    &pfl_xidhndl_poolmaster);
 
