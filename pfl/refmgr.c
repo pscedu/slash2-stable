@@ -180,7 +180,7 @@ pfl_refmgr_init(struct psc_refmgr *prm, int flags, int privsiz, int nobjs,
 
 	va_start(ap, namefmt);
 	_psc_poolmaster_initv(&prm->prm_pms, off + privsiz, off, flags,
-	    nobjs, min, max, initf, destroyf, NULL,
+	    nobjs, min, max, NULL,
 	    pfl_refmgr_reclaimcb, namefmt, ap);
 	va_end(ap);
 

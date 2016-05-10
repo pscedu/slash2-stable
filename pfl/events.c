@@ -620,27 +620,27 @@ pscrpc_ni_init(int type, int nmsgs)
 
 	psc_poolmaster_init(&pscrpc_export_poolmaster,
 	    struct pscrpc_export, exp_lentry, PPMF_AUTO, 64, 64, 0,
-	    NULL, NULL, NULL, "rpcexp");
+	    NULL, "rpcexp");
 	pscrpc_export_pool = psc_poolmaster_getmgr(&pscrpc_export_poolmaster);
 
 	psc_poolmaster_init(&pscrpc_conn_poolmaster,
 	    struct pscrpc_connection, c_hentry.phe_lentry, PPMF_AUTO, 64, 64, 0,
-	    NULL, NULL, NULL, "rpcconn");
+	    NULL, "rpcconn");
 	pscrpc_conn_pool = psc_poolmaster_getmgr(&pscrpc_conn_poolmaster);
 
 	psc_poolmaster_init(&pscrpc_set_poolmaster,
 	    struct pscrpc_request_set, set_lentry, PPMF_AUTO, 64, 64, 0,
-	    NULL, NULL, NULL, "rpcset");
+	    NULL, "rpcset");
 	pscrpc_set_pool = psc_poolmaster_getmgr(&pscrpc_set_poolmaster);
 
 	psc_poolmaster_init(&pscrpc_imp_poolmaster,
 	    struct pscrpc_import, imp_lentry, PPMF_AUTO, 64, 64, 0,
-	    NULL, NULL, NULL, "rpcimp");
+	    NULL, "rpcimp");
 	pscrpc_imp_pool = psc_poolmaster_getmgr(&pscrpc_imp_poolmaster);
 
 	psc_poolmaster_init(&pscrpc_rq_poolmaster,
 	    struct pscrpc_request, rq_lentry, PPMF_AUTO, 64, 64, 0,
-	    NULL, NULL, NULL, "rpcrq");
+	    NULL, "rpcrq");
 	pscrpc_rq_pool = psc_poolmaster_getmgr(&pscrpc_rq_poolmaster);
 
 	pscrpc_conns_init();

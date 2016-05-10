@@ -100,7 +100,7 @@ pfl_workq_init(size_t bufsiz)
 	_psc_poolmaster_init(&pfl_workrq_poolmaster,
 	    sizeof(struct pfl_workrq) + bufsiz,
 	    offsetof(struct pfl_workrq, wkrq_lentry), PPMF_AUTO, 128,
-	    128, 0, NULL, NULL, NULL, NULL, "workrq");
+	    128, 0, NULL, NULL, "workrq");
 	pfl_workrq_pool = psc_poolmaster_getmgr(&pfl_workrq_poolmaster);
 	lc_reginit(&pfl_workq, struct pfl_workrq, wkrq_lentry, "workq");
 }
