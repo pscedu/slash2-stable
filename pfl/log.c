@@ -392,7 +392,6 @@ pflog_get_stacktrace()
 	freelock(&psc_stack_lock);
 	return (psc_stack_symbuf);
 #else
-	(void)d;
 	return ("");
 #endif
 }
