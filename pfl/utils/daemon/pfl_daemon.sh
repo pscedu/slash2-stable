@@ -56,7 +56,9 @@ extract_value()
 				$h{$PREMATCH} = $POSTMATCH;
 			}
 		}
-		print $h{'$key'}'
+		if (exists($h{'$key'})) {
+			print $h{'$key'};
+		}'
 }
 
 # Load profile for the host where invoked.
@@ -98,7 +100,10 @@ loadprof()
 		srcdir=*)
 			declare ${fl%%=*}=${fl#*=};;
 
-		args=*)	xargs+=("${fl#args=}")
+		args=*)	
+			# xargs is a comma separated list of arguments.
+			# Some of them can have values.
+			xargs+=("${fl#args=}")
 			ctlsock=$(echo $xargs | extract_value ctlsock)
 			[ -n "$ctlsock" ] && export CTL_SOCK_FILE=$ctlsock
 			;;
