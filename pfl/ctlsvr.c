@@ -423,7 +423,10 @@ psc_ctlrep_getpool(int fd, struct psc_ctlmsghdr *mh, void *msg)
 			if (!rc)
 				break;
 
-			/* Terminate on exact match. */
+			/* 
+			 * Terminate on exact match. ppm_name is
+			 * m->ppm_u.ppmu_explist.pexl_name. 
+			 */
 			if (strcmp(m->ppm_name, name) == 0)
 				break;
 		}

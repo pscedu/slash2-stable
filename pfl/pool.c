@@ -198,6 +198,9 @@ _psc_poolmaster_initmgr(struct psc_poolmaster *p, struct psc_poolmgr *m)
 			psc_fatalx("%s: name too long", p->pms_name);
 	}
 
+	if (m->ppm_name[0] == '\0')
+		psc_assert(0);
+
 	INIT_PSC_LISTENTRY(&m->ppm_lentry);
 
 	locked = reqlock(&p->pms_lock);
