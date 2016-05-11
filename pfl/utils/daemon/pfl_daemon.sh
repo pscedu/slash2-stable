@@ -255,7 +255,7 @@ preproc()
 	local logdir=$(dirname "$PSC_LOG_FILE")
 
 	is_on_nfs "$logdir" && [ $allow_logfiles_over_nfs -eq 0 ] && \
-	    die "$logdir: refusing to write log files on NFS"
+	    warn "$logdir: attempting to write log files on NFS"
 
 	mkdir -p $logdir
 	cd $base
