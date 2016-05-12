@@ -1210,7 +1210,7 @@ __static void
 psc_ctlmsg_print(struct psc_ctlmsghdr *mh, const void *m)
 {
 	const struct psc_ctlmsg_prfmt *prf;
-	int n;
+	int i, len;
 
 	/* Validate message type. */
 	if (mh->mh_type < 0 ||
@@ -1228,12 +1228,12 @@ psc_ctlmsg_print(struct psc_ctlmsghdr *mh, const void *m)
 		/* Disallowed message type. */
 		psc_fatalx("invalid ctlmsg type %d", mh->mh_type);
 	else {
-		n = prf->prf_check(mh, m);
-		if (n == -1)
+		i = prf->prf_check(mh, m);
+		if (i == -1)
 			return;
-		else if (n)
+		else if (i)
 			psc_fatalx("invalid ctlmsg size; type=%d sizeof=%zu "
-			    "expected=%d", mh->mh_type, mh->mh_size, n);
+			    "expected=%d", mh->mh_type, mh->mh_size, i);
 	}
 
 	/* Print display header. */
@@ -1242,8 +1242,11 @@ psc_ctlmsg_print(struct psc_ctlmsghdr *mh, const void *m)
 
 		if (psc_ctl_lastmsgtype != -1)
 			printf("\n");
-		prf->prf_prhdr(mh, m);
-		for (n = 0; n < PSC_CTL_DISPLAY_WIDTH; n++)
+
+		len = prf->prf_prhdr(mh, m);
+		psc_assert(len >= PSC_CTL_DISPLAY_WIDTH);
+
+		for (i = 0; i < len; i++)
 			putchar('=');
 		putchar('\n');
 	}
