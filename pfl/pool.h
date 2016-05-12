@@ -244,7 +244,7 @@ struct psc_poolmgr *
 	  psc_pool_lookup(const char *);
 void	*_psc_pool_get(struct psc_poolmgr *, int);
 int	  psc_pool_gettotal(struct psc_poolmgr *);
-int	  psc_pool_grow(struct psc_poolmgr *, int, int);
+int	  psc_pool_grow(struct psc_poolmgr *, int);
 int	  psc_pool_inuse(struct psc_poolmgr *);
 int	  psc_pool_nfree(struct psc_poolmgr *);
 void	  psc_pool_reap(struct psc_poolmgr *, int);
