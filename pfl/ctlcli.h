@@ -86,7 +86,7 @@ struct psc_ctlcmd_req {
 };
 
 struct psc_ctlmsg_prfmt {
-	void			(*prf_prhdr)(struct psc_ctlmsghdr *, const void *);
+	int			(*prf_prhdr)(struct psc_ctlmsghdr *, const void *);
 	void			(*prf_prdat)(const struct psc_ctlmsghdr *, const void *);
 	size_t			  prf_msgsiz;
 	int			(*prf_check)(struct psc_ctlmsghdr *, const void *);
@@ -129,39 +129,39 @@ void  psc_ctlcli_main(const char *, int, char **, const struct psc_ctlopt *, int
 
 void  psc_ctlmsg_error_prdat(const struct psc_ctlmsghdr *, const void *);
 void  psc_ctlmsg_fault_prdat(const struct psc_ctlmsghdr *, const void *);
-void  psc_ctlmsg_fault_prhdr(struct psc_ctlmsghdr *, const void *);
+int   psc_ctlmsg_fault_prhdr(struct psc_ctlmsghdr *, const void *);
 void  pfl_ctlmsg_fsrq_prdat(const struct psc_ctlmsghdr *, const void *);
-void  pfl_ctlmsg_fsrq_prhdr(struct psc_ctlmsghdr *, const void *);
+int   pfl_ctlmsg_fsrq_prhdr(struct psc_ctlmsghdr *, const void *);
 void  psc_ctlmsg_hashtable_prdat(const struct psc_ctlmsghdr *, const void *);
-void  psc_ctlmsg_hashtable_prhdr(struct psc_ctlmsghdr *, const void *);
+int   psc_ctlmsg_hashtable_prhdr(struct psc_ctlmsghdr *, const void *);
 void  psc_ctlmsg_opstat_prdat(const struct psc_ctlmsghdr *, const void *);
-void  psc_ctlmsg_opstat_prhdr(struct psc_ctlmsghdr *, const void *);
+int   psc_ctlmsg_opstat_prhdr(struct psc_ctlmsghdr *, const void *);
 void  psc_ctlmsg_journal_prdat(const struct psc_ctlmsghdr *, const void *);
-void  psc_ctlmsg_journal_prhdr(struct psc_ctlmsghdr *, const void *);
+int   psc_ctlmsg_journal_prhdr(struct psc_ctlmsghdr *, const void *);
 void  psc_ctlmsg_lnetif_prdat(const struct psc_ctlmsghdr *, const void *);
-void  psc_ctlmsg_lnetif_prhdr(struct psc_ctlmsghdr *, const void *);
+int   psc_ctlmsg_lnetif_prhdr(struct psc_ctlmsghdr *, const void *);
 void  psc_ctlmsg_listcache_prdat(const struct psc_ctlmsghdr *, const void *);
-void  psc_ctlmsg_listcache_prhdr(struct psc_ctlmsghdr *, const void *);
+int   psc_ctlmsg_listcache_prhdr(struct psc_ctlmsghdr *, const void *);
 void  psc_ctlmsg_meter_prdat(const struct psc_ctlmsghdr *, const void *);
-void  psc_ctlmsg_meter_prhdr(struct psc_ctlmsghdr *, const void *);
+int   psc_ctlmsg_meter_prhdr(struct psc_ctlmsghdr *, const void *);
 void  psc_ctlmsg_mlist_prdat(const struct psc_ctlmsghdr *, const void *);
-void  psc_ctlmsg_mlist_prhdr(struct psc_ctlmsghdr *, const void *);
+int   psc_ctlmsg_mlist_prhdr(struct psc_ctlmsghdr *, const void *);
 void  psc_ctlmsg_odtable_prdat(const struct psc_ctlmsghdr *, const void *);
-void  psc_ctlmsg_odtable_prhdr(struct psc_ctlmsghdr *, const void *);
+int   psc_ctlmsg_odtable_prhdr(struct psc_ctlmsghdr *, const void *);
 void  psc_ctlmsg_param_prdat(const struct psc_ctlmsghdr *, const void *);
-void  psc_ctlmsg_param_prhdr(struct psc_ctlmsghdr *, const void *);
+int   psc_ctlmsg_param_prhdr(struct psc_ctlmsghdr *, const void *);
 void  psc_ctlmsg_pool_prdat(const struct psc_ctlmsghdr *, const void *);
-void  psc_ctlmsg_pool_prhdr(struct psc_ctlmsghdr *, const void *);
+int   psc_ctlmsg_pool_prhdr(struct psc_ctlmsghdr *, const void *);
 void  psc_ctlmsg_rpcrq_prdat(const struct psc_ctlmsghdr *, const void *);
-void  psc_ctlmsg_rpcrq_prhdr(struct psc_ctlmsghdr *, const void *);
+int   psc_ctlmsg_rpcrq_prhdr(struct psc_ctlmsghdr *, const void *);
 void  psc_ctlmsg_rpcsvc_prdat(const struct psc_ctlmsghdr *, const void *);
-void  psc_ctlmsg_rpcsvc_prhdr(struct psc_ctlmsghdr *, const void *);
+int   psc_ctlmsg_rpcsvc_prhdr(struct psc_ctlmsghdr *, const void *);
 int   psc_ctlmsg_subsys_check(struct psc_ctlmsghdr *, const void *);
 int   psc_ctlmsg_thread_check(struct psc_ctlmsghdr *, const void *);
 void  psc_ctlmsg_thread_prdat(const struct psc_ctlmsghdr *, const void *);
-void  psc_ctlmsg_thread_prhdr(struct psc_ctlmsghdr *, const void *);
+int   psc_ctlmsg_thread_prhdr(struct psc_ctlmsghdr *, const void *);
 void  pfl_ctlmsg_workrq_prdat(const struct psc_ctlmsghdr *, const void *);
-void  pfl_ctlmsg_workrq_prhdr(struct psc_ctlmsghdr *, const void *);
+int   pfl_ctlmsg_workrq_prhdr(struct psc_ctlmsghdr *, const void *);
 
 int   psc_ctl_get_display_maxwidth(void);
 void  psc_ctl_prnumber(int, uint64_t, int, const char *);
