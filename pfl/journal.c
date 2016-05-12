@@ -77,8 +77,11 @@ struct psc_lockedlist	pfl_journals = PLL_INIT(&pfl_journals,
 #define JIO_READ	0
 #define JIO_WRITE	1
 
-#define psc_journal_read(pj, p, len, off)	psc_journal_io((pj), (p), (len), (off), JIO_READ)
-#define psc_journal_write(pj, p, len, off)	psc_journal_io((pj), (p), (len), (off), JIO_WRITE)
+#define psc_journal_read(pj, p, len, off)			\	
+	psc_journal_io((pj), (p), (len), (off), JIO_READ)
+
+#define psc_journal_write(pj, p, len, off)			\
+	psc_journal_io((pj), (p), (len), (off), JIO_WRITE)
 
 struct psc_poolmaster	 pfl_xidhndl_poolmaster;
 struct psc_poolmgr	*pfl_xidhndl_pool;
