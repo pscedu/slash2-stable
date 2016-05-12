@@ -65,7 +65,7 @@
 #include "pfl/time.h"
 
 #ifndef PSC_LOG_FMT
-#define PSC_LOG_FMT "[%s.%06u00 %D %n:%I:%T %B %F %l] "
+#define PSC_LOG_FMT "[%s.%06u00 %n:%I:%T %B %F %l] "
 #endif
 
 const char			*psc_logfmt = PSC_LOG_FMT;
