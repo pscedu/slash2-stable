@@ -128,12 +128,13 @@ cmd_list(int ac, __unusedx char **av)
 	psc_ctlmsg_push(WOKCMT_LIST, sizeof(struct wokctlmsg_modspec));
 }
 
-void
+int
 wok_list_prhdr(__unusedx struct psc_ctlmsghdr *mh,
     __unusedx const void *m)
 {
 	printf("%3s %s\n",
 	    "pos", "module");
+	return(PSC_CTL_DISPLAY_WIDTH);
 }
 
 void
