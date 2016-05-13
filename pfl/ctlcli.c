@@ -97,7 +97,7 @@ uncolor(void)
 __static void
 psc_ctlmsg_sendlast(void)
 {
-	ssize_t siz;
+	ssize_t siz, rc;
 
 	spinlock(&psc_ctl_lock);
 	if (psc_ctl_sock == -1) {
@@ -107,8 +107,9 @@ psc_ctlmsg_sendlast(void)
 
 	/* Send last queued control messages. */
 	siz = psc_ctl_msghdr->mh_size + sizeof(*psc_ctl_msghdr);
-	if (write(psc_ctl_sock, psc_ctl_msghdr, siz) != siz)
-		psc_fatal("write");
+	rc = write(psc_ctl_sock, psc_ctl_msghdr, siz);
+	if (rc != siz)
+		psc_fatalx("write, rc = %zd", rc);
 	freelock(&psc_ctl_lock);
 }
 
