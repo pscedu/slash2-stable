@@ -13,7 +13,7 @@ It crashes on the following line:
 298                 spinlock(&mrsq.mrsq_lock);
 299         }
 
-This is not due to stack size. It is broken since v1.13.
+This is not due to stack size. It is broken since v1.13.  Maybe it is due to the use of -R?
 
 05/01/2016
 ----------
