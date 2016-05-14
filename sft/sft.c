@@ -626,7 +626,7 @@ main(int argc, char *argv[])
 
 	lc_init(&wkq, struct wk, lentry);
 	psc_poolmaster_init(&wk_poolmaster, struct wk, lentry,
-	    PPMF_AUTO, nthr, nthr, 0, NULL, NULL, NULL, "wk");
+	    PPMF_AUTO, nthr, nthr, 0,  NULL, "wk");
 	wk_pool = psc_poolmaster_getmgr(&wk_poolmaster);
 
 	pfl_opstimerthr_spawn(THRT_OPSTIMER, "opstimerthr");
