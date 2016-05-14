@@ -1289,7 +1289,7 @@ psc_ctlrep_getlnetif(int fd, struct psc_ctlmsghdr *mh, void *m)
 		pclni->pclni_mintxcredits = ni->ni_mintxcredits;
 		pclni->pclni_peertxcredits = ni->ni_peertxcredits;
 		pclni->pclni_refcount = ni->ni_refcount;
-		rc = psc_ctlmsg_sendv(fd, mh, pclni);
+		rc = psc_ctlmsg_sendv(fd, mh, pclni, NULL);
 		if (!rc)
 			break;
 	}

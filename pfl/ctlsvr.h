@@ -107,10 +107,9 @@ struct psc_ctlop {
 	size_t	  pc_siz;
 };
 
-int	psc_ctlsenderr(int, const struct psc_ctlmsghdr *, const char *, ...);
-
-int	psc_ctlmsg_sendv(int, const struct psc_ctlmsghdr *, const void *);
-int	psc_ctlmsg_send(int, int, int, size_t, const void *);
+int	psc_ctlsenderr(int, const struct psc_ctlmsghdr *, struct pfl_mutex *, const char *, ...);
+int	psc_ctlmsg_sendv(int, const struct psc_ctlmsghdr *, const void *, struct pfl_mutex *);
+int	psc_ctlmsg_send(int, int, int, size_t, const void *, struct pfl_mutex *);
 
 int	psc_ctlrep_getfault(int, struct psc_ctlmsghdr *, void *);
 int	pfl_ctlrep_getfsrq(int, struct psc_ctlmsghdr *, void *);

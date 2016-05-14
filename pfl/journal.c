@@ -1123,7 +1123,7 @@ psc_ctlrep_getjournal(int fd, struct psc_ctlmsghdr *mh, void *m)
 		pcj->pcj_wraparound	= j->pj_wraparound;
 		PJ_ULOCK(j);
 
-		rc = psc_ctlmsg_sendv(fd, mh, pcj);
+		rc = psc_ctlmsg_sendv(fd, mh, pcj, NULL);
 		if (!rc)
 			break;
 	}

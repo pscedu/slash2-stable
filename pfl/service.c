@@ -1144,7 +1144,7 @@ psc_ctlrep_getrpcsvc(int fd, struct psc_ctlmsghdr *mh, void *m)
 			pcrs->pcrs_flags |= PSCRPC_SVCF_COUNT_PEER_QLENS;
 		SVC_ULOCK(s);
 
-		rc = psc_ctlmsg_sendv(fd, mh, pcrs);
+		rc = psc_ctlmsg_sendv(fd, mh, pcrs, NULL);
 		if (!rc)
 			break;
 	}

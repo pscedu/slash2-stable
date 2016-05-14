@@ -1531,7 +1531,7 @@ psc_ctlrep_getrpcrq(int fd, struct psc_ctlmsghdr *mh, void *m)
 		pcrq->pcrq_phase = rq->rq_phase;
 		pcrq->pcrq_send_state = rq->rq_send_state;
 		pcrq->pcrq_nwaiters = psc_ctl_rpcrq_getnwaiters(rq);
-		rc = psc_ctlmsg_sendv(fd, mh, pcrq);
+		rc = psc_ctlmsg_sendv(fd, mh, pcrq, NULL);
 		if (!rc)
 			break;
 	}

@@ -342,7 +342,7 @@ pfl_ctlrep_getfsrq(int fd, struct psc_ctlmsghdr *mh, void *m)
 		    "%s", pfr->pfr_thread ? pfr->pfr_thread->pscthr_name
 		    : "<none>");
 
-		rc = psc_ctlmsg_sendv(fd, mh, pcfr);
+		rc = psc_ctlmsg_sendv(fd, mh, pcfr, NULL);
 		if (!rc)
 			break;
 	}
