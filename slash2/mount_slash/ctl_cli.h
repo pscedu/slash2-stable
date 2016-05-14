@@ -130,11 +130,11 @@ struct msctl_replstq {
 	struct psc_waitq		 mrsq_waitq;
 	int				 mrsq_id;
 	int				 mrsq_fd;
+	struct pfl_mutex		*mrsq_fdlock;
 	int				 mrsq_rc;
 	const struct psc_ctlmsghdr	*mrsq_mh;
 	psc_spinlock_t			 mrsq_lock;
 	slfid_t				 mrsq_fid;
-	int				 mrsq_refcnt;
 };
 
 void mrsq_release(struct msctl_replstq *, int);

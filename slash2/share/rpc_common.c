@@ -44,8 +44,9 @@
 
 #define CBARG_CSVC	0
 #define CBARG_STKVER	1
-#define CBARG_OLDIMPORT	2
-#define CBARG_NEWIMPORT	3
+#define CBARG_UPTIME	2
+#define CBARG_OLDIMPORT	3
+#define CBARG_NEWIMPORT	4
 
 struct pscrpc_request_set *sl_nbrqset;
 
@@ -226,6 +227,8 @@ slrpc_connect_cb(struct pscrpc_request *rq,
 	struct pscrpc_import *imp = args->pointer_arg[CBARG_NEWIMPORT];
 	struct slashrpc_cservice *csvc = args->pointer_arg[CBARG_CSVC];
 	uint32_t *stkversp = args->pointer_arg[CBARG_STKVER];
+	uint64_t *uptimep = args->pointer_arg[CBARG_UPTIME];
+	struct timespec tv1, tv2;
 	int rc;
 
 	SL_GET_RQ_STATUS(csvc, rq, mp, rc);
@@ -236,6 +239,13 @@ slrpc_connect_cb(struct pscrpc_request *rq,
 	if (rc) {
 		slrpc_connect_finish(csvc, imp, oimp, 0);
 	} else {
+
+		tv1.tv_sec = mp->uptime;
+		tv1.tv_nsec = 0;
+		_PFL_GETTIMESPEC(CLOCK_MONOTONIC, &tv2);
+		timespecsub(&tv2, &tv1, &tv1);
+		*uptimep = tv1.tv_sec;
+
 		*stkversp = mp->stkvers;
 		slrpc_connect_finish(csvc, imp, oimp, 1);
 		sl_csvc_online(csvc);
@@ -276,7 +286,8 @@ slrpc_new_import(struct slashrpc_cservice *csvc)
 __static int
 slrpc_issue_connect(lnet_nid_t local, lnet_nid_t server,
     struct slashrpc_cservice *csvc, int flags,
-    __unusedx struct pfl_multiwait *mw, uint32_t *stkversp)
+    __unusedx struct pfl_multiwait *mw, 
+    uint32_t *stkversp, uint64_t *uptimep)
 {
 	lnet_process_id_t server_id = { server, PSCRPC_SVR_PID };
 	struct pscrpc_import *imp, *oimp = NULL;
@@ -284,6 +295,7 @@ slrpc_issue_connect(lnet_nid_t local, lnet_nid_t server,
 	struct srm_connect_req *mq;
 	struct srm_connect_rep *mp;
 	struct pscrpc_request *rq;
+	struct timespec tv1, tv2;
 	int rc;
 
 	c = pscrpc_get_connection(server_id, local, NULL);
@@ -311,6 +323,7 @@ slrpc_issue_connect(lnet_nid_t local, lnet_nid_t server,
 
 	CSVC_ULOCK(csvc);
 
+	/* handled by slrpc_handle_connect() */
 	rc = SL_RSX_NEWREQ(csvc, SRMT_CONNECT, rq, mq, mp);
 	if (rc) {
 		CSVC_LOCK(csvc);
@@ -324,6 +337,10 @@ slrpc_issue_connect(lnet_nid_t local, lnet_nid_t server,
 	mq->version = csvc->csvc_version;
 	mq->stkvers = sl_stk_version;
 
+	_PFL_GETTIMESPEC(CLOCK_MONOTONIC, &tv1);
+	timespecsub(&tv1, &pfl_uptime, &tv1);
+	mq->uptime = tv1.tv_sec;
+
 	CSVC_LOCK(csvc);
 	csvc->csvc_tryref++;
 	if (flags & CSVCF_NONBLOCK)
@@ -335,6 +352,7 @@ slrpc_issue_connect(lnet_nid_t local, lnet_nid_t server,
 		rq->rq_interpret_reply = slrpc_connect_cb;
 		rq->rq_async_args.pointer_arg[CBARG_CSVC] = csvc;
 		rq->rq_async_args.pointer_arg[CBARG_STKVER] = stkversp;
+		rq->rq_async_args.pointer_arg[CBARG_UPTIME] = uptimep;
 		rq->rq_async_args.pointer_arg[CBARG_OLDIMPORT] = oimp;
 		rq->rq_async_args.pointer_arg[CBARG_NEWIMPORT] = imp;
 		rc = SL_NBRQSET_ADD(csvc, rq);
@@ -365,6 +383,12 @@ slrpc_issue_connect(lnet_nid_t local, lnet_nid_t server,
 	if (rc == 0) {
 		rc = mp->rc;
 		*stkversp = mp->stkvers;
+
+		tv1.tv_sec = mp->uptime;
+		tv1.tv_nsec = 0;
+		_PFL_GETTIMESPEC(CLOCK_MONOTONIC, &tv2);
+		timespecsub(&tv2, &tv1, &tv1);
+		*uptimep = tv1.tv_sec;
 	}
 	pscrpc_req_finished(rq);
 
@@ -428,14 +452,24 @@ slrpc_handle_connect(struct pscrpc_request *rq, uint64_t magic,
 	const struct srm_connect_req *mq;
 	struct srm_connect_rep *mp;
 	struct sl_resm *m;
+	char buf[PSCRPC_NIDSTR_SIZE];
+	struct timespec tv1, tv2;
 	struct {
 		struct slashrpc_cservice *csvc;
 		uint32_t stkvers;
+		uint64_t uptime;
 	} *expc;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
 	if (mq->magic != magic || mq->version != version)
 		mp->rc = -EINVAL;
+
+	/* stkvers and uptime are returned in slctlrep_getconn() */
+	tv1.tv_sec = mq->uptime;
+	tv1.tv_nsec = 0;
+	_PFL_GETTIMESPEC(CLOCK_MONOTONIC, &tv2);
+	timespecsub(&tv2, &tv1, &tv1);
+
 	switch (peertype) {
 	case SLCONNT_CLI:
 		if (e->exp_private)
@@ -444,7 +478,7 @@ slrpc_handle_connect(struct pscrpc_request *rq, uint64_t magic,
 			 * export so this is not a fatal condition but
 			 * should be noted.
 			 */
-			DEBUG_REQ(PLL_WARN, rq,
+			DEBUG_REQ(PLL_WARN, rq, buf,
 			    "duplicate connect msg detected");
 
 		/*
@@ -454,6 +488,7 @@ slrpc_handle_connect(struct pscrpc_request *rq, uint64_t magic,
 		 */
 		expc = sl_exp_getpri_cli(e, 1);
 		expc->stkvers = mq->stkvers;
+		expc->uptime = tv1.tv_sec; 
 		break;
 	case SLCONNT_IOD:
 		m = libsl_try_nid2resm(rq->rq_peer.nid);
@@ -464,6 +499,7 @@ slrpc_handle_connect(struct pscrpc_request *rq, uint64_t magic,
 		if (!RES_ISFS(m->resm_res))
 			mp->rc = -SLERR_RES_BADTYPE;
 		m->resm_res->res_stkvers = mq->stkvers;
+		m->resm_res->res_uptime = tv1.tv_sec;
 		break;
 	case SLCONNT_MDS:
 		m = libsl_try_nid2resm(rq->rq_peer.nid);
@@ -474,11 +510,14 @@ slrpc_handle_connect(struct pscrpc_request *rq, uint64_t magic,
 		if (m->resm_type != SLREST_MDS)
 			mp->rc = -SLERR_RES_BADTYPE;
 		m->resm_res->res_stkvers = mq->stkvers;
+		m->resm_res->res_uptime = tv1.tv_sec;
 		break;
 	default:
 		psc_fatal("choke");
 	}
 	mp->stkvers = sl_stk_version;
+	timespecsub(&tv2, &pfl_uptime, &tv1);
+	mp->uptime = tv1.tv_sec; 
 	return (0);
 }
 
@@ -523,6 +562,9 @@ sl_csvc_markfree(struct slashrpc_cservice *csvc)
 {
 	int locked;
 
+	/* 05/13/2016: Hit crash on slashd during to invalid mutex
+ 	 * coming from pscrpc_fail_import().
+ 	 */
 	locked = CSVC_RLOCK(csvc);
 	csvc->csvc_flags |= CSVCF_WANTFREE;
 	csvc->csvc_flags &= ~(CSVCF_CONNECTED | CSVCF_CONNECTING);
@@ -709,29 +751,6 @@ slrpc_getpeernid(struct pscrpc_export *exp,
 	return (peernid);
 }
 
-uint32_t *
-slrpc_getstkversp(struct slashrpc_cservice *csvc)
-{
-	struct sl_resm *m;
-	struct {
-		struct slashrpc_cservice *csvc;
-		uint32_t stkvers;
-	} *expc;
-
-	switch (csvc->csvc_peertype) {
-	case SLCONNT_CLI:
-		expc = (void *)csvc->csvc_params.scp_csvcp;
-		return (&expc->stkvers);
-	case SLCONNT_IOD:
-	case SLCONNT_MDS:
-		m = (void *)csvc->csvc_params.scp_csvcp;
-		return (&m->resm_res->res_stkvers);
-	default:
-		psc_fatalx("%d: bad peer connection type",
-		    csvc->csvc_peertype);
-	}
-}
-
 int
 csvc_cli_cmp(const void *a, const void *b)
 {
@@ -774,26 +793,40 @@ _sl_csvc_get(const struct pfl_callerinfo *pci,
     enum slconn_type peertype, struct pfl_multiwait *mw)
 {
 	void *hldropf, *hldroparg;
+	uint64_t *uptimep = NULL;
 	uint32_t *stkversp = NULL;
 	int rc = 0, addlist = 0, need_ref = 1;
 	struct slashrpc_cservice *csvc;
 	struct sl_resm *resm = NULL; /* gcc */
 	struct timespec now;
 	lnet_nid_t peernid;
+	char addrbuf[RESM_ADDRBUF_SZ];
+	struct {
+		struct slashrpc_cservice *csvc;
+		uint32_t stkvers;
+		uint64_t uptime;
+	} *expc;
+
+	if (peertype != SLCONNT_CLI && 
+	    peertype != SLCONNT_MDS && 
+	    peertype != SLCONNT_IOD)
+		psc_fatalx("%d: bad peer connection type", peertype);
 
 	if (*csvcp) {
 		csvc = *csvcp;
 		/* 04/04/2016: Hit crash with peer type SLCONNT_CLI */
+		psc_assert(csvc->csvc_peertype == peertype);
 		CSVC_LOCK(csvc);
-		goto restart;
+		goto next;
 	}
 
 	CONF_LOCK();
 	if (*csvcp) {
 		csvc = *csvcp;
+		psc_assert(csvc->csvc_peertype == peertype);
 		CSVC_LOCK(csvc);
 		CONF_ULOCK();
-		goto restart;
+		goto next;
 	}
 
 	switch (peertype) {
@@ -819,8 +852,6 @@ _sl_csvc_get(const struct pfl_callerinfo *pci,
 		hldropf = sl_imp_hldrop_resm;
 		hldroparg = resm;
 		break;
-	default:
-		psc_fatalx("%d: bad peer type", peertype);
 	}
 
 	/* initialize service */
@@ -834,12 +865,7 @@ _sl_csvc_get(const struct pfl_callerinfo *pci,
 
 	/* ensure peer is of the given resource type */
 	switch (peertype) {
-	case SLCONNT_CLI: {
-		char addrbuf[RESM_ADDRBUF_SZ];
-		struct {
-			struct slashrpc_cservice *csvc;
-			uint32_t stkvers;
-		} *expc;
+	case SLCONNT_CLI:
 
 		/* Hold reference as the multiwait arg below. */
 		csvc->csvc_refcnt = 1;
@@ -850,28 +876,37 @@ _sl_csvc_get(const struct pfl_callerinfo *pci,
 			    addrbuf);
 		pfl_multiwaitcond_init(&csvc->csvc_mwc, csvc,
 		    PMWCF_WAKEALL, "cli-%s", addrbuf);
-		expc = (void *)csvc->csvc_params.scp_csvcp;
-		stkversp = &expc->stkvers;
 
-		//if (imp->imp_connection->c_peer)
-
+		addlist = 1;
 		break;
-	    }
 	case SLCONNT_IOD:
 	case SLCONNT_MDS:
 		pfl_multiwaitcond_init(&csvc->csvc_mwc, csvc,
 		    PMWCF_WAKEALL, "res-%s", resm->resm_name);
-		stkversp = &resm->resm_res->res_stkvers;
 		break;
 	}
-	if (peertype == SLCONNT_CLI)
-		addlist = 1;
 
 	*csvcp = csvc;
 	CSVC_LOCK(csvc);
 	CONF_ULOCK();
 
+ next:
+	switch (peertype) {
+	case SLCONNT_CLI:
+		expc = (void *)csvc->csvc_params.scp_csvcp;
+		stkversp = &expc->stkvers;
+		uptimep = &expc->uptime;
+		break;
+	case SLCONNT_IOD:
+	case SLCONNT_MDS:
+		resm = (void *)csvc->csvc_params.scp_csvcp;
+		stkversp = &resm->resm_res->res_stkvers;
+		uptimep = &resm->resm_res->res_uptime;
+		break;
+	}
+
  restart:
+
 	if (need_ref) {
 		sl_csvc_incref(csvc);
 		need_ref = 0;
@@ -954,8 +989,6 @@ _sl_csvc_get(const struct pfl_callerinfo *pci,
 		csvc->csvc_tryref++;
 		CSVC_ULOCK(csvc);
 
-		if (stkversp == NULL)
-			stkversp = slrpc_getstkversp(csvc);
 		rc = ENETUNREACH;
 		DYNARRAY_FOREACH(nr, i, peernids)
 			DYNARRAY_FOREACH(pp, j, &sl_lnet_prids)
@@ -963,7 +996,8 @@ _sl_csvc_get(const struct pfl_callerinfo *pci,
 				    LNET_NIDNET(pp->nid)) {
 					trc = slrpc_issue_connect(
 					    pp->nid, nr->resmnid_nid,
-					    csvc, flags, mw, stkversp);
+					    csvc, flags, mw, stkversp, 
+					    uptimep);
 					if (trc == 0) {
 						rc = 0;
 						goto proc_conn;
@@ -1178,6 +1212,8 @@ slconnthr_watch(struct psc_thread *thr, struct slashrpc_cservice *csvc,
 
 	spinlock(&sl_conn_lock);
 	rc = psc_dynarray_exists(&sct->sct_monres, scp);
+	if (!rc)
+		psc_dynarray_add(&sct->sct_monres, scp);
 	freelock(&sl_conn_lock);
 	if (rc)
 		return;
@@ -1191,7 +1227,6 @@ slconnthr_watch(struct psc_thread *thr, struct slashrpc_cservice *csvc,
 	spinlock(&sl_conn_lock);
 	if (!pfl_multiwait_hascond(&sct->sct_mw, &csvc->csvc_mwc))
 		pfl_multiwait_addcond(&sct->sct_mw, &csvc->csvc_mwc);
-	psc_dynarray_add(&sct->sct_monres, scp);
 	freelock(&sl_conn_lock);
 }
 
@@ -1288,11 +1323,12 @@ slrpc_bulk_check(struct pscrpc_request *rq, const void *hbuf,
     struct iovec *iov, int n)
 {
 	char tbuf[AUTHBUF_ALGLEN];
+	char buf[PSCRPC_NIDSTR_SIZE];
 	int rc = 0;
 
 	slrpc_bulk_sign(rq, tbuf, iov, n);
 	if (memcmp(tbuf, hbuf, AUTHBUF_ALGLEN)) {
-		DEBUG_REQ(PLL_FATAL, rq, "authbuf did not hash "
+		DEBUG_REQ(PLL_FATAL, rq, buf, "authbuf did not hash "
 		    "correctly -- ensure key files are synced");
 		rc = SLERR_AUTHBUF_BADHASH;
 	}
@@ -1374,7 +1410,7 @@ slrpc_initcli(void)
 {
 	psc_poolmaster_init(&sl_csvc_poolmaster,
 	    struct slashrpc_cservice, csvc_lentry, PPMF_AUTO, 64, 64, 0,
-	    NULL, NULL, NULL, "csvc");
+	    NULL, "csvc");
 	sl_csvc_pool = psc_poolmaster_getmgr(&sl_csvc_poolmaster);
 }
 

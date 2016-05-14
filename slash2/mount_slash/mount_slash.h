@@ -53,6 +53,7 @@ enum {
 	MSTHRT_BWATCH,			/* bmap lease watcher */
 	MSTHRT_CTL,			/* control processor */
 	MSTHRT_CTLAC,			/* control acceptor */
+	MSTHRT_REAP,			/* pool reap thread */
 	MSTHRT_FREAP,			/* fcmh reap thread */
 	MSTHRT_FLUSH,			/* bmap write data flush thread */
 	MSTHRT_FSMGR,			/* pscfs manager */
@@ -60,7 +61,6 @@ enum {
 	MSTHRT_RCI,			/* service RPC reqs for CLI from ION */
 	MSTHRT_RCM,			/* service RPC reqs for CLI from MDS */
 	MSTHRT_READAHEAD,		/* readahead thread */
-	MSTHRT_IORETRY,			/* I/O retry thread */
 	MSTHRT_OPSTIMER,		/* opstats updater */
 	MSTHRT_USKLNDPL,		/* userland socket lustre net dev poll thr */
 	MSTHRT_WORKER			/* generic worker */
@@ -103,23 +103,17 @@ struct msreadahead_thread {
 	struct pfl_multiwait		 mrat_mw;
 };
 
-struct msioretry_thread {
-	struct pfl_multiwait		 mirt_mw;
-};
-
 PSCTHR_MKCAST(msattrflushthr, msattrflush_thread, MSTHRT_ATTR_FLUSH);
 PSCTHR_MKCAST(msflushthr, msflush_thread, MSTHRT_FLUSH);
 PSCTHR_MKCAST(msbreleasethr, msbrelease_thread, MSTHRT_BRELEASE);
 PSCTHR_MKCAST(msbwatchthr, msbwatch_thread, MSTHRT_BWATCH);
 PSCTHR_MKCAST(msrcithr, msrci_thread, MSTHRT_RCI);
 PSCTHR_MKCAST(msrcmthr, msrcm_thread, MSTHRT_RCM);
-PSCTHR_MKCAST(msioretrythr, msioretry_thread, MSTHRT_IORETRY);
 PSCTHR_MKCAST(msreadaheadthr, msreadahead_thread, MSTHRT_READAHEAD);
 
 #define NUM_NBRQ_THREADS		16
 #define NUM_BMAP_FLUSH_THREADS		16
 #define NUM_ATTR_FLUSH_THREADS		4
-#define NUM_IO_RETRY_THREADS		4
 #define NUM_READAHEAD_THREADS		4
 
 #define MSL_FIDNS_RPATH			".slfidns"
@@ -132,14 +126,6 @@ PSCTHR_MKCAST(msreadaheadthr, msreadahead_thread, MSTHRT_READAHEAD);
  * XXX This value should be calculated dynamically.
  */
 #define MAX_BMAPS_REQ			2
-
-/*
- * Used to retry an I/O request in the background.
- */
-struct slc_retry_req {
-	struct psc_listentry		 srr_lentry;
-	struct bmpc_ioreq		*srr_ioreq;
-};
 
 struct slc_async_req {
 	struct psc_listentry		  car_lentry;
@@ -338,7 +324,6 @@ int	 _msl_resm_throttle(struct sl_resm *, int);
 
 void	 msbmapthr_spawn(void);
 void	 msctlthr_spawn(void);
-void	 msioretrythr_spawn(void);
 void	 msreadaheadthr_spawn(void);
 void	 msl_readahead_svc_destroy(void);
 
@@ -393,7 +378,7 @@ extern struct psc_poolmgr	*msl_mfh_pool;
 
 extern int			 msl_acl;
 extern int			 msl_force_dio;
-extern int			 msl_direct_io;
+extern int			 msl_fuse_direct_io;
 extern int			 msl_ios_max_inflight_rpcs;
 extern int			 msl_mds_max_inflight_rpcs;
 extern int			 msl_max_nretries;
@@ -404,5 +389,8 @@ extern int			 msl_max_retries;
 extern int			 msl_root_squash;
 extern int			 msl_statfs_pref_ios_only;
 extern uint64_t			 msl_pagecache_maxsize;
+
+void				 msl_pgcache_init(void);
+void				 msl_pgcache_reap(void);
 
 #endif /* _MOUNT_SLASH_H_ */

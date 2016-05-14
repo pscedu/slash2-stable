@@ -943,6 +943,7 @@ msl_read_cleanup(struct pscrpc_request *rq, int rc,
 	struct srm_io_req *mq;
 	struct bmap *b;
 	int i;
+	char buf[PSCRPC_NIDSTR_SIZE];
 
 	b = r->biorq_bmap;
 
@@ -950,7 +951,7 @@ msl_read_cleanup(struct pscrpc_request *rq, int rc,
 	psc_assert(b);
 
 	if (rq)
-		DEBUG_REQ(rc ? PLL_ERROR : PLL_DIAG, rq,
+		DEBUG_REQ(rc ? PLL_ERROR : PLL_DIAG, rq, buf,
 		    "bmap=%p biorq=%p", b, r);
 
 	pfl_fault_here_rc(&rc, EIO, "slash2/read_cb");
@@ -1034,11 +1035,12 @@ msl_dio_cleanup(struct pscrpc_request *rq, int rc,
 	struct bmpc_ioreq *r = args->pointer_arg[MSL_CBARG_BIORQ];
 	struct msl_fsrqinfo *q;
 	struct srm_io_req *mq;
+	char buf[PSCRPC_NIDSTR_SIZE];
 	int op;
 
 	/* rq is NULL it we are called from sl_resm_hldrop() */
 	if (rq) {
-		DEBUG_REQ(PLL_DIAG, rq, "cb");
+		DEBUG_REQ(PLL_DIAG, rq, buf, "cb");
 
 		op = rq->rq_reqmsg->opc;
 		psc_assert(op == SRMT_READ || op == SRMT_WRITE);
@@ -1333,6 +1335,7 @@ msl_read_rpc_launch(struct bmpc_ioreq *r, struct psc_dynarray *bmpces,
 	struct sl_resm *m;
 	uint32_t off = 0;
 	int rc = 0, i;
+	char buf[PSCRPC_NIDSTR_SIZE];
 
 	a = PSCALLOC(sizeof(*a));
 	psc_dynarray_init(a);
@@ -1433,7 +1436,7 @@ msl_read_rpc_launch(struct bmpc_ioreq *r, struct psc_dynarray *bmpces,
  out:
 
 	if (rq) {
-		DEBUG_REQ(PLL_ERROR, rq, "req failed rc=%d", rc);
+		DEBUG_REQ(PLL_ERROR, rq, buf, "req failed rc=%d", rc);
 		pscrpc_req_finished(rq);
 	}
 	if (csvc)
@@ -2352,14 +2355,6 @@ msreadaheadthr_main(struct psc_thread *thr)
 }
 
 void
-msioretrythr_main(struct psc_thread *thr)
-{
-	while (pscthr_run(thr)) {
-		sleep(100000);
-	}
-}
-
-void
 msreadaheadthr_spawn(void)
 {
 	struct msreadahead_thread *mrat;
@@ -2368,7 +2363,7 @@ msreadaheadthr_spawn(void)
 
 	psc_poolmaster_init(&slc_readaheadrq_poolmaster,
 	    struct readaheadrq, rarq_lentry, PPMF_AUTO, 4096, 4096,
-	    4096, NULL, NULL, NULL, "readaheadrq");
+	    4096, NULL, "readaheadrq");
 	slc_readaheadrq_pool = psc_poolmaster_getmgr(
 	    &slc_readaheadrq_poolmaster);
 
@@ -2380,24 +2375,6 @@ msreadaheadthr_spawn(void)
 		    sizeof(*mrat), "msreadaheadthr%d", i);
 		mrat = msreadaheadthr(thr);
 		pfl_multiwait_init(&mrat->mrat_mw, "%s",
-		    thr->pscthr_name);
-		pscthr_setready(thr);
-	}
-}
-
-void
-msioretrythr_spawn(void)
-{
-	struct msioretry_thread *mirt;
-	struct psc_thread *thr;
-	int i;
-return;
-
-	for (i = 0; i < NUM_IO_RETRY_THREADS; i++) {
-		thr = pscthr_init(MSTHRT_IORETRY, msioretrythr_main,
-		    sizeof(*mirt), "msioretrythr%d", i);
-		mirt = msioretrythr(thr);
-		pfl_multiwait_init(&mirt->mirt_mw, "%s",
 		    thr->pscthr_name);
 		pscthr_setready(thr);
 	}

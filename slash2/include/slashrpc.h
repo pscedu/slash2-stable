@@ -666,14 +666,16 @@ struct srm_connect_req {
 	uint32_t		version;
 	 int32_t		nnids;
 	uint64_t		fsuuid;		/* file system unique ID */
+	uint64_t		uptime;
 	uint32_t		stkvers;	/* software stack version */
 	uint32_t		upnonce;	/* uptime instance */
 } __packed;
 
 struct srm_connect_rep {
 	uint64_t		fsuuid;
-	 int32_t		rc;
+	uint64_t		uptime;
 	 int32_t		stkvers;
+	 int32_t		rc;
 } __packed;
 
 struct srm_ping_req {

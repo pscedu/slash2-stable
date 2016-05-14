@@ -54,11 +54,12 @@ __static const char *slconn_restypes[] = {
 	"serial"
 };
 
-void
+int
 sl_conn_prhdr(__unusedx struct psc_ctlmsghdr *mh, __unusedx const void *m)
 {
-	printf("%-11s %38s %-8s %4s %5s %4s %4s\n",
-	    "resource", "host", "type", "flags", "stvrs", "txcr", "#ref");
+	printf("%-11s %38s %-7s %5s %5s %4s %4s %10s\n",
+	    "resource", "host", "type", "flags", "stvrs", "txcr", "#ref", "uptime");
+	return(PSC_CTL_DISPLAY_WIDTH+11);
 }
 
 void
@@ -95,7 +96,7 @@ sl_conn_prdat(const struct psc_ctlmsghdr *mh, const void *m)
 	char *p, *site, nid[NI_MAXHOST], *res, addrbuf[RESM_ADDRBUF_SZ];
 	const struct slctlmsg_conn *scc = m;
 	const char *addr, *stype, *prid;
-	int col;
+	int col, connected = 0;
 
 	stype = slconn_restypes[scc->scc_type];
 
@@ -149,6 +150,7 @@ sl_conn_prdat(const struct psc_ctlmsghdr *mh, const void *m)
 	if (scc->scc_flags & CSVCF_CONNECTED) {
 		setcolor(COLOR_GREEN);
 		printf("O");
+		connected = 1;
 		uncolor();
 	} else {
 		printf("-");
@@ -171,13 +173,21 @@ sl_conn_prdat(const struct psc_ctlmsghdr *mh, const void *m)
 	if (scc->scc_stkvers)
 		uncolor();
 
-	printf("%4d %4d\n", scc->scc_txcr, scc->scc_refcnt);
+	printf("%4d %4d ", scc->scc_txcr, scc->scc_refcnt);
+
+	if (connected)
+		printf("%3ldd%02ldh%02ldm\n",
+		    scc->scc_uptime / (60 * 60 * 24),
+		    (scc->scc_uptime % (60 * 60 * 24)) / (60 * 60),
+		    (scc->scc_uptime % (60 * 60)) / 60);
+	else
+		printf("\n");
 
 	strlcpy(lastsite, site, sizeof(lastsite));
 	strlcpy(lastres, res, sizeof(lastres));
 }
 
-void
+int
 sl_bmap_prhdr(__unusedx struct psc_ctlmsghdr *mh, __unusedx const void *m)
 {
 	int width;
@@ -187,6 +197,7 @@ sl_bmap_prhdr(__unusedx struct psc_ctlmsghdr *mh, __unusedx const void *m)
 		printf("%-16s ", "addr");
 	printf("%-16s %6s %-9s %5s %18s %7s\n",
 	    "fid", "bmapno", "flags", "refs", "ios", "seqno");
+	return(PSC_CTL_DISPLAY_WIDTH);
 }
 
 void
@@ -220,7 +231,7 @@ sl_bmap_prdat(__unusedx const struct psc_ctlmsghdr *mh, const void *m)
 # define BLKSIZE_LABEL "blksize"
 #endif
 
-void
+int
 sl_fcmh_prhdr(__unusedx struct psc_ctlmsghdr *mh, __unusedx const void *m)
 {
 	int width;
@@ -233,15 +244,18 @@ sl_fcmh_prhdr(__unusedx struct psc_ctlmsghdr *mh, __unusedx const void *m)
 	if (width > 6)
 		printf(" %6s", BLKSIZE_LABEL);
 	printf("\n");
+	return(PSC_CTL_DISPLAY_WIDTH);
 }
 
 void
 sl_fcmh_prdat(__unusedx const struct psc_ctlmsghdr *mh, const void *m)
 {
 	const struct slctlmsg_fcmh *scf = m;
+	char fidbuf[SL_FIDBUF_LEN];
 	char buf[PSCFMT_HUMAN_BUFSIZ];
 	int width;
 
+	sl_sprintf_fgen(scf->scf_fg.fg_gen, fidbuf, SL_FIDBUF_LEN);
 	width = psc_ctl_get_display_maxwidth() - PSC_CTL_DISPLAY_WIDTH;
 	pfl_fmt_human(buf, scf->scf_size);
 	printf("%016"SLPRIxFID" %c%c%c%c%c%c%c%c%c%c "
@@ -260,8 +274,7 @@ sl_fcmh_prdat(__unusedx const struct psc_ctlmsghdr *mh, const void *m)
 	    scf->scf_flags & FCMH_BUSY		? 'S' : '-',
 	    scf->scf_flags & FCMH_DELETED	? 'D' : '-',
 	    scf->scf_st_mode, scf->scf_uid, scf->scf_gid, buf,
-	    scf->scf_refcnt, sl_sprinta_fgen(scf->scf_fg.fg_gen),
-	    scf->scf_ptruncgen, scf->scf_utimgen);
+	    scf->scf_refcnt, fidbuf, scf->scf_ptruncgen, scf->scf_utimgen);
 	if (width > 6)
 		printf(" %6"PRIu64, scf->scf_blksize);
 	printf("\n");

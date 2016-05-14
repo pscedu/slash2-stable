@@ -266,7 +266,7 @@ _bmap_get(const struct pfl_callerinfo *pci, struct fidc_membh *f,
 	DEBUG_BMAP(PLL_DIAG, b, "loading bmap; flags=%d", flags);
 	BMAP_ULOCK(b);
 
-	/* mds_bmap_read(), iod_bmap_retrieve(), msl_bmap_retrieve() */
+	/* msl_bmap_retrieve(), iod_bmap_retrieve(), mds_bmap_read() */
 	rc = sl_bmap_ops.bmo_retrievef(b, flags);
 
 	BMAP_LOCK(b);
@@ -351,7 +351,7 @@ bmap_cache_init(size_t priv_size, int count)
 	_psc_poolmaster_init(&bmap_poolmaster,
 	    sizeof(struct bmap) + priv_size,
 	    offsetof(struct bmap, bcm_lentry),
-	    PPMF_AUTO, count, count, 0, NULL, NULL, NULL, NULL, "bmap");
+	    PPMF_AUTO, count, count, 0, NULL, NULL, "bmap");
 	bmap_pool = psc_poolmaster_getmgr(&bmap_poolmaster);
 }
 

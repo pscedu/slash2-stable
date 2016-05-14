@@ -763,7 +763,7 @@ slvr_remove(struct slvr *s)
 	bmap_op_done_type(bii_2_bmap(bii), BMAP_OPCNT_SLVR);
 
 	if (s->slvr_slab)
-		psc_pool_return(slab_pool, s->slvr_slab);
+		slab_free(s->slvr_slab);
 	psc_pool_return(slvr_pool, s);
 }
 
@@ -974,7 +974,7 @@ _slvr_lookup(const struct pfl_callerinfo *pci, uint32_t num,
 			alloc = 1;
 			BII_ULOCK(bii);
 			tmp1 = psc_pool_get(slvr_pool);
-			tmp2 = psc_pool_get(slab_pool);
+			tmp2 = slab_alloc();
 			BII_LOCK(bii);
 			goto retry;
 		}
@@ -1007,7 +1007,7 @@ _slvr_lookup(const struct pfl_callerinfo *pci, uint32_t num,
 	}
 	if (alloc) {
 		psc_pool_return(slvr_pool, tmp1);
-		psc_pool_return(slab_pool, tmp2);
+		slab_free(tmp2);
 	}
 	return (s);
 }
@@ -1104,12 +1104,12 @@ slvr_cache_init(void)
 {
 	psc_poolmaster_init(&slvr_poolmaster,
 	    struct slvr, slvr_lentry, PPMF_AUTO, 512, 512, 0,
-	    NULL, NULL, NULL, "slvr");
+	    NULL, "slvr");
 	slvr_pool = psc_poolmaster_getmgr(&slvr_poolmaster);
 
 	psc_poolmaster_init(&sli_readaheadrq_poolmaster,
 	    struct sli_readaheadrq, rarq_lentry, PPMF_AUTO, 64, 64, 0,
-	    NULL, NULL, NULL, "readaheadrq");
+	    NULL, "readaheadrq");
 	sli_readaheadrq_pool = psc_poolmaster_getmgr(
 	    &sli_readaheadrq_poolmaster);
 
@@ -1125,12 +1125,12 @@ slvr_cache_init(void)
 	if (slcfg_local->cfg_async_io) {
 		psc_poolmaster_init(&sli_iocb_poolmaster,
 		    struct sli_iocb, iocb_lentry, PPMF_AUTO, 64, 64,
-		    1024, NULL, NULL, NULL, "iocb");
+		    1024, NULL, "iocb");
 		sli_iocb_pool = psc_poolmaster_getmgr(&sli_iocb_poolmaster);
 
 		psc_poolmaster_init(&sli_aiocbr_poolmaster,
 		    struct sli_aiocb_reply, aiocbr_lentry, PPMF_AUTO, 64,
-		    64, 1024, NULL, NULL, NULL, "aiocbr");
+		    64, 1024, NULL, "aiocbr");
 		sli_aiocbr_pool = psc_poolmaster_getmgr(&sli_aiocbr_poolmaster);
 
 		lc_reginit(&sli_iocb_pndg, struct sli_iocb, iocb_lentry,

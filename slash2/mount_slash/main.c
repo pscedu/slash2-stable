@@ -160,7 +160,7 @@ struct psc_hashtbl		 msl_gidmap_int;
  */
 int				 msl_acl;
 int				 msl_force_dio;
-int				 msl_direct_io = 1;
+int				 msl_fuse_direct_io = 1;
 int				 msl_root_squash;
 int				 msl_max_retries = 5;
 uint64_t			 msl_pagecache_maxsize;
@@ -492,7 +492,7 @@ mslfsop_create(struct pscfs_req *pfr, pscfs_inum_t pinum,
 
 	fcmh_op_start_type(c, FCMH_OPCNT_OPEN);
 
-	if ((c->fcmh_sstb.sst_mode & _S_IXUGO) == 0 && msl_direct_io)
+	if ((c->fcmh_sstb.sst_mode & _S_IXUGO) == 0 && msl_fuse_direct_io)
 		rflags |= PSCFS_CREATEF_DIO;
 
 	FCMH_ULOCK(c);
@@ -609,7 +609,7 @@ msl_open(struct pscfs_req *pfr, pscfs_inum_t inum, int oflags,
 	 * so don't enable DIO on executable files so they can be
 	 * executed.
 	 */
-	if ((c->fcmh_sstb.sst_mode & _S_IXUGO) == 0 && msl_direct_io)
+	if ((c->fcmh_sstb.sst_mode & _S_IXUGO) == 0 && msl_fuse_direct_io)
 		*rflags |= PSCFS_OPENF_DIO;
 
 	if (oflags & O_TRUNC) {
@@ -1521,6 +1521,7 @@ msl_readdir_cb(struct pscrpc_request *rq, struct pscrpc_async_args *av)
 	struct dircache_page *p = av->pointer_arg[MSL_READDIR_CBARG_PAGE];
 	struct fidc_membh *d = av->pointer_arg[MSL_READDIR_CBARG_FCMH];
 	void *dentbuf = av->pointer_arg[MSL_READDIR_CBARG_DENTBUF];
+	char buf[PSCRPC_NIDSTR_SIZE];
 	int rc;
 
 	SL_GET_RQ_STATUSF(csvc, rq, mp,
@@ -1528,7 +1529,7 @@ msl_readdir_cb(struct pscrpc_request *rq, struct pscrpc_async_args *av)
 
 	if (rc) {
  error:
-		DEBUG_REQ(PLL_ERROR, rq, "rc=%d", rc);
+		DEBUG_REQ(PLL_ERROR, rq, buf, "rc=%d", rc);
 		msl_readdir_error(d, p, rc);
 	} else {
 		size_t len;
@@ -3753,6 +3754,36 @@ msattrflushthr_main(struct psc_thread *thr)
 }
 
 void
+msreapthr_main(struct psc_thread *thr)
+{
+	int curr, last = 0;
+	while (pscthr_run(thr)) {
+		while (fidc_reap(0, SL_FIDC_REAPF_EXPIRED));
+
+		POOL_LOCK(bmpce_pool);
+		curr = bmpce_pool->ppm_nfree;
+		POOL_ULOCK(bmpce_pool);
+
+		POOL_LOCK(bmpce_pool);
+		if (last && curr >= last)
+			psc_pool_try_shrink(bmpce_pool, curr);
+		last = bmpce_pool->ppm_nfree;
+		POOL_ULOCK(bmpce_pool);
+
+		msl_pgcache_reap();
+
+		psc_waitq_waitrel_s(&sl_freap_waitq, NULL, 30);
+
+	}
+}
+
+void
+msreapthr_spawn(int thrtype, const char *name)
+{
+	pscthr_init(thrtype, msreapthr_main, 0, name);
+}
+
+void
 msattrflushthr_spawn(void)
 {
 	struct msattrflush_thread *maft;
@@ -3907,33 +3938,24 @@ msl_init(void)
 	    dce_key, dce_hentry, 3 * slcfg_local->cfg_fidcachesz - 1,
 	    dircache_ent_cmp, "namecache");
 
-	psc_poolmaster_init(&msl_retry_req_poolmaster,
-	    struct slc_retry_req, srr_lentry, PPMF_AUTO, 64, 64, 0,
-	    NULL, NULL, NULL, "retryrq");
-	msl_retry_req_pool = psc_poolmaster_getmgr(&msl_retry_req_poolmaster);
-
 	psc_poolmaster_init(&msl_async_req_poolmaster,
 	    struct slc_async_req, car_lentry, PPMF_AUTO, 64, 64, 0,
-	    NULL, NULL, NULL, "asyncrq");
+	    NULL, "asyncrq");
 	msl_async_req_pool = psc_poolmaster_getmgr(&msl_async_req_poolmaster);
 
 	psc_poolmaster_init(&msl_biorq_poolmaster,
 	    struct bmpc_ioreq, biorq_lentry, PPMF_AUTO, 512, 512, 0,
-	    NULL, NULL, NULL, "biorq");
+	    NULL, "biorq");
 	msl_biorq_pool = psc_poolmaster_getmgr(&msl_biorq_poolmaster);
 
 	psc_poolmaster_init(&msl_mfh_poolmaster,
-	    struct msl_fhent, mfh_lentry, PPMF_AUTO, 64, 64, 0, NULL,
-	    NULL, NULL, "mfh");
+	    struct msl_fhent, mfh_lentry, PPMF_AUTO, 64, 64, 0,
+	    NULL, "mfh");
 	msl_mfh_pool = psc_poolmaster_getmgr(&msl_mfh_poolmaster);
 
 	psc_poolmaster_init(&msl_iorq_poolmaster, struct msl_fsrqinfo,
-	    mfsrq_lentry, PPMF_AUTO, 64, 64, 0, NULL, NULL, NULL,
-	    "iorq");
+	    mfsrq_lentry, PPMF_AUTO, 64, 64, 0, NULL, "iorq");
 	msl_iorq_pool = psc_poolmaster_getmgr(&msl_iorq_poolmaster);
-
-	pll_init(&slc_retry_req_list, struct slc_retry_req, srr_lentry,
-	    NULL);
 
 	/* Start up service threads. */
 	slrpc_initcli();
@@ -3959,10 +3981,9 @@ msl_init(void)
 	    "msl.iorpc-wr:%s");
 
 	msbmapthr_spawn();
-	sl_freapthr_spawn(MSTHRT_FREAP, "msfreapthr");
+	msreapthr_spawn(MSTHRT_REAP, "pool reapthr");
 	msattrflushthr_spawn();
 	msreadaheadthr_spawn();
-	msioretrythr_spawn();
 
 	name = getenv("MDS");
 	if (name == NULL)

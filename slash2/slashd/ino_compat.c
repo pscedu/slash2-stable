@@ -110,15 +110,23 @@ mds_inode_update(int vfsid, struct slash_inode_handle *ih,
 	struct srt_stat sstb;
 	void *h = NULL, *th;
 	int rc;
+	char buf[LINE_MAX];
 
 	sic = &sl_ino_compat_table[old_version];
 	rc = sic->sic_read_ino(ih);
 	if (rc)
 		return (rc);
-	DEBUG_INOH(PLL_INFO, ih, "updating old inode (v %d)",
+
+	OPSTAT_INCR("inode-update");
+	DEBUG_INOH(PLL_WARN, ih, buf, "updating old inode (v %d)",
 	    old_version);
 
 	f = inoh_2_fcmh(ih);
+
+	/* 
+	 * This logic was introduced by commit 
+	 * 85f8cf4f751fe8348e1dc997d6f73f99a1d37938
+	 */
 	snprintf(fn, sizeof(fn), "%016"PRIx64".update", fcmh_2_fid(f));
 	rc = mdsio_opencreatef(vfsid, mds_tmpdir_inum[vfsid],
 	    &rootcreds, O_RDWR | O_CREAT | O_TRUNC,
@@ -163,7 +171,7 @@ mds_inode_update(int vfsid, struct slash_inode_handle *ih,
 	if (rc) {
 		mdsio_unlink(vfsid, mds_tmpdir_inum[vfsid], NULL, fn,
 		    &rootcreds, NULL, NULL);
-		DEBUG_INOH(PLL_ERROR, ih, "error updating old inode "
+		DEBUG_INOH(PLL_ERROR, ih, buf, "error updating old inode "
 		    "rc=%d", rc);
 	}
 	return (rc);
@@ -176,17 +184,28 @@ mds_inode_update_interrupted(int vfsid, struct slash_inode_handle *ih,
 	char fn[NAME_MAX + 1];
 	struct srt_stat sstb;
 	struct iovec iovs[2];
-	uint64_t crc, od_crc;
 	void *h = NULL, *th;
 	mdsio_fid_t inum;
 	int exists = 0;
 	size_t nb;
+	uint64_t od_crc;
+#if 0
+	uint64_t crc;
+	char buf[LINE_MAX];
+#endif
 
 	th = inoh_2_mfh(ih);
 
 	snprintf(fn, sizeof(fn), "%016"PRIx64".update",
 	    inoh_2_fid(ih));
 
+	/*
+ 	 * 05/11/2016: I replicate a slash2 tree from one IOS to another and
+ 	 * then build tree there.  The build stalls on .sconsign.dblite.
+ 	 * (setattr return EIO). Later I tried to rm this file. I got
+ 	 * ENONET from the following lookup, and mds_inode_read()
+ 	 * turns it into EIO.
+ 	 */
 	*rc = mdsio_lookup(vfsid, mds_tmpdir_inum[vfsid], fn, &inum,
 	    &rootcreds, NULL);
 	if (*rc)
@@ -206,15 +225,24 @@ mds_inode_update_interrupted(int vfsid, struct slash_inode_handle *ih,
 	if (*rc)
 		PFL_GOTOERR(out, *rc);
 
+#if 0
+	/*
+ 	 * Let us trust ZFS o do the right thing. This code is trigger the
+ 	 * above-commented issue again. I need to re-visit the update 
+ 	 * interrupted issue some day.  ZFS never does write-in-place, we
+ 	 * should not need to create an "update" version of the file in
+ 	 * the first place.
+ 	 */
 	psc_crc64_calc(&crc, &ih->inoh_ino, sizeof(ih->inoh_ino));
 	if (crc != od_crc) {
 		OPSTAT_INCR("badcrc");
 		*rc = PFLERR_BADCRC;
-		DEBUG_INOH(PLL_WARN, ih, "CRC failed "
+		DEBUG_INOH(PLL_WARN, ih, buf, "CRC failed "
 		    "want=%"PSCPRIxCRC64", got=%"PSCPRIxCRC64,
 		    od_crc, crc);
 		PFL_GOTOERR(out, *rc);
 	}
+#endif
 
 	exists = 1;
 

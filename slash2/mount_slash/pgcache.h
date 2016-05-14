@@ -73,6 +73,12 @@ struct bmap_pagecache_entry {
 	RB_ENTRY(bmap_pagecache_entry) bmpce_tentry;
 	struct psc_listentry	 bmpce_lentry;	/* chain on bmap LRU */
 };
+struct bmap_page_entry {
+	union {
+		struct psc_listentry	 page_lentry;
+		char			 page_buf[BMPC_BUFSZ];
+	};
+};
 
 /* bmpce_flags */
 #define BMPCEF_DATARDY		(1 <<  0)	/* data loaded in memory */
@@ -86,7 +92,6 @@ struct bmap_pagecache_entry {
 #define BMPCEF_IDLE		(1 <<  8)	/* on idle_pages listcache */
 #define BMPCEF_REAPED		(1 <<  9)	/* reaper has removed us from LRU listcache */
 #define BMPCEF_READALC		(1 << 10)	/* on readahead_pages listcache */
-#define BMPCEF_FREED		(1 << 11)	/* memory for page returned to system (sanity check) */
 
 #define BMPCE_LOCK(e)		spinlock(&(e)->bmpce_lock)
 #define BMPCE_ULOCK(e)		freelock(&(e)->bmpce_lock)
@@ -298,13 +303,14 @@ struct bmpc_ioreq *
 #define bmpce_lookup(r, b, fl, off, wq, ep)				\
 	_bmpce_lookup(PFL_CALLERINFO(), (r), (b), (fl), (off), (wq), (ep))
 
-int	 bmpce_init(struct psc_poolmgr *, void *);
+void	 bmpce_init(struct bmap_pagecache_entry *);
 int	_bmpce_lookup(const struct pfl_callerinfo *, struct bmpc_ioreq *,
 	     struct bmap *, int, uint32_t, struct psc_waitq *,
 	     struct bmap_pagecache_entry **);
 void	 bmpce_release(struct bmap_pagecache_entry *);
 
-void	 bwc_release(struct bmpc_write_coalescer *);
+struct bmpc_write_coalescer *	 bwc_alloc(void);
+void				 bwc_free(struct bmpc_write_coalescer *);
 
 extern struct psc_poolmgr	*bmpce_pool;
 extern struct psc_poolmgr	*bwc_pool;

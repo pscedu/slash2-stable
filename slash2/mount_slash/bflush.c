@@ -236,7 +236,7 @@ msl_ric_bflush_cb(struct pscrpc_request *rq,
 
 	pfl_opstats_grad_incr(&slc_iorpc_iostats_wr, bwc->bwc_size);
 
-	bwc_release(bwc);
+	bwc_free(bwc);
 	sl_csvc_decref(csvc);
 
 	return (0);
@@ -251,6 +251,7 @@ bmap_flush_create_rpc(struct bmpc_write_coalescer *bwc,
 	struct srm_io_req *mq;
 	struct srm_io_rep *mp;
 	struct sl_resm *m;
+	char buf[PSCRPC_NIDSTR_SIZE];
 	int rc;
 
 	m = libsl_ios2resm(bmap_2_ios(b));
@@ -274,7 +275,7 @@ bmap_flush_create_rpc(struct bmpc_write_coalescer *bwc,
 
 	mq->sbd = *bmap_2_sbd(b);
 
-	DEBUG_REQ(PLL_DIAG, rq, "sending WRITE RPC to iosid=%#x "
+	DEBUG_REQ(PLL_DIAG, rq, buf, "sending WRITE RPC to iosid=%#x "
 	    "fid="SLPRI_FG" off=%u sz=%u ios=%u infl=%d",
 	    m->resm_res_id, SLPRI_FG_ARGS(&mq->sbd.sbd_fg), mq->offset,
 	    mq->size, bmap_2_ios(b), rpci->rpci_infl_rpcs);
@@ -424,7 +425,7 @@ bmap_flush_send_rpcs(struct bmpc_write_coalescer *bwc)
 	if (csvc)
 		sl_csvc_decref(csvc);
 
-	bwc_release(bwc);
+	bwc_free(bwc);
 }
 
 /*
@@ -590,7 +591,7 @@ bmap_flush_trycoalesce(const struct psc_dynarray *biorqs, int *indexp)
 
 	psc_assert(psc_dynarray_len(biorqs) > *indexp);
 
-	bwc = psc_pool_get(bwc_pool);
+	bwc = bwc_alloc();
 
 	for (idx = 0; idx + *indexp < psc_dynarray_len(biorqs);
 	    idx++, last = curr) {
@@ -677,7 +678,7 @@ bmap_flush_trycoalesce(const struct psc_dynarray *biorqs, int *indexp)
 	if (!(large || expired)) {
 		/* Clean up any lingering biorq's. */
 		bwc_desched(bwc);
-		bwc_release(bwc);
+		bwc_free(bwc);
 		bwc = NULL;
 	}
 
