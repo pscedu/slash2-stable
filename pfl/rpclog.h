@@ -64,7 +64,7 @@ pscrpc_rqphase2str(struct pscrpc_request *req)
 	(rq)->rq_abort_reply	? "A" : "",				\
 	(rq)->rq_waiting	? "W" : ""
 
-#define DEBUGS_REQ(level, ss, rq, fmt, ...)				\
+#define DEBUGS_REQ(level, ss, rq, buf, fmt, ...)			\
 	psclogs((level), (ss),						\
 	    "req@%p x%"PRId64"/t%"PRId64" cb=%p "			\
 	    "c%"PRIx64" "						\
@@ -78,10 +78,10 @@ pscrpc_rqphase2str(struct pscrpc_request *req)
 	       (rq)->rq_reqmsg->handle.cookie : 0xdeadbeef,		\
 	    (rq)->rq_reqmsg ? (int)(rq)->rq_reqmsg->opc : -1,		\
 	    (rq)->rq_import ?						\
-	       pscrpc_id2str2((rq)->rq_import->imp_connection->c_peer) :\
-	       (rq)->rq_conn ? pscrpc_nid2str2((rq)->rq_conn->		\
-		  c_peer.nid) : (rq)->rq_peer.nid != LNET_NID_ANY ?	\
-		     pscrpc_nid2str2((rq)->rq_peer.nid) : "<?>",	\
+	       pscrpc_id2str2((rq)->rq_import->imp_connection->c_peer, buf) :	\
+	       (rq)->rq_conn ? pscrpc_nid2str2((rq)->rq_conn->			\
+		  c_peer.nid, buf) : (rq)->rq_peer.nid != LNET_NID_ANY ?	\
+		     pscrpc_nid2str2((rq)->rq_peer.nid, buf) : "<?>",	\
 	    (rq)->rq_import ?						\
 	       (int)(rq)->rq_import->imp_cli_request_portal : -1,	\
 	    (rq)->rq_reqlen, (rq)->rq_replen,				\
@@ -97,7 +97,7 @@ pscrpc_rqphase2str(struct pscrpc_request *req)
 	    (rq)->rq_repmsg ? (rq)->rq_repmsg->status : 0,		\
 	    (rq)->rq_timeout, (rq)->rq_sent, ## __VA_ARGS__)
 
-#define DEBUG_REQ(level, rq, fmt, ...) DEBUGS_REQ((level), PSS_RPC, (rq), fmt, ## __VA_ARGS__)
+#define DEBUG_REQ(level, rq, buf, fmt, ...) DEBUGS_REQ((level), PSS_RPC, (rq), buf, fmt, ## __VA_ARGS__)
 
 #define DEBUG_EXP(level, exp, fmt, ...)					\
 	psclogs((level), PSS_RPC,					\

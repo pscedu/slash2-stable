@@ -132,7 +132,7 @@ _psc_mutex_reqlock(const struct pfl_callerinfo *pci,
 	if (rc == EDEADLK)
 		rc = 1;
 	else if (rc)
-		psc_fatalx("pthread_mutex_unlock: %s", strerror(rc));
+		psc_fatalx("pthread_mutex_lock: %s", strerror(rc));
 	mut->pm_owner = pthread_self();
 	PMUT_LOG(mut, "acquired, req=%d", rc);
 	return (rc);

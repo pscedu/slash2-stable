@@ -237,7 +237,7 @@ pfl_fsthr_getpri(struct psc_thread *thr)
 {
 	struct pfl_fsthr *pft;
 
-	//psc_assert(thr->pscthr_type == PFL_THRT_FSTHR);
+	psc_assert(thr->pscthr_type == PFL_THRT_FS);
 	pft = thr->pscthr_private;
 	return (pft->pft_private);
 }
@@ -247,7 +247,7 @@ pfl_fsthr_setpri(struct psc_thread *thr, void *data)
 {
 	struct pfl_fsthr *pft;
 
-	//psc_assert(thr->pscthr_type == PFL_THRT_FSTHR);
+	psc_assert(thr->pscthr_type == PFL_THRT_FS);
 	pft = thr->pscthr_private;
 	pft->pft_private = data;
 }
@@ -342,7 +342,7 @@ pfl_ctlrep_getfsrq(int fd, struct psc_ctlmsghdr *mh, void *m)
 		    "%s", pfr->pfr_thread ? pfr->pfr_thread->pscthr_name
 		    : "<none>");
 
-		rc = psc_ctlmsg_sendv(fd, mh, pcfr);
+		rc = psc_ctlmsg_sendv(fd, mh, pcfr, NULL);
 		if (!rc)
 			break;
 	}

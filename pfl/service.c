@@ -277,6 +277,7 @@ pscrpc_server_handle_request(struct pscrpc_service *svc,
 	struct pscrpc_thread *prt;
 	long                   timediff;
 	int                    rc;
+	char buf[PSCRPC_NIDSTR_SIZE];
 
 	LASSERT(svc);
 
@@ -339,7 +340,7 @@ pscrpc_server_handle_request(struct pscrpc_service *svc,
 		goto out;
 	}
 
-	DEBUG_REQ(PLL_DIAG, request, "got req xid=%"PRId64, request->rq_xid);
+	DEBUG_REQ(PLL_DIAG, request, buf, "got req xid=%"PRId64, request->rq_xid);
 
 	request->rq_svc_thread = thread;
 	request->rq_conn = pscrpc_get_connection(request->rq_peer,
@@ -388,13 +389,13 @@ pscrpc_server_handle_request(struct pscrpc_service *svc,
 	prt = pscrpcthr(thread);
 	prt->prt_peer_addr = request->rq_peer.nid;
 
-	DEBUG_REQ(PLL_DEBUG, request, "handling RPC");
+	DEBUG_REQ(PLL_DEBUG, request, buf, "handling RPC");
 
 	rc = svc->srv_handler(request);
 
 	request->rq_phase = PSCRPC_RQ_PHASE_COMPLETE;
 
-	DEBUG_REQ(PLL_DEBUG, request, "handled RPC");
+	DEBUG_REQ(PLL_DEBUG, request, buf, "handled RPC");
 
 	prt->prt_peer_addr = LNET_NID_ANY;
 	prt->prt_peer_addrbuf[0] = '\0';
@@ -434,7 +435,7 @@ pscrpc_server_handle_request(struct pscrpc_service *svc,
 	timediff = cfs_timeval_sub(&work_end, &work_start, NULL);
 
 	if (timediff / 1000000 > pfl_rpc_timeout)
-		DEBUG_REQ(PLL_ERROR, request,
+		DEBUG_REQ(PLL_ERROR, request, buf,
 		    "timeout, processed in %lds",
 		    cfs_timeval_sub(&work_end, &request->rq_arrival_time,
 		      NULL) / 1000000);
@@ -568,24 +569,26 @@ int
 pscrpc_target_send_reply_msg(struct pscrpc_request *req, int rc,
     int fail_id)
 {
+	char buf[PSCRPC_NIDSTR_SIZE];
+
 #if PAULS_TODO
 	if (PSCRPC_OBD_FAIL_CHECK(fail_id | PSCRPC_OBD_FAIL_ONCE)) {
 		obd_fail_loc |= PSCRPC_OBD_FAIL_ONCE | PSCRPC_OBD_FAILED;
-		DEBUG_REQ(PLL_ERROR, req, "dropping reply");
+		DEBUG_REQ(PLL_ERROR, req, buf, "dropping reply");
 		return (-ECOMM);
 	}
 #endif
 	if (fail_id) {
-		DEBUG_REQ(PLL_ERROR, req, "dropping reply");
+		DEBUG_REQ(PLL_ERROR, req, buf,"dropping reply");
 		return (-ECOMM);
 	}
 
 	if (rc) {
-		DEBUG_REQ(PLL_ERROR, req, "processing error (%d)", rc);
+		DEBUG_REQ(PLL_ERROR, req, buf, "processing error (%d)", rc);
 		req->rq_status = rc;
 		return (pscrpc_error(req));
 	} else {
-		DEBUG_REQ(PLL_DIAG, req, "sending reply");
+		DEBUG_REQ(PLL_DIAG, req, buf, "sending reply");
 	}
 
 	return (pscrpc_send_reply(req, 1));
@@ -983,7 +986,7 @@ pscrpc_init_svc(int nbufs, int bufsize, int max_req_size,
 
 	psc_poolmaster_init(&svc->srv_poolmaster,
 	    struct pscrpc_request_buffer_desc, rqbd_lentry, PPMF_AUTO,
-	    64, 64, 0, NULL, NULL, NULL, "rqbd-%s", svc->srv_name);
+	    64, 64, 0, NULL, "rqbd-%s", svc->srv_name);
 	svc->srv_pool = psc_poolmaster_getmgr(
 	    &svc->srv_poolmaster);
 
@@ -1141,7 +1144,7 @@ psc_ctlrep_getrpcsvc(int fd, struct psc_ctlmsghdr *mh, void *m)
 			pcrs->pcrs_flags |= PSCRPC_SVCF_COUNT_PEER_QLENS;
 		SVC_ULOCK(s);
 
-		rc = psc_ctlmsg_sendv(fd, mh, pcrs);
+		rc = psc_ctlmsg_sendv(fd, mh, pcrs, NULL);
 		if (!rc)
 			break;
 	}

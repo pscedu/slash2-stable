@@ -46,12 +46,13 @@ pscrpc_nbreqset_add(struct pscrpc_request_set *set,
     struct pscrpc_request *rq)
 {
 	int rc;
+	char buf[PSCRPC_NIDSTR_SIZE];
 
 	rq->rq_compl = &set->set_compl;
 	rc = pscrpc_push_req(rq);
 	if (rc) {
 		rq->rq_compl = NULL;
-		DEBUG_REQ(PLL_ERROR, rq, "send failure: %s",
+		DEBUG_REQ(PLL_ERROR, rq, buf, "send failure: %s",
 		    pfl_strerror(rc));
 	} else {
 		/*

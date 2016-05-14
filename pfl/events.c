@@ -92,6 +92,7 @@ void
 pscrpc_request_out_callback(lnet_event_t *ev)
 {
 	int silent;
+	char buf[PSCRPC_NIDSTR_SIZE];
 	struct pscrpc_cb_id   *cbid = ev->md.user_ptr;
 	struct pscrpc_request *req = cbid->cbid_arg;
 
@@ -115,7 +116,7 @@ pscrpc_request_out_callback(lnet_event_t *ev)
 	}
 
 	if (!silent)
-		DEBUG_REQ(ev->status ? PLL_ERROR : PLL_DIAG, req,
+		DEBUG_REQ(ev->status ? PLL_ERROR : PLL_DIAG, req, buf,
 		    "type %d, status %d", ev->type, ev->status);
 
 	/* these balance the references in ptl_send_rpc() */
@@ -312,6 +313,7 @@ pscrpc_reply_in_callback(lnet_event_t *ev)
 {
 	struct pscrpc_cb_id   *cbid = ev->md.user_ptr;
 	struct pscrpc_request *req = cbid->cbid_arg;
+	char buf[PSCRPC_NIDSTR_SIZE];
 
 	LASSERT(ev->type == LNET_EVENT_PUT ||
 		ev->type == LNET_EVENT_UNLINK);
@@ -320,7 +322,7 @@ pscrpc_reply_in_callback(lnet_event_t *ev)
 	LASSERT(ev->offset == 0);
 	LASSERT(ev->mlength <= (uint32_t)req->rq_replen);
 
-	DEBUG_REQ(ev->status ? PLL_ERROR : PLL_DIAG, req,
+	DEBUG_REQ(ev->status ? PLL_ERROR : PLL_DIAG, req, buf,
 		  "type=%d status=%d initiator=%s",
 		  ev->type, ev->status, libcfs_id2str(ev->initiator));
 	psclog_debug("event: type=%d status=%d offset=%d mlength=%d",
@@ -618,27 +620,27 @@ pscrpc_ni_init(int type, int nmsgs)
 
 	psc_poolmaster_init(&pscrpc_export_poolmaster,
 	    struct pscrpc_export, exp_lentry, PPMF_AUTO, 64, 64, 0,
-	    NULL, NULL, NULL, "rpcexp");
+	    NULL, "rpcexp");
 	pscrpc_export_pool = psc_poolmaster_getmgr(&pscrpc_export_poolmaster);
 
 	psc_poolmaster_init(&pscrpc_conn_poolmaster,
 	    struct pscrpc_connection, c_hentry.phe_lentry, PPMF_AUTO, 64, 64, 0,
-	    NULL, NULL, NULL, "rpcconn");
+	    NULL, "rpcconn");
 	pscrpc_conn_pool = psc_poolmaster_getmgr(&pscrpc_conn_poolmaster);
 
 	psc_poolmaster_init(&pscrpc_set_poolmaster,
 	    struct pscrpc_request_set, set_lentry, PPMF_AUTO, 64, 64, 0,
-	    NULL, NULL, NULL, "rpcset");
+	    NULL, "rpcset");
 	pscrpc_set_pool = psc_poolmaster_getmgr(&pscrpc_set_poolmaster);
 
 	psc_poolmaster_init(&pscrpc_imp_poolmaster,
 	    struct pscrpc_import, imp_lentry, PPMF_AUTO, 64, 64, 0,
-	    NULL, NULL, NULL, "rpcimp");
+	    NULL, "rpcimp");
 	pscrpc_imp_pool = psc_poolmaster_getmgr(&pscrpc_imp_poolmaster);
 
 	psc_poolmaster_init(&pscrpc_rq_poolmaster,
 	    struct pscrpc_request, rq_lentry, PPMF_AUTO, 64, 64, 0,
-	    NULL, NULL, NULL, "rpcrq");
+	    NULL, "rpcrq");
 	pscrpc_rq_pool = psc_poolmaster_getmgr(&pscrpc_rq_poolmaster);
 
 	pscrpc_conns_init();

@@ -545,11 +545,11 @@ void	 pscrpc_abort_inflight(struct pscrpc_import *);
 #define pscrpc_id2str(prid, buf)	libcfs_id2str2((prid), (buf))
 #define pscrpc_net2str(net, buf)	libcfs_net2str2((net), (buf))
 
-#define pscrpc_id2str2(prid)						\
-	libcfs_id2str2((prid), pfl_tls_get(PFL_TLSIDX_IDBUF, PSCRPC_NIDSTR_SIZE))
+#define pscrpc_id2str2(prid, buf)						\
+	libcfs_id2str2((prid), (buf))
 
-#define pscrpc_nid2str2(nid)						\
-	libcfs_nid2str2((nid), pfl_tls_get(PFL_TLSIDX_NIDBUF, PSCRPC_NIDSTR_SIZE))
+#define pscrpc_nid2str2(nid, buf)						\
+	libcfs_nid2str2((nid), (buf))
 
 /* connection.c */
 void	 pscrpc_drop_conns(lnet_process_id_t *);

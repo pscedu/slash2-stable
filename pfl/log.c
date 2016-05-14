@@ -69,6 +69,8 @@
 #endif
 
 const char			*psc_logfmt = PSC_LOG_FMT;
+int				 psc_logfmt_error = 0;
+
 int				 psc_loglevel = PLL_NOTICE;
 __static struct psclog_data	*psc_logdata;
 char				 psclog_eol[8] = "\n";	/* overrideable with ncurses EOL */
@@ -296,26 +298,36 @@ psclog_getdata(void)
 }
 
 const char *
-pfl_fmtlogdate(const struct timeval *tv, const char **s)
+pfl_fmtlogdate(const struct timeval *tv, const char **s, char *bufp)
 {
-	char fmtbuf[LINE_MAX], *bufp;
+	char fmtbuf[LINE_MAX];
 	const char *end, *start;
 	struct tm tm;
 	time_t sec;
 
 	start = *s + 1;
-	if (*start != '<')
-		errx(1, "invalid log prefix format: %s", start);
+	if (*start != '<') {
+		if (psc_logfmt_error < 5) {
+			psc_logfmt_error++;
+			warnx("invalid log prefix format: %s", start);
+		}
+		*s = *s + 1;
+		return ("");
+	}
 	for (end = start++;
 	    *end && *end != '>' && end - start < LINE_MAX; end++)
 		;
-	if (*end != '>')
-		errx(1, "invalid log prefix format: %s", end);
+	if (*end != '>') {
+		if (psc_logfmt_error < 5) {
+			psc_logfmt_error++;
+			warnx("invalid log suffix format: %s", end);
+		}
+		*s = *s + 1;
+		return ("");
+	}
 
 	memcpy(fmtbuf, start, end - start);
 	fmtbuf[end - start] = '\0';
-
-	bufp = pfl_tls_get(PFL_TLSIDX_LOGDATEBUF, LINE_MAX);
 
 	sec = tv->tv_sec;
 	localtime_r(&sec, &tm);
@@ -388,6 +400,7 @@ void
 _psclogv(const struct pfl_callerinfo *pci, int level, int options,
     const char *fmt, va_list ap)
 {
+	char bufp[LINE_MAX];
 	char *p, buf[BUFSIZ];
 	extern const char *__progname;
 	struct psc_thread *thr;
@@ -415,7 +428,7 @@ _psclogv(const struct pfl_callerinfo *pci, int level, int options,
 	(void)FMTSTR(buf, sizeof(buf), psc_logfmt,
 		FMTSTRCASE('A', "s", pflog_get_peer_addr(thr))
 		FMTSTRCASE('B', "s", pfl_basename(pci->pci_filename))
-		FMTSTRCASE('D', "s", pfl_fmtlogdate(&tv, &_t))
+		FMTSTRCASE('D', "s", pfl_fmtlogdate(&tv, &_t, bufp))
 		FMTSTRCASE('F', "s", pci->pci_func)
 		FMTSTRCASE('f', "s", pci->pci_filename)
 		FMTSTRCASE('H', "s", psc_hostname)

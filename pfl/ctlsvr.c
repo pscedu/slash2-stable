@@ -81,7 +81,8 @@
  * @m: control message contents.
  */
 int
-psc_ctlmsg_sendv(int fd, const struct psc_ctlmsghdr *mh, const void *m)
+psc_ctlmsg_sendv(int fd, const struct psc_ctlmsghdr *mh, const void *m,
+    struct pfl_mutex *lock)
 {
 	struct pfl_ctl_data *pcd;
 	struct psc_thread *thr;
@@ -91,9 +92,12 @@ psc_ctlmsg_sendv(int fd, const struct psc_ctlmsghdr *mh, const void *m)
 	size_t tsiz;
 	ssize_t n;
 
-	thr = pscthr_get();
-	pct = psc_ctlthr(thr);
-	pcd = pct->pct_ctldata;
+	if (lock == NULL) {
+		thr = pscthr_get();
+		pct = psc_ctlthr(thr);
+		pcd = pct->pct_ctldata;
+		lock = &pcd->pcd_mutex;
+	}
 
 	iov[0].iov_base = (void *)mh;
 	iov[0].iov_len = sizeof(*mh);
@@ -106,9 +110,9 @@ psc_ctlmsg_sendv(int fd, const struct psc_ctlmsghdr *mh, const void *m)
 	msg.msg_iovlen = nitems(iov);
 
 	/* XXX just need a lock on the fd, not the entire ctldata */
-	psc_mutex_lock(&pcd->pcd_mutex);
+	psc_mutex_lock(lock);
 	n = sendmsg(fd, &msg, PFL_MSG_NOSIGNAL);
-	psc_mutex_unlock(&pcd->pcd_mutex);
+	psc_mutex_unlock(lock);
 
 	if (n == -1) {
 		if (errno == EPIPE || errno == ECONNRESET) {
@@ -137,7 +141,8 @@ psc_ctlmsg_sendv(int fd, const struct psc_ctlmsghdr *mh, const void *m)
  *	written to the client preceding the message contents.
  */
 int
-psc_ctlmsg_send(int fd, int id, int type, size_t siz, const void *m)
+psc_ctlmsg_send(int fd, int id, int type, size_t siz, const void *m,
+    struct pfl_mutex *lock)
 {
 	struct psc_ctlmsghdr mh;
 
@@ -145,11 +150,11 @@ psc_ctlmsg_send(int fd, int id, int type, size_t siz, const void *m)
 	mh.mh_id = id;
 	mh.mh_type = type;
 	mh.mh_size = siz;
-	return (psc_ctlmsg_sendv(fd, &mh, m));
+	return (psc_ctlmsg_sendv(fd, &mh, m, lock));
 }
 
 int
-psc_ctlsenderrv(int fd, const struct psc_ctlmsghdr *mhp,
+psc_ctlsenderrv(int fd, const struct psc_ctlmsghdr *mhp, struct pfl_mutex *lock,
     const char *fmt, va_list ap)
 {
 	struct psc_ctlmsg_error pce;
@@ -163,7 +168,7 @@ psc_ctlsenderrv(int fd, const struct psc_ctlmsghdr *mhp,
 	mh.mh_id = mhp->mh_id;
 	mh.mh_type = PCMT_ERROR;
 	mh.mh_size = sizeof(pce);
-	return (psc_ctlmsg_sendv(fd, &mh, &pce));
+	return (psc_ctlmsg_sendv(fd, &mh, &pce, lock));
 }
 
 /*
@@ -173,14 +178,14 @@ psc_ctlsenderrv(int fd, const struct psc_ctlmsghdr *mhp,
  * @fmt: printf(3) format of error message.
  */
 int
-psc_ctlsenderr(int fd, const struct psc_ctlmsghdr *mhp, const char *fmt,
-    ...)
+psc_ctlsenderr(int fd, const struct psc_ctlmsghdr *mhp, struct pfl_mutex *lock, 
+    const char *fmt, ...)
 {
 	va_list ap;
 	int rc;
 
 	va_start(ap, fmt);
-	rc = psc_ctlsenderrv(fd, mhp, fmt, ap);
+	rc = psc_ctlsenderrv(fd, mhp, lock, fmt, ap);
 	va_end(ap);
 	return (rc);
 }
@@ -205,12 +210,12 @@ psc_ctlrep_getsubsys(int fd, struct psc_ctlmsghdr *mh,
 		if (snprintf(&pcss->pcss_names[n * PCSS_NAME_MAX],
 		    PCSS_NAME_MAX, "%s", pfl_subsys_name(n)) == -1) {
 			psclog_warn("snprintf");
-			rc = psc_ctlsenderr(fd, mh,
+			rc = psc_ctlsenderr(fd, mh, NULL,
 			    "unable to retrieve subsystems");
 			goto done;
 		}
 	mh->mh_size = siz;
-	rc = psc_ctlmsg_sendv(fd, mh, pcss);
+	rc = psc_ctlmsg_sendv(fd, mh, pcss, NULL);
  done:
 	/* reset because we used our own buffer */
 	mh->mh_size = 0;
@@ -242,7 +247,7 @@ psc_ctlmsg_thread_send(int fd, struct psc_ctlmsghdr *mh, void *m,
 	    psc_dynarray_len(&pfl_subsystems) *
 	    sizeof(*pct->pct_loglevels));
 	mh->mh_size = siz;
-	rc = psc_ctlmsg_sendv(fd, mh, pct);
+	rc = psc_ctlmsg_sendv(fd, mh, pct, NULL);
 	/* reset because we used our own buffer */
 	mh->mh_size = 0;
 	PSCFREE(pct);
@@ -297,7 +302,7 @@ psc_ctlrep_gethashtable(int fd, struct psc_ctlmsghdr *mh, void *m)
 			    &pcht->pcht_totalbucks,
 			    &pcht->pcht_usedbucks, &pcht->pcht_nents,
 			    &pcht->pcht_maxbucklen);
-			rc = psc_ctlmsg_sendv(fd, mh, pcht);
+			rc = psc_ctlmsg_sendv(fd, mh, pcht, NULL);
 			if (!rc)
 				break;
 
@@ -309,7 +314,7 @@ psc_ctlrep_gethashtable(int fd, struct psc_ctlmsghdr *mh, void *m)
 	PLL_ULOCK(&psc_hashtbls);
 
 	if (rc && !found && !all)
-		rc = psc_ctlsenderr(fd, mh, "unknown hash table: %s",
+		rc = psc_ctlsenderr(fd, mh, NULL, "unknown hash table: %s",
 		    name);
 	return (rc);
 }
@@ -350,7 +355,7 @@ psc_ctlrep_getlistcache(int fd, struct psc_ctlmsghdr *mh, void *m)
 			pclc->pclc_nw_empty = psc_waitq_nwaiters(
 			    &lc->plc_wq_empty);
 			LIST_CACHE_ULOCK(lc);
-			rc = psc_ctlmsg_sendv(fd, mh, pclc);
+			rc = psc_ctlmsg_sendv(fd, mh, pclc, NULL);
 			if (!rc)
 				break;
 
@@ -361,7 +366,7 @@ psc_ctlrep_getlistcache(int fd, struct psc_ctlmsghdr *mh, void *m)
 	}
 	PLL_ULOCK(&psc_listcaches);
 	if (rc && !found && !all)
-		rc = psc_ctlsenderr(fd, mh, "unknown listcache: %s",
+		rc = psc_ctlsenderr(fd, mh, NULL, "unknown listcache: %s",
 		    name);
 	return (rc);
 }
@@ -419,18 +424,21 @@ psc_ctlrep_getpool(int fd, struct psc_ctlmsghdr *mh, void *msg)
 					&m->ppm_lc.plc_wq_empty);
 			}
 			POOL_ULOCK(m);
-			rc = psc_ctlmsg_sendv(fd, mh, pcpl);
+			rc = psc_ctlmsg_sendv(fd, mh, pcpl, NULL);
 			if (!rc)
 				break;
 
-			/* Terminate on exact match. */
+			/* 
+			 * Terminate on exact match. ppm_name is
+			 * m->ppm_u.ppmu_explist.pexl_name. 
+			 */
 			if (strcmp(m->ppm_name, name) == 0)
 				break;
 		}
 	}
 	PLL_ULOCK(&psc_pools);
 	if (rc && !found && !all)
-		rc = psc_ctlsenderr(fd, mh, "unknown pool: %s", name);
+		rc = psc_ctlsenderr(fd, mh, NULL, "unknown pool: %s", name);
 	return (rc);
 }
 
@@ -469,7 +477,7 @@ psc_ctlmsg_param_send(int fd, const struct psc_ctlmsghdr *mh,
 	*s = '\0';
 
 	snprintf(pcp->pcp_value, sizeof(pcp->pcp_value), "%s", value);
-	rc = psc_ctlmsg_sendv(fd, mh, pcp);
+	rc = psc_ctlmsg_sendv(fd, mh, pcp, NULL);
 
 	/*
 	 * Restore original threadname value for additional processing.
@@ -488,7 +496,7 @@ psc_ctlparam_log_level(int fd, struct psc_ctlmsghdr *mh,
 	struct psc_thread *thr;
 
 	if (nlevels > 3)
-		return (psc_ctlsenderr(fd, mh, "invalid field"));
+		return (psc_ctlsenderr(fd, mh, NULL, "invalid field"));
 
 	levels[0] = "log";
 	levels[1] = "level";
@@ -500,11 +508,11 @@ psc_ctlparam_log_level(int fd, struct psc_ctlmsghdr *mh,
 	if (set) {
 		loglevel = psc_loglevel_fromstr(pcp->pcp_value);
 		if (loglevel == PNLOGLEVELS)
-			return (psc_ctlsenderr(fd, mh,
+			return (psc_ctlsenderr(fd, mh, NULL,
 			    "invalid log.level value: %s",
 			    pcp->pcp_value));
 		if (pcp->pcp_flags & (PCPF_ADD | PCPF_SUB))
-			return (psc_ctlsenderr(fd, mh,
+			return (psc_ctlsenderr(fd, mh, NULL,
 			    "invalid operation"));
 	}
 
@@ -512,7 +520,7 @@ psc_ctlparam_log_level(int fd, struct psc_ctlmsghdr *mh,
 		/* Subsys specified, use it. */
 		subsys = pfl_subsys_id(levels[2]);
 		if (subsys == -1)
-			return (psc_ctlsenderr(fd, mh,
+			return (psc_ctlsenderr(fd, mh, NULL,
 			    "invalid log.level subsystem: %s",
 			    levels[2]));
 		start_ss = subsys;
@@ -555,7 +563,7 @@ psc_ctlparam_log_level(int fd, struct psc_ctlmsghdr *mh,
  done:
 	PLL_ULOCK(&psc_threads);
 	if (!found)
-		return (psc_ctlsenderr(fd, mh, "invalid thread: %s",
+		return (psc_ctlsenderr(fd, mh, NULL, "invalid thread: %s",
 		    pcp->pcp_thrname));
 	return (rc);
 }
@@ -568,11 +576,11 @@ psc_ctlparam_log_file(int fd, struct psc_ctlmsghdr *mh,
 	int rc = 1, set;
 
 	if (nlevels > 2)
-		return (psc_ctlsenderr(fd, mh, "invalid field"));
+		return (psc_ctlsenderr(fd, mh, NULL, "invalid field"));
 
 	if (strcmp(pcp->pcp_thrname, PCTHRNAME_EVERYONE) != 0) {
 		if (nlevels == 2)
-			rc = psc_ctlsenderr(fd, mh, "log.file: "
+			rc = psc_ctlsenderr(fd, mh, NULL, "log.file: "
 			    "not thread specific");
 		return (rc);
 	}
@@ -585,11 +593,11 @@ psc_ctlparam_log_file(int fd, struct psc_ctlmsghdr *mh,
 	if (set) {
 		if (pcp->pcp_flags & PCPF_SUB)
 			return (psc_ctlsenderr(fd,
-			    mh, "invalid operation"));
+			    mh, NULL, "invalid operation"));
 		if (freopen(pcp->pcp_value,
 		    pcp->pcp_flags & PCPF_ADD ?
 		    "a" : "w", stderr) == NULL)
-			rc = psc_ctlsenderr(fd, mh, "log.file: %s",
+			rc = psc_ctlsenderr(fd, mh, NULL, "log.file: %s",
 			    strerror(errno));
 	} else {
 		char linkname[128], logname[PCP_VALUE_MAX];
@@ -616,11 +624,11 @@ psc_ctlparam_log_format(int fd, struct psc_ctlmsghdr *mh,
 	int rc = 1, set;
 
 	if (nlevels > 2)
-		return (psc_ctlsenderr(fd, mh, "invalid field"));
+		return (psc_ctlsenderr(fd, mh, NULL, "invalid field"));
 
 	if (strcmp(pcp->pcp_thrname, PCTHRNAME_EVERYONE) != 0) {
 		if (nlevels == 2)
-			rc = psc_ctlsenderr(fd, mh, "log.format: "
+			rc = psc_ctlsenderr(fd, mh, NULL, "log.format: "
 			    "not thread specific");
 		return (rc);
 	}
@@ -631,19 +639,23 @@ psc_ctlparam_log_format(int fd, struct psc_ctlmsghdr *mh,
 	set = (mh->mh_type == PCMT_SETPARAM);
 
 	if (set) {
-		/* XXX race */
 		static char logbuf[LINE_MAX];
 
 		if (nlevels != 2)
-			return (psc_ctlsenderr(fd, mh, "log.format: "
+			return (psc_ctlsenderr(fd, mh, NULL, "log.format: "
 			    "invalid level of specification"));
 
 		if (pcp->pcp_flags & (PCPF_ADD | PCPF_SUB))
-			return (psc_ctlsenderr(fd, mh,
+			return (psc_ctlsenderr(fd, mh, NULL,
 			    "invalid operation"));
 
 		strlcpy(logbuf, pcp->pcp_value, sizeof(logbuf));
+		/*
+ 		 * Let it race, the new format will settle down
+ 		 * after a while.
+ 		 */
 		psc_logfmt = logbuf;
+		psc_logfmt_error = 0;
 	} else
 		rc = psc_ctlmsg_param_send(fd, mh, pcp,
 		    PCTHRNAME_EVERYONE, levels, 2, psc_logfmt);
@@ -661,11 +673,11 @@ psc_ctlparam_log_points(int fd, struct psc_ctlmsghdr *mh,
 	long l;
 
 	if (nlevels > 2)
-		return (psc_ctlsenderr(fd, mh, "invalid field"));
+		return (psc_ctlsenderr(fd, mh, NULL, "invalid field"));
 
 	if (strcmp(pcp->pcp_thrname, PCTHRNAME_EVERYONE) != 0) {
 		if (nlevels == 2)
-			rc = psc_ctlsenderr(fd, mh, "log.points: "
+			rc = psc_ctlsenderr(fd, mh, NULL, "log.points: "
 			    "not thread specific");
 		return (rc);
 	}
@@ -676,14 +688,14 @@ psc_ctlparam_log_points(int fd, struct psc_ctlmsghdr *mh,
 	if (mh->mh_type == PCMT_SETPARAM) {
 		sln = strchr(pcp->pcp_value, ':');
 		if (sln == NULL)
-			return (psc_ctlsenderr(fd, mh,
+			return (psc_ctlsenderr(fd, mh, NULL,
 			    "invalid point format"));
 
 		*sln++ = '\0';
 		l = strtol(sln, &endp, 10);
 		if (l < 1 || l > INT_MAX ||
 		    *endp || endp == sln)
-			return (psc_ctlsenderr(fd, mh,
+			return (psc_ctlsenderr(fd, mh, NULL,
 			    "invalid point format"));
 		line = l;
 
@@ -694,7 +706,7 @@ psc_ctlparam_log_points(int fd, struct psc_ctlmsghdr *mh,
 				psc_dynarray_setpos(&_pfl_logpoints,
 				    pt->plogpt_idx, NULL);
 			else
-				return (psc_ctlsenderr(fd, mh,
+				return (psc_ctlsenderr(fd, mh, NULL,
 				    "no such log point"));
 		} else if (pcp->pcp_flags & PCPF_ADD) {
 			pt = _pfl_get_logpointid(pcp->pcp_value, line,
@@ -702,7 +714,7 @@ psc_ctlparam_log_points(int fd, struct psc_ctlmsghdr *mh,
 			psc_dynarray_setpos(&_pfl_logpoints,
 			    pt->plogpt_idx, pt);
 		} else
-			return (psc_ctlsenderr(fd, mh,
+			return (psc_ctlsenderr(fd, mh, NULL,
 			    "invalid operation"));
 	} else {
 		DYNARRAY_FOREACH(pt, n, &_pfl_logpoints) {
@@ -731,11 +743,11 @@ psc_ctlparam_get_rss(int fd, struct psc_ctlmsghdr *mh,
 	int rc = 1, statfd, len, set, skip;
 
 	if (nlevels > 2)
-		return (psc_ctlsenderr(fd, mh, "invalid field"));
+		return (psc_ctlsenderr(fd, mh, NULL, "invalid field"));
 
 	if (strcmp(pcp->pcp_thrname, PCTHRNAME_EVERYONE) != 0) {
 		if (nlevels == 2)
-			rc = psc_ctlsenderr(fd, mh, "sys.rss: "
+			rc = psc_ctlsenderr(fd, mh, NULL, "sys.rss: "
 			    "not thread specific");
 		return (rc);
 	}
@@ -746,19 +758,19 @@ psc_ctlparam_get_rss(int fd, struct psc_ctlmsghdr *mh,
 	set = (mh->mh_type == PCMT_SETPARAM);
 
 	if (set) 
-		return (psc_ctlsenderr(fd, mh,
+		return (psc_ctlsenderr(fd, mh, NULL,
 		    "field is read-only", levels[1]));
 
 	skip = 0;
 	snprintf(statname, sizeof(statname), "/proc/%d/stat", pfl_pid);
 	statfd = open(statname, O_RDONLY);
 	if (statfd < 0) 
-		return (psc_ctlsenderr(fd, mh,
+		return (psc_ctlsenderr(fd, mh, NULL,
 		    "fail to open file %s", statname));
 
 	len = read(statfd, buf, 1024);
 	if (len < 0) 
-		return (psc_ctlsenderr(fd, mh,
+		return (psc_ctlsenderr(fd, mh, NULL,
 		    "fail to read file %s", statname));
 	close(statfd);
 	skip = 0;
@@ -834,10 +846,10 @@ psc_ctlparam_rlim(int fd, struct psc_ctlmsghdr *mh,
 	rlim_t n;
 
 	if (nlevels > 2)
-		return (psc_ctlsenderr(fd, mh, "invalid field"));
+		return (psc_ctlsenderr(fd, mh, NULL, "invalid field"));
 
 	if (strcmp(pcp->pcp_thrname, PCTHRNAME_EVERYONE) != 0)
-		return (psc_ctlsenderr(fd, mh, "rlim: not thread "
+		return (psc_ctlsenderr(fd, mh, NULL, "rlim: not thread "
 		    "specific"));
 
 	rc = 1;
@@ -849,7 +861,7 @@ psc_ctlparam_rlim(int fd, struct psc_ctlmsghdr *mh,
 			if (strcmp(levels[1], pcr->pcr_name) == 0)
 				break;
 		if (i == nitems(psc_ctl_rlimtab))
-			return (psc_ctlsenderr(fd, mh,
+			return (psc_ctlsenderr(fd, mh, NULL,
 			    "invalid rlim field: %s", levels[1]));
 	}
 
@@ -857,12 +869,12 @@ psc_ctlparam_rlim(int fd, struct psc_ctlmsghdr *mh,
 
 	if (set) {
 		if (nlevels != 2)
-			return (psc_ctlsenderr(fd, mh,
+			return (psc_ctlsenderr(fd, mh, NULL,
 			    "invalid operation"));
 		endp = NULL;
 		val = strtol(pcp->pcp_value, &endp, 10);
 		if (endp == pcp->pcp_value || *endp != '\0')
-			return (psc_ctlsenderr(fd, mh,
+			return (psc_ctlsenderr(fd, mh, NULL,
 			    "invalid rlim.%s value: %s",
 			    pcr->pcr_name, pcp->pcp_value));
 
@@ -872,7 +884,7 @@ psc_ctlparam_rlim(int fd, struct psc_ctlmsghdr *mh,
 				int error = errno;
 
 				psclog_error("getrlimit");
-				return (psc_ctlsenderr(fd, mh,
+				return (psc_ctlsenderr(fd, mh, NULL,
 				    "getrlimit: %s", strerror(error)));
 			}
 			if (pcp->pcp_flags & PCPF_ADD)
@@ -889,7 +901,7 @@ psc_ctlparam_rlim(int fd, struct psc_ctlmsghdr *mh,
 			if (set) {
 				if (psc_setrlimit(pcr->pcr_id, val,
 				    val) == -1)
-					return (psc_ctlsenderr(fd, mh,
+					return (psc_ctlsenderr(fd, mh, NULL,
 					    "setrlimit: %s",
 					    strerror(errno)));
 			} else {
@@ -897,7 +909,7 @@ psc_ctlparam_rlim(int fd, struct psc_ctlmsghdr *mh,
 				if (psc_getrlimit(pcr->pcr_id, &n,
 				    NULL) == -1) {
 					psclog_error("getrlimit");
-					return (psc_ctlsenderr(fd, mh,
+					return (psc_ctlsenderr(fd, mh, NULL,
 					    "getrlimit: %s",
 					    strerror(errno)));
 				}
@@ -956,10 +968,10 @@ psc_ctlparam_rusage(int fd, struct psc_ctlmsghdr *mh,
 	long *lp;
 
 	if (nlevels > 2)
-		return (psc_ctlsenderr(fd, mh, "invalid field"));
+		return (psc_ctlsenderr(fd, mh, NULL, "invalid field"));
 
 	if (strcmp(pcp->pcp_thrname, PCTHRNAME_EVERYONE) != 0)
-		return (psc_ctlsenderr(fd, mh, "rusage: not thread "
+		return (psc_ctlsenderr(fd, mh, NULL, "rusage: not thread "
 		    "specific"));
 
 	rc = 1;
@@ -971,16 +983,16 @@ psc_ctlparam_rusage(int fd, struct psc_ctlmsghdr *mh,
 			if (strcmp(levels[1], pcru->pcru_name) == 0)
 				break;
 		if (i == nitems(psc_ctl_rusagetab))
-			return (psc_ctlsenderr(fd, mh,
+			return (psc_ctlsenderr(fd, mh, NULL,
 			    "invalid rusage field: %s", levels[1]));
 	}
 
 	if (mh->mh_type == PCMT_SETPARAM)
-		return (psc_ctlsenderr(fd, mh,
+		return (psc_ctlsenderr(fd, mh, NULL,
 		    "invalid operation"));
 
 	if (getrusage(RUSAGE_SELF, &rusage) == -1)
-		return (psc_ctlsenderr(fd, mh,
+		return (psc_ctlsenderr(fd, mh, NULL,
 		    "getrusage: %s", strerror(errno)));
 
 	for (pcru = psc_ctl_rusagetab, i = 0;
@@ -1019,7 +1031,7 @@ psc_ctlparam_run(int fd, struct psc_ctlmsghdr *mh,
 	struct psc_thread *thr;
 
 	if (nlevels > 1)
-		return (psc_ctlsenderr(fd, mh, "invalid field"));
+		return (psc_ctlsenderr(fd, mh, NULL, "invalid field"));
 
 	levels[0] = "run";
 	run = 0; /* gcc */
@@ -1028,7 +1040,7 @@ psc_ctlparam_run(int fd, struct psc_ctlmsghdr *mh,
 
 	if (set) {
 		if (pcp->pcp_flags & (PCPF_ADD | PCPF_SUB))
-			return (psc_ctlsenderr(fd, mh,
+			return (psc_ctlsenderr(fd, mh, NULL,
 			    "invalid operation"));
 
 		if (strcmp(pcp->pcp_value, "0") == 0)
@@ -1036,7 +1048,7 @@ psc_ctlparam_run(int fd, struct psc_ctlmsghdr *mh,
 		else if (strcmp(pcp->pcp_value, "1") == 0)
 			run = 1;
 		else
-			return (psc_ctlsenderr(fd, mh,
+			return (psc_ctlsenderr(fd, mh, NULL,
 			    "invalid run value: %s",
 			    pcp->pcp_field));
 	}
@@ -1057,7 +1069,7 @@ psc_ctlparam_run(int fd, struct psc_ctlmsghdr *mh,
 	}
 	PLL_ULOCK(&psc_threads);
 	if (!found)
-		return (psc_ctlsenderr(fd, mh, "invalid thread: %s",
+		return (psc_ctlsenderr(fd, mh, NULL, "invalid thread: %s",
 		    pcp->pcp_thrname));
 	return (rc);
 }
@@ -1081,7 +1093,7 @@ psc_ctlparam_pause(int fd, struct psc_ctlmsghdr *mh,
 	long l;
 
 	if (nlevels > 1)
-		return (psc_ctlsenderr(fd, mh, "invalid field"));
+		return (psc_ctlsenderr(fd, mh, NULL, "invalid field"));
 
 	levels[0] = "pause";
 
@@ -1091,14 +1103,14 @@ psc_ctlparam_pause(int fd, struct psc_ctlmsghdr *mh,
 
 	if (set) {
 		if (pcp->pcp_flags & (PCPF_ADD | PCPF_SUB))
-			return (psc_ctlsenderr(fd, mh,
+			return (psc_ctlsenderr(fd, mh, NULL,
 			    "invalid operation"));
 
 		s = NULL;
 		l = strtol(pcp->pcp_value, &s, 10);
 		if (l == LONG_MAX || l == LONG_MIN || *s != '\0' ||
 		    s == pcp->pcp_value || l < 0 || l > 1)
-			return (psc_ctlsenderr(fd, mh,
+			return (psc_ctlsenderr(fd, mh, NULL,
 			    "invalid pause value: %s",
 			    pcp->pcp_field));
 		pauseval = (int)l;
@@ -1120,7 +1132,7 @@ psc_ctlparam_pause(int fd, struct psc_ctlmsghdr *mh,
 	}
 	PLL_ULOCK(&psc_threads);
 	if (!found)
-		return (psc_ctlsenderr(fd, mh, "invalid thread: %s",
+		return (psc_ctlsenderr(fd, mh, NULL, "invalid thread: %s",
 		    pcp->pcp_thrname));
 	return (rc);
 }
@@ -1187,7 +1199,7 @@ psc_ctlparam_pool_handle(int fd, struct psc_ctlmsghdr *mh,
 			if (pcp->pcp_flags & PCPF_ADD)
 				psc_pool_grow(m, val);
 			else if (pcp->pcp_flags & PCPF_SUB)
-				psc_pool_tryshrink(m, val);
+				psc_pool_try_shrink(m, val);
 			else
 				psc_pool_settotal(m, val);
 		} else {
@@ -1201,7 +1213,7 @@ psc_ctlparam_pool_handle(int fd, struct psc_ctlmsghdr *mh,
 	}
 	if (nlevels < 3 || strcmp(levels[2], "free") == 0) {
 		if (set)
-			return (psc_ctlsenderr(fd, mh,
+			return (psc_ctlsenderr(fd, mh, NULL,
 			    "pool.%s.free: read-only", levels[1]));
 		else {
 			levels[2] = "free";
@@ -1239,7 +1251,7 @@ psc_ctlparam_pool_handle(int fd, struct psc_ctlmsghdr *mh,
 	}
 	if (nlevels < 3 || strcmp(levels[2], "grows") == 0) {
 		if (set)
-			return (psc_ctlsenderr(fd, mh,
+			return (psc_ctlsenderr(fd, mh, NULL,
 			    "pool.%s.grows: read-only", levels[1]));
 		levels[2] = "grows";
 		snprintf(nbuf, sizeof(nbuf), "%zd",
@@ -1251,11 +1263,11 @@ psc_ctlparam_pool_handle(int fd, struct psc_ctlmsghdr *mh,
 	if (nlevels == 3 && strcmp(levels[2], "reap") == 0) {
 		if (set) {
 			if (m->ppm_reclaimcb == NULL)
-				return (psc_ctlsenderr(fd, mh,
+				return (psc_ctlsenderr(fd, mh, NULL,
 				    "pool.%s: not reapable",
 				    levels[1]));
 			if (pcp->pcp_flags & PCPF_SUB)
-				return (psc_ctlsenderr(fd, mh,
+				return (psc_ctlsenderr(fd, mh, NULL,
 				    "pool.%s.reap: value cannot be "
 				    "negative", levels[1]));
 
@@ -1268,7 +1280,7 @@ psc_ctlparam_pool_handle(int fd, struct psc_ctlmsghdr *mh,
 
 			POOL_LOCK(m);
 		} else {
-			return (psc_ctlsenderr(fd, mh,
+			return (psc_ctlsenderr(fd, mh, NULL,
 			    "pool.%s.reap: write-only field",
 			    levels[1]));
 		}
@@ -1289,10 +1301,10 @@ psc_ctlparam_instances(int fd, struct psc_ctlmsghdr *mh,
 	long val;
 
 	if (nlevels > 1)
-		return (psc_ctlsenderr(fd, mh, "invalid field"));
+		return (psc_ctlsenderr(fd, mh, NULL, "invalid field"));
 
 	if (strcmp(pcp->pcp_thrname, PCTHRNAME_EVERYONE) == 0)
-		return (psc_ctlsenderr(fd, mh, "thread not specified"));
+		return (psc_ctlsenderr(fd, mh, NULL, "thread not specified"));
 
 	rc = 1;
 	levels[0] = "instances";
@@ -1305,7 +1317,7 @@ psc_ctlparam_instances(int fd, struct psc_ctlmsghdr *mh,
 		if (val == LONG_MIN || val == LONG_MAX ||
 		    val > INT_MAX || val < 0 ||
 		    endp == pcp->pcp_value || *endp != '\0')
-			return (psc_ctlsenderr(fd, mh,
+			return (psc_ctlsenderr(fd, mh, NULL,
 			    "invalid instances value: %s",
 			    pcp->pcp_value));
 	}
@@ -1316,10 +1328,10 @@ psc_ctlparam_instances(int fd, struct psc_ctlmsghdr *mh,
 			    sizeof(struct psc_ctlacthr), "thr%d",
 			    p - me->pscthr_name, me->pscthr_name);
 		else if (pcp->pcp_flags & PCPF_SUB)
-			return (psc_ctlsenderr(fd, mh,
+			return (psc_ctlsenderr(fd, mh, NULL,
 			    "operation not supported"));
 		else
-			return (psc_ctlsenderr(fd, mh,
+			return (psc_ctlsenderr(fd, mh, NULL,
 			    "operation not supported"));
 	} else {
 		int ninst = 0;
@@ -1353,10 +1365,10 @@ psc_ctlparam_pool(int fd, struct psc_ctlmsghdr *mh,
 	char buf[32];
 
 	if (nlevels > 3)
-		return (psc_ctlsenderr(fd, mh, "invalid field"));
+		return (psc_ctlsenderr(fd, mh, NULL, "invalid field"));
 
 	if (strcmp(pcp->pcp_thrname, PCTHRNAME_EVERYONE) != 0)
-		return (psc_ctlsenderr(fd, mh, "invalid field for %s",
+		return (psc_ctlsenderr(fd, mh, NULL, "invalid field for %s",
 		    pcp->pcp_thrname));
 
 	rc = 1;
@@ -1370,14 +1382,14 @@ psc_ctlparam_pool(int fd, struct psc_ctlmsghdr *mh,
 	    strcmp(levels[2], "free")  != 0 &&
 	    strcmp(levels[2], "reap")  != 0 &&
 	    strcmp(levels[2], "total") != 0)
-		return (psc_ctlsenderr(fd, mh,
+		return (psc_ctlsenderr(fd, mh, NULL,
 		    "invalid pool field: %s", levels[2]));
 
 	set = (mh->mh_type == PCMT_SETPARAM);
 
 	if (set) {
 		if (nlevels != 3)
-			return (psc_ctlsenderr(fd, mh,
+			return (psc_ctlsenderr(fd, mh, NULL,
 			    "invalid operation"));
 
 		endp = NULL;
@@ -1385,7 +1397,7 @@ psc_ctlparam_pool(int fd, struct psc_ctlmsghdr *mh,
 		if (val == LONG_MIN || val == LONG_MAX ||
 		    val > INT_MAX || val < 0 ||
 		    endp == pcp->pcp_value || *endp != '\0')
-			return (psc_ctlsenderr(fd, mh,
+			return (psc_ctlsenderr(fd, mh, NULL,
 			    "invalid pool %s value: %s",
 			    levels[2], pcp->pcp_value));
 	}
@@ -1419,7 +1431,7 @@ psc_ctlparam_pool(int fd, struct psc_ctlmsghdr *mh,
 	} else {
 		m = psc_pool_lookup(levels[1]);
 		if (m == NULL)
-			return (psc_ctlsenderr(fd, mh,
+			return (psc_ctlsenderr(fd, mh, NULL,
 			    "invalid pool: %s", levels[1]));
 		rc = psc_ctlparam_pool_handle(fd, mh, pcp, levels,
 		    nlevels, m, val);
@@ -1475,7 +1487,7 @@ psc_ctlrep_param_simple(int fd, struct psc_ctlmsghdr *mh,
 	char val[PCP_VALUE_MAX];
 
 	if (strcmp(pcp->pcp_thrname, PCTHRNAME_EVERYONE) != 0)
-		return (psc_ctlsenderr(fd, mh, "simple parameters are "
+		return (psc_ctlsenderr(fd, mh, NULL, "simple parameters are "
 		    "not thread specific"));
 
 	/*
@@ -1490,7 +1502,7 @@ psc_ctlrep_param_simple(int fd, struct psc_ctlmsghdr *mh,
 		if (pcn->pcn_setf) {
 			if (pcn->pcn_setf(pcp->pcp_value))
  invalid:
-				return (psc_ctlsenderr(fd, mh,
+				return (psc_ctlsenderr(fd, mh, NULL,
 				    "%s: invalid value: %s",
 				    psc_ctlparam_fieldname(
 				      pcp->pcp_field, nlevels),
@@ -1543,7 +1555,7 @@ psc_ctlrep_param_simple(int fd, struct psc_ctlmsghdr *mh,
 			}
 			return (1);
 		}
-		return (psc_ctlsenderr(fd, mh, "%s: field is read-only",
+		return (psc_ctlsenderr(fd, mh, NULL, "%s: field is read-only",
 		    psc_ctlparam_fieldname(pcp->pcp_field, nlevels)));
 	}
 	switch (pcn->pcn_vtype) {
@@ -1597,17 +1609,17 @@ psc_ctlrep_param(int fd, struct psc_ctlmsghdr *mh, void *m)
 		if ((t = strchr(levels[nlevels], '.')) != NULL)
 			*t++ = '\0';
 		if (*levels[nlevels++] == '\0')
-			return (psc_ctlsenderr(fd, mh,
+			return (psc_ctlsenderr(fd, mh, NULL,
 			    "%s: empty node name",
 			    psc_ctlparam_fieldname(pcp->pcp_field,
 			    nlevels)));
 	}
 
 	if (nlevels == 0)
-		return (psc_ctlsenderr(fd, mh,
+		return (psc_ctlsenderr(fd, mh, NULL,
 		    "no parameter field specified"));
 	if (nlevels >= MAX_LEVELS)
-		return (psc_ctlsenderr(fd, mh,
+		return (psc_ctlsenderr(fd, mh, NULL,
 		    "%s: parameter field exceeds maximum depth",
 		    psc_ctlparam_fieldname(pcp->pcp_field,
 		    MAX_LEVELS - 1)));
@@ -1617,7 +1629,7 @@ psc_ctlrep_param(int fd, struct psc_ctlmsghdr *mh, void *m)
 		if (rc == 0 && uid)
 			rc = EPERM;
 		if (rc)
-			return (psc_ctlsenderr(fd, mh, "%s: %s",
+			return (psc_ctlsenderr(fd, mh, NULL, "%s: %s",
 			    psc_ctlparam_fieldname(pcp->pcp_field,
 			      nlevels), strerror(rc)));
 	}
@@ -1650,13 +1662,13 @@ psc_ctlrep_param(int fd, struct psc_ctlmsghdr *mh, void *m)
 					pcn = c->ptn_data;
 					if (n)
 						rc = psc_ctlsenderr(fd,
-						    mh, "%s: available "
+						    mh, NULL, "%s: available "
 						    "subnode: %s",
 						    pcp->pcp_field,
 						    pcn->pcn_name);
 					else
 						rc = psc_ctlsenderr(fd,
-						    mh, "available "
+						    mh, NULL, "available "
 						    "top-level node: %s",
 						    pcn->pcn_name);
 					if (rc == 0)
@@ -1755,9 +1767,9 @@ psc_ctlrep_param(int fd, struct psc_ctlmsghdr *mh, void *m)
 		PSCFREE(pcf);
 	psc_ctlparam_fieldname(pcp->pcp_field, nlevels);
 	if (set)
-		return (psc_ctlsenderr(fd, mh,
+		return (psc_ctlsenderr(fd, mh, NULL,
 		    "%s: not a leaf node", pcp->pcp_field));
-	return (psc_ctlsenderr(fd, mh, "%s: invalid field",
+	return (psc_ctlsenderr(fd, mh, NULL, "%s: invalid field",
 	    pcp->pcp_field));
 }
 
@@ -1845,11 +1857,12 @@ psc_ctlparam_opstats(int fd, struct psc_ctlmsghdr *mh,
 {
 	int reset = 0, found = 0, rc = 1, i;
 	struct pfl_opstat *opst;
+	struct psc_dynarray all_ops = DYNARRAY_INIT;
 	char buf[32];
 	long val;
 
 	if (nlevels > 2)
-		return (psc_ctlsenderr(fd, mh, "invalid field"));
+		return (psc_ctlsenderr(fd, mh, NULL, "invalid field"));
 
 	levels[0] = "opstats";
 
@@ -1857,6 +1870,10 @@ psc_ctlparam_opstats(int fd, struct psc_ctlmsghdr *mh,
 
 	spinlock(&pfl_opstats_lock);
 	DYNARRAY_FOREACH(opst, i, &pfl_opstats)
+		psc_dynarray_add(&all_ops, opst);
+	freelock(&pfl_opstats_lock);
+	
+	DYNARRAY_FOREACH(opst, i, &all_ops)
 		if (nlevels < 2 ||
 		    strcmp(levels[1], opst->opst_name) == 0) {
 			found = 1;
@@ -1865,10 +1882,10 @@ psc_ctlparam_opstats(int fd, struct psc_ctlmsghdr *mh,
 				errno = 0;
 				val = strtol(pcp->pcp_value, NULL, 10);
 				if (errno == ERANGE) {
-					freelock(&pfl_opstats_lock);
-					return (psc_ctlsenderr(fd, mh,
+					rc = psc_ctlsenderr(fd, mh, NULL,
 					    "invalid opstat %s value: %s",
-					    levels[1], pcp->pcp_value));
+					    levels[1], pcp->pcp_value);
+					goto out;
 				}
 				psc_atomic64_set(&opst->opst_lifetime, val);
 			} else {
@@ -1882,10 +1899,11 @@ psc_ctlparam_opstats(int fd, struct psc_ctlmsghdr *mh,
 			if (nlevels == 2)
 				break;
 		}
-	freelock(&pfl_opstats_lock);
 	if (!found && nlevels > 1)
-		return (psc_ctlsenderr(fd, mh, "%s: invalid opstat",
+		return (psc_ctlsenderr(fd, mh, NULL, "%s: invalid opstat",
 		    psc_ctlparam_fieldname(pcp->pcp_field, nlevels)));
+ out:
+	psc_dynarray_free(&all_ops);
 	return (rc);
 }
 
@@ -1902,20 +1920,26 @@ psc_ctlrep_getopstat(int fd, struct psc_ctlmsghdr *mh, void *m)
 	struct pfl_opstat *opst;
 	char name[OPST_NAME_MAX];
 	int rc, found, all, i;
+	struct psc_dynarray all_ops = DYNARRAY_INIT;
 
 	rc = 1;
 	found = 0;
 	strlcpy(name, pcop->pco_name, sizeof(name));
 	all = (strcmp(name, "") == 0);
+
 	spinlock(&pfl_opstats_lock);
 	DYNARRAY_FOREACH(opst, i, &pfl_opstats)
+		psc_dynarray_add(&all_ops, opst);
+	freelock(&pfl_opstats_lock);
+
+	DYNARRAY_FOREACH(opst, i, &all_ops)
 		if (all || fnmatch(name, opst->opst_name, 0) == 0) {
 			found = 1;
 
 			pcop->pco_opst = *opst;
 			strlcpy(pcop->pco_name, opst->opst_name,
 			    sizeof(pcop->pco_name));
-			rc = psc_ctlmsg_sendv(fd, mh, pcop);
+			rc = psc_ctlmsg_sendv(fd, mh, pcop, NULL);
 			if (!rc)
 				break;
 
@@ -1923,10 +1947,10 @@ psc_ctlrep_getopstat(int fd, struct psc_ctlmsghdr *mh, void *m)
 			if (strcmp(opst->opst_name, name) == 0)
 				break;
 		}
-	freelock(&pfl_opstats_lock);
 	if (rc && !found && !all)
-		rc = psc_ctlsenderr(fd, mh, "unknown opstats: %s",
+		rc = psc_ctlsenderr(fd, mh, NULL, "unknown opstats: %s",
 		    name);
+	psc_dynarray_free(&all_ops);
 	return (rc);
 }
 
@@ -1956,7 +1980,7 @@ psc_ctlrep_getmeter(int fd, struct psc_ctlmsghdr *mh, void *m)
 
 			pcm->pcm_mtr = *pm; /* XXX atomic */
 			pcm->pcm_mtr.pm_max = *pm->pm_maxp; /* XXX atomic */
-			rc = psc_ctlmsg_sendv(fd, mh, pcm);
+			rc = psc_ctlmsg_sendv(fd, mh, pcm, NULL);
 			if (!rc)
 				break;
 
@@ -1966,7 +1990,7 @@ psc_ctlrep_getmeter(int fd, struct psc_ctlmsghdr *mh, void *m)
 		}
 	PLL_ULOCK(&pfl_meters);
 	if (rc && !found && !all)
-		rc = psc_ctlsenderr(fd, mh, "unknown meter: %s", name);
+		rc = psc_ctlsenderr(fd, mh, NULL, "unknown meter: %s", name);
 	return (rc);
 }
 
@@ -2006,7 +2030,7 @@ psc_ctlrep_getmlist(int fd, struct psc_ctlmsghdr *mh, void *m)
 				&pml->pml_mwcond_empty);
 			MLIST_ULOCK(pml);
 
-			rc = psc_ctlmsg_sendv(fd, mh, pcml);
+			rc = psc_ctlmsg_sendv(fd, mh, pcml, NULL);
 			if (!rc)
 				break;
 
@@ -2016,7 +2040,7 @@ psc_ctlrep_getmlist(int fd, struct psc_ctlmsghdr *mh, void *m)
 		}
 	PLL_ULOCK(&pfl_mlists);
 	if (rc && !found && !all)
-		rc = psc_ctlsenderr(fd, mh, "unknown mlist: %s", name);
+		rc = psc_ctlsenderr(fd, mh, NULL, "unknown mlist: %s", name);
 	return (rc);
 }
 
@@ -2051,7 +2075,7 @@ psc_ctlrep_getodtable(int fd, struct psc_ctlmsghdr *mh, void *m)
 			pco->pco_opts = odt->odt_hdr->odth_options;
 			psc_vbitmap_getstats(odt->odt_bitmap,
 			    &pco->pco_inuse, &pco->pco_total);
-			rc = psc_ctlmsg_sendv(fd, mh, pco);
+			rc = psc_ctlmsg_sendv(fd, mh, pco, NULL);
 			if (!rc)
 				break;
 
@@ -2063,7 +2087,7 @@ psc_ctlrep_getodtable(int fd, struct psc_ctlmsghdr *mh, void *m)
 	PLL_ULOCK(&pfl_odtables);
 
 	if (rc && !found && !all)
-		rc = psc_ctlsenderr(fd, mh, "unknown odtable: %s",
+		rc = psc_ctlsenderr(fd, mh, NULL, "unknown odtable: %s",
 		    name);
 	return (rc);
 }
@@ -2092,7 +2116,7 @@ pfl_ctlrep_getworkrq(int fd, struct psc_ctlmsghdr *mh, void *m)
 		snprintf(pcw->pcw_type, sizeof(pcw->pcw_type), "%s",
 		    type);
 
-		rc = psc_ctlmsg_sendv(fd, mh, pcw);
+		rc = psc_ctlmsg_sendv(fd, mh, pcw, NULL);
 		if (!rc)
 			break;
 	}
@@ -2143,7 +2167,7 @@ psc_ctl_applythrop(int fd, struct psc_ctlmsghdr *mh, void *m,
 			}
 		}
 		if (!found)
-			rc = psc_ctlsenderr(fd, mh,
+			rc = psc_ctlsenderr(fd, mh, NULL,
 			    "unknown thread: %s", thrname);
 	}
 	PLL_ULOCK(&psc_threads);
@@ -2225,14 +2249,14 @@ psc_ctlthr_service(int fd, const struct psc_ctlop *ct, int nops,
 	if (mh.mh_type < 0 ||
 	    mh.mh_type >= nops ||
 	    ct[mh.mh_type].pc_op == NULL) {
-		psc_ctlsenderr(fd, &mh,
+		psc_ctlsenderr(fd, &mh, NULL,
 		    "unrecognized psc_ctlmsghdr type; "
 		    "type=%d size=%zu nops=%d", mh.mh_type, mh.mh_size, nops);
 		return (0);
 	}
 	if (ct[mh.mh_type].pc_siz &&
 	    ct[mh.mh_type].pc_siz != mh.mh_size) {
-		psc_ctlsenderr(fd, &mh,
+		psc_ctlsenderr(fd, &mh, NULL,
 		    "invalid ctlmsg size; type=%d, size=%zu, want=%zu",
 		    mh.mh_type, mh.mh_size, ct[mh.mh_type].pc_siz);
 		return (0);

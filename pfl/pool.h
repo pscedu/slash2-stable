@@ -83,8 +83,6 @@ struct psc_poolmaster {
 	int			  pms_thres;		/* autoresize threshold */
 	void			 *pms_mwcarg;		/* mlist cond arg */
 
-	int			(*pms_initf)(struct psc_poolmgr *, void *);
-	void			(*pms_destroyf)(void *);
 	int			(*pms_reclaimcb)(struct psc_poolmgr *);
 };
 
@@ -116,10 +114,8 @@ struct psc_poolmgr {
 	struct pfl_opstat	 *ppm_opst_preaps;
 	struct pfl_opstat	 *ppm_opst_fails;
 
-	/* routines to initialize, teardown, & reclaim pool entries */
-	int			(*ppm_initf)(struct psc_poolmgr *, void *);
-	void			(*ppm_destroyf)(void *);
 	int			(*ppm_reclaimcb)(struct psc_poolmgr *);
+
 #define ppm_explist	ppm_u.ppmu_explist
 #define ppm_lc		ppm_u.ppmu_lc
 #define ppm_ml		ppm_u.ppmu_ml
@@ -180,16 +176,16 @@ struct psc_poolmgr {
  * @namefmt: printf(3)-like name of pool for external access.
  */
 #define psc_poolmaster_init(p, type, member, flags, total, min,	max,	\
-	    initf, destroyf, reclaimcb, namefmt, ...)			\
+	    reclaimcb, namefmt, ...)					\
 	_psc_poolmaster_init((p), sizeof(type), offsetof(type, member),	\
-	    (flags), (total), (min), (max), (initf), (destroyf),	\
+	    (flags), (total), (min), (max),				\
 	    (reclaimcb), NULL, (namefmt), ## __VA_ARGS__)
 
 #define psc_poolmaster_initml(p, type, member, flags, total, min, max,	\
-	    initf, destroyf, reclaimcb, mlcarg, namefmt, ...)		\
+	    reclaimcb, mlcarg, namefmt, ...)				\
 	_psc_poolmaster_init((p), sizeof(type), offsetof(type, member),	\
-	    (flags) | PPMF_MLIST, (total), (min), (max), (initf),	\
-	    (destroyf),	(reclaimcb), (mlcarg), (namefmt), ## __VA_ARGS__)
+	    (flags) | PPMF_MLIST, (total), (min), (max),		\
+	    (reclaimcb), (mlcarg), (namefmt), ## __VA_ARGS__)
 
 #define psc_poolmaster_getmgr(p)	_psc_poolmaster_getmgr((p), psc_memnode_getid())
 
@@ -198,8 +194,7 @@ struct psc_poolmgr {
  * @m: the pool manager.
  * @i: #items to remove from pool.
  */
-#define psc_pool_shrink(m, i)		_psc_pool_shrink((m), (i), 0)
-#define psc_pool_tryshrink(m, i)	_psc_pool_shrink((m), (i), 1)
+int psc_pool_try_shrink(struct psc_poolmgr *, int);
 
 #define PPGF_NONBLOCK			(1 << 0)
 #define PPGF_SHALLOW			(1 << 1)
@@ -229,7 +224,6 @@ struct psc_poolmgr {
 
 #define psc_pool_return(m, p)						\
 	do {								\
-		_PSC_POOL_CLEAR_OBJ((m), (p));				\
 		_psc_pool_return((m), (p));				\
 		psclog_diag("returned item %p to pool %s", (p),		\
 		    (m)->ppm_name);					\
@@ -240,12 +234,10 @@ struct psc_poolmgr *
 	_psc_poolmaster_getmgr(struct psc_poolmaster *, int);
 void	 pfl_poolmaster_destroy(struct psc_poolmaster *);
 void	_psc_poolmaster_init(struct psc_poolmaster *, size_t, ptrdiff_t,
-	    int, int, int, int, int (*)(struct psc_poolmgr *, void *),
-	    void (*)(void *), int (*)(struct psc_poolmgr *),
+	    int, int, int, int, int (*)(struct psc_poolmgr *),
 	    void *, const char *, ...);
 void	_psc_poolmaster_initv(struct psc_poolmaster *, size_t, ptrdiff_t,
-	    int, int, int, int, int (*)(struct psc_poolmgr *, void *),
-	    void (*)(void *), int (*)(struct psc_poolmgr *),
+	    int, int, int, int, int (*)(struct psc_poolmgr *),
 	    void *, const char *, va_list);
 
 struct psc_poolmgr *
@@ -261,7 +253,6 @@ void	  psc_pool_resize(struct psc_poolmgr *);
 void	 _psc_pool_return(struct psc_poolmgr *, void *);
 int	  psc_pool_settotal(struct psc_poolmgr *, int);
 void	  psc_pool_share(struct psc_poolmaster *);
-int	 _psc_pool_shrink(struct psc_poolmgr *, int, int);
 void	  psc_pool_unshare(struct psc_poolmaster *);
 
 void	  psc_poolset_disbar(struct psc_poolset *, struct psc_poolmaster *);

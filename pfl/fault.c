@@ -185,7 +185,7 @@ psc_ctlrep_getfault(int fd, struct psc_ctlmsghdr *mh, void *msg)
 			pcflt->pcflt_chance = pflt->pflt_chance;
 			pfl_fault_unlock(pflt);
 
-			rc = psc_ctlmsg_sendv(fd, mh, pcflt);
+			rc = psc_ctlmsg_sendv(fd, mh, pcflt, NULL);
 			if (!rc)
 				break;
 
@@ -195,7 +195,7 @@ psc_ctlrep_getfault(int fd, struct psc_ctlmsghdr *mh, void *msg)
 		}
 	freelock(&pfl_faults_lock);
 	if (rc && !found && !all)
-		rc = psc_ctlsenderr(fd, mh, "unknown fault point: %s",
+		rc = psc_ctlsenderr(fd, mh, NULL, "unknown fault point: %s",
 		    name);
 	return (rc);
 }
@@ -215,7 +215,7 @@ psc_ctlparam_faults_handle(int fd, struct psc_ctlmsghdr *mh,
 	if (nlevels < 3 || strcmp(levels[2], "active") == 0) {
 		if (nlevels == 3 && set) {
 			if (pcp->pcp_flags & (PCPF_ADD | PCPF_SUB))
-				return (psc_ctlsenderr(fd, mh,
+				return (psc_ctlsenderr(fd, mh, NULL,
 				    "invalid operation"));
 			if (val)
 				pflt->pflt_flags |= PFLTF_ACTIVE;
@@ -382,10 +382,10 @@ psc_ctlparam_faults(int fd, struct psc_ctlmsghdr *mh,
 	long val;
 
 	if (nlevels > 3)
-		return (psc_ctlsenderr(fd, mh, "invalid field"));
+		return (psc_ctlsenderr(fd, mh, NULL, "invalid field"));
 
 	if (strcmp(pcp->pcp_thrname, PCTHRNAME_EVERYONE) != 0)
-		return (psc_ctlsenderr(fd, mh, "invalid thread field"));
+		return (psc_ctlsenderr(fd, mh, NULL,"invalid thread field"));
 
 	rc = 1;
 	levels[0] = "faults";
@@ -402,14 +402,14 @@ psc_ctlparam_faults(int fd, struct psc_ctlmsghdr *mh,
 	    strcmp(levels[2], "unhits") != 0 &&
 	    strcmp(levels[2], "interval") != 0 &&
 	    strcmp(levels[2], "retval") != 0)
-		return (psc_ctlsenderr(fd, mh,
+		return (psc_ctlsenderr(fd, mh, NULL,
 		    "invalid faults field: %s", levels[2]));
 
 	set = (mh->mh_type == PCMT_SETPARAM);
 
 	if (set) {
 		if (nlevels != 3)
-			return (psc_ctlsenderr(fd, mh,
+			return (psc_ctlsenderr(fd, mh, NULL,
 			    "invalid operation"));
 
 		endp = NULL;
@@ -417,7 +417,7 @@ psc_ctlparam_faults(int fd, struct psc_ctlmsghdr *mh,
 		if (val == LONG_MIN || val == LONG_MAX ||
 		    val > INT_MAX || val < 0 ||
 		    endp == pcp->pcp_value || *endp != '\0')
-			return (psc_ctlsenderr(fd, mh,
+			return (psc_ctlsenderr(fd, mh, NULL,
 			    "invalid fault point %s value: %s",
 			    levels[2], pcp->pcp_value));
 	}
@@ -437,7 +437,7 @@ psc_ctlparam_faults(int fd, struct psc_ctlmsghdr *mh,
 		else
 			pflt = pfl_fault_peek(levels[1]);
 		if (pflt == NULL)
-			return (psc_ctlsenderr(fd, mh,
+			return (psc_ctlsenderr(fd, mh, NULL,
 			    "unknown fault point: %s", levels[1]));
 		pfl_fault_lock(pflt);
 		rc = psc_ctlparam_faults_handle(fd, mh, pcp, levels,

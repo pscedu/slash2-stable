@@ -77,8 +77,11 @@ struct psc_lockedlist	pfl_journals = PLL_INIT(&pfl_journals,
 #define JIO_READ	0
 #define JIO_WRITE	1
 
-#define psc_journal_read(pj, p, len, off)	psc_journal_io((pj), (p), (len), (off), JIO_READ)
-#define psc_journal_write(pj, p, len, off)	psc_journal_io((pj), (p), (len), (off), JIO_WRITE)
+#define psc_journal_read(pj, p, len, off)			\	
+	psc_journal_io((pj), (p), (len), (off), JIO_READ)
+
+#define psc_journal_write(pj, p, len, off)			\
+	psc_journal_io((pj), (p), (len), (off), JIO_WRITE)
 
 struct psc_poolmaster	 pfl_xidhndl_poolmaster;
 struct psc_poolmgr	*pfl_xidhndl_pool;
@@ -774,7 +777,7 @@ pjournal_open(const char *name, const char *fn)
 	 * size.
 	 */
 	pjhlen = PSC_ALIGN(sizeof(*pjh), statbuf.st_blksize);
-	pjh = psc_alloc(pjhlen, PAF_PAGEALIGN | PAF_LOCK);
+	pjh = psc_alloc(pjhlen, PAF_PAGEALIGN);
 	if (psc_journal_read(pj, pjh, pjhlen, 0))
 		psc_fatal("failed to read journal header");
 
@@ -836,7 +839,7 @@ pjournal_open(const char *name, const char *fn)
 
 	psc_poolmaster_init(&pfl_xidhndl_poolmaster,
 	    struct psc_journal_xidhndl, pjx_lentry, PPMF_AUTO, 4096,
-	    4096, 0, NULL, NULL, NULL, "xidhndl");
+	    4096, 0, NULL, "xidhndl");
 	pfl_xidhndl_pool = psc_poolmaster_getmgr(
 	    &pfl_xidhndl_poolmaster);
 
@@ -1120,7 +1123,7 @@ psc_ctlrep_getjournal(int fd, struct psc_ctlmsghdr *mh, void *m)
 		pcj->pcj_wraparound	= j->pj_wraparound;
 		PJ_ULOCK(j);
 
-		rc = psc_ctlmsg_sendv(fd, mh, pcj);
+		rc = psc_ctlmsg_sendv(fd, mh, pcj, NULL);
 		if (!rc)
 			break;
 	}

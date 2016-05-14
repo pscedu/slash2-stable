@@ -160,14 +160,13 @@ void
 _pscthr_unpause(__unusedx int sig)
 {
 	struct psc_thread *thr;
-	int locked;
 
 	thr = pscthr_get();
-	while (!tryreqlock(&pthread_lock, &locked))
+	while (!trylock(&pthread_lock))
 		pscthr_yield();
 	thr->pscthr_flags &= ~PTF_PAUSED;
 	psc_waitq_wakeall(&pthread_waitq);
-	ureqlock(&pthread_lock, locked);
+	freelock(&pthread_lock);
 }
 
 /*
@@ -349,8 +348,6 @@ _pscthr_init(int type, void (*startf)(struct psc_thread *),
 	va_list ap;
 	int rc;
 
-	OPSTAT_INCR("pfl.thread-create");
-
 	thr = psc_alloc(sizeof(*thr) + privsiz, PAF_NOLOG | PAF_NOZERO);
 	memset(thr, 0, sizeof(*thr) + privsiz);
 	INIT_PSC_LISTENTRY(&thr->pscthr_lentry);
@@ -393,6 +390,7 @@ _pscthr_init(int type, void (*startf)(struct psc_thread *),
 		_pscthr_finish_init(&thr_init);
 		freelock(&pthread_lock);
 	}
+	OPSTAT_INCR("pfl.thread-create");
 	return (thr);
 }
 
@@ -440,20 +438,6 @@ psc_log_setlevel(int ssid, int newlevel)
 		psc_fatalx("subsystem out of bounds (%d)", ssid);
 	else
 		thr->pscthr_loglevels[ssid] = newlevel;
-}
-
-/*
- * Get current thread name.
- */
-const char *
-pscthr_getname(void)
-{
-	struct psc_thread *thr;
-
-	thr = pscthr_get_canfail();
-	if (thr == NULL)
-		return (NULL);
-	return (thr->pscthr_name);
 }
 
 /*

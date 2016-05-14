@@ -123,7 +123,6 @@ struct pfl_wkdata_poolreap {
 void
 _psc_poolmaster_initv(struct psc_poolmaster *p, size_t entsize,
     ptrdiff_t offset, int flags, int total, int min, int max,
-    int (*initf)(struct psc_poolmgr *, void *), void (*destroyf)(void *),
     int (*reclaimcb)(struct psc_poolmgr *), void *mwcarg,
     const char *namefmt, va_list ap)
 {
@@ -132,11 +131,9 @@ _psc_poolmaster_initv(struct psc_poolmaster *p, size_t entsize,
 	psc_dynarray_init(&p->pms_poolmgrs);
 	psc_dynarray_init(&p->pms_sets);
 	p->pms_reclaimcb = reclaimcb;
-	p->pms_destroyf = destroyf;
 	p->pms_entsize = entsize;
 	p->pms_offset = offset;
 	p->pms_flags = flags;
-	p->pms_initf = initf;
 	p->pms_total = total;
 	p->pms_min = min;
 	p->pms_max = max;
@@ -149,7 +146,6 @@ _psc_poolmaster_initv(struct psc_poolmaster *p, size_t entsize,
 void
 _psc_poolmaster_init(struct psc_poolmaster *p, size_t entsize,
     ptrdiff_t offset, int flags, int total, int min, int max,
-    int (*initf)(struct psc_poolmgr *, void *), void (*destroyf)(void *),
     int (*reclaimcb)(struct psc_poolmgr *), void *mwcarg,
     const char *namefmt, ...)
 {
@@ -157,7 +153,7 @@ _psc_poolmaster_init(struct psc_poolmaster *p, size_t entsize,
 
 	va_start(ap, namefmt);
 	_psc_poolmaster_initv(p, entsize, offset, flags, total, min,
-	    max, initf, destroyf, reclaimcb, mwcarg, namefmt, ap);
+	    max, reclaimcb, mwcarg, namefmt, ap);
 	va_end(ap);
 }
 
@@ -202,12 +198,13 @@ _psc_poolmaster_initmgr(struct psc_poolmaster *p, struct psc_poolmgr *m)
 			psc_fatalx("%s: name too long", p->pms_name);
 	}
 
+	if (m->ppm_name[0] == '\0')
+		psc_assert(0);
+
 	INIT_PSC_LISTENTRY(&m->ppm_lentry);
 
 	locked = reqlock(&p->pms_lock);
 	m->ppm_reclaimcb = p->pms_reclaimcb;
-	m->ppm_destroyf = p->pms_destroyf;
-	m->ppm_initf = p->pms_initf;
 
 	m->ppm_thres = p->pms_thres;
 	m->ppm_flags = p->pms_flags;
@@ -303,8 +300,6 @@ _psc_pool_destroy_obj(struct psc_poolmgr *m, void *p)
 {
 	int flags;
 
-	if (p && m->ppm_destroyf)
-		m->ppm_destroyf(p);
 	flags = 0;
 	if (m->ppm_flags & PPMF_PIN)
 		flags |= PAF_LOCK;
@@ -348,61 +343,47 @@ psc_pool_grow(struct psc_poolmgr *m, int n)
 			errno = ENOMEM;
 			return (i);
 		}
-		if (m->ppm_initf == NULL)
-			INIT_PSC_LISTENTRY(psclist_entry2(p,
-			    m->ppm_explist.pexl_offset));
-		else if (m->ppm_initf(m, p)) {
-			if (flags & PAF_LOCK)
-				psc_free(p, PAF_LOCK, m->ppm_entsize);
-			else
-				PSCFREE(p);
-			return (i);
-		}
-		locked = POOL_RLOCK(m);
-		if (m->ppm_total < m->ppm_max ||
-		    m->ppm_max == 0) {
-			m->ppm_total++;
-			pfl_opstat_incr(m->ppm_opst_grows);
-			POOL_ADD_ITEM(m, p);
-			p = NULL;
-		}
-		POOL_URLOCK(m, locked);
+		INIT_PSC_LISTENTRY(psclist_entry2(p,
+		    m->ppm_explist.pexl_offset));
 
+#if 0
+		fprintf(stderr, "m = %p, p = %p, size = %d, name = %s\n", 
+		    m, p, m->ppm_entsize, m->ppm_master->pms_name);
+#endif
+			
 		/*
-		 * If we are prematurely exiting, we didn't use this
-		 * item.
-		 */
-		if (p) {
-			_psc_pool_destroy_obj(m, p);
-			break;
-		}
+ 		 * Add unconditionally, we might go overboard occasionally.
+ 		 */
+		locked = POOL_RLOCK(m);
+		m->ppm_total++;
+		pfl_opstat_incr(m->ppm_opst_grows);
+		POOL_ADD_ITEM(m, p);
+		POOL_URLOCK(m, locked);
 	}
 	return (i);
 }
 
 int
-_psc_pool_shrink(struct psc_poolmgr *m, int n, int failok)
+psc_pool_try_shrink(struct psc_poolmgr *m, int n)
 {
-	int i, locked;
+	int i;
 	void *p;
 
-	psc_assert(n > 0);
 	for (i = 0; i < n; i++) {
-		p = NULL;
-		locked = POOL_RLOCK(m);
 		if (m->ppm_total > m->ppm_min) {
 			p = POOL_TRYGETOBJ(m);
-			if (p) {
-				m->ppm_total--;
-				pfl_opstat_incr(m->ppm_opst_shrinks);
-			} else if (!failok)
-				psc_fatalx("no free items available to "
-				    "remove");
-		}
-		POOL_URLOCK(m, locked);
-		if (p == NULL)
+			/* XXX Hit NULL p case below, don't know why */
+			if (!p) {
+				fprintf(stderr, "corrupt? m = %p, name = %s.\n",  
+				    m, m->ppm_master->pms_name);
+				return (i);
+			}
+			_psc_pool_destroy_obj(m, p);
+			m->ppm_total--;
+			pfl_opstat_incr(m->ppm_opst_shrinks);
+		} else {
 			break;
-		_psc_pool_destroy_obj(m, p);
+		}
 	}
 	return (i);
 }
@@ -426,7 +407,7 @@ psc_pool_settotal(struct psc_poolmgr *m, int total)
 	POOL_URLOCK(m, locked);
 
 	if (adj < 0)
-		adj = psc_pool_tryshrink(m, -adj);
+		adj = psc_pool_try_shrink(m, -adj);
 	else if (adj)
 		adj = psc_pool_grow(m, adj);
 	return (adj);
@@ -452,7 +433,7 @@ psc_pool_resize(struct psc_poolmgr *m)
 	POOL_URLOCK(m, locked);
 
 	if (adj < 0)
-		psc_pool_tryshrink(m, -adj);
+		psc_pool_try_shrink(m, -adj);
 	else if (adj)
 		psc_pool_grow(m, adj);
 }
@@ -507,7 +488,7 @@ _psc_poolset_reap(struct psc_poolset *s,
 	freelock(&s->pps_lock);
 
 	if (culprit && nobj)
-		psc_pool_tryshrink(culprit, nobj);
+		psc_pool_try_shrink(culprit, nobj);
 }
 
 /*
@@ -754,12 +735,19 @@ _psc_pool_return(struct psc_poolmgr *m, void *p)
 	    ((m->ppm_max && m->ppm_total > m->ppm_max) ||
 	     m->ppm_nfree > m->ppm_total * m->ppm_thres / 100)) {
 		/* Reached free threshold; completely deallocate obj. */
+		_psc_pool_destroy_obj(m, p);
 		m->ppm_total--;
 		pfl_opstat_incr(m->ppm_opst_shrinks);
 		POOL_URLOCK(m, locked);
-		_psc_pool_destroy_obj(m, p);
 	} else {
 		/* Pool should keep this item. */
+#if 0
+		/*
+		 * We need this if all the memory of the item will be used 
+		 * including the link entry. Right now, we don't do this.
+		 */
+		INIT_PSC_LISTENTRY(psclist_entry2(p, m->ppm_explist.pexl_offset));
+#endif
 		POOL_ADD_ITEM(m, p);
 		POOL_URLOCK(m, locked);
 	}
@@ -814,7 +802,7 @@ psc_pool_nfree(struct psc_poolmgr *m)
 struct psc_poolmgr *
 psc_pool_lookup(const char *name)
 {
-	struct psc_poolmgr *m;
+	struct psc_poolmgr *m = NULL;
 
 	PLL_LOCK(&psc_pools);
 	PLL_FOREACH(m, &psc_pools)
