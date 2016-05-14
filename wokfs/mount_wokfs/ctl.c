@@ -75,10 +75,10 @@ wokctlcmd_insert(int fd, struct psc_ctlmsghdr *mh, void *msg)
 
 	rc = wokctl_getcreds(fd, &pcr);
 	if (rc)
-		return (psc_ctlsenderr(fd, mh, "insert: %s",
+		return (psc_ctlsenderr(fd, mh, NULL, "insert: %s",
 		    strerror(rc)));
 	if (pcr.pcr_uid)
-		return (psc_ctlsenderr(fd, mh, "insert: %s",
+		return (psc_ctlsenderr(fd, mh, NULL, "insert: %s",
 		    strerror(EPERM)));
 
 	pflfs_modules_wrpin();
@@ -86,7 +86,7 @@ wokctlcmd_insert(int fd, struct psc_ctlmsghdr *mh, void *msg)
 	if (wcms->wcms_pos < 0 ||
 	    wcms->wcms_pos > psc_dynarray_len(&pscfs_modules)) {
 		pflfs_modules_wrunpin();
-		return (psc_ctlsenderr(fd, mh, "insert %d: invalid "
+		return (psc_ctlsenderr(fd, mh, NULL, "insert %d: invalid "
 		    "position", wcms->wcms_pos));
 	}
 
@@ -96,7 +96,7 @@ wokctlcmd_insert(int fd, struct psc_ctlmsghdr *mh, void *msg)
 		pflfs_module_add(wcms->wcms_pos, &wm->wm_module);
 	pflfs_modules_wrunpin();
 	if (!wm)
-		return (psc_ctlsenderr(fd, mh, "insert %s: %s",
+		return (psc_ctlsenderr(fd, mh, NULL, "insert %s: %s",
 		    wcms->wcms_path, errbuf));
 	return (1);
 }
@@ -125,7 +125,7 @@ wokctlcmd_list(int fd, struct psc_ctlmsghdr *mh, void *msg)
 		if (wm->wm_opts)
 			strlcpy(wcms->wcms_opts, wm->wm_opts,
 			    sizeof(wcms->wcms_opts));
-		rc = psc_ctlmsg_sendv(fd, mh, wcms);
+		rc = psc_ctlmsg_sendv(fd, mh, wcms, NULL);
 		if (!rc)
 			break;
 	}
@@ -152,10 +152,10 @@ wokctlcmd_reload(__unusedx int fd, __unusedx struct psc_ctlmsghdr *mh,
 
 	rc = wokctl_getcreds(fd, &pcr);
 	if (rc)
-		return (psc_ctlsenderr(fd, mh, "reload: %s",
+		return (psc_ctlsenderr(fd, mh, NULL, "reload: %s",
 		    strerror(rc)));
 	if (pcr.pcr_uid)
-		return (psc_ctlsenderr(fd, mh, "reload: %s",
+		return (psc_ctlsenderr(fd, mh, NULL, "reload: %s",
 		    strerror(EPERM)));
 
 	pflfs_modules_wrpin();
@@ -163,7 +163,7 @@ wokctlcmd_reload(__unusedx int fd, __unusedx struct psc_ctlmsghdr *mh,
 	if (wcmc->wcmc_pos < 0 ||
 	    wcmc->wcmc_pos >= psc_dynarray_len(&pscfs_modules) - 1) {
 		pflfs_modules_wrunpin();
-		return (psc_ctlsenderr(fd, mh, "reload %d: invalid "
+		return (psc_ctlsenderr(fd, mh, NULL, "reload %d: invalid "
 		    "position", wcmc->wcmc_pos));
 	}
 
@@ -187,7 +187,7 @@ wokctlcmd_reload(__unusedx int fd, __unusedx struct psc_ctlmsghdr *mh,
 #if 0
 	if (wm == NULL) {
 		pflfs_modules_wrunpin();
-		return (psc_ctlsenderr(fd, mh, "reload %d: %s",
+		return (psc_ctlsenderr(fd, mh, NULL, "reload %d: %s",
 		    wcmc->wcmc_pos, errbuf));
 
 	}
@@ -222,10 +222,10 @@ wokctlcmd_remove(__unusedx int fd, __unusedx struct psc_ctlmsghdr *mh,
 
 	rc = wokctl_getcreds(fd, &pcr);
 	if (rc)
-		return (psc_ctlsenderr(fd, mh, "remove: %s",
+		return (psc_ctlsenderr(fd, mh, NULL, "remove: %s",
 		    strerror(rc)));
 	if (pcr.pcr_uid)
-		return (psc_ctlsenderr(fd, mh, "remove: %s",
+		return (psc_ctlsenderr(fd, mh, NULL, "remove: %s",
 		    strerror(EPERM)));
 
 	pflfs_modules_wrpin();
@@ -233,7 +233,7 @@ wokctlcmd_remove(__unusedx int fd, __unusedx struct psc_ctlmsghdr *mh,
 	if (wcmc->wcmc_pos < 0 ||
 	    wcmc->wcmc_pos >= psc_dynarray_len(&pscfs_modules) - 1) {
 		pflfs_modules_wrunpin();
-		return (psc_ctlsenderr(fd, mh, "remove %d: invalid "
+		return (psc_ctlsenderr(fd, mh, NULL, "remove %d: invalid "
 		    "position", wcmc->wcmc_pos));
 	}
 
@@ -281,10 +281,6 @@ ctlthr_spawn(void)
 
 	psc_ctlparam_register_var("sys.mountpoint", PFLCTL_PARAMT_STR,
 	    0, mountpoint);
-//	psc_ctlparam_register_simple("sys.uptime", ctlparam_uptime_get,
-//	    NULL);
-//	psc_ctlparam_register_simple("sys.version",
-//	    ctlparam_version_get, NULL);
 
 	thr = pscthr_init(PFL_THRT_CTL, ctlthr_main, 
 	    sizeof(struct psc_ctlthr), "ctlthr0");
