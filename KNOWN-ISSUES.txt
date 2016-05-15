@@ -54,3 +54,8 @@ linux-git/scripts/unifdef.c
 linux-git/scripts/gen_initramfs_list.sh
 tar: linux-git: file changed as we read it
 
+05/15/2016
+----------
+
+I use git to download a slash2 tree, replicate it to another IOS and try to build it there. The build fails
+with file .sconsign.dblite.  This must be tickled by replication.  See comments in file ino_compat.c.
