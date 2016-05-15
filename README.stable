@@ -1,3 +1,23 @@
+05/15/2016
+----------
+
+Major changes: (1) Rewrite the way slash2 client allocates 32K buffers, this greatly reduces
+RSS usage. (2) Fix an old bug in which we use random lock to send message to socket. This
+breaks a simple replication query command. (3) Other small fixes and improvments (EIO can 
+cause endless loop, add uptime in msctl -sc).
+
+My current practice to push to this stable tree:
+
+	- Linux kernel 4.2 build (make -j 3)
+	- iozone -a in a loop
+	- tar-ssh in a loop
+	- self build in a loop
+
+All driven manually. It usually finishes in 10+ hours (the kernel build lasts longest). Then
+I remove all files with rm -rvf *, which takes 30+ minutes. Then I do an iozone -a.  Then I 
+download a slash2 tree with git, and replicate it to another IOS.  The hardware I use is
+probably 10+ years old.
+
 05/11/2016
 ----------
 
@@ -14,6 +34,9 @@ It crashes on the following line:
 299         }
 
 This is not due to stack size. It is broken since v1.13.  Maybe it is due to the use of -R?
+
+	05/15/2016: This bug is fixed, it is due to misuse of socket lock by non-controller 
+	threads.
 
 05/01/2016
 ----------
