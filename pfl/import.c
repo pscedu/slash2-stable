@@ -99,6 +99,10 @@ pscrpc_set_import_discon(struct pscrpc_import *imp, uint32_t conn_cnt)
 	psclog_warnx("imp=%p conn_cnt=%u imp_conn_cnt=%u imp_state=%d",
 	    imp, conn_cnt, imp->imp_conn_cnt, imp->imp_state);
 
+	/* 
+	 * XXX If the following does not actually fail inflight requests, we
+ 	 * need to modify the log messages.
+ 	 */
 	if (imp->imp_state == PSCRPC_IMP_FULL &&
 	    (conn_cnt == 0 || conn_cnt == (uint32_t)imp->imp_conn_cnt)) {
 
