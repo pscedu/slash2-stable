@@ -77,6 +77,18 @@ pscrpc_init_import(struct pscrpc_import *imp)
  *             (increasing the import->conn_cnt) the older failure should
  *             not also cause a reconnection.  If zero it forces a reconnect.
  */
+
+/* 
+ * Stack trace when MDS fails to contact a client:
+ *
+ * _pscthr_begin() --> psc_usklndthr_begin() --> usocklnd_poll_thread() --> 
+ * usocklnd_process_stale_list() --> usocklnd_tear_peer_conn() -->
+ * usocklnd_check_peer_stale() --> usocklnd_peer_decref() -->  
+ * usocklnd_destroy_peer() --> lnet_enq_event_locked() --> 
+ * pscrpc_master_callback() --> pscrpc_drop_callback() --> 
+ * pscrpc_drop_conns() --> pscrpc_fail_import() --> here
+ */
+
 int
 pscrpc_set_import_discon(struct pscrpc_import *imp, uint32_t conn_cnt)
 {
