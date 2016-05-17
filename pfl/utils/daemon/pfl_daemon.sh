@@ -299,10 +299,10 @@ vsleep()
 	# for 60+ seconds.
 	# 
 	# So, instead of being smart, let us be dumb and just wait for
-	# 60 seconds. Also, let us keep the old logic for reference.
+	# 30 seconds. Also, let us keep the old logic for reference.
 	#
 
-	sleep 60
+	sleep 30
 	return
  
 	[ $SECONDS -gt 60 ] && return
