@@ -36,9 +36,14 @@ fi
 
 which=$(($total - $commit + 1))
 
-output=$(git log | grep "^commit" | awk 'NR=='$which'')
+output=$(git log --topo-order | grep "^commit" | awk 'NR=='$which'')
 output=${output#* }
 
-printf "Total # of commit is $total, you can checkout commit #$commit as follows:\n"
-printf "\ngit checkout $output\n"
-printf "\nWarning: You can only checkout a commit made directly in the stable tree!\n"
+if [ $# -eq 1 ]
+then
+    printf "Total # of commits is $total, you can checkout commit #$commit as follows:\n"
+    printf "\ngit checkout $output\n"
+    printf "\nWarning: You should only checkout a commit made directly in the stable tree!\n"
+else
+    printf "The current # of commits in the stable tree is $total.\n"
+fi
