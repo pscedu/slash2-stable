@@ -45,5 +45,5 @@ then
     printf "\ngit checkout $output\n"
     printf "\nWarning: You should only checkout a commit made directly in the stable tree!\n"
 else
-    printf "The current # of commits in the stable tree is $total.\n"
+    printf "The current # of commits in the stable tree sandbox is $total.\n"
 fi
