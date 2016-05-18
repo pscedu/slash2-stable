@@ -241,6 +241,11 @@ main(int argc, char *argv[])
 	psc_assert(rc != -1);
 	setenv("PATH", path_env, 1);
 
+	/*
+ 	 * If wokctl misbehave, or given wrong arugments, it is hard
+ 	 * to debug. So someday, this will be changed to a native
+ 	 * call.
+ 	 */
 	DYNARRAY_FOREACH(cmd, i, &startup_cmds)
 		pfl_systemf("wokctl -S %s %s", ctlsockfn, cmd);
 
