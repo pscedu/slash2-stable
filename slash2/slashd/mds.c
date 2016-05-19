@@ -243,6 +243,12 @@ mds_bmap_ios_restart(struct bmap_mds_lease *bml)
 	psc_assert(bml->bml_bmi->bmi_assign);
 
 	if (bml->bml_bmi->bmi_wr_ion) {
+		/*
+		 * Looks like we somehow end up with two write leases on
+		 * the same bmap, but likely with different IOSes, hence
+		 * the following assert triggers.  The bml_start value
+		 * between the two lease exceeds 60000.
+		 */
 		psc_assert(bml->bml_bmi->bmi_wr_ion == rmmi);
 	} else {
 		psc_atomic32_inc(&rmmi->rmmi_refcnt);
@@ -295,7 +301,7 @@ mds_sliod_alive(void *arg)
 __static int
 slm_try_sliodresm(struct sl_resm *resm)
 {
-	struct slashrpc_cservice *csvc = NULL;
+	struct slrpc_cservice *csvc = NULL;
 	struct sl_mds_iosinfo *si;
 	int ok = 0;
 
@@ -2158,7 +2164,7 @@ int
 slm_bmap_release_cb(__unusedx struct pscrpc_request *rq,
     struct pscrpc_async_args *av)
 {
-	struct slashrpc_cservice *csvc = av->pointer_arg[SLM_CBARG_SLOT_CSVC];
+	struct slrpc_cservice *csvc = av->pointer_arg[SLM_CBARG_SLOT_CSVC];
 
 	sl_csvc_decref(csvc);
 	return (0);
@@ -2170,7 +2176,7 @@ slm_ptrunc_prepare(struct fidc_membh *f)
 	int to_set, rc;
 	struct srm_bmap_release_req *mq;
 	struct srm_bmap_release_rep *mp;
-	struct slashrpc_cservice *csvc;
+	struct slrpc_cservice *csvc;
 	struct bmap_mds_lease *bml;
 	struct pscrpc_request *rq;
 	struct fcmh_mds_info *fmi;

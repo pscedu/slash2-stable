@@ -352,22 +352,6 @@ _msl_progallowed(struct pscfs_req *pfr)
 	return (0);
 }
 
-/*
- * Convert an error code acquired from RPC (either from the RPC stack,
- * underlying network stack, OS, or from the remote SLASH2 peer) to an
- * error value native to this system.
- */
-int
-msl_io_convert_errno(int rc)
-{
-	switch (rc) {
-	case -SLERR_ION_OFFLINE:
-		rc = ETIMEDOUT;
-		break;
-	}
-	return (rc);
-}
-
 void
 mslfsop_create(struct pscfs_req *pfr, pscfs_inum_t pinum,
     const char *name, int oflags, mode_t mode)
@@ -375,7 +359,7 @@ mslfsop_create(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	int rc = 0, rc2, rflags = 0;
 	struct dircache_ent_update dcu = DCE_UPD_INIT;
 	struct fidc_membh *c = NULL, *p = NULL;
-	struct slashrpc_cservice *csvc = NULL;
+	struct slrpc_cservice *csvc = NULL;
 	struct pscrpc_request *rq = NULL;
 	struct srm_create_rep *mp = NULL;
 	struct msl_fhent *mfh = NULL;
@@ -504,11 +488,10 @@ mslfsop_create(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	 * failure of the creation itself.
 	 *
 	 * Instead, wait for the application to perform some actual I/O
-	 * then report the error then.
+	 * to retrieve bmap lease on-demand.
 	 */
-	rc2 = msl_io_convert_errno(mp->rc2);
-	if (rc2)
-		PFL_GOTOERR(out, rc2);
+	if (mp->rc2)
+		PFL_GOTOERR(out, mp->rc2);
 
 	/*
 	 * Instantiate a bmap and load it with the piggybacked lease
@@ -661,7 +644,7 @@ mslfsop_opendir(struct pscfs_req *pfr, pscfs_inum_t inum, int oflags)
 int
 msl_stat(struct fidc_membh *f, void *arg)
 {
-	struct slashrpc_cservice *csvc = NULL;
+	struct slrpc_cservice *csvc = NULL;
 	struct pscrpc_request *rq = NULL;
 	struct pscfs_req *pfr = arg;
 	struct srm_getattr_req *mq;
@@ -779,7 +762,7 @@ mslfsop_link(struct pscfs_req *pfr, pscfs_inum_t c_inum,
 {
 	struct dircache_ent_update dcu = DCE_UPD_INIT;
 	struct fidc_membh *p = NULL, *c = NULL;
-	struct slashrpc_cservice *csvc = NULL;
+	struct slrpc_cservice *csvc = NULL;
 	struct pscrpc_request *rq = NULL;
 	struct srm_link_rep *mp = NULL;
 	struct srm_link_req *mq;
@@ -880,7 +863,7 @@ mslfsop_mkdir(struct pscfs_req *pfr, pscfs_inum_t pinum,
 {
 	struct dircache_ent_update dcu = DCE_UPD_INIT;
 	struct fidc_membh *c = NULL, *p = NULL;
-	struct slashrpc_cservice *csvc = NULL;
+	struct slrpc_cservice *csvc = NULL;
 	struct pscrpc_request *rq = NULL;
 	struct srm_mkdir_rep *mp = NULL;
 	struct srm_mkdir_req *mq;
@@ -981,7 +964,7 @@ msl_lookuprpc(struct pscfs_req *pfr, struct fidc_membh *p,
     struct fidc_membh **fp)
 {
 	slfid_t pfid = fcmh_2_fid(p);
-	struct slashrpc_cservice *csvc = NULL;
+	struct slrpc_cservice *csvc = NULL;
 	struct pscrpc_request *rq = NULL;
 	struct fidc_membh *f = NULL;
 	struct srm_lookup_req *mq;
@@ -1212,7 +1195,7 @@ msl_unlink(struct pscfs_req *pfr, pscfs_inum_t pinum, const char *name,
 {
 	struct dircache_ent_update dcu = DCE_UPD_INIT;
 	struct fidc_membh *c = NULL, *p = NULL;
-	struct slashrpc_cservice *csvc = NULL;
+	struct slrpc_cservice *csvc = NULL;
 	struct pscrpc_request *rq = NULL;
 	struct srm_unlink_rep *mp = NULL;
 	struct srm_unlink_req *mq;
@@ -1339,7 +1322,7 @@ mslfsop_mknod(struct pscfs_req *pfr, pscfs_inum_t pinum,
 {
 	struct dircache_ent_update dcu = DCE_UPD_INIT;
 	struct fidc_membh *p = NULL, *c = NULL;
-	struct slashrpc_cservice *csvc = NULL;
+	struct slrpc_cservice *csvc = NULL;
 	struct pscrpc_request *rq = NULL;
 	struct srm_mknod_rep *mp = NULL;
 	struct srm_mknod_req *mq = NULL;
@@ -1517,7 +1500,7 @@ msl_readdir_cb(struct pscrpc_request *rq, struct pscrpc_async_args *av)
 	struct iovec iov;
 	struct srm_readdir_req *mq;
 	struct srm_readdir_rep *mp;
-	struct slashrpc_cservice *csvc = av->pointer_arg[MSL_READDIR_CBARG_CSVC];
+	struct slrpc_cservice *csvc = av->pointer_arg[MSL_READDIR_CBARG_CSVC];
 	struct dircache_page *p = av->pointer_arg[MSL_READDIR_CBARG_PAGE];
 	struct fidc_membh *d = av->pointer_arg[MSL_READDIR_CBARG_FCMH];
 	void *dentbuf = av->pointer_arg[MSL_READDIR_CBARG_DENTBUF];
@@ -1575,7 +1558,7 @@ msl_readdir_issue(struct fidc_membh *d, off_t off, size_t size,
     int block)
 {
 	void *dentbuf = NULL;
-	struct slashrpc_cservice *csvc = NULL;
+	struct slrpc_cservice *csvc = NULL;
 	struct srm_readdir_req *mq = NULL;
 	struct srm_readdir_rep *mp = NULL;
 	struct pscrpc_request *rq = NULL;
@@ -1860,7 +1843,7 @@ void
 mslfsop_readlink(struct pscfs_req *pfr, pscfs_inum_t inum)
 {
 	unsigned char buf[SL_PATH_MAX], *retbuf = buf;
-	struct slashrpc_cservice *csvc = NULL;
+	struct slrpc_cservice *csvc = NULL;
 	struct pscrpc_request *rq = NULL;
 	struct srm_readlink_req *mq;
 	struct srm_readlink_rep *mp;
@@ -1985,7 +1968,7 @@ int
 msl_setattr(struct fidc_membh *f, int32_t to_set,
     const struct srt_stat *sstb, int setattrflags)
 {
-	struct slashrpc_cservice *csvc = NULL;
+	struct slrpc_cservice *csvc = NULL;
 	struct pscrpc_request *rq = NULL;
 	struct srm_setattr_req *mq;
 	struct srm_setattr_rep *mp;
@@ -2377,7 +2360,7 @@ mslfsop_rename(struct pscfs_req *pfr, pscfs_inum_t opinum,
 {
 	struct dircache_ent_update odcu = DCE_UPD_INIT, ndcu = DCE_UPD_INIT;
 	struct fidc_membh *child = NULL, *np = NULL, *op = NULL, *ch;
-	struct slashrpc_cservice *csvc = NULL;
+	struct slrpc_cservice *csvc = NULL;
 	struct pscrpc_request *rq = NULL;
 	struct srt_stat srcsstb, dstsstb;
 	struct sl_fidgen srcfg, dstfg;
@@ -2594,7 +2577,7 @@ mslfsop_rename(struct pscfs_req *pfr, pscfs_inum_t opinum,
 void
 mslfsop_statfs(struct pscfs_req *pfr, pscfs_inum_t inum)
 {
-	struct slashrpc_cservice *csvc = NULL;
+	struct slrpc_cservice *csvc = NULL;
 	struct pscrpc_request *rq = NULL;
 	struct resprof_cli_info *rpci;
 	struct sl_resource *pref_ios;
@@ -2674,7 +2657,7 @@ mslfsop_symlink(struct pscfs_req *pfr, const char *buf,
 {
 	struct dircache_ent_update dcu = DCE_UPD_INIT;
 	struct fidc_membh *c = NULL, *p = NULL;
-	struct slashrpc_cservice *csvc = NULL;
+	struct slrpc_cservice *csvc = NULL;
 	struct srm_symlink_rep *mp = NULL;
 	struct pscrpc_request *rq = NULL;
 	struct srm_symlink_req *mq;
@@ -3106,9 +3089,12 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 		 * XXX should we block access to the namecache until
 		 * this operation completes?
 		 */
-		if (mdie.mdie_pri)
+		if (mdie.mdie_pri) {
+			OPSTAT_INCR("msl.dircache-walk-begin");
 			dircache_walk(c, msl_dircache_inval_entry,
 			    &mdie);
+			OPSTAT_INCR("msl.dircache-walk-end");
+		}
 
 		fcmh_op_done(c);
 	}
@@ -3150,7 +3136,7 @@ mslfsop_destroy(__unusedx struct pscfs_req *pfr)
 {
 	lnet_process_id_t peer;
 	struct psc_thread *thr, *thr_next;
-	struct slashrpc_cservice *csvc;
+	struct slrpc_cservice *csvc;
 	struct pfl_opstat *opst;
 	struct sl_resource *r;
 	struct psc_poolmgr *p;
@@ -3339,7 +3325,7 @@ void
 mslfsop_listxattr(struct pscfs_req *pfr, size_t size, pscfs_inum_t inum)
 {
 	struct pscrpc_request *rq = NULL;
-	struct slashrpc_cservice *csvc = NULL;
+	struct slrpc_cservice *csvc = NULL;
 	struct srm_listxattr_rep tmp, *mp = NULL;
 	struct srm_listxattr_req *mq;
 	struct fidc_membh *f = NULL;
@@ -3452,7 +3438,7 @@ void
 mslfsop_setxattr(struct pscfs_req *pfr, const char *name,
     const void *value, size_t size, pscfs_inum_t inum)
 {
-	struct slashrpc_cservice *csvc = NULL;
+	struct slrpc_cservice *csvc = NULL;
 	struct pscrpc_request *rq = NULL;
 	struct srm_setxattr_rep *mp = NULL;
 	struct srm_setxattr_req *mq;
@@ -3535,7 +3521,7 @@ slc_getxattr(struct pscfs_req *pfr,
     size_t size, struct fidc_membh *f, size_t *retsz)
 {
 	int rc = 0, locked = 0;
-	struct slashrpc_cservice *csvc = NULL;
+	struct slrpc_cservice *csvc = NULL;
 	struct pscrpc_request *rq = NULL;
 	struct srm_getxattr_rep *mp;
 	struct srm_getxattr_req *mq;
@@ -3646,7 +3632,7 @@ void
 mslfsop_removexattr(struct pscfs_req *pfr, const char *name,
     pscfs_inum_t inum)
 {
-	struct slashrpc_cservice *csvc = NULL;
+	struct slrpc_cservice *csvc = NULL;
 	struct srm_removexattr_rep *mp = NULL;
 	struct srm_removexattr_req *mq;
 	struct pscrpc_request *rq = NULL;

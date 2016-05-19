@@ -49,13 +49,6 @@ struct sli_repl_workrq;
 #define SLI_RII_REPSZ		256
 #define SLI_RII_SVCNAME		"slirii"
 
-/* counterpart to csvc */
-struct sli_exp_cli {
-	struct slrpc_cservice	*iexpc_csvc;		/* must be first field */
-	uint32_t		 iexpc_stkvers;		/* must be second field */
-	uint64_t		 iexpc_uptime;		/* must be third field */
-};
-
 /* aliases for connection management */
 #define sli_geticsvcxf(resm, exp, flags)				\
 	sl_csvc_get(&(resm)->resm_csvc, (flags), (exp),			\
@@ -88,14 +81,14 @@ int	sli_rim_handler(struct pscrpc_request *);
 int	sli_ric_handler(struct pscrpc_request *);
 int	sli_rii_handler(struct pscrpc_request *);
 
-void	sli_rci_ctl_health_send(struct slashrpc_cservice *);
+void	sli_rci_ctl_health_send(struct slrpc_cservice *);
 
-int	sli_rmi_getcsvc(struct slashrpc_cservice **);
+int	sli_rmi_getcsvc(struct slrpc_cservice **);
 void	sli_rmi_setmds(const char *);
 
 void	sli_rmi_issue_bmap_release(struct srm_bmap_release_req *);
 
-int	sli_rii_issue_repl_read(struct slashrpc_cservice *, int, int,
+int	sli_rii_issue_repl_read(struct slrpc_cservice *, int, int,
 	    struct sli_repl_workrq *);
 
 void	sli_rim_init(void);
@@ -104,15 +97,15 @@ extern struct pscrpc_svc_handle sli_ric_svc;
 extern struct pscrpc_svc_handle sli_rii_svc;
 extern struct pscrpc_svc_handle sli_rim_svc;
 
-static __inline struct slashrpc_cservice *
+static __inline struct slrpc_cservice *
 sli_getclcsvc(struct pscrpc_export *exp)
 {
-	struct sli_exp_cli *iexpc;
+	struct sl_exp_cli *expc;
 
-	iexpc = sl_exp_getpri_cli(exp, 0);
-	if (iexpc == NULL)
+	expc = sl_exp_getpri_cli(exp, 0);
+	if (expc == NULL)
 		return (NULL);
-	return (sl_csvc_get(&iexpc->iexpc_csvc, 0, exp, NULL,
+	return (sl_csvc_get(&expc->expc_csvc, 0, exp, NULL,
 	    SRCI_REQ_PORTAL, SRCI_REP_PORTAL, SRCI_MAGIC, SRCI_VERSION,
 	    SLCONNT_CLI, NULL));
 }

@@ -73,12 +73,6 @@ enum slm_fwd_op {
 #define SLM_UPDATE_BATCH_NENTS		2048			/* namespace updates */
 #define SLM_RECLAIM_BATCH_NENTS		2048			/* garbage reclamation */
 
-struct slm_exp_cli {
-	struct slashrpc_cservice	 *mexpc_csvc;		/* must be first field */
-	uint32_t			  mexpc_stkvers;	/* must be second field */
-	uint64_t			  mexpc_uptime;		/* must be third field */
-};
-
 void	slm_rpc_initsvc(void);
 
 int	slm_rmc_handle_lookup(struct pscrpc_request *);
@@ -119,16 +113,16 @@ void	slmbchrqthr_spawn(void);
 #define slm_geticsvc_nb(m, mw)	slm_geticsvc((m), NULL, CSVCF_NONBLOCK, (mw))
 
 #define _pfl_callerinfo pci
-static __inline struct slashrpc_cservice *
+static __inline struct slrpc_cservice *
 _slm_getclcsvc(const struct pfl_callerinfo *pci,
     struct pscrpc_export *exp)
 {
-	struct slm_exp_cli *mexpc;
+	struct sl_exp_cli *expc;
 
-	mexpc = sl_exp_getpri_cli(exp, 0);
-	if (mexpc == NULL)
+	expc = sl_exp_getpri_cli(exp, 0);
+	if (expc == NULL)
 		return (NULL);
-	return (sl_csvc_get(&mexpc->mexpc_csvc, 0, exp, NULL,
+	return (sl_csvc_get(&expc->expc_csvc, 0, exp, NULL,
 	    SRCM_REQ_PORTAL, SRCM_REP_PORTAL, SRCM_MAGIC, SRCM_VERSION,
 	    SLCONNT_CLI, NULL));
 }

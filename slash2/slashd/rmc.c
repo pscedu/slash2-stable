@@ -336,6 +336,7 @@ slm_rmc_handle_getinode(struct pscrpc_request *rq)
 	return (0);
 }
 
+/* handle SRMT_GETBMAP RPC */
 int
 slm_rmc_handle_getbmap(struct pscrpc_request *rq)
 {
@@ -1728,7 +1729,7 @@ slm_rmc_handle_getreplst(struct pscrpc_request *rq)
 	const struct srm_replst_master_req *mq;
 	struct srm_replst_master_rep *mp;
 	struct slm_replst_workreq *rsw;
-	struct slashrpc_cservice *csvc;
+	struct slrpc_cservice *csvc;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
 
@@ -1883,9 +1884,9 @@ slm_rmc_handler(struct pscrpc_request *rq)
 void
 mexpc_allocpri(struct pscrpc_export *exp)
 {
-	struct slm_exp_cli *mexpc;
+	struct sl_exp_cli *expc;
 
-	mexpc = exp->exp_private = PSCALLOC(sizeof(*mexpc));
+	expc = exp->exp_private = PSCALLOC(sizeof(*expc));
 	slm_getclcsvc(exp);
 }
 
