@@ -292,6 +292,19 @@ vsleep()
 {
 	local amt=0
 
+	#
+	# We have seen illusion2 restart in a loop with this script.
+	# The SECONDS is the number of seconds since the script started.
+	# So it short-cuts the back off logical below after we are up
+	# for 60+ seconds.
+	# 
+	# So, instead of being smart, let us be dumb and just wait for
+	# 30 seconds. Also, let us keep the old logic for reference.
+	#
+
+	sleep 30
+	return
+ 
 	[ $SECONDS -gt 60 ] && return
 
 	case $ATTEMPT in
