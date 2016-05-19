@@ -59,3 +59,18 @@ tar: linux-git: file changed as we read it
 
 I use git to download a slash2 tree, replicate it to another IOS and try to build it there. The build fails
 with file .sconsign.dblite.  This must be tickled by replication.  See comments in file ino_compat.c.
+
+05/17/2016
+----------
+
+Rarely, the iozone -a test fails with the following ending:
+
+          131072   16384  809420  845865  1854258  1767181   99462  387310 1921290   117350   405174   140051   860074 1798069  1785815
+          262144      64  567824  679376   331244    17262
+Error writing block at 6291456
+write: Resource temporarily unavailable
+
+iozone: interrupted
+
+exiting iozone
+
