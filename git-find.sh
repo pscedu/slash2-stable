@@ -19,7 +19,8 @@ then
     fi
 fi
 
-# This must match whatever is in file slash2/mk/pre.mk
+# It does not matter whether we use --topo-order or not
+# here because we want a total count.
 
 total=$(git log | grep -c ^commit)
 
@@ -35,6 +36,8 @@ else
 fi
 
 which=$(($total - $commit + 1))
+
+# This must match whatever is in file slash2/mk/pre.mk
 
 output=$(git log --topo-order | grep "^commit" | awk 'NR=='$which'')
 output=${output#* }
