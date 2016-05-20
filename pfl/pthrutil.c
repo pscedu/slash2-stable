@@ -97,6 +97,7 @@ _psc_mutex_lock(const struct pfl_callerinfo *pci,
 #endif
 
 	rc = pthread_mutex_lock(&mut->pm_mutex);
+	/* asm-generic/errno.h: EDEADLK = 35 */
 	if (rc)
 		psc_fatalx("pthread_mutex_lock: %s", strerror(rc));
 	mut->pm_owner = pthread_self();
