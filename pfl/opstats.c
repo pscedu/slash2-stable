@@ -60,6 +60,7 @@ pfl_opstat_initf(int flags, const char *namefmt, ...)
 	sz = vsnprintf(name, 128, namefmt, ap) + 1;
 	va_end(ap);
 
+	/* (gdb) p ((struct pfl_opstat *)pfl_opstats.pda_items[74]).opst_name */
 	pos = psc_dynarray_bsearch(&pfl_opstats, name, _pfl_opstat_cmp);
 	if (pos < psc_dynarray_len(&pfl_opstats)) {
 		opst = psc_dynarray_getpos(&pfl_opstats, pos);
