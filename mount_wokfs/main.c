@@ -96,15 +96,17 @@ mod_load(const char *path, const char *opts, char *errbuf,
 
 	h = dlopen(path, RTLD_NOW);
 	if (h == NULL) {
-		strlcpy(errbuf, dlerror(), errlen);
+		snprintf(errbuf, LINE_MAX, "%s\n", dlerror()); 
+		fprintf(stderr, errbuf);
 		return (NULL);
 	}
 
 	loadf = dlsym(h, "pscfs_module_load");
 	if (loadf == NULL) {
 		dlclose(h);
-		strlcpy(errbuf, "module does not define symbol "
-		    "'pscfs_module_load'", errlen);
+		snprintf(errbuf, LINE_MAX,
+		    "symbol pscfs_module_load undefined.\n");
+		fprintf(stderr, errbuf);
 		return (NULL);
 	}
 
