@@ -152,6 +152,7 @@ pscfs_fuse_interrupt(__unusedx fuse_req_t req, void *d)
 	thr = pfr->pfr_thread;
 	pft = thr->pscthr_private;
 	pfr->pfr_interrupted = 1;
+	psclog_warnx("thread %p is interrupted, pfr = %p", thr, pfr);
 	pfl_multiwaitcond_wakeup(&pft->pft_multiwaitcond);
 }
 
