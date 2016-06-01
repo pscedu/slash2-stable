@@ -127,6 +127,7 @@ struct psc_ctlmsg_thread {
 	char			pct_thrname[PSC_THRNAME_MAX];
 	int32_t			pct_memnode;
 	uint32_t		pct_flags;
+	uint32_t		pct_tid;
 	int32_t			pct_loglevels[0];
 };
 
