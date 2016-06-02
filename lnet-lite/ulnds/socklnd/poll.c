@@ -46,6 +46,7 @@
 #include <sys/syscall.h>
 
 #include "pfl/pool.h"
+#include "pfl/thread.h"
 
 void
 usocklnd_process_stale_list(usock_pollthread_t *pt_data)
@@ -77,7 +78,9 @@ usocklnd_poll_thread(void *arg)
         int                 extra;
         int                 times;
 	struct lnet_xport  *lx;
+	struct psc_thread  *thr;
         
+	thr = pscthr_get(); 
         /* mask signals to avoid SIGPIPE, etc */
         sigset_t  sigs;
         sigfillset (&sigs);
@@ -115,9 +118,11 @@ usocklnd_poll_thread(void *arg)
                 usocklnd_process_stale_list(pt_data);
 
                 /* Actual polling for events */
+		thr->pscthr_waitq = "poll";
                 rc = poll(pt_data->upt_pollfd,
                           pt_data->upt_nfds,
                           usock_tuns.ut_poll_timeout * 1000);
+		thr->pscthr_waitq = NULL;
 
                 if (rc < 0 && errno != EINTR) {
                         CERROR("Cannot poll(2): errno=%d\n", errno);
