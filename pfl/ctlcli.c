@@ -867,7 +867,7 @@ psc_ctlmsg_thread_prhdr(__unusedx struct psc_ctlmsghdr *mh,
 	memnid = " memnid";
 #endif
 
-	printf("%-26s %10s %16s    %3s%*s", "thread", "tid", "wait", "flg", 
+	printf("%26s %10s %16s    %3s%*s", "thread", "tid", "wait", "flg", 
 	    memnid_len, memnid);
 
 	for (n = 0; n < psc_ctl_nsubsys; n++)
