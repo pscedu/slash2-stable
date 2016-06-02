@@ -68,6 +68,7 @@
 #endif
 
 #include "sdp_inet.h"
+#include "pfl/thread.h"
 
 #define LNET_GETAF(nid)		(LNET_NETTYP(nid) == SDPLND ? AF_INET_SDP : AF_INET)
 
@@ -353,8 +354,13 @@ libcfs_sock_accept (int *newsockp, int sock, __u32 *peer_ip, int *peer_port)
 {
 	struct sockaddr_in accaddr;
 	socklen_t accaddr_len = sizeof(struct sockaddr_in);
+	struct psc_thread *thr;
 
+	thr = pscthr_get();
+
+	thr->pscthr_waitq = "accept";
 	*newsockp = accept(sock, (struct sockaddr *)&accaddr, &accaddr_len);
+	thr->pscthr_waitq = NULL;
 
 	if ( *newsockp < 0 ) {
 		CERROR("accept() failed: errno==%d\n", errno);
