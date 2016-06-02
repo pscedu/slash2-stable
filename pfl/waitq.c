@@ -106,8 +106,8 @@ _psc_waitq_waitabs(struct psc_waitq *q, enum pfl_lockprim type,
 
 	PFL_LOCKPRIM_ULOCK(type, lockp);
 
+	thr->pscthr_waitq = q->wq_name;
 	if (abstime) {
-		thr->pscthr_waitq = q->wq_name;
 		rc = pthread_cond_timedwait(&q->wq_cond,
 		    &q->wq_mut.pm_mutex, abstime);
 		if (rc && rc != ETIMEDOUT)
