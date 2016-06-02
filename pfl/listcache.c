@@ -175,11 +175,15 @@ _lc_move(struct psc_listcache *plc, void *p, int flags)
 void
 _lc_init(struct psc_listcache *plc, const char *name, ptrdiff_t offset)
 {
+	char tmpname[MAX_WQ_NAME];
+
 	memset(plc, 0, sizeof(*plc));
 	INIT_PSC_LISTENTRY(&plc->plc_lentry);
 	_pll_initf(&plc->plc_pll, offset, NULL, 0);
-	psc_waitq_init(&plc->plc_wq_empty, name);
-	psc_waitq_init(&plc->plc_wq_want, name);
+	snprintf(tmpname, MAX_WQ_NAME, "%s-empty", name);
+	psc_waitq_init(&plc->plc_wq_empty, tmpname);
+	snprintf(tmpname, MAX_WQ_NAME, "%s-want", name);
+	psc_waitq_init(&plc->plc_wq_want, tmpname);
 }
 
 void
