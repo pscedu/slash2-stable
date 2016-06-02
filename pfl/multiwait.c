@@ -421,7 +421,9 @@ pfl_multiwait_rel(struct pfl_multiwait *mw, void *datap, int sec,
 	struct timespec adj = { sec, nsec };
 	struct pfl_multiwaitcond *mwc;
 	int rc, won = 0, j;
+	struct psc_thread *thr;
 
+	thr = pscthr_get();
 	/* Sanity checks. */
 	if (psc_dynarray_len(&mw->mw_conds) == 0)
 		psc_fatalx("multiwait %s has no conditions and "
@@ -447,6 +449,8 @@ pfl_multiwait_rel(struct pfl_multiwait *mw, void *datap, int sec,
 
 	DLOG_MULTIWAIT(PLL_DEBUG, mw, "entering wait; sec=%d nsec=%d",
 	    sec, nsec);
+
+	thr->pscthr_waitq = mwc->mwc_name;
 	if (sec || nsec) {
 		struct timespec ts;
 
@@ -469,6 +473,7 @@ pfl_multiwait_rel(struct pfl_multiwait *mw, void *datap, int sec,
 			psc_fatalx("pthread_cond_wait: %s",
 			    strerror(rc));
 	}
+	thr->pscthr_waitq = NULL;
 
  checkwaker:
 	mwc = mw->mw_waker;
