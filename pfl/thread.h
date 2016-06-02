@@ -47,6 +47,7 @@ struct psc_thread {
 	int			  pscthr_uniqid;		/* transiency bookkeeping */
 	int			  pscthr_flags;			/* operational flags */
 	int			  pscthr_type;			/* app-specific type */
+	char			 *pscthr_waitq;
 	char			  pscthr_name[PSC_THRNAME_MAX];/* human readable name */
 	int			 *pscthr_loglevels;		/* logging granularity */
 	void			 *pscthr_private;		/* app-specific data */

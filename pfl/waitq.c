@@ -35,6 +35,7 @@
 #include "pfl/lock.h"
 #include "pfl/log.h"
 #include "pfl/waitq.h"
+#include "pfl/thread.h"
 
 #ifdef HAVE_LIBPTHREAD
 
@@ -97,13 +98,16 @@ _psc_waitq_waitabs(struct psc_waitq *q, enum pfl_lockprim type,
     void *lockp, const struct timespec *abstime)
 {
 	int rc;
+	struct psc_thread *thr;
 
+	thr = pscthr_get();
 	psc_mutex_lock(&q->wq_mut);
 	q->wq_nwaiters++;
 
 	PFL_LOCKPRIM_ULOCK(type, lockp);
 
 	if (abstime) {
+		thr->pscthr_waitq = q->wq_name;
 		rc = pthread_cond_timedwait(&q->wq_cond,
 		    &q->wq_mut.pm_mutex, abstime);
 		if (rc && rc != ETIMEDOUT)
@@ -117,6 +121,7 @@ _psc_waitq_waitabs(struct psc_waitq *q, enum pfl_lockprim type,
 			    strerror(rc));
 	}
 
+	thr->pscthr_waitq = NULL;
 	q->wq_nwaiters--;
 	psc_mutex_unlock(&q->wq_mut);
 
