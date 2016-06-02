@@ -125,6 +125,7 @@ struct psc_ctlmsg_lnetif {
 
 struct psc_ctlmsg_thread {
 	char			pct_thrname[PSC_THRNAME_MAX];
+	char			pct_waitname[MAX_WQ_NAME];
 	int32_t			pct_memnode;
 	uint32_t		pct_flags;
 	uint32_t		pct_tid;

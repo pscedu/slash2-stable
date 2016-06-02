@@ -233,6 +233,7 @@ __static int
 psc_ctlmsg_thread_send(int fd, struct psc_ctlmsghdr *mh, void *m,
     struct psc_thread *thr)
 {
+	char *name;
 	struct psc_ctlmsg_thread *pct = m;
 	size_t siz;
 	int rc;
@@ -244,6 +245,11 @@ psc_ctlmsg_thread_send(int fd, struct psc_ctlmsghdr *mh, void *m,
 	pct->pct_flags = thr->pscthr_flags;
 	snprintf(pct->pct_thrname, sizeof(pct->pct_thrname),
 	    "%s", thr->pscthr_name);
+	name = thr->pscthr_waitq;
+	if (name)
+		strlcpy(pct->pct_waitname, name, MAX_WQ_NAME);
+	else
+		pct->pct_waitname[0] = '\0';
 	memcpy(pct->pct_loglevels, thr->pscthr_loglevels,
 	    psc_dynarray_len(&pfl_subsystems) *
 	    sizeof(*pct->pct_loglevels));
