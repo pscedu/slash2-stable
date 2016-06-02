@@ -156,7 +156,7 @@ pscrpc_prep_req_pool(struct pscrpc_import *imp, uint32_t version,
 	INIT_PSC_LISTENTRY(&request->rq_history_lentry);
 	//INIT_PSCLIST_HEAD(&request->rq_replay_list);
 	INIT_PSC_LISTENTRY(&request->rq_set_chain_lentry);
-	psc_waitq_init(&request->rq_reply_waitq);
+	psc_waitq_init(&request->rq_reply_waitq, "reply");
 	request->rq_xid = pscrpc_next_xid();
 	atomic_set(&request->rq_refcount, 1);
 
@@ -195,7 +195,7 @@ pscrpc_new_bulk(int npages, int type, int portal)
 		return NULL;
 
 	INIT_SPINLOCK(&desc->bd_lock);
-	psc_waitq_init(&desc->bd_waitq);
+	psc_waitq_init(&desc->bd_waitq, "rpc-bulk");
 	desc->bd_max_iov = npages;
 	desc->bd_iov_count = 0;
 	desc->bd_md_h = LNET_INVALID_HANDLE;
@@ -267,7 +267,7 @@ pscrpc_prep_set(void)
 	INIT_PSCLIST_HEAD(&set->set_requests);
 	INIT_PSC_LISTENTRY(&set->set_lentry);
 	INIT_SPINLOCK(&set->set_lock);
-	psc_waitq_init(&set->set_waitq);
+	psc_waitq_init(&set->set_waitq, "rpc-set");
 	psc_compl_init(&set->set_compl);
 	return (set);
 }

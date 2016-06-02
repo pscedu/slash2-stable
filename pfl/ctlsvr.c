@@ -2439,7 +2439,7 @@ psc_ctlthr_spawn_listener(const char *ofn, int acthrtype)
 	pcd->pcd_sock = s;
 	psc_dynarray_init(&pcd->pcd_clifds);
 	INIT_SPINLOCK(&pcd->pcd_lock);
-	psc_waitq_init(&pcd->pcd_waitq);
+	psc_waitq_init(&pcd->pcd_waitq, "pcd listener");
 	psc_mutex_init(&pcd->pcd_mutex);
 	pscthr_setready(acthr);
 	return (pcat);

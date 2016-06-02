@@ -178,7 +178,7 @@ pscthrs_init(void)
 	int rc;
 
 	INIT_SPINLOCK_NOLOG(&pthread_lock);
-	psc_waitq_init_nolog(&pthread_waitq);
+	psc_waitq_init_nolog(&pthread_waitq, "thrs_wait");
 
 	rc = pthread_key_create(&psc_thrkey, _pscthr_destroy);
 	if (rc)

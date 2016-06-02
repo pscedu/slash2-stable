@@ -38,7 +38,7 @@ struct psc_compl {
 	int			pc_rc;		/* optional "barrier" value */
 };
 
-#define PSC_COMPL_INIT		{ PSC_WAITQ_INIT, SPINLOCK_INIT, 0, 0, 1 }
+#define PSC_COMPL_INIT(name)	{ PSC_WAITQ_INIT(name), SPINLOCK_INIT, 0, 0, 1 }
 
 #define psc_compl_ready(pc, rc)	_psc_compl_ready((pc), (rc), 0)
 #define psc_compl_one(pc, rc)	_psc_compl_ready((pc), (rc), 1)

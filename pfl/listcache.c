@@ -173,13 +173,13 @@ _lc_move(struct psc_listcache *plc, void *p, int flags)
 }
 
 void
-_lc_init(struct psc_listcache *plc, ptrdiff_t offset)
+_lc_init(struct psc_listcache *plc, const char *name, ptrdiff_t offset)
 {
 	memset(plc, 0, sizeof(*plc));
 	INIT_PSC_LISTENTRY(&plc->plc_lentry);
 	_pll_initf(&plc->plc_pll, offset, NULL, 0);
-	psc_waitq_init(&plc->plc_wq_empty);
-	psc_waitq_init(&plc->plc_wq_want);
+	psc_waitq_init(&plc->plc_wq_empty, name);
+	psc_waitq_init(&plc->plc_wq_want, name);
 }
 
 void
@@ -255,7 +255,7 @@ _lc_reginit(struct psc_listcache *plc, ptrdiff_t offset,
 {
 	va_list ap;
 
-	_lc_init(plc, offset);
+	_lc_init(plc, name, offset);
 
 	va_start(ap, name);
 	lc_vregister(plc, name, ap);

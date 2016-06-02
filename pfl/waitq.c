@@ -38,6 +38,7 @@
 
 #ifdef HAVE_LIBPTHREAD
 
+#include "pfl/str.h"
 #include "pfl/time.h"
 #include "pfl/pthrutil.h"
 
@@ -48,11 +49,12 @@
  * @q: the struct to be initialized.
  */
 void
-_psc_waitq_init(struct psc_waitq *q, int flags)
+_psc_waitq_init(struct psc_waitq *q, const char *name, int flags)
 {
 	int rc;
 
 	memset(q, 0, sizeof(*q));
+	strlcpy(q->wq_name, name, MAX_WQ_NAME);
 	_psc_mutex_init(&q->wq_mut, flags & PWQF_NOLOG ?
 	    PMTXF_NOLOG : 0);
 	rc = pthread_cond_init(&q->wq_cond, NULL);
@@ -178,9 +180,10 @@ psc_waitq_wakeall(struct psc_waitq *q)
 #else /* HAVE_LIBPTHREAD */
 
 void
-psc_waitq_init(struct psc_waitq *q)
+psc_waitq_init(struct psc_waitq *q, char *name)
 {
 	memset(q, 0, sizeof(*q));
+	strlcpy(q->wq_name, name, MAX_WQ_NAME);
 }
 
 int

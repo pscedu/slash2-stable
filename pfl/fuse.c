@@ -296,7 +296,7 @@ void
 pscfs_fuse_listener_loop(__unusedx struct psc_thread *thr)
 {
 	static psc_spinlock_t lock = SPINLOCK_INIT;
-	static struct psc_waitq wq = PSC_WAITQ_INIT;
+	static struct psc_waitq wq = PSC_WAITQ_INIT("fuse-loop");
 	static int busy;
 
 	size_t bufsize = 0;

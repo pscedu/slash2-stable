@@ -69,7 +69,7 @@ __static int		pjournal_logwrite_internal(struct psc_journal *,
 psc_spinlock_t		pjournal_count = SPINLOCK_INIT;
 psc_spinlock_t		pjournal_reserve = SPINLOCK_INIT;
 
-struct psc_waitq	pjournal_waitq = PSC_WAITQ_INIT;
+struct psc_waitq	pjournal_waitq = PSC_WAITQ_INIT("distill");
 psc_spinlock_t		pjournal_waitqlock = SPINLOCK_INIT;
 struct psc_lockedlist	pfl_journals = PLL_INIT(&pfl_journals,
 			    struct psc_journal, pj_lentry);
@@ -832,7 +832,7 @@ pjournal_open(const char *name, const char *fn)
 	pll_init(&pj->pj_distillxids, struct psc_journal_xidhndl,
 	    pjx_dstl_lentry, NULL);
 
-	psc_waitq_init(&pj->pj_waitq);
+	psc_waitq_init(&pj->pj_waitq, "journal");
 	psc_dynarray_init(&pj->pj_bufs);
 
 	pll_add(&pfl_journals, pj);

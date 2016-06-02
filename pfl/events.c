@@ -733,7 +733,7 @@ pscrpc_ni_fini(void)
 				CWARN("Event queue still busy");
 
 			/* Wait for a bit */
-			psc_waitq_init(&waitq);
+			psc_waitq_init(&waitq, "rpc events");
 			lwi = LWI_TIMEOUT(2, NULL, NULL);
 			(void)pscrpc_svr_wait_event(&waitq, 0, &lwi, NULL);
 			break;

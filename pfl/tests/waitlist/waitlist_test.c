@@ -73,7 +73,7 @@ main(int argc, char *argv[])
 	if ((threads = calloc(nthreads, sizeof(*threads))) == NULL)
 		err(1, "calloc");
 
-	lc_init(&lc, struct item, lentry);
+	lc_init(&lc, "test", struct item, lentry);
 
 	for (j = 0, t = threads; j < nthreads; j++, t++) {
 		t->t_id = j;
