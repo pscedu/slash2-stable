@@ -2291,7 +2291,9 @@ psc_ctlacthr_main(struct psc_thread *thr)
 	s = pcd->pcd_sock;
 	pcd->pcd_acthr = thr;
 	while (pscthr_run(thr)) {
+		thr->pscthr_waitq = "accept";
 		fd = accept(s, NULL, NULL);
+		thr->pscthr_waitq = NULL;
 		if (fd == -1) {
 			if (errno == EINTR) {
 				usleep(300);
