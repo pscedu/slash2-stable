@@ -615,8 +615,13 @@ pscfs_main(int nthr, const char *thrname)
 
 	pfl_atexit(pfl_fuse_atexit);
 
+	thr = pscthr_get();
 	for (i = 0; i < nthr; i++) {
+
+		thr->pscthr_waitq = "join";
 		int ret = pthread_join(thrv[i], NULL);
+		thr->pscthr_waitq = NULL;
+
 		if (ret != 0)
 			fprintf(stderr, "Warning: pthread_join() on "
 			    "thread %i returned %i\n", i, ret);
