@@ -156,7 +156,7 @@ pscrpc_prep_req_pool(struct pscrpc_import *imp, uint32_t version,
 	INIT_PSC_LISTENTRY(&request->rq_history_lentry);
 	//INIT_PSCLIST_HEAD(&request->rq_replay_list);
 	INIT_PSC_LISTENTRY(&request->rq_set_chain_lentry);
-	psc_waitq_init(&request->rq_reply_waitq, "reply");
+	psc_waitq_init(&request->rq_reply_waitq, "rpc-reply");
 	request->rq_xid = pscrpc_next_xid();
 	atomic_set(&request->rq_refcount, 1);
 
