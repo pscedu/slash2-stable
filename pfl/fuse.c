@@ -152,7 +152,7 @@ pscfs_fuse_interrupt(__unusedx fuse_req_t req, void *d)
 	thr = pfr->pfr_thread;
 	pft = thr->pscthr_private;
 	pfr->pfr_interrupted = 1;
-	psclog_warnx("op interrupted, thread = %p, pfr = %p, name = %s", 
+	psclog_diag("op interrupted, thread = %p, pfr = %p, name = %s", 
 		thr, pfr, pfr->pfr_opname);
 	pfl_multiwaitcond_wakeup(&pft->pft_multiwaitcond);
 }
