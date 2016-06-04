@@ -49,6 +49,8 @@ struct pscrpc_export;
 
 struct sl_resm;
 
+extern struct pfl_rwlock	 sl_conn_lock;
+
 struct sl_exp_cli {
 	struct slrpc_cservice	*expc_csvc;
 	uint32_t		 expc_stkvers;	/* see slctlrep_getconn() */
@@ -96,13 +98,12 @@ struct slrpc_cservice {
 	 */
 	struct pscrpc_import	*csvc_import;
 	int			 csvc_lasterrno;	/* zeroed after a success */
-	int			 csvc_tryref;
+	/*
+ 	 * The reference count associated with a resource is not dropped
+ 	 * (except when the client module is unloaded by wokfs).
+ 	 */
 	int			 csvc_refcnt;
 
-	int			 csvc_nfails;
-	int			 csvc_lineno;
-	const char		*csvc_fn;
-	pthread_t		 csvc_owner;
 	void			*csvc_hldropf;
 	void			*csvc_hldroparg;
 
@@ -121,34 +122,34 @@ struct slrpc_cservice {
 #define slrpc_cservice slrpc_cservice
 
 /* csvc_flags */
-#define CSVCF_CONNECTING	(1 << 0)		/* conn attempt in progress */
-#define CSVCF_CONNECTED		(1 << 1)		/* conn online */
-#define CSVCF_WANTFREE		(1 << 2)		/* csvc mem resources need freed */
-#define CSVCF_PING		(1 << 3)		/* send keepalives */
-#define CSVCF_BUSY		(1 << 4)		/* send keepalives */
-#define CSVCF_DISCONNECTING	(1 << 5)		/* want to disconnect but in use; ASAP */
+#define CSVCF_CONNECTING	(1 << 0)	/* conn attempt in progress */
+#define CSVCF_CONNECTED		(1 << 1)	/* conn online */
+#define CSVCF_WATCH		(1 << 2)	/* on watch list, for debugging */
+#define CSVCF_PING		(1 << 3)	/* send keepalives */
+#define CSVCF_PINGING		(1 << 4)	/* wait ping reply */
+#define CSVCF_DISCONNECTING	(1 << 5)	/* want to disconnect but in use; ASAP */
 
 /* sl_csvc_get() flags, shared in numerical space */
-#define CSVCF_NONBLOCK		(1 << 6)		/* don't timeout waiting for new establishment */
-#define CSVCF_NORECON		(1 << 7)		/* don't attempt reconnection if down */
+
+#define CSVCF_NONBLOCK		(1 << 6)	/* don't timeout waiting for establishment */
+#define CSVCF_NORECON		(1 << 7)	/* don't attempt reconnection if down */
 
 #define CSVCF_FLAGSHIFT		(1 << 8)
 
-#define CSVC_RECONNECT_INTV	10			/* seconds */
-#define CSVC_PING_INTV		60			/* seconds */
+#define CSVC_CONN_INTV		10		/* seconds */
+#define CSVC_PING_INTV		30		/* seconds */
 
 #define DEBUG_CSVC(lvl, csvc, fmt, ...)					\
-	psclog((lvl), "csvc@%p fl=%#x:%s%s%s%s%s ref:%d " fmt,		\
+	psclog((lvl), "csvc@%p fl=%#x:%s%s%s%s ref:%d " fmt,		\
 	    (csvc), (csvc)->csvc_flags,					\
 	    (csvc)->csvc_flags & CSVCF_CONNECTING	? "C" : "",	\
 	    (csvc)->csvc_flags & CSVCF_CONNECTED	? "O" : "",	\
-	    (csvc)->csvc_flags & CSVCF_WANTFREE		? "F" : "",	\
+	    (csvc)->csvc_flags & CSVCF_WATCH		? "W" : "",	\
 	    (csvc)->csvc_flags & CSVCF_PING		? "P" : "",	\
-	    (csvc)->csvc_flags & CSVCF_BUSY		? "B" : "",	\
 	    (csvc)->csvc_refcnt, ##__VA_ARGS__)
 
 struct sl_expcli_ops {
-	void	(*secop_allocpri)(struct pscrpc_export *);
+	struct slrpc_cservice * (*secop_allocpri)(struct pscrpc_export *);
 };
 
 #define CSVC_CALLERINFO			PFL_CALLERINFO()
@@ -158,10 +159,11 @@ struct sl_expcli_ops {
 	_sl_csvc_get(CSVC_CALLERINFO, (csvcp), (flg), (exp), (nids),	\
 	    (pq), (pp), (mag), (vers), (ctype), (mw))
 
-#define SLRPC_DISCONNF_HIGHLEVEL	(1 << 0)
+#define sl_csvc_decref(csvc)		_sl_csvc_decref(CSVC_CALLERINFO, (csvc), 0)
+#define sl_csvc_decref_locked(csvc)	_sl_csvc_decref(CSVC_CALLERINFO, (csvc), 1)
 
-#define sl_csvc_decref(csvc)		_sl_csvc_decref(CSVC_CALLERINFO, (csvc))
-#define sl_csvc_disconnect(csvc)	_sl_csvc_disconnect(CSVC_CALLERINFO, (csvc))
+#define sl_csvc_disconnect(csvc)	_sl_csvc_disconnect(CSVC_CALLERINFO, (csvc), 0)
+#define sl_csvc_disconnect_locked(csvc)	_sl_csvc_disconnect(CSVC_CALLERINFO, (csvc), 1)
 
 #define slrpc_getname(rq)						\
 	slrpc_getname_for_opcode(pflrpc_req_get_opcode(rq))
@@ -175,27 +177,13 @@ struct sl_expcli_ops {
 		_resm = libsl_try_nid2resm(				\
 		    (exp)->exp_connection->c_peer.nid);			\
 		if (_resm) {						\
-			_csvc = _resm->resm_csvc;			\
-			/* ensure a csvc is allocated in exp_private */	\
-			if (_csvc) {					\
-				CSVC_LOCK(_csvc);			\
-				if (sl_csvc_useable(_csvc))		\
-					CSVC_ULOCK(_csvc);		\
-				else {					\
-					CSVC_ULOCK(_csvc);		\
-					_csvc = NULL;			\
-				}					\
-			}						\
-			if (_csvc == NULL) {				\
-				_csvc = getcsvc;			\
-				sl_csvc_decref(_csvc);			\
-			}						\
-									\
+			EXPORT_LOCK(exp);				\
 			if ((exp)->exp_hldropf == NULL) {		\
-				EXPORT_LOCK(exp);			\
+				_csvc = getcsvc;			\
+				psc_assert(_csvc);			\
 				exp->exp_hldropf = sl_exp_hldrop_resm;	\
-				EXPORT_ULOCK(exp);			\
 			}						\
+			EXPORT_ULOCK(exp);				\
 		} else							\
 			_rc = SLERR_RES_UNKNOWN;			\
 		(_rc);							\
@@ -373,13 +361,13 @@ struct slrpc_cservice *
 	    struct slrpc_cservice **, int, struct pscrpc_export *,
 	    struct psc_dynarray *, uint32_t, uint32_t, uint64_t,
 	    uint32_t, enum slconn_type, struct pfl_multiwait *);
-void	_sl_csvc_decref(const struct pfl_callerinfo *, struct slrpc_cservice *);
-void	_sl_csvc_disconnect(const struct pfl_callerinfo *,
-	    struct slrpc_cservice *);
+void	_sl_csvc_decref(const struct pfl_callerinfo *, struct slrpc_cservice *, int);
+void	_sl_csvc_disconnect(const struct pfl_callerinfo *, struct slrpc_cservice *, int);
 void	 sl_csvc_incref(struct slrpc_cservice *);
-void	 sl_csvc_markfree(struct slrpc_cservice *);
 int	 sl_csvc_useable(struct slrpc_cservice *);
 void	_sl_csvc_waitrelv(struct slrpc_cservice *, long, long);
+
+void	sl_csvc_online(struct slrpc_cservice *);
 
 void	 sl_exp_hldrop_resm(struct pscrpc_export *);
 void	*sl_exp_getpri_cli(struct pscrpc_export *, int);

@@ -151,7 +151,10 @@ msl_bmap_stash_lease(struct bmap *b, const struct srt_bmapdesc *sbd,
 
 	BMAP_LOCK_ENSURE(b);
 
-	psc_assert(sbd->sbd_seq);
+	if (!sbd->sbd_seq) {
+		psclog(PLL_WARN, "Zero bmap lease number (%s)", action);
+		OPSTAT_INCR("zero-seqno");
+	}
 	psc_assert(sbd->sbd_fg.fg_fid);
 	psc_assert(sbd->sbd_fg.fg_fid == fcmh_2_fid(b->bcm_fcmh));
 
@@ -339,7 +342,7 @@ msl_bmap_retrieve(struct bmap *b, int flags)
 		BMAP_ULOCK(b);
 	}
 
-	if (rc && slc_rpc_retry(pfr, &rc)) {
+	if (rc && slc_rpc_should_retry(pfr, &rc)) {
 		pscrpc_req_finished(rq);
 		rq = NULL;
 		goto retry;
@@ -495,7 +498,7 @@ msl_bmap_lease_extend(struct bmap *b, int blocking)
  out:
 	if (!rc)
 		rc = mp->rc;
-	if (rc && slc_rpc_retry(pfr, &rc)) {
+	if (rc && slc_rpc_should_retry(pfr, &rc)) {
 		pscrpc_req_finished(rq);
 		rq = NULL;
 		if (csvc) {
@@ -652,7 +655,7 @@ msl_bmap_modeset(struct bmap *b, enum rw rw, int flags)
 			goto retry;
 	}
 
-	if (rc && slc_rpc_retry(pfr, &rc)) {
+	if (rc && slc_rpc_should_retry(pfr, &rc)) {
 		pscrpc_req_finished(rq);
 		rq = NULL;
 		if (csvc) {
@@ -740,7 +743,7 @@ msl_bmap_lease_reassign(struct bmap *b)
 	 * be committed by the sliod.
 	 */
 	if ((b->bcm_flags & BMAPF_REASSIGNREQ) ||
-	    RB_EMPTY(&bmpc->bmpc_new_biorqs) ||
+	    RB_EMPTY(&bmpc->bmpc_biorqs) ||
 	    !pll_empty(&bmpc->bmpc_pndg_biorqs) ||
 	    bci->bci_nreassigns >= SL_MAX_IOSREASSIGN) {
 		BMAP_ULOCK(b);
@@ -841,7 +844,8 @@ msl_bmap_reap_init(struct bmap *b)
 	if (sbd->sbd_ios != IOS_ID_ANY && !(b->bcm_flags & BMAPF_DIO)) {
 		struct sl_resource *r = libsl_id2res(sbd->sbd_ios);
 
-		psc_assert(r);
+		if (!r)
+			psc_fatalx("Invalid IOS %x", sbd->sbd_ios);
 		psc_assert(b->bcm_flags & BMAPF_WR);
 
 		if (r->res_type == SLREST_ARCHIVAL_FS)
@@ -1196,7 +1200,7 @@ bmap_biorq_waitempty(struct bmap *b)
 	bmap_wait_locked(b, atomic_read(&b->bcm_opcnt) > 2);
 
 	psc_assert(pll_empty(&bmpc->bmpc_pndg_biorqs));
-	psc_assert(RB_EMPTY(&bmpc->bmpc_new_biorqs));
+	psc_assert(RB_EMPTY(&bmpc->bmpc_biorqs));
 	BMAP_ULOCK(b);
 }
 
@@ -1211,7 +1215,7 @@ msl_bmap_final_cleanup(struct bmap *b)
 	psc_assert(!(b->bcm_flags & BMAPF_FLUSHQ));
 
 	psc_assert(pll_empty(&bmpc->bmpc_pndg_biorqs));
-	psc_assert(RB_EMPTY(&bmpc->bmpc_new_biorqs));
+	psc_assert(RB_EMPTY(&bmpc->bmpc_biorqs));
 
 	/*
 	 * Assert that this bmap can no longer be scheduled by the write
@@ -1225,8 +1229,6 @@ msl_bmap_final_cleanup(struct bmap *b)
 	psc_assert(RB_EMPTY(&bmpc->bmpc_tree));
 
 	DEBUG_BMAP(PLL_DIAG, b, "done freeing");
-
-	psc_waitq_destroy(&bmpc->bmpc_waitq);
 }
 
 #if PFL_DEBUG > 0

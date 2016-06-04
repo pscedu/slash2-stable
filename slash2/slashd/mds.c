@@ -231,12 +231,11 @@ mds_bmap_directio(struct bmap *b, enum rw rw, int want_dio,
 	return (rc);
 }
 
-__static int
+__static void 
 mds_bmap_ios_restart(struct bmap_mds_lease *bml)
 {
 	struct sl_resm *resm = libsl_ios2resm(bml->bml_ios);
 	struct resm_mds_info *rmmi;
-	int rc = 0;
 
 	rmmi = resm2rmmi(resm);
 
@@ -255,8 +254,7 @@ mds_bmap_ios_restart(struct bmap_mds_lease *bml)
 		bml->bml_bmi->bmi_wr_ion = rmmi;
 	}
 
-	if (mds_bmap_timeotbl_mdsi(bml, BTE_REATTACH) == BMAPSEQ_ANY)
-		rc = 1;
+	mds_bmap_timeotbl_mdsi(bml, BTE_REATTACH);
 
 	if (bml->bml_seq > bml->bml_bmi->bmi_seq)
 		bml->bml_bmi->bmi_seq = bml->bml_seq;
@@ -264,7 +262,6 @@ mds_bmap_ios_restart(struct bmap_mds_lease *bml)
 	DEBUG_BMAP(PLL_DIAG, bml_2_bmap(bml), "res(%s) seq=%"PRIx64,
 	    resm->resm_res->res_name, bml->bml_seq);
 
-	return (rc);
 }
 
 int
@@ -929,7 +926,10 @@ mds_bmap_bml_add(struct bmap_mds_lease *bml, enum rw rw,
 
 	rc = mds_bmap_directio(b, rw, bml->bml_flags & BML_DIO,
 	    &bml->bml_cli_nidpid);
-	if (rc && !(bml->bml_flags & BML_RECOVER))
+	if (rc && (bml->bml_flags & BML_RECOVER))
+		rc = 0;
+
+	if (rc)
 		/*
 		 * 'rc' means that we're waiting on an async cb
 		 * completion.
@@ -963,7 +963,11 @@ mds_bmap_bml_add(struct bmap_mds_lease *bml, enum rw rw,
 
 	bml->bml_flags |= BML_BMI;
 
-	if (rw == SL_WRITE) {
+	if (rw == SL_READ) {
+		if (!wlease && !rlease)
+			bmi->bmi_readers++;
+		mds_bmap_timeotbl_mdsi(bml, BTE_ADD);
+	} else {
 		/*
 		 * Drop the lock prior to doing disk and possibly
 		 * network I/O.
@@ -997,7 +1001,7 @@ mds_bmap_bml_add(struct bmap_mds_lease *bml, enum rw rw,
 			psc_assert(bml->bml_ios &&
 			    bml->bml_ios != IOS_ID_ANY);
 			BMAP_ULOCK(b);
-			rc = mds_bmap_ios_restart(bml);
+			mds_bmap_ios_restart(bml);
 
 		} else if (!wlease && bmi->bmi_writers == 1) {
 			/*
@@ -1018,10 +1022,6 @@ mds_bmap_bml_add(struct bmap_mds_lease *bml, enum rw rw,
 		BMAP_LOCK(b);
 		b->bcm_flags &= ~BMAPF_IOSASSIGNED;
 
-	} else { //rw == SL_READ
-		if (!wlease && !rlease)
-			bmi->bmi_readers++;
-		mds_bmap_timeotbl_mdsi(bml, BTE_ADD);
 	}
 
  out:
@@ -1390,6 +1390,8 @@ mds_bia_odtable_startup_cb(void *data, struct pfl_odt_receipt *odtr,
 	struct bmap *b = NULL;
 	int rc;
 
+	OPSTAT_INCR("bmap-restart-check");
+
 	r = PSCALLOC(sizeof(*r));
 	memcpy(r, odtr, sizeof(*r));
 
@@ -1424,6 +1426,9 @@ mds_bia_odtable_startup_cb(void *data, struct pfl_odt_receipt *odtr,
 		PFL_GOTOERR(out, rc);
 	}
 
+	/*
+ 	 * So we only put a write lease into the odtable.
+ 	 */
 	BMAP_ULOCK(b);
 	bml = mds_bml_new(b, NULL, BML_WRITE | BML_RECOVER,
 	    &bia->bia_lastcli);
@@ -1437,9 +1442,9 @@ mds_bia_odtable_startup_cb(void *data, struct pfl_odt_receipt *odtr,
 	 * susceptible to gross changes in the system time.
 	 */
 	bml->bml_start = bia->bia_start;
-
-	/* Grant recovered leases some additional time. */
-	bml->bml_expire = time(NULL) + BMAP_RECOVERY_TIMEO_EXT;
+	bml->bml_expire = bml->bml_start + BMAP_TIMEO_MAX;
+	if (bml->bml_expire <= time(NULL))
+		OPSTAT_INCR("bmap-restart-expired");
 
 	if (bia->bia_flags & BIAF_DIO)
 		// XXX BMAP_LOCK(b)
@@ -1448,18 +1453,26 @@ mds_bia_odtable_startup_cb(void *data, struct pfl_odt_receipt *odtr,
 	bmap_2_bmi(b)->bmi_assign = r;
 
 	rc = mds_bmap_bml_add(bml, SL_WRITE, IOS_ID_ANY);
-	if (rc) {
-		bmap_2_bmi(b)->bmi_assign = NULL;
-		bml->bml_flags |= BML_FREEING | BML_RECOVERFAIL;
-	} else
-		r = NULL;
+	psc_assert(!rc);
+	/*
+ 	 * Leave it to the slmbmaptimeothr_begin() thread to free me.
+ 	 */
 	mds_bmap_bml_release(bml);
 
  out:
+	if (!rc)
+		OPSTAT_INCR("bmap-restart-ok");
+	else
+		/* XXX odtable leaks */
+		OPSTAT_INCR("bmap-restart-err");
+
 	if (rc && slm_opstate == SLM_OPSTATE_NORMAL)
 		/*
 		 * XXX On startup, this will stuck at dmu_tx_try_assign()
 		 * which calls cv_wait().
+		 *	
+		 * However, it should be able to work because our cursor
+		 * thread (i.e. slmjcursorthr_main() has already started.
 		 */
 		pfl_odt_freeitem(slm_bia_odt, r);
 	if (b)
@@ -2291,7 +2304,9 @@ slmbkdbthr_main(struct psc_thread *thr)
 	    "echo .dump | sqlite3 '%s' > %s", qdbfn, qbkfn);
 	while (pscthr_run(thr)) {
 		// XXX sqlite3_backup_init()
+		thr->pscthr_waitq = "sleep 120";
 		sleep(120);
+		thr->pscthr_waitq = NULL;
 		(void)system(cmd);
 	}
 }

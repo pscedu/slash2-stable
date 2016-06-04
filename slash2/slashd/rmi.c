@@ -84,12 +84,12 @@ slm_rmi_handle_bmap_getcrcs(struct pscrpc_request *rq)
 	mp->rc = rc = mds_bmap_load_fg(&mq->fg, mq->bmapno, &b);
 
 	if (!rc) {
+		DEBUG_BMAP(PLL_DIAG, b, "reply to sliod.");
 		bmi = bmap_2_bmi(b);
 		memcpy(&mp->crcs, bmi->bmi_crcs, sizeof(mp->crcs));
 		memcpy(&mp->crcstates, bmi->bmi_crcstates, sizeof(mp->crcstates));
 		bmap_op_done(b);
 	}
-	DEBUG_BMAP(rc ? PLL_ERROR: PLL_DIAG, b, "reply to sliod, rc = %d", rc);
 	return (rc);
 }
 
@@ -525,6 +525,7 @@ slm_rmi_handle_ping(struct pscrpc_request *rq)
 	struct resprof_mds_info *rpmi;
 	struct sl_mds_iosinfo *si;
 	struct srm_ping_rep *mp;
+	struct slrpc_cservice *csvc;
 	struct sl_resm *m;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
@@ -532,6 +533,29 @@ slm_rmi_handle_ping(struct pscrpc_request *rq)
 	if (m == NULL)
 		mp->rc = -SLERR_ION_UNKNOWN;
 	else {
+		/*
+ 		 * If I put sliod under gdb, and let it continue after a 
+ 		 * while, the MDS thinks the sliod is down, but the sliod 
+ 		 * thinks it is still connected to the MDS. So it does not 
+ 		 * issue CONNECT RPCs. It does issue PING RPCs. For some 
+ 		 * reason, the SL_EXP_REGISTER_RESM() does not re-establish 
+ 		 * the connection (maybe becuase exp_hldropf is not NULL).
+ 		 *
+ 		 * It could be that we did not clear export when we return
+ 		 * it to pscrpc_export_pool. Or the export was not dropped.
+ 		 *
+ 		 * Anyway, the following code is added to solve this problem.
+ 		 */
+		csvc = m->resm_csvc;
+		CSVC_LOCK(csvc);
+		clock_gettime(CLOCK_MONOTONIC, &csvc->csvc_mtime);
+		if (!(csvc->csvc_flags & CSVCF_CONNECTED)) {
+			sl_csvc_online(csvc);
+			psclog_warnx("csvc %p for %s is back online", 
+			    csvc, m->resm_name);
+		}
+		CSVC_ULOCK(csvc);
+
 		si = res2iosinfo(m->resm_res);
 		if (clock_gettime(CLOCK_MONOTONIC,
 		    &si->si_lastcomm) == -1)
@@ -569,10 +593,11 @@ slm_rmi_handler(struct pscrpc_request *rq)
 {
 	int rc;
 
-	rc = SL_EXP_REGISTER_RESM(rq->rq_export, slm_geticsvcx(_resm,
-	    rq->rq_export));
-	if (rc)
-		PFL_GOTOERR(out, rc);
+	/* (gdb) call libsl_try_nid2resm(rq->rq_export->exp_connection->c_peer.nid) */
+	rq->rq_status = SL_EXP_REGISTER_RESM(rq->rq_export, 
+	    slm_geticsvcx(_resm, rq->rq_export));
+	if (rq->rq_status)
+		return (pscrpc_error(rq));
 
 	switch (rq->rq_reqmsg->opc) {
 
@@ -586,7 +611,6 @@ slm_rmi_handler(struct pscrpc_request *rq)
 	case SRMT_GETBMAPCRCS:
 		rc = slm_rmi_handle_bmap_getcrcs(rq);
 		break;
-
 	case SRMT_GETBMAPMINSEQ:
 		rc = slm_rmi_handle_bmap_getminseq(rq);
 		break;
@@ -633,13 +657,11 @@ slm_rmi_handler(struct pscrpc_request *rq)
 		break;
 
 	default:
-		psclog_errorx("unexpected opcode %d",
-		    rq->rq_reqmsg->opc);
+		psclog_errorx("unexpected opcode %d", rq->rq_reqmsg->opc);
 		rc = -PFLERR_NOSYS;
 		break;
 	}
 
- out:
 	slrpc_rep_out(rq);
 	pscrpc_target_send_reply_msg(rq, rc, 0);
 	return (rc);

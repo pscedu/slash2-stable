@@ -91,7 +91,20 @@ slctlrep_getconn(int fd, struct psc_ctlmsghdr *mh, void *m)
 		    (RES_ISCLUSTER(r)))
 			continue;
 
+		pfl_rwlock_rdlock(&sl_conn_lock);
+		if (!resm->resm_csvc) {
+			pfl_rwlock_unlock(&sl_conn_lock);
+			continue;
+		}
+		/*
+ 		 * csvc associated with a resource never goes
+ 		 * away, so we don't take a lock here.
+ 		 */
+		CSVC_LOCK(resm->resm_csvc);
 		slctl_fillconn(scc, resm->resm_csvc);
+		CSVC_ULOCK(resm->resm_csvc);
+		pfl_rwlock_unlock(&sl_conn_lock);
+
 		/* XXX fix which nid is being used */
 		mn = psc_dynarray_getpos(&resm->resm_nids, 0);
 		strlcpy(scc->scc_addrbuf, mn->resmnid_addrbuf,
@@ -117,9 +130,17 @@ slctlrep_getconn(int fd, struct psc_ctlmsghdr *mh, void *m)
 	if (!rc)
 		return (rc);
 
+	CONF_LOCK();
 	PLL_LOCK(&sl_clients);
 	PLL_FOREACH(csvc, &sl_clients) {
+
+		CSVC_LOCK(csvc);
+		if (!csvc->csvc_refcnt) {
+			CSVC_ULOCK(csvc);
+			continue;
+		}
 		slctl_fillconn(scc, csvc);
+		CSVC_ULOCK(csvc);
 
 		imp = csvc->csvc_import;
 		if (imp && imp->imp_connection)
@@ -146,6 +167,7 @@ slctlrep_getconn(int fd, struct psc_ctlmsghdr *mh, void *m)
 			break;
 	}
 	PLL_ULOCK(&sl_clients);
+	CONF_ULOCK();
 	return (rc);
 }
 

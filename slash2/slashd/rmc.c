@@ -68,6 +68,7 @@
 #include "zfs-fuse/zfs_slashlib.h"
 
 int			slm_force_dio;
+int			slm_crc_check = 1;
 int			slm_global_mount;
 
 uint64_t		slm_next_fid = UINT64_MAX;
@@ -1039,33 +1040,51 @@ slm_rmc_handle_rename(struct pscrpc_request *rq)
 	    chfg);
 	mds_unreserve_slot(2);
 
- out:
-	if (mp->rc == 0) {
-		mdsio_fcmh_refreshattr(op, &mp->srr_opattr);
-		if (op != np)
-			mdsio_fcmh_refreshattr(np, &mp->srr_npattr);
+	if (mp->rc)
+		PFL_GOTOERR(out, mp->rc);
 
-		if (chfg[0].fg_fid != FID_ANY &&
-		    slm_fcmh_get(&chfg[0], &c) == 0) {
-			mdsio_fcmh_refreshattr(c,
-			    &mp->srr_cattr);
-			fcmh_op_done(c);
-		} else
-			mp->srr_cattr.sst_fid = FID_ANY;
+	mp->rc = mdsio_fcmh_refreshattr(op, &mp->srr_opattr);
+	if (mp->rc)
+		PFL_GOTOERR(out, mp->rc);
 
-		if (chfg[1].fg_fid != FID_ANY &&
-		    slm_fcmh_get(&chfg[1], &c) == 0) {
-			mdsio_fcmh_refreshattr(c,
-			    &mp->srr_clattr);
-			fcmh_op_done(c);
-		} else
-			mp->srr_clattr.sst_fid = FID_ANY;
+	if (op != np) {
+		mp->rc = mdsio_fcmh_refreshattr(np, &mp->srr_npattr);
+		if (mp->rc)
+			PFL_GOTOERR(out, mp->rc);
 	}
 
-	if (np)
-		fcmh_op_done(np);
-	if (op && op != np)
+	if (chfg[0].fg_fid != FID_ANY &&
+	    slm_fcmh_get(&chfg[0], &c) == 0) {
+		mp->rc = mdsio_fcmh_refreshattr(c,
+		    &mp->srr_cattr);
+		fcmh_op_done(c);
+	} else
+		mp->srr_cattr.sst_fid = FID_ANY;
+
+	if (mp->rc)
+		PFL_GOTOERR(out, mp->rc);
+	/*
+ 	 * This logic was introduced by the following commit:
+ 	 *
+ 	 * commit 686123166096a5ae07240f51fc68cb30afd7a0e3
+ 	 * Author: Jared Yanovich <yanovich@psc.edu>
+ 	 * Date:   Wed Jan 8 23:20:16 2014 +0000
+ 	 *
+ 	 * pass back RENAME clobbered file stat(2) attributes
+ 	 *
+ 	 */
+	if (chfg[1].fg_fid != FID_ANY &&
+	    slm_fcmh_get(&chfg[1], &c) == 0) {
+		mp->rc = mdsio_fcmh_refreshattr(c, &mp->srr_clattr);
+		fcmh_op_done(c);
+	} else
+		mp->srr_clattr.sst_fid = FID_ANY;
+
+ out:
+	if (op)
 		fcmh_op_done(op);
+	if (np && np != op)
+		fcmh_op_done(np);
 	return (0);
 }
 
@@ -1723,6 +1742,7 @@ slm_rmc_handle_delreplrq(struct pscrpc_request *rq)
 	return (0);
 }
 
+/* Handle SRMT_REPL_GETST RPC */
 int
 slm_rmc_handle_getreplst(struct pscrpc_request *rq)
 {
@@ -1881,13 +1901,14 @@ slm_rmc_handler(struct pscrpc_request *rq)
 	return (rc);
 }
 
-void
+/* called from sl_exp_getpri_cli() */
+static struct slrpc_cservice *
 mexpc_allocpri(struct pscrpc_export *exp)
 {
 	struct sl_exp_cli *expc;
 
 	expc = exp->exp_private = PSCALLOC(sizeof(*expc));
-	slm_getclcsvc(exp);
+	return (slm_getclcsvc(exp));
 }
 
 struct sl_expcli_ops sl_expcli_ops = {

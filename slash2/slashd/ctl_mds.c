@@ -486,6 +486,9 @@ slmctlthr_main(const char *fn)
 	psc_ctlparam_register("run", psc_ctlparam_run);
 	psc_ctlparam_register("rusage", psc_ctlparam_rusage);
 
+	psc_ctlparam_register_var("sys.crc_check",
+	    PFLCTL_PARAMT_INT, PFLCTL_PARAMF_RDWR, &slm_crc_check);
+
 	psc_ctlparam_register_simple("sys.next_fid",
 	    slmctlparam_nextfid_get, slmctlparam_nextfid_set);
 
@@ -504,6 +507,8 @@ slmctlthr_main(const char *fn)
 
 	psc_ctlparam_register_var("sys.global",
 	    PFLCTL_PARAMT_INT, PFLCTL_PARAMF_RDWR, &slm_global_mount);
+	psc_ctlparam_register_var("sys.pid", PFLCTL_PARAMT_INT, 0,
+	    &pfl_pid);
 	psc_ctlparam_register_var("sys.ptrunc",
 	    PFLCTL_PARAMT_INT, PFLCTL_PARAMF_RDWR, &slm_ptrunc_enabled);
 	psc_ctlparam_register_var("sys.preclaim",

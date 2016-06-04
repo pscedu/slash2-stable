@@ -128,6 +128,12 @@ mds_bmap_timeotbl_getnextseq(void)
 	if (slm_bmap_leases.btt_maxseq == BMAPSEQ_ANY) {
 		OPSTAT_INCR("seqno-wrap");
 		slm_bmap_leases.btt_maxseq = 1;
+	} else if (slm_bmap_leases.btt_maxseq == 0) {
+		/*
+ 		 * This should never happen, but we have been burned.
+ 		 */
+		OPSTAT_INCR("seqno-skip");
+		slm_bmap_leases.btt_maxseq = 1;
 	}
 
 	hwm = slm_bmap_leases.btt_maxseq;
@@ -145,13 +151,21 @@ mds_bmap_timeotbl_remove(struct bmap_mds_lease *bml)
 	if (pll_peekhead(&slm_bmap_leases.btt_leases) == bml)
 		update = 1;
 	pll_remove(&slm_bmap_leases.btt_leases, bml);
-	if (update) {
-		tmp = pll_peekhead(&slm_bmap_leases.btt_leases);
-		if (tmp)
-			slm_bmap_leases.btt_minseq = tmp->bml_seq;
-		else
-			slm_bmap_leases.btt_minseq =
-			    slm_bmap_leases.btt_maxseq;
+	if (!update)
+		return;
+
+	tmp = pll_peekhead(&slm_bmap_leases.btt_leases);
+	if (!tmp) {
+		slm_bmap_leases.btt_minseq = slm_bmap_leases.btt_maxseq;
+		mds_bmap_timeotbl_journal_seqno();
+		return;
+	}
+	/*
+ 	 * During log replay,  expired bmap leases are tagged with
+ 	 * BMAPSEQ_ANY. Ignore them.
+ 	 */
+	if (tmp->bml_seq != BMAPSEQ_ANY) {
+		slm_bmap_leases.btt_minseq = tmp->bml_seq;
 		mds_bmap_timeotbl_journal_seqno();
 	}
 }
@@ -213,6 +227,7 @@ mds_bmap_timeotbl_mdsi(struct bmap_mds_lease *bml, int flags)
 void
 slmbmaptimeothr_begin(struct psc_thread *thr)
 {
+	char wait[16];
 	struct bmap_mds_lease *bml;
 	int rc, nsecs = 0;
 
@@ -266,8 +281,12 @@ slmbmaptimeothr_begin(struct psc_thread *thr)
  out:
 		psclog_debug("nsecs=%d", nsecs);
 
-		if (nsecs > 0)
+		if (nsecs > 0) {
+			snprintf(wait, 16, "sleep %d", nsecs);
+			thr->pscthr_waitq = wait;
 			sleep((uint32_t)nsecs);
+			thr->pscthr_waitq = NULL;
+		}
 	}
 }
 

@@ -112,7 +112,7 @@ struct psc_journal_cursor	 mds_cursor;
 
 psc_spinlock_t			 mds_txg_lock = SPINLOCK_INIT;
 
-struct psc_waitq		 slm_cursor_waitq = PSC_WAITQ_INIT;
+struct psc_waitq		 slm_cursor_waitq = PSC_WAITQ_INIT("cursor");
 psc_spinlock_t			 slm_cursor_lock = SPINLOCK_INIT;
 int				 slm_cursor_update_inprog;
 int				 slm_cursor_update_needed;
@@ -755,7 +755,9 @@ mdslog_namespace(int op, uint64_t txg, uint64_t pfid, uint64_t npfid,
 			COPYFG((struct sl_fidgen *)arg, &sstb->sst_fg);
 		break;
 	case NS_OP_RENAME: {
-		struct {
+
+		/* filled in by zfs_rename() */
+		struct zfs_rename_log_arg {
 			struct sl_fidgen clfg;
 			struct sl_fidgen *fgp;
 		} *aa;
@@ -1291,8 +1293,7 @@ mds_open_cursor(void)
 	psclog_info("SLFID prior to replay="SLPRI_FID,
 	    mds_cursor.pjc_fid);
 
-	mds_bmap_setcurseq(mds_cursor.pjc_seqno_hwm,
-	    mds_cursor.pjc_seqno_lwm);
+	mds_bmap_setcurseq(mds_cursor.pjc_seqno_hwm, mds_cursor.pjc_seqno_lwm);
 
 	psclogs_info(SLMSS_INFO, "bmap sequence number LWM before replay is %"PRId64,
 	    mds_cursor.pjc_seqno_lwm);
@@ -1582,7 +1583,7 @@ mds_send_batch_reclaim(uint64_t *pbatchno)
 		rq->rq_async_args.pointer_arg[CBARG_RARG] = &rarg;
 		rq->rq_async_args.pointer_arg[CBARG_RES] = res;
 		rc = SL_NBRQSETX_ADD(set, csvc, rq);
-		if (!rc)
+		if (!rc) 
 			continue;
  out:
 		if (rq)
@@ -1953,8 +1954,8 @@ mds_journal_init(uint64_t fsuuid)
 	 */
 	pscthr_init(SLMTHRT_CURSOR, slmjcursorthr_main, 0, "slmjcursorthr");
 
-	psc_waitq_init(&nsupd_prg.waitq);
-	psc_waitq_init(&reclaim_prg.waitq);
+	psc_waitq_init(&nsupd_prg.waitq,"suspd");
+	psc_waitq_init(&reclaim_prg.waitq, "reclaim");
 
 	INIT_SPINLOCK(&nsupd_prg.lock);
 	INIT_SPINLOCK(&reclaim_prg.lock);

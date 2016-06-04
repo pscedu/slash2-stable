@@ -31,6 +31,7 @@
 #include <time.h>
 
 #include "pfl/atomic.h"
+#include "pfl/fs.h"
 #include "pfl/list.h"
 #include "pfl/listcache.h"
 #include "pfl/lock.h"
@@ -170,7 +171,7 @@ struct bmpc_ioreq {
 	struct timespec		 biorq_expire;
 	struct psc_dynarray	 biorq_pages;	/* array of bmpce */
 	struct psc_listentry	 biorq_lentry;	/* chain on bmpc_pndg_biorqs */
-	struct psc_listentry	 biorq_exp_lentry;/* chain on bmpc_new_biorqs_exp */
+	struct psc_listentry	 biorq_exp_lentry;/* chain on bmpc_biorqs_exp */
 	struct psc_listentry	 biorq_aio_lentry;/* chain on bmpce's aios */
 	RB_ENTRY(bmpc_ioreq)	 biorq_tentry;	/* indexed on offset for write coalescing */
 	struct bmap		*biorq_bmap;	/* backpointer to our bmap */
@@ -185,7 +186,7 @@ struct bmpc_ioreq {
 #define BIORQ_FLUSHRDY		(1 <<  5)	/* write buffer is filled */
 #define BIORQ_FREEBUF		(1 <<  6)	/* DIO READ needs a buffer */
 #define BIORQ_WAIT		(1 <<  7)	/* at least one waiter for aio */
-#define BIORQ_ONTREE		(1 <<  8)	/* on bmpc_new_biorqs rbtree */
+#define BIORQ_ONTREE		(1 <<  8)	/* on bmpc_biorqs rbtree */
 #define BIORQ_READAHEAD		(1 <<  9)	/* performed by readahead */
 #define BIORQ_AIOWAKE		(1 << 10)	/* aio needs wakeup */
 
@@ -249,7 +250,6 @@ RB_PROTOTYPE(bmpc_biorq_tree, bmpc_ioreq, biorq_tentry, bmpc_biorq_cmp)
 
 struct bmap_pagecache {
 	struct bmap_pagecachetree	 bmpc_tree;		/* tree of entries */
-	struct psc_waitq		 bmpc_waitq;
 
 	/*
 	 * List for new requests minus BIORQ_READ and BIORQ_DIO.  All
@@ -259,9 +259,9 @@ struct bmap_pagecache {
 	 * The tree is protected by the bmap lock.
 	 */
 	int				 bmpc_pndg_writes;
-	struct bmpc_biorq_tree		 bmpc_new_biorqs;
-	struct psc_lockedlist		 bmpc_new_biorqs_exp;	/* for flushing/expiring */
-	struct psc_lockedlist		 bmpc_pndg_biorqs;	/* pending I/O requests */
+	struct bmpc_biorq_tree		 bmpc_biorqs;
+	struct psc_lockedlist		 bmpc_biorqs_exp;	/* flush/expir/abort */
+	struct psc_lockedlist		 bmpc_pndg_biorqs;	/* all requests */
 };
 
 struct bmpc_write_coalescer {
@@ -327,12 +327,10 @@ bmpc_init(struct bmap_pagecache *bmpc)
 	/* Double check the exclusivity of these lists... */
 	pll_init(&bmpc->bmpc_pndg_biorqs, struct bmpc_ioreq,
 	    biorq_lentry, NULL);
-	pll_init(&bmpc->bmpc_new_biorqs_exp, struct bmpc_ioreq,
+	pll_init(&bmpc->bmpc_biorqs_exp, struct bmpc_ioreq,
 	    biorq_exp_lentry, NULL);
 
-	psc_waitq_init(&bmpc->bmpc_waitq);
-
-	RB_INIT(&bmpc->bmpc_new_biorqs);
+	RB_INIT(&bmpc->bmpc_biorqs);
 }
 
 #endif /* _MSL_PGCACHE_H_ */

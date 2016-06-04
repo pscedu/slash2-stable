@@ -284,7 +284,7 @@ msctlrep_getreplst(int fd, struct psc_ctlmsghdr *mh, void *m)
 	memset(&mrsq, 0, sizeof(mrsq));
 	INIT_PSC_LISTENTRY(&mrsq.mrsq_lentry);
 	INIT_SPINLOCK(&mrsq.mrsq_lock);
-	psc_waitq_init(&mrsq.mrsq_waitq);
+	psc_waitq_init(&mrsq.mrsq_waitq, "msrq");
 	mrsq.mrsq_id = mq->id;
 	mrsq.mrsq_fd = fd;
 	mrsq.mrsq_fdlock = fdlock;
@@ -962,6 +962,8 @@ msctlthr_spawn(void)
 	psc_ctlparam_register_var("sys.max_retries", PFLCTL_PARAMT_INT,
 	    PFLCTL_PARAMF_RDWR, &msl_max_retries);
 
+	psc_ctlparam_register_var("sys.pid", PFLCTL_PARAMT_INT, 0,
+	    &pfl_pid);
 	psc_ctlparam_register_var("sys.predio_window_size",
 	    PFLCTL_PARAMT_INT, PFLCTL_PARAMF_RDWR,
 	    &msl_predio_window_size);

@@ -45,6 +45,8 @@ struct bmap_pagecache_entry;
 struct bmpc_ioreq;
 struct dircache_page;
 
+extern struct psc_thread *slcconnthr;
+
 /* mount_slash thread types */
 enum {
 	MSTHRT_ATTR_FLUSH = _PFL_NTHRT,	/* attr write data flush thread */
@@ -58,6 +60,7 @@ enum {
 	MSTHRT_FLUSH,			/* bmap write data flush thread */
 	MSTHRT_FSMGR,			/* pscfs manager */
 	MSTHRT_NBRQ,			/* non-blocking RPC reply handler */
+	MSTHRT_CONN,			/* monitor connection to peers */
 	MSTHRT_RCI,			/* service RPC reqs for CLI from ION */
 	MSTHRT_RCM,			/* service RPC reqs for CLI from MDS */
 	MSTHRT_READAHEAD,		/* readahead thread */
@@ -221,12 +224,12 @@ struct msl_fsrqinfo {
  */
 struct resprof_cli_info {
 	struct psc_spinlock		 rpci_lock;
-	struct psc_dynarray		 rpci_pinned_bmaps;
 	struct statvfs			 rpci_sfb;
 	struct timespec			 rpci_sfb_time;
 	struct psc_waitq		 rpci_waitq;
 	int				 rpci_flags;
 	int				 rpci_timeouts;
+	int				 rpci_saw_error;
 	int				 rpci_infl_rpcs;
 	int				 rpci_max_infl_rpcs;
 };
@@ -309,7 +312,6 @@ ssize_t	 slc_getxattr(struct pscfs_req *pfr, const struct pscfs_creds *,
 	    const char *, void *, size_t, struct fidc_membh *, size_t *);
 
 size_t	 msl_pages_copyout(struct bmpc_ioreq *, struct msl_fsrqinfo *);
-int	 msl_fd_should_retry(struct msl_fhent *, struct pscfs_req *, int);
 
 int	 msl_try_get_replica_res(struct bmap *, int, int,
 	    struct sl_resm **, struct slrpc_cservice **);

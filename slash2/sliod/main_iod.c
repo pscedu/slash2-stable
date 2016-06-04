@@ -137,7 +137,9 @@ slistatfsthr_main(struct psc_thread *thr)
 			    sizeof(sli_ssfb.sf_type));
 			freelock(&sli_ssfb_lock);
 		}
+		thr->pscthr_waitq = "sleep 60";
 		sleep(60);
+		thr->pscthr_waitq = NULL;
 	}
 }
 
@@ -149,7 +151,7 @@ slistatfsthr_main(struct psc_thread *thr)
 void
 slihealththr_main(struct psc_thread *thr)
 {
-	struct psc_waitq dummy = PSC_WAITQ_INIT;
+	struct psc_waitq dummy = PSC_WAITQ_INIT("health");
 	struct slrpc_cservice *csvc;
 	struct timespec ts;
 	char cmdbuf[BUFSIZ];
@@ -184,14 +186,20 @@ slihealththr_main(struct psc_thread *thr)
 
 			sli_selftest_rc = rc;
 
+			CONF_LOCK();
 			PLL_LOCK(&sl_clients);
 			PLL_FOREACH(csvc, &sl_clients) {
 				CSVC_LOCK(csvc);
+				if (!csvc->csvc_refcnt) {
+					CSVC_ULOCK(csvc);
+					continue;
+				}
 				sl_csvc_incref(csvc);
 				CSVC_ULOCK(csvc);
 				sli_rci_ctl_health_send(csvc);
 			}
 			PLL_ULOCK(&sl_clients);
+			CONF_ULOCK();
 		}
 	}
 }

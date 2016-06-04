@@ -66,7 +66,7 @@ int				 msl_max_nretries = 256;
 
 #define MIN_COALESCE_RPC_SZ	 LNET_MTU
 
-struct psc_waitq		 slc_bflush_waitq = PSC_WAITQ_INIT;
+struct psc_waitq		 slc_bflush_waitq = PSC_WAITQ_INIT("bflush");
 psc_spinlock_t			 slc_bflush_lock = SPINLOCK_INIT;
 int				 slc_bflush_tmout_flags;
 
@@ -336,9 +336,7 @@ bmap_flush_resched(struct bmpc_ioreq *r, int rc)
 
 	if (!(r->biorq_flags & BIORQ_ONTREE)) {
 		bmpc = bmap_2_bmpc(b);
-		PSC_RB_XINSERT(bmpc_biorq_tree, &bmpc->bmpc_new_biorqs,
-		    r);
-		pll_addtail(&bmpc->bmpc_new_biorqs_exp, r);
+		PSC_RB_XINSERT(bmpc_biorq_tree, &bmpc->bmpc_biorqs, r);
 		r->biorq_flags |= BIORQ_ONTREE;
 	}
 	OPSTAT_INCR("msl.bmap-flush-resched");
@@ -371,7 +369,7 @@ bmap_flush_resched(struct bmpc_ioreq *r, int rc)
 	msl_bmap_lease_reassign(r->biorq_bmap);
 }
 
-__static void
+__static int
 bmap_flush_send_rpcs(struct bmpc_write_coalescer *bwc)
 {
 	struct slrpc_cservice *csvc;
@@ -405,9 +403,7 @@ bmap_flush_send_rpcs(struct bmpc_write_coalescer *bwc)
 		 */
 		r->biorq_last_sliod = bmap_2_ios(b);
 		r->biorq_flags &= ~BIORQ_ONTREE;
-		PSC_RB_XREMOVE(bmpc_biorq_tree, &bmpc->bmpc_new_biorqs,
-		    r);
-		pll_remove(&bmpc->bmpc_new_biorqs_exp, r);
+		PSC_RB_XREMOVE(bmpc_biorq_tree, &bmpc->bmpc_biorqs, r);
 	}
 	BMAP_ULOCK(b);
 
@@ -416,7 +412,7 @@ bmap_flush_send_rpcs(struct bmpc_write_coalescer *bwc)
 
 	rc = bmap_flush_create_rpc(bwc, csvc, b);
 	if (!rc)
-		return;
+		return (0);
 
  out:
 	DYNARRAY_FOREACH(r, i, &bwc->bwc_biorqs)
@@ -426,6 +422,8 @@ bmap_flush_send_rpcs(struct bmpc_write_coalescer *bwc)
 		sl_csvc_decref(csvc);
 
 	bwc_free(bwc);
+	OPSTAT_INCR("msl.bmap-flush-rpc-fail");
+	return (rc);
 }
 
 /*
@@ -554,7 +552,7 @@ bmap_flushable(struct bmap *b)
 	struct bmap_pagecache *bmpc;
 
 	bmpc = bmap_2_bmpc(b);
-	flush = !RB_EMPTY(&bmpc->bmpc_new_biorqs);
+	flush = !RB_EMPTY(&bmpc->bmpc_biorqs);
 
 	if (flush) {
 		PFL_GETTIMESPEC(&ts);
@@ -763,7 +761,7 @@ bmap_flush(void)
 	struct bmap_pagecache *bmpc;
 	struct bmpc_ioreq *r;
 	struct bmap *b, *tmpb;
-	int i, j, didwork = 0;
+	int i, j, rc, didwork = 0;
 
 	LIST_CACHE_LOCK(&msl_bmapflushq);
 	LIST_CACHE_FOREACH_SAFE(b, tmpb, &msl_bmapflushq) {
@@ -799,18 +797,19 @@ bmap_flush(void)
 
 		BMAP_LOCK(b);
 		DEBUG_BMAP(PLL_DIAG, b, "try flush");
-		RB_FOREACH(r, bmpc_biorq_tree, &bmpc->bmpc_new_biorqs) {
+		RB_FOREACH(r, bmpc_biorq_tree, &bmpc->bmpc_biorqs) {
 			DEBUG_BIORQ(PLL_DEBUG, r, "flushable");
 			psc_dynarray_add(&reqs, r);
 		}
 		BMAP_ULOCK(b);
 
 		j = 0;
-		while (j < psc_dynarray_len(&reqs) &&
+		rc = 0;
+		while (!rc && j < psc_dynarray_len(&reqs) &&
 		    (bwc = bmap_flush_trycoalesce(&reqs, &j))) {
 			didwork = 1;
 			bmap_flush_coalesce_map(bwc);
-			bmap_flush_send_rpcs(bwc);
+			rc = bmap_flush_send_rpcs(bwc);
 		}
 		psc_dynarray_reset(&reqs);
 
@@ -894,7 +893,7 @@ msbmapthr_spawn(void)
 	struct psc_thread *thr;
 	int i;
 
-	psc_waitq_init(&slc_bflush_waitq);
+	psc_waitq_init(&slc_bflush_waitq, "bmap-flush");
 
 	lc_reginit(&msl_bmapflushq, struct bmap,
 	    bcm_lentry, "bmapflushq");

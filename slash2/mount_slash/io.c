@@ -74,7 +74,7 @@ __static void	msl_pages_schedflush(struct bmpc_ioreq *);
 __static void	msl_update_attributes(struct msl_fsrqinfo *);
 
 /* Flushing fs threads wait here for I/O completion. */
-struct psc_waitq	 msl_fhent_aio_waitq = PSC_WAITQ_INIT;
+struct psc_waitq	 msl_fhent_aio_waitq = PSC_WAITQ_INIT("aio");
 
 struct timespec		 msl_bmap_max_lease = { BMAP_CLI_MAX_LEASE, 0 };
 struct timespec		 msl_bmap_timeo_inc = { BMAP_CLI_TIMEO_INC, 0 };
@@ -246,12 +246,11 @@ msl_biorq_del(struct bmpc_ioreq *r)
 
 	pll_remove(&bmpc->bmpc_pndg_biorqs, r);
 
-	if (r->biorq_flags & BIORQ_ONTREE) {
-		PSC_RB_XREMOVE(bmpc_biorq_tree, &bmpc->bmpc_new_biorqs, r);
-		pll_remove(&bmpc->bmpc_new_biorqs_exp, r);
-	}
+	if (r->biorq_flags & BIORQ_ONTREE)
+		PSC_RB_XREMOVE(bmpc_biorq_tree, &bmpc->bmpc_biorqs, r);
 
 	if (r->biorq_flags & BIORQ_FLUSHRDY) {
+		pll_remove(&bmpc->bmpc_biorqs_exp, r);
 		psc_assert(bmpc->bmpc_pndg_writes > 0);
 		psc_assert(b->bcm_flags & BMAPF_FLUSHQ);
 		bmpc->bmpc_pndg_writes--;
@@ -266,8 +265,6 @@ msl_biorq_del(struct bmpc_ioreq *r)
 
 	DEBUG_BMAP(PLL_DIAG, b, "remove biorq=%p nitems_pndg=%d",
 	    r, pll_nitems(&bmpc->bmpc_pndg_biorqs));
-
-	psc_waitq_wakeall(&bmpc->bmpc_waitq);
 
 	bmap_op_done_type(b, BMAP_OPCNT_BIORQ);
 }
@@ -874,7 +871,7 @@ msl_read_attempt_retry(struct msl_fsrqinfo *fsrqi, int rc0,
 
  restart:
 
-	if (!slc_rpc_retry(pfr, &rc0))
+	if (!slc_rpc_should_retry(pfr, &rc0))
 		return (0);
 
 	csvc = slc_geticsvc(m);
@@ -1248,7 +1245,7 @@ msl_pages_dio_getput(struct bmpc_ioreq *r)
 
 if (!pfl_rpc_max_retry) {
 
-	if (rc && slc_rpc_retry(pfr, &rc)) {
+	if (rc && slc_rpc_should_retry(pfr, &rc)) {
 		OPSTAT_INCR("msl.dio-retried");
 		if (nbs)
 			pscrpc_set_destroy(nbs);
@@ -1289,8 +1286,8 @@ msl_pages_schedflush(struct bmpc_ioreq *r)
 	biorq_incref(r);
 	r->biorq_flags |= BIORQ_FLUSHRDY | BIORQ_ONTREE;
 	bmpc->bmpc_pndg_writes++;
-	PSC_RB_XINSERT(bmpc_biorq_tree, &bmpc->bmpc_new_biorqs, r);
-	pll_addtail(&bmpc->bmpc_new_biorqs_exp, r);
+	PSC_RB_XINSERT(bmpc_biorq_tree, &bmpc->bmpc_biorqs, r);
+	pll_addtail(&bmpc->bmpc_biorqs_exp, r);
 	DEBUG_BIORQ(PLL_DIAG, r, "sched flush");
 
 	/* clear BMPCEF_FAULTING after incrementing bmpc_pndg_writes */
@@ -1515,6 +1512,7 @@ msl_launch_read_rpcs(struct bmpc_ioreq *r)
 	 * the storage.
 	 */
 	if (needflush) {
+		/* XXX make this interruptible */
 		BMAP_LOCK(r->biorq_bmap);
 		bmpc_biorqs_flush(r->biorq_bmap);
 		BMAP_ULOCK(r->biorq_bmap);

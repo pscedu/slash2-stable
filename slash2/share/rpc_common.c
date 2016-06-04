@@ -56,7 +56,11 @@ struct psc_poolmgr	*sl_csvc_pool;
 struct psc_lockedlist	 sl_clients = PLL_INIT(&sl_clients,
     struct slrpc_cservice, csvc_lentry);
 
-psc_spinlock_t		 sl_conn_lock = SPINLOCK_INIT;
+struct pfl_rwlock	 sl_conn_lock;
+psc_spinlock_t		 sl_watch_lock = SPINLOCK_INIT;
+
+void	sl_imp_hldrop_cli(void *);
+void	sl_imp_hldrop_resm(void *);
 
 /*
  * Create a new generic RPC request.  Common processing in all SLASH2
@@ -155,11 +159,6 @@ sl_csvc_online(struct slrpc_cservice *csvc)
 {
 	CSVC_LOCK_ENSURE(csvc);
 
-	while (csvc->csvc_flags & CSVCF_BUSY) {
-		CSVC_WAIT(csvc);
-		CSVC_LOCK(csvc);
-	}
-
 	/*
 	 * Hit a crash here on FreeBSD on sliod due to NULL import field below.
 	 * The type is SLCONNT_MDS, the last errno is ETIMEDOUT (-60).
@@ -168,45 +167,23 @@ sl_csvc_online(struct slrpc_cservice *csvc)
 	csvc->csvc_import->imp_failed = 0;
 	csvc->csvc_import->imp_invalid = 0;
 
-	csvc->csvc_flags &= ~CSVCF_CONNECTING;
+	csvc->csvc_flags &= ~(CSVCF_CONNECTING | CSVCF_DISCONNECTING);
 	csvc->csvc_flags |= CSVCF_CONNECTED;
-
-	csvc->csvc_lasterrno = 0;
-	csvc->csvc_nfails = 0;
-
-	CSVC_WAKE(csvc);
-}
-
-void
-sl_csvc_dectryref(struct slrpc_cservice *csvc)
-{
-	int locked;
-
-	locked = CSVC_RLOCK(csvc);
-	psc_assert(csvc->csvc_tryref > 0);
-	if (--csvc->csvc_tryref == 0)
-		csvc->csvc_flags &= ~CSVCF_CONNECTING;
-	CSVC_URLOCK(csvc, locked);
 }
 
 void
 slrpc_connect_finish(struct slrpc_cservice *csvc,
     struct pscrpc_import *imp, struct pscrpc_import *old, int success)
 {
-	int locked;
-
-	locked = CSVC_RLOCK(csvc);
-	sl_csvc_dectryref(csvc);
+	CSVC_LOCK(csvc);
 	if (success) {
 		if (csvc->csvc_import != imp)
 			csvc->csvc_import = imp;
 	} else {
 		if (csvc->csvc_import == imp)
 			csvc->csvc_import = old;
-		csvc->csvc_nfails++;
 	}
-	CSVC_WAKE(csvc);
-	CSVC_URLOCK(csvc, locked);
+	CSVC_ULOCK(csvc);
 
 	if (!success) {
 		pscrpc_abort_inflight(imp);
@@ -233,13 +210,11 @@ slrpc_connect_cb(struct pscrpc_request *rq,
 
 	SL_GET_RQ_STATUS(csvc, rq, mp, rc);
 
-	CSVC_LOCK(csvc);
-	clock_gettime(CLOCK_MONOTONIC, &csvc->csvc_mtime);
-	csvc->csvc_lasterrno = rc;
 	if (rc) {
 		slrpc_connect_finish(csvc, imp, oimp, 0);
+		CSVC_LOCK(csvc);
+		csvc->csvc_flags &= ~CSVCF_CONNECTING;
 	} else {
-
 		tv1.tv_sec = mp->uptime;
 		tv1.tv_nsec = 0;
 		_PFL_GETTIMESPEC(CLOCK_MONOTONIC, &tv2);
@@ -247,10 +222,13 @@ slrpc_connect_cb(struct pscrpc_request *rq,
 		*uptimep = tv1.tv_sec;
 		*stkversp = mp->stkvers;
 		slrpc_connect_finish(csvc, imp, oimp, 1);
+		CSVC_LOCK(csvc);
 		sl_csvc_online(csvc);
 	}
+	clock_gettime(CLOCK_MONOTONIC, &csvc->csvc_mtime);
+	csvc->csvc_lasterrno = rc;
 	CSVC_WAKE(csvc);
-	sl_csvc_decref(csvc);
+	sl_csvc_decref_locked(csvc);
 	return (0);
 }
 
@@ -300,20 +278,13 @@ slrpc_issue_connect(lnet_nid_t local, lnet_nid_t server,
 	c = pscrpc_get_connection(server_id, local, NULL);
 
 	CSVC_LOCK(csvc);
-	psc_assert((csvc->csvc_flags & CSVCF_BUSY) == 0);
 
-	csvc->csvc_flags |= CSVCF_BUSY;
-	csvc->csvc_owner = pthread_self();
-	csvc->csvc_lineno = __LINE__;
-	csvc->csvc_fn = __FILE__;
-
-	if (flags & CSVCF_NONBLOCK || csvc->csvc_import == NULL) {
+	if (csvc->csvc_import == NULL) {
 		imp = slrpc_new_import(csvc);
-		oimp = csvc->csvc_import;
 		csvc->csvc_import = imp;
-	}
+	} else
+		imp = csvc->csvc_import;
 
-	imp = csvc->csvc_import;
 	if (imp->imp_connection)
 		pscrpc_put_connection(imp->imp_connection);
 	imp->imp_connection = c;
@@ -325,11 +296,7 @@ slrpc_issue_connect(lnet_nid_t local, lnet_nid_t server,
 	/* handled by slrpc_handle_connect() */
 	rc = SL_RSX_NEWREQ(csvc, SRMT_CONNECT, rq, mq, mp);
 	if (rc) {
-		CSVC_LOCK(csvc);
-		csvc->csvc_owner = 0;
-		csvc->csvc_flags &= ~CSVCF_BUSY;
 		slrpc_connect_finish(csvc, imp, oimp, 0);
-		CSVC_ULOCK(csvc);
 		return (rc);
 	}
 	mq->magic = csvc->csvc_magic;
@@ -340,13 +307,8 @@ slrpc_issue_connect(lnet_nid_t local, lnet_nid_t server,
 	timespecsub(&tv1, &pfl_uptime, &tv1);
 	mq->uptime = tv1.tv_sec;
 
-	CSVC_LOCK(csvc);
-	csvc->csvc_tryref++;
-	if (flags & CSVCF_NONBLOCK)
-		sl_csvc_incref(csvc);
-	CSVC_ULOCK(csvc);
-
 	if (flags & CSVCF_NONBLOCK) {
+
 		rq->rq_silent_timeout = 1;
 		rq->rq_interpret_reply = slrpc_connect_cb;
 		rq->rq_async_args.pointer_arg[CBARG_CSVC] = csvc;
@@ -357,20 +319,9 @@ slrpc_issue_connect(lnet_nid_t local, lnet_nid_t server,
 		rc = SL_NBRQSET_ADD(csvc, rq);
 		if (rc) {
 			pscrpc_req_finished(rq);
-
-			CSVC_LOCK(csvc);
-			csvc->csvc_owner = 0;
-			csvc->csvc_flags &= ~CSVCF_BUSY;
 			slrpc_connect_finish(csvc, imp, oimp, 0);
-			sl_csvc_decref(csvc);
 			return (rc);
 		}
-		CSVC_LOCK(csvc);
-		csvc->csvc_owner = 0;
-		csvc->csvc_flags &= ~CSVCF_BUSY;
-		CSVC_WAKE(csvc);
-		CSVC_ULOCK(csvc);
-
 		/*
 		 * XXX wait a short amount of time and check for
 		 * establishment before returning.
@@ -379,8 +330,10 @@ slrpc_issue_connect(lnet_nid_t local, lnet_nid_t server,
 	}
 
 	rc = SL_RSX_WAITREP(csvc, rq, mp);
-	if (rc == 0) {
-		rc = mp->rc;
+	if (rc == 0)
+		rc = -mp->rc;
+
+	if (!rc) {
 		*stkversp = mp->stkvers;
 
 		tv1.tv_sec = mp->uptime;
@@ -391,11 +344,7 @@ slrpc_issue_connect(lnet_nid_t local, lnet_nid_t server,
 	}
 	pscrpc_req_finished(rq);
 
-	CSVC_LOCK(csvc);
-	csvc->csvc_owner = 0;
-	csvc->csvc_flags &= ~CSVCF_BUSY;
 	slrpc_connect_finish(csvc, imp, oimp, rc == 0);
-	CSVC_ULOCK(csvc);
 	return (rc);
 }
 
@@ -411,7 +360,8 @@ slrpc_ping_cb(struct pscrpc_request *rq,
 
 	CSVC_LOCK(csvc);
 	clock_gettime(CLOCK_MONOTONIC, &csvc->csvc_mtime);
-	sl_csvc_decref(csvc);
+       	csvc->csvc_flags &= ~CSVCF_PINGING;
+	sl_csvc_decref_locked(csvc);
 	return (0);
 }
 
@@ -423,6 +373,7 @@ slrpc_issue_ping(struct slrpc_cservice *csvc, int st_rc)
 	struct srm_ping_rep *mp;
 	int rc;
 
+	/* handled by slm_rmi_handle_ping() */
 	rc = SL_RSX_NEWREQ(csvc, SRMT_PING, rq, mq, mp);
 	if (rc)
 		return (rc);
@@ -478,7 +429,8 @@ slrpc_handle_connect(struct pscrpc_request *rq, uint64_t magic,
 
 		/*
 		 * Establish a SLCONNT_CLI connection to our newly
-		 * arrived client.
+		 * arrived client. This is called when a client 
+		 * connects to the MDS or an IOS.
 		 */
 		expc = sl_exp_getpri_cli(e, 1);
 		expc->expc_stkvers = mq->stkvers;
@@ -534,69 +486,15 @@ _sl_csvc_waitrelv(struct slrpc_cservice *csvc, long s, long ns)
 int
 sl_csvc_useable(struct slrpc_cservice *csvc)
 {
+	int flags;
+	
 	CSVC_LOCK_ENSURE(csvc);
 	if (csvc->csvc_import == NULL ||
 	    csvc->csvc_import->imp_failed ||
 	    csvc->csvc_import->imp_invalid)
 		return (0);
-	return ((csvc->csvc_flags &
-	  (CSVCF_CONNECTED | CSVCF_DISCONNECTING | CSVCF_WANTFREE)) ==
-	    CSVCF_CONNECTED);
-}
-
-/*
- * Mark that a connection will be freed when the last reference goes
- * away.  This should never be performed on service connections to
- * resms, only for service connections to clients.
- * @csvc: client service.
- */
-void
-sl_csvc_markfree(struct slrpc_cservice *csvc)
-{
-	int locked;
-
-	/* 05/13/2016: Hit crash on slashd during to invalid mutex
- 	 * coming from pscrpc_fail_import().
- 	 */
-	locked = CSVC_RLOCK(csvc);
-	csvc->csvc_flags |= CSVCF_WANTFREE;
-	csvc->csvc_flags &= ~(CSVCF_CONNECTED | CSVCF_CONNECTING);
-	csvc->csvc_lasterrno = 0;
-	DEBUG_CSVC(PLL_DEBUG, csvc, "marked WANTFREE");
-	CSVC_URLOCK(csvc, locked);
-}
-
-/*
- * Perform actual disconnect to a remote service.
- */
-void
-_sl_csvc_disconnect_core(struct slrpc_cservice *csvc, int flags)
-{
-	struct pscrpc_import *imp;
-
-	CSVC_LOCK_ENSURE(csvc);
-
-	if (flags & SLRPC_DISCONNF_HIGHLEVEL)
-		while (csvc->csvc_flags & CSVCF_BUSY) {
-			CSVC_WAIT(csvc);
-			CSVC_LOCK(csvc);
-		}
-	csvc->csvc_flags &= ~CSVCF_CONNECTED;
-	csvc->csvc_lasterrno = 0;
-	imp = csvc->csvc_import;
-	csvc->csvc_import = NULL;
-
-	CSVC_ULOCK(csvc);
-	if (imp) {
-		// deactivate(imp) ?
-		pscrpc_abort_inflight(imp);
-		if (flags & SLRPC_DISCONNF_HIGHLEVEL &&
-		    imp->imp_connection)
-			pscrpc_drop_conns(&imp->imp_connection->c_peer);
-		pscrpc_import_put(imp);
-	}
-	CSVC_LOCK(csvc);
-	CSVC_WAKE(csvc);
+	flags = CSVCF_CONNECTED | CSVCF_DISCONNECTING | CSVCF_CONNECTING;
+	return ((csvc->csvc_flags & flags) == CSVCF_CONNECTED);
 }
 
 /*
@@ -605,55 +503,62 @@ _sl_csvc_disconnect_core(struct slrpc_cservice *csvc, int flags)
  */
 void
 _sl_csvc_decref(const struct pfl_callerinfo *pci,
-    struct slrpc_cservice *csvc)
+    struct slrpc_cservice *csvc, int locked)
 {
 	struct pscrpc_import *imp;
 	int rc;
 
-	(void)CSVC_RLOCK(csvc);
+	/*
+ 	 * Recursive locking won't let me unlock later unless you
+ 	 * ignore it.
+ 	 */
+	if (!locked)
+		CSVC_LOCK(csvc);
 	rc = --csvc->csvc_refcnt;
 	psc_assert(rc >= 0);
-	DEBUG_CSVC(PLL_DIAG, csvc, "decref");
-	if (rc == 0) {
-		if (csvc->csvc_flags & CSVCF_WANTFREE) {
-			if (csvc->csvc_peertype == SLCONNT_CLI)
-				pll_remove(&sl_clients, csvc);
-
-			/*
-			 * Due to the nature of non-blocking CONNECT,
-			 * the import may or may not actually be
-			 * present.
-			 */
-			imp = csvc->csvc_import;
-			if (imp)
-				pscrpc_import_put(imp);
-
-			DEBUG_CSVC(PLL_DIAG, csvc, "freed");
-			// XXX assert(mutex.nwaiters == 0)
-			psc_mutex_unlock(&csvc->csvc_mutex);
-			psc_mutex_destroy(&csvc->csvc_mutex);
-			pfl_multiwaitcond_destroy(&csvc->csvc_mwc);
-			psc_pool_return(sl_csvc_pool, csvc);
-			return;
-		}
-		if (csvc->csvc_flags & CSVCF_DISCONNECTING)
-			_sl_csvc_disconnect_core(csvc,
-			    SLRPC_DISCONNF_HIGHLEVEL);
+	psclog_diag("after drop ref csvc = %p, refcnt = %d", 
+	    csvc, csvc->csvc_refcnt);
+	if (rc > 0) {
+		CSVC_ULOCK(csvc);
+		return;
 	}
+
+	psc_assert(!(csvc->csvc_flags & CSVCF_WATCH));
+
 	CSVC_ULOCK(csvc);
+	if (csvc->csvc_peertype == SLCONNT_CLI) {
+		CONF_LOCK();
+		pll_remove(&sl_clients, csvc);
+		CONF_ULOCK();
+	}
+
+	/*
+	 * Due to the nature of non-blocking CONNECT,
+	 * the import may or may not actually be
+	 * present.
+	 */
+	imp = csvc->csvc_import;
+	if (imp)
+		pscrpc_import_put(imp);
+
+	DEBUG_CSVC(PLL_DIAG, csvc, "freed");
+	psc_mutex_destroy(&csvc->csvc_mutex);
+	pfl_multiwaitcond_destroy(&csvc->csvc_mwc);
+	psc_pool_return(sl_csvc_pool, csvc);
+
 }
 
 /*
  * Account for starting to use a remote service connection.
  * @csvc: client service.
- * XXX if CSVCF_WANTFREE is set, bail.
  */
 void
 sl_csvc_incref(struct slrpc_cservice *csvc)
 {
 	CSVC_LOCK_ENSURE(csvc);
 	csvc->csvc_refcnt++;
-	DEBUG_CSVC(PLL_DIAG, csvc, "incref");
+	psclog_diag("after take ref csvc = %p, refcnt = %d", 
+	    csvc, csvc->csvc_refcnt);
 }
 
 /*
@@ -662,30 +567,17 @@ sl_csvc_incref(struct slrpc_cservice *csvc)
  */
 void
 _sl_csvc_disconnect(const struct pfl_callerinfo *pci,
-    struct slrpc_cservice *csvc)
+    struct slrpc_cservice *csvc, int locked)
 {
-	int locked;
 
-	locked = CSVC_RLOCK(csvc);
-	if (!(csvc->csvc_flags & CSVCF_DISCONNECTING))
+	if (!locked)
+		CSVC_LOCK(csvc);
+	if (!(csvc->csvc_flags & CSVCF_DISCONNECTING)) {
 		csvc->csvc_flags |= CSVCF_DISCONNECTING;
-	CSVC_URLOCK(csvc, locked);
-}
-
-void
-sl_imp_hldrop_cli(void *csvc)
-{
-	sl_csvc_markfree(csvc);
-	sl_csvc_disconnect(csvc);
-	sl_csvc_decref(csvc);
-}
-
-void
-sl_imp_hldrop_resm(void *arg)
-{
-	struct sl_resm *resm = arg;
-
-	sl_csvc_disconnect(resm->resm_csvc);
+		csvc->csvc_flags &= ~CSVCF_CONNECTED;
+	}
+	if (!locked)
+		CSVC_ULOCK(csvc);
 }
 
 /*
@@ -785,41 +677,63 @@ _sl_csvc_get(const struct pfl_callerinfo *pci,
     uint32_t rqptl, uint32_t rpptl, uint64_t magic, uint32_t version,
     enum slconn_type peertype, struct pfl_multiwait *mw)
 {
+	int rc = 0, success;
 	void *hldropf, *hldroparg;
 	uint64_t *uptimep = NULL;
 	uint32_t *stkversp = NULL;
-	int rc = 0, addlist = 0, need_ref = 1;
-	struct slrpc_cservice *csvc;
+	struct slrpc_cservice *csvc = NULL;
 	struct sl_resm *resm = NULL; /* gcc */
 	struct timespec now;
 	lnet_nid_t peernid;
 	char addrbuf[RESM_ADDRBUF_SZ];
 	struct sl_exp_cli *expc;
+	struct sl_resm_nid *nr;
+	lnet_process_id_t *pp;
+	int i, j;
+	uint64_t delta;
 
 	if (peertype != SLCONNT_CLI && 
 	    peertype != SLCONNT_MDS && 
 	    peertype != SLCONNT_IOD)
 		psc_fatalx("%d: bad peer connection type", peertype);
 
+	/* first grab read lock */
+	pfl_rwlock_rdlock(&sl_conn_lock);
 	if (*csvcp) {
 		csvc = *csvcp;
-		/* 04/04/2016: Hit crash with peer type SLCONNT_CLI */
-		psc_assert(csvc->csvc_peertype == peertype);
 		CSVC_LOCK(csvc);
-		goto next;
+		sl_csvc_incref(csvc);
+		CSVC_ULOCK(csvc);
+		pfl_rwlock_unlock(&sl_conn_lock);
+		goto gotit;
 	}
 
-	CONF_LOCK();
+	/* upgrade to write lock */
+	pfl_rwlock_unlock(&sl_conn_lock);
+	pfl_rwlock_wrlock(&sl_conn_lock);
 	if (*csvcp) {
 		csvc = *csvcp;
-		psc_assert(csvc->csvc_peertype == peertype);
 		CSVC_LOCK(csvc);
-		CONF_ULOCK();
-		goto next;
+		sl_csvc_incref(csvc);
+		CSVC_ULOCK(csvc);
+		pfl_rwlock_unlock(&sl_conn_lock);
+		goto gotit;
 	}
 
 	switch (peertype) {
 	case SLCONNT_CLI:
+		/*
+		 * From Lustre document: An import is the client side 
+		 * of the connection to a target. An export is the server 
+		 * side. A client has one import for every target.
+		 * A service has one export for every client.
+		 *
+		 * This is the case when a client connects to MDS or IOS.
+		 *
+		 * The csvc will be dropped by both sl_imp_hldrop_cli()
+		 * and sl_exp_hldrop_cli().  So the reference will be
+		 * initialized to two as well.
+		 */
 		hldropf = sl_imp_hldrop_cli;
 		hldroparg = NULL;
 		break;
@@ -846,27 +760,24 @@ _sl_csvc_get(const struct pfl_callerinfo *pci,
 	/* initialize service */
 	csvc = sl_csvc_create(rqptl, rpptl, hldropf, hldroparg);
 	csvc->csvc_params.scp_csvcp = csvcp;
+
+	/* one for our pointer, the other for current connection attempt */
+	csvc->csvc_refcnt = 2;
 	csvc->csvc_flags = flags;
 	csvc->csvc_peertype = peertype;
 	csvc->csvc_peernids = peernids;
 	csvc->csvc_version = version;
 	csvc->csvc_magic = magic;
 
-	/* ensure peer is of the given resource type */
 	switch (peertype) {
 	case SLCONNT_CLI:
 
-		/* Hold reference as the multiwait arg below. */
-		csvc->csvc_refcnt = 1;
-
-		snprintf(addrbuf, sizeof(addrbuf), "%p", csvc);
 		if (exp && exp->exp_connection)
 			pscrpc_id2str(exp->exp_connection->c_peer,
 			    addrbuf);
 		pfl_multiwaitcond_init(&csvc->csvc_mwc, csvc,
 		    PMWCF_WAKEALL, "cli-%s", addrbuf);
 
-		addlist = 1;
 		break;
 	case SLCONNT_IOD:
 	case SLCONNT_MDS:
@@ -875,11 +786,17 @@ _sl_csvc_get(const struct pfl_callerinfo *pci,
 		break;
 	}
 
+	/* publish new csvc */
 	*csvcp = csvc;
-	CSVC_LOCK(csvc);
-	CONF_ULOCK();
+	psclog_diag("publish csvc = %p, refcnt = %d", 
+	    csvc, csvc->csvc_refcnt);
+	pfl_rwlock_unlock(&sl_conn_lock);
 
- next:
+ gotit:
+
+	CSVC_LOCK(csvc);
+	psc_assert(csvc->csvc_peertype == peertype);
+
 	switch (peertype) {
 	case SLCONNT_CLI:
 		expc = (void *)csvc->csvc_params.scp_csvcp;
@@ -894,17 +811,11 @@ _sl_csvc_get(const struct pfl_callerinfo *pci,
 		break;
 	}
 
- restart:
+ recheck:
 
-	if (need_ref) {
-		sl_csvc_incref(csvc);
-		need_ref = 0;
-	}
-
+	success = 1;
 	if (sl_csvc_useable(csvc))
-		goto out;
-
-	csvc->csvc_flags &= ~CSVCF_CONNECTED;
+		goto out2;
 
 	clock_gettime(CLOCK_MONOTONIC, &now);
 
@@ -937,125 +848,115 @@ _sl_csvc_get(const struct pfl_callerinfo *pci,
 			pscrpc_put_connection(c);
 
 		csvc->csvc_mtime = now;
-		csvc->csvc_flags &= ~(CSVCF_CONNECTING |
-		    CSVCF_DISCONNECTING);
-		csvc->csvc_flags |= CSVCF_CONNECTED;
+		goto out1;
+	}
 
-	} else if (csvc->csvc_tryref ||
-	    (csvc->csvc_flags & CSVCF_CONNECTING)) {
+	if (csvc->csvc_flags & CSVCF_CONNECTING) {
 
 		if (flags & CSVCF_NONBLOCK) {
-			csvc = NULL;
-			goto out;
+			success = 0;	
+			goto out2;
 		}
 
-		pfl_multiwaitcond_wait(&csvc->csvc_mwc,
-		    &csvc->csvc_mutex);
+		OPSTAT_INCR("csvc-wait");
+		pfl_multiwaitcond_wait(&csvc->csvc_mwc, &csvc->csvc_mutex);
+		OPSTAT_INCR("csvc-wake");
+
 		CSVC_LOCK(csvc);
-		goto restart;
+		goto recheck;
+	}
 
-	} else if (flags & CSVCF_NORECON) {
+	if (flags & CSVCF_NORECON) {
+		success = 0;	
+		goto out2;
+	}
 
-		csvc = NULL;
-		goto out;
-
-	} else if (csvc->csvc_lasterrno == 0 ||
-	    csvc->csvc_mtime.tv_sec + CSVC_RECONNECT_INTV <
-	    now.tv_sec || csvc->csvc_nfails < 2) {
-		struct sl_resm_nid *nr;
-		lnet_process_id_t *pp;
-		int i, j, trc;
-
-		csvc->csvc_flags |= CSVCF_CONNECTING;
-		csvc->csvc_flags &= ~CSVCF_DISCONNECTING;
+	if (csvc->csvc_mtime.tv_sec + CSVC_CONN_INTV > now.tv_sec) {
 		if (flags & CSVCF_NONBLOCK) {
-			if (csvc->csvc_import) {
-				pscrpc_import_put(csvc->csvc_import);
-				csvc->csvc_import = NULL;
-			}
-		} else if (csvc->csvc_import == NULL)
-			csvc->csvc_import = slrpc_new_import(csvc);
-		csvc->csvc_tryref++;
+			success = 0;	
+			goto out2;
+		}
+		OPSTAT_INCR("csvc-delay");
+		delta = csvc->csvc_mtime.tv_sec + CSVC_CONN_INTV 
+			- now.tv_sec;
 		CSVC_ULOCK(csvc);
+		sleep(delta);
+		CSVC_LOCK(csvc);
+		goto recheck;
+	}
 
-		rc = ENETUNREACH;
-		DYNARRAY_FOREACH(nr, i, peernids)
-			DYNARRAY_FOREACH(pp, j, &sl_lnet_prids)
-				if (LNET_NIDNET(nr->resmnid_nid) ==
-				    LNET_NIDNET(pp->nid)) {
-					trc = slrpc_issue_connect(
-					    pp->nid, nr->resmnid_nid,
-					    csvc, flags, mw, stkversp, 
-					    uptimep);
-					if (trc == 0) {
-						rc = 0;
-						goto proc_conn;
-					}
+	csvc->csvc_flags |= CSVCF_CONNECTING;
+	csvc->csvc_flags &= ~CSVCF_DISCONNECTING;
+	/*
+ 	 * We can't assert CSVCF_CONNECTED is not set here because 
+	 * sl_csvc_useable() has other ideas why it is not connected.
+	 */
+	csvc->csvc_flags &= ~CSVCF_CONNECTED;
+	CSVC_ULOCK(csvc);
 
-					/*
-					 * Keep the current error code
-					 * without overwriting a
-					 * previous EWOULDBLOCK.
-					 */
-					if (rc != EWOULDBLOCK)
-						rc = trc;
-				}
+	/*
+	 * Don't clear CSVCF_CONNECTING and wake up waiters in between until 
+	 * we have tried all possibilities. Also, at most one async connection
+	 * is allowed.
+	 */
+	rc = ENETUNREACH;
+	DYNARRAY_FOREACH(nr, i, peernids) {
+		DYNARRAY_FOREACH(pp, j, &sl_lnet_prids) {
+			if (LNET_NIDNET(nr->resmnid_nid) ==
+			    LNET_NIDNET(pp->nid)) {
+				rc = slrpc_issue_connect(
+				    pp->nid, nr->resmnid_nid,
+				    csvc, flags, mw, stkversp, 
+				    uptimep);
+				if (rc == 0 || rc == EWOULDBLOCK)
+					goto proc_conn;
+			}
+		}
+	}
 
  proc_conn:
-		CSVC_LOCK(csvc);
 
-		sl_csvc_dectryref(csvc);
+	CSVC_LOCK(csvc);
 
-		if (rc == EWOULDBLOCK) {
-			csvc = NULL;
-			goto out;
-		}
-
-		csvc->csvc_lasterrno = rc;
-		clock_gettime(CLOCK_MONOTONIC, &csvc->csvc_mtime);
-		csvc->csvc_flags &= ~CSVCF_CONNECTING;
-		if (rc) {
-			if (csvc->csvc_import)
-				csvc->csvc_import->imp_failed = 1;
-			/*
-			 * The csvc stays allocated but is marked as
-			 * unusable until the next connection
-			 * establishment attempt.
-			 *
-			 * Our caller is signified about this failure
-			 * via the NULL return here.
-			 */
-			csvc = NULL;
-		}
-	} else {
-		csvc = NULL;
-		goto out;
+	if (rc == EWOULDBLOCK) {
+		/* will drop shortly, this allows us to return NULL */
+ 		sl_csvc_incref(csvc);
+		success = 0;	
+		goto out2;
 	}
-	if (rc == 0)
-		sl_csvc_online(csvc);
-	CSVC_WAKE(*csvcp);
 
-	if (addlist)
-		pll_add_sorted(&sl_clients, *csvcp, csvc_cli_cmp);
+	csvc->csvc_lasterrno = rc;
+	clock_gettime(CLOCK_MONOTONIC, &csvc->csvc_mtime);
+	csvc->csvc_flags &= ~CSVCF_CONNECTING;
+	CSVC_WAKE(csvc);
+	if (rc) {
+		if (csvc->csvc_import)
+			csvc->csvc_import->imp_failed = 1;
+		/*
+		 * The csvc stays allocated but is marked as
+		 * unusable until the next connection
+		 * establishment attempt.
+		 *
+		 * Our caller is signified about this failure
+		 * via the NULL return here.
+		 */
+		success = 0;	
+		goto out2;
+	}
 
- out:
-	if (csvc)
+ out1:
+
+	sl_csvc_online(csvc);
+
+	if (peertype == SLCONNT_CLI)
+		pll_add_sorted(&sl_clients, csvc, csvc_cli_cmp);
+ out2:
+
+	if (!success)
+ 		sl_csvc_decref_locked(csvc);
+	else
 		CSVC_ULOCK(csvc);
-	else {
-		if ((flags & CSVCF_NONBLOCK) && mw) {
-			spinlock(&sl_conn_lock);
-			if (pfl_multiwait_hascond(mw,
-			    &(*csvcp)->csvc_mwc))
-				pfl_multiwait_setcondwakeable(mw,
-				    &(*csvcp)->csvc_mwc, 1);
-			else
-				pfl_multiwait_addcond(mw,
-				    &(*csvcp)->csvc_mwc);
-			freelock(&sl_conn_lock);
-		}
-		sl_csvc_decref(*csvcp);
-	}
-	return (csvc);
+	return (success ? csvc : NULL);
 }
 
 /*
@@ -1064,42 +965,43 @@ _sl_csvc_get(const struct pfl_callerinfo *pci,
  *
  * MDS - needs to check pings from IONs
  * ION - needs to send PINGs to MDS
- * CLI - needs to send PINGs to IONs
+ * CLI - needs to check if MDS is up periodically (not strictly needed).
  */
 void
 slconnthr_main(struct psc_thread *thr)
 {
-	struct timespec ts0, ts1, diff, intv;
+	struct timespec ts;
 	struct slrpc_cservice *csvc;
 	struct slconn_thread *sct;
 	struct slconn_params *scp;
 	int i, rc, pingrc = 0;
 	void *dummy;
 
-	intv.tv_sec = CSVC_PING_INTV;
-	intv.tv_nsec = 0;
-
 	sct = thr->pscthr_private;
-	memset(&ts0, 0, sizeof(ts0));
 	while (pscthr_run(thr)) {
-		clock_gettime(CLOCK_MONOTONIC, &ts1);
+
+		/*
+		 * Retrieve the current health status and send the
+		 * result via PING RPC later.  IOS only.
+		 */
+		clock_gettime(CLOCK_MONOTONIC, &ts);
 		if (sct->sct_pingupc) {
-			timespecsub(&ts1, &ts0, &diff);
-			if (timespeccmp(&diff, &intv, >=)) {
-				pingrc = sct->sct_pingupc(
-				    sct->sct_pingupcarg);
-				if (pingrc)
-					psclog_diag("sct_pingupc "
-					    "failed (rc=%d)", pingrc);
-				memcpy(&ts0, &ts1, sizeof(ts0));
-			}
+			pingrc = sct->sct_pingupc( sct->sct_pingupcarg);
+			if (pingrc)
+				psclog_diag("sct_pingupc "
+				    "failed (rc=%d)", pingrc);
 		}
 
 		pfl_multiwait_entercritsect(&sct->sct_mw);
 
-		spinlock(&sl_conn_lock);
+		spinlock(&sl_watch_lock);
+		/*
+		 * csvc being watched should never be freed because
+		 * they are associated with resources. Otherwise, we
+		 * would need a reference to keep them on this list.
+		 */
 		DYNARRAY_FOREACH(scp, i, &sct->sct_monres) {
-			freelock(&sl_conn_lock);
+			freelock(&sl_watch_lock);
 			csvc = sl_csvc_get(scp->scp_csvcp,
 			    scp->scp_flags | CSVCF_NONBLOCK, NULL,
 			    scp->scp_peernids,
@@ -1113,6 +1015,7 @@ slconnthr_main(struct psc_thread *thr)
 				 */
 				goto next;
 
+			CSVC_LOCK(csvc);
 			/*
 			 * Only used by MDS to watch for its I/O
 			 * servers.  So scp_useablef is always
@@ -1121,43 +1024,49 @@ slconnthr_main(struct psc_thread *thr)
 			 * Note that the above sl_csvc_get() only
 			 * returns csvc when the connection is already
 			 * established.
+			 *
+			 * XXX We don't really need this logic, because
+			 * slm_try_sliodresm() will check it as well.
+			 *
+			 * We mark it as disconnected, and yet we don't
+			 * try to connect to IOS (we use CSVCF_NORECON).
+			 * We might as well let the PINGs from IOS to
+			 * take care things.
+			 *
+			 * I drop my IOS into gdb for 30+minutes, the
+			 * export/import drop functions are not called.
+			 * But here, we mark the csvc as disconnected.
+			 * This is why I need slm_rmi_handle_ping() to
+			 * bring the csvc back online.
 			 */
 			if (scp->scp_useablef &&
 			    !scp->scp_useablef(scp->scp_useablearg))
-				sl_csvc_disconnect(csvc);
+				sl_csvc_disconnect_locked(csvc);
 
-			CSVC_LOCK(csvc);
+			/*
+			 * Ping MDS and send my health status. IOS only.
+			 */
 			if (sl_csvc_useable(csvc) &&
-			    scp->scp_flags & CSVCF_PING) {
-				timespecsub(&ts1, &csvc->csvc_mtime,
-				    &diff);
-				if (timespeccmp(&diff, &intv, >=)) {
-					CSVC_ULOCK(csvc);
-					rc = slrpc_issue_ping(csvc, pingrc);
-					CSVC_LOCK(csvc);
-					memcpy(&csvc->csvc_mtime, &ts1,
-					    sizeof(ts1));
-					if (rc)
-						sl_csvc_disconnect(csvc);
+			    (scp->scp_flags & CSVCF_PING) && 
+			    !(scp->scp_flags & CSVCF_PINGING)) {
+			        scp->scp_flags |= CSVCF_PINGING;
+				CSVC_ULOCK(csvc);
+				rc = slrpc_issue_ping(csvc, pingrc);
+				CSVC_LOCK(csvc);
+				if (rc) {
+					sl_csvc_disconnect_locked(csvc);
+			        	scp->scp_flags &= ~CSVCF_PINGING;
 				}
+				memcpy(&csvc->csvc_mtime, &ts, sizeof(ts));
 			}
-			sl_csvc_decref(csvc);
 
-			if (scp->scp_flags & CSVCF_WANTFREE) {
-				sl_csvc_decref(csvc);
-
-				spinlock(&sl_conn_lock);
-				psc_dynarray_remove(&sct->sct_monres,
-				    scp);
-				freelock(&sl_conn_lock);
-
-				PSCFREE(scp);
-			}
+			sl_csvc_decref_locked(csvc);
  next:
-			spinlock(&sl_conn_lock);
+			spinlock(&sl_watch_lock);
 		}
-		freelock(&sl_conn_lock);
-		pfl_multiwait_secs(&sct->sct_mw, &dummy, 1);
+		freelock(&sl_watch_lock);
+		pfl_multiwait_secs(&sct->sct_mw, &dummy, CSVC_PING_INTV);
+		//pfl_multiwait_secs(&sct->sct_mw, &dummy, 100000);
 	}
 }
 
@@ -1178,7 +1087,7 @@ slconnthr_spawn(int thrtype, const char *thrnamepre,
 	sct->sct_pingupc = pingupc;
 	sct->sct_pingupcarg = pingupcarg;
 	pfl_multiwait_init(&sct->sct_mw, "resmon");
-	pfl_multiwaitcond_init(&sct->sct_mwc, NULL, 0, "rebuild");
+	pfl_multiwaitcond_init(&sct->sct_mwc, NULL, 0, "connection");
 	pfl_multiwait_addcond(&sct->sct_mw, &sct->sct_mwc);
 	pscthr_setready(thr);
 	return (thr);
@@ -1199,24 +1108,68 @@ slconnthr_watch(struct psc_thread *thr, struct slrpc_cservice *csvc,
 	sct = thr->pscthr_private;
 	scp = &csvc->csvc_params;
 
-	spinlock(&sl_conn_lock);
+	spinlock(&sl_watch_lock);
 	rc = psc_dynarray_exists(&sct->sct_monres, scp);
 	if (!rc)
 		psc_dynarray_add(&sct->sct_monres, scp);
-	freelock(&sl_conn_lock);
+	freelock(&sl_watch_lock);
 	if (rc)
 		return;
 
 	CSVC_LOCK(csvc);
-	scp->scp_flags |= flags;
+	scp->scp_flags |= flags | CSVCF_WATCH;
 	scp->scp_useablef = useablef;
 	scp->scp_useablearg = useablearg;
 	CSVC_ULOCK(csvc);
 
-	spinlock(&sl_conn_lock);
+	spinlock(&sl_watch_lock);
 	if (!pfl_multiwait_hascond(&sct->sct_mw, &csvc->csvc_mwc))
 		pfl_multiwait_addcond(&sct->sct_mw, &csvc->csvc_mwc);
-	freelock(&sl_conn_lock);
+	freelock(&sl_watch_lock);
+}
+
+void
+sl_imp_hldrop_cli(void *arg)
+{
+    	struct slrpc_cservice *csvc = arg;
+
+	CSVC_LOCK(csvc);
+	sl_csvc_disconnect_locked(csvc);
+	sl_csvc_decref_locked(csvc);
+	OPSTAT_INCR("rpc.import-drop-client");
+}
+
+void
+sl_imp_hldrop_resm(void *arg)
+{
+	struct sl_resm *resm = arg;
+
+	sl_csvc_disconnect(resm->resm_csvc);
+	OPSTAT_INCR("rpc.import-drop-resm");
+}
+
+/*
+ * Callback triggered when an export to a CLIENT fails.
+ * @exp: export to RPC CLI peer.
+ */
+void
+sl_exp_hldrop_cli(struct pscrpc_export *exp)
+{
+	struct slrpc_cservice *csvc;
+	struct sl_exp_cli *expc;
+
+	EXPORT_LOCK(exp);
+	expc = exp->exp_private;
+	exp->exp_private = NULL;
+	EXPORT_ULOCK(exp);
+
+	csvc = expc->expc_csvc;
+	CSVC_LOCK(csvc);
+	sl_csvc_disconnect_locked(csvc);
+	sl_csvc_decref_locked(csvc);
+
+	OPSTAT_INCR("rpc.export-drop-client");
+	PSCFREE(expc);
 }
 
 /*
@@ -1231,37 +1184,16 @@ sl_exp_hldrop_resm(struct pscrpc_export *exp)
 
 	resm = libsl_nid2resm(exp->exp_connection->c_peer.nid);
 	if (resm) {
+		/* (gdb) p resm->resm_csvc->csvc_refcnt */
+		psclog_warnx("drop export %p, resm = %p, name = %s", 
+		    exp, resm, resm->resm_name);
 		sl_csvc_disconnect(resm->resm_csvc);
 		sl_resm_hldrop(resm);
 	} else {
 		pscrpc_nid2str(exp->exp_connection->c_peer.nid, nidbuf);
 		psclog_warnx("no resm for %s", nidbuf);
 	}
-}
-
-/*
- * Callback triggered when an export to a CLIENT fails.
- * @exp: export to RPC CLI peer.
- */
-void
-sl_exp_hldrop_cli(struct pscrpc_export *exp)
-{
-	struct slrpc_cservice **csvcp;
-
-	EXPORT_LOCK(exp);
-	csvcp = exp->exp_private;
-	exp->exp_private = NULL;
-	EXPORT_ULOCK(exp);
-
-	if (csvcp == NULL)
-		return;
-
-	(void)CSVC_RLOCK(*csvcp);
-	sl_csvc_markfree(*csvcp);
-	sl_csvc_disconnect(*csvcp);
-	sl_csvc_decref(*csvcp);
-
-	PSCFREE(csvcp);
+	OPSTAT_INCR("rpc.export-drop-resm");
 }
 
 /*
@@ -1273,11 +1205,13 @@ sl_exp_getpri_cli(struct pscrpc_export *exp, int populate)
 {
 	void *p;
 	int locked;
+	static struct slrpc_cservice *csvc;
 
 	locked = EXPORT_RLOCK(exp);
 	if (exp->exp_private == NULL && populate) {
 		/* mexpc_allocpri() or iexpc_allocpri() */
-		sl_expcli_ops.secop_allocpri(exp);
+		csvc = sl_expcli_ops.secop_allocpri(exp);
+		psc_assert(csvc);
 		exp->exp_hldropf = sl_exp_hldrop_cli;
 	}
 	p = exp->exp_private;
@@ -1398,6 +1332,7 @@ slrpc_bulkclient(struct pscrpc_request *rq, int type, int chan,
 void
 slrpc_initcli(void)
 {
+	pfl_rwlock_init(&sl_conn_lock);
 	psc_poolmaster_init(&sl_csvc_poolmaster,
 	    struct slrpc_cservice, csvc_lentry, PPMF_AUTO, 64, 64, 0,
 	    NULL, "csvc");

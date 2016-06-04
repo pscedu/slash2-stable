@@ -116,7 +116,7 @@ GCRY_THREAD_OPTION_PTHREAD_IMPL;
 #define fcmh_reserved(f)	(FID_GET_INUM(fcmh_2_fid(f)) == SLFID_NS ? EPERM : 0)
 
 struct psc_hashtbl		 msl_namecache_hashtbl;
-struct psc_waitq		 msl_flush_attrq = PSC_WAITQ_INIT;
+struct psc_waitq		 msl_flush_attrq = PSC_WAITQ_INIT("flush-attr");
 
 struct psc_listcache		 msl_attrtimeoutq;
 
@@ -171,6 +171,8 @@ int				 msl_ios_max_inflight_rpcs = RESM_MAX_IOS_OUTSTANDING_RPCS;
 int				 msl_mds_max_inflight_rpcs = RESM_MAX_MDS_OUTSTANDING_RPCS;
 
 int				 msl_newent_inherit_groups = 1;
+
+struct psc_thread		*slcconnthr;
 
 /*
  * I/O requests that have failed due to timeouts are placed here for
@@ -419,7 +421,7 @@ mslfsop_create(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	rc = SL_RSX_WAITREP(csvc, rq, mp);
 
  retry2:
-	if (rc && slc_rpc_retry(pfr, &rc)) {
+	if (rc && slc_rpc_should_retry(pfr, &rc)) {
 		namecache_fail(&dcu);
 		goto retry1;
 	}
@@ -693,7 +695,7 @@ msl_stat(struct fidc_membh *f, void *arg)
 
 			rc = SL_RSX_WAITREP(csvc, rq, mp);
 		}
-	} while (rc && slc_rpc_retry(pfr, &rc));
+	} while (rc && slc_rpc_should_retry(pfr, &rc));
 
 	rc = abs(rc);
 	if (rc == 0)
@@ -821,7 +823,7 @@ mslfsop_link(struct pscfs_req *pfr, pscfs_inum_t c_inum,
 		namecache_hold_entry(&dcu, p, newname);
 		rc = SL_RSX_WAITREP(csvc, rq, mp);
 	}
-	if (rc && slc_rpc_retry(pfr, &rc)) {
+	if (rc && slc_rpc_should_retry(pfr, &rc)) {
 		namecache_fail(&dcu);
 		goto retry;
 	}
@@ -918,7 +920,7 @@ mslfsop_mkdir(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	rc = SL_RSX_WAITREP(csvc, rq, mp);
 
   retry2:
-	if (rc && slc_rpc_retry(pfr, &rc)) {
+	if (rc && slc_rpc_should_retry(pfr, &rc)) {
 		namecache_fail(&dcu);
 		goto retry1;
 	}
@@ -980,7 +982,7 @@ msl_lookuprpc(struct pscfs_req *pfr, struct fidc_membh *p,
 
 		rc = SL_RSX_WAITREP(csvc, rq, mp);
 	}
-	if (rc && slc_rpc_retry(pfr, &rc))
+	if (rc && slc_rpc_should_retry(pfr, &rc))
 		goto retry;
 
 	rc = abs(rc);
@@ -1253,7 +1255,7 @@ msl_unlink(struct pscfs_req *pfr, pscfs_inum_t pinum, const char *name,
 		namecache_hold_entry(&dcu, p, name);
 		rc = SL_RSX_WAITREP(csvc, rq, mp);
 	}
-	if (rc && slc_rpc_retry(pfr, &rc)) {
+	if (rc && slc_rpc_should_retry(pfr, &rc)) {
 		namecache_fail(&dcu);
 		goto retry;
 	}
@@ -1374,7 +1376,7 @@ mslfsop_mknod(struct pscfs_req *pfr, pscfs_inum_t pinum,
 
  retry2:
 
-	if (rc && slc_rpc_retry(pfr, &rc)) {
+	if (rc && slc_rpc_should_retry(pfr, &rc)) {
 		namecache_fail(&dcu);
 		goto retry1;
 	}
@@ -1704,7 +1706,7 @@ mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off,
 			if (p->dcp_rc) {
 				rc = p->dcp_rc;
 				dircache_free_page(d, p);
-				if (!slc_rpc_retry(pfr, &rc)) {
+				if (!slc_rpc_should_retry(pfr, &rc)) {
 					DIRCACHE_ULOCK(d);
 					PFL_GOTOERR(out, rc);
 				}
@@ -1779,7 +1781,7 @@ mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off,
 		 */
 		hit = 0;
 		rc = msl_readdir_issue(d, off, size, 1);
-		if (rc && !slc_rpc_retry(pfr, &rc))
+		if (rc && !slc_rpc_should_retry(pfr, &rc))
 			PFL_GOTOERR(out, rc);
 		DIRCACHE_WRLOCK(d);
 		goto restart;
@@ -1875,7 +1877,7 @@ mslfsop_readlink(struct pscfs_req *pfr, pscfs_inum_t inum)
 		rc = SL_RSX_WAITREPF(csvc, rq, mp,
 		    SRPCWAITF_DEFER_BULK_AUTHBUF_CHECK);
 	}
-	if (rc && slc_rpc_retry(pfr, &rc))
+	if (rc && slc_rpc_should_retry(pfr, &rc))
 		goto retry;
 	rc = abs(rc);
 	if (!rc)
@@ -2067,7 +2069,7 @@ msl_flush_ioattrs(struct pscfs_req *pfr, struct fidc_membh *f)
 
 	FCMH_LOCK(f);
 	FCMH_UREQ_BUSY(f, 0, PSLRV_WASLOCKED);
-	if (rc && slc_rpc_retry(pfr, &rc)) {
+	if (rc && slc_rpc_should_retry(pfr, &rc)) {
 		if (flush_mtime)
 			f->fcmh_flags |= FCMH_CLI_DIRTY_MTIME;
 		if (flush_size)
@@ -2504,7 +2506,7 @@ mslfsop_rename(struct pscfs_req *pfr, pscfs_inum_t opinum,
 	rc = SL_RSX_WAITREP(csvc, rq, mp);
 
   retry2:
-	if (rc && slc_rpc_retry(pfr, &rc)) {
+	if (rc && slc_rpc_should_retry(pfr, &rc)) {
 		namecache_fail(&odcu);
 		namecache_fail(&ndcu);
 		goto retry1;
@@ -2529,6 +2531,16 @@ mslfsop_rename(struct pscfs_req *pfr, pscfs_inum_t opinum,
 		fcmh_op_done(ch);
 	}
 
+	/*
+	 * The following logic was introduced by the following commit:
+	 *
+	 * commit ef7e931f959d2e1055ef845a22fc91874a565e00
+	 * Author: Jared Yanovich <yanovich@psc.edu>
+	 * Date:   Wed Jan 8 23:26:58 2014 +0000
+	 *
+	 * fix an fcmh leak of child and refresh RENAME clobbered file stat(2) attributes
+	 *         
+	 */
 	/*
 	 * Refresh clobbered file's attributes.  This file might have
 	 * additional links and may not be completely destroyed so don't
@@ -2622,7 +2634,7 @@ mslfsop_statfs(struct pscfs_req *pfr, pscfs_inum_t inum)
 		PFL_GOTOERR(out, rc);
 	rc = SL_RSX_WAITREP(csvc, rq, mp);
  retry2:
-	if (rc && slc_rpc_retry(pfr, &rc))
+	if (rc && slc_rpc_should_retry(pfr, &rc))
 		goto retry1;
 	rc = abs(rc);
 	if (rc == 0)
@@ -2713,7 +2725,7 @@ mslfsop_symlink(struct pscfs_req *pfr, const char *buf,
 	rc = SL_RSX_WAITREP(csvc, rq, mp);
 
  retry2:
-	if (rc && slc_rpc_retry(pfr, &rc)) {
+	if (rc && slc_rpc_should_retry(pfr, &rc)) {
 		namecache_fail(&dcu);
 		goto retry1;
 	}
@@ -3022,7 +3034,7 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 
  retry:
 	rc = msl_setattr(c, to_set, &sstb, setattrflags);
-	if (rc && slc_rpc_retry(pfr, &rc))
+	if (rc && slc_rpc_should_retry(pfr, &rc))
 		goto retry;
 
  out:
@@ -3122,7 +3134,7 @@ mslfsop_fsync(struct pscfs_req *pfr, int datasync_only, void *data)
 			int rc2;
 
 			rc2 = msl_flush_ioattrs(pfr, mfh->mfh_fcmh);
-			//if (rc && slc_rpc_retry(pfr, &rc))
+			//if (rc && slc_rpc_should_retry(pfr, &rc))
 			if (!rc)
 				rc = rc2;
 		}
@@ -3194,8 +3206,8 @@ mslfsop_destroy(__unusedx struct pscfs_req *pfr)
 			csvc = m->resm_csvc;
 			CSVC_LOCK(csvc);
 			sl_csvc_incref(csvc);
-			sl_csvc_markfree(csvc);
-			sl_csvc_decref(csvc);
+			csvc->csvc_flags &= ~CSVCF_WATCH;
+			sl_csvc_decref_locked(csvc);
 			continue;
 		}
 	pscrpc_set_kill(sl_nbrqset);
@@ -3401,7 +3413,7 @@ mslfsop_listxattr(struct pscfs_req *pfr, size_t size, pscfs_inum_t inum)
 	rc = SL_RSX_WAITREPF(csvc, rq, mp,
 	    SRPCWAITF_DEFER_BULK_AUTHBUF_CHECK);
  retry2:
-	if (rc && slc_rpc_retry(pfr, &rc))
+	if (rc && slc_rpc_should_retry(pfr, &rc))
 		goto retry1;
 	rc = abs(rc);
 	if (!rc)
@@ -3485,7 +3497,7 @@ mslfsop_setxattr(struct pscfs_req *pfr, const char *name,
 
 	rc = SL_RSX_WAITREP(csvc, rq, mp);
  retry2:
-	if (rc && slc_rpc_retry(pfr, &rc))
+	if (rc && slc_rpc_should_retry(pfr, &rc))
 		goto retry1;
 	rc = abs(rc);
 	if (!rc)
@@ -3573,7 +3585,7 @@ slc_getxattr(struct pscfs_req *pfr,
 	rc = SL_RSX_WAITREPF(csvc, rq, mp,
 	    SRPCWAITF_DEFER_BULK_AUTHBUF_CHECK);
  retry2:
-	if (rc && slc_rpc_retry(pfr, &rc))
+	if (rc && slc_rpc_should_retry(pfr, &rc))
 		goto retry1;
 	rc = abs(rc);
 	if (!rc)
@@ -3665,7 +3677,7 @@ mslfsop_removexattr(struct pscfs_req *pfr, const char *name,
 	rc = SL_RSX_WAITREP(csvc, rq, mp);
 
  retry2:
-	if (rc && slc_rpc_retry(pfr, &rc))
+	if (rc && slc_rpc_should_retry(pfr, &rc))
 		goto retry1;
 	rc = abs(rc);
 	if (rc == 0)
@@ -3777,7 +3789,7 @@ msattrflushthr_spawn(void)
 	int i;
 
 	lc_reginit(&msl_attrtimeoutq, struct fcmh_cli_info, fci_lentry,
-	    "attrtimeout");
+	    "attr-timeout");
 
 	for (i = 0; i < NUM_ATTR_FLUSH_THREADS; i++) {
 		thr = pscthr_init(MSTHRT_ATTR_FLUSH,
@@ -3974,6 +3986,8 @@ msl_init(void)
 	name = getenv("MDS");
 	if (name == NULL)
 		psc_fatalx("environment variable MDS not specified");
+
+	slcconnthr = slconnthr_spawn(MSTHRT_CONN, "slc", NULL, NULL);
 
 	rc = slc_rmc_setmds(name);
 	if (rc)

@@ -60,7 +60,7 @@ sli_rmi_getcsvc(struct slrpc_cservice **csvcp)
 			CSVC_ULOCK(rmi_resm->resm_csvc);
 		else
 			sl_csvc_waitrel_s(rmi_resm->resm_csvc,
-			    CSVC_RECONNECT_INTV);
+			    CSVC_CONN_INTV);
 	}
 	return (0);
 }
@@ -68,6 +68,10 @@ sli_rmi_getcsvc(struct slrpc_cservice **csvcp)
 void
 sli_rmi_setmds(const char *name)
 {
+	int i, j;
+	struct sl_resm *resm;
+	struct sl_site *s;
+	struct sl_resource *r;
 	struct sl_resource *res;
 	lnet_nid_t nid;
 
@@ -83,6 +87,16 @@ sli_rmi_setmds(const char *name)
 	sli_getmcsvc_nb(rmi_resm);
 	slconnthr_watch(sliconnthr, rmi_resm->resm_csvc, 
 	    CSVCF_PING, NULL, NULL);
+
+	/* Inform our IOS peers, not needed for correctness */
+	CONF_LOCK();
+	CONF_FOREACH_RESM(s, r, i, resm, j) {
+		if (resm == nodeResm || resm == rmi_resm ||
+		    (RES_ISCLUSTER(r)))
+			continue;
+		sli_geticsvc_nb(resm);
+	}
+	CONF_ULOCK();
 }
 
 int

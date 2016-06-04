@@ -104,8 +104,10 @@ sli_rpc_initsvc(void)
 }
 
 void
-sl_resm_hldrop(__unusedx struct sl_resm *resm)
+sl_resm_hldrop(struct sl_resm *resm)
 {
+	psclog_warnx("drop resource %p, type = %d", resm, resm->resm_type);
+	sl_csvc_decref(resm->resm_csvc);
 }
 
 int

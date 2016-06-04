@@ -168,6 +168,8 @@ struct bmap_timeo_table {
 	 * High and low water marks of the bmap sequence number.  The
 	 * MDS communicates the low water mark to an I/O server so that
 	 * the latter can reject timed out bmaps.
+	 *
+	 * They are initialized during startup by mds_bmap_setcurseq().
 	 */
 	uint64_t		 btt_maxseq;
 	uint64_t		 btt_minseq;
@@ -180,9 +182,6 @@ struct bmap_timeo_table {
 #define BTE_REATTACH		(1 << 2)
 
 #define BMAP_TIMEO_MAX		240	/* Max bmap lease timeout */
-
-/* Extend recovered leases after an MDS failure. */
-#define BMAP_RECOVERY_TIMEO_EXT BMAP_TIMEO_MAX
 
 struct bmap_mds_lease {
 	uint64_t		  bml_seq;

@@ -486,7 +486,7 @@ bmpc_freeall(struct bmap *b)
 	struct bmap_cli_info *bci = bmap_2_bci(b);
 	struct bmap_pagecache_entry *e, *next;
 
-	psc_assert(RB_EMPTY(&bmpc->bmpc_new_biorqs));
+	psc_assert(RB_EMPTY(&bmpc->bmpc_biorqs));
 
 	/* DIO rq's are allowed since no cached pages are involved. */
 	if (!pll_empty(&bmpc->bmpc_pndg_biorqs)) {
@@ -530,13 +530,14 @@ bmpc_freeall(struct bmap *b)
 	pfl_rwlock_unlock(&bci->bci_rwlock);
 }
 
+
 void
 bmpc_expire_biorqs(struct bmap_pagecache *bmpc)
 {
 	struct bmpc_ioreq *r;
 	int wake = 0;
 
-	PLL_FOREACH_BACKWARDS(r, &bmpc->bmpc_new_biorqs_exp) {
+	PLL_FOREACH_BACKWARDS(r, &bmpc->bmpc_biorqs_exp) {
 		BIORQ_LOCK(r);
 		/*
 		 * A biorq can only be added at the end of the list.  So
@@ -565,9 +566,11 @@ bmpc_expire_biorqs(struct bmap_pagecache *bmpc)
  *
  * @b: bmap to flush.
  */
+
 void
 bmpc_biorqs_flush(struct bmap *b)
 {
+	struct fidc_membh *f;
 	struct bmap_pagecache *bmpc;
 
 	bmpc = bmap_2_bmpc(b);
@@ -576,7 +579,10 @@ bmpc_biorqs_flush(struct bmap *b)
 	while (bmpc->bmpc_pndg_writes) {
 		OPSTAT_INCR("msl.biorq-flush-wait");
 		bmpc_expire_biorqs(bmpc);
-		psc_waitq_waitrel_us(&bmpc->bmpc_waitq, &b->bcm_lock,
+		BMAP_ULOCK(b);
+		f = b->bcm_fcmh;
+		FCMH_LOCK(f);
+		psc_waitq_waitrel_us(&f->fcmh_waitq, &f->fcmh_lock,
 		    100);
 		BMAP_LOCK(b);
 	}
@@ -616,7 +622,6 @@ bmpce_reap_list(struct psc_dynarray *a, struct psc_listcache *lc,
 		OPSTAT_INCR("msl.bmpce-reap-spin");
 	LIST_CACHE_ULOCK(lc);
 }
-
 /*
  * Reap pages from the idle and/or readahead lists.  The readahead list
  * is only considered if we are desperate and unable to reap anything

@@ -57,9 +57,9 @@ __static const char *slconn_restypes[] = {
 int
 sl_conn_prhdr(__unusedx struct psc_ctlmsghdr *mh, __unusedx const void *m)
 {
-	printf("%-11s %38s %-7s %5s %5s %4s %4s %10s\n",
-	    "resource", "host", "type", "flags", "stvrs", "txcr", "#ref", "uptime");
-	return(PSC_CTL_DISPLAY_WIDTH+11);
+	printf("%-11s %38s %-7s %5s %7s %4s %5s %10s\n",
+	    "resource", "host", "type", "flags", "stkvers", "txcr", "#ref", "uptime");
+	return(PSC_CTL_DISPLAY_WIDTH+14);
 }
 
 void
@@ -148,16 +148,14 @@ sl_conn_prdat(const struct psc_ctlmsghdr *mh, const void *m)
 	    scc->scc_flags & CSVCF_CONNECTING		? 'C' : '-');
 
 	if (scc->scc_flags & CSVCF_CONNECTED) {
-		setcolor(COLOR_GREEN);
 		printf("O");
 		connected = 1;
-		uncolor();
 	} else {
 		printf("-");
 	}
 
 	printf("%c%c ",
-	    scc->scc_flags & CSVCF_WANTFREE		? 'F' : '-',
+	    scc->scc_flags & CSVCF_WATCH		? 'W' : '-',
 	    scc->scc_flags & CSVCF_PING			? 'P' : '-');
 
 	if (scc->scc_flags & CSVCF_CTL_OLDER)
@@ -169,11 +167,11 @@ sl_conn_prdat(const struct psc_ctlmsghdr *mh, const void *m)
 
 	if (scc->scc_stkvers)
 		setcolor(col);
-	printf("%5d ", scc->scc_stkvers);
+	printf("%7d ", scc->scc_stkvers);
 	if (scc->scc_stkvers)
 		uncolor();
 
-	printf("%4d %4d ", scc->scc_txcr, scc->scc_refcnt);
+	printf("%4d %5d ", scc->scc_txcr, scc->scc_refcnt);
 
 	if (connected)
 		printf("%3ldd%02ldh%02ldm\n",
@@ -181,7 +179,7 @@ sl_conn_prdat(const struct psc_ctlmsghdr *mh, const void *m)
 		    (scc->scc_uptime % (60 * 60 * 24)) / (60 * 60),
 		    (scc->scc_uptime % (60 * 60)) / 60);
 	else
-		printf("\n");
+		printf("  --------\n");
 
 	strlcpy(lastsite, site, sizeof(lastsite));
 	strlcpy(lastres, res, sizeof(lastres));
