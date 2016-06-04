@@ -11,7 +11,7 @@ sys.uptime                                     2d18h29m
 sys.version                                    41063
 
 [zhihui@br011 ~]$ slmctl -p sys | tail -2
-sys.uptime                                     26d19h38m
+sys.uptime                                     38d5h59m
 sys.version                                    40977
 
 05/15/2016
