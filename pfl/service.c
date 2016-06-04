@@ -948,7 +948,7 @@ pscrpc_init_svc(int nbufs, int bufsize, int max_req_size,
 	svc->srv_name = name;
 	psc_mutex_init(&svc->srv_mutex);
 	INIT_PSCLIST_HEAD(&svc->srv_threads);
-	psc_waitq_init(&svc->srv_waitq);
+	psc_waitq_init(&svc->srv_waitq, "rpc-svc");
 
 	svc->srv_nbuf_per_group = test_req_buffer_pressure ? 1 : nbufs;
 	svc->srv_max_req_size = max_req_size;
@@ -978,7 +978,7 @@ pscrpc_init_svc(int nbufs, int bufsize, int max_req_size,
 
 	INIT_PSCLIST_HEAD(&svc->srv_free_rs_list);
 
-	psc_waitq_init(&svc->srv_free_rs_waitq);
+	psc_waitq_init(&svc->srv_free_rs_waitq, "reply-state");
 
 	spinlock(&pscrpc_all_services_lock);
 	psclist_add(&svc->srv_lentry, &pscrpc_all_services);

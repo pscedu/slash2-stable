@@ -93,7 +93,7 @@ void
 displaythr_main(__unusedx struct psc_thread *thr)
 {
 	char ratebuf[PSCFMT_HUMAN_BUFSIZ];
-	struct psc_waitq dummy = PSC_WAITQ_INIT;
+	struct psc_waitq dummy = PSC_WAITQ_INIT("display");
 	struct timespec tv;
 	int n = 0;
 

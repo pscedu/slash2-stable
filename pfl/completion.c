@@ -35,7 +35,7 @@ psc_compl_init(struct psc_compl *pc)
 {
 	memset(pc, 0, sizeof(*pc));
 	INIT_SPINLOCK(&pc->pc_lock);
-	psc_waitq_init(&pc->pc_wq);
+	psc_waitq_init(&pc->pc_wq, "completion");
 }
 
 void

@@ -103,7 +103,7 @@ main(int argc, char *argv[])
 
 	psclog_debug("nthreads = %d", nthreads);
 
-	psc_waitq_init(&waitq);
+	psc_waitq_init(&waitq, "test");
 
 	for (i = 0; i < nthreads; i++)
 		pscthr_init(0, child_main, 0, "thr%d", i);

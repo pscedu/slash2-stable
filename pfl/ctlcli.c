@@ -867,12 +867,14 @@ psc_ctlmsg_thread_prhdr(__unusedx struct psc_ctlmsghdr *mh,
 	memnid = " memnid";
 #endif
 
-	printf("%-26s %3s%*s", "thread", "flg", memnid_len, memnid);
+	printf("%26s %10s %24s    %3s%*s", "thread", "tid", "wait", "flg", 
+	    memnid_len, memnid);
+
 	for (n = 0; n < psc_ctl_nsubsys; n++)
 		printf(" %.3s", psc_ctl_subsys_names[n]);
 	printf("\n");
 
-	return(PSC_CTL_DISPLAY_WIDTH);
+	return(PSC_CTL_DISPLAY_WIDTH+33);
 }
 
 int
@@ -893,8 +895,10 @@ psc_ctlmsg_thread_prdat(__unusedx const struct psc_ctlmsghdr *mh,
 	const struct psc_ctlmsg_thread *pct = m;
 	int n, ll;
 
-	printf("%-26s %c%c%c",
+	printf("%26s %10d %24s    %c%c%c",
 	    pct->pct_thrname,
+	    pct->pct_tid,
+	    pct->pct_waitname[0] == '\0' ? "-----" : pct->pct_waitname,
 	    pct->pct_flags & PTF_PAUSED	? 'P' : '-',
 	    pct->pct_flags & PTF_RUN	? 'R' : '-',
 	    pct->pct_flags & PTF_READY	? 'I' : '-');

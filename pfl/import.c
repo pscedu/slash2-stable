@@ -248,7 +248,7 @@ pscrpc_new_import(void)
 	//imp->imp_last_success_conn = 0;
 	imp->imp_state = PSCRPC_IMP_NEW;
 	//imp->imp_obd = class_incref(obd);
-	psc_waitq_init(&imp->imp_recovery_waitq);
+	psc_waitq_init(&imp->imp_recovery_waitq, "imp-recovery");
 
 	atomic_set(&imp->imp_refcount, 2);
 	atomic_set(&imp->imp_inflight, 0);

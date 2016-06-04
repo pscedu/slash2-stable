@@ -45,6 +45,7 @@
 #include "pfl/mem.h"
 #include "pfl/pool.h"
 #include "pfl/pthrutil.h"
+#include "pfl/str.h"
 #include "pfl/waitq.h"
 #include "pfl/workthr.h"
 
@@ -169,6 +170,7 @@ int
 _psc_poolmaster_initmgr(struct psc_poolmaster *p, struct psc_poolmgr *m)
 {
 	int n, locked;
+	char name[PEXL_NAME_MAX];
 
 	memset(m, 0, sizeof(*m));
 	psc_mutex_init(&m->ppm_reclaim_mutex);
@@ -183,15 +185,17 @@ _psc_poolmaster_initmgr(struct psc_poolmaster *p, struct psc_poolmgr *m)
 		    p->pms_mwcarg, p->pms_offset, "%s", p->pms_name);
 #endif
 	} else {
-		_lc_init(&m->ppm_lc, p->pms_offset);
 
 #ifdef HAVE_NUMA
-		n = snprintf(m->ppm_name, sizeof(m->ppm_name),
+		n = snprintf(name, sizeof(m->ppm_name),
 		    "%s:%d", p->pms_name, psc_memnode_getid());
 #else
-		n = snprintf(m->ppm_name, sizeof(m->ppm_name),
+		n = snprintf(name, sizeof(m->ppm_name),
 		    "%s", p->pms_name);
 #endif
+		_lc_init(&m->ppm_lc, (const char *)name, p->pms_offset);
+		strlcpy(m->ppm_name, name, PEXL_NAME_MAX);
+
 		if (n == -1)
 			psc_fatal("snprintf %s", p->pms_name);
 		if (n >= (int)sizeof(m->ppm_name))

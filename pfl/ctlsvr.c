@@ -233,6 +233,7 @@ __static int
 psc_ctlmsg_thread_send(int fd, struct psc_ctlmsghdr *mh, void *m,
     struct psc_thread *thr)
 {
+	char *name;
 	struct psc_ctlmsg_thread *pct = m;
 	size_t siz;
 	int rc;
@@ -240,9 +241,15 @@ psc_ctlmsg_thread_send(int fd, struct psc_ctlmsghdr *mh, void *m,
 	siz = sizeof(*pct) + sizeof(*pct->pct_loglevels) *
 	    psc_dynarray_len(&pfl_subsystems);
 	pct = PSCALLOC(siz);
+	pct->pct_tid = thr->pscthr_thrid;
 	pct->pct_flags = thr->pscthr_flags;
 	snprintf(pct->pct_thrname, sizeof(pct->pct_thrname),
 	    "%s", thr->pscthr_name);
+	name = thr->pscthr_waitq;
+	if (name)
+		strlcpy(pct->pct_waitname, name, MAX_WQ_NAME);
+	else
+		pct->pct_waitname[0] = '\0';
 	memcpy(pct->pct_loglevels, thr->pscthr_loglevels,
 	    psc_dynarray_len(&pfl_subsystems) *
 	    sizeof(*pct->pct_loglevels));
@@ -2284,7 +2291,9 @@ psc_ctlacthr_main(struct psc_thread *thr)
 	s = pcd->pcd_sock;
 	pcd->pcd_acthr = thr;
 	while (pscthr_run(thr)) {
+		thr->pscthr_waitq = "accept";
 		fd = accept(s, NULL, NULL);
+		thr->pscthr_waitq = NULL;
 		if (fd == -1) {
 			if (errno == EINTR) {
 				usleep(300);
@@ -2438,7 +2447,7 @@ psc_ctlthr_spawn_listener(const char *ofn, int acthrtype)
 	pcd->pcd_sock = s;
 	psc_dynarray_init(&pcd->pcd_clifds);
 	INIT_SPINLOCK(&pcd->pcd_lock);
-	psc_waitq_init(&pcd->pcd_waitq);
+	psc_waitq_init(&pcd->pcd_waitq, "ctl-loop");
 	psc_mutex_init(&pcd->pcd_mutex);
 	pscthr_setready(acthr);
 	return (pcat);

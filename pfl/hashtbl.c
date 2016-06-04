@@ -79,7 +79,7 @@ _psc_hashtbl_init(struct psc_hashtbl *t, int flags,
 	memset(t, 0, sizeof(*t));
 	INIT_PSC_LISTENTRY(&t->pht_lentry);
 	INIT_SPINLOCK(&t->pht_lock);
-	_psc_waitq_init(&t->pht_waitq, flags & PHTF_NOLOG ?
+	_psc_waitq_init(&t->pht_waitq, "hash table", flags & PHTF_NOLOG ?
 	    PWQF_NOLOG : 0);
 	t->pht_nbuckets = nb;
 	if (flags & PHTF_STRP)

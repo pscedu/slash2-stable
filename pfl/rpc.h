@@ -154,6 +154,7 @@ struct pscrpc_cb_id {
 	void	 *cbid_arg;			/* additional arg */
 };
 
+/* RPC requests are allocated from pscrpc_export_pool */
 struct pscrpc_export {
 	psc_spinlock_t			  exp_lock;
 	struct pscrpc_handle		  exp_handle;
@@ -164,7 +165,6 @@ struct pscrpc_export {
 	void				(*exp_hldropf)(struct pscrpc_export *);
 	void				 *exp_private; /* app-specific data */
 	struct psc_listentry		  exp_lentry;
-//	struct psclist_head		  exp_outstanding_replies;
 };
 
 struct pscrpc_import;

@@ -434,7 +434,7 @@ acsreq_issue(struct access_request *arq)
 	spinlock(&apr->apr_lock);
 	apr->apr_id = arq->arq_id;
 	apr->apr_op = arq->arq_op;
-	psc_waitq_init(&apr->apr_wq);
+	psc_waitq_init(&apr->apr_wq, "acsreq");
 
 	pll_add(&acsvc_pendlist, apr);
 

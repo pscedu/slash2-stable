@@ -37,17 +37,19 @@ struct pfl_mutex;
 
 # include <pthread.h>
 
+#define	MAX_WQ_NAME		32
+
 struct psc_waitq {
 	struct pfl_mutex	wq_mut;
 	pthread_cond_t		wq_cond;
+	char			wq_name[MAX_WQ_NAME];
 	int			wq_nwaiters;
 	int			wq_flags;
 };
 
 #define PWQF_NOLOG		(1 << 0)
 
-# define PSC_WAITQ_INIT	{ PSC_MUTEX_INIT, PTHREAD_COND_INITIALIZER,	\
-			  0, 0 }
+# define PSC_WAITQ_INIT(name)	{ PSC_MUTEX_INIT, PTHREAD_COND_INITIALIZER, (name), 0, 0 }
 
 #else /* HAVE_LIBPTHREAD */
 
@@ -96,10 +98,10 @@ struct psc_waitq {
  */
 #define psc_waitq_nwaiters(wq)		(wq)->wq_nwaiters
 
-#define psc_waitq_init(wq)		_psc_waitq_init((wq), 0)
-#define psc_waitq_init_nolog(wq)	_psc_waitq_init((wq), PWQF_NOLOG)
+#define psc_waitq_init(wq, name)	_psc_waitq_init((wq), (name), 0)
+#define psc_waitq_init_nolog(wq, name)	_psc_waitq_init((wq), (name), PWQF_NOLOG)
 
-void	_psc_waitq_init(struct psc_waitq *, int);
+void	_psc_waitq_init(struct psc_waitq *, const char *, int);
 void	 psc_waitq_destroy(struct psc_waitq *);
 void	 psc_waitq_wakeone(struct psc_waitq *);
 void	 psc_waitq_wakeall(struct psc_waitq *);

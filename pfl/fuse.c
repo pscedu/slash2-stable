@@ -152,6 +152,8 @@ pscfs_fuse_interrupt(__unusedx fuse_req_t req, void *d)
 	thr = pfr->pfr_thread;
 	pft = thr->pscthr_private;
 	pfr->pfr_interrupted = 1;
+	psclog_diag("op interrupted, thread = %p, pfr = %p, name = %s", 
+		thr, pfr, pfr->pfr_opname);
 	pfl_multiwaitcond_wakeup(&pft->pft_multiwaitcond);
 }
 
@@ -294,7 +296,7 @@ void
 pscfs_fuse_listener_loop(__unusedx struct psc_thread *thr)
 {
 	static psc_spinlock_t lock = SPINLOCK_INIT;
-	static struct psc_waitq wq = PSC_WAITQ_INIT;
+	static struct psc_waitq wq = PSC_WAITQ_INIT("fuse-loop");
 	static int busy;
 
 	size_t bufsize = 0;
@@ -613,8 +615,13 @@ pscfs_main(int nthr, const char *thrname)
 
 	pfl_atexit(pfl_fuse_atexit);
 
+	thr = pscthr_get();
 	for (i = 0; i < nthr; i++) {
+
+		thr->pscthr_waitq = "join";
 		int ret = pthread_join(thrv[i], NULL);
+		thr->pscthr_waitq = NULL;
+
 		if (ret != 0)
 			fprintf(stderr, "Warning: pthread_join() on "
 			    "thread %i returned %i\n", i, ret);

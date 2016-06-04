@@ -166,8 +166,8 @@ struct psc_listcache {
  * @type: type of variable the list will contain.
  * @member: member name in type linking entries together.
  */
-#define lc_init(plc, type, member)					\
-	_lc_init((plc), offsetof(type, member))
+#define lc_init(plc, name, type, member)					\
+	_lc_init((plc), (name), offsetof(type, member))
 
 /**
  * lc_reginit - Initialize and register a list cache.
@@ -193,7 +193,7 @@ struct psc_listcache *
 	  lc_lookup(const char *);
 int	 _lc_add(struct psc_listcache *, void *, int, void *);
 void	*_lc_get(struct psc_listcache *, const struct timespec *, int);
-void	 _lc_init(struct psc_listcache *, ptrdiff_t);
+void	 _lc_init(struct psc_listcache *, const char *, ptrdiff_t);
 void	  lc_kill(struct psc_listcache *);
 void	 _lc_move(struct psc_listcache *, void *, int);
 int	  lc_nitems(struct psc_listcache *);

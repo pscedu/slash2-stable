@@ -157,7 +157,7 @@ lc_sort_test(void)
 	struct m *m;
 	struct psc_listcache lc;
 
-	lc_init(&lc, struct m, lentry);
+	lc_init(&lc, "test 1", struct m, lentry);
 
 	for (i = 0; i < (int) (sizeof(sorted) / sizeof (int)); i++) {
 		m = PSCALLOC(sizeof(*m));
@@ -171,7 +171,7 @@ lc_sort_test(void)
 		PSCFREE(m);
 	}
 
-	lc_init(&lc, struct m, lentry);
+	lc_init(&lc, "test 2", struct m, lentry);
 
 	for (i = 0; i < (int) (sizeof(sorted) / sizeof (int)); i++) {
 		m = PSCALLOC(sizeof(*m));
@@ -231,7 +231,7 @@ main(int argc, char *argv[])
 	while (shift())
 		;
 
-	lc_init(&lc, struct m, lentry);
+	lc_init(&lc, "test 3", struct m, lentry);
 
 	m = PSCALLOC(sizeof(*m));
 	INIT_PSC_LISTENTRY(&m->lentry);

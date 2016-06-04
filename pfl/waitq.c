@@ -35,9 +35,11 @@
 #include "pfl/lock.h"
 #include "pfl/log.h"
 #include "pfl/waitq.h"
+#include "pfl/thread.h"
 
 #ifdef HAVE_LIBPTHREAD
 
+#include "pfl/str.h"
 #include "pfl/time.h"
 #include "pfl/pthrutil.h"
 
@@ -48,11 +50,12 @@
  * @q: the struct to be initialized.
  */
 void
-_psc_waitq_init(struct psc_waitq *q, int flags)
+_psc_waitq_init(struct psc_waitq *q, const char *name, int flags)
 {
 	int rc;
 
 	memset(q, 0, sizeof(*q));
+	strlcpy(q->wq_name, name, MAX_WQ_NAME);
 	_psc_mutex_init(&q->wq_mut, flags & PWQF_NOLOG ?
 	    PMTXF_NOLOG : 0);
 	rc = pthread_cond_init(&q->wq_cond, NULL);
@@ -95,12 +98,15 @@ _psc_waitq_waitabs(struct psc_waitq *q, enum pfl_lockprim type,
     void *lockp, const struct timespec *abstime)
 {
 	int rc;
+	struct psc_thread *thr;
 
+	thr = pscthr_get();
 	psc_mutex_lock(&q->wq_mut);
 	q->wq_nwaiters++;
 
 	PFL_LOCKPRIM_ULOCK(type, lockp);
 
+	thr->pscthr_waitq = q->wq_name;
 	if (abstime) {
 		rc = pthread_cond_timedwait(&q->wq_cond,
 		    &q->wq_mut.pm_mutex, abstime);
@@ -115,6 +121,7 @@ _psc_waitq_waitabs(struct psc_waitq *q, enum pfl_lockprim type,
 			    strerror(rc));
 	}
 
+	thr->pscthr_waitq = NULL;
 	q->wq_nwaiters--;
 	psc_mutex_unlock(&q->wq_mut);
 
@@ -178,9 +185,10 @@ psc_waitq_wakeall(struct psc_waitq *q)
 #else /* HAVE_LIBPTHREAD */
 
 void
-psc_waitq_init(struct psc_waitq *q)
+psc_waitq_init(struct psc_waitq *q, char *name)
 {
 	memset(q, 0, sizeof(*q));
+	strlcpy(q->wq_name, name, MAX_WQ_NAME);
 }
 
 int

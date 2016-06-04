@@ -36,8 +36,8 @@
 #include "pfl/pthrutil.h"
 
 struct pfl_mutex	 m = PSC_MUTEX_INIT;
-struct psc_compl	 compl = PSC_COMPL_INIT;
-struct psc_waitq	 wq = PSC_WAITQ_INIT;
+struct psc_compl	 compl = PSC_COMPL_INIT("test");
+struct psc_waitq	 wq = PSC_WAITQ_INIT("test");
 int			 var = 0;
 
 void *
