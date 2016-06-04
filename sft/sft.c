@@ -126,7 +126,7 @@ struct psc_listcache		 wkq;
 struct psc_poolmaster		 wk_poolmaster;
 struct psc_poolmgr		*wk_pool;
 struct pfl_opstat		*iostats;
-struct psc_waitq		 display_wq = PSC_WAITQ_INIT;
+struct psc_waitq		 display_wq = PSC_WAITQ_INIT("display");
 volatile int			 running = 1;
 
 int				 incomplete = 0;
@@ -624,7 +624,7 @@ main(int argc, char *argv[])
 	if (sigaction(SIGINT, &sa, NULL) == -1)
 		psc_fatal("sigaction");
 
-	lc_init(&wkq, struct wk, lentry);
+	lc_init(&wkq, "work", struct wk, lentry);
 	psc_poolmaster_init(&wk_poolmaster, struct wk, lentry,
 	    PPMF_AUTO, nthr, nthr, 0,  NULL, "wk");
 	wk_pool = psc_poolmaster_getmgr(&wk_poolmaster);
