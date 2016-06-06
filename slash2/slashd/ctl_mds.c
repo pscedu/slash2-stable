@@ -473,7 +473,10 @@ slmctlthr_main(const char *fn)
 	pflrpc_register_ctlops(slmctlops);
 
 	psc_ctlparam_register("faults", psc_ctlparam_faults);
+
+#ifdef Linux
 	psc_ctlparam_register("log.file", psc_ctlparam_log_file);
+#endif
 	psc_ctlparam_register("log.format", psc_ctlparam_log_format);
 	psc_ctlparam_register("log.level", psc_ctlparam_log_level);
 	psc_ctlparam_register("log.points", psc_ctlparam_log_points);
@@ -488,6 +491,9 @@ slmctlthr_main(const char *fn)
 
 	psc_ctlparam_register_var("sys.crc_check",
 	    PFLCTL_PARAMT_INT, PFLCTL_PARAMF_RDWR, &slm_crc_check);
+
+	psc_ctlparam_register_var("sys.conn_debug",
+	    PFLCTL_PARAMT_INT, PFLCTL_PARAMF_RDWR, &sl_conn_debug);
 
 	psc_ctlparam_register_simple("sys.next_fid",
 	    slmctlparam_nextfid_get, slmctlparam_nextfid_set);
@@ -523,7 +529,9 @@ slmctlthr_main(const char *fn)
 	psc_ctlparam_register_var("sys.rpc_timeout",
 	    PFLCTL_PARAMT_INT, PFLCTL_PARAMF_RDWR, &pfl_rpc_timeout);
 
+#ifdef Linux
 	psc_ctlparam_register("sys.rss", psc_ctlparam_get_rss);
+#endif
 
 	psc_ctlparam_register_var("sys.bmaxseqno", PFLCTL_PARAMT_UINT64,
 	    0, &slm_bmap_leases.btt_maxseq);

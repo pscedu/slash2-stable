@@ -86,6 +86,7 @@
 
 GCRY_THREAD_OPTION_PTHREAD_IMPL;
 
+
 /*
  * Cap max_write at 1048576, which is the same as LNET_MTU, because our flush
  * mechanism assumes that each request can be flushed within ONE RPC.
