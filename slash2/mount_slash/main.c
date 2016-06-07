@@ -1886,9 +1886,9 @@ mslfsop_readlink(struct pscfs_req *pfr, pscfs_inum_t inum)
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
-	if (mp->len > LNET_MTU) {
+	if (mp->len > SL_PATH_MAX) {
 		rc = EINVAL;
-	} else if (mp->len < sizeof(mp->buf)) {
+	} else if (!mp->flag) {
 		retbuf = mp->buf;
 	} else {
 		iov.iov_len = mp->len;
