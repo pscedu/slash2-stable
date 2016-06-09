@@ -1,13 +1,16 @@
 06/07/2016
 ----------
 
-Start a checklist before pushing to the -stable tree (in addition to 4 parallel tests):
+Start a checklist before pushing to the -stable tree (in addition to 4 parallel tests). Each
+of these tests should only take less than five minutes:
 
 	- check out two slash2 trees, one in slash2, the other in a different file system
 	  do a recursive diff -dur -x .git comparison.  This can catch symbolic regressions.
 
 	- replicate a slash2 development tree from one IOS to another IOS. This makes sure
-	  that at last msctl and basic replication work.   
+	  that at least msctl and basic replication work.   
+
+	- If zfs-fuse is changed, try to create a new ZFS pool.
 
 06/03/2016
 ----------
