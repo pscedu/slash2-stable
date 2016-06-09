@@ -405,6 +405,8 @@ extern int			 slm_preclaim_enabled;
 
 extern struct psc_hashtbl	 slm_roots;
 
+extern int			 debug_ondisk_inode;
+
 /*
  * List of fault point that will be auto-registered on startup.
  */

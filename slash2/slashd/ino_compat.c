@@ -109,7 +109,7 @@ mds_inode_update(int vfsid, struct slash_inode_handle *ih,
 	struct fidc_membh *f;
 	struct srt_stat sstb;
 	void *h = NULL, *th;
-	int rc;
+	int rc, level;
 	char buf[LINE_MAX];
 
 	sic = &sl_ino_compat_table[old_version];
@@ -118,14 +118,13 @@ mds_inode_update(int vfsid, struct slash_inode_handle *ih,
 		return (rc);
 
 	OPSTAT_INCR("inode-update");
-	DEBUG_INOH(PLL_WARN, ih, buf, "updating old inode (v %d)",
-	    old_version);
+
+	level = debug_ondisk_inode ? PLL_MAX : PLL_WARN;
+	DEBUG_INOH(level, ih, buf, "updating old inode (v %d)", old_version);
 
 	f = inoh_2_fcmh(ih);
-
 	/* 
-	 * This logic was introduced by commit 
-	 * 85f8cf4f751fe8348e1dc997d6f73f99a1d37938
+	 * Introduced by commit 85f8cf4f751fe8348e1dc997d6f73f99a1d37938
 	 */
 	snprintf(fn, sizeof(fn), "%016"PRIx64".update", fcmh_2_fid(f));
 	rc = mdsio_opencreatef(vfsid, mds_tmpdir_inum[vfsid],
@@ -157,7 +156,6 @@ mds_inode_update(int vfsid, struct slash_inode_handle *ih,
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
-//	mdsio_rename(mds_tmpdir_inum, NULL, fn, &rootcreds, NULL);
 	rc = mds_inode_dump(vfsid, NULL, ih, h);
 	if (rc)
 		PFL_GOTOERR(out, rc);
