@@ -41,17 +41,17 @@ RSS usage. (2) Fix an old bug in which we use random lock to send message to soc
 breaks a simple replication query command. (3) Other small fixes and improvments (EIO can 
 cause endless loop, add uptime in msctl -sc).
 
-My current practice to push to this stable tree:
+My current practice to push to this stable tree (update 06/10/2016):
 
 	- Linux kernel 4.2 build (make -j 3)
 	- iozone -a in a loop
 	- tar-ssh in a loop
 	- self build in a loop
 
-All driven manually. It usually finishes in 10+ hours (the kernel build lasts longest). Then
-I remove all files with rm -rvf *, which takes 30+ minutes. Then I do an iozone -a.  Then I 
-download a slash2 tree with git, and replicate it to another IOS.  The hardware I use is
-probably 10+ years old.
+All tests are driven manually. It usually finishes in 10+ hours (the kernel build lasts longest). Then
+I remove all files with rm -rvf *, which takes 30+ minutes. After that, I repeat the above 4 parallel
+tests and let them run for a couple of hours.  Then, I kill all tests and wipe out all files again with 
+rm -rvf *.  Finally, I run though my check list (documented on 06/07/2016).
 
 05/11/2016
 ----------
