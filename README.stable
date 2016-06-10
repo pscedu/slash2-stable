@@ -1,16 +1,19 @@
 06/07/2016
 ----------
 
-Start a checklist before pushing to the -stable tree (in addition to 4 parallel tests). Each
-of these tests should only take less than five minutes:
+Start a check list before pushing to the -stable tree (in addition to 4 parallel tests). The
+list is currently as follows:
 
-	- check out two slash2 trees, one in slash2, the other in a different file system
-	  do a recursive diff -dur -x .git comparison.  This can catch symbolic regressions.
+	1. Build sliod on FreeBSD 9.0.
 
-	- replicate a slash2 development tree from one IOS to another IOS. This makes sure
-	  that at least msctl and basic replication work.   
+	2. If zfs-fuse is changed, try to create a new ZFS pool.
 
-	- If zfs-fuse is changed, try to create a new ZFS pool.
+	3. Check out two slash2 source trees, one in slash2, the other in a different file system.
+	   Then do a recursive diff -dur -x .git comparison.  This can catch symbolic regressions.
+
+	4. Check out a slash2 source tree on one IOS, replicate it to another IOS. Then take the
+           first IOS offline and build the source tree. This makes sure that msctl functionality
+	   and basic replication work.
 
 06/03/2016
 ----------
