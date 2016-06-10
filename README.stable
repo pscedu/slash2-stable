@@ -15,6 +15,8 @@ list is currently as follows:
            first IOS offline and build the source tree. This makes sure that msctl functionality
 	   and basic replication work.
 
+	5. Force MDS to always return DIO bmap lease (sys.force_dio=1) and do a self build.
+
 06/03/2016
 ----------
 
