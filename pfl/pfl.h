@@ -124,6 +124,11 @@ _pfl_callerinfo_get(const char *fn, const char *func, int lineno,
 {
 	struct pfl_callerinfo *pci;
 
+	/*
+	 * Hit segmentation fault with _psc_realloc() from here
+	 * coming from pscrpcthr_waitevent(). The MDS has been
+	 * running for 40+ days.
+	 */
 	pci = pfl_tls_get(PFL_TLSIDX_CALLERINFO, sizeof(*pci));
 	pci->pci_filename = fn;
 	pci->pci_func = func;
