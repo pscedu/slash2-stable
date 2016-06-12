@@ -4,6 +4,8 @@
 #
 # Pull commits from each subtree of slash2
 #
+# It has been tested on git version 1.8.3.1 
+#
 
 function bail-if-fail {
     if [ $? -ne 0 ] 
