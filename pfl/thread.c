@@ -90,6 +90,7 @@ _pscthr_destroy(void *arg)
 			    thr->pscthr_uniqid - 1);
 	}
 	PLL_ULOCK(&psc_threads);
+	/* crash below @40977 */
 	psc_free(thr->pscthr_loglevels, PAF_NOLOG);
 	psc_free(thr, PAF_NOLOG);
 }
