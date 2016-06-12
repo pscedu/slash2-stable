@@ -17,6 +17,18 @@ list is currently as follows:
 
 	5. Force MDS to always return DIO bmap lease (sys.force_dio=1) and do a self build.
 
+	   self-build non DIO mode:
+
+		real	3m46.075s
+		user	4m42.471s
+		sys	1m33.065s
+
+	   self-build DIO mode:
+
+		real	4m55.931s
+		user	4m45.384s
+		sys	1m35.727s
+
 06/03/2016
 ----------
 
