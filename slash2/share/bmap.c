@@ -258,7 +258,7 @@ _bmap_get(const struct pfl_callerinfo *pci, struct fidc_membh *f,
 		if (b->bcm_flags & BMAPF_LOADED)
 			OPSTAT_INCR("bmap-already-loaded");
 		else
-			OPSTAT_INCR("bmap-notyet-loaded");
+			OPSTAT_INCR("bmap-not-yet-loaded");
 		goto out;
 	}
 
@@ -308,28 +308,21 @@ _bmap_get(const struct pfl_callerinfo *pci, struct fidc_membh *f,
 	/*
 	 * Not all lookups are done with the intent of changing the bmap
 	 * mode i.e. bmap_lookup() does not specify a rw value.
-	 *
-	 * bmo_mode_chngf is currently CLI only and is
-	 * msl_bmap_modeset().
 	 */
 	if (!(bmaprw & b->bcm_flags) && sl_bmap_ops.bmo_mode_chngf) {
 
 		psc_assert(!(b->bcm_flags & BMAPF_MODECHNG));
 		b->bcm_flags |= BMAPF_MODECHNG;
 
-		DEBUG_BMAP(PLL_DIAG, b, "about to mode change (rw=%d)",
-		    rw);
+		DEBUG_BMAP(PLL_DIAG, b, "mode change (rw=%d)", rw);
 
 		BMAP_ULOCK(b);
 
 		psc_assert(rw == SL_WRITE || rw == SL_READ);
+
+	 	/* client only: call msl_bmap_modeset() */
 		rc = sl_bmap_ops.bmo_mode_chngf(b, rw, flags);
-
 		BMAP_LOCK(b);
-
-		if ((flags & BMAPGETF_NONBLOCK) == 0 || rc)
-			b->bcm_flags &= ~BMAPF_MODECHNG;
-		bmap_wake_locked(b);
 	}
 
  out:

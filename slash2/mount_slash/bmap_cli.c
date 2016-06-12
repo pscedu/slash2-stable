@@ -151,10 +151,8 @@ msl_bmap_stash_lease(struct bmap *b, const struct srt_bmapdesc *sbd,
 
 	BMAP_LOCK_ENSURE(b);
 
-	if (!sbd->sbd_seq) {
-		psclog(PLL_WARN, "Zero bmap lease number (%s)", action);
-		OPSTAT_INCR("zero-seqno");
-	}
+	if (!sbd->sbd_seq)
+		psc_fatalx("Zero bmap lease number (%s)", action);
 	psc_assert(sbd->sbd_fg.fg_fid);
 	psc_assert(sbd->sbd_fg.fg_fid == fcmh_2_fid(b->bcm_fcmh));
 
@@ -232,7 +230,7 @@ msl_bmap_retrieve_cb(struct pscrpc_request *rq,
 
 		b->bcm_flags |= BMAPF_LOADED;
 	} else {
-		/* ignore all errors for background operation */
+		/* ignore all errors for this background operation */
 		BMAP_LOCK(b);
 	}
 
@@ -308,13 +306,12 @@ msl_bmap_retrieve(struct bmap *b, int flags)
 			pscrpc_req_finished(rq);
 			sl_csvc_decref(csvc);
 		}
-		return (0);
+		return (rc);
 	}
 	rc = SL_RSX_WAITREP(csvc, rq, mp);
-
- out:
 	if (!rc)
 		rc = mp->rc;
+ out:
 	if (rc == -SLERR_BMAP_DIOWAIT) {
 		OPSTAT_INCR("bmap-retrieve-diowait");
 
@@ -387,7 +384,7 @@ msl_bmap_lease_extend_cb(struct pscrpc_request *rq,
 
 	SL_GET_RQ_STATUS(csvc, rq, mp, rc);
 
-	/* ignore all errors for background operation */
+	/* ignore all errors for this background operation */
 	if (!rc)
 		msl_bmap_stash_lease(b, &mp->sbd, "extend");
 
@@ -471,10 +468,10 @@ msl_bmap_lease_extend(struct bmap *b, int blocking)
  retry:
 	rc = slc_rmc_getcsvc(fcmh_2_fci(b->bcm_fcmh)->fci_resm, &csvc);
 	if (rc)
-		goto out;
+		PFL_GOTOERR(out, rc);
 	rc = SL_RSX_NEWREQ(csvc, SRMT_EXTENDBMAPLS, rq, mq, mp);
 	if (rc)
-		goto out;
+		PFL_GOTOERR(out, rc);
 
 	mq->sbd = *sbd;
 
@@ -491,13 +488,12 @@ msl_bmap_lease_extend(struct bmap *b, int blocking)
 			pscrpc_req_finished(rq);
 			sl_csvc_decref(csvc);
 		}
-		return (0);
+		return (rc);
 	}
 	rc = SL_RSX_WAITREP(csvc, rq, mp);
-
- out:
 	if (!rc)
 		rc = mp->rc;
+ out:
 	if (rc && slc_rpc_should_retry(pfr, &rc)) {
 		pscrpc_req_finished(rq);
 		rq = NULL;
@@ -536,7 +532,7 @@ msl_bmap_modeset_cb(struct pscrpc_request *rq,
 	SL_GET_RQ_STATUS(csvc, rq, mp, rc);
 
 	BMAP_LOCK(b);
-	/* ignore all errors for background operation */
+	/* ignore all errors for this background operation */
 	if (!rc) {
 		msl_bmap_stash_lease(b, &mp->sbd, "modechange");
 		psc_assert((b->bcm_flags & BMAP_RW_MASK) == BMAPF_RD);
@@ -592,19 +588,16 @@ msl_bmap_modeset(struct bmap *b, enum rw rw, int flags)
 	f = b->bcm_fcmh;
 	fci = fcmh_2_fci(f);
 
-	psc_assert(rw == SL_WRITE || rw == SL_READ);
 	psc_assert(b->bcm_flags & BMAPF_MODECHNG);
-
 	if (b->bcm_flags & BMAPF_WR) {
 		/*
 		 * Write enabled bmaps are allowed to read with no
 		 * further action being taken.
 		 */
-		if (!blocking) {
-			BMAP_LOCK(b);
-			b->bcm_flags &= ~BMAPF_MODECHNG;
-			BMAP_ULOCK(b);
-		}
+		BMAP_LOCK(b);
+		b->bcm_flags &= ~BMAPF_MODECHNG;
+		bmap_wake_locked(b);
+		BMAP_ULOCK(b);
 		return (0);
 	}
 
@@ -636,13 +629,12 @@ msl_bmap_modeset(struct bmap *b, enum rw rw, int flags)
 			pscrpc_req_finished(rq);
 			sl_csvc_decref(csvc);
 		}
-		return (0);
+		return (rc);
 	}
 	rc = SL_RSX_WAITREP(csvc, rq, mp);
-
- out:
 	if (!rc)
 		rc = mp->rc;
+ out:
 	if (rc == -SLERR_BMAP_DIOWAIT) {
 		OPSTAT_INCR("bmap-modeset-diowait");
 
@@ -685,11 +677,11 @@ msl_bmap_modeset(struct bmap *b, enum rw rw, int flags)
 			BMAP_LOCK(b);
 		}
 	} else {
-		DEBUG_BMAP(PLL_WARN, b, "unable to modeset bmap rc=%d",
-		    rc);
+		DEBUG_BMAP(PLL_WARN, b, "unable to modeset bmap rc=%d", rc);
 		BMAP_LOCK(b);
 	}
 
+	/* We can get here for !blocking case */
 	b->bcm_flags &= ~BMAPF_MODECHNG;
 	bmap_wake_locked(b);
 	BMAP_ULOCK(b);
@@ -722,6 +714,7 @@ msl_bmap_lease_reassign_cb(struct pscrpc_request *rq,
 	return (rc);
 }
 
+/* Handled by slm_rmc_handle_reassignbmapls() */
 void
 msl_bmap_lease_reassign(struct bmap *b)
 {
@@ -768,11 +761,11 @@ msl_bmap_lease_reassign(struct bmap *b)
 	psc_assert(fcmh_2_fci(b->bcm_fcmh)->fci_resm == msl_rmc_resm);
 	rc = slc_rmc_getcsvc(fcmh_2_fci(b->bcm_fcmh)->fci_resm, &csvc);
 	if (rc)
-		goto out;
+		PFL_GOTOERR(out, rc);
 
 	rc = SL_RSX_NEWREQ(csvc, SRMT_REASSIGNBMAPLS, rq, mq, mp);
 	if (rc)
-		goto out;
+		PFL_GOTOERR(out, rc);
 
 	mq->sbd = bci->bci_sbd;
 	memcpy(&mq->prev_sliods, &bci->bci_prev_sliods,
@@ -904,13 +897,13 @@ msl_bmap_release(struct sl_resm *resm)
 		rc = -abs(resm->resm_csvc->csvc_lasterrno); /* XXX race */
 		if (rc == 0)
 			rc = -ETIMEDOUT;
-		goto out;
+		PFL_GOTOERR(out, rc);
 	}
 
 	psc_assert(rmci->rmci_bmaprls.nbmaps);
 	rc = SL_RSX_NEWREQ(csvc, SRMT_RELEASEBMAP, rq, mq, mp);
 	if (rc)
-		goto out;
+		PFL_GOTOERR(out, rc);
 
 	memcpy(mq, &rmci->rmci_bmaprls, sizeof(*mq));
 
@@ -1142,13 +1135,14 @@ msl_bmap_to_csvc(struct bmap *b, int exclusive, struct sl_resm **pm,
 	 *	 again and use that connection.
 	 */
 	has_residency = 0;
-	for (j = 0; j < 2; j++) {
+	for (i = 0; i < 2; i++) {
 		pfl_multiwait_reset(mw);
 		pfl_multiwait_entercritsect(mw);
 
-		for (i = 0; i < fci->fci_inode.nrepls; i++) {
+		/* fci->u.f.inode.nrepls */
+		for (j = 0; j < fci->fci_inode.nrepls; j++) {
 			rc = msl_try_get_replica_res(b,
-			    fci->fcif_idxmap[i], j ? has_residency : 1,
+			    fci->fcif_idxmap[j], i ? has_residency : 1,
 			    pm, csvcp);
 			switch (rc) {
 			case 0:

@@ -58,9 +58,10 @@
  * +-------------+-----+-------------------+---------+-------------------+-----
  * | inode + CRC | gap | extra inode + CRC |   gap   | block 0 map + CRC |
  * +-------------+-----+-------------------+---------+-------------------+-----
- *       72                   752                          1192
+ *       72                   752                            1192 
+ *                                                     struct bmap_ondisk 
  *
- * CRC are 8 bytes.
+ * CRC are 8 bytes.  For a file with one bmap, the size is 2728 bytes.
  *
  */
 #define SL_EXTRAS_START_OFF	((off_t)0x0200)
@@ -84,14 +85,17 @@ typedef struct {
  * The inode structure lives at the beginning of the metafile and holds
  * the block store array along with snapshot pointers.
  *
- * A 64-bit CRC checksum follows this structure on disk.
+ * A 64-bit CRC checksum follows this structure on disk. 64 bytes in all.
  */
 struct slm_ino_od {
 	uint16_t		 ino_version;
 	uint16_t		 ino_flags;			/* immutable, etc. */
 	uint32_t		 ino_bsz;			/* bmap size */
+	/*
+ 	 * Incremented in _mds_repl_ios_lookup().
+ 	 */
 	uint32_t		 ino_nrepls;			/* number of replicas */
-	uint32_t		 ino_replpol;			/* new bmap BRPOL_* policy */
+	uint32_t		 ino_replpol;			/* BRPOL_ONETIME or BRPOL_PERSIST */
 	sl_replica_t		 ino_repls[SL_DEF_REPLICAS];	/* embed a few replicas	*/
 	uint64_t		 ino_repl_nblks[SL_DEF_REPLICAS];/* st_blocks constituents */
 };
@@ -101,7 +105,7 @@ struct slm_ino_od {
 #define INOF_IOS_AFFINITY	(1 << 0)			/* Prefer existing IOS for new bmaps */
 
 /*
- * A 64-bit CRC checksum follows this structure on disk.
+ * A 64-bit CRC checksum follows this structure on disk. 744 bytes in all.
  */
 struct slm_inox_od {
 	sl_snap_t		 inox_snaps[SL_DEF_SNAPSHOTS];	/* snapshot pointers */
