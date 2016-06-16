@@ -51,6 +51,7 @@ __static void				*_pfl_tls[PFL_TLSIDX_MAX];
 struct timespec				  pfl_uptime;
 pid_t					  pfl_pid;
 
+/* XXX does not work on FreeBSD 9.0, it returns -1 */
 pid_t
 pfl_getsysthrid(void)
 {
