@@ -134,6 +134,8 @@ int				 incomplete = 0;
 /* only main thread updates it, so it is thread-safe */
 long long			 totalbytes;
 
+int 				 seed;
+
 #define lock_output()							\
 	do {								\
 		flockfile(stdout);					\
@@ -247,18 +249,32 @@ file_close(struct file *f)
 void
 thrmain(struct psc_thread *thr)
 {
-	int save_errno;
+	int i, save_errno;
 	struct cksum cksum;
 	struct file *f;
 	struct wk *wk;
 	ssize_t rc;
 	char *buf;
+	int32_t result;
+	char rand_statebuf[32];
+	struct random_data rand_state;
 
 	/* use the same buffer for all reads or writes */
 	buf = psc_alloc(bufsz, PAF_PAGEALIGN);
 
-	if (dowrite)
-		pfl_random_getbytes(buf, bufsz);
+	if (dowrite) {
+		if (seed) {
+			memset(rand_statebuf, 0, sizeof(rand_statebuf));
+			memset(&rand_state, 0, sizeof(rand_state));
+			initstate_r(seed, rand_statebuf, 
+			    sizeof(rand_statebuf), &rand_state);
+			for (i = 0; i < bufsz; i++) {
+				random_r(&rand_state, &result);
+				buf[i] = (unsigned char)result;
+			}
+		} else
+			pfl_random_getbytes(buf, bufsz);
+	}
 
 	while (pscthr_run(thr)) {
 		if (exit_from_signal)
@@ -544,7 +560,7 @@ main(int argc, char *argv[])
 	gcry_control(GCRYCTL_INITIALIZATION_FINISHED, 0);
 
 	pfl_init();
-	while ((c = getopt(argc, argv, "Bb:CcD:dKO:PRs:Tt:vwZ")) != -1)
+	while ((c = getopt(argc, argv, "Bb:CcD:dKO:PRs:S:Tt:vwZ")) != -1)
 		switch (c) {
 		case 'B': /* display bandwidth */
 			displaybw = 1;
@@ -589,6 +605,9 @@ main(int argc, char *argv[])
 			if (totalsz <= 0)
 				errx(1, "%s: %s", optarg, strerror(
 				    totalsz ? -totalsz : EINVAL));
+			break;
+		case 'S': /* seed */
+			seed = atoi(optarg);
 			break;
 		case 'T': /* report total */
 			break;
