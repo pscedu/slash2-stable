@@ -629,6 +629,8 @@ main(int argc, char *argv[])
 	    PPMF_AUTO, nthr, nthr, 0,  NULL, "wk");
 	wk_pool = psc_poolmaster_getmgr(&wk_poolmaster);
 
+	pscthrs_init();
+	pscthr_init(PFL_THRT_CTL, NULL, 0, "sftctl");
 	pfl_opstimerthr_spawn(THRT_OPSTIMER, "opstimerthr");
 	iostats = pfl_opstat_init("iostats");
 
