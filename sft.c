@@ -466,7 +466,7 @@ addwk(struct file *f)
 }
 
 int
-proc(FTSENT *fe, __unusedx void *arg)
+sft_proc(FTSENT *fe, __unusedx void *arg)
 {
 	struct file *f;
 
@@ -640,7 +640,7 @@ main(int argc, char *argv[])
 		thrv[n] = pscthr_init(0, thrmain, 0, "thr%d", n);
 
 	for (; *argv; argv++)
-		pfl_filewalk(*argv, flags, NULL, proc, NULL);
+		pfl_filewalk(*argv, flags, NULL, sft_proc, NULL);
 
 	if (displaybw)
 		dispthr = pscthr_init(0, display, 0, "disp");
