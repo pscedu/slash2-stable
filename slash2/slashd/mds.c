@@ -544,13 +544,19 @@ mds_bmap_add_repl(struct bmap *b, struct bmap_ios_assign *bia)
 	iosidx = mds_repl_ios_lookup_add(current_vfsid, ih,
 	    bia->bia_ios);
 
-	if (iosidx < 0)
-		psc_fatalx("ios_lookup_add %d: %s", bia->bia_ios,
+	if (iosidx < 0) {
+		psclog_warnx("ios_lookup_add %d: %s", bia->bia_ios,
 		    sl_strerror(iosidx));
+		return (iosidx);
+	}
 
 //	BMAP_WAIT_BUSY(b);
 
-	rc = mds_repl_inv_except(b, iosidx);
+	/*
+ 	 * Here we assign a bmap as VALID even before a single byte
+ 	 * has been written to it. This might be a problem.
+ 	 */
+	rc = mds_repl_inv_except(b, iosidx, 0);
 	if (rc) {
 		DEBUG_BMAP(PLL_ERROR, b, "mds_repl_inv_except() failed");
 		BMAP_UNBUSY(b);
@@ -604,6 +610,7 @@ mds_bmap_add_repl(struct bmap *b, struct bmap_ios_assign *bia)
 __static int
 mds_bmap_ios_assign(struct bmap_mds_lease *bml, sl_ios_id_t iosid)
 {
+	int rc;
 	struct bmap *b = bml_2_bmap(bml);
 	struct bmap_mds_info *bmi = bmap_2_bmi(b);
 	struct resm_mds_info *rmmi;
@@ -620,14 +627,16 @@ mds_bmap_ios_assign(struct bmap_mds_lease *bml, sl_ios_id_t iosid)
 	psc_assert(b->bcm_flags & BMAPF_IOSASSIGNED);
 	if (!resm) {
 		struct sl_resource *r;
+		struct fidc_membh *f = b->bcm_fcmh;
 
 		b->bcm_flags |= BMAPF_NOION;
 		BMAP_ULOCK(b);
 		bml->bml_flags |= BML_ASSFAIL; // XXX bml locked?
 
 		r = libsl_id2res(iosid);
-		psclog_warnx("unable to contact IOS %#x (pref_ios=%s) "
-		    "for lease", iosid, r ? r->res_name : NULL);
+		psclog_warnx("Fail to contact IOS %#x (pref_ios=%s) "
+		    "for lease, fid = "SLPRI_FID, iosid, 
+		    r ? r->res_name : NULL, fcmh_2_fid(f)); 
 
 		return (-SLERR_ION_OFFLINE);
 	}
@@ -670,10 +679,11 @@ mds_bmap_ios_assign(struct bmap_mds_lease *bml, sl_ios_id_t iosid)
 
 	bmi->bmi_assign = pfl_odt_putitem(slm_bia_odt, item, bia);
 
-	if (mds_bmap_add_repl(b, bia)) {
+	rc = mds_bmap_add_repl(b, bia);
+	if (rc) {
 		pfl_odt_freebuf(slm_bia_odt, bia, NULL);
 		// release odt ent?
-		return (-1); // errno
+		return (rc);
 	}
 
 	bml->bml_seq = bia->bia_seq;

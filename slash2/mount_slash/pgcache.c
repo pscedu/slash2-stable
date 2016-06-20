@@ -73,10 +73,10 @@ msl_pgcache_init(void)
 	for (i = 0; i < msl_bmpces_min; i++) {
 		p = mmap(NULL, BMPC_BUFSZ, PROT_READ|PROT_WRITE, 
 		    MAP_ANONYMOUS|MAP_SHARED, -1, 0);
-		if (p == MAP_FAILED) {
-			OPSTAT_INCR("mmap-failure");
-			break;
-		}
+
+		if (p == MAP_FAILED)
+			psc_fatalx("Please raise vm.max_map_count limit");
+
 		OPSTAT_INCR("mmap-success");
 		page_buffers_count++;
 		INIT_PSC_LISTENTRY((struct psc_listentry *)p);
@@ -88,6 +88,7 @@ void *
 msl_pgcache_get(int wait)
 {
 	void *p;
+	static int warned = 0;
 
 	p = lc_getnb(&page_buffers);
 	if (p)
@@ -98,10 +99,15 @@ msl_pgcache_get(int wait)
 		p = mmap(NULL, BMPC_BUFSZ, PROT_READ|PROT_WRITE, 
 		    MAP_ANONYMOUS|MAP_SHARED, -1, 0);
 		if (p != MAP_FAILED) {
+			warned = 0;
 			OPSTAT_INCR("mmap-success");
 			page_buffers_count++;
 			LIST_CACHE_ULOCK(&page_buffers);
 			return (p);
+		}
+		if (warned < 3) {
+			warned++;
+			psclog_warnx("Please check vm.max_map_count");
 		}
 		OPSTAT_INCR("mmap-failure");
 	}
@@ -117,20 +123,9 @@ msl_pgcache_get(int wait)
 void
 msl_pgcache_put(void *p)
 {
-	int rc;
-
 	LIST_CACHE_LOCK(&page_buffers);
-	if (page_buffers_count > msl_bmpces_max) {
-		rc = munmap(p, BMPC_BUFSZ);
-		if (rc)
-			OPSTAT_INCR("munmap-failure");
-		else
-			OPSTAT_INCR("munmap-success");
-		page_buffers_count--;
-	} else {
-		INIT_PSC_LISTENTRY((struct psc_listentry *)p);
-		lc_add(&page_buffers, p);
-	}
+	INIT_PSC_LISTENTRY((struct psc_listentry *)p);
+	lc_add(&page_buffers, p);
 	LIST_CACHE_ULOCK(&page_buffers);
 }
 

@@ -50,14 +50,11 @@
 struct psc_poolmaster	 slvr_poolmaster;
 struct psc_poolmaster	 sli_aiocbr_poolmaster;
 struct psc_poolmaster	 sli_iocb_poolmaster;
-struct psc_poolmaster	 sli_readaheadrq_poolmaster;
 
 struct psc_poolmgr	*slvr_pool;
 struct psc_poolmgr	*sli_aiocbr_pool;
 struct psc_poolmgr	*sli_iocb_pool;
-struct psc_poolmgr	*sli_readaheadrq_pool;
 
-struct psc_listcache	 sli_readaheadq;
 struct psc_listcache	 sli_iocb_pndg;
 
 psc_atomic64_t		 sli_aio_id = PSC_ATOMIC64_INIT(0);
@@ -762,8 +759,7 @@ slvr_remove(struct slvr *s)
 	PSC_SPLAY_XREMOVE(biod_slvrtree, &bii->bii_slvrs, s);
 	bmap_op_done_type(bii_2_bmap(bii), BMAP_OPCNT_SLVR);
 
-	if (s->slvr_slab)
-		slab_free(s->slvr_slab);
+	slab_free(s->slvr_slab);
 	psc_pool_return(slvr_pool, s);
 }
 
@@ -784,6 +780,10 @@ slvr_remove_all(struct fidc_membh *f)
 	PFL_GETTIMESPEC(&ts0);
 
 	/*
+ 	 * If we are called by sli_rim_handle_reclaim(), we already 
+ 	 * to the FCMH lock, so take the read lock below is redundant
+ 	 * and does not get us anything.
+ 	 *
 	 * Use two loops to avoid entanglement with some background
 	 * operations.
 	 */
@@ -794,6 +794,16 @@ slvr_remove_all(struct fidc_membh *f)
 			BMAP_ULOCK(b);
 			continue;
 		}
+		/*
+		 * If slab_cache_reap() tries to free a sliver, this
+		 * reference count should hold the bmap. Otherwise,
+		 * slab_cache_reap() will try to grab the fcmh_rwlock
+		 * to remove the bmap from the fcmh tree and we have
+		 * a deadlock.
+		 *
+		 * Unfortunately, we still hit a deadlock due to this
+		 * race. More invetigation is needed.
+		 */
 		bmap_op_start_type(b, BMAP_OPCNT_SLVR);
 		psc_dynarray_add(&a, b);
 
@@ -1103,18 +1113,9 @@ void
 slvr_cache_init(void)
 {
 	psc_poolmaster_init(&slvr_poolmaster,
-	    struct slvr, slvr_lentry, PPMF_AUTO, 512, 512, 0,
-	    NULL, "slvr");
+	    struct slvr, slvr_lentry, PPMF_AUTO, SLAB_DEF_COUNT, 
+	    SLAB_DEF_COUNT, 0, NULL, "slvr");
 	slvr_pool = psc_poolmaster_getmgr(&slvr_poolmaster);
-
-	psc_poolmaster_init(&sli_readaheadrq_poolmaster,
-	    struct sli_readaheadrq, rarq_lentry, PPMF_AUTO, 64, 64, 0,
-	    NULL, "readaheadrq");
-	sli_readaheadrq_pool = psc_poolmaster_getmgr(
-	    &sli_readaheadrq_poolmaster);
-
-	lc_reginit(&sli_readaheadq, struct sli_readaheadrq, rarq_lentry,
-	    "readaheadq");
 
 	lc_reginit(&sli_lruslvrs, struct slvr, slvr_lentry, "lruslvrs");
 	lc_reginit(&sli_crcqslvrs, struct slvr, slvr_lentry, "crcqslvrs");

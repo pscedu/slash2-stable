@@ -363,6 +363,11 @@ slm_rmc_handle_getbmap(struct pscrpc_request *rq)
 	if (mp->rc)
 		goto out;
 
+	if (!fcmh_isreg(f)) {
+		mp->rc = -EINVAL;
+		goto out;
+	}
+
 	mp->flags = mq->flags;
 
 	mp->rc = mds_bmap_load_cli(f, mq->bmapno, mq->flags, mq->rw,
@@ -712,13 +717,17 @@ slm_rmc_handle_create(struct pscrpc_request *rq)
 	if (mp->rc)
 		PFL_GOTOERR(out, mp->rc);
 
-	slm_fcmh_endow_nolog(vfsid, p, c);
+	slm_fcmh_endow(vfsid, p, c);
 
 	/* obtain lease for first bmap as optimization */
 	mp->flags = mq->flags;
 
+#if 0
+	mp->rc2 = ENOENT;
+#else
 	mp->rc2 = mds_bmap_load_cli(c, 0, mp->flags, SL_WRITE,
 	    mq->prefios[0], &mp->sbd, rq->rq_export, NULL, 1);
+#endif
 
 	DEBUG_FCMH(level, p, "bmap load done for %s, rc = %d",
 	    mq->name, mp->rc2);

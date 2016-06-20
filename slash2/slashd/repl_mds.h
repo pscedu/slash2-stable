@@ -40,14 +40,13 @@ struct slm_replst_workreq {
 
 typedef void (*brepl_walkcb_t)(struct bmap *, int, int, void *);
 
-#define mds_repl_inv_except(b, idx)	_mds_repl_inv_except((b), (idx), 0)
-
+int	 mds_repl_inv_except(struct bmap *, int, int);
 int	 mds_repl_addrq(const struct sl_fidgen *, sl_bmapno_t,
 	    sl_bmapno_t *, sl_replica_t *, int, int, int);
+
 int	_mds_repl_bmap_apply(struct bmap *, const int *, const int *, int, int, int *, brepl_walkcb_t, void *);
 int	_mds_repl_bmap_walk(struct bmap *, const int *, const int *, int, const int *, int, brepl_walkcb_t, void *);
 int	 mds_repl_delrq(const struct sl_fidgen *, sl_bmapno_t, sl_bmapno_t *, sl_replica_t *, int);
-int	_mds_repl_inv_except(struct bmap *, int, int);
 int	_mds_repl_ios_lookup(int, struct slash_inode_handle *, sl_ios_id_t, int);
 int	_mds_repl_iosv_lookup(int, struct slash_inode_handle *, const sl_replica_t [], int [], int, int);
 
@@ -81,15 +80,16 @@ void	 mds_brepls_check(uint8_t *, int);
 
 #define IOSV_LOOKUPF_ADD	1
 #define IOSV_LOOKUPF_DEL	2
+#define IOSV_LOOKUPF_LOOKUP	3
 
 #define mds_repl_ios_lookup_add(vfsid, ih, iosid)		\
 	_mds_repl_ios_lookup((vfsid), (ih), (iosid), IOSV_LOOKUPF_ADD)
 
 #define mds_repl_ios_lookup(vfsid, ih, iosid)			\
-	_mds_repl_ios_lookup((vfsid), (ih), (iosid), 0)
+	_mds_repl_ios_lookup((vfsid), (ih), (iosid), IOSV_LOOKUPF_LOOKUP)
 
 #define mds_repl_iosv_lookup(vfsid, ih, ios, idx, nios)		\
-	_mds_repl_iosv_lookup((vfsid), (ih), (ios), (idx), (nios), 0)
+	_mds_repl_iosv_lookup((vfsid), (ih), (ios), (idx), (nios), IOSV_LOOKUPF_LOOKUP)
 
 #define mds_repl_iosv_lookup_add(vfsid, ih, ios, idx, nios)	\
 	_mds_repl_iosv_lookup((vfsid), (ih), (ios), (idx), (nios), IOSV_LOOKUPF_ADD)

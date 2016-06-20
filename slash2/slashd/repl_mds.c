@@ -111,38 +111,76 @@ _slm_repl_bmap_rel_type(struct bmap *b, int type)
 	bmap_op_done_type(b, type);
 }
 
+
+/*
+ * Return the index of the given IOS ID or a negative error code on failure.
+ */
 int
 _mds_repl_ios_lookup(int vfsid, struct slash_inode_handle *ih,
-    sl_ios_id_t ios, int flags)
+    sl_ios_id_t ios, int flag)
 {
-	int locked, rc = -SLERR_REPL_NOT_ACT, inox_rc = 0;
+	int locked, rc;
 	struct slm_inox_od *ix = NULL;
 	struct sl_resource *res;
 	struct fidc_membh *f;
 	sl_replica_t *repl;
-	uint32_t i, j, *nr;
+	uint32_t i, j, nr;
 	char buf[LINE_MAX];
+
+	switch (flag) {
+	    case IOSV_LOOKUPF_ADD:
+		OPSTAT_INCR("replicate-add");
+		break;
+	    case IOSV_LOOKUPF_DEL:
+		OPSTAT_INCR("replicate-del");
+		break;
+	    case IOSV_LOOKUPF_LOOKUP:
+		OPSTAT_INCR("replicate-lookup");
+		break;
+	    default:
+		psc_fatalx("Invalid IOS lookup flag %d", flag);
+	}
 
 	/*
  	 * Can I assume that IOS ID are non-zeros.  If so, I can use
  	 * it to mark a free slots.  See sl_global_id_build().
  	 */
 	f = inoh_2_fcmh(ih);
-	nr = &ih->inoh_ino.ino_nrepls;
+	nr = ih->inoh_ino.ino_nrepls;
 	repl = ih->inoh_ino.ino_repls;
 	locked = INOH_RLOCK(ih);
+
+	psc_assert(nr <= SL_MAX_REPLICAS);
+	if (nr == SL_MAX_REPLICAS && flag == IOSV_LOOKUPF_ADD) {
+		DEBUG_INOH(PLL_WARN, ih, buf, "too many replicas");
+		PFL_GOTOERR(out, rc = -ENOSPC);
+	}
+
+	res = libsl_id2res(ios);
+	if (res == NULL || !RES_ISFS(res))
+		PFL_GOTOERR(out, rc = -SLERR_RES_BADTYPE);
+
+	/*
+ 	 * Return ENOENT by default for IOSV_LOOKUPF_DEL & IOSV_LOOKUPF_LOOKUP.
+ 	 */
+	rc = -ENOENT;
+
 	/*
 	 * Search the existing replicas to see if the given IOS is
 	 * already there.
+	 *
+	 * The following code can step through zero IOS IDs just fine.
+	 *
 	 */
-	for (i = 0, j = 0; i < *nr; i++, j++) {
+	for (i = 0, j = 0; i < nr; i++, j++) {
 		if (i == SL_DEF_REPLICAS) {
 			/*
 			 * The first few replicas are in the inode
-			 * itself, the rest are in the extras block.
+			 * itself, the rest are in the extra inode
+			 * block.
 			 */
-			inox_rc = mds_inox_ensure_loaded(ih);
-			if (inox_rc)
+			rc = mds_inox_ensure_loaded(ih);
+			if (rc)
 				goto out;
 			ix = ih->inoh_extras;
 			repl = ix->inox_repls;
@@ -153,58 +191,88 @@ _mds_repl_ios_lookup(int vfsid, struct slash_inode_handle *ih,
 		    j, repl[j].bs_id, ios);
 
 		if (repl[j].bs_id == ios) {
-			if (flags == IOSV_LOOKUPF_DEL) {
-				if (*nr > SL_DEF_REPLICAS) {
-					inox_rc = mds_inox_ensure_loaded(ih);
-					if (inox_rc)
-						goto out;
-					ix = ih->inoh_extras;
-				}
+			/*
+ 			 * Luckily, this code is only called by mds_repl_delrq() 
+ 			 * for directories.
+ 			 *
+ 			 * Make sure that the following edge cases works:
+ 			 *
+ 			 *    (1) There is only one item in the basic array.
+ 			 *    (2) There is only one item in the extra array.
+ 			 *    (3) The number of items is SL_DEF_REPLICAS.
+ 			 *    (4) The number of items is SL_MAX_REPLICAS.
+ 			 */
+			if (flag == IOSV_LOOKUPF_DEL) {
+				/*
+				 * Compact the array if the IOS is not the last
+				 * one. The last one will be either overwritten
+				 * or zeroed.  Note that we might move extra 
+				 * garbage at the end if the total number is less 
+				 * than SL_DEF_REPLICAS.
+				 */
 				if (i < SL_DEF_REPLICAS - 1) {
 					memmove(&repl[j], &repl[j + 1],
 					    (SL_DEF_REPLICAS - j - 1) *
 					    sizeof(*repl));
 				}
+				/*
+				 * All items in the basic array, zero the last
+				 * one and we are done.
+				 */
+				if (nr <= SL_DEF_REPLICAS) {
+					repl[nr-1].bs_id = 0;
+					goto syncit;
+				}
+				/*
+				 * Now we know we have more than SL_DEF_REPLICAS
+				 * items.  However, if we are in the basic array,
+				 * we have not read the extra array yet. In this
+				 * case, we should also move the first item from 
+				 * the extra array to the last one in the basic 
+				 * array (overwrite).
+				 */
 				if (i < SL_DEF_REPLICAS) {
-					if (*nr > SL_DEF_REPLICAS)
-						repl[SL_DEF_REPLICAS - 1].bs_id =
-						    ix->inox_repls[0].bs_id;
+					rc = mds_inox_ensure_loaded(ih);
+					if (rc)
+						goto out;
+					ix = ih->inoh_extras;
+
+					repl[SL_DEF_REPLICAS - 1].bs_id =
+					    ix->inox_repls[0].bs_id;
+
+					repl = ix->inox_repls;
 					j = 0;
 				}
-				if (*nr > SL_DEF_REPLICAS &&
-				    i < SL_MAX_REPLICAS - 1) {
-					repl = ix->inox_repls;
+				/*
+				 * Compact the extra array unless the IOS is
+				 * the last one, which will be zeroed.
+				 */
+				if (i < SL_MAX_REPLICAS - 1) {
 					memmove(&repl[j], &repl[j + 1],
-					    (SL_INOX_NREPLICAS - j - 1) *
+					    (SL_INOX_NREPLICAS - j - 1) * 
 					    sizeof(*repl));
 				}
-				--*nr;
-				mds_inodes_odsync(vfsid, f,
-				    mdslog_ino_repls);
+
+				repl[nr-SL_DEF_REPLICAS-1].bs_id = 0;
+ syncit:
+				ih->inoh_ino.ino_nrepls = nr - 1;
+				rc = mds_inodes_odsync(vfsid, f, mdslog_ino_repls);
+				if (rc)
+					goto out;
 			}
+			/* XXX EEXIST for IOSV_LOOKUPF_ADD? */
 			rc = i; 
 			goto out;
 		}
 	}
 
-	res = libsl_id2res(ios);
-	if (res == NULL || !RES_ISFS(res))
-		PFL_GOTOERR(out, rc = -SLERR_RES_BADTYPE);
-
 	/* It doesn't exist; add to inode replica table if requested. */
-	if (flags == IOSV_LOOKUPF_ADD) {
+	if (flag == IOSV_LOOKUPF_ADD) {
 		int waslk, wasbusy;
 
-		psc_assert(*nr <= SL_MAX_REPLICAS);
-		if (*nr == SL_MAX_REPLICAS) {
-			DEBUG_INOH(PLL_WARN, ih, buf, "too many replicas");
-			PFL_GOTOERR(out, rc = -ENOSPC);
-
-		} else if (*nr >= SL_DEF_REPLICAS) {
-			inox_rc = mds_inox_ensure_loaded(ih);
-			if (inox_rc)
-				goto out;
-
+		/* paranoid */
+		psc_assert(i == nr);
+		if (nr >= SL_DEF_REPLICAS) {
 			repl = ih->inoh_extras->inox_repls;
 			j = i - SL_DEF_REPLICAS;
 
@@ -216,12 +284,13 @@ _mds_repl_ios_lookup(int vfsid, struct slash_inode_handle *ih,
 		wasbusy = FCMH_REQ_BUSY(f, &waslk);
 
 		repl[j].bs_id = ios;
-		++*nr;
 
-		DEBUG_INOH(PLL_DIAG, ih, buf, "add IOS(%u) to repls, index %d",
-		    ios, i);
+		DEBUG_INOH(PLL_DIAG, ih, buf, "add IOS(%u) at idx %d", ios, i);
 
-		mds_inodes_odsync(vfsid, f, mdslog_ino_repls);
+		ih->inoh_ino.ino_nrepls = nr + 1;
+		rc = mds_inodes_odsync(vfsid, f, mdslog_ino_repls);
+		if (rc)
+			goto out;
 
 		FCMH_UREQ_BUSY(f, wasbusy, waslk);
 
@@ -230,18 +299,21 @@ _mds_repl_ios_lookup(int vfsid, struct slash_inode_handle *ih,
 
  out:
 	INOH_URLOCK(ih, locked);
-	return (inox_rc ? inox_rc : rc);
+	return (rc);
 }
 
+/*
+ * Given a vector of IOS IDs, return their indexes.
+ */
 int
 _mds_repl_iosv_lookup(int vfsid, struct slash_inode_handle *ih,
-    const sl_replica_t iosv[], int iosidx[], int nios, int flags)
+    const sl_replica_t iosv[], int iosidx[], int nios, int flag)
 {
 	int k;
 
 	for (k = 0; k < nios; k++)
 		if ((iosidx[k] = _mds_repl_ios_lookup(vfsid, ih,
-		    iosv[k].bs_id, flags)) < 0)
+		    iosv[k].bs_id, flag)) < 0)
 			return (-iosidx[k]);
 
 	qsort(iosidx, nios, sizeof(iosidx[0]), iosidx_cmp);
@@ -407,6 +479,14 @@ _mds_repl_bmap_walk(struct bmap *b, const int *tract,
 	int scircuit, nr, off, k, rc, trc;
 
 	scircuit = rc = 0;
+
+	/* 
+	 * ((struct fcmh_mds_info *)(b->bcm_fcmh + 1))->
+	 * fmi_inodeh.inoh_ino.ino_nrepls 
+	 *
+ 	 * ((struct bmap_mds_info*)(b+1))->bmi_corestate.bcs_repls
+ 	 *
+	 */ 
 	nr = fcmh_2_nrepls(b->bcm_fcmh);
 
 	if (nios == 0)
@@ -481,7 +561,7 @@ mds_repl_inv_requeue(struct bmap *b, int idx, int val, void *arg)
  *	stored in the inode during log replay.
  */
 int
-_mds_repl_inv_except(struct bmap *b, int iosidx, int defer)
+mds_repl_inv_except(struct bmap *b, int iosidx, int defer)
 {
 	int rc, tract[NBREPLST], retifset[NBREPLST];
 	struct iosidv qv;
