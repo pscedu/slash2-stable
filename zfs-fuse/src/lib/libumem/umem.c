@@ -3226,7 +3226,7 @@ int should_reap_umem_default(void)
 	 */
 	if (umem_default_arena != NULL &&
 	    vmem_size(umem_default_arena, VMEM_FREE) <
-	    (vmem_size(umem_default_arena, VMEM_ALLOC) >> 4)) {
+	    (vmem_size(umem_default_arena, VMEM_ALLOC) >> 5)) {
 		vmem_reap();
 		return (1);
 	}
@@ -3240,9 +3240,16 @@ int should_wait_umem_default(void)
 	if (umem_default_arena == NULL)
 		return (0);
 
+#if 0
+	/*
+	 * This code causes hang when allocating a data buffer. It turns out that 
+	 * total and inuse are often the same!
+	 */
 	total = vmem_size(umem_default_arena, VMEM_TOTAL);
 	inuse = vmem_size(umem_default_arena, VMEM_ALLOC);
 	if (inuse + 3 > total)
 		return (1);
+#endif
+
 	return (0);
 }
