@@ -134,6 +134,8 @@ int				 incomplete = 0;
 /* only main thread updates it, so it is thread-safe */
 long long			 totalbytes;
 
+int 				 seed;
+
 #define lock_output()							\
 	do {								\
 		flockfile(stdout);					\
@@ -247,18 +249,32 @@ file_close(struct file *f)
 void
 thrmain(struct psc_thread *thr)
 {
-	int save_errno;
+	int i, save_errno;
 	struct cksum cksum;
 	struct file *f;
 	struct wk *wk;
 	ssize_t rc;
 	char *buf;
+	int32_t result;
+	char rand_statebuf[32];
+	struct random_data rand_state;
 
 	/* use the same buffer for all reads or writes */
 	buf = psc_alloc(bufsz, PAF_PAGEALIGN);
 
-	if (dowrite)
-		pfl_random_getbytes(buf, bufsz);
+	if (dowrite) {
+		if (seed) {
+			memset(rand_statebuf, 0, sizeof(rand_statebuf));
+			memset(&rand_state, 0, sizeof(rand_state));
+			initstate_r(seed, rand_statebuf, 
+			    sizeof(rand_statebuf), &rand_state);
+			for (i = 0; i < bufsz; i++) {
+				random_r(&rand_state, &result);
+				buf[i] = (unsigned char)result;
+			}
+		} else
+			pfl_random_getbytes(buf, bufsz);
+	}
 
 	while (pscthr_run(thr)) {
 		if (exit_from_signal)
@@ -466,7 +482,7 @@ addwk(struct file *f)
 }
 
 int
-proc(FTSENT *fe, __unusedx void *arg)
+sft_proc(FTSENT *fe, __unusedx void *arg)
 {
 	struct file *f;
 
@@ -544,7 +560,7 @@ main(int argc, char *argv[])
 	gcry_control(GCRYCTL_INITIALIZATION_FINISHED, 0);
 
 	pfl_init();
-	while ((c = getopt(argc, argv, "Bb:CcD:dKO:PRs:Tt:vwZ")) != -1)
+	while ((c = getopt(argc, argv, "Bb:CcD:dKO:PRs:S:Tt:vwZ")) != -1)
 		switch (c) {
 		case 'B': /* display bandwidth */
 			displaybw = 1;
@@ -590,6 +606,9 @@ main(int argc, char *argv[])
 				errx(1, "%s: %s", optarg, strerror(
 				    totalsz ? -totalsz : EINVAL));
 			break;
+		case 'S': /* seed */
+			seed = atoi(optarg);
+			break;
 		case 'T': /* report total */
 			break;
 		case 't': /* #threads */
@@ -629,6 +648,8 @@ main(int argc, char *argv[])
 	    PPMF_AUTO, nthr, nthr, 0,  NULL, "wk");
 	wk_pool = psc_poolmaster_getmgr(&wk_poolmaster);
 
+	pscthrs_init();
+	pscthr_init(PFL_THRT_CTL, NULL, 0, "sftctl");
 	pfl_opstimerthr_spawn(THRT_OPSTIMER, "opstimerthr");
 	iostats = pfl_opstat_init("iostats");
 
@@ -638,7 +659,7 @@ main(int argc, char *argv[])
 		thrv[n] = pscthr_init(0, thrmain, 0, "thr%d", n);
 
 	for (; *argv; argv++)
-		pfl_filewalk(*argv, flags, NULL, proc, NULL);
+		pfl_filewalk(*argv, flags, NULL, sft_proc, NULL);
 
 	if (displaybw)
 		dispthr = pscthr_init(0, display, 0, "disp");
