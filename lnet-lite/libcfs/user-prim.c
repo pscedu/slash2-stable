@@ -166,6 +166,9 @@ uid_t cfs_curproc_uid(void)
         return getuid();
 }
 
+/*
+ * Use environment variables to turn on some socket features.
+ */
 int cfs_parse_int_tunable(int *value, char *name)
 {
         char    *env = getenv(name);
