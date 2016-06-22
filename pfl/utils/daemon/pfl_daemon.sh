@@ -230,8 +230,6 @@ postproc()
 	else
 		rm c/$prog.$id
 	fi
-
-	[ $ex -eq 0 ] && exit
 }
 
 cleanup()
@@ -438,5 +436,6 @@ preinit()
 {
 	if [ $testmail -eq 1 ]; then
 		postproc 0
+		exit
 	fi
 }
