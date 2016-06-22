@@ -302,6 +302,7 @@ vsleep()
 	# 30 seconds. Also, let us keep the old logic for reference.
 	#
 
+	echo restarting after 30 seconds...
 	sleep 30
 	return
  
