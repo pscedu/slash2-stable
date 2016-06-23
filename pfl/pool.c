@@ -729,9 +729,9 @@ _psc_pool_return(struct psc_poolmgr *m, void *p)
 	int locked;
 
 	/*
-	 * If pool max < total (e.g. when an administrator lowers max
-	 * beyond current total) or we reached the auto resize
-	 * threshold, directly free this item.
+	 * If pool max is less than total (i.e., when an administrator lowers 
+	 * max below total) or free reaches the auto resize threshold, which
+	 * can be adjusted, directly free this item.
 	 */
 	locked = POOL_RLOCK(m);
 	pfl_opstat_incr(m->ppm_opst_returns);
