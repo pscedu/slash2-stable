@@ -60,6 +60,9 @@ __static struct psc_vbitmap	 psc_uniqthridmap = VBITMAP_INIT_AUTO;
 struct psc_lockedlist		 psc_threads =
     PLL_INIT_NOLOG(&psc_threads, struct psc_thread, pscthr_lentry);
 
+/*
+ * The following does not affect ZFS-fuse threads.
+ */
 #define	PTHREAD_GUARD_SIZE	 4096
 #define	PTHREAD_STACK_SIZE	 2*1024*1024
 
