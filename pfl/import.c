@@ -106,12 +106,8 @@ pscrpc_set_import_discon(struct pscrpc_import *imp, uint32_t conn_cnt)
 	if (imp->imp_state == PSCRPC_IMP_FULL &&
 	    (conn_cnt == 0 || conn_cnt == (uint32_t)imp->imp_conn_cnt)) {
 
-		psclog_errorx("connection to service via nid %s was "
-		    "lost; in progress operations using this "
-		    "service will %s",
-		    libcfs_nid2str(imp->imp_connection->c_peer.nid),
-		    imp->imp_replayable ?
-		    "wait for recovery to complete" : "fail");
+		psclog_errorx("connection to service via nid %s was lost.",
+		    libcfs_nid2str(imp->imp_connection->c_peer.nid));
 
 		PSCIMPORT_SET_STATE_NOLOCK(imp, PSCRPC_IMP_DISCON);
 		freelock(&imp->imp_lock);
