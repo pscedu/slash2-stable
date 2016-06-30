@@ -738,6 +738,8 @@ psc_ctlparam_log_points(int fd, struct psc_ctlmsghdr *mh,
 }
 
 
+static long long max_rss;
+
 int
 psc_ctlparam_get_rss(int fd, struct psc_ctlmsghdr *mh,
     struct psc_ctlmsg_param *pcp, char **levels, int nlevels,
@@ -791,6 +793,9 @@ psc_ctlparam_get_rss(int fd, struct psc_ctlmsghdr *mh,
 		}
 	}
 	sscanf(line, "%lld ", &rss);
+
+	if (rss > max_rss)
+		max_rss = rss;
 
 	line = (char *)buf;
 	snprintf(line, sizeof(buf), "%lldkB", rss * 4);
