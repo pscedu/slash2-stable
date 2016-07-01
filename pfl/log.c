@@ -464,8 +464,12 @@ _psclogv(const struct pfl_callerinfo *pci, int level, int options,
 	PSCLOG_LOCK();
 
 	/* XXX consider using fprintf_unlocked() for speed */
-	fprintf(stderr, "%s%s", buf, psclog_eol);
-	fflush(stderr);
+	rc = fprintf(stderr, "%s%s", buf, psclog_eol);
+	if (rc < 0)
+		pfl_abort();
+		
+	if (fflush(stderr))
+		pfl_abort();
 
 	if (pfl_syslog && pfl_syslog[pci->pci_subsys] &&
 	    level >= 0 && level < (int)nitems(pfl_syslog_map))
