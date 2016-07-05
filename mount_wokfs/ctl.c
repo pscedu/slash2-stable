@@ -258,7 +258,7 @@ struct psc_ctlop ctlops[] = {
 void
 ctlthr_main(__unusedx struct psc_thread *thr)
 {
-	psc_ctlthr_main(ctlsockfn, ctlops, nitems(ctlops),
+	psc_ctlthr_main(ctlsockfn, ctlops, nitems(ctlops), 0,
 	    PFL_THRT_CTLAC);
 }
 
