@@ -175,7 +175,7 @@ int	psc_ctlmsg_param_send(int, const struct psc_ctlmsghdr *,
 		struct psc_ctlmsg_param *, const char *, char **, int, const char *);
 
 void	pfl_ctl_destroy(struct pfl_ctl_data *);
-void	psc_ctlthr_main(const char *, const struct psc_ctlop *, int, int);
+void	psc_ctlthr_main(const char *, const struct psc_ctlop *, int, int, int);
 int	psc_ctl_applythrop(int, struct psc_ctlmsghdr *, void *, const char *,
 		int (*)(int, struct psc_ctlmsghdr *, void *, struct psc_thread *));
 
