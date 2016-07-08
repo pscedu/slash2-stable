@@ -2490,8 +2490,11 @@ psc_ctlthr_main(const char *ofn, const struct psc_ctlop *ct, int nops,
 	pcd = &pcat->pcat_ctldata;
 	spinlock(&pcd->pcd_lock);
 
-#define PFL_CTL_NTHRS 4
-	for (i = 1; i < PFL_CTL_NTHRS; i++) {
+	/*
+ 	 * The main thread has already become a control thread. A total
+ 	 * of 3 conntrol threads should be enough.
+ 	 */
+	for (i = 1; i < 3; i++) {
 		thr = pscthr_init(me->pscthr_type, psc_ctlthr_mainloop,
 		    sizeof(struct psc_ctlthr) + extra, "%.*sctlthr%d", 
 		    p - me->pscthr_name, me->pscthr_name, i);
