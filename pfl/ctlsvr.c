@@ -2492,7 +2492,7 @@ psc_ctlthr_main(const char *ofn, const struct psc_ctlop *ct, int nops,
 
 	/*
  	 * The main thread has already become a control thread. A total
- 	 * of 3 conntrol threads should be enough.
+ 	 * of 3 control threads should be enough.
  	 */
 	for (i = 1; i < 3; i++) {
 		thr = pscthr_init(me->pscthr_type, psc_ctlthr_mainloop,
