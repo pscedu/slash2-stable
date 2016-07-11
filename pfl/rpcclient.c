@@ -304,16 +304,6 @@ pscrpc_set_remove_req_locked(struct pscrpc_request_set *set,
 	}
 }
 
-void
-pscrpc_set_remove_req(struct pscrpc_request_set *set,
-    struct pscrpc_request *rq)
-{
-	spinlock(&set->set_lock);
-	pscrpc_set_remove_req_locked(set, rq);
-	psc_waitq_wakeall(&set->set_waitq);
-	freelock(&set->set_lock);
-}
-
 /**
  * expired_request - timeout handler used when sending a msg
  * @data: the request
