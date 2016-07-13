@@ -749,7 +749,7 @@ psc_ctlmsg_pool_prhdr(__unusedx struct psc_ctlmsghdr *mh,
 	    "%7s %6s %6s %5s "
 	    "%10s %3s %3s\n",
 	    "mem-pool", "flag", "#free", "#use", "total",
-	    "%use", "min", "max", "thres",
+	    "%use", "min", "max", "thrsh",
 	    "#shrnx", "#em", "#wa");
 	/* XXX add ngets and waiting/sleep time */
 	return(PSC_CTL_DISPLAY_WIDTH+11);
