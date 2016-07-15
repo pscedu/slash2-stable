@@ -260,6 +260,7 @@ pjournal_next_slot(struct psc_journal_xidhndl *xh)
 	if (++pj->pj_nextwrite == pj->pj_total) {
 		pj->pj_nextwrite = 0;
 		pj->pj_wraparound++;
+		OPSTAT_INCR("journal-wraparound");
 	}
 	psc_assert(pj->pj_resrv > 0);
 
