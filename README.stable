@@ -1,3 +1,11 @@
+08/01/2016
+----------
+
+Release 1.15
+
+Another batch of changes, including a workaround/fix on ZFS ARC code, disable invalidation
+of dentry on the client, and batch RPC improvements/fixes.
+
 06/12/2016
 ----------
 
