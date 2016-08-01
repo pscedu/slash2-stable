@@ -103,6 +103,7 @@ handle_connection(int sock)
 	dev_t dev = {0};
 	cred_t cr;
 
+	fprintf(stderr, "wait to handle requests from socket %d\n", sock);
 	while (zfsfuse_socket_read_loop(sock, &cmd,
 	    sizeof(zfsfuse_cmd_t)) != -1) {
 		switch(cmd.cmd_type)
@@ -125,6 +126,18 @@ handle_connection(int sock)
 			break;
 		default:
 			/*
+ 			 * 07/05/2016: There might be a race in file descriptor handoff. 
+ 			 * If so, adding these fprintf()s probably eliminates the race.
+ 			 * Anyway, I haven't seen this case for days on illusion2.
+ 			 */
+			fprintf(stderr, "ignore invalid request type %d from socket %d\n", 
+				cmd.cmd_type, sock);
+			/*
+			 * It is probably not a good idea to crash due to a random message
+			 * sent by a utility.
+			 */
+			continue;
+			/*
  			 * This could be caused by slashd.sh not cleaning up
  			 * the socket properly. Kill the slashd.sh seems to
  			 * help. Otherwise, it can't restart slashd automatically.
@@ -135,6 +148,7 @@ handle_connection(int sock)
 
  done:
 	cur_fd = -1;
+	fprintf(stderr, "done with handling requests from socket %d\n", sock);
 	close(sock);
 }
 
@@ -176,6 +190,7 @@ zfsfuse_ioctl_queue_worker_thread(void* init)
 	int must_exit = 0;
 	ioctl_queue_item_t job;
 
+	/* handle ioctl_queue */
 	for (;;) {
 		if (sem_wait(&queue->pending) == -1) {
 			if (errno == EINTR)
@@ -314,9 +329,12 @@ zfsfuse_ioctl_queue_fini(queue_t* queue)
 
 /********************************************************************************************************/
 
+static int enqueue_waited;
+
 static void
 enqueue_connection(queue_t* queue, int sock)
 {
+	int waited = 0;
 	ASSERT(queue);
 	VERIFY(0 == pthread_mutex_lock(&queue->lock));
 
@@ -329,9 +347,12 @@ enqueue_connection(queue_t* queue, int sock)
 
 	ioctl_queue_item_t* item = zfsfuse_ioctl_queue_find(1); // locate free item
 
-	if (0 == item) {
+	while (0 == item) {
+		if (waited)
+			enqueue_waited++;
 		VERIFY(0 == pthread_cond_wait(&queue->handling, &queue->lock)); // block until any worker has popped it's job
 		item = zfsfuse_ioctl_queue_find(1); // locate free item
+		waited++;
 	}
 
 	// fill queue item
@@ -361,6 +382,8 @@ listener_loop(void *arg)
 
 	int nfds = 1;
 
+	fprintf(stderr, "pid %d: listening to ZFS socket fd = %d\n", 
+		getpid(), fds[0].fd);
 	while (!exit_listener) {
 		/* Poll all sockets with a 1 second timeout */
 		int ret = poll(fds, nfds, 1000);
@@ -401,6 +424,7 @@ listener_loop(void *arg)
 					continue;
 				}
 
+				/* this will be included in the next poll */
 				fds[nfds].fd = sock;
 				fds[nfds].events = POLLIN;
 				fds[nfds].revents = 0;
@@ -408,6 +432,7 @@ listener_loop(void *arg)
 			} else {
 				int sock = fds[i].fd;
 				/* queue request */
+				fprintf(stderr, "enqueue connection, fd = %d\n", fds[i].fd);
 				enqueue_connection(&ioctl_queue, fds[i].fd);
 
 				/* socket is now handled by queue and can be removed from list */

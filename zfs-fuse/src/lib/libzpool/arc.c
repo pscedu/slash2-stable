@@ -1439,6 +1439,7 @@ arc_buf_destroy(arc_buf_t *buf, boolean_t recycle, boolean_t all)
 
 	/* clean up the buf */
 	buf->b_hdr = NULL;
+	buf->b_debug = 88776644;
 	kmem_cache_free(buf_cache, buf);
 }
 
@@ -1619,9 +1620,10 @@ arc_buf_size(arc_buf_t *buf)
  * it can't get a hash_lock on, and so may not catch all candidates.
  * It may also return without evicting as much space as requested.
  */
+static long evict_skipped;
 static void *
 arc_evict(arc_state_t *state, uint64_t spa, int64_t bytes, boolean_t recycle,
-    arc_buf_contents_t type)
+    arc_buf_contents_t type, arc_buf_hdr_t *skipme)
 {
 	arc_state_t *evicted_state;
 	uint64_t bytes_evicted = 0, skipped = 0, missed = 0;
@@ -1648,6 +1650,11 @@ arc_evict(arc_state_t *state, uint64_t spa, int64_t bytes, boolean_t recycle,
 			skipped++;
 			continue;
 		}
+		if (ab == skipme) {
+			evict_skipped++;
+			continue;
+		}
+		
 		/* "lookahead" for better eviction candidate */
 		if (recycle && ab->b_size != bytes &&
 		    ab_prev && ab_prev->b_size == bytes)
@@ -1845,14 +1852,14 @@ arc_adjust(void)
 
 	if (adjustment > 0 && arc_mru->arcs_lsize[ARC_BUFC_DATA] > 0) {
 		delta = MIN(arc_mru->arcs_lsize[ARC_BUFC_DATA], adjustment);
-		(void) arc_evict(arc_mru, 0, delta, FALSE, ARC_BUFC_DATA);
+		(void) arc_evict(arc_mru, 0, delta, FALSE, ARC_BUFC_DATA, NULL);
 		adjustment -= delta;
 	}
 
 	if (adjustment > 0 && arc_mru->arcs_lsize[ARC_BUFC_METADATA] > 0) {
 		delta = MIN(arc_mru->arcs_lsize[ARC_BUFC_METADATA], adjustment);
 		(void) arc_evict(arc_mru, 0, delta, FALSE,
-		    ARC_BUFC_METADATA);
+		    ARC_BUFC_METADATA, NULL);
 	}
 
 	/*
@@ -1863,7 +1870,7 @@ arc_adjust(void)
 
 	if (adjustment > 0 && arc_mfu->arcs_lsize[ARC_BUFC_DATA] > 0) {
 		delta = MIN(adjustment, arc_mfu->arcs_lsize[ARC_BUFC_DATA]);
-		(void) arc_evict(arc_mfu, 0, delta, FALSE, ARC_BUFC_DATA);
+		(void) arc_evict(arc_mfu, 0, delta, FALSE, ARC_BUFC_DATA, NULL);
 		adjustment -= delta;
 	}
 
@@ -1871,7 +1878,7 @@ arc_adjust(void)
 		int64_t delta = MIN(adjustment,
 		    arc_mfu->arcs_lsize[ARC_BUFC_METADATA]);
 		(void) arc_evict(arc_mfu, 0, delta, FALSE,
-		    ARC_BUFC_METADATA);
+		    ARC_BUFC_METADATA, NULL);
 	}
 
 	/*
@@ -1903,6 +1910,7 @@ arc_do_user_evicts(void)
 		arc_eviction_list = buf->b_next;
 		mutex_enter(&buf->b_evict_lock);
 		buf->b_hdr = NULL;
+		buf->b_debug = 8765432;
 		mutex_exit(&buf->b_evict_lock);
 		mutex_exit(&arc_eviction_mtx);
 
@@ -1930,22 +1938,22 @@ arc_flush(spa_t *spa)
 		guid = spa_guid(spa);
 
 	while (list_head(&arc_mru->arcs_list[ARC_BUFC_DATA])) {
-		(void) arc_evict(arc_mru, guid, -1, FALSE, ARC_BUFC_DATA);
+		(void) arc_evict(arc_mru, guid, -1, FALSE, ARC_BUFC_DATA, NULL);
 		if (spa)
 			break;
 	}
 	while (list_head(&arc_mru->arcs_list[ARC_BUFC_METADATA])) {
-		(void) arc_evict(arc_mru, guid, -1, FALSE, ARC_BUFC_METADATA);
+		(void) arc_evict(arc_mru, guid, -1, FALSE, ARC_BUFC_METADATA, NULL);
 		if (spa)
 			break;
 	}
 	while (list_head(&arc_mfu->arcs_list[ARC_BUFC_DATA])) {
-		(void) arc_evict(arc_mfu, guid, -1, FALSE, ARC_BUFC_DATA);
+		(void) arc_evict(arc_mfu, guid, -1, FALSE, ARC_BUFC_DATA, NULL);
 		if (spa)
 			break;
 	}
 	while (list_head(&arc_mfu->arcs_list[ARC_BUFC_METADATA])) {
-		(void) arc_evict(arc_mfu, guid, -1, FALSE, ARC_BUFC_METADATA);
+		(void) arc_evict(arc_mfu, guid, -1, FALSE, ARC_BUFC_METADATA, NULL);
 		if (spa)
 			break;
 	}
@@ -2232,7 +2240,7 @@ arc_evict_needed(arc_buf_contents_t type)
  		 * illusion2 for 17 hours except one instance
  		 * of umem exhaustion.
  		 */
-		if (arc_meta_used >= arc_meta_limit * 7/8) {
+		if (arc_meta_used >= arc_meta_limit * 31/32) {
 			arc_meta_eviction1++;
 			return (1);
 		}
@@ -2322,17 +2330,26 @@ arc_evict_needed(arc_buf_contents_t type)
 static void
 arc_get_data_buf(arc_buf_t *buf)
 {
+	int do_evict;
+	arc_buf_hdr_t *hdr;
+
 	arc_state_t		*state = buf->b_hdr->b_state;
 	uint64_t		size = buf->b_hdr->b_size;
 	arc_buf_contents_t	type = buf->b_hdr->b_type;
 
+	buf->b_debug = 12345678;
+	hdr = buf->b_hdr;
+
 recheck:
+
+	buf->b_debug++;
 	arc_adapt(size, state);
 
 	/*
 	 * We have not yet reached cache maximum size,
 	 * just allocate a new buffer.
 	 */
+	do_evict = 1;
 	if (!arc_evict_needed(type)) {
 		if (type == ARC_BUFC_METADATA) {
 			buf->b_data = zio_buf_alloc(size);
@@ -2343,6 +2360,7 @@ recheck:
 			ARCSTAT_INCR(arcstat_data_size, size);
 			atomic_add_64(&arc_size, size);
 		}
+		do_evict = 0;
 		goto out;
 	}
 	if (should_wait_umem_default()) {
@@ -2370,7 +2388,7 @@ recheck:
 		state =  (arc_mru->arcs_lsize[type] >= size &&
 		    mfu_space > arc_mfu->arcs_size) ? arc_mru : arc_mfu;
 	}
-	if ((buf->b_data = arc_evict(state, 0, size, TRUE, type)) == NULL) {
+	if ((buf->b_data = arc_evict(state, 0, size, TRUE, type, hdr)) == NULL) {
 		if (type == ARC_BUFC_METADATA) {
 			buf->b_data = zio_buf_alloc(size);
 			arc_space_consume(size, ARC_SPACE_DATA);
@@ -2749,6 +2767,9 @@ arc_read_nolock(zio_t *pio, spa_t *spa, const blkptr_t *bp,
 	uint64_t guid = spa_guid(spa);
 
 top:
+	if (arc_meta_used >= arc_meta_limit * 31/32)
+		arc_adjust();
+
 	hdr = buf_hash_find(guid, BP_IDENTITY(bp), BP_PHYSICAL_BIRTH(bp),
 	    &hash_lock);
 	if (hdr && hdr->b_datacnt > 0) {
@@ -3087,6 +3108,7 @@ arc_buf_evict(arc_buf_t *buf)
 	buf->b_private = NULL;
 	buf->b_hdr = NULL;
 	buf->b_next = NULL;
+	buf->b_debug = 654321;
 	kmem_cache_free(buf_cache, buf);
 	return (1);
 }
