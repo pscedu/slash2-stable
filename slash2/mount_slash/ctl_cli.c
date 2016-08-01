@@ -239,8 +239,10 @@ msctlrep_getreplst(int fd, struct psc_ctlmsghdr *mh, void *m)
 	if (mrq->mrq_fid == FID_ANY) {
 		fg.fg_fid = FID_ANY;
 		fg.fg_gen = FGEN_ANY;
+		OPSTAT_INCR("getreplst-any");
 		goto issue;
 	}
+	OPSTAT_INCR("getreplst-file");
 
 	rc = msctl_getcreds(fd, &pcr);
 	if (rc)
@@ -299,6 +301,8 @@ msctlrep_getreplst(int fd, struct psc_ctlmsghdr *mh, void *m)
 	pll_add(&msctl_replsts, &mrsq);
 	added = 1;
 
+	psclog_diag("add: mrsq@%p: fd = %d, id = %d.", &mrsq, fd, mq->id);
+
 	rc = SL_RSX_WAITREP(csvc, rq, mp);
 	if (rc == 0)
 		rc = mp->rc;
@@ -308,16 +312,11 @@ msctlrep_getreplst(int fd, struct psc_ctlmsghdr *mh, void *m)
 		goto out;
 	}
 
-	psclog_diag("add: mrsq@%p fd = %d.", &mrsq, fd);
-
 	spinlock(&mrsq.mrsq_lock);
 	while (!mrsq.mrsq_rc) {
-		psc_waitq_wait(&mrsq.mrsq_waitq, &mrsq.mrsq_lock);
+		psc_waitq_waitrel_s(&mrsq.mrsq_waitq, &mrsq.mrsq_lock, 30);
 		spinlock(&mrsq.mrsq_lock);
 	}
-	pll_remove(&msctl_replsts, &mrsq);
-	psc_waitq_destroy(&mrsq.mrsq_waitq);
-	added = 0;
 
 	rc = 1;
 	if (mrsq.mrsq_rc && mrsq.mrsq_rc != EOF)
@@ -904,7 +903,7 @@ msctlthr_main(struct psc_thread *thr)
 
 	/* stash thread so mslfsop_destroy() can kill ctlthr */
 	msl_ctlthr0 = thr;
-	psc_ctlthr_main(fn, msctlops, nitems(msctlops), MSTHRT_CTLAC);
+	psc_ctlthr_main(fn, msctlops, nitems(msctlops), 0, MSTHRT_CTLAC);
 }
 
 void

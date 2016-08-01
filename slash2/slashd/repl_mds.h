@@ -52,11 +52,7 @@ int	_mds_repl_iosv_lookup(int, struct slash_inode_handle *, const sl_replica_t [
 
 int	 resmpair_bw_adj(struct sl_resm *, struct sl_resm *, int64_t, int *);
 
-#define slm_repl_bmap_rel(b)		 slm_repl_bmap_rel_type((b), BMAP_OPCNT_LOOKUP)
-#define slm_repl_bmap_rel_type(b, type) _slm_repl_bmap_rel_type((b), (type))
-
 void	 slm_repl_upd_write(struct bmap *, int);
-void	_slm_repl_bmap_rel_type(struct bmap *, int);
 
 void	 mds_brepls_check(uint8_t *, int);
 
@@ -95,7 +91,7 @@ void	 mds_brepls_check(uint8_t *, int);
 	_mds_repl_iosv_lookup((vfsid), (ih), (ios), (idx), (nios), IOSV_LOOKUPF_ADD)
 
 extern struct psc_listcache	 slm_replst_workq;
-extern int			 slm_bwqueuesz;
+extern int			 slm_upsch_bandwidth;
 extern struct psc_poolmgr	*slm_repl_status_pool;
 
 #endif /* _SL_MDS_REPL_H_ */

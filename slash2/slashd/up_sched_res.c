@@ -75,10 +75,15 @@
 #define IP_SRCRESM	2
 #define IP_BMAP		3
 
-struct pfl_mlist	 slm_upschq;
-struct pfl_multiwait	 slm_upsch_mw;
+psc_spinlock_t           slm_upsch_lock;
+struct psc_waitq	 slm_upsch_waitq;
+struct psc_listcache     slm_upsch_queue;
+
 struct psc_poolmaster	 slm_upgen_poolmaster;
 struct psc_poolmgr	*slm_upgen_pool;
+
+int	upsch_total;
+int	slm_upsch_delay = 10;
 
 void (*upd_proctab[])(struct slm_update_data *);
 
@@ -117,48 +122,50 @@ upd_rpmi_remove(struct resprof_mds_info *rpmi,
  * and set things back to a virgin state for future processing.
  */
 void
-slm_batch_repl_cb(void *req, void *rep, void *scratch, int error)
+slm_batch_repl_cb(void *req, void *rep, void *scratch, int rc)
 {
 	sl_bmapgen_t bgen;
-	int rc, tract[NBREPLST], retifset[NBREPLST];
+	int tmprc, tract[NBREPLST], retifset[NBREPLST];
 	struct slm_batchscratch_repl *bsr = scratch;
 	struct sl_resm *dst_resm, *src_resm;
-	struct srt_replwk_rep *p = rep;
+	struct srt_replwk_rep *pp = rep;
 	struct srt_replwk_req *q = req;
 	struct fidc_membh *f = NULL;
 	struct bmap *b = NULL;
 
-	if (!error && p && p->rc)
-		error = p->rc;
+	if (!rc && pp && pp->rc)
+		rc = pp->rc;
 
-	if (error)
-		OPSTAT_INCR("repl-schedwk-fail");
+	if (rc)
+		OPSTAT_INCR("repl-schedwk-err");
 	else
-		OPSTAT_INCR("repl-schedwk");
+		OPSTAT_INCR("repl-schedwk-ok");
 
 	dst_resm = res_getmemb(bsr->bsr_res);
 	src_resm = libsl_ios2resm(q->src_resid);
 
-	rc = slm_fcmh_get(&q->fg, &f);
-	if (rc)
+	tmprc = slm_fcmh_get(&q->fg, &f);
+	if (tmprc)
 		goto out;
-	rc = bmap_get(f, q->bno, SL_WRITE, &b);
-	if (rc)
+
+	FCMH_WAIT_BUSY(f);
+	tmprc = bmap_get(f, q->bno, SL_WRITE, &b);
+	if (tmprc)
 		goto out;
-	BMAP_ULOCK(b);
+	bmap_wait_locked(b, b->bcm_flags & BMAPF_REPLMODWR);
 
 	// XXX grab bmap write lock before checking bgen!!!
 
 	// XXX check fgen
 
 	BHGEN_GET(b, &bgen);
-	if (!error && q->bgen != bgen)
-		error = SLERR_GEN_OLD;
+	if (!rc && q->bgen != bgen)
+		rc = SLERR_GEN_OLD;
 
 	brepls_init(tract, -1);
 	brepls_init(retifset, 0);
 
-	if (error == 0) {
+	if (rc == 0) {
 		tract[BREPLST_REPL_SCHED] = BREPLST_VALID;
 		tract[BREPLST_REPL_QUEUED] = BREPLST_VALID;
 		retifset[BREPLST_REPL_SCHED] = 1;
@@ -166,10 +173,10 @@ slm_batch_repl_cb(void *req, void *rep, void *scratch, int error)
 
 		OPSTAT2_ADD("repl-compl", bsr->bsr_amt);
 	} else {
-		if (p == NULL ||
-		    error == PFLERR_ALREADY ||
-		    error == SLERR_ION_OFFLINE ||
-		    error == ECONNRESET) {
+		if (pp == NULL ||
+		    rc == PFLERR_ALREADY ||
+		    rc == SLERR_ION_OFFLINE ||
+		    rc == ECONNRESET) {
 			tract[BREPLST_REPL_SCHED] = BREPLST_REPL_QUEUED;
 			OPSTAT_INCR("repl-fail-soft");
 		} else {
@@ -182,26 +189,25 @@ slm_batch_repl_cb(void *req, void *rep, void *scratch, int error)
 
 		DEBUG_BMAP(PLL_WARN, b, "replication "
 		    "arrangement failure; src=%s dst=%s "
-		    "error=%d",
+		    "rc=%d",
 		    src_resm ? src_resm->resm_name : NULL,
 		    dst_resm ? dst_resm->resm_name : NULL,
-		    error);
+		    rc);
 	}
 
 	if (mds_repl_bmap_apply(b, tract, retifset, bsr->bsr_off))
 		mds_bmap_write_logrepls(b);
-	slm_repl_bmap_rel(b);
-	b = NULL;
 
  out:
 	if (b)
 		bmap_op_done(b);
-	if (f)
+	if (f) {
+		FCMH_UNBUSY(f);
 		fcmh_op_done(f);
+	}
 
 	resmpair_bw_adj(src_resm, dst_resm, -bsr->bsr_amt, NULL);
 	upschq_resm(dst_resm, UPDT_PAGEIN);
-//	upschq_resm(src_resm, UPDT_PAGEIN);
 }
 
 /*
@@ -235,20 +241,10 @@ slm_upsch_tryrepl(struct bmap *b, int off, struct sl_resm *src_resm,
 		mds_repl_bmap_apply(b, tract, NULL, off);
 		mds_bmap_write_logrepls(b);
 		upschq_resm(dst_resm, UPDT_PAGEIN);
-//		upschq_resm(src_resm, UPDT_PAGEIN);
 		return (1);
 	}
 
 	if (!resmpair_bw_adj(src_resm, dst_resm, amt, &moreavail)) {
-		/*
-		 * No bandwidth available: bail and add "src to become
-		 * unbusy" and "dst to become unbusy" conditions to
-		 * multiwait.
-		 */
-		pfl_multiwait_setcondwakeable(&slm_upsch_mw,
-		    &src_resm->resm_csvc->csvc_mwc, 1);
-		pfl_multiwait_setcondwakeable(&slm_upsch_mw,
-		    &dst_resm->resm_csvc->csvc_mwc, 1);
 
 		OPSTAT_INCR("repl-throttle");
 
@@ -262,7 +258,7 @@ slm_upsch_tryrepl(struct bmap *b, int off, struct sl_resm *src_resm,
 	bsr->bsr_res = dst_res;
 
 	csvc = slm_geticsvc(dst_resm, NULL, CSVCF_NONBLOCK |
-	    CSVCF_NORECON, &slm_upsch_mw);
+	    CSVCF_NORECON, NULL);
 	if (csvc == NULL)
 		PFL_GOTOERR(out, rc = resm_getcsvcerr(dst_resm));
 
@@ -304,23 +300,30 @@ slm_upsch_tryrepl(struct bmap *b, int off, struct sl_resm *src_resm,
 	 * proceed; otherwise, bail: perhaps the user dequeued the
 	 * replication request or something.
 	 */
-	if (rc != BREPLST_REPL_QUEUED)
+	if (rc != BREPLST_REPL_QUEUED) {
+		psclog_warnx("Unexpected bmap state [off %d]: %d", off, rc);
 		PFL_GOTOERR(out, rc = -ENODEV);
+	}
 
-	rc = slrpc_batch_req_add(&res2rpmi(dst_res)->rpmi_batchrqs,
+	rc = slrpc_batch_req_add(dst_res,
 	    &slm_db_lopri_workq, csvc, SRMT_REPL_SCHEDWK,
 	    SRMI_BULK_PORTAL, SRIM_BULK_PORTAL, &q, sizeof(q), bsr,
-	    &slm_batch_rep_repl, 5);
+	    &slm_batch_rep_repl, slm_upsch_delay);
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
 	OPSTAT2_ADD("repl-sched", amt);
 
+	/*
+	 * Write it out. This is needed because we can't expect the bmap
+	 * to be cached until it is replicated.
+	 */
 	rc = mds_bmap_write_logrepls(b);
-	psc_assert(rc == 0);
+	if (rc)
+		goto out;
 
 	/*
-	 * We succesfully scheduled some work; if there is more
+	 * We have successfully scheduled some work; if there is more
 	 * bandwidth available, schedule more work.
 	 */
 	if (moreavail)
@@ -336,14 +339,16 @@ slm_upsch_tryrepl(struct bmap *b, int off, struct sl_resm *src_resm,
 		/* undo brepls change */
 		brepls_init(tract, -1);
 		tract[BREPLST_REPL_SCHED] = BREPLST_REPL_QUEUED;
+
+		FCMH_WAIT_BUSY(f);
+		BMAP_LOCK(b);
+		bmap_wait_locked(b, b->bcm_flags & BMAPF_REPLMODWR);
 		mds_repl_bmap_apply(b, tract, NULL, off);
-		bmap_op_start_type(b, BMAP_OPCNT_UPSCH);
-		slm_repl_bmap_rel_type(b, BMAP_OPCNT_UPSCH);
+		BMAP_ULOCK(b);
+		FCMH_UNBUSY(f);
 	}
 
 	resmpair_bw_adj(src_resm, dst_resm, -bsr->bsr_amt, NULL);
-
-	UPSCH_WAKE();
 
 	PSCFREE(bsr);
 
@@ -376,10 +381,16 @@ slm_upsch_finish_ptrunc(struct slrpc_cservice *csvc,
 		tract[BREPLST_TRUNCPNDG_SCHED] = rc ?
 		    BREPLST_TRUNCPNDG : BREPLST_VALID;
 		brepls_init_idx(retifset);
+
+		FCMH_WAIT_BUSY(f);
+		BMAP_LOCK(b);
+		bmap_wait_locked(b, b->bcm_flags & BMAPF_REPLMODWR);
 		ret = mds_repl_bmap_apply(b, tract, retifset, off);
 		if (ret != BREPLST_TRUNCPNDG_SCHED)
 			DEBUG_BMAPOD(PLL_FATAL, b, "bmap is corrupted");
 		mds_bmap_write_logrepls(b);
+		BMAP_ULOCK(b);
+		FCMH_UNBUSY(f);
 	}
 
 	if (!rc) {
@@ -421,7 +432,6 @@ slm_upsch_tryptrunc(struct bmap *b, int off,
     struct sl_resource *dst_res)
 {
 	int tract[NBREPLST], retifset[NBREPLST], rc, sched = 0;
-	struct bmap_mds_info *bmi = bmap_2_bmi(b);
 	struct pscrpc_request *rq = NULL;
 	struct slrpc_cservice *csvc;
 	struct srt_ptrunc_req *mq;
@@ -452,15 +462,17 @@ slm_upsch_tryptrunc(struct bmap *b, int off,
 	brepls_init(retifset, 0);
 	retifset[BREPLST_TRUNCPNDG_SCHED] = 1;
 
-	BMAPOD_RDLOCK(bmi);
+	FCMH_WAIT_BUSY(f);
+	BMAP_LOCK(b);
+	bmap_wait_locked(b, b->bcm_flags & BMAPF_REPLMODWR);
 	if (mds_repl_bmap_walk_all(b, NULL, retifset,
 	    REPL_WALKF_SCIRCUIT))
 		DEBUG_BMAPOD(PLL_FATAL, b,
 		    "truncate already scheduled");
-	BMAPOD_ULOCK(bmi);
+	BMAP_ULOCK(b);
 
 	csvc = slm_geticsvc(dst_resm, NULL, CSVCF_NONBLOCK |
-	    CSVCF_NORECON, &slm_upsch_mw);
+	    CSVCF_NORECON, NULL);
 	if (csvc == NULL)
 		PFL_GOTOERR(out, rc = resm_getcsvcerr(dst_resm));
 	av.pointer_arg[IP_CSVC] = csvc;
@@ -506,12 +518,12 @@ slm_batch_preclaim_cb(void *req, void *rep, void *scratch, int error)
 	int rc, idx, tract[NBREPLST];
 	struct slm_batchscratch_preclaim *bsp = scratch;
 	struct srt_preclaim_req *q = req;
-	struct srt_preclaim_rep *p = rep;
-	struct fidc_membh *f;
-	struct bmap *b;
+	struct srt_preclaim_rep *pp = rep;
+	struct fidc_membh *f = NULL;
+	struct bmap *b = NULL;
 
-	if (!error && p && p->rc)
-		error = -p->rc;
+	if (!error && pp && pp->rc)
+		error = -pp->rc;
 
 	if (error == -PFLERR_NOTSUP) {
 		struct resprof_mds_info *rpmi;
@@ -530,11 +542,14 @@ slm_batch_preclaim_cb(void *req, void *rep, void *scratch, int error)
 
 	rc = slm_fcmh_get(&q->fg, &f);
 	if (rc)
-		return;
+		goto out;
+
+	FCMH_WAIT_BUSY(f);
 	rc = bmap_get(f, q->bno, SL_WRITE, &b);
 	if (rc)
 		goto out;
-	BMAP_ULOCK(b);
+
+	bmap_wait_locked(b, b->bcm_flags & BMAPF_REPLMODWR);
 	rc = mds_repl_iosv_lookup(current_vfsid, fcmh_2_inoh(f), &repl,
 	    &idx, 1);
 	if (rc >= 0) {
@@ -545,7 +560,10 @@ slm_batch_preclaim_cb(void *req, void *rep, void *scratch, int error)
  out:
 	if (b)
 		bmap_op_done(b);
-	fcmh_op_done(f);
+	if (f) {
+		FCMH_UNBUSY(f);
+		fcmh_op_done(f);
+	}
 }
 
 int
@@ -565,6 +583,7 @@ slm_upsch_trypreclaim(struct sl_resource *r, struct bmap *b, int off)
 		return (0);
 	}
 
+	OPSTAT_INCR("preclaim-attempt");
 	si = res2iosinfo(r);
 	if (si->si_flags & SIF_PRECLAIM_NOTSUP) {
 		OPSTAT_INCR("preclaim-notsup");
@@ -573,7 +592,7 @@ slm_upsch_trypreclaim(struct sl_resource *r, struct bmap *b, int off)
 
 	m = res_getmemb(r);
 	csvc = slm_geticsvc(m, NULL, CSVCF_NONBLOCK | CSVCF_NORECON,
-	    &slm_upsch_mw);
+	    NULL);
 	if (csvc == NULL)
 		PFL_GOTOERR(out, rc = resm_getcsvcerr(m));
 
@@ -594,7 +613,7 @@ slm_upsch_trypreclaim(struct sl_resource *r, struct bmap *b, int off)
 		PFL_GOTOERR(out, rc = EINVAL);
 	}
 
-	rc = slrpc_batch_req_add(&res2rpmi(r)->rpmi_batchrqs,
+	rc = slrpc_batch_req_add(r,
 	    &slm_db_lopri_workq, csvc, SRMT_PRECLAIM, SRMI_BULK_PORTAL,
 	    SRIM_BULK_PORTAL, &q, sizeof(q), bsp,
 	    &slm_batch_rep_preclaim, 30);
@@ -656,14 +675,16 @@ upd_proc_hldrop(struct slm_update_data *tupd)
 			psclog_error("iosv_lookup: rc=%d", rc);
 			goto next;
 		}
+		FCMH_WAIT_BUSY(b->bcm_fcmh);
+		BMAP_LOCK(b);
+		bmap_wait_locked(b, b->bcm_flags & BMAPF_REPLMODWR);
 		if (mds_repl_bmap_walk(b, tract, retifset, 0, &iosidx,
-		    1))
+		    1)) {
 			mds_bmap_write_logrepls(b);
-		else {
-			BMAPOD_MODIFY_DONE(b, 0);
-			BMAP_UNBUSY(b);
-			FCMH_UNBUSY(b->bcm_fcmh);
 		}
+
+		BMAP_ULOCK(b);
+		FCMH_UNBUSY(b->bcm_fcmh);
  next:
 		UPD_DECREF(upd);
 
@@ -694,23 +715,10 @@ upd_proc_bmap(struct slm_update_data *upd)
 	f = b->bcm_fcmh;
 
 	DEBUG_FCMH(PLL_DEBUG, f, "upd=%p", upd);
-	/* skip, there is more important work to do */
-	if (b->bcm_flags & BMAPF_REPLMODWR) {
-		DEBUG_FCMH(PLL_DEBUG, f, "skip: upd=%p", upd);
-		return;
-	}
-
-	UPD_UNBUSY(upd);
 
 	FCMH_WAIT_BUSY(f);
-	FCMH_ULOCK(f);
-
-	BMAP_WAIT_BUSY(b);
-	BMAP_ULOCK(b);
-
-	UPD_WAIT(upd);
-	upd->upd_flags |= UPDF_BUSY;
-	upd->upd_owner = pthread_self();
+	BMAP_LOCK(b);
+	bmap_wait_locked(b, b->bcm_flags & BMAPF_REPLMODWR);
 
 	DEBUG_BMAPOD(PLL_DEBUG, b, "processing");
 
@@ -733,9 +741,6 @@ upd_proc_bmap(struct slm_update_data *upd)
 			/*
 			 * There is still a lease out; we'll wait for it
 			 * to be relinquished.
-			 *
-			 * XXX: mask mwc off and make sure lease
-			 * relinquishment masks us back on and wakes up.
 			 */
 			if (bmap_2_bmi(b)->bmi_wr_ion) {
 				psclog_debug("skipping because write "
@@ -800,7 +805,7 @@ upd_proc_bmap(struct slm_update_data *upd)
 					csvc = slm_geticsvc(m, NULL,
 					    CSVCF_NONBLOCK |
 					    CSVCF_NORECON,
-					    &slm_upsch_mw);
+					    NULL);
 					if (csvc == NULL)
 						continue;
 					sl_csvc_decref(csvc);
@@ -844,13 +849,10 @@ upd_proc_bmap(struct slm_update_data *upd)
 			break;
 		}
 	}
-	if (BMAPOD_HASWRLOCK(bmap_2_bmi(b)))
-		BMAPOD_MODIFY_DONE(b, 0);
-	BMAP_UNBUSY(b);
-	FCMH_UNBUSY(f);
-
  out:
-	;
+
+	BMAP_ULOCK(b);
+	FCMH_UNBUSY(f);
 }
 
 /*
@@ -860,7 +862,6 @@ upd_proc_bmap(struct slm_update_data *upd)
 void
 upd_proc_pagein_unit(struct slm_update_data *upd)
 {
-	struct bmap_mds_info *bmi = NULL;
 	struct slm_update_generic *upg;
 	struct fidc_membh *f = NULL;
 	struct bmap *b = NULL;
@@ -874,7 +875,6 @@ upd_proc_pagein_unit(struct slm_update_data *upd)
 	if (rc)
 		goto out;
 	BMAP_ULOCK(b);
-	bmi = bmap_2_bmi(b);
 
 	if (fcmh_2_nrepls(f) > SL_DEF_REPLICAS)
 		mds_inox_ensure_loaded(fcmh_2_inoh(f));
@@ -888,8 +888,10 @@ upd_proc_pagein_unit(struct slm_update_data *upd)
 		retifset[BREPLST_GARBAGE_SCHED] = 1;
 	}
 
-	BMAP_WAIT_BUSY(b);
-	BMAPOD_WRLOCK(bmi);
+	FCMH_WAIT_BUSY(f);
+
+	BMAP_LOCK(b);
+	bmap_wait_locked(b, b->bcm_flags & BMAPF_REPLMODWR);
 
 	if (mds_repl_bmap_walk_all(b, NULL, retifset,
 	    REPL_WALKF_SCIRCUIT))
@@ -897,8 +899,15 @@ upd_proc_pagein_unit(struct slm_update_data *upd)
 	else
 		rc = 1;
 
+	BMAP_ULOCK(b);
+	FCMH_UNBUSY(f);
+
  out:
 	if (rc) {
+		/*
+		 * XXX Do we need to do any work if rc is an error code
+		 * instead 1 here?
+		 */
 		struct slm_wkdata_upsch_purge *wk;
 
 		wk = pfl_workq_getitem(slm_wk_upsch_purge,
@@ -911,8 +920,6 @@ upd_proc_pagein_unit(struct slm_update_data *upd)
 		pfl_workq_putitemq(&slm_db_lopri_workq, wk);
 	}
 	if (b) {
-		BMAPOD_ULOCK(bmi);
-		BMAP_UNBUSY(b);
 		bmap_op_done(b);
 	}
 	if (f)
@@ -928,11 +935,16 @@ upd_pagein_wk(void *p)
 	upg = psc_pool_get(slm_upgen_pool);
 	memset(upg, 0, sizeof(*upg));
 	INIT_PSC_LISTENTRY(&upg->upg_lentry);
-	upd_init(&upg->upg_upd, UPDT_PAGEIN_UNIT);
+
+	/* Schedule a call to upd_proc_pagein_unit() */
+	upd_init(&upg->upg_upd, UPDT_PAGEIN_UNIT); 
+
 	upg->upg_fg.fg_fid = wk->fg.fg_fid;
 	upg->upg_fg.fg_gen = FGEN_ANY;
 	upg->upg_bno = wk->bno;
 	upsch_enqueue(&upg->upg_upd);
+	
+	spinlock(&upg->upg_upd.upd_lock);
 	UPD_UNBUSY(&upg->upg_upd);
 	return (0);
 }
@@ -952,6 +964,8 @@ upd_proc_pagein_cb(struct slm_sth *sth, __unusedx void *p)
 }
 
 /*
+ * Handle UPDT_PAGEIN.
+ *
  * Page in some work for the update scheduler to do.  This consults the
  * upsch database, potentially restricting to a single resource for work
  * to schedule.
@@ -1031,25 +1045,48 @@ void
 upd_proc(struct slm_update_data *upd)
 {
 	struct slm_update_generic *upg;
-	int locked;
-
-	locked = UPSCH_HASLOCK();
-	if (locked)
-		UPSCH_ULOCK();
 
 	DPRINTF_UPD(PLL_DIAG, upd, "start");
 
 	UPD_LOCK(upd);
+	upd->upd_flags &= ~UPDF_LIST;
 	UPD_WAIT(upd);
 	upd->upd_flags |= UPDF_BUSY;
 	upd->upd_owner = pthread_self();
-	upd_proctab[upd->upd_type](upd);
-	upd->upd_flags &= ~UPDF_BUSY;
-	UPD_WAKE(upd);
 	UPD_ULOCK(upd);
 
-	if (locked)
-		UPSCH_LOCK();
+	/*
+ 	 * Call the one of the following handlers:
+ 	 *
+ 	 * UPDT_BMAP: upd_proc_bmap()
+ 	 * UPDT_HLDROP: upd_proc_hldrop()
+ 	 * UPDT_PAGEIN: upd_proc_pagein()
+ 	 * UPDT_PAGEIN_UNIT: upd_proc_pagein_unit()
+ 	 */
+	switch (upd->upd_type) {
+	case UPDT_BMAP:
+		OPSTAT_INCR("upsch-bmap");
+		break;
+	case UPDT_HLDROP:
+		OPSTAT_INCR("upsch-hldrop");
+		break;
+	case UPDT_PAGEIN:
+		OPSTAT_INCR("upsch-pagein");
+		break;
+	case UPDT_PAGEIN_UNIT:
+		OPSTAT_INCR("upsch-pagein-unit");
+		break;
+	default:
+		psc_fatalx("Unknown type %d", upd->upd_type);
+	}
+
+	upd_proctab[upd->upd_type](upd);
+
+	UPD_LOCK(upd);
+	upd->upd_flags &= ~UPDF_BUSY;
+	upd->upd_owner = 0;
+	UPD_WAKE(upd);
+	UPD_ULOCK(upd);
 
 	switch (upd->upd_type) {
 	case UPDT_BMAP:
@@ -1062,6 +1099,16 @@ upd_proc(struct slm_update_data *upd)
 		psc_pool_return(slm_upgen_pool, upg);
 		break;
 	}
+}
+
+int
+slm_upsch_tally_cb(struct slm_sth *sth, void *p)
+{
+	int *val = p;
+
+	*val = sqlite3_column_int(sth->sth_sth, 0);
+
+	return (0);
 }
 
 /*
@@ -1096,12 +1143,14 @@ slm_upsch_revert_cb(struct slm_sth *sth, __unusedx void *p)
 	brepls_init(retifset, 0);
 	retifset[BREPLST_REPL_SCHED] = 1;
 	retifset[BREPLST_GARBAGE_SCHED] = 1;
+
+	FCMH_WAIT_BUSY(f);
+	BMAP_LOCK(b);
+	bmap_wait_locked(b, b->bcm_flags & BMAPF_REPLMODWR);
 	rc = mds_repl_bmap_walk_all(b, tract, retifset, 0);
 	if (rc)
 		mds_bmap_write(b, NULL, NULL);
-	else
-		BMAPOD_MODIFY_DONE(b, 0);
-	BMAP_UNBUSY(b);
+	BMAP_ULOCK(b);
 	FCMH_UNBUSY(f);
 
  out:
@@ -1153,6 +1202,10 @@ slm_upsch_insert(struct bmap *b, sl_ios_id_t resid, int sys_prio,
 	    SQLITE_INTEGER, usr_prio,				/* 7 */
 	    SQLITE_INTEGER, sl_sys_upnonce);			/* 8 */
 	upschq_resm(res_getmemb(r), UPDT_PAGEIN);
+	if (!rc)
+		OPSTAT_INCR("upsch-insert-ok");
+	else
+		OPSTAT_INCR("upsch-insert-err");
 	return (rc);
 }
 
@@ -1163,33 +1216,21 @@ slmupschthr_main(struct psc_thread *thr)
 	struct sl_resource *r;
 	struct sl_resm *m;
 	struct sl_site *s;
-	int i, j, rc;
+	int i, j, count;
 
 	while (pscthr_run(thr)) {
-		CONF_FOREACH_RESM(s, r, i, m, j)
-			if (RES_ISFS(r))
-				pfl_multiwait_setcondwakeable(&slm_upsch_mw,
-				    &m->resm_csvc->csvc_mwc, 0);
-
-		UPSCH_LOCK();
-		pfl_multiwait_entercritsect(&slm_upsch_mw);
-		upd = pfl_mlist_tryget(&slm_upschq);
-		if (upd)
-			upd_proc(upd);
-		UPSCH_ULOCK();
-		if (upd)
-			pfl_multiwait_leavecritsect(&slm_upsch_mw);
-		else {
-			/*
-			 * In theory we should avoid this.  However,
-			 * there might be outside updates to the upsch
-			 * database.
-			 */
-			rc = pfl_multiwait_secs(&slm_upsch_mw, &upd,
-			    30);
-			if (rc == -ETIMEDOUT)
-				upschq_resm(NULL, UPDT_PAGEIN);
+		dbdo(slm_upsch_tally_cb, &count,
+		    " SELECT	count (*)"
+		    " FROM	upsch");
+		if (count && lc_nitems(&slm_upsch_queue) < 32) {
+			CONF_FOREACH_RESM(s, r, i, m, j) {
+				if (!RES_ISFS(r))
+					continue;
+				upschq_resm(m, UPDT_PAGEIN);
+			}
 		}
+		upd = lc_getwait(&slm_upsch_queue);
+		upd_proc(upd);
 	}
 }
 
@@ -1201,7 +1242,9 @@ slm_upsch_init(void)
 	    NULL, "upgen");
 	slm_upgen_pool = psc_poolmaster_getmgr(&slm_upgen_poolmaster);
 
-	pfl_mlist_reginit(&slm_upschq, NULL, struct slm_update_data,
+	INIT_SPINLOCK(&slm_upsch_lock);
+	psc_waitq_init(&slm_upsch_waitq, "upsch");
+	lc_reginit(&slm_upsch_queue, struct slm_update_data,
 	    upd_lentry, "upschq");
 }
 
@@ -1209,29 +1252,13 @@ void
 slmupschthr_spawn(void)
 {
 	struct psc_thread *thr;
-	struct sl_resource *r;
-	struct sl_site *s;
-	struct sl_resm *m;
-	int i, j;
+	int i;
 
-	pfl_multiwait_init(&slm_upsch_mw, "upsch");
-	if (pfl_multiwait_addcond(&slm_upsch_mw,
-	    &slm_upschq.pml_mwcond_empty) == -1)
-		psc_fatal("pfl_multiwait_addcond");
-
-	CONF_FOREACH_RESM(s, r, i, m, j)
-		if (RES_ISFS(r))
-			pfl_multiwait_addcond(&slm_upsch_mw,
-			    &m->resm_csvc->csvc_mwc);
-
-	thr = pscthr_init(SLMTHRT_UPSCHED, slmupschthr_main,
-	    sizeof(struct slmupsch_thread), "slmupschthr");
-	pscthr_setready(thr);
-
-	/* page in initial replrq workload */
-	CONF_FOREACH_RES(s, r, i)
-		if (RES_ISFS(r))
-			upschq_resm(res_getmemb(r), UPDT_PAGEIN);
+	for (i = 0; i < SLM_NUPSCHED_THREADS; i++) {
+		thr = pscthr_init(SLMTHRT_UPSCHED, slmupschthr_main,
+		    sizeof(struct slmupsch_thread), "slmupschthr%d", i);
+		pscthr_setready(thr);
+	}
 }
 
 /*
@@ -1244,22 +1271,25 @@ upschq_resm(struct sl_resm *m, int type)
 	struct resprof_mds_info *rpmi;
 	struct slm_update_data *upd;
 	struct sl_mds_iosinfo *si;
+	struct slrpc_cservice *csvc;
 
-	if (type == UPDT_PAGEIN && m) {
-		int proc = 1;
-
+	if (type == UPDT_PAGEIN) {
+		csvc = slm_geticsvc(m, NULL, 
+		    CSVCF_NONBLOCK | CSVCF_NORECON, NULL);
+		if (!csvc)
+			return;
+		sl_csvc_decref(csvc);
 		rpmi = res2rpmi(m->resm_res);
 		si = res2iosinfo(m->resm_res);
 		RPMI_LOCK(rpmi);
-		if (si->si_flags & SIF_UPSCH_PAGING)
-			proc = 0;
-		else
-			si->si_flags |= SIF_UPSCH_PAGING;
-		RPMI_ULOCK(rpmi);
-
-		if (!proc)
+		if (si->si_flags & SIF_UPSCH_PAGING) {
+			RPMI_ULOCK(rpmi);
 			return;
+		}
+		si->si_flags |= SIF_UPSCH_PAGING;
+		RPMI_ULOCK(rpmi);
 	}
+
 	upg = psc_pool_get(slm_upgen_pool);
 	memset(upg, 0, sizeof(*upg));
 	INIT_PSC_LISTENTRY(&upg->upg_lentry);
@@ -1267,6 +1297,8 @@ upschq_resm(struct sl_resm *m, int type)
 	upd = &upg->upg_upd;
 	upd_init(upd, type);
 	upsch_enqueue(upd);
+
+	spinlock(&upd->upd_lock);
 	UPD_UNBUSY(upd);
 }
 
@@ -1274,18 +1306,21 @@ upschq_resm(struct sl_resm *m, int type)
  * Initialize a peer resource update.
  * @upd: peer update structure.
  * @type: type of update.
- * @flags: operation flags.
  */
 void
-upd_initf(struct slm_update_data *upd, int type, __unusedx int flags)
+upd_init(struct slm_update_data *upd, int type)
 {
+	psc_assert(type == UPDT_BMAP   || type == UPDT_HLDROP || 
+		   type == UPDT_PAGEIN || type == UPDT_PAGEIN_UNIT);
+
 	psc_assert(pfl_memchk(upd, 0, sizeof(*upd)) == 1);
 	INIT_PSC_LISTENTRY(&upd->upd_lentry);
 	upd->upd_type = type;
 	upd->upd_flags |= UPDF_BUSY;
 	upd->upd_owner = pthread_self();
-	psc_mutex_init(&upd->upd_mutex);
-	pfl_multiwaitcond_init(&upd->upd_mwc, upd, 0, "upd-%p", upd);
+
+	INIT_SPINLOCK(&upd->upd_lock);
+	psc_waitq_init(&upd->upd_waitq, "upd");
 
 	switch (type) {
 	case UPDT_BMAP: {
@@ -1309,8 +1344,6 @@ upd_destroy(struct slm_update_data *upd)
 	DPRINTF_UPD(PLL_DIAG, upd, "destroy");
 	psc_assert(psclist_disjoint(&upd->upd_lentry));
 	psc_assert(!(upd->upd_flags & UPDF_BUSY));
-	psc_mutex_destroy(&upd->upd_mutex);
-	pfl_multiwaitcond_destroy(&upd->upd_mwc);
 	memset(upd, 0, sizeof(*upd));
 }
 
@@ -1337,18 +1370,18 @@ slm_wk_upsch_purge(void *p)
 void
 upsch_enqueue(struct slm_update_data *upd)
 {
-	int locked;
+	spinlock(&upd->upd_lock);
 
-	locked = UPD_RLOCK(upd);
-	if (!pfl_mlist_conjoint(&slm_upschq, upd)) {
-		if (upd->upd_type == UPDT_BMAP &&
-		    (upd_2_fcmh(upd)->fcmh_flags & FCMH_MDS_IN_PTRUNC) == 0)
-			pfl_mlist_addtail(&slm_upschq, upd);
+	/* enqueue work for slmupschthr_main() */
+	if (!(upd->upd_flags & UPDF_LIST)) {
+		upd->upd_flags |= UPDF_LIST;
+		if (upd->upd_type == UPDT_BMAP)
+			lc_addhead(&slm_upsch_queue, upd);
 		else
-			pfl_mlist_addhead(&slm_upschq, upd);
+			lc_addtail(&slm_upsch_queue, upd);
 		UPD_INCREF(upd);
 	}
-	UPD_URLOCK(upd, locked);
+	freelock(&upd->upd_lock);
 }
 
 void *
@@ -1362,8 +1395,7 @@ upd_getpriv(struct slm_update_data *upd)
 	case UPDT_HLDROP:
 	case UPDT_PAGEIN:
 	case UPDT_PAGEIN_UNIT:
-		return (p - offsetof(struct slm_update_generic,
-		    upg_upd));
+		return (p - offsetof(struct slm_update_generic, upg_upd));
 	default:
 		psc_fatal("type");
 	}
@@ -1377,6 +1409,7 @@ dump_upd(struct slm_update_data *upd)
 }
 #endif
 
+/* see upd_type_enum  */
 void (*upd_proctab[])(struct slm_update_data *) = {
 	upd_proc_bmap,
 	upd_proc_hldrop,
@@ -1385,13 +1418,13 @@ void (*upd_proctab[])(struct slm_update_data *) = {
 };
 
 struct slrpc_batch_rep_handler slm_batch_rep_repl = {
-	slm_batch_repl_cb,
-	sizeof(struct srt_replwk_req),
-	sizeof(struct srt_replwk_rep),
+	slm_batch_repl_cb,				/* bph_cbf */
+	sizeof(struct srt_replwk_req),			/* bph_qlen */
+	sizeof(struct srt_replwk_rep),			/* bph_plen */
 };
 
 struct slrpc_batch_rep_handler slm_batch_rep_preclaim = {
-	slm_batch_preclaim_cb,
-	sizeof(struct srt_preclaim_req),
-	sizeof(struct srt_preclaim_rep),
+	slm_batch_preclaim_cb,				/* bph_cbf */
+	sizeof(struct srt_preclaim_req),		/* bph_qlen */
+	sizeof(struct srt_preclaim_rep),		/* bph_plen */
 };

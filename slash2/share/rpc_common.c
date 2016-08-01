@@ -157,7 +157,7 @@ slrpc_rep_in(struct slrpc_cservice *csvc,
 void
 sl_csvc_online(struct slrpc_cservice *csvc)
 {
-	CSVC_LOCK_ENSURE(csvc);
+	LOCK_ENSURE(&csvc->csvc_lock);
 
 	/*
 	 * Hit a crash here on FreeBSD on sliod due to NULL import field below.
@@ -227,7 +227,7 @@ slrpc_connect_cb(struct pscrpc_request *rq,
 	}
 	clock_gettime(CLOCK_MONOTONIC, &csvc->csvc_mtime);
 	csvc->csvc_lasterrno = rc;
-	CSVC_WAKE(csvc);
+	psc_waitq_wakeall(&csvc->csvc_waitq);
 	sl_csvc_decref_locked(csvc);
 	return (0);
 }
@@ -322,10 +322,6 @@ slrpc_issue_connect(lnet_nid_t local, lnet_nid_t server,
 			slrpc_connect_finish(csvc, imp, oimp, 0);
 			return (rc);
 		}
-		/*
-		 * XXX wait a short amount of time and check for
-		 * establishment before returning.
-		 */
 		return (EWOULDBLOCK);
 	}
 
@@ -475,8 +471,8 @@ _sl_csvc_waitrelv(struct slrpc_cservice *csvc, long s, long ns)
 	ts.tv_sec = s;
 	ts.tv_nsec = ns;
 
-	CSVC_LOCK_ENSURE(csvc);
-	pfl_multiwaitcond_waitrel(&csvc->csvc_mwc, &csvc->csvc_mutex, &ts);
+	spinlock(&csvc->csvc_lock);
+	psc_waitq_waitrel_ts(&csvc->csvc_waitq, &csvc->csvc_lock, &ts);
 }
 
 /*
@@ -488,7 +484,7 @@ sl_csvc_useable(struct slrpc_cservice *csvc)
 {
 	int flags;
 	
-	CSVC_LOCK_ENSURE(csvc);
+	LOCK_ENSURE(&csvc->csvc_lock);
 	if (csvc->csvc_import == NULL ||
 	    csvc->csvc_import->imp_failed ||
 	    csvc->csvc_import->imp_invalid)
@@ -542,10 +538,7 @@ _sl_csvc_decref(const struct pfl_callerinfo *pci,
 		pscrpc_import_put(imp);
 
 	DEBUG_CSVC(PLL_DIAG, csvc, "freed");
-	psc_mutex_destroy(&csvc->csvc_mutex);
-	pfl_multiwaitcond_destroy(&csvc->csvc_mwc);
 	psc_pool_return(sl_csvc_pool, csvc);
-
 }
 
 /*
@@ -555,7 +548,7 @@ _sl_csvc_decref(const struct pfl_callerinfo *pci,
 void
 sl_csvc_incref(struct slrpc_cservice *csvc)
 {
-	CSVC_LOCK_ENSURE(csvc);
+	LOCK_ENSURE(&csvc->csvc_lock);
 	csvc->csvc_refcnt++;
 	psclog_diag("after take ref csvc = %p, refcnt = %d", 
 	    csvc, csvc->csvc_refcnt);
@@ -593,7 +586,10 @@ sl_csvc_create(uint32_t rqptl, uint32_t rpptl, void (*hldropf)(void *),
 
 	csvc = psc_pool_get(sl_csvc_pool);
 	memset(csvc, 0, sizeof(*csvc));
-	psc_mutex_init(&csvc->csvc_mutex);
+
+	INIT_SPINLOCK(&csvc->csvc_lock);
+	psc_waitq_init(&csvc->csvc_waitq, "csvc");
+
 	INIT_PSC_LISTENTRY(&csvc->csvc_lentry);
 	csvc->csvc_rqptl = rqptl;
 	csvc->csvc_rpptl = rpptl;
@@ -685,7 +681,6 @@ _sl_csvc_get(const struct pfl_callerinfo *pci,
 	struct sl_resm *resm = NULL; /* gcc */
 	struct timespec now;
 	lnet_nid_t peernid;
-	char addrbuf[RESM_ADDRBUF_SZ];
 	struct sl_exp_cli *expc;
 	struct sl_resm_nid *nr;
 	lnet_process_id_t *pp;
@@ -769,27 +764,9 @@ _sl_csvc_get(const struct pfl_callerinfo *pci,
 	csvc->csvc_version = version;
 	csvc->csvc_magic = magic;
 
-	switch (peertype) {
-	case SLCONNT_CLI:
-
-		if (exp && exp->exp_connection)
-			pscrpc_id2str(exp->exp_connection->c_peer,
-			    addrbuf);
-		pfl_multiwaitcond_init(&csvc->csvc_mwc, csvc,
-		    PMWCF_WAKEALL, "cli-%s", addrbuf);
-
-		break;
-	case SLCONNT_IOD:
-	case SLCONNT_MDS:
-		pfl_multiwaitcond_init(&csvc->csvc_mwc, csvc,
-		    PMWCF_WAKEALL, "res-%s", resm->resm_name);
-		break;
-	}
-
 	/* publish new csvc */
 	*csvcp = csvc;
-	psclog_diag("publish csvc = %p, refcnt = %d", 
-	    csvc, csvc->csvc_refcnt);
+	psclog_diag("new csvc = %p, refcnt = %d", csvc, csvc->csvc_refcnt);
 	pfl_rwlock_unlock(&sl_conn_lock);
 
  gotit:
@@ -859,10 +836,10 @@ _sl_csvc_get(const struct pfl_callerinfo *pci,
 		}
 
 		OPSTAT_INCR("csvc-wait");
-		pfl_multiwaitcond_wait(&csvc->csvc_mwc, &csvc->csvc_mutex);
-		OPSTAT_INCR("csvc-wake");
 
+		psc_waitq_wait(&csvc->csvc_waitq, &csvc->csvc_lock);
 		CSVC_LOCK(csvc);
+
 		goto recheck;
 	}
 
@@ -877,8 +854,7 @@ _sl_csvc_get(const struct pfl_callerinfo *pci,
 			goto out2;
 		}
 		OPSTAT_INCR("csvc-delay");
-		delta = csvc->csvc_mtime.tv_sec + CSVC_CONN_INTV 
-			- now.tv_sec;
+		delta = csvc->csvc_mtime.tv_sec + CSVC_CONN_INTV - now.tv_sec;
 		CSVC_ULOCK(csvc);
 		sleep(delta);
 		CSVC_LOCK(csvc);
@@ -888,7 +864,7 @@ _sl_csvc_get(const struct pfl_callerinfo *pci,
 	csvc->csvc_flags |= CSVCF_CONNECTING;
 	csvc->csvc_flags &= ~CSVCF_DISCONNECTING;
 	/*
- 	 * We can't assert CSVCF_CONNECTED is not set here because 
+ 	 * We can't assert CSVCF_CONNECTED is not set below because 
 	 * sl_csvc_useable() has other ideas why it is not connected.
 	 */
 	csvc->csvc_flags &= ~CSVCF_CONNECTED;
@@ -928,7 +904,7 @@ _sl_csvc_get(const struct pfl_callerinfo *pci,
 	csvc->csvc_lasterrno = rc;
 	clock_gettime(CLOCK_MONOTONIC, &csvc->csvc_mtime);
 	csvc->csvc_flags &= ~CSVCF_CONNECTING;
-	CSVC_WAKE(csvc);
+	psc_waitq_wakeall(&csvc->csvc_waitq);
 	if (rc) {
 		if (csvc->csvc_import)
 			csvc->csvc_import->imp_failed = 1;
@@ -952,11 +928,12 @@ _sl_csvc_get(const struct pfl_callerinfo *pci,
 		pll_add_sorted(&sl_clients, csvc, csvc_cli_cmp);
  out2:
 
-	if (!success)
+	if (!success) {
  		sl_csvc_decref_locked(csvc);
-	else
+		csvc = NULL;
+	} else
 		CSVC_ULOCK(csvc);
-	return (success ? csvc : NULL);
+	return (csvc);
 }
 
 /*
@@ -985,8 +962,9 @@ slconnthr_main(struct psc_thread *thr)
 		 * result via PING RPC later.  IOS only.
 		 */
 		clock_gettime(CLOCK_MONOTONIC, &ts);
-		if (sct->sct_pingupc) {
-			pingrc = sct->sct_pingupc( sct->sct_pingupcarg);
+		if (sct->sct_pingupc) { 
+			/* slirmiconnthr_upcall() */
+			pingrc = sct->sct_pingupc(sct->sct_pingupcarg);
 			if (pingrc)
 				psclog_diag("sct_pingupc "
 				    "failed (rc=%d)", pingrc);
@@ -1121,10 +1099,6 @@ slconnthr_watch(struct psc_thread *thr, struct slrpc_cservice *csvc,
 	scp->scp_useablearg = useablearg;
 	CSVC_ULOCK(csvc);
 
-	spinlock(&sl_watch_lock);
-	if (!pfl_multiwait_hascond(&sct->sct_mw, &csvc->csvc_mwc))
-		pfl_multiwait_addcond(&sct->sct_mw, &csvc->csvc_mwc);
-	freelock(&sl_watch_lock);
 }
 
 void
@@ -1350,7 +1324,7 @@ slrpc_destroy(void)
 const char *
 slrpc_getname_for_opcode(int opc)
 {
-	if (opc < 1 || opc >= NSRMT)
+	if (opc < 1 || opc >= SRMT_TOTAL)
 		return (NULL);
 	return (slrpc_names[opc]);
 }

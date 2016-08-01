@@ -1,5 +1,5 @@
 /*
- * 03/07/2013: An I/O stresser with big files.
+ * 03/07/2013: bigfile1.c, read and write random regions within a file.
  */
 #include <stdio.h>
 #include <stdlib.h>
@@ -16,7 +16,7 @@
 #define	BASE_NAME_MAX		128
 #define BASE_NAME_SUFFIX	10
 
-int tweak = 0;
+int tweak = 1;
 char scratch[MAX_BUF_LEN];
 
 struct testfile {
@@ -177,7 +177,7 @@ main(int argc, char *argv[])
 {
 	char *name;
 	size_t tmp;
-	int times = 1;
+	int times = 10;
 	unsigned int seed = 1234;
 	size_t i, j, c, fd, nfile;
 
@@ -213,7 +213,7 @@ main(int argc, char *argv[])
 	for (i = 0; i < nfile; i++) {
 
 		snprintf(files[i].name, 128, "%s.%02d", argv[optind], i);
-		printf("Try to allocate %12ld bytes of memory for file %s\n", 
+		printf("Try to allocate %12ld bytes of working memory for file %s\n", 
 			files[i].size, files[i].name); 
 
 		files[i].buf = malloc(files[i].size);
@@ -250,7 +250,7 @@ main(int argc, char *argv[])
 		for (i = 0; i < nfile; i++) {
 			write_file(i);
 		}
-		printf("Loop %d on %d file is done successfully.\n", j, nfile);
+		printf("Loop %d on %d files is done successfully.\n", j, nfile);
 	}
 
 	for (i = 0; i < nfile; i++) {

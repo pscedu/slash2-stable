@@ -78,7 +78,7 @@ mds_bmap_initnew(struct bmap *b)
 	pol = fcmh_2_ino(f)->ino_replpol;
 	INOH_ULOCK(fcmh_2_inoh(f));
 
-	BHREPL_POLICY_SET(b, pol);
+	bmap_2_replpol(b) = pol;
 
 	bmi->bmi_sys_prio = -1;
 	bmi->bmi_usr_prio = -1;
@@ -87,7 +87,7 @@ mds_bmap_initnew(struct bmap *b)
 void
 mds_bmap_ensure_valid(struct bmap *b)
 {
-	int rc, level, retifset[NBREPLST];
+	int rc, retifset[NBREPLST];
 
 	brepls_init(retifset, 0);
 	retifset[BREPLST_VALID] = 1;
@@ -95,6 +95,8 @@ mds_bmap_ensure_valid(struct bmap *b)
 	retifset[BREPLST_GARBAGE_SCHED] = 1;
 	retifset[BREPLST_TRUNCPNDG] = 1;
 	retifset[BREPLST_TRUNCPNDG_SCHED] = 1;
+
+	/* Caller should busy fcmh and bmap. */
 	rc = mds_repl_bmap_walk_all(b, NULL, retifset, REPL_WALKF_SCIRCUIT);
 
 	/* 
@@ -109,11 +111,15 @@ mds_bmap_ensure_valid(struct bmap *b)
 	 * ((struct bmap_mds_info *)(b+1))->bmi_corestate.bcs_repls
 	 *
 	 */
-	if (!rc) {
-		level = (slm_opstate == SLM_OPSTATE_NORMAL) ? 
-		    PLL_FATAL : PLL_WARN;
-		DEBUG_BMAP(level, b, "bmap has no valid replicas");
-	}
+	if (rc) 
+		return;
+
+	/*
+ 	 * See this during normal operation.  However, it can recover if we
+ 	 * request a bmap from an IOS. So let us warn instead of crash.
+ 	 */
+	DEBUG_BMAP(PLL_WARN, b, "no valid replicas, bno = %d, fid = "SLPRI_FID,
+	    b->bcm_bmapno, fcmh_2_fid(b->bcm_fcmh)); 
 }
 
 struct bmap_nonce_cbarg {
@@ -146,6 +152,7 @@ slm_bmap_resetnonce_cb(struct slm_sth *sth, void *p)
 	return (0);
 }
 
+/* Introduced by commit 18a5f376d02847e075461819d4b315d228bcfde6 */
 void
 slm_bmap_resetnonce(struct bmap *b)
 {
@@ -184,7 +191,7 @@ slm_bmap_resetnonce(struct bmap *b)
 int
 mds_bmap_read(struct bmap *b, int flags)
 {
-	int rc, vfsid, retifset[NBREPLST];
+	int rc, new, unbusy, vfsid, retifset[NBREPLST];
 	struct bmap_mds_info *bmi = bmap_2_bmi(b);
 	struct slm_update_data *upd;
 	struct fidc_membh *f;
@@ -194,14 +201,16 @@ mds_bmap_read(struct bmap *b, int flags)
 
 	upd = bmap_2_upd(b);
 	upd_init(upd, UPDT_BMAP);
+	UPD_LOCK(upd);
 	UPD_UNBUSY(upd);
 
+	new = 0;
+	f = b->bcm_fcmh;
 	if (flags & BMAPGETF_NODISKREAD) {
+		new = 1;
 		mds_bmap_initnew(b);
 		goto out2;
 	}
-
-	f = b->bcm_fcmh;
 
 	iovs[0].iov_base = bmi_2_ondisk(bmi);
 	iovs[0].iov_len = BMAP_OD_CRCSZ;
@@ -254,21 +263,38 @@ mds_bmap_read(struct bmap *b, int flags)
 		return (rc);
 	}
 
-	/* (gdb) p ((struct bmap_mds_info*)(b+1))->bmi_corestate.bcs_repls */
-	mds_bmap_ensure_valid(b);
-
 	DEBUG_BMAPOD(PLL_DIAG, b, "successfully loaded from disk");
 
  out2:
-	if (slm_opstate == SLM_OPSTATE_REPLAY)
-		return (0);
 
-	brepls_init(retifset, 0);
-	retifset[BREPLST_REPL_SCHED] = 1;
-	retifset[BREPLST_GARBAGE_SCHED] = 1;
-	if (mds_repl_bmap_walk_all(b, NULL, retifset,
-	    REPL_WALKF_SCIRCUIT))
-		slm_bmap_resetnonce(b);
+	unbusy = 0;
+	if (!FCMH_HAS_BUSY(f)) {
+		unbusy = 1;
+		FCMH_WAIT_BUSY(f);
+	}
+	BMAP_LOCK(b);
+	bmap_wait_locked(b, b->bcm_flags & BMAPF_REPLMODWR);
+
+	if (!new)
+		/* 
+		 * gdb help:
+		 *
+		 * ((struct bmap_mds_info*)(b+1))->bmi_corestate.bcs_repls 
+		 */
+		mds_bmap_ensure_valid(b);
+
+	if (slm_opstate != SLM_OPSTATE_REPLAY) {
+		brepls_init(retifset, 0);
+		retifset[BREPLST_REPL_SCHED] = 1;
+		retifset[BREPLST_GARBAGE_SCHED] = 1;
+		if (mds_repl_bmap_walk_all(b, NULL, retifset,
+		    REPL_WALKF_SCIRCUIT))
+			slm_bmap_resetnonce(b);
+	}
+
+	BMAP_ULOCK(b);
+	if (unbusy)
+		FCMH_UNBUSY(f);
 	return (0);
 }
 
@@ -286,7 +312,6 @@ mds_bmap_write(struct bmap *b, void *logf, void *logarg)
 	size_t nb;
 	struct bmap_mds_info *bmi = bmap_2_bmi(b);
 
-	BMAPOD_REQRDLOCK(bmi);
 	mds_bmap_ensure_valid(b);
 
 	psc_crc64_calc(&crc, bmi_2_ondisk(bmi), BMAP_OD_CRCSZ);
@@ -317,8 +342,10 @@ mds_bmap_write(struct bmap *b, void *logf, void *logarg)
 	DEBUG_BMAP(level, b, "mdsio_pwritev: bno = %d, rc=%d", 
 	    b->bcm_bmapno, rc);
 
-	if (BMAPOD_HASRDLOCK(bmap_2_bmi(b)))
-		BMAPOD_READ_DONE(b, 0);
+	if (!rc && logf == (void *)mdslog_bmap_repls) {
+		BMAP_LOCK_ENSURE(b);
+		b->bcm_flags |= BMAPF_REPLMODWR;
+	}
 
 	return (rc);
 }
@@ -331,7 +358,9 @@ mds_bmap_init(struct bmap *b)
 	bmi = bmap_2_bmi(b);
 	pll_init(&bmi->bmi_leases, struct bmap_mds_lease,
 	    bml_bmi_lentry, &b->bcm_lock);
-	pfl_rwlock_init(&bmi->bmi_rwlock);
+
+	bmi->bmi_sys_prio = -1;
+	bmi->bmi_usr_prio = -1;
 }
 
 void
@@ -343,7 +372,6 @@ mds_bmap_destroy(struct bmap *b)
 	psc_assert(bmi->bmi_readers == 0);
 	psc_assert(bmi->bmi_assign == NULL);
 	psc_assert(pll_empty(&bmi->bmi_leases));
-	pfl_rwlock_destroy(&bmi->bmi_rwlock);
 	upd_destroy(&bmi->bmi_upd);
 }
 
@@ -362,8 +390,7 @@ mds_bmap_crc_update(struct bmap *bmap, sl_ios_id_t iosid,
 	struct srt_stat sstb;
 	int rc, fl, idx, vfsid;
 	uint32_t i;
-
-	psc_assert(bmap->bcm_flags & BMAPF_CRC_UP);
+	uint64_t nblks;
 
 	f = bmap->bcm_fcmh;
 	ih = fcmh_2_inoh(f);
@@ -372,19 +399,25 @@ mds_bmap_crc_update(struct bmap *bmap, sl_ios_id_t iosid,
 	if (rc)
 		return (-rc);
 	if (vfsid != current_vfsid)
-		return (EINVAL);
+		return (-EINVAL);
 
 	FCMH_WAIT_BUSY(f);
 	idx = mds_repl_ios_lookup(vfsid, ih, iosid);
-	if (idx < 0)
-		psc_fatal("not found");
+	if (idx < 0) {
+		FCMH_UNBUSY(f);
+		psclog_warnx("CRC update: invalid IOS %x", iosid);
+		return (idx);
+	}
+	if (idx < SL_DEF_REPLICAS)
+		nblks = fcmh_2_ino(f)->ino_repl_nblks[idx];
+	else
+		nblks = fcmh_2_inox(f)->inox_repl_nblks[idx - SL_DEF_REPLICAS];
 
 	/*
 	 * Only update the block usage when there is a real change.
 	 */
-	if (crcup->nblks != fcmh_2_repl_nblks(f, idx)) {
-		sstb.sst_blocks = fcmh_2_nblks(f) + crcup->nblks -
-		    fcmh_2_repl_nblks(f, idx);
+	if (crcup->nblks != nblks) {
+		sstb.sst_blocks = fcmh_2_nblks(f) + crcup->nblks - nblks;
 		fl = SL_SETATTRF_NBLKS;
 
 		fcmh_set_repl_nblks(f, idx, crcup->nblks);
@@ -396,26 +429,22 @@ mds_bmap_crc_update(struct bmap *bmap, sl_ios_id_t iosid,
 
 		FCMH_LOCK(f);
 
-		if (idx >= SL_DEF_REPLICAS)
-			mds_inox_write(vfsid, ih, NULL, NULL);
-		else
+		if (idx < SL_DEF_REPLICAS)
 			mds_inode_write(vfsid, ih, NULL, NULL);
+		else
+			mds_inox_write(vfsid, ih, NULL, NULL);
 	}
 
+	
+	BMAP_LOCK(bmap);
+	bmap_wait_locked(bmap, bmap->bcm_flags & BMAPF_REPLMODWR);
+	
 	if (mds_repl_inv_except(bmap, idx, 1)) {
-		/* XXX why are we writing the bmap twice??? */
-		mds_bmap_write_logrepls(bmap);
-	} else {
-		BMAPOD_MODIFY_DONE(bmap, 0);
-		BMAP_UNBUSY(bmap);
-		FCMH_UNBUSY(f);
+		/* 
+		 * This case should not happen.
+		 */
+		psclog_warnx("IOS %x is not found.", idx);
 	}
-
-	crclog.scl_bmap = bmap;
-	crclog.scl_crcup = crcup;
-	crclog.scl_iosid = iosid;
-
-	BMAPOD_REQWRLOCK(bmi);
 	for (i = 0; i < crcup->nups; i++) {
 		bmap_2_crcs(bmap, crcup->crcs[i].slot) =
 		    crcup->crcs[i].crc;
@@ -425,7 +454,15 @@ mds_bmap_crc_update(struct bmap *bmap, sl_ios_id_t iosid,
 		DEBUG_BMAP(PLL_DIAG, bmap, "slot=%d crc=%"PSCPRIxCRC64,
 		    crcup->crcs[i].slot, crcup->crcs[i].crc);
 	}
-	return (mds_bmap_write(bmap, mdslog_bmap_crc, &crclog));
+
+	crclog.scl_bmap = bmap;
+	crclog.scl_crcup = crcup;
+	crclog.scl_iosid = iosid;
+	rc = mds_bmap_write(bmap, mdslog_bmap_crc, &crclog);
+
+	BMAP_ULOCK(bmap);
+	FCMH_UNBUSY(f);
+	return (rc);
 }
 
 void

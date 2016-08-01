@@ -46,9 +46,8 @@ struct slvr;
 
 #define SLI_REPL_SLVR_SCHED	((void *)0x1)
 
-struct sli_repl_workrq {
+struct sli_repl_workrq {				/* sli_replwkrq_pool */
 	struct sl_fidgen	 srw_fg;
-	int			 srw_op;
 	sl_bmapno_t		 srw_bmapno;
 	sl_bmapgen_t		 srw_bgen;		/* bmap generation */
 	uint32_t		 srw_len;		/* bmap size */

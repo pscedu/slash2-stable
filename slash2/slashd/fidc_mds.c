@@ -152,6 +152,7 @@ slm_fcmh_ctor(struct fidc_membh *f, __unusedx int flags)
 			return (rc);
 		}
 
+		/* introduced by d56424e5f35de84cef5ba3b61afb8583efbd0a7b */
 		snprintf(fn, sizeof(fn), "%016"PRIx64".ino",
 		    fcmh_2_fid(f));
 
@@ -265,8 +266,7 @@ slm_fcmh_dtor(struct fidc_membh *f)
  * info in the SLASH2 metafile.
  */
 int
-_slm_fcmh_endow(int vfsid, struct fidc_membh *p, struct fidc_membh *c,
-    int wr)
+slm_fcmh_endow(int vfsid, struct fidc_membh *p, struct fidc_membh *c)
 {
 	sl_replica_t repls[SL_MAX_REPLICAS];
 	int nr, rc = 0;
@@ -304,8 +304,7 @@ _slm_fcmh_endow(int vfsid, struct fidc_membh *p, struct fidc_membh *c,
 		    &repls[SL_DEF_REPLICAS], sizeof(repls[0]) *
 		    SL_INOX_NREPLICAS);
 	}
-	if (wr)
-		mds_inodes_odsync(vfsid, c, mdslog_ino_repls);
+	rc = mds_inodes_odsync(vfsid, c, mdslog_ino_repls);
 	FCMH_UNBUSY(c);
 	return (rc);
 }

@@ -146,6 +146,13 @@ import_zpool(const char *zpoolname, const char *zfspoolcf)
 		closedir(dir);
 	}
 
+	/*
+ 	 *  The following message during start up should be harmless:
+ 	 *
+	 * cannot import XXX: a pool with that name is already created/imported,
+	 * and no additional pools with that name were found
+	 * cannot mount XXX: mountpoint or dataset is busy
+	 */
 	rc = pfl_systemf("zpool import -f %s%s%s '%s'",
 	    zfspoolcf ? "-c '" : "",
 	    zfspoolcf ? zfspoolcf : "",
@@ -623,6 +630,8 @@ main(int argc, char *argv[])
 		    " GROUP BY uid");
 	}
 
+	dbdo(NULL, NULL, "PRAGMA journal_mode=WAL");
+
 	slrpc_initcli();
 
 	dbdo(NULL, NULL, "BEGIN TRANSACTION");
@@ -689,7 +698,7 @@ main(int argc, char *argv[])
 	time(&now);
 	psclogs_info(SLMSS_INFO, "SLASH2 %s version %d started at %s",
 	    __progname, sl_stk_version, ctime(&now));
-	psclogs_info(SLMSS_INFO, "Max ARC caching size is %"PRIu64,
+	psclogs_info(SLMSS_INFO, "Max ARC caching size is %"PRIu64" bytes",
 	    arc_get_maxsize());
 
 	pfl_fault_register(RMC_HANDLE_FAULT);

@@ -794,6 +794,11 @@ mdslog_namespace(int op, uint64_t txg, uint64_t pfid, uint64_t npfid,
 		    sstb->sst_uid, sstb->sst_gid,
 		    siz, op);
 
+	/*
+ 	 * XXX The purpose of ZFS callback is to link a transaction ID with
+ 	 * the corresponding journal log entry which lives outside of the ZFS.
+ 	 * So anything other than writing the log entry should go away.
+ 	 */
 	if (op == NS_OP_RECLAIM ||
 	    (op == NS_OP_UNLINK && sstb->sst_nlink == 1)) {
 		struct slm_wkdata_upsch_purge *wk;
@@ -1750,7 +1755,7 @@ mdslogfill_bmap_repls(struct bmapc_memb *b,
 	struct bmap_mds_info *bmi = bmap_2_bmi(b);
 
 	FCMH_BUSY_ENSURE(f);
-	BMAP_BUSY_ENSURE(b);
+	BMAP_LOCK_ENSURE(b);
 
 	sjbr->sjbr_fid = fcmh_2_fid(f);
 	sjbr->sjbr_bmapno = b->bcm_bmapno;
@@ -1764,6 +1769,9 @@ mdslogfill_bmap_repls(struct bmapc_memb *b,
 	DEBUG_BMAPOD(PLL_DEBUG, b, "filled bmap_repls journal log entry");
 }
 
+/*
+ * Perform the work scheduled by mdslog_bmap_repls().
+ */
 int
 slm_wkcb_wr_brepl(void *p)
 {
@@ -1793,17 +1801,6 @@ mdslog_bmap_repls(void *datap, uint64_t txg, __unusedx int flag)
 	    sjbr, sizeof(*sjbr));
 	pjournal_put_buf(slm_journal, sjbr);
 
-	/*
-	 * Pass ownership, which was asserted in
-	 * mdslogfill_bmap_repls(), to whichever wkthr who gets it.
-	 */
-	DEBUG_FCMH(PLL_DEBUG, b->bcm_fcmh, "pass BUSY to wkthr");
-	b->bcm_fcmh->fcmh_owner = 0;
-	(void)BMAP_RLOCK(b);
-	b->bcm_owner = 0;
-	b->bcm_flags |= BMAPF_REPLMODWR;
-	BMAP_ULOCK(b);
-
 	wk = pfl_workq_getitem(slm_wkcb_wr_brepl,
 	    struct slm_wkdata_wr_brepl);
 	wk->b = b;
@@ -1830,10 +1827,6 @@ mdslog_bmap_crc(void *datap, uint64_t txg, __unusedx int flag)
 	struct srt_bmap_crcup *crcup = crclog->scl_crcup;
 	struct slmds_jent_bmap_crc *sjbc;
 	uint32_t n, t, distill;
-
-	BMAPOD_READ_DONE(bmap, 0);
-
-	psc_assert(bmap->bcm_flags & BMAPF_CRC_UP);
 
 	/*
 	 * See if we need to distill the file enlargement information.
@@ -1867,11 +1860,6 @@ mdslog_bmap_crc(void *datap, uint64_t txg, __unusedx int flag)
 	}
 
 	psc_assert(t == crcup->nups);
-
-	/* Signify that the update has occurred. */
-	BMAP_LOCK(bmap);
-	bmap->bcm_flags &= ~BMAPF_CRC_UP;
-	BMAP_ULOCK(bmap);
 }
 
 void

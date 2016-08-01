@@ -40,6 +40,7 @@
 #include "slashd.h"
 #include "slconfig.h"
 #include "slconn.h"
+#include "up_sched_res.h"
 
 struct slm_nsstats		 slm_nsstats_aggr;	/* aggregate stats */
 
@@ -467,6 +468,18 @@ struct psc_ctlop slmctlops[] = {
 };
 
 void
+slmctlparam_upsch_get(char *val)
+{
+	int upsch_total = 0;
+
+	dbdo(slm_upsch_tally_cb, &upsch_total,
+	    " SELECT	count (*)"
+	    " FROM	upsch");
+
+	snprintf(val, PCP_VALUE_MAX, "%d", upsch_total);
+}
+
+void
 slmctlthr_main(const char *fn)
 {
 	pfl_journal_register_ctlops(slmctlops);
@@ -537,8 +550,16 @@ slmctlthr_main(const char *fn)
 	    0, &slm_bmap_leases.btt_maxseq);
 	psc_ctlparam_register_var("sys.bminseqno", PFLCTL_PARAMT_UINT64,
 	    0, &slm_bmap_leases.btt_minseq);
-	psc_ctlparam_register_var("sys.bwqueuesz", PFLCTL_PARAMT_INT,
-	    0, &slm_bwqueuesz);
 
-	psc_ctlthr_main(fn, slmctlops, nitems(slmctlops), SLMTHRT_CTLAC);
+	psc_ctlparam_register_simple("sys.upsch",
+	    slmctlparam_upsch_get, NULL);
+
+	psc_ctlparam_register_var("sys.upsch_delay",
+	    PFLCTL_PARAMT_INT, PFLCTL_PARAMF_RDWR, &slm_upsch_delay);
+
+	psc_ctlparam_register_var("sys.upsch_bandwidth",
+	    PFLCTL_PARAMT_INT, PFLCTL_PARAMF_RDWR, &slm_upsch_bandwidth);
+
+	psc_ctlthr_main(fn, slmctlops, nitems(slmctlops), 
+	    sizeof(struct slmctl_thread), SLMTHRT_CTLAC);
 }

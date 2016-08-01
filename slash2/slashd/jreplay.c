@@ -66,6 +66,7 @@ mds_replay_bmap(void *jent, int op)
 	struct bmapc_memb *b = NULL;
 	struct bmap_mds_info *bmi;
 	struct sl_fidgen fg;
+	uint8_t bmi_orepls[SL_REPLICA_NBYTES];
 	struct {
 		slfid_t		fid;
 		sl_bmapno_t	bno;
@@ -134,16 +135,23 @@ mds_replay_bmap(void *jent, int op)
 		break;
 	    }
 	case B_REPLAY_OP_REPLS:
+
+		OPSTAT_INCR("replay-repls");
 		mds_brepls_check(sjbr->sjbr_repls, sjbr->sjbr_nrepls);
 
 		bmap_op_start_type(b, BMAP_OPCNT_WORK);
 
-		/* a no-op will gather the locks for us */
-		brepls_init(tract, -1);
-		mds_repl_bmap_walk_all(b, tract, NULL, 0);
+		/*
+		 * So we have some changes in the journal, but not
+		 * in the sql table.
+		 */
+		FCMH_WAIT_BUSY(b->bcm_fcmh);
+		BMAP_LOCK(b);
+		bmap_wait_locked(b, b->bcm_flags & BMAPF_REPLMODWR);
 
-		memcpy(bmi->bmi_orepls, bmi->bmi_repls,
+		memcpy(bmi_orepls, bmi->bmi_repls,
 		    sizeof(bmi->bmi_orepls));
+
 		bmap_2_replpol(b) = sjbr->sjbr_replpol;
 		memcpy(bmi->bmi_repls, sjbr->sjbr_repls,
 		    SL_REPLICA_NBYTES);
@@ -155,10 +163,21 @@ mds_replay_bmap(void *jent, int op)
 		mds_repl_bmap_walk_all(b, tract, NULL, 0);
 
 		b->bcm_flags |= BMAPF_REPLMODWR;
-		// bmi_sys_prio =
-		// bmi_usr_prio =
+		BMAP_ULOCK(b);
+
+		memcpy(bmi->bmi_orepls, bmi_orepls,
+		    sizeof(bmi->bmi_orepls));
+
 		slm_repl_upd_write(b, 1);
 
+		/*
+ 		 * The following seems to make sure those replicas already
+ 		 * marked BREPLST_REPL_QUEUED and BREPLST_GARBAGE before
+ 		 * log replay are inserted into the table.
+ 		 *
+ 		 * I got some not-unique warning (rc=19) after the locking 
+ 		 * revamp.
+ 		 */
 		for (n = 0, off = 0; n < fcmh_2_nrepls(f);
 		    n++, off += SL_BITS_PER_REPLICA)
 			switch (SL_REPL_GET_BMAP_IOS_STAT(bmi->bmi_repls,
@@ -167,17 +186,29 @@ mds_replay_bmap(void *jent, int op)
 			case BREPLST_GARBAGE:
 				resid = fcmh_2_repl(f, n);
 
-				// XXX sys/usr prio
-				slm_upsch_insert(b, resid, 0, 0);
+				rc = slm_upsch_insert(b, resid, 
+				    bmi->bmi_sys_prio, bmi->bmi_usr_prio);
+				if (rc)
+					psclog_warnx("upsch insert failed: bno=%d, "
+					    "fid=%"PRId64", ios=%d, rc=%d",
+					    b->bcm_bmapno, bmap_2_fid(b), 
+					    resid, rc);
 				break;
 			}
 
+		FCMH_UNBUSY(b->bcm_fcmh);
 		break;
 	}
 
 	DEBUG_BMAPOD(PLL_DIAG, b, "replayed bmap op=%d", op);
 
+	FCMH_WAIT_BUSY(b->bcm_fcmh);
+
+	BMAP_LOCK(b);
+	bmap_wait_locked(b, b->bcm_flags & BMAPF_REPLMODWR);
 	rc = mds_bmap_write(b, NULL, NULL);
+	BMAP_ULOCK(b);
+	FCMH_UNBUSY(b->bcm_fcmh);
 
 	if (0)
  unbusy:

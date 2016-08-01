@@ -110,8 +110,10 @@ struct slrpc_cservice {
 
 	struct timespec		 csvc_mtime;		/* last activity */
 	struct psclist_head	 csvc_lentry;
-	struct pfl_mutex	 csvc_mutex;
-	struct pfl_multiwaitcond csvc_mwc;
+
+	psc_spinlock_t		 csvc_lock;
+	struct psc_waitq	 csvc_waitq;
+
 #define csvc_flags	csvc_params.scp_flags
 #define csvc_magic	csvc_params.scp_magic
 #define csvc_version	csvc_params.scp_version
@@ -190,33 +192,10 @@ struct sl_expcli_ops {
 		(_rc);							\
 	})
 
-#define CSVC_LOCK(csvc)			_psc_mutex_lock(CSVC_CALLERINFO, &(csvc)->csvc_mutex)
-#define CSVC_ULOCK(csvc)		_psc_mutex_unlock(CSVC_CALLERINFO, &(csvc)->csvc_mutex)
-#define CSVC_RLOCK(csvc)		_psc_mutex_reqlock(CSVC_CALLERINFO, &(csvc)->csvc_mutex)
-#define CSVC_URLOCK(csvc, lk)		_psc_mutex_ureqlock(CSVC_CALLERINFO, &(csvc)->csvc_mutex, (lk))
-#define CSVC_LOCK_ENSURE(csvc)		psc_mutex_ensure_locked(&(csvc)->csvc_mutex)
-
-#define CSVC_WAKE(csvc)			pfl_multiwaitcond_wakeup(&(csvc)->csvc_mwc)
-#define CSVC_WAIT(csvc)			pfl_multiwaitcond_wait(&(csvc)->csvc_mwc, &(csvc)->csvc_mutex)
+#define CSVC_LOCK(csvc)			spinlock(&(csvc)->csvc_lock)
+#define CSVC_ULOCK(csvc)		freelock(&(csvc)->csvc_lock)
 
 #define sl_csvc_waitrel_s(csvc, s)	_sl_csvc_waitrelv((csvc), (s), 0L)
-
-#define sl_csvc_waitevent_rel_s(csvc, cond, s)				\
-	do {								\
-		struct timeval _start_tm, _now_tm, _diff_tm;		\
-									\
-		PFL_GETTIMEVAL(&_start_tm);				\
-		for (;;) {						\
-			sl_csvc_reqlock(csvc);				\
-			if (cond)					\
-				break;					\
-			PFL_GETTIMEVAL(&_now_tm);			\
-			timersub(&_now_tm, &_start_tm, &_diff_tm);	\
-			if (_diff_tm.tv_sec >= (s))			\
-				break;					\
-			sl_csvc_waitrel_s((csvc), (s));			\
-		}							\
-	} while (0)
 
 #define SRPCWAITF_DEFER_BULK_AUTHBUF_CHECK (1 << 0)
 

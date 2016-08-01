@@ -161,9 +161,9 @@ struct psc_hashtbl		 msl_gidmap_int;
  */
 int				 msl_acl;
 int				 msl_force_dio;
-int				 msl_fuse_direct_io = 1;
 int				 msl_root_squash;
-int				 msl_max_retries = 7;
+int				 msl_max_retries = 5;
+int				 msl_fuse_direct_io = 1;
 uint64_t			 msl_pagecache_maxsize;
 int				 msl_statfs_pref_ios_only;
 struct resprof_cli_info		 msl_statfs_aggr_rpci;
@@ -1146,6 +1146,9 @@ msl_lookup_fidcache_dcu(struct pscfs_req *pfr,
 		PFL_GOTOERR(out, rc);
 
 	namecache_hold_entry(dcup, p, name);
+	/*
+	 * Hit dcup->dcu_dce->dce_pfd = NULL at revision 41635.
+	 */
 	if (dcup->dcu_dce->dce_pfd->pfd_ino == FID_ANY ||
 	    sl_fcmh_lookup(dcup->dcu_dce->dce_pfd->pfd_ino, FGEN_ANY,
 	    FIDC_LOOKUP_LOCK, &c, pfr)) {
@@ -3111,7 +3114,15 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 		if (busied)
 			FCMH_UNBUSY(c);
 
-		/*
+#if 0
+		/* 
+		 * 07/30/2016: I hit a three task hang again with the following stack
+		 * in my self build test:
+		 *
+ 		 * fuse_dev_write --> fuse_dev_do_write --> fuse_reverse_inval_entry
+ 		 *
+ 		 * So I disable for now.
+		 *
 		 * If permissions changed for a directory, we need to
 		 * specifically invalidate all entries under the dir
 		 * from the cache in the kernel, otherwise there will be
@@ -3135,6 +3146,7 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 			    &mdie);
 			OPSTAT_INCR("msl.dircache-walk-end");
 		}
+#endif
 
 		fcmh_op_done(c);
 	}

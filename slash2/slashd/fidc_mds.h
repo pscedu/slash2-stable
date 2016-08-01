@@ -102,10 +102,7 @@ struct fcmh_mds_info {
 
 int	_mds_fcmh_setattr(int, struct fidc_membh *, int, const struct srt_stat *, int);
 
-#define slm_fcmh_endow(vfsid, p, c)			_slm_fcmh_endow((vfsid), (p), (c), 1)
-#define slm_fcmh_endow_nolog(vfsid, p, c)		_slm_fcmh_endow((vfsid), (p), (c), 0)
-
-int	_slm_fcmh_endow(int, struct fidc_membh *, struct fidc_membh *, int);
+int	slm_fcmh_endow(int, struct fidc_membh *, struct fidc_membh *);
 
 int	slfid_to_vfsid(slfid_t, int *);
 
@@ -125,15 +122,6 @@ fcmh_2_repl(struct fidc_membh *f, int idx)
 		return (fcmh_2_ino(f)->ino_repls[idx].bs_id);
 	mds_inox_ensure_loaded(fcmh_2_inoh(f));
 	return (fcmh_2_inox(f)->inox_repls[idx - SL_DEF_REPLICAS].bs_id);
-}
-
-static __inline uint64_t
-fcmh_2_repl_nblks(struct fidc_membh *f, int idx)
-{
-	if (idx < SL_DEF_REPLICAS)
-		return (fcmh_2_ino(f)->ino_repl_nblks[idx]);
-	mds_inox_ensure_loaded(fcmh_2_inoh(f));
-	return (fcmh_2_inox(f)->inox_repl_nblks[idx - SL_DEF_REPLICAS]);
 }
 
 static __inline void

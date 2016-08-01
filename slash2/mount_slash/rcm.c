@@ -86,20 +86,27 @@ msrcm_handle_getreplst(struct pscrpc_request *rq)
 	struct msctl_replstq *mrsq;
 	struct psc_ctlmsghdr mh;
 	struct sl_resource *res;
-	int rc, n;
+	int n;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
 
-	psclog_diag("Handle GETREPLST: id = %d, rc = %d", mq->id, mq->rc);
 	mrsq = mrsq_lookup(mq->id);
-	if (mrsq == NULL)
-		return (0);
+	if (mrsq == NULL) {
+		psclog_warnx("Handle GETREPLST: id = %d, rc = %d", 
+		    mq->id, mq->rc);
+		mp->rc = -PFLERR_CANCELED;
+		return (mp->rc);
+	}
 
 	mh = *mrsq->mrsq_mh;
 
 	mrs.mrs_fid = mq->fg.fg_fid;
 
 	if (mq->rc) {
+		/* XXX no need to send msctl an EOF message? */
+		if (mq->rc != EOF)
+			psclog_warnx("release: mrsq@%p: id=%d, rc=%d", 
+			    mrsq, mp->id, mq->rc);
 		mrsq_release(mrsq, mq->rc);
 		return (0);
 	}
@@ -116,8 +123,12 @@ msrcm_handle_getreplst(struct pscrpc_request *rq)
 			    "<unknown IOS %#x>",
 			    mq->repls[n].bs_id);
 	}
-	rc = psc_ctlmsg_sendv(mrsq->mrsq_fd, &mh, &mrs, mrsq->mrsq_fdlock);
-	mrsq_release(mrsq, rc ? 0 : EOF);
+	(void) psc_ctlmsg_sendv(mrsq->mrsq_fd, &mh, &mrs, mrsq->mrsq_fdlock);
+	/*
+ 	 * We used to call mrsq_release() here. And if msctl exits for some
+ 	 * reason (e.g., files are moved), we are going to drop the mrsq,
+ 	 * causing a lot of PFLERR_CANCELED later.
+ 	 */
 	return (0);
 }
 
@@ -134,17 +145,14 @@ msrcm_handle_getreplst_slave(struct pscrpc_request *rq)
 	struct srm_replst_slave_rep *mp;
 	struct msctl_replstq *mrsq;
 	struct iovec iov;
-	int rc;
+	int rc, level;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
-	rc = mq->rc;
-	if (rc == EOF)
-		rc = 0;
-
-	psclog_diag("Handle GETREPLST_SLAVE: id = %d, rc = %d", mq->id, rc);
 
 	mrsq = mrsq_lookup(mq->id);
 	if (mrsq == NULL) {
+		psclog_warnx("Handle GETREPLST_SLAVE: id = %d, rc = %d", 
+		    mq->id, mq->rc);
 		mp->rc = -PFLERR_CANCELED;
 		return (mp->rc);
 	}
@@ -176,7 +184,8 @@ msrcm_handle_getreplst_slave(struct pscrpc_request *rq)
 	}
 
  out:
-	mrsq_release(mrsq, rc);
+	level = (mq->rc && mq->rc != EOF) ? PLL_WARN : PLL_DIAG;
+	psclog(level, "Handle GETREPLST_SLAVE: id = %d, rc = %d", mq->id, mq->rc);
 	PSCFREE(mrsl);
 	return (mp->rc);
 }

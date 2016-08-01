@@ -90,6 +90,9 @@ mds_bmap_exists(struct fidc_membh *f, sl_bmapno_t n)
 	return (n < nb);
 }
 
+/*
+ * Calculate the number of valid bytes in the bmap.
+ */
 int64_t
 slm_bmap_calc_repltraffic(struct bmap *b)
 {
@@ -550,7 +553,8 @@ mds_bmap_add_repl(struct bmap *b, struct bmap_ios_assign *bia)
 		return (iosidx);
 	}
 
-//	BMAP_WAIT_BUSY(b);
+	BMAP_LOCK(b);
+	bmap_wait_locked(b, b->bcm_flags & BMAPF_REPLMODWR);
 
 	/*
  	 * Here we assign a bmap as VALID even before a single byte
@@ -559,7 +563,7 @@ mds_bmap_add_repl(struct bmap *b, struct bmap_ios_assign *bia)
 	rc = mds_repl_inv_except(b, iosidx, 0);
 	if (rc) {
 		DEBUG_BMAP(PLL_ERROR, b, "mds_repl_inv_except() failed");
-		BMAP_UNBUSY(b);
+		BMAP_ULOCK(b);
 		FCMH_UNBUSY(f);
 		return (rc);
 	}
@@ -574,7 +578,7 @@ mds_bmap_add_repl(struct bmap *b, struct bmap_ios_assign *bia)
 
 	mdslogfill_bmap_repls(b, &sjar->sjar_rep);
 
-	BMAP_UNBUSY(b);
+	BMAP_ULOCK(b);
 	FCMH_UNBUSY(f);
 
 	sjar->sjar_flags |= SLJ_ASSIGN_REP_REP;
@@ -1226,8 +1230,18 @@ mds_bmap_bml_release(struct bmap_mds_lease *bml)
 
 			pfl_odt_getitem(slm_bia_odt,
 			    bmi->bmi_assign, &bia);
-			psc_assert(bia->bia_seq == bmi->bmi_seq);
+
 			psc_assert(bia->bia_bmapno == b->bcm_bmapno);
+			/*
+ 			 * Hit crash with bmapno of 13577, bia_bmapno = 336169404,
+ 			 * bmi_seq = -1, and bml_flags = 101000010.
+ 			 */
+			if (bia->bia_seq !=  bmi->bmi_seq) {
+				psclog_warnx("Mismatch seqno: %ld vs. %ld, "
+				     "bno = %d, fid = "SLPRI_FID,
+				     bia->bia_seq, bmi->bmi_seq, 
+				     b->bcm_bmapno, fcmh_2_fid(f)); 
+			}
 
 			pfl_odt_freebuf(slm_bia_odt, bia, NULL);
 
@@ -1247,6 +1261,12 @@ mds_bmap_bml_release(struct bmap_mds_lease *bml)
 		brepls_init(retifset, 0);
 		retifset[BREPLST_REPL_QUEUED] = 1;
 		retifset[BREPLST_TRUNCPNDG] = 1;
+
+		BMAP_ULOCK(b);
+		FCMH_WAIT_BUSY(f);
+	
+		BMAP_LOCK(b);
+		bmap_wait_locked(b, b->bcm_flags & BMAPF_REPLMODWR);
 		if (mds_repl_bmap_walk_all(b, NULL, retifset,
 		    REPL_WALKF_SCIRCUIT)) {
 			struct slm_update_data *upd;
@@ -1254,32 +1274,19 @@ mds_bmap_bml_release(struct bmap_mds_lease *bml)
 
 			if (fcmh_2_nrepls(f) > SL_DEF_REPLICAS)
 				mds_inox_ensure_loaded(fcmh_2_inoh(f));
-
-			psc_assert(!FCMH_HAS_LOCK(f));
-
-			if (!FCMH_HAS_BUSY(f))
-				BMAP_ULOCK(b);
-			FCMH_WAIT_BUSY(f);
-			FCMH_ULOCK(f);
-			BMAP_WAIT_BUSY(b);
-			BMAPOD_RDLOCK(bmi);
-
 			brepls_init(qifset, 0);
 			qifset[BREPLST_REPL_QUEUED] = 1;
 			qifset[BREPLST_TRUNCPNDG] = 1;
 
 			upd = &bmi->bmi_upd;
-			UPD_WAIT(upd);
 			if (mds_repl_bmap_walk_all(b, NULL, qifset,
 			    REPL_WALKF_SCIRCUIT))
 				upsch_enqueue(upd);
-			UPD_UNBUSY(upd);
-			BMAPOD_ULOCK(bmi);
-			BMAP_UNBUSY(b);
-			FCMH_UNBUSY(f);
-
-			BMAP_LOCK(b);
 		}
+
+		BMAP_ULOCK(b);
+		FCMH_UNBUSY(f);
+		BMAP_LOCK(b);
 	}
 
  out:
@@ -1607,6 +1614,11 @@ mds_bmap_crc_write(struct srt_bmap_crcup *c, sl_ios_id_t iosid,
 	/* Call the journal and update the in-memory CRCs. */
 	rc = mds_bmap_crc_update(bmap, iosid, c);
 
+	/* Signify that the update has occurred. */
+	BMAP_LOCK(bmap);
+	bmap->bcm_flags &= ~BMAPF_CRC_UP;
+	BMAP_ULOCK(bmap);
+
 	/*
 	 * As a security precaution, most systems disable setuid or
 	 * setgid when a file is modified by nonsuperuser.  Since
@@ -1681,28 +1693,6 @@ mds_bmap_loadvalid(struct fidc_membh *f, sl_bmapno_t bmapno,
 	 */
 	bmap_op_done(b);
 	return (SLERR_BMAP_ZERO);
-}
-
-int
-mds_bmap_load_fg(const struct sl_fidgen *fg, sl_bmapno_t bmapno,
-    struct bmap **bp)
-{
-	struct fidc_membh *f;
-	struct bmap *b;
-	int rc = 0;
-
-	psc_assert(*bp == NULL);
-
-	rc = slm_fcmh_peek(fg, &f);
-	if (rc)
-		return (rc);
-
-	rc = bmap_get(f, bmapno, SL_WRITE, &b);
-	if (rc == 0)
-		*bp = b;
-
-	fcmh_op_done(f);
-	return (rc);
 }
 
 void
@@ -2166,8 +2156,9 @@ slm_ptrunc_apply(struct fidc_membh *f)
 		BHGEN_INCREMENT(b);
 		ret = mds_repl_bmap_walkcb(b, tract, NULL, 0,
 		    NULL, NULL);
-		if (ret)
+		if (ret) {
 			mds_bmap_write_logrepls(b);
+		}
 		bmap_op_done(b);
 	}
 
@@ -2362,6 +2353,7 @@ _dbdo(const struct pfl_callerinfo *pci,
 			check = 1;
 		}
 
+		/* see slmbkdbthr_main() on how we back the database */
 		if (rc != SQLITE_OK) {
 			psc_assert(slm_opstate == SLM_OPSTATE_REPLAY);
 

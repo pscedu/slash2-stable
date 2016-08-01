@@ -71,7 +71,7 @@ struct sl_mds_iosinfo	 slm_null_iosinfo = {
  * Max number of allowable bandwidth units (BW_UNITSZ) in any sliod's
  * bwqueue.
  */
-int slm_bwqueuesz = 8 * 32 * 1024;
+int slm_upsch_bandwidth = 8 * 32;
 
 __static int
 iosidx_cmp(const void *a, const void *b)
@@ -97,20 +97,6 @@ iosidx_in(int idx, const int *iosidx, int nios)
 		return (1);
 	return (0);
 }
-
-void
-_slm_repl_bmap_rel_type(struct bmap *b, int type)
-{
-	if (BMAPOD_HASWRLOCK(bmap_2_bmi(b)) &&
-	    !(b->bcm_flags & BMAPF_REPLMODWR)) {
-		/* we took a write lock but did not modify; undo */
-		BMAPOD_MODIFY_DONE(b, 0);
-		BMAP_UNBUSY(b);
-		FCMH_UNBUSY(b->bcm_fcmh);
-	}
-	bmap_op_done_type(b, type);
-}
-
 
 /*
  * Return the index of the given IOS ID or a negative error code on failure.
@@ -143,7 +129,7 @@ _mds_repl_ios_lookup(int vfsid, struct slash_inode_handle *ih,
 
 	/*
  	 * Can I assume that IOS ID are non-zeros.  If so, I can use
- 	 * it to mark a free slots.  See sl_global_id_build().
+ 	 * zero to mark a free slot.  See sl_global_id_build().
  	 */
 	f = inoh_2_fcmh(ih);
 	nr = ih->inoh_ino.ino_nrepls;
@@ -293,11 +279,11 @@ _mds_repl_ios_lookup(int vfsid, struct slash_inode_handle *ih,
 
 		ih->inoh_ino.ino_nrepls = nr + 1;
 		rc = mds_inodes_odsync(vfsid, f, mdslog_ino_repls);
-		if (rc)
-			goto out;
 
 		FCMH_UREQ_BUSY(f, wasbusy, waslk);
 
+		if (rc)
+			goto out;
 		rc = i;
 	}
 
@@ -363,60 +349,22 @@ mds_brepls_check(uint8_t *repls, int nr)
  * @cbf: callback routine for more detailed processing.
  * @cbarg: argument to callback.
  *
- * Notes: the locks are acquired in the following order:
- *	(*) FCMH_BUSY
- *	(*) BMAPF_BUSY
- *	(*) BMAPOD_WRLOCK
  */
 int
 _mds_repl_bmap_apply(struct bmap *b, const int *tract,
     const int *retifset, int flags, int off, int *scircuit,
     brepl_walkcb_t cbf, void *cbarg)
 {
-	int locked = 0, unlock = 0, relock = 0, val, rc = 0, dummy;
+	int val, rc = 0;
 	struct bmap_mds_info *bmi = bmap_2_bmi(b);
 	struct fidc_membh *f = b->bcm_fcmh;
 
+	FCMH_BUSY_ENSURE(f);
+	BMAP_LOCK_ENSURE(b);
+	psc_assert((b->bcm_flags & BMAPF_REPLMODWR) == 0);
 	if (tract) {
-		if (BMAPOD_HASWRLOCK(bmi))
-			FCMH_BUSY_ENSURE(f);
-
-		if (FCMH_HAS_BUSY(f)) {
-			if (FCMH_HAS_LOCK(f))
-				FCMH_ULOCK(f);
-		} else {
-			if (BMAP_HASLOCK(b)) {
-				locked = 1;
-				BMAP_ULOCK(b);
-			}
-			(void)FCMH_REQ_BUSY(f, &dummy);
-			FCMH_ULOCK(f);
-			if (locked)
-				BMAP_LOCK(b);
-		}
-
-		if (BMAPOD_HASWRLOCK(bmi)) {
-			BMAP_LOCK(b);
-			BMAP_BUSY_ENSURE(b);
-			psc_assert((b->bcm_flags &
-			    BMAPF_REPLMODWR) == 0);
-			BMAP_ULOCK(b);
-		} else {
-			BMAP_WAIT_BUSY(b);
-			psc_assert((b->bcm_flags &
-			    BMAPF_REPLMODWR) == 0);
-			BMAP_ULOCK(b);
-			/* grab write lock on bmi */
-			BMAPOD_MODIFY_START(b);
-			memcpy(bmi->bmi_orepls, bmi->bmi_repls,
-			    sizeof(bmi->bmi_orepls));
-		}
-	} else if (!BMAPOD_HASWRLOCK(bmi) && !BMAPOD_HASRDLOCK(bmi)) {
-		relock = BMAP_HASLOCK(b);
-		BMAP_WAIT_BUSY(b);
-		BMAPOD_RDLOCK(bmi);
-		BMAP_UNBUSY(b);
-		unlock = 1;
+		memcpy(bmi->bmi_orepls, bmi->bmi_repls,
+		    sizeof(bmi->bmi_orepls));
 	}
 
 	if (scircuit)
@@ -428,8 +376,10 @@ _mds_repl_bmap_apply(struct bmap *b, const int *tract,
 	val = SL_REPL_GET_BMAP_IOS_STAT(bmi->bmi_repls, off);
 
 	if (val >= NBREPLST)
-		psc_fatalx("corrupt bmap");
+		psc_fatalx("corrupt bmap, val = %d, bno = %d, fid="SLPRI_FID,
+			 val, b->bcm_bmapno, fcmh_2_fid(b->bcm_fcmh));
 
+	/* callback can be used to track if we did make any changes */
 	if (cbf)
 		cbf(b, off / SL_BITS_PER_REPLICA, val, cbarg);
 
@@ -442,7 +392,7 @@ _mds_repl_bmap_apply(struct bmap *b, const int *tract,
 		}
 	}
 
-	/* apply any translations */
+	/* apply any translations - this must be done after retifset */
 	if (tract && tract[val] != -1) {
 		DEBUG_BMAPOD(PLL_DEBUG, b, "before modification");
 		SL_REPL_SET_BMAP_IOS_STAT(bmi->bmi_repls, off,
@@ -451,10 +401,6 @@ _mds_repl_bmap_apply(struct bmap *b, const int *tract,
 	}
 
  out:
-	if (unlock)
-		BMAPOD_ULOCK(bmi);
-	if (relock)
-		BMAP_LOCK(b);
 	return (rc);
 }
 
@@ -485,15 +431,17 @@ _mds_repl_bmap_walk(struct bmap *b, const int *tract,
 	scircuit = rc = 0;
 
 	/* 
-	 * ((struct fcmh_mds_info *)(b->bcm_fcmh + 1))->
-	 * fmi_inodeh.inoh_ino.ino_nrepls 
+ 	 * gdb help:
+ 	 *
+	 * ((struct fcmh_mds_info *)
+	 * (b->bcm_fcmh + 1))->fmi_inodeh.inoh_ino.ino_nrepls 
 	 *
  	 * ((struct bmap_mds_info*)(b+1))->bmi_corestate.bcs_repls
  	 *
 	 */ 
 	nr = fcmh_2_nrepls(b->bcm_fcmh);
 
-	if (nios == 0)
+	if (nios == 0) {
 		/* no one specified; apply to all */
 		for (k = 0, off = 0; k < nr;
 		    k++, off += SL_BITS_PER_REPLICA) {
@@ -504,7 +452,9 @@ _mds_repl_bmap_walk(struct bmap *b, const int *tract,
 			if (scircuit)
 				break;
 		}
-	else if (flags & REPL_WALKF_MODOTH) {
+		return (rc);
+	}
+	if (flags & REPL_WALKF_MODOTH) {
 		/* modify sites all sites except those specified */
 		for (k = 0, off = 0; k < nr; k++,
 		    off += SL_BITS_PER_REPLICA)
@@ -517,17 +467,19 @@ _mds_repl_bmap_walk(struct bmap *b, const int *tract,
 				if (scircuit)
 					break;
 			}
-	} else
-		/* modify only the sites specified */
-		for (k = 0; k < nios; k++) {
-			trc = _mds_repl_bmap_apply(b, tract, retifset,
-			    flags, iosidx[k] * SL_BITS_PER_REPLICA,
-			    &scircuit, cbf, cbarg);
-			if (trc)
-				rc = trc;
-			if (scircuit)
-				break;
-		}
+		return (rc);
+	} 
+
+	/* modify only the sites specified */
+	for (k = 0; k < nios; k++) {
+		trc = _mds_repl_bmap_apply(b, tract, retifset,
+		    flags, iosidx[k] * SL_BITS_PER_REPLICA,
+		    &scircuit, cbf, cbarg);
+		if (trc)
+			rc = trc;
+		if (scircuit)
+			break;
+	}
 
 	return (rc);
 }
@@ -593,7 +545,7 @@ mds_repl_inv_except(struct bmap *b, int iosidx, int defer)
 		    "fid="SLPRI_FID" bmap=%d iosidx=%d state=%d",
 		    fcmh_2_fid(b->bcm_fcmh), b->bcm_bmapno, iosidx, rc);
 
-	BHREPL_POLICY_GET(b, &policy);
+	policy = bmap_2_replpol(b);
 
 	/*
 	 * Invalidate all other replicas.
@@ -647,28 +599,19 @@ slm_repl_upd_write(struct bmap *b, int rel)
 		char		*stat[SL_MAX_REPLICAS];
 		unsigned	 nios;
 	} add, del, chg;
-	int locked, off, vold, vnew, sprio, uprio, rc;
-	struct slm_update_data *upd;
+
+	int off, vold, vnew, sprio, uprio, rc;
 	struct sl_mds_iosinfo *si;
 	struct bmap_mds_info *bmi;
 	struct fidc_membh *f;
 	struct sl_resource *r;
 	sl_ios_id_t resid;
-	pthread_t pthr;
 	unsigned n;
 
 	bmi = bmap_2_bmi(b);
-	upd = &bmi->bmi_upd;
 	f = b->bcm_fcmh;
 	sprio = bmi->bmi_sys_prio;
 	uprio = bmi->bmi_usr_prio;
-
-	/* Transfer ownership to us. */
-	pthr = pthread_self();
-	f->fcmh_owner = pthr;
-	b->bcm_owner = pthr;
-
-	locked = BMAPOD_READ_START(b);
 
 	memset(&chg, 0, sizeof(chg));
 
@@ -733,11 +676,12 @@ slm_repl_upd_write(struct bmap *b, int rel)
 	for (n = 0; n < add.nios; n++) {
 		rc = slm_upsch_insert(b, add.iosv[n].bs_id, sprio,
 		    uprio);
-		if (rc)
-			DEBUG_BMAPOD(PLL_WARN, b,
-			    "unable to insert into upsch database; "
-			    "ios=%#x rc=%d",
-			    add.iosv[n].bs_id, rc);
+		if (!rc)
+			continue;
+		psclog_warnx("upsch insert failed: bno = %d, "
+		    "fid=%"PRId64", ios= %d, rc = %d",
+		    b->bcm_bmapno, bmap_2_fid(b), 
+		    add.iosv[n].bs_id, rc);
 	}
 
 	for (n = 0; n < del.nios; n++)
@@ -773,17 +717,9 @@ slm_repl_upd_write(struct bmap *b, int rel)
 	bmap_2_bmi(b)->bmi_usr_prio = -1;
 
 	if (rel) {
-		BMAPOD_READ_DONE(b, locked);
-
-		/* hit crash on busy from mds_replay_bmap_assign() */
-		FCMH_UNBUSY(b->bcm_fcmh);
-
 		BMAP_LOCK(b);
 		b->bcm_flags &= ~BMAPF_REPLMODWR;
-		BMAP_UNBUSY(b);
-
-		UPD_UNBUSY(upd);
-
+		bmap_wake_locked(b);
 		bmap_op_done_type(b, BMAP_OPCNT_WORK);
 	}
 }
@@ -879,24 +815,28 @@ mds_repl_addrq(const struct sl_fidgen *fgp, sl_bmapno_t bmapno,
 	/* Wildcards shouldn't result in errors on zero-length files. */
 	if (*nbmaps != (sl_bmapno_t)-1)
 		rc = -SLERR_BMAP_INVALID;
+
+	FCMH_WAIT_BUSY(f);
 	for (; *nbmaps && bmapno < fcmh_nvalidbmaps(f);
 	    bmapno++, --*nbmaps, nbmaps_processed++) {
-		if (nbmaps_processed >= SLM_REPLRQ_NBMAPS_MAX)
-			PFL_GOTOERR(out, rc = -PFLERR_WOULDBLOCK);
+
+		if (nbmaps_processed >= SLM_REPLRQ_NBMAPS_MAX) {
+			rc = -PFLERR_WOULDBLOCK;
+			break;
+		}
 
 		rc = -bmap_get(f, bmapno, SL_WRITE, &b);
 		if (rc) {
-			if (rc == -SLERR_BMAP_ZERO) {
+			if (rc == -SLERR_BMAP_ZERO)
 				rc = 0;
-				break;
-			}
-			PFL_GOTOERR(out, rc);
+			break;
 		}
 
 		/*
 		 * If no VALID replicas exist, the bmap must be
 		 * uninitialized/all zeroes; skip it.
 		 */
+		bmap_wait_locked(b, b->bcm_flags & BMAPF_REPLMODWR);
 		if (mds_repl_bmap_walk_all(b, NULL, ret_hasvalid,
 		    REPL_WALKF_SCIRCUIT) == 0) {
 			bmap_op_done(b);
@@ -911,6 +851,8 @@ mds_repl_addrq(const struct sl_fidgen *fgp, sl_bmapno_t bmapno,
 		flags = 0;
 		_mds_repl_bmap_walk(b, tract, NULL, 0, iosidx, nios,
 		    slm_repl_addrq_cb, &flags);
+
+		/* both default to -1 in parse_replrq() */
 		bmap_2_bmi(b)->bmi_sys_prio = sys_prio;
 		bmap_2_bmi(b)->bmi_usr_prio = usr_prio;
 		if (flags & FLAG_DIRTY) {
@@ -918,22 +860,32 @@ mds_repl_addrq(const struct sl_fidgen *fgp, sl_bmapno_t bmapno,
 
 			upd = &bmap_2_bmi(b)->bmi_upd;
 			if (pfl_memchk(upd, 0, sizeof(*upd)) == 1) {
+				/*
+ 				 * This should not happen, because
+ 				 * we init it when the bmap was read
+ 				 * for the first time.
+ 				 */
 				upd_init(upd, UPDT_BMAP);
 			} else {
-				UPD_WAIT(upd);
+				spinlock(&upd->upd_lock);
 				upd->upd_flags |= UPDF_BUSY;
 				upd->upd_owner = pthread_self();
-				UPD_ULOCK(upd);
+				psc_waitq_wakeall(&upd->upd_waitq);
+				freelock(&upd->upd_lock);
 			}
 			mds_bmap_write_logrepls(b);
+			spinlock(&upd->upd_lock);
 			UPD_UNBUSY(upd);
 		} else if (sys_prio != -1 || usr_prio != -1)
 			slm_repl_upd_write(b, 0);
-		slm_repl_bmap_rel(b);
-		if (flags & FLAG_REPLICA_STATE_INVALID)
-			PFL_GOTOERR(out,
-			    rc = -SLERR_REPLICA_STATE_INVALID);
+
+		bmap_op_done_type(b, BMAP_OPCNT_LOOKUP);
+		if (flags & FLAG_REPLICA_STATE_INVALID) {
+			rc = -SLERR_REPLICA_STATE_INVALID;
+			break;
+		}
 	}
+	FCMH_UNBUSY(f);
 
  out:
 	if (f)
@@ -1015,6 +967,7 @@ mds_repl_delrq(const struct sl_fidgen *fgp, sl_bmapno_t bmapno,
 	if (rc)
 		return (-rc);
 
+	FCMH_WAIT_BUSY(f);
 	if (fcmh_isdir(f))
 		flags = IOSV_LOOKUPF_DEL;
 
@@ -1066,25 +1019,28 @@ mds_repl_delrq(const struct sl_fidgen *fgp, sl_bmapno_t bmapno,
 		flags = 0;
 		rc = _mds_repl_bmap_walk(b, tract, NULL, 0, iosidx,
 		    nios, slm_repl_delrq_cb, &flags);
-		if (flags & FLAG_DIRTY)
+		if (flags & FLAG_DIRTY) {
 			mds_bmap_write_logrepls(b);
+		}
 
  bmap_done:
-		slm_repl_bmap_rel(b);
+		bmap_op_done_type(b, BMAP_OPCNT_LOOKUP);
 		if (flags & FLAG_REPLICA_STATE_INVALID)
 			PFL_GOTOERR(out,
 			    rc = -SLERR_REPLICA_STATE_INVALID);
 	}
 
  out:
-	if (f)
+	if (f) {
+		FCMH_UNBUSY(f);
 		fcmh_op_done(f);
+	}
 	*nbmaps = nbmaps_processed;
 	return (rc);
 }
 
 #define HAS_BW(bwd, amt)						\
-	((bwd)->bwd_queued + (bwd)->bwd_inflight < slm_bwqueuesz)
+	((bwd)->bwd_queued + (bwd)->bwd_inflight < slm_upsch_bandwidth * 1024)
 
 #define ADJ_BW(bwd, amt)						\
 	do {								\
@@ -1156,8 +1112,10 @@ resmpair_bw_adj(struct sl_resm *src, struct sl_resm *dst,
 		 * We released some bandwidth; wake anyone waiting for
 		 * some.
 		 */
+#if 0
 		CSVC_WAKE(src->resm_csvc);
 		CSVC_WAKE(dst->resm_csvc);
+#endif
 	}
 
 	RPMI_ULOCK(r_max);

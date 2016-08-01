@@ -92,6 +92,8 @@ slmrmcthr_replst_slave_fin(struct slrpc_cservice *csvc,
 	mq->len = nb;
 	mq->nbmaps = srcm->srcm_page_bitpos / (SL_BITS_PER_REPLICA *
 	    fcmh_2_nrepls(f) + SL_NBITS_REPLST_BHDR);
+
+	/* use piggyback or bulk transfer */
 	if (nb > sizeof(mq->buf)) {
 		iov.iov_base = srcm->srcm_page;
 		iov.iov_len = nb;
@@ -208,6 +210,8 @@ slmrcmthr_walk_bmaps(struct slm_replst_workreq *rsw,
 	int rc, rc2;
 
 	rc = slm_rcm_issue_getreplst(rsw, f);
+	if (rc)
+		return (rc);
 	if (fcmh_isreg(f)) {
 		for (n = 0; rc == 0; n++) {
 			/*
@@ -270,16 +274,17 @@ slmrcmthr_main(struct psc_thread *thr)
 
 	srcm = slmrcmthr(thr);
 	while (pscthr_run(thr)) {
+		/* handle requests for SRMT_REPL_GETST */
 		rsw = lc_getwait(&slm_replst_workq);
 		srcm->srcm_page_bitpos = SRM_REPLST_PAGESIZ * NBBY;
 
 		if (rsw->rsw_fg.fg_fid == FID_ANY) {
 			OPSTAT_INCR("replst-all");
-
-			UPSCH_LOCK();
+			
+			spinlock(&slm_upsch_lock);
 			dbdo(slmrcmthr_walk, &da,
 			    "SELECT DISTINCT fid FROM upsch");
-			UPSCH_ULOCK();
+			freelock(&slm_upsch_lock);
 
 			DYNARRAY_FOREACH(p, n, &da) {
 				fg.fg_fid = (slfid_t)p;
@@ -299,6 +304,7 @@ slmrcmthr_main(struct psc_thread *thr)
 		/* signal EOF */
 		slm_rcm_issue_getreplst(rsw, NULL);
 
+		/* XXX if we failed above, client will never know */
 		sl_csvc_decref(rsw->rsw_csvc);
 		psc_pool_return(slm_repl_status_pool, rsw);
 		psc_dynarray_reset(&da);

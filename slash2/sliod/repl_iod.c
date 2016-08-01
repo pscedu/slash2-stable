@@ -59,9 +59,8 @@ struct psc_poolmgr	*sli_replwkrq_pool;
 struct psc_listcache	 sli_replwkq_pending;
 
 /* and all registered replication requests are listed here */
-struct psc_lockedlist	 sli_replwkq_active =
-    PLL_INIT(&sli_replwkq_active, struct sli_repl_workrq,
-	    srw_active_lentry);
+struct psc_lockedlist	 sli_replwkq_active = 
+    PLL_INIT(&sli_replwkq_active, struct sli_repl_workrq, srw_active_lentry);
 
 struct sli_repl_workrq *
 sli_repl_findwq(const struct sl_fidgen *fgp, sl_bmapno_t bmapno)
@@ -120,17 +119,18 @@ sli_repl_addwk(struct slrpc_batch_rep *bp, void *req, void *rep)
 	struct bmap_iod_info *bii;
 	struct bmap *b = NULL;
 	size_t len;
-	int error, i;
+	int rc, i;
 
+	rc = 0;
 	if (q->fg.fg_fid == FID_ANY)
-		PFL_GOTOERR(out, error = EINVAL);
+		PFL_GOTOERR(out, rc = EINVAL);
 	if (q->len < 1 || q->len > SLASH_BMAP_SIZE)
-		PFL_GOTOERR(out, error = EINVAL);
+		PFL_GOTOERR(out, rc = EINVAL);
 
 	if (q->src_resid != IOS_ID_ANY) {
 		res = libsl_id2res(q->src_resid);
 		if (res == NULL)
-			PFL_GOTOERR(out, error = SLERR_ION_UNKNOWN);
+			PFL_GOTOERR(out, rc = SLERR_ION_UNKNOWN);
 	}
 
 	/*
@@ -138,15 +138,17 @@ sli_repl_addwk(struct slrpc_batch_rep *bp, void *req, void *rep)
 	 * crashes, comes back online, and assigns gratuitous requeue
 	 * work.
 	 */
-	if (sli_repl_findwq(&q->fg, q->bno))
-		PFL_GOTOERR(out, error = PFLERR_ALREADY);
+	if (sli_repl_findwq(&q->fg, q->bno)) {
+		OPSTAT_INCR("repl-already-queued");
+		PFL_GOTOERR(out, rc = PFLERR_ALREADY);
+	}
 
-	error = sli_fcmh_get(&q->fg, &f);
-	if (error)
-		PFL_GOTOERR(out, error);
-	error = bmap_get(f, q->bno, SL_READ, &b);
-	if (error)
-		PFL_GOTOERR(out, error);
+	rc = sli_fcmh_get(&q->fg, &f);
+	if (rc)
+		PFL_GOTOERR(out, rc);
+	rc = bmap_get(f, q->bno, SL_READ, &b);
+	if (rc)
+		PFL_GOTOERR(out, rc);
 
 	/*
 	 * If the MDS asks us to replicate a sliver, I do not
@@ -155,7 +157,7 @@ sli_repl_addwk(struct slrpc_batch_rep *bp, void *req, void *rep)
 	if (!sli_has_enough_space(f, q->bno, q->bno * SLASH_BMAP_SIZE,
 	    q->len)) {
 		OPSTAT_INCR("repl-out-of-space");
-		PFL_GOTOERR(out, error = ENOSPC);
+		PFL_GOTOERR(out, rc = ENOSPC);
 	}
 
 	w = psc_pool_get(sli_replwkrq_pool);
@@ -190,12 +192,14 @@ sli_repl_addwk(struct slrpc_batch_rep *bp, void *req, void *rep)
 	PFLOG_REPLWK(PLL_DEBUG, w, "created; #slivers=%d",
 	    w->srw_nslvr_tot);
 
+	/* for sli_repl_findwq() to detect duplicate request */
 	pll_add(&sli_replwkq_active, w);
+
+	/* for slireplpndthr_main() */
 	sli_replwk_queue(w);
 
  out:
-	if (error)
-		p->rc = error;
+	p->rc = rc;
 	if (b)
 		bmap_op_done(b);
 	if (f)
@@ -206,7 +210,7 @@ sli_repl_addwk(struct slrpc_batch_rep *bp, void *req, void *rep)
 void
 sli_replwkrq_decref(struct sli_repl_workrq *w, int rc)
 {
-	(void)reqlock(&w->srw_lock);
+	spinlock(&w->srw_lock);
 
 	rc = pflrpc_portable_errno(rc);
 
@@ -239,9 +243,7 @@ sli_replwkrq_decref(struct sli_repl_workrq *w, int rc)
 void
 sli_replwk_queue(struct sli_repl_workrq *w)
 {
-	int locked;
-
-	locked = LIST_CACHE_RLOCK(&sli_replwkq_pending);
+	LIST_CACHE_LOCK(&sli_replwkq_pending);
 	spinlock(&w->srw_lock);
 	if (!lc_conjoint(&sli_replwkq_pending, w)) {
 		psc_atomic32_inc(&w->srw_refcnt);
@@ -249,7 +251,7 @@ sli_replwk_queue(struct sli_repl_workrq *w)
 		lc_add(&sli_replwkq_pending, w);
 	}
 	freelock(&w->srw_lock);
-	LIST_CACHE_URLOCK(&sli_replwkq_pending, locked);
+	LIST_CACHE_ULOCK(&sli_replwkq_pending);
 }
 
 /*
@@ -259,16 +261,19 @@ void
 sli_repl_try_work(struct sli_repl_workrq *w,
     struct sli_repl_workrq **last)
 {
-	int rc, slvridx, slvrno = 0;
+	int rc, slvridx, slvrno;
 	struct slrpc_cservice *csvc;
 	struct bmap_iod_info *bii;
 	struct sl_resm *src_resm;
 
 	spinlock(&w->srw_lock);
-	if (w->srw_status)
-		goto release;
+	if (w->srw_status) {
+		freelock(&w->srw_lock);
+		goto out;
+	}
 
 	BMAP_LOCK(w->srw_bcm);
+	slvrno = 0;
 	bii = bmap_2_bii(w->srw_bcm);
 	while (slvrno < SLASH_SLVRS_PER_BMAP) {
 		if (bii->bii_crcstates[slvrno] & BMAP_SLVR_WANTREPL)
@@ -279,10 +284,11 @@ sli_repl_try_work(struct sli_repl_workrq *w,
 	if (slvrno == SLASH_SLVRS_PER_BMAP) {
 		BMAP_ULOCK(w->srw_bcm);
 		/* No work to do; we are done with this bmap. */
-		goto release;
+		freelock(&w->srw_lock);
+		goto out;
 	}
 
-	/* Find a pointer slot we can use to transmit the sliver. */
+	/* Find a free slot we can use to transmit the sliver. */
 	for (slvridx = 0; slvridx < nitems(w->srw_slvr); slvridx++)
 		if (w->srw_slvr[slvridx] == NULL)
 			break;
@@ -306,7 +312,7 @@ sli_repl_try_work(struct sli_repl_workrq *w,
 				*last = w;
 			LIST_CACHE_ULOCK(&sli_replwkq_pending);
 		}
-		goto release;
+		goto out;
 	}
 	*last = NULL;
 
@@ -321,6 +327,10 @@ sli_repl_try_work(struct sli_repl_workrq *w,
 	src_resm = psc_dynarray_getpos(&w->srw_src_res->res_members, 0);
 	csvc = sli_geticsvc(src_resm);
 
+	/*
+ 	 * We just take the work off the sli_replwkq_pending. Now we
+ 	 * are putting it back again?
+ 	 */
 	sli_replwk_queue(w);
 
 	if (csvc == NULL)
@@ -330,6 +340,7 @@ sli_repl_try_work(struct sli_repl_workrq *w,
 		sl_csvc_decref(csvc);
 	}
 	if (rc) {
+		OPSTAT_INCR("repl-ignore-error");
 		spinlock(&w->srw_lock);
 		w->srw_slvr[slvridx] = NULL;
 		BMAP_LOCK(w->srw_bcm);
@@ -339,7 +350,7 @@ sli_repl_try_work(struct sli_repl_workrq *w,
 		freelock(&w->srw_lock);
 	}
 
- release:
+ out:
 	sli_replwkrq_decref(w, 0);
 }
 
@@ -359,6 +370,8 @@ slireplpndthr_main(struct psc_thread *thr)
 void
 sli_repl_init(void)
 {
+	int i;
+
 	psc_poolmaster_init(&sli_replwkrq_poolmaster,
 	    struct sli_repl_workrq, srw_pending_lentry, PPMF_AUTO, 256,
 	    256, 0, NULL, "replwkrq");
@@ -367,5 +380,8 @@ sli_repl_init(void)
 	lc_reginit(&sli_replwkq_pending, struct sli_repl_workrq,
 	    srw_pending_lentry, "replwkpnd");
 
-	pscthr_init(SLITHRT_REPLPND, slireplpndthr_main, 0, "slireplpndthr");
+	for (i = 0; i < 1; i++) {
+		pscthr_init(SLITHRT_REPLPND, slireplpndthr_main, 0, 
+		    "slireplpndthr%d", i);
+	}
 }

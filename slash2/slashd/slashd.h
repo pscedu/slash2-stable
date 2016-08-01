@@ -252,7 +252,6 @@ struct resprof_mds_info {
 	struct pfl_mutex	  rpmi_mutex;
 	struct psc_dynarray	  rpmi_upschq;		/* updates queue */
 	struct psc_waitq	  rpmi_waitq;
-	struct psc_listcache	  rpmi_batchrqs;
 
 	/* rpmi_mds for peer MDS or rpmi_ios for IOS */
 	void			 *rpmi_info;
@@ -345,6 +344,7 @@ struct mio_rootnames {
 };
 
 #define SLM_NWORKER_THREADS	4
+#define SLM_NUPSCHED_THREADS	2
 
 enum {
 	SLM_OPSTATE_INIT = 0,

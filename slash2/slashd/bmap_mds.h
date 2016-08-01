@@ -74,7 +74,6 @@ struct bmap_mds_info {
 	int32_t			 bmi_writers;
 	int32_t			 bmi_readers;
 	int32_t			 bmi_diocb;		/* # of DIO downgrade RPCs inflight */
-	struct pfl_rwlock	 bmi_rwlock;		/* rwlock for modifying bmap contents */
 	struct slm_update_data	 bmi_upd;		/* data for upsch (replication engine) */
 
 	/*
@@ -105,14 +104,6 @@ struct bmap_mds_info {
 #define bmap_2_inoh(b)		fcmh_2_inoh((b)->bcm_fcmh)
 
 #define BMAPOD_CALLERINFO	PFL_CALLERINFOSS(SLSS_BMAP)
-#define BMAPOD_RDLOCK(bmi)	_pfl_rwlock_rdlock(BMAPOD_CALLERINFO, &(bmi)->bmi_rwlock)
-#define BMAPOD_REQRDLOCK(bmi)	_pfl_rwlock_reqrdlock(BMAPOD_CALLERINFO, &(bmi)->bmi_rwlock)
-#define BMAPOD_REQWRLOCK(bmi)	_pfl_rwlock_reqwrlock(BMAPOD_CALLERINFO, &(bmi)->bmi_rwlock)
-#define BMAPOD_HASRDLOCK(bmi)	 pfl_rwlock_hasrdlock(&(bmi)->bmi_rwlock)
-#define BMAPOD_HASWRLOCK(bmi)	 pfl_rwlock_haswrlock(&(bmi)->bmi_rwlock)
-#define BMAPOD_ULOCK(bmi)	_pfl_rwlock_unlock(BMAPOD_CALLERINFO, &(bmi)->bmi_rwlock)
-#define BMAPOD_UREQLOCK(bmi, l)	_pfl_rwlock_ureqlock(BMAPOD_CALLERINFO, &(bmi)->bmi_rwlock, (l))
-#define BMAPOD_WRLOCK(bmi)	_pfl_rwlock_wrlock(BMAPOD_CALLERINFO, &(bmi)->bmi_rwlock)
 
 static __inline struct bmap_mds_info *
 bmap_2_bmi(struct bmap *b)
@@ -120,46 +111,14 @@ bmap_2_bmi(struct bmap *b)
 	return (bmap_get_pri(b));
 }
 
-#define BMAPOD_MODIFY_START(b)	BMAPOD_REQWRLOCK(bmap_2_bmi(b))
-#define BMAPOD_MODIFY_DONE(b,w)	BMAPOD_UREQLOCK(bmap_2_bmi(b), (w))
-
-#define BMAPOD_READ_START(b)	BMAPOD_REQRDLOCK(bmap_2_bmi(b))
-#define BMAPOD_READ_DONE(b, lk)	BMAPOD_UREQLOCK(bmap_2_bmi(b), (lk))
-
-#define BHREPL_POLICY_SET(b, pol)					\
-	do {								\
-		int _lk;						\
-									\
-		_lk = BMAPOD_MODIFY_START(b);				\
-		bmap_2_replpol(b) = (pol);				\
-		BMAPOD_MODIFY_DONE((b), _lk);				\
-	} while (0)
-
-#define BHREPL_POLICY_GET(b, pol)					\
-	do {								\
-		int _lk;						\
-									\
-		_lk = BMAPOD_READ_START(b);				\
-		*(pol) = bmap_2_replpol(b);				\
-		BMAPOD_READ_DONE((b), _lk);				\
-	} while (0)
-
 #define BHGEN_INCREMENT(b)						\
 	do {								\
-		int _lk;						\
-									\
-		_lk = BMAPOD_MODIFY_START(b);				\
 		bmap_2_bgen(b)++;					\
-		BMAPOD_MODIFY_DONE((b), _lk);				\
 	} while (0)
 
 #define BHGEN_GET(b, bgen)						\
 	do {								\
-		int _lk;						\
-									\
-		_lk = BMAPOD_READ_START(b);				\
 		*(bgen) = bmap_2_bgen(b);				\
-		BMAPOD_READ_DONE((b), _lk);				\
 	} while (0)
 
 struct bmap_timeo_table {
@@ -185,7 +144,7 @@ struct bmap_timeo_table {
 
 struct bmap_mds_lease {
 	uint64_t		  bml_seq;
-	 int32_t		  bml_refcnt;
+	int32_t		  	  bml_refcnt;
 	sl_ios_id_t		  bml_ios;
 	lnet_process_id_t	  bml_cli_nidpid;
 	uint32_t		  bml_flags;
@@ -257,10 +216,7 @@ int	 mds_bmap_exists(struct fidc_membh *, sl_bmapno_t);
 int	 mds_bmap_load_cli(struct fidc_membh *, sl_bmapno_t, int, enum rw,
 	    sl_ios_id_t, struct srt_bmapdesc *, struct pscrpc_export *,
 	    uint8_t *, int);
-int	 mds_bmap_load_fg(const struct sl_fidgen *, sl_bmapno_t,
-	    struct bmap **);
-int	 mds_bmap_loadvalid(struct fidc_membh *, sl_bmapno_t,
-	    struct bmap **);
+int	 mds_bmap_loadvalid(struct fidc_membh *, sl_bmapno_t, struct bmap **);
 int	 mds_bmap_bml_chwrmode(struct bmap_mds_lease *, sl_ios_id_t);
 int	 mds_bmap_bml_release(struct bmap_mds_lease *);
 void	 mds_bmap_ensure_valid(struct bmap *);
