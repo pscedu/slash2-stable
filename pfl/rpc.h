@@ -597,7 +597,6 @@ void	 pscrpc_set_kill(struct pscrpc_request_set *);
 void	 pscrpc_set_destroy(struct pscrpc_request_set *);
 int	 pscrpc_set_finalize(struct pscrpc_request_set *, int, int);
 void	 pscrpc_set_init(struct pscrpc_request_set *);
-void	 pscrpc_set_remove_req(struct pscrpc_request_set *, struct pscrpc_request *);
 void	 pscrpc_set_remove_req_locked(struct pscrpc_request_set *, struct pscrpc_request *);
 int	 pscrpc_set_wait(struct pscrpc_request_set *);
 

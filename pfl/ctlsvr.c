@@ -738,6 +738,8 @@ psc_ctlparam_log_points(int fd, struct psc_ctlmsghdr *mh,
 }
 
 
+static long long max_rss;
+
 int
 psc_ctlparam_get_rss(int fd, struct psc_ctlmsghdr *mh,
     struct psc_ctlmsg_param *pcp, char **levels, int nlevels,
@@ -791,6 +793,9 @@ psc_ctlparam_get_rss(int fd, struct psc_ctlmsghdr *mh,
 		}
 	}
 	sscanf(line, "%lld ", &rss);
+
+	if (rss > max_rss)
+		max_rss = rss;
 
 	line = (char *)buf;
 	snprintf(line, sizeof(buf), "%lldkB", rss * 4);
@@ -1190,6 +1195,10 @@ psc_ctlparam_pool_handle(int fd, struct psc_ctlmsghdr *mh,
 				m->ppm_max = val;
 			if (m->ppm_max < 0)
 				m->ppm_max = 0;
+			/*
+ 			 * You need to lower min first if you want
+ 			 * to make max smaller than the current min.
+ 			 */
 			if (m->ppm_max && m->ppm_max < m->ppm_min)
 				m->ppm_max = m->ppm_min;
 			psc_pool_resize(m);
@@ -2462,7 +2471,7 @@ psc_ctlthr_spawn_listener(const char *ofn, int acthrtype)
  */
 void
 psc_ctlthr_main(const char *ofn, const struct psc_ctlop *ct, int nops,
-    int acthrtype)
+    int extra, int acthrtype)
 {
 	struct psc_thread *thr, *me;
 	struct psc_ctlacthr *pcat;
@@ -2481,10 +2490,13 @@ psc_ctlthr_main(const char *ofn, const struct psc_ctlop *ct, int nops,
 	pcd = &pcat->pcat_ctldata;
 	spinlock(&pcd->pcd_lock);
 
-#define PFL_CTL_NTHRS 4
-	for (i = 1; i < PFL_CTL_NTHRS; i++) {
+	/*
+ 	 * The main thread has already become a control thread. A total
+ 	 * of 3 control threads should be enough.
+ 	 */
+	for (i = 1; i < 3; i++) {
 		thr = pscthr_init(me->pscthr_type, psc_ctlthr_mainloop,
-		    sizeof(struct psc_ctlthr), "%.*sctlthr%d",
+		    sizeof(struct psc_ctlthr) + extra, "%.*sctlthr%d", 
 		    p - me->pscthr_name, me->pscthr_name, i);
 		pct = psc_ctlthr(thr);
 		pct->pct_ct = ct;

@@ -77,7 +77,7 @@ struct psc_lockedlist	pfl_journals = PLL_INIT(&pfl_journals,
 #define JIO_READ	0
 #define JIO_WRITE	1
 
-#define psc_journal_read(pj, p, len, off)			\	
+#define psc_journal_read(pj, p, len, off)			\
 	psc_journal_io((pj), (p), (len), (off), JIO_READ)
 
 #define psc_journal_write(pj, p, len, off)			\
@@ -260,6 +260,7 @@ pjournal_next_slot(struct psc_journal_xidhndl *xh)
 	if (++pj->pj_nextwrite == pj->pj_total) {
 		pj->pj_nextwrite = 0;
 		pj->pj_wraparound++;
+		OPSTAT_INCR("journal-wraparound");
 	}
 	psc_assert(pj->pj_resrv > 0);
 

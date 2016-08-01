@@ -230,8 +230,6 @@ postproc()
 	else
 		rm c/$prog.$id
 	fi
-
-	[ $ex -eq 0 ] && exit
 }
 
 cleanup()
@@ -302,6 +300,7 @@ vsleep()
 	# 30 seconds. Also, let us keep the old logic for reference.
 	#
 
+	echo restarting after 30 seconds...
 	sleep 30
 	return
  
@@ -437,5 +436,6 @@ preinit()
 {
 	if [ $testmail -eq 1 ]; then
 		postproc 0
+		exit
 	fi
 }

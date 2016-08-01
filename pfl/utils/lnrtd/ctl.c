@@ -48,6 +48,6 @@ lrctlthr_main(void)
 	psc_ctlparam_register("rlim", psc_ctlparam_rlim);
 	psc_ctlparam_register("run", psc_ctlparam_run);
 
-	psc_ctlthr_main(ctlsockfn, lrctlops, nitems(lrctlops),
+	psc_ctlthr_main(ctlsockfn, lrctlops, nitems(lrctlops), 0,
 	    LRTHRT_CTLAC);
 }
