@@ -1650,8 +1650,7 @@ pscfs_mount(const char *mp, struct pscfs_args *pfa)
 
 	ch = fuse_mount(mp, &pfa->pfa_av);
 	if (ch == NULL)
-		psc_fatal("fuse_mount");
-
+		psc_fatal("Is the mount point (%s) empty?", mp);
 	fuse_session = fuse_lowlevel_new(&pfa->pfa_av, &pscfs_fuse_ops,
 	    sizeof(pscfs_fuse_ops), NULL);
 
