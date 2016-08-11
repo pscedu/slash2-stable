@@ -42,6 +42,9 @@ list is currently as follows:
 		user	4m45.384s
 		sys	1m35.727s
 
+	   Also make sure that this test finishes within 4 minutes to detect possible performance
+	   regression.
+
 06/03/2016
 ----------
 
