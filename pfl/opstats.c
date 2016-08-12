@@ -33,6 +33,7 @@
 #include "pfl/str.h"
 #include "pfl/time.h"
 
+int			pfl_opstats_sum;
 struct psc_spinlock	pfl_opstats_lock = SPINLOCK_INIT;
 struct psc_dynarray	pfl_opstats = DYNARRAY_INIT;
 __static char		pfl_opstat_name[128];
@@ -70,6 +71,7 @@ pfl_opstat_initf(int flags, const char *namefmt, ...)
 			return (opst);
 		}
 	}
+	pfl_opstats_sum++;
 	opst = PSCALLOC(sizeof(*opst) + sz);
 	strlcpy(opst->opst_name, name, 128);
 	opst->opst_flags = flags;
