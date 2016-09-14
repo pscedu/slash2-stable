@@ -59,7 +59,7 @@
 struct pfl_mutex {
 	pthread_mutex_t		pm_mutex;
 	pthread_t		pm_owner;
-	int			pm_line;
+	int			pm_lineno;
 	int			pm_flags;
 };
 
