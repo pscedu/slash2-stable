@@ -101,6 +101,7 @@ _psc_mutex_lock(const struct pfl_callerinfo *pci,
 	if (rc)
 		psc_fatalx("pthread_mutex_lock: %s", strerror(rc));
 	mut->pm_owner = pthread_self();
+	mut->pm_line = pci ? pci->pci_lineno : __LINE__;
 	PMUT_LOG(mut, "acquired");
 }
 
