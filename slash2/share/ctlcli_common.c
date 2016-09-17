@@ -57,9 +57,9 @@ __static const char *slconn_restypes[] = {
 int
 sl_conn_prhdr(__unusedx struct psc_ctlmsghdr *mh, __unusedx const void *m)
 {
-	printf("%-11s %38s %-7s %5s %7s %4s %5s %10s\n",
+	printf("%-11s %38s %-7s %5s %7s %4s %5s %11s\n",
 	    "resource", "host", "type", "flags", "stkvers", "txcr", "#ref", "uptime");
-	return(PSC_CTL_DISPLAY_WIDTH+14);
+	return(PSC_CTL_DISPLAY_WIDTH+15);
 }
 
 void
@@ -174,12 +174,12 @@ sl_conn_prdat(const struct psc_ctlmsghdr *mh, const void *m)
 	printf("%4d %5d ", scc->scc_txcr, scc->scc_refcnt);
 
 	if (connected)
-		printf("%3ldd%02ldh%02ldm\n",
+		printf("%4ldd%02ldh%02ldm\n",
 		    scc->scc_uptime / (60 * 60 * 24),
 		    (scc->scc_uptime % (60 * 60 * 24)) / (60 * 60),
 		    (scc->scc_uptime % (60 * 60)) / 60);
 	else
-		printf("  --------\n");
+		printf("   --------\n");
 
 	strlcpy(lastsite, site, sizeof(lastsite));
 	strlcpy(lastres, res, sizeof(lastres));
@@ -256,7 +256,7 @@ sl_fcmh_prdat(__unusedx const struct psc_ctlmsghdr *mh, const void *m)
 	sl_sprintf_fgen(scf->scf_fg.fg_gen, fidbuf, SL_FIDBUF_LEN);
 	width = psc_ctl_get_display_maxwidth() - PSC_CTL_DISPLAY_WIDTH;
 	pfl_fmt_human(buf, scf->scf_size);
-	printf("%016"SLPRIxFID" %c%c%c%c%c%c%c%c%c%c "
+	printf("%016"SLPRIxFID" %c%c%c%c%c%c%c%c%c "
 	    "%6o %5u %5u %7s "
 	    "%3d %7s "
 	    "%4u %6u",
@@ -268,7 +268,6 @@ sl_fcmh_prdat(__unusedx const struct psc_ctlmsghdr *mh, const void *m)
 	    scf->scf_flags & FCMH_TOFREE	? 'T' : '-',
 	    scf->scf_flags & FCMH_HAVE_ATTRS	? 'A' : '-',
 	    scf->scf_flags & FCMH_GETTING_ATTRS	? 'G' : '-',
-	    scf->scf_flags & FCMH_CTOR_FAILED	? 'f' : '-',
 	    scf->scf_flags & FCMH_BUSY		? 'S' : '-',
 	    scf->scf_flags & FCMH_DELETED	? 'D' : '-',
 	    scf->scf_st_mode, scf->scf_uid, scf->scf_gid, buf,

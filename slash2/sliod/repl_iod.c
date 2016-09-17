@@ -106,7 +106,8 @@ sli_bwqueued_adj(int32_t *p, int amt_bytes)
 }
 
 /*
- * Add a piece of work to the replication scheduling engine.
+ * Add a piece of work to the replication scheduling engine. It is called
+ * from slrpc_batch_handle_request() via a worker thread.
  */
 int
 sli_repl_addwk(struct slrpc_batch_rep *bp, void *req, void *rep)
@@ -196,7 +197,10 @@ sli_repl_addwk(struct slrpc_batch_rep *bp, void *req, void *rep)
 	pll_add(&sli_replwkq_active, w);
 
 	/* for slireplpndthr_main() */
-	sli_replwk_queue(w);
+	if (sli_replwk_queue(w))
+		OPSTAT_INCR("repl-queue-pending");
+	else
+		OPSTAT_INCR("repl-queue-noop");
 
  out:
 	p->rc = rc;
@@ -240,18 +244,22 @@ sli_replwkrq_decref(struct sli_repl_workrq *w, int rc)
 	psc_pool_return(sli_replwkrq_pool, w);
 }
 
-void
+int
 sli_replwk_queue(struct sli_repl_workrq *w)
 {
+	int queued = 0;
 	LIST_CACHE_LOCK(&sli_replwkq_pending);
 	spinlock(&w->srw_lock);
+	/* XXX use a flag to cut overhead */
 	if (!lc_conjoint(&sli_replwkq_pending, w)) {
 		psc_atomic32_inc(&w->srw_refcnt);
 		PFLOG_REPLWK(PLL_DEBUG, w, "incref");
 		lc_add(&sli_replwkq_pending, w);
+		queued = 1;
 	}
 	freelock(&w->srw_lock);
 	LIST_CACHE_ULOCK(&sli_replwkq_pending);
+	return (queued);
 }
 
 /*

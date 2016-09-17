@@ -111,16 +111,26 @@ msctlrep_replrq(int fd, struct psc_ctlmsghdr *mh, void *m)
 	uint32_t n, nrepls = 0;
 	int rc;
 
-	if (mrq->mrq_nios < 1 ||
-	    mrq->mrq_nios >= nitems(mrq->mrq_iosv))
-		return (psc_ctlsenderr(fd, mh, NULL,
-		    "replication request: %s", strerror(EINVAL)));
-
 	rc = msctl_getcreds(fd, &pcr);
 	if (rc)
 		return (psc_ctlsenderr(fd, mh, NULL,
 		    SLPRI_FID": unable to obtain credentials: %s",
 		    mrq->mrq_fid, strerror(rc)));
+
+	/*
+	 * Reject if the user is not root and replication add/del
+	 * is not enabled.
+	 */
+	if (pcr.pcr_uid && !msl_repl_enable)
+		return (psc_ctlsenderr(fd, mh, NULL,
+		    "replication op disabled for non-root users: %s", 
+		    strerror(EACCES)));
+
+	if (mrq->mrq_nios < 1 ||
+	    mrq->mrq_nios >= nitems(mrq->mrq_iosv))
+		return (psc_ctlsenderr(fd, mh, NULL,
+		    "replication request: %s", strerror(EINVAL)));
+
 	rc = msctl_getclientctx(fd, &pfcc);
 	if (rc)
 		return (psc_ctlsenderr(fd, mh, NULL,
@@ -157,7 +167,7 @@ msctlrep_replrq(int fd, struct psc_ctlmsghdr *mh, void *m)
 			goto out;
 		}
 
- issue:
+ again: 
 	if (mh->mh_type == MSCMT_ADDREPLRQ)
 		MSL_RMC_NEWREQ(f, csvc, SRMT_REPL_ADDRQ, rq, mq,
 		    mp, rc);
@@ -184,7 +194,7 @@ msctlrep_replrq(int fd, struct psc_ctlmsghdr *mh, void *m)
 			if (mp->nbmaps_processed < mrq->mrq_nbmaps) {
 				mrq->mrq_bmapno += mp->nbmaps_processed;
 				mrq->mrq_nbmaps -= mp->nbmaps_processed;
-				goto issue;
+				goto again;
 			}
 			rc = psc_ctlsenderr(fd, mh, NULL, SLPRI_FID": "
 			    "invalid reply received from MDS",
@@ -975,6 +985,8 @@ msctlthr_spawn(void)
 	psc_ctlparam_register_var("sys.predio_issue_maxpages",
 	    PFLCTL_PARAMT_INT, PFLCTL_PARAMF_RDWR,
 	    &msl_predio_issue_maxpages);
+	psc_ctlparam_register_var("sys.repl_enable", PFLCTL_PARAMT_INT,
+	    PFLCTL_PARAMF_RDWR, &msl_repl_enable);
 	psc_ctlparam_register_var("sys.root_squash", PFLCTL_PARAMT_INT,
 	    PFLCTL_PARAMF_RDWR, &msl_root_squash);
 

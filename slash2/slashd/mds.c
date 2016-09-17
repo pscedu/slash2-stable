@@ -58,7 +58,7 @@
 
 struct pfl_odt		*slm_bia_odt;
 
-int			slm_ptrunc_enabled;
+int			slm_ptrunc_enabled = 0;
 int			slm_preclaim_enabled = 1;
 
 __static int slm_ptrunc_prepare(struct fidc_membh *);
@@ -102,14 +102,9 @@ slm_bmap_calc_repltraffic(struct bmap *b)
 	sl_bmapno_t lastbno;
 	int64_t amt = 0;
 
-	locked[1] = 0; /* gcc */
-
 	f = b->bcm_fcmh;
 	locked[0] = FCMH_RLOCK(f);
-	if (locked[0] == PSLRV_WASLOCKED)
-		locked[1] = BMAP_RLOCK(b);
-	else
-		BMAP_LOCK(b);
+	locked[1] = BMAP_RLOCK(b);
 
 	lastbno = fcmh_nvalidbmaps(f);
 	if (lastbno)
@@ -121,11 +116,17 @@ slm_bmap_calc_repltraffic(struct bmap *b)
 		bmapsize = fcmh_2_fsz(f) % SLASH_BMAP_SIZE;
 		if (bmapsize == 0)
 			bmapsize = SLASH_BMAP_SIZE;
+
+		/* last slvr number within the bmap */
 		lastslvr = (bmapsize - 1) / SLASH_SLVR_SIZE;
 		lastsize = fcmh_2_fsz(f) % SLASH_SLVR_SIZE;
 		if (lastsize == 0)
 			lastsize = SLASH_SLVR_SIZE;
 	} else {
+		/*
+		 * XXX can we unlock and return here
+		 * without going through the next loop?
+		 */ 
 		lastslvr = 0;
 		lastsize = 0;
 	}
@@ -145,10 +146,7 @@ slm_bmap_calc_repltraffic(struct bmap *b)
 			amt += SLASH_SLVR_SIZE;
 		}
 	}
-	if (locked[0] == PSLRV_WASLOCKED)
-		BMAP_URLOCK(b, locked[1]);
-	else
-		BMAP_ULOCK(b);
+	BMAP_URLOCK(b, locked[1]);
 	FCMH_URLOCK(f, locked[0]);
 	return (amt);
 }
@@ -543,7 +541,8 @@ mds_bmap_add_repl(struct bmap *b, struct bmap_ios_assign *bia)
 
 	psc_assert(b->bcm_flags & BMAPF_IOSASSIGNED);
 
-	FCMH_WAIT_BUSY(f);
+	FCMH_LOCK(f);
+	FCMH_WAIT_BUSY(f, 1);
 	iosidx = mds_repl_ios_lookup_add(current_vfsid, ih,
 	    bia->bia_ios);
 
@@ -560,11 +559,11 @@ mds_bmap_add_repl(struct bmap *b, struct bmap_ios_assign *bia)
  	 * Here we assign a bmap as VALID even before a single byte
  	 * has been written to it. This might be a problem.
  	 */
-	rc = mds_repl_inv_except(b, iosidx, 0);
+	rc = mds_repl_inv_except(b, iosidx);
 	if (rc) {
 		DEBUG_BMAP(PLL_ERROR, b, "mds_repl_inv_except() failed");
 		BMAP_ULOCK(b);
-		FCMH_UNBUSY(f);
+		FCMH_UNBUSY(f, 1);
 		return (rc);
 	}
 	mds_reserve_slot(1);
@@ -579,7 +578,7 @@ mds_bmap_add_repl(struct bmap *b, struct bmap_ios_assign *bia)
 	mdslogfill_bmap_repls(b, &sjar->sjar_rep);
 
 	BMAP_ULOCK(b);
-	FCMH_UNBUSY(f);
+	FCMH_UNBUSY(f, 1);
 
 	sjar->sjar_flags |= SLJ_ASSIGN_REP_REP;
 
@@ -1263,7 +1262,8 @@ mds_bmap_bml_release(struct bmap_mds_lease *bml)
 		retifset[BREPLST_TRUNCPNDG] = 1;
 
 		BMAP_ULOCK(b);
-		FCMH_WAIT_BUSY(f);
+		FCMH_LOCK(f);
+		FCMH_WAIT_BUSY(f, 1);
 	
 		BMAP_LOCK(b);
 		bmap_wait_locked(b, b->bcm_flags & BMAPF_REPLMODWR);
@@ -1285,7 +1285,7 @@ mds_bmap_bml_release(struct bmap_mds_lease *bml)
 		}
 
 		BMAP_ULOCK(b);
-		FCMH_UNBUSY(f);
+		FCMH_UNBUSY(f, 1);
 		BMAP_LOCK(b);
 	}
 
@@ -1513,6 +1513,7 @@ mds_bmap_crc_write(struct srt_bmap_crcup *c, sl_ios_id_t iosid,
 	struct bmap_mds_info *bmi;
 	struct fidc_membh *f;
 	int rc, vfsid;
+	struct srt_stat sstb;
 
 	rc = slfid_to_vfsid(c->fg.fg_fid, &vfsid);
 	if (rc)
@@ -1627,14 +1628,10 @@ mds_bmap_crc_write(struct srt_bmap_crcup *c, sl_ios_id_t iosid,
 	 * turn them off after any modification.
 	 */
 	if (f->fcmh_sstb.sst_mode & (S_ISGID | S_ISUID)) {
-		struct srt_stat sstb;
-
-		FCMH_WAIT_BUSY(f);
-		sstb.sst_mode = f->fcmh_sstb.sst_mode &
-		    ~(S_ISGID | S_ISUID);
-		mds_fcmh_setattr_nolog(vfsid, f, PSCFS_SETATTRF_MODE,
-		    &sstb);
-		FCMH_UNBUSY(f);
+		FCMH_LOCK(f);
+		sstb.sst_mode = f->fcmh_sstb.sst_mode & ~(S_ISGID | S_ISUID);
+		mds_fcmh_setattr_nolog(vfsid, f, PSCFS_SETATTRF_MODE, &sstb);
+		FCMH_ULOCK(f);
 	}
 
  out:
@@ -2011,24 +2008,13 @@ int
 slm_setattr_core(struct fidc_membh *f, struct srt_stat *sstb,
     int to_set)
 {
-	int deref = 0, rc = 0;
+	int rc = 0;
 	struct fcmh_mds_info *fmi;
 
 	if ((to_set & PSCFS_SETATTRF_DATASIZE) && sstb->sst_size) {
 		if (!slm_ptrunc_enabled) {
 			DEBUG_SSTB(PLL_MAX, sstb, "ptrunc averted");
 			return 0;
-		}
-		if (f == NULL) {
-			rc = slm_fcmh_get(&sstb->sst_fg, &f);
-			if (rc) {
-				psclog_errorx("unable to retrieve FID "
-				    SLPRI_FID": %s",
-				    sstb->sst_fid, sl_strerror(rc));
-				return (rc);
-			}
-			FCMH_LOCK(f);
-			deref = 1;
 		}
 		FCMH_LOCK_ENSURE(f);
 		f->fcmh_flags |= FCMH_MDS_IN_PTRUNC;
@@ -2039,10 +2025,7 @@ slm_setattr_core(struct fidc_membh *f, struct srt_stat *sstb,
 
 		rc = slm_ptrunc_prepare(f);
 
-		if (deref)
-			fcmh_op_done(f);
-		else
-			FCMH_LOCK(f);
+		FCMH_LOCK(f);
 	}
 	return (rc);
 }
@@ -2080,6 +2063,8 @@ slm_ptrunc_apply(struct fidc_membh *f)
 	struct fcmh_mds_info *fmi;
 	struct slm_update_data *upd;
 
+	FCMH_LOCK(f);
+	FCMH_WAIT_BUSY(f, 1);
 	fmi = fcmh_2_fmi(f);
 
 	/* get the number of replies we expect */
@@ -2096,14 +2081,13 @@ slm_ptrunc_apply(struct fidc_membh *f)
 	rc = bmap_get(f, i, SL_WRITE, &b);
 	if (rc)
 		goto out2;
+	bmap_wait_locked(b, b->bcm_flags & BMAPF_REPLMODWR);
 	/*
 	 * Arrange upd_proc_bmap() to call slm_upsch_tryptrunc().
 	 */
 	brepls_init(tract, -1);
 	tract[BREPLST_VALID] = BREPLST_TRUNCPNDG;
 
-	DEBUG_BMAPOD(PLL_DIAG, b, "truncate bmap");
-	BMAP_ULOCK(b);
 	mds_repl_bmap_walkcb(b, tract, NULL, 0, ptrunc_tally_ios, &ios_list);
 	fmi->fmi_ptrunc_nios = ios_list.nios;
 	if (fmi->fmi_ptrunc_nios) {
@@ -2113,7 +2097,6 @@ slm_ptrunc_apply(struct fidc_membh *f)
 		 */
 		rc = mds_bmap_write_logrepls(b);
 		if (rc) {
-			FCMH_UNBUSY(f);
 			bmap_op_done(b);
 			goto out2;
 		}
@@ -2133,10 +2116,9 @@ slm_ptrunc_apply(struct fidc_membh *f)
 		 * must hold the bmap reference to avoid a race.
 		 */
 		upsch_enqueue(upd);
-	} else {
-		FCMH_UNBUSY(f);
+		BMAP_ULOCK(b);
+	} else
 		bmap_op_done(b);
-	}
 
 	i++;
 
@@ -2152,7 +2134,6 @@ slm_ptrunc_apply(struct fidc_membh *f)
 		    BMAPGETF_NOAUTOINST, &b))
 			break;
 
-		BMAP_ULOCK(b);
 		BHGEN_INCREMENT(b);
 		ret = mds_repl_bmap_walkcb(b, tract, NULL, 0,
 		    NULL, NULL);
@@ -2170,6 +2151,7 @@ slm_ptrunc_apply(struct fidc_membh *f)
 		DEBUG_FCMH(PLL_MAX, f, "ptrunc completed.");
 		FCMH_ULOCK(f);
 	}
+	FCMH_UNBUSY(f, 1);
 	OPSTAT_INCR("ptrunc-apply");
 	return (rc);
 }

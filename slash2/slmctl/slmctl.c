@@ -78,9 +78,6 @@ packshow_replqueued(char *res)
 	struct slmctlmsg_replqueued *scrq;
 
 	scrq = psc_ctlmsg_push(SLMCMT_GETREPLQUEUED, sizeof(*scrq));
-	if (res && strcasecmp(res, "busy") == 0)
-		strlcpy(scrq->scrq_resname, SLMC_REPLQ_BUSY,
-		    sizeof(scrq->scrq_resname));
 }
 
 void
@@ -100,10 +97,9 @@ int
 slm_replqueued_prhdr(__unusedx struct psc_ctlmsghdr *mh,
     __unusedx const void *m)
 {
-	printf("%-32s %7s %7s %7s %7s %7s %7s\n",
-	    "resource", "in-q", "in-bw", "out-q", "out-bw", "aggr-q",
-	    "aggr-bw");
-	return(PSC_CTL_DISPLAY_WIDTH);
+	printf("%-32s %20s %20s %20s\n",
+	    "resource", "pending", "ingress", "egress");
+	return(PSC_CTL_DISPLAY_WIDTH+15);
 }
 
 void
@@ -113,12 +109,10 @@ slm_replqueued_prdat(__unusedx const struct psc_ctlmsghdr *mh,
 	const struct slmctlmsg_replqueued *scrq = m;
 
 	printf("%-32s ", scrq->scrq_resname);
-	psc_ctl_prnumber(0, scrq->scrq_ingress_queued * BW_UNITSZ, 0, " ");
-	psc_ctl_prnumber(0, scrq->scrq_ingress_assigned * BW_UNITSZ, 0, " ");
-	psc_ctl_prnumber(0, scrq->scrq_egress_queued * BW_UNITSZ, 0, " ");
-	psc_ctl_prnumber(0, scrq->scrq_egress_assigned * BW_UNITSZ, 0, " ");
-	psc_ctl_prnumber(0, scrq->scrq_aggr_queued * BW_UNITSZ, 0, " ");
-	psc_ctl_prnumber(0, scrq->scrq_aggr_assigned * BW_UNITSZ, 0, "\n");
+	psc_ctl_prnumber(1, scrq->scrq_repl_pending, 20, " ");
+	psc_ctl_prnumber(1, scrq->scrq_repl_ingress_aggr, 20, " ");
+	psc_ctl_prnumber(1, scrq->scrq_repl_egress_aggr, 20, " ");
+	printf("\n");
 }
 
 int

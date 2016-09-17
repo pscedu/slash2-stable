@@ -132,7 +132,7 @@ int
 mds_inode_write(int vfsid, struct slash_inode_handle *ih, void *logf,
     void *arg)
 {
-	int rc, level, wasbusy, waslocked;
+	int rc, level, wasbusy = 1;
 	struct fidc_membh *f;
 	struct iovec iovs[2];
 	uint64_t crc;
@@ -142,7 +142,11 @@ mds_inode_write(int vfsid, struct slash_inode_handle *ih, void *logf,
 	INOH_LOCK_ENSURE(ih);
 
 	f = inoh_2_fcmh(ih);
-	wasbusy = FCMH_REQ_BUSY(f, &waslocked);
+	if (!FCMH_HAS_BUSY(f)) {
+		wasbusy = 0;
+		FCMH_WAIT_BUSY(f, 0);
+	}
+	INOH_ULOCK(ih);
 
 	psc_crc64_calc(&crc, &ih->inoh_ino, sizeof(ih->inoh_ino));
 
@@ -150,8 +154,6 @@ mds_inode_write(int vfsid, struct slash_inode_handle *ih, void *logf,
 	iovs[0].iov_len = sizeof(ih->inoh_ino);
 	iovs[1].iov_base = &crc;
 	iovs[1].iov_len = sizeof(crc);
-
-	INOH_ULOCK(ih);
 
 	if (logf)
 		mds_reserve_slot(1);
@@ -175,7 +177,8 @@ mds_inode_write(int vfsid, struct slash_inode_handle *ih, void *logf,
 	if (!rc) 
 		if (ih->inoh_flags & INOH_INO_NEW)
 			ih->inoh_flags &= ~INOH_INO_NEW;
-	FCMH_UREQ_BUSY(f, wasbusy, waslocked);
+	if (!wasbusy)
+		FCMH_UNBUSY(f, 0);
 	return (rc);
 }
 
@@ -183,7 +186,7 @@ int
 mds_inox_write(int vfsid, struct slash_inode_handle *ih, void *logf,
     void *arg)
 {
-	int rc, level, wasbusy, waslocked;
+	int rc, level, wasbusy = 1;
 	struct fidc_membh *f;
 	struct iovec iovs[2];
 	uint64_t crc;
@@ -195,7 +198,11 @@ mds_inox_write(int vfsid, struct slash_inode_handle *ih, void *logf,
 	psc_assert(ih->inoh_extras);
 
 	f = inoh_2_fcmh(ih);
-	wasbusy = FCMH_REQ_BUSY(f, &waslocked);
+	if (!FCMH_HAS_BUSY(f)) {
+		wasbusy = 0;
+		FCMH_WAIT_BUSY(f, 0);
+	}
+	INOH_ULOCK(ih);
 
 	psc_crc64_calc(&crc, ih->inoh_extras, INOX_SZ);
 
@@ -203,8 +210,6 @@ mds_inox_write(int vfsid, struct slash_inode_handle *ih, void *logf,
 	iovs[0].iov_len = INOX_SZ;
 	iovs[1].iov_base = &crc;
 	iovs[1].iov_len = sizeof(crc);
-
-	INOH_ULOCK(ih);
 
 	if (logf)
 		mds_reserve_slot(1);
@@ -225,7 +230,8 @@ mds_inox_write(int vfsid, struct slash_inode_handle *ih, void *logf,
 	    "flags=%x size=%"PRIu64" data=%p, nb = %zd, rc = %d",
 	    ih->inoh_flags, inoh_2_fsz(ih), inoh_2_mfh(ih), nb, rc);
 
-	FCMH_UREQ_BUSY(f, wasbusy, waslocked);
+	if (!wasbusy)
+		FCMH_UNBUSY(f, 0);
 	return (rc);
 }
 

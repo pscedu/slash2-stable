@@ -162,6 +162,7 @@ struct psc_hashtbl		 msl_gidmap_int;
 int				 msl_acl;
 int				 msl_force_dio;
 int				 msl_root_squash;
+int				 msl_repl_enable;
 int				 msl_max_retries = 5;
 int				 msl_fuse_direct_io = 1;
 uint64_t			 msl_pagecache_maxsize;
@@ -2061,14 +2062,14 @@ msl_setattr(struct fidc_membh *f, int32_t to_set,
 int
 msl_flush_ioattrs(struct pscfs_req *pfr, struct fidc_membh *f)
 {
-	int dummy, flush_size = 0, flush_mtime = 0;
-	int rc, waslocked, to_set = 0;
+	int flush_size = 0, flush_mtime = 0;
+	int rc, to_set = 0;
 	struct srt_stat attr;
 
 	memset(&attr, 0, sizeof(attr));
 
-	waslocked = FCMH_RLOCK(f);
-	fcmh_wait_locked(f, f->fcmh_flags & FCMH_BUSY);
+	FCMH_LOCK(f);
+	FCMH_WAIT_BUSY(f, 0);
 
 	/*
 	 * Perhaps this checking should only be done on the mfh, with
@@ -2077,20 +2078,19 @@ msl_flush_ioattrs(struct pscfs_req *pfr, struct fidc_membh *f)
 	if (f->fcmh_flags & FCMH_CLI_DIRTY_DSIZE) {
 		flush_size = 1;
 		f->fcmh_flags &= ~FCMH_CLI_DIRTY_DSIZE;
-		FCMH_REQ_BUSY(f, &dummy);
 		to_set |= PSCFS_SETATTRF_DATASIZE;
 		attr.sst_size = f->fcmh_sstb.sst_size;
 	}
 	if (f->fcmh_flags & FCMH_CLI_DIRTY_MTIME) {
 		flush_mtime = 1;
 		f->fcmh_flags &= ~FCMH_CLI_DIRTY_MTIME;
-		FCMH_REQ_BUSY(f, &dummy);
 		to_set |= PSCFS_SETATTRF_MTIME;
 		attr.sst_mtim = f->fcmh_sstb.sst_mtim;
 	}
 	if (!to_set) {
 		psc_assert((f->fcmh_flags & FCMH_CLI_DIRTY_QUEUE) == 0);
-		FCMH_URLOCK(f, waslocked);
+		FCMH_UNBUSY(f, 0);
+		FCMH_ULOCK(f);
 		return (0);
 	}
 
@@ -2098,15 +2098,12 @@ msl_flush_ioattrs(struct pscfs_req *pfr, struct fidc_membh *f)
 
 	rc = msl_setattr(f, to_set, &attr, 0);
 
-	FCMH_LOCK(f);
-	FCMH_UREQ_BUSY(f, 0, PSLRV_WASLOCKED);
 	if (rc && slc_rpc_should_retry(pfr, &rc)) {
 		if (flush_mtime)
 			f->fcmh_flags |= FCMH_CLI_DIRTY_MTIME;
 		if (flush_size)
 			f->fcmh_flags |= FCMH_CLI_DIRTY_DSIZE;
-		fcmh_wake_locked(f);
-		FCMH_URLOCK(f, waslocked);
+		FCMH_UNBUSY(f, 1);
 	} else if (!(f->fcmh_flags & FCMH_CLI_DIRTY_ATTRS)) {
 		/*
 		 * XXX: If an UNLINK occurs on an open file descriptor
@@ -2122,13 +2119,13 @@ msl_flush_ioattrs(struct pscfs_req *pfr, struct fidc_membh *f)
 
 		psc_assert(f->fcmh_flags & FCMH_CLI_DIRTY_QUEUE);
 		f->fcmh_flags &= ~FCMH_CLI_DIRTY_QUEUE;
+		FCMH_UNBUSY(f, 1);
+
 		// XXX locking order violation
 		lc_remove(&msl_attrtimeoutq, fcmh_2_fci(f));
 		fcmh_op_done_type(f, FCMH_OPCNT_DIRTY_QUEUE);
-		if (waslocked == PSLRV_WASLOCKED)
-			FCMH_LOCK(f);
 	} else
-		FCMH_URLOCK(f, waslocked);
+		FCMH_UNBUSY(f, 1);
 
 	return (rc);
 }
@@ -2837,7 +2834,7 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
     struct stat *stb, int to_set, void *data)
 {
 	int flush_mtime = 0, flush_size = 0, setattrflags = 0;
-	int i, busied = 0, rc = 0, unset_trunc = 0, getting_attrs = 0;
+	int i, rc = 0, unset_trunc = 0, getting_attrs = 0;
 	struct msl_dc_inv_entry_data mdie;
 	struct msl_fhent *mfh = data;
 	struct fidc_membh *c = NULL;
@@ -2868,8 +2865,8 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 	if (to_set == 0)
 		goto out;
 
-	busied = 1;
-	FCMH_WAIT_BUSY(c);
+	FCMH_LOCK(c);
+	FCMH_WAIT_BUSY(c, 0);
 
 	slc_getfscreds(pfr, &pcr);
 
@@ -2956,25 +2953,21 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 		struct bmap *b;
 
 		if (!stb->st_size) {
-			DEBUG_FCMH(PLL_DIAG, c,
-			    "full truncate, free bmaps");
-
+			DEBUG_FCMH(PLL_DIAG, c, "full truncate, free bmaps");
 			OPSTAT_INCR("msl.truncate-full");
 			bmap_free_all_locked(c);
-			FCMH_ULOCK(c);
-
 		} else if (stb->st_size == (ssize_t)fcmh_2_fsz(c)) {
 			/*
 			 * No-op.  Don't send truncate request if the
 			 * sizes match.
 			 */
+			FCMH_ULOCK(c);
 			goto out;
 		} else {
 			struct psc_dynarray a = DYNARRAY_INIT;
 			uint32_t x = stb->st_size / SLASH_BMAP_SIZE;
 
 			OPSTAT_INCR("msl.truncate-part");
-
 			DEBUG_FCMH(PLL_DIAG, c, "partial truncate");
 
 			FCMH_ULOCK(c);
@@ -3017,16 +3010,15 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 				bmap_op_done_type(b, BMAP_OPCNT_TRUNCWAIT);
 			}
 			psc_dynarray_free(&a);
+			FCMH_LOCK(c);
 		}
 	}
 
-	(void)FCMH_RLOCK(c);
 	/* We're obtaining the attributes now. */
 	if ((c->fcmh_flags & (FCMH_GETTING_ATTRS | FCMH_HAVE_ATTRS)) == 0) {
 		getting_attrs = 1;
 		c->fcmh_flags |= FCMH_GETTING_ATTRS;
 	}
-	FCMH_ULOCK(c);
 
 	/*
 	 * Turn on mtime explicitly if we are going to change the size.
@@ -3040,7 +3032,6 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 		PFL_STB_MTIME_SET(ts.tv_sec, ts.tv_nsec, stb);
 	}
 
-	FCMH_LOCK(c);
 	if (c->fcmh_flags & FCMH_CLI_DIRTY_MTIME) {
 		flush_mtime = 1;
 		if (!(to_set & PSCFS_SETATTRF_MTIME)) {
@@ -3070,7 +3061,8 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 
  out:
 	if (c) {
-		(void)FCMH_RLOCK(c);
+		FCMH_LOCK(c);
+		FCMH_UNBUSY(c, 0);
 		if (unset_trunc) {
 			c->fcmh_flags &= ~FCMH_CLI_TRUNC;
 			fcmh_wake_locked(c);
@@ -3111,8 +3103,6 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 	pscfs_reply_setattr(pfr, stb, pscfs_attr_timeout, rc);
 
 	if (c) {
-		if (busied)
-			FCMH_UNBUSY(c);
 
 #if 0
 		/* 
@@ -3211,7 +3201,8 @@ mslfsop_destroy(__unusedx struct pscfs_req *pfr)
 	psc_waitq_wakeall(&msl_flush_attrq);
 
 	/* XXX crash on NULL sl_freapthr on destroy */
-	pscthr_setdead(sl_freapthr, 1);
+	if (sl_freapthr)
+		pscthr_setdead(sl_freapthr, 1);
 	psc_waitq_wakeall(&sl_freap_waitq);
 
 	/* wait for drain */
@@ -3792,8 +3783,8 @@ msattrflushthr_main(struct psc_thread *thr)
 
 			LIST_CACHE_ULOCK(&msl_attrtimeoutq);
 
-			msl_flush_ioattrs(NULL, f);
 			FCMH_ULOCK(f);
+			msl_flush_ioattrs(NULL, f);
 			break;
 		}
 		if (fci == NULL) {

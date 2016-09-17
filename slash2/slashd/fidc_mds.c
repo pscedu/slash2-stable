@@ -126,7 +126,6 @@ slm_fcmh_ctor(struct fidc_membh *f, __unusedx int flags)
 	rc = mdsio_lookup_slfid(vfsid, fcmh_2_fid(f), &rootcreds,
 	    &f->fcmh_sstb, &fcmh_2_mfid(f));
 	if (rc) {
-		fmi->fmi_ctor_rc = rc;
 		DEBUG_FCMH(PLL_WARN, f, "mdsio_lookup_slfid failed; "
 		    "fid="SLPRI_FID" rc=%d",
 		    fcmh_2_fid(f), rc);
@@ -152,7 +151,12 @@ slm_fcmh_ctor(struct fidc_membh *f, __unusedx int flags)
 			return (rc);
 		}
 
-		/* introduced by d56424e5f35de84cef5ba3b61afb8583efbd0a7b */
+		/* 
+		 * Introduced by d56424e5f35de84cef5ba3b61afb8583efbd0a7b.
+		 *
+		 * XXX if we ever support this, we should at least do it 
+		 * on-demand.
+		 */
 		snprintf(fn, sizeof(fn), "%016"PRIx64".ino",
 		    fcmh_2_fid(f));
 
@@ -183,10 +187,15 @@ slm_fcmh_ctor(struct fidc_membh *f, __unusedx int flags)
 
 			psc_assert(rc == 0);
 
-			mdsio_release(vfsid, &rootcreds,
-			    fcmh_2_dino_mfh(f));
+			/*
+ 			 * We are going to open this file again shortly by
+ 			 * setting ino_mfid.
+ 			 *
+ 			 * We should just use the file handle without close
+ 			 * and open it again.
+ 			 */
+			mdsio_release(vfsid, &rootcreds, fcmh_2_dino_mfh(f));
 		} else if (rc) {
-			fmi->fmi_ctor_rc = rc;
 			DEBUG_FCMH(PLL_WARN, f,
 			    "mdsio_lookup failed; rc=%d", rc);
 			return (rc);
@@ -198,8 +207,8 @@ slm_fcmh_ctor(struct fidc_membh *f, __unusedx int flags)
 
 	if (fcmh_isdir(f) || fcmh_isreg(f)) {
 		/*
-		 * We shouldn't need O_LARGEFILE because SLASH2
-		 * metafiles are small.
+		 * We shouldn't need O_LARGEFILE because SLASH2 metafiles 
+		 * are small.
 		 *
 		 * I created a file with size of 8070450532247928832
 		 * using dd by seeking to a large offset and writing one
@@ -218,7 +227,6 @@ slm_fcmh_ctor(struct fidc_membh *f, __unusedx int flags)
 				    "mfid=%"PRIx64" rc=%d",
 				    ino_mfid, rc);
 		} else {
-			fmi->fmi_ctor_rc = rc;
 			DEBUG_FCMH(PLL_WARN, f,
 			    "mdsio_opencreate failed; "
 			    "mfid=%"PRIx64" rc=%d",
@@ -239,7 +247,8 @@ slm_fcmh_dtor(struct fidc_membh *f)
 	fmi = fcmh_2_fmi(f);
 	if (fcmh_isreg(f) || fcmh_isdir(f)) {
 		/* XXX Need to worry about other modes here */
-		if (!fmi->fmi_ctor_rc) {
+		if (fcmh_2_mfh(f)) {
+			psc_assert(fcmh_2_mfh(f));
 			slfid_to_vfsid(fcmh_2_fid(f), &vfsid);
 			rc = mdsio_release(vfsid, &rootcreds,
 			    fcmh_2_mfh(f));
@@ -248,14 +257,16 @@ slm_fcmh_dtor(struct fidc_membh *f)
 	}
 
 	if (fcmh_isdir(f)) {
-		slfid_to_vfsid(fcmh_2_fid(f), &vfsid);
-		rc = mdsio_release(vfsid, &rootcreds,
-		    fcmh_2_dino_mfh(f));
-		psc_assert(rc == 0);
+		if (fcmh_2_dino_mfh(f)) {
+			slfid_to_vfsid(fcmh_2_fid(f), &vfsid);
+			psc_assert(fcmh_2_dino_mfh(f));
+			rc = mdsio_release(vfsid, &rootcreds,
+			    fcmh_2_dino_mfh(f));
+			psc_assert(rc == 0);
+		}
 	}
 
-	if (fmi->fmi_inodeh.inoh_extras)
-		PSCFREE(fmi->fmi_inodeh.inoh_extras);
+	PSCFREE(fmi->fmi_inodeh.inoh_extras);
 }
 
 /*
@@ -293,7 +304,8 @@ slm_fcmh_endow(int vfsid, struct fidc_membh *p, struct fidc_membh *c)
 	 * XXX If you don't set BREPLST_VALID, this logic is not really used.
  	 * The only information that might be useful is the policy perhaps.
  	 */
-	FCMH_WAIT_BUSY(c);
+	FCMH_LOCK(c);
+	FCMH_WAIT_BUSY(c, 0);
 	fcmh_2_replpol(c) = pol;
 	fcmh_2_ino(c)->ino_nrepls = nr;
 	memcpy(fcmh_2_ino(c)->ino_repls, repls, sizeof(repls[0]) *
@@ -305,7 +317,8 @@ slm_fcmh_endow(int vfsid, struct fidc_membh *p, struct fidc_membh *c)
 		    SL_INOX_NREPLICAS);
 	}
 	rc = mds_inodes_odsync(vfsid, c, mdslog_ino_repls);
-	FCMH_UNBUSY(c);
+	FCMH_UNBUSY(c, 0);
+	FCMH_ULOCK(c);
 	return (rc);
 }
 

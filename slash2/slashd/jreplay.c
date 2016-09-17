@@ -101,7 +101,7 @@ mds_replay_bmap(void *jent, int op)
 		if (idx < 0) {
 			psclog_errorx("iosid %d not found in repl "
 			    "table", sjbc->sjbc_iosid);
-			goto unbusy;
+			goto out;
 		}
 		sstb.sst_blocks = sjbc->sjbc_aggr_nblks;
 		fcmh_set_repl_nblks(f, idx, sjbc->sjbc_repl_nblks);
@@ -112,7 +112,7 @@ mds_replay_bmap(void *jent, int op)
 			rc = mds_inode_write(current_vfsid, ih, NULL,
 			    NULL);
 		if (rc)
-			goto unbusy;
+			goto out;
 
 		fl = SL_SETATTRF_NBLKS;
 
@@ -145,7 +145,8 @@ mds_replay_bmap(void *jent, int op)
 		 * So we have some changes in the journal, but not
 		 * in the sql table.
 		 */
-		FCMH_WAIT_BUSY(b->bcm_fcmh);
+		FCMH_LOCK(b->bcm_fcmh);
+		FCMH_WAIT_BUSY(b->bcm_fcmh, 1);
 		BMAP_LOCK(b);
 		bmap_wait_locked(b, b->bcm_flags & BMAPF_REPLMODWR);
 
@@ -196,23 +197,20 @@ mds_replay_bmap(void *jent, int op)
 				break;
 			}
 
-		FCMH_UNBUSY(b->bcm_fcmh);
+		FCMH_UNBUSY(b->bcm_fcmh, 1);
 		break;
 	}
 
 	DEBUG_BMAPOD(PLL_DIAG, b, "replayed bmap op=%d", op);
 
-	FCMH_WAIT_BUSY(b->bcm_fcmh);
+	FCMH_LOCK(b->bcm_fcmh);
+	FCMH_WAIT_BUSY(b->bcm_fcmh, 1);
 
 	BMAP_LOCK(b);
 	bmap_wait_locked(b, b->bcm_flags & BMAPF_REPLMODWR);
 	rc = mds_bmap_write(b, NULL, NULL);
 	BMAP_ULOCK(b);
-	FCMH_UNBUSY(b->bcm_fcmh);
-
-	if (0)
- unbusy:
-		FCMH_UNBUSY(f);
+	FCMH_UNBUSY(b->bcm_fcmh, 1);
 
  out:
 	if (b)
@@ -415,12 +413,12 @@ mds_replay_bmap_assign(struct psc_journal_enthdr *pje)
  * @replay: whether this is a replay or remote MDS update.
  */
 int
-mds_replay_namespace(struct slmds_jent_namespace *sjnm, int replay)
+mds_replay_namespace(struct slmds_jent_namespace *sjnm)
 {
 	char name[SL_NAME_MAX + 1], newname[SL_NAME_MAX + 1];
-	struct fidc_membh *f = NULL;
 	struct srt_stat sstb;
 	int rc;
+	struct fidc_membh *f = NULL;
 
 	memset(&sstb, 0, sizeof(sstb));
 	sstb.sst_fid = sjnm->sjnm_target_fid,
@@ -505,26 +503,18 @@ mds_replay_namespace(struct slmds_jent_namespace *sjnm, int replay)
 		break;
 	    case NS_OP_SETSIZE:
 	    case NS_OP_SETATTR:
-		if (!replay) {
-			/*
-			 * Make sure that we propagate attributes
-			 * to the fcmh layer if work is done at
-			 * the ZFS layer.
-			 */
-			rc = sl_fcmh_peek_fg(&sstb.sst_fg, &f);
-			if (f)
-				FCMH_LOCK(f);
-		}
 		rc = mdsio_redo_setattr(current_vfsid,
 		    sjnm->sjnm_target_fid, sjnm->sjnm_mask, &sstb);
-		slm_setattr_core(f, &sstb,
-		    mdsio_setattrmask_2_slflags(sjnm->sjnm_mask));
-		if (!replay) {
-			if (f) {
-				/* setattr() above has filled sstb */
-				COPY_SSTB(&sstb, &f->fcmh_sstb);
-				fcmh_op_done(f);
-			}
+		if (rc)
+			break;
+		/*
+		 * Throw away a cached copy to force a reload.
+		 */
+		rc = sl_fcmh_peek_fg(&sstb.sst_fg, &f);
+		if (!rc) {
+			FCMH_LOCK(f);
+			f->fcmh_flags |= FCMH_TOFREE;
+			fcmh_op_done(f);
 		}
 		break;
 	    default:
@@ -571,7 +561,7 @@ mds_replay_handler(struct psc_journal_enthdr *pje)
 	    case MDS_LOG_NAMESPACE:
 		sjnm = PJE_DATA(pje);
 		psc_assert(sjnm->sjnm_magic == SJ_NAMESPACE_MAGIC);
-		rc = mds_replay_namespace(sjnm, 1);
+		rc = mds_replay_namespace(sjnm);
 
 		/*
 		 * If we fail above, we still skip these SLASH2 FIDs here

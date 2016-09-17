@@ -278,9 +278,13 @@ slmrcmthr_main(struct psc_thread *thr)
 		rsw = lc_getwait(&slm_replst_workq);
 		srcm->srcm_page_bitpos = SRM_REPLST_PAGESIZ * NBBY;
 
+		/*
+ 		 * Hit hang waiting on LOADING bit for a bmap.
+ 		 */
 		if (rsw->rsw_fg.fg_fid == FID_ANY) {
 			OPSTAT_INCR("replst-all");
 			
+			/* XXX lock to be removed after extensive testing */
 			spinlock(&slm_upsch_lock);
 			dbdo(slmrcmthr_walk, &da,
 			    "SELECT DISTINCT fid FROM upsch");

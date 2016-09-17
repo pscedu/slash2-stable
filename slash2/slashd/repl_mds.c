@@ -181,7 +181,8 @@ _mds_repl_ios_lookup(int vfsid, struct slash_inode_handle *ih,
  			 * Luckily, this code is only called by mds_repl_delrq() 
  			 * for directories.
  			 *
- 			 * Make sure that the following edge cases works:
+ 			 * Make sure that the logic works for at least the following 
+ 			 * edge cases:
  			 *
  			 *    (1) There is only one item in the basic array.
  			 *    (2) There is only one item in the extra array.
@@ -254,7 +255,6 @@ _mds_repl_ios_lookup(int vfsid, struct slash_inode_handle *ih,
 
 	/* It doesn't exist; add to inode replica table if requested. */
 	if (flag == IOSV_LOOKUPF_ADD) {
-		int waslk, wasbusy;
 
 		/* paranoid */
 		psc_assert(i == nr);
@@ -271,20 +271,14 @@ _mds_repl_ios_lookup(int vfsid, struct slash_inode_handle *ih,
 			j = i;
 		}
 
-		wasbusy = FCMH_REQ_BUSY(f, &waslk);
-
 		repl[j].bs_id = ios;
 
 		DEBUG_INOH(PLL_DIAG, ih, buf, "add IOS(%u) at idx %d", ios, i);
 
 		ih->inoh_ino.ino_nrepls = nr + 1;
 		rc = mds_inodes_odsync(vfsid, f, mdslog_ino_repls);
-
-		FCMH_UREQ_BUSY(f, wasbusy, waslk);
-
-		if (rc)
-			goto out;
-		rc = i;
+		if (!rc)
+			rc = i;
 	}
 
  out:
@@ -365,6 +359,7 @@ _mds_repl_bmap_apply(struct bmap *b, const int *tract,
 	if (tract) {
 		memcpy(bmi->bmi_orepls, bmi->bmi_repls,
 		    sizeof(bmi->bmi_orepls));
+		psc_assert((flags & REPL_WALKF_SCIRCUIT) == 0);
 	}
 
 	if (scircuit)
@@ -379,7 +374,7 @@ _mds_repl_bmap_apply(struct bmap *b, const int *tract,
 		psc_fatalx("corrupt bmap, val = %d, bno = %d, fid="SLPRI_FID,
 			 val, b->bcm_bmapno, fcmh_2_fid(b->bcm_fcmh));
 
-	/* callback can be used to track if we did make any changes */
+	/* callback can also be used to track if we did make any changes */
 	if (cbf)
 		cbf(b, off / SL_BITS_PER_REPLICA, val, cbarg);
 
@@ -484,21 +479,6 @@ _mds_repl_bmap_walk(struct bmap *b, const int *tract,
 	return (rc);
 }
 
-struct iosidv {
-	sl_replica_t	iosv[SL_MAX_REPLICAS];
-	int		nios;
-};
-
-void
-mds_repl_inv_requeue(struct bmap *b, int idx, int val, void *arg)
-{
-	struct iosidv *qv = arg;
-
-	if (val == BREPLST_VALID)
-		qv->iosv[qv->nios++].bs_id = fcmh_2_repl(b->bcm_fcmh,
-		    idx);
-}
-
 /*
  * For the given bmap, change the status of all its replicas marked
  * "valid" to "invalid" except for the replica specified.
@@ -517,10 +497,9 @@ mds_repl_inv_requeue(struct bmap *b, int idx, int val, void *arg)
  *	stored in the inode during log replay.
  */
 int
-mds_repl_inv_except(struct bmap *b, int iosidx, int defer)
+mds_repl_inv_except(struct bmap *b, int iosidx)
 {
-	int rc, tract[NBREPLST], retifset[NBREPLST];
-	struct iosidv qv;
+	int rc, logit = 0, tract[NBREPLST], retifset[NBREPLST];
 	uint32_t policy;
 
 	/* Ensure replica on active IOS is marked valid. */
@@ -528,6 +507,10 @@ mds_repl_inv_except(struct bmap *b, int iosidx, int defer)
 	tract[BREPLST_INVALID] = BREPLST_VALID;
 	tract[BREPLST_GARBAGE] = BREPLST_VALID;
 
+	/*
+	 * The old state for this bmap on the given IOS is
+	 * either valid or invalid.
+	 */
 	brepls_init_idx(retifset);
 	retifset[BREPLST_INVALID] = 0;
 	retifset[BREPLST_VALID] = 0;
@@ -539,11 +522,12 @@ mds_repl_inv_except(struct bmap *b, int iosidx, int defer)
 	 * happens a few times.
 	 */
 	rc = mds_repl_bmap_walk(b, tract, retifset, 0, &iosidx, 1);
-	if (rc)
+	if (rc) {
 		psclog_errorx("bcs_repls has active IOS marked in a "
 		    "weird state while invalidating other replicas; "
 		    "fid="SLPRI_FID" bmap=%d iosidx=%d state=%d",
 		    fcmh_2_fid(b->bcm_fcmh), b->bcm_bmapno, iosidx, rc);
+	}
 
 	policy = bmap_2_replpol(b);
 
@@ -560,16 +544,17 @@ mds_repl_inv_except(struct bmap *b, int iosidx, int defer)
 
 	brepls_init(retifset, 0);
 	retifset[BREPLST_VALID] = 1;
+	retifset[BREPLST_REPL_SCHED] = 1;
 
-	qv.nios = 0;
 	if (_mds_repl_bmap_walk(b, tract, retifset, REPL_WALKF_MODOTH,
-	    &iosidx, 1, mds_repl_inv_requeue, &qv))
+	    &iosidx, 1, NULL, NULL)) {
+		logit = 1;
 		BHGEN_INCREMENT(b);
-
-	if (defer)
-		return (rc);
-
-	rc = mds_bmap_write(b, NULL, NULL);
+	}
+	if (logit)
+		rc = mds_bmap_write_logrepls(b);
+	else
+		rc = mds_bmap_write(b, NULL, NULL);
 
 	/*
 	 * If this bmap is marked for persistent replication, the repl
@@ -816,7 +801,8 @@ mds_repl_addrq(const struct sl_fidgen *fgp, sl_bmapno_t bmapno,
 	if (*nbmaps != (sl_bmapno_t)-1)
 		rc = -SLERR_BMAP_INVALID;
 
-	FCMH_WAIT_BUSY(f);
+	FCMH_LOCK(f);
+	FCMH_WAIT_BUSY(f, 1);
 	for (; *nbmaps && bmapno < fcmh_nvalidbmaps(f);
 	    bmapno++, --*nbmaps, nbmaps_processed++) {
 
@@ -881,11 +867,12 @@ mds_repl_addrq(const struct sl_fidgen *fgp, sl_bmapno_t bmapno,
 
 		bmap_op_done_type(b, BMAP_OPCNT_LOOKUP);
 		if (flags & FLAG_REPLICA_STATE_INVALID) {
+			/* See pfl_register_errno() */
 			rc = -SLERR_REPLICA_STATE_INVALID;
 			break;
 		}
 	}
-	FCMH_UNBUSY(f);
+	FCMH_UNBUSY(f, 1);
 
  out:
 	if (f)
@@ -909,7 +896,7 @@ slm_repl_countvalid_cb(__unusedx struct bmap *b, int iosidx, int val,
     void *arg)
 {
 	struct slm_repl_valid *t = arg;
-	int j;
+	int i;
 
 	/* If the state isn't VALID, nothing to count. */
 	if (val != BREPLST_VALID)
@@ -919,8 +906,8 @@ slm_repl_countvalid_cb(__unusedx struct bmap *b, int iosidx, int val,
 	 * If we find an IOS that was specified, we can't factor it into
 	 * our count since it won't be here much longer.
 	 */
-	for (j = 0; j < t->nios; j++)
-		if (iosidx == t->idx[j])
+	for (i = 0; i < t->nios; i++)
+		if (iosidx == t->idx[i])
 			return;
 	t->n++;
 }
@@ -932,20 +919,12 @@ slm_repl_delrq_cb(__unusedx struct bmap *b, __unusedx int iosidx,
 	int *flags = arg;
 
 	switch (val) {
-	case BREPLST_INVALID:
 	case BREPLST_REPL_QUEUED:
 	case BREPLST_REPL_SCHED:
-		break;
-
-	case BREPLST_GARBAGE:
-	case BREPLST_GARBAGE_SCHED:
 	case BREPLST_VALID:
-		 *flags |= FLAG_DIRTY;
-		 break;
-
+		*flags |= FLAG_DIRTY;
+		break;
 	default:
-		 /* Report that the replica will not be made invalid. */
-		 *flags |= FLAG_REPLICA_STATE_INVALID;
 		 break;
 	}
 }
@@ -954,7 +933,7 @@ int
 mds_repl_delrq(const struct sl_fidgen *fgp, sl_bmapno_t bmapno,
     sl_bmapno_t *nbmaps, sl_replica_t *iosv, int nios)
 {
-	int tract[NBREPLST], rc, iosidx[SL_MAX_REPLICAS], flags = 0;
+	int tract[NBREPLST], rc, iosidx[SL_MAX_REPLICAS], flags;
 	sl_bmapno_t nbmaps_processed = 0;
 	struct slm_repl_valid replv;
 	struct fidc_membh *f = NULL;
@@ -967,18 +946,19 @@ mds_repl_delrq(const struct sl_fidgen *fgp, sl_bmapno_t bmapno,
 	if (rc)
 		return (-rc);
 
-	FCMH_WAIT_BUSY(f);
+	FCMH_LOCK(f);
+	FCMH_WAIT_BUSY(f, 1);
 	if (fcmh_isdir(f))
 		flags = IOSV_LOOKUPF_DEL;
+	else
+		flags = IOSV_LOOKUPF_LOOKUP;
 
 	/* Find replica IOS indexes. */
 	rc = -_mds_repl_iosv_lookup(current_vfsid, fcmh_2_inoh(f), iosv,
 	    iosidx, nios, flags);
-	if (rc)
-		PFL_GOTOERR(out, rc);
 
-	if (fcmh_isdir(f))
-		PFL_GOTOERR(out, 0);
+	if (fcmh_isdir(f) || rc)
+		PFL_GOTOERR(out, rc);
 
 	replv.nios = nios;
 	replv.idx = iosidx;
@@ -991,6 +971,12 @@ mds_repl_delrq(const struct sl_fidgen *fgp, sl_bmapno_t bmapno,
 	/* Wildcards shouldn't result in errors on zero-length files. */
 	if (*nbmaps != (sl_bmapno_t)-1)
 		rc = -SLERR_BMAP_INVALID;
+
+	/*
+ 	 * The following loop will bail out on the very first error. 
+ 	 * However,  its previous action, if any, has already taken
+ 	 * effect.
+ 	 */
 	for (; *nbmaps && bmapno < fcmh_nvalidbmaps(f);
 	    bmapno++, --*nbmaps, nbmaps_processed++) {
 		if (nbmaps_processed >= SLM_REPLRQ_NBMAPS_MAX)
@@ -1013,26 +999,24 @@ mds_repl_delrq(const struct sl_fidgen *fgp, sl_bmapno_t bmapno,
 		replv.n = 0;
 		mds_repl_bmap_walkcb(b, NULL, NULL, 0,
 		    slm_repl_countvalid_cb, &replv);
-		if (replv.n == 0)
-			PFL_GOTOERR(bmap_done, rc = -SLERR_LASTREPL);
 
 		flags = 0;
-		rc = _mds_repl_bmap_walk(b, tract, NULL, 0, iosidx,
-		    nios, slm_repl_delrq_cb, &flags);
-		if (flags & FLAG_DIRTY) {
-			mds_bmap_write_logrepls(b);
+		if (replv.n == 0)
+			rc = -SLERR_LASTREPL;
+		else {
+			rc = _mds_repl_bmap_walk(b, tract, NULL, 0, iosidx,
+			    nios, slm_repl_delrq_cb, &flags);
+			if (flags & FLAG_DIRTY)
+				mds_bmap_write_logrepls(b);
 		}
-
- bmap_done:
 		bmap_op_done_type(b, BMAP_OPCNT_LOOKUP);
-		if (flags & FLAG_REPLICA_STATE_INVALID)
-			PFL_GOTOERR(out,
-			    rc = -SLERR_REPLICA_STATE_INVALID);
+		if (rc)
+			PFL_GOTOERR(out, rc);
 	}
 
  out:
 	if (f) {
-		FCMH_UNBUSY(f);
+		FCMH_UNBUSY(f, 1);
 		fcmh_op_done(f);
 	}
 	*nbmaps = nbmaps_processed;
@@ -1040,12 +1024,12 @@ mds_repl_delrq(const struct sl_fidgen *fgp, sl_bmapno_t bmapno,
 }
 
 #define HAS_BW(bwd, amt)						\
-	((bwd)->bwd_queued + (bwd)->bwd_inflight < slm_upsch_bandwidth * 1024)
+	((bwd)->bwd_queued + (bwd)->bwd_inflight < 			\
+	slm_upsch_bandwidth * BW_UNITSZ)				
 
 #define ADJ_BW(bwd, amt)						\
 	do {								\
-		if ((amt) > 0)						\
-			(bwd)->bwd_inflight += (amt);			\
+		(bwd)->bwd_inflight += (amt);				\
 		(bwd)->bwd_assigned += (amt);				\
 		psc_assert((bwd)->bwd_assigned >= 0);			\
 	} while (0)
@@ -1056,23 +1040,16 @@ mds_repl_delrq(const struct sl_fidgen *fgp, sl_bmapno_t bmapno,
  * Adjust the bandwidth estimate between two IONs.
  * @src: source resm.
  * @dst: destination resm.
- * @amt_bytes: adjustment amount, in octets.
- * @moreavail: whether there is still bandwidth left after this
- * reservation.
+ * @amt: adjustment amount in bytes.
  */
 int
 resmpair_bw_adj(struct sl_resm *src, struct sl_resm *dst,
-    int64_t amt_bytes, int *moreavail)
+    int64_t amt, int rc)
 {
+	int ret = 1;
 	struct resprof_mds_info *r_min, *r_max;
 	struct rpmi_ios *is, *id;
-	int32_t amt;
-	int rc = 0;
-
-	amt = SIGN(amt_bytes) * howmany(labs(amt_bytes), BW_UNITSZ);
-
-	if (moreavail)
-		*moreavail = 0;
+	int64_t cap = (int64_t)slm_upsch_bandwidth;
 
 	/* sort by addr to avoid deadlock */
 	r_min = MIN(res2rpmi(src->resm_res), res2rpmi(dst->resm_res));
@@ -1083,31 +1060,32 @@ resmpair_bw_adj(struct sl_resm *src, struct sl_resm *dst,
 	is = res2rpmi_ios(src->resm_res);
 	id = res2rpmi_ios(dst->resm_res);
 
-	if (amt < 0 ||
-	    (HAS_BW(&is->si_bw_egress, amt) &&
-	     HAS_BW(&is->si_bw_aggr, amt) &&
-	     HAS_BW(&id->si_bw_ingress, amt) &&
-	     HAS_BW(&id->si_bw_aggr, amt))) {
-		ADJ_BW(&is->si_bw_egress, amt);
-		ADJ_BW(&is->si_bw_aggr, amt);
-		ADJ_BW(&id->si_bw_ingress, amt);
-		ADJ_BW(&id->si_bw_aggr, amt);
+	psc_assert(amt);
 
-		psclog_diag("adjust bandwidth; src=%s dst=%s amt=%d",
+	/* reserve */
+	if (amt > 0) {
+		if ((is->si_repl_pending + amt > cap * BW_UNITSZ) || 
+		    (id->si_repl_pending + amt > cap * BW_UNITSZ)) {
+			ret = 0;
+			goto out;
+		}
+		is->si_repl_pending += amt;
+		id->si_repl_pending += amt;
+
+		psclog_diag("adjust bandwidth; src=%s dst=%s amt=%"PRId64,
 		    src->resm_name, dst->resm_name, amt);
-
-		if (moreavail &&
-		    HAS_BW(&is->si_bw_egress, 1) &&
-		    HAS_BW(&is->si_bw_aggr, 1) &&
-		    HAS_BW(&id->si_bw_ingress, 1) &&
-		    HAS_BW(&id->si_bw_aggr, 1))
-			*moreavail = 1;
-
-		rc = 1;
 	}
 
-	/* XXX upsch page in? */
+	/* unreserve */
 	if (amt < 0) {
+		is->si_repl_pending += amt;
+		id->si_repl_pending += amt;
+		psc_assert(is->si_repl_pending >= 0);
+		psc_assert(id->si_repl_pending >= 0);
+		if (!rc) {
+			is->si_repl_egress_aggr += -amt;
+			id->si_repl_ingress_aggr += -amt;
+		}
 		/*
 		 * We released some bandwidth; wake anyone waiting for
 		 * some.
@@ -1118,8 +1096,9 @@ resmpair_bw_adj(struct sl_resm *src, struct sl_resm *dst,
 #endif
 	}
 
+ out:
 	RPMI_ULOCK(r_max);
 	RPMI_ULOCK(r_min);
 
-	return (rc);
+	return (ret);
 }

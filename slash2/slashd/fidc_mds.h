@@ -44,13 +44,14 @@
 struct fcmh_mds_info {
 	struct slash_inode_handle fmi_inodeh;
 	mio_fid_t		  fmi_mfid;		/* backing object inum */
-	struct mio_fh		  fmi_mfh;		/* file descriptor */
-	int			  fmi_ctor_rc;		/* constructor return code */
+	struct mio_fh		  fmi_mfh;		/* file handle */
 	union {
 		struct {
-			mio_fid_t fmid_dino_mfid;	/* for inode */
-			struct mio_fh
-				  fmid_dino_mfh;
+			/*
+ 			 * Object inum and handle for the .ino file per directory.
+ 			 */
+			mio_fid_t	fmid_dino_mfid;
+			struct mio_fh	fmid_dino_mfh;
 		} d;
 		struct {
 			int	  fmif_ptrunc_nios;

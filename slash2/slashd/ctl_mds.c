@@ -284,14 +284,11 @@ slmctlcmd_upsch_query(__unusedx int fd,
 int
 slmctlrep_getreplqueued(int fd, struct psc_ctlmsghdr *mh, void *mb)
 {
-	int busyonly = 0, i, rc = 1;
+	int i, rc = 1;
 	struct slmctlmsg_replqueued *scrq = mb;
 	struct sl_resource *r;
 	struct rpmi_ios *si;
 	struct sl_site *s;
-
-	if (strcasecmp(scrq->scrq_resname, SLMC_REPLQ_BUSY) == 0)
-		busyonly = 1;
 
 	CONF_LOCK();
 	CONF_FOREACH_RES(s, r, i) {
@@ -300,21 +297,12 @@ slmctlrep_getreplqueued(int fd, struct psc_ctlmsghdr *mh, void *mb)
 
 		si = res2rpmi_ios(r);
 
-		if (busyonly && si->si_bw_aggr.bwd_assigned == 0)
-			continue;
-
 		memset(scrq, 0, sizeof(*scrq));
 		strlcpy(scrq->scrq_resname, r->res_name,
 		    sizeof(scrq->scrq_resname));
-		scrq->scrq_ingress_queued = si->si_bw_ingress.bwd_queued +
-		    si->si_bw_ingress.bwd_inflight;
-		scrq->scrq_ingress_assigned = si->si_bw_ingress.bwd_assigned;
-		scrq->scrq_egress_queued = si->si_bw_egress.bwd_queued +
-		    si->si_bw_egress.bwd_inflight;
-		scrq->scrq_egress_assigned = si->si_bw_egress.bwd_assigned;
-		scrq->scrq_aggr_queued = si->si_bw_aggr.bwd_queued +
-		    si->si_bw_aggr.bwd_inflight;
-		scrq->scrq_aggr_assigned = si->si_bw_aggr.bwd_assigned;
+		scrq->scrq_repl_pending = si->si_repl_pending;
+		scrq->scrq_repl_egress_aggr = si->si_repl_egress_aggr;
+		scrq->scrq_repl_ingress_aggr = si->si_repl_ingress_aggr;
 		rc = psc_ctlmsg_sendv(fd, mh, scrq, NULL);
 
 		if (!rc)

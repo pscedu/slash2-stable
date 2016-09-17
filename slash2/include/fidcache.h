@@ -48,7 +48,7 @@ struct sl_fcmh_ops {
 	void	(*sfop_dtor)(struct fidc_membh *);
 	int	(*sfop_getattr)(struct fidc_membh *, void *);
 	void	(*sfop_postsetattr)(struct fidc_membh *);
-	int	(*sfop_modify)(struct fidc_membh *, slfgen_t);
+	int	(*sfop_reopen)(struct fidc_membh *, slfgen_t);
 };
 
 /*
@@ -87,10 +87,9 @@ struct fidc_membh {
 #define FCMH_TOFREE		(1 <<  4)	/* ctor failure or memory pressure */
 #define FCMH_HAVE_ATTRS		(1 <<  5)	/* has valid stat(2) info */
 #define FCMH_GETTING_ATTRS	(1 <<  6)	/* fetching stat(2) info */
-#define FCMH_CTOR_FAILED	(1 <<  7)	/* constructor func failed */
-#define FCMH_BUSY		(1 <<  8)	/* fcmh being processed */
-#define FCMH_DELETED		(1 <<  9)	/* fcmh has been deleted */
-#define _FCMH_FLGSHFT		(1 << 10)
+#define FCMH_BUSY		(1 <<  7)	/* fcmh being processed */
+#define FCMH_DELETED		(1 <<  8)	/* fcmh has been deleted */
+#define _FCMH_FLGSHFT		(1 <<  9)
 
 /* number of seconds in which attribute times out */
 #define FCMH_ATTR_TIMEO		8
@@ -143,74 +142,35 @@ struct fidc_membh {
 			psc_waitq_wakeall(&(f)->fcmh_waitq);		\
 	} while (0)
 
-#define FCMH_TRYBUSY(f)							\
-	_PFL_RVSTART {							\
-		pthread_t _pthr = pthread_self();			\
-		int _waslocked, _got = 0;				\
-									\
-		_waslocked = FCMH_RLOCK(f);				\
-		if ((f)->fcmh_flags & FCMH_BUSY) {			\
-			if ((f)->fcmh_owner == _pthr)			\
-				DEBUG_FCMH(PLL_FATAL, (f),		\
-				    "TRYBUSY: already holding");	\
-		} else {						\
-			(f)->fcmh_flags |= FCMH_BUSY;			\
-			(f)->fcmh_owner = _pthr;			\
-			(f)->fcmh_lineno = __LINE__;			\
-			(f)->fcmh_fn = __FILE__;			\
-			DEBUG_FCMH(PLL_DEBUG, (f), "set BUSY");		\
-			_got = 1;					\
-		}							\
-		FCMH_URLOCK(f, _waslocked);				\
-		(_got);							\
-	} _PFL_RVEND
-
-#define FCMH_REQ_BUSY(f, waslocked)					\
-	_PFL_RVSTART {							\
-		pthread_t _pthr = pthread_self();			\
-		int _wasbusy = 0;					\
-									\
-		*(waslocked) = FCMH_RLOCK(f);				\
-		if (((f)->fcmh_flags & FCMH_BUSY) &&			\
-		    (f)->fcmh_owner == _pthr) {				\
-			 _wasbusy = 1;					\
-			DEBUG_FCMH(PLL_DEBUG, (f), "require BUSY");	\
-		} else {						\
-			fcmh_wait_locked((f),				\
-			    (f)->fcmh_flags & FCMH_BUSY);		\
-			(f)->fcmh_flags |= FCMH_BUSY;			\
-			(f)->fcmh_owner = _pthr;			\
-			(f)->fcmh_lineno = __LINE__;			\
-			(f)->fcmh_fn = __FILE__;			\
-			DEBUG_FCMH(PLL_DIAG, (f), "set BUSY");		\
-		}							\
-		(_wasbusy);						\
-	} _PFL_RVEND
-
-#define FCMH_UREQ_BUSY(f, wasbusy, waslocked)				\
+#define FCMH_WAIT_BUSY(f, unlock)					\
 	do {								\
-		(void)FCMH_RLOCK(f);					\
-		FCMH_BUSY_ENSURE(f);					\
-		if (wasbusy) {						\
-			DEBUG_FCMH(PLL_DEBUG, (f), "unrequire BUSY");	\
-		} else {						\
-			(f)->fcmh_owner = 0;				\
-			(f)->fcmh_flags &= ~FCMH_BUSY;			\
-			DEBUG_FCMH(PLL_DIAG, (f), "cleared BUSY");	\
-			fcmh_wake_locked(f);				\
-		}							\
-		FCMH_URLOCK((f), (waslocked));				\
+		pthread_t _pthr = pthread_self();			\
+		FCMH_LOCK_ENSURE((f));					\
+		psc_assert(!FCMH_HAS_BUSY((f)));			\
+		fcmh_wait_locked((f), (f)->fcmh_flags & FCMH_BUSY);	\
+		(f)->fcmh_flags |= FCMH_BUSY;				\
+		(f)->fcmh_owner = _pthr;				\
+		(f)->fcmh_lineno = __LINE__;				\
+		(f)->fcmh_fn = __FILE__;				\
+		DEBUG_FCMH(PLL_DIAG, (f), "set BUSY");			\
+		if (unlock)						\
+			 FCMH_ULOCK((f));				\
 	} while (0)
 
-#define FCMH_WAIT_BUSY(f)						\
+#define FCMH_UNBUSY(f, lock)						\
 	do {								\
-		int _wb, _waslocked;					\
-									\
-		_wb = FCMH_REQ_BUSY((f), &_waslocked);			\
-		psc_assert(_wb == 0);					\
+		if (lock)						\
+			FCMH_LOCK((f));					\
+		else							\
+			FCMH_LOCK_ENSURE((f));				\
+		psc_assert(FCMH_HAS_BUSY(f));				\
+		(f)->fcmh_owner = 0;					\
+		(f)->fcmh_flags &= ~FCMH_BUSY;				\
+		DEBUG_FCMH(PLL_DIAG, (f), "clear BUSY");		\
+		fcmh_wake_locked((f));					\
+		if (lock)						\
+			FCMH_ULOCK((f));				\
 	} while (0)
-
-#define FCMH_UNBUSY(f)		FCMH_UREQ_BUSY((f), 0, PSLRV_WASNOTLOCKED)
 
 #define FCMH_HAS_BUSY(f)						\
 	(((f)->fcmh_flags & FCMH_BUSY) &&				\
@@ -228,7 +188,7 @@ struct fidc_membh {
 #define DEBUG_FCMH(level, f, fmt, ...)					\
 	psclogs((level), SLSS_FCMH,					\
 	    "fcmh@%p f+g="SLPRI_FG" "					\
-	    "flg=%#x:%s%s%s%s%s%s%s%s%s%s%s "				\
+	    "flg=%#x:%s%s%s%s%s%s%s%s%s%s "				\
 	    "ref=%d sz=%"PRId64" "DEBUG_FCMH_BLKSIZE_LABEL"=%"PRId64" "	\
 	    "mode=%#o : "fmt,						\
 	    (f), SLPRI_FG_ARGS(&(f)->fcmh_fg), (f)->fcmh_flags,		\
@@ -239,7 +199,6 @@ struct fidc_membh {
 	    (f)->fcmh_flags & FCMH_TOFREE		? "T" : "",	\
 	    (f)->fcmh_flags & FCMH_HAVE_ATTRS		? "A" : "",	\
 	    (f)->fcmh_flags & FCMH_GETTING_ATTRS	? "G" : "",	\
-	    (f)->fcmh_flags & FCMH_CTOR_FAILED		? "f" : "",	\
 	    (f)->fcmh_flags & FCMH_BUSY			? "S" : "",	\
 	    (f)->fcmh_flags & FCMH_DELETED		? "D" : "",	\
 	    (f)->fcmh_flags & ~(_FCMH_FLGSHFT - 1)	? "+" : "",	\

@@ -72,14 +72,8 @@ fcmh_destroy(struct fidc_membh *f)
 
 	psc_waitq_destroy(&f->fcmh_waitq);
 
-	/* slc_fcmh_dtor(), slm_fcmh_dtor(), sli_fcmh_dtor() */
-	if (sl_fcmh_ops.sfop_dtor) {
-		if (f->fcmh_flags & FCMH_CTOR_FAILED)
-			DEBUG_FCMH(PLL_INFO, f,
-			    "bypassing dtor() call");
-		else
-			sl_fcmh_ops.sfop_dtor(f);
-	}
+	/* slc_fcmh_dtor(), slm_fcmh_dtor(), and sli_fcmh_dtor() */
+	sl_fcmh_ops.sfop_dtor(f);
 
 	f->fcmh_flags = FCMH_FREE;
 	psc_pool_return(sl_fcmh_pool, f);
@@ -243,13 +237,14 @@ _fidc_lookup(const struct pfl_callerinfo *pci, slfid_t fid,
 		psc_hashbkt_put(&sl_fcmh_hashtbl, b);
 
 		/* call sli_fcmh_reopen() sliod only */
-		if (sl_fcmh_ops.sfop_modify) {
-			rc = sl_fcmh_ops.sfop_modify(f, fgen);
+		if (sl_fcmh_ops.sfop_reopen) {
+			rc = sl_fcmh_ops.sfop_reopen(f, fgen);
 			FCMH_LOCK_ENSURE(f);
 		}
-		if (rc)
+		if (rc) {
+			f->fcmh_flags |= FCMH_TOFREE;
 			fcmh_op_done_type(f, FCMH_OPCNT_LOOKUP_FIDC);
-		else {
+		} else {
 			if ((flags & FIDC_LOOKUP_LOCK) == 0)
 				FCMH_ULOCK(f);
 			*fp = f;
@@ -319,10 +314,8 @@ _fidc_lookup(const struct pfl_callerinfo *pci, slfid_t fid,
 	 * thread should be waiting for us.
 	 */
 	rc = sl_fcmh_ops.sfop_ctor(f, flags);
-	if (rc) {
-		f->fcmh_flags |= FCMH_CTOR_FAILED;
+	if (rc)
 		goto finish;
-	}
 
 	if (flags & FIDC_LOOKUP_LOAD) {
 		psc_assert(sl_fcmh_ops.sfop_getattr);
@@ -436,7 +429,9 @@ _fcmh_op_done_type(const struct pfl_callerinfo *pci,
 	freelock(&fcmh_ref_lock);
 #endif
 
-	(void)FCMH_RLOCK(f);
+	if (!FCMH_HAS_LOCK(f))
+		FCMH_LOCK(f);
+
 	rc = f->fcmh_refcnt--;
 	psc_assert(rc > 0);
 	DEBUG_FCMH(PLL_DEBUG, f, "release ref (type=%d)", type);
@@ -449,7 +444,7 @@ _fcmh_op_done_type(const struct pfl_callerinfo *pci,
 		 * memory pressure, and a deprecated fcmh will
 		 * cause us to spin on it.
 		 */
-		if (f->fcmh_flags & FCMH_CTOR_FAILED) {
+		if (f->fcmh_flags & FCMH_TOFREE) {
 			/*
 			 * This won't race with _fidc_lookup because
 			 * _fidc_lookup holds the bucket lock which this
@@ -459,7 +454,6 @@ _fcmh_op_done_type(const struct pfl_callerinfo *pci,
 			 * FCMH_TOFREE before this thread calls
 			 * fcmh_destroy().
 			 */
-			f->fcmh_flags |= FCMH_TOFREE;
 			FCMH_ULOCK(f);
 
 			psc_hashent_remove(&sl_fcmh_hashtbl, f);
@@ -531,7 +525,6 @@ _dump_fcmh_flags_common(int *flags, int *seq)
 	PFL_PRFLAG(FCMH_TOFREE, flags, seq);
 	PFL_PRFLAG(FCMH_HAVE_ATTRS, flags, seq);
 	PFL_PRFLAG(FCMH_GETTING_ATTRS, flags, seq);
-	PFL_PRFLAG(FCMH_CTOR_FAILED, flags, seq);
 	PFL_PRFLAG(FCMH_BUSY, flags, seq);
 	PFL_PRFLAG(FCMH_DELETED, flags, seq);
 }

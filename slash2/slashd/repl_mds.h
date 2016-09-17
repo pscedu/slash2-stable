@@ -40,7 +40,7 @@ struct slm_replst_workreq {
 
 typedef void (*brepl_walkcb_t)(struct bmap *, int, int, void *);
 
-int	 mds_repl_inv_except(struct bmap *, int, int);
+int	 mds_repl_inv_except(struct bmap *, int);
 int	 mds_repl_addrq(const struct sl_fidgen *, sl_bmapno_t,
 	    sl_bmapno_t *, sl_replica_t *, int, int, int);
 
@@ -50,7 +50,7 @@ int	 mds_repl_delrq(const struct sl_fidgen *, sl_bmapno_t, sl_bmapno_t *, sl_rep
 int	_mds_repl_ios_lookup(int, struct slash_inode_handle *, sl_ios_id_t, int);
 int	_mds_repl_iosv_lookup(int, struct slash_inode_handle *, const sl_replica_t [], int [], int, int);
 
-int	 resmpair_bw_adj(struct sl_resm *, struct sl_resm *, int64_t, int *);
+int	 resmpair_bw_adj(struct sl_resm *, struct sl_resm *, int64_t, int);
 
 void	 slm_repl_upd_write(struct bmap *, int);
 

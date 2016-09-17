@@ -249,8 +249,7 @@ slc_rpc_should_retry(struct pscfs_req *pfr, int *rc)
 	case ENETDOWN:
 	case ENETRESET:
 	case ENETUNREACH:
-	case ENOTCONN:
-		psclog_warnx("Unexpected error code %d", in_rc);
+		psclog_warnx("Unexpected error %d (line %d)", in_rc, __LINE__);
 		break;
 
 	/* only retry for a limited number of times */
@@ -268,6 +267,7 @@ slc_rpc_should_retry(struct pscfs_req *pfr, int *rc)
 	case PFLERR_NOTSUP:
 		*rc = ENOTSUP;
 	case EIO:
+	case ENOTCONN:
 #ifdef ENONET
 	case ENONET:
 #endif

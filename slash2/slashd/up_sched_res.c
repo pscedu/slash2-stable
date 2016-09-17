@@ -148,7 +148,8 @@ slm_batch_repl_cb(void *req, void *rep, void *scratch, int rc)
 	if (tmprc)
 		goto out;
 
-	FCMH_WAIT_BUSY(f);
+	FCMH_LOCK(f);
+	FCMH_WAIT_BUSY(f, 1);
 	tmprc = bmap_get(f, q->bno, SL_WRITE, &b);
 	if (tmprc)
 		goto out;
@@ -166,6 +167,11 @@ slm_batch_repl_cb(void *req, void *rep, void *scratch, int rc)
 	brepls_init(retifset, 0);
 
 	if (rc == 0) {
+		/*
+ 		 * If a bmap is already marked as GARBAGE, the
+ 		 * replication will be done in vain.  See
+ 		 * mds_repl_delrq().
+ 		 */
 		tract[BREPLST_REPL_SCHED] = BREPLST_VALID;
 		tract[BREPLST_REPL_QUEUED] = BREPLST_VALID;
 		retifset[BREPLST_REPL_SCHED] = 1;
@@ -187,6 +193,8 @@ slm_batch_repl_cb(void *req, void *rep, void *scratch, int rc)
 
 		retifset[BREPLST_REPL_SCHED] = 1;
 
+		/* ECONNRESET = 104 */
+		/* PFLERR_ALREADY = _PFLERR_START + 3 = 503 */
 		DEBUG_BMAP(PLL_WARN, b, "replication "
 		    "arrangement failure; src=%s dst=%s "
 		    "rc=%d",
@@ -202,11 +210,11 @@ slm_batch_repl_cb(void *req, void *rep, void *scratch, int rc)
 	if (b)
 		bmap_op_done(b);
 	if (f) {
-		FCMH_UNBUSY(f);
+		FCMH_UNBUSY(f, 1);
 		fcmh_op_done(f);
 	}
 
-	resmpair_bw_adj(src_resm, dst_resm, -bsr->bsr_amt, NULL);
+	resmpair_bw_adj(src_resm, dst_resm, -bsr->bsr_amt, rc);
 	upschq_resm(dst_resm, UPDT_PAGEIN);
 }
 
@@ -221,7 +229,7 @@ int
 slm_upsch_tryrepl(struct bmap *b, int off, struct sl_resm *src_resm,
     struct sl_resource *dst_res)
 {
-	int chg = 0, tract[NBREPLST], retifset[NBREPLST], rc, moreavail;
+	int chg = 0, tract[NBREPLST], retifset[NBREPLST], rc;
 	struct slrpc_cservice *csvc = NULL;
 	struct slm_batchscratch_repl *bsr;
 	struct srt_replwk_req q;
@@ -244,11 +252,8 @@ slm_upsch_tryrepl(struct bmap *b, int off, struct sl_resm *src_resm,
 		return (1);
 	}
 
-	if (!resmpair_bw_adj(src_resm, dst_resm, amt, &moreavail)) {
-
+	if (!resmpair_bw_adj(src_resm, dst_resm, amt, 0)) {
 		OPSTAT_INCR("repl-throttle");
-
-		/* XXX push batch out immediately */
 		return (0);
 	}
 
@@ -323,11 +328,9 @@ slm_upsch_tryrepl(struct bmap *b, int off, struct sl_resm *src_resm,
 		goto out;
 
 	/*
-	 * We have successfully scheduled some work; if there is more
-	 * bandwidth available, schedule more work.
+	 * We have successfully scheduled some work, page in more.
 	 */
-	if (moreavail)
-		upschq_resm(dst_resm, UPDT_PAGEIN);
+	upschq_resm(dst_resm, UPDT_PAGEIN);
 
 	return (1);
 
@@ -340,20 +343,22 @@ slm_upsch_tryrepl(struct bmap *b, int off, struct sl_resm *src_resm,
 		brepls_init(tract, -1);
 		tract[BREPLST_REPL_SCHED] = BREPLST_REPL_QUEUED;
 
-		FCMH_WAIT_BUSY(f);
+		FCMH_WAIT_BUSY(f, 1);
 		BMAP_LOCK(b);
 		bmap_wait_locked(b, b->bcm_flags & BMAPF_REPLMODWR);
 		mds_repl_bmap_apply(b, tract, NULL, off);
 		BMAP_ULOCK(b);
-		FCMH_UNBUSY(f);
+		FCMH_UNBUSY(f, 1);
 	}
 
-	resmpair_bw_adj(src_resm, dst_resm, -bsr->bsr_amt, NULL);
+	resmpair_bw_adj(src_resm, dst_resm, -bsr->bsr_amt, rc);
 
 	PSCFREE(bsr);
 
 	if (csvc)
 		sl_csvc_decref(csvc);
+
+ 	/* Signal our caller to continue to try. */
 	return (0);
 }
 
@@ -382,7 +387,7 @@ slm_upsch_finish_ptrunc(struct slrpc_cservice *csvc,
 		    BREPLST_TRUNCPNDG : BREPLST_VALID;
 		brepls_init_idx(retifset);
 
-		FCMH_WAIT_BUSY(f);
+		FCMH_WAIT_BUSY(f, 1);
 		BMAP_LOCK(b);
 		bmap_wait_locked(b, b->bcm_flags & BMAPF_REPLMODWR);
 		ret = mds_repl_bmap_apply(b, tract, retifset, off);
@@ -390,7 +395,7 @@ slm_upsch_finish_ptrunc(struct slrpc_cservice *csvc,
 			DEBUG_BMAPOD(PLL_FATAL, b, "bmap is corrupted");
 		mds_bmap_write_logrepls(b);
 		BMAP_ULOCK(b);
-		FCMH_UNBUSY(f);
+		FCMH_UNBUSY(f, 1);
 	}
 
 	if (!rc) {
@@ -462,14 +467,10 @@ slm_upsch_tryptrunc(struct bmap *b, int off,
 	brepls_init(retifset, 0);
 	retifset[BREPLST_TRUNCPNDG_SCHED] = 1;
 
-	FCMH_WAIT_BUSY(f);
-	BMAP_LOCK(b);
-	bmap_wait_locked(b, b->bcm_flags & BMAPF_REPLMODWR);
 	if (mds_repl_bmap_walk_all(b, NULL, retifset,
 	    REPL_WALKF_SCIRCUIT))
 		DEBUG_BMAPOD(PLL_FATAL, b,
 		    "truncate already scheduled");
-	BMAP_ULOCK(b);
 
 	csvc = slm_geticsvc(dst_resm, NULL, CSVCF_NONBLOCK |
 	    CSVCF_NORECON, NULL);
@@ -544,7 +545,13 @@ slm_batch_preclaim_cb(void *req, void *rep, void *scratch, int error)
 	if (rc)
 		goto out;
 
-	FCMH_WAIT_BUSY(f);
+	/*
+ 	 * XXX Should we drop the lock on the fcmh?  Otherwise the work thread
+ 	 * won't be able to be done with a bmap and then move on to clear the
+ 	 * BMAPF_REPLMODWR flag of other bmaps in the same file.
+ 	 */
+	FCMH_LOCK(f);
+	FCMH_WAIT_BUSY(f, 1);
 	rc = bmap_get(f, q->bno, SL_WRITE, &b);
 	if (rc)
 		goto out;
@@ -561,7 +568,7 @@ slm_batch_preclaim_cb(void *req, void *rep, void *scratch, int error)
 	if (b)
 		bmap_op_done(b);
 	if (f) {
-		FCMH_UNBUSY(f);
+		FCMH_UNBUSY(f, 1);
 		fcmh_op_done(f);
 	}
 }
@@ -579,6 +586,7 @@ slm_upsch_trypreclaim(struct sl_resource *r, struct bmap *b, int off)
 
 	f = b->bcm_fcmh;
 	if (!slm_preclaim_enabled) {
+		OPSTAT_INCR("preclaim-averted");
 		DEBUG_FCMH(PLL_DIAG, f, "preclaim averted");
 		return (0);
 	}
@@ -675,7 +683,7 @@ upd_proc_hldrop(struct slm_update_data *tupd)
 			psclog_error("iosv_lookup: rc=%d", rc);
 			goto next;
 		}
-		FCMH_WAIT_BUSY(b->bcm_fcmh);
+		FCMH_WAIT_BUSY(b->bcm_fcmh, 1);
 		BMAP_LOCK(b);
 		bmap_wait_locked(b, b->bcm_flags & BMAPF_REPLMODWR);
 		if (mds_repl_bmap_walk(b, tract, retifset, 0, &iosidx,
@@ -684,7 +692,7 @@ upd_proc_hldrop(struct slm_update_data *tupd)
 		}
 
 		BMAP_ULOCK(b);
-		FCMH_UNBUSY(b->bcm_fcmh);
+		FCMH_UNBUSY(b->bcm_fcmh, 1);
  next:
 		UPD_DECREF(upd);
 
@@ -694,7 +702,7 @@ upd_proc_hldrop(struct slm_update_data *tupd)
 }
 
 /*
- * Process a bmap for upsch work.
+ * Process a bmap for upsch work. Called by upd_proc().
  */
 void
 upd_proc_bmap(struct slm_update_data *upd)
@@ -716,7 +724,8 @@ upd_proc_bmap(struct slm_update_data *upd)
 
 	DEBUG_FCMH(PLL_DEBUG, f, "upd=%p", upd);
 
-	FCMH_WAIT_BUSY(f);
+	FCMH_LOCK(f);
+	FCMH_WAIT_BUSY(f, 1);
 	BMAP_LOCK(b);
 	bmap_wait_locked(b, b->bcm_flags & BMAPF_REPLMODWR);
 
@@ -852,7 +861,7 @@ upd_proc_bmap(struct slm_update_data *upd)
  out:
 
 	BMAP_ULOCK(b);
-	FCMH_UNBUSY(f);
+	FCMH_UNBUSY(f, 1);
 }
 
 /*
@@ -888,7 +897,8 @@ upd_proc_pagein_unit(struct slm_update_data *upd)
 		retifset[BREPLST_GARBAGE_SCHED] = 1;
 	}
 
-	FCMH_WAIT_BUSY(f);
+	FCMH_LOCK(f);
+	FCMH_WAIT_BUSY(f, 1);
 
 	BMAP_LOCK(b);
 	bmap_wait_locked(b, b->bcm_flags & BMAPF_REPLMODWR);
@@ -900,7 +910,7 @@ upd_proc_pagein_unit(struct slm_update_data *upd)
 		rc = 1;
 
 	BMAP_ULOCK(b);
-	FCMH_UNBUSY(f);
+	FCMH_UNBUSY(f, 1);
 
  out:
 	if (rc) {
@@ -998,6 +1008,9 @@ upd_proc_pagein(struct slm_update_data *upd)
 	 * selects a different user at random, so over time, no users
 	 * will starve.
 	 */
+
+#define UPSCH_PAGEIN_BATCH 128
+
 	dbdo(upd_proc_pagein_cb, NULL,
 	    " SELECT	fid,"
 	    "		bno,"
@@ -1014,9 +1027,10 @@ upd_proc_pagein(struct slm_update_data *upd)
 	    "		us.rnd,"
 	    "		usr_prio DESC,"
 	    "		RANDOM()"
-	    " LIMIT	32",
+	    " LIMIT	?",
 	    upg->upg_resm ? SQLITE_INTEGER : SQLITE_NULL,
-	    upg->upg_resm ? r->res_id : 0);
+	    upg->upg_resm ? r->res_id : 0,
+	    SQLITE_INTEGER, UPSCH_PAGEIN_BATCH);
 }
 
 #if 0
@@ -1144,14 +1158,15 @@ slm_upsch_revert_cb(struct slm_sth *sth, __unusedx void *p)
 	retifset[BREPLST_REPL_SCHED] = 1;
 	retifset[BREPLST_GARBAGE_SCHED] = 1;
 
-	FCMH_WAIT_BUSY(f);
+	FCMH_LOCK(f);
+	FCMH_WAIT_BUSY(f, 1);
 	BMAP_LOCK(b);
 	bmap_wait_locked(b, b->bcm_flags & BMAPF_REPLMODWR);
 	rc = mds_repl_bmap_walk_all(b, tract, retifset, 0);
 	if (rc)
 		mds_bmap_write(b, NULL, NULL);
 	BMAP_ULOCK(b);
-	FCMH_UNBUSY(f);
+	FCMH_UNBUSY(f, 1);
 
  out:
 	if (b)
@@ -1216,21 +1231,23 @@ slmupschthr_main(struct psc_thread *thr)
 	struct sl_resource *r;
 	struct sl_resm *m;
 	struct sl_site *s;
-	int i, j, count;
+	int i, j;
+	struct timespec ts;
 
 	while (pscthr_run(thr)) {
-		dbdo(slm_upsch_tally_cb, &count,
-		    " SELECT	count (*)"
-		    " FROM	upsch");
-		if (count && lc_nitems(&slm_upsch_queue) < 32) {
+		if (lc_nitems(&slm_upsch_queue) < 32) {
 			CONF_FOREACH_RESM(s, r, i, m, j) {
 				if (!RES_ISFS(r))
 					continue;
+				/* schedule a call to upd_proc_pagein() */
 				upschq_resm(m, UPDT_PAGEIN);
 			}
 		}
-		upd = lc_getwait(&slm_upsch_queue);
-		upd_proc(upd);
+		ts.tv_nsec = 0;
+		ts.tv_sec = time(NULL) + 3;
+		upd = lc_gettimed(&slm_upsch_queue, &ts);
+		if (upd)
+			upd_proc(upd);
 	}
 }
 
@@ -1409,7 +1426,7 @@ dump_upd(struct slm_update_data *upd)
 }
 #endif
 
-/* see upd_type_enum  */
+/* see upd_type_enum, called by upd_proc() */
 void (*upd_proctab[])(struct slm_update_data *) = {
 	upd_proc_bmap,
 	upd_proc_hldrop,

@@ -63,26 +63,39 @@ struct slrpc_batch_req_handler sli_rim_batch_req_handlers[SRMT_TOTAL];
  * Handle a piece of PRECLAIM (partial reclaim) work.  If our backend
  * does not support fallocate(2) for punching a hole, we return ENOTSUP
  * so the MDS leaves us alone.
+ *
+ * It is called by slrpc_batch_handle_request() via a worker thread.
  */
 int
 sli_rim_batch_handle_preclaim(__unusedx struct slrpc_batch_rep *bp,
     void *req, void *rep)
 {
+	int rc;
 	struct srt_preclaim_req *q = req;
 	struct srt_preclaim_rep *p = rep;
 	struct fidc_membh *f;
 
 #ifdef HAVE_FALLOC_FL_PUNCH_HOLE
+	/*
+ 	 * Works on ext4 on Linux 4.4.0-1.el7.x86_64.netboot.
+ 	 */
 	OPSTAT_INCR("preclaim-attempt");
 	p->rc = sli_fcmh_get(&q->fg, &f);
 	if (p->rc)
 		return (0);
 
-	/* XXX lock/clear sliver pages in memory? */
-	if (fallocate(fcmh_2_fd(f), FALLOC_FL_PUNCH_HOLE |
+	OPSTAT_INCR("slvr-remove-preclaim");
+	slvr_remove_all(f);
+	rc = fallocate(fcmh_2_fd(f), FALLOC_FL_PUNCH_HOLE |
 	    FALLOC_FL_KEEP_SIZE, q->bno * SLASH_BMAP_SIZE,
-	    SLASH_BMAP_SIZE) == -1)
+	    SLASH_BMAP_SIZE);
+	if (rc < 0) {
 		p->rc = errno;
+		OPSTAT_INCR("preclaim-err");
+	} else {
+		p->rc = 0;
+		OPSTAT_INCR("preclaim-ok");
+	}
 
 	fcmh_op_done(f);
 	return (0);
@@ -127,8 +140,9 @@ sli_rim_handle_bmap_ptrunc(struct pscrpc_request *rq)
 	if (mp->rc)
 		return (0);
 
+	OPSTAT_INCR("slvr-remove-truncate");
+	slvr_remove_all(f);
 	off = SLASH_BMAP_SIZE * mq->bmapno + mq->offset;
-	/* XXX lock/clear sliver pages in memory? */
 	if (ftruncate(fcmh_2_fd(f), off) == -1) {
 		mp->rc = errno;
 		DEBUG_FCMH(PLL_ERROR, f, "truncate rc=%d", mp->rc);
@@ -138,8 +152,8 @@ sli_rim_handle_bmap_ptrunc(struct pscrpc_request *rq)
 	}
 
 	/*
-	 * XXX queue a CRC update to be transmitted back if this
-	 * truncation cut a sliver.
+	 * Simulate a write to trigger a CRC update to be transmitted 
+	 * back to MDS.
 	 */
 	slvr_crc_update(f, mq->bmapno, mq->offset);
 
