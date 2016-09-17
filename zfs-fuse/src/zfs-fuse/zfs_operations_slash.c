@@ -701,14 +701,14 @@ zfsslash2_lookup(int vfsid, mdsio_fid_t parent, const char *name,
 		goto out;
 	}
 
-	if (xattrsize && mfp == NULL)
-		mfp = &mfid;
-
-	if (sstb || mfp)
-		error = fill_sstb(vfsid, vp, mfp, sstb, &cred);
+	if (sstb || mfp || xattrsize)
+		error = fill_sstb(vfsid, vp, &mfid, sstb, &cred);
 
 	if (xattrsize)
-		*xattrsize = zfsslash2_hasxattrs(vfsid, slcrp, *mfp);
+		*xattrsize = zfsslash2_hasxattrs(vfsid, slcrp, mfid);
+
+	if (mfp)
+		*mfp = mfid;
 
  out:
 	if (vp)
@@ -797,6 +797,9 @@ zfsslash2_release(int vfsid, __unusedx const struct slash_creds *slcrp,
 	ASSERT(info->vp);
 	ASSERT(VTOZ(info->vp));
 
+#if 0
+	fprintf(stdout, "zfsslash2_release: vp = %p, count = %d\n", info->vp, info->vp->v_count);
+#endif
 	VN_RELE(info->vp);
 
 	kmem_cache_free(file_info_cache, info);
