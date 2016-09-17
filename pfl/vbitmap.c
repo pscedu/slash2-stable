@@ -487,6 +487,7 @@ psc_vbitmap_resize(struct psc_vbitmap *vb, size_t newsize)
 		 */
 		VB_CLEAR_UNALLOC(vb);
 	else {
+		/* XXX check return code ? */
 		vb->vb_start = psc_realloc(vb->vb_start, nsiz, 0);
 		if (nsiz)
 			vb->vb_end = vb->vb_start + nsiz - 1;

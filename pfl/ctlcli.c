@@ -614,9 +614,9 @@ int
 psc_ctlmsg_opstat_prhdr(__unusedx struct psc_ctlmsghdr *mh,
     __unusedx const void *m)
 {
-	printf("%-38s %13s %13s %13s\n",
+	printf("%-42s %13s %13s %13s\n",
 	    "opstat", "rate10s", "ratecur", "total");
-	return(PSC_CTL_DISPLAY_WIDTH);
+	return(PSC_CTL_DISPLAY_WIDTH+4);
 }
 
 void
@@ -630,7 +630,7 @@ psc_ctlmsg_opstat_prdat(__unusedx const struct psc_ctlmsghdr *mh,
 	if (opst->opst_flags & OPSTF_BASE10 || psc_ctl_inhuman)
 		base10 = 1;
 
-	printf("%-38s ", pco->pco_name);
+	printf("%-42s ", pco->pco_name);
 
 	// 11.2
 	psc_ctl_prnumber(base10, opst->opst_avg, 11, "/s ");
@@ -800,9 +800,9 @@ int
 psc_ctlmsg_listcache_prhdr(__unusedx struct psc_ctlmsghdr *mh,
     __unusedx const void *m)
 {
-	printf("%-43s %3s %8s %3s %3s %15s\n",
-	    "list-cache", "flg", "#items", "#wa", "#em", "#seen");
-	return(PSC_CTL_DISPLAY_WIDTH);
+	printf("%-43s %4s %8s  %5s  %6s %15s\n",
+	    "list-cache", "flag", "#items", "#want", "#empty", "#seen");
+	return(PSC_CTL_DISPLAY_WIDTH+8);
 }
 
 void
@@ -811,12 +811,13 @@ psc_ctlmsg_listcache_prdat(__unusedx const struct psc_ctlmsghdr *mh,
 {
 	const struct psc_ctlmsg_listcache *pclc = m;
 
-	printf("%-43s   %c "
-	    "%8"PRIu64" %3d %3d %15"PRIu64"\n",
+	printf("%-43s    %c "
+	    "%8"PRIu64"  %5d  %6d %15"PRIu64"\n",
 	    pclc->pclc_name,
 	    pclc->pclc_flags & PLCF_DYING ? 'D' : '-',
 	    pclc->pclc_size,
-	    pclc->pclc_nw_want, pclc->pclc_nw_empty,
+	    pclc->pclc_nw_want,
+	    pclc->pclc_nw_empty,
 	    pclc->pclc_nseen);
 }
 

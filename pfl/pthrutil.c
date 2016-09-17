@@ -97,10 +97,11 @@ _psc_mutex_lock(const struct pfl_callerinfo *pci,
 #endif
 
 	rc = pthread_mutex_lock(&mut->pm_mutex);
-	/* asm-generic/errno.h: EDEADLK = 35 */
+	/* asm-generic/errno.h: EDEADLK = 35 (lock against myself) */
 	if (rc)
 		psc_fatalx("pthread_mutex_lock: %s", strerror(rc));
 	mut->pm_owner = pthread_self();
+	mut->pm_lineno = pci ? pci->pci_lineno : __LINE__;
 	PMUT_LOG(mut, "acquired");
 }
 
@@ -111,6 +112,7 @@ _psc_mutex_unlock(const struct pfl_callerinfo *pci,
 	int rc, dolog = 0, loglevel = PLL_VDEBUG;
 
 	mut->pm_owner = 0;
+	mut->pm_lineno = 0;
 	PMUT_LOG(mut, "releasing log=%d level=%d",
 	    dolog = ((mut->pm_flags & PMTXF_NOLOG) == 0),
 	    loglevel = (mut->pm_flags & PMTXF_DEBUG ? PLL_MAX :

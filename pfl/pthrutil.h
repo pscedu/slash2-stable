@@ -36,16 +36,16 @@
 /* The last "unable" case happens on FreeBSD 9.0-CURRENT */
  
 #ifdef PTHREAD_MUTEX_ERRORCHECK_INITIALIZER
-# define PSC_MUTEX_INIT			{ PTHREAD_MUTEX_ERRORCHECK_INITIALIZER, 0, 0 }
+# define PSC_MUTEX_INIT			{ PTHREAD_MUTEX_ERRORCHECK_INITIALIZER, 0, 0, 0 }
 #elif defined(PTHREAD_MUTEX_ERRORCHECK_INITIALIZER_NP)
-# define PSC_MUTEX_INIT			{ PTHREAD_MUTEX_ERRORCHECK_INITIALIZER_NP, 0, 0 }
+# define PSC_MUTEX_INIT			{ PTHREAD_MUTEX_ERRORCHECK_INITIALIZER_NP, 0, 0, 0 }
 #elif defined(PTHREAD_ERRORCHECK_MUTEX_INITIALIZER)
-# define PSC_MUTEX_INIT			{ PTHREAD_ERRORCHECK_MUTEX_INITIALIZER, 0, 0 }
+# define PSC_MUTEX_INIT			{ PTHREAD_ERRORCHECK_MUTEX_INITIALIZER, 0, 0, 0 }
 #elif defined(PTHREAD_ERRORCHECK_MUTEX_INITIALIZER_NP)
-# define PSC_MUTEX_INIT			{ PTHREAD_ERRORCHECK_MUTEX_INITIALIZER_NP, 0, 0 }
+# define PSC_MUTEX_INIT			{ PTHREAD_ERRORCHECK_MUTEX_INITIALIZER_NP, 0, 0, 0 }
 #else
 # warning "unable to find an error checking mutex; beware"
-# define PSC_MUTEX_INIT			{ PTHREAD_MUTEX_INITIALIZER, 0, 0 }
+# define PSC_MUTEX_INIT			{ PTHREAD_MUTEX_INITIALIZER, 0, 0, 0 }
 #endif
 
 #define psc_mutex_ensure_locked(m)	_psc_mutex_ensure_locked(PFL_CALLERINFO(), (m))
@@ -59,6 +59,7 @@
 struct pfl_mutex {
 	pthread_mutex_t		pm_mutex;
 	pthread_t		pm_owner;
+	int			pm_lineno;
 	int			pm_flags;
 };
 
