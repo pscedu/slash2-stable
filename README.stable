@@ -1,3 +1,12 @@
+09/17/2016
+----------
+
+Partial reclaim should be working. For example:
+
+$ msctl repl-remove:lemon@PSC1:5-7 /zzh-slash2/zhihui/bigfile.txt 
+
+Also clean up the FCMH BUSY business.
+
 08/01/2016
 ----------
 
