@@ -47,8 +47,8 @@ struct pfl_opstat {
 
 	psc_atomic64_t		 opst_lifetime;	/* lifetime accumulator */
 	/*
-	 * Unlike the above lifetime counter, the following are
-	 * maintained by a timer thread.
+	 * Unlike the above lifetime counter, the following are maintained 
+	 * by the timer thread. See pfl_opstimerthr_main() for details.
 	 */
 	int64_t			 opst_last;	/* last second lifetime value */
 	int64_t			 opst_intv;	/* last second counter */
