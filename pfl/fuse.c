@@ -147,17 +147,11 @@ pscfs_fuse_interrupt(__unusedx fuse_req_t req, void *d)
 {
 	struct pscfs_req *pfr = d;
 	struct psc_thread *thr;
-	struct pfl_fsthr *pft;
 
 	thr = pfr->pfr_thread;
-	pft = thr->pscthr_private;
 	pfr->pfr_interrupted = 1;
 	psclog_diag("op interrupted, thread = %p, pfr = %p, name = %s", 
 		thr, pfr, pfr->pfr_opname);
-	/*
- 	 * The following was introduced by commit 36b902b7156df48dbdc8c2cc50800862a0f4052f.
- 	 */
-	pfl_multiwaitcond_wakeup(&pft->pft_multiwaitcond);
 }
 
 int
@@ -597,13 +591,6 @@ pscfs_main(int nthr, const char *thrname)
 	for (i = 0; i < nthr; i++) {
 		thr = pscthr_init(PFL_THRT_FS, pscfs_fuse_listener_loop,
 		    sizeof(*pft), "%sfsthr%02d", thrname, i);
-		pft = thr->pscthr_private;
-		pfl_multiwait_init(&pft->pft_multiwait, "%s",
-		    thr->pscthr_name);
-		pfl_multiwaitcond_init(&pft->pft_multiwaitcond, thr, 0,
-		    "%s", thr->pscthr_name);
-		pfl_multiwait_addcond(&pft->pft_multiwait,
-		    &pft->pft_multiwaitcond);
 		thrv[i] = thr->pscthr_pthread;
 		pscthr_setready(thr);
 	}
